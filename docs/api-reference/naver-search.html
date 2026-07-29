@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Naver 검색 Open API — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<div class="wrap">
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Naver 검색</div>
+
+<header class="hero">
+  <div class="kicker">NAVER OPEN API</div>
+  <h1>Naver 검색 Open API</h1>
+  <p class="sub">한국어 소재 리서치의 1차 도구. 일 25,000회 무료라 SerpApi(월 250회)보다 쿼터가 두 자릿수 크고, 국내 뉴스·블로그 후기·카페 여론은 Google 인덱스보다 이쪽이 정확하다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://developers.naver.com/docs/serviceapi/search/news/news.md">검색 API</a></span>
+    <span>키 <code>NAVER_CLIENT_ID</code> · <code>NAVER_CLIENT_SECRET</code></span>
+    <span>구현 <code>server/src/naver-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#endpoints">엔드포인트 4종</a></li>
+    <li><a href="#params">파라미터</a></li>
+    <li><a href="#response">응답과 정제</a></li>
+    <li><a href="#errors">에러와 쿼터</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="endpoints">
+  <h2>1. 엔드포인트 4종</h2>
+  <pre><code>GET https://openapi.naver.com/v1/search/{엔드포인트}
+X-Naver-Client-Id:     {클라이언트 ID}
+X-Naver-Client-Secret: {클라이언트 시크릿}</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th><code>type</code></th><th>엔드포인트</th><th>쓰임</th><th><code>sort</code></th></tr></thead>
+    <tbody>
+      <tr><td><code>news</code> <span class="badge free">기본</span></td><td><code>news.json</code></td><td>국내 뉴스 — 시효성 값(가격·시행일) 교차 검증</td><td>지원</td></tr>
+      <tr><td><code>blog</code></td><td><code>blog.json</code></td><td>블로그 후기 — 실사용 경험·체감</td><td>지원</td></tr>
+      <tr><td><code>web</code></td><td><code>webkr.json</code></td><td>웹문서 — 공식 페이지·자료</td><td><strong>미지원</strong></td></tr>
+      <tr><td><code>cafe</code></td><td><code>cafearticle.json</code></td><td>카페글 — 커뮤니티 여론·불만</td><td>지원</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong><code>webkr.json</code>에 <code>sort</code>를 넘기면 400이다.</strong> 다른 엔드포인트와 파라미터 표면이 미묘하게 다르므로 <code>type === 'web'</code>일 때는 <code>sort</code>를 아예 빼고 보내야 한다.
+  </div>
+  <p>자격증명은 <strong>헤더로만</strong> 전달된다. SerpApi와 달리 URL에 키가 실리지 않아, 에러 본문에 URL이 에코돼도 키가 새지 않는다.</p>
+</section>
+
+<section id="params">
+  <h2>2. 파라미터</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>파라미터</th><th>범위</th><th>기본</th><th>구현</th></tr></thead>
+    <tbody>
+      <tr><td><code>query</code></td><td>—</td><td>필수</td><td>1–300자</td></tr>
+      <tr><td><code>display</code></td><td>1–100</td><td>10</td><td><strong>1–30으로 축소</strong></td></tr>
+      <tr><td><code>start</code></td><td>1–1000</td><td>1</td><td>1–1000</td></tr>
+      <tr><td><code>sort</code></td><td><code>sim</code>(정확도) · <code>date</code>(날짜)</td><td><code>sim</code></td><td><code>web</code>에서는 미전송</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><code>start</code> 상한이 1000이라 한 검색어로 수집 가능한 최대 결과는 약 1,099건이다.</p>
+  <div class="note">
+    <strong><code>display</code>를 30으로 좁힌 것은 결함이 아니라 설계다.</strong> API 상한 100건을 그대로 받으면 응답이 LLM 컨텍스트를 크게 잠식하는데, 소재 리서치에서 31번째 결과가 판단을 바꾸는 일은 사실상 없다. 더 필요하면 <code>start</code>로 다음 페이지를 짚는 것이 옳다.
+  </div>
+</section>
+
+<section id="response">
+  <h2>3. 응답과 정제</h2>
+  <pre><code>{
+  "total": 12345,
+  "start": 1,
+  "display": 10,
+  "items": [
+    {
+      "title": "&lt;b&gt;검색어&lt;/b&gt;가 포함된 제목",
+      "originallink": "https://…",
+      "link": "https://n.news.naver.com/…",
+      "description": "…&lt;b&gt;하이라이트&lt;/b&gt;…",
+      "pubDate": "Tue, 29 Jul 2026 09:00:00 +0900"
+    }
+  ]
+}</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>원본 필드</th><th>정제 후</th><th>처리</th></tr></thead>
+    <tbody>
+      <tr><td><code>title</code></td><td><code>title</code></td><td><code>&lt;b&gt;</code> 태그 제거 + HTML 엔티티 복원</td></tr>
+      <tr><td><code>originallink</code> / <code>link</code></td><td><code>link</code></td><td><strong><code>originallink</code> 우선</strong> — 네이버 뉴스 미러가 아니라 언론사 원문이 출처 표기에 맞다</td></tr>
+      <tr><td><code>description</code></td><td><code>description</code></td><td>동일 정제</td></tr>
+      <tr><td><code>bloggername</code> / <code>cafename</code></td><td><code>source</code></td><td>타입에 따라 있는 쪽</td></tr>
+      <tr><td><code>pubDate</code> / <code>postdate</code></td><td><code>date</code></td><td>타입에 따라 있는 쪽</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><code>&lt;b&gt;</code> 하이라이트를 남겨두면 모델이 이를 강조로 오해하거나 그대로 인용문에 복사한다. <code>&amp;quot;</code>·<code>&amp;amp;</code>·<code>&amp;lt;</code>·<code>&amp;gt;</code>·<code>&amp;apos;</code>도 함께 복원한다.</p>
+</section>
+
+<section id="errors">
+  <h2>4. 에러와 쿼터</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>상황</th><th>응답</th><th>서버의 대응 지시</th></tr></thead>
+    <tbody>
+      <tr><td>키 무효 / 검색 API 미신청</td><td>401 · 403</td><td>"키를 교정하기 전 재시도 금지" + 앱 설정 링크</td></tr>
+      <tr><td>쿼터 소진</td><td>429</td><td>"일일 쿼터(25,000회) 소진 — 이번 세션에서는 WebSearch/serp_*로 대체할 것"</td></tr>
+      <tr><td>결과 없음</td><td>200 + 빈 <code>items</code></td><td>"검색어를 바꿔 1회만 재시도하거나, 확인 실패한 주장은 본문에서 제외할 것"</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>403은 키가 틀린 게 아니라 "검색 API 사용 신청"이 안 된 앱일 수 있다.</strong> Naver Developers에서 앱을 만들어도 API별 사용 신청이 별도다. 에러 메시지가 이 둘을 함께 제시해야 모델이 엉뚱한 방향(키 재발급)으로 가지 않는다.
+  </div>
+</section>
+
+<section id="impl">
+  <h2>5. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th></tr></thead>
+    <tbody>
+      <tr><td><code>display</code></td><td>최대 100</td><td>최대 30 (컨텍스트 보호)</td></tr>
+      <tr><td><code>sort</code></td><td>엔드포인트별 지원 상이</td><td><code>web</code>에서 자동 제거</td></tr>
+      <tr><td>링크</td><td><code>link</code>·<code>originallink</code> 병존</td><td><code>originallink</code> 우선 단일화</td></tr>
+      <tr><td>마크업</td><td><code>&lt;b&gt;</code> 하이라이트 포함</td><td>제거 + 엔티티 복원</td></tr>
+      <tr><td>노출 타입</td><td>10종 이상 (쇼핑·영화·백과 등)</td><td>4종만 — 콘텐츠 소재 조사에 쓰이는 것만</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  기준일 2026-07-29 · 구현 <a href="../../server/src/naver-client.ts">server/src/naver-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+</footer>
+
+</div>
+</body>
+</html>

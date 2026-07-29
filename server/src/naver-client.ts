@@ -53,7 +53,7 @@ function stripMarkup(text: string): string {
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;|&#39;/g, "'");
 }
 
 function compact<T extends Record<string, unknown>>(obj: T): Partial<T> {

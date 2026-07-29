@@ -1,10 +1,14 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
-import { SNS_CHANNELS, snsCredentialFiles } from './config.js';
+import { SNS_PLATFORMS, listChannelDirs, snsCredentialFile } from './config.js';
 /**
- * 자사 SNS 직접 게시 클라이언트 — 채널별 로컬 자격증명 파일(config.snsCredentialFiles)로
- * 각 플랫폼 API 를 직접 호출해 **즉시 공개 게시**한다.
+ * 자사 SNS 직접 게시 클라이언트 — 로컬 자격증명 파일(config.snsCredentialFile 로
+ * 채널·플랫폼 해석)로 각 플랫폼 API 를 직접 호출해 **즉시 공개 게시**한다.
+ *
+ * 멀티 채널: 모든 게시·댓글 입력이 선택 인자 `channel`(브랜드 slug)을 받는다 —
+ * 지정 시 <SNS_TOKEN_DIR>/<slug>/ 토큰만 쓰고 기본(평면) 토큰으로 폴백하지 않는다
+ * (오계정 게시 방지). 미지정 시 기본 토큰(단일 채널·레거시 경로)을 쓴다.
  *
  * HITL 계약: 이 모듈에는 별도 검토 게이트가 없다 — 호출 = 게시다. 도구 설명에 명시된
  * 대로, 사람이 최종 문안·미디어를 승인한 직후에만 호출해야 한다.
@@ -16,13 +20,29 @@ import { SNS_CHANNELS, snsCredentialFiles } from './config.js';
  *   THREADS/INSTAGRAM/FACEBOOK — 60일 갱신형(FB 페이지는 무기한) 평문 1줄
  *   YOUTUBE — { client_id, client_secret, refresh_token } JSON
  */
-/** 자격증명 파일이 존재하는 채널 — 채널별 게시 툴의 ListTools 노출 게이트. */
-export function enabledChannels() {
-    return SNS_CHANNELS.filter((channel) => existsSync(snsCredentialFiles[channel]));
+/**
+ * 자격증명 파일이 존재하는 플랫폼(기본 토큰 ∪ 채널 디렉토리) — 플랫폼별 게시 툴의
+ * ListTools 노출 게이트. 어느 채널이든 토큰이 있으면 그 플랫폼 툴은 노출돼야 한다.
+ */
+export function enabledPlatforms() {
+    const channelDirs = listChannelDirs();
+    return SNS_PLATFORMS.filter((platform) => existsSync(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform)));
 }
-const THREADS_BASE = 'https://graph.threads.net/v1.0';
-const IG_BASE = 'https://graph.instagram.com/v23.0';
-const FB_BASE = 'https://graph.facebook.com/v23.0';
+/** 해당 채널(미지정 시 기본 토큰) 기준으로 자격증명 파일이 존재하는 플랫폼. */
+function availablePlatformsFor(channel) {
+    return SNS_PLATFORMS.filter((platform) => existsSync(snsCredentialFile(platform, channel)));
+}
+/**
+ * Meta Graph API 버전 — 한 곳에서만 관리한다.
+ *
+ * 최신은 v25.0(2026-02)이지만 v23.0(2025-05)에 고정해 둔다. Meta 버전은 릴리스 후
+ * 약 2년간 유효하므로 v23.0 은 2027년까지 살아 있고, 버전을 고정해야 상위 버전의
+ * 파괴적 변경이 게시를 조용히 깨뜨리지 않는다. 올릴 때는 이 상수 하나만 바꾼다.
+ */
+const GRAPH_VERSION = 'v23.0';
+const THREADS_BASE = 'https://graph.threads.net/v1.0'; // Threads 는 자체 버전 체계
+const IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
+const FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 const DEFAULT_POLL_INTERVAL_MS = 2_000;
 const DEFAULT_POLL_MAX_TRIES = 60; // 릴스 영상 처리 여유 (2s × 60 = 2분)
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -38,8 +58,20 @@ function parseJson(body) {
         return null;
     }
 }
-async function loadTokenFile(channel) {
-    const filePath = snsCredentialFiles[channel];
+/** 토큰 부재 안내 — 채널 지정 시 폴백하지 않는 이유와 사용 가능 채널 목록을 함께 싣는다. */
+function missingTokenMessage(platform, channel, filePath) {
+    if (!channel) {
+        return (`Token file not found: ${filePath} — ${platform} 게시에는 로컬 토큰이 필요하다 ` +
+            `(채널별 토큰은 channel 인자 + <SNS_TOKEN_DIR>/<slug>/ 디렉토리, 위치 변경은 SNS_TOKEN_DIR env).`);
+    }
+    const channels = listChannelDirs()
+        .map((dir) => `${dir.channel}(${dir.platforms.join(',')})`)
+        .join(', ');
+    return (`Token file not found: ${filePath} — 채널 "${channel}" 에 ${platform} 토큰이 없다. ` +
+        `기본(평면) 토큰으로 폴백하지 않는다(오계정 게시 방지). 사용 가능 채널: ${channels || '없음'}`);
+}
+async function loadTokenFile(platform, channel) {
+    const filePath = snsCredentialFile(platform, channel);
     try {
         const token = (await readFile(filePath, 'utf8')).trim();
         if (!token)
@@ -47,21 +79,34 @@ async function loadTokenFile(channel) {
         return { token };
     }
     catch {
-        return {
-            error: fail(400, `Token file not found: ${filePath} — ${channel} 게시에는 로컬 토큰이 필요하다 (SNS_TOKEN_DIR 또는 채널별 *_TOKEN_FILE env 로 위치 변경 가능).`),
-        };
+        return { error: fail(400, missingTokenMessage(platform, channel, filePath)) };
     }
 }
-/** Graph 계열 공통 fetch — 파라미터는 쿼리스트링, 실패는 구조화 결과로. 토큰 값은 오류 메시지에 싣지 않는다. */
+/**
+ * Graph 계열 공통 fetch — GET/DELETE 는 쿼리스트링, POST 는 form 본문. 실패는 구조화
+ * 결과로. 토큰 값은 오류 메시지에 싣지 않는다.
+ *
+ * POST 파라미터를 URL 에 실으면 캡션 상한(IG 2,200자 · FB 5,000자)이 %-인코딩(한글
+ * ×9배)되어 URL 이 수십 KB 가 되고, 요청 라인 길이 한계에 걸려 스키마가 허용한
+ * 입력이 전송 계층에서 실패할 수 있다. 본문 전송은 Graph API 표준 방식이며
+ * access_token 이 URL 에 남지 않는 부수 효과도 있다.
+ */
 async function graphRequest(method, baseUrl, params, timeoutMs = 30_000) {
     const sp = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
         if (value !== undefined && value !== '')
             sp.set(key, value);
     }
-    const url = `${baseUrl}?${sp.toString()}`;
+    const isPost = method === 'post';
+    const url = isPost ? baseUrl : `${baseUrl}?${sp.toString()}`;
     try {
-        const res = await fetch(url, { method: method.toUpperCase(), signal: AbortSignal.timeout(timeoutMs) });
+        const res = await fetch(url, {
+            method: method.toUpperCase(),
+            ...(isPost
+                ? { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: sp.toString() }
+                : {}),
+            signal: AbortSignal.timeout(timeoutMs),
+        });
         const text = await res.text();
         return { ok: res.ok, status: res.status, body: text };
     }
@@ -102,7 +147,7 @@ function okJson(payload) {
     return { ok: true, status: 200, body: JSON.stringify(payload) };
 }
 export async function publishThreads(input, opts) {
-    const { token, error } = await loadTokenFile('THREADS');
+    const { token, error } = await loadTokenFile('THREADS', input.channel);
     if (!token)
         return error;
     const me = await fetchMe(THREADS_BASE, token, 'id,username');
@@ -146,7 +191,7 @@ export async function publishThreads(input, opts) {
     });
 }
 export async function publishInstagram(input, opts) {
-    const { token, error } = await loadTokenFile('INSTAGRAM');
+    const { token, error } = await loadTokenFile('INSTAGRAM', input.channel);
     if (!token)
         return error;
     const me = await fetchMe(IG_BASE, token, 'id,username');
@@ -231,7 +276,7 @@ export async function publishInstagram(input, opts) {
     });
 }
 export async function publishFacebook(input) {
-    const { token, error } = await loadTokenFile('FACEBOOK');
+    const { token, error } = await loadTokenFile('FACEBOOK', input.channel);
     if (!token)
         return error;
     // 페이지 토큰의 /me = 페이지 자신
@@ -294,9 +339,9 @@ export async function publishFacebook(input) {
         permalink: permalink.ok ? (parseJson(permalink.body)?.permalink_url ?? null) : null,
     });
 }
-/** 페이지 명의로 자기 게시물에 댓글 작성 — "원문 링크는 첫 댓글로" 채널 규칙용 (scope: pages_manage_engagement). */
+/** 페이지 명의로 자기 게시물에 댓글 작성 — "원문 링크는 첫 댓글로" 플랫폼 규칙용 (scope: pages_manage_engagement). */
 export async function commentFacebook(input) {
-    const { token, error } = await loadTokenFile('FACEBOOK');
+    const { token, error } = await loadTokenFile('FACEBOOK', input.channel);
     if (!token)
         return error;
     const create = await graphRequest('post', `${FB_BASE}/${input.postId}/comments`, {
@@ -318,14 +363,14 @@ export async function commentFacebook(input) {
         permalink: permalink.ok ? (parseJson(permalink.body)?.permalink_url ?? null) : null,
     });
 }
-async function loadYoutubeClient() {
-    const filePath = snsCredentialFiles.YOUTUBE;
+async function loadYoutubeClient(channel) {
+    const filePath = snsCredentialFile('YOUTUBE', channel);
     let raw;
     try {
         raw = await readFile(filePath, 'utf8');
     }
     catch {
-        return { error: fail(400, `Token file not found: ${filePath}`) };
+        return { error: fail(400, missingTokenMessage('YOUTUBE', channel, filePath)) };
     }
     const parsed = parseJson(raw);
     const client = parsed;
@@ -398,7 +443,8 @@ export async function publishYoutube(input) {
     catch (error) {
         return fail(400, `Cannot read video file: ${error instanceof Error ? error.message : String(error)}`);
     }
-    // 썸네일은 업로드 전에 검증 — videos.insert 는 1,600유닛/호출이라 실패를 뒤로 미루면 쿼터가 탄다
+    // 썸네일은 업로드 전에 검증 — 업로드 후에 거부하면 이미 소모된 업로드 쿼터와
+    // 전송 시간(수십 MB)이 통째로 낭비된다
     let thumb;
     if (input.thumbnailFilePath) {
         const thumbMime = YT_THUMB_MIME_BY_EXT[extname(input.thumbnailFilePath).toLowerCase()];
@@ -417,7 +463,7 @@ export async function publishYoutube(input) {
         }
         thumb = { bytes: thumbBytes, mimeType: thumbMime };
     }
-    const { client, error: clientError } = await loadYoutubeClient();
+    const { client, error: clientError } = await loadYoutubeClient(input.channel);
     if (!client)
         return clientError;
     const { token, error: tokenError } = await exchangeYoutubeAccessToken(client);
@@ -433,9 +479,15 @@ export async function publishYoutube(input) {
                 snippet: {
                     title: input.title,
                     description: input.description,
-                    categoryId: input.categoryId ?? '25',
+                    // 22 = People & Blogs. 카테고리는 추천·탐색 분류에 쓰이므로 일반 콘텐츠
+                    // 채널의 영상을 25(News & Politics)로 올리면 엉뚱한 관심사 집단에 노출된다.
+                    categoryId: input.categoryId ?? '22',
                 },
-                status: { privacyStatus: input.privacyStatus ?? 'public', selfDeclaredMadeForKids: false },
+                status: {
+                    privacyStatus: input.privacyStatus ?? 'public',
+                    // COPPA 자기 선언 — 하드코딩하면 아동 대상 콘텐츠가 허위 선언되므로 입력으로 받는다
+                    selfDeclaredMadeForKids: input.madeForKids ?? false,
+                },
             }),
             signal: AbortSignal.timeout(30_000),
         });
@@ -482,16 +534,16 @@ export async function publishYoutube(input) {
  * 받은 댓글 관리 경로. 읽기(인박스)는 부작용이 없지만 **답글·모더레이션은 게시와
  * 똑같이 호출 즉시 외부 공개**다 — 툴 설명의 HITL 규칙이 유일한 게이트다.
  *
- * 채널 능력이 비대칭이다 (2026-07-26 토큰 실측):
+ * 플랫폼 능력이 비대칭이다 (2026-07-26 토큰 실측):
  *   THREADS   읽기 `/conversation`(깊이 무관 평면화) · 답글 `reply_to_id` · 숨김 `manage_reply` · 좋아요 API 없음
  *   INSTAGRAM 읽기 `/comments{replies}` · 답글 `/{comment}/replies`(최상위 댓글에만) · 숨김 `hide` · 좋아요 API 없음
  *   FACEBOOK  읽기 `/comments?filter=stream` · 답글 `/{comment}/comments` · 숨김 `is_hidden` · 좋아요 O
  *   YOUTUBE   토큰 scope 에 `youtube.force-ssl` 이 없어 댓글 API 자체가 불가 — 인박스에서 제외한다
  *
- * "우리가 이미 답했는가"는 채널 필드로 판정한다(THREADS `is_reply_owned_by_me`,
+ * "우리가 이미 답했는가"는 플랫폼 필드로 판정한다(THREADS `is_reply_owned_by_me`,
  * IG username 일치, FB `from.id == pageId`) — 추측하지 않으므로 중복 답글이 나가지 않는다.
  */
-export const COMMENT_CHANNELS = ['THREADS', 'INSTAGRAM', 'FACEBOOK'];
+export const COMMENT_PLATFORMS = ['THREADS', 'INSTAGRAM', 'FACEBOOK'];
 const rawList = (body) => {
     const data = parseJson(body)?.data;
     return Array.isArray(data) ? data : [];
@@ -505,8 +557,8 @@ function minutesSince(timestamp, now) {
     const parsed = Date.parse(timestamp);
     return Number.isNaN(parsed) ? null : Math.max(0, Math.round((now - parsed) / 60_000));
 }
-async function inboxThreads(input, now) {
-    const { token, error } = await loadTokenFile('THREADS');
+async function inboxThreads(input, now, channel) {
+    const { token, error } = await loadTokenFile('THREADS', channel);
     if (!token)
         return { error };
     const me = await fetchMe(THREADS_BASE, token, 'id,username');
@@ -530,7 +582,7 @@ async function inboxThreads(input, now) {
         if (!postId)
             continue;
         const post = {
-            channel: 'THREADS',
+            platform: 'THREADS',
             postId,
             permalink: item.permalink ? str(item.permalink) : null,
             excerpt: excerpt(str(item.text)),
@@ -566,7 +618,7 @@ async function inboxThreads(input, now) {
             const timestamp = reply.timestamp ? str(reply.timestamp) : null;
             const parentId = str(reply.replied_to?.id);
             post.comments.push({
-                channel: 'THREADS',
+                platform: 'THREADS',
                 postId,
                 commentId,
                 parentCommentId: parentId && parentId !== postId ? parentId : null,
@@ -585,8 +637,8 @@ async function inboxThreads(input, now) {
     }
     return { account, posts };
 }
-async function inboxInstagram(input, now) {
-    const { token, error } = await loadTokenFile('INSTAGRAM');
+async function inboxInstagram(input, now, channel) {
+    const { token, error } = await loadTokenFile('INSTAGRAM', channel);
     if (!token)
         return { error };
     const me = await fetchMe(IG_BASE, token, 'id,username');
@@ -610,7 +662,7 @@ async function inboxInstagram(input, now) {
         if (!postId)
             continue;
         const post = {
-            channel: 'INSTAGRAM',
+            platform: 'INSTAGRAM',
             postId,
             permalink: item.permalink ? str(item.permalink) : null,
             excerpt: excerpt(str(item.caption)),
@@ -645,7 +697,7 @@ async function inboxInstagram(input, now) {
                 const timestamp = node.timestamp ? str(node.timestamp) : null;
                 const author = str(node.username);
                 post.comments.push({
-                    channel: 'INSTAGRAM',
+                    platform: 'INSTAGRAM',
                     postId,
                     commentId,
                     parentCommentId,
@@ -669,8 +721,8 @@ async function inboxInstagram(input, now) {
     }
     return { account, posts };
 }
-async function inboxFacebook(input, now) {
-    const { token, error } = await loadTokenFile('FACEBOOK');
+async function inboxFacebook(input, now, channel) {
+    const { token, error } = await loadTokenFile('FACEBOOK', channel);
     if (!token)
         return { error };
     const me = await fetchMe(FB_BASE, token, 'id,name');
@@ -693,7 +745,7 @@ async function inboxFacebook(input, now) {
         if (!postId)
             continue;
         const post = {
-            channel: 'FACEBOOK',
+            platform: 'FACEBOOK',
             postId,
             permalink: item.permalink_url ? str(item.permalink_url) : null,
             excerpt: excerpt(str(item.message)),
@@ -730,7 +782,7 @@ async function inboxFacebook(input, now) {
             const timestamp = row.created_time ? str(row.created_time) : null;
             const from = row.from;
             post.comments.push({
-                channel: 'FACEBOOK',
+                platform: 'FACEBOOK',
                 postId,
                 commentId,
                 parentCommentId: str(row.parent?.id) || null,
@@ -750,8 +802,8 @@ async function inboxFacebook(input, now) {
     return { account, posts };
 }
 /**
- * 채널 횡단 댓글 인박스 — 최근 게시물의 댓글을 정규화해 모으고, 기본값으로
- * **우리가 아직 답하지 않은 남의 댓글만** 남긴다. 채널 하나가 실패해도 나머지는
+ * 플랫폼 횡단 댓글 인박스 — 최근 게시물의 댓글을 정규화해 모으고, 기본값으로
+ * **우리가 아직 답하지 않은 남의 댓글만** 남긴다. 플랫폼 하나가 실패해도 나머지는
  * 그대로 반환하고 실패 사유를 skipped 에 싣는다(부분 실패가 전체를 막지 않는다).
  */
 export async function commentInbox(input = {}) {
@@ -760,8 +812,9 @@ export async function commentInbox(input = {}) {
         postLimit: Math.min(Math.max(input.postLimit ?? 5, 1), 25),
         commentLimit: Math.min(Math.max(input.commentLimit ?? 50, 1), 100),
     };
-    const available = new Set(enabledChannels());
-    const requested = input.channels?.length ? input.channels : [...COMMENT_CHANNELS];
+    // 가용성은 채널 스코프로 판정한다 — 채널 지정 시 그 채널 디렉토리의 토큰만 본다
+    const available = new Set(availablePlatformsFor(input.channel));
+    const requested = input.platforms?.length ? input.platforms : [...COMMENT_PLATFORMS];
     const collectors = {
         THREADS: inboxThreads,
         INSTAGRAM: inboxInstagram,
@@ -770,23 +823,28 @@ export async function commentInbox(input = {}) {
     const accounts = {};
     const skipped = [];
     const posts = [];
-    for (const channel of requested) {
-        if (!available.has(channel)) {
-            skipped.push({ channel, reason: `자격증명 파일 없음 (${snsCredentialFiles[channel]})` });
+    // 플랫폼별 수집은 서로 다른 API 라 병렬로 돌린다 — 최대 75회(25게시물×3)의 직렬
+    // 왕복을 플랫폼 단위로 겹쳐 체감 지연을 1/3 로 줄인다. 결과 순서는 requested 유지.
+    const collected = await Promise.all(requested.map(async (platform) => ({
+        platform,
+        inbox: available.has(platform) ? await collectors[platform](limits, now, input.channel) : null,
+    })));
+    for (const { platform, inbox } of collected) {
+        if (!inbox) {
+            skipped.push({ platform, reason: `자격증명 파일 없음 (${snsCredentialFile(platform, input.channel)})` });
             continue;
         }
-        const result = await collectors[channel](limits, now);
-        if (result.account)
-            accounts[channel] = result.account;
-        if (result.error) {
-            skipped.push({ channel, reason: `HTTP ${result.error.status}: ${result.error.body.slice(0, 300)}` });
+        if (inbox.account)
+            accounts[platform] = inbox.account;
+        if (inbox.error) {
+            skipped.push({ platform, reason: `HTTP ${inbox.error.status}: ${inbox.error.body.slice(0, 300)}` });
             continue;
         }
-        posts.push(...(result.posts ?? []));
+        posts.push(...(inbox.posts ?? []));
     }
     if (available.has('YOUTUBE')) {
         skipped.push({
-            channel: 'YOUTUBE',
+            platform: 'YOUTUBE',
             reason: '토큰 scope 에 youtube.force-ssl 이 없어 댓글 조회·작성 불가 — YouTube Studio 에서 수동 응대',
         });
     }
@@ -806,16 +864,22 @@ export async function commentInbox(input = {}) {
         return { ...post, comments };
     });
     const actionable = filtered.flatMap((post) => post.comments);
-    const byChannel = {};
+    const byPlatform = {};
     for (const comment of actionable)
-        byChannel[comment.channel] = (byChannel[comment.channel] ?? 0) + 1;
+        byPlatform[comment.platform] = (byPlatform[comment.platform] ?? 0) + 1;
+    // 상한(25 게시물 × 100 댓글)을 다 채우면 응답이 호출자 컨텍스트를 크게 잠식한다.
+    // 잘라야 할 때는 **오래된 것부터** 버린다 — 골든타임(첫 60분) 댓글이 남아야 한다.
+    // summary 의 집계는 자르기 **전** 값을 유지한다: 잘린 목록으로 다시 세면
+    // "미응대 3건"처럼 실제보다 적게 보고되어 남은 응대를 놓친다.
+    const { posts: trimmedPosts, dropped } = capInboxPayload(filtered);
     return okJson({
+        channel: input.channel ?? null,
         accounts,
         summary: {
             postsScanned: posts.length,
             commentsFetched: fetched,
             actionable: actionable.length,
-            byChannel,
+            byPlatform,
             // 골든타임(첫 60분) 안에 남은 미응대 — 우선순위 판단의 1순위 신호
             withinGoldenHour: actionable.filter((c) => c.ageMinutes !== null && c.ageMinutes <= 60).length,
             oldestActionableMinutes: actionable.reduce((max, c) => (c.ageMinutes === null ? max : max === null ? c.ageMinutes : Math.max(max, c.ageMinutes)), null),
@@ -825,22 +889,54 @@ export async function commentInbox(input = {}) {
                 sinceHours: input.sinceHours ?? null,
                 ...limits,
             },
+            ...(dropped > 0
+                ? {
+                    truncated: `응답 크기 상한으로 오래된 댓글 ${dropped}건을 목록에서 제외했다(위 집계는 제외 전 기준). 전부 보려면 sinceHours 로 기간을 좁히거나 commentLimit/postLimit 을 줄여 재조회할 것.`,
+                }
+                : {}),
         },
-        posts: filtered,
+        posts: trimmedPosts,
         skipped,
     });
 }
-/** 받은 댓글에 답글 작성 — 호출 즉시 공개. 채널별 답글 엔드포인트 차이를 흡수한다. */
+/** 인박스 응답 직렬화 상한 — 초과분은 오래된 댓글부터 버린다. */
+const INBOX_MAX_CHARS = 60_000;
+function capInboxPayload(posts) {
+    if (JSON.stringify(posts).length <= INBOX_MAX_CHARS)
+        return { posts, dropped: 0 };
+    // 전 게시물의 댓글을 한 줄로 세워 최신순 정렬 → 상한에 들어가는 만큼만 남긴다.
+    // ageMinutes 가 없는(타임스탬프 미제공) 댓글은 판단 근거가 없으므로 뒤로 보낸다.
+    const ranked = posts
+        .flatMap((post) => post.comments)
+        .sort((a, b) => (a.ageMinutes ?? Number.MAX_SAFE_INTEGER) - (b.ageMinutes ?? Number.MAX_SAFE_INTEGER));
+    // 직렬화 크기는 유지 수에 단조 증가하므로 이분 탐색으로 "상한에 들어가는 최대
+    // 유지 수"를 찾는다 — 절반씩 버리는 방식은 필요 이상(최대 2배)을 버렸다.
+    const keepTop = (count) => {
+        const survivors = new Set(ranked.slice(0, count).map((comment) => comment.commentId));
+        return posts.map((post) => ({ ...post, comments: post.comments.filter((c) => survivors.has(c.commentId)) }));
+    };
+    let lo = 0;
+    let hi = ranked.length;
+    while (lo < hi) {
+        const mid = Math.floor((lo + hi + 1) / 2);
+        if (JSON.stringify(keepTop(mid)).length <= INBOX_MAX_CHARS)
+            lo = mid;
+        else
+            hi = mid - 1;
+    }
+    return { posts: keepTop(lo), dropped: ranked.length - lo };
+}
+/** 받은 댓글에 답글 작성 — 호출 즉시 공개. 플랫폼별 답글 엔드포인트 차이를 흡수한다. */
 export async function replyToComment(input) {
-    if (input.channel === 'THREADS') {
+    if (input.platform === 'THREADS') {
         // Threads 답글은 별도 엔드포인트가 없다 — reply_to_id 를 단 새 게시물이 곧 답글이다
-        return publishThreads({ caption: input.message, replyToId: input.commentId });
+        return publishThreads({ caption: input.message, replyToId: input.commentId, channel: input.channel });
     }
-    if (input.channel === 'FACEBOOK') {
+    if (input.platform === 'FACEBOOK') {
         // FB 는 댓글 id 에 댓글을 달면 대댓글 — 게시물 첫 댓글과 같은 엔드포인트다
-        return commentFacebook({ postId: input.commentId, message: input.message });
+        return commentFacebook({ postId: input.commentId, message: input.message, channel: input.channel });
     }
-    const { token, error } = await loadTokenFile('INSTAGRAM');
+    const { token, error } = await loadTokenFile('INSTAGRAM', input.channel);
     if (!token)
         return error;
     const create = await graphRequest('post', `${IG_BASE}/${input.commentId}/replies`, {
@@ -860,13 +956,13 @@ export async function replyToComment(input) {
  * 스팸·어뷰징 대응에는 숨김이 브랜드 리스크가 더 낮다 (2026-07-26 사용자 확정).
  */
 export async function moderateComment(input) {
-    const { channel, commentId, action } = input;
+    const { platform, commentId, action, channel } = input;
     const hide = action === 'hide';
     if (action === 'like' || action === 'unlike') {
-        if (channel !== 'FACEBOOK') {
-            return fail(400, `${channel} 는 댓글 좋아요 API 가 없다 — 답글(sns_comment_reply)로만 반응할 수 있다.`);
+        if (platform !== 'FACEBOOK') {
+            return fail(400, `${platform} 는 댓글 좋아요 API 가 없다 — 답글(sns_comment_reply)로만 반응할 수 있다.`);
         }
-        const { token, error } = await loadTokenFile('FACEBOOK');
+        const { token, error } = await loadTokenFile('FACEBOOK', channel);
         if (!token)
             return error;
         const res = await graphRequest(action === 'like' ? 'post' : 'delete', `${FB_BASE}/${commentId}/likes`, {
@@ -874,10 +970,10 @@ export async function moderateComment(input) {
         });
         if (!res.ok)
             return res;
-        return okJson({ platform: channel, commentId, action, done: true });
+        return okJson({ platform, commentId, action, done: true });
     }
-    if (channel === 'THREADS') {
-        const { token, error } = await loadTokenFile('THREADS');
+    if (platform === 'THREADS') {
+        const { token, error } = await loadTokenFile('THREADS', channel);
         if (!token)
             return error;
         const res = await graphRequest('post', `${THREADS_BASE}/${commentId}/manage_reply`, {
@@ -886,10 +982,10 @@ export async function moderateComment(input) {
         });
         if (!res.ok)
             return res;
-        return okJson({ platform: channel, commentId, action, done: true });
+        return okJson({ platform, commentId, action, done: true });
     }
-    if (channel === 'INSTAGRAM') {
-        const { token, error } = await loadTokenFile('INSTAGRAM');
+    if (platform === 'INSTAGRAM') {
+        const { token, error } = await loadTokenFile('INSTAGRAM', channel);
         if (!token)
             return error;
         const res = await graphRequest('post', `${IG_BASE}/${commentId}`, {
@@ -898,9 +994,9 @@ export async function moderateComment(input) {
         });
         if (!res.ok)
             return res;
-        return okJson({ platform: channel, commentId, action, done: true });
+        return okJson({ platform, commentId, action, done: true });
     }
-    const { token, error } = await loadTokenFile('FACEBOOK');
+    const { token, error } = await loadTokenFile('FACEBOOK', channel);
     if (!token)
         return error;
     const res = await graphRequest('post', `${FB_BASE}/${commentId}`, {
@@ -909,45 +1005,47 @@ export async function moderateComment(input) {
     });
     if (!res.ok)
         return res;
-    return okJson({ platform: channel, commentId, action, done: true });
+    return okJson({ platform, commentId, action, done: true });
 }
 // ── 계정 점검 ────────────────────────────────────────────────────
-/** SNS 게시 자격증명 일괄 점검 — 계정 식별 정보만 반환, 토큰 값은 절대 싣지 않는다. */
-export async function checkAccounts() {
-    const summary = {};
-    for (const [key, channel, baseUrl, fields] of [
+/**
+ * 한 자격증명 세트(채널 하나 또는 기본 토큰)의 4개 플랫폼 점검 — 토큰 값은 절대
+ * 싣지 않는다. 플랫폼 점검은 서로 독립이라 병렬로 돌린다(4회 직렬 왕복 → 1회 체감).
+ */
+async function checkPlatformSet(channel) {
+    const metaChecks = [
         ['threads', 'THREADS', THREADS_BASE, 'id,username'],
         ['instagram', 'INSTAGRAM', IG_BASE, 'id,username'],
         ['facebook', 'FACEBOOK', FB_BASE, 'id,name'],
-    ]) {
-        const { token, error } = await loadTokenFile(channel);
-        if (!token) {
-            summary[key] = { ok: false, reason: error.body };
-            continue;
-        }
+    ].map(async ([key, platform, baseUrl, fields]) => {
+        const { token, error } = await loadTokenFile(platform, channel);
+        if (!token)
+            return [key, { ok: false, reason: error.body }];
         const me = await fetchMe(baseUrl, token, fields);
-        summary[key] = me.ok
-            ? { ok: true, account: parseJson(me.body) }
-            : { ok: false, status: me.status, reason: me.body.slice(0, 300) };
-    }
-    const { client, error: clientError } = await loadYoutubeClient();
-    if (!client) {
-        summary.youtube = { ok: false, reason: clientError.body };
-    }
-    else {
+        return [
+            key,
+            me.ok
+                ? { ok: true, account: parseJson(me.body) }
+                : { ok: false, status: me.status, reason: me.body.slice(0, 300) },
+        ];
+    });
+    const youtubeCheck = (async () => {
+        const { client, error: clientError } = await loadYoutubeClient(channel);
+        if (!client)
+            return ['youtube', { ok: false, reason: clientError.body }];
         const { token, error } = await exchangeYoutubeAccessToken(client);
-        if (!token) {
-            summary.youtube = { ok: false, status: error.status, reason: error.body.slice(0, 300) };
-        }
-        else {
-            try {
-                const res = await fetch('https://www.googleapis.com/youtube/v3/channels?part=id,snippet&mine=true', {
-                    headers: { Authorization: `Bearer ${token}` },
-                    signal: AbortSignal.timeout(30_000),
-                });
-                const text = await res.text();
-                const items = parseJson(text)?.items ?? [];
-                summary.youtube = res.ok
+        if (!token)
+            return ['youtube', { ok: false, status: error.status, reason: error.body.slice(0, 300) }];
+        try {
+            const res = await fetch('https://www.googleapis.com/youtube/v3/channels?part=id,snippet&mine=true', {
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(30_000),
+            });
+            const text = await res.text();
+            const items = parseJson(text)?.items ?? [];
+            return [
+                'youtube',
+                res.ok
                     ? {
                         ok: true,
                         channels: items.map((item) => ({
@@ -955,14 +1053,36 @@ export async function checkAccounts() {
                             title: item.snippet?.title,
                         })),
                     }
-                    : { ok: false, status: res.status, reason: text.slice(0, 300) };
-            }
-            catch (error) {
-                summary.youtube = { ok: false, reason: error instanceof Error ? error.message : String(error) };
-            }
+                    : { ok: false, status: res.status, reason: text.slice(0, 300) },
+            ];
         }
+        catch (error) {
+            return ['youtube', { ok: false, reason: error instanceof Error ? error.message : String(error) }];
+        }
+    })();
+    return Object.fromEntries(await Promise.all([...metaChecks, youtubeCheck]));
+}
+/**
+ * SNS 게시 자격증명 일괄 점검 — channel 지정 시 그 채널 세트만, 미지정 시
+ * 모든 채널 디렉토리 + 기본(평면) 토큰을 함께 점검한다. 계정 식별 정보만 반환.
+ */
+export async function checkAccounts(channel) {
+    if (channel) {
+        const body = { channel, platforms: await checkPlatformSet(channel) };
+        return { ok: true, status: 200, body: JSON.stringify(body, null, 2) };
     }
-    // 점검이 완료되면 그 자체로 성공이다 — 채널 구성은 선택적이므로 미설정 채널의
+    const channelEntries = await Promise.all(listChannelDirs().map(async (dir) => [dir.channel, await checkPlatformSet(dir.channel)]));
+    const channels = Object.fromEntries(channelEntries);
+    // 기본(평면) 토큰은 존재할 때만 점검한다 — 채널 디렉토리로 전부 이전한 구성에서
+    // 전부-실패 노이즈를 만들지 않기 위해서다.
+    const hasDefaults = availablePlatformsFor().length > 0;
+    const body = {
+        channels,
+        defaultTokens: hasDefaults
+            ? await checkPlatformSet()
+            : '없음 — 채널 미지정(channel 인자 생략) 게시는 불가하다. 게시 툴에 channel 을 지정할 것.',
+    };
+    // 점검이 완료되면 그 자체로 성공이다 — 플랫폼 구성은 선택적이므로 미설정 플랫폼의
     // ok:false 는 body 상세로만 보고하고 툴 결과 전체를 실패로 표시하지 않는다.
-    return { ok: true, status: 200, body: JSON.stringify(summary, null, 2) };
+    return { ok: true, status: 200, body: JSON.stringify(body, null, 2) };
 }

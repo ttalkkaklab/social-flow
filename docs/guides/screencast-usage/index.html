@@ -249,7 +249,7 @@
     <div class="step you">
       <span class="tag">사용자</span>
       <div class="name">④ 게시 승인</div>
-      <div class="desc">채널별 텍스트와 함께 공개</div>
+      <div class="desc">플랫폼별 텍스트와 함께 공개</div>
     </div>
   </div>
 
@@ -270,7 +270,7 @@
   <h2><span class="num">2.</span>준비 (최초 1회)</h2>
   <p>전제 조건은 즉흥 녹화 흐름과 같다 — whisper.cpp · STT 모델 · 화면 기록/마이크
   권한 · ffmpeg. 상세 확인 방법은 <a href="../ingest-usage/index.html#setup">ingest
-  가이드 2장</a>을 그대로 따른다. 카테고리(<code>/social-flow:category add</code>)도
+  가이드 2장</a>을 그대로 따른다. 채널(<code>/social-flow:channel add</code>)도
   미리 있어야 한다.</p>
   <div class="callout tip">
     <span class="ct">✓ 이 머신은 준비 완료</span>
@@ -369,13 +369,13 @@
 
   <div class="stepcard">
     <span class="who claude">Claude</span>
-    <h4>편집 빌드 + 채널 텍스트</h4>
+    <h4>편집 빌드 + 플랫폼 텍스트</h4>
     <pre><code><span class="k">/social-flow:produce</span> 재테크 "홈택스 연말정산 미리보기"</code></pre>
     <ul class="plain">
       <li>씬별 컷 → 확대 → 9:16 합성 → 타이틀 오버레이 → 자막 번인 → BGM 덕킹(육성에
         맞춰 자동 볼륨 다운) → 아웃트로 접합. 오디오·비디오 드리프트 0 을 빌드가
         단언한다.</li>
-      <li>폰 뷰포트 검수 · 채널별 텍스트(Threads/IG/FB/YT) · 품질 게이트는 일반 제작과
+      <li>폰 뷰포트 검수 · 플랫폼별 텍스트(Threads/IG/FB/YT) · 품질 게이트는 일반 제작과
         동일하게 이어진다.</li>
     </ul>
   </div>
@@ -463,7 +463,7 @@
 
   <div class="summary">
     <span class="ct">한 줄 요약</span>
-    <code>/social-flow:storyboard &lt;카테고리&gt; &lt;주제&gt; 촬영 대본으로</code> →
+    <code>/social-flow:storyboard &lt;채널&gt; &lt;주제&gt; 촬영 대본으로</code> →
     <strong>대본 승인</strong> → 보조 모니터에 대본 띄우고
     <code>record</code> 로 <strong>촬영</strong> → "녹화 끝" →
     이탈 보고 <strong>확인</strong> → 편집·검수 → <strong>게시 승인</strong>.

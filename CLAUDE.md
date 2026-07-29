@@ -1,6 +1,6 @@
 # social-flow — 프로젝트 지침
 
-카테고리 기반 쇼트폼 콘텐츠 파이프라인 Claude Code 플러그인.
+채널 기반 쇼트폼 콘텐츠 파이프라인 Claude Code 플러그인.
 구조·스킬·MCP 툴 목록은 [README.md](README.md)를 정본으로 삼는다.
 
 ## Git / GitHub 인증 (필수)
@@ -53,8 +53,12 @@ feat/<name> | fix/<name>  (integration)  →  dev  →  staging  →  main
 ## 커밋·비밀정보
 
 - `.env*`, `*.pem`, `*.key`, 자격증명·시크릿류는 절대 커밋하지 않는다(`.gitignore` 등록됨).
-- 대용량 산출물(`data/**/output/**/*.mp4|mov|wav|pcm`, `data/**/.work/`,
-  `data/**/recording/raw/`)은 재생성 가능하므로 커밋 대상이 아니다.
+- `data/` 하위는 전부 커밋 대상이 아니다 — 구조 설명 문서인 `data/README.md` 만 예외다.
+  채널 프로파일·스토리보드·이미지·영상·브랜딩 자산은 로컬 산출물이며,
+  이 저장소는 플러그인 코드·스킬만 담는다.
+- 반대로 `server/dist/` 는 빌드 산출물이지만 **반드시 커밋한다** — `.mcp.json` 이
+  빌드 단계 없이 `${CLAUDE_PLUGIN_ROOT}/server/dist/index.js` 를 직접 실행하므로,
+  무시하면 설치본이 깨진다. `server/src/` 수정 시 `npm run build` 후 dist 도 함께 커밋한다.
 - API 키는 `.mcp.json`이 아니라 셸 환경변수로 주입한다.
 
 ## 다중 세션 주의

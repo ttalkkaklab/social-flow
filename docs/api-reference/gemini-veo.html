@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Veo 3.1 — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<div class="wrap">
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Veo 3.1</div>
+
+<header class="hero">
+  <div class="kicker">GOOGLE GEMINI</div>
+  <h1>Veo 3.1 — 영상 생성</h1>
+  <p class="sub">네이티브 오디오를 포함한 영상을 만드는 비동기 long-running operation API. 하나의 <code>generateVideos</code> 호출이 입력 조합(<code>image</code>·<code>video</code>·<code>referenceImages</code>)에 따라 4가지 모드로 갈라진다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://ai.google.dev/gemini-api/docs/veo">Veo</a></span>
+    <span>SDK <code>@google/genai</code> 2.13.0</span>
+    <span>키 <code>GEMINI_API_KEY</code></span>
+    <span>구현 <code>server/src/video-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#models">모델과 교차 제약</a></li>
+    <li><a href="#config">GenerateVideosConfig</a></li>
+    <li><a href="#modes">4가지 생성 모드</a></li>
+    <li><a href="#polling">비동기 폴링과 다운로드</a></li>
+    <li><a href="#prompt">프롬프트 규칙</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="models">
+  <h2>1. 모델과 교차 제약</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>모델 ID</th><th>비율</th><th>해상도</th><th>길이(초)</th><th>연장</th><th>참조 이미지</th><th>상대 비용</th></tr></thead>
+    <tbody>
+      <tr><td><code>veo-3.1-generate-preview</code><br><span class="badge free">기본값</span></td><td>16:9 · 9:16</td><td>720p · 1080p · 4k</td><td>4 · 6 · 8</td><td>지원</td><td>지원</td><td>1× ($0.40/초 @720p)</td></tr>
+      <tr><td><code>veo-3.1-fast-generate-preview</code></td><td>16:9 · 9:16</td><td>720p · 1080p · 4k</td><td>4 · 6 · 8</td><td>지원</td><td>지원</td><td>1/4×</td></tr>
+      <tr><td><code>veo-3.1-lite-generate-preview</code></td><td>16:9 · 9:16</td><td>720p · 1080p</td><td>4 · 6 · 8</td><td><strong>미지원</strong></td><td><strong>미지원</strong></td><td>1/8×</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>스키마가 강제하는 교차 제약</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>규칙</th><th>거부 메시지</th></tr></thead>
+    <tbody>
+      <tr><td>1080p · 4k는 <strong>8초 전용</strong></td><td><code>1080p 해상도는 8초 길이에서만 지원됩니다 (요청: 4초).</code></td></tr>
+      <tr><td>4k는 <strong>lite 미지원</strong></td><td><code>veo-3.1-lite-generate-preview 는 4k 를 지원하지 않습니다 (720p/1080p 만).</code></td></tr>
+      <tr><td>연장은 <strong>lite 미지원</strong></td><td><code>video extension 은(는) veo-3.1-lite-generate-preview 에서 지원되지 않습니다.</code></td></tr>
+      <tr><td>참조 이미지는 <strong>lite 미지원</strong></td><td><code>reference images 은(는) veo-3.1-lite-generate-preview 에서 지원되지 않습니다.</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    이 제약들을 <strong>호출 전 zod 단계에서</strong> 잡는 이유는 비용이다. Veo 호출은 1~6분이 걸리고 실패해도 대기 시간은 소모된다. 서버가 조합을 미리 거부하면 모델은 즉시 교정된 인자로 재호출할 수 있다.
+  </div>
+  <div class="warn">
+    <strong>veo-3.0 / veo-2.0 계열은 2026-06-30 셧다운됐다.</strong> 다른 문서·예제에서 <code>veo-3.0-generate-001</code> 같은 ID를 보더라도 Gemini API로는 호출되지 않는다.
+  </div>
+</section>
+
+<section id="config">
+  <h2>2. GenerateVideosConfig</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>필드</th><th>값</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td><code>aspectRatio</code></td><td><code>16:9</code> · <code>9:16</code></td><td>연장 모드에서는 무효 — 입력 영상 비율을 따른다</td></tr>
+      <tr><td><code>resolution</code></td><td><code>720p</code> · <code>1080p</code> · <code>4k</code></td><td>연장 결과는 720p 고정</td></tr>
+      <tr><td><code>durationSeconds</code></td><td><code>4</code> · <code>6</code> · <code>8</code></td><td>참조 이미지 사용 시 8 고정, 연장 모드에서는 무효</td></tr>
+      <tr><td><code>lastFrame</code></td><td>인라인 이미지</td><td>첫 프레임과 함께 주면 두 이미지 사이를 보간</td></tr>
+      <tr><td><code>referenceImages</code></td><td>최대 3장 <code>{ image, referenceType }</code></td><td><code>referenceType</code>은 SDK enum <code>VideoGenerationReferenceType.ASSET</code></td></tr>
+      <tr><td><code>numberOfVideos</code></td><td>정수</td><td>연장 호출에서 명시</td></tr>
+      <tr><td><code>personGeneration</code></td><td>정책 값</td><td>이 서버는 사용하지 않는다 — 공급사 기본 정책을 그대로 따른다</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="modes">
+  <h2>3. 4가지 생성 모드</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>툴</th><th>추가 입력</th><th>결과 길이</th><th>고유 제약</th></tr></thead>
+    <tbody>
+      <tr><td><code>veo_text2video</code></td><td>없음</td><td>4/6/8초</td><td>—</td></tr>
+      <tr><td><code>veo_img2video</code></td><td><code>image</code> (+ <code>lastFrame</code>)</td><td>4/6/8초</td><td>이미지는 로컬 파일을 base64 인라인으로 읽는다</td></tr>
+      <tr><td><code>veo_extension</code></td><td><code>video</code></td><td><strong>+7초</strong></td><td>입력은 Veo 생성물 · 720p · 141초 이하. 최대 20회 연장. 마지막 1초에 음성이 없으면 음성은 이어지지 않는다</td></tr>
+      <tr><td><code>veo_reference</code></td><td><code>referenceImages</code> 1~3장</td><td><strong>8초 고정</strong></td><td>여러 각도의 선명한 이미지일수록 일관성이 올라간다</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <pre><code>// 연장 — 공식 샘플과 동일하게 durationSeconds·aspectRatio 를 넘기지 않는다
+const operation = await genai.models.generateVideos({
+  model: 'veo-3.1-generate-preview',
+  prompt: '카메라가 천천히 뒤로 빠지며 전경을 보여준다',
+  video: { videoBytes: base64, mimeType: 'video/mp4' },
+  config: { numberOfVideos: 1, resolution: '720p' },
+});</code></pre>
+  <div class="note">
+    <code>veo_extension</code>의 응답 <code>Added Duration</code>은 <strong>추가된 길이(+7초)</strong>지 전체 길이가 아니다. 20회까지 누적하면 원본 8초 + 140초가 된다.
+  </div>
+</section>
+
+<section id="polling">
+  <h2>4. 비동기 폴링과 다운로드</h2>
+  <p>생성은 즉시 완료되지 않는다. SDK가 반환한 <code>operation.name</code>을 REST로 폴링한다.</p>
+  <pre><code>GET https://generativelanguage.googleapis.com/v1beta/{operation.name}
+x-goog-api-key: {API_KEY}</code></pre>
+  <div class="note">
+    키는 <code>?key=</code> 쿼리가 아니라 <code>x-goog-api-key</code> 헤더로 보낸다 — URL은 로그·에러 메시지에 에코될 수 있어 유출면이 되지만 헤더는 그 경로가 없다. 실측(2026-07-29): 헤더 인증으로 unregistered-caller 게이트를 통과함을 확인.
+  </div>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>응답 필드</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td><code>done</code></td><td>완료 여부</td></tr>
+      <tr><td><code>error.message</code></td><td>생성 실패 사유</td></tr>
+      <tr><td><code>response.generateVideoResponse.generatedSamples[].video.uri</code></td><td>결과 영상 URI (현행 형식)</td></tr>
+      <tr><td><code>response.generatedVideos[].video.uri</code></td><td>구 형식 — 호환을 위해 함께 확인</td></tr>
+      <tr><td><code>response.generateVideoResponse.raiMediaFilteredReasons[]</code></td><td>책임 AI 필터에 걸린 사유. <strong>비어 있지 않으면 결과가 없다</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>영상 URI 다운로드도 같은 헤더 인증을 쓴다. 서버는 10초 간격 · 최대 60회(=10분) 폴링하고, 초과 시 <code>Video generation timed out (10 minutes)</code>로 실패한다.</p>
+  <div class="warn">
+    <strong>RAI 필터는 <code>done: true</code> + 빈 결과로 온다.</strong> <code>raiMediaFilteredReasons</code>를 먼저 보지 않으면 "영상이 없다"는 모호한 에러가 되어 모델이 같은 프롬프트로 재시도한다 — 그 재시도는 반드시 다시 걸리고 대기 시간만 소모된다.
+  </div>
+  <p>모든 결과물에는 눈에 보이지 않는 <strong>SynthID 워터마크</strong>가 들어간다.</p>
+</section>
+
+<section id="prompt">
+  <h2>5. 프롬프트 규칙</h2>
+  <ul>
+    <li>오디오는 네이티브 생성이다. <strong>대사는 큰따옴표로 감싸고</strong>, 효과음("engine roaring")과 환경음을 프롬프트에 명시적으로 적는다.</li>
+    <li>영어 프롬프트가 더 안정적이다.</li>
+    <li>쇼트폼은 <code>aspectRatio: '9:16'</code>이 기본 선택지다.</li>
+    <li>비용 레버: 초안·테스트는 <code>lite</code>(1/8), 중간 품질은 <code>fast</code>(1/4), 최종 컷만 기본 모델.</li>
+  </ul>
+</section>
+
+<section id="impl">
+  <h2>6. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th></tr></thead>
+    <tbody>
+      <tr><td>모델 목록</td><td>3.1 계열 3종 (+ 3.0 계열은 셧다운)</td><td>3.1 계열 3종만 enum에 노출</td></tr>
+      <tr><td>교차 제약</td><td>문서에 산문으로 서술</td><td><code>superRefine</code>으로 호출 전 거부 (4개 규칙)</td></tr>
+      <tr><td>폴링</td><td>operation 폴링 필요</td><td>10초 × 60회, RAI 확인 후 다운로드까지 한 헬퍼로 통합</td></tr>
+      <tr><td>결과 반환</td><td>영상 URI</td><td>로컬 <code>.mp4</code>로 저장 후 <strong>경로만</strong> 반환</td></tr>
+      <tr><td>출력 파일명</td><td>—</td><td>경로 분리자·<code>..</code> 거부 + 비디오 확장자 화이트리스트</td></tr>
+      <tr><td><code>personGeneration</code></td><td>지원</td><td>미노출 — 공급사 기본 정책 사용</td></tr>
+      <tr><td>다중 생성</td><td><code>numberOfVideos</code></td><td>미노출 (연장 호출에만 내부적으로 1 지정) — 쇼트폼 파이프라인은 컷 단위 1개 생성이 기본이고, N개 생성은 비용이 N배다</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  기준일 2026-07-29 · 구현 <a href="../../server/src/video-client.ts">server/src/video-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+</footer>
+
+</div>
+</body>
+</html>

@@ -30,7 +30,7 @@ function stripMarkup(text) {
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
-        .replace(/&apos;/g, "'");
+        .replace(/&apos;|&#39;/g, "'");
 }
 function compact(obj) {
     const out = {};

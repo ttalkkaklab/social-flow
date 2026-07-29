@@ -3,26 +3,26 @@ name: storyboard
 description: >
   This skill should be used when the user asks to "스토리보드 만들어", "스토리보드 작성",
   "이 주제로 영상 기획", "촬영 대본 만들어", "내가 녹화할 대본", "make a storyboard",
-  "plan a video for topic X", or starts a new post topic in a category. Researches the
+  "plan a video for topic X", or starts a new post topic in a channel. Researches the
   topic (naver_search/WebSearch/serp_*), then authors an image-included storyboard under
-  data/<category>/<topic>/storyboard/ — human-readable storyboard.md + machine-readable
+  data/<channel>/<topic>/storyboard/ — human-readable storyboard.md + machine-readable
   scenes.js (the SoT that produce consumes) + generated 9:16 scene images, or in
   screencast mode a shooting script (script.md) the user records against — and gets
   HITL approval before production/recording.
-argument-hint: "<카테고리> <주제 또는 주제 힌트>"
+argument-hint: "<채널> <주제 또는 주제 힌트>"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__gpt_image_text2img"]
 ---
 
-# 스토리보드 저작 — data/[카테고리]/[주제]/storyboard/
+# 스토리보드 저작 — data/[채널]/[주제]/storyboard/
 
 주제 하나를 받아 **조사 → 씬 설계 → 이미지 생성 → 스토리보드 승인**까지 진행한다.
 여기서 확정된 `scenes.js` 가 이후 제작(produce)의 유일한 데이터 원천(SoT)이다 —
-영상·캡션·채널별 텍스트가 전부 이 파일에서 파생되므로 채널 간 사실 불일치가
+영상·캡션·플랫폼별 텍스트가 전부 이 파일에서 파생되므로 플랫폼 간 사실 불일치가
 원천 차단된다.
 
 ```
-data/<카테고리>/<주제 slug>/storyboard/
-├── research.md      # 근거·출처·교차검증 기록 (조사 생략 카테고리는 생략)
+data/<채널>/<주제 slug>/storyboard/
+├── research.md      # 근거·출처·교차검증 기록 (조사 생략 채널은 생략)
 ├── storyboard.md    # 사람이 읽는 스토리보드 — 씬 표 + 이미지 임베드
 ├── scenes.js        # 기계가 읽는 SoT — THEME + SCENES(+나레이션 세그먼트)
 ├── images/          # 씬별 9:16 생성 이미지 (scene-<n>.png) — 촬영 모드는 생략
@@ -33,8 +33,8 @@ data/<카테고리>/<주제 slug>/storyboard/
 
 ### 1. 프로파일 로드
 
-`data/<카테고리 slug>/profile.md` 를 Read 한다. 없으면 중단하고
-`/social-flow:category add` 를 먼저 안내한다. 톤·보이스·테마·검증 정책·주제 slug
+`data/<채널 slug>/profile.md` 를 Read 한다. 없으면 중단하고
+`/social-flow:channel add` 를 먼저 안내한다. 톤·보이스·테마·검증 정책·주제 slug
 규칙을 이 파일에서 상속한다.
 
 ### 1.5 모드 결정 — 생성(기본) vs 촬영(screencast)
@@ -68,11 +68,11 @@ data/<카테고리>/<주제 slug>/storyboard/
   주장은 스토리보드에 넣지 않는다 — 수치를 새로 만들거나 반올림으로 의미를 바꾸지
   않는다("300만~500만"을 "500만"으로 줄이면 왜곡).
 - `research.md` 에 기록: 핵심 주장별 출처 링크·확인 날짜·검증 상태 표.
-  조사 생략 카테고리(창작·일상)는 이 단계 전체를 건너뛴다.
+  조사 생략 채널(창작·일상)은 이 단계 전체를 건너뛴다.
 
 ### 3. 주제 디렉토리 생성
 
-프로파일 §7 slug 규칙으로 `data/<카테고리>/<주제 slug>/storyboard/images/` 를 만든다.
+프로파일 §7 slug 규칙으로 `data/<채널>/<주제 slug>/storyboard/images/` 를 만든다.
 이미 존재하면 사용자에게 이어서 작업할지(기존 스토리보드 개정) 확인한다.
 
 ### 4. 씬 설계 — scenes.js 작성
@@ -124,9 +124,9 @@ AskUserQuestion 으로 스토리보드를 제시한다 — storyboard.md 경로,
 총길이, 커버 제목, 핵심 수치와 출처. 선택지: [승인 — 제작 진행 / 수정 요청 /
 주제 보류]. **승인 없이 produce 로 넘어가지 않는다.** 수정이면 반영 후 재제시.
 승인되면 scenes.js 상단에 `// approved: <YYYY-MM-DD>` 주석을 남기고
-`/social-flow:produce <카테고리> <주제>` 를 안내한다.
+`/social-flow:produce <채널> <주제>` 를 안내한다.
 
-**촬영 모드**의 승인 후 안내는 녹화다 — `/social-flow:ingest <카테고리> record
+**촬영 모드**의 승인 후 안내는 녹화다 — `/social-flow:ingest <채널> record
 <주제>` (script.md 를 보조 모니터에 띄우고 촬영). 녹화·정합이 끝나면 produce 가
 편집 파이프라인으로 영상을 만든다.
 

@@ -7,7 +7,7 @@
 
 ```markdown
 ---
-category: <카테고리 slug>
+channel: <채널 slug>
 topic: <주제 slug>
 status: draft            # draft | approved | produced | published
 created: <YYYY-MM-DD>
@@ -15,7 +15,7 @@ created: <YYYY-MM-DD>
 
 # <주제 표시명> — 스토리보드
 
-- **카테고리**: <표시명> (`data/<slug>/profile.md`)
+- **채널**: <표시명> (`data/<slug>/profile.md`)
 - **예상 총길이**: <NN>초 (본편 <N>씬 + 아웃트로)
 - **핵심 메시지**: <이 영상이 남기는 한 문장>
 - **커버 훅**: "<커버 title>" — 히어로 수치 <stat>
@@ -46,9 +46,9 @@ created: <YYYY-MM-DD>
 |---|---|---|---|
 | <핵심 수치> | [<매체>](<URL>) | <날짜> | ✅ 2개 교차 |
 
-## 채널 계획
+## 플랫폼 계획
 
-| 채널 | 형태 | 비고 |
+| 플랫폼 | 형태 | 비고 |
 |---|---|---|
 | instagram | 릴스 | |
 | youtube | 쇼츠 | 제목 키워드: <…> |

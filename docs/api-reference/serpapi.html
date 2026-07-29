@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SerpApi — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<div class="wrap">
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>SerpApi</div>
+
+<header class="hero">
+  <div class="kicker">SERPAPI</div>
+  <h1>SerpApi — 검색 결과 조회</h1>
+  <p class="sub">Google 웹·뉴스와 Naver를 하나의 엔드포인트에서 <code>engine</code> 파라미터로 갈라 쓴다. 엔진마다 파라미터 이름과 <strong>정렬 값 체계가 다르다</strong> — 같은 "최신순"이 엔진에 따라 <code>1</code>이기도 하고 <code>dd</code>이기도 하다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://serpapi.com/search-api">Google</a> · <a href="https://serpapi.com/google-news-api">Google News</a> · <a href="https://serpapi.com/naver-search-api">Naver</a></span>
+    <span>키 <code>SERPAPI_API_KEY</code></span>
+    <span>구현 <code>server/src/serp-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#common">공통 계약</a></li>
+    <li><a href="#google">engine=google</a></li>
+    <li><a href="#news">engine=google_news</a></li>
+    <li><a href="#naver">engine=naver</a></li>
+    <li><a href="#errors">에러와 쿼터</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="common">
+  <h2>1. 공통 계약</h2>
+  <pre><code>GET https://serpapi.com/search?engine={엔진}&api_key={키}&output=json&…</code></pre>
+  <div class="danger">
+    <strong>키가 URL 쿼리로만 전달된다.</strong> 타임아웃·도달 불가 같은 실패 경로는 URL을 에러 본문에 싣기 때문에, 마스킹하지 않으면 API 키가 그대로 LLM 컨텍스트에 들어간다. 이 서버는 밖으로 나가는 모든 텍스트에 <code>api_key=[^&amp;\s"']+ → api_key=***</code> 치환을 건다.
+  </div>
+</section>
+
+<section id="google">
+  <h2>2. <code>engine=google</code> — 웹 검색</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>파라미터</th><th>의미</th><th>구현 노출</th></tr></thead>
+    <tbody>
+      <tr><td><code>q</code></td><td>검색어. <code>site:</code>·<code>inurl:</code>·<code>intitle:</code>·<code>filetype:</code> 연산자 지원</td><td>○ (<code>q</code>)</td></tr>
+      <tr><td><code>gl</code></td><td>국가 코드 2자 (<code>kr</code>·<code>us</code>·<code>vn</code>)</td><td>○</td></tr>
+      <tr><td><code>hl</code></td><td>인터페이스 언어 코드</td><td>○</td></tr>
+      <tr><td><code>location</code></td><td>도시 단위 검색 기준지. <code>uule</code>·<code>lat</code>·<code>lon</code>과 병용 불가</td><td>○</td></tr>
+      <tr><td><code>start</code></td><td>결과 오프셋. 10 단위가 한 페이지</td><td>△ — <code>page</code>로 받아 <code>(page-1)×num</code>으로 환산</td></tr>
+      <tr><td><code>num</code></td><td>결과 수</td><td>○ (1–20으로 제한)</td></tr>
+      <tr><td><code>tbs</code></td><td>기간 필터 등 고급 필터</td><td>△ — <code>recency</code>로 받아 <code>qdr:h|d|w|m|y</code>로 환산</td></tr>
+      <tr><td><code>google_domain</code>·<code>tbm</code>·<code>device</code>·<code>safe</code>·<code>no_cache</code>·<code>async</code></td><td>도메인·검색유형·기기·세이프서치·캐시·비동기</td><td>미노출</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>슬리밍 대상 필드</h3>
+  <p>원본 응답은 검색 1회에 20~60KB다. 근거로 쓸 수 있는 것만 남겨 2~4KB로 줄인다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>필드</th><th>남기는 하위 키</th></tr></thead>
+    <tbody>
+      <tr><td><code>search_information.total_results</code></td><td>—</td></tr>
+      <tr><td><code>answer_box</code></td><td><code>type</code> <code>title</code> <code>answer</code> <code>snippet</code> <code>link</code></td></tr>
+      <tr><td><code>knowledge_graph</code></td><td><code>title</code> <code>type</code> <code>description</code> <code>source</code> <code>website</code></td></tr>
+      <tr><td><code>organic_results</code></td><td><code>position</code> <code>title</code> <code>link</code> <code>snippet</code> <code>date</code> <code>source</code></td></tr>
+      <tr><td><code>related_questions</code></td><td><code>question</code> <code>snippet</code> <code>link</code> (상위 4개)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>버려지는 것: 광고, 인라인 이미지·비디오, 페이지네이션 메타, <code>serpapi_*</code> 내부 링크, 썸네일 URL. 전부 사실검증에 기여하지 않으면서 응답의 대부분을 차지한다.</p>
+</section>
+
+<section id="news">
+  <h2>3. <code>engine=google_news</code> — 뉴스</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>파라미터</th><th>의미</th><th>구현 노출</th></tr></thead>
+    <tbody>
+      <tr><td><code>q</code> · <code>gl</code> · <code>hl</code></td><td>검색어 · 국가 · 언어</td><td>○</td></tr>
+      <tr><td><code>so</code></td><td>정렬 — <code>0</code>=관련도(기본) · <code>1</code>=날짜. <strong><code>q</code>와 병용 불가</strong></td><td>미노출 (아래 경고)</td></tr>
+      <tr><td><code>topic_token</code>·<code>publication_token</code>·<code>story_token</code>·<code>section_token</code></td><td>토큰 기반 탐색</td><td>미노출</td></tr>
+      <tr><td><code>num</code> · <code>start</code></td><td><strong>없음</strong> — 이 엔진은 오프셋 페이지네이션을 지원하지 않는다</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong><code>num</code>이 없으므로 결과 수 제한은 서버 측 슬라이스다.</strong> <code>max_results</code>는 요청 크기를 줄이지 않고 <em>반환</em>만 줄인다 — 과금은 동일하게 검색 1회다.
+  </div>
+  <div class="danger">
+    <strong><code>so</code>는 검색어와 함께 쓸 수 없다(실측).</strong> <code>q</code>와 <code>so</code>를 같이 보내면 400이 온다:
+    <pre><code>{ "error": "`q` and `so` parameters can't be used together." }</code></pre>
+    <code>so</code>는 <code>topic_token</code>/<code>publication_token</code>/<code>story_token</code> 탐색 전용이다. 이 툴은 검색어가 필수이므로 <code>so</code>를 <strong>노출하지 않는다</strong> — 최신순이 필요하면 <a href="#google"><code>serp_web_search</code>의 <code>recency</code></a>(<code>tbs=qdr:*</code>)나 <a href="naver-search.html"><code>naver_search</code>의 <code>sort=date</code></a>를 쓴다.
+  </div>
+  <p><code>news_results[]</code> 항목: <code>position</code> <code>title</code> <code>link</code> <code>date</code> <code>iso_date</code> <code>source{name,icon,authors}</code> <code>snippet</code> <code>thumbnail</code>. 중첩 구조로 <code>highlight</code>(대표 기사)와 <code>stories</code>(묶인 관련 기사)가 올 수 있다. 이 서버는 <code>source</code>가 객체면 <code>name</code>만 꺼내 평탄화한다.</p>
+</section>
+
+<section id="naver">
+  <h2>4. <code>engine=naver</code> — Naver</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>파라미터</th><th>값</th><th>구현 노출</th></tr></thead>
+    <tbody>
+      <tr><td><code>query</code></td><td>검색어. <code>NOT</code>·<code>OR</code>·<code>site:</code>·<code>filetype:</code> 지원</td><td>○</td></tr>
+      <tr><td><code>where</code></td><td><code>nexearch</code>(기본) · <code>web</code> · <code>news</code> · <code>video</code> · <code>image</code></td><td>○ — <code>web</code>(기본) · <code>news</code>만</td></tr>
+      <tr><td><code>page</code> · <code>start</code></td><td>페이지 번호 · 오프셋</td><td>○ (<code>page</code>)</td></tr>
+      <tr><td><code>sort_by</code></td><td><strong>엔진 내부에서도 값 체계가 갈린다</strong> (아래)</td><td>○</td></tr>
+      <tr><td><code>num</code></td><td>1–100 — <strong>이미지 검색 전용</strong></td><td>미노출</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong><code>sort_by</code>는 <code>where</code>에 따라 값이 다르다.</strong>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th><code>where</code></th><th>관련도</th><th>최신</th><th>오래된순</th></tr></thead>
+      <tbody>
+        <tr><td><code>news</code></td><td><code>0</code> (기본)</td><td><code>1</code></td><td><code>2</code></td></tr>
+        <tr><td>그 외 (<code>web</code> 등)</td><td><code>r</code> (기본)</td><td><code>dd</code></td><td>—</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <code>where=news</code>에 <code>dd</code>를 보내면 정렬이 적용되지 않는다. 에러가 아니라 <strong>조용히 무시</strong>되므로, 최신순으로 정렬됐다고 믿고 시효성 값을 뽑으면 오래된 기사를 최신으로 인용하게 된다.
+  </div>
+  <h3>결과 배열의 키 이름 — 문서와 실제가 다르다</h3>
+  <div class="danger">
+    <strong>SerpApi 문서는 <code>where=web</code>이 <code>web_results</code>를 준다고 적지만, 실제로 오는 것은 <code>organic_results</code>다(실측).</strong>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th><code>where</code></th><th>문서</th><th>실제 응답 키</th></tr></thead>
+      <tbody>
+        <tr><td><code>web</code></td><td><code>web_results</code></td><td><strong><code>organic_results</code></strong> (<code>position</code> <code>title</code> <code>link</code> <code>displayed_link</code> <code>snippet</code> <code>related_results</code>)</td></tr>
+        <tr><td><code>news</code></td><td><code>news_results</code></td><td><code>news_results</code> ✓</td></tr>
+        <tr><td><code>nexearch</code></td><td>여러 배열</td><td><code>web_results</code> · <code>ads_results</code> · <code>inline_images_results</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+    이 서버는 <strong>세 키를 모두 확인</strong>한다. <code>web_results</code>만 읽던 구현은 기본 경로(<code>where=web</code>)에서 매번 "결과 없음"을 반환했고, 그 응답이 <em>진짜로 결과가 없는 경우</em>와 구분되지 않아 모델이 검색을 포기했다 — 에러도 예외도 없이 조용히 틀리는 부류의 결함이다.
+  </div>
+</section>
+
+<section id="errors">
+  <h2>5. 에러와 쿼터</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>상황</th><th>응답</th><th>서버의 대응 지시</th></tr></thead>
+    <tbody>
+      <tr><td>키 무효</td><td>HTTP 401</td><td>"키를 교정하기 전 재시도 금지 (401/400은 재시도해도 같은 결과)"</td></tr>
+      <tr><td>쿼터 소진</td><td>HTTP 429</td><td>"이번 세션에서는 추가 검색을 중단하고, 이미 확보한 근거 안에서만 저작하거나 미검증 주장을 본문에서 제외할 것"</td></tr>
+      <tr><td>결과 없음</td><td><strong>HTTP 200</strong> + <code>error</code> 문자열</td><td>툴 에러가 아니라 "빈 결과"로 취급. <strong>결과 없는 검색은 과금되지 않는다</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>결과 없음이 200으로 온다는 게 함정이다.</strong> <code>res.ok</code>만 보고 파싱하면 빈 결과를 정상 응답으로 오해한다. 본문의 <code>error</code> 필드를 먼저 검사하고, 그 안에서도 <em>"hasn't returned any results"</em> 계열만 빈 결과로, 나머지는 진짜 에러로 갈라야 한다.
+  </div>
+  <p>무료 플랜은 월 250회다. 검색 1회 = 크레딧 1건이므로 같은 검색을 반복하지 않는 것이 실질 쿼터를 좌우한다. 한국어 소재 리서치는 쿼터가 큰 <a href="naver-search.html">Naver Open API(일 25,000회)</a>를 먼저 쓴다.</p>
+</section>
+
+<section id="impl">
+  <h2>6. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th></tr></thead>
+    <tbody>
+      <tr><td>응답 본문</td><td>원본 JSON 전체</td><td>엔진별 슬리밍 — <code>http.ts</code>의 "원문 그대로 반환" 철학의 <strong>의도적 예외</strong></td></tr>
+      <tr><td><code>num</code> 상한</td><td>google은 큰 값 허용</td><td>1–20으로 제한 — LLM 컨텍스트 보호</td></tr>
+      <tr><td>페이지</td><td><code>start</code> 오프셋</td><td><code>page</code>(1–5)로 받아 환산. 설명에 "첫 페이지에 근거가 없을 때만"</td></tr>
+      <tr><td>키 노출</td><td>URL 쿼리 필수</td><td>모든 출력 경로에 마스킹</td></tr>
+      <tr><td>타임아웃</td><td>—</td><td>15초 (<code>config.requestTimeoutMs</code>) → 504로 구조화</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  기준일 2026-07-29 · 구현 <a href="../../server/src/serp-client.ts">server/src/serp-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+</footer>
+
+</div>
+</body>
+</html>
