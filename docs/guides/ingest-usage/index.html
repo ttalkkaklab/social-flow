@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>화면 녹화로 쇼트폼 만들기 — /social-flow:ingest 사용 가이드</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  /* ── Header ── */
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  /* ── TOC ── */
+  nav.toc {
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 56px; font-size: 15px;
+  }
+  nav.toc .toc-title { font-size: 13px; font-weight: 700; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 10px; }
+  nav.toc ol { list-style: none; counter-reset: toc; }
+  nav.toc li { counter-increment: toc; padding: 3px 0; }
+  nav.toc a { color: var(--text); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc li::before { content: counter(toc) ". "; color: var(--accent); font-weight: 700; margin-right: 4px; }
+
+  /* ── Sections ── */
+  section { margin-bottom: 64px; }
+  h2 {
+    font-size: 24px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+  }
+  h2 .num { color: var(--accent); margin-right: 8px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
+  p { margin-bottom: 14px; }
+  p.lead { font-size: 16.5px; }
+  ul.plain, ol.plain { margin: 0 0 16px 22px; }
+  ul.plain li, ol.plain li { margin-bottom: 8px; }
+  strong { font-weight: 700; }
+  em { font-style: normal; color: var(--accent); font-weight: 600; }
+
+  /* ── Code ── */
+  code {
+    font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: .875em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px;
+  }
+  pre {
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 20px; margin: 14px 0 20px; overflow-x: auto;
+    font-size: 14px; line-height: 1.7;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: inherit; }
+  pre .c { color: var(--text-soft); }
+  pre .k { color: var(--accent); font-weight: 600; }
+
+  /* ── Pipeline flow ── */
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 20px 0 24px; }
+  .flow .step {
+    flex: 1 1 150px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow); position: relative;
+  }
+  .flow .step .tag { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; color: var(--accent); }
+  .flow .step .name { font-weight: 700; font-size: 15px; margin-top: 2px; }
+  .flow .step .desc { font-size: 13px; color: var(--text-soft); margin-top: 4px; line-height: 1.55; }
+  .flow .step.you { border-color: var(--green); }
+  .flow .step.you .tag { color: var(--green); }
+  .flow .arrow { align-self: center; color: var(--text-soft); font-size: 18px; flex: 0 0 auto; }
+
+  /* ── Step cards ── */
+  .stepcard {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: 10px; background: var(--bg-card); box-shadow: var(--shadow);
+    padding: 20px 24px; margin: 20px 0;
+  }
+  .stepcard .who {
+    display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .05em;
+    padding: 2px 10px; border-radius: 999px; margin-bottom: 8px;
+  }
+  .who.user { color: var(--green); background: var(--green-soft); }
+  .who.claude { color: var(--purple); background: var(--purple-soft); }
+  .stepcard h4 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .stepcard p:last-child, .stepcard pre:last-child, .stepcard ul:last-child { margin-bottom: 0; }
+
+  /* ── Callouts ── */
+  .callout { border-radius: 10px; padding: 14px 18px; margin: 16px 0 20px; font-size: 15px; border: 1px solid; }
+  .callout .ct { font-weight: 700; font-size: 13px; letter-spacing: .05em; display: block; margin-bottom: 4px; }
+  .callout.tip  { background: var(--green-soft); border-color: var(--green); }
+  .callout.tip .ct { color: var(--green); }
+  .callout.warn { background: var(--amber-soft); border-color: var(--amber); }
+  .callout.warn .ct { color: var(--amber); }
+  .callout.danger { background: var(--red-soft); border-color: var(--red); }
+  .callout.danger .ct { color: var(--red); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ── Tables ── */
+  .tblwrap { overflow-x: auto; margin: 14px 0 20px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { border: 1px solid var(--border); padding: 9px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+  td code { white-space: nowrap; }
+
+  /* ── File tree ── */
+  pre.tree { line-height: 1.6; }
+
+  /* ── Summary card ── */
+  .summary {
+    background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px;
+    padding: 24px 28px; font-size: 16.5px;
+  }
+  .summary .ct { font-weight: 800; color: var(--accent); letter-spacing: .04em; font-size: 13px; display: block; margin-bottom: 8px; }
+
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--text-soft); }
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 26px; }
+    .flow { flex-direction: column; }
+    .flow .arrow { transform: rotate(90deg); align-self: flex-start; margin-left: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">USER GUIDE</span>
+  <h1>화면 녹화로 쇼트폼 만들기<br>— <code>/social-flow:ingest</code> 사용 가이드</h1>
+  <p class="sub">화면을 조작하며 말로 설명한 녹화 한 편이 타임라인 → 스토리보드 → 9:16 영상
+  → SNS 게시까지 이어지는 전 과정을 다룬다. 사용자가 할 일은 <strong>말하며 시연하고,
+  중간 결과를 확인·승인</strong>하는 것뿐이다.</p>
+  <div class="meta">
+    <span><strong>플러그인</strong> social-flow</span>
+    <span><strong>대상 스킬</strong> ingest → storyboard → produce → publish</span>
+    <span><strong>작성일</strong> 2026-07-29</span>
+    <span><strong>플랫폼</strong> macOS (screencapture · whisper.cpp)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <span class="toc-title">목차</span>
+  <ol>
+    <li><a href="#overview">전체 그림 — 무엇이 어떻게 이어지는가</a></li>
+    <li><a href="#setup">준비 (최초 1회)</a></li>
+    <li><a href="#record">녹화하며 말하기</a></li>
+    <li><a href="#auto">자동 처리 — 녹화가 타임라인이 되기까지</a></li>
+    <li><a href="#content">콘텐츠로 만들기 — 스토리보드부터 게시까지</a></li>
+    <li><a href="#script-first">대본 먼저 찍는 흐름 — 스토리보드 선행 촬영</a></li>
+    <li><a href="#trouble">문제 해결과 조정 노브</a></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════════ 1. 전체 그림 ═══════════════════ -->
+<section id="overview">
+  <h2><span class="num">1.</span>전체 그림 — 무엇이 어떻게 이어지는가</h2>
+  <p class="lead">핵심 아이디어: <em>웹 조사 대신 녹화가 콘텐츠의 1차 소스</em>가 된다.
+  화면을 보여주며 말한 내용이 문장별 타임스탬프가 달린 <code>timeline.md</code> 로
+  정리되고, 스토리보드 스킬이 이것을 재료로 씬을 설계한다.</p>
+
+  <div class="flow">
+    <div class="step you">
+      <span class="tag">사용자</span>
+      <div class="name">녹화 + 말하기</div>
+      <div class="desc">화면 시연하며 음성 설명, 끝나면 "녹화 끝"</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <span class="tag">자동</span>
+      <div class="name">타임라인</div>
+      <div class="desc">STT 전사 · 씬 분리 · 키프레임 · 화면 설명 · 교정</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">사용자</span>
+      <div class="name">확인 · 승인</div>
+      <div class="desc">타임라인 검토 → 스토리보드 승인</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <span class="tag">자동</span>
+      <div class="name">영상 제작</div>
+      <div class="desc">9:16 쇼트폼 + 채널별 텍스트</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">사용자</span>
+      <div class="name">게시 승인</div>
+      <div class="desc">Threads · IG · FB · YouTube</div>
+    </div>
+  </div>
+
+  <p>초록 테두리가 사용자 차례, 나머지는 Claude 가 자동으로 진행한다.
+  승인 게이트는 두 곳 — <strong>스토리보드 승인</strong>(제작 전)과
+  <strong>게시 승인</strong>(공개 전)이다.</p>
+</section>
+
+<!-- ═══════════════════ 2. 준비 ═══════════════════ -->
+<section id="setup">
+  <h2><span class="num">2.</span>준비 (최초 1회)</h2>
+
+  <h3>2-1. 플러그인 로드</h3>
+  <p>이 레포를 플러그인으로 로드한 Claude Code 세션에서 시작한다:</p>
+  <pre><code>claude --plugin-dir /Volumes/data/repository/zeans/social/social-flow</code></pre>
+
+  <h3>2-2. 전제 조건 확인</h3>
+  <div class="tblwrap">
+  <table>
+    <tr><th>항목</th><th>확인 방법</th><th>없을 때</th></tr>
+    <tr>
+      <td>whisper.cpp</td>
+      <td><code>command -v whisper-cli</code></td>
+      <td><code>brew install whisper-cpp</code></td>
+    </tr>
+    <tr>
+      <td>STT 모델 (1.5GB)</td>
+      <td><code>ls ~/.cache/whisper-cpp/ggml-large-v3-turbo.bin</code></td>
+      <td>huggingface <code>ggerganov/whisper.cpp</code> 에서 다운로드</td>
+    </tr>
+    <tr>
+      <td>화면 기록 · 마이크 권한</td>
+      <td>첫 녹화 시도 시 자동 확인됨</td>
+      <td>시스템 설정 → 개인정보 보호 및 보안 → 화면 기록 / 마이크에 터미널 앱 허용</td>
+    </tr>
+    <tr>
+      <td>ffmpeg · python3</td>
+      <td><code>command -v ffmpeg python3</code></td>
+      <td><code>brew install ffmpeg</code></td>
+    </tr>
+  </table>
+  </div>
+  <div class="callout tip">
+    <span class="ct">✓ 이 머신은 준비 완료</span>
+    <p>whisper.cpp · 모델 · 화면 기록/마이크 권한이 이미 설치·허용돼 있다 (2026-07-29 실측).
+    추가 설치 없이 바로 3장으로 넘어가면 된다.</p>
+  </div>
+
+  <h3>2-3. 카테고리 만들기</h3>
+  <p>콘텐츠는 <code>data/[카테고리]/[주제]/</code> 구조로 쌓인다. 카테고리가 아직 없으면
+  프로파일부터 만든다 (채널 톤 · 도메인 용어 · 비주얼 테마가 여기 기록된다):</p>
+  <pre><code>/social-flow:category add 재테크</code></pre>
+</section>
+
+<!-- ═══════════════════ 3. 녹화 ═══════════════════ -->
+<section id="record">
+  <h2><span class="num">3.</span>녹화하며 말하기</h2>
+
+  <div class="stepcard">
+    <span class="who user">사용자</span>
+    <h4>녹화 시작</h4>
+    <pre><code>/social-flow:ingest 재테크 record</code></pre>
+    <p>Claude 가 <code>screencapture</code> 로 화면+마이크 녹화를 시작하고
+    "말씀하시면서 시연하세요"라고 알린다.</p>
+  </div>
+
+  <div class="stepcard">
+    <span class="who user">사용자</span>
+    <h4>말하며 시연</h4>
+    <ul class="plain">
+      <li><strong>마이크에 대고 설명하면서</strong> 화면을 조작한다 — 보여주는 것과
+        말하는 것이 곧 콘텐츠 재료다.</li>
+      <li><strong>화제를 바꿀 때 1초 이상 말을 멈추고 화면을 전환</strong>한다 —
+        이 습관 하나가 씬 경계 정확도를 좌우한다. 긴 쉼 + 화면 전환이 겹친 지점이
+        씬 경계로 인식된다.</li>
+      <li>끝나면 채팅에 <strong>"녹화 끝"</strong> 이라고 입력한다.</li>
+    </ul>
+  </div>
+
+  <div class="callout tip">
+    <span class="ct">🖥 녹화 범위는 메인 모니터 하나</span>
+    <p>녹화는 시스템 설정에서 <strong>메인으로 지정한 모니터만</strong> 찍는다.
+    모니터가 둘 이상이면 시연은 메인에서 하고, 보조 모니터는 대본 메모 · 진행
+    확인 등 자유롭게 써도 녹화에 포함되지 않는다.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="ct">⚠ 녹화 전 체크</span>
+    <p><strong>방해 금지 모드</strong>를 켠다 — 메인 화면의 알림 배너까지 전부 찍힌다.
+    이메일 · 계정명 · 토큰 · 금액 등 <strong>민감정보가 보이는 화면</strong>은 피한다
+    (찍히면 이후 검수 단계에서 잡아 보고해 주지만, 애초에 안 찍는 게 최선).</p>
+  </div>
+
+  <h3>이미 녹화한 파일이 있다면</h3>
+  <p><code>record</code> 대신 파일 경로를 준다. 주제 slug 는 생략하면 전사 내용을 보고
+  제안받는다:</p>
+  <pre><code>/social-flow:ingest 재테크 ~/Movies/데모.mov 환율앱-소개</code></pre>
+</section>
+
+<!-- ═══════════════════ 4. 자동 처리 ═══════════════════ -->
+<section id="auto">
+  <h2><span class="num">4.</span>자동 처리 — 녹화가 타임라인이 되기까지</h2>
+  <p class="lead">"녹화 끝" 이후는 Claude 가 순서대로 진행한다. 사용자가 개입할 지점은
+  마지막 확인뿐이다.</p>
+
+  <div class="flow">
+    <div class="step">
+      <span class="tag">STT</span>
+      <div class="name">① 전사</div>
+      <div class="desc">whisper.cpp + 도메인 용어집 주입(오인식 예방)</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <span class="tag">신호 병합</span>
+      <div class="name">② 씬 분리</div>
+      <div class="desc">무음 길이 + 화면 전환으로 경계 산출</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <span class="tag">VISION</span>
+      <div class="name">③ 화면 분석</div>
+      <div class="desc">씬별 키프레임 → 화면 설명 · 전사 교정 · 민감정보 검수</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">사용자</span>
+      <div class="name">④ 확인</div>
+      <div class="desc">씬 수 · 요약 검토 → 다음 단계 선택</div>
+    </div>
+  </div>
+
+  <h3>산출물</h3>
+  <pre class="tree"><code>data/재테크/&lt;주제&gt;/recording/
+├── raw/                 <span class="c"># STT · 무음 · 화면전환 원신호 (whisper 원문 보존)</span>
+├── timeline.json        <span class="c"># 기계용 씬 타임라인</span>
+├── timeline.md          <span class="c"># ★ 사람용 — 씬 표 + 문장별 타임스탬프 + 화면 설명 + 교정 로그</span>
+└── keyframes/seg-N.jpg  <span class="c"># 씬 대표 프레임</span></code></pre>
+
+  <h3>사용자가 할 일 세 가지</h3>
+  <ol class="plain">
+    <li><strong>타임라인 확인</strong> — 씬 수 · 씬별 요약이 제시되면 훑어보고
+      [스토리보드 진행 / 경계 조정 / 여기까지] 중 선택한다.</li>
+    <li><strong>오인식 신고</strong> — 전사가 이상하면 <em>"○○를 △△로 잘못 들었어"</em>
+      라고만 말하면 된다. 용어집을 보강해 재전사하거나, 화면 OCR 을 근거로 교정한다.
+      교정은 <code>원문(→교정)</code> 표기와 교정 로그로 남아 검수 가능하다.</li>
+    <li><strong>민감정보 판단</strong> — 화면에 개인정보가 찍힌 씬이 있으면 목록으로
+      보고된다. 해당 프레임을 영상 소재로 쓸지 여부만 판단하면 된다.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="ct">✓ 처리 시간 감각</span>
+    <p>large-v3-turbo 는 Apple Silicon 에서 대략 실시간의 3~5배 속도로 전사한다 —
+    10분 녹화면 STT 에 2~3분. 전체 파이프라인은 녹화 길이의 절반 안쪽으로 끝나는 게 보통이다.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 5. 콘텐츠로 만들기 ═══════════════════ -->
+<section id="content">
+  <h2><span class="num">5.</span>콘텐츠로 만들기 — 스토리보드부터 게시까지</h2>
+
+  <pre><code><span class="k">/social-flow:storyboard</span> 재테크 &lt;주제&gt;   <span class="c"># 타임라인을 1차 소스로 씬 설계 → [승인]</span>
+<span class="k">/social-flow:produce</span> 재테크 &lt;주제&gt;      <span class="c"># 9:16 영상 + 채널별 텍스트 제작</span>
+<span class="k">/social-flow:publish</span> 재테크 &lt;주제&gt;      <span class="c"># [승인] → Threads · IG · FB · YouTube 게시</span></code></pre>
+
+  <p>storyboard 는 <code>recording/timeline.md</code> 가 있으면 웹 조사 대신 그것을
+  소재로 쓴다. 각 단계는 이전 단계 산출물을 검사하므로 — 스토리보드 미승인이면
+  produce 가, 제작 미완이면 publish 가 스스로 중단하고 이전 단계를 안내한다.</p>
+
+  <div class="callout danger">
+    <span class="ct">✗ 녹화 속 발언은 근거가 아니다</span>
+    <p>녹화에서 말한 수치(가격 · 세율 · 기한 등 시효성 값)는 <strong>주장이지 출처가
+    아니다</strong>. 스토리보드 단계에서 독립 출처 2개 교차 검증을 그대로 거친다.
+    구어 전사의 필러 · 말실수도 나레이션에 복사되지 않고 재구성된다.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 6. 대본 먼저 찍는 흐름 ═══════════════════ -->
+<section id="script-first">
+  <h2><span class="num">6.</span>대본 먼저 찍는 흐름 — 스토리보드 선행 촬영</h2>
+
+  <p class="lead">3~5장의 흐름(즉흥 녹화 → 타임라인 → 스토리보드)을 <em>뒤집은</em>
+  모드다. <strong>스토리보드·촬영 대본을 먼저 확정</strong>하고, 대본대로 녹화하면,
+  Claude 가 녹화 원본을 잘라 최종 영상으로 <strong>편집</strong>한다. 말할 내용이
+  미리 설계되므로 품질이 고르고, 영상 화면·음성이 생성물이 아니라 실제 시연·육성이다.</p>
+
+  <div class="flow">
+    <div class="step">
+      <span class="tag">자동</span>
+      <div class="name">대본 설계</div>
+      <div class="desc">조사 · 씬 설계 · 촬영 대본(script.md)</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">사용자</span>
+      <div class="name">대본 승인 + 촬영</div>
+      <div class="desc">보조 모니터에 대본 · 메인에서 시연</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <span class="tag">자동</span>
+      <div class="name">정합 + 편집</div>
+      <div class="desc">전사 → 씬 정합 → 컷 · 확대 · 자막 · BGM</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">사용자</span>
+      <div class="name">게시 승인</div>
+      <div class="desc">채널별 텍스트와 함께</div>
+    </div>
+  </div>
+
+  <pre><code><span class="k">/social-flow:storyboard</span> 재테크 &lt;주제&gt; 촬영 대본으로   <span class="c"># 씬 설계 + script.md → [승인]</span>
+<span class="k">/social-flow:ingest</span> 재테크 record &lt;주제&gt;             <span class="c"># 대본 보며 촬영 → 전사 · 정합</span>
+<span class="k">/social-flow:produce</span> 재테크 &lt;주제&gt;                   <span class="c"># 녹화를 잘라 9:16 편집 + 채널 텍스트</span>
+<span class="k">/social-flow:publish</span> 재테크 &lt;주제&gt;                   <span class="c"># [승인] → 게시</span></code></pre>
+
+  <div class="stepcard">
+    <span class="who user">사용자</span>
+    <h4>촬영 수칙 (script.md 상단에도 인쇄돼 있다)</h4>
+    <ul class="plain">
+      <li><strong>대본은 보조 모니터에</strong> 띄운다 — 녹화는 메인 모니터만 찍는다.</li>
+      <li>씬이 끝나면 <strong>말 멈추고 1초 → 화면 전환</strong> — 이 지점이 편집 컷이 된다.</li>
+      <li><strong>시연 앱 폰트·창을 키운다</strong>(브라우저 ⌘+) — 세로 영상 폭 1080px 로
+        축소되므로 작은 글씨는 안 보인다. 초점이 화면 일부면 편집에서 그 영역만 확대한다.</li>
+      <li>틀리면 녹화를 끊지 말고 <strong>그 씬 처음부터 다시</strong> — 편집이 마지막
+        테이크만 쓴다.</li>
+      <li>문장 암송은 불필요 — 단 <strong>핵심 수치·고유명사만 대본 그대로</strong>.</li>
+    </ul>
+  </div>
+
+  <p>편집된 영상은 다크 캔버스 위에 <strong>씬 타이틀(상단) + 녹화 화면 밴드(중단) +
+  자막(하단)</strong> 구성이다. 자막은 대본이 아니라 <em>실제 발화의 교정 전사</em>에서
+  나오고, BGM 이 육성에 맞춰 자동으로 볼륨을 낮춘다(덕킹). 대본에 없는 즉흥 발화 ·
+  누락 씬 · 수치 불일치는 편집 전에 표로 보고되고 사용자가 판단한다.</p>
+
+  <div class="callout tip">
+    <span class="ct">💡 어느 흐름을 쓸까</span>
+    <p>머릿속에 이미 정리된 내용을 빠르게 쏟아내려면 <strong>즉흥 녹화</strong>(3~5장) —
+    녹화가 스토리보드의 재료가 된다. 완성도 있는 튜토리얼 · 시연 영상을 만들려면
+    <strong>대본 촬영</strong>(이 장) — 스토리보드가 녹화의 설계도가 된다.</p>
+  </div>
+
+  <p>단계별 상세(촬영 수칙 전체 · 정합 이탈 보고 · 편집 화면 구성 · 문제 해결)는
+  전용 가이드 <a href="../screencast-usage/index.html">촬영 대본으로 쇼트폼
+  만들기</a>를 참조한다.</p>
+</section>
+
+<!-- ═══════════════════ 7. 문제 해결 ═══════════════════ -->
+<section id="trouble">
+  <h2><span class="num">7.</span>문제 해결과 조정 노브</h2>
+
+  <div class="tblwrap">
+  <table>
+    <tr><th>증상</th><th>대응</th></tr>
+    <tr>
+      <td>녹화 시작 실패</td>
+      <td>시스템 설정 → 개인정보 보호 및 보안 → <strong>화면 기록</strong> · <strong>마이크</strong>에
+      터미널 앱 허용 후 재시도.</td>
+    </tr>
+    <tr>
+      <td>고유명사 · 용어 오인식</td>
+      <td>"○○를 △△로 잘못 들었어"라고 알린다. 광범위하면 <code>WHISPER_PROMPT</code>
+      용어집을 보강해 재전사(비용 최소), 소수면 화면 OCR 근거 교정.</td>
+    </tr>
+    <tr>
+      <td>말한 적 없는 문장이 보임</td>
+      <td>whisper 환각 — 무음 구간에서 문장을 지어낸다. 자동 필터가 대부분 제거하지만
+      남아 있으면 해당 구간을 알려주면 된다.</td>
+    </tr>
+    <tr>
+      <td>씬이 너무 많다 / 적다</td>
+      <td>경계 조정 재실행을 요청한다 — <code>--min-scene</code>(기본 8s) ·
+      <code>--max-scene</code>(기본 45s) 노브로 재산출 (raw 신호 재사용이라 빠름).</td>
+    </tr>
+    <tr>
+      <td>스크롤이 화면 전환으로 오탐</td>
+      <td><code>SCENE_THRESH</code> 를 0.04 → 0.15 로 올려 재실행. 단 발화 중 오탐은
+      경계 점수에 반영되지 않아 무해하다.</td>
+    </tr>
+    <tr>
+      <td>조용한 방에서 쉼이 검출 안 됨</td>
+      <td><code>SIL_DB</code> 를 -35dB → -40dB 로 내려 재실행.</td>
+    </tr>
+  </table>
+  </div>
+
+  <p>노브의 상세 의미와 기본값 근거는
+  <code>skills/ingest/references/timeline-schema.md</code> 를 참조한다.
+  이 조정은 전부 Claude 에게 증상만 말하면 알아서 적용된다 — 노브 이름을 외울 필요는 없다.</p>
+
+  <div class="summary">
+    <span class="ct">한 줄 요약</span>
+    <code>/social-flow:category add</code> 한 번 →
+    <code>/social-flow:ingest &lt;카테고리&gt; record</code> →
+    <strong>말하며 시연</strong> → "녹화 끝" →
+    <strong>확인만 하면</strong> 스토리보드 → 영상 → 게시까지 이어진다.
+  </div>
+</section>
+
+<footer>
+  social-flow 플러그인 문서 · <code>docs/guides/ingest-usage/</code> ·
+  관련: <code>skills/ingest/SKILL.md</code>(절차 정의) ·
+  <code>skills/ingest/references/timeline-schema.md</code>(데이터 계약) ·
+  <code>README.md</code>(파이프라인 전체)
+</footer>
+
+</div>
+</body>
+</html>

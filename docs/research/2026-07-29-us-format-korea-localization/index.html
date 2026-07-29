@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>미국 검증 포맷의 한국 현지화 채널 전략 — 딥 리서치 보고서 (2026-07-29)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  /* ── Header ── */
+  header.hero {
+    padding: 72px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .hero .kicker {
+    display: inline-block;
+    font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px;
+    margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta {
+    margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px;
+    font-size: 13.5px; color: var(--text-soft);
+  }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  /* ── TOC ── */
+  nav.toc {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 56px;
+  }
+  nav.toc h2 { font-size: 14px; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 14px; text-transform: uppercase; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  nav.toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a {
+    color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500;
+  }
+  nav.toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent); font-weight: 700; font-size: 12.5px;
+    margin-right: 10px; font-variant-numeric: tabular-nums;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+
+  /* ── Sections ── */
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 19px; font-weight: 700; margin: 36px 0 14px; }
+  h4 { font-size: 16px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 14px; }
+  p.lead { font-size: 17.5px; }
+  ul, ol { margin: 0 0 16px 22px; }
+  li { margin-bottom: 8px; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+  .muted { color: var(--text-soft); font-size: 14px; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    padding: 2px 10px; border-radius: 999px; vertical-align: 2px;
+    white-space: nowrap;
+  }
+  .b-green  { background: var(--green-soft);  color: var(--green); }
+  .b-amber  { background: var(--amber-soft);  color: var(--amber); }
+  .b-red    { background: var(--red-soft);    color: var(--red); }
+  .b-blue   { background: var(--accent-soft); color: var(--accent); }
+  .b-purple { background: var(--purple-soft); color: var(--purple); }
+
+  /* ── Callouts ── */
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    background: var(--bg-soft);
+    border-radius: 0 10px 10px 0;
+    padding: 18px 22px;
+    margin: 20px 0;
+  }
+  .callout.green  { border-left-color: var(--green); }
+  .callout.amber  { border-left-color: var(--amber); }
+  .callout.red    { border-left-color: var(--red); }
+  .callout.purple { border-left-color: var(--purple); }
+  .callout .co-title {
+    font-weight: 800; font-size: 14px; letter-spacing: .04em;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ── Verdict hero card ── */
+  .verdict {
+    background: linear-gradient(135deg, var(--accent-soft), transparent 70%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 36px;
+    box-shadow: var(--shadow);
+    margin-bottom: 32px;
+  }
+  .verdict .v-label { font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--accent); margin-bottom: 10px; }
+  .verdict .v-main { font-size: 21px; font-weight: 800; line-height: 1.55; margin-bottom: 14px; }
+  .verdict p { color: var(--text-soft); margin-bottom: 0; font-size: 15.5px; }
+
+  /* ── Rank cards ── */
+  .rank-card {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow);
+    padding: 26px 30px;
+    margin: 24px 0;
+  }
+  .rank-card .rk-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .rank-card .rk-no {
+    flex: none; width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px; font-weight: 800; color: #fff;
+  }
+  .rk-no.n1 { background: var(--green); }
+  .rk-no.n2 { background: var(--amber); }
+  .rk-no.nx { background: var(--red); }
+  .rank-card h3 { margin: 0; font-size: 20px; }
+
+  /* ── Tables ── */
+  .tbl-wrap { overflow-x: auto; margin: 18px 0 24px; border: 1px solid var(--border); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 560px; }
+  th {
+    background: var(--bg-soft); text-align: left; font-weight: 700;
+    padding: 11px 16px; border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .up { color: var(--green); font-weight: 700; }
+  .down { color: var(--red); font-weight: 700; }
+
+  /* ── Checklist ── */
+  .check-list { list-style: none; margin-left: 0; }
+  .check-list li {
+    position: relative; padding-left: 34px; margin-bottom: 12px;
+  }
+  .check-list li::before {
+    content: "✓"; position: absolute; left: 0; top: 1px;
+    width: 22px; height: 22px; border-radius: 6px;
+    background: var(--green-soft); color: var(--green);
+    font-weight: 800; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .check-list.x li::before { content: "✕"; background: var(--red-soft); color: var(--red); }
+
+  /* ── Source list ── */
+  .src-group { margin-bottom: 26px; }
+  .src-group h4 { margin-top: 0; }
+  .src-group ul { list-style: none; margin-left: 0; }
+  .src-group li {
+    font-size: 13.5px; margin-bottom: 6px; padding-left: 18px; position: relative;
+    color: var(--text-soft);
+  }
+  .src-group li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .src-group a { word-break: break-all; }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 28px; font-size: 13.5px; color: var(--text-soft);
+  }
+
+  /* ── Print ── */
+  @media print {
+    body { font-size: 12px; }
+    .wrap { max-width: none; padding: 0; }
+    .rank-card, .verdict, .callout { box-shadow: none; break-inside: avoid; }
+    nav.toc { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">DEEP RESEARCH REPORT</span>
+  <h1>미국 검증 포맷의 한국 현지화<br>신규 소셜 채널 전략 보고서</h1>
+  <p class="sub">AI 기반(faceless) 제작을 전제로, 미국에서 성공이 검증된 채널 포맷 중 한국어 버전으로 새로 시작하기 좋은 포맷을 조사하고 우선순위를 매긴 보고서. YouTube(쇼츠+롱폼) · Instagram 릴스 · Facebook 릴스 동시 운영 전제를 검증 결과에 따라 수정 제안한다.</p>
+  <div class="meta">
+    <span><strong>조사일</strong> 2026-07-29</span>
+    <span><strong>조사 방식</strong> 딥리서치 워크플로우(에이전트 104개) + 보강 조사 2건</span>
+    <span><strong>검증</strong> 주장 25건 × 3표 적대적 검증 → 10건 확정 · 15건 반박 탈락</span>
+    <span><strong>목표</strong> 빠른 팔로워·구독자 성장</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#verdict">최종 결론 (Executive Summary)</a></li>
+    <li><a href="#recommend">우선순위 추천 포맷</a></li>
+    <li><a href="#us-cases">근거 ① 미국 검증 사례와 YouTube 정책</a></li>
+    <li><a href="#kr-market">근거 ② 한국 시장 포화도 분석</a></li>
+    <li><a href="#meta-policy">근거 ③ Meta 정책·크로스포스팅·한국 플랫폼 데이터</a></li>
+    <li><a href="#ops">플랫폼 운영 설계</a></li>
+    <li><a href="#risks">리스크 및 미확인 사항</a></li>
+    <li><a href="#refuted">검증에서 탈락한 주장들</a></li>
+    <li><a href="#next">다음 단계 제안</a></li>
+    <li><a href="#sources">출처 목록</a></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════ 1. 최종 결론 ═══════════════ -->
+<section id="verdict">
+  <h2 class="sec"><span class="no">01</span>최종 결론 (Executive Summary)</h2>
+
+  <div class="verdict">
+    <div class="v-label">FINAL VERDICT</div>
+    <div class="v-main">추천 1순위는 「경제·금융 스토리텔링 내레이션 포맷」 — 쇼츠로 발견을 만들고 롱폼으로 회수하는 투트랙 운영. 그리고 Facebook은 한국 타깃에서 제외한다.</div>
+    <p>일반 지식 해설은 한국에서 이미 포화·점유가 끝났다(기존 1위 지식한입: 3개월 구독자 순증 0 / AI 페이스리스 「3분 지혜」가 168만 구독으로 카테고리 점유 완료). 반면 경제 서사 니치는 조사 시점 한국에서 가장 빠르게 성장하는 검증된 신호가 잡혔고(주간 +22만 구독 채널 존재), 미국 검증 선례(10x Income)와 정책 안전성(영상별 고유 기획 시 AI 제작 명시 허용)까지 3박자가 맞는 유일한 포맷이다.</p>
+  </div>
+
+  <h3>핵심 판정 요약</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>판정 항목</th><th>결론</th><th>신뢰도</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>AI 제작(faceless) 자체의 수익화 가능 여부</td>
+          <td>YouTube·Meta 모두 <strong>AI 사용 자체는 페널티 대상이 아님</strong>. 심판 기준은 오직 "독창성" — 영상별 고유 스크립트·리서치·관점이 유일한 방어선</td>
+          <td><span class="badge b-green">높음 · 1차 출처</span></td>
+        </tr>
+        <tr>
+          <td>가장 위험한 포맷</td>
+          <td><strong>클립 짜깁기·컴필레이션</strong> — YouTube 정책 원문과 Meta 2025~2026 독창성 단속이 모두 명시적으로 겨냥</td>
+          <td><span class="badge b-green">높음 · 1차 출처</span></td>
+        </tr>
+        <tr>
+          <td>한국 지식 해설 카테고리</td>
+          <td><strong>포화</strong> — 기존 강자 성장 정지, AI 채널이 이미 1위 점유</td>
+          <td><span class="badge b-green">검증됨</span></td>
+        </tr>
+        <tr>
+          <td>바이럴 클립 큐레이션 한국판</td>
+          <td><strong>공백</strong> — 단, 진입장벽은 AI가 아니라 클립 라이선싱이며 정책 리스크 최고 등급</td>
+          <td><span class="badge b-amber">부재의 증명</span></td>
+        </tr>
+        <tr>
+          <td>한국에서 쇼츠발 급성장 가능성</td>
+          <td><strong>현실적</strong> — 월 +52~64% 성장 중소 채널 다수 실측</td>
+          <td><span class="badge b-green">검증됨</span></td>
+        </tr>
+        <tr>
+          <td>Facebook 한국 배포력</td>
+          <td><strong>사실상 소멸 중</strong> — 도달 705만(인스타의 27%), 2년 연속 약 −8%</td>
+          <td><span class="badge b-green">검증됨 · DataReportal</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 2. 우선순위 추천 ═══════════════ -->
+<section id="recommend">
+  <h2 class="sec"><span class="no">02</span>우선순위 추천 포맷</h2>
+
+  <div class="rank-card">
+    <div class="rk-head">
+      <div class="rk-no n1">1</div>
+      <h3>경제·금융 스토리텔링 내레이션 (지식·다큐형)</h3>
+      <span class="badge b-green">추천</span>
+    </div>
+    <p>기업 흥망사, 시장 사건 해설, 돈의 역사 등 <strong>서사가 있는 경제 콘텐츠를 한국어 AI 보이스오버 + 생성 비주얼로 제작</strong>하는 포맷. 미국 검증 선례, 한국 실시간 성장 신호, 정책 안전성이 모두 확인된 유일한 조합이다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>근거 축</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td>미국 검증 사례</td><td>10x Income — '돈 버는 법' 해설 포맷으로 개설 5개월·영상 20개 만에 26만 구독 (Wayback Machine 스냅샷 교차 검증)</td></tr>
+          <tr><td>한국 실시간 신호</td><td>playboard 주간 성장 1위 「주식 너 이러기야?」 주간 <span class="up">+22만 명(9.4%)</span>, 총 234만. 교육 카테고리 상위권에 성인 경제 채널 2개(투자의 신 찬스 536만, 메인경제TV 453만)</td></tr>
+          <tr><td>수요 근거</td><td>한국 시청자 <strong>85%가 "정보·지식 목적"</strong>으로 유튜브 이용 (YouTube 공식 임팩트 리포트 2025)</td></tr>
+          <tr><td>정책 안전성</td><td>YouTube·Meta 모두 "영상별 고유 스크립트·리서치·관점"이 있으면 AI 제작을 명시적으로 허용</td></tr>
+          <tr><td>경쟁 밀도</td><td>한국판 직접 경쟁자(흥망일지)는 영상당 1.7만 뷰 수준의 소규모 — 포맷 미점유</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout amber">
+      <div class="co-title">⚠ 주의</div>
+      <p>일반 상식·자기계발 지식 해설로 넓히면 안 된다. 그 영역은 이미 끝난 게임이다 — 기존 강자 지식한입(147만)은 3개월간 순증 0으로 멈췄고, AI 페이스리스 「3분 지혜」가 168만 구독·누적 20억 뷰로 카테고리를 점유했다. <strong>서브니치(경제 서사)로 좁혀야 자리가 있다.</strong></p>
+    </div>
+  </div>
+
+  <div class="rank-card">
+    <div class="rk-head">
+      <div class="rk-no n2">2</div>
+      <h3>해외 바이럴 클립 큐레이션 한국판 (Daily Dose of Internet 스타일)</h3>
+      <span class="badge b-amber">조건부 — 라이선싱 전제</span>
+    </div>
+    <p>세 카테고리 중 <strong>유일한 진짜 시장 공백</strong>. 5개 이상의 한국어 쿼리에서 지배적 한국어 채널이 확인되지 않았다(미국 원본 채널은 2,060만 구독, 월 추정 $140K–$400K). 그러나 후순위인 이유가 명확하다.</p>
+    <ul>
+      <li><strong>정책 리스크 최고 등급</strong> — YouTube 정책 원문이 "타 소셜미디어에서 모은 짧은 영상 컴필레이션"을 수익화 배제 예시로 명시. Meta도 2025~2026년 "클립 짜깁기(stitching together clips)"를 도달 강등·수익화 박탈 사유로 명문화.</li>
+      <li><strong>진짜 진입장벽은 AI가 아니라 클립 라이선싱</strong> — 원본 채널의 해자는 원작자 허락을 받는 수급 파이프라인이다. 한국 소규모 채널들이 "모든 자료 직접 편집"을 강조하는 것도 같은 압박의 흔적.</li>
+      <li>진입하려면 <strong>오리지널 내레이션·서사를 대폭 얹은 변형이 필수</strong> — YouTube 허용 예시: "Edited footage from other creators where you add a storyline and commentary".</li>
+    </ul>
+  </div>
+
+  <div class="rank-card">
+    <div class="rk-head">
+      <div class="rk-no nx">✕</div>
+      <h3>피해야 할 것 — 검증된 실패 패턴</h3>
+      <span class="badge b-red">회피</span>
+    </div>
+    <ul class="check-list x">
+      <li><strong>정보·괴담·미스터리·요약 4종 양산</strong> — 한국 자동화 가이드 블로그의 표준 레시피가 된 탓에 진입자 밀도만 높고 성공 사례가 없는 최악의 조합.</li>
+      <li><strong>템플릿 대량 양산</strong> — 지식스쿨(@top10contents)은 영상 2,500개를 찍고도 43만에서 정체 + 업로드 중단. 2026년 1월 유튜브가 AI 양산 채널 16곳(합산 3,500만 구독, 연 광고수익 약 144억 원 규모)을 삭제한 집행 사례 존재.</li>
+      <li><strong>페이스리스 음식 내레이션</strong> — 한국 음식 카테고리는 먹방(얼굴 노출)이 구조적으로 지배(상위권 3채널 각 2,000만 구독). 공백이지만 수요 부재형 공백일 위험이 크다.</li>
+      <li><strong>워터마크 재업로드·자동 크로스포스팅</strong> — 양 플랫폼 공식 문서로 확정된 도달 강등 사유. §6 참조.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ 3. 미국 사례 + YouTube 정책 ═══════════════ -->
+<section id="us-cases">
+  <h2 class="sec"><span class="no">03</span>근거 ① 미국 검증 사례와 YouTube 정책</h2>
+
+  <h3>3-1. 적대적 검증을 통과한 미국 사례는 단 2건</h3>
+  <p>후보 발굴 단계에서 수집된 105개 주장 중 상위 25건을 3표 적대적 검증에 부친 결과, <strong>블로그발 통계 15건이 반박·탈락</strong>했고 실제 채널 사례는 2건만 살아남았다.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>채널</th><th>포맷</th><th>성과</th><th>검증 방법</th><th>한계</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>10x Income</strong><br><span class="muted">지식·교육형</span></td>
+          <td>'ChatGPT/AI로 돈 버는 법' 롱폼 해설 (faceless)</td>
+          <td>개설 5개월·영상 20개에 <span class="num">24.4만</span> 구독, 5.5개월에 <span class="num">26만</span>. 최고 롱폼 <span class="num">440만</span> 뷰</td>
+          <td>Wayback Machine의 실제 채널 페이지 스냅샷으로 독립 확인 (2023-05-16, 2023-06-02)</td>
+          <td>성장이 2023년 ChatGPT 붐의 전방집중형 스파이크 — 이후 3년간 +7.3만에 그침(현재 33.3만). <strong>성장은 쇼츠가 아닌 롱폼에서 나옴</strong>(쇼츠 4개는 각 8.6천~1.8만 뷰)</td>
+        </tr>
+        <tr>
+          <td><strong>Daily Dose of Internet</strong><br><span class="muted">엔터·큐레이션형</span></td>
+          <td>바이럴 클립 + 차분한 중립 내레이션 + 최소 편집</td>
+          <td><span class="num">2,060만+</span> 구독 (2026-07 독립 트래커 확인), 월 추정 $140K–$400K</td>
+          <td>구독자 수는 HypeAuditor/Viewstats/vidIQ 교차 검증. 수익은 Social Blade 추정 범위 내</td>
+          <td>수익 수치는 SEO 리스티클의 추정치. 클립 라이선스·재사용 콘텐츠 정책 리스크를 정면으로 안는 포맷</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>3-2. YouTube 수익화 정책 — "AI 금지"가 아니라 "비독창 금지" <span class="badge b-green">1차 출처 · 3-0 만장일치</span></h3>
+  <p>2025년 7월 15일, YouTube는 '반복적(repetitious) 콘텐츠' 정책을 <strong>'비진정성(inauthentic) 콘텐츠'</strong>로 개명하며 양산형·반복형 콘텐츠를 명시적으로 포괄했다. YouTube 공식 정책 페이지에서 라이브 검증된 원문 기준:</p>
+
+  <div class="callout red">
+    <div class="co-title"><span class="badge b-red">수익화 불가</span> 금지 예시 (정책 원문)</div>
+    <ul style="margin-bottom:0">
+      <li>"AI-generated content made with generic or unoriginal templates giving the impression of mass production without adding the creator's original, authentic insights or perspective" — 독창적 인사이트 없는 템플릿 양산형 AI 콘텐츠</li>
+      <li>"Clips of moments from your favorite show edited together with little or no narrative" — 서사 없는 클립 짜깁기</li>
+      <li>"Short videos you compiled from other social media websites" — 타 소셜미디어에서 모은 컴필레이션</li>
+    </ul>
+  </div>
+
+  <div class="callout green">
+    <div class="co-title"><span class="badge b-green">수익화 허용</span> 허용 예시 (정책 원문)</div>
+    <ul style="margin-bottom:0">
+      <li>"Content that utilizes creative tools to assist in delivering a unique, well-researched, or creative narrative" — 고유한 리서치·서사를 위해 AI 도구를 활용한 콘텐츠</li>
+      <li>"Edited footage from other creators where you add a storyline and commentary" — 스토리라인·코멘터리를 더한 타 크리에이터 영상 편집</li>
+    </ul>
+  </div>
+
+  <p>즉 <strong>AI 보이스오버 + 생성 비주얼 + 자동 편집 파이프라인이라도 영상별 고유 기획·관점을 담으면 수익화가 가능</strong>하며, "AI 쓰면 수익 차단"이라는 소문은 사실이 아니다. YouTube Creator Liaison도 이 개정을 "AI 단속이 아니라 minor update"라고 공식 확인했다. 단, 사실적 합성 미디어에는 별도의 공개(디스클로저) 의무가 적용된다.</p>
+
+  <h3>3-3. 투트랙 전략의 근거와 반례 <span class="badge b-amber">2-1 표결 · 중간 신뢰도</span></h3>
+  <p>쇼츠는 발견·성장에, 롱폼은 체류시간·수익화에 배정하는 투트랙 설계는 YouTube 공식 인사(Todd Beaupré, Pierce Vellucci)의 발언 — "Use Shorts to reach new viewers, long-form to build watch time and revenue" — 으로 교차 확인됐다. 다만 두 가지를 유의해야 한다:</p>
+  <ul>
+    <li>2025년 말~2026년 보도 기준 <strong>쇼츠와 롱폼 추천 시스템은 분리</strong>되어 있어, 쇼츠 성공이 롱폼 노출로 자동 이전되지 않는다.</li>
+    <li>10x Income의 성장은 <strong>롱폼 주도</strong>였다 — "쇼츠만으로 빠른 성장"의 직접 증거는 이번 조사에서 확보되지 않았다. 다만 한국 시장에서는 쇼츠발 급성장 실측 데이터가 별도로 존재한다(§4-4).</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 4. 한국 시장 ═══════════════ -->
+<section id="kr-market">
+  <h2 class="sec"><span class="no">04</span>근거 ② 한국 시장 포화도 분석</h2>
+
+  <h3>4-1. 거시 지표 — 한국은 AI 페이스리스 콘텐츠의 세계 최대 소비국</h3>
+  <ul>
+    <li>영상편집 플랫폼 Kapwing 분석 기준, <strong>한국 기반 AI 슬롭 채널의 누적 조회수는 84억 5,000만 회로 조사 대상국 1위</strong> (2위 파키스탄 53.4억, 3위 미국 33.9억 — 한국이 미국의 약 2.5배). <span class="muted">출처: 머니투데이 2026-01-16, 미디어오늘</span></li>
+    <li>신규 유튜브 계정에 추천된 영상 500개 중 <strong>104개(약 5개 중 1개)가 AI 슬롭 채널 영상</strong> — 알고리즘이 이미 이 포맷을 대량 증폭 중.</li>
+    <li>2026년 1월 유튜브가 AI 양산 채널 16곳 삭제 — 합산 구독자 3,500만 명, 누적 조회 47억 회, 연 광고수익 약 144억 원 규모. <strong>양산형의 정책 리스크는 이미 현실화된 영역</strong>.</li>
+    <li>1인 미디어 시장의 소득 분포는 전형적 포화형: 연 1억 원 이상 유튜버는 4년 새 15.6배(259명 → 4,032명) 늘었지만, <strong>하위 50%는 연 약 2,000만 원에 정체</strong>. <span class="muted">출처: 매일포스트(국세청 종합소득세 신고 기준)</span></li>
+  </ul>
+  <p class="muted">⚠ Kapwing 통계는 유튜브 공식 수치가 아닌 외부 추정치이며, 인용 기사 간 모수 불일치(11개 채널 vs 상위 100개)가 있다.</p>
+
+  <h3>4-2. 카테고리별 판정</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>카테고리</th><th>판정</th><th>핵심 근거</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>지식·교양·다큐 해설</td>
+          <td><span class="badge b-red">포화</span></td>
+          <td>지식한입(147만) 3개월 순증 0 — playboard 일일 신규 구독자 전 기간 "−". AI 페이스리스 「3분 지혜」가 영상 108개만으로 168만 구독·누적 20.2억 회·연 광고수익 추정 58억 원으로 카테고리 점유 완료</td>
+        </tr>
+        <tr>
+          <td>바이럴 클립 큐레이션</td>
+          <td><span class="badge b-green">공백</span></td>
+          <td>5개 이상의 서로 다른 한국어 쿼리에서 지배적 한국어 채널 미노출. 단 공백의 원인은 클립 저작권 확보 비용일 가능성이 높음(부재의 증명 — 확실성 한계 있음)</td>
+        </tr>
+        <tr>
+          <td>생활·음식·리뷰 페이스리스</td>
+          <td><span class="badge b-amber">부분 포화</span></td>
+          <td>랭킹/Top10(지식스쿨 43만·영상 2,500개 정체), 기업 흥망사(흥망일지 — 영상당 1.7만 뷰)로 포맷은 점유됐으나 시장이 안 열림. 음식은 먹방(얼굴 노출)이 구조적 지배</td>
+        </tr>
+        <tr>
+          <td>미국 포맷 한국 현지화 전례</td>
+          <td><span class="badge b-amber">부분 포화</span></td>
+          <td>성공(3분 지혜 — 영어권 motivational wisdom 포맷의 한국어판)과 실패(지식스쿨 — Top10 포맷 이식) 모두 존재. 성공한 쪽이 곧바로 "AI 슬롭 문제"로 언론·규제의 표적이 됨</td>
+        </tr>
+        <tr>
+          <td>쇼츠발 구독자 성장</td>
+          <td><span class="badge b-green">기회 우세</span></td>
+          <td>월 +52~64% 성장 중소 채널 다수 실측(§4-4). 쇼츠 국내 일평균 조회수 전년비 +90%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>4-3. 한국 지식 카테고리 주요 채널 현황 (2026-07 기준)</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>채널</th><th>구독자</th><th>제작 방식</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>슈카월드</td><td class="num">372만</td><td>얼굴 노출</td><td>월 조회 2,103만</td></tr>
+        <tr><td>주식 너 이러기야?</td><td class="num">234만</td><td>페이스리스 스타일 <span class="badge b-amber">AI 여부 미확인</span></td><td class="up">주간 +22만 (9.4%) — 주간 성장 전국 1위</td></tr>
+        <tr><td>조승연의 탐구생활</td><td class="num">194만</td><td>얼굴 노출</td><td>총 조회 2.6억</td></tr>
+        <tr><td>3분 지혜</td><td class="num">168만</td><td><strong>AI 페이스리스</strong></td><td>영상 108개, 누적 20.2억 회, 연 광고수익 추정 58억 원 — 한국 AI 슬롭 조회수의 약 25%</td></tr>
+        <tr><td>지식한입</td><td class="num">147만</td><td>페이스리스 내레이션</td><td class="down">3개월 순증 0 — 성장 정지</td></tr>
+        <tr><td>셜록현준</td><td class="num">143만</td><td>얼굴 노출</td><td>총 조회 2억</td></tr>
+        <tr><td>1분과학</td><td class="num">87~89만</td><td>페이스리스</td><td>—</td></tr>
+        <tr><td>지식스쿨 (@top10contents)</td><td class="num">43만</td><td>페이스리스 양산형</td><td class="down">영상 2,500개에도 정체, 업로드 중단 공지</td></tr>
+        <tr><td>지식보관소</td><td class="num">38.8만</td><td>페이스리스</td><td>총 조회 1.16억</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">출처: playboard.co, vling.net, socialerus.com, ranktube.co.kr, imbench.com, tubeboard.kr (2026-07 조회)</p>
+
+  <h3>4-4. 한국에서 쇼츠발 급성장은 실재한다</h3>
+  <p>playboard 한국 월간 성장 랭킹(2026년 6월)에서 중소 채널의 성장률이 대형 IP를 압도한다:</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>채널</th><th>월 순증</th><th>성장률</th><th>총 구독자</th></tr></thead>
+      <tbody>
+        <tr><td>안녕하세요원이입니다잘부탁드립니다</td><td class="num up">+60.9만</td><td class="num up">52.1%</td><td class="num">117만</td></tr>
+        <tr><td>SnapWorks</td><td class="num up">+41.9만</td><td class="num up">64.0%</td><td class="num">65.5만</td></tr>
+        <tr><td>EVAN</td><td class="num up">+41.3만</td><td class="num up">52.6%</td><td class="num">78.5만</td></tr>
+        <tr><td>DoubleBite</td><td class="num up">+50.0만</td><td class="num">23.9%</td><td class="num">209만</td></tr>
+        <tr><td>(참고) BANGTANTV</td><td class="num">+50.0만</td><td class="num">0.6%</td><td class="num">8,500만</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul>
+    <li>쇼츠 국내 일평균 조회수 전년비 <strong>+90%</strong>, 쇼츠 목적 로그인 이용자 1년 새 +40% (유튜브/입소스). <span class="muted">출처: 이데일리</span></li>
+    <li>김프로KIMPRO — 한국 채널로 <strong>32개월 만에 구독자 1억 명</strong> 돌파, 연간 조회수 775억 회 전 세계 1위.</li>
+    <li>한국 시청자의 <strong>85%가 "정보를 얻거나 지식을 넓히기 위해"</strong> 유튜브 이용 — 쇼츠 훅 + 지식 롱폼 조합이 구조적으로 유리하다는 공식 근거. <span class="muted">출처: YouTube 임팩트 리포트 2025</span></li>
+  </ul>
+  <div class="callout amber">
+    <div class="co-title">⚠ 비검증 통설 (방향성 참고용)</div>
+    <p>숏폼→롱폼 구독 전환율 8~12%, 쇼츠 CPM은 롱폼의 1/10 수준, 초기 쇼츠 70%:롱폼 30% 배분 권장 — 이 세 수치는 모두 개인 블로그/툴 업체 콘텐츠로 1차 데이터가 아니다. 다만 "쇼츠는 구독자 획득 채널이지 수익 채널이 아니다"라는 방향성 자체는 YouTube 공식 발언(§3-3)과 일치한다.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 5. Meta 정책 ═══════════════ -->
+<section id="meta-policy">
+  <h2 class="sec"><span class="no">05</span>근거 ③ Meta 정책 · 크로스포스팅 · 한국 플랫폼 데이터</h2>
+
+  <h3>5-1. 한국 플랫폼별 배포력 (DataReportal Digital 2026 South Korea, 2025-10 데이터)</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>플랫폼</th><th>광고 도달</th><th>인구 대비</th><th>전년 대비</th></tr></thead>
+      <tbody>
+        <tr><td>YouTube</td><td class="num">4,290만</td><td class="num">83.1%</td><td class="num down">−1.2%</td></tr>
+        <tr><td>Instagram</td><td class="num">2,560만</td><td class="num">49.5%</td><td class="num up">+13.1%</td></tr>
+        <tr><td>TikTok (18+)</td><td class="num">1,180만</td><td class="num">26.2% (성인)</td><td class="num up">+69.6%</td></tr>
+        <tr><td><strong>Facebook</strong></td><td class="num"><strong>705만</strong></td><td class="num"><strong>13.6%</strong></td><td class="num down"><strong>−7.8%</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Facebook은 직전 보고서(Digital 2025)에서도 −7.7%로, <strong>2년 연속 약 −8%씩 감소 중</strong>이다. 도달 가능 모수가 Instagram의 27%에 불과하다. 한국 타깃이라면 Facebook Reels는 채널 우선순위에서 제외해도 무방하다. <span class="muted">(주의: 이 수치는 Meta 광고 도구의 reach 추정치로 MAU와 동일하지 않음)</span></p>
+
+  <h3>5-2. Meta의 AI 콘텐츠 정책 — AI는 판정 축이 아니다</h3>
+  <ul>
+    <li>2024년 5월부터 AI 생성·변형 콘텐츠에 "AI info" 라벨 부착(자동 감지 + 자진 신고). <strong>organic 콘텐츠의 라벨 미부착에 대한 명시적 페널티 규정은 확인되지 않음</strong>.</li>
+    <li>2025년 11월 — 편집·재인코딩을 거쳐도 유지되는 <strong>보이지 않는 워터마크(invisible watermarking)</strong> 도입. AI 사용 사실을 지우기 어려워지는 방향.</li>
+    <li>Meta는 AI 쇼트폼을 억제하는 게 아니라 직접 밀고 있다 — 2025년 9월 릴스형 AI 영상 피드 <strong>Vibes</strong>를 출시했고, Instagram·Facebook의 Stories/Reels로 크로스포스트되도록 설계했다.</li>
+    <li>Instagram Recommendations Guidelines에는 AI 생성 콘텐츠에 대한 별도 제한 조항이 없다.</li>
+  </ul>
+
+  <h3>5-3. 진짜 리스크 — 2025~2026 독창성 단속의 3단계 확대</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>시점</th><th>플랫폼</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>2025-07-14</td><td>Facebook</td>
+          <td>비독창 콘텐츠 단속 개시 — "클립 짜깁기(stitching together clips)" 무기여 편집, 타 앱 콘텐츠 재사용 등에 수익화 접근 상실·도달 축소. 상반기 스팸 계정 50만 조치</td>
+        </tr>
+        <tr>
+          <td>2026-03-13</td><td>Facebook</td>
+          <td>original content를 <strong>"크리에이터가 직접 촬영하거나 제작한 것"</strong>으로 명문화. 제3자 콘텐츠 포함 릴스는 신선한 분석·실질적 개선·유의미한 재구성이 있을 때만 인정 — <strong>단순 리액션·내레이션은 불충분</strong>. 위반 시 non-recommendable + demonetized</td>
+        </tr>
+        <tr>
+          <td>2026-04-29</td><td>Instagram</td>
+          <td>릴스에만 적용되던 정책을 사진·캐러셀로 확대. Mosseri: "If most of what you post to Instagram is someone else's content, your account is no longer going to be recommendable." 단 팔로워 노출은 유지되며 <strong>30일 내 오리지널 위주로 채우면 추천 자격 복원</strong> 가능</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout purple">
+    <div class="co-title">핵심 시사점</div>
+    <p>AI faceless 채널이 Meta에서 죽는 이유는 "AI라서"가 아니라 <strong>"템플릿 반복·저노력 대량생산이 unoriginal/spammy로 분류되어서"</strong>다. YouTube의 비진정성 정책과 완전히 같은 방향이며, 방어선도 동일하다 — 편당 고유한 관점·스크립트·보이스오버.</p>
+  </div>
+
+  <h3>5-4. 수익화 현실</h3>
+  <ul>
+    <li><strong>Instagram</strong>: YouTube 파트너 프로그램 같은 <strong>조회수 기반 상시 광고수익 배분이 없다</strong>. 한국에서 열려 있는 것은 구독·선물·배지·보너스(초대제·기간 한정)·파트너십 광고·크리에이터 마켓플레이스. → 수익 채널이 아니라 유입·브랜드 채널로 설계해야 한다.</li>
+    <li><strong>Facebook Content Monetization</strong>: Ads on Reels·In-Stream Ads·Performance Bonus를 대체하는 통합 프로그램이지만 <strong>2026년 7월 현재도 초대 전용</strong>("현재 이 프로그램은 초대 전용입니다" — 한국어 공식 페이지 직접 확인). 신규 채널이 초대받을 가능성은 낮다. 릴스 수익화 최소 길이 10초.</li>
+    <li>한국의 프로그램 대상국 여부는 Meta 페이지 렌더링 문제로 이번 조사에서 확정하지 못했다 — 페이지 개설 후 프로페셔널 대시보드 &gt; 수익화 탭에서 직접 확인하는 것이 가장 정확하다.</li>
+  </ul>
+
+  <h3>5-5. 크로스포스팅 — 워터마크 강등은 공식 문서로 확정 <span class="badge b-green">Meta 1차 출처</span></h3>
+  <p>Instagram 공식 랭킹 설명 문서 원문:</p>
+  <div class="callout">
+    <p style="font-style:italic">"We aim to make certain reels less visible for other reasons, such as <strong>low-resolution or watermarked reels</strong>, reels that are muted or contain borders, reels that are majority text, or <strong>reels that have already been posted on Instagram</strong>."</p>
+  </div>
+  <ul>
+    <li>타 앱 워터마크는 삭제가 아니라 <strong>추천 제외·도달 강등</strong>. 자기 브랜드 로고는 무관(Mosseri: "if it's your own logo, don't worry about it").</li>
+    <li>IG→FB 자동 크로스포스트 기능은 존재하지만, Facebook 수익화 자격 문서가 <strong>"crossposted content"를 수익화 제외 콘텐츠로 명시</strong>하므로 켜지 않는 것이 안전하다.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 6. 운영 설계 ═══════════════ -->
+<section id="ops">
+  <h2 class="sec"><span class="no">06</span>플랫폼 운영 설계</h2>
+
+  <h3>6-1. 플랫폼 역할 배분 (전제 수정)</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>플랫폼</th><th>역할</th><th>운영 강도</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>YouTube</strong></td>
+          <td>주력 — 쇼츠로 발견·구독 확보, 롱폼으로 시청시간·수익 회수 (투트랙)</td>
+          <td><span class="badge b-green">최대</span></td>
+        </tr>
+        <tr>
+          <td><strong>Instagram 릴스</strong></td>
+          <td>유입·브랜드 채널 — 한국 도달 2,560만·+13.1% 성장 중이나 상시 수익 프로그램 없음. 수익 기대 없이 병행</td>
+          <td><span class="badge b-blue">병행</span></td>
+        </tr>
+        <tr>
+          <td><strong>Facebook 릴스</strong></td>
+          <td>사실상 제외 — 페이지만 열어 수익화 초대 자격 상태 확인용으로 유지, 주 1회 수준 저비용 업로드</td>
+          <td><span class="badge b-red">최소</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>6-2. 제작·배포 체크리스트</h3>
+  <ul class="check-list">
+    <li><strong>마스터 파일 1개</strong>: 1080×1920, 워터마크 없음, 자막은 하단 안전 영역(하단 약 15%) 회피 배치.</li>
+    <li><strong>플랫폼별 개별 네이티브 업로드</strong> — YouTube/TikTok에서 다운로드한 파일 재업로드 절대 금지(워터마크 강등 명문화).</li>
+    <li><strong>캡션·해시태그·훅은 플랫폼별로 차별화</strong> — "이미 게시된 릴스" 강등 조항과 중복 콘텐츠 강등 회피.</li>
+    <li><strong>IG→FB 자동 공유 토글 OFF</strong> — 크로스포스트 콘텐츠는 FB 수익화 제외 조항에 걸림.</li>
+    <li><strong>FB 릴스는 10초 이상</strong>(수익화 최소 길이 요건).</li>
+    <li><strong>편당 고유한 스크립트·리서치·관점</strong> — 양 플랫폼 공통의 유일한 정책 방어선. 시각 템플릿도 주기적으로 변주.</li>
+    <li><strong>AI 자진 라벨링 ON</strong> — 페널티가 없고, invisible watermark 검출 확대에 대비한 신뢰 확보 수단.</li>
+    <li>YouTube 사실적 합성 미디어에는 <strong>별도 공개(디스클로저)</strong> 의무 준수.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 7. 리스크 ═══════════════ -->
+<section id="risks">
+  <h2 class="sec"><span class="no">07</span>리스크 및 미확인 사항</h2>
+
+  <h3>7-1. 확인된 리스크</h3>
+  <ul>
+    <li><strong>규제 표적화</strong>: 한국에서 성공한 AI 포맷 이식 사례(3분 지혜)는 언론에서 "성공"이 아니라 "AI 슬롭 문제"로 보도되고 있으며, 2026년 1월 16개 채널 삭제·3만 구독 채널 무경고 삭제 소송 사례가 존재한다. 성공할수록 집행 리스크가 커지는 구조.</li>
+    <li><strong>10x Income 성장의 재현성 한계</strong>: 2023년 ChatGPT 붐이라는 시류 편승형 스파이크였고 이후 정체했다. 소재의 시의성이 성장 속도를 결정한다는 함의. 또한 이 채널의 제작 파이프라인이 AI로 재현 가능하다는 주장 자체는 검증에서 반박(0-3)됐다.</li>
+    <li><strong>쇼츠 단독 수익화 불가</strong>: 쇼츠 CPM이 낮다는 업계 통설(비검증)과 YouTube 공식 투트랙 권고를 종합하면, 롱폼 없는 쇼츠 단독 전략은 성장은 가능해도 수익화가 어렵다.</li>
+  </ul>
+
+  <h3>7-2. 미확인 사항 (후속 검증 1순위)</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>상태</th><th>확인 방법</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>「주식 너 이러기야?」·「투자의 신 찬스」 등 한국 급성장 경제 채널의 실제 AI 제작 여부</td>
+          <td><span class="badge b-amber">미확인</span> 통계 사이트 429/403 차단으로 "페이스리스 스타일"까지만 확인</td>
+          <td>채널 직접 시청·분석 (진입 전 포맷 역설계 겸)</td>
+        </tr>
+        <tr>
+          <td>100% AI 생성 릴스가 Facebook의 2026-03 "직접 촬영·제작" 독창성 정의를 충족하는지</td>
+          <td><span class="badge b-amber">회색지대</span> Meta 공식 입장 없음</td>
+          <td>소규모 테스트 계정으로 도달률 실측</td>
+        </tr>
+        <tr>
+          <td>한국의 Facebook Content Monetization 대상국 포함 여부</td>
+          <td><span class="badge b-amber">미확인</span> Meta 국가 목록 페이지 추출 실패</td>
+          <td>페이지 개설 후 프로페셔널 대시보드 &gt; 수익화 탭에서 직접 확인</td>
+        </tr>
+        <tr>
+          <td>타 언어 현지화 성공의 직접 선례</td>
+          <td><span class="badge b-red">반박됨</span> 최근접 선례였던 GENIAL(BRIGHT SIDE 스페인어판) 클레임이 0-3으로 반박 탈락</td>
+          <td>한국 사례(3분 지혜)가 사실상 가장 가까운 선례</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 8. 탈락 주장 ═══════════════ -->
+<section id="refuted">
+  <h2 class="sec"><span class="no">08</span>검증에서 탈락한 주장들</h2>
+  <p>3표 적대적 검증(2/3 반박 시 제거)에서 <strong>15건이 탈락</strong>했다. 이 목록 자체가 중요한 결과물이다 — <strong>이 분야 SEO 블로그에서 유통되는 수치 대부분이 허수</strong>라는 뜻이므로, 아래 유형의 수치를 다른 곳에서 접하더라도 신뢰하지 않아야 한다.</p>
+  <ul class="check-list x">
+    <li>"니치별 CPM 순위 — 금융 $15–50, AI 튜토리얼 $15–22…" (frameloop) — <strong>0-3 반박</strong></li>
+    <li>"AI 튜토리얼 검색 수요 340% 성장" (clippie) — <strong>0-3 반박</strong></li>
+    <li>"쇼츠 6개월 꾸준히 올리면 채널 성장 44% 증가" (virvid) — <strong>0-3 반박</strong></li>
+    <li>"영상당 제작비 $3 미만, 5~10분 제작" (vibedna) — <strong>0-3 반박</strong></li>
+    <li>"faceless 채널의 3%만 수익화 도달, 97% 손익분기 실패" (frameloop) — <strong>0-3 반박</strong></li>
+    <li>"신규 화이트보드 금융 채널이 2개월에 2~3만 구독" (vozo) — <strong>0-3 반박</strong></li>
+    <li>"BRIGHT SIDE 4,470만 구독·GENIAL 스페인어판 3,200만 구독 = 현지화 성공 증거" (awisee) — <strong>0-3 반박</strong> (현지화 전략의 최근접 선례가 소멸)</li>
+    <li>"2026년 4월 YouTube가 faceless 채널 16개(47억 뷰) 종료, AI 보이스+휴먼 스크립트는 생존" (vibedna) — <strong>0-3 반박</strong> (유사한 실제 집행은 한국 언론이 보도한 2026년 1월 건)</li>
+    <li>"10x Income 파이프라인은 AI/자동화 도구로 재현 가능" (medium 케이스스터디) — <strong>0-3 반박</strong></li>
+    <li>"알고리즘은 faceless를 차별하지 않는다 (vidIQ 가이드 인용)" (virvid) — <strong>0-3 반박</strong></li>
+  </ul>
+  <p class="muted">이외 5건 포함 총 15건 탈락. 전체 목록과 표결 기록은 워크플로우 결과 원본에 보존되어 있다.</p>
+</section>
+
+<!-- ═══════════════ 9. 다음 단계 ═══════════════ -->
+<section id="next">
+  <h2 class="sec"><span class="no">09</span>다음 단계 제안</h2>
+  <ol>
+    <li><strong>포맷 역설계</strong> — 한국 급성장 경제 채널 2~3개(「주식 너 이러기야?」 등)의 영상 구조·업로드 주기·훅 패턴·내레이션 스타일 분석. AI 제작 여부 확인을 겸한다.</li>
+    <li><strong>서브니치 확정</strong> — 경제 서사 안에서도 좁힌 포지션 결정(예: 기업 흥망사 / 글로벌 시장 사건 해설 / 돈의 역사). 흥망일지가 소규모인 이유(소재·훅·주기)도 함께 분석.</li>
+    <li><strong>파일럿 파이프라인 설계</strong> — 스크립트(고유 리서치) → AI 보이스오버 → 생성 비주얼 → 편집 → 마스터 파일 → 3플랫폼 네이티브 배포의 제작 라인 구축. 편당 고유성을 담보하는 리서치 단계가 정책 방어의 핵심.</li>
+    <li><strong>테스트 런</strong> — 쇼츠 중심 4~8주 파일럿으로 훅·소재별 반응 실측 후, 반응이 검증된 소재를 롱폼으로 확장.</li>
+    <li><strong>수익화 준비</strong> — YouTube YPP 요건 충족 시점에 맞춰 롱폼 비중 확대. FB 페이지는 개설만 해두고 수익화 초대 자격 상태 모니터링.</li>
+  </ol>
+</section>
+
+<!-- ═══════════════ 10. 출처 ═══════════════ -->
+<section id="sources">
+  <h2 class="sec"><span class="no">10</span>출처 목록</h2>
+
+  <div class="src-group">
+    <h4>플랫폼 1차 출처 (정책 원문)</h4>
+    <ul>
+      <li><a href="https://support.google.com/youtube/answer/1311392">YouTube 채널 수익 창출 정책 (비진정성 콘텐츠 조항 원문)</a></li>
+      <li><a href="https://about.fb.com/news/2026/03/rewarding-original-creators-on-facebook/">Meta — Rewarding Original Creators on Facebook (2026-03-13)</a></li>
+      <li><a href="https://creators.instagram.com/blog/rewarding-original-creators-on-instagram">Instagram — Rewarding Original Creators (2026-04)</a></li>
+      <li><a href="https://about.instagram.com/blog/announcements/instagram-ranking-explained">Instagram Ranking Explained (워터마크·중복 강등 조항 원문)</a></li>
+      <li><a href="https://creators.facebook.com/blog/combating-unoriginal-content/">Facebook — Combating Unoriginal Content</a></li>
+      <li><a href="https://creators.facebook.com/tools/facebook-content-monetization/">Facebook Content Monetization (초대 전용 상태 확인)</a></li>
+      <li><a href="https://www.facebook.com/business/help/1049081556813520">FB 수익화 자격·제외 콘텐츠 (크로스포스트 제외 조항)</a></li>
+      <li><a href="https://transparency.meta.com/governance/tracking-impact/labeling-ai-content">Meta Transparency Center — AI 라벨링</a></li>
+      <li><a href="https://about.fb.com/news/2024/04/metas-approach-to-labeling-ai-generated-content-and-manipulated-media/">Meta — AI 라벨링 정책 전환 (2024-04)</a></li>
+      <li><a href="https://about.fb.com/news/2025/09/introducing-vibes-ai-videos/">Meta — Vibes AI 영상 피드 출시 (2025-09)</a></li>
+      <li><a href="https://creators.instagram.com/earn-money?locale=ko_KR">Instagram 수익화 기능 (한국어 공식)</a></li>
+      <li><a href="https://blog.youtube/intl/ko-kr/news-and-events/youtube-impact-report-2025/">YouTube 임팩트 리포트 2025 (한국)</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h4>시장 데이터·언론</h4>
+    <ul>
+      <li><a href="https://datareportal.com/reports/digital-2026-south-korea">DataReportal — Digital 2026 South Korea (2025-11-08)</a></li>
+      <li><a href="https://datareportal.com/reports/digital-2025-south-korea">DataReportal — Digital 2025 South Korea (2025-03-03)</a></li>
+      <li><a href="https://www.mt.co.kr/tech/2026/01/16/2026011520194273556">머니투데이 — 한국 AI 슬롭 채널 조회수 세계 1위 (2026-01-16)</a></li>
+      <li><a href="https://www.mediatoday.co.kr/news/articleView.html?idxno=331119">미디어오늘 — AI 슬롭 채널 실태 (Kapwing 분석)</a></li>
+      <li><a href="https://www.kmjournal.net/news/articleView.html?idxno=7999">KM저널 — 유튜브 AI 양산 채널 16곳 삭제 (2026-01)</a></li>
+      <li><a href="https://techcrunch.com/2025/07/14/following-youtube-meta-announces-crackdown-on-unoriginal-facebook-content/">TechCrunch — Meta 비독창 콘텐츠 단속 (2025-07-14)</a></li>
+      <li><a href="https://www.tubefilter.com/2026/04/30/instagram-removes-algorithm-recommendations-repost-content-aggregator/">Tubefilter — Instagram 리포스트 추천 제외 (2026-04-30)</a></li>
+      <li><a href="https://www.socialmediatoday.com/news/meta-outlines-invisible-watermarking-ai-generated-content/804700/">SocialMediaToday — Meta invisible watermarking (2025-11-04)</a></li>
+      <li><a href="https://fortune.com/2025/03/14/facebook-creators-monetization/">Fortune — FB Content Monetization 초대 규모 (2025-03-14)</a></li>
+      <li><a href="https://www.edaily.co.kr/news/read?newsId=01462886635837536">이데일리 — 쇼츠 국내 조회수 +90%</a></li>
+      <li><a href="https://www.maeilpost.com/news/articleView.html?idxno=749">매일포스트 — 1인 미디어 소득 분포 (국세청 자료)</a></li>
+      <li><a href="https://lawtalknews.co.kr/article/MNQ7SFPBDGTU">로톡뉴스 — AI 채널 임의 삭제 소송</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h4>채널 통계 (2026-07 조회)</h4>
+    <ul>
+      <li><a href="https://playboard.co/youtube-ranking/most-growth-all-channels-in-south-korea-weekly">playboard — 한국 주간 성장 랭킹</a></li>
+      <li><a href="https://playboard.co/channel/UCi9Sl8GnFdYoqEVXnojBPJw">playboard — 지식한입 채널 통계</a></li>
+      <li><a href="https://vling.net/channel/UCaef7ckGyWcgVQ4JwDkTgtg/channel-info">vling — 3분 지혜 채널 정보</a></li>
+      <li><a href="https://vling.net/channel/UC6xRDwYtCdTF3E3FRTS8iXQ/channel-info">vling — 지식스쿨 채널 정보</a></li>
+      <li><a href="https://medium.com/the-youtube-playbook/261-000-subscribers-in-5-months-with-20-videos-faceless-youtube-channel-case-study-406823801bcc">Medium — 10x Income 케이스스터디 (Wayback Machine 교차 검증)</a></li>
+      <li><a href="https://awisee.com/blog/successful-faceless-youtube-channels/">AWISEE — faceless 채널 리스트 (Daily Dose 구독자만 독립 검증)</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h4>신뢰도 낮음 (교차검증 실패 — 방향성 참고용)</h4>
+    <ul>
+      <li>Reels Play Bonus 2025-08-31 종료설 (influencermarketinghub, netinfluencer)</li>
+      <li>한국 릴스 파트너 초대 중단설 (개인 블로그)</li>
+      <li>숏폼→롱폼 전환율 8~12%·쇼츠 CPM 1/10 통설 (viralpulse, marketslab 등)</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p><strong>조사 방법론</strong> — 딥리서치 워크플로우: 질문을 5개 검색 각도로 분해 → 병렬 웹 검색 → 소스 22개 수집·주장 105건 추출 → 상위 25건에 3표 적대적 검증(2/3 반박 시 제거) → 10건 확정·15건 탈락 → 신뢰도 순 합성. 보강 조사 2건(한국 시장 포화도, Meta 정책·크로스포스팅)은 1차 출처(플랫폼 공식 문서, DataReportal, playboard/vling 실측) 우선 원칙으로 수행.</p>
+  <p style="margin-top:10px">작성일 2026-07-29 · social-flow 프로젝트 · docs/research/2026-07-29-us-format-korea-localization/</p>
+</footer>
+
+</div>
+</body>
+</html>

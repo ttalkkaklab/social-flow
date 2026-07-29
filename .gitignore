@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+
+# Node
+node_modules/
+
+# 로컬 세션 설정·시크릿
+.claude/settings.local.json
+.claude/*.local.md
+.env
+.env.*
+
+# 대용량 산출물 — 영상·오디오 원본은 커밋하지 않는다 (재생성 가능, git 이 비대해짐)
+data/**/output/**/*.mp4
+data/**/output/**/*.mov
+data/**/output/**/*.wav
+data/**/output/**/*.pcm
+
+# 작업 중간 산출물
+data/**/.work/
+
+# 녹화 인제스트 원신호 — 추출 오디오·로그는 커밋하지 않는다 (timeline·키프레임은 커밋)
+data/**/recording/raw/
