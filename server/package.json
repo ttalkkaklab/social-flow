@@ -1,0 +1,30 @@
+{
+  "name": "@zeans/social-flow-mcp-server",
+  "version": "0.2.0",
+  "description": "social-flow 플러그인 내부 MCP 서버 — SNS 직접 게시(Threads·Instagram·Facebook·YouTube) + 자료조사 검색(SerpApi·Naver Open API) + 이미지·영상 생성(OpenAI GPT Image·Veo 3.1)",
+  "type": "module",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@google/genai": "^1.38.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "openai": "^6.46.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.6.0"
+  },
+  "bin": {
+    "social-flow-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ]
+}
