@@ -1,0 +1,17 @@
+{
+  "name": "social-flow-local",
+  "owner": {
+    "name": "Zeans",
+    "email": "zeans@astratech.vn"
+  },
+  "metadata": {
+    "description": "social-flow 로컬 마켓플레이스 — 채널 기반 쇼트폼 콘텐츠 파이프라인 플러그인(내부 MCP 서버 포함)을 로컬 경로에서 설치합니다."
+  },
+  "plugins": [
+    {
+      "name": "social-flow",
+      "source": "./",
+      "description": "채널 기반 쇼트폼 콘텐츠 파이프라인 — data/[채널]/[주제]/storyboard 에 이미지 포함 스토리보드를 저작·승인하고, output 에 플랫폼별(Threads·Instagram·Facebook·YouTube) 텍스트·영상 콘텐츠를 제작해 HITL 승인 후 직접 게시하는 플러그인 (내부 MCP 서버: SNS 게시 + SerpApi·Naver 검색 + 공공데이터포털 수집 + 이미지·영상 생성)"
+    }
+  ]
+}

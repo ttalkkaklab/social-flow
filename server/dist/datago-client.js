@@ -298,7 +298,11 @@ export async function downloadFile(input) {
     const saveDir = input.saveDir ?? join(tmpdir(), 'social-flow-datago');
     await mkdir(saveDir, { recursive: true });
     let savedPath = join(saveDir, filename);
-    for (let i = 1; existsSync(savedPath) && i < 100; i++) {
+    for (let i = 1; existsSync(savedPath); i++) {
+        // 상한 도달 시 에러 — 예전처럼 -99 를 조용히 덮어쓰면 기존 수집물이 유실된다
+        if (i >= 100) {
+            return err(`같은 이름의 파일이 ${saveDir} 에 100개 이상 있다 — saveDir 를 정리하거나 다른 디렉토리를 지정할 것.`);
+        }
         savedPath = join(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i}$1`));
     }
     await writeFile(savedPath, buf);

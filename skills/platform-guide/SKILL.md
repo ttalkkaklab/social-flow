@@ -1,23 +1,23 @@
 ---
-name: channel-guide
+name: platform-guide
 description: >
-  This skill should be used when the user asks about "채널 문법", "채널별 작성 규칙",
-  "인스타 캡션 어떻게", "쇼츠 제목 규칙", "channel grammar", "how to write for
+  This skill should be used when the user asks about "플랫폼 문법", "플랫폼별 작성 규칙",
+  "인스타 캡션 어떻게", "쇼츠 제목 규칙", "platform grammar", "how to write for
   Threads/Instagram/Facebook/YouTube", or when any social-flow skill needs the
-  per-channel writing rules, video specs, safe zones, or posting-limit reference.
-  Knowledge-only skill — the SoT for channel grammar lives in
-  references/channel-playbook.md.
+  per-platform writing rules, video specs, safe zones, or posting-limit reference.
+  Knowledge-only skill — the SoT for platform grammar lives in
+  references/platform-playbook.md.
 ---
 
-# 채널 가이드 — 문법·규격의 SoT
+# 플랫폼 가이드 — 문법·규격의 SoT
 
-Threads · Instagram · Facebook · YouTube 4채널의 작성 문법, 영상 규격, 한도,
-안티패턴을 담은 지식형 스킬. produce(§9 채널별 텍스트)와 publish(승인 게이트
-검토), content-reviewer 에이전트가 이 스킬의 플레이북을 기준으로 삼는다.
+Threads · Instagram · Facebook · YouTube 4개 게시 플랫폼의 작성 문법, 영상 규격,
+한도, 안티패턴을 담은 지식형 스킬. produce(§9 플랫폼별 텍스트)와 publish(승인
+게이트 검토), content-reviewer 에이전트가 이 스킬의 플레이북을 기준으로 삼는다.
 
 ## 핵심 원칙 (요약)
 
-1. **"사실은 공유하되 문장은 공유하지 않는다"** — 같은 소재라도 채널마다 화자·
+1. **"사실은 공유하되 문장은 공유하지 않는다"** — 같은 소재라도 플랫폼마다 화자·
    어체·종결·정보 밀도를 다시 설계한다. 자동 크로스포스팅은 금지.
 2. **쉬운 말** — 시청자는 비전문가다. 무설명 전문용어·직역어·주어 없는 과압축
    금지. 용어가 꼭 필요하면 쉬운 말을 앞세우고 첫 등장에서만 괄호 병기.
@@ -26,7 +26,7 @@ Threads · Instagram · Facebook · YouTube 4채널의 작성 문법, 영상 규
 4. **골든타임 응대** — 게시 후 첫 60분의 댓글 응답 속도가 도달을 좌우한다
    (Buffer 190만 게시물 분석: 답글 시 참여도 Threads +42% / IG +21% / FB +9.5%).
 
-## 채널 한눈에 보기
+## 플랫폼 한눈에 보기
 
 | | Threads | Instagram | Facebook | YouTube |
 |---|---|---|---|---|
@@ -36,13 +36,13 @@ Threads · Instagram · Facebook · YouTube 4채널의 작성 문법, 영상 규
 | 링크 | 본문 금지 → 자기 답글 | 캡션 링크 클릭 불가 → 댓글 | 본문 금지 → 첫 댓글 | 설명란 가능 |
 | 해시태그 | ≤1 (가중치 0) | 3~5 | 0~2 | 3~5 (#Shorts 필수) |
 | 미디어 | 공개 HTTPS URL | 공개 HTTPS URL | 공개 HTTPS URL | 로컬 파일 업로드 |
-| 한도 | 250건/24h | 100건/24h | — | 업로드 6건/일 |
+| 한도 | 250건/24h | 100건/24h | — | 업로드 100회/일 |
 
 상세 문법·카피 공식·안티패턴 체크리스트·영상 규격(세이프존·자막·길이)은
-`references/channel-playbook.md` 를 Read 한다 — 채널별 작성 전에 반드시.
+`references/platform-playbook.md` 를 Read 한다 — 플랫폼별 작성 전에 반드시.
 
 ## Additional Resources
 
 ### Reference Files
 
-- **`references/channel-playbook.md`** — 채널별 문법 상세, 카피 공식, 영상 규격, 안티패턴 체크리스트 (SoT)
+- **`references/platform-playbook.md`** — 플랫폼별 문법 상세, 카피 공식, 영상 규격, 안티패턴 체크리스트 (SoT)

@@ -7,24 +7,24 @@ description: >
   (with voice narration) to turn into content. Can start/stop the screen+mic
   recording itself (record.sh, macOS screencapture), then extracts timestamped
   speech (whisper.cpp STT) + silence/scene-change signals from the recording,
-  merges them into a per-scene timeline (data/<category>/<topic>/recording/
+  merges them into a per-scene timeline (data/<channel>/<topic>/recording/
   timeline.md with keyframes + vision descriptions), which then feeds the
   storyboard skill as the primary source replacing web research. In the
   storyboard-first shooting flow (storyboard/script.md exists), it additionally
   aligns the recording to the storyboard scenes (recording/alignment.json) so
   produce can edit the footage into the final video.
-argument-hint: "<카테고리> <녹화파일 경로|record> [주제 slug]"
+argument-hint: "<채널> <녹화파일 경로|record> [주제 slug]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__fect-mcp__vision_analyze", "mcp__fect-mcp__vision_ocr"]
 ---
 
-# 녹화 인제스트 — data/[카테고리]/[주제]/recording/
+# 녹화 인제스트 — data/[채널]/[주제]/recording/
 
 화면 녹화(음성 나레이션 포함)를 **타임라인별 텍스트**로 변환한다. 산출된
 `timeline.md` 는 storyboard 스킬의 자료조사(research.md) 자리를 대체하는
 1차 소스가 된다 — 녹화에서 말하고 보여준 것이 씬 설계의 재료다.
 
 ```
-data/<카테고리>/<주제 slug>/recording/
+data/<채널>/<주제 slug>/recording/
 ├── raw/                 # STT·무음·화면전환 원신호 (transcribe.sh)
 ├── timeline.json        # 기계용 씬 타임라인
 ├── timeline.md          # 사람용 — 씬 표 + 문장 타임스탬프 + 화면 설명
@@ -71,8 +71,8 @@ command -v whisper-cli && ls ~/.cache/whisper-cpp/ggml-large-v3-turbo.bin
 
 ### 2. 프로파일 로드 + 주제 확정
 
-`data/<카테고리>/profile.md` 를 Read 한다 — 없으면 중단하고
-`/social-flow:category add` 안내. 주제 slug 는 인자로 받거나, 전사 후 내용을
+`data/<채널>/profile.md` 를 Read 한다 — 없으면 중단하고
+`/social-flow:channel add` 안내. 주제 slug 는 인자로 받거나, 전사 후 내용을
 보고 §7 slug 규칙으로 제안해 사용자 확인을 받는다 (전사 전에는 가칭 디렉토리
 `recording-inbox/` 가 아니라 **전사를 먼저 스크래치에서 돌린 뒤** slug 를 정하고
 정식 경로로 옮겨도 된다).
@@ -87,8 +87,8 @@ command -v whisper-cli && ls ~/.cache/whisper-cpp/ggml-large-v3-turbo.bin
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/ingest/references
 WHISPER_PROMPT="<profile.md 용어, 예상 고유명사 쉼표 나열>" \
-  bash $REF/transcribe.sh <녹화파일 절대경로> data/<카테고리>/<주제>/recording
-python3 $REF/build-timeline.py data/<카테고리>/<주제>/recording --src <녹화파일 절대경로>
+  bash $REF/transcribe.sh <녹화파일 절대경로> data/<채널>/<주제>/recording
+python3 $REF/build-timeline.py data/<채널>/<주제>/recording --src <녹화파일 절대경로>
 ```
 
 - 원본은 **복사하지 않는다** — timeline.json 이 절대경로를 참조한다.
@@ -141,13 +141,13 @@ python3 $REF/build-timeline.py data/<카테고리>/<주제>/recording --src <녹
 
 AskUserQuestion 으로 결과를 제시한다 — timeline.md 경로, 씬 수·총길이,
 씬별 한 줄 요약. 선택지: [스토리보드 진행 / 타임라인 수정(경계 조정 재실행) /
-여기까지]. 스토리보드 진행이면 `/social-flow:storyboard <카테고리> <주제>` 를
+여기까지]. 스토리보드 진행이면 `/social-flow:storyboard <채널> <주제>` 를
 안내한다 — storyboard 스킬은 `recording/timeline.md` 가 있으면 웹 조사 대신
 이를 1차 소스로 쓴다.
 
 **촬영 모드(§5 를 거친 경우)** 는 스토리보드가 이미 승인돼 있으므로 선택지가
 다르다: [편집 제작 진행 / 정합 수정 / 여기까지] — 진행이면
-`/social-flow:produce <카테고리> <주제>` 를 안내한다 (produce 가
+`/social-flow:produce <채널> <주제>` 를 안내한다 (produce 가
 alignment.json 을 발견하고 편집 파이프라인을 탄다).
 
 ## 함정

@@ -15,11 +15,16 @@
  */
 
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import type { GenerateVideosConfig, VideoGenerationReferenceImage } from '@google/genai';
 import { z } from 'zod';
 import { requireGeminiKey } from './config.js';
-import { ALLOWED_EXTENSIONS, mimeFromExtension, validateFilePath } from './media-utils.js';
+import {
+  ALLOWED_EXTENSIONS,
+  bareFilenameSchema,
+  mimeFromExtension,
+  resolveOutputFile,
+  validateFilePath,
+} from './media-utils.js';
 
 // 지원되는 Veo 모델 (2026-07 기준 — Gemini API 에서 호출 가능한 현역 모델 3종)
 // veo-3.0-* / veo-2.0-* 계열은 2026-06-30 자로 셧다운되어 호출할 수 없다.
@@ -91,7 +96,7 @@ export const text2VideoSchema = z
     resolution: z.enum(VALID_VIDEO_RESOLUTIONS).optional().default('720p'),
     durationSeconds: DurationSchema,
     outputPath: z.string().optional(),
-    filename: z.string().optional(),
+    filename: bareFilenameSchema('video').optional(),
   })
   .superRefine((data, ctx) => {
     validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
@@ -108,7 +113,7 @@ export const img2VideoSchema = z
     resolution: z.enum(VALID_VIDEO_RESOLUTIONS).optional().default('720p'),
     durationSeconds: DurationSchema,
     outputPath: z.string().optional(),
-    filename: z.string().optional(),
+    filename: bareFilenameSchema('video').optional(),
   })
   .superRefine((data, ctx) => {
     validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
@@ -123,7 +128,7 @@ export const videoExtensionSchema = z
     sourceVideoPath: z.string().min(1, 'Source video path is required'),
     model: z.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
     outputPath: z.string().optional(),
-    filename: z.string().optional(),
+    filename: bareFilenameSchema('video').optional(),
   })
   .superRefine((data, ctx) => rejectLiteModel('video extension', data.model, ctx));
 
@@ -140,7 +145,7 @@ export const referenceVideoSchema = z
     aspectRatio: z.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default('16:9'),
     resolution: z.enum(VALID_VIDEO_RESOLUTIONS).optional().default('720p'),
     outputPath: z.string().optional(),
-    filename: z.string().optional(),
+    filename: bareFilenameSchema('video').optional(),
   })
   .superRefine((data, ctx) => {
     rejectLiteModel('reference images', data.model, ctx);
@@ -187,10 +192,15 @@ interface OperationStatus {
   error?: { code?: number; message?: string };
 }
 
-/** REST API를 통해 operation 상태 조회 */
+/**
+ * REST API를 통해 operation 상태 조회.
+ * 키는 URL 쿼리(?key=)가 아니라 x-goog-api-key 헤더로 보낸다 — URL 은 로그·에러
+ * 메시지에 에코될 수 있어 유출면이 되지만 헤더는 그 경로가 없다 (serp/datago
+ * 클라이언트의 키 마스킹 철학과 동일).
+ */
 async function getOperationStatus(apiKey: string, operationName: string): Promise<OperationStatus> {
-  const url = `${API_BASE_URL}/${operationName}?key=${apiKey}`;
-  const response = await fetch(url);
+  const url = `${API_BASE_URL}/${operationName}`;
+  const response = await fetch(url, { headers: { 'x-goog-api-key': apiKey } });
 
   if (!response.ok) {
     const error = await response.text();
@@ -200,11 +210,9 @@ async function getOperationStatus(apiKey: string, operationName: string): Promis
   return response.json() as Promise<OperationStatus>;
 }
 
-/** 비디오 파일 다운로드 */
+/** 비디오 파일 다운로드 — 키는 헤더로만 (getOperationStatus 와 동일 이유) */
 async function downloadVideo(apiKey: string, videoUri: string): Promise<Buffer> {
-  // videoUri에 API 키가 필요한 경우 추가
-  const url = videoUri.includes('?') ? `${videoUri}&key=${apiKey}` : `${videoUri}?key=${apiKey}`;
-  const response = await fetch(url);
+  const response = await fetch(videoUri, { headers: { 'x-goog-api-key': apiKey } });
 
   if (!response.ok) {
     throw new Error(`Failed to download video: ${response.status}`);
@@ -263,11 +271,9 @@ async function awaitVideoAndSave(
       return { error: 'No video URI in response' };
     }
 
-    // 디렉토리 생성 + 다운로드·저장
-    const fullPath = path.join(outputPath, filename);
-    if (!fs.existsSync(outputPath)) {
-      fs.mkdirSync(outputPath, { recursive: true });
-    }
+    // 경로 검증(traversal·확장자) + 디렉토리 생성 + 다운로드·저장.
+    // 검증은 다운로드 전에 한다 — 수십 MB 를 받고 나서 거부하면 대역폭이 낭비된다.
+    const fullPath = resolveOutputFile(outputPath, filename, 'video');
     const videoBuffer = await downloadVideo(apiKey, videoUri);
     fs.writeFileSync(fullPath, videoBuffer);
 
@@ -336,7 +342,7 @@ export async function generateFromText(request: Text2VideoRequest): Promise<Vide
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[Veo] Error: ${errorMessage}`);
-    return { success: false, error: `Video generation failed: ${errorMessage}` };
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -413,7 +419,7 @@ export async function generateFromImage(request: Img2VideoRequest): Promise<Vide
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[Veo] Error: ${errorMessage}`);
-    return { success: false, error: `Video generation from image failed: ${errorMessage}` };
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -477,7 +483,7 @@ export async function extendVideo(request: VideoExtensionRequest): Promise<Video
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[Veo] Error: ${errorMessage}`);
-    return { success: false, error: `Video extension failed: ${errorMessage}` };
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -547,6 +553,6 @@ export async function generateWithReferences(request: ReferenceVideoRequest): Pr
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[Veo] Error: ${errorMessage}`);
-    return { success: false, error: `Video generation with references failed: ${errorMessage}` };
+    return { success: false, error: errorMessage };
   }
 }

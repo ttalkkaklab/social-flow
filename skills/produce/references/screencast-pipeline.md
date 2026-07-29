@@ -4,7 +4,7 @@
 대본)대로 화면을 녹화하면, ingest 가 전사·정합(`recording/alignment.json`)을
 만들고, produce 가 이 문서의 절차로 **녹화 원본을 잘라 9:16 쇼트폼으로 편집**한다.
 TTS·생성 배경 파이프라인(pipeline.md)과 달리 **음성은 사용자 육성, 화면은 실제
-녹화**다 — scenes.js 는 타이틀 오버레이·채널 텍스트의 원천으로만 쓰인다.
+녹화**다 — scenes.js 는 타이틀 오버레이·플랫폼 텍스트의 원천으로만 쓰인다.
 
 ```
 storyboard(대본) → 사용자 촬영(ingest record) → 전사·정합(ingest) → 편집(이 문서)
@@ -72,9 +72,9 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 · cover.jpg · bui
   (긴 타이틀은 tight1~3 자동 축소 후 잔여 노출).
 - BGM 은 pipeline.md 와 동일하게 `music_generate` 인스트루멘털 — 단 육성 위이므로
   빌더 기본 볼륨이 낮다(BGM_VOL 0.22).
-- 아웃트로는 TTS 파이프라인과 **같은 공용 자산**(`data/<카테고리>/assets/outro.mp4`)
+- 아웃트로는 TTS 파이프라인과 **같은 공용 자산**(`data/<채널>/assets/outro.mp4`)
   을 `.work/outro.mp4` 로 복사한다.
-- 이후 폰 모드 검수·채널 텍스트·품질 게이트는 produce SKILL.md §8~10 그대로.
+- 이후 폰 모드 검수·플랫폼 텍스트·품질 게이트는 produce SKILL.md §8~10 그대로.
 
 ## 빌드 리포트 게이트 (build-report.txt)
 

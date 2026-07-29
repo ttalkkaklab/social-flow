@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>social-flow 문서</title>
+<link rel="stylesheet" href="assets/reference.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">SOCIAL-FLOW DOCS</div>
+  <h1>social-flow 문서</h1>
+  <p class="sub">채널 기반 쇼트폼 콘텐츠 파이프라인 Claude Code 플러그인의 문서 모음. 스킬 사용 가이드, 리서치 기록, 그리고 내부 MCP 서버가 호출하는 전체 외부 API 레퍼런스.</p>
+  <div class="meta">
+    <span>정본 README: <a href="../README.md">README.md</a></span>
+    <span>프로젝트 지침: <a href="../CLAUDE.md">CLAUDE.md</a></span>
+  </div>
+</header>
+
+<section>
+  <h2>API 레퍼런스</h2>
+  <p>내부 MCP 서버(<code>server/src</code>)가 실제로 호출하는 모든 외부 API의 공식 계약을 정리하고, 이 저장소의 구현이 그 계약을 어떻게 지키는지(또는 의도적으로 좁히는지) 함께 적었다.</p>
+  <div class="cards">
+    <a class="card" href="api-reference/index.html">
+      <h3>API 레퍼런스 허브 →</h3>
+      <p>11개 API 인벤토리, 자격증명 매트릭스, 툴 ↔ API 매핑표.</p>
+    </a>
+    <a class="card" href="api-reference/tool-audit.html">
+      <h3>툴 품질 감사 리포트 →</h3>
+      <p>31개 툴을 공식 문서 계약 + MCP 스펙 + 툴 작성 베스트 프랙티스로 채점한 결과와 수정 내역.</p>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>사용 가이드</h2>
+  <div class="cards">
+    <a class="card" href="guides/ingest-usage/index.html">
+      <h3>화면 녹화로 쇼트폼 만들기 →</h3>
+      <p><code>/social-flow:ingest</code> — 화면 녹화와 음성 타임라인으로 소재를 수집하는 흐름.</p>
+    </a>
+    <a class="card" href="guides/screencast-usage/index.html">
+      <h3>스크린캐스트 제작 →</h3>
+      <p>대본 → 촬영 → 정합 → 편집으로 이어지는 스크린캐스트 파이프라인.</p>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>리서치</h2>
+  <div class="cards">
+    <a class="card" href="research/2026-07-29-us-format-korea-localization/index.html">
+      <h3>미국 포맷의 한국 현지화 →</h3>
+      <p>2026-07-29 기록. 해외 쇼트폼 포맷을 국내 채널에 옮길 때의 판단 기준.</p>
+    </a>
+    <a class="card" href="research/2026-07-29-cloudflare-limits-billing/index.html">
+      <h3>Cloudflare 한도·과금 →</h3>
+      <p>2026-07-29 기록.</p>
+    </a>
+  </div>
+</section>
+
+<footer>
+  social-flow — 채널 기반 쇼트폼 콘텐츠 파이프라인. 구조·스킬·MCP 툴 목록의 정본은 <a href="../README.md">README.md</a>다.
+</footer>
+
+</div>
+</body>
+</html>

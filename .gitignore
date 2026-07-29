@@ -1,23 +1,52 @@
-# OS
+# ── OS ────────────────────────────────────────────────────────────
 .DS_Store
+._*
+Thumbs.db
 
-# Node
+# ── 에디터 ────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*~
+
+# ── Node ──────────────────────────────────────────────────────────
 node_modules/
+npm-debug.log*
+*.log
+# server/dist/ 는 무시하지 않는다 — .mcp.json 이 빌드 단계 없이
+# ${CLAUDE_PLUGIN_ROOT}/server/dist/index.js 를 직접 실행하므로 커밋 대상이다.
 
-# 로컬 세션 설정·시크릿
+# ── Python (skills/**/references/*.py) ────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ── 로컬 세션 설정 ────────────────────────────────────────────────
 .claude/settings.local.json
 .claude/*.local.md
+
+# ── 시크릿·자격증명 (절대 커밋 금지) ──────────────────────────────
 .env
 .env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+client_secret*.json
+token.json
+tokens.json
+*-token.json
 
-# 대용량 산출물 — 영상·오디오 원본은 커밋하지 않는다 (재생성 가능, git 이 비대해짐)
-data/**/output/**/*.mp4
-data/**/output/**/*.mov
-data/**/output/**/*.wav
-data/**/output/**/*.pcm
+# ── git 워크트리 (스프린트 작업 공간) ─────────────────────────────
+.worktrees/
 
-# 작업 중간 산출물
-data/**/.work/
+# ── 콘텐츠 데이터 ─────────────────────────────────────────────────
+# 채널 작업물(profile.md·스토리보드·이미지·영상·브랜딩 자산)은 로컬 산출물이다.
+# 이 저장소는 플러그인 코드·스킬만 담는다. 구조 설명 문서만 예외로 커밋한다.
+data/*
+!data/README.md
 
-# 녹화 인제스트 원신호 — 추출 오디오·로그는 커밋하지 않는다 (timeline·키프레임은 커밋)
-data/**/recording/raw/
+# 작업 중간 산출물 (data/ 밖에서 생겨도 무시)
+.work/

@@ -1,6 +1,6 @@
 # scenes.js 데이터 계약 (SoT)
 
-`data/<카테고리>/<주제>/storyboard/scenes.js` — 스토리보드 승인 후 produce 가
+`data/<채널>/<주제>/storyboard/scenes.js` — 스토리보드 승인 후 produce 가
 소비하는 유일한 데이터 원천. `video-template.html` 이 `<script src="./scenes.js">`
 로 로드한다.
 
@@ -121,7 +121,7 @@ visual: {
 { type: "outro", title: "매주 이런 정보 올라옵니다", sub: "팔로우하고 이어서 보세요" }
 ```
 
-- **본편 manifest 에 넣지 않는다** — 공용 `data/<카테고리>/assets/outro.mp4` 를
+- **본편 manifest 에 넣지 않는다** — 공용 `data/<채널>/assets/outro.mp4` 를
   빌드가 접합한다. 이 씬은 outro.mp4 최초 생성(build-outro.sh) 시에만 렌더된다.
 
 ## 저작 검증 체크리스트 (storyboard 스킬이 승인 요청 전 자가 점검)

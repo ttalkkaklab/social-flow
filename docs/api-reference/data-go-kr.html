@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>공공데이터포털 — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<div class="wrap">
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>공공데이터포털</div>
+
+<header class="hero">
+  <div class="kicker">DATA.GO.KR</div>
+  <h1>공공데이터포털 — 정부 공식 데이터</h1>
+  <p class="sub">콘텐츠의 수치 근거로는 기사 재인용보다 원천 데이터가 우선한다. 다만 이 포털은 API 하나가 아니라 <strong>성격이 다른 5개 경로</strong>이고, 그중 셋은 인증이 아예 필요 없다.</p>
+  <div class="meta">
+    <span>포털 <a href="https://www.data.go.kr">data.go.kr</a></span>
+    <span>키 <code>DATA_GO_KR_API_KEY</code> (2개 경로만)</span>
+    <span>구현 <code>server/src/datago-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#paths">5개 경로와 인증 요건</a></li>
+    <li><a href="#trap">활용신청 함정</a></li>
+    <li><a href="#search">검색·상세 (HTML 파싱)</a></li>
+    <li><a href="#download">파일 다운로드 (2단계)</a></li>
+    <li><a href="#odcloud">odcloud 행 조회</a></li>
+    <li><a href="#openapi">표준 오픈API</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="paths">
+  <h2>1. 5개 경로와 인증 요건</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>툴</th><th>호출 대상</th><th>응답</th><th>인증</th></tr></thead>
+    <tbody>
+      <tr><td><code>datago_search</code></td><td><code>www.data.go.kr/tcs/dss/selectDataSetList.do</code></td><td>HTML</td><td><span class="badge free">무인증</span></td></tr>
+      <tr><td><code>datago_detail</code></td><td><code>www.data.go.kr/data/{pk}/{fileData|openapi}.do</code></td><td>HTML</td><td><span class="badge free">무인증</span></td></tr>
+      <tr><td><code>datago_file_download</code></td><td><code>selectFileDataDownload.do</code> → <code>cmm/cmm/fileDownload.do</code></td><td>JSON → 바이너리</td><td><span class="badge free">무인증</span></td></tr>
+      <tr><td><code>datago_file_fetch</code></td><td><code>api.odcloud.kr/api/{pk}/v1/{uddi}</code></td><td>JSON</td><td><span class="badge key">키 + 활용신청</span></td></tr>
+      <tr><td><code>datago_api_call</code></td><td><code>apis.data.go.kr/{path}</code></td><td>XML 또는 JSON</td><td><span class="badge key">키 + 활용신청</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>키 없이도 파일데이터는 끝까지 받을 수 있다.</strong> 검색 → 상세 → 다운로드 3단계가 전부 무인증이므로, 인증키가 없거나 활용신청이 안 된 상황에서 <code>datago_file_download</code>가 가장 빠른 수집 경로다.
+  </div>
+</section>
+
+<section id="trap">
+  <h2>2. 활용신청 함정</h2>
+  <div class="danger">
+    <strong>인증키만으로는 부족하다.</strong> 포털에서 <strong>API별 활용신청</strong>(대부분 자동승인·즉시)을 해야 그 키가 해당 API에 등록된다. 마이페이지에서 발급한 키를 그대로 써도, 신청하지 않은 API를 호출하면 거부된다.
+    <ul>
+      <li>odcloud: <code>code: -4</code></li>
+      <li>표준 오픈API: <code>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</code> 또는 플레인 텍스트 <code>Unauthorized</code></li>
+    </ul>
+    이 두 응답을 "키가 틀렸다"로 번역하면 모델은 키를 다시 발급받으려 하고, 실제 해법(활용신청)에는 영원히 도달하지 못한다.
+  </div>
+</section>
+
+<section id="search">
+  <h2>3. 검색·상세 (HTML 파싱)</h2>
+  <p>포털은 검색·상세에 JSON API를 제공하지 않는다. 서버 렌더링 HTML을 정규식으로 파싱한다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>추출 대상</th><th>패턴 근거</th></tr></thead>
+    <tbody>
+      <tr><td><code>publicDataPk</code> · <code>type</code></td><td>목록 항목의 <code>fn_preview('12345', 'FILE')</code> 호출</td></tr>
+      <tr><td>제목 · 설명 · 포맷 태그</td><td><code>&lt;span class="title"&gt;</code> · <code>&lt;dd class="ellipsis publicDataDesc"&gt;</code> · <code>&lt;span class="tagset…"&gt;</code></td></tr>
+      <tr><td>제공기관 · 수정일 · 키워드</td><td><code>&lt;span class="tit"&gt;라벨&lt;/span&gt;</code> 다음 값</td></tr>
+      <tr><td>타입별 총건수</td><td>탭 라벨의 <code>(N건)</code></td></tr>
+      <tr><td>상세 메타</td><td><code>&lt;th&gt;라벨&lt;/th&gt;&lt;td&gt;값&lt;/td&gt;</code> — 화이트리스트 16종만 통과</td></tr>
+      <tr><td>다운로드 식별자 <code>uddi</code></td><td><code>fileDataDown('{pk}', '{uddi}')</code> — <strong>pk로 정확히 짚는다</strong></td></tr>
+      <tr><td>오픈API 엔드포인트</td><td><code>var swaggerUrl</code> · <code>var swaggerJson</code> · 본문의 <code>apis.data.go.kr</code> URL</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>파싱은 포털 개편에 깨진다.</strong> 그래서 모든 파서는 예외를 던지지 않고 <strong>0건 + 원인 안내</strong>로 우아하게 실패한다 — <em>"계속 0건이면 포털 개편으로 파싱이 깨졌을 수 있다: … 를 WebFetch로 직접 확인하고 서버 파서 수정을 사용자에게 보고할 것"</em>. 모델이 검색어를 바꿔가며 무한 재시도하는 것을 막는 안내다.
+  </div>
+  <p><code>uddi</code> 추출에서 pk를 정규식에 박아 넣는 이유: 상세 페이지에는 <strong>관련 데이터셋의 uddi도 함께</strong> 실려 있어, 첫 매치를 쓰면 엉뚱한 데이터셋을 받게 된다.</p>
+  <p>포털은 브라우저가 아닌 User-Agent를 차단할 수 있어 통상 UA를 보낸다(robots는 검색봇 대상).</p>
+</section>
+
+<section id="download">
+  <h2>4. 파일 다운로드 (2단계)</h2>
+  <pre><code># 1단계 — 다운로드 티켓 (JSON)
+GET /tcs/dss/selectFileDataDownload.do?publicDataPk={pk}&publicDataDetailPk={uddi}
+→ { "status": true, "atchFileId": "FILE_00000…", "fileDetailSn": "1" }
+
+# 2단계 — 실파일 (바이너리)
+GET /cmm/cmm/fileDownload.do?atchFileId={atchFileId}&fileDetailSn={fileDetailSn}</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>함정</th><th>대응</th></tr></thead>
+    <tbody>
+      <tr><td><code>status: false</code> — 로그인 필수·제공 중단 데이터셋</td><td>"포털이 파일 티켓을 거부했다 … detailUrl을 브라우저로 확인할 것"</td></tr>
+      <tr><td>파일명이 깨져 온다</td><td>fetch는 헤더를 latin-1로 노출하는데 포털은 UTF-8 바이트를 그대로 싣는다. <code>filename*</code>의 %-인코딩이면 URI 디코드, 아니면 latin-1 바이트를 UTF-8로 재해석하고, 그래도 깨지면 원문 유지</td></tr>
+      <tr><td>CSV 인코딩이 EUC-KR/UTF-8 혼재</td><td>선두 4KB를 UTF-8로 읽어 <code>�</code>가 있으면 EUC-KR로 재해석. 판정 시 <strong>마지막 4글자는 제외</strong>한다 — 4KB 절단이 멀티바이트 문자를 잘라 생긴 <code>�</code>를 인코딩 오판으로 삼지 않기 위해</td></tr>
+      <tr><td>대용량</td><td>100MB 상한. 초과 시 "odcloud API(datago_file_fetch)로 필요한 행만 조회할 것"</td></tr>
+      <tr><td>같은 이름 재다운로드</td><td><code>-1</code>·<code>-2</code> 접미어로 충돌 회피 (최대 99)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>미리보기 <code>encoding</code>이 <code>euc-kr</code>이면 파일을 읽기 전에 <code>iconv -f euc-kr -t utf-8</code> 변환이 필요하다 — 응답이 이를 명시한다.</p>
+</section>
+
+<section id="odcloud">
+  <h2>5. odcloud 행 조회</h2>
+  <pre><code>GET https://api.odcloud.kr/api/{publicDataPk}/v1/{uddi}?page=1&perPage=10&returnType=JSON
+Authorization: Infuser {인증키}</code></pre>
+  <div class="ok">
+    <strong>키를 <code>Authorization</code> 헤더로 보낸다.</strong> odcloud는 <code>serviceKey</code> 쿼리도 받지만, 헤더를 쓰면 에러 본문에 URL이 에코돼도 키가 새지 않는다.
+  </div>
+  <p><code>uddi</code>의 <code>:</code>는 리터럴로 통과해야 한다(실측) — 세그먼트를 인코딩한 뒤 <code>%3A</code>만 <code>:</code>로 되돌린다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th><code>code</code></th><th>의미</th><th>서버의 안내</th></tr></thead>
+    <tbody>
+      <tr><td><code>-1</code></td><td>필수 파라미터 누락</td><td>—</td></tr>
+      <tr><td><code>-2</code></td><td>권한 없음</td><td>—</td></tr>
+      <tr><td><code>-3</code></td><td>등록되지 않은 서비스</td><td>"uddi는 <code>_YYYYMMDDHHMM</code> 접미사까지 전체가 필요"</td></tr>
+      <tr><td><code>-4</code></td><td>이 API에 등록되지 않은 인증키</td><td>"활용신청(자동승인)을 먼저 … 활용신청 전에는 <code>datago_file_download</code>(무인증)로 원본을 받는 것이 빠르다"</td></tr>
+      <tr><td><code>-5</code></td><td>트래픽 초과</td><td>"오늘은 <code>datago_file_download</code>로 대체할 것"</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>응답은 12,000자에서 자르고 <code>…(잘림 — perPage를 줄이거나 필요한 행만 page로 짚어 조회할 것)</code>을 덧붙인다.</p>
+</section>
+
+<section id="openapi">
+  <h2>6. 표준 오픈API</h2>
+  <pre><code>GET https://apis.data.go.kr/{path}?{params}&serviceKey={인증키}
+# 예: 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th><code>returnAuthMsg</code></th><th>안내</th></tr></thead>
+    <tbody>
+      <tr><td><code>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</code></td><td>활용신청 여부 + 키 일치 확인. "키 교정 전 재시도 금지"</td></tr>
+      <tr><td><code>DEADLINE_HAS_EXPIRED_ERROR</code></td><td>활용기간 만료 — 포털에서 연장 신청</td></tr>
+      <tr><td><code>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</code></td><td>일일 트래픽 초과 — 오늘은 이 API 추가 호출 금지</td></tr>
+      <tr><td><code>SERVICE_ACCESS_DENIED_ERROR</code></td><td>활용신청 승인 상태 확인</td></tr>
+      <tr><td><code>TEMPORARILY_DISABLE_THE_SERVICEKEY_ERROR</code></td><td>일시 차단된 키</td></tr>
+      <tr><td><code>NO_OPENAPI_SERVICE_ERROR</code></td><td>존재하지 않는 경로 — 활용가이드의 요청주소와 대조</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>게이트웨이가 미등록 키에 HTTP 200을 준다.</strong> 본문이 XML 에러이거나 플레인 텍스트 <code>Unauthorized</code>일 수 있어, 상태 코드만 보면 성공으로 오인한다. 본문 검사가 먼저다.
+  </div>
+  <ul>
+    <li>응답이 XML인 API가 많다. <code>dataType</code>/<code>_type=JSON</code>을 지원하는 API는 JSON을 요청하는 편이 파싱이 쉽다.</li>
+    <li><code>serviceKey</code>는 서버가 주입한다 — 호출자가 <code>params</code>에 넣으면 zod가 거부한다.</li>
+    <li>응답은 8,000자에서 자르고 <code>numOfRows</code>/<code>pageNo</code>로 줄여 재조회하라고 안내한다.</li>
+    <li>모든 출력 경로에 <code>serviceKey=***</code> 마스킹.</li>
+  </ul>
+  <div class="note">
+    <strong>파라미터를 추측해 반복 호출하면 안 된다.</strong> 표준 오픈API는 일일 트래픽 제한이 있고, 잘못된 파라미터 호출도 카운트된다. <code>datago_detail</code>의 <code>endpoint</code>/<code>requestUrls</code>/<code>docs</code>에서 계약을 먼저 확인하는 것이 툴 설명에 명시돼 있다.
+  </div>
+</section>
+
+<section id="impl">
+  <h2>7. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>포털 계약</th><th>social-flow 구현</th></tr></thead>
+    <tbody>
+      <tr><td>검색·상세</td><td>JSON API 없음</td><td>HTML 정규식 파싱 + 우아한 실패</td></tr>
+      <tr><td>검색 타입</td><td><code>dType=API|FILE</code></td><td><code>type</code> 생략 시 <strong>둘 다 병렬 검색</strong></td></tr>
+      <tr><td>인증 전달</td><td>odcloud는 쿼리·헤더 모두 허용</td><td>헤더만 (키 유출 경로 차단)</td></tr>
+      <tr><td>다운로드 상한</td><td>제한 없음</td><td>100MB — 콘텐츠 시드 용도 상한</td></tr>
+      <tr><td>다운로드 타임아웃</td><td>—</td><td>120초 (공용 15초와 별도)</td></tr>
+      <tr><td>저장 위치</td><td>—</td><td><code>saveDir</code> 미지정 시 OS 임시 디렉토리 하위 <code>social-flow-datago/</code></td></tr>
+      <tr><td>출처 표기</td><td>—</td><td>응답에 "상세 URL과 수정일(데이터 기준일)을 research 기록에 남길 것" 안내</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  기준일 2026-07-29 · 구현 <a href="../../server/src/datago-client.ts">server/src/datago-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+</footer>
+
+</div>
+</body>
+</html>

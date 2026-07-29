@@ -2,27 +2,27 @@
 name: produce
 description: >
   This skill should be used when the user asks to "영상 만들어", "콘텐츠 제작",
-  "produce the video", "채널별 콘텐츠 만들어", or after a storyboard is approved.
-  Converts the approved scenes.js under data/<category>/<topic>/storyboard/ into a
+  "produce the video", "플랫폼별 콘텐츠 만들어", or after a storyboard is approved.
+  Converts the approved scenes.js under data/<channel>/<topic>/storyboard/ into a
   narrated 9:16 video (1080x1920/30fps — generated backgrounds, TTS narration, BGM
-  with ducking, kinetic subtitles, brand outro) plus per-channel text (Threads,
-  Instagram, Facebook, YouTube) under data/<category>/<topic>/output/, verified on a
+  with ducking, kinetic subtitles, brand outro) plus per-platform text (Threads,
+  Instagram, Facebook, YouTube) under data/<channel>/<topic>/output/, verified on a
   phone viewport before the publish step. When recording/alignment.json exists
   (storyboard-first shooting flow), it instead edits the user's screen recording
   into the 9:16 video (cut per scene, focus crop, title overlays, burned subtitles,
   BGM ducking) via build-screencast.sh.
-argument-hint: "<카테고리> <주제> [채널CSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__fect-mcp__tts_generate", "mcp__fect-mcp__tts_list_voices", "mcp__fect-mcp__music_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_text2video", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
+argument-hint: "<채널> <주제> [플랫폼CSV|auto]"
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_text2video", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
 ---
 
-# 채널별 콘텐츠 제작 — data/[카테고리]/[주제]/output/
+# 플랫폼별 콘텐츠 제작 — data/[채널]/[주제]/output/
 
-승인된 스토리보드(`storyboard/scenes.js`)를 9:16 나레이션 영상과 채널별 텍스트로
+승인된 스토리보드(`storyboard/scenes.js`)를 9:16 나레이션 영상과 플랫폼별 텍스트로
 변환한다. **scenes.js 가 유일한 데이터 원천** — 영상 화면·나레이션·자막·캡션이
 전부 여기서 파생된다.
 
 ```
-data/<카테고리>/<주제>/
+data/<채널>/<주제>/
 ├── storyboard/          # 입력 (approved 상태여야 함)
 ├── .work/               # 중간 산출물 (gitignore — cards/ broll/ pcm/ manifest)
 └── output/
@@ -38,7 +38,7 @@ data/<카테고리>/<주제>/
 1. **사실 왜곡 금지** — 나레이션·캡션은 scenes.js 에 이미 있는 사실의 재구성만.
    범위를 상한 하나로 줄이지 않고, 수치를 새로 만들지 않는다.
 2. **크로스포스팅 복붙 금지** — "사실은 공유하되 문장은 공유하지 않는다."
-   채널마다 어체·종결·정보 밀도를 다시 설계한다 (channel-guide 플레이북).
+   플랫폼마다 어체·종결·정보 밀도를 다시 설계한다 (platform-guide 플레이북).
 3. **쉬운 말** — 화면 텍스트·나레이션·자막·캡션 전부. 소리로만 듣고도 이해돼야 한다.
 4. **생성 영상은 무드샷·캐릭터 발화만** — 사건 재연·실존 인물·국가 상징·뉴스 화면
    연출 금지. 카드(정지 텍스트)는 코드 렌더만.
@@ -53,15 +53,15 @@ data/<카테고리>/<주제>/
 
 - `storyboard/storyboard.md` frontmatter `status: approved` 확인 — 아니면 중단하고
   `/social-flow:storyboard` 승인부터 안내.
-- `data/<카테고리>/profile.md` 로드 (보이스·테마·채널·아웃트로).
+- `data/<채널>/profile.md` 로드 (보이스·테마·플랫폼·아웃트로).
 - **소스 판별**: `recording/alignment.json` 이 있으면 **촬영 편집 경로**다 —
   §2~7 대신 `references/screencast-pipeline.md` §편집 절차를 따른다 (오버레이
   캡처 → edit.json → build-screencast.sh — TTS·생성 배경·reveal 없음, 음성은
   사용자 육성). 산출물 이름(reel.mp4·cover.jpg·build-report.txt)이 같으므로
-  §8~10(폰 검수·채널 텍스트·품질 게이트)은 그대로 진행한다. 게이트 판정표는
+  §8~10(폰 검수·플랫폼 텍스트·품질 게이트)은 그대로 진행한다. 게이트 판정표는
   screencast-pipeline.md 의 것을 쓴다.
-- 작업 디렉토리 준비: `.work/{cards,broll,pcm,fonts}` 생성, 채널 목록 확정
-  (인자 CSV 또는 profile §4 활성 채널).
+- 작업 디렉토리 준비: `.work/{cards,broll,pcm,fonts}` 생성, 플랫폼 목록 확정
+  (인자 CSV 또는 profile §4 게시 플랫폼).
 
 ### 2. 프레임 렌더 준비
 
@@ -136,7 +136,7 @@ segs.tsv  : idx <TAB> seg(0부터) <TAB> 비주얼 <TAB> tts문장 <TAB> sub문�
 비주얼 열: 상태 PNG / `영상.mp4::오버레이.png`(커버·발화) / `A|B`(하위 reveal —
 불릿을 묶어 읽은 문장도 화면 등장은 하나씩). 아웃트로는 profile §6 자산을
 `.work/outro.mp4` 로 복사만 한다(없으면 `build-outro.sh` 로 최초 1회 생성 후
-`data/<카테고리>/assets/` 에 저장). 자막 폰트를 지정하려면 ttf 를 `.work/fonts/`
+`data/<채널>/assets/` 에 저장). 자막 폰트를 지정하려면 ttf 를 `.work/fonts/`
 에 넣는다(woff2 불가 — 없으면 fontconfig 폴백으로도 게시 품질은 나온다).
 
 ```bash
@@ -161,23 +161,23 @@ $REF/build-reel.sh .work    # → .work/reel.mp4 · cover.jpg · build-report.tx
 프레임만 보고 주제 인지. 문제 시 템플릿 수정 → frame.html 재생성 → 해당 상태만
 재캡처 → 재빌드.
 
-### 9. 채널별 텍스트 저작
+### 9. 플랫폼별 텍스트 저작
 
-channel-guide 플레이북(`../channel-guide/references/channel-playbook.md`)을 Read
-하고 채널별로 재작성한다 — Threads 구어체 1~3줄+답글 체인 / IG 캡션 첫 125자
+platform-guide 플레이북(`../platform-guide/references/platform-playbook.md`)을 Read
+하고 플랫폼별로 재작성한다 — Threads 구어체 1~3줄+답글 체인 / IG 캡션 첫 125자
 훅+저장 CTA / FB 구조화 본문+첫 댓글 링크 문안 / YT 키워드 제목+설명+#Shorts
-해시태그. 각 `output/<채널>/` 에 저장하고, 영상·커버는
+해시태그. 각 `output/<플랫폼>/` 에 저장하고, 영상·커버는
 `cp .work/reel.mp4 output/video/video.mp4` · `cp .work/cover.jpg output/video/cover.jpg` ·
 `cp .work/build-report.txt output/video/` 로 확정한다 (이후 publish 는 output/ 만 본다).
 
 ### 10. 품질 게이트 + 완료 보고
 
 content-reviewer 에이전트(Agent)에 산출물 검증을 위임한다 — 영상 프레임
-스크린샷·채널별 카피·scenes.js 를 주고 P0(오탈자·잘림·사실 불일치·채널 금기·복붙
-문장·무설명 전문용어) 검출과 축별 점수를 받는다. **P0=0 이 될 때까지 수정
+스크린샷·플랫폼별 카피·scenes.js 를 주고 P0(오탈자·잘림·사실 불일치·플랫폼 금기·
+복붙 문장·무설명 전문용어) 검출과 축별 점수를 받는다. **P0=0 이 될 때까지 수정
 (최대 3라운드)** — 미달 시 미해결 지적을 사용자에게 그대로 보고하고 판단을
 위임한다. 통과하면 storyboard.md `status: produced` 갱신, 산출물 표(경로·길이·
-채널)와 함께 `/social-flow:publish` 를 안내한다.
+플랫폼)와 함께 `/social-flow:publish` 를 안내한다.
 
 ## Additional Resources
 
@@ -189,7 +189,7 @@ content-reviewer 에이전트(Agent)에 산출물 검증을 위임한다 — 영
 - **`references/screencast-overlay.html`** — 씬 타이틀 알파 오버레이 렌더러 (상단 y 190~460 블록, scenes.js 주입)
 - **`references/video-template.html`** — 1080×1920 씬 렌더러 (THEME 주입·reveal·alpha·세이프존·오버플로 가드)
 - **`references/build-reel.sh`** — 합성 파이프라인 SoT (무음 트림→loudnorm→경계 검출→reveal xfade→켄번즈→자막→아웃트로 접합)
-- **`references/build-outro.sh`** — 카테고리 공용 아웃트로 생성
+- **`references/build-outro.sh`** — 채널 공용 아웃트로 생성
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — 헤드리스 캡처 (상태 수 자동 도출)
 - **`references/reveal-timing.py`** — 나레이션 '쉼' 역산 reveal 타이밍
 - **`references/frame-persona-clip.py`** — 발화 클립 프레이밍 통일 + 팔린드롬

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{CHANNEL}} — 프로필 이미지 방향 선택</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0b1020; color: #e8ecf4;
+    font-family: "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    padding: 32px; min-height: 100vh;
+  }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 { font-size: 22px; font-weight: 800; }
+  header p { color: #8b93a7; font-size: 13px; margin-top: 6px; }
+  .grid {
+    display: grid; grid-template-columns: repeat(2, minmax(280px, 460px));
+    gap: 24px; justify-content: center;
+  }
+  .card {
+    background: #131a2e; border: 1px solid #232c46; border-radius: 16px;
+    padding: 18px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .card .tag {
+    align-self: flex-start; font-size: 13px; font-weight: 800;
+    background: #22304f; color: #9db8ff; border-radius: 8px; padding: 4px 10px;
+  }
+  .card img.main { width: 100%; border-radius: 12px; display: block; }
+  .preview { display: flex; align-items: center; gap: 14px; }
+  .preview img { border-radius: 50%; object-fit: cover; display: block; }
+  .preview .lg { width: 96px; height: 96px; }
+  .preview .sm { width: 40px; height: 40px; }
+  .preview span { color: #8b93a7; font-size: 12px; }
+  .desc { color: #c3cadb; font-size: 13px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>{{CHANNEL}} — 프로필 이미지 방향 선택</h1>
+  <p>원형 미리보기가 실제 플랫폼 노출 형태입니다. 터미널에서 A~D 를 선택하세요.</p>
+</header>
+<div class="grid">
+  <div class="card">
+    <span class="tag">A · {{LABEL_A}}</span>
+    <img class="main" src="{{IMG_A}}" alt="후보 A">
+    <div class="preview">
+      <img class="lg" src="{{IMG_A}}" alt=""><img class="sm" src="{{IMG_A}}" alt="">
+      <span>원형 크롭 미리보기</span>
+    </div>
+    <p class="desc">{{DESC_A}}</p>
+  </div>
+  <div class="card">
+    <span class="tag">B · {{LABEL_B}}</span>
+    <img class="main" src="{{IMG_B}}" alt="후보 B">
+    <div class="preview">
+      <img class="lg" src="{{IMG_B}}" alt=""><img class="sm" src="{{IMG_B}}" alt="">
+      <span>원형 크롭 미리보기</span>
+    </div>
+    <p class="desc">{{DESC_B}}</p>
+  </div>
+  <div class="card">
+    <span class="tag">C · {{LABEL_C}}</span>
+    <img class="main" src="{{IMG_C}}" alt="후보 C">
+    <div class="preview">
+      <img class="lg" src="{{IMG_C}}" alt=""><img class="sm" src="{{IMG_C}}" alt="">
+      <span>원형 크롭 미리보기</span>
+    </div>
+    <p class="desc">{{DESC_C}}</p>
+  </div>
+  <div class="card">
+    <span class="tag">D · {{LABEL_D}}</span>
+    <img class="main" src="{{IMG_D}}" alt="후보 D">
+    <div class="preview">
+      <img class="lg" src="{{IMG_D}}" alt=""><img class="sm" src="{{IMG_D}}" alt="">
+      <span>원형 크롭 미리보기</span>
+    </div>
+    <p class="desc">{{DESC_D}}</p>
+  </div>
+</div>
+</body>
+</html>

@@ -165,7 +165,7 @@ function validateBackground(
 // Text-to-Image 요청 스키마 (POST /v1/images/generations)
 export const text2ImageSchema = z
   .object({
-    prompt: z.string().min(1, 'Prompt is required'),
+    prompt: z.string().min(1, 'Prompt is required').max(32_000, 'Prompt exceeds the 32,000-character limit for GPT Image models'),
     model: z.enum(VALID_GPT_IMAGE_MODELS).optional().default(DEFAULT_MODEL),
     size: GptImageSizeSchema.optional().default('auto'),
     quality: z.enum(VALID_GPT_IMAGE_QUALITIES).optional().default('auto'),
@@ -182,7 +182,7 @@ export const text2ImageSchema = z
 // 참고: openai SDK v6 부터 images.edit 도 output_format / input_fidelity 를 지원한다.
 export const img2ImgSchema = z
   .object({
-    prompt: z.string().min(1, 'Prompt is required'),
+    prompt: z.string().min(1, 'Prompt is required').max(32_000, 'Prompt exceeds the 32,000-character limit for GPT Image models'),
     sourceImagesBase64: z
       .array(z.string().min(1))
       .min(1, 'At least one source image is required')
@@ -293,7 +293,7 @@ export async function generateFromText(request: Text2ImageRequest): Promise<Imag
     return {
       success: false, base64: '', mimeType: responseMime,
       prompt: request.prompt, model,
-      error: `Image generation failed: ${errorMessage}`,
+      error: errorMessage,
     };
   }
 }
@@ -350,7 +350,7 @@ export async function generateFromImage(request: Img2ImgRequest): Promise<ImageG
     return {
       success: false, base64: '', mimeType: responseMime,
       prompt: request.prompt, model,
-      error: `Image editing failed: ${errorMessage}`,
+      error: errorMessage,
     };
   }
 }

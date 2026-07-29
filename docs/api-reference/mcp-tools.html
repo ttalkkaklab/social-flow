@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCP 툴 스펙 &amp; 작성 베스트 프랙티스 — social-flow</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<div class="wrap">
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>MCP 툴</div>
+
+<header class="hero">
+  <div class="kicker">PROTOCOL</div>
+  <h1>MCP 툴 스펙 &amp; 작성 베스트 프랙티스</h1>
+  <p class="sub">이 서버가 준수해야 하는 프로토콜 계약(Model Context Protocol 2025-06-18)과, 툴을 "모델이 실제로 잘 쓰는" 형태로 만드는 설계 원칙. 두 축을 합쳐 이 저장소의 품질 평가 루브릭을 정의한다.</p>
+  <div class="meta">
+    <span>스펙 <a href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools">MCP 2025-06-18 · Tools</a></span>
+    <span>가이드 <a href="https://www.anthropic.com/engineering/writing-tools-for-agents">Anthropic — Writing tools for agents</a></span>
+    <span>SDK <strong>@modelcontextprotocol/sdk 1.30.0</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#tool">Tool 정의 필드</a></li>
+    <li><a href="#annotations">동작 힌트(annotations)</a></li>
+    <li><a href="#result">CallToolResult 계약</a></li>
+    <li><a href="#errors">에러 보고 2계층</a></li>
+    <li><a href="#practices">툴 작성 원칙 7가지</a></li>
+    <li><a href="#rubric">평가 루브릭</a></li>
+    <li><a href="#apply">이 저장소의 적용 규칙</a></li>
+  </ol>
+</nav>
+
+<section id="tool">
+  <h2>1. Tool 정의 필드</h2>
+  <p>MCP의 <code>tools/list</code> 응답에 실리는 Tool 객체의 필드다. SDK 1.30.0의 <code>ToolSchema</code>가 정본이다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>필드</th><th>필수</th><th>용도</th><th>social-flow</th></tr></thead>
+    <tbody>
+      <tr><td><code>name</code></td><td>필수</td><td>고유 식별자. 모델이 호출할 때 쓰는 이름</td><td>사용</td></tr>
+      <tr><td><code>title</code></td><td>선택</td><td>사람에게 보여줄 표시 이름. 클라이언트 UI가 툴 목록·승인 창에 띄운다</td><td>사용 (한국어)</td></tr>
+      <tr><td><code>description</code></td><td>선택</td><td>모델이 읽는 사용 설명. 사실상 프롬프트다</td><td>사용</td></tr>
+      <tr><td><code>inputSchema</code></td><td>필수</td><td>인자 JSON Schema. <code>type: "object"</code> 고정</td><td>사용</td></tr>
+      <tr><td><code>outputSchema</code></td><td>선택</td><td>구조화 결과의 JSON Schema. 선언하면 서버는 <strong>MUST</strong> 이에 맞는 <code>structuredContent</code>를 반환해야 한다</td><td>SNS 툴 9종에 사용</td></tr>
+      <tr><td><code>annotations</code></td><td>선택</td><td>동작 힌트 4종 + 표시용 title (아래 §2)</td><td>전 툴 사용</td></tr>
+      <tr><td><code>execution</code></td><td>선택</td><td><code>taskSupport</code> — 장시간 작업의 task 위임 여부</td><td>미사용</td></tr>
+      <tr><td><code>_meta</code> · <code>icons</code></td><td>선택</td><td>구현별 확장 메타 · 아이콘</td><td>미사용</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong><code>outputSchema</code>는 선언하면 계약이 된다.</strong> 스펙은 "Servers MUST provide structured results that conform to this schema"라고 못박는다. 실패 경로에서 <code>structuredContent</code>를 못 채울 가능성이 있으면 선언하지 않는 편이 낫다. 이 저장소는 <strong>성공 경로에서 항상 채워지는 필드만</strong> <code>required</code>로 잡고, 실패는 <code>isError: true</code> + 텍스트로만 반환해 이 계약을 지킨다.
+  </div>
+</section>
+
+<section id="annotations">
+  <h2>2. 동작 힌트(annotations)</h2>
+  <p>클라이언트가 "이 호출에 사용자 확인을 받아야 하나"를 판단하는 근거다. 스펙은 이들을 <strong>힌트</strong>로 규정하고, 클라이언트는 신뢰할 수 없는 서버의 힌트를 믿어서는 안 된다고 경고한다 — 그러나 <em>신뢰되는</em> 서버가 이 필드를 비워두면 클라이언트는 위험한 툴과 안전한 툴을 구분할 수단을 잃는다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>힌트</th><th>기본값</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td><code>readOnlyHint</code></td><td><code>false</code></td><td>환경을 수정하지 않는다</td></tr>
+      <tr><td><code>destructiveHint</code></td><td><code>true</code></td><td>파괴적·되돌리기 어려운 갱신을 할 수 있다. <code>readOnlyHint: false</code>일 때만 의미가 있다</td></tr>
+      <tr><td><code>idempotentHint</code></td><td><code>false</code></td><td>같은 인자로 반복 호출해도 추가 효과가 없다. <code>readOnlyHint: false</code>일 때만 의미가 있다</td></tr>
+      <tr><td><code>openWorldHint</code></td><td><code>true</code></td><td>외부(인터넷 등) 열린 세계와 상호작용한다</td></tr>
+      <tr><td><code>title</code></td><td>—</td><td>표시 이름 (Tool 최상위 <code>title</code>의 구버전 위치)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong>이 서버에는 게시 전 검토 게이트가 없다 — 호출이 곧 공개다.</strong> <code>threads_publish</code>·<code>instagram_publish</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>sns_comment_reply</code>·<code>sns_comment_moderate</code> 7종은 호출 즉시 외부에 공개되고, 게시 API는 비멱등이라 재시도가 중복 게시를 만든다. 이 사실은 원래 각 툴의 <code>description</code> 산문으로만 적혀 있었다 — 즉 <strong>모델은 읽지만 클라이언트는 읽지 못하는 형태</strong>였다. 이제 <code>destructiveHint: true</code> + <code>idempotentHint: false</code>로 기계가 읽을 수 있게 선언한다.
+  </div>
+</section>
+
+<section id="result">
+  <h2>3. CallToolResult 계약</h2>
+  <p>비구조화 결과는 <code>content[]</code>에, 구조화 결과는 <code>structuredContent</code>에 담는다. 둘은 배타가 아니라 <strong>병행</strong>이다 — 스펙은 구조화 결과를 내는 툴도 하위호환을 위해 직렬화 JSON을 텍스트 블록으로 함께 실으라고 권한다(SHOULD).</p>
+  <h3>콘텐츠 블록 종류</h3>
+  <ul>
+    <li><code>text</code> — <code>{ type, text }</code></li>
+    <li><code>image</code> — <code>{ type, data(base64), mimeType }</code></li>
+    <li><code>audio</code> — <code>{ type, data(base64), mimeType }</code></li>
+    <li><code>resource_link</code> — <code>{ type, uri, name, description?, mimeType? }</code></li>
+    <li><code>resource</code> — 임베드된 리소스</li>
+  </ul>
+  <div class="note">
+    <strong>생성 미디어를 base64로 돌려줄지, 경로만 돌려줄지.</strong> 이미지(<code>gpt_image_*</code>)는 <code>image</code> 블록으로 함께 반환한다 — 모델이 결과를 눈으로 보고 재생성 여부를 판단해야 하기 때문이다. 반면 영상·음성·음악은 <strong>경로만</strong> 반환한다: 수 MB짜리 base64는 컨텍스트를 태우는데 모델은 오디오·비디오를 어차피 직접 평가하지 못한다.
+  </div>
+</section>
+
+<section id="errors">
+  <h2>4. 에러 보고 2계층</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>계층</th><th>형태</th><th>쓰는 경우</th><th>이 서버</th></tr></thead>
+    <tbody>
+      <tr><td>프로토콜 에러</td><td>JSON-RPC <code>error</code></td><td>알 수 없는 툴, 잘못된 인자, 서버 내부 오류</td><td>SDK가 전송 계층에서 처리</td></tr>
+      <tr><td>툴 실행 에러</td><td><code>result.isError: true</code> + 텍스트</td><td>API 실패, 입력 데이터 오류, 비즈니스 로직 실패</td><td><code>index.ts</code>가 모든 예외를 여기로 변환</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>실행 에러를 <code>isError</code>로 돌려주는 이유는 <strong>모델이 그걸 읽고 스스로 교정</strong>할 수 있어야 하기 때문이다. 프로토콜 에러로 던지면 모델은 실패 사실만 알고 원인을 못 본다. 이 서버는 zod 검증 실패도 필드 경로와 함께 실행 에러로 변환한다.</p>
+  <pre><code>Invalid arguments — durationSeconds: 1080p 해상도는 8초 길이에서만 지원됩니다 (요청: 4초).</code></pre>
+</section>
+
+<section id="practices">
+  <h2>5. 툴 작성 원칙 7가지</h2>
+  <p>Anthropic의 <a href="https://www.anthropic.com/engineering/writing-tools-for-agents">Writing tools for agents</a>에서 정리한 원칙과, 이 저장소가 각각을 어떻게 지키는지.</p>
+
+  <h3>① 워크플로 단위로 통합하라</h3>
+  <p>API 엔드포인트를 1:1로 감싸지 말고, 실제 작업 단위로 묶는다. <code>list_users</code>+<code>list_events</code>+<code>create_event</code> 대신 <code>schedule_event</code> 하나.</p>
+  <div class="ok"><strong>적용:</strong> <code>instagram_publish</code> 한 번이 <code>/me</code> 조회 → 자식 컨테이너 N개 생성 → 전부 <code>FINISHED</code> 폴링 → 캐러셀 묶기 → <code>media_publish</code> → permalink 조회까지 6단계를 처리한다. 모델은 캡션과 이미지 URL만 넘긴다.</div>
+
+  <h3>② 네임스페이싱</h3>
+  <p>서비스·리소스별 공통 접두어로 묶어 모델이 유사 툴을 구분하게 한다.</p>
+  <div class="ok"><strong>적용:</strong> <code>serp_</code>·<code>naver_</code>·<code>datago_</code>·<code>gpt_image_</code>·<code>veo_</code>·<code>tts_</code>·<code>music_</code>·<code>sns_</code>. 게시 툴만 플랫폼 이름을 앞에 둔다(<code>threads_publish</code>) — 게시는 플랫폼 선택이 곧 의사결정이라 접두어가 플랫폼이어야 모델이 헷갈리지 않는다.</div>
+
+  <h3>③ 고신호 컨텍스트만 반환</h3>
+  <p>기술적 식별자(UUID·MIME)보다 의미 있는 언어로. 유연성보다 관련성 우선.</p>
+  <div class="ok"><strong>적용:</strong> SERP 원본 JSON은 검색 1회에 20~60KB다. <code>organic_results</code>·<code>answer_box</code>·<code>knowledge_graph</code>·<code>related_questions</code>만 추려 2~4KB로 줄인다. <code>sns_comment_inbox</code>는 플랫폼별 필드명 차이를 흡수하고 <code>ageMinutes</code>·<code>withinGoldenHour</code>처럼 <strong>판단에 바로 쓰이는 파생값</strong>을 계산해 싣는다.</div>
+
+  <h3>④ 토큰 효율 — 페이지네이션·필터·절단</h3>
+  <p>기본값을 합리적으로 잡고, 잘렸으면 잘렸다고 실행 가능한 안내와 함께 알린다.</p>
+  <div class="ok"><strong>적용:</strong> <code>datago_file_fetch</code>는 12,000자에서 자르며 <code>…(잘림 — perPage 를 줄이거나 필요한 행만 page 로 짚어 조회할 것)</code>을 덧붙인다. <code>tts_*</code>는 16,000자 대본을 그대로 반향하지 않고 <strong>길이만</strong> 돌려준다 — 이미 호출자가 보낸 문자열이라 정보가 0인데 컨텍스트만 태우기 때문이다.</div>
+
+  <h3>⑤ 실행 가능한 에러 메시지</h3>
+  <p>에러 코드가 아니라 "무엇을 어떻게 고치면 되는지"를 말한다.</p>
+  <div class="ok"><strong>적용:</strong> <code>odcloud -4</code>를 그대로 흘리지 않고 <em>"이 API에 등록되지 않은 인증키 — 포털에서 활용신청(자동승인)을 먼저 해야 한다. 활용신청 전에는 datago_file_download(무인증)로 원본을 받는 것이 빠르다"</em>로 번역한다. SerpApi 401/429는 <em>"키를 교정하기 전 재시도 금지"</em>·<em>"이번 세션에서는 추가 검색을 중단"</em>처럼 <strong>재시도 정책까지</strong> 지시한다.</div>
+
+  <h3>⑥ 설명은 신입 온보딩처럼</h3>
+  <p>암묵적 맥락을 명시하고, 파라미터 이름을 모호하지 않게(<code>user</code>가 아니라 <code>user_id</code>) 짓는다.</p>
+  <div class="ok"><strong>적용:</strong> 생성 툴 설명은 <em>Use when… / Do NOT use… / Returns:</em> 3부 구조를 고정한다. 이건 "무엇을 하는가"만 적은 설명이 유발하는 <strong>오선택</strong>을 막는다 — 모델이 <code>veo_img2video</code>를 써야 할 때 <code>veo_text2video</code>를 고르는 실패는 기능 설명이 아니라 경계 설명이 없어서 생긴다.</div>
+
+  <h3>⑦ 체계적 평가</h3>
+  <p>실제 워크플로 기반의 다단계 태스크로 평가하고, 정확도 외에 실행시간·호출 수·토큰·에러를 함께 본다.</p>
+  <div class="warn"><strong>적용(부분):</strong> 이 저장소는 <code>server/test/contract.test.mjs</code>로 <strong>정적 계약</strong>(스키마 유효성·라우팅 정합·힌트 일관성)을 자동 검증한다. 실제 모델을 돌리는 행동 평가(behavioral eval)는 아직 없다 — 게시 툴이 실호출로 공개 게시를 만들기 때문에 안전한 평가 하네스에는 드라이런 계층이 먼저 필요하다.</div>
+</section>
+
+<section id="rubric">
+  <h2>6. 평가 루브릭</h2>
+  <p>이 저장소의 툴 품질 점수는 아래 5축 100점으로 계산한다. <a href="tool-audit.html">감사 리포트</a>가 이 루브릭으로 채점한 결과다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>축</th><th>배점</th><th>채점 항목</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>A. API 계약 정합성</strong></td><td>30</td>
+        <td>모델 ID·엔드포인트·버전이 현재 공식 문서와 일치하는가 / 파라미터 범위·enum·상한이 공식 값과 같은가 / 설명에 적힌 사실(쿼터·제약·지원 언어)이 참인가 / 교차 제약(해상도×길이×모델)을 스키마에서 강제하는가</td>
+      </tr>
+      <tr>
+        <td><strong>B. MCP 프로토콜 준수</strong></td><td>20</td>
+        <td>Tool 필드(<code>title</code>·<code>annotations</code>·<code>outputSchema</code>) 활용 / 동작 힌트가 실제 부작용과 일치 / <code>structuredContent</code>와 <code>outputSchema</code>의 정합 / 에러 2계층 분리 / capability 선언의 정직성</td>
+      </tr>
+      <tr>
+        <td><strong>C. 툴 설계 베스트 프랙티스</strong></td><td>25</td>
+        <td>워크플로 통합 / 네임스페이싱 일관성 / 설명의 Use·Do NOT·Returns 3부 구조 / 파라미터 이름·설명의 명확성 / 응답 토큰 효율과 절단 안내 / 에러 메시지의 실행 가능성</td>
+      </tr>
+      <tr>
+        <td><strong>D. 구현 정확성·안전성</strong></td><td>15</td>
+        <td>경로 트래버설·확장자 화이트리스트 / 시크릿 유출 경로 차단(URL 에코·에러 본문) / 비멱등 연산의 재시도 안전성 / 부분 실패 격리 / 중복 에러 접두어 같은 출력 오염 없음</td>
+      </tr>
+      <tr>
+        <td><strong>E. 검증 가능성</strong></td><td>10</td>
+        <td>툴 표면 계약을 자동 검증하는 테스트 존재 / 라우팅 정합(정의 ↔ 핸들러 양방향) / 빌드 산출물과 소스의 동기 / 단일 출처 상수(목록 중복 없음)</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p>P0(호출을 실패시키거나 사고를 만드는 결함)은 해당 축 점수를 0으로 내리고, P1은 항목당 감점, P2는 총평에만 반영한다.</p>
+</section>
+
+<section id="apply">
+  <h2>7. 이 저장소의 적용 규칙</h2>
+  <h3>동작 힌트 판정표</h3>
+  <p>애매한 경계를 미리 못박아 툴이 추가될 때 판단이 흔들리지 않게 한다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>툴 부류</th><th>readOnly</th><th>destructive</th><th>idempotent</th><th>openWorld</th><th>근거</th></tr></thead>
+    <tbody>
+      <tr><td>검색·조회 (<code>serp_*</code>, <code>naver_search</code>, <code>datago_search|detail|file_fetch|api_call</code>, <code>sns_comment_inbox</code>, <code>sns_account_check</code>)</td><td>true</td><td>—</td><td>—</td><td>true</td><td>부작용 없음</td></tr>
+      <tr><td>목록 상수 (<code>tts_list_voices</code>, <code>music_list_options</code>)</td><td>true</td><td>—</td><td>—</td><td><strong>false</strong></td><td>API 호출 자체가 없다</td></tr>
+      <tr><td>로컬 파일 생성 (<code>gpt_image_*</code>, <code>veo_*</code>, <code>tts_generate|multi_speaker</code>, <code>music_generate*</code>, <code>datago_file_download</code>)</td><td>false</td><td><strong>false</strong></td><td>false</td><td>true</td><td>새 파일을 쓸 뿐 기존 상태를 파괴하지 않는다. 다만 같은 <code>filename</code>이면 덮어쓰고 생성 결과는 비결정론적이라 멱등이 아니다</td></tr>
+      <tr><td>즉시 공개 게시·답글 (<code>*_publish</code>, <code>facebook_comment</code>, <code>sns_comment_reply</code>)</td><td>false</td><td><strong>true</strong></td><td><strong>false</strong></td><td>true</td><td>되돌리려면 삭제해야 하고, 재시도는 중복 게시를 만든다</td></tr>
+      <tr><td>모더레이션 (<code>sns_comment_moderate</code>)</td><td>false</td><td><strong>true</strong></td><td><strong>true</strong></td><td>true</td><td>숨김/해제는 상태 설정이라 반복해도 결과가 같다. 그래도 외부에 즉시 반영되므로 destructive다</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>설명 3부 구조</h3>
+  <pre><code>&lt;한 줄 요약: 무엇을 하는가&gt;
+
+Use when the user asks to …  ← 선택 근거 (한국어 트리거 단어 병기)
+Do NOT use …                 ← 형제 툴과의 경계
+&lt;비용·시간·제약 한 줄&gt;
+
+Returns: &lt;반환물의 정확한 형태&gt;</code></pre>
+  <p>게시 툴은 여기에 <strong>HITL 계약</strong>을 앞세운다 — <code>⚠️ … 즉시 공개 게시한다 … 사용자가 최종 문안·미디어를 확인·승인한 직후에만 호출한다(승인 없이 호출 금지)</code>.</p>
+
+  <h3>단일 출처 상수</h3>
+  <p>목록형 값(TTS 음성 30종, 조성 13종, 생성 모드 3종)은 클라이언트 모듈의 상수 하나를 정본으로 두고 <code>tools.ts</code>의 JSON Schema enum과 zod enum을 <strong>파생</strong>시킨다. 목록을 스키마에 복사해두면 값이 추가될 때 한쪽만 고쳐지는 사고가 반드시 난다.</p>
+  <pre><code>// tts-client.ts — 정본
+export const TTS_VOICES = { Zephyr: 'Bright', /* …30종… */ } as const;
+export const TTS_VOICE_NAMES = Object.keys(TTS_VOICES) as [VoiceName, ...VoiceName[]];
+
+// tools.ts — 파생
+enum: [...TTS_VOICE_NAMES]
+// tts-client.ts — 파생
+const voiceSchema = z.enum(TTS_VOICE_NAMES);</code></pre>
+</section>
+
+<footer>
+  기준일 2026-07-29 · <a href="index.html">API 레퍼런스 허브</a> · <a href="tool-audit.html">툴 품질 감사 리포트</a>
+</footer>
+
+</div>
+</body>
+</html>
