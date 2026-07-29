@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "social-flow": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT:-.}/server/dist/index.js"],
+      "env": {
+        "SERPAPI_API_KEY": "${SERPAPI_API_KEY:-}",
+        "NAVER_CLIENT_ID": "${NAVER_CLIENT_ID:-}",
+        "NAVER_CLIENT_SECRET": "${NAVER_CLIENT_SECRET:-}",
+        "DATA_GO_KR_API_KEY": "${DATA_GO_KR_API_KEY:-}",
+        "GEMINI_API_KEY": "${GEMINI_API_KEY:-}",
+        "GOOGLE_API_KEY": "${GOOGLE_API_KEY:-}",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY:-}",
+        "SNS_TOKEN_DIR": "${SNS_TOKEN_DIR:-}",
+        "THREADS_TOKEN_FILE": "${THREADS_TOKEN_FILE:-}",
+        "INSTAGRAM_TOKEN_FILE": "${INSTAGRAM_TOKEN_FILE:-}",
+        "FACEBOOK_PAGE_TOKEN_FILE": "${FACEBOOK_PAGE_TOKEN_FILE:-}",
+        "YOUTUBE_OAUTH_FILE": "${YOUTUBE_OAUTH_FILE:-}"
+      }
+    }
+  }
+}
