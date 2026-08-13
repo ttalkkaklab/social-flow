@@ -63,6 +63,26 @@ exit 0 통과 / 1 경고(S2 누적) / 2 불합격(S1) / 3 게이트 미실행(�
 다시 돌린다. 경로는 `${CLAUDE_PLUGIN_ROOT}` 기준으로 쓴다(produce·publish 는
 `data/<채널>/<주제>/` 에서 돌기 때문에 상대경로는 잡히지 않는다).
 
+## 적대적 검증 게이트 — 발신 글 공통 계약
+
+플러그인이 저작해 밖으로 나가는 모든 한국어 문안은 두 단계를 통과한 것만 게시한다.
+1차는 위 문체 검사기(기계 판정이 정본), 2차는 적대적 리뷰어 에이전트다 — AI 가
+쓴 티가 나는지, 처음 읽는 사람이 따라올 수 있는 어휘인지를 반증으로 검증한다.
+**score ≥95 이고 P0=0 일 때만 게시**하고, 최대 3라운드(무인 경로는 2라운드) 안에
+미달이면 게시하지 않는다 — 미달 글을 올리는 것보다 안 올리는 것이 낫다.
+
+| 발신 글 | 저작 지점 | 리뷰어 | 판정 tail |
+|---|---|---|---|
+| 스토리보드 문안 (나레이션·자막·화면) | storyboard · autoproduce | storyboard-reviewer 문안 모드 | `STORYBOARD_REVIEW` |
+| 플랫폼 카피 (threads·ig·fb·yt) | produce · autoproduce | content-reviewer 카피 축 | `CONTENT_REVIEW` |
+| 성장 문안 (새 글·검색 참여·인박스 답글) | grow-threads · grow-instagram · grow-youtube | growth-post-reviewer | `GROWTH_POST_REVIEW` |
+| 게시 후 답글 | publish | growth-post-reviewer | `GROWTH_POST_REVIEW` |
+| bio·채널 소개·태그라인 | channel · intro | growth-post-reviewer `standalone` | `GROWTH_POST_REVIEW` |
+
+통과선 95 는 2026-08-13 사용자 지시다(성장 문안은 2026-08-12 에 90 으로 내렸다가
+같은 지시로 95 복귀). 리뷰어를 거치지 않는 발신 문안 경로를 새 스킬에 만들지
+않는다 — 새 표면이 생기면 이 표에 행을 추가하고 기존 리뷰어를 확장한다.
+
 ## Additional Resources
 
 ### Reference Files

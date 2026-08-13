@@ -96,6 +96,10 @@ $CAP "file://$PWD/$W/lockup.html?mode=char" "$W/char-card.png" 0
 echo "<태그라인>" | python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py --surface screen -
 ```
 
+검사기 통과 뒤 growth-post-reviewer 에이전트에 `standalone` 표면으로 위임해
+**score ≥95 이고 p0=0** 을 받은 태그라인만 화면에 싣는다(최대 3라운드 — 한
+줄짜리 문안이라 라운드를 아끼려면 후보 2~3개를 함께 위임해 고른다).
+
 ### 4. 오프닝 키프레임 (롱 버전 전용 — 4초 표준에서는 생략)
 
 컨셉이 씬 도입형(소품 있는 미니 씬, 어두운 스튜디오 등)이면

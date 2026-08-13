@@ -67,6 +67,12 @@ data/
    채운다. 빈 섹션을 남기지 않는다 — 모르는 값은 사용자에게 묻거나 근거 있는
    기본값을 쓰고 `(기본값)` 표기를 붙인다.
 
+   **채널 카피(소개문·bio)는 발신 글이다** — setup 스킬이 이 문안을 그대로 플랫폼
+   bio 로 올린다. 쓰고 나면 문체 게이트(check-style `--surface screen`)를 돌린 뒤
+   growth-post-reviewer 에이전트에 `standalone` 표면으로 위임해 **score ≥95 이고
+   p0=0** 을 받은 문안만 profile.md 에 싣는다(최대 3라운드, 미달이면 지적을
+   보여주고 사용자와 함께 다듬는다).
+
 6. **SNS 토큰 디렉토리 안내** — 게시 자격증명은 채널별 디렉토리
    `~/.config/social-flow/<slug>/` 에 둔다 (data/<slug> 와 동일 slug — 게시 툴
    `channel` 인자가 이 디렉토리를 가리킨다. 채널 지정 시 기본 토큰 폴백 없음):
@@ -94,6 +100,8 @@ data/
 1. `data/<slug>/profile.md` 를 Read 한다 (없으면 목록을 보여주고 재확인).
 2. 사용자가 지정한 항목만 Edit 한다 — 특히 **TTS 보이스와 THEME 색 변경 시 경고**:
    이미 게시된 영상과 톤이 어긋나며, 채널 공용 outro.mp4 도 다시 만들어야 한다.
+   채널 카피(소개문·bio)를 고쳤으면 add 절차 5와 같은 게이트(check-style +
+   growth-post-reviewer `standalone` ≥95·p0=0)를 다시 통과시킨다.
 3. 변경 전/후를 표로 보고한다.
 
 ## 규칙

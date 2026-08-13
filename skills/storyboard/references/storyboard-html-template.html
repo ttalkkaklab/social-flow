@@ -2,7 +2,7 @@
 <html lang="ko">
 <!--
   ═══════════════════════════════════════════════════════════════════════
-  storyboard.html 템플릿 — 사람이 읽는 스토리보드 렌더 (scenes.js 가 SoT)
+  storyboard.html 템플릿 — 사람이 검토하는 스토리보드 (scenes.js 가 SoT)
   ═══════════════════════════════════════════════════════════════════════
 
   사용법 (storyboard 스킬 §6):
@@ -15,161 +15,546 @@
     않는다 — <script src="./scenes.js"> 가 로드한 window.SCENES 를 렌더러가
     그린다. scenes.js 를 고치면 이 문서는 자동으로 따라온다.
   - SB_DOC 에는 scenes.js 에 없는 편집 메타만 담는다: 핵심 메시지·씬별 주석·
-    전환·개인정보 회피·출처 요약·플랫폼 계획·촬영 준비·재확인 목록.
+    전환·오디오 지시·개인정보 회피·출처 요약·플랫폼 계획·촬영 준비·재확인 목록.
   - 자수·말속도·씬 길이·총길이 검산은 렌더러가 계약(scenes-schema /
-    shot-script-template)대로 자동 계산해 배지로 표시한다.
+    shot-script-template)대로 자동 계산해 배지로 표시하고, 위반은 문서 맨 위
+    점검 스트립에 모아 준다.
+
+  ■ 씬 카드 구조 — 현업 스토리보드 관행 두 가지를 그대로 옮겼다
+    · 패널 스트립: 리빌(화면이 바뀌는 순간) 하나 = 패널 하나. 9:16 프레임 안에
+      배경·오버레이·자막을 실제 위치로 합성해 그린다.
+    · AV 2열: 왼쪽 VIDEO(보이는 것) · 오른쪽 AUDIO(들리는 것) — 방송·광고 대본의
+      표준 배치라 화면과 소리의 어긋남이 한눈에 보인다.
+
+  ■ 프레임 기하는 produce 렌더러에서 그대로 가져온 비율이다 (근사 미리보기)
+    · 생성 모드 = video-template.html — 텍스트 존 x 176/1080 · top 190/1920 ·
+      bottom 570/1920, cover 하단 앵커 · points 상단 앵커 · quote/outro 중앙.
+    · 촬영 모드 = screencast-overlay.html — 상단 블록 y190~460 + 녹화 밴드 y≥460
+      (build-screencast.sh BAND_MIN_Y 460 · BAND_CY 880 · BAND_MAX_H 900).
+    · 자막 = build-reel.sh ASS Style Sub — 폰트 58 · MarginV 380 · MarginL/R 250.
+    produce 의 위 세 파일에서 기하가 바뀌면 이 템플릿의 상수도 같이 고친다.
 
   모드: 촬영(screencast)·생성 모드 둘 다 지원 — visual.source==="recording"
-  이면 shot 텍스트를, 아니면 visual.bg 이미지를 그린다.
+  이면 녹화 밴드 프레임을, 아니면 생성 배경 프레임을 그린다.
+  narration[].img 가 있으면 대사별 삽화 모드(라이트)로 배경이 대사마다 바뀐다.
 -->
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{주제 표시명}} — 스토리보드 · {{채널명}}</title>
 <style>
+  /* ── 토큰 ────────────────────────────────────────────────
+     채널 색(--accent/--accent2/--ink)은 렌더러가 THEME 으로 덮어쓴다.
+     문서 팔레트는 무채색이다 — 색은 채널 강조와 판정(ok/warn/bad)만 쓴다. */
   :root {
-    --accent: #5b8cff; --accent2: #a05bff; --ink: #0b1020;
-    --bg: #f7f8fb; --card: #ffffff; --text: #1c2333; --muted: #66708a;
-    --line: #e3e7f0; --soft: #eef1f8; --ok: #1a9e5c; --warn: #c77b00; --bad: #d13438;
+    --accent: #3f6cff; --accent2: #7b4dff; --ink: #0b1020;
+
+    --bg: #f7f7f5; --card: #ffffff; --sunk: #f2f2ef;
+    --text: #17191d; --muted: #555b64; --faint: #5f6773;
+    --line: #e4e3de; --hair: #eeede9;
+    --ok: #0f6d43; --warn: #855400; --bad: #b52f24;
+    --shadow: 0 1px 2px rgba(18,20,24,.05), 0 12px 28px -22px rgba(18,20,24,.35);
+    /* 링크·강조는 채널색을 텍스트 쪽으로 눌러 본문과 같은 가독성을 유지한다 —
+       순색 accent 는 배지 점·타임라인 칸·스와치처럼 글자가 아닌 자리에만 쓴다 */
+    --accent-ink: color-mix(in srgb, var(--accent) 62%, var(--text));
+
+    /* 타입 스케일 — 1.25 비율 */
+    --t-micro: 11px; --t-cap: 12px; --t-aux: 13px; --t-body: 15px;
+    --t-scene: 17px; --t-lead: 19px; --t-title: 29px;
+    /* 간격 리듬 — 4px 격자 */
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 36px; --s7: 56px;
+    /* 미리보기 프레임 폭 */
+    --fw: 164px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #10141f; --card: #1a2030; --text: #e6eaf5; --muted: #93a0bd;
-      --line: #2a3450; --soft: #232b40;
+      --bg: #0c0d10; --card: #141619; --sunk: #101216;
+      --text: #e8eaed; --muted: #a3a9b3; --faint: #949aa4;
+      --line: #24272d; --hair: #1b1e23;
+      --ok: #4fcb8b; --warn: #e0a733; --bad: #ef7368;
+      --accent-ink: color-mix(in srgb, var(--accent) 45%, var(--text));
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 14px 30px -24px rgba(0,0,0,.8);
     }
   }
+
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: 15px/1.65 "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+    font: var(--t-body)/1.65 "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
   }
-  .wrap { max-width: 860px; margin: 0 auto; padding: 28px 20px 80px; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: var(--s6) var(--s5) 96px; }
+  a { color: var(--accent-ink); text-decoration: none; border-bottom: 1px solid transparent; }
+  a:hover { border-bottom-color: currentColor; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; }
 
-  /* ── 헤더 ─────────────────────────────── */
-  .doc-head { padding: 22px 0 6px; }
-  .doc-kicker { font-size: 13px; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
-  .doc-title { font-size: 27px; font-weight: 800; margin: 6px 0 10px; line-height: 1.3; }
-  .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+  /* ── 헤더 ─────────────────────────────────────────────── */
+  .doc-kicker {
+    font-size: var(--t-cap); letter-spacing: .16em; color: var(--muted); font-weight: 600;
+  }
+  .doc-title {
+    font-size: var(--t-title); font-weight: 700; letter-spacing: -.02em;
+    margin: var(--s3) 0 var(--s4); line-height: 1.28; word-break: keep-all;
+  }
+  .badges { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
   .badge {
-    font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
-    background: var(--soft); color: var(--muted); border: 1px solid var(--line);
+    font-size: var(--t-cap); font-weight: 600; padding: 3px 9px; border-radius: 5px;
+    background: var(--sunk); color: var(--muted); border: 1px solid var(--hair);
+    white-space: nowrap;
   }
-  .badge.ok   { color: var(--ok);   border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
-  .badge.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
-  .badge.bad  { color: var(--bad);  border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
-  .badge.mode { color: #fff; background: linear-gradient(90deg, var(--accent), var(--accent2)); border: none; }
-  .meta-grid { display: grid; grid-template-columns: 110px 1fr; gap: 4px 14px; margin: 14px 0 0; font-size: 14px; }
-  .meta-grid dt { color: var(--muted); font-weight: 700; }
-  .meta-grid dd { margin: 0; }
+  .badge.ok   { color: var(--ok);   background: color-mix(in srgb, var(--ok) 8%, transparent);   border-color: color-mix(in srgb, var(--ok) 24%, transparent); }
+  .badge.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+  .badge.bad  { color: var(--bad);  background: color-mix(in srgb, var(--bad) 9%, transparent);  border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
+  .badge.mode { color: var(--text); background: transparent; border-color: var(--line); font-weight: 700; }
+  .badge.mode::before {
+    content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); margin-right: 6px; vertical-align: 1px;
+  }
 
-  /* ── 섹션 공통 ─────────────────────────── */
-  h2.sec {
-    font-size: 17px; font-weight: 800; margin: 42px 0 14px; padding-top: 18px;
-    border-top: 2px solid var(--line);
+  .meta-grid {
+    display: grid; grid-template-columns: 92px 1fr; gap: var(--s2) var(--s4);
+    margin: var(--s5) 0 0; font-size: var(--t-body); align-items: baseline;
   }
+  .meta-grid dt { color: var(--faint); font-size: var(--t-aux); font-weight: 600; }
+  .meta-grid dd { margin: 0; word-break: keep-all; }
+
+  /* 점검 스트립 — 검산 위반을 문서 맨 위로 모은다 */
+  .audit {
+    margin: var(--s5) 0 0; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--card); overflow: hidden;
+  }
+  .audit-head {
+    display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s4);
+    font-size: var(--t-aux); font-weight: 700; border-bottom: 1px solid var(--hair);
+  }
+  .audit-head .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+  .audit.has-warn .audit-head .dot { background: var(--warn); }
+  .audit.has-bad  .audit-head .dot { background: var(--bad); }
+  .audit-head .count { margin-left: auto; color: var(--muted); font-weight: 500; }
+  .audit ul { margin: 0; padding: var(--s3) var(--s4) var(--s3) 0; list-style: none; }
+  .audit li {
+    display: grid; grid-template-columns: 84px 1fr; gap: var(--s3);
+    padding: var(--s1) var(--s4); font-size: var(--t-aux);
+  }
+  .audit li .where { color: var(--text); font-weight: 700; }
+  /* 색만으로 가르지 않는다 — 흑백 인쇄·색각 이상에서도 위반이 보여야 한다 */
+  .audit li .where::before { content: "· "; color: var(--faint); font-weight: 400; }
+  .audit li.bad .where::before { content: "! "; color: var(--bad); font-weight: 700; }
+  .audit li.bad  .what { color: var(--bad); }
+  .audit li.warn .what { color: var(--warn); }
+  .audit li.warn .where { font-weight: 600; color: var(--muted); }
+  .audit .clean { padding: var(--s3) var(--s4); font-size: var(--t-aux); color: var(--muted); }
+
   .note {
-    background: var(--soft); border-left: 3px solid var(--accent);
-    border-radius: 0 8px 8px 0; padding: 10px 14px; margin: 10px 0; font-size: 13.5px;
+    background: var(--sunk); border-radius: 8px; padding: var(--s3) var(--s4);
+    margin: var(--s2) 0; font-size: var(--t-aux); line-height: 1.6; color: var(--text);
+    border-left: 2px solid var(--line);
   }
-  .note + .note { margin-top: 8px; }
+  .note.pv { border-left-color: var(--bad); }
 
-  /* ── 타임라인 ─────────────────────────── */
-  .timeline { display: flex; gap: 3px; margin: 12px 0 4px; height: 46px; }
+  /* ── 섹션 ─────────────────────────────────────────────── */
+  .sec {
+    font-size: var(--t-cap); font-weight: 700; letter-spacing: .14em; color: var(--faint);
+    margin: var(--s7) 0 var(--s4); padding-bottom: var(--s2);
+    border-bottom: 1px solid var(--line);
+  }
+  .sec .aside { float: right; font-weight: 500; letter-spacing: 0; color: var(--faint); }
+
+  /* ── 타임라인 ─────────────────────────────────────────── */
+  .timeline { display: flex; gap: 2px; height: 40px; }
   .tl-seg {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    border-radius: 8px; color: #fff; font-size: 11.5px; font-weight: 700; min-width: 34px;
-    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--ink)));
+    border-radius: 4px; font-size: var(--t-micro); font-weight: 700; min-width: 26px;
+    background: color-mix(in srgb, var(--accent) 14%, var(--card));
+    color: var(--text);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    overflow: hidden; white-space: nowrap;
   }
-  .tl-seg.cover { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
-  .tl-seg.outro { background: var(--muted); opacity: .75; }
-  .tl-seg small { font-weight: 400; opacity: .85; font-size: 10.5px; }
-  .tl-cap { font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+  /* 커버 칸은 채도가 아니라 두께로 세운다 — 채널색 위 흰 글자는 색에 따라 대비가 무너진다 */
+  .tl-seg.cover {
+    background: color-mix(in srgb, var(--accent) 26%, var(--card));
+    color: var(--text); border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .tl-seg.broll { background: repeating-linear-gradient(135deg,
+      color-mix(in srgb, var(--accent) 14%, var(--card)) 0 5px,
+      color-mix(in srgb, var(--accent) 5%, var(--card)) 5px 10px); }
+  .tl-seg.outro { background: var(--sunk); color: var(--muted); border-color: var(--line); }
+  .tl-seg.outro small { opacity: 1; }
+  .tl-seg small { font-weight: 500; opacity: .8; font-size: 10px; }
+  .tl-ruler { display: flex; margin-top: var(--s1); font-size: 10px; color: var(--faint); }
+  .tl-ruler span { border-left: 1px solid var(--line); padding-left: 3px; }
+  .tl-ruler span:last-child { text-align: right; border-left: none; border-right: 1px solid var(--line); padding: 0 3px 0 0; }
+  .tl-cap { font-size: var(--t-cap); color: var(--faint); margin-bottom: var(--s2); }
 
-  /* ── 씬 카드 ──────────────────────────── */
+  /* ── 씬 카드 ──────────────────────────────────────────── */
   .scene {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    padding: 18px 20px; margin: 18px 0; box-shadow: 0 1px 4px rgba(10,20,50,.05);
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: var(--s5); margin: var(--s4) 0; box-shadow: var(--shadow);
   }
-  .scene-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 12px; }
-  .scene-no { font-size: 13px; font-weight: 800; color: var(--accent); letter-spacing: .04em; }
-  .scene-title { font-size: 19px; font-weight: 800; }
-  .scene-checks { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .scene-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2) var(--s3); }
+  .scene-no {
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em; color: var(--faint);
+    border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px;
+  }
+  .scene-title { font-size: var(--t-scene); font-weight: 700; letter-spacing: -.01em; word-break: keep-all; }
+  .scene-beat { font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em; color: var(--accent-ink); }
+  .scene-checks { margin-left: auto; display: flex; gap: var(--s1); flex-wrap: wrap; }
 
-  /* 오버레이 미리보기 — 실제 영상 렌더 근사 */
-  .overlay {
-    background: var(--ink); color: #fff; border-radius: 12px;
-    padding: 20px 22px; margin: 8px 0 14px;
+  /* 씬 본문 — 기본은 세로 스택(패널 위 · AV 아래). 패널이 3장 이하일 때만 옆에 세운다.
+     4장부터는 가로로 세우면 AV 값 칸이 90px 대로 눌려 파일 경로가 줄 중간에서 쪼개지고,
+     패널 아래 세로 공백이 오히려 커진다(실측). */
+  .scene-body { display: grid; grid-template-columns: 1fr; gap: var(--s4); margin-top: var(--s4); }
+  .scene-body.side {
+    grid-template-columns: auto minmax(440px, 1fr); gap: var(--s5); align-items: start;
   }
-  .ov-cap { font-size: 11px; color: var(--muted); margin: -6px 0 10px; }
-  .ov-kicker { font-size: 12px; font-weight: 700; opacity: .75; letter-spacing: .08em; margin-bottom: 6px; }
-  .ov-title { font-size: 22px; font-weight: 800; line-height: 1.35; }
-  .ov-stat { font-size: 34px; font-weight: 800; margin-top: 12px;
+  /* 패널 칸 — 스트립과 그 안내 문구를 한 칸에 묶는다(그리드 자식은 둘뿐이라야 한다) */
+  .panel-col { min-width: 0; }
+  .panel-note { margin: var(--s3) 0 0; }
+
+  /* 패널 스트립 — 리빌 1개 = 패널 1개 */
+  .panels {
+    display: flex; gap: var(--s3); flex-wrap: wrap;
+    padding-bottom: var(--s2); max-width: 100%;
+  }
+  /* 패널 폭 — 옆에 세운 배치(.side)에서만 좁힌다. .side 가 붙은 쪽이 특이도가 높아 이긴다. */
+  .panels { --fw: 148px; }                       /* 스택 배치(4장 이상) — 폭이 넉넉하다 */
+  .side .panels[data-n="3"] { --fw: 132px; }     /* 옆에 세울 때만 좁힌다 */
+  .side .panels[data-n="1"], .side .panels[data-n="2"] { --fw: 156px; }
+  .panel { margin: 0; flex: none; width: var(--fw); }
+  .panel figcaption {
+    margin-top: var(--s2); font-size: var(--t-micro); color: var(--muted); line-height: 1.5;
+  }
+  .panel figcaption b { color: var(--text); font-weight: 700; }
+  .panel figcaption .seg { display: block; color: var(--faint); margin-top: 1px; }
+
+  /* 9:16 프레임 — produce 렌더러 기하의 비례 근사 */
+  .fr {
+    position: relative; width: var(--fw); aspect-ratio: 9 / 16; overflow: hidden;
+    background: var(--ink); border-radius: calc(var(--fw) * .05);
+    border: 1px solid var(--line);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    color: #fff; text-align: center; line-height: 1.2;
+  }
+  .fr .fbg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  .fr .fscrim { position: absolute; inset: 0; }
+  /* 스크림 — video-template.html 의 d1 강도 */
+  .fr.t-cover  .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.16) 0%, rgba(5,8,20,0) 34%, rgba(5,8,20,.42) 62%, rgba(5,8,20,.90) 100%); }
+  .fr.t-points .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.64) 0%, rgba(5,8,20,.48) 28%, rgba(5,8,20,0) 48%, rgba(5,8,20,0) 68%, rgba(5,8,20,.52) 100%); }
+  .fr.t-quote  .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.55) 0%, rgba(5,8,20,.38) 35%, rgba(5,8,20,.52) 62%, rgba(5,8,20,.92) 100%); }
+  /* 라이트(삽화) 모드 — 흰 배경 라인아트 위 잉크 텍스트 + 화이트 워시 */
+  .fr.light .fscrim { background: linear-gradient(180deg, rgba(255,255,255,.66) 0%, rgba(255,255,255,0) 34%, rgba(255,255,255,0) 64%, rgba(255,255,255,.66) 100%); }
+  .fr.light { color: var(--ink); }
+
+  /* 텍스트 존 — left/right 176/1080, top 190/1920, bottom 570/1920 */
+  .fr .fzone {
+    position: absolute; left: 16.30%; right: 16.30%; top: 9.90%; bottom: 29.69%;
+    display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
+  }
+  .fr .fzone.top { justify-content: flex-start; }
+  .fr .fzone.center { justify-content: center; }
+
+  .fr .f-kicker {
+    align-self: center; font-size: calc(var(--fw) * .0315); font-weight: 700;
+    letter-spacing: .1em; color: rgba(255,255,255,.92); background: rgba(5,8,20,.38);
+    border: 1px solid rgba(255,255,255,.14); border-radius: 999px;
+    padding: calc(var(--fw) * .011) calc(var(--fw) * .031);
+    margin-bottom: calc(var(--fw) * .028);
+  }
+  .fr.light .f-kicker { color: rgba(255,255,255,.95); background: color-mix(in srgb, var(--ink) 86%, transparent); }
+  .fr .f-title {
+    font-size: calc(var(--fw) * .0926); line-height: 1.14; font-weight: 800;
+    letter-spacing: -.02em; word-break: keep-all; text-shadow: 0 1px 5px rgba(0,0,0,.55);
+    margin-bottom: calc(var(--fw) * .041);
+  }
+  /* inline-block 이라야 폭이 글자 폭이다 — produce 의 640px 가드가 재는 값과 같아진다 */
+  .fr .f-stat {
+    font-size: calc(var(--fw) * var(--stat-fs, .1898)); line-height: 1; font-weight: 800;
+    letter-spacing: -.03em; white-space: nowrap; display: inline-block;
+  }
+  .fr .f-statlabel {
+    font-size: calc(var(--fw) * .037); font-weight: 600; color: rgba(255,255,255,.88);
+    margin-top: calc(var(--fw) * .02); word-break: keep-all;
+  }
+  .fr.light .f-statlabel { color: color-mix(in srgb, var(--ink) 80%, transparent); }
+  .fr .f-ptitle {
+    font-size: calc(var(--fw) * .0556); line-height: 1.2; font-weight: 800;
+    letter-spacing: -.015em; word-break: keep-all; text-shadow: 0 1px 4px rgba(0,0,0,.6);
+    margin-bottom: calc(var(--fw) * .031);
+  }
+  .fr.light .f-ptitle, .fr.light .f-title { text-shadow: 0 0 4px #fff, 0 0 2px #fff; }
+  .fr .f-cap::before {
+    content: ""; display: block; width: calc(var(--fw) * .0519);
+    height: calc(var(--fw) * .00556); border-radius: calc(var(--fw) * .00278);
+    margin: 0 auto calc(var(--fw) * .0185);
     background: linear-gradient(90deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text; background-clip: text; color: transparent; display: inline-block; }
-  .ov-statlabel { font-size: 13px; opacity: .7; margin-top: 2px; }
-  .ov-bullets { margin: 12px 0 0; padding: 0; list-style: none; }
-  .ov-bullets li { padding: 5px 0; font-size: 14.5px; }
-  .ov-bullets .t { font-weight: 700; }
-  .ov-bullets .d { opacity: .7; font-size: 13px; margin-left: 8px; }
-  .ov-foot { font-size: 11.5px; opacity: .55; margin-top: 10px; }
-  .chip {
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    color: #fff; border-radius: 6px; padding: 0 6px; font-weight: 800;
   }
-  .ov-title .chip { padding: 1px 7px; }
+  .fr .f-cap .t { font-size: calc(var(--fw) * .046); line-height: 1.25; font-weight: 700; word-break: keep-all; text-shadow: 0 1px 4px rgba(0,0,0,.65); }
+  .fr .f-cap .d { font-size: calc(var(--fw) * .0324); line-height: 1.4; font-weight: 500; color: rgba(255,255,255,.85); margin-top: calc(var(--fw) * .011); word-break: keep-all; }
+  .fr.light .f-cap .t { text-shadow: 0 0 4px #fff, 0 0 2px #fff; }
+  /* 흰 배경에서는 연한 accent2 끝이 묻힌다 — produce 가 실측으로 진한 쪽으로 재정의한다 */
+  .fr.light .f-em {
+    background: linear-gradient(105deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--ink)));
+    -webkit-background-clip: text; background-clip: text;
+    text-shadow: none;   /* 투명 글자 뒤로 그림자가 비쳐 씻겨 보인다(produce 실측) */
+  }
+  .fr.light .f-cap .d, .fr.light .f-foot { text-shadow: 0 0 4px #fff, 0 0 2px #fff; }
+  .fr.light .f-cap .d { color: color-mix(in srgb, var(--ink) 72%, transparent); }
+  .fr .f-foot { font-size: calc(var(--fw) * .0241); color: rgba(255,255,255,.6); }
+  .fr.light .f-foot { color: color-mix(in srgb, var(--ink) 55%, transparent); }
+  /* 리빌 숨김은 opacity 뿐이다 — 레이아웃 불변이 produce 캡처의 계약이라
+     아직 안 나온 요소도 자리를 차지한다 (video-template.html .rv.hide). */
+  .fr .fhide { opacity: 0; }
+  .fr .f-capstack { display: grid; margin-bottom: calc(var(--fw) * .0241); }
+  .fr .f-capstack > .f-cap { grid-area: 1 / 1; }
+  .fr .f-statwrap { margin-bottom: calc(var(--fw) * .0444); }
+  .fr .f-em {
+    background: linear-gradient(105deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .fr .f-sign { position: absolute; left: 16.3%; right: 16.3%; top: 11.98%; text-align: center; }
+  .fr .f-sign .nm { font-size: calc(var(--fw) * .048); font-weight: 800; }
+  .fr .f-sign .rl { font-size: calc(var(--fw) * .0296); font-weight: 600; color: rgba(255,255,255,.85); margin-top: calc(var(--fw) * .0111); }
+  .fr .f-sign .rl .ai { color: var(--accent); font-weight: 800; }
+  .fr .f-quote { font-size: calc(var(--fw) * .0519); line-height: 1.45; font-weight: 650; word-break: keep-all; }
+  .fr .f-quote::before {
+    content: "“"; display: block; font-size: calc(var(--fw) * .1389); line-height: .6;
+    color: var(--accent); margin-bottom: calc(var(--fw) * .0278);
+  }
+  .fr .f-obrand { font-size: calc(var(--fw) * .059); font-weight: 800; letter-spacing: .03em; margin-bottom: calc(var(--fw) * .037); }
+  .fr .f-otitle { font-size: calc(var(--fw) * .078); line-height: 1.25; font-weight: 800; word-break: keep-all; margin-bottom: calc(var(--fw) * .033); }
+  .fr .f-osub { font-size: calc(var(--fw) * .039); line-height: 1.4; color: rgba(255,255,255,.85); word-break: keep-all; }
 
-  /* 씬 내부 블록 */
-  .blk { margin: 12px 0; }
-  .blk-label { font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: .05em; margin-bottom: 5px; }
-  table.narr { width: 100%; border-collapse: collapse; font-size: 14px; }
-  table.narr th, table.narr td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  table.narr th { font-size: 12px; color: var(--muted); font-weight: 700; }
-  table.narr td.n { color: var(--accent); font-weight: 800; width: 26px; }
-  table.narr td.len { color: var(--muted); font-size: 12px; white-space: nowrap; width: 52px; text-align: right; }
-  .sub-diff { color: var(--muted); font-size: 12.5px; }
-  .shot { background: var(--soft); border-radius: 8px; padding: 10px 14px; font-size: 13.5px; }
-  .privacy { border-left: 3px solid var(--bad); background: color-mix(in srgb, var(--bad) 7%, var(--card));
-    border-radius: 0 8px 8px 0; padding: 8px 14px; font-size: 13px; }
-  .transition { font-size: 13px; color: var(--muted); margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); }
-  .scene-notes { margin-top: 12px; }
-  .scene-notes .note { font-size: 13px; }
-  img.scene-img { max-width: 240px; border-radius: 10px; display: block; margin: 8px 0; }
+  /* 자막 — ASS Style Sub: 폰트 58/1080, MarginV 380/1920, MarginL/R 250/1080 */
+  .fr .f-sub {
+    position: absolute; left: 23.15%; right: 23.15%; bottom: 19.79%;
+    font-size: calc(var(--fw) * .0537); line-height: 1.25; font-weight: 700;
+    color: #fff; text-shadow: 0 0 3px #101828, 0 1px 2px #101828, 0 0 5px rgba(0,0,0,.9);
+    word-break: keep-all;
+  }
 
-  /* 대사별 삽화 행 — narration[].img 가 있을 때 (왼쪽 그림 · 오른쪽 대사) */
-  .narr-row { display: flex; gap: 14px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); }
-  .narr-row:last-of-type { border-bottom: none; }
-  .narr-row img { width: 132px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 10px; flex: none; background: #fff; border: 1px solid var(--line); }
-  .narr-row .txt { flex: 1; min-width: 0; }
-  .narr-row .n { color: var(--accent); font-weight: 800; margin-right: 8px; }
-  .narr-row .len { color: var(--muted); font-size: 12px; margin-left: 8px; white-space: nowrap; }
-  .narr-row .prompt { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.5; }
-  .narr-noimg { width: 132px; aspect-ratio: 9 / 16; border: 1px dashed var(--line); border-radius: 10px;
-    display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; flex: none; }
+  /* 촬영 모드 — 상단 블록(y190~460) + 녹화 밴드
+     밴드: 16:9 녹화를 폭 1080 에 맞추면 높이 607 · 중심 y880 → y576~1184 */
+  /* produce 의 `.top` 은 높이 제약이 없다 — 내용만큼 늘어나고, 그 하단이 y=460 을 넘는지로
+     넘침을 잰다(screencast-overlay.html). 여기서 bottom 을 묶으면 항상 460 에 멈춰 못 잰다. */
+  .fr .f-top { position: absolute; left: 16.3%; right: 16.3%; top: 9.9%; }
+  .fr .f-top .f-title { font-size: calc(var(--fw) * .0667); line-height: 1.18; margin-bottom: 0; }
+  .fr.t-cover .f-top .f-title { font-size: calc(var(--fw) * .0778); }
+  /* 촬영 모드 kicker 는 pill 이 아니라 플레인 텍스트다 (screencast-overlay.html .kicker) */
+  .fr.rec .f-kicker {
+    display: block; background: none; border: none; padding: 0;
+    font-size: calc(var(--fw) * .0296); letter-spacing: .14em;
+    color: rgba(255,255,255,.82); margin-bottom: calc(var(--fw) * .0241);
+  }
+  .fr.rec.tight2 .f-kicker { margin-bottom: calc(var(--fw) * .0167); }
+  .fr .f-statrow { display: flex; align-items: baseline; justify-content: center; gap: calc(var(--fw) * .018); margin-top: calc(var(--fw) * .024); }
+  .fr .f-statrow .f-stat { font-size: calc(var(--fw) * .07); }
+  .fr .f-statrow .f-statlabel { font-size: calc(var(--fw) * .03); margin-top: 0; }
+  .fr .f-band {
+    position: absolute; left: 0; right: 0; top: 30%; height: 31.64%;
+    background: rgba(255,255,255,.06); border-top: 1px dashed rgba(255,255,255,.24);
+    border-bottom: 1px dashed rgba(255,255,255,.24);
+    display: flex; align-items: center; justify-content: center;
+    font-size: calc(var(--fw) * .03); color: rgba(255,255,255,.55); font-weight: 600;
+    letter-spacing: .06em;
+  }
 
-  /* ── 검산·표 ──────────────────────────── */
-  table.grid { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  table.grid th, table.grid td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  table.grid th { font-size: 12px; color: var(--muted); }
-  .swatch { display: inline-block; width: 13px; height: 13px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; border: 1px solid var(--line); }
-  ul.plain { padding-left: 20px; margin: 8px 0; }
-  ul.plain li { margin: 5px 0; }
-  ul.checklist { list-style: none; padding: 0; }
-  ul.checklist li { padding: 5px 0 5px 26px; position: relative; }
-  ul.checklist li::before { content: "☐"; position: absolute; left: 2px; color: var(--muted); }
+  /* 오버플로 가드 — video-template.html / screencast-overlay.html 의 tight1~3 과 같은 단계.
+     렌더러가 1080px 캔버스에서 실측해 부여한다(측정 하네스 참조). */
+  .fr.tight1 .f-title { font-size: calc(var(--fw) * .0852); }
+  .fr.tight1 .f-ptitle { font-size: calc(var(--fw) * .0509); }
+  .fr.tight1 .f-cap .t { font-size: calc(var(--fw) * .0426); }
+  .fr.tight1 .f-cap .d { font-size: calc(var(--fw) * .0296); }
+  .fr.tight2 .f-title { font-size: calc(var(--fw) * .0787); }
+  .fr.tight2 .f-ptitle { font-size: calc(var(--fw) * .0472); }
+  .fr.tight2 .f-cap .t { font-size: calc(var(--fw) * .0398); }
+  .fr.tight2 .f-cap .d { font-size: calc(var(--fw) * .0278); }
+  .fr.tight2 .f-stat { --stat-fs: .1667; }
+  .fr.tight3 .f-title { font-size: calc(var(--fw) * .0722); }
+  .fr.tight3 .f-ptitle { font-size: calc(var(--fw) * .0435); }
+  .fr.tight3 .f-cap .t { font-size: calc(var(--fw) * .037); }
+  .fr.tight3 .f-cap .d { font-size: calc(var(--fw) * .0259); }
+  .fr.tight1 .f-top .f-title { font-size: calc(var(--fw) * .0593); }
+  .fr.tight1.t-cover .f-top .f-title { font-size: calc(var(--fw) * .0685); }
+  .fr.tight1 .f-statrow .f-stat { font-size: calc(var(--fw) * .0611); }
+  .fr.tight2 .f-top .f-title { font-size: calc(var(--fw) * .0519); }
+  /* 촬영 커버 제목은 produce 의 캐스케이드를 그대로 따른다 (실측):
+     tight1 = 74px, tight2·tight3 은 `.tight2 .title`(56/50px)이 `body.scene-cover .title`(84px)을
+     특이도로 못 이겨 기본 84px 로 되돌아간다. 이상해 보여도 실제 렌더가 그렇다. */
+  .fr.rec.t-cover.tight1 .f-top .f-title { font-size: calc(var(--fw) * .0685); }
+  .fr.rec.t-cover.tight2 .f-top .f-title,
+  .fr.rec.t-cover.tight3 .f-top .f-title { font-size: calc(var(--fw) * .0778); }
+  .fr.tight2 .f-statrow .f-stat { font-size: calc(var(--fw) * .0537); }
+  .fr.tight3 .f-top .f-title { font-size: calc(var(--fw) * .0463); }
+  .fr.tight3 .f-statrow { margin-top: calc(var(--fw) * .015); }
 
-  .doc-foot { margin-top: 48px; padding-top: 16px; border-top: 2px solid var(--line);
-    font-size: 12.5px; color: var(--muted); }
-  .error-box { background: color-mix(in srgb, var(--bad) 10%, var(--card)); border: 1px solid var(--bad);
-    border-radius: 10px; padding: 16px 20px; margin: 30px 0; font-weight: 700; }
+  /* 측정 하네스 — 1080px 캔버스에서 실측한다 (화면 밖).
+     테두리는 뺀다 — produce 캔버스에는 없어서 텍스트 존이 2px 좁아진다. */
+  #fr-probe { position: fixed; left: -12000px; top: 0; --fw: 1080px; pointer-events: none; }
+  #fr-probe .fr { border: 0; border-radius: 0; }
+
+  /* 세이프존 가이드 — 토글 */
+  .fr .fsafe { position: absolute; inset: 0; display: none; }
+  body.safe .fr .fsafe { display: block; }
+  .fr .fsafe::before {
+    content: ""; position: absolute; left: 16.30%; right: 16.30%; top: 9.90%; bottom: 29.69%;
+    border: 1px dashed rgba(120,200,255,.55);
+  }
+  .fr .fsafe::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 29.69%;
+    background: repeating-linear-gradient(135deg, rgba(120,200,255,.10) 0 4px, transparent 4px 8px);
+    border-top: 1px solid rgba(120,200,255,.35);
+  }
+  body:not(.subs) .fr .f-sub { display: none; }
+
+  /* 프레임 없는 씬(b-roll) 카드 */
+  .clip {
+    display: flex; gap: var(--s4); align-items: flex-start; margin-top: var(--s4);
+    background: var(--sunk); border-radius: 10px; padding: var(--s4);
+  }
+  .clip img { width: calc(var(--fw) * .72); aspect-ratio: 9/16; object-fit: cover; border-radius: 8px; flex: none; }
+  .clip .meta { font-size: var(--t-aux); line-height: 1.7; }
+  .clip .meta b { color: var(--faint); font-weight: 600; margin-right: var(--s2); }
+
+  /* ── AV 2열 ───────────────────────────────────────────── */
+  .av {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: 0 var(--s4);
+  }
+  .av > section:first-child { border-right: 1px solid var(--line); padding-right: var(--s4); }
+  .av h4 {
+    margin: 0 0 var(--s3); font-size: var(--t-micro); font-weight: 700;
+    letter-spacing: .16em; color: var(--faint);
+  }
+  .av .row { display: grid; grid-template-columns: 62px 1fr; gap: var(--s3); font-size: var(--t-aux); margin-bottom: var(--s2); }
+  .av .row > b { color: var(--faint); font-weight: 600; }
+  .av .row .v { min-width: 0; word-break: break-word; line-height: 1.6; }
+  .av .shot { font-size: var(--t-aux); line-height: 1.7; }
+  /* 화면 텍스트 — 프레임 안에서는 8px 라 못 읽는다. 여기서 실제 문구를 읽는다. */
+  .capline { font-size: var(--t-aux); line-height: 1.6; padding: 2px 0; }
+  .capline .k {
+    display: inline-block; min-width: 15px; color: var(--faint);
+    font-size: var(--t-micro); font-weight: 700;
+  }
+  .capline .t { font-weight: 600; }
+  .capline .d { color: var(--muted); margin-left: 6px; }
+  .capline .f { color: var(--faint); font-size: var(--t-micro); }
+  details.prompt { margin-top: var(--s2); }
+  details.prompt summary {
+    font-size: var(--t-micro); color: var(--faint); cursor: pointer; letter-spacing: .04em;
+    list-style: none; display: inline-flex; align-items: center; gap: var(--s1);
+  }
+  details.prompt summary::-webkit-details-marker { display: none; }
+  details.prompt summary::before { content: "▸"; font-size: 9px; }
+  details.prompt[open] summary::before { content: "▾"; }
+  details.prompt p {
+    margin: var(--s2) 0 0; font-size: var(--t-micro); line-height: 1.65; color: var(--muted);
+    background: var(--sunk); border-radius: 6px; padding: var(--s3); word-break: break-word;
+  }
+
+  table.narr { width: 100%; border-collapse: collapse; font-size: var(--t-aux); }
+  table.narr td { padding: var(--s2) 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  table.narr tr:last-child td { border-bottom: none; }
+  table.narr td.n { color: var(--faint); font-weight: 700; width: 20px; font-size: var(--t-micro); padding-top: 10px; }
+  table.narr td.len { color: var(--faint); font-size: var(--t-micro); white-space: nowrap; width: 34px; text-align: right; padding-top: 10px; }
+  .sub-diff { color: var(--muted); font-size: var(--t-micro); margin-top: 2px; }
+  .sub-diff b { color: var(--faint); font-weight: 600; }
+
+  .transition {
+    font-size: var(--t-aux); color: var(--muted); margin-top: var(--s4);
+    padding-top: var(--s3); border-top: 1px dashed var(--line);
+  }
+  .transition b { color: var(--faint); font-weight: 600; letter-spacing: .06em; font-size: var(--t-micro); margin-right: var(--s2); }
+  .scene-notes { margin-top: var(--s4); }
+
+  /* ── 표·목록 ──────────────────────────────────────────── */
+  table.grid { width: 100%; border-collapse: collapse; font-size: var(--t-aux); }
+  table.grid th, table.grid td { text-align: left; padding: var(--s2) var(--s3); border-bottom: 1px solid var(--hair); vertical-align: top; }
+  table.grid th { font-size: var(--t-micro); color: var(--faint); font-weight: 600; letter-spacing: .06em; }
+  table.grid th:first-child, table.grid td:first-child { padding-left: 0; }
+  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin-right: var(--s1); border: 1px solid var(--line); }
+  ul.checklist { list-style: none; padding: 0; margin: 0; }
+  ul.checklist li { padding: var(--s1) 0 var(--s1) 22px; position: relative; font-size: var(--t-aux); }
+  ul.checklist li::before {
+    content: ""; position: absolute; left: 0; top: 8px; width: 11px; height: 11px;
+    border: 1px solid var(--line); border-radius: 3px;
+  }
+  /* 문서 본문의 **강조** — 색은 헤더 요약에만, 본문에서는 굵기로만 세운다 */
+  .mark { color: var(--accent-ink); font-weight: 700; }
+  .note .mark, .scene-title .mark, table.grid .mark, .transition .mark { color: inherit; }
+  .scene-title .mark { color: var(--accent-ink); }
+
+  /* docNotes — 설계 근거는 접어 둔다 (첫 화면은 승인 판단 재료만) */
+  details.docnotes { margin-top: var(--s4); }
+  details.docnotes > summary {
+    font-size: var(--t-aux); color: var(--muted); cursor: pointer; list-style: none;
+    display: inline-flex; align-items: center; gap: var(--s2);
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px;
+  }
+  details.docnotes > summary::-webkit-details-marker { display: none; }
+  details.docnotes > summary::before { content: "▸"; font-size: 9px; }
+  details.docnotes[open] > summary::before { content: "▾"; }
+  details.docnotes > summary:hover { border-color: var(--muted); }
+
+  /* 툴바 */
+  .toolbar { display: flex; gap: var(--s4); align-items: center; margin: var(--s4) 0 0; font-size: var(--t-cap); color: var(--muted); }
+  .toolbar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  .toolbar input { accent-color: var(--accent); margin: 0; }
+  .toolbar .legend { color: var(--faint); }
+
+  .doc-foot {
+    margin-top: var(--s7); padding-top: var(--s4); border-top: 1px solid var(--line);
+    font-size: var(--t-cap); color: var(--faint); line-height: 1.8;
+  }
+  .error-box {
+    background: color-mix(in srgb, var(--bad) 8%, var(--card)); border: 1px solid var(--bad);
+    border-radius: 10px; padding: var(--s5); margin: var(--s6) 0; font-weight: 600;
+  }
+
+  @media (max-width: 1080px) {
+    .scene-body.side { grid-template-columns: 1fr; gap: var(--s4); }
+  }
+  @media (max-width: 560px) {
+    .panels { overflow-x: auto; flex-wrap: nowrap; }
+  }
+  @media (max-width: 720px) {
+    .av { grid-template-columns: 1fr; gap: var(--s4); }
+    .av > section:first-child { border-right: none; padding-right: 0; padding-bottom: var(--s4); border-bottom: 1px solid var(--hair); }
+    .meta-grid { grid-template-columns: 1fr; }
+  }
+
   @media print {
+    /* 종이는 언제나 흰색이다 — 다크 모드로 보던 사람이 인쇄해도 라이트 팔레트로 돌린다.
+       배경만 흰색으로 바꾸고 글자색을 다크값으로 두면 흰 종이에 흰 글씨가 나온다(실측). */
+    :root, :root:not([data-theme]) {
+      --bg: #fff; --card: #fff; --sunk: #f2f2ef; --shadow: none;
+      --text: #17191d; --muted: #555b64; --faint: #5f6773;
+      --line: #d8d7d2; --hair: #e8e7e3;
+      --ok: #0f6d43; --warn: #855400; --bad: #b52f24;
+      --accent-ink: color-mix(in srgb, var(--accent) 62%, var(--text));
+    }
+    /* data-n 규칙이 :root 보다 안쪽이라 그냥 두면 화면 폭이 그대로 인쇄된다 */
+    .panels, .panels[data-n] { --fw: 104px; }
     body { background: #fff; }
-    .scene { break-inside: avoid; box-shadow: none; }
+    .wrap { max-width: none; padding: 0; }
+    /* 카드를 통째로 avoid 하면 A4 아래쪽이 통으로 빈다 — 쪼개지면 안 되는 단위만 묶는다 */
+    .scene { break-inside: auto; border-color: #ddd; padding: var(--s4); margin: var(--s3) 0; }
+    .scene-head { break-after: avoid; }
+    .panels, .av > section, .clip { break-inside: avoid; }
+    .panels, .av, .av > section { break-inside: avoid; }
+    .panels { overflow: visible; flex-wrap: wrap; }
+    .toolbar, .tl-cap { display: none; }
+    details.prompt, details.docnotes { display: none; }
+    details.scenenotes > summary { display: none; }
+    details.scenenotes[open] > *, details.scenenotes:not([open]) > *:not(summary) { display: block; }
+    .sec { break-after: avoid; }
+    a { color: inherit; }
+    .fr, .badge, .tl-seg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
-<body>
+<body class="subs">
 <div class="wrap"><div id="app"><noscript>이 문서는 scenes.js 를 로드해 렌더됩니다 — JavaScript 를 켜 주세요.</noscript></div></div>
 
 <script src="./scenes.js"></script>
@@ -199,8 +584,10 @@ window.SB_DOC = {
   transitions: [
     "{{말 멈추고 1초 → 다음 씬 화면}}"
   ],
-  // 씬 번호 → 개인정보 회피 지시 (해당 씬만)
+  // 씬 번호 → 개인정보 회피 지시 (그 씬만)
   privacy: {},
+  // 씬 번호 → 오디오 지시 (BGM·효과음·톤). AV 2열의 AUDIO 쪽에 붙는다. 없으면 {}
+  audioNotes: {},
 
   // 출처 요약 — research.md 검증 통과 표의 요약 (연구 원장은 research.md)
   // 내부 실측·자체 계약처럼 URL 이 없는 출처는 url 을 빈 문자열로 둔다(라벨만 표시됨).
@@ -229,218 +616,549 @@ window.SB_DOC = {
   }
   var THEME = window.THEME, SCENES = window.SCENES, DOC = window.SB_DOC || {};
   var root = document.documentElement.style;
-  root.setProperty("--accent", THEME.accent);
-  root.setProperty("--accent2", THEME.accent2);
-  root.setProperty("--ink", THEME.ink);
+  // 결측 값을 그대로 넣으면 --accent: undefined 가 되어 color-mix 가 전부 무효가 된다
+  if (THEME.accent) root.setProperty("--accent", THEME.accent);
+  if (THEME.accent2) root.setProperty("--accent2", THEME.accent2);
+  if (THEME.ink) root.setProperty("--ink", THEME.ink);
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-  function chip(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="chip">$1</span>'); }
   function strip(s) { return String(s == null ? "" : s).replace(/\*\*/g, ""); }
+  /** 문서 본문의 **강조** — 절제된 색 강조 */
+  function mark(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="mark">$1</span>'); }
+  /** 프레임 안의 **강조** — 실제 렌더대로 그라데이션 */
+  function femph(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="f-em">$1</span>'); }
   // 자수: 표시 = ** 제거 후 전체 길이 / 실자 = 공백·구두점 제외
   function dispLen(s) { return strip(s).length; }
   function netLen(s) { return strip(s).replace(/[\s.,·:;!?…"'“”‘’()\[\]〔〕\-–—~%]/g, "").length; }
   function badge(cls, text) { return '<span class="badge ' + cls + '">' + esc(text) + "</span>"; }
 
   var isRec = SCENES.some(function (s) { return s.visual && s.visual.source === "recording"; });
-  var total = SCENES.reduce(function (a, s) { return a + (s.duration || 0); }, 0);
+  var isLine = SCENES.some(function (s) {
+    return (s.narration || []).some(function (n) { return n.img; }); });
+  var main = SCENES.filter(function (s) { return s.type !== "outro"; });
+  var total = main.reduce(function (a, s) { return a + (s.duration || 0); }, 0);
+  // 아웃트로는 공용 mp4 라 길이가 scenes.js 밖에 있다 — SB_DOC.outro 가 정본이고,
+  // 안 적혀 있어도 outro 씬이 있으면 접합 사실만은 타임라인에 보여 준다
+  var hasOutro = SCENES.some(function (s) { return s.type === "outro"; });
   var outroSec = DOC.outro ? DOC.outro.seconds || 0 : 0;
+  var outroUnknown = hasOutro && !outroSec;
   var cover = SCENES[0] && SCENES[0].type === "cover" ? SCENES[0] : null;
 
-  /* ── 씬별 검산 ── */
-  function sceneCheck(s) {
-    var syl = (s.narration || []).reduce(function (a, n) { return a + netLen(n.tts); }, 0);
-    var rate = s.duration ? syl / s.duration : 0;
-    var maxSent = (s.narration || []).reduce(function (a, n) { return Math.max(a, netLen(n.tts)); }, 0);
-    var chips = [badge("", "~" + (s.duration || "?") + "s"), badge("", syl + "음절")];
+  /* ── 점검 스트립 수집기 ──
+     스트립은 문서 맨 위에 그려지지만 위반은 아래쪽 렌더 도중에도 나온다. 그래서
+     자리만 먼저 잡아 두고 마지막에 채운다 — 늦게 등록된 위반이 조용히 사라지던
+     사고를 구조로 막는다(sealed 이후 flag 는 콘솔 경고). */
+  var audit = [], auditSealed = false;
+  function flag(level, where, what) {
+    if (auditSealed && window.console)
+      console.warn("[storyboard] 점검 스트립이 이미 렌더된 뒤의 flag:", where, what);
+    audit.push({ level: level, where: where, what: what });
+  }
+
+  /* ── 리빌 상태 계산 — 패널 1개 = 화면이 바뀌는 순간 1개 ──
+     매핑 근거: scenes-schema §타입별 계약 (cover rg1=title/rg2=stat,
+     points rg1=제목+출처/rg2..=캡션, quote rg0=서명/rg1=인용문). */
+  function revealsOf(s) {
+    var narr = s.narration || [], out = [];
     if (isRec) {
-      chips.push(badge(rate >= 4.5 && rate <= 6.5 ? "ok" : "warn", rate.toFixed(2) + "자/초"));
-      if (s.duration > 20) chips.push(badge("bad", "20s 초과"));
-      else if (s.duration < 8) chips.push(badge("warn", "8s 미만"));
-      if (maxSent > 40) chips.push(badge("warn", "문장 " + maxSent + "자"));
+      // 촬영 모드는 오버레이가 씬당 하나(screencast-overlay) — 화면이 바뀌는 건 녹화와
+      // 자막이다. 같은 프레임을 문장 수만큼 늘어놓지 않고, 첫 컷 하나만 그린다.
+      return [{ label: "오버레이 + 첫 자막", seg: narr.length ? 0 : -1, cap: -1 }];
+    }
+    if (s.type === "cover") {
+      out.push({ label: "제목", seg: 0, cap: -1 });
+      if (s.stat) out.push({ label: "히어로 수치", seg: 1, cap: -1 });
+    } else if (s.type === "points") {
+      out.push({ label: "제목·출처", seg: 0, cap: -1 });
+      (s.bullets || []).forEach(function (b, k) {
+        out.push({ label: "캡션 " + (k + 1), seg: k + 1, cap: k }); });
+    } else if (s.type === "quote") {
+      out.push({ label: "서명", seg: 0, cap: -1 });
+      out.push({ label: "인용문", seg: 1, cap: -1 });
     } else {
+      out.push({ label: "전체", seg: 0, cap: -1 });
+    }
+    // 문장 하나가 캡션 둘을 덮으면 그동안 자막은 그대로다 — 마지막 대사를 이어 붙인다.
+    // 어느 문장이 쪼개지는지는 produce 가 하위 reveal(A|B)로 정한다.
+    out.forEach(function (st) {
+      if (st.seg >= narr.length) { st.seg = narr.length - 1; st.carry = true; }
+    });
+    return out;
+  }
+
+  /* ── 9:16 프레임 ── */
+  function frame(s, st, idx, tier, statScale) {
+    var narr = s.narration || [];
+    var seg = st.seg >= 0 && narr[st.seg] ? narr[st.seg] : null;
+    var lineImg = seg && seg.img ? seg.img : null;
+    var bg = lineImg || (s.visual && s.visual.bg) || null;
+    var light = !!lineImg;
+    var cls = "fr t-" + esc(s.type) + (isRec ? " rec" : "") + (light ? " light" : "") +
+              (tier ? " tight" + tier : "");
+    var h = '<div class="' + cls + '">';
+    if (bg) h += '<div class="fbg" style="background-image:url(\'' + esc(bg) + '\')"></div>';
+    h += '<div class="fscrim"></div>';
+
+    if (isRec) {
+      h += '<div class="f-band">녹화 화면</div><div class="f-top">';
+      if (s.kicker) h += '<div class="f-kicker">' + esc(s.kicker) + "</div>";
+      h += '<div class="f-title">' + femph(s.title || "") + "</div>";
+      if (s.type === "cover" && s.stat)
+        h += '<div class="f-statrow"><div class="f-stat f-em">' + esc(s.stat) + "</div>" +
+             (s.statLabel ? '<div class="f-statlabel">' + esc(s.statLabel) + "</div>" : "") + "</div>";
+      h += "</div>";
+    } else if (s.type === "cover") {
+      // 삽화(라이트) 모드의 커버는 상단 앵커 — video-template.html 의 body.light 분기
+      h += '<div class="fzone' + (light ? " top" : "") + '">';
+      if (s.kicker) h += '<div class="f-kicker">' + esc(s.kicker) + "</div>";
+      h += '<div class="f-title">' + femph(s.title || "") + "</div>";
+      if (s.stat)
+        h += '<div class="f-statwrap' + (idx < 1 ? " fhide" : "") + '"><div class="f-stat f-em"' +
+             (statScale ? ' style="--stat-fs:' + statScale.toFixed(5) + '"' : "") +
+             ">" + esc(s.stat) + "</div>" +
+             (s.statLabel ? '<div class="f-statlabel">' + esc(s.statLabel) + "</div>" : "") + "</div>";
+      h += "</div>";
+    } else if (s.type === "points") {
+      h += '<div class="fzone top"><div class="f-ptitle">' + femph(s.title || "") + "</div>";
+      var caps = s.bullets || [];
+      if (caps.length) {
+        // 캡션은 같은 자리에 겹쳐 쌓이고 활성 하나만 보인다 (캡션 스왑)
+        h += '<div class="f-capstack">' + caps.map(function (b, k) {
+          return '<div class="f-cap' + (k === st.cap ? "" : " fhide") + '"><div class="t">' + femph(b.t) + "</div>" +
+                 (b.d ? '<div class="d">' + esc(b.d) + "</div>" : "") + "</div>"; }).join("") + "</div>";
+      }
+      if (s.footnote) h += '<div class="f-foot">' + esc(s.footnote) + "</div>";
+      h += "</div>";
+    } else if (s.type === "quote") {
+      h += '<div class="f-sign"><div class="nm">' + esc(s.speaker || "") + "</div>" +
+           '<div class="rl">' + esc(s.role || "").replace(/AI/g, '<span class="ai">AI</span>') + "</div></div>";
+      h += '<div class="fzone center"><div class="f-quote' + (idx < 1 ? " fhide" : "") + '">' +
+           femph(s.text || "") + "</div></div>";
+    } else if (s.type === "outro") {
+      h += '<div class="fzone center"><div class="f-obrand f-em">' + esc(THEME.brand || "") + "</div>" +
+           '<div class="f-otitle">' + femph(s.title || "") + "</div>" +
+           (s.sub ? '<div class="f-osub">' + esc(s.sub) + "</div>" : "") + "</div>";
+    }
+
+    if (seg && seg.sub) h += '<div class="f-sub">' + esc(seg.sub) + "</div>";
+    h += '<div class="fsafe"></div></div>';
+    return h;
+  }
+
+  /* ── 프레임 넘침 실측 ──
+     produce 렌더러(video-template.html / screencast-overlay.html)와 같은 1080px
+     캔버스에 그려 텍스트 존을 넘는지 재고, 같은 tight1~3 단계로 줄인다. 세 단계로도
+     안 들어가면 잔여 px 를 경고한다 — 제작 전에 글자 잘림을 잡는 자리다. */
+  var probe = document.createElement("div");
+  probe.id = "fr-probe";
+  document.body.appendChild(probe);
+  var fit = {};
+  SCENES.forEach(function (s, i) {
+    if (s.type === "broll") return;
+    revealsOf(s).forEach(function (st, k) {
+      probe.innerHTML = frame(s, st, k, 0);
+      var fr = probe.firstChild;
+      var box = fr.querySelector(isRec ? ".f-top" : ".fzone");
+      // 재는 방식도 produce 를 따른다 — 생성 모드는 존의 scrollHeight, 촬영 모드는
+      // 블록 하단이 y=460(BAND_MIN_Y)을 넘는지. 촬영에서 scrollHeight 를 쓰면
+      // line-height:1 인 수치의 글자 상자 때문에 한 단계 먼저 줄고 허위 경고가 난다.
+      var REC_LIMIT = 460;
+      function over() {
+        if (!box) return 0;
+        return isRec
+          ? box.getBoundingClientRect().bottom - fr.getBoundingClientRect().top - REC_LIMIT
+          : box.scrollHeight - box.clientHeight;
+      }
+      // tight 는 누적이다 — 교체하면 아래 단계에 없는 규칙이 기본값으로 되돌아온다
+      var tier = 0;
+      while (over() > 1 && tier < 3) { tier += 1; fr.classList.add("tight" + tier); }
+
+      // 폭 가드는 단계 축소가 끝난 폰트에서 잰다 (video-template.html 의 실행 순서)
+      var statPx = 0, statOvf = 0;
+      var stat = !isRec && s.type === "cover" ? fr.querySelector(".f-stat") : null;
+      if (stat) {
+        var size = parseFloat(getComputedStyle(stat).fontSize), guard = 0;
+        while (stat.getBoundingClientRect().width > 640 && size > 80 && guard < 40) {
+          size -= 6; stat.style.fontSize = size + "px"; guard += 1;
+        }
+        statPx = size;
+        statOvf = Math.round(Math.max(0, stat.getBoundingClientRect().width - 640));
+      }
+      fit[i + ":" + k] = {
+        tier: tier, ovf: Math.max(0, Math.round(over())),
+        // 1080 기준 폰트 px → 프레임 폭 비율. 패널에도 같은 축소를 먹인다.
+        statScale: statPx ? statPx / 1080 : 0, statOvf: statOvf
+      };
+    });
+  });
+  probe.innerHTML = "";
+
+  /* ── 씬별 검산 배지 ── */
+  function sceneCheck(s, no) {
+    var narr = s.narration || [];
+    var syl = narr.reduce(function (a, n) { return a + netLen(n.tts); }, 0);
+    var rate = s.duration ? syl / s.duration : 0;
+    var maxSent = narr.reduce(function (a, n) { return Math.max(a, netLen(n.tts)); }, 0);
+    var chips = [badge("", (s.duration || "?") + "s")];
+    if (isRec) {
+      if (syl) {
+        chips.push(badge("", syl + "자"));
+        var rOk = rate >= 4.5 && rate <= 6.5;
+        chips.push(badge(rOk ? "ok" : "warn", rate.toFixed(2) + "자/초"));
+        if (!rOk) flag("warn", "씬 " + no, "말속도 " + rate.toFixed(2) + "자/초 — 촬영 기준 5~6자/초(4.5~6.5 허용)");
+      }
+      if (s.duration > 20) { chips.push(badge("bad", "20s 초과")); flag("bad", "씬 " + no, "길이 " + s.duration + "s — 촬영 모드 씬 상한 20s"); }
+      else if (s.duration && s.duration < 8) { chips.push(badge("warn", "8s 미만")); flag("warn", "씬 " + no, "길이 " + s.duration + "s — 촬영 모드 씬 목표 8~20s"); }
+      if (maxSent > 40) { chips.push(badge("warn", "문장 " + maxSent + "자")); flag("warn", "씬 " + no, "가장 긴 문장 " + maxSent + "자 — 촬영 대본 권장 40자"); }
+    } else if (s.type !== "broll" && s.type !== "outro") {
       var cap = s.type === "cover" ? 40 : 50;
-      chips.push(badge(syl <= cap ? "ok" : "bad", "자수 " + syl + "/" + cap));
-      if (maxSent > 25 || ((s.narration || []).length && (s.narration || []).some(function (n) { return netLen(n.tts) < 8; })))
-        chips.push(badge("warn", "문장 8~25자 확인"));
-      if (s.duration > 13) chips.push(badge("warn", "13s 초과"));
+      if (narr.length) {
+        chips.push(badge(syl <= cap ? "ok" : "bad", "자수 " + syl + "/" + cap));
+        if (syl > cap) flag("bad", "씬 " + no, "나레이션 " + syl + "자 — 상한 " + cap + "자(" + s.type + ")");
+      } else if (s.type === "quote") {
+        // 발화 클립 quote 는 배우가 말하므로 TTS 나레이션이 없는 게 정상이다
+        chips.push(badge("", "발화 클립"));
+      } else {
+        chips.push(badge("bad", "나레이션 없음"));
+        flag("bad", "씬 " + no, "나레이션이 비어 있다 — 소리 없이 " + (s.duration || "?") + "초를 버틴다");
+      }
+      var shortSent = narr.some(function (n) { return netLen(n.tts) < 8; });
+      if (maxSent > 25 || shortSent) {
+        chips.push(badge("warn", "문장 8~25자"));
+        flag("warn", "씬 " + no, (maxSent > 25 ? "가장 긴 문장 " + maxSent + "자" : "8자 미만 문장 있음") + " — 문장당 8~25자");
+      }
+      if (s.duration > 13) { chips.push(badge("warn", "13s 초과")); flag("warn", "씬 " + no, "길이 " + s.duration + "s — 생성 모드 씬 상한 13s"); }
+    }
+    if (!(s.duration > 0) && s.type !== "outro")
+      flag("bad", "씬 " + no, "길이(duration)가 " + (s.duration === undefined ? "없다" : s.duration + "s 다") + " — 초 단위 양수로 적는다");
+    narr.forEach(function (n, j) {
+      if (!n.tts) flag("bad", "씬 " + no, "대사 " + (j + 1) + " 에 tts 가 없다 — 읽어 줄 문장이 비어 있다");
+    });
+    if (s.type === "broll") {
+      // b-roll 은 영상이 가진 소리를 쓴다 — TTS 를 얹으면 두 소리가 싸운다
+      if (narr.length) flag("bad", "씬 " + no, "b-roll 에 나레이션 " + narr.length + "개 — 비어 있어야 한다");
+      if (s.duration > 8) flag("bad", "씬 " + no, "b-roll 사용 길이 " + s.duration + "s — 생성이 8초 고정이라 그 이상은 못 쓴다");
+      var af = s.after || 0;
+      if (!SCENES[af] || SCENES[af].type === "broll")
+        flag("bad", "씬 " + no, "after: " + af + " 가 가리키는 씬이 없다 — 삽입 위치를 못 정한다");
+      var src = (s.visual || {}).src, cov = cover && cover.visual ? cover.visual.bg : null;
+      if (src && cov && src !== cov) flag("warn", "씬 " + no, "b-roll src 가 커버 배경(" + cov + ")과 다르다");
+    } else {
+      var worst = 0, ovf = 0;
+      revealsOf(s).forEach(function (st, k) {
+        var f = fit[(no - 1) + ":" + k];
+        if (!f) return;
+        if (f.tier > worst) worst = f.tier;
+        if (f.ovf > ovf) ovf = f.ovf;
+      });
+      var swide = 0;
+      revealsOf(s).forEach(function (st, k) {
+        var f = fit[(no - 1) + ":" + k];
+        if (f && f.statOvf > swide) swide = f.statOvf;
+      });
+      if (swide > 0) {
+        chips.push(badge("bad", "수치 폭 초과"));
+        flag("bad", "씬 " + no, "히어로 수치가 최소 크기에서도 세이프존을 " + swide + "px 넘는다 — 짧은 표기로 바꾼다");
+      }
+      if (ovf > 0) {
+        chips.push(badge("bad", "프레임 넘침"));
+        flag("bad", "씬 " + no, "화면 텍스트가 3단계 축소 뒤에도 " + ovf + "px 넘친다 — 제목·캡션을 줄인다");
+      } else if (worst) {
+        chips.push(badge("warn", "자동 축소 " + worst + "단계"));
+        flag("warn", "씬 " + no, "화면 텍스트가 존을 넘어 렌더러가 " + worst + "단계 줄인다");
+      }
     }
     return chips.join("");
   }
 
-  /* ── 헤더 ── */
+  /* ══ 헤더 ══ */
   var h = "";
-  h += '<header class="doc-head">';
+  h += "<header>";
   h += '<div class="doc-kicker">' + esc(DOC.channelName || DOC.channel || THEME.brand) +
        (DOC.series ? " · " + esc(DOC.series) : "") + "</div>";
-  h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic) + " — 스토리보드</h1>";
-  h += '<div class="badges">' + badge("mode", isRec ? "촬영 모드 (screencast)" : "생성 모드") +
-       badge("", "status: " + (DOC.status || "draft")) + badge("", DOC.created || "") +
-       badge(total >= 60 && total <= 75 ? "ok" : total <= 90 ? "warn" : "bad",
-             "본편 " + total + "s (목표 60~75 · 상한 90)") +
-       (outroSec ? badge("", "+아웃트로 ≈" + (total + outroSec) + "s") : "") + "</div>";
+  h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic || "") + "</h1>";
+
+  var lenCls = total >= 60 && total <= 75 ? "ok" : total <= 90 ? "warn" : "bad";
+  if (lenCls === "bad") flag("bad", "총길이", "본편 " + total + "s — 상한 90s 초과");
+  else if (lenCls === "warn") flag("warn", "총길이", "본편 " + total + "s — 목표 60~75s 밖(상한 90s 안)");
+  h += '<div class="badges">' +
+       badge("mode", isRec ? "촬영 모드" : isLine ? "생성 모드 · 대사별 삽화" : "생성 모드") +
+       badge((DOC.status || "draft") === "draft" ? "" : "ok", DOC.status || "draft") +
+       (DOC.created ? badge("", DOC.created) : "") +
+       badge(lenCls, "본편 " + total + "s") +
+       (outroSec ? badge("", "아웃트로 포함 ≈" + (total + outroSec) + "s") : "") +
+       badge("", main.length + "씬") + "</div>";
+
   h += '<dl class="meta-grid">';
-  if (DOC.keyMessage) h += "<dt>핵심 메시지</dt><dd>" + chip(DOC.keyMessage) + "</dd>";
-  if (DOC.hook) h += "<dt>커버 훅</dt><dd>" + chip(DOC.hook) + "</dd>";
-  if (DOC.seriesNote) h += "<dt>시리즈</dt><dd>" + chip(DOC.seriesNote) + "</dd>";
-  h += "<dt>SoT</dt><dd><code>scenes.js</code> — 이 문서는 씬 데이터를 복사하지 않고 직접 로드해 그린다</dd>";
+  if (DOC.keyMessage) h += "<dt>핵심 메시지</dt><dd>" + mark(DOC.keyMessage) + "</dd>";
+  if (DOC.hook) h += "<dt>커버 훅</dt><dd>" + mark(DOC.hook) + "</dd>";
+  if (DOC.seriesNote) h += "<dt>시리즈</dt><dd>" + mark(DOC.seriesNote) + "</dd>";
+  h += "<dt>원본</dt><dd><code>scenes.js</code> — 이 문서가 직접 읽어 그리므로 둘이 어긋날 일이 없다</dd>";
   h += "</dl>";
+
+  /* 커버 계약 — 배지가 아니라 검산 항목으로 */
+  if (cover) {
+    if (dispLen(cover.title) > 16) flag("bad", "커버", "title 표시 " + dispLen(cover.title) + "자 — 상한 16자");
+    if (cover.statLabel && dispLen(cover.statLabel) > 18)
+      flag("warn", "커버", "statLabel 표시 " + dispLen(cover.statLabel) + "자 — 상한 18자");
+  }
+  if (DOC.transitions && DOC.transitions.length && DOC.transitions.length !== SCENES.length)
+    flag("warn", "전환", "SB_DOC.transitions " + DOC.transitions.length + "개 — 씬 " + SCENES.length + "개와 다름");
+
+  // 템플릿 자리표시자가 남은 채로 승인 게이트에 가는 사고를 막는다
+  var blanks = (JSON.stringify(DOC).match(/\{\{/g) || []).length;
+  if (blanks) flag("bad", "SB_DOC", "채우지 않은 자리표시자 " + blanks + "곳 — {{…}} 를 지우고 다시 연다");
+
+  /* 씬 검산은 카드 렌더에서 수집되므로 먼저 돌려 둔다 */
+  var sceneChips = SCENES.map(function (s, i) { return sceneCheck(s, i + 1); });
+
+  // 자리만 잡는다 — 내용은 렌더가 끝난 뒤 채운다(위 flag 주석 참조)
+  h += '<section class="audit" id="audit"></section>';
+
   if (DOC.docNotes && DOC.docNotes.length)
-    h += DOC.docNotes.map(function (n) { return '<div class="note">' + chip(n) + "</div>"; }).join("");
+    h += '<details class="docnotes"><summary>설계 근거 ' + DOC.docNotes.length + "건</summary>" +
+      DOC.docNotes.map(function (n) { return '<div class="note">' + mark(n) + "</div>"; }).join("") + "</details>";
   h += "</header>";
 
-  /* ── 타임라인 ── */
-  h += '<h2 class="sec">타임라인</h2><div class="tl-cap">칸 너비 = 씬 길이 비례</div><div class="timeline">';
-  SCENES.forEach(function (s, i) {
-    h += '<div class="tl-seg ' + esc(s.type) + '" style="flex:' + (s.duration || 1) + '" title="' +
-         esc(strip(s.title || s.type)) + '">씬' + (i + 1) + "<small>" + (s.duration || "?") + "s</small></div>";
+  /* ══ 타임라인 ══ */
+  h += '<h2 class="sec">타임라인<span class="aside">칸 너비 = 길이 비례</span></h2>';
+  h += '<div class="timeline">';
+  // 재생 순서로 그린다 — b-roll 은 배열 끝에 두지만 실제로는 after 씬 뒤에 끼어든다
+  // (scenes-schema §broll: 배열 중간에 넣으면 캡처 인덱스가 전부 어긋난다)
+  var order = [];
+  main.forEach(function (s, i) { if (s.type !== "broll") order.push({ s: s, i: i }); });
+  main.forEach(function (s, i) {
+    if (s.type !== "broll") return;
+    var at = order.findIndex(function (o) { return o.i === (s.after || 0); });
+    order.splice(at < 0 ? order.length : at + 1, 0, { s: s, i: i });
   });
-  if (outroSec) h += '<div class="tl-seg outro" style="flex:' + outroSec + '" title="' +
-                     esc((DOC.outro && DOC.outro.note) || "아웃트로") + '">아웃트로<small>≈' + outroSec + "s</small></div>";
+  // 재생상 마지막 본편 씬 = PAYOFF (b-roll 은 페이오프가 아니다)
+  var lastMain = -1;
+  for (var q = order.length - 1; q >= 0; q--) { if (order[q].s.type !== "broll") { lastMain = order[q].i; break; } }
+  var acc = 0, marks = [];
+  order.forEach(function (o) {
+    var d = Math.max(0.1, o.s.duration || 1);
+    marks.push({ at: acc, d: d });
+    acc += d;
+    h += '<div class="tl-seg ' + esc(o.s.type) + '" style="flex:' + d + '" title="' +
+         esc(strip(o.s.title || o.s.type)) + '">씬' + (o.i + 1) + "<small>" + (o.s.duration || "?") + "s</small></div>";
+  });
+  if (outroSec || outroUnknown)
+    h += '<div class="tl-seg outro" style="flex:' + (outroSec || 9) + '" title="' +
+         esc((DOC.outro && DOC.outro.note) || "공용 아웃트로") + '">아웃트로<small>' +
+         (outroSec ? outroSec + "s" : "길이 미기재") + "</small></div>";
   h += "</div>";
+  h += '<div class="tl-ruler">' + marks.map(function (m) {
+    return '<span style="flex:' + m.d + '">' + m.at + "s</span>"; }).join("") +
+    (outroSec ? '<span style="flex:' + outroSec + '">' + acc + "s</span>" +
+      '<span style="flex:0 0 auto">' + (acc + outroSec) + "s</span>"
+      : '<span style="flex:0 0 auto">' + acc + "s</span>") + "</div>";
+  if (outroUnknown) flag("warn", "아웃트로", "outro 씬은 있는데 SB_DOC.outro 길이가 없다 — 총길이에 안 들어간다");
 
-  /* ── 씬 카드 ── */
+  /* ══ 씬 카드 ══ */
   h += '<h2 class="sec">씬 구성</h2>';
+  h += '<div class="toolbar">' +
+       '<label><input type="checkbox" id="tg-safe"> 글자 자리 보기</label>' +
+       '<label><input type="checkbox" id="tg-subs" checked> 자막</label>' +
+       '<span class="legend">점선 = 글자가 들어가는 자리 · 빗금 = 자막과 앱 버튼이 덮는 아래쪽</span>' +
+       '<span style="margin-left:auto">실제 화면 비율을 줄여 그린 미리보기다</span></div>';
+
+  var carryNoted = false;
   SCENES.forEach(function (s, i) {
     var no = i + 1;
-    var hasLineImgs = (s.narration || []).some(function (n) { return n.img; });
+    var narr = s.narration || [];
     h += '<article class="scene"><div class="scene-head">';
-    h += '<span class="scene-no">씬 ' + no + " · " + esc(s.type) + "</span>";
-    h += '<span class="scene-title">' + chip(s.title || "") + "</span>";
-    h += '<span class="scene-checks">' + sceneCheck(s) + "</span></div>";
+    h += '<span class="scene-no">' + no + " · " + esc(s.type).toUpperCase() + "</span>";
+    h += '<span class="scene-title">' + mark(s.title || (s.type === "quote" ? s.text : "") || "—") + "</span>";
+    if (s.type === "cover") h += '<span class="scene-beat">HOOK</span>';
+    else if (s.type === "outro") h += '<span class="scene-beat">CTA</span>';
+    else if (i === lastMain) h += '<span class="scene-beat">PAYOFF</span>';
+    h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
 
-    // 오버레이 미리보기 — 촬영 모드는 실제 렌더 필드만
-    h += '<div class="overlay">';
-    if (s.kicker) h += '<div class="ov-kicker">' + esc(s.kicker) + "</div>";
-    h += '<div class="ov-title">' + chip(s.title || "") + "</div>";
-    if (s.type === "cover" && s.stat) {
-      h += '<div class="ov-stat">' + esc(s.stat) + "</div>";
-      if (s.statLabel) h += '<div class="ov-statlabel">' + esc(s.statLabel) +
-        " <span style='opacity:.6'>(" + dispLen(s.statLabel) + "/18자)</span></div>";
-    }
-    if (!isRec && s.bullets) {
-      h += '<ul class="ov-bullets">' + s.bullets.map(function (b) {
-        return '<li><span class="t">' + esc(b.t) + '</span><span class="d">' + esc(b.d || "") + "</span></li>"; }).join("") + "</ul>";
-      if (s.footnote) h += '<div class="ov-foot">' + esc(s.footnote) + "</div>";
-    }
-    h += "</div>";
-    h += '<div class="ov-cap">화면 오버레이 미리보기 — ' +
-         (isRec ? "촬영 모드는 kicker·title" + (s.type === "cover" ? "·stat·statLabel" : "") + "만 렌더된다" :
-                  "생성 배경 위에 렌더된다") +
-         (s.type === "cover" ? " · title 표시 " + dispLen(s.title) + "/16자 · 리빌: rg1=title←세그① / rg2=stat←세그②" : "") +
-         (!isRec && s.type === "points" ? " · 실제 화면엔 캡션이 <b>한 번에 하나씩</b> 상단 블록에 스왑된다(여기 나열은 데이터 확인용)" : "") + "</div>";
-
-    // 나레이션 — narration[].img 가 있으면 대사별 삽화 행(왼쪽 그림 · 오른쪽 대사), 없으면 표
-    if (s.narration && s.narration.length) {
-      h += '<div class="blk"><div class="blk-label">' +
-           (isRec ? "대사 (번호 = 세그먼트 = 리빌)" : hasLineImgs ? "대사별 삽화 (번호 = 세그먼트)" : "나레이션 세그먼트") + "</div>";
-      if (hasLineImgs) {
-        s.narration.forEach(function (n, j) {
-          var same = strip(n.tts) === strip(n.sub);
-          h += '<div class="narr-row">' +
-               (n.img ? '<img src="' + esc(n.img) + '" alt="scene-' + no + "-line-" + (j + 1) + '" loading="lazy">'
-                      : '<div class="narr-noimg">삽화 없음</div>') +
-               '<div class="txt"><span class="n">' + (j + 1) + "</span>" + esc(n.tts) +
-               '<span class="len">' + netLen(n.tts) + "자</span>" +
-               (same ? "" : '<div class="sub-diff">자막: ' + esc(n.sub) + "</div>") +
-               (n.imgPrompt ? '<div class="prompt">imgPrompt: ' + esc(n.imgPrompt) + "</div>" : "") +
-               "</div></div>";
-        });
-      } else {
-        h += '<table class="narr"><tbody>';
-        s.narration.forEach(function (n, j) {
-          var same = strip(n.tts) === strip(n.sub);
-          h += '<tr><td class="n">' + (j + 1) + "</td><td>" + esc(n.tts) +
-               (same ? "" : '<div class="sub-diff">자막: ' + esc(n.sub) + "</div>") +
-               '</td><td class="len">' + netLen(n.tts) + "자</td></tr>";
-        });
-        h += "</tbody></table>";
+    if (s.type === "broll") {
+      var v = s.visual || {};
+      h += '<div class="clip">' +
+        (v.src ? '<img src="' + esc(v.src) + '" alt="b-roll 소스" onerror="this.remove()">' : "") +
+        '<div class="meta">' +
+        "<div><b>삽입</b>씬 " + ((s.after || 0) + 1) + " 종료 직후 · 사용 " + (s.duration || "?") + "초 (생성 8초 중 앞부분)</div>" +
+        (v.src ? "<div><b>소스</b><code>" + esc(v.src) + "</code> — 커버 배경과 같은 파일</div>" : "") +
+        (v.motion ? "<div><b>모션</b>" + esc(v.motion) + "</div>" : "") +
+        (v.audio ? "<div><b>오디오</b>" + esc(v.audio) + "</div>" : "") +
+        (v.clip ? "<div><b>산출</b><code>" + esc(v.clip) + "</code></div>" : "") +
+        "<div><b>나레이션</b>" + (narr.length ? "있음 — b-roll 은 비어 있어야 한다" : "없음 (영상 자체 소리)") + "</div>" +
+        "</div></div>";
+    } else {
+      var states = revealsOf(s);
+      h += '<div class="scene-body' + (states.length <= 3 ? " side" : "") + '"><div class="panel-col">';
+      h += '<div class="panels" data-n="' + states.length + '">' + states.map(function (st, k) {
+        var seg = st.seg >= 0 && narr[st.seg] ? narr[st.seg] : null;
+        var f = fit[i + ":" + k] || {};
+        return '<figure class="panel">' + frame(s, st, k, f.tier || 0, f.statScale || 0) +
+          "<figcaption><b>" + esc(st.label) + "</b>" +
+          (seg ? '<span class="seg">대사 ' + (st.seg + 1) + (st.carry ? " 이어짐" : " · " + netLen(seg.tts) + "자") + "</span>" : "") +
+          "</figcaption></figure>";
+      }).join("") + "</div>";
+      // 같은 안내를 씬마다 되풀이하지 않는다 — 처음 한 번만.
+      // 패널 칸 안에 넣는다 — .scene-body 의 직계 자식이 되면 그리드 자동 배치 커서가
+      // 되돌아가지 않아 AV 가 다음 행 왼쪽 칸으로 내려간다(실측).
+      if (!isRec && s.type === "points" && narr.length && narr.length !== states.length && !carryNoted) {
+        carryNoted = true;
+        h += '<div class="note panel-note">화면은 ' + states.length + "번 바뀌는데 대사는 " + narr.length +
+             "문장이다 — 한 문장이 캡션 둘을 안는 셈이고, 어느 문장인지는 제작 단계에서 정한다.</div>";
       }
-      h += "</div>";
+      h += "</div>";   // .panels 를 감싼 왼쪽 칸
     }
 
-    // bullets — 촬영 모드에서는 화면에 안 나가는 원천 데이터임을 명시
-    if (isRec && s.bullets) {
-      h += '<div class="blk"><div class="blk-label">bullets — 화면에 렌더되지 않음 · 캡션/대본 원천</div><ul class="plain">' +
-        s.bullets.map(function (b) { return "<li><b>" + esc(b.t) + "</b>" + (b.d ? " — " + esc(b.d) : "") + "</li>"; }).join("") + "</ul>" +
-        (s.footnote ? '<div class="blk-label" style="margin-top:6px">footnote: ' + esc(s.footnote) + "</div>" : "") + "</div>";
+    /* AV 2열 */
+    var vis = s.visual || {};
+    h += '<div class="av"><section><h4>VIDEO</h4>';
+    if (isRec) {
+      h += '<div class="shot">' + mark(vis.shot || "—") + "</div>";
+    } else if (s.type !== "broll") {
+      var lineImgs = narr.filter(function (n) { return n.img; });
+      if (lineImgs.length) {
+        h += '<div class="row"><b>삽화</b><div class="v">대사마다 1장 · 총 ' + lineImgs.length +
+             "장 <span style='color:var(--faint)'>(라이트 모드 · 흰 배경 라인아트)</span></div></div>";
+        h += '<div class="row"><b>대표</b><div class="v"><code>' + esc(vis.bg || "—") + "</code> — 커버 정지·썸네일 원천</div></div>";
+        h += lineImgs.map(function (n, j) {
+          return n.imgPrompt ? '<details class="prompt"><summary>삽화 ' + (j + 1) + " 프롬프트</summary><p>" +
+            esc(n.imgPrompt) + "</p></details>" : ""; }).join("");
+      } else {
+        h += '<div class="row"><b>배경</b><div class="v">' +
+             (vis.bg ? "<code>" + esc(vis.bg) + "</code>" : s.type === "quote" ? "없음 — 발화 클립 또는 인용 카드" : "—") +
+             "</div></div>";
+      }
+      if (vis.motion) h += '<div class="row"><b>모션</b><div class="v">' + esc(vis.motion) + "</div></div>";
+      if (vis.clip && vis.clip.prompt)
+        h += '<details class="prompt"><summary>발화 클립 프롬프트</summary><p>' + esc(vis.clip.prompt) + "</p></details>";
+      if (vis.bgPrompt)
+        h += '<details class="prompt"><summary>배경 프롬프트</summary><p>' + esc(vis.bgPrompt) + "</p></details>";
+    } else {
+      h += '<div class="shot">위 클립 계획 참조.</div>';
     }
-
-    // 화면 — 촬영 지시 or 생성 이미지
-    if (s.visual) {
-      h += '<div class="blk"><div class="blk-label">화면' + (isRec ? " (촬영 지시 — visual.shot)" : "") + "</div>";
-      if (s.visual.shot) h += '<div class="shot">' + chip(s.visual.shot) + "</div>";
-      if (s.visual.bg && !hasLineImgs) h += '<img class="scene-img" src="' + esc(s.visual.bg) + '" alt="scene-' + no + '">';
-      if (s.visual.bg && hasLineImgs) h += '<div class="shot">produce 폴백 배경: <code>' + esc(s.visual.bg) +
-        "</code> — 대사별 삽화 스왑 지원 전까지 이 한 장을 쓴다</div>";
-      if (s.visual.bgPrompt) h += '<div class="shot" style="margin-top:6px">bgPrompt: ' + esc(s.visual.bgPrompt) + "</div>";
-      h += "</div>";
+    // 화면에 뜨는 글자는 프레임 안에서 너무 작다 — 읽을 수 있는 크기로 여기 적는다
+    var caps = s.bullets || [];
+    if (caps.length || s.stat || s.speaker) {
+      h += '<div class="row" style="margin-top:var(--s3)"><b>' +
+        (isRec ? "대본 원천" : "화면 텍스트") + '</b><div class="v">' +
+        (s.title ? '<div class="capline"><span class="t">' + esc(strip(s.title)) + "</span></div>" : "") +
+        (s.kicker ? '<div class="capline"><span class="f">' + esc(s.kicker) + "</span></div>" : "") +
+        (s.stat ? '<div class="capline"><span class="t">' + esc(s.stat) + "</span>" +
+          (s.statLabel ? '<span class="d">' + esc(s.statLabel) + "</span>" : "") + "</div>" : "") +
+        (s.speaker ? '<div class="capline"><span class="t">' + esc(s.speaker) + "</span>" +
+          (s.role ? '<span class="d">' + esc(s.role) + "</span>" : "") + "</div>" : "") +
+        (s.text ? '<div class="capline"><span class="d">' + esc(strip(s.text)) + "</span></div>" : "") +
+        caps.map(function (b, k) {
+          return '<div class="capline"><span class="k">' + (k + 1) + '</span><span class="t">' + esc(b.t) + "</span>" +
+                 (b.d ? '<span class="d">' + esc(b.d) + "</span>" : "") + "</div>"; }).join("") +
+        (s.footnote ? '<div class="capline"><span class="f">' + esc(s.footnote) + "</span></div>" : "") +
+        (isRec && caps.length ? '<div class="capline"><span class="f">캡션은 화면에 렌더되지 않는다 — 대사·자막이 말한다</span></div>' : "") +
+        "</div></div>";
     }
-
     if (DOC.privacy && DOC.privacy[no])
-      h += '<div class="privacy">🔒 개인정보 회피 — ' + chip(DOC.privacy[no]) + "</div>";
+      h += '<div class="note pv">개인정보 회피 — ' + mark(DOC.privacy[no]) + "</div>";
+    h += "</section>";
 
-    if (DOC.sceneNotes && DOC.sceneNotes[no])
-      h += '<div class="scene-notes">' + DOC.sceneNotes[no].map(function (n) {
-        return '<div class="note">' + chip(n) + "</div>"; }).join("") + "</div>";
+    h += "<section><h4>AUDIO</h4>";
+    if (narr.length) {
+      h += '<table class="narr"><tbody>' + narr.map(function (n, j) {
+        var same = strip(n.tts) === strip(n.sub);
+        return '<tr><td class="n">' + (j + 1) + "</td><td>" + esc(n.tts) +
+          (same ? "" : '<div class="sub-diff"><b>자막</b> ' + esc(n.sub) + "</div>") +
+          '</td><td class="len">' + netLen(n.tts) + "</td></tr>"; }).join("") + "</tbody></table>";
+    } else {
+      h += '<div class="shot" style="color:var(--muted)">' +
+           (s.type === "broll" ? "영상이 가진 소리를 그대로 쓴다 — TTS 없음." : "나레이션 없음.") + "</div>";
+    }
+    if (DOC.audioNotes && DOC.audioNotes[no])
+      h += '<div class="note">' + mark(DOC.audioNotes[no]) + "</div>";
+    h += "</section></div>";
+    if (s.type !== "broll") h += "</div>";   // .scene-body
 
+    // 씬 주석은 셋 이상이면 접는다 — 판단에 바로 쓰는 건 개인정보 회피와 전환이다
+    var sn = (DOC.sceneNotes && DOC.sceneNotes[no]) || [];
+    if (sn.length) {
+      var body = sn.map(function (n) { return '<div class="note">' + mark(n) + "</div>"; }).join("");
+      h += sn.length > 2
+        ? '<details class="docnotes scenenotes"><summary>설계 근거 ' + sn.length + "건</summary>" + body + "</details>"
+        : '<div class="scene-notes">' + body + "</div>";
+    }
     if (DOC.transitions && DOC.transitions[i])
-      h += '<div class="transition">⏭ 전환 — ' + chip(DOC.transitions[i]) + "</div>";
+      h += '<div class="transition"><b>전환</b>' + mark(DOC.transitions[i]) + "</div>";
     h += "</article>";
   });
 
-  /* ── 계약 검산 요약 ── */
-  h += '<h2 class="sec">계약 검산 (렌더 시 자동 계산)</h2><table class="grid"><tbody>';
+  /* ══ 계약·출처·플랫폼 ══ */
+  h += '<h2 class="sec">계약 기준<span class="aside">렌더 시 자동 계산</span></h2><table class="grid"><tbody>';
   h += "<tr><th>본편 총길이</th><td>" + total + "s — 목표 60~75 · 상한 90" +
-       (outroSec ? " / 아웃트로 포함 ≈" + (total + outroSec) + "s" : "") + "</td></tr>";
+       (outroSec ? " · 아웃트로 포함 ≈" + (total + outroSec) + "s" : "") + "</td></tr>";
   if (cover) {
-    h += "<tr><th>커버 title</th><td>" + chip(cover.title) + " — 표시 " + dispLen(cover.title) + "/16자</td></tr>";
+    h += "<tr><th>커버 title</th><td>" + mark(cover.title) + " — 표시 " + dispLen(cover.title) + "/16자</td></tr>";
     if (cover.statLabel) h += "<tr><th>statLabel</th><td>" + esc(cover.statLabel) + " — 표시 " + dispLen(cover.statLabel) + "/18자</td></tr>";
   }
-  h += "<tr><th>말속도 기준</th><td>" + (isRec ? "촬영 모드 5~6자/초 (4.5~6.5 허용 표시) · 씬 8~20s" : "TTS 4.5자/초 역산 · 씬 13s 상한") + "</td></tr>";
+  h += "<tr><th>말속도</th><td>" + (isRec ? "촬영 5~6자/초 (4.5~6.5 허용) · 씬 8~20s" : "TTS 4.5자/초 역산 · 씬 13s 상한") + "</td></tr>";
   h += "<tr><th>THEME</th><td>" + ["accent", "accent2", "ink"].map(function (k) {
     return '<span class="swatch" style="background:' + esc(THEME[k]) + '"></span><code>' + esc(THEME[k]) + "</code>"; }).join(" &nbsp; ") +
-    " &nbsp; brand: " + esc(THEME.brand) + "</td></tr>";
+    " &nbsp; brand <code>" + esc(THEME.brand) + "</code></td></tr>";
   h += "</tbody></table>";
-  if (DOC.transitions && DOC.transitions.length !== SCENES.length)
-    h += '<div class="note" style="border-color:var(--warn)">⚠ SB_DOC.transitions 길이(' + DOC.transitions.length +
-         ')가 씬 수(' + SCENES.length + ")와 다르다 — 씬마다 전환 1개(마지막은 녹화 종료).</div>";
 
-  /* ── 촬영 준비·출처·플랫폼·재확인 ── */
-  if (DOC.prep && DOC.prep.length) {
+  if (DOC.prep && DOC.prep.length)
     h += '<h2 class="sec">촬영 전 준비</h2><ul class="checklist">' +
-      DOC.prep.map(function (p) { return "<li>" + chip(p) + "</li>"; }).join("") + "</ul>";
-  }
+      DOC.prep.map(function (p) { return "<li>" + mark(p) + "</li>"; }).join("") + "</ul>";
+
   if (DOC.sources && DOC.sources.length) {
-    h += '<h2 class="sec">출처 요약 (원장: research.md)</h2><table class="grid"><thead><tr><th>주장</th><th>출처</th><th>확인일</th><th>상태</th></tr></thead><tbody>';
+    h += '<h2 class="sec">출처<span class="aside">원장: research.md</span></h2>' +
+      '<table class="grid"><thead><tr><th>주장</th><th>출처</th><th>확인일</th><th>상태</th></tr></thead><tbody>';
     DOC.sources.forEach(function (r) {
-      h += "<tr><td>" + chip(r.claim) + "</td><td>" +
+      h += "<tr><td>" + mark(r.claim) + "</td><td>" +
         (r.links || []).map(function (l) {
           return l.url ? '<a href="' + esc(l.url) + '">' + esc(l.label) + "</a>" : "<span>" + esc(l.label) + "</span>";
-        }).join(" · ") +
-        "</td><td>" + esc(r.date || "") + "</td><td>" + chip(r.status || "") + "</td></tr>";
+        }).join(" · ") + "</td><td>" + esc(r.date || "") + "</td><td>" + mark(r.status || "") + "</td></tr>";
     });
     h += "</tbody></table>";
   }
   if (DOC.platforms && DOC.platforms.length) {
     h += '<h2 class="sec">플랫폼 계획</h2><table class="grid"><thead><tr><th>플랫폼</th><th>형태</th><th>비고</th></tr></thead><tbody>';
     DOC.platforms.forEach(function (p) {
-      h += "<tr><td><b>" + esc(p.name) + "</b></td><td>" + esc(p.form) + "</td><td>" + chip(p.note || "") + "</td></tr>";
+      h += "<tr><td><b>" + esc(p.name) + "</b></td><td>" + esc(p.form) + "</td><td>" + mark(p.note || "") + "</td></tr>";
     });
     h += "</tbody></table>";
   }
-  if (DOC.recheck && DOC.recheck.length) {
-    h += '<h2 class="sec">게시 직전 재확인 (시효성)</h2><ul class="checklist">' +
-      DOC.recheck.map(function (r) { return "<li>" + chip(r) + "</li>"; }).join("") + "</ul>";
-  }
+  if (DOC.recheck && DOC.recheck.length)
+    h += '<h2 class="sec">게시 직전 재확인<span class="aside">시효성</span></h2><ul class="checklist">' +
+      DOC.recheck.map(function (r) { return "<li>" + mark(r) + "</li>"; }).join("") + "</ul>";
 
-  h += '<footer class="doc-foot"><b>scenes.js 가 SoT 다</b> — 이 문서는 렌더라서 씬 데이터가 틀리게 보이면 scenes.js 를 고친다. ' +
-       "이 파일에서는 SB_DOC(주석·출처·플랫폼 계획)만 편집한다. 원본 문서: " +
+  h += '<footer class="doc-foot"><b>원본은 scenes.js 다</b> — 이 문서는 그것을 그려 보여 줄 뿐이라, 씬 내용이 틀리게 보이면 scenes.js 를 고친다. ' +
+       "이 파일에서는 SB_DOC(주석·오디오 지시·출처·플랫폼 계획)만 편집한다.<br>" +
        '<a href="./storyboard.md">storyboard.md</a> · <a href="./script.md">script.md</a> · ' +
        '<a href="./research.md">research.md</a> · <a href="./scenes.js">scenes.js</a></footer>';
 
   app.innerHTML = h;
-  document.title = (DOC.displayTitle || DOC.topic || "스토리보드") + " — 스토리보드 · " + (DOC.channelName || THEME.brand);
+
+  /* 점검 스트립 채우기 — 모든 위반이 등록된 뒤라야 빠짐이 없다 */
+  auditSealed = true;
+  // 위반을 위로 — 훑는 눈에 먼저 걸려야 한다 (같은 등급끼리는 등록 순서 유지)
+  audit = audit.filter(function (a) { return a.level === "bad"; })
+    .concat(audit.filter(function (a) { return a.level !== "bad"; }));
+  var nBad = audit.filter(function (a) { return a.level === "bad"; }).length;
+  var nWarn = audit.length - nBad;
+  var box = document.getElementById("audit");
+  box.className = "audit" + (nBad ? " has-bad" : nWarn ? " has-warn" : "");
+  box.innerHTML = '<div class="audit-head"><span class="dot"></span>계약 점검' +
+    '<span class="count">' + (audit.length ? "위반 " + nBad + " · 확인 " + nWarn : "위반 없음") + "</span></div>" +
+    (audit.length
+      ? "<ul>" + audit.map(function (a) {
+          return '<li class="' + a.level + '"><span class="where">' + esc(a.where) + "</span>" +
+                 '<span class="what">' + esc(a.what) + "</span></li>"; }).join("") + "</ul>"
+      : '<div class="clean">자수·말속도·씬 길이·프레임 넘침·총길이·커버 제목 — 계약 항목 전부 통과.</div>');
+
+  var safe = document.getElementById("tg-safe"), subs = document.getElementById("tg-subs");
+  if (safe) safe.addEventListener("change", function () { document.body.classList.toggle("safe", safe.checked); });
+  if (subs) subs.addEventListener("change", function () { document.body.classList.toggle("subs", subs.checked); });
+
+  var who = DOC.channelName || DOC.channel || THEME.brand || "";
+  document.title = (DOC.displayTitle || DOC.topic || "스토리보드") + (who ? " — 스토리보드 · " + who : " — 스토리보드");
 })();
 </script>
 </body>
