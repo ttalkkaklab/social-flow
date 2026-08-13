@@ -243,6 +243,8 @@
   .fr.t-cover  .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.16) 0%, rgba(5,8,20,0) 34%, rgba(5,8,20,.42) 62%, rgba(5,8,20,.90) 100%); }
   .fr.t-points .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.64) 0%, rgba(5,8,20,.48) 28%, rgba(5,8,20,0) 48%, rgba(5,8,20,0) 68%, rgba(5,8,20,.52) 100%); }
   .fr.t-quote  .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.55) 0%, rgba(5,8,20,.38) 35%, rgba(5,8,20,.52) 62%, rgba(5,8,20,.92) 100%); }
+  /* 발화 클립 위(alpha)는 정지 카드의 풀워시가 아니라 서명·자막용 상·하단 스크림뿐이다 */
+  .fr.t-quote.clip .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.78) 0%, rgba(5,8,20,0) 22.4%, rgba(5,8,20,0) 66.7%, rgba(5,8,20,.85) 100%); }
   /* 라이트(삽화) 모드 — 흰 배경 라인아트 위 잉크 텍스트 + 화이트 워시 */
   .fr.light .fscrim { background: linear-gradient(180deg, rgba(255,255,255,.66) 0%, rgba(255,255,255,0) 34%, rgba(255,255,255,0) 64%, rgba(255,255,255,.66) 100%); }
   .fr.light { color: var(--ink); }
@@ -351,6 +353,12 @@
   .fr .f-statrow { display: flex; align-items: baseline; justify-content: center; gap: calc(var(--fw) * .018); margin-top: calc(var(--fw) * .024); }
   .fr .f-statrow .f-stat { font-size: calc(var(--fw) * .07); }
   .fr .f-statrow .f-statlabel { font-size: calc(var(--fw) * .03); margin-top: 0; }
+  /* 발화 클립 자리 — produce 가 veo 클립을 까는 구간이라 아직 그림이 없다.
+     스크림이 걷힌 중앙이라 배경과 같은 색이 되지 않게 자체 대비를 준다. */
+  .fr .f-band-clip {
+    top: 26%; height: 34%; background: rgba(5,8,20,.55);
+    border-color: rgba(255,255,255,.3); color: rgba(255,255,255,.9);
+  }
   .fr .f-band {
     position: absolute; left: 0; right: 0; top: 30%; height: 31.64%;
     background: rgba(255,255,255,.06); border-top: 1px dashed rgba(255,255,255,.24);
@@ -486,16 +494,20 @@
   .scene-title .mark { color: var(--accent-ink); }
 
   /* docNotes — 설계 근거는 접어 둔다 (첫 화면은 승인 판단 재료만) */
-  details.docnotes { margin-top: var(--s4); }
-  details.docnotes > summary {
+  details.docnotes, details.scenenotes { margin-top: var(--s4); }
+  details.docnotes > summary, details.scenenotes > summary {
     font-size: var(--t-aux); color: var(--muted); cursor: pointer; list-style: none;
     display: inline-flex; align-items: center; gap: var(--s2);
     border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px;
   }
-  details.docnotes > summary::-webkit-details-marker { display: none; }
-  details.docnotes > summary::before { content: "▸"; font-size: 9px; }
-  details.docnotes[open] > summary::before { content: "▾"; }
-  details.docnotes > summary:hover { border-color: var(--muted); }
+  details.docnotes > summary::-webkit-details-marker,
+  details.scenenotes > summary::-webkit-details-marker { display: none; }
+  details.docnotes > summary::before,
+  details.scenenotes > summary::before { content: "▸"; font-size: 9px; }
+  details.docnotes[open] > summary::before,
+  details.scenenotes[open] > summary::before { content: "▾"; }
+  details.docnotes > summary:hover,
+  details.scenenotes > summary:hover { border-color: var(--muted); }
 
   /* 툴바 */
   .toolbar { display: flex; gap: var(--s4); align-items: center; margin: var(--s4) 0 0; font-size: var(--t-cap); color: var(--muted); }
@@ -694,8 +706,9 @@ window.SB_DOC = {
     var lineImg = seg && seg.img ? seg.img : null;
     var bg = lineImg || (s.visual && s.visual.bg) || null;
     var light = !!lineImg;
+    var hasClip = s.type === "quote" && !!(s.visual && s.visual.clip);
     var cls = "fr t-" + esc(s.type) + (isRec ? " rec" : "") + (light ? " light" : "") +
-              (tier ? " tight" + tier : "");
+              (hasClip ? " clip" : "") + (tier ? " tight" + tier : "");
     var h = '<div class="' + cls + '">';
     if (bg) h += '<div class="fbg" style="background-image:url(\'' + esc(bg) + '\')"></div>';
     h += '<div class="fscrim"></div>';
@@ -731,10 +744,15 @@ window.SB_DOC = {
       if (s.footnote) h += '<div class="f-foot">' + esc(s.footnote) + "</div>";
       h += "</div>";
     } else if (s.type === "quote") {
+      // 발화 클립이 계획되면 produce 는 alpha 로 캡처한다 — 화면에는 서명만 나가고
+      // 인용문은 나레이션·자막이 말한다(produce SKILL 캡처 표 · scenes-schema §quote).
+      // 클립이 없을 때만 정지 인용 카드(서명 + 인용문 + 풀워시)가 된다.
       h += '<div class="f-sign"><div class="nm">' + esc(s.speaker || "") + "</div>" +
            '<div class="rl">' + esc(s.role || "").replace(/AI/g, '<span class="ai">AI</span>') + "</div></div>";
-      h += '<div class="fzone center"><div class="f-quote' + (idx < 1 ? " fhide" : "") + '">' +
-           femph(s.text || "") + "</div></div>";
+      h += hasClip
+        ? '<div class="f-band f-band-clip">발화 클립 · 서명만</div>'
+        : '<div class="fzone center"><div class="f-quote' + (idx < 1 ? " fhide" : "") + '">' +
+          femph(s.text || "") + "</div></div>";
     } else if (s.type === "outro") {
       h += '<div class="fzone center"><div class="f-obrand f-em">' + esc(THEME.brand || "") + "</div>" +
            '<div class="f-otitle">' + femph(s.title || "") + "</div>" +
@@ -1081,7 +1099,7 @@ window.SB_DOC = {
     if (sn.length) {
       var body = sn.map(function (n) { return '<div class="note">' + mark(n) + "</div>"; }).join("");
       h += sn.length > 2
-        ? '<details class="docnotes scenenotes"><summary>설계 근거 ' + sn.length + "건</summary>" + body + "</details>"
+        ? '<details class="scenenotes"><summary>설계 근거 ' + sn.length + "건</summary>" + body + "</details>"
         : '<div class="scene-notes">' + body + "</div>";
     }
     if (DOC.transitions && DOC.transitions[i])
