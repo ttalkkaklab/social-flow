@@ -1,0 +1,35 @@
+# 생성 툴 단가 정본 (SoT) — cost-report.sh 가 이 파일만 읽는다.
+# cost-tiers.md 는 이 표를 설명할 뿐 숫자를 복사하지 않는다(사본 드리프트 방지).
+#
+# 열: key <TAB> unit <TAB> usd <TAB> 근거등급 <TAB> 출처·비고
+#   usd = ?  → 단가 미확인. cost-report.sh 가 그 키를 만나면 실패한다(조용한 $0 금지).
+#   근거등급: 공식(벤더 요금 페이지 직접 확인) / 환산(공식값에서 계산) / 미검증(검색 결과·미교차확인)
+#
+# 갱신일 2026-08-11. 벤더 요금은 바뀐다 — 분기마다 출처를 다시 열어 확인한다.
+
+# ── 이미지 (OpenAI Images) ───────────────────────────────────────────────
+# 공식 표는 프리셋 해상도만 준다. 이 파이프라인은 1088x1920(커스텀)을 쓰므로
+# 1024x1536 값에 픽셀비 1.33배를 곱한 환산값이다 — 실제 청구서로 한 번 재볼 것.
+image.gpt-image-2.low	장	0.007	환산	공식 1024x1536 low $0.005 × 1.33 (developers.openai.com/api/docs/guides/image-generation)
+image.gpt-image-2.medium	장	0.055	환산	공식 1024x1536 medium $0.041 × 1.33
+image.gpt-image-2.high	장	0.220	환산	공식 1024x1536 high $0.165 × 1.33
+
+# ── 영상 (Veo 3.1) ──────────────────────────────────────────────────────
+# 초당 과금. video-client.ts 주석과 같은 값이며, docs/guides/ai-video-production
+# §9 는 이 숫자를 "3표 검증 미통과"로 남겨 뒀다 — 실과금 호출로 재보기 전까지 미검증이다.
+veo.lite.720p	초	0.05	미검증	veo-3.1-lite-generate-preview
+veo.fast.720p	초	0.10	미검증	veo-3.1-fast-generate-preview
+veo.standard.720p	초	0.40	미검증	veo-3.1-generate-preview — 자율 저작 금지 티어
+veo.fast.1080p	초	0.12	미검증	1080p 는 8초 전용
+veo.lite.1080p	초	0.08	미검증	1080p 는 8초 전용
+
+# ── 음성 ────────────────────────────────────────────────────────────────
+# Gemini 는 문자가 아니라 오디오 토큰(초당 25개)으로 과금한다. 아래는 한국어
+# 발화속도 실측 6.55자/초로 100만 자를 환산한 값을 1,000자 단가로 되돌린 것이다.
+tts.local	1000자	0.000	공식	Supertonic 로컬 — 네트워크·키 없음. 전기값만
+tts.gemini-flash	1000자	0.038	환산	$38/100만 자 (docs/research/2026-08-11-local-tts-and-commercial-api)
+tts.gemini-pro	1000자	0.076	환산	$76/100만 자 — flash 거절 시 폴백
+
+# ── 음악 (Lyria) ────────────────────────────────────────────────────────
+music.lyria-clip	클립	0.04	미검증	music_generate_clip 30초 고정. README 기재값
+music.lyria-realtime	초	?	미확인	music_generate 가변 길이 — 단가 미확인이라 자율 저작에서 쓰지 않는다

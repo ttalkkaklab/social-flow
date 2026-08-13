@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
@@ -210,10 +211,14 @@ export async function publishThreads(input: ThreadsPublishInput, opts?: PollOpts
   const creationId = String(parseJson(create.body)?.id ?? '');
   if (!creationId) return fail(502, `Threads container create returned no id: ${create.body}`);
 
-  if (input.imageUrl) {
-    const pollFailure = await pollContainer(THREADS_BASE, creationId, token, 'status', opts);
-    if (pollFailure) return pollFailure;
-  }
+  // 미디어 유무와 무관하게 컨테이너가 FINISHED 가 될 때까지 기다린다.
+  // 텍스트 컨테이너도 status 를 보고하며, 특히 **남의 글에 다는 답글**
+  // (reply_to_id 가 우리 게시물이 아닌 경우)은 생성 직후 발행하면
+  // code 24 / subcode 4279009 "미디어를 찾을 수 없음" 으로 실패한다
+  // (2026-08-11 실측 — 실패한 컨테이너도 잠시 뒤 조회하면 FINISHED).
+  // 자기 답글·일반 글은 대개 첫 조회에서 FINISHED 라 비용이 GET 1회다.
+  const pollFailure = await pollContainer(THREADS_BASE, creationId, token, 'status', opts);
+  if (pollFailure) return pollFailure;
 
   const publish = await graphRequest('post', `${THREADS_BASE}/${uid}/threads_publish`, {
     creation_id: creationId,
@@ -230,6 +235,195 @@ export async function publishThreads(input: ThreadsPublishInput, opts?: PollOpts
     platform: 'THREADS',
     postId,
     permalink: permalink.ok ? (parseJson(permalink.body)?.permalink ?? null) : null,
+  });
+}
+
+// ── Threads 성장 조회 (인사이트·키워드 검색 — 읽기 전용) ─────────
+
+/**
+ * 스코프 부족 에러에 재발급 안내를 얹는다 — 인사이트·검색 스코프
+ * (threads_manage_insights·threads_keyword_search)는 게시용으로 발급한 기존
+ * 토큰에 없을 수 있고, 그 원문만으로는 다음 행동을 알 수 없다.
+ *
+ * 스코프 부족이 명시적 permission 에러로만 오지 않는다 — keyword_search 는
+ * 스코프·기능 미승인 시 code 1 "An unknown error occurred"(HTTP 500)로
+ * 온다(2026-08-11 실측). 그 형태도 스코프 후보로 취급한다.
+ */
+function withScopeHint(res: ApiResult, scope: string): ApiResult {
+  if (res.ok) return res;
+  const scopeLike =
+    /permission|scope|not authorized|OAuthException/i.test(res.body) ||
+    (/"code"\s*:\s*1\b/.test(res.body) && /unknown error/i.test(res.body));
+  if (!scopeLike) return res;
+  return fail(
+    res.status,
+    `${res.body}\n→ 이 엔드포인트는 ${scope} 스코프가 필요하다. 기존 토큰은 이 스코프 없이 발급됐을 수 있다 — ` +
+      `동의 플로우에서 스코프 체크박스를 추가로 켜고 토큰을 재발급할 것 (절차: skills/publish/references/token-setup.md).`,
+  );
+}
+
+export interface ThreadsInsightsInput {
+  /** 계정 지표 집계 일수 (기본 7) */
+  days?: number;
+  /** 최근 루트 게시물 지표 수 (기본 10, 0 이면 게시물 지표 생략) */
+  postLimit?: number;
+  channel?: string;
+}
+
+/** 게시물(media) 인사이트 지표 — views·shares 는 플랫폼이 "개발 중"으로 표시하는 값 */
+const THREADS_MEDIA_METRICS = 'views,likes,replies,reposts,quotes,shares';
+
+/**
+ * Threads 성과 스냅샷 — 계정 지표(threads_insights)와 최근 루트 게시물별
+ * 지표(/insights)를 한 번에 정규화해 반환한다. grow-threads 루프가 틱마다 찍어
+ * 전 틱 대비 증감을 판단하는 용도라, 호출 시점 값만 반환하고 저장은
+ * 호출자(data/<채널>/growth/threads/) 몫이다.
+ */
+export async function threadsInsights(input: ThreadsInsightsInput): Promise<ApiResult> {
+  const { token, error } = await loadTokenFile('THREADS', input.channel);
+  if (!token) return error!;
+  const me = await fetchMe(THREADS_BASE, token, 'id,username');
+  if (!me.ok) return me;
+  const account = parseJson(me.body) ?? {};
+  const uid = str(account.id);
+  if (!uid) return fail(502, `Threads /me returned no id: ${me.body}`);
+
+  const days = input.days ?? 7;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const since = nowSec - days * 86_400;
+
+  // followers_count 는 since/until 미지원 — 구간 지표와 분리해 병렬 호출한다
+  const [ranged, followers] = await Promise.all([
+    graphRequest('get', `${THREADS_BASE}/${uid}/threads_insights`, {
+      metric: 'views,likes,replies,reposts,quotes',
+      since: String(since),
+      until: String(nowSec),
+      access_token: token,
+    }),
+    graphRequest('get', `${THREADS_BASE}/${uid}/threads_insights`, {
+      metric: 'followers_count',
+      access_token: token,
+    }),
+  ]);
+  if (!ranged.ok) return withScopeHint(ranged, 'threads_manage_insights');
+  if (!followers.ok) return withScopeHint(followers, 'threads_manage_insights');
+
+  const userMetrics: Record<string, unknown> = {};
+  for (const item of [...rawList(ranged.body), ...rawList(followers.body)]) {
+    const name = str(item.name);
+    if (!name) continue;
+    const totalValue = (item.total_value as Raw | undefined)?.value;
+    if (totalValue !== undefined) {
+      userMetrics[name] = totalValue;
+    } else if (Array.isArray(item.values)) {
+      // views 는 일 단위 시계열 — 합계와 시계열을 함께 싣는다
+      const daily = (item.values as Raw[]).map((v) => ({
+        date: str(v.end_time).slice(0, 10),
+        value: numOrNull(v.value) ?? 0,
+      }));
+      userMetrics[name] = { total: daily.reduce((sum, v) => sum + v.value, 0), daily };
+    }
+  }
+
+  // 최근 루트 게시물별 지표 — 게시물당 /insights 1회 왕복 (postLimit 로 상한)
+  const postLimit = input.postLimit ?? 10;
+  let posts: Array<Record<string, unknown>> = [];
+  if (postLimit > 0) {
+    const list = await graphRequest('get', `${THREADS_BASE}/${uid}/threads`, {
+      fields: 'id,text,timestamp,permalink,is_reply',
+      limit: String(postLimit * 2), // is_reply(자기 답글) 제외분 여유
+      access_token: token,
+    });
+    if (!list.ok) return list;
+    const roots = rawList(list.body)
+      .filter((item) => item.is_reply !== true)
+      .slice(0, postLimit);
+    posts = await Promise.all(
+      roots.map(async (item) => {
+        const postId = str(item.id);
+        const ins = await graphRequest('get', `${THREADS_BASE}/${postId}/insights`, {
+          metric: THREADS_MEDIA_METRICS,
+          access_token: token,
+        });
+        const metrics: Record<string, number | null> = {};
+        if (ins.ok) {
+          for (const m of rawList(ins.body)) {
+            const values = m.values as Raw[] | undefined;
+            metrics[str(m.name)] = numOrNull(values?.[0]?.value ?? (m.total_value as Raw | undefined)?.value);
+          }
+        }
+        return {
+          postId,
+          permalink: item.permalink ? str(item.permalink) : null,
+          excerpt: excerpt(str(item.text)),
+          timestamp: item.timestamp ? str(item.timestamp) : null,
+          metrics: ins.ok ? metrics : null,
+          ...(ins.ok ? {} : { metricsError: `HTTP ${ins.status}: ${ins.body.slice(0, 200)}` }),
+        };
+      }),
+    );
+  }
+
+  return okJson({
+    channel: input.channel ?? null,
+    account: { id: uid, username: str(account.username) },
+    period: { since: new Date(since * 1000).toISOString(), until: new Date(nowSec * 1000).toISOString(), days },
+    user: userMetrics,
+    posts,
+  });
+}
+
+export interface ThreadsSearchInput {
+  query: string;
+  searchType?: 'TOP' | 'RECENT';
+  searchMode?: 'KEYWORD' | 'TAG';
+  /** 이 시간 이내 게시물만 (RECENT 와 조합해 신선한 대화를 고를 때) */
+  sinceHours?: number;
+  limit?: number;
+  channel?: string;
+}
+
+/**
+ * Threads 공개 게시물 키워드 검색 — 채널 관심 키워드로 참여할 대화를 찾는다.
+ * 쿼터는 계정당 24시간 롤링 2,200회(결과 없는 쿼리 미포함). 결과 postId 를
+ * threads_publish 의 replyToId 로 넘기면 그 글에 답글로 참여한다.
+ */
+export async function threadsKeywordSearch(input: ThreadsSearchInput): Promise<ApiResult> {
+  const { token, error } = await loadTokenFile('THREADS', input.channel);
+  if (!token) return error!;
+  const now = Date.now();
+  const res = await graphRequest('get', `${THREADS_BASE}/keyword_search`, {
+    q: input.query,
+    search_type: input.searchType,
+    search_mode: input.searchMode,
+    since: input.sinceHours ? String(Math.floor(now / 1000) - Math.round(input.sinceHours * 3600)) : undefined,
+    limit: String(input.limit ?? 25),
+    fields: 'id,text,media_type,permalink,timestamp,username,has_replies,is_quote_post,is_reply',
+    access_token: token,
+  });
+  if (!res.ok) return withScopeHint(res, 'threads_keyword_search');
+
+  const results = rawList(res.body).map((item) => {
+    const timestamp = item.timestamp ? str(item.timestamp) : null;
+    return {
+      postId: str(item.id),
+      username: str(item.username),
+      text: str(item.text),
+      mediaType: str(item.media_type) || null,
+      permalink: item.permalink ? str(item.permalink) : null,
+      timestamp,
+      ageMinutes: minutesSince(timestamp, now),
+      isReply: item.is_reply === true,
+      isQuotePost: item.is_quote_post === true,
+      hasReplies: item.has_replies === true,
+    };
+  });
+  return okJson({
+    channel: input.channel ?? null,
+    query: input.query,
+    searchType: input.searchType ?? 'TOP',
+    count: results.length,
+    results,
   });
 }
 
@@ -321,6 +515,131 @@ export async function publishInstagram(input: InstagramPublishInput, opts?: Poll
   });
 }
 
+export interface InstagramInsightsInput {
+  /** 계정 지표 집계 일수 (기본 7) */
+  days?: number;
+  /** 최근 미디어 지표 수 (기본 10, 0 이면 미디어 지표 생략) */
+  mediaLimit?: number;
+  channel?: string;
+}
+
+/**
+ * 계정 인사이트 — 전부 metric_type=total_value 로 구간 합계를 받는다.
+ * total_value 없이 부르면 views 처럼 시계열을 지원하지 않는 지표가 **에러 없이
+ * 응답에서 빠진다**(실측). 팔로워 수는 여기 넣지 않는다 — follower_count 는
+ * 팔로워 100 미만 계정에서 빈 배열을 돌려주므로(실측) 콜드 스타트 채널에서
+ * 무용지물이고, /me 의 followers_count 프로필 필드로 읽는다.
+ */
+const IG_USER_METRICS =
+  'reach,views,profile_views,accounts_engaged,total_interactions,likes,comments,shares,saves,profile_links_taps';
+
+/** 미디어 공통 지표 — 계정 쪽 saves 와 달리 미디어는 saved 단수형이다(실측). */
+const IG_MEDIA_METRICS = 'views,reach,likes,comments,shares,saved,total_interactions,follows,profile_visits';
+
+/**
+ * 릴스에만 붙는 지표. FEED(이미지·캐러셀)에 요청하면 400 으로 응답 전체가
+ * 실패하므로 media_product_type 으로 갈라 붙인다(실측).
+ * reels_skip_rate 는 훅 판정의 유일한 1차 지표다 — 랭킹 모델이 "3초 미만 시청
+ * 확률"을 직접 예측하는데, 이탈률을 API 로 주는 건 이 플랫폼뿐이다.
+ */
+const IG_REELS_METRICS = 'ig_reels_avg_watch_time,ig_reels_video_view_total_time,reels_skip_rate';
+
+/**
+ * Instagram 성과 스냅샷 — 계정 구간 지표와 최근 미디어별 지표를 한 번에
+ * 정규화해 반환한다. grow-instagram 루프가 틱마다 찍어 전 틱 대비 증감을
+ * 판단하는 용도라, 호출 시점 값만 반환하고 저장은 호출자
+ * (data/<채널>/growth/instagram/) 몫이다.
+ */
+export async function instagramInsights(input: InstagramInsightsInput): Promise<ApiResult> {
+  const { token, error } = await loadTokenFile('INSTAGRAM', input.channel);
+  if (!token) return error!;
+  const me = await fetchMe(
+    IG_BASE,
+    token,
+    'id,username,account_type,media_count,followers_count,follows_count',
+  );
+  if (!me.ok) return me;
+  const profile = parseJson(me.body) ?? {};
+  const uid = str(profile.id);
+  if (!uid) return fail(502, `Instagram /me returned no id: ${me.body}`);
+
+  const days = input.days ?? 7;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const since = nowSec - days * 86_400;
+
+  const ranged = await graphRequest('get', `${IG_BASE}/${uid}/insights`, {
+    metric: IG_USER_METRICS,
+    period: 'day',
+    metric_type: 'total_value',
+    since: String(since),
+    until: String(nowSec),
+    access_token: token,
+  });
+  if (!ranged.ok) return withScopeHint(ranged, 'instagram_business_manage_insights');
+
+  const userMetrics: Record<string, number | null> = {};
+  for (const item of rawList(ranged.body)) {
+    const name = str(item.name);
+    if (!name) continue;
+    userMetrics[name] = numOrNull((item.total_value as Raw | undefined)?.value);
+  }
+
+  // 최근 미디어별 지표 — 미디어당 /insights 1회 왕복 (mediaLimit 로 상한)
+  const mediaLimit = input.mediaLimit ?? 10;
+  let media: Array<Record<string, unknown>> = [];
+  if (mediaLimit > 0) {
+    const list = await graphRequest('get', `${IG_BASE}/${uid}/media`, {
+      fields: 'id,media_type,media_product_type,caption,permalink,timestamp,like_count,comments_count',
+      limit: String(mediaLimit),
+      access_token: token,
+    });
+    if (!list.ok) return list;
+    media = await Promise.all(
+      rawList(list.body).map(async (item) => {
+        const mediaId = str(item.id);
+        const productType = str(item.media_product_type) || null;
+        const isReel = productType === 'REELS';
+        const ins = await graphRequest('get', `${IG_BASE}/${mediaId}/insights`, {
+          metric: isReel ? `${IG_MEDIA_METRICS},${IG_REELS_METRICS}` : IG_MEDIA_METRICS,
+          access_token: token,
+        });
+        const metrics: Record<string, number | null> = {};
+        if (ins.ok) {
+          for (const m of rawList(ins.body)) {
+            const values = m.values as Raw[] | undefined;
+            metrics[str(m.name)] = numOrNull(values?.[0]?.value ?? (m.total_value as Raw | undefined)?.value);
+          }
+        }
+        return {
+          mediaId,
+          mediaType: str(item.media_type) || null,
+          mediaProductType: productType,
+          permalink: item.permalink ? str(item.permalink) : null,
+          excerpt: excerpt(str(item.caption)),
+          timestamp: item.timestamp ? str(item.timestamp) : null,
+          metrics: ins.ok ? metrics : null,
+          ...(ins.ok ? {} : { metricsError: `HTTP ${ins.status}: ${ins.body.slice(0, 200)}` }),
+        };
+      }),
+    );
+  }
+
+  return okJson({
+    channel: input.channel ?? null,
+    account: {
+      id: uid,
+      username: str(profile.username),
+      accountType: str(profile.account_type) || null,
+      followersCount: numOrNull(profile.followers_count),
+      followsCount: numOrNull(profile.follows_count),
+      mediaCount: numOrNull(profile.media_count),
+    },
+    period: { since: new Date(since * 1000).toISOString(), until: new Date(nowSec * 1000).toISOString(), days },
+    user: userMetrics,
+    media,
+  });
+}
+
 // ── Facebook 페이지 ──────────────────────────────────────────────
 
 export interface FacebookPublishInput {
@@ -329,11 +648,31 @@ export interface FacebookPublishInput {
   videoUrl?: string;
   /** 링크 첨부(텍스트 게시에서만) — FB 플랫폼 문법의 "링크 첨부 또는 첫 댓글" 규칙용 */
   linkUrl?: string;
+  /** 자막 파일(.srt) 절대 경로 — videoUrl 게시에서만 유효하다 */
+  captionFilePath?: string;
+  /** 자막 로케일 (기본 'ko_KR') — FB 는 파일명 `<이름>.<locale>.srt` 가 계약이다 */
+  captionLocale?: string;
   /** 채널(브랜드) slug — <SNS_TOKEN_DIR>/<slug>/ 토큰 사용, 미지정 시 기본 토큰 */
   channel?: string;
 }
 
 export async function publishFacebook(input: FacebookPublishInput): Promise<ApiResult> {
+  // 자막은 영상 게시에서만 의미가 있다 — 이미지·텍스트 게시에 붙이면 조용히 버려지므로 막는다
+  if (input.captionFilePath && !input.videoUrl) {
+    return fail(400, 'captionFilePath requires videoUrl (captions attach to a video, not to photos or text posts)');
+  }
+  const captionLocale = input.captionLocale ?? 'ko_KR';
+  if (input.captionFilePath && !/^[a-z]{2}_[A-Z]{2}$/.test(captionLocale)) {
+    return fail(400, `captionLocale must look like ko_KR / en_US / vi_VN: ${captionLocale}`);
+  }
+  let captionBytes: Buffer | undefined;
+  if (input.captionFilePath) {
+    // 게시 전에 검증한다 — 200K 초과나 경로 오타를 게시 뒤에 발견하면 되돌릴 수 없다
+    const caption = await readCaptionFile(input.captionFilePath, CAPTION_MAX_BYTES_FB);
+    if (!caption.bytes) return caption.error;
+    captionBytes = caption.bytes;
+  }
+
   const { token, error } = await loadTokenFile('FACEBOOK', input.channel);
   if (!token) return error!;
   // 페이지 토큰의 /me = 페이지 자신
@@ -383,6 +722,12 @@ export async function publishFacebook(input: FacebookPublishInput): Promise<ApiR
   }
   if (!postId) return fail(502, 'Facebook publish returned no id');
 
+  // 영상 게시의 postId 는 곧 video_id 라 captions 엣지에 그대로 넘어간다.
+  // 실패해도 게시는 유효하므로 경고로만 보고한다(재게시 금지 — 게시 API 는 비멱등).
+  const captionWarning = captionBytes
+    ? await uploadFacebookCaption(token, postId, { bytes: captionBytes, locale: captionLocale })
+    : undefined;
+
   const permalink = await graphRequest('get', `${FB_BASE}/${postId}`, {
     fields: 'permalink_url',
     access_token: token,
@@ -391,6 +736,8 @@ export async function publishFacebook(input: FacebookPublishInput): Promise<ApiR
     platform: 'FACEBOOK',
     postId,
     permalink: permalink.ok ? (parseJson(permalink.body)?.permalink_url ?? null) : null,
+    ...(captionBytes ? { captionSet: !captionWarning } : {}),
+    ...(captionWarning ? { captionWarning } : {}),
   });
 }
 
@@ -482,7 +829,22 @@ export interface YoutubePublishInput {
   categoryId?: string;
   /** 아동용 콘텐츠 자기 선언(COPPA) — 미지정 시 false. 아동 대상 콘텐츠는 반드시 true 로 선언해야 한다 */
   madeForKids?: boolean;
+  /**
+   * 합성 미디어 자기 고지 — 실제처럼 보이는 AI 생성·변형 콘텐츠(AI 음악, 실제
+   * 장소·인물의 사실적 생성 영상)를 담았으면 true. 이 파이프라인은 Veo 영상과
+   * Lyria 음악을 쓰므로 기본값이 true 다(미고지 리스크가 고지 비용보다 크다 —
+   * YouTube 는 "고지가 노출·수익 자격에 영향을 주지 않는다"고 명시한 반면
+   * 상습 미고지에는 라벨 강제·삭제·YPP 정지를 예고한다).
+   */
+  containsSyntheticMedia?: boolean;
   thumbnailFilePath?: string;
+  /**
+   * 자막 파일(.srt) 절대 경로 — 자막은 영상에 태우지 않고 따로 올리는 것이 원칙이다
+   * (게시 후 자막만 교체할 수 있고, 시청자가 끌 수 있고, 자동 번역의 원본이 된다).
+   */
+  captionFilePath?: string;
+  /** 자막 언어 BCP-47 (기본 'ko') */
+  captionLanguage?: string;
   /** 채널(브랜드) slug — <SNS_TOKEN_DIR>/<slug>/ 토큰 사용, 미지정 시 기본 토큰 */
   channel?: string;
 }
@@ -499,6 +861,128 @@ const YT_THUMB_MIME_BY_EXT: Record<string, string> = {
 };
 
 const YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
+
+/**
+ * 자막 파일 상한 — YouTube 는 captions.insert 문서의 100MB, Facebook 은 captions
+ * 엣지 문서의 200K 다. 쇼트폼 SRT 는 수 KB 라 실질 제약은 아니지만, 잘못된 파일을
+ * 게시 뒤에 발견하는 것보다 호출 전에 막는 편이 낫다(게시 API 는 비멱등).
+ */
+const CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
+const CAPTION_MAX_BYTES_FB = 200 * 1024;
+
+/**
+ * 게시용 자막 파일(.srt)을 읽어 검증한다. 이 파이프라인은 자막을 영상에 태우지 않고
+ * 따로 올리는 것이 원칙이라(플랫폼이 자막 파일을 받는 경우) 게시 툴이 이 경로를 탄다.
+ */
+async function readCaptionFile(
+  path: string,
+  maxBytes: number,
+): Promise<{ bytes: Buffer; error?: undefined } | { bytes?: undefined; error: ApiResult }> {
+  if (extname(path).toLowerCase() !== '.srt') {
+    return { error: fail(400, `Caption file must be .srt (SubRip): ${path}`) };
+  }
+  let bytes: Buffer;
+  try {
+    bytes = await readFile(path);
+  } catch (error) {
+    return { error: fail(400, `Cannot read caption file: ${error instanceof Error ? error.message : String(error)}`) };
+  }
+  if (bytes.byteLength === 0) return { error: fail(400, `Caption file is empty: ${path}`) };
+  if (bytes.byteLength > maxBytes) {
+    return { error: fail(400, `Caption file exceeds ${maxBytes} bytes: ${path} (${bytes.byteLength} bytes)`) };
+  }
+  return { bytes };
+}
+
+/**
+ * captions.insert — 메타데이터(JSON)와 SRT 바이트를 multipart/related 한 요청에 싣는다
+ * (`uploadType=multipart`). 두 가지가 videos.insert 와 다르다: 스코프가
+ * **youtube.force-ssl** 이고(게시용 youtube.upload 로는 거부된다) 쿼터가 **400유닛**이다.
+ * 영상 업로드가 이미 성공한 뒤에 호출되므로 실패는 전체 실패로 만들지 않고 경고로 돌려준다
+ * — 재업로드는 비멱등이고 쿼터만 태운다.
+ */
+async function uploadYoutubeCaption(
+  token: string,
+  videoId: string,
+  caption: { bytes: Buffer; language: string },
+): Promise<string | null> {
+  const boundary = `sfcap${randomUUID().replace(/-/g, '')}`;
+  // name 은 트랙 표시명 — 빈 문자열이 기본 트랙이다(플레이어에 언어명만 뜬다)
+  const meta = JSON.stringify({
+    snippet: { videoId, language: caption.language, name: '', isDraft: false },
+  });
+  const body = Buffer.concat([
+    Buffer.from(
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +
+        `--${boundary}\r\nContent-Type: application/octet-stream\r\n\r\n`,
+      'utf8',
+    ),
+    caption.bytes,
+    Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8'),
+  ]);
+  try {
+    const res = await fetch(
+      'https://www.googleapis.com/upload/youtube/v3/captions?uploadType=multipart&part=snippet',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': `multipart/related; boundary=${boundary}`,
+        },
+        body: new Uint8Array(body.buffer as ArrayBuffer, body.byteOffset, body.byteLength),
+        signal: AbortSignal.timeout(60_000),
+      },
+    );
+    if (res.ok) return null;
+    const text = (await res.text()).slice(0, 300);
+    const scopeLike = res.status === 401 || res.status === 403 || /insufficient|scope|forbidden/i.test(text);
+    return (
+      `captions.insert ${res.status}: ${text}` +
+      (scopeLike
+        ? ' → 이 호출은 youtube.force-ssl 스코프가 필요하다(게시용 youtube.upload 로는 안 된다).' +
+          ' 영상 업로드는 이미 성공했으므로 스코프를 추가해 토큰을 재발급한 뒤 자막만 수동으로 올리면 된다' +
+          ' (절차: skills/publish/references/token-setup.md).'
+        : '')
+    );
+  } catch (error) {
+    return `captions.insert failed: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
+/**
+ * POST /{video_id}/captions — SRT 를 multipart/form-data 로 첨부한다. **파일명이 계약**이라
+ * `<이름>.<locale>.srt` 형식이 아니면 error 386 으로 거부된다(locale 은 `ko_KR` 꼴).
+ * 영상 게시(`/{pageId}/videos`)의 응답 id 가 곧 video_id 라 그대로 넘길 수 있다.
+ * 다만 FB 는 file_url 영상을 비동기로 처리하므로, 게시 직후 호출이 처리 중 상태에 걸리면
+ * 실패할 수 있다 — 그때도 게시는 유효하니 경고로만 보고하고 자막만 다시 올리면 된다.
+ */
+async function uploadFacebookCaption(
+  token: string,
+  videoId: string,
+  caption: { bytes: Buffer; locale: string },
+): Promise<string | null> {
+  const form = new FormData();
+  form.set('access_token', token);
+  form.set('default_locale', caption.locale);
+  form.set(
+    'captions_file',
+    new Blob([new Uint8Array(caption.bytes.buffer as ArrayBuffer, caption.bytes.byteOffset, caption.bytes.byteLength)], {
+      type: 'application/octet-stream',
+    }),
+    `caption.${caption.locale}.srt`,
+  );
+  try {
+    const res = await fetch(`${FB_BASE}/${videoId}/captions`, {
+      method: 'POST',
+      body: form,
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (res.ok) return null;
+    return `captions ${res.status}: ${(await res.text()).slice(0, 300)}`;
+  } catch (error) {
+    return `caption upload failed: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
 
 async function setYoutubeThumbnail(
   token: string,
@@ -553,6 +1037,14 @@ export async function publishYoutube(input: YoutubePublishInput): Promise<ApiRes
     thumb = { bytes: thumbBytes, mimeType: thumbMime };
   }
 
+  // 자막도 업로드 **전에** 읽어 검증한다 — 경로 오타를 게시 뒤에 발견하면 되돌릴 수 없다
+  let captionBytes: Buffer | undefined;
+  if (input.captionFilePath) {
+    const caption = await readCaptionFile(input.captionFilePath, CAPTION_MAX_BYTES_YT);
+    if (!caption.bytes) return caption.error;
+    captionBytes = caption.bytes;
+  }
+
   const { client, error: clientError } = await loadYoutubeClient(input.channel);
   if (!client) return clientError!;
   const { token, error: tokenError } = await exchangeYoutubeAccessToken(client);
@@ -578,6 +1070,8 @@ export async function publishYoutube(input: YoutubePublishInput): Promise<ApiRes
             privacyStatus: input.privacyStatus ?? 'public',
             // COPPA 자기 선언 — 하드코딩하면 아동 대상 콘텐츠가 허위 선언되므로 입력으로 받는다
             selfDeclaredMadeForKids: input.madeForKids ?? false,
+            // 합성 미디어 고지 — 이 파이프라인의 영상·음악은 생성형이므로 기본 true
+            containsSyntheticMedia: input.containsSyntheticMedia ?? true,
           },
         }),
         signal: AbortSignal.timeout(30_000),
@@ -604,6 +1098,13 @@ export async function publishYoutube(input: YoutubePublishInput): Promise<ApiRes
     if (!videoId) return fail(502, `YouTube upload returned no video id: ${text}`);
     // 썸네일 실패는 경고로만 — 업로드는 이미 성공했고 재게시는 비멱등·쿼터 소모라 전체 실패로 만들지 않는다
     const thumbnailWarning = thumb ? await setYoutubeThumbnail(token, videoId, thumb) : undefined;
+    // 자막도 같은 규칙 — 실패해도 게시는 성공이다(경고로 보고하고 자막만 다시 올린다)
+    const captionWarning = captionBytes
+      ? await uploadYoutubeCaption(token, videoId, {
+          bytes: captionBytes,
+          language: input.captionLanguage ?? 'ko',
+        })
+      : undefined;
     return okJson({
       platform: 'YOUTUBE',
       videoId,
@@ -611,10 +1112,275 @@ export async function publishYoutube(input: YoutubePublishInput): Promise<ApiRes
       fileName: basename(input.videoFilePath),
       ...(thumb ? { thumbnailSet: !thumbnailWarning } : {}),
       ...(thumbnailWarning ? { thumbnailWarning } : {}),
+      ...(captionBytes ? { captionSet: !captionWarning } : {}),
+      ...(captionWarning ? { captionWarning } : {}),
     });
   } catch (error) {
     return fail(502, `YouTube upload failed: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+const YT_DATA_BASE = 'https://www.googleapis.com/youtube/v3';
+const YT_ANALYTICS_BASE = 'https://youtubeanalytics.googleapis.com/v2';
+
+/**
+ * YouTube API 호출 — 액세스 토큰은 **헤더로만** 싣는다. 쿼리스트링에 넣으면
+ * 에러 본문·로그에 토큰이 그대로 실린다.
+ */
+async function youtubeRequest(
+  method: 'get' | 'post',
+  url: string,
+  params: Record<string, string>,
+  token: string,
+  body?: unknown,
+): Promise<ApiResult> {
+  const target = `${url}?${new URLSearchParams(params).toString()}`;
+  try {
+    const res = await fetch(target, {
+      method: method.toUpperCase(),
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    const text = await res.text();
+    return res.ok ? { ok: true, status: res.status, body: text } : { ok: false, status: res.status, body: text };
+  } catch (error) {
+    return fail(502, `YouTube API request failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * 구글 OAuth 의 스코프 부족은 403 `insufficientPermissions` 또는 401 로 온다 —
+ * Meta 형식(withScopeHint)과 본문이 달라 별도 판정이 필요하다. 이 플러그인의
+ * 기존 YouTube 토큰은 `youtube.upload` 단일 스코프로 발급됐을 가능성이 높아,
+ * 새 스코프를 요구하는 툴은 첫 호출에서 반드시 이 안내를 만난다.
+ */
+function withYoutubeScopeHint(res: ApiResult, scope: string): ApiResult {
+  if (res.ok) return res;
+  const scopeLike =
+    res.status === 401 ||
+    res.status === 403 ||
+    /insufficient|scope|forbidden|unauthorized/i.test(res.body);
+  if (!scopeLike) return res;
+  return fail(
+    res.status,
+    `${res.body}\n→ 이 엔드포인트는 ${scope} 스코프가 필요하다. 게시(youtube.upload)만으로 발급한 기존 ` +
+      `refresh_token 에는 없다 — 동의 플로우에서 스코프를 추가로 켜고 재발급할 것 ` +
+      `(절차: skills/publish/references/token-setup.md). 재발급 후 youtube-oauth-client.json 의 refresh_token 을 교체한다.`,
+  );
+}
+
+export interface YoutubeInsightsInput {
+  /** 집계 일수 (기본 7) */
+  days?: number;
+  /** 지표를 붙일 최근 업로드 수 (기본 10, 0 이면 채널 지표만) */
+  videoLimit?: number;
+  /** 수익 지표 포함 — yt-analytics-monetary.readonly 스코프 추가 필요 (기본 false) */
+  includeRevenue?: boolean;
+  channel?: string;
+}
+
+/** 채널 단위 Analytics 지표 — engagedViews 는 "초반을 넘겨 본" 조회로, 2025-03 이후 views 와 분리됐다. */
+const YT_CHANNEL_METRICS =
+  'views,engagedViews,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained,subscribersLost,likes,comments,shares';
+
+/** 영상 단위 — 영상별 리포트는 지원 지표가 더 좁다(구독 증감은 채널 리포트에만 안정적). */
+const YT_VIDEO_METRICS = 'views,engagedViews,averageViewDuration,averageViewPercentage,likes,comments,shares';
+
+const ytDate = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
+
+/**
+ * YouTube 성과 스냅샷 — 채널 통계(Data API)와 기간 지표·영상별 지표(Analytics API)를
+ * 한 번에 정규화한다. grow-youtube 루프가 틱마다 찍어 전 틱 대비 증감과 잘 먹힌
+ * 영상 유형을 판단하는 용도이고, 저장·비교는 호출자(data/<채널>/growth/youtube/) 몫이다.
+ *
+ * **스와이프 이탈률(Studio 의 "How many chose to view")은 Analytics API 에 없다** —
+ * 공식 메트릭 목록에 대응 항목이 없어 이 툴로는 못 가져온다. Shorts 훅 판정은
+ * averageViewPercentage 로 대신하고, 스와이프 지표가 필요하면 Studio 에서 수동 확인한다.
+ */
+export async function youtubeInsights(input: YoutubeInsightsInput): Promise<ApiResult> {
+  const { client, error: clientError } = await loadYoutubeClient(input.channel);
+  if (!client) return clientError!;
+  const { token, error: tokenError } = await exchangeYoutubeAccessToken(client);
+  if (!token) return tokenError!;
+
+  const days = Math.min(Math.max(input.days ?? 7, 1), 365);
+  const now = Date.now();
+  // Analytics 데이터는 2~3일 지연이 정상이다 — endDate 를 오늘로 두면 최근 구간이 0 으로 보인다
+  const startDate = ytDate(now - days * 86_400_000);
+  const endDate = ytDate(now);
+
+  const mine = await youtubeRequest(
+    'get',
+    `${YT_DATA_BASE}/channels`,
+    { part: 'id,snippet,statistics,contentDetails', mine: 'true' },
+    token,
+  );
+  if (!mine.ok) return withYoutubeScopeHint(mine, 'youtube.readonly (또는 youtube)');
+  const channelItem = (parseJson(mine.body)?.items as Raw[] | undefined)?.[0];
+  if (!channelItem) return fail(502, `YouTube channels.list returned no channel: ${mine.body}`);
+  const stats = (channelItem.statistics as Raw | undefined) ?? {};
+  const uploadsPlaylist = str(
+    ((channelItem.contentDetails as Raw | undefined)?.relatedPlaylists as Raw | undefined)?.uploads,
+  );
+
+  const analytics = await youtubeRequest(
+    'get',
+    `${YT_ANALYTICS_BASE}/reports`,
+    { ids: 'channel==MINE', startDate, endDate, metrics: YT_CHANNEL_METRICS },
+    token,
+  );
+  if (!analytics.ok) return withYoutubeScopeHint(analytics, 'yt-analytics.readonly');
+  const channelMetrics = ytReportRow(analytics.body);
+
+  // 수익은 스코프가 하나 더 필요하다 — 실패해도 나머지 지표를 죽이지 않는다
+  let revenue: Record<string, number> | null = null;
+  let revenueError: string | undefined;
+  if (input.includeRevenue) {
+    const res = await youtubeRequest(
+      'get',
+      `${YT_ANALYTICS_BASE}/reports`,
+      { ids: 'channel==MINE', startDate, endDate, metrics: 'estimatedRevenue,estimatedAdRevenue,estimatedRedPartnerRevenue,cpm' },
+      token,
+    );
+    if (res.ok) revenue = ytReportRow(res.body);
+    else revenueError = withYoutubeScopeHint(res, 'yt-analytics-monetary.readonly').body.slice(0, 400);
+  }
+
+  const videoLimit = Math.min(Math.max(input.videoLimit ?? 10, 0), 50);
+  let videos: Array<Record<string, unknown>> = [];
+  // 영상 조회가 실패해도 채널 지표는 살린다 — 다만 빈 배열을 "업로드가 없다"로
+  // 오해하지 않도록 사유를 함께 싣는다
+  const videoErrors: string[] = [];
+  if (videoLimit > 0 && !uploadsPlaylist) videoErrors.push('채널에 uploads 플레이리스트가 없다');
+  if (videoLimit > 0 && uploadsPlaylist) {
+    const list = await youtubeRequest(
+      'get',
+      `${YT_DATA_BASE}/playlistItems`,
+      { part: 'snippet,contentDetails', playlistId: uploadsPlaylist, maxResults: String(videoLimit) },
+      token,
+    );
+    if (!list.ok) videoErrors.push(`playlistItems HTTP ${list.status}: ${list.body.slice(0, 200)}`);
+    if (list.ok) {
+      const items = (parseJson(list.body)?.items as Raw[] | undefined) ?? [];
+      const ids = items.map((item) => str((item.contentDetails as Raw | undefined)?.videoId)).filter(Boolean);
+      // 영상별 Analytics 는 filters=video==a,b,c 로 한 번에 받는다 — 영상마다 왕복하면 쿼터가 배로 든다
+      const [detail, perVideo] = await Promise.all([
+        ids.length
+          ? youtubeRequest('get', `${YT_DATA_BASE}/videos`, { part: 'snippet,statistics,contentDetails', id: ids.join(',') }, token)
+          : Promise.resolve(okJson({ items: [] })),
+        ids.length
+          ? youtubeRequest(
+              'get',
+              `${YT_ANALYTICS_BASE}/reports`,
+              {
+                ids: 'channel==MINE',
+                startDate,
+                endDate,
+                metrics: YT_VIDEO_METRICS,
+                dimensions: 'video',
+                filters: `video==${ids.join(',')}`,
+                maxResults: String(ids.length),
+              },
+              token,
+            )
+          : Promise.resolve(okJson({ rows: [] })),
+      ]);
+      if (!detail.ok) videoErrors.push(`videos.list HTTP ${detail.status}: ${detail.body.slice(0, 200)} (lifetime 이 0 으로 보인다)`);
+      if (!perVideo.ok) videoErrors.push(`영상별 Analytics HTTP ${perVideo.status}: ${perVideo.body.slice(0, 200)} (period 가 null 이다)`);
+      const detailById = new Map<string, Raw>();
+      for (const item of (parseJson(detail.body)?.items as Raw[] | undefined) ?? []) {
+        detailById.set(str(item.id), item);
+      }
+      const metricsById = perVideo.ok ? ytReportRowsByKey(perVideo.body) : new Map<string, Record<string, number>>();
+      videos = ids.map((videoId) => {
+        const item = detailById.get(videoId);
+        const snippet = (item?.snippet as Raw | undefined) ?? {};
+        const videoStats = (item?.statistics as Raw | undefined) ?? {};
+        const duration = str((item?.contentDetails as Raw | undefined)?.duration);
+        return {
+          videoId,
+          permalink: `https://www.youtube.com/watch?v=${videoId}`,
+          title: excerpt(str(snippet.title), 100),
+          publishedAt: snippet.publishedAt ? str(snippet.publishedAt) : null,
+          duration: duration || null,
+          // ISO8601 기간에서 초를 뽑아 Shorts(3분 이하 세로) 여부 판단에 쓴다
+          durationSeconds: ytDurationSeconds(duration),
+          lifetime: {
+            views: Number(videoStats.viewCount ?? 0),
+            likes: Number(videoStats.likeCount ?? 0),
+            comments: Number(videoStats.commentCount ?? 0),
+          },
+          period: metricsById.get(videoId) ?? null,
+        };
+      });
+    }
+  }
+
+  return okJson({
+    channel: input.channel ?? null,
+    account: {
+      channelId: str(channelItem.id),
+      title: str((channelItem.snippet as Raw | undefined)?.title),
+      subscriberCount: Number(stats.subscriberCount ?? 0),
+      viewCount: Number(stats.viewCount ?? 0),
+      videoCount: Number(stats.videoCount ?? 0),
+      // 채널이 구독자 수를 비공개로 두면 API 가 반올림 값을 준다 — 증감 판단이 무의미해진다
+      subscriberCountHidden: stats.hiddenSubscriberCount === true,
+    },
+    period: { startDate, endDate, days },
+    metrics: channelMetrics,
+    ...(revenue ? { revenue } : {}),
+    ...(revenueError ? { revenueError } : {}),
+    videos,
+    ...(videoErrors.length ? { videosError: videoErrors.join(' · ') } : {}),
+    note: '스와이프 이탈률("How many chose to view")은 Analytics API 가 제공하지 않는다 — 훅 판정은 averageViewPercentage 로 하고, 스와이프 지표는 YouTube Studio 에서 확인할 것.',
+  });
+}
+
+/** Analytics 응답의 단일 행을 {메트릭명: 값} 으로 — rows 가 비면 0 이 아니라 빈 객체다(데이터 지연과 진짜 0 을 구분). */
+function ytReportRow(body: string): Record<string, number> {
+  const parsed = parseJson(body);
+  const headers = (parsed?.columnHeaders as Raw[] | undefined) ?? [];
+  const row = (parsed?.rows as unknown[][] | undefined)?.[0];
+  if (!row) return {};
+  const out: Record<string, number> = {};
+  headers.forEach((header, index) => {
+    const name = str(header.name);
+    if (name) out[name] = Number(row[index] ?? 0);
+  });
+  return out;
+}
+
+/** dimensions 가 붙은 Analytics 응답 — 첫 열(차원 값)을 키로 나머지 메트릭을 묶는다. */
+function ytReportRowsByKey(body: string): Map<string, Record<string, number>> {
+  const parsed = parseJson(body);
+  const headers = (parsed?.columnHeaders as Raw[] | undefined) ?? [];
+  const rows = (parsed?.rows as unknown[][] | undefined) ?? [];
+  const out = new Map<string, Record<string, number>>();
+  for (const row of rows) {
+    const key = str(row[0]);
+    if (!key) continue;
+    const metrics: Record<string, number> = {};
+    headers.forEach((header, index) => {
+      if (index === 0) return;
+      const name = str(header.name);
+      if (name) metrics[name] = Number(row[index] ?? 0);
+    });
+    out.set(key, metrics);
+  }
+  return out;
+}
+
+/** ISO8601 duration(PT1M30S) → 초. 파싱 실패는 null 이다(0 으로 만들면 Shorts 로 오판한다). */
+function ytDurationSeconds(duration: string): number | null {
+  const match = /^P(?:(\d+)D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(duration);
+  if (!match) return null;
+  const [, d, h, m, s] = match;
+  return Number(d ?? 0) * 86_400 + Number(h ?? 0) * 3_600 + Number(m ?? 0) * 60 + Number(s ?? 0);
 }
 
 // ── 댓글 인박스 · 답글 · 모더레이션 ──────────────────────────────
@@ -627,16 +1393,20 @@ export async function publishYoutube(input: YoutubePublishInput): Promise<ApiRes
  *   THREADS   읽기 `/conversation`(깊이 무관 평면화) · 답글 `reply_to_id` · 숨김 `manage_reply` · 좋아요 API 없음
  *   INSTAGRAM 읽기 `/comments{replies}` · 답글 `/{comment}/replies`(최상위 댓글에만) · 숨김 `hide` · 좋아요 API 없음
  *   FACEBOOK  읽기 `/comments?filter=stream` · 답글 `/{comment}/comments` · 숨김 `is_hidden` · 좋아요 O
- *   YOUTUBE   토큰 scope 에 `youtube.force-ssl` 이 없어 댓글 API 자체가 불가 — 인박스에서 제외한다
+ *   YOUTUBE   읽기 `commentThreads.list`(영상별) · 답글 `comments.insert` · 숨김·좋아요 미지원(범위 밖)
  *
  * "우리가 이미 답했는가"는 플랫폼 필드로 판정한다(THREADS `is_reply_owned_by_me`,
- * IG username 일치, FB `from.id == pageId`) — 추측하지 않으므로 중복 답글이 나가지 않는다.
+ * IG username 일치, FB `from.id == pageId`, YT `authorChannelId == 내 채널 id`) —
+ * 추측하지 않으므로 중복 답글이 나가지 않는다.
+ *
+ * YouTube 만 답글 대상이 다르다: `comments.insert` 의 parentId 는 **최상위 댓글**만
+ * 받는다(대댓글에 직접 답글을 달 수 없다). 이 비대칭은 replyToComment 가 흡수한다.
  */
 
-export const COMMENT_PLATFORMS = ['THREADS', 'INSTAGRAM', 'FACEBOOK'] as const;
+export const COMMENT_PLATFORMS = ['THREADS', 'INSTAGRAM', 'FACEBOOK', 'YOUTUBE'] as const;
 export type CommentPlatform = (typeof COMMENT_PLATFORMS)[number];
 
-/** 정규화 댓글 — 플랫폼별 필드명 차이를 흡수해 분류·우선순위 판단만 남긴다. */
+/** 정규화 댓글 — 플랫폼별 필드명 차이를 흡수해 분류·우선순위 판단만 싣는다. */
 export interface InboxComment {
   platform: CommentPlatform;
   postId: string;
@@ -949,8 +1719,157 @@ async function inboxFacebook(
 }
 
 /**
+ * YouTube 댓글 인박스 — 최근 업로드를 훑어 영상별 댓글 스레드를 정규화한다.
+ *
+ * "이미 답했는가"는 스레드 안 **우리 마지막 답글 시각**으로 판정한다: 그보다 먼저
+ * 달린 댓글은 응대 완료, 뒤에 달린 댓글은 미응대다. 스레드 단위로 뭉뚱그리면
+ * 우리 답글 뒤에 붙은 새 댓글을 놓치고, 댓글 단위로만 보면 이미 답한 스레드에
+ * 또 답한다.
+ */
+async function inboxYoutube(
+  input: Required<Pick<CommentInboxInput, 'postLimit' | 'commentLimit'>>,
+  now: number,
+  channel?: string,
+): Promise<ChannelInbox> {
+  const { client, error: clientError } = await loadYoutubeClient(channel);
+  if (!client) return { error: clientError };
+  const { token, error: tokenError } = await exchangeYoutubeAccessToken(client);
+  if (!token) return { error: tokenError };
+
+  const mine = await youtubeRequest(
+    'get',
+    `${YT_DATA_BASE}/channels`,
+    { part: 'id,snippet,contentDetails', mine: 'true' },
+    token,
+  );
+  if (!mine.ok) return { error: withYoutubeScopeHint(mine, 'youtube.readonly (또는 youtube)') };
+  const channelItem = (parseJson(mine.body)?.items as Raw[] | undefined)?.[0];
+  if (!channelItem) return { error: fail(502, `YouTube channels.list returned no channel: ${mine.body}`) };
+  const myChannelId = str(channelItem.id);
+  const account = { id: myChannelId, title: str((channelItem.snippet as Raw | undefined)?.title) };
+  const uploads = str(
+    ((channelItem.contentDetails as Raw | undefined)?.relatedPlaylists as Raw | undefined)?.uploads,
+  );
+  if (!uploads) return { account, error: fail(502, 'YouTube channel has no uploads playlist') };
+
+  const list = await youtubeRequest(
+    'get',
+    `${YT_DATA_BASE}/playlistItems`,
+    { part: 'snippet,contentDetails', playlistId: uploads, maxResults: String(input.postLimit) },
+    token,
+  );
+  if (!list.ok) return { account, error: list };
+
+  const posts: InboxPost[] = [];
+  for (const entry of (parseJson(list.body)?.items as Raw[] | undefined) ?? []) {
+    const videoId = str((entry.contentDetails as Raw | undefined)?.videoId);
+    if (!videoId) continue;
+    const snippet = (entry.snippet as Raw | undefined) ?? {};
+    const post: InboxPost = {
+      platform: 'YOUTUBE',
+      postId: videoId,
+      permalink: `https://www.youtube.com/watch?v=${videoId}`,
+      excerpt: excerpt(str(snippet.title)),
+      timestamp: snippet.publishedAt ? str(snippet.publishedAt) : null,
+      comments: [],
+    };
+
+    const threads = await youtubeRequest(
+      'get',
+      `${YT_DATA_BASE}/commentThreads`,
+      {
+        part: 'snippet,replies',
+        videoId,
+        maxResults: String(Math.min(input.commentLimit, 100)),
+        order: 'time',
+        textFormat: 'plainText',
+      },
+      token,
+    );
+    if (!threads.ok) {
+      // 댓글 사용 중지된 영상은 403 — 영상 하나의 실패가 인박스를 죽이지 않는다
+      post.commentsError = `HTTP ${threads.status}: ${threads.body.slice(0, 200)}`;
+      posts.push(post);
+      continue;
+    }
+
+    for (const thread of (parseJson(threads.body)?.items as Raw[] | undefined) ?? []) {
+      const threadSnippet = (thread.snippet as Raw | undefined) ?? {};
+      const top = (threadSnippet.topLevelComment as Raw | undefined) ?? {};
+      const topId = str(top.id);
+      if (!topId) continue;
+
+      // replies part 는 최대 5건만 준다 — 잘렸으면 전체를 다시 받는다.
+      // 우리 답글이 잘려 안 보이면 미응대로 오판해 **중복 답글**이 나간다.
+      const totalReplies = Number(threadSnippet.totalReplyCount ?? 0);
+      let replies = ((thread.replies as Raw | undefined)?.comments as Raw[] | undefined) ?? [];
+      let repliesIncomplete = false;
+      if (totalReplies > replies.length) {
+        const full = await youtubeRequest(
+          'get',
+          `${YT_DATA_BASE}/comments`,
+          { part: 'snippet', parentId: topId, maxResults: '100', textFormat: 'plainText' },
+          token,
+        );
+        if (full.ok) {
+          replies = (parseJson(full.body)?.items as Raw[] | undefined) ?? [];
+          // 100건을 넘는 스레드는 여전히 잘린다 — 판정 근거가 불완전하다
+          repliesIncomplete = totalReplies > replies.length;
+        } else {
+          repliesIncomplete = true;
+          post.commentsError = [post.commentsError, `replies HTTP ${full.status}: ${full.body.slice(0, 120)}`]
+            .filter(Boolean)
+            .join(' · ');
+        }
+      }
+
+      const authorChannelId = (comment: Raw): string =>
+        str(((comment.snippet as Raw | undefined)?.authorChannelId as Raw | undefined)?.value);
+      const publishedMs = (comment: Raw): number => {
+        const parsed = Date.parse(str((comment.snippet as Raw | undefined)?.publishedAt));
+        return Number.isNaN(parsed) ? 0 : parsed;
+      };
+      // 우리 마지막 답글 시각 — 이 뒤에 달린 댓글만 미응대다
+      const myLastReplyMs = replies
+        .filter((reply) => authorChannelId(reply) === myChannelId)
+        .reduce((max, reply) => Math.max(max, publishedMs(reply)), 0);
+
+      const push = (comment: Raw, parentCommentId: string | null): void => {
+        const commentId = str(comment.id);
+        if (!commentId) return;
+        const commentSnippet = (comment.snippet as Raw | undefined) ?? {};
+        const timestamp = commentSnippet.publishedAt ? str(commentSnippet.publishedAt) : null;
+        post.comments.push({
+          platform: 'YOUTUBE',
+          postId: videoId,
+          commentId,
+          parentCommentId,
+          author: str(commentSnippet.authorDisplayName),
+          isOwn: authorChannelId(comment) === myChannelId,
+          // 답글 목록이 불완전하면 "아직 안 답했다"를 주장할 근거가 없다 — 우리 답글이
+          // 잘려 안 보이는 것일 수 있으므로 응대됨으로 처리해 기본 필터에서 뺀다.
+          // 놓친 댓글은 다음 틱에 잡히지만, 반대로 틀리면 중복 답글이 공개로 나간다.
+          answeredByUs: repliesIncomplete || (myLastReplyMs > 0 && publishedMs(comment) <= myLastReplyMs),
+          text: str(commentSnippet.textOriginal || commentSnippet.textDisplay),
+          timestamp,
+          ageMinutes: minutesSince(timestamp, now),
+          likeCount: numOrNull(commentSnippet.likeCount),
+          // 숨김 댓글은 API 응답에 아예 오지 않는다 — 공개된 것만 보인다
+          hidden: false,
+          permalink: `https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`,
+        });
+      };
+      push(top, null);
+      for (const reply of replies) push(reply, topId);
+    }
+    posts.push(post);
+  }
+  return { account, posts };
+}
+
+/**
  * 플랫폼 횡단 댓글 인박스 — 최근 게시물의 댓글을 정규화해 모으고, 기본값으로
- * **우리가 아직 답하지 않은 남의 댓글만** 남긴다. 플랫폼 하나가 실패해도 나머지는
+ * **우리가 아직 답하지 않은 남의 댓글만** 싣는다. 플랫폼 하나가 실패해도 나머지는
  * 그대로 반환하고 실패 사유를 skipped 에 싣는다(부분 실패가 전체를 막지 않는다).
  */
 export async function commentInbox(input: CommentInboxInput = {}): Promise<ApiResult> {
@@ -967,6 +1886,7 @@ export async function commentInbox(input: CommentInboxInput = {}): Promise<ApiRe
     THREADS: inboxThreads,
     INSTAGRAM: inboxInstagram,
     FACEBOOK: inboxFacebook,
+    YOUTUBE: inboxYoutube,
   };
 
   const accounts: Record<string, unknown> = {};
@@ -993,13 +1913,6 @@ export async function commentInbox(input: CommentInboxInput = {}): Promise<ApiRe
     }
     posts.push(...(inbox.posts ?? []));
   }
-  if (available.has('YOUTUBE')) {
-    skipped.push({
-      platform: 'YOUTUBE',
-      reason: '토큰 scope 에 youtube.force-ssl 이 없어 댓글 조회·작성 불가 — YouTube Studio 에서 수동 응대',
-    });
-  }
-
   const cutoff = input.sinceHours ? now - input.sinceHours * 3_600_000 : null;
   let fetched = 0;
   const filtered = posts.map((post) => {
@@ -1060,7 +1973,7 @@ const INBOX_MAX_CHARS = 60_000;
 function capInboxPayload(posts: InboxPost[]): { posts: InboxPost[]; dropped: number } {
   if (JSON.stringify(posts).length <= INBOX_MAX_CHARS) return { posts, dropped: 0 };
 
-  // 전 게시물의 댓글을 한 줄로 세워 최신순 정렬 → 상한에 들어가는 만큼만 남긴다.
+  // 전 게시물의 댓글을 한 줄로 세워 최신순 정렬 → 상한에 들어가는 만큼만 싣는다.
   // ageMinutes 가 없는(타임스탬프 미제공) 댓글은 판단 근거가 없으므로 뒤로 보낸다.
   const ranked = posts
     .flatMap((post) => post.comments)
@@ -1101,6 +2014,7 @@ export async function replyToComment(input: CommentReplyInput): Promise<ApiResul
     // FB 는 댓글 id 에 댓글을 달면 대댓글 — 게시물 첫 댓글과 같은 엔드포인트다
     return commentFacebook({ postId: input.commentId, message: input.message, channel: input.channel });
   }
+  if (input.platform === 'YOUTUBE') return replyYoutubeComment(input);
 
   const { token, error } = await loadTokenFile('INSTAGRAM', input.channel);
   if (!token) return error!;
@@ -1112,6 +2026,47 @@ export async function replyToComment(input: CommentReplyInput): Promise<ApiResul
   const replyId = str(parseJson(create.body)?.id);
   if (!replyId) return fail(502, `Instagram reply returned no id: ${create.body}`);
   return okJson({ platform: 'INSTAGRAM', replyId, permalink: null });
+}
+
+/**
+ * YouTube 답글 — `comments.insert` 의 parentId 는 **최상위 댓글만** 받는다.
+ * 대댓글 id 를 그대로 넘기면 실패하므로, 먼저 그 댓글의 부모를 조회해 스레드
+ * 루트로 바꿔 단다. 인박스가 대댓글도 응대 대상으로 내놓기 때문에 필요한 단계다.
+ */
+async function replyYoutubeComment(input: CommentReplyInput): Promise<ApiResult> {
+  const { client, error: clientError } = await loadYoutubeClient(input.channel);
+  if (!client) return clientError!;
+  const { token, error: tokenError } = await exchangeYoutubeAccessToken(client);
+  if (!token) return tokenError!;
+
+  const lookup = await youtubeRequest(
+    'get',
+    `${YT_DATA_BASE}/comments`,
+    { part: 'snippet', id: input.commentId },
+    token,
+  );
+  if (!lookup.ok) return withYoutubeScopeHint(lookup, 'youtube.force-ssl');
+  const found = (parseJson(lookup.body)?.items as Raw[] | undefined)?.[0];
+  if (!found) return fail(404, `YouTube comment not found: ${input.commentId}`);
+  const parentId = str((found.snippet as Raw | undefined)?.parentId) || input.commentId;
+
+  const created = await youtubeRequest(
+    'post',
+    `${YT_DATA_BASE}/comments`,
+    { part: 'snippet' },
+    token,
+    { snippet: { parentId, textOriginal: input.message } },
+  );
+  if (!created.ok) return withYoutubeScopeHint(created, 'youtube.force-ssl');
+  const replyId = str(parseJson(created.body)?.id);
+  if (!replyId) return fail(502, `YouTube comment insert returned no id: ${created.body}`);
+  return okJson({
+    platform: 'YOUTUBE',
+    replyId,
+    // 대댓글 id 로 요청이 오면 실제 부모가 달라진다 — 어디에 붙었는지 알린다
+    parentCommentId: parentId,
+    permalink: null,
+  });
 }
 
 export type ModerateAction = 'hide' | 'unhide' | 'like' | 'unlike';
@@ -1166,6 +2121,16 @@ export async function moderateComment(input: CommentModerateInput): Promise<ApiR
     });
     if (!res.ok) return res;
     return okJson({ platform, commentId, action, done: true });
+  }
+
+  if (platform === 'YOUTUBE') {
+    // YouTube 의 숨김은 `setModerationStatus`(rejected/heldForReview)로 의미가 다르고,
+    // 이 툴이 약속한 "되돌릴 수 있는 숨김"과 어긋난다 — 잘못 매핑하느니 거부한다
+    return fail(
+      400,
+      'YouTube 댓글 숨김은 이 툴이 지원하지 않는다 — 의미가 다른 검토 보류/거부(setModerationStatus)뿐이라 ' +
+        '되돌릴 수 있는 숨김으로 매핑할 수 없다. YouTube Studio > 댓글에서 처리할 것.',
+    );
   }
 
   const { token, error } = await loadTokenFile('FACEBOOK', channel);

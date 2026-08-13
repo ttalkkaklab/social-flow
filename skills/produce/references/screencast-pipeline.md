@@ -65,7 +65,7 @@ cp storyboard/scenes.js .work/
 $REF/capture-frames.sh "file://$PWD/.work/overlay.html?i=0&alpha=1" .work/cards/t1.png 1
 # ③ alignment.json + overlay 경로 → .work/edit.json 작성, BGM 준비(.work/bgm.wav)
 # ④ 빌드 — BG 는 THEME.ink 를 넘긴다
-BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 · cover.jpg · build-report.txt
+BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4(클린) · reel-sub.mp4(번인) · subs.srt · cover.jpg · build-report.txt
 ```
 
 - 오버레이 캡처 후 `evaluate_script` 또는 육안으로 `window.__overflow === 0` 확인
@@ -103,6 +103,12 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 · cover.jpg · bui
 - **자막은 교정 표기** — raw/transcript.json 원문을 그대로 넣으면 오인식이 화면에
   박제된다. timeline.md 교정본에서 옮긴다.
 - **BGM 인스트루멘털 필수** — 보컬은 육성과 마스킹 충돌 (pipeline.md 와 동일).
+- **육성 정리는 빌더가 한다 — 밖에서 EQ 를 미리 걸지 않는다.** 빌더가 씬별로
+  저역 정리(80Hz 하이패스, 250Hz −3dB) → 명료도 보강(3.2kHz +3dB) → 근접효과
+  대응 다이나믹 저역 압축 → loudnorm 순으로 처리한다. 미리 걸면 이중 처리로
+  목소리가 얇아진다. 카디오이드 마이크는 가까이서 **크게 말할 때만** 저음을
+  부풀리므로("웅~" 하는 울림) 고정 EQ 로 깎으면 조용한 대목이 앙상해진다 —
+  그래서 `sidechaincompress` 로 큰 소리일 때만 저역을 누른다.
 - **-shortest 봉합 금지** — 빌더 밖에서 오디오·비디오를 다시 먹싱하지 않는다.
 - **오버레이 html 에 body 닫는 태그 리터럴 추가 금지** — sed 주입이 그 지점을
   치환한다 (video-template 실측 사고와 동일 계약).

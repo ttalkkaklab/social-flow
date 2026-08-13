@@ -11,16 +11,23 @@
       window.SCENES = [ {type:"cover"|"points"|"quote"|"outro", ...}, ... ]
       필드:
         cover : kicker, title(16자 이내·**강조** 지원), stat, statLabel(18자 이내)
-        points: title(74px), bullets:[{t,d}], footnote(출처)
+        points: title(60px 상단 고정), bullets:[{t,d}] — 캡션. 화면에는 **한 번에
+                하나만** 보인다(스왑), footnote(출처 — 제목과 함께 상시)
         quote : speaker, role("… AI" 등 역할 표기), text
         outro : title, sub
+  ■ 사진이 주인공 (produce 절대 규칙 14): 씬 텍스트는 상·하단 밴드 안에만 산다 —
+      points 는 상단 블록(제목+캡션 1개), cover 는 하단 블록. 화면 중앙을 덮는
+      박스·슬래브·풀스크린 딤을 만들지 않는다. 배경 사진이 그대로 보여야 한다.
   ■ URL 파라미터 (capture-frames.sh / capture-reveals.sh 계약):
       ?i=<n>        씬 인덱스 (0부터)
-      &reveal=<k>   reveal 그룹 k 이하만 불투명 — 미래 요소는 opacity:0 으로만 숨긴다
-                    (레이아웃 불변 계약 — display:none 금지, xfade 오염 방지)
+      &reveal=<k>   누적 요소(제목·출처·커버)는 그룹 k 이하만 불투명. points 캡션은
+                    **활성 그룹(=min(k, 마지막 캡션))만** 불투명 — 과거 캡션도 숨는다
+                    (스왑). 숨김은 언제나 opacity:0 뿐이고 캡션은 grid 스택으로 같은
+                    자리에 겹쳐 있어 레이아웃 불변 — display:none 금지, xfade 오염 방지
       &alpha=1      배경·글로우 제거 + body 투명 (영상 위 오버레이 PNG 용)
-      &scrim=1      다크 스크림 레이어 표시 (alpha 모드에서도 유지 — PNG 에 굽는다)
-      &dim=0|1|2    스크림 강도 (0 감상 우선 / 1 리스트 가독 / 2 밝은 배경 전용)
+      &scrim=1      밴드 스크림 레이어 표시 (alpha 모드에서도 유지 — PNG 에 굽는다)
+      &dim=0|1|2    스크림 강도 (0 감상 우선 / 1 기본 / 2 밝은 배경 전용).
+                    모양은 씬 타입이 정한다 — cover=하단 밴드, points=상단 밴드
       &bg=<url>     정지 배경 이미지 (불투명 캡처용)
   ■ 세이프존 (톨폰 실측 — 줄이지 말 것):
       텍스트 존 x 176~904 (폭 728) · y 190~1350. 하단 570px 은 자막 밴드+플랫폼 UI.
@@ -50,9 +57,47 @@
      display:none 이 body 자신에 걸려 페이지 전체가 사라진다 (실측 사고) */
   .scrim{position:absolute;inset:0;display:none}
   body.scrim-on .scrim{display:block}
-  .scrim.d0{background:linear-gradient(180deg,rgba(5,8,20,.38) 0%,rgba(5,8,20,.12) 35%,rgba(5,8,20,.30) 62%,rgba(5,8,20,.86) 100%)}
-  .scrim.d1{background:linear-gradient(180deg,rgba(5,8,20,.55) 0%,rgba(5,8,20,.38) 35%,rgba(5,8,20,.52) 62%,rgba(5,8,20,.92) 100%)}
-  .scrim.d2{background:linear-gradient(180deg,rgba(5,8,20,.74) 0%,rgba(5,8,20,.62) 40%,rgba(5,8,20,.70) 62%,rgba(5,8,20,.95) 100%)}
+  /* 밴드 스크림 — 풀스크린 딤이 아니라 텍스트 밴드만 어둡게 한다(절대 규칙 14).
+     기본형(cover 등 하단 블록): 위는 맑게 두고 하단 1/3 로 갈수록 어두워진다. */
+  .scrim.d0{background:linear-gradient(180deg,rgba(5,8,20,.10) 0%,rgba(5,8,20,0) 34%,rgba(5,8,20,.30) 62%,rgba(5,8,20,.86) 100%)}
+  .scrim.d1{background:linear-gradient(180deg,rgba(5,8,20,.16) 0%,rgba(5,8,20,0) 34%,rgba(5,8,20,.42) 62%,rgba(5,8,20,.90) 100%)}
+  .scrim.d2{background:linear-gradient(180deg,rgba(5,8,20,.28) 0%,rgba(5,8,20,.08) 34%,rgba(5,8,20,.55) 62%,rgba(5,8,20,.94) 100%)}
+  /* quote 정지 인용 카드만 예외 — 인용문이 화면 중앙(zone.center)에 앉는 씬이라
+     구 풀워시를 유지한다(절대 규칙 14 의 문서화된 예외). */
+  body.scene-quote .scrim.d0{background:linear-gradient(180deg,rgba(5,8,20,.38) 0%,rgba(5,8,20,.12) 35%,rgba(5,8,20,.30) 62%,rgba(5,8,20,.86) 100%)}
+  body.scene-quote .scrim.d1{background:linear-gradient(180deg,rgba(5,8,20,.55) 0%,rgba(5,8,20,.38) 35%,rgba(5,8,20,.52) 62%,rgba(5,8,20,.92) 100%)}
+  body.scene-quote .scrim.d2{background:linear-gradient(180deg,rgba(5,8,20,.74) 0%,rgba(5,8,20,.62) 40%,rgba(5,8,20,.70) 62%,rgba(5,8,20,.95) 100%)}
+  /* points(상단 블록): 상단 밴드 + 자막 대비 보험용 얕은 하단. 중앙은 항상 맑다.
+     밴드는 블록 끝(출처 줄, ~y560)까지 끌고 y≈920 전에 완전히 걷는다. */
+  body.scene-points .scrim.d0{background:linear-gradient(180deg,rgba(5,8,20,.50) 0%,rgba(5,8,20,.36) 26%,rgba(5,8,20,0) 46%,rgba(5,8,20,0) 70%,rgba(5,8,20,.42) 100%)}
+  body.scene-points .scrim.d1{background:linear-gradient(180deg,rgba(5,8,20,.64) 0%,rgba(5,8,20,.48) 28%,rgba(5,8,20,0) 48%,rgba(5,8,20,0) 68%,rgba(5,8,20,.52) 100%)}
+  body.scene-points .scrim.d2{background:linear-gradient(180deg,rgba(5,8,20,.80) 0%,rgba(5,8,20,.62) 30%,rgba(5,8,20,.14) 48%,rgba(5,8,20,0) 66%,rgba(5,8,20,.62) 100%)}
+
+  /* ── 라이트(삽화) 모드 — &light=1: 흰 배경 라인아트 삽화 위 텍스트 ────────
+     다크 스크림은 흰 그림을 회색으로 죽인다(실측) — 대신 텍스트를 잉크색으로
+     뒤집고 밴드는 화이트 워시로만 부드럽게 한다. 커버 텍스트는 상단 앵커로
+     옮긴다(삽화 계약: 상단 1/4 타이틀 여백·중단 주인공·하단 1/3 자막 여백).
+     이 블록은 씬별 스크림보다 뒤에 있어야 한다 — 동률 특이도는 뒤가 이긴다. */
+  body.light .scrim.d0{background:linear-gradient(180deg,rgba(255,255,255,.45) 0%,rgba(255,255,255,0) 30%,rgba(255,255,255,0) 68%,rgba(255,255,255,.50) 100%)}
+  body.light .scrim.d1{background:linear-gradient(180deg,rgba(255,255,255,.66) 0%,rgba(255,255,255,0) 34%,rgba(255,255,255,0) 64%,rgba(255,255,255,.66) 100%)}
+  body.light .scrim.d2{background:linear-gradient(180deg,rgba(255,255,255,.86) 0%,rgba(255,255,255,.28) 36%,rgba(255,255,255,0) 60%,rgba(255,255,255,.82) 100%)}
+  body.light .cover-title{color:var(--ink);text-shadow:0 3px 26px rgba(255,255,255,.7)}
+  /* .em 은 글자색이 투명(background-clip:text)이라 text-shadow 가 글자 뒤로 비쳐 씻겨 보인다(실측)
+     — 칩에서는 text-shadow 를 끄고 흰 drop-shadow 필터로 분리한다. 그라데이션도 흰 배경에서는
+     연한 끝색(accent2)이 묻혀 진한 쪽으로 재정의한다. */
+  body.light .cover-title .em, body.light .points-title .em{text-shadow:none;
+    background:linear-gradient(105deg,var(--accent),color-mix(in srgb, var(--accent) 55%, var(--ink)));
+    -webkit-background-clip:text;background-clip:text}
+  body.light .cover-title .em{filter:drop-shadow(0 0 8px rgba(255,255,255,.9)) drop-shadow(0 3px 16px color-mix(in srgb, var(--ink) 22%, transparent))}
+  body.light .stat{filter:drop-shadow(0 5px 26px color-mix(in srgb, var(--ink) 22%, transparent))}
+  body.light .stat-label{color:color-mix(in srgb, var(--ink) 80%, transparent)}
+  /* 흰 헤일로 — 삽화 선이 텍스트 뒤를 지나도 글자가 분리된다 (워시로는 못 잡는 겹침) */
+  body.light .points-title{color:var(--ink);text-shadow:0 0 14px #fff,0 0 7px #fff}
+  body.light .points-title .em{filter:drop-shadow(0 0 7px rgba(255,255,255,.9)) drop-shadow(0 3px 14px color-mix(in srgb, var(--ink) 20%, transparent))}
+  body.light .cap .t{color:var(--ink);text-shadow:0 0 12px #fff,0 0 6px #fff}
+  body.light .cap .d{color:color-mix(in srgb, var(--ink) 72%, transparent);text-shadow:0 0 10px #fff,0 0 5px #fff}
+  body.light .footnote{color:color-mix(in srgb, var(--ink) 55%, transparent);text-shadow:0 0 10px #fff,0 0 5px #fff,0 0 5px #fff}
+  body.light .kicker{background:color-mix(in srgb, var(--ink) 86%, transparent);border-color:rgba(255,255,255,.25)}
 
   /* ── 텍스트 존 ─────────────────────────────────────────────── */
   .zone{
@@ -62,46 +107,53 @@
     text-align:center; overflow:hidden;
   }
   .zone.center{justify-content:center}
+  .zone.top{justify-content:flex-start}
 
   /* reveal — 미래 요소는 투명하게만 (레이아웃 불변) */
   .rv{opacity:1}
   .rv.hide{opacity:0}
 
-  .kicker{font-size:36px;font-weight:700;letter-spacing:.14em;color:rgba(255,255,255,.82);
-    text-transform:uppercase;margin-bottom:34px}
+  /* kicker 는 방송 칩 — 밝은 배경 위에서도 읽히는 유일한 장치. 12자 남짓의 작은
+     필이라 절대 규칙 14(슬래브 금지)의 예외가 아니라 하단 밴드 텍스트의 일부다. */
+  .kicker{display:inline-block;font-size:34px;font-weight:700;letter-spacing:.12em;
+    color:rgba(255,255,255,.92);text-transform:uppercase;margin-bottom:30px;
+    background:rgba(5,8,20,.38);border:1px solid rgba(255,255,255,.14);
+    border-radius:999px;padding:12px 34px;backdrop-filter:blur(4px)}
   .kicker .dot{color:var(--accent)}
 
-  /* 커버 */
-  .cover-title{font-size:108px;line-height:1.16;font-weight:800;letter-spacing:-0.02em;
-    text-shadow:0 6px 40px rgba(0,0,0,.55);word-break:keep-all;margin-bottom:56px}
+  /* 커버 — 썸네일 겸용이라 글자는 크게 유지하되, 블록이 하단 1/3 에 앉도록 조인다 */
+  .cover-title{font-size:100px;line-height:1.14;font-weight:800;letter-spacing:-0.02em;
+    text-shadow:0 6px 40px rgba(0,0,0,.55);word-break:keep-all;margin-bottom:44px}
   .cover-title .em{
     background:linear-gradient(105deg,var(--accent),var(--accent2));
     -webkit-background-clip:text;background-clip:text;color:transparent;
     filter:drop-shadow(0 4px 26px rgba(0,0,0,.5));
   }
-  .stat-wrap{margin-bottom:64px}
-  .stat{font-size:230px;line-height:1;font-weight:800;letter-spacing:-0.03em;display:inline-block;
+  .stat-wrap{margin-bottom:48px}
+  .stat{font-size:205px;line-height:1;font-weight:800;letter-spacing:-0.03em;display:inline-block;
     background:linear-gradient(120deg,var(--accent) 10%,var(--accent2) 90%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
     filter:drop-shadow(0 8px 44px rgba(0,0,0,.6));white-space:nowrap}
   .stat-label{font-size:40px;font-weight:600;color:rgba(255,255,255,.88);margin-top:22px;word-break:keep-all}
 
-  /* 포인트(리스트) 씬 */
-  .points-title{font-size:74px;line-height:1.22;font-weight:800;letter-spacing:-0.015em;
-    text-shadow:0 4px 30px rgba(0,0,0,.55);word-break:keep-all;margin-bottom:52px}
+  /* 포인트(캡션) 씬 — 사진이 주인공(절대 규칙 14). 박스·슬래브 없이 상단 블록에
+     제목 + 활성 캡션 1개 + 출처만 얹는다. 캡션은 grid 스택으로 같은 자리에 겹쳐
+     있고(레이아웃 불변) 활성 것만 불투명하다 — reveal 전환이 캡션 교체가 된다. */
+  .points-title{font-size:60px;line-height:1.2;font-weight:800;letter-spacing:-0.015em;
+    text-shadow:0 3px 26px rgba(0,0,0,.6);word-break:keep-all;margin-bottom:34px}
   .points-title .em{background:linear-gradient(105deg,var(--accent),var(--accent2));
-    -webkit-background-clip:text;background-clip:text;color:transparent}
-  .bullets{display:flex;flex-direction:column;gap:30px;text-align:left;margin-bottom:48px}
-  .bullet{display:flex;gap:24px;align-items:flex-start;
-    background:rgba(10,14,32,.42);border:1px solid rgba(255,255,255,.13);
-    border-radius:22px;padding:30px 34px;backdrop-filter:blur(6px)}
-  body.alpha .bullet{background:rgba(10,14,32,.55)}
-  .bullet .no{flex:0 0 auto;width:52px;height:52px;border-radius:14px;margin-top:2px;
-    display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;
-    background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
-  .bullet .t{font-size:44px;line-height:1.3;font-weight:750;word-break:keep-all}
-  .bullet .d{font-size:34px;line-height:1.42;color:rgba(255,255,255,.80);margin-top:8px;word-break:keep-all}
-  .footnote{font-size:28px;color:rgba(255,255,255,.62);text-align:center}
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 4px 20px rgba(0,0,0,.65))}
+  .cap-stack{display:grid;margin-bottom:26px}
+  .cap-stack > .rv{grid-area:1/1}
+  .cap::before{content:"";display:block;width:56px;height:6px;border-radius:3px;
+    margin:0 auto 20px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .cap .t{font-size:50px;line-height:1.25;font-weight:750;word-break:keep-all;
+    text-shadow:0 3px 22px rgba(0,0,0,.65)}
+  .cap .d{font-size:35px;line-height:1.4;font-weight:500;color:rgba(255,255,255,.85);
+    margin-top:12px;word-break:keep-all;text-shadow:0 2px 16px rgba(0,0,0,.6)}
+  .footnote{font-size:26px;color:rgba(255,255,255,.60);text-align:center;
+    text-shadow:0 2px 12px rgba(0,0,0,.6)}
 
   /* 인용(발화) 씬 — alpha 오버레이는 상단 서명만, 정지 카드는 인용문 포함 */
   .quote-sign{position:absolute;left:var(--zone-x);right:var(--zone-x);top:230px;text-align:center}
@@ -126,14 +178,13 @@
   .outro-sub{font-size:42px;line-height:1.4;color:rgba(255,255,255,.85);word-break:keep-all}
 
   /* 오버플로 가드 — 실측 후 자동 적용 */
-  .tight1 .cover-title{font-size:98px}  .tight1 .points-title{font-size:68px}
-  .tight1 .bullet .t{font-size:41px}    .tight1 .bullet .d{font-size:32px}
-  .tight1 .bullets{gap:24px}            .tight1 .bullet{padding:26px 30px}
-  .tight2 .cover-title{font-size:90px}  .tight2 .points-title{font-size:62px}
-  .tight2 .bullet .t{font-size:38px}    .tight2 .bullet .d{font-size:30px}
-  .tight2 .bullets{gap:20px}            .tight2 .stat{font-size:200px}
-  .tight3 .cover-title{font-size:82px}  .tight3 .points-title{font-size:57px}
-  .tight3 .bullet .d{display:block;font-size:28px} .tight3 .bullets{gap:16px}
+  .tight1 .cover-title{font-size:92px}  .tight1 .points-title{font-size:55px}
+  .tight1 .cap .t{font-size:46px}       .tight1 .cap .d{font-size:32px}
+  .tight2 .cover-title{font-size:85px}  .tight2 .points-title{font-size:51px}
+  .tight2 .cap .t{font-size:43px}       .tight2 .cap .d{font-size:30px}
+  .tight2 .stat{font-size:180px}
+  .tight3 .cover-title{font-size:78px}  .tight3 .points-title{font-size:47px}
+  .tight3 .cap .t{font-size:40px}       .tight3 .cap .d{font-size:28px}
 </style>
 </head>
 <body>
@@ -155,6 +206,7 @@ function __boot() {
   const scrim = qs.get('scrim') === '1';
   const dim = qs.get('dim') || '1';
   const bg = qs.get('bg');
+  const light = qs.get('light') === '1';   // 삽화(라이트) 모드 — 위 CSS 블록 참조
 
   const THEME = window.THEME || {};
   const root = document.documentElement;
@@ -168,6 +220,7 @@ function __boot() {
   if (!scene) { zone.textContent = 'scenes.js 미주입 또는 인덱스 초과: i=' + i; return; }
 
   document.body.classList.add('scene-' + scene.type);
+  if (light) document.body.classList.add('light');
   if (alpha) document.body.classList.add('alpha');
   if (scrim) { document.body.classList.add('scrim-on');
     document.getElementById('scrim').className = 'scrim d' + dim; }
@@ -185,19 +238,33 @@ function __boot() {
   const R = (rg, html) => { if (rg > maxRg) maxRg = rg; return rv(rg, html); };
 
   if (scene.type === 'cover') {
+    // 라이트(삽화) 모드: 커버 텍스트를 상단 앵커로 — 하단 앵커는 중단의 삽화
+    // 주인공(캐릭터)을 덮는다(실측). 삽화 계약이 상단 1/4 을 타이틀 여백으로 비워 둔다.
+    if (light) zone.classList.add('top');
     zone.innerHTML =
       (scene.kicker ? R(0, '<div class="kicker">' + esc(scene.kicker).replace(/·/g, '<span class="dot">·</span>') + '</div>') : '') +
       R(1, '<div class="cover-title">' + em(scene.title) + '</div>') +
       (scene.stat ? R(2, '<div class="stat-wrap"><div class="stat" id="stat">' + esc(scene.stat) + '</div>' +
         (scene.statLabel ? '<div class="stat-label">' + esc(scene.statLabel) + '</div>' : '') + '</div>') : '');
   } else if (scene.type === 'points') {
-    const bullets = (scene.bullets || []).map((b, k) =>
-      R(2 + k, '<div class="bullet"><div class="no">' + (k + 1) + '</div><div><div class="t">' + em(b.t) + '</div>' +
-        (b.d ? '<div class="d">' + esc(b.d) + '</div>' : '') + '</div></div>')).join('');
+    // 캡션 스왑 — 활성 캡션(rg === capShow)만 불투명. reveal 이 마지막 캡션을
+    // 넘으면 마지막에 캡을 걸어(capShow) 그림이 더 변하지 않는다 —
+    // capture-reveals.sh 의 바이트 동일성 열거가 여기서 멈춘다.
+    zone.classList.add('top');
+    const caps = scene.bullets || [];
+    const lastRg = 1 + caps.length;                    // 캡션 rg = 2 .. lastRg
+    const capShow = Math.min(reveal, lastRg);
+    const capHtml = caps.map((b, k) => {
+      const rg = 2 + k;
+      if (rg > maxRg) maxRg = rg;
+      return '<div class="rv cap' + (rg === capShow ? '' : ' hide') + '" data-rg="' + rg + '">' +
+        '<div class="t">' + em(b.t) + '</div>' +
+        (b.d ? '<div class="d">' + esc(b.d) + '</div>' : '') + '</div>';
+    }).join('');
     zone.innerHTML =
       R(1, '<div class="points-title">' + em(scene.title) + '</div>') +
-      '<div class="bullets">' + bullets + '</div>' +
-      (scene.footnote ? R(2 + (scene.bullets || []).length, '<div class="footnote">' + esc(scene.footnote) + '</div>') : '');
+      '<div class="cap-stack">' + capHtml + '</div>' +
+      (scene.footnote ? R(1, '<div class="footnote">' + esc(scene.footnote) + '</div>') : '');
   } else if (scene.type === 'quote') {
     // alpha(발화 영상 위): 상단 서명만. 불투명(정지 카드): 서명 + 인용문.
     document.body.insertAdjacentHTML('beforeend',

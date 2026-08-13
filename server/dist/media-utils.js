@@ -116,7 +116,7 @@ export function saveAudioFile(outputDir, filename, data) {
  * filename 인자용 zod 스키마 — resolveOutputFile 과 같은 규칙을 **호출 전에** 적용한다.
  *
  * 저장 시점 검증만 두면 Veo 처럼 1~6분 걸리는 생성이 다 끝난 뒤에야 파일명이 거부되어
- * 시간과 비용이 통째로 날아간다. 저장 시점 검증은 방어선으로 그대로 남긴다.
+ * 시간과 비용이 통째로 날아간다. 저장 시점 검증은 방어선으로 그대로 둔다.
  */
 export function bareFilenameSchema(kind) {
     const allowed = ALLOWED_EXTENSIONS[kind];

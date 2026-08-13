@@ -25,7 +25,7 @@
 <nav class="toc">
   <div class="toc-title">목차</div>
   <ol>
-    <li><a href="#endpoints">엔드포인트 4종</a></li>
+    <li><a href="#endpoints">엔드포인트 8종</a></li>
     <li><a href="#params">파라미터</a></li>
     <li><a href="#response">응답과 정제</a></li>
     <li><a href="#errors">에러와 쿼터</a></li>
@@ -34,41 +34,64 @@
 </nav>
 
 <section id="endpoints">
-  <h2>1. 엔드포인트 4종</h2>
+  <h2>1. 엔드포인트 8종</h2>
   <pre><code>GET https://openapi.naver.com/v1/search/{엔드포인트}
 X-Naver-Client-Id:     {클라이언트 ID}
 X-Naver-Client-Secret: {클라이언트 시크릿}</code></pre>
   <div class="table-scroll">
   <table>
-    <thead><tr><th><code>type</code></th><th>엔드포인트</th><th>쓰임</th><th><code>sort</code></th></tr></thead>
+    <thead><tr><th><code>type</code></th><th>엔드포인트</th><th>쓰임</th><th><code>sort</code></th><th><code>limit</code> 상한</th></tr></thead>
     <tbody>
-      <tr><td><code>news</code> <span class="badge free">기본</span></td><td><code>news.json</code></td><td>국내 뉴스 — 시효성 값(가격·시행일) 교차 검증</td><td>지원</td></tr>
-      <tr><td><code>blog</code></td><td><code>blog.json</code></td><td>블로그 후기 — 실사용 경험·체감</td><td>지원</td></tr>
-      <tr><td><code>web</code></td><td><code>webkr.json</code></td><td>웹문서 — 공식 페이지·자료</td><td><strong>미지원</strong></td></tr>
-      <tr><td><code>cafe</code></td><td><code>cafearticle.json</code></td><td>카페글 — 커뮤니티 여론·불만</td><td>지원</td></tr>
+      <tr><td><code>news</code> <span class="badge free">기본</span></td><td><code>news.json</code></td><td>국내 뉴스 — 시효성 값(가격·시행일) 교차 검증</td><td><code>sim</code>·<code>date</code></td><td>30</td></tr>
+      <tr><td><code>blog</code></td><td><code>blog.json</code></td><td>블로그 후기 — 실사용 경험·체감</td><td><code>sim</code>·<code>date</code></td><td>30</td></tr>
+      <tr><td><code>web</code></td><td><code>webkr.json</code></td><td>웹문서 — 공식 페이지·자료</td><td><strong>미지원</strong></td><td>30</td></tr>
+      <tr><td><code>cafe</code></td><td><code>cafearticle.json</code></td><td>카페글 — 커뮤니티 여론·불만</td><td><code>sim</code>·<code>date</code></td><td>30</td></tr>
+      <tr><td><code>kin</code></td><td><code>kin.json</code></td><td>지식iN — 사람들이 실제로 모르는 것. 훅 문장의 재료</td><td><code>sim</code>·<code>date</code></td><td>30</td></tr>
+      <tr><td><code>image</code></td><td><code>image.json</code></td><td>이미지 — 국내 소재 레퍼런스</td><td><code>sim</code>·<code>date</code></td><td>30</td></tr>
+      <tr><td><code>encyc</code></td><td><code>encyc.json</code></td><td>백과사전 — 자막에 쓸 용어 정의</td><td><strong>미지원</strong></td><td>30</td></tr>
+      <tr><td><code>local</code></td><td><code>local.json</code></td><td>지역 업체 — 주소·좌표·전화·카테고리</td><td><code>random</code>·<code>comment</code></td><td><strong>5</strong></td></tr>
     </tbody>
   </table>
   </div>
   <div class="danger">
-    <strong><code>webkr.json</code>에 <code>sort</code>를 넘기면 400이다.</strong> 다른 엔드포인트와 파라미터 표면이 미묘하게 다르므로 <code>type === 'web'</code>일 때는 <code>sort</code>를 아예 빼고 보내야 한다.
+    <strong>공식 문서에 있는데 실제로는 죽은 API가 5개 있다.</strong> 네이버 공식 swagger(<code>naver/naver-openapi-guide</code>)는 <code>book</code>·<code>book_adv</code>·<code>doc</code>(전문자료)·<code>shop</code>(쇼핑)·<code>movie</code>(영화)를 여전히 싣고 있지만, 실호출은 전부 <strong>404 <code>SE05</code> "존재하지 않는 검색 api"</strong>다(실측 2026-08-11). 문서만 보고 툴을 추가하면 죽은 툴이 된다 — 살아 있음을 확인한 8종만 노출한다.
+  </div>
+  <div class="danger">
+    <strong>타입마다 파라미터 표면이 다르고, 위반은 조용히 무시되거나 400이다.</strong>
+    <ul>
+      <li><code>web</code>·<code>encyc</code>는 공식 문서상 <code>sort</code> <strong>비적용 대상</strong>이다. 실호출은 400이 아니라 200을 주지만(실측), 그건 지원한다는 뜻이 아니라 <strong>조용히 무시</strong>한다는 뜻이다.</li>
+      <li><code>local</code>은 <code>sim</code>/<code>date</code>가 아니라 <strong><code>random</code>/<code>comment</code> 체계</strong>다. <code>display</code>를 10으로 올려도 5건만 오고, <code>start</code>를 넘겨도 같은 결과가 온다(페이징 없음).</li>
+      <li><code>filter</code>(이미지 크기)는 <code>image</code> 전용이다.</li>
+    </ul>
+    잘못된 값이 <strong>에러 없이 무시</strong>되는 게 가장 위험하다 — 모델이 "최신순으로 정렬됐다"고 믿고 오래된 자료를 최신으로 인용한다. 그래서 서버가 <strong>호출 전에</strong> 거절한다.
   </div>
   <p>자격증명은 <strong>헤더로만</strong> 전달된다. SerpApi와 달리 URL에 키가 실리지 않아, 에러 본문에 URL이 에코돼도 키가 새지 않는다.</p>
+  <div class="note">
+    <strong>동영상 검색은 이 API에 없다.</strong> 필요하면 <code>serp_naver_search(where: "video")</code>를 쓴다.
+  </div>
 </section>
 
 <section id="params">
   <h2>2. 파라미터</h2>
   <div class="table-scroll">
   <table>
-    <thead><tr><th>파라미터</th><th>범위</th><th>기본</th><th>구현</th></tr></thead>
+    <thead><tr><th>툴 인자</th><th>API 파라미터·범위</th><th>기본</th><th>구현</th></tr></thead>
     <tbody>
-      <tr><td><code>query</code></td><td>—</td><td>필수</td><td>1–300자</td></tr>
-      <tr><td><code>display</code></td><td>1–100</td><td>10</td><td><strong>1–30으로 축소</strong></td></tr>
-      <tr><td><code>start</code></td><td>1–1000</td><td>1</td><td>1–1000</td></tr>
-      <tr><td><code>sort</code></td><td><code>sim</code>(정확도) · <code>date</code>(날짜)</td><td><code>sim</code></td><td><code>web</code>에서는 미전송</td></tr>
+      <tr><td><code>query</code></td><td><code>query</code></td><td>필수</td><td>1–300자</td></tr>
+      <tr><td><code>limit</code></td><td><code>display</code> 1–100</td><td>10</td><td><strong>1–30으로 축소</strong> (<code>local</code>은 5)</td></tr>
+      <tr><td><code>page</code></td><td><code>start</code> 1–1000 — <strong>페이지가 아니라 항목 오프셋</strong></td><td>1</td><td><code>(page-1)×limit+1</code>로 환산. 상한 초과·<code>local</code>은 거절</td></tr>
+      <tr><td><code>sort</code></td><td><code>sort</code> — 타입별 값 체계 상이</td><td>API 기본값</td><td>타입이 지원하지 않으면 거절</td></tr>
+      <tr><td><code>imageSize</code></td><td><code>filter</code> — <code>all</code>·<code>large</code>·<code>medium</code>·<code>small</code></td><td>—</td><td><code>image</code> 전용 — 다른 타입이면 거절</td></tr>
     </tbody>
   </table>
   </div>
   <p><code>start</code> 상한이 1000이라 한 검색어로 수집 가능한 최대 결과는 약 1,099건이다.</p>
+  <div class="note">
+    <strong>네이버 <code>start</code>는 페이지 번호가 아니다.</strong> 1부터 세는 <strong>항목 위치</strong>라서 <code>page</code>를 그대로 넘기면 <code>page=2</code>가 2번째 항목부터를 뜻해 결과가 겹친다(<code>limit=3</code>이면 3건 중 2건이 직전 페이지와 같다). 서버가 <code>(page-1)×limit+1</code>로 환산하므로 툴 사용자는 <code>page</code>를 페이지로만 생각하면 된다 — 이름이 같으면 뜻도 같아야 통일에 의미가 있다.
+  </div>
+  <div class="note">
+    <strong>툴 인자 이름은 검색 툴 전체가 공유한다</strong> — <code>query</code>·<code>limit</code>·<code>page</code>. 백엔드가 <code>q</code>·<code>display</code>·<code>num</code>·<code>start</code> 중 무엇을 쓰든 환산은 서버가 맡는다. 이름이 툴마다 흔들리면 모델이 툴을 갈아탈 때마다 인자를 다시 배우고, 그 비용은 잘못된 인자명 호출 → <code>-32602</code> 왕복으로 돌아온다. 계약 테스트가 이 규약을 강제한다.
+  </div>
   <div class="note">
     <strong><code>display</code>를 30으로 좁힌 것은 결함이 아니라 설계다.</strong> API 상한 100건을 그대로 받으면 응답이 LLM 컨텍스트를 크게 잠식하는데, 소재 리서치에서 31번째 결과가 판단을 바꾸는 일은 사실상 없다. 더 필요하면 <code>start</code>로 다음 페이지를 짚는 것이 옳다.
   </div>
@@ -99,9 +122,20 @@ X-Naver-Client-Secret: {클라이언트 시크릿}</code></pre>
       <tr><td><code>description</code></td><td><code>description</code></td><td>동일 정제</td></tr>
       <tr><td><code>bloggername</code> / <code>cafename</code></td><td><code>source</code></td><td>타입에 따라 있는 쪽</td></tr>
       <tr><td><code>pubDate</code> / <code>postdate</code></td><td><code>date</code></td><td>타입에 따라 있는 쪽</td></tr>
+      <tr><td><code>sizewidth</code> / <code>sizeheight</code></td><td><code>width</code> / <code>height</code></td><td><code>image</code> 전용 — <code>link</code>는 <code>imageUrl</code>로 개명(원본 이미지 URL임을 분명히)</td></tr>
+      <tr><td><code>mapx</code> / <code>mapy</code></td><td><code>coords</code></td><td><code>local</code> 전용 — <strong>10<sup>7</sup>로 나눠 경위도 환산</strong></td></tr>
+      <tr><td><code>total</code></td><td>—</td><td><code>local</code>에서는 <strong>제거</strong> (아래 경고)</td></tr>
+      <tr><td><code>address</code> / <code>roadAddress</code> / <code>telephone</code> / <code>category</code></td><td>동명</td><td><code>local</code> 전용 — 그대로 보존</td></tr>
     </tbody>
   </table>
   </div>
+  <div class="danger">
+    <strong><code>local</code>의 <code>total</code>은 전체 업체 수가 아니다.</strong> 요청한 건수를 그대로 되돌려주는 값이다(실측: <code>limit=2</code> → <code>total:2</code>, <code>limit=3</code> → <code>total:3</code>). 그대로 실으면 모델이 "강남에 카페가 2곳"으로 읽으므로 <strong>아예 뺀다</strong>. 대신 상한·페이징 부재를 <code>note</code>로 항상 실어, 적은 결과를 검색 실패로 오해하지 않게 한다.
+  </div>
+  <div class="warn">
+    <strong><code>local</code>의 좌표를 원본 그대로 흘리면 안 된다.</strong> <code>mapx: "1269719531"</code>은 소수점이 빠진 정수 문자열이다. 10<sup>7</sup>로 나눠야 경도 <code>126.9719531</code>이 된다. 원본을 그대로 두면 모델이 이를 좌표로 오인해 엉뚱한 지점을 인용한다. 환산 결과가 한반도 범위를 벗어나면 좌표계 가정이 깨진 것이므로 <strong>추측값을 흘리지 않고 필드를 생략</strong>한다.
+  </div>
+  <p><strong>타입마다 응답 필드가 다르다</strong> — <code>image</code>는 <code>description</code>이 아예 없고 <code>thumbnail</code>·크기가 오며, <code>local</code>은 주소·좌표·전화가 온다. 공통 슬리밍으로 뭉개면 지역 검색의 좌표가 통째로 사라지므로 타입별로 분기한다.</p>
   <p><code>&lt;b&gt;</code> 하이라이트를 남겨두면 모델이 이를 강조로 오해하거나 그대로 인용문에 복사한다. <code>&amp;quot;</code>·<code>&amp;amp;</code>·<code>&amp;lt;</code>·<code>&amp;gt;</code>·<code>&amp;apos;</code>도 함께 복원한다.</p>
 </section>
 
@@ -129,17 +163,19 @@ X-Naver-Client-Secret: {클라이언트 시크릿}</code></pre>
     <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th></tr></thead>
     <tbody>
       <tr><td><code>display</code></td><td>최대 100</td><td>최대 30 (컨텍스트 보호)</td></tr>
-      <tr><td><code>sort</code></td><td>엔드포인트별 지원 상이</td><td><code>web</code>에서 자동 제거</td></tr>
+      <tr><td><code>sort</code></td><td>엔드포인트별 지원 상이 — 위반해도 400이 아니라 무시</td><td><strong>호출 전 거절</strong> (타입별 허용값 표가 정본)</td></tr>
       <tr><td>링크</td><td><code>link</code>·<code>originallink</code> 병존</td><td><code>originallink</code> 우선 단일화</td></tr>
       <tr><td>마크업</td><td><code>&lt;b&gt;</code> 하이라이트 포함</td><td>제거 + 엔티티 복원</td></tr>
-      <tr><td>노출 타입</td><td>10종 이상 (쇼핑·영화·백과 등)</td><td>4종만 — 콘텐츠 소재 조사에 쓰이는 것만</td></tr>
+      <tr><td>노출 타입</td><td>문서상 13종</td><td><strong>8종</strong> — 실호출로 살아 있음을 확인한 것만 (<code>book</code>·<code>doc</code>·<code>shop</code>·<code>movie</code>는 404, <code>adult</code>·<code>errata</code>는 리서치 용도 아님)</td></tr>
+      <tr><td>타입별 제약</td><td>위반해도 무시되거나 400</td><td><strong>호출 전 거절</strong> — 정렬·페이징·이미지 필터를 타입별로 검증</td></tr>
+      <tr><td><code>local</code> 좌표</td><td><code>mapx</code>/<code>mapy</code> 정수 문자열</td><td>WGS84 경위도로 환산 (<code>coords.lat</code>/<code>lng</code>)</td></tr>
     </tbody>
   </table>
   </div>
 </section>
 
 <footer>
-  기준일 2026-07-29 · 구현 <a href="../../server/src/naver-client.ts">server/src/naver-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+  기준일 2026-08-11 · 구현 <a href="../../server/src/naver-client.ts">server/src/naver-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
 </footer>
 
 </div>

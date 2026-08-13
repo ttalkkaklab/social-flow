@@ -89,10 +89,18 @@ $CAP "file://$PWD/$W/lockup.html?mode=char" "$W/char-card.png" 0
 캡처 3장을 Read 로 열어 확인한다 — 채널명 오탈자·태그라인 줄바꿈·캐릭터 크롭.
 여기서 틀리면 뒤 전부가 틀린다.
 
+태그라인은 화면에 박히면 못 고친다. 문체 게이트를 한 번 통과시킨다(채널명은
+고유명사라 검사 대상 밖이다).
+
+```bash
+echo "<태그라인>" | python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py --surface screen -
+```
+
 ### 4. 오프닝 키프레임 (롱 버전 전용 — 4초 표준에서는 생략)
 
 컨셉이 씬 도입형(소품 있는 미니 씬, 어두운 스튜디오 등)이면
-`gpt_image_img2img`(로고 마스터 레퍼런스, 1080×1920)로 첫 프레임을 생성한다 —
+`gpt_image_img2img`(로고 마스터 레퍼런스, 1080×1920)로 첫 프레임을 생성한다
+(로컬 기본 경로의 예외 — 레퍼런스 편집은 image_local_generate 에 없다) —
 캐릭터 등장 전 상태 또는 실루엣, profile 부정 지시 + "no text" 포함,
 `.work/open-frame.png`. 캐릭터 정면 등장형 컨셉이면 생략한다.
 

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>맥북에서 쓸 로컬 이미지 생성 — 모델·도구 조사와 M4 Max 실측 (2026-08-12)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  nav.toc { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 56px; }
+  nav.toc h2 { font-size: 14px; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 14px; text-transform: uppercase; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  nav.toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a { color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500; }
+  nav.toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent); font-weight: 700; font-size: 12.5px;
+    margin-right: 10px; font-variant-numeric: tabular-nums;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
+  p { margin-bottom: 16px; }
+  p.note { font-size: 14.5px; color: var(--text-soft); }
+  ul.plain { margin: 0 0 16px 22px; }
+  ul.plain li { margin-bottom: 8px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px;
+  }
+  pre {
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 20px; overflow-x: auto; margin-bottom: 16px;
+    font-size: 13.5px; line-height: 1.6;
+  }
+  pre code { background: none; border: none; padding: 0; }
+
+  .callout {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    background: var(--bg-soft); border-radius: 0 10px 10px 0;
+    padding: 16px 20px; margin-bottom: 20px; font-size: 15px;
+  }
+  .callout.green { border-left-color: var(--green); }
+  .callout.amber { border-left-color: var(--amber); }
+  .callout.red { border-left-color: var(--red); }
+  .callout b:first-child { display: block; margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14.5px; }
+  th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; font-size: 13.5px; }
+  .table-scroll { overflow-x: auto; }
+
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+  }
+  .badge.green { color: var(--green); background: var(--green-soft); }
+  .badge.amber { color: var(--amber); background: var(--amber-soft); }
+  .badge.red { color: var(--red); background: var(--red-soft); }
+  .badge.purple { color: var(--purple); background: var(--purple-soft); }
+  .badge.blue { color: var(--accent); background: var(--accent-soft); }
+
+  .evidence { display: flex; gap: 20px; flex-wrap: wrap; margin: 20px 0; }
+  .evidence figure { margin: 0; flex: 1 1 260px; max-width: 440px; }
+  .evidence figure.tall { flex: 0 1 240px; }
+  .evidence img { width: 100%; border-radius: 10px; display: block; border: 1px solid var(--border); }
+  .evidence figcaption { font-size: 13px; color: var(--text-soft); padding: 8px 2px; line-height: 1.5; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 24px; font-size: 13.5px; color: var(--text-soft); }
+  footer a { color: var(--accent); text-decoration: none; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">RESEARCH → 채택</span>
+  <h1>맥북에서 쓸 로컬 이미지 생성<br>모델·도구 조사와 M4 Max 실측</h1>
+  <p class="sub">
+    이 맥북(M4 Max·128GB)에서 로컬 이미지 생성이 실제로 되는지 mflux + Z-Image Turbo 로
+    직접 생성까지 돌려 확인한 조사. 상업 사용 가능한 후보 3계열과 파이프라인(gpt_image·nanobanana API) 대비 위치를 정리한다.
+  </p>
+  <div class="hero .meta meta">
+    <span>작성 <strong>2026-08-12</strong></span>
+    <span>실측 장비 <strong>MacBook Pro M4 Max · 16코어 · 128GB · macOS 26</strong></span>
+    <span>실측 도구 <strong>mflux 0.17.x (MLX) · 8bit 양자화</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#conclusion">결론</a></li>
+    <li><a href="#bench">이 맥북 실측 결과</a></li>
+    <li><a href="#models">후보 모델 비교</a></li>
+    <li><a href="#text">텍스트(한글) 렌더링 실측</a></li>
+    <li><a href="#tools">실행 도구</a></li>
+    <li><a href="#pipeline">파이프라인 관점 — API 대비</a></li>
+    <li><a href="#budget">디스크·메모리 예산</a></li>
+    <li><a href="#sources">근거 등급·출처</a></li>
+  </ol>
+</nav>
+
+<section id="conclusion">
+  <h2 class="sec"><span class="no">01</span>결론</h2>
+  <div class="callout green">
+    <b>이 맥북으로 로컬 이미지 생성이 된다 — 실측으로 확인했다.</b>
+    Z-Image Turbo(6B·Apache 2.0)를 mflux 로 돌려 1024² 기준 확산 약 2분, 9:16 세로형(1088×1920) 약 7.4분에
+    커버 배경으로 바로 쓸 품질이 나왔다. 피크 메모리 32~39GB 로 128GB 에서 여유가 크다.
+    단, 실측 당시 다른 세션들이 겹쳐 로드 평균 74 인 과부하 상태였으므로 위 수치는 보수적인 하한이다.
+  </div>
+  <p>
+    추천 구성은 이렇다. 기본은 <b>Z-Image Turbo</b> — 속도·품질·라이선스(Apache 2.0) 모두 걸리는 게 없다.
+    편집(img2img·멀티 레퍼런스)이 필요하면 <b>FLUX.2 klein 4B</b>(Apache 2.0) 또는 <b>Qwen-Image-Edit-2511</b>(Apache 2.0)을 얹는다.
+    도구는 스크립트 파이프라인엔 <b>mflux</b>(CLI·Python API), 손으로 탐색할 땐 <b>Draw Things</b>(무료 GUI) 조합이다.
+  </p>
+  <p class="note">
+    주의할 라이선스 함정: FLUX.2 계열은 4B(klein)만 Apache 2.0 이고 klein 9B·dev(32B)는 비상업 라이선스다.
+    수익 채널 콘텐츠에 쓰는 이 프로젝트에선 9B·dev 를 제외해야 한다.
+  </p>
+</section>
+
+<section id="bench">
+  <h2 class="sec"><span class="no">02</span>이 맥북 실측 결과 <span class="badge green">실측</span></h2>
+  <p>
+    mflux 를 <code>uv tool install --python 3.12 mflux</code> 로 설치하고 Z-Image Turbo(8bit 양자화, 9스텝)를 세 번 돌렸다.
+    모델 저장소 다운로드는 31GB(bf16 원본 기준)였다.
+  </p>
+  <div class="table-scroll"><table>
+    <tr><th>실행</th><th>해상도</th><th>확산 시간</th><th>스텝당</th><th>전체(로드 포함)</th><th>피크 메모리</th></tr>
+    <tr><td>1차 (부하 보통)</td><td>1024×1024</td><td>116초</td><td>~13초</td><td>149초</td><td>31.9GB</td></tr>
+    <tr><td>2차 (부하 심함)</td><td>1024×1024</td><td>197초</td><td>~22초</td><td>210초</td><td>31.9GB</td></tr>
+    <tr><td>3차 (9:16 세로)</td><td>1088×1920</td><td>443초</td><td>~49초</td><td>462초</td><td>38.9GB</td></tr>
+  </table></div>
+  <p class="note">
+    측정 중 로드 평균이 74(16코어 대비 4~5배 과부하)였다 — 다른 Claude Code 세션들이 같은 머신에서 돌던 상태다.
+    한가한 머신에서는 1024² 가 1~2분대로 내려올 여지가 크다. 9:16 은 픽셀 수 2.1배에 어텐션 비용이 제곱으로 붙어 4배 안팎으로 느려진다.
+  </p>
+  <div class="evidence">
+    <figure>
+      <img src="z-image-test1.png" alt="1024x1024 실측 — 홈오피스 책상, 노트북에 편집 타임라인">
+      <figcaption><b>1024×1024 · 확산 116초.</b> 프롬프트의 요구(골든아워 창가·편집 타임라인 화면)를 정확히 따랐다.</figcaption>
+    </figure>
+    <figure class="tall">
+      <img src="z-image-916.png" alt="1088x1920 9:16 실측 — 야간 책상, 램프와 노트북">
+      <figcaption><b>1088×1920(9:16) · 확산 443초.</b> 쇼트폼 커버 배경 그대로 쓸 수 있는 톤.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="models">
+  <h2 class="sec"><span class="no">03</span>후보 모델 비교</h2>
+  <p>
+    2026년 8월 기준, 이 사양에서 돌 수 있고 품질이 현역인 모델은 세 계열이다.
+    크기·라이선스는 Hugging Face 모델 카드(1차 출처)로 확인했다.
+  </p>
+  <div class="table-scroll"><table>
+    <tr><th>모델</th><th>크기</th><th>라이선스</th><th>스텝</th><th>강점</th><th>편집(img2img)</th></tr>
+    <tr>
+      <td><b>Z-Image Turbo</b> <span class="badge green">기본 추천</span></td>
+      <td>6B</td><td>Apache 2.0 <span class="badge green">상업 OK</span></td><td>8~9</td>
+      <td>속도 대비 사실감 최상, 적은 스텝</td>
+      <td>별도 모델(Z-Image-Edit)</td>
+    </tr>
+    <tr>
+      <td><b>FLUX.2 klein 4B</b></td>
+      <td>4B</td><td>Apache 2.0 <span class="badge green">상업 OK</span></td><td>4</td>
+      <td>가장 빠름, 생성·편집 단일 모델</td>
+      <td>멀티 레퍼런스 편집 내장</td>
+    </tr>
+    <tr>
+      <td><b>Qwen-Image (20B) + Edit-2511</b></td>
+      <td>20B</td><td>Apache 2.0 <span class="badge green">상업 OK</span></td><td>Lightning LoRA 로 4~8</td>
+      <td>프롬프트 이해·타이포그래피(영·중) 최상급</td>
+      <td>Edit 계열 별도 모델, 성숙</td>
+    </tr>
+    <tr>
+      <td>FLUX.2 klein 9B</td>
+      <td>9B</td><td>비상업 <span class="badge red">제외</span></td><td>4</td>
+      <td>4B 보다 품질 위</td><td>내장</td>
+    </tr>
+    <tr>
+      <td>FLUX.2 dev</td>
+      <td>32B(+Mistral 인코더)</td><td>비상업 <span class="badge red">제외</span></td><td>—</td>
+      <td>오픈 웨이트 품질 정점</td><td>내장</td>
+    </tr>
+  </table></div>
+  <div class="callout amber">
+    <b>Qwen-Image 2.0(7B)은 아직 로컬로 못 쓴다.</b>
+    2026-02 발표 후 화제였지만 Hugging Face 에 오픈 웨이트가 없다(API·데모 전용). "로컬 가능" 이라고 쓴 블로그가 여럿인데
+    HF 모델 검색으로 직접 확인한 결과 공개된 것은 Qwen-Image(20B)·Qwen-Image-2512·Edit-2509/2511 뿐이다.
+  </div>
+  <p class="note">
+    SDXL·FLUX.1·SD 3.5 같은 이전 세대도 물론 돌지만, 지금 새로 시작하면서 고를 이유는 없다.
+    품질·속도·라이선스 모두 위 세 계열이 앞선다.
+  </p>
+</section>
+
+<section id="text">
+  <h2 class="sec"><span class="no">04</span>텍스트(한글) 렌더링 실측 <span class="badge green">실측</span></h2>
+  <p>
+    커버·썸네일에 글자를 새겨 넣을 수 있는지는 별도 문제다. Z-Image·Qwen-Image 의 타이포그래피 강점은
+    영어·중국어 기준이고, 한글은 오픈 모델 전반의 약점이다.
+  </p>
+  <div class="callout red">
+    <b>실측 결과: 한글은 못 쓴다.</b>
+    "딸깍연구소" 를 흰 고딕 타이틀로 요청하자 <b>"달닥연구소"</b> 로 렌더링됐다 — 받침·자소가
+    비슷한 다른 글자로 바뀌는 전형적 유사문자 패턴이다. 레이아웃·폰트 무게는 그럴듯해서
+    언뜻 보면 지나치기 쉽다는 점이 오히려 위험하다. 같은 화면의 영어 "AI LAB" 은 완벽했다.
+  </div>
+  <div class="evidence">
+    <figure>
+      <img src="z-image-korean-text.png" alt="한글 텍스트 실측 — 딸깍연구소가 달닥연구소로 깨짐">
+      <figcaption><b>1024×1024 · 확산 163초.</b> 요청 문구 "딸깍연구소" → 출력 "달닥연구소". 영어 부제는 정확.</figcaption>
+    </figure>
+  </div>
+  <p class="note">
+    이 프로젝트 파이프라인에는 영향이 없다 — 커버 배경은 텍스트 없는 이미지로 생성하고
+    글자는 렌더 템플릿에서 오버레이로 얹는 구조(계획 리뷰 P0 규칙)라, 모델의 한글 렌더링 능력과 무관하다.
+    글자가 박힌 이미지가 꼭 필요한 경우(카드뉴스류)는 지금처럼 gpt_image API 를 쓰거나 배경 생성 + HTML 오버레이로 우회한다.
+  </p>
+</section>
+
+<section id="tools">
+  <h2 class="sec"><span class="no">05</span>실행 도구</h2>
+  <h3>mflux — 스크립트 파이프라인용 <span class="badge blue">이번 실측에 사용</span></h3>
+  <p>
+    Apple MLX 로 포팅된 이미지 생성 CLI·Python API. <code>uv tool install --python 3.12 mflux</code> 한 줄로 설치되고
+    33개 명령이 깔린다 — <code>mflux-generate-z-image-turbo</code>, <code>mflux-generate-flux2</code>,
+    <code>mflux-generate-flux2-edit</code>, <code>mflux-generate-qwen</code>, <code>mflux-generate-qwen-edit</code> 등
+    생성·편집·업스케일(SeedVR2)·ControlNet·LoRA 학습까지 커버한다. 헤드리스 실행이 되므로
+    지금의 서버 툴(gpt_image 등)과 같은 자리에 로컬 백엔드로 붙일 수 있다.
+  </p>
+  <pre><code># 이번 실측에 쓴 명령
+mflux-generate-z-image-turbo \
+  --prompt "..." --width 1088 --height 1920 \
+  --steps 9 --seed 42 -q 8 --output cover.png</code></pre>
+  <h3>Draw Things — GUI 탐색용</h3>
+  <p>
+    무료 맥 네이티브 앱(App Store). FLUX.2·Z-Image·Qwen-Image 를 모두 지원하고 LoRA 학습도 된다.
+    Metal 최적화로 ComfyUI 보다 빠르다는 평이 많다. 프롬프트를 손으로 다듬으며 탐색할 때 적합하고,
+    자동화 파이프라인에는 mflux 쪽이 맞다.
+  </p>
+  <h3>ComfyUI — 복잡한 워크플로용</h3>
+  <p>
+    노드 기반 워크플로가 필요할 때(다단계 합성·커스텀 파이프라인)만 고려. 맥에서도 돌지만 MLX 네이티브가 아니라
+    같은 모델 기준 mflux·Draw Things 보다 느린 경우가 많다.
+  </p>
+</section>
+
+<section id="pipeline">
+  <h2 class="sec"><span class="no">06</span>파이프라인 관점 — 지금 쓰는 API 대비</h2>
+  <p>
+    social-flow 는 지금 gpt_image(OpenAI)·nanobanana(Gemini) API 로 이미지를 만든다. 로컬 전환의 손익은 명확하다.
+  </p>
+  <div class="table-scroll"><table>
+    <tr><th></th><th>로컬 (Z-Image Turbo 등)</th><th>API (gpt_image·nanobanana)</th></tr>
+    <tr><td>비용</td><td>0원 · 무제한</td><td>장당 과금</td></tr>
+    <tr><td>속도</td><td>1024² 2~3분대 (과부하 실측 기준)</td><td>수 초~수십 초</td></tr>
+    <tr><td>품질(사진풍 배경)</td><td>커버 배경으로 충분 (실측 확인)</td><td>상급</td></tr>
+    <tr><td>한글 텍스트</td><td>사실상 불가</td><td>gpt_image 는 가능</td></tr>
+    <tr><td>편집(img2img)</td><td>qwen-edit·flux2-edit 로 가능</td><td>성숙</td></tr>
+    <tr><td>프라이버시·오프라인</td><td>완전 로컬</td><td>외부 전송</td></tr>
+  </table></div>
+  <p>
+    결론은 대체가 아니라 보완이고, <b>이 분담은 조사 당일 플러그인에 채택·구현됐다</b>(사용자 결정 2026-08-12).
+    서버에 <code>image_local_generate</code> 툴이 supertonic 클라이언트와 같은 방식(mflux CLI 서브프로세스)으로
+    추가되어 텍스트 없는 이미지(points 배경·성장 루프 첨부·시안 탐색)의 기본 경로가 됐고,
+    글자가 들어가거나 품질 상향이 필요한 건(커버 배경=썸네일·b-roll 소스·브랜딩)만 gpt_image 로 간다.
+    빌드된 서버로 512×512 를 23초에 생성해 동작을 확인했다.
+  </p>
+</section>
+
+<section id="budget">
+  <h2 class="sec"><span class="no">07</span>디스크·메모리 예산</h2>
+  <ul class="plain">
+    <li><b>디스크</b> — 여유 150GB. Z-Image Turbo bf16 원본 저장소가 31GB 를 차지했다.
+      커뮤니티 사전 양자화 가중치(<code>filipstrand/Z-Image-Turbo-mflux-4bit</code>,
+      <code>Runpod/FLUX.2-klein-4B-mflux-4bit</code>, <code>OsaurusAI/Qwen-Image-mflux-4bit</code> 등)를 쓰면
+      모델당 4~12GB 로 줄어 서너 계열을 얹어도 부담이 없다. FLUX.2 dev fp16(64GB급)만 피하면 된다.</li>
+    <li><b>메모리</b> — 실측 피크 32~39GB. 128GB 에서 다른 세션과 겹쳐도 안전하다.
+      다만 생성 중 CPU·GPU 를 크게 쓰므로 영상 렌더(ffmpeg)나 다른 세션의 무거운 작업과 동시 실행은 피하는 게 좋다.</li>
+  </ul>
+</section>
+
+<section id="sources">
+  <h2 class="sec"><span class="no">08</span>근거 등급·출처</h2>
+  <div class="table-scroll"><table>
+    <tr><th>등급</th><th>내용</th></tr>
+    <tr><td><span class="badge green">실측</span></td>
+      <td>이 맥북에서 직접 측정 — §02 생성 시간·피크 메모리·다운로드 용량, §04 한글 렌더링, 설치 절차 전체.</td></tr>
+    <tr><td><span class="badge blue">1차 출처</span></td>
+      <td>HF 모델 카드·공식 발표 — 모델 크기·라이선스·스텝 수(Z-Image Turbo, FLUX.2 klein 4B/9B·dev), HF API 검색(Qwen-Image 계열 공개 목록, mflux 사전 양자화 repo).</td></tr>
+    <tr><td><span class="badge amber">2차 출처</span></td>
+      <td>블로그·리뷰 — Draw Things/ComfyUI 속도 비교, 타 기종 벤치마크. 참고만 하고 수치는 싣지 않았다.</td></tr>
+  </table></div>
+  <ul class="plain" style="font-size:14px;">
+    <li><a href="https://github.com/filipstrand/mflux">mflux (GitHub)</a> · <a href="https://pypi.org/project/mflux/">PyPI</a></li>
+    <li><a href="https://huggingface.co/Tongyi-MAI/Z-Image-Turbo">Z-Image-Turbo 모델 카드</a></li>
+    <li><a href="https://huggingface.co/black-forest-labs/FLUX.2-klein-4B">FLUX.2 klein 4B</a> · <a href="https://huggingface.co/black-forest-labs/FLUX.2-klein-9B">klein 9B</a> · <a href="https://huggingface.co/black-forest-labs/FLUX.2-dev">FLUX.2 dev</a></li>
+    <li><a href="https://huggingface.co/Qwen/Qwen-Image">Qwen-Image</a> · <a href="https://huggingface.co/Qwen/Qwen-Image-Edit-2511">Qwen-Image-Edit-2511</a></li>
+    <li><a href="https://drawthings.ai">Draw Things</a> · <a href="https://releases.drawthings.ai/p/introducing-qwen-image-support">Qwen Image 지원 발표</a></li>
+    <li>2차: <a href="https://www.heyuan110.com/posts/ai/2026-02-15-mac-mini-local-image-generation/">Mac Mini M4 ComfyUI vs Draw Things</a>, <a href="https://lilting.ch/en/articles/flux2-klein-apple-silicon">FLUX.2 Klein on Apple Silicon</a></li>
+  </ul>
+</section>
+
+<footer>
+  social-flow research · 2026-08-12 · 실측: MacBook Pro M4 Max 128GB / mflux 0.17.x / Z-Image Turbo 8bit
+</footer>
+
+</div>
+</body>
+</html>

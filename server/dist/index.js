@@ -6,7 +6,7 @@ import { config, listChannelDirs } from './config.js';
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
 import { enabledPlatforms } from './sns-client.js';
-const server = new Server({ name: 'social-flow', version: '0.4.1' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'social-flow', version: '0.8.0' }, { capabilities: { tools: {} } });
 // 플랫폼별 게시 툴은 자격증명 파일이 있는(기본 토큰 ∪ 채널 디렉토리) 플랫폼만
 // 노출한다 — 요청 시점 평가라 토큰 파일 추가가 서버 재시작 없이 반영된다.
 // 핸들러는 전부 유지되므로 숨은 툴을 직접 호출해도 명시적 토큰 부재 에러가 반환된다.
@@ -59,8 +59,10 @@ async function main() {
     console.error(`Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* tools will fail)'}, ` +
         `naver keys ${config.naverClientId && config.naverClientSecret ? 'set' : 'MISSING (naver_search will fail)'}, ` +
         `data.go.kr key ${config.dataGoKrApiKey ? 'set' : 'MISSING (datago_file_fetch/datago_api_call will fail — search/detail/download still work)'}, ` +
-        `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/tts_*/music_* generation tools will fail)'}, ` +
-        `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail)'}, ` +
+        `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail — tts_local_generate does not need it)'}, ` +
+        `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail — image_local_generate does not need it)'}, ` +
+        `local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : 'python3 (default — set SUPERTONIC_PYTHON for a virtualenv)'}, ` +
+        `local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : '~/.local/bin/mflux-generate-z-image-turbo (default — set MFLUX_ZIMAGE_BIN if elsewhere)'}, ` +
         `sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(',') : 'none'} (credential files found — others hidden from ListTools), ` +
         `sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(',')}]`).join(' ') : 'none (flat/default tokens only)'}`);
 }

@@ -36,7 +36,8 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Web
 
 ### 1. 검색 — 데이터셋 발굴
 
-`datago_search` 로 주제어를 검색한다. 요령:
+`datago_search` 로 주제어를 검색한다(인자는 다른 검색 툴과 같다 — `query`·`limit`·`page`).
+요령:
 
 - 첫 검색은 type 생략(API·FILE 동시) — totals 로 데이터 지형을 파악한다.
 - 검색어는 짧은 주제어부터("환율" → 82건), 안 좁혀지면 기관명·세부어를 병기

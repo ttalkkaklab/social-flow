@@ -25,6 +25,9 @@ Threads · Instagram · Facebook · YouTube 4개 게시 플랫폼의 작성 문�
    첫 3초. 여기서 승부가 안 나면 나머지는 읽히지 않는다.
 4. **골든타임 응대** — 게시 후 첫 60분의 댓글 응답 속도가 도달을 좌우한다
    (Buffer 190만 게시물 분석: 답글 시 참여도 Threads +42% / IG +21% / FB +9.5%).
+5. **AI 티 없는 한국어** — 번역투·상투구·조수 말투가 한 문장만 섞여도 광고로 읽히고
+   스크롤된다. 규칙은 `references/korean-style.md`, 판정은 `references/check-style.py`
+   가 한다. 나레이션·자막·카피·제목·댓글 문안 전부가 대상이다.
 
 ## 플랫폼 한눈에 보기
 
@@ -41,8 +44,30 @@ Threads · Instagram · Facebook · YouTube 4개 게시 플랫폼의 작성 문�
 상세 문법·카피 공식·안티패턴 체크리스트·영상 규격(세이프존·자막·길이)은
 `references/platform-playbook.md` 를 Read 한다 — 플랫폼별 작성 전에 반드시.
 
+## 문체 게이트
+
+한국어 텍스트를 쓰거나 고쳤으면 표면별로 검사기를 돌린다. 판정은 코드가 하고,
+문장은 사람·에이전트가 고친다.
+
+```bash
+PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
+python3 $PG/check-style.py --surface <표면> <파일>
+node $PG/extract-text.js ./storyboard/scenes.js <narration|subtitle|screen> | \
+  python3 $PG/check-style.py --surface <표면> -
+```
+
+표면 8종: `narration` `subtitle` `screen` `threads` `ig` `fb` `yt` `reply`.
+exit 0 통과 / 1 경고(S2 누적) / 2 불합격(S1) / 3 게이트 미실행(빈 입력·경로 오류).
+
+**S1 은 예외 없이 고친 뒤 재실행한다.** exit 3 도 통과가 아니다 — 경로를 고쳐
+다시 돌린다. 경로는 `${CLAUDE_PLUGIN_ROOT}` 기준으로 쓴다(produce·publish 는
+`data/<채널>/<주제>/` 에서 돌기 때문에 상대경로는 잡히지 않는다).
+
 ## Additional Resources
 
 ### Reference Files
 
 - **`references/platform-playbook.md`** — 플랫폼별 문법 상세, 카피 공식, 영상 규격, 안티패턴 체크리스트 (SoT)
+- **`references/korean-style.md`** — 한국어 문체 SoT: AI 티 패턴 표(T·D·C·A), 심각도, 표면별 적용, 빼기 전용 원칙
+- **`references/check-style.py`** — 문체 결정적 검사기 (표준 라이브러리만, `--surface`·`--json`·`--doc`·`--selftest`)
+- **`references/extract-text.js`** — scenes.js → 표면별 텍스트 추출 (narration·subtitle·screen, `window.SCENES` 전역 계약 대응)

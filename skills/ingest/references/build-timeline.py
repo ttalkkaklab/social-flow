@@ -56,7 +56,7 @@ def score_boundary(silence, scene_times):
     채택한 정책: 길이 기여분 + 화면 전환 가산점.
       - 1.5s 이상 쉬면 그것만으로 강한 경계 (말로만 단락 전환도 잡는다)
       - 0.9s 쉼 + 근처 화면 전환 = 강한 경계 (0.4 + 0.6 = 1.0)
-      - 화면 전환 없는 짧은 쉼은 약한 경계로만 남는다 (숨 고르기)
+      - 화면 전환 없는 짧은 쉼은 약한 경계로만 잡는다 (숨 고르기)
     """
     dur = silence["end"] - silence["start"]
     center = (silence["start"] + silence["end"]) / 2

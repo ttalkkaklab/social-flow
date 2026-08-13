@@ -29,6 +29,7 @@
     <li><a href="#upload">resumable 업로드 2단계</a></li>
     <li><a href="#fields">snippet · status 필드</a></li>
     <li><a href="#thumb">썸네일</a></li>
+    <li><a href="#captions">자막 트랙 — 영상과 따로 올린다</a></li>
     <li><a href="#quota">쿼터 — 2026년 개편</a></li>
     <li><a href="#shorts">쇼츠 분류</a></li>
     <li><a href="#impl">구현 대조표</a></li>
@@ -52,13 +53,28 @@ client_id=…&client_secret=…&refresh_token=…&grant_type=refresh_token
   <table>
     <thead><tr><th>스코프</th><th>가능해지는 것</th></tr></thead>
     <tbody>
-      <tr><td><code>youtube.upload</code></td><td>영상 업로드</td></tr>
+      <tr><td><code>youtube.upload</code></td><td>영상 업로드 — <code>youtube_publish</code></td></tr>
       <tr><td><code>youtube</code></td><td>업로드 + 채널 조회 + 썸네일</td></tr>
-      <tr><td><code>youtube.force-ssl</code></td><td>위 전부 + <strong>댓글 API</strong></td></tr>
+      <tr><td><code>youtube.readonly</code></td><td>채널·영상 조회 — <code>youtube_insights</code>의 통계부</td></tr>
+      <tr><td><code>yt-analytics.readonly</code></td><td>기간 지표(조회·시청·구독 증감) — <code>youtube_insights</code>의 Analytics부</td></tr>
+      <tr><td><code>youtube.force-ssl</code></td><td>위 전부 + <strong>자막 업로드</strong>(<code>captions.insert</code>) + <strong>댓글 API</strong> — <code>youtube_publish</code>의 <code>captionFilePath</code>, <code>sns_comment_inbox</code>/<code>sns_comment_reply</code></td></tr>
+      <tr><td><code>yt-analytics-monetary.readonly</code></td><td>수익 지표 — <code>includeRevenue: true</code></td></tr>
     </tbody>
   </table>
   </div>
-  <p>이 저장소의 토큰에는 <code>youtube.force-ssl</code>이 없어 <a href="meta-graph.html#comments">댓글 인박스에서 YouTube가 제외</a>된다.</p>
+  <div class="warn">
+    <strong>게시용으로 발급한 토큰에는 위쪽 하나(<code>youtube.upload</code>)뿐이다.</strong> 그런데 <code>force-ssl</code>은 이제 <strong>게시에도 필요하다</strong> — 이 파이프라인은 자막을 영상에 태우지 않고 따로 올리는데(§5), 그 호출이 업로드 스코프로는 거부된다. 옛 토큰으로 게시하면 영상은 올라가고 자막만 실패한다. 성장 루프(<code>/social-flow:grow-youtube</code>)도 나머지를 요구하므로 첫 호출에서 스코프 에러가 나는 것이 정상이며, 에러 본문에 재발급 안내가 실려 온다. 동의 플로우에서 체크박스를 하나씩 다 켜고 재발급한 뒤 <code>refresh_token</code>만 교체한다. 조회 스코프와 댓글 스코프는 별개라 <strong>한쪽만 막힐 수 있다</strong>.
+  </div>
+  <h3>성장 루프가 쓰는 다른 API 둘</h3>
+  <p><code>youtube_insights</code>는 Data API 하나로 끝나지 않는다. 채널 통계와 최근 업로드 목록은 Data API(<code>channels.list</code> → <code>playlistItems.list</code> → <code>videos.list</code>, 합쳐서 3유닛)에서 오지만, 기간 지표는 <strong>별도 서비스</strong>인 YouTube Analytics API에서 온다.</p>
+  <pre><code>GET https://youtubeanalytics.googleapis.com/v2/reports
+  ?ids=channel==MINE&startDate=…&endDate=…
+  &metrics=views,engagedViews,averageViewPercentage,subscribersGained,…
+  &dimensions=video&filters=video==id1,id2,…   # 영상별은 한 번에 묶어 받는다</code></pre>
+  <div class="warn">
+    <strong>Google Cloud Console에서 YouTube Analytics API를 따로 활성화해야 한다.</strong> Data API만 켜 두면 스코프가 맞아도 403이 난다. 그리고 <strong>Analytics 데이터는 2~3일 지연</strong>된다 — 어제·오늘 값이 비는 것은 장애가 아니므로 <code>days</code>를 7 이상으로 둔다. 응답의 <code>rows</code>가 비면 0이 아니라 빈 객체를 반환해 "지연"과 "진짜 0"을 구분한다.
+    <p style="margin-top:10px">Studio의 <strong>"How many chose to view"</strong>(시청 대 스와이프 이탈 비율)는 Analytics API 메트릭 목록에 <strong>대응 항목이 없다</strong>. 쇼츠 훅 판정은 <code>averageViewPercentage</code>로 대신하고, 스와이프 지표는 Studio에서 사람이 확인해야 한다. <a href="https://developers.google.com/youtube/analytics/metrics">메트릭 목록</a> · <a href="https://developers.google.com/youtube/analytics/reference/reports/query">reports.query</a></p>
+  </div>
 </section>
 
 <section id="upload">
@@ -120,8 +136,37 @@ Content-Type: image/jpeg | image/png
   </div>
 </section>
 
+<section id="captions">
+  <h2>5. 자막 트랙 — 영상과 따로 올린다</h2>
+  <p>자막을 영상에 태우지 않고 파일로 올리면 게시 후에도 자막만 교체할 수 있고, 시청자가 끄고 켤 수 있고, YouTube 자동 번역의 원본이 된다. 번인 자막은 오타 하나에 재인코딩과 재게시를 부른다.</p>
+  <pre><code>POST https://www.googleapis.com/upload/youtube/v3/captions?uploadType=multipart&amp;part=snippet
+Authorization: Bearer {access_token}
+Content-Type: multipart/related; boundary={boundary}
+
+--{boundary}
+Content-Type: application/json; charset=UTF-8
+
+{"snippet":{"videoId":"...","language":"ko","name":"","isDraft":false}}
+--{boundary}
+Content-Type: application/octet-stream
+
+&lt;SRT 바이트&gt;
+--{boundary}--</code></pre>
+  <ul>
+    <li><code>snippet.videoId</code>·<code>snippet.language</code>·<code>snippet.name</code>이 필수다. <code>name</code>은 트랙 표시명이라 <strong>빈 문자열이 기본 트랙</strong>이다.</li>
+    <li>최대 100MB. MIME은 <code>text/xml</code>·<code>application/octet-stream</code>·<code>*/*</code>를 받는다.</li>
+    <li>업로드 프로토콜은 Google 공통 규약을 따른다 — 메타데이터와 파일을 한 요청에 싣는 <code>uploadType=multipart</code>가 SRT 같은 작은 파일의 정석이다(영상은 <code>resumable</code>).</li>
+  </ul>
+  <div class="danger">
+    <strong>두 가지가 영상 업로드와 다르다.</strong> ① 스코프가 <code>youtube.force-ssl</code>(또는 <code>youtubepartner</code>)이다 — 게시용 <code>youtube.upload</code>로는 <strong>거부된다</strong>. 업로드만 켜 둔 옛 토큰으로 게시하면 영상은 올라가고 자막만 실패한다. ② 쿼터가 <strong>호출당 400유닛</strong>이다 — <code>videos.insert</code>의 1유닛과 400배 차이라, 회차당 한 번만 부른다.
+  </div>
+  <div class="ok">
+    <strong>순서 규칙은 썸네일과 같다.</strong> 자막 파일 검증(확장자·존재·크기)은 <strong>업로드 전에</strong> 하고, <code>captions.insert</code> 호출 실패는 전체를 실패로 만들지 않는다 — 영상은 이미 공개됐고 재업로드는 비멱등이라 <code>captionWarning</code>으로 낮춰 보고한다. 스코프 부족이 감지되면 경고에 재발급 절차를 실어 보낸다.
+  </div>
+</section>
+
 <section id="quota">
-  <h2>5. 쿼터 — 2026년 개편</h2>
+  <h2>6. 쿼터 — 2026년 개편</h2>
   <div class="danger">
     <strong>videos.insert의 쿼터 계산이 바뀌었다.</strong> 과거에는 기본 버킷 10,000유닛/일에서 호출당 약 1,600유닛을 소모해 <strong>하루 6건</strong>이 실질 상한이었다. 지금은 <code>videos.insert</code>와 <code>search.list</code>가 각자의 버킷으로 분리되어, <strong>videos.insert는 Video Uploads 버킷에서 호출당 1유닛(기본 일 100회)</strong>을 쓴다.
     <div class="table-scroll">
@@ -140,7 +185,7 @@ Content-Type: image/jpeg | image/png
 </section>
 
 <section id="shorts">
-  <h2>6. 쇼츠 분류</h2>
+  <h2>7. 쇼츠 분류</h2>
   <p>쇼츠로 만드는 별도 플래그는 없다. <strong>세로 비율(9:16) + 3분 이하</strong>면 YouTube가 자동 분류한다.</p>
   <ul>
     <li>제목은 키워드형이 유리하다 — 쇼츠는 제목 검색 노출 비중이 크다.</li>
@@ -149,7 +194,7 @@ Content-Type: image/jpeg | image/png
 </section>
 
 <section id="impl">
-  <h2>7. 구현 대조표</h2>
+  <h2>8. 구현 대조표</h2>
   <div class="table-scroll">
   <table>
     <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th></tr></thead>
@@ -158,9 +203,10 @@ Content-Type: image/jpeg | image/png
       <tr><td>영상 형식</td><td><code>video/*</code>, 256GB</td><td><code>.mp4</code>·<code>.mov</code>만 — 확장자에서 MIME 결정</td></tr>
       <tr><td><code>categoryId</code></td><td>필수</td><td>노출 · 기본 <code>22</code></td></tr>
       <tr><td>썸네일</td><td>별도 호출</td><td>업로드 전 검증 → 업로드 후 설정 → 실패는 경고로 강등</td></tr>
+      <tr><td>자막</td><td><code>captions.insert</code> (force-ssl · 400유닛)</td><td><strong>기본 동작</strong> — <code>captionFilePath</code>로 <code>.srt</code>를 받아 업로드 후 등록. 썸네일과 같은 순서 규칙(사전 검증 · 실패는 경고). 영상은 자막 없는 클린 마스터를 올린다</td></tr>
       <tr><td>대상 채널</td><td>토큰이 결정</td><td>설정으로 받지 않는다 — <code>sns_account_check</code>로 사전 확인</td></tr>
       <tr><td>재시도</td><td>—</td><td>없음 — 업로드는 비멱등이라 자동 재시도가 중복 영상을 만든다</td></tr>
-      <tr><td>결과</td><td><code>{ id }</code></td><td><code>videoId</code> + <code>permalink</code> + <code>thumbnailSet</code>/<code>thumbnailWarning</code></td></tr>
+      <tr><td>결과</td><td><code>{ id }</code></td><td><code>videoId</code> + <code>permalink</code> + <code>thumbnailSet</code>/<code>thumbnailWarning</code> + <code>captionSet</code>/<code>captionWarning</code></td></tr>
     </tbody>
   </table>
   </div>

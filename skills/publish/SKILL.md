@@ -40,13 +40,21 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp
 6. **링크는 본문이 아니라 댓글/답글로** — Threads 는 게시 성공 직후 응답 postId 를
    `replyToId` 로 넣은 링크 답글, FB 는 `facebook_comment` 첫 댓글.
    **링크 댓글까지 게시돼야 그 플랫폼의 게시가 완료된 것이다.**
+8. **영상과 자막은 따로 올린다** — 자막 파일을 받는 플랫폼(YouTube·Facebook)에는
+   자막 없는 클린 마스터(`video.mp4`)와 `subs.srt` 를 함께 준다. 번인본
+   (`video-sub.mp4`)은 **Instagram 에만** 쓴다 — IG 는 자막 파일을 받는 경로가 없어
+   화면에 태우는 것 말고 방법이 없다. 플랫폼마다 어느 파일이 가는지는 §2 표가 정본이며,
+   섞이면 YouTube 에 자막이 두 겹으로 박히거나 IG 에서 자막이 사라진다.
 
 ## 절차
 
 ### 0. 사전 점검 (세션당 1회)
 
 - `output/` 산출물 존재 + `storyboard.md` `status: produced` 확인 — 아니면
-  `/social-flow:produce` 부터 안내.
+  `/social-flow:produce` 부터 안내. 영상은 **세 파일이 다 있어야 한다** —
+  `output/video/video.mp4`(클린) · `video-sub.mp4`(번인) · `subs.srt`. 번인본이나
+  자막 파일이 없으면 옛 빌드다. `SUB`/`BURN` 을 끄고 만든 게 아닌지 확인하고,
+  아니면 `/social-flow:produce` 로 되돌려 다시 빌드한다(자막 없이 게시하지 않는다).
 - `sns_account_check` 를 **`channel: <채널slug>` 로 호출**해 이 채널의 플랫폼별
   토큰 상태를 점검 — **게시 계정이 어디인지 이 결과로 확인·보고한다**(계정은
   설정이 아니라 그 채널 토큰의 /me 로 결정). 점검 결과의 계정명이 채널 브랜드와
@@ -58,9 +66,32 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp
 
 ### 1. HITL 승인 게이트 (호스팅보다 먼저 — 미승인 콘텐츠를 공개 URL 에 올리지 않는다)
 
+승인 전에 문체 검사기를 표면별로 한 번 돌린다(Bash, LLM 콜 아님) — 게시 후에는
+IG 이미지·영상을 바꿀 수 없어 여기가 마지막 기회다.
+
+```bash
+CS=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py
+python3 "$CS" --selftest >/dev/null 2>&1 \
+  || echo "gate_exit=3 (검사기 없음·손상·규칙 레드 — 아래 결과는 전부 미검증)"
+for P in threads:output/threads/post.md ig:output/instagram/caption.md \
+         fb:output/facebook/post.md yt:output/youtube/meta.md; do
+  python3 $CS --surface ${P%%:*} ${P#*:}; echo "[${P%%:*}] gate_exit=$?"
+done
+# 출력을 줄이려고 | head 를 붙이지 않는다 — $? 가 그 명령의 것이 되어 FAIL 이 0 으로 보인다
+```
+
+exit 2(S1)면 게이트에 올리지 말고 `/social-flow:produce` 로 되돌려 고친다 — 여기서
+즉석으로 문장을 고치면 규칙 4에 걸린다. exit 1(경고)은 게이트 제시문에 그대로 적어
+사용자가 판단하게 한다. **출력 머리줄에 `인용면제 N` 이 있으면 그 N건을 제시문에
+따로 적는다** — 검사기가 출처의 진위를 모르는 채 판정에서 빼준 위반이다. 진짜 원문
+인용이면 그대로 게시하고, 우리가 쓴 문장에 따옴표만 씌운 것이면 produce 로 되돌린다. exit 3 은 게이트가 안 돈 것이다 — 경로를 고쳐 다시 돌리고,
+못 돌리면 "문체 미검증"을 제시문에 명시한다. 검사기 파일 자체가 없으면 python 이
+2를 내므로 위 존재 확인 줄로 구분한다.
+
 AskUserQuestion 으로 플랫폼별 최종본을 제시한다 — 본문/캡션 전문, 미디어 **로컬
-경로**(cover.jpg·video.mp4), 해시태그, Threads 답글·FB 첫 댓글 문안까지 전부,
-게시 예정 계정(계정 점검 결과). 선택지: [전체 게시 / 일부 플랫폼만 / 수정 후
+경로**(플랫폼마다 다르다: YT·FB 는 `video.mp4`+`subs.srt`, IG 는 `video-sub.mp4`,
+Threads 는 `cover.jpg`), 자막 큐 수, 해시태그, Threads 답글·FB 첫 댓글 문안까지 전부,
+게시 예정 계정(계정 점검 결과), 문체 검사 결과(표면별 exit·점수, 인용 면제 건수). 선택지: [전체 게시 / 일부 플랫폼만 / 수정 후
 재제시 / 중단]. **이 게이트 통과가 곧 실게시 승인이다.** 수정 요청이면 반영 후
 다시 게이트.
 
@@ -68,7 +99,19 @@ AskUserQuestion 으로 플랫폼별 최종본을 제시한다 — 본문/캡션 
 
 게시 툴의 `imageUrl`/`videoUrl` 은 **공개 접근 가능한 HTTPS URL** 이어야 한다 —
 플랫폼이 크롤하며 로컬 경로·인증 URL 불가 (YouTube 만 로컬 파일 업로드라 호스팅
-불요).
+불요). **자막 파일은 어느 플랫폼이든 로컬 경로 그대로 넘긴다** — 호스팅 대상이 아니다.
+
+플랫폼별로 올리는 파일이 다르다. 이 표가 정본이다.
+
+| 플랫폼 | 영상 | 자막 | 왜 |
+| --- | --- | --- | --- |
+| YouTube | `video.mp4` (로컬 경로) | `captionFilePath: subs.srt` | `captions.insert` 로 트랙 별도 업로드 — 게시 후 교체 가능, 자동 번역 원본 |
+| Facebook | `video.mp4` (공개 URL) | `captionFilePath: subs.srt` | `/{video_id}/captions` 엣지 |
+| Instagram | **`video-sub.mp4`** (공개 URL) | 없음 — 화면에 태워 나간다 | 컨테이너에 자막 파라미터가 없다 |
+| Threads | 커버 이미지만 | 해당 없음 | 이 파이프라인은 Threads 에 영상을 올리지 않는다 |
+
+호스팅 디렉토리에는 **IG 용 번인본과 FB 용 클린본이 둘 다** 필요하다. 파일명이 서로
+달라 한 디렉토리에 같이 두면 되고, 각각 `curl -sI` 로 200 을 확인한다.
 
 - 호스팅은 profile.md §4 에 지정된 방법을 쓴다. **미정이면 게시를 보류하고
   사용자에게 호스팅 방법을 묻는다.**
@@ -89,14 +132,37 @@ AskUserQuestion 으로 플랫폼별 최종본을 제시한다 — 본문/캡션 
 링크 대체(YouTube permalink 등)를 사용자에게 묻는다. 나머지 플랫폼 순서는 자유.
 
 1. **YouTube**: `youtube_publish` — `output/youtube/meta.md` 의 title/description,
-   `videoFilePath`=output/video/video.mp4, **`thumbnailFilePath`=cover.jpg 필수**
-   (미지정 시 임의 프레임이 썸네일이 된다). `thumbnailWarning` 이 오면 게시는
-   성공 — 경고 내용을 보고한다.
-2. **Instagram**: `instagram_publish` — `videoUrl`(공개 URL) + caption.
+   `videoFilePath`=output/video/**video.mp4**(클린본), **`thumbnailFilePath`=cover.jpg 필수**
+   (미지정 시 임의 프레임이 썸네일이 된다), **`captionFilePath`=output/video/subs.srt 필수**.
+   `thumbnailWarning`·`captionWarning` 이 오면 게시는 성공 — 경고 내용을 보고한다.
+   자막 업로드는 **`youtube.force-ssl` 스코프**가 필요하다(게시용 `youtube.upload` 로는
+   거부된다). 게시만 하던 토큰이면 첫 호출에서 스코프 에러가 정상이며, 그때는 영상이
+   이미 올라간 상태이므로 **재게시하지 말고** 토큰을 재발급해 자막만 따로 올린다
+   (`references/token-setup.md`). 쿼터도 다르다 — 업로드는 1유닛인데 자막은 400유닛이라
+   회차당 한 번만 부른다.
+   **`containsSyntheticMedia` 는 지정하지 않는다**(기본 true). 이 파이프라인은 Veo
+   영상·Lyria 음악을 쓰므로 AI 고지 대상이고, YouTube 는 고지가 노출·수익 자격에
+   영향을 주지 않는다고 명시한 반면 상습 미고지에는 라벨 강제·삭제·YPP 정지를
+   예고한다. 끄려면 사용자가 면제 사유를 확인해야 한다(면제 목록: 대본·제목·썸네일·
+   자막·아이디어 생성, 자기 목소리 복제, 사실적이지 않은 애니메이션, 색보정·필터).
+   **게시 성공 후 쇼츠 세로 표면 프레임 지정까지가 YouTube 게시다** —
+   `thumbnailFilePath` 가 바꾸는 것은 가로 표면(검색결과·공유 미리보기·임베드)뿐이고,
+   쇼츠 피드·채널 쇼츠 탭이 쓰는 세로 프레임(`oar*`)은 YouTube 네이티브 앱의 프레임
+   선택으로만 바뀐다(API·웹 불가 — 실측 2026-08-13, 미지정이면 영상 중간의 임의
+   프레임이 쇼츠 첫 화면에 노출된다). 절차는 `references/shorts-surface-adb.md`
+   (채널 전용 AVD + adb, 영상당 ~60초), 판정은
+   `i.ytimg.com/vi/<videoId>/oardefault.jpg` **HTTP 200** 하나뿐이다. 에뮬레이터
+   로그인 등 사용자 개입이 필요해 당장 못 하면 videoId 와 보류 사유를 publish-log
+   미결 사항에 적어 둔다.
+2. **Instagram**: `instagram_publish` — `videoUrl` 은 **번인본(video-sub.mp4)의 공개
+   URL** + caption. 여기만 자막이 화면에 박힌 영상이다.
 3. **Threads**: `threads_publish` — 커버 이미지 본문 게시 → 응답 postId 를
    `replyToId` 로 **링크 답글 즉시 게시** (승인분 문안 그대로).
-4. **Facebook**: `facebook_publish`(videoUrl + 본문) → 응답 postId 로
-   `facebook_comment` **첫 댓글(원문/관련 링크) 즉시 게시**.
+4. **Facebook**: `facebook_publish` — `videoUrl` 은 **클린본(video.mp4)의 공개 URL**,
+   `captionFilePath`=output/video/subs.srt(로컬 경로) + 본문 → 응답 postId 로
+   `facebook_comment` **첫 댓글(원문/관련 링크) 즉시 게시**. `captionWarning` 이 오면
+   게시는 유효하다 — FB 는 영상을 비동기로 처리하므로 처리 중 상태에 걸렸을 수 있다.
+   **재게시하지 말고** 잠시 뒤 자막만 다시 올린다(응답의 postId 가 곧 video_id 다).
 
 실패 처리: 에러를 그대로 보고하고 **같은 호출을 맹목 재시도하지 않는다**(게시
 API 비멱등 — 타임아웃 후에는 permalink/최근 미디어 조회로 중복 여부 먼저 확인).
@@ -104,6 +170,14 @@ API 비멱등 — 타임아웃 후에는 permalink/최근 미디어 조회로 �
 수동 처리를 안내한다.
 
 ### 4. 기록·마무리
+
+게시 후 댓글에 답할 때(`sns_comment_reply`)도 문안을 먼저 검사한다. 답글은 사람 대
+사람의 대화라 AI 티가 가장 빨리 들킨다 — 골든타임 응대라고 검사를 건너뛰지 않는다.
+
+```bash
+printf '%s\n' "$답글문안" | \
+  python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py --surface reply -
+```
 
 - `data/<채널>/<주제>/output/publish-log.md` 에 기록: 일시·플랫폼·게시 id·
   permalink·캡션 요약·승인자 결정 표.
@@ -115,3 +189,4 @@ API 비멱등 — 타임아웃 후에는 permalink/최근 미디어 조회로 �
 ### Reference Files
 
 - **`references/token-setup.md`** — 플랫폼별 자격증명 발급·파일 규약·갱신 절차 (Threads/IG 60일 · FB 무기한 · YouTube OAuth)
+- **`references/shorts-surface-adb.md`** — YouTube 쇼츠 세로 표면(`oar*`) 프레임 지정: 채널 전용 AVD + adb 절차·함정·oardefault 판정

@@ -5,6 +5,8 @@ import * as music from './music-client.js';
 import * as naver from './naver-client.js';
 import * as serp from './serp-client.js';
 import * as sns from './sns-client.js';
+import * as supertonic from './supertonic-client.js';
+import * as zimage from './zimage-client.js';
 import * as tts from './tts-client.js';
 import * as video from './video-client.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
@@ -68,49 +70,120 @@ function tryParseObject(body: string): Record<string, unknown> | undefined {
   }
 }
 
-/** Zod 파싱 실패를 모델이 교정 가능한 메시지로 변환 */
+/**
+ * Zod 파싱 실패를 모델이 교정 가능한 메시지로 변환한다.
+ *
+ * 스키마에 없는 최상위 인자는 **거절한다**. zod 의 기본 object 는 미지의 키를
+ * 조용히 벗겨내는데, 그 침묵이 정확히 이 서버가 없애려는 실패 모드다 — 예컨대
+ * 네이버 공식 문서를 읽은 모델이 `filter`(우리 툴에서는 `imageSize`)를 그대로
+ * 보내면, 필터가 걸리지 않은 결과를 받고도 걸렸다고 믿는다. 스키마마다
+ * `.strict()` 를 다는 대신 여기 한 곳에서 잡아 새 스키마가 규약을 빠뜨릴 수 없게
+ * 한다.
+ */
 function parseArgs<T extends z.ZodTypeAny>(schema: T, args: unknown): z.infer<T> {
   const parsed = schema.safeParse(args);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ');
     throw new Error(`Invalid arguments — ${issues}`);
   }
+  const known = knownKeys(schema);
+  if (known && args && typeof args === 'object' && !Array.isArray(args)) {
+    const unknown = Object.keys(args as Record<string, unknown>).filter((k) => !known.has(k));
+    if (unknown.length > 0) {
+      throw new Error(
+        `Invalid arguments — 알 수 없는 인자: ${unknown.join(', ')}. ` +
+          `이 툴이 받는 인자: ${[...known].join(', ')}. ` +
+          '인자를 무시하고 진행하면 걸리지 않은 필터를 걸렸다고 오해하게 되므로 거절한다.',
+      );
+    }
+  }
   return parsed.data;
+}
+
+/** 스키마의 최상위 키 집합 — object 가 아니면 undefined(검사 생략) */
+function knownKeys(schema: z.ZodTypeAny): Set<string> | undefined {
+  const def = (schema as { _def?: { typeName?: string; shape?: () => Record<string, unknown> } })._def;
+  if (def?.typeName !== 'ZodObject' || typeof def.shape !== 'function') return undefined;
+  return new Set(Object.keys(def.shape()));
 }
 
 // ── 조사 스키마 ──────────────────────────────────────────────────
 
+/**
+ * 검색 툴 공통 인자 — 이름을 하나로 묶어 두면 모델이 툴을 갈아탈 때 인자를
+ * 다시 배우지 않는다. 검색어는 query, 결과 수는 limit, 페이지는 page 다.
+ * (백엔드 API 의 q/display/num/start 로의 환산은 각 클라이언트가 맡는다.)
+ */
+const searchQuery = z.string().min(1).max(300);
+const searchPage = z.number().int().min(1).max(5).optional();
+const countryCode = z.string().regex(/^[a-z]{2}$/i, 'must be a 2-letter country code, e.g. kr, us').optional();
+const langCode = z.string().min(2).max(7).optional();
+
 const serpWebSchema = z.object({
-  q: z.string().min(1).max(300),
-  gl: z.string().regex(/^[a-z]{2}$/i, 'must be a 2-letter country code, e.g. kr, us').optional(),
-  hl: z.string().min(2).max(7).optional(),
+  query: searchQuery,
+  gl: countryCode,
+  hl: langCode,
   location: z.string().max(120).optional(),
-  num: z.number().int().min(1).max(20).optional(),
-  page: z.number().int().min(1).max(5).optional(),
+  // 이 엔진은 한 페이지가 10건 고정이다(num 이 구글로 전달되지 않는다 — 실측).
+  // 20 을 받아 두면 지킬 수 없는 약속이 되므로 상한을 실제 페이지 크기에 맞춘다
+  limit: z.number().int().min(1).max(10).optional(),
+  page: searchPage,
   recency: z.enum(['hour', 'day', 'week', 'month', 'year']).optional(),
 });
 
 const serpNewsSchema = z.object({
-  q: z.string().min(1).max(300),
-  gl: z.string().regex(/^[a-z]{2}$/i, 'must be a 2-letter country code, e.g. kr, us').optional(),
-  hl: z.string().min(2).max(7).optional(),
-  max_results: z.number().int().min(1).max(20).optional(),
+  query: searchQuery,
+  gl: countryCode,
+  hl: langCode,
+  limit: z.number().int().min(1).max(serp.SERP_NEWS_MAX_LIMIT).optional(),
 });
 
 const serpNaverSchema = z.object({
-  query: z.string().min(1).max(300),
-  where: z.enum(['web', 'news']).optional(),
-  page: z.number().int().min(1).max(5).optional(),
-  sort_by: z.enum(['relevance', 'latest']).optional(),
-  max_results: z.number().int().min(1).max(20).optional(),
+  query: searchQuery,
+  where: z.enum(['web', 'news', 'image', 'video']).optional(),
+  page: searchPage,
+  sort: z.enum(['relevance', 'latest', 'oldest']).optional(),
+  period: z.enum(serp.SERP_NAVER_PERIODS).optional(),
+  limit: z.number().int().min(1).max(serp.SERP_NAVER_MAX_LIMIT).optional(),
+});
+
+const serpImageSchema = z.object({
+  query: searchQuery,
+  gl: countryCode,
+  hl: langCode,
+  limit: z.number().int().min(1).max(serp.SERP_IMAGE_MAX_LIMIT).optional(),
+  page: searchPage,
+  size: z.enum(serp.IMAGE_SIZES).optional(),
+  aspect: z.enum(serp.IMAGE_ASPECTS).optional(),
+  imageType: z.enum(serp.IMAGE_TYPES).optional(),
+  license: z.enum(serp.IMAGE_LICENSES).optional(),
+  color: z
+    .enum(['bw', 'trans', 'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'white', 'gray', 'black', 'brown'])
+    .optional(),
+  safe: z.boolean().optional(),
 });
 
 const naverSearchSchema = z.object({
-  query: z.string().min(1).max(300),
-  type: z.enum(['news', 'blog', 'web', 'cafe']).optional(),
-  display: z.number().int().min(1).max(30).optional(),
-  start: z.number().int().min(1).max(1000).optional(),
-  sort: z.enum(['sim', 'date']).optional(),
+  query: searchQuery,
+  type: z
+    .enum(naver.NAVER_SEARCH_TYPES as [string, ...string[]], {
+      // 종료된 API 안내를 여기 실어야 모델에게 도달한다. 클라이언트의 같은 안내는
+      // zod 가 먼저 자르므로 실행되지 않는다 — 네이버 공식 문서를 읽고 type:"book"
+      // 을 보내는 것이 가장 흔한 오호출이라, 그 순간 왜 없는지를 알려줘야 한다.
+      errorMap: () => ({
+        message:
+          `사용 가능: ${naver.NAVER_SEARCH_TYPES.join(' | ')}. ` +
+          'book(책)·doc(전문자료)·shop(쇼핑)·movie(영화)는 네이버가 종료한 API 라 ' +
+          '공식 문서에 남아 있어도 호출하면 404 다 — 재시도 대신 serp_web_search 로 대체할 것.',
+      }),
+    })
+    .optional(),
+  limit: z.number().int().min(1).max(30).optional(),
+  // page 는 항목 오프셋이 아니라 페이지다 — 클라이언트가 (page-1)*limit+1 로
+  // 환산하며, API start 상한 1000 초과는 환산 후 거절한다(limit 에 따라 달라짐)
+  page: z.number().int().min(1).max(1000).optional(),
+  sort: z.enum(naver.NAVER_SORTS as [string, ...string[]]).optional(),
+  imageSize: z.enum(naver.NAVER_IMAGE_FILTERS).optional(),
 });
 
 // ── 공공데이터포털 스키마 ────────────────────────────────────────
@@ -118,10 +191,10 @@ const naverSearchSchema = z.object({
 const datagoTypeSchema = z.enum(['API', 'FILE']);
 
 const datagoSearchSchema = z.object({
-  keyword: z.string().min(1).max(100),
+  query: z.string().min(1).max(100),
   type: datagoTypeSchema.optional(),
   page: z.number().int().min(1).max(50).optional(),
-  perPage: z.number().int().min(1).max(20).optional(),
+  limit: z.number().int().min(1).max(20).optional(),
 });
 
 const datagoDetailSchema = z.object({
@@ -142,7 +215,7 @@ const datagoFileFetchSchema = z.object({
   publicDataPk: z.string().regex(/^\d+$/),
   uddi: z.string().min(1).max(200),
   page: z.number().int().min(1).max(100_000).optional(),
-  perPage: z.number().int().min(1).max(50).optional(),
+  limit: z.number().int().min(1).max(50).optional(),
 });
 
 const datagoApiCallSchema = z.object({
@@ -220,6 +293,11 @@ const facebookPublishSchema = z
     caption: z.string().min(1).max(5000),
     imageUrls: z.array(z.string().url()).min(1).max(10).optional(),
     videoUrl: z.string().url().optional(),
+    captionFilePath: z.string().min(1).optional(),
+    captionLocale: z
+      .string()
+      .regex(/^[a-z]{2}_[A-Z]{2}$/, 'captionLocale must look like ko_KR / en_US / vi_VN')
+      .optional(),
     linkUrl: z.string().url().optional(),
     channel: channelSlugSchema,
   })
@@ -229,6 +307,9 @@ const facebookPublishSchema = z
     if (v.imageUrls && v.videoUrl) issue('videoUrl', 'imageUrls and videoUrl are mutually exclusive');
     if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue('videoUrl', 'videoUrl must be a .mp4/.mov URL');
     if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue('linkUrl', 'linkUrl is for text-only posts (no media)');
+    // 자막은 영상에만 붙는다 — 이미지·텍스트 게시에 딸려 오면 조용히 버려지므로 여기서 막는다
+    if (v.captionFilePath && !v.videoUrl) issue('captionFilePath', 'captionFilePath requires videoUrl');
+    if (v.captionLocale && !v.captionFilePath) issue('captionLocale', 'captionLocale requires captionFilePath');
   });
 
 const facebookCommentSchema = z.object({
@@ -246,21 +327,35 @@ const youtubePublishSchema = z.object({
     .regex(/^[^<>]*$/, 'YouTube rejects angle brackets in titles'),
   caption: z.string().min(1).max(5000),
   privacyStatus: z.enum(['public', 'unlisted', 'private']).optional(),
-  thumbnailFilePath: z.string().min(1).optional(),
+  // 썸네일은 필수다 — 미지정 업로드는 임의 프레임이 커버가 되고, 게시 후에는
+  // 쇼츠 세로 표면을 API 로 되돌릴 수 없다(2026-08-13 사용자 지시로 강제).
+  thumbnailFilePath: z.string().min(1),
+  captionFilePath: z.string().min(1).optional(),
+  captionLanguage: z
+    .string()
+    .regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, 'captionLanguage is a BCP-47 tag, e.g. ko / en / vi / zh-Hant')
+    .optional(),
   categoryId: z
     .string()
     .regex(/^\d{1,3}$/, 'categoryId is a numeric YouTube category id, e.g. 22 (People & Blogs)')
     .optional(),
   madeForKids: z.boolean().optional(),
+  containsSyntheticMedia: z.boolean().optional(),
   channel: channelSlugSchema,
 });
 
 // ── 받은 댓글 관리 스키마 (인박스는 읽기 전용, 답글·숨김은 즉시 공개) ─────
 
-const commentPlatform = z.enum(['THREADS', 'INSTAGRAM', 'FACEBOOK']);
+const commentPlatform = z.enum(['THREADS', 'INSTAGRAM', 'FACEBOOK', 'YOUTUBE']);
+
+/**
+ * 숨김·좋아요 대상 플랫폼 — YouTube 는 제외한다. API 가 주는 것은 의미가 다른
+ * 검토 보류/거부(setModerationStatus)뿐이라 "되돌릴 수 있는 숨김"으로 매핑할 수 없다.
+ */
+const moderatePlatform = z.enum(['THREADS', 'INSTAGRAM', 'FACEBOOK']);
 
 /** 플랫폼별 답글 길이 상한 — 게시 본문 상한과 같다(플랫폼 하드 리밋). */
-const REPLY_MAX_CHARS = { THREADS: 500, INSTAGRAM: 2200, FACEBOOK: 8000 } as const;
+const REPLY_MAX_CHARS = { THREADS: 500, INSTAGRAM: 2200, FACEBOOK: 8000, YOUTUBE: 10_000 } as const;
 
 const commentInboxSchema = z.object({
   platforms: z.array(commentPlatform).min(1).optional(),
@@ -293,13 +388,47 @@ const commentReplySchema = z
   });
 
 const commentModerateSchema = z.object({
-  platform: commentPlatform,
+  platform: moderatePlatform,
   commentId: z.string().min(1),
   action: z.enum(['hide', 'unhide', 'like', 'unlike']),
   channel: channelSlugSchema,
 });
 
 const accountCheckSchema = z.object({
+  channel: channelSlugSchema,
+});
+
+// ── Threads 성장 조회 스키마 (읽기 전용) ─────────────────────────
+
+const threadsInsightsSchema = z.object({
+  days: z.number().int().min(1).max(90).optional(),
+  postLimit: z.number().int().min(0).max(25).optional(),
+  channel: channelSlugSchema,
+});
+
+const threadsSearchSchema = z.object({
+  query: z.string().min(1).max(200),
+  searchType: z.enum(['TOP', 'RECENT']).optional(),
+  searchMode: z.enum(['KEYWORD', 'TAG']).optional(),
+  sinceHours: z.number().min(0.5).max(720).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  channel: channelSlugSchema,
+});
+
+// ── Instagram 성장 조회 스키마 (읽기 전용) ───────────────────────
+
+const instagramInsightsSchema = z.object({
+  days: z.number().int().min(1).max(90).optional(),
+  mediaLimit: z.number().int().min(0).max(25).optional(),
+  channel: channelSlugSchema,
+});
+
+// ── YouTube 성장 조회 스키마 (읽기 전용) ─────────────────────────
+
+const youtubeInsightsSchema = z.object({
+  days: z.number().int().min(1).max(365).optional(),
+  videoLimit: z.number().int().min(0).max(50).optional(),
+  includeRevenue: z.boolean().optional(),
   channel: channelSlugSchema,
 });
 
@@ -318,8 +447,12 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const result = await serp.naverSearch(parseArgs(serpNaverSchema, args));
     return text(result.text, result.isError);
   },
+  serp_image_search: async (args) => {
+    const result = await serp.imageSearch(parseArgs(serpImageSchema, args));
+    return text(result.text, result.isError);
+  },
   naver_search: async (args) => {
-    const result = await naver.naverSearch(parseArgs(naverSearchSchema, args));
+    const result = await naver.naverSearch(parseArgs(naverSearchSchema, args) as naver.NaverSearchInput);
     return text(result.text, result.isError);
   },
 
@@ -382,6 +515,19 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     }
     return imageResult(summary, result.base64, result.mimeType);
   },
+  // 로컬 생성(Z-Image Turbo) — 서브프로세스로 온디바이스 실행. 키·네트워크·과금 없음.
+  // gpt_image 와 달리 base64 블록을 싣지 않는다 — 이 툴은 항상 로컬 파일을 쓰므로
+  // 호출자는 경로로 읽으면 되고, 9:16 PNG 를 base64 로 반향하면 컨텍스트만 태운다.
+  image_local_generate: async (args) => {
+    const request = parseArgs(zimage.zimageGenerateSchema, args);
+    const result = await zimage.generateLocalImage(request);
+    if (!result.success) return text(`Local image generation failed: ${result.error}`, true);
+    return text(
+      `Image generated locally!\n\nFile: ${result.imagePath}\nEngine: Z-Image Turbo via mflux (on-device)\n` +
+        `Size: ${result.width}x${result.height}\nSteps: ${result.steps}\nSeed: ${result.seed ?? 'random'}\n` +
+        `Quantization: ${result.quantize}-bit\nGeneration time: ${result.elapsedSeconds}s`,
+    );
+  },
 
   // ── 영상 생성 (Veo 3.1) — mp4 로컬 저장 후 경로·메타 텍스트 반환 ──
   veo_text2video: async (args) => {
@@ -437,19 +583,37 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
       `Multi-speaker audio generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\nSpeakers:\n${speakerInfo}\nScript length: ${request.script.length} chars`,
     );
   },
+  // 로컬 합성(Supertonic) — 서브프로세스로 온디바이스 실행. 키·네트워크·쿼터 없음.
+  tts_local_generate: async (args) => {
+    const request = parseArgs(supertonic.supertonicGenerateSchema, args);
+    const result = await supertonic.generateLocalSpeech(request);
+    if (!result.success) return text(`Local TTS generation failed: ${result.error}`, true);
+    return text(
+      `Audio generated locally!\n\nFile: ${result.audioPath}\nEngine: Supertonic 3 (on-device)\n` +
+        `Voice: ${result.voice}\nLanguage: ${result.lang}\nSpeed: ${request.speed}\n` +
+        `Duration: ${result.durationSeconds}s\nSample rate: ${result.sampleRate} Hz\n` +
+        `Synthesis time: ${result.elapsedSeconds}s\nText length: ${request.text.length} chars`,
+    );
+  },
   tts_list_voices: async () => {
     const voiceList = Object.entries(tts.TTS_VOICES)
       .map(([voice, characteristic]) => `  - ${voice}: ${characteristic}`)
       .join('\n');
     return text(
-      `Available TTS Voices (${tts.TTS_VOICE_NAMES.length} voices):\n\n${voiceList}\n\n` +
+      `Gemini TTS — ${tts.TTS_VOICE_NAMES.length} voices (tts_generate / tts_multi_speaker):\n\n${voiceList}\n\n` +
         `Tips for choosing a voice:\n` +
         `- For professional/business: Kore, Charon, Rasalgethi, Alnilam\n` +
         `- For friendly/casual: Achird, Puck, Zubenelgenubi, Sulafat\n` +
         `- For calm/gentle: Achernar, Vindemiatrix, Umbriel\n` +
         `- For energetic/lively: Fenrir, Sadachbia, Laomedeia\n` +
         `- For clear narration: Iapetus, Erinome, Schedar\n\n` +
-        `채널 프로파일(data/<slug>/profile.md)에 TTS 보이스가 지정돼 있으면 그 값을 그대로 쓸 것 — ` +
+        `Supertonic 3 — ${supertonic.SUPERTONIC_VOICE_NAMES.length} voices, on-device (tts_local_generate):\n\n` +
+        `  ${supertonic.SUPERTONIC_VOICE_NAMES.join(', ')}\n` +
+        `  F1–F5 는 여성, M1–M5 는 남성이라는 것 외에 공급사가 공개한 성격 라벨은 없다.\n` +
+        `  들어보고 고를 것 — 같은 문장을 두세 개 보이스로 뽑아 비교하면 된다.\n\n` +
+        `엔진 선택: 나레이션 본문·긴 대본은 tts_local_generate(비용 0, 실시간 6.3배), ` +
+        `연기가 필요한 짧은 컷은 tts_generate(stylePrompt 가 있는 쪽은 여기뿐).\n` +
+        `채널 프로파일(data/<slug>/profile.md)에 보이스가 지정돼 있으면 그 값을 그대로 쓸 것 — ` +
         `회차마다 목소리가 바뀌면 채널 정체성이 깨진다.`,
     );
   },
@@ -541,7 +705,13 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     return fromApi(
       await sns.publishFacebook(
         input.videoUrl
-          ? { caption: input.caption, videoUrl: input.videoUrl, channel: input.channel }
+          ? {
+              caption: input.caption,
+              videoUrl: input.videoUrl,
+              captionFilePath: input.captionFilePath,
+              captionLocale: input.captionLocale,
+              channel: input.channel,
+            }
           : { caption: input.caption, imageUrls: input.imageUrls, linkUrl: input.linkUrl, channel: input.channel },
       ),
       SNS_PUBLISHED_NOTE,
@@ -560,12 +730,25 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         description: input.caption,
         privacyStatus: input.privacyStatus,
         thumbnailFilePath: input.thumbnailFilePath,
+        captionFilePath: input.captionFilePath,
+        captionLanguage: input.captionLanguage,
         categoryId: input.categoryId,
         madeForKids: input.madeForKids,
+        containsSyntheticMedia: input.containsSyntheticMedia,
         channel: input.channel,
       }),
       SNS_PUBLISHED_NOTE,
     );
+  },
+  youtube_insights: async (args) => {
+    const input = parseArgs(youtubeInsightsSchema, args);
+    return fromApi(await sns.youtubeInsights(input));
+  },
+
+  // ── Instagram 성장 조회 (읽기 전용 — grow-instagram 스킬이 틱마다 호출) ──
+  instagram_insights: async (args) => {
+    const input = parseArgs(instagramInsightsSchema, args);
+    return fromApi(await sns.instagramInsights(input));
   },
   sns_account_check: async (args) => {
     const input = parseArgs(accountCheckSchema, args);
@@ -584,5 +767,15 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   sns_comment_moderate: async (args) => {
     const input = parseArgs(commentModerateSchema, args);
     return fromApi(await sns.moderateComment(input), '모더레이션 반영 완료 — 이미 플랫폼에 적용된 상태다.');
+  },
+
+  // ── Threads 성장 조회 (읽기 전용 — grow-threads 스킬이 틱마다 호출) ──
+  threads_insights: async (args) => {
+    const input = parseArgs(threadsInsightsSchema, args);
+    return fromApi(await sns.threadsInsights(input));
+  },
+  threads_search: async (args) => {
+    const input = parseArgs(threadsSearchSchema, args);
+    return fromApi(await sns.threadsKeywordSearch(input));
   },
 };

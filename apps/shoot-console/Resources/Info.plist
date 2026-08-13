@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>ShootConsole</string>
+	<key>CFBundleDisplayName</key>
+	<string>촬영 콘솔</string>
+	<key>CFBundleIdentifier</key>
+	<string>app.socialflow.shootconsole</string>
+	<key>CFBundleExecutable</key>
+	<string>ShootConsole</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<!-- screencapture -g 가 이 앱 책임으로 마이크를 잡는다. 이 키가 없으면
+	     권한을 묻지 않고 프로세스가 그냥 죽는다. 화면 기록은 대응 키가 없고
+	     시스템이 알아서 묻는다. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>대본을 보며 화면을 녹화할 때 나레이션 음성을 함께 담습니다.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>마이크 입력 볼륨을 확인하고 맞추는 데 씁니다.</string>
+</dict>
+</plist>
