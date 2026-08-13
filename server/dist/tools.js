@@ -1,9 +1,13 @@
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
+import { DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
 import { DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, TTS_VOICE_NAMES, VALID_TTS_MODELS } from './tts-client.js';
+import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MIN_ZIMAGE_DIMENSION, ZIMAGE_DIMENSION_STEP, ZIMAGE_QUANTIZE_OPTIONS, } from './zimage-client.js';
 /**
- * 툴 표면 정의 (31종) — 조사 4종 + 공공데이터 5종 +
- * 생성 13종(이미지 2 + 영상 4 + 음성 3 + 음악 4) +
- * 플랫폼별 게시 5종 + 받은 댓글 3종 + 계정 점검 1종.
+ * 툴 표면 정의 (38종) — 조사 5종 + 공공데이터 5종 +
+ * 생성 15종(이미지 3 + 영상 4 + 음성 4 + 음악 4) +
+ * 플랫폼별 게시 5종 + 받은 댓글 3종 + 계정 점검 1종 +
+ * 성장 조회 4종(Threads 인사이트·키워드 검색 · YouTube 인사이트 · Instagram
+ * 인사이트 — 각 grow-* 스킬 전용 읽기 툴).
  *
  * 게시 툴 description 은 HITL 계약을 내장한다 — 이 서버에는 검토 게이트가 없어
  * 호출 = 즉시 공개 게시이므로, 사용자 승인 없이는 절대 호출하지 않도록 명시한다.
@@ -85,6 +89,12 @@ const SNS_CHANNEL_PROPERTY = {
 };
 const SERP_QUOTA_LINE = '검색 1회 = SerpApi 크레딧 1건(무료 250회/월) — 동일 검색 반복 금지. 한국어 소재 리서치는 쿼터가 큰 naver_search(Naver Open API, 일 25,000회)를 우선 검토할 것.';
 /**
+ * 검색 툴군의 인자 이름은 전부 같다 — 툴을 갈아탈 때 인자를 다시 배우지 않도록
+ * 설명에도 명시한다. 백엔드 API 의 q/display/num/start 로의 환산은 서버가 맡는다.
+ */
+const SEARCH_ARG_LINE = '검색 툴 공통 인자: query(검색어)·limit(결과 수)·page(페이지). ' +
+    '엔진이 준 것보다 적게 돌려줬으면 응답 note 에 그 사실이 실린다 — 잘린 구간은 page 를 넘겨도 닿지 않으니 note 가 있으면 읽을 것.';
+/**
  * MCP 동작 힌트 프리셋 (readOnly/destructive/idempotent/openWorld).
  *
  * 클라이언트가 "이 호출에 사용자 확인을 받아야 하나"를 판단하는 유일한 기계 판독
@@ -100,6 +110,8 @@ const HINT = {
     local: { readOnlyHint: true, openWorldHint: false },
     /** 로컬 파일 생성 — 기존 상태를 파괴하진 않지만 결과가 비결정론적이라 멱등도 아니다 */
     generate: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    /** 온디바이스 생성 — generate 와 같되 네트워크를 타지 않는다(로컬 모델) */
+    generateLocal: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     /** 호출 즉시 외부 공개 · 재시도 = 중복 게시 */
     publish: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     /** 외부 상태 설정 — 즉시 반영되지만 반복해도 결과가 같다 */
@@ -131,8 +143,30 @@ const YOUTUBE_PUBLISH_OUTPUT = {
             type: 'string',
             description: '썸네일 설정만 실패했을 때의 사유. 영상 업로드는 성공한 상태이므로 재업로드 금지 — 이 툴만 다시 부르지 말고 YouTube Studio 에서 설정할 것',
         },
+        captionSet: { type: 'boolean', description: 'captionFilePath 를 준 경우에만 — 자막 트랙 업로드 성공 여부' },
+        captionWarning: {
+            type: 'string',
+            description: '자막 업로드만 실패했을 때의 사유(스코프 부족이 가장 흔하다 — captions.insert 는 youtube.force-ssl 이 필요하다). 영상 업로드는 성공한 상태이므로 재업로드 금지 — 토큰을 재발급하거나 YouTube Studio 에서 자막만 올릴 것',
+        },
     },
     required: ['platform', 'videoId', 'permalink'],
+};
+const FACEBOOK_PUBLISH_OUTPUT = {
+    type: 'object',
+    properties: {
+        platform: PLATFORM_PROPERTY,
+        postId: {
+            type: 'string',
+            description: 'Facebook 게시물 id — facebook_comment 의 postId 로 그대로 넘긴다. 영상 게시일 때는 이 값이 곧 video_id 다',
+        },
+        permalink: PERMALINK_PROPERTY,
+        captionSet: { type: 'boolean', description: 'captionFilePath 를 준 경우에만 — 자막 파일 업로드 성공 여부' },
+        captionWarning: {
+            type: 'string',
+            description: '자막 업로드만 실패했을 때의 사유. 게시는 성공한 상태이므로 재게시 금지 — 영상이 아직 처리 중이라 실패했을 수 있으니 잠시 뒤 자막만 다시 올릴 것',
+        },
+    },
+    required: ['platform', 'postId'],
 };
 const ACCOUNT_CHECK_OUTPUT = {
     type: 'object',
@@ -164,12 +198,16 @@ const COMMENT_INBOX_OUTPUT = {
 };
 const COMMENT_REPLY_OUTPUT = {
     type: 'object',
-    description: '답글 id 의 키 이름이 플랫폼마다 다르다 — THREADS=postId · FACEBOOK=commentId · INSTAGRAM=replyId',
+    description: '답글 id 의 키 이름이 플랫폼마다 다르다 — THREADS=postId · FACEBOOK=commentId · INSTAGRAM/YOUTUBE=replyId',
     properties: {
         platform: PLATFORM_PROPERTY,
         postId: { type: 'string', description: 'THREADS — 답글도 하나의 게시물이다' },
         commentId: { type: 'string', description: 'FACEBOOK — 댓글에 단 대댓글 id' },
-        replyId: { type: 'string', description: 'INSTAGRAM — 답글 id' },
+        replyId: { type: 'string', description: 'INSTAGRAM·YOUTUBE — 답글 id' },
+        parentCommentId: {
+            type: 'string',
+            description: 'YOUTUBE — 답글이 실제로 붙은 최상위 댓글 id. 대댓글 id 를 넘겼다면 그 부모로 바뀐 값이다',
+        },
         permalink: PERMALINK_PROPERTY,
     },
     required: ['platform'],
@@ -184,63 +222,201 @@ const COMMENT_MODERATE_OUTPUT = {
     },
     required: ['platform', 'commentId', 'action', 'done'],
 };
+const THREADS_INSIGHTS_OUTPUT = {
+    type: 'object',
+    properties: {
+        channel: { description: '조회한 채널 slug (미지정이면 null)' },
+        account: { type: 'object', description: '토큰 소유 계정 { id, username }' },
+        period: { type: 'object', description: '계정 지표 집계 구간 { since, until, days }' },
+        user: {
+            type: 'object',
+            description: '계정 지표 — views 는 { total, daily[] } 일 단위 시계열, likes·replies·reposts·quotes 는 구간 합계, followers_count 는 현재값(구간 무관)',
+        },
+        posts: {
+            type: 'array',
+            description: '최근 루트 게시물별 지표 { postId, permalink, excerpt, timestamp, metrics: { views, likes, replies, reposts, quotes, shares } } — 개별 조회 실패 시 metrics=null + metricsError',
+            items: { type: 'object' },
+        },
+    },
+    required: ['account', 'period', 'user', 'posts'],
+};
+const INSTAGRAM_INSIGHTS_OUTPUT = {
+    type: 'object',
+    properties: {
+        channel: { description: '조회한 채널 slug (미지정이면 null)' },
+        account: {
+            type: 'object',
+            description: '{ id, username, accountType, followersCount, followsCount, mediaCount } — 팔로워 수는 인사이트가 아니라 프로필 필드다(인사이트의 follower_count 는 팔로워 100 미만 계정에서 빈 값)',
+        },
+        period: { type: 'object', description: '계정 지표 집계 구간 { since, until, days }' },
+        user: {
+            type: 'object',
+            description: '계정 구간 합계 — reach, views, profile_views, accounts_engaged, total_interactions, likes, comments, shares, saves, profile_links_taps',
+        },
+        media: {
+            type: 'array',
+            description: '최근 미디어별 지표 { mediaId, mediaType, mediaProductType, permalink, excerpt, timestamp, metrics } — metrics 는 views·reach·likes·comments·shares·saved·total_interactions·follows·profile_visits, mediaProductType=REELS 면 ig_reels_avg_watch_time(ms)·ig_reels_video_view_total_time(ms)·reels_skip_rate 가 추가된다. 개별 조회 실패 시 metrics=null + metricsError',
+            items: { type: 'object' },
+        },
+    },
+    required: ['account', 'period', 'user', 'media'],
+};
+const YOUTUBE_INSIGHTS_OUTPUT = {
+    type: 'object',
+    properties: {
+        channel: { description: '조회한 채널 slug (미지정이면 null)' },
+        account: {
+            type: 'object',
+            description: '{ channelId, title, subscriberCount, viewCount, videoCount, subscriberCountHidden } — subscriberCountHidden=true 면 구독자 수가 반올림 값이라 증감 판단에 쓸 수 없다',
+        },
+        period: { type: 'object', description: '집계 구간 { startDate, endDate, days } (YYYY-MM-DD)' },
+        metrics: {
+            type: 'object',
+            description: '채널 구간 지표 — views, engagedViews(초반을 넘겨 본 조회), estimatedMinutesWatched, averageViewDuration(초), averageViewPercentage, subscribersGained/Lost, likes, comments, shares. Analytics 데이터는 2~3일 지연되므로 최근 구간이 비어 있으면 {} 로 온다(0 과 구분)',
+        },
+        revenue: { type: 'object', description: 'includeRevenue=true 이고 수익 스코프가 있을 때만 — estimatedRevenue, estimatedAdRevenue, estimatedRedPartnerRevenue, cpm' },
+        revenueError: { type: 'string', description: '수익 조회만 실패한 사유 (다른 지표는 정상)' },
+        videos: {
+            type: 'array',
+            description: '최근 업로드별 { videoId, permalink, title, publishedAt, duration, durationSeconds, lifetime: { views, likes, comments }, period: 구간 지표 } — durationSeconds ≤180 이면 쇼츠 후보(세로 여부는 API 로 확인 불가), period 는 데이터 없으면 null',
+            items: { type: 'object' },
+        },
+        videosError: {
+            type: 'string',
+            description: '영상 조회만 실패한 사유 — 이게 있으면 videos 의 빈 배열·0 값을 "업로드가 없다"로 읽으면 안 된다 (채널 지표는 정상)',
+        },
+        note: { type: 'string', description: 'API 로 얻을 수 없는 지표에 대한 안내' },
+    },
+    required: ['account', 'period', 'metrics', 'videos'],
+};
+const THREADS_SEARCH_OUTPUT = {
+    type: 'object',
+    properties: {
+        channel: { description: '조회한 채널 slug (미지정이면 null)' },
+        query: { type: 'string', description: '실행한 검색어' },
+        searchType: { type: 'string', description: 'TOP(인기순) 또는 RECENT(최신순)' },
+        count: { type: 'number', description: '반환 게시물 수' },
+        results: {
+            type: 'array',
+            description: '{ postId, username, text, mediaType, permalink, timestamp, ageMinutes, isReply, isQuotePost, hasReplies } — postId 를 threads_publish 의 replyToId 로 넘기면 답글 참여',
+            items: { type: 'object' },
+        },
+    },
+    required: ['query', 'count', 'results'],
+};
 export const TOOLS = [
     // ── 자료조사·사실검증 ──────────────────────────────────────────
     {
         name: 'serp_web_search',
         title: 'Google 웹 검색 (SerpApi)',
         annotations: HINT.read,
-        description: `Google 웹 검색 (SerpApi) — 스토리보드 저작 전 자료조사·사실검증용. 해외 자료는 gl/hl 로 국가·언어를 지정, 한국어 일반 자료는 gl=kr&hl=ko. 서버가 organic/answer_box/knowledge_graph/related_questions 만 추려 반환. ${SERP_QUOTA_LINE}`,
+        description: `Google 웹 검색 (SerpApi) — 스토리보드 저작 전 자료조사·사실검증용. 해외 자료는 gl/hl 로 국가·언어를 지정, 한국어 일반 자료는 gl=kr&hl=ko. 서버가 organic/answer_box/knowledge_graph/related_questions 만 추려 반환. ${SEARCH_ARG_LINE} ${SERP_QUOTA_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
-                q: { type: 'string', description: '검색어 (site:, filetype: 등 연산자 지원)' },
+                query: { type: 'string', description: '검색어 (site:, filetype: 등 연산자 지원)' },
                 gl: { type: 'string', description: '국가 코드 2자, 예: kr, us, vn' },
                 hl: { type: 'string', description: '언어 코드, 예: ko, en, vi' },
                 location: { type: 'string', description: '결과 기준 지역명 (선택), 예: Seoul, South Korea' },
-                num: { type: 'number', description: '결과 수 (기본 10, 최대 20)' },
-                page: { type: 'number', description: '페이지 (1부터) — 첫 페이지에 근거가 없을 때만' },
+                limit: { type: 'number', description: '결과 수 (기본 10, 최대 10 — 이 엔진은 한 페이지가 10건 고정이다). 더 필요하면 page 를 1씩 올릴 것. ' },
+                page: { type: 'number', description: '페이지 (1부터 5) — 첫 페이지에 근거가 없을 때만' },
                 recency: {
                     type: 'string',
                     enum: ['hour', 'day', 'week', 'month', 'year'],
                     description: '기간 필터 — 시효성 값(가격·기한·시행일) 검증 시 month/year 권장',
                 },
             },
-            required: ['q'],
+            required: ['query'],
         },
     },
     {
         name: 'serp_news_search',
         title: 'Google 뉴스 검색 (SerpApi)',
         annotations: HINT.read,
-        description: `Google 뉴스 검색 (SerpApi) — 최신 동향·발표·시행 소식 확인용. 시효성 값(가격·기한·시행일)을 콘텐츠에 쓰기 전 교차 검증에 사용. 이 엔진에는 기간 필터·정렬 파라미터가 없다(검색어와 함께 쓸 수 없음) — 발표 시점으로 좁혀야 하면 serp_web_search 의 recency 나 naver_search(sort=date)를 쓸 것. ${SERP_QUOTA_LINE}`,
+        description: `Google 뉴스 검색 (SerpApi) — 최신 동향·발표·시행 소식 확인용. 시효성 값(가격·기한·시행일)을 콘텐츠에 쓰기 전 교차 검증에 사용. 이 엔진에는 기간 필터·정렬 파라미터가 없다(검색어와 함께 쓸 수 없음) — 발표 시점으로 좁혀야 하면 serp_web_search 의 recency, serp_naver_search 의 period, naver_search(sort=date) 를 쓸 것. ${SEARCH_ARG_LINE} ${SERP_QUOTA_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
-                q: { type: 'string', description: '검색어' },
+                query: { type: 'string', description: '검색어' },
                 gl: { type: 'string', description: '국가 코드 2자, 예: kr, us' },
                 hl: { type: 'string', description: '언어 코드, 예: ko, en' },
-                max_results: {
+                limit: {
                     type: 'number',
-                    description: '반환 기사 수 (기본 10, 최대 20). 이 엔진은 num/start 가 없어 서버가 응답을 잘라 주는 것이며, 값을 줄여도 과금은 검색 1회로 동일하다',
+                    description: '반환 기사 수 (기본 10, 최대 20). 이 엔진은 결과 수 파라미터가 없어 서버가 응답을 잘라 주는 것이며, 값을 줄여도 과금은 검색 1회로 동일하다',
                 },
             },
-            required: ['q'],
+            required: ['query'],
         },
     },
     {
         name: 'serp_naver_search',
         title: 'Naver 검색 (SerpApi 경유)',
         annotations: HINT.read,
-        description: `Naver 검색 (SerpApi 경유) — naver_search(공식 Open API)가 키 미설정·쿼터 소진일 때의 대체 경로. where=web(기본)|news. ${SERP_QUOTA_LINE}`,
+        description: `Naver 검색 (SerpApi 경유) — naver_search(공식 Open API)가 키 미설정·쿼터 소진일 때의 대체 경로이자, 공식 API 에 없는 **동영상 검색**과 기간 필터(period)를 쓰는 경로. where=web(기본)|news|image|video. 같은 검색을 공식 API 로 할 수 있으면 쿼터가 두 자릿수 큰 naver_search 를 먼저 쓸 것. ${SEARCH_ARG_LINE} ${SERP_QUOTA_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
                 query: { type: 'string', description: '검색어 (NOT/OR/site: 연산자 지원)' },
-                where: { type: 'string', enum: ['web', 'news'], description: '검색 유형 (기본 web)' },
-                page: { type: 'number', description: '페이지 (1부터)' },
-                sort_by: { type: 'string', enum: ['relevance', 'latest'], description: '정렬 (기본 relevance)' },
-                max_results: { type: 'number', description: '반환 결과 수 (기본 10, 최대 20)' },
+                where: {
+                    type: 'string',
+                    enum: ['web', 'news', 'image', 'video'],
+                    description: 'web=웹문서(기본) | news=뉴스 | image=이미지 | video=동영상(공식 Open API 에 없는 유형)',
+                },
+                page: { type: 'number', description: '페이지 (1부터 5)' },
+                sort: {
+                    type: 'string',
+                    enum: ['relevance', 'latest', 'oldest'],
+                    description: '정렬 (기본 relevance). oldest 는 where=news 전용 — 다른 유형에 넘기면 에러',
+                },
+                period: {
+                    type: 'string',
+                    enum: ['1h', '1d', '1w', '1m', '3m', '6m', '1y'],
+                    description: '기간 필터 — 시효성 값 검증 시 최신 구간으로 좁힐 것. 공식 Open API 에는 없는 기능이다',
+                },
+                limit: { type: 'number', description: '반환 결과 수 (기본 10, 최대 50). 한 호출에 오는 건수는 where·검색어에 따라 다르다(실측: web 15 · news 10 · video 68 · image 48) — limit 보다 많이 오면 잘린 건수와 대처법이 응답 note 에 실린다' },
+            },
+            required: ['query'],
+        },
+    },
+    {
+        name: 'serp_image_search',
+        title: 'Google 이미지 검색 (SerpApi)',
+        annotations: HINT.read,
+        description: `Google 이미지 검색 (SerpApi) — 스토리보드 레퍼런스·구도 조사, 실물 확인(제품·장소·인물이 실제로 어떻게 생겼는지), 생성 이미지 프롬프트의 시각 근거 수집용. 원본 URL·해상도·출처를 반환한다. **콘텐츠에 그대로 실을 소재를 찾는 용도라면 license 를 반드시 지정할 것** — 무지정 결과는 저작권 확인이 안 된 이미지이며, 게시물에 넣으면 침해가 된다. 직접 만들 이미지는 이 툴 대신 image_local_generate(기본·무료)나 gpt_image_text2img(텍스트 포함·고품질)를 쓴다(권리 문제 없음). ${SEARCH_ARG_LINE} ${SERP_QUOTA_LINE}`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                query: { type: 'string', description: '검색어 (site: 등 연산자 지원)' },
+                gl: { type: 'string', description: '국가 코드 2자, 예: kr, us' },
+                hl: { type: 'string', description: '언어 코드, 예: ko, en' },
+                limit: { type: 'number', description: '결과 수 (기본 20, 최대 50) — 엔진이 한 번에 100건을 주므로 값을 줄여도 과금은 검색 1회다. **page 한 칸이 100건이라 51~100번은 어떤 조합으로도 받을 수 없다** — 그 구간이 필요하면 필터(size·aspect·license)나 검색어로 좁힐 것' },
+                page: { type: 'number', description: '페이지 (1부터 5) — 한 칸이 100건이라 page=2 는 101번부터다(51~100 은 건너뛴다). 결과의 position 은 이 엔진이 주는 전역 순번 그대로다' },
+                size: {
+                    type: 'string',
+                    enum: ['large', 'medium', 'icon', '2mp', '4mp', '8mp', '15mp'],
+                    description: '이미지 크기 — 쇼트폼 배경으로 쓸 고해상도는 large 이상 권장',
+                },
+                aspect: {
+                    type: 'string',
+                    enum: ['square', 'tall', 'wide', 'panoramic'],
+                    description: '종횡비 — 9:16 세로 포맷 레퍼런스는 tall',
+                },
+                imageType: {
+                    type: 'string',
+                    enum: ['photo', 'clipart', 'lineart', 'animated', 'face'],
+                    description: '이미지 종류 (photo=사진 | clipart=클립아트 | lineart=선화 | animated=움짤 | face=얼굴)',
+                },
+                license: {
+                    type: 'string',
+                    enum: ['free', 'commercial', 'modify', 'modify_commercial', 'creative_commons'],
+                    description: '라이선스 범위 — 게시물에 실을 소재는 commercial(상업 이용 가능) 이상, 편집까지 하면 modify_commercial 을 쓸 것',
+                },
+                color: {
+                    type: 'string',
+                    enum: ['bw', 'trans', 'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'white', 'gray', 'black', 'brown'],
+                    description: '주조색 — trans=투명 배경(로고·오버레이 소재)',
+                },
+                safe: { type: 'boolean', description: '성인 콘텐츠 필터 (기본 true=켬)' },
             },
             required: ['query'],
         },
@@ -249,19 +425,30 @@ export const TOOLS = [
         name: 'naver_search',
         title: 'Naver 검색 (공식 Open API)',
         annotations: HINT.read,
-        description: 'Naver Open API 검색 (공식, 일 25,000회 무료) — 한국어 소재 리서치의 1차 도구. 뉴스·블로그·웹문서·카페글을 타입으로 선택한다. 한국 트렌드·실사용 후기·국내 뉴스는 Google 보다 이쪽이 정확하다. 서버가 <b> 하이라이트를 제거하고 title/link/description/date 만 추려 반환.',
+        description: `${SEARCH_ARG_LINE} ` +
+            'Naver Open API 검색 (공식, 일 25,000회 무료) — 한국어 소재 리서치의 1차 도구. type 으로 8종을 고른다: news=뉴스 | blog=블로그 후기 | web=웹문서 | cafe=카페글(실사용 여론) | kin=지식iN(진짜 궁금해하는 질문 — 쇼트폼 주제 발굴에 강하다) | image=이미지 | encyc=백과사전(용어 정의) | local=지역 업체(주소·좌표·전화). 한국 트렌드·실사용 후기·국내 뉴스는 Google 보다 이쪽이 정확하다. 서버가 <b> 하이라이트를 제거하고 근거 필드만 추려 반환하며, local 은 좌표를 경위도로 환산해 준다. ' +
+            '**타입마다 파라미터 제약이 다르다** — web·encyc 은 정렬 미지원(sort 를 넘기면 서버가 거절), local 은 sort=random|comment 체계에 최대 5건·페이징 없음, imageSize 는 type=image 전용. 책·쇼핑·전문자료·영화 검색은 네이버가 종료해 없다(공식 문서에 남아 있어도 호출하면 404) — 필요하면 serp_web_search 로 대체할 것. 동영상 검색은 serp_naver_search(where=video).',
         inputSchema: {
             type: 'object',
             properties: {
                 query: { type: 'string', description: '검색어' },
                 type: {
                     type: 'string',
-                    enum: ['news', 'blog', 'web', 'cafe'],
-                    description: 'news=뉴스(기본) | blog=블로그 후기 | web=웹문서 | cafe=카페글(실사용 여론)',
+                    enum: ['news', 'blog', 'web', 'cafe', 'kin', 'image', 'encyc', 'local'],
+                    description: 'news=뉴스(기본) | blog=블로그 후기 | web=웹문서 | cafe=카페글 | kin=지식iN 질문 | image=이미지 | encyc=백과사전 | local=지역 업체',
                 },
-                display: { type: 'number', description: '결과 수 (기본 10, 최대 30)' },
-                start: { type: 'number', description: '시작 위치 (1부터) — 첫 페이지에 근거가 없을 때만' },
-                sort: { type: 'string', enum: ['sim', 'date'], description: 'sim=정확도순(기본) | date=최신순 — web 타입은 미지원' },
+                limit: { type: 'number', description: '결과 수 (기본 10, 최대 30 — local 은 API 상한이 5)' },
+                page: { type: 'number', description: '페이지 (1부터) — 첫 페이지에 근거가 없을 때만. 쿼터가 커서 serp_* (1~5) 보다 깊이 넘길 수 있으나, (page-1)×limit+1 이 1000 을 넘으면 API 상한이라 거절된다. local 은 페이징 미지원' },
+                sort: {
+                    type: 'string',
+                    enum: ['sim', 'date', 'random', 'comment'],
+                    description: 'news/blog/cafe/kin/image: sim=정확도순(기본) | date=최신순 · local: random=정확도순 | comment=리뷰 많은 순 · web/encyc: 정렬 미지원',
+                },
+                imageSize: {
+                    type: 'string',
+                    enum: ['all', 'large', 'medium', 'small'],
+                    description: '이미지 크기 필터 (type=image 전용)',
+                },
             },
             required: ['query'],
         },
@@ -275,12 +462,12 @@ export const TOOLS = [
         inputSchema: {
             type: 'object',
             properties: {
-                keyword: { type: 'string', description: '검색어 (주제어, 필요시 기관명 병기)' },
+                query: { type: 'string', description: '검색어 (주제어, 필요시 기관명 병기)' },
                 type: { type: 'string', enum: ['API', 'FILE'], description: 'API=오픈API | FILE=파일데이터(CSV 등) — 생략 시 둘 다 검색' },
                 page: { type: 'number', description: '페이지 (1부터)' },
-                perPage: { type: 'number', description: '타입당 결과 수 (기본 10, 최대 20)' },
+                limit: { type: 'number', description: '타입당 결과 수 (기본 10, 최대 20)' },
             },
-            required: ['keyword'],
+            required: ['query'],
         },
     },
     {
@@ -323,7 +510,7 @@ export const TOOLS = [
                 publicDataPk: { type: 'string', description: 'datago_detail 응답의 publicDataPk' },
                 uddi: { type: 'string', description: 'datago_detail 응답의 publicDataDetailPk (uddi:… 전체)' },
                 page: { type: 'number', description: '페이지 (1부터)' },
-                perPage: { type: 'number', description: '행 수 (기본 10, 최대 50)' },
+                limit: { type: 'number', description: '행 수 (기본 10, 최대 50)' },
             },
             required: ['publicDataPk', 'uddi'],
         },
@@ -353,8 +540,8 @@ export const TOOLS = [
         annotations: HINT.generate,
         description: `Generate an image from a text prompt using OpenAI GPT Image models.
 
-Use when the user asks to create, draw, generate, or make an image, picture, photo, banner, illustration, or thumbnail from a description (이미지 생성, 그림 그려줘). Strengths: reliable text rendering inside the image (posters, labels, UI mockups, signage), strong photorealism, and exact custom WIDTHxHEIGHT resolutions (e.g. "1088x1920" for 9:16 — gpt-image-2 only, edges multiple of 16).
-Do NOT use to edit or compose existing images — use gpt_image_img2img.
+Use when the image must contain legible text — posters, labels, UI mockups, signage, title cards — or when a quality boost over the local default is worth paying for. The local engine breaks Korean glyphs (실측: "딸깍연구소" 가 "달닥연구소" 로 깨졌다); every text-bearing image belongs here. Strengths: reliable text rendering inside the image, strong photorealism, and exact custom WIDTHxHEIGHT resolutions (e.g. "1088x1920" for 9:16 — gpt-image-2 only, edges multiple of 16).
+Do NOT use as the first choice for text-free images (커버 배경·b-roll·시안 탐색) — the plugin's default path is image_local_generate (local Z-Image, free); this tool bills per image. Do NOT use to edit or compose existing images — use gpt_image_img2img.
 Note: gpt-image-2 (default) does NOT support transparent backgrounds; transparent requires the deprecated gpt-image-1/1.5 and png/webp output. Size/quality/background constraints are enforced per model — see each parameter.
 
 Returns: the generated image as MCP image content (always base64), plus a text block with model, size, quality, and the saved file path when savePath is given.`,
@@ -479,6 +666,69 @@ Returns: the edited image as MCP image content (always base64, in the requested 
                 },
             },
             required: ['prompt', 'sourceImagesBase64'],
+        },
+    },
+    {
+        name: 'image_local_generate',
+        title: '이미지 생성 (로컬 · Z-Image — 기본)',
+        annotations: HINT.generateLocal,
+        description: `Generate an image from a text prompt **on this machine** using Z-Image Turbo (6B, Apache 2.0) via mflux — no API key, no network, no per-image cost.
+
+This is the DEFAULT image generation path of this plugin. Use for any text-free image: cover backgrounds, b-roll stills, branding drafts, mood exploration, bulk candidate batches (이미지 생성, 커버 배경). Measured on this class of machine (M4 Max): 1024×1024 in ~2–3.5 min and 1088×1920 (9:16) in ~7.5 min under heavy load — minutes, not seconds, with 32–39GB peak memory; avoid running alongside video renders.
+Do NOT use when the image must contain legible text — Korean glyphs break (실측: "딸깍연구소" 가 "달닥연구소" 로 렌더링됐다); any text-bearing image (poster, label, title card) and any quality-critical shot goes to gpt_image_text2img instead. Do NOT use to edit existing images — gpt_image_img2img.
+Requires mflux (\`uv tool install --python 3.12 mflux\`; Apple Silicon only); set MFLUX_ZIMAGE_BIN if the binary lives elsewhere. The first call downloads the ~31GB weight repository to ~/.cache/huggingface — the tool extends its own timeout by an hour for that download, so a very slow first call is normal, not stuck.
+
+Returns: a text block with the saved .png path, resolution, steps, seed, quantization, and generation time.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Image generation prompt (max 32,000 characters). English prompts recommended; do not ask for text in the image.',
+                    maxLength: 32000,
+                },
+                width: {
+                    type: 'number',
+                    description: `Image width in pixels (default: 1024). ${MIN_ZIMAGE_DIMENSION}–${MAX_ZIMAGE_DIMENSION}, multiple of ${ZIMAGE_DIMENSION_STEP}. 9:16 세로형은 1080×1920 이 아니라 1088×1920 이다.`,
+                    minimum: MIN_ZIMAGE_DIMENSION,
+                    maximum: MAX_ZIMAGE_DIMENSION,
+                    default: 1024,
+                },
+                height: {
+                    type: 'number',
+                    description: `Image height in pixels (default: 1024). Same constraints as width. Generation time scales with width×height — 9:16 full size takes ~4x a 1024² render.`,
+                    minimum: MIN_ZIMAGE_DIMENSION,
+                    maximum: MAX_ZIMAGE_DIMENSION,
+                    default: 1024,
+                },
+                steps: {
+                    type: 'number',
+                    description: `Diffusion steps (default: ${DEFAULT_ZIMAGE_STEPS} — the model card's recommended setting; 9 steps = 8 DiT forwards). More steps rarely help this turbo-distilled model.`,
+                    minimum: 1,
+                    maximum: 50,
+                    default: DEFAULT_ZIMAGE_STEPS,
+                },
+                seed: {
+                    type: 'number',
+                    description: 'Random seed for reproducible output. Omit for a random seed. Re-run the same prompt+seed+size to get the identical image.',
+                    minimum: 0,
+                },
+                quantize: {
+                    type: 'number',
+                    description: `Weight quantization bits (default: ${DEFAULT_ZIMAGE_QUANTIZE}). 8 is the measured baseline; 4 halves memory with a small quality cost.`,
+                    enum: [...ZIMAGE_QUANTIZE_OPTIONS],
+                    default: DEFAULT_ZIMAGE_QUANTIZE,
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the image file (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the image file (default: zimage_<timestamp>.png)',
+                },
+            },
+            required: ['prompt'],
         },
     },
     // ── 영상 생성 (Google Veo 3.1 — fect-mcp video 모듈 이식) ──────────
@@ -757,15 +1007,72 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
         },
     },
     {
+        name: 'tts_local_generate',
+        title: '음성 합성 (로컬 · Supertonic)',
+        annotations: HINT.generateLocal,
+        description: `Convert text to speech **on this machine** using Supertonic 3 — no API key, no network, no quota, no per-character cost.
+
+Use for narration bodies and any bulk voice-over: scene narration in the produce pipeline, long scripts, and repeated takes where API cost or quota would add up. Measured at 6.3x realtime on CPU alone. 10 built-in voices (F1–F5 female, M1–M5 male) across 31 languages; output is 44.1kHz mono WAV and the response includes the exact audio duration, so no ffprobe round-trip is needed for length checks.
+Do NOT use when the line needs acted delivery — there is no style/emotion parameter here, so intro lines, character dialogue, and anything with a stylePrompt belong to tts_generate (Gemini). Do NOT mix both engines inside one video without resampling: this returns 44.1kHz and tts_generate returns 24kHz.
+Requires a local Python runtime with the \`supertonic\` package (pip install supertonic); set SUPERTONIC_PYTHON if it lives in a virtualenv. The first call downloads 385MB of weights to ~/.cache/supertonic3. Model weights are OpenRAIL-M licensed (code is MIT) — commercial use is permitted with use-based restrictions, so review the terms before shipping generated audio.
+
+Returns: a text block with the saved .wav path, voice, language, audio duration, sample rate, and synthesis time.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                text: {
+                    type: 'string',
+                    description: `The text to convert to speech (max ${MAX_SUPERTONIC_INPUT_CHARS} characters — split longer scripts by scene)`,
+                    maxLength: MAX_SUPERTONIC_INPUT_CHARS,
+                },
+                voice: {
+                    type: 'string',
+                    description: `Voice style (default: "${DEFAULT_SUPERTONIC_VOICE}"). F1–F5 are female, M1–M5 male; the vendor publishes no personality labels beyond that. Keep one voice per channel — see data/<slug>/profile.md.`,
+                    enum: [...SUPERTONIC_VOICE_NAMES],
+                    default: DEFAULT_SUPERTONIC_VOICE,
+                },
+                lang: {
+                    type: 'string',
+                    description: `Language code (default: "${DEFAULT_SUPERTONIC_LANGUAGE}"). Unlike tts_generate this is NOT auto-detected — set it, because the code also selects chunking (Korean uses shorter chunks). Use "na" only for text whose language is unsupported.`,
+                    enum: [...SUPERTONIC_LANGUAGES],
+                    default: DEFAULT_SUPERTONIC_LANGUAGE,
+                },
+                speed: {
+                    type: 'number',
+                    description: `Speech speed 0.7–2.0 (default: ${DEFAULT_SUPERTONIC_SPEED}). Keep it identical across every cut of one video.`,
+                    minimum: 0.7,
+                    maximum: 2.0,
+                    default: DEFAULT_SUPERTONIC_SPEED,
+                },
+                steps: {
+                    type: 'number',
+                    description: `Quality steps 1–100 (default: ${DEFAULT_SUPERTONIC_STEPS}). Higher is slower with diminishing returns; the default is the vendor's recommended setting.`,
+                    minimum: 1,
+                    maximum: 100,
+                    default: DEFAULT_SUPERTONIC_STEPS,
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the audio file (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the audio file (default: supertonic_<timestamp>.wav)',
+                },
+            },
+            required: ['text'],
+        },
+    },
+    {
         name: 'tts_list_voices',
         title: 'TTS 음성 목록',
         annotations: HINT.local,
-        description: `List all 30 available TTS voices with their personality/style traits.
+        description: `List the available voices for both TTS engines — 30 Gemini voices with personality traits, plus the 10 local Supertonic voices.
 
-Use before tts_generate or tts_multi_speaker when the user has not specified a voice, or asks what voices are available (목소리 종류). Read-only; makes no API call.
-Do NOT use to generate audio — use tts_generate or tts_multi_speaker. The list is static; one call per session is enough. When the channel profile (data/<slug>/profile.md) already fixes a TTS voice, use that instead of picking a new one.
+Use before tts_generate, tts_multi_speaker, or tts_local_generate when the user has not specified a voice, or asks what voices are available (목소리 종류). Read-only; makes no API call.
+Do NOT use to generate audio — use tts_generate (acted delivery) or tts_local_generate (narration, free). The list is static; one call per session is enough. When the channel profile (data/<slug>/profile.md) already fixes a voice, use that instead of picking a new one.
 
-Returns: a text list of 30 voice names, each with a one-line personality/style description (e.g. "Kore — Firm").`,
+Returns: a text list of the 30 Gemini voice names with one-line personality descriptions (e.g. "Kore — Firm"), followed by the 10 Supertonic voice IDs (F1–F5, M1–M5 — no personality labels are published for these) and a note on which engine to pick.`,
         inputSchema: {
             type: 'object',
             properties: {},
@@ -1027,7 +1334,11 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
                     items: { type: 'string', format: 'uri' },
                     description: '공개 접근 가능한 이미지 URL 1~10장 (2장 이상이면 캐러셀 — 첫 장 비율 기준 강제 크롭). videoUrl 과 동시 사용 불가',
                 },
-                videoUrl: { type: 'string', format: 'uri', description: '릴스 영상 공개 URL 1개 (.mp4/.mov) — imageUrls 와 동시 사용 불가' },
+                videoUrl: {
+                    type: 'string',
+                    format: 'uri',
+                    description: '릴스 영상 공개 URL 1개 (.mp4/.mov) — imageUrls 와 동시 사용 불가. **자막 번인본을 준다** — IG Content Publishing 에는 자막 파일을 받는 파라미터가 없어서, 자막을 따로 올리는 다른 플랫폼과 달리 여기서는 화면에 태운 영상이 유일한 방법이다',
+                },
                 channel: SNS_CHANNEL_PROPERTY,
             },
             required: ['caption'],
@@ -1037,8 +1348,8 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         name: 'facebook_publish',
         title: '⚠️ Facebook 페이지 게시 (즉시 공개)',
         annotations: HINT.publish,
-        outputSchema: publishOutput('postId', 'Facebook 게시물 id (<pageId>_<postId>) — facebook_comment 의 postId 로 그대로 넘긴다'),
-        description: `⚠️ Facebook 페이지 직접 게시 — 로컬 페이지 토큰으로 Graph API 에 **즉시 공개 게시**한다(게시 페이지는 토큰의 /me 로 자동 결정). 별도 검토 게이트가 없으므로 반드시 사용자가 최종 문안·미디어를 확인·승인한 직후에만 호출한다(HITL — 승인 없이 호출 금지). 형태: 텍스트 / 이미지 ≤10장 / 영상 1개(일반 영상 — 릴스 아님). 원문 링크는 본문(linkUrl)이 아니라 게시 성공 직후 facebook_comment 첫 댓글로 **반드시** 단다. ${SNS_HITL_LINE}`,
+        outputSchema: FACEBOOK_PUBLISH_OUTPUT,
+        description: `⚠️ Facebook 페이지 직접 게시 — 로컬 페이지 토큰으로 Graph API 에 **즉시 공개 게시**한다(게시 페이지는 토큰의 /me 로 자동 결정). 별도 검토 게이트가 없으므로 반드시 사용자가 최종 문안·미디어를 확인·승인한 직후에만 호출한다(HITL — 승인 없이 호출 금지). 형태: 텍스트 / 이미지 ≤10장 / 영상 1개(일반 영상 — 릴스 아님). 영상 게시에는 **자막 파일을 함께 올린다**(captionFilePath) — 이 파이프라인은 자막을 영상에 태우지 않고 따로 올리는 것이 원칙이라, 번인본이 아니라 자막 없는 클린 마스터를 videoUrl 로 준다. 원문 링크는 본문(linkUrl)이 아니라 게시 성공 직후 facebook_comment 첫 댓글로 **반드시** 단다. ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -1048,7 +1359,15 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
                     items: { type: 'string', format: 'uri' },
                     description: '공개 접근 가능한 이미지 URL ≤10장 — videoUrl 과 동시 사용 불가',
                 },
-                videoUrl: { type: 'string', format: 'uri', description: '영상 공개 URL 1개 (.mp4/.mov) — imageUrls 와 동시 사용 불가' },
+                videoUrl: { type: 'string', format: 'uri', description: '영상 공개 URL 1개 (.mp4/.mov) — imageUrls 와 동시 사용 불가. 자막 번인본이 아니라 **클린 마스터**를 준다(자막은 captionFilePath 로 따로)' },
+                captionFilePath: {
+                    type: 'string',
+                    description: '자막 파일 **로컬** 절대 경로 (.srt, ≤200K) — videoUrl 게시에서만 유효. 영상 URL 과 달리 호스팅이 필요 없다(파일 직접 업로드). 게시 성공 직후 자동으로 올라가며, 자막만 실패하면 captionWarning 이 온다(게시는 유효 — 재게시 금지)',
+                },
+                captionLocale: {
+                    type: 'string',
+                    description: '자막 로케일 (기본 ko_KR). `ko_KR`·`en_US`·`vi_VN` 형식이어야 한다 — FB 는 업로드 파일명이 `<이름>.<locale>.srt` 인지로 로케일을 판정하고, 형식이 틀리면 error 386 으로 거부한다',
+                },
                 linkUrl: { type: 'string', format: 'uri', description: '(예외용) 링크 첨부 — 텍스트 게시(미디어 없음)에서만. 기본 규칙은 링크를 facebook_comment 첫 댓글로 다는 것' },
                 channel: SNS_CHANNEL_PROPERTY,
             },
@@ -1076,7 +1395,7 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         title: '⚠️ YouTube 업로드 (즉시 공개)',
         annotations: HINT.publish,
         outputSchema: YOUTUBE_PUBLISH_OUTPUT,
-        description: `⚠️ YouTube 직접 게시 — 로컬 OAuth 리프레시 토큰으로 **로컬 영상 파일을 즉시 공개 업로드**한다(대상 채널은 토큰 소유 계정으로 자동 결정). 별도 검토 게이트가 없으므로 반드시 사용자가 최종 문안·영상을 확인·승인한 직후에만 호출한다(HITL — 승인 없이 호출 금지). 세로 9:16·3분 이하 영상은 쇼츠로 자동 분류(별도 플래그 없음). 유일하게 공개 URL 호스팅이 불필요한 플랫폼이다(파일 직접 업로드). 업로드는 videos.insert 전용 "Video Uploads" 쿼터 버킷을 쓴다 — 호출당 1유닛·기본 일 100회이므로 회차 게시를 아낄 이유가 없다(과거의 "1,600유닛/일 6건" 제한은 2026년 쿼터 개편으로 사라졌다). ${SNS_HITL_LINE}`,
+        description: `⚠️ YouTube 직접 게시 — 로컬 OAuth 리프레시 토큰으로 **로컬 영상 파일을 즉시 공개 업로드**한다(대상 채널은 토큰 소유 계정으로 자동 결정). 별도 검토 게이트가 없으므로 반드시 사용자가 최종 문안·영상을 확인·승인한 직후에만 호출한다(HITL — 승인 없이 호출 금지). 세로 9:16·3분 이하 영상은 쇼츠로 자동 분류(별도 플래그 없음). 유일하게 공개 URL 호스팅이 불필요한 플랫폼이다(파일 직접 업로드 — 자막 파일도 마찬가지). **영상과 자막은 따로 올린다** — captionFilePath 로 .srt 를 함께 주고 videoFilePath 에는 자막을 태우지 않은 클린 마스터를 준다. 업로드는 videos.insert 전용 "Video Uploads" 쿼터 버킷을 쓴다 — 호출당 1유닛·기본 일 100회이므로 회차 게시를 아낄 이유가 없다(과거의 "1,600유닛/일 6건" 제한은 2026년 쿼터 개편으로 사라졌다). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -1085,7 +1404,15 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
                 caption: { type: 'string', description: '영상 설명(description) 완성본 ≤5000자 — 첫 줄 요약 + 핵심 포인트 + 해시태그(#Shorts 포함 3~5개)' },
                 thumbnailFilePath: {
                     type: 'string',
-                    description: '커버 스틸 절대 경로 (.jpg/.png ≤2MB) — 필수 권장: 미지정 시 쇼츠는 YouTube 가 임의 프레임을 썸네일로 뽑아 제목 커버가 안 보인다. 채널에 전화번호 인증(중급 기능)이 없으면 지정이 거부되며 게시는 성공하고 thumbnailWarning 으로 보고된다',
+                    description: '커버 스틸 절대 경로 (.jpg/.png ≤2MB) — **필수**. 미지정 업로드는 YouTube 가 임의 프레임을 썸네일로 뽑아 제목 커버가 안 보이고, 게시 후 API 로는 세로 표면을 되돌릴 수 없다. 이 지정이 바꾸는 것은 **가로 표면**(검색결과·공유 미리보기·임베드)뿐이다 — 쇼츠 피드·채널 쇼츠 탭의 세로 프레임(oar*)은 YouTube 네이티브 앱의 프레임 선택으로만 바뀐다(publish 스킬 §3 세로 표면 단계). 채널에 전화번호 인증(중급 기능)이 없으면 지정이 거부되며 게시는 성공하고 thumbnailWarning 으로 보고된다',
+                },
+                captionFilePath: {
+                    type: 'string',
+                    description: '자막 파일 절대 경로 (.srt) — **기본으로 지정한다**. 자막을 영상에 태우지 않고 따로 올리면 게시 후에도 자막만 교체할 수 있고, 시청자가 끄고 켤 수 있고, YouTube 자동 번역의 원본이 된다. videoFilePath 는 번인본이 아니라 자막 없는 클린 마스터를 준다. 업로드는 **youtube.force-ssl 스코프**가 필요하고(게시용 youtube.upload 로는 거부된다) **쿼터 400유닛**을 쓴다 — 영상 업로드(1유닛)와 달리 무거우니 회차마다 한 번만. 자막만 실패하면 captionWarning 이 오고 게시는 유효하다(재업로드 금지)',
+                },
+                captionLanguage: {
+                    type: 'string',
+                    description: '자막 언어 BCP-47 (기본 ko) — 예: ko, en, vi. 자동 번역의 원본 언어가 된다',
                 },
                 privacyStatus: {
                     type: 'string',
@@ -1101,9 +1428,34 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
                     description: '아동용 콘텐츠 자기 선언(COPPA, 기본 false). 영상이 아동 대상이면 반드시 true 로 지정할 것 — 허위 선언은 채널 제재 사유이며, true 면 댓글·개인화 광고가 비활성화된다.',
                     default: false,
                 },
+                containsSyntheticMedia: {
+                    type: 'boolean',
+                    description: '합성 미디어 자기 고지 — **기본 true**(이 파이프라인은 Veo 영상·Lyria 음악을 쓴다). YouTube 는 실제처럼 보이는 AI 생성·변형 콘텐츠(AI 생성 음악, 실제 장소·인물의 사실적 생성 영상)에 고지를 요구하고, 상습 미고지에 라벨 강제·삭제·YPP 정지를 예고한다. 반대로 "고지가 노출·수익 자격에 영향을 주지 않는다"고 명시하므로 애매하면 켜 두는 쪽이 손해가 없다. false 로 내릴 수 있는 경우는 명확히 면제인 사용뿐이다 — 대본·제목·썸네일 생성, 자막 생성, 아이디어 생성, 자기 목소리 복제, 사실적이지 않은 애니메이션·판타지 영상, 색보정·뷰티 필터.',
+                    default: true,
+                },
                 channel: SNS_CHANNEL_PROPERTY,
             },
-            required: ['videoFilePath', 'title', 'caption'],
+            required: ['videoFilePath', 'title', 'caption', 'thumbnailFilePath'],
+        },
+    },
+    {
+        name: 'youtube_insights',
+        title: 'YouTube 성과 인사이트',
+        annotations: HINT.read,
+        outputSchema: YOUTUBE_INSIGHTS_OUTPUT,
+        description: 'YouTube 성과 인사이트 — 채널 통계(구독자·총 조회)와 기간 지표(조회·engagedViews·평균 시청 지속·평균 시청 비율·구독 증감), 최근 업로드별 지표를 한 번에 반환한다(읽기 전용, 부작용 없음). grow-youtube 루프가 틱마다 스냅샷을 찍어 전 틱 대비 증감과 잘 먹힌 영상 유형을 판단하는 용도 — 저장·비교는 호출자가 data/<채널>/growth/youtube/ 에서 한다. **스코프 2종 필요**: 채널·영상 조회는 youtube.readonly, 기간 지표는 yt-analytics.readonly. 게시(youtube.upload)만으로 발급한 기존 토큰에는 없으므로 재발급이 필요하고, 부족 시 에러에 재발급 안내가 실려 온다. 수익 지표(includeRevenue)는 yt-analytics-monetary.readonly 가 하나 더 필요하며 실패해도 나머지 지표는 그대로 온다. **Analytics 데이터는 2~3일 지연**되므로 어제·오늘 값이 비어 보이는 것은 정상이고, days 를 7 이상으로 두어야 추세가 보인다. 쇼츠 훅 판정에 쓰는 스와이프 이탈률(Studio 의 "How many chose to view")은 Analytics API 에 대응 메트릭이 없어 이 툴로 못 가져온다 — averageViewPercentage 로 대신하고 스와이프 지표는 Studio 에서 수동 확인할 것.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                days: { type: 'number', description: '집계 일수 (기본 7, 1~365). Analytics 지연이 2~3일이라 7 미만은 비어 보일 수 있다' },
+                videoLimit: { type: 'number', description: '지표를 붙일 최근 업로드 수 (기본 10, 최대 50, 0 이면 채널 지표만)' },
+                includeRevenue: {
+                    type: 'boolean',
+                    description: '수익 지표 포함 (기본 false) — yt-analytics-monetary.readonly 스코프가 추가로 필요하다',
+                    default: false,
+                },
+                channel: SNS_CHANNEL_PROPERTY,
+            },
         },
     },
     // ── 받은 댓글 관리 (인박스 → 답글 → 숨김) ────────────────────────
@@ -1114,14 +1466,14 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         title: '받은 댓글 인박스',
         annotations: HINT.read,
         outputSchema: COMMENT_INBOX_OUTPUT,
-        description: '받은 댓글 인박스 — Threads·Instagram·Facebook 최근 게시물의 댓글·대댓글을 한 번에 모아 정규화 목록으로 반환한다(읽기 전용, 부작용 없음). 기본값은 **우리가 아직 답하지 않은 남의 댓글만**(includeOwn/includeAnswered=false) — "이미 답했는가"는 추측이 아니라 플랫폼 필드(Threads is_reply_owned_by_me · IG username 일치 · FB from.id==pageId)로 판정하므로 중복 답글이 나가지 않는다. 각 댓글에 ageMinutes 가 실려 오며 summary.withinGoldenHour 는 첫 60분 안에 남은 미응대 수다(답글 속도가 확산을 좌우 — 이 값이 0 이 아니면 최우선 처리). 응답의 commentId 를 sns_comment_reply/sns_comment_moderate 에 그대로 넘긴다. YouTube 는 토큰 scope 부족으로 제외된다.',
+        description: '받은 댓글 인박스 — Threads·Instagram·Facebook·YouTube 최근 게시물의 댓글·대댓글을 한 번에 모아 정규화 목록으로 반환한다(읽기 전용, 부작용 없음). 기본값은 **우리가 아직 답하지 않은 남의 댓글만**(includeOwn/includeAnswered=false) — "이미 답했는가"는 추측이 아니라 플랫폼 필드(Threads is_reply_owned_by_me · IG username 일치 · FB from.id==pageId · YT authorChannelId 일치)로 판정하므로 중복 답글이 나가지 않는다. YouTube 는 스레드 안 우리 마지막 답글 시각을 기준으로 판정해, 우리 답글 **뒤에** 달린 새 댓글은 미응대로 잡힌다. 답글 목록을 온전히 받지 못한 스레드(답글 100건 초과 또는 조회 실패)는 판정 근거가 없으므로 **응대됨으로 처리해 목록에서 뺀다** — 놓친 댓글은 다음 조회에서 잡히지만, 반대로 틀리면 중복 답글이 공개로 나가기 때문이다. 각 댓글에 ageMinutes 가 실려 오며 summary.withinGoldenHour 는 첫 60분 안에 남은 미응대 수다(답글 속도가 확산을 좌우 — 이 값이 0 이 아니면 최우선 처리). 응답의 commentId 를 sns_comment_reply/sns_comment_moderate 에 그대로 넘긴다. YouTube 는 댓글 스코프(youtube.force-ssl)가 없으면 skipped 에 재발급 안내와 함께 실려 나온다.',
         inputSchema: {
             type: 'object',
             properties: {
                 platforms: {
                     type: 'array',
-                    items: { type: 'string', enum: ['THREADS', 'INSTAGRAM', 'FACEBOOK'] },
-                    description: '조회할 플랫폼 (생략 시 자격증명이 있는 3개 플랫폼 전부)',
+                    items: { type: 'string', enum: ['THREADS', 'INSTAGRAM', 'FACEBOOK', 'YOUTUBE'] },
+                    description: '조회할 플랫폼 (생략 시 자격증명이 있는 4개 플랫폼 전부)',
                 },
                 channel: SNS_CHANNEL_PROPERTY,
                 postLimit: { type: 'number', description: '플랫폼당 훑을 최근 게시물 수 (기본 5, 최대 25)' },
@@ -1137,13 +1489,13 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         title: '⚠️ 받은 댓글에 답글 (즉시 공개)',
         annotations: HINT.publish,
         outputSchema: COMMENT_REPLY_OUTPUT,
-        description: `⚠️ 받은 댓글에 답글 작성 — 로컬 토큰으로 **즉시 공개 답글**을 단다(작성 주체는 브랜드 계정 자신). 별도 검토 게이트가 없으므로 사용자가 승인한 최종 문안만 게시한다(HITL — 승인 없이 호출 금지). commentId 는 sns_comment_inbox 응답값을 그대로 쓴다. 플랫폼별 계약: THREADS 는 reply_to_id 를 단 새 게시물이 곧 답글이라 대댓글의 대댓글까지 자유롭게 이어진다 / INSTAGRAM 은 **최상위 댓글에만** 답글이 붙는다(대댓글에 답하려면 그 부모 commentId 를 넘길 것 — parentCommentId 가 있는 댓글은 그 값을 사용) / FACEBOOK 은 댓글 id 에 다는 댓글이 곧 대댓글이다. 실패 시 같은 호출을 맹목 재시도하지 않는다(비멱등 — 중복 답글). ${SNS_HITL_LINE}`,
+        description: `⚠️ 받은 댓글에 답글 작성 — 로컬 토큰으로 **즉시 공개 답글**을 단다(작성 주체는 브랜드 계정 자신). 별도 검토 게이트가 없으므로 사용자가 승인한 최종 문안만 게시한다(HITL — 승인 없이 호출 금지). commentId 는 sns_comment_inbox 응답값을 그대로 쓴다. 플랫폼별 계약: THREADS 는 reply_to_id 를 단 새 게시물이 곧 답글이라 대댓글의 대댓글까지 자유롭게 이어진다 / INSTAGRAM 은 **최상위 댓글에만** 답글이 붙는다(대댓글에 답하려면 그 부모 commentId 를 넘길 것 — parentCommentId 가 있는 댓글은 그 값을 사용) / FACEBOOK 은 댓글 id 에 다는 댓글이 곧 대댓글이다 / YOUTUBE 도 최상위 댓글에만 붙지만 대댓글 id 를 넘겨도 된다 — 이 툴이 부모를 조회해 스레드 루트로 바꿔 달고 응답의 parentCommentId 로 어디에 붙었는지 알린다(youtube.force-ssl 스코프 필요). 실패 시 같은 호출을 맹목 재시도하지 않는다(비멱등 — 중복 답글). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
-                platform: { type: 'string', enum: ['THREADS', 'INSTAGRAM', 'FACEBOOK'], description: '대상 플랫폼' },
-                commentId: { type: 'string', description: 'sns_comment_inbox 의 commentId (IG 는 최상위 댓글 id 여야 함)' },
-                message: { type: 'string', description: '답글 완성본 — THREADS ≤500자, IG ≤2200자, FB ≤8000자' },
+                platform: { type: 'string', enum: ['THREADS', 'INSTAGRAM', 'FACEBOOK', 'YOUTUBE'], description: '대상 플랫폼' },
+                commentId: { type: 'string', description: 'sns_comment_inbox 의 commentId (IG 는 최상위 댓글 id 여야 함 — YT 는 대댓글 id 도 허용)' },
+                message: { type: 'string', description: '답글 완성본 — THREADS ≤500자, IG ≤2200자, FB ≤8000자, YT ≤10000자' },
                 channel: SNS_CHANNEL_PROPERTY,
             },
             required: ['platform', 'commentId', 'message'],
@@ -1154,7 +1506,7 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         title: '⚠️ 댓글 숨김·해제 · FB 좋아요',
         annotations: HINT.moderate,
         outputSchema: COMMENT_MODERATE_OUTPUT,
-        description: '⚠️ 받은 댓글 숨김/해제와 Facebook 댓글 좋아요 — 호출 즉시 반영된다(HITL — 사용자 승인 없이 호출 금지). **삭제는 제공하지 않는다**: 숨김은 되돌릴 수 있고 작성자 본인에게는 계속 보여 마찰이 적은 반면 삭제는 비가역이라, 스팸·어뷰징 대응에는 숨김이 브랜드 리스크가 낮다. 정당한 비판·불만은 숨기지 않는다 — 숨김은 스팸·광고·혐오·개인정보 노출에만 쓴다. like/unlike 는 FACEBOOK 만 지원한다(Threads·IG 는 댓글 좋아요 API 자체가 없어 답글이 유일한 반응 수단).',
+        description: '⚠️ 받은 댓글 숨김/해제와 Facebook 댓글 좋아요 — 호출 즉시 반영된다(HITL — 사용자 승인 없이 호출 금지). **삭제는 제공하지 않는다**: 숨김은 되돌릴 수 있고 작성자 본인에게는 계속 보여 마찰이 적은 반면 삭제는 비가역이라, 스팸·어뷰징 대응에는 숨김이 브랜드 리스크가 낮다. 정당한 비판·불만은 숨기지 않는다 — 숨김은 스팸·광고·혐오·개인정보 노출에만 쓴다. like/unlike 는 FACEBOOK 만 지원한다(Threads·IG 는 댓글 좋아요 API 자체가 없어 답글이 유일한 반응 수단). **YouTube 는 지원하지 않는다** — API 가 제공하는 것은 의미가 다른 검토 보류/거부(setModerationStatus)뿐이라 되돌릴 수 있는 숨김으로 매핑할 수 없다. YouTube 댓글은 Studio 에서 처리한다.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -1178,6 +1530,76 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         description: 'SNS 게시용 로컬 자격증명을 일괄 점검한다 — Threads/Instagram/Facebook 페이지는 /me 조회, YouTube 는 리프레시 토큰 교환 + 채널 조회. channel 지정 시 그 채널(브랜드) 토큰 세트만, 생략 시 <SNS_TOKEN_DIR> 하위 모든 채널 디렉토리 + 기본(평면) 토큰을 함께 점검해 채널별로 묶어 반환한다. 계정 id·이름과 유효 여부만 반환하며 토큰 값은 노출하지 않는다. 플랫폼별 *_publish 전 사전 점검(게시 예정 계정 확인)과 Meta 토큰 60일 만료 갱신 시점 판단에 사용한다. 자격증명 미설정 플랫폼은 사유와 함께 ok:false 로 표시된다.',
         inputSchema: { type: 'object', properties: { channel: SNS_CHANNEL_PROPERTY } },
     },
+    // ── Instagram 성장 조회 (grow-instagram 스킬 전용 읽기 툴 — 부작용 없음) ──
+    {
+        name: 'instagram_insights',
+        title: 'Instagram 성과 인사이트',
+        annotations: HINT.read,
+        outputSchema: INSTAGRAM_INSIGHTS_OUTPUT,
+        description: 'Instagram 성과 인사이트 — 계정 구간 지표(도달·조회·프로필 방문·참여 계정·상호작용·저장·프로필 링크 누름)와 최근 미디어별 지표를 한 번에 반환한다(읽기 전용, 부작용 없음). grow-instagram 루프가 틱마다 스냅샷을 찍어 전 틱 대비 증감과 잘 먹힌 릴스 유형을 판단하는 용도 — 저장·비교는 호출자가 data/<채널>/growth/instagram/ 에서 한다. **릴스(mediaProductType=REELS)에만** ig_reels_avg_watch_time(평균 시청 시간 ms)·ig_reels_video_view_total_time(총 시청 시간 ms)·reels_skip_rate(건너뛴 비율)가 붙는다 — 이 셋이 훅 판정의 1차 지표이고, 이미지·캐러셀에는 플랫폼이 지원하지 않는다. **팔로워 수는 인사이트가 아니라 account.followersCount 프로필 값**을 쓴다(인사이트의 follower_count 는 팔로워 100 미만 계정에서 빈 값이라 신규 채널에서 쓸 수 없다). **instagram_business_manage_insights 스코프 필요** — 게시용으로 발급한 기존 토큰에는 없을 수 있으며, 부족 시 에러에 재발급 안내가 실려 온다. 미디어당 /insights 1회 왕복이라 mediaLimit 만큼 API 호출이 늘어난다.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                days: { type: 'number', description: '계정 지표 집계 일수 (기본 7, 1~90)' },
+                mediaLimit: {
+                    type: 'number',
+                    description: '지표를 붙일 최근 미디어 수 (기본 10, 최대 25, 0 이면 계정 지표만)',
+                },
+                channel: SNS_CHANNEL_PROPERTY,
+            },
+        },
+    },
+    // ── Threads 성장 조회 (grow-threads 스킬 전용 읽기 툴 — 부작용 없음) ─────
+    // 인사이트·키워드 검색 스코프는 게시용 토큰에 없을 수 있다 — 부족 시 서버가
+    // 에러에 재발급 안내(token-setup.md)를 얹어 반환한다.
+    {
+        name: 'threads_insights',
+        title: 'Threads 성과 인사이트',
+        annotations: HINT.read,
+        outputSchema: THREADS_INSIGHTS_OUTPUT,
+        description: 'Threads 성과 인사이트 — 계정 지표(팔로워 수·프로필 조회 시계열·좋아요·답글·리포스트·인용 구간 합계)와 최근 루트 게시물별 지표를 한 번에 반환한다(읽기 전용, 부작용 없음). grow-threads 루프가 틱마다 스냅샷을 찍어 전 틱 대비 증감과 잘 먹힌 글 유형을 판단하는 용도 — 저장·비교는 호출자가 data/<채널>/growth/threads/ 에서 한다. views·shares 지표는 플랫폼이 "개발 중"으로 표시하는 값이라 오차가 있을 수 있고, followers_count 는 현재값만 온다(기간 무관). **threads_manage_insights 스코프 필요** — 게시용으로 발급한 기존 토큰에는 없을 수 있으며, 부족 시 에러에 재발급 안내가 실려 온다. 게시물당 /insights 1회 왕복이라 postLimit 만큼 API 호출이 늘어난다.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                days: {
+                    type: 'number',
+                    description: '계정 지표 집계 일수 (기본 7, 1~90 — 플랫폼 제약상 2024-04-13 이전 데이터는 조회 불가)',
+                },
+                postLimit: {
+                    type: 'number',
+                    description: '지표를 붙일 최근 루트 게시물 수 (기본 10, 최대 25, 0 이면 계정 지표만)',
+                },
+                channel: SNS_CHANNEL_PROPERTY,
+            },
+        },
+    },
+    {
+        name: 'threads_search',
+        title: 'Threads 키워드 검색',
+        annotations: HINT.read,
+        outputSchema: THREADS_SEARCH_OUTPUT,
+        description: 'Threads 공개 게시물 키워드 검색 — 채널 관심 키워드로 남의 공개 대화를 찾아 참여 후보를 고른다(읽기 전용, 부작용 없음). 결과의 postId 를 threads_publish 의 replyToId 로 넘기면 그 글에 답글로 참여할 수 있다(답글 게시 자체는 게시 툴의 승인 정책을 따른다). 대화 참여 목적이면 searchType=RECENT + sinceHours 로 신선한 글을 고를 것 — 오래된 글 답글은 도달이 없다. **threads_keyword_search 스코프 필요**(부족 시 에러에 재발급 안내). 쿼터: 계정당 24시간 롤링 2,200회(결과 없는 쿼리 미포함) — 틱당 키워드 1~3개면 충분하다. 민감·유해 키워드는 빈 결과가 정상 동작이며, 앱이 고급 접근 승인 전이면 자기 계정 게시물만 검색된다.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                query: { type: 'string', description: '검색 키워드 (채널 growth-plan 의 관심 키워드)' },
+                searchType: {
+                    type: 'string',
+                    enum: ['TOP', 'RECENT'],
+                    description: 'TOP=인기순(기본) | RECENT=최신순 — 대화 참여용은 RECENT 권장',
+                },
+                searchMode: {
+                    type: 'string',
+                    enum: ['KEYWORD', 'TAG'],
+                    description: 'KEYWORD=본문 검색(기본) | TAG=게시물에 붙은 토픽 태그 일치',
+                },
+                sinceHours: { type: 'number', description: '이 시간 이내 게시물만 (예: 24 — RECENT 와 조합 권장)' },
+                limit: { type: 'number', description: '결과 수 (기본 25, 최대 100)' },
+                channel: SNS_CHANNEL_PROPERTY,
+            },
+            required: ['query'],
+        },
+    },
 ];
 /**
  * 플랫폼별 게시 툴 → 필요한 자격증명 플랫폼 매핑 — index.ts 가 ListTools 시점에
@@ -1187,8 +1609,12 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
  */
 export const SNS_PLATFORM_BY_TOOL = {
     threads_publish: 'THREADS',
+    threads_insights: 'THREADS',
+    threads_search: 'THREADS',
     instagram_publish: 'INSTAGRAM',
+    instagram_insights: 'INSTAGRAM',
     facebook_publish: 'FACEBOOK',
     facebook_comment: 'FACEBOOK',
     youtube_publish: 'YOUTUBE',
+    youtube_insights: 'YOUTUBE',
 };

@@ -50,3 +50,10 @@ data/*
 
 # 작업 중간 산출물 (data/ 밖에서 생겨도 무시)
 .work/
+
+# ── Swift 앱 (apps/shoot-console) ─────────────────────────────────
+# 빌드 산출물은 커밋하지 않는다 — server/dist 와 달리 플러그인 실행 경로에
+# 걸려 있지 않고, 쓰는 사람이 build-app.sh 로 직접 빌드해 서명한다
+# (서명 신원이 머신마다 다르다).
+apps/*/.build/
+apps/*/build/

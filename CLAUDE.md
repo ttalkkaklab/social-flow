@@ -3,6 +3,45 @@
 채널 기반 쇼트폼 콘텐츠 파이프라인 Claude Code 플러그인.
 구조·스킬·MCP 툴 목록은 [README.md](README.md)를 정본으로 삼는다.
 
+## 문체 금칙 — 보고체 상태 동사 (사용자 지시, 2026-08-12)
+
+**남긴다 · 갈린다 · 나뉜다 · 남는다 · 남습니다 · 나뉩니다 · 갈립니다 · 남깁니다**
+류로 문장을 닫지 않는다. 현상을 동사 하나로 정리해 끝내는 낭독체가 AI 티다.
+대신 대상을 주어로 구체적으로 쓴다 — "근거를 남긴다" → "근거를 적어 둔다",
+"추천이 갈린다" → "미용실마다 다른 색을 권한다", "둘로 나뉜다" → "두 갈래다".
+
+**적용 범위는 콘텐츠 문안만이 아니다** — 스킬 문서·코드 주석·툴 설명·발행 HTML·
+커밋 메시지·사용자 응답 전부다. 콘텐츠 문안은 `check-style.py` D8(S1)이 기계
+차단하지만 **문서와 주석에는 검사기가 돌지 않으므로** 쓰는 사람이 지켜야 한다.
+새 문서를 쓰거나 고칠 때 이 스캔을 돌린다:
+
+```bash
+python3 - <<'PY'
+import re, os, glob
+pat = re.compile(r'남긴다|갈린다|갈렸다|엇갈린다|나뉜다|(?<!살아)남는다'
+                 r'|갈립니다|나뉩니다|(?<!살아)남습니다|남깁니다')
+roots = ['skills','agents','server/src','docs'] + glob.glob('data/*/growth/*/growth-plan.md')
+files = ['README.md','CLAUDE.md']
+for r in roots:
+    if os.path.isfile(r): files.append(r); continue
+    for dp,_,fn in os.walk(r):
+        files += [os.path.join(dp,f) for f in fn
+                  if f.endswith(('.md','.html','.ts','.js','.sh','.py'))]
+for p in files:
+    if 'korean-style.md' in p or 'check-style.py' in p: continue   # 규칙 정본·픽스처
+    s = open(p,encoding='utf-8',errors='replace').read()
+    for m in pat.finditer(s):
+        print(f"{p}: …{s[max(0,m.start()-40):m.end()+15]}…".replace('\n',' '))
+PY
+```
+
+`growth-plan.md`(상시 승인서)는 스캔에 넣는다 — 틱마다 다시 읽는 우리 산문이다.
+`growth-log.md`·`state.json` 은 넣지 않는다(과거 기록이고 리뷰어 인용을 담는다).
+`CLAUDE.md` 는 이 절이 금칙 형태를 인용하므로 그 대목이 잡히는 게 정상이다.
+
+규칙 정본은 `skills/platform-guide/references/korean-style.md` §D8 이다.
+예외는 `살아남는다`(다른 동사)와 조건절(`나뉜다면`)·구어 과거·명령(`남겼어`·`남겨 둬`).
+
 ## Git / GitHub 인증 (필수)
 
 원격 `origin`은 **`zeanxai/social-flow`(PRIVATE)** 이다.

@@ -116,6 +116,7 @@ GET /cmm/cmm/fileDownload.do?atchFileId={atchFileId}&fileDetailSn={fileDetailSn}
 <section id="odcloud">
   <h2>5. odcloud 행 조회</h2>
   <pre><code>GET https://api.odcloud.kr/api/{publicDataPk}/v1/{uddi}?page=1&perPage=10&returnType=JSON
+# 툴 인자는 limit — 서버가 odcloud 의 perPage 로 환산한다
 Authorization: Infuser {인증키}</code></pre>
   <div class="ok">
     <strong>키를 <code>Authorization</code> 헤더로 보낸다.</strong> odcloud는 <code>serviceKey</code> 쿼리도 받지만, 헤더를 쓰면 에러 본문에 URL이 에코돼도 키가 새지 않는다.
@@ -133,7 +134,7 @@ Authorization: Infuser {인증키}</code></pre>
     </tbody>
   </table>
   </div>
-  <p>응답은 12,000자에서 자르고 <code>…(잘림 — perPage를 줄이거나 필요한 행만 page로 짚어 조회할 것)</code>을 덧붙인다.</p>
+  <p>응답은 12,000자에서 자르고 <code>…(잘림 — limit 을 줄이거나 필요한 행만 page 로 짚어 조회할 것)</code>을 덧붙인다.</p>
 </section>
 
 <section id="openapi">

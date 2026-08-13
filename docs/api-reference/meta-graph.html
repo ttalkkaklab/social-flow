@@ -33,6 +33,7 @@
     <li><a href="#comments">댓글 능력 비대칭</a></li>
     <li><a href="#tokens">토큰과 계정 결정</a></li>
     <li><a href="#impl">구현 대조표</a></li>
+    <li><a href="#growth">Threads 성장 조회 (인사이트·키워드 검색)</a></li>
   </ol>
 </nav>
 
@@ -129,7 +130,8 @@ POST /{ig-id}/media_publish?creation_id=…</code></pre>
     <tbody>
       <tr><td>텍스트 (+링크)</td><td><code>POST /{page-id}/feed</code> <code>message</code> <code>link</code></td><td>—</td></tr>
       <tr><td>이미지 ≤10장</td><td><code>POST /{page-id}/photos</code> (<code>published=false</code>) → <code>/feed</code> + <code>attached_media[N]</code></td><td>미게시 사진을 만들고 피드에 묶는다</td></tr>
-      <tr><td>영상</td><td><code>POST /{page-id}/videos</code> <code>file_url</code> <code>description</code></td><td>일반 영상 — 릴스가 아니다. 타임아웃 120초</td></tr>
+      <tr><td>영상</td><td><code>POST /{page-id}/videos</code> <code>file_url</code> <code>description</code></td><td>일반 영상 — 릴스가 아니다. 타임아웃 120초. <strong>응답의 <code>id</code>가 곧 video_id</strong></td></tr>
+      <tr><td>자막</td><td><code>POST /{video-id}/captions</code> <code>captions_file</code> <code>default_locale</code></td><td>SRT 파일 첨부(multipart/form-data) · <strong>200K 상한</strong></td></tr>
       <tr><td>댓글</td><td><code>POST /{post-id}/comments</code> <code>message</code></td><td>scope <code>pages_manage_engagement</code></td></tr>
     </tbody>
   </table>
@@ -139,27 +141,46 @@ POST /{ig-id}/media_publish?creation_id=…</code></pre>
     <strong>원문 링크는 본문이 아니라 첫 댓글로.</strong> 페이스북은 외부 링크가 붙은 게시물의 도달을 낮춘다. <code>facebook_publish</code> 성공 직후 응답의 <code>postId</code>를 <code>facebook_comment</code>에 넘겨 첫 댓글로 링크를 단다 — FB 댓글의 링크는 클릭 가능하고 프리뷰도 렌더된다. <code>linkUrl</code>은 미디어가 없는 텍스트 게시의 예외 경로로만 남겼다.
   </div>
   <div class="danger">
-    댓글만 실패했을 때 <strong>본문을 재게시하면 안 된다</strong>. <code>facebook_comment</code>만 재시도한다. 게시 API가 비멱등이라 본문 재시도는 중복 게시가 된다.
+    댓글만 실패했을 때 <strong>본문을 재게시하면 안 된다</strong>. <code>facebook_comment</code>만 재시도한다. 게시 API가 비멱등이라 본문 재시도는 중복 게시가 된다. 자막(<code>captionWarning</code>)도 같다.
+  </div>
+  <h3>자막은 영상과 따로 올린다</h3>
+  <p>Meta 4종 중 <strong>Facebook만 자막 파일을 받는다</strong>. 영상 게시 응답의 <code>id</code>가 그대로 video_id라 곧바로 자막 엣지에 넘길 수 있다.</p>
+  <pre><code>POST /{video-id}/captions
+Content-Type: multipart/form-data
+
+access_token=…
+default_locale=ko_KR
+captions_file=@caption.ko_KR.srt   ← 파일명이 계약이다</code></pre>
+  <div class="warn">
+    <strong>파일명이 로케일을 결정한다.</strong> <code>&lt;이름&gt;.&lt;locale&gt;.srt</code> 형식이 아니면 <strong>error 386</strong>으로 거부된다(<code>ko_KR</code>·<code>en_US</code> 꼴). 이 서버는 <code>captionLocale</code>을 정규식으로 검증하고 파일명을 직접 조립해 이 함정을 없앴다. 200K를 넘는 파일도 호출 전에 막는다.
+    <p style="margin-top:10px">FB는 <code>file_url</code> 영상을 <strong>비동기로 처리</strong>한다. 게시 직후 자막 호출이 처리 중 상태에 걸리면 실패할 수 있는데, 그때도 게시는 유효하므로 경고로만 보고하고 자막만 다시 올린다.</p>
+  </div>
+  <div class="danger">
+    <strong>Instagram·Threads에는 자막 파일 경로가 없다.</strong> IG Content Publishing 컨테이너에 자막 파라미터가 없어서, IG 릴스는 화면에 자막을 태운 영상(<code>video-sub.mp4</code>)을 올리는 것이 유일한 방법이다. 그래서 이 파이프라인은 영상을 두 벌 만든다 — 클린 마스터는 YouTube·Facebook으로, 번인본은 Instagram으로.
   </div>
 </section>
 
 <section id="comments">
   <h2>6. 댓글 능력 비대칭</h2>
-  <p>받은 댓글 관리(<code>sns_comment_*</code>)가 흡수해야 하는 플랫폼 차이다. 2026-07-26 토큰 실측 기준.</p>
+  <p>받은 댓글 관리(<code>sns_comment_*</code>)가 흡수해야 하는 플랫폼 차이다. Meta 3종은 2026-07-26 토큰 실측, YouTube는 2026-08-11 편입 기준.</p>
   <div class="table-scroll">
   <table>
     <thead><tr><th></th><th>Threads</th><th>Instagram</th><th>Facebook</th><th>YouTube</th></tr></thead>
     <tbody>
-      <tr><td>읽기</td><td><code>/{post}/conversation</code><br>깊이 무관 평면화</td><td><code>/{post}/comments</code><br><code>replies{…}</code> 중첩</td><td><code>/{post}/comments?filter=stream</code><br>대댓글까지 평면</td><td><strong>불가</strong></td></tr>
-      <tr><td>답글</td><td><code>reply_to_id</code> 새 게시물<br>깊이 제한 없음</td><td><code>/{comment}/replies</code><br><strong>최상위 댓글에만</strong></td><td><code>/{comment}/comments</code></td><td><strong>불가</strong></td></tr>
-      <tr><td>숨김</td><td><code>/{id}/manage_reply?hide=</code></td><td><code>/{id}?hide=</code></td><td><code>/{id}?is_hidden=</code></td><td>—</td></tr>
-      <tr><td>좋아요</td><td><strong>API 없음</strong></td><td><strong>API 없음</strong></td><td><code>/{id}/likes</code> POST·DELETE</td><td>—</td></tr>
-      <tr><td>"내가 답했나" 판정</td><td><code>is_reply_owned_by_me</code></td><td><code>username</code> 일치</td><td><code>from.id == pageId</code></td><td>—</td></tr>
+      <tr><td>읽기</td><td><code>/{post}/conversation</code><br>깊이 무관 평면화</td><td><code>/{post}/comments</code><br><code>replies{…}</code> 중첩</td><td><code>/{post}/comments?filter=stream</code><br>대댓글까지 평면</td><td><code>commentThreads.list</code><br>영상별 · <code>replies</code>는 5건까지</td></tr>
+      <tr><td>답글</td><td><code>reply_to_id</code> 새 게시물<br>깊이 제한 없음</td><td><code>/{comment}/replies</code><br><strong>최상위 댓글에만</strong></td><td><code>/{comment}/comments</code></td><td><code>comments.insert</code><br><strong>최상위 댓글에만</strong></td></tr>
+      <tr><td>숨김</td><td><code>/{id}/manage_reply?hide=</code></td><td><code>/{id}?hide=</code></td><td><code>/{id}?is_hidden=</code></td><td>미지원 — 의미가 다름</td></tr>
+      <tr><td>좋아요</td><td><strong>API 없음</strong></td><td><strong>API 없음</strong></td><td><code>/{id}/likes</code> POST·DELETE</td><td>미지원</td></tr>
+      <tr><td>"내가 답했나" 판정</td><td><code>is_reply_owned_by_me</code></td><td><code>username</code> 일치</td><td><code>from.id == pageId</code></td><td>스레드 내 <strong>우리 마지막 답글 시각</strong></td></tr>
     </tbody>
   </table>
   </div>
+  <div class="note">
+    <strong>YouTube의 판정만 시각 기준인 이유.</strong> 다른 셋은 댓글마다 "우리 것인가"를 알려주는 필드가 있지만 YouTube에는 없다. 스레드 단위로 뭉뚱그리면 우리 답글 뒤에 붙은 새 댓글을 놓치고, 댓글 단위로만 보면 이미 답한 스레드에 또 답한다. 그래서 <strong>우리 마지막 답글보다 나중에 달린 것만 미응대</strong>로 잡는다. <code>replies</code> part가 5건만 주므로 잘렸으면 <code>comments.list</code>로 전체를 다시 받고, 그래도 불완전하면(100건 초과·조회 실패) 판정 근거가 없으니 <strong>응대됨으로 처리해 목록에서 뺀다</strong> — 놓친 댓글은 다음 조회에 잡히지만 반대로 틀리면 중복 답글이 공개로 나간다.
+  </div>
   <div class="warn">
-    <strong>YouTube는 토큰 scope에 <code>youtube.force-ssl</code>이 없어 댓글 API 자체가 불가능하다.</strong> 인박스는 이를 조용히 빼지 않고 <code>skipped</code>에 사유와 함께 실어 보고한다 — "YouTube 댓글이 0건"과 "YouTube를 조회하지 못함"은 다른 사실이다.
+    <strong>YouTube는 2026-08부터 인박스·답글에 편입됐다</strong>(<code>commentThreads.list</code> + <code>comments.insert</code>). 다만 <code>youtube.force-ssl</code> 스코프가 있어야 하고, 게시용으로 발급한 토큰에는 없다 — 이때 인박스는 조용히 빼지 않고 <code>skipped</code>에 재발급 안내와 함께 실어 보고한다. "YouTube 댓글이 0건"과 "YouTube를 조회하지 못함"은 다른 사실이다.
+    <p style="margin-top:10px">숨김·좋아요는 여전히 YouTube를 지원하지 않는다. API가 주는 것은 의미가 다른 검토 보류/거부(<code>setModerationStatus</code>)뿐이라 "되돌릴 수 있는 숨김"으로 매핑할 수 없다 — 잘못 매핑하느니 명시적으로 거부한다.</p>
   </div>
   <h3>인박스 설계</h3>
   <ul>
@@ -197,6 +218,7 @@ POST /{ig-id}/media_publish?creation_id=…</code></pre>
       <tr><td>Threads 미디어</td><td>TEXT·IMAGE·VIDEO·CAROUSEL</td><td>TEXT·IMAGE (전략적 선택)</td></tr>
       <tr><td>IG 미디어</td><td>IMAGE·VIDEO·REELS·CAROUSEL·STORIES</td><td>IMAGE·CAROUSEL·REELS</td></tr>
       <tr><td>FB 미디어</td><td>텍스트·사진·영상·릴스</td><td>텍스트·사진 ≤10·일반 영상</td></tr>
+      <tr><td>자막</td><td>FB만 <code>/{video-id}/captions</code> (IG·Threads 없음)</td><td><strong>FB는 파일 별도 업로드</strong>(<code>captionFilePath</code>, 영상 게시에서만) · <strong>IG는 번인본 영상</strong>으로 대응. 파일명·크기는 호출 전 검증, 실패는 <code>captionWarning</code>으로 강등</td></tr>
       <tr><td>POST 파라미터 전송</td><td>쿼리스트링·form 본문 모두 허용</td><td><strong>form 본문</strong>(<code>application/x-www-form-urlencoded</code>) — 캡션 상한(IG 2,200자·FB 5,000자)이 %-인코딩(한글 ×9)되면 URL이 수십 KB가 되어 요청 라인 길이 한계에 걸릴 수 있고, 토큰이 URL에 남지 않는다. GET/DELETE는 쿼리스트링 유지</td></tr>
       <tr><td>토큰 노출</td><td>—</td><td>에러 메시지에 전체 URL을 싣지 않는다 (베이스 URL만) + POST는 토큰도 본문으로</td></tr>
       <tr><td>permalink</td><td>별도 조회</td><td>게시 성공 후 조회. 실패해도 게시는 성공으로 보고(<code>permalink: null</code>)</td></tr>
@@ -207,8 +229,41 @@ POST /{ig-id}/media_publish?creation_id=…</code></pre>
   </div>
 </section>
 
+<section id="growth">
+  <h2>9. Threads 성장 조회 (인사이트·키워드 검색)</h2>
+  <p>grow-threads 스킬 전용 읽기 엔드포인트 2종 — <code>threads_insights</code>·<code>threads_search</code> 툴의 백엔드다. 2026-08-11 공식 문서(<a href="https://developers.facebook.com/docs/threads/insights">Insights</a> · <a href="https://developers.facebook.com/docs/threads/keyword-search">Keyword Search</a>) 기준.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>인사이트</th><th>키워드 검색</th></tr></thead>
+    <tbody>
+      <tr><td>엔드포인트</td><td>계정 <code>GET /{user-id}/threads_insights</code><br>게시물 <code>GET /{media-id}/insights</code></td><td><code>GET /keyword_search</code> (uid 불필요)</td></tr>
+      <tr><td>필요 스코프</td><td><code>threads_manage_insights</code></td><td><code>threads_keyword_search</code></td></tr>
+      <tr><td>주요 파라미터</td><td><code>metric</code> · <code>since</code>/<code>until</code>(unix 초)</td><td><code>q</code> · <code>search_type=TOP|RECENT</code> · <code>search_mode=KEYWORD|TAG</code> · <code>since</code>/<code>until</code> · <code>limit</code>(기본 25 최대 100)</td></tr>
+      <tr><td>쿼터</td><td>일반 Graph 한도</td><td><strong>계정당 24시간 롤링 2,200회</strong> — 결과 없는 쿼리는 미포함</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>계정 지표의 두 가지 응답 형태</h3>
+  <ul>
+    <li><code>views</code>는 <strong>일 단위 시계열</strong>(<code>values[]</code>), <code>likes</code>·<code>replies</code>·<code>reposts</code>·<code>quotes</code>는 구간 합계(<code>total_value</code>)로 온다 — 서버가 <code>{ total, daily[] }</code> / 스칼라로 정규화한다.</li>
+    <li><code>followers_count</code>·<code>follower_demographics</code>는 <strong>since/until 미지원</strong> — 서버는 followers_count 를 별도 호출로 분리한다(같은 요청에 섞으면 실패). demographics 는 팔로워 100명 미만이면 안 나오므로 미노출.</li>
+    <li>since/until 은 2024-04-13 이전으로 내려가지 않는다(플랫폼 제약).</li>
+    <li>게시물 지표 <code>views</code>·<code>shares</code>는 문서상 "개발 중" — 오차 전제로 추이 판단에만 쓴다.</li>
+  </ul>
+  <h3>키워드 검색 실측 주의</h3>
+  <ul>
+    <li>응답 필드: <code>id,text,media_type,permalink,timestamp,username,has_replies,is_quote_post,is_reply</code> — <code>owner</code> 필드는 없다.</li>
+    <li><strong>앱이 고급 접근 승인 전이면 인증된 자기 계정 게시물만 반환된다</strong> — 검색이 "빈 결과"인 것과 "권한 부족"은 다른 사실이므로 grow-threads init 의 스코프 검증에서 걸러야 한다.</li>
+    <li>민감·유해 키워드는 에러가 아니라 <strong>빈 배열</strong>로 온다 — 정상 동작이다.</li>
+    <li>검색 결과 postId 에 <code>reply_to_id</code> 게시(= <code>threads_publish</code> 의 <code>replyToId</code>)로 남의 공개 글에 답글 참여가 가능하다 — 상대 계정의 답글 제한 설정에 막히면 게시 단계에서 플랫폼 에러가 돌아온다.</li>
+  </ul>
+  <div class="warn">
+    <strong>스코프는 재발급으로만 늘어난다.</strong> 게시용으로 발급한 기존 토큰에는 이 두 스코프가 없다 — <code>refresh_access_token</code> 갱신은 스코프를 바꾸지 못하므로, 동의 플로우에서 체크박스를 켜고 <strong>토큰을 새로 발급</strong>해야 한다. 서버는 스코프 부족 에러에 이 안내(token-setup.md)를 얹어 반환한다.
+  </div>
+</section>
+
 <footer>
-  기준일 2026-07-29 · 구현 <a href="../../server/src/sns-client.ts">server/src/sns-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+  기준일 2026-08-11 · 구현 <a href="../../server/src/sns-client.ts">server/src/sns-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
 </footer>
 
 </div>

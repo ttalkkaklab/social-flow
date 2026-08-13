@@ -8,7 +8,7 @@ import { ROUTES } from './handlers.js';
 import { enabledPlatforms } from './sns-client.js';
 
 const server = new Server(
-  { name: 'social-flow', version: '0.4.1' },
+  { name: 'social-flow', version: '0.8.0' },
   { capabilities: { tools: {} } },
 );
 
@@ -66,8 +66,10 @@ async function main() {
     `Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* tools will fail)'}, ` +
       `naver keys ${config.naverClientId && config.naverClientSecret ? 'set' : 'MISSING (naver_search will fail)'}, ` +
       `data.go.kr key ${config.dataGoKrApiKey ? 'set' : 'MISSING (datago_file_fetch/datago_api_call will fail — search/detail/download still work)'}, ` +
-      `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/tts_*/music_* generation tools will fail)'}, ` +
-      `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail)'}, ` +
+      `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail — tts_local_generate does not need it)'}, ` +
+      `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail — image_local_generate does not need it)'}, ` +
+      `local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : 'python3 (default — set SUPERTONIC_PYTHON for a virtualenv)'}, ` +
+      `local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : '~/.local/bin/mflux-generate-z-image-turbo (default — set MFLUX_ZIMAGE_BIN if elsewhere)'}, ` +
       `sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(',') : 'none'} (credential files found — others hidden from ListTools), ` +
       `sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(',')}]`).join(' ') : 'none (flat/default tokens only)'}`,
   );

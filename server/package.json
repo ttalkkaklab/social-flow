@@ -1,7 +1,7 @@
 {
   "name": "@zeans/social-flow-mcp-server",
-  "version": "0.4.1",
-  "description": "social-flow 플러그인 내부 MCP 서버 — SNS 직접 게시(Threads·Instagram·Facebook·YouTube) + 자료조사 검색(SerpApi·Naver Open API) + 이미지·영상·음성·음악 생성(OpenAI GPT Image·Veo 3.1·Gemini TTS·Lyria)",
+  "version": "0.8.0",
+  "description": "social-flow 플러그인 내부 MCP 서버 — SNS 직접 게시(Threads·Instagram·Facebook·YouTube) + 자료조사 검색(SerpApi 4종·Naver Open API 8타입) + 이미지·영상·음성·음악 생성(OpenAI GPT Image·Veo 3.1·Gemini TTS·Lyria)",
   "type": "module",
   "main": "dist/index.js",
   "engines": {

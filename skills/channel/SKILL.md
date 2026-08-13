@@ -8,7 +8,7 @@ description: >
   theme, target platforms, and fact-check policy — the SoT every storyboard/produce/publish
   run reads first.
 argument-hint: "[add|list|update] [채널명]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices"]
 ---
 
 # 채널 관리 — data/[채널]/profile.md
@@ -47,7 +47,9 @@ data/
 2. **핵심 정보 수집** — AskUserQuestion 으로 다음을 확인한다 (한 번에 최대 4개,
    사용자가 이미 준 정보는 다시 묻지 않는다):
    - 타깃 시청자 (누가, 어떤 순간에 보는가)
-   - 톤 (존댓말 설명형 / 반말 톡톡형 / 다큐 나레이션형 등)
+   - 톤 (존댓말 설명형 / 반말 톡톡형 / 다큐 나레이션형 등) — 여기서 정한 격식이
+     이후 전 산출물의 정본이다. 문체 게이트는 이 격식을 바꾸지 않고 AI 티만
+     걷어낸다(platform-guide `references/korean-style.md`)
    - 게시 플랫폼 (threads / instagram / facebook / youtube 중)
    - 사실 검증 정책 (정보성=조사 필수 / 창작·일상=생략)
 
@@ -63,7 +65,7 @@ data/
 
 5. **profile.md 생성** — `references/profile-template.md` 를 복사해 수집한 값으로
    채운다. 빈 섹션을 남기지 않는다 — 모르는 값은 사용자에게 묻거나 근거 있는
-   기본값을 쓰고 `(기본값)` 표기를 남긴다.
+   기본값을 쓰고 `(기본값)` 표기를 붙인다.
 
 6. **SNS 토큰 디렉토리 안내** — 게시 자격증명은 채널별 디렉토리
    `~/.config/social-flow/<slug>/` 에 둔다 (data/<slug> 와 동일 slug — 게시 툴
@@ -75,6 +77,10 @@ data/
 
    토큰 발급·파일 규약은 publish 스킬의 `references/token-setup.md` 를 안내하고,
    설정 후 `sns_account_check`(channel=<slug>)로 게시 예정 계정을 확인하게 한다.
+   계정을 처음부터 개설해야 하면 플랫폼별 개설 스킬을 안내한다 — 계정 개설·브랜딩·
+   API 토큰 발급을 ego lite 로 사용자와 함께 진행한다:
+   `/social-flow:setup-threads <채널>` · `/social-flow:setup-instagram <채널>` ·
+   `/social-flow:setup-youtube <채널>`.
    토큰 없이도 스토리보드·제작은 진행 가능하다 — 게시 시점까지만 준비되면 된다.
 
 7. **보고** — 생성된 profile.md 전문을 보여주고 다음 단계를 안내한다:

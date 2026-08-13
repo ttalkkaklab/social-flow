@@ -303,7 +303,7 @@ export async function generateAdvanced(request) {
         return { success: false, error: errorMessage };
     }
 }
-/** 세션 종료 실패는 이미 결정된 결과를 뒤집지 않는다 — 삼키고 로그만 남긴다. */
+/** 세션 종료 실패는 이미 결정된 결과를 뒤집지 않는다 — 삼키고 로그만 적는다. */
 function closeQuietly(session) {
     try {
         session.close();

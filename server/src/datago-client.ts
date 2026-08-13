@@ -68,10 +68,10 @@ function compact<T extends Record<string, unknown>>(obj: T): Partial<T> {
 export type DatagoType = 'API' | 'FILE';
 
 export interface DatagoSearchInput {
-  keyword: string;
+  query: string;
   type?: DatagoType;
   page?: number;
-  perPage?: number;
+  limit?: number;
 }
 
 interface SearchItem {
@@ -148,11 +148,11 @@ async function searchOneType(keyword: string, type: DatagoType, page: number, pe
 
 export async function searchDatasets(input: DatagoSearchInput): Promise<DatagoResult> {
   const page = input.page ?? 1;
-  const perPage = Math.min(input.perPage ?? 10, 20);
+  const perPage = Math.min(input.limit ?? 10, 20);
   const types: DatagoType[] = input.type ? [input.type] : ['API', 'FILE'];
 
-  const results = await Promise.all(types.map((t) => searchOneType(input.keyword, t, page, perPage)));
-  const out: Record<string, unknown> = { keyword: input.keyword, page };
+  const results = await Promise.all(types.map((t) => searchOneType(input.query, t, page, perPage)));
+  const out: Record<string, unknown> = { query: input.query, page };
   let empty = true;
   for (let i = 0; i < types.length; i++) {
     const r = results[i];
@@ -391,7 +391,7 @@ export interface DatagoFileFetchInput {
   publicDataPk: string;
   uddi: string;
   page?: number;
-  perPage?: number;
+  limit?: number;
 }
 
 const ODCLOUD_CODE_HELP: Record<number, string> = {
@@ -408,7 +408,7 @@ export async function fetchFileRows(input: DatagoFileFetchInput): Promise<Datago
   const uddiSegment = encodeURIComponent(input.uddi).replace(/%3A/gi, ':');
   const url = `${ODCLOUD_BASE}/${input.publicDataPk}/v1/${uddiSegment}${buildQuery({
     page: input.page ?? 1,
-    perPage: Math.min(input.perPage ?? 10, 50),
+    perPage: Math.min(input.limit ?? 10, 50),
     returnType: 'JSON',
   })}`;
   // 키는 Authorization 헤더로만 — URL 에코 경로로 키가 새지 않는다
@@ -438,7 +438,7 @@ export async function fetchFileRows(input: DatagoFileFetchInput): Promise<Datago
     1,
   );
   if (text.length > 12_000) {
-    text = `${text.slice(0, 12_000)}\n…(잘림 — perPage 를 줄이거나 필요한 행만 page 로 짚어 조회할 것)`;
+    text = `${text.slice(0, 12_000)}\n…(잘림 — limit 을 줄이거나 필요한 행만 page 로 짚어 조회할 것)`;
   }
   return { text, isError: false };
 }

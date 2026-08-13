@@ -530,7 +530,7 @@
     <p style="margin-top:10px">계정 단위 $5짜리 Workers Paid를 결제해도 업로드 한도는 100 MB 그대로다. 이 한도는 <strong>프록시를 통과하는 그 도메인의 CDN 요금제</strong>가 결정한다. 도메인 A만 Business로 올렸다면 200 MB는 A에만 적용되고, 같은 계정의 도메인 B는 여전히 100 MB다.</p>
   </div>
 
-  <h3>요청 경로에 따라 한도가 갈린다</h3>
+  <h3>요청 경로에 따라 한도가 다르다</h3>
   <div class="flow">
     <div class="flow-row">
       <span class="flow-label">경로 ① — CDN 프록시 경유 (오렌지 구름)</span>
@@ -548,7 +548,7 @@
     </div>
   </div>
 
-  <p>Cloudflare의 한도는 <strong>누가 트래픽을 처리하느냐</strong>로 갈린다. 프록시를 지나면 zone 요금제 한도를, 계정 단위 제품의 자체 엔드포인트로 직접 가면 그 제품 한도를 따른다. 그래서 “업로드가 413으로 막힌다”의 정석 해법은 요금제 업그레이드가 아니라 <strong>업로드 경로를 프록시 밖으로 빼는 것</strong>이다.</p>
+  <p>Cloudflare의 한도는 <strong>누가 트래픽을 처리하느냐</strong>에 따라 다르다. 프록시를 지나면 zone 요금제 한도를, 계정 단위 제품의 자체 엔드포인트로 직접 가면 그 제품 한도를 따른다. 그래서 “업로드가 413으로 막힌다”의 정석 해법은 요금제 업그레이드가 아니라 <strong>업로드 경로를 프록시 밖으로 빼는 것</strong>이다.</p>
 
   <h3>부수 주의 — WAF가 검사하는 본문은 훨씬 작다</h3>
   <p><code>http.request.body.*</code> 필드가 처리하는 본문 크기는 업로드 허용치보다 한참 작다. 초과분은 잘려서 <code>http.request.body.truncated</code>가 <code>true</code>가 되고, 이 필드에 의존하는 WAF 규칙은 그 지점부터 무력해진다. <strong>오리진은 전체 본문을 그대로 수신</strong>하므로, 대용량 업로드는 WAF 본문 검사를 사실상 통과한다고 보고 오리진 측 검증을 반드시 설계해야 한다.</p>
@@ -653,7 +653,7 @@
 <section id="billing">
   <h2 class="sec"><span class="no">08</span>결제 단위 — 도메인별 vs 계정별</h2>
 
-  <p class="lead">답은 <strong>“둘 다”</strong>이며, 제품군에 따라 갈린다. 이 이원 구조를 이해하지 못하면 비용 설계가 크게 어긋난다.</p>
+  <p class="lead">답은 <strong>“둘 다”</strong>이며, 제품군에 따라 다르다. 이 이원 구조를 이해하지 못하면 비용 설계가 크게 어긋난다.</p>
 
   <div class="split">
     <div class="unit-card">

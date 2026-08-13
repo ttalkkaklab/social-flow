@@ -24,8 +24,16 @@ make-reels 파이프라인에서 승계했다 (동일 스크립트·동일 계�
 → 문장 경계 검출(silencedetect — 실패 시 자수 비례 폴백) → 카드 길이 프레임 올림 +
 오디오 샘플 정확 패딩(**드리프트 0**) → reveal 전환 시각 산출(reveal-timing.py) →
 비주얼 체인(영상+알파 합성 → reveal xfade) → 켄번즈 zoompan(3.5%) → concat →
-BGM 사이드체인 덕킹 → ASS 자막 번인(하단 밴드) → 아웃트로 xfade 0.6초 접합 →
-loudnorm -14 최종 인코딩(H.264 High 4.1, faststart) → 커버 스틸 추출(`COVER_TS`).
+BGM 사이드체인 덕킹 → 자막 파일 생성(`subs.srt` 게시용 · `subs.ass` 번인용) →
+아웃트로 xfade 0.6초 접합 → loudnorm -14 최종 인코딩(H.264 High 4.1, faststart)
+→ 커버 스틸 추출(`COVER_TS`).
+
+**영상은 두 벌 나온다** — `reel.mp4`(자막 없는 클린 마스터)와 `reel-sub.mp4`(하단
+밴드 번인). 자막은 영상에 태우지 않고 파일로 따로 올리는 것이 원칙이라 클린본이
+기본이고, 번인본은 자막 파일을 못 받는 IG 릴스용이다. 번인본은 클린본을 다시
+인코딩하지 않고 **같은 원본에서 한 번 더** 뽑는다(둘 다 1세대). SRT 와 ASS 도
+자막 줄을 만드는 그 자리에서 동시에 찍는다 — 역변환하면 두 파일의 시각이 어긋난다.
+`BURN=0` 으로 번인본을 끌 수 있지만, IG 에 올릴 것이 있으면 자막이 사라진다.
 
 **동기화의 원천은 구조다** — 오디오는 카드당 1파일, 카드 길이는 프레임 올림 +
 샘플 정확 패딩으로 확정. reveal 은 순수 비디오 측 타이밍이라 경계 검출이 틀려도
@@ -72,10 +80,16 @@ RIFF 매직으로 자동 판별한다. temperature 0.4.
 
 ## 팔린드롬 루프 (8초 클립 → 16초)
 
+> **영상 사운드를 쓰는 구간에는 쓰지 않는다.** 정+역 이어붙이기라 후반부에서 소리가
+> 거꾸로 재생된다. produce 절대 규칙 9(생성 영상 구간은 영상 사운드를 쓴다)가 적용되는
+> 도입 b-roll 은 **8초 생성본에서 사용 길이(broll 씬 duration, 기본 4초)만 잘라** 쓰고,
+> 길이가 모자라면 씬 구성을 줄인다 — 팔린드롬으로 늘리지 않는다.
+> 팔린드롬은 소리를 버리는 구간(발화 클립 위에 나레이션을 얹는 quote 씬 등)에서만 쓴다.
+
 ```bash
 ffmpeg -y -i cover-motion.mp4 -filter_complex \
   "[0:v]split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1:a=0,fps=30,format=yuv420p[v]" \
-  -map "[v]" -c:v libx264 -preset medium -crf 18 cover-palin.mp4
+  -map "[v]" -c:v libx264 -preset medium -crf 18 speaker-palin.mp4
 ```
 
 ## 실측 함정 모음

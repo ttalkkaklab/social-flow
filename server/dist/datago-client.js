@@ -109,10 +109,10 @@ async function searchOneType(keyword, type, page, perPage) {
 }
 export async function searchDatasets(input) {
     const page = input.page ?? 1;
-    const perPage = Math.min(input.perPage ?? 10, 20);
+    const perPage = Math.min(input.limit ?? 10, 20);
     const types = input.type ? [input.type] : ['API', 'FILE'];
-    const results = await Promise.all(types.map((t) => searchOneType(input.keyword, t, page, perPage)));
-    const out = { keyword: input.keyword, page };
+    const results = await Promise.all(types.map((t) => searchOneType(input.query, t, page, perPage)));
+    const out = { query: input.query, page };
     let empty = true;
     for (let i = 0; i < types.length; i++) {
         const r = results[i];
@@ -334,7 +334,7 @@ export async function fetchFileRows(input) {
     const uddiSegment = encodeURIComponent(input.uddi).replace(/%3A/gi, ':');
     const url = `${ODCLOUD_BASE}/${input.publicDataPk}/v1/${uddiSegment}${buildQuery({
         page: input.page ?? 1,
-        perPage: Math.min(input.perPage ?? 10, 50),
+        perPage: Math.min(input.limit ?? 10, 50),
         returnType: 'JSON',
     })}`;
     // 키는 Authorization 헤더로만 — URL 에코 경로로 키가 새지 않는다
@@ -360,7 +360,7 @@ export async function fetchFileRows(input) {
         data: json.data,
     }), null, 1);
     if (text.length > 12_000) {
-        text = `${text.slice(0, 12_000)}\n…(잘림 — perPage 를 줄이거나 필요한 행만 page 로 짚어 조회할 것)`;
+        text = `${text.slice(0, 12_000)}\n…(잘림 — limit 을 줄이거나 필요한 행만 page 로 짚어 조회할 것)`;
     }
     return { text, isError: false };
 }

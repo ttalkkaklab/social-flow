@@ -14,7 +14,8 @@
 #   <workdir>/bgm.wav     : 배경음악 (본편보다 짧으면 루프)
 #   <workdir>/outro.mp4   : (선택) 공통 아웃트로 — 있으면 xfade+acrossfade 접합
 #   <workdir>/fonts/      : (선택) 자막 폰트 ttf — libass 는 woff2 를 못 읽는다
-# 출력: <workdir>/reel.mp4 · cover.jpg · subs.ass · build-report.txt
+# 출력: <workdir>/reel.mp4 (자막 없는 클린 마스터) · reel-sub.mp4 (번인본, BURN=0 이면 생략)
+#       subs.srt (게시용) · subs.ass (번인 원본) · cover.jpg · build-report.txt
 #
 # 합성 지오메트리 (1080×1920 캔버스):
 #   상단 y 190~460   타이틀 블록 (오버레이 PNG — screencast-overlay.html 의 y=460 계약과 짝)
@@ -39,11 +40,15 @@ BGM_VOL=${BGM_VOL:-0.22}           # 육성은 TTS 보다 다이내믹 — 낮�
 DUCK_RELEASE=${DUCK_RELEASE:-250}
 XFADE=${XFADE:-0.6}                # 본편↔아웃트로 전환 길이
 XFADE_T=${XFADE_T:-fadeblack}
-SUB=${SUB:-1}                      # 1=ASS 자막 번인, 0=자막 없음
+SUB=${SUB:-1}                      # 1=자막 데이터 생성(subs.srt·subs.ass), 0=자막 없음
+BURN=${BURN:-1}                    # 1=번인본 reel-sub.mp4 도 산출, 0=클린 마스터만
 SUB_FONT=${SUB_FONT:-Pretendard}   # fonts/ 에 ttf 가 없으면 fontconfig 폴백
 COVER_TS=${COVER_TS:-1.2}          # 커버 스틸 시각 (타이틀 오버레이가 보이는 프레임)
 
 rm -rf work && mkdir -p work
+# 옛 빌드의 자막·번인본을 먼저 지운다 — SUB=0 으로 다시 빌드했을 때 이전 subs.srt 가
+# 남아 있으면 타이밍이 어긋난 자막이 게시된다(publish 는 파일 존재만 보고 복사한다)
+rm -f subs.srt subs.ass reel-sub.mp4
 REPORT=build-report.txt
 : > "$REPORT"
 WARN=0
@@ -65,6 +70,10 @@ def asstime(t):
     if t < 0: t = 0.0
     h = int(t // 3600); m = int((t - h*3600) // 60); s = t - h*3600 - m*60
     return "%d:%02d:%05.2f" % (h, m, s)
+def srttime(t):                       # SRT 는 hh:mm:ss,mmm — ASS 와 자리수·구분자가 다르다
+    if t < 0: t = 0.0
+    h = int(t // 3600); m = int((t - h*3600) // 60); s = t - h*3600 - m*60
+    return ("%02d:%02d:%06.3f" % (h, m, s)).replace(".", ",")
 rows, subs, totf = [], [], 0
 for sc in d["scenes"]:
     idx = sc["idx"]; st = float(sc["start"]); en = float(sc["end"])
@@ -94,6 +103,11 @@ open("work/scenes.tsv", "w").write("\n".join(rows) + "\n")
 with open("work/subs.body", "w") as f:
     for a, b, t in subs:
         f.write("Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n" % (asstime(a), asstime(b), t))
+# 게시용 SRT 는 같은 subs 리스트에서 찍는다 — 번인본과 자막 파일이 한 원천을 공유해야
+# 두 파일이 서로 다른 시각을 갖는 사고가 없다. 페이드 태그는 ASS 전용이라 뺀다.
+with open("work/subs.srtbody", "w") as f:
+    for i, (a, b, t) in enumerate(subs, 1):
+        f.write("%d\n%s --> %s\n%s\n\n" % (i, srttime(a), srttime(b), t))
 print(d["source"])
 PYEOF
 )
@@ -143,10 +157,26 @@ while IFS=$'\t' read -r -u 3 IDX ST D FRAMES CROP OVL; do
       -map "[v]" -frames:v "$FRAMES" -an -c:v libx264 -preset medium -crf 18 "work/v$IDX.mp4"
   fi
 
-  # 오디오 — 씬별 loudnorm(육성 음량 편차 정규화) 후 샘플 정확 패딩/트림
-  ffmpeg -y -v error -ss "$ST" -t "$D" -i "$SRC" -vn \
-    -af "aresample=48000,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000,apad=whole_len=$SAMPLES,atrim=end_sample=$SAMPLES" \
-    -ac 1 -ar 48000 "work/n$IDX.wav"
+  # 오디오 — 육성 정리(저역·명료도·근접효과) → 씬별 loudnorm(음량 편차 정규화)
+  #          → 샘플 정확 패딩/트림. apad·atrim 은 반드시 마지막이다 — concat 드리프트
+  #          단언(2ms)이 이 샘플 수에 걸려 있다.
+  #
+  # sidechaincompress 가 저역(≤250Hz)만 전체 신호를 트리거로 눌러 준다. 카디오이드
+  # 마이크는 가까이서 크게 말할 때만 저음을 부풀리므로(근접효과) 고정 EQ 로 깎으면
+  # 조용히 말할 때 목소리가 얇아진다. "웅~" 하는 울림의 정체가 이것이다.
+  ffmpeg -y -v error -ss "$ST" -t "$D" -i "$SRC" -vn -filter_complex \
+    "[0:a]aresample=48000,\
+highpass=f=80:poles=2,\
+equalizer=f=250:t=q:w=1.2:g=-3,\
+equalizer=f=3200:t=q:w=1.4:g=3,\
+asplit=3[full][lo0][hi0];\
+[lo0]lowpass=f=250:poles=2[lo];\
+[hi0]highpass=f=250:poles=2[hi];\
+[lo][full]sidechaincompress=threshold=0.03:ratio=6:attack=5:release=120:makeup=1[loc];\
+[loc][hi]amix=inputs=2:normalize=0,\
+loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000,\
+apad=whole_len=${SAMPLES},atrim=end_sample=${SAMPLES}[na]" \
+    -map "[na]" -ac 1 -ar 48000 "work/n$IDX.wav"
 
   echo "$IDX" >> work/order.txt
   say "$(printf 'scene %s | 컷 %ss + %.2fs | %sf | crop %s | 축소 x%s | overlay %s' \
@@ -197,33 +227,51 @@ if [ "$SUB" = "1" ] && [ -s work/subs.body ]; then
   } > subs.ass
   if [ -d fonts ] && ls fonts/*.[to]tf >/dev/null 2>&1; then SUBFILTER="subtitles=subs.ass:fontsdir=fonts"
   else SUBFILTER="subtitles=subs.ass"; fi
-  say "── 자막: $(grep -c '^Dialogue' subs.ass)줄 / 폰트 $SUB_FONT"
+  # 게시용 SRT — 줄끝은 CRLF(SubRip 원 스펙)
+  awk '{printf "%s\r\n", $0}' work/subs.srtbody > subs.srt
+  say "── 자막: $(grep -c '^Dialogue' subs.ass)줄 (번인 subs.ass / 게시 subs.srt) / 폰트 $SUB_FONT"
 else
+  rm -f subs.srt
   say "── 자막 없음 (subs.body 비어 있음 또는 SUB=0)"
 fi
 
-# ── 5) 자막 번인 + 아웃트로 접합 — -shortest 금지 (105ms 누적 실측, build-reel 승계)
+# ── 5) 렌더 + 아웃트로 접합 — -shortest 금지 (105ms 누적 실측, build-reel 승계)
+#      자막은 따로 올리는 것이 원칙이라 reel.mp4 가 클린 마스터다. 번인본은 자막 파일을
+#      못 받는 플랫폼용이며 클린본 재인코딩이 아니라 같은 원본에서 한 번 더 뽑는다.
 ENC=(-c:v libx264 -profile:v high -level 4.1 -preset slow -crf 19 -pix_fmt yuv420p
      -g $((FPS*2)) -keyint_min "$FPS" -sc_threshold 0 -r "$FPS"
      -c:a aac -b:a 192k -ar 48000 -ac 2 -movflags +faststart)
-VSRC="[0:v]"
-[ -n "$SUBFILTER" ] && VSRC="[vsub]"
-if [ -f outro.mp4 ]; then
-  OFF=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
-  ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -i outro.mp4 -filter_complex "
-    ${SUBFILTER:+[0:v]$SUBFILTER[vsub];}
-    ${VSRC}[2:v]xfade=transition=$XFADE_T:duration=$XFADE:offset=$OFF[v];
-    [1:a][2:a]acrossfade=d=$XFADE:c1=tri:c2=tri[a]
-  " -map "[v]" -map "[a]" "${ENC[@]}" reel.mp4
-  say "── 아웃트로 접합: xfade ${XFADE_T} ${XFADE}s @ ${OFF}s"
-else
-  if [ -n "$SUBFILTER" ]; then
-    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -filter_complex "[0:v]$SUBFILTER[v]" \
-      -map "[v]" -map 1:a "${ENC[@]}" reel.mp4
+OFF=""
+[ -f outro.mp4 ] && OFF=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
+
+render() {                          # $1=출력파일  $2=자막필터(빈 문자열이면 번인 없음)
+  local OUT="$1" SF="${2:-}" VSRC="[0:v]"
+  [ -n "$SF" ] && VSRC="[vsub]"
+  if [ -f outro.mp4 ]; then
+    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -i outro.mp4 -filter_complex "
+      ${SF:+[0:v]$SF[vsub];}
+      ${VSRC}[2:v]xfade=transition=$XFADE_T:duration=$XFADE:offset=$OFF[v];
+      [1:a][2:a]acrossfade=d=$XFADE:c1=tri:c2=tri[a]
+    " -map "[v]" -map "[a]" "${ENC[@]}" "$OUT"
+  elif [ -n "$SF" ]; then
+    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -filter_complex "[0:v]$SF[v]" \
+      -map "[v]" -map 1:a "${ENC[@]}" "$OUT"
   else
-    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -map 0:v -map 1:a "${ENC[@]}" reel.mp4
+    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -map 0:v -map 1:a "${ENC[@]}" "$OUT"
   fi
-  say "── 아웃트로 없음: 본편 단독 먹싱"
+}
+
+render reel.mp4 ""
+if [ -f outro.mp4 ]; then say "── 아웃트로 접합: xfade ${XFADE_T} ${XFADE}s @ ${OFF}s"
+else say "── 아웃트로 없음: 본편 단독 먹싱"; fi
+
+rm -f reel-sub.mp4
+if [ "$BURN" = "1" ] && [ -n "$SUBFILTER" ]; then
+  render reel-sub.mp4 "$SUBFILTER"
+  say "── 번인본 reel-sub.mp4: 자막 파일을 못 받는 플랫폼용 (클린 마스터는 reel.mp4)"
+elif [ "$BURN" = "1" ]; then
+  say "⚠ BURN=1 이지만 자막 데이터가 없어 번인본을 만들지 않았다 (SUB=$SUB)"
+  WARN=1
 fi
 
 # ── 6) 최종 검증 + 커버 스틸
@@ -232,6 +280,16 @@ RA=$(ffprobe -v error -select_streams a -show_entries stream=duration -of csv=p=
 LUFS=$(ffmpeg -hide_banner -i reel.mp4 -af loudnorm=I=-14:TP=-1:LRA=11:print_format=summary -f null - 2>&1 | sed -n 's/.*Input Integrated: *\(.*\)/\1/p')
 FSTART=$(xxd -l 48 reel.mp4 | grep -c moov || true)
 say "── reel.mp4: video ${RV}s / audio ${RA}s / 라우드니스 ${LUFS} / faststart $([ "$FSTART" -ge 1 ] && echo OK || echo 미확인)"
+# 번인본은 같은 원본·같은 필터체인이라 길이가 클린본과 같아야 한다 — 어긋나면 둘 중 하나가 옛 빌드다
+if [ -f reel-sub.mp4 ]; then
+  SV=$(ffprobe -v error -select_streams v -show_entries stream=duration -of csv=p=0 reel-sub.mp4)
+  if awk -v a="$RV" -v b="$SV" 'BEGIN{exit (a-b<0.05 && b-a<0.05) ? 0 : 1}'; then
+    say "── reel-sub.mp4: video ${SV}s (클린본과 일치)"
+  else
+    say "✗ reel-sub.mp4 길이 ${SV}s ≠ reel.mp4 ${RV}s — 같은 빌드 산출물이 아니다"; exit 1
+  fi
+fi
+[ -s subs.srt ] && say "── subs.srt: $(grep -c ' --> ' subs.srt)큐 / $(wc -c < subs.srt | tr -d ' ')바이트 (FB 상한 200K)"
 ffmpeg -y -v error -ss "$COVER_TS" -i reel.mp4 -frames:v 1 -q:v 2 cover.jpg
 [ "$WARN" -eq 1 ] && say "── 경고 있음: 위 ⚠ 항목 확인"
 say "── 완료"

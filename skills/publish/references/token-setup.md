@@ -52,7 +52,12 @@ chmod 600 ~/.config/social-flow/<채널slug>/*
 
 1. Meta 개발자 콘솔(developers.facebook.com)에서 앱 생성 → Threads API 사용 설정.
 2. 스코프: `threads_basic`, `threads_content_publish`, 답글 관리까지 쓰려면
-   `threads_manage_replies`.
+   `threads_manage_replies`. **grow-threads 스킬(성장 루프)을 쓰려면 추가로**
+   `threads_manage_insights`(threads_insights 툴)·`threads_keyword_search`
+   (threads_search 툴). 동의 플로우에서 스코프는 **체크박스를 켠 것만** 토큰에
+   실린다 — 기존 게시용 토큰에 이 둘이 없으면 스코프를 추가해 **토큰을
+   재발급**해야 한다(갱신으로는 스코프가 늘지 않는다). 키워드 검색은 앱이
+   고급 접근 승인 전이면 자기 계정 게시물만 반환한다.
 3. 단기 토큰 발급 → 장기 토큰(60일) 교환:
    `GET https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=…&access_token=…`
 4. 갱신(만료 전, 24시간 경과 후 가능):
@@ -76,12 +81,33 @@ chmod 600 ~/.config/social-flow/<채널slug>/*
 
 ### YouTube
 
-1. Google Cloud Console 에서 프로젝트 생성 → YouTube Data API v3 활성화.
+1. Google Cloud Console 에서 프로젝트 생성 → **YouTube Data API v3** 활성화.
+   성장 루프(grow-youtube)를 쓰려면 **YouTube Analytics API** 도 함께 켠다.
 2. OAuth 클라이언트(데스크톱) 생성 → `client_id`/`client_secret`.
-3. 스코프 `https://www.googleapis.com/auth/youtube.upload` 로 1회 동의 →
-   `refresh_token` 획득. 세 값을 JSON 으로 저장.
+3. 스코프를 켜고 1회 동의 → `refresh_token` 획득. 세 값을 JSON 으로 저장.
+
+   | 스코프 | 무엇이 열리나 | 필요 시점 |
+   |---|---|---|
+   | `youtube.upload` | `youtube_publish` 업로드 | 게시 (필수) |
+   | `youtube.force-ssl` | **자막 업로드 (`captionFilePath`)** + 댓글 조회·답글 | **게시 (필수)** · 성장 루프 |
+   | `youtube.readonly` | `youtube_insights` 의 채널·영상 조회 | 성장 루프 |
+   | `yt-analytics.readonly` | 기간 지표(조회·시청·구독 증감) | 성장 루프 |
+   | `yt-analytics-monetary.readonly` | 수익 지표 (`includeRevenue: true`) | 선택 |
+
+   **`force-ssl` 은 이제 게시에도 필요하다** — 이 파이프라인은 자막을 영상에 태우지
+   않고 `captions.insert` 로 따로 올리는데, 그 호출이 업로드용 `youtube.upload` 로는
+   거부된다. 업로드만 켜 둔 옛 토큰으로 게시하면 **영상은 올라가고 자막만 실패한다**
+   (`captionWarning`). 그때는 영상이 이미 공개된 상태이므로 재게시하지 말고, 아래 절차로
+   토큰을 재발급한 뒤 Studio 에서 자막만 올린다.
+
+   **게시용으로 이미 발급한 토큰에는 위 네 개가 없다** — 자막·성장 툴 첫 호출에서
+   스코프 에러가 나는 것이 정상이며, 에러에 이 절차 안내가 실려 온다. 동의
+   플로우에서 체크박스를 **하나씩 다 켜고**(하나라도 빠지면 그 기능만 막힌다)
+   재발급한 뒤 `youtube-oauth-client.json` 의 `refresh_token` 을 교체한다.
+   `client_id`/`client_secret` 은 그대로 둔다.
 4. 커스텀 썸네일 지정에는 채널 전화번호 인증(중급 기능)이 필요 — 없으면 게시는
-   성공하고 `thumbnailWarning` 으로 보고된다.
+   성공하고 `thumbnailWarning` 으로 보고된다. 쇼츠→롱폼을 잇는 Related video
+   설정도 최소 전화번호 인증이 필요하다(설정 자체는 Studio 에서만 — API 미지원).
 5. **쇼츠 세로 표면(피드·쇼츠 탭) 썸네일은 API 로 못 바꾼다** —
    `thumbnailFilePath` 는 가로 표면(공유 미리보기·검색)만 적용된다. 세로 표면
    프레임은 YouTube 네이티브 앱의 Edit → Edit thumbnail 로만 지정 가능하니,

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스레드 성장 베스트 프랙티스 — social-flow 가이드</title>
+<link rel="stylesheet" href="../../assets/reference.css">
+<style>
+  /* 이 문서 전용 소품 — 공용 reference.css 위에 얹는다 */
+  .lede { font-size: 18px; line-height: 1.7; color: var(--text); margin: 8px 0 4px; }
+  .lede strong { font-weight: 750; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }
+  .col-box { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; background: var(--bg-card); }
+  .col-box.win { border-top: 3px solid var(--green); }
+  .col-box.fail { border-top: 3px solid var(--red); }
+  .col-box h4 { margin: 0 0 10px; font-size: 14.5px; letter-spacing: .02em; }
+  .col-box.win h4 { color: var(--green); }
+  .col-box.fail h4 { color: var(--red); }
+  .col-box ul { margin: 0 0 0 18px; }
+  .col-box li { font-size: 14.5px; margin-bottom: 8px; }
+  .signal-num { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
+  .metric-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+  .metric { flex: 1 1 180px; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; background: var(--bg-soft); }
+  .metric .m-k { font-size: 13px; color: var(--text-soft); }
+  .metric .m-v { font-size: 15.5px; font-weight: 650; margin-top: 2px; }
+  .rule-list { list-style: none; margin-left: 0; }
+  .rule-list > li { position: relative; padding-left: 30px; margin-bottom: 16px; }
+  .rule-list > li .n {
+    position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums;
+  }
+  .quote-ex { border-left: 3px solid var(--border); padding: 2px 0 2px 16px; margin: 10px 0; color: var(--text-soft); font-size: 14.5px; }
+  .quote-ex b { color: var(--text); font-weight: 600; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="crumbs"><a href="../../index.html">문서</a><span>/</span>사용 가이드<span>/</span>스레드 성장</div>
+
+<header class="hero">
+  <div class="kicker">GROWTH · THREADS</div>
+  <h1>스레드를 성장시키는 법</h1>
+  <p class="sub">스레드는 팔로워 수가 아니라 게시물 하나하나를 심사한다. 그래서 계정을 키운다는 건 팔로워를 모으는 일이 아니라, 매번 심사를 통과할 글을 쓰는 일이다. 이 문서는 그 심사가 무엇을 보는지와, 거기에 맞춰 무엇을 하고 무엇을 하지 말지를 정리한다.</p>
+  <div class="meta">
+    <span>기준일 <strong>2026-08-11</strong></span>
+    <span>근거 <strong>Meta 투명성 센터 + 다출처 교차 확인</strong></span>
+    <span>자동화 <strong><code>/social-flow:grow-threads</code></strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#why">왜 스레드는 다른가</a></li>
+    <li><a href="#signals">도달을 정하는 5개 신호</a></li>
+    <li><a href="#do">도달을 만드는 네 가지 행동</a></li>
+    <li><a href="#dont">눌리는 것 — 하지 말 것</a></li>
+    <li><a href="#rhythm">운영 리듬</a></li>
+    <li><a href="#writing">글쓰기 — 말투와 형식</a></li>
+    <li><a href="#culture">어휘와 문화 (스하리)</a></li>
+    <li><a href="#links">링크 정책</a></li>
+    <li><a href="#metrics">무엇을 볼 것인가</a></li>
+    <li><a href="#automation">자동화 — grow-threads</a></li>
+    <li><a href="#sources">출처</a></li>
+  </ol>
+</nav>
+
+<section id="why">
+  <h2>1. 왜 스레드는 다른가</h2>
+  <p class="lede"><strong>팔로워 0명 계정의 글이 10만 조회를 찍고, 팔로워 5천 계정의 글이 300에서 멈추는 일이 같은 날 일어난다.</strong></p>
+  <p>인스타·유튜브와 가장 다른 지점이 여기다. 저기서는 구독자·팔로워가 도달의 바닥을 깔아 준다. 스레드는 그렇지 않다. 게시물이 올라오면 알고리즘이 그 글 하나를 소수에게 먼저 보여 보고, 반응이 좋으면 더 넓히고 시원찮으면 거기서 멈춘다. 계정의 이름값이 아니라 <strong>이번 글의 반응</strong>이 도달을 정한다.</p>
+  <p>그래서 이 문서는 "팔로워 늘리는 법"이 아니라 "심사를 통과하는 글 쓰는 법"이다. 팔로워는 그 결과로 따라온다.</p>
+</section>
+
+<section id="signals">
+  <h2>2. 도달을 정하는 5개 신호</h2>
+  <p>Meta가 투명성 센터에서 공개한 스레드 피드 랭킹 신호는 다섯 가지다. 앞의 넷을 올리고 마지막 하나를 낮추는 게 전부다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>신호</th><th>알고리즘이 예측하는 것</th><th>실무 번역</th></tr></thead>
+    <tbody>
+      <tr><td><span class="signal-num">1</span> 좋아요 확률</td><td>이 사용자가 이 글에 좋아요를 누를까</td><td>공감·유용함이 첫인상에 들어와야 한다</td></tr>
+      <tr><td><span class="signal-num">2</span> 답글 조회 확률</td><td>답글을 보려고 눌러 들어갈까</td><td><strong>가장 중요.</strong> 댓글이 붙는 글이 좋아요만 많은 글을 이긴다</td></tr>
+      <tr><td><span class="signal-num">3</span> 팔로우 확률</td><td>작성자를 팔로우할까</td><td>인스타 프로필 조회 이력도 여기 반영된다</td></tr>
+      <tr><td><span class="signal-num">4</span> 프로필 클릭 확률</td><td>프로필을 눌러 볼까</td><td>글 한 편이 "이 사람 더 보고 싶다"를 만들어야 한다</td></tr>
+      <tr><td><span class="signal-num">5</span> 스크롤 통과 확률</td><td>그냥 지나칠까 <span class="badge de">낮출수록 좋음</span></td><td>첫 줄에서 멈춰 세워야 한다</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>2번이 핵심이다.</strong> 좋아요는 그 자리에서 끝나지만 답글은 사람을 글 안으로 끌어들인다. 실전 규칙으로 바꾸면 하나다 — <strong>읽고 나서 할 말이 안 생기는 글은 아무리 잘 써도 천장이 낮다.</strong> 단정하고 끝내는 대신 남이 끼어들 틈을 준다.
+  </div>
+</section>
+
+<section id="do">
+  <h2>3. 도달을 만드는 네 가지 행동</h2>
+  <ul class="rule-list">
+    <li>
+      <span class="n">1</span>
+      <strong>답글이 붙는 글을 쓴다.</strong> 완성된 주장보다 관찰이나 고백이 낫다.
+      <div class="quote-ex"><b>"이래야 합니다"</b>는 반박밖에 안 나오지만, <b>"이거 나만 그런가?"</b>는 저마다의 경험을 부른다.</div>
+    </li>
+    <li>
+      <span class="n">2</span>
+      <strong>초기 속도를 만든다.</strong> 같은 반응이라도 하루에 걸쳐 쌓인 것보다 올리자마자 붙은 쪽이 훨씬 멀리 퍼진다. 대체로 <strong>첫 60~90분</strong>이 갈림길이다. 올려두고 자리를 뜨지 말고, 올린 직후 30분은 답글 다는 시간으로 잡아둔다.
+    </li>
+    <li>
+      <span class="n">3</span>
+      <strong>올리기 전에 먼저 참여한다.</strong> 게시 직전 10~15분을 남의 글에 답글 다는 데 쓰면, 알고리즘이 활성 사용자로 인식해 뒤이은 내 글의 초기 분배가 올라간다. 대상은 나보다 조금 큰 계정이 좋다 — 너무 큰 계정 밑에서는 묻힌다.
+    </li>
+    <li>
+      <span class="n">4</span>
+      <strong>인스타와 함께 굴린다.</strong> 팔로우 확률 예측에 인스타 프로필 조회 이력이 들어간다. 두 계정을 같이 운영하는 것 자체가 신호다.
+    </li>
+  </ul>
+</section>
+
+<section id="dont">
+  <h2>4. 눌리는 것 — 하지 말 것</h2>
+  <p>Meta가 노출 억제 대상으로 못박은 것들이다. 도달을 갉아먹을 뿐 아니라, 계정 성격이 잡히면 계정 전체의 신호를 깎는다.</p>
+  <div class="two-col">
+    <div class="col-box fail">
+      <h4>✕ 참여 구걸 (engagement bait)</h4>
+      <ul>
+        <li>"좋아요 눌러", "동의하면 댓글 YES"</li>
+        <li>"팔로우하면 알려드려요"</li>
+        <li>"여러분 생각은?" 같은 빈 질문도 여기 가깝다</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ 조직적 품앗이</h4>
+      <ul>
+        <li>스하리 품앗이 방·기계적 맞팔</li>
+        <li>초반 부스트로는 먹히지만 계정 성격이 잡히면 발목을 잡는다</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ 크로스포스트 복붙</h4>
+      <ul>
+        <li>X에서 그대로 옮겨 온 티가 나는 글</li>
+        <li>플랫폼마다 문법이 다르다 — 스레드는 스레드의 말로</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ 이어붙인 에세이</h4>
+      <ul>
+        <li>여러 글로 길게 잇는 스레드형은 강의처럼 읽혀 잘 안 된다</li>
+        <li>필요한 내용은 한 편에 압축한다</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="rhythm">
+  <h2>5. 운영 리듬</h2>
+  <p>하루 1~3회가 대체적 합의선이다. 하루 한 개가 하한선인데, 진짜 효과가 큰 건 게시 개수가 아니라 <strong>올리기 전 남의 글에 답글 다는 시간</strong>이다.</p>
+  <div class="metric-row">
+    <div class="metric"><div class="m-k">새 글</div><div class="m-v">할 말 있는 만큼 (관찰상 1~3회)</div></div>
+    <div class="metric"><div class="m-k">올리기 전 사전 참여</div><div class="m-v">10~15분 답글</div></div>
+    <div class="metric"><div class="m-k">초기 대응 창</div><div class="m-v">게시 후 첫 60~90분</div></div>
+    <div class="metric"><div class="m-k">해시태그</div><div class="m-v">≤ 1개 (가중치 0)</div></div>
+  </div>
+  <p>슬롯을 고정하라는 건 타깃이 활동하는 시간대에 규칙적으로 올리라는 뜻이다. 아무 때나 몰아 올리는 것보다, 정한 시간에 꾸준히 나가는 편이 초기 반응을 모으기 쉽다.</p>
+</section>
+
+<section id="writing">
+  <h2>6. 글쓰기 — 말투와 형식</h2>
+  <h3>말투는 하나로 고정한다</h3>
+  <p>스레드 한국 사용자층의 기본 언어는 <strong>반말</strong>이다. 초면이든 나이 차가 나든 상관없고, 자영업자·업체 계정도 반말로 댓글을 단다. "손님과 사장"이 아니라 "아는 사람"처럼 굴러가는 게 이 플랫폼의 온도다.</p>
+  <p>다만 강제는 아니다. 존댓말로 잘 운영하는 계정도 많다. 운영자 입장에서 실행 가능한 규칙은 하나다 — <strong>채널마다 말투를 하나로 정하고 끝까지 안 바꾸는 것.</strong> 어떤 글은 반말, 어떤 글은 존댓말이면 사람이 아니라 관리자로 읽힌다.</p>
+
+  <h3>먹히는 글 vs 실패하는 글</h3>
+  <div class="two-col">
+    <div class="col-box win">
+      <h4>✓ 먹힌다</h4>
+      <ul>
+        <li><strong>1~3줄.</strong> 500자까지 되지만 타임라인은 스캔된다</li>
+        <li>관찰·고백 — "이거 나만 그런가?"</li>
+        <li>자기 경험 하나 깔고 상대 경험을 부르는 질문으로 종결</li>
+        <li>훅을 다 소진하지 않기 (결론까지 말하면 댓글에 쓸 말이 없다)</li>
+        <li>이미지 한 장 첨부 (텍스트만보다 우위)</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ 막힌다</h4>
+      <ul>
+        <li>답글 부를 틈 없는 강한 단정</li>
+        <li>강의처럼 이어지는 장문 에세이</li>
+        <li>링크만 던지는 순수 홍보</li>
+        <li>참여 구걸형 마무리</li>
+        <li>무설명 전문용어·주어 없는 과압축</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">
+    <strong>쉬운 말 원칙.</strong> 읽는 사람이 그 주제 배경까지 아는 건 아니다. 용어가 꼭 필요하면 쉬운 말을 앞세우고 첫 등장에서만 괄호로 병기한다. 예: "기준환율" → <b>"뉴스에 나오는 값('기준환율')"</b>.
+  </div>
+</section>
+
+<section id="culture">
+  <h2>7. 어휘와 문화 (스하리)</h2>
+  <p>Meta가 만든 공식 용어가 아니라 사용자들이 만든 말이다. 모르면 댓글 맥락을 못 읽는다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>말</th><th>뜻</th></tr></thead>
+    <tbody>
+      <tr><td><strong>스하리</strong></td><td>스레드 팔로우 + 하트(좋아요) + 리포스트를 다 해준 것. "스하리 하고 갑니다"</td></tr>
+      <tr><td><strong>반하리</strong></td><td>스하리 받았으니 그대로 돌려주는 것. 매너로 통하지만 의무는 아니다</td></tr>
+      <tr><td><strong>맞하리</strong></td><td>서로 스하리를 주고받은 상태</td></tr>
+      <tr><td><strong>또하리</strong></td><td>이미 한 상대에게 다시 스하리</td></tr>
+      <tr><td><strong>스팔 / 맞스팔</strong></td><td>스레드 팔로우 / 서로 팔로우</td></tr>
+      <tr><td><strong>스친</strong></td><td>스레드 친구 (인친의 스레드판)</td></tr>
+      <tr><td><strong>스린이 · 스친이</strong></td><td>스레드 초보</td></tr>
+      <tr><td><strong>쓰플루언서</strong></td><td>스레드에서 영향력 있는 계정</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>이 어휘가 알려주는 건 단어가 아니라 문화다. 스레드는 <strong>주고받기가 명시적으로 언어화된 곳</strong>이다. 리포스트를 자주 하는 계정이 리포스트를 자주 받는다. 브랜드 계정이 남의 글을 하나도 안 나르면서 자기 글만 올리면, 알고리즘 이전에 사람들이 먼저 알아본다.</p>
+  <div class="warn">
+    <strong>단, 품앗이 방과는 다르다.</strong> 받은 성의에 답글·리포스트로 답하는 건 문화지만, 조직적 맞팔·기계적 스하리 교환은 §4의 억제 대상과 구분되지 않는다. 자동화 루프가 품앗이 방에 참여하지 않는 이유다.
+  </div>
+</section>
+
+<section id="links">
+  <h2>8. 링크 정책</h2>
+  <p>2024년의 링크 페널티는 <strong>철회됐다</strong>. Adam Mosseri가 "링크가 제대로 랭킹되도록 작업했고, 한 달 넘게 훨씬 잘 작동하고 있다"고 직접 밝혔고, 링크 성과 분석 기능도 붙었다.</p>
+  <p>다만 "본문 링크 = 페널티"가 사라졌다는 것이지, 본문 링크가 최선이라는 뜻은 아니다. 본문에 링크가 있으면 독자가 밖으로 나가면서 그 글의 답글이 줄어드는 건 별개 문제고, Meta는 링크 도달을 올렸다 내렸다 한 전력이 있다.</p>
+  <div class="note">
+    <strong>권장: A/B로 채널 실측.</strong> 같은 소재로 <b>본문 링크판</b>과 <b>답글 링크판</b>을 며칠 나눠 올려 도달·답글 수를 비교하면, 우리 채널 기준의 답이 나온다. 결과를 성장 플랜에 기록해 기본값으로 삼는다.
+  </div>
+</section>
+
+<section id="metrics">
+  <h2>9. 무엇을 볼 것인가</h2>
+  <p>주간으로는 네 개만 본다. 좋아요는 후행 지표라 판단을 바꾸지 않아 뺀다.</p>
+  <div class="metric-row">
+    <div class="metric"><div class="m-k">1</div><div class="m-v">게시물당 도달</div></div>
+    <div class="metric"><div class="m-k">2</div><div class="m-v">게시물당 답글 수</div></div>
+    <div class="metric"><div class="m-k">3</div><div class="m-v">팔로워 증가율</div></div>
+    <div class="metric"><div class="m-k">4</div><div class="m-v">프로필 방문</div></div>
+  </div>
+  <p>여기에 하나 더 — 도달 상위 글의 <strong>유형</strong>(소재·형식)을 읽어 다음 글에 반영하는 학습 루프다. 이게 없으면 계정은 같은 글만 반복하게 된다. social-flow에서는 <code>threads_insights</code> 툴이 게시물별 지표를 뽑아 이 판단을 돕는다.</p>
+</section>
+
+<section id="automation">
+  <h2>10. 자동화 — grow-threads</h2>
+  <p>위 원칙을 그대로 루프로 돌리는 게 <code>/social-flow:grow-threads</code> 스킬이다. 호출 1회 = 성장 사이클 1틱이고, 반복은 <code>/loop</code>가 맡는다.</p>
+  <pre><code>/social-flow:grow-threads &lt;채널&gt; init      # 최초 1회 — 성장 플랜 확정 (승인)
+/loop 30m /social-flow:grow-threads &lt;채널&gt;  # 30분 주기 자율 루프</code></pre>
+  <p>한 틱의 우선순위는 이 문서의 순서 그대로다:</p>
+  <ol>
+    <li><strong>인박스 답글</strong> — 골든아워(첫 60분) 미응대부터 (§2·§3)</li>
+    <li><strong>인사이트 스냅샷</strong> — 전 틱 대비 증감·도달 상위 글 유형 기록 (§9)</li>
+    <li><strong>키워드 대화 참여</strong> — 관심 키워드로 남의 공개 글에 기여 (§3-3)</li>
+    <li><strong>새 글 저작</strong> — 플랜 슬롯에 걸릴 때만 (§5·§6)</li>
+  </ol>
+  <div class="ok">
+    <strong>틱 ≠ 게시.</strong> 새 글은 플랜 슬롯에서만 나가고, 대부분의 틱은 답글·관찰로 끝난다. <code>init</code>에서 승인한 <code>growth-plan.md</code>가 상시 승인서 역할을 하며, 그 범위(소재 풀·키워드·톤·슬롯) 밖의 게시는 하지 않는다. 전술 정본은 스킬의 <code>references/growth-playbook.md</code>다.
+  </div>
+  <div class="warn">
+    <strong>키워드 검색은 앱 권한이 따로 필요하다.</strong> <code>threads_search</code>(공개 게시물 검색)는 토큰 스코프에 더해 앱의 <code>threads_keyword_search</code> 기능 액세스가 있어야 한다. 없으면 그 단계만 건너뛰고 인박스 답글·인사이트·슬롯 게시는 정상 동작한다.
+  </div>
+</section>
+
+<section id="sources">
+  <h2>11. 출처</h2>
+  <ul>
+    <li>Meta 투명성 센터 — 스레드 피드 랭킹 신호 (5개 예측값). 본문 §2의 근거.</li>
+    <li>Adam Mosseri (Instagram 책임자) — 링크 랭킹 정상화 발언 · Social Media Today, Engadget 보도. §8의 근거.</li>
+    <li>다출처 교차 확인 — 답글 우선·초기 속도·참여 구걸 억제·게시 리듬. 단일 출처의 정밀 수치(예: "답글 8단어 이상만 계산")는 확인 불가라 본문에서 제외.</li>
+    <li>한국 사용자 실사용 자료 (네이버 블로그·카페) — 반말 문화·스하리 어휘. §6·§7의 근거.</li>
+  </ul>
+  <div class="note">
+    영어권 "스레드 알고리즘 2026" 글 상당수는 SEO 목적의 내용 공장 글이다. 정밀해 보이는 단일 출처 수치는 신뢰하지 말고, 여기 남긴 건 <strong>Meta 공식 문서에서 나왔거나 여러 출처가 일치한 것</strong>만이다.
+  </div>
+</section>
+
+<footer>
+  기준일 2026-08-11 · 전술 정본 <code>skills/grow-threads/references/growth-playbook.md</code> · 플랫폼 문법 <code>skills/platform-guide/references/platform-playbook.md</code> §3 · <a href="../../index.html">문서 허브</a>
+</footer>
+
+</div>
+</body>
+</html>

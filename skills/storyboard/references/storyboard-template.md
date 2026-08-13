@@ -56,6 +56,23 @@ created: <YYYY-MM-DD>
 | facebook | 영상 게시 | |
 ```
 
+## storyboard.html (검토용 렌더 — 템플릿 기반)
+
+`references/storyboard-html-template.html` 을 storyboard/ 에 복사해 만든다.
+씬 데이터를 복사하지 않고 `<script src="./scenes.js">` 로 SoT 를 직접 로드해
+그리므로, scenes.js 를 고치면 문서가 자동으로 따라온다 — storyboard.md·script.md
+가 겪는 사본 드리프트가 이 문서에서는 구조적으로 불가능하다.
+
+- 채우는 곳은 **`<title>` 과 `✎ SB_DOC` 블록 둘뿐** — 스타일·렌더러는 수정 금지.
+- SB_DOC 에는 scenes.js 에 없는 편집 메타만 담는다: 핵심 메시지·docNotes·씬별
+  주석(sceneNotes)·전환(transitions)·개인정보 회피(privacy)·출처 요약(sources)·
+  플랫폼 계획(platforms)·촬영 준비(prep)·재확인 목록(recheck).
+- 자수·말속도·씬 길이·총길이 검산은 렌더러가 계약(scenes-schema /
+  shot-script-template)대로 자동 계산해 배지로 표시한다 — 모드(촬영/생성)도
+  `visual.source` 로 자동 판별한다.
+- 브라우저에서 `storyboard.html` 을 직접 열면 된다(외부 리소스 없음). HITL 승인
+  제시 때 이 문서를 기본으로 쓴다.
+
 ## research.md
 
 조사·검증의 원장. 스토리보드에 실리는 **모든 사실 주장**이 여기 항목과 1:1 로

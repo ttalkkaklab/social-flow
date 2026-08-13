@@ -19,7 +19,7 @@ SPF=$((48000 / FPS))
 CW=${CW:-1024}; CH=${CH:-1280}
 CX=${CX:-28};   CY=${CY:-200}
 PRE=${PRE:-0.50}                 # 크로스페이드로 들어오므로 본편보다 살짝 긴 프리롤
-TAIL=${TAIL:-1.0}                # CTA 읽을 여운 — 길면 나레이션 끝난 정지 화면이 남는다
+TAIL=${TAIL:-1.0}                # CTA 읽을 여운 — 길면 나레이션 끝난 정지 화면이 이어진다
 BGM_VOL=${BGM_VOL:-0.30}
 DUCK_RELEASE=${DUCK_RELEASE:-250}
 TARGET_RATE=${TARGET_RATE:-4.4}  # 브랜드 나레이션 목표 발화속도 (자/초, 공백·구두점 제외)

@@ -59,7 +59,10 @@ data/<slug>/assets/branding/
 ### 3. 후보 4종 생성
 
 `gpt_image_text2img`(size "1024x1024")로 **서로 다른 스타일 방향** 4종을 생성해
-`.work/candidate-{a,b,c,d}.png` 에 저장한다. 기본 방향(브리프에 따라 대체 가능):
+`.work/candidate-{a,b,c,d}.png` 에 저장한다. 브랜딩은 **로컬 기본 경로
+(image_local_generate)의 예외**다 — 채널의 얼굴이 되는 원본이라 품질 조항에
+해당하고, brand-reviewer 의 글자 깨짐 P0 도 gpt 쪽 렌더가 안전하다.
+기본 방향(브리프에 따라 대체 가능):
 
 - **A flat-mascot** — 플랫 벡터 마스코트, 두꺼운 아웃라인, 단순 셰이프
 - **B render-3d** — 소프트 3D 캐릭터 렌더, 스튜디오 라이팅

@@ -11,6 +11,11 @@
 #
 # 전제: 터미널 앱에 시스템 설정 → 개인정보 보호 및 보안 → 화면 기록 +
 #       마이크 권한. -g 가 기본 입력 장치(마이크) 오디오를 함께 캡처한다.
+#
+# 마이크는 start 시점의 "기본 입력 장치"가 그대로 쓰인다. 아래 환경변수로 고정할 수 있다.
+#   SF_MIC_DEVICE  전환할 입력 장치 이름 (예: "Shure MV6") — SwitchAudioSource 필요
+#   SF_MIC_VOLUME  입력 볼륨 0~100 — 너무 낮으면 녹음이 작고, 너무 높으면 노이즈가 뜬다
+# 설정하지 않으면 현재 값을 그대로 쓰되, start 가 장치·볼륨을 출력해 적는다.
 set -euo pipefail
 
 CMD="${1:?사용법: record.sh start|stop|status <출력.mov>}"
@@ -23,6 +28,24 @@ case "$CMD" in
       echo "ERROR: 이미 녹화 중 (pid $(cat "$PIDFILE"))" >&2; exit 1
     fi
     mkdir -p "$(dirname "$OUT")"
+
+    # 입력(마이크) 준비 — -g 는 "기본 입력 장치"를 캡처하므로, 엉뚱한 마이크가
+    # 잡혀 있으면 녹화가 끝난 뒤에야 안다. 값을 강제하지 않고 현재 상태를 찍어
+    # 적는다. SF_MIC_DEVICE / SF_MIC_VOLUME 이 있으면 그 값으로 맞춘다.
+    CURMIC="(SwitchAudioSource 없음 — brew install switchaudio-osx)"
+    if command -v SwitchAudioSource >/dev/null 2>&1; then
+      if [ -n "${SF_MIC_DEVICE:-}" ]; then
+        SwitchAudioSource -t input -s "$SF_MIC_DEVICE" >/dev/null 2>&1 || \
+          echo "WARN: 입력 장치 '$SF_MIC_DEVICE' 로 전환 실패 — 현재 장치로 진행" >&2
+      fi
+      CURMIC="$(SwitchAudioSource -t input -c 2>/dev/null || echo '?')"
+    fi
+    if [ -n "${SF_MIC_VOLUME:-}" ]; then
+      osascript -e "set volume input volume ${SF_MIC_VOLUME}" >/dev/null 2>&1 || true
+    fi
+    CURVOL="$(osascript -e 'input volume of (get volume settings)' 2>/dev/null || echo '?')"
+    echo "입력 장치: ${CURMIC} / 입력 볼륨: ${CURVOL}"
+
     # nohup+disown — 호출 셸이 끝나도 녹화가 살아남는다
     # -D 1 = 메인 디스플레이 고정 — 보조 모니터는 프레임에 포함되지 않는다
     nohup screencapture -v -g -x -D 1 "$OUT" >/dev/null 2>&1 &

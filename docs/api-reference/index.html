@@ -16,8 +16,8 @@
   <h1>social-flow가 호출하는 전체 API</h1>
   <p class="sub">내부 MCP 서버(<code>server/src</code>)가 실제로 호출하는 외부 API 11종의 공식 계약을 정리한 레퍼런스다. 각 문서는 <strong>공식 문서가 말하는 것</strong>과 <strong>이 저장소의 구현이 실제로 하는 것</strong>을 나란히 적어, 둘이 어긋나는 지점을 바로 볼 수 있게 했다.</p>
   <div class="meta">
-    <span>기준일 <strong>2026-07-29</strong></span>
-    <span>툴 <strong>31종</strong></span>
+    <span>기준일 <strong>2026-08-11</strong></span>
+    <span>툴 <strong>35종</strong></span>
     <span>외부 API <strong>11종</strong></span>
     <span>MCP SDK <strong>1.30.0</strong></span>
   </div>
@@ -63,12 +63,12 @@
     </a>
     <a class="card" href="serpapi.html">
       <h3>SerpApi</h3>
-      <p>google · google_news · naver 세 엔진의 파라미터와 응답 구조, 엔진별로 다른 정렬 값 체계, 쿼터와 과금 규칙.</p>
-      <div class="tools">serp_web_search · serp_news_search · serp_naver_search</div>
+      <p>google · google_news · naver · google_images 네 엔진의 파라미터와 응답 구조, 엔진별로 다른 정렬 값 체계, 문서와 어긋나는 실제 응답 키, 쿼터와 과금 규칙.</p>
+      <div class="tools">serp_web_search · serp_news_search · serp_naver_search · serp_image_search</div>
     </a>
     <a class="card" href="naver-search.html">
       <h3>Naver 검색 Open API</h3>
-      <p>4개 엔드포인트(news·blog·webkr·cafearticle), display/start 상한, webkr의 sort 미지원, 일 25,000회 쿼터.</p>
+      <p>8개 엔드포인트(news·blog·webkr·cafearticle·kin·image·encyc·local), 타입별로 다른 정렬·페이징 제약, 종료된 API 5종, 일 25,000회 쿼터.</p>
       <div class="tools">naver_search</div>
     </a>
     <a class="card" href="data-go-kr.html">
@@ -103,7 +103,7 @@
     <tbody>
       <tr><td><code>GEMINI_API_KEY</code><br>(또는 <code>GOOGLE_API_KEY</code>)</td><td><code>veo_*</code> · <code>tts_generate</code> · <code>tts_multi_speaker</code> · <code>music_generate*</code></td><td>영상·음성·음악 생성 불가. 나머지는 정상</td><td><a href="https://aistudio.google.com/apikey">AI Studio</a></td></tr>
       <tr><td><code>OPENAI_API_KEY</code></td><td><code>gpt_image_*</code></td><td>이미지 생성 불가</td><td><a href="https://platform.openai.com/api-keys">OpenAI</a></td></tr>
-      <tr><td><code>SERPAPI_API_KEY</code></td><td><code>serp_*</code></td><td>검색 3종 불가 — <code>naver_search</code>·내장 WebSearch로 대체</td><td><a href="https://serpapi.com/manage-api-key">SerpApi</a></td></tr>
+      <tr><td><code>SERPAPI_API_KEY</code></td><td><code>serp_*</code></td><td>검색 4종 불가 — <code>naver_search</code>·내장 WebSearch로 대체</td><td><a href="https://serpapi.com/manage-api-key">SerpApi</a></td></tr>
       <tr><td><code>NAVER_CLIENT_ID</code><br><code>NAVER_CLIENT_SECRET</code></td><td><code>naver_search</code></td><td>한국어 1차 조사 불가 — <code>serp_naver_search</code>로 대체</td><td><a href="https://developers.naver.com/apps">Naver Developers</a></td></tr>
       <tr><td><code>DATA_GO_KR_API_KEY</code></td><td><code>datago_file_fetch</code> · <code>datago_api_call</code></td><td>검색·상세·파일 다운로드 3종은 <strong>키 없이도 동작</strong></td><td><a href="https://www.data.go.kr">공공데이터포털</a></td></tr>
       <tr><td><code>SNS_TOKEN_DIR</code><br>(기본 <code>~/.config/social-flow</code>)</td><td>게시·댓글 툴 전체</td><td>토큰 파일이 없는 플랫폼의 게시 툴은 <strong>ListTools에서 아예 숨겨진다</strong></td><td>플랫폼별 OAuth</td></tr>
@@ -125,6 +125,7 @@
       <tr><td><code>serp_web_search</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>SerpApi <code>engine=google</code></td><td><a href="serpapi.html">SerpApi</a></td></tr>
       <tr><td><code>serp_news_search</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>SerpApi <code>engine=google_news</code></td><td><a href="serpapi.html">SerpApi</a></td></tr>
       <tr><td><code>serp_naver_search</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>SerpApi <code>engine=naver</code></td><td><a href="serpapi.html">SerpApi</a></td></tr>
+      <tr><td><code>serp_image_search</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>SerpApi <code>engine=google_images</code></td><td><a href="serpapi.html">SerpApi</a></td></tr>
       <tr><td><code>naver_search</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td><code>openapi.naver.com/v1/search/*</code></td><td><a href="naver-search.html">Naver</a></td></tr>
       <tr><td><code>datago_search</code></td><td><span class="badge ro">읽기</span> <span class="badge free">무인증</span></td><td><code>data.go.kr</code> 검색 페이지 (HTML)</td><td><a href="data-go-kr.html">공공데이터</a></td></tr>
       <tr><td><code>datago_detail</code></td><td><span class="badge ro">읽기</span> <span class="badge free">무인증</span></td><td><code>data.go.kr</code> 상세 페이지 (HTML)</td><td><a href="data-go-kr.html">공공데이터</a></td></tr>

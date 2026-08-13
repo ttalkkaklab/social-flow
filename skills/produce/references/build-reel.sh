@@ -16,7 +16,10 @@
 #   <workdir>/bgm.wav   : 배경음악 (본편보다 짧으면 루프)
 #   <workdir>/outro.mp4 : (선택) 공통 아웃트로 — 있으면 xfade+acrossfade 접합
 #   <workdir>/fonts/    : (선택) 자막 폰트 ttf/otf — libass 는 woff2 를 못 읽는다
-# 출력: <workdir>/reel.mp4, cover.jpg, subs.ass, build-report.txt
+# 출력: <workdir>/reel.mp4 (자막 없는 클린 마스터 — 자막 파일을 따로 받는 플랫폼용)
+#       <workdir>/reel-sub.mp4 (자막 번인본 — 자막 파일 경로가 없는 플랫폼용, BURN=0 이면 생략)
+#       <workdir>/subs.srt (게시 툴에 그대로 넘기는 자막 파일), subs.ass (번인 원본)
+#       <workdir>/cover.jpg, build-report.txt
 #
 # 동기화 원리 (v3):
 #   오디오는 v2 와 동일하게 카드당 1파일 — 카드 duration 을 프레임 올림으로 확정하고 오디오를 정확히
@@ -50,16 +53,22 @@ REVEAL_LEAD=${REVEAL_LEAD:-0.30}   # 폴백 리드 — 쉼을 못 찾았을 때(
 SIL_DB=${SIL_DB:--37}              # 문장 경계 무음 임계 (dB)
 SIL_MIN=${SIL_MIN:-0.16}           # 문장 경계 최소 무음 길이 (s)
 ZOOM_SPAN=${ZOOM_SPAN:-0.035}      # 카드당 켄번즈 총 줌 폭 (3.5%)
-SUB=${SUB:-1}                      # 1=ASS 자막 번인, 0=자막 없음
+SUB=${SUB:-1}                      # 1=자막 데이터 생성(subs.srt·subs.ass), 0=자막 없음
+BURN=${BURN:-1}                    # 1=번인본 reel-sub.mp4 도 산출, 0=클린 마스터만
 SUB_FONT=${SUB_FONT:-Pretendard}   # fonts/ 에 ttf 가 없으면 fontconfig 폴백
 
 rm -rf work && mkdir -p work
+# 옛 빌드의 자막·번인본을 먼저 지운다 — SUB=0 으로 다시 빌드했을 때 이전 subs.srt 가
+# 남아 있으면 타이밍이 어긋난 자막이 게시된다(publish 는 파일 존재만 보고 복사한다)
+rm -f subs.srt subs.ass reel-sub.mp4
 REPORT=build-report.txt
 : > "$REPORT"
 WARN=0
 say() { echo "$1"; echo "$1" >> "$REPORT"; }
 f2() { awk -v v="$1" 'BEGIN{printf "%.2f", v}'; }
 asstime() { awk -v t="$1" 'BEGIN{if(t<0)t=0; h=int(t/3600); m=int((t-h*3600)/60); s=t-h*3600-m*60; printf "%d:%02d:%05.2f", h, m, s}'; }
+# SRT 는 hh:mm:ss,mmm — ASS(h:mm:ss.cc)와 자리수·구분자가 달라 역변환하지 않고 같은 원본에서 따로 찍는다
+srttime() { awk -v t="$1" 'BEGIN{if(t<0)t=0; h=int(t/3600); m=int((t-h*3600)/60); s=t-h*3600-m*60; printf "%02d:%02d:%06.3f", h, m, s}' | tr '.' ','; }
 
 [ -f cards.tsv ] || { echo "cards.tsv 없음"; exit 1; }
 [ -f segs.tsv ] || { echo "segs.tsv 없음"; exit 1; }
@@ -67,7 +76,7 @@ asstime() { awk -v t="$1" 'BEGIN{if(t<0)t=0; h=int(t/3600); m=int((t-h*3600)/60)
 
 say "── make-reels build v3 ($(basename "$WORKDIR"))"
 
-# 카드별 총 reveal 상태 수 — capture-reveals.sh 가 캡처하며 남긴다. 있으면 "마지막 상태까지
+# 카드별 총 reveal 상태 수 — capture-reveals.sh 가 캡처하며 적는다. 있으면 "마지막 상태까지
 # 다 썼는지"까지 검사한다(파일명만으로는 알 수 없는 결함). 없으면 건너뜀 검사만 돈다.
 RTOTAL=""
 for C in cards/reveals.tsv reveals.tsv; do [ -f "$C" ] && { RTOTAL="$C"; break; }; done
@@ -76,6 +85,8 @@ for C in cards/reveals.tsv reveals.tsv; do [ -f "$C" ] && { RTOTAL="$C"; break; 
 N=0
 TOTF=0                              # 누적 프레임 (자막 절대 시각의 원천 — concat 이 샘플 정확이라 성립)
 : > work/subs.body
+: > work/subs.srtbody
+SRTN=0                              # SRT 큐 순번 (1부터, 파일 전체 통번호)
 : > work/order.txt
 
 # fd 3 로 읽는다 — 루프 내부 ffmpeg 의 stdin 소비 방지 (v2 함정 승계)
@@ -197,7 +208,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
   #   ① 건너뜀 → 그 전환에서 요소 여러 개가 동시에 등장한다
   #   ② 마지막 상태 미도달 → 마지막 요소가 영상에 한 번도 안 나온다
   #   ②는 파일명만으로는 알 수 없다. cards/reveals.tsv(capture-reveals.sh 가 캡처하며 남기는
-  #   idx<TAB>총상태수)가 있어야 검사된다 — 없으면 ①만 돌고 리포트에 그 사실을 남긴다.
+  #   idx<TAB>총상태수)가 있어야 검사된다 — 없으면 ①만 돌고 리포트에 그 사실을 적는다.
   RSEQ=$(printf '%s\n' "${FVIS[@]}" | sed 's/.*:://' | sed -nE 's/.*r([0-9]+)\.png$/\1/p' | sort -n -u)
   if [ -n "$RSEQ" ]; then
     MISS=$(awk 'NR==1{p=$1; next} {if($1>p+1) for(k=p+1;k<$1;k++) printf "r%d ", k; p=$1}' <<< "$RSEQ")
@@ -277,7 +288,13 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
       if [ "$j" -lt $((M-1)) ]; then EN=$(awk -v cs="$CS" -v p="$PRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b-0.06}')
       else EN=$(awk -v cs="$CS" -v p="$PRE" -v l="$L" -v d="$D" 'BEGIN{e=p+l+0.45; if(e>d)e=d; printf "%.3f", cs+e}'); fi
       TXT=$(printf '%s' "${SARR[$j]}" | sed 's/[{}\\]//g')
-      [ -n "$TXT" ] && printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$(asstime "$ST")" "$(asstime "$EN")" "$TXT" >> work/subs.body
+      if [ -n "$TXT" ]; then
+        printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$(asstime "$ST")" "$(asstime "$EN")" "$TXT" >> work/subs.body
+        # 같은 ST/EN/TXT 에서 SRT 도 찍는다 — 번인본과 자막 파일이 한 원천을 공유해 드리프트가 생기지 않는다.
+        # 페이드 태그({\fad})는 ASS 전용이라 뺀다 (SRT 는 서식 태그를 모른다).
+        SRTN=$((SRTN+1))
+        printf '%d\n%s --> %s\n%s\n\n' "$SRTN" "$(srttime "$ST")" "$(srttime "$EN")" "$TXT" >> work/subs.srtbody
+      fi
     done
   fi
 
@@ -335,31 +352,52 @@ if [ "$SUB" = "1" ] && [ -s work/subs.body ]; then
   } > subs.ass
   if [ -d fonts ] && ls fonts/*.[to]tf >/dev/null 2>&1; then SUBFILTER="subtitles=subs.ass:fontsdir=fonts"
   else SUBFILTER="subtitles=subs.ass"; fi
-  say "── 자막: $(grep -c '^Dialogue' subs.ass)줄 / 폰트 $SUB_FONT"
+  # 게시용 SRT — 줄끝은 CRLF(SubRip 원 스펙). 플랫폼 파서가 LF 를 받는지는 확인된 바 없어
+  # 스펙 쪽에 맞춘다. 파일 끝 빈 줄 하나는 마지막 큐의 종료 표시라 남겨 둔다.
+  awk '{printf "%s\r\n", $0}' work/subs.srtbody > subs.srt
+  say "── 자막: ${SRTN}줄 (번인 subs.ass / 게시 subs.srt) / 폰트 $SUB_FONT"
 fi
 
-# ── 12) 자막 번인 + 아웃트로 접합 (아웃트로엔 자막 없음) — -shortest 금지 (v2 동일)
+# ── 12) 렌더 + 아웃트로 접합 (아웃트로엔 자막 없음) — -shortest 금지 (v2 동일)
+#      자막은 영상과 따로 올리는 것이 원칙이라 **클린 마스터가 reel.mp4** 다. 번인본은
+#      자막 파일 경로가 없는 플랫폼(IG 릴스)용 별도 산출물이며, reel.mp4 를 다시 인코딩하지
+#      않고 같은 원본에서 한 번 더 뽑는다 — 2세대 인코딩을 피해 두 파일 모두 1세대다.
 ENC=(-c:v libx264 -profile:v high -level 4.1 -preset slow -crf 19 -pix_fmt yuv420p
      -g $((FPS*2)) -keyint_min "$FPS" -sc_threshold 0 -r "$FPS"
      -c:a aac -b:a 192k -ar 48000 -ac 2 -movflags +faststart)
-VSRC="[0:v]"
-[ -n "$SUBFILTER" ] && VSRC="[vsub]"
-if [ -f outro.mp4 ]; then
-  OFF=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
-  ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -i outro.mp4 -filter_complex "
-    ${SUBFILTER:+[0:v]$SUBFILTER[vsub];}
-    ${VSRC}[2:v]xfade=transition=$XFADE_T:duration=$XFADE:offset=$OFF[v];
-    [1:a][2:a]acrossfade=d=$XFADE:c1=tri:c2=tri[a]
-  " -map "[v]" -map "[a]" "${ENC[@]}" reel.mp4
-  say "── 아웃트로 접합: xfade ${XFADE_T} ${XFADE}s @ ${OFF}s"
-else
-  if [ -n "$SUBFILTER" ]; then
-    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -filter_complex "[0:v]$SUBFILTER[v]" \
-      -map "[v]" -map 1:a "${ENC[@]}" reel.mp4
+OFF=""
+[ -f outro.mp4 ] && OFF=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
+
+render() {                          # $1=출력파일  $2=자막필터(빈 문자열이면 번인 없음)
+  local OUT="$1" SF="${2:-}" VSRC="[0:v]"
+  [ -n "$SF" ] && VSRC="[vsub]"
+  if [ -f outro.mp4 ]; then
+    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -i outro.mp4 -filter_complex "
+      ${SF:+[0:v]$SF[vsub];}
+      ${VSRC}[2:v]xfade=transition=$XFADE_T:duration=$XFADE:offset=$OFF[v];
+      [1:a][2:a]acrossfade=d=$XFADE:c1=tri:c2=tri[a]
+    " -map "[v]" -map "[a]" "${ENC[@]}" "$OUT"
+  elif [ -n "$SF" ]; then
+    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -filter_complex "[0:v]$SF[v]" \
+      -map "[v]" -map 1:a "${ENC[@]}" "$OUT"
   else
-    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -map 0:v -map 1:a "${ENC[@]}" reel.mp4
+    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -map 0:v -map 1:a "${ENC[@]}" "$OUT"
   fi
-  say "── 아웃트로 없음: 본편 단독 먹싱"
+}
+
+render reel.mp4 ""
+if [ -f outro.mp4 ]; then say "── 아웃트로 접합: xfade ${XFADE_T} ${XFADE}s @ ${OFF}s"
+else say "── 아웃트로 없음: 본편 단독 먹싱"; fi
+
+rm -f reel-sub.mp4
+if [ "$BURN" = "1" ] && [ -n "$SUBFILTER" ]; then
+  render reel-sub.mp4 "$SUBFILTER"
+  say "── 번인본 reel-sub.mp4: 자막 파일을 못 받는 플랫폼용 (클린 마스터는 reel.mp4)"
+elif [ "$BURN" = "1" ]; then
+  say "⚠ BURN=1 이지만 자막 데이터가 없어 번인본을 만들지 않았다 (SUB=$SUB)"
+  WARN=1
+else
+  say "── 번인 생략(BURN=0) — 모든 게시 대상이 자막 파일을 받는 경우에만 맞다"
 fi
 
 # ── 13) 최종 검증 (v2 동일)
@@ -368,7 +406,23 @@ RA=$(ffprobe -v error -select_streams a -show_entries stream=duration -of csv=p=
 LUFS=$(ffmpeg -hide_banner -i reel.mp4 -af loudnorm=I=-14:TP=-1:LRA=11:print_format=summary -f null - 2>&1 | sed -n 's/.*Input Integrated: *\(.*\)/\1/p')
 FSTART=$(xxd -l 48 reel.mp4 | grep -c moov || true)
 say "── reel.mp4: video ${RV}s / audio ${RA}s / 라우드니스 ${LUFS} / faststart $([ "$FSTART" -ge 1 ] && echo OK || echo 미확인)"
+# 번인본은 같은 원본·같은 필터체인이라 길이가 클린본과 같아야 한다 — 어긋나면 두 파일 중
+# 하나가 옛 빌드의 잔존물이다(플랫폼별로 다른 영상이 나가는 사고).
+if [ -f reel-sub.mp4 ]; then
+  SV=$(ffprobe -v error -select_streams v -show_entries stream=duration -of csv=p=0 reel-sub.mp4)
+  if awk -v a="$RV" -v b="$SV" 'BEGIN{exit (a-b<0.05 && b-a<0.05) ? 0 : 1}'; then
+    say "── reel-sub.mp4: video ${SV}s (클린본과 일치)"
+  else
+    say "✗ reel-sub.mp4 길이 ${SV}s ≠ reel.mp4 ${RV}s — 같은 빌드 산출물이 아니다"; exit 1
+  fi
+fi
+# 자막 파일은 게시 툴에 그대로 넘어간다 — 여기서 비어 있으면 게시 단계에서야 발견된다
+if [ "$SUB" = "1" ]; then
+  if [ -s subs.srt ]; then say "── subs.srt: ${SRTN}큐 / $(wc -c < subs.srt | tr -d ' ')바이트 (FB 상한 200K)"
+  else say "✗ SUB=1 인데 subs.srt 가 비었다 — segs.tsv 의 자막표기 컬럼을 확인할 것"; exit 1; fi
+fi
 # 커버 = 히어로 스탯까지 모두 등장한 시점(자동 프레임은 훅 전달 실패 — 커버 최적화 조사 준거)
+# 클린본에서 뽑는다 — 썸네일에 자막이 얹히면 커버 카피와 겹친다
 ffmpeg -y -v error -ss "${COVER_TS:-3.2}" -i reel.mp4 -frames:v 1 -q:v 2 cover.jpg
 [ "$WARN" -eq 1 ] && say "── 경고 있음: 위 ⚠ 항목 확인 (재생성 권고는 빌드를 막지 않음)"
 say "── 완료"

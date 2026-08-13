@@ -25,6 +25,31 @@ export const config = {
 };
 
 /**
+ * 로컬 TTS(Supertonic)를 실행할 Python 인터프리터.
+ *
+ * 다른 자격증명과 달리 **없어도 기동은 된다** — `python3` 로 폴백하고, 실제로 없거나
+ * 패키지가 안 깔렸으면 호출 시점에 설치 안내와 함께 실패한다(supertonic-client).
+ *
+ * venv 경로를 자동 탐색하지 않는 건 의도적이다. `./venv`·`./.venv` 를 뒤지면 편하지만,
+ * 저장소마다 다른 가상환경을 조용히 집어 "어제는 되던 목소리가 오늘 다른 목소리"가
+ * 되는 실패가 생긴다. 어느 인터프리터를 쓸지는 명시로만 정한다.
+ */
+export function supertonicPython(): string {
+  return process.env.SUPERTONIC_PYTHON || 'python3';
+}
+
+/**
+ * 로컬 이미지 생성(Z-Image Turbo)을 실행할 mflux CLI 실행 파일.
+ *
+ * supertonicPython 과 같은 원칙 — 없어도 기동은 되고, 호출 시점에 설치 안내와 함께
+ * 실패한다(zimage-client). 기본값은 uv tool 의 결정적 설치 경로다. PATH 를 뒤지는
+ * 폴백은 두지 않는다 — 조용한 자동 발견은 "어제는 되던 게 오늘 다른 결과"를 만든다.
+ */
+export function mfluxZImageBin(): string {
+  return process.env.MFLUX_ZIMAGE_BIN || join(homedir(), '.local', 'bin', 'mflux-generate-z-image-turbo');
+}
+
+/**
  * SNS 직접 게시 자격증명 경로 (플랫폼별 게시 툴).
  *
  * 용어 계약: **채널(channel) = 운영 브랜드**(data/<slug> 와 1:1), **플랫폼(platform)

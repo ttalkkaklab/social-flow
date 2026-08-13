@@ -6,7 +6,8 @@
 <title>릴스 폰 모드 검수</title>
 <!--
   make-reels 검수 하네스 — 실제 폰 화면 + 플랫폼 UI 오버레이 위에서 릴스를 확인한다.
-  ?v=<영상경로>  기본 ./reel.mp4
+  ?v=<영상경로>  기본 ./reel.mp4 — **자막 검수는 ./reel-sub.mp4 를 명시할 것**
+                 (reel.mp4 는 자막 없는 클린 마스터라 잘림·침범이 보이지 않는다)
   ?ui=ig|yt|none 플랫폼 UI 목업 (기본 ig)
   ?fit=crop|full crop=톨폰 실제 표시(세로 채움·좌우 크롭) / full=전체 보이기 (기본 crop)
   ?t=<초>        시작 지점
@@ -116,7 +117,7 @@ document.getElementById("ui").innerHTML = ui === "ig" ? IG : ui === "yt" ? YT : 
 function drawZones() {
   const P = document.getElementById("phone").getBoundingClientRect();
   const s = fit === "crop" ? P.height / 1920 : P.width / 1080;
-  // 영상은 가운데 정렬 — crop 은 좌우가, full 은 위아래가 잘리거나 남는다. 양쪽 오프셋을 다 보정한다.
+  // 영상은 가운데 정렬 — crop 은 좌우가, full 은 위아래가 잘리거나 여백이 생긴다. 양쪽 오프셋을 다 보정한다.
   const vw = 1080 * s, off = (P.width - vw) / 2;
   const vh = 1920 * s, voff = (P.height - vh) / 2;
   const box = (x, y, w, h, label) => {
