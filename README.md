@@ -17,10 +17,10 @@ fect-persona 플러그인에서 실측 검증된 영상 파이프라인(세이�
 social-flow/
 ├── .claude-plugin/plugin.json   # 플러그인 매니페스트
 ├── .mcp.json                    # 내부 MCP 서버 등록 (social-flow)
-├── server/                      # 내부 MCP 서버 (TypeScript, stdio) — 툴 24종
+├── server/                      # 내부 MCP 서버 (TypeScript, stdio) — 툴 38종
 │   └── src/
-│       ├── index.ts             # 엔트리 (플랫폼별 게시 툴 조건부 노출)
-│       ├── tools.ts             # 툴 정의 (조사 4 + 공공데이터 5 + 생성 6 + 게시 5 + 댓글 3 + 점검 1)
+│       ├── index.ts             # 엔트리 (플랫폼별 게시·인사이트 툴 조건부 노출)
+│       ├── tools.ts             # 툴 정의 (조사 5 + 공공데이터 5 + 생성 15 + 게시 4 + 댓글 4 + 인사이트 3 + 검색 1 + 점검 1)
 │       ├── handlers.ts          # zod 검증 + 라우팅
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube 게시/댓글 (fect-persona 승계)
 │       ├── serp-client.ts       # SerpApi (키 마스킹 + 응답 슬리밍)
@@ -43,10 +43,10 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md(루프백 리스너·프로덕션 단계 7일 만료 함정)
 │   ├── datago/                  # /social-flow:datago — 공공데이터 조사→수집→시드 기록
 │   ├── ingest/                  # /social-flow:ingest — 화면 녹화(+음성)→타임라인 (녹화 제어·STT·씬 경계·키프레임)
-│   ├── storyboard/              # /social-flow:storyboard — 조사→씬 설계→이미지→승인
+│   ├── storyboard/              # /social-flow:storyboard — 조사→씬 설계→문안 수렴(95점)→이미지→이미지 수렴(95점)→승인
 │   ├── produce/                 # /social-flow:produce — 영상 합성 + 플랫폼별 텍스트
 │   │   └── references/          #   build-reel.sh·video-template.html·검수 하네스
-│   ├── autoproduce/             # /social-flow:autoproduce — 주제 하나로 조사→저작→영상까지 무인 관통 (사람 게이트를 기계 게이트 5개로 대체, 경제 티어 기본)
+│   ├── autoproduce/             # /social-flow:autoproduce — 주제 하나로 조사→저작→영상까지 무인 관통 (사람 게이트를 기계 게이트 7개로 대체, 경제 티어 기본)
 │   │   └── references/          #   cost-tiers.md(모델 사다리·승급 조건)·prices.tsv(단가 SoT)·cost-report.sh
 │   ├── publish/                 # /social-flow:publish — HITL 승인 후 플랫폼 게시
 │   ├── grow-threads/            # /social-flow:grow-threads — Threads 자율 성장 루프 1틱 (init 플랜=상시 승인서, /loop 로 반복 — 성장 스킬은 플랫폼별 분리)
@@ -60,7 +60,8 @@ social-flow/
 ├── agents/
 │   ├── brand-reviewer.md        # 프로필 이미지·인트로 영상 적대적 평가 (95점/90점 수렴 게이트)
 │   ├── content-reviewer.md      # 게시 전 적대적 검증 (P0 게이트)
-│   └── growth-post-reviewer.md  # 성장 루프 문안 적대적 검증 (AI 티·맥락 — 90점 게이트)
+│   ├── growth-post-reviewer.md  # 성장 루프 문안 적대적 검증 (AI 티·맥락 — 95점 게이트)
+│   └── storyboard-reviewer.md   # 스토리보드 적대적 검증 (문안 AI 티 / 이미지 맥락 — 각 95점 게이트)
 └── data/                        # 콘텐츠 데이터 루트 (data/README.md 참조)
 ```
 
@@ -76,7 +77,7 @@ social-flow/
 /social-flow:produce 재테크 20260729-환율       # 3. 영상+플랫폼 텍스트 제작
 /social-flow:publish 재테크 20260729-환율       # 4. [승인]→게시→permalink 기록
 /social-flow:grow-threads 재테크 init          # 5. (선택) Threads 성장 플랜 확정 [승인 — 상시 승인서]
-/loop 30m /social-flow:grow-threads 재테크     #    이후 30분 주기 자율 성장 루프 (인박스 답글·인사이트·키워드 참여·판단 게시 — 90점 게이트)
+/loop 30m /social-flow:grow-threads 재테크     #    이후 30분 주기 자율 성장 루프 (인박스 답글·인사이트·키워드 참여·판단 게시 — 95점 게이트)
 /social-flow:grow-youtube 재테크 init          # 5-b. (선택) YouTube 성장 플랜 확정 [승인 — 상시 승인서]
 /loop 1h /social-flow:grow-youtube 재테크      #     이후 1시간 주기 자율 성장 루프 (댓글 응대·지표 관찰·대기열 보충 저작·대기열 게시)
 /social-flow:grow-instagram 재테크 init        # 5-c. (선택) Instagram 성장 플랜 확정 [승인 — 상시 승인서]
@@ -92,8 +93,9 @@ social-flow/
 /social-flow:autoproduce 재테크 "7월 환율 변동"   # 조사→scenes.js→이미지→TTS→빌드→output
 ```
 
-승인 게이트 자리에 기계 게이트 다섯이 선다 — 사실 검증(교차검증 통과 3건 이상)·
-문체 검사기·빌드 리포트(drift 0)·content-reviewer P0=0·비용 상한. 모델은
+승인 게이트 자리에 기계 게이트 일곱이 선다 — 사실 검증(교차검증 통과 3건 이상)·
+문체 검사기·storyboard-reviewer 문안 95점·storyboard-reviewer 이미지 95점·
+빌드 리포트(drift 0)·content-reviewer P0=0·비용 상한. 모델은
 **경제 티어가 기본**이라 Veo 를 한 번도 부르지 않고(정지 배경 + 켄번즈) 편당 약
 $0.05 이며, 훅 지표가 임계 아래로 떨어진 경우에만 커버 4초를 `veo-3.1-lite` 로
 승급한다. 저작은 **플랫폼 루프당 하루 최대 2편**(하드캡, 성공·실패 포함)이고,
@@ -111,6 +113,17 @@ Threads 반말이나 FB 사례 수집형 마무리처럼 플레이북이 요구�
 `skills/platform-guide/references/korean-style.md`, 판정은 코드가 하고 문장은
 에이전트가 고친다.
 
+**스토리보드 수렴 게이트** — 검사기가 규칙으로 잡는 층이 있다면, 그 위층은 사람이
+읽어야 느끼는 것들이다. 대구 남용, 3개 나열, 훈계형 마무리, 전부 같은 길이로
+낭독되는 리듬. 그림 쪽도 같다 — 해상도는 기계가 보지만 "이 그림이 그 씬이 말하는
+내용을 보여주는가"는 봐야 안다. 그래서 storyboard 스킬은 승인 전에 적대적 리뷰어
+`storyboard-reviewer` 를 두 번 부른다. **문안 모드**(§4.5, 하드캡 5라운드)가 문장을,
+**이미지 모드**(§5.5, 하드캡 3라운드)가 생성된 PNG 를 보고, 둘 다 **95점 이상 ·
+P0 0건**이라야 사용자 승인 화면으로 넘어간다. 문안이 이미지보다 먼저인 이유는
+단순하다 — 문장이 바뀌면 그 씬이 보여줄 그림도 바뀐다. 하드캡에 걸리면 최고 점수
+버전과 미해결 지적을 그대로 승인 화면에 실어 사람이 판단한다. autoproduce 의 무인
+경로도 같은 게이트를 라운드 2로 돈다(미달이면 `queue_*: hold`).
+
 **스토리보드 선행 촬영 흐름** (완성도 있는 시연·튜토리얼용 — 순서가 뒤집힌다):
 
 ```
@@ -121,6 +134,14 @@ Threads 반말이나 FB 사례 수집형 마무리처럼 플레이북이 요구�
 ```
 
 ## MCP 툴 표면 (38종)
+
+**`tools/list` 에는 38종이 다 보이지 않는다.** 게시·인사이트 툴 9종
+(`threads_publish`·`instagram_publish`·`facebook_publish`·`facebook_comment`·
+`youtube_publish`·`threads_insights`·`instagram_insights`·`youtube_insights`·
+`threads_search`)은 **자격증명 파일이 있는 플랫폼만** 노출된다 — 목록을 요청한 시점에
+평가하므로 토큰을 추가하면 서버를 다시 띄우지 않아도 나타난다. 토큰이 하나도 없는
+환경에서 세면 29종이다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가
+돌아온다(조용히 실패하지 않는다).
 
 | 그룹 | 툴 | 백엔드 |
 |---|---|---|
@@ -150,15 +171,16 @@ Threads 반말이나 FB 사례 수집형 마무리처럼 플레이북이 요구�
 grow-instagram)의 자율 모드로, init 에서 HITL 로 승인한 `growth-plan.md`(상시
 승인서) 범위 안에서만 게시별 승인 없이 게시한다. grow-threads 는 게시 빈도를
 개수 상한 없이 스스로 판단하는 대신, 나가는 모든 문안을 적대적 리뷰어
-(growth-post-reviewer)에 통과시켜 90점 이상·P0 0건일 때만 게시한다(통과선은 2026-08-12
-사용자 지시로 95 에서 내렸다 — P0 조건은 그대로다). 영상 플랫폼 둘은 여기에 방어선을
+(growth-post-reviewer)에 통과시켜 95점 이상·P0 0건일 때만 게시한다(통과선은 2026-08-12
+에 90 으로 내렸다가 2026-08-13 사용자 지시로 95 에 복귀했다 — P0 조건은 그대로다). 영상 플랫폼 둘은 여기에 방어선을
 하나 더 둔다 — storyboard.md 에 대기열 마커가 찍힌 것만 나가며, 마커는 플랫폼별로
 분리돼 있다(YouTube `queue: ready` · Instagram `queue_instagram: ready`).
 같은 키를 공유하면 먼저 도는 루프가 마커를 소진해 다른 쪽이 영영 게시하지 못한다.
 마커를 찍는 주체는 둘이다 — 사람이 직접 찍거나 플랜에서 `autoproduce` 를 켠
 경우 대기열이 마를 때 루프가 스스로 한 편을 만들어 찍는다. 자동 저작분은 기계
-게이트 다섯(사실 검증·문체·빌드 리포트·content-reviewer P0·비용 상한)을 전부
-통과한 것만 `ready` 가 되고, 하나라도 떨어지면 `hold` 로 남아 사람을 기다린다.
+게이트 일곱(사실 검증·문체·storyboard-reviewer 문안·storyboard-reviewer 이미지·
+빌드 리포트·content-reviewer P0·비용 상한)을 전부 통과한 것만 `ready` 가 되고,
+하나라도 떨어지면 `hold` 로 남아 사람을 기다린다.
 grow-instagram 은 공개 HTTPS URL 이 있어야만 게시하고, 호스팅이 없으면 게시
 단계와 자동 저작을 함께 끈다(자율 루프가 임시 터널을 띄우지 않으므로, 나갈 길이
 없는 영상을 돈 들여 만들지도 않는다).
@@ -289,7 +311,8 @@ claude --plugin-dir /Volumes/data/repository/zeans/social/social-flow
 ## 안전 계약 (요약)
 
 - **HITL 이중 게이트** — 스토리보드 승인(제작 전) + 게시 승인(공개 전).
-  승인 없이 게시 툴을 호출하지 않는다.
+  승인 없이 게시 툴을 호출하지 않는다. 스토리보드 승인 앞에는 적대적 수렴 게이트
+  둘(문안·이미지, 각 95점·P0 0건)이 선다.
 - **사실 왜곡 금지** — 시효성 값은 독립 출처 2개 교차 검증, 범위는 범위로.
 - **크로스포스팅 복붙 금지** — 플랫폼마다 문장을 다시 설계한다.
 - **토큰 평문 비노출** — 파일 기반, /me 로 계정 자동 결정.

@@ -9,8 +9,9 @@ description: >
   build the 9:16 video (clean master + burned copy + subs.srt) and per-platform
   text under data/<channel>/<topic>/output/ — on the cheapest model tier that
   works, escalating only when measured metrics say the hook is failing. Machine
-  gates (fact verification, style checker, build report, content-reviewer P0,
-  cost cap) stand in for the human approval gates of storyboard/produce.
+  gates (fact verification, style checker, storyboard-reviewer ≥95 on both copy and
+  images, build report, content-reviewer copy ≥95 with zero P0, cost cap) stand in for the human
+  approval gates of storyboard/produce.
 argument-hint: "<채널> \"<주제>\" [unattended]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
@@ -40,7 +41,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
 ## 사람 게이트를 무엇이 대신하나
 
 파이프라인의 안전은 HITL 이중 게이트(스토리보드 승인·게시 승인)에 걸려 있었다.
-무인 모드는 그 자리에 **기계 판정 다섯**을 세운다. 하나라도 떨어지면 영상은
+무인 모드는 그 자리에 **기계 판정 일곱**을 세운다. 하나라도 떨어지면 영상은
 만들어지되 **큐에 들어가지 않는다**(`queue_*: hold`) — 사람이 볼 때까지 게시되지
 않는다는 뜻이다.
 
@@ -48,8 +49,10 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
 |---|---|---|
 | 사실이 맞나 | 시효성 값 독립 출처 2개 교차검증 + 검증 통과 사실 **3건 이상** | 주제 폐기 (§2) |
 | 문장이 사람 글인가 | `check-style.py` 표면별 exit ≤ 1 | 고쳐서 재시도, 2회 실패면 중단 (§4·§9) |
+| 스토리보드 문안이 승인할 만한가 | storyboard-reviewer 문안 모드 **≥95 · P0 = 0** (무인 최대 2라운드) | `queue_*: hold` (§4.5) |
+| 그림이 씬 내용에 맞나 | storyboard-reviewer 이미지 모드 **≥95 · P0 = 0** (무인 최대 2라운드) | `queue_*: hold` (§6.5) |
 | 영상이 성립하나 | `build-report.txt` drift 0 · reveal 누락 0 | 중단 (§8) |
-| 게시해도 되나 | content-reviewer **P0 = 0** (무인 최대 2라운드) | `queue_*: hold` (§10) |
+| 게시해도 되나 | content-reviewer **카피 ≥95 · P0 = 0** (무인 최대 2라운드) | `queue_*: hold` (§10) |
 | 돈이 나가도 되나 | `cost-report.sh --cap` exit 0 | 승급 취소 후 경제 기본 (§5) |
 
 ## 절대 규칙
@@ -235,6 +238,27 @@ done
 두 번 고쳐도 2 면 중단하고 보고한다 — 무인 루프가 같은 문장을 무한히 다듬는
 것을 막는다.
 
+### 4.5 문안 리뷰 게이트 (게이트 6 — storyboard-reviewer 문안 모드)
+
+위 검사가 값싼 선별이라면, 이쪽이 판정이다. 기계가 못 잡는 층위 — 대구 남용·
+3개 나열·훈계형 마무리·같은 길이로 낭독되는 리듬·근거 없는 단정 — 을 리뷰어가 본다.
+**게이트 2를 먼저 통과시키고 부른다**: exit 2 인 채로 위임하면 라운드 하나를
+기계가 이미 아는 사실에 쓴다.
+
+**storyboard-reviewer 에이전트(Agent)에 "문안 모드"로 위임**하고 tail
+`STORYBOARD_REVIEW: mode=text score=NN p0=N verdict=PASS|FAIL` 을 파싱한다.
+`scenes.js`·`research.md`·`profile.md` 경로와 이전 라운드 지적을 전달한다.
+
+- **PASS(≥95 · p0 = 0)** → §5 로.
+- **FAIL** → 교정 지시대로 scenes.js 를 고치고 한 번 더 위임한다. **무인 캡 2라운드.**
+- 2라운드에도 FAIL 이면 **저작을 멈춘다.** 영상을 만들지 않는다 — 문안이 안 된 채로
+  이미지·TTS·빌드에 돈과 시간을 쓰는 것이 가장 비싼 실패다. 이 경로에서는 §10 까지
+  못 가므로 **storyboard.md 를 여기서 만들어** (§10 의 frontmatter 형식,
+  `status: draft` · `queue_*: hold`) 미해결 지적을 본문에 적고 보고한다 — 사람이
+  이어받을 실마리가 파일에 있어야 한다.
+
+**빼기만 한다** — AI 티를 지우려다 없던 비유·상투구를 새로 심으면 그게 새 AI 티다.
+
 ### 5. 티어 결정 + 사전 견적 (게이트 5)
 
 `references/cost-tiers.md` 의 승급 조건을 확인한다. 무인 호출이면 성장 루프가
@@ -292,6 +316,24 @@ exit 1(판정 불가)이면 중단한다. 단가를 모르는 채로 돈을 쓰�
 
 호출마다 `.work/cost-tally.tsv` 에 실제 사용량을 한 줄씩 append 한다.
 
+### 6.5 이미지 리뷰 게이트 (게이트 7 — storyboard-reviewer 이미지 모드)
+
+계획 모드가 프롬프트를 봤다면, 여기서는 **나온 그림**을 본다. 무인 경로는 사람이
+이미지를 볼 기회가 없으니 이 게이트가 유일한 눈이다 — 씬이 말하는 내용과 무관한
+그림, 박힌 유사문자, 밝은 하단(자막이 묻힌다)을 여기서 잡는다.
+
+**storyboard-reviewer 에이전트(Agent)에 "이미지 모드"로 위임**하고 tail
+`STORYBOARD_REVIEW: mode=image score=NN p0=N verdict=PASS|FAIL` 을 파싱한다.
+`images/scene-*.png` 전체 경로와 `scenes.js`·`profile.md` 를 전달한다.
+
+- **PASS(≥95 · p0 = 0)** → §7 로.
+- **FAIL** → 지적받은 장만 다시 만들고 한 번 더 위임한다. **무인 캡 2라운드.**
+  재생성분도 `.work/cost-tally.tsv` 에 적고 상한(§5)을 다시 확인한다 — 상한을
+  넘기면 재생성 대신 그 자리에서 hold 다.
+- 2라운드에도 FAIL 이면 영상은 끝까지 만들되, **§10 마무리에서 `queue_*: hold`** 로
+  적고 미해결 지적을 함께 적는다. 맥락이 어긋난 커버는 그대로 썸네일이 되므로
+  사람이 봐야 한다.
+
 ### 7. 나레이션
 
 produce 스킬 §5 그대로다 — **씬당 1콜**, profile §2 엔진·보이스 고정,
@@ -344,7 +386,9 @@ Facebook 으로, 번인본은 Instagram 으로 간다(publish 스킬 규칙 8).
 
 content-reviewer 에이전트에 위임한다 — **번인본에서 뽑은 프레임**(클린본에는
 자막이 없어 오탈자·잘림이 안 보인다)·플랫폼 카피·scenes.js·§4·§9 의 exit code.
-**P0 = 0 이 될 때까지 수정, 무인 모드는 최대 2라운드.**
+조사 생략 채널이면 그 사실도 명시한다(사실 축 만점 환산).
+**tail(`CONTENT_REVIEW:`)의 카피 ≥95 이고 P0 = 0 이 될 때까지 수정, 무인 모드는
+최대 2라운드.**
 
 마무리 순서:
 

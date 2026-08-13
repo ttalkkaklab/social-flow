@@ -7,18 +7,26 @@ description: >
   topic (naver_search/WebSearch/serp_*), then authors an image-included storyboard under
   data/<channel>/<topic>/storyboard/ — human-readable storyboard.md + machine-readable
   scenes.js (the SoT that produce consumes) + generated 9:16 scene images, or in
-  screencast mode a shooting script (script.md) the user records against — and gets
-  HITL approval before production/recording.
+  screencast mode a shooting script (script.md) the user records against. Two adversarial
+  convergence loops run before approval — the storyboard-reviewer agent scores the copy
+  (AI-sounding phrasing, hook, factual fidelity) and the generated images (do they match
+  what each scene actually says), and the storyboard only reaches HITL approval once both
+  score ≥95 with zero P0 defects.
 argument-hint: "<채널> <주제 또는 주제 힌트>"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img"]
 ---
 
 # 스토리보드 저작 — data/[채널]/[주제]/storyboard/
 
-주제 하나를 받아 **조사 → 씬 설계 → 이미지 생성 → 스토리보드 승인**까지 진행한다.
-여기서 확정된 `scenes.js` 가 이후 제작(produce)의 유일한 데이터 원천(SoT)이다 —
-영상·캡션·플랫폼별 텍스트가 전부 이 파일에서 파생되므로 플랫폼 간 사실 불일치가
-원천 차단된다.
+주제 하나를 받아 **조사 → 씬 설계 → 문안 수렴 → 이미지 생성 → 이미지 수렴 →
+스토리보드 승인**까지 진행한다. 여기서 확정된 `scenes.js` 가 이후 제작(produce)의
+유일한 데이터 원천(SoT)이다 — 영상·캡션·플랫폼별 텍스트가 전부 이 파일에서
+파생되므로 플랫폼 간 사실 불일치가 원천 차단된다.
+
+승인 전에 적대적 리뷰어(`storyboard-reviewer`)가 두 번 막는다. 한 번은 **문장**을
+보고(AI 가 쓴 티·훅·사실 충실), 한 번은 **그림**을 본다(씬이 말하는 내용을 화면이
+실제로 보여주는가). 두 관문 모두 **95점 이상 + P0 0건**이라야 사용자 승인 단계로
+간다. 사람이 보기 전에 기계가 먼저 반증을 시도하는 셈이다.
 
 ```
 data/<채널>/<주제 slug>/storyboard/
@@ -99,6 +107,11 @@ data/<채널>/<주제 slug>/storyboard/
   (유지율은 길이에 반비례 — 90초 상한).
 - **커버 제목은 16자 이내 + 주제어 필수** — 자극만 있고 무엇의 이야기인지 없으면
   스킵된다. 강조어는 `**굵게**`(그라데이션 칩). statLabel 은 18자 이내.
+- **씬 제목은 전부 구어 훅이다**(사용자 지시 2026-08-13) — 보는 사람이 속으로
+  내뱉는 말(반말 감탄·의문·전언: "원하던 색이 아닌데 ㅠㅠ", "같은 염색약인데 왜
+  달라?"). 설명형 서술은 제목이 아니라 캡션·나레이션 자리다. 나레이션은 존댓말
+  설명형 유지 — 화면이 감정·의문을 던지고 소리가 존댓말로 답한다
+  (`references/scenes-schema.md` §title 은 구어 훅).
 - **나레이션 = 세그먼트(문장) 배열** — 문장 하나가 reveal 하나와 1:1. 자수 상한
   (공백·구두점 제외): cover ≤40자, points/quote ≤50자. 문장당 8~25자, 마침표로
   분명히 끊는다(TTS 무음 경계 검출용). 표기 이원화: `tts` 는 한글 발음
@@ -106,6 +119,27 @@ data/<채널>/<주제 slug>/storyboard/
 - **쉬운 말 원칙(프로파일 §2)** — 화면 텍스트·나레이션 모두. 덱 저작 단계에서
   용어를 풀어 써야 나레이션도 쉬워진다.
 - THEME 은 프로파일 §3 값을 그대로 복사한다.
+
+### 4.5 문안 수렴 루프 (storyboard-reviewer 문안 모드, 목표 score ≥95 AND p0 = 0)
+
+**이미지를 만들기 전에 문장부터 통과시킨다** — 문안이 바뀌면 그 씬이 보여줄 그림도
+바뀌므로, 순서가 뒤집히면 만든 이미지를 버리게 된다. **하드캡 5회**:
+
+1. **storyboard-reviewer 에이전트(Agent)에 "문안 모드"로 위임** — `scenes.js`·
+   `research.md`(있으면)·`profile.md` 경로와 이전 라운드 미해결 지적을 전달한다.
+   판정 tail `STORYBOARD_REVIEW: mode=text score=NN p0=N verdict=PASS|FAIL` 을 파싱한다.
+2. **PASS(score ≥95 이고 p0 = 0)** → §5 로.
+3. **FAIL** → 교정 지시대로 `scenes.js` 를 고치고 다시 위임한다.
+   - **빼기만 한다** — AI 티를 지우려다 원문에 없던 비유·상투구를 새로 심지 않는다.
+     넣는 순간 그게 새 AI 티다.
+   - 사실 지적(P0-3·P0-4)은 문장을 다듬어 덮지 않는다. research.md 로 돌아가
+     근거를 다시 확인하고, 근거가 없으면 그 주장을 뺀다.
+   - 같은 지적이 2회 연속 반복되면 그 씬을 다시 쓴다 — 같은 문장을 계속 다듬으면
+     리듬만 더 기계적으로 굳는다.
+4. 하드캡 도달 시 **최고 점수 버전 + 미해결 지적**을 §7 승인 게이트에 그대로 싣고
+   사용자 판단을 받는다. 점수를 꾸며 통과시키지 않는다.
+
+**촬영 모드도 이 루프를 돈다** — 사용자가 소리 내 읽을 대사라 AI 티가 더 크게 들린다.
 
 ### 5. 씬 이미지 생성 (촬영 모드는 건너뛴다)
 
@@ -115,7 +149,9 @@ data/<채널>/<주제 slug>/storyboard/
 docs/research/2026-08-12-local-image-generation):
 
 - **points 배경 = `image_local_generate`(로컬 Z-Image — 기본).** 장당 비용 0.
-  장당 수 분 걸리므로 순차로 걸어 두고 그동안 §6 storyboard.md 를 쓴다.
+  장당 수 분 걸리므로 순차로 걸어 두고, 그동안 §6 중 **이미지와 무관한 부분**
+  (SB_DOC 편집 메타·출처 요약)을 미리 써 둔다. 이미지 임베드와 씬 표는 §5.5 를
+  통과한 뒤에 쓴다 — 재생성이 걸리면 그만큼 다시 손봐야 한다.
   mflux 미설치 머신이면 툴이 설치 안내와 함께 실패한다 — 그 회차만
   `gpt_image_text2img`(quality "low")로 폴백한다.
 - **커버 배경(scene-1) = `gpt_image_text2img`(quality "high").** 썸네일이자 veo
@@ -149,6 +185,31 @@ docs/research/2026-08-12-local-image-generation):
   4초)과 그 근거**·모션(영어)·오디오 지시를 함께 적는다 — 생성은 1080p·8초 고정이고
   (API 제약), produce 가 사용 길이만큼 잘라 쓴다.
 
+### 5.5 이미지 맥락 수렴 루프 (storyboard-reviewer 이미지 모드, 목표 score ≥95 AND p0 = 0)
+
+생성 전 계획은 content-reviewer 계획 모드가 봤고, 여기서는 **나온 그림 자체**를 본다 —
+"이 그림이 그 씬이 말하는 내용을 보여주는가". 예쁜지가 아니라 맞는지가 기준이다.
+**촬영 모드는 이 루프를 통째로 건너뛴다**(화면이 사용자의 실제 녹화에서 나온다).
+**하드캡 3회** — 재생성은 로컬도 장당 수 분, gpt high 는 돈이 나간다.
+
+1. **storyboard-reviewer 에이전트(Agent)에 "이미지 모드"로 위임** — `images/scene-*.png`
+   전체 경로와 `scenes.js`·`profile.md`, 삽화 모드면 `narration[].img` 경로들,
+   이전 라운드 미해결 지적을 전달한다. 판정 tail
+   `STORYBOARD_REVIEW: mode=image score=NN p0=N verdict=PASS|FAIL` 을 파싱한다.
+2. **PASS(score ≥95 이고 p0 = 0)** → §6 으로. storyboard.md 는 통과한 이미지로 한 번만
+   쓴다(루프 중에 문서를 미리 쓰면 매 라운드 다시 손봐야 한다).
+3. **FAIL** → 지적받은 장만 다시 만든다. 통과한 장은 건드리지 않는다.
+   - 엔진은 §5 분담 그대로. 프롬프트는 원래 것에 교정 지시만 얹고 **전면 재서술은
+     하지 않는다** — 다 뜯어고치면 통과했던 요소까지 같이 사라진다.
+   - **부정 지시는 프롬프트 본문에 쓰지 않는다** — "no maps" 를 본문에 넣으면 오히려
+     지도가 그려진다(실측 4장 전패). 부정 명사는 `--negative-prompt` 쪽으로 분리한다.
+   - **글자 각인 소품은 부정 지시로 못 막는다**(키보드·계산기·간판). 그 물체를 장면
+     구성에서 빼는 쪽이 정답이다.
+   - 같은 지적이 2회 연속 반복되면 씬의 소재를 바꾼다 — 같은 프롬프트를 다듬어
+     세 번째로 같은 실패를 사지 않는다.
+4. 하드캡 도달 시 **최고 점수 버전 + 미해결 지적**을 §7 승인 게이트에 그대로 싣는다.
+   비용이 계속 나가는 축이라 여기서 사용자 판단을 받는 편이 싸다.
+
 ### 6. storyboard.md 작성
 
 `references/storyboard-template.md` 구조로 사람이 검토할 문서를 만든다 —
@@ -166,19 +227,42 @@ docs/research/2026-08-12-local-image-generation):
 storyboard/ 에 복사해 **`<title>` 과 `✎ SB_DOC` 블록만** 채운다. 씬 데이터(제목·
 대사·bullets·shot·duration·THEME)는 절대 HTML 에 적지 않는다 — 문서가
 `<script src="./scenes.js">` 로 SoT 를 직접 로드해 그리므로, scenes.js 를 고치면
-문서가 자동으로 따라오고 사본 드리프트가 원천 차단된다. 자수·말속도·씬 길이·
-총길이 검산은 렌더러가 계약대로 자동 계산해 배지로 표시하므로 검토 시 그대로
-읽으면 된다. SB_DOC 에는 scenes.js 에 없는 편집 메타만 담는다(핵심 메시지·씬별
-주석·전환·개인정보 회피·출처 요약·플랫폼 계획·촬영 준비·재확인 목록).
+문서가 자동으로 따라오고 사본 드리프트가 원천 차단된다. SB_DOC 에는 scenes.js 에
+없는 편집 메타만 담는다(핵심 메시지·씬별 주석·전환·오디오 지시·개인정보 회피·
+출처 요약·플랫폼 계획·촬영 준비·재확인 목록).
+
+문서가 보여 주는 것은 셋이다.
+
+- **9:16 패널 스트립** — 화면이 바뀌는 순간(리빌) 하나가 패널 하나다. 배경·오버레이·
+  자막을 produce 렌더러와 같은 비율로 합성해 그리므로 완성 화면을 문서에서 본다.
+  points 캡션 스왑·삽화 모드의 대사별 배경 교체·촬영 모드의 녹화 밴드까지 그대로다.
+  촬영 모드는 오버레이가 씬당 하나라 패널도 한 장이고, 문장별 자막은 AUDIO 열이 맡는다.
+  타임라인은 b-roll 을 배열 위치가 아니라 `after` 가 정한 재생 위치에 꽂아 그린다.
+- **AV 2열** — 왼쪽 VIDEO(배경·모션·화면 텍스트·프롬프트·촬영 지시) · 오른쪽 AUDIO
+  (대사 세그먼트·자막 차이·오디오 지시). 화면과 소리의 어긋남이 한 줄에서 보인다.
+  프레임 안에서 8px 로 그려지는 화면 텍스트를 VIDEO 열이 읽을 수 있는 크기로 다시 적는다.
+- **계약 점검 스트립** — 위반을 문서 맨 위 한 곳에 모은다. 자수·말속도·씬 길이·총길이·
+  커버 제목에 더해 **프레임 넘침**과 **히어로 수치 폭**을 produce 와 같은 방식으로
+  실측하고(1080px 캔버스 · 3단계 축소 · 640px 가드), b-roll 계약(나레이션 없음·8초 이하·
+  커버 배경과 같은 src·`after` 가 실재 씬)·씬 길이 결측·`tts` 결측·아웃트로 길이 미기재·
+  SB_DOC 미기입 `{{…}}` 도 잡는다. 제작 전에 글자 잘림과 계약 위반을 걸러 내는 자리다 —
+  다만 produce 와 같은 사각이 있어 **위로** 밀려난 글자는 안 걸린다(아래 넘침만 잰다).
+
+승인 제시 때 이 문서를 기본으로 쓴다. 텍스트 존·자막 토글은 씬 구성 절 머리에 있다.
 
 ### 7. HITL 승인 게이트
 
 AskUserQuestion 으로 스토리보드를 제시한다 — storyboard.md·storyboard.html 경로
 (HTML 을 브라우저로 열면 검산 배지까지 보인다), 씬 수·예상 총길이, 커버 제목,
-핵심 수치와 출처. 선택지: [승인 — 제작 진행 / 수정 요청 /
-주제 보류]. **승인 없이 produce 로 넘어가지 않는다.** 수정이면 반영 후 재제시.
-승인되면 scenes.js 상단에 `// approved: <YYYY-MM-DD>` 주석을 남기고
-`/social-flow:produce <채널> <주제>` 를 안내한다.
+핵심 수치와 출처. 여기에 **두 수렴 루프의 결과를 함께 싣는다** — 문안·이미지 각각의
+최종 점수와 라운드 수, 하드캡에 걸렸으면 미해결 지적을 그대로. 선택지:
+[승인 — 제작 진행 / 수정 요청 / 주제 보류]. **승인 없이 produce 로 넘어가지 않는다.**
+수정 요청이면 반영한 뒤 **바뀐 축의 게이트를 다시 통과시키고** 재제시한다 — 문장을
+고쳤으면 §4.5, 이미지를 다시 만들었으면 §5.5 다(재제시 라운드는 하드캡을 새로 센다).
+승인되면 scenes.js 상단에 `// approved: <YYYY-MM-DD>` 와
+`// review: text=NN(R라운드) image=NN(R라운드)` 두 줄을 적고
+`/social-flow:produce <채널> <주제>` 를 안내한다 — 나중에 어떤 점수의 문안이
+어떤 성과를 냈는지 되짚을 수 있다.
 
 **촬영 모드**의 승인 후 안내는 녹화다 — `/social-flow:ingest <채널> record
 <주제>` (script.md 를 보조 모니터에 띄우고 촬영). 녹화·정합이 끝나면 produce 가
@@ -186,6 +270,12 @@ AskUserQuestion 으로 스토리보드를 제시한다 — storyboard.md·storyb
 
 ## 함정
 
+- **판정 권한은 storyboard-reviewer 에만 있다** — 스킬 실행자가 자기 문안을 읽고
+  "이 정도면 됐다"로 루프를 끝내지 않는다. 자기가 쓴 문장의 AI 티는 자기 눈에 가장
+  안 보인다. 점수 조작·자기 채점 종료 금지이고, 통과는 tail 의 `verdict=PASS` 로만
+  선언한다.
+- **두 루프의 순서를 바꾸지 않는다** — 문안(§4.5)이 이미지(§5.5)보다 먼저다.
+  거꾸로 돌면 문장이 바뀔 때마다 만든 그림을 버린다.
 - **scenes.js 는 살아있는 파일이 아니다** — 승인 후 produce 가 소비하는 확정본이다.
   제작 중 고치고 싶으면 스토리보드 개정 → 재승인부터.
 - **범위는 범위로** — 수치 범위를 상한 하나로 줄이지 않는다(실제 발생 사례).
@@ -202,3 +292,11 @@ AskUserQuestion 으로 스토리보드를 제시한다 — storyboard.md·storyb
 - **`references/storyboard-template.md`** — storyboard.md 표준 구조 + research.md 표 형식
 - **`references/storyboard-html-template.html`** — storyboard.html 렌더 템플릿 — scenes.js 동적 로드 + 계약 검산 자동 표시, `✎ SB_DOC` 블록만 채워 사용
 - **`references/shot-script-template.md`** — 촬영 모드 한정: script.md(촬영 대본) 구조 + 촬영 수칙 + scenes.js 변형 계약
+
+### 위임 에이전트
+
+- **`storyboard-reviewer`** — §4.5 문안 모드(AI 티·훅·사실 충실)와 §5.5 이미지 모드
+  (씬 내용 대 그림의 맥락 정합). 두 모드 모두 95점·P0 0건이 통과선이고, 루브릭·P0
+  목록·tail 형식은 `agents/storyboard-reviewer.md` 가 정본이다
+- **`content-reviewer` 계획 모드** — §5 생성 호출 직전의 프롬프트 검증(`PLAN_REVIEW`).
+  storyboard-reviewer 이미지 모드와 보는 대상이 다르다 — 이쪽은 프롬프트, 저쪽은 결과물

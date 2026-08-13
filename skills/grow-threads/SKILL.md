@@ -8,7 +8,7 @@ description: >
   contribution exists (no daily cap), and authors/publishes new posts whenever there
   is something worth saying (slots are a rhythm guide, not a gate), attaching a
   generated image via the meleon.app uploader when one would help — every outgoing
-  text must pass the adversarial growth-post-reviewer gate (score ≥ 90, P0 = 0)
+  text must pass the adversarial growth-post-reviewer gate (score ≥ 95, P0 = 0)
   before publishing. Fully autonomous within the standing authorization of
   data/<channel>/growth/threads/growth-plan.md. Recur with /loop <interval>
   /social-flow:grow-threads <channel>. First run: /social-flow:grow-threads
@@ -66,8 +66,9 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
 4. **토큰 평문 노출 금지** — 토큰은 `~/.config/social-flow/<채널slug>/` 파일로만.
    state.json·growth-log.md 에 API 응답을 통째로 저장하지 않는다(필요 필드만).
 5. **검증 게이트 미통과 게시 금지** — 밖으로 나가는 모든 문안(새 글·검색 참여·
-   인박스 답글)은 §적대적 검증 게이트를 통과해야 한다(score ≥90 이고 P0=0 —
-   통과선은 사용자가 2026-08-12 에 95 에서 내렸다. P0 조건과 3라운드 상한은 그대로다).
+   인박스 답글)은 §적대적 검증 게이트를 통과해야 한다(score ≥95 이고 P0=0 —
+   통과선은 2026-08-12 에 사용자가 95 에서 90 으로 내렸다가 2026-08-13 에 철회해
+   95 로 되돌렸다. P0 조건과 3라운드 상한은 그대로다).
    3라운드 안에 못 넘으면 그 문안은 게시하지 않고 growth-log 에 점수와 함께
    스킵으로 적는다. 일·틱 단위 개수 상한은 없다 — 남는 한계는 플랫폼 자체
    쿼터(게시 250/24h·검색 2,200/24h)와 질적 규칙(같은 글 재참여 금지, 같은
@@ -103,7 +104,7 @@ data/<채널 slug>/growth/threads/
    `status: approved` 로 저장한다. 이때 반드시 고지한다: *"이 플랜이 상시
    승인서입니다 — 루프는 이 범위(소재 풀·키워드·톤) 안에서 게시별 승인 없이
    즉시 공개 게시하며, 게시 빈도는 고정 상한 없이 루프가 판단합니다. 모든
-   문안은 적대적 검증 게이트(90점)를 통과한 것만 나갑니다. 중단은 /loop 중지,
+   문안은 적대적 검증 게이트(95점)를 통과한 것만 나갑니다. 중단은 /loop 중지,
    범위 변경은 플랜 수정으로 합니다."*
 5. `state.json` 초기화, growth-log.md 헤더 작성.
 
@@ -230,7 +231,7 @@ data/<채널 slug>/growth/threads/
 
    고친 문안만 모아 재위임하고, 이전 라운드 지적을 함께 실어 해소 여부를 판정받는다.
 
-4. **판정** — **score ≥90 이고 p0=0 인 문안만 게시한다.** 3라운드에도 미달이면
+4. **판정** — **score ≥95 이고 p0=0 인 문안만 게시한다.** 3라운드에도 미달이면
    게시하지 않고 growth-log 에 `스킵(게이트 NN점)` 으로 적는다 — 안 올리는 것이
    미달 글을 올리는 것보다 낫다. 게시한 문안의 최종 점수도 growth-log 메모에
    적는다 — 게이트가 실제로 동작하는지 사용자가 관찰하는 창이다.

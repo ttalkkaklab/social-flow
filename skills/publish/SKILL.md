@@ -179,6 +179,11 @@ printf '%s\n' "$답글문안" | \
   python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py --surface reply -
 ```
 
+검사기를 통과한 문안은 growth-post-reviewer 에이전트에 위임한다(`inbox_reply`
+표면, 원 댓글과 우리 게시물 본문 동봉) — **score ≥95 이고 p0=0 인 문안만
+게시한다.** 미달이면 교정 지시대로 빼기만 해서 고치고 최대 3라운드, 그래도
+미달이면 보내지 않고 사유를 publish-log 에 적는다.
+
 - `data/<채널>/<주제>/output/publish-log.md` 에 기록: 일시·플랫폼·게시 id·
   permalink·캡션 요약·승인자 결정 표.
 - `storyboard.md` `status: published` 갱신.

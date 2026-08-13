@@ -100,7 +100,7 @@ topic_keywords: ["베트남 비자", "주재원 행정"]   # topic_source: keywo
   `data/<채널>/growth/autoproduce.json` 에 쌓인다. 사다리와 승급 조건은
   `skills/autoproduce/references/cost-tiers.md` 가 정본이며, 인스타의 승급
   트리거는 최근 3편 `reels_skip_rate` 평균 0.55 초과다.
-- **품질** — 기계 게이트(사실 검증·문체·빌드 리포트·content-reviewer P0·비용)를
+- **품질** — 기계 게이트(사실 검증·문체·스토리보드 리뷰 문안·이미지·빌드 리포트·content-reviewer P0·비용)를
   다 통과한 편만 `queue_instagram: ready` 가 되고, 하나라도 떨어지면 `hold` 다.
 - **중복** — 저작 전에 `check-duplicate.py` 가 후보를 채널의 기존 주제 전부와
   비교한다. slug 이 달라도 말만 바꾼 같은 이야기면 후보를 버린다(임계

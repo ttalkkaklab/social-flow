@@ -67,7 +67,7 @@ topic_keywords: ["베트남 비자", "주재원 행정"]   # topic_source: keywo
 - **비용** — 편당 상한 `max_cost_per_video`, 일·주 누적 상한은 채널 공용
   `data/<채널>/growth/autoproduce.json` 에 쌓인다. 사다리와 승급 조건은
   `skills/autoproduce/references/cost-tiers.md` 가 정본이다.
-- **품질** — 기계 게이트(사실 검증·문체·빌드 리포트·content-reviewer P0·비용)를
+- **품질** — 기계 게이트(사실 검증·문체·스토리보드 리뷰 문안·이미지·빌드 리포트·content-reviewer P0·비용)를
   다 통과한 편만 `queue: ready` 가 되고, 하나라도 떨어지면 `queue: hold` 로
   남아 사람을 기다린다.
 - **중복** — 저작 전에 `check-duplicate.py` 가 후보를 채널의 기존 주제 전부와
