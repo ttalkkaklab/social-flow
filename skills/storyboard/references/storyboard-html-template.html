@@ -244,7 +244,7 @@
   .fr.t-points .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.64) 0%, rgba(5,8,20,.48) 28%, rgba(5,8,20,0) 48%, rgba(5,8,20,0) 68%, rgba(5,8,20,.52) 100%); }
   .fr.t-quote  .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.55) 0%, rgba(5,8,20,.38) 35%, rgba(5,8,20,.52) 62%, rgba(5,8,20,.92) 100%); }
   /* 발화 클립 위(alpha)는 정지 카드의 풀워시가 아니라 서명·자막용 상·하단 스크림뿐이다 */
-  .fr.t-quote.clip .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.78) 0%, rgba(5,8,20,0) 22.4%, rgba(5,8,20,0) 66.7%, rgba(5,8,20,.85) 100%); }
+  .fr.t-quote.fclip .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.78) 0%, rgba(5,8,20,0) 22.4%, rgba(5,8,20,0) 66.7%, rgba(5,8,20,.85) 100%); }
   /* 라이트(삽화) 모드 — 흰 배경 라인아트 위 잉크 텍스트 + 화이트 워시 */
   .fr.light .fscrim { background: linear-gradient(180deg, rgba(255,255,255,.66) 0%, rgba(255,255,255,0) 34%, rgba(255,255,255,0) 64%, rgba(255,255,255,.66) 100%); }
   .fr.light { color: var(--ink); }
@@ -715,7 +715,7 @@ window.SB_DOC = {
     var light = !!lineImg;
     var hasClip = s.type === "quote" && !!(s.visual && s.visual.clip);
     var cls = "fr t-" + esc(s.type) + (isRec ? " rec" : "") + (light ? " light" : "") +
-              (hasClip ? " clip" : "") + (tier ? " tight" + tier : "");
+              (hasClip ? " fclip" : "") + (tier ? " tight" + tier : "");
     var h = '<div class="' + cls + '">';
     if (bg) h += '<div class="fbg" style="background-image:url(\'' + esc(bg) + '\')"></div>';
     h += '<div class="fscrim"></div>';
@@ -841,8 +841,9 @@ window.SB_DOC = {
       if (narr.length) {
         chips.push(badge(syl <= cap ? "ok" : "bad", "자수 " + syl + "/" + cap));
         if (syl > cap) flag("bad", "씬 " + no, "나레이션 " + syl + "자 — 상한 " + cap + "자(" + s.type + ")");
-      } else if (s.type === "quote") {
-        // 발화 클립 quote 는 배우가 말하므로 TTS 나레이션이 없는 게 정상이다
+      } else if (s.type === "quote" && s.visual && s.visual.clip) {
+        // 발화 클립 quote 만 면제다 — 배우가 말하므로 TTS 나레이션이 없는 게 정상이다.
+        // 클립 없는 정지 인용 카드는 소리가 아예 없으니 아래 위반 가지로 내려간다.
         chips.push(badge("", "발화 클립"));
       } else {
         chips.push(badge("bad", "나레이션 없음"));
