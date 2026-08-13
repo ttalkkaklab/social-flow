@@ -353,12 +353,6 @@
   .fr .f-statrow { display: flex; align-items: baseline; justify-content: center; gap: calc(var(--fw) * .018); margin-top: calc(var(--fw) * .024); }
   .fr .f-statrow .f-stat { font-size: calc(var(--fw) * .07); }
   .fr .f-statrow .f-statlabel { font-size: calc(var(--fw) * .03); margin-top: 0; }
-  /* 발화 클립 자리 — produce 가 veo 클립을 까는 구간이라 아직 그림이 없다.
-     스크림이 걷힌 중앙이라 배경과 같은 색이 되지 않게 자체 대비를 준다. */
-  .fr .f-band-clip {
-    top: 26%; height: 34%; background: rgba(5,8,20,.55);
-    border-color: rgba(255,255,255,.3); color: rgba(255,255,255,.9);
-  }
   .fr .f-band {
     position: absolute; left: 0; right: 0; top: 30%; height: 31.64%;
     background: rgba(255,255,255,.06); border-top: 1px dashed rgba(255,255,255,.24);
@@ -366,6 +360,13 @@
     display: flex; align-items: center; justify-content: center;
     font-size: calc(var(--fw) * .03); color: rgba(255,255,255,.55); font-weight: 600;
     letter-spacing: .06em;
+  }
+  /* 발화 클립 자리 — produce 가 veo 클립을 까는 구간이라 아직 그림이 없다.
+     스크림이 걷힌 중앙이라 배경과 같은 색이 되지 않게 자체 대비를 준다.
+     `.f-band` 와 같은 특이도로 두면 소스 순서에 지므로 두 클래스를 함께 건다. */
+  .fr .f-band.f-band-clip {
+    top: 26%; height: 34%; background: rgba(5,8,20,.55);
+    border-color: rgba(255,255,255,.3); color: rgba(255,255,255,.9);
   }
 
   /* 오버플로 가드 — video-template.html / screencast-overlay.html 의 tight1~3 과 같은 단계.
@@ -686,8 +687,14 @@ window.SB_DOC = {
       (s.bullets || []).forEach(function (b, k) {
         out.push({ label: "캡션 " + (k + 1), seg: k + 1, cap: k }); });
     } else if (s.type === "quote") {
-      out.push({ label: "서명", seg: 0, cap: -1 });
-      out.push({ label: "인용문", seg: 1, cap: -1 });
+      // 발화 클립 위(alpha)는 서명만 얹혀 화면이 한 번도 안 바뀐다 — 패널도 한 장.
+      // 정지 인용 카드일 때만 서명 → 인용문 두 상태다(video-template `if (!alpha)`).
+      if (s.visual && s.visual.clip) {
+        out.push({ label: "서명 오버레이", seg: 0, cap: -1 });
+      } else {
+        out.push({ label: "서명", seg: 0, cap: -1 });
+        out.push({ label: "인용문", seg: 1, cap: -1 });
+      }
     } else {
       out.push({ label: "전체", seg: 0, cap: -1 });
     }
@@ -1066,7 +1073,10 @@ window.SB_DOC = {
           (s.statLabel ? '<span class="d">' + esc(s.statLabel) + "</span>" : "") + "</div>" : "") +
         (s.speaker ? '<div class="capline"><span class="t">' + esc(s.speaker) + "</span>" +
           (s.role ? '<span class="d">' + esc(s.role) + "</span>" : "") + "</div>" : "") +
-        (s.text ? '<div class="capline"><span class="d">' + esc(strip(s.text)) + "</span></div>" : "") +
+        // 클립 quote 의 인용문은 화면에 안 뜬다 — 소리로만 나가므로 그렇게 적는다
+        (s.text ? '<div class="capline">' +
+          (vis.clip ? '<span class="f">인용문은 화면에 안 뜬다 — 소리로만: ' + esc(strip(s.text)) + "</span>"
+                    : '<span class="d">' + esc(strip(s.text)) + "</span>") + "</div>" : "") +
         caps.map(function (b, k) {
           return '<div class="capline"><span class="k">' + (k + 1) + '</span><span class="t">' + esc(b.t) + "</span>" +
                  (b.d ? '<span class="d">' + esc(b.d) + "</span>" : "") + "</div>"; }).join("") +
