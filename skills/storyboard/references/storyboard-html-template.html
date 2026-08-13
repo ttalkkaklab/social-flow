@@ -316,6 +316,9 @@
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
   .fr .f-sign { position: absolute; left: 16.3%; right: 16.3%; top: 11.98%; text-align: center; }
+  /* 서명은 발화 클립 위에 얹히므로 늘 흰 글자다 — 라이트(삽화) 모드가 잉크색을 상속하면
+     클립 스크림(어두운 상단) 위에서 검정 위 검정이 된다. 클립 프레임에서만 되돌린다. */
+  .fr.fclip .f-sign { color: #fff; }
   .fr .f-sign .nm { font-size: calc(var(--fw) * .048); font-weight: 800; }
   .fr .f-sign .rl { font-size: calc(var(--fw) * .0296); font-weight: 600; color: rgba(255,255,255,.85); margin-top: calc(var(--fw) * .0111); }
   .fr .f-sign .rl .ai { color: var(--accent); font-weight: 800; }
