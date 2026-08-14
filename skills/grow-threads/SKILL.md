@@ -82,8 +82,12 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
 data/<채널 slug>/growth/threads/
 ├── growth-plan.md   # 상시 승인서 (init 이 HITL 로 작성, status: approved)
 ├── state.json       # 틱 간 이월 상태 (이중 게시 방지의 근거)
-└── growth-log.md    # 틱별 한 줄 기록 + 인사이트 증감 (관찰 원장)
+├── growth-log.md    # 틱별 한 줄 기록 + 인사이트 증감 (관찰 원장)
+└── posts.md         # 게시한 새 글 문안 원장 (`## <postId> <시각>` + 본문) — 묶음 검사 입력
 ```
+
+`posts.md` 가 따로 있는 이유: 묶음 동질화는 **게시한 문안들을 한자리에 놓아야** 보인다.
+growth-log 는 틱 요약 한 줄이라 문안이 남지 않고, `threads_insights` 는 지표만 준다.
 
 템플릿과 state 스키마는 `references/growth-plan-template.md` 를 쓴다.
 
@@ -382,12 +386,33 @@ ID 로 `/{id}/replies` 를 직접 조회해 함께 응대한다(`references/api-
 그래서 훅 첫 문장에는 **독자가 아는 숫자나 상황**을 둔다. 도구 이름·내부 용어로
 시작하지 않는다.
 
+**첫 문장을 바로 쓰지 말고 진입점 3~4개를 먼저 적는다** — 겪은 일 / 숫자 / 되묻기 /
+반대 사례 중에서 고른다. 그냥 쓰면 모델이 매번 가장 무난한 도입으로 수렴해서, 글
+하나하나는 게이트를 통과하는데 타임라인 전체가 한 목소리로 보인다. 근거 등급은 낮다
+— 후보를 먼저 벌리면 다양성이 1.6~2.1배 오른다는 측정이 있지만 영어 창작
+프리프린트고 한국어 실측은 없다. 비용이 거의 안 드는 절차라 넣었다.
+
 ### 5. 저장·보고
 
-`state.json` 저장(lastTickAt 갱신) → growth-log.md 에 틱 요약 한 줄 append —
-메모에 게시 문안별 게이트 점수(스킵 포함)를 적는다 → 사용자 보고 한 줄:
+`state.json` 저장(lastTickAt 갱신) → 새 글을 게시했으면 `posts.md` 에
+`## <postId> <시각>` 헤더로 문안 원문을 append → growth-log.md 에 틱 요약 한 줄
+append — 메모에 게시 문안별 게이트 점수(스킵 포함)를 적는다 → 사용자 보고 한 줄:
 `[틱 hh:mm] 답글 n · 참여 n · 새 글 n · 게이트 통과 n/스킵 n · 팔로워 ±n`.
 아무 액션이 없던 틱은 "관찰만" 으로 적는다 — 조용한 틱이 정상이다.
+
+**새 글이 다섯 편 쌓일 때마다 묶음을 잰다** (`posts.md` 의 `##` 개수가 5의 배수가
+된 틱). 게이트는 문안을 한 편씩 보므로 루프 전체가 한 틀로 수렴하는 것을 **원리적으로
+못 본다** — 개별 품질과 묶음 다양성은 반대로 움직인다(자매 플러그인 실측: 소재만
+바꾼 두 문안이 각각 100/100 인데 서로 겹침 0.77). 이 루프가 그 위험면의 한복판이다.
+
+```sh
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-batch.py \
+  --split data/<채널>/growth/threads/posts.md
+```
+
+반려하지 않는다 — 문턱으로 쓸 실측 근거가 없어서 순위만 낸다. "돌려쓴 구절"에 뜬
+표현과 "같은 말로 시작" 비율을 growth-log 에 적고, **다음 글부터 그 표현·도입을
+쓰지 않는다**(이미 나간 글은 고치지 않는다). 겹침이 눈에 띄면 소재 풀부터 다시 본다.
 
 ## status — 상태 보고
 

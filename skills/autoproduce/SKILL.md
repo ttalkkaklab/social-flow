@@ -9,9 +9,10 @@ description: >
   build the 9:16 video (clean master + burned copy + subs.srt) and per-platform
   text under data/<channel>/<topic>/output/ — on the cheapest model tier that
   works, escalating only when measured metrics say the hook is failing. Machine
-  gates (fact verification, style checker, storyboard-reviewer ≥95 on both copy and
-  images, build report, content-reviewer copy ≥95 with zero P0, cost cap) stand in for the human
-  approval gates of storyboard/produce.
+  gates (fact verification, style checker, storyboard-reviewer ≥95 on copy, on every
+  single scene, on the vocabulary of every narration and title, and on the generated
+  images, build report, content-reviewer copy ≥95 with zero P0, cost cap) stand in for
+  the human approval gates of storyboard/produce.
 argument-hint: "<채널> \"<주제>\" [unattended]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
@@ -41,7 +42,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
 ## 사람 게이트를 무엇이 대신하나
 
 파이프라인의 안전은 HITL 이중 게이트(스토리보드 승인·게시 승인)에 걸려 있었다.
-무인 모드는 그 자리에 **기계 판정 일곱**을 세운다. 하나라도 떨어지면 영상은
+무인 모드는 그 자리에 **기계 판정 아홉**을 세운다. 하나라도 떨어지면 영상은
 만들어지되 **큐에 들어가지 않는다**(`queue_*: hold`) — 사람이 볼 때까지 게시되지
 않는다는 뜻이다.
 
@@ -49,7 +50,9 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
 |---|---|---|
 | 사실이 맞나 | 시효성 값 독립 출처 2개 교차검증 + 검증 통과 사실 **3건 이상** | 주제 폐기 (§2) |
 | 문장이 사람 글인가 | `check-style.py` 표면별 exit ≤ 1 | 고쳐서 재시도, 2회 실패면 중단 (§4·§9) |
-| 스토리보드 문안이 승인할 만한가 | storyboard-reviewer 문안 모드 **≥95 · P0 = 0** (무인 최대 2라운드) | `queue_*: hold` (§4.5) |
+| 스토리보드 문안이 승인할 만한가 | storyboard-reviewer 문안 모드 **≥95 · P0 = 0** (무인 최대 2라운드) | 저작 중단 (§4.5) |
+| 씬 하나하나가 제 역할을 하나 | storyboard-reviewer 씬 모드 **최저 씬 ≥95 · P0 = 0** (무인 최대 2라운드) | 저작 중단 (§4.6) |
+| 낱말이 사람이 쓰는 말인가 | storyboard-reviewer 어휘 모드 **최저 씬 ≥95 · P0 = 0** (무인 최대 2라운드) | 저작 중단 (§4.7) |
 | 그림이 씬 내용에 맞나 | storyboard-reviewer 이미지 모드 **≥95 · P0 = 0** (무인 최대 2라운드) | `queue_*: hold` (§6.5) |
 | 영상이 성립하나 | `build-report.txt` drift 0 · reveal 누락 0 | 중단 (§8) |
 | 게시해도 되나 | content-reviewer **카피 ≥95 · P0 = 0** (무인 최대 2라운드) | `queue_*: hold` (§10) |
@@ -249,7 +252,7 @@ done
 `STORYBOARD_REVIEW: mode=text score=NN p0=N verdict=PASS|FAIL` 을 파싱한다.
 `scenes.js`·`research.md`·`profile.md` 경로와 이전 라운드 지적을 전달한다.
 
-- **PASS(≥95 · p0 = 0)** → §5 로.
+- **PASS(≥95 · p0 = 0)** → §4.6 으로.
 - **FAIL** → 교정 지시대로 scenes.js 를 고치고 한 번 더 위임한다. **무인 캡 2라운드.**
 - 2라운드에도 FAIL 이면 **저작을 멈춘다.** 영상을 만들지 않는다 — 문안이 안 된 채로
   이미지·TTS·빌드에 돈과 시간을 쓰는 것이 가장 비싼 실패다. 이 경로에서는 §10 까지
@@ -258,6 +261,36 @@ done
   이어받을 실마리가 파일에 있어야 한다.
 
 **빼기만 한다** — AI 티를 지우려다 없던 비유·상투구를 새로 심으면 그게 새 AI 티다.
+
+### 4.6 씬별 리뷰 게이트 (게이트 6b — storyboard-reviewer 씬 모드)
+
+문안 게이트가 스토리보드를 한 덩어리로 봤다면, 여기서는 **씬을 하나씩** 본다 — 평균은
+좋은데 한 씬만 무너진 회차를 잡는 자리다. 사람이 스토리보드를 넘겨보며 "이 씬 왜
+있지?" 하는 그 눈이 무인 경로엔 없으므로 이 게이트가 대신한다.
+
+**storyboard-reviewer 에이전트(Agent)에 "씬 모드"로 위임**하고 tail
+`STORYBOARD_REVIEW: mode=scene score=NN p0=N worst=N verdict=PASS|FAIL` 을 파싱한다.
+**`score` 는 최저 씬 점수**이므로 ≥95 가 곧 전 씬 95 이상이다.
+
+- **PASS(≥95 · p0 = 0)** → §4.7 로.
+- **FAIL** → `worst` 씬만 고치고 한 번 더 위임한다. **무인 캡 2라운드.** 역할 공백·
+  중복 지적은 문장을 다듬어 못 고친다 — 그 씬을 합치거나 빼고 남은 씬 길이로 총길이를
+  맞춘다. 씬을 더하거나 뺐으면 §4.5 를 다시 통과시킨 뒤 돌아온다.
+- 2라운드에도 FAIL 이면 **§4.5 와 같이 저작을 멈춘다** — 이미지·TTS 에 돈을 쓰기 전이다.
+
+### 4.7 어휘 리뷰 게이트 (게이트 6c — storyboard-reviewer 어휘 모드)
+
+씬 구성이 확정된 뒤 **낱말만** 본다. 검사기가 잡는 것은 규칙에 적힌 형태뿐이라,
+"기한이 도래합니다" 같은 문어 어휘는 exit 0 으로 통과한다 — 그 층을 리뷰어가 맡는다.
+
+**storyboard-reviewer 에이전트(Agent)에 "어휘 모드"로 위임**하고 tail
+`STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=N verdict=PASS|FAIL` 을 파싱한다.
+여기서도 `score` 는 최저 씬 점수다.
+
+- **PASS(≥95 · p0 = 0)** → §5 로.
+- **FAIL** → 지적받은 **낱말만 바꾸고** 한 번 더 위임한다. **무인 캡 2라운드.**
+  문장을 다시 쓰면 §4.5·§4.6 이 본 구조가 무너져 두 게이트를 다시 돌아야 한다.
+- 2라운드에도 FAIL 이면 저작을 멈춘다(§4.5 와 같은 처리).
 
 ### 5. 티어 결정 + 사전 견적 (게이트 5)
 
@@ -304,7 +337,12 @@ exit 1(판정 불가)이면 중단한다. 단가를 모르는 채로 돈을 쓰�
   §6 트림+믹스 규약대로 원본 앞부분만 잘라 쓰고 원본은 보관한다. 업스케일하지
   않는다(본편이 1080×1920 — 720p 로 내리지 않는 사용자 결정 2026-08-11).
   **프롬프트는 영어로 모션만** + 끝에 오디오 지시 한 줄. 소스 이미지에 이미 보이는
-  것을 다시 묘사하면 모델이 장면을 재설계한다. `.work/broll/cover-broll.mp4`.
+  것을 다시 묘사하면 모델이 장면을 재설계한다. `.work/broll/broll-a<after>.mp4`
+  (도입 칸이면 `broll-a0.mp4`).
+  - **무인 루프가 스스로 올리는 것은 1칸까지다**(cost-tiers §승급). 스키마 상한은
+    2칸이지만 veo 과금이 생성 길이 기준이라 칸이 늘면 회차 지출이 배로 뛴다. 다만
+    **스토리보드에 2칸이 적혀 있으면 적힌 대로 둘 다 만든다** — 승인된 씬을 비용을
+    이유로 빼면 영상이 계획과 달라진다.
   - **커버 자체를 생성 영상으로 만들지 않는다** — Veo 는 한글을 못 쓴다(절대 규칙 10).
     커버는 코드 렌더로 두고 b-roll 은 **커버 다음 구간**에 넣는다.
   - **그 구간에는 나레이션이 없다**(절대 규칙 9) — 영상 사운드를 쓴다. 그 씬은
@@ -355,15 +393,19 @@ produce 스킬 §2(frame.html 재생성) · §4(reveal 캡처) · §6(manifest) 
 **drift ≠ 0 · reveal 상태 누락 · 마지막 reveal 미사용은 진행 금지**다. 무인
 모드에서 진행 금지는 곧 중단이며, 큐에 넣지 않는다.
 
-**도입 b-roll 을 만들었으면 여기서 접합한다** (produce §6 끝):
+**b-roll 을 만들었으면 여기서 접합한다** (produce §6 끝 — 트림+믹스 먼저, 그다음 접합):
 
 ```bash
-T=$(grep -E "^card 0" .work/build-report.txt | sed -E 's/.*\| ([0-9.]+)s \| [0-9]+f.*/\1/')
-$REF_P/splice-clip.sh .work .work/broll/cover-broll.mp4 "$T"
+mix_broll 0 4                                   # produce §6 의 mix_broll — broll-a0-mixed.mp4
+$REF_P/splice-clip.sh .work .work/broll/broll-a0-mixed.mp4 "$(cardend 0)"
 ```
 
-`T` 는 눈대중으로 잡지 않는다 — `card 0` 의 확정 길이가 커버 종료 시각이다.
-접합 출력에서 **`T 를 걸친 큐 0개`** 와 **클린·번인 길이 일치**를 확인한다. 어긋나면
+`T` 는 눈대중으로 잡지 않는다 — `cardend <after>`(produce §6)가 `card 0..after` 확정
+길이를 더한 값이 그 씬 종료 시각이다. **원본을 그대로 접합하지 않는다** — 믹스 단계를
+건너뛰면 veo 사운드가 본편보다 4dB 넘게 작고 BGM 이 그 구간만 끊긴다.
+스토리보드에 b-roll 이 2칸이면 **한 번의 호출에 두 클립을 함께** 넘긴다(두 번 나눠
+부르면 두 번째 호출이 첫 접합을 지운다).
+접합 출력에서 **`걸친 큐 0개`** 와 **클린·번인 길이 일치**를 확인한다. 어긋나면
 큐에 넣지 않는다. 이후 §9 는 `reel-spliced.mp4`·`reel-sub-spliced.mp4`·`subs-spliced.srt`
 를 output 으로 옮긴다.
 
@@ -380,7 +422,10 @@ Facebook 으로, 번인본은 Instagram 으로 간다(publish 스킬 규칙 8).
 
 플랫폼 텍스트는 platform-guide 플레이북대로 플랫폼마다 다시 쓰고, 저장 직후
 표면별 문체 검사를 돌린다(produce §9 의 스크립트 그대로). exit 2 면 고쳐서 재실행,
-두 번 실패면 그 플랫폼 큐 마커를 찍지 않는다.
+두 번 실패면 그 플랫폼 큐 마커를 찍지 않는다. **produce §9 의 묶음 검사(check-batch)도
+같이 돌린다** — 무인 경로라 사람이 "지난 편이랑 똑같네"를 알아챌 자리가 없고, 성장
+루프가 이 스킬을 반복 호출하는 만큼 채널 동질화가 가장 빨리 쌓이는 자리다. 판정은
+없다(순위만) — 돌려쓴 구절이 이번 편에 있으면 그 문장을 고치고 넘어간다.
 
 ### 10. 품질 게이트 (게이트 4) + 마무리
 

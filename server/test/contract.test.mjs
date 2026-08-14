@@ -493,6 +493,33 @@ describe('YouTube 썸네일 필수 계약', () => {
   });
 });
 
+describe('Threads 본문 링크 계약', () => {
+  // 영상 회차의 Threads 는 커버 이미지 + 링크 답글이 아니라 본문 링크 한 건으로 나간다
+  // (2026-08-14 전략 변경). 링크 프리뷰 카드는 media_type=TEXT 전용이라 이미지와 배타다.
+  const th = () => byName.get('threads_publish');
+  const props = () => th().inputSchema.properties;
+
+  it('linkUrl 인자를 받는다 (링크 프리뷰 카드)', () => {
+    assert.equal(props().linkUrl?.format, 'uri', 'linkUrl 이 없거나 uri 포맷이 아니다');
+  });
+
+  it('linkUrl·imageUrl 설명이 서로 배타임을 알린다', () => {
+    // 같이 보내면 플랫폼이 컨테이너 생성 단계에서 거부한다 — 스키마 설명이 먼저 막는다
+    assert.match(props().linkUrl.description, /배타/, 'linkUrl 설명에 배타 안내가 없다');
+    assert.match(props().imageUrl.description, /배타/, 'imageUrl 설명에 배타 안내가 없다');
+  });
+
+  it('툴 설명이 링크 답글 전략으로 되돌아가지 않는다', () => {
+    // 옛 전략("커버 이미지 본문 + 풀영상 링크 답글")이 설명에 남아 있으면
+    // 호출자가 답글을 한 번 더 게시해 같은 링크가 두 번 나간다
+    assert.doesNotMatch(th().description, /링크 답글|링크는 본문이 아니라/, '옛 링크 답글 전략이 설명에 남아 있다');
+  });
+
+  it('FB 와 인자 이름이 같다 (텍스트 게시의 링크 = linkUrl)', () => {
+    assert.ok(byName.get('facebook_publish').inputSchema.properties.linkUrl, 'FB linkUrl 이 사라졌다');
+  });
+});
+
 describe('댓글 툴 플랫폼 정합', () => {
   // 세 곳(sns-client 의 COMMENT_PLATFORMS, 툴 enum, 핸들러 zod enum)이 어긋나면
   // 스키마는 통과하는데 런타임에서 다른 플랫폼 토큰으로 새는 사고가 난다.

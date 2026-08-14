@@ -148,6 +148,9 @@ function okJson(payload) {
     return { ok: true, status: 200, body: JSON.stringify(payload) };
 }
 export async function publishThreads(input, opts) {
+    if (input.imageUrl && input.linkUrl) {
+        return fail(400, 'linkUrl is for text-only posts (link_attachment requires media_type=TEXT)');
+    }
     const { token, error } = await loadTokenFile('THREADS', input.channel);
     if (!token)
         return error;
@@ -161,6 +164,7 @@ export async function publishThreads(input, opts) {
         media_type: input.imageUrl ? 'IMAGE' : 'TEXT',
         text: input.caption,
         image_url: input.imageUrl,
+        link_attachment: input.linkUrl,
         reply_to_id: input.replyToId,
         access_token: token,
     });

@@ -96,7 +96,11 @@
   body.light .points-title .em{filter:drop-shadow(0 0 7px rgba(255,255,255,.9)) drop-shadow(0 3px 14px color-mix(in srgb, var(--ink) 20%, transparent))}
   body.light .cap .t{color:var(--ink);text-shadow:0 0 12px #fff,0 0 6px #fff}
   body.light .cap .d{color:color-mix(in srgb, var(--ink) 72%, transparent);text-shadow:0 0 10px #fff,0 0 5px #fff}
-  body.light .footnote{color:color-mix(in srgb, var(--ink) 55%, transparent);text-shadow:0 0 10px #fff,0 0 5px #fff,0 0 5px #fff}
+  /* 각주 알파 55%→80% (2026-08-13 실측) — 셀 채색 삽화의 검은 머리·짙은 문이 텍스트 밴드
+     아래로 들어오면 55% 는 1.60~1.96:1 까지 떨어져 안 읽힌다(10개 상태 중 6개가 3:1 미만).
+     같은 배경에서 캡션 설명줄(72%)이 3.35:1 을 내므로 80% 면 큰 글자 기준 3:1 을 넘긴다.
+     흰 배경 라인아트에서는 글자가 진해질 뿐이라 이전 회차 룩에 손해가 없다. */
+  body.light .footnote{color:color-mix(in srgb, var(--ink) 80%, transparent);text-shadow:0 0 12px #fff,0 0 6px #fff,0 0 6px #fff}
   body.light .kicker{background:color-mix(in srgb, var(--ink) 86%, transparent);border-color:rgba(255,255,255,.25)}
 
   /* ── 텍스트 존 ─────────────────────────────────────────────── */
