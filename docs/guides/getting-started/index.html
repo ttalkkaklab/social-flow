@@ -17,7 +17,8 @@
   --bg-card: #ffffff;
   --text: #1f2328;
   --text-soft: #59636e;
-  --text-mute: #818b98;
+  /* #818b98 은 코드 주석·목차 번호에서 대비 3.2:1 로 AA 미달이었다 — 4.5:1 넘게 내렸다 */
+  --text-mute: #69737f;
   --border: #d1d9e0;
   --border-soft: #e4e8ed;
   --accent: #0969da;
@@ -261,7 +262,7 @@ footer a { color: var(--accent); }
   <ul>
     <li><strong>영상은 9:16 세로 한 가지로 만든다.</strong> 1080×1920 · 30fps 한 벌을 만들어 릴스·쇼츠·스레드로 각각 내보낸다.</li>
     <li><strong>같은 글을 여러 곳에 복붙하지 않는다.</strong> 사실은 하나를 쓰되 문장은 플랫폼마다 다시 쓴다. 스레드는 반말 구어체, 유튜브는 검색되는 제목·설명처럼 성격이 다르기 때문이다.</li>
-    <li><strong>공개되는 지점 앞에는 사람 승인이 두 번 있다.</strong> 스토리보드를 확정할 때와 실제로 올리기 직전이다. 승인 없이 계정에 글이 올라가는 경로는 없다.</li>
+    <li><strong>기본 흐름에는 사람 승인이 두 번 있다.</strong> 스토리보드를 확정할 때와 실제로 올리기 직전이다. 예외는 성장 루프 하나다 — 계정을 스스로 키우는 <code>grow-*</code> 스킬은 처음 한 번 승인받은 성장 계획이 게시별 승인을 대신한다. 그 범위 안에서는 묻지 않고 올리므로 계획을 승인할 때 범위를 좁게 잡는 편이 좋다.</li>
   </ul>
 </section>
 
@@ -287,6 +288,10 @@ footer a { color: var(--accent); }
   <div class="note">
     <strong>맥이 아니어도 되나?</strong> 영상 제작까지는 리눅스에서도 돈다. 다만 화면 녹화 기능과 온디바이스 이미지 생성은 macOS·Apple Silicon 전용이다.
   </div>
+
+  <div class="warn">
+    <strong>API 키 없이 공짜 경로로 갈 생각이라면 미리 준비할 게 더 있다.</strong> 뒤에 나오는 로컬 대안 둘은 따로 깔아야 한다 — 이미지는 <code>uv tool install --python 3.12 mflux</code> 를 깔고 <strong>첫 호출 때 가중치 31GB 를 내려받는다</strong>. 목소리는 <code>pip install supertonic</code> 이면 되고, 파이썬을 여러 개 쓰면 <code>SUPERTONIC_PYTHON</code> 으로 어느 것을 쓸지 지정한다.
+  </div>
 </section>
 
 <!-- ══════════ 3 ══════════ -->
@@ -297,11 +302,12 @@ footer a { color: var(--accent); }
     <div class="step-num">1</div>
     <div class="step-body">
       <h3>내려받고 서버를 빌드한다</h3>
-      <p>이 한 단계를 빼먹으면 플러그인은 붙어도 도구가 하나도 안 보인다. 저장소에는 소스만 있고 실행에 필요한 라이브러리는 없기 때문이다.</p>
+      <p>이 한 단계를 빼먹으면 플러그인은 붙어도 도구가 하나도 안 보인다. 저장소에는 빌드 결과까지 들어 있지만 실행에 필요한 라이브러리(<code>node_modules</code>)는 들어 있지 않기 때문이다.</p>
 <pre><code>git clone https://github.com/zeanxai/social-flow.git
 cd social-flow/server
 npm install &amp;&amp; npm run build</code></pre>
       <p><code>npm run check</code> 로 바꿔 실행하면 빌드와 함께 자체 점검 테스트도 돈다. 외부 API 를 부르지 않아 키가 없어도 통과한다.</p>
+      <div class="note"><strong>이 저장소는 비공개다.</strong> 접근 권한이 있는 GitHub 계정으로 인증해야 <code>git clone</code> 이 된다. 권한이 없으면 "권한 없음"이 아니라 <code>Repository not found</code> 가 떠서 원인을 짚기 어렵다. 이미 내려받은 폴더가 있으면 그걸 그대로 쓰면 된다.</div>
     </div>
   </div>
 
@@ -333,7 +339,7 @@ claude</code></pre>
     <div class="step-body">
       <h3>제대로 붙었는지 본다</h3>
       <p><code>/mcp</code> 를 치면 연결된 서버 목록이 나온다. <code>social-flow</code> 가 있고 도구 목록이 보이면 끝났다.</p>
-      <div class="ok"><strong>도구 개수가 29개쯤이어도 정상이다.</strong> SNS 게시 도구 아홉은 그 계정의 자격증명 파일이 있는 플랫폼만 나타난다. 아직 계정을 연결하지 않았다면 안 보이는 게 맞다.</div>
+      <div class="ok"><strong>도구 개수가 29개쯤이어도 정상이다.</strong> 전체 38종 가운데 게시·인사이트 툴 9종은 그 계정의 자격증명 파일이 있는 플랫폼만 나타난다. 아직 계정을 연결하지 않았다면 안 보이는 게 맞다.</div>
     </div>
   </div>
 </section>
@@ -398,7 +404,8 @@ export GEMINI_API_KEY="..."        <span class="c"># 영상·목소리·배경�
     <div class="step-body">
       <h3>채널을 만든다 <span style="font-weight:400;color:var(--text-soft);font-size:14px">— 채널당 한 번</span></h3>
 <pre><code><span class="p">/social-flow:channel</span> add 재테크</code></pre>
-      <p>누가 보는지, 어떤 말투로 말할지, 어디에 올릴지를 몇 가지 물어본 뒤 <code>data/재테크/profile.md</code> 에 적어 둔다. 이후 모든 작업이 이 파일을 먼저 읽어 톤과 목소리를 이어받는다.</p>
+      <p>맨 먼저 채널명을 영문 slug 로 바꿔 제안한다 — "재테크"라면 <code>money</code> 같은 것이다. 폴더 이름과 게시 계정 키로 쓰이는 값이라 한글을 쓰지 않는다. <strong>이 다음부터 명령에 넣는 채널은 원래 이름이 아니라 이 slug 다.</strong></p>
+      <p>이어서 누가 보는지, 어떤 말투로 말할지, 어디에 올릴지를 몇 가지 물어본 뒤 <code>data/money/profile.md</code> 에 적어 둔다. 이후 모든 작업이 이 파일을 먼저 읽어 톤과 목소리를 이어받는다.</p>
       <p>내레이션 목소리도 여기서 하나 정해 고정한다. 회차마다 목소리가 바뀌면 같은 채널로 안 들리기 때문이다.</p>
     </div>
   </div>
@@ -407,7 +414,7 @@ export GEMINI_API_KEY="..."        <span class="c"># 영상·목소리·배경�
     <div class="step-num">2</div>
     <div class="step-body">
       <h3>스토리보드를 만든다 <span style="font-weight:400;color:var(--text-soft);font-size:14px">— 가장 오래 걸리는 단계</span></h3>
-<pre><code><span class="p">/social-flow:storyboard</span> 재테크 "7월 환율 변동"</code></pre>
+<pre><code><span class="p">/social-flow:storyboard</span> money "7월 환율 변동"</code></pre>
       <p>자료를 찾고, 씬을 나누고, 대사를 쓰고, 씬마다 세로 그림을 만든다. 결과는 브라우저로 열어 볼 수 있는 <code>storyboard.html</code> 로 나온다.</p>
       <p>사람에게 보여 주기 전에 검토용 에이전트가 원고와 그림을 네 번 다시 본다 — 문장이 AI 가 쓴 티가 나는지, 씬 하나하나가 제 역할을 하는지, 낱말이 사람이 쓰는 말인지, 그림이 그 씬 내용과 맞는지. 기준에 못 미치면 스스로 고쳐 다시 본다. <strong>여기서 시간이 걸리는 건 정상이다. 마지막에 확인 요청이 오면 승인한다.</strong></p>
     </div>
@@ -417,9 +424,9 @@ export GEMINI_API_KEY="..."        <span class="c"># 영상·목소리·배경�
     <div class="step-num">3</div>
     <div class="step-body">
       <h3>영상과 글을 뽑는다</h3>
-<pre><code><span class="p">/social-flow:produce</span> 재테크 20260729-환율</code></pre>
+<pre><code><span class="p">/social-flow:produce</span> money 20260729-환율</code></pre>
       <p>주제 이름은 2단계가 만든 폴더 이름을 그대로 쓴다. 화면을 그려 캡처하고, 목소리를 입히고, 배경음악을 깔고, 자막을 붙여 세로 영상을 만든다. 여기에 스레드·인스타·페이스북·유튜브용 글이 각각 따로 나온다.</p>
-      <p>결과물은 <code>data/재테크/20260729-환율/output/</code> 에 있다. 자막을 화면에 태운 영상과 태우지 않은 영상이 따로 나오는데 인스타는 자막 파일을 못 받아 태운 쪽을 쓰고 유튜브·페이스북은 자막을 따로 올린다.</p>
+      <p>결과물은 <code>data/money/20260729-환율/output/</code> 에 있다. 자막을 화면에 태운 영상과 태우지 않은 영상이 따로 나오는데 인스타는 자막 파일을 못 받아 태운 쪽을 쓰고 유튜브·페이스북은 자막을 따로 올린다.</p>
     </div>
   </div>
 
@@ -427,14 +434,14 @@ export GEMINI_API_KEY="..."        <span class="c"># 영상·목소리·배경�
     <div class="step-num">4</div>
     <div class="step-body">
       <h3>올린다</h3>
-<pre><code><span class="p">/social-flow:publish</span> 재테크 20260729-환율</code></pre>
+<pre><code><span class="p">/social-flow:publish</span> money 20260729-환율</code></pre>
       <p>플랫폼별 최종 문안과 올라갈 계정을 전부 보여 주고 승인을 받는다. 승인해야 실제 호출이 나가고 올라간 주소는 <code>publish-log.md</code> 에 적힌다.</p>
       <p>SNS 계정을 아직 연결하지 않았다면 이 단계는 건너뛰어도 된다. 영상 파일은 이미 손에 있으니 직접 올려도 그만이다.</p>
     </div>
   </div>
 
   <div class="note">
-    <strong>한 번에 끝내고 싶다면</strong> — <code>/social-flow:autoproduce 재테크 "7월 환율 변동"</code> 한 줄이 2·3단계를 사람 확인 없이 관통한다. 승인 대신 기계 검사 아홉을 세워 두고 하나라도 걸리면 사람을 기다린다. 영상 한 편에 드는 비용은 대략 $0.05 수준이다.
+    <strong>한 번에 끝내고 싶다면</strong> — <code>/social-flow:autoproduce money "7월 환율 변동"</code> 한 줄이 2·3단계를 사람 확인 없이 관통한다. 승인 대신 기계 검사 아홉을 세워 두고 하나라도 걸리면 사람을 기다린다. 영상 한 편에 드는 비용은 대략 $0.05 수준이다.
   </div>
 </section>
 
@@ -442,14 +449,14 @@ export GEMINI_API_KEY="..."        <span class="c"># 영상·목소리·배경�
 <section id="publish">
   <h2>SNS 에 올리려면</h2>
 
-  <p>게시는 각 플랫폼의 API 토큰이 있어야 한다. 토큰 파일이 있는 플랫폼의 도구만 나타나므로 설치 직후에 게시 도구가 안 보이는 건 정상이다.</p>
+  <p>게시는 각 플랫폼의 API 토큰이 있어야 한다. 토큰 파일이 있는 플랫폼의 게시·인사이트 툴만 나타나므로 설치 직후에 안 보이는 건 정상이다.</p>
 
   <h3>직접 받는 대신 맡기는 방법</h3>
   <p>계정 개설부터 토큰 발급까지 브라우저를 대신 몰아 주는 스킬이 플랫폼마다 있다. 로그인·인증번호 입력처럼 사람 손이 꼭 필요한 지점만 넘겨받는다.</p>
 
-<pre><code><span class="p">/social-flow:setup-threads</span> 재테크
-<span class="p">/social-flow:setup-instagram</span> 재테크
-<span class="p">/social-flow:setup-youtube</span> 재테크</code></pre>
+<pre><code><span class="p">/social-flow:setup-threads</span> money
+<span class="p">/social-flow:setup-instagram</span> money
+<span class="p">/social-flow:setup-youtube</span> money</code></pre>
 
   <h3>토큰을 두는 자리</h3>
   <p>채널마다 폴더 하나를 쓴다. 여러 브랜드를 굴려도 계정이 섞이지 않는다.</p>
@@ -475,22 +482,22 @@ export GEMINI_API_KEY="..."        <span class="c"># 영상·목소리·배경�
     <div class="card">
       <h4>채널 로고 만들기</h4>
       <p>후보 넷을 만들어 고르게 하고 고른 안을 검토 에이전트가 95점까지 다듬는다.</p>
-      <span class="cmd">/social-flow:branding 재테크</span>
+      <span class="cmd">/social-flow:branding money</span>
     </div>
     <div class="card">
       <h4>채널 인트로 영상</h4>
       <p>캐릭터가 연기하는 4초 인트로. 본편 앞이 아니라 뒤에 붙인다 — 앞 3초를 브랜드가 먹으면 넘겨진다.</p>
-      <span class="cmd">/social-flow:intro 재테크</span>
+      <span class="cmd">/social-flow:intro money</span>
     </div>
     <div class="card">
       <h4>화면 녹화로 만들기</h4>
       <p>웹 조사 대신 내 화면과 목소리를 소재로 쓴다. 받아쓰기해서 타임라인으로 바꿔 준다.</p>
-      <span class="cmd">/social-flow:ingest 재테크 record</span>
+      <span class="cmd">/social-flow:ingest money record</span>
     </div>
     <div class="card">
       <h4>대본 보며 촬영하기</h4>
       <p>시연·튜토리얼용. 대본을 먼저 쓰고 그걸 보며 녹화한 뒤 편집한다.</p>
-      <span class="cmd">/social-flow:storyboard 재테크 &lt;주제&gt; 촬영 대본으로</span>
+      <span class="cmd">/social-flow:storyboard money &lt;주제&gt; 촬영 대본으로</span>
     </div>
     <div class="card">
       <h4>공공데이터 찾기</h4>
@@ -500,11 +507,11 @@ export GEMINI_API_KEY="..."        <span class="c"># 영상·목소리·배경�
     <div class="card">
       <h4>계정 스스로 키우기</h4>
       <p>승인해 둔 성장 계획 범위 안에서 댓글 응대·지표 관찰·게시를 자율로 돈다.</p>
-      <span class="cmd">/social-flow:grow-threads 재테크 init</span>
+      <span class="cmd">/social-flow:grow-threads money init</span>
     </div>
   </div>
 
-  <p>성장 루프는 한 번 계획을 승인하고 나면 <code>/loop 30m /social-flow:grow-threads 재테크</code> 처럼 주기를 걸어 돌린다. 나가는 모든 문장은 검토 에이전트의 95점 기준을 넘어야 게시된다. 플랫폼별 자세한 전략은 <a href="../threads-growth/index.html">스레드</a> · <a href="../youtube-shorts-growth/index.html">유튜브 쇼츠</a> · <a href="../instagram-growth/index.html">인스타그램</a> 가이드에 정리돼 있다.</p>
+  <p>성장 루프는 한 번 계획을 승인하고 나면 <code>/loop 30m /social-flow:grow-threads money</code> 처럼 주기를 걸어 돌린다. 나가는 모든 문장은 검토 에이전트의 95점 기준을 넘어야 게시된다. 플랫폼별 자세한 전략은 <a href="../threads-growth/index.html">스레드</a> · <a href="../youtube-shorts-growth/index.html">유튜브 쇼츠</a> · <a href="../instagram-growth/index.html">인스타그램</a> 가이드에 정리돼 있다.</p>
 </section>
 
 <!-- ══════════ 8 ══════════ -->
