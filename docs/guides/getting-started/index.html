@@ -290,7 +290,7 @@ footer a { color: var(--accent); }
   </div>
 
   <div class="warn">
-    <strong>API 키 없이 공짜 경로로 갈 생각이라면 미리 준비할 게 더 있다.</strong> 뒤에 나오는 로컬 대안 둘은 따로 깔아야 한다 — 이미지는 <code>uv tool install --python 3.12 mflux</code> 를 깔고 <strong>첫 호출 때 가중치 31GB 를 내려받는다</strong>. 목소리는 <code>pip install supertonic</code> 이면 되고, 파이썬을 여러 개 쓰면 <code>SUPERTONIC_PYTHON</code> 으로 어느 것을 쓸지 지정한다.
+    <strong>로컬 엔진으로 비용을 줄일 생각이라면 미리 깔 게 있다.</strong> 뒤에 나오는 로컬 대안 둘은 따로 설치한다 — 이미지는 <code>uv tool install --python 3.12 mflux</code> 를 깔고 <strong>첫 호출 때 가중치 31GB 를 내려받는다</strong>. 목소리는 <code>pip install supertonic</code> 이면 되고, 파이썬을 여러 개 쓰면 <code>SUPERTONIC_PYTHON</code> 으로 어느 것을 쓸지 지정한다. 둘을 깔아도 <code>OPENAI_API_KEY</code> 는 여전히 든다 — 커버 이미지와 글자가 들어가는 화면은 로컬 엔진이 한글을 깨뜨려 API 로 고정돼 있다.
   </div>
 </section>
 
@@ -362,7 +362,7 @@ export GEMINI_API_KEY="..."        <span class="c"># 영상·목소리·배경�
       <tr>
         <td><code>OPENAI_API_KEY</code><br><span class="badge req">첫 영상에 필요</span></td>
         <td>platform.openai.com/api-keys</td>
-        <td>스토리보드의 씬 그림을 못 만든다. 애플 실리콘 맥이라면 온디바이스 생성(<code>image_local_generate</code>)으로 대신할 수 있다 — 공짜지만 그림에 글자를 넣지는 못한다</td>
+        <td>스토리보드의 씬 그림을 못 만든다. 애플 실리콘 맥이라면 <strong>씬 배경만은</strong> 온디바이스 생성(<code>image_local_generate</code>)으로 대신할 수 있다 — 공짜지만 커버 이미지와 글자가 들어가는 화면은 그대로 이 키를 쓴다</td>
       </tr>
       <tr>
         <td><code>GEMINI_API_KEY</code><br><span class="badge req">첫 영상에 필요</span></td>
