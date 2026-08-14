@@ -169,6 +169,15 @@ def shift_for(a):
     """큐 시작 a 보다 앞선 삽입들의 실측 길이 합 — 뒤 삽입은 이 큐를 밀지 않는다"""
     return sum(s for t, s in zip(TS, SH) if a >= t)
 
+def shift_end(b):
+    """큐 종료 b 는 조건이 다르다 — 등호가 빠진다(b 와 같은 시각의 삽입은 안 민다).
+
+    T 를 걸친 큐(a < t < b)는 종료가 시작보다 한 삽입 더 밀려야 클립 길이만큼
+    늘어난다. 양쪽에 shift_for(a) 를 똑같이 더하면 그 큐는 삽입 길이만큼 일찍
+    사라진다. 걸치지 않는 큐는 두 값이 어차피 같다.
+    """
+    return sum(s for t, s in zip(TS, SH) if t < b)
+
 src = open('subs.srt', encoding='utf-8').read()
 LINE = re.compile(r'^(\d\d:\d\d:\d\d,\d\d\d) --> (\d\d:\d\d:\d\d,\d\d\d)\s*$')
 out, straddle, moved = [], [0]*len(TS), 0
@@ -180,9 +189,9 @@ for line in src.splitlines():
     for i, t in enumerate(TS):
         if a < t < b:
             straddle[i] += 1       # T 를 걸치는 큐 — 삽입 클립이 자막 중간을 끊는다
-    d = shift_for(a)
-    if d:
-        a += d; b += d; moved += 1
+    da, db = shift_for(a), shift_end(b)
+    if da or db:
+        a += da; b += db; moved += 1
     out.append(f"{to_ts(a)} --> {to_ts(b)}")
 open('subs-spliced.srt', 'w', encoding='utf-8').write("\n".join(out) + "\n")
 print(f"── 자막: {moved}개 큐 시프트 (총 +{sum(SH):.3f}s)")
