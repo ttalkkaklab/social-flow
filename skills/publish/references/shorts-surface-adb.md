@@ -36,31 +36,65 @@
 
 ## 절차 (영상당 ~60초)
 
-1. `emulator -avd <채널 AVD>` — 로그인이 필요한 회차는 창 모드로 띄워 사용자가
-   비밀번호를 칠 수 있게 한다. **진입 전에 `adb shell date` 를 먼저 확인한다**
-   (아래 시계 함정).
-2. YouTube 앱 → 하단 **You** → **Your videos** → 채널 페이지 영상 그리드.
-3. 대상 영상 타일의 **More actions(⋮) → Edit** → Edit video 화면.
+아래는 2026-08-14 딸깍랩 회차에서 **끝까지 돌려 성공한 경로**다(1080×2400 · API 36).
+좌표는 그때 실측값이니 참고만 하고, 화면마다 `uiautomator dump` 로 다시 뽑는다.
+
+1. `emulator -avd <채널 AVD>` — 스냅샷 유지로 띄운다(`-no-snapshot-save` 금지).
+   부팅 대기는 `until [ "$(adb shell getprop sys.boot_completed|tr -d '\r')" = 1 ]`.
+   **진입 전에 `adb shell date` 를 먼저 확인한다**(아래 시계 함정).
+2. **앱은 `am start -n` 으로 띄운다.**
+
+   ```bash
+   adb shell am start -n com.google.android.youtube/com.google.android.apps.youtube.app.WatchWhileActivity
+   ```
+
+   ⚠ `monkey -p com.google.android.youtube -c android.intent.category.LAUNCHER 1` 은
+   **Play 스토어의 YouTube 상세 페이지**를 열어 버린다(2026-08-14 실측). 그걸 앱
+   화면으로 오인하고 좌표를 찍으면 엉뚱한 데를 누른다.
+3. 하단 **You**(≈972,2274) → **Your videos**(≈550,1714) → 채널 페이지 영상 그리드.
+4. 대상 영상 타일의 **More actions(⋮)** → **Edit** → Edit video 화면.
    - ⚠ **쇼츠 플레이어의 상단 ⋮ 는 쓰지 마라** — "Swipe up for next video"
      코치마크가 반복 출현하며 상단 행 탭을 전부 삼킨다. 채널 페이지 경로만 신뢰 가능.
-4. **Edit thumbnail**(연필) → 프레임 피커에서 목표 프레임 선택 → 체크(✓) → **Save**
-   → "Video updated" 토스트.
+   - 그리드 타일마다 `More actions` 가 따로 있다 — **덤프 순서가 아니라 x 좌표로**
+     대상 타일을 고른다(첫 타일 ≈323, 둘째 ≈684, 셋째 ≈1045).
+5. **Edit thumbnail**(연필 ≈85,274) → 프레임 피커 → 목표 프레임 → 체크(✓ ≈985,141)
+   → **Save**(≈946,125) → "Video updated".
    - **목표 프레임은 커버 완성 시각이다** — 이 파이프라인의 커버는 첫 카드지만
-     히어로 수치는 몇 초 뒤에 완성된다(드롭쉬핑 회차 실측: "0원" 등장 ~6초).
-     프레임 피커 **첫 칸(t=0)으로는 수치가 안 잡힌다.** `cover.jpg` 와 같은 화면이
-     될 때까지 스크럽하고, 시각은 `build-report.txt` 의 커버 전환 완료 시각으로
-     역산한다.
-   - 필름스트립은 `android.widget.SeekBar` 다 — `input swipe` 로 핸들을 끈다.
-     목표 x ≈ `좌단 + (t/총길이) × 폭`. **한 번에 크게(60px 이상) 끌면 피커가
-     `Unable to preview the video` 로 죽고 체크가 무반응이 된다** — 30px 안팎으로
-     나눠 두세 번 끌고, 구간마다 screencap 으로 프레임을 확인한다. 죽으면 에디터를
-     X 로 닫고 재진입해야 한다.
+     히어로 수치는 몇 초 뒤에 완성된다(드롭쉬핑 회차 "0원" 등장 ~6초, 홈페이지 회차
+     6.5초). 프레임 피커 **첫 칸(t=0)으로는 수치가 안 잡힌다.** 시각은
+     `produce` 가 `cover.jpg` 를 뽑은 그 시각(`build-report.txt` 커버 전환 완료)을 쓴다.
+   - **눈대중으로 스크럽하지 말고 플레이헤드가 스스로 말하는 시각을 읽는다.**
+     필름스트립 `android.widget.SeekBar` 의 `content-desc` 가
+     `Playhead selected at 0 minutes 6 seconds out of 1 minute 25 seconds` 형태로
+     **현재 시각을 초 단위로 알려 준다**(2026-08-14 발견). 끌 때마다 이걸 읽으면
+     스크린샷 판독 없이 목표 초에 정확히 맞춘다.
+
+     ```bash
+     readtime(){ adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+                 adb pull /sdcard/ui.xml .work/ui.xml >/dev/null 2>&1
+                 grep -o 'Playhead selected at [^"]*' .work/ui.xml | head -1; }
+     adb shell input swipe 81 2240 112 2240 500; sleep 2; readtime   # → 2 seconds
+     adb shell input swipe 112 2240 140 2240 500; sleep 2; readtime  # → 5 seconds
+     adb shell input swipe 140 2240 156 2240 500; sleep 2; readtime  # → 6 seconds
+     ```
+
+     실측 눈금(85초 영상 · 필름스트립 x 32~1048): t=0 은 핸들 중심 x≈81 이고,
+     앞 구간은 **1초에 약 9~15px** 다. 목표 x ≈ `81 + (t/총길이) × 918` 로 잡고
+     시작해 위 루프로 다듬는다.
+   - **한 번에 크게(60px 이상) 끌면 피커가 `Unable to preview the video` 로 죽고
+     체크가 무반응이 된다** — 30px 안팎으로 나눠 끈다. 죽으면 에디터를 X 로 닫고
+     재진입해야 한다.
+   - 체크(✓) 전에 **screencap 으로 미리보기가 커버인지 눈으로 확인**한다.
+     여기서 틀린 프레임을 승인하면 200 은 뜨는데 내용이 틀린다.
    - 좌표는 기기·앱 버전마다 다르다 — **`uiautomator dump` 로 매번 재추출**한다.
      키보드가 올라오면 버튼 위치가 통째로 밀린다(이메일 입력에서 NEXT 를 눌렀는데
      "." 키가 눌린 실측) — 화면 상태 확인 없이 좌표를 연타하지 말 것.
-5. 판정: `curl -s -o /dev/null -w "%{http_code}" "https://i.ytimg.com/vi/<videoId>/oardefault.jpg"`
+6. 판정: `curl -s -o oar.jpg -w "%{http_code}" "https://i.ytimg.com/vi/<videoId>/oardefault.jpg"`
    → **200 = 적용**. 내려받아 내용까지 눈으로 확인한다(200 은 "어떤" 세로 프레임이
-   걸렸다는 뜻이지 "맞는" 프레임이라는 뜻이 아니다).
+   걸렸다는 뜻이지 "맞는" 프레임이라는 뜻이 아니다). 크기가 **1080×1920** 이면 세로
+   프레임이 맞다.
+   - **Save 직후 바로 200 이 된다** — 2026-08-14 실측은 저장 8초 뒤 첫 조회에서 200.
+     404 가 계속 나오면 기다릴 게 아니라 Save 가 안 먹은 것이다(에디터 재진입).
    - `oar1`/`oar2`·웹 채널 그리드는 며칠씩 구 프레임을 돌려준다 — **판정 근거는
      oardefault 200 하나뿐**. 재작업하지 말고 캐시 수렴을 기다린다.
    - 프레임 지정 후 `maxresdefault` 는 선택 프레임의 레터박스판으로 바뀐다 —

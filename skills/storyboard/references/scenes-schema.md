@@ -84,10 +84,15 @@ narration: [
 visual: {
   bg: "images/scene-1.png",          // 생성 배경 (storyboard 단계 산출)
   bgPrompt: "…",                     // 생성에 쓴 프롬프트 (재생성·감사용 기록)
-  motion: "very slow push-in",       // cover 만: veo img2video 카메라 지시
+  motion: "very slow push-in",       // cover 만: 도입 b-roll 용 veo 카메라 지시
+  video: null,                       // points 만: 모션 배경 씬 구분자 (§모션 배경) — 정지 씬은 생략
   clip: null                         // quote 만: 발화 클립 계획 (아래)
 }
 ```
+
+`video` 유무가 **정지 이미지 씬 / 이미지→영상 씬의 구분자**다 — storyboard.html 이
+컷 배지("정지 삽화"·"이미지→영상 · veo")로 그리고, produce 가 이 필드를 보고
+동작을 가른다.
 
 ## 타입별 계약
 
@@ -180,7 +185,49 @@ visual: {
 - alpha 캡처 시 상단 서명(이름+역할)만 렌더 — 인용문은 나레이션·자막이 말한다.
 - 실존 인물의 얼굴·음성 합성 금지. 캐릭터는 실사로 오인되지 않는 스타일만.
 
-### broll — 생성 영상 구간 (참조만) · **회차당 최대 2칸**
+### 모션 배경 (`visual.video`) — 씬 배경을 이미지→영상으로
+
+```js
+{
+  type: "points",
+  bullets: [ … ], footnote: "",
+  duration: 8,                        // ≤8초로 잡는다 — 클립 1회 재생이 씬을 덮는다
+  narration: [ {tts, sub}, … ],       // 유지된다 — b-roll 과 달리 말하면서 배경만 움직인다
+  visual: {
+    bg: "images/scene-3.png",         // veo 파라미터 — gpt_image high · §broll 의 소스 조항(인물 실사) 그대로
+    bgPrompt: "…",
+    video: {
+      prompt: "very slow push-in, hair swaying gently, nearly static camera",  // 영어 모션만
+      clip: ".work/motion/motion-i2.mp4"   // produce 산출 기록 — motion-i<씬 인덱스>.mp4
+    }
+  }
+}
+```
+
+스토리보드가 보여 준 그 이미지를 **파라미터로 veo_img2video 영상을 만들어 씬 배경에
+까는** 방식이다. 캡션·자막 오버레이는 alpha 캡처로 그 위에 얹힌다(produce §4·§6).
+
+- **언제 쓰나**: 움직임 자체가 내용일 때. 말없이 그림만 보여줄 자리면 `broll`
+  (씬 사이 삽입)이고, **말하면서 배경이 움직여야 하면 모션 배경**이다. 정지로
+  충분한 씬은 정지가 기본값이다 — 영상은 비용과 이음새 위험을 산다.
+- **생성 영상 합산 상한 — 이 절이 정본이다**: 한 회차에 **b-roll 칸 + 모션 배경 씬을
+  합쳐 최대 2**(사용자 지시 2026-08-14). veo 호출도 2회가 상한이다. quote 발화
+  클립은 이 합산에 들어가지 않는다. 셋 이상은 `storyboard.html` 점검 스트립이
+  빨간 배지로 잡는다.
+- **points 전용** — cover 는 코드 렌더 정지를 유지하고(produce 절대 규칙 10) 영상은
+  도입 b-roll 로 넣는다. quote 는 `clip` 이 그 역할이다.
+- **나레이션·자막을 유지한다** — 절대 규칙 9(영상 소리 사용·나레이션 금지)는 b-roll
+  **삽입 구간** 이야기다. 모션 배경은 빌더가 영상 트랙만 쓰므로 클립의 소리는
+  버려지고 TTS·자막·BGM 이 그대로 간다.
+- **대사별 삽화(`narration[].img`)와 함께 쓰지 않는다** — 모션 배경은 씬 전체에 영상
+  한 편이 깔리는 구조라 세그별 배경 교체가 성립하지 않는다(alpha 캡처에는 텍스트만
+  있다). 삽화 모드 씬을 영상화하려면 대표 삽화 한 장(`visual.bg`)을 소스로 쓴다.
+- `duration` 을 8초 이하로 잡는다 — 생성이 8초 고정이라 그 안이면 클립 한 번으로
+  덮는다. 넘기면 루프가 돌아 이음새가 보인다.
+- content-reviewer **계획 모드** 게이트는 b-roll 과 같다(절대 규칙 13) —
+  `PLAN_REVIEW: PASS` 없이 veo 를 부르지 않는다.
+
+### broll — 생성 영상 구간 (참조만) · 씬 사이 삽입
 
 ```js
 {
@@ -199,10 +246,10 @@ visual: {
 }
 ```
 
-**한 회차에 영상으로 만드는 씬은 최대 둘이다**(사용자 지시 2026-08-14). 하나는 보통
-커버 뒤 도입(`after: 0`), 나머지 하나는 본문 어느 씬 뒤든 둘 수 있다 — 이야기의 축이
-바뀌는 자리, 정지 컷이 길게 이어져 늘어지는 자리가 후보다. 셋 이상은 계약 위반이고
-`storyboard.html` 점검 스트립이 빨간 배지로 잡는다.
+생성 영상 상한은 **§모션 배경의 합산 상한(2)이 정본이다** — b-roll 칸과 모션 배경
+씬을 합쳐 센다. b-roll 하나는 보통 커버 뒤 도입(`after: 0`), 나머지 하나는 본문 어느
+씬 뒤든 둘 수 있다 — 이야기의 축이 바뀌는 자리, 정지 컷이 길게 이어져 늘어지는
+자리가 후보다.
 
 - **본편 manifest 에 넣지 않는다** — 빌드 후 `../produce/references/splice-clip.sh` 가
   `after` 씬 종료 시각에 접합하고 뒤 자막을 실측 삽입 길이만큼 민다. 두 칸을 썼으면
@@ -279,7 +326,11 @@ visual: {
       캡션·제목이 없다. 칸을 채우려고 쓴 글자가 없다(§화면 텍스트는 필요할 때만).
       비어 있는 `title`·`footnote`·`bullets` 는 결함이 아니라 정상이다
 - [ ] THEME 이 profile.md §3 과 일치
-- [ ] `broll` 씬을 뒀다면 — **최대 2칸** · 두 칸의 `after` 가 서로 다름 ·
+- [ ] 생성 영상(`broll` + `visual.video` 합산)이 **최대 2** (§모션 배경이 정본) ·
+      content-reviewer 계획 모드 PASS 기록
+- [ ] `broll` 씬을 뒀다면 — 두 칸의 `after` 가 서로 다름 ·
       각 칸이 `narration: []` · `src` 가 `SCENES[after].visual.bg` 와 같은 실존 PNG
       (그 장은 gpt_image high 로 만든 인물 실사) · `duration`(사용 길이)이 8 이하이고
-      근거 주석이 있음 (팔린드롬으로 늘리지 않는다) · content-reviewer 계획 모드 PASS 기록
+      근거 주석이 있음 (팔린드롬으로 늘리지 않는다)
+- [ ] `visual.video` 씬을 뒀다면 — points 타입 · `duration` ≤ 8 · `narration[].img`
+      미사용 · `prompt` 가 영어 모션만 · 소스 `bg` 가 실존 PNG(gpt_image high)

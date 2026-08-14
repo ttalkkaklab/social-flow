@@ -12,8 +12,15 @@
 #                         또는 "영상.mp4::오버레이.png" — 알파 PNG(reel.html?alpha=1 캡처)를 영상 위에 합성
 #                         (페르소나 발화 영상 + 배지·인용·서명 오버레이). 같은 영상을 잇는 세그는
 #                         xfade 시점만큼 -ss 로 앞당겨 재생을 이어붙인다(전환 시 영상 점프 방지).
+#                         경로 앞에 "@" 를 붙이면 **한 번만 재생**한다 — 첫 프레임부터 틀고 끝
+#                         프레임에서 멈춘다(앞당김·루프 없음). 타이핑 카드처럼 처음부터 끝까지가
+#                         한 동작인 클립용. "@영상.mp4::오버레이.png" 로 오버레이와 같이 쓸 수 있다
 #                         TTS대본 = 자수·비례폴백용(한글 발음 표기) / 자막표기 = 화면용(숫자·단위 원표기)
 #   <workdir>/bgm.wav   : 배경음악 (본편보다 짧으면 루프)
+#   <workdir>/sfx.tsv   : (선택) idx <TAB> seg <TAB> 오디오파일 <TAB> bgm(on|off)
+#                         그 세그 구간에만 나는 소리와 BGM 차단. 오디오파일은 wav·mp4 아무거나
+#                         (영상이면 그 안의 소리를 쓴다), 비워 두고 bgm 만 off 로 적어도 된다.
+#                         시각 기준은 문장 경계가 아니라 그 비주얼의 등장 시각이다
 #   <workdir>/outro.mp4 : (선택) 공통 아웃트로 — 있으면 xfade+acrossfade 접합
 #   <workdir>/fonts/    : (선택) 자막 폰트 ttf/otf — libass 는 woff2 를 못 읽는다
 # 출력: <workdir>/reel.mp4 (자막 없는 클린 마스터 — 자막 파일을 따로 받는 플랫폼용)
@@ -45,6 +52,8 @@ ATEMPO_MIN=${ATEMPO_MIN:-0.88}; ATEMPO_MAX=${ATEMPO_MAX:-1.18}
 RATE_LO=${RATE_LO:-3.2}; RATE_HI=${RATE_HI:-6.2}
 BGM_VOL=${BGM_VOL:-0.28}
 DUCK_RELEASE=${DUCK_RELEASE:-250}
+SFX_VOL=${SFX_VOL:-0.85}           # 세그먼트 효과음 볼륨 (sfx.tsv)
+BGM_GATE_R=${BGM_GATE_R:-0.30}     # BGM 차단 구간 앞뒤 램프 — 하드 컷은 끊겨 들린다
 XFADE=${XFADE:-0.6}                # 본편↔아웃트로 전환 길이
 XFADE_T=${XFADE_T:-fadeblack}      # 전환 종류 — fade 는 마지막 카드(인물 클로즈업)와 로고를 겹쳐 이중노출
 REVEAL_D=${REVEAL_D:-0.35}         # reveal 페이드 최대 길이 (쉼이 짧으면 그 안에 맞춰 줄어든다)
@@ -81,6 +90,13 @@ say "── make-reels build v3 ($(basename "$WORKDIR"))"
 RTOTAL=""
 for C in cards/reveals.tsv reveals.tsv; do [ -f "$C" ] && { RTOTAL="$C"; break; }; done
 [ -n "$RTOTAL" ] || say "· reveals.tsv 없음 — 상태 완결성 검사는 '건너뜀'만 수행(캡처는 capture-reveals.sh 권장)"
+
+# 세그먼트 효과음·BGM 차단 (선택) — sfx.tsv: idx <TAB> seg <TAB> 오디오파일 <TAB> bgm(on|off)
+#   오디오파일은 wav 여도 mp4 여도 된다(영상이면 그 안의 소리를 쓴다). 비워 두고 bgm 만 off 로
+#   적으면 그 세그 동안 음악만 빠진다.
+SFXTSV=""; [ -f sfx.tsv ] && SFXTSV=sfx.tsv
+: > work/sfx.list
+: > work/bgmgate.list
 
 N=0
 TOTF=0                              # 누적 프레임 (자막 절대 시각의 원천 — concat 이 샘플 정확이라 성립)
@@ -226,6 +242,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
   # ── 7) 비디오: 상태 체인(xfade) → 켄번즈(zoompan) — b-roll(.mp4)은 풀스크린 윈도우로 동참
   #        "영상::오버레이.png" 는 영상을 깔고 알파 PNG 를 합성. j>0 의 영상은 xfade 시점만큼 -ss 로
   #        앞당겨 시작해(루프 길이 모듈로) 전환을 넘어 재생이 이어진 것처럼 보이게 한다.
+  #        경로 앞의 **`@` 는 한 번만 재생**이다 — 앞당기지도 잇지도 않고 클립 첫 프레임부터
+  #        틀다가 끝 프레임에서 멈춘다. 타이핑 카드처럼 **처음부터 끝까지가 한 동작**인 클립용이다.
+  #        (기본 동작을 그대로 두면 두 번 깨진다: j>0 은 모듈로 -ss 때문에 글자가 다 쳐진
+  #         중간부터 시작하고, j=0 도 세그 창이 클립보다 길면 루프가 돌아 처음부터 다시 친다.)
   INS=(); FILT=""; NIN=0
   j=0
   for VIS in "${FVIS[@]}"; do
@@ -237,19 +257,26 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
     fi
     BASE="$VIS"; OVL=""
     case "$VIS" in *::*) BASE="${VIS%%::*}"; OVL="${VIS#*::}";; esac
-    BI=$NIN
+    ONESHOT=0; case "$BASE" in @*) ONESHOT=1; BASE="${BASE#@}";; esac
+    BI=$NIN; HOLD=""
     case "$BASE" in
       *.mp4|*.mov|*.m4v|*.webm)
-        SS=0
-        if [ "$j" -gt 0 ]; then
-          BDUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$BASE")
-          SS=$(awk -v o="${FOFF[$j]}" -v d="$BDUR" 'BEGIN{if(d<=0){print 0; exit} printf "%.3f", o-int(o/d)*d}')
-        fi
-        INS+=(-ss "$SS" -stream_loop -1 -t "$T" -i "$BASE") ;;
+        if [ "$ONESHOT" = "1" ]; then
+          # 클립이 세그 창보다 짧으면 끝 프레임을 복제해 채운다 — 루프가 아니라 정지다
+          INS+=(-i "$BASE")
+          HOLD="tpad=stop_mode=clone:stop=-1,trim=duration=$T,setpts=PTS-STARTPTS,"
+        else
+          SS=0
+          if [ "$j" -gt 0 ]; then
+            BDUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$BASE")
+            SS=$(awk -v o="${FOFF[$j]}" -v d="$BDUR" 'BEGIN{if(d<=0){print 0; exit} printf "%.3f", o-int(o/d)*d}')
+          fi
+          INS+=(-ss "$SS" -stream_loop -1 -t "$T" -i "$BASE")
+        fi ;;
       *) INS+=(-loop 1 -framerate "$FPS" -t "$T" -i "$BASE") ;;
     esac
     NIN=$((NIN+1))
-    FILT+="[$BI:v]scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,fps=$FPS,settb=AVTB,setsar=1,format=yuv420p[b$j];"
+    FILT+="[$BI:v]${HOLD}scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,fps=$FPS,settb=AVTB,setsar=1,format=yuv420p[b$j];"
     if [ -n "$OVL" ]; then
       OI=$NIN
       INS+=(-loop 1 -framerate "$FPS" -t "$T" -i "$OVL")
@@ -278,6 +305,32 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
   FILT+="${CUR}scale=1620:2880:flags=lanczos,zoompan=z='$ZEXPR':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=1080x1920:fps=$FPS,format=yuv420p[vout]"
   ffmpeg -y -v error "${INS[@]}" -filter_complex "$FILT" -map "[vout]" \
     -frames:v "$FRAMES" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p "work/v$IDX.mp4"
+
+  # ── 7.5) 세그먼트 효과음 + BGM 차단 구간 (sfx.tsv 가 있을 때만)
+  #   "그 구간에만 나는 소리"를 위한 자리다 — 타이핑 카드의 키보드 소리가 첫 사례다.
+  #   시각 기준은 문장 경계가 아니라 **그 비주얼의 등장 시각 FOFF** 다. xfade 는 오프셋에서
+  #   뒤 입력의 0초를 틀기 시작하므로, 경계에 맞추면 소리가 화면보다 서너 글자 앞선다.
+  if [ -n "$SFXTSV" ]; then
+    CS0=$(awk -v f="$TOTF" -v fps="$FPS" 'BEGIN{printf "%.4f", f/fps}')
+    FJ=0
+    for ((j=0; j<M; j++)); do
+      SN=$(awk -F, -v k=$((j+1)) 'NR==1{print $k}' <<< "$SUBS")
+      SPATH=$(awk -F'\t' -v i="$IDX" -v s="$j" '$1==i && $2==s{print $3}' "$SFXTSV" | head -1)
+      SBGM=$(awk -F'\t' -v i="$IDX" -v s="$j" '$1==i && $2==s{print $4}' "$SFXTSV" | head -1)
+      if [ -n "$SPATH" ] || [ "${SBGM:-}" = "off" ]; then
+        WS=$(awk -v c="$CS0" -v o="${FOFF[$FJ]}" 'BEGIN{printf "%.3f", c+o}')
+        if [ "$j" -lt $((M-1)) ]; then WE=$(awk -v c="$CS0" -v p="$PRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", c+p+b}')
+        else WE=$(awk -v c="$CS0" -v d="$D" 'BEGIN{printf "%.3f", c+d}'); fi
+        if [ -n "$SPATH" ]; then
+          [ -f "$SPATH" ] || { say "✗ card $IDX seg $j: sfx 파일 없음 — $SPATH"; exit 1; }
+          printf '%s\t%s\n' "$WS" "$SPATH" >> work/sfx.list
+        fi
+        [ "${SBGM:-}" = "off" ] && printf '%s\t%s\n' "$WS" "$WE" >> work/bgmgate.list
+        say "· card $IDX seg $j: 효과음 ${SPATH:-없음} @${WS}s · BGM ${SBGM:-on} (~${WE}s)"
+      fi
+      FJ=$((FJ + SN))
+    done
+  fi
 
   # ── 8) ASS 자막 라인 (자막표기 컬럼) — 시각은 카드 절대 오프셋(누적 프레임/FPS) 기준
   if [ "$SUB" = "1" ]; then
@@ -326,12 +379,45 @@ DRIFT=$(awk -v a="$VT" -v b="$NT" 'BEGIN{d=a-b; if(d<0)d=-d; printf "%.4f", d}')
 say "── 본편: video ${VT}s / narration ${NT}s / drift ${DRIFT}s"
 awk -v d="$DRIFT" 'BEGIN{exit !(d<=0.002)}' || { say "✗ 드리프트 허용치(2ms) 초과 — 빌드 중단"; exit 1; }
 
-# ── 10) BGM 덕킹 믹스 (v2 동일)
+# ── 10) BGM 덕킹 믹스 (v2 동일) — sfx.tsv 가 있으면 효과음 트랙과 BGM 차단 구간이 얹힌다
 FOUT=$(awk -v t="$NT" 'BEGIN{printf "%.3f", t-2.2}')
-ffmpeg -y -v error -i work/narration.wav -stream_loop -1 -i bgm.wav -filter_complex "
-  [0:a]aformat=channel_layouts=stereo,asplit=2[vo_key][vo_mix];
+
+# 10a) 효과음 트랙 — 본편 길이의 무음에 각 효과음을 시작 시각만큼 지연시켜 얹는다.
+#      나레이션에 섞지 않고 따로 만드는 이유: 덕킹의 키(vo_key)는 목소리만이어야 한다.
+#      효과음이 키에 들어가면 키보드 소리가 BGM 을 눌러 음악이 딸꾹질한다.
+SFXIN=""
+if [ -s work/sfx.list ]; then
+  SI=(-f lavfi -t "$NT" -i "anullsrc=r=48000:cl=mono"); SFC=""; SMIX="[0:a]"; SN2=1
+  while IFS=$'\t' read -r ST SP; do
+    SI+=(-i "$SP")
+    SFC+="[$SN2:a]aresample=48000,aformat=channel_layouts=mono,adelay=$(awk -v s="$ST" 'BEGIN{printf "%d", s*1000}'):all=1,atrim=0:$NT[x$SN2];"
+    SMIX+="[x$SN2]"; SN2=$((SN2+1))
+  done < work/sfx.list
+  ffmpeg -y -v error "${SI[@]}" -filter_complex \
+    "${SFC}${SMIX}amix=inputs=$SN2:duration=first:normalize=0,volume=$SFX_VOL,apad,atrim=0:$NT[sx]" \
+    -map "[sx]" -ac 1 -ar 48000 work/sfx.wav
+  SFXIN="-i work/sfx.wav"
+  say "── 효과음: $((SN2-1))개 (볼륨 $SFX_VOL)"
+fi
+
+# 10b) BGM 차단 — 구간마다 게이트를 곱한다. 하드 컷은 음악이 뚝 끊겨 들리므로 ${BGM_GATE_R}s 램프를 둔다.
+#      게이트 = max(내려가는 경사, 올라가는 경사) — 구간 밖은 1, 구간 안은 0 이다.
+BGMGATE=""
+if [ -s work/bgmgate.list ]; then
+  BGMGATE=$(awk -F'\t' -v r="$BGM_GATE_R" '
+    {printf "%smax(min(1\\,max(0\\,(%s-t)/%s))\\,min(1\\,max(0\\,(t-%s)/%s)))", (NR>1?"*":""), $1, r, $2, r}' work/bgmgate.list)
+  BGMGATE=",volume=eval=frame:volume='$BGMGATE'"
+  say "── BGM 차단 $(wc -l < work/bgmgate.list | tr -d ' ')구간 (램프 ${BGM_GATE_R}s)"
+fi
+
+if [ -n "$SFXIN" ]; then VOMIX="[vo_raw][sfxa]amix=inputs=2:duration=first:normalize=0[vo_mix];"
+else VOMIX="[vo_raw]anull[vo_mix];"; fi
+ffmpeg -y -v error -i work/narration.wav -stream_loop -1 -i bgm.wav $SFXIN -filter_complex "
+  [0:a]aformat=channel_layouts=stereo,asplit=2[vo_key][vo_raw];
+  ${SFXIN:+[2:a]aformat=channel_layouts=stereo[sfxa];}
+  $VOMIX
   [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,volume=$BGM_VOL,
-       afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=2.2[bgv];
+       afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=2.2$BGMGATE[bgv];
   [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=8:attack=20:release=$DUCK_RELEASE:makeup=1[duck];
   [vo_mix][duck]amix=inputs=2:duration=first:dropout_transition=0,
        loudnorm=I=-14:TP=-1.0:LRA=11,aresample=48000[out]
