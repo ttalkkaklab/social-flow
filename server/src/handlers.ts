@@ -52,7 +52,7 @@ function fromApi(result: ApiResult, note?: string): ToolResult {
     return text(`HTTP ${result.status}\n${result.body}`, true);
   }
   // 노트는 성공 경로에만 붙인다 — 게시 실패에 "게시 완료" 안내가 실리면
-  // 호출자가 실패를 성공으로 보고하고 후속 절차(링크 답글 등)를 건너뛴다.
+  // 호출자가 실패를 성공으로 보고하고 후속 절차(FB 첫 댓글 등)를 건너뛴다.
   const out = text(note ? `${note}\n${result.body}` : result.body);
   const parsed = tryParseObject(result.body);
   if (parsed) out.structuredContent = parsed;
@@ -261,17 +261,29 @@ export function threadsTextLength(text: string): number {
 
 const THREADS_MAX_CHARS = 500;
 
-const threadsPublishSchema = z.object({
-  caption: z
-    .string()
-    .min(1)
-    .refine((value) => threadsTextLength(value) <= THREADS_MAX_CHARS, (value) => ({
-      message: `THREADS caption must be ≤${THREADS_MAX_CHARS} chars (got ${threadsTextLength(value)} — 이모지는 UTF-8 바이트로 계산된다)`,
-    })),
-  imageUrl: z.string().url().optional(),
-  replyToId: z.string().min(1).optional(),
-  channel: channelSlugSchema,
-});
+const threadsPublishSchema = z
+  .object({
+    caption: z
+      .string()
+      .min(1)
+      .refine((value) => threadsTextLength(value) <= THREADS_MAX_CHARS, (value) => ({
+        message: `THREADS caption must be ≤${THREADS_MAX_CHARS} chars (got ${threadsTextLength(value)} — 이모지는 UTF-8 바이트로 계산된다)`,
+      })),
+    imageUrl: z.string().url().optional(),
+    linkUrl: z.string().url().optional(),
+    replyToId: z.string().min(1).optional(),
+    channel: channelSlugSchema,
+  })
+  .superRefine((v, ctx) => {
+    // link_attachment 는 media_type=TEXT 전용 — 이미지와 같이 보내면 플랫폼이 거부한다
+    if (v.linkUrl && v.imageUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['linkUrl'],
+        message: 'linkUrl is for text-only posts (mutually exclusive with imageUrl)',
+      });
+    }
+  });
 
 const instagramPublishSchema = z
   .object({

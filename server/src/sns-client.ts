@@ -186,13 +186,22 @@ function okJson(payload: Record<string, unknown>): ApiResult {
 export interface ThreadsPublishInput {
   caption: string;
   imageUrl?: string;
-  /** 자기 답글 체인(reply-first 규칙 — 본문 링크 금지, 링크는 답글로) */
+  /**
+   * 본문에 붙는 링크 프리뷰 카드(`link_attachment`). `media_type=TEXT` 전용이라
+   * imageUrl 과 함께 쓸 수 없다. 본문(text)에 같은 URL 이 있으면 플랫폼이 링크
+   * 1개로 센다(상한 5개).
+   */
+  linkUrl?: string;
+  /** 자기 답글 체인 · 남의 글에 다는 답글 */
   replyToId?: string;
   /** 채널(브랜드) slug — <SNS_TOKEN_DIR>/<slug>/ 토큰 사용, 미지정 시 기본 토큰 */
   channel?: string;
 }
 
 export async function publishThreads(input: ThreadsPublishInput, opts?: PollOpts): Promise<ApiResult> {
+  if (input.imageUrl && input.linkUrl) {
+    return fail(400, 'linkUrl is for text-only posts (link_attachment requires media_type=TEXT)');
+  }
   const { token, error } = await loadTokenFile('THREADS', input.channel);
   if (!token) return error!;
   const me = await fetchMe(THREADS_BASE, token, 'id,username');
@@ -204,6 +213,7 @@ export async function publishThreads(input: ThreadsPublishInput, opts?: PollOpts
     media_type: input.imageUrl ? 'IMAGE' : 'TEXT',
     text: input.caption,
     image_url: input.imageUrl,
+    link_attachment: input.linkUrl,
     reply_to_id: input.replyToId,
     access_token: token,
   });

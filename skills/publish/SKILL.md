@@ -37,9 +37,11 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp
    하면 수정본으로 승인 게이트를 다시 거친다.
 5. **한도 존중** — Threads 250건/24h, IG 100건/24h, YouTube 업로드 일 100회
    (videos.insert 전용 Video Uploads 버킷·호출당 1유닛 — 회차 게시를 아낄 이유 없음).
-6. **링크는 본문이 아니라 댓글/답글로** — Threads 는 게시 성공 직후 응답 postId 를
-   `replyToId` 로 넣은 링크 답글, FB 는 `facebook_comment` 첫 댓글.
-   **링크 댓글까지 게시돼야 그 플랫폼의 게시가 완료된 것이다.**
+6. **Threads 는 본문 링크 한 건, FB 는 첫 댓글** — Threads 영상 회차는 반말 구어체
+   본문 마지막 줄에 영상 링크(IG 릴스 permalink)를 적고 `threads_publish` 의
+   `linkUrl` 에 같은 URL 을 넣어 **한 번의 호출로 끝낸다** — 커버 이미지 첨부도,
+   링크 답글도 없다. FB 는 종전대로 본문 링크 금지 → `facebook_comment` 첫 댓글이며
+   **그 댓글까지 게시돼야 FB 게시가 완료된 것이다.**
 8. **영상과 자막은 따로 올린다** — 자막 파일을 받는 플랫폼(YouTube·Facebook)에는
    자막 없는 클린 마스터(`video.mp4`)와 `subs.srt` 를 함께 준다. 번인본
    (`video-sub.mp4`)은 **Instagram 에만** 쓴다 — IG 는 자막 파일을 받는 경로가 없어
@@ -90,12 +92,17 @@ exit 2(S1)면 게이트에 올리지 말고 `/social-flow:produce` 로 되돌려
 
 AskUserQuestion 으로 플랫폼별 최종본을 제시한다 — 본문/캡션 전문, 미디어 **로컬
 경로**(플랫폼마다 다르다: YT·FB 는 `video.mp4`+`subs.srt`, IG 는 `video-sub.mp4`,
-Threads 는 `cover.jpg`), 자막 큐 수, 해시태그, Threads 답글·FB 첫 댓글 문안까지 전부,
+Threads 는 미디어 없이 본문 링크), 자막 큐 수, 해시태그, FB 첫 댓글 문안까지 전부,
 게시 예정 계정(계정 점검 결과), 문체 검사 결과(표면별 exit·점수, 인용 면제 건수). 선택지: [전체 게시 / 일부 플랫폼만 / 수정 후
 재제시 / 중단]. **이 게이트 통과가 곧 실게시 승인이다.** 수정 요청이면 반영 후
 다시 게이트.
 
-### 2. 미디어 공개 URL 확보 (IG 필수 · Threads 이미지 · FB 이미지/영상)
+Threads 본문의 링크 자리는 이 시점에 아직 `<IG_REELS_URL>` 자리표시자다(IG 를
+먼저 게시해야 permalink 가 나온다). 제시문에 "이 자리에 IG 릴스 permalink 가
+들어간다"고 적어 두면, §3 에서 그 자리만 채우는 것은 승인 범위 안이다 — 문장을
+고치는 게 아니라서 규칙 4의 재승인 대상이 아니다.
+
+### 2. 미디어 공개 URL 확보 (IG 필수 · FB 이미지/영상 — Threads 는 해당 없음)
 
 게시 툴의 `imageUrl`/`videoUrl` 은 **공개 접근 가능한 HTTPS URL** 이어야 한다 —
 플랫폼이 크롤하며 로컬 경로·인증 URL 불가 (YouTube 만 로컬 파일 업로드라 호스팅
@@ -108,7 +115,7 @@ Threads 는 `cover.jpg`), 자막 큐 수, 해시태그, Threads 답글·FB 첫 �
 | YouTube | `video.mp4` (로컬 경로) | `captionFilePath: subs.srt` | `captions.insert` 로 트랙 별도 업로드 — 게시 후 교체 가능, 자동 번역 원본 |
 | Facebook | `video.mp4` (공개 URL) | `captionFilePath: subs.srt` | `/{video_id}/captions` 엣지 |
 | Instagram | **`video-sub.mp4`** (공개 URL) | 없음 — 화면에 태워 나간다 | 컨테이너에 자막 파라미터가 없다 |
-| Threads | 커버 이미지만 | 해당 없음 | 이 파이프라인은 Threads 에 영상을 올리지 않는다 |
+| Threads | 없음 — 호스팅 대상이 아니다 | 해당 없음 | 본문에 IG 릴스 링크만 적는다(`linkUrl` 프리뷰 카드). 첨부 미디어가 없어 업로드할 파일도 없다 |
 
 호스팅 디렉토리에는 **IG 용 번인본과 FB 용 클린본이 둘 다** 필요하다. 파일명이 서로
 달라 한 디렉토리에 같이 두면 되고, 각각 `curl -sI` 로 200 을 확인한다.
@@ -127,8 +134,8 @@ Threads 는 `cover.jpg`), 자막 큐 수, 해시태그, Threads 답글·FB 첫 �
 
 아래 모든 게시·댓글 툴 호출에 `channel: <채널slug>` 를 넣는다(규칙 7).
 
-경성 순서 제약은 하나다 — **IG 릴스가 Threads 보다 먼저** (Threads 답글의
-"풀영상" 링크가 IG permalink 라서). IG 게시가 실패하면 Threads 는 보류하고
+경성 순서 제약은 하나다 — **IG 릴스가 Threads 보다 먼저** (Threads 본문에 넣을
+영상 링크가 IG permalink 라서). IG 게시가 실패하면 Threads 는 보류하고
 링크 대체(YouTube permalink 등)를 사용자에게 묻는다. 나머지 플랫폼 순서는 자유.
 
 1. **YouTube**: `youtube_publish` — `output/youtube/meta.md` 의 title/description,
@@ -156,8 +163,13 @@ Threads 는 `cover.jpg`), 자막 큐 수, 해시태그, Threads 답글·FB 첫 �
    미결 사항에 적어 둔다.
 2. **Instagram**: `instagram_publish` — `videoUrl` 은 **번인본(video-sub.mp4)의 공개
    URL** + caption. 여기만 자막이 화면에 박힌 영상이다.
-3. **Threads**: `threads_publish` — 커버 이미지 본문 게시 → 응답 postId 를
-   `replyToId` 로 **링크 답글 즉시 게시** (승인분 문안 그대로).
+3. **Threads**: `threads_publish` — 승인분 본문의 `<IG_REELS_URL>` 자리를 2번에서
+   받은 IG permalink 로 치환해 `caption` 으로 넘기고, `linkUrl` 에 **같은 URL** 을
+   넣는다. **`imageUrl` 은 넣지 않는다** — 링크 카드는 텍스트 게시 전용이라 이미지와
+   같이 못 쓰고, 넣으면 서버가 400 을 낸다. 호출 한 번으로 게시가 끝나며 링크
+   답글을 따로 달지 않는다. 본문 URL 과
+   `linkUrl` 이 같아야 링크 1개로 계산된다 — 서로 다른 URL 을 넣으면 링크 두 개짜리
+   글이 된다.
 4. **Facebook**: `facebook_publish` — `videoUrl` 은 **클린본(video.mp4)의 공개 URL**,
    `captionFilePath`=output/video/subs.srt(로컬 경로) + 본문 → 응답 postId 로
    `facebook_comment` **첫 댓글(원문/관련 링크) 즉시 게시**. `captionWarning` 이 오면
@@ -166,8 +178,9 @@ Threads 는 `cover.jpg`), 자막 큐 수, 해시태그, Threads 답글·FB 첫 �
 
 실패 처리: 에러를 그대로 보고하고 **같은 호출을 맹목 재시도하지 않는다**(게시
 API 비멱등 — 타임아웃 후에는 permalink/최근 미디어 조회로 중복 여부 먼저 확인).
-링크 댓글만 실패하면 댓글 호출만 재시도, 끝내 실패하면 postId 와 사유를 남기고
-수동 처리를 안내한다.
+FB 첫 댓글만 실패하면 댓글 호출만 재시도, 끝내 실패하면 postId 와 사유를 적어 두고
+수동 처리를 안내한다. Threads 는 한 번의 호출이라 부분 실패가 없다 — 실패했으면
+게시 자체가 안 된 것이므로 permalink 조회로 확인한 뒤에만 다시 부른다.
 
 ### 4. 기록·마무리
 

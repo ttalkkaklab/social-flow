@@ -1396,9 +1396,9 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
     name: 'threads_publish',
     title: '⚠️ Threads 게시 (즉시 공개)',
     annotations: HINT.publish,
-    outputSchema: publishOutput('postId', 'Threads 게시물 id — 링크 답글의 replyToId 로 그대로 넘긴다'),
+    outputSchema: publishOutput('postId', 'Threads 게시물 id — 답글을 이어 달 때 replyToId 로 그대로 넘긴다'),
     description:
-      `⚠️ Threads 직접 게시 — 로컬 토큰으로 Threads API 에 **즉시 공개 게시**한다(게시 계정은 토큰의 /me 로 자동 결정). 별도 검토 게이트가 없으므로 반드시 사용자가 최종 문안·미디어를 확인·승인한 직후에만 호출한다(HITL — 승인 없이 호출 금지). 이 툴이 지원하는 형태는 텍스트 또는 이미지 1장이다 — 플랫폼 자체는 영상·캐러셀도 지원하지만, 이 파이프라인은 영상을 YouTube·릴스로 내보내고 Threads 에는 커버 이미지 본문 + 풀영상 링크 답글로 유입을 만드는 전략을 쓴다. 본문 링크 금지 플랫폼 규칙: 링크는 본문이 아니라 게시 성공 직후 응답 postId 를 replyToId 로 넣은 답글로 이어서 게시한다. 게시 쿼터는 24시간당 250건. ${SNS_HITL_LINE}`,
+      `⚠️ Threads 직접 게시 — 로컬 토큰으로 Threads API 에 **즉시 공개 게시**한다(게시 계정은 토큰의 /me 로 자동 결정). 별도 검토 게이트가 없으므로 반드시 사용자가 최종 문안·미디어를 확인·승인한 직후에만 호출한다(HITL — 승인 없이 호출 금지). 이 툴이 지원하는 형태는 텍스트(선택적 링크 프리뷰 카드) 또는 이미지 1장이다 — 플랫폼 자체는 영상·캐러셀도 지원하지만, 이 파이프라인은 영상을 YouTube·릴스로 내보내고 Threads 에는 구어체 본문 + 영상 링크(linkUrl)로 유입을 만드는 전략을 쓴다. 영상 회차는 커버 이미지를 붙이지 않는다 — 링크 프리뷰 카드가 그 자리를 대신하고, 한 번의 호출로 게시가 끝난다(링크를 답글로 따로 달지 않는다). 게시 쿼터는 24시간당 250건. ${SNS_HITL_LINE}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -1407,8 +1407,14 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
           description:
             '게시 본문 완성본 ≤500자 (해시태그는 ≤1개 권장 — 랭킹 가중치 0). 이모지는 플랫폼이 UTF-8 바이트로 세므로 1자보다 크게 계산된다',
         },
-        imageUrl: { type: 'string', format: 'uri', description: '공개 접근 가능한 이미지 URL 1장 (플랫폼이 크롤 — 로컬 경로 불가)' },
-        replyToId: { type: 'string', description: '이 게시물 id 에 대한 답글로 게시 (자기 답글 체인 — 링크는 본문이 아닌 답글에)' },
+        imageUrl: { type: 'string', format: 'uri', description: '공개 접근 가능한 이미지 URL 1장 (플랫폼이 크롤 — 로컬 경로 불가). linkUrl 과 배타' },
+        linkUrl: {
+          type: 'string',
+          format: 'uri',
+          description:
+            '본문에 붙일 링크 프리뷰 카드 URL (영상 회차의 릴스·쇼츠 permalink). 텍스트 게시 전용이라 imageUrl 과 배타이며, caption 본문에 같은 URL 을 적어도 플랫폼은 링크 1개로 센다(상한 5개)',
+        },
+        replyToId: { type: 'string', description: '이 게시물 id 에 대한 답글로 게시 (자기 답글 체인, 또는 남의 글에 답글 참여)' },
         channel: SNS_CHANNEL_PROPERTY,
       },
       required: ['caption'],

@@ -27,7 +27,7 @@ data/<채널>/<주제>/
 ├── .work/               # 중간 산출물 (gitignore — cards/ broll/ pcm/ manifest)
 └── output/
     ├── video/           # video.mp4(클린) · video-sub.mp4(번인) · subs.srt · cover.jpg · build-report.txt
-    ├── threads/post.md  # 본문 + 답글 체인 문안 (+커버 이미지 참조)
+    ├── threads/post.md  # 반말 본문 + 마지막 줄 영상 링크 (첨부 이미지 없음)
     ├── instagram/caption.md
     ├── facebook/post.md
     └── youtube/meta.md  # title · description · tags · thumbnail
@@ -40,6 +40,9 @@ data/<채널>/<주제>/
 2. **크로스포스팅 복붙 금지** — "사실은 공유하되 문장은 공유하지 않는다."
    플랫폼마다 어체·종결·정보 밀도를 다시 설계한다 (platform-guide 플레이북).
 3. **쉬운 말** — 화면 텍스트·나레이션·자막·캡션 전부. 소리로만 듣고도 이해돼야 한다.
+   **소리가 말한 것을 화면이 다시 쓰지 않는다**(사용자 지시 2026-08-14) — scenes.js 의
+   빈 `title`·`bullets` 는 결함이 아니다. 렌더가 빈 칸을 임의로 채우거나 나레이션에서
+   캡션을 만들어 넣지 않는다 (scenes-schema §화면 텍스트는 필요할 때만).
 4. **AI 티 없는 한국어** — 번역투("~에 대해"·"되어진다")·상투구("결론적으로"·
    "시사하는 바가 크다")·조수 말투("함께 알아볼까요"·"도움이 되셨길")를 쓰지 않는다.
    규칙은 platform-guide `references/korean-style.md`, 판정은 `check-style.py` 가 한다
@@ -78,12 +81,19 @@ data/<채널>/<주제>/
    - 실사 인물이 나오면 **AI 생성 고지 대상**이다 — YouTube 게시 시
      `containsSyntheticMedia: true`(publish 스킬 계약).
 12. **커버 배경 PNG(메타 이미지)는 대충 만들지 않는다** — 커버 프레임이 그대로
-   `cover.jpg`(모든 플랫폼의 썸네일)가 된다. 주제와 무관한 정물·추상 배경 금지 —
+   `cover.jpg`(YouTube 썸네일이자 IG·FB 영상의 첫 화면)가 된다. 주제와 무관한
+   정물·추상 배경 금지 —
    **주제가 한눈에 보이는 실사 인물 장면**(규칙 11 의 인물 계약 그대로)을
-   `quality: "high"` 로 만든다. b-roll 이 있는 편은 **커버 배경과 b-roll 소스가 같은
-   파일**이다 — 커버(정지+텍스트)가 끝나면 그 사진이 그대로 움직이기 시작하는 전환이
-   되고, 이미지 1장이 두 역할을 한다. 텍스트는 여전히 코드 렌더다(규칙 10) — 이 규칙은
+   `quality: "high"` 로 만든다. 텍스트는 여전히 코드 렌더다(규칙 10) — 이 규칙은
    배경 그림 이야기다.
+   **b-roll 소스는 그 b-roll 이 붙는 씬(`after`)의 배경과 같은 파일이다** — 앞 씬이
+   정지로 보여 준 사진이 그대로 움직이기 시작하는 전환이 되고, 이미지 1장이 두 역할을
+   한다. 도입 b-roll(`after: 0`)이면 그 파일이 곧 커버 배경이다. 본문 b-roll 이면
+   그 points 씬 배경인데, **그 장만은 로컬 Z-Image 가 아니라 `gpt_image_text2img`
+   (high)로 만든다** — veo 입력이라 흐린 소스는 흐린 영상이 되고, 사람이 없으면
+   모델이 움직일 대상을 못 찾는다(규칙 11).
+   **한 회차에 영상으로 만드는 씬은 최대 둘이다**(사용자 지시 2026-08-14) —
+   veo 호출도 접합도 2회가 상한이고, 계약은 scenes-schema §broll 이 정본이다.
 13. **돈이 나가는 생성은 계획 검증을 통과한 뒤에만** — 커버 배경·b-roll 은 스토리보드에
    계획(소스 프롬프트·모션·사용 길이+근거)이 먼저 있어야 하고, content-reviewer
    **계획 모드**에 위임해 `PLAN_REVIEW: PASS` 를 받은 뒤에만 `gpt_image_text2img`(high)·
@@ -150,19 +160,25 @@ points 정지 배경 등 텍스트 없는 이미지, storyboard §5 가 이 규�
   **`seen from behind, face turned away`** 로 바꿔 사람이 분명히 보이게 한다.
   커버 캡처(`bg=./scene-1.png`)와 veo 입력이 같은 파일을 쓰므로 커버가 끝나면
   그 사진이 그대로 움직이기 시작한다.
-- **도입 b-roll (커버 *다음* 구간)**: 그 커버 배경 PNG 를 `veo_img2video`
-  (`aspectRatio: "9:16"` · `resolution: "1080p"` · `durationSeconds: 8` · fast 모델)로
-  애니메이션한다. 절대 규칙 8·10 — 소스는 **이미 만들어 둔 이미지**여야 하고,
-  **커버 자체는 코드 렌더로 만든다**(Veo 는 한글을 못 쓴다).
+- **b-roll (scenes.js 의 `broll` 씬 — 회차당 최대 2칸)**: 각 칸의 `visual.src` PNG 를
+  `veo_img2video`(`aspectRatio: "9:16"` · `resolution: "1080p"` · `durationSeconds: 8` ·
+  fast 모델)로 애니메이션한다. 절대 규칙 8·10 — 소스는 **이미 만들어 둔 이미지**여야
+  하고, **커버 자체는 코드 렌더로 만든다**(Veo 는 한글을 못 쓴다).
+  **스토리보드에 있는 만큼만 만든다** — 계획된 칸을 빼먹으면 승인된 씬이 조용히
+  사라지고, 없는 칸을 더 만들면 계약 위반이자 헛돈이다.
   - **생성은 8초, 사용은 필요한 만큼** — 1080p 는 API 가 8초만 허용한다. 본편이
     1080×1920 이라 720p 생성 후 업스케일하지 않는다(사용자 결정 2026-08-11 — 업스케일이
     필요하면 그냥 1080p). 실제로 쓰는 길이는 스토리보드 broll 씬의 `duration`(기본
     4초)이고, §6 접합 직전에 원본 앞부분만 잘라 쓴다. 원본 8초
-    (**`.work/broll/cover-broll.mp4`**)는 보관한다 — 재트림의 기준점이다.
+    (**`.work/broll/broll-a<after>.mp4`**)는 보관한다 — 재트림의 기준점이다.
+    파일명에 `after` 를 넣는 이유는 하나다 — 두 칸이 같은 이름으로 서로를 덮어쓴다.
   프롬프트는 scenes.js `visual.motion`("very slow push-in / nearly static camera")을
   **영어로 모션만** 옮기고 끝에 오디오 지시를 붙인다 — 예:
   `Audio: quiet studio room tone with a faint fabric rustle, no music, no speech.`
   이미지에 이미 보이는 인물·배경·조명을 다시 묘사하면 모델이 장면을 재설계한다.
+  - **두 칸은 각자의 소스로 만든다** — 같은 PNG 를 모션만 바꿔 두 번 돌리면 같은
+    장면이 두 번 나와 영상이 제자리를 맴돈다. 두 번째 칸의 소스는 그 칸이 붙는 씬의
+    배경이고, 그 장은 gpt_image high 로 만든 인물 실사여야 한다(절대 규칙 11·12).
   - **팔린드롬 루프를 쓰지 않는다** — 정+역 이어붙이기는 소리가 거꾸로 재생된다
     (절대 규칙 9 로 이 구간은 영상 사운드를 쓴다).
   - 이 구간은 manifest 에 넣지 않고 **빌드 후 접합**한다(§6 끝). 카드당 오디오 1개인
@@ -305,45 +321,65 @@ $REF/build-reel.sh .work    # → .work/reel.mp4(클린) · reel-sub.mp4(번인)
 재게시를 부른다. 그래서 `reel.mp4` 는 자막이 없는 클린 마스터고, `subs.srt` 가 게시
 툴에 함께 넘어간다.
 
-#### 도입 b-roll 접합 (§3 에서 만든 경우)
+#### b-roll 접합 (§3 에서 만든 경우 — 최대 2칸)
 
-생성 영상 구간은 **빌드가 끝난 뒤** 커버 씬 종료 시각 T 에 끼워 넣는다. `build-reel.sh`
-는 아웃트로만 접합하므로 이건 빌더 밖 후처리다.
+생성 영상 구간은 **빌드가 끝난 뒤** 각 칸의 `after` 씬 종료 시각 T 에 끼워 넣는다.
+`build-reel.sh` 는 아웃트로만 접합하므로 이건 빌더 밖 후처리다.
 
-접합 전에 **트림 + 음량 정규화 + BGM 을 한 번의 재인코딩**으로 처리한다 — 원본 8초에서
-broll 씬 `duration`(사용 길이) 만큼만 자르면서 veo 사운드를 본편 기준으로 맞추고 BGM 을
-얹는다(생성 사운드는 본편보다 작다 — 실측 인물 소스 mean −18~−22dB):
+접합 전에 칸마다 **트림 + 음량 정규화 + BGM 을 한 번의 재인코딩**으로 처리한다 — 원본
+8초에서 broll 씬 `duration`(사용 길이) 만큼만 자르면서 veo 사운드를 본편 기준으로 맞추고
+BGM 을 얹는다(생성 사운드는 본편보다 작다 — 실측 인물 소스 mean −18~−22dB):
 
 ```bash
-USE=4   # scenes.js broll 씬의 duration — 스토리보드가 정한 사용 길이
-ffmpeg -y -i .work/broll/cover-broll.mp4 -stream_loop -1 -i .work/bgm.wav -t $USE \
-  -filter_complex "[0:a]loudnorm=I=-20:TP=-2:LRA=7[va];
-    [1:a]volume=0.15,afade=t=in:st=0:d=0.4,afade=t=out:st=$((USE-1)):d=1[bg];
-    [va][bg]amix=inputs=2:duration=first:normalize=0[a]" \
-  -map 0:v -map "[a]" -r 30 -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p \
-  -c:a aac -ar 48000 -ac 2 -b:a 192k .work/broll/cover-broll-mixed.mp4
+mix_broll() {           # mix_broll <after> <사용길이초>
+  local A=$1 USE=$2
+  ffmpeg -y -i .work/broll/broll-a$A.mp4 -stream_loop -1 -i .work/bgm.wav -t $USE \
+    -filter_complex "[0:a]loudnorm=I=-20:TP=-2:LRA=7[va];
+      [1:a]volume=0.15,afade=t=in:st=0:d=0.4,afade=t=out:st=$((USE-1)):d=1[bg];
+      [va][bg]amix=inputs=2:duration=first:normalize=0[a]" \
+    -map 0:v -map "[a]" -r 30 -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p \
+    -c:a aac -ar 48000 -ac 2 -b:a 192k .work/broll/broll-a$A-mixed.mp4
+}
+mix_broll 0 4          # scenes.js broll 씬의 after 와 duration 을 그대로 넣는다
+mix_broll 3 4          # 두 번째 칸이 있으면
 ```
 
 **믹스본을 다시 자르지 않는다** — 페이드가 길이 기준으로 박혀 있어, 자르면 끝 페이드가
 사라지고 BGM 페이드 위치가 어긋난다. 길이를 바꾸려면 원본 8초에서 다시 믹스한다.
 (veo 출력은 24fps 라 30fps 재인코딩이 여기서 함께 일어난다.)
 
+삽입 시각 T 는 `build-report.txt` 의 `card` 줄들에서 **`after` 카드까지의 확정 길이를
+누적**해 구한다. broll·outro 는 manifest 에 없고 broll 씬은 배열 끝에 두므로,
+**본편 씬 인덱스 = 카드 인덱스**가 그대로 성립한다.
+
 ```bash
-$REF/splice-clip.sh .work .work/broll/cover-broll-mixed.mp4 <T>
+cardend() {   # cardend <after> — card 0..after 확정 길이 합 = 그 씬이 끝나는 시각
+  awk -v n="$1" -F'|' '/^card /{ split($1,a," "); if (a[2]+0 <= n) { gsub(/[^0-9.]/,"",$(NF-2)); s += $(NF-2) } }
+                       END{ printf "%.3f", s }' .work/build-report.txt
+}
+$REF/splice-clip.sh .work \
+  .work/broll/broll-a0-mixed.mp4 "$(cardend 0)" \
+  .work/broll/broll-a3-mixed.mp4 "$(cardend 3)"
 # → reel-spliced.mp4 · reel-sub-spliced.mp4 · subs-spliced.srt
 ```
 
-- **T 는 `build-report.txt` 의 `card 0` 줄에서 읽는다** — 그 카드의 확정 길이(프레임
-  올림 후 초)가 커버 종료 시각이다. 눈대중으로 잡으면 커버 마지막 프레임이 잘린다.
+- **두 칸을 한 번의 호출로 넘긴다.** 스크립트를 두 번 부르면 두 번째 호출이 `reel.mp4`
+  를 다시 읽어 첫 접합이 사라진다(입출력 이름이 고정이다). T 는 둘 다 **원본 타임라인
+  기준**으로 준다 — 앞 클립이 밀어낼 길이를 미리 더하지 않는다. 미는 계산은 스크립트가
+  한다.
+- **T 를 눈대중으로 잡지 않는다** — 카드의 확정 길이(프레임 올림 후 초)가 씬 종료
+  시각이다. 어림으로 잡으면 그 씬 마지막 프레임이 잘린다.
 - 클린본과 번인본을 **같은 T·같은 클립으로 각각** 접합한다. 번인본은 자막이 이미 화면에
   태워져 있어 타임코드 시프트가 필요 없고, 빌더의 ASS 스타일이 그대로 보존된다
   (srt 로 다시 태우면 폰트·위치·아웃라인이 원본과 달라진다).
-- `subs.srt` 는 **T 이후 큐만** 실측 삽입 길이만큼 뒤로 민다. 공칭 길이(예: 8초)가 아니라
-  **재인코딩 후 ffprobe 로 잰 값**을 쓴다 — 프레임 올림 때문에 수십 ms 가 어긋나고,
-  그 오차가 영상 끝까지 누적돼 자막이 밀린다.
-- **T 를 걸치는 자막 큐가 0 인지 확인한다.** 걸치면 문장 중간에 b-roll 이 끼어든다 —
-  T 를 문장 경계로 옮긴다.
+- `subs.srt` 의 각 큐는 **자기 앞에 끼어든 클립들의 실측 길이 합**만큼 뒤로 밀린다.
+  공칭 길이(예: 4초)가 아니라 **재인코딩 후 ffprobe 로 잰 값**을 쓴다 — 프레임 올림
+  때문에 수십 ms 가 어긋나고, 그 오차가 영상 끝까지 누적돼 자막이 밀린다.
+- **T 를 걸치는 자막 큐가 0 인지 확인한다**(스크립트가 T 별로 보고한다). 걸치면 문장
+  중간에 b-roll 이 끼어든다 — 그 T 를 문장 경계로 옮긴다.
 - 접합 후 **클린본과 번인본 길이가 일치**하는지 본다. 어긋나면 한쪽 조각이 잘못 잘렸다.
+  출력 길이가 "기대"보다 수십 ms 큰 것은 정상이다(조각마다 프레임 경계로 올림된다) —
+  칸이 둘이면 조각이 셋이라 그 오차도 조금 커진다.
 
 번인본(`reel-sub.mp4`)을 따로 두는 이유는 하나다 — **인스타그램은 자막 파일을 받는
 경로가 없다.** IG Content Publishing 컨테이너에 자막 파라미터가 없어서, 거기서는 화면에
@@ -373,10 +409,18 @@ $REF/splice-clip.sh .work .work/broll/cover-broll-mixed.mp4 <T>
 
 ### 9. 플랫폼별 텍스트 저작
 
+**첫 문장을 바로 쓰지 말고 진입점 3~4개를 먼저 적는다** — 겪은 일 / 숫자 / 되묻기 /
+장면 묘사 중에서 고른다. 그냥 쓰면 모델이 매번 가장 무난한 도입으로 수렴해서, 편마다
+카피는 게이트를 통과하는데 채널 피드에서는 전부 같은 목소리로 보인다. 근거 등급은
+낮다(영어 창작 프리프린트, 다양성 1.6~2.1배 — `korean-style.md` §근거 등급).
+
 platform-guide 플레이북(`../platform-guide/references/platform-playbook.md`)을 Read
-하고 플랫폼별로 재작성한다 — Threads 구어체 1~3줄+답글 체인 / IG 캡션 첫 125자
-훅+저장 CTA / FB 구조화 본문+첫 댓글 링크 문안 / YT 키워드 제목+설명+#Shorts
-해시태그. 각 `output/<플랫폼>/` 에 저장하고, 영상·커버는
+하고 플랫폼별로 재작성한다 — Threads 반말 구어체 1~3줄 + 마지막 줄 영상 링크 /
+IG 캡션 첫 125자 훅+저장 CTA / FB 구조화 본문+첫 댓글 링크 문안 / YT 키워드
+제목+설명+#Shorts 해시태그. **Threads 는 커버 이미지를 붙이지 않는다** — 링크
+프리뷰 카드가 그 자리를 대신하므로 `post.md` 는 본문과 링크 URL 만 담는다. 링크
+자리는 IG 릴스 permalink 라 게시 시점까지 값을 모른다 — `post.md` 에는
+`<IG_REELS_URL>` 처럼 자리표시자를 두고 실제 URL 은 publish 가 채운다. 각 `output/<플랫폼>/` 에 저장하고, 영상·커버는
 `cp .work/reel.mp4 output/video/video.mp4` · `cp .work/reel-sub.mp4 output/video/video-sub.mp4` ·
 `cp .work/subs.srt output/video/` · `cp .work/cover.jpg output/video/cover.jpg` ·
 `cp .work/build-report.txt output/video/` 로 확정한다 (이후 publish 는 output/ 만 본다).
@@ -394,6 +438,21 @@ for P in threads:output/threads/post.md ig:output/instagram/caption.md \
   python3 $CS --surface ${P%%:*} ${P#*:}; echo "[${P%%:*}] gate_exit=$?"
 done
 ```
+
+**같은 채널에 편이 셋 이상 쌓였으면 묶음도 잰다.** 위 검사기는 카피를 한 편씩만 봐서
+채널 전체가 한 틀로 찍히는 것을 **원리적으로 못 본다** — 개별 품질과 묶음 다양성은
+반대로 움직인다(자매 플러그인 실측: 소재만 바꾼 두 원고가 각각 100/100 인데 서로
+겹침 0.77). 회차를 거듭할수록 이 축이 실제 위험이다.
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-batch.py \
+  --split ../*/output/threads/post.md
+```
+
+반려하지 않는다 — 순위만 나온다. `post.md` 는 본문과 운영 메모가 한 파일이라
+`--split` 이 필수다(안 나누면 겹침 상위가 전부 "답글 게시 성공 직후 replyToId" 같은
+운영 문구로 찬다 — 실측). **본문 섹션끼리의 쌍**만 보고, 돌려쓴 구절이 이번 편에
+있으면 그 문장을 다시 쓴다. 지난 편은 고치지 않는다.
 
 검사기 파일이 없으면 python 이 exit 2 를 낸다 — 판정 2와 구분되지 않으므로 존재
 확인 줄을 먼저 둔다. 설치가 깨진 상태를 "전 표면 S1"으로 읽고 멀쩡한 카피를 고치면
@@ -433,7 +492,7 @@ content-reviewer 에이전트(Agent)에 산출물 검증을 위임한다 — 영
 - **`references/video-template.html`** — 1080×1920 씬 렌더러 (THEME 주입·reveal·alpha·세이프존·오버플로 가드)
 - **`references/build-reel.sh`** — 합성 파이프라인 SoT (무음 트림→loudnorm→경계 검출→reveal xfade→켄번즈→자막→아웃트로 접합)
 - **`references/build-outro.sh`** — 채널 공용 아웃트로 생성
-- **`references/splice-clip.sh`** — 빌드 후 클립 삽입 (도입 b-roll·시리즈 스팅어). 클린·번인 각각 접합 + 자막 T 이후 실측 시프트 + T 걸친 큐·길이 일치 검사
+- **`references/splice-clip.sh`** — 빌드 후 클립 삽입 (b-roll 최대 2칸·시리즈 스팅어). `<클립> <T>` 쌍을 여러 개 받아 **한 번의 실행**으로 접합하고(두 번 나눠 부르면 첫 접합이 지워진다), 클린·번인 각각 처리 + 각 자막 큐를 앞선 삽입들의 실측 길이 합만큼 시프트 + T 걸친 큐·길이 일치 검사
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — 헤드리스 캡처 (상태 수 자동 도출)
 - **`references/reveal-timing.py`** — 나레이션 '쉼' 역산 reveal 타이밍
 - **`references/frame-persona-clip.py`** — 발화 클립 프레이밍 통일 + 팔린드롬

@@ -871,8 +871,11 @@ window.SB_DOC = {
       var af = s.after || 0;
       if (!SCENES[af] || SCENES[af].type === "broll")
         flag("bad", "씬 " + no, "after: " + af + " 가 가리키는 씬이 없다 — 삽입 위치를 못 정한다");
-      var src = (s.visual || {}).src, cov = cover && cover.visual ? cover.visual.bg : null;
-      if (src && cov && src !== cov) flag("warn", "씬 " + no, "b-roll src 가 커버 배경(" + cov + ")과 다르다");
+      // 소스는 앞 씬이 정지로 보여 준 그 사진이다 — 정지가 그대로 움직이기 시작한다
+      var src = (s.visual || {}).src;
+      var base = SCENES[af] && SCENES[af].visual ? SCENES[af].visual.bg : null;
+      if (src && base && src !== base)
+        flag("warn", "씬 " + no, "b-roll src 가 씬 " + (af + 1) + " 배경(" + base + ")과 다르다");
     } else {
       var worst = 0, ovf = 0;
       revealsOf(s).forEach(function (st, k) {
@@ -890,6 +893,28 @@ window.SB_DOC = {
         chips.push(badge("bad", "수치 폭 초과"));
         flag("bad", "씬 " + no, "히어로 수치가 최소 크기에서도 세이프존을 " + swide + "px 넘는다 — 짧은 표기로 바꾼다");
       }
+      // 화면 텍스트가 소리와 겹치는지 (scenes-schema §화면 텍스트는 필요할 때만, 2026-08-14).
+      // 캡션 k 는 세그 k+1 과 함께 뜬다 — 그 대사에 캡션 문구가 통째로 들어 있으면
+      // 같은 말을 눈과 귀로 두 번 받는 것이다. 자막이 이미 그 문장을 쓰고 있다.
+      // 조사·어미 차이를 넘기려고 한글/영숫자만 남겨 비교하고, 짧은 조각(4자 미만)은 세지 않는다.
+      (function () {
+        var norm = function (t) { return String(t || "").replace(/[^가-힣A-Za-z0-9]/g, ""); };
+        var narr = s.narration || [], dup = [];
+        (s.bullets || []).forEach(function (b, bi) {
+          var seg = narr[bi + 1];                       // 캡션 k ← 세그 k+1
+          if (!seg) return;
+          var said = norm(seg.sub || seg.tts);
+          [b.t, b.d].forEach(function (cap) {
+            var c = norm(cap);
+            if (c.length >= 4 && said.indexOf(c) !== -1) dup.push(cap);
+          });
+        });
+        if (dup.length) {
+          chips.push(badge("warn", "소리와 겹침 " + dup.length));
+          flag("warn", "씬 " + no, "캡션이 대사에 그대로 있다 — " + dup.join(" · ") +
+               ". 소리가 말한 것을 화면이 다시 쓰지 않는다(필요 없으면 캡션을 비운다)");
+        }
+      })();
       if (ovf > 0) {
         chips.push(badge("bad", "프레임 넘침"));
         flag("bad", "씬 " + no, "화면 텍스트가 3단계 축소 뒤에도 " + ovf + "px 넘친다 — 제목·캡션을 줄인다");
@@ -934,6 +959,17 @@ window.SB_DOC = {
   }
   if (DOC.transitions && DOC.transitions.length && DOC.transitions.length !== SCENES.length)
     flag("warn", "전환", "SB_DOC.transitions " + DOC.transitions.length + "개 — 씬 " + SCENES.length + "개와 다름");
+
+  /* b-roll 슬롯 계약 — 회차당 최대 2칸, 같은 자리에 겹치지 않는다 (scenes-schema §broll) */
+  var brolls = SCENES.filter(function (s) { return s.type === "broll"; });
+  if (brolls.length > 2)
+    flag("bad", "b-roll", "생성 영상 " + brolls.length + "칸 — 회차당 상한 2칸이다");
+  var seenAfter = {};
+  brolls.forEach(function (s) {
+    var af = s.after || 0;
+    if (seenAfter[af]) flag("bad", "b-roll", "after: " + af + " 에 두 칸이 겹친다 — 삽입 순서가 정해지지 않는다");
+    seenAfter[af] = 1;
+  });
 
   // 템플릿 자리표시자가 남은 채로 승인 게이트에 가는 사고를 막는다
   var blanks = (JSON.stringify(DOC).match(/\{\{/g) || []).length;
@@ -1011,7 +1047,7 @@ window.SB_DOC = {
         (v.src ? '<img src="' + esc(v.src) + '" alt="b-roll 소스" onerror="this.remove()">' : "") +
         '<div class="meta">' +
         "<div><b>삽입</b>씬 " + ((s.after || 0) + 1) + " 종료 직후 · 사용 " + (s.duration || "?") + "초 (생성 8초 중 앞부분)</div>" +
-        (v.src ? "<div><b>소스</b><code>" + esc(v.src) + "</code> — 커버 배경과 같은 파일</div>" : "") +
+        (v.src ? "<div><b>소스</b><code>" + esc(v.src) + "</code> — 씬 " + ((s.after || 0) + 1) + " 배경과 같은 파일</div>" : "") +
         (v.motion ? "<div><b>모션</b>" + esc(v.motion) + "</div>" : "") +
         (v.audio ? "<div><b>오디오</b>" + esc(v.audio) + "</div>" : "") +
         (v.clip ? "<div><b>산출</b><code>" + esc(v.clip) + "</code></div>" : "") +

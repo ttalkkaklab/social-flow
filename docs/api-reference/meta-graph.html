@@ -85,15 +85,16 @@ POST /{user-id}/threads_publish 또는 /{ig-id}/media_publish?creation_id=…</c
       <tr><td>본문 길이</td><td>500자. <strong>이모지는 UTF-8 바이트로 계산</strong>된다</td><td>500자 (JS 문자 길이 기준)</td></tr>
       <tr><td>이미지</td><td>JPEG/PNG, 8MB 이하, 가로 320–1440px, 비율 최대 10:1</td><td>공개 URL 1장 (플랫폼이 크롤)</td></tr>
       <tr><td>영상</td><td>MOV/MP4, H264/HEVC, 0–300초, 1GB 이하</td><td>미지원</td></tr>
+      <tr><td>링크 카드</td><td><code>link_attachment</code> — <strong><code>media_type=TEXT</code> 전용</strong>. 게시물당 링크 5개까지, 본문 URL과 같으면 1개로 계산</td><td><code>linkUrl</code>로 노출 (<code>imageUrl</code>과 배타 — 같이 오면 400)</td></tr>
       <tr><td>답글</td><td><code>reply_to_id</code>를 단 새 게시물이 곧 답글 — 깊이 제한 없음</td><td><code>replyToId</code>로 노출</td></tr>
       <tr><td>게시 쿼터</td><td><strong>24시간당 250건</strong> (캐러셀은 1건)</td><td>—</td></tr>
     </tbody>
   </table>
   </div>
   <div class="warn">
-    <strong>Threads 영상 미지원은 플랫폼 제약이 아니라 이 서버의 선택이다.</strong> 플랫폼은 <code>VIDEO</code>·<code>CAROUSEL</code>을 지원한다. 이 파이프라인은 쇼트폼 영상을 YouTube/IG 릴스로 내보내고, Threads에는 <em>커버 이미지 본문 + 풀영상 링크 답글</em>로 유입을 만드는 전략을 쓴다. 툴 설명이 이를 플랫폼 한계처럼 적으면 안 된다.
+    <strong>Threads 영상 미지원은 플랫폼 제약이 아니라 이 서버의 선택이다.</strong> 플랫폼은 <code>VIDEO</code>·<code>CAROUSEL</code>을 지원한다. 이 파이프라인은 쇼트폼 영상을 YouTube/IG 릴스로 내보내고, Threads에는 <em>반말 구어체 본문 + 영상 링크 한 건</em>으로 유입을 만드는 전략을 쓴다. 툴 설명이 이를 플랫폼 한계처럼 적으면 안 된다.
   </div>
-  <p><strong>본문 링크 금지 규칙:</strong> Threads는 본문 링크의 도달을 억제한다. 링크는 게시 성공 직후 응답의 <code>postId</code>를 <code>replyToId</code>로 넣어 자기 답글로 단다. 해시태그도 랭킹 가중치가 0이라 1개 이하를 권한다.</p>
+  <p><strong>본문 링크 규칙(2026-08-14 변경):</strong> 영상 회차의 링크는 본문에 둔다. 본문 마지막 줄에 URL을 적고 <code>linkUrl</code>(플랫폼 파라미터 <code>link_attachment</code>)에 같은 URL을 넣으면 링크 프리뷰 카드가 붙는다 — 본문 URL과 같으면 링크 1개로 계산된다(상한 5개). <code>link_attachment</code>는 <code>media_type=TEXT</code> 전용이라 <code>imageUrl</code>과 배타이며, 서버가 400으로 먼저 막는다. 커버 이미지 첨부와 링크 답글은 쓰지 않는다. 2024년의 본문 링크 페널티는 철회됐지만(Mosseri 공식) 링크가 답글을 줄이는 효과는 그대로라, 링크를 붙일 이유가 있는 회차에만 붙인다. 해시태그는 랭킹 가중치가 0이라 1개 이하를 권한다.</p>
 </section>
 
 <section id="instagram">

@@ -7,26 +7,37 @@ description: >
   topic (naver_search/WebSearch/serp_*), then authors an image-included storyboard under
   data/<channel>/<topic>/storyboard/ — human-readable storyboard.md + machine-readable
   scenes.js (the SoT that produce consumes) + generated 9:16 scene images, or in
-  screencast mode a shooting script (script.md) the user records against. Two adversarial
-  convergence loops run before approval — the storyboard-reviewer agent scores the copy
-  (AI-sounding phrasing, hook, factual fidelity) and the generated images (do they match
-  what each scene actually says), and the storyboard only reaches HITL approval once both
-  score ≥95 with zero P0 defects.
+  screencast mode a shooting script (script.md) the user records against. Four adversarial
+  convergence loops run before approval — the storyboard-reviewer agent scores the copy as
+  a whole (AI-sounding phrasing, hook, factual fidelity), then every single scene for
+  quality and contextual fit, then the word choice of every narration and title for
+  human-sounding vocabulary, and finally the generated images (do they match what each
+  scene actually says). The per-scene loops pass only when the LOWEST-scoring scene clears
+  95, and the storyboard reaches HITL approval only once all four score ≥95 with zero P0
+  defects.
 argument-hint: "<채널> <주제 또는 주제 힌트>"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img"]
 ---
 
 # 스토리보드 저작 — data/[채널]/[주제]/storyboard/
 
-주제 하나를 받아 **조사 → 씬 설계 → 문안 수렴 → 이미지 생성 → 이미지 수렴 →
-스토리보드 승인**까지 진행한다. 여기서 확정된 `scenes.js` 가 이후 제작(produce)의
-유일한 데이터 원천(SoT)이다 — 영상·캡션·플랫폼별 텍스트가 전부 이 파일에서
-파생되므로 플랫폼 간 사실 불일치가 원천 차단된다.
+주제 하나를 받아 **조사 → 씬 설계 → 문안 수렴 → 씬별 수렴 → 어휘 수렴 →
+이미지 생성 → 이미지 수렴 → 스토리보드 승인**까지 진행한다. 여기서 확정된
+`scenes.js` 가 이후 제작(produce)의 유일한 데이터 원천(SoT)이다 — 영상·캡션·플랫폼별
+텍스트가 전부 이 파일에서 파생되므로 플랫폼 간 사실 불일치가 원천 차단된다.
 
-승인 전에 적대적 리뷰어(`storyboard-reviewer`)가 두 번 막는다. 한 번은 **문장**을
-보고(AI 가 쓴 티·훅·사실 충실), 한 번은 **그림**을 본다(씬이 말하는 내용을 화면이
-실제로 보여주는가). 두 관문 모두 **95점 이상 + P0 0건**이라야 사용자 승인 단계로
-간다. 사람이 보기 전에 기계가 먼저 반증을 시도하는 셈이다.
+승인 전에 적대적 리뷰어(`storyboard-reviewer`)가 네 번 막는다.
+
+| 관문 | 보는 것 | 통과선 |
+|---|---|---|
+| §4.5 문안 | 스토리보드 전체의 문장 — AI 가 쓴 티·훅·사실 충실 | 총점 ≥95 · P0 0 |
+| §4.6 씬별 | **씬 하나하나**의 역할과 맥락 적절성 | **최저 씬** ≥95 · P0 0 |
+| §4.7 어휘 | 나레이션·타이틀의 **낱말**이 사람 말인가 | **최저 씬** ≥95 · P0 0 |
+| §5.5 이미지 | 씬이 말하는 내용을 그림이 보여주는가 | 총점 ≥95 · P0 0 |
+
+씬별 두 관문의 통과선이 평균이 아니라 **가장 낮은 씬**인 이유는 하나다 — 평균은
+무너진 한 씬을 잘 나온 씬들이 가려 준다. 사람이 보기 전에 기계가 먼저 반증을 시도하는
+셈이고, 네 관문을 다 넘어야 사용자 승인 단계로 간다.
 
 ```
 data/<채널>/<주제 slug>/storyboard/
@@ -107,6 +118,12 @@ data/<채널>/<주제 slug>/storyboard/
   (유지율은 길이에 반비례 — 90초 상한).
 - **커버 제목은 16자 이내 + 주제어 필수** — 자극만 있고 무엇의 이야기인지 없으면
   스킵된다. 강조어는 `**굵게**`(그라데이션 칩). statLabel 은 18자 이내.
+- **화면 텍스트는 필요할 때만 쓴다**(사용자 지시 2026-08-14) — 씬마다 캡션 칸을 채우지
+  않는다. `title`·`footnote`·`bullets` 는 비울 수 있고, **소리가 이미 말한 것을 화면이
+  다시 쓰지 않는다**(나레이션 문장을 줄여 옮긴 캡션은 자막과 겹친다). 글자를 쓰는 자리는
+  커버·숫자·단계 번호·소리에 없는 정보(출처·용어 풀이)·복붙할 원문이다. 세그 1개짜리
+  씬은 캡션이 0개이고 그게 정상이다 — 계약 전문은 `references/scenes-schema.md`
+  §화면 텍스트는 필요할 때만.
 - **씬 제목은 전부 구어 훅이다**(사용자 지시 2026-08-13) — 보는 사람이 속으로
   내뱉는 말(반말 감탄·의문·전언: "원하던 색이 아닌데 ㅠㅠ", "같은 염색약인데 왜
   달라?"). 설명형 서술은 제목이 아니라 캡션·나레이션 자리다. 나레이션은 존댓말
@@ -128,7 +145,7 @@ data/<채널>/<주제 slug>/storyboard/
 1. **storyboard-reviewer 에이전트(Agent)에 "문안 모드"로 위임** — `scenes.js`·
    `research.md`(있으면)·`profile.md` 경로와 이전 라운드 미해결 지적을 전달한다.
    판정 tail `STORYBOARD_REVIEW: mode=text score=NN p0=N verdict=PASS|FAIL` 을 파싱한다.
-2. **PASS(score ≥95 이고 p0 = 0)** → §5 로.
+2. **PASS(score ≥95 이고 p0 = 0)** → §4.6 으로.
 3. **FAIL** → 교정 지시대로 `scenes.js` 를 고치고 다시 위임한다.
    - **빼기만 한다** — AI 티를 지우려다 원문에 없던 비유·상투구를 새로 심지 않는다.
      넣는 순간 그게 새 AI 티다.
@@ -140,6 +157,65 @@ data/<채널>/<주제 slug>/storyboard/
    사용자 판단을 받는다. 점수를 꾸며 통과시키지 않는다.
 
 **촬영 모드도 이 루프를 돈다** — 사용자가 소리 내 읽을 대사라 AI 티가 더 크게 들린다.
+
+### 4.6 씬별 품질·맥락 수렴 루프 (storyboard-reviewer 씬 모드, **모든 씬** ≥95 AND p0 = 0)
+
+§4.5 가 스토리보드를 한 덩어리로 봤다면, 여기서는 **씬을 하나씩 따로 채점한다.**
+전체 평균은 잘 나오는데 한 씬만 무너진 스토리보드가 실제로 나온다 — 평균은 90점짜리
+씬을 100점짜리가 가려 주기 때문이다. 그래서 이 루프의 통과선은 평균이 아니라
+**가장 낮은 씬의 점수**다. 보는 축은 둘이다.
+
+- **품질** — 그 씬이 제 역할을 하는가. 커버는 3초 안에 무엇의 이야기인지 알리고,
+  points 는 한 화면에 한 메시지를 주고, quote 는 그 사람 입에서 나올 법한 말을 한다.
+- **맥락 적절성** — 그 씬이 여기 있을 이유가 있는가. 앞 씬이 던진 것을 받고 다음 씬을
+  열어 주는지, 프로파일 §3 타깃이 알아들을 전제인지, 그 주장이 research.md 의 어느
+  항목에 걸리는지.
+
+**하드캡 5회**:
+
+1. **storyboard-reviewer 에이전트(Agent)에 "씬 모드"로 위임** — `scenes.js`·
+   `research.md`(있으면)·`profile.md` 경로와 이전 라운드 미해결 지적을 전달한다.
+   판정 tail `STORYBOARD_REVIEW: mode=scene score=NN p0=N worst=<씬번호> verdict=PASS|FAIL`
+   을 파싱한다. **`score` 는 최저 씬 점수**이므로 ≥95 는 곧 전 씬 95 이상이다.
+2. **PASS(score ≥95 이고 p0 = 0)** → §4.7 로.
+3. **FAIL** → `worst` 씬부터 고친다. 미달 씬만 손대고 통과한 씬은 건드리지 않는다.
+   - **역할이 비어 있다는 지적은 문장을 다듬어 못 고친다** — 그 씬이 빠져도 영상이
+     성립하면 씬을 합치거나 뺀다. 씬 수가 줄면 남은 씬의 길이를 늘려 총길이를 맞춘다.
+   - 흐름 단절 지적은 그 씬이 아니라 **앞뒤 순서**를 의심한다. 순서를 바꿔도 말이
+     되는 배열이면 애초에 흐름이 없는 것이다.
+   - 씬을 새로 쓰거나 순서를 바꿨으면 **§4.5 를 다시 통과시킨 뒤** 이 루프로 돌아온다
+     (문장이 바뀌었으므로).
+4. 하드캡 도달 시 **최저 씬과 그 점수·미해결 지적**을 §7 승인 게이트에 그대로 싣는다.
+
+### 4.7 어휘 수렴 루프 (storyboard-reviewer 어휘 모드, **모든 씬** ≥95 AND p0 = 0)
+
+씬 구성이 확정된 뒤 **낱말만** 본다 — 나레이션과 타이틀에 쓴 말이 사람이 실제로 쓰는
+말인가. 구조·리듬은 §4.5 가, 역할·흐름은 §4.6 이 봤으므로 이 루프는 어휘 층위에만
+머문다. 같은 뜻을 담고도 "제출 기한이 도래합니다"와 "이날까지 안 내면 늦어요"는 다른
+글이고, 시청자가 AI 냄새를 맡는 자리는 대개 낱말이다.
+
+보는 것: 어려운 한자어·무설명 전문용어, 번역투 낱말(`~를 통해`·`~에 있어서`·
+`수행합니다`), 문어 전용 어휘와 보고체 상태 동사(korean-style §D8·§D9), AI 상투어,
+같은 낱말의 과반복, 프로파일 §3 타깃이 쓰지 않는 말.
+
+**하드캡 5회**:
+
+1. **storyboard-reviewer 에이전트(Agent)에 "어휘 모드"로 위임** — `scenes.js`·
+   `profile.md`·이전 라운드 미해결 지적을 전달한다. 판정 tail
+   `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<씬번호> verdict=PASS|FAIL`
+   을 파싱한다. 여기서도 **`score` 는 최저 씬 점수**다.
+2. **PASS(score ≥95 이고 p0 = 0)** → §5 로.
+3. **FAIL** → 지적받은 낱말을 **바꾸기만 한다.**
+   - **문장을 다시 쓰지 않는다** — 어휘 교정이 문장 재작성으로 번지면 §4.5·§4.6 이
+     본 구조가 무너져 두 루프를 다시 돌아야 한다. 낱말 하나를 바꿔서 안 되면 그때만
+     그 문장을 고치고, 고쳤으면 그 사실을 다음 라운드 위임에 적는다.
+   - **빼기만 한다.** 어려운 말을 지우려다 없던 비유·상투구를 새로 심으면 그게 새
+     AI 티다(문안 루프와 같은 규칙).
+   - 수치·고유명사·`tts` 발음 표기는 건드리지 않는다.
+4. 하드캡 도달 시 최저 씬·미해결 지적을 §7 승인 게이트에 싣는다.
+
+**촬영 모드도 §4.6·§4.7 을 돈다** — 사용자가 소리 내 읽을 대본이라 낱말이 더 크게
+들린다. 이미지 축(§5·§5.5)만 건너뛴다.
 
 ### 5. 씬 이미지 생성 (촬영 모드는 건너뛴다)
 
@@ -160,14 +236,21 @@ docs/research/2026-08-12-local-image-generation):
   자소가 깨진다(실측: "딸깍연구소" → "달닥연구소").
 
 - **커버 배경(scene-1)은 이 회차의 메타 이미지다** — 커버 프레임이 그대로
-  `cover.jpg`(모든 플랫폼의 썸네일)가 된다. 은유 정물이 아니라 **주제가 한눈에
+  `cover.jpg`(YouTube 썸네일이자 IG·FB 영상의 첫 화면)가 된다. 은유 정물이 아니라 **주제가 한눈에
   보이는 실사 인물 장면**(생성 인물만, 기본 한국 여성 — 프로파일 §3 타깃 기준)으로,
   **`quality: "high"`**. 부정 지시의 `face not visible` 은 여기서만
   `seen from behind, face turned away` 로 바꾼다(produce 절대 규칙 11·12).
-  b-roll 승급 편은 이 PNG 가 그대로 veo 소스를 겸한다 — 커버가 끝나면 그 사진이
+  도입 b-roll 을 둔 편은 이 PNG 가 그대로 veo 소스를 겸한다 — 커버가 끝나면 그 사진이
   움직이기 시작한다.
+- **영상으로 만들 씬은 회차당 최대 2개다**(사용자 지시 2026-08-14, scenes-schema
+  §broll). 하나는 보통 커버 뒤 도입이고, 나머지 하나는 본문에서 이야기의 축이
+  바뀌거나 정지 컷이 길게 이어져 늘어지는 자리에 둔다. 두 칸의 `after` 는 서로 달라야
+  하고, **b-roll 이 붙는 씬의 배경은 로컬 엔진이 아니라 `gpt_image_text2img`(high)로
+  만든 인물 실사**여야 한다 — veo 입력이라 흐리거나 사람이 없으면 그 8초가 정지 컷처럼
+  보인다. b-roll 구간은 말이 없으므로(절대 규칙 9), 두 칸을 다 쓰면 정보를 전하는
+  시간이 8초 안팎 줄어든다. 총길이 계약 안에서 그 손해를 감당할 자리에만 둔다.
 - **생성 호출 전에 계획을 검증받는다**(produce 절대 규칙 13) — 커버 bgPrompt 와
-  broll 씬(있으면)을 content-reviewer **계획 모드**에 위임해 `PLAN_REVIEW: PASS`
+  broll 씬 전부(칸마다)를 content-reviewer **계획 모드**에 위임해 `PLAN_REVIEW: PASS`
   를 받은 뒤 생성한다. 돈이 나가는 호출(high 이미지·veo) 전의 마지막 관문이다.
 - **points 배경도 화면의 주인공이다**(produce 절대 규칙 14 — 캡션이 상단 밴드만
   쓰므로 사진이 그대로 보인다). 은유 정물이 아니라 **주제 실사 컷**으로 만들고,
@@ -181,9 +264,10 @@ docs/research/2026-08-12-local-image-generation):
   인물·같은 공간의 다른 앵글로 연속성을 지킨다. quote 씬은 배경 불요(발화 클립
   또는 인용 카드).
 - 생성 문자가 박히면 재생성 — 가짜 문서·간판으로 오독되는 순간 사실 왜곡이 된다.
-- b-roll 씬을 계획하면 scenes-schema 의 `broll` 계약대로 **사용 길이 `duration`(기본
-  4초)과 그 근거**·모션(영어)·오디오 지시를 함께 적는다 — 생성은 1080p·8초 고정이고
-  (API 제약), produce 가 사용 길이만큼 잘라 쓴다.
+- b-roll 씬을 계획하면 칸마다 scenes-schema 의 `broll` 계약대로 **사용 길이
+  `duration`(기본 4초)과 그 근거**·`after`·`src`·모션(영어)·오디오 지시를 적는다 —
+  생성은 1080p·8초 고정이고(API 제약), produce 가 사용 길이만큼 잘라 쓴다.
+  두 칸이 같은 PNG 를 쓰면 같은 장면이 두 번 나온다 — 칸마다 다른 소스를 지정한다.
 
 ### 5.5 이미지 맥락 수렴 루프 (storyboard-reviewer 이미지 모드, 목표 score ≥95 AND p0 = 0)
 
@@ -254,15 +338,17 @@ storyboard/ 에 복사해 **`<title>` 과 `✎ SB_DOC` 블록만** 채운다. �
 
 AskUserQuestion 으로 스토리보드를 제시한다 — storyboard.md·storyboard.html 경로
 (HTML 을 브라우저로 열면 검산 배지까지 보인다), 씬 수·예상 총길이, 커버 제목,
-핵심 수치와 출처. 여기에 **두 수렴 루프의 결과를 함께 싣는다** — 문안·이미지 각각의
-최종 점수와 라운드 수, 하드캡에 걸렸으면 미해결 지적을 그대로. 선택지:
+핵심 수치와 출처. 여기에 **네 수렴 루프의 결과를 함께 싣는다** — 문안·씬별·어휘·이미지
+각각의 최종 점수와 라운드 수, 씬별·어휘는 **최저 씬이 몇 번이고 몇 점인지**까지,
+하드캡에 걸렸으면 미해결 지적을 그대로. 선택지:
 [승인 — 제작 진행 / 수정 요청 / 주제 보류]. **승인 없이 produce 로 넘어가지 않는다.**
-수정 요청이면 반영한 뒤 **바뀐 축의 게이트를 다시 통과시키고** 재제시한다 — 문장을
-고쳤으면 §4.5, 이미지를 다시 만들었으면 §5.5 다(재제시 라운드는 하드캡을 새로 센다).
+수정 요청이면 반영한 뒤 **바뀐 축의 게이트를 다시 통과시키고** 재제시한다 — 문장 구조를
+고쳤으면 §4.5 부터, 씬을 더하거나 뺐으면 §4.6 부터, 낱말만 바꿨으면 §4.7, 이미지를
+다시 만들었으면 §5.5 다(재제시 라운드는 하드캡을 새로 센다).
 승인되면 scenes.js 상단에 `// approved: <YYYY-MM-DD>` 와
-`// review: text=NN(R라운드) image=NN(R라운드)` 두 줄을 적고
-`/social-flow:produce <채널> <주제>` 를 안내한다 — 나중에 어떤 점수의 문안이
-어떤 성과를 냈는지 되짚을 수 있다.
+`// review: text=NN(R라운드) scene=NN(R라운드) lexicon=NN(R라운드) image=NN(R라운드)`
+두 줄을 적고 `/social-flow:produce <채널> <주제>` 를 안내한다 — 나중에 어떤 점수의
+문안이 어떤 성과를 냈는지 되짚을 수 있다.
 
 **촬영 모드**의 승인 후 안내는 녹화다 — `/social-flow:ingest <채널> record
 <주제>` (script.md 를 보조 모니터에 띄우고 촬영). 녹화·정합이 끝나면 produce 가
@@ -274,8 +360,12 @@ AskUserQuestion 으로 스토리보드를 제시한다 — storyboard.md·storyb
   "이 정도면 됐다"로 루프를 끝내지 않는다. 자기가 쓴 문장의 AI 티는 자기 눈에 가장
   안 보인다. 점수 조작·자기 채점 종료 금지이고, 통과는 tail 의 `verdict=PASS` 로만
   선언한다.
-- **두 루프의 순서를 바꾸지 않는다** — 문안(§4.5)이 이미지(§5.5)보다 먼저다.
-  거꾸로 돌면 문장이 바뀔 때마다 만든 그림을 버린다.
+- **네 루프의 순서를 바꾸지 않는다** — 문안(§4.5) → 씬별(§4.6) → 어휘(§4.7) →
+  이미지(§5.5) 다. 이미지가 마지막인 이유는 문장이 바뀌면 그 씬이 보여줄 그림도
+  바뀌기 때문이고, 어휘가 씬별 뒤인 이유는 빠질 씬의 낱말을 다듬는 게 헛일이기
+  때문이다. 거꾸로 돌면 통과한 작업을 버린다.
+- **씬별·어휘 관문의 점수는 평균이 아니라 최저 씬이다** — tail 의 `score` 가 곧
+  가장 낮은 씬의 점수다. "평균 96이니 통과"로 읽지 않는다.
 - **scenes.js 는 살아있는 파일이 아니다** — 승인 후 produce 가 소비하는 확정본이다.
   제작 중 고치고 싶으면 스토리보드 개정 → 재승인부터.
 - **범위는 범위로** — 수치 범위를 상한 하나로 줄이지 않는다(실제 발생 사례).
@@ -295,8 +385,10 @@ AskUserQuestion 으로 스토리보드를 제시한다 — storyboard.md·storyb
 
 ### 위임 에이전트
 
-- **`storyboard-reviewer`** — §4.5 문안 모드(AI 티·훅·사실 충실)와 §5.5 이미지 모드
-  (씬 내용 대 그림의 맥락 정합). 두 모드 모두 95점·P0 0건이 통과선이고, 루브릭·P0
-  목록·tail 형식은 `agents/storyboard-reviewer.md` 가 정본이다
+- **`storyboard-reviewer`** — 네 모드다. §4.5 문안 모드(AI 티·훅·사실 충실) ·
+  §4.6 씬 모드(씬별 역할·맥락 적절성) · §4.7 어휘 모드(낱말이 사람 말인가) ·
+  §5.5 이미지 모드(씬 내용 대 그림의 맥락 정합). 넷 다 95점·P0 0건이 통과선이고,
+  씬 모드·어휘 모드는 그 95가 **최저 씬** 기준이다. 루브릭·P0 목록·tail 형식은
+  `agents/storyboard-reviewer.md` 가 정본이다
 - **`content-reviewer` 계획 모드** — §5 생성 호출 직전의 프롬프트 검증(`PLAN_REVIEW`).
   storyboard-reviewer 이미지 모드와 보는 대상이 다르다 — 이쪽은 프롬프트, 저쪽은 결과물
