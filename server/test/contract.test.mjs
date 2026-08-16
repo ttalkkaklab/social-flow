@@ -10,7 +10,9 @@
  */
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import { CHANNEL_SLUG_RE, SNS_PLATFORMS, snsCredentialFile, snsTokenDir } from '../dist/config.js';
@@ -1084,5 +1086,27 @@ describe('멀티 채널 토큰 해석', () => {
       assert.ok(CHANNEL_SLUG_RE.test(channel), `${channel} 은 정규 slug 다`);
       assert.doesNotThrow(() => snsCredentialFile('YOUTUBE', channel));
     }
+  });
+});
+
+/**
+ * initialize 응답의 서버 버전은 index.ts 에 리터럴로 박혀 있다. 값을 읽으려고
+ * dist/index.js 를 import 하면 서버가 stdio 로 뜨므로, 두 파일을 텍스트로 대조한다.
+ * 실제로 0.8.0 대 0.9.0 으로 갈라져 있던 것을 2026-08-16 에 잡았다.
+ */
+describe('서버 버전 선언', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const read = (rel) => readFileSync(join(here, '..', rel), 'utf8');
+
+  it('index.ts 의 version 이 package.json 과 같다', () => {
+    const pkg = JSON.parse(read('package.json')).version;
+    const src = read('src/index.ts');
+    const declared = src.match(/name: 'social-flow', version: '([^']+)'/)?.[1];
+    assert.ok(declared, "index.ts 에서 Server({ name, version }) 리터럴을 찾지 못했다 — 선언 형태가 바뀌었으면 이 테스트도 함께 고친다");
+    assert.equal(
+      declared,
+      pkg,
+      `initialize 가 알리는 버전(${declared})과 패키지 버전(${pkg})이 다르다 — 클라이언트가 보는 버전이 실제와 어긋난다`,
+    );
   });
 });
