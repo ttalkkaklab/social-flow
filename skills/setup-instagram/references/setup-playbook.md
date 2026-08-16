@@ -1,10 +1,16 @@
-# Instagram 개설 플레이북 — ego lite 실측 레시피
+# Instagram 개설 플레이북 — 실측 레시피
 
 SKILL.md 의 각 단계를 실제로 어떻게 조작하는지 담는다. Meta 계열 사이트
 (instagram.com·developers.facebook.com)는 ego 편의 헬퍼가 무한 행하는 구간이 많아
 **CDP 저수준 호출로만** 안정적으로 움직인다.
 
-## ego lite 조작 원칙 (공통)
+## 브라우저 레인과 조작 원칙
+
+레인은 둘이다 — ego lite 가 먼저고, 없으면 claude-in-chrome 이다(SKILL.md
+§브라우저 레인). 아래 단계별 레시피는 ego 레인 기준으로 쓰여 있지만, 조작의 뼈대가
+CDP 표준이라 Chrome 레인으로도 거의 그대로 옮겨진다.
+
+### ego lite 레인 (기본)
 
 먼저 `~/.claude/skills/ego-browser/SKILL.md` 를 로드해 CLI 사용법을 확인한다.
 호출은 `ego-browser nodejs <<'EOF' ... EOF` 히어독.
@@ -18,6 +24,29 @@ SKILL.md 의 각 단계를 실제로 어떻게 조작하는지 담는다. Meta �
   `cdp('Target.getTargets',{})` → `switchTab(전체 targetId)`.
 - 클릭 전 `document.elementFromPoint(x,y)` 로 가림 확인. 화면 공유는
   `handOffTaskSpace(id)`(agent 탭은 GUI 에 안 보임).
+
+### Chrome 레인 (claude-in-chrome)
+
+위 CDP 호출을 이렇게 옮긴다. 툴 이름은 로드 방식에 따라 프리픽스가 달라질 수 있으니
+`/mcp` 로 실제 이름을 확인하고 쓴다.
+
+| ego 레인 | Chrome 레인 |
+|---|---|
+| `cdp('Page.navigate',{url})` | `navigate` |
+| `cdp('Runtime.evaluate',{expression,returnByValue:true})` | `javascript_tool` — DOM 읽기·값 입력 둘 다 |
+| `cdp('Input.dispatchMouseEvent', …)` 신뢰 클릭 | `computer` |
+| `cdp('Target.getTargets',{})` → `switchTab(targetId)` | 탭 도구 — `tabs_context_mcp` 로 목록을 받아 전환 |
+| `useOrCreateTaskSpace` 격리 | 없다 — 작업 중 사용자 브라우저를 점유한다 |
+| `handOffTaskSpace`/`takeOverTaskSpace` | 필요 없다 — 화면이 곧 사용자 것이라 완료 확인만 한다 |
+
+세션 시작에 `tabs_context_mcp` 로 현재 탭을 먼저 확인하고, 작업은 새 탭에서 한다.
+사용자가 열어 둔 탭을 가져다 쓰지 않는다. 다른 브랜드 IG 세션이 살아 있을 수 있으니
+로그아웃 판단은 SKILL.md 절대 규칙 3 을 따른다.
+
+**이 레인은 Meta 사이트 실측 전이다.** 어디서 행에 걸리고 어느 좌표가 컨테이너로
+잡히는지는 ego 레인에서 부딪혀 알아낸 것이다. 첫 실행에서 그 지점들을 다시 확인하고
+이 문서에 적는다. 특히 `computer` 의 클릭이 React 의 신뢰 이벤트 검사를 통과하는지
+(테스터 초대 탭 전환·동의 화면 "허용")는 확인해 본 적이 없다 — 첫 실행에서 볼 지점이다.
 
 ## 1단계 · 계정 개설
 

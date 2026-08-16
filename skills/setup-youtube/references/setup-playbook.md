@@ -1,10 +1,16 @@
-# YouTube 개설 플레이북 — ego lite 실측 레시피
+# YouTube 개설 플레이북 — 실측 레시피
 
 SKILL.md 의 각 단계를 실제로 어떻게 조작하는지 담는다. Google 콘솔은 Meta 만큼
 헬퍼가 행하지는 않지만, **활성 채널을 잘못 잡으면 남의 브랜드 채널을 오염**시키니
 매 단계 채널 확인이 최우선이다.
 
-## ego lite 조작 원칙 (공통)
+## 브라우저 레인과 조작 원칙
+
+레인은 둘이다 — ego lite 가 먼저고, 없으면 claude-in-chrome 이다(SKILL.md
+§브라우저 레인). 아래 단계별 레시피는 ego 레인 기준으로 쓰여 있지만, 조작의 뼈대가
+CDP 표준이라 Chrome 레인으로도 거의 그대로 옮겨진다.
+
+### ego lite 레인 (기본)
 
 먼저 `~/.claude/skills/ego-browser/SKILL.md` 를 로드해 CLI 사용법을 확인한다.
 호출은 `ego-browser nodejs <<'EOF' ... EOF` 히어독.
@@ -17,6 +23,31 @@ SKILL.md 의 각 단계를 실제로 어떻게 조작하는지 담는다. Google
 - **ego lite 의 Google 세션 프로필 주의** — 이 브라우저의 Google 세션에 어떤
   브랜드 채널이 보이는지 먼저 확인한다. 개설 대상이 아닌 다른 브랜드가 활성이면
   채널 전환기로 바꾸고 URL 채널 ID 로 재확인한 뒤 진행한다.
+
+### Chrome 레인 (claude-in-chrome)
+
+위 CDP 호출을 이렇게 옮긴다. 툴 이름은 로드 방식에 따라 프리픽스가 달라질 수 있으니
+`/mcp` 로 실제 이름을 확인하고 쓴다.
+
+| ego 레인 | Chrome 레인 |
+|---|---|
+| `cdp('Page.navigate',{url})` | `navigate` |
+| `cdp('Runtime.evaluate',{expression,returnByValue:true})` | `javascript_tool` — DOM 읽기·값 입력 둘 다 |
+| `cdp('Input.dispatchMouseEvent', …)` 신뢰 클릭 | `computer` |
+| `cdp('Target.getTargets',{})` → `switchTab(targetId)` | 탭 도구 — `tabs_context_mcp` 로 목록을 받아 전환 |
+| `useOrCreateTaskSpace` 격리 | 없다 — 작업 중 사용자 브라우저를 점유한다 |
+| `handOffTaskSpace`/`takeOverTaskSpace` | 필요 없다 — 화면이 곧 사용자 것이라 완료 확인만 한다 |
+
+세션 시작에 `tabs_context_mcp` 로 현재 탭을 먼저 확인하고, 작업은 새 탭에서 한다.
+사용자가 열어 둔 탭을 가져다 쓰지 않는다.
+
+**활성 채널 확인이 이 레인에서 더 중요하다** — 사용자의 일상 브라우저라 다른 브랜드
+채널이 활성일 가능성이 ego 레인보다 높다. 매 작업 전에 URL 의 채널 ID 를 읽어
+개설 대상인지 확인하고, 아니면 채널 전환기로 바꾼 뒤 다시 확인한다.
+
+**이 레인은 Google 콘솔 실측 전이다.** 첫 실행에서 막히는 지점을 확인하고 이 문서에
+적는다. 특히 `computer` 의 클릭이 동의 화면 스코프 체크박스에서 어떻게 동작하는지는
+확인해 본 적이 없다 — 체크가 실제로 들어갔는지 진행 전에 화면으로 검증한다.
 
 ## 1단계 · 고급 기능 신원 인증
 
