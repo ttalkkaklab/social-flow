@@ -7,8 +7,11 @@ import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
 import { enabledPlatforms } from './sns-client.js';
 
+// initialize 응답에 실리는 서버 버전 — package.json 의 version 과 같은 값을 쓴다.
+// 둘이 갈라지면 클라이언트가 보는 버전이 실제 패키지와 달라지므로, package.json 을
+// 올릴 때 이 줄도 함께 올린다(계약 테스트가 두 값의 일치를 검사한다).
 const server = new Server(
-  { name: 'social-flow', version: '0.8.0' },
+  { name: 'social-flow', version: '0.9.0' },
   { capabilities: { tools: {} } },
 );
 
