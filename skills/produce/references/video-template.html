@@ -69,6 +69,17 @@
   body.scene-quote .scrim.d2{background:linear-gradient(180deg,rgba(5,8,20,.74) 0%,rgba(5,8,20,.62) 40%,rgba(5,8,20,.70) 62%,rgba(5,8,20,.95) 100%)}
   /* points(상단 블록): 상단 밴드 + 자막 대비 보험용 얕은 하단. 중앙은 항상 맑다.
      밴드는 블록 끝(출처 줄, ~y560)까지 끌고 y≈920 전에 완전히 걷는다. */
+  /* 영상 배경 커버 — 텍스트가 상단이고 배경이 8~10초 동안 움직인다. 기본 커버 스크림은
+     아래로 무거워(상단 .10) 위쪽 글자를 못 지킨다. 밝은 피사체가 텍스트 띠를 지나가는
+     최악의 순간을 기준으로 잡았다: 딸깍맨 흰 머리가 서브텍스트 줄을 지날 때 그 자리
+     국소 휘도가 YAVG 121·YMAX 241 이라 흰 글자 대비가 4.35:1 로 게이트(4.5) 아래였다.
+     상단 .62 면 같은 지점이 5:1 을 넘는다(2026-08-15 실측). 하단은 커버 기본값 유지.
+     ★평탄부를 36%(y691)까지 끈다 — 제목이 두 줄이면 서브텍스트가 y580 아래로 내려가는데
+     예전 26%(y499) 스톱은 거기서 이미 걷혀 있었다. 2줄 제목으로 재면 그 줄의 최악 대비가
+     2.85:1 로 게이트 아래고 77프레임 중 51 이 미달이었다(2026-08-16 실측 — 밝은 담벼락이
+     흰 글자 뒤로 지나간다). 36% 로 끌면 같은 프레임이 5.19:1 이다. 화면 중앙(y960)은
+     그대로 맑아 절대 규칙 14 의 밴드 스크림을 지킨다. */
+  body.scene-cover.cover-video .scrim.d0{background:linear-gradient(180deg,rgba(5,8,20,.62) 0%,rgba(5,8,20,.58) 36%,rgba(5,8,20,0) 52%,rgba(5,8,20,.30) 70%,rgba(5,8,20,.86) 100%)}
   body.scene-points .scrim.d0{background:linear-gradient(180deg,rgba(5,8,20,.50) 0%,rgba(5,8,20,.36) 26%,rgba(5,8,20,0) 46%,rgba(5,8,20,0) 70%,rgba(5,8,20,.42) 100%)}
   body.scene-points .scrim.d1{background:linear-gradient(180deg,rgba(5,8,20,.64) 0%,rgba(5,8,20,.48) 28%,rgba(5,8,20,0) 48%,rgba(5,8,20,0) 68%,rgba(5,8,20,.52) 100%)}
   body.scene-points .scrim.d2{background:linear-gradient(180deg,rgba(5,8,20,.80) 0%,rgba(5,8,20,.62) 30%,rgba(5,8,20,.14) 48%,rgba(5,8,20,0) 66%,rgba(5,8,20,.62) 100%)}
@@ -244,11 +255,18 @@ function __boot() {
   if (scene.type === 'cover') {
     // 라이트(삽화) 모드: 커버 텍스트를 상단 앵커로 — 하단 앵커는 중단의 삽화
     // 주인공(캐릭터)을 덮는다(실측). 삽화 계약이 상단 1/4 을 타이틀 여백으로 비워 둔다.
-    if (light) zone.classList.add('top');
+    // **영상 배경 커버도 상단이다** — 영상은 피사체가 8초 동안 움직이므로 중앙이
+    // 계속 비어 있다는 보장이 없다. 고정 밴드를 위에 두는 쪽이 안전하다.
+    if (light || (scene.visual && scene.visual.video)) zone.classList.add('top');
+    // 다크 영상 커버만 상단 우세 스크림으로 바꾼다(라이트는 자기 흰 워시가 이미 상단이다).
+    if (!light && scene.visual && scene.visual.video) document.body.classList.add('cover-video');
     zone.innerHTML =
       (scene.kicker ? R(0, '<div class="kicker">' + esc(scene.kicker).replace(/·/g, '<span class="dot">·</span>') + '</div>') : '') +
       R(1, '<div class="cover-title">' + em(scene.title) + '</div>') +
-      (scene.stat ? R(2, '<div class="stat-wrap"><div class="stat" id="stat">' + esc(scene.stat) + '</div>' +
+      // 히어로 수치 없이 **서브텍스트만** 쓰는 커버가 있다(영상 커버) — 그때도 라벨을
+      // 그린다. 예전 조건은 stat 이 있어야만 블록 자체를 만들어 라벨이 조용히 사라졌다.
+      ((scene.stat || scene.statLabel) ? R(2, '<div class="stat-wrap">' +
+        (scene.stat ? '<div class="stat" id="stat">' + esc(scene.stat) + '</div>' : '') +
         (scene.statLabel ? '<div class="stat-label">' + esc(scene.statLabel) + '</div>' : '') + '</div>') : '');
   } else if (scene.type === 'points') {
     // 캡션 스왑 — 활성 캡션(rg === capShow)만 불투명. reveal 이 마지막 캡션을

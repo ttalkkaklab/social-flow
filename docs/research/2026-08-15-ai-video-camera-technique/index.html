@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 영상의 카메라 기법 — 엔진별 어휘와 연출 근거 (2026-08-15)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  nav.toc { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 56px; }
+  nav.toc h2 { font-size: 14px; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 14px; text-transform: uppercase; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  nav.toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a { color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500; }
+  nav.toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent); font-weight: 700; font-size: 12.5px;
+    margin-right: 10px; font-variant-numeric: tabular-nums;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
+  p { margin-bottom: 16px; }
+  p.note { font-size: 14.5px; color: var(--text-soft); }
+  p.lead { font-size: 17px; }
+  ul.plain { margin: 0 0 16px 22px; }
+  ul.plain li { margin-bottom: 8px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px;
+  }
+
+  .callout {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    background: var(--bg-soft); border-radius: 0 10px 10px 0;
+    padding: 16px 20px; margin-bottom: 20px; font-size: 15px;
+  }
+  .callout.green { border-left-color: var(--green); }
+  .callout.amber { border-left-color: var(--amber); }
+  .callout.red { border-left-color: var(--red); }
+  .callout.purple { border-left-color: var(--purple); }
+  .callout > b:first-child { display: block; margin-bottom: 4px; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .verdict {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px 32px; margin-bottom: 56px;
+    box-shadow: var(--shadow);
+  }
+  .verdict .v-label {
+    font-size: 12.5px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); margin-bottom: 12px;
+  }
+  .verdict .v-main { font-size: 20px; font-weight: 700; line-height: 1.6; margin-bottom: 16px; letter-spacing: -.01em; }
+  .verdict p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14.5px; }
+  th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; font-size: 13.5px; }
+  .table-scroll { overflow-x: auto; }
+  td.y { color: var(--green); font-weight: 700; }
+  td.n { color: var(--text-soft); }
+
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+  }
+  .badge.green { color: var(--green); background: var(--green-soft); }
+  .badge.amber { color: var(--amber); background: var(--amber-soft); }
+  .badge.red { color: var(--red); background: var(--red-soft); }
+  .badge.purple { color: var(--purple); background: var(--purple-soft); }
+  .badge.blue { color: var(--accent); background: var(--accent-soft); }
+  .badge.gray { color: var(--text-soft); background: var(--bg-soft); border: 1px solid var(--border); }
+
+  .grades { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 32px; }
+  .grades div {
+    flex: 1 1 200px; border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; font-size: 14px; color: var(--text-soft); background: var(--bg-card);
+  }
+  .grades div b { display: block; margin-bottom: 4px; }
+
+  .study {
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 20px; background: var(--bg-card);
+  }
+  .study h4 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .study .cite { font-size: 13px; color: var(--text-soft); margin-bottom: 14px; }
+  .study .nums {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: 12.5px; color: var(--text-soft); background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; margin: 12px 0 0; line-height: 1.7; word-break: break-word;
+  }
+  .study .limit { font-size: 14px; color: var(--text-soft); margin-top: 12px; margin-bottom: 0; }
+  .study .limit b { color: var(--amber); }
+  .study p:last-child { margin-bottom: 0; }
+
+  .src-group { margin-bottom: 26px; }
+  .src-group h3 { margin-top: 0; }
+  .src-group ul { list-style: none; margin-left: 0; }
+  .src-group li {
+    font-size: 13.5px; margin-bottom: 6px; padding-left: 18px; position: relative;
+    color: var(--text-soft);
+  }
+  .src-group li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .src-group a { word-break: break-all; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 24px; font-size: 13.5px; color: var(--text-soft); }
+  footer p { margin-bottom: 8px; }
+  footer a { color: var(--accent); text-decoration: none; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">RESEARCH</span>
+  <h1>AI 영상의 카메라 기법<br>엔진별 어휘와 연출의 실제 근거</h1>
+  <p class="sub">
+    카메라를 어떻게 지시해야 의도한 컷이 나오는지, 그리고 그 무브를 애초에 왜 쓰는지를 벤더 원문과 실증 연구로 갈라 확인했다.
+    떠도는 요령 중 원문에서 확인되지 않은 것은 본문에서 뺐고, 확인은 됐지만 과장된 것은 원문 범위로 줄여 적었다.
+  </p>
+  <div class="meta">
+    <span>작성 <strong>2026-08-15</strong></span>
+    <span>대상 <strong>Veo 3.1 · Seedance 1.5 Pro / 2.0 · Kling · Runway · Luma</strong></span>
+    <span>검증 <strong>1차 25건 중 23건 확인 · 2차 68건 중 35건 확인 · 31건 축소</strong></span>
+    <span>유령 인용 적발 <strong>5건</strong></span>
+  </div>
+</header>
+
+<div class="verdict">
+  <div class="v-label">결론</div>
+  <div class="v-main">
+    카메라 어휘에 엔진 공통 표준어가 없다. 벤더가 자기 문서에서 실제로 이름 붙인 말만 골라 써야 하고,
+    그 목록은 엔진마다 다르다. 그리고 카메라 <b>무브</b>의 심리 효과는 촬영 교본이 말하는 만큼 실증되지 않았다 —
+    실증이 받쳐 주는 쪽은 무브가 아니라 <b>앵글</b>이다.
+  </div>
+  <p>
+    Veo 정본 문서는 무브 12개를 정의하면서 <code>orbit</code>·<code>push in</code>·<code>pull out</code>·<code>steadicam</code>을
+    한 번도 쓰지 않는다. 그래서 우리 프롬프트의 orbit은 <code>arc shot</code>으로, push in/pull out은 <code>dolly in/out</code>으로
+    바꿔 적어야 벤더 어휘와 맞는다. 반대로 Kling은 push in·pull back을 쓰고 Luma는 Pull Out·Pedestal Up을 쓴다.
+    같은 컷을 지시하는 말이 엔진마다 다르다.
+  </p>
+  <p>
+    <b>전제 하나를 정정한다.</b> 지난 조사가 확언했던 "Veo 5부 공식은 카메라가 문장 첫머리"는 구글 클라우드 블로그 한 곳에만 있고,
+    레퍼런스 문서 세 곳(Gemini API·DeepMind·Vertex)은 어순을 규정하지 않으며 카메라를 오히려 <code>[Optional]</code>로 표시한다.
+    폐기가 아니라 근거 등급을 블로그로 낮추는 정정이다.
+  </p>
+  <p>
+    연출 축은 실증 연구 4편을 원문 대조해 수치까지 확인했다. 그 결과가 통념과 어긋난다 —
+    카메라가 앞으로 다가가는 무브는 쾌·불쾌와 각성을 유의하게 바꾸지 못했고(p=.84 / p=.21), 클로즈업은 많이 박을수록 좋지 않았다.
+    반면 앵글 높이가 인물 인상을 바꾼다는 것과 눈높이가 가장 신뢰받는다는 것은 수치로 확인된다.
+  </p>
+  <p class="note">
+    이 문서가 확인하지 못한 것도 §10에 그대로 적었다. 특히 <b>세로 9:16에서 카메라 무브가 시청 유지를 어떻게 바꾸는지 잰 자료는 없다</b> —
+    실증 연구 4편이 전부 가로 화면이고 종속변수도 시청 유지가 아니다.
+  </p>
+</div>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#grade">읽는 법 — 근거의 등급</a></li>
+    <li><a href="#vocab">엔진별 카메라 어휘 사전</a></li>
+    <li><a href="#syntax">문장의 어디에 쓰나</a></li>
+    <li><a href="#stack">한 컷에 무브를 몇 개까지</a></li>
+    <li><a href="#firstframe">시작 프레임이 있을 때</a></li>
+    <li><a href="#vertical">세로 9:16 — 안전 영역의 실제 수치</a></li>
+    <li><a href="#move-psych">무브의 심리 효과는 실증되지 않았다</a></li>
+    <li><a href="#angle-psych">앵글과 클로즈업은 실증됐다</a></li>
+    <li><a href="#apply">우리 파이프라인에 옮기면</a></li>
+    <li><a href="#nogo">유령 인용 · 기각 · 근거 없음</a></li>
+    <li><a href="#sources">출처</a></li>
+  </ol>
+</nav>
+
+<section id="grade">
+  <h2 class="sec"><span class="no">01</span>읽는 법 — 근거의 등급</h2>
+
+  <p class="lead">
+    이 문서의 문장은 무게가 서로 다르다. 벤더가 자기 문서에 적은 말, 동료 심사를 거친 실험 결과,
+    제작사가 블로그에 쓴 권고는 같은 값으로 쓸 수 없다. 그래서 항목마다 등급을 붙였다.
+  </p>
+
+  <div class="grades">
+    <div><b><span class="badge blue">벤더 문서</span></b>Veo·Seedance·Kling·Runway·Luma가 자기 API 문서나 공식 가이드에 적은 것. 계약에 가깝지만 모델이 실제로 그렇게 동작한다는 증명은 아니다.</div>
+    <div><b><span class="badge purple">플랫폼 공식</span></b>Meta·YouTube·TikTok이 광고 소재 규격이나 크리에이터 가이드에 적은 것. 대부분 유료 광고 기준이라 오가닉 게시에는 근사값이다.</div>
+    <div><b><span class="badge green">실증 연구</span></b>동료 심사 학술지의 실험 결과. 수치와 유의값을 원문 그대로 옮겼고, 표본·자극·측정 대상의 한계를 반드시 함께 적었다.</div>
+    <div><b><span class="badge amber">촬영 교본</span></b>영화제·촬영 단체의 산문 지침. 경험의 축적이지만 측정치가 없다.</div>
+    <div><b><span class="badge gray">제작사 블로그</span></b>업체가 쓴 콘텐츠 마케팅 글. 저자 표기도 인용도 없는 경우가 많아 가장 낮은 등급이다.</div>
+  </div>
+
+  <h3>검증을 두 번 돌렸다</h3>
+  <p>
+    1차는 주장마다 검증자 셋을 붙여 반박을 시도하는 방식이었다. 25건을 검증해 23건이 살아남았다.
+    그런데 이 라운드에서 예산이 떨어져 세로 구도와 연출 심리 쪽 주장 68건이 검증 없이 잘려 나갔다.
+    이 문서를 쓰려고 2차를 따로 돌렸다 — 소스마다 검증자를 하나씩 붙여, 인용문이 원문에 실제로 있는지
+    문자열로 대조하고 주장이 인용 범위를 넘어서지 않는지 봤다.
+  </p>
+  <p>
+    2차 결과가 이 조사에서 가장 중요한 대목이다. <b>68건 중 확인 35건, 과장 31건, 반박 2건.</b>
+    절반 가까이가 인용문은 실재하는데 주장이 더 세게 말하고 있었다. 그런 항목은 원문 범위로 줄여서 실었다.
+    인용문 자체가 원문에 없던 것도 하나 나왔다(§10).
+  </p>
+
+  <div class="callout amber">
+    <b>이 문서가 확인한 것의 층위</b>
+    <p>
+      엔진 관련 항목은 전부 "벤더 문서가 무엇이라 적었는가"다. 실제로 생성을 돌려 프레임 궤적을 잰 실측은 한 건도 없다.
+      Veo가 zoom과 dolly를 정의상 갈라 놓았다는 사실은 어휘 계약이지 모델 행동의 검증이 아니다.
+      프롬프트 어휘를 바꿨을 때 결과가 실제로 달라지는지는 우리가 직접 찍어 봐야 안다.
+    </p>
+  </div>
+</section>
+
+<section id="vocab">
+  <h2 class="sec"><span class="no">02</span>엔진별 카메라 어휘 사전</h2>
+
+  <p class="lead">
+    "orbit"이라고 쓰면 Luma는 알아듣고 Veo 문서에는 그 말이 없다. 엔진마다 자기가 이름 붙인 말이 따로 있어서
+    한 엔진에서 쓰던 프롬프트를 그대로 옮기면 벤더가 예시한 적 없는 어휘로 지시하게 된다.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%">지시 의도</th>
+        <th>Veo (Vertex 정본)</th>
+        <th>Seedance 1.5 Pro</th>
+        <th>Kling 3.0</th>
+        <th>Luma Ray2</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>다가간다</td><td class="y">dolly in</td><td class="y">推</td><td class="y">push in</td><td class="n">(Zoom In만 확인)</td></tr>
+      <tr><td>멀어진다</td><td class="y">dolly out</td><td class="y">拉</td><td class="y">pull back</td><td class="y">Pull Out</td></tr>
+      <tr><td>제자리에서 좌우로</td><td class="y">pan</td><td class="y">摇</td><td class="y">pan left / right</td><td class="n">—</td></tr>
+      <tr><td>제자리에서 위아래로</td><td class="y">tilt</td><td class="y">—</td><td class="y">tilt up / down</td><td class="y">Tilt Down</td></tr>
+      <tr><td>몸체가 좌우로 이동</td><td class="y">truck</td><td class="y">移</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>몸체가 위아래로 이동</td><td class="y">pedestal</td><td class="y">升 / 降</td><td class="n">—</td><td class="y">Pedestal Up</td></tr>
+      <tr><td>피사체를 돈다</td><td class="y">arc shot</td><td class="y">环绕</td><td class="y">orbit slowly</td><td class="y">Orbit Right</td></tr>
+      <tr><td>피사체를 따라간다</td><td class="n">(예문에만 tracking)</td><td class="y">跟</td><td class="y">track forward</td><td class="n">—</td></tr>
+      <tr><td>렌즈만 확대</td><td class="y">zoom</td><td class="y">变焦</td><td class="n">(예시 프롬프트에만)</td><td class="y">Zoom In</td></tr>
+      <tr><td>고정</td><td class="y">static / fixed</td><td class="n">—</td><td class="y">static camera</td><td class="n">—</td></tr>
+      <tr><td>흔들림</td><td class="y">handheld / shaky cam</td><td class="y">甩(휙 돌리기)</td><td class="n">—</td><td class="y">Hand Held</td></tr>
+      <tr><td>공중</td><td class="y">aerial / drone</td><td class="n">—</td><td class="n">—</td><td class="y">Aerial Drone</td></tr>
+      <tr><td>버티고</td><td class="y">dolly zoom</td><td class="y">推拉+变焦</td><td class="n">—</td><td class="y">Dolly Zoom</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">
+    빈칸은 "그 엔진이 못 알아듣는다"가 아니라 <b>"그 벤더 문서에서 확인되지 않았다"</b>는 뜻이다.
+    벤더 목록은 대부분 <code>等</code>·<code>and more</code>·<code>examples</code>로 끝나는 열린 목록이라,
+    없다고 해서 금지어는 아니다. 다만 있는 말을 쓰는 편이 안전하다.
+  </p>
+
+  <h3>Veo — 정의된 무브 12개</h3>
+  <p>
+    <span class="badge blue">벤더 문서</span>
+    Vertex AI 프롬프트 가이드(2026-08-13 갱신)가 이름 붙여 정의하는 무브는
+    static/fixed · pan · tilt · dolly · truck · pedestal · zoom · crane · aerial(drone) · handheld/shaky cam · whip pan · arc shot 열둘이다.
+    페이지 전문을 내려받아 문자열로 세어 보면 <code>orbit</code> 0회, <code>steadicam</code> 0회, <code>gimbal</code> 0회,
+    <code>crash zoom</code> 0회, <code>hyperlapse</code> 0회, <code>push</code>라는 낱말 자체가 0회다.
+  </p>
+  <p>
+    zoom과 dolly는 정의문에서 명시로 갈라져 있다. 원문 그대로 —
+    "Zoom (in/out): the camera's lens changes its focal length… <b>This is different from a dolly, as the camera itself doesn't move.</b>"
+    다가가는 컷을 원하면 <code>dolly in</code>이지 <code>zoom in</code>이 아니다.
+  </p>
+
+  <div class="callout">
+    <b>구글 문서끼리도 어휘가 서로 다르다</b>
+    <p>
+      Veo 3.1 블로그는 무브를 6개(dolly shot, tracking shot, crane shot, aerial view, slow pan, POV shot)로 들고
+      tracking·POV를 앵글이 아니라 무브로 분류한다. "12개가 구글 공통 정본"으로 일반화하면 틀린다.
+      게다가 그 블로그의 워크플로 예시는 자기 목록 밖 표현을 그대로 쓴다 — medium shot 8회, reverse shot 2회, 180-degree arc 2회.
+      벤더 목록은 엔진이 아는 전부가 아니라 벤더가 예시한 최소 어휘다.
+    </p>
+  </div>
+
+  <h3>앵글·렌즈에만 붙은 경고</h3>
+  <p>
+    <span class="badge blue">벤더 문서</span>
+    같은 Veo 문서에서 "일부 고급 지시어는 공식 지원이 아니며 결과와 신뢰도가 프롬프트에 따라 달라진다"는 경고가
+    정확히 두 번 나오는데 붙은 자리가 <b>카메라 앵글 절과 렌즈 절</b>이다. 무브 12항목 절 본문 2,932자 안에는 그 경고가 없다.
+  </p>
+  <p>
+    경고가 붙은 앵글 절에는 close-up·extreme close-up·medium shot·wide/establishing shot·over-the-shoulder·POV 같은
+    샷 사이즈가 전부 들어 있다. 즉 <b>샷 사이즈 지시어가 무브 지시어보다 벤더 보증이 약하다.</b>
+    다만 이건 사실 진술까지이고, "그래서 무브가 더 잘 먹힌다"는 침묵으로부터의 추론이다 —
+    문서는 무브의 신뢰도가 높다고 어디서도 말하지 않는다. 렌즈 경고가 붙은 절에 dolly zoom이 들어 있는 것도 걸린다.
+  </p>
+
+  <h3>Seedance — 버전마다 목록이 다르다</h3>
+  <p>
+    <span class="badge blue">벤더 문서</span>
+    1.5 Pro 가이드가 인정하는 운경 어휘는 11개다 — 推·拉·摇·移·跟·升·降·甩·环绕·旋转·变焦.
+    1.0 계열 문서는 9개(推·拉·摇·移·环绕·跟随·升·降·变焦)를 들면서 "정확히 응답한다(精准响应)"고 적고 <code>等</code>으로 끝맺어 열린 목록임을 표시한다.
+  </p>
+  <p>
+    프레이밍은 景别 5단계(远景·全景·中景·近景·特写)와 관찰 각도(수중·항공·부감·앙각·마크로)까지만 보증한다.
+    <b>초점거리·렌즈 규격·카메라 바디·필름스톡 지시어는 문서 전체에 0건이다</b> —
+    焦距·焦段·mm·毫米·胶片·相机·光圈·广角·景深·ARRI·Kodak 전부 없고, 영문 미러에서도 마찬가지다.
+    "85mm 프라임"이나 "shot on ARRI"를 Seedance 프롬프트에 적을 근거가 벤더 문서에는 없다.
+  </p>
+</section>
+
+<section id="syntax">
+  <h2 class="sec"><span class="no">03</span>문장의 어디에 쓰나</h2>
+
+  <div class="callout red">
+    <b>정정 — 5부 공식은 블로그 등급이다</b>
+    <p>
+      지난 조사 문서가 "Veo는 카메라를 문장 맨 앞에 놓는 5부 공식"이라고 단정했다. 이번에 레퍼런스 문서 세 곳을 원문으로 열어 확인한 결과,
+      그 공식은 <b>구글 클라우드 블로그 한 곳에만</b> 있다. Gemini API 문서·DeepMind 프롬프트 가이드·Vertex AI 가이드 어디에도
+      <code>Cinematography</code>라는 낱말조차 없고, 어순을 규정하는 문장도 없다.
+    </p>
+  </div>
+
+  <p>
+    Gemini API 문서는 요소 7개(Subject, Action, Style, Camera positioning and motion, Composition, Focus and lens effects, Ambiance)를
+    열거하면서 뒤 네 개를 <code>[Optional]</code>로 표시하고 유일한 주석 예시에서 카메라 모션을 <b>문장 맨 끝</b>에 둔다.
+    Vertex 레퍼런스도 Subject로 시작하며 "You don't need to use all elements in every prompt"라고 적는다.
+    DeepMind 가이드는 7버킷을 "섞어 쓰라"고만 안내한다.
+  </p>
+  <p>
+    실무 결론은 폐기가 아니라 등급 강등이다. 카메라를 앞에 두는 어순은 벤더 블로그 등급의 권고이고,
+    레퍼런스 등급에서 카메라는 순서 없는 선택 요소다. 카메라를 앞에 쓰지 말라는 뜻이 아니라,
+    <b>앞에 써야만 먹힌다고 믿고 파이프라인을 설계하면 안 된다</b>는 뜻이다.
+  </p>
+
+  <h3>Seedance는 카메라 칸이 필수가 아니다</h3>
+  <p>
+    <span class="badge blue">벤더 문서</span>
+    1.5 Pro 공식은 <code>主体 + 运动 + 环境（非必须）+ 运镜/切镜（非必须）+ 美学描述（非必须）+ 声音（非必须）</code>다.
+    본문 전체에서 <code>非必须</code>가 정확히 4회이고 전부 이 한 줄 안에 있어서 필수는 주체와 운동 둘뿐이다.
+    카메라 하위 공식 <code>起幅构图 + 运镜 + 运镜幅度 + 落幅构图</code>이 따로 있긴 한데,
+    상위 공식의 카메라 칸 자체가 비필수라 <b>진폭을 반드시 채워야 하는 자리로 읽으면 안 된다</b>(1차 검증 0-3 기각).
+  </p>
+  <p>
+    2.0 계열은 심화 공식에서 카메라를 다섯 번째에 두지만 컷 단위로 내려가면 각 컷을 운경·컷 전환으로 시작하라고 권한다.
+    그런데 같은 문서의 예시가 그 순서를 지키지 않는다 — 示例1의 镜头1은 시간대와 동작이 카메라보다 먼저 온다.
+    벤더가 카메라 우선이라 적고 동작 우선으로 시연한다.
+  </p>
+
+  <h3>부정 지시를 쓰는 자리가 엔진마다 다르다</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th style="width:18%">엔진</th><th>부정 지시를 어디에</th><th>근거</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Veo</td>
+        <td>본문 밖 <code>negativePrompt</code> 파라미터에 명사구만 콤마로</td>
+        <td>Veo 공식 문서 <span class="badge blue">벤더</span></td>
+      </tr>
+      <tr>
+        <td>Seedance 2.0</td>
+        <td>별도 필드가 없다. 본문 <code>约束条件</code> 칸에 부정문을 직접 — 「保持无字幕」「不要生成Logo」</td>
+        <td>2.0 가이드 §5-3 <span class="badge blue">벤더</span></td>
+      </tr>
+      <tr>
+        <td>Runway Gen-4</td>
+        <td>부정 표현 자체를 지원하지 않는다. 긍정문으로 바꿔 쓴다 — ❌ "No camera movement" → ✅ "Locked camera. The camera remains still."</td>
+        <td>Gen-4 가이드 <span class="badge blue">벤더</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p>
+    "부정 지시는 본문에 쓰지 않는다"는 우리 파이프라인 규칙은 <b>Veo 행에만 유효하다.</b>
+    Seedance 2.0은 정반대로 본문에 넣으라고 하고, Runway는 아예 쓰지 말라고 한다.
+    Runway 쪽 경고는 특히 세다 — 부정문이 "예상 밖이거나 심지어 반대 결과"를 낼 수 있다고 적는다.
+    우리가 Z-Image에서 <code>"no maps"</code>로 지도를 얻었던 그 현상이다.
+  </p>
+</section>
+
+<section id="stack">
+  <h2 class="sec"><span class="no">04</span>한 컷에 무브를 몇 개까지</h2>
+
+  <p class="lead">
+    여기서 벤더들이 정면으로 갈라진다. 같은 회사 안에서도 버전이 다르면 반대로 말한다.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th style="width:20%">엔진</th><th>무브 겹치기</th><th>원문 강도</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Seedance 1.5 Pro<br><span class="badge green">우리 기본 모델</span></td>
+        <td><b>조합을 가르친다</b> — 히치콕 샷 = 推拉+变焦, 불릿타임 = 升格镜头+快速环绕</td>
+        <td>권장</td>
+      </tr>
+      <tr>
+        <td>Seedance 2.0</td>
+        <td><b>컷당 1종을 권한다</b> — 推拉摇移를 동시에 요구하면 화면 불안정성이 커진다</td>
+        <td><code>尽量</code>(가급적), 注意 박스 안의 권고</td>
+      </tr>
+      <tr>
+        <td>Seedance 1.0</td>
+        <td>复杂运镜을 고급 사용자용으로 허용하고 상한을 적지 않는다. 예시는 4~6개까지 연쇄한다</td>
+        <td>허용이지 권장이 아님</td>
+      </tr>
+      <tr>
+        <td>Kling 3.0</td>
+        <td>주 무브 하나를 권한다 — 여러 개면 "unstable results"</td>
+        <td>"usually better" (헤지)</td>
+      </tr>
+      <tr>
+        <td>Luma Ray2</td>
+        <td>겹치기가 공식 지원 기능이다. 데모 캡션은 전부 2개 조합</td>
+        <td>"many Concepts can be combined"</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout amber">
+    <b>모델 스코프를 섞으면 곧바로 틀린다</b>
+    <p>
+      컷당 1종 규칙은 <b>Seedance 2.0 한정</b>이다. 우리 기본 모델인 1.5 Pro 가이드는 정반대로 조합을 가르친다.
+      2.5 가이드에는 그 문장이 아예 없다. 한 벤더의 한 버전 문서에서 읽은 규칙을 형제 버전에 옮기면 벤더 문서와 정면으로 충돌한다.
+    </p>
+  </div>
+
+  <div class="callout red">
+    <b>Kling은 자기 문서 안에서 모순된다</b>
+    <p>
+      한 컷에 주 무브 하나를 권해 놓고, 같은 페이지 대표 시연 프롬프트가 5초 dolly-in에 pan right와 tilt up을 얹은 3중 무브다
+      ("the camera simultaneously performs a subtle pan right and a gentle tilt upward").
+      <b>벤더 데모를 그대로 베끼면 벤더 자신의 권고를 어긴다.</b>
+    </p>
+  </div>
+
+  <h3>Luma 데모가 전부 2개였던 것은 관찰이지 상한이 아니다</h3>
+  <p>
+    <span class="badge blue">벤더 문서</span>
+    Luma 페이지의 데모 캡션은 Pull Out + Tilt Down, Orbit Right + Hand Held, Elevator Doors + Dolly Zoom처럼 모두 두 무브 조합이다.
+    여기서 "한 컷에 최대 2개"라는 규칙을 끌어내고 싶어지는데 원문은 "many Concepts can be combined"라고만 적고 상한을 말한 적이 없다.
+    관찰된 데모가 2개였을 뿐이다. 상한이 필요하면 우리 실측으로 정해야 한다.
+  </p>
+
+  <h3>타임코드 — Veo와 Seedance가 반대다</h3>
+  <p>
+    <span class="badge blue">벤더 문서</span>
+    Veo 3.1 블로그는 8초를 <code>[00:00-00:02]</code>·<code>[00:02-00:04]</code>·<code>[00:04-00:06]</code>·<code>[00:06-00:08]</code>
+    네 구간으로 쪼개 컷별 샷 사이즈와 무브를 적는 타임스탬프 프롬프팅을 <b>정식 워크플로로 제시한다.</b>
+  </p>
+  <p>
+    Seedance 2.0은 반대다 — "模型对精确时间（如 0–3 秒）的支持不稳定"이라 경고하고 镜头1/镜头2/镜头3 라벨로 순서만 주라고 한다.
+    2.5 가이드가 이 대비를 직접 확인해 준다: "Seedance 2.0 不响应时间戳只响应镜头序号，而 Seedance 2.5 响应整数秒的时间戳".
+    <b>우리 규칙집의 타임코드 금지는 Seedance 행에만 적고 Veo에 옮기면 안 된다.</b>
+  </p>
+  <p class="note">
+    다만 Veo 쪽 근거는 API 레퍼런스가 아니라 공식 블로그이고, 확인된 범위도 "타임코드를 허용·권장한다"까지다.
+    지시한 초가 프레임 단위로 지켜지는지의 정밀도는 별개 문제이고 근거가 없다.
+  </p>
+
+  <h3>카메라를 세게 쓰면 연기가 죽는가</h3>
+  <p>
+    <span class="badge blue">벤더 문서</span>
+    Kling이 이 현상을 직접 적는다 — 푸시인 중에 피사체가 돌고 걷고 표정까지 바꾸면 "the result may become less stable"이고,
+    팬 방향과 피사체 이동 방향이 빠르게 반대면 "can create motion confusion"이다.
+    흥미로운 건 처방이다. 카메라를 약하게 쓰라는 쪽이 아니라 <b>피사체 동작을 단순하게 유지하라</b>("Keep the action simple")는 쪽이다.
+    다만 원문은 <code>may</code>·<code>can</code>으로 가능성을 말하지 단정하지 않고, 수치 검증도 없다.
+  </p>
+</section>
+
+<section id="firstframe">
+  <h2 class="sec"><span class="no">05</span>시작 프레임이 있을 때</h2>
+
+  <p class="lead">
+    첫 프레임을 넣으면 카메라 지시가 무력해지는가. 답은 아니다 — 다만 역할이 바뀐다.
+  </p>
+
+  <h3>첫·끝 프레임은 무브를 대체하지 않고 조합한다</h3>
+  <p>
+    <span class="badge blue">벤더 문서</span>
+    Veo 3.1은 이 기능을 벤더 스스로 카메라 무브 제작 기법으로 규정한다 —
+    "This technique allows you to create a <b>specific and controlled camera movement</b> or transformation between two distinct points of view."
+    예시도 정면 뷰와 인물 뒤 POV 두 프레임에 "smooth 180-degree arc shot"을 건다.
+    두 프레임이 시작·종료 구도를 못 박고 프롬프트가 그 사이 경로를 서술하는 구조다.
+  </p>
+  <p>
+    화산방주 문서는 운경을 "간단히 묘사만 해도 된다"며 <code>镜头环绕推进</code> 같은 한 구절짜리 프롬프트를 예로 든다.
+    단서 셋이 붙는다. '간단히'는 운경 슬롯에만 걸리고 피사체 동작 변화에는 <code>详细</code>(상세)를 요구한다.
+    카메라를 문장 맨 뒤에 두는 어순은 인물 동작형에 한정되고, 카메라가 그 컷의 주제일 때는 맨 앞으로 온다.
+    그리고 이 문서는 Seedance 프롬프트 가이드가 아니라 Seedream 4.0 활용 베스트 프랙티스다.
+  </p>
+
+  <h3>Runway Gen-4 — 이미지에 있는 걸 다시 쓰면 모션이 죽는다</h3>
+  <p>
+    <span class="badge blue">벤더 문서</span>
+    "Reiterating elements that exist within the image <b>in high detail</b> can lead to reduced motion or unexpected results."
+    그래서 피사체를 "the subject"나 대명사로 부르고 텍스트는 동작 서술에 쓰라고 권한다.
+    조건('in high detail')과 가능형('can lead to')이 붙어 있으니 단정으로 읽으면 안 되고,
+    금지 대상은 고유 지칭이 아니라 외형 묘사 반복이다 — 벤더 자신의 ✅ 예시도 "The woman smiles and waves"처럼 사람 명사를 쓴다.
+    Gen-4 한정이라 Veo·Seedance로 옮기려면 자체 실측이 필요하다.
+  </p>
+
+  <h3>레퍼런스를 켜면 8초로 고정된다</h3>
+  <p>
+    <span class="badge blue">벤더 문서</span>
+    Veo 3.1 파라미터 표의 <code>durationSeconds</code> 행이 직접 적는다 —
+    값은 4/6/8인데 "Must be 8 when using extension, reference images or with 1080p and 4k resolutions".
+    <code>referenceImages</code>는 Veo 3.1 및 3.1 Fast 전용이라 Lite·Veo 3·Veo 2에는 없다.
+    우리 저장소의 <code>docs/api-reference/veo-portrait.html</code>이 같은 결론을 독립으로 적어 뒀다.
+  </p>
+  <div class="callout green">
+    <b>오정보 하나를 걷어낸다</b>
+    <p>
+      일부 제3자 집계 사이트가 "Veo 레퍼런스는 16:9 한정"이라고 쓰는데 구글 1차 문서의 <code>aspectRatio</code> 행은
+      Veo 3.1·3.1 Fast·Lite·3 전부 <code>16:9</code>·<code>9:16</code>이고 레퍼런스에 비율 제한을 걸지 않는다.
+      우리 실측 메모도 세로+레퍼런스 8초 $0.80으로 적혀 있다. <b>16:9 제한설은 근거 없음이다.</b>
+    </p>
+  </div>
+
+  <h3>입력 이미지 비율을 목표 영상 비율에 맞춘다</h3>
+  <p>
+    <span class="badge blue">벤더 문서</span>
+    ByteDance 쪽이 이 규칙을 강하게 적는다 — "图生视频，选择的宽高比与您上传的图片宽高比不一致时，方舟会对您的图片进行裁剪，裁剪时会<b>居中裁剪</b>".
+    확정 중앙 크롭이다. 9:16 영상을 원하면 키프레임도 9:16으로 뽑아야 한다.
+    첫끝 프레임 비율이 서로 다르면 "以首帧图片为主，尾帧图片会自动裁剪适配"로 첫 프레임이 이긴다.
+  </p>
+  <p class="note">
+    강도를 엔진별로 갈라 적는다. 확정 중앙 크롭은 ByteDance 한정이고, Veo는
+    "Images of other aspect ratios or sizes <b>may be</b> resized or centrally cropped" 수준이다. Kling·Runway는 확인하지 않았다.
+  </p>
+</section>
+
+<section id="vertical">
+  <h2 class="sec"><span class="no">06</span>세로 9:16 — 안전 영역의 실제 수치</h2>
+
+  <p class="lead">
+    세로에서 화면 절반 가까이는 UI가 덮는다. 그런데 그 수치를 공식으로 주는 문서는 전부 광고 규격이고,
+    오가닉 게시용 수치는 어느 플랫폼도 주지 않는다.
+  </p>
+
+  <h3>Meta 릴스 — 상단 14% · 하단 35% · 좌우 각 6%</h3>
+  <p>
+    <span class="badge purple">플랫폼 공식</span>
+    Meta 광고 가이드가 9:16 자산에서 이 구역을 비우라고 권장한다. 그 자리에 텍스트·로고·주요 크리에이티브 요소를 놓으면
+    잘리거나 프로필 아이콘·행동 유도 버튼에 가려진다는 이유까지 적는다. 형제 문서인 동영상 사양 페이지도 같은 수치를 준다 —
+    안전 영역이 정지 이미지 전용이 아니라 움직이는 릴스에도 걸린다.
+  </p>
+  <p>
+    권장 해상도 1440×2560에 대입하면 상단 358px·하단 896px·좌우 각 86px가 예약 구간이고,
+    쓸 수 있는 화면은 세로 1306px로 <b>전체의 51%</b>다. 그 중심은 위에서 39.5% 지점이다(1080×1920 환산 y≈269~1248).
+  </p>
+  <div class="callout amber">
+    <b>이 수치를 그대로 믿지 않는 이유</b>
+    <p>
+      원문은 수치마다 "정도"를 붙인 근사 권장이고, 하단 35%는 <b>광고 CTA 버튼을 전제한 값</b>이다.
+      캡션·계정명·오른쪽 액션 레일이 덮는 오가닉 릴스에는 근사 프록시로만 쓴다.
+      그리고 Meta가 비우라고 한 대상은 텍스트·로고·주요 크리에이티브 요소이지 <b>얼굴이나 피사체가 아니다</b> —
+      "피사체를 위쪽 39~40%에 앉힌다"는 우리 해석이지 Meta가 명시한 규칙이 아니다.
+    </p>
+  </div>
+
+  <h3>YouTube 세로 — 좌 48 / 우 192 / 상 288 / 하 672 px</h3>
+  <p>
+    <span class="badge purple">플랫폼 공식</span>
+    Google은 1080×1920 세로 광고 프레임에 Safe Zone을 정의한다. 오른쪽 여백이 왼쪽의 <b>4배</b>인 건 액션 버튼 열 때문이고,
+    하단 672px는 제목·설명 영역 때문이다. 안쪽에 840×960 영역이 나온다.
+  </p>
+  <p>
+    같은 문서에 크롭 장치가 하나 더 있다. 워치 페이지에서 세로 영상을 보다가 아래 관련 콘텐츠를 스크롤하면
+    플레이어가 최대 1:1까지 압축될 수 있고 그때 영상의 위·아래가 잘린다.
+    다만 원문이 위아래를 각각 얼마씩 자르는지 밝히지 않으므로 "중앙 정사각 밴드는 안전하다"로 읽으면 안 된다.
+  </p>
+
+  <div class="callout">
+    <b>두 플랫폼 규격이 모양부터 다르다</b>
+    <p>
+      Meta는 좌우 대칭 6%인데 YouTube는 좌 48 / 우 192로 비대칭이다. 상단은 Meta 14% 대 YouTube 15%(288/1920)로 비슷하고
+      하단은 둘 다 35%로 겹친다. 같은 소재를 두 플랫폼에 쓰려면 <b>두 규격을 겹쳐 더 좁은 쪽</b>으로 잡아야 한다 —
+      상단 15% · 하단 35% · 좌 6% · 우 18%.
+    </p>
+  </div>
+
+  <h3>세로에서 팬은 왜 위험한가</h3>
+  <p>
+    <span class="badge amber">촬영 교본</span>
+    세로 9:16은 화각이 좁아 좌우 움직임을 과장한다. 과한 핸드헬드 흔들림이나 중간-빠른 팬(medium-fast pans)은
+    관객을 멀미 나게 할 수 있다는 것이 Vertical Film Festival 가이드의 진술이다.
+    대책은 팬 금지가 아니라 속도를 낮추고 무거운 삼각대·플루이드 헤드로 부드럽게 치는 쪽이다.
+  </p>
+  <p class="note">
+    측정치·표본·유의값이 문서 전체에 하나도 없는 축제 공동감독의 교본 산문이라 <b>팬 속도의 임계값을 숫자로 뽑지 못한다.</b>
+    대형 세로 스크린 상영이 전제인 문장이지만 같은 문서의 구도 절이 상영 조건 없이 화각만으로 같은 경고를 반복하므로 폰 화면에도 논리는 걸린다.
+  </p>
+
+  <h3>가로로 만들어 크롭하는 우회법의 대가</h3>
+  <p>
+    Seedance 2.0의 자막 환각 회피책이 "가로로 생성하고 나중에 세로로 크롭"이다.
+    그런데 세로 촬영 교본과 제작사 블로그는 둘 다 크롭을 강하게 말린다. 겉으로는 충돌인데, 근거가 겹치지 않는다.
+  </p>
+  <p>
+    두 교본이 든 이유는 촬영 현장의 구도 설계·후처리 단계·광학 왜곡·심사위원 눈이다.
+    <b>렌즈도 현장도 없는 생성 영상에는 그 이유가 걸리지 않고, 두 문서 모두 생성 영상을 한 글자도 다루지 않는다.</b>
+    다만 크롭 손실 자체는 기하로 성립한다 — 높이를 유지한 채 16:9를 9:16으로 자르면 폭이 원폭의 31.6%로 줄어 <b>68.4%가 잘린다.</b>
+    자막 환각을 피하는 대가로 이 손실을 계산에 넣는다.
+  </p>
+
+  <h3>세로가 맞는 피사체가 따로 있다</h3>
+  <p>
+    <span class="badge amber">촬영 교본</span>
+    서 있거나 앉은 사람·건물·나무·산처럼 수직으로 선 것들이 세로와 맞고,
+    빠른 액션은 중력 탓에 대체로 수평으로 벌어져 세로와 어긋난다.
+    무브를 고르기 전에 피사체가 세로 프레임을 정당화하는지부터 본다. 로우앵글·하이앵글은 세로에서 오히려 힘을 얻는다고 같은 절이 적는다.
+  </p>
+  <p>
+    <span class="badge gray">제작사 블로그</span>
+    Axis AI Studios는 9:16에 유용한 무브로 셋을 든다 — 감정이 고조되는 순간의 느린 푸시 인,
+    폭로·충격 순간의 풀 백, 얼굴에서 손·편지·폰 화면으로 내리는 버티컬 틸트.
+    반대로 넓은 횡이동 트래킹은 빼라고 하고, 와이드스크린에서 다큐멘터리 활력으로 읽히는 핸드헬드가
+    세로에서는 제작 불안정으로 읽힌다고 한다.
+    측정도 표본도 없는 권고이고 얼굴이 프레임을 채우는 세로 대사극이 전제라, 무브 지속시간을 8초 컷에 그대로 옮기지 못한다.
+  </p>
+</section>
+
+<section id="move-psych">
+  <h2 class="sec"><span class="no">07</span>무브의 심리 효과는 실증되지 않았다</h2>
+
+  <p class="lead">
+    "푸시 인은 긴장을 만들고 핸드헬드는 현장감을 준다." 촬영 교본이 반복하는 이 말을 실험으로 재 본 연구가 있다.
+    결과는 통념과 어긋난다.
+  </p>
+
+  <div class="study">
+    <h4>카메라 무브는 정서를 바꾸지 못했고 몰입만 바꿨다</h4>
+    <p class="cite">Frontiers in Neuroscience (2023) — Steadicam·달리·핸드헬드·정지 4조건 비교 <span class="badge green">실증 연구</span></p>
+    <p>
+      카메라가 전방으로 이동하는 무브는 정지 조건과 비교해 쾌·불쾌(valence)와 각성(arousal)에서 유의한 차이를 만들지 못했다.
+      차이가 난 쪽은 몰입 문항이었다. <b>"푸시 인을 넣으면 긴장이 오른다"를 전제로 무브를 배치할 근거가 이 실험에는 없다.</b>
+    </p>
+    <p>
+      게다가 무브의 몰입 이득은 <b>무엇을 보는 컷인지 아직 모호한 중립 장면에서만</b> 일관되게 나왔다.
+      이미 성격이 뚜렷한 컷에 무브를 더하는 건 이 데이터로 정당화되지 않는다.
+      저자들은 관객이 장면을 쾌·불쾌로 느끼게 만든 주된 요인을 카메라가 아니라 <b>세트 드레싱이 만든 전체 분위기</b>로 본다.
+    </p>
+    <p class="nums">
+      valence χ²(3)=0.84, p=.84 · arousal χ²(3)=4.56, p=.21<br>
+      몰입 Q1 χ²(3)=12.41, p=.006 · Q2("카메라가 내 눈 같았다") χ²(3)=27.18, p&lt;.001<br>
+      중립 장면에서 모든 무브가 정지보다 몰입 상승 all p ≤ .01, 다른 장면은 차이 없음<br>
+      예외: 에로틱 장면을 달리로 찍은 조건의 평균 valence 2.82, 달리 기준 handheld β=0.82, p=.03
+    </p>
+    <p class="limit">
+      <b>사정거리</b> — 저자 표현은 "정서 반응을 반드시 바꾸지는 않는다(not necessarily)"다. 무효 증명이 아니라
+      44명·조건당 촬영 1회·45초 가로 무성 클립·배우 없음·컷 없음에서 못 잡았다는 뜻이다.
+      정지 조건에도 틸트업·팬이 들어 있어 대비는 "무브 대 무동작"이 아니라 "물리적 이동 있음/없음"이다.
+      45초 클립 결과라 8초 컷에는 방향성만 옮긴다.
+    </p>
+  </div>
+
+  <div class="callout green">
+    <b>줌과 달리를 가르는 관행에는 이론 쪽 근거가 있다</b>
+    <p>
+      같은 연구진(현업 촬영감독 포함)이 줌 조건을 실험에서 뺐는데 그 이유가
+      "줌은 공간적으로 가까워지는 체화된 착각을 만들지 못하고 이미지를 기계적으로 확대할 뿐"이라는 것이다.
+      Veo 문서가 dolly in과 zoom in을 갈라 놓는 구분과 같은 이야기다.
+      다만 이건 실험 결과가 아니라 <b>설계 근거</b>다 — 줌 조건은 아예 촬영되지 않았으므로
+      이 논문은 줌 대 달리의 관객 반응 차이를 재 본 적이 없다.
+    </p>
+  </div>
+
+  <h3>그래서 무브를 쓰지 말라는 뜻인가</h3>
+  <p>
+    아니다. 이 실험이 말하는 것은 <b>무브를 정서 연출의 수단으로 믿고 배치할 근거가 약하다</b>는 것까지다.
+    몰입 쪽 효과는 유의했고(p=.006, p&lt;.001), 특히 도입·전환처럼 아직 성격이 안 잡힌 자리에서 일관됐다.
+    실무로 옮기면 이렇다 — 컷의 정서 톤은 배경·미술·소품으로 잡고, 무브는 아직 모호한 자리에서 몰입을 끌어올리는 데 쓴다.
+  </p>
+  <p class="note">
+    제작사 블로그는 "느린 푸시 인이 클로즈업 친밀감을 증폭한다"고 단언한다. 등급 차이가 크므로
+    결론은 실증 쪽으로 쓰고 제작사 권고는 연출 후보로만 둔다.
+  </p>
+</section>
+
+<section id="angle-psych">
+  <h2 class="sec"><span class="no">08</span>앵글과 클로즈업은 실증됐다</h2>
+
+  <p class="lead">
+    무브와 달리 앵글은 실험 근거가 두텁다. 다만 방향이 우리가 아는 것과 조금 다르고, 측정된 축이 무엇인지가 중요하다.
+  </p>
+
+  <div class="study">
+    <h4>앵글 높이는 인물 인상을 바꾼다 — 다만 호감도는 아니다</h4>
+    <p class="cite">Kraft, Memory &amp; Cognition 15 (1987) 291–307 <span class="badge green">실증 연구</span></p>
+    <p>
+      하이에서 아이레벨, 로우로 갈수록 인물이 더 커·강해·덜 두려워·대담해·공격적으로 평가됐다.
+      다섯 척도 전부 p&lt;.001이다. 그런데 <b>호감도(good/bad)는 앵글로 움직이지 않았다.</b>
+      로우앵글이 인물을 세워 보이게 하는 건 맞지만 좋아 보이게 하지는 않는다.
+    </p>
+    <p>
+      효과는 인상 평가에서 그치지 않는다. 극단 앵글 조건의 자유회상문이 아이레벨보다 인물 묘사 형용사를 더 많이 담았고,
+      판정자들이 회상문을 세 줄거리로 분류한 결과가 예측 방향으로 유의했다. 같은 대사라도 앵글로 인물 관계 해석이 달라진다.
+    </p>
+    <p class="nums">
+      short/tall F(2,82)=29.32 · weak/strong 24.46 · afraid/unafraid 18.15 · timid/bold 17.58 · passive/aggressive 21.80 — 전부 p&lt;.001<br>
+      good/bad F(2,82)=3.08, p&gt;.05 (유의하지 않음)<br>
+      형용사 수 극단 M=4.53(SD 1.97) 대 중립 M=3.85(SD 2.03), t(41)=3.30, p&lt;.01<br>
+      표본 Exp1 N=42 · Exp2 N=36 · Exp3 N=24, 전원 Grinnell College 심리학 개론 수강생
+    </p>
+    <p class="limit">
+      <b>사정거리</b> — 자극이 5초씩 제시된 정지 슬라이드 4장짜리 이야기다.
+      <b>카메라 무브의 근거가 아니라 고정 앵글 높이 선택의 근거다.</b>
+      "권위(authority)"는 측정된 척도가 아니라 저자가 기제를 설명하며 쓴 이론 용어이고,
+      실제로 잰 것은 키·힘·두려움·대담함·공격성이다. 여섯 편 중 세 편만 줄거리 범주에서 유의했다.
+    </p>
+  </div>
+
+  <div class="study">
+    <h4>토킹헤드에서는 눈높이가 가장 신뢰받는다</h4>
+    <p class="cite">Baranowski &amp; Hecht, Empirical Studies of the Arts (2018) <span class="badge green">실증 연구</span></p>
+    <p>
+      카메라를 정면으로 보고 말하는 15초 클로즈업에서 눈높이 카메라가 가장 신뢰받았다.
+      촬영 조건이 쇼트폼 토킹헤드 훅과 거의 같아서 이 조사에서 가장 직접 쓸 수 있는 연구다.
+    </p>
+    <p>
+      <b>다만 대비는 비대칭이다.</b> 눈높이 대 로우앵글은 유의하고(p=.007), 눈높이 대 하이앵글은 유의수준을 못 넘긴 경향값이다(p=.082).
+      확실한 건 "올려찍기보다 눈높이가 낫다"까지이고 "하이앵글 금지"는 이 논문으로 못 받친다.
+      원문 초록이 이 비대칭을 덮고 "눈높이일 때 가장 신뢰받고 올리거나 내리면 덜하다"로만 적어서
+      <b>초록만 읽고 인용하면 바로 과장이 된다.</b>
+    </p>
+    <p>
+      같은 실험에서 앙각은 신뢰도를 움직였지만 매력도와 Big Five 평정에는 영향이 없었다.
+      카메라 높이를 조정하는 목적은 신뢰 인상이지 인물을 예뻐 보이게 하는 것이 아니다.
+    </p>
+    <p class="nums">
+      눈높이 M=5.03(SD 1.45) / 로우 M=4.27(SD 0.81) F(1,20)=8.89, p=.007, ηp²=.31<br>
+      눈높이 / 하이 M=4.57(SD 1.19) F(1,20)=3.36, p=.082, ηp²=.14 — 로우와 하이 사이에는 차이 없음<br>
+      신뢰 주효과 F(1.76, 27.14)=5.80, p=.015 · 매력 F(1.96, 39.19)=1.39, p=.261<br>
+      피험자 34명, 배우 12명, 배우당 15초 1080p 클립, 앙각 ±30°, 검출 하한 ηp²=.14
+    </p>
+    <p class="limit">
+      <b>사정거리</b> — 매력도는 무효과가 아니라 <b>미검출</b>이다(효과크기 .07이 검출 하한 .14보다 작다).
+      시청 조건도 다르다 — 피험자는 72×42cm 가로 화면을 30cm 앞에서, 자기 눈높이를 화면 중앙에 맞춘 암실에서 봤다.
+      폰은 보통 눈높이 아래로 들고 보므로 이 통제가 그대로 성립하지 않는다.
+      잰 값도 시청 유지가 아니라 죄수의 딜레마 게임쇼 상황의 신뢰 평정이다.
+    </p>
+  </div>
+
+  <div class="callout purple">
+    <b>두 연구는 서로 반박하지 않는다 — 측정한 축이 다르다</b>
+    <p>
+      Kraft(1987)는 로우앵글을 힘·크기·대담함과 잇고, Baranowski &amp; Hecht(2018)는 눈높이가 가장 신뢰받는다고 보고한다.
+      앞은 크기·힘을 쟀고 뒤는 신뢰를 쟀다. <b>로우앵글이 호감이나 신뢰를 올린다는 근거는 어느 쪽에도 없다.</b>
+      저자들의 결론은 앵글 효과가 맥락에 달렸다는 것이다 — 서사 단서가 있으면 힘 인상이 살고,
+      서사가 걷힌 단발 직접 화법 클립에서는 신뢰 축이 눈높이로 간다.
+      서사가 아직 안 붙은 훅 컷에서는 앵글을 주는 대신 눈높이를 지키는 편이 맞다.
+    </p>
+  </div>
+
+  <div class="study">
+    <h4>클로즈업은 많이 박을수록 좋지 않다 — 뒤집힌 U자</h4>
+    <p class="cite">Poetics 83 (2020) 101480 — 클로즈업 빈도 실험, N=495 <span class="badge green">실증 연구</span></p>
+    <p>
+      클로즈업 1~10개 범위에서 <b>3개 조건</b>이 시청 뒤 자유서술 속 자발적 심리 언급 비율이 가장 높았고,
+      1·4·5·10개 조건보다 유의하게 높았다. "샷이 가까울수록 좋다"가 아니라 뒤집힌 U자다.
+    </p>
+    <p>
+      그리고 효과가 좁다. 클로즈업 빈도는 "캐릭터의 속마음을 언급하는가"에만 작동했고
+      감정 처리·인지 처리에는 효과가 없었다(인지 p=.99, 정서 p=.071).
+      <b>이 논문을 "클로즈업이 감정 몰입을 키운다"는 근거로 인용하면 오인용이다.</b>
+    </p>
+    <p class="nums">
+      전체 효과 Wald χ²(5)=14.092, p=.015 · 3 CU 편차대비 χ²(1)=7.31, p=.007<br>
+      3 CU 대 1 CU p=.012 · 4 CU p=.005 · 5 CU p=.017 · 10 CU p=.009<br>
+      추정주변평균 3 CU 17.49 / 0 CU 13.3 / 1 CU 12.90 / 2 CU 15.27 / 4 CU 11.46 / 10 CU 11.24<br>
+      인지 처리 Wald χ²(5)=0.34, p=.99 · 정서 처리 10.168, p=.071<br>
+      표본 495명(검정 투입 469명), 삽입 시선샷 각 2초, 성별 조절효과 p=.035
+    </p>
+    <p class="limit">
+      <b>사정거리</b> — "많을수록 좋다"를 기각하는 근거이지 "없는 것보다 낫다"의 근거는 아니다.
+      무클로즈업 통제군(n=26)이 검정 모형 밖이고 3 대 0 유의차가 논문에 없다.
+      <b>저자들이 "최적 클로즈업 개수"를 일반 규칙으로 주장하기를 명시적으로 거부한다</b> —
+      "3"은 7분 20초짜리 애니메이션에서 나온 값이라 35~75초 컷에 개수 기준으로 옮기지 못한다.
+      자극도 대사·가사 없는 2D 손그림 애니메이션 한 편이고, 효과는 주로 남성 참가자에서 나왔다.
+    </p>
+  </div>
+
+  <h3>훅 구간은 2초인가 3초인가</h3>
+  <p>
+    <span class="badge purple">플랫폼 공식</span>
+    Meta는 릴스에서 "강렬한 시각 요소나 예상치 못한 순간으로 <b>첫 2초</b> 안에 관심을 잡으라"고 적는다.
+    TikTok은 "클릭률 상위 영상의 <b>63% 넘게가 핵심 메시지나 제품을 첫 3초 안에</b> 드러냈다"고 적는다.
+    두 플랫폼이 다른 숫자를 쓴다.
+  </p>
+  <p class="note">
+    둘 다 카메라의 근거는 아니다. Meta 문서에는 camera·zoom·pan·handheld 어휘 자체가 0건이고,
+    수단을 "시각적 충격"이라는 상위 개념으로만 적는다. TikTok 쪽은 지표가 시청 유지가 아니라 CTR이고
+    기저율 없는 상위군 서술이라 인과로 못 읽는다. 같은 문서에 카메라 무브 어휘가 한 줄도 없다.
+    <b>특정 무브(크래시 줌·푸시 인)를 첫 3초에 쓰라는 플랫폼 근거는 존재하지 않는다.</b>
+  </p>
+  <p>
+    참고로 TikTok에는 카메라 축으로 옮길 수 있는 수치가 하나 더 있다 —
+    VTR 상위 광고의 33%가 화자가 렌즈를 보고 말하는 "제4의 벽 깨기"를 썼다.
+    다만 원문은 "눈을 마주 본다"까지만 말하고 카메라 높이를 한 마디도 하지 않으므로,
+    여기에 "아이레벨"을 얹으면 원문에 없는 촬영 규격을 만드는 것이다(하이앵글 셀피에서도 렌즈 직시는 성립한다).
+  </p>
+</section>
+
+<section id="apply">
+  <h2 class="sec"><span class="no">09</span>우리 파이프라인에 옮기면</h2>
+
+  <p class="lead">
+    확인된 것만으로 지금 바꿀 수 있는 것 여섯 가지다.
+  </p>
+
+  <h3>1. 프롬프트 어휘를 엔진별 사전에 맞춘다</h3>
+  <p>
+    Veo 행에서 <code>orbit</code>은 <code>arc shot</code>으로, <code>push in</code>/<code>pull out</code>은
+    <code>dolly in</code>/<code>dolly out</code>으로 적는다. 다가가는 컷에 <code>zoom in</code>을 쓰지 않는다.
+    Seedance 행에서는 11개 운경 어휘 안에서 고르고, 렌즈 규격(<code>85mm</code>·<code>f/2.8</code>)이나
+    카메라 바디(<code>shot on ARRI</code>)를 적지 않는다 — 벤더 문서에 그 어휘가 0건이라 근거가 없다.
+  </p>
+
+  <h3>2. 컷당 무브 개수를 모델별로 다르게 잡는다</h3>
+  <p>
+    기본 모델 Seedance 1.5 Pro는 벤더가 조합을 가르치므로 2개까지 시도할 수 있다.
+    참조 모델 2.0으로 갈 때만 컷당 1종으로 좁힌다. 이 규칙을 두 모델에 뭉뚱그려 적용하면 한쪽은 벤더 문서와 어긋난다.
+  </p>
+
+  <h3>3. 타임코드 규칙을 엔진별로 갈라 적는다</h3>
+  <p>
+    규칙집의 "타임코드 금지"는 Seedance 행으로 좁힌다. Veo 3.1에서는 오히려
+    <code>[00:00-00:02]</code> 형식이 벤더가 제시한 워크플로다. 8초 컷 안에서 컷 분할을 지시할 때 쓸 수 있다.
+  </p>
+
+  <h3>4. 세로 안전 영역을 두 플랫폼 교집합으로 잡는다</h3>
+  <p>
+    상단 15% · 하단 35% · 좌 6% · 우 18%를 비운다(1080×1920 기준 상 288 / 하 672 / 좌 65 / 우 192px).
+    화면 텍스트와 로고를 그 안에 넣고, 프레임 맨 위·맨 아래에는 핵심 정보를 붙이지 않는다.
+    다만 이건 광고 규격에서 끌어온 보수적 상한이라, 실제 오버레이를 재보고 보정하는 편이 낫다.
+  </p>
+
+  <h3>5. 훅 컷의 카메라 높이를 눈높이로 둔다</h3>
+  <p>
+    서사가 아직 안 붙은 첫 컷에서 앵글을 주면 신뢰 인상이 깎인다는 실증 근거가 있다(p=.007).
+    인물을 세워 보여야 하는 컷에서만 로우앵글을 쓰고, 그때도 호감도가 오르리라 기대하지 않는다 — 그 효과는 측정되지 않았다.
+  </p>
+
+  <h3>6. 무브를 정서 연출로 쓰지 않는다</h3>
+  <p>
+    컷의 정서 톤은 배경·미술·소품으로 잡는다. 무브는 아직 성격이 모호한 도입·전환 자리에서 몰입을 끌어올리는 데 쓴다.
+    모든 컷에 무브를 넣지 않는다 — 앵글 쪽 선행 연구도 눈높이 아닌 샷을 적게 섞을수록 발화자 신뢰도가 높았다고 보고한다.
+  </p>
+
+  <div class="callout purple">
+    <b>다음에 우리가 직접 재야 할 것</b>
+    <p>
+      같은 컷을 <code>orbit</code>과 <code>arc shot</code>, <code>push in</code>과 <code>dolly in</code>으로 각각 찍어
+      프레임 궤적을 비교하는 A/B가 이 조사에서 답을 못 낸 첫 번째 항목이다.
+      벤더가 이름 붙인 말이 실제로 다른 결과를 내는지는 문서로 알 수 없다.
+      세로 8초 컷 몇 번이면 판정할 수 있다.
+    </p>
+  </div>
+</section>
+
+<section id="nogo">
+  <h2 class="sec"><span class="no">10</span>유령 인용 · 기각 · 근거 없음</h2>
+
+  <p class="lead">
+    이 절이 이 문서에서 가장 중요할 수 있다. 확인하지 못한 것을 확인한 것처럼 쓰지 않으려고 따로 적어 둔다.
+  </p>
+
+  <h3>2차 검증이 잡아낸 유령 인용 5건</h3>
+  <p>
+    1차 조사가 원문에서 뽑았다고 주장한 인용문 중 실제로는 원문에 없거나 뜻이 반대인 것들이다.
+    <b>이 문서 본문에는 전부 실리지 않았다.</b>
+  </p>
+  <ul class="plain">
+    <li>
+      <b>Kraft(1987)를 페이월로 오인</b> — "방향은 유료 전문에만 있으므로 로우앵글=권위를 인용하면 과대 인용"이라고 적었는데
+      실제로는 bronze open access라 17쪽 전문을 무료로 받을 수 있다. 방향도 원문에 F값까지 붙어 명시돼 있다.
+      Springer 303 리다이렉트와 PDF 봇 차단 페이지를 페이월로 읽은 것이다. 인용문 자리에 들어 있던
+      "Full Text Access: Paywalled"는 논문 문장이 아니라 페이지 상태 라벨이었다.
+    </li>
+    <li>
+      <b>Meta 문서에 안전 영역 규정이 없다는 주장</b> — 원문이 정면으로 뒤집는다.
+      인용을 하필 safe zone 어구가 시작되는 자리에서 끊어서 뜻이 바뀌었다.
+      원문은 "Use the creative essentials: vertical 9:16 video, <b>in the safe zone</b>, with audio."로 준수를 지시한다.
+    </li>
+    <li>
+      <b>Runway 문서 번호 43176400374419</b> — "Camera Terms, Prompts, &amp; Examples"라고 지목했으나
+      그 번호는 "Creating with Aleph"로 걸린 링크이고 지금 열면 404다. 카메라 용어표는 47313504791059 하나뿐이다.
+      같은 주장의 <code>rack focus</code>도 본문 0건으로, 원문 표현은 <code>shifts in focus</code>다.
+    </li>
+    <li>
+      <b>Runway Gen-3 은퇴 날짜와 대체품명</b> — "2026년 7월 8일·30일 은퇴, 대체품 Edit Studio Aleph 2.0"을
+      검증하지 못했다. 라이브 URL이 막혀 도달 가능한 최신 스냅샷(2026-04-02)에는 은퇴 문구도 <code>retire</code>라는 낱말도 없고,
+      배너가 가리키는 대체품 이름은 "Gen-4 Aleph"다.
+    </li>
+    <li>
+      <b>Kling 카메라 어휘 "9개뿐"</b> — 원문이 "Useful camera words include:"로 연 열린 목록이라 폐쇄 목록이 아니다.
+      <code>dolly</code>(2회)·<code>zoom</code>(1회)도 본문 예시 프롬프트에 나온다.
+      정말 0회인 낱말은 dutch angle·crane·rack focus·whip pan이다.
+    </li>
+  </ul>
+
+  <h3>1차 적대 검증에서 기각된 것 2건</h3>
+  <ul class="plain">
+    <li>
+      <b>"Seedance 카메라 하위 공식의 진폭은 반드시 채워야 하는 슬롯"</b>(0-3 기각) —
+      하위 공식 자체는 실재하지만 상위 공식에서 카메라 칸이 <code>非必须</code>라 필수성 해석이 무너진다.
+    </li>
+    <li>
+      <b>"Veo가 명시한 무브 예는 aerial view·eye-level·top-down·dolly shot"</b>(1-2 기각) —
+      문서마다 분류가 달라 이 넷으로 정리되지 않는다.
+    </li>
+  </ul>
+
+  <h3>이번에도 근거를 못 세운 것</h3>
+  <p>
+    아래 항목은 어느 벤더 문서·실증 연구·플랫폼 가이드에서도 확인되지 않았다.
+    <b>지어내지 않고 비워 둔다.</b>
+  </p>
+  <ul class="plain">
+    <li><b>세로 9:16에서 카메라 무브가 시청 유지·스킵률을 어떻게 바꾸는가</b> — 실증 연구 4편이 전부 가로 화면이고 종속변수도 평정·회상·자유서술이지 시청 유지가 아니다.</li>
+    <li><b>세로에서 무브가 어떻게 동작하는지 보여주는 벤더 데모</b> — Luma 데모 9편 중 8편이 1920×1080이고, Kling 문서는 9:16·vertical·portrait를 한 번도 쓰지 않으며 Runway Gen-4 가이드에도 관련 어휘가 0건이다.</li>
+    <li><b>무브별 1회 성공률과 필요 재생성 회차</b> — Kling이 카메라 제어가 확률적이라 자인하면서도 회차를 적지 않는다. 어느 문서에도 수치가 없다.</li>
+    <li><b>컷당 무브 개수 상한의 실측</b> — 벤더 권고는 전부 헤지돼 있고 개수별 실패율 수치는 없다.</li>
+    <li><b>오가닉 쇼츠·릴스의 안전 영역 공식 수치</b> — Meta·YouTube 둘 다 광고 규격이다. Meta 릴스 가이드는 준수를 지시하면서 픽셀을 주지 않는다.</li>
+    <li><b>얼굴·피사체를 세로 프레임 어느 높이에 앉힐지</b> — 플랫폼이 규정한 대상은 텍스트·로고이지 피사체가 아니다. "눈은 상단 1/3"은 제작사 블로그 권고 한 건뿐이다.</li>
+    <li><b>8초 컷에 맞는 무브 지속시간과 클로즈업 개수</b> — Poetics의 "3개"는 7분 20초 애니메이션 값이고 저자들이 일반화를 거부했다.</li>
+    <li><b>세로에서 팬 속도의 임계값</b> — 축제 교본이 "medium-fast pans"라고만 쓰고 측정치가 없다.</li>
+    <li><b>렌즈·조리개 지시가 생성 결과를 바꾸는가</b> — 실사 촬영 파라미터를 프롬프트에 적었을 때의 효과를 잰 자료가 없다. Seedance 문서에는 그 어휘가 아예 0건이다.</li>
+    <li><b>180도 법칙·30도 법칙이 AI 생성 컷 이어붙이기에서 지켜지는가</b> — 어느 소스도 다루지 않았다.</li>
+    <li><b>한국 시장·한국어 쇼트폼 수치</b> — 1차·2차 소스 38건에 전무하다.</li>
+  </ul>
+</section>
+
+<section id="sources">
+  <h2 class="sec"><span class="no">11</span>출처</h2>
+
+  <div class="src-group">
+    <h3>Google Veo <span class="badge blue">벤더 문서</span></h3>
+    <ul>
+      <li><a href="https://docs.cloud.google.com/vertex-ai/generative-ai/docs/video/video-gen-prompt-guide">Vertex AI 영상 생성 프롬프트 가이드</a> — 무브 12개·앵글 13개 정의, 2026-08-13 갱신</li>
+      <li><a href="https://ai.google.dev/gemini-api/docs/veo">Gemini API — Veo 문서</a> — 요소 7개와 <code>[Optional]</code> 표시, <code>durationSeconds</code> 파라미터 표</li>
+      <li><a href="https://deepmind.google/models/veo/prompt-guide/">DeepMind Veo 프롬프트 가이드</a> — 7버킷, 어순 규정 없음</li>
+      <li><a href="https://cloud.google.com/blog/products/ai-machine-learning/ultimate-prompting-guide-for-veo-3-1">Veo 3.1 프롬프팅 가이드 (블로그)</a> — 5부 공식·타임스탬프 프롬프팅의 유일한 출처</li>
+      <li><a href="https://docs.cloud.google.com/vertex-ai/generative-ai/docs/video/generate-videos-from-an-image">이미지에서 영상 생성</a> — 종횡비 처리</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>ByteDance Seedance / 화산방주 <span class="badge blue">벤더 문서</span></h3>
+    <ul>
+      <li><a href="https://docs.volcengine.com/docs/82379/2168087?lang=zh">Seedance 1.5 pro 提示词指南</a> — 공식·운경 11개·무브 조합, 2026-08-13 갱신</li>
+      <li><a href="https://docs.volcengine.com/docs/82379/2222480?lang=zh">Doubao Seedance 2.0 系列提示词指南</a> — 컷당 1종·타임코드 경고·约束词·자막 환각</li>
+      <li><a href="https://docs.volcengine.com/docs/82379/1631633?lang=zh">Seedance 1.0 pro 문서</a> — 운경 9개·景别 5단계</li>
+      <li><a href="https://docs.volcengine.com/docs/82379/1951250?lang=zh">Seedream 4.0 助力 Seedance 생성 베스트 프랙티스</a> — 첫끝 프레임·종횡비 정합</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>비교 엔진 <span class="badge blue">벤더 문서</span></h3>
+    <ul>
+      <li><a href="https://lumalabs.ai/news/camera-motion-concepts">Luma — Camera Motion Concepts</a> (2025-03-31)</li>
+      <li><a href="https://kling.ai/blog/kling-ai-camera-control-video-guide">Kling — 카메라 컨트롤 가이드</a> (2026-08-13) <span class="badge gray">벤더 블로그</span></li>
+      <li><a href="https://help.runwayml.com/hc/en-us/articles/39789879462419-Gen-4-Video-Prompting-Guide">Runway Gen-4 프롬프팅 가이드</a></li>
+      <li>Runway Gen-3 Camera Control — 제품 은퇴로 Wayback 스냅샷(2025-04-25 · 2026-04-02)으로만 확인</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>플랫폼 <span class="badge purple">플랫폼 공식</span></h3>
+    <ul>
+      <li><a href="https://www.facebook.com/business/ads-guide/update/image/instagram-reels">Meta 광고 가이드 — 릴스 사양</a> — 안전 영역 14/35/6%</li>
+      <li><a href="https://www.facebook.com/business/learn/lessons/create-fb-ig-reels">Meta — 릴스 만들기</a> — 첫 2초 훅</li>
+      <li><a href="https://support.google.com/google-ads/answer/9128498?hl=en">Google Ads — 세로 영상 사양</a> — Safe Zone 픽셀·1:1 압축</li>
+      <li><a href="https://ads.tiktok.com/business/library/Auction_Ads_Creative_Tips.pdf">TikTok — Auction Ads Creative Tips (PDF)</a> — 첫 3초 63%·세로 25%·제4의 벽 33%</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>실증 연구 <span class="badge green">동료 심사</span></h3>
+    <ul>
+      <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10352452/">카메라 무브와 정서·몰입</a> — Frontiers in Neuroscience (2023-07-03)</li>
+      <li><a href="https://link.springer.com/article/10.3758/BF03197032">Kraft, 카메라 앵글과 인물 판단·회상</a> — Memory &amp; Cognition 15 (1987) 291–307</li>
+      <li><a href="https://experimental.psychologie.uni-mainz.de/files/2024/06/2018BaranowskiHecht_Camera_Angle.pdf">Baranowski &amp; Hecht, 카메라 앙각과 신뢰</a> — Empirical Studies of the Arts (2018), DOI 10.1177/0276237417710762</li>
+      <li><a href="https://www.sciencedirect.com/science/article/pii/S0304422X20302175">클로즈업 빈도와 사회인지</a> — Poetics 83 (2020) 101480</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>촬영 교본·제작사 <span class="badge amber">교본</span> <span class="badge gray">블로그</span></h3>
+    <ul>
+      <li><a href="https://verticalfilmfestival.org/9-16-tips-and-tricks">Vertical Film Festival — 9:16 Tips and Tricks</a> (2018-12-08, 2020-05 갱신)</li>
+      <li><a href="https://www.axisaistudios.com/blog/how-to-shoot-for-the-vertical-frame-a-cinematography-guide">Axis AI Studios — 세로 프레임 촬영 가이드</a> (2026-08-13)</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>이 저장소 안의 관련 문서</h3>
+    <ul>
+      <li><a href="../2026-08-15-veo-seedance-prompting/index.html">Veo·Seedance 프롬프트·일관성 조사</a> — 이 문서가 §03에서 정정하는 5부 공식의 출처</li>
+      <li><a href="../2026-08-15-first-scene-live-action-vs-animation/index.html">첫 장면 실사 대 애니메이션</a> — 오프닝 연출의 매체 선택</li>
+      <li><a href="../../api-reference/veo-portrait.html">Veo 세로 API 레퍼런스</a> — 8초 고정 실측</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p><b>조사 방법</b> — 1차는 검색 각도 5개로 소스 24건을 받아 주장 108건을 뽑고, 그중 25건을 3표 적대 검증해 23건을 확인했다(에이전트 106개). 예산 소진으로 검증되지 못한 축 C·D·B의 주장 68건을 2차 라운드에서 소스별 원문 인용 대조로 다시 검증해 35건 확인·31건 축소·2건 반박했다(에이전트 15개).</p>
+  <p><b>한계</b> — 엔진 관련 항목은 전부 문서 대조이고 생성 실측이 아니다. 실증 연구는 전부 가로 화면·비쇼트폼이다. 한국 시장 수치는 없다.</p>
+  <p>social-flow · <a href="../../index.html">문서 홈</a> · <a href="../../../README.md">README</a></p>
+</footer>
+
+</div>
+</body>
+</html>

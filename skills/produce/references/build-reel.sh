@@ -123,36 +123,55 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
   [ "$M" -ge 1 ] || { say "✗ card $IDX: segs.tsv 에 세그먼트 없음"; exit 1; }
   TEXT=""; for t in "${TARR[@]}"; do TEXT="$TEXT$t"; done
 
-  # ── 1) 오디오: 포맷 판별 → 트림 → loudnorm  (v2 동일)
+  # ── 무발화 카드 (MUTE) ──────────────────────────────────────────────
+  # 자수가 0인 카드가 있다. 영상 커버가 그 자리다 — 나레이션 없이 클립이 가진 소리로
+  # 가고(produce 절대 규칙 9 와 같은 동작), cards.tsv 에는 그 길이만큼의 무음 wav 가
+  # 오디오로 들어온다. 발화가 없으니 **발화속도라는 값 자체가 정의되지 않는다.**
+  # 이 카드는 오디오 머신을 통째로 비켜 간다. 세 군데가 무발화에서 깨지기 때문이다(실측):
+  #   ① silenceremove 가 무음을 전부 지워 길이가 N/A 가 되고 뒤의 ffmpeg 가 abort 한다
+  #   ② loudnorm 이 무음을 증폭해 없던 잡음을 만든다
+  #   ③ 발화속도 t/r 이 0 나눗셈으로 죽는다(awk 런타임 오류 + set -e)
+  # 그래서 트림·정규화·속도 보정을 다 건너뛰고 준 오디오를 48k 로만 맞춰 그대로 쓴다.
+  # 이 카드의 길이는 발화가 아니라 **오디오 길이 그대로**이고, 그 길이는 cards.tsv 를
+  # 쓰는 쪽(§6)이 클립 길이에 맞춰 만든 무음 wav 가 정한다.
+  C=$(printf '%s' "$TEXT" | sed -E 's/[[:space:][:punct:]]//g' | wc -m | tr -d ' ')
+  MUTE=0; [ "$C" -eq 0 ] && MUTE=1
+
+  # ── 1) 오디오: 포맷 판별 → 트림 → loudnorm  (v2 동일 · 무발화는 리샘플만)
   if head -c 4 "$SRC" | LC_ALL=C grep -q RIFF; then INARGS=(-i "$SRC")
   else INARGS=(-f s16le -ar 24000 -ac 1 -i "$SRC"); fi
-  ffmpeg -y -v error "${INARGS[@]}" -af "
-    silenceremove=start_periods=1:start_silence=0.10:start_threshold=-50dB:detection=peak,
-    areverse,silenceremove=start_periods=1:start_silence=0.20:start_threshold=-55dB:detection=peak,areverse,
-    loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000" -ac 1 -ar 48000 "work/t$IDX.wav"
+  if [ "$MUTE" -eq 1 ]; then
+    ffmpeg -y -v error "${INARGS[@]}" -af "aresample=48000" -ac 1 -ar 48000 "work/t$IDX.wav"
+  else
+    ffmpeg -y -v error "${INARGS[@]}" -af "
+      silenceremove=start_periods=1:start_silence=0.10:start_threshold=-50dB:detection=peak,
+      areverse,silenceremove=start_periods=1:start_silence=0.20:start_threshold=-55dB:detection=peak,areverse,
+      loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000" -ac 1 -ar 48000 "work/t$IDX.wav"
+  fi
 
   L0=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "work/t$IDX.wav")
-  C=$(printf '%s' "$TEXT" | sed -E 's/[[:space:][:punct:]]//g' | wc -m | tr -d ' ')
-  R0=$(awk -v c="$C" -v l="$L0" 'BEGIN{printf "%.2f", c/l}')
+  R0=$(awk -v c="$C" -v l="$L0" 'BEGIN{printf "%.2f", (c>0 && l>0)? c/l : 0}')
+  [ "$MUTE" -eq 1 ] && say "· card $IDX 무발화 — 트림·정규화·속도 보정 건너뜀(오디오 원본 그대로 ${L0}s)"
 
   # ── 2) TTS 재생성 권고 게이트 (v2 동일)
-  if awk -v r="$R0" -v lo="$RATE_LO" -v hi="$RATE_HI" 'BEGIN{exit !(r<lo || r>hi)}'; then
+  if [ "$MUTE" -eq 0 ] && awk -v r="$R0" -v lo="$RATE_LO" -v hi="$RATE_HI" 'BEGIN{exit !(r<lo || r>hi)}'; then
     say "⚠ REGEN 권고: card $IDX 발화속도 ${R0}자/초 — 허용 [${RATE_LO},${RATE_HI}] 밖. 같은 레지스트리로 1회 재생성 후 재빌드하세요."
     WARN=1
   fi
   TAILV=$(ffmpeg -hide_banner -i "work/t$IDX.wav" -af "atrim=start=$(awk -v l="$L0" 'BEGIN{printf "%.3f",(l>0.2)?l-0.12:0}'),volumedetect" -f null - 2>&1 | sed -n 's/.*mean_volume: \([-0-9.]*\) dB/\1/p')
-  if [ -n "$TAILV" ] && awk -v v="$TAILV" 'BEGIN{exit !(v > -20)}'; then
+  if [ "$MUTE" -eq 0 ] && [ -n "$TAILV" ] && awk -v v="$TAILV" 'BEGIN{exit !(v > -20)}'; then
     say "⚠ REGEN 권고: card $IDX 끝 0.12s 음량 ${TAILV}dB — 문장이 잘린 채 생성됐을 수 있음. 청취 확인 필요."
     WARN=1
   fi
 
   # ── 3) 발화속도 정규화 atempo (v2 동일)
-  F=$(awk -v t="$TARGET" -v r="$R0" -v tol="$RATE_TOL" -v mn="$ATEMPO_MIN" -v mx="$ATEMPO_MAX" \
-      'BEGIN{f=t/r; if (f>1-tol && f<1+tol) f=1; if (f<mn) f=mn; if (f>mx) f=mx; printf "%.4f", f}')
+  if [ "$MUTE" -eq 1 ]; then F=1.0000
+  else F=$(awk -v t="$TARGET" -v r="$R0" -v tol="$RATE_TOL" -v mn="$ATEMPO_MIN" -v mx="$ATEMPO_MAX" \
+      'BEGIN{f=t/r; if (f>1-tol && f<1+tol) f=1; if (f<mn) f=mn; if (f>mx) f=mx; printf "%.4f", f}'); fi
   if [ "$F" = "1.0000" ]; then cp "work/t$IDX.wav" "work/s$IDX.wav"
   else ffmpeg -y -v error -i "work/t$IDX.wav" -af "atempo=$F" "work/s$IDX.wav"; fi
   L=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "work/s$IDX.wav")
-  R=$(awk -v c="$C" -v l="$L" 'BEGIN{printf "%.2f", c/l}')
+  R=$(awk -v c="$C" -v l="$L" 'BEGIN{printf "%.2f", (c>0)? c/l : 0}')
 
   # ── 4) 문장 경계 검출 (세그 2개 이상일 때) — 무음 M-1개(긴 것 우선), 부족하면 자수 비례 폴백
   BLIST=""; BMETHOD="단일"

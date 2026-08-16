@@ -29,7 +29,7 @@
 topic: <주제 slug>
 mode: screencast
 scenes: <씬 수>
-target: 60~75s
+target: 35~75s
 generated: <YYYY-MM-DD>
 ---
 

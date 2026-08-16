@@ -67,10 +67,17 @@ veo 호출 전에 **서로 다른 컨셉 4종을 보기로 제시**하고 사용
 | **라이트 스윕** | 광선이 쓸고 지나가며 심볼 드러남 | 전 유형 (가장 안전) |
 | **잉크/빛 번짐** | accent 빛이 번지며 실루엣 형성 | 일러스트 로고 |
 
-공통: 카메라는 "slow push-in" 또는 "static" — 흔들림·빠른 컷은 소형 화면에서
-멀미를 만든다. 모션은 **감속 이징**으로 서술하고, 마지막 1초는 거의 정지시킨다.
+공통: 카메라는 `slow dolly in` 또는 `static` — 흔들림·빠른 컷은 소형 화면에서
+멀미를 만든다. **veo 는 `push in` 을 모른다** — Vertex 프롬프트 가이드 전문에 `push`
+라는 낱말이 0건이고, 다가가는 무브의 벤더 이름이 `dolly in` 이다(카메라 조사 §02).
+모션은 **감속 이징**으로 서술하고, 마지막 1초는 거의 정지시킨다.
 이펙트 스택(입자+글리치+연기 동시)은 저가형으로 보이는 첫째 원인 — **모션
 아이디어는 하나만**.
+
+**카메라 높이는 눈높이다.** 캐릭터를 올려다보거나 내려다보면 크기·힘 인상은 바뀌어도
+호감도는 안 움직이고(p>.05), 짧은 정면 클로즈업에서는 눈높이가 가장 신뢰받는다
+(p=.007). 인트로는 채널의 첫인사라 신뢰 쪽이 남는 축이다 — 로우앵글은 캐릭터를
+일부러 크게 세울 때만 쓴다.
 
 ## 5. L.O.G.O. 프롬프트 공식 (veo 골격)
 
@@ -87,10 +94,18 @@ veo 호출 전에 **서로 다른 컨셉 4종을 보기로 제시**하고 사용
 - **O — Output (스펙)**: "Slow confident easing, ends settled in the exact pose
   and framing of the final frame, last second nearly static."
 
-부정 지시 상비: **"no text, no letters, no captions"** (채널명은 결정적
-플레이트가 담당 — §6) + "no watermark, no lens flare spam, no particle storm,
-no glitch effects" + profile §3 금지 소재. 오디오는 모션 SFX 만 서술하고
-**"no music"** 을 명시한다 — 음악 성분은 로고음(§7)과 충돌한다.
+**부정 지시는 프롬프트 본문이 아니라 `negativePrompt` 인자로 보낸다.** 문법은
+명사·형용사구를 콤마로 나열하는 것이고, "no ~" 같은 지시문을 쓰지 않는다 —
+Veo 프롬프트 가이드가 그 형태를 not recommended 로 적고, 본문에 배제할 명사를
+적으면 그 명사가 오히려 그려진다(로컬 이미지 실측 4장 전패).
+
+상비 값: **`text, letters, captions, subtitles, watermark, lens flare, particle
+effects, glitch effects`** (채널명은 결정적 플레이트가 담당 — §6) + profile §3
+금지 소재를 명사구로 옮겨 붙인다. 음악도 여기다 — `music, background score` 를
+넣는다. 음악 성분은 로고음(§7)과 충돌한다. 오디오는 프롬프트 본문에 모션 SFX
+만 서술한다.
+
+근거: `docs/research/2026-08-15-veo-seedance-prompting/` §03.
 
 ## 6. 채널명 리빌 — 텍스트는 결정적 렌더만
 
@@ -99,7 +114,7 @@ no glitch effects" + profile §3 금지 소재. 오디오는 모션 SFX 만 서�
 맡기면 오탈자·유사문자(P0)가 나온다. 계약:
 
 1. 텍스트는 `lockup-template.html` → 헤드리스 캡처로 렌더한다 (풀 락업 +
-   투명 텍스트 플레이트). veo 프롬프트에는 항상 "no text" 를 넣는다.
+   투명 텍스트 플레이트). veo 호출에는 항상 `negativePrompt` 에 `text` 를 넣는다.
 2. build-intro.sh 가 텍스트 플레이트를 착지 직전(`TEXT_AT`)에 슬라이드 인 —
    캐릭터 연기를 가리지 않으면서 이름이 먼저 읽히고, 락업으로 이어진다.
 3. 세 캡처 모드(full/text/char)의 좌표는 동일 — 플레이트와 락업이 픽셀 일치해
@@ -164,8 +179,8 @@ no glitch effects" + profile §3 금지 소재. 오디오는 모션 SFX 만 서�
 | 증상 | 교정 |
 |---|---|
 | 캐릭터 오프모델 (형태·색 변형) | L 규칙 강화, veo_reference 로 전환해 참조 1~3장 제공 |
-| 글자·유사문자 출현 | "no text, no letters, no captions" 재강조 후 재생성 |
-| 이펙트 범벅 | 제스처 1개만 남기고 삭제 — "remove particles, smoke, sparks" |
+| 글자·유사문자 출현 | `negativePrompt` 에 `text, letters, captions, subtitles` 를 넣고 재생성 (본문에 "no text" 를 적으면 역효과) |
+| 이펙트 범벅 | 제스처 1개만 남기고 삭제 + `negativePrompt` 에 `particles, smoke, sparks` |
 | 모션이 끝까지 부산함 | "last second nearly static, settles into the final frame pose" |
 | 도입 1~2초 정체 | 재생성 대신 `TRIM_START` 로 컷 (후처리가 더 싸다) |
 | 로고음-착지 어긋남 | 재생성 대신 `SONIC_AT` 조정 (후처리가 더 싸다) |

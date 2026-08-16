@@ -3,6 +3,7 @@ import * as datago from './datago-client.js';
 import * as image from './image-client.js';
 import * as music from './music-client.js';
 import * as naver from './naver-client.js';
+import * as seedance from './seedance-client.js';
 import * as serp from './serp-client.js';
 import * as sns from './sns-client.js';
 import * as supertonic from './supertonic-client.js';
@@ -21,6 +22,18 @@ function imageResult(message, base64Data, mimeType) {
             { type: 'text', text: message },
         ],
     };
+}
+/**
+ * Seedance 결과의 공통 메타 줄 — 세 툴이 같은 형식으로 보고한다.
+ *
+ * 토큰 수를 싣는 이유는 이 값이 곧 청구서이기 때문이다. 단가표로 환산한 추정치는
+ * 벤더가 요금을 바꾸면 조용히 틀리지만, completion_tokens 는 호출마다 실측이다.
+ */
+function seedanceMeta(result) {
+    const tokens = result.completionTokens === undefined
+        ? ''
+        : `\nBilled tokens: ${result.completionTokens.toLocaleString('en-US')} (completion_tokens — 과금 근거)`;
+    return `Model: ${result.model}\nRatio: ${result.ratio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds${tokens}\nTask ID: ${result.taskId}`;
 }
 /**
  * 플랫폼 API 결과 → MCP 툴 결과.
@@ -512,6 +525,30 @@ export const ROUTES = {
             return text(`Video generation with references failed: ${result.error}`, true);
         const refImagesInfo = result.referenceImages?.join('\n  - ') || '';
         return text(`Video generated with reference images successfully!\n\nOutput: ${result.videoPath}\nReference Images (${result.referenceImages?.length || 0}):\n  - ${refImagesInfo}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}`);
+    },
+    // ── 영상 생성 (Seedance) — mp4 로컬 저장 후 경로·메타 텍스트 반환 ──
+    // 과금 토큰(completionTokens)을 함께 돌려준다 — 예상 단가 환산이 아니라 이
+    // 값이 벤더 청구 기준이라, 회차 비용 집계는 이쪽을 적어야 맞는다.
+    seedance_text2video: async (args) => {
+        const result = await seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, args));
+        if (!result.success)
+            return text(`Seedance video generation failed: ${result.error}`, true);
+        return text(`Video generated successfully!\n\nFile: ${result.videoPath}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
+    },
+    seedance_img2video: async (args) => {
+        const result = await seedance.generateFromImage(parseArgs(seedance.seedanceImg2VideoSchema, args));
+        if (!result.success)
+            return text(`Seedance video generation from image failed: ${result.error}`, true);
+        const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
+        const modeInfo = result.lastImage ? ' (frame interpolation mode)' : '';
+        return text(`Video generated from image${modeInfo} successfully!\n\nOutput: ${result.videoPath}\nFirst Frame Image: ${result.sourceImage}${lastImageInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
+    },
+    seedance_reference: async (args) => {
+        const result = await seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, args));
+        if (!result.success)
+            return text(`Seedance video generation with references failed: ${result.error}`, true);
+        const refImagesInfo = result.referenceImages?.join('\n  - ') || '';
+        return text(`Video generated with reference images successfully!\n\nOutput: ${result.videoPath}\nReference Images (${result.referenceImages?.length || 0}):\n  - ${refImagesInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
     },
     // ── 음성 합성 (Gemini TTS) — wav 로컬 저장 후 경로·메타 텍스트 반환 ──
     // 대본 전문이 아니라 길이만 돌려준다 — 16k 자 대본을 그대로 반향하면

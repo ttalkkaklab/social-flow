@@ -24,7 +24,17 @@ export const VALID_VIDEO_MODELS = [
     'veo-3.1-fast-generate-preview', // 저지연·저가 — 720p $0.10/초 (기본 대비 4배 절감)
     'veo-3.1-lite-generate-preview', // 최저가 — 720p $0.05/초 (8배 절감). 4K/Extension/Reference 미지원
 ];
-export const DEFAULT_VIDEO_MODEL = 'veo-3.1-generate-preview';
+/**
+ * 기본 모델 — fast.
+ *
+ * 표준 티어를 기본값으로 두지 않는 근거는 값이 아니라 **품질 측정**이다. Artificial
+ * Analysis 블라인드 아레나에서 세 티어의 Elo 격차가 세 보드 모두 20 이내이고
+ * 신뢰구간이 겹친다(이미지→영상 1,086 / 1,076 / 1,066 · 텍스트→영상 음성 포함
+ * 1,091 / 1,090 / 1,088 · 무음 1,200 / 1,199 / 1,207 — 무음에서는 순서가 뒤집혀
+ * lite 가 표준보다 위다, 2026-08-15 확인). 사람이 더 좋아하지 않는데 4배를 내는
+ * 기본값은 기본값이 아니다. 표준 티어는 계속 고를 수 있게 열어 둔다.
+ */
+export const DEFAULT_VIDEO_MODEL = 'veo-3.1-fast-generate-preview';
 export const VALID_VIDEO_ASPECT_RATIOS = ['16:9', '9:16'];
 export const VALID_VIDEO_RESOLUTIONS = ['720p', '1080p', '4k'];
 const DEFAULT_DURATION_SECONDS = 8;
@@ -64,10 +74,25 @@ function rejectLiteModel(feature, model, ctx) {
         });
     }
 }
+/**
+ * 배제 지시 전용 필드.
+ *
+ * 공식 문서가 문법을 못 박는다 — 지시문("no walls" · "don't show walls")이 아니라
+ * 명사·형용사구를 콤마로 나열한다("wall, frame"). 프롬프트 본문에 "no ~" 를 적으면
+ * 그 명사가 오히려 그려지므로(로컬 이미지 실측 4장 전패) 배제는 전부 이 필드로 보낸다.
+ * 근거: Vertex AI video-gen-prompt-guide · docs/research/2026-08-15-veo-seedance-prompting/
+ */
+const negativePromptSchema = z
+    .string()
+    .max(500)
+    .optional()
+    .describe('Comma-separated noun or adjective phrases to exclude (e.g. "wall, frame, text overlay"). ' +
+    'Never use instructive language such as "no" or "don\'t" — the API docs reject that form.');
 // Text-to-Video 요청 스키마
 export const text2VideoSchema = z
     .object({
     prompt: z.string().min(1, 'Prompt is required'),
+    negativePrompt: negativePromptSchema,
     model: z.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
     aspectRatio: z.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default('16:9'),
     resolution: z.enum(VALID_VIDEO_RESOLUTIONS).optional().default('720p'),
@@ -82,6 +107,7 @@ export const text2VideoSchema = z
 export const img2VideoSchema = z
     .object({
     prompt: z.string().min(1, 'Prompt is required'),
+    negativePrompt: negativePromptSchema,
     sourceImagePath: z.string().min(1, 'Source image path is required'),
     lastImagePath: z.string().optional(),
     model: z.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
@@ -100,6 +126,7 @@ export const img2VideoSchema = z
 export const videoExtensionSchema = z
     .object({
     prompt: z.string().min(1, 'Prompt is required'),
+    negativePrompt: negativePromptSchema,
     sourceVideoPath: z.string().min(1, 'Source video path is required'),
     model: z.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
     outputPath: z.string().optional(),
@@ -111,6 +138,7 @@ export const videoExtensionSchema = z
 export const referenceVideoSchema = z
     .object({
     prompt: z.string().min(1, 'Prompt is required'),
+    negativePrompt: negativePromptSchema,
     referenceImagePaths: z
         .array(z.string())
         .min(1, 'At least one reference image is required')
@@ -221,6 +249,8 @@ export async function generateFromText(request) {
             resolution,
             durationSeconds,
         };
+        if (request.negativePrompt)
+            config.negativePrompt = request.negativePrompt;
         const operation = await genai.models.generateVideos({ model, prompt: request.prompt, config });
         if (!operation.name)
             return { success: false, error: 'No operation name returned from API' };
@@ -276,6 +306,8 @@ export async function generateFromImage(request) {
             resolution,
             durationSeconds,
         };
+        if (request.negativePrompt)
+            config.negativePrompt = request.negativePrompt;
         // 종료 이미지가 제공된 경우 lastFrame 추가
         if (request.lastImagePath) {
             config.lastFrame = readInlineImage(request.lastImagePath);
@@ -335,6 +367,8 @@ export async function extendVideo(request) {
             numberOfVideos: 1,
             resolution: '720p',
         };
+        if (request.negativePrompt)
+            config.negativePrompt = request.negativePrompt;
         const operation = await genai.models.generateVideos({
             model,
             prompt: request.prompt,
@@ -395,6 +429,8 @@ export async function generateWithReferences(request) {
             durationSeconds: DEFAULT_DURATION_SECONDS,
             referenceImages,
         };
+        if (request.negativePrompt)
+            config.negativePrompt = request.negativePrompt;
         const operation = await genai.models.generateVideos({ model, prompt: request.prompt, config });
         if (!operation.name)
             return { success: false, error: 'No operation name returned from API' };

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ByteDance Seedance — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+</head>
+<body>
+<div class="wrap">
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Seedance</div>
+
+<header class="hero">
+  <div class="kicker">BYTEPLUS MODELARK</div>
+  <h1>Seedance — 영상 생성</h1>
+  <p class="sub">이 서버의 두 번째 영상 엔진. 태스크를 만들고 폴링하는 비동기 REST API 로, Veo 와 달리 <strong>2~30초를 1초 단위</strong>로 받고 요청한 길이만큼만 과금한다. 대신 실사 얼굴 입력 제약과 모델별 능력 차이가 크다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://docs.byteplus.com/en/docs/ModelArk/1520757">ModelArk 영상 API</a></span>
+    <span>인증 <code>ARK_API_KEY</code></span>
+    <span>리전 <code>ap-southeast-1</code></span>
+    <span>구현 <code>server/src/seedance-client.ts</code></span>
+    <span>확인일 <strong>2026-08-15</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#models">모델 7종과 능력표</a></li>
+    <li><a href="#api">REST 계약 — 만들고 폴링한다</a></li>
+    <li><a href="#params">요청 파라미터</a></li>
+    <li><a href="#price">과금 — 토큰 산식과 실비</a></li>
+    <li><a href="#traps">함정</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="models">
+  <h2>1. 모델 7종과 능력표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>모델 ID</th><th>해상도</th><th>길이</th><th>참조 이미지</th><th>음성</th><th>seed</th><th>실사 얼굴 입력</th><th>활성화 관문</th></tr></thead>
+    <tbody>
+      <tr><td><code>dreamina-seedance-2-5-260628</code></td><td>480p · 720p</td><td>4–30초</td><td>1–30장</td><td>지원</td><td><strong>미지원</strong></td><td><strong>거부</strong></td><td>잔액 $30</td></tr>
+      <tr><td><code>dreamina-seedance-2-0-260128</code></td><td>480p · 720p · 1080p · 4K</td><td>4–15초</td><td>1–9장</td><td>지원</td><td><strong>미지원</strong></td><td><strong>거부</strong></td><td>잔액 $30</td></tr>
+      <tr><td><code>dreamina-seedance-2-0-fast-260128</code></td><td>480p · 720p</td><td>4–15초</td><td>1–9장</td><td>지원</td><td><strong>미지원</strong></td><td><strong>거부</strong></td><td>잔액 $30</td></tr>
+      <tr><td><code>dreamina-seedance-2-0-mini-260615</code></td><td>480p · 720p</td><td>4–15초</td><td>1–9장</td><td>지원</td><td><strong>미지원</strong></td><td><strong>거부</strong></td><td>잔액 $30</td></tr>
+      <tr><td><code>seedance-1-5-pro-251215</code><br><span class="badge free">기본값</span></td><td>480p · 720p · 1080p</td><td>4–12초</td><td><strong>미지원</strong></td><td>지원</td><td>지원</td><td>허용</td><td>없음</td></tr>
+      <tr><td><code>seedance-1-0-pro-250528</code></td><td>480p · 720p · 1080p</td><td>2–12초</td><td><strong>미지원</strong></td><td><strong>무음 전용</strong></td><td>지원</td><td>허용</td><td>없음</td></tr>
+      <tr><td><code>seedance-1-0-pro-fast-251015</code></td><td>480p · 720p · 1080p</td><td>2–12초</td><td><strong>미지원</strong></td><td><strong>무음 전용</strong></td><td>지원</td><td>허용</td><td>없음</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>전 모델 <strong>24fps 고정</strong>이고 비율은 <code>16:9</code> · <code>9:16</code> · <code>4:3</code> · <code>3:4</code> · <code>1:1</code> · <code>21:9</code> · <code>adaptive</code> 를 모두 받는다. <code>seedance-1-0-pro-fast</code> 만 첫 프레임 전용이라 첫+끝 프레임 보간을 못 한다.</p>
+  <div class="note">
+    기본값이 <code>seedance-1-5-pro-251215</code> 인 이유는 셋이다 — 오늘 1080p 를 낼 수 있고, <strong>실사 인물 입력을 받으며</strong>, 잔액 관문이 없다. 이 파이프라인의 커버 배경이 실사 인물 PNG 라 2.x 로 보내면 회차가 통째로 막힌다.
+  </div>
+  <div class="warn">
+    <strong>2.5 의 1080p 는 2026-08-17(UTC+8)부터 열린다.</strong> 그날 이후 <code>seedance-client.ts</code> 능력표의 <code>dreamina-seedance-2-5-260628.resolutions</code> 에 <code>'1080p'</code> 를 더한다. 그전까지는 호출 전에 거부된다.
+  </div>
+</section>
+
+<section id="api">
+  <h2>2. REST 계약 — 만들고 폴링한다</h2>
+  <p>생성은 비동기다. POST 가 태스크 ID 만 돌려주고, GET 으로 <code>succeeded</code> 가 될 때까지 폴링한 뒤 결과 URL 에서 mp4 를 내려받는다.</p>
+  <pre><code>POST https://ark.ap-southeast.bytepluses.com/api/v3/contents/generations/tasks
+Authorization: Bearer $ARK_API_KEY
+
+{ "model": "seedance-1-5-pro-251215",
+  "content": [ { "type": "text", "text": "..." },
+               { "type": "image_url", "image_url": { "url": "data:image/png;base64,..." },
+                 "role": "first_frame" } ],
+  "ratio": "adaptive", "resolution": "1080p", "duration": 5,
+  "generate_audio": false, "watermark": false }
+→ { "id": "cgt-2026..." }
+
+GET .../contents/generations/tasks/cgt-2026...
+→ { "status": "succeeded",
+    "content": { "video_url": "https://...tos-ap-southeast-1.volces.com/..." },
+    "usage": { "completion_tokens": 244800 },
+    "duration": 5, "ratio": "9:16", "resolution": "1080p", "framespersecond": 24 }</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>상태</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td><code>queued</code> / <code>running</code></td><td>계속 폴링한다</td></tr>
+      <tr><td><code>succeeded</code></td><td><code>content.video_url</code> 에서 즉시 내려받는다</td></tr>
+      <tr><td><code>failed</code></td><td><code>error.code</code> · <code>error.message</code> 에 사유. 실패 건은 과금되지 않는다</td></tr>
+      <tr><td><code>expired</code></td><td><code>execution_expires_after</code>(기본 48시간)를 넘겨 종료</td></tr>
+      <tr><td><code>cancelled</code></td><td>큐 상태에서 취소됨 — 24시간 뒤 자동 삭제</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>결과 URL 은 24시간짜리다</strong>(2.5 는 다운로드 100회 제한도 걸린다). 작업 조회도 최근 7일치만 된다. 이 서버는 폴링이 끝나는 즉시 로컬 mp4 로 저장하고 경로만 반환한다 — URL 을 호출자에게 돌려주면 하루 뒤 죽은 링크가 된다.
+  </div>
+</section>
+
+<section id="params">
+  <h2>3. 요청 파라미터</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>필드</th><th>값</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td><code>content[]</code></td><td><code>text</code> · <code>image_url</code> · <code>video_url</code> · <code>audio_url</code></td><td>이미지는 공개 URL 또는 base64 data URI. <strong>영상·오디오 참조는 공개 URL 만</strong> 받는다(base64 불가)</td></tr>
+      <tr><td><code>content[].role</code></td><td><code>first_frame</code> · <code>last_frame</code> · <code>reference_image</code></td><td>세 시나리오는 <strong>배타적</strong>이라 섞을 수 없다</td></tr>
+      <tr><td><code>ratio</code></td><td>7종 + <code>adaptive</code></td><td>이미지 입력에서 비율이 다르면 서버가 <strong>중앙 기준으로 잘라낸다</strong></td></tr>
+      <tr><td><code>resolution</code></td><td><code>480p</code> ~ <code>4k</code></td><td>모델별로 다름(§1). 4K 는 10bit H.265 라 재생 호환성 주의</td></tr>
+      <tr><td><code>duration</code></td><td>정수 초, 또는 <code>-1</code>(자동)</td><td>모델별 범위가 다름. 과금이 이 값에 정비례한다</td></tr>
+      <tr><td><code>generate_audio</code></td><td>기본 <strong><code>true</code></strong></td><td>1.0 계열은 무음 전용이라 <code>true</code> 를 거절한다. 1.5 pro 는 켜면 단가가 정확히 2배</td></tr>
+      <tr><td><code>seed</code> · <code>camera_fixed</code></td><td>1.5 pro · 1.0 계열 전용</td><td>2.x 는 둘 다 없다 — 카메라 고정은 프롬프트로 지시한다</td></tr>
+      <tr><td><code>watermark</code></td><td>기본 <code>false</code></td><td><code>true</code> 면 우하단에 "AI Generated" 가 박힌다</td></tr>
+      <tr><td><code>frames</code></td><td><code>25 + 4n</code></td><td>소수점 초 길이용. 1.0 pro·fast 전용이며 <code>duration</code> 보다 우선한다</td></tr>
+      <tr><td><code>callback_url</code></td><td>웹훅 주소</td><td>폴링 대신 상태 변화를 받는다. 이 서버는 폴링을 쓴다(로컬 프로세스라 수신할 주소가 없다)</td></tr>
+      <tr><td><code>service_tier</code></td><td><code>default</code> · <code>flex</code></td><td><code>flex</code> 는 값이 절반인 오프라인 추론 — <strong>1.x 만</strong> 지원한다</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>입력 이미지 제약</h3>
+  <p>포맷 jpeg·png·webp·bmp·tiff·gif, 비율 0.4~2.5, 변 300~6000px, 장당 30MB 이하, 요청 본문 합계 64MB 이하. 프롬프트는 500자(한글)·1,000단어(영어) 이하를 권한다. <strong>한국어 프롬프트를 공식 지원하는 모델은 2.5 뿐</strong>이고, 2.0 계열은 영어·스페인어·인도네시아어·포르투갈어·일본어, 1.x 는 영어다.</p>
+</section>
+
+<section id="price">
+  <h2>4. 과금 — 토큰 산식과 실비</h2>
+  <pre><code>토큰 = (입력 영상 길이 + 출력 영상 길이) × 출력 가로 × 출력 세로 × fps / 1024
+요금 = 모델·해상도별 토큰 단가 × 토큰</code></pre>
+  <p>가로·세로의 <strong>곱</strong>만 쓰므로 9:16 은 16:9 와 값이 같다(720p 5초 = 102,960 토큰). 실제 청구는 응답의 <code>usage.completion_tokens</code> 가 정본이고, 생성 실패·검열 차단 건은 청구되지 않는다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>모델</th><th>480p</th><th>720p</th><th>1080p</th><th>4K</th></tr></thead>
+    <tbody>
+      <tr><td>Seedance 2.5</td><td>$0.514</td><td>$1.156</td><td>$2.843 <span class="badge">8/17~</span></td><td>—</td></tr>
+      <tr><td>Seedance 2.0</td><td>$0.35</td><td>$0.76</td><td>$1.87</td><td>$3.89</td></tr>
+      <tr><td>2.0 fast</td><td>$0.28</td><td>$0.60</td><td>—</td><td>—</td></tr>
+      <tr><td>2.0 mini</td><td>$0.18</td><td>$0.38</td><td>—</td><td>—</td></tr>
+      <tr><td>1.5 pro (무음)</td><td>$0.06</td><td>$0.13</td><td>$0.29</td><td>—</td></tr>
+      <tr><td>1.5 pro (음성)</td><td>$0.12</td><td>$0.26</td><td>$0.58</td><td>—</td></tr>
+      <tr><td>1.0 pro</td><td>$0.12</td><td>$0.26</td><td>$0.61</td><td>—</td></tr>
+      <tr><td>1.0 pro fast</td><td>$0.05</td><td>$0.10</td><td>$0.24</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">공식 문서의 5초·16:9 예시가(정가). 9:16 도 같은 값이다. 초당 단가로 환산한 표는 <code>skills/autoproduce/references/prices.tsv</code> 의 <code>seedance.*</code> 행이 정본이다.</p>
+  <div class="note">
+    <strong>한시 할인 세 건</strong>(정가에 반영하지 않았다 — 끝나면 조용히 틀린 값이 된다): 2.5 의 1080p 는 정가의 72%(~2026-09-17), 2.0 mini 는 40%(~2026-09-07), 2.0 fast 는 75%(~2026-09-07).
+  </div>
+  <div class="warn">
+    <strong>영상 모델에는 무료 쿼터가 없다.</strong> ModelArk 무료 체험분은 LLM·비전 모델용이고, 모델 목록의 무료 쿼터 칸은 3D·임베딩 모델에만 붙어 있다. 검색에 나오는 "Seedance 200만 토큰 무료"는 1.0 시절 블로그 문구다.
+  </div>
+</section>
+
+<section id="traps">
+  <h2>5. 함정</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>함정</th><th>증상</th><th>대처</th></tr></thead>
+    <tbody>
+      <tr><td><strong>2.x 의 실사 얼굴 거부</strong></td><td>얼굴이 든 이미지를 넣으면 <code>InputImageSensitiveContentDetected.PrivacyInformation</code> 으로 거절된다. AI 가 만든 얼굴도 걸린다</td><td>1.5 pro · 1.0 pro 계열로 보낸다. 서버 기본값이 이미 그쪽이다. 2.x 를 꼭 써야 하면 <a href="seedance-portrait.html">인물·자산 정책</a> 의 우회로 셋을 본다</td></tr>
+      <tr><td><strong>비율 불일치 크롭</strong></td><td>1088×1920 커버에 <code>16:9</code> 를 주면 화면 가운데 띠만 살아서 나온다</td><td>이미지 입력 툴의 기본값 <code>adaptive</code> 를 그대로 둔다</td></tr>
+      <tr><td><strong><code>generate_audio</code> 기본 true</strong></td><td>TTS 나레이션과 모델 음성이 두 겹으로 겹치고, 1.5 pro 는 값이 2배</td><td>서버가 기본값을 <code>false</code> 로 뒤집어 둔다</td></tr>
+      <tr><td><strong>2.x 활성화 관문</strong></td><td>키가 맞는데도 모델이 안 열린다</td><td>권한 문제가 아니라 잔액 문제 — 잔액 $30 초과 또는 리소스팩</td></tr>
+      <tr><td><strong>영상 입력은 URL 만</strong></td><td>로컬 mp4 를 base64 로 못 넣는다</td><td>연장·영상 편집은 <code>veo_extension</code> 이 전담한다(§6)</td></tr>
+      <tr><td><strong>결과 URL 24시간</strong></td><td>하루 지난 링크가 죽는다</td><td>폴링 직후 로컬 저장. 타임아웃 건은 ModelArk 콘솔에서 그날 안에 회수</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="impl">
+  <h2>6. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th></tr></thead>
+    <tbody>
+      <tr><td>툴 표면</td><td>엔드포인트 1개가 모든 시나리오를 겸한다</td><td>시나리오별 3종 — <code>seedance_text2video</code> · <code>seedance_img2video</code> · <code>seedance_reference</code></td></tr>
+      <tr><td>모델 목록</td><td>7종</td><td>7종 전부 노출. 참조 툴만 2.x 로 좁히고(1.x 는 참조 이미지를 못 받는다) 기본값은 공개 아레나 이미지→영상 1위인 <code>dreamina-seedance-2-0-260128</code> — 기능이 더 넓은 2.5 는 평가가 없어 명시 선택으로만 쓴다</td></tr>
+      <tr><td>교차 제약</td><td>모델별로 산문에 흩어져 있다</td><td>능력표 하나로 모으고 <code>superRefine</code> 이 호출 전에 거부 — 해상도·길이·음성·seed·첫끝프레임·참조 장수</td></tr>
+      <tr><td><code>generate_audio</code></td><td>기본 <code>true</code></td><td>기본 <strong><code>false</code></strong> — 나레이션은 <code>tts_*</code> 가 따로 붙인다. 무음 전용 모델에는 필드 자체를 싣지 않는다</td></tr>
+      <tr><td>이미지 입력</td><td>URL · base64 · 에셋 ID</td><td>로컬 경로만 받아 base64 data URI 로 변환. 장당 30MB·합계 64MB 를 보내기 전에 검사</td></tr>
+      <tr><td>영상 연장·편집</td><td>2.x 가 지원(입력은 공개 URL)</td><td><strong>미구현</strong> — 파이프라인의 mp4 는 로컬 파일이라 넣을 수 없다. 연장은 <code>veo_extension</code></td></tr>
+      <tr><td>폴링</td><td>폴링 또는 웹훅</td><td>10초 × 90회(15분). 로컬 프로세스라 웹훅 수신 주소가 없다</td></tr>
+      <tr><td>결과 반환</td><td>24시간짜리 URL</td><td>즉시 다운로드해 로컬 <code>.mp4</code> 저장 후 <strong>경로만</strong> 반환</td></tr>
+      <tr><td>비용 보고</td><td><code>usage.completion_tokens</code></td><td>응답 텍스트에 그대로 싣는다 — 단가 환산 추정치가 아니라 이 값이 청구 근거다</td></tr>
+      <tr><td>출력 파일명</td><td>—</td><td>Veo 와 같은 규칙 — 경로 분리자·<code>..</code> 거부 + 비디오 확장자 화이트리스트</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    어느 엔진을 언제 쓰는지의 정본은 <a href="../../skills/produce/references/video-model-selection.md">skills/produce/references/video-model-selection.md</a> 다. 요약하면 <strong>소리를 쓰는 구간은 Veo, 소리를 버리는 구간은 Seedance</strong> — b-roll 칸은 클립의 소리를 쓰므로(produce 절대 규칙 9) Veo 로 두고, 빌더가 영상 트랙만 까는 모션 배경(<code>visual.video</code>)이 Seedance 자리다.
+  </div>
+</section>
+
+<footer>
+  기준일 2026-08-15 · 구현 <a href="../../server/src/seedance-client.ts">server/src/seedance-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+</footer>
+
+</div>
+</body>
+</html>

@@ -123,8 +123,9 @@ data/<채널>/<주제 slug>/storyboard/
 
 `references/scenes-schema.md` 의 계약대로 작성한다. 핵심 규칙:
 
-- **구성**: cover 1 + points/quote 4~5 + outro 참조 = 본편 총 60~75초 목표
-  (유지율은 길이에 반비례 — 90초 상한).
+- **구성**: cover 1 + points/quote 3~5 + outro 참조 = 본편 총 **35~75초** 목표
+  (유지율은 길이에 반비례 — 90초 상한. 완주율 벤치마크가 60초 미만 66% 대 1~2분
+  56%라 하한을 35초로 열었다, 2026-08-15 — 소재가 짧으면 짧게 끝내는 게 맞다).
 - **커버 제목은 16자 이내 + 주제어 필수** — 자극만 있고 무엇의 이야기인지 없으면
   스킵된다. 강조어는 `**굵게**`(그라데이션 칩). statLabel 은 18자 이내.
 - **화면 텍스트는 필요할 때만 쓴다**(사용자 지시 2026-08-14) — 씬마다 캡션 칸을 채우지
@@ -174,7 +175,8 @@ data/<채널>/<주제 slug>/storyboard/
 씬을 100점짜리가 가려 주기 때문이다. 그래서 이 루프의 통과선은 평균이 아니라
 **가장 낮은 씬의 점수**다. 보는 축은 둘이다.
 
-- **품질** — 그 씬이 제 역할을 하는가. 커버는 3초 안에 무엇의 이야기인지 알리고,
+- **품질** — 그 씬이 제 역할을 하는가. 커버는 3초 안에 무엇의 이야기인지 알리고
+  **왜 남아야 하는지도 준다**(세그①이 약속·문제 제기·반전 — scenes-schema §cover),
   points 는 한 화면에 한 메시지를 주고, quote 는 그 사람 입에서 나올 법한 말을 한다.
 - **맥락 적절성** — 그 씬이 여기 있을 이유가 있는가. 앞 씬이 던진 것을 받고 다음 씬을
   열어 주는지, 프로파일 §3 타깃이 알아들을 전제인지, 그 주장이 research.md 의 어느
@@ -286,6 +288,22 @@ docs/research/2026-08-12-local-image-generation):
   재묘사는 모델이 장면을 재설계한다 — produce §3 과 같은 규칙). 클립 소리는 빌드에서
   쓰이지 않으므로 오디오 지시는 없어도 된다.
 
+**호출마다 비용 원장에 한 줄 적는다.** 이 회차의 돈은 여기서 이미 나가기 시작한다 —
+커버 한 장이 $0.22 이고, produce 는 며칠 뒤 다른 세션에서 돌 수도 있다. 그때
+합산하려면 원장이 주제 디렉토리에 있어야 한다. 규약 정본은
+[cost-tally.md](../autoproduce/references/cost-tally.md) 다.
+
+```bash
+mkdir -p .work
+# 생성 직후 그 호출을 적는다 — 나중에 몰아서 쓰면 재생성분을 빠뜨린다
+printf 'image.gpt-image-2.high\t1\tstoryboard: 커버 배경 scene-1\n' >> .work/cost-tally.tsv
+printf 'image.local\t3\tstoryboard: points 배경 scene-2~4\n'        >> .work/cost-tally.tsv
+```
+
+로컬 이미지도 적는다 — 단가가 0 이라 합계는 그대로지만, 몇 장을 어디에 썼는지가
+리포트에 보여야 "이미지 비용 0" 이 집계 결과인지 집계 누락인지 구분된다.
+`gpt_image_text2img` 의 `quality` 가 키를 정한다(`high`·`medium`·`low`).
+
 ### 5.5 이미지 맥락 수렴 루프 (storyboard-reviewer 이미지 모드, 목표 score ≥95 AND p0 = 0)
 
 생성 전 계획은 content-reviewer 계획 모드가 봤고, 여기서는 **나온 그림 자체**를 본다 —
@@ -300,10 +318,16 @@ docs/research/2026-08-12-local-image-generation):
 2. **PASS(score ≥95 이고 p0 = 0)** → §6 으로. storyboard.md 는 통과한 이미지로 한 번만
    쓴다(루프 중에 문서를 미리 쓰면 매 라운드 다시 손봐야 한다).
 3. **FAIL** → 지적받은 장만 다시 만든다. 통과한 장은 건드리지 않는다.
+   - **재생성분도 §5 의 원장에 적는다** — 버린 장도 청구는 된다. 라운드 번호를
+     메모에 넣으면(`storyboard: §5.5 재생성 scene-1 (2라운드)`) 나중에 이 루프가
+     그 편에서 얼마를 썼는지 리포트에서 그대로 읽힌다.
    - 엔진은 §5 분담 그대로. 프롬프트는 원래 것에 교정 지시만 얹고 **전면 재서술은
      하지 않는다** — 다 뜯어고치면 통과했던 요소까지 같이 사라진다.
    - **부정 지시는 프롬프트 본문에 쓰지 않는다** — "no maps" 를 본문에 넣으면 오히려
-     지도가 그려진다(실측 4장 전패). 부정 명사는 `--negative-prompt` 쪽으로 분리한다.
+     지도가 그려진다(실측 4장 전패). 부정 명사는 배제 전용 인자로 분리한다 —
+     로컬 이미지는 `--negative-prompt`, `veo_*` 는 `negativePrompt` 다. Veo 프롬프트
+     가이드도 본문의 지시문 형태를 not recommended 로 적고 명사구 나열을 권한다.
+     Seedance 에는 그 인자가 없으므로 장면 서술 자체를 바꿔 피한다.
    - **글자 각인 소품은 부정 지시로 못 막는다**(키보드·계산기·간판). 그 물체를 장면
      구성에서 빼는 쪽이 정답이다.
    - 같은 지적이 2회 연속 반복되면 씬의 소재를 바꾼다 — 같은 프롬프트를 다듬어
@@ -400,6 +424,7 @@ AskUserQuestion 으로 스토리보드를 제시한다 — storyboard.md·storyb
 - **`references/storyboard-template.md`** — storyboard.md 표준 구조 + research.md 표 형식
 - **`references/storyboard-html-template.html`** — storyboard.html 렌더 템플릿 — scenes.js 동적 로드 + 계약 검산 자동 표시, `✎ SB_DOC` 블록만 채워 사용
 - **`references/shot-script-template.md`** — 촬영 모드 한정: script.md(촬영 대본) 구조 + 촬영 수칙 + scenes.js 변형 계약
+- **`../autoproduce/references/cost-tally.md`** — 회차 비용 원장 규약 (§5·§5.5 가 적는 파일의 위치·줄 형식·단위). 단가 정본은 같은 디렉토리의 `prices.tsv`
 
 ### 위임 에이전트
 

@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>첫 장면이 실사면 조회수가 더 나오나 — 릴스·쇼츠 오프닝 화면 사실 확인 (2026-08-15)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  nav.toc { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 56px; }
+  nav.toc h2 { font-size: 14px; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 14px; text-transform: uppercase; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  nav.toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a { color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500; }
+  nav.toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent); font-weight: 700; font-size: 12.5px;
+    margin-right: 10px; font-variant-numeric: tabular-nums;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
+  p { margin-bottom: 16px; }
+  p.note { font-size: 14.5px; color: var(--text-soft); }
+  p.lead { font-size: 17px; }
+  ul.plain { margin: 0 0 16px 22px; }
+  ul.plain li { margin-bottom: 8px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px;
+  }
+
+  .callout {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    background: var(--bg-soft); border-radius: 0 10px 10px 0;
+    padding: 16px 20px; margin-bottom: 20px; font-size: 15px;
+  }
+  .callout.green { border-left-color: var(--green); }
+  .callout.amber { border-left-color: var(--amber); }
+  .callout.red { border-left-color: var(--red); }
+  .callout.purple { border-left-color: var(--purple); }
+  .callout b:first-child { display: block; margin-bottom: 4px; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .verdict {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px 32px; margin-bottom: 56px;
+    box-shadow: var(--shadow);
+  }
+  .verdict .v-label {
+    font-size: 12.5px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); margin-bottom: 12px;
+  }
+  .verdict .v-main { font-size: 20px; font-weight: 700; line-height: 1.6; margin-bottom: 16px; letter-spacing: -.01em; }
+  .verdict p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14.5px; }
+  th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; font-size: 13.5px; }
+  .table-scroll { overflow-x: auto; }
+
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+  }
+  .badge.green { color: var(--green); background: var(--green-soft); }
+  .badge.amber { color: var(--amber); background: var(--amber-soft); }
+  .badge.red { color: var(--red); background: var(--red-soft); }
+  .badge.purple { color: var(--purple); background: var(--purple-soft); }
+  .badge.blue { color: var(--accent); background: var(--accent-soft); }
+
+  .grades { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 32px; }
+  .grades div {
+    flex: 1 1 200px; border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; font-size: 14px; color: var(--text-soft); background: var(--bg-card);
+  }
+  .grades div b { display: block; margin-bottom: 4px; }
+
+  .src-group { margin-bottom: 26px; }
+  .src-group h3 { margin-top: 0; }
+  .src-group ul { list-style: none; margin-left: 0; }
+  .src-group li {
+    font-size: 13.5px; margin-bottom: 6px; padding-left: 18px; position: relative;
+    color: var(--text-soft);
+  }
+  .src-group li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .src-group a { word-break: break-all; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 24px; font-size: 13.5px; color: var(--text-soft); }
+  footer p { margin-bottom: 8px; }
+  footer a { color: var(--accent); text-decoration: none; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">RESEARCH</span>
+  <h1>첫 장면이 실사면 조회수가 더 나오나<br>릴스·쇼츠 오프닝 화면 사실 확인</h1>
+  <p class="sub">
+    "릴스·쇼츠의 첫 장면은 실사(실제 촬영 또는 실사풍 AI 영상)가 일러스트·애니메이션보다 조회수가 잘 나온다"는
+    직감을 확인했다. 플랫폼 공식 자료·측정사 집계·학술 실험을 1차로 열어 대조하고, 떠도는 비교 수치는 원문까지 따라가 봤다.
+  </p>
+  <div class="meta">
+    <span>작성 <strong>2026-08-15</strong></span>
+    <span>대상 <strong>Instagram 릴스 · YouTube 쇼츠 · TikTok</strong></span>
+    <span>1차 확인 <strong>TikTok Creative Center · Emplifi · 학술 실험 2건 · Rival IQ</strong></span>
+    <span>판정 <strong>부분 지지</strong></span>
+  </div>
+</header>
+
+<div class="verdict">
+  <div class="v-label">결론</div>
+  <div class="v-main">
+    직감의 방향은 맞는데 원인이 "실사"가 아니다. 데이터가 지지하는 건 매체가 아니라 세 가지다 —
+    <b>사람</b>, <b>목소리</b>, <b>움직임</b>. 실사와 애니메이션의 첫 장면을 직접 비교한 공개 데이터는 없다.
+  </div>
+  <p>
+    질문을 "첫 장면을 실사풍(실녹화 또는 AI 실사 영상)으로 하면 잘 나오나"로 읽고 조사했다.
+    다르게 읽어야 하면 한마디만 해 주면 그 축으로 다시 본다.
+  </p>
+  <p>
+    확인된 것부터 말하면, 첫 2~3초가 성패를 정한다는 전제는 플랫폼 공식 자료가 뒷받침한다. 그 안에서 성과가 올라간 요소는
+    사람이 화면에 있는 것(10초 유지 +10.1%), 목소리가 먼저 들리는 것(+24.7%), 화면이 움직이는 것(주의 +11%)이다.
+    셋 다 실사 촬영으로 채우기 쉬울 뿐, <b>실사여서 오른 게 아니다.</b> 반대로 실사풍 AI 인물은 감점 근거가 나온다 —
+    통제 실험에서 AI 아바타는 진행자가 사람일 때보다 신뢰 3.78 대 4.63으로 뚜렷하게 낮았다.
+  </p>
+</div>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#grade">근거 등급과 읽는 법</a></li>
+    <li><a href="#premise">전제는 맞다 — 첫 2초가 판을 정한다</a></li>
+    <li><a href="#human">확인 ① 사람이 있으면 오른다</a></li>
+    <li><a href="#voice">확인 ② 목소리가 얼굴보다 세다</a></li>
+    <li><a href="#motion">확인 ③ 움직이면 오른다 — 살짝만 움직여도</a></li>
+    <li><a href="#absent">확인 안 됨 — 실사 대 애니메이션 비교는 없다</a></li>
+    <li><a href="#ghost">떠도는 숫자를 열어 봤다</a></li>
+    <li><a href="#against">반대 방향 — 실사풍 AI는 감점 요인이다</a></li>
+    <li><a href="#apply">그래서 우리 커버는</a></li>
+    <li><a href="#gap">비어 있는 칸</a></li>
+    <li><a href="#sources">출처</a></li>
+  </ol>
+</nav>
+
+<section id="grade">
+  <h2 class="sec"><span class="no">01</span>근거 등급과 읽는 법</h2>
+  <p>
+    이 주제는 공식 문서가 말을 아끼는 자리에 마케팅 블로그 숫자가 빽빽하게 들어차 있다. 그래서 문장마다 등급을 붙였고,
+    <b>내가 그 페이지를 직접 열어 확인한 수치만</b> 본문에 썼다. 검색 요약에만 있고 원문을 못 연 숫자는 §07로 몰아 두고 규칙으로 쓰지 않는다.
+  </p>
+  <div class="grades">
+    <div><b><span class="badge green">공식·1차</span></b>플랫폼이 자기 문서에 실은 것 — TikTok Creative Center·헬프센터</div>
+    <div><b><span class="badge blue">측정사 집계</span></b>3자 측정사의 대규모 집계. 방향만 참고하고 숫자를 목표치로 삼지 않는다</div>
+    <div><b><span class="badge purple">학술 실험</span></b>표본·통계량이 공개된 논문. 인과는 강한데 실험실 조건이라 현장 이식은 조심</div>
+    <div><b><span class="badge red">미확인</span></b>원문에 출처가 없거나 페이지를 못 열었다. 근거로 쓰지 않는다</div>
+  </div>
+
+  <div class="callout amber">
+    <b>인과 사슬을 먼저 밝힌다</b>
+    <p>
+      아래 숫자는 대부분 <b>조회수가 아니라 유지율과 참여</b>다. 첫 화면이 좋으면 3초·10초를 더 보고, 그 신호를 보고 플랫폼이 더 퍼뜨리고,
+      그래서 조회수가 오른다는 게 통상의 경로다. 앞 칸(첫 화면 → 유지율)은 측정된 것이고, 뒷 칸(유지율 → 배급 → 조회수)은
+      플랫폼 설명에 기댄 추론이다. "조회수가 몇 % 오른다"고 약속하는 자료는 못 찾았다.
+    </p>
+  </div>
+</section>
+
+<section id="premise">
+  <h2 class="sec"><span class="no">02</span>전제는 맞다 — 첫 2초가 판을 정한다</h2>
+
+  <p class="lead">
+    "첫 장면이 조회수를 좌우한다"는 부분은 다툴 게 없다. TikTok이 자사 크리에이티브 센터에 수치로 실어 뒀다.
+  </p>
+
+  <h3>가장 값나가는 구간은 첫 2초 <span class="badge green">공식</span></h3>
+  <p>
+    TikTok Marketing Sciences의 <i>Value of a View</i> 연구를 인용해, 광고 회상은 <b>첫 2초</b>, 인지도는 <b>첫 2.5초</b>가
+    영상에서 가장 값나가는 구간이라고 못 박았다. 같은 페이지에 행동 유도 문구를 오프닝 프레임에 두면 뒤에 두는 것보다
+    전환이 <b>44% 높다</b>는 수치도 있다. 즉 첫 프레임은 장식이 아니라 성과가 갈리는 지점이다.
+  </p>
+
+  <h3>공식 권고는 "3초 안에 제안, 6초 안에 훅" <span class="badge green">공식</span></h3>
+  <p>
+    TikTok 헬프센터의 크리에이티브 베스트 프랙티스는 첫 3초에 콘텐츠의 제안을 꺼내고 훅은 6초 안에 두라고 쓴다.
+    그리고 사람(크리에이터·직원·고객)을 등장시키라고 권한다. <b>다만 실사 촬영이냐 그래픽이냐를 가르는 문장은 여기에도 없다.</b>
+  </p>
+</section>
+
+<section id="human">
+  <h2 class="sec"><span class="no">03</span>확인 ① 사람이 있으면 오른다</h2>
+
+  <p class="lead">
+    직감이 잡아낸 진짜 변수가 이것으로 보인다. 실사 영상에는 거의 항상 사람이 나오고, 일러스트 커버에는 잘 안 나온다.
+  </p>
+
+  <h3>첫 3초에 사람이 1초만 나와도 10초 유지가 +10.1% <span class="badge blue">측정사 집계</span></h3>
+  <p>
+    Emplifi가 브랜드 페이스북 릴스를 분석한 자료다. 첫 3초 안에 사람이 <b>최소 1초</b> 등장하면
+    3초 유지 <b>+3.6%</b>, 10초 유지 <b>+10.1%</b>, 소리 켠 조회 <b>+4.3%</b>였다.
+  </p>
+  <div class="callout">
+    <b>같은 표에 반대 부호가 하나 있다</b>
+    <p>
+      30초 유지는 <b>−2.4%</b>로 오히려 내려갔다. 사람이 초반 시선을 잡는 데는 확실히 듣지만, 끝까지 보게 만드는 힘은
+      다른 데서 온다는 뜻으로 읽힌다. 60초 안팎을 쓰는 우리 포맷에서는 초반 지표를 취하고 후반은 내용으로 버텨야 한다.
+    </p>
+  </div>
+  <p class="note">
+    Emplifi 페이지 자체에는 표본이 안 적혀 있다. Social Media Today 기사가 "브랜드 페이지 704곳의 릴스 10,110편"이라고 전한다 —
+    표본 규모는 그 기사 경유로만 확인했다.
+  </p>
+
+  <h3>학술 집계도 같은 방향, 게다가 얼굴은 클수록 좋다 <span class="badge purple">학술</span></h3>
+  <p>
+    상위 50개 브랜드가 3년간 올린 소셜 영상 <b>2,754편</b>을 기계학습으로 태깅해 분석한 논문(Journal of Consumer Marketing)은
+    사람 얼굴의 등장이 참여도에 <b>견고한 정적 효과</b>를 냈고 <b>얼굴이 클수록 효과가 커졌다</b>고 보고한다.
+    조절 변수는 화면에 얼굴이 떠 있는 시간과 브랜드 포지셔닝(즐거움 축 대 실용 축)이었다.
+  </p>
+
+  <div class="callout amber">
+    <b>여기서 두 수치가 부딪힌다 — 억지로 합치지 않았다</b>
+    <p>
+      TikTok 크리에이티브 센터에는 VidMob 분석을 인용해 <b>얼굴이 화면의 20% 미만</b>일 때 고려도가 <b>31% 높다</b>는 반대 방향 수치가 있다.
+      학술 쪽은 "클수록 좋다"인데 광고 쪽은 "작을수록 좋다"인 셈이다. 지표와 표면이 다르다 — 앞은 유기적 게시물의 참여(좋아요·댓글·공유),
+      뒤는 유료 광고의 고려도(consideration)다. 그러니 둘 다 적어 두고 <b>우리 자리에 맞는 쪽</b>을 골라야 한다.
+      쇼트폼 유기적 게시물이 우리 자리이므로 학술 쪽에 무게를 둔다. VidMob 수치를 버리지 않는 이유는 TikTok이 자사 공식 페이지에 실었기 때문이다.
+    </p>
+  </div>
+
+  <p>
+    같은 TikTok 페이지에 <b>출연자가 감정 표현을 4가지 이상</b> 보이면 3가지 이하보다 전환이 <b>3.3배</b>라는 수치도 있다.
+    사람이 나오느냐보다 <b>표정이 움직이느냐</b>가 핵심이라는 쪽을 가리킨다.
+  </p>
+</section>
+
+<section id="voice">
+  <h2 class="sec"><span class="no">04</span>확인 ② 목소리가 얼굴보다 세다</h2>
+
+  <p class="lead">
+    이번 조사에서 제일 뜻밖이었던 대목이다. 같은 자료 안에서 목소리의 효과가 사람 등장의 두 배를 넘는다.
+  </p>
+
+  <h3>첫 3초에 말이 시작되면 10초 유지 +24.7% <span class="badge blue">측정사 집계</span></h3>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>첫 3초에 넣은 것</th><th>3초 유지</th><th>10초 유지</th><th>30초 유지</th><th>참여</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>사람이 화면에 1초 이상</td><td>+3.6%</td><td>+10.1%</td><td>−2.4%</td><td>소리 켠 조회 +4.3%</td></tr>
+      <tr><td><b>사람 목소리가 시작</b></td><td><b>+11.7%</b></td><td><b>+24.7%</b></td><td><b>+6.6%</b></td><td><b>+5.6%</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>
+    목소리는 세 구간 전부에서 이겼고, 사람 등장이 마이너스였던 30초 구간에서도 <b>+6.6%</b>로 플러스다.
+    음악만 깔린 영상보다 말이 들어간 영상이 낫다는 뜻이다. 첫 화면을 뭘로 채우느냐보다 <b>첫 화면에서 말이 시작되느냐</b>가 크게 작동한다.
+  </p>
+  <div class="callout red">
+    <b>우리에게 그대로 적용되는지는 모른다</b>
+    <p>
+      이 파이프라인의 나레이션은 사람 목소리가 아니라 합성음(Supertonic 로컬 TTS·Gemini TTS)이다.
+      Emplifi 분석은 사람 목소리와 음악을 갈랐을 뿐 합성음을 따로 세지 않았다. 합성음이 같은 리프트를 받는지는
+      <b>이번 조사로 확인하지 못했다.</b> §10에 남겨 둔다.
+    </p>
+  </div>
+</section>
+
+<section id="motion">
+  <h2 class="sec"><span class="no">05</span>확인 ③ 움직이면 오른다 — 살짝만 움직여도</h2>
+
+  <p class="lead">
+    실사와 애니메이션을 가르는 축이 아니라, <b>정지와 움직임</b>을 가르는 축이 실제로 성과를 갈랐다.
+  </p>
+
+  <h3>풀모션 +11%, 라이트 모션 +8% <span class="badge blue">측정사 집계</span></h3>
+  <p>
+    Vertical Impression이 정지 이미지 · 라이트 모션(잎이 흔들리거나 물이 흐르는 정도의 미세한 움직임) · 풀모션(장면 전환이 있는 완전한 영상)
+    셋을 시선 측정으로 비교했다. 정지 대비 주의는 풀모션 <b>+11%</b>, 라이트 모션 <b>+8%</b>였고,
+    라이트 모션이 풀모션과 거의 비슷한 성과를 냈다.
+  </p>
+  <div class="callout amber">
+    <b>이 수치는 등급을 낮춰 읽어야 한다</b>
+    <p>
+      표본 크기·지역·통계적 유의성이 공개돼 있지 않고, 무엇보다 <b>디지털 옥외광고(DOOH)</b> 환경의 측정이다.
+      손안에서 엄지로 넘기는 피드와 길에서 지나치며 보는 화면은 주의 구조가 다르다. 방향만 취하고 숫자는 취하지 않는다.
+    </p>
+  </div>
+  <p>
+    그래도 실무 함의는 뚜렷하다. 커버를 실사로 바꿔야 오르는 게 아니라 <b>정지 그림에 움직임을 주기만 해도</b> 상당 부분을 가져간다.
+    라이트 모션이 풀모션에 근접했다는 대목이 특히 그렇다. 일러스트 커버를 버리지 않고도 이 축은 채울 수 있다.
+  </p>
+</section>
+
+<section id="absent">
+  <h2 class="sec"><span class="no">06</span>확인 안 됨 — 실사 대 애니메이션 비교는 없다</h2>
+
+  <p class="lead">
+    질문의 핵심을 그대로 다룬 공개 데이터를 <b>찾지 못했다.</b> 없다고 단정하는 게 아니라, 아래를 다 열어 봤는데 없었다는 뜻이다.
+  </p>
+  <ul>
+    <li><b>TikTok 크리에이티브 센터</b> — 첫 프레임 관련 수치 전부를 훑었다. 사람·얼굴 크기·감정·CTA는 있고 실사 대 애니메이션 항목은 없다.</li>
+    <li><b>TikTok 헬프센터 베스트 프랙티스</b> — 사람 등장 권고만 있고 매체 구분이 없다.</li>
+    <li><b>Emplifi 릴스 분석</b> — 형식(세로·길이)·목소리·사람·텍스트 오버레이만 태깅했다. 실사와 그래픽을 가르는 축이 아예 없다.</li>
+    <li><b>System1·Kantar</b> — 광고 효과 측정으로 유명한 두 곳에서 애니메이션 대 실사 비교 테스트 점수를 찾았지만 나오지 않았다.</li>
+    <li><b>한국 자료</b> — 네이버 블로그·웹문서와 구글을 한국 설정으로 뒤졌다. 관련 수치를 하나도 못 찾았다.</li>
+  </ul>
+  <p>
+    광고 업계 일반론(설명형 콘텐츠는 애니메이션이 유리하고, 신뢰가 필요한 자리는 실사가 유리하다)은 여러 곳에서 반복된다.
+    다만 그 문장들은 <b>영상 전체</b>에 대한 것이고 <b>쇼트폼 첫 프레임</b>을 잰 게 아니다. 그대로 옮기면 안 된다.
+  </p>
+</section>
+
+<section id="ghost">
+  <h2 class="sec"><span class="no">07</span>떠도는 숫자를 열어 봤다</h2>
+
+  <p class="lead">
+    검색하면 이 질문에 딱 맞는 숫자가 우수수 나온다. 세 곳을 원문까지 따라가 봤더니 <b>전부 출처가 없었다.</b>
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>떠도는 수치</th><th>원문을 열어 확인한 결과</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>"애니메이션 광고가 실사보다 참여 유도에 <b>32% 더 효과적</b>"<br>"애니메이션 소셜 영상 참여율 1.84%"</td>
+        <td>출처 링크·표본·조사 방법이 <b>하나도 없다.</b> "Google Display Network 집계", "Meta 2025 벤치마크", "Wyzowl 2026" 같은 이름만 적고 링크가 없다.</td>
+      </tr>
+      <tr>
+        <td>"Meta의 2025 Creative Best Practices 리포트 — 첫 3초 훅이 있으면 완주율 <b>89% 높다</b>"</td>
+        <td>그 리포트의 제목도 링크도 없다. 걸려 있는 건 Meta 비즈니스 헬프센터 일반 주소뿐이다. <b>보고서의 실재를 확인하지 못했다.</b></td>
+      </tr>
+      <tr>
+        <td>"소비자 <b>52%</b>가 AI 의심 시 참여를 줄인다", "<b>59.9%</b>가 온라인 콘텐츠 진정성을 의심한다"</td>
+        <td>출처로 지목된 페이지를 열었더니 <b>그 숫자가 본문에 아예 없었다.</b> 검색 요약이 만들어 낸 수치로 보인다.</td>
+      </tr>
+      <tr>
+        <td>"Nielsen 2024 — 애니메이션이 브랜드 회상 22% 높다", "Meta 2025 — 애니메이션 공유율 28% 높다"</td>
+        <td>검색 요약에만 있고 원 보고서를 열지 못했다. <span class="badge red">미확인</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout red">
+    <b>이게 이번 조사의 실질 소득 하나다</b>
+    <p>
+      "애니메이션이 32% 더 낫다" 같은 문장은 서로가 서로를 베끼며 굴러다니고, 거슬러 올라가면 바닥에 아무것도 없다.
+      방향이 반대인 숫자도 같은 방식으로 만들 수 있다. 그래서 이 질문에 관해서는 <b>남이 인용한 숫자를 그대로 쓰지 않는 것</b>이
+      가장 안전하다.
+    </p>
+  </div>
+</section>
+
+<section id="against">
+  <h2 class="sec"><span class="no">08</span>반대 방향 — 실사풍 AI는 감점 요인이다</h2>
+
+  <p class="lead">
+    "실사"를 실제 촬영이 아니라 AI 실사 영상으로 채운다면, 근거는 오히려 반대쪽을 가리킨다.
+  </p>
+
+  <h3>같은 내용을 사람이 말할 때와 AI 아바타가 말할 때 <span class="badge purple">학술</span></h3>
+  <p>
+    쇼트폼 광고 진행자를 사람과 AI 아바타로 바꿔 가며 재는 통제 실험이다(연구 2, <b>N=769</b>). 결과는 전 항목에서 사람이 앞섰다.
+  </p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>측정 항목</th><th>사람 진행자</th><th>AI 아바타</th><th>효과 크기 η²</th></tr></thead>
+    <tbody>
+      <tr><td>영상 태도</td><td>4.31</td><td>3.50</td><td>.068</td></tr>
+      <tr><td>신뢰</td><td>4.63</td><td>3.78</td><td>.082</td></tr>
+      <tr><td>제작자 책임감</td><td>5.24</td><td>4.52</td><td>.060</td></tr>
+      <tr><td>들인 노력</td><td>5.08</td><td>4.18</td><td>.090</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>
+    경로도 밝혀져 있다. 사람이 나오면 <b>책임을 지는 주체가 있다</b>고 보고, 그 다음 <b>공을 들였다</b>고 보고, 그래서 태도와 신뢰가 올라간다.
+    앞선 연구 1(<b>N=656</b>)에서는 사람 진행자가 자막만 있는 영상보다 태도 4.60 대 3.96으로 앞섰다.
+    두 실험 모두 진짜 사람이 앞섰다. 다만 <b>AI 아바타가 자막만 있는 영상보다 나은지는 이 연구로 알 수 없다</b> —
+    표본이 서로 다른 실험이라 두 조건의 절대값을 맞대면 안 된다.
+  </p>
+
+  <h3>다만 현장 데이터는 훨씬 지저분하다 <span class="badge blue">측정사 집계</span></h3>
+  <p>
+    Rival IQ가 AI 영상 계정과 사람 크리에이터의 같은 트렌드 영상을 맞대 봤더니 결과가 뒤집혔다 붙었다 한다.
+    유리 아침식사 트렌드에서는 AI 계정이 3,390만 조회·조회당 참여 12%로 사람(1,060만·8.88%)을 크게 이겼고,
+    사탕 버터 트렌드에서는 사람이 377만·11.6%로 AI(68.8만·3.17%)를 압도했다.
+    이들이 내린 결론은 <b>플랫폼은 제작 방식이 아니라 참여를 본다</b>는 것이다.
+  </p>
+  <div class="callout amber">
+    <b>우리 조건에서는 한 가지가 더 붙는다</b>
+    <p>
+      이 채널은 AI 음악·AI 이미지·AI 나레이션을 쓰므로 YouTube 게시에 <code>containsSyntheticMedia: true</code>가 켜져 있다.
+      실사풍 AI 인물까지 넣으면 고지 대상이 넓어지고, 라인아트 마스코트로 세워 둔 채널 정체성과도 충돌한다.
+      캐릭터에 실사 인물을 섞었을 때 생기는 사고는 이미 겪었다 — 입 없는 마스코트에 Veo가 입을 그려 넣은 건이다.
+    </p>
+  </div>
+</section>
+
+<section id="apply">
+  <h2 class="sec"><span class="no">09</span>그래서 우리 커버는</h2>
+
+  <p class="lead">
+    조사 결과를 우리 파이프라인에 대면 이렇게 정리된다. 아래는 제안이고, 커버 계약(<code>skills/produce</code>·<code>storyboard</code>) 개정은 따로 결정할 일이다.
+  </p>
+
+  <h3>바꿀 이유가 확인된 것</h3>
+  <ul>
+    <li>
+      <b>커버를 정지 그림으로 두지 않는다.</b> 정지 대비 라이트 모션만으로도 주의가 올라간다. 켄번즈나
+      <code>seedance_img2video</code> 모션 배경으로 첫 씬에 움직임을 주는 쪽이 근거에 맞다. 실사로 갈아탈 필요는 없다.
+    </li>
+    <li>
+      <b>첫 3초에 말이 시작되게 한다.</b> 사람 등장(+10.1%)보다 목소리(+24.7%)의 리프트가 두 배 이상이었다.
+      커버에 제목만 띄우고 침묵으로 시작하는 구성은 손해를 보는 쪽이다.
+    </li>
+    <li>
+      <b>오늘 정한 실녹화 커버 허용은 근거와 어긋나지 않는다.</b> 다만 효과의 출처가 "실사여서"가 아니라
+      "사람이 나오고 움직이고 진짜여서"라는 점을 계약 문구에 적어 두는 편이 낫다. 그래야 다음 사람이
+      "무조건 실사로"로 잘못 읽지 않는다.
+    </li>
+  </ul>
+
+  <h3>바꿀 이유가 확인되지 않은 것</h3>
+  <ul>
+    <li><b>일러스트 커버를 실사풍 AI 영상으로 교체하는 것.</b> 직접 비교 근거가 없고, AI 진행자 실험은 반대 방향을 가리킨다.</li>
+    <li><b>라인아트 정체성을 버리는 것.</b> 얼굴 효과를 다룬 연구들은 <b>사람 얼굴</b>을 잰 것이라, 캐릭터 얼굴이 같은 효과를 받는지는 아무도 안 쟀다. 정체성을 버리는 근거로는 약하다.</li>
+  </ul>
+</section>
+
+<section id="gap">
+  <h2 class="sec"><span class="no">10</span>비어 있는 칸</h2>
+  <p>다음에 이 주제를 다시 열 사람이 알아야 할 구멍이다.</p>
+  <ul>
+    <li><b>쇼트폼 첫 프레임의 실사 대 애니메이션 직접 비교</b> — 공개 데이터를 못 찾았다. 우리가 재는 수밖에 없다.</li>
+    <li><b>합성음의 목소리 리프트</b> — Emplifi 수치가 TTS에도 적용되는지 확인 못 했다. 우리 나레이션이 전부 합성음이므로 결론이 뒤집힐 수 있는 칸이다.</li>
+    <li><b>캐릭터 얼굴의 얼굴 효과</b> — 학술 연구는 전부 사람 얼굴이다. 마스코트가 같은 대접을 받는지 모른다.</li>
+    <li><b>AI 고지가 시청에 미치는 영향</b> — 관련 논문(MDPI <i>Behavioral Sciences</i> 16(7):1179)을 찾았지만 <b>403으로 열지 못했다.</b> 결과를 인용하지 않는다.</li>
+    <li><b>한국 시장 수치</b> — 두 경로로 찾았지만 없었다. "존재하지 않는다"가 아니라 "못 찾았다"로 적어 둔다.</li>
+    <li>
+      <b>우리 채널 자체 비교</b> — 게시분이 10편 남짓이고 주제·플랫폼·시간대가 섞여 있어 커버 스타일만 떼어 비교할 수 없다.
+      재려면 같은 영상의 커버만 바꿔 올리는 식의 설계가 필요하다.
+    </li>
+  </ul>
+</section>
+
+<section id="sources">
+  <h2 class="sec"><span class="no">11</span>출처</h2>
+
+  <div class="src-group">
+    <h3>플랫폼 공식 <span class="badge green">1차</span></h3>
+    <ul>
+      <li><a href="https://ads.tiktok.com/business/creativecenter/quicktok/online/Power_Creative_Elements/pc/en">The Power of Creative Elements in TikTok ads — TikTok Creative Center</a> — 첫 2초·2.5초, CTA +44%, 얼굴 20% 미만 +31%(VidMob), 감정 4종 3.3배</li>
+      <li><a href="https://ads.tiktok.com/help/article/creative-best-practices">Creative best practices for performance ads — TikTok 헬프센터</a> — 3초 제안·6초 훅·사람 등장 권고</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>측정사 집계 <span class="badge blue">실측</span></h3>
+    <ul>
+      <li><a href="https://emplifi.io/resources/facebook-reels-data/">Facebook Reels data — Emplifi</a> — 사람 등장·목소리·형식별 유지율 리프트</li>
+      <li><a href="https://www.socialmediatoday.com/news/human-speech-and-presence-help-drive-reels-engagement/815381/">Human speech and presence help drive Reels engagement — Social Media Today</a> — 위 분석의 표본(704 페이지·10,110편)을 전한 기사</li>
+      <li><a href="https://www.rivaliq.com/blog/ai-generated-videos-on-social-media-hype-risks-and-performance/">AI-Generated Videos on Social Media — Rival IQ</a> — AI 계정 대 사람 크리에이터 트렌드별 실적</li>
+      <li><a href="https://www.verticalimpression.com/post/does-movement-matter-testing-video-vs-static-in-dooh">Does Movement Matter? Testing Video vs Static in DOOH — Vertical Impression</a> — 풀모션 +11%, 라이트 모션 +8%(옥외광고 환경)</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>학술 <span class="badge purple">실험·집계</span></h3>
+    <ul>
+      <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12938081/">Human Presence in Short-Form Video Advertising: Social Judgments of Human and AI Presenters Under Privacy Concerns</a> — N=656·769 통제 실험</li>
+      <li><a href="https://www.emerald.com/jcm/article/42/3/318/1247037/Analyzing-the-impact-of-faces-on-consumer">Analyzing the impact of faces on consumer engagement in social media videos — Journal of Consumer Marketing</a> — 영상 2,754편 기계학습 분석</li>
+      <li><a href="https://www.sciencedirect.com/science/article/abs/pii/S0167811625000096">The impact of face presence in user-generated videos on consumer engagement — IJRM</a> — 얼굴 등장의 조절 조건</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>출처 검증에 쓴 페이지 <span class="badge red">미확인 판정</span></h3>
+    <ul>
+      <li><a href="https://cybertizemedia.com/insight/animation-ads-deliver-42-higher-engagement-than-static-creatives/">Animation Ads Deliver 42% Higher Engagement — Cybertize Media</a> — 인용 통계 전부 링크·표본 없음</li>
+      <li><a href="https://adlibrary.com/posts/meta-ads-creative-best-practices">Meta Ads Creative Best Practices — adlibrary.com</a> — "Meta 2025 리포트 89%"의 원 보고서 확인 불가</li>
+      <li><a href="https://millo.co/are-ai-videos-bad-for-brand-trust-and-audience-engagement">Are AI Videos Bad for Brand Trust and Audience Engagement? — Millo</a> — 인용된 52%·59.9%가 본문에 없음</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p>2026-08-15 조사. 이 문서는 사실 확인 기록이다. 커버 계약의 정본은 <code>skills/storyboard/SKILL.md</code>·<code>skills/produce/SKILL.md</code>이고, 이 조사만으로 그 계약을 고치지 않았다.</p>
+  <p><a href="../../index.html">← social-flow 문서 홈</a></p>
+</footer>
+
+</div>
+</body>
+</html>

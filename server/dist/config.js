@@ -19,8 +19,21 @@ export const config = {
     geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
     /** OpenAI API 키 (gpt_image_* 이미지 생성 툴 필수) — https://platform.openai.com/api-keys */
     openaiApiKey: process.env.OPENAI_API_KEY || '',
+    /** BytePlus ModelArk API 키 (seedance_* 영상 생성 툴 필수) — https://ai.byteplus.com/ark/region:ap-southeast-1/apikey */
+    arkApiKey: process.env.ARK_API_KEY || '',
     requestTimeoutMs: 15_000,
 };
+/**
+ * ModelArk 리전 엔드포인트.
+ *
+ * 영상 모델은 ap-southeast-1(싱가포르)에만 있어서 기본값이 곧 유일한 선택지다.
+ * env 오버라이드를 남겨 두는 건 리전이 늘거나 중국 본토 방주(volcengine)를 쓰는
+ * 설치본을 위한 것이고, 자동 탐색은 하지 않는다 — 조용한 리전 이동은 "어제는
+ * 되던 모델이 오늘 없는" 실패가 된다.
+ */
+export function arkBaseUrl() {
+    return (process.env.ARK_BASE_URL || 'https://ark.ap-southeast.bytepluses.com/api/v3').replace(/\/+$/, '');
+}
 /**
  * 로컬 TTS(Supertonic)를 실행할 Python 인터프리터.
  *
@@ -139,6 +152,21 @@ export function requireOpenAiKey() {
             '검색·게시·영상 툴은 이 키 없이도 정상 동작한다.');
     }
     return config.openaiApiKey;
+}
+export function requireArkKey() {
+    if (!config.arkApiKey) {
+        throw new Error('ARK_API_KEY is not set. seedance_* (video) generation tools require a BytePlus ModelArk API key ' +
+            '(https://ai.byteplus.com/ark/region:ap-southeast-1/apikey). ' +
+            '키는 서명용 AccessKeyId/SecretAccessKey 가 아니라 콘솔이 따로 발급하는 API Key 다(ark- 로 시작). ' +
+            '그리고 키만으로는 부족하다 — 모델마다 콘솔 Model activation 에서 먼저 켜야 하고, 안 켜면 태스크 생성이 ' +
+            'ModelNotOpen 으로 떨어진다(seedance-1-5-pro 포함, 2026-08-15 실측). 첫 활성화 때 ' +
+            'TOS·VPC·ML 플랫폼 교차 서비스 권한 부여를 요구하는데 이건 계정 주인이 눌러야 한다. ' +
+            'Dreamina Seedance 2.5·2.0 계열은 그 위에 계정 잔액 $30 초과 또는 리소스팩 구매라는 관문이 하나 더 있다 ' +
+            '(seedance-1-5-pro·1-0-pro 계열은 잔액 관문만 없다). ' +
+            '이 키가 없어도 veo_* 영상 생성은 GEMINI_API_KEY 로 정상 동작한다 — 어느 쪽을 쓸지는 ' +
+            'skills/produce/references/video-model-selection.md 를 볼 것.');
+    }
+    return config.arkApiKey;
 }
 export function requireNaverKeys() {
     if (!config.naverClientId || !config.naverClientSecret) {

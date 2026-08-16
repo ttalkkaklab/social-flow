@@ -96,7 +96,8 @@ data/<채널>/<주제 slug>/
 │   ├── storyboard.html
 │   └── images/
 ├── .work/
-│   ├── cost-tally.tsv   # 무엇을 몇 개 썼나 (§5 부터 한 줄씩 append)
+│   ├── cost-estimate.tsv # 쓰기 전 예상 — 상한 판정 전용 (§5)
+│   ├── cost-tally.tsv   # 실제로 무엇을 몇 개 썼나 (§6 부터 한 줄씩 append)
 │   └── …
 └── output/
     ├── video/           # video.mp4(클린) · video-sub.mp4(번인) · subs.srt · cover.jpg
@@ -230,7 +231,7 @@ storyboard 스킬 §4 를 그대로 따른다. 특히 자동 저작이 자주 �
   cover ≤40자, points/quote ≤50자, 문장당 8~25자.
 - `tts` 는 한글 발음 표기("4,700만"→"사천칠백만"), `sub` 는 원표기.
 - THEME 은 profile §3 값을 그대로 복사.
-- 구성은 cover 1 + points/quote 4~5, 본편 60~75초.
+- 구성은 cover 1 + points/quote 3~5, 본편 35~75초.
 
 ### 4. 문체 게이트 — 영상 표면 (게이트 2)
 
@@ -303,14 +304,17 @@ done
 
 `references/cost-tiers.md` 의 승급 조건을 확인한다. 무인 호출이면 성장 루프가
 방금 읽은 인사이트(YouTube `averageViewPercentage` / Instagram
-`reels_skip_rate` 최근 3편 평균)를 인자로 받아 판정하고, 게시 이력이 3편 미만이면
-**승급하지 않는다**.
+`reels_skip_rate`)를 인자로 받아 **추세로 판정한다** — 최근 3편 평균 대 직전
+3편 평균, 5%p 이상 악화일 때만 승급. 게시 이력 6편 미만이거나 훅 계약 개정 후
+새 기준선 3편이 안 쌓였으면 **승급하지 않는다**(둘 다 cost-tiers 정본).
 
-예상 tally 를 `.work/cost-tally.tsv` 에 적고 상한을 확인한다.
+예상 tally 는 **`.work/cost-estimate.tsv`** 에 적는다. 실제 원장(`cost-tally.tsv`)과
+파일을 갈라 두는 이유는 하나다 — 한 파일에 예상과 실사용이 같이 쌓이면 §마무리의
+사후 리포트가 같은 지출을 두 번 센다.
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
-$REF/cost-report.sh .work/cost-tally.tsv --cap <플랜 max_cost_per_video>; echo "cost_exit=$?"
+$REF/cost-report.sh .work/cost-estimate.tsv --cap <플랜 max_cost_per_video>; echo "cost_exit=$?"
 ```
 
 exit 2(초과)면 **승급을 취소하고 경제 기본으로 내려온다** — 중단이 아니다.
@@ -337,9 +341,15 @@ exit 1(판정 불가)이면 중단한다. 단가를 모르는 채로 돈을 쓰�
     확인한다(절대 규칙 13) — 무인 경로에서도 이 게이트는 기계 판정이라 사람이 필요
     없다. FAIL 이면 계획을 고쳐 재위임한다(최대 2라운드, 미달 시 그 편 중단).
 - **도입 b-roll (승급했을 때만)** — `veo_img2video`(`aspectRatio: "9:16"`,
-  `resolution: "1080p"`, `durationSeconds: 8`, model `veo-3.1-fast-generate-preview`).
+  `resolution: "1080p"`, `durationSeconds: 8`, model `veo-3.1-lite-generate-preview`
+  — 블라인드 아레나에서 세 티어의 품질이 통계적으로 같아 가장 싼 티어를 쓴다).
   **소스는 §6 에서 이미 만든 커버 배경 PNG** 다 — produce 절대 규칙 8 이 `veo_text2video`
   를 금지한다(같은 프롬프트로도 매번 다른 장면이 나와 되돌릴 기준이 없다).
+  이 칸이 Veo 고정인 이유는 소리다 — 절대 규칙 9 로 b-roll 구간은 클립이 가진 소리를
+  쓰므로 무음이 싼 Seedance 로 옮길 자리가 아니다. 커버 배경이 성인 실사 인물이어도
+  Veo 이미지 레인은 그대로 받는다(실측 2026-08-15). **다만 소스에 아이·청소년으로 보이는
+  인물이 있으면 이 레인이 차단된다**(Support code 17301594) — 계획 게이트가 P0-10 으로
+  먼저 잡지만, 생성이 무응답으로 떨어지면 그 편은 인물을 성인으로 다시 만들고 재시도한다.
   **생성은 8초(1080p 는 8초 전용), 사용은 broll 씬 `duration`(기본 4초)만** — produce
   §6 트림+믹스 규약대로 원본 앞부분만 잘라 쓰고 원본은 보관한다. 업스케일하지
   않는다(본편이 1080×1920 — 720p 로 내리지 않는 사용자 결정 2026-08-11).
@@ -359,7 +369,10 @@ exit 1(판정 불가)이면 중단한다. 단가를 모르는 채로 돈을 쓰�
   프롬프트에 "leaves space for a spoken voiceover, no melody in the vocal
   frequency range". 빌더가 루프로 늘린다.
 
-호출마다 `.work/cost-tally.tsv` 에 실제 사용량을 한 줄씩 append 한다.
+호출마다 `.work/cost-tally.tsv` 에 실제 사용량을 한 줄씩 append 한다 — §5 의
+견적 파일이 아니라 이쪽이다. 줄 형식·단위(veo 는 생성 길이, tts 는 자수÷1000)는
+`references/cost-tally.md` 가 정본이고, 손 경로(storyboard·produce)도 같은 규약으로
+같은 이름의 파일에 적는다.
 
 ### 6.5 이미지 리뷰 게이트 (게이트 7 — storyboard-reviewer 이미지 모드)
 
@@ -373,8 +386,11 @@ exit 1(판정 불가)이면 중단한다. 단가를 모르는 채로 돈을 쓰�
 
 - **PASS(≥95 · p0 = 0)** → §7 로.
 - **FAIL** → 지적받은 장만 다시 만들고 한 번 더 위임한다. **무인 캡 2라운드.**
-  재생성분도 `.work/cost-tally.tsv` 에 적고 상한(§5)을 다시 확인한다 — 상한을
-  넘기면 재생성 대신 그 자리에서 hold 다.
+  재생성을 결정하면 **그 줄을 먼저 `.work/cost-estimate.tsv` 에 얹고** §5 와 같은
+  방식으로 `--cap` 재판정을 돌린다 — 상한을 넘기면(exit 2) 재생성 대신 그 자리에서
+  hold 다. 판정을 실제 원장으로 돌리지 않는다: 그 시점의 원장에는 BGM·나레이션처럼
+  **아직 안 나간 지출**이 빠져 있어 합계가 작게 보이고, 넘길 재생성이 통과한다.
+  호출이 끝나면 실사용을 `.work/cost-tally.tsv` 에 적는다(§6 그대로).
 - 2라운드에도 FAIL 이면 영상은 끝까지 만들되, **§10 마무리에서 `queue_*: hold`** 로
   적고 미해결 지적을 함께 적는다. 맥락이 어긋난 커버는 그대로 썸네일이 되므로
   사람이 봐야 한다.
@@ -483,6 +499,7 @@ queue_at: 2026-08-11
 - **`references/cost-tiers.md`** — 모델 사다리·승급 조건·자율 금지 티어·상한 판정 (정본)
 - **`references/prices.tsv`** — 생성 툴 단가 SoT (근거등급·출처 포함, `?` 는 미확인)
 - **`references/cost-report.sh`** — tally × 단가 → 리포트. 사전 견적과 사후 리포트에 같은 계산기를 쓴다
+- **`references/cost-tally.md`** — 회차 원장 규약 (파일 위치·줄 형식·단위·exit 읽기). 손 경로 storyboard·produce 도 이 규약으로 같은 파일에 적는다
 - **`references/check-duplicate.py`** — 주제 중복 판정 (기존 전 주제 대비 글자 바이그램 포함도, 임계 0.5 · `--selftest` 픽스처 11쌍)
 
 ### 다른 스킬의 계약을 그대로 쓴다

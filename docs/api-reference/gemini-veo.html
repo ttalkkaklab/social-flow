@@ -41,8 +41,8 @@
   <table>
     <thead><tr><th>모델 ID</th><th>비율</th><th>해상도</th><th>길이(초)</th><th>연장</th><th>참조 이미지</th><th>상대 비용</th></tr></thead>
     <tbody>
-      <tr><td><code>veo-3.1-generate-preview</code><br><span class="badge free">기본값</span></td><td>16:9 · 9:16</td><td>720p · 1080p · 4k</td><td>4 · 6 · 8</td><td>지원</td><td>지원</td><td>1× ($0.40/초 @720p)</td></tr>
-      <tr><td><code>veo-3.1-fast-generate-preview</code></td><td>16:9 · 9:16</td><td>720p · 1080p · 4k</td><td>4 · 6 · 8</td><td>지원</td><td>지원</td><td>1/4×</td></tr>
+      <tr><td><code>veo-3.1-generate-preview</code></td><td>16:9 · 9:16</td><td>720p · 1080p · 4k</td><td>4 · 6 · 8</td><td>지원</td><td>지원</td><td>1× ($0.40/초 @720p) — 아레나 동점이라 기본값에서 내림</td></tr>
+      <tr><td><code>veo-3.1-fast-generate-preview</code><br><span class="badge free">기본값</span></td><td>16:9 · 9:16</td><td>720p · 1080p · 4k</td><td>4 · 6 · 8</td><td>지원</td><td>지원</td><td>1/4×</td></tr>
       <tr><td><code>veo-3.1-lite-generate-preview</code></td><td>16:9 · 9:16</td><td>720p · 1080p</td><td>4 · 6 · 8</td><td><strong>미지원</strong></td><td><strong>미지원</strong></td><td>1/8×</td></tr>
     </tbody>
   </table>
@@ -80,9 +80,13 @@
       <tr><td><code>lastFrame</code></td><td>인라인 이미지</td><td>첫 프레임과 함께 주면 두 이미지 사이를 보간</td></tr>
       <tr><td><code>referenceImages</code></td><td>최대 3장 <code>{ image, referenceType }</code></td><td><code>referenceType</code>은 SDK enum <code>VideoGenerationReferenceType.ASSET</code></td></tr>
       <tr><td><code>numberOfVideos</code></td><td>정수</td><td>연장 호출에서 명시</td></tr>
-      <tr><td><code>personGeneration</code></td><td>정책 값</td><td>이 서버는 사용하지 않는다 — 공급사 기본 정책을 그대로 따른다</td></tr>
+      <tr><td><code>personGeneration</code></td><td>텍스트→영상·연장은 <code>allow_all</code>, 이미지→영상·보간·참조는 <code>allow_adult</code></td><td>미노출 — 3.1 계열은 <strong>모드마다 허용 값이 하나뿐</strong>이라 안 넘겨도 손실이 없다. 정책 전문은 <a href="veo-portrait.html">Veo 인물·참조 정책</a></td></tr>
+      <tr><td><code>seed</code></td><td>정수 (Veo 3 계열)</td><td>미노출 — 결정성을 보장하진 않지만 약간 개선한다. 같은 컷 재현 실험을 못 한다</td></tr>
     </tbody>
   </table>
+  </div>
+  <div class="note">
+    <strong>인물이 든 이미지를 넣는 회차는 <a href="veo-portrait.html">인물·참조 정책</a>을 먼저 본다.</strong> 성인 얼굴은 그대로 통과하고(2026-08-15 실측), 미성년으로 보이는 얼굴은 <code>Support code: 17301594</code> 로 막히며, 화풍 참조(<code>referenceType: "style"</code>)는 3.1 에서 아예 닫혀 있다.
   </div>
 </section>
 
@@ -136,6 +140,21 @@ x-goog-api-key: {API_KEY}</code></pre>
     <strong>RAI 필터는 <code>done: true</code> + 빈 결과로 온다.</strong> <code>raiMediaFilteredReasons</code>를 먼저 보지 않으면 "영상이 없다"는 모호한 에러가 되어 모델이 같은 프롬프트로 재시도한다 — 그 재시도는 반드시 다시 걸리고 대기 시간만 소모된다.
   </div>
   <p>모든 결과물에는 눈에 보이지 않는 <strong>SynthID 워터마크</strong>가 들어간다.</p>
+
+  <h3>운영에 걸리는 공식 제한 (2026-08-15 재확인)</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>제한</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td>결과 보관</td><td><strong>2일</strong> 뒤 서버에서 삭제된다. 이 서버는 생성 즉시 로컬 저장이라 무해하지만, 며칠 뒤 연장하려면 로컬 파일이 있어야 한다</td></tr>
+      <tr><td>차단 시 과금</td><td>안전 필터·오디오 처리로 생성이 막히면 <strong>요금이 청구되지 않는다</strong></td></tr>
+      <tr><td>지연</td><td>최소 11초 · 최대 6분(피크). 이 서버의 폴링 상한 10분은 여유가 있다</td></tr>
+      <tr><td>언어</td><td>영어만 완전 지원. 다른 언어는 평가되지 않아 결과가 달라질 수 있다</td></tr>
+      <tr><td>다중 영상 참조</td><td>영상 여러 개를 참조·추론하는 기능이 없다. 시도하면 품질이 떨어진다</td></tr>
+      <tr><td>지역</td><td>EU·영국·스위스·MENA 계정은 <code>personGeneration</code> 이 <code>allow_adult</code> 로 좁혀진다</td></tr>
+    </tbody>
+  </table>
+  </div>
 </section>
 
 <section id="prompt">
@@ -167,7 +186,7 @@ x-goog-api-key: {API_KEY}</code></pre>
 </section>
 
 <footer>
-  기준일 2026-07-29 · 구현 <a href="../../server/src/video-client.ts">server/src/video-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+  기준일 2026-07-29 · 파라미터표·제한 재확인 2026-08-15 · 인물 정책은 <a href="veo-portrait.html">Veo 인물·참조 정책</a> · 구현 <a href="../../server/src/video-client.ts">server/src/video-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
 </footer>
 
 </div>
