@@ -35,12 +35,12 @@ social-flow/
 │   ├── channel/                 # /social-flow:channel — 채널·프로파일 관리
 │   ├── branding/                # /social-flow:branding — 채널 프로필 이미지 (4종 후보→HITL 선택→적대적 수렴 95점)
 │   ├── intro/                   # /social-flow:intro — 채널 인트로 영상 (컨셉 4종 HITL→veo 캐릭터 연기→채널명 리빌·로고음→90점 수렴)
-│   ├── setup-threads/           # /social-flow:setup-threads — Threads 계정 개설·API 연동 (ego lite HITL — 개설·브랜딩·Meta 앱·60일 토큰, 상태 탐지·재개)
-│   │   └── references/          #   setup-playbook.md(ego CDP 레시피·토큰 교환·60일 갱신)
-│   ├── setup-instagram/         # /social-flow:setup-instagram — Instagram 계정 개설·API 연동 (ego lite HITL — 프로페셔널 전환·Instagram Login OAuth·60일 토큰)
-│   │   └── references/          #   setup-playbook.md(UID 예약변수 함정·테스터 초대 수락 경로)
-│   ├── setup-youtube/           # /social-flow:setup-youtube — YouTube 브랜드 채널 개설·API 연동 (ego lite HITL — 고급기능 인증→채널 생성→refresh_token, 여러 날 재개)
-│   │   └── references/          #   setup-playbook.md(루프백 리스너·프로덕션 단계 7일 만료 함정)
+│   ├── setup-threads/           # /social-flow:setup-threads — Threads 계정 개설·API 연동 (브라우저 HITL — 개설·브랜딩·Meta 앱·60일 토큰, 상태 탐지·재개)
+│   │   └── references/          #   setup-playbook.md(CDP 레시피·Chrome 레인 대응표·토큰 교환·60일 갱신)
+│   ├── setup-instagram/         # /social-flow:setup-instagram — Instagram 계정 개설·API 연동 (브라우저 HITL — 프로페셔널 전환·Instagram Login OAuth·60일 토큰)
+│   │   └── references/          #   setup-playbook.md(UID 예약변수 함정·테스터 초대 수락 경로·Chrome 레인 대응표)
+│   ├── setup-youtube/           # /social-flow:setup-youtube — YouTube 브랜드 채널 개설·API 연동 (브라우저 HITL — 고급기능 인증→채널 생성→refresh_token, 여러 날 재개)
+│   │   └── references/          #   setup-playbook.md(루프백 리스너·프로덕션 단계 7일 만료 함정·Chrome 레인 대응표)
 │   ├── datago/                  # /social-flow:datago — 공공데이터 조사→수집→시드 기록
 │   ├── ingest/                  # /social-flow:ingest — 화면 녹화(+음성)→타임라인 (녹화 제어·STT·씬 경계·키프레임)
 │   ├── storyboard/              # /social-flow:storyboard — 조사→씬 설계→문안·씬별·어휘 수렴(95점)→이미지→이미지 수렴(95점)→승인
@@ -72,7 +72,7 @@ social-flow/
 /social-flow:channel add 재테크           # 1. 채널 프로파일 (1회)
 /social-flow:branding 재테크              # 1.2 (선택) 채널 프로필 이미지 — 4종 후보→HITL 선택→95점 수렴
 /social-flow:intro 재테크                 # 1.3 (선택) 채널 인트로 — 컨셉 4종 HITL→veo 4초 생성→90점 수렴 (본편 뒤 접합 클로징)
-/social-flow:setup-threads 재테크         # 1.4 (선택) SNS 계정 개설·API 연동 — ego lite HITL (플랫폼별: setup-instagram·setup-youtube)
+/social-flow:setup-threads 재테크         # 1.4 (선택) SNS 계정 개설·API 연동 — 브라우저 HITL, ego lite 우선·Chrome 폴백 (플랫폼별: setup-instagram·setup-youtube)
 /social-flow:ingest 재테크 record         # 1.5 (선택) 화면+음성 녹화→타임라인 — 웹 조사 대체 소스
 /social-flow:storyboard 재테크 "7월 환율 변동"   # 2. 조사(또는 타임라인)→스토리보드→[승인]
 /social-flow:produce 재테크 20260729-환율       # 3. 영상+플랫폼 텍스트 제작

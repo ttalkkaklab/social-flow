@@ -5,20 +5,21 @@ description: >
   채널 만들어", "유튜브 API 연동해줘", "쇼츠 붙여줘", "set up a YouTube channel",
   or wants to stand up a LIVE YouTube brand channel for a channel and wire it into
   social-flow. Drives advanced-feature identity verification, brand channel creation,
-  branding, and Google OAuth refresh_token issuance through the ego lite browser with
-  HITL handoffs (phone·selfie verification·consent), then saves
+  branding, and Google OAuth refresh_token issuance through a browser lane — ego lite
+  first, the claude-in-chrome tools as fallback — with HITL handoffs (phone·selfie
+  verification·consent), then saves
   <SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json and verifies with sns_account_check.
   Spans multiple days (verification approval is async) — resumable, detects state and
   continues; a status mode reports what is pending.
 argument-hint: "<채널> [status|verify|create|token]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__claude-in-chrome__tabs_context_mcp", "mcp__claude-in-chrome__tabs_create_mcp", "mcp__claude-in-chrome__tabs_close_mcp", "mcp__claude-in-chrome__navigate", "mcp__claude-in-chrome__javascript_tool", "mcp__claude-in-chrome__computer"]
 ---
 
-# YouTube 채널 개설 — ego lite HITL
+# YouTube 채널 개설 — 브라우저 HITL
 
 채널(브랜드) 하나에 **살아 있는 YouTube 브랜드 채널을 붙이는** 스킬이다. 고급 기능
-신원 인증, 브랜드 채널 생성, 브랜딩, Google OAuth `refresh_token` 발급까지를 ego
-lite 로 몰고 가되 **사람 손이 필요한 지점만 넘긴다**. 끝나면
+신원 인증, 브랜드 채널 생성, 브랜딩, Google OAuth `refresh_token` 발급까지를
+브라우저로 몰고 가되 **사람 손이 필요한 지점만 넘긴다**. 끝나면
 `<SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json` 이 저장되고 쇼츠를
 `channel: "<slug>"` 로 게시할 수 있다.
 
@@ -33,24 +34,47 @@ lite 로 몰고 가되 **사람 손이 필요한 지점만 넘긴다**. 끝나�
 
 ## 무엇을 자동으로, 무엇을 넘기나
 
-ego lite 로 페이지 이동·폼 입력·동의 진행까지 자동으로 한다. 다음은 사람 게이트라
+브라우저로 페이지 이동·폼 입력·동의 진행까지 자동으로 한다. 다음은 사람 게이트라
 **사용자에게 넘긴다**:
 
 - **신원 인증** — 전화번호 수신 코드, QR 로 폰에서 찍는 6초 셀피 영상. 사람만 가능.
 - **Google 로그인·2FA** — 계정 인증.
 - **동의 스코프 체크박스** — 스코프마다 사용자가 직접 체크(§token 함정).
 
-핸드오프는 `handOffTaskSpace` → 사용자 완료 확인 → `takeOverTaskSpace`.
+핸드오프 방식은 레인마다 다르다 — ego lite 는 `handOffTaskSpace` → 사용자 완료 확인
+→ `takeOverTaskSpace`. Chrome 레인은 화면이 처음부터 사용자 것이라 노출 절차가 없고
+완료 확인만 한다.
 
 ## 전제 조건
 
 - `data/<slug>/profile.md` 가 있어야 한다 — 없으면 `/social-flow:channel add` 안내
   후 중단.
-- **ego lite**(`ego-browser` CLI) — 이 머신의 도구. 없으면 §수동 폴백.
+- **브라우저 레인 하나** — ego lite 또는 claude-in-chrome. 고르는 기준은 아래
+  §브라우저 레인.
 - **Google Cloud OAuth 클라이언트**(데스크톱) — `client_id`/`client_secret`. 기존
   채널의 것을 재사용해도 된다(같은 Google 프로젝트).
 - YouTube Data API v3 활성화. 성장 루프(grow-youtube)까지 쓰려면 YouTube
   Analytics API 도 켠다.
+
+## 브라우저 레인 — ego lite 우선, Chrome 폴백
+
+브라우저 조작은 세 갈래고 위에서부터 고른다.
+
+1. **ego lite** — `command -v ego-browser` 로 확인한다. 사용자 로그인 상태를 쓰면서도
+   agent 전용 task space 에서 돌아 사용자 탭과 부딪히지 않는다. 실측 레시피가 이 레인
+   기준으로 쓰여 있다(`references/setup-playbook.md`).
+2. **claude-in-chrome** — ego 가 없을 때. 윈도우·리눅스가 대표적이다(ego lite 는
+   macOS 전용). 사용자의 실제 Chrome 세션에 붙어 로그인 상태를 그대로 쓰지만
+   **격리가 없다** — 작업 중 사용자 브라우저를 점유하고, 사이트별 권한 승인을 먼저
+   받아야 한다. CDP 레시피와의 대응은 playbook §브라우저 레인의 표를 본다.
+3. **수동 폴백** — 둘 다 없으면 아래 §수동 폴백으로 간다(토큰 발급만 돕는다).
+
+레인이 바뀌어도 **사람 게이트는 그대로다** — 신원 인증·로그인·동의 체크는 어느
+레인에서든 사용자가 한다.
+
+**활성 채널 확인은 Chrome 레인에서 더 조심한다** — 사용자의 실제 브라우저라 다른
+브랜드 채널이 활성일 가능성이 ego 레인보다 높다. 절대 규칙 1 대로 매 작업 전에 URL
+채널 ID 로 확인한다.
 
 ## 절대 규칙 (위반 시 즉시 중단)
 
@@ -150,7 +174,7 @@ ego lite 로 페이지 이동·폼 입력·동의 진행까지 자동으로 한�
 멈췄는지 — 특히 **신원 인증 승인 대기**인지 — 를 짚는다. 승인 대기 중이면 Gmail
 확인만 권하고 재촉·재제출을 유도하지 않는다. 게시·변경 없음.
 
-## 수동 폴백 (ego lite 없을 때)
+## 수동 폴백 (브라우저 레인이 없을 때)
 
 신원 인증·채널 생성·브랜딩은 사용자가 직접 하고, 이 스킬은 **토큰 발급만** 돕는다:
 루프백 리스너를 띄우고 authorize URL 을 만들어 사용자에게 주면 → 사용자가 브라우저
