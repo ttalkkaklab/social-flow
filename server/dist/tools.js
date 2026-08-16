@@ -1,10 +1,11 @@
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
+import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
 import { DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, TTS_VOICE_NAMES, VALID_TTS_MODELS } from './tts-client.js';
 import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MIN_ZIMAGE_DIMENSION, ZIMAGE_DIMENSION_STEP, ZIMAGE_QUANTIZE_OPTIONS, } from './zimage-client.js';
 /**
- * 툴 표면 정의 (38종) — 조사 5종 + 공공데이터 5종 +
- * 생성 15종(이미지 3 + 영상 4 + 음성 4 + 음악 4) +
+ * 툴 표면 정의 (41종) — 조사 5종 + 공공데이터 5종 +
+ * 생성 18종(이미지 3 + 영상 7 + 음성 4 + 음악 4) +
  * 플랫폼별 게시 5종 + 받은 댓글 3종 + 계정 점검 1종 +
  * 성장 조회 4종(Threads 인사이트·키워드 검색 · YouTube 인사이트 · Instagram
  * 인사이트 — 각 grow-* 스킬 전용 읽기 툴).
@@ -18,6 +19,13 @@ import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MI
  * 참조를 제거하고 쇼트폼 파이프라인 맥락(채널 프로파일 보이스·seed 고정)을 더했다
  * (키는 호출 시점 검증).
  *
+ * 영상만 엔진이 둘이다 — veo_*(Google Veo 3.1, GEMINI_API_KEY)와
+ * seedance_*(ByteDance Seedance, ARK_API_KEY). 둘은 대체재가 아니라 잘하는 일이
+ * 다르고, 어느 쪽을 언제 쓰는지의 정본은
+ * skills/produce/references/video-model-selection.md 다. 툴 description 은 그
+ * 판단표의 요약을 각자 싣는다 — 스킬 문서를 안 읽고 툴 목록만 보는 호출자도
+ * 엔진을 고를 수 있어야 한다.
+ *
  * 음성·조성·모드 목록은 각 클라이언트 모듈의 정본 상수에서 파생시킨다 — 30종짜리
  * 목록을 스키마에 복사해 두면 모델 추가 때 한쪽만 고쳐지는 사고가 난다.
  *
@@ -26,12 +34,17 @@ import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MI
  * 옮긴 것이다 — description 산문은 모델만 읽고 승인 UI 는 읽지 못한다.
  * 판정 기준표는 docs/api-reference/mcp-tools.html §7 이 정본이다.
  */
-/** Veo 공통 프로퍼티 정의 (Veo 3.1 계열) */
+/**
+ * Veo 공통 프로퍼티 정의 (Veo 3.1 계열).
+ *
+ * 기본값이 표준이 아니라 fast 인 근거는 video-client.ts DEFAULT_VIDEO_MODEL 주석에
+ * 적어 두었다 — 세 티어의 블라인드 아레나 Elo 가 통계적으로 같다.
+ */
 const VEO_MODEL_PROPERTY = {
     type: 'string',
-    description: 'Veo model (default: "veo-3.1-generate-preview"). fast = same features at 1/4 cost, lite = cheapest (1/8 cost) but no 4k/extension/reference support.',
+    description: 'Veo model (default: "veo-3.1-fast-generate-preview"). Blind-arena Elo puts the three tiers within overlapping confidence intervals on every board — the tier buys features and resolution, not measurably better video — so pick the CHEAPEST tier that has the features you need. lite is 1/2 the cost of fast and 1/8 of standard but drops 4k, extension, and reference images; standard costs 4x fast for no measured preference gain.',
     enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview', 'veo-3.1-lite-generate-preview'],
-    default: 'veo-3.1-generate-preview',
+    default: 'veo-3.1-fast-generate-preview',
 };
 const VEO_RESOLUTION_PROPERTY = {
     type: 'string',
@@ -45,6 +58,60 @@ const VEO_DURATION_PROPERTY = {
     enum: [4, 6, 8],
     default: 8,
 };
+/**
+ * 배제 지시 — 프롬프트 본문이 아니라 이 필드로 보낸다.
+ *
+ * 문법은 공식 문서가 못 박는다: 지시문이 아니라 명사·형용사구를 콤마로 나열한다.
+ * 본문에 "no ~" 를 적으면 그 명사가 오히려 그려진다(로컬 이미지 실측 4장 전패).
+ */
+const VEO_NEGATIVE_PROMPT_PROPERTY = {
+    type: 'string',
+    description: 'What to keep OUT of the frame, as comma-separated noun or adjective phrases: "wall, frame, on-screen text, subtitles". Do NOT write instructions such as "no walls" or "don\'t show walls" — Google\'s prompt guide names that form as not recommended, and writing an exclusion into the prompt body tends to summon the very noun you named. Put every exclusion here instead of in prompt.',
+};
+/**
+ * Seedance 공통 프로퍼티 정의 (BytePlus ModelArk) — 목록·기본값은 seedance-client.ts
+ * 능력표에서 파생시킨다. 모델별 제약(해상도·길이·음성·seed)은 스키마 enum 하나로는
+ * 표현되지 않아 클라이언트의 superRefine 이 호출 전에 거부한다.
+ */
+const SEEDANCE_MODEL_PROPERTY = {
+    type: 'string',
+    description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no activation gate). ` +
+        'Quality, from the Artificial Analysis blind image-to-video arena: dreamina-seedance-2-0-260128 ranks 1st overall (Elo 1,198), the three Veo 3.1 tiers sit at 1,066-1,086, and seedance-1-5-pro-251215 is the arena baseline at 1,000 — so 2.0 is clearly the best Seedance, and 1.5 pro trades roughly a 59:41 preference against Veo for about a third of the price. ' +
+        'dreamina-seedance-2-5-260628, the 2.0 fast/mini variants, and seedance-1-0-pro-fast-251015 have NO public evaluation at all — prefer them only for cost or for a capability the tested models lack, not for a shot that matters. ' +
+        'The 2.x models REJECT input images containing real human faces and need account balance > $30 to activate, which rules them out for photoreal-person sources.',
+    enum: [...VALID_SEEDANCE_MODELS],
+    default: DEFAULT_SEEDANCE_MODEL,
+};
+const SEEDANCE_RESOLUTION_PROPERTY = {
+    type: 'string',
+    description: `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model — 1080p needs 2.0, 1.5 pro, or 1.0 pro/fast; 4k is 2.0 only; 2.5 and the 2.0 fast/mini models top out at 720p.`,
+    enum: [...VALID_SEEDANCE_RESOLUTIONS],
+    default: DEFAULT_SEEDANCE_RESOLUTION,
+};
+const SEEDANCE_DURATION_PROPERTY = {
+    type: 'number',
+    description: `Clip length in seconds (default: ${DEFAULT_SEEDANCE_DURATION}). Range differs per model — 2.5 accepts 4-30, the 2.0 series 4-15, 1.5 pro 4-12, and 1.0 pro/fast 2-12. Frame rate is fixed at ${SEEDANCE_FPS} fps. Cost scales linearly with duration.`,
+    default: DEFAULT_SEEDANCE_DURATION,
+};
+const SEEDANCE_AUDIO_PROPERTY = {
+    type: 'boolean',
+    description: 'Generate a soundtrack with the video (default: false — this pipeline adds narration separately with tts_*, and on seedance-1-5-pro audio doubles the price). The vendor default is true; set it to true only when you want the model to voice the clip. The 1.0 pro/fast models are silent-only and reject true.',
+    default: false,
+};
+const SEEDANCE_WATERMARK_PROPERTY = {
+    type: 'boolean',
+    description: 'Burn a visible "AI Generated" mark into the bottom-right corner (default: false).',
+    default: false,
+};
+const SEEDANCE_SEED_PROPERTY = {
+    type: 'number',
+    description: 'Random seed, -1 to 2147483647 (default -1). Supported only by seedance-1-5-pro and the 1.0 pro/fast models — the 2.x models reject it, so the reference lane has no seed at all. The API reference calls it a random seed and does not promise that the same seed reproduces the same video: do NOT build shot-to-shot consistency on it. Consistency belongs on reference images (seedance_reference) or first+last frames.',
+};
+const SEEDANCE_CAMERA_FIXED_PROPERTY = {
+    type: 'boolean',
+    description: 'Ask the model to hold the camera still. Supported only by seedance-1-5-pro and the 1.0 pro/fast models — on 2.x, describe the camera in the prompt instead.',
+};
+const SEEDANCE_RATIO_VALUES = [...VALID_SEEDANCE_RATIOS];
 /** TTS 공통 프로퍼티 정의 (Gemini TTS) — 목록은 tts-client.ts 정본에서 파생 */
 const TTS_VOICE_ENUM = [...TTS_VOICE_NAMES];
 const TTS_VOICE_PROPERTY = {
@@ -255,7 +322,7 @@ const INSTAGRAM_INSIGHTS_OUTPUT = {
         },
         media: {
             type: 'array',
-            description: '최근 미디어별 지표 { mediaId, mediaType, mediaProductType, permalink, excerpt, timestamp, metrics } — metrics 는 views·reach·likes·comments·shares·saved·total_interactions·follows·profile_visits, mediaProductType=REELS 면 ig_reels_avg_watch_time(ms)·ig_reels_video_view_total_time(ms)·reels_skip_rate 가 추가된다. 개별 조회 실패 시 metrics=null + metricsError',
+            description: '최근 미디어별 지표 { mediaId, mediaType, mediaProductType, permalink, excerpt, timestamp, metrics } — metrics 공통은 views·reach·likes·comments·shares·saved·total_interactions 이고, 표면 전용 지표가 mediaProductType 에 따라 갈려 붙는다: REELS 면 ig_reels_avg_watch_time(ms)·ig_reels_video_view_total_time(ms)·reels_skip_rate, FEED 면 follows·profile_visits. 두 묶음은 배타적이라 반대쪽에 요청하면 400 으로 그 미디어 지표가 통째로 비므로 섞어 부르지 않는다. 개별 조회 실패 시 metrics=null + metricsError',
             items: { type: 'object' },
         },
     },
@@ -740,7 +807,8 @@ Returns: a text block with the saved .png path, resolution, steps, seed, quantiz
 
 Use when the user asks to create, generate, or make a video, clip, footage, or short ad from a description alone (비디오 생성, 영상 만들어줘). Audio is generated natively: wrap dialogue in double quotes, and describe SFX ("engine roaring") and ambient sound explicitly in the prompt.
 Do NOT use when a source visual exists — use veo_img2video to animate a still image, veo_extension to continue a Veo-generated video, or veo_reference to keep a specific subject consistent from photos.
-Cost lever: default model is top quality ($0.40/s at 720p); fast is 1/4 the cost, lite is 1/8 (no 4k). Generation is asynchronous and typically takes 1-6 minutes.
+Prefer seedance_text2video when you need a length off Veo's 4/6/8-second grid, a ratio other than 16:9 or 9:16, or a much cheaper silent shot; keep Veo when native dialogue audio is the point.
+Cost lever: the default is now fast ($0.10/s at 720p) because blind-arena Elo shows no measurable quality gap between the tiers; drop to lite ($0.05/s) whenever 4k, extension, and reference images are not needed. Generation is asynchronous and typically takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolution, and duration in seconds. Videos carry an invisible SynthID watermark.`,
         inputSchema: {
@@ -750,6 +818,7 @@ Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolu
                     type: 'string',
                     description: 'Descriptive text prompt for video generation (English recommended)',
                 },
+                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
                 model: VEO_MODEL_PROPERTY,
                 aspectRatio: {
                     type: 'string',
@@ -779,6 +848,9 @@ Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolu
 
 Use when the user provides an image to bring to life, animate, or add motion to (이미지로 영상 만들기) — e.g. animate a product photo. Provide sourceImagePath as the first frame; optionally add lastImagePath for a smooth transition between two images. The prompt should describe the desired motion.
 Do NOT use for pure text-to-video (use veo_text2video), continuing an existing video (use veo_extension), or subject consistency from reference photos (use veo_reference).
+For a silent b-roll shot from an already-generated background, seedance_img2video bills only the seconds you ask for — a 4-second 1080p shot runs about $0.23 silent against $0.64 on veo-3.1-lite, which must bill 8 seconds at 1080p and cannot turn audio off. Stay on Veo when the clip needs native audio or a later veo_extension.
+Person policy, measured 2026-08-15: an adult photoreal face in the source image passes here and holds for the clip, while Seedance 2.x rejects the very same file — so this is the image lane for photoreal people. A face that reads as a MINOR is blocked whether it arrives as a photo or an illustration (Support code 17301594); blocked generations are not billed, so redraw the cut instead of hunting for a way around it.
+For composition control — a subject appearing, vanishing, or changing pose exactly as drawn — pass lastImagePath. Reference images (veo_reference) carry appearance, not layout.
 Generation is asynchronous and typically takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, source/last frame image paths, model, aspect ratio, resolution, and duration in seconds.`,
@@ -789,6 +861,7 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
                     type: 'string',
                     description: 'Text description for video animation/motion',
                 },
+                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
                 sourceImagePath: {
                     type: 'string',
                     description: 'Absolute path to the first frame (starting) image file',
@@ -825,7 +898,7 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
         description: `Extend a Veo-generated video by adding 7 seconds of new content per call.
 
 Use when the user asks to continue, lengthen, or extend a video that was previously generated by Veo (비디오 연장, 이어서 만들기). Up to 20 extensions per video; input must be a Veo output at 720p, 16:9 or 9:16, and 141 seconds or shorter.
-Do NOT use on videos not generated by Veo, and do NOT use the lite model (unsupported). For a brand-new scene use veo_text2video instead.
+Do NOT use on videos not generated by Veo, and do NOT use the lite model (unsupported). For a brand-new scene use veo_text2video instead. Seedance has no equivalent for local files — its video input accepts only public URLs — so extension of a local clip always lands here.
 Output is always 720p and follows the input video's aspect ratio. Voice cannot be effectively extended if absent from the last 1 second of the input. Takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, source video path, model, resolution, and the added duration (+7 seconds).`,
@@ -836,15 +909,16 @@ Returns: a text block with the saved .mp4 file path, source video path, model, r
                     type: 'string',
                     description: 'Text description for the video continuation',
                 },
+                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
                 sourceVideoPath: {
                     type: 'string',
                     description: 'Absolute path to the source video file to extend (must be a Veo-generated 720p video, 141 seconds or shorter)',
                 },
                 model: {
                     type: 'string',
-                    description: 'Veo model (default: "veo-3.1-generate-preview"). The lite model does NOT support extension.',
+                    description: 'Veo model (default: "veo-3.1-fast-generate-preview"). The lite model does NOT support extension. Blind-arena Elo has fast and standard statistically tied, so standard only buys 4k here.',
                     enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview'],
-                    default: 'veo-3.1-generate-preview',
+                    default: 'veo-3.1-fast-generate-preview',
                 },
                 outputPath: {
                     type: 'string',
@@ -866,6 +940,8 @@ Returns: a text block with the saved .mp4 file path, source video path, model, r
 
 Use when the user wants a video featuring a specific person, character, product, or garment shown in reference photos — fashion videos, brand/product marketing, consistent character animation (캐릭터 일관성, 제품 영상). Provide 1-3 clear, well-lit reference images (multiple angles improve consistency) and a detailed prompt describing the scene and interactions.
 Do NOT use the lite model (unsupported). To animate a single image as-is use veo_img2video; for free-form generation use veo_text2video.
+This is the reference tool for REAL people — Seedance's seedance_reference rejects real human faces, while it accepts far more reference images (up to 30) and a free duration, so route drawn characters and products there. The person policy here is documented as the same allow_adult contract veo_img2video runs under, but it is unmeasured on this mode; only the image lane was probed.
+Reference images are ASSET only: they preserve ONE subject's appearance, NOT the layout of the picture. For a cut that must match a drawn composition use veo_img2video with sourceImagePath + lastImagePath. Veo 3.1 has no style reference at all — the official docs send style images to the experimental veo-2.0 model, so route sketch or toon style transfer to seedance_reference instead.
 Duration is fixed at 8 seconds when reference images are used. Takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, reference image list, model, aspect ratio, resolution, and duration.`,
@@ -876,6 +952,7 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
                     type: 'string',
                     description: 'Detailed text description of the video scene and subject interactions',
                 },
+                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
                 referenceImagePaths: {
                     type: 'array',
                     items: {
@@ -887,9 +964,9 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
                 },
                 model: {
                     type: 'string',
-                    description: 'Veo model (default: "veo-3.1-generate-preview"). The lite model does NOT support reference images.',
+                    description: 'Veo model (default: "veo-3.1-fast-generate-preview"). The lite model does NOT support reference images. Blind-arena Elo has fast and standard statistically tied, so standard only buys 4k here.',
                     enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview'],
-                    default: 'veo-3.1-generate-preview',
+                    default: 'veo-3.1-fast-generate-preview',
                 },
                 aspectRatio: {
                     type: 'string',
@@ -898,6 +975,157 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
                     default: '16:9',
                 },
                 resolution: VEO_RESOLUTION_PROPERTY,
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the generated video (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the generated video (default: video_ref_<timestamp>.mp4)',
+                },
+            },
+            required: ['prompt', 'referenceImagePaths'],
+        },
+    },
+    // ── 영상 생성 (ByteDance Seedance — BytePlus ModelArk) ─────────────
+    // Veo 와 같은 자리를 쓰는 두 번째 엔진이다. 어느 쪽을 언제 쓰는지의 정본은
+    // skills/produce/references/video-model-selection.md 다.
+    {
+        name: 'seedance_text2video',
+        title: '영상 생성 (텍스트 → 영상, Seedance)',
+        annotations: HINT.generate,
+        description: `Generate a video from a text prompt using ByteDance Seedance (BytePlus ModelArk).
+
+Use when you need a clip that Veo's fixed 4/6/8-second grid cannot express — an odd length (2-30 seconds, any whole second), a 21:9 or 4:3 frame, or simply the cheapest possible shot: a silent 9:16 1080p 5-second clip costs about $0.24 on seedance-1-0-pro-fast, against $0.64 on veo-3.1-lite and $0.96 on veo-3.1-fast (Veo forces an 8-second bill at 1080p and always includes audio). Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
+Do NOT use when you need Veo's native dialogue audio quality or its +7s extension of an existing clip — veo_text2video and veo_extension keep those. When a source visual already exists use seedance_img2video, and for subject consistency from photos use seedance_reference.
+Model choice drives both price and limits; read the model parameter before overriding the default. Generation is asynchronous and typically takes 1-6 minutes.
+
+Returns: a text block with the saved .mp4 file path, model, ratio, resolution, duration, and the billed completion token count.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb — "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" — the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead. Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ...". Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628) — Korean dialogue still works inside quotes on 1.5-pro, which lip-syncs it.',
+                },
+                model: SEEDANCE_MODEL_PROPERTY,
+                ratio: {
+                    type: 'string',
+                    description: 'Aspect ratio of the generated video (default: "16:9"). "adaptive" lets the model pick.',
+                    enum: SEEDANCE_RATIO_VALUES,
+                    default: '16:9',
+                },
+                resolution: SEEDANCE_RESOLUTION_PROPERTY,
+                durationSeconds: SEEDANCE_DURATION_PROPERTY,
+                generateAudio: SEEDANCE_AUDIO_PROPERTY,
+                watermark: SEEDANCE_WATERMARK_PROPERTY,
+                seed: SEEDANCE_SEED_PROPERTY,
+                cameraFixed: SEEDANCE_CAMERA_FIXED_PROPERTY,
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the generated video (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the generated video (default: video_<timestamp>.mp4)',
+                },
+            },
+            required: ['prompt'],
+        },
+    },
+    {
+        name: 'seedance_img2video',
+        title: '영상 생성 (이미지 → 영상, Seedance)',
+        annotations: HINT.generate,
+        description: `Animate a still image into a video (first frame, or first+last frame interpolation) using ByteDance Seedance.
+
+Use for the cheap b-roll lane of this pipeline: animating an already-generated cover or point background PNG. ratio defaults to "adaptive" so the source image is not center-cropped — pass an explicit ratio only when you intend a different frame. Billing follows the requested duration, so ask for the length you will actually cut in.
+The default model (seedance-1-5-pro) accepts photoreal human faces. The dreamina-seedance-2.5/2.0 models REJECT input images containing real human faces, so never route a photoreal-person background through them.
+Do NOT use for pure text-to-video (use seedance_text2video) or for subject consistency across several photos (use seedance_reference). Veo's veo_img2video remains the choice when you want its native audio or Veo-only extension afterwards.
+
+Returns: a text block with the saved .mp4 file path, source/last frame image paths, model, ratio, resolution, duration, and the billed completion token count.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Motion only — do not re-describe people, background, or lighting already visible in the source image, or the model redesigns the scene. Write camera as a span: "starting frame composition + movement + movement amplitude + ending frame composition". Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable). English or Chinese only. There is no negative-prompt parameter here — an unwanted element has to be designed out of the sentence, not forbidden in it.',
+                },
+                sourceImagePath: {
+                    type: 'string',
+                    description: 'Absolute path to the first frame (starting) image file',
+                },
+                lastImagePath: {
+                    type: 'string',
+                    description: 'Optional: Absolute path to the last frame (ending) image file for a smooth interpolation. Not supported by seedance-1-0-pro-fast-251015 (first frame only).',
+                },
+                model: SEEDANCE_MODEL_PROPERTY,
+                ratio: {
+                    type: 'string',
+                    description: 'Aspect ratio of the generated video (default: "adaptive" — follows the source image). A different value makes the server center-crop your image.',
+                    enum: SEEDANCE_RATIO_VALUES,
+                    default: 'adaptive',
+                },
+                resolution: SEEDANCE_RESOLUTION_PROPERTY,
+                durationSeconds: SEEDANCE_DURATION_PROPERTY,
+                generateAudio: SEEDANCE_AUDIO_PROPERTY,
+                watermark: SEEDANCE_WATERMARK_PROPERTY,
+                seed: SEEDANCE_SEED_PROPERTY,
+                cameraFixed: SEEDANCE_CAMERA_FIXED_PROPERTY,
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the generated video (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the generated video (default: video_<timestamp>.mp4)',
+                },
+            },
+            required: ['prompt', 'sourceImagePath'],
+        },
+    },
+    {
+        name: 'seedance_reference',
+        title: '영상 생성 (참조 이미지, Seedance 2.x)',
+        annotations: HINT.generate,
+        description: `Generate a video that keeps subjects from reference images consistent, using Dreamina Seedance 2.x.
+
+Use when a character, product, or garment must stay the same across the shot and you have several photos of it (캐릭터 일관성, 제품 영상). dreamina-seedance-2-5-260628 takes 1-30 reference images and up to 30 seconds; the 2.0 series takes 1-9 and up to 15 seconds. Unlike veo_reference the length is not pinned to 8 seconds.
+Do NOT pass reference images containing real human faces — the 2.x models reject them; use veo_reference for real people. The seedance-1-5-pro and 1.0 models do not accept reference images at all and are rejected before the call. These models also need account balance > $30 to activate.
+References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred — this is the only style-transfer lane in the plugin, since Veo 3.1 dropped style references — and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
+Do NOT feed a three-view or multi-view character sheet. ByteDance's own docs advise against it twice: the model reads the separate angles as separate people, which worsens identity drift and produces duplicate characters in one frame. Send a headshot (face only, neutral expression, minimal shoulders and background) plus one full-body shot instead — the docs call those two sufficient. Order is weight: put the asset that must be matched most precisely first in the array.
+
+Returns: a text block with the saved .mp4 file path, reference image list, model, ratio, resolution, duration, and the billed completion token count.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable. English or Chinese only. Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
+                },
+                referenceImagePaths: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    minItems: 1,
+                    maxItems: 30,
+                    description: 'Absolute paths to reference images guiding subject appearance — up to 30 for dreamina-seedance-2-5-260628, up to 9 for the 2.0 series. Must not contain real human faces.',
+                },
+                model: {
+                    type: 'string',
+                    description: `Seedance model (default: "${DEFAULT_SEEDANCE_REFERENCE_MODEL}" — the only reference-capable model with independent quality data: rank 1 on the Artificial Analysis blind image-to-video arena, and it also outputs 1080p and 4k). Only the 2.x models accept reference images. Switch to dreamina-seedance-2-5-260628 when you actually need more than 9 reference images or more than 15 seconds — it is untested in every public arena, so do not pick it for a shot that matters without comparing first. fast and mini trade quality for cost and are likewise untested.`,
+                    enum: [...SEEDANCE_REFERENCE_MODELS],
+                    default: DEFAULT_SEEDANCE_REFERENCE_MODEL,
+                },
+                ratio: {
+                    type: 'string',
+                    description: 'Aspect ratio of the generated video (default: "adaptive").',
+                    enum: SEEDANCE_RATIO_VALUES,
+                    default: 'adaptive',
+                },
+                resolution: SEEDANCE_RESOLUTION_PROPERTY,
+                durationSeconds: SEEDANCE_DURATION_PROPERTY,
+                generateAudio: SEEDANCE_AUDIO_PROPERTY,
+                watermark: SEEDANCE_WATERMARK_PROPERTY,
                 outputPath: {
                     type: 'string',
                     description: 'Directory path to save the generated video (default: current working directory)',

@@ -12,7 +12,7 @@ description: >
   into the 9:16 video (cut per scene, focus crop, title overlays, burned subtitles,
   BGM ducking) via build-screencast.sh.
 argument-hint: "<채널> <주제> [플랫폼CSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
 ---
 
 # 플랫폼별 콘텐츠 제작 — data/[채널]/[주제]/output/
@@ -65,10 +65,16 @@ data/<채널>/<주제>/
    **이 규칙은 b-roll 삽입 구간 이야기다** — 모션 배경 씬(scenes-schema §모션 배경,
    `visual.video`)은 빌더가 영상 트랙만 쓰므로 클립의 소리는 버려지고, 나레이션·자막을
    그대로 유지한다.
-10. **커버(첫 화면)는 코드 렌더로만 만든다** — 생성 영상을 커버에 쓰지 않는다.
-   **Veo 는 한글을 못 쓴다**(사용자 확인 2026-08-11). 커버는 훅 제목·히어로 수치가
-   전부인 화면이라 글자가 깨지면 그 회차가 통째로 못 쓰게 된다. 생성 영상은 **커버
-   다음 구간**에 무텍스트 b-roll 로 넣는다.
+10. **커버(첫 화면)의 텍스트는 코드 렌더로만 만든다** — **생성 영상**을 커버에 쓰지
+   않는다. **Veo 는 한글을 못 쓴다**(사용자 확인 2026-08-11). 커버는 훅 제목·히어로
+   수치가 전부인 화면이라 글자가 깨지면 그 회차가 통째로 못 쓰게 된다. 생성 영상은
+   **커버 다음 구간**에 무텍스트 b-roll 로 넣는다.
+   **실녹화 클립은 예외다**(2026-08-15) — 한글 깨짐이라는 금지 근거가 스크린캐스트에는
+   성립하지 않는다. 결과물 실화면(완성 사이트 스크롤·툴 실행 장면)을 커버 **배경**으로
+   깔고 제목·수치는 종전대로 코드 렌더 오버레이를 얹는 구성은 허용이고, 첫 프레임에
+   움직임이 생겨 훅에 유리하다(스킵률 실측 84.8~93.8% 개선 목표 — Veo 비용 0).
+   클립은 사용자 제공 녹화 또는 ingest 산출물이어야 하며 저작권 있는 남의 화면은
+   쓰지 않는다.
 11. **생성 영상의 소스 이미지에는 사람이 있어야 한다** — 오브제만 놓인 정물을 넣으면
    Veo 가 움직일 대상이 없어 화면이 미묘하게 흔들리다 끝나고, 그 8초가 정지 컷처럼
    보인다. 사람이 있으면 모델이 머리카락 흔들림·고개 돌림·옷 주름 같은 **자연스러운
@@ -85,9 +91,12 @@ data/<채널>/<주제>/
      `containsSyntheticMedia: true`(publish 스킬 계약).
 12. **커버 배경 PNG(메타 이미지)는 대충 만들지 않는다** — 커버 프레임이 그대로
    `cover.jpg`(YouTube 썸네일이자 IG·FB 영상의 첫 화면)가 된다. 주제와 무관한
-   정물·추상 배경 금지 —
-   **주제가 한눈에 보이는 실사 인물 장면**(규칙 11 의 인물 계약 그대로)을
-   `quality: "high"` 로 만든다. 텍스트는 여전히 코드 렌더다(규칙 10) — 이 규칙은
+   정물·추상 배경 금지 — 기본은 둘 중 하나다:
+   **주제가 한눈에 보이는 실사 인물 장면**(규칙 11 의 인물 계약 그대로), 또는
+   **주제 실물**(그 회차가 다루는 결과물 화면·제품 스크린샷 — 개발·툴 채널처럼
+   증거가 인물이 아니라 화면인 주제에서. "전문성은 말이 아니라 증거로", 2026-08-15).
+   어느 쪽이든 `quality: "high"` 로 만들고, 채널 profile §3 이 화풍을 달리 정하면
+   그쪽이 우선이다. 텍스트는 여전히 코드 렌더다(규칙 10) — 이 규칙은
    배경 그림 이야기다.
    **b-roll 소스는 그 b-roll 이 붙는 씬(`after`)의 배경과 같은 파일이다** — 앞 씬이
    정지로 보여 준 사진이 그대로 움직이기 시작하는 전환이 되고, 이미지 1장이 두 역할을
@@ -130,6 +139,10 @@ data/<채널>/<주제>/
   screencast-pipeline.md 의 것을 쓴다.
 - 작업 디렉토리 준비: `.work/{cards,broll,motion,pcm,fonts}` 생성, 플랫폼 목록 확정
   (인자 CSV 또는 profile §4 게시 플랫폼).
+- **`.work/cost-tally.tsv` 를 지우지 않는다** — storyboard 가 이미지 비용을 적어 둔
+  회차 원장이고, §10 이 그 파일 하나로 스토리보드부터 영상까지를 합산한다. 파일이
+  없으면 이번 회차부터 새로 적되, `storyboard/images/*.png` 가 있는데 원장이 없으면
+  이미지 비용이 집계에서 빠진 상태다 — §10 이 그 사실을 보고에 적는다.
 
 ### 2. 프레임 렌더 준비
 
@@ -156,6 +169,85 @@ points 정지 배경 등 텍스트 없는 이미지, storyboard §5 가 이 규�
 `gpt_image_text2img`(high)를 유지하고, 글자가 필요한 이미지는 항상 gpt_image 다
 (로컬 한글 실측: "딸깍연구소" → "달닥연구소" 로 깨짐).
 
+**영상 엔진 분담** — 엔진이 둘이고(`veo_*` · `seedance_*`) 잘하는 일이 다르다.
+판단표 정본은 [video-model-selection.md](references/video-model-selection.md) 이고,
+이 스킬은 그 문서의 순서를 그대로 따른다 — **얼굴 → 소리 → 격자**다.
+
+**① 그 컷에 누가 있나** — 값도 품질도 이 다음에 본다. 얼굴이 엔진을 먼저 지운다.
+
+- **성인 실사 얼굴**: Veo 는 받는다(`veo_img2video` 실측 2026-08-15 — 720p 4초 동안
+  얼굴이 유지됐다). Seedance 는 1.5 pro·1.0 pro 만 받고 **2.x 는 태스크 생성 단계에서
+  거부한다**(`InputImageSensitiveContentDetected.PrivacyInformation` — 거부는 무과금이라
+  경계를 재는 실험은 공짜다). `veo_reference` 는 문서상 같은 정책이지만 미실측이다.
+- **미성년으로 보이는 얼굴**: 사진이든 일러스트든 **Veo 이미지 레인이 막는다**
+  (Support code 17301594). Seedance 1.x 쪽은 확인 안 됐다. 우회를 찾지 말고 그 컷을
+  다시 그린다 — 얼굴을 빼거나 인물을 성인으로 바꾼다.
+- **얼굴이 안 보이는 컷**(뒷모습·실루엣·손과 화면만): 전 모델이 다 받는다. 공개
+  아레나 이미지→영상 1위인 `dreamina-seedance-2-0-260128` 이 열리는 자리가 여기다.
+- **입 없는 캐릭터**(딸깍랩 마우스 머리류): **엔진이 정반대로 갈린 유일한 축이다.**
+  Veo 는 0.2초에 없던 입을 그려 넣지만(5전 5패 실측, 부정 지시로 막히는 종류가 아니다),
+  **Seedance 2.0 은 15초 1080p 클립 내내 입을 만들지 않았다**(2026-08-15 실측 — 감정
+  연기 컷까지 마우스 머리에 사선 눈 둘 그대로). 그 얼굴이 화면에 있으면 Veo 를 부르지
+  않고 Seedance 로 간다. 채널 프로파일 §3 의 veo 금지는 그대로 두되, 그 금지가 엔진
+  전체가 아니라 Veo 에만 걸린다는 뜻이다.
+
+**② 그 구간의 소리를 쓰나**
+
+- **b-roll 칸은 Veo 다** — 절대 규칙 9 로 그 구간은 클립이 가진 소리를 쓴다.
+  네이티브 오디오는 Veo 가 낫고, 무음 클립을 넣으면 그 4초가 통째로 조용해진다.
+- **모션 배경(`visual.video`)은 Seedance 로 보낼 수 있다** — 빌더가 영상 트랙만
+  깔고 **클립의 소리는 버린다**. 버릴 소리에 Veo 값을 낼 이유가 없고, Veo 는
+  1080p 를 8초로만 만드는데 Seedance 는 요청한 초만큼만 만들고 그만큼만 받는다.
+  `seedance_img2video`(`resolution: "1080p"` · `durationSeconds`= 그 씬이 실제로
+  쓰는 길이 · 모델 `seedance-1-5-pro-251215` · `generateAudio: false`).
+  비율 인자는 넘기지 않는다 — 기본 `adaptive` 가 1088×1920 소스를 그대로 따르고,
+  `9:16` 을 명시해도 결과는 같지만 다른 값을 넣으면 소스가 중앙에서 잘린다.
+
+**③ 길이·해상도가 Veo 격자에 맞나** — Veo 는 4·6·8초만 만들고 1080p·4K 는 8초
+전용이며 음성을 못 끈다. 그 격자 밖의 길이·비율이 필요하면 Seedance 다.
+
+엔진과 무관하게 걸리는 두 줄도 여기 둔다.
+
+- **구도를 재현해야 하면 참조 이미지가 아니라 첫·끝 프레임이다.** 참조는 외형
+  (Veo `asset`)이나 화풍(Seedance)을 옮기지 구도를 옮기지 않는다. 등장·소멸·자세
+  변화처럼 그림대로 가야 하는 컷은 `sourceImagePath` + `lastImagePath` 자리이고,
+  두 PNG 는 같은 배경에서 대상만 다르게 만든다.
+- **화풍 이식은 Seedance 뿐이다.** Veo 3.1 에는 `referenceType: "style"` 이 아예
+  없다(공식 문서가 오디오도 못 내는 2.0 실험 모델을 쓰라고 안내한다). 스케치·툰
+  콘티를 화풍으로 넘기려면 `seedance_reference` 다.
+
+`ARK_API_KEY` 가 없으면 Seedance 호출은 실패한다. 그때는 종전대로 Veo 로 만들되
+①의 얼굴 조항은 그대로 지킨다 — 두 엔진은 서로를 막지 않는다.
+
+**영상 프롬프트 문법 — 엔진마다 다르다.** 엔진을 고른 다음 문장을 어떻게 쓰는지가
+여기다. 근거는 두 벤더 공식 문서이고 정리본이
+[프롬프트 문법 조사](../../docs/research/2026-08-15-veo-seedance-prompting/index.html)와
+[카메라 기법 조사](../../docs/research/2026-08-15-ai-video-camera-technique/index.html) 둘이다.
+**카메라 항목의 정본은 `references/video-model-selection.md` §카메라**이고 여기엔 요약만 둔다.
+
+- **배제는 프롬프트 본문에 쓰지 않는다** — Veo 는 `negativePrompt` 인자로 받고,
+  문법은 명사·형용사구를 콤마로 나열하는 것이다(`text, subtitles, black bars`).
+  본문에 "no ~" 를 적으면 그 명사가 오히려 그려진다(로컬 이미지 실측 4장 전패이고,
+  Veo 프롬프트 가이드도 그 형태를 not recommended 로 적는다). Seedance 에는 이 인자가
+  없으므로 배제할 소재는 아예 안 그려지게 장면을 다시 서술한다.
+- **슬롯 순서에 규칙이 없다** — 카메라를 문장 첫 낱말에 두라는 5부 공식은 구글 클라우드
+  블로그 한 곳에만 있고, 레퍼런스 문서 세 곳은 어순을 규정하지 않으며 Gemini API 는
+  카메라를 `[Optional]` 로 적는다. 필요한 슬롯을 채우는 데만 신경 쓴다.
+- **카메라 어휘는 그 벤더가 쓴 말로 적는다** — Veo 호출이면 `orbit` 이 아니라 `arc shot`,
+  `push in` 이 아니라 `dolly in` 이다(정본 문서 전문에 `orbit`·`push` 가 0건). `zoom in` 은
+  카메라가 안 움직이고 화각만 좁아지므로 다가가는 컷에는 쓰지 않는다.
+- **무브를 정서 연출로 쓰지 않는다** — 다가가는 무브가 정서를 바꾼다는 근거가 실증에서
+  안 나왔다(p=.84). 톤은 배경·미술로 잡고, 무브는 도입·전환의 몰입에 쓴다. 반대로
+  **앵글에는 실증이 있다** — 훅 컷과 발화 클립의 카메라 높이는 눈높이가 기본값이다.
+- **Seedance 카메라는 구간으로 적으면 좋다** — `시작 구도 + 무브 + 종료 구도`. 벤더가
+  요구하는 형식은 아니고(카메라 칸 자체가 `非必须`) **구도를 재현해야 하는 모션 배경 컷에서
+  우리가 쓰는 형식**이다. 프롬프트 본문은 중국어·영어만 받으므로 지시는 영어로 쓴다.
+  컷당 무브는 기본 모델 1.5 Pro 에서 2개까지 — 컷당 1종 권고는 2.0 한정이다.
+- **Seedance 프롬프트에 초를 적지 않는다** — 길이는 씬의 `duration` 이 정하고 편집이
+  자르기 때문이다. 벤더 고지가 있는 쪽은 2.0 이고(2.5 는 정수 초에 응답한다) 기본 모델
+  1.5 Pro 는 확인된 바 없다 — 규칙의 근거는 우리 파이프라인이지 벤더 문서가 아니다.
+  **Veo 는 반대다** — 3.1 은 `[00:00-00:02]` 형식의 구간 분할을 정식 워크플로로 제시한다.
+
 - **커버 배경 = b-roll 소스 (한 장, `storyboard/images/scene-1.png`)**:
   `gpt_image_text2img`, `size: "1088x1920"`, **`quality: "high"`**. **사람이 있는 실사
   스타일**(절대 규칙 11·12) — 생성 인물만(기본 한국 여성), 채널 주제가 화면 중심이 되는
@@ -166,7 +258,12 @@ points 정지 배경 등 텍스트 없는 이미지, storyboard §5 가 이 규�
   그 사진이 그대로 움직이기 시작한다.
 - **b-roll (scenes.js 의 `broll` 씬 — 회차당 최대 2칸)**: 각 칸의 `visual.src` PNG 를
   `veo_img2video`(`aspectRatio: "9:16"` · `resolution: "1080p"` · `durationSeconds: 8` ·
-  fast 모델)로 애니메이션한다. 절대 규칙 8·10 — 소스는 **이미 만들어 둔 이미지**여야
+  **`veo-3.1-lite-generate-preview`**)로 애니메이션한다. lite 를 쓰는 근거는 블라인드
+  아레나에서 Veo 세 티어의 Elo 격차가 20 이내이고 신뢰구간이 겹친다는 것이다
+  (video-model-selection §품질) — 같은 그림에 fast 는 8초당 $0.96, lite 는 $0.64 다.
+  **단서 하나**: 아레나는 영상과 소리를 묶어 평가해서 오디오 품질만 따로 재지 않았다.
+  이 칸은 클립의 소리를 쓰는 자리이므로(절대 규칙 9), 리뷰가 b-roll **소리**를 P0 로
+  지적하면 그 편은 fast 로 올려 다시 만든다. 절대 규칙 8·10 — 소스는 **이미 만들어 둔 이미지**여야
   하고, **커버 자체는 코드 렌더로 만든다**(Veo 는 한글을 못 쓴다).
   **스토리보드에 있는 만큼만 만든다** — 계획된 칸을 빼먹으면 승인된 씬이 조용히
   사라지고, 없는 칸을 더 만들면 계약 위반이자 헛돈이다.
@@ -176,8 +273,9 @@ points 정지 배경 등 텍스트 없는 이미지, storyboard §5 가 이 규�
     4초)이고, §6 접합 직전에 원본 앞부분만 잘라 쓴다. 원본 8초
     (**`.work/broll/broll-a<after>.mp4`**)는 보관한다 — 재트림의 기준점이다.
     파일명에 `after` 를 넣는 이유는 하나다 — 두 칸이 같은 이름으로 서로를 덮어쓴다.
-  프롬프트는 scenes.js `visual.motion`("very slow push-in / nearly static camera")을
-  **영어로 모션만** 옮기고 끝에 오디오 지시를 붙인다 — 예:
+  프롬프트는 scenes.js `visual.motion`("very slow dolly in / nearly static camera")을
+  **영어로 모션만** 옮기고 끝에 오디오 지시를 붙인다 — 이 칸은 Veo 호출이라 `push in` 이
+  아니라 `dolly in` 이다(위 어휘 규칙). 예:
   `Audio: quiet studio room tone with a faint fabric rustle, no music, no speech.`
   이미지에 이미 보이는 인물·배경·조명을 다시 묘사하면 모델이 장면을 재설계한다.
   - **두 칸은 각자의 소스로 만든다** — 같은 PNG 를 모션만 바꿔 두 번 돌리면 같은
@@ -188,22 +286,55 @@ points 정지 배경 등 텍스트 없는 이미지, storyboard §5 가 이 규�
   - 이 구간은 manifest 에 넣지 않고 **빌드 후 접합**한다(§6 끝). 카드당 오디오 1개인
     빌더 계약에 무발화 오디오를 끼우면 발화속도·문장경계 계산이 깨진다.
 - **모션 배경 (scenes.js 의 `visual.video` — 생성 영상 합산 상한 안에서)**: 그 씬의
-  `visual.bg` PNG 를 `veo_img2video`(`aspectRatio: "9:16"` · `resolution: "1080p"` ·
-  `durationSeconds: 8` · fast 모델)로 애니메이션해 **`.work/motion/motion-i<씬 인덱스>.mp4`**
-  로 저장한다. 프롬프트는 `visual.video.prompt`(영어 모션만 — 장면 재묘사는 모델이
+  `visual.bg` PNG 를 애니메이션해 **`.work/motion/motion-i<씬 인덱스>.mp4`** 로 저장한다.
+  **여기가 Seedance 자리다**(위 영상 엔진 분담) — `seedance_img2video`
+  (`resolution: "1080p"` · `durationSeconds`= 그 씬이 쓰는 길이 ·
+  `seedance-1-5-pro-251215` · `generateAudio: false`). `ARK_API_KEY` 가 없으면
+  `veo_img2video`(`aspectRatio: "9:16"` · `resolution: "1080p"` · `durationSeconds: 8` ·
+  `veo-3.1-lite-generate-preview`)로 만든다. 프롬프트는 `visual.video.prompt`(영어 모션만 — 장면 재묘사는 모델이
   장면을 재설계한다)를 그대로 쓴다. 클립의 소리는 빌드에서 쓰이지 않으므로(§6 조립이
   영상 트랙만 깐다) 오디오 지시는 없어도 된다. 계획 게이트(절대 규칙 13)는 b-roll 과
   같은 위임에서 함께 받는다. **스토리보드에 있는 만큼만 만든다** — b-roll 과 합산 2가
   상한이다(scenes-schema §모션 배경 정본).
-- **quote 발화 클립**(계획된 경우): `veo_reference`(아바타 1장, 9:16, 720p) —
+- **quote 발화 클립**(계획된 경우): `veo_reference`(아바타 1장, 9:16, 720p,
+  `veo-3.1-fast-generate-preview` — 참조 이미지는 lite 가 지원하지 않아 fast 가
+  최저 티어다. 표준 티어는 아레나에서 fast 와 동점이라 4배를 낼 이유가 없다) —
   프롬프트에 캐릭터 묘사 반복 + "static camera" + "wide chest-up framing … subject
-  appears small in the frame" + 배경은 THEME 다크 통일 + "no text, no black bars".
+  appears small in the frame" + 배경은 THEME 다크 통일. **배제는 본문이 아니라
+  `negativePrompt` 인자다** — `text, subtitles, black bars, letterboxing`.
   `frame-persona-clip.py <입력> .work/broll/<화자>-palin.mp4` 로 프레이밍 통일 +
   팔린드롬. 여러 클립은 hstack 으로 나란히 붙여 눈으로 배율을 비교한다. 발화
   클립이 없으면 정지 인용 카드로 대체(불투명 캡처).
+  아바타에도 ①의 얼굴 조항이 그대로 걸린다 — 입 없는 캐릭터면 Veo 를 부르지 않고
+  정지 인용 카드로 간다. 참조는 외형만 옮기므로 **아바타의 구도를 그대로 지켜야
+  하면 참조가 아니라 `veo_img2video` 첫·끝 프레임**이다.
 - **BGM**: `music_generate`(Lyria, 인스트루멘털) 90초 — "leaves space for a spoken
   voiceover, no melody in the vocal frequency range". **`.work/bgm.wav`** 로 저장
   (build-reel.sh 가 이 이름을 찾는다).
+
+**호출마다 `.work/cost-tally.tsv` 에 한 줄 적는다** — storyboard 가 쓰던 원장을 그대로
+이어 쓴다. 규약 정본은 [cost-tally.md](../autoproduce/references/cost-tally.md) 다.
+
+```bash
+printf 'image.gpt-image-2.high\t1\tproduce: 커버 배경 재생성\n'          >> .work/cost-tally.tsv
+printf 'veo.lite.1080p\t8\tproduce: b-roll a1 — 8초 생성·4초 사용\n'     >> .work/cost-tally.tsv
+printf 'seedance.1-5-pro-silent.1080p\t5\tproduce: 모션 배경 i3 (completion_tokens 102960)\n' >> .work/cost-tally.tsv
+printf 'music.lyria-realtime\t90\tproduce: BGM 90초 — 단가 미확인\n'     >> .work/cost-tally.tsv
+```
+
+단위를 틀리기 쉬운 자리가 둘이다.
+
+- **veo 는 생성 길이를 적는다** — 8초 만들어 4초만 써도 `8` 이다. 1080p 는 API 가
+  8초만 허용하고, 트림은 청구를 줄이지 않는다. 4를 적으면 그 편 영상비의 절반이
+  리포트에서 사라진다.
+- **seedance 는 요청한 초 그대로** 적고, 응답의 `completion_tokens`(실제 청구 근거)는
+  메모에 옮겨 둔다. 단가표의 초당 값은 공식 예시가에서 나온 환산이라, 나중에 둘을
+  대조하면 환산이 맞는지 검산된다.
+
+**BGM 은 단가가 확인되지 않은 항목이다.** `music_generate` 가 부르는 Lyria RealTime 은
+공식 요금표에 행이 없다(2026-08-15 확인). 그래도 원장에는 적는다 — 0 으로 적거나 줄을
+빼면 그 편 비용이 조용히 줄어든다. 리포트가 exit 1 을 내는 것이 정상 동작이고, §10 이
+"집계 제외 1건"으로 보고한다.
 
 ### 4. reveal 상태 캡처
 
@@ -308,6 +439,18 @@ exit 2 면 **scenes.js 를 고치고** 여기서 다시 시작한다 — `.work/
 `tts_generate` 는 ffprobe 로 잰다 (Gemini TTS 이상 산출 대처는
 `references/pipeline.md` §TTS 장애).
 
+씬 전체를 뽑았으면 원장에 한 줄 적는다. **수량은 자수가 아니라 자수÷1000 이다** —
+단가가 1,000자 단위라 412자를 `412` 로 적으면 1000배가 된다. 로컬 엔진은 단가 0 이라
+티가 안 나지만, Gemini 채널에서는 그대로 잘못된 청구액이 된다. 재생성한 씬은 그
+몫을 한 줄 더 적는다.
+
+```bash
+# 로컬(Supertonic) 채널 — 전 씬 합계 1,840자
+printf 'tts.local\t1.840\tproduce: 나레이션 5씬 1840자\n' >> .work/cost-tally.tsv
+# Gemini 채널이면 모델에 맞는 키로 (기본 flash)
+printf 'tts.gemini-flash\t1.840\tproduce: 나레이션 5씬 1840자\n' >> .work/cost-tally.tsv
+```
+
 로컬 엔진이 "Python interpreter not found" 나 "No module named 'supertonic'" 으로
 실패하면 **그 자리에서 멈추고 사용자에게 설치를 요청한다.** Gemini 로 조용히 갈아타지
 않는다 — 목소리가 바뀐 채로 영상이 만들어지고, 회차마다 화자가 달라진다.
@@ -333,6 +476,11 @@ b-roll 처럼 **어디서 잘라 붙여도 되는 그림**을 전제로 한 동�
 **처음부터 끝까지가 한 동작**인 클립은 그러면 두 군데서 깨진다: 세그 2 이상이면 글자가
 다 쳐진 중간부터 시작하고, 세그 1 이어도 창이 클립보다 길면 루프가 돌아 처음부터 다시
 친다(실측). `@` 는 첫 프레임부터 틀고 끝 프레임에서 멈춘다.
+**단 `@` 는 단일 세그 전용이다** — 클립 하나를 **연속 두 세그에 걸치면** `@` 가 세그
+경계마다 클립을 처음부터 다시 시작시켜 타이핑이 리셋된다(2026-08-14 claude-skills 회차
+실측 — 둘째 명령이 화면에 못 나왔다). 걸침 세그는 `@` 를 떼고 같은 경로를 이어 적으면
+빌더가 `-ss` 이어재생으로 붙인다(모션 배경과 같은 동작). 창 합이 클립보다 짧으면 루프
+없이 그 지점에서 끝나므로, 타이핑 완료 시각(타이핑초)이 창 합 안에 들어오는지만 확인한다.
 
 **`sfx.tsv` = 그 세그 구간에만 나는 소리**. 오디오파일은 wav 든 mp4 든 되고(영상이면
 그 안의 소리를 쓴다), 비워 두고 `bgm` 만 `off` 로 적으면 그 구간에서 음악만 빠진다.
@@ -425,7 +573,7 @@ $REF/splice-clip.sh .work \
 
 `build-report.txt` 를 반드시 읽고 판정한다 — **drift 는 0.0000s 여야 하며**,
 `reveal 상태 누락`/`마지막 reveal 상태 미사용` 은 진행 금지 신호다. 전체 판정표는
-`references/pipeline.md` §리포트 게이트. 총길이 60~75초 권장, 90초 상한.
+`references/pipeline.md` §리포트 게이트. 총길이 35~75초 권장, 90초 상한.
 `cover.jpg` 가 히어로 수치까지 등장한 프레임인지 확인하고, 아니면 리포트의 커버
 전환 완료 시각 이후로 `COVER_TS` 를 잡아 재빌드(또는 ffmpeg 로 해당 시각 스틸만
 재추출)한다.
@@ -513,8 +661,60 @@ content-reviewer 에이전트(Agent)에 산출물 검증을 위임한다 — 영
 리뷰어는 그 수치를 정본으로 쓰고 자기 인상으로 덮어쓰지 않는다. 조사 생략 채널이면
 그 사실도 위임 프롬프트에 명시한다(리뷰어가 사실 축을 만점 환산한다).
 **tail(`CONTENT_REVIEW:`)의 카피 ≥95 이고 P0=0 이 될 때까지 수정(최대 3라운드)** —
-미달 시 미해결 지적을 사용자에게 그대로 보고하고 판단을 위임한다. 통과하면 storyboard.md `status: produced` 갱신, 산출물 표(경로·길이·
-플랫폼)와 함께 `/social-flow:publish` 를 안내한다.
+미달 시 미해결 지적을 사용자에게 그대로 보고하고 판단을 위임한다.
+
+**첫 3초 점검** (2026-08-15 — 스킵률 실측이 강제. 리뷰어 위임과 별개로 저작자가
+직접 한다):
+
+- [ ] 도입 0~3초 구간을 실제로 **본다** — 첫 프레임에 주제 실물 또는 움직임이
+      있는가, 표지 카드 한 장이 3초를 정지로 버티고 있지 않은가
+- [ ] 첫 세그 TTS 를 실제로 **듣는다** — 로봇 낭독처럼 들리면 그 세그만 재생성
+      (faceless 콘텐츠 이탈의 1순위가 도입 목소리 품질이다. 스킵은 3초 안에
+      일어나므로 첫 문장의 목소리가 곧 훅이다)
+
+**비용 집계 (필수)** — 회차 원장을 리포트로 만들고 그 결과를 완료 보고에 싣는다.
+스토리보드 이미지부터 이번 영상까지가 한 파일에 있으므로, 여기가 그 편에 든 돈을
+사람이 처음이자 마지막으로 보는 자리다. 촬영 편집 경로(screencast)도 똑같이 돌린다 —
+생성 호출이 거의 없어 합계가 0 에 가깝더라도, 0 이 집계 결과라는 것 자체가 정보다.
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+$REF/cost-report.sh .work/cost-tally.tsv > output/video/cost-report.txt; echo "cost_exit=$?"
+cat output/video/cost-report.txt
+```
+
+`cost_exit` 를 그대로 읽는다 (판정 정본은
+[cost-tally.md](../autoproduce/references/cost-tally.md) §exit 읽기).
+
+- **0** — 합계가 그 회차 비용이다.
+- **1** — `!!` 줄을 보고에 그대로 옮긴다. `알 수 없는 key` 면 키 이름을 고치고 다시
+  돌리고, `단가 미확인` 이면(현재는 BGM 하나) 합계 뒤에 **"집계 제외 1건"** 을 붙여
+  적는다. **1을 통과로 읽지 않는다.**
+- **3** — 원장이 없다. 이번 회차에 생성 호출이 정말 없었는지 확인하고, 있었으면
+  파일을 세어 사후에 채운 뒤 채운 사실을 보고에 적는다.
+
+보고는 **단계와 항목을 함께** 보여준다 — 사용자가 알고 싶은 것은 총액만이 아니라
+"어디서 나갔나" 다. 원장 메모의 `storyboard:` / `produce:` 접두어가 그 구분이다.
+
+```
+비용 — 이 편에 든 돈 (스토리보드 ~ 영상)
+  스토리보드   이미지 6장 (gpt high 2 · 로컬 4)        $0.44
+    · 그중 재생성 1장 (§5.5 2라운드)                   $0.22
+  제작         b-roll veo lite 1080p 8초 생성           $0.64
+               나레이션 1,840자 (로컬)                  $0.00
+               BGM 90초                                집계 제외 — 단가 미확인
+  ────────────────────────────────────────────────────────────
+  합계                                                  $1.08  (+ 집계 제외 1건)
+  전문: output/video/cost-report.txt
+```
+
+**합계 $0 을 그냥 보고하지 않는다.** 이미지가 생성돼 있는데 합계가 0 이면 공짜로
+만든 것이 아니라 원장에 적기를 빠뜨린 것이다. 로컬 이미지·로컬 TTS 만 쓴 회차는
+진짜로 0 일 수 있고, 그때는 리포트에 그 줄들이 보인다 — 줄이 있어서 0 인지 줄이
+없어서 0 인지를 확인하고 보고한다.
+
+통과하면 storyboard.md `status: produced` 갱신, 산출물 표(경로·길이·
+플랫폼)와 비용 요약을 함께 제시하고 `/social-flow:publish` 를 안내한다.
 
 ## Additional Resources
 
@@ -532,3 +732,4 @@ content-reviewer 에이전트(Agent)에 산출물 검증을 위임한다 — 영
 - **`references/reveal-timing.py`** — 나레이션 '쉼' 역산 reveal 타이밍
 - **`references/frame-persona-clip.py`** — 발화 클립 프레이밍 통일 + 팔린드롬
 - **`references/reel-qa.html`** — 폰 모드 검수 하네스 (IG/YT UI 목업·crop 재현·세이프존 가이드)
+- **`../autoproduce/references/cost-tally.md`** — 회차 비용 원장 규약 (§3·§5 가 적고 §10 이 집계하는 파일). 단가 정본 `prices.tsv` · 계산기 `cost-report.sh` 가 같은 디렉토리에 있다

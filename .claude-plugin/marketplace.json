@@ -1,11 +1,11 @@
 {
-  "name": "social-flow-local",
+  "name": "social-flow",
   "owner": {
     "name": "Zeans",
     "email": "zeans@astratech.vn"
   },
   "metadata": {
-    "description": "social-flow 로컬 마켓플레이스 — 채널 기반 쇼트폼 콘텐츠 파이프라인 플러그인(내부 MCP 서버 포함)을 로컬 경로에서 설치합니다."
+    "description": "social-flow 마켓플레이스 — 채널 기반 쇼트폼 콘텐츠 파이프라인 플러그인(내부 MCP 서버 포함)을 설치합니다."
   },
   "plugins": [
     {

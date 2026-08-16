@@ -459,7 +459,7 @@ export async function publishInstagram(input, opts) {
  */
 const IG_USER_METRICS = 'reach,views,profile_views,accounts_engaged,total_interactions,likes,comments,shares,saves,profile_links_taps';
 /** 미디어 공통 지표 — 계정 쪽 saves 와 달리 미디어는 saved 단수형이다(실측). */
-const IG_MEDIA_METRICS = 'views,reach,likes,comments,shares,saved,total_interactions,follows,profile_visits';
+const IG_MEDIA_METRICS = 'views,reach,likes,comments,shares,saved,total_interactions';
 /**
  * 릴스에만 붙는 지표. FEED(이미지·캐러셀)에 요청하면 400 으로 응답 전체가
  * 실패하므로 media_product_type 으로 갈라 붙인다(실측).
@@ -467,6 +467,12 @@ const IG_MEDIA_METRICS = 'views,reach,likes,comments,shares,saved,total_interact
  * 확률"을 직접 예측하는데, 이탈률을 API 로 주는 건 이 플랫폼뿐이다.
  */
 const IG_REELS_METRICS = 'ig_reels_avg_watch_time,ig_reels_video_view_total_time,reels_skip_rate';
+/**
+ * FEED(이미지·캐러셀)에만 붙는 지표 — 위 릴스 함정의 대칭이다. 릴스에 요청하면
+ * `does not support the follows, profile_visits metric` 400 이 나면서 **응답
+ * 전체가 실패해** 릴스 지표가 통째로 비어 온다(실측). 공통 지표에 섞지 않는다.
+ */
+const IG_FEED_METRICS = 'follows,profile_visits';
 /**
  * Instagram 성과 스냅샷 — 계정 구간 지표와 최근 미디어별 지표를 한 번에
  * 정규화해 반환한다. grow-instagram 루프가 틱마다 찍어 전 틱 대비 증감을
@@ -518,9 +524,11 @@ export async function instagramInsights(input) {
         media = await Promise.all(rawList(list.body).map(async (item) => {
             const mediaId = str(item.id);
             const productType = str(item.media_product_type) || null;
-            const isReel = productType === 'REELS';
+            // 표면 전용 지표는 서로 배타적이다 — 반대쪽에 요청하면 400 으로 응답 전체가
+            // 날아가므로, 아는 두 표면만 붙이고 그 밖(STORY 등)은 공통 지표만 요청한다.
+            const surfaceMetrics = productType === 'REELS' ? IG_REELS_METRICS : productType === 'FEED' ? IG_FEED_METRICS : '';
             const ins = await graphRequest('get', `${IG_BASE}/${mediaId}/insights`, {
-                metric: isReel ? `${IG_MEDIA_METRICS},${IG_REELS_METRICS}` : IG_MEDIA_METRICS,
+                metric: surfaceMetrics ? `${IG_MEDIA_METRICS},${surfaceMetrics}` : IG_MEDIA_METRICS,
                 access_token: token,
             });
             const metrics = {};

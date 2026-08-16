@@ -99,7 +99,7 @@ topic_keywords: ["베트남 비자", "주재원 행정"]   # topic_source: keywo
 - **비용** — 편당 상한 `max_cost_per_video`, 일·주 누적은 채널 공용
   `data/<채널>/growth/autoproduce.json` 에 쌓인다. 사다리와 승급 조건은
   `skills/autoproduce/references/cost-tiers.md` 가 정본이며, 인스타의 승급
-  트리거는 최근 3편 `reels_skip_rate` 평균 0.55 초과다.
+  트리거는 최근 3편 `reels_skip_rate` 평균 55 초과다(백분율 단위).
 - **품질** — 기계 게이트(사실 검증·문체·스토리보드 리뷰 문안·이미지·빌드 리포트·content-reviewer P0·비용)를
   다 통과한 편만 `queue_instagram: ready` 가 되고, 하나라도 떨어지면 `hold` 다.
 - **중복** — 저작 전에 `check-duplicate.py` 가 후보를 채널의 기존 주제 전부와
@@ -166,9 +166,9 @@ topic_keywords: ["베트남 비자", "주재원 행정"]   # topic_source: keywo
     "topReel": {
       "mediaId": "18012...",
       "views": 8200,
-      "reelsSkipRate": 0.41,
+      "reelsSkipRate": 41.0,
       "avgWatchTimeMs": 7300,
-      "follows": 12
+      "shares": 12
     }
   }
 }
@@ -203,5 +203,5 @@ topic_keywords: ["베트남 비자", "주재원 행정"]   # topic_source: keywo
 ```
 
 주 1회(월요일 첫 틱) 요약 줄을 추가한다: 주간 4지표(`reels_skip_rate`·
-`ig_reels_avg_watch_time`·도달당 공유·미디어별 `follows`) + 도달 상위 릴스 유형 한 줄
+`ig_reels_avg_watch_time`·도달당 공유·계정 `profile_views`) + 도달 상위 릴스 유형 한 줄
 + 이번 주 게시 수와 목표(주 3~5) 대비.

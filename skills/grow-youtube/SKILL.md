@@ -234,9 +234,10 @@ storyboard 파이프라인에서 사람이 한다.
    못 잡으면 다른 플랫폼 루프가 저작 중이라는 뜻이므로 그냥 넘어간다
 
 통과하면 `${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/SKILL.md` 를 Read 하고
-**무인 모드 절차를 그대로 수행**한다. 이때 §2 에서 읽은 지표를 티어 판정
-인자로 넘긴다 — 최근 3편의 `averageViewPercentage` 평균이 30% 미만이면 커버
-모션 승급, 게시 이력이 3편 미만이면 승급 없음(`references/cost-tiers.md`).
+**무인 모드 절차를 그대로 수행**한다. 이때 §2 에서 읽은 지표
+(`averageViewPercentage`)를 티어 판정 인자로 넘긴다 — 판정은 추세다(최근 3편
+평균이 직전 3편 평균보다 5%p 이상 악화하면 커버 모션 승급). 게시 이력
+6편 미만이면 승급 없음(정본: autoproduce `references/cost-tiers.md`).
 
 **저작이 성공하면 플랜 `autoproduce.mark_queues` 에 적힌 플랫폼 큐를 전부
 찍는다.** 한 번 만든 9:16 마스터가 두 플랫폼에 다 나가므로, 플랫폼마다 따로

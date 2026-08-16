@@ -16,8 +16,8 @@
   <h1>툴 품질 감사 리포트</h1>
   <p class="sub">31개 툴을 각 API의 공식 문서 계약, MCP 2025-06-18 스펙, 그리고 툴 작성 베스트 프랙티스로 채점하고 결함을 수정한 기록. 루브릭은 <a href="mcp-tools.html#rubric">MCP 툴 스펙 §6</a>이 정본이다.</p>
   <div class="meta">
-    <span>대상 <strong>31개 툴 · 5,700줄</strong></span>
-    <span>검증 <strong>계약 테스트 239개</strong></span>
+    <span>대상 <strong>31개 툴 · 5,700줄</strong> (현재 41종 중)</span>
+    <span>검증 <strong>계약 테스트 239개</strong> (현재 447개)</span>
     <span>수정 <strong>P0 2건 · P1 11건 · P2 9건</strong></span>
   </div>
 </header>
@@ -31,6 +31,7 @@
     <li><a href="#p2">P2 — 정확도·안내 개선</a></li>
     <li><a href="#verify">검증 방법</a></li>
     <li><a href="#open">남긴 것과 그 이유</a></li>
+    <li><a href="#since">감사 뒤에 늘어난 툴 (미감사)</a></li>
   </ol>
 </nav>
 
@@ -317,8 +318,30 @@
   <p>이번에도 남긴 것: 생성 이미지의 base64 image 블록 상시 반환(HITL 검토에 즉시 보이는 가치가 커 유지), 생성 오디오 filename 확장자와 실제 포맷 불일치 허용(생성 후 임의 개명이 더 나쁨), datago 다운로드의 전량 메모리 버퍼링(100MB 상한으로 유계). 점수는 <strong>96 유지</strong> — 수정분은 1차 감점 항목이 아니라 신규 발견이며, 유일한 감점(행동 평가 하네스)은 그대로 남아 있다.</p>
 </section>
 
+<section id="since">
+  <h2>7. 감사 뒤에 늘어난 툴 (미감사)</h2>
+  <div class="warn">
+    <strong>위 96점은 2026-07-29 시점의 31개 툴에 대한 점수다.</strong> 그 뒤 툴이 10종 늘어 지금은 41종이며, 아래 10종은 이 감사를 거치지 않았다. 숫자를 41로 고쳐 적으면 돌지 않은 감사를 돌았다고 말하는 셈이라 31 그대로 둔다.
+  </div>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>추가된 툴</th><th>무엇</th><th>백엔드</th></tr></thead>
+    <tbody>
+      <tr><td><code>seedance_text2video</code> · <code>seedance_img2video</code> · <code>seedance_reference</code></td><td>두 번째 영상 엔진 — 2~30초를 1초 단위로 끊어 요청한 만큼만 과금한다</td><td>BytePlus ModelArk (<code>ARK_API_KEY</code>)</td></tr>
+      <tr><td><code>image_local_generate</code></td><td>온디바이스 이미지 생성 — 이미지의 기본 경로가 여기로 옮겨 왔다</td><td>mflux / Z-Image Turbo (로컬)</td></tr>
+      <tr><td><code>tts_local_generate</code></td><td>온디바이스 음성 합성 — 나레이션 본문의 기본 경로</td><td>Supertonic 3 (로컬)</td></tr>
+      <tr><td><code>serp_image_search</code></td><td>이미지 검색 — 라이선스·크기·종횡비 필터</td><td>SerpApi <code>google_images</code></td></tr>
+      <tr><td><code>threads_insights</code> · <code>threads_search</code></td><td>grow-threads 전용 읽기</td><td>Threads Graph</td></tr>
+      <tr><td><code>instagram_insights</code></td><td>grow-instagram 전용 읽기</td><td>Instagram Graph</td></tr>
+      <tr><td><code>youtube_insights</code></td><td>grow-youtube 전용 읽기</td><td>YouTube Data + Analytics</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>감사를 다시 돌리지 않았을 뿐 이 10종도 같은 계약 테스트 그물에는 들어 있다 — <code>npm run check</code> 의 테스트가 239개에서 <strong>447개</strong>로 늘었고 현재 전부 통과한다(2026-08-16 실행). 다음 감사 때 채점 대상은 41종이다.</p>
+</section>
+
 <footer>
-  감사일 2026-07-29 (1차 v0.4.0 · 2차 v0.4.1) · 루브릭 <a href="mcp-tools.html#rubric">MCP 툴 스펙 §6</a> · 재현 <code>cd server &amp;&amp; npm run check</code>
+  감사일 2026-07-29 (1차 v0.4.0 · 2차 v0.4.1) · 툴 목록 확인 2026-08-16 (v0.16.2 · 41종 중 31종 감사분) · 루브릭 <a href="mcp-tools.html#rubric">MCP 툴 스펙 §6</a> · 재현 <code>cd server &amp;&amp; npm run check</code>
 </footer>
 
 </div>

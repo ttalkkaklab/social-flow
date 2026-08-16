@@ -67,6 +67,7 @@
   <p class="sub">쇼츠 성장 조언은 대부분 근거가 없다. 이 문서는 YouTube 공식 문서에서 확인되고 적대적 검증까지 통과한 것만 담는다. AI로 채널을 돌릴 때 수익화가 막히는 조건과 고지 의무의 범위, 2027년 개편이 만든 사실상의 마감일, 쇼츠에서 어디로 보낼 수 있는지, 그리고 YouTube가 직접 부정하는 통념을 다룬다.</p>
   <div class="meta">
     <span>기준일 <strong>2026-08-11</strong></span>
+    <span>갱신 <strong>2026-08-15 스팸 정책·업로드 한도 · 2026-08-16 자동화 절</strong></span>
     <span>근거 <strong>YouTube 공식 문서 (237건 추출 → 50건 3표 검증 → 28건 확정)</strong></span>
     <span>성장 루프 <strong><code>/social-flow:grow-youtube</code></strong></span>
   </div>
@@ -86,6 +87,7 @@
     <li><a href="#metrics">무엇을 볼 것인가</a></li>
     <li><a href="#refuted">검증에서 탈락한 주장</a></li>
     <li><a href="#unknown">아직 모르는 것</a></li>
+    <li><a href="#automation">자동화 — grow-youtube</a></li>
     <li><a href="#sources">출처</a></li>
   </ol>
 </nav>
@@ -161,6 +163,37 @@
     <li><span class="n">2</span> 이건 삭제·차단 정책이 아니라 <strong>수익화 자격</strong> 정책이다. 영상이 내려가는 게 아니라 채널이 YPP에서 빠진다.</li>
     <li><span class="n">3</span> 문서는 '사람이 만든 부가가치'를 문자 그대로 요구하지 않는다. 요구하는 건 <strong>'제작자의 독창적·진솔한 관점'</strong>이고 심사 기준이나 입증 절차는 없다 — 결과물 자체에서 드러나야 한다. 사람이 검수했다는 걸 증빙할 방법이 없으므로 <strong>영상마다 고유한 기획이 실제로 담기는 것</strong>이 유일한 방어선이다.</li>
   </ul>
+
+  <h3>더 무서운 쪽은 스팸 정책이다 — 관문이 하나 더 있다</h3>
+  <p>위 진위성 정책은 <strong>수익화 자격</strong>만 건다(실무 함정 2번). 그런데 같은 행위를 <strong>삭제와 채널 종료</strong>로 다루는 별도 정책이 있다 — 스팸·기만 행위 정책이다. 둘을 한 덩어리로 읽으면 위험을 절반만 보게 된다.</p>
+
+  <div class="src-quote">
+    <p>"YouTube doesn't allow use of creation tools to flood the platform with repetitive content, including coordinated mass-production and technical manipulation to bypass filters."</p>
+  </div>
+
+  <p>정책이 예로 드는 형태가 <strong>전 영상에 같은 배경음악과 반복되는 AI 이미지를 쓰고 AI가 쓴 대본을 읽어 주는 채널</strong>이다. 이 파이프라인이 음악(Lyria)·이미지·나레이션(TTS)을 전부 생성하므로, 템플릿을 그대로 돌리면 이 문장 안이다.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>정책</th><th>무엇을 잃나</th><th>회복</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>진위성 없는 콘텐츠</strong><br>(채널 수익 창출 정책)</td>
+        <td>수익화 자격 — 채널이 YPP에서 빠진다. 영상 자체는 안 내려간다</td>
+        <td>정책 준수 후 재신청</td>
+      </tr>
+      <tr>
+        <td><strong>스팸·기만 행위</strong><br>(커뮤니티 가이드라인)</td>
+        <td>콘텐츠 삭제 · 경고 · 스트라이크. <strong>90일에 3스트라이크면 채널 종료</strong></td>
+        <td>스트라이크는 90일 후 소멸 · 종료는 이의신청</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="danger">
+    <strong>방아쇠는 빈도가 아니라 반복이다.</strong> 어느 플랫폼도 "하루 N개 넘으면"이라고 쓰지 않았고, 전부 "같은 것을 반복해서"라고 썼다. 하루 다섯 개를 다 다르게 만들면 걸릴 조항이 없고, <strong>하루 한 개라도 30일 내내 배경음악·구도·나레이션이 똑같으면</strong> 정확히 저 조항이다. 그래서 대응은 게시를 줄이는 게 아니라 <strong>편차를 만드는 것</strong>이다 — 회차마다 BGM·커버 구도·오프닝 중 최소 하나는 바꾸고, 대기열을 소진하느라 같은 틀을 연속으로 내보내지 않는다.
+  </div>
 
   <div class="warn">
     <strong>자격 심사는 두 개의 다른 관문이다.</strong> YPP 자격 페이지에는 콘텐츠 진위성 기준이 <strong>하나도 없다</strong> — 페이지 전문에 'AI', 'inauthentic', 'reused', 'mass-produced', 'synthetic'이 전부 0회다. 진위성 판단은 별도 문서인 채널 수익 창출 정책이 맡고, 파트너 계약을 수락하는 순간 준수 의무가 생긴다. 위반하면 시청 시간·구독자 수와 <strong>무관하게</strong> 수익화를 잃는다.
@@ -362,6 +395,13 @@
   </div>
 
   <p><strong>실무 결론:</strong> 매일 올리지 못한다고 채널이 죽지 않는다. 다만 총 산출량이 줄면 기회도 준다. <strong>"스케줄을 지키려 품질을 깎는" 선택은 근거가 없다.</strong> 이건 스레드와 정반대다 — 스레드는 게시 리듬과 초기 60~90분 대응이 도달을 좌우하지만, 쇼츠는 개별 영상이 각자 평가된다.</p>
+
+  <h3>반대편 통념 — "많이 올리면 차단된다"</h3>
+  <p>일일 업로드 한도는 <strong>실재한다</strong>. YouTube가 데스크톱·모바일·API를 합쳐 24시간에 올릴 수 있는 영상 수를 제한한다고 공식 문서에 적혀 있다. 다만 <strong>숫자를 공개하지 않는다</strong> — 국가와 채널 이력에 따라 다르고, 커뮤니티 가이드라인 경고를 받으면 줄어든다.</p>
+  <div class="note">
+    <strong>이건 제재가 아니라 수도꼭지다.</strong> 넘으면 "일일 업로드 한도 도달" 에러가 날 뿐이고 24시간 뒤 풀린다. 계정에 흠집이 남지 않는다. 사람이 하루 한두 편 올리는 규모는 근처에도 못 간다. <strong>계정이 실제로 종료되는 경로는 개수가 아니라 §2의 스팸 정책</strong>이다 — 같은 틀의 반복이 방아쇠다.
+  </div>
+  <p class="quote-ex">조사 기록: <a href="../../research/2026-08-15-posting-frequency-and-growth/index.html">게시 빈도와 성장 (2026-08-15)</a> — 세 플랫폼의 빈도·차단 통념을 한자리에서 비교했다.</p>
 </section>
 
 <section id="views">
@@ -439,11 +479,32 @@
   <p>방법상 한계도 밝힌다. 1차 조사에서 여러 검증자가 세션 웹 검색 한도를 소진해, 일부 항목은 2차 출처 반증 검색 없이 1차 문서 재확인만으로 판정했다. "1차 문서가 무엇을 말하는가"에 관한 주장이라 결론이 뒤집힐 위험은 낮지만, <strong>집행 실태나 현장 편차를 검증한 건 아니다.</strong> 2차 조사에서는 반대 문제가 있었다 — 108건 중 25건만 검증 예산에 들어가 한국 시장과 다국어 항목이 통째로 밀렸다.</p>
 </section>
 
+<section id="automation">
+  <h2>12. 자동화 — grow-youtube</h2>
+  <p>위 원칙을 루프로 돌리는 게 <code>/social-flow:grow-youtube</code> 스킬이다. 호출 1회가 한 틱이고 반복은 <code>/loop</code>가 맡는다.</p>
+  <pre><code>/social-flow:grow-youtube &lt;채널&gt; init      # 최초 1회 — 성장 플랜 확정 (승인)
+/loop 1h /social-flow:grow-youtube &lt;채널&gt;  # 1시간 주기 자율 루프</code></pre>
+  <ol>
+    <li><strong>댓글 응대</strong> — 골든아워 미응대부터</li>
+    <li><strong>지표 관찰</strong> — 채널 통계 + Analytics 기간 지표. §9의 항목을 <code>youtube_insights</code> 로 받는다</li>
+    <li><strong>대기열 보충</strong> — 플랜이 켠 경우에만, 대기열이 마를 때 한 편을 저작한다</li>
+    <li><strong>대기열 게시</strong> — <code>queue: ready</code> 가 찍힌 영상만</li>
+  </ol>
+  <div class="warn">
+    <strong>첫 틱에서 스코프 에러가 나는 것이 정상이다.</strong> 게시용으로 발급한 토큰에는 <code>youtube.upload</code> 하나뿐이라 조회·Analytics·댓글 스코프가 없다. 갱신으로는 스코프가 늘지 않으므로 동의 플로우에서 체크박스를 켜고 토큰을 새로 발급해야 하고, 서버 에러에 그 안내가 실려 온다. Analytics API 는 Google Cloud Console 에서 <strong>따로 활성화</strong>해야 하며(스코프와 별개 관문), 데이터는 2~3일 지연된다.
+  </div>
+  <div class="ok">
+    <strong>AI 고지는 루프가 끄지 못한다.</strong> <code>containsSyntheticMedia</code> 의 기본값이 <code>true</code> 이고 자율 루프는 이 값을 내리지 않는다 — §2에서 확인했듯 고지해도 노출·수익 자격이 깎이지 않는 대신 상습 미고지에는 라벨 강제와 YPP 정지가 걸린다. 값을 내리는 판단은 사람 몫이다.
+  </div>
+</section>
+
 <section id="sources">
-  <h2>12. 출처</h2>
+  <h2>13. 출처</h2>
   <h4>YouTube 공식 — 정책 · 수익화</h4>
   <ul>
     <li><a href="https://support.google.com/youtube/answer/1311392?hl=en">채널 수익 창출 정책</a> — 진위성 없는 콘텐츠 포함. §2의 근거.</li>
+    <li><a href="https://support.google.com/youtube/answer/2801973?hl=en">스팸·기만 행위 정책</a> — 대량 반복 생산, 삭제·스트라이크·채널 종료. §2의 근거. 2026-08-15 확인</li>
+    <li><a href="https://support.google.com/youtube/answer/10383400?hl=en">업로드 오류 안내</a> — 24시간 업로드 한도 존재·숫자 비공개. §7의 근거. 2026-08-15 확인</li>
     <li><a href="https://support.google.com/youtube/answer/72851">YPP 자격 요건</a> — §1·§3의 근거.</li>
     <li><a href="https://blog.youtube/news-and-events/youtube-partner-program-updates-2027-new-opportunities-earn/">2027 YPP 개편 발표 (2026-08-10)</a> — §3의 근거.</li>
     <li><a href="https://support.google.com/youtube/answer/12504220?hl=en">쇼츠 수익 배분 정책</a> · <a href="https://support.google.com/youtube/answer/72902?hl=en">수익 배분 개요</a> — §4의 근거.</li>
@@ -479,7 +540,7 @@
 </section>
 
 <footer>
-  기준일 2026-08-11 · 조사 방식 딥리서치 워크플로우 2회(에이전트 212개) → 48개 출처 → 주장 237건 추출 → 50건 3표 검증 → 28건 확정 ·
+  기준일 2026-08-11 · 갱신 2026-08-16(§12 자동화 절 추가) · 2026-08-15(<a href="../../research/2026-08-15-posting-frequency-and-growth/index.html">빈도·차단 조사</a> 반영) · 조사 방식 딥리서치 워크플로우 2회(에이전트 212개) → 48개 출처 → 주장 237건 추출 → 50건 3표 검증 → 28건 확정 ·
   성장 루프 <code>/social-flow:grow-youtube</code> · 전술 정본 <code>skills/grow-youtube/references/growth-playbook.md</code> ·
   같은 장르 <a href="../threads-growth/index.html">스레드 성장 가이드</a> · 플랫폼 문법 <code>skills/platform-guide/references/platform-playbook.md</code> · <a href="../../index.html">문서 허브</a>
   <p style="margin-top:10px"><strong>2027-02-01 이후에는 §3·§4를 반드시 다시 확인할 것.</strong></p>

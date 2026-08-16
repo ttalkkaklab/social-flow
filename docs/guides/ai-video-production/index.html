@@ -58,11 +58,20 @@
   <h1>AI로 쇼트폼 영상 만들기</h1>
   <p class="sub">영상 생성 툴만 쓸 것인가, 이미지에 나레이션을 얹을 것인가, 섞을 것인가. 이 문서는 그 답이 취향이 아니라 스펙에서 나온다는 것을 보인다. 공식 문서와 실제로 돌아가는 코드에서 확인되고 적대적 검증까지 통과한 것만 남겼고, 답을 못 낸 영역은 빈칸으로 뒀다.</p>
   <div class="meta">
-    <span>기준일 <strong>2026-08-11</strong></span>
+    <span>기준일 <strong>2026-08-11</strong> · 코드 대조 <strong>2026-08-16</strong></span>
     <span>근거 <strong>24개 출처 → 120건 추출 → 25건 3표 검증 → 14건 확정</strong></span>
     <span>파이프라인 <strong><code>/social-flow:storyboard</code> → <code>produce</code></strong></span>
   </div>
 </header>
+
+<div class="warn">
+  <strong>2026-08-16 갱신 — 그 사이 바뀐 것 셋.</strong> 본문은 8월 11일 조사 그대로 두고, 코드가 달라진 자리만 여기에 모았다.
+  <ul style="margin:10px 0 0">
+    <li><strong>영상 엔진이 둘이 됐다.</strong> Seedance(<code>seedance_*</code>)가 붙어 2~30초를 1초 단위로 만든다 — 아래 §2 의 "8초 격자"는 이제 Veo 한쪽의 제약이다. 어느 쪽을 언제 쓰는지는 <a href="../../../skills/produce/references/video-model-selection.md">video-model-selection.md</a> 가 정본이다.</li>
+    <li><strong><code>negativePrompt</code> 가 생겼다.</strong> §7 표에 "없다"고 적힌 그 필드가 Veo 툴 4종 전부에 들어왔다. §3 의 부정 프롬프트 규칙을 이제 그대로 쓸 수 있다.</li>
+    <li><strong>편당 비용이 숫자로 잡혔다.</strong> §9 가 "검증을 통과한 값이 하나도 없다"고 적은 그 구멍은 <code>skills/autoproduce/references/prices.tsv</code> 와 <code>cost-tiers.md</code> 가 메웠다. 자동 저작의 기본인 경제 티어는 Veo 를 한 번도 부르지 않고 편당 <strong>약 $0.26~0.29</strong>(상한 $0.30)다.</li>
+  </ul>
+</div>
 
 <nav class="toc">
   <div class="toc-title">목차</div>
@@ -145,6 +154,23 @@
   <div class="warn">
     <strong>문서끼리 어긋나는 곳이 있다.</strong> Vertex의 「Generate videos from text」 페이지는 4K를 "Preview 모델 전용"으로 적어 GA 모델 카드와 충돌하고(모델 카드가 정본), <code>veo-3.1-generate-001</code> 카드의 <code>Sound generation: Not supported</code> 항목은 다른 구글 문서와 배치된다. 개별 필드는 실측 스팟체크 대상으로 두는 게 안전하다. <strong>9:16 + 1080p 조합도 한 번 뽑아 확인할 값어치가 있다</strong> — 구 Veo 3.0에는 1080p가 16:9 전용이라는 제약이 있었다.
   </div>
+
+  <h3>위 격자는 이제 Veo 한쪽의 제약이다 <span class="badge key">2026-08-16 추가</span></h3>
+  <p>조사 시점에는 영상 엔진이 Veo 하나여서 8초 격자가 곧 파이프라인의 제약이었다. 지금은 Seedance(<code>seedance_*</code>, BytePlus ModelArk)가 함께 있고, 두 엔진은 대체재가 아니라 잘하는 일이 다르다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>Veo 3.1</th><th>Seedance</th></tr></thead>
+    <tbody>
+      <tr><td>길이</td><td>4 · 6 · 8초 격자</td><td><strong>2~30초를 1초 단위로</strong> — 요청한 만큼만 과금</td></tr>
+      <tr><td>비율</td><td>16:9 · 9:16</td><td>7종 (21:9 · 4:3 · 1:1 · 3:4 등)</td></tr>
+      <tr><td>오디오</td><td>항상 켜짐 — 대사·효과음이 강점</td><td>끌 수 있다 — 그래서 무음 컷이 훨씬 싸다</td></tr>
+      <tr><td>참조 이미지</td><td>최대 3장 · 8초 고정</td><td>최대 30장 · 자산 등록소(<code>asset://</code>) 보유</td></tr>
+      <tr><td>실사 인물 입력</td><td>성인 얼굴 통과 (아이는 차단)</td><td><strong>2.x 계열이 거부</strong> — 1.5 pro·1.0 계열만 받는다</td></tr>
+      <tr><td>이어 붙이기</td><td><code>veo_extension</code> — 7초씩 최대 20회</td><td>대응 툴 없음</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>그래서 §1의 "하이브리드가 기본값" 결론은 살아 있되 이유가 하나 늘었다. 길이 제약이 풀렸어도 <strong>구글이 권하는 "프롬프트 하나에 순간 하나"는 그대로</strong>라, 30초를 한 통으로 뽑는 것은 여전히 권장 사용법이 아니다. 값이 갈리는 축은 길이가 아니라 <strong>그 구간의 소리를 쓰는지</strong>다 — 소리를 버리는 모션 배경은 Seedance 무음, 클립 소리를 쓰는 b-roll 은 Veo다. 판단표 정본은 <a href="../../../skills/produce/references/video-model-selection.md">video-model-selection.md</a>, API 계약은 <a href="../../api-reference/seedance.html">Seedance 레퍼런스</a>다.</p>
 </section>
 
 <section id="prompt">
@@ -305,13 +331,13 @@
     <tbody>
       <tr>
         <td><code>negativePrompt</code> 필드</td>
-        <td><strong>없다.</strong> <code>veo_text2video</code>·<code>veo_img2video</code>·<code>veo_reference</code>·<code>veo_extension</code> 어디에도 없다. §3의 부정 프롬프트 규칙은 필드를 추가해야 비로소 쓸 수 있다</td>
-        <td>전수 grep 0건</td>
+        <td><strong>생겼다.</strong> <span class="badge key">2026-08-16 갱신</span> Veo 툴 4종 전부에 붙었다. 조사 시점에는 없어서 §3의 부정 프롬프트 규칙을 쓸 수 없었는데 이제 쓴다 — 배제할 것은 프롬프트 본문이 아니라 이 필드에 명사구로 적는다</td>
+        <td>소스 확인 (<code>tools.ts</code> 4건 · <code>video-client.ts</code>)</td>
       </tr>
       <tr>
         <td>Veo <code>seed</code></td>
-        <td><strong>없다.</strong> <code>seed</code>는 음악 툴에만 있다</td>
-        <td>전수 grep 0건</td>
+        <td><strong>여전히 없다.</strong> Veo 쪽에는 지금도 없고, Seedance 는 <code>seed</code> 를 받되 1.5 pro·1.0 계열만이다(2.x 는 거부). 다만 벤더 문서가 같은 seed 의 재현을 약속하지 않으므로 <strong>컷 사이 일관성을 여기에 걸지 않는다</strong> — 그건 참조 이미지나 첫·끝 프레임의 몫이다</td>
+        <td>소스 확인 (<code>tools.ts</code>)</td>
       </tr>
       <tr>
         <td>ffmpeg <code>zoompan</code> 함정</td>
@@ -376,13 +402,13 @@
 
 <section id="unknown">
   <h2>9. 답을 못 낸 것</h2>
-  <p class="lede"><strong>여덟 개 질문 중 넷은 검증 통과분이 0건이다.</strong> 그럴듯한 문장으로 채우지 않았다.</p>
+  <p class="lede"><strong>조사 시점에는 여덟 개 질문 중 넷이 검증 통과분 0건이었다.</strong> 그럴듯한 문장으로 채우지 않았고, 그중 비용 한 건은 그 뒤 코드가 메웠다 — 아래 표에 표시했다.</p>
 
   <div class="table-scroll">
   <table>
     <thead><tr><th>영역</th><th>상태</th></tr></thead>
     <tbody>
-      <tr><td><strong>비용·리롤 경제성</strong></td><td>Veo 8초 클립 1개와 정지컷 1장의 편당 비용·소요시간, 현실적인 재생성 횟수 — 전부 미확정. <strong>이 숫자가 없으면 하이브리드에서 어느 씬에 생성 영상을 쓸지 원칙으로 정할 수 없다</strong></td></tr>
+      <tr><td><strong>비용·리롤 경제성</strong> <span class="badge key">해소</span></td><td>조사 시점에는 전부 미확정이었다. 지금은 <code>skills/autoproduce/references/prices.tsv</code> 가 단가 정본이고 <code>cost-tiers.md</code> 가 모델 사다리와 승급 조건을 정한다 — 자동 저작의 기본인 경제 티어는 생성 영상을 한 컷도 쓰지 않고 편당 $0.26~0.29 이며, 훅 지표가 임계 아래로 떨어질 때만 커버 4초를 <code>veo-3.1-lite</code> 로 올린다. 아래 "가장 빨리 메울 수 있는 구멍"이 그 작업이었다</td></tr>
       <tr><td><strong>편성 규칙</strong></td><td>훅(첫 1~3초)·본문·마무리에 어떤 소재가 맞는지, 컷 길이, 자막 설계 — 살아남은 주장 0건. §6에서 자막을 분리한 것도 <strong>성과가 아니라 기능</strong>을 근거로 한 결정이다</td></tr>
       <tr><td><strong>품질 게이트</strong></td><td>손·글자 깨짐·모프·플리커를 자동으로 걸러내는 방법 — 검증 통과분 없음</td></tr>
       <tr><td><strong>플랫폼 AI 정책</strong></td><td>SynthID 적용 범위 미확인. "고지하면 노출이 깎인다"는 통념도 반증도 입증도 못 했다</td></tr>
@@ -398,9 +424,10 @@
   <p>비용이다. 검색 단계에서 공식 요금 페이지 수치가 나오긴 했다 — Veo 3.1 초당 표준 $0.40, Fast $0.10(720p)·$0.12(1080p), Lite $0.05·$0.08. 8초로 환산하면 각각 <strong>$3.20 / $0.80 / $0.40</strong>이다. <strong>다만 3표 검증을 거치지 않았다.</strong> <span class="badge free">미검증</span> 같은 조사에서 요약기 환각이 실제로 잡혔으므로(§7), 이 숫자는 <strong>실제 과금 호출로 직접 재보는 게 맞다.</strong></p>
 
   <h3>이어서 할 만한 것</h3>
+  <p style="color:var(--text-soft);font-size:14.5px">2026-08-16 대조에서 <s>취소선</s>은 그 뒤 끝난 항목이다.</p>
   <ul>
-    <li><code>veo_*</code> 툴에 <code>negativePrompt</code>와 <code>seed</code>를 노출한다 — §3 규칙을 쓰기 위한 전제다</li>
-    <li>storyboard·produce 지침에 <strong>Veo 프롬프트는 영어</strong>를 못 박는다 (§2)</li>
+    <li><s><code>veo_*</code> 툴에 <code>negativePrompt</code>와 <code>seed</code>를 노출한다</s> — <code>negativePrompt</code> 는 4종 전부에 붙였다. <code>seed</code> 는 <strong>일부러 안 붙였다</strong>: 벤더가 같은 seed 의 재현을 약속하지 않아서, 컷 사이 일관성은 참조 이미지와 첫·끝 프레임으로 잡는다</li>
+    <li><s>storyboard·produce 지침에 <strong>영상 프롬프트는 영어</strong>를 못 박는다 (§2)</s> — <code>produce/SKILL.md</code> 에 들어갔다. Seedance 쪽도 프롬프트 본문이 중국어·영어만이라 같은 규칙이 걸린다</li>
     <li>9:16에서 1080p·4K가 실제로 나오는지 한 번 뽑아 확인한다</li>
     <li><code>instagram_publish</code>에 <code>is_ai_generated</code>를 붙인다 — YouTube만 AI 고지를 하고 IG는 안 하고 있다 (§7)</li>
     <li><strong>실게시로 자막 경로를 한 번 통과시킨다</strong> — 요청 바이트까지는 검증했지만 플랫폼이 실제로 받아들이는지는 게시해 봐야 안다. 특히 두 가지: YouTube 토큰에 <code>force-ssl</code>을 넣어 재발급하는 일과, FB가 영상을 비동기 처리하는 동안 자막 호출이 걸리는지</li>
@@ -448,7 +475,7 @@
 </section>
 
 <footer class="foot">
-  <p>social-flow 사용 가이드 · 기준일 2026-08-11 · 24개 출처에서 120건 추출 → 25건 3표 검증 → 14건 확정 · 8개 질문 중 4개 미해결</p>
+  <p>social-flow 사용 가이드 · 조사 기준일 2026-08-11 · 코드 대조 2026-08-16 (v0.16.2) · 24개 출처에서 120건 추출 → 25건 3표 검증 → 14건 확정 · 미해결 4개 중 1개(비용) 해소</p>
   <p>관련 문서: <a href="../youtube-shorts-growth/index.html">유튜브 쇼츠 성장</a> · <a href="../screencast-usage/index.html">스크린캐스트 제작</a> · <a href="../../api-reference/index.html">API 레퍼런스</a></p>
 </footer>
 

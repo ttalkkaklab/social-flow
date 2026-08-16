@@ -25,6 +25,22 @@ import {
   SUPERTONIC_VOICE_NAMES,
 } from '../dist/supertonic-client.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from '../dist/music-client.js';
+import { DEFAULT_VIDEO_MODEL, img2VideoSchema } from '../dist/video-client.js';
+import {
+  DEFAULT_SEEDANCE_DURATION,
+  DEFAULT_SEEDANCE_MODEL,
+  DEFAULT_SEEDANCE_REFERENCE_MODEL,
+  DEFAULT_SEEDANCE_RESOLUTION,
+  SEEDANCE_MODEL_SPECS,
+  SEEDANCE_REAL_FACE_MODELS,
+  SEEDANCE_REFERENCE_MODELS,
+  VALID_SEEDANCE_MODELS,
+  VALID_SEEDANCE_RATIOS,
+  VALID_SEEDANCE_RESOLUTIONS,
+  seedanceImg2VideoSchema,
+  seedanceReferenceSchema,
+  seedanceText2VideoSchema,
+} from '../dist/seedance-client.js';
 import {
   DEFAULT_ZIMAGE_QUANTIZE,
   DEFAULT_ZIMAGE_STEPS,
@@ -720,6 +736,245 @@ describe('이미지 경로 분리 (로컬 · OpenAI)', () => {
     assert.ok(zimageTimeoutMs(1088, 1920, 9) > 462_000 * 2, '9:16 타임아웃이 실측 대비 빠듯하다');
     // 상한은 30분 — 무한정 매달리지 않는다
     assert.ok(zimageTimeoutMs(2048, 2048, 50) <= 30 * 60_000);
+  });
+});
+
+/**
+ * 두 영상 엔진의 분담을 계약으로 못박는다 (음성·이미지 경로 분리와 같은 구조).
+ *
+ * Veo 는 네이티브 오디오와 로컬 파일 연장을 갖고, Seedance 는 자유로운 길이·비율과
+ * 훨씬 싼 무음 컷을 갖는다. 이 분담이 설명에서 사라지면 호출자는 목록 맨 위에 있는
+ * 툴을 집는다 — 그러면 4초짜리 b-roll 이 8초 과금으로 나가거나, 실사 인물 커버가
+ * 얼굴 입력을 거부하는 2.x 로 가서 회차가 통째로 막힌다.
+ *
+ * enum 은 seedance-client.ts 능력표에서 파생시킨 값과 일치해야 한다 — 스키마에
+ * 목록을 복사해 두면 모델이 늘 때 한쪽만 고쳐진다.
+ */
+describe('영상 엔진 분리 (Veo · Seedance)', () => {
+  const t2v = byName.get('seedance_text2video');
+  const i2v = byName.get('seedance_img2video');
+  const ref = byName.get('seedance_reference');
+
+  it('세 툴이 모두 있고 생성 힌트를 단다', () => {
+    for (const tool of [t2v, i2v, ref]) {
+      assert.ok(tool, 'seedance 툴이 없다');
+      assert.equal(tool.annotations.readOnlyHint, false);
+      assert.equal(tool.annotations.destructiveHint, false, '파일만 만드는 생성 툴이 파괴적으로 표시됐다');
+      assert.equal(tool.annotations.openWorldHint, true, '외부 API 호출인데 닫혀 있다');
+    }
+  });
+
+  it('모델·해상도·비율 enum 이 seedance-client 정본과 같다', () => {
+    assert.deepEqual(t2v.inputSchema.properties.model.enum, VALID_SEEDANCE_MODELS);
+    assert.deepEqual(t2v.inputSchema.properties.resolution.enum, VALID_SEEDANCE_RESOLUTIONS);
+    assert.deepEqual(t2v.inputSchema.properties.ratio.enum, VALID_SEEDANCE_RATIOS);
+    assert.equal(t2v.inputSchema.properties.model.default, DEFAULT_SEEDANCE_MODEL);
+    assert.equal(t2v.inputSchema.properties.resolution.default, DEFAULT_SEEDANCE_RESOLUTION);
+    assert.equal(t2v.inputSchema.properties.durationSeconds.default, DEFAULT_SEEDANCE_DURATION);
+  });
+
+  it('참조 툴의 모델 enum 은 2.x 로 좁혀져 있다 — 1.x 는 참조 이미지를 못 받는다', () => {
+    assert.deepEqual(ref.inputSchema.properties.model.enum, SEEDANCE_REFERENCE_MODELS);
+    assert.ok(SEEDANCE_REFERENCE_MODELS.length > 0, '참조 지원 모델이 하나도 없다');
+    for (const model of SEEDANCE_REFERENCE_MODELS) {
+      assert.notEqual(SEEDANCE_MODEL_SPECS[model].referenceImages, false);
+    }
+    // 기본 모델(1.5 pro)은 참조를 못 받으므로 이 툴의 기본값이 될 수 없다
+    assert.ok(!SEEDANCE_REFERENCE_MODELS.includes(DEFAULT_SEEDANCE_MODEL));
+  });
+
+  it('9:16 을 세 툴이 모두 낼 수 있다 — 이 파이프라인의 기본 포맷', () => {
+    for (const tool of [t2v, i2v, ref]) {
+      assert.ok(tool.inputSchema.properties.ratio.enum.includes('9:16'), `${tool.name} 에 9:16 이 없다`);
+    }
+  });
+
+  it('이미지 입력 툴의 비율 기본값이 adaptive 다 — 소스가 잘리는 사고를 막는다', () => {
+    for (const tool of [i2v, ref]) {
+      assert.equal(tool.inputSchema.properties.ratio.default, 'adaptive', `${tool.name} 이 소스를 자를 기본값이다`);
+    }
+    assert.match(i2v.inputSchema.properties.ratio.description, /crop/, '자름 경고가 설명에 없다');
+  });
+
+  it('음성 기본값이 벤더와 반대(false)이고 그 이유가 설명에 있다', () => {
+    // 이 파이프라인은 나레이션을 tts_* 로 따로 붙인다. 벤더 기본(true)을 그대로
+    // 두면 1.5 pro 는 단가가 두 배로 나가고 음성이 두 겹으로 겹친다.
+    for (const tool of [t2v, i2v, ref]) {
+      assert.equal(tool.inputSchema.properties.generateAudio.default, false);
+    }
+    assert.match(t2v.inputSchema.properties.generateAudio.description, /vendor default is true/i);
+  });
+
+  it('실사 인물 입력 제약이 이미지 툴 설명에 있다 — 커버 배경 레인의 함정', () => {
+    assert.match(i2v.description, /real human faces/i, '2.x 얼굴 거부 경고가 없다');
+    assert.match(ref.description, /real human faces/i);
+    // 기본 모델은 실사 얼굴을 받는 쪽이어야 커버 → b-roll 레인이 그냥 돈다
+    assert.equal(SEEDANCE_MODEL_SPECS[DEFAULT_SEEDANCE_MODEL].realFaceInput, true);
+    assert.ok(SEEDANCE_REAL_FACE_MODELS.includes(DEFAULT_SEEDANCE_MODEL));
+  });
+
+  it('두 엔진이 서로를 가리킨다 — 목록만 보는 호출자도 갈아탈 수 있어야 한다', () => {
+    assert.match(byName.get('veo_text2video').description, /seedance_text2video/);
+    assert.match(byName.get('veo_img2video').description, /seedance_img2video/);
+    assert.match(byName.get('veo_reference').description, /seedance_reference/);
+    assert.match(t2v.description, /veo_text2video/);
+    assert.match(i2v.description, /veo_img2video/);
+    assert.match(ref.description, /veo_reference/);
+  });
+
+  it('Seedance 에 없는 연장 기능이 veo_extension 으로 안내된다', () => {
+    assert.ok(!byName.has('seedance_extension'), 'seedance_extension 이 생겼다 — 영상 입력은 공개 URL 만 받는다');
+    assert.match(byName.get('veo_extension').description, /Seedance/, '연장이 Veo 전담임을 설명이 밝히지 않는다');
+  });
+
+  /**
+   * 툴 표면의 default 와 실제로 적용되는 zod default 가 갈라지면 인자를 생략한
+   * 정상 호출이 전부 실패한다 — JSON 스키마의 default 는 안내일 뿐이라 서버가
+   * 읽지 않는다. 실제로 `seedance_reference` 가 공통 기본값(1.5 pro)을 물려받아
+   * 자기 검증에 걸렸다. 스키마를 눈으로 보는 검사로는 안 잡히므로 **파싱해서**
+   * 확인한다.
+   */
+  it('인자를 생략한 최소 호출이 세 스키마 모두에서 통과한다', () => {
+    const cases = [
+      [seedanceText2VideoSchema, { prompt: 'x' }],
+      [seedanceImg2VideoSchema, { prompt: 'x', sourceImagePath: '/tmp/a.png' }],
+      [seedanceReferenceSchema, { prompt: 'x', referenceImagePaths: ['/tmp/a.png'] }],
+    ];
+    for (const [schema, args] of cases) {
+      const parsed = schema.safeParse(args);
+      assert.ok(parsed.success, `기본값 호출이 거절됐다: ${JSON.stringify(parsed.error?.issues)}`);
+      assert.ok(VALID_SEEDANCE_MODELS.includes(parsed.data.model));
+    }
+  });
+
+  it('참조 스키마의 실제 기본 모델이 2.x 다 — 툴 표면 default 와 어긋나지 않는다', () => {
+    const parsed = seedanceReferenceSchema.parse({ prompt: 'x', referenceImagePaths: ['/tmp/a.png'] });
+    assert.ok(SEEDANCE_REFERENCE_MODELS.includes(parsed.model));
+    assert.equal(parsed.model, ref.inputSchema.properties.model.default, '표면 default 와 실제 기본값이 다르다');
+    assert.equal(parsed.model, DEFAULT_SEEDANCE_REFERENCE_MODEL);
+  });
+
+  /**
+   * 기본값은 **품질 근거가 있는 모델**이어야 한다.
+   *
+   * 아레나에 없는 모델(2.5·2.0 fast·2.0 mini·1.0 pro fast)을 기본값으로 두면,
+   * 인자를 생략한 호출이 전부 검증되지 않은 품질로 나간다. 값이 싸거나 기능이
+   * 넓다는 이유로 기본값을 그쪽에 두려면 근거를 먼저 만들어야 한다.
+   */
+  it('기본 모델은 공개 평가가 있는 쪽이다', () => {
+    const EVALUATED = ['dreamina-seedance-2-0-260128', 'seedance-1-5-pro-251215', 'seedance-1-0-pro-250528'];
+    assert.ok(EVALUATED.includes(DEFAULT_SEEDANCE_MODEL), `기본 모델 ${DEFAULT_SEEDANCE_MODEL} 에 공개 평가가 없다`);
+    assert.ok(EVALUATED.includes(DEFAULT_SEEDANCE_REFERENCE_MODEL), `참조 기본 모델 ${DEFAULT_SEEDANCE_REFERENCE_MODEL} 에 공개 평가가 없다`);
+    // 참조 기본값을 목록 순서에서 뽑으면 모델을 끼워 넣는 순간 조용히 바뀐다
+    assert.notEqual(DEFAULT_SEEDANCE_REFERENCE_MODEL, undefined);
+  });
+
+  /**
+   * Veo 세 티어는 블라인드 아레나에서 통계적으로 같다(격차 20 Elo 이내, 신뢰구간
+   * 중첩, 무음 보드에서는 순서가 뒤집힌다). 그래서 표준 티어를 기본값으로 두면
+   * 사람이 더 좋아하지도 않는 결과에 4배를 낸다.
+   */
+  it('Veo 기본 티어가 표준이 아니다 — 값만 4배인 기본값 금지', () => {
+    assert.equal(DEFAULT_VIDEO_MODEL, 'veo-3.1-fast-generate-preview');
+    for (const name of ['veo_text2video', 'veo_img2video', 'veo_extension', 'veo_reference']) {
+      const tool = byName.get(name);
+      assert.equal(
+        tool.inputSchema.properties.model.default,
+        DEFAULT_VIDEO_MODEL,
+        `${name} 의 기본 모델이 video-client 정본과 다르다`,
+      );
+    }
+  });
+
+  /**
+   * 배제 지시를 프롬프트 본문에 쓰면 그 명사가 오히려 그려진다(로컬 이미지 실측
+   * 4장 전패). Google 프롬프트 가이드도 지시문 형태를 not recommended 로 적고
+   * 명사구 나열을 권한다. 그래서 배제 전용 입구가 네 툴에 다 있어야 하고,
+   * 설명이 그 문법을 말해 줘야 한다 — 입구만 있고 문법을 안 알려 주면
+   * 호출자가 그 필드에 "no walls" 를 적는다.
+   */
+  it('veo 네 툴이 배제 지시 입구를 노출한다 — 본문에 "no ~" 를 쓰지 않게', () => {
+    for (const name of ['veo_text2video', 'veo_img2video', 'veo_extension', 'veo_reference']) {
+      const prop = byName.get(name).inputSchema.properties.negativePrompt;
+      assert.ok(prop, `${name} 에 negativePrompt 입구가 없다`);
+      assert.match(prop.description, /comma-separated/i, `${name} 설명이 명사구 나열 문법을 안 알려 준다`);
+      assert.match(prop.description, /Do NOT write instructions/, `${name} 설명이 지시문 금지를 안 적었다`);
+    }
+    // 스키마도 실제로 받아야 한다 — 설명만 있고 값이 버려지면 소용없다
+    const parsed = img2VideoSchema.safeParse({
+      prompt: 'very slow push-in',
+      sourceImagePath: '/tmp/x.png',
+      negativePrompt: 'on-screen text, subtitles',
+    });
+    assert.equal(parsed.success, true);
+    assert.equal(parsed.data.negativePrompt, 'on-screen text, subtitles');
+  });
+
+  /**
+   * Seedance 문법은 Veo 와 다르고, 그 차이가 실패를 만든다. 벤더가 자기 문서에서
+   * 두 가지를 못 박았다 — 프롬프트에 초를 적으면 결과가 망가지고(정밀 타이밍
+   * 지원이 불안정하다는 자기 고지), 삼면도 캐릭터 시트를 참조로 넣으면 같은 인물이
+   * 둘 나온다. 호출 직전에 읽히는 자리가 툴 설명이라 여기가 실효 지점이다.
+   */
+  it('seedance 툴 설명이 벤더가 못 박은 두 금지를 싣는다', () => {
+    for (const name of ['seedance_text2video', 'seedance_img2video', 'seedance_reference']) {
+      const desc = byName.get(name).inputSchema.properties.prompt.description;
+      assert.match(desc, /timecode/i, `${name} 가 타임코드 금지를 안 알려 준다`);
+      assert.match(desc, /English or Chinese|English \(|Korean only/i, `${name} 가 프롬프트 언어 제약을 안 알려 준다`);
+    }
+    // 삼면도 금지는 참조 툴에만 걸린다
+    assert.match(byName.get('seedance_reference').description, /multi-view/i);
+    // seed 에 재현성을 약속하지 않는다 — 원문에 근거가 없다
+    const seed = byName.get('seedance_text2video').inputSchema.properties.seed.description;
+    assert.match(seed, /does not promise/i, 'seed 설명이 없는 재현성을 약속한다');
+  });
+
+  it('교차 제약이 호출 전에 거부된다 — 돈 나가는 호출을 만들기 전에', () => {
+    // 무음 전용 모델에 음성 요청
+    assert.equal(
+      seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'seedance-1-0-pro-250528', generateAudio: true }).success,
+      false,
+    );
+    // 2.5 는 오늘 1080p 를 못 낸다 (2026-08-17 개시)
+    assert.equal(
+      seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'dreamina-seedance-2-5-260628', resolution: '1080p' }).success,
+      false,
+    );
+    // 2.x 는 seed 가 없다
+    assert.equal(
+      seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'dreamina-seedance-2-0-260128', seed: 7 }).success,
+      false,
+    );
+    // 1.5 pro 의 길이 상한은 12초
+    assert.equal(seedanceText2VideoSchema.safeParse({ prompt: 'x', durationSeconds: 20 }).success, false);
+    // 첫+끝 프레임을 못 받는 모델
+    assert.equal(
+      seedanceImg2VideoSchema.safeParse({
+        prompt: 'x',
+        sourceImagePath: '/tmp/a.png',
+        lastImagePath: '/tmp/b.png',
+        model: 'seedance-1-0-pro-fast-251015',
+      }).success,
+      false,
+    );
+  });
+
+  it('모델 능력표가 스스로 모순되지 않는다', () => {
+    for (const [model, spec] of Object.entries(SEEDANCE_MODEL_SPECS)) {
+      assert.ok(spec.resolutions.length > 0, `${model}: 해상도가 비어 있다`);
+      for (const resolution of spec.resolutions) {
+        assert.ok(VALID_SEEDANCE_RESOLUTIONS.includes(resolution), `${model}: 알 수 없는 해상도 ${resolution}`);
+      }
+      const [min, max] = spec.duration;
+      assert.ok(min > 0 && min <= max, `${model}: 길이 범위가 뒤집혔다`);
+      // 기본 길이는 전 모델이 받아야 한다 — 아니면 기본값 호출이 모델에 따라 거절된다
+      assert.ok(
+        DEFAULT_SEEDANCE_DURATION >= min && DEFAULT_SEEDANCE_DURATION <= max,
+        `${model}: 기본 길이 ${DEFAULT_SEEDANCE_DURATION}초를 못 받는다`,
+      );
+      // 기본 해상도도 마찬가지 — 모델을 바꿨을 뿐인데 해상도까지 같이 고쳐야 하면 함정이다
+      assert.ok(spec.resolutions.includes(DEFAULT_SEEDANCE_RESOLUTION), `${model}: 기본 해상도를 못 낸다`);
+    }
   });
 });
 

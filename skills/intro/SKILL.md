@@ -105,7 +105,7 @@ echo "<태그라인>" | python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/refe
 컨셉이 씬 도입형(소품 있는 미니 씬, 어두운 스튜디오 등)이면
 `gpt_image_img2img`(로고 마스터 레퍼런스, 1080×1920)로 첫 프레임을 생성한다
 (로컬 기본 경로의 예외 — 레퍼런스 편집은 image_local_generate 에 없다) —
-캐릭터 등장 전 상태 또는 실루엣, profile 부정 지시 + "no text" 포함,
+캐릭터 등장 전 상태 또는 실루엣, profile 부정 지시 + 글자 배제 포함,
 `.work/open-frame.png`. 캐릭터 정면 등장형 컨셉이면 생략한다.
 
 ### 5. 영상 생성 (veo — 필수 경로)
@@ -127,9 +127,11 @@ echo "<태그라인>" | python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/refe
 - **마스코트 연기 강조 컨셉**: `veo_reference` — 로고 마스터(+가능하면 다른
   각도 1~2장)를 referenceImagePaths 로, 9:16. 캐릭터 온모델 유지가 강점.
 - 프롬프트는 플레이북 §5 L.O.G.O. 골격: 캐릭터 보존 규칙 → 컨셉의 단일
-  제스처(초 단위 시간 배분) → 모션 SFX 서술 + **"no music"** → "ends settled in
-  the exact pose of the final frame, last second nearly static" + **"no text,
-  no letters, no captions"** + profile 금지 소재. `.work/intro-raw.mp4` 저장.
+  제스처(초 단위 시간 배분) → 모션 SFX 서술 → "ends settled in the exact pose
+  of the final frame, last second nearly static". **배제는 본문이 아니라
+  `negativePrompt` 인자다** — `text, letters, captions, subtitles, music,
+  background score` + profile 금지 소재를 명사구로(플레이북 §5).
+  `.work/intro-raw.mp4` 저장.
 
 ### 6. 로고음
 
@@ -215,8 +217,9 @@ profile.md §6 의 **인트로 자산** 라인을 갱신한다(없으면 추가)
   받는다. 영상 후보를 여러 개 생성해 고르는 방식은 비용상 금지.
 - **판정 권한은 brand-reviewer(인트로 모드)에만 있다** — 자기 채점으로 루프를
   끝내지 않는다. 점수 조작 금지.
-- **채널명·태그라인 텍스트는 생성 모델에 맡기지 않는다** — veo 프롬프트에 항상
-  "no text", 텍스트는 락업 카드·플레이트(결정적 렌더)가 담당한다.
+- **채널명·태그라인 텍스트는 생성 모델에 맡기지 않는다** — veo 호출마다
+  `negativePrompt` 에 `text` 를 넣고, 텍스트는 락업 카드·플레이트(결정적 렌더)가
+  담당한다. 본문에 "no text" 를 적으면 글자가 오히려 나온다.
 - **로고음은 채널 자산** — 한번 확정하면 전 영상에서 재사용, 재생성은 사용자
   명시 시에만.
 - HITL 선택 이후 **컨셉 드리프트 금지** — 바꿔야 하면 루프를 멈추고 §2 로

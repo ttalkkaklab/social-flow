@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veo·Seedance로 세로 쇼트폼 잘 뽑는 법 — 프롬프트·일관성·연출 (2026-08-15)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  nav.toc { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 56px; }
+  nav.toc h2 { font-size: 14px; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 14px; text-transform: uppercase; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  nav.toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a { color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500; }
+  nav.toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent); font-weight: 700; font-size: 12.5px;
+    margin-right: 10px; font-variant-numeric: tabular-nums;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
+  p { margin-bottom: 16px; }
+  p.note { font-size: 14.5px; color: var(--text-soft); }
+  p.lead { font-size: 17px; }
+  ul.plain { margin: 0 0 16px 22px; }
+  ul.plain li { margin-bottom: 8px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px;
+  }
+
+  .callout {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    background: var(--bg-soft); border-radius: 0 10px 10px 0;
+    padding: 16px 20px; margin-bottom: 20px; font-size: 15px;
+  }
+  .callout.green { border-left-color: var(--green); }
+  .callout.amber { border-left-color: var(--amber); }
+  .callout.red { border-left-color: var(--red); }
+  .callout.purple { border-left-color: var(--purple); }
+  .callout b:first-child { display: block; margin-bottom: 4px; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .verdict {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px 32px; margin-bottom: 56px;
+    box-shadow: var(--shadow);
+  }
+  .verdict .v-label {
+    font-size: 12.5px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); margin-bottom: 12px;
+  }
+  .verdict .v-main { font-size: 20px; font-weight: 700; line-height: 1.6; margin-bottom: 16px; letter-spacing: -.01em; }
+  .verdict p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14.5px; }
+  th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; font-size: 13.5px; }
+  .table-scroll { overflow-x: auto; }
+
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+  }
+  .badge.green { color: var(--green); background: var(--green-soft); }
+  .badge.amber { color: var(--amber); background: var(--amber-soft); }
+  .badge.red { color: var(--red); background: var(--red-soft); }
+  .badge.purple { color: var(--purple); background: var(--purple-soft); }
+  .badge.blue { color: var(--accent); background: var(--accent-soft); }
+
+  .grades { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 32px; }
+  .grades div {
+    flex: 1 1 200px; border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; font-size: 14px; color: var(--text-soft); background: var(--bg-card);
+  }
+  .grades div b { display: block; margin-bottom: 4px; }
+
+  .src-group { margin-bottom: 26px; }
+  .src-group h3 { margin-top: 0; }
+  .src-group ul { list-style: none; margin-left: 0; }
+  .src-group li {
+    font-size: 13.5px; margin-bottom: 6px; padding-left: 18px; position: relative;
+    color: var(--text-soft);
+  }
+  .src-group li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .src-group a { word-break: break-all; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 24px; font-size: 13.5px; color: var(--text-soft); }
+  footer p { margin-bottom: 8px; }
+  footer a { color: var(--accent); text-decoration: none; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">RESEARCH</span>
+  <h1>Veo·Seedance로 세로 쇼트폼 잘 뽑는 법<br>프롬프트 · 일관성 · 연출</h1>
+  <p class="sub">
+    두 엔진의 공식 프롬프트 문서를 원문으로 열어 대조했다. 문장 골격, 카메라 어휘, 부정 지시를 쓰는 자리,
+    컷 사이 캐릭터를 붙이는 절차, 9:16에서만 생기는 함정까지. 떠도는 요령은 원문에서 확인되지 않으면 본문에서 뺐다.
+  </p>
+  <div class="meta">
+    <span>작성 <strong>2026-08-15</strong></span>
+    <span>대상 <strong>Veo 3.1 · Seedance 1.5 Pro · Dreamina Seedance 2.0</strong></span>
+    <span>1차 확인 <strong>Vertex AI docs · Gemini API docs · Google Cloud 블로그 · BytePlus ModelArk · Volcengine</strong></span>
+    <span>검증 <strong>25건 중 20건 확인 · 5건 기각</strong></span>
+  </div>
+</header>
+
+<div class="verdict">
+  <div class="v-label">결론</div>
+  <div class="v-main">
+    두 엔진은 <b>문장 골격부터 다른 문법</b>을 요구한다. Veo는 카메라를 문장 맨 앞에 놓는 5부 공식에
+    부정 지시를 본문 밖 파라미터로 빼내는 구조고, Seedance는 카메라를 "시작 구도 → 무브 → 진폭 → 종료 구도"로
+    따로 적는 구조다. 같은 프롬프트를 양쪽에 그대로 넣으면 한쪽 문법에는 어긋난다.
+  </div>
+  <p>
+    캐릭터 일관성은 업계 통념이 오히려 반대다. ByteDance는 <b>삼면도·다각도 캐릭터 시트를 쓰지 말라</b>고 자기 문서에
+    못 박는다 — 모델이 각도별 그림을 서로 다른 인물로 읽어서 얼굴이 흔들리고 같은 사람이 둘 나오는 결함이 심해진다는
+    것이다. 권장은 얼굴만 있는 헤드샷 한 장에 전신 한 장이다. 반대로 "Veo에서 seed를 고정해 컷 사이 일관성을 잡는다"는
+    널리 도는 요령은 이번 검증에서 원문 확인에 실패했다(3표 전부 기각). 일관성 설계를 seed 위에 올리면 안 된다.
+  </p>
+  <p>
+    세로에는 세로만의 비용이 붙는다. Veo는 <code>aspectRatio</code>를 직접 넣어야 9:16이 나오고(기본값이 가로다),
+    레퍼런스 이미지를 켜는 순간 컷 하나가 8초로 못 박힌다. Seedance 2.0은 세로로 뽑으면 요청하지 않은 자막을
+    가로보다 뚜렷이 자주 태워 넣어서 벤더가 내놓은 공식 회피책이 "가로로 만들고 나중에 세로로 크롭"이다.
+  </p>
+  <p class="note">
+    세 번째 축이었던 "감독·AI 필름메이커의 재현 가능한 연출 워크플로"는 1차 근거가 거의 살아남지 않았다.
+    §08에 문서에서 실제로 끌어낼 수 있는 연출 재료 넷과, 문서가 아무 말도 하지 않는 자리 셋을 갈라 적었다.
+  </p>
+</div>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#grade">읽는 법 — 이 문서가 확인한 것</a></li>
+    <li><a href="#veo-skeleton">Veo ① 문장 골격과 카메라 어휘</a></li>
+    <li><a href="#veo-special">Veo ② 부정 지시와 오디오</a></li>
+    <li><a href="#sd-skeleton">Seedance ① 문장 골격과 카메라 공식</a></li>
+    <li><a href="#sd-multishot">Seedance ② 멀티컷·한국어 대사·타임코드 금지</a></li>
+    <li><a href="#consistency">캐릭터 일관성 — 통념이 반대다</a></li>
+    <li><a href="#vertical">세로(9:16)에서만 걸리는 것</a></li>
+    <li><a href="#directing">연출 축 — 문서가 주는 것과 안 주는 것</a></li>
+    <li><a href="#apply">우리 파이프라인에 옮기면</a></li>
+    <li><a href="#refuted">기각·미확인 — 함께 들고 갈 것</a></li>
+    <li><a href="#sources">출처</a></li>
+  </ol>
+</nav>
+
+<section id="grade">
+  <h2 class="sec"><span class="no">01</span>읽는 법 — 이 문서가 확인한 것</h2>
+
+  <p class="lead">
+    살아남은 20건은 사실상 전부 <b>"벤더 문서가 이렇게 적는다"</b>는 문서 대조 결과다. 실제로 돈을 내고 생성을 돌려
+    확인한 실측이 아니다. 문서가 "된다"고 적은 조합이 실제로 통과하는지는 별개 문제라, 이 구분을 계속 붙여 뒀다.
+  </p>
+
+  <div class="grades">
+    <div><b><span class="badge green">벤더 문서</span></b>Google·ByteDance가 자기 문서에 적은 것. 원문 문장을 그대로 인용했다</div>
+    <div><b><span class="badge purple">우리 실측</span></b>이 저장소가 유료 호출로 확인한 기록. 문서와 어긋나면 이쪽이 정본이다</div>
+    <div><b><span class="badge amber">보고·정황</span></b>개발자 포럼·언론 보도. 방향만 참고하고 규칙으로 쓰지 않는다</div>
+    <div><b><span class="badge red">기각</span></b>3표 적대 검증에서 원문 확인에 실패했다. §10에 모아 뒀다</div>
+  </div>
+
+  <div class="callout amber">
+    <b>이 주제에는 실체 없는 인용이 실제로 돌아다닌다</b>
+    <p>
+      검증 과정에서 잡힌 오류만 넷이다 — "Veo가 1:1 비율을 지원한다", "확장 입력으로 1080p를 받는다",
+      "확장 입력은 8초까지다", "Veo 3.1은 2026-01-13 출시". 어느 Google 페이지에도 근거가 없다.
+      원인 하나는 기술적이다. Google docs와 BytePlus docs가 둘 다 JS 렌더라 일반 페이지 수집기가 내비게이션 껍데기만
+      가져오고, 그 빈자리를 검색 스니펫으로 메우면 그대로 유령 인용이 된다. 이번에는 원본 파싱과 브라우저 렌더로
+      다시 읽어 확인했다.
+    </p>
+  </div>
+
+  <div class="callout red">
+    <b>시효가 짧다</b>
+    <p>
+      Seedance는 버전 사이에 규칙이 그대로 옮겨가지 않는다. 아래 §05의 타임코드 금지와 §06의 삼면도 금지는
+      <b>2.0 계열 문서에서 확인한 것</b>이고 1.5 Pro·2.5 적용 여부는 확인 못 했다. 2.5는 프롬프트 가이드 자체가 없고,
+      2.5 문서는 §07의 세로 자막 경고를 빼는 대신 자막 네거티브 제어를 새로 넣었다. Veo 쪽은 3.1이 현역이고
+      Veo 4는 없다.
+    </p>
+  </div>
+</section>
+
+<section id="veo-skeleton">
+  <h2 class="sec"><span class="no">02</span>Veo ① 문장 골격과 카메라 어휘</h2>
+
+  <h3>공식 골격은 둘인데 충돌하지 않는다 <span class="badge green">벤더 문서</span></h3>
+
+  <p>
+    Google이 쓴 정본이 두 갈래다. Cloud 블로그는 <b>5부 공식</b>을 준다.
+  </p>
+
+  <div class="callout">
+    <b>[Cinematography] + [Subject] + [Action] + [Context] + [Style &amp; Ambiance]</b>
+    <p class="note">
+      원문: "A structured prompt yields consistent, high-quality results. Consider this five-part formula for optimal control."
+    </p>
+  </div>
+
+  <p>
+    여기서 눈여겨볼 건 항목 목록보다 <b>어순</b>이다. 카메라가 문장 첫머리에 온다.
+    같은 문서의 워크드 예제도 어순 그대로다.
+  </p>
+
+  <div class="callout purple">
+    <p>
+      <code>Medium shot, a tired corporate worker, rubbing his temples in exhaustion, in front of a bulky 1980s
+      computer in a cluttered office late at night... Retro aesthetic, shot as if on 1980s color film, slightly grainy.</code>
+    </p>
+  </div>
+
+  <p>
+    Vertex AI docs 쪽은 다른 분해를 쓴다. 항목이 이렇다 — (Subject / Action / Scene or context / Camera angles /
+    Camera movements / Lens and optical effects / Visual style &amp; aesthetics / Temporal elements / Audio /
+    Cinematic terms)를 늘어놓고 "You don't need to use all elements in every prompt"이라고 선택성을 명시한다.
+    두 문서를 싸움 붙일 필요가 없다 — <b>5부 공식을 문장 템플릿으로 쓰고, docs의 항목들은 그 안을 채우는 어휘집으로 쓴다.</b>
+  </p>
+
+  <div class="callout amber">
+    <b>포맷 제어는 프롬프트 가이드에 없다</b>
+    <p>
+      docs 프롬프트 가이드 본문에는 aspect ratio·9:16·duration·resolution·seed·reference image가
+      <b>한 번도 나오지 않는다</b>(문자열 카운트 0). 전부 다른 페이지의 API 파라미터다. 프롬프트를 아무리 잘 써도
+      세로가 안 나오는 이유가 여기 있다(§07).
+    </p>
+  </div>
+
+  <h3>카메라 어휘 — 앵글 13종, 무브 12종 <span class="badge green">벤더 문서</span></h3>
+
+  <p>
+    docs가 예문 한 줄씩 붙여 열거한다. 페이지 갱신일 2026-08-13.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <tr><th style="width:110px">종류</th><th>어휘</th></tr>
+    <tr>
+      <td><b>앵글 13</b></td>
+      <td>eye-level · low-angle · high-angle · bird's-eye(top-down) · worm's-eye · Dutch(canted) ·
+      close-up · extreme close-up · medium · full(long) · wide(establishing) · over-the-shoulder · POV</td>
+    </tr>
+    <tr>
+      <td><b>무브 12</b></td>
+      <td>static · pan · tilt · dolly · truck · pedestal · zoom · crane · aerial(drone) · handheld · whip pan · arc</td>
+    </tr>
+  </table>
+  </div>
+
+  <p>
+    단서 둘. 목록이 "examples of camera angles that you can use"라 닫힌 화이트리스트가 아니다. 그리고
+    <b>앵글·렌즈 절에만</b> 경고가 붙어 있다 — "Some advanced camera angles are not officially supported.
+    The results and reliability may vary." 무브 절에는 그 경고가 없다. 안 되는 걸 억지로 시키는 쪽은 앵글이라는 뜻이다.
+  </p>
+
+  <div class="callout green">
+    <b>zoom과 dolly를 문서가 직접 갈라 놓는다</b>
+    <p>
+      "Zoom (in/out): the camera's lens changes its focal length to magnify or de-magnify the subject.
+      <b>This is different from a dolly, as the camera itself doesn't move.</b>" 대
+      "Dolly (in/out): the camera physically moves closer to the subject or further away."
+    </p>
+    <p>
+      인물에게 다가가는 컷을 원하면서 "zoom in"이라고 쓰면 카메라가 제자리에 선 채 화각만 좁아진다.
+      공간감이 필요하면 <code>dolly in</code>이다. 참고로 dolly zoom(현기증 효과)은 무브 절이 아니라
+      렌즈·광학 효과 절에 <code>Vertigo effect</code>로 들어 있다.
+    </p>
+  </div>
+</section>
+
+<section id="veo-special">
+  <h2 class="sec"><span class="no">03</span>Veo ② 부정 지시와 오디오</h2>
+
+  <h3>부정 지시는 표면마다 문법이 다르다 <span class="badge green">벤더 문서</span></h3>
+
+  <p class="lead">
+    같은 "빼고 싶다"는 뜻인데 쓰는 자리가 둘이고 문법이 서로 다르다. 이걸 섞으면 지시가 역효과를 낸다.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <tr><th style="width:170px">쓰는 자리</th><th>문법</th><th>원문 예시</th></tr>
+    <tr>
+      <td><code>negativePrompt</code> 파라미터</td>
+      <td>지시문 없이 <b>명사·형용사구만 콤마로</b> 나열</td>
+      <td><code>wall, frame</code> / <code>urban background, man-made structures, dark, stormy, or threatening atmosphere</code></td>
+    </tr>
+    <tr>
+      <td>본문 프롬프트</td>
+      <td>추상 범주 대신 <b>구체적 장면 서술</b>로</td>
+      <td><code>a desolate landscape with no buildings or roads</code> (← <code>no man-made structures</code>)</td>
+    </tr>
+  </table>
+  </div>
+
+  <p>
+    docs 원문이 딱 잘라 말한다. "Not recommended: using instructive language or words such as 'no' or 'don't'.
+    For example, avoid prompts such as 'no walls' or 'don't show walls'. Recommended: Describe what you don't
+    want to see. For example, 'wall, frame'." 이 지침은 2025-10 판부터 2026-06 판까지 표현만 바뀐 채 유지된다.
+  </p>
+
+  <p>
+    API 구조로 보면 <code>negativePrompt</code>는 <code>instances[].prompt</code>와 <b>형제인 별도 필드</b>다 —
+    <code>parameters</code> 안에 <code>aspectRatio</code>·<code>seed</code>와 같은 층에 있다. 프롬프트 문자열에
+    "no ~"를 적는 것과는 완전히 다른 경로다.
+  </p>
+
+  <div class="callout purple">
+    <b>우리가 이미지 쪽에서 이미 데인 함정이다</b>
+    <p>
+      로컬 이미지 생성(Z-Image)에서 <code>"no maps"</code>를 프롬프트 본문에 넣었더니 오히려 지도가 그려져서
+      4장 전패한 기록이 있다(<code>zimage-local-image</code> 메모리). 부정 명사는 본문이 아니라
+      <code>--negative-prompt</code>로 빼야 한다는 결론이었고, storyboard 스킬에도
+      "부정 지시는 프롬프트 본문에 쓰지 않는다"로 이미 박아 뒀다. <b>Veo 문서가 영상 쪽에서 같은 규칙을 적는다</b> —
+      두 매체·두 벤더에서 같은 방향이라 이 규칙은 그냥 믿고 써도 된다.
+    </p>
+  </div>
+
+  <h3>네이티브 오디오는 세 갈래로 지시한다 <span class="badge green">벤더 문서</span></h3>
+
+  <div class="table-scroll">
+  <table>
+    <tr><th style="width:120px">갈래</th><th>표기</th><th>원문 예시</th></tr>
+    <tr><td>대사</td><td><b>따옴표</b>로 감싼다</td><td><code>"This must be the key," he murmured.</code></td></tr>
+    <tr><td>효과음</td><td>소리를 그대로 서술</td><td><code>tires screeching loudly, engine roaring</code></td></tr>
+    <tr><td>앰비언스</td><td>환경의 소리 풍경을 서술</td><td><code>A faint, eerie hum resonates in the background.</code></td></tr>
+  </table>
+  </div>
+
+  <p>
+    Gemini API 문서와 Cloud 블로그가 각각 다른 예문으로 같은 세 갈래를 반복한다. 다만 널리 도는
+    <code>SFX:</code> · <code>Ambient noise:</code> 접두 라벨 문법과 따옴표 없는 <code>says:</code> 문법은
+    <b>원문 대조에서 살아남지 못했다</b>(1-2 기각). 세 갈래 구분만 확인된 것으로 읽어야 한다.
+  </p>
+
+  <div class="callout red">
+    <b>따옴표 대사가 화면에 자막을 태운다 <span class="badge amber">보고</span></b>
+    <p>
+      MIT Technology Review가 2025-07-15에 Veo 3의 자막 번인 문제를 다뤘고, 제작자들이 콜론 문법과
+      "no subtitles" 부정 지시를 회피책으로 쓴다. 문서가 권하는 표기가 자막을 안 만든다는 보장이 없다는 뜻이라,
+      대사가 든 컷은 <b>첫 회 출력에서 화면 글자를 눈으로 확인</b>하고 넘어가야 한다.
+      한국어 쇼트폼이면 더 그렇다 — 우리는 자막을 따로 얹는다.
+    </p>
+  </div>
+</section>
+
+<section id="sd-skeleton">
+  <h2 class="sec"><span class="no">04</span>Seedance ① 문장 골격과 카메라 공식</h2>
+
+  <h3>1.5 Pro — 슬롯 여섯에 카메라 전용 공식 하나 <span class="badge green">벤더 문서</span></h3>
+
+  <p>
+    이 저장소의 기본 Seedance 모델이 정확히 이 모델이다(<code>seedance-1-5-pro-251215</code>).
+    BytePlus ModelArk 가이드(최종 갱신 2026-07-06)의 공식은 이렇다.
+  </p>
+
+  <div class="callout">
+    <b>Subject + Movement + Environment(선택) + Camera movement(선택) + Aesthetic description(선택) + Sound(선택)</b>
+    <p class="note">
+      Sound 슬롯은 1.5에서 새로 생겼다 — 1.0 Pro 가이드 전문에서 "formula"·"sound"·"audio"를 찾으면 0건이다.
+    </p>
+  </div>
+
+  <p>
+    Veo와 갈라지는 지점이 여기다. Veo는 카메라를 <b>문장 맨 앞</b>에 두라고 하는데 Seedance는 <b>네 번째 슬롯</b>에 둔다.
+    대신 그 슬롯 안쪽에 별도 공식을 하나 더 준다.
+  </p>
+
+  <div class="callout green">
+    <b>시작 프레임 구도 + 무브 + 무브 진폭 + 종료 프레임 구도</b>
+    <p class="note">
+      원문: "Shot movement description formula: Starting frame composition description + Shot movement +
+      Shot movement amplitude + Ending frame composition description"
+    </p>
+    <p>
+      카메라를 한 동작으로 적지 않고 <b>구간</b>으로 적는 방식이다. "천천히 돌린다"가 아니라 "어디서 시작해 얼마만큼 움직여
+      어디서 끝나는가"를 쓴다. 세로 컷에서 구도를 통제하려면 이 공식이 훨씬 유리하다 — 시작과 끝 구도를 직접 지정하니까.
+    </p>
+  </div>
+
+  <p>
+    무브 어휘는 <code>dolly-in / dolly-out / Pan / track / Follow / Rise / Fall / Whirl / Rotate / Surround /
+    Zoom</code> 등이고 목록이 "etc"로 끝나 닫힌 집합이 아니다. 조합 예시도 문서가 직접 준다 —
+    <b>히치콕 샷 = dolly-in/out + zoom-out/in</b>, <b>불릿타임 = time slowdown + surround</b>.
+  </p>
+
+  <div class="callout amber">
+    <b>샷 사이즈는 라벨 말고 예문을 베낀다</b>
+    <p>
+      문서는 규칙을 "Subject + Shot Size"라고 적어 놓고 영어 예문은 어순이 반대다 —
+      <code>Close-up of the man on the left</code>, <code>A bust of the woman in red</code>.
+      중국어 원문(主体+景别)을 그대로 옮긴 흔적으로 보인다. 라벨을 따르면 틀리므로 <b>예문 어순을 쓴다.</b>
+    </p>
+  </div>
+
+  <h3>2.0 — 슬롯 여덟에 "엔지니어링 지시" <span class="badge green">벤더 문서</span></h3>
+
+  <p>
+    Dreamina Seedance 2.0 계열 문서(갱신 2026-08-11~14)는 더 긴 공식을 권한다.
+  </p>
+
+  <div class="callout">
+    <b>정확한 주체 + 동작 디테일 + 장면·환경 + 조명·색조 + 카메라 무브 + 화풍 + 화질 + 제약</b>
+  </div>
+
+  <p>
+    이 문서의 태도가 재미있다. 프롬프트를 카피가 아니라 <b>엔지니어링 지시</b>로 규정한다 — "a good prompt is not
+    simply 'copywriting-style description', but an 'engineering-style instruction': who, in what scene, doing what
+    action, how the camera moves, and in what chronological order events occur." 모델이 안에서 텍스트를
+    <b>공간 레이어(화면에 무엇이 있나)</b>와 <b>시간 레이어(어떻게 변하나)</b>로 갈라 읽는다고도 밝힌다.
+    프롬프트를 쓸 때 두 층을 각각 채웠는지 점검하면 되는 셈이다.
+  </p>
+
+  <p class="note">
+    이 순서를 강제라고 적지는 않고, 같은 문서의 멀티샷 절은 카메라를 앞세우는 다른 순서를 권한다.
+    권장 순서로 읽고 멀티샷일 때는 §05의 샷 내부 순서를 겹쳐 쓴다.
+  </p>
+</section>
+
+<section id="sd-multishot">
+  <h2 class="sec"><span class="no">05</span>Seedance ② 멀티컷·한국어 대사·타임코드 금지</h2>
+
+  <h3>한 번의 생성 안에서 컷을 나눈다 <span class="badge green">벤더 문서</span></h3>
+
+  <p class="lead">
+    Seedance 1.5 Pro 가이드에 "Shot transition writing" 절이 따로 있고, 하위 능력이 셋이다 —
+    컷 전환 전후 스타일 유지, 대화 장면 리버스 샷, 전환 타이밍 반응.
+  </p>
+
+  <p>문법은 두 가지다.</p>
+
+  <ul class="plain">
+    <li><b>번호형</b> — <code>Shot 1: Medium shot. The character raises her hand and looks at her palm.
+      Shot 2: Cut to a close-up of the hand. … Shot 5: Cut to a close-up of her face.</code></li>
+    <li><b>산문형</b> — <code>The scene then cuts to a close-up of the boy as he lifts his head.
+      Finally, the camera cuts back to the father…</code></li>
+  </ul>
+
+  <p>
+    컷 수 상한은 문서에 없다. 공식 예제가 3컷(립스틱 광고)부터 6컷(캣푸드)까지라 "3~5컷" 같은 수치를 규칙으로
+    옮기면 안 되고, 정확히는 <b>공식 예제는 3~6컷, 문서상 상한 없음</b>이다. 길이 예산은 1.5 Pro가 4~12초라
+    5컷을 12초에 넣으면 컷당 2.4초쯤 된다.
+  </p>
+
+  <div class="callout amber">
+    <b>멀티컷과 레퍼런스 일관성은 서로 다른 모델에 있다</b>
+    <p>
+      1.5 Pro는 <b>레퍼런스 이미지를 못 받는다</b>. 캐릭터를 참조로 붙이려면 2.x로 가야 하는데 2.x는 실사 얼굴 입력을
+      거부하고(우리 실측) seed도 없다. 한 컷 안에서 컷을 나누는 능력과 컷 사이 캐릭터를 붙이는 능력을
+      한 모델에서 동시에 얻지 못한다.
+    </p>
+  </div>
+
+  <h3>한국어 대사와 립싱크 <span class="badge green">벤더 문서</span></h3>
+
+  <p>
+    1.5 Pro는 영상과 오디오를 함께 만드는 모델이고 지원 언어에 한국어가 들어 있다.
+    가이드의 워크드 예제가 한국어 대사를 직접 보여 준다 — <code>A: "측정값이 불안정해. 다시 보정해야 해."
+    B: "알겠어. 설정값을 바꿔볼게."</code> 1인 독백과 다인 대화 모두 되고 밀리초 단위 립싱크를 표방한다
+    (벤더 주장이지 실측이 아니다).
+  </p>
+
+  <p>
+    감정·억양·발화 속도에는 <b>파라미터가 없다.</b> 파라미터 목록은 resolution·ratio·duration·seed·camera_fixed·watermark뿐이다.
+    대신 평서문으로 지시한다 — <code>In a gentle emotional state, with a soft tone and a slow speaking pace,
+    say: "You can take your time. I'm not rushing you."</code>
+  </p>
+
+  <div class="callout red">
+    <b>프롬프트 본문은 중국어·영어만 받는다</b>
+    <p>
+      가이드가 한 줄로 못 박는다: "Prompts (required): Support Chinese and English."
+      연출·카메라 지시는 영어로 쓰고 <b>한국어는 따옴표 안 대사 줄에만</b> 넣는 게 벤더 예제의 형태다.
+      한국어 프롬프트를 공식 지원하는 Seedance 모델은 2.5뿐인데, 2.5는 프롬프트 가이드도 품질 근거도 없다.
+    </p>
+  </div>
+
+  <h3>컷마다 초를 지정하면 안 된다 <span class="badge green">벤더 문서</span></h3>
+
+  <p>
+    2.0 문서는 <code>Shot 1 / Shot 2 / Shot 3</code> 스토리보드를 권하면서 샷 안쪽 서술 순서도 정해 준다.
+  </p>
+
+  <div class="callout">
+    <b>카메라 무브·전환 → 주체 동작·표정 → 위치·공간 변화 → 오디오</b>
+  </div>
+
+  <p>
+    그리고 타이밍을 못 박아 금지한다. "Do not impose strict limits on the duration of each segment" +
+    Tip "The model's support for precise timing (such as 0–3 seconds) is unstable, and forcibly limiting duration
+    may lead to abnormal generation results." <b>모델이 정밀 타이밍을 못 한다고 벤더가 스스로 고지한 것</b>이다.
+    공식 예제에도 타임코드가 하나도 없다.
+  </p>
+
+  <div class="callout purple">
+    <b>쇼트폼의 "0~3초 훅"과 정면으로 부딪히는 것처럼 보이지만 아니다</b>
+    <p>
+      이 규칙의 사정거리는 <b>프롬프트 문자열에 초를 적는 것</b>까지다. 편집 단계에서 첫 3초 훅을 설계하는 걸
+      막지 않는다. 훅은 타임코드가 아니라 <b>Shot 1의 내용과 카메라</b>로 지시하고 초는 편집에서 자른다.
+      우리 파이프라인은 어차피 클립을 받아 <code>ffmpeg</code>로 편집하므로 이 구분이 그대로 맞는다.
+    </p>
+  </div>
+</section>
+
+<section id="consistency">
+  <h2 class="sec"><span class="no">06</span>캐릭터 일관성 — 통념이 반대다</h2>
+
+  <p class="lead">
+    "캐릭터 시트를 만들어 여러 각도를 보여 주면 모델이 인물을 더 잘 붙든다"는 조언이 널리 돈다.
+    ByteDance는 자기 문서에서 <b>그러지 말라</b>고 적는다.
+  </p>
+
+  <div class="callout red">
+    <b>삼면도·다각도 캐릭터 시트를 쓰지 않는다 <span class="badge green">벤더 문서</span></b>
+    <p>
+      "Using multi-view character images is <b>not recommended</b>. Multi-view assets contain different angles of
+      the same character, and the model may easily identify them as multiple different subjects, which instead
+      worsens the ID drift issue."
+    </p>
+    <p>
+      별도 FAQ("Duplicated characters")가 같은 경고를 독립적으로 되풀이한다 — 삼면도를 참조로 넣으면
+      <b>같은 인물이 화면에 둘</b> 나오기 쉬우니 "prioritize independent single-person photos"라고 적는다.
+      한 문서에서 두 번 다른 각도로 경고하는 결함이라 무게가 다르다.
+    </p>
+  </div>
+
+  <h3>권장은 두 장이다</h3>
+
+  <div class="table-scroll">
+  <table>
+    <tr><th style="width:130px">자산</th><th>요건</th></tr>
+    <tr>
+      <td><b>헤드샷</b></td>
+      <td>얼굴만. 무표정이 가장 좋고, 어깨·목·배경 같은 간섭 요소를 최소화한다
+      ("retaining only the face; no expression is best; minimize interfering elements")</td>
+    </tr>
+    <tr><td><b>전신</b></td><td>원래 쓰던 전신 사진 한 장</td></tr>
+  </table>
+  </div>
+
+  <p>
+    문서는 이 둘로 "sufficient"라고 적지 <b>정확히 2장이라고 강제하지는 않는다.</b> 자산 구성 절은 총 4~5개 자산 안에
+    캐릭터 이미지 1~2장을 권한다. 나머지 자리는 장면·소품·화풍이 채우는 셈이다.
+  </p>
+
+  <div class="callout green">
+    <b>순서가 가중치다</b>
+    <p>
+      "Place important assets first: The more an asset requires precise reference, the earlier it should be
+      placed in the prompt." 캐릭터를 정확히 붙들어야 하는 컷이면 캐릭터 자산을 <b>배열 맨 앞</b>에 놓는다.
+      <code>seedance_reference</code>의 <code>referenceImages</code> 배열 순서가 그냥 순서가 아니라는 뜻이다.
+    </p>
+  </div>
+
+  <h3>Veo 쪽 일관성 장치는 둘 <span class="badge green">벤더 문서</span></h3>
+
+  <ul class="plain">
+    <li><b>Ingredients-to-Video</b> — 장면·캐릭터·사물·화풍 레퍼런스 이미지로 여러 컷의 미감을 유지한다.
+      3.1에서 오디오 생성까지 포함한다.</li>
+    <li><b>First-and-Last-Frame</b> — 시작 이미지와 종료 이미지 사이 전환을 오디오까지 만든다.</li>
+    <li>Add/Remove Object는 아직 Veo 2에서 돌고 오디오를 못 만든다.</li>
+  </ul>
+
+  <div class="callout amber">
+    <b>화풍 참조는 3.1에서 막혀 있다 <span class="badge purple">우리 실측</span></b>
+    <p>
+      Cloud 블로그는 Ingredients에 style을 포함해 적지만 이 저장소 조사 기록은 Veo 3.1에서
+      <code>referenceType: "style"</code>이 안 열린다고 적는다. 화풍 참조는 <code>veo-2.0-generate-exp</code> 뿐이고
+      그 모델은 오디오를 못 만든다. 스케치·툰 화풍을 참조로 옮기려면 <code>seedance_reference</code>가 답이다.
+    </p>
+  </div>
+
+  <div class="callout red">
+    <b>seed로 컷 사이 일관성을 잡는다는 요령은 기각됐다 <span class="badge red">0-3</span></b>
+    <p>
+      Vertex 파라미터 목록에 seed 필드가 있는 건 맞다. 그런데 "다른 파라미터를 고정하면 같은 영상이 나온다"는
+      결정성 주장은 원문 확인에 실패했다. <b>필드의 존재와 결정성은 다른 얘기다.</b>
+      Seedance 쪽은 아예 모델마다 다르다 — 1.5 Pro와 1.0 계열은 seed를 받지만 레퍼런스를 돌리는
+      Dreamina 2.0·2.0 fast·2.0 mini·2.5는 전부 seed가 없다. 즉 <b>참조 기반 일관성을 쓰는 자리에는
+      seed 자체가 없다.</b> 일관성 설계는 레퍼런스 이미지와 첫·끝 프레임 위에 올린다.
+    </p>
+  </div>
+</section>
+
+<section id="vertical">
+  <h2 class="sec"><span class="no">07</span>세로(9:16)에서만 걸리는 것</h2>
+
+  <h3>① Veo는 세로를 명시해야 나온다 <span class="badge green">벤더 문서</span></h3>
+
+  <p>
+    <code>aspectRatio</code>의 기본값이 <code>"16:9"</code>이고 허용값은 <code>"16:9"</code>·<code>"9:16"</code>
+    <b>둘뿐</b>이다. 1:1도 4:5도 없다. 이 문단은 veo-2.0부터 veo-3.1-fast까지 일곱 모델 ID 목록 바로 아래에 있어
+    전 모델에 걸리고, 레퍼런스 이미지 페이지는 "Only one of the following: '16:9' '9:16'."으로 더 못을 박는다.
+  </p>
+
+  <p>
+    <b>세로 시작 이미지를 넣어도 비율이 따라오지 않는다.</b> 이미지→영상 문서는 다른 비율 이미지가
+    "may be resized or centrally cropped"라고 적는다. 해상도도 별개 노브라 기본이 720p다.
+  </p>
+
+  <div class="callout amber">
+    <b>요청 에코 말고 출력 파일을 재라 <span class="badge amber">보고</span></b>
+    <p>
+      Google AI 개발자 포럼에 9:16을 넘겨도 16:9가 나온다는 보고와, 레퍼런스 이미지를 함께 쓰면
+      <code>ASPECT_RATIO_9_16</code>이 거부된다는 보고가 남아 있다. 세로 파이프라인을 짜는 쪽이면
+      요청이 받아들여진 걸 확인하지 말고 <b>결과 mp4의 실제 해상도</b>를 확인해야 한다.
+    </p>
+  </div>
+
+  <h3>② 레퍼런스를 켜면 컷이 8초로 못 박힌다 <span class="badge green">벤더 문서</span></h3>
+
+  <div class="table-scroll">
+  <table>
+    <tr><th style="width:150px">조건</th><th>길이</th></tr>
+    <tr><td>Veo 3 계열 기본</td><td>4 · 6 · 8초 (기본 8)</td></tr>
+    <tr><td>1080p 또는 4k</td><td><b>8초 고정</b></td></tr>
+    <tr><td>레퍼런스 이미지 사용</td><td><b>8초 고정</b></td></tr>
+    <tr><td>확장(extension) 사용</td><td><b>8초 고정</b></td></tr>
+    <tr><td>Veo 2</td><td>5~8초</td></tr>
+  </table>
+  </div>
+
+  <p>
+    쇼트폼 관점에서 이게 뼈아프다. <b>캐릭터 레퍼런스를 켜는 순간 컷 단가와 컷 길이가 동시에 올라간다.</b>
+    우리 저장소 기록으로는 참조를 쓰면 lite가 막혀 fast 8초로 가야 하고 약 $0.80이 든다.
+    참고로 <code>durationSeconds</code>는 "target duration ... may vary slightly"라 입력은 열거값이되
+    출력 길이는 보장이 아니다.
+  </p>
+
+  <h3>③ 확장은 720p 레인이다 <span class="badge green">벤더 문서</span></h3>
+
+  <p>
+    Veo 확장은 한 번에 7초씩 최대 20회, 결과물 148초까지 붙인다. 입력 요건이 <b>Veo가 만든 영상 · 720p ·
+    141초 이하 · 9:16 또는 16:9</b>다. 산술도 양방향으로 맞는다(8+20×7=148, 141+7=148).
+    이 저장소 클라이언트가 같은 계약을 코드로 박아 뒀다 — <code>extendVideo()</code>가 720p를 하드코딩한다.
+  </p>
+
+  <div class="callout amber">
+    <b>확장을 쓸 체인은 처음부터 720p로 간다</b>
+    <p>
+      1080p 클립을 만들어 두고 확장하려 하면 이어붙일 때 해상도가 어긋난다. 서버 보관 기간이 2일이라
+      참조가 만료될 수도 있다(확장할 때마다 타이머가 다시 돈다).
+    </p>
+  </div>
+
+  <h3>④ Seedance 2.0은 세로에서 자막을 더 만든다 <span class="badge green">벤더 문서</span></h3>
+
+  <div class="callout red">
+    <p>
+      "Currently, it is <b>not possible to directly avoid generating subtitles 100%</b>. You can only reduce the
+      probability of their occurrence... If your business allows, <b>prioritize generating videos in landscape size
+      (the probability of generating subtitles in landscape is significantly lower than in portrait). You can later
+      crop it to portrait using editing software.</b>"
+    </p>
+    <p class="note">
+      중국어 원본도 같다 — "优先选择横屏尺寸生成视频（横屏生成字幕的概率明显低于竖屏），后续可通过剪辑软件裁剪为竖屏".
+      横屏/竖屏은 명백한 가로·세로 용어라 번역 오해가 아니다.
+    </p>
+  </div>
+
+  <p>
+    독립 실측도 아티팩트 자체를 뒷받침한다 — 36kr의 Seedance 2.0 리뷰가 "画面之中的文本乱码更是客观存在的，
+    而且几乎无法避免"(화면 안 텍스트 깨짐은 객관적으로 존재하고 거의 피할 수 없다)라고 적는다.
+    세로 대 가로 비대칭 자체는 벤더 문서 단독 근거지만 <b>자기 결함 고지</b>라 마케팅 과장과는 반대 방향이라
+    믿을 만하다.
+  </p>
+
+  <p>
+    실무 선택은 둘 중 하나다. 세로 네이티브로 뽑고 자막 확률을 감수하든지, 가로로 만들어 크롭하며
+    구도와 해상도를 내주든지. 나머지 회피책은 참조 자산에서 글자를 지우는 것이다.
+    2.5 가이드는 이 경고를 빼는 대신 자막 네거티브 제어를 준다(<code>Do not add subtitles.</code> /
+    <code>No subtitles.</code>) — <b>2.0 한정 조언</b>으로 읽어야 한다.
+  </p>
+</section>
+
+<section id="directing">
+  <h2 class="sec"><span class="no">08</span>연출 축 — 문서가 주는 것과 안 주는 것</h2>
+
+  <p class="lead">
+    이 조사에서 가장 정직하게 말해야 하는 대목이다. "감독·AI 필름메이커가 공개한 재현 가능한 연출 워크플로"를
+    찾으러 갔는데 <b>원문 대조를 통과한 항목이 없다.</b> 검증을 시도한 학술 근거 하나(Seedance 1.0 기술 리포트의
+    멀티샷 주장, arXiv 2506.09113)도 3표 전부 기각이었다.
+  </p>
+
+  <h3>문서에서 실제로 끌어낼 수 있는 연출 재료 넷</h3>
+
+  <ol style="margin-left:22px">
+    <li style="margin-bottom:8px"><b>카메라를 문장 첫머리에</b> — Veo 5부 공식의 어순 자체가 연출 처방이다.
+      샷 사이즈를 먼저 정하고 나머지를 쓴다.</li>
+    <li style="margin-bottom:8px"><b>zoom과 dolly를 갈라 쓰는 어휘 규율</b> — 공간감이 필요하면 dolly,
+      화각만 바꾸면 zoom.</li>
+    <li style="margin-bottom:8px"><b>구간으로 적는 카메라 서술</b> — Seedance의 "시작 구도 → 무브 → 진폭 → 종료 구도".
+      히치콕 샷·불릿타임 같은 조합 어휘도 문서가 직접 준다.</li>
+    <li><b>샷 내부 서술 순서</b> — 카메라 → 연기 → 위치 → 오디오, 그리고 타임코드 금지.</li>
+  </ol>
+
+  <h3>문서가 아무 말도 하지 않는 자리 셋</h3>
+
+  <p>
+    첫 1~3초 훅, 세로 프레임 구도 잡기, 시선 유도. Veo docs 프롬프트 가이드에는
+    <code>9:16</code>·<code>mobile</code>·<code>shorts</code>·<code>reels</code> 문자열이
+    <b>0건</b>이다. 벤더는 쇼트폼 연출을 안 가르친다.
+  </p>
+
+  <div class="callout purple">
+    <b>이 칸은 조사가 아니라 우리 실측이 채운다</b>
+    <p>
+      이 저장소가 이미 가진 훅 계약이 외부 근거보다 강한 자료다 — 스킵률 84.8~93.8% 실측에서 나온
+      커버 세그① 훅 규칙(화자 보고형 개시는 리뷰어 P0), 길이 35~75초 계약. 그리고 첫 장면 조사에서
+      확인한 것도 있다: 오른 건 매체가 아니라 <b>사람·목소리·움직임</b>이었다(목소리 +24.7%).
+      Veo·Seedance 프롬프트로 옮기면 "첫 컷에 사람이 있고, 소리가 먼저 나고, 화면이 움직인다"가 된다.
+    </p>
+  </div>
+</section>
+
+<section id="apply">
+  <h2 class="sec"><span class="no">09</span>우리 파이프라인에 옮기면</h2>
+
+  <p class="lead">
+    엔진 선택 규칙은 이미 <code>skills/produce/references/video-model-selection.md</code>가 정본으로 잡아 뒀다.
+    이번 조사가 더하는 건 <b>고른 다음에 무엇을 어떻게 쓰는가</b>다. 아래는 그 문서와 어긋나지 않게 겹쳐 읽은 결과다.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <tr><th style="width:180px">상황</th><th>이번 조사가 더하는 규칙</th></tr>
+    <tr>
+      <td>Veo 프롬프트를 쓴다</td>
+      <td>샷 사이즈를 <b>문장 첫 낱말</b>로. 배제할 것은 본문이 아니라 <code>negativePrompt</code>에 명사구로.
+      대사가 들어가면 첫 출력에서 화면 글자를 확인한다</td>
+    </tr>
+    <tr>
+      <td>Seedance 프롬프트를 쓴다</td>
+      <td>카메라는 <b>시작 구도 → 무브 → 진폭 → 종료 구도</b>로. 프롬프트는 영어로 쓰고 한국어는 따옴표 대사에만.
+      초를 적지 않는다</td>
+    </tr>
+    <tr>
+      <td>캐릭터를 여러 컷에 붙인다</td>
+      <td>삼면도 캐릭터 시트를 만들지 않는다. <b>헤드샷(무표정·배경 최소) + 전신</b> 두 장, 캐릭터 자산을
+      배열 맨 앞에</td>
+    </tr>
+    <tr>
+      <td>세로 컷을 뽑는다</td>
+      <td>Veo는 <code>aspectRatio: "9:16"</code>을 반드시 넘기고 <b>결과 mp4 해상도를 잰다</b>.
+      Seedance 2.0 세로는 자막 환각을 각오하거나 가로→크롭</td>
+    </tr>
+    <tr>
+      <td>b-roll에 레퍼런스를 켠다</td>
+      <td>컷이 8초로 못 박히고 lite가 막힌다 — 720p 4초 기준 $0.20짜리 컷이 fast 8초 $0.80이 된다. 켤 가치가 있는 컷인지 먼저 본다</td>
+    </tr>
+    <tr>
+      <td>클립을 이어 붙인다</td>
+      <td>확장 체인은 <b>처음부터 720p</b>로. 1080p 클립은 확장 레인에 못 들어간다</td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="callout green">
+    <b>이미 맞게 하고 있던 것</b>
+    <p>
+      storyboard 스킬의 "부정 지시는 프롬프트 본문에 쓰지 않는다"는 Veo 공식 문서와 정확히 같은 규칙이다.
+      우리는 Z-Image에서 <code>"no maps"</code>로 지도를 얻고 나서 이 규칙을 세웠는데 Google이 영상 쪽에서
+      같은 말을 적어 두었다. 두 매체·두 벤더에서 같은 방향이라 규칙의 등급을 올려도 된다.
+    </p>
+  </div>
+
+  <div class="callout amber">
+    <b>웹 문서와 우리 실측이 어긋나는 자리</b>
+    <p>
+      Veo 레퍼런스 이미지 <b>3장 상한</b>은 Google 개발자 블로그와 이 저장소 기록이 둘 다 3장을 적는데
+      API 레퍼런스 표에서 재확인되지 않았다(0-3 기각). 숫자를 문서에 단정해 쓰지 말고
+      <b>코드의 zod 검증값을 정본</b>으로 삼는다. 그리고 우리가 유료 호출로 확인한 것들 —
+      Seedance 2.x가 실사 얼굴 입력을 거부한다는 것, Veo는 성인 얼굴을 받고 미성년은 막는다는 것,
+      <code>ratio</code>를 건드리면 소스가 중앙 크롭된다는 것 — 은 어느 벤더 문서에도 이렇게 적혀 있지 않다.
+      <b>충돌하면 실측이 이긴다.</b>
+    </p>
+  </div>
+</section>
+
+<section id="refuted">
+  <h2 class="sec"><span class="no">10</span>기각·미확인 — 함께 들고 갈 것</h2>
+
+  <p>
+    3표 적대 검증에서 죽은 항목들이다. "틀렸다"가 아니라 <b>"인용된 원문에서 확인되지 않았다"</b>는 뜻이라,
+    규칙으로 쓰지 않되 방증이 있으면 적어 뒀다.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <tr><th style="width:230px">기각된 주장</th><th style="width:60px">표</th><th>어떻게 다룰까</th></tr>
+    <tr>
+      <td>Veo 레퍼런스 이미지 상한이 3장</td>
+      <td><span class="badge red">0-3</span></td>
+      <td>개발자 블로그와 우리 코드가 3장을 적으므로 방증은 있다. 코드 검증값을 정본으로</td>
+    </tr>
+    <tr>
+      <td>Veo seed 고정으로 컷 사이 재현성 확보</td>
+      <td><span class="badge red">0-3</span></td>
+      <td>일관성 설계를 seed 위에 올리지 않는다. 레퍼런스·첫끝 프레임으로</td>
+    </tr>
+    <tr>
+      <td>Veo 오디오의 <code>SFX:</code>·<code>Ambient noise:</code> 접두 라벨 문법</td>
+      <td><span class="badge red">1-2</span></td>
+      <td>세 갈래 구분만 쓴다. 접두 라벨은 근거 없음</td>
+    </tr>
+    <tr>
+      <td>따옴표 없는 <code>says:</code> 대사 문법</td>
+      <td><span class="badge red">1-2</span></td>
+      <td>따옴표 표기를 쓴다</td>
+    </tr>
+    <tr>
+      <td>Seedance 1.0이 모델 차원에서 멀티샷을 지원 (기술 리포트)</td>
+      <td><span class="badge red">0-3</span></td>
+      <td>Seedance 멀티컷 근거는 1.5·2.0 <b>프롬프트 가이드에만</b> 있다</td>
+    </tr>
+  </table>
+  </div>
+
+  <h3>다음에 실제로 재 볼 것 넷</h3>
+
+  <ol style="margin-left:22px">
+    <li style="margin-bottom:8px"><b>Veo에서 9:16 + 레퍼런스 이미지 조합이 통과하나.</b> 문서는 막지 않는데
+      포럼에는 거부 보고가 있다. fast 8초 한 번, 약 $0.80으로 끝나는 문제다.</li>
+    <li style="margin-bottom:8px"><b>Veo seed가 같은 파라미터에서 같은 결과를 주나.</b> 같은 프롬프트·같은 seed로
+      두 번 뽑아 프레임을 비교하면 된다.</li>
+    <li style="margin-bottom:8px"><b>타임코드 금지와 삼면도 금지가 1.5 Pro·2.5에도 걸리나.</b> 우리 기본 모델이
+      1.5 Pro, 참조 모델이 2.0이라 두 규칙의 사정거리가 실무에 바로 걸린다.</li>
+    <li><b>세로에서 화면 글자를 덜 만드는 엔진이 어느 쪽인가.</b> 같은 대사 한 줄로 두 엔진을 세로에서
+      나란히 뽑은 기록이 없다.</li>
+  </ol>
+</section>
+
+<section id="sources">
+  <h2 class="sec"><span class="no">11</span>출처</h2>
+
+  <div class="src-group">
+    <h3>Google — Veo <span class="badge green">1차</span></h3>
+    <ul>
+      <li><a href="https://cloud.google.com/blog/products/ai-machine-learning/ultimate-prompting-guide-for-veo-3-1">Google Cloud Blog — The ultimate prompting guide for Veo 3.1</a></li>
+      <li><a href="https://docs.cloud.google.com/vertex-ai/generative-ai/docs/video/video-gen-prompt-guide">Vertex AI — Video generation prompt guide</a> (갱신 2026-08-13)</li>
+      <li><a href="https://ai.google.dev/gemini-api/docs/veo">Gemini API — Veo (파라미터·모델 능력표)</a></li>
+      <li><a href="https://docs.cloud.google.com/vertex-ai/generative-ai/docs/video/generate-videos-from-text">Vertex AI — Generate videos from text</a></li>
+      <li><a href="https://docs.cloud.google.com/vertex-ai/generative-ai/docs/video/generate-videos-from-an-image">Vertex AI — Generate videos from an image</a></li>
+      <li><a href="https://docs.cloud.google.com/vertex-ai/generative-ai/docs/video/use-reference-images-to-guide-video-generation">Vertex AI — Use reference images to guide video generation</a></li>
+      <li><a href="https://docs.cloud.google.com/vertex-ai/generative-ai/docs/video/best-practice">Vertex AI — Video generation best practices</a></li>
+      <li><a href="https://docs.cloud.google.com/vertex-ai/generative-ai/docs/video/turn-the-prompt-rewriter-off">Vertex AI — Turn the prompt rewriter off</a></li>
+      <li><a href="https://developers.googleblog.com/en/introducing-veo-3-1/">Google Developers Blog — Introducing Veo 3.1</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>ByteDance / BytePlus — Seedance <span class="badge green">1차</span></h3>
+    <ul>
+      <li><a href="https://docs.byteplus.com/en/docs/ModelArk/2168087">ModelArk 2168087 — Seedance 1.5 Pro 프롬프트 가이드</a> (갱신 2026-07-06)</li>
+      <li><a href="https://docs.byteplus.com/en/docs/ModelArk/2222480">ModelArk 2222480 — Dreamina Seedance 2.0 프롬프트 가이드·FAQ</a> (갱신 2026-08-11~14)</li>
+      <li><a href="https://docs.byteplus.com/en/docs/ModelArk/1631633">ModelArk 1631633 — Seedance 1.0 Pro 가이드</a></li>
+      <li><a href="https://docs.byteplus.com/en/docs/ModelArk/1587798">ModelArk 1587798 — 영상 생성 API</a></li>
+      <li><a href="https://www.volcengine.com/docs/82379/2222480">Volcengine 2222480 — 중국어 원본</a></li>
+      <li><a href="https://www.volcengine.com/docs/82379/1951250">Volcengine 1951250</a></li>
+      <li><a href="https://seed.bytedance.com/en/blog/one-take-creation-flexible-referencing-introducing-seedance-2-5">ByteDance Seed — Introducing Seedance 2.5</a></li>
+      <li><a href="https://arxiv.org/abs/2506.09113">arXiv 2506.09113 — Seedance 1.0 기술 리포트</a> <span class="badge red">멀티샷 주장 기각</span></li>
+      <li><a href="https://arxiv.org/abs/2604.14148">arXiv 2604.14148</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>보고·정황 <span class="badge amber">2차</span></h3>
+    <ul>
+      <li><a href="https://discuss.ai.google.dev/t/veo-3-1-reference-images-docs-say-available-api-says-not-supported/111853">Google AI 개발자 포럼 — Veo 3.1 reference images: docs say available, API says not supported</a></li>
+      <li><a href="https://www.technologyreview.com/2025/07/15/1120156/googles-generative-video-model-veo-3-has-a-subtitles-problem/">MIT Technology Review (2025-07-15) — Veo 3의 자막 문제</a></li>
+      <li><a href="https://36kr.com/p/3676072215163399">36kr — Seedance 2.0 실사용 리뷰</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>이 저장소 <span class="badge purple">우리 실측</span></h3>
+    <ul>
+      <li><code>skills/produce/references/video-model-selection.md</code> — 엔진 선택 규칙·단가·아레나 Elo·함정 4건</li>
+      <li><code>docs/api-reference/veo-portrait.html</code> — 인물 입력 실측, 참조 8초 고정</li>
+      <li><code>docs/api-reference/seedance.html</code> · <code>seedance-portrait.html</code> — ModelArk 계약</li>
+      <li><code>server/src/video-client.ts</code> · <code>server/src/seedance-client.ts</code> — 모델별 능력표</li>
+      <li><code>skills/storyboard/SKILL.md</code> — 부정 지시 규칙</li>
+      <li><code>docs/research/2026-08-15-first-scene-live-action-vs-animation/</code> — 사람·목소리·움직임</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p>작성 2026-08-15 · social-flow 조사 문서</p>
+  <p>
+    검증 방식 — 5개 검색 각도로 소스 18건을 모아 주장 90건을 뽑고, 그중 25건을 주장마다 독립 검증자 3명이
+    반박을 시도하는 방식으로 판정했다. 2표 이상 반박이면 기각이다. 결과는 확인 20건·기각 5건이다.
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

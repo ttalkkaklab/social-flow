@@ -6,9 +6,20 @@
 #
 # tally.tsv (탭 구분, 주석 #, 빈 줄 무시):
 #   key <TAB> 수량 <TAB> 메모
-#   예) image.gpt-image-2.low	2	커버·포인트 배경
-#       tts.local	412	나레이션 412자
-#       music.lyria-clip	1	BGM 30초
+#   예) image.gpt-image-2.high	1	storyboard: 커버 배경 scene-1
+#       image.local	3	storyboard: points 배경 scene-2~4
+#       veo.lite.1080p	8	produce: b-roll a1 — 8초 생성·4초 사용
+#       tts.local	0.412	produce: 나레이션 412자
+#       music.lyria-clip	1	produce: BGM 30초
+#
+# **수량은 prices.tsv 의 unit 열이 정한다** — 개수가 아니라 그 단위의 양이다.
+#   tts.* 는 1000자 단위라 412자면 0.412 다. 412 로 적으면 1000배가 된다
+#   (local 은 0 이라 안 보이지만 gemini 채널에서 그대로 청구액으로 나타난다).
+#   veo.* 는 **생성 길이**다 — 8초 생성해 4초만 써도 8 이다(1080p 는 8초 전용).
+#   seedance.* 는 요청한 초 그대로. 실측 completion_tokens 는 메모 열에 적는다.
+#
+# 메모 열 앞에 `storyboard:` / `produce:` 를 붙인다 — 리포트 표에서 단계별로
+# 읽힌다. 규약 정본은 cost-tally.md 다.
 #
 # 종료 코드 — 그대로 읽는다:
 #   0  정상 (상한을 줬으면 이내)

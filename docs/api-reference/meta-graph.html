@@ -34,6 +34,7 @@
     <li><a href="#tokens">토큰과 계정 결정</a></li>
     <li><a href="#impl">구현 대조표</a></li>
     <li><a href="#growth">Threads 성장 조회 (인사이트·키워드 검색)</a></li>
+    <li><a href="#ig-growth">Instagram 성장 조회 (인사이트)</a></li>
   </ol>
 </nav>
 
@@ -263,8 +264,34 @@ captions_file=@caption.ko_KR.srt   ← 파일명이 계약이다</code></pre>
   </div>
 </section>
 
+<section id="ig-growth">
+  <h2>10. Instagram 성장 조회 (인사이트)</h2>
+  <p>grow-instagram 스킬 전용 읽기 엔드포인트 — <code>instagram_insights</code> 툴의 백엔드다. 계정 구간 지표와 최근 미디어별 지표를 한 번의 툴 호출로 받아 정규화한다. 스코프는 <code>instagram_business_manage_insights</code> 하나다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>대상</th><th>엔드포인트</th><th>요청 지표</th></tr></thead>
+    <tbody>
+      <tr><td>계정</td><td><code>GET /{ig-user-id}/insights</code></td><td><code>reach · views · profile_views · accounts_engaged · total_interactions · likes · comments · shares · saves · profile_links_taps</code></td></tr>
+      <tr><td>미디어 공통</td><td><code>GET /{media-id}/insights</code></td><td><code>views · reach · likes · comments · shares · saved · total_interactions</code></td></tr>
+      <tr><td>릴스 전용</td><td>같은 엔드포인트</td><td><code>ig_reels_avg_watch_time · ig_reels_video_view_total_time · reels_skip_rate</code></td></tr>
+      <tr><td>피드 전용</td><td>같은 엔드포인트</td><td><code>follows · profile_visits</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>실호출로 확인한 함정 넷</h3>
+  <ul>
+    <li><strong><code>metric_type=total_value</code> 를 빼면 지표가 조용히 사라진다.</strong> <code>views</code> 처럼 시계열을 지원하지 않는 지표가 에러 없이 응답에서 빠진다 — 그래서 계정 지표는 전부 구간 합계로 요청한다.</li>
+    <li><strong>팔로워 수는 인사이트가 아니라 프로필 필드다.</strong> 인사이트의 <code>follower_count</code> 는 팔로워 100명 미만 계정에서 빈 배열을 돌려주므로 갓 만든 채널에서는 쓸모가 없다. 서버는 <code>/me</code> 의 <code>followers_count</code> 를 읽는다.</li>
+    <li><strong>계정은 <code>saves</code>, 미디어는 <code>saved</code>.</strong> 같은 뜻인데 단·복수가 다르다.</li>
+    <li><strong>릴스 지표와 피드 지표를 섞으면 응답 전체가 400 이다.</strong> 릴스에 <code>follows</code>·<code>profile_visits</code> 를 요청하면 <code>does not support ... metric</code> 으로 실패하고, 반대로 피드(이미지·캐러셀)에 릴스 3종을 요청해도 같다. 서버는 <code>media_product_type</code> 으로 갈라 붙인다.</li>
+  </ul>
+  <div class="note">
+    <strong><code>reels_skip_rate</code> 는 이 플랫폼에만 있다.</strong> 3초 미만 시청 확률을 랭킹 모델이 직접 예측하는데, 그 이탈률을 API 로 돌려주는 곳이 여기뿐이다. YouTube Analytics 에는 대응 메트릭이 없어 쇼츠 훅은 <code>averageViewPercentage</code> 로 우회한다(<a href="youtube-data.html">YouTube Data API</a> 참조).
+  </div>
+</section>
+
 <footer>
-  기준일 2026-08-11 · 구현 <a href="../../server/src/sns-client.ts">server/src/sns-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+  기준일 2026-08-16 · 구현 <a href="../../server/src/sns-client.ts">server/src/sns-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
 </footer>
 
 </div>

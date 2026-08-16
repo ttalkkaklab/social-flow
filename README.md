@@ -17,10 +17,10 @@ fect-persona 플러그인에서 실측 검증된 영상 파이프라인(세이�
 social-flow/
 ├── .claude-plugin/plugin.json   # 플러그인 매니페스트
 ├── .mcp.json                    # 내부 MCP 서버 등록 (social-flow)
-├── server/                      # 내부 MCP 서버 (TypeScript, stdio) — 툴 38종
+├── server/                      # 내부 MCP 서버 (TypeScript, stdio) — 툴 41종
 │   └── src/
 │       ├── index.ts             # 엔트리 (플랫폼별 게시·인사이트 툴 조건부 노출)
-│       ├── tools.ts             # 툴 정의 (조사 5 + 공공데이터 5 + 생성 15 + 게시 4 + 댓글 4 + 인사이트 3 + 검색 1 + 점검 1)
+│       ├── tools.ts             # 툴 정의 (조사 5 + 공공데이터 5 + 생성 18 + 게시 5 + 댓글 3 + 점검 1 + 성장 조회 4)
 │       ├── handlers.ts          # zod 검증 + 라우팅
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube 게시/댓글 (fect-persona 승계)
 │       ├── serp-client.ts       # SerpApi (키 마스킹 + 응답 슬리밍)
@@ -48,6 +48,7 @@ social-flow/
 │   │   └── references/          #   build-reel.sh·video-template.html·검수 하네스
 │   ├── autoproduce/             # /social-flow:autoproduce — 주제 하나로 조사→저작→영상까지 무인 관통 (사람 게이트를 기계 게이트 7개로 대체, 경제 티어 기본)
 │   │   └── references/          #   cost-tiers.md(모델 사다리·승급 조건)·prices.tsv(단가 SoT)·cost-report.sh
+│   │                            #   cost-tally.md(회차 비용 원장 규약 — storyboard·produce 공용)
 │   ├── publish/                 # /social-flow:publish — HITL 승인 후 플랫폼 게시
 │   ├── grow-threads/            # /social-flow:grow-threads — Threads 자율 성장 루프 1틱 (init 플랜=상시 승인서, /loop 로 반복 — 성장 스킬은 플랫폼별 분리)
 │   │   └── references/          #   growth-playbook.md(전술 정본)·growth-plan-template.md(플랜·state 스키마)
@@ -97,7 +98,7 @@ social-flow/
 문체 검사기·storyboard-reviewer 문안 95점·씬별 95점(최저 씬)·어휘 95점(최저 씬)·
 이미지 95점·빌드 리포트(drift 0)·content-reviewer P0=0·비용 상한. 모델은
 **경제 티어가 기본**이라 Veo 를 한 번도 부르지 않고(정지 배경 + 켄번즈) 편당 약
-$0.05 이며, 훅 지표가 임계 아래로 떨어진 경우에만 커버 4초를 `veo-3.1-lite` 로
+$0.26~0.29(상한 $0.30)이며, 훅 지표가 임계 아래로 떨어진 경우에만 커버 4초를 `veo-3.1-lite` 로
 승급한다. 저작은 **플랫폼 루프당 하루 최대 2편**(하드캡, 성공·실패 포함)이고,
 후보 주제는 `check-duplicate.py` 가 채널의 기존 주제 전부와 비교해 말만 바꾼
 재탕을 버린다. 사다리·승급 조건·단가는 `skills/autoproduce/references/` 참조.
@@ -141,14 +142,14 @@ Threads 반말이나 FB 사례 수집형 마무리처럼 플레이북이 요구�
 /social-flow:publish 재테크 <주제>                    # [승인]→게시
 ```
 
-## MCP 툴 표면 (38종)
+## MCP 툴 표면 (41종)
 
-**`tools/list` 에는 38종이 다 보이지 않는다.** 게시·인사이트 툴 9종
+**`tools/list` 에는 41종이 다 보이지 않는다.** 게시·인사이트 툴 9종
 (`threads_publish`·`instagram_publish`·`facebook_publish`·`facebook_comment`·
 `youtube_publish`·`threads_insights`·`instagram_insights`·`youtube_insights`·
 `threads_search`)은 **자격증명 파일이 있는 플랫폼만** 노출된다 — 목록을 요청한 시점에
 평가하므로 토큰을 추가하면 서버를 다시 띄우지 않아도 나타난다. 토큰이 하나도 없는
-환경에서 세면 29종이다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가
+환경에서 세면 32종이다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가
 돌아온다(조용히 실패하지 않는다).
 
 | 그룹 | 툴 | 백엔드 |
@@ -159,7 +160,8 @@ Threads 반말이나 FB 사례 수집형 마무리처럼 플레이북이 요구�
 | 공공데이터 | `datago_file_fetch` / `datago_api_call` | odcloud·apis.data.go.kr (인증키 + **API 별 활용신청** 필수) |
 | 이미지 생성 | `image_local_generate` | Z-Image Turbo 온디바이스, mflux/MLX (**API 키·네트워크·과금 없음 — 기본 경로**. Apple Silicon + `uv tool install --python 3.12 mflux` 필요, 최초 호출 시 가중치 31GB 다운로드. 텍스트 포함 이미지 금지 — 한글 자소가 깨진다) |
 | 이미지 생성 | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **텍스트 포함·고품질 경로**: 텍스트 렌더링·임의 WIDTHxHEIGHT, 멀티 레퍼런스 16장·마스크 인페인팅) |
-| 영상 생성 | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p~4k, 비동기 1~6분, mp4 로컬 저장) |
+| 영상 생성 | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p~4k, 4/6/8초 격자, **네이티브 오디오·로컬 파일 연장·실사 인물 참조**가 이쪽 강점) |
+| 영상 생성 | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p~4k, **2~30초를 1초 단위로** 요청한 만큼만 과금, 비율 7종, 참조 이미지 최대 30장. 음성을 끌 수 있어 무음 컷이 싸다 — 1080p 4초 기준 $0.23 대 Veo lite $0.64. 어느 엔진을 언제 쓰는지는 [판단표](skills/produce/references/video-model-selection.md)) |
 | 음성 생성 | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 보이스 30종, 언어 자동 감지, wav 모노 24kHz 저장) |
 | 음성 생성 | `tts_local_generate` | Supertonic 3 온디바이스 (**API 키·네트워크 없음** — 보이스 10종, 언어 31종 명시 지정, wav 모노 44.1kHz. 로컬 python + `pip install supertonic` 필요) |
 | 음악 생성 | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip(30초 고정 mp3 — BGM 기본 경로) · Lyria RealTime(5~300초 가변 wav 48kHz, seed 재현) |
@@ -193,7 +195,7 @@ grow-instagram 은 공개 HTTPS URL 이 있어야만 게시하고, 호스팅이 
 단계와 자동 저작을 함께 끈다(자율 루프가 임시 터널을 띄우지 않으므로, 나갈 길이
 없는 영상을 돈 들여 만들지도 않는다).
 
-생성 툴 13종은 `fect-mcp-server` 의 gpt-image·video·tts·music 모듈을 이식한 것으로,
+생성 툴 18종 중 13종은 `fect-mcp-server` 의 gpt-image·video·tts·music 모듈을 이식한 것으로,
 **외부 MCP 서버 없이 이 플러그인 단독으로 동작한다**. 키는 둘이다 — 이미지는 OPENAI_API_KEY,
 영상·음성·음악은 GEMINI_API_KEY. 4K·배너 비율·최저가 이미지가 필요한
 경우에만 별도 서버 fect-mcp 의 `nanobanana_*`(Gemini)를 선택적으로 쓸 수 있다.
@@ -267,6 +269,8 @@ claude --plugin-dir /Volumes/data/repository/zeans/social/social-flow
 | `DATA_GO_KR_API_KEY` | datago_file_fetch·api_call 사용 시 | — | 공공데이터포털 인증키 (data.go.kr 마이페이지 — 키 외에 **API 별 활용신청** 필요. 검색·상세·다운로드는 키 없이 동작) |
 | `OPENAI_API_KEY` | gpt_image_* 사용 시 | — | OpenAI API 키 (platform.openai.com/api-keys — 이미지 생성) |
 | `GEMINI_API_KEY` (또는 `GOOGLE_API_KEY`) | veo_* · tts_generate · tts_multi_speaker · music_* 사용 시 | — | Gemini API 키 (aistudio.google.com/apikey — 영상·음성·음악 생성 공통. `tts_local_generate` 는 이 키가 없어도 된다) |
+| `ARK_API_KEY` | seedance_* 사용 시 | — | BytePlus ModelArk API 키 (ai.byteplus.com/ark — 두 번째 영상 엔진. Dreamina Seedance 2.x 계열은 키 외에 **계정 잔액 $30 초과 또는 리소스팩**으로 모델 활성화가 필요하고, 1.5 pro·1.0 계열은 그 관문이 없다. 이 키가 없어도 `veo_*` 는 그대로 동작한다) |
+| `ARK_BASE_URL` | | `https://ark.ap-southeast.bytepluses.com/api/v3` | ModelArk 리전 엔드포인트. 영상 모델이 ap-southeast-1 에만 있어 평소에는 건드리지 않는다 |
 | `SUPERTONIC_PYTHON` | | `python3` | 로컬 TTS 를 실행할 Python 인터프리터. 가상환경에 설치했으면 그 경로를 지정한다(예: `~/venvs/tts/bin/python`). venv 자동 탐색은 하지 않는다 — 저장소마다 다른 환경을 조용히 집어 목소리가 바뀌는 사고를 막는다 |
 | `SNS_TOKEN_DIR` | | `~/.config/social-flow` | SNS 자격증명 루트 디렉토리 |
 | `THREADS_TOKEN_FILE` 외 플랫폼별 | | `<SNS_TOKEN_DIR>/규약 파일명` | 기본(평면) 경로 개별 오버라이드 — 채널 디렉토리에는 미적용 |
@@ -285,15 +289,18 @@ claude --plugin-dir /Volumes/data/repository/zeans/social/social-flow
 
 ### API 레퍼런스 (docs/api-reference/)
 
-내부 MCP 서버가 호출하는 외부 API 11종의 공식 계약과, 이 구현이 그 계약을 어떻게
+내부 MCP 서버가 호출하는 외부 API 12종의 공식 계약과, 이 구현이 그 계약을 어떻게
 지키는지(또는 의도적으로 좁히는지)를 나란히 적은 레퍼런스다.
 
 - **[API 레퍼런스 허브](docs/api-reference/index.html)** — 인벤토리·자격증명 매트릭스·툴↔API 매핑
 - **[MCP 툴 스펙 & 베스트 프랙티스](docs/api-reference/mcp-tools.html)** — Tool 필드,
   동작 힌트 판정표, 툴 작성 원칙 7가지, 품질 평가 루브릭
-- **[툴 품질 감사 리포트](docs/api-reference/tool-audit.html)** — 31개 툴 채점 결과와 수정 내역
+- **[툴 품질 감사 리포트](docs/api-reference/tool-audit.html)** — 2026-07-29 시점 31개 툴의 채점 결과와 수정 내역 (그 뒤 늘어난 10종은 미감사)
 - 개별 API — [Gemini TTS](docs/api-reference/gemini-tts.html) ·
   [Veo 3.1](docs/api-reference/gemini-veo.html) ·
+  [Veo 인물·참조 정책](docs/api-reference/veo-portrait.html) ·
+  [Seedance](docs/api-reference/seedance.html) ·
+  [Seedance 인물·자산 정책](docs/api-reference/seedance-portrait.html) ·
   [Lyria](docs/api-reference/gemini-lyria.html) ·
   [OpenAI Images](docs/api-reference/openai-images.html) ·
   [SerpApi](docs/api-reference/serpapi.html) ·
@@ -301,6 +308,11 @@ claude --plugin-dir /Volumes/data/repository/zeans/social/social-flow
   [공공데이터포털](docs/api-reference/data-go-kr.html) ·
   [Meta Graph](docs/api-reference/meta-graph.html) ·
   [YouTube Data](docs/api-reference/youtube-data.html)
+
+로컬 엔진 둘(`image_local_generate`·`tts_local_generate`)은 호출할 외부 계약이 없어
+API 레퍼런스 대신 조사 기록에 근거를 적어 두었다 —
+[로컬 이미지 생성](docs/research/2026-08-12-local-image-generation/index.html) ·
+[로컬 TTS와 상용 API](docs/research/2026-08-11-local-tts-and-commercial-api/index.html).
 
 ### 사용 가이드 (docs/guides/)
 
@@ -315,6 +327,10 @@ claude --plugin-dir /Volumes/data/repository/zeans/social/social-flow
 - **[인스타그램 릴스 성장 베스트 프랙티스](docs/guides/instagram-growth/index.html)** —
   계정 자격과 게시물 오디션이라는 두 관문·랭킹이 실제로 예측하는 항목·검증에서
   죽은 통념 9개. grow-instagram 의 해설판.
+- **[AI로 쇼트폼 영상 만들기](docs/guides/ai-video-production/index.html)** —
+  두 영상 엔진의 갈리는 축, 프롬프트 공식 규칙, 자막을 영상에 태울지의 판단.
+- **[제휴 영상 규칙](docs/guides/affiliate-video-compliance/index.html)** —
+  쇼핑 커넥트 상품을 유튜브로 홍보할 때의 관문 다섯. 안 써본 상품의 화법과 AI 캐릭터 표시.
 
 ## 안전 계약 (요약)
 
