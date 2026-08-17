@@ -62,7 +62,10 @@ sed 's|</body>|<script src="./scenes.js"></script>\n</body>|' \
   $REF/screencast-overlay.html > .work/overlay.html
 cp storyboard/scenes.js .work/
 # ② 씬별 타이틀 캡처 — ?i 는 0부터 (edit.json idx-1), 파일명은 t<idx>.png
-$REF/capture-frames.sh "file://$PWD/.work/overlay.html?i=0&alpha=1" .work/cards/t1.png 1
+FORMAT_ENV="$PWD/.work/format.env" \
+  $REF/capture-frames.sh "file://$PWD/.work/overlay.html?i=0&alpha=1" .work/cards/t1.png 1
+#    접두가 창 크기(CAP_W/CAP_H)와 URL 의 &format= 을 함께 정한다. 빠뜨리면 12분치를
+#    다 찍은 뒤에야 빌더 자산 선검사가 잡는다.
 # ③ alignment.json + overlay 경로 → .work/edit.json 작성, BGM 준비(.work/bgm.wav)
 # ④ 빌드 — BG 는 THEME.ink 를 넘긴다
 BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4(클린) · reel-sub.mp4(번인) · subs.srt · cover.jpg · build-report.txt

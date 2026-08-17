@@ -46,7 +46,14 @@ cd "$WORK"
 [ -f reel.mp4 ] || { echo "✗ reel.mp4 없음 — build-reel.sh 를 먼저 돌린다" >&2; exit 1; }
 [ -f subs.srt ] || { echo "✗ subs.srt 없음" >&2; exit 1; }
 
+# 포맷 프리셋 — 빌더 3종과 같은 계약. 인라인 기본값 **앞**에서 읽는다.
+# 이 줄이 없으면 가드가 정확히 거꾸로 돈다 — 가로에서 정상인 1920x1080 조각이 세로
+# 기본값과 어긋나 매번 경고를 내고, 잡으라고 만든 세로 스팅어는 조용히 통과한다.
+[ -f format.env ] && . ./format.env
+
 FPS=${FPS:-30}
+W=${W:-1080}; H=${H:-1920}      # 캔버스 — 조각 해상도 단언의 기준
+STRICT_DIM=${STRICT_DIM:-0}     # 1=불일치에 exit 1, 0=경고 한 줄(오늘 동작)
 AFADE=${AFADE:-0.04}      # 조인 클릭음만 없앨 만큼 — 길이는 건드리지 않는다
 mkdir -p splice
 rm -f splice/*.mp4 splice/list-*.txt 2>/dev/null || true
@@ -74,6 +81,28 @@ for ((i = 0; i < N; i++)); do
   fi
   say "   · $(basename "${CLIPS[i]}") → ${TS[i]}s"
 done
+
+# ── 0.5) 해상도 단언
+#   `concat -c copy` 는 1920x1080 과 1080x1920 을 **에러 없이** 붙이고 ffprobe 는 앞 조각
+#   해상도로만 보고한다 — 산출물 중간 프레임을 직접 뽑아야 드러난다【실측】. 그래서 붙이기
+#   전에 잰다. 삽입 클립은 정규화(§2)가 스케일을 안 하므로 자기 해상도를 그대로 들고 간다.
+VDIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x reel.mp4)
+DIMBAD=0
+if [ "$VDIM" != "${W}x${H}" ]; then
+  say "⚠ reel.mp4 가 ${VDIM} 인데 캔버스 선언은 ${W}x${H} 다 — format.env 와 빌드가 어긋났다"
+  DIMBAD=1
+fi
+for ((i = 0; i < N; i++)); do
+  CDIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "${CLIPS[i]}")
+  if [ "$CDIM" != "$VDIM" ]; then
+    say "⚠ $(basename "${CLIPS[i]}") 가 ${CDIM} — 본편 ${VDIM} 과 다르다. concat 은 에러 없이 붙이고 그 구간만 다른 화면비가 된다"
+    DIMBAD=1
+  fi
+done
+if [ "$DIMBAD" = 1 ] && [ "$STRICT_DIM" = 1 ]; then
+  echo "✗ 해상도 불일치 — STRICT_DIM=1 이라 중단한다" >&2
+  exit 1
+fi
 
 ENC=(-c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -r $FPS -c:a aac -ar 48000 -ac 2 -b:a 192k)
 
@@ -200,6 +229,69 @@ for i, t in enumerate(TS):
 if any(straddle):
     print("⚠ T 를 걸친 자막이 있다 — 삽입 시각을 문장 경계로 옮겨야 한다")
 PY
+
+# ── 5.5) 챕터 시프트 — chapters.txt 가 있을 때만
+#   자막과 **같은 shift_for()** 를 쓴다(등호 포함). 챕터는 시작 시각만 있으므로 shift_end()
+#   는 안 쓴다. 등호가 곧 정책이다 — 챕터 경계 T 에 스팅어를 넣으면 챕터 시작이 스팅어
+#   **뒤**로 밀리고, 그래서 스팅어는 앞 챕터 꼬리에 귀속된다. 챕터를 클릭한 시청자는 브랜드
+#   스팅이 아니라 본문에 착지한다.
+#   00:00 은 :69-70 의 `T > 0` 단언이 지킨다 — 삽입 시각이 0 보다 크므로 첫 챕터는 안 밀린다.
+if [ -f chapters.txt ]; then
+python3 - "${TS[*]}" "${SHIFTS[*]}" <<'CHAPPY'
+import math, sys
+TS = [float(x) for x in sys.argv[1].split()]
+SH = [float(x) for x in sys.argv[2].split()]
+
+def shift_for(a):
+    """자막 큐와 같은 규칙 — 시작 시각 a 보다 앞선 삽입들의 실측 길이 합."""
+    return sum(s for t, s in zip(TS, SH) if a >= t)
+
+def to_s(ts):
+    p = [int(x) for x in ts.split(':')]
+    return p[0] * 3600 + p[1] * 60 + p[2] if len(p) == 3 else p[0] * 60 + p[1]
+
+def to_ts(v):
+    m, s = divmod(int(v), 60)
+    h, m = divmod(m, 60)
+    return f"{h:d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
+
+rows, moved = [], 0
+for line in open('chapters.txt', encoding='utf-8'):
+    line = line.rstrip('\n')
+    if not line.strip():
+        continue
+    ts, _, label = line.partition('\t')
+    a = to_s(ts.strip())
+    d = shift_for(a)
+    # 올림 — 내리면 타임스탬프가 진짜 챕터 시작보다 앞서고, 그 자리를 클릭한 시청자가
+    # 앞 챕터 꼬리부터 듣는다. 0.x초 늦는 쪽이 말 토막을 듣는 쪽보다 낫다.
+    b = math.ceil(a + d) if d else a
+    if b != a:
+        moved += 1
+    rows.append((b, label))
+
+bad = []
+if rows and rows[0][0] != 0:
+    bad.append(f"첫 타임스탬프가 {to_ts(rows[0][0])} 다 — 00:00 이어야 한다")
+if len(rows) < 3:
+    bad.append(f"챕터 {len(rows)}개 — 유튜브는 3개 이상을 요구한다")
+for i in range(1, len(rows)):
+    gap = rows[i][0] - rows[i - 1][0]
+    if gap < 10:
+        bad.append(f"{to_ts(rows[i-1][0])} → {to_ts(rows[i][0])} 간격 {gap}s — 10초 미만이다")
+
+if bad:
+    sys.stderr.write("✗ 시프트 후 챕터가 유튜브 요건을 어긴다\n")
+    for b in bad:
+        sys.stderr.write(f"   · {b}\n")
+    sys.exit(1)
+
+with open('chapters-spliced.txt', 'w', encoding='utf-8') as f:
+    for b, label in rows:
+        f.write(f"{to_ts(b)}\t{label}\n")
+print(f"── 챕터: {len(rows)}개 중 {moved}개 시프트 → chapters-spliced.txt")
+CHAPPY
+fi
 
 # ── 6) 길이 일치 확인 — 두 벌이 어긋나면 게시 후 자막만 밀린다
 if [ -f reel-sub-spliced.mp4 ]; then

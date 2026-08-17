@@ -27,10 +27,19 @@ export LC_ALL=en_US.UTF-8
 WORKDIR="${1:?사용법: build-screencast.sh <workdir>}"
 cd "$WORKDIR"
 
+# 포맷 프리셋 — build-reel.sh 와 같은 계약. 인라인 기본값 **앞**에서 읽는다.
+[ -f format.env ] && . ./format.env
+
 FPS=${FPS:-30}
 SPF=$((48000 / FPS))               # 프레임당 오디오 샘플 수
 BG=${BG:-#0b1020}                  # 캔버스 배경 — THEME.ink 를 넘긴다
 BG="${BG#\#}"; BG="${BG#0x}"; BG="0x${BG}"   # '#'/'0x' 어느 표기든 0xRRGGBB 로 정규화
+# 캔버스 — 지금 쓰는 곳은 ASS PlayRes 와 4단계 자산 선검사다. 배경 합성(:144)과
+# 축소 배율(:142)은 13단계가 가로 가지를 따로 만들 때까지 세로 리터럴 그대로다.
+# 밴드 상수(BAND_MAX_H 900 · BAND_CY 880 · BAND_MIN_Y 460)가 절대 px 라
+# 캔버스만 변수로 바꾸면 720x1280 도 되는 것처럼 보이는 없는 일반성이 생긴다.
+W=${W:-1080}                       # 캔버스 폭
+H=${H:-1920}                       # 캔버스 높이
 BAND_MAX_H=${BAND_MAX_H:-900}      # 녹화 밴드 높이 상한 (1380 자막 밴드 침범 방지)
 BAND_CY=${BAND_CY:-880}            # 밴드 수직 중심 목표
 BAND_MIN_Y=${BAND_MIN_Y:-460}      # 밴드 상단 하한 (타이틀 블록 y=460 계약)
@@ -43,7 +52,15 @@ XFADE_T=${XFADE_T:-fadeblack}
 SUB=${SUB:-1}                      # 1=자막 데이터 생성(subs.srt·subs.ass), 0=자막 없음
 BURN=${BURN:-1}                    # 1=번인본 reel-sub.mp4 도 산출, 0=클린 마스터만
 SUB_FONT=${SUB_FONT:-Pretendard}   # fonts/ 에 ttf 가 없으면 fontconfig 폴백
+SUB_SIZE=${SUB_SIZE:-58}           # ASS Fontsize — build-reel.sh 와 같은 값이어야 한다
+SUB_ML=${SUB_ML:-250}              # 자막 좌 마진
+SUB_MR=${SUB_MR:-250}              # 자막 우 마진
+SUB_MV=${SUB_MV:-380}              # 자막 하단 마진
+SUB_OUT=${SUB_OUT:-5}              # 외곽선 두께
+SUB_SHA=${SUB_SHA:-1.7}            # 그림자
 COVER_TS=${COVER_TS:-1.2}          # 커버 스틸 시각 (타이틀 오버레이가 보이는 프레임)
+OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}   # 접합할 아웃트로 — 포맷마다 다른 파일이다
+STRICT_DIM=${STRICT_DIM:-0}        # 1=자산 해상도 불일치에 exit 1, 0=경고 한 줄
 
 rm -rf work && mkdir -p work
 # 옛 빌드의 자막·번인본을 먼저 지운다 — SUB=0 으로 다시 빌드했을 때 이전 subs.srt 가
@@ -118,6 +135,37 @@ SRCW=${SRCWH%%,*}; SRCH=${SRCWH##*,}
 AUD=$(ffprobe -v error -select_streams a:0 -show_entries stream=index -of csv=p=0 "$SRC")
 [ -n "$AUD" ] || { say "✗ 원본에 오디오 스트림 없음 — record.sh(-g 마이크 캡처)로 녹화했는지 확인"; exit 1; }
 say "── 원본: $SRC (${SRCW}x${SRCH})"
+
+# ── 0.5) 자산 해상도 선검사
+#   강도가 자산마다 다르다 — 필터 그래프가 그것을 어떻게 먹는지가 정한다.
+#     아웃트로  xfade 직결               → 정확 일치. 다르면 ffmpeg 이 죽는다
+#     오버레이  overlay=0:0(스케일 없음)  → 정확 일치. 어긋나면 조용히 밀린다
+#   녹화 원본은 검사하지 않는다 — scale=decrease,pad 가 어떤 해상도든 받는 것이 이 빌더의
+#   전제이고, 크기 문제는 SHRINK 경고가 따로 본다. 통과하면 아무 말도 안 한다.
+DIMBAD=0
+assert_exact() {   # <경로> <역할>
+  local got
+  case "$1" in
+    *.png|*.PNG) got=$(sips -g pixelWidth -g pixelHeight "$1" 2>/dev/null \
+      | awk '/pixelWidth/{w=$2} /pixelHeight/{h=$2} END{printf "%sx%s", w, h}') ;;
+    *) got=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height \
+         -of csv=p=0:s=x "$1" 2>/dev/null) ;;
+  esac
+  [ -n "$got" ] || { say "⚠ $2 $1 치수를 못 읽었다"; DIMBAD=1; return; }
+  [ "$got" = "${W}x${H}" ] || {
+    say "⚠ $2 $1 이 ${got} — 캔버스 ${W}x${H} 와 정확히 같아야 한다"; DIMBAD=1; }
+}
+[ -f "$OUTRO_ASSET" ] && assert_exact "$OUTRO_ASSET" "아웃트로"
+while IFS=$'\t' read -r _ _ _ _ _ SOVL; do
+  [ "${SOVL:-}" = "-" ] && continue
+  [ -n "${SOVL:-}" ] && [ -f "$SOVL" ] && assert_exact "$SOVL" "오버레이"
+done < work/scenes.tsv
+if [ "$DIMBAD" = 1 ]; then
+  if [ "$STRICT_DIM" = 1 ]; then
+    say "✗ 자산 해상도 불일치 — STRICT_DIM=1 이라 첫 ffmpeg 전에 중단한다"; exit 1
+  fi
+  WARN=1
+fi
 
 # ── 1) 씬별 컷 — 비디오(크롭→fit→pad→오버레이) + 오디오(loudnorm→샘플 정확 패딩)
 N=0
@@ -219,9 +267,9 @@ ffmpeg -y -v error -i work/narration.wav -stream_loop -1 -i bgm.wav -filter_comp
 SUBFILTER=""
 if [ "$SUB" = "1" ] && [ -s work/subs.body ]; then
   {
-    printf '[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n'
+    printf "[Script Info]\nScriptType: v4.00+\nPlayResX: ${W}\nPlayResY: ${H}\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n"
     printf '[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n'
-    printf 'Style: Sub,%s,58,&H00FFFFFF,&H00FFFFFF,&H00281810,&H78000000,-1,0,0,0,100,100,0,0,1,5,1.7,2,250,250,380,1\n\n' "$SUB_FONT"
+    printf "Style: Sub,%s,${SUB_SIZE},&H00FFFFFF,&H00FFFFFF,&H00281810,&H78000000,-1,0,0,0,100,100,0,0,1,${SUB_OUT},${SUB_SHA},2,${SUB_ML},${SUB_MR},${SUB_MV},1\n\n" "$SUB_FONT"
     printf '[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n'
     cat work/subs.body
   } > subs.ass
@@ -242,13 +290,13 @@ ENC=(-c:v libx264 -profile:v high -level 4.1 -preset slow -crf 19 -pix_fmt yuv42
      -g $((FPS*2)) -keyint_min "$FPS" -sc_threshold 0 -r "$FPS"
      -c:a aac -b:a 192k -ar 48000 -ac 2 -movflags +faststart)
 OFF=""
-[ -f outro.mp4 ] && OFF=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
+[ -f "$OUTRO_ASSET" ] && OFF=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
 
 render() {                          # $1=출력파일  $2=자막필터(빈 문자열이면 번인 없음)
   local OUT="$1" SF="${2:-}" VSRC="[0:v]"
   [ -n "$SF" ] && VSRC="[vsub]"
-  if [ -f outro.mp4 ]; then
-    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -i outro.mp4 -filter_complex "
+  if [ -f "$OUTRO_ASSET" ]; then
+    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -i "$OUTRO_ASSET" -filter_complex "
       ${SF:+[0:v]$SF[vsub];}
       ${VSRC}[2:v]xfade=transition=$XFADE_T:duration=$XFADE:offset=$OFF[v];
       [1:a][2:a]acrossfade=d=$XFADE:c1=tri:c2=tri[a]
@@ -262,7 +310,7 @@ render() {                          # $1=출력파일  $2=자막필터(빈 문�
 }
 
 render reel.mp4 ""
-if [ -f outro.mp4 ]; then say "── 아웃트로 접합: xfade ${XFADE_T} ${XFADE}s @ ${OFF}s"
+if [ -f "$OUTRO_ASSET" ]; then say "── 아웃트로 접합: xfade ${XFADE_T} ${XFADE}s @ ${OFF}s"
 else say "── 아웃트로 없음: 본편 단독 먹싱"; fi
 
 rm -f reel-sub.mp4
@@ -290,6 +338,16 @@ if [ -f reel-sub.mp4 ]; then
   fi
 fi
 [ -s subs.srt ] && say "── subs.srt: $(grep -c ' --> ' subs.srt)큐 / $(wc -c < subs.srt | tr -d ' ')바이트 (FB 상한 200K)"
+# ── 캔버스 대조 (게이트 6) — 선언과 실측이 어긋나면 진행 금지.
+#   검사는 포맷과 무관하게 돌고 리포트 줄만 format.env 가 있을 때 붙인다.
+#   `── ` 접두를 쓰고 `card ` 로 시작하지 않는다.
+RDIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x reel.mp4)
+if [ "$RDIM" != "${W}x${H}" ]; then
+  say "✗ reel.mp4 가 ${RDIM} 인데 선언 캔버스는 ${W}x${H} 다 — 자산이나 필터가 어긋났다"
+  exit 1
+fi
+[ -f format.env ] && say "── 캔버스: 선언 ${W}x${H} · 실측 ${RDIM}"
+
 ffmpeg -y -v error -ss "$COVER_TS" -i reel.mp4 -frames:v 1 -q:v 2 cover.jpg
 [ "$WARN" -eq 1 ] && say "── 경고 있음: 위 ⚠ 항목 확인"
 say "── 완료"

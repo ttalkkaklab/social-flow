@@ -139,6 +139,21 @@ data/<채널>/<주제>/
   screencast-pipeline.md 의 것을 쓴다.
 - 작업 디렉토리 준비: `.work/{cards,broll,motion,pcm,fonts}` 생성, 플랫폼 목록 확정
   (인자 CSV 또는 profile §4 게시 플랫폼).
+- **포맷 확정 — `.work/format.env` 를 쓴다. 건너뛰지 않는다.**
+
+  ```bash
+  PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
+  node $PG/format-resolve.js storyboard/scenes.js --sh > .work/format.env
+  ```
+
+  `scenes.js` 최상위 `window.FORMAT` 이 포맷 축이고 **없으면 `shorts-9x16`** 이다.
+  기존 회차는 전부 이 키가 없으므로 오늘과 같은 값이 나온다 — 방출값이 빌더 인라인
+  기본값과 문자 동일하다는 것이 단위 테스트로 고정돼 있다(`format-resolve.test.mjs`).
+  포맷과 무관하게 항상 쓰는 이유는 하나다. 조건부로 두면 "가로일 때만 쓴다"를 누가
+  한 번 빠뜨렸을 때 그 회차가 조용히 세로 기본값으로 빌드된다.
+
+  캡처 호출은 이 파일을 **명령줄 접두**로 받는다(§4). `export` 로는 안 나른다 —
+  Bash 툴이 호출마다 셸을 새로 띄우므로 export 한 변수가 그 호출과 함께 사라진다.
 - **`.work/cost-tally.tsv` 를 지우지 않는다** — storyboard 가 이미지 비용을 적어 둔
   회차 원장이고, §10 이 그 파일 하나로 스토리보드부터 영상까지를 합산한다. 파일이
   없으면 이번 회차부터 새로 적되, `storyboard/images/*.png` 가 있는데 원장이 없으면
@@ -343,7 +358,8 @@ printf 'music.lyria-realtime\t90\tproduce: BGM 90초 — 단가 미확인\n'    
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
-$REF/capture-reveals.sh <idx> "file://$PWD/.work/frame.html?i=<idx>&alpha=1&scrim=1&dim=1" .work/cards/a<idx>r 1
+FORMAT_ENV="$PWD/.work/format.env" \
+  $REF/capture-reveals.sh <idx> "file://$PWD/.work/frame.html?i=<idx>&alpha=1&scrim=1&dim=1" .work/cards/a<idx>r 1
 ```
 
 | 씬 | URL 파라미터 (reveal= 제외) | 알파 |
@@ -380,7 +396,9 @@ points 의 reveal 전환은 **캡션 교체(스왑)** 다 — 상태 수 = 1(배
 - 대사별 삽화 스왑은 캡처가 푼다 — 빌드 수정은 없다(세그 경계 xfade 가 배경까지
   함께 크로스페이드한다): ① `capture-reveals.sh` 를 1행 삽화 bg 로 돌려 상태 수를
   도출하고(reveals.tsv 기록) ② 상태→대사 매핑에 따라 bg 가 다른 상태만
-  `capture-frames.sh` 로 다시 찍어 교체한다. 매핑: cover 는 r1←세그①, r2←세그②.
+  `capture-frames.sh` 로 다시 찍어 교체한다(**`FORMAT_ENV="$PWD/.work/format.env"` 접두를
+  똑같이 붙인다** — 여기만 빠뜨리면 교체된 카드만 세로 창으로 찍혀 한 회차 안에서 크기가
+  어긋난다). 매핑: cover 는 r1←세그①, r2←세그②.
   points 는 r1(제목)←세그①, 캡션 r k 는 그 캡션을 읽는 세그먼트의 삽화.
 - `dim=1` 로 통일한다(화이트 워시 기본값). 밝기 고민이 없는 모드라 dim=2 는 안 쓴다.
 

@@ -41,6 +41,12 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # cd 전에 잡아둔다 
 WORKDIR="${1:?사용법: build-reel.sh <workdir>}"
 cd "$WORKDIR"
 
+# 포맷 프리셋 — format-resolve.js 가 쓴 `: "${VAR:=값}"` 블록.
+# 인라인 기본값보다 **앞**에서 읽어야 우선순위가 산다: 호출자 env → format.env → 인라인.
+# 뒤에 두면 아래 ${VAR:-…} 가 먼저 값을 박아 format.env 가 영영 못 이긴다.
+# 파일이 없으면 오늘과 같다 — 세로 회차는 이 줄이 생겨도 동작이 안 바뀐다.
+[ -f format.env ] && . ./format.env
+
 FPS=${FPS:-30}
 SPF=$((48000 / FPS))               # 프레임당 오디오 샘플 수
 PRE=${PRE:-0.40}                   # 프리롤 (카드 등장 여백)
@@ -62,9 +68,22 @@ REVEAL_LEAD=${REVEAL_LEAD:-0.30}   # 폴백 리드 — 쉼을 못 찾았을 때(
 SIL_DB=${SIL_DB:--37}              # 문장 경계 무음 임계 (dB)
 SIL_MIN=${SIL_MIN:-0.16}           # 문장 경계 최소 무음 길이 (s)
 ZOOM_SPAN=${ZOOM_SPAN:-0.035}      # 카드당 켄번즈 총 줌 폭 (3.5%)
+W=${W:-1080}                       # 캔버스 폭 — 포맷이 정한다
+H=${H:-1920}                       # 캔버스 높이
+ZOOM_BASE=${ZOOM_BASE:-1620x2880}  # 켄번즈 소스 해상도 (캔버스의 1.5배)
+ZB=${ZOOM_BASE/x/:}                # ffmpeg scale= 는 콜론 표기라 한 번 바꾼다
 SUB=${SUB:-1}                      # 1=자막 데이터 생성(subs.srt·subs.ass), 0=자막 없음
 BURN=${BURN:-1}                    # 1=번인본 reel-sub.mp4 도 산출, 0=클린 마스터만
 SUB_FONT=${SUB_FONT:-Pretendard}   # fonts/ 에 ttf 가 없으면 fontconfig 폴백
+OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}   # 접합할 아웃트로 — 포맷마다 다른 파일이다
+STRICT_DIM=${STRICT_DIM:-0}        # 1=자산 해상도 불일치에 exit 1, 0=경고 한 줄
+URL_FMT=${URL_FMT:-}               # 캡처 URL 에 붙일 포맷 파라미터 (세로는 빈 값)
+SUB_SIZE=${SUB_SIZE:-58}           # ASS Fontsize
+SUB_ML=${SUB_ML:-250}              # 자막 좌 마진
+SUB_MR=${SUB_MR:-250}              # 자막 우 마진
+SUB_MV=${SUB_MV:-380}              # 자막 하단 마진 (밴드 y≈1380)
+SUB_OUT=${SUB_OUT:-5}              # 외곽선 두께
+SUB_SHA=${SUB_SHA:-1.7}            # 그림자
 
 rm -rf work && mkdir -p work
 # 옛 빌드의 자막·번인본을 먼저 지운다 — SUB=0 으로 다시 빌드했을 때 이전 subs.srt 가
@@ -91,10 +110,95 @@ RTOTAL=""
 for C in cards/reveals.tsv reveals.tsv; do [ -f "$C" ] && { RTOTAL="$C"; break; }; done
 [ -n "$RTOTAL" ] || say "· reveals.tsv 없음 — 상태 완결성 검사는 '건너뜀'만 수행(캡처는 capture-reveals.sh 권장)"
 
+# ── 0.5) 캔버스 프로브 + 자산 해상도 선검사
+#   오늘은 두 사고가 전부 §12 에서, 즉 TTS·이미지·veo 비용을 다 쓴 뒤에 터진다.
+#   여기서 3초 안에 잡는다. 통과하면 아무 말도 안 한다 — 게이트는 위반에서만 말한다.
+
+# 프로브: CSS 캔버스가 창을 안 따라온 경우. frame.html?probe=1 이 캔버스 전체를 #FF00FF 로
+# 칠하므로 네 모서리 픽셀이 전부 마젠타여야 한다.
+# **이번 실행이 만든 frame.html 에만 건다** — frame.html 은 회차별 냉동 사본이라 보관본은
+# probe 파라미터를 모르고 씬 0 을 평소대로 그린다. 무조건 걸면 옛 회차 재빌드가 첫 ffmpeg
+# 전에 죽는다.
+probe_canvas() {
+  local html=$1 png=work/probe.png corner ok=1
+  grep -q 'probe' "$html" 2>/dev/null || return 0
+  # 창 크기를 **명시로 넘긴다** — capture-frames.sh 는 자식 프로세스이고 위 `${W:-1080}` 은
+  # export 가 아니라 안 넘어간다. 안 넘기면 가로 빌드가 1080x1920 창으로 찍고 모서리를
+  # (1919,1079) 에서 읽어 PNG 밖을 겨눈다 — 정상 캔버스인데 exit 1 하는 가짜 실패다.
+  # format 파라미터도 같이 간다. 캔버스 크기가 템플릿의 .wide 클래스에 달려 있다.
+  env CAP_W="$W" CAP_H="$H" "$HERE/capture-frames.sh" \
+    "file://$PWD/$html?probe=1${URL_FMT:+&format=$URL_FMT}" "$png" 0 >/dev/null 2>&1 || {
+    say "✗ 캔버스 프로브 캡처 실패 — $html"; exit 1; }
+  for corner in "0:0" "$((W-1)):0" "0:$((H-1))" "$((W-1)):$((H-1))"; do
+    local x=${corner%%:*} y=${corner##*:}
+    local hex
+    hex=$(ffmpeg -v error -i "$png" -vf "crop=1:1:$x:$y,format=rgb24" -f rawvideo - 2>/dev/null | xxd -p)
+    [ "$hex" = "ff00ff" ] || { say "✗ 캔버스 프로브: (${x},${y}) 가 #${hex} — 마젠타가 아니다"; ok=0; }
+  done
+  [ "$ok" = 1 ] || { say "  CSS 캔버스가 ${W}x${H} 창을 안 따라왔다. 템플릿 :root 의 --w/--h 를 확인한다."; exit 1; }
+}
+[ -f frame.html ] && probe_canvas frame.html
+
+# 자산 선검사: 검사 강도가 자산마다 다르다 — 필터 그래프가 그것을 어떻게 먹는지가 정한다.
+#   접합 자산(아웃트로)  xfade 직결        → 정확 일치. 다르면 ffmpeg 이 죽는다
+#   오버레이 PNG(:: 뒤)  overlay=0:0       → 정확 일치. 어긋나면 조용히 밀린다
+#   b-roll·배경          scale=increase,crop → 방향만. 어떤 해상도든 받는다
+# b-roll 에 정확 일치를 걸면 멀쩡한 회차가 경고를 문다 — 실측으로 720x1280 b-roll 이 있다.
+DIMBAD=0
+dim_of() {
+  case "$1" in
+    *.png|*.PNG) sips -g pixelWidth -g pixelHeight "$1" 2>/dev/null \
+      | awk '/pixelWidth/{w=$2} /pixelHeight/{h=$2} END{printf "%sx%s", w, h}' ;;
+    *) ffprobe -v error -select_streams v:0 -show_entries stream=width,height \
+         -of csv=p=0:s=x "$1" 2>/dev/null ;;
+  esac
+}
+assert_exact() {   # <경로> <역할>
+  local got; got=$(dim_of "$1")
+  [ -n "$got" ] || { say "⚠ $2 $1 치수를 못 읽었다"; DIMBAD=1; return; }
+  [ "$got" = "${W}x${H}" ] || {
+    say "⚠ $2 $1 이 ${got} — 캔버스 ${W}x${H} 와 정확히 같아야 한다"; DIMBAD=1; }
+}
+assert_orient() {  # <경로> <역할> — 방향만 본다
+  local got w h; got=$(dim_of "$1")
+  [ -n "$got" ] || { say "⚠ $2 $1 치수를 못 읽었다"; DIMBAD=1; return; }
+  w=${got%%x*}; h=${got##*x}
+  if [ "$W" -gt "$H" ]; then [ "$w" -gt "$h" ] || {
+    say "⚠ $2 $1 이 ${got} — 가로 캔버스인데 세로 소스다. 중앙 크롭으로 화각 대부분이 잘린다"; DIMBAD=1; }
+  else [ "$w" -lt "$h" ] || {
+    say "⚠ $2 $1 이 ${got} — 세로 캔버스인데 가로 소스다. 중앙 크롭으로 화각 대부분이 잘린다"; DIMBAD=1; }
+  fi
+}
+
+[ -f "$OUTRO_ASSET" ] && assert_exact "$OUTRO_ASSET" "아웃트로"
+# segs.tsv 3열 파싱 — 빌드 루프와 **같은 규칙**이다(| 분해 · @ 접두 제거 · :: 뒤 절단).
+# 다르게 짜면 선검사가 보는 집합과 빌드가 읽는 집합부터 어긋난다.
+while IFS=$'\t' read -r _ _ VIS _; do
+  [ -z "${VIS:-}" ] && continue
+  IFS='|' read -ra PARTS <<< "$VIS"
+  for PART in "${PARTS[@]}"; do
+    [ -z "$PART" ] && continue
+    PBASE="$PART"; POVL=""
+    case "$PBASE" in *::*) POVL="${PBASE#*::}"; PBASE="${PBASE%%::*}";; esac
+    PBASE="${PBASE#@}"
+    [ -n "$PBASE" ] && [ -f "$PBASE" ] && assert_orient "$PBASE" "비주얼"
+    [ -n "$POVL" ] && [ -f "$POVL" ] && assert_exact "$POVL" "오버레이"
+  done
+done < segs.tsv
+if [ "$DIMBAD" = 1 ]; then
+  if [ "$STRICT_DIM" = 1 ]; then
+    say "✗ 자산 해상도 불일치 — STRICT_DIM=1 이라 첫 ffmpeg 전에 중단한다"; exit 1
+  fi
+  WARN=1
+fi
+
 # 세그먼트 효과음·BGM 차단 (선택) — sfx.tsv: idx <TAB> seg <TAB> 오디오파일 <TAB> bgm(on|off)
 #   오디오파일은 wav 여도 mp4 여도 된다(영상이면 그 안의 소리를 쓴다). 비워 두고 bgm 만 off 로
 #   적으면 그 세그 동안 음악만 빠진다.
 SFXTSV=""; [ -f sfx.tsv ] && SFXTSV=sfx.tsv
+# 챕터 입력(선택) — 챕터첫카드idx<TAB>ts문구. 부재 = chapters.txt 를 안 만든다.
+CHAPTSV=""; [ -f chapters.tsv ] && CHAPTSV=chapters.tsv
+: > work/chapstart.tsv
 : > work/sfx.list
 : > work/bgmgate.list
 
@@ -109,6 +213,13 @@ SRTN=0                              # SRT 큐 순번 (1부터, 파일 전체 통
 while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
   [ -z "${IDX:-}" ] && continue
   N=$((N+1))
+
+  # 챕터 첫 카드면 절대 시작 프레임을 적어 둔다 — TOTF 는 아직 이 카드를 안 더한 값이라
+  # 그대로 이 카드의 시작이다. 10단계 bgm.tsv 도 같은 값을 쓴다.
+  if [ -n "$CHAPTSV" ]; then
+    CHTS=$(awk -F'\t' -v i="$IDX" '$1==i{print $2; exit}' "$CHAPTSV")
+    [ -n "$CHTS" ] && printf '%s\t%s\n' "$TOTF" "$CHTS" >> work/chapstart.tsv
+  fi
 
   # ── 0) 카드의 세그먼트 로드 (seg 순서 보장)
   awk -F'\t' -v i="$IDX" '$1==i' segs.tsv | sort -t"$(printf '\t')" -k2,2n > "work/seg$IDX.tsv"
@@ -295,7 +406,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
       *) INS+=(-loop 1 -framerate "$FPS" -t "$T" -i "$BASE") ;;
     esac
     NIN=$((NIN+1))
-    FILT+="[$BI:v]${HOLD}scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,fps=$FPS,settb=AVTB,setsar=1,format=yuv420p[b$j];"
+    FILT+="[$BI:v]${HOLD}scale=$W:$H:force_original_aspect_ratio=increase:flags=lanczos,crop=$W:$H,fps=$FPS,settb=AVTB,setsar=1,format=yuv420p[b$j];"
     if [ -n "$OVL" ]; then
       OI=$NIN
       INS+=(-loop 1 -framerate "$FPS" -t "$T" -i "$OVL")
@@ -321,7 +432,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
   if [ "$ZD" = "auto" ]; then if [ $((N % 2)) -eq 1 ]; then ZD=in; else ZD=out; fi; fi
   if [ "$ZD" = "out" ]; then ZEXPR="1+$ZOOM_SPAN*(1-on/$ZLAST)"
   else ZEXPR="1+$ZOOM_SPAN*on/$ZLAST"; fi
-  FILT+="${CUR}scale=1620:2880:flags=lanczos,zoompan=z='$ZEXPR':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=1080x1920:fps=$FPS,format=yuv420p[vout]"
+  FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$ZEXPR':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
   ffmpeg -y -v error "${INS[@]}" -filter_complex "$FILT" -map "[vout]" \
     -frames:v "$FRAMES" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p "work/v$IDX.mp4"
 
@@ -380,6 +491,32 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
     while IFS= read -r line; do say "$line"; done < "work/rt$IDX.txt"
   fi
 done 3< cards.tsv
+
+# ── 9.0) chapters.txt — chapters.tsv 가 있을 때만
+#   입력은 `챕터첫카드idx<TAB>ts문구` 2열이다. 시각은 카드 절대 시각(누적 프레임/FPS)에서
+#   나오므로 사람이 mm:ss 를 세는 자리가 없다. 부재 = 오늘 동작(파일을 안 만든다).
+#
+#   **내림을 쓴다.** 챕터 경계는 문장 사이 쉼에 앉으므로, 타임스탬프가 진짜 시작보다 조금
+#   앞서면 시청자가 쉼에 착지하고 조금 뒤서면 첫 낱말이 잘린다. splice 쪽은 반대로 올림인데
+#   거기서는 지켜야 할 것이 다르다 — 삽입 클립 구간 안에 마커가 앉지 않는 것이고, 올림만이
+#   그것을 보장한다(시프트 후 시각 ≥ 클립 끝).
+if [ -n "$CHAPTSV" ] && [ -s work/chapstart.tsv ]; then
+  awk -F'\t' -v fps="$FPS" '
+    function ts(v,   h, m, s) { s = int(v); m = int(s/60); s -= m*60; h = int(m/60); m -= h*60;
+      return h ? sprintf("%d:%02d:%02d", h, m, s) : sprintf("%02d:%02d", m, s) }
+    { sec = int($1 / fps); printf "%s\t%s\n", ts(sec), $2; secs[NR] = sec; n = NR }
+    END {
+      bad = 0
+      if (secs[1] != 0) { printf "✗ 첫 챕터가 %s 다 — 00:00 이어야 한다\n", ts(secs[1]) > "/dev/stderr"; bad = 1 }
+      if (n < 3) { printf "✗ 챕터 %d개 — 유튜브는 3개 이상을 요구한다\n", n > "/dev/stderr"; bad = 1 }
+      for (i = 2; i <= n; i++) if (secs[i] - secs[i-1] < 10) {
+        printf "✗ %s → %s 간격 %ds — 10초 미만이다\n", ts(secs[i-1]), ts(secs[i]), secs[i]-secs[i-1] > "/dev/stderr"; bad = 1 }
+      exit bad
+    }' work/chapstart.tsv > chapters.txt || {
+      say "✗ chapters.tsv 가 유튜브 챕터 요건을 어긴다 — 위 항목을 고친다"
+      rm -f chapters.txt; exit 1; }
+  say "── 챕터: $(wc -l < chapters.txt | tr -d ' ')개 → chapters.txt"
+fi
 
 # ── 9) 본편 concat + 드리프트 단언 (v2 동일)
 : > work/list.txt
@@ -449,9 +586,9 @@ ffmpeg -y -v error -i work/narration.wav -stream_loop -1 -i bgm.wav $SFXIN -filt
 SUBFILTER=""
 if [ "$SUB" = "1" ] && [ -s work/subs.body ]; then
   {
-    printf '[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n'
+    printf "[Script Info]\nScriptType: v4.00+\nPlayResX: ${W}\nPlayResY: ${H}\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n"
     printf '[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n'
-    printf 'Style: Sub,%s,58,&H00FFFFFF,&H00FFFFFF,&H00281810,&H78000000,-1,0,0,0,100,100,0,0,1,5,1.7,2,250,250,380,1\n\n' "$SUB_FONT"
+    printf "Style: Sub,%s,${SUB_SIZE},&H00FFFFFF,&H00FFFFFF,&H00281810,&H78000000,-1,0,0,0,100,100,0,0,1,${SUB_OUT},${SUB_SHA},2,${SUB_ML},${SUB_MR},${SUB_MV},1\n\n" "$SUB_FONT"
     printf '[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n'
     cat work/subs.body
   } > subs.ass
@@ -471,13 +608,13 @@ ENC=(-c:v libx264 -profile:v high -level 4.1 -preset slow -crf 19 -pix_fmt yuv42
      -g $((FPS*2)) -keyint_min "$FPS" -sc_threshold 0 -r "$FPS"
      -c:a aac -b:a 192k -ar 48000 -ac 2 -movflags +faststart)
 OFF=""
-[ -f outro.mp4 ] && OFF=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
+[ -f "$OUTRO_ASSET" ] && OFF=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
 
 render() {                          # $1=출력파일  $2=자막필터(빈 문자열이면 번인 없음)
   local OUT="$1" SF="${2:-}" VSRC="[0:v]"
   [ -n "$SF" ] && VSRC="[vsub]"
-  if [ -f outro.mp4 ]; then
-    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -i outro.mp4 -filter_complex "
+  if [ -f "$OUTRO_ASSET" ]; then
+    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -i "$OUTRO_ASSET" -filter_complex "
       ${SF:+[0:v]$SF[vsub];}
       ${VSRC}[2:v]xfade=transition=$XFADE_T:duration=$XFADE:offset=$OFF[v];
       [1:a][2:a]acrossfade=d=$XFADE:c1=tri:c2=tri[a]
@@ -491,7 +628,7 @@ render() {                          # $1=출력파일  $2=자막필터(빈 문�
 }
 
 render reel.mp4 ""
-if [ -f outro.mp4 ]; then say "── 아웃트로 접합: xfade ${XFADE_T} ${XFADE}s @ ${OFF}s"
+if [ -f "$OUTRO_ASSET" ]; then say "── 아웃트로 접합: xfade ${XFADE_T} ${XFADE}s @ ${OFF}s"
 else say "── 아웃트로 없음: 본편 단독 먹싱"; fi
 
 rm -f reel-sub.mp4
@@ -526,6 +663,17 @@ if [ "$SUB" = "1" ]; then
   if [ -s subs.srt ]; then say "── subs.srt: ${SRTN}큐 / $(wc -c < subs.srt | tr -d ' ')바이트 (FB 상한 200K)"
   else say "✗ SUB=1 인데 subs.srt 가 비었다 — segs.tsv 의 자막표기 컬럼을 확인할 것"; exit 1; fi
 fi
+# ── 캔버스 대조 (게이트 6) — 선언과 실측이 어긋나면 진행 금지.
+#   **검사는 포맷과 무관하게 돌고 리포트 줄만 format.env 가 있을 때 붙인다.** 무조건 줄을
+#   더하면 보관 회차 재빌드의 build-report.txt 가 그 자리에서 달라진다(회귀 축 ②).
+#   `── ` 접두를 쓰고 `card ` 로 시작하지 않는다 — cardend() 의 /^card / 계약을 지킨다.
+RDIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x reel.mp4)
+if [ "$RDIM" != "${W}x${H}" ]; then
+  say "✗ reel.mp4 가 ${RDIM} 인데 선언 캔버스는 ${W}x${H} 다 — 자산이나 필터가 어긋났다"
+  exit 1
+fi
+[ -f format.env ] && say "── 캔버스: 선언 ${W}x${H} · 실측 ${RDIM}"
+
 # 커버 = 히어로 스탯까지 모두 등장한 시점(자동 프레임은 훅 전달 실패 — 커버 최적화 조사 준거)
 # 클린본에서 뽑는다 — 썸네일에 자막이 얹히면 커버 카피와 겹친다
 ffmpeg -y -v error -ss "${COVER_TS:-3.2}" -i reel.mp4 -frames:v 1 -q:v 2 cover.jpg
