@@ -80,11 +80,19 @@ description(동작·무드·로고음 한 줄) + **preview 에 씬 시나리오*
 
 ```bash
 CAP=${CLAUDE_PLUGIN_ROOT}/skills/produce/references/capture-frames.sh
-W="data/<slug>/assets/intro/.work"
-$CAP "file://$PWD/$W/lockup.html?mode=full" "$W/lockup.png" 0
-$CAP "file://$PWD/$W/lockup.html?mode=text" "$W/text-plate.png" 1   # 알파 필수
-$CAP "file://$PWD/$W/lockup.html?mode=char" "$W/char-card.png" 0
+WD="data/<slug>/assets/intro/.work"
+# 인트로는 회차 스코프가 없다 — 저장소 루트에서 부르고 출력만 회차로 보내므로
+# `.work/format.env` 를 찾을 길이 없다. 그래서 창 크기를 직접 준다.
+# 세로 1080×1920 은 오늘 기본값과 같아 동작이 안 바뀐다. 가로 인트로는
+# `CAP_W=1920 CAP_H=1080` 에 URL 끝을 `&format=wide` 로 바꾼다.
+CAPENV='CAP_W=1080 CAP_H=1920'
+env $CAPENV $CAP "file://$PWD/$WD/lockup.html?mode=full" "$WD/lockup.png" 0
+env $CAPENV $CAP "file://$PWD/$WD/lockup.html?mode=text" "$WD/text-plate.png" 1   # 알파 필수
+env $CAPENV $CAP "file://$PWD/$WD/lockup.html?mode=char" "$WD/char-card.png" 0
 ```
+
+셸 변수 이름을 `W` 에서 `WD` 로 바꿨다 — `W` 는 이제 캔버스 폭이라 같은 이름을 두면
+읽는 사람이 헷갈린다(export 를 안 하므로 오늘도 자식에게 안 넘어갔다).
 
 캡처 3장을 Read 로 열어 확인한다 — 채널명 오탈자·태그라인 줄바꿈·캐릭터 크롭.
 여기서 틀리면 뒤 전부가 틀린다.

@@ -511,6 +511,34 @@ describe('YouTube 썸네일 필수 계약', () => {
   });
 });
 
+describe('YouTube 포맷별 캡션 계약 (16:9 롱폼 레인)', () => {
+  // 한 툴이 두 포맷을 받으므로 caption 설명이 포맷을 갈라 말해야 한다.
+  // 안 그러면 모델이 롱폼 설명문에도 #Shorts 를 붙여 쇼츠 표면으로 잘못 분류된다.
+  // 대상이 caption 인 이유 — youtube_publish 스키마에 hashtags·description 속성이
+  // 아예 없다. #Shorts 지시가 사는 곳은 required 인 caption 설명 한 줄뿐이다.
+  const yt = () => byName.get('youtube_publish');
+
+  it('#Shorts 지시가 쇼츠 조건 안에 있다', () => {
+    assert.match(
+      yt().inputSchema.properties.caption.description,
+      /쇼츠[^]{0,120}#Shorts/,
+      '#Shorts 지시가 쇼츠 조건 밖에 있다 — 모델이 롱폼 설명문에도 붙인다',
+    );
+  });
+
+  it('롱폼 갈래를 명시한다', () => {
+    assert.match(yt().inputSchema.properties.caption.description, /16:9|롱폼/);
+  });
+
+  it('롱폼에 챕터 타임스탬프를 안내한다', () => {
+    assert.match(yt().inputSchema.properties.caption.description, /챕터|타임스탬프/);
+  });
+
+  it('썸네일 설명이 가로 롱폼을 함께 말한다', () => {
+    assert.match(yt().inputSchema.properties.thumbnailFilePath.description, /가로/);
+  });
+});
+
 describe('Threads 본문 링크 계약', () => {
   // 영상 회차의 Threads 는 커버 이미지 + 링크 답글이 아니라 본문 링크 한 건으로 나간다
   // (2026-08-14 전략 변경). 링크 프리뷰 카드는 media_type=TEXT 전용이라 이미지와 배타다.

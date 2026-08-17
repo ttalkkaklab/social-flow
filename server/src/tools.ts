@@ -274,6 +274,30 @@ const publishOutput = (idKey: string, idDescription: string): OutputSchema => ({
   required: ['platform', idKey],
 });
 
+const YOUTUBE_UPDATE_OUTPUT: OutputSchema = {
+  type: 'object',
+  properties: {
+    platform: PLATFORM_PROPERTY,
+    videoId: { type: 'string', description: '고친 영상 id' },
+    permalink: { type: 'string', description: 'https://www.youtube.com/watch?v=<videoId>' },
+    privacyStatus: { type: 'string', description: '반영 뒤 공개 범위 (public | unlisted | private)' },
+    title: { type: 'string', description: '반영 뒤 제목' },
+    changed: {
+      type: 'object',
+      description: '무엇이 실제로 바뀌었는지 — 전부 false 면 호출이 아무것도 안 바꾼 것이다',
+      properties: {
+        privacyStatus: { type: 'boolean' },
+        title: { type: 'boolean' },
+        description: { type: 'boolean' },
+      },
+    },
+    dryRun: { type: 'boolean', description: 'dryRun 호출에만 — true' },
+    current: { type: 'object', description: 'dryRun 호출에만 — 지금 YouTube 에 있는 snippet·status' },
+    wouldSend: { type: 'object', description: 'dryRun 호출에만 — 실제로 보낼 본문. 병합 결과를 눈으로 확인하는 자리다' },
+  },
+  required: ['platform', 'videoId'],
+};
+
 const YOUTUBE_PUBLISH_OUTPUT: OutputSchema = {
   type: 'object',
   properties: {
@@ -1764,7 +1788,7 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
       properties: {
         videoFilePath: { type: 'string', description: '업로드할 로컬 영상 파일 절대 경로 (.mp4/.mov)' },
         title: { type: 'string', description: '영상 제목 ≤100자 (꺾쇠 <> 금지) — 키워드형 권장(쇼츠는 제목 검색 노출 비중이 큼)' },
-        caption: { type: 'string', description: '영상 설명(description) 완성본 ≤5000자 — 첫 줄 요약 + 핵심 포인트 + 해시태그(#Shorts 포함 3~5개)' },
+        caption: { type: 'string', description: '영상 설명(description) 완성본 **≤5000바이트**(글자 수가 아니다 — 한국어는 글자당 3바이트라 약 1,666자) — 첫 줄 요약 + 핵심 포인트. **해시태그를 포맷별로 다르게 붙인다** — 9:16 쇼츠는 #Shorts 를 포함해 3~5개를 붙이고, 16:9 롱폼은 #Shorts 를 붙이지 않는다(쇼츠 표면으로 잘못 분류된다). 롱폼은 해시태그 대신 **챕터 타임스탬프**를 싣는다 — 첫 줄이 00:00 이고 3개 이상, 각 구간 10초 이상이 문서 요건이다. **어겼을 때의 거동은 공식 문서에 없다** — 10초는 실제로 안 막는 것을 확인했고(2초 구간 21개가 그대로 렌더됐다), 확실한 것은 자동 챕터가 신규 업로드에 기본 켜짐이고 설명란 수동 목록이 그것을 덮는다는 것뿐이다. 요건을 어기면 우리 목록이 무시되고 자동 챕터가 대신 붙을 수 있다.' },
         thumbnailFilePath: {
           type: 'string',
           description:
@@ -1804,6 +1828,34 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         channel: SNS_CHANNEL_PROPERTY,
       },
       required: ['videoFilePath', 'title', 'caption', 'thumbnailFilePath'],
+    },
+  },
+  {
+    name: 'youtube_update',
+    title: '⚠️ YouTube 영상 메타데이터·공개범위 변경',
+    annotations: HINT.moderate,
+    outputSchema: YOUTUBE_UPDATE_OUTPUT,
+    description:
+      '⚠️ 이미 게시된 YouTube 영상의 공개 범위·제목·설명을 고친다(videos.update). **호출 즉시 반영되고 되돌릴 수 없다 — 사람 승인 없이 호출 금지.** **롱폼 2단 게시의 두 번째 단계다** — 8~15분 영상을 privacyStatus "private" 로 올려 watch 페이지에서 인코딩·자막·챕터를 사람이 확인한 뒤 이 툴로 public 으로 돌린다. 쇼트폼처럼 바로 공개하면 실패를 시청자가 먼저 본다. **videos.update 는 부분 갱신이 아니라 덮어쓰기라서** 이 툴이 먼저 videos.list 로 현재 값을 읽어 병합한다 — 인자로 안 준 필드는 지금 값을 그대로 다시 싣는다(제목·설명·태그·언어·COPPA 선언·합성미디어 고지 전부). 되돌릴 수 없는 변경이므로 **처음 쓰는 영상에는 dryRun: true 를 먼저 부르고 wouldSend 를 눈으로 확인할 것.** publishAt(예약 공개)은 privacyStatus 가 private 일 때만 걸린다 — 아니면 400 으로 거부한다. **스코프**: youtube (읽기 전용 youtube.readonly 로는 안 되고 게시용 youtube.upload 로도 안 된다). 부족하면 에러에 재발급 안내가 실려 온다.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        videoId: { type: 'string', description: '대상 영상 id (permalink 의 v= 값)' },
+        privacyStatus: {
+          type: 'string',
+          enum: ['public', 'unlisted', 'private'],
+          description: '공개 범위. 미지정이면 지금 값을 유지한다',
+        },
+        title: { type: 'string', description: '제목 ≤100자. 미지정이면 지금 제목을 유지한다' },
+        description: { type: 'string', description: '설명 ≤5000바이트(한국어 약 1,666자). 롱폼이면 챕터 타임스탬프가 여기 들어간다. 미지정이면 지금 설명을 유지한다' },
+        categoryId: { type: 'string', description: 'YouTube 카테고리 id. 미지정이면 지금 값을 유지한다' },
+        madeForKids: { type: 'boolean', description: 'COPPA 자기 선언. 미지정이면 지금 값을 유지한다 — 빼고 보내면 기본값으로 되돌아가는 API 함정을 이 툴이 막는다' },
+        containsSyntheticMedia: { type: 'boolean', description: '합성 미디어 고지. 미지정이면 지금 값을 유지한다' },
+        publishAt: { type: 'string', description: '예약 공개 시각 (RFC3339, 예 2026-08-20T09:00:00Z). privacyStatus 를 "private" 로 함께 줘야 걸린다' },
+        dryRun: { type: 'boolean', description: '보낼 본문만 돌려주고 호출하지 않는다. 되돌릴 수 없는 변경 앞의 확인용', default: false },
+        channel: SNS_CHANNEL_PROPERTY,
+      },
+      required: ['videoId'],
     },
   },
   {
