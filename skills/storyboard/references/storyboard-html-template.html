@@ -469,8 +469,41 @@
   .fr.tight3 .f-top .f-title { font-size: calc(var(--fw) * .0463); }
   .fr.tight3 .f-statrow { margin-top: calc(var(--fw) * .015); }
 
+  /* ══ 가로 롱폼 16:9 콘티 프레임 ═══════════════════════════════════════════
+     세로 프레임의 비율은 전부 캔버스 폭(1080) 기준이라 가로(1920)에서는 뜻이 달라진다.
+     여기 값도 정본은 formats.js 이고 format-lint.js 가 대조한다 — 글자 비율은
+     그 파일의 `fonts` 그대로다(절대px / 1920). */
+  .fr.wide { aspect-ratio: 16 / 9; border-radius: calc(var(--fw) * .012); }
+  /* 존 — x 96/1920 · top 96/1080 · bottom 285/1080 (safezone-landscape.md 실측) */
+  .fr.wide .fzone { left: 5.00%; right: 5.00%; top: 8.89%; bottom: 26.39%; }
+  .fr.wide .fsafe::before { left: 5.00%; right: 5.00%; top: 8.89%; bottom: 26.39%; }
+  .fr.wide .fsafe::after { height: 26.39%; }
+  .fr.wide .f-kicker { font-size: calc(var(--fw) * .0125);
+    padding: calc(var(--fw) * .004) calc(var(--fw) * .012); margin-bottom: calc(var(--fw) * .009); }
+  .fr.wide .f-title { font-size: calc(var(--fw) * .0375); margin-bottom: calc(var(--fw) * .014); }
+  .fr.wide .f-stat { font-size: calc(var(--fw) * .0771); }
+  .fr.wide .f-statlabel { font-size: calc(var(--fw) * .0151); }
+  .fr.wide .f-ptitle { font-size: calc(var(--fw) * .0224); margin-bottom: calc(var(--fw) * .010); }
+  .fr.wide .f-cap .t { font-size: calc(var(--fw) * .0188); }
+  .fr.wide .f-cap .d { font-size: calc(var(--fw) * .0130); }
+  .fr.wide .f-foot { font-size: calc(var(--fw) * .0125); }
+  /* 자막은 우리가 안 태운다(BURN=0) — 유튜브 플레이어가 그린다. 예약된 하단 띠 안에
+     실측 크기(캔버스 48px = .025)로 그려 저작자가 자리를 보게 한다. 점선은 "우리
+     산출물이 아니다"는 표시다【safezone-landscape.md §②】. */
+  .fr.wide .f-sub { left: 12%; right: 12%; bottom: 8.5%;
+    font-size: calc(var(--fw) * .025); color: rgba(255,255,255,.86);
+    outline: 1px dashed rgba(255,255,255,.22); outline-offset: calc(var(--fw) * .004); }
+  /* 촬영 씬 로어서드 — 존 하단 왼쪽. 화면 위쪽은 사용자가 시연하는 자리라 비운다 */
+  .fr.wide .fzone.l3 { justify-content: flex-end; text-align: left; }
+  .fr.wide .fzone.l3 .f-ptitle { border-left: calc(var(--fw) * .003) solid var(--accent);
+    padding-left: calc(var(--fw) * .010); }
+  .fr.wide .fzone.l3 .f-foot { text-align: left; }
+  .fr.wide.rec .fscrim { background: linear-gradient(0deg, rgba(5,8,20,.82) 0%, rgba(5,8,20,.46) 28%, rgba(5,8,20,0) 48%); }
+
   /* 측정 하네스 — 1080px 캔버스에서 실측한다 (화면 밖).
-     테두리는 뺀다 — produce 캔버스에는 없어서 텍스트 존이 2px 좁아진다. */
+     테두리는 뺀다 — produce 캔버스에는 없어서 텍스트 존이 2px 좁아진다.
+     가로 회차는 JS 가 --fw 를 1920px 로 바꾼다 — 글자 비율의 기준변이 캔버스 폭이라
+     1080 으로 재면 가로 글자가 1.78배로 부풀어 없는 넘침이 잡힌다. */
   #fr-probe { position: fixed; left: -12000px; top: 0; --fw: 1080px; pointer-events: none; }
   #fr-probe .fr { border: 0; border-radius: 0; }
 
@@ -717,6 +750,7 @@ window.SB_DOC = {
   };
   var FMT_KEY = FMT_MIRROR[window.FORMAT] ? window.FORMAT : "shorts-9x16";
   var FMT = FMT_MIRROR[FMT_KEY];
+  var WIDE = FMT_KEY === "youtube-long-16x9";
 
   /* 롱폼은 900s 처럼 읽기 힘든 숫자가 나온다 — 2분 넘으면 분으로 적는다. */
   function durTxt(t) {
@@ -810,7 +844,18 @@ window.SB_DOC = {
   }
   var hasSceneField = SCENES.some(function (s) { return s.scene != null; });
 
-  var isRec = SCENES.some(function (s) { return s.visual && s.visual.source === "recording"; });
+  /* 촬영 씬 판정은 **씬 하나 단위**다. 롱폼은 촬영 씬과 생성 씬이 한 편에 섞이는 것이
+     정상 경로라(scenes-schema §촬영 씬), 편 전체를 한 모드로 뒤집으면 촬영 씬 하나가
+     생성 씬까지 촬영 계약(자수 40·말속도 5~6자/초)으로 검사받게 만든다. */
+  function recOf(s) { return !!(s && s.visual && s.visual.source === "recording"); }
+  /* 세로 촬영 레인만 「상단 블록 + 녹화 밴드」다 — 16:9 녹화를 세로 캔버스에 넣느라
+     띠로 앉히기 때문이다(screencast-overlay). 가로는 클립이 화면을 꽉 채우므로
+     띠가 없고 글자는 로어서드로 간다. */
+  function recTall(s) { return recOf(s) && !WIDE; }
+  var recCount = SCENES.filter(recOf).length;
+  var hasRec = recCount > 0;                    // 편 단위 질문에만 쓴다
+  var allRec = hasRec && recCount === SCENES.filter(function (s) {
+    return s.type !== "outro"; }).length;
   var isLine = SCENES.some(function (s) {
     return (s.narration || []).some(function (n) { return n.img; }); });
   var main = SCENES.filter(function (s) { return s.type !== "outro"; });
@@ -839,7 +884,7 @@ window.SB_DOC = {
      points rg1=제목+출처/rg2..=캡션, quote rg0=서명/rg1=인용문). */
   function revealsOf(s) {
     var narr = s.narration || [], out = [];
-    if (isRec) {
+    if (recOf(s)) {
       // 촬영 모드는 오버레이가 씬당 하나(screencast-overlay) — 화면이 바뀌는 건 녹화와
       // 자막이다. 같은 프레임을 문장 수만큼 늘어놓지 않고, 첫 컷 하나만 그린다.
       return [{ label: "오버레이 + 첫 자막", seg: narr.length ? 0 : -1, cap: -1 }];
@@ -899,13 +944,14 @@ window.SB_DOC = {
     var bg = lineImg || (s.visual && s.visual.bg) || null;
     var light = !!lineImg;
     var hasClip = s.type === "quote" && !!(s.visual && s.visual.clip);
-    var cls = "fr t-" + esc(s.type) + (isRec ? " rec" : "") + (light ? " light" : "") +
+    var cls = "fr t-" + esc(s.type) + (recOf(s) ? " rec" : "") + (light ? " light" : "") +
+              (WIDE ? " wide" : "") +
               (hasClip ? " fclip" : "") + (tier ? " tight" + tier : "");
     var h = '<div class="' + cls + '">';
     if (bg) h += '<div class="fbg" style="background-image:url(\'' + esc(bg) + '\')"></div>';
     h += '<div class="fscrim"></div>';
 
-    if (isRec) {
+    if (recTall(s)) {
       h += '<div class="f-band">녹화 화면</div><div class="f-top">';
       if (s.kicker) h += '<div class="f-kicker">' + esc(s.kicker) + "</div>";
       h += '<div class="f-title">' + femph(s.title || "") + "</div>";
@@ -925,7 +971,8 @@ window.SB_DOC = {
              (s.statLabel ? '<div class="f-statlabel">' + esc(s.statLabel) + "</div>" : "") + "</div>";
       h += "</div>";
     } else if (s.type === "points") {
-      h += '<div class="fzone top"><div class="f-ptitle">' + femph(s.title || "") + "</div>";
+      // 가로 촬영 씬은 로어서드(존 하단 왼쪽) — video-template 의 .zone.l3 와 같은 자리다.
+      h += '<div class="fzone ' + (recOf(s) ? "l3" : "top") + '"><div class="f-ptitle">' + femph(s.title || "") + "</div>";
       var caps = s.bullets || [];
       if (caps.length) {
         // 캡션은 같은 자리에 겹쳐 쌓이고 활성 하나만 보인다 (캡션 스왑)
@@ -962,6 +1009,7 @@ window.SB_DOC = {
      안 들어가면 잔여 px 를 경고한다 — 제작 전에 글자 잘림을 잡는 자리다. */
   var probe = document.createElement("div");
   probe.id = "fr-probe";
+  if (WIDE) probe.style.setProperty("--fw", "1920px");
   document.body.appendChild(probe);
   var fit = {};
   SCENES.forEach(function (s, i) {
@@ -969,14 +1017,14 @@ window.SB_DOC = {
     revealsOf(s).forEach(function (st, k) {
       probe.innerHTML = frame(s, st, k, 0);
       var fr = probe.firstChild;
-      var box = fr.querySelector(isRec ? ".f-top" : ".fzone");
+      var box = fr.querySelector(recTall(s) ? ".f-top" : ".fzone");
       // 재는 방식도 produce 를 따른다 — 생성 모드는 존의 scrollHeight, 촬영 모드는
       // 블록 하단이 y=460(BAND_MIN_Y)을 넘는지. 촬영에서 scrollHeight 를 쓰면
       // line-height:1 인 수치의 글자 상자 때문에 한 단계 먼저 줄고 허위 경고가 난다.
       var REC_LIMIT = 460;
       function over() {
         if (!box) return 0;
-        return isRec
+        return recTall(s)
           ? box.getBoundingClientRect().bottom - fr.getBoundingClientRect().top - REC_LIMIT
           : box.scrollHeight - box.clientHeight;
       }
@@ -986,7 +1034,7 @@ window.SB_DOC = {
 
       // 폭 가드는 단계 축소가 끝난 폰트에서 잰다 (video-template.html 의 실행 순서)
       var statPx = 0, statOvf = 0;
-      var stat = !isRec && s.type === "cover" ? fr.querySelector(".f-stat") : null;
+      var stat = !recOf(s) && s.type === "cover" ? fr.querySelector(".f-stat") : null;
       if (stat) {
         var size = parseFloat(getComputedStyle(stat).fontSize), guard = 0;
         while (stat.getBoundingClientRect().width > 640 && size > 80 && guard < 40) {
@@ -1011,7 +1059,7 @@ window.SB_DOC = {
     var rate = s.duration ? syl / s.duration : 0;
     var maxSent = narr.reduce(function (a, n) { return Math.max(a, netLen(n.tts)); }, 0);
     var chips = [badge("", (s.duration || "?") + "s")];
-    if (isRec) {
+    if (recOf(s)) {
       if (syl) {
         chips.push(badge("", syl + "자"));
         var rOk = rate >= 4.5 && rate <= 6.5;
@@ -1028,6 +1076,21 @@ window.SB_DOC = {
         flag("warn", "샷 " + no, "길이 " + s.duration + "s — 촬영 모드 씬 목표 8초 이상");
       }
       if (maxSent > 40) { chips.push(badge("warn", "문장 " + maxSent + "자")); flag("warn", "샷 " + no, "가장 긴 문장 " + maxSent + "자 — 촬영 대본 권장 40자"); }
+
+      /* 촬영 씬 계약 (scenes-schema §촬영 씬) — 세 칸이 다 있어야 사용자가 무엇을
+         찍을지 알고, produce 가 그 파일을 찾는다. 승인 뒤에 비어 있는 걸 알면
+         촬영을 다시 시작해야 한다. */
+      var vz = s.visual || {};
+      if (!vz.clip) {
+        chips.push(badge("bad", "clip 없음"));
+        flag("bad", "샷 " + no, "촬영 씬인데 visual.clip(파일명)이 없다 — 사용자가 어디에 저장할지 모른다");
+      } else if (!/^footage\/s\d+-[a-z0-9-]+\.(mp4|mov|m4v)$/.test(vz.clip)) {
+        chips.push(badge("warn", "clip 규약"));
+        flag("warn", "샷 " + no, "clip \"" + vz.clip + "\" — 규약은 footage/s<씬번호>-<slug>.mp4 다");
+      }
+      if (!vz.shot) flag("bad", "샷 " + no, "촬영 씬인데 visual.shot(화면에 보이는 것)이 없다");
+      if (!vz.action) flag("bad", "샷 " + no, "촬영 씬인데 visual.action(사용자가 하는 동작)이 없다");
+      chips.push(badge("", narr.length ? "나레이션 덮기" : "육성"));
     } else if (s.type !== "broll" && s.type !== "outro") {
       var cap = s.type === "cover" ? FMT.capCover : FMT.capBody;
       if (narr.length) {
@@ -1226,7 +1289,7 @@ window.SB_DOC = {
     var b = beatOf(o.s);
     if (b && firstBeat[b] == null) firstBeat[b] = { pos: pos, i: o.i };
   });
-  var processy = !!(firstBeat.result || firstBeat.body || isRec);
+  var processy = !!(firstBeat.result || firstBeat.body || hasRec);
   var orderOk = true;
   if (order.length && order[0].s.type !== "cover") {
     flag("warn", "재생 순서", "첫 샷이 커버가 아니다 — 한눈 결과와 훅이 맨 앞에 와야 한다");
@@ -1251,7 +1314,8 @@ window.SB_DOC = {
   }
 
   h += '<div class="badges">' +
-       badge("mode", isRec ? "촬영 모드" : isLine ? "생성 모드 · 대사별 삽화" : "생성 모드") +
+       badge("mode", allRec ? "촬영 모드" : hasRec ? "섞어 찍기 · 촬영 " + recCount + "씬"
+             : isLine ? "생성 모드 · 대사별 삽화" : "생성 모드") +
        badge((DOC.status || "draft") === "draft" ? "" : "ok", DOC.status || "draft") +
        (DOC.created ? badge("", DOC.created) : "") +
        badge(lenCls, "본편 " + total + "s") +
@@ -1403,7 +1467,7 @@ window.SB_DOC = {
         // scenes.js 의 visual.video(명시 구분자)가 정본이고, 없으면 구조로 추론한다.
         var seg = st.seg >= 0 && narr[st.seg] ? narr[st.seg] : null;
         var vt =
-          isRec ? ["녹화 화면", ""] :
+          recOf(s) ? ["녹화 화면", ""] :
           s.type === "outro" ? ["공용 아웃트로 mp4", "gen"] :
           (s.type === "quote" && vis.clip) ? ["발화 클립 영상 · veo", "gen"] :
           vis.video ? ["이미지→영상 · veo", "gen"] :
@@ -1415,13 +1479,16 @@ window.SB_DOC = {
 
         // 화면 — 이 컷에 뜨는 텍스트. 프레임 안 글자는 작아서 여기서 읽는다.
         var sc = "";
-        if (isRec) {
+        if (recOf(s)) {
           if (s.kicker) sc += capline(null, null, esc(s.kicker));
           if (s.title) sc += capline(esc(strip(s.title)));
           if (s.type === "cover" && s.stat) sc += capline(esc(s.stat), esc(s.statLabel || ""));
           sc += (s.bullets || []).map(function (b, m) {
             return capline(esc(b.t), b.d ? esc(b.d) : null, null, m + 1); }).join("");
-          if ((s.bullets || []).length) sc += capline(null, null, "캡션은 화면에 렌더되지 않는다 — 대사·자막이 말한다");
+          // 세로 촬영 오버레이는 kicker+title 만 그린다(screencast-overlay). 가로는
+          // 로어서드에 캡션까지 뜨므로 그 안내를 붙이면 거짓말이 된다.
+          if ((s.bullets || []).length && !WIDE)
+            sc += capline(null, null, "캡션은 화면에 렌더되지 않는다 — 대사·자막이 말한다");
           if (s.footnote) sc += capline(null, null, esc(s.footnote));
         } else if (s.type === "cover") {
           if (k === 0) {
@@ -1474,7 +1541,7 @@ window.SB_DOC = {
       }).join("") + "</div>";
 
       // 같은 안내를 씬마다 되풀이하지 않는다 — 처음 한 번만.
-      if (!isRec && s.type === "points" && narr.length && narr.length !== states.length && !carryNoted) {
+      if (!recOf(s) && s.type === "points" && narr.length && narr.length !== states.length && !carryNoted) {
         carryNoted = true;
         h += '<div class="note">화면은 ' + states.length + "번 바뀌는데 대사는 " + narr.length +
              "문장이다 — 한 문장이 캡션 둘을 안는 셈이고, 어느 문장인지는 제작 단계에서 정한다.</div>";
@@ -1482,8 +1549,13 @@ window.SB_DOC = {
 
       /* 컷 밖 정보 — 배경·모션·프롬프트·오디오 지시 */
       var meta = "";
-      if (isRec) {
+      if (recOf(s)) {
+        // 촬영 씬은 사용자가 이 문서를 보고 찍는다 — 무엇이 보이고(shot), 무엇을 하고
+        // (action), 어느 파일로 저장하는지(clip)가 다 있어야 촬영이 성립한다.
         meta += '<div class="shot">' + mark(vis.shot || "—") + "</div>";
+        if (vis.action) meta += '<div class="row"><b>행동</b><div class="v">' + mark(vis.action) + "</div></div>";
+        meta += '<div class="row"><b>저장</b><div class="v"><code>' + esc(vis.clip || "— 파일명 미정") +
+                "</code>" + (narr.length ? " · 나레이션 덮기(TTS)" : " · 육성(클립 소리를 쓴다)") + "</div></div>";
       } else {
         var lineImgs = narr.filter(function (n) { return n.img; });
         if (lineImgs.length) {
@@ -1549,7 +1621,10 @@ window.SB_DOC = {
     h += "<tr><th>커버 title</th><td>" + mark(cover.title) + " — 표시 " + dispLen(cover.title) + "/16자</td></tr>";
     if (cover.statLabel) h += "<tr><th>statLabel</th><td>" + esc(cover.statLabel) + " — 표시 " + dispLen(cover.statLabel) + "/18자</td></tr>";
   }
-  h += "<tr><th>말속도</th><td>" + (isRec ? "촬영 5~6자/초 (4.5~6.5 허용) · 씬 8~20s" : "TTS 4.5자/초 역산 · 씬 13s 상한") + "</td></tr>";
+  h += "<tr><th>말속도</th><td>" +
+     (allRec ? "촬영 5~6자/초 (4.5~6.5 허용) · 씬 8~20s"
+      : hasRec ? "촬영 씬 5~6자/초 · 생성 씬 TTS 4.5자/초 역산 (씬마다 따로 잰다)"
+      : "TTS 4.5자/초 역산 · 씬 " + FMT.sceneMax + "s 상한") + "</td></tr>";
   h += "<tr><th>THEME</th><td>" + ["accent", "accent2", "ink"].map(function (k) {
     return '<span class="swatch" style="background:' + esc(THEME[k]) + '"></span><code>' + esc(THEME[k]) + "</code>"; }).join(" &nbsp; ") +
     " &nbsp; brand <code>" + esc(THEME.brand) + "</code></td></tr>";

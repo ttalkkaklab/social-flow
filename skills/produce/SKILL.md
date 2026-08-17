@@ -131,12 +131,28 @@ data/<채널>/episodes/<주제>/
 - `storyboard/storyboard.md` frontmatter `status: approved` 확인 — 아니면 중단하고
   `/social-flow:storyboard` 승인부터 안내.
 - `data/<채널>/profile.md` 로드 (보이스·테마·플랫폼·아웃트로).
-- **소스 판별**: `recording/alignment.json` 이 있으면 **촬영 편집 경로**다 —
-  §2~7 대신 `references/screencast-pipeline.md` §편집 절차를 따른다 (오버레이
-  캡처 → edit.json → build-screencast.sh — TTS·생성 배경·reveal 없음, 음성은
-  사용자 육성). 산출물 이름(reel.mp4·reel-sub.mp4·subs.srt·cover.jpg·build-report.txt)이 같으므로
-  §8~10(폰 검수·플랫폼 텍스트·품질 게이트)은 그대로 진행한다. 게이트 판정표는
-  screencast-pipeline.md 의 것을 쓴다.
+- **소스 판별**: 세 경로다. `window.FORMAT` 과 씬의 `visual.source` 가 정한다.
+
+  | 조건 | 경로 |
+  |---|---|
+  | `recording/alignment.json` 있음 + 세로 | **촬영 편집** — `references/screencast-pipeline.md` |
+  | 촬영 씬(`visual.source==="recording"`)이 섞여 있음 | **섞어 찍기** — 이 문서 그대로 + §3.5 |
+  | 그 외 | 생성 (§2~7) |
+
+  **촬영 편집 경로**는 §2~7 대신 `references/screencast-pipeline.md` §편집 절차를
+  따른다 (오버레이 캡처 → edit.json → build-screencast.sh — TTS·생성 배경·reveal
+  없음, 음성은 사용자 육성). 산출물 이름(reel.mp4·reel-sub.mp4·subs.srt·cover.jpg·
+  build-report.txt)이 같으므로 §8~10(폰 검수·플랫폼 텍스트·품질 게이트)은 그대로
+  진행한다. 게이트 판정표는 screencast-pipeline.md 의 것을 쓴다.
+
+  **`alignment.json` + 가로는 성립하지 않는다.** `build-screencast.sh` 의 밴드
+  상수(BAND_MAX_H 900·BAND_CY 880·BAND_MIN_Y 460)와 배경 합성이 세로 절대 px 라
+  가로 캔버스로 못 간다. 이 조합을 만나면 **멈추고** 사용자에게 알린다 — 씬마다
+  파일로 나눠 저장하면 섞어 찍기 경로로 갈 수 있다. 그냥 돌리면 12분치를 다 찍은
+  뒤 마지막 캔버스 대조에서 죽는다.
+
+  **섞어 찍기**는 촬영 씬과 생성 씬을 한 타임라인에 붙인다 — 빌더는 생성 회차와
+  같은 `build-reel.sh` 이고, 촬영 씬만 §3.5 의 준비를 더 거친다.
 - 작업 디렉토리 준비: `.work/{cards,broll,motion,pcm,fonts}` 생성, 플랫폼 목록 확정
   (인자 CSV 또는 profile §4 게시 플랫폼).
 - **포맷 확정 — `.work/format.env` 를 쓴다. 건너뛰지 않는다.**
@@ -361,6 +377,48 @@ printf 'music.lyria-realtime\t90\tproduce: BGM 90초 — 단가 미확인\n'    
 빼면 그 편 비용이 조용히 줄어든다. 리포트가 exit 1 을 내는 것이 정상 동작이고, §10 이
 "집계 제외 1건"으로 보고한다.
 
+### 3.5 촬영 클립 수용 (섞어 찍기 회차만)
+
+사용자가 `footage/` 에 저장한 파일을 **한 번 정규화해** `.work/footage/` 로 옮긴다.
+원본을 그대로 빌더에 넣지 않는다 — 폰·화면 녹화는 가변 프레임률(VFR)이 흔하고,
+그대로 붙이면 뒤로 갈수록 입과 소리가 밀린다.
+
+```bash
+mkdir -p .work/footage .work/pcm
+for SRC in footage/*.mp4 footage/*.mov footage/*.m4v; do
+  [ -f "$SRC" ] || continue
+  B=$(basename "${SRC%.*}")
+  # 중간본은 .mov 다 — 무손실 PCM 을 담아야 육성이 2세대 손실을 안 입는데,
+  # PCM 을 mp4 에 넣는 건 ffmpeg 7 대에서야 열렸다(그 전 버전은 먹싱을 거부한다).
+  # mov 는 어느 버전에서나 표준이고 빌더도 .mov 를 그대로 받는다.
+  ffmpeg -y -v error -i "$SRC" \
+    -r 30 -vsync cfr -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p \
+    -c:a pcm_s16le -ar 48000 -ac 1 ".work/footage/$B.mov"
+  # 오디오는 **정규화한 파일에서** 뽑는다 — 그래야 카드 오디오와 빌더가 쓰는
+  # 영상 트랙이 같은 파일에서 나온다
+  ffmpeg -y -v error -i ".work/footage/$B.mov" -vn -ar 48000 -ac 1 ".work/pcm/$B.wav"
+done
+```
+
+- **먼저 확인한다** — scenes.js 촬영 씬의 `visual.clip` 이 전부 실재하는가.
+  하나라도 없으면 **거기서 멈추고** 어느 파일이 비었는지 사용자에게 알린다.
+  없는 채로 진행하면 그 씬만 빠진 영상이 나오고 그걸 나중에 발견한다.
+- **방향 검사**: 가로 회차에 세로 클립이 들어오면 빌더가 `STRICT_DIM=1` 로 첫
+  ffmpeg 전에 멈춘다. 재촬영이므로 사용자에게 바로 알린다.
+- **길이 검사**: 나레이션을 덮는 씬은 클립이 `나레이션 + PRE + POST` 보다 길어야
+  한다. 짧으면 마지막에 화면이 얼어붙는다 — 그 씬 대본을 줄이거나 클립을 다시 받는다.
+- 오버레이는 씬마다 **알파 캡처 한 장**이다(로어서드). reveal 열거는 육성 씬에
+  안 쓴다 — 화면이 바뀌는 건 녹화 쪽이지 우리 글자가 아니다.
+
+  ```bash
+  FORMAT_ENV="$PWD/.work/format.env" \
+    $REF/capture-frames.sh "file://$PWD/.work/frame.html?i=<idx>&alpha=1&scrim=1&dim=1" .work/cards/a<idx>.png 1
+  ```
+- **자막은 전사에서 만든다.** 클립 오디오를 `ingest` 의 `transcribe.sh` 로 전사하고
+  교정한 뒤, 카드 시작 기준 초로 `.work/cards/s<idx>subs.tsv`(`start<TAB>end<TAB>문장`)
+  를 쓴다. 이 파일을 §6 의 `cards.tsv` 5열 `subs=` 로 넘긴다 — 육성 씬은 발화 경계
+  검출을 안 거치므로 자막 시각이 전사에서만 나온다.
+
 ### 4. reveal 상태 캡처
 
 씬마다 `capture-reveals.sh` 로 **상태 수를 스스로 도출**시킨다 (몇 개 찍을지
@@ -488,10 +546,36 @@ printf 'tts.gemini-flash\t1.840\tproduce: 나레이션 5씬 1840자\n' >> .work/
 `.work/cards.tsv`·`segs.tsv` 를 scenes.js 에서 변환한다 (탭 구분, 아웃트로 제외):
 
 ```
-cards.tsv : idx <TAB> 오디오절대경로 <TAB> 목표자/초 <TAB> zoom(in|out|auto)
+cards.tsv : idx <TAB> 오디오절대경로 <TAB> 목표자/초 <TAB> zoom(in|out|auto|none) [<TAB> 옵션]
 segs.tsv  : idx <TAB> seg(0부터) <TAB> 비주얼 <TAB> tts문장 <TAB> sub문장
 sfx.tsv   : idx <TAB> seg <TAB> 오디오파일 <TAB> bgm(on|off)      (선택)
+chapters.tsv : 챕터첫카드idx <TAB> 챕터 제목                       (롱폼)
 ```
+
+**cards.tsv 5열(옵션)은 `k=v,k=v` 다.** 없어도 되고, 기존 4열 파일은 그대로 돈다.
+
+| 옵션 | 무엇 | 언제 |
+|---|---|---|
+| `sync=1` | 프리롤·무음 트림·속도 보정을 전부 끈다. 정규화만 한다 | **촬영 씬의 육성** — 셋 중 하나만 걸려도 입과 소리가 어긋난다 |
+| `subs=<tsv>` | 그 카드 자막을 파일로 준다(`start<TAB>end<TAB>문장`, 카드 시작 기준 초) | 전사에서 만든 자막 — 발화 경계 검출을 안 거치는 씬 |
+| `pan=<방향>[:배율]` | 켄번즈를 줌 대신 팬으로 (`l2r`·`r2l`·`u2d`·`d2u`) | 가로 정지 배경. 이동폭 = 폭 × (배율−1) |
+
+`zoom=none` 은 켄번즈 자체를 끈다 — **촬영 클립은 이미 움직이므로** 그 위에 줌을
+또 얹으면 화면이 흔들린다. 촬영 씬 카드는 대개 `none` + `sync=1` 조합이다.
+
+```
+# 촬영 씬(육성) 한 줄 예
+3	pcm/s3-run-cli.wav	0	none	sync=1,subs=cards/s3subs.tsv
+```
+
+`sync` 카드의 오디오는 **그 클립에서 뽑은 wav** 를 준다(§3.5). 카드 길이가 곧 그
+오디오 길이라, 원본 mov 에서 뽑은 것과 정규화본에서 뽑은 것이 다르면 그 차이만큼
+화면이 밀린다.
+
+**촬영 씬의 세그 비주얼**은 `@.work/footage/<이름>.mov::.work/cards/a<idx>.png` 다 —
+클립을 첫 프레임부터 한 번만 틀고(`@`) 그 위에 로어서드 알파 PNG 를 얹는다. 육성
+씬은 세그가 하나이므로 `@` 가 맞고, 나레이션을 덮는 씬이 세그 여럿이면 `@` 를 떼고
+같은 경로를 이어 적는다(빌더가 `-ss` 로 재생을 이어 붙인다).
 
 비주얼 열: 상태 PNG / `영상.mp4::오버레이.png`(커버·발화·모션 배경) / `A|B`(하위 reveal —
 불릿을 묶어 읽은 문장도 화면 등장은 하나씩). **모션 배경 씬**의 세그 비주얼은
@@ -517,14 +601,31 @@ b-roll 처럼 **어디서 잘라 붙여도 되는 그림**을 전제로 한 동�
 덕킹의 키는 목소리만이라 효과음이 BGM 을 누르지 않는다. 볼륨은 `SFX_VOL`(기본 0.85),
 BGM 차단 램프는 `BGM_GATE_R`(기본 0.30s) 로 조절한다.
 
-아웃트로는 catalog 에서 고른 파일을 `.work/outro.mp4` 로 복사만 한다.
-플랫폼을 알면 그 id(`youtube`·`instagram`), 모르면 `default`.
+**챕터(롱폼)** — scenes.js 의 `chapter` 문자열을 그 샷의 카드 idx 에 붙여 적는다.
+타임스탬프는 적지 않는다. 빌더가 실측 시각에서 만들고 유튜브 3요건(첫 챕터 0:00 ·
+3개 이상 · 간격 10초 이상)을 검사해 어기면 **거기서 멈춘다**.
+
+```bash
+# scenes.js 배열 인덱스 = 카드 idx (0부터). format-resolve 와 같은 vm 방식으로 읽는다
+node -e '
+const fs=require("fs"), vm=require("vm");
+const sb={window:{},console:{log(){},warn(){},error(){}}}; sb.globalThis=sb;
+vm.runInNewContext(fs.readFileSync("storyboard/scenes.js","utf8"), sb);
+(sb.window.SCENES||[]).forEach((s,i)=>{ if(s.chapter) console.log(i+"\t"+s.chapter); });
+' > .work/chapters.tsv
+```
+
+아웃트로는 catalog 에서 고른 파일을 **`format.env` 의 `OUTRO_ASSET` 이름 그대로**
+복사한다 — 가로는 `outro-16x9.mp4` 라, `outro.mp4` 로 두면 빌더가 못 찾아 아웃트로
+없이 붙는다(그게 리포트 한 줄로만 지나간다). 플랫폼을 알면 그 id(`youtube`·
+`instagram`), 모르면 `default`.
 
 ```bash
 ASSET=${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py
+. .work/format.env                      # OUTRO_ASSET 을 읽는다
 OUTRO=$(python3 "$ASSET" data/<채널> outro "${PLATFORM:-default}") \
   || OUTRO=$(python3 "$ASSET" data/<채널> outro default)
-cp "$OUTRO" .work/outro.mp4
+cp "$OUTRO" ".work/${OUTRO_ASSET}"
 # 없으면 build-outro.sh 로 최초 1회 생성 → assets/outro/default.mp4 저장
 #   python3 "$ASSET" --ensure data/<채널> outro default outro/default.mp4
 if [ -d data/<채널>/assets/fonts ]; then

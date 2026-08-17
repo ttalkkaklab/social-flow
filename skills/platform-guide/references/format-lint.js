@@ -202,6 +202,77 @@ for (const [key, f] of Object.entries(FORMATS)) {
   rule('chapterMax', rec ? rec.targetMax : 'null');
 }
 
+// ── video-template 가로 조판 미러 (&format=wide) ───────────────────────
+//
+// 세로는 `:root` 토큰이 프리셋과 대조되지만(위 RULES), 가로는 CSS 블록 하나가
+// 캔버스·존·글자 열둘을 통째로 들고 있다. 그 사본이 프리셋과 어긋나면 **가로 회차만**
+// 조용히 틀린 자리에 글자를 그린다 — 세로는 멀쩡하니 증상이 안 보인다.
+//
+// 글자는 프리셋이 비율(절대px / 1920)로 갖고 있어 여기서 px 로 되돌린다.
+// 반올림을 쓰는 이유는 비율이 소수 넷째에서 끊겨 있어서다 — 0.0771 × 1920 = 148.032.
+const VT = 'skills/produce/references/video-template.html';
+const WIDE = FORMATS['youtube-long-16x9'];
+
+if (WIDE) {
+  // 캔버스·존 — `:root.wide{…}` 블록 안에서만 찾는다(기본 :root 토큰과 안 섞이게)
+  const rootWide = (token, want) =>
+    RULES.push({
+      name: `video-template wide ${token}`,
+      file: VT,
+      re: new RegExp(':root\\.wide\\{[^}]*' + token + ':(\\d+)px'),
+      want: String(want),
+    });
+  rootWide('--w', WIDE.canvas.w);
+  rootWide('--h', WIDE.canvas.h);
+  rootWide('--zone-x', WIDE.zone.x);
+  rootWide('--zone-top', WIDE.zone.top);
+  rootWide('--zone-bottom', WIDE.zone.bottom);
+
+  // 글자 — 줄머리 앵커(`\n` + 들여쓰기)로 `.tight2 body.wide .stat{…}` 을 피한다.
+  // 앵커가 없으면 축소 계단이 기준값 행세를 하고 그대로 통과한다.
+  const wideFont = (sel, ratioKey) =>
+    RULES.push({
+      name: `video-template wide ${ratioKey}`,
+      file: VT,
+      re: new RegExp('\\n\\s*body\\.wide ' + sel + '\\{font-size:(\\d+)px'),
+      want: String(Math.round(WIDE.fonts[ratioKey] * WIDE.canvas.w)),
+    });
+  wideFont('\\.kicker', 'kicker');
+  wideFont('\\.cover-title', 'coverTitle');
+  wideFont('\\.stat', 'stat');
+  wideFont('\\.stat-label', 'statLabel');
+  wideFont('\\.points-title', 'title');
+  wideFont('\\.cap \\.t', 'capTitle');
+  wideFont('\\.cap \\.d', 'capDesc');
+  wideFont('\\.footnote', 'foot');
+
+  // 콘티 템플릿의 가로 프레임 — 여기 비율의 기준변은 **프레임 폭**이라 프리셋 fonts 값
+  // 그대로다(둘 다 절대px / 1920). 존은 퍼센트라 축마다 기준변이 다르다.
+  // 소수 넷째로 맞춰 대조한다 — CSS 의 `.0130` 과 JS 의 0.013 은 같은 값이고,
+  // 문자 그대로 비교하면 그 표기 차이가 어긋남으로 잡힌다.
+  const sbWide = (sel, want) =>
+    RULES.push({
+      name: `콘티 wide ${sel}`,
+      file: SB_TPL,
+      re: new RegExp('\\.fr\\.wide ' + sel + '[^}]*?(?:font-size: )?calc\\(var\\(--fw\\) \\* ([\\d.]+)\\)'),
+      want: fix(want, 4),
+    });
+  sbWide('\\.f-title', WIDE.fonts.coverTitle);
+  sbWide('\\.f-stat', WIDE.fonts.stat);
+  sbWide('\\.f-statlabel', WIDE.fonts.statLabel);
+  sbWide('\\.f-ptitle', WIDE.fonts.title);
+  sbWide('\\.f-cap \\.t', WIDE.fonts.capTitle);
+  sbWide('\\.f-cap \\.d', WIDE.fonts.capDesc);
+  sbWide('\\.f-foot', WIDE.fonts.foot);
+
+  const sbZone = (name, re, want) => RULES.push({ name: `콘티 wide ${name}`, file: SB_TPL, re, want });
+  sbZone('존 left %', /\.fr\.wide \.fzone \{ left: ([\d.]+)%/, pct(WIDE.zone.x, WIDE.canvas.w));
+  sbZone('존 top %', /\.fr\.wide \.fzone \{[^}]*top: ([\d.]+)%/, pct(WIDE.zone.top, WIDE.canvas.h));
+  sbZone('존 bottom %', /\.fr\.wide \.fzone \{[^}]*bottom: ([\d.]+)%/, pct(WIDE.zone.bottom, WIDE.canvas.h));
+  // 프로브 캔버스 폭 — 글자 비율의 기준변이라 여기가 어긋나면 넘침 실측이 통째로 틀린다
+  sbZone('프로브 --fw', /probe\.style\.setProperty\("--fw", "(\d+)px"\)/, String(WIDE.canvas.w));
+}
+
 /**
  * 두 빌더의 ASS 헤더·Style 상호 대조. 프리셋과 별개로 **서로** 같아야 한다 —
  * 한쪽만 고치면 촬영본과 생성본의 자막이 다른 폰트·위치로 나온다.

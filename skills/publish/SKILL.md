@@ -45,7 +45,13 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp
    이었다. 도달 분배가 본문 링크에서 눌리는 실측이라 되돌린다.)
    FB 는 종전대로 본문 링크 금지 → `facebook_comment` 첫 댓글이며
    **그 댓글까지 게시돼야 FB 게시가 완료된 것이다.**
-9. **YouTube 는 쇼츠 세로 첫 화면까지 지정해야 게시가 끝난다** — `thumbnailFilePath`
+10. **롱폼은 두 단으로 게시한다** — 8~15분 영상을 `privacyStatus: "private"` 으로
+   올려 watch 페이지에서 **인코딩·자막·챕터를 사람이 확인한 뒤** `youtube_update` 로
+   public 으로 돌린다. 쇼트폼처럼 바로 공개하면 실패를 시청자가 먼저 본다 —
+   12분짜리는 처리에 몇 분이 걸리고 그 사이 저화질본이 노출된다. 절차는 §3-2.
+   **`#Shorts` 를 붙이지 않는다** — 가로 롱폼에 붙으면 쇼츠 표면으로 잘못 분류된다.
+   규칙 9(세로 첫 화면)는 롱폼에 적용되지 않는다.
+9. **YouTube 는 쇼츠 세로 첫 화면까지 지정해야 게시가 끝난다** (쇼트폼 한정) — `thumbnailFilePath`
    가 바꾸는 것은 가로 표면뿐이다. 쇼츠 피드·채널 쇼츠 탭이 실제로 보여 주는 세로
    프레임(`oar*`)을 지정하지 않으면 **영상 중간의 임의 프레임이 첫 화면에 걸린다** —
    우리 커버가 아니라 대사 중간의 표정이 노출된다. 절차는 §3-1 과
@@ -62,8 +68,26 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp
 
 ### 0. 사전 점검 (세션당 1회)
 
+- **포맷을 먼저 읽는다** — `scenes.js` 의 `window.FORMAT` 이 게시 경로를 가른다.
+
+  ```bash
+  PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
+  node $PG/format-resolve.js storyboard/scenes.js --json | python3 -c \
+    'import json,sys; f=json.load(sys.stdin); print(f["format"], f["platforms"], f["hashtags"])'
+  ```
+
+  | | 쇼트폼 9:16 | 유튜브 롱폼 16:9 |
+  |---|---|---|
+  | 나가는 곳 | 네 플랫폼 | **유튜브 하나** |
+  | 필요한 파일 | `video.mp4` · `video-sub.mp4` · `subs.srt` | `video.mp4` · `subs.srt` · `chapters.txt` |
+  | 해시태그 | `#Shorts` 포함 3~5개 | **`#Shorts` 금지** — 쇼츠로 잘못 분류된다 |
+  | 첫 공개 | 바로 public | **private 로 올려 확인 후 public** (§3-2) |
+  | 세로 표면 | `oar*` 지정 필수(규칙 9) | 해당 없음 — 가로는 썸네일이 곧 표면이다 |
+
+  롱폼에 번인본(`video-sub.mp4`)이 없는 것은 결함이 아니다 — `BURN=0` 이 그 포맷의
+  계약이고, 유튜브가 `subs.srt` 를 받아 켜고 끈다.
 - `output/` 산출물 존재 + `storyboard.md` `status: produced` 확인 — 아니면
-  `/social-flow:produce` 부터 안내. 영상은 **세 파일이 다 있어야 한다** —
+  `/social-flow:produce` 부터 안내. **쇼트폼**은 세 파일이 다 있어야 한다 —
   `output/video/video.mp4`(클린) · `video-sub.mp4`(번인) · `subs.srt`. 번인본이나
   자막 파일이 없으면 옛 빌드다. `SUB`/`BURN` 을 끄고 만든 게 아닌지 확인하고,
   아니면 `/social-flow:produce` 로 되돌려 다시 빌드한다(자막 없이 게시하지 않는다).
@@ -193,6 +217,30 @@ permalink 가 들어간다"고 적어 두면, §3 에서 그 자리만 채우는
    `facebook_comment` **첫 댓글(원문/관련 링크) 즉시 게시**. `captionWarning` 이 오면
    게시는 유효하다 — FB 는 영상을 비동기로 처리하므로 처리 중 상태에 걸렸을 수 있다.
    **재게시하지 말고** 잠시 뒤 자막만 다시 올린다(응답의 postId 가 곧 video_id 다).
+
+#### 3-2. 롱폼(`youtube-long-16x9`) — private 로 올리고, 확인한 뒤 공개
+
+가로 롱폼은 위 1번을 이렇게 바꿔 부른다. 나머지 플랫폼은 아예 안 간다
+(프리셋 `platforms: ["youtube"]`).
+
+1. `youtube_publish` 를 **`privacyStatus: "private"`** 로 호출한다.
+   `videoFilePath`=`video.mp4`(클린) · `thumbnailFilePath`=`cover.jpg` ·
+   `captionFilePath`=`subs.srt`. `caption`(설명란)에는 **챕터 타임스탬프**를 싣는다 —
+   `output/video/chapters.txt` 가 빌더 실측 시각으로 만든 그 목록이고, 첫 줄이
+   `00:00` 이며 3개 이상이다. 해시태그는 붙이더라도 **`#Shorts` 는 절대 안 넣는다.**
+2. `https://www.youtube.com/watch?v=<videoId>` 를 열어 **네 가지를 눈으로 본다** —
+   ① 화질이 최종 해상도까지 올라왔는가(처리 중이면 기다린다) ② 자막 트랙이 켜지는가
+   ③ 설명란 챕터가 재생바에 구간으로 그려지는가 ④ 썸네일이 우리 커버인가.
+3. 다 통과하면 `youtube_update` 로 `privacyStatus: "public"` 으로 돌린다.
+   **처음 쓰는 영상에는 `dryRun: true` 를 먼저** 불러 `wouldSend` 를 확인한다 —
+   이 툴은 부분 갱신이 아니라 덮어쓰기라, 안 준 필드를 지금 값으로 다시 싣는다.
+4. 어느 하나라도 실패하면 **비공개인 채로** 사용자에게 알린다. 재업로드하지 않는다 —
+   자막·설명란·썸네일은 게시 후에도 고칠 수 있고, 영상만 다시 올리면 조회수가 0 부터다.
+
+챕터가 안 그려지는 경우가 있다. 요건(첫 줄 0:00 · 3개 이상 · 간격 10초 이상)을
+어기면 우리 목록이 무시되고 자동 챕터가 대신 붙는다 — 빌더가 그 셋을 먼저 검사하므로
+`chapters.txt` 가 있으면 통과한 것이고, 그래도 안 뜨면 설명란에 옮겨 붙일 때 줄이
+깨졌는지 본다.
 
 실패 처리: 에러를 그대로 보고하고 **같은 호출을 맹목 재시도하지 않는다**(게시
 API 비멱등 — 타임아웃 후에는 permalink/최근 미디어 조회로 중복 여부 먼저 확인).
