@@ -3,7 +3,7 @@ name: publish
 description: >
   This skill should be used when the user asks to "게시해", "올려줘", "SNS 게시",
   "publish to social", "스레드/인스타/페북/유튜브에 올려", or after production is
-  complete. Takes the finished per-platform content under data/<channel>/<topic>/output/
+  complete. Takes the finished per-platform content under data/<channel>/episodes/<topic>/output/
   through account checks, public media hosting, a mandatory HITL approval gate, and
   publishes via the social-flow MCP platform tools (threads/instagram/facebook/
   youtube_publish — immediate public post), then records permalinks in publish-log.md.
@@ -215,7 +215,7 @@ printf '%s\n' "$답글문안" | \
 게시한다.** 미달이면 교정 지시대로 빼기만 해서 고치고 최대 3라운드, 그래도
 미달이면 보내지 않고 사유를 publish-log 에 적는다.
 
-- `data/<채널>/<주제>/output/publish-log.md` 에 기록: 일시·플랫폼·게시 id·
+- `data/<채널>/episodes/<주제>/output/publish-log.md` 에 기록: 일시·플랫폼·게시 id·
   permalink·캡션 요약·승인자 결정 표.
 - `storyboard.md` `status: published` 갱신.
 - 임시 터널을 썼으면 §1 철거 검증 후, 플랫폼·permalink 표로 최종 보고한다.

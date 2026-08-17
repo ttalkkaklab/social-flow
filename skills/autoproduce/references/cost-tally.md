@@ -10,8 +10,8 @@ $0.22 다** — 그리고 그 장은 스토리보드 단계에서, 대개 영상
 집계한다.
 
 ```
-data/<채널>/<주제>/.work/cost-tally.tsv     ← 원장 (storyboard·produce 공용)
-data/<채널>/<주제>/output/video/cost-report.txt  ← 집계 결과 (produce §10 이 만든다)
+data/<채널>/episodes/<주제>/.work/cost-tally.tsv     ← 원장 (storyboard·produce 공용)
+data/<채널>/episodes/<주제>/output/video/cost-report.txt  ← 집계 결과 (produce §10 이 만든다)
 ```
 
 `.work/` 는 gitignore 대상이지만 스킬 어디에도 그 디렉토리를 지우는 절차가 없다.

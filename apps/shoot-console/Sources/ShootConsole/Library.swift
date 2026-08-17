@@ -3,7 +3,7 @@ import Observation
 
 // 대본 폴더와 저장 폴더, 그리고 그 안을 훑어 만든 목록.
 //
-// 대본은 data/<채널>/<주제>/storyboard/script.md 에 있고 촬영마다 새 주제가
+// 대본은 data/<채널>/episodes/<주제>/storyboard/script.md 에 있고 촬영마다 새 주제가
 // 생긴다. 매번 ⌘O 로 다섯 단계를 파고드는 대신 뿌리 폴더 하나만 잡아두면
 // 목록에서 고른다. 저장 폴더도 같은 이유다 — 촬영본이 어디 쌓이는지 앱이
 // 알아야 찍고 나서 경로를 찾아 헤매지 않는다.
@@ -162,14 +162,17 @@ final class Library {
     private nonisolated static func entry(for url: URL, root: URL) -> ScriptEntry {
         let meta = preview(url)
 
-        // <채널>/<주제>/storyboard/script.md 에서 채널·주제를 뽑는다. 뿌리를
-        // 채널 폴더나 주제 폴더에 바로 잡아도 무너지지 않게 뒤에서부터 깎는다.
+        // <채널>/episodes/<주제>/storyboard/script.md 에서 채널·주제를 뽑는다.
+        // 뿌리를 채널 폴더나 주제 폴더에 바로 잡아도 무너지지 않게 뒤에서부터 깎는다.
         var comps = url.deletingLastPathComponent().pathComponents
         let rootComps = root.pathComponents
         if comps.count >= rootComps.count, Array(comps.prefix(rootComps.count)) == rootComps {
             comps.removeFirst(rootComps.count)
         }
         if comps.last == "storyboard" { comps.removeLast() }
+        if comps.count >= 2, comps[comps.count - 2] == "episodes" {
+            comps.remove(at: comps.count - 2)
+        }
 
         let topic = comps.last ?? meta.topic ?? root.lastPathComponent
         let channel = comps.count >= 2 ? comps[comps.count - 2] : nil

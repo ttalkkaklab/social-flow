@@ -23,6 +23,12 @@ export const config = {
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   /** BytePlus ModelArk API 키 (seedance_* 영상 생성 툴 필수) — https://ai.byteplus.com/ark/region:ap-southeast-1/apikey */
   arkApiKey: process.env.ARK_API_KEY || '',
+  /**
+   * YouTube Data API 키 (youtube_topic_scout 공개 조회 우선 경로).
+   * OAuth 와 달리 내 채널 쿼터를 쓰지 않는다. 없으면 채널 OAuth(youtube.readonly) 로 폴백.
+   * https://console.cloud.google.com/apis/credentials
+   */
+  youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
   requestTimeoutMs: 15_000,
 };
 

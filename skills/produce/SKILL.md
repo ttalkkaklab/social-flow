@@ -3,10 +3,10 @@ name: produce
 description: >
   This skill should be used when the user asks to "영상 만들어", "콘텐츠 제작",
   "produce the video", "플랫폼별 콘텐츠 만들어", or after a storyboard is approved.
-  Converts the approved scenes.js under data/<channel>/<topic>/storyboard/ into a
+  Converts the approved scenes.js under data/<channel>/episodes/<topic>/storyboard/ into a
   narrated 9:16 video (1080x1920/30fps — generated backgrounds, TTS narration, BGM
   with ducking, kinetic subtitles, brand outro) plus per-platform text (Threads,
-  Instagram, Facebook, YouTube) under data/<channel>/<topic>/output/, verified on a
+  Instagram, Facebook, YouTube) under data/<channel>/episodes/<topic>/output/, verified on a
   phone viewport before the publish step. When recording/alignment.json exists
   (storyboard-first shooting flow), it instead edits the user's screen recording
   into the 9:16 video (cut per scene, focus crop, title overlays, burned subtitles,
@@ -15,14 +15,14 @@ argument-hint: "<채널> <주제> [플랫폼CSV|auto]"
 allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
 ---
 
-# 플랫폼별 콘텐츠 제작 — data/[채널]/[주제]/output/
+# 플랫폼별 콘텐츠 제작 — data/[채널]/episodes/[주제]/output/
 
 승인된 스토리보드(`storyboard/scenes.js`)를 9:16 나레이션 영상과 플랫폼별 텍스트로
 변환한다. **scenes.js 가 유일한 데이터 원천** — 영상 화면·나레이션·자막·캡션이
 전부 여기서 파생된다.
 
 ```
-data/<채널>/<주제>/
+data/<채널>/episodes/<주제>/
 ├── storyboard/          # 입력 (approved 상태여야 함)
 ├── .work/               # 중간 산출물 (gitignore — cards/ broll/ pcm/ manifest)
 └── output/
@@ -139,21 +139,6 @@ data/<채널>/<주제>/
   screencast-pipeline.md 의 것을 쓴다.
 - 작업 디렉토리 준비: `.work/{cards,broll,motion,pcm,fonts}` 생성, 플랫폼 목록 확정
   (인자 CSV 또는 profile §4 게시 플랫폼).
-- **포맷 확정 — `.work/format.env` 를 쓴다. 건너뛰지 않는다.**
-
-  ```bash
-  PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
-  node $PG/format-resolve.js storyboard/scenes.js --sh > .work/format.env
-  ```
-
-  `scenes.js` 최상위 `window.FORMAT` 이 포맷 축이고 **없으면 `shorts-9x16`** 이다.
-  기존 회차는 전부 이 키가 없으므로 오늘과 같은 값이 나온다 — 방출값이 빌더 인라인
-  기본값과 문자 동일하다는 것이 단위 테스트로 고정돼 있다(`format-resolve.test.mjs`).
-  포맷과 무관하게 항상 쓰는 이유는 하나다. 조건부로 두면 "가로일 때만 쓴다"를 누가
-  한 번 빠뜨렸을 때 그 회차가 조용히 세로 기본값으로 빌드된다.
-
-  캡처 호출은 이 파일을 **명령줄 접두**로 받는다(§4). `export` 로는 안 나른다 —
-  Bash 툴이 호출마다 셸을 새로 띄우므로 export 한 변수가 그 호출과 함께 사라진다.
 - **`.work/cost-tally.tsv` 를 지우지 않는다** — storyboard 가 이미지 비용을 적어 둔
   회차 원장이고, §10 이 그 파일 하나로 스토리보드부터 영상까지를 합산한다. 파일이
   없으면 이번 회차부터 새로 적되, `storyboard/images/*.png` 가 있는데 원장이 없으면
@@ -323,9 +308,19 @@ points 정지 배경 등 텍스트 없는 이미지, storyboard §5 가 이 규�
   아바타에도 ①의 얼굴 조항이 그대로 걸린다 — 입 없는 캐릭터면 Veo 를 부르지 않고
   정지 인용 카드로 간다. 참조는 외형만 옮기므로 **아바타의 구도를 그대로 지켜야
   하면 참조가 아니라 `veo_img2video` 첫·끝 프레임**이다.
-- **BGM**: `music_generate`(Lyria, 인스트루멘털) 90초 — "leaves space for a spoken
-  voiceover, no melody in the vocal frequency range". **`.work/bgm.wav`** 로 저장
-  (build-reel.sh 가 이 이름을 찾는다).
+- **BGM**: 채널 공용 침대가 있으면 그걸 쓴다.
+  ```bash
+  ASSET=${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py
+  if BGM=$(python3 "$ASSET" data/<채널> bgm default 2>/dev/null); then
+    cp "$BGM" .work/bgm.wav
+  else
+    # 없을 때만 생성 — 다음 편에도 쓰려면 assets/audio/bgm/default.wav 로
+    # 복사하고 resolve-asset.py --ensure 로 catalog 에 올린다
+    : # music_generate (Lyria, 인스트루멘털) 90초 → .work/bgm.wav
+  fi
+  ```
+  생성 프롬프트: "leaves space for a spoken voiceover, no melody in the vocal
+  frequency range". **`.work/bgm.wav`** 가 빌더가 찾는 이름이다.
 
 **호출마다 `.work/cost-tally.tsv` 에 한 줄 적는다** — storyboard 가 쓰던 원장을 그대로
 이어 쓴다. 규약 정본은 [cost-tally.md](../autoproduce/references/cost-tally.md) 다.
@@ -358,8 +353,7 @@ printf 'music.lyria-realtime\t90\tproduce: BGM 90초 — 단가 미확인\n'    
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
-FORMAT_ENV="$PWD/.work/format.env" \
-  $REF/capture-reveals.sh <idx> "file://$PWD/.work/frame.html?i=<idx>&alpha=1&scrim=1&dim=1" .work/cards/a<idx>r 1
+$REF/capture-reveals.sh <idx> "file://$PWD/.work/frame.html?i=<idx>&alpha=1&scrim=1&dim=1" .work/cards/a<idx>r 1
 ```
 
 | 씬 | URL 파라미터 (reveal= 제외) | 알파 |
@@ -396,9 +390,7 @@ points 의 reveal 전환은 **캡션 교체(스왑)** 다 — 상태 수 = 1(배
 - 대사별 삽화 스왑은 캡처가 푼다 — 빌드 수정은 없다(세그 경계 xfade 가 배경까지
   함께 크로스페이드한다): ① `capture-reveals.sh` 를 1행 삽화 bg 로 돌려 상태 수를
   도출하고(reveals.tsv 기록) ② 상태→대사 매핑에 따라 bg 가 다른 상태만
-  `capture-frames.sh` 로 다시 찍어 교체한다(**`FORMAT_ENV="$PWD/.work/format.env"` 접두를
-  똑같이 붙인다** — 여기만 빠뜨리면 교체된 카드만 세로 창으로 찍혀 한 회차 안에서 크기가
-  어긋난다). 매핑: cover 는 r1←세그①, r2←세그②.
+  `capture-frames.sh` 로 다시 찍어 교체한다. 매핑: cover 는 r1←세그①, r2←세그②.
   points 는 r1(제목)←세그①, 캡션 r k 는 그 캡션을 읽는 세그먼트의 삽화.
 - `dim=1` 로 통일한다(화이트 워시 기본값). 밝기 고민이 없는 모드라 dim=2 는 안 쓴다.
 
@@ -507,10 +499,28 @@ b-roll 처럼 **어디서 잘라 붙여도 되는 그림**을 전제로 한 동�
 덕킹의 키는 목소리만이라 효과음이 BGM 을 누르지 않는다. 볼륨은 `SFX_VOL`(기본 0.85),
 BGM 차단 램프는 `BGM_GATE_R`(기본 0.30s) 로 조절한다.
 
-아웃트로는 profile §6 자산을
-`.work/outro.mp4` 로 복사만 한다(없으면 `build-outro.sh` 로 최초 1회 생성 후
-`data/<채널>/assets/` 에 저장). 자막 폰트를 지정하려면 ttf 를 `.work/fonts/`
-에 넣는다(woff2 불가 — 없으면 fontconfig 폴백으로도 게시 품질은 나온다).
+아웃트로는 catalog 에서 고른 파일을 `.work/outro.mp4` 로 복사만 한다.
+플랫폼을 알면 그 id(`youtube`·`instagram`), 모르면 `default`.
+
+```bash
+ASSET=${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py
+OUTRO=$(python3 "$ASSET" data/<채널> outro "${PLATFORM:-default}") \
+  || OUTRO=$(python3 "$ASSET" data/<채널> outro default)
+cp "$OUTRO" .work/outro.mp4
+# 없으면 build-outro.sh 로 최초 1회 생성 → assets/outro/default.mp4 저장
+#   python3 "$ASSET" --ensure data/<채널> outro default outro/default.mp4
+if [ -d data/<채널>/assets/fonts ]; then
+  mkdir -p .work/fonts
+  cp data/<채널>/assets/fonts/*.[to]tf .work/fonts/ 2>/dev/null || true
+fi
+```
+
+옛 `assets/outro.mp4` 도 resolve 가 찾는다. 자막 폰트는 `assets/fonts/` 의
+ttf 를 `.work/fonts/` 로 복사한다(woff2 불가 — 없으면 fontconfig 폴백으로도
+게시 품질은 나온다).
+
+`sfx.tsv` 세 번째 칸은 파일 경로 또는 catalog id 다. id 만 있으면
+`python3 "$ASSET" data/<채널> sfx <id>` 로 푼다.
 
 ```bash
 $REF/build-reel.sh .work    # → .work/reel.mp4(클린) · reel-sub.mp4(번인) · subs.srt · cover.jpg · build-report.txt
@@ -751,3 +761,4 @@ cat output/video/cost-report.txt
 - **`references/frame-persona-clip.py`** — 발화 클립 프레이밍 통일 + 팔린드롬
 - **`references/reel-qa.html`** — 폰 모드 검수 하네스 (IG/YT UI 목업·crop 재현·세이프존 가이드)
 - **`../autoproduce/references/cost-tally.md`** — 회차 비용 원장 규약 (§3·§5 가 적고 §10 이 집계하는 파일). 단가 정본 `prices.tsv` · 계산기 `cost-report.sh` 가 같은 디렉토리에 있다
+- **`../channel/references/resolve-asset.py`** — 공용 아웃트로·BGM·효과음·캐릭터 시트 조회 (catalog + 기본 경로 + 옛 `assets/outro.mp4`)

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# make-reels 공통 아웃트로 렌더 — 전 릴스에서 재사용하는 브랜드 마무리 영상 (1회 렌더 → assets/outro.mp4 커밋)
+# make-reels 공통 아웃트로 렌더 — 전 릴스에서 재사용하는 브랜드 마무리 영상
+# (1회 렌더 → assets/outro/default.mp4. 옛 assets/outro.mp4 도 resolve 가 찾는다)
 #
 # 사용법: build-outro.sh <workdir>
 #   <workdir>/outro-card.png   : 브랜드 아웃트로 카드 (1080x1920 풀프레임 권장)
@@ -14,14 +15,8 @@ export LC_ALL=en_US.UTF-8
 WORKDIR="${1:?사용법: build-outro.sh <workdir>}"
 cd "$WORKDIR"
 
-# 포맷 프리셋 — build-reel.sh 와 같은 계약. 인라인 기본값 **앞**에서 읽는다.
-[ -f format.env ] && . ./format.env
-
 FPS=${FPS:-30}
 SPF=$((48000 / FPS))
-W=${W:-1080}; H=${H:-1920}          # 캔버스 — 포맷이 정한다
-ZOOM_BASE=${ZOOM_BASE:-1620x2880}   # 켄번즈 소스 해상도
-ZB=${ZOOM_BASE/x/:}                 # ffmpeg scale= 콜론 표기
 CW=${CW:-1024}; CH=${CH:-1280}
 CX=${CX:-28};   CY=${CY:-200}
 PRE=${PRE:-0.50}                 # 크로스페이드로 들어오므로 본편보다 살짝 긴 프리롤
@@ -70,28 +65,13 @@ echo "outro: 발화 ${L}s → 총 ${D}s (${FRAMES}f)"
 # ── 3) 비디오 — 카드가 이미 1080×1920 풀프레임이면 그대로 켄번즈(v4 릴스 네이티브),
 #      아니면 구 4:5 카드로 보고 블러 배경 위에 픽셀 고정 오버레이(v3 호환)
 CDIM=$(ffprobe -v error -select_streams v -show_entries stream=width,height -of csv=p=0:s=x outro-card.png)
-if [ "$CDIM" = "${W}x${H}" ]; then
+if [ "$CDIM" = "1080x1920" ]; then
   ffmpeg -y -v error -loop 1 -framerate "$FPS" -t "$D" -i outro-card.png -filter_complex "
-    [0:v]scale=$ZB:flags=lanczos,
+    [0:v]scale=1620:2880:flags=lanczos,
          zoompan=z='1+0.035*on/$((FRAMES-1))':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':
-         s=${W}x${H}:fps=$FPS,fade=t=in:st=0:d=0.45,format=yuv420p
+         s=1080x1920:fps=$FPS,fade=t=in:st=0:d=0.45,format=yuv420p
   " -frames:v "$FRAMES" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p work/ovid.mp4
 else
-  # [세로 전용] 구 4:5 카드 호환 — 블러 배경 위에 픽셀 고정 오버레이(v3 계열).
-  # 좌표(CW/CH/CX/CY)와 블러 배경(1440x2560)이 전부 1080x1920 캔버스에 맞춰 잡은 절대값이라
-  # 다른 캔버스로 오면 뜻을 잃는다. 지금은 1920x1080 카드를 넣어도 에러 없이 세로 블러 배경
-  # 위에 세로 카드를 얹은 영상이 나온다 — 그 조용한 실패를 실패로 바꾼다.
-  CDW=${CDIM%%x*}; CDH=${CDIM##*x}
-  [ "$W" = 1080 ] && [ "$H" = 1920 ] || {
-    echo "✗ ${W}x${H} 아웃트로는 풀프레임 카드여야 한다 — outro-card.png 가 ${CDIM} 이다"
-    echo "  구 4:5 호환 가지는 1080x1920 캔버스 전용이다. 카드를 ${W}x${H} 로 다시 만들어라."
-    exit 1
-  }
-  [ "$CDW" -lt "$CDH" ] || {
-    echo "✗ outro-card.png 가 가로다(${CDIM}) — 세로 캔버스의 구 4:5 가지는 세로 카드만 받는다"
-    echo "  지금 그대로 두면 세로 블러 배경 위에 가로 카드를 ${CW}x${CH} 로 늘여 얹는다."
-    exit 1
-  }
   ffmpeg -y -v error -loop 1 -framerate "$FPS" -t "$D" -i outro-card.png -filter_complex "
     [0:v]scale=1440:2560:force_original_aspect_ratio=increase:flags=lanczos,crop=1440:2560,
          gblur=sigma=52,eq=brightness=0.10:saturation=0.85[bgsrc];

@@ -7,7 +7,7 @@ description: >
   Takes a single topic and runs the whole chain unattended — research with the
   search tools, author scenes.js, generate 9:16 backgrounds, synthesize narration,
   build the 9:16 video (clean master + burned copy + subs.srt) and per-platform
-  text under data/<channel>/<topic>/output/ — on the cheapest model tier that
+  text under data/<channel>/episodes/<topic>/output/ — on the cheapest model tier that
   works, escalating only when measured metrics say the hook is failing. Machine
   gates (fact verification, style checker, storyboard-reviewer ≥95 on copy, on every
   single scene, on the vocabulary of every narration and title, and on the generated
@@ -88,7 +88,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
 publish·큐·QA 하네스가 전부 이 파일들을 읽는다.
 
 ```
-data/<채널>/<주제 slug>/
+data/<채널>/episodes/<주제 slug>/
 ├── storyboard/
 │   ├── research.md      # 출처·확인일·검증 상태 — 자동 저작일수록 이게 유일한 감사 흔적
 │   ├── scenes.js        # SoT
@@ -173,6 +173,11 @@ grep -qF "$TOKEN" "$LOCK/owner" 2>/dev/null && rm -rf "$LOCK"
   사람들이 실제로 묻는 것 중 하나를 고른다. 지식iN은 "무엇을 모르는지"가 질문
   그대로 남아 있어 훅의 재료가 된다. 이 모드는 init 에서 사용자가 명시로 고른
   경우만 쓴다.
+- **`scout`** — `data/<채널>/growth/keywords/market-keywords.md` 에서 고른
+  주제(없으면 주제어 표 위) 하나를 쓴다. `/social-flow:topic-scout` 가 채널
+  중앙값 대비 5배 이상 영상에서 뽑은 구다. 파일이 없거나 14일이 지났으면
+  저작하지 않고 topic-scout 를 안내한다. 툴을 틱마다 다시 부르지 않는다 —
+  search.list 가 호출당 100유닛이다.
 
 **주제 축 게이트** — 후보를 profile §1 주제 영역·타깃과 대조한다. `pool` 은
 사람이 승인한 목록이라 대개 자연 통과하고, 이 게이트가 실제로 잡는 건 `keywords`
@@ -226,12 +231,19 @@ profile §5 정책대로 조사한다. 도구 순서와 쿼터 절약은 `refere
 storyboard 스킬 §4 를 그대로 따른다. 특히 자동 저작이 자주 어기는 것:
 
 - 커버 제목 **16자 이내 + 주제어 필수**. 자극만 있고 무엇의 이야기인지 없으면
-  스킵된다.
+  스킵된다. 제목은 방법·도구가 아니라 **낯선 사람이 이미 느끼는 문제**로 연다
+  (platform-playbook §1 ② · scenes-schema §cover).
 - 나레이션은 **세그먼트(문장) 배열** — 문장 하나가 reveal 하나. 자수 상한은
   cover ≤40자, points/quote ≤50자, 문장당 8~25자.
 - `tts` 는 한글 발음 표기("4,700만"→"사천칠백만"), `sub` 는 원표기.
 - THEME 은 profile §3 값을 그대로 복사.
 - 구성은 cover 1 + points/quote 3~5, 본편 35~75초.
+- 재생 순서는 **커버 → 후킹 → 결과물 → 내용**. 샷마다 `beat` 를 적는다
+  (`hook`·`hooking`·`result`·`body`·`cta`). 제작·튜토리얼은 완성본이 방법보다
+  앞에 온다 (scenes-schema §재생 순서).
+- 항목 하나는 샷이다. `scene`·`sceneSlug`·`shot.size`·`shot.info` 와
+  `visual.picture`·`visual.overlay` 를 적는다(정본은 scenes-schema §문법 단위와
+  제작 층). AI 영상과 HTML 연출을 한 칸에 합치지 않는다.
 
 ### 4. 문체 게이트 — 영상 표면 (게이트 2)
 
@@ -283,7 +295,8 @@ done
 - **PASS(≥95 · p0 = 0)** → §4.7 로.
 - **FAIL** → `worst` 씬만 고치고 한 번 더 위임한다. **무인 캡 2라운드.** 역할 공백·
   중복 지적은 문장을 다듬어 못 고친다 — 그 씬을 합치거나 빼고 남은 씬 길이로 총길이를
-  맞춘다. 씬을 더하거나 뺐으면 §4.5 를 다시 통과시킨 뒤 돌아온다.
+  맞춘다. 방법이 결과보다 앞에 있으면 문장을 고치지 말고 결과물 씬을 앞으로 옮긴다.
+  씬을 더하거나 뺐으면 §4.5 를 다시 통과시킨 뒤 돌아온다.
 - 2라운드에도 FAIL 이면 **§4.5 와 같이 저작을 멈춘다** — 이미지·TTS 에 돈을 쓰기 전이다.
 
 ### 4.7 어휘 리뷰 게이트 (게이트 6c — storyboard-reviewer 어휘 모드)
@@ -365,9 +378,13 @@ exit 1(판정 불가)이면 중단한다. 단가를 모르는 채로 돈을 쓰�
   - **그 구간에는 나레이션이 없다**(절대 규칙 9) — 영상 사운드를 쓴다. 그 씬은
     `narration: []` 이고, 자막도 없으므로 §8 빌드 후 `splice-clip.sh` 가 뒤 자막을
     실측 삽입 길이만큼 민다. **팔린드롬 금지** — 소리가 거꾸로 재생된다.
-- **BGM** — `music_generate_clip` 인스트루멘털 30초, `.work/bgm.wav`.
-  프롬프트에 "leaves space for a spoken voiceover, no melody in the vocal
-  frequency range". 빌더가 루프로 늘린다.
+- **BGM** — 채널 공용 침대가 있으면 복사만 한다.
+  `python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py data/<채널> bgm default`
+  경로가 나오면 `.work/bgm.wav` 로 복사. 없으면 `music_generate_clip`
+  인스트루멘털 30초를 `.work/bgm.wav` 에 둔다. 프롬프트에
+  "leaves space for a spoken voiceover, no melody in the vocal frequency range".
+  빌더가 루프로 늘린다. 같은 톤을 다음 편에도 쓰려면
+  `assets/audio/bgm/default.wav` 로 복사하고 catalog 에 올린다.
 
 호출마다 `.work/cost-tally.tsv` 에 실제 사용량을 한 줄씩 append 한다 — §5 의
 견적 파일이 아니라 이쪽이다. 줄 형식·단위(veo 는 생성 길이, tts 는 자수÷1000)는

@@ -7,7 +7,7 @@ description: >
   (with voice narration) to turn into content. Can start/stop the screen+mic
   recording itself (record.sh, macOS screencapture), then extracts timestamped
   speech (whisper.cpp STT) + silence/scene-change signals from the recording,
-  merges them into a per-scene timeline (data/<channel>/<topic>/recording/
+  merges them into a per-scene timeline (data/<channel>/episodes/<topic>/recording/
   timeline.md with keyframes + vision descriptions), which then feeds the
   storyboard skill as the primary source replacing web research. In the
   storyboard-first shooting flow (storyboard/script.md exists), it additionally
@@ -17,14 +17,14 @@ argument-hint: "<채널> <녹화파일 경로|record> [주제 slug]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__fect-mcp__vision_analyze", "mcp__fect-mcp__vision_ocr"]
 ---
 
-# 녹화 인제스트 — data/[채널]/[주제]/recording/
+# 녹화 인제스트 — data/[채널]/episodes/[주제]/recording/
 
 화면 녹화(음성 나레이션 포함)를 **타임라인별 텍스트**로 변환한다. 산출된
 `timeline.md` 는 storyboard 스킬의 자료조사(research.md) 자리를 대체하는
 1차 소스가 된다 — 녹화에서 말하고 보여준 것이 씬 설계의 재료다.
 
 ```
-data/<채널>/<주제 slug>/recording/
+data/<채널>/episodes/<주제 slug>/recording/
 ├── raw/                 # STT·무음·화면전환 원신호 (transcribe.sh)
 ├── timeline.json        # 기계용 씬 타임라인
 ├── timeline.md          # 사람용 — 씬 표 + 문장 타임스탬프 + 화면 설명
@@ -91,8 +91,8 @@ command -v whisper-cli && ls ~/.cache/whisper-cpp/ggml-large-v3-turbo.bin
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/ingest/references
 WHISPER_PROMPT="<profile.md 용어, 예상 고유명사 쉼표 나열>" \
-  bash $REF/transcribe.sh <녹화파일 절대경로> data/<채널>/<주제>/recording
-python3 $REF/build-timeline.py data/<채널>/<주제>/recording --src <녹화파일 절대경로>
+  bash $REF/transcribe.sh <녹화파일 절대경로> data/<채널>/episodes/<주제>/recording
+python3 $REF/build-timeline.py data/<채널>/episodes/<주제>/recording --src <녹화파일 절대경로>
 ```
 
 - 원본은 **복사하지 않는다** — timeline.json 이 절대경로를 참조한다.

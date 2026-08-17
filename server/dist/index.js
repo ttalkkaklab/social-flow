@@ -9,7 +9,7 @@ import { enabledPlatforms } from './sns-client.js';
 // initialize 응답에 실리는 서버 버전 — package.json 의 version 과 같은 값을 쓴다.
 // 둘이 갈라지면 클라이언트가 보는 버전이 실제 패키지와 달라지므로, package.json 을
 // 올릴 때 이 줄도 함께 올린다(계약 테스트가 두 값의 일치를 검사한다).
-const server = new Server({ name: 'social-flow', version: '0.10.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'social-flow', version: '0.9.0' }, { capabilities: { tools: {} } });
 // 플랫폼별 게시 툴은 자격증명 파일이 있는(기본 토큰 ∪ 채널 디렉토리) 플랫폼만
 // 노출한다 — 요청 시점 평가라 토큰 파일 추가가 서버 재시작 없이 반영된다.
 // 핸들러는 전부 유지되므로 숨은 툴을 직접 호출해도 명시적 토큰 부재 에러가 반환된다.
@@ -66,6 +66,7 @@ async function main() {
         `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail — image_local_generate does not need it)'}, ` +
         `local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : 'python3 (default — set SUPERTONIC_PYTHON for a virtualenv)'}, ` +
         `local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : '~/.local/bin/mflux-generate-z-image-turbo (default — set MFLUX_ZIMAGE_BIN if elsewhere)'}, ` +
+        `youtube data key ${config.youtubeApiKey ? 'set' : 'MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)'}, ` +
         `sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(',') : 'none'} (credential files found — others hidden from ListTools), ` +
         `sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(',')}]`).join(' ') : 'none (flat/default tokens only)'}`);
 }

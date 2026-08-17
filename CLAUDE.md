@@ -42,56 +42,6 @@ PY
 규칙 정본은 `skills/platform-guide/references/korean-style.md` §D8 이다.
 예외는 `살아남는다`(다른 동사)와 조건절(`나뉜다면`)·구어 과거·명령(`남겼어`·`남겨 둬`).
 
-## Git / GitHub 인증 (필수)
-
-원격 `origin`은 **`ttalkkaklab/social-flow`(PRIVATE)** 이다.
-머신의 기본 `GITHUB_TOKEN`은 **다른 계정(zeanserssi)** 이라 이 저장소에 접근할 수 없다.
-따라서 이 저장소의 모든 GitHub 작업은 **`TTALKKAKLAB_GITHUB_TOKEN`** 환경변수를 써야 한다.
-
-> 2026-08-16 에 GitHub 사용자명을 `zeanxai` → `ttalkkaklab` 으로 바꿨다. 계정은 그대로라
-> 토큰도 그대로 쓰고, 환경변수 이름만 `ZEANXAI_` → `TTALKKAKLAB_` 로 맞췄다.
-> 옛 이름 주소는 당분간 리다이렉트되지만 누군가 풀려난 `zeanxai` 를 선점하면 끊기므로
-> 새 주소를 쓴다.
-
-### gh CLI
-
-`gh`는 `GH_TOKEN`을 `GITHUB_TOKEN`보다 우선하므로, 전역 설정을 건드리지 말고
-명령 단위로 앞에 얹는다.
-
-```bash
-GH_TOKEN="$TTALKKAKLAB_GITHUB_TOKEN" gh pr list
-GH_TOKEN="$TTALKKAKLAB_GITHUB_TOKEN" gh pr create --base dev --title "..." --body "..."
-```
-
-`GH_TOKEN` 없이 `gh`를 호출하면 `Could not resolve to a Repository`로 실패한다.
-이는 권한 오류가 아니라 **계정이 틀린 것**이므로, 저장소를 새로 만들거나
-origin을 바꾸는 식으로 우회하지 말 것.
-
-### git push / fetch
-
-push는 gh 인증과 별개 경로(credential helper)를 탄다.
-저장소 로컬 config(`.git/config`, 커밋 대상 아님)에 helper가 설정되어 있어
-평소에는 `git push`가 그대로 동작한다.
-
-`credential.helper`는 다중값이라 등록된 순서대로 실행된다. 첫 값인 빈 문자열이
-전역 `store`·`osxkeychain` helper를 무력화하고 그다음 토큰 함수가 돈다. 빈 값이
-빠지면 키체인에 남은 다른 계정 자격증명이 먼저 잡히므로, `--replace-all`로 덮지 말고
-`--unset-all` 뒤에 `--add`로 순서대로 쌓는다.
-
-```bash
-git config --local credential.https://github.com.username ttalkkaklab
-git config --local --unset-all credential.https://github.com.helper
-git config --local --add credential.https://github.com.helper ""
-git config --local --add credential.https://github.com.helper \
-  '!f(){ test "$1" = get && echo username=ttalkkaklab && echo password=$TTALKKAKLAB_GITHUB_TOKEN; };f'
-```
-
-helper는 **환경변수를 참조만** 하므로 토큰 값이 파일에 남지 않는다.
-클론을 새로 뜨거나 `.git/config`가 초기화되면 위 명령을 다시 실행한다.
-설정 뒤 `GIT_TRACE=1 git ls-remote origin HEAD`로 helper 함수가 실제로 호출되는지 본다.
-
-> 토큰 값을 코드·문서·커밋 메시지에 평문으로 적지 않는다. 환경변수 이름만 기록한다.
-
 ## 브랜치 전략
 
 ```

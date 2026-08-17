@@ -23,7 +23,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__youtube_insights", "mcp__social-flow__youtube_publish",
   "mcp__social-flow__sns_comment_reply",
   "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
-  "mcp__social-flow__serp_news_search",
+  "mcp__social-flow__serp_news_search", "mcp__social-flow__youtube_topic_scout",
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img",
   "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate",
   "mcp__social-flow__tts_list_voices",
@@ -137,7 +137,7 @@ data/<채널 slug>/growth/
 
    **자동 저작은 따로 묻는다** — 루프의 권한이 게시에서 저작까지 넓어지는
    지점이라 기본값으로 켜지 않는다. 끌지 켤지, 주제를 어디서 가져올지
-   (`pool` 기본 / `keywords`), 주제 풀 항목, 편당 비용 상한(기본 $0.30),
+   (`pool` 기본 / `keywords` / `scout`), 주제 풀 항목, 편당 비용 상한(기본 $0.30),
    일·주 비용 상한, 하루 저작 횟수(기본 1 — 이 플랫폼 하드캡 2 이내),
    대기열 최소 잔량(기본 1),
    저작 성공 시 함께 찍을 플랫폼 큐(`mark_queues` — 승인된 성장 플랜이 있는
@@ -207,8 +207,10 @@ YouTube 는 툴 지원도 없어 Studio 에서 처리한다).
 
 영상별 지표에서 **도달 상위 영상의 유형**(소재·길이·형식)과
 `averageViewPercentage` 를 읽어 다음 기획에 반영한다 — 이 학습 루프가 없으면
-자동화는 같은 영상만 반복한다. 관찰 결과는 사용자에게 보고하고, 기획 반영은
-storyboard 파이프라인에서 사람이 한다.
+자동화는 같은 영상만 반복한다. 조회는 낮은데 초반 통과·유지가 살아 있으면 그
+형식을 복제하지 않는다. 다음 편은 제목·커버를 방법·도구가 아니라 느끼는 문제로
+연다(content_feedback 각도 레버 · platform-playbook §1 ②). 관찰 결과는
+사용자에게 보고하고, 기획 반영은 storyboard 파이프라인에서 사람이 한다.
 
 스와이프 이탈률(Studio 의 "How many chose to view")은 API 에 없다 — 훅 판정은
 `averageViewPercentage` 로 하고, 스와이프 지표가 필요하면 Studio 확인을 권한다.
@@ -265,7 +267,7 @@ storyboard 파이프라인에서 사람이 한다.
 3시간이 지난 슬롯은 건너뛴다(루프가 꺼져 있다가 밤에 아침 슬롯을 몰아 게시하는
 사고 방지).
 
-대기열 후보는 `data/<채널>/*/storyboard/storyboard.md` 중 frontmatter 의 `status`
+대기열 후보는 `data/<채널>/episodes/*/storyboard/storyboard.md` 중 frontmatter 의 `status`
 가 `produced` **또는** `published` 이면서 `queue: ready` 이고,
 `state.publishedTopics` 에 없는 주제다. 여럿이면 `queue_at`(없으면 파일 mtime) 이
 가장 오래된 것 하나.

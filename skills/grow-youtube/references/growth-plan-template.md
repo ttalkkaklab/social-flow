@@ -18,7 +18,7 @@ queue_rule: "status: produced|published + queue: ready"   # 대기열 자격 (�
 ai_disclosure: always       # always | per-topic — always 면 루프가 고지를 끄지 않는다
 autoproduce:                # 대기열이 마르면 루프가 직접 저작한다 (기본 꺼짐)
   enabled: false            # true 로 켜는 순간 루프의 권한이 게시 → 저작까지 넓어진다
-  topic_source: pool        # pool(승인 목록에서) | keywords(지식iN 질문에서 발굴)
+  topic_source: pool        # pool(승인 목록) | keywords(지식iN) | scout(market-keywords.md)
   min_queue: 1              # ready 잔량이 이 수 미만일 때만 저작
   daily_produce_cap: 1      # 이 플랜의 하루 저작 편수 (성공·실패 합산, 상한 2 — 플랫폼별 하드캡)
   duplicate_threshold: 0.5  # 중복 판정 임계 (check-duplicate.py) — 시리즈물 채널만 올린다
@@ -32,7 +32,7 @@ autoproduce:                # 대기열이 마르면 루프가 직접 저작한�
 
 ## 게시 대기열 규칙
 
-`data/<채널>/<주제>/storyboard/storyboard.md` frontmatter 의 `status` 가
+`data/<채널>/episodes/<주제>/storyboard/storyboard.md` frontmatter 의 `status` 가
 `produced` **또는** `published` 이면서 `queue: ready` 인 주제만 자율 게시
 대상이다. produced 만으로는 나가지 않는다 — "제작 완료"와 "올려도 된다"는 다르다.
 `published` 를 빼면 안 된다 — `status` 는 플랫폼 구분이 없는 한 칸이라, 같은
@@ -55,7 +55,11 @@ queue_at: 2026-08-11        # 여럿일 때 오래된 것부터 나간다 (생�
 **주제는 여기서만 나온다.** `topic_source: pool` 이면 아래 목록의 미사용 항목을
 오래된 순서로 쓴다. **비면 루프는 저작을 멈추고 보고한다 — 주제를 지어내지
 않는다.** `keywords` 로 바꾸면 아래 키워드로 지식iN 질문을 훑어 소재를 발굴하는데,
-그만큼 소재 위험이 커지므로 금지 소재 목록을 먼저 손본다.
+그만큼 소재 위험이 커지므로 금지 소재 목록을 먼저 손본다. `scout` 는
+`data/<채널>/growth/keywords/market-keywords.md` 의 **고른 주제**(없으면
+주제어 표 위부터)를 쓴다. 파일이 없거나 생성된 지 14일이 지났으면 저작하지
+않고 `/social-flow:topic-scout <채널>` 을 안내한다 — 시든 시장 조사로 영상을
+만들지 않는다.
 
 ```yaml
 topic_pool:

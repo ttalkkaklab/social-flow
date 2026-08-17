@@ -142,7 +142,7 @@ current safety settings for person/face generation.
   <div class="note">
     Vertex AI 경로에는 <code>storageUri</code> 로 GCS 버킷을 지정하는 옵션이 있는데, 이건 <strong>출력 저장소</strong>이지 자산 등록소가 아니다. 참조 이미지는 Vertex 에서도 <code>bytesBase64Encoded</code> 인라인이다. 즉 등록소가 없다는 결론은 두 경로 모두에 해당한다.
   </div>
-  <p>실무로 옮기면 이렇다. <strong>캐릭터 일관성은 Veo 쪽에 맡기지 말고 우리가 파일로 관리한다.</strong> 채널 캐릭터의 정면·측면·전신 PNG 를 <code>data/&lt;채널&gt;/assets/</code> 에 두고 회차마다 같은 파일을 참조 이미지로 올린다. 등록소가 없다는 건 곧 <strong>버전이 우리 손에 있다</strong>는 뜻이라, 캐릭터를 고쳤을 때 과거 회차가 조용히 바뀌는 사고는 이쪽에서 안 난다.</p>
+  <p>실무로 옮기면 이렇다. <strong>캐릭터 일관성은 Veo 쪽에 맡기지 말고 우리가 파일로 관리한다.</strong> 채널 캐릭터의 정면·측면·전신 PNG 를 <code>data/&lt;채널&gt;/assets/characters/&lt;id&gt;/</code> 에 두고 회차마다 같은 파일을 참조 이미지로 올린다. <code>catalog.md</code> 의 <code>character</code> 행과 <code>resolve-asset.py</code> 가 그 시트를 찾는다. 등록소가 없다는 건 곧 <strong>버전이 우리 손에 있다</strong>는 뜻이라, 캐릭터를 고쳤을 때 과거 회차가 조용히 바뀌는 사고는 이쪽에서 안 난다.</p>
 </section>
 
 <section id="refimg">

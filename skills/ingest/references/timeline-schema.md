@@ -1,6 +1,6 @@
 # 타임라인 데이터 계약 — recording/
 
-`data/<채널>/<주제>/recording/` — ingest 스킬 산출. `timeline.md` 가
+`data/<채널>/episodes/<주제>/recording/` — ingest 스킬 산출. `timeline.md` 가
 storyboard 스킬의 자료조사(research.md) 자리를 대체하는 **1차 소스**다.
 
 ```

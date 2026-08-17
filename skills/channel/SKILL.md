@@ -23,11 +23,14 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp
 data/
 └── <채널 slug>/
     ├── profile.md            # 채널 프로파일 (SoT)
-    ├── assets/               # 채널 공용 자산 (outro.mp4, 로고 등 — 선택)
-    └── <주제 slug>/          # 게시 주제별 디렉토리 (storyboard 스킬이 생성)
-        ├── storyboard/
-        └── output/
+    ├── assets/               # 채널 공용 자산 — catalog.md + branding/ intro/ outro/ …
+    ├── growth/               # 성장 루프 상태
+    └── episodes/<주제 slug>/ # 회차 (storyboard 스킬이 생성)
 ```
+
+`assets/` 의 종류 칸·catalog 규약은 `data/README.md` 와
+`references/assets-catalog-template.md` 가 정본이다. 두 편 이상에서 다시
+쓰는 것만 두고, 한 편용 생성물은 주제 `.work/` 에 둔다.
 
 ## 인자 해석
 
@@ -73,6 +76,14 @@ data/
    p0=0** 을 받은 문안만 profile.md 에 싣는다(최대 3라운드, 미달이면 지적을
    보여주고 사용자와 함께 다듬는다).
 
+   **공용 자산 카탈로그** — `data/<slug>/assets/catalog.md` 를
+   `references/assets-catalog-template.md` 에서 복사해 둔다. 빈 종류 폴더는
+   만들지 않는다. branding·intro·outro 가 확정본을 설치할 때
+   `references/resolve-asset.py --ensure` 로 행을 올린다.
+
+   회차 칸 `data/<slug>/episodes/` 는 만들어 둔다. 주제 디렉토리는
+   storyboard 가 그 아래에 연다.
+
 6. **SNS 토큰 디렉토리 안내** — 게시 자격증명은 채널별 디렉토리
    `~/.config/social-flow/<slug>/` 에 둔다 (data/<slug> 와 동일 slug — 게시 툴
    `channel` 인자가 이 디렉토리를 가리킨다. 채널 지정 시 기본 토큰 폴백 없음):
@@ -93,13 +104,15 @@ data/
    프로필 이미지(로고)가 없으면 먼저 `/social-flow:branding <채널>` (4종 후보 →
    HITL 방향 선택 → 적대적 수렴), 로고 확정 후 선택적으로
    `/social-flow:intro <채널>` (캐릭터가 연기하는 채널 인트로 영상 — 컨셉 4종
-   HITL → veo 생성), 그다음 `/social-flow:storyboard <채널> <주제>`.
+   HITL → veo 생성), 그다음 `/social-flow:topic-scout <채널>` 로 지금 시장에서
+   검증된 주제를 고른 뒤 `/social-flow:storyboard <채널> <주제>`.
 
 ## update 절차
 
 1. `data/<slug>/profile.md` 를 Read 한다 (없으면 목록을 보여주고 재확인).
 2. 사용자가 지정한 항목만 Edit 한다 — 특히 **TTS 보이스와 THEME 색 변경 시 경고**:
-   이미 게시된 영상과 톤이 어긋나며, 채널 공용 outro.mp4 도 다시 만들어야 한다.
+   이미 게시된 영상과 톤이 어긋나며, 채널 공용 아웃트로(`assets/outro/`)도
+   다시 만들어야 한다.
    채널 카피(소개문·bio)를 고쳤으면 add 절차 5와 같은 게이트(check-style +
    growth-post-reviewer `standalone` ≥95·p0=0)를 다시 통과시킨다.
 3. 변경 전/후를 표로 보고한다.
@@ -118,3 +131,5 @@ data/
 ### Reference Files
 
 - **`references/profile-template.md`** — profile.md 표준 템플릿 (섹션 구조·THEME 계약·보이스 예시 포함)
+- **`references/assets-catalog-template.md`** — `assets/catalog.md` 초안 (kind+id 표)
+- **`references/resolve-asset.py`** — catalog·기본 경로로 공용 자산 조회 (`--ensure` 로 행 추가, `--selftest`)

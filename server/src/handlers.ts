@@ -10,6 +10,8 @@ import * as supertonic from './supertonic-client.js';
 import * as zimage from './zimage-client.js';
 import * as tts from './tts-client.js';
 import * as video from './video-client.js';
+import { contentFeedback } from './content-feedback.js';
+import { youtubeTopicScout } from './youtube-topic-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import type { ApiResult } from './http.js';
 
@@ -352,17 +354,6 @@ const facebookCommentSchema = z.object({
   channel: channelSlugSchema,
 });
 
-/** YouTube description 은 5000 **바이트** 상한이다. 한국어는 글자당 3바이트다. */
-const YT_DESCRIPTION_MAX_BYTES = 5000;
-const ytDescription = z
-  .string()
-  .min(1)
-  .refine((v) => Buffer.byteLength(v, 'utf8') <= YT_DESCRIPTION_MAX_BYTES, (v) => ({
-    message:
-      `설명이 ${Buffer.byteLength(v, 'utf8')}바이트다 — YouTube 상한은 ${YT_DESCRIPTION_MAX_BYTES}바이트다(글자 수가 아니다). ` +
-      `한국어는 글자당 3바이트라 실효 한도가 약 ${Math.floor(YT_DESCRIPTION_MAX_BYTES / 3)}자다.`,
-  }));
-
 const youtubePublishSchema = z.object({
   videoFilePath: z.string().min(1),
   title: z
@@ -370,11 +361,7 @@ const youtubePublishSchema = z.object({
     .min(1)
     .max(100)
     .regex(/^[^<>]*$/, 'YouTube rejects angle brackets in titles'),
-  // YouTube 는 description 을 **바이트**로 잰다(5000 bytes) — 글자가 아니다.
-  // z.string().max(5000) 은 UTF-16 코드 단위를 세므로 한국어 5000자를 통과시키는데
-  // 그게 15,000바이트라 API 가 거절한다. 롱폼은 챕터 목록까지 실어 설명이 가장
-  // 길어지는 경로라 여기서 막는다 — 업로드를 다 태운 뒤 400 을 받으면 쿼터가 날아간다.
-  caption: ytDescription,
+  caption: z.string().min(1).max(5000),
   privacyStatus: z.enum(['public', 'unlisted', 'private']).optional(),
   // 썸네일은 필수다 — 미지정 업로드는 임의 프레임이 커버가 되고, 게시 후에는
   // 쇼츠 세로 표면을 API 로 되돌릴 수 없다(2026-08-13 사용자 지시로 강제).
@@ -474,24 +461,35 @@ const instagramInsightsSchema = z.object({
 
 // ── YouTube 성장 조회 스키마 (읽기 전용) ─────────────────────────
 
-const youtubeUpdateSchema = z.object({
-  videoId: z.string().min(1),
-  privacyStatus: z.enum(['public', 'unlisted', 'private']).optional(),
-  title: z.string().max(100).optional(),
-  description: ytDescription.optional(),
-  categoryId: z.string().optional(),
-  madeForKids: z.boolean().optional(),
-  containsSyntheticMedia: z.boolean().optional(),
-  publishAt: z.string().optional(),
-  dryRun: z.boolean().optional(),
-  channel: channelSlugSchema,
-});
-
 const youtubeInsightsSchema = z.object({
   days: z.number().int().min(1).max(365).optional(),
   videoLimit: z.number().int().min(0).max(50).optional(),
   includeRevenue: z.boolean().optional(),
   channel: channelSlugSchema,
+});
+
+const contentFeedbackSchema = z.object({
+  channel: channelSlugSchema,
+  limit: z.number().int().min(1).max(10).optional(),
+  days: z.number().int().min(7).max(365).optional(),
+  outputPath: z.string().min(1).max(500).optional(),
+});
+
+const youtubeTopicScoutSchema = z.object({
+  query: searchQuery,
+  extraQueries: z.array(z.string().min(1).max(300)).max(3).optional(),
+  channel: channelSlugSchema,
+  excludeChannelId: z.string().min(2).max(40).optional(),
+  regionCode: z.string().regex(/^[a-z]{2}$/i, 'must be a 2-letter region code, e.g. US').optional(),
+  language: z.string().min(2).max(7).optional(),
+  publishedAfterDays: z.number().int().min(7).max(365).optional(),
+  channelLimit: z.number().int().min(5).max(40).optional(),
+  videosPerChannel: z.number().int().min(5).max(30).optional(),
+  minMultiplier: z.number().min(1.5).max(100).optional(),
+  minViews: z.number().int().min(0).max(10_000_000).optional(),
+  duration: z.enum(['short', 'any']).optional(),
+  includeComments: z.boolean().optional(),
+  limit: z.number().int().min(3).max(30).optional(),
 });
 
 // ── 라우팅 ───────────────────────────────────────────────────────
@@ -828,11 +826,6 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
       SNS_PUBLISHED_NOTE,
     );
   },
-  youtube_update: async (args) => {
-    const input = parseArgs(youtubeUpdateSchema, args);
-    // dryRun 은 아무것도 안 바꾸므로 게시 주의 문구를 붙이지 않는다.
-    return fromApi(await sns.youtubeUpdate(input), input.dryRun ? undefined : SNS_PUBLISHED_NOTE);
-  },
   youtube_insights: async (args) => {
     const input = parseArgs(youtubeInsightsSchema, args);
     return fromApi(await sns.youtubeInsights(input));
@@ -842,6 +835,14 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   instagram_insights: async (args) => {
     const input = parseArgs(instagramInsightsSchema, args);
     return fromApi(await sns.instagramInsights(input));
+  },
+  content_feedback: async (args) => {
+    const input = parseArgs(contentFeedbackSchema, args);
+    return fromApi(await contentFeedback(input));
+  },
+  youtube_topic_scout: async (args) => {
+    const input = parseArgs(youtubeTopicScoutSchema, args);
+    return fromApi(await youtubeTopicScout(input));
   },
   sns_account_check: async (args) => {
     const input = parseArgs(accountCheckSchema, args);

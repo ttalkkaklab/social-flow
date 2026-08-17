@@ -2,14 +2,14 @@
 
 채널 기반 쇼트폼 콘텐츠 파이프라인 Claude Code 플러그인 —
 **스토리보드(이미지 포함) → 플랫폼별 영상·텍스트 제작 → HITL 승인 게시**를
-`data/[채널]/[주제]/` 디렉토리 구조로 운영한다.
+`data/[채널]/episodes/[주제]/` 디렉토리 구조로 운영한다.
 
 **채널**은 사용자가 운영하는 콘텐츠 채널(브랜드) 단위다 — `data/` 디렉토리
 하나가 채널 하나이고, 톤·보이스·테마·게시 대상을 profile.md 로 고정한다.
 게시 대상 **플랫폼**: **Threads · Instagram(릴스) · Facebook 페이지 · YouTube(쇼츠)**.
 영상은 9:16 쇼트폼(1080×1920/30fps) 단일 포맷으로 제작해 플랫폼별로 파생한다.
-fect-persona 플러그인에서 실측 검증된 영상 파이프라인(세이프존·reveal 동기화·
-자막 계약)과 SNS 게시 클라이언트를 승계·일반화했다.
+영상 파이프라인(세이프존·reveal 동기화·자막 계약)과 SNS 게시 클라이언트는 앞선
+사내 플러그인에서 실측 검증된 것을 승계해 채널 단위로 일반화했다.
 
 ## 구성
 
@@ -17,10 +17,10 @@ fect-persona 플러그인에서 실측 검증된 영상 파이프라인(세이�
 social-flow/
 ├── .claude-plugin/plugin.json   # 플러그인 매니페스트
 ├── .mcp.json                    # 내부 MCP 서버 등록 (social-flow)
-├── server/                      # 내부 MCP 서버 (TypeScript, stdio) — 툴 41종
+├── server/                      # 내부 MCP 서버 (TypeScript, stdio) — 툴 43종
 │   └── src/
 │       ├── index.ts             # 엔트리 (플랫폼별 게시·인사이트 툴 조건부 노출)
-│       ├── tools.ts             # 툴 정의 (조사 5 + 공공데이터 5 + 생성 18 + 게시 5 + 댓글 3 + 점검 1 + 성장 조회 4)
+│       ├── tools.ts             # 툴 정의 (조사 6 + 공공데이터 5 + 생성 18 + 게시 5 + 댓글 3 + 점검 1 + 성장 조회 5)
 │       ├── handlers.ts          # zod 검증 + 라우팅
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube 게시/댓글 (fect-persona 승계)
 │       ├── serp-client.ts       # SerpApi (키 마스킹 + 응답 슬리밍)
@@ -56,6 +56,8 @@ social-flow/
 │   │   └── references/          #   growth-playbook.md(근거 등급 표기 정본)·growth-plan-template.md
 │   ├── grow-instagram/          # /social-flow:grow-instagram — Instagram 자율 성장 루프 1틱 (댓글 응대·이탈률/시청 관찰·대기열 보충 저작·대기열 게시 — 릴스는 queue_instagram: ready + 공개 URL 이 있어야만)
 │   │   └── references/          #   growth-playbook.md(두 관문·자격 상실 정본)·growth-plan-template.md
+│   ├── review-recent/           # /social-flow:review-recent — 최근 5편 유튜브·인스타 피드백 HTML (퍼널·막대·문제→가설→다음 편)
+│   ├── topic-scout/             # /social-flow:topic-scout — 시장에서 검증된 유튜브 주제 (채널 중앙값 대비 5배 · 도표 HTML)
 │   └── platform-guide/          # 지식형 — 플랫폼 문법·영상 규격·한국어 문체 SoT
 │       └── references/          #   platform-playbook.md·korean-style.md·check-style.py(문체 게이트)
 ├── agents/
@@ -83,6 +85,8 @@ social-flow/
 /loop 1h /social-flow:grow-youtube 재테크      #     이후 1시간 주기 자율 성장 루프 (댓글 응대·지표 관찰·대기열 보충 저작·대기열 게시)
 /social-flow:grow-instagram 재테크 init        # 5-c. (선택) Instagram 성장 플랜 확정 [승인 — 상시 승인서]
 /loop 1h /social-flow:grow-instagram 재테크    #     이후 1시간 주기 자율 성장 루프 (댓글 응대·이탈률 관찰·대기열 보충 저작·대기열 게시)
+/social-flow:topic-scout 재테크                # 1.6 지금 시장에서 검증된 주제 — md 정본 + 도표 HTML
+/social-flow:review-recent 재테크              # 6. 최근 5편 유튜브·인스타 피드백 HTML (퍼널·비교 막대·다음 편 레버)
 ```
 
 각 단계는 이전 단계의 산출물을 검사한다 — 스토리보드 미승인이면 produce 가,
@@ -142,18 +146,21 @@ Threads 반말이나 FB 사례 수집형 마무리처럼 플레이북이 요구�
 /social-flow:publish 재테크 <주제>                    # [승인]→게시
 ```
 
-## MCP 툴 표면 (41종)
+## MCP 툴 표면 (43종)
 
-**`tools/list` 에는 41종이 다 보이지 않는다.** 게시·인사이트 툴 9종
+**`tools/list` 에는 43종이 다 보이지 않는다.** 게시·인사이트 툴 9종
 (`threads_publish`·`instagram_publish`·`facebook_publish`·`facebook_comment`·
 `youtube_publish`·`threads_insights`·`instagram_insights`·`youtube_insights`·
 `threads_search`)은 **자격증명 파일이 있는 플랫폼만** 노출된다 — 목록을 요청한 시점에
 평가하므로 토큰을 추가하면 서버를 다시 띄우지 않아도 나타난다. 토큰이 하나도 없는
-환경에서 세면 32종이다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가
-돌아온다(조용히 실패하지 않는다).
+환경에서 세면 34종이다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가
+돌아온다(조용히 실패하지 않는다). `content_feedback`·`youtube_topic_scout` 는
+플랫폼 게이트 밖이라 토큰이 없어도 목록에 있다. 스카우트는 `YOUTUBE_API_KEY` 또는
+채널 OAuth 가 호출 시점에 필요하고, 피드백은 없는 쪽 섹션만 건너뛴다.
 
 | 그룹 | 툴 | 백엔드 |
 |---|---|---|
+| 조사 | `youtube_topic_scout` | YouTube Data API — 내 분야 채널을 모아 최근 업로드 중앙값 대비 5배 이상 영상을 찾고 제목에서 주제어를 뽑는다 (`YOUTUBE_API_KEY` 우선, 없으면 OAuth `youtube.readonly`) |
 | 조사 | `naver_search` | Naver Open API (일 25,000회 무료 — 한국어 1차). type 8종: news·blog·web·cafe·kin(지식iN)·image·encyc(백과)·local(지역) |
 | 조사 | `serp_web_search` / `serp_news_search` / `serp_naver_search` / `serp_image_search` | SerpApi (무료 250회/월 — 정밀·해외). naver 는 where=web·news·image·video + period 기간 필터, image 는 라이선스·크기·종횡비 필터 |
 | 공공데이터 | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (무인증 — 검색·상세·파일 원본) |
@@ -171,6 +178,7 @@ Threads 반말이나 FB 사례 수집형 마무리처럼 플레이북이 요구�
 | 성장 조회 | `threads_insights` / `threads_search` | Threads 인사이트(계정·게시물 지표)·공개 게시물 키워드 검색 — grow-threads 전용 (`threads_manage_insights`·`threads_keyword_search` 스코프) |
 | 성장 조회 | `youtube_insights` | 채널 통계 + Analytics 기간 지표(조회·engagedViews·평균 시청 비율·구독 증감) + 영상별 지표 — grow-youtube 전용 (`youtube.readonly`·`yt-analytics.readonly` 스코프, 데이터 2~3일 지연) |
 | 성장 조회 | `instagram_insights` | 계정 구간 지표(도달·조회·프로필 방문·저장) + 미디어별 지표 — 릴스에만 `reels_skip_rate`·`ig_reels_avg_watch_time` 이 붙는다(훅·유지 판정). grow-instagram 전용 (`instagram_business_manage_insights` 스코프, 팔로워 수는 프로필 필드) |
+| 성장 조회 | `content_feedback` | 최근 N편(기본 5)을 유튜브·인스타로 나눠 중앙값 대비 채점하고 퍼널·막대 HTML 을 `data/<채널>/growth/review-recent.html` 에 쓴다. 토큰 없는 플랫폼은 그 섹션만 생략 |
 
 검색 툴(`*_search`)은 인자 이름이 같다 — **`query`(검색어) · `limit`(결과 수) ·
 `page`(페이지)**. 백엔드 API 가 `q`·`display`·`num`·`start` 중 무엇을 쓰든 환산은
@@ -238,24 +246,30 @@ grow-instagram 은 공개 HTTPS URL 이 있어야만 게시하고, 호스팅이 
 > **로드 방식 주의**: 스킬의 MCP 툴 참조(`mcp__social-flow__*`)는 `--plugin-dir`
 > 로드 기준이다. 마켓플레이스 설치 시 서버 프리픽스가 달라질 수 있으니 로드 후
 > `/mcp` 로 실제 툴 이름을 확인하라. `data/` 는 **플러그인 루트가 아니라 세션
-> cwd 기준**으로 생성된다 — 이 레포를 프로젝트 루트로 열고 쓰는 구성이 기본이다.
+> cwd 기준**으로 생성된다.
 
 ## 설치
 
 ```bash
-cd server && npm install && npm run build
+git clone https://github.com/ttalkkaklab/social-flow.git
+cd social-flow/server && npm install && npm run build
 ```
 
-`npm run check` 는 빌드 + 툴 계약 테스트(`server/test/`)를 함께 돌린다. 이 테스트는
-외부 API 를 부르지 않고 툴 표면만 검증한다 — 스키마 유효성, 정의 ↔ 핸들러 라우팅
-정합, 동작 힌트와 설명의 일관성, 정본 상수와 enum 의 일치, 생성 파일 경로 안전성.
-`server/src` 를 고쳤으면 `npm run check` 를 통과시키고 `server/dist` 도 함께 커밋한다.
+`server/dist` 는 커밋되어 있으므로 받아서 바로 쓸 수 있다. 빌드는 `server/src` 를
+고쳤을 때만 필요하다. `npm run check` 는 빌드 + 툴 계약 테스트(`server/test/`)를 함께
+돌린다 — 외부 API 를 부르지 않고 툴 표면만 검증한다(스키마 유효성, 정의 ↔ 핸들러
+라우팅 정합, 동작 힌트와 설명의 일관성, 정본 상수와 enum 의 일치, 생성 파일 경로
+안전성). `server/src` 를 고쳤으면 `npm run check` 를 통과시키고 `server/dist` 도 함께
+커밋한다.
 
-플러그인 로드:
+플러그인 로드 — 클론한 경로를 지정한다:
 
 ```bash
-claude --plugin-dir /Volumes/data/repository/zeans/social/social-flow
+claude --plugin-dir /path/to/social-flow
 ```
+
+작업 산출물은 세션 cwd 기준 `data/` 에 쌓이므로, 콘텐츠를 만들 디렉토리에서
+Claude Code 를 띄우고 위 옵션으로 플러그인만 얹는 구성이 편하다.
 
 ## 환경변수·자격증명
 
@@ -273,6 +287,7 @@ claude --plugin-dir /Volumes/data/repository/zeans/social/social-flow
 | `ARK_BASE_URL` | | `https://ark.ap-southeast.bytepluses.com/api/v3` | ModelArk 리전 엔드포인트. 영상 모델이 ap-southeast-1 에만 있어 평소에는 건드리지 않는다 |
 | `SUPERTONIC_PYTHON` | | `python3` | 로컬 TTS 를 실행할 Python 인터프리터. 가상환경에 설치했으면 그 경로를 지정한다(예: `~/venvs/tts/bin/python`). venv 자동 탐색은 하지 않는다 — 저장소마다 다른 환경을 조용히 집어 목소리가 바뀌는 사고를 막는다 |
 | `SNS_TOKEN_DIR` | | `~/.config/social-flow` | SNS 자격증명 루트 디렉토리 |
+| `MEDIA_UPLOAD_URL` / `MEDIA_UPLOAD_API_KEY` | grow-threads 이미지 글 사용 시 | — | 미디어 호스팅 엔드포인트와 키. Threads 는 이미지를 **공개 URL** 로만 받으므로 로컬 파일을 올릴 자리가 필요하다. `POST` 에 `x-api-key` 헤더 + raw 바이트를 받아 `201 {data:{url}}` 을 돌려주고 그 url 을 무인증 공개 GET 으로 서빙하면 무엇이든 붙는다(`skills/grow-threads/references/upload-media.sh` 머리말이 계약 정본). 미설정이면 이미지 단계만 꺼지고 텍스트 글은 그대로 나간다 |
 | `THREADS_TOKEN_FILE` 외 플랫폼별 | | `<SNS_TOKEN_DIR>/규약 파일명` | 기본(평면) 경로 개별 오버라이드 — 채널 디렉토리에는 미적용 |
 
 자격증명 파일 규약(600 권한, 커밋 금지) — `threads_token` · `instagram_token` ·
@@ -343,10 +358,22 @@ API 레퍼런스 대신 조사 기록에 근거를 적어 두었다 —
 - **생성 비주얼 제한** — 무드샷·자사 캐릭터 발화만. 실존 인물·국가 상징·보도
   화면 연출 금지.
 
-## 관련 프로젝트
+## 사용 범위
 
-- 파이프라인·게시 클라이언트 원전: `fect-persona` 플러그인
-  (`/Volumes/data/repository/astra/fect/fect-persona`)
-- 생성 도구 서버: `fect-mcp-server` — gpt-image·video·tts·music 모듈 이식 원전
-  (이식 완료 후 런타임 의존 없음). nanobanana(Gemini 이미지)·vision 만 이 서버에
-  남아 있으며 선택 사용이다 (`/Volumes/data/repository/astra/fect/fect-mcp-server`)
+이 플러그인은 **자기 계정을 자기가 운영하는 용도**로 만들었다. 게시·댓글·성장 루프는
+전부 각 플랫폼의 공식 API 를 쓰고, 자격증명은 쓰는 사람이 자기 계정으로 직접 발급한다.
+
+- **플랫폼 약관이 상위 규칙이다.** Threads·Instagram·Facebook·YouTube 의 자동화·스팸
+  정책을 지키는 책임은 쓰는 사람에게 있다. 성장 루프에 참여 구걸·품앗이 차단 규칙을
+  넣어 둔 것도 그래서다.
+- **남의 계정을 대신 운영하거나, 여러 계정으로 같은 글을 뿌리는 용도로 쓰지 않는다.**
+- **AI 생성 콘텐츠 표시 의무**를 따른다 — YouTube 는 `containsSyntheticMedia`,
+  다른 플랫폼도 각자 규정이 있다.
+- 생성 비주얼은 실존 인물·국가 상징·보도 화면 연출을 금지한다(§안전 계약).
+
+보증은 없다. 이 도구가 만든 콘텐츠와 그 게시 결과의 책임은 쓰는 사람에게 있다
+(LICENSE 의 면책 조항).
+
+## 라이선스
+
+[Apache License 2.0](LICENSE). Copyright 2026 Zeans.

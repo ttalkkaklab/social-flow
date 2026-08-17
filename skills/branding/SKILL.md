@@ -114,6 +114,8 @@ cp "$BR/.work/iter-<최종>.png" "$BR/<slug>-logo-master-1024.png"
 sips -z 800 800 "$BR/<slug>-logo-master-1024.png" --out "$BR/<slug>-logo-youtube-800.png"
 sips -z 320 320 "$BR/<slug>-logo-master-1024.png" --out "$BR/<slug>-logo-instagram-320.png"
 sips -z 192 192 "$BR/<slug>-logo-master-1024.png" --out "$BR/<slug>-logo-192.png"
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py \
+  --ensure data/<slug> logo master "branding/<slug>-logo-master-1024.png" "프로필 로고"
 ```
 
 profile.md §1 의 **로고 자산** 라인을 마스터 경로로 갱신한다(없으면 추가).

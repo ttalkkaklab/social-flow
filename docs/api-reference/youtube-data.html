@@ -32,6 +32,7 @@
     <li><a href="#captions">자막 트랙 — 영상과 따로 올린다</a></li>
     <li><a href="#quota">쿼터 — 2026년 개편</a></li>
     <li><a href="#shorts">쇼츠 분류</a></li>
+    <li><a href="#scout">시장 주제 스카우트</a></li>
     <li><a href="#impl">구현 대조표</a></li>
   </ol>
 </nav>
@@ -193,8 +194,19 @@ Content-Type: application/octet-stream
   </ul>
 </section>
 
+<section id="scout">
+  <h2>8. 시장 주제 스카우트</h2>
+  <p><code>youtube_topic_scout</code>는 게시·내 채널 인사이트가 아니다. 시드 검색어로 관련 채널을 모은 뒤 각 채널의 최근 업로드 조회수 중앙값을 구하고, 중앙값의 5배 이상 나온 영상 제목에서 주제어를 뽑는다. 절대 조회수는 채널 크기마다 기본값이 달라 주제를 고르는 잣대가 못 된다.</p>
+  <pre><code>GET /search?part=snippet&amp;type=video&amp;order=viewCount&amp;publishedAfter=…   # 100유닛
+GET /channels?part=snippet,statistics,contentDetails&amp;id=…             # 1유닛
+GET /playlistItems?part=contentDetails&amp;playlistId=uploads             # 1유닛
+GET /videos?part=snippet,statistics,contentDetails&amp;id=…               # 1유닛</code></pre>
+  <p>인증은 <code>YOUTUBE_API_KEY</code>가 우선이다 — 공개 데이터라 OAuth가 필요 없고 게시 쿼터를 건드리지 않는다. 키가 없으면 채널 OAuth의 <code>youtube.readonly</code>로 같은 엔드포인트를 부른다. 게시용 <code>youtube.upload</code>만 있는 토큰은 검색이 거부된다.</p>
+  <p>스킬 <code>/social-flow:topic-scout</code>의 기본 시장은 미국(<code>US</code>/<code>en</code>)과 중국(<code>CN</code>/<code>zh</code>)이다. 한국어 시드를 그대로 넣지 않고 영어·중국어 명사로 옮긴 뒤 시장마다 툴을 한 번씩 부르고 <code>merge-scout.py</code>로 합친다. 한국만 볼 때는 <code>regionCode: KR</code>을 명시한다. 결과는 <code>data/&lt;채널&gt;/growth/keywords/</code>의 md·html이다. grow-youtube 플랜의 <code>topic_source: scout</code>는 md를 읽는다.</p>
+</section>
+
 <section id="impl">
-  <h2>8. 구현 대조표</h2>
+  <h2>9. 구현 대조표</h2>
   <div class="table-scroll">
   <table>
     <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th></tr></thead>

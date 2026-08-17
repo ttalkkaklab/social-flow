@@ -7,7 +7,7 @@ description: >
   first), snapshots insights, joins keyword conversations whenever it judges a real
   contribution exists (no daily cap), and authors/publishes new posts whenever there
   is something worth saying (slots are a rhythm guide, not a gate), attaching a
-  generated image via the meleon.app uploader when one would help — every outgoing
+  generated image via the media uploader when one would help — every outgoing
   text must pass the adversarial growth-post-reviewer gate (score ≥ 95, P0 = 0)
   before publishing. Fully autonomous within the standing authorization of
   data/<channel>/growth/threads/growth-plan.md. Recur with /loop <interval>
@@ -128,8 +128,8 @@ growth-log 는 틱 요약 한 줄이라 문안이 남지 않고, `threads_insigh
 
    exit 2(S1)면 고쳐서 재검사한다. exit 0 이어도 탐지 목록을 읽는다 — S2 는
    점수만 깎고 통과시키므로 "초록이면 보낸다"로 쓰면 죽는다. 특히 **C7(장문
-   부재)이 뜬 새 글은 그대로 두지 않는다** — 짧은 문장만 이어진 글이다(실측:
-   C7 이 뜬 글은 같은 나이에 조회 30, 안 뜬 글은 78). 기계 판정이 정본이다 —
+   부재)이 뜬 새 글은 그대로 두지 않는다** — 짧은 문장만 이어진 글이다(채널
+   실측: C7 이 뜬 글은 같은 나이에 도달이 2.6배 뒤처졌다). 기계 판정이 정본이다 —
    자가 판단으로 덮어쓰지 않는다. 규칙은 platform-guide `references/korean-style.md`.
 
    **검사기가 못 보는 표기 두 가지는 손으로 훑는다** — 오탈자와 **숫자·영문 뒤 조사
@@ -240,24 +240,24 @@ growth-log 는 틱 요약 한 줄이라 문안이 남지 않고, `threads_insigh
    미달 글을 올리는 것보다 낫다. 게시한 문안의 최종 점수도 growth-log 메모에
    적는다 — 게이트가 실제로 동작하는지 사용자가 관찰하는 창이다.
 
-## 이미지 절차 — 생성·업로드 (meleon.app)
+## 이미지 절차 — 생성·업로드
 
 새 글에 이미지가 필요하다고 판단되면(§4 판단 기준) 이 절차로 공개 URL 을 만든다.
 threads_publish 의 `imageUrl` 은 플랫폼이 크롤하는 공개 URL 만 받으므로, 로컬
-파일을 meleon.app 미디어 API 에 올려 URL 을 얻는다.
+파일을 사용자가 지정한 미디어 호스팅에 올려 URL 을 얻는다.
 
-1. **호스팅 게이트** — `MELEON_MEDIA_API_KEY` 셸 환경변수가 없으면 이미지 단계
-   전체를 끄고 텍스트만 게시한다. 자율 루프가 대체 호스팅·임시 터널을 찾지
-   않는다(grow-instagram 호스팅 게이트와 같은 원칙). 업로드가 404(미배포)나
-   503(서버 키 미설정)으로 떨어져도 같다 — growth-log 에 한 줄 남기고 이미지
-   없이 진행한다.
+1. **호스팅 게이트** — `MEDIA_UPLOAD_URL`·`MEDIA_UPLOAD_API_KEY` 셸 환경변수가
+   없으면 이미지 단계 전체를 끄고 텍스트만 게시한다. 자율 루프가 대체 호스팅·
+   임시 터널을 찾지 않는다(grow-instagram 호스팅 게이트와 같은 원칙). 업로드가
+   404(엔드포인트 없음)나 503(서버 키 미설정)으로 떨어져도 같다 — growth-log 에
+   한 줄 적어 두고 이미지 없이 진행한다.
 2. **생성** — `image_local_generate`(로컬 Z-Image — 기본, 비용 0)로 만든다.
    프로파일 §THEME 색·채널 톤을 프롬프트에 반영하고, **이미지 안에 글자를 넣지
    않는다** — 한글 렌더는 깨지기 쉽고(로컬 실측: "딸깍연구소" → "달닥연구소")
    깨진 글자는 그 자체로 AI 티다. 말은 본문이 하고 이미지는 장면·수치의 분위기만
    만든다. 글자 없는 첨부 이미지라 로컬 품질로 충분하다 — 품질을 특별히 올릴
    이유가 있는 컷만 `gpt_image_text2img`. 저장은 `data/<채널>/growth/threads/.work/` 에.
-3. **업로드·검증** — `references/upload-meleon.sh <파일>` 이 업로드와 공개 URL
+3. **업로드·검증** — `references/upload-media.sh <파일>` 이 업로드와 공개 URL
    왕복 검증(GET 200)까지 하고 URL 한 줄을 돌려준다. 검증 안 된 URL 을
    `imageUrl` 에 넣지 않는다. jpg/png/webp/gif · 10MB 이하(초과 시 sips 로
    축소) · 타입은 바이트 앞머리로 판정되므로 확장자 위장은 통하지 않는다.
@@ -265,10 +265,10 @@ threads_publish 의 `imageUrl` 은 플랫폼이 크롤하는 공개 URL 만 받�
 4. **게시** — 게이트(§적대적 검증)를 통과한 본문과 함께
    `threads_publish(caption, imageUrl, channel)`.
 
-> 2026-08-11 기준 이 API 는 meleon-portal `feat/public-media-upload`(PR #47)에만
-> 있고 프로덕션 미배포 상태다(실측: POST 404). PR 이 main 까지 승격되고 배포
-> 시크릿에 `MEDIA_API_KEY` 가 들어가면 그때부터 동작한다 — 스크립트가 404/503 을
-> 구분해 알려주므로 스킬 쪽은 손댈 것 없이 그날부터 이미지 글이 나간다.
+> 호스팅은 쓰는 사람이 준비한다 — `POST` 에 `x-api-key` 헤더와 raw 바이트를 받아
+> `201 {data:{url}}` 을 돌려주고, 그 url 을 무인증 공개 GET 으로 서빙하면 무엇이든
+> 붙는다(스크립트 머리말의 계약). 준비 전에는 호스팅 게이트가 이미지 단계를 꺼
+> 두므로 텍스트 글은 그대로 나간다.
 
 ## tick — 자율 사이클 (기본 모드)
 

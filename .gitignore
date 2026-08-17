@@ -25,6 +25,7 @@ venv/
 # ── 로컬 세션 설정 ────────────────────────────────────────────────
 .claude/settings.local.json
 .claude/*.local.md
+CLAUDE.local.md
 
 # ── 시크릿·자격증명 (절대 커밋 금지) ──────────────────────────────
 .env
@@ -50,6 +51,7 @@ data/*
 
 # 작업 중간 산출물 (data/ 밖에서 생겨도 무시)
 .work/
+**/assets/scratch/
 
 # ── Swift 앱 (apps/shoot-console) ─────────────────────────────────
 # 빌드 산출물은 커밋하지 않는다 — server/dist 와 달리 플러그인 실행 경로에

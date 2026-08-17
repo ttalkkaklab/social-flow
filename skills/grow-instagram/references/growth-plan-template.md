@@ -57,7 +57,7 @@ autoproduce:                # 대기열이 마르면 루프가 직접 저작한�
 
 ## 게시 대기열 규칙
 
-`data/<채널>/<주제>/storyboard/storyboard.md` frontmatter 의 `status` 가
+`data/<채널>/episodes/<주제>/storyboard/storyboard.md` frontmatter 의 `status` 가
 `produced` **또는** `published` 이면서 `queue_instagram: ready` 인 주제만 자율 게시
 대상이다. `published` 를 빼면 안 된다 — `status` 는 플랫폼 구분이 없는 한 칸이라,
 같은 주제를 YouTube 에도 큐잉했을 때 그쪽이 먼저 나가면 `published` 로 바뀌고

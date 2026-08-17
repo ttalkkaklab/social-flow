@@ -59,7 +59,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Web
 
 **FILE (기본 경로)** — `datago_file_download` 로 원본을 받는다:
 
-- `saveDir` 는 주제 작업 중이면 `data/<채널>/<주제>/storyboard/`, 단독
+- `saveDir` 는 주제 작업 중이면 `data/<채널>/episodes/<주제>/storyboard/`, 단독
   조사면 `docs/research/<YYYY-MM-DD>-<slug>/` 절대 경로.
 - 응답 `encoding` 이 `euc-kr` 이면 Read 전에 변환:
   `iconv -f euc-kr -t utf-8 <파일> > <파일>.utf8.csv`

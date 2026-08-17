@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<meta name="description" content="가게를 열기 전에 같은 상권, 같은 업종의 개업·폐업을 보고 자리를 고르는 서비스 기획서">
+<title>관련 점포 레이더 — 서비스 기획서</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --sub: #555;
+    --line: #333;
+    --thin: #999;
+    --rule: #cbd2dc;
+    --bg: #f0f0f0;
+    --paper: #fff;
+    --accent: #0b4f9e;
+    --navy: #0b2545;
+    --head: #eceff3;
+    --cell: #f6f7f9;
+    --soft: #fcfdfe;
+    --key-line: #8fb4dc;
+    --key-bg: #f7fafd;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    word-break: keep-all;
+  }
+  a { color: var(--accent); }
+  a:hover { text-decoration: underline; }
+
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #222;
+    color: #fff;
+    padding: 10px 16px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .toolbar a { color: #ddd; text-decoration: none; }
+  .toolbar a:hover { color: #fff; }
+  .toolbar .spacer { flex: 1; }
+  .toolbar button {
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .page {
+    width: 210mm;
+    max-width: 100%;
+    min-height: 297mm;
+    margin: 14px auto;
+    padding: 20mm 18mm;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 1px 10px rgba(0, 0, 0, .12);
+  }
+
+  h2 {
+    font-size: 19px;
+    font-weight: 800;
+    margin: 0 0 14px;
+    padding: 9px 14px;
+    background: var(--navy);
+    color: #fff;
+    letter-spacing: -.5px;
+  }
+  h3 {
+    font-size: 15.5px;
+    font-weight: 700;
+    margin: 22px 0 8px;
+    padding-bottom: 5px;
+    border-bottom: 1.5px solid var(--line);
+  }
+  h4 { font-size: 14.5px; font-weight: 700; margin: 16px 0 6px; color: var(--navy); }
+  p { margin: 0 0 10px; }
+  .lead { line-height: 1.75; }
+
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 12.5px; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; }
+  th { background: var(--head); font-weight: 700; text-align: center; vertical-align: middle; }
+  td.lbl { background: var(--cell); font-weight: 600; text-align: center; width: 110px; vertical-align: middle; }
+  td.qno { width: 78px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  tr.ans td { background: var(--soft); }
+  .center { text-align: center; }
+  .small { font-size: 11.5px; color: var(--sub); }
+
+  .key {
+    border: 1px solid var(--key-line);
+    background: var(--key-bg);
+    padding: 11px 14px;
+    margin: 12px 0;
+    font-size: 13px;
+  }
+  .key .kt { font-size: 12px; font-weight: 800; color: var(--navy); margin-bottom: 3px; }
+  .key .kt::before { content: "■ "; font-size: 11.5px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--line);
+    margin: 11px 0 13px;
+  }
+  .stat { padding: 9px 8px; text-align: center; border-right: 1px solid var(--rule); }
+  .stat:last-child { border-right: 0; }
+  .stat .v { font-size: 20px; font-weight: 800; color: var(--navy); letter-spacing: -1px; line-height: 1.2; }
+  .stat .l { font-size: 11.5px; color: var(--sub); margin-top: 2px; }
+
+  .cover {
+    display: flex;
+    flex-direction: column;
+    min-height: 257mm;
+  }
+  .cover-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12.5px;
+    color: var(--sub);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .cover-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    padding: 48px 12px 40px;
+  }
+  .cover-kind {
+    margin: 0 0 18px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: 4px;
+  }
+  .cover-body h1 {
+    margin: 0 0 20px;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--navy);
+    letter-spacing: -.6px;
+    line-height: 1.3;
+  }
+  .cover-sub {
+    margin: 0 auto;
+    max-width: 28em;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+  .cover-meta { margin: 0; }
+  .cover-meta th, .cover-meta td { padding: 7px 10px; font-size: 13px; }
+  .cover-meta th { width: 28%; }
+
+  .toc-h { text-align: center; letter-spacing: 10px; font-size: 20px; margin: 0 0 16px; font-weight: 800; color: var(--navy); }
+  ul.toc-list { list-style: none; margin: 0; padding: 0; }
+  ul.toc-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 2px 0;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  ul.toc-list a { color: inherit; text-decoration: none; }
+  ul.toc-list a:hover { color: var(--accent); }
+  ul.toc-list li .d { flex: 1; border-bottom: 1px dotted #b6bcc6; transform: translateY(-3px); }
+  ul.toc-list li .p { font-variant-numeric: tabular-nums; color: var(--sub); min-width: 28px; text-align: right; }
+  ul.toc-list li.ch { margin-top: 12px; font-size: 14.5px; font-weight: 800; color: var(--navy); }
+  ul.toc-list li.ch:first-child { margin-top: 0; }
+  ul.toc-list li.s1 { padding-left: 16px; }
+  .toc-note { margin-top: 18px; padding-top: 8px; border-top: 1px solid var(--rule); font-size: 11.5px; color: var(--sub); }
+
+  ol.flow, ol.life { margin: 8px 0 14px; padding-left: 22px; }
+  ol.flow li, ol.life li { margin: 4px 0; }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .page { box-shadow: none; margin: 0; width: auto; page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    table, .key, .stats { page-break-inside: avoid; }
+  }
+  @media screen and (max-width: 820px) {
+    .page { width: auto; min-height: auto; padding: 20px 16px; margin: 8px; }
+    .cover { min-height: auto; }
+    .stats { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <a href="../../index.html">문서 홈</a>
+  <strong>관련 점포 레이더 기획서</strong>
+  <span class="spacer"></span>
+  <button type="button" onclick="window.print()">인쇄 / PDF</button>
+</div>
+
+<section class="page cover" aria-label="표지">
+  <div class="cover-top">
+    <span>social-flow</span>
+    <span>내부용 · 초안</span>
+  </div>
+  <div class="cover-body">
+    <p class="cover-kind">서비스 기획서</p>
+    <h1>관련 점포 레이더</h1>
+    <p class="cover-sub">후보지 주소를 넣으면 관련 업종의 허가·개업·폐업을 묶어 보여 준다.</p>
+  </div>
+  <table class="cover-meta">
+    <thead>
+      <tr><th colspan="2">문서 정보</th></tr>
+    </thead>
+    <tbody>
+      <tr><th>버전</th><td>0.1</td></tr>
+      <tr><th>작성일</th><td>2026년 8월 17일</td></tr>
+      <tr><th>상태</th><td>아이디어 검증 전</td></tr>
+      <tr><th>핵심 이용자</th><td>예비 창업자</td></tr>
+      <tr><th>관련 문서</th><td><a href="../neighborhood-change-radar/index.html">동네 변화 레이더</a></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="page toc" aria-label="목차">
+  <h2 class="toc-h">목 차</h2>
+  <ul class="toc-list">
+    <li class="ch"><a href="#ch1"><span class="t">Ⅰ. 개요</span></a><span class="d"></span><span class="p">1</span></li>
+    <li class="s1"><a href="#ch1-1"><span class="t">1. 배경과 목적</span></a><span class="d"></span><span class="p">1</span></li>
+    <li class="s1"><a href="#ch1-2"><span class="t">2. 정의와 범위</span></a><span class="d"></span><span class="p">1</span></li>
+    <li class="ch"><a href="#ch2"><span class="t">Ⅱ. 이용자</span></a><span class="d"></span><span class="p">2</span></li>
+    <li class="s1"><a href="#ch2-1"><span class="t">1. 액터</span></a><span class="d"></span><span class="p">2</span></li>
+    <li class="s1"><a href="#ch2-2"><span class="t">2. 페르소나</span></a><span class="d"></span><span class="p">2</span></li>
+    <li class="s1"><a href="#ch2-3"><span class="t">3. 인터뷰 상세</span></a><span class="d"></span><span class="p">3</span></li>
+    <li class="s1"><a href="#iv-eunji"><span class="t">3-1. 예비 창업자</span></a><span class="d"></span><span class="p">3</span></li>
+    <li class="s1"><a href="#iv-miran"><span class="t">3-2. 기존 점주</span></a><span class="d"></span><span class="p">5</span></li>
+    <li class="s1"><a href="#iv-doyoon"><span class="t">3-3. 중개사 · 컨설턴트</span></a><span class="d"></span><span class="p">7</span></li>
+    <li class="ch"><a href="#ch3"><span class="t">Ⅲ. 문제</span></a><span class="d"></span><span class="p">9</span></li>
+    <li class="s1"><a href="#ch3-1"><span class="t">1. 핵심 통증</span></a><span class="d"></span><span class="p">9</span></li>
+    <li class="s1"><a href="#ch3-2"><span class="t">2. 하는 일</span></a><span class="d"></span><span class="p">10</span></li>
+    <li class="ch"><a href="#ch4"><span class="t">Ⅳ. 해결 방향</span></a><span class="d"></span><span class="p">10</span></li>
+    <li class="s1"><a href="#ch4-1"><span class="t">1. 아이디어와 채택</span></a><span class="d"></span><span class="p">10</span></li>
+    <li class="s1"><a href="#ch4-2"><span class="t">2. 채택 기능</span></a><span class="d"></span><span class="p">11</span></li>
+    <li class="s1"><a href="#ch4-3"><span class="t">3. 사용자 흐름</span></a><span class="d"></span><span class="p">11</span></li>
+    <li class="ch"><a href="#ch5"><span class="t">Ⅴ. 1차 범위와 검증</span></a><span class="d"></span><span class="p">12</span></li>
+    <li class="s1"><a href="#ch5-1"><span class="t">1. 포함과 제외</span></a><span class="d"></span><span class="p">12</span></li>
+    <li class="s1"><a href="#ch5-2"><span class="t">2. 제품 원칙</span></a><span class="d"></span><span class="p">12</span></li>
+    <li class="s1"><a href="#ch5-3"><span class="t">3. 다음 검증</span></a><span class="d"></span><span class="p">12</span></li>
+    <li class="ch"><a href="#ch6"><span class="t">Ⅵ. 기능 정의</span></a><span class="d"></span><span class="p">13</span></li>
+    <li class="s1"><a href="#ch6-1"><span class="t">1. 기능 목록</span></a><span class="d"></span><span class="p">13</span></li>
+    <li class="s1"><a href="#ch6-2"><span class="t">2. 기능 명세</span></a><span class="d"></span><span class="p">13</span></li>
+    <li class="s1"><a href="#ch6-3"><span class="t">3. 사용자 스토리와 출시</span></a><span class="d"></span><span class="p">15</span></li>
+  </ul>
+  <p class="toc-note">구성은 기획서 관행을 따른다. 개요 → 이용자 → 문제 → 방안 → 범위 → 기능. 가설은 표에 ‘검증 전’으로 적는다.</p>
+</section>
+
+<section class="page" id="ch1">
+  <h2>Ⅰ. 개요</h2>
+
+  <h3 id="ch1-1">1. 배경과 목적</h3>
+  <p class="lead"><a href="../neighborhood-change-radar/index.html">동네 변화 레이더</a>는 주거 계약자를 1순위로 두고 건축·상가·공공공사를 한 주소에 묶는다. 그 문서에서 후속이던 창업 조각을 이 기획서가 한가운데로 옮긴다.</p>
+  <p>가게를 열기 전에 사람은 주말마다 골목을 걷고 지도를 켠다. 같은 업종이 늘었는지 줄었는지는 허가와 실제 오픈이 갈라져 있어 후보지끼리 같은 숫자로 붙이지 못한다.</p>
+
+  <div class="key">
+    <div class="kt">목적</div>
+    매출을 맞히지 않는다. 사용자가 다시 묶은 관련 점포의 허가·미개업·개업·폐업을 비교하고, 출처와 날짜가 있는 한 장으로 내보낸다.
+  </div>
+
+  <h3 id="ch1-2">2. 정의와 범위</h3>
+  <table>
+    <thead>
+      <tr><th style="width:22%">구분</th><th>내용</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="lbl">한 문장</td><td>후보지 주소를 넣으면 관련 업종의 허가·개업·폐업을 묶어 보여 준다.</td></tr>
+      <tr><td class="lbl">하는 일</td><td>관련 업종을 다시 묶고, 허가부터 폐업까지를 단계와 12개월 증감으로 보여 준다.</td></tr>
+      <tr><td class="lbl">하지 않는 일</td><td>장사 성공 예언, 실시간 현장 단정, 주거·공사 구독(형제 문서 소관).</td></tr>
+      <tr><td class="lbl">지금</td><td>주말마다 간판을 센다. 행정 사이트를 열고 닫는다.</td></tr>
+      <tr><td class="lbl">이 제품</td><td>주소를 넣고 묶음을 고친 뒤, 후보지 두세 곳을 같은 숫자로 붙인다.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="page" id="ch2">
+  <h2>Ⅱ. 이용자</h2>
+
+  <h3 id="ch2-1">1. 액터</h3>
+  <p>인터뷰는 직접 사용자 셋에 모았다. 운영자와 제공기관은 데이터와 콘솔로 검증한다. 주거 계약자와 현장 제보자는 범위 밖이다.</p>
+  <table>
+    <thead>
+      <tr><th>액터</th><th>유형</th><th>원하는 결과</th><th>우선</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>예비 창업자</td><td>직접</td><td>후보지의 같은 업종 개폐업을 보고 이번 달 자리를 고른다</td><td class="center">핵심</td></tr>
+      <tr><td>기존 점주</td><td>직접</td><td>내 반경의 경쟁 허가와 폐업 추세를 놓치지 않는다</td><td class="center">핵심</td></tr>
+      <tr><td>중개사 · 컨설턴트</td><td>직접</td><td>손님에게 출처 있는 한 장을 넘긴다</td><td class="center">후속</td></tr>
+      <tr><td>프랜차이즈 출점 담당</td><td>직접</td><td>권역 밀도와 경쟁 출점을 본다</td><td class="center">후속</td></tr>
+      <tr><td>상가 임대인</td><td>이해관계</td><td>건물과 인근에서 버티는 업종을 본다</td><td class="center">후속</td></tr>
+      <tr><td>서비스 운영자</td><td>관리</td><td>중복·좌표 오류·오분류를 줄이고 출처를 유지한다</td><td class="center">필수</td></tr>
+      <tr><td>공공데이터 제공기관</td><td>간접</td><td>공식 인허가·휴폐업 기록을 갱신한다</td><td class="center">필수</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="ch2-2">2. 페르소나</h3>
+  <p>액터마다 세 명. 아직 가설이며, 실제 인터뷰에서 행동과 지불 의사를 검증해야 한다.</p>
+  <table>
+    <thead>
+      <tr><th>액터</th><th>이름</th><th>요약</th><th>기기 · 숙련</th></tr>
+    </thead>
+    <tbody>
+      <tr><td rowspan="3">예비 창업자</td><td>최은지 · 29 · 광고기획</td><td>성수와 연남 카페 둘을 이번 달 안에 고른다. 추정 매출은 한 번 보고 닫았다.</td><td>모바일 · 중급</td></tr>
+      <tr><td>정태호 · 44 · 제과점 8년</td><td>2호점을 본다. 제과·디저트·커피를 다시 고른다. 허가만 나고 안 연 집까지 포함한다.</td><td>휴대폰+노트북 · 중급</td></tr>
+      <tr><td>한시우 · 33 · 학원 강사</td><td>본사 추천 치킨 자리 셋을 아내와 걸러야 한다. 상권 리포트는 두 쪽에서 포기했다.</td><td>모바일 · 초급</td></tr>
+      <tr><td rowspan="3">기존 점주</td><td>오미란 · 47 · 한식당 7년</td><td>비슷한 집 두 곳을 현수막 보고서야 알았다. 한식·분식, 200m, 주 1회를 넘기면 끈다.</td><td>모바일 · 초급</td></tr>
+      <tr><td>배성준 · 36 · 스터디카페</td><td>책상 많은 카페가 경쟁인데 커피숍으로 빠진다. 관련 업종을 자기가 묶고 싶어 한다.</td><td>하이브리드 · 중급</td></tr>
+      <tr><td>윤하늘 · 41 · 네일샵</td><td>네 달 뒤 갱신. 빈 호실이 한두 집 사정인지 상권이 빠지는지 모른다.</td><td>모바일 · 중급</td></tr>
+      <tr><td rowspan="3">중개 · 컨설턴트</td><td>김도윤 · 39 · 상가 중개</td><td>손님이 “주변에 뭐 생겨요?”라고 묻는다. 공공 화면 캡처는 안 읽혀서 그만 보냈다.</td><td>데스크톱 · 고급</td></tr>
+      <tr><td>서지혜 · 52 · 동네 부동산</td><td>본업은 전월세. 상권 사이트는 로그인 화면에서 그만둔다.</td><td>모바일 · 초급</td></tr>
+      <tr><td>이민재 · 35 · 창업 컨설턴트</td><td>보고서 이틀 중 하루는 중복을 묶고 시차를 설명하는 문장이다.</td><td>노트북+현장 · 고급</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="page" id="ch2-3">
+  <h3>3. 인터뷰 상세</h3>
+  <p>아홉 명에게 같은 번호로 물었다. 사람마다 빠진 문항이 있다. 아래는 가상 심층 인터뷰이며 실제 조사로 바꿔야 한다.</p>
+  <table>
+    <thead>
+      <tr><th>번호</th><th>구분</th><th>질문</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="lbl qno">Q1</td><td rowspan="3">지금 경험</td><td>지금은 어떻게 조사하나요. 중개·컨설턴트는 지금은 어떻게 일하나요.</td></tr>
+      <tr><td class="lbl qno">Q2</td><td>어떤 도구를 쓰나요.</td></tr>
+      <tr><td class="lbl qno">Q3</td><td>시간이 가장 많이 드는 일은 무엇인가요.</td></tr>
+      <tr><td class="lbl qno">Q4</td><td rowspan="3">통증</td><td>가장 아픈 지점은 어디인가요.</td></tr>
+      <tr><td class="lbl qno">Q5</td><td>실수는 어디서 나나요.</td></tr>
+      <tr><td class="lbl qno">Q6</td><td>언제 포기하나요.</td></tr>
+      <tr><td class="lbl qno">Q7</td><td rowspan="2">기대</td><td>이상적인 화면은 어떤 모습인가요.</td></tr>
+      <tr><td class="lbl qno">Q8</td><td>무엇을 자동으로 하고 싶나요.</td></tr>
+      <tr><td class="lbl qno">Q9</td><td rowspan="2">가치</td><td>가장 중요한 기능은 무엇인가요.</td></tr>
+      <tr><td class="lbl qno">Q10</td><td>무엇에 돈을 내겠나요.</td></tr>
+    </tbody>
+  </table>
+
+  <h4 id="iv-eunji">3-1. 최은지 · 29 · 광고기획 (예비 창업자)</h4>
+  <table>
+    <thead><tr><th style="width:14%">번호</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl qno">Q1 질문</td><td>지금은 어떻게 조사하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q1 답</td><td>성수랑 연남을 주말마다 걸어요. 카페 간판을 세고, 인스타 위치 태그로 신상을 봐요.</td></tr>
+      <tr><td class="lbl qno">Q2 질문</td><td>어떤 도구를 쓰나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q2 답</td><td>네이버 지도요. 소상공인365는 추정 매출이 커 보여서 한 번 열고 닫았어요.</td></tr>
+      <tr><td class="lbl qno">Q3 질문</td><td>시간이 가장 많이 드는 일은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q3 답</td><td>두 동네를 같은 기준으로 비교하는 일요. 걸을 때마다 숫자가 달라요.</td></tr>
+      <tr><td class="lbl qno">Q4 질문</td><td>가장 아픈 지점은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q4 답</td><td>허가와 오픈을 구분 못 해요. 성수 계약을 거의 넣었다가 디저트 카페 허가를 나중에야 알았어요.</td></tr>
+      <tr><td class="lbl qno">Q5 질문</td><td>실수는 어디서 나나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q5 답</td><td>상호가 바뀐 집을 두 번 셌어요.</td></tr>
+      <tr><td class="lbl qno">Q6 질문</td><td>언제 포기하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q6 답</td><td>추정 매출이 앞에 나오면 닫아요. 그 숫자가 안 믿겨요.</td></tr>
+      <tr><td class="lbl qno">Q7 질문</td><td>이상적인 화면은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q7 답</td><td>주소 두 개를 붙여 주세요. 6개월 동안 같은 업종이 몇 곳 생기고 몇 곳 닫혔는지만요.</td></tr>
+      <tr><td class="lbl qno">Q10 질문</td><td>무엇에 돈을 내겠나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q10 답</td><td>계약 전 한 장이요. 시간 절약이 임대료 절약보다 앞섭니다.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>정태호 · 44 · 제과점 사장님 (예비 창업자 · 2호점)</h4>
+  <table>
+    <thead><tr><th style="width:14%">번호</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl qno">Q1 질문</td><td>지금은 어떻게 조사하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q1 답</td><td>새벽 일곱 시에 골목을 돌아요. 건축인허가 앱이랑 행정 사이트는 이미 씁니다.</td></tr>
+      <tr><td class="lbl qno">Q3 질문</td><td>시간이 가장 많이 드는 일은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q3 답</td><td>제과·디저트·커피를 목록에서 다시 고르는 일요. 제과점만 보면 빵 파는 카페가 빠져요.</td></tr>
+      <tr><td class="lbl qno">Q4 질문</td><td>가장 아픈 지점은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q4 답</td><td>허가 난 지 네 달째 안 연 집이 있어요. 그걸 이미 있는 집으로 세면 자리가 달라져요.</td></tr>
+      <tr><td class="lbl qno">Q6 질문</td><td>언제 포기하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q6 답</td><td>데이터는 두 달 전인데 그날 아침 본 간판과 다르면 화면을 닫아요.</td></tr>
+      <tr><td class="lbl qno">Q7 질문</td><td>이상적인 화면은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q7 답</td><td>필터를 내가 고치고, 허가에서 미개업, 개업, 폐업이 이어지면 좋겠어요.</td></tr>
+      <tr><td class="lbl qno">Q10 질문</td><td>무엇에 돈을 내겠나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q10 답</td><td>반경 안 ‘허가만 나고 안 연 집’ 감시요. 틀린 알림보다 느려도 맞는 쪽을 고릅니다.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="page" id="iv-siwoo">
+  <h4>한시우 · 33 · 영어 학원 강사 (예비 창업자 · 가맹 검토)</h4>
+  <table>
+    <thead><tr><th style="width:14%">번호</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl qno">Q1 질문</td><td>지금은 어떻게 조사하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q1 답</td><td>본사 PDF랑 네이버, 인스타, 저녁에 드라이브가 전부예요.</td></tr>
+      <tr><td class="lbl qno">Q3 질문</td><td>시간이 가장 많이 드는 일은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q3 답</td><td>아내와 “이 자료 믿어도 되냐”를 따지는 시간요.</td></tr>
+      <tr><td class="lbl qno">Q4 질문</td><td>가장 아픈 지점은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q4 답</td><td>유동인구가 많다는 문장만 보고 150미터 안 치킨집 세 곳을 놓칠 뻔했어요.</td></tr>
+      <tr><td class="lbl qno">Q6 질문</td><td>언제 포기하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q6 답</td><td>상권 리포트는 두 쪽에서 접었어요. 컨설팅은 80만 원이라 손도 안 댔고요.</td></tr>
+      <tr><td class="lbl qno">Q7 질문</td><td>이상적인 화면은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q7 답</td><td>이 골목 치킨이 1년 동안 늘었는지 줄었는지를 아내 휴대폰으로 보내는 화면이요.</td></tr>
+      <tr><td class="lbl qno">Q10 질문</td><td>무엇에 돈을 내겠나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q10 답</td><td>구독료에는 인색해요. 본사 자리를 거절할 근거 한 장이라면 소액은 낼 수 있어요.</td></tr>
+    </tbody>
+  </table>
+
+  <h4 id="iv-miran">3-2. 오미란 · 47 · 한식당 사장님 (기존 점주)</h4>
+  <table>
+    <thead><tr><th style="width:14%">번호</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl qno">Q1 질문</td><td>지금은 어떻게 조사하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q1 답</td><td>체계적으로는 안 해요. 단골 말이랑 장보러 가는 길에 간판을 봐요.</td></tr>
+      <tr><td class="lbl qno">Q4 질문</td><td>가장 아픈 지점은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q4 답</td><td>작년에 한식 두 곳이 생겼고 하나는 다섯 달 만에 닫았어요. 둘 다 현수막을 보고서야 알았어요.</td></tr>
+      <tr><td class="lbl qno">Q6 질문</td><td>언제 포기하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q6 답</td><td>가입이 필요한 사이트는 안 열어요. 알림이 주 1회를 넘으면 꺼요.</td></tr>
+      <tr><td class="lbl qno">Q7 질문</td><td>이상적인 화면은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q7 답</td><td>한식·분식만, 200미터만, ‘허가 났어요’ 한 줄이면 돼요.</td></tr>
+      <tr><td class="lbl qno">Q10 질문</td><td>무엇에 돈을 내겠나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q10 답</td><td>매달 돈은 부담스러워요. 가까운 같은 업종 허가 알림이 최우선이에요.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>배성준 · 36 · 스터디카페 운영 (기존 점주)</h4>
+  <table>
+    <thead><tr><th style="width:14%">번호</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl qno">Q1 질문</td><td>지금은 어떻게 조사하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q1 답</td><td>소상공인365랑 인허가 목록, 주말 좌석 수를 같이 봐요.</td></tr>
+      <tr><td class="lbl qno">Q3 질문</td><td>시간이 가장 많이 드는 일은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q3 답</td><td>커피숍이랑 스터디카페를 다시 나누는 일요.</td></tr>
+      <tr><td class="lbl qno">Q4 질문</td><td>가장 아픈 지점은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q4 답</td><td>책상 마흔 개인 24시간 카페가 경쟁인데 커피숍으로 빠져 있었어요. 손님이 줄자 시간을 늘렸다가, 180미터 새 스터디카페를 뒤늦게 봤어요.</td></tr>
+      <tr><td class="lbl qno">Q7 질문</td><td>이상적인 화면은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q7 답</td><td>관련 업종을 내가 묶고 밀도 추이를 보고 싶어요.</td></tr>
+      <tr><td class="lbl qno">Q10 질문</td><td>무엇에 돈을 내겠나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q10 답</td><td>정확도가 속도보다 앞섭니다. 경쟁 범위만 맞게 유지되면 월 구독을 낼 수 있어요.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="page" id="iv-haneul">
+  <h4>윤하늘 · 41 · 네일샵 원장 (기존 점주)</h4>
+  <table>
+    <thead><tr><th style="width:14%">번호</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl qno">Q1 질문</td><td>지금은 어떻게 조사하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q1 답</td><td>상가 복도를 걸으며 빈 호실이랑 이웃 샵 이야기를 모아요. ‘뭐 생겨?’를 한 번 켰다가 식당 알림만 나와 닫았어요.</td></tr>
+      <tr><td class="lbl qno">Q4 질문</td><td>가장 아픈 지점은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q4 답</td><td>빈 곳이 잠시인지 빠져 나가는 흐름인지 모르겠어요. 미용·네일·속눈썹이 갈라지면 체감과 달라요.</td></tr>
+      <tr><td class="lbl qno">Q5 질문</td><td>실수는 어디서 나나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q5 답</td><td>사람은 아직 오는데 12개월 안에 뷰티 네 곳이 닫힌 줄을 모르고 갱신을 거의 했어요.</td></tr>
+      <tr><td class="lbl qno">Q7 질문</td><td>이상적인 화면은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q7 답</td><td>네 달 뒤 계약 전에 뷰티 묶음 폐업·공실 추이만 있으면 돼요. 알림은 주 1회면 충분해요.</td></tr>
+      <tr><td class="lbl qno">Q10 질문</td><td>무엇에 돈을 내겠나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q10 답</td><td>갱신용 보고서에는 한 번 돈을 낼 수 있어요.</td></tr>
+    </tbody>
+  </table>
+
+  <h4 id="iv-doyoon">3-3. 김도윤 · 39 · 역세권 상가 중개사</h4>
+  <table>
+    <thead><tr><th style="width:14%">번호</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl qno">Q1 질문</td><td>지금은 어떻게 일하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q1 답</td><td>매물 열다섯에서 스무 곳을 카카오톡 사진으로 돌려요. 손님이 매번 “주변에 뭐 생겨요?”라고 물어요.</td></tr>
+      <tr><td class="lbl qno">Q4 질문</td><td>가장 아픈 지점은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q4 답</td><td>소상공인365 캡처는 안 읽혀서 그만 보냈어요. 한적하다고 소개한 달에 치킨이 두 곳 들어와 항의를 받았어요.</td></tr>
+      <tr><td class="lbl qno">Q7 질문</td><td>이상적인 화면은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q7 답</td><td>주소만 넣으면 출처와 날짜가 있는 링크나 PDF가 나와야 해요. 분석가가 되고 싶지는 않아요.</td></tr>
+      <tr><td class="lbl qno">Q10 질문</td><td>무엇에 돈을 내겠나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q10 답</td><td>매물당이든 자리 라이선스든 낼 수 있어요. 계약을 더 빨리 끝내는 한 장이 최우선이에요.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>서지혜 · 52 · 동네 부동산</h4>
+  <table>
+    <thead><tr><th style="width:14%">번호</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl qno">Q1 질문</td><td>지금은 어떻게 일하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q1 답</td><td>본업은 전월세라 상가 손님이 가끔 와요. 그때마다 자료를 찾을 시간이 없어요.</td></tr>
+      <tr><td class="lbl qno">Q6 질문</td><td>언제 포기하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q6 답</td><td>상권 사이트는 로그인 화면에서 그만뒀어요. “이 자리 잘 될 거예요”를 감으로 말한 적이 있어요.</td></tr>
+      <tr><td class="lbl qno">Q7 질문</td><td>이상적인 화면은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q7 답</td><td>네이버 부동산처럼 지도만 보이는 화면, 한 번 눌러 최근 변화만 읽고 싶어요. 새 앱을 배울 생각은 거의 없어요.</td></tr>
+      <tr><td class="lbl qno">Q10 질문</td><td>무엇에 돈을 내겠나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q10 답</td><td>내가 구독료를 내기보다 손님이 보낸 링크를 열어 보는 쪽에 가까워요. 당황하지 않을 한 줄이 최우선이에요.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="page" id="iv-minjae">
+  <h4>이민재 · 35 · 독립 창업 컨설턴트</h4>
+  <table>
+    <thead><tr><th style="width:14%">번호</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl qno">Q1 질문</td><td>지금은 어떻게 일하나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q1 답</td><td>소상공인365, 인허가, 현장 사진, 엑셀을 한 보고서에 붙이는 데 이틀을 써요. 그중 하루는 같은 가게를 묶고 시차를 설명하는 문장이에요.</td></tr>
+      <tr><td class="lbl qno">Q4 질문</td><td>가장 아픈 지점은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q4 답</td><td>안정적이라고 썼는데 손님이 걸어 보고 허가 세 건을 찾아내면 그 리포트는 끝이에요.</td></tr>
+      <tr><td class="lbl qno">Q7 질문</td><td>이상적인 화면은</td></tr>
+      <tr class="ans"><td class="lbl qno">Q7 답</td><td>판단을 대신하진 말고, 여러 주소를 붙여 업종을 다시 묶고 출처와 기준일을 그대로 내보내면 돼요.</td></tr>
+      <tr><td class="lbl qno">Q10 질문</td><td>무엇에 돈을 내겠나요</td></tr>
+      <tr class="ans"><td class="lbl qno">Q10 답</td><td>이틀을 하루로 줄이는 시간에 돈을 내요. 시차를 숨기는 도구는 안 씁니다.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="page" id="ch3">
+  <h2>Ⅲ. 문제</h2>
+
+  <h3 id="ch3-1">1. 핵심 통증</h3>
+  <p>관련 점포를 공공 업종 그대로 보면 실제 경쟁이 빠진다. 허가와 개업과 폐업이 한 줄로 안 붙고, 후보지 여러 곳을 나란히 볼 방법이 없다.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="v">10</div><div class="l">통합 통증</div></div>
+    <div class="stat"><div class="v">4</div><div class="l">먼저 풀 것 (5×5)</div></div>
+    <div class="stat"><div class="v">8</div><div class="l">채택 아이디어</div></div>
+    <div class="stat"><div class="v">5</div><div class="l">보류 · 흡수</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>ID</th><th>통증</th><th>관련</th><th>심각</th><th>빈도</th><th>우선</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>PP-001</td><td>공공 업종과 내가 느끼는 경쟁이 다르다</td><td>정태호, 배성준, 윤하늘, 이민재</td><td class="center">5</td><td class="center">5</td><td class="center">높음</td></tr>
+      <tr><td>PP-002</td><td>허가·아직 안 염·개업·휴업·폐업이 단계로 안 보인다</td><td>최은지, 정태호, 이민재</td><td class="center">5</td><td class="center">5</td><td class="center">높음</td></tr>
+      <tr><td>PP-003</td><td>후보지·매물 여러 곳을 나란히 비교하지 못한다</td><td>최은지, 한시우, 김도윤, 이민재</td><td class="center">5</td><td class="center">5</td><td class="center">높음</td></tr>
+      <tr><td>PP-006</td><td>손님·가족에게 넘길 출처 있는 한 장이 없다</td><td>김도윤, 서지혜, 이민재, 한시우</td><td class="center">5</td><td class="center">5</td><td class="center">높음</td></tr>
+      <tr><td>PP-004</td><td>같은 업종 개업을 현수막·간판 이후에야 안다</td><td>오미란, 정태호, 김도윤</td><td class="center">5</td><td class="center">4</td><td class="center">높음</td></tr>
+      <tr><td>PP-005</td><td>폐업·빈 호실이 한두 집 사정인지 상권 흐름인지 모른다</td><td>윤하늘, 한시우, 오미란</td><td class="center">5</td><td class="center">4</td><td class="center">높음</td></tr>
+      <tr><td>PP-008</td><td>같은 가게가 두 번 뜨고, 폐업은 몇 주 늦어 현장과 싸운다</td><td>이민재, 정태호, 김도윤</td><td class="center">5</td><td class="center">4</td><td class="center">높음</td></tr>
+      <tr><td>PP-007</td><td>공식 화면이 어렵거나, 추정 매출처럼 안 믿는 숫자가 앞에 있다</td><td>최은지, 한시우, 오미란, 서지혜</td><td class="center">4</td><td class="center">5</td><td class="center">중간</td></tr>
+      <tr><td>PP-009</td><td>업종·거리·주기가 안 맞는 알림은 바로 끈다</td><td>오미란, 윤하늘</td><td class="center">4</td><td class="center">5</td><td class="center">중간</td></tr>
+      <tr><td>PP-010</td><td>본사 추천이나 중개인 감에 기대다가 과밀·침체 자리를 못 걸러 낸다</td><td>한시우, 서지혜</td><td class="center">4</td><td class="center">4</td><td class="center">중간</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="page" id="ch3-2">
+  <h3>2. 하는 일</h3>
+  <table>
+    <thead>
+      <tr><th>하는 일</th><th>중요</th><th>시간</th><th>빈도</th><th>걸린 통증</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>같은 업종 점포 세기</td><td class="center">5</td><td class="center">5</td><td class="center">5</td><td>PP-001, PP-003</td></tr>
+      <tr><td>허가와 영업 구분</td><td class="center">5</td><td class="center">4</td><td class="center">4</td><td>PP-002, PP-008</td></tr>
+      <tr><td>현장으로 확인</td><td class="center">5</td><td class="center">5</td><td class="center">4</td><td>PP-004, PP-008</td></tr>
+      <tr><td>가족·손님에게 전달</td><td class="center">5</td><td class="center">4</td><td class="center">5</td><td>PP-006, PP-007</td></tr>
+      <tr><td>늦게 알고 대응</td><td class="center">5</td><td class="center">2</td><td class="center">3</td><td>PP-004, PP-009</td></tr>
+      <tr><td>폐업을 추세로 읽기</td><td class="center">4</td><td class="center">3</td><td class="center">3</td><td>PP-005</td></tr>
+      <tr><td>본사·감 자리 검증</td><td class="center">4</td><td class="center">3</td><td class="center">3</td><td>PP-010</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="ch4">Ⅳ. 해결 방향</h2>
+
+  <h3 id="ch4-1">1. 아이디어와 채택</h3>
+  <p>통증 열 개를 자리 고르기, 연 뒤 감시, 남에게 넘기기로 나눠 열세 개를 뽑았다. 여덟 개를 이번 제품으로 골랐다.</p>
+  <table>
+    <thead>
+      <tr><th>#</th><th>아이디어</th><th>덮는 통증</th><th>난이도</th><th>효과</th><th>선택</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="center">1</td><td>관련 업종 묶음</td><td>PP-001</td><td class="center">중간</td><td class="center">높음</td><td class="center">채택</td></tr>
+      <tr><td class="center">2</td><td>점포 생애 단계</td><td>PP-002</td><td class="center">중간</td><td class="center">높음</td><td class="center">채택</td></tr>
+      <tr><td class="center">3</td><td>후보지 나란히 비교</td><td>PP-003</td><td class="center">낮음</td><td class="center">높음</td><td class="center">채택</td></tr>
+      <tr><td class="center">4</td><td>미개업 감시 목록</td><td>PP-002, 004</td><td class="center">중간</td><td class="center">중간</td><td class="center">보류</td></tr>
+      <tr><td class="center">5</td><td>조준 알림</td><td>PP-004, 009</td><td class="center">중간</td><td class="center">높음</td><td class="center">채택</td></tr>
+      <tr><td class="center">6</td><td>폐업·공실 12개월 추세</td><td>PP-005</td><td class="center">중간</td><td class="center">높음</td><td class="center">채택</td></tr>
+      <tr><td class="center">7</td><td>출처 있는 한 장</td><td>PP-006, 007</td><td class="center">낮음</td><td class="center">높음</td><td class="center">채택</td></tr>
+      <tr><td class="center">8</td><td>숫자 먼저 화면</td><td>PP-007</td><td class="center">낮음</td><td class="center">중간</td><td class="center">보류</td></tr>
+      <tr><td class="center">9</td><td>중복 묶기·기준일</td><td>PP-008</td><td class="center">높음</td><td class="center">높음</td><td class="center">채택</td></tr>
+      <tr><td class="center">10</td><td>과밀·침체 한 줄</td><td>PP-010</td><td class="center">낮음</td><td class="center">중간</td><td class="center">보류</td></tr>
+      <tr><td class="center">11</td><td>로그인 없는 미리보기</td><td>PP-007</td><td class="center">낮음</td><td class="center">중간</td><td class="center">채택</td></tr>
+      <tr><td class="center">12</td><td>임대 갱신 D-day 리포트</td><td>PP-005</td><td class="center">낮음</td><td class="center">중간</td><td class="center">보류</td></tr>
+      <tr><td class="center">13</td><td>매물 일괄 패킷</td><td>PP-006</td><td class="center">중간</td><td class="center">중간</td><td class="center">보류</td></tr>
+    </tbody>
+  </table>
+  <p class="small">보류 다섯은 버린 것이 아니다. 4는 단계의 필터, 8은 미리보기 첫 줄, 10·12·13은 비교·추세·한 장의 후속이다.</p>
+</section>
+
+<section class="page" id="ch4-2">
+  <h3>2. 채택 기능</h3>
+  <p>점포 한 집을 단계로 보는 일이 가운데 있다. 묶음이 모수를 정하고, 비교와 알림과 한 장이 그 모수를 쓴다.</p>
+  <ol class="life">
+    <li><strong>허가</strong> — 서류만. 아직 집이 없다.</li>
+    <li><strong>미개업</strong> — 허가만 나고 아직 안 연 집.</li>
+    <li><strong>개업</strong> — 장사 중. 세어야 할 집.</li>
+    <li><strong>휴업</strong> — 잠시 닫음. 폐업과 가른다.</li>
+    <li><strong>폐업</strong> — 흐름의 끝. 추세의 재료.</li>
+  </ol>
+  <table>
+    <thead>
+      <tr><th>기능</th><th>통증</th><th>요지</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>관련 업종 묶음</td><td>PP-001</td><td>카페·디저트·제과처럼 실제로 붙는 집만 다시 묶는다.</td></tr>
+      <tr><td>점포 생애 단계</td><td>PP-002</td><td>한 집을 허가에서 폐업까지 이어 본다.</td></tr>
+      <tr><td>후보지 나란히 비교</td><td>PP-003</td><td>성수 대 연남, 본사 추천 세 곳을 같은 숫자로 붙인다.</td></tr>
+      <tr><td>조준 알림</td><td>PP-004, 009</td><td>업종·거리·주기를 졸인다. 기본은 주 1회, 허가 단계.</td></tr>
+      <tr><td>12개월 추세</td><td>PP-005</td><td>폐업·허가 건수의 증감만 적는다. 성공은 예언하지 않는다.</td></tr>
+      <tr><td>출처 있는 한 장</td><td>PP-006</td><td>기준일과 제공기관을 붙인 링크·PDF.</td></tr>
+      <tr><td>중복 묶기·기준일</td><td>PP-008</td><td>난이도는 가장 높다. 빼면 묶음·단계·비교·한 장이 틀린다.</td></tr>
+      <tr><td>로그인 없는 미리보기</td><td>PP-007</td><td>주소 하나의 개폐업 숫자만 가입 없이 연다.</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="ch4-3">3. 사용자 흐름</h3>
+  <p>검색보다 주소 하나가 먼저다. 묶음을 고친 뒤에야 비교와 알림이 같은 모수를 쓴다.</p>
+  <ol class="flow">
+    <li><strong>주소 하나</strong> — 가입 없이 미리본다.</li>
+    <li><strong>관련 업종</strong> — 실제 경쟁만 고른다.</li>
+    <li><strong>단계와 추세</strong> — 허가부터 12개월 증감을 확인한다.</li>
+    <li><strong>나란히 비교</strong> — 후보지를 더 넣어 같은 숫자로 붙인다.</li>
+    <li><strong>한 장 · 알림</strong> — 출처 요약을 보내거나 주 1회 알림을 켠다.</li>
+  </ol>
+  <div class="key">
+    <div class="kt">핵심 경험</div>
+    가게가 몇 곳인가를 세기보다, 묶은 업종이 12개월에 몇 곳 생기고 몇 곳 닫혔는가를 먼저 보여 준다. 1단계는 로그인 벽 앞, 5단계는 돈과 구독이 붙는 자리다.
+  </div>
+</section>
+
+<section class="page" id="ch5">
+  <h2>Ⅴ. 1차 범위와 검증</h2>
+
+  <h3 id="ch5-1">1. 포함과 제외</h3>
+  <p>주소 하나를 가입 없이 보고, 묶음을 고친 뒤, 후보지 두 곳을 같은 숫자로 비교하는 경험을 검증한다.</p>
+  <table>
+    <thead>
+      <tr><th style="width:50%">포함한다</th><th>빼 둔다</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>도로명·지번 검색, 첫 주소는 로그인 없이</td><td>매출·성공 확률·완료 시점 예측</td></tr>
+      <tr><td>관련 업종 기본 묶음과 수정</td><td>과밀을 단정하는 한 줄 문장</td></tr>
+      <tr><td>허가·미개업·개업·휴업·폐업 단계</td><td>주민 제보 게시판, 현장 사진 커뮤니티</td></tr>
+      <tr><td>후보지 두세 곳 나란히 비교</td><td>매물 주소 수십 개의 일괄 패킷</td></tr>
+      <tr><td>같은 업종 폐업·허가 12개월 증감</td><td>임대 갱신 D-day 자동 리포트</td></tr>
+      <tr><td>출처·허가일·감지일이 있는 한 장</td><td>부동산 중개와 계약 기능</td></tr>
+      <tr><td>업종·거리·주기 조준 알림, 기본 주 1회</td><td></td></tr>
+      <tr><td>관리번호·주소·날짜로 같은 가게 묶기</td><td></td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="ch5-2">2. 제품 원칙</h3>
+  <table>
+    <thead>
+      <tr><th>원칙</th><th>이유</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>허가와 개업을 가른다</td><td>허가·미개업·개업을 다른 칸에 둔다.</td></tr>
+      <tr><td>묶음이 모수</td><td>사용자가 고친 관련 업종을 모든 화면이 쓴다.</td></tr>
+      <tr><td>날짜 두 개</td><td>허가일과 서비스 감지 시각을 같이 적는다.</td></tr>
+      <tr><td>같은 집 한 번</td><td>관리번호·주소·날짜로 중복을 묶는다.</td></tr>
+      <tr><td>알림은 드물게</td><td>업종·거리·주기를 졸이고 기본은 주 1회다.</td></tr>
+    </tbody>
+  </table>
+  <div class="key">
+    <div class="kt">금지 표현</div>
+    “반드시 잘된다”, “실시간 개업 현황”, “이 자리는 과밀이라 하면 안 된다”. 보여주는 것은 건수와 단계와 출처다.
+  </div>
+
+  <h3 id="ch5-3">3. 다음 검증</h3>
+  <table>
+    <thead>
+      <tr><th style="width:8%">순서</th><th>항목</th><th>내용</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="center">1</td><td>실데이터 표본</td><td>성격이 다른 지역 3곳, 최근 12개월 영업 인허가를 반경과 묶음으로 묶고 중복·좌표·갱신 주기를 잰다.</td></tr>
+      <tr><td class="center">2</td><td>묶음 기본값</td><td>카페·디저트·제과, 한식·분식, 스터디·책상 카페, 뷰티가 현장 경쟁과 맞는지 점주 셋에게 보여 준다.</td></tr>
+      <tr><td class="center">3</td><td>실제 인터뷰</td><td>최근 계약·갱신·중개 경험, 조사 방식, 놓친 사건, 알림 허용 범위, 한 장에 낼 돈을 묻는다.</td></tr>
+      <tr><td class="center">4</td><td>미리보기와 한 장</td><td>후보지 두세 곳 고르기가 주말 답사보다 짧은지 종이로 본다.</td></tr>
+      <tr><td class="center">5</td><td>주간 이메일 알림</td><td>앱 전체보다 오미란·윤하늘이 끄지 않는 주기부터 찾는다.</td></tr>
+    </tbody>
+  </table>
+  <div class="key">
+    <div class="kt">가장 먼저 답할 질문</div>
+    사용자는 후보지 비교를 한 번 하고 떠나는가, 아니면 연 뒤에도 조준 알림으로 돌아오는가?
+  </div>
+</section>
+
+<section class="page" id="ch6">
+  <h2>Ⅵ. 기능 정의</h2>
+  <p>채택한 여덟 아이디어를 구현 단위로 나눈다. 기능 그룹 → 기능 → 하위 기능. 아이디어 번호는 Ⅳ장 채택표와 같다.</p>
+
+  <h3 id="ch6-1">1. 기능 목록</h3>
+  <table>
+    <thead>
+      <tr><th>그룹</th><th>기능 ID</th><th>기능</th><th>채택 아이디어</th><th>통증</th><th>1차</th></tr>
+    </thead>
+    <tbody>
+      <tr><td rowspan="2">조회·비교</td><td>F-01</td><td>주소 미리보기</td><td>11 로그인 없는 미리보기</td><td>PP-007</td><td class="center">포함</td></tr>
+      <tr><td>F-02</td><td>후보지 나란히 비교</td><td>3 나란히 비교</td><td>PP-003</td><td class="center">포함</td></tr>
+      <tr><td rowspan="3">묶음·단계</td><td>F-03</td><td>관련 업종 묶음</td><td>1 관련 업종 묶음</td><td>PP-001</td><td class="center">포함</td></tr>
+      <tr><td>F-04</td><td>점포 생애 단계</td><td>2 점포 생애 단계</td><td>PP-002</td><td class="center">포함</td></tr>
+      <tr><td>F-05</td><td>중복 묶기·기준일</td><td>9 중복 묶기·기준일</td><td>PP-008</td><td class="center">포함</td></tr>
+      <tr><td rowspan="2">추세·알림</td><td>F-06</td><td>12개월 추세</td><td>6 폐업·공실 12개월 추세</td><td>PP-005</td><td class="center">포함</td></tr>
+      <tr><td>F-07</td><td>조준 알림</td><td>5 조준 알림</td><td>PP-004, 009</td><td class="center">포함</td></tr>
+      <tr><td>공유</td><td>F-08</td><td>출처 있는 한 장</td><td>7 출처 있는 한 장</td><td>PP-006</td><td class="center">포함</td></tr>
+    </tbody>
+  </table>
+  <p class="small">1차에 여덟을 모두 넣되, 알림은 이메일 주간 요약부터 연다. 앱 푸시는 검증 뒤로 미룬다.</p>
+</section>
+
+<section class="page" id="ch6-2">
+  <h3>2. 기능 명세</h3>
+
+  <h4>F-01 주소 미리보기</h4>
+  <table>
+    <thead><tr><th style="width:22%">항목</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl">하는 일</td><td>가입 없이 주소 하나의 같은 업종 개폐업 숫자를 보여 준다.</td></tr>
+      <tr><td class="lbl">하위 기능</td><td>도로명·지번 검색. 반경 기본값. 최근 개업·폐업 건수 요약. 허가일과 감지일 표시.</td></tr>
+      <tr><td class="lbl">이용자</td><td>최은지, 서지혜, 오미란 — 로그인 벽에서 닫는 사람.</td></tr>
+      <tr><td class="lbl">완료 조건</td><td>주소 하나를 넣고 묶음 기본값으로 건수가 나온다. 회원 가입을 요구하지 않는다.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>F-02 후보지 나란히 비교</h4>
+  <table>
+    <thead><tr><th style="width:22%">항목</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl">하는 일</td><td>주소 두세 곳을 같은 묶음, 같은 기간의 숫자로 붙인다.</td></tr>
+      <tr><td class="lbl">하위 기능</td><td>후보지 추가·삭제. 열 맞춤 비교. 같은 모수가 아니면 비교를 막는다.</td></tr>
+      <tr><td class="lbl">이용자</td><td>최은지(성수·연남), 한시우(본사 추천 세 곳).</td></tr>
+      <tr><td class="lbl">완료 조건</td><td>두 주소의 12개월 개업·폐업 건수가 한 화면에 나란히 보인다.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>F-03 관련 업종 묶음</h4>
+  <table>
+    <thead><tr><th style="width:22%">항목</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl">하는 일</td><td>공공 업종 코드 대신, 실제로 붙는 집을 한 묶음으로 다시 묶는다.</td></tr>
+      <tr><td class="lbl">하위 기능</td><td>기본 묶음(카페·디저트·제과, 한식·분식, 스터디·책상 카페, 뷰티). 묶음 수정. 모든 화면이 같은 묶음을 쓴다.</td></tr>
+      <tr><td class="lbl">이용자</td><td>정태호, 배성준, 윤하늘.</td></tr>
+      <tr><td class="lbl">완료 조건</td><td>묶음을 고치면 미리보기·비교·추세·알림·한 장의 숫자가 같이 바뀐다.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>F-04 점포 생애 단계</h4>
+  <table>
+    <thead><tr><th style="width:22%">항목</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl">하는 일</td><td>한 집을 허가 · 미개업 · 개업 · 휴업 · 폐업으로 이어 보여 준다.</td></tr>
+      <tr><td class="lbl">하위 기능</td><td>단계 표시. 미개업만 보기. 허가를 개업 건수에 넣지 않음.</td></tr>
+      <tr><td class="lbl">이용자</td><td>최은지, 정태호, 이민재.</td></tr>
+      <tr><td class="lbl">완료 조건</td><td>허가만 난 집이 개업 숫자와 분리되어 보인다.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="page" id="ch6-2b">
+  <h4>F-05 중복 묶기·기준일</h4>
+  <table>
+    <thead><tr><th style="width:22%">항목</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl">하는 일</td><td>같은 집을 한 번만 세고, 허가일과 서비스가 감지한 날을 같이 적는다.</td></tr>
+      <tr><td class="lbl">하위 기능</td><td>관리번호·주소·날짜로 묶기. 중복 후보 표시. 허가일·감지일 병기. 원본 주소 공개.</td></tr>
+      <tr><td class="lbl">이용자</td><td>이민재, 정태호, 김도윤. 화면을 닫게 만든 시차를 줄인다.</td></tr>
+      <tr><td class="lbl">완료 조건</td><td>같은 관리번호의 집이 한 줄로 나오고, 모든 숫자에 기준일이 있다.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>F-06 12개월 추세</h4>
+  <table>
+    <thead><tr><th style="width:22%">항목</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl">하는 일</td><td>묶음 기준 허가·폐업 건수의 12개월 증감을 보여 준다.</td></tr>
+      <tr><td class="lbl">하위 기능</td><td>월별 건수. 전년 대비 증감. 성공·과밀을 문장으로 단정하지 않음.</td></tr>
+      <tr><td class="lbl">이용자</td><td>윤하늘(갱신), 한시우(골목이 죽어 가는지).</td></tr>
+      <tr><td class="lbl">완료 조건</td><td>주소와 묶음을 넣으면 12개월 허가·폐업 건수가 나온다. 예언 문장이 없다.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>F-07 조준 알림</h4>
+  <table>
+    <thead><tr><th style="width:22%">항목</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl">하는 일</td><td>저장한 주소 반경에 같은 묶음 허가가 나면 드물게 알린다.</td></tr>
+      <tr><td class="lbl">하위 기능</td><td>업종·거리·주기 설정. 기본 주 1회. 허가 단계 알림. 1차는 이메일 요약.</td></tr>
+      <tr><td class="lbl">이용자</td><td>오미란, 윤하늘 — 알림이 섞이면 끈다.</td></tr>
+      <tr><td class="lbl">완료 조건</td><td>기본값이 주 1회이고, 선택한 묶음·거리 밖의 사건은 보내지 않는다.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>F-08 출처 있는 한 장</h4>
+  <table>
+    <thead><tr><th style="width:22%">항목</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="lbl">하는 일</td><td>주소 하나의 비교 결과를 출처와 날짜가 있는 한 장으로 보낸다.</td></tr>
+      <tr><td class="lbl">하위 기능</td><td>링크 공유. PDF 내려받기. 제공기관·기준일·감지일. 묶음과 단계 포함.</td></tr>
+      <tr><td class="lbl">이용자</td><td>김도윤, 한시우(아내), 이민재 보고서 첫 쪽.</td></tr>
+      <tr><td class="lbl">완료 조건</td><td>한 장에 출처와 날짜가 있고, 캡처 없이도 손님에게 전달된다.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="page" id="ch6-3">
+  <h3>3. 사용자 스토리와 출시</h3>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>액터</th><th>스토리</th><th>기능</th><th>출시</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>US-01</td><td>예비 창업자</td><td>가입하지 않고 후보지 주소 하나의 개폐업 건수를 본다.</td><td>F-01</td><td>1차</td></tr>
+      <tr><td>US-02</td><td>예비 창업자</td><td>같은 묶음으로 주소 두 곳을 나란히 보고 이번 달 자리를 고른다.</td><td>F-02, F-03</td><td>1차</td></tr>
+      <tr><td>US-03</td><td>예비 창업자</td><td>허가만 난 집과 이미 연 집을 나눠 센다.</td><td>F-04</td><td>1차</td></tr>
+      <tr><td>US-04</td><td>예비 창업자</td><td>본사 추천 자리를 거절할 근거 한 장을 가족에게 보낸다.</td><td>F-08</td><td>1차</td></tr>
+      <tr><td>US-05</td><td>기존 점주</td><td>내 가게 반경, 내 묶음의 허가 소식만 주 1회 받는다.</td><td>F-07, F-03</td><td>1차</td></tr>
+      <tr><td>US-06</td><td>기존 점주</td><td>임대 갱신 전에 12개월 폐업·허가 증감을 본다.</td><td>F-06</td><td>1차</td></tr>
+      <tr><td>US-07</td><td>중개사</td><td>매물 주소를 넣어 출처 있는 링크를 손님에게 보낸다.</td><td>F-08</td><td>1차</td></tr>
+      <tr><td>US-08</td><td>컨설턴트</td><td>같은 집이 두 줄로 나오지 않고, 모든 숫자에 기준일이 있다.</td><td>F-05</td><td>1차</td></tr>
+      <tr><td>US-09</td><td>기존 점주</td><td>알림을 앱 푸시로 즉시 받는다.</td><td>F-07</td><td>이후</td></tr>
+      <tr><td>US-10</td><td>중개사</td><td>매물 주소를 여러 곳 넣어 한 장을 한꺼번에 만든다.</td><td>F-08</td><td>이후</td></tr>
+    </tbody>
+  </table>
+
+  <h4>출시 나눔</h4>
+  <table>
+    <thead>
+      <tr><th>구분</th><th>넣는 기능</th><th>검증 질문</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="lbl">1차</td><td>F-01 ~ F-08. 알림은 이메일 주간 요약.</td><td>후보지 두 곳 비교가 주말 답사보다 짧은가. 알림을 끄는가.</td></tr>
+      <tr><td class="lbl">이후</td><td>푸시 알림. 매물 일괄 패킷. 미개업 전용 목록(F-04 필터). 과밀 한 줄 문장(검증 후).</td><td>점주가 연 뒤에도 돌아오는가. 중개사가 매물마다 한 장을 반복하는가.</td></tr>
+    </tbody>
+  </table>
+
+  <p class="small toc-note"><a href="../../index.html">문서 홈</a> · <a href="../neighborhood-change-radar/index.html">동네 변화 레이더</a> · 아이디어 검증 전 초안. 페르소나와 지불 의사는 가설이다.</p>
+</section>
+
+</body>
+</html>

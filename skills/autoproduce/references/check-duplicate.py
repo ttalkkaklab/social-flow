@@ -89,21 +89,44 @@ def doc_title(md_path: str):
     return None
 
 
+# 채널 루트에 두는 칸 — 여기 아래는 에피소드가 아니다
+_RESERVED = frozenset({'assets', 'growth', 'episodes', 'scratch', 'output'})
+
+
+def _topic_roots(channel_dir: str):
+    """에피소드가 있는 디렉토리. episodes/ 를 먼저 보고, 옛 배치(채널 루트)도 받는다."""
+    roots = []
+    epi = os.path.join(channel_dir, 'episodes')
+    if os.path.isdir(epi):
+        roots.append(epi)
+    roots.append(channel_dir)
+    return roots
+
+
 def collect(channel_dir: str):
     """[(slug, [신원 문자열들])] — 주제 디렉토리마다 하나."""
     out = []
-    for name in sorted(os.listdir(channel_dir)):
-        sb = os.path.join(channel_dir, name, 'storyboard')
-        if not os.path.isdir(sb):
+    seen = set()
+    for root in _topic_roots(channel_dir):
+        try:
+            names = os.listdir(root)
+        except OSError:
             continue
-        ids = [name.replace('-', ' ')]
-        t = doc_title(os.path.join(sb, 'storyboard.md'))
-        if t:
-            ids.append(t)
-        c = cover_title(os.path.join(sb, 'scenes.js'))
-        if c:
-            ids.append(c)
-        out.append((name, ids))
+        for name in sorted(names):
+            if name in _RESERVED or name.startswith('.') or name in seen:
+                continue
+            sb = os.path.join(root, name, 'storyboard')
+            if not os.path.isdir(sb):
+                continue
+            seen.add(name)
+            ids = [name.replace('-', ' ')]
+            t = doc_title(os.path.join(sb, 'storyboard.md'))
+            if t:
+                ids.append(t)
+            c = cover_title(os.path.join(sb, 'scenes.js'))
+            if c:
+                ids.append(c)
+            out.append((name, ids))
     return out
 
 

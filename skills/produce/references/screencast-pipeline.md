@@ -62,10 +62,7 @@ sed 's|</body>|<script src="./scenes.js"></script>\n</body>|' \
   $REF/screencast-overlay.html > .work/overlay.html
 cp storyboard/scenes.js .work/
 # ② 씬별 타이틀 캡처 — ?i 는 0부터 (edit.json idx-1), 파일명은 t<idx>.png
-FORMAT_ENV="$PWD/.work/format.env" \
-  $REF/capture-frames.sh "file://$PWD/.work/overlay.html?i=0&alpha=1" .work/cards/t1.png 1
-#    접두가 창 크기(CAP_W/CAP_H)와 URL 의 &format= 을 함께 정한다. 빠뜨리면 12분치를
-#    다 찍은 뒤에야 빌더 자산 선검사가 잡는다.
+$REF/capture-frames.sh "file://$PWD/.work/overlay.html?i=0&alpha=1" .work/cards/t1.png 1
 # ③ alignment.json + overlay 경로 → .work/edit.json 작성, BGM 준비(.work/bgm.wav)
 # ④ 빌드 — BG 는 THEME.ink 를 넘긴다
 BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4(클린) · reel-sub.mp4(번인) · subs.srt · cover.jpg · build-report.txt
@@ -73,9 +70,12 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4(클린) · reel-sub
 
 - 오버레이 캡처 후 `evaluate_script` 또는 육안으로 `window.__overflow === 0` 확인
   (긴 타이틀은 tight1~3 자동 축소 후 잔여 노출).
-- BGM 은 pipeline.md 와 동일하게 `music_generate` 인스트루멘털 — 단 육성 위이므로
+- BGM 은 produce §3 과 같다 — `resolve-asset.py data/<채널> bgm default` 가
+  준 파일을 복사하고, 없을 때만 `music_generate` 인스트루멘털. 육성 위이므로
   빌더 기본 볼륨이 낮다(BGM_VOL 0.22).
-- 아웃트로는 TTS 파이프라인과 **같은 공용 자산**(`data/<채널>/assets/outro.mp4`)
+- 아웃트로는 TTS 파이프라인과 **같은 공용 자산**
+  (`resolve-asset.py data/<채널> outro <플랫폼|default>` —
+  기본 `assets/outro/default.mp4`, 옛 `assets/outro.mp4` 도 찾는다)
   을 `.work/outro.mp4` 로 복사한다.
 - 이후 폰 모드 검수·플랫폼 텍스트·품질 게이트는 produce SKILL.md §8~10 그대로.
 

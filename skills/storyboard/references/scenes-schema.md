@@ -1,6 +1,6 @@
 # scenes.js 데이터 계약 (SoT)
 
-`data/<채널>/<주제>/storyboard/scenes.js` — 스토리보드 승인 후 produce 가
+`data/<채널>/episodes/<주제>/storyboard/scenes.js` — 스토리보드 승인 후 produce 가
 소비하는 유일한 데이터 원천. `video-template.html` 이 `<script src="./scenes.js">`
 로 로드한다.
 
@@ -14,17 +14,85 @@ window.THEME = {
   ink:     "#0b1020",          // 베이스 다크 (배경·자막 아웃라인)
   brand:   "채널 이름"          // 아웃트로 브랜드 표기
 };
-window.SCENES = [ /* 씬 배열 — 아래 타입별 계약 */ ];
+window.SCENES = [ /* 샷 배열 — 항목 하나 = 샷 하나. 식별자 이름은 유지 */ ];
 ```
 
-## 씬 공통 필드
+배열 이름(`SCENES`)·파일명(`scenes.js`·`images/scene-N.png`)·캡처 인덱스
+(`frame.html?i=n`)는 바꾸지 않는다. produce 가 읽는 기계 식별자다. 사람이 읽는
+라벨만 샷·씬·시퀀스로 옮긴다.
+
+## 문법 단위와 제작 층
+
+한 편의 쇼트는 책, 시퀀스는 문단, 씬은 문장, 샷은 단어다.
+
+| 단위 | 뜻 | 이 파일에서 |
+|---|---|---|
+| Sequence (시퀀스) | 한 목적으로 묶인 씬들. 「이 대목」 | `sequence` — 목적이 갈릴 때만 적는다. 한 편에 하나면 생략 |
+| Scene (씬) | 한 장소, 연속된 한 시간대의 한 사건. 머리글은 `S#1. 카페 안 / 낮` | `scene` + `sceneSlug`. 장소나 시간이 바뀌면 새 번호 |
+| Shot (샷 / 현장에선 컷) | 녹화 ON~OFF 의 끊기지 않은 한 덩어리 | **`SCENES[]` 항목 하나**. `type` 은 역할(cover/points/…)이지 문법 단위가 아니다 |
+| Reveal (리빌) | 같은 샷 안에서 화면 글자가 나타나는 순간 | `narration` 세그·bullets. 샷이 아니다 — 콘티 행 라벨은 「리빌」 |
+| Take (테이크) | 같은 샷의 재시도 | 촬영 대본·생성 라운드. 이 배열의 항목이 아니다 |
+| Coverage (커버리지) | 한 씬을 여러 사이즈로 나눠 찍은 재료 | 같은 `scene` 번호의 샷들. `shot.info` 가 겹치면 하나면 충분하다 |
+
+쇼트 한 편은 대개 시퀀스 하나다. 씬은 장소·시간이 끊길 때만 나눈다. 샷은 **새 정보
+하나당 하나** — 대화 한 씬에 4~6샷이 기본이지만, 25~45초 정보형은 씬마다 사이즈가
+다른 샷 2개(와이드 + 가까움)가 최소선이다.
+
+`type`(cover/points/quote/broll/outro) 은 화면 종류다. **재생 역할**은 `beat` 다.
+문법 축과 직교한다.
+
+## 재생 순서 — 커버 → 후킹 → 결과물 → 내용
+
+이탈을 줄이는 뼈대다. 커버가 결과를 한눈 보여 주고, 후킹이 왜 필요한지 걸고,
+**완성본을 방법보다 먼저** 보여 준 뒤에야 내용을 푼다. 방법이 결과보다 앞에
+있으면 목적지를 모르는 채 설명을 듣게 된다.
+
+| `beat` | 한글 | 하는 일 | 자리 |
+|---|---|---|---|
+| `hook` | 커버 | 첫 프레임에 완성본을 비추고, 첫 대사가 남을 이유를 준다 | `type:"cover"` — 적지 않아도 커버다 |
+| `hooking` | 후킹 | 문제·피해·결심. 왜 그 결과가 필요한지 | 커버 다음, 결과물 앞 |
+| `result` | 결과물 | 완성본을 제대로 보여 준다. 스크롤·시연·전후 비교 | **후킹 직후, 내용 앞** |
+| `body` | 내용 | 그 결과를 만든 방법·근거·단계 | 결과물이 보인 뒤 |
+| `cta` | 다음 | 다음 편에서 무엇이 완성되는지 | 맨 끝. `type:"outro"` 는 적지 않아도 여기 |
+
+커버의 첫 프레임과 결과물 씬은 같은 산출물을 가리킨다. 커버는 한눈, 결과물은
+만들어진 칸이 보이게 펼친다. 내용 끝에 같은 완성본을 다시 펼치지 않는다.
+
+적지 않으면 렌더러가 이렇게 읽는다. `type:"cover"` → hook, `type:"outro"` → cta,
+`sequence` 가 `결과` 로 열리면 result, `기획`·`방법`·`단계`·`내용` 이면 body,
+`문제` 로 열리면 hooking. 제작·튜토리얼·전후 비교인데 결과물이 내용보다 뒤에
+있으면 `storyboard.html` 이 경고한다.
+
+```js
+beat: "result"                    // hook | hooking | result | body | cta
+sequence: "결과"                  // 시퀀스 머리글. beat 와 같이 쓰면 문서에서 한 덩어리로 보인다
+```
+
+## 샷 공통 필드
 
 | 필드 | 필수 | 설명 |
 |---|---|---|
-| `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` |
-| `narration` | ✅(`broll`·`outro` 제외) | 세그먼트 배열 `[{tts, sub}, ...]` — 문장 하나 = 세그먼트 하나 = reveal 하나 |
+| `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` — 역할 |
+| `narration` | ✅(`broll`·`outro` 제외) | 세그먼트 배열 `[{tts, sub}, ...]` — 문장 하나 = 세그먼트 하나 = 리빌 하나 |
 | `visual` | ✅ | 비주얼 계획 객체 (아래) |
 | `duration` | 권장 | 목표 초 — 나레이션 자수/4.5 로 추정, 13초 상한 |
+| `scene` | 권장 | 문법 씬 번호. 같은 장소·시간이면 같은 값. 없으면 렌더러가 항목마다 씬 하나를 가정한다 |
+| `sceneSlug` | `scene` 있으면 권장 | `"장소 / 시간"` — 예: `"미용실 의자 / 낮"` |
+| `sequence` | 선택 | 시퀀스 이름. 한 편에 목적이 둘일 때만 |
+| `beat` | 선택 | `hook` \| `hooking` \| `result` \| `body` \| `cta` — 재생 역할. 위 §재생 순서 |
+| `shot` | 권장 | `{ size, info }` — 아래 |
+
+```js
+shot: {
+  size: "ws",                         // ws 와이드 · two 투샷 · ms 미디엄 · cu 클로즈업
+  info: "추천이 두 갈래라는 사실"       // 이 샷이 관객에게 새로 알려주는 정보 한 줄
+}
+```
+
+- `info` 가 같은 씬의 다른 샷과 같으면 그 샷은 버려도 된다. 그게 커버리지 설계다.
+- 클로즈업으로 열면 다음 샷에서 와이드·미디엄으로 「여기가 어디인지」를 갚는다.
+- 옛 `scenes.js` 에 이 칸이 없어도 produce 는 그대로 돈다. 사람 문서와 점검만
+  비어 보인다.
 
 ### narration 세그먼트
 
@@ -82,39 +150,74 @@ narration: [
 
 ```js
 visual: {
+  picture: "still",                  // still | ai-video | recording | asset — 화면 본체
+  overlay: "html",                   // html | none — 화면 위 HTML 연출
   bg: "images/scene-1.png",          // 생성 배경 (storyboard 단계 산출)
   bgPrompt: "…",                     // 생성에 쓴 프롬프트 (재생성·감사용 기록)
   motion: "very slow dolly in",      // cover 만: 도입 b-roll 용 veo 카메라 지시
                                      // veo 어휘로 적는다 — 정본 문서에 push·orbit 이 0건이다
-  video: null,                       // points 만: 모션 배경 씬 구분자 (§모션 배경) — 정지 씬은 생략
-  clip: null                         // quote 만: 발화 클립 계획 (아래)
+  video: null,                       // points 만: 모션 배경 샷 구분자 (§모션 배경) — 정지는 생략
+  clip: null,                        // quote 만: 발화 클립 계획 (아래)
+  character: null                    // 채널 공용 캐릭터 id — resolve-asset.py character <id>
 }
 ```
 
-`video` 유무가 **정지 이미지 씬 / 이미지→영상 씬의 구분자**다 — storyboard.html 이
-컷 배지("정지 삽화"·"이미지→영상 · veo")로 그리고, produce 가 이 필드를 보고
-동작을 가른다.
+한 샷은 **화면 본체**와 **화면 위 연출**이 겹칠 수 있다. 커버가 정지 사진 위에
+제목·수치를 HTML 로 띄우는 것이 기본값이다. 둘을 한 배지로 합치지 않는다.
+
+| `picture` | 화면 본체 | 구조로 보는 단서 |
+|---|---|---|
+| `still` | 정지 사진·삽화. 켄번즈는 빌더가 얹는다 | `visual.bg` 있고 `video`·`clip` 없음 |
+| `ai-video` | 생성 영상 — 모션 배경·b-roll·발화 클립 | `type==="broll"` 또는 `visual.video` 또는 `visual.clip` |
+| `recording` | 사용자가 찍은 화면 | `visual.source==="recording"` |
+| `asset` | 미리 만든 공용 mp4 | `type==="outro"` |
+
+| `overlay` | 화면 위 | 언제 |
+|---|---|---|
+| `html` | `video-template.html` / `screencast-overlay.html` 이 글자를 그린다. 리빌·캡션 스왑·타이핑 카드·서명 | cover·points·인용 카드·촬영 오버레이 |
+| `none` | 글자 오버레이 없음. 영상 자체만 | b-roll, 공용 아웃트로 |
+
+적지 않으면 storyboard.html 이 위 단서로 추론한다. 적어 둔 값이 구조와 어긋나면
+점검 스트립이 잡는다 — `picture:"ai-video"` 인데 `video`/`clip`/broll 이 없으면
+영상을 만들 수 없다.
+
+`video` 유무가 produce 가 읽는 **정지 / 이미지→영상** 구분자다. `picture` 는 사람이
+읽는 제작 층이고, 둘은 같아야 한다.
 
 ## 타입별 계약
 
-### cover — 첫 3초가 전부
+### cover — 첫 1초에 결과, 첫 3초에 약속
 
 ```js
 {
   type: "cover",
+  scene: 1,
+  sceneSlug: "신고 창구 / 낮",
+  shot: { size: "cu", info: "안 내면 과태료라는 사실" },
   kicker: "베트남 생활 · 행정",              // 상단 시리즈 라벨 (rg0)
   title: "임시거주 신고, 안 하면 **과태료**",  // 16자 이내 + 주제어 필수 (rg1)
   stat: "500만₫",                           // 히어로 수치 (rg2)
   statLabel: "미신고 과태료 상한",            // 18자 이내 한정어
   narration: [ {tts,sub}, {tts,sub} ],      // 2세그 — ①훅 ②히어로 수치
-  visual: { bg: "images/scene-1.png", bgPrompt: "…", motion: "very slow dolly in" }
+  visual: {
+    picture: "still", overlay: "html",
+    bg: "images/scene-1.png", bgPrompt: "…", motion: "very slow dolly in"
+  }
 }
 ```
 
 - title: 자극 + **무엇의 이야기인지**(주제 명사)가 반드시 안에. `**…**` 는 그라데이션 칩.
+  각도는 platform-playbook §1 ② — **방법·도구가 아니라 낯선 사람이 이미 느끼는
+  문제**. "노션으로 이렇게" 가 아니라 "하루가 왜 늘 피곤하지". 해결·방법은
+  후킹·내용 씬이 맡는다.
 - reveal 매핑: rg1=title ← 세그①, rg2=stat ← 세그②.
 
-#### 세그①은 시청자에게 하는 약속이다 (2026-08-15 — 스킵률 실측이 강제)
+#### 첫 프레임은 결과, 세그①은 시청자에게 하는 약속이다
+
+제작·튜토리얼·전후 비교 콘텐츠는 `visual.bg` 또는 `visual.shot`의 **첫 프레임부터
+완성 결과**를 보여 준다. 과정 화면, 앱을 여는 장면, 화자 얼굴 인사로 시작하지 않는다.
+시청자는 첫 1초에 결과를 보고, 세그①에서 왜 계속 봐야 하는지 듣는다. 결과를 화면으로
+보여 줄 수 없는 정보형 주제만 문제 상황·핵심 수치를 첫 프레임으로 쓴다.
 
 커버의 첫 대사(세그①)는 화면 제목과 별개의 훅 표면이다. 계약은 하나 —
 **듣는 사람이 남아야 할 이유를 첫 문장이 준다.** 형태는 셋 중 하나다:
@@ -132,7 +235,7 @@ visual: {
 달라졌습니다".
 
 근거: 2026 릴스 스킵률 벤치마크는 평균 25~35%, 교육형도 30~40%가 정상선인데
-화자 보고형 개시 4편의 실측이 84.8~93.8%였다(딸깍랩 2026-08-15). 해외 훅
+화자 보고형 개시 4편의 자체 채널 실측이 84.8~93.8%였다(2026-08-15). 해외 훅
 가이드의 공통 조건도 0.5~1.5초 안의 약속·문제 제기 한 문장이다.
 
 ### points — 한 화면에 한 메시지
@@ -140,14 +243,17 @@ visual: {
 ```js
 {
   type: "points",
+  scene: 1,
+  sceneSlug: "신고 창구 / 낮",
+  shot: { size: "ws", info: "기한이 도착 당일로 바뀐 것" },
   title: "7월 24일부터 **이렇게** 바뀝니다",   // 60px 상단 고정 (rg1) — 없으면 "" (아래 §화면 텍스트는 필요할 때만)
   bullets: [                                  // 화면에는 한 번에 하나만 (캡션 스왑). 0개도 정상이다
     { t: "도착 즉시 신고", d: "종전 24시간 → 도착 당일로" },
     { t: "온라인 제출 허용", d: "앱·포털 어디서든" }
   ],
   footnote: "출처: 공안부 시행령 NN/2026",      // 제목과 함께 상시 노출 (rg1) — 없으면 ""
-  narration: [ … ],                            // 세그 수는 씬마다 다르다 (1~3)
-  visual: { bg: "images/scene-2.png", bgPrompt: "…" }
+  narration: [ … ],                            // 세그 수는 샷마다 다르다 (1~3)
+  visual: { picture: "still", overlay: "html", bg: "images/scene-2.png", bgPrompt: "…" }
 }
 ```
 
@@ -195,6 +301,7 @@ visual: {
   text: "저도 작년에 놓쳐서 벌금 냈어요.",
   narration: [ {tts,sub}, {tts,sub} ],   // 2세그 — 둘 다 같은 오버레이 사용
   visual: {
+    picture: "ai-video", overlay: "html",  // 클립 없으면 picture:"still" — 정지 인용 카드
     bg: null,
     clip: {                               // 발화 클립 계획 (produce 가 생성) — 없으면 정지 인용 카드
       avatar: "…아바타 이미지 경로 또는 null",
@@ -216,6 +323,7 @@ visual: {
   duration: 8,                        // ≤8초로 잡는다 — 클립 1회 재생이 씬을 덮는다
   narration: [ {tts, sub}, … ],       // 유지된다 — b-roll 과 달리 말하면서 배경만 움직인다
   visual: {
+    picture: "ai-video", overlay: "html",
     bg: "images/scene-3.png",         // veo 파라미터 — gpt_image high · §broll 의 소스 조항(인물 실사) 그대로
     bgPrompt: "…",
     video: {
@@ -314,6 +422,7 @@ Veo 로 갈 때만 `negativePrompt` 인자가 그 자리다). 문장은 영어�
                                      // 생성은 1080p·8초 고정(API 제약) — produce 가 앞부분만 잘라 쓴다
                                      // 팔린드롬으로 늘리지 않는다(소리가 거꾸로 재생)
   visual: {
+    picture: "ai-video", overlay: "none",
     src: "images/scene-1.png",       // SCENES[after] 의 visual.bg 와 같은 파일 — 절대 규칙 8·12
     clip: ".work/broll/broll-a0-mixed.mp4",   // 트림+loudnorm+BGM 믹스본 (원본 8초는 broll-a0.mp4)
     motion: "very slow dolly in, nearly static camera",   // veo 호출 — push-in 이 아니다
@@ -342,7 +451,7 @@ Veo 로 갈 때만 `negativePrompt` 인자가 그 자리다). 문장은 영어�
   이 실수는 조용히 통과한다 — 배경 사진이 있는 씬(cover·points) 뒤에만 둔다.
 - **`narration` 이 비어 있어야 한다.** 이 구간은 영상이 가진 소리를 쓴다 — TTS 를 얹으면
   두 소리가 싸운다(produce 절대 규칙 9). 그만큼 말이 없는 시간이 생기므로, 두 칸을 다
-  쓰면 본편에서 정보를 전하는 시간이 8초 안팎 줄어든다. 총길이 계약(35~75초) 안에서
+  쓰면 본편에서 정보를 전하는 시간이 8초 안팎 줄어든다. 기본 길이 계약(25~45초) 안에서
   그 손해를 감당할 만한 자리에만 둔다.
 - **커버에 쓰지 않는다.** Veo 는 한글을 못 쓰므로 훅 제목·히어로 수치가 있는 화면은
   코드 렌더로 만든다(절대 규칙 10). `after: 0` — 커버 **뒤**다.
@@ -360,14 +469,20 @@ Veo 로 갈 때만 `negativePrompt` 인자가 그 자리다). 문장은 영어�
 - **생성 호출 전에 이 씬들과 커버 bgPrompt 를 content-reviewer 계획 모드로 검증받는다**
   (절대 규칙 13) — `PLAN_REVIEW: PASS` 없이 이미지·영상 생성(image_local_generate·gpt_image high·veo)을 부르지 않는다.
 
-### outro — 브랜드 클로징 (참조만)
+### outro — 다음 가치가 있는 브랜드 클로징 (참조만)
 
 ```js
-{ type: "outro", title: "매주 이런 정보 올라옵니다", sub: "팔로우하고 이어서 보세요" }
+{ type: "outro", title: "다음엔 로그인 붙여요", sub: "완성 과정, 다음 편에서 이어집니다" }
 ```
 
-- **본편 manifest 에 넣지 않는다** — 공용 `data/<채널>/assets/outro.mp4` 를
-  빌드가 접합한다. 이 씬은 outro.mp4 최초 생성(build-outro.sh) 시에만 렌더된다.
+- **본편 manifest 에 넣지 않는다** — 공용 `data/<채널>/assets/outro/default.mp4`
+  (플랫폼별이면 `outro/youtube.mp4` · `outro/instagram.mp4`)를 빌드가 접합한다.
+  `resolve-asset.py` 가 catalog·기본 경로·옛 `assets/outro.mp4` 를 찾는다.
+  이 씬은 outro 최초 생성(build-outro.sh) 시에만 렌더된다.
+- `"매주 올립니다"`·`"구독해 주세요"`처럼 채널 행동만 요구하는 문구를 기본값으로
+  쓰지 않는다. 연재형이면 다음 편에서 얻게 될 결과를 말하고, 단편이면 같은 문제를
+  계속 해결해 주는 채널 가치 한 줄을 말한다. 공용 outro 영상이 고정 문구라면 본편
+  마지막 나레이션에서 다음 결과를 먼저 약속한다.
 
 ## 저작 검증 체크리스트 (storyboard 스킬이 승인 요청 전 자가 점검)
 
@@ -375,10 +490,20 @@ Veo 로 갈 때만 `negativePrompt` 인자가 그 자리다). 문장은 영어�
 히어로 수치 폭·b-roll 계약)은 **`storyboard.html` 을 브라우저로 열면 맨 위 점검
 스트립에 뜬다** — 손으로 세지 말고 그 스트립이 "위반 없음"인지 확인한다.
 
-- [ ] cover title ≤16자 + 주제어 포함, statLabel ≤18자
+- [ ] cover title ≤16자 + 주제어 포함, statLabel ≤18자. 제목이 방법·도구가 아니라
+      느끼는 문제로 열린다 (platform-playbook §1 ②)
 - [ ] **전 씬 title 이 구어 훅** — 사람이 내뱉는 말(반말 감탄·의문·전언)이고 설명형
       서술·`-하기` 명사형·`-ㄴ다` 신문체가 아니다 (§title 은 구어 훅)
-- [ ] 씬 수: cover 1 + 본문 3~5 (총 35~75초, 90초 상한)
+- [ ] 샷 수: cover 1 + 본문 2~4 (기본 25~45초, 45초 초과 사유 기록, 90초 상한)
+- [ ] 샷마다 `scene`·`sceneSlug`·`shot.size`·`shot.info` — 같은 씬의 `info` 가 겹치지 않는다
+- [ ] `visual.picture`·`visual.overlay` 가 구조와 맞다. AI 영상과 HTML 연출을 한 배지로 합치지 않는다
+- [ ] 제작·튜토리얼·전후 비교는 첫 프레임에 완성 결과가 보이고, 첫 대사는 시청자에게
+      그 결과의 이익·변화를 약속한다
+- [ ] 재생 순서가 **커버 → 후킹 → 결과물 → 내용** 이다. 완성본(`beat:"result"`)이
+      방법·단계(`beat:"body"`)보다 앞에 있다. 커버 한눈과 결과물 펼침을 같은
+      산출물로 맞춘다
+- [ ] 한 회차가 해결하는 문제·결과가 하나다
+- [ ] 연재형 CTA가 막연한 구독 요청이 아니라 다음 편의 구체적인 결과를 약속한다
 - [ ] narration 자수 상한 준수, 문장당 8~25자, 전 문장 마침표 종결
 - [ ] tts/sub 표기 이원화 완료 (숫자·외래어)
 - [ ] 수치 범위 왜곡 없음 (범위는 범위로)

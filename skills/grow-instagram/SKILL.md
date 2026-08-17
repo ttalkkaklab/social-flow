@@ -288,7 +288,7 @@ exit 2(S1)면 고쳐서 보낸다. 규칙은 platform-guide `references/korean-s
 3시간이 지난 슬롯은 건너뛴다(루프가 꺼져 있다가 밤에 아침 슬롯을 몰아 게시하는
 사고 방지).
 
-대기열 후보는 `data/<채널>/*/storyboard/storyboard.md` 중 frontmatter 의 `status` 가
+대기열 후보는 `data/<채널>/episodes/*/storyboard/storyboard.md` 중 frontmatter 의 `status` 가
 `produced` **또는** `published` 이면서 `queue_instagram: ready` 이고,
 `state.publishedTopics` 에 없는 주제다. 여럿이면 `queue_at`(없으면 파일 mtime) 이
 가장 오래된 것 하나.

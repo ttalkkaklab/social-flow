@@ -172,9 +172,9 @@ D8 은 사용자 지시다(2026-08-12 — "나뉩니다·갈려요·남습니다
 문장 밖에 있으면 심각도를 내린다 와 같은 취지).
 
 **C7 주 — 보는 축은 분산이 아니라 최장 문장이다.** "길이가 균일하면 기계 티"는
-실측에서 기각됐다(2026-08-11, 딸깍랩 Threads 게시분 9건). 반응이 가장 좋았던 글이
-오히려 더 균일했고(cv 0.13·범위 9 · 267조회·좋아요 5), 같은 나이에 2.6배 뒤처진
-글(30 대 78조회)만 최장 문장이 21자였다. 나머지 8건은 전부 25자 이상이다. 사용자
+채널 실측에서 기각됐다(Threads 게시분 9건). 반응이 가장 좋았던 글이 오히려 더
+균일했고(cv 0.13·범위 9), 같은 나이에 도달이 2.6배 뒤처진 글만 최장 문장이
+21자였다. 나머지 8건은 전부 25자 이상이다. 사용자
 문체 지침의 "AI 글의 실제 결함은 균일함보다 장문의 부재"(대조 코퍼스 1000문장당
 장문 AI 8.1 대 사람 91.3)와 방향이 같다. 표본 9건에 여유 4자라 근거가 얇으므로
 차단(S1)하지 않는다 — 작성자 눈에 올리는 데까지가 이 규칙의 역할이다.
@@ -334,7 +334,7 @@ publish §1 이 exit 1 을 승인 제시문에 그대로 적으므로 사람이 
 ## 검사기 사용
 
 경로는 저장소 규약대로 `${CLAUDE_PLUGIN_ROOT}` 기준이다 — produce·publish 는
-`data/<채널>/<주제>/` 에서 돌기 때문에 상대경로로는 잡히지 않는다.
+`data/<채널>/episodes/<주제>/` 에서 돌기 때문에 상대경로로는 잡히지 않는다.
 
 ```bash
 set -o pipefail          # 파이프를 쓸 때 필수 — 아래 함정 참조
@@ -350,7 +350,7 @@ node $PG/extract-text.js ./storyboard/scenes.js subtitle  | python3 $PG/check-st
 node $PG/extract-text.js ./storyboard/scenes.js screen    | python3 $PG/check-style.py --surface screen -
 
 # 묶음 — 여러 편을 한꺼번에 (반려 없음, 순위만 낸다)
-python3 $PG/check-batch.py data/<채널>/*/output/threads/post.md
+python3 $PG/check-batch.py data/<채널>/episodes/*/output/threads/post.md
 python3 $PG/check-batch.py --split data/<채널>/growth/threads/posts.md
 ```
 

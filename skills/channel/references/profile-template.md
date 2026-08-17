@@ -86,8 +86,12 @@ video-template.html 의 THEME 계약 — scenes.js 에 그대로 들어간다:
   기본 용도는 **본편 뒤 접합**(브랜드 클로징 — 1회 제작 고정 자산).
   **쇼트폼 본편 앞에는 붙이지 않는다** (첫 3초 훅 원칙 — 용도는 intro-playbook.md §1)
 - **문구**: <브랜드 클로징 대본 — 예: "이런 정보, 매주 올라옵니다. 팔로우하고 이어서 보세요.">
-- **자산 경로**: `data/<slug>/assets/outro.mp4` — 없으면 produce 첫 회에
-  build-outro.sh 로 생성 후 여기 저장 (주제마다 재생성하지 않는다)
+- **자산 경로**: `data/<slug>/assets/outro/default.mp4` — 없으면 produce 첫 회에
+  build-outro.sh 로 생성 후 여기 저장 (주제마다 재생성하지 않는다).
+  플랫폼마다 문구가 다르면 `outro/youtube.mp4` · `outro/instagram.mp4` 를 두고
+  catalog 에 id 를 올린다. 옛 `assets/outro.mp4` 도 resolve-asset 이 찾는다.
+- **카탈로그**: `data/<slug>/assets/catalog.md` — 공용물의 kind+id 표.
+  규약은 `references/assets-catalog-template.md`.
 
 ## 7. 운영 규칙
 
@@ -121,7 +125,7 @@ video-template.html 의 THEME 계약 — scenes.js 에 그대로 들어간다:
 ```
 mcp__social-flow__tts_local_generate
   text: "<대표 나레이션 두 문장>"  voice: "F1"  lang: "ko"
-  outputPath: "data/<slug>/assets"  filename: "voice-test-F1.wav"
+  outputPath: "data/<slug>/assets/scratch"  filename: "voice-test-F1.wav"
 ```
 
 `afplay` 로 재생해 비교하고, 고른 값을 위 §2 에 적는다.

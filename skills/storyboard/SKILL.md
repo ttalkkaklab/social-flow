@@ -5,7 +5,7 @@ description: >
   "이 주제로 영상 기획", "촬영 대본 만들어", "내가 녹화할 대본", "make a storyboard",
   "plan a video for topic X", or starts a new post topic in a channel. Researches the
   topic (naver_search/WebSearch/serp_*), then authors an image-included storyboard under
-  data/<channel>/<topic>/storyboard/ — human-readable storyboard.md + machine-readable
+  data/<channel>/episodes/<topic>/storyboard/ — human-readable storyboard.md + machine-readable
   scenes.js (the SoT that produce consumes) + generated 9:16 scene images, or in
   screencast mode a shooting script (script.md) the user records against. Four adversarial
   convergence loops run before approval — the storyboard-reviewer agent scores the copy as
@@ -19,7 +19,7 @@ argument-hint: "<채널> <주제 또는 주제 힌트>"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img"]
 ---
 
-# 스토리보드 저작 — data/[채널]/[주제]/storyboard/
+# 스토리보드 저작 — data/[채널]/episodes/[주제]/storyboard/
 
 주제 하나를 받아 **조사 → 씬 설계 → 문안 수렴 → 씬별 수렴 → 어휘 수렴 →
 이미지 생성 → 이미지 수렴 → 스토리보드 승인**까지 진행한다. 여기서 확정된
@@ -40,7 +40,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuesti
 셈이고, 네 관문을 다 넘어야 사용자 승인 단계로 간다.
 
 ```
-data/<채널>/<주제 slug>/storyboard/
+data/<채널>/episodes/<주제 slug>/storyboard/
 ├── research.md      # 근거·출처·교차검증 기록 (조사 생략 채널은 생략)
 ├── storyboard.md    # 사람이 읽는 스토리보드 — 씬 표 + 이미지 임베드
 ├── storyboard.html  # 검토용 렌더 — scenes.js 를 직접 로드해 그린다 (템플릿 기반, §6)
@@ -116,16 +116,41 @@ data/<채널>/<주제 slug>/storyboard/
 
 ### 3. 주제 디렉토리 생성
 
-프로파일 §7 slug 규칙으로 `data/<채널>/<주제 slug>/storyboard/images/` 를 만든다.
+프로파일 §7 slug 규칙으로 `data/<채널>/episodes/<주제 slug>/storyboard/images/` 를 만든다.
+채널 루트에 주제를 두지 않는다 — `assets/` · `growth/` 와 같은 층의 `episodes/` 아래다.
 이미 존재하면 사용자에게 이어서 작업할지(기존 스토리보드 개정) 확인한다.
 
 ### 4. 씬 설계 — scenes.js 작성
 
-`references/scenes-schema.md` 의 계약대로 작성한다. 핵심 규칙:
+`references/scenes-schema.md` 의 계약대로 작성한다. 배열 이름(`SCENES`)은
+유지하고, 항목 하나는 **샷**이다. 같은 장소·시간은 `scene`+`sceneSlug` 로 묶고,
+목적이 갈릴 때만 `sequence` 를 적는다. 샷마다 `shot.size`·`shot.info` 와
+`visual.picture`(정지 사진 / AI 영상 / 녹화 / 공용 자산)·`visual.overlay`(HTML
+연출 / 없음)를 적는다 — 한 샷이 둘 다 가질 수 있다. 커버가 정지 사진 위에 HTML
+리빌을 얹는 것이 기본값이다. 칸 정의는 스키마 §문법 단위와 제작 층이 정본.
 
-- **구성**: cover 1 + points/quote 3~5 + outro 참조 = 본편 총 **35~75초** 목표
-  (유지율은 길이에 반비례 — 90초 상한. 완주율 벤치마크가 60초 미만 66% 대 1~2분
-  56%라 하한을 35초로 열었다, 2026-08-15 — 소재가 짧으면 짧게 끝내는 게 맞다).
+핵심 규칙:
+
+- **구성**: cover 1 + points/quote 2~4 + outro 참조 = 본편 총 **25~45초**를 기본값으로
+  삼는다. 45초를 넘길 때는 중요한 시연·근거를 빼면 결과를 이해할 수 없는 이유를
+  `storyboard.md` 설계 근거에 적는다(90초 절대 상한). 채널 Analytics 실측이 있으면
+  일반 벤치마크보다 **계속 시청함·유효 조회수·영상별 구독자 증가**를 우선한다. 원시
+  조회수가 아니라 유효 조회수와 구독을 만든 회차를 기준으로 길이와 포맷을 고른다.
+- **재생 순서는 커버 → 후킹 → 결과물 → 내용**이다. 제작·튜토리얼·전후 비교는 이
+  네 칸을 빠뜨리지 않는다. 커버는 완성본을 한눈 보여 주고, 후킹은 왜 필요한지
+  걸고, **결과물 씬이 방법·단계보다 앞에** 온다. 내용(어떻게 만들었는지)은
+  완성본을 본 뒤에야 푼다. 샷마다 `beat` 를 적는다 — `hook` · `hooking` ·
+  `result` · `body` · `cta`. 정본은 scenes-schema §재생 순서.
+- **첫 1초 결과 선공개**: 커버 첫 프레임은 완성 화면이나 작동 결과다. 커버 첫
+  대사는 그 결과가 시청자에게 주는 이익·변화를 말한다. 인사, 배경 설명, 도구
+  정의, "해 봤습니다"는 빼거나 후킹 뒤로 보낸다. 커버의 한눈과 결과물 씬의
+  펼침은 같은 산출물을 가리킨다.
+- **한 회차 한 결과**: 한 영상이 해결하는 문제나 만들어 내는 변화는 하나다. 설치·설정·
+  시연을 한 회차에 전부 넣지 않는다. 남는 단계는 다음 회차로 보내고 이번 결과만 완결한다.
+- **구독 전환은 다음 가치로 설계**: 제작·연재에 맞는 주제면 독립 단편을 흩뿌리지 말고
+  같은 결과물을 진전시키는 시리즈로 묶는다. 마지막 CTA는 "구독해 주세요"가 아니라
+  **다음 편에서 무엇이 완성되는지**를 구체적으로 약속한다. 각 편은 처음 보는 사람도
+  이해할 수 있어야 하며, 시리즈 번호만으로 맥락을 대신하지 않는다.
 - **커버 제목은 16자 이내 + 주제어 필수** — 자극만 있고 무엇의 이야기인지 없으면
   스킵된다. 강조어는 `**굵게**`(그라데이션 칩). statLabel 은 18자 이내.
 - **화면 텍스트는 필요할 때만 쓴다**(사용자 지시 2026-08-14) — 씬마다 캡션 칸을 채우지
@@ -146,6 +171,22 @@ data/<채널>/<주제 slug>/storyboard/
 - **쉬운 말 원칙(프로파일 §2)** — 화면 텍스트·나레이션 모두. 덱 저작 단계에서
   용어를 풀어 써야 나레이션도 쉬워진다.
 - THEME 은 프로파일 §3 값을 그대로 복사한다.
+
+#### 채널 실측을 스토리 구조로 옮기는 법
+
+`grow-youtube` 산출물이나 YouTube Analytics 기록을 읽을 수 있으면, 저작 전에 아래를
+한 줄씩 결정해 `storyboard.md` 설계 근거와 `SB_DOC.seriesNote`에 적는다.
+
+1. **멈춤 문제** — `계속 시청함`이 낮으면 첫 프레임·첫 대사를 바꾼다. CTA를 세게 쓰는
+   것으로 대신하지 않는다.
+2. **관심 문제** — 원시 조회수 대비 유효 조회수가 낮으면 설명을 줄이고 결과 도달 시점을
+   앞당긴다.
+3. **전환 단서** — 구독자를 만든 영상의 주제·결과·형식을 다음 3~5편의 공통 축으로 쓴다.
+   조회수만 높고 구독자가 없던 포맷은 그대로 복제하지 않는다.
+   반대로 초반 통과·유지는 좋은데 조회만 낮으면 형식이 아니라 제목 각도가
+   문제다 — 방법·도구가 아니라 느끼는 문제로 다시 연다(platform-playbook §1 ②).
+4. **다음 약속** — 이번 편 결과와 다음 편 결과를 각각 한 문장으로 쓴다. 둘이 이어지지
+   않으면 시리즈가 아니라 주제만 비슷한 단편이다.
 
 ### 4.5 문안 수렴 루프 (storyboard-reviewer 문안 모드, 목표 score ≥95 AND p0 = 0)
 
@@ -177,10 +218,11 @@ data/<채널>/<주제 slug>/storyboard/
 
 - **품질** — 그 씬이 제 역할을 하는가. 커버는 3초 안에 무엇의 이야기인지 알리고
   **왜 남아야 하는지도 준다**(세그①이 약속·문제 제기·반전 — scenes-schema §cover),
+  결과물 씬은 완성본을 펼쳐 보여 주고, 내용 씬은 그 결과를 만든 방법만 말한다.
   points 는 한 화면에 한 메시지를 주고, quote 는 그 사람 입에서 나올 법한 말을 한다.
 - **맥락 적절성** — 그 씬이 여기 있을 이유가 있는가. 앞 씬이 던진 것을 받고 다음 씬을
-  열어 주는지, 프로파일 §3 타깃이 알아들을 전제인지, 그 주장이 research.md 의 어느
-  항목에 걸리는지.
+  열어 주는지, 제작형이면 결과물이 내용보다 앞에 있는지, 프로파일 §3 타깃이
+  알아들을 전제인지, 그 주장이 research.md 의 어느 항목에 걸리는지.
 
 **하드캡 5회**:
 
@@ -193,7 +235,8 @@ data/<채널>/<주제 slug>/storyboard/
    - **역할이 비어 있다는 지적은 문장을 다듬어 못 고친다** — 그 씬이 빠져도 영상이
      성립하면 씬을 합치거나 뺀다. 씬 수가 줄면 남은 씬의 길이를 늘려 총길이를 맞춘다.
    - 흐름 단절 지적은 그 씬이 아니라 **앞뒤 순서**를 의심한다. 순서를 바꿔도 말이
-     되는 배열이면 애초에 흐름이 없는 것이다.
+     되는 배열이면 애초에 흐름이 없는 것이다. 제작형에서 방법 설명이 완성본보다
+     앞에 있으면 문장을 고치지 말고 결과물 씬을 앞으로 옮긴다.
    - 씬을 새로 쓰거나 순서를 바꿨으면 **§4.5 를 다시 통과시킨 뒤** 이 루프로 돌아온다
      (문장이 바뀌었으므로).
 4. 하드캡 도달 시 **최저 씬과 그 점수·미해결 지적**을 §7 승인 게이트에 그대로 싣는다.
@@ -338,15 +381,15 @@ printf 'image.local\t3\tstoryboard: points 배경 scene-2~4\n'        >> .work/c
 ### 6. storyboard.md 작성
 
 `references/storyboard-template.md` 구조로 사람이 검토할 문서를 만든다 —
-씬별 표(타입·길이 목표·나레이션 문장·화면 텍스트·비주얼 계획)와 생성 이미지를
-`![scene-1](images/scene-1.png)` 로 임베드한다. research.md 의 핵심 출처를
-말미에 요약 링크한다.
+씬 머리(`S#1. 장소 / 시간`) 아래 샷별 표(사이즈·새 정보·화면 본체·HTML 연출·
+나레이션)와 생성 이미지를 `![scene-1](images/scene-1.png)` 로 임베드한다.
+research.md 의 핵심 출처를 말미에 요약 링크한다.
 
-**촬영 모드**는 이미지 임베드 대신 씬별 "화면(shot)" 열을 쓰고, 추가로
+**촬영 모드**는 이미지 임베드 대신 샷별 "화면" 열을 쓰고, 추가로
 `script.md`(촬영 대본)를 `references/shot-script-template.md` 구조로 저작한다 —
-촬영 수칙(보조 모니터에 대본·씬 사이 1초 멈춤+전환·앱 폰트 확대·재촬영은 같은
-씬 처음부터)과 씬별 [화면/대사/전환] 블록. 대사는 scenes.js narration 에서
-옮긴다(두 벌 관리 금지 — scenes.js 가 SoT).
+촬영 수칙(보조 모니터에 대본·샷 사이 1초 멈춤+전환·앱 폰트 확대·같은 샷은
+처음부터 다시, 한 씬을 찍었으면 가까이 한 번 더)과 샷별 [화면/대사/전환]
+블록. 대사는 scenes.js narration 에서 옮긴다(두 벌 관리 금지 — scenes.js 가 SoT).
 
 **storyboard.html (검토용 렌더)** — `references/storyboard-html-template.html` 을
 storyboard/ 에 복사해 **`<title>` 과 `✎ SB_DOC` 블록만** 채운다. 씬 데이터(제목·
@@ -358,28 +401,29 @@ storyboard/ 에 복사해 **`<title>` 과 `✎ SB_DOC` 블록만** 채운다. �
 
 문서가 보여 주는 것은 셋이다.
 
-- **콘티 행** — 컷(리빌 — 화면이 바뀌는 순간) 하나가 행 하나다. 왼쪽에 9:16 프레임을
-  produce 렌더러와 같은 비율로 합성해 그리고(캡션 스왑·삽화 모드의 대사별 배경 교체·
-  촬영 모드의 녹화 밴드 그대로), 오른쪽에 그 컷의 화면 텍스트와 대사를 나란히 둔다 —
-  종이 콘티의 배치라 화면과 소리의 어긋남이 행 하나에서 보인다. 프레임 안에서 8px 로
-  그려지는 화면 텍스트는 오른쪽 칸이 읽을 수 있는 크기로 다시 적는다. 컷 오른쪽 끝의
-  **유형 배지**가 정지 이미지/생성 영상(모션 배경·타이핑 영상·발화 클립)을 가른다 —
-  무채색이 정지, 채널색 틴트가 영상이다. 배경·모션·프롬프트·오디오 지시는 행 아래
-  씬 메타가 담는다. 타임라인은 b-roll 을 배열 위치가 아니라 `after` 가 정한 재생
-  위치에 꽂아 그린다.
+- **샷 카드** — `SCENES[]` 항목 하나. 헤더에 역할·사이즈·**beat**(커버·후킹·결과물·
+  내용·CTA)와 **제작 층 두 배지** (화면 본체 = 정지 사진 / AI 영상 / 녹화 / 공용
+  자산, 화면 위 = HTML 리빌·캡션·타이핑 / 없음). `scene` 이 같으면 씬 밴드
+  (`S#1. 장소 / 시간`)로 묶는다. 마지막 본편을 PAYOFF 로 찍지 않는다. 채널색은
+  AI 영상, 테두리만 있는 배지는 HTML 연출이다. 한 배지로 합치지 않는다.
+- **콘티 행** — 리빌(같은 샷 안에서 글자가 나타나는 순간) 하나가 행 하나다. 샷이
+  아니다. 왼쪽에 9:16 프레임, 오른쪽에 그 순간의 글자와 대사. 배경·모션·프롬프트는
+  행 아래 샷 메타가 담는다. 타임라인 칸은 샷이고, b-roll 은 `after` 가 정한 재생
+  위치에 꽂힌다.
 - **계약 점검 스트립** — 위반을 문서 맨 위 한 곳에 모은다. 자수·말속도·씬 길이·총길이·
   커버 제목에 더해 **프레임 넘침**과 **히어로 수치 폭**을 produce 와 같은 방식으로
   실측하고(1080px 캔버스 · 3단계 축소 · 640px 가드), b-roll 계약(나레이션 없음·8초 이하·
   커버 배경과 같은 src·`after` 가 실재 씬)·씬 길이 결측·`tts` 결측·아웃트로 길이 미기재·
-  SB_DOC 미기입 `{{…}}` 도 잡는다. 제작 전에 글자 잘림과 계약 위반을 걸러 내는 자리다 —
+  SB_DOC 미기입 `{{…}}`·**재생 순서**(커버 → 후킹 → 결과물 → 내용, 내용이 결과보다
+  앞에 있으면 위반) 도 잡는다. 제작 전에 글자 잘림과 계약 위반을 걸러 내는 자리다 —
   다만 produce 와 같은 사각이 있어 **위로** 밀려난 글자는 안 걸린다(아래 넘침만 잰다).
 
-승인 제시 때 이 문서를 기본으로 쓴다. 텍스트 존·자막 토글은 씬 구성 절 머리에 있다.
+승인 제시 때 이 문서를 기본으로 쓴다. 텍스트 존·자막 토글은 샷 구성 절 머리에 있다.
 
 ### 7. HITL 승인 게이트
 
 AskUserQuestion 으로 스토리보드를 제시한다 — storyboard.md·storyboard.html 경로
-(HTML 을 브라우저로 열면 검산 배지까지 보인다), 씬 수·예상 총길이, 커버 제목,
+(HTML 을 브라우저로 열면 검산 배지까지 보인다), 샷 수·예상 총길이, 커버 제목,
 핵심 수치와 출처. 여기에 **네 수렴 루프의 결과를 함께 싣는다** — 문안·씬별·어휘·이미지
 각각의 최종 점수와 라운드 수, 씬별·어휘는 **최저 씬이 몇 번이고 몇 점인지**까지,
 하드캡에 걸렸으면 미해결 지적을 그대로. 선택지:
