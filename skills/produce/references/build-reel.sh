@@ -4,7 +4,20 @@
 #   비디오 측을 확장한다: 문장 경계 검출 → reveal 크로스페이드 체인 → 켄번즈 → ASS 자막 → b-roll 윈도우.
 #
 # 사용법: build-reel.sh <workdir>
-#   <workdir>/cards.tsv : idx <TAB> 나레이션오디오경로 <TAB> 목표속도(자/초) <TAB> zoom(in|out|auto)
+#   <workdir>/cards.tsv : idx <TAB> 나레이션오디오경로 <TAB> 목표속도(자/초) <TAB> zoom(in|out|auto|none) [<TAB> opts]
+#                         zoom=none 은 켄번즈를 안 건다 — 실촬영 클립처럼 이미 움직이는 화면용.
+#                         5열 opts 는 "k=v,k=v" 다(생략 가능 — 4열 파일은 오늘 그대로 돈다):
+#                           sync=1        오디오가 화면과 한 몸인 카드(사용자 촬영 클립의 육성).
+#                                         프리롤·포스트롤·최소길이 0, 무음 트림·속도 보정 없음 —
+#                                         잘라 내면 입과 소리가 어긋난다. 정규화(loudnorm)만 건다
+#                                         (무음 클립이면 그것도 건너뛴다). 오디오는 클립에서 뽑은
+#                                         wav 를 그대로 준다 — 카드 길이 = 그 오디오 길이.
+#                           subs=<tsv>    이 카드의 자막을 파일로 준다: start<TAB>end<TAB>문장,
+#                                         시각은 카드 시작 기준 초. 발화 경계 검출을 안 거치는
+#                                         자막(전사본)용. segs.tsv 의 자막표기 열과 같이 쓰면 둘 다 나온다
+#                           pan=<방향>[:z] 정지 사진의 켄번즈를 줌 대신 팬으로 — l2r|r2l|u2d|d2u,
+#                                         z 는 배율(기본 1.12, KB_ZOOM_MIN~KB_ZOOM_MAX 로 클램프).
+#                                         가로 캔버스용 — 세로는 팬 폭이 없어 쓰지 않는다
 #   <workdir>/segs.tsv  : idx <TAB> seg(0..) <TAB> 비주얼경로 <TAB> TTS대본문장 <TAB> 자막표기문장
 #                         비주얼 = reveal 상태 PNG(reel-template ?reveal=k 캡처) 또는 .mp4(풀스크린 b-roll)
 #                         '|' 로 여러 개를 나열하면 그 문장의 발화 창 안에서 균등 분할해 계단식으로
@@ -84,6 +97,9 @@ SUB_MR=${SUB_MR:-250}              # 자막 우 마진
 SUB_MV=${SUB_MV:-380}              # 자막 하단 마진 (밴드 y≈1380)
 SUB_OUT=${SUB_OUT:-5}              # 외곽선 두께
 SUB_SHA=${SUB_SHA:-1.7}            # 그림자
+KB_ZOOM_MIN=${KB_ZOOM_MIN:-1.06}   # 팬 베이스 배율 하한 (cards.tsv pan= 옵션)
+KB_ZOOM_MAX=${KB_ZOOM_MAX:-1.35}   # 팬 베이스 배율 상한 — 이동폭 = W(z-1)
+PAN_Z=${PAN_Z:-1.12}               # pan= 에 배율을 안 적었을 때
 
 rm -rf work && mkdir -p work
 # 옛 빌드의 자막·번인본을 먼저 지운다 — SUB=0 으로 다시 빌드했을 때 이전 subs.srt 가
@@ -210,9 +226,31 @@ SRTN=0                              # SRT 큐 순번 (1부터, 파일 전체 통
 : > work/order.txt
 
 # fd 3 로 읽는다 — 루프 내부 ffmpeg 의 stdin 소비 방지 (v2 함정 승계)
-while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
+# 5열(opts)은 없어도 된다 — read 가 남은 변수를 빈 값으로 채우므로 4열 파일은 오늘 그대로다.
+while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   [ -z "${IDX:-}" ] && continue
   N=$((N+1))
+
+  # ── 카드 옵션 (5열) — sync / subs / pan. 모르는 키는 실패다(오타가 조용히 무시되면
+  #    sync 가 빠진 촬영 카드가 0.4초 어긋난 채 나가고 그것을 눈으로 잡아야 한다).
+  SYNC=0; SUBSF=""; PAN=""; PZ="$PAN_Z"
+  if [ -n "${OPTS:-}" ]; then
+    IFS=',' read -ra OARR <<< "$OPTS"
+    for KV in "${OARR[@]}"; do
+      [ -z "$KV" ] && continue
+      case "$KV" in
+        sync=1) SYNC=1 ;;
+        sync=0) SYNC=0 ;;
+        subs=*) SUBSF="${KV#subs=}"; [ -f "$SUBSF" ] || { say "✗ card $IDX: subs 파일 없음 — $SUBSF"; exit 1; } ;;
+        pan=*)  PAN="${KV#pan=}"; case "$PAN" in *:*) PZ="${PAN#*:}"; PAN="${PAN%%:*}";; esac
+                case "$PAN" in l2r|r2l|u2d|d2u) : ;; *) say "✗ card $IDX: pan 방향 모름 — $PAN (l2r|r2l|u2d|d2u)"; exit 1;; esac
+                PZ=$(awk -v z="$PZ" -v lo="$KB_ZOOM_MIN" -v hi="$KB_ZOOM_MAX" 'BEGIN{if(z<lo)z=lo; if(z>hi)z=hi; printf "%.3f", z}') ;;
+        *) say "✗ card $IDX: cards.tsv 5열 옵션 모름 — $KV"; exit 1 ;;
+      esac
+    done
+  fi
+  # 촬영 카드(sync)는 여백을 안 둔다 — 프리롤이 있으면 화면은 0초부터 도는데 소리만 0.4초 늦다.
+  if [ "$SYNC" -eq 1 ]; then CPRE=0; CPOST=0; CMIN=0; else CPRE=$PRE; CPOST=$POST; CMIN=$MIN_DUR; fi
 
   # 챕터 첫 카드면 절대 시작 프레임을 적어 둔다 — TOTF 는 아직 이 카드를 안 더한 값이라
   # 그대로 이 카드의 시작이다. 10단계 bgm.tsv 도 같은 값을 쓴다.
@@ -249,9 +287,22 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
   MUTE=0; [ "$C" -eq 0 ] && MUTE=1
 
   # ── 1) 오디오: 포맷 판별 → 트림 → loudnorm  (v2 동일 · 무발화는 리샘플만)
+  #   sync 카드는 세 번째 길이다 — 트림도 속도 보정도 없이 **정규화만**. 앞뒤를 자르면 그만큼
+  #   화면과 어긋나고, loudnorm 은 시각을 안 옮긴다(클릭 1.000s → 1.000s 실측). 클립이 무음이면
+  #   loudnorm 이 바닥 잡음을 -16 까지 끌어올리므로 그때는 리샘플만 한다.
   if head -c 4 "$SRC" | LC_ALL=C grep -q RIFF; then INARGS=(-i "$SRC")
   else INARGS=(-f s16le -ar 24000 -ac 1 -i "$SRC"); fi
-  if [ "$MUTE" -eq 1 ]; then
+  if [ "$SYNC" -eq 1 ]; then
+    MEANV=$(ffmpeg -hide_banner "${INARGS[@]}" -af volumedetect -f null - 2>&1 | sed -n 's/.*mean_volume: \([-0-9.]*\) dB/\1/p')
+    if [ -n "$MEANV" ] && awk -v v="$MEANV" 'BEGIN{exit !(v > -50)}'; then
+      ffmpeg -y -v error "${INARGS[@]}" -af "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000" -ac 1 -ar 48000 "work/t$IDX.wav"
+      SYNCNOTE="육성 정규화(loudnorm)"
+    else
+      ffmpeg -y -v error "${INARGS[@]}" -af "aresample=48000" -ac 1 -ar 48000 "work/t$IDX.wav"
+      SYNCNOTE="무음 클립 — 정규화 생략"
+    fi
+    MUTE=1   # 아래 오디오 머신(속도·경고·atempo)을 통째로 비켜 간다 — 소리와 화면이 한 몸이다
+  elif [ "$MUTE" -eq 1 ]; then
     ffmpeg -y -v error "${INARGS[@]}" -af "aresample=48000" -ac 1 -ar 48000 "work/t$IDX.wav"
   else
     ffmpeg -y -v error "${INARGS[@]}" -af "
@@ -262,7 +313,8 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
 
   L0=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "work/t$IDX.wav")
   R0=$(awk -v c="$C" -v l="$L0" 'BEGIN{printf "%.2f", (c>0 && l>0)? c/l : 0}')
-  [ "$MUTE" -eq 1 ] && say "· card $IDX 무발화 — 트림·정규화·속도 보정 건너뜀(오디오 원본 그대로 ${L0}s)"
+  if [ "$SYNC" -eq 1 ]; then say "· card $IDX 촬영 sync — ${SYNCNOTE}, 트림·속도 보정 없음(오디오 ${L0}s 가 곧 카드 길이)"
+  elif [ "$MUTE" -eq 1 ]; then say "· card $IDX 무발화 — 트림·정규화·속도 보정 건너뜀(오디오 원본 그대로 ${L0}s)"; fi
 
   # ── 2) TTS 재생성 권고 게이트 (v2 동일)
   if [ "$MUTE" -eq 0 ] && awk -v r="$R0" -v lo="$RATE_LO" -v hi="$RATE_HI" 'BEGIN{exit !(r<lo || r>hi)}'; then
@@ -310,8 +362,8 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
   fi
 
   # ── 5) 카드 duration 확정 + 샘플 정확 오디오 조립 (v2 동일 — 드리프트 0 의 원천)
-  D0=$(awk -v p="$PRE" -v l="$L" -v q="$POST" 'BEGIN{printf "%.6f", p+l+q}')
-  D1=$(awk -v d="$D0" -v m="$MIN_DUR" 'BEGIN{printf "%.6f", (d>m)?d:m}')
+  D0=$(awk -v p="$CPRE" -v l="$L" -v q="$CPOST" 'BEGIN{printf "%.6f", p+l+q}')
+  D1=$(awk -v d="$D0" -v m="$CMIN" 'BEGIN{printf "%.6f", (d>m)?d:m}')
   FRAMES=$(awk -v d="$D1" -v f="$FPS" 'BEGIN{n=d*f; printf "%d", (n==int(n))?n:int(n)+1}')
   D=$(awk -v n="$FRAMES" -v f="$FPS" 'BEGIN{printf "%.6f", n/f}')
   SAMPLES=$((FRAMES * SPF))
@@ -319,7 +371,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
     say "⚠ card $IDX 길이 ${D}s > ${MAX_DUR}s — 대본 축약을 권고합니다."
     WARN=1
   fi
-  PRE_MS=$(awk -v p="$PRE" 'BEGIN{printf "%d", p*1000}')
+  PRE_MS=$(awk -v p="$CPRE" 'BEGIN{printf "%d", p*1000}')
   ffmpeg -y -v error -i "work/s$IDX.wav" \
     -af "adelay=${PRE_MS}:all=1,apad=whole_len=$SAMPLES,atrim=end_sample=$SAMPLES" \
     -ac 1 -ar 48000 "work/n$IDX.wav"
@@ -339,7 +391,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
   FOFF=(0); FDUR=("$REVEAL_D")      # [0] 은 기저 상태 — 전환이 없다
   if [ "$MV" -gt 1 ]; then
     FB=""; case "$BMETHOD" in 비례폴백*) FB="--fallback";; esac   # 빈 배열은 bash 3.2 의 set -u 에서 죽는다
-    TIMING=$(python3 "$HERE/reveal-timing.py" --pre "$PRE" --speech "$L" --dur "$D" \
+    TIMING=$(python3 "$HERE/reveal-timing.py" --pre "$CPRE" --speech "$L" --dur "$D" \
       --fade "$REVEAL_D" --gap "$REVEAL_GAP" --lead "$REVEAL_LEAD" \
       --silences "work/silin$IDX.txt" --bounds "$BLIST" --subs "$SUBS" \
       $FB --report 2>"work/rt$IDX.txt")
@@ -430,9 +482,24 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
   ZLAST=$(( FRAMES > 1 ? FRAMES - 1 : 1 ))
   ZD="${ZDIR:-auto}"
   if [ "$ZD" = "auto" ]; then if [ $((N % 2)) -eq 1 ]; then ZD=in; else ZD=out; fi; fi
-  if [ "$ZD" = "out" ]; then ZEXPR="1+$ZOOM_SPAN*(1-on/$ZLAST)"
-  else ZEXPR="1+$ZOOM_SPAN*on/$ZLAST"; fi
-  FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$ZEXPR':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
+  if [ "$ZD" = "none" ]; then
+    # 켄번즈 없음 — 실촬영 클립처럼 화면이 이미 움직이는 카드. 소스 확대(scale=ZB)도 안 한다.
+    FILT+="${CUR}format=yuv420p[vout]"
+  elif [ -n "$PAN" ]; then
+    # 팬 — 배율 z 고정, 창이 한 방향으로 이동한다. 이동폭 = W(z-1)(가로) / H(z-1)(세로).
+    case "$PAN" in
+      l2r) PX="(iw-iw/zoom)*on/$ZLAST";     PY="ih/2-(ih/zoom/2)" ;;
+      r2l) PX="(iw-iw/zoom)*(1-on/$ZLAST)"; PY="ih/2-(ih/zoom/2)" ;;
+      u2d) PX="iw/2-(iw/zoom/2)";           PY="(ih-ih/zoom)*on/$ZLAST" ;;
+      d2u) PX="iw/2-(iw/zoom/2)";           PY="(ih-ih/zoom)*(1-on/$ZLAST)" ;;
+    esac
+    ZD="pan:$PAN@$PZ"
+    FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$PZ':x='$PX':y='$PY':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
+  else
+    if [ "$ZD" = "out" ]; then ZEXPR="1+$ZOOM_SPAN*(1-on/$ZLAST)"
+    else ZEXPR="1+$ZOOM_SPAN*on/$ZLAST"; fi
+    FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$ZEXPR':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
+  fi
   ffmpeg -y -v error "${INS[@]}" -filter_complex "$FILT" -map "[vout]" \
     -frames:v "$FRAMES" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p "work/v$IDX.mp4"
 
@@ -449,7 +516,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
       SBGM=$(awk -F'\t' -v i="$IDX" -v s="$j" '$1==i && $2==s{print $4}' "$SFXTSV" | head -1)
       if [ -n "$SPATH" ] || [ "${SBGM:-}" = "off" ]; then
         WS=$(awk -v c="$CS0" -v o="${FOFF[$FJ]}" 'BEGIN{printf "%.3f", c+o}')
-        if [ "$j" -lt $((M-1)) ]; then WE=$(awk -v c="$CS0" -v p="$PRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", c+p+b}')
+        if [ "$j" -lt $((M-1)) ]; then WE=$(awk -v c="$CS0" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", c+p+b}')
         else WE=$(awk -v c="$CS0" -v d="$D" 'BEGIN{printf "%.3f", c+d}'); fi
         if [ -n "$SPATH" ]; then
           [ -f "$SPATH" ] || { say "✗ card $IDX seg $j: sfx 파일 없음 — $SPATH"; exit 1; }
@@ -466,10 +533,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
   if [ "$SUB" = "1" ]; then
     CS=$(awk -v f="$TOTF" -v fps="$FPS" 'BEGIN{printf "%.4f", f/fps}')
     for ((j=0; j<M; j++)); do
-      if [ "$j" -eq 0 ]; then ST=$(awk -v cs="$CS" -v p="$PRE" 'BEGIN{s=p-0.15; if(s<0)s=0; printf "%.3f", cs+s}')
-      else ST=$(awk -v cs="$CS" -v p="$PRE" -v b="${BARR[$((j-1))]}" 'BEGIN{printf "%.3f", cs+p+b}'); fi
-      if [ "$j" -lt $((M-1)) ]; then EN=$(awk -v cs="$CS" -v p="$PRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b-0.06}')
-      else EN=$(awk -v cs="$CS" -v p="$PRE" -v l="$L" -v d="$D" 'BEGIN{e=p+l+0.45; if(e>d)e=d; printf "%.3f", cs+e}'); fi
+      if [ "$j" -eq 0 ]; then ST=$(awk -v cs="$CS" -v p="$CPRE" 'BEGIN{s=p-0.15; if(s<0)s=0; printf "%.3f", cs+s}')
+      else ST=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$((j-1))]}" 'BEGIN{printf "%.3f", cs+p+b}'); fi
+      if [ "$j" -lt $((M-1)) ]; then EN=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b-0.06}')
+      else EN=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" -v d="$D" 'BEGIN{e=p+l+0.45; if(e>d)e=d; printf "%.3f", cs+e}'); fi
       TXT=$(printf '%s' "${SARR[$j]}" | sed 's/[{}\\]//g')
       if [ -n "$TXT" ]; then
         printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$(asstime "$ST")" "$(asstime "$EN")" "$TXT" >> work/subs.body
@@ -479,6 +546,24 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR; do
         printf '%d\n%s --> %s\n%s\n\n' "$SRTN" "$(srttime "$ST")" "$(srttime "$EN")" "$TXT" >> work/subs.srtbody
       fi
     done
+    # 파일 자막(subs=) — 카드 시작 기준 초를 절대 시각으로 옮긴다. 경계 검출을 안 거치므로
+    # 전사본처럼 시각을 이미 아는 자막용이다. 카드 길이를 넘는 끝은 카드 끝으로 자른다.
+    if [ -n "$SUBSF" ]; then
+      NSF=0
+      while IFS=$'\t' read -r FS FE FT; do
+        [ -z "${FS:-}" ] && continue
+        case "$FS" in \#*) continue;; esac
+        FT=$(printf '%s' "${FT:-}" | sed 's/[{}\\]//g')
+        [ -n "$FT" ] || continue
+        ST=$(awk -v cs="$CS" -v s="$FS" 'BEGIN{if(s<0)s=0; printf "%.3f", cs+s}')
+        EN=$(awk -v cs="$CS" -v e="$FE" -v d="$D" 'BEGIN{if(e>d)e=d; printf "%.3f", cs+e}')
+        awk -v s="$ST" -v e="$EN" 'BEGIN{exit !(e>s)}' || continue
+        printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$(asstime "$ST")" "$(asstime "$EN")" "$FT" >> work/subs.body
+        SRTN=$((SRTN+1)); NSF=$((NSF+1))
+        printf '%d\n%s --> %s\n%s\n\n' "$SRTN" "$(srttime "$ST")" "$(srttime "$EN")" "$FT" >> work/subs.srtbody
+      done < "$SUBSF"
+      say "· card $IDX 파일 자막 ${NSF}줄 ($SUBSF)"
+    fi
   fi
 
   echo "$IDX" >> work/order.txt

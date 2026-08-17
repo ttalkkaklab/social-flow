@@ -298,3 +298,94 @@ test('chapters.txt 는 chapters.tsv 가 있을 때만 나온다', () => {
   assert.match(reel, /유튜브는 3개 이상을 요구한다/);
   assert.match(reel, /10초 미만이다/);
 });
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 3단계 — 가로 조판과 촬영 클립 레인
+ *
+ * 여기서 지키는 것은 "가로 회차만 조용히 세로로 떨어지는" 부류의 결함이다.
+ * 세로는 값이 그대로라 아무 증상이 없어 눈으로는 못 잡는다.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+const SB_TPL = resolve(HERE, '../../skills/storyboard/references/storyboard-html-template.html');
+
+test('video-template 이 가로 조판을 안다 (&format=wide)', () => {
+  const t = readFileSync(join(PRODUCE, 'video-template.html'), 'utf8');
+  assert.match(t, /const wide = qs\.get\('format'\) === 'wide'/, '포맷 파라미터');
+  // 캔버스 변수는 html 이 읽는다 — body 에만 붙이면 창은 가로인데 CSS 캔버스가 세로다
+  assert.match(t, /root\.classList\.add\('wide'\); document\.body\.classList\.add\('wide'\)/,
+    'wide 클래스가 html·body 양쪽에');
+  assert.match(t, /:root\.wide\{\s*\n?\s*--w:1920px; --h:1080px;/, '가로 캔버스 토큰');
+  // 축소 계단이 기준값 자리를 차지하면 린트가 그것을 프리셋과 대조하게 된다
+  assert.match(t, /\n  body\.wide \.cover-title\{font-size:72px/, '가로 기준 글자');
+  assert.match(t, /\.tight1 body\.wide \.cover-title\{font-size:66px\}/, '가로 축소 계단');
+});
+
+test('캔버스 프로브가 씬 없이도 돈다 — 게이트 1 의 전제', () => {
+  const t = readFileSync(join(PRODUCE, 'video-template.html'), 'utf8');
+  const iProbe = t.indexOf("qs.get('probe') === '1'");
+  const iScene = t.indexOf('const scenes = window.SCENES');
+  assert.ok(iProbe > 0, '프로브 분기가 없다');
+  assert.ok(iProbe < iScene, '프로브가 scenes.js 를 읽은 뒤에 있다 — 미주입 상태에서 못 돈다');
+  assert.match(t, /html\.probe,body\.probe\{background:#FF00FF\}/, '마젠타 도색');
+  // build-reel 은 네 모서리를 정확히 ff00ff 로 읽는다 — 배경·글자가 남으면 모서리가 오염된다
+  assert.match(t, /body\.probe \.bg,body\.probe \.scrim,body\.probe \.zone/, '레이어 숨김');
+});
+
+test('촬영 씬 판정이 편 단위가 아니라 씬 단위다', () => {
+  const t = readFileSync(join(PRODUCE, 'video-template.html'), 'utf8');
+  assert.match(t, /const isFootage = !!\(scene\.visual &&/, '씬 하나를 본다');
+  assert.doesNotMatch(t, /SCENES\.some\([^)]*recording/, '편 전체로 뒤집는 판정이 살아났다');
+  assert.match(t, /zone\.classList\.add\(isFootage \? 'l3' : 'top'\)/, '로어서드 분기');
+
+  // 콘티 템플릿도 같다 — 여기서 편 단위로 뒤집으면 촬영 씬 하나가 생성 씬까지
+  // 촬영 계약(자수 40·말속도 5~6자/초)으로 검사받게 만든다
+  const sb = readFileSync(SB_TPL, 'utf8');
+  assert.match(sb, /function recOf\(s\)/, '씬 단위 판정 함수');
+  assert.doesNotMatch(sb, /\bvar isRec\b/, '편 단위 isRec 이 되살아났다');
+  assert.match(sb, /function recTall\(s\) \{ return recOf\(s\) && !WIDE; \}/,
+    '세로 촬영 레인만 상단 블록 + 녹화 밴드다');
+  assert.match(sb, /if \(WIDE\) probe\.style\.setProperty\("--fw", "1920px"\)/,
+    '가로 넘침 실측의 기준변');
+});
+
+test('build-reel 촬영 레인 — sync 카드가 오디오 머신을 비켜 간다', () => {
+  const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');
+  // 5열은 없어도 된다 — 4열 파일이 오늘 그대로 도는 것이 회귀 0 이다
+  assert.match(reel, /read -r -u 3 IDX SRC TARGET ZDIR OPTS/, 'cards.tsv 5열');
+  assert.match(reel, /if \[ "\$SYNC" -eq 1 \]; then CPRE=0; CPOST=0; CMIN=0;/,
+    'sync 카드는 프리롤·포스트롤·최소길이가 0 이다');
+  // 카드 루프가 전역 PRE 를 다시 집으면 sync 카드만 0.4초 밀린다
+  assert.doesNotMatch(reel, /-v p="\$PRE"/, '루프 안에 전역 PRE 가 남았다');
+  assert.match(reel, /--pre "\$CPRE"/, 'reveal 타이밍도 카드 값을 쓴다');
+  // 트림·atempo 를 태우면 그만큼 화면과 어긋난다
+  assert.match(reel, /MUTE=1   # 아래 오디오 머신/, 'sync 는 트림·속도 보정을 건너뛴다');
+  assert.match(reel, /SYNCNOTE="무음 클립 — 정규화 생략"/, '무음 클립은 loudnorm 도 안 건다');
+});
+
+test('build-reel 켄번즈 — 촬영 클립엔 안 걸고, 가로엔 팬을 쓴다', () => {
+  const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');
+  assert.match(reel, /if \[ "\$ZD" = "none" \]; then/, 'zoom=none');
+  assert.match(reel, /\$\{CUR\}format=yuv420p\[vout\]/, 'none 은 소스 확대도 안 한다');
+  assert.match(reel, /l2r\) PX="\(iw-iw\/zoom\)\*on\/\$ZLAST"/, '팬 방향식');
+  // 팬 배율은 프리셋 clamp 를 넘지 못한다 — 넘으면 화각이 크게 잘린다
+  assert.match(reel, /-v lo="\$KB_ZOOM_MIN" -v hi="\$KB_ZOOM_MAX"/, '팬 배율 clamp');
+  assert.match(reel, /KB_ZOOM_MIN=\$\{KB_ZOOM_MIN:-1\.06\}/, 'clamp 인라인 기본값');
+});
+
+test('build-reel 파일 자막 — 전사본 시각을 카드 절대 시각으로 옮긴다', () => {
+  const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');
+  assert.match(reel, /if \[ -n "\$SUBSF" \]; then/, 'subs= 분기');
+  // 카드 길이를 넘는 끝은 잘라야 한다 — 안 그러면 다음 카드 위로 자막이 흘러간다
+  assert.match(reel, /-v d="\$D" 'BEGIN\{if\(e>d\)e=d;/, '카드 끝 클램프');
+  // ASS·SRT 를 같은 자리에서 찍는다(역변환하면 두 파일 시각이 어긋난다)
+  const iAss = reel.indexOf("printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\\\fad(160,120)}%s\\n' \"$(asstime \"$ST\")\" \"$(asstime \"$EN\")\" \"$FT\"");
+  assert.ok(iAss > 0, '파일 자막의 ASS 줄');
+  assert.match(reel, /SRTN=\$\(\(SRTN\+1\)\); NSF=\$\(\(NSF\+1\)\)/, '파일 자막도 SRT 통번호를 쓴다');
+});
+
+test('모르는 cards.tsv 옵션은 조용히 무시되지 않는다', () => {
+  const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');
+  // 오타가 무시되면 sync 가 빠진 촬영 카드가 0.4초 어긋난 채 나가고, 그것을 눈으로 잡아야 한다
+  assert.match(reel, /\*\) say "✗ card \$IDX: cards\.tsv 5열 옵션 모름 — \$KV"; exit 1 ;;/);
+  assert.match(reel, /pan 방향 모름/, '모르는 팬 방향도 멈춘다');
+});

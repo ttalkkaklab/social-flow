@@ -6,8 +6,12 @@ description: >
   "plan a video for topic X", or starts a new post topic in a channel. Researches the
   topic (naver_search/WebSearch/serp_*), then authors an image-included storyboard under
   data/<channel>/episodes/<topic>/storyboard/ — human-readable storyboard.md + machine-readable
-  scenes.js (the SoT that produce consumes) + generated 9:16 scene images, or in
-  screencast mode a shooting script (script.md) the user records against. Four adversarial
+  scenes.js (the SoT that produce consumes) + generated scene images, or in
+  screencast mode a shooting script (script.md) the user records against. Picks the format
+  with the user first (9:16 shorts by default, or 16:9 YouTube long-form with chapters);
+  long-form episodes mix scenes the user films with generated ones, and for every filmed
+  scene the shooting script spells out what is on screen, what to do, what to say, and the
+  exact filename to save it as, so the user can just follow it. Four adversarial
   convergence loops run before approval — the storyboard-reviewer agent scores the copy as
   a whole (AI-sounding phrasing, hook, factual fidelity), then every single scene for
   quality and contextual fit, then the word choice of every narration and title for
@@ -106,12 +110,37 @@ window.FORMAT = "youtube-long-16x9";   // 또는 "shorts-9x16"
 녹화할게", 앱 시연·튜토리얼류)면 **촬영 모드**다. 확실치 않으면 AskUserQuestion
 으로 확인한다. 촬영 모드의 차이 (`references/shot-script-template.md` 계약):
 
-- 씬 `visual` 은 `{ source: "recording", shot: "보여줄 화면" }` — §5 이미지 생성을
+- 씬 `visual` 은 `{ source: "recording", clip, shot, action }` — §5 이미지 생성을
   통째로 건너뛴다 (영상 화면은 사용자의 실제 녹화에서 나온다).
 - narration 은 TTS 대본이 아니라 **말할 문장** — 자수 상한 완화 (문장당 40자 권장,
   씬 목표 8~20s 로 역산).
 - §6 에서 storyboard.md 와 함께 **script.md(촬영 대본)** 를 저작한다.
 - 승인 후 안내가 produce 가 아니라 **녹화**다 (§7 분기).
+
+#### 롱폼은 세 번째 경우다 — 한 편에 섞는다
+
+쇼트폼은 편 전체가 생성이거나 전체가 촬영이지만, **롱폼은 촬영 씬과 생성 씬을
+한 편에 섞는 것이 정상 경로다.** 설치 화면·실행 결과·손으로 만지는 장면은 실제로
+찍은 것이 낫고, 배경 설명·개념 그림은 생성이 싸고 빠르다. 12분을 한 종류로만
+채울 이유가 없다.
+
+그래서 롱폼에서는 모드가 편 단위가 아니라 **씬 단위**다. 씬을 설계할 때(§4)
+하나씩 정한다 — 이 장면은 찍을 것인가, 만들 것인가.
+
+```
+[가로 롱폼 · 섞어 찍기]  ← 롱폼 기본. 촬영 씬은 사용자가 파일로 찍어 준다
+[가로 롱폼 · 전부 생성]  ← 찍을 화면이 없는 주제(정보 정리·해설)
+[가로 롱폼 · 전부 촬영]  ← 처음부터 끝까지 시연. 섞어 찍기의 특수한 경우로 다룬다
+```
+
+**"전부 촬영"도 섞어 찍기 레인으로 만든다** — 씬마다 파일 하나로 받고 생성 씬이
+0개일 뿐이다. 쇼트폼의 `build-screencast.sh` 경로(한 번에 쭉 찍고 정합)는 세로
+전용이라 가로로 못 간다. 사용자가 "쭉 찍고 싶다"고 하면 그렇게 찍되 씬 경계에서
+파일을 나눠 저장해 달라고 안내한다.
+
+촬영 씬이 하나라도 있으면 §6 에서 **`script.md`(촬영 대본)** 를 저작하고, 승인
+후 안내가 촬영이다(§7). 계약은 `references/scenes-schema.md` §촬영 씬 ·
+문서 구조는 `references/shot-script-template.md` 가 정본이다.
 
 ### 2. 자료조사·사실검증 (프로파일 §5 정책에 따름)
 
@@ -179,6 +208,14 @@ window.FORMAT = "youtube-long-16x9";   // 또는 "shorts-9x16"
   구독자 증가**를 우선한다. 원시 조회수가 아니라 유효 조회수와 구독을 만든 회차를
   기준으로 길이와 포맷을 고른다.
 
+- **롱폼 씬마다 찍을지 만들지를 정한다**(§1.6). 판단 기준은 하나다 — **증거가
+  화면에 있으면 찍고, 설명이 필요하면 만든다.** 설치가 실제로 되는 장면, 결과물이
+  도는 화면, 손으로 만지는 순간은 생성 그림이 대신할 수 없다. 반대로 "왜 이게
+  빠른가" 같은 대목은 찍을 화면 자체가 없다.
+  촬영 씬에는 `visual.clip`(파일명)·`shot`(보이는 것)·`action`(하는 일)을 적고,
+  파일명은 **`footage/s<씬번호>-<slug>.mp4`** 규약으로 스토리보드가 정한다 —
+  사용자가 이름을 고르지 않는다. 소리를 육성으로 쓸지 나레이션을 덮을지도 여기서
+  정한다(육성이면 `narration: []`). 전문은 scenes-schema §촬영 씬.
 - **롱폼은 한 회차 한 결과를 챕터로 펼치는 것이지, 쇼트폼 여러 편을 이어 붙이는 게
   아니다.** 챕터마다 다른 주제를 넣으면 그건 재생목록이지 한 편이 아니다. 커버 →
   후킹 → 결과물 → 내용의 뼈대는 포맷과 무관하게 같고, 롱폼은 그 「내용」이 챕터로
@@ -454,11 +491,17 @@ printf 'image.local\t3\tstoryboard: points 배경 scene-2~4\n'        >> .work/c
 나레이션)와 생성 이미지를 `![scene-1](images/scene-1.png)` 로 임베드한다.
 research.md 의 핵심 출처를 말미에 요약 링크한다.
 
-**촬영 모드**는 이미지 임베드 대신 샷별 "화면" 열을 쓰고, 추가로
+**촬영 씬이 하나라도 있으면** 이미지 임베드 대신 샷별 "화면" 열을 쓰고, 추가로
 `script.md`(촬영 대본)를 `references/shot-script-template.md` 구조로 저작한다 —
-촬영 수칙(보조 모니터에 대본·샷 사이 1초 멈춤+전환·앱 폰트 확대·같은 샷은
-처음부터 다시, 한 씬을 찍었으면 가까이 한 번 더)과 샷별 [화면/대사/전환]
-블록. 대사는 scenes.js narration 에서 옮긴다(두 벌 관리 금지 — scenes.js 가 SoT).
+촬영 수칙(가로로 찍기·보조 모니터에 대본·앱 폰트 확대·같은 샷은 처음부터 다시)과
+샷별 [저장할 파일 / 화면 / 행동 / 대사] 블록이다. **사용자가 이 문서를 보며 그대로
+따라 찍는다** — 무엇이 화면에 보여야 하고, 무엇을 조작하고, 무슨 말을 하고, 어느
+파일명으로 저장하는지가 한 덩어리로 붙어 있어야 한다. 대사는 scenes.js narration
+에서 옮긴다(두 벌 관리 금지 — scenes.js 가 SoT).
+
+롱폼 섞어 찍기면 **촬영 씬만** 싣고, 맨 위에 「오늘 찍을 것」 표(파일명·씬·무엇을
+찍나·목표 길이)를 둔다. 생성 씬은 사용자가 찍을 것이 없으므로 대본에 안 넣는다 —
+넣으면 무엇을 해야 하는지가 흐려진다.
 
 **storyboard.html (검토용 렌더)** — `references/storyboard-html-template.html` 을
 storyboard/ 에 복사해 **`<title>` 과 `✎ SB_DOC` 블록만** 채운다. 씬 데이터(제목·
@@ -495,6 +538,8 @@ AskUserQuestion 으로 스토리보드를 제시한다 — **포맷**(쇼트폼 
 storyboard.md·storyboard.html 경로(HTML 을 브라우저로 열면 검산 배지까지 보인다),
 샷 수·예상 총길이, 커버 제목, 핵심 수치와 출처. 롱폼이면 **챕터 목록과 안전영역이
 잠정값이라는 사실**을 함께 알린다(§1.5).
+촬영 씬이 있으면 **`script.md` 경로와 찍어야 할 파일 수**를 같이 보여 준다 —
+승인이 곧 촬영 시작이라, 사용자가 무엇을 몇 개 찍어야 하는지 이 화면에서 알아야 한다.
 여기에 **네 수렴 루프의 결과를 함께 싣는다** — 문안·씬별·어휘·이미지
 각각의 최종 점수와 라운드 수, 씬별·어휘는 **최저 씬이 몇 번이고 몇 점인지**까지,
 하드캡에 걸렸으면 미해결 지적을 그대로. 선택지:
@@ -507,9 +552,17 @@ storyboard.md·storyboard.html 경로(HTML 을 브라우저로 열면 검산 배
 두 줄을 적고 `/social-flow:produce <채널> <주제>` 를 안내한다 — 나중에 어떤 점수의
 문안이 어떤 성과를 냈는지 되짚을 수 있다.
 
-**촬영 모드**의 승인 후 안내는 녹화다 — `/social-flow:ingest <채널> record
-<주제>` (script.md 를 보조 모니터에 띄우고 촬영). 녹화·정합이 끝나면 produce 가
-편집 파이프라인으로 영상을 만든다.
+**촬영 씬이 있으면** 승인 후 안내가 녹화다. 레인마다 다르다.
+
+- **쇼트폼 전편 촬영** — `/social-flow:ingest <채널> record <주제>` (script.md 를
+  보조 모니터에 띄우고 한 번에 촬영). 녹화·정합이 끝나면 produce 가 편집
+  파이프라인으로 영상을 만든다.
+- **롱폼 섞어 찍기** — 사용자가 `script.md` 「오늘 찍을 것」 표대로 **씬마다 따로
+  찍어** `data/<채널>/episodes/<주제>/footage/` 에 그 파일명으로 저장한다. ingest
+  정합을 안 거친다(파일명이 곧 정합이다). 파일이 다 모이면
+  `/social-flow:produce <채널> <주제>` 가 촬영 씬과 생성 씬을 한 타임라인으로 붙인다.
+  승인 화면에 **찍어야 할 파일 목록을 그대로 보여 준다** — 사용자가 그 목록을
+  체크리스트로 쓴다.
 
 ## 함정
 
