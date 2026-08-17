@@ -1,8 +1,8 @@
-import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { basename, extname } from 'node:path';
-import { SNS_PLATFORMS, listChannelDirs, snsCredentialFile } from './config.js';
+import { createHash, randomUUID } from 'node:crypto';
+import { existsSync, mkdirSync as nodeMkdirSync, readFileSync as nodeReadFileSync, rmSync as nodeRmSync, writeFileSync as nodeWriteFileSync, } from 'node:fs';
+import { open as nodeOpen, readFile, stat } from 'node:fs/promises';
+import { basename, dirname, extname, join } from 'node:path';
+import { SNS_PLATFORMS, listChannelDirs, snsCredentialFile, snsTokenDir } from './config.js';
 /**
  * 자사 SNS 직접 게시 클라이언트 — 로컬 자격증명 파일(config.snsCredentialFile 로
  * 채널·플랫폼 해석)로 각 플랫폼 API 를 직접 호출해 **즉시 공개 게시**한다.
@@ -846,13 +846,193 @@ async function setYoutubeThumbnail(token, videoId, thumb) {
         return `thumbnails.set failed: ${error instanceof Error ? error.message : String(error)}`;
     }
 }
+/* ────────────────────────────────────────────────────────────────────────────
+ * YouTube resumable 업로드 — 청크 PUT + 재개
+ *
+ * 오늘 코드도 `uploadType=resumable` 로 세션을 연다. 없는 것은 프로토콜이 아니라
+ * **재개 사용**이다 — 단일 PUT 으로 전체를 밀어 넣고 600초 타임아웃을 건다.
+ * 8분 이상 롱폼(수백 MB)에서 그 한 번의 PUT 이 끊기면 처음부터 다시 올린다.
+ *
+ * 크기 임계 분기를 만들지 않는다. 근거 셋 —
+ *   ① 위험한 경로는 드물게 도는 경로다. 쇼트폼이 매일 밟으면 회귀가 롱폼 파일럿이
+ *      아니라 그날 쇼트폼 게시에서 드러난다.
+ *   ② 두 경로는 곧 두 벌의 재시도·중복방지 규칙이고 단일 PUT 쪽은 둘 다 못 갖는다.
+ *   ③ 청크 3~7회의 추가 왕복이 keep-alive 에서 회당 100~300ms, 합쳐 2초 안쪽이다.
+ * ──────────────────────────────────────────────────────────────────────────── */
+/** 프로토콜이 마지막 청크를 뺀 모든 청크에 256KiB 배수를 요구한다. */
+const YT_CHUNK_MIN = 256 * 1024;
+/** 재개 세션의 수명. 유튜브는 7일을 주지만 우리는 24시간만 믿는다(아래 주석). */
+const YT_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+function ytChunkSize() {
+    const mb = Number(process.env.SOCIAL_FLOW_YT_CHUNK_MB ?? 8);
+    const raw = Math.floor((Number.isFinite(mb) && mb > 0 ? mb : 8) * 1024 * 1024);
+    return Math.max(YT_CHUNK_MIN, raw - (raw % YT_CHUNK_MIN));
+}
+/**
+ * Range 헤더에서 서버가 받은 다음 오프셋을 뽑는다.
+ *
+ * 308 응답의 `Range: bytes=0-8388607` 은 **받은 마지막 바이트**이므로 다음 오프셋은
+ * +1 이다. 헤더가 아예 없으면 서버가 0바이트를 받은 것이다 — 이 두 경우를 뭉뚱그리면
+ * 첫 청크를 건너뛰거나 한 바이트를 겹쳐 보낸다.
+ */
+function parseResumeOffset(range) {
+    if (!range)
+        return 0;
+    const m = /bytes=0-(\d+)/.exec(range);
+    return m ? Number(m[1]) + 1 : 0;
+}
+function sessionStateFile(filePath) {
+    // 상태는 토큰과 같은 디렉토리 아래 둔다 — 사용자 소유이고 이미 gitignore 밖이다.
+    const key = createHash('sha256').update(filePath).digest('hex').slice(0, 16);
+    return join(snsTokenDir, '.yt-upload', `${key}.json`);
+}
+/**
+ * 상태 저장은 **최선 노력**이다. 디렉토리가 없거나 쓰기가 막히면 조용히 건너뛰고
+ * 오늘과 같은 무재개 동작으로 내려간다 — 상태 저장 실패가 게시 실패가 되면 안 된다.
+ */
+function readState(filePath) {
+    try {
+        const raw = nodeReadFileSync(sessionStateFile(filePath), 'utf8');
+        const s = JSON.parse(raw);
+        if (Date.now() - s.startedAt > YT_SESSION_TTL_MS)
+            return null;
+        return s;
+    }
+    catch {
+        return null;
+    }
+}
+function writeState(filePath, s) {
+    const p = sessionStateFile(filePath);
+    try {
+        if (s === null) {
+            nodeRmSync(p, { force: true });
+            return;
+        }
+        nodeMkdirSync(dirname(p), { recursive: true });
+        nodeWriteFileSync(p, JSON.stringify(s), 'utf8');
+    }
+    catch {
+        /* 저장 못 해도 업로드는 계속한다 */
+    }
+}
+/**
+ * 세션 URL 로 파일을 청크 PUT 한다. 308 이면 서버가 말한 오프셋에서 이어 간다.
+ *
+ * `bytes` 를 인자로 안 받는 것이 핵심이다 — 파일 핸들 하나와 청크 버퍼 하나만 쓴다.
+ * 호출부가 `readFile` 로 전체를 힙에 올려 두면 청크로 바꿔도 피크가 "파일 크기 +
+ * 청크" 그대로다(512MB 파일이면 약 560MB).
+ */
+export async function uploadResumable(sessionUrl, filePath, mimeType, opts = { total: 0 }) {
+    const total = opts.total;
+    const chunk = ytChunkSize();
+    let offset = opts.startOffset ?? 0;
+    let resumed = offset > 0;
+    const fh = await nodeOpen(filePath, 'r');
+    const buf = Buffer.allocUnsafe(chunk);
+    try {
+        while (offset < total) {
+            const want = Math.min(chunk, total - offset);
+            const { bytesRead } = await fh.read(buf, 0, want, offset);
+            if (bytesRead !== want) {
+                return { ok: false, status: 500, body: `Short read at ${offset}: ${bytesRead}/${want}` };
+            }
+            const end = offset + want - 1;
+            const view = new Uint8Array(buf.buffer, buf.byteOffset, want);
+            let res;
+            try {
+                res = await fetch(sessionUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': mimeType,
+                        'Content-Range': `bytes ${offset}-${end}/${total}`,
+                    },
+                    body: view,
+                    signal: AbortSignal.timeout(300_000),
+                });
+            }
+            catch (error) {
+                // 전송 실패 — 서버가 어디까지 받았는지 물어보고 이어 간다. 바이트는 도달했는데
+                // 응답만 끊긴 경우가 있어서 오프셋을 우리가 추정하면 안 된다.
+                const sync = await queryResumeOffset(sessionUrl, total, mimeType);
+                if (sync.done)
+                    return { ok: true, body: sync.body, resumed: true };
+                if (sync.offset === null) {
+                    return {
+                        ok: false,
+                        status: 502,
+                        body: `YouTube upload chunk failed at ${offset}: ${error instanceof Error ? error.message : String(error)}`,
+                    };
+                }
+                offset = sync.offset;
+                resumed = true;
+                continue;
+            }
+            if (res.status === 308) {
+                offset = parseResumeOffset(res.headers.get('range'));
+                opts.onProgress?.(offset, total);
+                continue;
+            }
+            const text = await res.text();
+            if (!res.ok)
+                return { ok: false, status: res.status, body: text };
+            opts.onProgress?.(total, total);
+            return { ok: true, body: text, resumed };
+        }
+        // 루프가 끝났는데 최종 응답을 못 받았다 — 상태를 물어본다.
+        const sync = await queryResumeOffset(sessionUrl, total, mimeType);
+        if (sync.done)
+            return { ok: true, body: sync.body, resumed: true };
+        return { ok: false, status: 502, body: 'YouTube upload ended without a final response' };
+    }
+    finally {
+        await fh.close();
+    }
+}
+/**
+ * 빈 PUT 으로 서버가 받은 오프셋을 묻는다. `Content-Range: bytes * /TOTAL`.
+ *
+ * **완료 상태를 반드시 구분한다.** 마지막 청크는 도달했는데 응답만 유실된 경우
+ * 서버가 200/201 + 영상 JSON 을 돌려준다. 이걸 못 알아보면 같은 파일을 통째로
+ * 다시 올려 중복 영상이 생긴다.
+ */
+async function queryResumeOffset(sessionUrl, total, mimeType) {
+    try {
+        const res = await fetch(sessionUrl, {
+            method: 'PUT',
+            headers: { 'Content-Range': `bytes */${total}`, 'Content-Type': mimeType },
+            signal: AbortSignal.timeout(60_000),
+        });
+        if (res.status === 308) {
+            return { offset: parseResumeOffset(res.headers.get('range')), done: false, body: '' };
+        }
+        const body = await res.text();
+        if (res.ok)
+            return { offset: total, done: true, body };
+        // 404/410 = 세션이 죽었다. 재개 불가이므로 즉시 중단한다(재업로드는 호출부 판단).
+        return { offset: null, done: false, body };
+    }
+    catch {
+        return { offset: null, done: false, body: '' };
+    }
+}
 export async function publishYoutube(input) {
     const mimeType = YT_VIDEO_MIME_BY_EXT[extname(input.videoFilePath).toLowerCase()];
     if (!mimeType)
         return fail(400, `Unsupported video extension: ${input.videoFilePath} (.mp4/.mov)`);
-    let bytes;
+    // 크기와 mtime 만 읽는다 — 바이트는 uploadResumable 안에서 청크로만 읽는다.
+    // readFile 로 전체를 힙에 올리면 청크 PUT 으로 바꿔도 피크가 "파일 크기 + 청크"라
+    // 512MB 파일에 약 560MB 다. stat 은 오늘의 400 조기 검증도 그대로 지킨다.
+    let videoSize;
+    let videoMtimeMs;
     try {
-        bytes = await readFile(input.videoFilePath);
+        const st = await stat(input.videoFilePath);
+        if (!st.isFile())
+            return fail(400, `Not a file: ${input.videoFilePath}`);
+        if (st.size === 0)
+            return fail(400, `Empty video file: ${input.videoFilePath}`);
+        videoSize = st.size;
+        videoMtimeMs = st.mtimeMs;
     }
     catch (error) {
         return fail(400, `Cannot read video file: ${error instanceof Error ? error.message : String(error)}`);
@@ -891,53 +1071,103 @@ export async function publishYoutube(input) {
     const { token, error: tokenError } = await exchangeYoutubeAccessToken(client);
     if (!token)
         return tokenError;
-    // resumable 세션 개시 → Location 에 바이트 PUT (콘솔 어댑터와 동일 계약)
-    let location;
+    // 살아 있는 재개 세션이 있으면 그것을 쓴다. 키가 (경로, 크기, mtime) 이라
+    // 재빌드로 파일이 바뀌면 자동으로 새 세션을 연다 — 옛 세션에 새 바이트를 이어
+    // 붙이는 사고를 막는다.
+    const prior = readState(input.videoFilePath);
+    const reusable = prior && prior.size === videoSize && prior.mtimeMs === videoMtimeMs ? prior : null;
+    // resumable 세션 개시 → Location 에 청크 PUT (콘솔 어댑터와 동일 계약)
+    let location = reusable ? reusable.sessionUrl : null;
+    let sessionStartedAt = reusable ? reusable.startedAt : Date.now();
     try {
-        const init = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                snippet: {
-                    title: input.title,
-                    description: input.description,
-                    // 22 = People & Blogs. 카테고리는 추천·탐색 분류에 쓰이므로 일반 콘텐츠
-                    // 채널의 영상을 25(News & Politics)로 올리면 엉뚱한 관심사 집단에 노출된다.
-                    categoryId: input.categoryId ?? '22',
+        const init = location
+            ? null
+            : await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    // 프로토콜이 요구하는 두 줄 — 없으면 서버가 청크 재개를 지원하지 않는다.
+                    'X-Upload-Content-Length': String(videoSize),
+                    'X-Upload-Content-Type': mimeType,
                 },
-                status: {
-                    privacyStatus: input.privacyStatus ?? 'public',
-                    // COPPA 자기 선언 — 하드코딩하면 아동 대상 콘텐츠가 허위 선언되므로 입력으로 받는다
-                    selfDeclaredMadeForKids: input.madeForKids ?? false,
-                    // 합성 미디어 고지 — 이 파이프라인의 영상·음악은 생성형이므로 기본 true
-                    containsSyntheticMedia: input.containsSyntheticMedia ?? true,
-                },
-            }),
-            signal: AbortSignal.timeout(30_000),
-        });
-        if (!init.ok)
-            return { ok: false, status: init.status, body: await init.text() };
-        location = init.headers.get('location');
+                body: JSON.stringify({
+                    snippet: {
+                        title: input.title,
+                        description: input.description,
+                        // 22 = People & Blogs. 카테고리는 추천·탐색 분류에 쓰이므로 일반 콘텐츠
+                        // 채널의 영상을 25(News & Politics)로 올리면 엉뚱한 관심사 집단에 노출된다.
+                        categoryId: input.categoryId ?? '22',
+                    },
+                    status: {
+                        privacyStatus: input.privacyStatus ?? 'public',
+                        // COPPA 자기 선언 — 하드코딩하면 아동 대상 콘텐츠가 허위 선언되므로 입력으로 받는다
+                        selfDeclaredMadeForKids: input.madeForKids ?? false,
+                        // 합성 미디어 고지 — 이 파이프라인의 영상·음악은 생성형이므로 기본 true
+                        containsSyntheticMedia: input.containsSyntheticMedia ?? true,
+                    },
+                }),
+                signal: AbortSignal.timeout(30_000),
+            });
+        if (init) {
+            if (!init.ok)
+                return { ok: false, status: init.status, body: await init.text() };
+            location = init.headers.get('location');
+            sessionStartedAt = Date.now();
+        }
     }
     catch (error) {
         return fail(502, `YouTube resumable init failed: ${error instanceof Error ? error.message : String(error)}`);
     }
     if (!location)
         return fail(502, 'YouTube resumable init returned no Location header');
+    writeState(input.videoFilePath, {
+        sessionUrl: location,
+        size: videoSize,
+        mtimeMs: videoMtimeMs,
+        startedAt: sessionStartedAt,
+    });
     try {
-        const view = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-        const upload = await fetch(location, {
-            method: 'PUT',
-            headers: { 'Content-Type': mimeType },
-            body: view,
-            signal: AbortSignal.timeout(600_000),
+        // 재사용 세션이면 서버가 어디까지 받았는지 먼저 묻는다. 우리가 기억한 오프셋을
+        // 믿으면 안 된다 — 바이트는 도달했는데 응답만 끊긴 경우가 있다.
+        let startOffset = 0;
+        if (reusable) {
+            const sync = await queryResumeOffset(location, videoSize, mimeType);
+            if (sync.done) {
+                // 마지막 청크가 이미 도달해 있었다. 재업로드하면 중복 영상이 생긴다.
+                const doneId = String(parseJson(sync.body)?.id ?? '');
+                if (doneId) {
+                    writeState(input.videoFilePath, null);
+                    return okJson({
+                        platform: 'YOUTUBE',
+                        videoId: doneId,
+                        permalink: `https://www.youtube.com/watch?v=${doneId}`,
+                        fileName: basename(input.videoFilePath),
+                        resumed: true,
+                        note: `이 파일은 ${new Date(sessionStartedAt).toISOString()} 에 시작한 업로드로 이미 올라가 있다. 재업로드하지 않았다.`,
+                    });
+                }
+            }
+            if (sync.offset === null) {
+                // 세션이 죽었다(404/410). 상태를 지우고 새 세션으로 다시 부르게 한다.
+                writeState(input.videoFilePath, null);
+                return fail(502, `YouTube resumable session expired — 같은 인자로 다시 호출하면 새 세션으로 올린다`);
+            }
+            startOffset = sync.offset;
+        }
+        const up = await uploadResumable(location, input.videoFilePath, mimeType, {
+            total: videoSize,
+            startOffset,
         });
-        const text = await upload.text();
-        if (!upload.ok)
-            return { ok: false, status: upload.status, body: text };
+        if (!up.ok)
+            return { ok: false, status: up.status, body: up.body };
+        const text = up.body;
         const videoId = String(parseJson(text)?.id ?? '');
         if (!videoId)
             return fail(502, `YouTube upload returned no video id: ${text}`);
+        // 업로드가 끝났으니 재개 상태를 지운다 — 남겨 두면 같은 파일 재게시가
+        // "이미 올라가 있다"로 옛 videoId 를 돌려준다.
+        writeState(input.videoFilePath, null);
         // 썸네일 실패는 경고로만 — 업로드는 이미 성공했고 재게시는 비멱등·쿼터 소모라 전체 실패로 만들지 않는다
         const thumbnailWarning = thumb ? await setYoutubeThumbnail(token, videoId, thumb) : undefined;
         // 자막도 같은 규칙 — 실패해도 게시는 성공이다(경고로 보고하고 자막만 다시 올린다)
@@ -1011,14 +1241,89 @@ const YT_CHANNEL_METRICS = 'views,engagedViews,estimatedMinutesWatched,averageVi
 const YT_VIDEO_METRICS = 'views,engagedViews,averageViewDuration,averageViewPercentage,likes,comments,shares';
 const ytDate = (ms) => new Date(ms).toISOString().slice(0, 10);
 /**
- * YouTube 성과 스냅샷 — 채널 통계(Data API)와 기간 지표·영상별 지표(Analytics API)를
- * 한 번에 정규화한다. grow-youtube 루프가 틱마다 찍어 전 틱 대비 증감과 잘 먹힌
- * 영상 유형을 판단하는 용도이고, 저장·비교는 호출자(data/<채널>/growth/youtube/) 몫이다.
+ * 게시된 영상의 공개 범위·메타데이터를 고친다 (`videos.update`).
  *
- * **스와이프 이탈률(Studio 의 "How many chose to view")은 Analytics API 에 없다** —
- * 공식 메트릭 목록에 대응 항목이 없어 이 툴로는 못 가져온다. Shorts 훅 판정은
- * averageViewPercentage 로 대신하고, 스와이프 지표가 필요하면 Studio 에서 수동 확인한다.
+ * 롱폼이 이 툴을 요구하는 이유는 2단 게시다 — 8~15분 영상을 `private` 로 올려
+ * watch 페이지에서 사람이 확인한 뒤 공개로 돌린다. 쇼트폼처럼 바로 공개하면
+ * 인코딩 실패·자막 어긋남을 시청자가 먼저 본다.
+ *
+ * **`videos.update` 는 덮어쓰기다 — 부분 갱신이 아니다.** `part` 에 넣은 리소스의
+ * 필드를 통째로 교체하므로, `snippet` 을 보내면서 `title` 을 빼면 제목이 지워진다.
+ * 그래서 이 함수는 **먼저 `videos.list` 로 현재 값을 읽어 병합한다.** 이 한 단계가
+ * 없으면 "공개로만 바꾸려다 제목과 설명을 날리는" 사고가 난다.
+ *
+ * `status.selfDeclaredMadeForKids` 도 같은 함정이다. 빼고 보내면 기본값으로 되돌아가
+ * COPPA 선언이 조용히 뒤집힌다 — 그래서 읽어 온 값을 그대로 다시 싣는다.
  */
+export async function youtubeUpdate(input) {
+    const { client, error: clientError } = await loadYoutubeClient(input.channel);
+    if (!client)
+        return clientError;
+    const { token, error: tokenError } = await exchangeYoutubeAccessToken(client);
+    if (!token)
+        return tokenError;
+    // ── 1) 현재 값을 읽는다. 병합의 기준선이다.
+    const cur = await youtubeRequest('get', `${YT_DATA_BASE}/videos`, { part: 'snippet,status', id: input.videoId }, token);
+    if (!cur.ok)
+        return withYoutubeScopeHint(cur, 'https://www.googleapis.com/auth/youtube');
+    const items = parseJson(cur.body)?.items;
+    if (!Array.isArray(items) || items.length === 0) {
+        return fail(404, `영상을 못 찾았다: ${input.videoId} (다른 채널의 영상이거나 삭제됐다)`);
+    }
+    const snippet = (items[0]?.snippet ?? {});
+    const status = (items[0]?.status ?? {});
+    // ── 2) 병합. 인자로 안 준 필드는 읽어 온 값을 그대로 다시 싣는다.
+    const nextSnippet = {
+        title: input.title ?? snippet.title,
+        description: input.description ?? snippet.description,
+        categoryId: input.categoryId ?? snippet.categoryId,
+        ...(snippet.tags ? { tags: snippet.tags } : {}),
+        ...(snippet.defaultLanguage ? { defaultLanguage: snippet.defaultLanguage } : {}),
+        ...(snippet.defaultAudioLanguage ? { defaultAudioLanguage: snippet.defaultAudioLanguage } : {}),
+    };
+    const nextStatus = {
+        privacyStatus: input.privacyStatus ?? status.privacyStatus,
+        selfDeclaredMadeForKids: input.madeForKids ?? status.selfDeclaredMadeForKids ?? false,
+        containsSyntheticMedia: input.containsSyntheticMedia ?? status.containsSyntheticMedia ?? true,
+        ...(input.publishAt ? { publishAt: input.publishAt } : {}),
+        ...(status.embeddable !== undefined ? { embeddable: status.embeddable } : {}),
+        ...(status.license ? { license: status.license } : {}),
+        ...(status.publicStatsViewable !== undefined
+            ? { publicStatsViewable: status.publicStatsViewable }
+            : {}),
+    };
+    const body = { id: input.videoId, snippet: nextSnippet, status: nextStatus };
+    // publishAt 은 privacyStatus 가 private 일 때만 유효하다 — 아니면 API 가 조용히 무시한다.
+    if (input.publishAt && nextStatus.privacyStatus !== 'private') {
+        return fail(400, 'publishAt 은 privacyStatus 가 private 일 때만 예약이 걸린다. 공개 예약이면 privacyStatus: "private" 을 함께 준다.');
+    }
+    if (input.dryRun) {
+        return okJson({
+            platform: 'YOUTUBE',
+            videoId: input.videoId,
+            dryRun: true,
+            current: { snippet, status },
+            wouldSend: body,
+        });
+    }
+    // ── 3) 덮어쓴다.
+    const res = await youtubeRequest('put', `${YT_DATA_BASE}/videos`, { part: 'snippet,status' }, token, body);
+    if (!res.ok)
+        return withYoutubeScopeHint(res, 'https://www.googleapis.com/auth/youtube');
+    const updated = parseJson(res.body);
+    return okJson({
+        platform: 'YOUTUBE',
+        videoId: input.videoId,
+        permalink: `https://www.youtube.com/watch?v=${input.videoId}`,
+        privacyStatus: updated?.status?.privacyStatus ?? nextStatus.privacyStatus,
+        title: updated?.snippet?.title ?? nextSnippet.title,
+        changed: {
+            privacyStatus: status.privacyStatus !== nextStatus.privacyStatus,
+            title: snippet.title !== nextSnippet.title,
+            description: snippet.description !== nextSnippet.description,
+        },
+    });
+}
 export async function youtubeInsights(input) {
     const { client, error: clientError } = await loadYoutubeClient(input.channel);
     if (!client)
