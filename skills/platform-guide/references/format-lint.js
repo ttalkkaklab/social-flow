@@ -164,6 +164,44 @@ const RULES = [
     want: fix(S.guards.shrinkWarn, 1), optional: true },
 ];
 
+// ── storyboard.html 검산 배지의 포맷 미러 ──────────────────────────
+//
+// 브라우저는 formats.js 로 가는 경로가 없어(문서는 data/<채널>/… 아래에 있다)
+// 템플릿이 사본을 들고 있다. **이 사본이 어긋나면 저작 단계가 옛 대역으로 검사받고
+// 그대로 통과한다** — 2026-08-17 에 총길이 25~45 가 그렇게 살아남았다. 프리셋과
+// produce 는 35~75 인데 storyboard 쪽만 옛 값을 쟀고, 그때 린터가 빌더 셸만 보고
+// 이 템플릿을 안 봐서 못 잡았다. 그 사각을 여기서 메운다.
+const SB_TPL = 'skills/storyboard/references/storyboard-html-template.html';
+
+for (const [key, f] of Object.entries(FORMATS)) {
+  // 그 포맷 블록 안에서만 찾는다 — 미러 항목에 중첩 객체가 없어 `[^}]*` 가 블록을 안 넘는다
+  const blk = `"${key}":\\s*\\{[^}]*`;
+  const rule = (field, want) =>
+    RULES.push({
+      name: `storyboard.html ${key} ${field}`,
+      file: SB_TPL,
+      re: new RegExp(blk + field + ':\\s*(null|[\\d.]+)'),
+      want: String(want),
+    });
+  const p = f.pacing;
+  const rec = f.chaptersRec || null;
+  rule('totalMin', p.totalMin);
+  rule('totalMax', p.totalMax);
+  rule('totalHard', p.totalHard);
+  rule('sceneCountMin', p.sceneCountMin);
+  rule('sceneCountMax', p.sceneCountMax);
+  rule('sceneMax', p.sceneMax);
+  rule('recSceneMax', p.recSceneMax === null ? 'null' : p.recSceneMax);
+  rule('capCover', p.charCap.cover);
+  rule('capBody', p.charCap.body);
+  rule('sentMin', p.sentMin);
+  rule('sentMax', p.sentMax);
+  // 칸 수 = 합산 초 / 8 (생성은 8초 고정이다)
+  rule('videoMax', f.video.generatedSecondsMax / 8);
+  rule('chapterMin', rec ? rec.min : 'null');
+  rule('chapterMax', rec ? rec.targetMax : 'null');
+}
+
 /**
  * 두 빌더의 ASS 헤더·Style 상호 대조. 프리셋과 별개로 **서로** 같아야 한다 —
  * 한쪽만 고치면 촬영본과 생성본의 자막이 다른 폰트·위치로 나온다.

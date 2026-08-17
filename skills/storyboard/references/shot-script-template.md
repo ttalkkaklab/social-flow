@@ -33,7 +33,7 @@
 topic: <주제 slug>
 mode: screencast
 scenes: <씬 수>
-target: 25~45s
+target: 35~75s  # 쇼트폼. 롱폼(youtube-long-16x9)은 8~15분
 generated: <YYYY-MM-DD>
 ---
 

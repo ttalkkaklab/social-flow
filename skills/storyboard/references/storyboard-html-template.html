@@ -688,6 +688,41 @@ window.SB_DOC = {
     return;
   }
   var THEME = window.THEME, SCENES = window.SCENES, DOC = window.SB_DOC || {};
+
+  /* ══ 포맷 미러 ══
+     정본은 skills/platform-guide/references/formats.js 다. 브라우저가 그 파일로 가는
+     경로를 못 만들어(문서는 data/<채널>/… 아래에 있다) 사본을 여기 둔다.
+     format-lint.js 가 이 블록과 프리셋을 기계로 대조하므로, 값을 고칠 때는 프리셋을
+     먼저 고치고 린터를 돌린다. window.FORMAT 부재 = shorts-9x16 (회귀 0 의 진입점). */
+  var FMT_MIRROR = {
+    "shorts-9x16": {
+      label: "쇼트폼 9:16",
+      totalMin: 35, totalMax: 75, totalHard: 90,
+      sceneCountMin: 4, sceneCountMax: 7,
+      sceneMax: 13, recSceneMax: 20,
+      capCover: 40, capBody: 50, sentMin: 8, sentMax: 25,
+      videoMax: 2,                              // 8초×2칸 = 16초
+      chapterMin: null, chapterMax: null        // 쇼트폼에 챕터 개념이 없다
+    },
+    "youtube-long-16x9": {
+      label: "유튜브 롱폼 16:9",
+      totalMin: 480, totalMax: 900, totalHard: 1200,
+      sceneCountMin: 28, sceneCountMax: 70,
+      sceneMax: 20, recSceneMax: null,          // 촬영 레인 상한 없음
+      capCover: 70, capBody: 90, sentMin: 12, sentMax: 40,
+      videoMax: 5,                              // 8초×5칸 = 40초
+      chapterMin: 3, chapterMax: 13             // 3=유튜브 요건 · 13=촬영 레인 목표 상한
+                                                // (저작 레인 목표 5~10 은 SKILL §4 안내)
+    }
+  };
+  var FMT_KEY = FMT_MIRROR[window.FORMAT] ? window.FORMAT : "shorts-9x16";
+  var FMT = FMT_MIRROR[FMT_KEY];
+
+  /* 롱폼은 900s 처럼 읽기 힘든 숫자가 나온다 — 2분 넘으면 분으로 적는다. */
+  function durTxt(t) {
+    t = Math.round(t || 0);
+    return t >= 120 ? (t / 60).toFixed(1) + "분" : t + "s";
+  }
   var root = document.documentElement.style;
   // 결측 값을 그대로 넣으면 --accent: undefined 가 되어 color-mix 가 전부 무효가 된다
   if (THEME.accent) root.setProperty("--accent", THEME.accent);
@@ -983,11 +1018,18 @@ window.SB_DOC = {
         chips.push(badge(rOk ? "ok" : "warn", rate.toFixed(2) + "자/초"));
         if (!rOk) flag("warn", "샷 " + no, "말속도 " + rate.toFixed(2) + "자/초 — 촬영 기준 5~6자/초(4.5~6.5 허용)");
       }
-      if (s.duration > 20) { chips.push(badge("bad", "20s 초과")); flag("bad", "샷 " + no, "길이 " + s.duration + "s — 촬영 모드 씬 상한 20s"); }
-      else if (s.duration && s.duration < 8) { chips.push(badge("warn", "8s 미만")); flag("warn", "샷 " + no, "길이 " + s.duration + "s — 촬영 모드 씬 목표 8~20s"); }
+      // 롱폼 촬영 레인은 씬 상한이 없다(recSceneMax: null) — 녹화 한 덩어리가 한 씬으로
+      // 들어오는 것이 정상 경로라, 상한을 두면 자연스러운 녹화를 쪼개게 된다.
+      if (FMT.recSceneMax !== null && s.duration > FMT.recSceneMax) {
+        chips.push(badge("bad", FMT.recSceneMax + "s 초과"));
+        flag("bad", "샷 " + no, "길이 " + s.duration + "s — 촬영 모드 씬 상한 " + FMT.recSceneMax + "s");
+      } else if (s.duration && s.duration < 8) {
+        chips.push(badge("warn", "8s 미만"));
+        flag("warn", "샷 " + no, "길이 " + s.duration + "s — 촬영 모드 씬 목표 8초 이상");
+      }
       if (maxSent > 40) { chips.push(badge("warn", "문장 " + maxSent + "자")); flag("warn", "샷 " + no, "가장 긴 문장 " + maxSent + "자 — 촬영 대본 권장 40자"); }
     } else if (s.type !== "broll" && s.type !== "outro") {
-      var cap = s.type === "cover" ? 40 : 50;
+      var cap = s.type === "cover" ? FMT.capCover : FMT.capBody;
       if (narr.length) {
         chips.push(badge(syl <= cap ? "ok" : "bad", "자수 " + syl + "/" + cap));
         if (syl > cap) flag("bad", "샷 " + no, "나레이션 " + syl + "자 — 상한 " + cap + "자(" + s.type + ")");
@@ -1003,12 +1045,17 @@ window.SB_DOC = {
         chips.push(badge("bad", "나레이션 없음"));
         flag("bad", "샷 " + no, "나레이션이 비어 있다 — 소리 없이 " + (s.duration || "?") + "초를 버틴다");
       }
-      var shortSent = narr.some(function (n) { return netLen(n.tts) < 8; });
-      if (maxSent > 25 || shortSent) {
-        chips.push(badge("warn", "문장 8~25자"));
-        flag("warn", "샷 " + no, (maxSent > 25 ? "가장 긴 문장 " + maxSent + "자" : "8자 미만 문장 있음") + " — 문장당 8~25자");
+      var sentBand = FMT.sentMin + "~" + FMT.sentMax + "자";
+      var shortSent = narr.some(function (n) { return netLen(n.tts) < FMT.sentMin; });
+      if (maxSent > FMT.sentMax || shortSent) {
+        chips.push(badge("warn", "문장 " + sentBand));
+        flag("warn", "샷 " + no, (maxSent > FMT.sentMax ? "가장 긴 문장 " + maxSent + "자"
+             : FMT.sentMin + "자 미만 문장 있음") + " — 문장당 " + sentBand);
       }
-      if (s.duration > 13) { chips.push(badge("warn", "13s 초과")); flag("warn", "샷 " + no, "길이 " + s.duration + "s — 생성 모드 씬 상한 13s"); }
+      if (s.duration > FMT.sceneMax) {
+        chips.push(badge("warn", FMT.sceneMax + "s 초과"));
+        flag("warn", "샷 " + no, "길이 " + s.duration + "s — 생성 모드 씬 상한 " + FMT.sceneMax + "s");
+      }
       // 모션 배경 씬 계약 (scenes-schema §모션 배경) — 유형 표시는 컷 배지(vtag)가 맡는다
       if (s.visual && s.visual.video) {
         // cover 는 사용자가 회차별로 명시 지시했을 때만 여는 예외다(scenes-schema §모션 배경).
@@ -1097,13 +1144,39 @@ window.SB_DOC = {
        (DOC.series ? " · " + esc(DOC.series) : "") + "</div>";
   h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic || "") + "</h1>";
 
-  var lenCls = total >= 25 && total <= 45 ? "ok" : total <= 90 ? "warn" : "bad";
-  if (lenCls === "bad") flag("bad", "총길이", "본편 " + total + "s — 상한 90s 초과");
-  else if (lenCls === "warn") flag("warn", "총길이", "본편 " + total + "s — 기본 25~45s 밖(45초 초과는 설계 근거 필요, 상한 90s)");
-  // 생성 영상 합산 상한 — b-roll 칸 + 모션 배경 씬 ≤ 2 (scenes-schema §모션 배경 정본)
+  var lenCls = total >= FMT.totalMin && total <= FMT.totalMax ? "ok"
+             : total <= FMT.totalHard ? "warn" : "bad";
+  var lenBand = durTxt(FMT.totalMin) + "~" + durTxt(FMT.totalMax);
+  if (lenCls === "bad")
+    flag("bad", "총길이", "본편 " + durTxt(total) + " — 상한 " + durTxt(FMT.totalHard) + " 초과");
+  else if (lenCls === "warn")
+    flag("warn", "총길이", "본편 " + durTxt(total) + " — 기본 " + lenBand +
+         " 밖(초과는 설계 근거 필요, 상한 " + durTxt(FMT.totalHard) + ")");
+
+  // 샷 수도 포맷 대역이 있다 — 롱폼을 쇼트폼 샷 수로 짜면 씬 하나가 몇 분씩 늘어진다.
+  if (main.length < FMT.sceneCountMin || main.length > FMT.sceneCountMax)
+    flag("warn", "샷 수", "본편 " + main.length + "샷 — " + FMT.label + " 대역은 " +
+         FMT.sceneCountMin + "~" + FMT.sceneCountMax + "샷");
+
+  // 생성 영상 합산 상한 — b-roll 칸 + 모션 배경 씬 (scenes-schema §모션 배경 정본)
   var genVid = SCENES.filter(function (s) {
     return s.type === "broll" || (s.visual && s.visual.video); }).length;
-  if (genVid > 2) flag("bad", "생성 영상", "b-roll·모션 배경 합산 " + genVid + "샷 — 상한 2 (scenes-schema §모션 배경)");
+  if (genVid > FMT.videoMax)
+    flag("bad", "생성 영상", "b-roll·모션 배경 합산 " + genVid + "샷 — 상한 " +
+         FMT.videoMax + " (scenes-schema §모션 배경)");
+
+  // 롱폼 챕터 요건 (scenes-schema §chapter) — 쇼트폼에는 챕터 개념이 없다
+  if (FMT.chapterMin) {
+    var chaps = SCENES.filter(function (s) { return s.chapter; });
+    if (chaps.length < FMT.chapterMin)
+      flag("bad", "챕터", chaps.length + "개 — 유튜브 요건은 " + FMT.chapterMin +
+           "개 이상이다. 씬에 chapter 문자열을 적는다(§chapter)");
+    else if (chaps.length > FMT.chapterMax)
+      flag("warn", "챕터", chaps.length + "개 — 저작 목표는 " + FMT.chapterMin + "~" +
+           FMT.chapterMax + "개다");
+    if (chaps.length && SCENES.indexOf(chaps[0]) !== 0)
+      flag("bad", "챕터", "첫 챕터가 0:00 에 없다 — 커버 샷에 chapter 를 적는다(유튜브 요건)");
+  }
 
   /* 제작 층 어긋남 · 커버리지 — 칸을 적어 둔 샷만 본다. 옛 파일은 조용히 통과. */
   SCENES.forEach(function (s, i) {
@@ -1462,8 +1535,16 @@ window.SB_DOC = {
 
   /* ══ 계약·출처·플랫폼 ══ */
   h += '<h2 class="sec">계약 기준<span class="aside">렌더 시 자동 계산</span></h2><table class="grid"><tbody>';
-  h += "<tr><th>본편 총길이</th><td>" + total + "s — 기본 25~45 · 상한 90" +
-       (outroSec ? " · 아웃트로 포함 ≈" + (total + outroSec) + "s" : "") + "</td></tr>";
+  h += "<tr><th>포맷</th><td>" + esc(FMT.label) + " <code>" + esc(FMT_KEY) + "</code>" +
+       (window.FORMAT ? "" : " <span class=\"aside\">window.FORMAT 미기재 — 기본값</span>") +
+       (FMT_KEY === "youtube-long-16x9"
+         ? " <span class=\"aside\">안전영역 잠정값(모바일 웹 가로·상단 제목바 미측정)</span>" : "") +
+       "</td></tr>";
+  h += "<tr><th>본편 총길이</th><td>" + durTxt(total) + " — 기본 " +
+       durTxt(FMT.totalMin) + "~" + durTxt(FMT.totalMax) + " · 상한 " + durTxt(FMT.totalHard) +
+       (outroSec ? " · 아웃트로 포함 ≈" + durTxt(total + outroSec) : "") + "</td></tr>";
+  h += "<tr><th>샷 수</th><td>" + main.length + "샷 — 대역 " +
+       FMT.sceneCountMin + "~" + FMT.sceneCountMax + "</td></tr>";
   if (cover) {
     h += "<tr><th>커버 title</th><td>" + mark(cover.title) + " — 표시 " + dispLen(cover.title) + "/16자</td></tr>";
     if (cover.statLabel) h += "<tr><th>statLabel</th><td>" + esc(cover.statLabel) + " — 표시 " + dispLen(cover.statLabel) + "/18자</td></tr>";
