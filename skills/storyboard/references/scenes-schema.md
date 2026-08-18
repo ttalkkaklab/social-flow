@@ -9,6 +9,7 @@
 ```js
 // approved: 2026-07-29        ← storyboard 스킬이 HITL 승인 시 기록
 window.FORMAT = "shorts-9x16"; // 포맷 축 — 생략하면 shorts-9x16 (§포맷)
+window.VOICE = "user";         // 전 씬 육성 회차만 (§전 씬 육성 회차) — 생략하면 TTS
 window.THEME = {
   accent:  "#5b8cff",          // 강조 그라데이션 시작 — profile.md §3 그대로
   accent2: "#a05bff",          // 강조 그라데이션 끝
@@ -187,7 +188,7 @@ narration: [
 
 ```js
 visual: {
-  picture: "still",                  // still | ai-video | recording | asset — 화면 본체
+  picture: "still",                  // still | ai-video | recording | asset | slide — 화면 본체
   overlay: "html",                   // html | none — 화면 위 HTML 연출
   bg: "images/scene-1.png",          // 생성 배경 (storyboard 단계 산출)
   bgPrompt: "…",                     // 생성에 쓴 프롬프트 (재생성·감사용 기록)
@@ -195,6 +196,7 @@ visual: {
                                      // veo 어휘로 적는다 — 정본 문서에 push·orbit 이 0건이다
   video: null,                       // points 만: 모션 배경 샷 구분자 (§모션 배경) — 정지는 생략
   clip: null,                        // quote 만: 발화 클립 계획 (아래)
+  slide: null,                       // 롱폼 슬라이드 씬 (§슬라이드 씬) — { file, plan, labels }
   character: null                    // 채널 공용 캐릭터 id — resolve-asset.py character <id>
 }
 ```
@@ -208,6 +210,7 @@ visual: {
 | `ai-video` | 생성 영상 — 모션 배경·b-roll·발화 클립 | `type==="broll"` 또는 `visual.video` 또는 `visual.clip` |
 | `recording` | **사용자가 직접 찍은 클립** (§촬영 씬) | `visual.source==="recording"` |
 | `asset` | 미리 만든 공용 mp4 | `type==="outro"` |
+| `slide` | **HTML 슬라이드** — 글·도형 도해가 화면 전체 (§슬라이드 씬, 롱폼 전용) | `visual.slide` 있음 |
 
 **판정은 씬 하나 단위다.** 한 편에 생성 씬과 촬영 씬이 섞이는 것이 롱폼의 정상
 경로라, 편 전체를 한 모드로 뒤집으면 안 된다 — 그러면 촬영 씬 하나가 생성 씬까지
@@ -217,7 +220,7 @@ visual: {
 | `overlay` | 화면 위 | 언제 |
 |---|---|---|
 | `html` | `video-template.html` / `screencast-overlay.html` 이 글자를 그린다. 리빌·캡션 스왑·타이핑 카드·서명 | cover·points·인용 카드·촬영 오버레이 |
-| `none` | 글자 오버레이 없음. 영상 자체만 | b-roll, 공용 아웃트로 |
+| `none` | 글자 오버레이 없음. 영상 자체만 | b-roll, 공용 아웃트로, 슬라이드 씬(글자를 슬라이드가 직접 그린다) |
 
 적지 않으면 storyboard.html 이 위 단서로 추론한다. 적어 둔 값이 구조와 어긋나면
 점검 스트립이 잡는다 — `picture:"ai-video"` 인데 `video`/`clip`/broll 이 없으면
@@ -714,6 +717,30 @@ Veo 로 갈 때만 `negativePrompt` 인자가 그 자리다). 문장은 영어�
 나레이션 덮기 갈래는 그 반대로 쓴다 — 화면만 찍고 말은 안 한 컷(스크롤·실행 대기·
 결과 화면)이라 TTS 를 얹어도 겹칠 소리가 없다.
 
+#### 전 씬 육성 회차 — `window.VOICE = "user"` (롱폼 기본)
+
+롱폼에서 사용자가 **모든 씬의 나레이션을 자기 목소리로 녹음**하는 회차는 최상위에
+한 줄을 적는다. 섞어 찍기 레인에서는 이쪽이 기본값이다 — 한 편 안에서 사용자
+목소리와 TTS 가 번갈아 나오면 화자가 중간에 바뀐다(produce 가 TTS 엔진을 조용히
+갈아타지 못하게 막는 것과 같은 이유). TTS 로 덮는 회차는 사용자가 그렇게 정할 때만.
+
+```js
+window.VOICE = "user";   // 전 씬 나레이션 = 사용자 육성. 생략하면 TTS
+```
+
+이 회차에서는 위 두 갈래 표의 「육성 = `narration: []`」 규칙을 쓰지 않는다 —
+**전 씬이 `narration` 을 채운다.** 그 세그는 TTS 대본이 아니라 **말할 문장**
+(녹음 가이드 + 자막·정합 대조 기준)이고, script.md 가 전 샷의 대사를 싣는 근거다.
+소리의 출처만 씬마다 다르다.
+
+| 씬 | 소리 | 파일 |
+|---|---|---|
+| 촬영 씬 | 클립이 가진 소리 (sync 레인) | `footage/s<씬번호>-<slug>.mp4` |
+| 생성·슬라이드 씬 | 따로 녹음한 목소리 | `voice/s<샷번호>.wav` — **샷번호 = SCENES 배열 순번(1부터)**, script.md 샷 번호와 같다 |
+
+`voice/` 는 `footage/` 와 같은 층(에피소드 루트)이고, 파일명은 스토리보드가 정해
+script.md 에 찍는다 — 촬영 클립과 같은 규칙이다.
+
 #### 화면 글자는 로어서드다
 
 촬영 씬의 `title`·`bullets`·`footnote` 는 **화면 아래 왼쪽 띠**에 앉는다. 생성 씬처럼
@@ -729,6 +756,57 @@ Veo 로 갈 때만 `negativePrompt` 인자가 그 자리다). 문장은 영어�
 롱폼은 16:9 다. 세로로 찍은 클립을 넣으면 중앙 크롭으로 화각 대부분이 잘리고,
 빌더가 `STRICT_DIM=1` 로 **첫 ffmpeg 전에** 멈춘다(가로 프리셋 기본값). 이 사실은
 `script.md` 촬영 수칙 맨 위에 적힌다 — 다 찍은 뒤에 알면 재촬영이다.
+
+### 슬라이드 씬 — 글·도형이 주인공인 화면 (`visual.slide`, 롱폼 전용)
+
+구조·비교·단계·수치 흐름처럼 **설명 자체가 화면이어야 하는 대목**은 사진 배경에
+캡션을 얹는 것보다 슬라이드가 낫다. 판단 기준은 §촬영 씬과 같은 한 줄로 잇는다 —
+증거가 화면에 있으면 찍고, 분위기·장소·인물이면 이미지를 만들고, **글자와 도형을
+배치해야 전달되면 슬라이드다.**
+
+```js
+{
+  type: "points",
+  scene: 8, sceneSlug: "작업실 / 낮",
+  beat: "body",
+  title: "폴더 세 개가 전부야",
+  duration: 18,
+  narration: [ /* 세그 — 슬라이드 리빌 그룹과 1:1 */ ],
+  visual: {
+    picture: "slide",
+    overlay: "none",                 // 슬라이드가 곧 화면 — 위에 또 얹지 않는다
+    slide: {
+      // 이 샷이 배열 12번째면 s12 — scene 번호(8)가 아니라 배열 순번이다
+      file: "slides/s12-plugin-layout.html",
+      plan: "플러그인 폴더 구조가 위에서 아래로 하나씩 드러나는 도해",
+      labels: ["skills/", "agents/", "server/"]
+    }
+  }
+}
+```
+
+| 칸 | 필수 | 무엇 |
+|---|---|---|
+| `slide.file` | ✅ | `slides/s<샷번호>-<slug>.html` — **샷번호 = SCENES 배열 순번(1부터)**, script.md 샷 번호·`voice/s<n>.wav` 와 같은 번호다 |
+| `slide.plan` | ✅ | 무엇을 그릴지 한 줄. §7 승인이 이 계획을 본다 — 파일은 승인 뒤에 만든다 |
+| `slide.labels` | 도형에 글자가 있으면 ✅ | `title`·`bullets` 밖에서 슬라이드에 그릴 글자 전부. 문체 게이트 screen 표면이 이 배열을 검사한다 — 여기 없는 한글을 슬라이드 파일에 심으면 검사를 통과한 적 없는 글자가 화면에 나간다 |
+
+**파일은 스토리보드 단계에서 만들지 않는다.** 콘티에는 `plan`·`labels` 만 적고,
+§7 승인이 끝난 뒤 storyboard §8 이 `references/slide-template.html` 계약대로
+저작한다. 문안이 바뀌면 슬라이드도 바뀌므로 순서가 뒤집히면 만든 슬라이드를
+버린다 — §5 이미지와 같은 이유이고, 여기서는 비용 대신 저작 시간이 나간다.
+
+- 슬라이드 씬에는 `bg`·`bgPrompt` 가 없다 — §5 이미지 생성과 §5.5 이미지 루프에서
+  빠지고, storyboard-reviewer 이미지 모드도 이 씬의 `scene-N.png` 부재를 결함으로
+  보지 않는다.
+- **리빌 그룹은 나레이션 세그와 1:1 이 기본**이고, 하위 reveal(`A|B`)을 쓰면 그룹이
+  더 많아진다 — video-template 와 같은 계약이라 produce 의 상태 캡처·xfade 가
+  그대로 슬라이드 애니메이션이 된다.
+- 애니메이션은 **빌더의 xfade 가 전부다.** CSS 애니메이션·트랜지션·커서 깜빡임을
+  넣으면 상태 캡처의 바이트 동일성 판정(capture-reveals.sh 종료 조건)이 끝나지
+  않는다. 슬라이드는 `?reveal=k` 에 대해 결정적으로 렌더되어야 한다.
+- 글자는 존(x 96 · top 96 · bottom 285) 안에 앉힌다 — 켄번즈가 없어도(`zoom=none`)
+  하단 285px 는 자막 밴드다.
 
 ## 저작 검증 체크리스트 (storyboard 스킬이 승인 요청 전 자가 점검)
 
@@ -755,7 +833,13 @@ Veo 로 갈 때만 `negativePrompt` 인자가 그 자리다). 문장은 영어�
       `clip` 이 `footage/s<씬번호>-<slug>.mp4` 규약을 지킨다. 육성 갈래면
       `narration: []`, 나레이션 덮기 갈래면 세그먼트가 있다 — 둘 다 있으면 소리가 겹친다
 - [ ] **촬영 씬 대사가 `script.md` 와 한 벌이다** — scenes.js 가 SoT 이고 script.md 는
-      렌더다. 촬영 대본에만 있는 문장을 만들지 않는다
+      렌더다. 촬영 대본에만 있는 문장을 만들지 않는다 (렌더는 `make-script.js`)
+- [ ] **슬라이드 씬이 있으면** (§슬라이드 씬) 씬마다 `slide.file`·`slide.plan` 이 있고
+      file 이 `slides/s<샷번호>-<slug>.html` 규약(샷번호 = 배열 순번)을 지킨다.
+      도형에 그릴 글자는 전부 `slide.labels` 에 있다 — 파일 자체는 승인 뒤 §8 에서 만든다
+- [ ] **전 씬 육성 회차면** `window.VOICE = "user"` 가 있고 나레이션 있는 전 씬이
+      `narration` 을 채웠다 (§전 씬 육성 회차) — 촬영 씬 「육성 = `[]`」 규칙은 TTS
+      회차 전용이다
 - [ ] 샷마다 `scene`·`sceneSlug`·`shot.size`·`shot.info` — 같은 씬의 `info` 가 겹치지 않는다
 - [ ] `visual.picture`·`visual.overlay` 가 구조와 맞다. AI 영상과 HTML 연출을 한 배지로 합치지 않는다
 - [ ] 제작·튜토리얼·전후 비교는 첫 프레임에 완성 결과가 보이고, 첫 대사는 시청자에게

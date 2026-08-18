@@ -736,6 +736,7 @@ window.SB_DOC = {
       sceneMax: 13, recSceneMax: 20,
       capCover: 40, capBody: 50, sentMin: 8, sentMax: 25,
       videoMax: 2,                              // 8초×2칸 = 16초
+      burn: true,                               // 번인 자막 (formats.js:108)
       chapterMin: null, chapterMax: null        // 쇼트폼에 챕터 개념이 없다
     },
     "youtube-long-16x9": {
@@ -745,6 +746,7 @@ window.SB_DOC = {
       sceneMax: 20, recSceneMax: null,          // 촬영 레인 상한 없음
       capCover: 70, capBody: 90, sentMin: 12, sentMax: 40,
       videoMax: 5,                              // 8초×5칸 = 40초
+      burn: false,                              // 클린 마스터 + subs.srt (formats.js:246)
       chapterMin: 3, chapterMax: 13             // 3=유튜브 요건 · 13=촬영 레인 목표 상한
                                                 // (저작 레인 목표 5~10 은 SKILL §4 안내)
     }
@@ -787,9 +789,10 @@ window.SB_DOC = {
   /* 문법 단위 · 제작 층 — scenes-schema §문법 단위와 제작 층 이 정본.
      칸이 비면 구조로 추론한다. 옛 scenes.js 도 그대로 그린다. */
   var SIZE_KO = { ws: "와이드", two: "투샷", ms: "미디엄", cu: "클로즈업" };
-  var PIC_KO = { still: "정지 사진", "ai-video": "AI 영상", recording: "녹화", asset: "공용 자산" };
+  var PIC_KO = { still: "정지 사진", "ai-video": "AI 영상", recording: "녹화", asset: "공용 자산", slide: "HTML 슬라이드" };
   function inferredPicture(s) {
     if (s.visual && s.visual.source === "recording") return "recording";
+    if (s.visual && s.visual.slide) return "slide";
     if (s.type === "outro") return "asset";
     if (s.type === "broll" || (s.visual && s.visual.video) || (s.type === "quote" && s.visual && s.visual.clip))
       return "ai-video";
@@ -797,6 +800,7 @@ window.SB_DOC = {
   }
   function inferredOverlay(s) {
     if (s.type === "broll" || s.type === "outro") return "none";
+    if (s.visual && s.visual.slide) return "none";   // 글자를 슬라이드가 직접 그린다
     return "html";
   }
   function pictureOf(s) { return (s.visual && s.visual.picture) || inferredPicture(s); }
@@ -1094,8 +1098,29 @@ window.SB_DOC = {
       }
       if (!vz.shot) flag("bad", "샷 " + no, "촬영 씬인데 visual.shot(화면에 보이는 것)이 없다");
       if (!vz.action) flag("bad", "샷 " + no, "촬영 씬인데 visual.action(사용자가 하는 동작)이 없다");
-      chips.push(badge("", narr.length ? "나레이션 덮기" : "육성"));
+      // 전 씬 육성 회차(window.VOICE === "user")는 촬영 씬도 narration 을 채운다 —
+      // 그 세그는 TTS 대본이 아니라 말할 문장이다(scenes-schema §전 씬 육성 회차).
+      chips.push(badge("", narr.length ? (window.VOICE === "user" ? "육성 대본" : "나레이션 덮기") : "육성"));
     } else if (s.type !== "broll" && s.type !== "outro") {
+      /* 슬라이드 씬 계약 (scenes-schema §슬라이드 씬) — 파일명·계획이 승인 대상이고,
+         파일 자체는 승인 뒤에 나온다. bg 와의 공존은 모순이다(화면은 하나다). */
+      var sl = s.visual && s.visual.slide;
+      if (sl) {
+        chips.push(badge("", "슬라이드"));
+        if (!sl.plan) {
+          chips.push(badge("bad", "plan 없음"));
+          flag("bad", "샷 " + no, "슬라이드 씬인데 slide.plan(무엇을 그릴지)이 없다 — 승인이 이 계획을 본다");
+        }
+        if (!sl.file) {
+          chips.push(badge("bad", "file 없음"));
+          flag("bad", "샷 " + no, "슬라이드 씬인데 slide.file 이 없다");
+        } else if (!new RegExp("^slides/s" + no + "-[a-z0-9-]+\\.html$").test(sl.file)) {
+          chips.push(badge("warn", "file 규약"));
+          flag("warn", "샷 " + no, 'slide.file "' + sl.file + '" — 규약은 slides/s' + no + "-<slug>.html (샷번호 = 배열 순번)");
+        }
+        if (s.visual.bg)
+          flag("warn", "샷 " + no, "슬라이드 씬에 bg 가 같이 있다 — 화면은 슬라이드 하나다");
+      }
       var cap = s.type === "cover" ? FMT.capCover : FMT.capBody;
       if (narr.length) {
         chips.push(badge(syl <= cap ? "ok" : "bad", "자수 " + syl + "/" + cap));
@@ -1175,7 +1200,9 @@ window.SB_DOC = {
       // 캡션 k 는 세그 k+1 과 함께 뜬다 — 그 대사에 캡션 문구가 통째로 들어 있으면
       // 같은 말을 눈과 귀로 두 번 받는 것이다. 자막이 이미 그 문장을 쓰고 있다.
       // 조사·어미 차이를 넘기려고 한글/영숫자만 남겨 비교하고, 짧은 조각(4자 미만)은 세지 않는다.
-      (function () {
+      // 번인 포맷 한정이다 — 롱폼(burn:false)은 자막을 안 태우므로 자막을 안 켠 시청자에게
+      // 캡션이 그 값을 받는 유일한 자리다. 과검출 실측 2026-08-18(상관계수 0 캡션).
+      if (FMT.burn) (function () {
         var norm = function (t) { return String(t || "").replace(/[^가-힣A-Za-z0-9]/g, ""); };
         var narr = s.narration || [], dup = [];
         (s.bullets || []).forEach(function (b, bi) {
@@ -1373,6 +1400,15 @@ window.SB_DOC = {
   // 템플릿 자리표시자가 남은 채로 승인 게이트에 가는 사고를 막는다
   var blanks = (JSON.stringify(DOC).match(/\{\{/g) || []).length;
   if (blanks) flag("bad", "SB_DOC", "채우지 않은 자리표시자 " + blanks + "곳 — {{…}} 를 지우고 다시 연다");
+
+  /* 전 씬 육성 회차 — 나레이션이 곧 녹음 대본이라, 비면 그 샷의 소리가 없다 */
+  if (window.VOICE === "user") {
+    SCENES.forEach(function (s, i) {
+      if (s.type === "broll" || s.type === "outro") return;
+      if (!(s.narration || []).length)
+        flag("warn", "샷 " + (i + 1), "전 씬 육성 회차(window.VOICE)인데 narration 이 비었다 — 말할 문장이 대본에 안 실린다");
+    });
+  }
 
   /* 씬 검산은 카드 렌더에서 수집되므로 먼저 돌려 둔다 */
   var sceneChips = SCENES.map(function (s, i) { return sceneCheck(s, i + 1); });
@@ -1606,6 +1642,14 @@ window.SB_DOC = {
           meta += '<details class="prompt"><summary>발화 클립 프롬프트</summary><p>' + esc(vis.clip.prompt) + "</p></details>";
         if (vis.bgPrompt)
           meta += '<details class="prompt"><summary>배경 프롬프트</summary><p>' + esc(vis.bgPrompt) + "</p></details>";
+        if (vis.slide) {
+          meta += '<div class="row"><b>슬라이드</b><div class="v"><code>' + esc(vis.slide.file || "?") +
+               "</code> — 승인 뒤 §8 저작</div></div>";
+          if (vis.slide.plan)
+            meta += '<details class="prompt"><summary>슬라이드 계획</summary><p>' + esc(vis.slide.plan) +
+                 (vis.slide.labels && vis.slide.labels.length ? " · 라벨: " + esc(vis.slide.labels.join(", ")) : "") +
+                 "</p></details>";
+        }
       }
       if (DOC.privacy && DOC.privacy[no])
         meta += '<div class="note pv">개인정보 회피 — ' + mark(DOC.privacy[no]) + "</div>";

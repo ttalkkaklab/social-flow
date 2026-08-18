@@ -13,7 +13,8 @@
  *   narration — TTS 가 읽는 문장(`narration[].tts`). 소리로 한 번 지나간다.
  *   subtitle  — 화면에 번인되는 자막(`narration[].sub`). 표기가 tts 와 다르다.
  *   screen    — 카드 텍스트: kicker·title·stat·statLabel·bullets(t·d)·footnote,
- *               그리고 quote 씬의 text·role. 게시 후 수정이 불가능한 표면이다.
+ *               quote 씬의 text·role, 슬라이드 씬의 visual.slide.labels.
+ *               게시 후 수정이 불가능한 표면이다.
  *               speaker(인물 이름)는 고유명사라 뺀다.
  *
  * exit 0 정상 / 2 인자 오류 / 3 scenes.js 를 읽지 못함.
@@ -61,6 +62,11 @@ for (const s of scenes) {
     for (const b of s.bullets || []) {
       if (b && b.t) out.push(strip(b.t));
       if (b && b.d) out.push(strip(b.d));
+    }
+    // 슬라이드 씬의 도형 라벨 — 화면에 그대로 나가는 글자다 (scenes-schema §슬라이드 씬)
+    const sl = s.visual && s.visual.slide;
+    for (const t of (sl && sl.labels) || []) {
+      if (t) out.push(strip(t));
     }
   }
 }
