@@ -91,7 +91,7 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
   `<slug>-sonic-logo.wav` (the sonic logo — shared across all videos) — generate with /social-flow:intro.
   The default use is **splicing after the main video** (a brand close — a fixed asset made once).
   **Never placed in front of a short-form main video** (the first-3-seconds hook principle — the uses are in intro-playbook.md §1)
-- **Wording**: <the brand closing script — e.g. "More like this every week. Follow and keep watching.">
+- **Wording**: <the brand closing script — e.g. "이런 정보, 매주 올라옵니다. 팔로우하고 이어서 보세요." ("More like this every week. Follow and keep watching.")>
 - **Asset path**: `data/<slug>/assets/outro/default.mp4` — if missing, generate it on
   the first produce run with build-outro.sh and save it here (don't regenerate per topic).
   When the wording differs per platform, keep `outro/youtube.mp4` and `outro/instagram.mp4`
