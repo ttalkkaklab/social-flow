@@ -288,7 +288,7 @@ test('the silent-failure gates are alive in the builders', () => {
   // Gate 6 — canvas comparison. The check always runs; only the report line is conditional on format.env.
   for (const [name, src] of [['build-reel', reel], ['build-screencast', cast]]) {
     assert.match(src, /RDIM=\$\(ffprobe/, `${name} measured value`);
-    assert.match(src, /\[ -f format\.env \] && say "── 캔버스: 선언/, `${name} report line is conditional`);
+    assert.match(src, /\[ -f format\.env \] && say "── canvas: declared/, `${name} report line is conditional`);
   }
 
   // build-outro else branch — portrait canvas + portrait cards only
@@ -303,9 +303,9 @@ test('chapters.txt only comes out when chapters.tsv exists', () => {
   // Round down — a chapter boundary is a pause between sentences, so a slightly earlier timestamp is better.
   assert.match(reel, /sec = int\(\$1 \/ fps\)/, 'seconds are pulled from the absolute card frame');
   // The three requirements
-  assert.match(reel, /00:00 이어야 한다/);
-  assert.match(reel, /유튜브는 3개 이상을 요구한다/);
-  assert.match(reel, /10초 미만이다/);
+  assert.match(reel, /it has to be 00:00/);
+  assert.match(reel, /YouTube requires at least 3/);
+  assert.match(reel, /under the 10 second minimum/);
 });
 
 /* ───────────────────────────────────────────────────────────────────────────
