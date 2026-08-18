@@ -747,7 +747,9 @@ $REF/splice-clip.sh .work \
 platform-guide 플레이북(`../platform-guide/references/platform-playbook.md`)을 Read
 하고 플랫폼별로 재작성한다 — Threads 반말 구어체 1~3줄 + 마지막 줄 영상 링크 /
 IG 캡션 첫 125자 훅+저장 CTA / FB 구조화 본문+첫 댓글 링크 문안 / YT 키워드
-제목+설명+#Shorts 해시태그. **Threads 는 커버 이미지를 붙이지 않는다** — 링크
+제목+설명+#Shorts 해시태그. **제목·첫 줄의 자극은 scenes.js 커버 `hookType`
+(공포·공감·호기심·결말 미리 보여주기)을 잇는다** — 영상은 공포로 열었는데 YT 제목이
+방법 설명이면 제목 기대와 첫 30초가 어긋난다(플레이북 §1 ②·§6). **Threads 는 커버 이미지를 붙이지 않는다** — 링크
 프리뷰 카드가 그 자리를 대신하므로 `post.md` 는 본문과 링크 URL 만 담는다. 링크
 자리는 IG 릴스 permalink 라 게시 시점까지 값을 모른다 — `post.md` 에는
 `<IG_REELS_URL>` 처럼 자리표시자를 두고 실제 URL 은 publish 가 채운다. 각 `output/<플랫폼>/` 에 저장하고, 영상·커버는

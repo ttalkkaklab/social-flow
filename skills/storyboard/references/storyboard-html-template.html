@@ -222,6 +222,7 @@
   .scene-beat { font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em; color: var(--accent-ink); }
   .scene-beat.beat-result { color: var(--ok); }
   .scene-beat.beat-body { color: var(--faint); }
+  .scene-beat.beat-hooktype { color: var(--accent-ink); opacity: .8; }
   .scene-checks { margin-left: auto; display: flex; gap: var(--s1); flex-wrap: wrap; }
   /* 배지가 3개 이상 뭉치면 제목 아래 줄로 내린다 — 제목이 배지에 밀려 꺾이지 않게 (리뷰 3회차) */
   .scene-checks:has(> :nth-child(3)) { flex-basis: 100%; margin-left: 0; }
@@ -821,6 +822,9 @@ window.SB_DOC = {
   // 재생 역할 — type 과 직교. 정본은 scenes-schema §재생 순서
   // 커버 → 후킹 → 결과물 → 내용. 적지 않으면 type·sequence 머리글로 읽는다.
   var BEAT_KO = { hook: "커버", hooking: "후킹", result: "결과물", body: "내용", cta: "CTA" };
+  // 도입부 전략 — 커버 샷 hookType. 회차마다 넷 중 하나는 반드시(scenes-schema §도입부 전략 넷).
+  // 없거나 넷 밖의 값이면 검산 스트립이 경고한다 — 이름표를 달라는 뜻이고 감점은 리뷰어 몫이다.
+  var HOOK_KO = { fear: "공포", empathy: "공감", curiosity: "호기심", spoiler: "결말 미리 보여주기" };
   function beatOf(s) {
     if (s.beat) return s.beat;
     if (s.type === "cover") return "hook";
@@ -1320,9 +1324,19 @@ window.SB_DOC = {
     orderOk = false;
   }
 
+  /* 도입부 전략 — 커버 hookType 이 넷 중 하나인가 (scenes-schema §도입부 전략 넷).
+     넷 중 어느 것도 도입부에 없는지는 리뷰어 문안 모드가 본다 — 여기서는 이름표만 검산한다. */
+  var hookKo = cover && cover.hookType ? HOOK_KO[cover.hookType] : "";
+  if (cover && !cover.hookType) {
+    flag("warn", "도입부 전략", "커버에 hookType 이 없다 — 이 회차 도입부(제목·세그①·후킹)가 공포·공감·호기심·결말 미리 보여주기 중 무엇으로 여는지 fear|empathy|curiosity|spoiler 로 적는다");
+  } else if (cover && !hookKo) {
+    flag("warn", "도입부 전략", "hookType \"" + cover.hookType + "\" 은 넷 밖의 값이다 — fear|empathy|curiosity|spoiler 중 하나로 고친다");
+  }
+
   h += '<div class="badges">' +
        badge("mode", allRec ? "촬영 모드" : hasRec ? "섞어 찍기 · 촬영 " + recCount + "씬"
              : isLine ? "생성 모드 · 대사별 삽화" : "생성 모드") +
+       (cover ? badge(hookKo ? "ok" : "warn", "도입 · " + (hookKo || (cover.hookType ? cover.hookType + " (넷 밖)" : "전략 미기입"))) : "") +
        badge((DOC.status || "draft") === "draft" ? "" : "ok", DOC.status || "draft") +
        (DOC.created ? badge("", DOC.created) : "") +
        badge(lenCls, "본편 " + total + "s") +
@@ -1435,6 +1449,9 @@ window.SB_DOC = {
     var beat = beatOf(s);
     if (beat && BEAT_KO[beat])
       h += '<span class="scene-beat beat-' + beat + '">' + BEAT_KO[beat] + "</span>";
+    // 커버 샷에는 도입부 전략 이름표를 함께 단다 — 제목·세그①이 이 자극을 실어야 한다
+    if (s.type === "cover")
+      h += '<span class="scene-beat beat-hooktype">' + esc(HOOK_KO[s.hookType] || (s.hookType ? s.hookType + " (넷 밖)" : "전략 미기입")) + "</span>";
     h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
     h += '<div class="shot-meta"><span class="craft">' +
          '<span class="vtag' + (pic === "ai-video" ? " gen" : "") + '">' + esc(PIC_KO[pic] || pic) + "</span>" +
@@ -1626,6 +1643,10 @@ window.SB_DOC = {
        FMT.sceneCountMin + "~" + FMT.sceneCountMax + "</td></tr>";
   if (cover) {
     h += "<tr><th>커버 title</th><td>" + mark(cover.title) + " — 표시 " + dispLen(cover.title) + "/16자</td></tr>";
+    h += "<tr><th>도입부 전략</th><td>" + (HOOK_KO[cover.hookType]
+         ? esc(HOOK_KO[cover.hookType]) + " (<code>" + esc(cover.hookType) + "</code>) — 제목·세그①·후킹이 이 자극을 탄다"
+         : (cover.hookType ? "<code>" + esc(cover.hookType) + "</code> 는 넷 밖의 값 — " : "미기입 — ") +
+           "fear|empathy|curiosity|spoiler 중 하나 (scenes-schema §도입부 전략 넷)") + "</td></tr>";
     if (cover.statLabel) h += "<tr><th>statLabel</th><td>" + esc(cover.statLabel) + " — 표시 " + dispLen(cover.statLabel) + "/18자</td></tr>";
   }
   h += "<tr><th>말속도</th><td>" +
@@ -1692,7 +1713,7 @@ window.SB_DOC = {
       ? "<ul>" + audit.map(function (a) {
           return '<li class="' + a.level + '"><span class="where">' + esc(a.where) + "</span>" +
                  '<span class="what">' + esc(a.what) + "</span></li>"; }).join("") + "</ul>"
-      : '<div class="clean">자수·말속도·샷 길이·프레임 넘침·총길이·커버 제목·재생 순서 — 계약 항목 전부 통과.</div>');
+      : '<div class="clean">자수·말속도·샷 길이·프레임 넘침·총길이·커버 제목·재생 순서·도입부 전략 — 계약 항목 전부 통과.</div>');
 
   var safe = document.getElementById("tg-safe"), subs = document.getElementById("tg-subs");
   if (safe) safe.addEventListener("change", function () { document.body.classList.toggle("safe", safe.checked); });
