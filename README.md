@@ -1,5 +1,9 @@
 # social-flow
 
+[![check](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml/badge.svg)](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml)
+[![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+&nbsp;·&nbsp; Docs: [English](docs/index.en.html) · [한국어](docs/index.html)
+
 A Claude Code plugin that runs a channel-based short-form/long-form content pipeline —
 **storyboard (with generated images) → per-platform video & text production → HITL-approved
 publishing** — over a `data/[channel]/episodes/[topic]/` directory tree.

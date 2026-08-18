@@ -103,6 +103,21 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
 
 - **Topic slug rule**: <e.g. YYYYMMDD-keyword | series-name-NN>
 - **Series**: <the series names and numbering in use — "none" if there aren't any>
+
+## 8. SNS accounts
+
+The setup-* skills fill this table as each platform gets connected; leave rows you
+haven't set up as "—". The status value they write is exactly `✅ API connected`, so
+keep that wording when editing by hand. Account identity is always re-derived from
+the token's /me at publish time — this table is a record for humans, not a lookup
+the tools trust.
+
+| Platform | Account | Account ID | Token issued | Scopes | Status |
+|---|---|---|---|---|---|
+| threads | <@handle> | <user_id> | <YYYY-MM-DD> | <n> | — |
+| instagram | <@handle> | <ig_user_id> | <YYYY-MM-DD> | <n> | — |
+| facebook | <page name> | <page_id> | <YYYY-MM-DD> | <n> | — |
+| youtube | <channel name> | <channel ID (UC…)> | <YYYY-MM-DD> | <scope list or n> | — |
 ```
 
 ## Gemini TTS voice examples (by tone)
