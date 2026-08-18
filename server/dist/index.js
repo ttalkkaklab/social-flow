@@ -9,7 +9,7 @@ import { enabledPlatforms } from './sns-client.js';
 // The server version carried in the initialize response — same value as package.json's version.
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
-const server = new Server({ name: 'social-flow', version: '0.11.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'social-flow', version: '0.12.0' }, { capabilities: { tools: {} } });
 // Per-platform publish tools are exposed only for platforms that have a credential file
 // (default tokens ∪ channel directories) — this is evaluated per request, so adding a token
 // file takes effect without a server restart. Every handler stays registered, so calling a
