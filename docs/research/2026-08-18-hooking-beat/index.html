@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>커버 다음 후킹 — 3초를 넘긴 시청자를 결과물까지 데려가는 구간 (2026-08-18)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  nav.toc { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 56px; }
+  nav.toc h2 { font-size: 14px; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 14px; text-transform: uppercase; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  nav.toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a { color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500; }
+  nav.toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent); font-weight: 700; font-size: 12.5px;
+    margin-right: 10px; font-variant-numeric: tabular-nums;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
+  p { margin-bottom: 16px; }
+  p.note { font-size: 14.5px; color: var(--text-soft); }
+  p.lead { font-size: 17px; }
+  ul.plain { margin: 0 0 16px 22px; }
+  ul.plain li { margin-bottom: 8px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px;
+  }
+
+  .callout {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    background: var(--bg-soft); border-radius: 0 10px 10px 0;
+    padding: 16px 20px; margin-bottom: 20px; font-size: 15px;
+  }
+  .callout.green { border-left-color: var(--green); }
+  .callout.amber { border-left-color: var(--amber); }
+  .callout.red { border-left-color: var(--red); }
+  .callout.purple { border-left-color: var(--purple); }
+  .callout b:first-child { display: block; margin-bottom: 4px; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .verdict {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px 32px; margin-bottom: 56px;
+    box-shadow: var(--shadow);
+  }
+  .verdict .v-label {
+    font-size: 12.5px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); margin-bottom: 12px;
+  }
+  .verdict .v-main { font-size: 20px; font-weight: 700; line-height: 1.6; margin-bottom: 16px; letter-spacing: -.01em; }
+  .verdict p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14.5px; }
+  th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; font-size: 13.5px; }
+  .table-scroll { overflow-x: auto; }
+
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+  }
+  .badge.green { color: var(--green); background: var(--green-soft); }
+  .badge.amber { color: var(--amber); background: var(--amber-soft); }
+  .badge.red { color: var(--red); background: var(--red-soft); }
+  .badge.purple { color: var(--purple); background: var(--purple-soft); }
+  .badge.blue { color: var(--accent); background: var(--accent-soft); }
+
+  .grades { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 32px; }
+  .grades div {
+    flex: 1 1 200px; border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; font-size: 14px; color: var(--text-soft); background: var(--bg-card);
+  }
+  .grades div b { display: block; margin-bottom: 4px; }
+
+  .src-group { margin-bottom: 26px; }
+  .src-group h3 { margin-top: 0; }
+  .src-group ul { list-style: none; margin-left: 0; }
+  .src-group li {
+    font-size: 13.5px; margin-bottom: 6px; padding-left: 18px; position: relative;
+    color: var(--text-soft);
+  }
+  .src-group li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .src-group a { word-break: break-all; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 24px; font-size: 13.5px; color: var(--text-soft); }
+  footer p { margin-bottom: 8px; }
+  footer a { color: var(--accent); text-decoration: none; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">RESEARCH</span>
+  <h1>커버 다음 후킹<br>3초를 넘긴 시청자를 결과물까지 데려가는 구간</h1>
+  <p class="sub">
+    쇼트폼에서 커버(첫 1~3초) 바로 뒤에 오는 구간을 어떻게 만들어야 하는지 조사했다.
+    플랫폼 공식 문서 PDF 와 유출된 제작 메모, Loewenstein 1994 는 원문으로 열어 확인했고,
+    Quesenberry &amp; Coolsen 2014 는 초록으로만 확인했다. 블로그에 도는 수치는 원출처가 있는 것만
+    남겼다. 커버(첫 3초)는 08-15 훅 계약과 08-17 커버 조사가 이미 다뤘으므로 여기서는 그 다음
+    구간만 본다.
+  </p>
+  <div class="meta">
+    <span>작성 <strong>2026-08-18</strong></span>
+    <span>대상 <strong>YouTube 쇼츠 · Instagram 릴스 · 유튜브 롱폼 도입부</strong></span>
+    <span>원문 확인 <strong>TikTok Creative Codes PDF · YouTube 고객센터 · Google ABCD 가이드 PDF · MrBeast 메모 전문 · Loewenstein 1994(스캔본 1쪽)</strong></span>
+    <span>초록 확인 <strong>Quesenberry &amp; Coolsen 2014</strong></span>
+    <span>적용 <strong>storyboard 스킬 §hooking 계약 신설</strong></span>
+  </div>
+</header>
+
+<div class="verdict">
+  <div class="v-label">결론</div>
+  <div class="v-main">
+    커버와 후킹은 다른 일을 한다. 커버는 <b>손가락을 멈추게</b> 하고, 후킹은 멈춘 사람을
+    <b>결과물까지 데려간다</b>. 문서들이 겹치는 자리는 넷이다 — 커버가 던진 것을 그대로 <b>받는다</b>,
+    시청자의 문제를 시청자 주어로 <b>건다</b>, 답은 <b>풀지 않는다</b>, 그리고 <b>짧다</b>.
+  </div>
+  <p>
+    플랫폼 지표가 이 구분을 그대로 보여 준다. 인스타 스킵률과 유튜브 "Viewed vs. swiped away"는
+    첫 3초를 재고, 유튜브 "Intro" 지표는 첫 30초 뒤에 남은 비율을 잰다. 3초를 넘긴 사람이 30초까지 오게
+    하는 게 후킹의 일이다. TikTok 은 훅을 아예 <b>첫 6초</b>로 정의하고, 이야기 앞머리에 서스펜스를 두면
+    시청 시간이 16% 는다고 적었다. MrBeast 메모는 첫 1분에 이탈이 가장 크다며 "무엇을 볼지 말하지 말고
+    보여 줘라"고 한다.
+  </p>
+  <p>
+    우리 플러그인에는 <code>beat:"hooking"</code> 이라는 이름표는 있었지만 커버(약 60줄)와 달리 계약이
+    한 줄뿐이었고, 검산 스트립은 제작형에서만 후킹 부재를 경고했다. 정보형 회차는 후킹 없이도 조용히
+    통과했다. 이번에 §hooking 계약을 세우고 모든 회차에 강제한다.
+  </p>
+</div>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#s1">커버와 후킹을 왜 갈라 보나 — 지표가 다르다</a></li>
+    <li><a href="#s2">플랫폼이 직접 말하는 것</a></li>
+    <li><a href="#s3">실무 1차 문서 — MrBeast 제작 메모</a></li>
+    <li><a href="#s4">이론과 학술 — 정보 틈 · 극 구조 · 설득 순서</a></li>
+    <li><a href="#s5">실무 관행 — 3초 · 10초 · 30초</a></li>
+    <li><a href="#s6">우리 실측 — 스킵당한 4편과 후킹을 둔 2편</a></li>
+    <li><a href="#s7">계약으로 옮기기 — 받는다 · 건다 · 안 푼다 · 짧다</a></li>
+    <li><a href="#s8">근거 등급</a></li>
+    <li><a href="#s9">출처</a></li>
+  </ol>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="no">01</span> 커버와 후킹을 왜 갈라 보나 — 지표가 다르다</h2>
+
+  <p class="lead">
+    "훅"이라는 한 단어가 두 구간을 가리킨다. 손가락이 멈추는 첫 1~3초와, 멈춘 뒤 "그래서 왜 봐야 하는데"가
+    결정되는 그다음 10초 남짓. 플랫폼은 두 구간을 다른 지표로 잰다.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th style="width:18%">구간</th><th style="width:22%">우리 이름</th><th style="width:30%">플랫폼이 재는 지표</th><th style="width:30%">시청자에게 일어나는 일</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>0 ~ 3초</b></td>
+        <td>커버 (<code>beat:"hook"</code>)<br><span class="note">세그① 훅 계약 · 08-15</span></td>
+        <td>IG <code>reels_skip_rate</code> · YT 쇼츠 "Viewed vs. swiped away" · Meta 3초 재생</td>
+        <td>스와이프할지 말지. 무엇의 이야기인지와 볼 이유 한 문장</td>
+      </tr>
+      <tr>
+        <td><b>3 ~ 15초</b><br><span class="badge blue">이 문서</span></td>
+        <td>후킹 (<code>beat:"hooking"</code>)</td>
+        <td>YT 롱폼 "Intro"(첫 30초 뒤 잔존율) · 평균 시청 시간 · 리텐션 곡선 첫 구간</td>
+        <td>계속 볼지 말지. 커버가 던진 것이 내 문제라는 확신, 답이 곧 나온다는 기대</td>
+      </tr>
+      <tr>
+        <td><b>그 뒤</b></td>
+        <td>결과물 → 내용 → CTA</td>
+        <td>완주율 · 재시청 · 저장 · 공유</td>
+        <td>약속이 지켜지는가</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout amber">
+    <b>쇼트폼의 3~15초 구간만 따로 잰 실증은 찾지 못했다</b>
+    <p>
+      플랫폼 지표는 3초(스킵)와 30초·1분(이탈)만 공개한다. 그 사이 구간에 대한 수치는 광고 연구(TikTok 6초,
+      Google 5초)와 롱폼 관찰(MrBeast 첫 1분)에서 빌려 온다. 그래서 아래 길이 권장값은 <strong>기준선 3편으로
+      확인할 잠정값</strong>이고, 방향(받는다·건다·안 푼다)은 여러 자료가 겹치므로 그대로 쓴다.
+    </p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="no">02</span> 플랫폼이 직접 말하는 것</h2>
+
+  <h3>TikTok Creative Codes — 훅은 첫 6초, 서스펜스로 열면 시청 시간 +16%</h3>
+  <p>
+    TikTok for Business 의 <i>Creative Codes</i> 원문 PDF 는 크리에이티브를 <b>훅 · 본문 · 마무리</b> 셋으로 나누고
+    "훅: 첫 6초가 결정적이다(The first six seconds are vital)"라고 적는다. 그 6초 안에 "콘텐츠의 가치 제안을
+    꺼내라"고 하고, 훅 유형별 수치를 붙였다 — 이야기 앞머리에 <b>서스펜스</b>를 쓴 광고는 시청 시간 <b>+16%</b>,
+    <b>놀라움</b>은 완시청률 1.7배, <b>감정</b>으로 열면 인지 상승 1.7배(Lumen 2021, 미국 중소 광고주 대상).
+    회상 효과의 90%, 인지 효과의 80%가 6초 안에 만들어진다는 수치도 함께 있다(TikTok "Value of View" 2020).
+  </p>
+  <p>
+    시도할 서사 구조로 <b>아하 순간 · 문제-해결 · 고객 여정</b> 셋을 든다. 우리 뼈대에서 "문제"는 후킹,
+    "해결"은 결과물·내용이다.
+  </p>
+  <p class="note">
+    광고 연구라는 점을 잊지 않는다. 다만 같은 피드·같은 스와이프 동작을 전제한 1차 자료이고, 커버 조사(08-17)가
+    쓴 것과 같은 문서다. 여기서 새로 가져오는 건 "6초"라는 창 크기와 "서스펜스 → 시청 시간" 한 쌍이다.
+  </p>
+
+  <h3>YouTube "Intro" 지표 — 첫 30초는 썸네일·제목 기대와 맞아야 한다</h3>
+  <p>
+    유튜브 고객센터의 리텐션 핵심 순간 문서는 <b>Intro</b> 를 "첫 30초 뒤에도 보고 있던 시청자 비율"로 정의한다.
+    이 값이 높으면 두 가지를 뜻한다고 적었다 — "첫 30초 콘텐츠가 <b>썸네일과 제목에서 시청자가 기대한 것과
+    맞았다</b>", 그리고 "콘텐츠가 흥미를 유지했다". 낮을 때의 처방도 둘이다 — 썸네일·제목을 내용에 맞게 바꾸거나,
+    첫 30초를 바꿔 다른 스타일을 실험하라.
+  </p>
+  <p>
+    이 정의가 후킹 계약의 첫 항목이다. 후킹은 새 이야기를 시작하는 자리가 아니라 <b>커버가 던진 약속을 받아
+    확인해 주는 자리</b>다. 커버에 없던 소재로 새면 기대가 어긋나고, 유튜브는 그걸 Intro 하락으로 잰다.
+    60초 이상 영상에만 뜨는 지표라 쇼츠에는 없지만, 롱폼 도입부 계약에는 그대로 쓴다.
+  </p>
+
+  <h3>Google ABCD — 강한 신호로 시작하고 여러 번 정점을 만든다</h3>
+  <p>
+    Google 의 ABCD 가이드는 TrueView 광고 5,000편 이상의 브랜드 리프트 데이터를 Nielsen Neuro·Kantar 가
+    검토한 상관 연구다. Attract 항목이 오프닝을 다룬다 — "프레이밍·페이싱·사람·오디오가 오프닝의 훅에 특히
+    중요하다", "첫 5초에 두 프레임 이상", "사람이 나오는 영상이면 사람으로 열어라". 그리고 서사 구조를 둘로
+    갈라 그렸다. TV 식 <b>전통 서사</b>(도입 → 빌드 → 클라이맥스 → 리빌)가 아니라 유튜브에 훨씬 효과적인
+    <b>emerging story arc</b> — "강한 신호로 시작하고, 여러 정점과 예상 밖 전환을 계속 둔다".
+  </p>
+  <p>
+    우리 커버 → 후킹 → 결과물 순서가 정확히 이 모양이다. 커버가 강한 신호(완성본 한눈), 후킹이 다음 정점
+    (왜 필요한지), 결과물이 그다음 정점(펼침)이고, 방법은 그 뒤다. 문서 스스로 "상관 데이터이고 성과를 보장하지
+    않는다"고 적었으니 등급은 그대로 옮긴다.
+  </p>
+
+  <h3>Meta — 3초 안에 핵심 메시지</h3>
+  <p>
+    Meta 비즈니스 도움말의 모바일 영상 광고 지침은 "첫 3초 안에 주의를 끌고 핵심 메시지나 브랜딩을 넣어라"다.
+    커버 구간 얘기이고 후킹에 대한 별도 지침은 없다. Mosseri 가 2025-01 에 밝힌 릴스 랭킹 상위 신호(시청 시간 ·
+    도달 대비 좋아요 · 도달 대비 전송)는 2차 보도로만 확인했다.
+  </p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="no">03</span> 실무 1차 문서 — MrBeast 제작 메모</h2>
+
+  <p class="lead">
+    2024년에 유출된 36쪽짜리 온보딩 문서다. 한 채널의 내부 관찰이지만 리텐션 곡선을 실제 수치로 읽어 준
+    거의 유일한 1차 자료라 그대로 옮긴다.
+  </p>
+
+  <div class="callout">
+    <b>원문</b>
+    <p>
+      "As with almost every video on Youtube, <strong>the first minute has the most loss</strong> (go look). This is why we freak out
+      so much about the first minute." — "On this particular video we lost 21 million viewers in the first minute of the video
+      (which surprisingly compared to other channels is above average)." — "<strong>Stop telling people what they will be watching
+      and start showing them.</strong>" — "if I didn't match the expectations of the clickbait, I didn't pre plan what I'd say, and we
+      didn't front load some interesting stuff for the first minute of content…"
+    </p>
+  </div>
+
+  <p>
+    세 가지를 가져온다. 첫째, 이탈은 첫 1분에 몰린다 — 후킹이 놓인 자리가 곧 이탈 곡선의 가장 가파른 구간이다.
+    둘째, "무엇을 볼지 말하지 말고 보여 줘라" — 후킹을 예고·인사·자기소개로 채우지 않는 근거다.
+    셋째, "클릭베이트의 기대와 맞춰라" — 유튜브 Intro 지표의 정의와 같은 말이다. 3분·6분에 두는 재관여
+    (re-engagement)는 롱폼 챕터 설계의 소관이라 여기선 다루지 않는다.
+  </p>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="no">04</span> 이론과 학술 — 정보 틈 · 극 구조 · 설득 순서</h2>
+
+  <h3>정보 틈 이론 — 호기심은 "알고 싶은 것"이 먼저 보여야 생긴다</h3>
+  <p>
+    Loewenstein(1994, <i>Psychological Bulletin</i>)은 초록에서 호기심을 이렇게 정의한다 — "a form of cognitively
+    induced deprivation that arises from the perception of a gap in knowledge or understanding"(지식이나 이해의
+    틈을 인지할 때 생기는, 인지가 만든 결핍). 틈이 생기려면 두 조건이 있어야 한다 — 알고 싶은 대상이 눈앞에
+    보여야 하고, 아직 채워지지 않아야 한다. 커버가 완성본을 먼저 보여 주고(대상), 후킹이 "왜·어떻게"를 풀지
+    않는(미충족) 이유가 여기 있다. 후킹에서 답을 말해 버리면 틈이 닫히고, 뒤에 오는 결과물·내용은 재탕이 된다.
+  </p>
+  <p>
+    같은 첫 쪽에 광고 얘기가 한 줄 있다 — 제품 정체를 끝에 가서야 밝히는 "미스터리 광고"가 처음부터 밝히는 광고보다
+    이후 브랜드 재인이 높았다는 연구(Fazio, Herr &amp; Powell 1992)를 각주로 인용한다. 재는 것이 시청 유지가
+    아니라 재인이라 방향만 참고한다.
+  </p>
+  <p class="note">이론 등급이다 — 쇼트폼 시청 데이터로 검증한 논문이 아니라 호기심 일반의 심리학 리뷰다. CMU 게재
+    스캔본 1쪽(초록·도입)을 직접 읽어 정의 문장을 확인했다.</p>
+
+  <h3>극 구조 — 막이 있는 광고가 더 좋은 평가를 받는다</h3>
+  <p>
+    Quesenberry &amp; Coolsen(2014, <i>Journal of Marketing Theory and Practice</i>)은 슈퍼볼 광고 108편을 2년에 걸쳐
+    내용 분석해, 5막 극 구조(발단·전개·절정·하강·결말)를 따를수록 소비자 평점이 높고 막의 수와 호감이 양의 상관을
+    보인다고 보고했다. 30초 TV 광고 맥락의 상관 연구다. 가져오는 건 방향 하나 — <b>문제(전개)가 있어야 해결(절정)이
+    보상이 된다</b>. 후킹은 그 전개 자리다.
+  </p>
+  <p class="note">초록과 2차 보도(ScienceDaily)로만 확인했다 — 본문 표는 못 열었다. 그래서 막 수와 평점의 상관 크기는
+    옮기지 않는다.</p>
+
+  <h3>먼로의 동기 순서 — 옛 설득 순서와 같은 뼈대</h3>
+  <p>
+    Monroe 가 1930년대에 정리한 설득 연설 순서는 주의(Attention) → 필요(Need) → 충족(Satisfaction) →
+    시각화(Visualization) → 행동(Action)이다. 우리 뼈대에 대면 커버=주의, <b>후킹=필요</b>, 결과물=시각화를 앞으로
+    당긴 것, 내용=충족, CTA=행동이다. 교과서 등급의 구조이고 실증은 개별 연구마다 다르지만, "왜 필요한지"를
+    해결보다 앞에 두는 순서가 90년 된 관행이라는 점만 확인해 둔다.
+  </p>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="no">05</span> 실무 관행 — 3초 · 10초 · 30초</h2>
+
+  <p class="lead">
+    블로그와 한국 크리에이터 게시물이 입을 모으는 구조가 있다. 근거를 대는 곳은 없지만 여러 자료가 같은 모양이라
+    방향으로만 참고한다.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th style="width:22%">구간</th><th style="width:38%">실무 관행이 말하는 것</th><th style="width:40%">우리 뼈대</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>0~3초 훅</td><td>시선 끌기 — 질문·충격 사실·숫자·반전</td><td>커버 세그① (약속·문제 제기·반전)</td></tr>
+      <tr><td>3~13초 상황 설명</td><td>문제 제시 — 시청자가 겪는 상황을 구체 장면으로. "후킹은 반드시 본문과 일치해야 한다"</td><td><b>후킹</b> — 받는다·건다·안 푼다</td></tr>
+      <tr><td>13~45초 솔루션</td><td>핵심 팁·방법</td><td>결과물 → 내용</td></tr>
+      <tr><td>마지막 5~10초</td><td>요약 · CTA · 저장 유도</td><td>CTA (다음 편 약속)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    영어권 가이드도 같은 모양이다 — "0~5초 주의, 5~15초 약속을 분명히, 15~30초 이해관계·맥락". 그리고 미리 쓴
+    "hook-deliver cycle"(작은 해결마다 다음 훅을 심는다)이나 "rehook"(중간에 주의를 다시 잡는 장치)은 롱폼용
+    기법이고, 60초 안쪽 쇼트폼에서는 후킹 한 번과 결과물 한 번으로 족하다.
+  </p>
+  <p class="note">
+    <span class="badge amber">블로그 등급</span> — 이 절의 초 단위 수치는 어느 것도 원출처가 없다. 자주 도는
+    "상위 영상 63%가 첫 3초에 핵심을 꺼낸다"는 TikTok for Business 원문이 있어 1차로 올렸고, "1.7초 안에 결정한다"는
+    2016 Facebook IQ 모바일 피드 연구의 2차 인용이라 방향으로만 적는다.
+  </p>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="no">06</span> 우리 실측 — 스킵당한 4편과 후킹을 둔 2편</h2>
+
+  <p>
+    2026-08-15 에 인스타 <code>reels_skip_rate</code> 가 처음 열렸을 때 4편 전부 84.8~93.8% 였다(벤치마크 정상선
+    25~40%). 4편 다 정적 표지 카드 + 화자 상황 보고("~해 봤습니다")로 열었고, 그 진단으로 커버 세그① 훅 계약을
+    세웠다. 그 사고는 <b>커버 구간</b>의 문제였다. 후킹 구간이 어떻게 됐는지는 아직 재지 못했다 — 홈페이지 편만
+    평균 시청 5.8초로 타편의 두 배였는데, 그건 3초를 넘긴 사람이 조금 더 갔다는 뜻이지 후킹이 통했다는 뜻까지는
+    아니다.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th style="width:26%">회차</th><th style="width:16%">후킹 구성</th><th style="width:34%">형태</th><th style="width:24%">계측</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>20260818-buzz-agents</td>
+        <td>1샷 · 10초<br><span class="note">커버 3.4초 → 결과물 13.4초 시작</span></td>
+        <td>캐릭터가 질문을 던지고 답을 미룬다 — "반응이 없을 것 같은 영상이면, 너희들 결정은 뭐야?" (미해결 긴장형)</td>
+        <td>게시 전</td>
+      </tr>
+      <tr>
+        <td>20260816-neighborhood-change-radar</td>
+        <td>4샷 · 17.2초<br><span class="note">커버 3.4초 → 결과물 20.6초 시작</span></td>
+        <td>문제 발견 이야기 — 카페 개업 → 카페거리 → "미리 알 수 있는 서비스를 만들어야겠어" (문제·피해 → 결심형)</td>
+        <td>IG 평균 시청 시간 · YT 리텐션 대기</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    아래 권장값(1~3샷 · 4~15초, 커버부터 20초 안에 결과물)에 대면 buzz-agents 는 안이고, radar 는 샷 수·길이·결과물
+    시작 시각 셋 다 상한을 넘는다. 권장값은 TikTok 훅 6초와 유튜브 Intro 30초 사이에 둔 잠정값이지 두 편에서
+    끌어낸 값이 아니다. radar 의 성과가 나오면 상한을 늘릴지, 이야기형 후킹을 더 짧게 자를지 그때 정한다.
+  </p>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="no">07</span> 계약으로 옮기기 — 받는다 · 건다 · 안 푼다 · 짧다</h2>
+
+  <p class="lead">
+    자료가 겹치는 지점을 storyboard 스킬의 <code>scenes-schema.md §hooking</code> 으로 옮겼다.
+    아래가 그 계약의 근거 대응표다.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th style="width:16%">계약</th><th style="width:44%">내용</th><th style="width:40%">근거</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>받는다</b></td>
+        <td>커버가 던진 것과 같은 대상·같은 약속을 이어 간다. 커버에 없던 소재로 새지 않는다</td>
+        <td>YouTube Intro 정의(썸네일·제목 기대와 매치) · MrBeast "클릭베이트 기대와 맞춰라" · 실무 "후킹은 본문과 일치"</td>
+      </tr>
+      <tr>
+        <td><b>건다</b></td>
+        <td>시청자의 문제·손해·이익을 <b>시청자 주어</b>로 말한다. 형태는 셋 — 문제·피해(공감형) / 미해결 긴장(호기심형) / 결심·기준(선언형)</td>
+        <td>playbook §1 ②(도구가 아니라 느끼는 문제) · ABCD Connect(사람·행동·흥미) · TikTok 문제-해결 구조 · 먼로 "필요"</td>
+      </tr>
+      <tr>
+        <td><b>안 푼다</b></td>
+        <td>답·방법·완성본은 결과물·내용 몫이다. 후킹이 답을 말하면 뒤가 재탕이 된다</td>
+        <td>TikTok 서스펜스 +16% · Loewenstein 정보 틈 · ABCD 여러 정점 · Quesenberry 전개→절정</td>
+      </tr>
+      <tr>
+        <td><b>짧다</b></td>
+        <td>쇼트폼 1~3샷 · 4~15초, 커버부터 20초 안에 결과물(정보형은 첫 내용 씬)이 시작. 롱폼 1~3샷 · 20~60초, 첫 60초 안에 결과물</td>
+        <td>TikTok 훅 6초 · YouTube Intro 30초 · MrBeast 첫 1분 · 실무 3-10-30. 우리 2편은 10초(안)·17초(밖) — <span class="badge amber">잠정값</span></td>
+      </tr>
+      <tr>
+        <td><b>채우지 않는 것</b></td>
+        <td>인사 · 자기소개 · 채널 소개 · "오늘은 ~ 알아볼게요" 예고 · 도구 정의 · 배경 설명. 화자 보고형 개시 P0 는 커버 세그①과 후킹 첫 세그 둘 다에 적용</td>
+        <td>MrBeast "말하지 말고 보여 줘라" · 08-15 스킵률 실측</td>
+      </tr>
+      <tr>
+        <td><b>모든 편에</b></td>
+        <td>제작형만이 아니라 정보형에도 후킹은 있다. 결과물 씬은 제작형에만 필수인 것과 다르다</td>
+        <td>"왜 남아야 하는지"는 정보형에도 성립 — 검산 스트립의 processy 가드를 없앤 이유</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>플러그인에서 바뀐 것</h3>
+  <ul class="plain">
+    <li><code>scenes-schema.md</code> — §cover 바로 뒤에 <b>§hooking</b> 절 신설(자리·길이·하는 일·채우지 않는 것·화면·렌더러 추론).</li>
+    <li><code>storyboard SKILL.md §4</code> — "커버 다음 샷은 후킹이다(필수)" 규칙과 §4.6 품질 축·§6 점검 스트립 항목.</li>
+    <li><code>storyboard-html-template.html</code> — 후킹 검사에서 제작형 가드(processy)를 빼고, 후킹 부재와 "커버 다음 샷이 후킹이 아님"을 모든 회차에서 경고.</li>
+    <li><code>agents/storyboard-reviewer.md</code> — 문안 모드 훅·전달 축에 후킹 5점, P0 9(화자 보고형)를 후킹 첫 세그까지, 씬 모드 P0 12 "후킹 공백" 신설, 타입별 역할 기준에 후킹 행.</li>
+  </ul>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="no">08</span> 근거 등급</h2>
+
+  <div class="grades">
+    <div><b><span class="badge green">1차 · 공식</span></b>TikTok Creative Codes(Kantar·Lumen 연구, 원문 PDF) · YouTube 고객센터 Intro 지표 · Google ABCD 가이드(5,000편 상관, Nielsen·Kantar 검토) · Meta 모바일 영상 지침</div>
+    <div><b><span class="badge blue">1차 · 실무 문서</span></b>MrBeast 제작 메모 전문(유출본, 한 채널의 내부 실측)</div>
+    <div><b><span class="badge purple">학술</span></b>Loewenstein 1994(원문 1쪽 확인, 이론 리뷰) · Quesenberry &amp; Coolsen 2014(초록만 확인, 108편 상관, TV 광고) · Monroe 동기 순서(교과서)</div>
+    <div><b><span class="badge amber">실무 관행</span></b>3-10-30 구조 — 블로그·Threads 게시물 다수, 원출처 없음. 방향만</div>
+    <div><b><span class="badge red">자체 실측</span></b>08-15 스킵률 4편 · 후킹을 둔 2편(성과 대기)</div>
+  </div>
+
+  <p class="note">
+    수치는 옮기지 않고 방향만 옮긴 것: 서스펜스 +16%(광고), 첫 5초 두 프레임(광고), 5막 구조 호감(TV 광고).
+    유령 인용은 이번엔 쫓지 않았다 — 블로그 수치를 계약에 넣지 않았기 때문이다.
+  </p>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="no">09</span> 출처</h2>
+
+  <div class="src-group">
+    <h3>1차 — 플랫폼 공식</h3>
+    <ul>
+      <li>TikTok for Business, <a href="https://ads.tiktok.com/business/library/Creative_Codes_One_Pager_CA.pdf">Creative Codes — Six secrets to help decode your brand's creative potential on TikTok</a> (PDF) — Code 2 Structure: 첫 6초 · 서스펜스 +16% · 놀라움 1.7x VTR · 문제-해결 구조</li>
+      <li>YouTube Help, <a href="https://support.google.com/youtube/answer/9314415?hl=en">Measure key moments for audience retention</a> — Intro(첫 30초)·Spikes·Dips 정의</li>
+      <li>Google, <a href="https://services.google.com/fh/files/misc/youtube_google_abcd_reference_guide_en.pdf">YouTube ABCD reference guide</a> (PDF) · Think with Google, <a href="https://www.thinkwithgoogle.com/_qs/documents/8472/ABCD_Complete_V7b_HR_1.pdf">A playbook for building effective creative on YouTube</a> (PDF) — Attract · emerging story arc</li>
+      <li>Meta Business Help, <a href="https://www.facebook.com/business/help/144240239372256">Best Practices for Mobile Video Ads</a> — 첫 3초</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>1차 — 실무 문서</h3>
+    <ul>
+      <li>MrBeast, <i>How to succeed in MrBeast production</i> (2024 유출본) — 전문은 <a href="https://www.alexanderjarvis.com/memo-how-to-succeed-in-mrbeast-production/">alexanderjarvis.com 게재본</a>, 맥락은 <a href="https://simonwillison.net/2024/Sep/15/how-to-succeed-in-mrbeast-production/">Simon Willison</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>학술</h3>
+    <ul>
+      <li>George Loewenstein, <a href="https://www.cmu.edu/dietrich/sds/docs/loewenstein/PsychofCuriosity.pdf">The psychology of curiosity: A review and reinterpretation</a>, <i>Psychological Bulletin</i> 116(1), 75–98 (1994)</li>
+      <li>Keith A. Quesenberry &amp; Michael K. Coolsen, <a href="https://www.tandfonline.com/doi/abs/10.2753/MTP1069-6679220406">What Makes a Super Bowl Ad Super? Five-Act Dramatic Form Affects Consumer Super Bowl Advertising Ratings</a>, <i>Journal of Marketing Theory and Practice</i> 22(4), 437–454 (2014)</li>
+      <li>Alan H. Monroe, <i>Principles and Types of Speech</i> (1935) — Motivated Sequence</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>실무 관행 — 방향 참고용</h3>
+    <ul>
+      <li>Threads 게시물(<a href="https://www.threads.com/@human__bro/post/DIqtiUGy0mc">@human__bro</a> · <a href="https://www.threads.com/@nomadbuffett/post/DEjiHuKJHDZ">@nomadbuffett</a>) — 훅 3초 · 상황 설명 10초 · 솔루션 30초 · CTA 구조</li>
+      <li><a href="https://www.skillagit.com/people/people_view.php?b_id=008&amp;idx=588">유튜브·인스타·릴스·숏폼 대본 이렇게 쓰면 조회수 달라진다</a> — "후킹은 본문 내용과 일치해야 한다"</li>
+      <li>OpusClip, <a href="https://www.opus.pro/blog/ideal-youtube-shorts-length-format-retention">The Ideal YouTube Shorts Length &amp; Format for Retention</a> · AIR Media-Tech, <a href="https://air.io/en/youtube-hacks/advanced-retention-editing-cutting-patterns-that-keep-viewers-past-minute-8">Advanced retention editing</a> — hook-deliver cycle · rehook</li>
+      <li>1of10, <a href="https://1of10.com/blog/how-to-hook-viewers-in-the-first-30-seconds-of-a-youtube-video/">How to Hook Viewers in the First 30 Seconds</a> — 0~5·5~15·15~30초 구조 · vidIQ, <a href="https://vidiq.com/blog/post/youtube-video-intros/">YouTube Intro Ideas</a> — 인트로 10초 이하, "문제 해결 제안"·"공감 질문"</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p>social-flow · 리서치 노트 · 2026-08-18</p>
+  <p>관련 문서 — <a href="../2026-08-17-video-cover-design/">영상 커버 잘 만드는 법</a> · <a href="../2026-08-15-first-scene-live-action-vs-animation/">첫 장면 실사 대 애니메이션</a> · <a href="../2026-08-15-posting-frequency-and-growth/">게시 빈도와 성장</a></p>
+</footer>
+
+</div>
+</body>
+</html>

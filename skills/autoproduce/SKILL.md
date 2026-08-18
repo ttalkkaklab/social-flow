@@ -239,8 +239,10 @@ storyboard 스킬 §4 를 그대로 따른다. 특히 자동 저작이 자주 �
 - THEME 은 profile §3 값을 그대로 복사.
 - 구성은 cover 1 + points/quote 3~5, 본편 35~75초.
 - 재생 순서는 **커버 → 후킹 → 결과물 → 내용**. 샷마다 `beat` 를 적는다
-  (`hook`·`hooking`·`result`·`body`·`cta`). 제작·튜토리얼은 완성본이 방법보다
-  앞에 온다 (scenes-schema §재생 순서).
+  (`hook`·`hooking`·`result`·`body`·`cta`). **커버 다음 샷은 후킹이다 — 정보형도**
+  (커버가 던진 것을 받아 시청자 주어로 걸고 답은 안 푼다, 커버부터 20초 안에
+  결과물이나 첫 내용 씬 — scenes-schema §hooking). 제작·튜토리얼은 완성본이
+  방법보다 앞에 온다 (scenes-schema §재생 순서).
 - 항목 하나는 샷이다. `scene`·`sceneSlug`·`shot.size`·`shot.info` 와
   `visual.picture`·`visual.overlay` 를 적는다(정본은 scenes-schema §문법 단위와
   제작 층). AI 영상과 HTML 연출을 한 칸에 합치지 않는다.
