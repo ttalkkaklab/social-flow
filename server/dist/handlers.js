@@ -262,17 +262,20 @@ const threadsPublishSchema = z
         message: `THREADS caption must be ≤${THREADS_MAX_CHARS} chars (got ${threadsTextLength(value)} — emoji are counted as UTF-8 bytes)`,
     })),
     imageUrl: z.string().url().optional(),
+    videoUrl: z.string().url().optional(),
     linkUrl: z.string().url().optional(),
     replyToId: z.string().min(1).optional(),
     channel: channelSlugSchema,
 })
     .superRefine((v, ctx) => {
-    // link_attachment is media_type=TEXT only — the platform rejects it alongside an image
-    if (v.linkUrl && v.imageUrl) {
+    // One media_type per post — VIDEO, IMAGE or TEXT(link_attachment). The platform
+    // rejects two together, so catch it before the call is spent.
+    const media = ['imageUrl', 'videoUrl', 'linkUrl'].filter((k) => v[k]);
+    if (media.length > 1) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            path: ['linkUrl'],
-            message: 'linkUrl is for text-only posts (mutually exclusive with imageUrl)',
+            path: [media[1]],
+            message: `imageUrl, videoUrl and linkUrl are mutually exclusive (got ${media.join(', ')})`,
         });
     }
 });

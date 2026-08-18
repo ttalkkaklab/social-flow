@@ -34,28 +34,62 @@ into promoting that prompt to "always allow".
    `~/.config/social-flow/<channel-slug>/`. Even when debugging with curl, use inline
    `$(cat …)` references only; never print token values or the access_token field
    into the conversation.
-7. **Every publish and comment tool call takes `channel: <channel-slug>`** — use this
-   skill's first argument (data/<channel-slug>) as is. With a channel given, only that
-   channel's token is used, with no fallback to the default token (prevents publishing
-   from the wrong account — a server contract). If you get an error saying the channel
-   has no token, walk the user through the channel-directory procedure in
-   `references/token-setup.md`.
 4. **No distorting the facts** — publish only within the approved artifacts. If a
    caption needs fixing on the spot, take the corrected version back through the
    approval gate.
 5. **Respect the limits** — Threads 250/24h, IG 100/24h, YouTube uploads 100/day
    (the videos.insert-only Video Uploads bucket, 1 unit per call — no reason to
    ration episode publishes).
-6. **Threads puts the link in a self-reply, FB in the first comment** — for a Threads
-   video episode, publish the casual spoken-style body (no link) first, then attach
-   the video link (the IG reels permalink) as a `sns_comment_reply` **self-reply**.
-   No cover image attached.
-   (2026-08-15 — this is a **retraction** of the 2026-08-14 "one link in the body"
-   directive. The first two posts done that way got 9 and 21 views, a tenth of the
-   link-free posts from the same day, while the two reply-link posts got 257 and 623.
-   Reach distribution is measurably suppressed by a body link, so we reverted.)
-   FB keeps the old rule — no link in the body → `facebook_comment` first comment, and
+6. **Threads carries the video on the post, FB puts the link in the first comment** —
+   a Threads video episode goes out in one call: the casual spoken-style body (no link)
+   as `caption` plus the public URL of the subtitle-burned cut as `videoUrl` (user
+   directive 2026-08-19). Don't attach the video as a reply. Only an episode that can't
+   carry a video falls back to a self-reply link.
+   No link in the body either — the first two link-in-body posts got 9 and 21 views, a
+   tenth of the link-free posts from the same day (measured 2026-08-15).
+   FB: no link in the body → `facebook_comment` first comment, and
    **the FB publish is complete only once that comment is up too.**
+7. **Every publish and comment tool call takes `channel: <channel-slug>`** — use this
+   skill's first argument (data/<channel-slug>) as is. With a channel given, only that
+   channel's token is used, with no fallback to the default token (prevents publishing
+   from the wrong account — a server contract). If you get an error saying the channel
+   has no token, walk the user through the channel-directory procedure in
+   `references/token-setup.md`.
+8. **Video and subtitles go up separately** — platforms that take a subtitle file
+   (YouTube · Facebook) get the clean master (`video.mp4`) plus `subs.srt`. The
+   burned-in cut (`video-sub.mp4`) is what **Instagram and Threads** use — neither has a
+   path that accepts a subtitle file, so burning them into the picture is the only way.
+   The §2 table is canonical for which file goes where; mix them up and YouTube ends up
+   with subtitles twice over, or IG loses them entirely.
+9. **Every YouTube upload starts private — no exceptions** (user directive 2026-08-19).
+   Call `youtube_publish` with **`privacyStatus: "private"`**, attach everything the
+   cover needs, and only then flip to public with `youtube_update`. Publishing straight
+   to public exposes a mid-sentence frame as the first thing anyone sees while you are
+   still attaching the cover. This holds for short-form and long-form alike; the
+   long-form specifics are rule 10.
+
+   **What `thumbnailFilePath` changes is the landscape surface only** — search results,
+   share previews, embeds. The portrait frame that the shorts feed and the channel
+   shorts tab actually show is separate, and left unset **a random mid-video frame lands
+   as the first frame** — an expression mid-sentence instead of our cover.
+
+   **The portrait frame is set in a browser** (measured 2026-08-19) —
+   `studio.youtube.com/video/<id>/edit` → the `⋮` over the portrait image in the
+   thumbnail box → **"Select from video"** → the cover frame → Done → Save. Any browser
+   we drive works (ego lite by default, Chrome MCP as fallback); the native app is not
+   needed. Don't pick `Change` (file upload) in that same menu — it only swaps the
+   landscape surface. If the picker is missing or the cover isn't among the candidates,
+   fall back to the emulator procedure in `references/shorts-surface-adb.md`.
+
+   **The verdict is not `oardefault.jpg`** — it stays 404 even after the frame is set,
+   and `oar2.jpg` answers 200 with a cached older frame. Read the tile's `img` src from
+   the channel shorts tab DOM (`youtube.com/@<handle>/shorts`), download it, and confirm
+   with your eyes that it's the cover. **This check only works once the video is public**
+   — private videos don't appear in the shorts tab. So the frame gets set while private,
+   and the check happens right after going public.
+
+   **Don't skip this step and report "published"** (completion criteria: §4).
+   If it needs the user (a login, say), ask right then — don't defer it.
 10. **Long-form publishes in two stages** — upload the 8–15 minute video as
    `privacyStatus: "private"`, **have a human check the encode, subtitles and chapters**
    on the watch page, then flip it to public with `youtube_update`. Going straight
@@ -64,21 +98,6 @@ into promoting that prompt to "always allow".
    Procedure in §3-2. **Don't add `#Shorts`** — on landscape long-form it gets
    misfiled onto the shorts surface. Rule 9 (portrait first frame) doesn't apply to
    long-form.
-9. **YouTube isn't published until the shorts portrait first frame is set** (short-form
-   only) — what `thumbnailFilePath` changes is the landscape surface, nothing else.
-   Without setting the portrait frame (`oar*`) that the shorts feed and the channel
-   shorts tab actually show, **a random mid-video frame lands as the first frame** —
-   an expression mid-sentence instead of our cover. Procedure in §3-1 and
-   `references/shorts-surface-adb.md`; the verdict is `oardefault.jpg` **HTTP 200 +
-   downloading it and confirming with your eyes that it's the cover screen.**
-   **Don't skip this step and report "published".**
-   If it needs the user (an emulator login, say), ask right then — don't defer it.
-8. **Video and subtitles go up separately** — platforms that take a subtitle file
-   (YouTube, Facebook) get the clean master (`video.mp4`) plus `subs.srt`. The
-   burned-in copy (`video-sub.mp4`) is for **Instagram only** — IG has no path that
-   accepts a subtitle file, so burning them into the picture is the only way. Which
-   file goes to which platform is defined by the table in §2, and mixing them up
-   either double-burns subtitles on YouTube or loses them on IG.
 
 ## Procedure
 
@@ -148,20 +167,21 @@ missing, python returns 2, so the existence check line above tells them apart.
 
 Present the final version for each platform with AskUserQuestion — the full body/caption,
 the media **local paths** (they differ per platform: YT and FB get `video.mp4`+`subs.srt`,
-IG gets `video-sub.mp4`, Threads gets the media-free body + the link reply copy), the
+IG and Threads get `video-sub.mp4`), the
 subtitle cue count, the hashtags, the FB first-comment copy, all of it; the account it
 will publish to (from the account check); and the style-check results (per-surface exit
 and score, number of quote exemptions). Options: [publish everything / some platforms
 only / revise and re-present / stop]. **Passing this gate is the approval to actually
 publish.** If they ask for changes, apply them and gate again.
 
-At this point the link slot in the Threads reply is still the `<IG_REELS_URL>`
-placeholder (IG has to be published first for the permalink to exist). Write "the IG
-reels permalink goes here" into the prompt, and filling in that slot alone in §3 stays
-inside the approval — it isn't editing a sentence, so rule 4's re-approval doesn't
-apply.
+Threads carries the video on the post (§2 table), so there is no link placeholder.
+Only a fallback episode that can't carry a video uses a reply link, and there the link
+slot is still the `<IG_REELS_URL>` placeholder at this point (IG has to be published
+first for the permalink to exist). Write "the IG reels permalink goes here" into the
+prompt, and filling in that slot alone in §3 stays inside the approval — it isn't
+editing a sentence, so rule 4's re-approval doesn't apply.
 
-### 2. Getting public media URLs (required for IG · FB images/video — n/a for Threads)
+### 2. Getting public media URLs (required for IG and Threads · FB images/video)
 
 The `imageUrl`/`videoUrl` on the publish tools must be a **publicly reachable HTTPS
 URL** — the platform crawls it, so local paths and authenticated URLs won't do
@@ -175,11 +195,11 @@ Which file goes up differs per platform. This table is the source of truth.
 | YouTube | `video.mp4` (local path) | `captionFilePath: subs.srt` | uploaded as a separate track via `captions.insert` — replaceable after publishing, and the source for auto-translation |
 | Facebook | `video.mp4` (public URL) | `captionFilePath: subs.srt` | the `/{video_id}/captions` edge |
 | Instagram | **`video-sub.mp4`** (public URL) | none — burned into the picture | the container has no subtitle parameter |
-| Threads | none — nothing to host | n/a | the body is a link-free casual post, and the IG reels link goes in a self-reply. No attached media, so no file to upload |
+| Threads | **`video-sub.mp4`** (public URL) | none — burned into the picture | the video rides on the post (`videoUrl`). The container takes no subtitle parameter, so it uses the same burn-in as IG. The video never goes in a reply |
 
-The hosting directory needs **both the burned-in copy for IG and the clean copy for
-FB**. The filenames differ, so they can sit in one directory together; check each one
-for a 200 with `curl -sI`.
+The hosting directory needs **both the burned-in copy and the clean copy** — IG and
+Threads share the burn-in, FB takes the clean copy. The filenames differ, so they can
+sit in one directory together; check each one for a 200 with `curl -sI`.
 
 - Use the hosting method named in profile.md §4. **If none is set, hold the publish and
   ask the user which hosting to use.**
@@ -196,10 +216,13 @@ for a 200 with `curl -sI`.
 
 Put `channel: <channel-slug>` on every publish and comment tool call below (rule 7).
 
-There's exactly one hard ordering constraint — **IG reels before Threads** (the video
-link that goes in the Threads post is the IG permalink). If the IG publish fails, hold
-Threads and ask the user for a replacement link (the YouTube permalink, say). The
-order of the remaining platforms is free.
+**There is no ordering constraint** — now that Threads carries its own video, the
+dependency on the IG permalink is gone. Publish in any order.
+
+Only the fallback (an episode that can't carry a video) puts **IG reels before
+Threads**, because the link in the Threads reply is then the IG permalink. If the IG
+publish fails there, hold Threads and ask the user for a replacement link (the YouTube
+permalink, say).
 
 1. **YouTube**: `youtube_publish` — title/description from `output/youtube/meta.md`,
    `videoFilePath`=output/video/**video.mp4** (the clean copy),
@@ -221,36 +244,48 @@ order of the remaining platforms is free.
    non-realistic animation, color grading and filters).
    **The YouTube publish isn't done until the shorts portrait first frame is set
    (absolute rule 9 — not skippable).** What `thumbnailFilePath` changes is only the
-   landscape surface (search results, share previews, embeds); the portrait frame
-   (`oar*`) used by the shorts feed and the channel shorts tab changes only through
-   frame selection in the YouTube native app (not via API or web — measured
-   2026-08-13 and 08-14). Leave it unset and a random mid-video frame becomes the
-   shorts first frame. Procedure in `references/shorts-surface-adb.md`
-   (channel-dedicated AVD + adb, ~60 seconds per video).
+   landscape surface (search results, share previews, embeds); the portrait frame used
+   by the shorts feed and the channel shorts tab is separate. Leave it unset and a
+   random mid-video frame becomes the shorts first frame.
+
+   **Set it in a browser while the video is still private** —
+   `studio.youtube.com/video/<id>/edit` → the `⋮` over the portrait image in the
+   thumbnail box → **"Select from video"** → the cover frame → Done → Save. Drive it
+   with whatever browser this session has (ego lite by default, Chrome MCP as fallback).
+   `Change` in that same menu is file upload and only swaps the landscape surface.
+   The emulator route in `references/shorts-surface-adb.md` is the fallback for when
+   the picker is missing or the cover isn't among the candidates.
 
    **The target frame is the moment the cover is complete** — use the timestamp where
    `produce` pulled `cover.jpg` (the cover transition completion time in
    `build-report.txt`; around 6 seconds in this pipeline). At the frame picker's first
    slot (t=0) the hero stat isn't up yet.
 
-   **The verdict looks at two things** — (1) `i.ytimg.com/vi/<videoId>/oardefault.jpg`
-   returns **HTTP 200**, and (2) you download that file and **confirm with your eyes
-   that it's the cover screen** (200 means "some" portrait frame is attached, not that
-   it's the "right" one). Both have to pass before you write it up as published in
-   `publish-log.md`.
+   **The verdict is not `oardefault.jpg`** — it stays 404 after the frame is set, and
+   `oar2.jpg` serves a cached older frame with a 200. Read the tile's `img` src from the
+   channel shorts tab DOM (`youtube.com/@<handle>/shorts`), download it, and confirm by
+   eye that it's the cover. This only works **after** the video is public, so the order
+   is: set the frame while private → flip to public → check the shorts tab.
 
-   If there's no emulator or a login is needed, **ask the user right then** — don't
-   defer it as an open item and report completion. Only if the user explicitly says
-   they'll do it later do you record it as open, along with the videoId.
+   If a login is needed, **ask the user right then** — don't defer it as an open item
+   and report completion. Only if the user explicitly says they'll do it later do you
+   record it as open, along with the videoId.
 2. **Instagram**: `instagram_publish` — `videoUrl` is the public URL of the
    **burned-in copy (video-sub.mp4)** + caption. This is the only place the subtitles
    are baked into the picture.
-3. **Threads**: `threads_publish` — publish the approved body (no link) as `caption`
-   (no `linkUrl`, no `imageUrl`), and once it's up attach the IG permalink from step 2
-   as a **self-reply** with `sns_comment_reply` (one line like "full video here →"
-   plus the link). Threads isn't published until that reply is up. (2026-08-15 — the
-   body-link approach is retracted, see the evidence under rule 6. Measured: a link in
-   the body suppresses reach distribution.)
+3. **Threads**: `threads_publish` — the approved body (no link) as `caption` and the
+   public URL of the burned-in copy (`video-sub.mp4`) as `videoUrl`. **One call finishes
+   it** — no reply. The video container transcodes, so the tool waits up to 2 minutes
+   for FINISHED.
+
+   No link in the body, same as before — the first two link-in-body posts got 9 and 21
+   views, a tenth of the link-free posts from the same day (measured 2026-08-15).
+   Carrying the video on the post means nothing links out, which sidesteps this.
+
+   **Fallback** — only when there's no video file or hosting is blocked: publish the
+   body alone, then attach the IG permalink as a **self-reply** with `sns_comment_reply`
+   (one line like "full video here →" plus the link). In that case, and only that case,
+   Threads isn't published until the reply is up.
 4. **Facebook**: `facebook_publish` — `videoUrl` is the public URL of the **clean copy
    (video.mp4)**, `captionFilePath`=output/video/subs.srt (a local path), plus the
    body → then **publish the first comment (source/related link) immediately** with
@@ -295,7 +330,37 @@ the comment call; if it keeps failing, write down the postId and the reason and 
 the manual fix. Threads is a single call, so it has no partial failure — if it failed,
 nothing was published, so check the permalink before calling again.
 
-### 4. Record and wrap up
+### 4. Completion checklist (don't say "published" until every box is ticked)
+
+**A 200 from the API is not completion.** Walk this list, and if anything is open, name
+the open item and say what's left. Reporting completion with work still outstanding is
+the most frequent failure in this skill.
+
+- [ ] **YouTube — the landscape thumbnail is our cover.** Download
+      `i.ytimg.com/vi/<videoId>/maxresdefault.jpg` and compare it to `cover.jpg` by eye.
+      A `thumbnailWarning` means it did **not** attach — don't just report the warning
+      and move on.
+- [ ] **YouTube — the portrait first frame is set.** Web Studio frame picker (rule 9).
+      `thumbnailFilePath` does not change this. Skip it and a mid-sentence expression is
+      the first thing the shorts feed shows.
+- [ ] **YouTube — the portrait surface was checked after going public.** Read the tile's
+      `img` src from the channel shorts tab DOM and confirm it's the cover (not
+      `oardefault.jpg`).
+- [ ] **YouTube — private actually became public.** Read `privacyStatus` back from the
+      `youtube_update` response. Don't flip it while anything above is still open.
+- [ ] **YouTube — the subtitle track attached.** No `captionWarning`, and CC shows on the
+      watch page.
+- [ ] **Threads — the video is on the post** (rule 6). Open the permalink and confirm it
+      plays. A body-only post is incomplete.
+- [ ] **Facebook — the first comment is up** (rule 6).
+- [ ] **Instagram — a permalink came back.** A 200 on the container is not a publish.
+- [ ] **Any temporary tunnel is torn down** — `pgrep -fl "cloudflared|http.server"`
+      prints nothing.
+
+Anything that needs the user (a login, say) gets **asked for right then**. Don't defer
+it and report the rest as done.
+
+### 5. Record and wrap up
 
 When you reply to comments after publishing (`sns_comment_reply`), check the copy
 first as well. A reply is person-to-person talk, which is where AI phrasing gets
@@ -314,6 +379,8 @@ write the reason into the publish log.
 
 - Record in `data/<channel>/episodes/<topic>/output/publish-log.md`: a table of
   timestamp, platform, post id, permalink, caption summary, and the approver's decision.
+  **Write the §4 checklist beside it, item by item, as O/X** — an open item has to
+  survive in the log for the next person to finish it.
 - Update `storyboard.md` to `status: published`.
 - If you used a temporary tunnel, verify the teardown per §1, then give the final
   report as a platform/permalink table.
