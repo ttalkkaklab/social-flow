@@ -121,7 +121,7 @@ else
     -ac 2 -ar 48000 work/omix.wav
 fi
 
-# ── 5) 먹싱 (본편 최종과 동일 인코딩 계열 — xfade 재인코딩 입력으로 쓰인다)
+# ── 5) Mux (the same encoding family as the feature's final — it's used as an xfade re-encode input)
 ffmpeg -y -v error -i work/ovid.mp4 -i work/omix.wav -map 0:v -map 1:a \
   -c:v libx264 -profile:v high -level 4.1 -preset slow -crf 18 -pix_fmt yuv420p \
   -g $((FPS*2)) -keyint_min "$FPS" -sc_threshold 0 -r "$FPS" \

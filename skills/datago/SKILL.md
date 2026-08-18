@@ -7,112 +7,125 @@ description: >
   seeds. Searches data.go.kr datasets (OpenAPI + file data) with the datago_* tools,
   collects file originals (no auth) or API rows (auth key + per-API approval), and
   records them as sourced research seeds for content creation.
-argument-hint: "<검색 주제> [채널]"
+argument-hint: "<search topic> [channel]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "WebFetch", "WebSearch", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__naver_search"]
 ---
 
-# 공공데이터 조사 — data.go.kr 을 콘텐츠 시드로
+# Public data research — data.go.kr as a content seed
 
-공공데이터포털에서 주제 관련 **오픈API·파일데이터를 찾아 수집하고, 출처가 달린
-조사 시드로 기록**한다. 정부·공공기관 원천 데이터는 그 자체가 1차 출처다 —
-같은 수치라면 기사 재인용보다 원천 데이터셋을 우선한다(교차검증 부담도 준다:
-원천 1개 = 확정, 기사 2개 = 교차검증).
+Find and collect **open APIs and file datasets** related to a topic on the Korea
+open-data portal (data.go.kr), **and record them as sourced research seeds**.
+Source data from government and public bodies is itself a primary source — for the
+same number, prefer the original dataset over a news article requoting it (it also
+lightens the cross-check burden: 1 primary source = settled, 2 articles = cross-checked).
 
-## 툴 지도
+## Tool map
 
-| 툴 | 인증 | 용도 |
+| Tool | Auth | Use |
 |---|---|---|
-| `datago_search` | 불필요 | 키워드로 데이터셋 발굴 (API·FILE 동시) |
-| `datago_detail` | 불필요 | 수집 경로·메타(수정일·이용허락범위) 확보 |
-| `datago_file_download` | 불필요 | 파일 원본(CSV 등) 다운로드 — **가장 빠른 경로** |
-| `datago_file_fetch` | 키+활용신청 | 대용량 파일데이터를 행 단위로만 조회 (odcloud) |
-| `datago_api_call` | 키+활용신청 | 표준 오픈API 호출 (실시간·조건조회형 데이터) |
+| `datago_search` | none | find datasets by keyword (API and FILE at once) |
+| `datago_detail` | none | get the collection path and metadata (last-modified, license scope) |
+| `datago_file_download` | none | download the file original (CSV, etc.) — **the fastest route** |
+| `datago_file_fetch` | key + 활용신청 (usage application) | page through large file datasets row by row (odcloud) |
+| `datago_api_call` | key + 활용신청 (usage application) | call a standard open API (live and query-conditional data) |
 
-인증키는 `DATA_GO_KR_API_KEY`(프로젝트 `.claude/settings.local.json`)로 주입된다.
-키가 있어도 **API 별 활용신청**(포털 로그인, 대부분 자동승인)이 선행돼야 한다 —
-아래 §4 참조.
+The auth key is injected as `DATA_GO_KR_API_KEY` (project `.claude/settings.local.json`).
+Even with a key, a **per-API 활용신청** (usage application on the portal — log in;
+most are auto-approved) has to come first — see §4 below.
 
-## 절차
+## Procedure
 
-### 1. 검색 — 데이터셋 발굴
+### 1. Search — find the datasets
 
-`datago_search` 로 주제어를 검색한다(인자는 다른 검색 툴과 같다 — `query`·`limit`·`page`).
-요령:
+Search a keyword with `datago_search` (the arguments match the other search tools —
+`query`, `limit`, `page`). Tips:
 
-- 첫 검색은 type 생략(API·FILE 동시) — totals 로 데이터 지형을 파악한다.
-- 검색어는 짧은 주제어부터("환율" → 82건), 안 좁혀지면 기관명·세부어를 병기
-  ("한국은행 기준금리"). 조사 대상이 아닌 검색어 반복 변주는 금지.
-- 후보 선정 기준: **수정일이 최근**이고(오래된 1회성 데이터는 시효 주의),
-  제공기관이 주제의 소관 기관인 것.
+- On the first search, omit type (API and FILE together) — read the totals to see
+  the shape of the data.
+- Start with a short keyword ("환율" / exchange rate → 82 hits); if that doesn't
+  narrow, add the agency name or a more specific term ("한국은행 기준금리" / Bank of
+  Korea base rate). Don't churn through query variations that aren't the research subject.
+- Selection criteria: **recently modified** (an old one-off dataset carries staleness
+  risk), and a provider that actually owns the subject.
 
-### 2. 상세 — 수집 경로와 시효 확인
+### 2. Detail — check the collection path and staleness
 
-후보 데이터셋의 `publicDataPk`+`type` 으로 `datago_detail` 을 호출한다.
-반드시 읽을 것:
+Call `datago_detail` with a candidate dataset's `publicDataPk` + `type`.
+Always read:
 
-- **수정일·업데이트 주기** — "수시 (1회성 데이터)" 면 데이터 기준일이 오래일 수
-  있다(예: 2017년 수집 DB). 시효성 주제엔 부적합.
-- **이용허락범위** — "제한 없음" 확인. 제한이 있으면 사용자에게 보고 후 판단.
-- FILE → `publicDataDetailPk`(uddi), API → `requestUrls`/`docs`(활용가이드).
+- **Last-modified date and update cycle** — "수시 (1회성 데이터)" ("as needed
+  (one-off data)") means the data's own reference date can be old (e.g. a DB
+  collected in 2017). Unsuitable for time-sensitive topics.
+- **License scope (이용허락범위)** — confirm "제한 없음" ("no restrictions"). If
+  there are restrictions, report to the user and let them decide.
+- FILE → `publicDataDetailPk` (uddi); API → `requestUrls` / `docs` (the usage guide).
 
-### 3. 수집
+### 3. Collection
 
-**FILE (기본 경로)** — `datago_file_download` 로 원본을 받는다:
+**FILE (the default route)** — get the original with `datago_file_download`:
 
-- `saveDir` 는 주제 작업 중이면 `data/<채널>/episodes/<주제>/storyboard/`, 단독
-  조사면 `docs/research/<YYYY-MM-DD>-<slug>/` 절대 경로.
-- 응답 `encoding` 이 `euc-kr` 이면 Read 전에 변환:
-  `iconv -f euc-kr -t utf-8 <파일> > <파일>.utf8.csv`
-- 수십 MB 급이거나 일부 행만 필요하면 `datago_file_fetch`(활용신청 필요)로
-  페이지 조회가 낫다.
+- `saveDir` is `data/<channel>/episodes/<topic>/storyboard/` when working on a topic,
+  or the absolute path `docs/research/<YYYY-MM-DD>-<slug>/` for standalone research.
+- If the response's `encoding` is `euc-kr`, convert before reading:
+  `iconv -f euc-kr -t utf-8 <file> > <file>.utf8.csv`
+- For tens of MB, or when you need only some rows, paging with `datago_file_fetch`
+  (needs the usage application) is better.
 
-**API (실시간·조건조회형)** — 파라미터 계약을 **먼저** 확인하고 호출한다:
+**API (live and query-conditional)** — check the parameter contract **first**, then call:
 
-- `datago_detail` 의 `requestUrls` 가 경로, 파라미터는 `docs`(활용가이드 문서,
-  hwp/docx — WebFetch 불가면 datago_file_download 형식과 무관하게 curl 로 받아
-  변환하거나 detailUrl 을 WebFetch)에서 확인.
-- 파라미터 추측으로 반복 호출 금지 — 일일 트래픽(대개 1,000회)이 소진된다.
+- `datago_detail`'s `requestUrls` is the path; the parameters are in `docs` (the
+  usage guide document, hwp/docx — when WebFetch can't read it, fetch it with curl
+  regardless of the datago_file_download format and convert, or WebFetch the detailUrl).
+- Don't call repeatedly while guessing parameters — the daily traffic (usually 1,000
+  calls) burns out.
 
-### 4. 활용신청 게이트 (수동 — 사용자 안내)
+### 4. The 활용신청 gate (manual — guide the user)
 
-`datago_file_fetch`/`datago_api_call` 이 "등록되지 않은 인증키"(-4)·"인증 거부"를
-반환하면 **키 문제가 아니라 활용신청 누락**이 대부분이다. 사용자에게 안내한다:
+When `datago_file_fetch` / `datago_api_call` returns "등록되지 않은 인증키"
+("unregistered auth key", -4) or "인증 거부" ("auth denied"), it's usually **not the
+key but a missing 활용신청** (usage application). Walk the user through it:
 
-1. 포털 로그인 → 해당 데이터셋 상세(`detailUrl`) → **활용신청** 버튼
-2. 대부분 자동승인(즉시). 승인 후 같은 호출 재시도.
-3. 그래도 실패하면 마이페이지 > 개인 API 인증키의 키와 `DATA_GO_KR_API_KEY`
-   일치 확인.
+1. Log in to the portal → the dataset's detail page (`detailUrl`) → the **활용신청**
+   ("apply for use") button
+2. Most are auto-approved (instantly). Retry the same call after approval.
+3. If it still fails, check that the key under 마이페이지 > 개인 API 인증키
+   (My Page > personal API auth key) matches `DATA_GO_KR_API_KEY`.
 
-활용신청을 기다릴 수 없으면 FILE 은 `datago_file_download`(무인증)로 우회한다.
+If the application can't be waited on, route FILE around it with
+`datago_file_download` (no auth).
 
-### 5. 시드 기록 — 출처 계약
+### 5. Record the seed — the source contract
 
-수집 결과를 조사 문서에 기록한다 (storyboard 작업 중이면 `research.md`, 단독
-조사면 `docs/research/<YYYY-MM-DD>-<slug>/public-data.md`):
+Record what you collected in the research document (`research.md` while working on a
+storyboard, or `docs/research/<YYYY-MM-DD>-<slug>/public-data.md` for standalone research):
 
 ```markdown
-| 주장/수치 | 근거 데이터 | 데이터 기준일 | 출처 |
+| Claim/number | Source data | Data reference date | Source |
 |---|---|---|---|
-| 전국 마리나 34개소 | 해양수산부_전국 마리나 현황 (행 34) | 수정일 2025-11-12 | [data.go.kr](https://www.data.go.kr/data/15152090/fileData.do) |
+| 34 marinas nationwide | 해양수산부_전국 마리나 현황 (34 rows) | modified 2025-11-12 | [data.go.kr](https://www.data.go.kr/data/15152090/fileData.do) |
 ```
 
-- 출처 표기는 **기관명_데이터셋명 + 데이터 기준일 + 상세 URL** — 콘텐츠에서
-  "해양수산부 공공데이터(2025)" 처럼 인용할 수 있게.
-- **데이터 기준일 ≠ 수정일일 수 있다** — 파일 내용(연도 컬럼·파일명)에서 실제
-  기준 시점을 확인해 기록한다. 2017년 수집 데이터를 "현재" 로 서술하면 왜곡.
-- 수치 가공 시 원칙은 스토리보드 스킬과 동일: 범위는 범위로, 반올림으로 의미를
-  바꾸지 않는다.
+- Cite as **agency name_dataset name + data reference date + detail URL** — so the
+  content can quote it as "Ministry of Oceans and Fisheries public data (2025)".
+- **The data reference date may not be the last-modified date** — check the actual
+  reference point from the file contents (a year column, the filename) and record
+  that. Describing data collected in 2017 as "current" is a distortion.
+- When processing numbers, the principle matches the storyboard skill: a range stays
+  a range, and rounding never changes the meaning.
 
-## 함정
+## Traps
 
-- **수정일에 속지 말 것** — 포털 수정일은 메타데이터 갱신일이다. "전체 행 5,003 /
-  2017년 수집" 데이터가 수정일 2025 로 보일 수 있다(실측 사례: 해양관광레저정보DB).
-- **EUC-KR 파일** — 응답의 encodingNote 를 무시하고 바로 Read 하면 한글이 깨진
-  채 인용된다. iconv 변환 후 읽는다.
-- **트래픽은 유한** — api_call 은 API 별 일일 한도가 있다. 같은 조회 반복 금지,
-  응답이 크면 numOfRows 류 파라미터로 줄인다.
-- **검색·상세가 계속 0건/파싱 실패** — 포털 개편으로 서버 HTML 파서가 깨졌을 수
-  있다. detailUrl 을 WebFetch 로 직접 확인해 조사는 계속하되, 서버
-  (`server/src/datago-client.ts`) 수정 필요를 사용자에게 보고한다.
-- **이용허락범위 제한 데이터** — "제한 없음" 이 아니면 상업적 콘텐츠 인용 전
-  사용자 확인을 받는다.
+- **Don't be fooled by the last-modified date** — the portal's modified date is when
+  the metadata was updated. A dataset of "5,003 total rows / collected in 2017" can
+  show modified 2025 (a case measured in practice: 해양관광레저정보DB, the marine
+  tourism and leisure information DB).
+- **EUC-KR files** — ignore the response's encodingNote and Read it directly and the
+  Korean comes out mangled in your quote. Convert with iconv, then read.
+- **Traffic is finite** — api_call has a per-API daily limit. Don't repeat the same
+  query; when the response is large, trim it with numOfRows-style parameters.
+- **Search and detail keep returning 0 hits or failing to parse** — a portal redesign
+  may have broken the server's HTML parser. Keep the research going by checking the
+  detailUrl directly with WebFetch, but report to the user that the server
+  (`server/src/datago-client.ts`) needs fixing.
+- **License-restricted data** — if it isn't "제한 없음" ("no restrictions"), get the
+  user's confirmation before quoting it in commercial content.
