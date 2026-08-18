@@ -88,3 +88,27 @@ a vulnerability.
 This plugin exists to operate your own accounts. Contributions that add multi-account
 blasting, engagement farming, or ways around a platform's automation policy are out
 of scope regardless of how well they're implemented.
+
+A few requests come up often enough to answer in advance. None of these are bad ideas;
+they're just larger than they look, and saying so up front beats leaving an issue open
+for months.
+
+- **Another platform (TikTok, X, LinkedIn, …)** — a platform isn't one publish call. It
+  needs its own format preset, its own copy grammar in the playbook, its own insights
+  shape for the growth loop, and its own credential and token-refresh path. Adding one
+  properly is a project, not a patch. If you want to take that on, open an issue and
+  let's scope it before you write code.
+- **A different content language** — the copy gates are Korean-specific by construction:
+  `check-style.py`'s rules are Korean regexes, and the reviewers judge Korean register.
+  The rest of the pipeline is language-agnostic, so another language means writing a new
+  gate rather than translating this one. Worth doing, but as its own module.
+- **A different LLM or agent runtime** — this is a Claude Code plugin. Skills are prompt
+  documents that assume Claude Code's skill loading, HITL prompts, and MCP wiring. The
+  MCP server underneath is portable; the skills are not.
+- **Removing or lowering the quality gates** — the gates are why output is publishable.
+  A flag to skip them turns the default into "ships whatever came out". If a gate is
+  wrong, fix the rule and bring the fixture that proves it.
+
+**Response time.** Expect a reply within about a week. If a week passes with nothing,
+say so in the thread — that's a nudge, not a nag, and it's the fastest way to surface
+something that got missed.

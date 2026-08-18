@@ -1,0 +1,87 @@
+name: Setup help
+description: Something won't install, a tool isn't showing up, or a key isn't being picked up
+labels: ["setup"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Most setup problems come down to one of three things: a missing local
+        dependency (ffmpeg, whisper.cpp, mflux), a key that isn't in the shell the
+        session was started from, or a credential-gated tool that isn't listed yet.
+        The fields below cover all three, so filling them in usually gets an answer
+        in one round instead of three.
+
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      description: The `version` in `.claude-plugin/plugin.json`
+      placeholder: "0.24.0"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: OS and Claude Code version
+      placeholder: "macOS 15.2 (Apple Silicon) · Claude Code 2.1.4"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where it goes wrong
+      options:
+        - Installing the plugin / loading the marketplace
+        - MCP tools missing from /mcp
+        - A skill (channel, storyboard, produce, publish, grow-*, setup-*)
+        - Video build (ffmpeg / capture)
+        - Publishing to a platform
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What you ran and what happened
+      description: The command or skill invocation, then the output. Paste it as text rather than a screenshot so it's searchable.
+      render: shell
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: keys
+    attributes:
+      label: Which keys are set in the shell you started Claude Code from
+      description: |
+        Names only — **never paste key values.** A session carries the environment it
+        was started with, so a key exported after launch isn't visible to it.
+      options:
+        - label: OPENAI_API_KEY
+        - label: GEMINI_API_KEY (or GOOGLE_API_KEY)
+        - label: ARK_API_KEY
+        - label: SERPAPI_API_KEY
+        - label: NAVER_CLIENT_ID / NAVER_CLIENT_SECRET
+        - label: DATA_GO_KR_API_KEY
+        - label: None of them
+
+  - type: textarea
+    id: account_check
+    attributes:
+      label: Output of sns_account_check (only if this is about publishing)
+      description: |
+        It reports token status without printing token values, so its output is safe
+        to paste. Skip this field if your issue isn't about publishing.
+      render: shell
+
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Before filing
+      options:
+        - label: I read [Getting started](https://github.com/ttalkkaklab/social-flow/blob/main/docs/guides/getting-started/index.en.html) and [Costs & API keys](https://github.com/ttalkkaklab/social-flow/blob/main/docs/guides/costs-and-keys/index.en.html)
+          required: true
+        - label: There are no API keys, tokens, or contents of `~/.config/social-flow/` anywhere in this issue
+          required: true
