@@ -321,7 +321,7 @@
 <section id="since">
   <h2>7. 감사 뒤에 늘어난 툴 (미감사)</h2>
   <div class="warn">
-    <strong>위 96점은 2026-07-29 시점의 31개 툴에 대한 점수다.</strong> 그 뒤 툴이 늘어 지금은 43종이며, 아래 목록은 이 감사를 거치지 않았다. 숫자를 43으로 고쳐 적으면 돌지 않은 감사를 돌았다고 말하는 셈이라 31 그대로 둔다.
+    <strong>위 96점은 2026-07-29 시점의 31개 툴에 대한 점수다.</strong> 그 뒤 툴이 늘어 지금은 46종이며, 아래 목록은 이 감사를 거치지 않았다. 숫자를 46으로 고쳐 적으면 돌지 않은 감사를 돌았다고 말하는 셈이라 31 그대로 둔다.
   </div>
   <div class="table-scroll">
   <table>
@@ -336,10 +336,12 @@
       <tr><td><code>youtube_insights</code></td><td>grow-youtube 전용 읽기</td><td>YouTube Data + Analytics</td></tr>
       <tr><td><code>content_feedback</code></td><td>최근 5편 유튜브·인스타 채점 → 로컬 HTML</td><td>위 인사이트 둘 + 파일 쓰기</td></tr>
       <tr><td><code>youtube_topic_scout</code></td><td>분야 채널을 모아 중앙값 대비 5배 영상에서 주제어를 뽑는다</td><td>YouTube Data API search/channels/videos (<code>YOUTUBE_API_KEY</code> 또는 OAuth)</td></tr>
+      <tr><td><code>serp_trending_now</code></td><td>나라별 구글 급상승 검색어 — 검색량·증가율 어림값, 창은 4·24·48·168시간</td><td>SerpApi <code>google_trends_trending_now</code></td></tr>
+      <tr><td><code>sns_issue_scout</code></td><td>스레드·X·인스타 <code>site:</code> 검색으로 최근 게시물을 모아 여러 글·여러 플랫폼에 같이 나오는 주제어를 센다 — 참여량 없는 언급 목록</td><td>SerpApi <code>google</code> + 급상승 1회</td></tr>
     </tbody>
   </table>
   </div>
-  <p>감사를 다시 돌리지 않았을 뿐 이 목록도 같은 계약 테스트 그물에는 들어 있다 — <code>npm run check</code> 의 테스트가 239개에서 <strong>448개</strong>로 늘었고 현재 전부 통과한다(2026-08-16 실행). 다음 감사 때 채점 대상은 43종이다.</p>
+  <p>감사를 다시 돌리지 않았을 뿐 이 목록도 같은 계약 테스트 그물에는 들어 있다 — <code>npm run check</code> 의 테스트가 239개에서 <strong>448개</strong>로 늘었고 현재 전부 통과한다(2026-08-16 실행). 다음 감사 때 채점 대상은 46종이다.</p>
 </section>
 
 <footer>

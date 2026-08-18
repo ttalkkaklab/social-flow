@@ -9,7 +9,7 @@ import { enabledPlatforms } from './sns-client.js';
 // initialize 응답에 실리는 서버 버전 — package.json 의 version 과 같은 값을 쓴다.
 // 둘이 갈라지면 클라이언트가 보는 버전이 실제 패키지와 달라지므로, package.json 을
 // 올릴 때 이 줄도 함께 올린다(계약 테스트가 두 값의 일치를 검사한다).
-const server = new Server({ name: 'social-flow', version: '0.10.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'social-flow', version: '0.11.0' }, { capabilities: { tools: {} } });
 // 플랫폼별 게시 툴은 자격증명 파일이 있는(기본 토큰 ∪ 채널 디렉토리) 플랫폼만
 // 노출한다 — 요청 시점 평가라 토큰 파일 추가가 서버 재시작 없이 반영된다.
 // 핸들러는 전부 유지되므로 숨은 툴을 직접 호출해도 명시적 토큰 부재 에러가 반환된다.
@@ -59,7 +59,7 @@ async function main() {
     console.error('social-flow MCP server started');
     const snsEnabled = enabledPlatforms();
     const channelDirs = listChannelDirs();
-    console.error(`Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* tools will fail)'}, ` +
+    console.error(`Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* and sns_issue_scout tools will fail)'}, ` +
         `naver keys ${config.naverClientId && config.naverClientSecret ? 'set' : 'MISSING (naver_search will fail)'}, ` +
         `data.go.kr key ${config.dataGoKrApiKey ? 'set' : 'MISSING (datago_file_fetch/datago_api_call will fail — search/detail/download still work)'}, ` +
         `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail — tts_local_generate does not need it)'}, ` +

@@ -66,7 +66,8 @@ export function parseIsoDurationSeconds(iso) {
     const total = days * 86_400 + hours * 3_600 + minutes * 60 + seconds;
     return total > 0 ? total : null;
 }
-const STOP = new Set([
+/** 제목·본문에서 주제어가 못 되는 토큰. sns-issue-scout 도 같은 목록을 쓴다. */
+export const STOP = new Set([
     '그',
     '이',
     '저',

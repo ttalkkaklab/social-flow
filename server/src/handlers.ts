@@ -12,6 +12,7 @@ import * as tts from './tts-client.js';
 import * as video from './video-client.js';
 import { contentFeedback } from './content-feedback.js';
 import { youtubeTopicScout } from './youtube-topic-scout.js';
+import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import type { ApiResult } from './http.js';
 
@@ -185,6 +186,15 @@ const serpImageSchema = z.object({
     .enum(['bw', 'trans', 'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'white', 'gray', 'black', 'brown'])
     .optional(),
   safe: z.boolean().optional(),
+});
+
+const serpTrendingSchema = z.object({
+  geo: countryCode,
+  hours: z.union([z.literal(4), z.literal(24), z.literal(48), z.literal(168)]).optional(),
+  categoryId: z.number().int().min(1).max(30).optional(),
+  onlyActive: z.boolean().optional(),
+  hl: langCode,
+  limit: z.number().int().min(1).max(serp.SERP_TRENDING_MAX_LIMIT).optional(),
 });
 
 const naverSearchSchema = z.object({
@@ -520,6 +530,19 @@ const youtubeTopicScoutSchema = z.object({
   limit: z.number().int().min(3).max(30).optional(),
 });
 
+const snsIssueScoutSchema = z.object({
+  query: searchQuery,
+  extraQueries: z.array(z.string().min(1).max(300)).max(3).optional(),
+  platforms: z.array(z.enum(snsScout.SNS_SCOUT_PLATFORMS)).min(1).max(3).optional(),
+  recency: z.enum(snsScout.SNS_SCOUT_RECENCIES).optional(),
+  gl: countryCode,
+  hl: langCode,
+  pagesPerQuery: z.number().int().min(1).max(snsScout.MAX_SNS_PAGES_PER_QUERY).optional(),
+  includeTrending: z.boolean().optional(),
+  trendingHours: z.union([z.literal(4), z.literal(24), z.literal(48), z.literal(168)]).optional(),
+  limit: z.number().int().min(3).max(30).optional(),
+});
+
 // ── 라우팅 ───────────────────────────────────────────────────────
 
 export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
@@ -537,6 +560,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   serp_image_search: async (args) => {
     const result = await serp.imageSearch(parseArgs(serpImageSchema, args));
+    return text(result.text, result.isError);
+  },
+  serp_trending_now: async (args) => {
+    const result = await serp.trendingNow(parseArgs(serpTrendingSchema, args));
     return text(result.text, result.isError);
   },
   naver_search: async (args) => {
@@ -876,6 +903,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   youtube_topic_scout: async (args) => {
     const input = parseArgs(youtubeTopicScoutSchema, args);
     return fromApi(await youtubeTopicScout(input));
+  },
+  sns_issue_scout: async (args) => {
+    const input = parseArgs(snsIssueScoutSchema, args);
+    return fromApi(await snsScout.snsIssueScout(input));
   },
   sns_account_check: async (args) => {
     const input = parseArgs(accountCheckSchema, args);

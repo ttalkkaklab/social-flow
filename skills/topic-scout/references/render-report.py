@@ -634,7 +634,122 @@ def links_html(outliers: list[dict]) -> str:
     return " · ".join(parts) if parts else "—"
 
 
-def render(data: dict, md: str, name: str, out_path: str) -> str:
+_SNS_NAMES = {"threads": "스레드", "x": "X", "instagram": "인스타그램"}
+_SNS_RECENCY = {"day": "하루", "week": "일주일", "month": "한 달"}
+
+
+def sns_name(platform: str) -> str:
+    return _SNS_NAMES.get(platform, platform)
+
+
+def sns_stats_html(sns: dict) -> str:
+    scanned = sns.get("scanned") or {}
+    posts = sns.get("posts") or []
+    per = {}
+    for p in posts:
+        per[p.get("platform")] = per.get(p.get("platform"), 0) + 1
+    cells = [
+        f'<div class="stat"><div class="v">{comma(scanned.get("posts") or len(posts))}<small> 건</small></div><div class="l">모은 글</div></div>'
+    ]
+    for key in ("threads", "x", "instagram"):
+        cells.append(
+            f'<div class="stat"><div class="v">{comma(per.get(key, 0))}<small> 건</small></div>'
+            f'<div class="l">{esc(sns_name(key))}</div></div>'
+        )
+    return f'<div class="stats">{"".join(cells)}</div>'
+
+
+def sns_keyword_table_html(sns: dict) -> str:
+    rows = (sns.get("keywords") or [])[:12]
+    if not rows:
+        return '<p class="small">여러 글에 같이 나온 주제어가 없다 — 시드를 바꾸거나 구간을 넓혀 다시 본다.</p>'
+    bits = []
+    for k in rows:
+        plats = " · ".join(sns_name(x) for x in (k.get("platforms") or []))
+        ev = k.get("evidence") or []
+        links = " · ".join(
+            f'<a href="{esc(e.get("url"))}">{esc(clip(e.get("title") or sns_name(e.get("platform", "")), 22))}</a>'
+            for e in ev[:2]
+            if e.get("url")
+        )
+        bits.append(
+            f'<tr><td><b>{esc(k.get("phrase"))}</b></td>'
+            f'<td class="center">{comma(k.get("postCount"))}</td>'
+            f'<td class="center">{esc(plats)}</td>'
+            f'<td>{links or "—"}</td></tr>'
+        )
+    return (
+        '<table class="tight"><colgroup><col style="width:26%"><col style="width:10%"><col style="width:24%"><col></colgroup>'
+        '<thead><tr><th>주제어</th><th>언급 글</th><th>어디서</th><th>대표 글</th></tr></thead>'
+        f'<tbody>{"".join(bits)}</tbody></table>'
+    )
+
+
+def sns_trending_html(sns: dict) -> str:
+    trending = sns.get("trending") or {}
+    items = trending.get("items") or []
+    if not items:
+        return ""
+    hours = int(trending.get("hours") or 24)
+    hit = [t for t in items if t.get("matchesSeed")]
+    rest = [t for t in items if not t.get("matchesSeed")][:8]
+    chips = []
+    for t in hit:
+        chips.append(f'<span class="chip pick">{esc(t.get("query"))}</span>')
+    for t in rest:
+        chips.append(f'<span class="chip">{esc(t.get("query"))}</span>')
+    head = (
+        f"우리 주제와 겹치는 급상승 검색어가 {len(hit)}개 있다 — 시의성 소재 후보다."
+        if hit
+        else "우리 주제와 겹치는 급상승 검색어는 없다 — 대부분 연예·사건 검색어라 안 겹치는 게 보통이다."
+    )
+    return (
+        f'<h4>최근 {hours}시간 구글 급상승 검색어</h4>'
+        f'<p class="small">{esc(head)} 검색량은 구글 어림값이고 SNS 참여가 아니다.</p>'
+        f'<div class="fam">{"".join(chips)}</div>'
+    )
+
+
+def sns_posts_html(sns: dict) -> str:
+    posts = sns.get("posts") or []
+    parts = []
+    for key in ("threads", "x", "instagram"):
+        mine = [p for p in posts if p.get("platform") == key][:3]
+        if not mine:
+            continue
+        links = " · ".join(
+            f'<a href="{esc(p.get("url"))}">{esc(clip(p.get("title") or p.get("author") or "글", 20))}</a>' for p in mine
+        )
+        parts.append(f'<div class="fam"><span class="fh">{esc(sns_name(key))}</span> {links}</div>')
+    return f'<div class="famstrip">{"".join(parts)}</div>' if parts else ""
+
+
+def sns_page_html(sns: dict, display: str, page_no: int) -> str:
+    method = sns.get("method") or {}
+    recency = _SNS_RECENCY.get(str(method.get("recency") or "week"), "일주일")
+    scanned = sns.get("scanned") or {}
+    errors = sns.get("errors") or []
+    err_html = (
+        f'<p class="small">일부 검색이 실패했다({len(errors)}건) — 그 플랫폼·시드는 이 장에 없다.</p>' if errors else ""
+    )
+    return f"""<section class="page" data-pg="{page_no}">
+  <p class="runhead">{esc(display)} · SNS 에서 지금 오가는 이야기</p>
+  <h3>{page_no - 1}. 스레드·X·인스타그램에서는 무엇을 말하나</h3>
+  <p class="lead">같은 주제로 최근 {esc(recency)} 안에 올라온 글을 모아 <b>여러 글·여러 곳에 같이
+  나온 낱말</b>만 세었습니다. 앞 장의 유튜브 표와는 뜻이 다릅니다 — 여기 숫자는
+  좋아요나 조회가 아니라 <b>그 말을 꺼낸 글의 수</b>입니다. 무엇이 터졌는지가 아니라
+  무엇이 얘기되는지를 봅니다.</p>
+  {sns_stats_html(sns)}
+  {sns_keyword_table_html(sns)}
+  {sns_trending_html(sns)}
+  <h4>대표 글</h4>
+  {sns_posts_html(sns)}
+  {err_html}
+  <p class="small">숫자 원본: sns-issues.json · 검색 {comma(scanned.get("searches"))}회 · 크레딧 {comma(sns.get("credits"))}건 · 순서는 구글이 준 대로라 인기순이 아니다 · 인용 전에 글을 연다</p>
+</section>"""
+
+
+def render(data: dict, md: str, name: str, out_path: str, sns: dict | None = None) -> str:
     queries = data.get("queries") or []
     method = data.get("method") or {}
     scanned = data.get("scanned") or {}
@@ -718,6 +833,8 @@ def render(data: dict, md: str, name: str, out_path: str) -> str:
   <p class="small">숫자 원본: market-keywords.md · market-keywords.json · 참고 영상 {links_html(outliers)} · 조회 {comma(min_v)} 미만은 빼 둠</p>
 </section>"""
 
+    page4 = sns_page_html(sns, display, 4) if sns else ""
+
     return f"""<meta charset="utf-8">
 <title>{esc(title)} ({esc(generated)})</title>
 <style>
@@ -732,6 +849,7 @@ def render(data: dict, md: str, name: str, out_path: str) -> str:
 {page1}
 {page2}
 {page3}
+{page4}
 """
 
 
@@ -739,6 +857,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="시장 키워드 HTML 보고서를 뽑는다")
     ap.add_argument("--json", required=True, help="youtube_topic_scout 응답을 저장한 json")
     ap.add_argument("--md", help="고른 주제·걸러 표시가 있는 md (없으면 json 옆)")
+    ap.add_argument("--sns", help="sns_issue_scout 응답을 저장한 json (있으면 SNS 장을 붙인다)")
     ap.add_argument("--out", help="쓸 HTML 경로 (기본 json 옆 market-keywords.html)")
     ap.add_argument("--name", help="채널 표시명")
     args = ap.parse_args()
@@ -764,7 +883,15 @@ def main() -> int:
             generated = m.group(1)
             data["generated"] = generated
 
-    html_out = render(data, md, args.name or "", out_path)
+    sns = None
+    if args.sns:
+        sns_path = os.path.abspath(args.sns)
+        if not os.path.isfile(sns_path):
+            print(f"sns json 없음: {sns_path}", file=sys.stderr)
+            return 1
+        sns = json.loads(open(sns_path, encoding="utf-8").read())
+
+    html_out = render(data, md, args.name or "", out_path, sns)
     open(out_path, "w", encoding="utf-8").write(html_out)
 
     if generated:
