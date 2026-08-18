@@ -73,7 +73,7 @@ def parse_chosen(md: str) -> list[tuple[str, str]]:
         if not line.startswith("- "):
             continue
         body = line[2:].strip()
-        if body.startswith("None"):
+        if body.lower().startswith("none"):
             return []
         if "—" in body:
             phrase, why = body.split("—", 1)

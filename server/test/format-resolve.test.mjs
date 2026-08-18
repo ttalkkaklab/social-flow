@@ -267,7 +267,7 @@ test('the silent-failure gates are alive in the builders', () => {
   assert.match(reel, /ff00ff/, 'magenta corner check');
 
   // Gate 2 — the capture-dimension assertion sits **before** the manifest (a mismatched capture never reaches the baseline)
-  const iAssert = cap.indexOf('캡처 치수 불일치');
+  const iAssert = cap.indexOf('capture dimension mismatch');
   const iManifest = cap.indexOf('MANIFEST=');
   assert.ok(iAssert > 0 && iManifest > iAssert, 'the dimension assertion is after the manifest');
 

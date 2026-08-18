@@ -55,7 +55,7 @@ kill $PID 2>/dev/null || true; wait $PID 2>/dev/null || true
 GOT=$(sips -g pixelWidth -g pixelHeight "$OUT" 2>/dev/null \
   | awk '/pixelWidth/{w=$2} /pixelHeight/{h=$2} END{printf "%sx%s", w, h}')
 if [ "$GOT" != "${CAP_W}x${CAP_H}" ]; then
-  echo "✗ 캡처 치수 불일치: $OUT 이 $GOT (요청한 창 ${CAP_W}x${CAP_H})" >&2
+  echo "✗ capture dimension mismatch: $OUT is $GOT (requested window ${CAP_W}x${CAP_H})" >&2
   echo "  the PNG pixels no longer match the window size — suspect a DPR scale factor, a window clamp, or a scrollbar." >&2
   echo "  URL: $URL" >&2
   exit 1
