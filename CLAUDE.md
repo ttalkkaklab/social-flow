@@ -62,9 +62,11 @@ feat/<name> | fix/<name>  (integration)  →  dev  →  staging  →  main
   which documents the structure. Channel profiles, storyboards, images, videos,
   and branding assets are local artifacts; this repo holds only plugin code and skills.
 - Conversely, `server/dist/` is a build artifact but **must be committed** — `.mcp.json`
-  runs `${CLAUDE_PLUGIN_ROOT}/server/dist/index.js` directly with no build step,
-  so ignoring it breaks the installed copy. After editing `server/src/`, run
-  `npm run build` and commit dist along with it.
+  runs `${CLAUDE_PLUGIN_ROOT}/server/dist/bundle.js` directly with no build or install
+  step. The bundle is self-contained (dependencies inlined via esbuild) because
+  marketplace installs never run `npm install` — an unbundled entry dies with
+  `ERR_MODULE_NOT_FOUND` there. After editing `server/src/`, run `npm run build`
+  and commit dist (per-module output for tests + `bundle.js`) along with it.
 - API keys are injected via shell environment variables, not `.mcp.json`.
 
 ## Multi-session caution
