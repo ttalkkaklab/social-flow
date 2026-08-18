@@ -1,389 +1,528 @@
 # social-flow
 
-채널 기반 쇼트폼·롱폼 콘텐츠 파이프라인 Claude Code 플러그인 —
-**스토리보드(이미지 포함) → 플랫폼별 영상·텍스트 제작 → HITL 승인 게시**를
-`data/[채널]/episodes/[주제]/` 디렉토리 구조로 운영한다.
+A Claude Code plugin that runs a channel-based short-form/long-form content pipeline —
+**storyboard (with generated images) → per-platform video & text production → HITL-approved
+publishing** — over a `data/[channel]/episodes/[topic]/` directory tree.
 
-**채널**은 사용자가 운영하는 콘텐츠 채널(브랜드) 단위다 — `data/` 디렉토리
-하나가 채널 하나이고, 톤·보이스·테마·게시 대상을 profile.md 로 고정한다.
-게시 대상 **플랫폼**: **Threads · Instagram(릴스) · Facebook 페이지 · YouTube(쇼츠)**.
-영상은 포맷 둘이다 — 9:16 쇼트폼(1080×1920/30fps)으로 만들어 플랫폼별로 파생하는 것이
-기본이고, 유튜브 롱폼은 16:9(1920×1080)로 만든다. 스토리보드 저작 때 고르고,
-`scenes.js` 의 `window.FORMAT` 한 줄이 이후 빌드 전체의 상수를 정한다.
-롱폼은 **직접 찍은 클립과 생성 화면을 한 편에 섞는다** — 증거가 화면에 있으면 찍고,
-분위기·장소면 이미지를 만들고, 글·도형 도해가 필요한 씬은 **HTML 슬라이드**로
-콘티에 계획만 적어 승인받은 뒤 저작한다. 나레이션은 전 씬 사용자 육성이 기본이라
-촬영 대본(`script.md`)이 전 샷의 대사를 싣는다 — 촬영 샷은 무엇을 보여 주고 무슨
-말을 하고 어느 파일명으로 저장할지, 나머지 샷은 소리만 녹음. 사용자는 그것만 보고
-찍으면 된다.
-영상 파이프라인(세이프존·reveal 동기화·자막 계약)과 SNS 게시 클라이언트는 앞선
-사내 플러그인에서 실측 검증된 것을 승계해 채널 단위로 일반화했다.
+A **channel** is one content brand you operate: one `data/` directory per channel, with
+tone, voice, theme, and publish targets pinned in `profile.md`. Publish targets:
+**Threads · Instagram (Reels) · Facebook Pages · YouTube (Shorts and long-form)**.
 
-## 구성
+Video comes in two formats. The default is 9:16 short-form (1080×1920/30fps), derived
+per platform; YouTube long-form uses 16:9 (1920×1080). You pick the format while
+authoring the storyboard, and a single `window.FORMAT` line in `scenes.js` fixes every
+build constant downstream. Long-form episodes **mix clips you film yourself with
+generated scenes** — where the evidence lives on screen you film it, where the point is
+a mood or a place the pipeline generates an image, and scenes that need words or
+diagrams on screen become **HTML slides**: planned in the storyboard, authored only
+after you approve the plan. Narration defaults to **your own voice on every scene**, so
+the shooting script (`script.md`) carries the lines for every shot — filmed shots get
+what to show, what to say, and the filename to save it as; the rest are voice-only
+recordings.
 
-```
-social-flow/
-├── .claude-plugin/plugin.json   # 플러그인 매니페스트
-├── .mcp.json                    # 내부 MCP 서버 등록 (social-flow)
-├── server/                      # 내부 MCP 서버 (TypeScript, stdio) — 툴 43종
-│   └── src/
-│       ├── index.ts             # 엔트리 (플랫폼별 게시·인사이트 툴 조건부 노출)
-│       ├── tools.ts             # 툴 정의 (조사 6 + 공공데이터 5 + 생성 18 + 게시 5 + 댓글 3 + 점검 1 + 성장 조회 5)
-│       ├── handlers.ts          # zod 검증 + 라우팅
-│       ├── sns-client.ts        # Threads·IG·FB·YouTube 게시/댓글 (fect-persona 승계)
-│       ├── serp-client.ts       # SerpApi (키 마스킹 + 응답 슬리밍)
-│       ├── naver-client.ts      # Naver Open API (뉴스·블로그·웹·카페)
-│       ├── datago-client.ts     # 공공데이터포털 (검색·상세·다운로드·odcloud·표준 오픈API)
-│       ├── image-client.ts      # OpenAI GPT Image 이미지 생성 (fect-mcp-server 이식)
-│       ├── video-client.ts      # Veo 3.1 영상 생성 — t2v·i2v·연장·참조 (fect-mcp-server 이식)
-│       ├── tts-client.ts        # Gemini TTS 음성 합성 — 단일 화자·2인 대화 (fect-mcp-server 이식)
-│       ├── music-client.ts      # Lyria 음악 생성 — 30초 클립(배치)·가변 길이(스트리밍) (fect-mcp-server 이식)
-│       └── media-utils.ts       # 경로 검증·base64 저장·PCM→WAV 공용 유틸
-├── skills/
-│   ├── channel/                 # /social-flow:channel — 채널·프로파일 관리
-│   ├── branding/                # /social-flow:branding — 채널 프로필 이미지 (4종 후보→HITL 선택→적대적 수렴 95점)
-│   ├── intro/                   # /social-flow:intro — 채널 인트로 영상 (컨셉 4종 HITL→veo 캐릭터 연기→채널명 리빌·로고음→90점 수렴)
-│   ├── setup-threads/           # /social-flow:setup-threads — Threads 계정 개설·API 연동 (브라우저 HITL — 개설·브랜딩·Meta 앱·60일 토큰, 상태 탐지·재개)
-│   │   └── references/          #   setup-playbook.md(CDP 레시피·Chrome 레인 대응표·토큰 교환·60일 갱신)
-│   ├── setup-instagram/         # /social-flow:setup-instagram — Instagram 계정 개설·API 연동 (브라우저 HITL — 프로페셔널 전환·Instagram Login OAuth·60일 토큰)
-│   │   └── references/          #   setup-playbook.md(UID 예약변수 함정·테스터 초대 수락 경로·Chrome 레인 대응표)
-│   ├── setup-youtube/           # /social-flow:setup-youtube — YouTube 브랜드 채널 개설·API 연동 (브라우저 HITL — 고급기능 인증→채널 생성→refresh_token, 여러 날 재개)
-│   │   └── references/          #   setup-playbook.md(루프백 리스너·프로덕션 단계 7일 만료 함정·Chrome 레인 대응표)
-│   ├── datago/                  # /social-flow:datago — 공공데이터 조사→수집→시드 기록
-│   ├── ingest/                  # /social-flow:ingest — 화면 녹화(+음성)→타임라인 (녹화 제어·STT·씬 경계·키프레임)
-│   ├── storyboard/              # /social-flow:storyboard — 조사→씬 설계→문안·씬별·어휘 수렴(95점)→이미지→이미지 수렴(95점)→승인
-│   ├── produce/                 # /social-flow:produce — 영상 합성 + 플랫폼별 텍스트
-│   │   └── references/          #   build-reel.sh·video-template.html·검수 하네스
-│   ├── autoproduce/             # /social-flow:autoproduce — 주제 하나로 조사→저작→영상까지 무인 관통 (사람 게이트를 기계 게이트 7개로 대체, 경제 티어 기본)
-│   │   └── references/          #   cost-tiers.md(모델 사다리·승급 조건)·prices.tsv(단가 SoT)·cost-report.sh
-│   │                            #   cost-tally.md(회차 비용 원장 규약 — storyboard·produce 공용)
-│   ├── publish/                 # /social-flow:publish — HITL 승인 후 플랫폼 게시
-│   ├── grow-threads/            # /social-flow:grow-threads — Threads 자율 성장 루프 1틱 (init 플랜=상시 승인서, /loop 로 반복 — 성장 스킬은 플랫폼별 분리)
-│   │   └── references/          #   growth-playbook.md(전술 정본)·growth-plan-template.md(플랜·state 스키마)
-│   ├── grow-youtube/            # /social-flow:grow-youtube — YouTube 자율 성장 루프 1틱 (댓글 응대·지표 관찰·대기열 보충 저작·대기열 게시 — queue: ready 를 사람 또는 자동 저작이 찍은 것만)
-│   │   └── references/          #   growth-playbook.md(근거 등급 표기 정본)·growth-plan-template.md
-│   ├── grow-instagram/          # /social-flow:grow-instagram — Instagram 자율 성장 루프 1틱 (댓글 응대·이탈률/시청 관찰·대기열 보충 저작·대기열 게시 — 릴스는 queue_instagram: ready + 공개 URL 이 있어야만)
-│   │   └── references/          #   growth-playbook.md(두 관문·자격 상실 정본)·growth-plan-template.md
-│   ├── review-recent/           # /social-flow:review-recent — 최근 5편 유튜브·인스타 피드백 HTML (퍼널·막대·문제→가설→다음 편)
-│   ├── topic-scout/             # /social-flow:topic-scout — 시장에서 검증된 유튜브 주제 (채널 중앙값 대비 5배 · 도표 HTML) + SNS 이슈 절(스레드·X·인스타 언급 목록·급상승 검색어)
-│   └── platform-guide/          # 지식형 — 플랫폼 문법·영상 규격·한국어 문체 SoT
-│       └── references/          #   platform-playbook.md·korean-style.md·check-style.py(문체 게이트)
-├── agents/
-│   ├── brand-reviewer.md        # 프로필 이미지·인트로 영상 적대적 평가 (95점/90점 수렴 게이트)
-│   ├── content-reviewer.md      # 게시 전 적대적 검증 (P0 게이트)
-│   ├── growth-post-reviewer.md  # 성장 루프 문안 적대적 검증 (AI 티·맥락 — 95점 게이트)
-│   └── storyboard-reviewer.md   # 스토리보드 적대적 검증 (문안 AI 티 / 씬별 역할·맥락 / 어휘 / 이미지 맥락 — 각 95점 게이트)
-└── data/                        # 콘텐츠 데이터 루트 (data/README.md 참조)
-```
+The video pipeline (safe zones, reveal sync, subtitle contracts) and the SNS publishing
+client carry over from an earlier in-house plugin where they were verified in
+production, generalized here to per-channel operation.
 
-## 파이프라인
+> **Content language.** The pipeline was built and field-tested on Korean-market
+> content, so it ships with Korean-specific parts: a Korean copy style gate
+> (`check-style.py`), Naver search, and Korea's open-data portal (data.go.kr). All of
+> them are optional — the rest of the pipeline is language-agnostic.
 
-```
-/social-flow:channel add 재테크           # 1. 채널 프로파일 (1회)
-/social-flow:branding 재테크              # 1.2 (선택) 채널 프로필 이미지 — 4종 후보→HITL 선택→95점 수렴
-/social-flow:intro 재테크                 # 1.3 (선택) 채널 인트로 — 컨셉 4종 HITL→veo 4초 생성→90점 수렴 (본편 뒤 접합 클로징)
-/social-flow:setup-threads 재테크         # 1.4 (선택) SNS 계정 개설·API 연동 — 브라우저 HITL, ego lite 우선·Chrome 폴백 (플랫폼별: setup-instagram·setup-youtube)
-/social-flow:ingest 재테크 record         # 1.5 (선택) 화면+음성 녹화→타임라인 — 웹 조사 대체 소스
-/social-flow:storyboard 재테크 "7월 환율 변동"   # 2. 조사(또는 타임라인)→스토리보드→[승인]
-/social-flow:produce 재테크 20260729-환율       # 3. 영상+플랫폼 텍스트 제작
-/social-flow:publish 재테크 20260729-환율       # 4. [승인]→게시→permalink 기록
-/social-flow:grow-threads 재테크 init          # 5. (선택) Threads 성장 플랜 확정 [승인 — 상시 승인서]
-/loop 30m /social-flow:grow-threads 재테크     #    이후 30분 주기 자율 성장 루프 (인박스 답글·인사이트·키워드 참여·판단 게시 — 95점 게이트)
-/social-flow:grow-youtube 재테크 init          # 5-b. (선택) YouTube 성장 플랜 확정 [승인 — 상시 승인서]
-/loop 1h /social-flow:grow-youtube 재테크      #     이후 1시간 주기 자율 성장 루프 (댓글 응대·지표 관찰·대기열 보충 저작·대기열 게시)
-/social-flow:grow-instagram 재테크 init        # 5-c. (선택) Instagram 성장 플랜 확정 [승인 — 상시 승인서]
-/loop 1h /social-flow:grow-instagram 재테크    #     이후 1시간 주기 자율 성장 루프 (댓글 응대·이탈률 관찰·대기열 보충 저작·대기열 게시)
-/social-flow:topic-scout 재테크                # 1.6 지금 시장에서 검증된 주제 — md 정본 + 도표 HTML
-/social-flow:review-recent 재테크              # 6. 최근 5편 유튜브·인스타 피드백 HTML (퍼널·비교 막대·다음 편 레버)
-```
+## Requirements
 
-각 단계는 이전 단계의 산출물을 검사한다 — 스토리보드 미승인이면 produce 가,
-제작 미완이면 publish 가 중단하고 이전 단계를 안내한다.
-
-**주제만 주고 영상까지 한 번에** (2~3단계를 사람 승인 없이 관통):
-
-```
-/social-flow:autoproduce 재테크 "7월 환율 변동"   # 조사→scenes.js→이미지→TTS→빌드→output
-```
-
-승인 게이트 자리에 기계 게이트 아홉이 선다 — 사실 검증(교차검증 통과 3건 이상)·
-문체 검사기·storyboard-reviewer 문안 95점·씬별 95점(최저 씬)·어휘 95점(최저 씬)·
-이미지 95점·빌드 리포트(drift 0)·content-reviewer P0=0·비용 상한. 모델은
-**경제 티어가 기본**이라 Veo 를 한 번도 부르지 않고(정지 배경 + 켄번즈) 편당 약
-$0.26~0.29(상한 $0.30)이며, 훅 지표가 임계 아래로 떨어진 경우에만 커버 4초를 `veo-3.1-lite` 로
-승급한다. 저작은 **플랫폼 루프당 하루 최대 2편**(하드캡, 성공·실패 포함)이고,
-후보 주제는 `check-duplicate.py` 가 채널의 기존 주제 전부와 비교해 말만 바꾼
-재탕을 버린다. 사다리·승급 조건·단가는 `skills/autoproduce/references/` 참조.
-성장 스킬이 대기열을 스스로 채울 때 부르는 것도 이 스킬이다.
-
-**문체 게이트** — 한국어 텍스트가 나오는 모든 지점(스토리보드 저작, produce 의 TTS
-직전·플랫폼 카피, publish 승인 직전, content-reviewer 검증)에서
-`check-style.py` 가 AI 티를 결정적으로 판정한다. 번역투·상투구·조수 말투·연결어미
-뒤 쉼표를 S1/S2/S3 로 나눠 잡고, S1 이 남으면 게시로 넘어가지 않는다(exit 2).
-표면 8종(나레이션·자막·카드 텍스트·플랫폼 4종·댓글)마다 임계와 끄는 규칙이 다르다 —
-Threads 반말이나 FB 사례 수집형 마무리처럼 플레이북이 요구하는 격식과 싸우지 않는다.
-영상 표면은 `extract-text.js` 가 scenes.js 에서 뽑아 넘긴다. 규칙 SoT 는
-`skills/platform-guide/references/korean-style.md`, 판정은 코드가 하고 문장은
-에이전트가 고친다.
-
-**스토리보드 수렴 게이트** — 검사기가 규칙으로 잡는 층이 있다면, 그 위층은 사람이
-읽어야 느끼는 것들이다. 대구 남용, 3개 나열, 훈계형 마무리, 전부 같은 길이로
-낭독되는 리듬. 그림 쪽도 같다 — 해상도는 기계가 보지만 "이 그림이 그 씬이 말하는
-내용을 보여주는가"는 봐야 안다. 그래서 storyboard 스킬은 승인 전에 적대적 리뷰어
-`storyboard-reviewer` 를 **네 번** 부른다.
-
-| 관문 | 보는 것 | 하드캡 | 통과선 |
-|---|---|---|---|
-| 문안 모드 (§4.5) | 스토리보드 전체의 문장 | 5라운드 | 총점 ≥95 · P0 0 |
-| 씬 모드 (§4.6) | 씬 하나하나의 역할·맥락 | 5라운드 | **최저 씬** ≥95 · P0 0 |
-| 어휘 모드 (§4.7) | 나레이션·타이틀의 낱말 | 5라운드 | **최저 씬** ≥95 · P0 0 |
-| 이미지 모드 (§5.5) | 생성된 PNG 와 씬의 정합 | 3라운드 | 총점 ≥95 · P0 0 |
-
-씬 관문 둘이 평균이 아니라 **가장 낮은 씬**을 보는 이유는 평균이 무너진 한 씬을 잘
-나온 씬들로 가려 주기 때문이다. 순서에도 이유가 있다 — 문장이 바뀌면 그 씬이 보여줄
-그림도 바뀌니 이미지가 마지막이고, 빠질 씬의 낱말을 다듬는 건 헛일이니 어휘가 씬별
-뒤다. 하드캡에 걸리면 최고 점수 버전과 미해결 지적을 그대로 승인 화면에 실어 사람이
-판단한다. autoproduce 의 무인 경로도 같은 게이트를 라운드 2로 돈다(미달이면 저작 중단).
-
-**스토리보드 선행 촬영 흐름** (완성도 있는 시연·튜토리얼용 — 순서가 뒤집힌다):
-
-```
-/social-flow:storyboard 재테크 <주제> 촬영 대본으로   # 씬 설계+촬영 대본(script.md)→[승인]
-/social-flow:ingest 재테크 record <주제>              # 대본 보며 촬영→전사·씬 정합(alignment.json)
-/social-flow:produce 재테크 <주제>                    # 녹화를 잘라 9:16 편집 (육성+실화면, TTS 없음)
-/social-flow:publish 재테크 <주제>                    # [승인]→게시
-```
-
-## MCP 툴 표면 (46종)
-
-**`tools/list` 에는 46종이 다 보이지 않는다.** 게시·인사이트 툴 9종
-(`threads_publish`·`instagram_publish`·`facebook_publish`·`facebook_comment`·
-`youtube_publish`·`threads_insights`·`instagram_insights`·`youtube_insights`·
-`threads_search`)은 **자격증명 파일이 있는 플랫폼만** 노출된다 — 목록을 요청한 시점에
-평가하므로 토큰을 추가하면 서버를 다시 띄우지 않아도 나타난다. 토큰이 하나도 없는
-환경에서 세면 37종이다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가
-돌아온다(조용히 실패하지 않는다). `content_feedback`·`youtube_topic_scout`·
-`sns_issue_scout` 는 플랫폼 게이트 밖이라 토큰이 없어도 목록에 있다. 유튜브
-스카우트는 `YOUTUBE_API_KEY` 또는 채널 OAuth 가, SNS 스카우트는 `SERPAPI_API_KEY` 가
-호출 시점에 필요하고, 피드백은 없는 쪽 섹션만 건너뛴다.
-
-| 그룹 | 툴 | 백엔드 |
-|---|---|---|
-| 조사 | `youtube_topic_scout` | YouTube Data API — 내 분야 채널을 모아 최근 업로드 중앙값 대비 5배 이상 영상을 찾고 제목에서 주제어를 뽑는다 (`YOUTUBE_API_KEY` 우선, 없으면 OAuth `youtube.readonly`) |
-| 조사 | `sns_issue_scout` | SerpApi 구글 검색에 `site:threads.com`·`site:x.com`·`site:instagram.com` 을 붙여 최근 게시물을 모으고, 여러 글·여러 플랫폼에 같이 나오는 주제어를 센다 (+ 구글 급상승 검색어). **참여량 없는 언급 목록**이라 유튜브 배수와 같은 표에 섞지 않는다 — 스레드 키워드 검색은 고급 액세스 전엔 자기 글만, 인스타 로그인 API 엔 공개 검색이 없어 이 경로가 셋을 한 번에 보는 유일한 무계정 길이다 |
-| 조사 | `naver_search` | Naver Open API (일 25,000회 무료 — 한국어 1차). type 8종: news·blog·web·cafe·kin(지식iN)·image·encyc(백과)·local(지역) |
-| 조사 | `serp_web_search` / `serp_news_search` / `serp_naver_search` / `serp_image_search` / `serp_trending_now` | SerpApi (무료 250회/월 — 정밀·해외). naver 는 where=web·news·image·video + period 기간 필터, image 는 라이선스·크기·종횡비 필터, trending_now 는 나라별 구글 급상승 검색어(창 4·24·48·168시간, 검색량·증가율 어림값) |
-| 공공데이터 | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (무인증 — 검색·상세·파일 원본) |
-| 공공데이터 | `datago_file_fetch` / `datago_api_call` | odcloud·apis.data.go.kr (인증키 + **API 별 활용신청** 필수) |
-| 이미지 생성 | `image_local_generate` | Z-Image Turbo 온디바이스, mflux/MLX (**API 키·네트워크·과금 없음 — 기본 경로**. Apple Silicon + `uv tool install --python 3.12 mflux` 필요, 최초 호출 시 가중치 31GB 다운로드. 텍스트 포함 이미지 금지 — 한글 자소가 깨진다) |
-| 이미지 생성 | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **텍스트 포함·고품질 경로**: 텍스트 렌더링·임의 WIDTHxHEIGHT, 멀티 레퍼런스 16장·마스크 인페인팅) |
-| 영상 생성 | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p~4k, 4/6/8초 격자, **네이티브 오디오·로컬 파일 연장·실사 인물 참조**가 이쪽 강점) |
-| 영상 생성 | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p~4k, **2~30초를 1초 단위로** 요청한 만큼만 과금, 비율 7종, 참조 이미지 최대 30장. 음성을 끌 수 있어 무음 컷이 싸다 — 1080p 4초 기준 $0.23 대 Veo lite $0.64. 어느 엔진을 언제 쓰는지는 [판단표](skills/produce/references/video-model-selection.md)) |
-| 음성 생성 | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 보이스 30종, 언어 자동 감지, wav 모노 24kHz 저장) |
-| 음성 생성 | `tts_local_generate` | Supertonic 3 온디바이스 (**API 키·네트워크 없음** — 보이스 10종, 언어 31종 명시 지정, wav 모노 44.1kHz. 로컬 python + `pip install supertonic` 필요) |
-| 음악 생성 | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip(30초 고정 mp3 — BGM 기본 경로) · Lyria RealTime(5~300초 가변 wav 48kHz, seed 재현) |
-| 게시 | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | 각 플랫폼 API 직접 호출 — **자격증명 파일이 있는 플랫폼만 노출**(`youtube_update` 는 이미 올린 영상의 제목·설명·태그·공개 범위 수정) |
-| 받은 댓글 | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | 플랫폼 횡단 정규화 인박스 · 답글 · 숨김(삭제 미제공). 인박스·답글은 4플랫폼, 숨김은 YouTube 제외(API 가 주는 건 의미가 다른 검토 보류뿐) |
-| 점검 | `sns_account_check` | 토큰 /me 일괄 점검 (토큰 값 비노출) |
-| 성장 조회 | `threads_insights` / `threads_search` | Threads 인사이트(계정·게시물 지표)·공개 게시물 키워드 검색 — grow-threads 전용 (`threads_manage_insights`·`threads_keyword_search` 스코프) |
-| 성장 조회 | `youtube_insights` | 채널 통계 + Analytics 기간 지표(조회·engagedViews·평균 시청 비율·구독 증감) + 영상별 지표 — grow-youtube 전용 (`youtube.readonly`·`yt-analytics.readonly` 스코프, 데이터 2~3일 지연) |
-| 성장 조회 | `instagram_insights` | 계정 구간 지표(도달·조회·프로필 방문·저장) + 미디어별 지표 — 릴스에만 `reels_skip_rate`·`ig_reels_avg_watch_time` 이 붙는다(훅·유지 판정). grow-instagram 전용 (`instagram_business_manage_insights` 스코프, 팔로워 수는 프로필 필드) |
-| 성장 조회 | `content_feedback` | 최근 N편(기본 5)을 유튜브·인스타로 나눠 중앙값 대비 채점하고 퍼널·막대 HTML 을 `data/<채널>/growth/review-recent.html` 에 쓴다. 토큰 없는 플랫폼은 그 섹션만 생략 |
-
-검색 툴(`*_search`)은 인자 이름이 같다 — **`query`(검색어) · `limit`(결과 수) ·
-`page`(페이지)**. 백엔드 API 가 `q`·`display`·`num`·`start` 중 무엇을 쓰든 환산은
-서버가 맡는다. 계약 테스트가 이 규약을 강제하므로 새 검색 툴도 같은 이름을 쓴다.
-
-게시 툴은 검토 게이트가 없어 **호출 = 즉시 공개 게시**다 — publish 스킬의 HITL
-승인 게이트를 반드시 거친다. 유일한 예외는 성장 스킬(grow-threads·grow-youtube·
-grow-instagram)의 자율 모드로, init 에서 HITL 로 승인한 `growth-plan.md`(상시
-승인서) 범위 안에서만 게시별 승인 없이 게시한다. grow-threads 는 게시 빈도를
-개수 상한 없이 스스로 판단하는 대신, 나가는 모든 문안을 적대적 리뷰어
-(growth-post-reviewer)에 통과시켜 95점 이상·P0 0건일 때만 게시한다(통과선은 2026-08-12
-에 90 으로 내렸다가 2026-08-13 사용자 지시로 95 에 복귀했다 — P0 조건은 그대로다). 영상 플랫폼 둘은 여기에 방어선을
-하나 더 둔다 — storyboard.md 에 대기열 마커가 찍힌 것만 나가며, 마커는 플랫폼별로
-분리돼 있다(YouTube `queue: ready` · Instagram `queue_instagram: ready`).
-같은 키를 공유하면 먼저 도는 루프가 마커를 소진해 다른 쪽이 영영 게시하지 못한다.
-마커를 찍는 주체는 둘이다 — 사람이 직접 찍거나 플랜에서 `autoproduce` 를 켠
-경우 대기열이 마를 때 루프가 스스로 한 편을 만들어 찍는다. 자동 저작분은 기계
-게이트 아홉(사실 검증·문체·storyboard-reviewer 문안/씬별/어휘/이미지·
-빌드 리포트·content-reviewer P0·비용 상한)을 전부 통과한 것만 `ready` 가 되고,
-하나라도 떨어지면 `hold` 로 남아 사람을 기다린다.
-grow-instagram 은 공개 HTTPS URL 이 있어야만 게시하고, 호스팅이 없으면 게시
-단계와 자동 저작을 함께 끈다(자율 루프가 임시 터널을 띄우지 않으므로, 나갈 길이
-없는 영상을 돈 들여 만들지도 않는다).
-
-생성 툴 18종 중 13종은 `fect-mcp-server` 의 gpt-image·video·tts·music 모듈을 이식한 것으로,
-**외부 MCP 서버 없이 이 플러그인 단독으로 동작한다**. 키는 둘이다 — 이미지는 OPENAI_API_KEY,
-영상·음성·음악은 GEMINI_API_KEY. 4K·배너 비율·최저가 이미지가 필요한
-경우에만 별도 서버 fect-mcp 의 `nanobanana_*`(Gemini)를 선택적으로 쓸 수 있다.
-
-음성·음악 이식 시 확인한 사항:
-
-- **나레이션 본문은 `tts_local_generate`(로컬), 연기가 필요한 컷만 `tts_generate`(Gemini).**
-  이 맥에서 잰 값으로 Supertonic 은 CPU 만 써서 실시간 6.3배, 회차당 비용이 0이다.
-  대신 스타일·감정 지시 인자가 없어서 인트로 멘트나 캐릭터 대사는 Gemini 쪽이어야
-  한다. 근거와 상용 API 13종 비용 비교는
-  [로컬 TTS와 상용 API](docs/research/2026-08-11-local-tts-and-commercial-api/index.html).
-- **두 엔진의 샘플레이트가 다르다 — 로컬 44.1kHz, Gemini 24kHz.** 한 영상 안에서
-  섞으려면 리샘플링이 필요하다. `tts_local_generate` 는 응답에 오디오 길이를 담아
-  주므로 씬 길이 검사에 ffprobe 를 따로 부르지 않아도 된다.
-- **BGM 기본 경로는 `music_generate_clip`**(Lyria 3, 30초 고정 · 클립당 약 $0.04).
-  정확한 길이(내레이션 맞춤)나 seed 재현이 필요할 때만 `music_generate` 계열을 쓴다.
-- **다중 화자(`tts_multi_speaker`)는 flash 모델에서 짧은 대화 스크립트가 자주 거절된다**
-  (`Model tried to generate text…`). 서버가 3회 자동 재시도하며 그래도 실패하면
-  `model: "gemini-2.5-pro-preview-tts"` 로 바꾸면 통과한다 (실측 확인).
-- Lyria 는 프롬프트 정책 필터가 예민하다 — "lo-fi/vinyl crackle" 조합이 차단된
-  사례가 있으며 악기·분위기를 평이하게 서술하면 통과한다.
-
-## 전제 조건
-
-- Node 20+, ffmpeg, Google Chrome (헤드리스 캡처), python3
-- `pip install supertonic` — `tts_local_generate`(로컬 음성) 사용 시. 최초 호출에서
-  가중치 385MB 를 `~/.cache/supertonic3` 에 내려받는다(약 24초). 가상환경에 깔았으면
-  `SUPERTONIC_PYTHON` 으로 인터프리터를 지정한다. 코드는 MIT, **가중치는 OpenRAIL-M**
-  (상업 이용 가능하되 용도 제한 조항이 붙는다)
+- Node 20+, ffmpeg, Google Chrome (headless capture), python3
+- `pip install supertonic` — for `tts_local_generate` (on-device voice). The first call
+  downloads 385MB of weights into `~/.cache/supertonic3` (~24s). If you installed it in
+  a virtualenv, point `SUPERTONIC_PYTHON` at that interpreter. Code is MIT; **the
+  weights are OpenRAIL-M** (commercial use allowed, with use-based restrictions)
 - whisper.cpp (`brew install whisper-cpp`) + `~/.cache/whisper-cpp/ggml-large-v3-turbo.bin`
-  — ingest(녹화→타임라인) 사용 시. 녹화 모드는 터미널 앱에 **화면 기록·마이크**
-  권한(시스템 설정 → 개인정보 보호 및 보안) 필요
-- `OPENAI_API_KEY` (platform.openai.com/api-keys) — storyboard 의 씬 이미지
-  생성(내장 `gpt_image_*` 툴)에 필수
-- `GEMINI_API_KEY` (aistudio.google.com/apikey) — produce 의 영상·내레이션·BGM
-  생성(내장 `veo_*` / `tts_*` / `music_*` 툴)에 필수
-- chrome-devtools MCP (produce §8 폰 모드 검수용 — 선택, 없으면 캡처 스크립트로 대체)
-- 게시할 플랫폼의 자격증명 파일 (아래)
+  — for ingest (recording → timeline). Recording mode needs **Screen Recording and
+  Microphone** permission for your terminal app (System Settings → Privacy & Security)
+- chrome-devtools MCP (for produce §8 phone-viewport QA — optional; a capture script
+  covers it otherwise)
+- API keys and platform credentials — see the next section for what each one unlocks
 
-> **로드 방식 주의**: 스킬의 MCP 툴 참조(`mcp__social-flow__*`)는 `--plugin-dir`
-> 로드 기준이다. 마켓플레이스 설치 시 서버 프리픽스가 달라질 수 있으니 로드 후
-> `/mcp` 로 실제 툴 이름을 확인하라. `data/` 는 **플러그인 루트가 아니라 세션
-> cwd 기준**으로 생성된다.
+> **Load-path caveat**: the skills reference MCP tools as `mcp__social-flow__*`, which
+> assumes a `--plugin-dir` load. A marketplace install may use a different server
+> prefix — check the real tool names with `/mcp` after loading. `data/` is created
+> relative to the **session cwd**, not the plugin root.
 
-## 설치
+## API keys — what each one unlocks
+
+The keys come in two independent groups, and **you can stop after either one**.
+
+**Group 1 — production keys.** These make the video. `OPENAI_API_KEY` renders the
+cover and any frame with text on it (local image generation garbles Korean glyphs, so
+text frames go to GPT Image), and `GEMINI_API_KEY` covers generated video clips,
+acted narration, and BGM. Both are optional in the strict sense — scene backgrounds
+default to on-device `image_local_generate` and narration defaults to on-device
+`tts_local_generate`, so a no-key run still produces a video — but without
+`OPENAI_API_KEY` you lose text-bearing frames, and without `GEMINI_API_KEY` you lose
+generated motion and music. For research, `SERPAPI_API_KEY` and the Naver pair are
+optional too; the storyboard skill falls back to WebSearch.
+
+**Group 2 — platform credentials (Threads · Instagram · YouTube · Facebook). Entirely
+optional, and they're what turns the tool from a video maker into an operator.**
+
+- **Set them up** and the pipeline runs end to end and keeps running on its own:
+  `publish` posts directly to your accounts, and the growth skills (`grow-threads`,
+  `grow-youtube`, `grow-instagram`) take over day-to-day operation on `/loop` —
+  replying to comments, watching insights, joining keyword conversations, refilling
+  the publish queue, and posting inside the standing authorization you approved once
+  at `init`. Insight tools (`threads_insights`, `youtube_insights`,
+  `instagram_insights`, `content_feedback`) start reporting real numbers, and
+  `review-recent` can score your last five episodes against your own medians.
+- **Skip them** and everything up to and including production still works. Research,
+  storyboard, image generation, narration, the build — `produce` writes the finished
+  9:16 or 16:9 video plus per-platform text into
+  `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
+  the publishing and growth-loop half is unavailable: the nine publish/insight tools
+  aren't even listed (`tools/list` shows 37 instead of 46), and the growth skills have
+  nothing to drive.
+
+Credentials are per platform, so this is not all-or-nothing — a YouTube-only setup
+publishes and grows YouTube while Threads and Instagram stay manual. Add a token
+later and the matching tools appear without restarting the server. The three
+`setup-*` skills walk the account signup and token issuance with a browser, handing
+back to you only at the steps that need a human (login, verification codes, consent
+screens); `skills/publish/references/token-setup.md` documents the manual route.
+
+Exact variable names, defaults, and file conventions:
+[Environment variables & credentials](#environment-variables--credentials).
+
+### What costs money, and what doesn't
+
+Generation is metered by the vendor unless it runs on your own machine. Four
+capabilities, four different answers:
+
+| Capability | Free / on-device | Paid | Costs money unless… |
+|---|---|---|---|
+| **Images** | `image_local_generate` — Z-Image Turbo via mflux/MLX, $0 | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame have to go to the paid path |
+| **Video** | none | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you generate no video at all. **The default build does exactly that** — stills plus ffmpeg Ken Burns, zero video calls |
+| **Speech (TTS)** | `tts_local_generate` — Supertonic 3, $0 | `tts_generate` / `tts_multi_speaker` — Gemini, per 1,000 chars | …you don't need acted delivery. The local engine has no style or emotion control |
+| **Transcription (STT)** | whisper.cpp, $0 | none | never — there is no paid STT path here |
+| **Music (BGM)** | none | Lyria clip via Gemini | …you ship without BGM |
+
+So a zero-cost run is possible: local images, local narration, whisper
+transcription, no generated video, no BGM. What you give up is a proper cover
+frame (it needs rendered text) and background music.
+
+A realistic paid episode is small. The default economy tier spends about
+**$0.26–0.29** — one high-quality cover image plus one 30-second BGM clip, with
+everything else local — against a per-episode cap of $0.30 that the pipeline
+enforces before spending, not after. Generated video is the expensive step: one
+8-second Veo lite escalation adds roughly $0.64, which is why it stays off unless
+hook metrics justify it and you raise the cap yourself.
+
+Prices live in one file, `skills/autoproduce/references/prices.tsv`, each row
+carrying its evidence grade and source. `cost-report.sh` reads only that file and
+**fails rather than guessing** — an unknown price exits 1 (verdict unavailable),
+never 0.
+
+Full detail — per-capability setup for both lanes, every key's signup and billing
+steps, the on-device installs, worked cost arithmetic, and how the caps work:
+**[Costs & API keys](docs/guides/costs-and-keys/index.html)**
+([English](docs/guides/costs-and-keys/index.en.html)).
+
+## Install
 
 ```bash
 git clone https://github.com/ttalkkaklab/social-flow.git
 cd social-flow/server && npm install && npm run build
 ```
 
-`server/dist` 는 커밋되어 있으므로 받아서 바로 쓸 수 있다. 빌드는 `server/src` 를
-고쳤을 때만 필요하다. `npm run check` 는 빌드 + 툴 계약 테스트(`server/test/`)를 함께
-돌린다 — 외부 API 를 부르지 않고 툴 표면만 검증한다(스키마 유효성, 정의 ↔ 핸들러
-라우팅 정합, 동작 힌트와 설명의 일관성, 정본 상수와 enum 의 일치, 생성 파일 경로
-안전성). `server/src` 를 고쳤으면 `npm run check` 를 통과시키고 `server/dist` 도 함께
-커밋한다.
+`server/dist` is committed, so a fresh clone works without building — you only build
+after editing `server/src`. `npm run check` runs the build plus the tool contract
+tests (`server/test/`) — no external API calls, just the tool surface: schema
+validity, definition ↔ handler routing, behavior hints consistent with descriptions,
+enums matching their source-of-truth constants, generated-file path safety. If you
+change `server/src`, make `npm run check` pass and commit `server/dist` with it.
 
-플러그인 로드 — 클론한 경로를 지정한다:
+Load the plugin by pointing at your clone:
 
 ```bash
 claude --plugin-dir /path/to/social-flow
 ```
 
-작업 산출물은 세션 cwd 기준 `data/` 에 쌓이므로, 콘텐츠를 만들 디렉토리에서
-Claude Code 를 띄우고 위 옵션으로 플러그인만 얹는 구성이 편하다.
+Work products accumulate under `data/` relative to the session cwd, so the convenient
+setup is to start Claude Code in the directory where you want your content and add
+the plugin with the flag above.
 
-## 환경변수·자격증명
+## Pipeline
 
-`.mcp.json` 이 셸 환경에서 패스스루한다. 시크릿은 파일에 커밋하지 않는다 —
-미설정 시 해당 툴만 명시적 에러를 반환하고 나머지는 정상 동작한다.
+```
+/social-flow:channel add my-channel        # 1. channel profile (once)
+/social-flow:branding my-channel           # 1.2 (optional) profile image — 4 candidates → HITL pick → 95-point convergence
+/social-flow:intro my-channel              # 1.3 (optional) channel intro — 4 concepts HITL → 4s veo render → 90-point convergence (spliced after the episode as a closer)
+/social-flow:setup-threads my-channel      # 1.4 (optional) SNS account setup + API tokens — browser HITL, ego lite first, Chrome fallback (per platform: setup-instagram · setup-youtube)
+/social-flow:ingest my-channel record      # 1.5 (optional) screen+voice recording → timeline — an alternative research source
+/social-flow:storyboard my-channel "July FX swings"   # 2. research (or timeline) → storyboard → [approval]
+/social-flow:produce my-channel 20260729-fx           # 3. video + per-platform text
+/social-flow:publish my-channel 20260729-fx           # 4. [approval] → publish → record permalinks
+/social-flow:grow-threads my-channel init             # 5. (optional) Threads growth plan [approval — standing authorization]
+/loop 30m /social-flow:grow-threads my-channel        #    then an autonomous growth tick every 30m (inbox replies · insights · keyword conversations · judgment-based posting — 95-point gate)
+/social-flow:grow-youtube my-channel init             # 5-b. (optional) YouTube growth plan [approval — standing authorization]
+/loop 1h /social-flow:grow-youtube my-channel         #     then an hourly tick (comment replies · metrics · queue refill authoring · queue publishing)
+/social-flow:grow-instagram my-channel init           # 5-c. (optional) Instagram growth plan [approval — standing authorization]
+/loop 1h /social-flow:grow-instagram my-channel       #     then an hourly tick (comment replies · skip-rate watch · queue refill authoring · queue publishing)
+/social-flow:topic-scout my-channel                   # 1.6 topics the market has already validated — md source of truth + chart HTML
+/social-flow:review-recent my-channel                 # 6. feedback HTML for the last 5 episodes (funnel · bars · next-episode levers)
+```
 
-| 변수 | 필수 | 기본 | 용도 |
+Each step checks the previous step's output — produce stops on an unapproved
+storyboard, publish stops on unfinished production, and each points you back to the
+step that's missing.
+
+Steps 1 through 3 need no platform credentials. Steps 4 onward — publishing, the
+growth loops, and `review-recent` — are the half that platform tokens unlock; without
+them the pipeline ends at `produce` with the finished video and per-platform text in
+`output/`, ready to upload by hand.
+
+**One topic string straight to a finished video** (steps 2–3 with no human approval):
+
+```
+/social-flow:autoproduce my-channel "July FX swings"   # research → scenes.js → images → TTS → build → output
+```
+
+Nine machine gates stand where the approval gates were — fact verification (3+
+cross-verified claims), the copy style checker, storyboard-reviewer copy at 95,
+per-scene at 95 (lowest scene), vocabulary at 95 (lowest scene), images at 95, build
+report (drift 0), content-reviewer P0=0, and a cost cap. The **economy tier is the
+default**: no Veo calls at all (still backgrounds + Ken Burns), roughly $0.26–0.29
+per episode (capped at $0.30); only when hook metrics fall below threshold does the
+4-second cover get promoted to `veo-3.1-lite`. Authoring is capped at **2 episodes
+per platform loop per day** (hard cap, counting successes and failures), and
+`check-duplicate.py` compares every candidate topic against the channel's whole back
+catalog to throw out rewordings of things already made. Ladder, promotion rules, and
+unit prices live in `skills/autoproduce/references/`. This is also the skill the
+growth loops call when they refill their own queues.
+
+**Style gate** — wherever Korean text is produced (storyboard authoring, produce
+right before TTS and per-platform copy, publish right before approval,
+content-reviewer verification), `check-style.py` deterministically flags AI-sounding
+prose. It catches translationese, stock phrases, assistant-register endings, and
+comma-after-connective habits, tiered S1/S2/S3; any remaining S1 blocks publishing
+(exit 2). Each of the 8 surfaces (narration, subtitles, card text, four platform
+copies, comments) has its own thresholds and disabled rules — the gate doesn't fight
+the register the playbook itself demands, like Threads banmal or Facebook's
+case-collecting closers. For video surfaces, `extract-text.js` pulls the text out of
+scenes.js. The rule source of truth is
+`skills/platform-guide/references/korean-style.md`; the code renders the verdict and
+the agent fixes the sentences.
+
+**Storyboard convergence gates** — the checker catches what rules can catch; the
+layer above it is what a person has to read to feel. Overused antithesis, triple
+lists, sermon-style closers, a rhythm where every sentence reads at the same length.
+Images are the same — a machine can check resolution, but "does this picture show
+what the scene is saying" takes a reader. So the storyboard skill calls the
+adversarial reviewer `storyboard-reviewer` **four times** before approval:
+
+| Gate | What it reads | Hard cap | Pass bar |
 |---|---|---|---|
-| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | naver_search 사용 시 | — | Naver Open API (developers.naver.com) |
-| `SERPAPI_API_KEY` | serp_* 사용 시 | — | SerpApi 키 |
-| `DATA_GO_KR_API_KEY` | datago_file_fetch·api_call 사용 시 | — | 공공데이터포털 인증키 (data.go.kr 마이페이지 — 키 외에 **API 별 활용신청** 필요. 검색·상세·다운로드는 키 없이 동작) |
-| `OPENAI_API_KEY` | gpt_image_* 사용 시 | — | OpenAI API 키 (platform.openai.com/api-keys — 이미지 생성) |
-| `GEMINI_API_KEY` (또는 `GOOGLE_API_KEY`) | veo_* · tts_generate · tts_multi_speaker · music_* 사용 시 | — | Gemini API 키 (aistudio.google.com/apikey — 영상·음성·음악 생성 공통. `tts_local_generate` 는 이 키가 없어도 된다) |
-| `ARK_API_KEY` | seedance_* 사용 시 | — | BytePlus ModelArk API 키 (ai.byteplus.com/ark — 두 번째 영상 엔진. Dreamina Seedance 2.x 계열은 키 외에 **계정 잔액 $30 초과 또는 리소스팩**으로 모델 활성화가 필요하고, 1.5 pro·1.0 계열은 그 관문이 없다. 이 키가 없어도 `veo_*` 는 그대로 동작한다) |
-| `ARK_BASE_URL` | | `https://ark.ap-southeast.bytepluses.com/api/v3` | ModelArk 리전 엔드포인트. 영상 모델이 ap-southeast-1 에만 있어 평소에는 건드리지 않는다 |
-| `SUPERTONIC_PYTHON` | | `python3` | 로컬 TTS 를 실행할 Python 인터프리터. 가상환경에 설치했으면 그 경로를 지정한다(예: `~/venvs/tts/bin/python`). venv 자동 탐색은 하지 않는다 — 저장소마다 다른 환경을 조용히 집어 목소리가 바뀌는 사고를 막는다 |
-| `SNS_TOKEN_DIR` | | `~/.config/social-flow` | SNS 자격증명 루트 디렉토리 |
-| `MEDIA_UPLOAD_URL` / `MEDIA_UPLOAD_API_KEY` | grow-threads 이미지 글 사용 시 | — | 미디어 호스팅 엔드포인트와 키. Threads 는 이미지를 **공개 URL** 로만 받으므로 로컬 파일을 올릴 자리가 필요하다. `POST` 에 `x-api-key` 헤더 + raw 바이트를 받아 `201 {data:{url}}` 을 돌려주고 그 url 을 무인증 공개 GET 으로 서빙하면 무엇이든 붙는다(`skills/grow-threads/references/upload-media.sh` 머리말이 계약 정본). 미설정이면 이미지 단계만 꺼지고 텍스트 글은 그대로 나간다 |
-| `THREADS_TOKEN_FILE` 외 플랫폼별 | | `<SNS_TOKEN_DIR>/규약 파일명` | 기본(평면) 경로 개별 오버라이드 — 채널 디렉토리에는 미적용 |
+| Copy mode (§4.5) | the storyboard's prose as a whole | 5 rounds | total ≥95 · P0 0 |
+| Scene mode (§4.6) | each scene's role and context | 5 rounds | **lowest scene** ≥95 · P0 0 |
+| Vocabulary mode (§4.7) | word choice in narration and titles | 5 rounds | **lowest scene** ≥95 · P0 0 |
+| Image mode (§5.5) | generated PNGs against scene content | 3 rounds | total ≥95 · P0 0 |
 
-자격증명 파일 규약(600 권한, 커밋 금지) — `threads_token` · `instagram_token` ·
-`facebook_page_token` · `youtube-oauth-client.json`. **멀티 채널**: 채널(브랜드)별
-토큰은 `<SNS_TOKEN_DIR>/<채널 slug>/` 하위에 같은 규약 파일명으로 두고, 게시 툴의
-`channel` 인자로 선택한다 — 채널 지정 시 그 디렉토리만 쓰며 기본(평면) 토큰으로
-폴백하지 않는다(오계정 게시 방지). 평면 파일은 채널 미지정(단일 채널·레거시)
-경로다. **파일이 있는 플랫폼의 게시 툴만 노출된다**(기본 ∪ 채널 디렉토리 합집합).
-발급·갱신 절차는 `skills/publish/references/token-setup.md` 참조.
+The two per-scene gates judge the **lowest-scoring scene** rather than the average,
+because an average lets one broken scene hide behind the good ones. The order has a
+reason too — images come last because a changed sentence changes what its scene
+should show, and vocabulary comes after the scene gate because polishing the words
+of a scene that's about to be cut is wasted work. If a gate hits its hard cap, the
+best-scoring version ships to the approval screen with its unresolved findings
+attached, and the human decides. autoproduce's unattended path runs the same gates
+with a 2-round cap (falling short halts authoring).
 
-## 문서 (docs/)
+**Storyboard-first shooting flow** (for polished demos and tutorials — the order flips):
 
-전체 색인은 **[docs/index.html](docs/index.html)**.
+```
+/social-flow:storyboard my-channel <topic> as a shooting script   # scene design + shooting script (script.md) → [approval]
+/social-flow:ingest my-channel record <topic>                     # film against the script → transcription + scene alignment (alignment.json)
+/social-flow:produce my-channel <topic>                           # cut the recording into a 9:16 edit (your voice + real screens, no TTS)
+/social-flow:publish my-channel <topic>                           # [approval] → publish
+```
 
-### API 레퍼런스 (docs/api-reference/)
+## Repository layout
 
-내부 MCP 서버가 호출하는 외부 API 12종의 공식 계약과, 이 구현이 그 계약을 어떻게
-지키는지(또는 의도적으로 좁히는지)를 나란히 적은 레퍼런스다.
+```
+social-flow/
+├── .claude-plugin/plugin.json   # plugin manifest
+├── .mcp.json                    # internal MCP server registration (social-flow)
+├── server/                      # internal MCP server (TypeScript, stdio) — 46 tools
+│   └── src/
+│       ├── index.ts             # entry (publish/insights tools exposed per credential file)
+│       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
+│       ├── handlers.ts          # zod validation + routing
+│       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
+│       ├── serp-client.ts       # SerpApi (key masking + response slimming)
+│       ├── naver-client.ts      # Naver Open API (news·blog·web·cafe…)
+│       ├── datago-client.ts     # data.go.kr (search·detail·download·odcloud·standard open API)
+│       ├── image-client.ts      # OpenAI GPT Image generation
+│       ├── zimage-client.ts     # Z-Image Turbo on-device generation (mflux/MLX)
+│       ├── video-client.ts      # Veo 3.1 — t2v·i2v·extension·reference
+│       ├── seedance-client.ts   # Seedance — t2v·i2v·reference (BytePlus ModelArk)
+│       ├── tts-client.ts        # Gemini TTS — single speaker + 2-speaker dialogue
+│       ├── supertonic-client.ts # Supertonic 3 on-device TTS
+│       ├── music-client.ts      # Lyria — 30s clips (batch) + variable length (streaming)
+│       └── media-utils.ts       # path validation · base64 saves · PCM→WAV utils
+├── skills/
+│   ├── channel/                 # /social-flow:channel — channel & profile management
+│   ├── branding/                # /social-flow:branding — channel profile image (4 candidates → HITL pick → adversarial convergence at 95)
+│   ├── intro/                   # /social-flow:intro — channel intro video (4 concepts HITL → veo character acting → name reveal + sonic logo → 90-point convergence)
+│   ├── setup-threads/           # /social-flow:setup-threads — Threads account setup + API hookup (browser HITL — signup·branding·Meta app·60-day token, state detection & resume)
+│   │   └── references/          #   setup-playbook.md (CDP recipes · Chrome lane map · token exchange · 60-day renewal)
+│   ├── setup-instagram/         # /social-flow:setup-instagram — Instagram account setup + API hookup (browser HITL — professional conversion · Instagram Login OAuth · 60-day token)
+│   │   └── references/          #   setup-playbook.md (UID reserved-variable trap · tester invite path · Chrome lane map)
+│   ├── setup-youtube/           # /social-flow:setup-youtube — YouTube brand channel setup + API hookup (browser HITL — advanced-features verification → channel creation → refresh_token, multi-day resume)
+│   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap · Chrome lane map)
+│   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
+│   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
+│   ├── storyboard/              # /social-flow:storyboard — research → scene design → copy/per-scene/vocabulary convergence (95) → images → image convergence (95) → approval
+│   ├── produce/                 # /social-flow:produce — video build + per-platform text
+│   │   └── references/          #   build-reel.sh · video-template.html · QA harness
+│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research→authoring→video unattended (human gates replaced by nine machine gates, economy tier default)
+│   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
+│   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
+│   ├── publish/                 # /social-flow:publish — HITL approval, then platform publishing
+│   ├── grow-threads/            # /social-flow:grow-threads — one autonomous Threads growth tick (init plan = standing authorization, repeat via /loop — growth skills are per-platform)
+│   │   └── references/          #   growth-playbook.md (tactics SoT) · growth-plan-template.md (plan/state schema)
+│   ├── grow-youtube/            # /social-flow:grow-youtube — one autonomous YouTube growth tick (comment replies · metrics · queue refill authoring · queue publishing — only items marked queue: ready by a human or by auto-authoring)
+│   │   └── references/          #   growth-playbook.md (evidence-grade notation SoT) · growth-plan-template.md
+│   ├── grow-instagram/          # /social-flow:grow-instagram — one autonomous Instagram growth tick (comment replies · skip/watch metrics · queue refill authoring · queue publishing — Reels go out only with queue_instagram: ready + a public URL)
+│   │   └── references/          #   growth-playbook.md (two gates · disqualification SoT) · growth-plan-template.md
+│   ├── review-recent/           # /social-flow:review-recent — feedback HTML for the last 5 episodes across YouTube/Instagram (funnel · bars · problem→hypothesis→next episode)
+│   ├── topic-scout/             # /social-flow:topic-scout — market-validated YouTube topics (5× channel median · chart HTML) + an SNS issues section (Threads/X/Instagram mentions · trending searches)
+│   └── platform-guide/          # knowledge skill — platform grammar · video specs · Korean style SoT
+│       └── references/          #   platform-playbook.md · korean-style.md · check-style.py (style gate)
+├── agents/
+│   ├── brand-reviewer.md        # adversarial review of profile images & intro videos (95/90-point convergence gates)
+│   ├── content-reviewer.md      # adversarial pre-publish verification (P0 gate)
+│   ├── growth-post-reviewer.md  # adversarial review of growth-loop copy (AI tells · context — 95-point gate)
+│   └── storyboard-reviewer.md   # adversarial storyboard review (copy AI tells / per-scene role·context / vocabulary / image fit — 95-point gates)
+├── apps/
+│   └── shoot-console/           # macOS SwiftUI recording console for the shooting-script flow (built locally via build-app.sh)
+└── data/                        # content data root (see data/README.md)
+```
 
-- **[API 레퍼런스 허브](docs/api-reference/index.html)** — 인벤토리·자격증명 매트릭스·툴↔API 매핑
-- **[MCP 툴 스펙 & 베스트 프랙티스](docs/api-reference/mcp-tools.html)** — Tool 필드,
-  동작 힌트 판정표, 툴 작성 원칙 7가지, 품질 평가 루브릭
-- **[툴 품질 감사 리포트](docs/api-reference/tool-audit.html)** — 2026-07-29 시점 31개 툴의 채점 결과와 수정 내역 (그 뒤 늘어난 10종은 미감사)
-- 개별 API — [Gemini TTS](docs/api-reference/gemini-tts.html) ·
+## MCP tool surface (46 tools)
+
+**`tools/list` does not show all 46.** The nine publish/insights tools
+(`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
+`youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
+`threads_search`) are exposed **only for platforms whose credential file exists** —
+evaluated at list time, so adding a token makes them appear without restarting the
+server. With no tokens at all you'll count 37. Hidden tools still have live handlers:
+calling one directly returns a missing-token error rather than failing silently.
+`content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
+platform gate and stay listed without tokens — the YouTube scout needs
+`YOUTUBE_API_KEY` or channel OAuth at call time, the SNS scout needs
+`SERPAPI_API_KEY`, and feedback simply skips the sections it has no token for.
+(`youtube_update` is likewise always listed and errors without a token.)
+
+| Group | Tools | Backend |
+|---|---|---|
+| Research | `youtube_topic_scout` | YouTube Data API — collects channels in your niche, finds videos at 5×+ their recent-upload median, and extracts topic phrases from titles (`YOUTUBE_API_KEY` first, else OAuth `youtube.readonly`) |
+| Research | `sns_issue_scout` | SerpApi Google search with `site:threads.com` · `site:x.com` · `site:instagram.com`, collecting recent posts and counting topic phrases that recur across posts and platforms (+ Google trending searches). **A mention list with no engagement counts** — don't mix it into the same table as YouTube multipliers. Threads keyword search only returns your own posts before advanced access, and the Instagram Login API has no public search, so this is the only no-account path that sees all three at once |
+| Research | `naver_search` | Naver Open API (25,000 calls/day free — first choice for Korean). 8 types: news·blog·web·cafe·kin (Knowledge-iN)·image·encyc·local |
+| Research | `serp_web_search` / `serp_news_search` / `serp_naver_search` / `serp_image_search` / `serp_trending_now` | SerpApi (250 free/month — precision + international). naver takes where=web·news·image·video + a period filter, image takes license/size/aspect filters, trending_now returns per-country Google trending searches (4/24/48/168-hour windows, approximate volume and growth) |
+| Open data | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (no auth — search·detail·raw file) |
+| Open data | `datago_file_fetch` / `datago_api_call` | odcloud · apis.data.go.kr (auth key + **per-API usage application** required) |
+| Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux/MLX (**no API key, no network, no billing — the default path**. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
+| Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **the text-and-quality path**: text rendering, arbitrary WIDTHxHEIGHT, up to 16 reference images, mask inpainting) |
+| Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
+| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |
+| Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |
+| Music generation | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip (fixed 30s mp3 — the default BGM path) · Lyria RealTime (5–300s variable wav 48kHz, seed reproducibility) |
+| Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
+| Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
+| Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
+| Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
+| Growth insights | `youtube_insights` | Channel stats + Analytics period metrics (views · engagedViews · average view ratio · subscriber delta) + per-video metrics — for grow-youtube (`youtube.readonly` · `yt-analytics.readonly` scopes; data lags 2–3 days) |
+| Growth insights | `instagram_insights` | Account period metrics (reach · views · profile visits · saves) + per-media metrics — Reels alone carry `reels_skip_rate` and `ig_reels_avg_watch_time` (hook/retention verdicts). For grow-instagram (`instagram_business_manage_insights` scope; follower count comes from the profile field) |
+| Growth insights | `content_feedback` | Scores the last N episodes (default 5) against channel medians, split YouTube/Instagram, and writes a funnel/bar HTML to `data/<channel>/growth/review-recent.html`. Platforms without tokens just lose their section |
+
+Search tools (`*_search`) share argument names — **`query` · `limit` · `page`**.
+Whatever the backend API calls them (`q`, `display`, `num`, `start`), the server does
+the mapping. The contract tests enforce this convention, so new search tools use the
+same names.
+
+Publish tools have no review gate of their own — **a call is an immediate public
+post** — so they only run behind the publish skill's HITL approval gate. The one
+exception is the growth skills' autonomous mode (grow-threads · grow-youtube ·
+grow-instagram), which publishes without per-post approval, but only inside the
+`growth-plan.md` standing authorization approved via HITL at init. grow-threads
+decides its own posting frequency with no daily cap; in exchange, every outgoing text
+passes the adversarial growth-post-reviewer at 95+ with zero P0 (the bar briefly ran
+at 90 and went back to 95 — the P0 condition never moved). The two video platforms
+add one more line of defense — only episodes with a queue marker in storyboard.md go
+out, and the markers are per-platform (YouTube `queue: ready` · Instagram
+`queue_instagram: ready`). If they shared one key, whichever loop ran first would
+consume the marker and the other platform would never publish. Two things set
+markers: a human, or — when the plan enables `autoproduce` — the loop itself
+authoring one episode when the queue runs dry. Auto-authored episodes become `ready`
+only after passing all nine machine gates (fact verification · style · the
+storyboard-reviewer copy/per-scene/vocabulary/image gates · build report ·
+content-reviewer P0 · cost cap); failing any one leaves them `hold`, waiting for a
+human. grow-instagram publishes only with a public HTTPS URL, and with no hosting
+configured it disables both publishing and auto-authoring (the loop won't start
+tunnels, and it won't spend money making a video with no way out).
+
+All 18 generation tools run **inside this plugin — no external MCP server required**.
+Two keys cover the hosted ones: OPENAI_API_KEY for images, GEMINI_API_KEY for
+video/voice/music (Seedance adds ARK_API_KEY). Two of them —
+`image_local_generate` and `tts_local_generate` — run on-device and need no key at
+all.
+
+Findings from porting the voice/music modules:
+
+- **Narration bodies go to `tts_local_generate` (local); only cuts that need acting
+  go to `tts_generate` (Gemini).** Measured on this machine, Supertonic runs 6.3×
+  realtime on CPU alone at zero per-episode cost. It has no style/emotion controls,
+  so intro lines and character dialogue belong to Gemini. Evidence and a cost
+  comparison across 13 commercial APIs:
+  [local TTS vs commercial APIs](docs/research/2026-08-11-local-tts-and-commercial-api/index.html) (Korean).
+- **The two engines differ in sample rate — local 44.1kHz, Gemini 24kHz.** Mixing
+  them in one video needs resampling. `tts_local_generate` returns audio duration in
+  its response, so scene-length checks don't need a separate ffprobe call.
+- **The default BGM path is `music_generate_clip`** (Lyria 3, fixed 30s, ~$0.04 per
+  clip). Use the `music_generate` family only when you need exact length
+  (narration-fitted) or seed reproducibility.
+- **`tts_multi_speaker` on the flash model often rejects short dialogue scripts**
+  (`Model tried to generate text…`). The server retries 3 times; if it still fails,
+  switching to `model: "gemini-2.5-pro-preview-tts"` gets it through (verified).
+- Lyria's prompt policy filter is touchy — a "lo-fi/vinyl crackle" combination has
+  been blocked; plain descriptions of instruments and mood pass.
+
+## Environment variables & credentials
+
+`.mcp.json` passes these through from your shell environment. Secrets never go into
+committed files — with a variable unset, only the tools that need it return an
+explicit error and everything else works.
+
+| Variable | Required for | Default | Purpose |
+|---|---|---|---|
+| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | naver_search | — | Naver Open API (developers.naver.com) |
+| `SERPAPI_API_KEY` | serp_* | — | SerpApi key |
+| `DATA_GO_KR_API_KEY` | datago_file_fetch · api_call | — | data.go.kr auth key (My Page on data.go.kr — beyond the key, each API needs a **per-API usage application**. Search/detail/download work without a key) |
+| `OPENAI_API_KEY` | gpt_image_* | — | OpenAI API key (platform.openai.com/api-keys — image generation) |
+| `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · tts_generate · tts_multi_speaker · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. `tts_local_generate` works without it) |
+| `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — the second video engine. Dreamina Seedance 2.x models additionally require **an account balance over $30 or a resource pack** to activate; 1.5 pro and 1.0 have no such gate. `veo_*` works fine without this key) |
+| `ARK_BASE_URL` | | `https://ark.ap-southeast.bytepluses.com/api/v3` | ModelArk region endpoint. The video models only exist in ap-southeast-1, so normally leave it alone |
+| `SUPERTONIC_PYTHON` | | `python3` | Python interpreter for local TTS. Point it at your virtualenv if you used one (e.g. `~/venvs/tts/bin/python`). No venv auto-discovery — quietly picking up a different environment per repo and changing the voice is exactly the accident this avoids |
+| `SNS_TOKEN_DIR` | | `~/.config/social-flow` | Root directory for SNS credentials |
+| `MEDIA_UPLOAD_URL` / `MEDIA_UPLOAD_API_KEY` | grow-threads image posts | — | Media hosting endpoint + key. Threads only accepts images as **public URLs**, so local files need somewhere to live. Anything works that accepts `POST` with an `x-api-key` header + raw bytes, returns `201 {data:{url}}`, and serves that url as unauthenticated public GET (the header of `skills/grow-threads/references/upload-media.sh` is the contract SoT). Unset, only the image step turns off — text posts still go out |
+| `THREADS_TOKEN_FILE` and friends | | `<SNS_TOKEN_DIR>/conventional name` | Per-platform override of the default (flat) path — not applied to channel directories |
+
+Credential file convention (mode 600, never committed) — `threads_token` ·
+`instagram_token` · `facebook_page_token` · `youtube-oauth-client.json`.
+**Multi-channel**: per-channel tokens live under `<SNS_TOKEN_DIR>/<channel slug>/`
+with the same file names, selected by the publish tools' `channel` argument — with a
+channel specified, only that directory is used, with no fallback to the flat tokens
+(prevents wrong-account publishing). The flat files are the no-channel
+(single-channel/legacy) path. **Only platforms with a file present get their publish
+tools listed** (union of flat and channel directories). Issuance and renewal:
+`skills/publish/references/token-setup.md`.
+
+## Documentation (docs/)
+
+Manuals are bilingual — Korean pages with English siblings (`*.en.html`).
+Full index: **[docs/index.html](docs/index.html)** (Korean) ·
+**[docs/index.en.html](docs/index.en.html)** (English).
+
+### API reference (docs/api-reference/)
+
+Side-by-side notes on the official contracts of the 12 external APIs the internal MCP
+server calls, and how this implementation honors (or deliberately narrows) each one.
+
+- **[API reference hub](docs/api-reference/index.html)** — inventory · credential matrix · tool↔API map
+- **[MCP tool spec & best practices](docs/api-reference/mcp-tools.html)** — Tool
+  fields, behavior-hint decision table, 7 authoring principles, quality rubric
+- **[Tool quality audit](docs/api-reference/tool-audit.html)** — scores and fixes for
+  the 31 tools as of 2026-07-29 (the 15 added since are unaudited)
+- Individual APIs — [Gemini TTS](docs/api-reference/gemini-tts.html) ·
   [Veo 3.1](docs/api-reference/gemini-veo.html) ·
-  [Veo 인물·참조 정책](docs/api-reference/veo-portrait.html) ·
+  [Veo people & reference policy](docs/api-reference/veo-portrait.html) ·
   [Seedance](docs/api-reference/seedance.html) ·
-  [Seedance 인물·자산 정책](docs/api-reference/seedance-portrait.html) ·
+  [Seedance people & asset policy](docs/api-reference/seedance-portrait.html) ·
   [Lyria](docs/api-reference/gemini-lyria.html) ·
   [OpenAI Images](docs/api-reference/openai-images.html) ·
   [SerpApi](docs/api-reference/serpapi.html) ·
-  [Naver 검색](docs/api-reference/naver-search.html) ·
-  [공공데이터포털](docs/api-reference/data-go-kr.html) ·
+  [Naver Search](docs/api-reference/naver-search.html) ·
+  [data.go.kr](docs/api-reference/data-go-kr.html) ·
   [Meta Graph](docs/api-reference/meta-graph.html) ·
   [YouTube Data](docs/api-reference/youtube-data.html)
 
-로컬 엔진 둘(`image_local_generate`·`tts_local_generate`)은 호출할 외부 계약이 없어
-API 레퍼런스 대신 조사 기록에 근거를 적어 두었다 —
-[로컬 이미지 생성](docs/research/2026-08-12-local-image-generation/index.html) ·
-[로컬 TTS와 상용 API](docs/research/2026-08-11-local-tts-and-commercial-api/index.html).
+The two local engines (`image_local_generate` · `tts_local_generate`) have no
+external contract to document, so their evidence lives in research notes instead —
+[local image generation](docs/research/2026-08-12-local-image-generation/index.html) ·
+[local TTS vs commercial APIs](docs/research/2026-08-11-local-tts-and-commercial-api/index.html)
+(Korean).
 
-### 사용 가이드 (docs/guides/)
+### Guides (docs/guides/)
 
-- **[즉흥 녹화 가이드](docs/guides/ingest-usage/index.html)** — 화면 녹화(+음성)
-  → 타임라인 → 스토리보드 → 게시 흐름. 준비·녹화 요령·조정 노브 포함.
-- **[촬영 대본 가이드](docs/guides/screencast-usage/index.html)** — 스토리보드
-  선행 촬영 흐름. 촬영 수칙·정합 이탈 보고·편집 화면 구성·문제 해결.
-- **[스레드 성장 베스트 프랙티스](docs/guides/threads-growth/index.html)** —
-  게시물 단위 심사·랭킹 5신호·스하리 문화. grow-threads 의 해설판.
-- **[유튜브 쇼츠 성장 베스트 프랙티스](docs/guides/youtube-shorts-growth/index.html)** —
-  AI 고지 경계선·2027년 YPP 개편·공식 문서가 부정하는 통념. grow-youtube 의 해설판.
-- **[인스타그램 릴스 성장 베스트 프랙티스](docs/guides/instagram-growth/index.html)** —
-  계정 자격과 게시물 오디션이라는 두 관문·랭킹이 실제로 예측하는 항목·검증에서
-  죽은 통념 9개. grow-instagram 의 해설판.
-- **[AI로 쇼트폼 영상 만들기](docs/guides/ai-video-production/index.html)** —
-  두 영상 엔진의 갈리는 축, 프롬프트 공식 규칙, 자막을 영상에 태울지의 판단.
-- **[제휴 영상 규칙](docs/guides/affiliate-video-compliance/index.html)** —
-  쇼핑 커넥트 상품을 유튜브로 홍보할 때의 관문 다섯. 안 써본 상품의 화법과 AI 캐릭터 표시.
+- **[Getting started](docs/guides/getting-started/index.html)** — install, API key
+  setup, first channel, first episode.
+- **[Costs & API keys](docs/guides/costs-and-keys/index.html)** — what image, video,
+  TTS, and STT actually cost, the on-device alternatives that cost nothing, setup for
+  both lanes, and how the per-episode cap is enforced.
+- **[Improv recording guide](docs/guides/ingest-usage/index.html)** — screen
+  recording (+voice) → timeline → storyboard → publish, with prep, recording tips,
+  and tuning knobs.
+- **[Shooting script guide](docs/guides/screencast-usage/index.html)** — the
+  storyboard-first shooting flow: filming rules, alignment-drift reports, edit-screen
+  layout, troubleshooting.
+- **[Threads growth best practices](docs/guides/threads-growth/index.html)** —
+  per-post review, the 5 ranking signals, reply culture. The commentary edition of
+  grow-threads.
+- **[YouTube Shorts growth best practices](docs/guides/youtube-shorts-growth/index.html)** —
+  the AI-disclosure boundary, the 2027 YPP changes, myths the official docs deny. The
+  commentary edition of grow-youtube.
+- **[Instagram Reels growth best practices](docs/guides/instagram-growth/index.html)** —
+  the two gates of account standing and per-post auditions, what ranking actually
+  predicts, 9 myths that died in verification. The commentary edition of grow-instagram.
+- **[Making short-form video with AI](docs/guides/ai-video-production/index.html)** —
+  where the two video engines diverge, official prompt rules, and when to burn
+  subtitles into the video.
+- **[Marketing basics](docs/guides/marketing-basics/index.html)** — the vocabulary a
+  marketing beginner needs first.
+- **[Affiliate video compliance](docs/guides/affiliate-video-compliance/index.html)** —
+  the five gates when promoting Shopping Connect products on YouTube; wording for
+  products you haven't used and AI-character disclosure.
 
-## 안전 계약 (요약)
+## Safety contract (summary)
 
-- **HITL 이중 게이트** — 스토리보드 승인(제작 전) + 게시 승인(공개 전).
-  승인 없이 게시 툴을 호출하지 않는다. 스토리보드 승인 앞에는 적대적 수렴 게이트
-  둘(문안·이미지, 각 95점·P0 0건)이 선다.
-- **사실 왜곡 금지** — 시효성 값은 독립 출처 2개 교차 검증, 범위는 범위로.
-- **크로스포스팅 복붙 금지** — 플랫폼마다 문장을 다시 설계한다.
-- **토큰 평문 비노출** — 파일 기반, /me 로 계정 자동 결정.
-- **생성 비주얼 제한** — 무드샷·자사 캐릭터 발화만. 실존 인물·국가 상징·보도
-  화면 연출 금지.
+- **Double HITL gate** — storyboard approval (before production) + publish approval
+  (before going public). No publish tool call without approval. Adversarial
+  convergence gates (copy and image, 95 points · zero P0 each) stand in front of
+  storyboard approval.
+- **No fact distortion** — time-sensitive values get two independent sources; ranges
+  stay ranges.
+- **No cross-post copy-paste** — every platform gets its sentences redesigned.
+- **No plaintext tokens** — file-based, account resolved via /me.
+- **Generated visuals restricted** — mood shots and the channel's own character only.
+  No real people, no national symbols, no staged news footage.
 
-## 사용 범위
+## Intended use
 
-이 플러그인은 **자기 계정을 자기가 운영하는 용도**로 만들었다. 게시·댓글·성장 루프는
-전부 각 플랫폼의 공식 API 를 쓰고, 자격증명은 쓰는 사람이 자기 계정으로 직접 발급한다.
+This plugin was built for **operating your own accounts yourself**. Publishing,
+comments, and growth loops all use each platform's official API, with credentials you
+issue for your own accounts.
 
-- **플랫폼 약관이 상위 규칙이다.** Threads·Instagram·Facebook·YouTube 의 자동화·스팸
-  정책을 지키는 책임은 쓰는 사람에게 있다. 성장 루프에 참여 구걸·품앗이 차단 규칙을
-  넣어 둔 것도 그래서다.
-- **남의 계정을 대신 운영하거나, 여러 계정으로 같은 글을 뿌리는 용도로 쓰지 않는다.**
-- **AI 생성 콘텐츠 표시 의무**를 따른다 — YouTube 는 `containsSyntheticMedia`,
-  다른 플랫폼도 각자 규정이 있다.
-- 생성 비주얼은 실존 인물·국가 상징·보도 화면 연출을 금지한다(§안전 계약).
+- **Platform terms outrank this tool.** Complying with the automation and spam
+  policies of Threads, Instagram, Facebook, and YouTube is on you. That's also why
+  the growth loops ship with rules against engagement-begging and follow-for-follow.
+- **Don't run other people's accounts with it, and don't blast the same post across
+  multiple accounts.**
+- **Follow AI-generated content disclosure duties** — YouTube has
+  `containsSyntheticMedia`; the other platforms have their own rules.
+- Generated visuals must avoid real people, national symbols, and staged news
+  footage (see the safety contract).
 
-보증은 없다. 이 도구가 만든 콘텐츠와 그 게시 결과의 책임은 쓰는 사람에게 있다
-(LICENSE 의 면책 조항).
+No warranty. What this tool creates, and what happens after you publish it, is your
+responsibility (see the disclaimer in LICENSE).
 
-## 라이선스
+## License
 
 [Apache License 2.0](LICENSE). Copyright 2026 Zeans.

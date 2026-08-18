@@ -4,22 +4,28 @@
 <meta charset="utf-8">
 <title>social-flow screencast overlay</title>
 <!--
-  촬영(스크린캐스트) 편집용 씬 타이틀 오버레이 — 1080×1920 투명 캔버스 상단 블록만 렌더.
-  화면 중앙은 녹화 밴드(build-screencast.sh 가 y≥460 에 배치)가 차지하므로
-  이 렌더러는 y 190~460 상단 블록(키커+타이틀, 커버는 +스탯)만 그린다.
+  Scene title overlay for screencast (recording) editing — renders only the top block of
+  the 1080×1920 transparent canvas.
+  The middle of the screen belongs to the recording band (build-screencast.sh places it at
+  y≥460), so this renderer draws only the y 190~460 top block (kicker + title, plus the
+  stat on a cover).
 
-  ■ 데이터 계약: 같은 디렉토리의 scenes.js 를 <script src> 로 주입 (video-template 과 동일한
-    sed 주입 방식 — 이 파일 어디에도 body 닫는 태그 리터럴을 추가로 쓰면 안 된다).
+  ■ Data contract: inject scenes.js from the same directory with <script src> (the same sed
+    injection as video-template — never write another literal body closing tag anywhere in
+    this file).
       window.THEME  = { accent, accent2, ink, brand }
-      window.SCENES = [ {type, kicker, title(**강조** 지원), stat?, statLabel?, ...}, ... ]
-    촬영 모드 씬은 어떤 type 이든 kicker+title 만 쓴다. cover 는 stat/statLabel 을
-    타이틀 아래 한 줄 칩으로 추가한다 (불릿·인용문은 오버레이에 그리지 않는다 —
-    녹화 화면과 자막이 그 역할).
-  ■ URL 파라미터 (capture-frames.sh 계약):
-      ?i=<n>     씬 인덱스 (0부터 — edit.json 의 idx(1부터)와 1 차이, 캡처 루프에서 환산)
-      &alpha=1   body 투명 (항상 이 모드로 캡처한다 — 불투명은 미리보기용)
-  ■ 블록 하한 y=460 계약: 넘치면 tight1~3 축소 후 잔여를 window.__overflow 로 노출.
-      build-screencast.sh 의 BAND_MIN_Y 기본값과 짝 — 한쪽만 바꾸면 타이틀이 밴드에 깔린다.
+      window.SCENES = [ {type, kicker, title(**emphasis** supported), stat?, statLabel?, ...}, ... ]
+    A recording-mode scene uses kicker+title only, whatever its type. cover adds
+    stat/statLabel as a one-line chip under the title (bullets and quotes aren't drawn in
+    the overlay — the recorded screen and the subtitles do that job).
+  ■ URL parameters (the capture-frames.sh contract):
+      ?i=<n>     scene index (from 0 — one off from edit.json's idx, which starts at 1;
+                 the capture loop converts)
+      &alpha=1   transparent body (always capture in this mode — opaque is for preview)
+  ■ The y=460 block floor contract: on overflow, shrink through tight1~3 and expose the
+      remainder as window.__overflow.
+      Paired with build-screencast.sh's BAND_MIN_Y default — change one side only and the
+      title ends up buried under the band.
 -->
 <style>
   :root{ --accent:#5b8cff; --accent2:#a05bff; --ink:#0b1020; }
@@ -32,7 +38,7 @@
   }
   body.alpha{background:transparent}
 
-  /* 세이프존 x 176~904 (pipeline.md — IG 크롭·액션바 회피) */
+  /* Safe zone x 176~904 (pipeline.md — dodges the IG crop and the action bar) */
   .top{position:absolute;left:176px;right:176px;top:190px;text-align:center}
   .kicker{font-size:32px;font-weight:700;letter-spacing:.14em;color:rgba(255,255,255,.82);
     text-transform:uppercase;margin-bottom:26px}
@@ -50,7 +56,7 @@
     filter:drop-shadow(0 5px 26px rgba(0,0,0,.6))}
   .stat-label{font-size:32px;font-weight:600;color:rgba(255,255,255,.88);word-break:keep-all}
 
-  /* 오버플로 가드 — 블록 하단이 y=460 을 넘으면 단계 축소 */
+  /* Overflow guard — step the size down when the block bottom passes y=460 */
   .tight1 .title{font-size:64px}  .tight1 body.scene-cover .title{font-size:74px}
   .tight1 .stat{font-size:66px}
   .tight2 .title{font-size:56px}  .tight2 .stat{font-size:58px}
@@ -75,7 +81,7 @@ function __boot() {
   const scenes = window.SCENES || [];
   const scene = scenes[i];
   const top = document.getElementById('top');
-  if (!scene) { top.textContent = 'scenes.js 미주입 또는 인덱스 초과: i=' + i; return; }
+  if (!scene) { top.textContent = 'scenes.js not injected, or index out of range: i=' + i; return; }
 
   document.body.classList.add('scene-' + scene.type);
   if (alpha) document.body.classList.add('alpha');
@@ -92,7 +98,7 @@ function __boot() {
         (scene.statLabel ? '<div class="stat-label">' + esc(scene.statLabel) + '</div>' : '') + '</div>'
       : '');
 
-  // 오버플로 가드 — 블록 하단 y=460 계약 (BAND_MIN_Y 와 짝)
+  // Overflow guard — the y=460 block bottom contract (paired with BAND_MIN_Y)
   const LIMIT = 460;
   let tier = 0;
   while (top.getBoundingClientRect().bottom > LIMIT && tier < 3) {

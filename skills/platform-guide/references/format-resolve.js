@@ -1,27 +1,30 @@
 #!/usr/bin/env node
 /**
- * format-resolve.js — scenes.js 의 포맷을 읽어 프리셋과 병합하고 방출한다.
+ * format-resolve.js — reads the format from scenes.js, merges it with the preset, and emits it.
  *
- *   format-resolve.js <scenes.js> --sh     빌더가 소싱할 format.env
- *   format-resolve.js <scenes.js> --json   리뷰어 위임·문서 생성용
- *   format-resolve.js <scenes.js> --url    캡처 URL 조각 (&format=wide 또는 빈 문자열)
- *   format-resolve.js --format <키> --sh   scenes.js 없이 포맷을 직접 지정 (인트로 등)
+ *   format-resolve.js <scenes.js> --sh     format.env for builders to source
+ *   format-resolve.js <scenes.js> --json   for reviewer delegation · doc generation
+ *   format-resolve.js <scenes.js> --url    capture URL fragment (&format=wide or empty string)
+ *   format-resolve.js --format <key> --sh  pick the format directly, no scenes.js (intro etc.)
  *
- * ## 회귀 0 의 정의
+ * ## The definition of zero regression
  *
- * `window.FORMAT` 이 없는 기존 scenes.js 를 넣으면 shorts-9x16 방출이 나오고,
- * 그 방출의 모든 값이 오늘 빌더가 쓰는 값과 같다. 그래서 세로 회차에 format.env 가
- * 새로 생겨도 ffmpeg 명령이 한 글자도 안 바뀐다. **이것이 1단계 인수 조건이다.**
+ * Feed in an existing scenes.js without `window.FORMAT` and you get the
+ * shorts-9x16 emission, every value equal to what today's builders use. So
+ * even though portrait episodes gain a new format.env, not one character of
+ * the ffmpeg commands changes. **This is the stage-1 acceptance condition.**
  *
- * 방출 형태가 `: "${VAR:=값}"` 인 이유는 우선순위다 — 호출자 env → format.env →
- * 빌더 인라인 기본값 순으로 이긴다. 평범한 대입(`VAR=값`)으로 쓰면 오늘 빌더 계약
- * (`${VAR:-기본값}` 이 호출자 env 를 항상 앞세운다)이 뒤집힌다.
+ * The emission form is `: "${VAR:=value}"` because of precedence — caller env
+ * → format.env → builder inline default, in that winning order. A plain
+ * assignment (`VAR=value`) would invert today's builder contract
+ * (`${VAR:-default}` always lets caller env win).
  *
- * ## 거부하는 두 가지
+ * ## The two things it rejects
  *
- * 조용히 세로로 떨어지면 12분치 캡처를 태운 뒤에야 드러나므로 여기서 exit 1 한다.
- *   ① 기하 블록(zone·fonts·sub)이 null 인 프리셋에 그 값을 요구하는 호출
- *   ② BURN=1 + 16:9 — 가로 자막 블록이 실측 전이라 태울 좌표가 없다
+ * Silently falling back to portrait only surfaces after burning 12 minutes of
+ * capture, so exit 1 happens here instead.
+ *   ① a call that needs geometry blocks (zone·fonts·sub) on a preset where they are null
+ *   ② BURN=1 + 16:9 — the landscape subtitle block is unmeasured, so there are no coordinates to burn at
  */
 
 'use strict';
@@ -38,60 +41,63 @@ function die(msg) {
 }
 
 /**
- * scenes.js 에서 window.FORMAT 을 꺼낸다.
+ * Pulls window.FORMAT out of scenes.js.
  *
- * vm 샌드박스에 global.window 를 깔고 평가한다 — extract-text.js:32 가 쓰는
- * 방식과 같은 선례다. scenes.js 는 최상위에 window.SCENES / window.THEME 등을
- * 대입하는 평범한 스크립트라 이 방식으로 전부 읽힌다.
+ * Evaluates with global.window laid into a vm sandbox — the same precedent
+ * extract-text.js:32 uses. scenes.js is a plain script assigning
+ * window.SCENES / window.THEME etc. at top level, so this reads all of it.
  */
 function readScenes(file) {
-  if (!fs.existsSync(file)) die(`scenes.js 없음: ${file}`);
+  if (!fs.existsSync(file)) die(`scenes.js not found: ${file}`);
   const src = fs.readFileSync(file, 'utf8');
   const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
   sandbox.globalThis = sandbox;
   try {
     vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
   } catch (e) {
-    die(`scenes.js 평가 실패: ${e && e.message}`);
+    die(`failed to evaluate scenes.js: ${e && e.message}`);
   }
   return sandbox.window;
 }
 
 function pickFormat(win, override) {
   if (override) {
-    if (!FORMATS[override]) die(`모르는 포맷: ${override} (${Object.keys(FORMATS).join(' | ')})`);
+    if (!FORMATS[override]) die(`unknown format: ${override} (${Object.keys(FORMATS).join(' | ')})`);
     return override;
   }
-  // 부재 = shorts-9x16. 이 폴백이 회귀 0 의 진입점이다.
+  // Absent = shorts-9x16. This fallback is the entry point of zero regression.
   const key = win && typeof win.FORMAT === 'string' ? win.FORMAT : DEFAULT_FORMAT;
   if (!FORMATS[key]) {
-    die(`scenes.js 의 window.FORMAT 이 모르는 값이다: ${JSON.stringify(key)} ` +
+    die(`window.FORMAT in scenes.js is an unknown value: ${JSON.stringify(key)} ` +
         `(${Object.keys(FORMATS).join(' | ')})`);
   }
   return key;
 }
 
-/** 소수 표기를 방출 표와 문자 그대로 맞춘다 — 3.0 이 "3" 으로 새면 린트가 어긋난다. */
+/** Matches decimal notation to the emission table exactly — 3.0 leaking out as "3" breaks the lint. */
 function num(v, decimals) {
   if (decimals === undefined) return String(v);
   return Number(v).toFixed(decimals);
 }
 
 /**
- * 촬영 씬 길이 상한이 없을 때(recSceneMax: null) 쓰는 도달 불가 상수.
+ * The unreachable constant used when the filmed-scene length cap is off (recSceneMax: null).
  *
- * build-screencast.sh:136 이 `awk 'BEGIN{exit !(d>m)}'` 라 0 은 "끔"이 아니라
- * "전 씬 경고"다(0.5초 씬도 문다). 빈 값도 안 된다 — :37 의 `${MAX_SCENE:-20}` 가
- * 20 으로 되돌려 결정이 소리 없이 사라진다. inf 는 awk 구현 의존이고 1e400 은
- * strnum 파싱에 실패해 문자열 비교로 떨어진다. 정수 표기로 고정한다.【전부 실측】
+ * build-screencast.sh:136 runs `awk 'BEGIN{exit !(d>m)}'`, so 0 is not "off"
+ * but "warn on every scene" (even a 0.5s scene trips it). Empty won't do
+ * either — `${MAX_SCENE:-20}` at :37 restores 20 and the decision silently
+ * disappears. inf is awk-implementation-dependent, and 1e400 fails strnum
+ * parsing and degrades to string comparison. Pinned as an integer literal.
+ * 【all field-tested】
  */
 const NO_SCENE_CAP = 999999;
 
 /**
- * §2.5 방출 표 그대로. 세로 행은 오늘 값과 문자 동일하다. 가로는 프리셋이 정본이다.
+ * The §2.5 emission table verbatim. Portrait rows are character-identical to
+ * today's values. For landscape the preset is the source of truth.
  *
- * 방출 순서를 고정한다 — 단위 테스트가 문자열 전체를 대조하므로 순서가 흔들리면
- * 인수 조건이 흔들린다.
+ * The emission order is fixed — the unit tests compare the whole string, so
+ * a shifting order shakes the acceptance condition.
  */
 function toShell(key) {
   const f = FORMATS[key];
@@ -112,7 +118,7 @@ function toShell(key) {
   line(['SUB', 1], ['BURN', f.burn ? 1 : 0], ['STRICT_DIM', f.guards.strictDim]);
 
   const cap = [['CAP_W', f.capture.w], ['CAP_H', f.capture.h]];
-  // urlFormat 부재면 URL_FMT 를 안 낸다 — 세로 URL 에 format= 이 안 붙는 것이 오늘이다.
+  // No urlFormat, no URL_FMT emitted — a portrait URL without format= is today's behavior.
   if (f.capture.urlFormat) cap.push(['URL_FMT', f.capture.urlFormat]);
   line(...cap);
 
@@ -127,14 +133,14 @@ function toShell(key) {
     ['KB_ZOOM_MAX', num(f.kenburns.panZoomMax, 2)],
   );
 
-  // 번인이 열린 포맷만 자막 6종을 낸다. BURN=0 이면 태울 곳이 없다.
+  // Only formats with burn-in enabled emit the six subtitle values. BURN=0 has nowhere to burn.
   if (f.burn) {
-    if (!f.sub) die(`${key}: burn=true 인데 sub 블록이 null 이다`);
+    if (!f.sub) die(`${key}: burn=true but the sub block is null`);
     line(['SUB_SIZE', f.sub.fontSize], ['SUB_ML', f.sub.marginLR], ['SUB_MR', f.sub.marginLR]);
     line(['SUB_MV', f.sub.marginV], ['SUB_OUT', f.sub.outline], ['SUB_SHA', num(f.sub.shadow, 1)]);
   }
 
-  // STRICT_AR 는 방출하지 않는다 — build-intro.sh 전용이고 회차 빌드가 안 읽는다.
+  // STRICT_AR is not emitted — build-intro.sh only; episode builds don't read it.
   return L.join('\n') + '\n';
 }
 
@@ -144,13 +150,15 @@ function toUrl(key) {
 }
 
 /**
- * 기하 블록이 null 인 프리셋으로 조판·게이트를 하려는 호출을 막는다.
+ * Blocks calls that would lay out or gate against a preset whose geometry blocks are null.
  *
- * **`sub` 는 여기서 안 본다.** 그 블록은 번인 자막 좌표이고 `burn: false` 인 포맷은
- * 태울 곳이 없어 영영 null 이다(16:9 는 클린 마스터 + subs.srt 계약). `sub` 를 필수로
- * 두면 세이프존을 다 실측한 뒤에도 --json 이 거부당하고, 그 거부를 풀려고 누군가
- * 세로 자막 값을 베껴 넣게 된다 — 막으려던 사고가 그 순간 열린다.
- * 번인이 열린 포맷(`burn: true`)에서만 `sub` 를 요구한다.
+ * **`sub` is not checked here.** That block holds burn-in subtitle coordinates,
+ * and a `burn: false` format has nowhere to burn, so it stays null forever
+ * (16:9 is the clean-master + subs.srt contract). Make `sub` required and
+ * --json keeps getting rejected even after the safe zone is fully measured —
+ * and to clear that rejection someone copies in the portrait subtitle values.
+ * The accident this exists to prevent opens at that moment. `sub` is required
+ * only for formats with burn-in enabled (`burn: true`).
  */
 function assertGeometry(key, why) {
   const f = FORMATS[key];
@@ -158,8 +166,8 @@ function assertGeometry(key, why) {
   const missing = need.filter((k) => f[k] === null);
   if (missing.length) {
     die(
-      `${key}: ${missing.join('·')} 블록이 아직 null 이다(provisional). ${why}\n` +
-      `  세이프존 실측 전이라 값이 없다. 세로 값으로 대신 돌면 12분치 캡처를 태운 뒤에야 드러난다.`,
+      `${key}: the ${missing.join('·')} block(s) are still null (provisional). ${why}\n` +
+      `  No values exist before the safe-zone measurement. Falling back to portrait values only surfaces after burning 12 minutes of capture.`,
     );
   }
 }
@@ -176,24 +184,25 @@ function main(argv) {
     if (a === '--sh' || a === '--json' || a === '--url') mode = a.slice(2);
     else if (a === '--format') override = args[++i];
     else if (a === '--burn') burn = args[++i];
-    else if (a.startsWith('--')) die(`모르는 인자: ${a}`);
+    else if (a.startsWith('--')) die(`unknown argument: ${a}`);
     else file = a;
   }
-  if (!mode) die('출력 모드가 필요하다: --sh | --json | --url');
-  if (!file && !override) die('scenes.js 경로 또는 --format <키> 가 필요하다');
+  if (!mode) die('an output mode is required: --sh | --json | --url');
+  if (!file && !override) die('a scenes.js path or --format <key> is required');
 
   const win = file ? readScenes(path.resolve(file)) : {};
   const key = pickFormat(win, override);
   const f = FORMATS[key];
 
-  // 거부 ② — 가로 번인은 태울 자막 좌표가 없다. 프리셋 burn 이 false 인데
-  // 호출자가 BURN=1 을 요구하면 조용히 세로 좌표로 태우게 되므로 여기서 멈춘다.
+  // Rejection ② — landscape burn-in has no subtitle coordinates to burn at.
+  // The preset says burn is false; if the caller demands BURN=1 it would
+  // silently burn at portrait coordinates, so stop here.
   const wantBurn = burn === null ? (f.burn ? '1' : '0') : String(burn);
   if (wantBurn === '1' && !f.burn) {
     die(
-      `${key}: BURN=1 을 요구했는데 이 포맷의 sub 블록이 null 이다.\n` +
-      `  16:9 는 클린 마스터 + subs.srt 계약이라 번인이 없다. 세로 좌표로 태우면\n` +
-      `  자막이 화면 밖으로 나가거나 안전영역을 침범한다.`,
+      `${key}: BURN=1 was requested but this format's sub block is null.\n` +
+      `  16:9 is the clean-master + subs.srt contract, so there is no burn-in. Burning at\n` +
+      `  portrait coordinates puts subtitles off-screen or inside the safe zone.`,
     );
   }
 
@@ -202,8 +211,8 @@ function main(argv) {
   } else if (mode === 'url') {
     process.stdout.write(toUrl(key));
   } else {
-    // JSON 은 조판·게이트가 읽으므로 기하 블록이 살아 있어야 한다.
-    assertGeometry(key, '--json 은 조판 좌표를 요구한다.');
+    // JSON feeds layout and gates, so the geometry blocks must be alive.
+    assertGeometry(key, '--json needs layout coordinates.');
     process.stdout.write(JSON.stringify({ format: key, ...f }, null, 2) + '\n');
   }
 }

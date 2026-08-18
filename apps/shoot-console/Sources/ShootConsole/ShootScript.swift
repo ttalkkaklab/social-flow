@@ -1,18 +1,20 @@
 import Foundation
 
-// storyboard/script.md 를 읽어 씬 단위로 쪼갠다.
+// Reads storyboard/script.md and splits it into scenes.
 //
-// scenes.js 가 아니라 script.md 를 파싱하는 이유: script.md 는 "촬영하는 사람이
-// 보조 모니터에 띄우고 읽는 문서"로 이미 설계돼 있다(shot-script-template.md).
-// 말할 문장·화면 지시·전환 신호가 사람이 읽는 순서대로 들어 있어, 이 앱이 할 일은
-// 그걸 크게 보여주고 현재 위치를 짚는 것뿐이다.
+// Why parse script.md instead of scenes.js: script.md is already designed as
+// "the document the person filming puts on a secondary display and reads"
+// (shot-script-template.md). The sentences to speak, screen directions, and
+// transition cues sit in the order a human reads them, so all this app has to
+// do is show them large and point at the current position.
 
 struct ScriptLine: Identifiable {
     let id = UUID()
     let index: Int
-    /// 실제로 소리 내어 읽는 문장.
+    /// The sentence actually spoken out loud.
     let spoken: String
-    /// 〔자막: …〕 — 화면 자막용 원표기라 읽지 않는다. 숫자·영문이 원형으로 적혀 있다.
+    /// 〔자막: …〕 — the verbatim on-screen caption, not read aloud. Numbers and
+    /// Latin text appear here in their original form.
     let caption: String?
 }
 
@@ -20,21 +22,21 @@ struct ShootScene: Identifiable {
     let id = UUID()
     let number: Int
     let title: String
-    /// cover / points — scenes.js 의 씬 종류.
+    /// cover / points — the scene kind from scenes.js.
     let kind: String?
-    /// 목표 길이(초). 헤딩의 "목표 ~17s" 에서 뽑는다.
+    /// Target length in seconds. Pulled from "목표 ~17s" in the heading.
     let targetSeconds: Int?
-    /// **화면**: 무엇을 띄우고 무엇을 조작하는지.
+    /// **화면** (screen): what to put on screen and what to operate.
     let shot: String
     let lines: [ScriptLine]
-    /// **전환**: 다음 씬으로 넘어가는 신호.
+    /// **전환** (transition): the cue for moving to the next scene.
     let transition: String?
-    /// 인용 블록 주석 — 말하면 안 되는 것, 촬영 시 주의점.
+    /// Blockquote notes — things not to say, filming caveats.
     let notes: [String]
-    /// 마지막 씬의 **녹화 종료**: 안내.
+    /// The final scene's **녹화 종료** (wrap-up) instructions.
     let wrapUp: String?
 
-    var heading: String { "씬 \(number) — \(title)" }
+    var heading: String { "Scene \(number) — \(title)" }
 }
 
 struct ShootScript {
@@ -43,7 +45,7 @@ struct ShootScript {
     let mode: String?
     let targetTotal: String?
     let title: String
-    /// 촬영 전 준비 + 촬영 수칙 — 녹화를 시작하기 전에 한 번 읽는 것들.
+    /// Pre-shoot prep + filming rules — read once before recording starts.
     let prep: [PrepSection]
     let scenes: [ShootScene]
 
@@ -53,22 +55,24 @@ struct ShootScript {
         let body: String
     }
 
-    /// 대본이 잡아둔 본편 목표 길이 합계(초). 씬에 목표가 하나도 없으면 nil.
+    /// Total target length of the main body as set by the script (seconds).
+    /// nil when no scene has a target.
     var totalTargetSeconds: Int? {
         let sum = scenes.compactMap(\.targetSeconds).reduce(0, +)
         return sum > 0 ? sum : nil
     }
 }
 
-/// 마크다운 서식 기호를 걷어낸다.
+/// Strips markdown formatting symbols.
 ///
-/// 대본을 화면에 그대로 띄우면 `**금액을 말하지 말 것**` 처럼 별표가 문장에 섞인다.
-/// 촬영 중에는 서식이 아니라 문장을 읽으므로 기호를 지우고 글자만 남긴다.
+/// Shown as-is, the script mixes asterisks into sentences, like
+/// `**금액을 말하지 말 것**`. While filming you read sentences, not formatting,
+/// so the symbols go and only the text stays.
 func plainText(_ source: String) -> String {
     var out = source.replacingOccurrences(of: "**", with: "")
     out = out.replacingOccurrences(of: "`", with: "")
 
-    // [보이는 글자](주소) → 보이는 글자
+    // [visible text](url) → visible text
     var guardCount = 0
     while guardCount < 32,
           let open = out.range(of: "["),
@@ -87,8 +91,8 @@ enum ScriptParseError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unreadable(let url): "대본을 읽을 수 없습니다: \(url.path)"
-        case .noScenes: "대본에서 '## 씬 N — …' 헤딩을 찾지 못했습니다. 촬영 대본(script.md)이 맞는지 확인하세요."
+        case .unreadable(let url): "Can't read the script: \(url.path)"
+        case .noScenes: "No '## 씬 N — …' heading found in the script. Check that this is a shooting script (script.md)."
         }
     }
 }
@@ -110,7 +114,8 @@ enum ScriptParser {
         var prep: [ShootScript.PrepSection] = []
         var scenes: [ShootScene] = []
 
-        // 현재 수집 중인 덩어리. 씬 헤딩이나 다른 ## 를 만나면 확정한다.
+        // The chunk currently being collected. Finalized when a scene heading
+        // or another ## shows up.
         var sceneBuf: SceneBuffer?
         var prepTitle: String?
         var prepBody: [String] = []
@@ -134,7 +139,7 @@ enum ScriptParser {
 
             if trimmed.hasPrefix("# ") && !trimmed.hasPrefix("## ") {
                 docTitle = String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespaces)
-                // "촬영 대본 — 제목" 형태면 접두어를 떼어 제목만 남긴다.
+                // For a "촬영 대본 — title" heading, drop the prefix and keep just the title.
                 if let r = docTitle.range(of: "촬영 대본") {
                     let rest = docTitle[r.upperBound...].trimmingCharacters(in: CharacterSet(charactersIn: " —–-"))
                     if !rest.isEmpty { docTitle = rest }
@@ -154,8 +159,9 @@ enum ScriptParser {
                     inIgnoredSection = false
                     prepTitle = heading
                 } else {
-                    // "촬영 후", "대사 표기 규칙" 같은 나머지 섹션은 촬영 중 화면에
-                    // 띄울 것이 아니라 건너뛴다.
+                    // The remaining sections, like "촬영 후" (after the shoot)
+                    // or "대사 표기 규칙" (line notation rules), aren't meant for
+                    // the screen during filming — skip them.
                     inIgnoredSection = true
                 }
                 continue
@@ -188,7 +194,7 @@ enum ScriptParser {
         heading.contains("촬영 전") || heading.contains("촬영 수칙") || heading.contains("준비")
     }
 
-    /// --- ... --- 프런트매터를 떼어내고 key: value 로 돌려준다.
+    /// Strips the --- ... --- front matter and returns it as key: value pairs.
     private static func stripFrontMatter(_ lines: inout [String]) -> [String: String] {
         guard lines.first?.trimmingCharacters(in: .whitespaces) == "---" else { return [:] }
         var meta: [String: String] = [:]
@@ -205,7 +211,7 @@ enum ScriptParser {
     }
 }
 
-// MARK: - 씬 헤딩
+// MARK: - Scene heading
 
 /// `## 씬 3 — 이미지 도구를 직접 붙인다 (points · 목표 ~17s)`
 private struct SceneHeading {
@@ -218,13 +224,14 @@ private struct SceneHeading {
         guard heading.hasPrefix("씬 ") || heading.hasPrefix("씬") else { return nil }
         var rest = heading.dropFirst(1).trimmingCharacters(in: .whitespaces)
 
-        // 번호
+        // Number
         let digits = rest.prefix { $0.isNumber }
         guard let num = Int(digits) else { return nil }
         number = num
         rest = String(rest.dropFirst(digits.count)).trimmingCharacters(in: CharacterSet(charactersIn: " —–-"))
 
-        // 꼬리 괄호에서 종류·목표 초를 뽑는다. 없으면 제목만.
+        // Pull the kind and target seconds from the trailing parentheses.
+        // Without them, it's just the title.
         if rest.hasSuffix(")"), let open = rest.lastIndex(of: "(") {
             let meta = String(rest[rest.index(after: open)...].dropLast())
             title = String(rest[..<open]).trimmingCharacters(in: .whitespaces)
@@ -248,7 +255,7 @@ private struct SceneHeading {
     }
 }
 
-// MARK: - 씬 본문 수집
+// MARK: - Scene body collection
 
 private struct SceneBuffer {
     let heading: SceneHeading
@@ -272,7 +279,7 @@ private struct SceneBuffer {
         if let body = labelled(t, "녹화 종료") { field = .none; wrapUp = body; return }
 
         if t.hasPrefix(">") {
-            // 인용 주석은 어느 필드 중이든 독립적으로 모은다.
+            // Blockquote notes collect independently of whatever field is open.
             let body = t.dropFirst().trimmingCharacters(in: .whitespaces)
             if body.isEmpty {
                 notes.append("")
@@ -286,7 +293,8 @@ private struct SceneBuffer {
         }
 
         if t.isEmpty {
-            // 빈 줄은 필드를 닫지 않는다 — 대사 목록 사이에 빈 줄이 있어도 이어진다.
+            // A blank line doesn't close a field — lines in a list continue
+            // across blank lines.
             return
         }
 
@@ -298,7 +306,7 @@ private struct SceneBuffer {
         }
     }
 
-    /// `**화면**: 본문` 또는 `**화면**:` 에서 본문을 뽑는다.
+    /// Extracts the body from `**화면**: body` or `**화면**:` style labels.
     private func labelled(_ line: String, _ label: String) -> String? {
         for prefix in ["**\(label)**:", "**\(label)** :", "\(label):"] {
             if line.hasPrefix(prefix) {
@@ -322,8 +330,8 @@ private struct SceneBuffer {
         )
     }
 
-    /// "1. 문장  〔자막: 원표기〕" 목록을 ScriptLine 으로 바꾼다.
-    /// 번호가 없는 줄은 직전 문장의 이어짐으로 붙인다.
+    /// Turns a "1. sentence  〔자막: verbatim〕" list into ScriptLine values.
+    /// A line without a number continues the previous sentence.
     private static func parseLines(_ raw: [String]) -> [ScriptLine] {
         var out: [(spoken: String, caption: String?)] = []
 
@@ -362,7 +370,7 @@ private struct SceneBuffer {
         }
     }
 
-    /// 〔자막: …〕 를 본문에서 떼어낸다.
+    /// Detaches 〔자막: …〕 from the body text.
     private static func split(_ s: String) -> (spoken: String, caption: String?) {
         guard let open = s.range(of: "〔"), let close = s.range(of: "〕", range: open.upperBound..<s.endIndex) else {
             return (s.trimmingCharacters(in: .whitespaces), nil)

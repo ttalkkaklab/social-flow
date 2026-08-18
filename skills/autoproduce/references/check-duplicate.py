@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
-"""후보 주제가 이 채널에 이미 있는 이야기인지 판정한다.
+"""Judge whether a candidate topic is a story this channel already has.
 
-slug 이 다르면 사람 눈에는 새 주제로 보이지만 내용은 같을 수 있다("비자 수수료
-인상" 과 "베트남 비자 수수료 오른다"). 자동 저작은 그 판단을 사람에게 맡길 수
-없으므로 여기서 결정적으로 판정한다 — 글자 바이그램 자카드 유사도다.
+A different slug looks like a new topic, but the content can be the same
+("비자 수수료 인상" and "베트남 비자 수수료 오른다" — two phrasings of "visa
+fees are going up"). Automated authoring can't leave that call to a human, so
+this makes the verdict deterministic — character-bigram Jaccard similarity.
 
-비교 대상은 채널의 **모든 기존 주제**다. autoproduce 가 만든 것과 사람이 만든
-것을 다 본다(같은 이야기를 두 번 올리는 것을 막는 게 목적이므로).
-각 주제에서 뽑는 신원은 셋이다 — 디렉토리 slug · storyboard.md 제목 · scenes.js
-커버 title. 셋 중 가장 높은 점수를 그 주제의 점수로 쓴다.
+It compares against **every existing topic** on the channel — what autoproduce
+made and what humans made alike (the point is to stop the same story going up
+twice). Three identities are extracted per topic — the directory slug, the
+storyboard.md title, and the scenes.js cover title. The highest of the three
+scores becomes that topic's score.
 
-사용:
-  check-duplicate.py --channel-dir data/<채널> --title "<후보 제목>"
-                     [--message "<핵심 메시지>"] [--threshold 0.45] [--json]
+Usage:
+  check-duplicate.py --channel-dir data/<channel> --title "<candidate title>"
+                     [--message "<core message>"] [--threshold 0.45] [--json]
 
-종료 코드 — 그대로 읽는다:
-  0  신규 (임계 미만)
-  2  중복 의심 — 이 후보를 버리고 다음 후보로 간다
-  1  판정 불가 (채널 디렉토리 없음 등). **신규로 읽지 않는다**
-  3  입력 오류
+Exit codes — read literally:
+  0  new (below the threshold)
+  2  suspected duplicate — drop this candidate and move to the next
+  1  verdict unavailable (channel directory missing, etc.). **Never read as new**
+  3  input error
 """
 import argparse
 import json
@@ -26,12 +28,13 @@ import os
 import re
 import sys
 
-# 임계 0.5 — 픽스처로 보정한 값. 같은 이야기를 다르게 쓴 쌍(0.5~1.0)은 잡고
-# 같은 채널의 다른 주제(0.0~0.25)는 통과시킨다. 바꾸려면 --selftest 픽스처부터
-# 손댄다. **막는 쪽으로 치우쳐 있다** — 후보를 하나 건너뛰는 값은 싸고, 재탕이
-# 공개로 나가는 값은 비싸다. 시리즈물처럼 접두어가 같은 제목은 이 임계에 걸리므로
-# 그런 채널은 --threshold 를 올려 부르거나(플랜 duplicate_threshold) 사람이
-# storyboard 로 만든다.
+# Threshold 0.5 — calibrated against the fixtures. It catches pairs telling the
+# same story in different words (0.5~1.0) and passes different topics on the
+# same channel (0.0~0.25). To change it, start with the --selftest fixtures.
+# **It leans toward blocking** — skipping a candidate is cheap, a rehash going
+# out in public is expensive. Series-style titles with a shared prefix trip
+# this threshold, so call such channels with a higher --threshold (plan
+# duplicate_threshold) or have a human make them with storyboard.
 DEFAULT_THRESHOLD = 0.5
 
 _KEEP = re.compile(r'[^0-9A-Za-z가-힣]+')
@@ -51,12 +54,12 @@ def bigrams(s: str) -> set:
 
 
 def similarity(a: str, b: str) -> float:
-    """포함도(overlap coefficient) — 짧은 쪽이 긴 쪽에 얼마나 들어 있나.
+    """Overlap coefficient — how much of the shorter string sits in the longer.
 
-    자카드를 쓰면 한쪽이 길다는 이유로 점수가 깎여 재탕을 놓친다
-    ("베트남 비자 수수료 오른다" ↔ "비자 수수료 인상 시점" 이 0.29 로 통과).
-    다만 포함도는 짧은 문자열에서 1.0 이 쉽게 나오므로, 바이그램이 4개 미만이면
-    자카드로 되돌아간다."""
+    Jaccard docks the score just because one side is longer and misses rehashes
+    ("베트남 비자 수수료 오른다" ↔ "비자 수수료 인상 시점" passes at 0.29).
+    But the overlap coefficient hits 1.0 too easily on short strings, so fall
+    back to Jaccard when there are fewer than 4 bigrams."""
     ba, bb = bigrams(a), bigrams(b)
     if not ba or not bb:
         return 0.0
@@ -67,8 +70,8 @@ def similarity(a: str, b: str) -> float:
 
 
 def cover_title(scenes_path: str):
-    """scenes.js 의 첫 title 값. 파서를 두지 않고 정규식으로 뽑는다 —
-    JS 를 실행하지 않는 것이 이 스크립트의 계약이다."""
+    """The first title value in scenes.js. Pulled with a regex, no parser —
+    not executing the JS is this script's contract."""
     try:
         with open(scenes_path, encoding='utf-8') as f:
             src = f.read()
@@ -89,12 +92,12 @@ def doc_title(md_path: str):
     return None
 
 
-# 채널 루트에 두는 칸 — 여기 아래는 에피소드가 아니다
+# Slots kept at the channel root — nothing under these is an episode
 _RESERVED = frozenset({'assets', 'growth', 'episodes', 'scratch', 'output'})
 
 
 def _topic_roots(channel_dir: str):
-    """에피소드가 있는 디렉토리. episodes/ 를 먼저 보고, 옛 배치(채널 루트)도 받는다."""
+    """Directories that hold episodes. episodes/ first, plus the legacy layout (channel root)."""
     roots = []
     epi = os.path.join(channel_dir, 'episodes')
     if os.path.isdir(epi):
@@ -104,7 +107,7 @@ def _topic_roots(channel_dir: str):
 
 
 def collect(channel_dir: str):
-    """[(slug, [신원 문자열들])] — 주제 디렉토리마다 하나."""
+    """[(slug, [identity strings])] — one per topic directory."""
     out = []
     seen = set()
     for root in _topic_roots(channel_dir):
@@ -132,20 +135,21 @@ def collect(channel_dir: str):
 
 def selftest() -> int:
     cases = [
-        # (후보, 기존, 중복이어야 하나, 메모)
-        ("베트남 비자 수수료 오른다", "비자 수수료 인상 시점", True, "같은 사실을 다르게 씀"),
-        ("임시거주 신고, 안 하면 과태료", "임시거주 신고 안 하면 과태료입니다", True, "어미만 다름"),
-        ("비자 수수료 인상", "비자 수수료 인상", True, "완전 동일"),
-        ("임시거주 신고 절차", "임시거주 신고, 안 하면 과태료", True, "같은 제도, 다른 각도"),
-        ("환율 급등, 송금 언제", "2026년 환율 급등기 송금 타이밍", True, "연도·조사만 다름"),
-        # 보수적 판정 — 시리즈물이라 사람 눈에는 다른 편이지만 접두어가 같아 막힌다.
-        # 오판이 아닌 설계된 치우침이다(막는 쪽이 싸다).
-        ("연말정산 의료비 공제", "연말정산 월세 공제", True, "시리즈 접두어 — 보수적으로 막음"),
-        ("임시거주 신고 절차", "비자 수수료 인상 시점", False, "무관"),
-        ("7월 환율 변동", "임시거주 신고, 안 하면 과태료", False, "무관"),
-        ("주재원 건강보험 가입", "주재원 자녀 학교 등록", False, "타깃만 같음"),
-        ("비자 수수료 인상", "비자 발급 절차 바뀜", False, "소재만 같음"),
-        ("전기요금 누진제 개편", "도시가스 요금 인상", False, "분야만 같음"),
+        # (candidate, existing, should-be-duplicate, memo)
+        ("베트남 비자 수수료 오른다", "비자 수수료 인상 시점", True, "same fact, different wording"),
+        ("임시거주 신고, 안 하면 과태료", "임시거주 신고 안 하면 과태료입니다", True, "only the sentence ending differs"),
+        ("비자 수수료 인상", "비자 수수료 인상", True, "identical"),
+        ("임시거주 신고 절차", "임시거주 신고, 안 하면 과태료", True, "same policy, different angle"),
+        ("환율 급등, 송금 언제", "2026년 환율 급등기 송금 타이밍", True, "only the year and particles differ"),
+        # Conservative verdict — to a human these are different episodes of a
+        # series, but the shared prefix blocks them. Not a misjudgment: a
+        # designed bias (blocking is the cheap side).
+        ("연말정산 의료비 공제", "연말정산 월세 공제", True, "series prefix — conservatively blocked"),
+        ("임시거주 신고 절차", "비자 수수료 인상 시점", False, "unrelated"),
+        ("7월 환율 변동", "임시거주 신고, 안 하면 과태료", False, "unrelated"),
+        ("주재원 건강보험 가입", "주재원 자녀 학교 등록", False, "only the target audience matches"),
+        ("비자 수수료 인상", "비자 발급 절차 바뀜", False, "only the material matches"),
+        ("전기요금 누진제 개편", "도시가스 요금 인상", False, "only the domain matches"),
     ]
     bad = 0
     for cand, prior, dup, memo in cases:
@@ -153,14 +157,14 @@ def selftest() -> int:
         got = s >= DEFAULT_THRESHOLD
         if got != dup:
             bad += 1
-        print(f"  {'ok ' if got == dup else 'FAIL'} {s:.3f} 중복={dup} · {memo}")
+        print(f"  {'ok ' if got == dup else 'FAIL'} {s:.3f} dup={dup} · {memo}")
         print(f"        {cand!r} ↔ {prior!r}")
-    print("selftest PASS" if not bad else f"selftest FAIL {bad}건")
+    print("selftest PASS" if not bad else f"selftest FAIL {bad} cases")
     return 0 if not bad else 1
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description='주제 중복 판정 (글자 바이그램 자카드)')
+    p = argparse.ArgumentParser(description='Topic duplicate verdict (character-bigram Jaccard)')
     p.add_argument('--channel-dir')
     p.add_argument('--title')
     p.add_argument('--message', default='')
@@ -172,10 +176,10 @@ def main() -> int:
     if a.selftest:
         return selftest()
     if not a.channel_dir or not a.title:
-        print('--channel-dir 와 --title 이 필요하다 (규칙 검증만 할 때는 --selftest)', file=sys.stderr)
+        print('--channel-dir and --title are required (use --selftest to check only the rules)', file=sys.stderr)
         return 3
     if not os.path.isdir(a.channel_dir):
-        print(f'채널 디렉토리 없음: {a.channel_dir} — 판정 불가', file=sys.stderr)
+        print(f'channel directory missing: {a.channel_dir} — verdict unavailable', file=sys.stderr)
         return 1
 
     cand = a.title if not a.message else f'{a.title} {a.message}'
@@ -195,10 +199,10 @@ def main() -> int:
             'top': [{'slug': s, 'score': round(v, 4)} for v, s in top],
         }, ensure_ascii=False))
     else:
-        print(f'중복 판정 — 후보 "{a.title}" · 기존 주제 {len(scored)}개 · 임계 {a.threshold}')
+        print(f'duplicate verdict — candidate "{a.title}" · {len(scored)} existing topics · threshold {a.threshold}')
         for v, s in top:
             print(f'  {v:.3f}  {s}')
-        print('판정 중복 — 이 후보를 버린다' if dup else '판정 신규')
+        print('verdict: duplicate — drop this candidate' if dup else 'verdict: new')
     return 2 if dup else 0
 
 

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>제휴 영상 규칙 — 쇼핑 커넥트 상품을 유튜브로 홍보할 때 | social-flow 가이드</title>
+<link rel="alternate" hreflang="en" href="index.en.html">
 <link rel="stylesheet" href="../../assets/reference.css">
 <style>
   /* 이 문서 전용 소품 — 공용 reference.css 위에 얹는다 */
@@ -61,6 +62,7 @@
 </head>
 <body>
 <div class="wrap">
+<div class="langbar"><a href="index.en.html" hreflang="en">English</a></div>
 
 <div class="crumbs"><a href="../../index.html">문서</a><span>/</span>사용 가이드<span>/</span>제휴 영상 규칙</div>
 
@@ -311,7 +313,7 @@
     <li>
       <span class="n">2</span>
       <strong>AI 고지는 이것과 별개다.</strong> 유튜브 업로드의 합성 미디어 고지
-      (<code>containsSyntheticMedia</code>, <code>server/src/sns-client.ts:1094</code>에서 기본 <code>true</code>)는
+      (<code>containsSyntheticMedia</code>, <code>server/src/sns-client.ts:1337</code>에서 기본 <code>true</code>)는
       플랫폼 대응이고 공정위 표시는 광고 규제 대응이다. 둘 다 해야 한다.
     </li>
     <li>
@@ -349,7 +351,7 @@
   </p>
   <div class="danger">
     <strong>파이프라인에 거는 규칙.</strong> 서면 허락 없이는 상품 이미지를 <code>gpt_image_img2img</code>·
-    <code>nanobanana_img2img</code>·<code>veo_img2video</code>·<code>veo_reference</code>·
+    <code>veo_img2video</code>·<code>veo_reference</code>·
     <code>seedance_img2video</code>·<code>seedance_reference</code>를 비롯해
     <strong>이미지를 입력으로 받는 생성 경로 어디에도</strong> 넣지 않는다. 툴이 늘어도 같은 규칙이 걸린다.
     참고 삼아 한 장만 물리는 것도 같다 — 결과물에 형태가 옮겨 오면 같은 문제다.

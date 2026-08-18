@@ -1,20 +1,21 @@
 /**
- * ByteDance Seedance 비디오 생성 클라이언트 (BytePlus ModelArk).
+ * ByteDance Seedance video generation client (BytePlus ModelArk).
  *
- * Veo(video-client.ts)와 같은 자리를 쓰는 두 번째 영상 엔진이다. 둘은 대체재가
- * 아니라 **상황이 다른 도구**다 — 어느 쪽을 언제 쓰는지는
- * skills/produce/references/video-model-selection.md 가 정본이다.
+ * The second video engine sharing the slot with Veo (video-client.ts). The two are
+ * not substitutes but **tools for different situations** — when to use which is
+ * governed by skills/produce/references/video-model-selection.md.
  *
- * - 모델 7종: Dreamina Seedance 2.5 / 2.0·fast·mini / Seedance 1.5 pro / 1.0 pro·fast
- * - Text-to-Video, Image-to-Video(첫 프레임 · 첫+끝 프레임), 참조 이미지(2.x 전용)
- * - 비율 7종(9:16 포함) · 24fps 고정 · 길이 2~30초(모델별로 다름)
- * - 생성은 비동기 — POST 로 태스크를 만들고 GET 으로 폴링한 뒤 mp4 를 내려받는다
+ * - 7 models: Dreamina Seedance 2.5 / 2.0·fast·mini / Seedance 1.5 pro / 1.0 pro·fast
+ * - Text-to-Video, Image-to-Video (first frame · first+last frame), reference images (2.x only)
+ * - 7 aspect ratios (9:16 included) · fixed 24fps · duration 2~30s (varies per model)
+ * - Generation is async — POST creates a task, GET polls it, then the mp4 is downloaded
  *
- * 결과 URL 은 **24시간짜리**라 폴링이 끝나는 즉시 로컬에 저장하고 경로만 반환한다
- * (Veo 클라이언트와 같은 계약). 과금 근거인 completion_tokens 도 함께 돌려준다 —
- * 벤더 청구 기준이 이 값이라 예상 단가로 환산한 값보다 이쪽이 정본이다.
+ * Result URLs are **valid for 24 hours**, so we save locally as soon as polling
+ * finishes and return only the path (same contract as the Veo client). We also
+ * return completion_tokens, the billing basis — the vendor bills on this value,
+ * so it's more authoritative than any estimated per-unit price conversion.
  *
- * API 키는 기동 시가 아니라 호출 시점에 검증한다 (config.requireArkKey).
+ * The API key is validated at call time, not at startup (config.requireArkKey).
  */
 
 import * as fs from 'node:fs';
@@ -29,47 +30,50 @@ import {
   validateFilePath,
 } from './media-utils.js';
 
-// ── 모델 능력표 (정본) ──────────────────────────────────────────────
+// ── Model capability table (source of truth) ────────────────────────
 //
-// 공식 문서(docs.byteplus.com/en/docs/ModelArk 1330310·1520757·1544106, 2026-08-15
-// 확인)의 모델별 제약을 그대로 옮긴 것이다. 스키마 검증·툴 enum·문서가 전부 이
-// 표에서 파생된다 — 값을 여러 곳에 복사해 두면 모델이 늘 때 한쪽만 고쳐진다.
+// A direct transcription of the per-model constraints in the official docs
+// (docs.byteplus.com/en/docs/ModelArk 1330310·1520757·1544106, checked 2026-08-15).
+// Schema validation, tool enums, and docs all derive from this table — copying
+// the values into multiple places means only one gets fixed when a model is added.
 
 export const VALID_SEEDANCE_RESOLUTIONS = ['480p', '720p', '1080p', '4k'] as const;
 export type SeedanceResolution = (typeof VALID_SEEDANCE_RESOLUTIONS)[number];
 
-/** 비율 7종. adaptive 는 입력(이미지·영상)의 비율을 그대로 따른다. */
+/** 7 aspect ratios. adaptive follows the input's (image/video) ratio as-is. */
 export const VALID_SEEDANCE_RATIOS = ['16:9', '9:16', '4:3', '3:4', '1:1', '21:9', 'adaptive'] as const;
 export type SeedanceRatio = (typeof VALID_SEEDANCE_RATIOS)[number];
 
 export interface SeedanceModelSpec {
-  /** 이 모델이 출력할 수 있는 해상도 */
+  /** Resolutions this model can output */
   resolutions: readonly SeedanceResolution[];
-  /** 생성 길이(초) 하한·상한 */
+  /** Generation duration (seconds), lower and upper bound */
   duration: readonly [number, number];
-  /** 첫+끝 프레임 보간 지원 여부 */
+  /** Whether first+last frame interpolation is supported */
   lastFrame: boolean;
-  /** 참조 이미지 장수 범위. false 면 참조 이미지 자체를 지원하지 않는다 */
+  /** Reference image count range. false means reference images aren't supported at all */
   referenceImages: readonly [number, number] | false;
-  /** 음성 동시 생성(generate_audio) 지원 여부. false 면 무음 전용 */
+  /** Whether simultaneous audio generation (generate_audio) is supported. false means silent-only */
   audio: boolean;
-  /** seed·cameraFixed 지원 여부 (2.x 는 둘 다 없다) */
+  /** Whether seed·cameraFixed are supported (2.x has neither) */
   seed: boolean;
-  /** 실제 사람 얼굴이 든 입력 이미지를 받는지 (2.x 는 거부한다) */
+  /** Whether input images containing real human faces are accepted (2.x rejects them) */
   realFaceInput: boolean;
   /**
-   * 활성화에 **계정 잔액 $30 초과 또는 리소스팩**이 필요한지 — 돈이 걸린 관문만 가리킨다.
+   * Whether activation requires **an account balance over $30 or a resource pack** —
+   * this flags only the money gate.
    *
-   * false 가 "그냥 쓸 수 있다" 는 뜻은 아니다. **모든 모델**은 콘솔 Model activation 에서
-   * 먼저 켜야 하고, 안 켠 채 부르면 태스크 생성이 `ModelNotOpen` 으로 떨어진다
-   * (seedance-1-5-pro 로 실측, 2026-08-15 — 과금은 안 붙는다). 첫 활성화 때는
-   * TOS·VPC·ML 플랫폼 교차 서비스 권한 부여를 함께 요구한다.
+   * false does not mean "just works". **Every model** must first be enabled in the
+   * console's Model activation, and calling one that isn't enabled fails task
+   * creation with `ModelNotOpen` (measured with seedance-1-5-pro, 2026-08-15 — no
+   * charge is incurred). First-time activation also demands TOS, VPC, and ML
+   * platform cross-service authorization.
    */
   activationGate: boolean;
 }
 
 export const SEEDANCE_MODEL_SPECS = {
-  // 1080p 는 2026-08-17(UTC+8)부터 열린다 — 그날 이후 resolutions 에 '1080p' 를 더한다.
+  // 1080p opens on 2026-08-17 (UTC+8) — add '1080p' to resolutions after that date.
   'dreamina-seedance-2-5-260628': {
     resolutions: ['480p', '720p'],
     duration: [4, 30],
@@ -148,46 +152,50 @@ export const VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS) as Array<
 export type SeedanceModel = (typeof VALID_SEEDANCE_MODELS)[number];
 
 /**
- * 기본 모델 — Seedance 1.5 pro.
+ * Default model — Seedance 1.5 pro.
  *
- * 이 파이프라인의 기본 포맷(9:16 · 1080p)을 오늘 뽑을 수 있는 모델 중 가장 싸고,
- * 실사 인물 입력을 받으며(2.x 는 거부한다), seed 로 재현이 되고, 잔액 관문도 없다.
+ * Of the models that can produce this pipeline's default format (9:16 · 1080p)
+ * today, it's the cheapest, accepts real-person inputs (2.x rejects them),
+ * reproduces via seed, and has no balance gate.
  */
 export const DEFAULT_SEEDANCE_MODEL: SeedanceModel = 'seedance-1-5-pro-251215';
 
-/** 참조 이미지를 받는 모델만 (2.x 계열) — seedance_reference 의 enum 정본 */
+/** Models that accept reference images (the 2.x family) — enum source of truth for seedance_reference */
 export const SEEDANCE_REFERENCE_MODELS = VALID_SEEDANCE_MODELS.filter(
   (model) => SEEDANCE_MODEL_SPECS[model].referenceImages !== false,
 );
 
 /**
- * 참조 툴의 기본 모델 — Dreamina Seedance 2.0.
+ * Default model for the reference tool — Dreamina Seedance 2.0.
  *
- * 2.5 가 참조 30장·30초로 기능이 더 넓지만 **품질 근거가 없다** — Artificial
- * Analysis 블라인드 아레나 네 보드 어디에도 없고 ByteDance 도 수치 벤치마크를
- * 내지 않았다(2026-08-15 확인). 2.0 은 같은 아레나 이미지→영상 보드 1위이고
- * (Elo 1,198 · 표본 12,599) 1080p·4K 도 낸다. 근거 있는 쪽을 기본값으로 둔다.
+ * 2.5 has wider capabilities (30 reference images, 30 seconds) but **no quality
+ * evidence** — it appears on none of the four Artificial Analysis blind-arena
+ * boards, and ByteDance published no numeric benchmarks either (checked
+ * 2026-08-15). 2.0 ranks #1 on that arena's image-to-video board (Elo 1,198 ·
+ * sample 12,599) and also outputs 1080p/4K. The side with evidence gets to be
+ * the default.
  *
- * 목록 순서에서 뽑지 않고 상수로 박는 이유는, 능력표에 모델을 하나 끼워 넣는
- * 순간 기본값이 조용히 바뀌는 결합을 없애기 위해서다.
+ * It's pinned as a constant rather than picked from list order to remove the
+ * coupling where inserting a model into the capability table silently changes
+ * the default.
  */
 export const DEFAULT_SEEDANCE_REFERENCE_MODEL: SeedanceModel = 'dreamina-seedance-2-0-260128';
 
-/** 실사 인물이 든 입력 이미지를 받는 모델만 — 커버 배경 → b-roll 레인이 쓸 수 있는 목록 */
+/** Models that accept input images containing real people — the list the cover-background → b-roll lane can use */
 export const SEEDANCE_REAL_FACE_MODELS = VALID_SEEDANCE_MODELS.filter(
   (model) => SEEDANCE_MODEL_SPECS[model].realFaceInput,
 );
 
 export const DEFAULT_SEEDANCE_RESOLUTION: SeedanceResolution = '720p';
-export const DEFAULT_SEEDANCE_DURATION = 5; // 전 모델의 길이 범위에 들어가는 유일한 공통 기본값
-export const SEEDANCE_FPS = 24; // 전 모델 고정
+export const DEFAULT_SEEDANCE_DURATION = 5; // the only common default that fits every model's duration range
+export const SEEDANCE_FPS = 24; // fixed across all models
 
 const POLL_INTERVAL_MS = 10_000;
-const MAX_POLLS = 90; // 15분 최대 대기 — 2.5 의 30초 클립은 Veo 보다 오래 걸린다
-const MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024; // 이미지 1장 상한 (공식)
-const MAX_REQUEST_BYTES = 64 * 1024 * 1024; // 요청 본문 상한 (공식)
+const MAX_POLLS = 90; // 15-minute max wait — 2.5's 30s clips take longer than Veo
+const MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024; // per-image cap (official)
+const MAX_REQUEST_BYTES = 64 * 1024 * 1024; // request body cap (official)
 
-// ── 공통 스키마 조각 ────────────────────────────────────────────────
+// ── Shared schema pieces ────────────────────────────────────────────
 
 const commonFields = {
   prompt: z.string().min(1, 'Prompt is required'),
@@ -212,11 +220,12 @@ type CommonInput = {
 };
 
 /**
- * 모델 × 해상도 × 길이 × 기능 교차 제약 검증 (공식 문서 준거).
+ * Model × resolution × duration × feature cross-constraint validation (per official docs).
  *
- * 호출 전에 거부하는 이유는 Veo 와 같다 — 생성 한 번이 분 단위로 걸리고, 잘못된
- * 조합은 비동기 에러로 돌아와 그 시간을 통째로 태운다. 여기서 거부하면 모델은
- * 즉시 교정된 인자로 다시 부를 수 있다.
+ * We reject before calling for the same reason Veo does — one generation takes
+ * minutes, and a bad combination comes back as an async error that burns all of
+ * that time. Rejecting here lets the model immediately retry with corrected
+ * arguments.
  */
 function validateCommon(data: CommonInput, ctx: z.RefinementCtx): void {
   const spec = SEEDANCE_MODEL_SPECS[data.model];
@@ -225,7 +234,7 @@ function validateCommon(data: CommonInput, ctx: z.RefinementCtx): void {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['resolution'],
-      message: `${data.model} 은(는) ${data.resolution} 을 지원하지 않습니다 (지원: ${spec.resolutions.join(', ')}).`,
+      message: `${data.model} does not support ${data.resolution} (supported: ${spec.resolutions.join(', ')}).`,
     });
   }
 
@@ -234,7 +243,7 @@ function validateCommon(data: CommonInput, ctx: z.RefinementCtx): void {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['durationSeconds'],
-      message: `${data.model} 의 길이 범위는 ${minDuration}~${maxDuration}초입니다 (요청: ${data.durationSeconds}초).`,
+      message: `${data.model} supports durations of ${minDuration}~${maxDuration}s (requested: ${data.durationSeconds}s).`,
     });
   }
 
@@ -242,7 +251,7 @@ function validateCommon(data: CommonInput, ctx: z.RefinementCtx): void {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['generateAudio'],
-      message: `${data.model} 은(는) 무음 전용이라 음성을 생성할 수 없습니다. 음성이 필요하면 seedance-1-5-pro-251215 이상을 쓰세요.`,
+      message: `${data.model} is silent-only and cannot generate audio. If you need audio, use seedance-1-5-pro-251215 or later.`,
     });
   }
 
@@ -251,20 +260,20 @@ function validateCommon(data: CommonInput, ctx: z.RefinementCtx): void {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['seed'],
-        message: `${data.model} 은(는) seed 를 지원하지 않습니다 (Seedance 1.5 pro·1.0 pro·1.0 pro fast 전용).`,
+        message: `${data.model} does not support seed (Seedance 1.5 pro·1.0 pro·1.0 pro fast only).`,
       });
     }
     if (data.cameraFixed !== undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['cameraFixed'],
-        message: `${data.model} 은(는) cameraFixed 를 지원하지 않습니다 (Seedance 1.5 pro·1.0 pro·1.0 pro fast 전용). 카메라 고정은 프롬프트로 지시하세요.`,
+        message: `${data.model} does not support cameraFixed (Seedance 1.5 pro·1.0 pro·1.0 pro fast only). Direct a fixed camera through the prompt instead.`,
       });
     }
   }
 }
 
-// Text-to-Video 요청 스키마
+// Text-to-Video request schema
 export const seedanceText2VideoSchema = z
   .object({
     ...commonFields,
@@ -272,14 +281,15 @@ export const seedanceText2VideoSchema = z
   })
   .superRefine(validateCommon);
 
-// Image-to-Video 요청 스키마 (첫 프레임 · 첫+끝 프레임)
+// Image-to-Video request schema (first frame · first+last frame)
 export const seedanceImg2VideoSchema = z
   .object({
     ...commonFields,
     sourceImagePath: z.string().min(1, 'Source image path is required'),
     lastImagePath: z.string().optional(),
-    // 입력 이미지 비율을 그대로 따르는 것이 기본이다 — 다른 비율을 지정하면
-    // 서버가 소스 이미지를 중앙 기준으로 잘라낸다(9:16 커버가 잘리는 사고).
+    // Following the input image's ratio is the default — specifying a different
+    // ratio makes the server center-crop the source image (the incident where a
+    // 9:16 cover got cropped).
     ratio: z.enum(VALID_SEEDANCE_RATIOS).optional().default('adaptive'),
   })
   .superRefine((data, ctx) => {
@@ -288,17 +298,19 @@ export const seedanceImg2VideoSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['lastImagePath'],
-        message: `${data.model} 은(는) 첫 프레임만 받습니다 — 첫+끝 프레임 보간은 seedance-1-0-pro-250528 이상을 쓰세요.`,
+        message: `${data.model} accepts a first frame only — for first+last frame interpolation use seedance-1-0-pro-250528 or later.`,
       });
     }
   });
 
-// 참조 이미지 요청 스키마 (2.x 전용 — omni reference)
+// Reference image request schema (2.x only — omni reference)
 //
-// model 을 공통 필드에서 **덮어쓴다**. 툴 표면(JSON 스키마)의 default 는 안내일 뿐
-// 실제로 적용되는 건 여기 zod 기본값이라, 덮어쓰지 않으면 공통 기본값(1.5 pro)이
-// 들어오고 아래 superRefine 이 그걸 거절한다 — 인자를 생략한 정상 호출이 전부
-// 실패한다. 좁힌 enum 은 1.x 를 아래 검증까지 가기 전에 걸러 메시지도 명확해진다.
+// This **overrides** model from the common fields. The default on the tool
+// surface (JSON schema) is only guidance; what actually applies is the zod
+// default here, so without the override the common default (1.5 pro) comes in
+// and the superRefine below rejects it — every normal call that omits the
+// argument fails. The narrowed enum also filters 1.x out before it reaches the
+// validation below, which makes the message clearer too.
 export const seedanceReferenceSchema = z
   .object({
     ...commonFields,
@@ -316,7 +328,7 @@ export const seedanceReferenceSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['model'],
-        message: `${data.model} 은(는) 참조 이미지를 지원하지 않습니다. Dreamina Seedance 2.5 또는 2.0 계열(${SEEDANCE_REFERENCE_MODELS.join(', ')})을 쓰세요.`,
+        message: `${data.model} does not support reference images. Use the Dreamina Seedance 2.5 or 2.0 family (${SEEDANCE_REFERENCE_MODELS.join(', ')}).`,
       });
       return;
     }
@@ -325,7 +337,7 @@ export const seedanceReferenceSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['referenceImagePaths'],
-        message: `${data.model} 의 참조 이미지 상한은 ${maxImages}장입니다 (요청: ${data.referenceImagePaths.length}장).`,
+        message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`,
       });
     }
   });
@@ -343,7 +355,7 @@ export interface SeedanceGenerationResponse {
   ratio?: string;
   resolution?: string;
   duration?: number;
-  /** 벤더 청구 기준 토큰 수 — 예상 단가 환산이 아니라 이 값이 실제 과금 근거다 */
+  /** Token count the vendor bills on — this, not an estimated price conversion, is the actual billing basis */
   completionTokens?: number;
   taskId?: string;
   sourceImage?: string;
@@ -351,7 +363,7 @@ export interface SeedanceGenerationResponse {
   referenceImages?: string[];
 }
 
-// ── ModelArk REST 계약 ──────────────────────────────────────────────
+// ── ModelArk REST contract ──────────────────────────────────────────
 
 type ContentPart =
   | { type: 'text'; text: string }
@@ -384,7 +396,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** ModelArk 에러 본문에서 모델이 읽을 수 있는 한 줄을 뽑는다. */
+/** Extract a one-liner the model can read from a ModelArk error body. */
 function describeHttpError(status: number, body: string): string {
   try {
     const parsed = JSON.parse(body) as { error?: { code?: string; message?: string } };
@@ -392,12 +404,12 @@ function describeHttpError(status: number, body: string): string {
     const message = parsed.error?.message;
     if (message) return `HTTP ${status} ${code ? `(${code}) ` : ''}${message}`;
   } catch {
-    // JSON 이 아니면 원문을 그대로 쓴다
+    // not JSON — use the raw body as-is
   }
   return `HTTP ${status} — ${body.slice(0, 400)}`;
 }
 
-/** 태스크 생성 → 태스크 ID */
+/** Create a task → task ID */
 async function createTask(apiKey: string, body: CreateTaskBody): Promise<string> {
   const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks`, {
     method: 'POST',
@@ -427,10 +439,10 @@ async function getTask(apiKey: string, taskId: string): Promise<TaskStatus> {
 }
 
 /**
- * 완료 폴링 → mp4 다운로드 → 로컬 저장.
+ * Poll for completion → download the mp4 → save locally.
  *
- * 다운로드에는 API 키를 보내지 않는다 — video_url 은 서명이 이미 붙은 오브젝트
- * 스토리지 주소이고, 남의 도메인에 우리 키를 얹을 이유가 없다.
+ * The download does not send the API key — video_url is an already-signed object
+ * storage address, and there's no reason to attach our key to someone else's domain.
  */
 async function awaitVideoAndSave(
   apiKey: string,
@@ -453,12 +465,13 @@ async function awaitVideoAndSave(
     const videoUrl = task.content?.video_url;
     if (!videoUrl) return { error: 'Task succeeded but no video_url in response' };
 
-    // 경로 검증(traversal·확장자)은 다운로드 전에 한다 — 수십 MB 를 받고 나서
-    // 거부하면 대역폭이 낭비되고, 결과 URL 은 24시간 뒤 사라져 재시도도 못 한다.
+    // Path validation (traversal·extension) happens before the download —
+    // rejecting after receiving tens of MB wastes bandwidth, and the result URL
+    // disappears after 24 hours so there's no retry either.
     const fullPath = resolveOutputFile(outputPath, filename, 'video');
     const download = await fetch(videoUrl);
     if (!download.ok) {
-      return { error: `Failed to download video: HTTP ${download.status} (URL 유효기간 24시간)` };
+      return { error: `Failed to download video: HTTP ${download.status} (URL is valid for 24 hours)` };
     }
     fs.writeFileSync(fullPath, Buffer.from(await download.arrayBuffer()));
 
@@ -466,27 +479,28 @@ async function awaitVideoAndSave(
     return { videoPath: fullPath, task };
   }
 
-  return { error: `Video generation timed out (${(MAX_POLLS * POLL_INTERVAL_MS) / 60_000} minutes). 태스크 ${taskId} 는 계속 돌고 있을 수 있다 — ModelArk 콘솔에서 확인할 것.` };
+  return { error: `Video generation timed out (${(MAX_POLLS * POLL_INTERVAL_MS) / 60_000} minutes). Task ${taskId} may still be running — check the ModelArk console.` };
 }
 
 /**
- * 로컬 이미지를 data URI 로 읽는다.
+ * Read a local image as a data URI.
  *
- * ModelArk 는 공개 URL 이 아니면 base64 data URI 만 받는다. 형식 문자열은
- * 소문자여야 하고(`data:image/png;base64,`), 요청 본문 전체가 64MB 를 넘으면 안 된다.
+ * ModelArk only accepts base64 data URIs unless given a public URL. The format
+ * string must be lowercase (`data:image/png;base64,`), and the whole request
+ * body must stay under 64MB.
  */
 function readImageDataUri(filePath: string): string {
   const stats = fs.statSync(filePath);
   if (stats.size > MAX_INPUT_IMAGE_BYTES) {
     throw new Error(
-      `Input image too large: ${path.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, 상한 30MB)`,
+      `Input image too large: ${path.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`,
     );
   }
   const buffer = fs.readFileSync(filePath);
   return `data:${mimeFromExtension(filePath, 'image')};base64,${buffer.toString('base64')}`;
 }
 
-/** 입력 이미지 경로를 검증하고 data URI 로 바꾼다 (존재·확장자·크기·합계). */
+/** Validate input image paths and convert to data URIs (existence·extension·size·total). */
 function loadImages(filePaths: string[]): string[] {
   const uris: string[] = [];
   for (const filePath of filePaths) {
@@ -497,13 +511,13 @@ function loadImages(filePaths: string[]): string[] {
   const total = uris.reduce((sum, uri) => sum + uri.length, 0);
   if (total > MAX_REQUEST_BYTES) {
     throw new Error(
-      `Request body too large: base64 합계 ${(total / 1024 / 1024).toFixed(1)}MB (상한 64MB). 이미지 수를 줄이거나 해상도를 낮출 것.`,
+      `Request body too large: base64 total ${(total / 1024 / 1024).toFixed(1)}MB (limit 64MB). Use fewer images or lower their resolution.`,
     );
   }
   return uris;
 }
 
-/** 공통 요청 본문 조립 — 모델이 지원하지 않는 필드는 아예 싣지 않는다. */
+/** Assemble the shared request body — fields the model doesn't support aren't included at all. */
 function buildBody(
   request: CommonInput & { prompt: string; ratio: SeedanceRatio; watermark: boolean },
   images: ContentPart[],
@@ -517,9 +531,10 @@ function buildBody(
     duration: request.durationSeconds,
     watermark: request.watermark,
   };
-  // generate_audio 의 벤더 기본은 true 다. 무음 전용 모델에 넘기면 거절되므로
-  // 지원 모델에만 싣고, 우리 기본값은 false 로 뒤집는다 — 이 파이프라인은
-  // 나레이션을 TTS 로 따로 붙이고, 1.5 pro 는 음성을 켜면 단가가 정확히 2배다.
+  // The vendor default for generate_audio is true. Passing it to a silent-only
+  // model gets rejected, so we send it only to models that support it and flip
+  // our own default to false — this pipeline attaches narration separately via
+  // TTS, and enabling audio on 1.5 pro exactly doubles the price.
   if (spec.audio) body.generate_audio = request.generateAudio;
   if (spec.seed) {
     if (request.seed !== undefined) body.seed = request.seed;
@@ -528,7 +543,7 @@ function buildBody(
   return body;
 }
 
-/** 성공 응답 조립 — 실제 생성 결과(벤더가 돌려준 값)를 우선한다. */
+/** Assemble the success response — the actual generation result (values the vendor returned) wins. */
 function toResponse(
   request: { prompt: string; model: SeedanceModel; ratio: SeedanceRatio; resolution: SeedanceResolution; durationSeconds: number },
   videoPath: string,
@@ -554,9 +569,9 @@ function toFailure(error: unknown): SeedanceGenerationResponse {
   return { success: false, error: message };
 }
 
-// ── 생성 함수 3종 ────────────────────────────────────────────────────
+// ── The 3 generation functions ──────────────────────────────────────
 
-/** 텍스트 프롬프트로 영상 생성 */
+/** Generate video from a text prompt */
 export async function generateFromText(
   request: SeedanceText2VideoRequest,
 ): Promise<SeedanceGenerationResponse> {
@@ -579,7 +594,7 @@ export async function generateFromText(
   }
 }
 
-/** 이미지에서 영상 생성 (첫 프레임 · 첫+끝 프레임 보간) */
+/** Generate video from an image (first frame · first+last frame interpolation) */
 export async function generateFromImage(
   request: SeedanceImg2VideoRequest,
 ): Promise<SeedanceGenerationResponse> {
@@ -617,7 +632,7 @@ export async function generateFromImage(
   }
 }
 
-/** 참조 이미지로 피사체 일관성을 지키며 영상 생성 (Dreamina Seedance 2.x 전용) */
+/** Generate video with subject consistency from reference images (Dreamina Seedance 2.x only) */
 export async function generateWithReferences(
   request: SeedanceReferenceRequest,
 ): Promise<SeedanceGenerationResponse> {

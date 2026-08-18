@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""한국어 AI 티 결정적 검사기 — social-flow 전 표면 공통 게이트.
+"""Deterministic Korean AI-tell checker — the shared gate for every social-flow surface.
 
-규칙 정의는 `korean-style.md` 가 SoT다. 이 스크립트는 그 규칙을 기계 판정으로
-옮긴 것이며, 판정 결과가 정본이다(에이전트 자가 판단으로 덮어쓰지 않는다).
+`korean-style.md` is the SoT for the rule definitions. This script is those
+rules turned into a machine verdict, and the verdict is authoritative (agents
+don't override it with their own judgment).
 
     python3 check-style.py --surface narration output/script.txt
     cat post.md | python3 check-style.py --surface threads -
     python3 check-style.py --surface ig --json caption.md
 
-exit 0 통과 / 1 경고(S2 누적) / 2 불합격(S1 검출) / 3 실행 오류.
+exit 0 pass / 1 warn (S2 accumulation) / 2 fail (S1 found) / 3 execution error.
 
-의존성 없음(표준 라이브러리만). 플러그인 배포본에서 그대로 실행된다.
+No dependencies (stdlib only). Runs as-is in the plugin distribution.
 """
 
 from __future__ import annotations
@@ -24,349 +25,400 @@ import unicodedata
 SURFACES = ("narration", "subtitle", "screen", "threads", "ig", "fb", "yt", "reply")
 
 # ---------------------------------------------------------------------------
-# Do-NOT — 탐지·수정 모두 제외. 위치를 보존하려고 같은 길이의 공백으로 가린다.
+# Do-NOT — excluded from both detection and fixing. Masked with same-length
+# spaces to preserve offsets.
 # ---------------------------------------------------------------------------
 
-# 카피 검사에서 늘 가리는 것 — 바꾸면 안 되는 값들뿐이다.
-# 여기에 "덩어리를 통째로 가리는" 마스크를 넣지 않는다. 실측 사고 둘: 인용 200자를
-# 가렸더니 슬롭을 따옴표에 넣어 0점이 100점이 됐고, 백틱·코드펜스를 가렸더니 같은
-# 우회가 다시 열렸다. 덩어리 마스크는 전부 DOC_MASKS 로 간다.
+# Always masked in copy checks — only values that must not be changed.
+# Never add a "mask the whole chunk" mask here. Two measured incidents: masking
+# a 200-char quote let slop hide inside quotation marks (a 0 score became 100),
+# and masking backticks/code fences reopened the same bypass. Chunk masks all
+# go to DOC_MASKS.
 MASKS = (
     re.compile(r"https?://\S+"),                 # URL
-    re.compile(r"#[\w가-힣]+"),                   # 해시태그
-    re.compile(r"[A-Za-z][A-Za-z0-9_.\-]*"),     # 영문 약어·고유명사
-    re.compile(r"\d[\d,.\-~%/:]*"),              # 수치·날짜·단위
+    re.compile(r"#[\w가-힣]+"),                   # hashtags
+    re.compile(r"[A-Za-z][A-Za-z0-9_.\-]*"),     # Latin abbreviations, proper nouns
+    re.compile(r"\d[\d,.\-~%/:]*"),              # numbers, dates, units
 )
 
-# --doc 에서만 추가로 가리는 것. 규칙표·명령 예시가 든 내부 문서를 검사할 때 쓴다.
-# 산출 카피에는 켜지 않는다 — 전부 슬롭 은신처가 된다.
+# Masked additionally under --doc only. For checking internal docs that carry
+# rule tables and command examples. Never enabled on produced copy — every one
+# of these becomes a slop hideout.
 DOC_MASKS = (
-    re.compile(r"```.*?```", re.S),              # 코드블록 (명령·예시)
-    re.compile(r"`[^`\n]+`"),                    # 인라인 코드
-    re.compile(r"(?m)^\s*\|.*\|\s*$"),           # 마크다운 표 행
-    re.compile(r"(?m)^\s*>.*$"),                 # 인용 블록
+    re.compile(r"```.*?```", re.S),              # code blocks (commands, examples)
+    re.compile(r"`[^`\n]+`"),                    # inline code
+    re.compile(r"(?m)^\s*\|.*\|\s*$"),           # markdown table rows
+    re.compile(r"(?m)^\s*>.*$"),                 # quote blocks
 )
 
-# 이모지만 — 화살표(→ ←)·괘선은 문서 기호이지 이모지가 아니다(오탐 주범).
+# Emoji only — arrows (→ ←) and box-drawing are document symbols, not emoji
+# (the main source of false positives).
 EMOJI = re.compile(
-    "[\U0001F000-\U0001FAFF"   # 이모티콘·픽토그램·교통·기호 보충
-    "☀-⛿"            # 기타 기호 ☀ ⚡ ⚠
-    "✀-➿"            # 장식 기호 ✅ ✂
-    "⬀-⯿"            # 굵은 화살표·별 ⬅ ⭐
+    "[\U0001F000-\U0001FAFF"   # emoticons, pictographs, transport, symbol supplement
+    "☀-⛿"            # miscellaneous symbols ☀ ⚡ ⚠
+    "✀-➿"            # dingbats ✅ ✂
+    "⬀-⯿"            # heavy arrows, stars ⬅ ⭐
     "〰〽㊗㊙]"
 )
 
 # ---------------------------------------------------------------------------
-# 패턴 — (ID, 심각도, 설명, 정규식, 임계) 임계 = 이 횟수를 넘겨야 계상.
-# 심각도는 korean-style.md 표와 1:1. 여기서만 바꾸지 말고 문서도 같이 고친다.
+# Patterns — (ID, severity, label, regex, threshold); threshold = only hits
+# beyond this count are tallied.
+# Severity maps 1:1 to the korean-style.md tables. Don't change it here alone —
+# fix the doc together with it.
 # ---------------------------------------------------------------------------
 
-# 1인칭 주어가 앞에 오면 "~야 할 것이다"는 훈계가 아니라 화자 자신의 의지다
-# ("나도 서류를 챙겨야 할 것이다"). D3 은 S1 이라 이 오탐이 곧 차단이 된다.
+# With a first-person subject in front, "~야 할 것이다" is the speaker's own
+# resolve, not a lecture ("나도 서류를 챙겨야 할 것이다"). D3 is S1, so this
+# false positive would mean an outright block.
 #
-# **WHITELIST 로 빼면 안 된다.** 화이트리스트는 매치가 그 구간 안에 들어가면 통째로
-# 면제하는데, 이 패턴의 구간이 최대 30자라 "나도" 두 글자만 붙이면 그 안의 T1·D1·T3
-# 까지 전부 빠진다(실측: 네 문장 모두 위반 0). 우회로를 만드는 셈이라 D3 규칙 자체의
-# lookbehind 로 둔다 — 면제가 D3 매치에만 걸린다.
-# **정규식이 아니라 후처리로 뺀다.** 파이썬 re 는 가변폭 lookbehind 를 못 쓰고
-# (`look-behind requires fixed-width pattern`), WHITELIST 는 구간 통째 면제라
-# 그 안의 T1·D1·T3 까지 빠진다. C1 접속부사와 같은 방식으로 analyze() 에서 거른다.
-# (JS 이식본은 가변폭 lookbehind 가 되므로 규칙 정규식에 직접 박혀 있다 — 동작은 같다.)
+# **Do not move this into WHITELIST.** The whitelist exempts a match wholesale
+# when it falls inside a whitelisted span, and this pattern's span runs up to
+# 30 chars — prefix the two chars "나도" and the T1·D1·T3 inside all escape too
+# (measured: all four test sentences dropped to 0 violations). That builds a
+# bypass, so it lives as a lookbehind on the D3 rule itself — the exemption
+# applies to D3 matches only.
+# **Filtered in post-processing, not in the regex.** Python re can't do
+# variable-width lookbehind (`look-behind requires fixed-width pattern`), and
+# WHITELIST exempts the whole span, dropping the T1·D1·T3 inside. Filtered in
+# analyze(), the same way as the C1 conjunctive adverbs.
+# (The JS port supports variable-width lookbehind, so there it sits directly in
+# the rule regex — behavior is the same.)
 FIRST_PERSON_LEAD = re.compile(
     r"(?:내가|나도|나는|저도|저는|제가|우리가|우리도)[^.!?\n]{0,30}$")
 
 Pattern = tuple  # (id, sev, label, regex, threshold, fix)
 
 PATTERNS: list[Pattern] = [
-    # --- 번역투 T -----------------------------------------------------------
-    # 관형형 "~에 대한"도 같은 번역투다("제도에 대한 설명" → "제도 설명"). 뒤 공백을
-    # 요구해 "반대한 사람"·"상대한 업체"의 어간 우연 일치를 비켜 간다(실측 오탐 0).
-    # `관해/관하여`도 같은 번역투다. **`관한`은 넣지 않는다** — "개인정보 보호에 관한
-    # 법률"이 법령 제목의 표준 형식이라 정상이다(T1 은 S1 = 반려).
+    # --- Translationese T ---------------------------------------------------
+    # The adnominal "~에 대한" is the same translationese ("제도에 대한 설명" → "제도 설명").
+    # Requiring a trailing space sidesteps accidental stem matches in "반대한 사람"·
+    # "상대한 업체" (measured false positives: 0).
+    # `관해/관하여` are the same translationese. **`관한` is deliberately left out** —
+    # "개인정보 보호에 관한 법률" is the standard format for statute titles and is
+    # normal (T1 is S1 = reject).
     ("T1", "S1", "~에 대해(서)·~에 대한·~에 관해",
      re.compile(r"에\s*(대(해서|해|하여|한(?=\s))|관(해서|해|하여))"), 0,
-     "목적격 조사로 직결 — '제도에 대해 알아보자' → '제도를 알아보자'"),
-    # 존재동사와 구분한다 — "가방에 있어."는 정상이고 "문제에 있어서"만 번역투다.
+     "Use the object particle directly — '제도에 대해 알아보자' → '제도를 알아보자'"),
+    # Distinguish from the existence verb — "가방에 있어." is normal; only "문제에 있어서"
+    # is translationese.
     ("T2", "S1", "~에 있어서", re.compile(r"에\s*있어서(?=\s*[가-힣])"), 0,
-     "'~에서' 또는 '~할 때'"),
-    # '여지는'(명사 여지+는)은 뺀다 — 이중피동이 아니다.
-    # 여섯 계열 모두에 `집`(존댓말 종결 "보여집니다")이 필요하다 — 되어 계열에만 있어서
-    # 대표형 "보여집니다"·"잊혀집니다"가 전부 샜다(자매 플러그인 감사에서 발견).
-    ("T3", "S1", "이중 피동",
-     # `질`도 필요하다 — "판단되어질 수 있다"·"보여질 것이다"가 샜다(실측).
+     "'~에서' or '~할 때'"),
+    # '여지는' (noun 여지 + 는) is excluded — not a double passive.
+    # All six series need `집` (polite ending "보여집니다") — only the 되어 series had it,
+    # so the representative forms "보여집니다"·"잊혀집니다" all leaked (found in the
+    # sister plugin's audit).
+    ("T3", "S1", "double passive",
+     # `질` is needed too — "판단되어질 수 있다"·"보여질 것이다" leaked (measured).
      re.compile(r"(되어[지진졌집질]|보여[지진졌집질]|잊혀[지진졌집질]"
                 r"|쓰여[지진졌집질]|불려[지진졌집질]|모아[지진졌집질])"), 0,
-     "단순 피동으로 — '판단되어진다' → '판단한다'"),
+     "Simple passive — '판단되어진다' → '판단한다'"),
     ("T4", "S1", "~을 가지고 있다", re.compile(r"[을를]\s*가지고\s*있"), 0,
-     "동사로 — '강점을 가지고 있다' → '강점이 있다'"),
-    # 피동 어미를 되·진·받으로만 잡으면 가장 흔한 "~된다"·"~됐다"·"~됩니다"가 전부
-    # 새어 나간다(실측: "관세총국에 의해 갱신된다" 미검출 — 10라운드 뒤 자체 공격에서
-    # 발견). 된·됐·됩을 더해 6/10 → 9/10. "된장"만 빼면 남은 오탐이 없다 — 이건 면제
-    # 목록이 아니라 오탐 가드라 우회에 쓸 수 없다.
-    ("T5", "S2", "~에 의해 + 피동",
-     # 피동 접미사 앞에는 어간이 온다 — `\S*` 로 두면 어절 첫 글자도 잡혀
-     # "지표에 의해 진도를"·"통계에 의해 받침이"가 걸렸다(실측 4건). 10/14 → 14/14.
+     "Use a verb — '강점을 가지고 있다' → '강점이 있다'"),
+    # Catching passive endings with only 되·진·받 lets the most common "~된다"·"~됐다"·
+    # "~됩니다" all slip through (measured: "관세총국에 의해 갱신된다" undetected — found
+    # in a self-attack after round 10). Adding 된·됐·됩 took 6/10 → 9/10. Excluding
+    # "된장" alone leaves no remaining false positives — this is a false-positive guard,
+    # not an exemption list, so it can't be used as a bypass.
+    ("T5", "S2", "~에 의해 + passive",
+     # A stem precedes the passive suffix — with `\S*` the first char of the word gets
+     # caught too, flagging "지표에 의해 진도를"·"통계에 의해 받침이" (4 measured cases).
+     # 10/14 → 14/14.
      re.compile(r"에\s*의(해|하여)\s*[가-힣]*[가-힣](되|된(?!장)|됐|됩|진|받)"), 0,
-     "능동으로 — '법에 의해 정해진다' → '법이 정한다'"),
-    ("T6", "S2", "이중 조사", re.compile(r"(에서의|으로의|로의|에의|로부터의|으로부터의)"), 0,
-     "절로 풀기 — '현지에서의 생활' → '현지 생활'"),
-    ("T7", "S2", "~를 통해 반복", re.compile(r"[을를]\s*통(해서|해|하여)"), 2,
-     "3회 넘을 때만 일부를 '~로'·'~해서'로 분산"),
-    ("T8", "S2", "~라는 점에서 반복", re.compile(r"[라다]는\s*점에서"), 1,
+     "Make it active — '법에 의해 정해진다' → '법이 정한다'"),
+    ("T6", "S2", "double particle", re.compile(r"(에서의|으로의|로의|에의|로부터의|으로부터의)"), 0,
+     "Unpack into a clause — '현지에서의 생활' → '현지 생활'"),
+    ("T7", "S2", "~를 통해 repeated", re.compile(r"[을를]\s*통(해서|해|하여)"), 2,
+     "Only past 3 occurrences: spread some into '~로'·'~해서'"),
+    ("T8", "S2", "~라는 점에서 repeated", re.compile(r"[라다]는\s*점에서"), 1,
      "'~라서'·'~니까'"),
-    ("T9", "S3", "인칭 대명사 밀도", re.compile(r"\b(그|그녀|그들|그것)(는|은|가|를|의|에게|와|도)\b"), 2,
-     "생략하거나 이름·호칭으로"),
-    # T10~T13 — 2026-08-14 딥리서치 1라운드가 국립국어원 「한눈에 알아보는 공공언어
-    # 바로 쓰기(개정판)」(2022) 교정쌍에서 찾아낸 미구현분. **근거 등급이 다르다**:
-    # 규범 근거이지 코퍼스 실측이 아니다 — 이 게이트의 어느 규칙도 "사람 평정을
-    # 올린다"로 측정된 적이 없다(2라운드 결론). 그래서 심각도를 판별 가능한 만큼만
-    # 준다: 오탐 면적이 0 인 T10 만 반려, 나머지는 경고.
-    # **인용은 etc_seq=699 페이지가 아니라 첨부 PDF 를 본다** — 페이지 HTML 에는 규칙
-    # 문구가 없어서 URL 만 열면 인용을 지어낸 것으로 오판한다(조사에서 밟은 함정).
+    ("T9", "S3", "personal pronoun density", re.compile(r"\b(그|그녀|그들|그것)(는|은|가|를|의|에게|와|도)\b"), 2,
+     "Drop them, or use a name/title"),
+    # T10~T13 — the unimplemented items round 1 of the 2026-08-14 deep research found in
+    # the correction pairs of the National Institute of Korean Language's "Public Language
+    # at a Glance (revised)" (2022). **The evidence grade differs**: normative grounds, not
+    # corpus measurement — no rule in this gate has ever been measured as "raising human
+    # ratings" (round 2 conclusion). So severity is set only as far as each can
+    # discriminate: only T10, with zero false-positive surface, rejects; the rest warn.
+    # **Cite the attached PDF, not the etc_seq=699 page** — the page HTML has no rule
+    # text, so opening only the URL misjudges the citation as fabricated (a trap the
+    # research stepped in).
     ("T10", "S1", "~을 필요로 하다", re.compile(r"[을를]\s*필요로\s*(하|한|합|해|했|함)"), 0,
      "'~이 필요하다' — '검토를 필요로 한다' → '검토가 필요하다'"),
-    # 사동 접사 규칙이 아니라 **어근 열거**다. `-시키다` 는 정상 사동이 훨씬 많아서
-    # ("아이를 등록시키다"·"차를 정지시키다") 접미사로 잡으면 통째로 샌다. 여기 다섯은
-    # `-하다` 형이 이미 타동사라 사동 접사가 뜻을 더하지 않는 것들이다.
-    # **늘릴 때는 자동사 용법이 있는지 먼저 본다** — 증가·감소·향상은 자동사가 있어
-    # ("매출이 증가하다") '증가시키다' 가 정당한 사동이다. 넣으면 그대로 오탐이 된다.
-    ("T11", "S2", "불필요한 사동 -시키다",
+    # A **stem enumeration**, not a causative-suffix rule. `-시키다` is far more often a
+    # legitimate causative ("아이를 등록시키다"·"차를 정지시키다"), so catching the suffix
+    # leaks wholesale. These five are ones whose `-하다` form is already transitive, so
+    # the causative suffix adds no meaning.
+    # **When extending, first check for an intransitive use** — 증가·감소·향상 have
+    # intransitives ("매출이 증가하다"), so '증가시키다' is a legitimate causative. Adding
+    # it becomes a false positive straight away.
+    ("T11", "S2", "unnecessary causative -시키다",
      re.compile(r"(개선|소개|금지|실현|완성)시(키|켜|킨|킬|켰|킵)"), 0,
-     "'-하다' 로 — '개선시킬 수 있다' → '개선할 수 있다'"),
-    # 행위자를 지운 피동 종결. T5(~에 의해 + 피동)와 갈래가 다르다 — 저기는 행위자가
-    # 문장에 있고(그래서 능동으로 되돌릴 수 있고), 여기는 아예 없다("주의가 요구됩니다"
-    # 는 누가 누구에게 요구하는지가 없다). `(?![면고는])` 는 D8 과 같은 갈래 가드다 —
-    # 조건절("요구된다면")·연결형("요구된다고 한다")·관형절("요구된다는 지적")은 종결이
-    # 아니다. **`는` 이 특히 중요하다** — "~다는"은 한국어에서 절대 종결이 될 수 없고
-    # 항상 뒤 명사를 꾸미는데, 이게 빠져 있어서 "요구된다는 지적/우려" 같은 정상
-    # 문형이 그대로 감점됐다(2026-08-14 코드 리뷰 실측).
-    ("T12", "S2", "무주어 피동 ~이 요구된다",
+     "Use '-하다' — '개선시킬 수 있다' → '개선할 수 있다'"),
+    # Agentless passive ending. A different branch from T5 (~에 의해 + passive) — there
+    # the agent is in the sentence (so it can be turned back to active); here there is
+    # none at all ("주의가 요구됩니다" says nothing about who demands what of whom).
+    # `(?![면고는])` is the same branch guard as D8 — conditional ("요구된다면"),
+    # connective ("요구된다고 한다"), and adnominal clause ("요구된다는 지적") aren't
+    # endings. **`는` matters most** — "~다는" can never be a sentence ending in Korean
+    # and always modifies the following noun; with it missing, normal forms like
+    # "요구된다는 지적/우려" were penalized (2026-08-14 code review, measured).
+    ("T12", "S2", "agentless passive ~이 요구된다",
      re.compile(r"[이가]\s*요구(된다|됩니다|돼요|되었다|되었습니다|됐다|됐습니다|되고\s*있(다|습니다))(?![면고는])"), 0,
-     "누가 무엇을 해야 하는지로 — '주의가 요구됩니다' → '주의해야 합니다'"),
-    # 무생물이 사람처럼 말하는 문형. 넷 중 정규식으로 가장 안 갈리는 항목이라 주어
-    # 명사와 서술어를 양쪽 다 열거해 좁혔고, 그래도 남는 불확실성만큼 심각도를 낮췄다
-    # (S3 = 2점, 사람 눈에만 올라간다). 관형형("자료가 말해 주는 것은")은 정상 문형이라
-    # 종결형만 본다. 구간은 `[^.!?\n]{0,60}` — 중첩 수량사를 피해 백트래킹을 막는다.
-    ("T13", "S3", "무생물 주어 능동",
+     "Say who has to do what — '주의가 요구됩니다' → '주의해야 합니다'"),
+    # An inanimate thing speaking like a person. Of the four this is the hardest to
+    # discriminate by regex, so both the subject noun and the predicate are enumerated to
+    # narrow it, and severity is lowered by the uncertainty that remains (S3 = 2 points,
+    # surfaces to human eyes only). The adnominal ("자료가 말해 주는 것은") is a normal
+    # form, so only endings are checked. The span is `[^.!?\n]{0,60}` — avoids nested
+    # quantifiers to prevent backtracking.
+    ("T13", "S3", "inanimate subject + active verb",
      re.compile(r"(결과|수치|통계|자료|데이터|보고서|기록|지표)[은는이가]\s[^.!?\n]{0,60}"
                 r"(말해\s*(준다|줍니다|주고\s*있(다|습니다))|웅변(한다|합니다))(?![면고는])"), 0,
-     "'~에서 알 수 있다' 로 — '이 결과는 ~ 말해 준다' → '이 결과에서 알 수 있다'"),
+     "Use '~에서 알 수 있다' — '이 결과는 ~ 말해 준다' → '이 결과에서 알 수 있다'"),
 
-    # --- AI 관용구 D ---------------------------------------------------------
-    # 구어 축약 "~적으론"·"~적으로는"도 같은 상투어다(실측 누락). 세 단어만 명시해
-    # "기본적으론"·"개인적으론" 같은 정상 부사는 비켜 간다.
-    ("D1", "S1", "상투적 도입·결말어",
+    # --- AI stock phrases D --------------------------------------------------
+    # The colloquial contractions "~적으론"·"~적으로는" are the same cliché (a measured
+    # miss). Only the three words are spelled out, so normal adverbs like "기본적으론"·
+    # "개인적으론" stay clear.
+    ("D1", "S1", "stock opener/closer words",
      re.compile(r"((?:결론|궁극|본질)적으(?:로[는은]?|론)|요컨대|종합하면|정리하자면)"), 0,
-     "삭제. 답은 첫 문장에서 말한다"),
-    ("D2", "S1", "의의 과장",
-     # 종결형만 잡으면 관형형이 샌다 — "주목받는 변화"·"주목되는 대목"이 미검출이었다.
-     # 평가 쪽은 넓히지 않는다: "높게 평가받는 대행사"는 사실 서술이라 S1 로 막으면 과차단.
-     # **관형형은 뒤 명사로 갈린다.** "주목받는 변화"(추상어=슬롭)와 "주목받는 기업"
-     # (구체 명사=사실 서술)이 같은 형태다. 그냥 넓혔더니 정상 문장이 S1 으로 막혔다
-     # (실측 5건). D7 과 같은 방식으로 뒤를 추상어 목록에 묶어 슬롭만 남긴다.
-     # 종결형(주목된다·주목받는다)은 목적어가 없어 항상 슬롭이라 그대로 둔다.
+     "Delete. Say the answer in the first sentence"),
+    ("D2", "S1", "significance inflation",
+     # Catching only endings lets adnominals leak — "주목받는 변화"·"주목되는 대목" went
+     # undetected.
+     # The 평가 side is not widened: "높게 평가받는 대행사" is factual reporting, and
+     # blocking it at S1 over-blocks.
+     # **Adnominals split on the following noun.** "주목받는 변화" (abstract noun = slop)
+     # and "주목받는 기업" (concrete noun = factual reporting) have the same shape.
+     # Widening naively blocked normal sentences at S1 (5 measured cases). Same approach
+     # as D7: tie the tail to an abstract-noun list so only slop remains.
+     # Endings (주목된다·주목받는다) take no object and are always slop, so they stay.
      re.compile(r"(시사하는\s*바가\s*[크큽]|의미가\s*[크큽]|주목할\s*만하"
                 r"|주목(된다|받는다|됩니다|받습니다)"
                 r"|주목(받는|되는|받은|받고\s*있는|되고\s*있는)"
                 r"\s*(변화|대목|행보|움직임|흐름|점|부분|사실|현상|추세)"
                 r"|평가된다|평가받는다|귀추가\s*주목|기대를\s*모으)"), 0,
-     "무엇이 왜 그런지로 바꾸거나 삭제"),
-    # 훈계형은 성질이 다른 둘이 섞여 있어서 나눴다. **심각도는 그 패턴이 실제로
-    # 판별할 수 있는 만큼만 준다.**
+     "Replace with what and why, or delete"),
+    # The lecturing form mixes two different animals, so it's split. **Severity goes only
+    # as far as the pattern can actually discriminate.**
     #
-    # D3(S1) 은 문장 안에 판별 근거가 있다. 고정 관용구이거나(할 필요가 있다·하는
-    # 것이 중요하다·명심해야) 청자 높임 `~셔야`가 문법 표지로 대상을 독자로 못박는다.
-    # 오탐 위험이 없어 반려해도 된다.
-    ("D3", "S1", "훈계형",
+    # D3 (S1) has its evidence inside the sentence. Either it's a fixed idiom (할 필요가
+    # 있다·하는 것이 중요하다·명심해야) or the addressee honorific `~셔야` pins the
+    # target to the reader as a grammatical marker. No false-positive risk, so rejecting
+    # is safe.
+    ("D3", "S1", "lecturing form",
      re.compile(r"(할\s*필요(가|성이)\s*있|하는\s*것이\s*중요"
                 r"|[가-힣]{1,6}[셔서]야\s*할\s*것(이다|입니다)|명심해야)"), 0,
      "'확인할 필요가 있다' → '확인하자'"),
-    # D3b(S2) 는 못 갈린다. "기한을 지켜야 할 것이다"(훈계)와 "내년에는 제도가
-    # 바뀌어야 할 것이다"(전망)가 같은 형태다. 갈리는 건 용언도 주어도 아니고
-    # **화행**(누구에게 하는 말인가)인데, 그건 문장 어디에도 표지가 없다.
-    # 뒤(용언)를 묶어 봤더니 전망·조건절 귀결 7종이 전부 반려됐다(실측 7/7).
-    # 그래서 반려가 아니라 경고다 — 뉴스는 전망을 쓰는 장르라 막으면 글이 막힌다.
-    ("D3b", "S2", "~야 할 것이다 (훈계면 고치고 전망이면 둔다)",
+    # D3b (S2) can't discriminate. "기한을 지켜야 할 것이다" (lecture) and "내년에는
+    # 제도가 바뀌어야 할 것이다" (forecast) have the same shape. What splits them is
+    # neither predicate nor subject but the **speech act** (who the sentence addresses),
+    # and nothing in the sentence marks that.
+    # Constraining the tail (the predicate) rejected all 7 forecast/conditional-conclusion
+    # cases (measured 7/7). So it warns instead of rejecting — news is a genre that
+    # writes forecasts, and blocking them blocks the writing.
+    ("D3b", "S2", "~야 할 것이다 (fix if it lectures, keep if it forecasts)",
      re.compile(r"([을를]\s*(?:[가-힣]+\s+){0,2}[가-힣]{1,6}야\s*할\s*것(이다|입니다)"
                 r"|[가-힣]{2,}(?:해|하여)야\s*할\s*것(이다|입니다))"), 0,
-     "남에게 시키는 말이면 '지키자'로. 전망이면 그대로 둔다"),
-    ("D4", "S2", "완곡 회피",
+     "If it tells others what to do, use '지키자'. If it's a forecast, leave it"),
+    ("D4", "S2", "hedging",
      re.compile(r"(라고\s*할\s*수\s*있|로\s*보여진다|인\s*셈이다|라고\s*볼\s*수\s*있"
                 r"|것으로\s*보(인다|입니다|이며)|것으로\s*예상|라고\s*여겨)"), 1,
-     "단정할 수 있으면 단정한다"),
-    ("D5", "S2", "과장 수식",
+     "If you can state it flat, state it flat"),
+    ("D5", "S2", "hype modifiers",
      re.compile(r"(혁신적|획기적|새로운\s*지평|게임\s*체인저|판도를\s*바꿀|놀라운)"), 0,
-     "삭제. 강조는 수식어가 아니라 숫자로"),
-    ("D6", "S2", "뜻 없는 수식어",
+     "Delete. Emphasize with numbers, not modifiers"),
+    ("D6", "S2", "empty modifiers",
      re.compile(r"(매우|굉장히|효과적으로|원활하게|성공적으로|다양한|폭넓은|손쉽게)"), 1,
-     "삭제"),
-    # 어휘 티는 없는데 내용도 없는 보도자료체 — 규칙 확장 실측에서 마지막까지
-    # 통과하던 유형이다.
-    # "중요한 것은 X입니다"는 X 가 추상어일 때만 잡는다 — "중요한 것은 접수증입니다"
-    # 같은 구체적 결론까지 먹으면 잘 쓴 문장이 감점된다(실측). "전환점을 맞"도
-    # 사실 서술을 과포획해서 뺐다.
-    ("D7", "S2", "공허한 수사",
+     "Delete"),
+    # Press-release prose with no lexical tell and no content either — the type that kept
+    # passing until the very end of the rule-expansion measurements.
+    # "중요한 것은 X입니다" is caught only when X is an abstract noun — swallowing
+    # concrete conclusions like "중요한 것은 접수증입니다" penalizes well-written
+    # sentences (measured). "전환점을 맞" was dropped too for over-capturing factual
+    # reporting.
+    ("D7", "S2", "hollow rhetoric",
      re.compile(r"(물결\s*속에서|시대의?\s*흐름\s*속|균형점을\s*찾|화두로\s*떠오"
                 r"|답은\s*간단합니다|핵심은\s*딱\s*하나|새로운\s*국면"
                 r"|중요한\s*것은\s*(방향|본질|자세|태도|의지|마음가짐|관점|균형))"), 0,
-     "구체적 사실·숫자로 바꾸거나 삭제"),
-    # 보고체 상태 동사 종결 — 사용자 지시(2026-08-12, 같은 날 2차 확장).
-    # 현상을 동사 하나로 정리해 끝내는 낭독체를 잡는다: "둘로 나뉩니다" · "추천이
-    # 갈려요" · "선택지가 남습니다" · "근거를 남긴다".
-    # 인용·간접화법("나뉜다는 얘기야")도 잡는다 — 실측으로 확인한 현재 동작이고,
-    # 사용자 지시가 "절대 쓰지 않도록"이라 느슨하게 풀지 않는다.
-    # 잡지 않는 것: 관형형("갈리는 이유" — 제목 문형) · 조건절("나뉜다면") ·
-    # 구어 과거·명령("후기 남겼어"·"메모 남겨 둬"·"3일 남았어요").
-    # '남기다'는 타동사지만 같은 보고체 종결이라 함께 잡는다 — 현재형 격식
-    # (남긴다·남깁니다)만이다. 사람은 "적어 둔다"·"메모해 둔다"로 말한다.
-    # '갈-' 계열은 어두이거나 '엇갈-'일 때만 — "헷갈렸어요"·"헷갈립니다"는 일상어라
-    # 경계 없이 잡으면 오탐이 난다(fect-persona 이식 중 발견, 2026-08-12).
-    ("D8", "S1", "보고체 상태 동사 종결",
+     "Replace with concrete facts and numbers, or delete"),
+    # Report-register stative verb endings — user directive (2026-08-12, second expansion
+    # the same day). Catches the read-aloud register that wraps a phenomenon in one verb
+    # and stops: "둘로 나뉩니다" · "추천이 갈려요" · "선택지가 남습니다" · "근거를 남긴다".
+    # Quotes and reported speech ("나뉜다는 얘기야") are caught too — that's the current
+    # behavior, confirmed by measurement, and the user directive says "never", so it
+    # isn't loosened.
+    # Not caught: adnominals ("갈리는 이유" — headline phrasing) · conditionals
+    # ("나뉜다면") · colloquial past and imperatives ("후기 남겼어"·"메모 남겨 둬"·
+    # "3일 남았어요").
+    # '남기다' is transitive but shares the report-register ending, so it's caught too —
+    # present formal only (남긴다·남깁니다). People say "적어 둔다"·"메모해 둔다".
+    # The '갈-' family only word-initially or as '엇갈-' — "헷갈렸어요"·"헷갈립니다" are
+    # everyday words, and matching without a boundary false-positives (found while
+    # porting to fect-persona, 2026-08-12).
+    ("D8", "S1", "report-register stative verb ending",
      re.compile(r"(나뉜다|나뉩니다|나뉘어요|나뉘죠|나뉘었"
                 r"|(?:엇|(?<![가-힣]))갈(?:린다|립니다|려요|리죠|렸다|렸어요|렸습니다|립니까)"
                 r"|(?<!살아)남습니다|(?<!살아)남는다|남긴다|남깁니다)(?!면)"), 0,
-     "대상을 주어로 구체적으로 — '추천이 갈려요' → '미용실마다 다른 색을 권해요',"
+     "Make the target the subject, concretely — '추천이 갈려요' → '미용실마다 다른 색을 권해요',"
      " '근거를 남긴다' → '근거를 적어 둔다'"),
 
-    # D9/D9b — 구어 표면의 문어체 평서형 종결. 사용자 지시(2026-08-13):
-    # "화면이 나온다 / 주소부터 준다 / 이렇게 친다 -> 이런식의 말투는 사람이 쓰는
-    # 말투가 아니잖아". 해라체 평서형 '-ㄴ다/-는다'는 설명문·논설문·신문기사·논문의
-    # 어미다(국립국어원). 불특정 다수에게 쓰는 글의 레지스터라 낮춤의 뜻도 없고,
-    # 옆자리 동료에게 말할 때는 아무도 이렇게 끝내지 않는다.
+    # D9/D9b — written-register declarative endings on spoken surfaces. User directive
+    # (2026-08-13): "화면이 나온다 / 주소부터 준다 / 이렇게 친다 -> 이런식의 말투는
+    # 사람이 쓰는 말투가 아니잖아" (that's not how a person talks). The plain declarative
+    # '-ㄴ다/-는다' is the ending of expository prose, editorials, news articles, and
+    # papers (National Institute of Korean Language). It's the register of writing for an
+    # unspecified audience, doesn't even carry the lowering meaning, and nobody ends
+    # sentences this way talking to the colleague next to them.
     #
-    # 종성 인덱스 4(ㄴ)로 가른다 — '-ㄴ다/-는다'는 **동사에만 붙는 어미**라
-    # (형용사 판별 기준 그 자체다) 오탐 면적이 작다. 형용사 기본형('편하다'·
-    # '다르다'·'같다')과 '-이다'는 앞 음절 종성이 ㄴ 이 아니라 자동으로 빠진다.
-    # 문장 끝일 때만 본다 — 연결형('간다고 했어')·관형형('가는 길')·조건절
-    # ('간다면')은 대상이 아니다. 닫는 따옴표·괄호는 넘어서 본다.
-    ("D9", "S1", "문어체 평서형 종결 (-ㄴ다/-는다)",
+    # Split on final-consonant index 4 (ㄴ) — '-ㄴ다/-는다' is an **ending that attaches
+    # to verbs only** (it's the very test for telling adjectives apart), so the
+    # false-positive surface is small. Adjective base forms ('편하다'·'다르다'·'같다')
+    # and '-이다' have a different final consonant on the preceding syllable and drop out
+    # automatically.
+    # Sentence-final only — connective ('간다고 했어'), adnominal ('가는 길'), and
+    # conditional ('간다면') aren't targets. Closing quotes and brackets are looked past.
+    ("D9", "S1", "written-register declarative ending (-ㄴ다/-는다)",
      re.compile(r"[가-힣]다(?=[\"'”’」』)\]]*\s*(?:[.!?…]|\n|$))", re.M), 0,
-     "구어 반말로 끝낸다 — '화면이 나온다' → '화면이 나와', '주소부터 준다' →"
+     "End in casual spoken form — '화면이 나온다' → '화면이 나와', '주소부터 준다' →"
      " '주소부터 줘', '이렇게 친다' → '이렇게 쳐'"),
-    # D9b 는 일기체 과거다. S2 인데 **thr=1 로 첫 한 건을 면제한다** — S2 는 7점이라
-    # 두 문장만 이렇게 닫혀도 86점이 되어 게이트(90) 탈락이다. 사용자가 지적한 건
-    # 현재형 절차 서술이었고 '~했다'는 스레드에서 사람도 쓴다. 산수를 알고 넣었다.
-    ("D9b", "S2", "일기체 과거 종결 (-았다/었다/였다/했다)",
+    # D9b is the diary-style past. It's S2, but **thr=1 exempts the first hit** — S2
+    # costs 7 points, so just two sentences closed this way hit 86 and fail the 90 gate.
+    # What the user flagged was present-tense procedural prose, and people do write
+    # '~했다' on Threads. The arithmetic was known when this went in.
+    ("D9b", "S2", "diary-style past ending (-았다/었다/였다/했다)",
      re.compile(r"(았|었|였|했)다(?=[\"'”’」』)\]]*\s*(?:[.!?…]|\n|$))", re.M), 1,
-     "구어 반말로 — '만들었다' → '만들었어'. 한 번은 감수한다(두 번째부터 감점)"),
+     "Casual spoken form — '만들었다' → '만들었어'. One is tolerated (penalty from the second)"),
 
-    # --- 구조·리듬 C ---------------------------------------------------------
-    # `데,` 는 열거로 잡히지 않는다 — 어간이 무엇이든 붙을 수 있어서다(많은데·비싼데·
-    # 한데·어딘데·예쁜데…). 어미 목록을 늘리면 계속 샌다(2026-08-11 실측: 열거안이
-    # "어딘데," 를 놓쳤다). 그래서 `<한글>데,` 를 넓게 잡고 **앞 음절 받침 유무**로
-    # 가른다(아래 C1_DATA_TAIL 후처리) — 연결어미 -은데/-ㄴ데/-는데 는 항상 받침 있는
-    # 음절로 끝나고, 의존명사 '데'(갈 데, 잘 데)는 띄어 쓰므로 붙어 있으면 어미다.
-    # 검증 표본 9/9 검출 · 오탐 0(데스크탑·데이터·"갈 데, 올 데"·"기대, 실망" 등 12건).
-    ("C1", "S1", "연결어미 뒤 쉼표",
+    # --- Structure and rhythm C ----------------------------------------------
+    # `데,` can't be caught by enumeration — it attaches to any stem (많은데·비싼데·
+    # 한데·어딘데·예쁜데…). Growing the ending list keeps leaking (measured 2026-08-11:
+    # the enumeration draft missed "어딘데,"). So `<hangul>데,` is matched broadly and
+    # split by **whether the preceding syllable has a final consonant** (the C1_DATA_TAIL
+    # post-processing below) — the connective endings -은데/-ㄴ데/-는데 always end on a
+    # syllable with one, and the bound noun '데' (갈 데, 잘 데) is written with a space,
+    # so attached means ending.
+    # Verification sample 9/9 detected · 0 false positives (데스크탑·데이터·"갈 데,
+    # 올 데"·"기대, 실망" etc., 12 cases).
+    ("C1", "S1", "comma after connective ending",
      re.compile(r"(지만|는데|면서|라서|어서|아서|으며|하며|거나|려면|더라도|해도|지요|는지),"
                 r"|[가-힣]데,"), 0,
-     "쉼표를 뺀다 — '발전하지만, 대응은 느리다' → '발전하지만 대응은 느리다'"),
-    ("C2", "S2", "부정 대구 'A가 아니라 B'",
+     "Drop the comma — '발전하지만, 대응은 느리다' → '발전하지만 대응은 느리다'"),
+    ("C2", "S2", "negation parallelism 'A가 아니라 B'",
      re.compile(r"(이|가|은|는|도)?\s*아니라\s"), 0,
-     "그냥 B라고 쓴다 (2회 이상이면 S1 승격)"),
-    # 용언 3연속만 잡는다. 명사 나열("여권, 비자, 계약서")은 체크리스트 장르의
-    # 기본 문형이라 대상이 아니다 — 실측에서 오탐이 났다.
-    ("C3", "S2", "3항 나열 (대등 용언)",
+     "Just write B (promoted to S1 at 2 or more)"),
+    # Only three predicates in a row. Noun lists ("여권, 비자, 계약서") are the basic
+    # phrasing of the checklist genre and aren't targets — they false-positived in
+    # measurement.
+    ("C3", "S2", "triple listing (coordinated predicates)",
      re.compile(r"[가-힣]{2,}고\s+[가-힣]{2,}(하)?며\s+[가-힣]{2,}[한는]"
                 r"|[가-힣]{2,}하고\s*,\s*[가-힣]{2,}하고\s*,\s*[가-힣]{2,}[한하]"), 0,
-     "정말 셋일 때만 셋. 대개 하나면 된다"),
-    ("C6", "S2", "기계적 3단",
+     "Three only when there really are three. Usually one is enough"),
+    ("C6", "S2", "mechanical three-step",
      re.compile(r"(먼저|첫째|첫\s*번째).{0,120}?(다음으로|둘째|두\s*번째).{0,120}?(마지막으로|끝으로|셋째)",
                 re.S), 0,
-     "순서가 진짜 중요할 때만"),
+     "Only when the order truly matters"),
 
-    # --- 조수 말투 A ---------------------------------------------------------
-    ("A1", "S1", "안내형 도입",
-     # 구어 청유 "~시죠"도 같은 안내형이다(실측 누락).
+    # --- Assistant voice A ---------------------------------------------------
+    ("A1", "S1", "tour-guide opener",
+     # The colloquial invitation "~시죠" is the same opener (a measured miss).
      re.compile(r"(함께\s*알아보|알아볼까요|알아보시죠|알아봅시다"
                 r"|살펴볼까요|살펴보시죠|살펴봅시다"
                 r"|오늘은\s*\S{0,20}에\s*대|이번\s*시간에는)"), 0,
-     "본론부터"),
-    # 짧은 감사 인사 자체는 정상 응대다(platform-guide 원칙 4 골든타임). 콘텐츠를
-    # 닫는 상투적 마무리만 잡는다.
-    ("A2", "S1", "마무리 인사",
-     # "도움 되셨나요?"처럼 조사를 뺀 구어형이 샜다(실측).
+     "Get to the point"),
+    # A short thank-you by itself is normal engagement (platform-guide principle 4,
+    # golden hour). Only the stock closer that wraps up content is caught.
+    ("A2", "S1", "closing pleasantry",
+     # Colloquial forms with the particle dropped, like "도움 되셨나요?", leaked (measured).
      re.compile(r"(도움이?\s*되(셨|었)|참고하시기\s*바랍|참고\s*부탁|되시길\s*바랍"
                 r"|읽어\s*주셔서\s*(감사|고맙)|읽어주셔서\s*(감사|고맙)"
                 r"|시청해\s*주셔서|끝까지\s*(봐|읽)"
                 r"|다음에도\s*(유익|좋은|알찬)|찾아뵙)"), 0,
-     "삭제"),
-    ("A3", "S2", "안 물어본 균형",
+     "Delete"),
+    ("A3", "S2", "unasked-for balance",
      re.compile(r"(물론\s.{0,40}도\s*있지만|양쪽\s*모두|일장일단|장단점이\s*있)"), 0,
-     "한쪽을 고르거나 삭제"),
-    ("A4", "S1", "인사 개시·채널 홍보",
-     # "전해 드립니다"는 띄어쓰기가 표준인데 붙여쓴 형태만 잡고 있었다(실측 누락).
-     # 종결형만 잡는다 — "말씀을 전해 드리려고 왔다"는 정상 서술이다.
+     "Pick a side or delete"),
+    ("A4", "S1", "greeting opener / channel promo",
+     # "전해 드립니다" with the standard spacing wasn't caught — only the run-together
+     # form was (a measured miss).
+     # Endings only — "말씀을 전해 드리려고 왔다" is normal narration.
      re.compile(r"(안녕하세요|반갑습니다|소식을\s*전해\s*드리"
                 r"|전해\s*드립니다|전해드립니다"
                 r"|구독과?\s*좋아요|좋아요\s*눌러|구독\s*눌러"
                 r"|알림\s*설정|많은\s*관심\s*부탁)"), 0,
-     "본론부터. 채널 표시는 아웃트로가 맡는다"),
+     "Get to the point. The outro handles channel identity"),
 ]
 
-# 접속부사는 뒤에 쉼표가 와도 정상이다("하지만, ~"). C1 정규식이 어미로 잡는
-# "하지만"과 어간이 붙은 "발전하지만"은 어절 전체를 봐야 구분된다.
+# A conjunctive adverb followed by a comma is fine ("하지만, ~"). "하지만" that the C1
+# regex catches as an ending and "발전하지만" with a stem attached can only be told
+# apart by looking at the whole eojeol (space-delimited word).
 CONJ_ADVERBS = {
     "하지만", "그렇지만", "그런데", "한데", "그러면서", "그래서", "그러니까",
     "그러므로", "다만", "게다가",
 }
 
-# 플레이북이 규정한 표현 — 패턴에 걸려도 위반이 아니다.
+# Expressions the playbook prescribes — matching a pattern isn't a violation.
 #
-# **항목은 짧게 유지한다.** 화이트리스트는 매치가 그 구간 안에 들어가면 통째로
-# 면제하므로, 긴 구간을 넣으면 그 안이 슬롭 은신처가 된다(자매 플러그인 실측:
-# 30자짜리 1인칭 패턴을 넣었더니 "나도" 두 글자로 T1·D1·D6·T3 가 전부 빠졌다).
-# 지금 항목은 전부 7자 이하다. 넓은 면제가 필요하면 화이트리스트가 아니라
-# 해당 규칙에서 처리한다(D3 의 FIRST_PERSON_LEAD 후처리 참고).
+# **Keep entries short.** The whitelist exempts a match wholesale when it falls inside
+# an entry's span, so a long span becomes a slop hideout (sister-plugin measurement:
+# adding a 30-char first-person pattern let the two chars "나도" exempt T1·D1·D6·T3
+# entirely). Every current entry is 7 chars or less. If a wide exemption is needed,
+# handle it in the rule itself, not the whitelist (see D3's FIRST_PERSON_LEAD
+# post-processing).
 WHITELIST = (
-    # 부사 + '의' 는 이중 조사가 아니다 — "앞으로의 변화"는 자연스러운 한국어다(T6 오탐).
+    # Adverb + '의' isn't a double particle — "앞으로의 변화" is natural Korean (T6
+    # false positive).
     re.compile(r"(앞|뒤|이후|향후|지금|평소)으?로의"),
-    # FB 사례 수집형 마무리 — 플레이북 §5 규정. 지금은 어떤 패턴에도 걸리지 않지만,
-    # 질문 종결 규칙을 나중에 넣더라도 이 표현은 보호되도록 미리 선언해 둔다.
+    # The FB case-collecting closer — playbook §5 prescription. It matches no pattern
+    # today, but it's declared in advance so a future question-ending rule can't break it.
     re.compile(r"여러분은\s*어떻게\s*(하고\s*)?(계신가요|하시나요)"),
-    # "다름 아니라"는 고정 관용구다 — 부정 대구(C2)가 아니다.
-    # C2 매치가 뒤 공백까지 포함하므로 화이트리스트도 공백을 덮어야 한다.
+    # "다름 아니라" is a fixed idiom — not negation parallelism (C2).
+    # The C2 match includes the trailing space, so the whitelist must cover it too.
     re.compile(r"다름\s*아니라\s*"),
 )
 
 # ---------------------------------------------------------------------------
-# 표면별 설정
+# Per-surface configuration
 # ---------------------------------------------------------------------------
 
-# off 목록이 표면별 완화의 유일한 창구다 — korean-style.md 의 "끄는 규칙" 열과
-# 이 표가 정확히 같아야 한다. 한쪽만 고치지 않는다.
+# The off lists are the only channel for per-surface loosening — this table and the
+# "Rules off" column in korean-style.md must match exactly. Never change one side alone.
 SURFACE_CFG = {
-    # C7(장문 부재)은 길이를 스키마로 묶는 표면에서 끈다 — 8~25자로 잘라 읽히게
-    # 만든 나레이션에 "길게 쓰라"는 처방은 스키마와 싸운다.
-    # D9/D9b(문어체 평서형 종결)는 **사람이 말하는 표면에서만** 켠다. 나레이션은
-    # 8~25자 스키마에 묶인 대사라 채널마다 해라체 서술을 쓰는 자리가 있고(픽스처
-    # "하루만 늦어도 과태료가 나온다"·"전에는 사흘이었다"), 자막·카드는 문장이
-    # 아니라 조각이다. yt 제목은 헤드라인 레지스터라 '-ㄴ다'가 정상 문형이다.
+    # C7 (no long sentence) is off on surfaces whose length is bound by schema — telling
+    # narration cut to 8~25 chars for readability to "write longer" fights the schema.
+    # D9/D9b (written-register declarative endings) are on **only for surfaces where a
+    # person speaks**. Narration is dialogue bound to the 8~25-char schema, and channels
+    # have places for plain-register statements (fixtures "하루만 늦어도 과태료가
+    # 나온다"·"전에는 사흘이었다"); subtitles and cards are fragments, not sentences.
+    # yt titles are headline register, where '-ㄴ다' is normal phrasing.
     "narration": {"emoji": 0, "len": (8, 25), "off": ("C7", "D9", "D9b")},
     "subtitle":  {"emoji": 0, "len": (0, 30), "off": ("C3", "C5", "C6", "C7", "D9", "D9b")},
-    # 카드 텍스트는 제목·라벨 조각이라 리듬 규칙이 맞지 않는다. 어휘 티만 본다.
+    # Card text is title/label fragments, so rhythm rules don't fit. Lexical tells only.
     "screen":    {"emoji": 0, "len": None,    "off": ("C1", "C3", "C5", "C6", "C7", "T9", "D9", "D9b")},
     "threads":   {"emoji": 1, "len": None,    "off": ("C5",)},
     "ig":        {"emoji": 3, "len": None,    "off": ()},
     "fb":        {"emoji": 2, "len": None,    "off": ("C3", "C6")},
     "yt":        {"emoji": 2, "len": None,    "off": ("C1", "C3", "C5", "C6", "C7", "T9", "D9", "D9b")},
-    # A4 를 끈다 — 댓글의 "안녕하세요"는 골든타임 응대의 표준 첫마디다(플레이북 원칙 4).
+    # A4 is off — "안녕하세요" in a comment reply is the standard golden-hour opener
+    # (playbook principle 4).
     "reply":     {"emoji": 1, "len": None,    "off": ("C3", "C5", "C6", "A4")},
 }
 
-# C7 임계 — 이 자릿수 미만이 최장 문장이면 "장문 부재". 실측 분리점은 21/25 라
-# 그 사이를 잡았다. 올리면 정상 목록형까지 걸리고, 내리면 아무것도 안 걸린다.
+# C7 threshold — "no long sentence" when the longest is under this many chars. The
+# measured split point was 21/25, so a value in between. Raise it and normal list-style
+# posts get caught; lower it and nothing does.
 C7_FLOOR = 23
 
 PENALTY = {"S1": 20, "S2": 7, "S3": 2}
 METRIC_PENALTY = 3
-WARN_BELOW = 85  # S1 이 없어도 이 점수 미만이면 exit 1
+WARN_BELOW = 85  # exit 1 below this score even with no S1
 
 # ---------------------------------------------------------------------------
 
 
 def mask(text: str, doc: bool = False) -> str:
-    """Do-NOT 구간을 같은 길이의 공백으로 가린다(오프셋 보존)."""
+    """Mask Do-NOT spans with same-length spaces (offsets preserved)."""
     out = list(text)
     for rx in MASKS + (DOC_MASKS if doc else ()):
         for m in rx.finditer(text):
@@ -380,83 +432,97 @@ def whitelist_spans(text: str) -> list[tuple[int, int]]:
     return [(m.start(), m.end()) for rx in WHITELIST for m in rx.finditer(text)]
 
 
-# 큰따옴표 직접 인용. 가리지 않는다(가리면 슬롭 은신처가 된다) — 대신 여기서 나온
-# 위반은 `quoted` 라벨을 달아 점수·판정에서 빼고 보고에만 싣는다. 남의 말을 옮긴
-# 구간은 고치는 것 자체가 왜곡이기 때문이다(korean-style.md §Do-NOT).
+# Direct quotes in double quotation marks. Not masked (masking makes a slop hideout) —
+# instead, violations found here get a `quoted` label, are excluded from score and
+# verdict, and appear only in the report. Fixing a span that relays someone else's words
+# is itself distortion (korean-style.md §Do-NOT).
 QUOTE_RX = re.compile(r"[\"“][^\"”]{0,400}[\"”]")
 
-# 면제 조건은 **출처가 특정됐는가**다. 두 번 틀렸다.
-#   1차: 인용 비중으로 갈랐더니 양방향으로 깨졌다 — 비중이 낮으면 앞에 평범한
-#        문장만 깔아 슬롭을 통과시킬 수 있었고, 비중이 높으면 짧은 글의 정당한
-#        원문 인용이 차단됐다. 비중은 정당성과 무관한 축이다.
-#   2차: 귀속 표지로 바꿨는데 목록이 넓어 서사 어휘까지 들어갔다. "그가 말했다."
-#        "이렇게." "다음과 같습니다." 두 단어만 붙이면 임의의 슬롭이 통과했다.
-#        지어낸 슬롭 앞에 붙이기가 진짜 인용 앞에 붙이기보다 쉬웠다.
-# 그래서 지금은 **무엇의 말인지 지목하는 표지**만 인정한다.
+# The exemption condition is **whether the source is identified**. Got this wrong twice.
+#   1st: splitting on quote share broke both ways — with a low share you could pad
+#        ordinary sentences in front and pass slop through; with a high share, a short
+#        post's legitimate verbatim quote got blocked. Share is an axis unrelated to
+#        legitimacy.
+#   2nd: switched to attribution markers, but the list was wide enough to admit
+#        narrative vocabulary. "그가 말했다." "이렇게." "다음과 같습니다." — two words
+#        in front passed arbitrary slop. Prefixing invented slop was easier than
+#        prefixing a real quote.
+# So now only **markers that point at whose words these are** count.
 SOURCE_NOUNS = (
     r"(시행령|시행규칙|법률|법령|고시|공고|공문|훈령|조례|지침|약관|규정집|판결문"
     r"|보도자료|안내문|성명서|백서|매뉴얼|공안부|국세청|외교부|노동부|보건부|출입국"
     r"|대사관|영사관|세무서|관공서|당국"
-    # 생활 출처. 이 장르에서 집주인·중개인·고객센터 인용은 기관 인용만큼 흔한데
-    # 기관 명사만 두면 그런 인용이 통째로 차단됐다(실측: 집주인 문자 인용 exit 2,
-    # 우회 수단 없음 — 남의 문자를 고치라는 처방이 되어 §Do-NOT 와 충돌했다).
-    # 넓혀도 조용한 통과가 되지 않는다 — 면제는 exit 1 로 사람 눈에 올라간다.
+    # Everyday sources. In this genre, quoting a landlord, an agent, or customer service
+    # is as common as quoting an agency, and with agency nouns only those quotes were
+    # blocked outright (measured: a landlord text-message quote hit exit 2 with no way
+    # around — the prescription became "fix someone else's text", clashing with §Do-NOT).
+    # Widening doesn't create a silent pass — exemptions surface to human eyes as exit 1.
     r"|집주인|임대인|세입자|중개인|인사팀|고객센터|상담원)"
 )
-# 출처를 지목하는 지시대명사·범용어는 배제한다. "이것에 따르면" 한 어절로 면제가
-# 열렸다(실측) — 무엇의 말인지 하나도 특정하지 않는 표지다.
+# Demonstratives and generic nouns pointing at a source are excluded. The single word
+# "이것에 따르면" opened the exemption (measured) — a marker that identifies nothing
+# about whose words these are.
 VAGUE = r"(?!(?:이것|그것|저것|여기|거기|이거|그거|이런|그런|자료|내용|정보)에\s*따르면)"
-# 개인 출처 행위형 뒤에 붙어 "옮긴 것"이 아니라 "알게 된 계기"임을 드러내는 꼬리.
-# 단 어미만 보면 갈리지 않는다 — "받고 알았습니다"(계기)와 "받고 그대로 옮깁니다"
-# (인용 도입)가 같은 어미다(실측: 후자가 exit 2 로 막혔다). 뒤 20자 안에 옮김
-# 동사가 오면 계기가 아니라 도입이므로 배제를 취소한다.
+# The tail after a personal-source action form that reveals "how I found out" rather
+# than "what I'm relaying". The ending alone can't split them — "받고 알았습니다"
+# (occasion) and "받고 그대로 옮깁니다" (quote intro) share the ending (measured: the
+# latter got blocked at exit 2). A relaying verb within the next 20 chars means intro,
+# not occasion, so the exclusion is cancelled.
 NOT_HEARSAY = (
     r"(?!\s*(?:을|를|랑|이랑)?\s*(?:보고|받고|읽고|확인하고|보니|듣고)"
     r"(?!.{0,20}(?:옮|붙여|인용|그대로|전문)))"
 )
 ATTRIBUTION = re.compile(
-    r"(https?://"                                  # 인용에 붙은 출처 링크
-    rf"|{SOURCE_NOUNS}"                            # 문서·법령·기관·생활 출처 이름
-    rf"|{VAGUE}[가-힣A-Za-z0-9]{{2,}}에\s*따르면"   # "X에 따르면" — 출처를 목적어로 요구
+    r"(https?://"                                  # source link attached to the quote
+    rf"|{SOURCE_NOUNS}"                            # document/statute/agency/everyday-source names
+    rf"|{VAGUE}[가-힣A-Za-z0-9]{{2,}}에\s*따르면"   # "X에 따르면" — demands a source as its object
     r"|[가-힣A-Za-z0-9]{2,}이?\s*발표한"            # "X가 발표한"
-    # 개인 출처의 표준 문형 — 무엇을 옮긴 것인지(문자·메일·답변)까지 밝힌 경우.
-    # 뒤에 "~를 보고/받고" 가 오면 인용 도입이 아니라 경위 서술이다("친구가 보낸
-    # 문자를 보고 알았습니다") — 옮긴 게 아니라 알게 된 계기라서 표지가 아니다.
+    # The standard personal-source phrasing — when it also states what is being relayed
+    # (a text, an email, a reply). Followed by "~를 보고/받고" it's an account of events,
+    # not a quote intro ("친구가 보낸 문자를 보고 알았습니다") — how they found out, not
+    # a relay, so not a marker.
     rf"|[가-힣]{{2,}}(이|가|께서|에서)\s*(보낸|보내온|보내준|남긴|준)"
     rf"\s*(문자|메시지|메일|카톡|쪽지|답변|안내|공지|글){NOT_HEARSAY}"
     rf"|[가-힣]{{2,}}(에게|한테)\s*받은\s*(문자|메시지|메일|카톡|답변|안내){NOT_HEARSAY}"
     r")"
 )
-# 목록은 베트남·한국 행정 도메인에 맞춰져 있다. **채널이 늘어도 이 목록을 늘리지
-# 않는다** — 재테크·IT 채널의 출처는 `X에 따르면` 이나 URL 로 적으면 그대로 면제된다.
-# 명사를 계속 더하면 목록이 곧 우회로가 된다(흔한 단어가 섞이는 순간 두 글자 접두어로
-# 통과한다). 목록은 관공서 문서를 자주 인용하는 채널의 편의 축일 뿐이고, 일반 축은
-# URL 과 "X에 따르면" 둘이다.
+# The list is tuned to the Vietnam/Korea administrative domain. **Don't grow it as
+# channels grow** — a finance or IT channel's sources get exempted as-is by writing
+# `X에 따르면` or a URL. Keep adding nouns and the list itself becomes a bypass (the
+# moment a common word slips in, a two-char prefix passes). The list is only a
+# convenience axis for channels that quote government documents often; the general axes
+# are URLs and "X에 따르면", those two.
 
-# 인용 부호 앞뒤 이 범위 안에서 표지를 찾는다. 60자는 한국어 도입부 한 문장을
-# 넉넉히 덮는 폭이다 — "공안부가 지난주 발표한 시행령 원문은 다음과 같습니다."(27자),
-# "원문 https://example.gov.vn/decree 에는 이렇게 적혀 있습니다."(48자) 둘 다 들어온다.
-# 40자였을 때 URL 도입부가 잘려 정당한 인용이 면제를 못 받았다(실측).
-# 넓혀도 우회에 쓰이지 않는다 — 표지가 기관·법령·URL 이라 붙이려면 없는 출처를
-# 지어내야 하고, 그건 문체가 아니라 사실 왜곡 게이트(content-reviewer P0-3)가 잡는다.
+# Markers are searched within this range before and after the quote marks. 60 chars
+# comfortably covers one Korean intro sentence — "공안부가 지난주 발표한 시행령 원문은
+# 다음과 같습니다." (27 chars) and "원문 https://example.gov.vn/decree 에는 이렇게
+# 적혀 있습니다." (48 chars) both fit.
+# At 40 chars the URL intro got cut off and a legitimate quote missed its exemption
+# (measured).
+# Widening doesn't enable a bypass — the markers are agencies, statutes, and URLs, so
+# attaching one means inventing a source that doesn't exist, and that's caught by the
+# factual-distortion gate (content-reviewer P0-3), not the style gate.
 ATTRIBUTION_WINDOW = 60
-# 인용 바로 앞 줄은 거리와 무관하게 후보로 보되, 그 줄의 **끝 40자**까지만 본다.
-# 줄 전체를 열었더니 160자 도입부 맨 앞에 기관명 하나만 흘려도 그 아래 인용이
-# 통째로 면제됐다(실측). 그 우회를 막는 주역은 40 이 아니라 아래 min() 구조다 —
-# 앞줄에서 가져오는 범위를 유한하게 자르는 순간 막힌다(상수를 0 으로 놓고 재도
-# exit 2 다). 40 이 지키는 건 반대쪽이다: 출처가 앞줄에 있고 인용이 같은 줄에서
-# 60자 넘게 들여쓰이면 60자 창이 앞줄에 닿지 못하는데, 이때 꼬리 40자가 그 정당한
-# 인용을 살린다. 0 으로 되돌리면 셀프테스트 "앞줄 꼬리는 깊은 들여쓰기를 지킨다"
-# 가 깨진다 — 이 상수가 무엇을 지키는지는 그 픽스처가 증명한다.
+# The line right above the quote is a candidate regardless of distance, but only its
+# **last 40 chars** are read. Opening the whole line meant dropping one agency name at
+# the head of a 160-char intro exempted the quote below wholesale (measured). What
+# blocks that bypass isn't the 40 but the min() structure below — the moment the range
+# taken from the previous line is cut finite, it's blocked (set the constant to 0 and
+# re-measure: still exit 2). What 40 protects is the other direction: when the source
+# sits on the previous line and the quote is indented more than 60 chars into its own
+# line, the 60-char window can't reach the previous line, and the 40-char tail saves
+# that legitimate quote. Roll it back to 0 and the self-test "prev-line tail protects
+# deep indentation" breaks — that fixture proves what this constant protects.
 PREV_LINE_TAIL = 40
 
 
 def quote_spans(text: str) -> list[tuple[int, int]]:
-    """출처가 밝혀진 직접 인용 구간만 돌려준다."""
+    """Return only the direct-quote spans whose source is identified."""
     out = []
     for m in QUOTE_RX.finditer(text):
-        # 문자 거리(60자)에 더해 **바로 앞 줄의 끝부분**을 후보로 본다. 사람은
-        # 출처를 인용 앞줄 끝에 적지, 60자에 맞춰 적지 않는다.
+        # Besides the 60-char distance, the **tail of the line right above** is a
+        # candidate. People write the source at the end of the line above the quote,
+        # not to fit within 60 chars.
         line_start = text.rfind("\n", 0, m.start()) + 1
         prev_line_start = text.rfind("\n", 0, max(line_start - 1, 0)) + 1
         prev_tail = max(prev_line_start, line_start - 1 - PREV_LINE_TAIL)
@@ -473,7 +539,7 @@ def line_of(text: str, pos: int) -> int:
 
 
 def eojeol_at(text: str, pos: int) -> str:
-    """pos 가 속한 어절에서 구두점을 뗀 형태. 접속부사 판정용."""
+    """The eojeol containing pos, punctuation stripped. For conjunctive-adverb checks."""
     a = max(text.rfind(" ", 0, pos), text.rfind("\n", 0, pos)) + 1
     b = min((i for i in (text.find(" ", pos), text.find("\n", pos)) if i != -1),
             default=len(text))
@@ -481,7 +547,7 @@ def eojeol_at(text: str, pos: int) -> str:
 
 
 def sentences(masked: str) -> list[tuple[int, str]]:
-    """(시작 오프셋, 문장) 목록. 종결부호와 줄바꿈을 경계로 본다."""
+    """List of (start offset, sentence). Terminal punctuation and newlines are boundaries."""
     out, start = [], 0
     for m in re.finditer(r"[.!?。…]+\s*|\n+", masked):
         piece = masked[start:m.start()].strip()
@@ -495,7 +561,7 @@ def sentences(masked: str) -> list[tuple[int, str]]:
 
 
 def ending_key(sentence: str) -> str | None:
-    """문장 마지막 어절의 끝 2음절 — 종결어미 반복 판정용."""
+    """Last 2 syllables of the sentence's final eojeol — for repeated-ending checks."""
     words = sentence.split()
     if not words:
         return None
@@ -508,16 +574,17 @@ def visible_len(sentence: str) -> int:
 
 
 def sentence_initial(masked: str, pos: int) -> bool:
-    """그 위치의 어절이 문장 첫 어절인가 — 앞쪽에 종결부호·줄바꿈만 있으면 참."""
+    """Is the eojeol at this position sentence-initial — true when only terminal punctuation or newlines precede it."""
     head = masked[:pos].rstrip()
     return not head or head[-1] in ".!?…\n"
 
 
 def jongseong_index(ch: str) -> int:
-    """한글 음절의 종성 인덱스 — 0 받침 없음 · 4 ㄴ · 20 ㅆ. 한글이 아니면 -1.
+    """Final-consonant index of a hangul syllable — 0 none · 4 ㄴ · 20 ㅆ. -1 if not hangul.
 
-    D9 가 '-ㄴ다/-는다'(동사 현재 평서형)를 형용사 기본형과 가르는 축이다.
-    `has_final_consonant` 는 받침 유무만 보므로 여기에는 쓸 수 없다.
+    The axis D9 uses to split '-ㄴ다/-는다' (verb present declarative) from
+    adjective base forms. `has_final_consonant` only sees presence, so it
+    can't be used here.
     """
     code = ord(ch)
     if not 0xAC00 <= code <= 0xD7A3:
@@ -526,7 +593,7 @@ def jongseong_index(ch: str) -> int:
 
 
 def has_final_consonant(ch: str) -> bool:
-    """한글 음절에 받침이 있는가 — C1 의 `데,` 갈래를 어미와 명사로 가르는 축."""
+    """Does the hangul syllable have a final consonant — the axis that splits C1's `데,` branch into ending vs. noun."""
     code = ord(ch)
     if not 0xAC00 <= code <= 0xD7A3:
         return False
@@ -550,28 +617,32 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
         if pid in cfg["off"]:
             continue
         hits = [m for m in rx.finditer(masked) if not whitelisted(m.start(), m.end())]
-        # C1 은 접속부사 어절("하지만, ")을 제외한다 — 어미가 아니라 부사다.
-        # `<한글>데,` 갈래는 앞 음절에 받침이 없으면 어미가 아니므로 뺀다("기대, 실망").
+        # C1 excludes conjunctive-adverb eojeols ("하지만, ") — adverbs, not endings.
+        # The `<hangul>데,` branch is dropped when the preceding syllable has no final
+        # consonant — then it's not an ending ("기대, 실망").
         if pid == "C1":
-            # `한데` 는 문장 첫 어절이면 접속부사(=그런데)지만 그 밖에서는 연결어미다
-            # ("싶긴 한데," — 실측으로 이 갈래가 통째로 새고 있었다). 위치로 가른다.
+            # `한데` sentence-initially is a conjunctive adverb (= 그런데), but anywhere
+            # else it's a connective ending ("싶긴 한데," — measurement showed this whole
+            # branch leaking). Split by position.
             hits = [m for m in hits
                     if eojeol_at(masked, m.start()) not in CONJ_ADVERBS
                     or (eojeol_at(masked, m.start()) == "한데" and not sentence_initial(masked, m.start()))]
             hits = [m for m in hits if not (m.group().endswith("데,") and len(m.group()) == 3
                                             and not has_final_consonant(m.group()[-3]))]
-        # D9 는 앞 음절 종성이 ㄴ 일 때만 — '-ㄴ다/-는다'(동사)를 가른다.
-        # '편하다'·'다르다'·'~이다'는 종성이 달라 여기서 빠진다.
+        # D9 only when the preceding syllable's final consonant is ㄴ — splits off
+        # '-ㄴ다/-는다' (verbs). '편하다'·'다르다'·'~이다' have a different final
+        # consonant and drop out here.
         if pid == "D9":
             hits = [m for m in hits if jongseong_index(m.group()[0]) == 4]
-        # D3 계열은 1인칭 주어가 앞에 오면 훈계가 아니라 화자 자신의 의지다.
+        # The D3 family with a first-person subject in front is the speaker's own
+        # resolve, not a lecture.
         if pid in ("D3", "D3b"):
             hits = [m for m in hits
                     if not FIRST_PERSON_LEAD.search(masked[:m.start()])]
         if len(hits) <= thr:
             continue
         counted = hits[thr:]
-        # C2 는 2회 이상이면 S1 로 승격(korean-style.md C2 주).
+        # C2 promotes to S1 at 2 or more (korean-style.md C2 note).
         eff = "S1" if (pid == "C2" and len(counted) >= 2) else sev
         for m in counted:
             findings.append({
@@ -582,34 +653,36 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
                 "quoted": in_quote(m.start(), m.end()),
             })
 
-    # 이모지 한도. **마스킹된 텍스트를 센다** — 원문을 세면 마스크가 무효가 된다.
-    # 지금 MASKS 에는 이모지를 덮는 항목이 없지만 DOC_MASKS 의 코드블록·표 행은 덮고,
-    # 나중에 이모지성 마스크를 하나라도 추가하면 바로 밟는 함정이다(자매 플러그인
-    # fect-persona 에서 실제로 밟았다 — 차트 라벨 이모지가 한도에 잡혔다).
+    # Emoji limit. **Counted on the masked text** — counting the original voids the
+    # masks. No MASKS entry covers emoji today, but DOC_MASKS' code blocks and table
+    # rows do, and the moment any emoji-like mask is added this trap springs (the
+    # sister plugin fect-persona actually stepped on it — chart label emoji counted
+    # against the limit).
     emojis = [m for m in EMOJI.finditer(masked) if not whitelisted(m.start(), m.end())]
     if len(emojis) > cfg["emoji"]:
         findings.append({
             "id": "C4", "severity": "S1" if cfg["emoji"] == 0 else "S2",
-            "label": f"이모지 한도 초과 ({len(emojis)} > {cfg['emoji']})",
+            "label": f"emoji limit exceeded ({len(emojis)} > {cfg['emoji']})",
             "line": line_of(text, emojis[0].start()),
             "excerpt": "".join(m.group() for m in emojis[:8]),
-            "fix": f"{surface} 표면 한도는 {cfg['emoji']}개",
+            "fix": f"the {surface} surface limit is {cfg['emoji']}",
         })
 
     sents = sentences(masked)
 
-    # 문장 길이 (스키마 상한이 있는 표면만)
+    # Sentence length (only surfaces with a schema bound)
     if cfg["len"] and sents:
         lo, hi = cfg["len"]
         bad = [(off, s) for off, s in sents if not (lo <= visible_len(s) <= hi)]
         if bad:
             metrics.append({
-                "id": "M-len", "label": f"문장 길이 이탈 {len(bad)}/{len(sents)} ({lo}~{hi}자)",
+                "id": "M-len", "label": f"sentence length out of range {len(bad)}/{len(sents)} ({lo}~{hi} chars)",
                 "line": line_of(text, bad[0][0]), "count": len(bad), "total": len(sents),
-                "detail": [f"{visible_len(s)}자: {s[:24]}" for _, s in bad[:3]],
+                "detail": [f"{visible_len(s)} chars: {s[:24]}" for _, s in bad[:3]],
             })
 
-    # C5 같은 종결어미 3연속 — 문서 표대로 S2 finding 이다(점수 집계에 들어간다).
+    # C5 same sentence-ending runs — an S2 finding per the doc table (enters the score
+    # tally).
     if "C5" not in cfg["off"] and len(sents) >= 3:
         keys = [ending_key(s) for _, s in sents]
         run, worst, at = 1, 1, 0
@@ -620,43 +693,48 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
                     worst, at = run, i
             else:
                 run = 1
-        # 4연속부터 — 존댓말 설명형 채널은 '~니다' 3연속이 정상 격식이다.
-        # profile.md 가 정한 격식과 싸우지 않는다(korean-style.md §고칠 때의 원칙).
+        # From 4 in a row — for polite explanatory channels, three '~니다' in a row is
+        # normal register. Don't fight the register profile.md sets (korean-style.md
+        # §Principles when fixing).
         if worst >= 4:
             findings.append({
-                "id": "C5", "severity": "S2", "label": f"같은 종결어미 {worst}연속",
+                "id": "C5", "severity": "S2", "label": f"same sentence ending {worst} in a row",
                 "line": line_of(text, sents[at][0]),
                 "excerpt": sents[at][1][:40],
-                "fix": "종결을 섞는다",
+                "fix": "Mix the endings",
             })
 
-    # C7 장문 부재 — 짧은 문장만 죽 이어지는 글.
+    # C7 no long sentence — a piece that's nothing but short sentences.
     #
-    # 넣기 전에 두 가설을 채널 실측으로 갈랐다(Threads 게시분 9건 + 같은 나이
-    # 도달 비교). **"길이가 균일하면 기계 티"는 기각됐다** — 반응이 가장 좋았던
-    # 글이 오히려 더 균일했다(cv 0.13·범위 9). 반면 같은 나이에 도달이 2.6배
-    # 뒤처진 글만 최장 문장이 21자였고, 나머지 8건은 전부 25자 이상이었다.
-    # 그래서 보는 축은 **분산이 아니라 최장 문장**이다
-    # (사용자 지침의 "AI 글의 결함은 균일함보다 장문의 부재" 와 같은 방향 —
-    # 대조 코퍼스 1000문장당 장문 AI 8.1 대 사람 91.3).
+    # Two hypotheses were split with channel measurements before adding this (9 Threads
+    # posts + same-age reach comparison). **"Uniform length = machine tell" was
+    # rejected** — the best-performing post was actually more uniform (cv 0.13, range 9).
+    # Meanwhile only the post whose same-age reach lagged 2.6x had a longest sentence of
+    # 21 chars; the other 8 were all 25+.
+    # So the axis is **the longest sentence, not variance**
+    # (same direction as the user style guide's "the real defect of AI prose is the
+    # absence of long sentences, not uniformity" — contrast corpus: long sentences per
+    # 1000, AI 8.1 vs. human 91.3).
     #
-    # 표본 9건에 여유 4자라 근거가 얇다. 그래서 S1(차단)이 아니라 S2 로 두고
-    # 작성자 눈에만 올린다. 스키마가 길이를 묶는 표면(narration 8~25자·subtitle
-    # ≤30자)과 조각 표면(screen·yt)은 짧은 게 정상이라 끈다.
+    # 9 samples with 4 chars of margin is thin evidence. So it's S2, not S1 (block), and
+    # surfaces to the author's eyes only. Surfaces whose schema binds length (narration
+    # 8~25 chars, subtitle ≤30) and fragment surfaces (screen·yt) are off — short is
+    # normal there.
     if "C7" not in cfg["off"] and len(sents) >= 5:
         longest = max((visible_len(s) for _, s in sents), default=0)
         if longest < C7_FLOOR:
             at = max(range(len(sents)), key=lambda i: visible_len(sents[i][1]))
             findings.append({
                 "id": "C7", "severity": "S2",
-                "label": f"장문 부재 — 최장 문장 {longest}자 (전부 짧은 문장)",
+                "label": f"no long sentence — longest is {longest} chars (all short)",
                 "line": line_of(text, sents[at][0]),
                 "excerpt": sents[at][1][:40],
-                "fix": "한 문장은 길게 이어 붙인다. 목록으로 잘라 쓴 글이면 소재·훅부터 다시 본다",
+                "fix": "Run at least one sentence long. If the piece is chopped into a list, rethink the material and hook first",
             })
 
-    # 인용 구간 위반은 점수·판정에서 뺀다 — 고칠 수 없는 텍스트로 파이프라인을
-    # 세우지 않는다. 보고에는 그대로 실어 원문 확인을 유도한다.
+    # Quoted-span violations are excluded from score and verdict — the pipeline isn't
+    # halted over text that can't be fixed. They stay in the report to prompt checking
+    # the original.
     live = [f for f in findings if not f.get("quoted")]
     quoted = [f for f in findings if f.get("quoted")]
 
@@ -664,8 +742,9 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
     for f in live:
         score -= PENALTY[f["severity"]]
     for m in metrics:
-        # 길이 이탈은 비율로 깎는다 — 한 문장만 어긋난 것과 전부 어긋난 것을 같은
-        # 3점으로 치면 스키마 위반이 통과한다(실측: 1자 나레이션 1문장이 PASS 였다).
+        # Length deviations are penalized by ratio — charging one deviant sentence and
+        # all-deviant the same 3 points passes schema violations (measured: a single
+        # 1-char narration sentence was a PASS).
         if m.get("total"):
             ratio = m["count"] / m["total"]
             score -= min(15, round(15 * ratio)) + (5 if ratio > 0.5 else 0)
@@ -675,11 +754,12 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
 
     s1 = sum(1 for f in live if f["severity"] == "S1")
     exit_code = 2 if s1 else (1 if score < WARN_BELOW else 0)
-    # 면제가 조용한 통과가 되면 안 된다. 검사기는 출처가 진짜인지 모른다 —
-    # "출처: 안내문" 여덟 글자로 S1 여섯 건이 판정에서 빠질 수 있다(실측).
-    # 그래서 면제를 적용했다는 사실 자체를 사람에게 올린다: exit 0 을 1(경고)로
-    # 바닥 처리해 publish §1 의 기존 규칙("exit 1 은 승인 제시문에 그대로 적는다")에
-    # 태운다. 1 은 차단이 아니므로 정당한 인용은 그대로 게시로 간다.
+    # An exemption must not become a silent pass. The checker doesn't know whether the
+    # source is real — the eight chars "출처: 안내문" can drop six S1s from the verdict
+    # (measured). So the fact that an exemption applied is itself raised to a human:
+    # exit 0 is floored to 1 (warn), riding publish §1's existing rule ("exit 1 goes
+    # verbatim into the approval prompt"). 1 isn't a block, so legitimate quotes proceed
+    # to publishing.
     if quoted and exit_code == 0:
         exit_code = 1
 
@@ -700,34 +780,34 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
 
 
 def render(r: dict) -> str:
-    head = (f"판정 {r['verdict']} · 점수 {r['score']}/100 · "
+    head = (f"verdict {r['verdict']} · score {r['score']}/100 · "
             f"S1 {r['s1']} S2 {r['s2']} S3 {r['s3']}")
     if r["quoted_findings"]:
-        head += f" · 인용면제 {r['quoted_findings']}"
+        head += f" · quote-exempt {r['quoted_findings']}"
     lines = [
-        f"check-style — 표면 {r['surface']} / {r['chars']}자 {r['sentences']}문장",
+        f"check-style — surface {r['surface']} / {r['chars']} chars {r['sentences']} sentences",
         head,
         "",
     ]
     live = [f for f in r["findings"] if not f.get("quoted")]
     quoted = [f for f in r["findings"] if f.get("quoted")]
     if live:
-        lines.append("[탐지]")
+        lines.append("[findings]")
         for f in live:
             lines.append(f"  {f['severity']} {f['id']} L{f['line']} {f['label']}")
             lines.append(f"      … {f['excerpt']} …")
             lines.append(f"      → {f['fix']}")
     else:
-        lines.append("[탐지] 없음")
+        lines.append("[findings] none")
     if quoted:
         lines.append("")
-        lines.append(f"[인용 면제 {len(quoted)}건 — 점수에서 제외, 판정은 최소 WARN]")
+        lines.append(f"[quote exemptions: {len(quoted)} — excluded from score, verdict floors at WARN]")
         for f in quoted:
             lines.append(f"  ({f['severity']} {f['id']}) L{f['line']} {f['label']} — {f['excerpt']}")
-        lines.append("  남의 말을 옮긴 것이면 고치지 않는다. 우리가 쓴 문장이면 따옴표를 풀고 고친다.")
+        lines.append("  If it relays someone else's words, don't fix it. If we wrote it, drop the quotes and fix it.")
     if r["metrics"]:
         lines.append("")
-        lines.append("[지표]")
+        lines.append("[metrics]")
         for m in r["metrics"]:
             lines.append(f"  {m['id']} L{m['line']} {m['label']}")
             for d in m["detail"]:
@@ -736,12 +816,12 @@ def render(r: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 자가 검증 — 규칙을 고칠 때마다 돌린다. 세 축을 본다: 슬롭을 잡는가,
-# 멀쩡한 글을 통과시키는가, Do-NOT 구간에 오탐을 내지 않는가.
+# Self-verification — run on every rule change. Three axes: does it catch slop,
+# does it pass clean prose, does it avoid false positives in Do-NOT spans.
 # ---------------------------------------------------------------------------
 
 SELFTEST = [
-    ("슬롭 검출", "narration", 2,
+    ("slop detected", "narration", 2,
      "오늘은 임시거주 제도에 대해 함께 알아볼까요.\n"
      "이 제도는 개정되어졌습니다.\n"
      "신고 기한이 중요한 의미를 가지고 있습니다.\n"
@@ -749,292 +829,323 @@ SELFTEST = [
      "단순한 절차가 아니라 생활의 문제입니다.\n"
      "등록이 아니라 보호의 문제입니다.\n"
      "도움이 되셨길 바랍니다.\n"),
-    ("정상 통과", "narration", 0,
+    ("clean prose passes", "narration", 0,
      "신고 기한이 바뀌었다.\n전에는 사흘이었다.\n이제는 도착 즉시다.\n"
      "하루만 늦어도 과태료가 나온다.\n영수증을 받아 두자.\n"),
-    ("오탐 없음", "ig", 0,
+    ("no false positives", "ig", 0,
      "신고가 도착 즉시로 바뀝니다 🇻🇳\n"
      "시행일은 2026년 7월 15일, 과태료는 300만~500만 동.\n"
      "접수증 사진은 남겨두세요.\n"
      "링크는 https://example.com/guide 를 보세요.\n"
      "#베트남 #임시거주 #하노이\n"),
-    ("접속부사 오탐 없음", "fb", 0,
+    ("no conjunctive-adverb false positives", "fb", 0,
      "신고 기한이 도착 즉시로 바뀝니다.\n"
      "하지만, 집주인이 대신 신고하는 관행은 그대로입니다.\n"
      "그런데, 최종 책임은 본인 몫입니다.\n"
      "여러분은 어떻게 하고 계신가요?\n"),
-    # D8 보고체 상태 동사 — 사용자 지시(2026-08-12). 종결형 전부 S1.
-    ("보고체 상태 동사 검출", "narration", 2,
+    # D8 report-register stative verbs — user directive (2026-08-12). All endings S1.
+    ("report-register stative verbs detected", "narration", 2,
      "올가을 추천은 둘로 나뉩니다.\n"
      "미용실마다 말이 갈려요.\n"
      "선택지는 두 개가 남는다.\n"),
-    # 2차 확장(같은 날) — '남기다' 계열 현재형 격식. 타동사지만 같은 보고체 결이다.
-    ("보고체 남기다 검출", "narration", 2,
+    # Second expansion (same day) — the '남기다' family, present formal. Transitive,
+    # but the same report-register grain.
+    ("report-register 남긴다 detected", "narration", 2,
      "판정 근거는 로그에 남긴다.\n"),
-    ("보고체 남깁니다 검출", "narration", 2,
+    ("report-register 남깁니다 detected", "narration", 2,
      "확인한 값만 문서에 남깁니다.\n"),
-    # 인용·간접화법도 잡는다 — 종결만 피해 같은 낭독체를 쓰는 우회를 막는다.
-    ("보고체 인용형 검출", "threads", 2,
+    # Quotes and reported speech are caught too — blocks the bypass of keeping the same
+    # read-aloud register while avoiding the ending.
+    ("report-register quoted form detected", "threads", 2,
      "추천이 갈린다는 게 문제야.\n"),
-    # 같은 어휘의 정상 구어·관형형·조건절은 잡지 않는다 — 과차단 방지.
-    ("보고체 오탐 없음", "threads", 0,
+    # Normal colloquial, adnominal, and conditional uses of the same words aren't
+    # caught — over-blocking prevention.
+    ("no report-register false positives", "threads", 0,
      "휴가 사흘 남았어.\n"
      "추천이 갈리는 이유가 궁금해서 물어봤어.\n"
      "접수증은 꼭 남겨 둬.\n"
      "후기 남겼어.\n"
      "메모 남기는 게 나아.\n"
      "둘로 나뉜다면 그때 다시 보자.\n"
-     "처음엔 저도 헷갈렸어요. 이름이 비슷해서 헷갈립니다.\n"),  # '헷갈리다'는 일상어다
-    # '살아남다'는 다른 동사다(실측 과차단 1건). threads 에서는 D9(문어체 종결)가
-    # 잡으므로, D9 가 꺼진 narration 에서 D8 의 lookbehind 만 따로 못박는다.
-    ("보고체 살아남다 오탐 없음", "narration", 0,
+     "처음엔 저도 헷갈렸어요. 이름이 비슷해서 헷갈립니다.\n"),  # '헷갈리다' is an everyday word
+    # '살아남다' is a different verb (1 measured over-block). On threads D9 (written-
+    # register ending) catches it, so D8's lookbehind is pinned separately on narration,
+    # where D9 is off.
+    ("no 살아남다 false positive", "narration", 0,
      "셸을 닫아도 녹화는 살아남는다.\n"),
-    # 어휘 티가 없는 대신 관측형 종결로 흐르는 슬롭 — 초기 규칙이 놓쳤던 유형.
-    ("관측형 슬롭 검출", "fb", 2,
+    # Slop that avoids lexical tells but drifts into observational endings — a type the
+    # early rules missed.
+    ("observational slop detected", "fb", 2,
      "이번 개정은 많은 분들에게 도움이 될 것으로 보입니다.\n"
      "다양한 사례가 보고되고 있습니다.\n"
      "앞으로의 변화가 주목됩니다.\n"),
-    # 플랫폼 문법이 요구하는 격식 — 검사기가 문어체로 끌고 가면 안 된다.
-    ("반말 구어 통과", "threads", 0,
+    # The register the platform grammar demands — the checker must not drag it toward
+    # written style.
+    ("casual spoken style passes", "threads", 0,
      "신고 기한 바뀐 거 알아?\n"
      "예전엔 사흘이었는데 이제 도착하자마자야.\n"
      "집주인이 해주겠거니 하다가 과태료 물더라.\n"
      "너는 어떻게 하고 있어?\n"),
-    # D9 — 사용자가 지목한 문장 그대로가 정답 표본이다(2026-08-13).
-    ("문어체 평서형 종결 검출", "threads", 2, (
+    # D9 — the very sentences the user pointed at are the answer key (2026-08-13).
+    ("written-register declarative endings detected", "threads", 2, (
         '"예쁘게 만들어줘"라고 하면 어디서 본 것 같은 화면이 나온다.\n'
         "요즘은 주소부터 준다.\n"
         "맘에 드는 사이트 링크를 붙이고 이렇게 친다.\n"
     ), ("D9",)),
-    # 종성 ㄴ 필터가 갈라야 하는 넷: 형용사 기본형 · 연결형 · 조건절 · '-이다'.
-    ("문어체 종결 오탐 없음", "threads", 0,
+    # The four the ㄴ final-consonant filter must split off: adjective base form ·
+    # connective · conditional · '-이다'.
+    ("no written-register ending false positives", "threads", 0,
      "이게 훨씬 편하다.\n"
      "쟤는 내일 간다고 했어.\n"
      "네가 간다면 나도 같이 갈게.\n"
      "그건 그냥 취향 차이다.\n"
      "이 방법이 제일 빠른 길이라 나는 요즘 계속 이렇게 쓰고 있어.\n"),
-    # D9b 는 S2 에 thr=1 — 세 건이면 두 건만 세서 86점, exit 0 이다. 감점이지 차단이 아니다.
-    ("일기체 과거 종결 검출", "threads", 0, (
+    # D9b is S2 with thr=1 — three hits count as two, 86 points, exit 0. A penalty,
+    # not a block.
+    ("diary-past endings detected", "threads", 0, (
         "어제 밤에 데이터 옮기는 스크립트를 짜서 돌려 봤더니 삼십 분 만에 다 끝나서 로그부터 확인했다.\n"
         "남은 시간에는 그동안 밀린 문서를 정리했다.\n"
         "정리하다 보니 예전에 적어 둔 메모가 쓸모 있었다.\n"
     ), ("D9b",)),
-    ("키워드형 제목 통과", "yt", 0,
+    ("keyword-style title passes", "yt", 0,
      "베트남 임시거주 신고 도착 즉시로 변경 — 2026년 7월 시행\n"
      "사흘이던 기한이 없어졌습니다. 과태료 기준과 접수증 보관까지 정리했습니다.\n"
      "#Shorts #베트남 #임시거주\n"),
-    # 슬롭을 덩어리 마스크 뒤에 숨기는 우회 3종 — 따옴표·백틱·코드펜스.
-    # 귀속 없이 따옴표만 씌운 것은 인용이 아니다.
-    ("따옴표 우회 차단", "ig", 2,
+    # The three bypasses that hide slop behind chunk masks — quote marks, backticks,
+    # code fences. Quote marks without attribution aren't a quote.
+    ("quote-mark bypass blocked", "ig", 2,
      '"오늘은 제도에 대해 함께 알아볼까요. '
      '결론적으로 이 변화는 시사하는 바가 큽니다."\n'),
-    # 출처를 특정하지 못하는 서사 어휘로는 면제되지 않는다. 여섯 개를 각각 고정한다 —
-    # 하나만 막으면 나머지가 그대로 남는다(실측으로 여섯 개 전부 통과했었다).
-    ("서사 어휘 우회 차단 — 그가 말했다", "ig", 2,
+    # Narrative vocabulary that identifies no source earns no exemption. All six are
+    # pinned individually — block one and the rest remain (measured: all six used to
+    # pass).
+    ("narrative-vocabulary bypass blocked — 그가 말했다", "ig", 2,
      '그가 말했다. "오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다."\n'),
-    ("서사 어휘 우회 차단 — 이렇게", "ig", 2,
+    ("narrative-vocabulary bypass blocked — 이렇게", "ig", 2,
      '이렇게. "오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다."\n'),
-    ("서사 어휘 우회 차단 — 다음과 같습니다", "ig", 2,
+    ("narrative-vocabulary bypass blocked — 다음과 같습니다", "ig", 2,
      '다음과 같습니다. "오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다."\n'),
-    ("서사 어휘 우회 차단 — 전문가는 밝혔다", "ig", 2,
+    ("narrative-vocabulary bypass blocked — 전문가는 밝혔다", "ig", 2,
      '전문가는 밝혔다. "오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다."\n'),
-    ("서사 어휘 우회 차단 — 적혀 있다", "ig", 2,
+    ("narrative-vocabulary bypass blocked — 적혀 있다", "ig", 2,
      '적혀 있다. "오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다."\n'),
-    ("서사 어휘 우회 차단 — 인용", "ig", 2,
+    ("narrative-vocabulary bypass blocked — 인용", "ig", 2,
      '인용. "오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다."\n'),
-    # 무엇의 말인지 특정하지 못하는 지시대명사·범용어는 표지가 아니다.
-    ("지시대명사 우회 차단 — 이것에 따르면", "ig", 2,
+    # Demonstratives and generic nouns that identify nothing aren't markers.
+    ("demonstrative bypass blocked — 이것에 따르면", "ig", 2,
      '이것에 따르면 "오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다."\n'),
-    ("범용어 우회 차단 — 자료에 따르면", "ig", 2,
+    ("generic-noun bypass blocked — 자료에 따르면", "ig", 2,
      '자료에 따르면 "오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다."\n'),
-    # 앞줄 머리에 기관명만 흘리고 아래에 슬롭을 묶는 우회 — 끝 40자 밖이라 안 걸린다.
-    ("앞줄 머리 기관명 우회 차단", "ig", 2,
+    # The bypass of dropping an agency name at the head of the previous line and bundling
+    # slop below — outside the last 40 chars, so it doesn't count.
+    ("prev-line-head agency-name bypass blocked", "ig", 2,
      '공안부 자료를 정리했습니다. 신고 기한과 과태료 기준, 접수증 보관 방식, '
      '온라인 확인 절차까지 하나씩 짚어 봤습니다.\n'
      '"오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다. '
      '도움이 되셨길 바랍니다."\n'),
-    # 개인 출처 인용도 면제 대상이다 — 기관만 인정하면 남의 문자를 고치라는 처방이 된다.
-    ("개인 출처 인용 면제 — 집주인", "fb", 1,
+    # Personal-source quotes are exempt too — recognizing only agencies prescribes
+    # fixing someone else's text message.
+    ("personal-source quote exemption — landlord", "fb", 1,
      "집주인이 보낸 문자는 이랬습니다.\n"
      '"신고는 제가 대신 했고, 접수증은 나중에 드릴게요. 급하시면 직접 가셔도 되는데, '
      '서류는 제가 가지고 있어서 같이 가셔야 합니다."\n'
      "그래서 직접 갔더니 접수 기록이 없었습니다.\n"),
-    # "~를 보고 알았습니다" 는 옮긴 게 아니라 알게 된 계기다 — 표지가 아니다.
-    ("경위 서술은 표지가 아니다", "fb", 2,
+    # "~를 보고 알았습니다" is how they found out, not a relay — not a marker.
+    ("an account of events is not a marker", "fb", 2,
      "친구가 보낸 문자를 보고 알았습니다. 제도가 바뀐 걸 몰랐거든요.\n"
      '"오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다."\n'),
-    # 같은 어미라도 뒤에 옮김 동사가 오면 계기가 아니라 인용 도입이다. 주체가
-    # SOURCE_NOUNS 밖(친구·사장님·선배)일 때 행위형이 유일한 통로라 이걸 막으면
-    # 정당한 인용이 차단된다.
-    ("옮김 동사가 오면 인용 도입이다", "fb", 1,
+    # Same ending, but a relaying verb after it makes a quote intro, not an occasion.
+    # When the subject is outside SOURCE_NOUNS (a friend, a boss, a senior), the action
+    # form is the only path — block it and legitimate quotes get blocked.
+    ("a relaying verb makes it a quote intro", "fb", 1,
      "친구가 보낸 문자를 받고 그대로 옮깁니다.\n"
      '"신고는 제가 대신 했고, 접수증은 나중에 드릴게요. 급하시면 직접 가셔도 '
      '되는데, 서류는 제가 가지고 있어서 같이 가셔야 합니다."\n'),
-    ("개인 출처 인용 면제 — 행위형", "fb", 1,
+    ("personal-source quote exemption — action form", "fb", 1,
      "사장님이 보낸 메일 그대로입니다.\n"
      '"연차는 본인이 신청해야 하는데, 대리 신청은 인정되지 않습니다."\n'),
-    # 출처를 특정하면 면제된다 — 기관명·법령명·URL 세 경로. 면제돼도 exit 는 1 이다
-    # (검사기는 출처의 진위를 모른다 — 면제 사실을 사람에게 올려 확인시킨다).
-    ("출처 특정 인용 면제 — 기관·법령", "fb", 1,
+    # Identifying the source exempts — three paths: agency name, statute name, URL. Even
+    # exempted, exit is 1 (the checker doesn't know if the source is real — the
+    # exemption is raised to a human to confirm).
+    ("identified-source quote exemption — agency/statute", "fb", 1,
      '공안부 시행령 원문은 이렇게 돼 있습니다.\n'
      '"신고 의무는 체류자 본인에게 있어서 대행 여부와 무관하게 판단되어진다."\n'),
-    ("출처 특정 인용 면제 — URL", "fb", 1,
+    ("identified-source quote exemption — URL", "fb", 1,
      '원문 https://example.gov.vn/decree 에는 이렇게 적혀 있습니다.\n'
      '"신고 의무는 체류자 본인에게 있어서 대행 여부와 무관하게 판단되어진다."\n'),
-    # 면제는 조용한 PASS 가 되지 못한다 — 짧은 출처 접두어로 S1 을 지워도 exit 는 1.
-    ("면제는 exit 0 을 만들지 못한다", "ig", 1,
+    # An exemption can't become a silent PASS — even a short source prefix that erases
+    # the S1s leaves exit at 1.
+    ("exemption can't produce exit 0", "ig", 1,
      '출처: 안내문\n'
      '"오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다. '
      '도움이 되셨길 바랍니다."\n'),
-    # PREV_LINE_TAIL 이 지키는 유일한 형태 — 출처가 앞줄에 있고 인용이 같은 줄에서
-    # 60자 넘게 들여쓰인 경우. 60자 창은 앞줄에 닿지 못하고 앞줄 꼬리만 닿는다.
-    # 상수를 0 으로 되돌리면 이 정당한 인용이 exit 2 로 막힌다(실측).
-    ("앞줄 꼬리는 깊은 들여쓰기를 지킨다", "fb", 1,
+    # The only shape PREV_LINE_TAIL protects — the source on the previous line and the
+    # quote indented more than 60 chars into its own line. The 60-char window can't
+    # reach the previous line; only the prev-line tail does.
+    # Roll the constant back to 0 and this legitimate quote gets blocked at exit 2
+    # (measured).
+    ("prev-line tail protects deep indentation", "fb", 1,
      "이번에 바뀐 부분은 시행령에 그대로 나와 있습니다.\n"
      "제가 읽은 그대로 아래에 옮겨 둡니다. 손대거나 앞뒤를 자르지 않았고 번역도 "
      "하지 않았어요. 원문입니다 "
      '"신고 의무는 체류자 본인에게 있어서 대행 여부와 무관하게 판단되어진다."\n'),
-    # 사람은 출처를 60자에 맞춰 적지 않는다 — 인용 바로 앞 줄이면 거리와 무관하게 면제.
-    ("앞 줄 귀속은 거리와 무관", "fb", 1,
+    # People don't write sources to fit within 60 chars — the line right above the quote
+    # exempts regardless of distance.
+    ("prev-line attribution regardless of distance", "fb", 1,
      '아래는 이번에 바뀐 부분을 확인하려고 찾아본 공안부 시행령의 해당 조문 원문 '
      '그대로이며, 번역 없이 옮깁니다.\n'
      '"신고 의무는 체류자 본인에게 있어서 대행 여부와 무관하게 판단되어진다."\n'),
-    ("백틱 우회 차단", "ig", 2,
+    ("backtick bypass blocked", "ig", 2,
      "`오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다.`\n"),
-    ("코드펜스 우회 차단", "ig", 2,
+    ("code-fence bypass blocked", "ig", 2,
      "```\n오늘은 제도에 대해 함께 알아볼까요. 도움이 되셨길 바랍니다.\n```\n"),
-    # 체크리스트 장르의 기본 문형 — 명사 나열은 3항 나열이 아니다.
-    ("명사 나열 통과", "fb", 0,
+    # The checklist genre's basic phrasing — a noun list is not a triple listing.
+    ("noun list passes", "fb", 0,
      "여권, 비자, 계약서를 챙기세요.\n하노이, 다낭, 호치민은 절차가 다릅니다.\n"),
-    # 원문 인용은 고칠 수 없다 — 점수는 세우지 않되 면제 사실은 경고로 남는다.
-    ("인용 구간은 점수 제외", "fb", 1,
+    # Verbatim quotes can't be fixed — no score is charged, but the exemption itself
+    # shows up as a warning.
+    ("quoted span excluded from score", "fb", 1,
      "공안부 시행령 원문은 이렇게 돼 있습니다.\n"
      "\"신고 의무는 체류자 본인에게 있어서 대행 여부와 무관하게 판단되어진다.\"\n"
      "쉽게 말하면 집주인이 해줬어도 책임은 본인이 집니다.\n"),
-    # 인용 밖 슬롭까지 봐주지는 않는다.
-    ("인용 밖 위반은 그대로 차단", "fb", 2,
+    # Slop outside the quote gets no such favor.
+    ("violations outside the quote still block", "fb", 2,
      "시행령 원문은 이렇다.\n"
      "\"신고는 도착 즉시 이루어져야 한다.\"\n"
      "결론적으로 이 변화는 시사하는 바가 큽니다.\n"),
-    # 면제 조건은 비중이 아니라 출처 표시다 — 임계 경계 양쪽을 고정한다.
-    # ① 귀속 없는 따옴표는 비중이 낮아도 면제되지 않는다(우회 차단).
-    ("귀속 없는 인용은 면제 안 됨", "ig", 2,
+    # The exemption condition is attribution, not share — both sides of the boundary
+    # are pinned.
+    # ① Unattributed quote marks earn no exemption even at a low share (bypass blocked).
+    ("unattributed quote gets no exemption", "ig", 2,
      "이번 개정 내용을 정리했습니다. 시행일과 과태료 기준을 아래에 적었습니다.\n"
      "접수증 보관 방법도 함께 넣었습니다. 필요한 분은 저장해두세요.\n"
      "현장에서 자주 나오는 질문도 마지막에 붙였습니다.\n"
      "\"오늘은 제도에 대해 함께 알아볼까요. 결론적으로 시사하는 바가 큽니다.\"\n"),
-    # ② 귀속 있는 인용은 비중이 높아도 면제된다(정당한 원문 인용).
-    ("귀속 있는 인용은 비중 무관 면제", "fb", 1,
+    # ② An attributed quote is exempt even at a high share (legitimate verbatim quote).
+    ("attributed quote exempt regardless of share", "fb", 1,
      "시행령 원문입니다.\n"
      "\"거주지 이전 신고는 도착 즉시 이루어져야 하며, 신고 의무는 체류자 본인에게 "
      "있어서 집주인의 대행 여부와 무관하게 판단되어진다.\"\n"),
-    # 고정 관용구는 부정 대구가 아니다.
-    ("다름 아니라 통과", "threads", 0,
+    # A fixed idiom is not negation parallelism.
+    ("다름 아니라 passes", "threads", 0,
      "다름 아니라 어제 겪은 일인데.\n다름 아니라 신고 기한 얘기야.\n"),
-    # 어휘 티 없이 내용만 빈 보도자료체.
-    ("공허한 수사 검출", "fb", 1,
+    # Press-release prose with no lexical tell, just empty content.
+    ("hollow rhetoric detected", "fb", 1,
      "디지털 전환의 물결 속에서 제도도 바뀝니다.\n"
      "규제와 자율의 균형점을 찾아가는 과정입니다.\n"
      "중요한 것은 방향입니다.\n"),
-    # 댓글 첫마디 — 골든타임 응대의 표준이다.
-    ("댓글 인사 통과", "reply", 0,
+    # A reply's opening line — standard golden-hour engagement.
+    ("reply greeting passes", "reply", 0,
      "안녕하세요, 문의 주신 부분 확인했습니다.\n접수증은 그 자리에서 줍니다.\n"),
-    # 훈계는 시킬 대상이 있다 — 자동사만 오면 화자 자신의 의지·전망이다.
-    ("D3 의지·전망 오탐 없음", "fb", 0,
+    # A lecture has someone to order around — with only an intransitive verb it's the
+    # speaker's own resolve or a forecast.
+    ("no D3 resolve/forecast false positives", "fb", 0,
      "내가 가야 할 것입니다.\n언젠가는 바뀌어야 할 것입니다.\n시간이 지나야 할 것입니다.\n"
      "나도 서류를 챙겨야 할 것입니다.\n저도 신고를 다시 해야 할 것입니다.\n"),
-    # 청자 높임은 목적어가 없어도 대상이 독자다.
-    ("D3 청자 높임은 훈계다", "fb", 2,
+    # The addressee honorific targets the reader even without an object.
+    ("D3 addressee honorific is a lecture", "fb", 2,
      "서두르셔야 할 것입니다.\n조심하셔야 할 것입니다.\n"),
-    # 화행으로만 갈리는 갈래는 반려하지 않는다. 뉴스는 전망을 쓰는 장르라
-    # S1 으로 두면 정상 문장 7종이 통째로 막혔다(실측 7/7).
-    ("D3b 전망·조건절 귀결은 반려하지 않는다", "fb", 0,
+    # A branch that only the speech act can split is not rejected. News is a genre that
+    # writes forecasts — at S1, all 7 normal sentence types got blocked (measured 7/7).
+    ("D3b forecasts and conditional conclusions aren't rejected", "fb", 0,
      "내년에는 제도를 바꿔야 할 것이다.\n기한을 넘기면 과태료를 내야 할 것이다.\n"),
-    # 반대쪽 — 오탐 위험이 없는 갈래는 그대로 반려한다.
-    ("D3 고정 관용구는 반려한다", "fb", 2,
+    # The other side — the branch with no false-positive risk still rejects.
+    ("D3 fixed idioms are rejected", "fb", 2,
      "확인할 필요가 있습니다.\n점검하는 것이 중요합니다.\n이 점을 명심해야 한다.\n"),
-    # 1인칭 면제는 D3 에만 걸려야 한다 — 구간 면제로 두면 "나도" 가 우회로가 된다.
-    ("1인칭 면제가 다른 규칙을 가리지 않는다", "fb", 2,
+    # The first-person exemption must apply to D3 only — as a span exemption, "나도"
+    # becomes a bypass.
+    ("first-person exemption doesn't shield other rules", "fb", 2,
      "나도 이 제도에 대해 정리해야 할 것입니다.\n"
      "저도 결론적으로 다시 봐야 할 것입니다.\n"),
-    # D2 관형형은 뒤 명사로 갈린다 — 구체 명사가 오면 사실 서술이다(P0 오탐이었다).
-    ("D2 구체 명사 오탐 없음", "fb", 0,
+    # D2 adnominals split on the following noun — a concrete noun means factual
+    # reporting (this was a P0 false positive).
+    ("no D2 concrete-noun false positives", "fb", 0,
      "주목받는 기업은 세 곳입니다.\n올해 주목받는 품목은 전자부품입니다.\n"
      "이번 개정으로 주목받고 있는 기업이 많습니다.\n현지에서 주목받은 사례를 소개합니다.\n"),
-    ("D2 추상어 뒤 관형형·종결형", "fb", 2,
+    ("D2 adnominal/final forms before abstract nouns", "fb", 2,
      "주목받는 변화입니다.\n주목되는 대목은 기한입니다.\n이번 개정이 주목됩니다.\n"),
-    # T5 피동 접미사 앞에는 어간이 온다 — 어절 첫 글자를 잡으면 이것들이 걸린다.
-    ("T5 어절 첫 글자 오탐 없음", "fb", 0,
+    # T5: a stem precedes the passive suffix — matching a word's first char catches
+    # these.
+    ("no T5 word-initial false positives", "fb", 0,
      "이 지표에 의해 진도를 판단합니다.\n조사에 의해 진실이 밝혀졌습니다.\n"
      "통계에 의해 받침이 생겼습니다.\n"),
-    # 3R 권고 확장 — T1 관해·A1 ㅂ시다·A2 참고 부탁
-    ("T1 관해·A1 ㅂ시다·A2 참고 부탁", "fb", 2,
+    # Round-3 recommended expansion — T1 관해 · A1 ㅂ시다 · A2 참고 부탁
+    ("T1 관해 · A1 ㅂ시다 · A2 참고 부탁", "fb", 2,
      "제도에 관해 알아보겠습니다.\n같이 살펴봅시다.\n참고 부탁드립니다.\n"),
-    ("3R 확장 오탐 없음", "fb", 0,
+    ("no round-3 expansion false positives", "fb", 0,
      "규정에 관한 설명입니다.\n개인정보 보호에 관한 법률 조문입니다.\n"
      "서류를 챙깁시다.\n참고 자료를 첨부했습니다.\n"),
-    # 조사 변형·구어 축약 스윕에서 나온 누락 5건. 활용형만 봤을 때는 안 보였다.
-    ("구어 축약·조사 변형", "fb", 2,
+    # 5 misses from the particle-variant / colloquial-contraction sweep. Invisible when
+    # only conjugated forms were checked.
+    ("colloquial contractions and particle variants", "fb", 2,
      "결론적으론 그렇습니다.\n판단되어질 수 있습니다.\n확인할 필요성이 있습니다.\n"
      "같이 살펴보시죠.\n도움 되셨나요?\n구독 좋아요 눌러주세요.\n"),
-    ("구어 축약 오탐 없음", "fb", 0,
+    ("no colloquial-contraction false positives", "fb", 0,
      "기본적으론 맞습니다.\n개인적으론 반대입니다.\n좋아요 수가 늘었습니다.\n"
      "도움을 받았습니다.\n개인정보 보호에 관한 법률 조문입니다.\n"),
-    # 활용형 스윕에서 나온 누락 — 관형형 "~에 대한", 띄어쓴 "전해 드립니다".
-    ("T1 관형형·A4 띄어쓰기", "fb", 2,
+    # Misses from the conjugation sweep — the adnominal "~에 대한" and the spaced
+    # "전해 드립니다".
+    ("T1 adnominal · A4 spacing", "fb", 2,
      "제도에 대한 설명입니다.\n소식을 전해 드립니다.\n"),
-    ("T1·A4 어간 우연 일치 오탐 없음", "fb", 0,
+    ("no T1/A4 accidental stem-match false positives", "fb", 0,
      "반대한 사람은 없었다.\n상대한 업체가 셋이다.\n말씀을 전해 드리려고 왔다.\n"),
-    # 존댓말 종결 이중피동 — `집` 이 되어 계열에만 있어 대표형이 통째로 샜다.
-    ("T3 존댓말 종결 이중피동", "fb", 2,
+    # Polite-ending double passives — `집` existed only on the 되어 stem, so the
+    # representative forms leaked wholesale.
+    ("T3 polite-ending double passive", "fb", 2,
      "효과가 보여집니다.\n기록이 잊혀집니다.\n규정이 쓰여집니다.\n"),
-    ("T3 어간 분리 오탐 없음", "fb", 0,
+    ("no T3 split-stem false positives", "fb", 0,
      "집에 보여 준 서류다.\n잊혀 가는 관행이다.\n"),
-    # 종결형만 잡던 D2·D3 의 관형형·타어간 누락. 실문장 공격에서 나왔다.
-    ("D2·D3 관형형·타어간", "fb", 2,
+    # D2/D3 misses on adnominals and other stems while only endings were caught. Found
+    # in a real-sentence attack.
+    ("D2/D3 adnominals and other stems", "fb", 2,
      "업계에서 크게 주목받는 변화다.\n가장 주목되는 대목은 기한이다.\n"
      "예약을 미리 잡아야 할 것이다.\n기한을 지켜야 할 것입니다.\n"),
-    ("D2·D3 오탐 없음", "fb", 0,
+    ("no D2/D3 false positives", "fb", 0,
      "관세총국 주목 대상 품목이다.\n내가 해야 할 일이 많다.\n"
      "다음에 가야 할 곳을 적었다.\n높게 평가받는 대행사를 골랐다.\n"),
-    # T5 는 피동 어미가 되·진·받뿐이면 "~된다"·"~됐다"·"~됩니다"를 통째로 놓친다.
-    ("T5 흔한 피동 어미", "fb", 1,
+    # With only 되·진·받 as passive endings, T5 misses "~된다"·"~됐다"·"~됩니다"
+    # entirely.
+    ("T5 common passive endings", "fb", 1,
      "검사 대상은 관세총국에 의해 갱신됩니다.\n제도가 개정안에 의해 시행됐습니다.\n"
      "절차가 고시에 의해 단축됩니다.\n"),
-    ("T5 된장 오탐 없음", "fb", 0,
+    ("no T5 된장 false positive", "fb", 0,
      "규정에 의해 된장 수입이 늘었다.\n그에 의해 사람들이 모였다.\n"),
-    # 존재동사 "있어"·명사 "여지"는 번역투가 아니다.
-    ("존재동사 오탐 없음", "threads", 0,
+    # The existence verb "있어" and the noun "여지" aren't translationese.
+    ("no existence-verb false positives", "threads", 0,
      "영수증은 가방에 있어.\n지금 어디에 있어?\n다른 해석의 여지는 없다.\n"),
-    # 댓글의 짧은 감사는 골든타임 응대다(platform-guide 원칙 4).
-    ("댓글 감사 통과", "reply", 0,
+    # A short thank-you in a reply is golden-hour engagement (platform-guide
+    # principle 4).
+    ("reply thanks passes", "reply", 0,
      "알려주셔서 감사합니다.\n확인하고 바로 반영할게요.\n"),
-    # 어휘 티 대신 조수 말투·기계적 열거로 흐르는 나레이션 슬롭.
-    ("조수 말투 나레이션 검출", "narration", 2,
+    # Narration slop that drifts into assistant voice and mechanical listing instead of
+    # lexical tells.
+    ("assistant-voice narration detected", "narration", 2,
      "안녕하세요! 오늘 소식입니다.\n"
      "빠르고 간편하며 안전한 절차입니다.\n"
      "첫째로 신청서를 냅니다. 둘째로 서류를 냅니다. 마지막으로 기다립니다.\n"
      "끝까지 읽어주셔서 고맙습니다.\n"),
-    # C7 장문 부재. 두 픽스처는 **실제 게시분**이다 — 같은 나이에 도달이 2.6배
-    # 뒤처진 글(최장 21자)과 반응이 가장 좋았던 글(최장 30자). 어휘 티가
-    # 하나도 없는데 성과가 갈린 쌍이라 C7 을 이 두 건으로 못박는다.
-    ("C7 장문 부재 검출", "threads", 0, (
+    # C7 no long sentence. Both fixtures are **actual published posts** — the one whose
+    # same-age reach lagged 2.6x (longest 21 chars) and the best-performing one (longest
+    # 30 chars). A pair with zero lexical tells yet opposite outcomes, so C7 is pinned
+    # by these two.
+    ("C7 no-long-sentence detected", "threads", 0, (
         "클로드코드로 스레드 자동 운영을 붙여봤어. 오늘 시간 날린 함정 세 개.\n"
         "1. 검색 기능은 앱 승인 전까지 내 글만 나와. 남의 글이 0건인 게 정상인데 버그로 착각했어.\n"
         "2. 글마다 붙은 번호가 두 종류야. 눈에 먼저 띄는 쪽을 쓰면 엉뚱한 글에 답글이 달려.\n"
         "3. 방금 올린 글 조회수가 0 이면 아직 집계 전이야. 계정 전체 숫자가 먼저 올라.\n"
         "자동화하다 이런 데서 하루 태운 사람 또 있어?\n"
     ), ("C7",)),
-    # C1 의 `데,` 갈래. 어미 목록 열거로는 계속 샜다(2026-08-11 — growth-post-reviewer
-    # 가 게시 문안에서 잔존 2건을 찾아냈다). 어간이 무엇이든 붙기 때문이다.
-    ("C1 데-어미 검출", "fb", 2,
+    # C1's `데,` branch. Ending-list enumeration kept leaking (2026-08-11 —
+    # growth-post-reviewer found 2 survivors in publish copy). It attaches to any stem.
+    ("C1 데-ending detected", "fb", 2,
      "일이 많은데, 시간은 없다.\n가고 싶은데, 못 갔다.\n비싼데, 살까.\n"
      "싶긴 한데, 사람이 읽는다.\n", ("C1",)),
-    # 갈라야 하는 셋: 의존명사 '데'(띄어 씀) · '데'로 끝나는 명사 · 문두 '한데'(=그런데).
-    ("C1 데-오탐 없음", "fb", 0,
+    # The three to split off: the bound noun '데' (spaced) · nouns ending in '데' ·
+    # sentence-initial '한데' (= 그런데).
+    ("no C1 데 false positives", "fb", 0,
      "갈 데, 올 데를 정했다.\n기대, 실망이 반복됐다.\n받은 데이터, 보낸 데이터.\n"
      "한데, 그건 다르다.\n"),
-    ("C7 오탐 없음 (긴 문장 있음)", "threads", 0, (
+    ("no C7 false positive (long sentence present)", "threads", 0, (
         "팔로워 2명인 계정인데 낮에 쓴 글 하나가 201명한테 갔어.\n"
         "스레드는 팔로워 안 보고 글 하나씩 뿌린다는 게 진짜더라.\n"
         "근데 좋아요 0, 댓글 0. 도달은 됐는데 아무도 반응을 안 한 거지.\n"
@@ -1042,27 +1153,30 @@ SELFTEST = [
         "정보만 던지고 끝낸 글이라 그럴 만도 한데 처음에 이 구간 어떻게 넘겼어?\n"
     )),
 
-    # --- T10~T13 (2026-08-14 딥리서치가 국립국어원 규범에서 찾아낸 미구현분) -------
-    ("T10 ~을 필요로 하다 반려", "fb", 2,
+    # --- T10~T13 (unimplemented rules the 2026-08-14 deep research found in NIKL norms)
+    ("T10 ~을 필요로 하다 rejected", "fb", 2,
      "이번 개정은 추가 검토를 필요로 합니다.\n"),
-    # 셋을 한 픽스처로 묶으면 7+7+2=16 이라 84 점, 경고 문턱(85) 바로 아래다.
-    # 하나라도 죽으면 점수가 올라 exit 이 0 이 되므로 exit 만으로도 걸린다.
-    ("T11·T12·T13 경고", "fb", 1, (
+    # Bundling the three into one fixture gives 7+7+2=16, so 84 points — right below the
+    # warn threshold (85). If any one dies the score rises and exit becomes 0, so exit
+    # alone catches it.
+    ("T11/T12/T13 warn", "fb", 1, (
         "접수 절차를 개선시킬 방법을 찾았어요.\n"
         "기한 전 신고에 주의가 요구됩니다.\n"
         "이 수치는 현지 물가가 얼마나 올랐는지를 말해 줍니다.\n"
     ), ("T11", "T12", "T13")),
-    # T11 은 어근 열거다 — 정상 사동까지 잡으면 여기서 세 건이 걸려 79점(exit 1)이 된다.
-    ("T11 정상 사동 오탐 없음", "fb", 0,
+    # T11 is a stem enumeration — catch legitimate causatives and three hits land here,
+    # 79 points (exit 1).
+    ("no T11 legitimate-causative false positives", "fb", 0,
      "아이를 학원에 등록시켰어요.\n차를 갓길에 정지시켰어요.\n매출을 크게 증가시켰어요.\n"),
-    # T12·T13 은 종결형만 본다. **금지 ID 로 고정한다** — exit 으로만 고정하면 S2 한 건
-    # (93점)·S3 한 건(98점)이 둘 다 exit 0 이라 오탐이 문턱 아래에 숨는다. 실제로
-    # `~다는`(관형절) 오탐이 이 구멍으로 통과했다.
-    ("T12 관형·조건·연결·관형절 오탐 없음", "fb", 0,
+    # T12/T13 check endings only. **Pinned by banned ID** — pinning by exit alone lets
+    # one S2 (93 points) or one S3 (98 points), both exit 0, hide false positives below
+    # the threshold. The `~다는` (adnominal clause) false positive actually passed
+    # through that hole.
+    ("no T12 adnominal/conditional/connective false positives", "fb", 0,
      "요구되는 서류가 늘었어요.\n주의가 요구된다면 그때 공지할게요.\n"
      "추가 서류가 요구된다고 해요.\n추가 서류가 요구된다는 지적이 나왔어요.\n",
      (), ("T12",)),
-    ("T13 관형·연결·관형절 오탐 없음", "fb", 0,
+    ("no T13 adnominal/connective false positives", "fb", 0,
      "자료가 말해 주는 것은 분명해요.\n이 수치는 물가가 올랐다는 뜻을 말해 준다고 해요.\n"
      "이 수치는 물가가 올랐다는 뜻을 말해 준다는 점에서 중요해요.\n",
      (), ("T13",)),
@@ -1070,17 +1184,19 @@ SELFTEST = [
 
 
 def selftest() -> int:
-    """픽스처는 (이름, 표면, 기대 exit, 본문[, 기대 ID[, 금지 ID]]) 다.
+    """A fixture is (name, surface, expected exit, body[, required IDs[, banned IDs]]).
 
-    5번째 항목은 **반드시 탐지돼야 하는 ID 집합**이다. exit 코드만 보던 때는
-    S2·S3 규칙을 픽스처로 고정할 수 없었다 — 한 건이 7점·2점만 깎아 exit 0 이라
-    규칙이 조용히 죽어도 초록으로 지나갔다(C7 을 넣다 발견). ID 를 함께 못박는다.
+    The 5th item is the **set of IDs that must be detected**. When only exit codes were
+    checked, S2/S3 rules couldn't be pinned by fixtures — one hit docks only 7 or 2
+    points, exit stays 0, and a rule could die silently while staying green (found while
+    adding C7). So the IDs are pinned too.
 
-    6번째 항목은 그 반대다 — **잡히면 안 되는 ID 집합**. 오탐 픽스처를 exit 0 으로만
-    고정하면 S2·S3 오탐이 문턱 아래에 숨는다: S2 한 건은 93점, S3 한 건은 98점이라
-    둘 다 exit 0 이다. 그 구멍으로 T12 의 `~다는` 오탐(관형절을 종결로 오인)이
-    셀프테스트를 통과했다(2026-08-14 코드 리뷰에서 발각). **심각도를 낮게 준 규칙일수록
-    오탐 픽스처는 exit 이 아니라 ID 로 고정해야 한다.**
+    The 6th item is the reverse — the **set of IDs that must NOT fire**. Pinning a
+    false-positive fixture by exit 0 alone lets S2/S3 false positives hide below the
+    threshold: one S2 is 93 points, one S3 is 98, both exit 0. T12's `~다는` false
+    positive (adnominal clause misread as an ending) passed the self-test through that
+    hole (caught in the 2026-08-14 code review). **The lower a rule's severity, the more
+    its false-positive fixtures must be pinned by ID, not exit.**
     """
     failed = 0
     for case in SELFTEST:
@@ -1094,46 +1210,47 @@ def selftest() -> int:
         ok = got["exit_code"] == want and not missing and not leaked
         failed += 0 if ok else 1
         ids = ",".join(sorted(got_ids)) or "-"
-        note = f" 누락={','.join(sorted(missing))}" if missing else ""
-        note += f" 오탐={','.join(sorted(leaked))}" if leaked else ""
+        note = f" missing={','.join(sorted(missing))}" if missing else ""
+        note += f" false-positive={','.join(sorted(leaked))}" if leaked else ""
         print(f"[{'PASS' if ok else 'FAIL'}] {name} ({surface}) "
-              f"exit={got['exit_code']} 기대={want} 점수={got['score']} 탐지={ids}{note}")
-    print(f"\n{len(SELFTEST) - failed}/{len(SELFTEST)} 통과")
+              f"exit={got['exit_code']} expected={want} score={got['score']} found={ids}{note}")
+    print(f"\n{len(SELFTEST) - failed}/{len(SELFTEST)} passed")
     return 1 if failed else 0
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="한국어 AI 티 결정적 검사기")
-    p.add_argument("path", nargs="?", help="검사할 텍스트 파일 (- 는 표준입력)")
+    p = argparse.ArgumentParser(description="Deterministic Korean AI-tell checker")
+    p.add_argument("path", nargs="?", help="text file to check (- for stdin)")
     p.add_argument("--surface", choices=SURFACES,
-                   help="표면 — 표면별로 임계와 끄는 규칙이 다르다")
-    p.add_argument("--json", action="store_true", help="구조화 출력")
+                   help="surface — thresholds and disabled rules differ per surface")
+    p.add_argument("--json", action="store_true", help="structured output")
     p.add_argument("--doc", action="store_true",
-                   help="내부 문서 모드 — 마크다운 표·인용 블록을 추가로 가린다. "
-                        "산출 카피에는 쓰지 않는다(표가 슬롭 은신처가 된다)")
-    p.add_argument("--selftest", action="store_true", help="내장 픽스처로 규칙 자가 검증")
+                   help="internal-doc mode — additionally masks markdown tables and "
+                        "quote blocks. Never use on produced copy (tables become "
+                        "slop hideouts)")
+    p.add_argument("--selftest", action="store_true", help="self-verify the rules against built-in fixtures")
     args = p.parse_args(argv)
 
     if args.selftest:
         return selftest()
     if not args.path or not args.surface:
-        p.error("path 와 --surface 가 필요하다 (규칙 검증만 할 때는 --selftest)")
+        p.error("path and --surface are required (--selftest to only verify the rules)")
 
     try:
         raw = sys.stdin.read() if args.path == "-" else open(args.path, encoding="utf-8").read()
     except OSError as e:
-        print(f"check-style: 입력을 읽지 못했다 — {e}", file=sys.stderr)
+        print(f"check-style: couldn't read input — {e}", file=sys.stderr)
         return 3
 
     text = unicodedata.normalize("NFC", raw)
     if not text.strip():
-        print("check-style: 빈 입력", file=sys.stderr)
+        print("check-style: empty input", file=sys.stderr)
         return 3
 
     try:
         result = analyze(text, args.surface, args.doc)
-    except Exception as e:  # 게이트가 죽어서 파이프라인을 막지는 않게 한다
-        print(f"check-style: 분석 실패 — {e}", file=sys.stderr)
+    except Exception as e:  # don't let a dying gate block the pipeline
+        print(f"check-style: analysis failed — {e}", file=sys.stderr)
         return 3
 
     print(json.dumps(result, ensure_ascii=False, indent=2) if args.json else render(result))

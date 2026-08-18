@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>API 레퍼런스 — social-flow</title>
 <link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="index.en.html">
 </head>
 <body>
 <div class="wrap">
+<div class="langbar"><a href="index.en.html" hreflang="en">English</a></div>
 
 <div class="crumbs"><a href="../index.html">문서</a><span>/</span>API 레퍼런스</div>
 
@@ -16,7 +18,7 @@
   <h1>social-flow가 호출하는 전체 API</h1>
   <p class="sub">내부 MCP 서버(<code>server/src</code>)가 실제로 호출하는 외부 API 12종의 공식 계약을 정리한 레퍼런스다. 각 문서는 <strong>공식 문서가 말하는 것</strong>과 <strong>이 저장소의 구현이 실제로 하는 것</strong>을 나란히 적어, 둘이 어긋나는 지점을 바로 볼 수 있게 했다. 이미지·음성은 네트워크를 타지 않는 온디바이스 엔진 2종이 기본 경로이며 그쪽은 호출할 외부 계약이 없다.</p>
   <div class="meta">
-    <span>기준일 <strong>2026-08-16</strong></span>
+    <span>기준일 <strong>2026-08-18</strong></span>
     <span>툴 <strong>46종</strong></span>
     <span>외부 API <strong>12종</strong> + 로컬 <strong>2종</strong></span>
     <span>MCP SDK <strong>1.30.0</strong></span>
@@ -104,11 +106,11 @@
     <a class="card" href="youtube-data.html">
       <h3>YouTube Data API v3</h3>
       <p>resumable 업로드 2단계, 2026년 개편된 Video Uploads 쿼터 버킷, categoryId, 썸네일 설정과 인증 요건, Analytics API 를 따로 켜야 하는 이유와 2~3일 지연, 시장 주제 스카우트.</p>
-      <div class="tools">youtube_publish · youtube_insights · youtube_topic_scout · sns_account_check</div>
+      <div class="tools">youtube_publish · youtube_update · youtube_insights · youtube_topic_scout · sns_account_check</div>
     </a>
     <a class="card" href="tool-audit.html">
       <h3>툴 품질 감사 리포트</h3>
-      <p>2026-07-29 시점의 툴 31개를 위 계약과 베스트 프랙티스로 채점한 결과, 발견한 결함 전체와 수정 내역. 그 뒤 추가된 10종은 아직 감사 대상이 아니다.</p>
+      <p>2026-07-29 시점의 툴 31개를 위 계약과 베스트 프랙티스로 채점한 결과, 발견한 결함 전체와 수정 내역. 그 뒤 15종이 추가돼 지금은 46종이고, 그 15종은 아직 감사 대상이 아니다.</p>
       <div class="tools">감사 · 점수 · 수정 이력</div>
     </a>
   </div>
@@ -116,6 +118,9 @@
 
 <section id="creds">
   <h2>자격증명 매트릭스</h2>
+  <p><strong>키는 서로 독립인 두 묶음이고, 어느 한쪽에서 멈춰도 된다.</strong></p>
+  <p><strong>① 제작 키</strong> — 영상을 만드는 쪽이다. <code>OPENAI_API_KEY</code> 가 커버와 글자 들어간 프레임을 그리고(로컬 이미지 생성은 한글 자소가 깨진다), <code>GEMINI_API_KEY</code> 가 생성 영상 클립·연기 나레이션·BGM 을 맡는다. 엄밀히 따지면 둘 다 선택이다 — 씬 배경은 온디바이스 <code>image_local_generate</code>, 나레이션은 온디바이스 <code>tts_local_generate</code> 가 기본 경로라 키가 하나도 없어도 영상 한 편이 나온다. 조사 키(<code>SERPAPI_API_KEY</code>·Naver 한 쌍)도 선택이고, 없으면 스토리보드가 내장 WebSearch 로 간다.</p>
+  <p><strong>② 플랫폼 자격증명(Threads · Instagram · YouTube · Facebook) — 선택이다.</strong> 넣으면 파이프라인이 끝까지 가고 그다음부터는 알아서 굴러간다 — <code>publish</code> 가 내 계정에 바로 올리고, 성장 스킬(<code>grow-threads</code>·<code>grow-youtube</code>·<code>grow-instagram</code>)이 <code>/loop</code> 위에서 댓글 답글·지표 관찰·키워드 대화 참여·대기열 보충·게시까지 <code>init</code> 때 한 번 승인한 상시 승인서 안에서 채널을 운영한다. 안 넣어도 제작까지는 전부 돌아간다 — <code>produce</code> 가 완성 영상과 플랫폼별 텍스트를 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주고, 그 파일을 손으로 올리면 된다. 못 쓰는 건 게시·성장 절반뿐이고 자격증명에 묶인 툴 9종은 목록에 나오지도 않는다. 플랫폼 단위라 전부 아니면 전무도 아니다 — YouTube 만 연결하면 YouTube 만 게시·성장하고 나머지는 수동으로 둔다. 나중에 토큰을 넣어도 서버를 다시 띄울 필요가 없다.</p>
   <p>키는 <strong>기동 시가 아니라 툴 호출 시점에</strong> 검증된다. 검색 키 없이도 게시 툴은 동작해야 하고 그 반대도 마찬가지이기 때문이다. 아래 표의 환경변수 이름만 기록하고 값은 어디에도 커밋하지 않는다.</p>
   <div class="table-scroll">
   <table>
@@ -124,7 +129,7 @@
       <tr><td><code>GEMINI_API_KEY</code><br>(또는 <code>GOOGLE_API_KEY</code>)</td><td><code>veo_*</code> · <code>tts_generate</code> · <code>tts_multi_speaker</code> · <code>music_generate*</code></td><td>영상·음성·음악 생성 불가. 나머지는 정상</td><td><a href="https://aistudio.google.com/apikey">AI Studio</a></td></tr>
       <tr><td><code>ARK_API_KEY</code></td><td><code>seedance_*</code></td><td>Seedance 영상 생성 불가. <code>veo_*</code> 는 정상</td><td><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/apikey">BytePlus ModelArk</a></td></tr>
       <tr><td><code>OPENAI_API_KEY</code></td><td><code>gpt_image_*</code></td><td>이미지 생성 불가</td><td><a href="https://platform.openai.com/api-keys">OpenAI</a></td></tr>
-      <tr><td><code>SERPAPI_API_KEY</code></td><td><code>serp_*</code></td><td>검색 4종 불가 — <code>naver_search</code>·내장 WebSearch로 대체</td><td><a href="https://serpapi.com/manage-api-key">SerpApi</a></td></tr>
+      <tr><td><code>SERPAPI_API_KEY</code></td><td><code>serp_*</code> · <code>sns_issue_scout</code></td><td><code>serp_*</code> 5종과 <code>sns_issue_scout</code> 불가 — <code>naver_search</code>·내장 WebSearch로 대체</td><td><a href="https://serpapi.com/manage-api-key">SerpApi</a></td></tr>
       <tr><td><code>NAVER_CLIENT_ID</code><br><code>NAVER_CLIENT_SECRET</code></td><td><code>naver_search</code></td><td>한국어 1차 조사 불가 — <code>serp_naver_search</code>로 대체</td><td><a href="https://developers.naver.com/apps">Naver Developers</a></td></tr>
       <tr><td><code>DATA_GO_KR_API_KEY</code></td><td><code>datago_file_fetch</code> · <code>datago_api_call</code></td><td>검색·상세·파일 다운로드 3종은 <strong>키 없이도 동작</strong></td><td><a href="https://www.data.go.kr">공공데이터포털</a></td></tr>
       <tr><td><code>YOUTUBE_API_KEY</code></td><td><code>youtube_topic_scout</code></td><td>없으면 채널 OAuth <code>youtube.readonly</code> 로 폴백. 둘 다 없으면 호출이 실패한다</td><td><a href="https://console.cloud.google.com/apis/credentials">Google Cloud Console</a></td></tr>
@@ -143,7 +148,7 @@
 <section id="map">
   <h2>툴 ↔ API 매핑</h2>
   <p>배지: <span class="badge ro">읽기</span> 부작용 없음 · <span class="badge wr">쓰기</span> 로컬 파일 생성 · <span class="badge de">공개</span> 호출 즉시 외부 공개 · <span class="badge key">키</span> 자격증명 필요 · <span class="badge free">무인증</span></p>
-  <p><strong>46종이 항상 다 보이지는 않는다.</strong> 플랫폼에 묶인 9종(<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>)은 자격증명 파일이 있는 플랫폼만 <code>tools/list</code> 에 나온다. 목록을 요청한 시점에 평가하므로 토큰을 넣으면 서버를 다시 띄우지 않아도 나타나고, 토큰이 하나도 없으면 37종이 보인다. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> 는 게이트 밖이라 토큰이 없어도 목록에 있다. 스카우트는 호출 시점에 <code>YOUTUBE_API_KEY</code> 또는 OAuth 가 필요하다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가 온다.</p>
+  <p><strong>46종이 항상 다 보이지는 않는다.</strong> 플랫폼에 묶인 9종(<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>)은 자격증명 파일이 있는 플랫폼만 <code>tools/list</code> 에 나온다. 목록을 요청한 시점에 평가하므로 토큰을 넣으면 서버를 다시 띄우지 않아도 나타나고, 토큰이 하나도 없으면 37종이 보인다. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> 는 게이트 밖이라 토큰이 없어도 목록에 있다 — 유튜브 스카우트는 호출 시점에 <code>YOUTUBE_API_KEY</code> 또는 채널 OAuth 가, SNS 스카우트는 <code>SERPAPI_API_KEY</code> 가 필요하고, 피드백은 토큰이 없는 플랫폼의 절만 건너뛴다. <code>youtube_update</code> 도 마찬가지로 항상 목록에 있고 토큰이 없으면 에러를 낸다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가 온다.</p>
   <div class="table-scroll">
   <table>
     <thead><tr><th>툴</th><th>성격</th><th>호출 대상</th><th>레퍼런스</th></tr></thead>
@@ -183,6 +188,7 @@
       <tr><td><code>facebook_publish</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td><code>graph.facebook.com/v23.0</code></td><td><a href="meta-graph.html">Meta</a></td></tr>
       <tr><td><code>facebook_comment</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td><code>graph.facebook.com/v23.0</code></td><td><a href="meta-graph.html">Meta</a></td></tr>
       <tr><td><code>youtube_publish</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td>OAuth2 갱신 → resumable upload → thumbnails.set</td><td><a href="youtube-data.html">YouTube</a></td></tr>
+      <tr><td><code>youtube_update</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td><code>videos.list</code> → <code>videos.update</code> (이미 올린 영상의 제목·설명·태그·공개범위)</td><td><a href="youtube-data.html">YouTube</a></td></tr>
       <tr><td><code>youtube_insights</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>Data API 3종 + Analytics <code>reports.query</code></td><td><a href="youtube-data.html">YouTube</a></td></tr>
       <tr><td><code>sns_comment_inbox</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>Threads · IG · FB 댓글 조회</td><td><a href="meta-graph.html">Meta</a></td></tr>
       <tr><td><code>sns_comment_reply</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td>플랫폼별 답글 엔드포인트</td><td><a href="meta-graph.html">Meta</a></td></tr>
@@ -209,7 +215,7 @@
 </section>
 
 <footer>
-  기준일 2026-08-16 · 구현 정본은 <a href="../../server/src">server/src</a>, 툴 목록 정본은 <a href="../../README.md">README.md</a>다.
+  기준일 2026-08-18 · 구현 정본은 <a href="../../server/src">server/src</a>, 툴 목록 정본은 <a href="../../README.md">README.md</a>다.
 </footer>
 
 </div>

@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenAI Images — social-flow API 레퍼런스</title>
 <link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="openai-images.en.html">
 </head>
 <body>
 <div class="wrap">
+<div class="langbar"><a href="openai-images.en.html" hreflang="en">English</a></div>
 
 <div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>OpenAI Images</div>
 
@@ -51,6 +53,9 @@
   <p><code>dall-e-2</code>·<code>dall-e-3</code>는 2026-05-12 셧다운을 마쳤다. 예정된 EOL이 모두 지나면 Images API에 남는 모델은 <code>gpt-image-2</code> 하나다.</p>
   <div class="warn">
     <strong>투명 배경은 EOL과 함께 사라진다.</strong> <code>background: "transparent"</code>는 <code>gpt-image-2</code>가 지원하지 않고, 지원하는 <code>gpt-image-1</code>/<code>1.5</code>는 2026년 안에 종료된다. 로고·오버레이 소재는 후처리(배경 제거)를 전제로 설계해야 한다.
+  </div>
+  <div class="note">
+    <strong>키가 없어도 이미지는 만든다 — 온디바이스 <code>image_local_generate</code>.</strong> Z-Image Turbo 를 mflux/MLX 로 돌려 <code>OPENAI_API_KEY</code> 도 네트워크도 과금도 없이 그리며(Apple Silicon 필요), 씬 배경의 기본 경로가 그쪽이다. 다만 <strong>글자가 들어가는 프레임은 GPT Image 로 보낸다</strong> — 로컬 생성은 한글 자소를 깨뜨려서 커버·타이틀처럼 글자를 읽혀야 하는 자리에 쓰지 못한다. <code>OPENAI_API_KEY</code> 가 여는 건 그 "글자와 품질" 경로다. 키는 서버 기동이 아니라 호출 시점에 확인하므로, 키가 없는 설치에서도 나머지 툴은 그대로 돈다.
   </div>
 </section>
 
@@ -101,7 +106,7 @@
     <strong>쇼트폼 9:16은 <code>1088x1920</code>.</strong> 1080×1920은 1080이 16의 배수가 아니라 거부되므로 1088을 쓴다(1088 = 16×68, 1920 = 16×120, 총 2,088,960px, 비율 0.567 → 제약 통과).
   </div>
   <p>이 서버는 네 제약을 각각 검사해 <strong>위반 항목을 모두 모아</strong> 한 번에 알린다 — 한 번에 하나씩 알리면 모델이 크기를 여러 번 고쳐 쏘게 된다.</p>
-  <pre><code>커스텀 해상도 "1080x1921" 제약 위반: 가로·세로는 16의 배수여야 합니다</code></pre>
+  <pre><code>Custom resolution "1080x1921" violates constraints: width and height must be multiples of 16</code></pre>
 </section>
 
 <section id="edit">

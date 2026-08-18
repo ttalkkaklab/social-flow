@@ -1,170 +1,227 @@
-# Threads 성장 플레이북 — grow-threads 스킬 전술 정본
+# Threads growth playbook — tactics source of truth for the grow-threads skill
 
-2026-08 조사 기반(메타 투명성 센터 + 다출처 교차 확인). 단일 출처 수치는 뺐다.
-플랫폼 공통 문체·게시 규칙은 `skills/platform-guide/references/platform-playbook.md`
-§3 이 정본이고, 이 문서는 **성장 루프 전용 전술**만 담는다.
+Based on 2026-08 research (Meta Transparency Center + multi-source
+cross-checks). Single-source numbers were dropped. Platform-wide style and
+posting rules live in `skills/platform-guide/references/platform-playbook.md`
+§3; this document carries **growth-loop tactics only**.
 
-## 원리 — 무엇이 도달을 만드는가
+## Principles — what creates reach
 
-Threads 는 팔로워 수가 아니라 **게시물 하나하나를 심사**한다. 메타가 공개한
-랭킹 신호는 다섯 가지다: 좋아요 확률 · **답글을 보러 들어갈 확률** · 작성자 팔로우
-확률 · 프로필 클릭 확률 · 스크롤 통과 확률(낮을수록 좋음). 실무 번역:
+Threads judges **each post on its own**, not your follower count. The ranking
+signals Meta has published are five: probability of a like · **probability of
+clicking into the replies** · probability of following the author ·
+probability of a profile click · probability of scrolling past (lower is
+better). Translated into practice:
 
-- **읽고 나서 할 말이 안 생기는 글은 천장이 낮다.** 단정으로 끝내지 말고 남이
-  끼어들 틈을 준다. 답글이 붙는 글이 좋아요만 많은 글을 이긴다.
-- **초기 속도가 총량을 이긴다.** 같은 반응이라도 첫 60~90분 안에 붙은 쪽이 멀리
-  퍼진다 — 골든아워 답글 대응이 틱의 최우선인 이유다.
-- **올리기 전에 참여하라.** 게시 직전 10~15분을 남의 글 답글에 쓰면 활성 사용자로
-  인식돼 뒤이은 글의 초기 분배가 오른다. 틱 순서(참여 → 새 글)가 이걸 구현한다.
-- **인스타 동반 운영이 신호다** — 팔로우 확률 예측에 IG 프로필 조회가 들어간다.
+- **A post that leaves the reader with nothing to say has a low ceiling.**
+  Don't close with a verdict — leave a gap someone can step into. A post that
+  collects replies beats one that only collects likes.
+- **Early velocity beats total volume.** The same reactions spread further
+  when they land within the first 60–90 minutes — which is why golden-hour
+  reply handling is the tick's top priority.
+- **Engage before you post.** Spending the 10–15 minutes before publishing on
+  replies to other people's posts marks you as an active user and lifts the
+  next post's early distribution. The tick order (engage → new post)
+  implements this.
+- **Running Instagram alongside is a signal** — IG profile views feed the
+  follow-probability prediction.
 
-억제 대상(메타 명시): 참여 구걸("좋아요 눌러"·"댓글 YES"), 조직적 품앗이.
-X 크로스포스트 티가 나는 글, 이어붙인 에세이형도 실측에서 죽는 패턴이다.
+Suppressed (Meta explicitly): engagement begging ("좋아요 눌러" · "댓글
+YES"), organized reciprocity circles. Posts that smell like X cross-posts and
+stitched-together essay threads are also patterns that die in our
+measurements.
 
-## 리듬
+## Rhythm
 
-- 새 글 개수에 상한은 없다 — **할 말이 있는 만큼** 쓴다. 꾸준한 계정이 대체로
-  하루 1~3개 리듬에 안착하는 건 관찰 결과이지 규칙이 아니다. 반대 방향의 규칙은
-  있다: 할 말 없이 리듬을 지키려는 채우기 게시가 계정을 가장 빨리 죽인다.
-  슬롯(타깃 활동 시간대)은 글이 나갈 때 그 시간대를 우선하라는 가이드다.
-- **빈도 자체를 벌하는 장치는 확인되지 않았다** (2026-08-15 조사). Threads 근거는
-  이 문서 §원리의 랭킹 5신호다 — 메타가 공개한 그 목록에 게시 빈도가 없다.
-  **인용 경로를 정확히 해둔다**: 같은 조사에서 훑은 투명성 센터 피드·탐색 랭킹
-  카드와 공식 랭킹 해설은 **인스타그램 문서**이고, Threads 랭킹 문서를 쓸어본 게
-  아니다. 그쪽에서 확인한 것은 인스타 이야기로만 쓴다 — 배포 감소 사유가 전부
-  콘텐츠 속성이라는 것, 그리고 피드 다양성 규칙("같은 사람의 글을 연속으로 너무
-  많이 보여주지 않으려 한다")이 계정 페널티가 아니라 한 사람의 피드 안에서 순서를
-  섞는 장치라는 것.
-- **API 하드 리밋은 제재가 아니다** — 24시간 이동창에 게시 250 · 답글 1,000 ·
-  삭제 100 · 위치검색 500이고, 넘으면 에러가 날 뿐 계정에 흠집이 나지 않는다
-  (`GET /{threads-user-id}/threads_publishing_limit`). 판단 기반 게시가 이 선에
-  닿는 일은 없다. 조사 기록은 `docs/research/2026-08-15-posting-frequency-and-growth/`.
-- 링크: 2024년의 링크 페널티는 철회됐다(Mosseri 공식). 다만 본문 링크는 독자를
-  밖으로 빼서 답글을 줄이는 별개 문제가 있다 — 성장 루프의 일반 글은 **기본이
-  답글 링크이고, 본문 링크는 A/B 로 채널 실측** 후 플랜에 반영한다. 회차 콘텐츠
-  (produce → publish 로 나가는 영상 글)는 예외로 본문 링크가 정본이다
-  (platform-playbook §3) — 두 경로가 다르다는 걸 알고 섞지 않는다.
-- 해시태그(토픽 태그) ≤1 — 랭킹 가중치가 없다.
+- No cap on new-post count — write **as much as you have to say**. Consistent
+  accounts settling into a 1–3-a-day rhythm is an observation, not a rule.
+  The rule points the other way: filler posts written to keep a rhythm with
+  nothing to say are the fastest way to kill an account. Slots (target
+  audience's active hours) are guidance to prefer those windows when a post
+  does go out.
+- **No mechanism punishing frequency itself has been confirmed**
+  (2026-08-15 research). The Threads evidence is the five ranking signals in
+  §Principles — posting frequency isn't on the list Meta published. **Keep
+  the citation path precise**: the Transparency Center feed/explore ranking
+  cards and the official ranking explainer swept in that same research are
+  **Instagram documents**, not a sweep of Threads ranking docs. What was
+  confirmed there gets cited as Instagram-only: that the listed distribution
+  penalties are all content attributes, and that the feed-diversity rule
+  ("we try not to show too many posts from the same person in a row") is a
+  per-viewer feed-ordering device, not an account penalty.
+- **API hard limits are not sanctions** — in a 24-hour sliding window:
+  publish 250 · replies 1,000 · deletes 100 · location search 500. Exceeding
+  them just returns an error; the account takes no mark
+  (`GET /{threads-user-id}/threads_publishing_limit`). Judgment-based
+  publishing never touches these lines. Research notes:
+  `docs/research/2026-08-15-posting-frequency-and-growth/`.
+- Links: the 2024 link penalty was retracted (Mosseri, official). But a body
+  link still has the separate problem of pulling readers away and cutting
+  replies — the growth loop's regular posts **default to link-in-reply, and
+  body links only after channel A/B measurement**, recorded in the plan.
+  Episode content (videos going out via produce → publish) is the exception
+  where a body link is canonical (platform-playbook §3) — know the two paths
+  differ and don't mix them.
+- Hashtags (topic tags) ≤1 — they carry no ranking weight.
 
-## §새 글 문체
+## §New-post style
 
-말투는 플랜에 고정된 것 하나만 쓴다(한국 스레드 기본값은 반말 — 강제는 아니지만
-글마다 오가면 관리자로 읽힌다). 규칙:
+Use the single speech style pinned in the plan (the Korean Threads default is
+반말/casual — not mandatory, but switching between posts reads as an admin
+account). Rules:
 
-1. **1~3줄.** 500자까지 되지만 타임라인은 스캔된다.
-2. **관찰·고백 > 완성된 주장.** "이거 나만 그런가?" 가 "이래야 합니다" 보다
-   답글이 붙는다. 판단을 아예 뺀 중립 요약·소식 전달도 같은 이유로 죽는다
-   (§형식 실측의 정보 전달 글들) — 자기 판단 하나는 걸되, 단정으로 닫지 않을 뿐이다.
-3. **질문 종결 — 단 빈 질문 금지.** 자기 경험 하나를 깔고 상대 경험을 부른다.
-   "여러분 생각은?" 은 참여 구걸에 가깝다.
-4. **훅을 소진하지 않는다.** 결론까지 다 말하면 댓글에 쓸 말이 없다.
-5. **이미지 1장 우위** — 채널 테마 이미지가 있으면 붙인다.
-6. 무설명 전문용어 금지(쉬운 말 원칙 — platform-playbook §2 상속).
-7. **문어체로 닫지 않는다.** "화면이 나온다"·"주소부터 준다"·"이렇게 친다" 처럼
-   `-ㄴ다/-는다` 로 끝내면 신문기사 레지스터다 — 반말 표면에서 사람은 "나와"·"줘"·
-   "쳐"·"~하거든"·"~하더라"로 말한다. 사용자 지시(2026-08-13)이고 `check-style.py`
-   D9 가 S1 으로 막는다. 절차를 설명하는 글일수록 이 어미로 흐르니 **저작 중에**
-   본다 — 검사기에서 처음 보면 문단을 통째로 다시 써야 한다.
+1. **1–3 lines.** 500 characters are allowed; the timeline is scanned.
+2. **Observation and confession > finished argument.** "이거 나만 그런가?"
+   (is this just me?) collects more replies than "이래야 합니다" (this is how
+   it should be). Neutral summaries and news relays with the judgment removed
+   die for the same reason (see the information-delivery posts in §Form's
+   measurements) — stake one judgment of your own, just don't close with a
+   verdict.
+3. **End on a question — but never an empty one.** Lay down one experience of
+   your own and invite the other person's. "여러분 생각은?" (what do you all
+   think?) is close to engagement begging.
+4. **Don't spend the hook.** Say the whole conclusion and there's nothing
+   left to reply with.
+5. **One image wins** — attach the channel-theme image when there is one.
+6. No unexplained jargon (plain-language principle — inherited from
+   platform-playbook §2).
+7. **Don't close in written register.** Ending on `-ㄴ다/-는다` — like
+   "화면이 나온다" · "주소부터 준다" · "이렇게 친다" — is newspaper register;
+   in casual speech people say "나와" · "줘" · "쳐" · "~하거든" · "~하더라".
+   User directive (2026-08-13), and `check-style.py` D9 blocks it at S1.
+   Posts explaining a procedure drift into this ending, so watch **while
+   authoring** — meet it first at the checker and you rewrite the paragraph
+   wholesale.
 
-## §답글 (인박스 대응)
+## §Replies (inbox handling)
 
-- 1~3문장, 플랜 톤. 정보·공감을 하나 더하고 **상대가 또 답할 틈**을 준다.
-- "감사합니다 😊" 류 영혼 없는 답글은 신호 가치가 없다 — 짧아도 내용을 담는다.
-- 논쟁 유도·시비조에는 사실 하나로 짧게 답하거나 답하지 않는다. 숨김 판단은
-  자율 범위 밖 — 사용자에게 보고만.
+- 1–3 sentences, plan tone. Add one piece of information or empathy and
+  **leave the other person room to answer again**.
+- Soulless replies like "감사합니다 😊" (thank you 😊) carry no signal value —
+  short is fine, empty is not.
+- To bait and hostility: answer briefly with one fact, or not at all. Hiding
+  is outside autonomous scope — report to the user only.
 
-## §검색 참여 (남의 대화)
+## §Search engagement (other people's conversations)
 
-브랜드 계정이 남의 글에 끼는 것이므로 기준이 더 높다:
+A brand account stepping into someone else's post — the bar is higher:
 
-- **기여만 한다** — 경험·정보·구체적 팁. 홍보·링크·자기 글 유도는 금지다(그 순간
-  스팸이고, 계정 전체 신호를 깎는다).
-- 충실한 답글이어야 신호로 계산된다 — 한두 단어 반응은 쓰지 않는다.
-- 신선한 루트 글만(RECENT + 24h, `isReply: false`). 오래된 글 답글은 도달이 없다.
-- 같은 글 재참여 금지(state.engagedPostIds). 같은 계정을 따라다니며 연달아
-  답글 달지 않는다 — 받는 쪽에는 스토킹으로, 알고리즘에는 조직 참여로 읽힌다.
-- 논쟁·민감 주제 글에는 참여하지 않는다(플랜 금지 소재 준용).
+- **Contribute, only** — experience, information, a concrete tip. Promotion,
+  links, and steering people to your own posts are banned (that instant it's
+  spam, and it cuts the whole account's signal).
+- Only a substantial reply counts as signal — never a one-or-two-word
+  reaction.
+- Fresh root posts only (RECENT + 24h, `isReply: false`). Replies on old
+  posts reach no one.
+- Never re-engage the same post (state.engagedPostIds). Don't trail the same
+  account with back-to-back replies — the recipient reads it as stalking, the
+  algorithm as coordinated engagement.
+- Stay out of contentious and sensitive posts (the plan's banned topics
+  apply).
 
-## 스하리 문화 (한국 로컬)
+## Seuhari culture (Korea-local)
 
-스하리(팔로우+하트+리포스트) · 반하리(받은 만큼 돌려주기) · 스친 · 스린이 —
-상호성이 언어화된 문화다. 루프가 할 일은 **받은 성의에 답글로 답하는 것**까지다.
-품앗이 방 참여·기계적 맞팔은 억제 대상 조직 참여 패턴과 구분되지 않으므로
-하지 않는다. 사람들이 먼저 알아보는 건 알고리즘이 아니라 일방성이다.
+스하리 (seuhari — follow + heart + repost) · 반하리 (banhari — returning as
+much as you received) · 스친 · 스린이 — a culture where reciprocity has its
+own vocabulary. The loop's part ends at **answering received goodwill with a
+reply**. Swap-room participation and mechanical follow-backs can't be told
+apart from the suppressed coordinated-engagement patterns, so we don't do
+them. What people notice first isn't the algorithm — it's one-sidedness.
 
-## §형식 — 무엇이 반응을 만드는가 (콜드 스타트 채널 실측)
+## §Form — what creates response (measured on a cold-start channel)
 
-팔로워 한 자릿수 계정에서 하루에 네 글을 올려 갈린 결과다. 도달과 반응이 **반대로**
-움직였다. 반응률은 (좋아요 + 답글) / 조회다.
+Results from posting four times in one day on an account with
+single-digit followers. Reach and response moved **in opposite directions**.
+Response rate is (likes + replies) / views.
 
-| 글 | 도달 | 반응률 |
+| Post | Reach | Response rate |
 | --- | --- | --- |
-| 제휴 구조 발견담 (정보 전달) | 중 | 0.4% |
-| 신고 면제 팁 (정보 전달 + 질문) | 하 | 0.6% |
-| **우리 지표를 그대로 깐 고백형** | **최상** | **4.0%** |
-| 게이트 삽질 고백 (쉼표) | 최하 | 2.0% |
-| API 함정 번호 목록 | 최하 | 0% |
+| Affiliate-structure discovery (information delivery) | mid | 0.4% |
+| Reporting-exemption tip (information + question) | low | 0.6% |
+| **Confessional laying our metrics bare** | **top** | **4.0%** |
+| Gate-blunder confession (comma) | bottom | 2.0% |
+| Numbered list of API traps | bottom | 0% |
 
-(게시 다음 날 새벽 재실측 — 반나절 뒤 격차가 더 벌어졌다. 고백형은 밤새 혼자 자랐고
-나머지는 멈췄다. 그 글에 달린 답글 중 절반 가까이가 남이 준 것이고 그게 대화로 이어졌다.)
+(Re-measured the next morning — the gap widened overnight. The confessional
+kept growing on its own while the rest stalled. Nearly half the replies on it
+came from others, and those turned into conversations.)
 
-읽어야 할 것은 조회가 아니라 **조회 대비 반응**이다. 정보만 던지는 글은 뿌려지고
-아무도 안 누른다 — 랭킹 신호의 "스크롤 통과"가 나쁜 쪽이다.
+What to read is not views but **response against views**. Posts that just
+throw information out get sprayed wide and nobody taps — the bad side of the
+"scrolled past" ranking signal.
 
-**갈린 축은 문체가 아니라 읽는 사람의 지분이었다.** 어휘 티는 네 글 다 없었다
-(문체 게이트 전부 통과). API 함정 목록은 스레드 자동화를 직접 만드는 사람만
-해당되고, 고백형은 계정을 키우는 누구나 자기 얘기로 읽는다. 같은 나이에 도달 7.6배.
+**The axis that split them wasn't style — it was the reader's stake.** None
+of the four had vocabulary tells (all passed the style gate). The API-trap
+list applies only to people building Threads automation themselves; the
+confessional reads as their own story to anyone growing an account. 7.6x the
+reach at the same age.
 
-그래서 쓰기 전에 한 줄로 못박는다 — **"이 글을 읽는 사람은 누구이고 60초 안에 무엇을
-판단하게 되는가."** 답에 우리 도구·파이프라인 이름이 들어가야만 성립하면 소재를 바꾼다.
-훅 첫 문장에는 독자가 아는 숫자나 상황을 둔다.
+So pin it in one line before writing — **"who reads this post, and what will
+they be able to judge within 60 seconds."** If the answer only works with our
+tool or pipeline names in it, change the topic. The hook's first sentence
+carries a number or situation the reader knows.
 
-기각된 가설도 적어 둔다 — "문장 길이가 균일해서 기계 티"는 실측에서 깨졌다. 반응 1위 글이
-오히려 더 균일했다(변동계수 0.13). 다만 **최장 문장**은 갈렸고(뒤처진 글만 21자, 나머지
-25자 이상) 그건 게이트 C7 로 고정했다(korean-style.md §C7).
+Rejected hypotheses get recorded too — "uniform sentence length reads as
+machine" broke on measurement. The top-response post was the more uniform one
+(coefficient of variation 0.13). But the **longest sentence** did split them
+(only the trailing post capped at 21 characters; the rest 25+), and that was
+fixed as gate C7 (korean-style.md §C7).
 
-## §참여 대상 — 도달보다 기여 가능성이 먼저다
+## §Engagement targets — ability to contribute comes before reach
 
-노출 큰 글에 끼고 싶은 유혹이 계속 생긴다. 기준은 하나다 — **우리가 실제로 겪은 것을
-줄 수 있는가.** 실측으로 건너뛴 사례:
+The temptation to jump into big-exposure posts keeps coming. One criterion —
+**can we give something we actually experienced.** Measured skips:
 
-- 노출 7,232 · 키보드 앱 추천 글 → 우리에게 1차 경험이 없다. 도달만 보고 끼면 스팸이다.
-- 노출 617 · "조회수 치트키 알려줄까?" 낚시 훅 → 우리 실측을 들이대면 시비로 읽힌다.
-- 좋아요 181 · "자랑 늘어놓고 가세요, 리포해드릴게요" → 답글에 자기 홍보를 넣는 게
-  조건인 리포 교환. 홍보 금지·품앗이 금지에 정면으로 걸린다.
+- 7,232 exposures · a keyboard-app recommendation post → we have no
+  first-hand experience. Jump in on reach alone and it's spam.
+- 617 exposures · a "조회수 치트키 알려줄까?" (want the view-count cheat
+  code?) bait hook → producing our measurements against it reads as picking a
+  fight.
+- 181 likes · "자랑 늘어놓고 가세요, 리포해드릴게요" (drop your brag, I'll
+  repost you) → a repost exchange conditioned on self-promotion in the
+  replies. Directly against the promotion ban and the reciprocity ban.
 
-반대로 고른 것은 노출 77~364 의 작은 글들이었다 — 같은 도구로 같은 걸 만들다 막힌
-사람, 우리가 오늘 해결한 함정을 곧 만날 사람. 브랜드 계정이 남의 글에 끼는 값은
-도달이 아니라 **그 사람이 우리를 기억하는가**다.
+What we picked instead were small posts at 77–364 exposures — someone stuck
+building the same thing with the same tools, someone about to hit the trap we
+solved that day. What a brand account earns by stepping into someone's post
+isn't reach — it's **whether that person remembers us**.
 
-## §답글 도달 — 참여는 부수 활동이 아니다 (2026-08-12 실측)
+## §Reply reach — engagement is not a side activity (measured 2026-08-12)
 
-우리 답글 14건을 전수 조회하니, 상위 두 건의 도달이 **같은 시점 루트 글 여섯 중
-넷을 넘어섰다**. 남의 글 도달에 얹히는 구조라 그렇다 — 팔로워 한 자릿수 계정이 자기
-글로 만들 수 있는 도달보다, 남이 이미 모은 독자 앞에 서는 쪽이 크다.
+Querying all 14 of our replies, the top two exceeded the reach of **four of
+our six root posts from the same period**. The structure explains it — the
+reply rides the other post's reach, and standing in front of an audience
+someone else already gathered beats anything a single-digit-follower account
+can reach with its own posts.
 
-그래서 콜드 스타트 구간에서 **참여는 새 글을 못 쓸 때 하는 대체 활동이 아니다.**
-후보가 있으면 참여를 먼저 하고, 오전처럼 후보가 마르면 그때가 관찰 틱이다.
+So in the cold-start stretch, **engagement is not the fallback activity for
+when you can't write a new post.** When candidates exist, engage first; when
+they dry up, as they did that morning, that's an observation tick.
 
-단 도달이 커도 반응은 얇았다(도달 상위 답글 둘 다 좋아요 1·대댓글 0). 답글은 대화를 열되
-계정으로 사람을 끌어오지는 못한다 — 프로필로 넘어오게 하는 건 여전히 루트 글의
-일이다. 두 축을 섞어 판단하지 않는다.
+But even at high reach, the response stayed thin (both top-reach replies: 1
+like · 0 sub-replies). A reply opens a conversation but doesn't pull people
+to the account — bringing them to the profile is still the root post's job.
+Don't blend the two axes when judging.
 
-**바깥 근거가 하나 붙었다** (2026-08-15 조사). Mosseri 가 Platformer 인터뷰에서
-*"If you're really trying to grow your presence, you should reply much more than
-you post"* 라고 말했다 — 존재감을 키우려면 올리는 것보다 답글을 훨씬 더 많이 쓰라는
-뜻이다. 지금까지 이 원칙을 우리 실측 하나로만 붙들고 있었는데 방향이 같은 발언이다.
-**등급은 [발언·2차 경유]** — Platformer 원문 URL 이 404 라 1차 확인에 실패했고 2차
-매체 인용으로만 확보했다. 시스템 카드급 근거와 같은 무게로 인용하지 않는다.
+**One outside data point attached** (2026-08-15 research). Mosseri said in a
+Platformer interview, *"If you're really trying to grow your presence, you
+should reply much more than you post."* Until now we held this principle on
+our single measurement; the statement points the same way. **Grade:
+[statement · secondhand]** — the Platformer source URL 404s, so first-hand
+confirmation failed and we only have secondary-outlet quotes. Don't cite it
+with the weight of system-card-grade evidence.
 
-## 관찰 지표 (주간 4개)
+## Observed metrics (4 weekly)
 
-게시물당 도달 · 게시물당 답글 수 · 팔로워 증가율 · 프로필 방문. 좋아요는 후행
-지표라 판단을 바꾸지 않는다. threads_insights 의 도달 상위 글에서 소재·형식을
-읽어 다음 글에 반영한다 — 이 학습이 없으면 루프는 같은 글만 복제한다.
+Reach per post · replies per post · follower growth rate · profile visits.
+Likes are a lagging indicator and change no decision. Read topic and form off
+the top-reach posts in threads_insights and feed the next post — without this
+learning, the loop just clones the same post.
 
-**계정 지표만 보면 답글 성과가 안 보인다.** `threads_insights` 의 `posts` 는 루트
-글만 담고, 계정 합계의 `likes`·`replies` 에는 **우리가 쓴 답글까지 섞인다**(실측:
-인박스가 빈 채로 replies 가 오르면 대개 우리 답글이다). 참여 성과를 보려면
-`state.recentReplyIds` 로 `/{id}/insights` 를 직접 훑어야 한다 — 이걸 안 하면 루트
-글보다 멀리 간 답글이 원장에 한 줄도 안 적힌다.
+**Account-level metrics alone hide reply performance.** `threads_insights`'s
+`posts` holds root posts only, and the account totals' `likes` · `replies`
+**mix in the replies we wrote** (measured: when replies climb while the inbox
+stays empty, they're usually ours). To see engagement performance you must
+sweep `/{id}/insights` directly via `state.recentReplyIds` — skip that and a
+reply that traveled further than any root post never gets a line in the
+ledger.

@@ -3,7 +3,7 @@
 ._*
 Thumbs.db
 
-# ── 에디터 ────────────────────────────────────────────────────────
+# ── Editors ───────────────────────────────────────────────────────
 .idea/
 .vscode/
 *.swp
@@ -13,8 +13,8 @@ Thumbs.db
 node_modules/
 npm-debug.log*
 *.log
-# server/dist/ 는 무시하지 않는다 — .mcp.json 이 빌드 단계 없이
-# ${CLAUDE_PLUGIN_ROOT}/server/dist/index.js 를 직접 실행하므로 커밋 대상이다.
+# server/dist/ is NOT ignored — .mcp.json runs
+# ${CLAUDE_PLUGIN_ROOT}/server/dist/index.js directly with no build step, so it's committed.
 
 # ── Python (skills/**/references/*.py) ────────────────────────────
 __pycache__/
@@ -22,12 +22,12 @@ __pycache__/
 .venv/
 venv/
 
-# ── 로컬 세션 설정 ────────────────────────────────────────────────
+# ── Local session settings ────────────────────────────────────────
 .claude/settings.local.json
 .claude/*.local.md
 CLAUDE.local.md
 
-# ── 시크릿·자격증명 (절대 커밋 금지) ──────────────────────────────
+# ── Secrets·credentials (never commit) ────────────────────────────
 .env
 .env.*
 !.env.example
@@ -40,22 +40,22 @@ token.json
 tokens.json
 *-token.json
 
-# ── git 워크트리 (스프린트 작업 공간) ─────────────────────────────
+# ── git worktrees (sprint workspaces) ─────────────────────────────
 .worktrees/
 
-# ── 콘텐츠 데이터 ─────────────────────────────────────────────────
-# 채널 작업물(profile.md·스토리보드·이미지·영상·브랜딩 자산)은 로컬 산출물이다.
-# 이 저장소는 플러그인 코드·스킬만 담는다. 구조 설명 문서만 예외로 커밋한다.
+# ── Content data ──────────────────────────────────────────────────
+# Channel work products (profile.md·storyboards·images·videos·branding assets) are local artifacts.
+# This repo holds only plugin code and skills. The structure doc is the one committed exception.
 data/*
 !data/README.md
 
-# 작업 중간 산출물 (data/ 밖에서 생겨도 무시)
+# Work intermediates (ignored even when created outside data/)
 .work/
 **/assets/scratch/
 
-# ── Swift 앱 (apps/shoot-console) ─────────────────────────────────
-# 빌드 산출물은 커밋하지 않는다 — server/dist 와 달리 플러그인 실행 경로에
-# 걸려 있지 않고, 쓰는 사람이 build-app.sh 로 직접 빌드해 서명한다
-# (서명 신원이 머신마다 다르다).
+# ── Swift app (apps/shoot-console) ────────────────────────────────
+# Build artifacts aren't committed — unlike server/dist they're not on the
+# plugin's execution path, and users build and sign them with build-app.sh
+# themselves (the signing identity differs per machine).
 apps/*/.build/
 apps/*/build/

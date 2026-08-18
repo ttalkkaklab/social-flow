@@ -1,12 +1,14 @@
 /**
- * 툴 표면 계약 테스트 — `npm run check` (빌드 후 실행).
+ * Tool-surface contract tests — `npm run check` (runs after the build).
  *
- * 실제 API 를 부르지 않는다. 이 서버의 결함은 대부분 "호출해 보기 전에는 안 보이는
- * 계약 불일치"(라우팅 누락, 스키마에만 있고 핸들러엔 없는 인자, 정본 상수와 어긋난
- * enum, 동작 힌트와 설명의 모순)라서, 정적으로 잡을 수 있는 것부터 전부 잡는다.
+ * No real API is called. Most defects in this server are "contract mismatches
+ * invisible until you actually call" (missing routes, arguments that exist in
+ * the schema but not the handler, enums drifted from the canonical constants,
+ * behavior hints contradicting the description), so everything catchable
+ * statically is caught here.
  *
- * 게시 툴이 실호출로 공개 게시를 만들기 때문에 행동 평가(behavioral eval)는 여기
- * 없다 — 그건 드라이런 계층이 생긴 뒤의 일이다.
+ * There are no behavioral evals here, because the publish tools create public
+ * posts on a real call — that waits for a dry-run layer.
  */
 
 import assert from 'node:assert/strict';
@@ -65,7 +67,7 @@ import { pcmToWav, resolveOutputFile } from '../dist/media-utils.js';
 
 const byName = new Map(TOOLS.map((tool) => [tool.name, tool]));
 
-/** inputSchema.properties 를 (경로, 스키마) 쌍으로 깊이 우선 평탄화한다. */
+/** Depth-first flattening of inputSchema.properties into (path, schema) pairs. */
 function walkProperties(schema, prefix = '') {
   const out = [];
   for (const [key, value] of Object.entries(schema.properties ?? {})) {
@@ -81,86 +83,86 @@ function walkProperties(schema, prefix = '') {
   return out;
 }
 
-describe('툴 표면', () => {
-  it('툴이 존재하고 이름이 고유하다', () => {
-    assert.ok(TOOLS.length > 0, '툴이 하나도 없다');
-    assert.equal(byName.size, TOOLS.length, '중복된 툴 이름이 있다');
+describe('tool surface', () => {
+  it('tools exist and names are unique', () => {
+    assert.ok(TOOLS.length > 0, 'no tools at all');
+    assert.equal(byName.size, TOOLS.length, 'duplicate tool name');
   });
 
   for (const tool of TOOLS) {
     describe(tool.name, () => {
-      it('이름이 snake_case 네임스페이스 규약을 지킨다', () => {
+      it('name follows the snake_case namespace convention', () => {
         assert.match(tool.name, /^[a-z][a-z0-9]*(_[a-z0-9]+)+$/);
       });
 
-      it('title 과 description 이 있다', () => {
+      it('has a title and a description', () => {
         assert.equal(typeof tool.title, 'string');
-        assert.ok(tool.title.trim().length > 0, 'title 이 비어 있다');
-        assert.ok(tool.title.length <= 60, `title 이 너무 길다 (${tool.title.length}자)`);
-        assert.ok((tool.description ?? '').trim().length >= 40, 'description 이 없거나 너무 짧다');
+        assert.ok(tool.title.trim().length > 0, 'title is empty');
+        assert.ok(tool.title.length <= 60, `title too long (${tool.title.length} chars)`);
+        assert.ok((tool.description ?? '').trim().length >= 40, 'description missing or too short');
       });
 
-      it('inputSchema 가 유효한 object 스키마다', () => {
+      it('inputSchema is a valid object schema', () => {
         assert.equal(tool.inputSchema?.type, 'object');
         const properties = tool.inputSchema.properties ?? {};
         for (const key of tool.inputSchema.required ?? []) {
-          assert.ok(key in properties, `required 에 있는 "${key}" 가 properties 에 없다`);
+          assert.ok(key in properties, `"${key}" is in required but not in properties`);
         }
       });
 
-      it('모든 파라미터에 설명이 있다', () => {
+      it('every parameter has a description', () => {
         for (const [path, schema] of walkProperties(tool.inputSchema)) {
           assert.ok(
             typeof schema.description === 'string' && schema.description.trim().length > 0,
-            `"${path}" 에 description 이 없다 — 모델이 무엇을 넣어야 할지 알 수 없다`,
+            `"${path}" has no description — the model cannot know what to pass`,
           );
         }
       });
 
-      it('enum 이 비어 있지 않고 default 가 enum 안에 있다', () => {
+      it('enums are non-empty and defaults are inside the enum', () => {
         for (const [path, schema] of walkProperties(tool.inputSchema)) {
           if (!Array.isArray(schema.enum)) continue;
-          assert.ok(schema.enum.length > 0, `"${path}" 의 enum 이 비어 있다`);
-          assert.equal(new Set(schema.enum).size, schema.enum.length, `"${path}" 의 enum 에 중복이 있다`);
+          assert.ok(schema.enum.length > 0, `enum of "${path}" is empty`);
+          assert.equal(new Set(schema.enum).size, schema.enum.length, `enum of "${path}" has duplicates`);
           if (schema.default !== undefined) {
             assert.ok(
               schema.enum.includes(schema.default),
-              `"${path}" 의 default(${schema.default})가 enum 밖이다`,
+              `default of "${path}" (${schema.default}) is outside the enum`,
             );
           }
         }
       });
 
-      it('annotations 가 있고 힌트 조합이 모순되지 않는다', () => {
+      it('annotations exist and the hint combination is consistent', () => {
         const a = tool.annotations;
-        assert.ok(a, 'annotations 가 없다 — 클라이언트가 위험한 툴을 구분할 수 없다');
+        assert.ok(a, 'no annotations — the client cannot tell dangerous tools apart');
         assert.equal(typeof a.readOnlyHint, 'boolean');
         assert.equal(typeof a.openWorldHint, 'boolean');
 
         if (a.readOnlyHint) {
-          // 읽기 전용에 destructive/idempotent 를 다는 것은 스펙상 무의미하다
-          assert.equal(a.destructiveHint, undefined, 'readOnly 인데 destructiveHint 가 있다');
-          assert.equal(a.idempotentHint, undefined, 'readOnly 인데 idempotentHint 가 있다');
+          // destructive/idempotent hints on a read-only tool mean nothing per spec
+          assert.equal(a.destructiveHint, undefined, 'readOnly yet destructiveHint is set');
+          assert.equal(a.idempotentHint, undefined, 'readOnly yet idempotentHint is set');
         } else {
-          // 쓰기 툴은 두 힌트를 기본값에 맡기지 않는다 — destructiveHint 의 기본은
-          // true 라, 파일만 만드는 생성 툴이 파괴적으로 오인된다
-          assert.equal(typeof a.destructiveHint, 'boolean', 'destructiveHint 를 명시해야 한다');
-          assert.equal(typeof a.idempotentHint, 'boolean', 'idempotentHint 를 명시해야 한다');
+          // write tools must not leave the two hints to defaults — destructiveHint
+          // defaults to true, so a file-only generation tool reads as destructive
+          assert.equal(typeof a.destructiveHint, 'boolean', 'destructiveHint must be explicit');
+          assert.equal(typeof a.idempotentHint, 'boolean', 'idempotentHint must be explicit');
         }
       });
 
-      it('outputSchema 를 선언했다면 유효하다', () => {
+      it('outputSchema, when declared, is valid', () => {
         if (!tool.outputSchema) return;
         assert.equal(tool.outputSchema.type, 'object');
         const properties = tool.outputSchema.properties ?? {};
-        assert.ok(Object.keys(properties).length > 0, 'properties 가 비어 있다');
+        assert.ok(Object.keys(properties).length > 0, 'properties is empty');
         for (const key of tool.outputSchema.required ?? []) {
-          assert.ok(key in properties, `outputSchema.required 의 "${key}" 가 properties 에 없다`);
+          assert.ok(key in properties, `"${key}" from outputSchema.required is not in properties`);
         }
         for (const [key, schema] of Object.entries(properties)) {
           assert.ok(
             typeof schema.description === 'string' && schema.description.trim().length > 0,
-            `outputSchema "${key}" 에 description 이 없다`,
+            `outputSchema "${key}" has no description`,
           );
         }
       });
@@ -169,26 +171,28 @@ describe('툴 표면', () => {
 });
 
 /**
- * 파라미터 이름 규약.
+ * Parameter naming convention.
  *
- * 이름이 툴마다 흔들리면(q vs query, num vs display vs max_results) 모델은 툴을
- * 갈아탈 때마다 인자를 다시 배워야 하고, 그 비용은 잘못된 인자명 호출 →
- * -32602 왕복으로 되돌아온다. 백엔드 API 가 q/display/num 을 쓰더라도 그 환산은
- * 클라이언트 계층의 일이지 툴 표면의 일이 아니다.
+ * When names wobble per tool (q vs query, num vs display vs max_results),
+ * the model has to relearn arguments every time it switches tools, and that
+ * cost comes back as wrong-argument calls → -32602 round trips. Even where
+ * the backend API uses q/display/num, that mapping is the client layer's
+ * job, not the tool surface's.
  */
-describe('파라미터 네이밍 규약', () => {
+describe('parameter naming convention', () => {
   const SEARCH_TOOLS = TOOLS.filter((t) => t.name.endsWith('_search'));
 
-  it('검색 툴이 존재한다 (필터가 헛돌지 않는지 확인)', () => {
-    assert.ok(SEARCH_TOOLS.length >= 5, `검색 툴이 ${SEARCH_TOOLS.length}개뿐이다 — 필터가 잘못됐을 수 있다`);
+  it('search tools exist (the filter is not spinning empty)', () => {
+    assert.ok(SEARCH_TOOLS.length >= 5, `only ${SEARCH_TOOLS.length} search tools — the filter may be wrong`);
   });
 
   /**
-   * 검색 툴이 아니어도 결과 수·페이지를 받는 툴은 같은 이름을 써야 한다.
-   * `_search` 접미사에만 걸면 datago_file_fetch 처럼 이름이 다른 조회 툴이
-   * 그물을 빠져나간다 — 실제로 perPage 가 그렇게 남아 있었다.
+   * Even non-search tools taking result counts and pages must use the same
+   * names. Hooking only on the `_search` suffix lets differently named
+   * lookup tools like datago_file_fetch slip the net — perPage actually
+   * survived that way.
    */
-  it('페이지네이션 인자 이름이 서버 전역에서 하나다', () => {
+  it('pagination argument names are uniform server-wide', () => {
     const offenders = [];
     for (const tool of TOOLS) {
       for (const [path] of walkProperties(tool.inputSchema)) {
@@ -198,49 +202,50 @@ describe('파라미터 네이밍 규약', () => {
         }
       }
     }
-    assert.deepEqual(offenders, [], `결과 수 인자는 limit 으로 통일한다: ${offenders.join(', ')}`);
+    assert.deepEqual(offenders, [], `result-count arguments are unified as limit: ${offenders.join(', ')}`);
   });
 
   for (const tool of TOOLS) {
-    it(`${tool.name}: 파라미터가 camelCase 다`, () => {
+    it(`${tool.name}: parameters are camelCase`, () => {
       for (const [path] of walkProperties(tool.inputSchema)) {
         const key = path.split('.').pop().replace(/\[\]$/, '');
-        // gl/hl/q 같은 외부 API 표준 약어는 예외 — 바꾸면 오히려 대응이 흐려진다
+        // external-API standard abbreviations like gl/hl/q are exempt — renaming them blurs the mapping
         if (['gl', 'hl', 'uddi'].includes(key)) continue;
         assert.ok(
           /^[a-z][a-zA-Z0-9]*$/.test(key),
-          `"${tool.name}.${path}" 가 camelCase 가 아니다 (snake_case 금지 — 서버 전역 규약은 camelCase)`,
+          `"${tool.name}.${path}" is not camelCase (no snake_case — the server-wide convention is camelCase)`,
         );
       }
     });
   }
 
   /**
-   * 이름만 같고 뜻이 다르면 통일이 오히려 함정이다.
+   * Same name, different meaning turns unification into a trap.
    *
-   * 실제로 두 번 물렸다: naver_search 는 API 의 start(항목 오프셋)를 page 로
-   * 그대로 넘겨 page=2 가 2번째 항목부터를 뜻했고, serp_web_search 는 오프셋을
-   * limit 배수로 계산해 limit≠10 일 때 페이지가 겹쳤다. 둘 다 에러 없이 조용히
-   * 중복 결과를 주는 부류라 설명에 "페이지"라고 못박아 계약을 드러낸다.
+   * It bit twice for real: naver_search forwarded the API's start (item
+   * offset) as page, so page=2 meant "from the 2nd item", and serp_web_search
+   * computed the offset as a limit multiple, overlapping pages when limit≠10.
+   * Both silently return duplicate results with no error, so the description
+   * pins "page" to surface the contract.
    */
   for (const tool of SEARCH_TOOLS) {
     const pageSchema = tool.inputSchema.properties?.page;
     if (!pageSchema) continue;
-    it(`${tool.name}: page 가 페이지 번호임을 설명이 명시한다`, () => {
+    it(`${tool.name}: the description states page is a page number`, () => {
       assert.match(
         pageSchema.description ?? '',
-        /페이지/,
-        'page 는 항목 오프셋이 아니라 페이지 번호다 — 환산은 클라이언트가 맡고, 설명이 그 계약을 드러내야 한다',
+        /[Pp]age number/,
+        'page is a page number, not an item offset — the client owns the mapping, and the description must surface that contract',
       );
       assert.ok(
-        !/오프셋|시작 위치|start/i.test(pageSchema.description ?? ''),
-        'page 설명이 오프셋 의미를 드러내면 안 된다 — 툴 표면은 페이지여야 한다',
+        !/offset|start/i.test(pageSchema.description ?? ''),
+        'the page description must not leak offset semantics — the tool surface is pages',
       );
     });
   }
 
   for (const tool of SEARCH_TOOLS) {
-    it(`${tool.name}: 검색 툴 공통 인자명을 쓴다`, () => {
+    it(`${tool.name}: uses the shared search-tool argument names`, () => {
       const props = tool.inputSchema.properties ?? {};
       const banned = {
         q: 'query',
@@ -255,70 +260,72 @@ describe('파라미터 네이밍 규약', () => {
         sort_by: 'sort',
         sortBy: 'sort',
       };
-      // 중첩 객체 안의 인자도 같은 규약을 받는다 — 최상위만 보면 한 겹 아래로
-      // 숨긴 q/num 이 그대로 통과한다
+      // arguments inside nested objects follow the same convention — checking
+      // only the top level lets a q/num hidden one layer down pass untouched
       for (const [path] of walkProperties(tool.inputSchema)) {
         const key = path.split('.').pop().replace(/\[\]$/, '');
         const good = banned[key];
-        assert.ok(!good, `"${tool.name}.${path}" 는 검색 툴 공통 인자 "${good}" 로 통일해야 한다`);
+        assert.ok(!good, `"${tool.name}.${path}" must be unified as the shared search argument "${good}"`);
       }
-      // 검색어를 받는 툴이라면 이름은 query 이고 필수다
-      assert.ok('query' in props, `${tool.name} 에 query 가 없다 — 검색 툴의 검색어 인자명은 query 다`);
+      // a tool that takes search terms names them query, and query is required
+      assert.ok('query' in props, `${tool.name} has no query — the search-term argument of a search tool is named query`);
       assert.ok(
         (tool.inputSchema.required ?? []).includes('query'),
-        `${tool.name}.query 가 required 가 아니다`,
+        `${tool.name}.query is not required`,
       );
     });
   }
 });
 
-describe('라우팅 정합', () => {
-  it('정의된 모든 툴에 핸들러가 있다', () => {
+describe('routing consistency', () => {
+  it('every defined tool has a handler', () => {
     const orphans = TOOLS.filter((tool) => typeof ROUTES[tool.name] !== 'function').map((t) => t.name);
-    assert.deepEqual(orphans, [], `핸들러 없는 툴: ${orphans.join(', ')}`);
+    assert.deepEqual(orphans, [], `tools without a handler: ${orphans.join(', ')}`);
   });
 
-  it('정의되지 않은 핸들러가 없다', () => {
+  it('no handler is undefined as a tool', () => {
     const orphans = Object.keys(ROUTES).filter((name) => !byName.has(name));
-    assert.deepEqual(orphans, [], `툴 정의 없는 핸들러: ${orphans.join(', ')}`);
+    assert.deepEqual(orphans, [], `handlers without a tool definition: ${orphans.join(', ')}`);
   });
 
-  it('ListTools 게이트가 실재하는 툴만 가리킨다', () => {
+  it('the ListTools gate points only at tools that exist', () => {
     for (const name of Object.keys(SNS_PLATFORM_BY_TOOL)) {
-      assert.ok(byName.has(name), `SNS_PLATFORM_BY_TOOL 의 "${name}" 이 툴 목록에 없다`);
+      assert.ok(byName.has(name), `"${name}" from SNS_PLATFORM_BY_TOOL is not in the tool list`);
     }
   });
 });
 
-describe('HITL 계약', () => {
+describe('HITL contract', () => {
   const destructive = TOOLS.filter((t) => t.annotations?.destructiveHint === true);
 
-  it('즉시 공개되는 툴이 하나 이상 파괴적으로 표시돼 있다', () => {
+  it('at least one immediately-public tool is marked destructive', () => {
     assert.ok(destructive.length > 0);
   });
 
   for (const tool of destructive) {
-    it(`${tool.name} — 설명이 승인 없이 호출 금지를 명시한다`, () => {
-      // 힌트(기계 판독)와 설명(모델 판독)이 같은 사실을 말해야 한다.
-      // 한쪽만 고치고 다른 쪽을 두면 둘 중 하나는 반드시 거짓이 된다.
-      assert.match(tool.description, /⚠️/, '경고 표식이 없다');
-      assert.match(tool.description, /승인 없이 호출 금지|HITL/, 'HITL 문구가 없다');
+    it(`${tool.name} — the description forbids calling without approval`, () => {
+      // The hint (machine-read) and the description (model-read) must state
+      // the same fact. Fix one and leave the other, and one of them is
+      // guaranteed to be a lie.
+      assert.match(tool.description, /⚠️/, 'no warning marker');
+      assert.match(tool.description, /never call without|HITL/, 'no HITL wording');
     });
   }
 
-  it('읽기 전용 툴은 파괴적 경고를 달지 않는다', () => {
+  it('read-only tools carry no destructive warning', () => {
     for (const tool of TOOLS.filter((t) => t.annotations?.readOnlyHint === true)) {
       assert.ok(
-        !tool.description.includes('즉시 공개'),
-        `${tool.name} — readOnly 인데 설명이 "즉시 공개"라고 말한다`,
+        !tool.description.includes('immediately public'),
+        `${tool.name} — readOnly yet the description says "immediately public"`,
       );
     }
   });
 });
 
-describe('Threads 성장 조회 툴', () => {
-  // 인사이트·검색 스코프는 게시용 토큰에 없을 수 있다 — 스코프 이름이 설명에
-  // 없으면 403 을 받은 호출자가 다음 행동(재발급)을 알 수 없다.
+describe('Threads growth lookup tools', () => {
+  // The insights/search scopes may be missing from publish-issued tokens —
+  // without the scope name in the description, a caller hitting 403 cannot
+  // know the next move (reissue).
   const scopeByTool = {
     threads_insights: 'threads_manage_insights',
     threads_search: 'threads_keyword_search',
@@ -326,273 +333,282 @@ describe('Threads 성장 조회 툴', () => {
 
   for (const [name, scope] of Object.entries(scopeByTool)) {
     describe(name, () => {
-      it('THREADS 자격증명으로 게이트된다', () => {
+      it('is gated on THREADS credentials', () => {
         assert.equal(SNS_PLATFORM_BY_TOOL[name], 'THREADS');
       });
 
-      it('읽기 전용으로 표시돼 있다 (부작용 없음 — 승인 프롬프트 불필요)', () => {
+      it('is marked read-only (no side effects — no approval prompt needed)', () => {
         assert.equal(byName.get(name)?.annotations?.readOnlyHint, true);
       });
 
-      it(`설명이 필요 스코프(${scope})를 명시한다`, () => {
-        assert.ok(byName.get(name)?.description.includes(scope), `"${scope}" 문구가 없다`);
+      it(`the description names the required scope (${scope})`, () => {
+        assert.ok(byName.get(name)?.description.includes(scope), `"${scope}" wording missing`);
       });
     });
   }
 
-  it('threads_search 설명이 검색 쿼터를 명시한다', () => {
-    assert.match(byName.get('threads_search').description, /2,?200/, '24h 롤링 쿼터 문구가 없다');
+  it('the threads_search description states the search quota', () => {
+    assert.match(byName.get('threads_search').description, /2,?200/, 'no 24h rolling quota wording');
   });
 });
 
-describe('Instagram 성장 조회 툴', () => {
+describe('Instagram growth lookup tool', () => {
   const tool = () => byName.get('instagram_insights');
 
-  it('INSTAGRAM 자격증명으로 게이트된다', () => {
+  it('is gated on INSTAGRAM credentials', () => {
     assert.equal(SNS_PLATFORM_BY_TOOL.instagram_insights, 'INSTAGRAM');
   });
 
-  it('읽기 전용으로 표시돼 있다 (부작용 없음 — 승인 프롬프트 불필요)', () => {
+  it('is marked read-only (no side effects — no approval prompt needed)', () => {
     assert.equal(tool()?.annotations?.readOnlyHint, true);
   });
 
-  // 게시용으로 발급한 기존 토큰에는 인사이트 스코프가 없다 — 스코프 이름이
-  // 설명에 없으면 에러를 받은 호출자가 무엇을 재발급해야 하는지 알 수 없다.
-  it('설명이 필요 스코프(instagram_business_manage_insights)를 명시한다', () => {
-    assert.ok(tool()?.description.includes('instagram_business_manage_insights'), '스코프 문구가 없다');
+  // Tokens issued for publishing lack the insights scope — without the scope
+  // name in the description, a caller hitting an error cannot know what to reissue.
+  it('the description names the required scope (instagram_business_manage_insights)', () => {
+    assert.ok(tool()?.description.includes('instagram_business_manage_insights'), 'scope wording missing');
   });
 
-  // 실측: FEED 미디어에 릴스 지표를 요청하면 400 으로 응답 전체가 실패한다.
-  // 어느 지표가 릴스 한정인지 설명에 없으면 호출자가 이미지에서도 찾는다.
-  it('설명이 릴스 전용 지표와 그 한정 조건을 함께 명시한다', () => {
+  // Measured: requesting reels metrics on FEED media fails the whole response
+  // with a 400. Without the reels-only list in the description, callers go
+  // looking for them on images too.
+  it('the description names the reels-only metrics together with their condition', () => {
     const description = tool().description;
     for (const metric of ['ig_reels_avg_watch_time', 'reels_skip_rate']) {
-      assert.ok(description.includes(metric), `"${metric}" 문구가 없다`);
+      assert.ok(description.includes(metric), `"${metric}" wording missing`);
     }
-    assert.match(description, /REELS/, '릴스 한정 조건이 없다');
+    assert.match(description, /REELS/, 'no reels-only condition');
   });
 
-  // 실측: 인사이트의 follower_count 는 팔로워 100 미만 계정에서 빈 배열을
-  // 돌려준다. 이 툴이 겨냥하는 게 팔로워 0인 신규 채널이라 치명적이다.
-  it('설명이 팔로워 수 출처가 프로필 필드임을 명시한다', () => {
-    assert.match(tool().description, /followersCount/, '팔로워 수 출처 안내가 없다');
-    assert.match(tool().description, /100 미만/, '인사이트 follower_count 의 한계 경고가 없다');
+  // Measured: the insights follower_count returns an empty array for accounts
+  // with fewer than 100 followers. Fatal, since this tool targets brand-new
+  // channels sitting at 0 followers.
+  it('the description states the follower count comes from the profile field', () => {
+    assert.match(tool().description, /followersCount/, 'no follower-count source guidance');
+    assert.match(tool().description, /fewer than 100/, 'no warning about the insights follower_count limit');
   });
 
-  it('출력 스키마가 계정·구간·계정지표·미디어를 모두 요구한다', () => {
+  it('the output schema requires account, period, user, and media', () => {
     assert.deepEqual(tool()?.outputSchema?.required, ['account', 'period', 'user', 'media']);
   });
 });
 
-describe('YouTube 성장 조회 툴', () => {
+describe('YouTube growth lookup tool', () => {
   const tool = () => byName.get('youtube_insights');
 
-  it('YOUTUBE 자격증명으로 게이트된다', () => {
+  it('is gated on YOUTUBE credentials', () => {
     assert.equal(SNS_PLATFORM_BY_TOOL.youtube_insights, 'YOUTUBE');
   });
 
-  it('읽기 전용으로 표시돼 있다 (부작용 없음 — 승인 프롬프트 불필요)', () => {
+  it('is marked read-only (no side effects — no approval prompt needed)', () => {
     assert.equal(tool()?.annotations?.readOnlyHint, true);
   });
 
-  // 기존 토큰은 youtube.upload 단독으로 발급됐다 — 스코프 이름이 설명에 없으면
-  // 403 을 받은 호출자가 무엇을 재발급해야 하는지 알 수 없다.
+  // Existing tokens were issued with youtube.upload alone — without the scope
+  // name in the description, a caller hitting 403 cannot know what to reissue.
   for (const scope of ['youtube.readonly', 'yt-analytics.readonly', 'yt-analytics-monetary.readonly']) {
-    it(`설명이 필요 스코프(${scope})를 명시한다`, () => {
-      assert.ok(tool()?.description.includes(scope), `"${scope}" 문구가 없다`);
+    it(`the description names the required scope (${scope})`, () => {
+      assert.ok(tool()?.description.includes(scope), `"${scope}" wording missing`);
     });
   }
 
-  it('설명이 Analytics 데이터 지연을 경고한다', () => {
-    assert.match(tool().description, /2~3일 지연/, '지연 경고가 없다 — 최근 구간이 빈 것을 장애로 오인한다');
+  it('the description warns about the Analytics data lag', () => {
+    assert.match(tool().description, /2-3 days/, 'no lag warning — an empty recent window gets misread as an outage');
   });
 
-  it('설명이 스와이프 이탈률 미제공을 명시한다', () => {
-    // API 에 없는 지표를 있는 것처럼 두면 호출자가 계속 찾는다
-    assert.match(tool().description, /스와이프/, '스와이프 이탈률 부재 안내가 없다');
+  it('the description states the swipe-away rate is unavailable', () => {
+    // leave a metric the API lacks looking available and callers keep hunting for it
+    assert.match(tool().description, /swipe/, 'no notice that the swipe-away rate is absent');
   });
 });
 
-describe('AI 생성 콘텐츠 고지 (YouTube)', () => {
+describe('AI-generated content disclosure (YouTube)', () => {
   const publish = () => byName.get('youtube_publish');
 
-  it('containsSyntheticMedia 파라미터가 있다', () => {
-    assert.ok(publish()?.inputSchema.properties.containsSyntheticMedia, '합성 미디어 고지 인자가 없다');
+  it('has a containsSyntheticMedia parameter', () => {
+    assert.ok(publish()?.inputSchema.properties.containsSyntheticMedia, 'no synthetic-media disclosure argument');
   });
 
-  // 이 파이프라인은 Veo 영상·Lyria 음악을 쓴다. 기본값이 false 면 미고지 게시가
-  // 기본 동작이 되고, 상습 미고지는 라벨 강제·삭제·YPP 정지 사유다.
-  it('기본값이 true 다 (미고지가 기본이 되지 않는다)', () => {
+  // This pipeline uses Veo video and Lyria music. A false default makes
+  // non-disclosure the default behavior, and habitual non-disclosure is
+  // grounds for forced labels, removal, and YPP suspension.
+  it('defaults to true (non-disclosure never becomes the default)', () => {
     assert.equal(publish().inputSchema.properties.containsSyntheticMedia.default, true);
   });
 
-  it('설명이 면제 사례를 알려준다 (끌 수 있는 경우를 모르면 항상 켜진다)', () => {
+  it('the description lists the exemptions (not knowing when to turn it off means it stays on)', () => {
     assert.match(
       publish().inputSchema.properties.containsSyntheticMedia.description,
-      /면제|자기 목소리|대본/,
-      '면제 사례 안내가 없다',
+      /exempt/,
+      'no exemption guidance',
     );
   });
 });
 
-describe('자막 별도 업로드 계약', () => {
-  // 이 파이프라인은 자막을 영상에 태우지 않고 파일로 따로 올린다. 그래서 자막 파일을
-  // 받는 플랫폼에는 인자가 반드시 있어야 하고, 못 받는 플랫폼(IG)에는 있으면 안 된다 —
-  // IG 에 자막 인자가 생기면 호출자가 클린본을 올리고 자막이 조용히 사라진다.
+describe('separate subtitle upload contract', () => {
+  // This pipeline uploads subtitles as files instead of burning them in. So the
+  // platforms that take a subtitle file must have the argument, and the platform
+  // that cannot (IG) must not — give IG a subtitle argument and callers upload
+  // the clean master while the subtitles silently disappear.
   const yt = () => byName.get('youtube_publish');
   const fb = () => byName.get('facebook_publish');
   const ig = () => byName.get('instagram_publish');
 
-  it('YouTube 가 자막 파일·언어 인자를 받는다', () => {
-    assert.ok(yt()?.inputSchema.properties.captionFilePath, 'captionFilePath 가 없다');
-    assert.ok(yt()?.inputSchema.properties.captionLanguage, 'captionLanguage 가 없다');
+  it('YouTube takes subtitle file and language arguments', () => {
+    assert.ok(yt()?.inputSchema.properties.captionFilePath, 'no captionFilePath');
+    assert.ok(yt()?.inputSchema.properties.captionLanguage, 'no captionLanguage');
   });
 
-  it('Facebook 이 자막 파일·로케일 인자를 받는다', () => {
-    assert.ok(fb()?.inputSchema.properties.captionFilePath, 'captionFilePath 가 없다');
-    assert.ok(fb()?.inputSchema.properties.captionLocale, 'captionLocale 이 없다');
+  it('Facebook takes subtitle file and locale arguments', () => {
+    assert.ok(fb()?.inputSchema.properties.captionFilePath, 'no captionFilePath');
+    assert.ok(fb()?.inputSchema.properties.captionLocale, 'no captionLocale');
   });
 
-  it('Instagram 에는 자막 파일 인자가 없다 (플랫폼이 받지 않는다)', () => {
+  it('Instagram has no subtitle file argument (the platform does not take one)', () => {
     assert.equal(ig()?.inputSchema.properties.captionFilePath, undefined);
   });
 
-  it('Instagram videoUrl 설명이 번인본을 요구한다', () => {
-    // 여기만 자막이 화면에 박힌 영상이다 — 설명이 없으면 클린본이 올라간다
-    assert.match(ig().inputSchema.properties.videoUrl.description, /번인/, '번인본 요구가 없다');
+  it('the Instagram videoUrl description demands the burned-in master', () => {
+    // this is the only place subtitles live in the frame — without the note, the clean master goes up
+    assert.match(ig().inputSchema.properties.videoUrl.description, /burned-in/, 'no burned-in requirement');
   });
 
-  it('YouTube 자막 설명이 force-ssl 스코프를 알린다', () => {
-    // 게시용 youtube.upload 로는 captions.insert 가 거부된다 — 모르면 영상만 올라간다
+  it('the YouTube subtitle description mentions the force-ssl scope', () => {
+    // captions.insert is rejected on the publish-only youtube.upload — unaware callers upload video only
     assert.match(yt().inputSchema.properties.captionFilePath.description, /force-ssl/);
   });
 
-  it('YouTube 자막 설명이 400유닛 쿼터를 알린다', () => {
-    // 업로드 1유닛과 400배 차이라 호출 빈도 판단이 달라진다
-    assert.match(yt().inputSchema.properties.captionFilePath.description, /400유닛/);
+  it('the YouTube subtitle description mentions the 400-unit quota', () => {
+    // 400x the 1-unit upload — it changes how often you would call
+    assert.match(yt().inputSchema.properties.captionFilePath.description, /400 units/);
   });
 
-  it('Facebook 로케일 설명이 파일명 계약을 알린다', () => {
-    // FB 는 업로드 파일명 `<이름>.<locale>.srt` 로 로케일을 판정한다
+  it('the Facebook locale description mentions the file-name contract', () => {
+    // FB derives the locale from the uploaded file name `<name>.<locale>.srt`
     assert.match(fb().inputSchema.properties.captionLocale.description, /ko_KR/);
   });
 
-  it('두 툴 출력이 captionSet·captionWarning 을 노출한다', () => {
+  it('both tool outputs expose captionSet and captionWarning', () => {
     for (const [name, tool] of [['youtube_publish', yt()], ['facebook_publish', fb()]]) {
-      assert.ok(tool.outputSchema?.properties?.captionSet, `${name}: captionSet 이 없다`);
-      assert.ok(tool.outputSchema?.properties?.captionWarning, `${name}: captionWarning 이 없다`);
+      assert.ok(tool.outputSchema?.properties?.captionSet, `${name}: no captionSet`);
+      assert.ok(tool.outputSchema?.properties?.captionWarning, `${name}: no captionWarning`);
     }
   });
 
-  it('captionWarning 설명이 재게시를 막는다', () => {
-    // 게시 API 는 비멱등 — 자막만 실패했는데 재게시하면 게시물이 중복으로 쌓인다
+  it('the captionWarning description blocks re-publishing', () => {
+    // the publish APIs are non-idempotent — re-publish after a subtitle-only failure and posts pile up
     for (const [name, tool] of [['youtube_publish', yt()], ['facebook_publish', fb()]]) {
       assert.match(
         tool.outputSchema.properties.captionWarning.description,
-        /재업로드 금지|재게시 금지/,
-        `${name}: 재게시 금지 안내가 없다`,
+        /do not re-upload|do not re-publish/,
+        `${name}: no do-not-republish guidance`,
       );
     }
   });
 });
 
-describe('YouTube 썸네일 필수 계약', () => {
-  // 미지정 업로드는 YouTube 가 임의 프레임을 커버로 뽑고, 게시 후 세로 표면은
-  // API 로 되돌릴 수 없다 — 그래서 업로드 시점에 스키마가 막는다(2026-08-13).
+describe('YouTube required-thumbnail contract', () => {
+  // Without one, YouTube picks an arbitrary frame as the cover, and the
+  // vertical surface cannot be reverted via the API after publishing — so the
+  // schema blocks it at upload time (2026-08-13).
   const yt = () => byName.get('youtube_publish');
 
-  it('thumbnailFilePath 가 required 에 있다 (썸네일 없는 업로드 차단)', () => {
-    assert.ok(yt().inputSchema.required.includes('thumbnailFilePath'), 'thumbnailFilePath 가 필수가 아니다');
+  it('thumbnailFilePath is in required (blocks thumbnail-less uploads)', () => {
+    assert.ok(yt().inputSchema.required.includes('thumbnailFilePath'), 'thumbnailFilePath is not required');
   });
 
-  it('설명이 세로 표면 한계를 알린다 (이 인자가 바꾸는 건 가로 표면뿐)', () => {
-    // 쇼츠 피드·채널 쇼츠 탭의 세로 프레임(oar*)은 앱 프레임 선택으로만 바뀐다
-    assert.match(yt().inputSchema.properties.thumbnailFilePath.description, /세로 (표면|프레임)/, '세로 표면 안내가 없다');
+  it('the description states the vertical-surface limit (this argument changes landscape surfaces only)', () => {
+    // the vertical frame (oar*) in the Shorts feed and channel Shorts tab changes only via app frame selection
+    assert.match(yt().inputSchema.properties.thumbnailFilePath.description, /vertical[ -](surface|frame)/, 'no vertical-surface guidance');
   });
 });
 
-describe('YouTube 포맷별 캡션 계약 (16:9 롱폼 레인)', () => {
-  // 한 툴이 두 포맷을 받으므로 caption 설명이 포맷을 갈라 말해야 한다.
-  // 안 그러면 모델이 롱폼 설명문에도 #Shorts 를 붙여 쇼츠 표면으로 잘못 분류된다.
-  // 대상이 caption 인 이유 — youtube_publish 스키마에 hashtags·description 속성이
-  // 아예 없다. #Shorts 지시가 사는 곳은 required 인 caption 설명 한 줄뿐이다.
+describe('YouTube per-format caption contract (16:9 long-form lane)', () => {
+  // One tool takes both formats, so the caption description has to split them.
+  // Otherwise the model attaches #Shorts to long-form descriptions too, and
+  // the video is misclassified onto the Shorts surface.
+  // Why caption is the target — the youtube_publish schema has no hashtags or
+  // description properties at all. The only place the #Shorts instruction can
+  // live is the description line of the required caption.
   const yt = () => byName.get('youtube_publish');
 
-  it('#Shorts 지시가 쇼츠 조건 안에 있다', () => {
+  it('the #Shorts instruction sits inside the Shorts branch', () => {
     assert.match(
       yt().inputSchema.properties.caption.description,
-      /쇼츠[^]{0,120}#Shorts/,
-      '#Shorts 지시가 쇼츠 조건 밖에 있다 — 모델이 롱폼 설명문에도 붙인다',
+      /9:16 Shorts[^]{0,120}#Shorts/,
+      'the #Shorts instruction sits outside the Shorts branch — the model attaches it to long-form descriptions too',
     );
   });
 
-  it('롱폼 갈래를 명시한다', () => {
-    assert.match(yt().inputSchema.properties.caption.description, /16:9|롱폼/);
+  it('names the long-form branch', () => {
+    assert.match(yt().inputSchema.properties.caption.description, /16:9|long-form/);
   });
 
-  it('롱폼에 챕터 타임스탬프를 안내한다', () => {
-    assert.match(yt().inputSchema.properties.caption.description, /챕터|타임스탬프/);
+  it('guides long-form toward chapter timestamps', () => {
+    assert.match(yt().inputSchema.properties.caption.description, /chapter|timestamp/i);
   });
 
-  it('썸네일 설명이 가로 롱폼을 함께 말한다', () => {
-    assert.match(yt().inputSchema.properties.thumbnailFilePath.description, /가로/);
+  it('the thumbnail description speaks to landscape long-form too', () => {
+    assert.match(yt().inputSchema.properties.thumbnailFilePath.description, /landscape/);
   });
 });
 
-describe('Threads 본문 링크 계약', () => {
-  // 영상 회차의 Threads 는 커버 이미지 + 링크 답글이 아니라 본문 링크 한 건으로 나간다
-  // (2026-08-14 전략 변경). 링크 프리뷰 카드는 media_type=TEXT 전용이라 이미지와 배타다.
+describe('Threads body-link contract', () => {
+  // Threads for video episodes goes out as one body-link post, not cover image
+  // + link reply (strategy change, 2026-08-14). The link preview card is
+  // media_type=TEXT only, hence exclusive with the image.
   const th = () => byName.get('threads_publish');
   const props = () => th().inputSchema.properties;
 
-  it('linkUrl 인자를 받는다 (링크 프리뷰 카드)', () => {
-    assert.equal(props().linkUrl?.format, 'uri', 'linkUrl 이 없거나 uri 포맷이 아니다');
+  it('takes a linkUrl argument (link preview card)', () => {
+    assert.equal(props().linkUrl?.format, 'uri', 'linkUrl missing or not uri format');
   });
 
-  it('linkUrl·imageUrl 설명이 서로 배타임을 알린다', () => {
-    // 같이 보내면 플랫폼이 컨테이너 생성 단계에서 거부한다 — 스키마 설명이 먼저 막는다
-    assert.match(props().linkUrl.description, /배타/, 'linkUrl 설명에 배타 안내가 없다');
-    assert.match(props().imageUrl.description, /배타/, 'imageUrl 설명에 배타 안내가 없다');
+  it('the linkUrl and imageUrl descriptions state they are mutually exclusive', () => {
+    // sent together, the platform rejects at container creation — the schema description blocks it first
+    assert.match(props().linkUrl.description, /mutually exclusive/, 'no exclusivity note in the linkUrl description');
+    assert.match(props().imageUrl.description, /mutually exclusive/, 'no exclusivity note in the imageUrl description');
   });
 
-  it('툴 설명이 링크 답글 전략으로 되돌아가지 않는다', () => {
-    // 옛 전략("커버 이미지 본문 + 풀영상 링크 답글")이 설명에 남아 있으면
-    // 호출자가 답글을 한 번 더 게시해 같은 링크가 두 번 나간다
-    assert.doesNotMatch(th().description, /링크 답글|링크는 본문이 아니라/, '옛 링크 답글 전략이 설명에 남아 있다');
+  it('the tool description does not fall back to the link-reply strategy', () => {
+    // if the old strategy ("cover image body + full-video link reply") lingers
+    // in the description, callers publish one more reply and the same link goes out twice
+    assert.doesNotMatch(th().description, /link reply|the link in a reply/, 'the old link-reply strategy lingers in the description');
   });
 
-  it('FB 와 인자 이름이 같다 (텍스트 게시의 링크 = linkUrl)', () => {
-    assert.ok(byName.get('facebook_publish').inputSchema.properties.linkUrl, 'FB linkUrl 이 사라졌다');
+  it('argument name matches FB (the link of a text post = linkUrl)', () => {
+    assert.ok(byName.get('facebook_publish').inputSchema.properties.linkUrl, 'FB linkUrl has vanished');
   });
 });
 
-describe('댓글 툴 플랫폼 정합', () => {
-  // 세 곳(sns-client 의 COMMENT_PLATFORMS, 툴 enum, 핸들러 zod enum)이 어긋나면
-  // 스키마는 통과하는데 런타임에서 다른 플랫폼 토큰으로 새는 사고가 난다.
+describe('comment tool platform consistency', () => {
+  // If the three places (COMMENT_PLATFORMS in sns-client, the tool enum, the
+  // handler zod enum) drift apart, the schema passes yet the call leaks onto
+  // another platform's token at runtime.
   const inboxEnum = byName.get('sns_comment_inbox').inputSchema.properties.platforms.items.enum;
   const replyEnum = byName.get('sns_comment_reply').inputSchema.properties.platform.enum;
   const moderateEnum = byName.get('sns_comment_moderate').inputSchema.properties.platform.enum;
 
-  it('인박스와 답글이 같은 플랫폼 집합을 받는다', () => {
+  it('inbox and reply take the same platform set', () => {
     assert.deepEqual([...inboxEnum].sort(), [...replyEnum].sort());
   });
 
-  it('YOUTUBE 가 인박스·답글에 포함된다', () => {
-    assert.ok(inboxEnum.includes('YOUTUBE'), '인박스에 YOUTUBE 가 없다');
-    assert.ok(replyEnum.includes('YOUTUBE'), '답글에 YOUTUBE 가 없다');
+  it('YOUTUBE is included in inbox and reply', () => {
+    assert.ok(inboxEnum.includes('YOUTUBE'), 'no YOUTUBE in the inbox');
+    assert.ok(replyEnum.includes('YOUTUBE'), 'no YOUTUBE in reply');
   });
 
-  it('숨김·좋아요는 YOUTUBE 를 받지 않는다', () => {
-    // setModerationStatus 는 "되돌릴 수 있는 숨김"과 의미가 다르다 — 매핑하지 않는다
-    assert.ok(!moderateEnum.includes('YOUTUBE'), 'YOUTUBE 가 숨김 대상에 들어 있다');
+  it('hide/like do not take YOUTUBE', () => {
+    // setModerationStatus means something other than "reversible hide" — no mapping
+    assert.ok(!moderateEnum.includes('YOUTUBE'), 'YOUTUBE is in the hide targets');
   });
 
-  it('답글 툴 설명이 YouTube 의 최상위 댓글 제약을 알려준다', () => {
-    assert.match(byName.get('sns_comment_reply').description, /YOUTUBE/, 'YouTube 계약 설명이 없다');
+  it('the reply tool description explains the YouTube top-level-comment constraint', () => {
+    assert.match(byName.get('sns_comment_reply').description, /YOUTUBE/, 'no YouTube contract explanation');
   });
 });
 
-describe('단일 출처 상수', () => {
+describe('single-source constants', () => {
   const enumOf = (toolName, path) => {
     const parts = path.split('.');
     let schema = byName.get(toolName).inputSchema;
@@ -601,17 +617,19 @@ describe('단일 출처 상수', () => {
   };
 
   /**
-   * 검색 툴 enum·상한은 tools.ts 가 리터럴로 다시 적고 handlers.ts 는 정본 상수를
-   * 참조한다. 한쪽만 고치면 툴이 광고하는 값을 zod 가 -32602 로 거절하는데,
-   * 실호출 전까지 아무도 모른다. 정본과 묶어 드리프트를 빌드 시점에 잡는다.
+   * Search-tool enums and caps are re-written as literals in tools.ts while
+   * handlers.ts references the canonical constants. Fix one side only and zod
+   * rejects the values the tool advertises with -32602 — and nobody knows
+   * until a real call. Tying them to the source of truth catches the drift at
+   * build time.
    */
-  it('naver_search enum 이 naver-client 정본과 같다', () => {
+  it('naver_search enums match the naver-client source of truth', () => {
     assert.deepEqual(enumOf('naver_search', 'type'), [...NAVER_SEARCH_TYPES]);
     assert.deepEqual(enumOf('naver_search', 'sort'), [...NAVER_SORTS]);
     assert.deepEqual(enumOf('naver_search', 'imageSize'), [...NAVER_IMAGE_FILTERS]);
   });
 
-  it('serp 검색 enum 이 serp-client 정본과 같다', () => {
+  it('serp search enums match the serp-client source of truth', () => {
     assert.deepEqual(enumOf('serp_naver_search', 'period'), [...SERP_NAVER_PERIODS]);
     assert.deepEqual(enumOf('serp_image_search', 'size'), [...IMAGE_SIZES]);
     assert.deepEqual(enumOf('serp_image_search', 'aspect'), [...IMAGE_ASPECTS]);
@@ -619,88 +637,89 @@ describe('단일 출처 상수', () => {
     assert.deepEqual(enumOf('serp_image_search', 'license'), [...IMAGE_LICENSES]);
   });
 
-  it('검색 툴 limit 상한이 툴 설명과 정본 상수에서 일치한다', () => {
-    // 설명에 적힌 "최대 N" 이 실제 상한과 다르면 모델은 지킬 수 없는 값을 보낸다
+  it('search-tool limit caps agree between tool descriptions and the canonical constants', () => {
+    // if the "max N" written in the description differs from the real cap, the model sends values it cannot honor
     const capInDescription = (toolName) => {
       const desc = byName.get(toolName).inputSchema.properties.limit.description ?? '';
-      const m = desc.match(/최대\s*(\d+)/);
+      const m = desc.match(/max\s*(\d+)/i);
       return m ? Number(m[1]) : null;
     };
     assert.equal(capInDescription('serp_news_search'), SERP_NEWS_MAX_LIMIT);
     assert.equal(capInDescription('serp_naver_search'), SERP_NAVER_MAX_LIMIT);
     assert.equal(capInDescription('serp_image_search'), SERP_IMAGE_MAX_LIMIT);
-    // 나머지 검색 툴도 같은 가드를 받는다 — 세 개만 덮으면 나머지가 드리프트한다
+    // the remaining search tools get the same guard — cover only three and the rest drift
     assert.equal(capInDescription('serp_web_search'), 10);
     assert.equal(capInDescription('naver_search'), 30);
   });
 
-  it('TTS 음성 enum 이 tts-client 정본과 같다', () => {
+  it('TTS voice enums match the tts-client source of truth', () => {
     assert.deepEqual(enumOf('tts_generate', 'voiceName'), [...TTS_VOICE_NAMES]);
     const speakerVoice = byName.get('tts_multi_speaker').inputSchema.properties.speakers.items
       .properties.voiceName.enum;
     assert.deepEqual(speakerVoice, [...TTS_VOICE_NAMES]);
   });
 
-  it('TTS 모델 enum 이 정본과 같다', () => {
+  it('the TTS model enum matches the source of truth', () => {
     assert.deepEqual(enumOf('tts_generate', 'model'), [...VALID_TTS_MODELS]);
   });
 
-  it('음악 조성·모드 enum 이 music-client 정본과 같다', () => {
+  it('music scale/mode enums match the music-client source of truth', () => {
     assert.deepEqual(enumOf('music_generate_advanced', 'config.scale'), [...MUSIC_SCALES]);
     assert.deepEqual(enumOf('music_generate_advanced', 'config.musicGenerationMode'), [
       ...MUSIC_GENERATION_MODES,
     ]);
   });
 
-  it('로컬 TTS 보이스·언어 enum 이 supertonic-client 정본과 같다', () => {
+  it('local TTS voice/language enums match the supertonic-client source of truth', () => {
     assert.deepEqual(enumOf('tts_local_generate', 'voice'), [...SUPERTONIC_VOICE_NAMES]);
     assert.deepEqual(enumOf('tts_local_generate', 'lang'), [...SUPERTONIC_LANGUAGES]);
   });
 });
 
 /**
- * 두 음성 경로가 서로 다른 물건이라는 사실을 계약으로 못박는다.
+ * Pins as contract the fact that the two speech lanes are different things.
  *
- * 로컬(Supertonic)과 Gemini 는 이름이 둘 다 tts_* 라 호출자가 바꿔 끼우기 쉬운데,
- * 샘플레이트(44.1kHz vs 24kHz)와 연기 지시 가능 여부가 다르다. 설명에서 그 경계가
- * 사라지면 한 영상 안에서 섞여 이어붙이기가 깨진다.
+ * Local (Supertonic) and Gemini are both named tts_*, so callers swap them
+ * easily — yet the sample rate (44.1kHz vs 24kHz) and whether acted delivery
+ * is possible differ. Lose that boundary in the descriptions and the two mix
+ * inside one video, breaking the splice.
  */
-describe('음성 경로 분리 (로컬 · Gemini)', () => {
+describe('speech lane separation (local · Gemini)', () => {
   const local = byName.get('tts_local_generate');
 
-  it('로컬 합성은 네트워크를 타지 않는다고 표시된다', () => {
-    assert.equal(local.annotations.openWorldHint, false, 'openWorldHint 가 열려 있다');
+  it('local synthesis is marked as not touching the network', () => {
+    assert.equal(local.annotations.openWorldHint, false, 'openWorldHint is open');
     assert.equal(local.annotations.readOnlyHint, false);
   });
 
-  it('로컬 툴 설명이 Python 런타임 요구와 설치법을 알려준다', () => {
-    assert.match(local.description, /pip install supertonic/, '설치 안내가 없다');
-    assert.match(local.description, /SUPERTONIC_PYTHON/, 'venv 지정 방법이 없다');
+  it('the local tool description gives the Python runtime requirement and install steps', () => {
+    assert.match(local.description, /pip install supertonic/, 'no install guidance');
+    assert.match(local.description, /SUPERTONIC_PYTHON/, 'no venv selection method');
   });
 
-  it('로컬 툴 설명이 가중치 라이선스(OpenRAIL-M)를 알린다', () => {
-    // 코드는 MIT 지만 가중치는 용도 제한 조항이 붙는다 — 게시물에 실리는 음성이라 표기가 필요하다
-    assert.match(local.description, /OpenRAIL-M/, '가중치 라이선스 주의가 없다');
+  it('the local tool description notes the weight license (OpenRAIL-M)', () => {
+    // the code is MIT but the weights carry use-based restrictions — the audio ships in posts, so it must be flagged
+    assert.match(local.description, /OpenRAIL-M/, 'no weight-license caution');
   });
 
-  it('두 엔진의 샘플레이트 차이를 설명이 경고한다', () => {
-    assert.match(local.description, /44\.1kHz/, '로컬 출력 규격이 없다');
-    assert.match(local.description, /24kHz/, 'Gemini 쪽 규격과의 차이 경고가 없다');
+  it('the description warns about the sample-rate difference between the two engines', () => {
+    assert.match(local.description, /44\.1kHz/, 'no local output spec');
+    assert.match(local.description, /24kHz/, 'no warning about the difference from the Gemini spec');
     assert.equal(SUPERTONIC_SAMPLE_RATE, 44_100);
   });
 
-  it('연기가 필요한 컷은 Gemini 로 보내라고 안내한다 — 로컬엔 스타일 인자가 없다', () => {
-    assert.ok(!('stylePrompt' in local.inputSchema.properties), '로컬에 stylePrompt 가 생겼다');
-    assert.match(local.description, /tts_generate/, 'Gemini 경로 안내가 없다');
+  it('routes cuts needing acted delivery to Gemini — local has no style argument', () => {
+    assert.ok(!('stylePrompt' in local.inputSchema.properties), 'a stylePrompt appeared on local');
+    assert.match(local.description, /tts_generate/, 'no Gemini lane guidance');
   });
 
-  it('언어는 자동 감지가 아니라 인자다 (Gemini 와 반대)', () => {
-    // Gemini 는 텍스트에서 언어를 감지하지만 Supertonic 은 코드로 청킹까지 결정한다
+  it('language is an argument, not auto-detected (the opposite of Gemini)', () => {
+    // Gemini detects the language from the text, while Supertonic uses the code even for chunking
     assert.equal(local.inputSchema.properties.lang.default, DEFAULT_SUPERTONIC_LANGUAGE);
     assert.ok(!('lang' in byName.get('tts_generate').inputSchema.properties));
   });
 
-  it('두 경로의 입력 상한이 같다 — 바꿔 낄 때 걸리지 않도록', () => {
+  it('both lanes share the same input cap — so swapping never trips', () => {
     assert.equal(local.inputSchema.properties.text.maxLength, MAX_SUPERTONIC_INPUT_CHARS);
     assert.equal(
       byName.get('tts_generate').inputSchema.properties.text.maxLength,
@@ -710,91 +729,96 @@ describe('음성 경로 분리 (로컬 · Gemini)', () => {
 });
 
 /**
- * 두 이미지 경로의 분담을 계약으로 못박는다 (음성 경로 분리와 같은 구조).
+ * Pins the division of the two image lanes as contract (same structure as the
+ * speech lane separation).
  *
- * 로컬(Z-Image)이 기본이고 텍스트 포함·고품질 건만 gpt_image 로 간다 — 이 라우팅이
- * 설명에서 사라지면 글자 든 커버가 로컬로 가서 한글 자소가 깨진 채 게시되거나,
- * 텍스트 없는 b-roll 이 전부 과금 경로로 간다. 실측 근거는
- * docs/research/2026-08-12-local-image-generation 이다.
+ * Local (Z-Image) is the default and only text-bearing/high-quality jobs go
+ * to gpt_image — lose this routing from the descriptions and a lettered cover
+ * goes local and publishes with broken Korean glyphs, or every text-free
+ * b-roll goes down the billed lane. The measured evidence is
+ * docs/research/2026-08-12-local-image-generation.
  */
-describe('이미지 경로 분리 (로컬 · OpenAI)', () => {
+describe('image lane separation (local · OpenAI)', () => {
   const local = byName.get('image_local_generate');
   const paid = byName.get('gpt_image_text2img');
 
-  it('로컬 생성은 네트워크를 타지 않는다고 표시된다', () => {
-    assert.equal(local.annotations.openWorldHint, false, 'openWorldHint 가 열려 있다');
+  it('local generation is marked as not touching the network', () => {
+    assert.equal(local.annotations.openWorldHint, false, 'openWorldHint is open');
     assert.equal(local.annotations.readOnlyHint, false);
   });
 
-  it('로컬 툴 설명이 mflux 설치법과 바이너리 지정 방법을 알려준다', () => {
-    assert.match(local.description, /uv tool install --python 3\.12 mflux/, '설치 안내가 없다');
-    assert.match(local.description, /MFLUX_ZIMAGE_BIN/, '바이너리 경로 지정 방법이 없다');
+  it('the local tool description gives the mflux install and binary override', () => {
+    assert.match(local.description, /uv tool install --python 3\.12 mflux/, 'no install guidance');
+    assert.match(local.description, /MFLUX_ZIMAGE_BIN/, 'no binary path override method');
   });
 
-  it('로컬 툴 설명이 최초 호출 대용량 다운로드를 경고한다', () => {
-    // 31GB 를 모르고 부르면 "멈췄다"로 오판하고 죽인다 — 다운로드 중임을 미리 알린다
-    assert.match(local.description, /31GB/, '가중치 다운로드 경고가 없다');
+  it('the local tool description warns about the large first-call download', () => {
+    // call it unaware of the 31GB and you misread it as "stuck" and kill it — flag the download in advance
+    assert.match(local.description, /31GB/, 'no weight-download warning');
   });
 
-  it('텍스트 든 이미지는 gpt_image 로 보내라고 안내한다 — 한글 실측 근거 포함', () => {
-    assert.match(local.description, /gpt_image_text2img/, '과금 경로 안내가 없다');
-    assert.match(local.description, /딸깍연구소/, '한글 렌더링 실측 근거가 없다');
+  it('routes text-bearing images to gpt_image — with the measured Korean evidence', () => {
+    assert.match(local.description, /gpt_image_text2img/, 'no billed-lane guidance');
+    assert.match(local.description, /딸깍연구소/, 'no measured Korean-rendering evidence');
   });
 
-  it('gpt_image 쪽 설명이 역방향 라우팅(기본은 로컬)을 안내한다', () => {
-    assert.match(paid.description, /image_local_generate/, '로컬 기본 경로 안내가 없다');
+  it('the gpt_image description gives the reverse routing (the default is local)', () => {
+    assert.match(paid.description, /image_local_generate/, 'no local-default-lane guidance');
   });
 
-  it('serp_image_search 의 생성 유도 문구가 두 경로를 모두 가리킨다', () => {
+  it('the generation nudge in serp_image_search points at both lanes', () => {
     assert.match(byName.get('serp_image_search').description, /image_local_generate/);
   });
 
-  it('양자화 enum 이 zimage-client 정본과 같다', () => {
+  it('the quantization enum matches the zimage-client source of truth', () => {
     assert.deepEqual(local.inputSchema.properties.quantize.enum, [...ZIMAGE_QUANTIZE_OPTIONS]);
     assert.equal(local.inputSchema.properties.quantize.default, DEFAULT_ZIMAGE_QUANTIZE);
     assert.equal(local.inputSchema.properties.steps.default, DEFAULT_ZIMAGE_STEPS);
   });
 
-  it('해상도 제약(16의 배수)을 스키마 설명이 알려준다 — 1080×1920 함정', () => {
-    // 9:16 을 1080 으로 부르는 게 가장 흔한 첫 실수다 — 걸리기 전에 설명에서 막는다
+  it('the schema description states the resolution constraint (multiple of 16) — the 1080×1920 trap', () => {
+    // calling 9:16 as 1080 is the most common first mistake — the description blocks it before it trips
     assert.match(local.inputSchema.properties.width.description, /1088/);
     assert.equal(Number(local.inputSchema.properties.width.description.match(/multiple of (\d+)/)?.[1]), ZIMAGE_DIMENSION_STEP);
   });
 
-  it('타임아웃이 실측 최악값을 여유 있게 덮는다', () => {
-    // 실측: 1088×1920 @9스텝, 로드 74 과부하에서 462초 — 그 2배 이상을 허용해야 한다
-    assert.ok(zimageTimeoutMs(1088, 1920, 9) > 462_000 * 2, '9:16 타임아웃이 실측 대비 빠듯하다');
-    // 상한은 30분 — 무한정 매달리지 않는다
+  it('the timeout covers the measured worst case with headroom', () => {
+    // measured: 1088×1920 @9 steps, 462s under load-74 overload — allow at least double that
+    assert.ok(zimageTimeoutMs(1088, 1920, 9) > 462_000 * 2, 'the 9:16 timeout is tight against the measurement');
+    // capped at 30 minutes — never hangs on indefinitely
     assert.ok(zimageTimeoutMs(2048, 2048, 50) <= 30 * 60_000);
   });
 });
 
 /**
- * 두 영상 엔진의 분담을 계약으로 못박는다 (음성·이미지 경로 분리와 같은 구조).
+ * Pins the division of the two video engines as contract (same structure as
+ * the speech/image lane separations).
  *
- * Veo 는 네이티브 오디오와 로컬 파일 연장을 갖고, Seedance 는 자유로운 길이·비율과
- * 훨씬 싼 무음 컷을 갖는다. 이 분담이 설명에서 사라지면 호출자는 목록 맨 위에 있는
- * 툴을 집는다 — 그러면 4초짜리 b-roll 이 8초 과금으로 나가거나, 실사 인물 커버가
- * 얼굴 입력을 거부하는 2.x 로 가서 회차가 통째로 막힌다.
+ * Veo has native audio and local-file extension; Seedance has free lengths
+ * and ratios plus far cheaper silent cuts. Lose this division from the
+ * descriptions and callers grab whichever tool sits at the top of the list —
+ * then a 4-second b-roll bills as 8 seconds, or a photoreal-person cover
+ * routes to 2.x, which rejects face input, and the whole episode stalls.
  *
- * enum 은 seedance-client.ts 능력표에서 파생시킨 값과 일치해야 한다 — 스키마에
- * 목록을 복사해 두면 모델이 늘 때 한쪽만 고쳐진다.
+ * Enums must match the values derived from the seedance-client.ts capability
+ * table — copy the list into the schema and only one side gets fixed when a
+ * model is added.
  */
-describe('영상 엔진 분리 (Veo · Seedance)', () => {
+describe('video engine separation (Veo · Seedance)', () => {
   const t2v = byName.get('seedance_text2video');
   const i2v = byName.get('seedance_img2video');
   const ref = byName.get('seedance_reference');
 
-  it('세 툴이 모두 있고 생성 힌트를 단다', () => {
+  it('all three tools exist and carry generation hints', () => {
     for (const tool of [t2v, i2v, ref]) {
-      assert.ok(tool, 'seedance 툴이 없다');
+      assert.ok(tool, 'a seedance tool is missing');
       assert.equal(tool.annotations.readOnlyHint, false);
-      assert.equal(tool.annotations.destructiveHint, false, '파일만 만드는 생성 툴이 파괴적으로 표시됐다');
-      assert.equal(tool.annotations.openWorldHint, true, '외부 API 호출인데 닫혀 있다');
+      assert.equal(tool.annotations.destructiveHint, false, 'a file-only generation tool is marked destructive');
+      assert.equal(tool.annotations.openWorldHint, true, 'an external API call yet marked closed');
     }
   });
 
-  it('모델·해상도·비율 enum 이 seedance-client 정본과 같다', () => {
+  it('model/resolution/ratio enums match the seedance-client source of truth', () => {
     assert.deepEqual(t2v.inputSchema.properties.model.enum, VALID_SEEDANCE_MODELS);
     assert.deepEqual(t2v.inputSchema.properties.resolution.enum, VALID_SEEDANCE_RESOLUTIONS);
     assert.deepEqual(t2v.inputSchema.properties.ratio.enum, VALID_SEEDANCE_RATIOS);
@@ -803,47 +827,47 @@ describe('영상 엔진 분리 (Veo · Seedance)', () => {
     assert.equal(t2v.inputSchema.properties.durationSeconds.default, DEFAULT_SEEDANCE_DURATION);
   });
 
-  it('참조 툴의 모델 enum 은 2.x 로 좁혀져 있다 — 1.x 는 참조 이미지를 못 받는다', () => {
+  it('the reference tool model enum is narrowed to 2.x — 1.x cannot take reference images', () => {
     assert.deepEqual(ref.inputSchema.properties.model.enum, SEEDANCE_REFERENCE_MODELS);
-    assert.ok(SEEDANCE_REFERENCE_MODELS.length > 0, '참조 지원 모델이 하나도 없다');
+    assert.ok(SEEDANCE_REFERENCE_MODELS.length > 0, 'no reference-capable model at all');
     for (const model of SEEDANCE_REFERENCE_MODELS) {
       assert.notEqual(SEEDANCE_MODEL_SPECS[model].referenceImages, false);
     }
-    // 기본 모델(1.5 pro)은 참조를 못 받으므로 이 툴의 기본값이 될 수 없다
+    // the default model (1.5 pro) takes no references, so it cannot be this tool's default
     assert.ok(!SEEDANCE_REFERENCE_MODELS.includes(DEFAULT_SEEDANCE_MODEL));
   });
 
-  it('9:16 을 세 툴이 모두 낼 수 있다 — 이 파이프라인의 기본 포맷', () => {
+  it('all three tools can output 9:16 — this pipeline\'s default format', () => {
     for (const tool of [t2v, i2v, ref]) {
-      assert.ok(tool.inputSchema.properties.ratio.enum.includes('9:16'), `${tool.name} 에 9:16 이 없다`);
+      assert.ok(tool.inputSchema.properties.ratio.enum.includes('9:16'), `${tool.name} lacks 9:16`);
     }
   });
 
-  it('이미지 입력 툴의 비율 기본값이 adaptive 다 — 소스가 잘리는 사고를 막는다', () => {
+  it('image-input tools default ratio to adaptive — prevents the cropped-source accident', () => {
     for (const tool of [i2v, ref]) {
-      assert.equal(tool.inputSchema.properties.ratio.default, 'adaptive', `${tool.name} 이 소스를 자를 기본값이다`);
+      assert.equal(tool.inputSchema.properties.ratio.default, 'adaptive', `${tool.name} has a source-cropping default`);
     }
-    assert.match(i2v.inputSchema.properties.ratio.description, /crop/, '자름 경고가 설명에 없다');
+    assert.match(i2v.inputSchema.properties.ratio.description, /crop/, 'no crop warning in the description');
   });
 
-  it('음성 기본값이 벤더와 반대(false)이고 그 이유가 설명에 있다', () => {
-    // 이 파이프라인은 나레이션을 tts_* 로 따로 붙인다. 벤더 기본(true)을 그대로
-    // 두면 1.5 pro 는 단가가 두 배로 나가고 음성이 두 겹으로 겹친다.
+  it('the audio default is the opposite of the vendor (false) and the reason is in the description', () => {
+    // this pipeline attaches narration separately via tts_*. Leave the vendor
+    // default (true) and 1.5 pro doubles in price with two voice layers stacked.
     for (const tool of [t2v, i2v, ref]) {
       assert.equal(tool.inputSchema.properties.generateAudio.default, false);
     }
     assert.match(t2v.inputSchema.properties.generateAudio.description, /vendor default is true/i);
   });
 
-  it('실사 인물 입력 제약이 이미지 툴 설명에 있다 — 커버 배경 레인의 함정', () => {
-    assert.match(i2v.description, /real human faces/i, '2.x 얼굴 거부 경고가 없다');
+  it('the real-face input constraint is in the image tool descriptions — the cover-background lane trap', () => {
+    assert.match(i2v.description, /real human faces/i, 'no 2.x face-rejection warning');
     assert.match(ref.description, /real human faces/i);
-    // 기본 모델은 실사 얼굴을 받는 쪽이어야 커버 → b-roll 레인이 그냥 돈다
+    // the default model must be the one accepting real faces so the cover → b-roll lane just runs
     assert.equal(SEEDANCE_MODEL_SPECS[DEFAULT_SEEDANCE_MODEL].realFaceInput, true);
     assert.ok(SEEDANCE_REAL_FACE_MODELS.includes(DEFAULT_SEEDANCE_MODEL));
   });
 
-  it('두 엔진이 서로를 가리킨다 — 목록만 보는 호출자도 갈아탈 수 있어야 한다', () => {
+  it('the two engines point at each other — a list-only caller must be able to switch', () => {
     assert.match(byName.get('veo_text2video').description, /seedance_text2video/);
     assert.match(byName.get('veo_img2video').description, /seedance_img2video/);
     assert.match(byName.get('veo_reference').description, /seedance_reference/);
@@ -852,19 +876,19 @@ describe('영상 엔진 분리 (Veo · Seedance)', () => {
     assert.match(ref.description, /veo_reference/);
   });
 
-  it('Seedance 에 없는 연장 기능이 veo_extension 으로 안내된다', () => {
-    assert.ok(!byName.has('seedance_extension'), 'seedance_extension 이 생겼다 — 영상 입력은 공개 URL 만 받는다');
-    assert.match(byName.get('veo_extension').description, /Seedance/, '연장이 Veo 전담임을 설명이 밝히지 않는다');
+  it('extension, which Seedance lacks, is routed to veo_extension', () => {
+    assert.ok(!byName.has('seedance_extension'), 'a seedance_extension appeared — its video input takes public URLs only');
+    assert.match(byName.get('veo_extension').description, /Seedance/, 'the description does not state extension is Veo-only');
   });
 
   /**
-   * 툴 표면의 default 와 실제로 적용되는 zod default 가 갈라지면 인자를 생략한
-   * 정상 호출이 전부 실패한다 — JSON 스키마의 default 는 안내일 뿐이라 서버가
-   * 읽지 않는다. 실제로 `seedance_reference` 가 공통 기본값(1.5 pro)을 물려받아
-   * 자기 검증에 걸렸다. 스키마를 눈으로 보는 검사로는 안 잡히므로 **파싱해서**
-   * 확인한다.
+   * When the tool-surface default and the actually applied zod default split,
+   * every normal call omitting the argument fails — the JSON-schema default is
+   * advisory and the server never reads it. `seedance_reference` really did
+   * inherit the shared default (1.5 pro) and trip its own validation. Eyeball
+   * schema checks miss this, so it is verified **by parsing**.
    */
-  it('인자를 생략한 최소 호출이 세 스키마 모두에서 통과한다', () => {
+  it('a minimal call omitting arguments passes all three schemas', () => {
     const cases = [
       [seedanceText2VideoSchema, { prompt: 'x' }],
       [seedanceImg2VideoSchema, { prompt: 'x', sourceImagePath: '/tmp/a.png' }],
@@ -872,65 +896,68 @@ describe('영상 엔진 분리 (Veo · Seedance)', () => {
     ];
     for (const [schema, args] of cases) {
       const parsed = schema.safeParse(args);
-      assert.ok(parsed.success, `기본값 호출이 거절됐다: ${JSON.stringify(parsed.error?.issues)}`);
+      assert.ok(parsed.success, `a defaults-only call was rejected: ${JSON.stringify(parsed.error?.issues)}`);
       assert.ok(VALID_SEEDANCE_MODELS.includes(parsed.data.model));
     }
   });
 
-  it('참조 스키마의 실제 기본 모델이 2.x 다 — 툴 표면 default 와 어긋나지 않는다', () => {
+  it('the reference schema\'s actual default model is 2.x — consistent with the tool-surface default', () => {
     const parsed = seedanceReferenceSchema.parse({ prompt: 'x', referenceImagePaths: ['/tmp/a.png'] });
     assert.ok(SEEDANCE_REFERENCE_MODELS.includes(parsed.model));
-    assert.equal(parsed.model, ref.inputSchema.properties.model.default, '표면 default 와 실제 기본값이 다르다');
+    assert.equal(parsed.model, ref.inputSchema.properties.model.default, 'the surface default and the actual default differ');
     assert.equal(parsed.model, DEFAULT_SEEDANCE_REFERENCE_MODEL);
   });
 
   /**
-   * 기본값은 **품질 근거가 있는 모델**이어야 한다.
+   * The default must be a **model with quality evidence**.
    *
-   * 아레나에 없는 모델(2.5·2.0 fast·2.0 mini·1.0 pro fast)을 기본값으로 두면,
-   * 인자를 생략한 호출이 전부 검증되지 않은 품질로 나간다. 값이 싸거나 기능이
-   * 넓다는 이유로 기본값을 그쪽에 두려면 근거를 먼저 만들어야 한다.
+   * Default to a model absent from the arena (2.5, 2.0 fast, 2.0 mini,
+   * 1.0 pro fast) and every argument-omitting call goes out with unverified
+   * quality. To move the default there because it is cheaper or broader,
+   * build the evidence first.
    */
-  it('기본 모델은 공개 평가가 있는 쪽이다', () => {
+  it('the default models are the publicly evaluated ones', () => {
     const EVALUATED = ['dreamina-seedance-2-0-260128', 'seedance-1-5-pro-251215', 'seedance-1-0-pro-250528'];
-    assert.ok(EVALUATED.includes(DEFAULT_SEEDANCE_MODEL), `기본 모델 ${DEFAULT_SEEDANCE_MODEL} 에 공개 평가가 없다`);
-    assert.ok(EVALUATED.includes(DEFAULT_SEEDANCE_REFERENCE_MODEL), `참조 기본 모델 ${DEFAULT_SEEDANCE_REFERENCE_MODEL} 에 공개 평가가 없다`);
-    // 참조 기본값을 목록 순서에서 뽑으면 모델을 끼워 넣는 순간 조용히 바뀐다
+    assert.ok(EVALUATED.includes(DEFAULT_SEEDANCE_MODEL), `default model ${DEFAULT_SEEDANCE_MODEL} has no public evaluation`);
+    assert.ok(EVALUATED.includes(DEFAULT_SEEDANCE_REFERENCE_MODEL), `reference default model ${DEFAULT_SEEDANCE_REFERENCE_MODEL} has no public evaluation`);
+    // derive the reference default from list order and it silently changes the moment a model is inserted
     assert.notEqual(DEFAULT_SEEDANCE_REFERENCE_MODEL, undefined);
   });
 
   /**
-   * Veo 세 티어는 블라인드 아레나에서 통계적으로 같다(격차 20 Elo 이내, 신뢰구간
-   * 중첩, 무음 보드에서는 순서가 뒤집힌다). 그래서 표준 티어를 기본값으로 두면
-   * 사람이 더 좋아하지도 않는 결과에 4배를 낸다.
+   * The three Veo tiers are statistically tied in the blind arena (gaps
+   * within 20 Elo, overlapping confidence intervals, order flips on the
+   * silent board). So defaulting to the standard tier pays 4x for output
+   * people do not even prefer.
    */
-  it('Veo 기본 티어가 표준이 아니다 — 값만 4배인 기본값 금지', () => {
+  it('the Veo default tier is not standard — no defaults that just cost 4x', () => {
     assert.equal(DEFAULT_VIDEO_MODEL, 'veo-3.1-fast-generate-preview');
     for (const name of ['veo_text2video', 'veo_img2video', 'veo_extension', 'veo_reference']) {
       const tool = byName.get(name);
       assert.equal(
         tool.inputSchema.properties.model.default,
         DEFAULT_VIDEO_MODEL,
-        `${name} 의 기본 모델이 video-client 정본과 다르다`,
+        `the default model of ${name} differs from the video-client source of truth`,
       );
     }
   });
 
   /**
-   * 배제 지시를 프롬프트 본문에 쓰면 그 명사가 오히려 그려진다(로컬 이미지 실측
-   * 4장 전패). Google 프롬프트 가이드도 지시문 형태를 not recommended 로 적고
-   * 명사구 나열을 권한다. 그래서 배제 전용 입구가 네 툴에 다 있어야 하고,
-   * 설명이 그 문법을 말해 줘야 한다 — 입구만 있고 문법을 안 알려 주면
-   * 호출자가 그 필드에 "no walls" 를 적는다.
+   * Write an exclusion into the prompt body and the very noun gets drawn
+   * (measured on local images: 4 out of 4 failed). Google's prompt guide also
+   * marks the instruction form as not recommended and advises noun-phrase
+   * lists. So all four tools need the dedicated exclusion inlet, and the
+   * description must teach the grammar — an inlet without the grammar and
+   * callers write "no walls" into the field.
    */
-  it('veo 네 툴이 배제 지시 입구를 노출한다 — 본문에 "no ~" 를 쓰지 않게', () => {
+  it('all four veo tools expose the exclusion inlet — so "no ~" stays out of the body', () => {
     for (const name of ['veo_text2video', 'veo_img2video', 'veo_extension', 'veo_reference']) {
       const prop = byName.get(name).inputSchema.properties.negativePrompt;
-      assert.ok(prop, `${name} 에 negativePrompt 입구가 없다`);
-      assert.match(prop.description, /comma-separated/i, `${name} 설명이 명사구 나열 문법을 안 알려 준다`);
-      assert.match(prop.description, /Do NOT write instructions/, `${name} 설명이 지시문 금지를 안 적었다`);
+      assert.ok(prop, `${name} has no negativePrompt inlet`);
+      assert.match(prop.description, /comma-separated/i, `the ${name} description does not teach the noun-list grammar`);
+      assert.match(prop.description, /Do NOT write instructions/, `the ${name} description does not ban instruction forms`);
     }
-    // 스키마도 실제로 받아야 한다 — 설명만 있고 값이 버려지면 소용없다
+    // the schema must actually accept it too — a description whose value gets dropped is useless
     const parsed = img2VideoSchema.safeParse({
       prompt: 'very slow push-in',
       sourceImagePath: '/tmp/x.png',
@@ -941,43 +968,45 @@ describe('영상 엔진 분리 (Veo · Seedance)', () => {
   });
 
   /**
-   * Seedance 문법은 Veo 와 다르고, 그 차이가 실패를 만든다. 벤더가 자기 문서에서
-   * 두 가지를 못 박았다 — 프롬프트에 초를 적으면 결과가 망가지고(정밀 타이밍
-   * 지원이 불안정하다는 자기 고지), 삼면도 캐릭터 시트를 참조로 넣으면 같은 인물이
-   * 둘 나온다. 호출 직전에 읽히는 자리가 툴 설명이라 여기가 실효 지점이다.
+   * Seedance grammar differs from Veo, and that difference produces failures.
+   * The vendor pinned two things in its own docs — write seconds into the
+   * prompt and the result degrades (their own notice that precise-timing
+   * support is unstable), and feed a three-view character sheet as reference
+   * and the same person appears twice. The tool description is what gets read
+   * right before the call, so this is where it takes effect.
    */
-  it('seedance 툴 설명이 벤더가 못 박은 두 금지를 싣는다', () => {
+  it('the seedance tool descriptions carry the two vendor-pinned bans', () => {
     for (const name of ['seedance_text2video', 'seedance_img2video', 'seedance_reference']) {
       const desc = byName.get(name).inputSchema.properties.prompt.description;
-      assert.match(desc, /timecode/i, `${name} 가 타임코드 금지를 안 알려 준다`);
-      assert.match(desc, /English or Chinese|English \(|Korean only/i, `${name} 가 프롬프트 언어 제약을 안 알려 준다`);
+      assert.match(desc, /timecode/i, `${name} does not state the timecode ban`);
+      assert.match(desc, /English or Chinese|English \(|Korean only/i, `${name} does not state the prompt-language constraint`);
     }
-    // 삼면도 금지는 참조 툴에만 걸린다
+    // the multi-view ban applies only to the reference tool
     assert.match(byName.get('seedance_reference').description, /multi-view/i);
-    // seed 에 재현성을 약속하지 않는다 — 원문에 근거가 없다
+    // seed promises no reproducibility — the source docs give none
     const seed = byName.get('seedance_text2video').inputSchema.properties.seed.description;
-    assert.match(seed, /does not promise/i, 'seed 설명이 없는 재현성을 약속한다');
+    assert.match(seed, /does not promise/i, 'the seed description promises reproducibility that does not exist');
   });
 
-  it('교차 제약이 호출 전에 거부된다 — 돈 나가는 호출을 만들기 전에', () => {
-    // 무음 전용 모델에 음성 요청
+  it('cross constraints are rejected before the call — before a paid call is created', () => {
+    // audio requested on a silent-only model
     assert.equal(
       seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'seedance-1-0-pro-250528', generateAudio: true }).success,
       false,
     );
-    // 2.5 는 오늘 1080p 를 못 낸다 (2026-08-17 개시)
+    // 2.5 cannot do 1080p today (launched 2026-08-17)
     assert.equal(
       seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'dreamina-seedance-2-5-260628', resolution: '1080p' }).success,
       false,
     );
-    // 2.x 는 seed 가 없다
+    // 2.x has no seed
     assert.equal(
       seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'dreamina-seedance-2-0-260128', seed: 7 }).success,
       false,
     );
-    // 1.5 pro 의 길이 상한은 12초
+    // the 1.5 pro duration cap is 12 seconds
     assert.equal(seedanceText2VideoSchema.safeParse({ prompt: 'x', durationSeconds: 20 }).success, false);
-    // 첫+끝 프레임을 못 받는 모델
+    // a model that cannot take first+last frames
     assert.equal(
       seedanceImg2VideoSchema.safeParse({
         prompt: 'x',
@@ -989,86 +1018,87 @@ describe('영상 엔진 분리 (Veo · Seedance)', () => {
     );
   });
 
-  it('모델 능력표가 스스로 모순되지 않는다', () => {
+  it('the model capability table does not contradict itself', () => {
     for (const [model, spec] of Object.entries(SEEDANCE_MODEL_SPECS)) {
-      assert.ok(spec.resolutions.length > 0, `${model}: 해상도가 비어 있다`);
+      assert.ok(spec.resolutions.length > 0, `${model}: resolutions is empty`);
       for (const resolution of spec.resolutions) {
-        assert.ok(VALID_SEEDANCE_RESOLUTIONS.includes(resolution), `${model}: 알 수 없는 해상도 ${resolution}`);
+        assert.ok(VALID_SEEDANCE_RESOLUTIONS.includes(resolution), `${model}: unknown resolution ${resolution}`);
       }
       const [min, max] = spec.duration;
-      assert.ok(min > 0 && min <= max, `${model}: 길이 범위가 뒤집혔다`);
-      // 기본 길이는 전 모델이 받아야 한다 — 아니면 기본값 호출이 모델에 따라 거절된다
+      assert.ok(min > 0 && min <= max, `${model}: duration range is inverted`);
+      // every model must accept the default duration — else a defaults call gets rejected per model
       assert.ok(
         DEFAULT_SEEDANCE_DURATION >= min && DEFAULT_SEEDANCE_DURATION <= max,
-        `${model}: 기본 길이 ${DEFAULT_SEEDANCE_DURATION}초를 못 받는다`,
+        `${model}: cannot take the default duration of ${DEFAULT_SEEDANCE_DURATION}s`,
       );
-      // 기본 해상도도 마찬가지 — 모델을 바꿨을 뿐인데 해상도까지 같이 고쳐야 하면 함정이다
-      assert.ok(spec.resolutions.includes(DEFAULT_SEEDANCE_RESOLUTION), `${model}: 기본 해상도를 못 낸다`);
+      // same for the default resolution — having to fix the resolution just because you switched models is a trap
+      assert.ok(spec.resolutions.includes(DEFAULT_SEEDANCE_RESOLUTION), `${model}: cannot output the default resolution`);
     }
   });
 });
 
-describe('생성 파일 경로 안전성', () => {
-  it('경로 분리자가 든 파일명을 거부한다', () => {
-    // path.join 이 ../ 를 정규화해 없애므로 조립 전에 막아야 한다
+describe('generated file path safety', () => {
+  it('rejects file names containing path separators', () => {
+    // path.join normalizes ../ away, so it must be blocked before assembly
     for (const bad of ['../escape.wav', 'sub/dir.wav', '..\\escape.wav', 'a/../../b.mp4']) {
       assert.throws(() => resolveOutputFile('/tmp', bad, 'audio'), /bare file name|Path traversal/);
     }
   });
 
-  it('허용되지 않은 확장자를 거부한다', () => {
+  it('rejects disallowed extensions', () => {
     assert.throws(() => resolveOutputFile('/tmp', 'payload.sh', 'audio'), /not allowed/);
     assert.throws(() => resolveOutputFile('/tmp', 'clip.wav', 'video'), /not allowed/);
   });
 });
 
-describe('PCM → WAV 헤더', () => {
-  it('RIFF 헤더가 규격대로 조립된다', () => {
-    const pcm = Buffer.alloc(960); // 48kHz 스테레오 16-bit 5ms
+describe('PCM → WAV header', () => {
+  it('the RIFF header is assembled to spec', () => {
+    const pcm = Buffer.alloc(960); // 48kHz stereo 16-bit, 5ms
     const wav = pcmToWav(pcm, 48_000, 2);
 
     assert.equal(wav.length, 44 + pcm.length);
     assert.equal(wav.subarray(0, 4).toString(), 'RIFF');
     assert.equal(wav.subarray(8, 12).toString(), 'WAVE');
     assert.equal(wav.readUInt32LE(4), 36 + pcm.length);
-    assert.equal(wav.readUInt16LE(20), 1, 'PCM 포맷 태그');
-    assert.equal(wav.readUInt16LE(22), 2, '채널 수');
-    assert.equal(wav.readUInt32LE(24), 48_000, '샘플레이트');
+    assert.equal(wav.readUInt16LE(20), 1, 'PCM format tag');
+    assert.equal(wav.readUInt16LE(22), 2, 'channel count');
+    assert.equal(wav.readUInt32LE(24), 48_000, 'sample rate');
     assert.equal(wav.readUInt32LE(28), 48_000 * 2 * 2, 'byteRate');
     assert.equal(wav.readUInt16LE(32), 4, 'blockAlign');
     assert.equal(wav.readUInt16LE(34), 16, 'bitsPerSample');
     assert.equal(wav.readUInt32LE(40), pcm.length, 'dataSize');
   });
 
-  it('모노 24kHz(TTS 규격)도 같은 규칙을 따른다', () => {
+  it('mono 24kHz (the TTS spec) follows the same rules', () => {
     const wav = pcmToWav(Buffer.alloc(480), 24_000, 1);
     assert.equal(wav.readUInt16LE(22), 1);
     assert.equal(wav.readUInt32LE(28), 24_000 * 1 * 2);
   });
 });
 
-describe('Threads 길이 계산', () => {
-  it('이모지를 UTF-8 바이트로 센다 (.length 의 과소 계산을 없앤다)', () => {
-    // 🎬 는 UTF-16 2유닛이지만 UTF-8 4바이트 — 플랫폼은 바이트로 센다
-    assert.equal('🎬'.length, 2, '전제: JS .length 는 2로 센다');
+describe('Threads length counting', () => {
+  it('counts emoji as UTF-8 bytes (removes the undercount of .length)', () => {
+    // 🎬 is 2 UTF-16 units but 4 UTF-8 bytes — the platform counts bytes
+    assert.equal('🎬'.length, 2, 'premise: JS .length counts 2');
     assert.equal(threadsTextLength('🎬'), 4);
-    assert.equal(threadsTextLength('안녕하세요'), 5, '한글은 코드포인트 1로 센다');
+    assert.equal(threadsTextLength('안녕하세요'), 5, 'Korean counts as 1 per code point');
     assert.equal(threadsTextLength('abc'), 3);
   });
 
-  it('플랫폼이 거부할 캡션을 통과시키지 않는다', () => {
-    const caption = '🎬'.repeat(130); // .length = 260 이지만 플랫폼 기준 520
-    assert.ok(caption.length <= 500, '전제: 구식 .length 검증이라면 통과시킨다');
-    assert.ok(threadsTextLength(caption) > 500, '새 계산은 거부한다');
+  it('does not pass a caption the platform would reject', () => {
+    const caption = '🎬'.repeat(130); // .length = 260 but 520 by platform count
+    assert.ok(caption.length <= 500, 'premise: an old-style .length check would pass it');
+    assert.ok(threadsTextLength(caption) > 500, 'the new count rejects it');
   });
 });
 
 /**
- * 멀티 채널 토큰 해석 — 오계정 게시를 막는 안전 속성이라 정적으로 못 박는다.
- * snsTokenDir 는 모듈 로드 시점 고정이므로 env 를 바꿔 끼우지 않고, 그 값을
- * 기준점 삼아 경로 관계(기본 ≠ 채널 스코프)를 검증한다.
+ * Multi-channel token resolution — a safety property preventing wrong-account
+ * publishing, so it is pinned statically. snsTokenDir is fixed at module load,
+ * so no env swapping: its value anchors the path relations verified here
+ * (default ≠ channel scope).
  */
-/** 기본 경로만 덮어쓰는 env override — 채널 스코프 경로에는 적용되지 않는다(config.ts 계약). */
+/** env override for the default path only — never applied to channel-scoped paths (the config.ts contract). */
 const DEFAULT_PATH_ENV = {
   THREADS: 'THREADS_TOKEN_FILE',
   INSTAGRAM: 'INSTAGRAM_TOKEN_FILE',
@@ -1076,65 +1106,66 @@ const DEFAULT_PATH_ENV = {
   YOUTUBE: 'YOUTUBE_OAUTH_FILE',
 };
 
-describe('멀티 채널 토큰 해석', () => {
-  it('채널 미지정이면 <SNS_TOKEN_DIR> 바로 아래 평면 파일(또는 env override)을 쓴다', () => {
+describe('multi-channel token resolution', () => {
+  it('with no channel, the flat file right under <SNS_TOKEN_DIR> (or the env override) is used', () => {
     for (const platform of SNS_PLATFORMS) {
       const override = process.env[DEFAULT_PATH_ENV[platform]];
       if (override) {
-        assert.equal(snsCredentialFile(platform), override, `${platform}: env override 가 기본 경로를 결정한다`);
+        assert.equal(snsCredentialFile(platform), override, `${platform}: the env override decides the default path`);
       } else {
-        assert.equal(dirname(snsCredentialFile(platform)), snsTokenDir, `${platform} 기본 자격증명 위치`);
+        assert.equal(dirname(snsCredentialFile(platform)), snsTokenDir, `${platform} default credential location`);
       }
     }
   });
 
-  it('채널 지정 시 그 채널 디렉토리만 본다 — 기본 토큰으로 폴백하지 않는다', () => {
+  it('with a channel set, only that channel directory is used — no fallback to the default tokens', () => {
     for (const platform of SNS_PLATFORMS) {
       const scoped = snsCredentialFile(platform, 'brand-a');
       const fallback = snsCredentialFile(platform);
-      assert.equal(dirname(scoped), join(snsTokenDir, 'brand-a'), `${platform} 채널 스코프 경로`);
-      assert.notEqual(scoped, fallback, `${platform}: 채널 지정이 기본 경로로 폴백하면 다른 브랜드 계정에 게시된다`);
-      assert.equal(basename(scoped), basename(fallback), '채널 디렉토리 안에서도 파일명 규약은 동일하다');
+      assert.equal(dirname(scoped), join(snsTokenDir, 'brand-a'), `${platform} channel-scoped path`);
+      assert.notEqual(scoped, fallback, `${platform}: a channel falling back to the default path publishes to another brand's account`);
+      assert.equal(basename(scoped), basename(fallback), 'the file-name convention holds inside channel directories too');
     }
   });
 
-  it('경로 트래버설·규약 위반 slug 를 거부한다', () => {
+  it('rejects path-traversal and convention-breaking slugs', () => {
     const rejected = ['..', '../etc', '.', 'a/b', 'a\\b', '/abs', 'UPPER', '-lead', 'dot.dot', 'with space', 'a'.repeat(65)];
     for (const channel of rejected) {
       assert.throws(
         () => snsCredentialFile('THREADS', channel),
         /Invalid channel slug/,
-        `"${channel}" 는 거부돼야 한다 — 경로 조립에 쓰이므로 통과하면 토큰 디렉토리를 벗어난다`,
+        `"${channel}" must be rejected — it feeds path assembly, so letting it pass escapes the token directory`,
       );
     }
   });
 
-  it('data/<slug> 와 같은 kebab-case 는 통과한다', () => {
+  it('kebab-case like data/<slug> passes', () => {
     for (const channel of ['a', 'brand-a', 'ttalkkak-lab', 'vn-life', '2026-news']) {
-      assert.ok(CHANNEL_SLUG_RE.test(channel), `${channel} 은 정규 slug 다`);
+      assert.ok(CHANNEL_SLUG_RE.test(channel), `${channel} is a regular slug`);
       assert.doesNotThrow(() => snsCredentialFile('YOUTUBE', channel));
     }
   });
 });
 
 /**
- * initialize 응답의 서버 버전은 index.ts 에 리터럴로 박혀 있다. 값을 읽으려고
- * dist/index.js 를 import 하면 서버가 stdio 로 뜨므로, 두 파일을 텍스트로 대조한다.
- * 실제로 0.8.0 대 0.9.0 으로 갈라져 있던 것을 2026-08-16 에 잡았다.
+ * The server version in the initialize response is a literal in index.ts.
+ * Importing dist/index.js to read it would start the server on stdio, so the
+ * two files are compared as text. It really was split 0.8.0 vs 0.9.0, caught
+ * on 2026-08-16.
  */
-describe('서버 버전 선언', () => {
+describe('server version declaration', () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const read = (rel) => readFileSync(join(here, '..', rel), 'utf8');
 
-  it('index.ts 의 version 이 package.json 과 같다', () => {
+  it('the version in index.ts equals package.json', () => {
     const pkg = JSON.parse(read('package.json')).version;
     const src = read('src/index.ts');
     const declared = src.match(/name: 'social-flow', version: '([^']+)'/)?.[1];
-    assert.ok(declared, "index.ts 에서 Server({ name, version }) 리터럴을 찾지 못했다 — 선언 형태가 바뀌었으면 이 테스트도 함께 고친다");
+    assert.ok(declared, "could not find the Server({ name, version }) literal in index.ts — if the declaration form changed, fix this test with it");
     assert.equal(
       declared,
       pkg,
-      `initialize 가 알리는 버전(${declared})과 패키지 버전(${pkg})이 다르다 — 클라이언트가 보는 버전이 실제와 어긋난다`,
+      `the version initialize announces (${declared}) differs from the package version (${pkg}) — clients see a version that is not real`,
     );
   });
 });

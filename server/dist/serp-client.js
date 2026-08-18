@@ -1,13 +1,15 @@
 import { requireSerpApiKey } from './config.js';
 import { buildQuery, requestRaw } from './http.js';
 /**
- * SerpApi 클라이언트 — 자료조사·사실검증 툴(serp_*)의 백엔드.
+ * SerpApi client — backend for the research/fact-checking tools (serp_*).
  *
- * 두 가지 불변 조건:
- * 1. **키 마스킹** — SerpApi 는 api_key 를 URL 쿼리로만 받으므로, 에러 경로(requestRaw 의
- *    타임아웃/도달불가 본문에 URL 포함)에서 키가 LLM 컨텍스트로 새지 않게 항상 마스킹한다.
- * 2. **응답 슬리밍** — 원본 SERP JSON 은 검색 1회에 20~60KB. LLM 이 근거로 쓸 필드만
- *    추려 2~4KB 로 줄인다 (원문 패스스루 금지 — http.ts 의 원문 반환 철학의 의도적 예외).
+ * Two invariants:
+ * 1. **Key masking** — SerpApi only takes api_key as a URL query param, so on error
+ *    paths (requestRaw puts the URL in timeout/unreachable bodies) we always mask
+ *    it so the key can't leak into the LLM context.
+ * 2. **Response slimming** — raw SERP JSON runs 20–60KB per search. We keep only
+ *    the fields the LLM can cite as evidence, cutting it to 2–4KB (no raw
+ *    passthrough — a deliberate exception to http.ts's raw-return philosophy).
  */
 const SERPAPI_BASE = 'https://serpapi.com/search';
 const RECENCY_TBS = {
@@ -24,21 +26,22 @@ function err(message) {
     return { text: message, isError: true };
 }
 /**
- * error 필드 없이 200 + 빈 결과가 오는 경우(강한 필터·페이지 초과 등)의 응답.
- * 빈 스켈레톤 JSON 만 돌려주면 "결과 없음"과 구분되지 않아 모델이 방향을 잃는다.
+ * Response for 200 + empty results without an error field (strong filters, page
+ * overrun, etc.). Returning a bare skeleton JSON is indistinguishable from
+ * "no results", and the model loses its bearings.
  */
 function emptyResult() {
     return {
-        text: '(검색 결과 없음 — 검색어를 바꿔 1회만 재시도하거나, 확인 실패한 주장은 본문에서 제외할 것)',
+        text: '(no search results — retry once with a different query, or drop claims you could not verify from the copy)',
         isError: false,
     };
 }
 /**
- * 네이버 SERP 스크래핑 결과에 섞여 들어오는 스크린리더 라벨을 떼어낸다.
+ * Strips the screen-reader labels that leak into Naver SERP scrape results.
  *
- * 실측 2026-08-11: where=video 의 title·origin·channel 끝에 "새 창 열림"이 붙어
- * 온다("너만몰라TV새 창 열림"). 남겨 두면 모델이 채널명의 일부로 읽어 인용문에
- * 그대로 복사한다.
+ * Measured 2026-08-11: where=video appends "새 창 열림" ("opens in a new window")
+ * to title/origin/channel ("너만몰라TV새 창 열림"). Left in place, the model reads
+ * it as part of the channel name and copies it into citations.
  */
 function stripA11yLabel(value) {
     if (typeof value !== 'string')
@@ -47,29 +50,33 @@ function stripA11yLabel(value) {
     return cleaned.length > 0 ? cleaned : undefined;
 }
 /**
- * 슬라이스 고지 — 엔진이 준 것보다 적게 돌려줄 때 그 사실을 응답에 싣는다.
+ * Slice notice — when we return fewer items than the engine gave us, the response
+ * says so.
  *
- * 검색 엔진마다 한 번에 주는 건수가 고정이고 우리 `limit` 과 다르다. 침묵하면
- * 모델은 받은 것이 전부라고 믿고 조사를 멈춘다.
+ * Each engine returns a fixed number of items per call, and it differs from our
+ * `limit`. Stay silent and the model believes what it got is everything and stops
+ * researching.
  *
- * 잘린 구간을 되찾는 방법은 엔진마다 달라서 호출자가 `more` 로 넘긴다 — page
- * 보폭이 한 묶음보다 작은 엔진(video 68건에 보폭 48)에서는 다음 page 가 겹쳐
- * 가져오고, page 인자가 아예 없는 엔진(google_news)에서는 limit 뿐이다.
+ * How to recover the truncated range differs per engine, so the caller passes it
+ * in as `more` — on engines whose page stride is smaller than one batch (video:
+ * 68 items, stride 48) the next page overlaps into it; on engines with no page
+ * param at all (google_news) limit is the only lever.
  *
- * 상수 추정이 아니라 **이번 응답이 실제로 준 건수**로 판단한다. 엔진 페이지
- * 크기는 검색어·시점에 따라 흔들리므로(구글 웹은 같은 요청에 5~10건), 상수를
- * 근거로 대면 응답과 모순되는 고지문이 만들어진다.
+ * Judge by **how many items this response actually contained**, not by a
+ * constant. Engine page sizes wobble with query and timing (Google web: 5–10
+ * items for the same request), so reasoning from a constant produces a notice
+ * that contradicts the response.
  *
- * @param received 엔진이 이번에 준 건수
- * @param limit    사용자가 요청한 건수
- * @param more     더 가져오는 방법 — 툴마다 다르다(page vs limit)
+ * @param received how many items the engine gave this time
+ * @param limit    how many the user asked for
+ * @param more     how to fetch more — differs per tool (page vs limit)
  */
 function sliceNote(received, limit, more) {
     if (received <= limit)
         return undefined;
-    return `이번 응답은 ${received}건을 받았는데 limit=${limit} 라 ${received - limit}건을 잘랐다. ${more}`;
+    return `This response contained ${received} items but limit=${limit}, so ${received - limit} were cut. ${more}`;
 }
-/** undefined·빈 문자열·빈 배열·빈 객체 필드를 제거해 페이로드를 줄인다 */
+/** Drops undefined / empty-string / empty-array / empty-object fields to shrink the payload */
 function compact(obj) {
     const out = {};
     for (const [key, value] of Object.entries(obj)) {
@@ -97,12 +104,12 @@ async function callSerpApi(params) {
     if (!res.ok) {
         if (res.status === 401) {
             return {
-                result: err('SerpApi 401 Unauthorized — SERPAPI_API_KEY 가 유효하지 않다. 키를 교정하기 전 재시도 금지 (401/400 은 재시도해도 같은 결과).'),
+                result: err('SerpApi 401 Unauthorized — SERPAPI_API_KEY is invalid. Do not retry before fixing the key (401/400 return the same thing on retry).'),
             };
         }
         if (res.status === 429) {
             return {
-                result: err('SerpApi 429 — 월간 쿼터 또는 시간당 처리량 소진. 이번 세션에서는 추가 검색을 중단하고, 이미 확보한 근거 안에서만 저작하거나 미검증 주장을 본문에서 제외할 것.'),
+                result: err('SerpApi 429 — monthly quota or hourly throughput exhausted. Stop searching for this session; write from the evidence already gathered, or drop unverified claims from the copy.'),
             };
         }
         return { result: err(`SerpApi HTTP ${res.status}: ${maskKey(res.body.slice(0, 500))}`) };
@@ -112,15 +119,15 @@ async function callSerpApi(params) {
         json = JSON.parse(res.body);
     }
     catch {
-        return { result: err(`SerpApi 응답 JSON 파싱 실패: ${maskKey(res.body.slice(0, 300))}`) };
+        return { result: err(`SerpApi response JSON parse failed: ${maskKey(res.body.slice(0, 300))}`) };
     }
     const body = json;
-    // 결과 없음은 HTTP 200 + error 필드로 온다 — 툴 에러가 아니라 "빈 결과"로 취급
+    // "No results" arrives as HTTP 200 + an error field — treat as an empty result, not a tool error
     if (typeof body.error === 'string') {
         if (/hasn'?t returned any results|no results/i.test(body.error)) {
             return {
                 result: {
-                    text: '(검색 결과 없음 — 검색어를 바꿔 1회만 재시도하거나, 확인 실패한 주장은 본문에서 제외할 것. 결과 없는 검색은 과금되지 않음)',
+                    text: '(no search results — retry once with a different query, or drop claims you could not verify from the copy. Searches with no results are not billed)',
                     isError: false,
                 },
             };
@@ -130,22 +137,24 @@ async function callSerpApi(params) {
     return { json: body };
 }
 /**
- * 구글 결과 페이지 크기. `start` 는 0부터 세는 **항목 오프셋**이며, 이 값의
- * 배수로만 페이지를 끊는다.
+ * Google result page size. `start` is a 0-based **item offset**, and pages only
+ * break on multiples of this value.
  *
- * **`num` 은 이 엔진에서 무효다** (실측 2026-08-11). SerpApi 가 구글로 넘기지
- * 않는다 — 응답의 `search_parameters` 에 `num` 이 없고 `search_metadata.google_url`
- * 에도 실리지 않으며, `serpapi_pagination.current` 는 start 0/10/20 을 각각
- * 1/2/3 페이지로 센다. 즉 실제 페이지는 요청과 무관하게 **항상 10건**이다.
+ * **`num` is a no-op on this engine** (measured 2026-08-11). SerpApi doesn't
+ * forward it to Google — the response's `search_parameters` has no `num`, it
+ * isn't on `search_metadata.google_url` either, and `serpapi_pagination.current`
+ * counts start 0/10/20 as pages 1/2/3. The real page is **always 10 items**
+ * regardless of the request.
  *
- * 그래서 오프셋 단위를 `limit` 에 연동하면 안 된다. `limit=20` 을 20 배수로
- * 잡으면 page=2 가 구글 3페이지를 가리켜 2페이지(11~20번)가 통째로 사라진다.
- * `limit` 은 서버 슬라이스일 뿐이므로 오프셋은 항상 10 단위다.
+ * So don't tie the offset unit to `limit`. Set the offset in multiples of 20
+ * for `limit=20` and page=2 points at Google page 3, wiping out page 2 (items
+ * 11–20) entirely. `limit` is only a server-side slice, so the offset is always
+ * in units of 10.
  *
- * (한때 "구글이 커서를 요청한 num 만큼 소비한다"고 적었으나 오독이었다.
- * num=20·start=20 에서 중복이 없던 것은 num 이 무시된 채 start=20 이 그냥
- * 3페이지였기 때문이고, num=5·start=5 의 중복은 start=5 가 1페이지 안쪽을
- * 가리켰기 때문이다.)
+ * (We once wrote "Google's cursor consumes the requested num" — a misreading.
+ * num=20·start=20 had no duplicates because num was ignored and start=20 was
+ * simply page 3; the duplicates at num=5·start=5 were because start=5 pointed
+ * inside page 1.)
  */
 export const GOOGLE_PAGE_SIZE = 10;
 export async function webSearch(input) {
@@ -163,10 +172,10 @@ export async function webSearch(input) {
         return result;
     const p = json;
     const rawOrganic = p.organic_results ?? [];
-    // position 은 페이지마다 1부터 다시 시작한다 — 그대로 두면 page=2 의 1번이
-    // page=1 의 1번과 같은 순위로 읽힌다. 오프셋을 더해 전역 순번으로 바꾸면
-    // 모델이 페이지 경계의 재배치(구글이 같은 링크를 다른 페이지에도 얹는 경우)를
-    // 스스로 알아볼 수 있다.
+    // position restarts at 1 on every page — left alone, page 2's #1 reads as the
+    // same rank as page 1's #1. Adding the offset makes it a global rank, so the
+    // model can spot cross-page reshuffling on its own (Google sometimes repeats
+    // the same link on another page).
     const offset = input.page && input.page > 1 ? (input.page - 1) * GOOGLE_PAGE_SIZE : 0;
     const organicResults = rawOrganic.slice(0, limit).map((r, i) => compact({
         position: offset + (typeof r.position === 'number' ? r.position : i + 1),
@@ -180,10 +189,10 @@ export async function webSearch(input) {
         return emptyResult();
     const slim = compact({
         query: input.query,
-        // total_results 는 페이지마다 크게 흔들린다(실측: 같은 검색어에서 1페이지 462,
-        // 2페이지 122) — 근거로 인용할 수 있는 값이 아니라 첫 페이지에서만 싣는다
+        // total_results swings wildly between pages (measured: 462 on page 1, 122 on
+        // page 2 for the same query) — not a citable number, so only on the first page
         total_results: input.page && input.page > 1 ? undefined : p.search_information?.total_results,
-        note: sliceNote(rawOrganic.length, limit, `page 를 1씩 올리면 전역 ${offset + GOOGLE_PAGE_SIZE + 1}번부터 이어지므로 그 사이 구간은 건너뛴다 — 빠짐없이 보려면 limit 을 ${GOOGLE_PAGE_SIZE} 이하로 두고 page 를 차례로 넘길 것`),
+        note: sliceNote(rawOrganic.length, limit, `raising page by 1 continues from global #${offset + GOOGLE_PAGE_SIZE + 1}, skipping the range in between — to see everything, keep limit at ${GOOGLE_PAGE_SIZE} or below and step through pages in order`),
         answer_box: pick(p.answer_box, ['type', 'title', 'answer', 'snippet', 'link']),
         knowledge_graph: pick(p.knowledge_graph, ['title', 'type', 'description', 'source', 'website']),
         organic_results: organicResults,
@@ -193,19 +202,19 @@ export async function webSearch(input) {
     });
     return { text: JSON.stringify(slim, null, 1), isError: false };
 }
-/** serp_news_search.limit 의 스키마 상한 — handlers.ts 와 같은 값이어야 한다 */
+/** Schema cap for serp_news_search.limit — must match handlers.ts */
 export const SERP_NEWS_MAX_LIMIT = 20;
 /**
- * Google 뉴스 검색.
+ * Google News search.
  *
- * 이 엔진에는 결과 수·페이지 파라미터(num/start)가 없어 반환 개수는 서버 측
- * 슬라이스로만 줄인다 — 과금은 어느 쪽이든 검색 1회다.
+ * This engine has no result-count/page params (num/start), so we only trim the
+ * returned count with a server-side slice — billing is one search either way.
  *
- * 정렬 파라미터 so(0=관련도 | 1=날짜)도 쓸 수 없다. 실측(2026-07-29) 결과
- * `q` 와 함께 보내면 400 이 온다: "`q` and `so` parameters can't be used
- * together." — so 는 topic/publication/story 토큰 탐색 전용이다. 최신순이
- * 필요하면 serp_web_search 의 recency(tbs=qdr:*) 나 naver_search(sort=date)
- * 를 쓴다.
+ * The sort param so (0=relevance | 1=date) is unusable too. Measured
+ * (2026-07-29): sending it with `q` returns 400: "`q` and `so` parameters can't
+ * be used together." — so is only for topic/publication/story token
+ * exploration. If you need newest-first, use serp_web_search's recency
+ * (tbs=qdr:*) or naver_search (sort=date).
  */
 export async function newsSearch(input) {
     const max = input.limit ?? 10;
@@ -219,12 +228,14 @@ export async function newsSearch(input) {
         return result;
     const p = json;
     /**
-     * link 없는 항목은 섹션 헤더인데, **그 안에 stories[] 로 실기사를 달고 온다**
-     * (실측 2026-08-11: {"position":1,"title":"주요 뉴스","stories":[4건]}).
+     * Items without a link are section headers, but **they carry real articles
+     * inside stories[]** (measured 2026-08-11:
+     * {"position":1,"title":"주요 뉴스","stories":[4 items]}).
      *
-     * 한때 헤더를 통째로 버렸는데, 버려진 4건이 응답에서 가장 최신이었다 —
-     * 시효성 검증이 이 툴의 존재 이유인데 최상위 랭크의 최신 기사가 사라졌다.
-     * 헤더 자체는 근거로 못 쓰므로 벗겨내되, 안의 기사는 평탄화해 살린다.
+     * We once dropped headers wholesale — and the 4 dropped articles were the most
+     * recent in the response. Recency checking is this tool's reason to exist, and
+     * the freshest top-ranked articles were vanishing. The header itself can't be
+     * cited, so peel it off, but flatten and keep the articles inside.
      */
     const rawNews = (p.news_results ?? []).flatMap((r) => {
         if (typeof r?.link === 'string' && r.link.length > 0)
@@ -232,8 +243,8 @@ export async function newsSearch(input) {
         const stories = r?.stories ?? [];
         return stories.filter((s) => typeof s?.link === 'string' && s.link.length > 0);
     });
-    // 묶음을 평탄화하면 원본 position 이 겹친다(헤더 안 기사도 1부터 센다) —
-    // 순번을 다시 매겨 "2위가 두 개"인 응답을 만들지 않는다
+    // flattening the bundles makes original positions collide (articles inside a
+    // header also count from 1) — renumber so the response doesn't have two #2s
     const newsResults = rawNews.slice(0, max).map((r, i) => compact({
         position: i + 1,
         title: r.title,
@@ -247,25 +258,27 @@ export async function newsSearch(input) {
     return {
         text: JSON.stringify(compact({
             query: input.query,
-            // 이 엔진은 페이지 인자가 없다 — 잘린 구간을 가져올 방법이 limit 뿐이다
+            // this engine has no page param — limit is the only way to reach the truncated range
             note: sliceNote(rawNews.length, max, max >= SERP_NEWS_MAX_LIMIT
-                ? `이 엔진에는 페이지 인자가 없고 limit 도 이미 상한(${SERP_NEWS_MAX_LIMIT})이라 나머지는 받을 수 없다 — 더 좁은 검색어나 gl/hl 로 재조회할 것`
-                : `이 엔진에는 페이지 인자가 없으므로 더 필요하면 limit 을 올려 재호출할 것(상한 ${SERP_NEWS_MAX_LIMIT})`),
+                ? `this engine has no page param and limit is already at its cap (${SERP_NEWS_MAX_LIMIT}), so the rest is unreachable — re-query with a narrower query or gl/hl`
+                : `this engine has no page param, so if you need more, call again with a higher limit (cap ${SERP_NEWS_MAX_LIMIT})`),
             news_results: newsResults,
         }), null, 1),
         isError: false,
     };
 }
-/** naver 엔진의 period 허용값 (공식 문서 + 실측 — 오값은 400 "Invalid format") */
+/** Allowed period values for the naver engine (official docs + measured — bad values get 400 "Invalid format") */
 export const SERP_NAVER_PERIODS = ['1h', '1d', '1w', '1m', '3m', '6m', '1y'];
 /**
- * naver 엔진의 sort_by 는 where 에 따라 값 체계가 다르다 (공식 문서 + 실측):
- *   where=news → 0=관련도(기본) · 1=최신 · 2=오래된순
- *   그 외      → r=관련도(기본) · dd=최신
- * 잘못된 값은 에러가 아니라 **조용히 무시**되므로, 최신순으로 정렬됐다고 믿고
- * 시효성 값을 뽑으면 오래된 기사를 최신으로 인용하게 된다.
+ * The naver engine's sort_by value scheme differs by where (official docs + measured):
+ *   where=news → 0=relevance (default) · 1=newest · 2=oldest
+ *   others     → r=relevance (default) · dd=newest
+ * Wrong values are **silently ignored**, not errors — believe the results are
+ * sorted newest-first and pull recency facts, and you end up citing old
+ * articles as new.
  *
- * oldest 는 news 전용이다 — 다른 where 에 대응값이 없어 호출 전에 거절한다.
+ * oldest is news-only — other wheres have no equivalent value, so we reject
+ * before calling.
  */
 function naverSortValue(where, sort) {
     if (!sort)
@@ -275,39 +288,42 @@ function naverSortValue(where, sort) {
     return sort === 'latest' ? 'dd' : 'r';
 }
 /**
- * serp_naver_search.limit 의 스키마 상한 — handlers.ts 와 같은 값이어야 한다.
+ * Schema cap for serp_naver_search.limit — must match handlers.ts.
  *
- * 한 번에 오는 건수는 where 마다 다르고(실측 2026-08-11 "전기차 보조금":
- * web 15 · news 10 · video 68 · image 48) 검색어에 따라 흔들리므로 상수로 두지
- * 않는다 — 잘림 판단은 sliceNote 가 **이번 응답의 실제 건수**로 한다. 상수를
- * 근거로 대면 응답과 모순되는 고지문이 만들어진다(실제로 만들어졌다).
+ * Items per call differ by where (measured 2026-08-11, query "전기차 보조금":
+ * web 15 · news 10 · video 68 · image 48) and wobble with the query, so no
+ * constant here — sliceNote judges truncation from **this response's actual
+ * count**. Reasoning from a constant produces a notice that contradicts the
+ * response (it actually did).
  */
 export const SERP_NAVER_MAX_LIMIT = 50;
 /**
- * naver 엔진의 페이지 보폭 — **한 번에 오는 건수와 반드시 같아야 한다**.
+ * Page stride for the naver engine — **must equal the number of items per call**.
  *
- * 어긋나면 조용히 겹치거나 빠진다. image 는 `num` 으로 청크를 이 값에 맞출 수
- * 있어 그렇게 하고(미전송 시 엔진 기본값 50이 걸려 48건이 온다 — 실측), 나머지
- * where 는 청크가 고정이라 그 값을 보폭으로 쓴다 (실측 2026-08-11: web 15).
+ * If they diverge, pages silently overlap or skip. image can match its chunk to
+ * this value via `num`, so we do (unsent, the engine default of 50 kicks in and
+ * 48 arrive — measured); the other wheres have fixed chunks, so we use those as
+ * the stride (measured 2026-08-11: web 15).
  */
 const NAVER_STRIDE = {
     web: 15,
     news: 10,
-    // video 는 num 이 안 먹어 청크(68)를 줄일 수 없다 — 네이버 자체 pagination 이
-    // 제시하는 다음 오프셋(start=49)에 맞춰 보폭 48 을 쓴다. 청크보다 20 작아
-    // 페이지 경계에서 겹치는 구간이 남지만, 보폭을 10 으로 두면 40건이 겹친다.
+    // video ignores num, so its chunk (68) can't be shrunk — use stride 48 to
+    // match the next offset Naver's own pagination proposes (start=49). That's 20
+    // short of the chunk, so page boundaries overlap a bit, but a stride of 10
+    // would overlap by 40.
     video: 48,
     image: 10,
 };
 /**
- * naver 엔진의 `start` 오프셋 — where 마다 보폭이 다르다 (공식 문서 + 실측).
+ * The naver engine's `start` offset — the stride differs per where (official docs + measured).
  *
- *   web  : start = (page-1)*15 + 1   (문서 공식 page*15-29 와 같은 값, page≥2 에서)
- *   그 외 : start = (page-1)*10 + 1
+ *   web   : start = (page-1)*15 + 1   (same value as the documented formula page*15-29, for page≥2)
+ *   others: start = (page-1)*10 + 1
  *
- * 문서 공식을 그대로 쓰면 page=2 가 start=1 이 되어 1페이지와 겹친다 — SerpApi
- * 자신의 pagination 도 page=2 를 건너뛴다. 여기서는 보폭을 일정하게 잡아
- * page 가 어느 where 에서나 "다음 묶음"을 뜻하게 만든다.
+ * Use the documented formula as-is and page=2 becomes start=1, overlapping
+ * page 1 — SerpApi's own pagination skips page=2 too. Here we keep the stride
+ * uniform so page means "the next batch" on every where.
  */
 function naverStart(where, page) {
     if (!page || page < 2)
@@ -315,69 +331,73 @@ function naverStart(where, page) {
     return (page - 1) * NAVER_STRIDE[where] + 1;
 }
 export async function naverSearch(input) {
-    // limit 을 보폭보다 크게 주면 페이지 경계에서 그 차이만큼 겹친다 — video 는
-    // 청크 68 에 보폭 48 이라 limit=50 이면 2건씩 밀려 10건이 중복됐다(실측).
-    // 보폭으로 클램프하면 페이지가 정확히 이어지고, 넘친 만큼은 다음 page 에서
-    // 다시 오므로 잃는 결과가 없다.
+    // A limit above the stride overlaps at page boundaries by the difference —
+    // video's chunk is 68 with stride 48, so limit=50 slid by 2 per page and
+    // duplicated 10 items (measured). Clamping to the stride makes pages line up
+    // exactly, and the overflow comes back on the next page, so no results are lost.
     const requested = input.limit ?? 10;
     const where = input.where ?? 'web';
     const max = Math.min(requested, NAVER_STRIDE[where]);
     if (input.sort === 'oldest' && where !== 'news') {
-        return err(`sort=oldest 는 where=news 전용이다 (현재 where=${where}) — 다른 검색 유형에는 대응 정렬값이 없다.`);
+        return err(`sort=oldest is where=news only (current where=${where}) — other search types have no equivalent sort value.`);
     }
     const { result, json } = await callSerpApi({
         engine: 'naver',
         query: input.query,
         where,
-        // SerpApi 의 편의 인자 `page` 를 쓰면 **where=web 에서 2페이지가 무동작**이다.
-        // 공식 문서가 web 에만 `start = page*15 - 29` 를 쓰는데, page=2 는 1 이 되어
-        // page=1 과 같은 오프셋을 가리킨다 (실측 2026-08-11: 둘 다 start=1, 링크
-        // 15/15 중복. page=1 응답의 serpapi_pagination.next 도 page=2 를 건너뛰고
-        // page=3&start=16 을 가리킨다). start 를 직접 계산해 이 함정을 피한다.
+        // SerpApi's convenience arg `page` makes **page 2 a no-op on where=web**.
+        // The official docs apply `start = page*15 - 29` to web only, and page=2
+        // yields 1 — the same offset as page=1 (measured 2026-08-11: both start=1,
+        // 15/15 links duplicated. The page=1 response's serpapi_pagination.next also
+        // skips page=2 and points at page=3&start=16). We compute start ourselves
+        // to dodge the trap.
         start: naverStart(where, input.page),
         sort_by: naverSortValue(where, input.sort),
         period: input.period,
-        // **num 은 반드시 보폭과 같은 값으로 명시한다** (where=image 전용 파라미터).
+        // **num must be sent explicitly, equal to the stride** (a where=image-only param).
         //
-        // 페이지네이션의 불변식은 "한 번에 오는 건수 = 보폭"이다. 둘이 어긋나면
-        // 겹치거나(청크 > 보폭) 빠진다(청크 < 보폭). 실측 2026-08-11:
+        // Pagination's invariant is "items per call = stride". When they diverge,
+        // pages overlap (chunk > stride) or skip (chunk < stride). Measured 2026-08-11:
         //
-        //   num 미전송 → 48건 수신 (엔진 기본값 50이 걸린다). 보폭은 10 이므로
-        //                page=2 가 직전 페이지 안쪽을 가리켜 38건이 중복됐다.
-        //   num=10     → 10건 수신. 보폭과 일치해 페이지가 깨끗하게 이어진다.
+        //   num unsent → 48 received (the engine default of 50 kicks in). The stride
+        //                is 10, so page=2 pointed inside the previous page — 38 duplicated.
+        //   num=10     → 10 received. Matches the stride; pages line up cleanly.
         //
-        // "안 보내면 10건이 온다"고 적었던 때가 있으나 틀렸다 — 미전송은 기본값
-        // 적용이지 비활성화가 아니다. 과금은 어느 쪽이든 검색 1회이므로 한 번에
-        // 많이 받을 이유도 없다. 더 필요하면 page 를 넘긴다.
+        // We once wrote "unsent means 10 arrive" — wrong. Unsent means the default
+        // applies, not that it's disabled. Billing is one search either way, so
+        // there's no reason to grab more at once. Need more, step through page.
         num: where === 'image' ? NAVER_STRIDE.image : undefined,
     });
     if (result)
         return result;
     const p = json;
     /**
-     * 잘렸을 때 더 가져오는 방법 — where 마다 다르다.
+     * How to fetch more after truncation — differs per where.
      *
-     * **page 보폭이 한 번에 오는 건수보다 작다**(실측 2026-08-11: video 는 68건이
-     * 오는데 보폭 48, web 은 15건에 보폭 15). 즉 잘린 구간은 "영영 못 본다"가
-     * 아니라 대개 다음 page 가 겹쳐서 가져온다 — 한때 그렇게 단정했으나 틀렸고,
-     * 그 문구는 쓸데없는 재조회로 크레딧을 태웠다.
+     * **The page stride is smaller than the items per call** (measured
+     * 2026-08-11: video returns 68 with stride 48, web 15 with stride 15). So the
+     * truncated range isn't "gone forever" — the next page usually overlaps into
+     * it. We once asserted it was gone; that was wrong, and the wording burned
+     * credits on pointless re-queries.
      *
-     * limit 을 올릴 여지가 있으면 그쪽이 싸다(호출 1회). 상한에 이미 닿았으면
-     * page 를 넘기라고 안내한다.
+     * If limit has room to grow, that's cheaper (one call). At the cap already,
+     * point at page instead.
      */
-    // video 는 네이버가 page 마다 결과를 재배치해 경계에서 일부가 겹친다
-    // (실측: 보폭 48 로 맞춰도 page1↔2 에 10건 중복. 페이지 내부는 고유 48/48 이고
-    // 경계도 이어지므로 우리 보폭 계산 문제가 아니라 엔진 특성이다). stateless 라
-    // 서버가 직전 페이지를 기억할 수 없으니, 없앨 수 없는 사실을 알려만 준다.
-    const overlapWarn = where === 'video' ? ' (이 검색 유형은 page 경계에서 일부가 겹쳐 오니 링크로 중복을 걸러낼 것)' : '';
+    // On video, Naver reshuffles results per page, so boundaries overlap a little
+    // (measured: even at stride 48, 10 duplicates between pages 1↔2. Within a page
+    // it's unique 48/48 and boundaries do connect, so it's engine behavior, not
+    // our stride math). We're stateless — the server can't remember the previous
+    // page — so we just disclose what can't be removed.
+    const overlapWarn = where === 'video' ? ' (this search type overlaps a little at page boundaries — dedupe by link)' : '';
     const moreHint = (max < requested
-        ? `요청한 limit=${requested} 는 where=${where} 의 페이지 크기(${NAVER_STRIDE[where]})를 넘어 ${max} 로 줄였다 — 더 받으려면 page 를 1씩 올릴 것`
-        : `page 를 1씩 올리면 이어지는 구간을 받을 수 있다`) + overlapWarn;
-    // 이미지·비디오는 결과 필드 자체가 다르다 — 공통 슬리밍으로 뭉개면
-    // 원본 URL·해상도·재생시간이 사라져 소재 선별에 못 쓴다.
+        ? `requested limit=${requested} exceeds where=${where}'s page size (${NAVER_STRIDE[where]}), so it was lowered to ${max} — to get more, raise page one step at a time`
+        : `raise page by 1 to get the next contiguous range`) + overlapWarn;
+    // image and video have entirely different result fields — mash them through
+    // the common slimming and original URL, resolution, and duration disappear,
+    // making them useless for sourcing material.
     if (where === 'image') {
-        // 문서는 inline_images_results 라고 적지만 실제 응답 키는 images_results 다
-        // (실측 2026-08-11 — 문서의 naver-images-api 예시도 images_results 로 나온다).
+        // the docs say inline_images_results, but the actual response key is images_results
+        // (measured 2026-08-11 — the docs' own naver-images-api example shows images_results too).
         const rawImages = p.images_results ?? p.inline_images_results ?? [];
         const images = rawImages.slice(0, max).map((r) => compact({
             title: r.title,
@@ -397,7 +417,7 @@ export async function naverSearch(input) {
         };
     }
     if (where === 'video') {
-        // 실측 2026-08-11: 응답 키는 문서의 inline_videos_results 가 아니라 video_results 다
+        // measured 2026-08-11: the response key is video_results, not the documented inline_videos_results
         const rawVideos = p.video_results ?? p.inline_videos_results ?? [];
         const videos = rawVideos.slice(0, max).map((r) => compact({
             position: r.position,
@@ -407,8 +427,8 @@ export async function naverSearch(input) {
             source: stripA11yLabel(r.origin),
             channel: stripA11yLabel(typeof r.channel === 'object' ? r.channel?.name : r.channel),
             date: r.publish_date,
-            // 조회수 — 스킬이 이 툴을 "조회 흐름 파악"에 쓰라고 안내하므로 필수다.
-            // 원본은 "조회수 1,118" 같은 표시 문자열로 온다
+            // view count — required: the skill tells callers to use this tool to read
+            // view flow. The raw value is a display string like "조회수 1,118" ("1,118 views")
             views: r.views,
             thumbnail: r.thumbnail,
         }));
@@ -420,10 +440,11 @@ export async function naverSearch(input) {
         };
     }
     const slimItems = (items) => (items ?? []).slice(0, max).map((r) => {
-        // where=news 는 날짜·언론사를 최상위가 아니라 news_info 하위에 중첩해서 준다
-        // (실측 2026-08-11: news_info.news_date "2시간 전" / news_info.press_name "이데일리").
-        // 최상위만 보던 때는 뉴스 결과에서 date·source 가 통째로 사라졌다 — 시효성
-        // 검증이 이 툴의 존재 이유인데 정렬·기간 필터가 걸렸는지 확인할 길이 없었다.
+        // where=news nests date and outlet under news_info, not at the top level
+        // (measured 2026-08-11: news_info.news_date "2시간 전" / news_info.press_name "이데일리").
+        // When we only read the top level, news results lost date and source
+        // entirely — recency checking is this tool's reason to exist, and there was
+        // no way to tell whether sort/period filters had applied.
         const info = (r.news_info ?? {});
         return compact({
             position: r.position,
@@ -437,12 +458,13 @@ export async function naverSearch(input) {
             date: r.date ?? r.published_date ?? info.news_date ?? info.date,
         });
     });
-    // where 에 따라 결과 배열의 **키 이름이 다르다** (실측 2026-07-29):
-    //   where=web      → organic_results   (SerpApi 문서는 web_results 라고 적지만 실제는 이쪽)
+    // The result array's **key name differs by where** (measured 2026-07-29):
+    //   where=web      → organic_results   (the SerpApi docs say web_results, but this is what arrives)
     //   where=news     → news_results
     //   where=nexearch → web_results (+ ads/inline_images…)
-    // web_results 만 보던 때는 기본 경로(where=web)가 매번 "결과 없음"을 반환했고,
-    // 그게 진짜 빈 결과와 구분되지 않아 모델이 검색을 포기했다. 셋 다 확인한다.
+    // When we only read web_results, the default path (where=web) returned "no
+    // results" every time — indistinguishable from a genuinely empty result, and
+    // the model gave up searching. Check all three.
     const raw = p.organic_results ?? p.web_results ?? p.news_results ?? [];
     const items = slimItems(raw);
     if (items.length === 0)
@@ -457,17 +479,18 @@ export async function naverSearch(input) {
         isError: false,
     };
 }
-// ── 이미지 검색 (engine=google_images) ────────────────────────────
+// ── Image search (engine=google_images) ───────────────────────────
 /**
- * Google 이미지 검색의 필터 파라미터 (공식 문서 + 실측 2026-08-11).
+ * Filter params for Google image search (official docs + measured 2026-08-11).
  *
- * SerpApi 는 이 필터들을 tbs 조립 없이 **전용 파라미터**로 받는다 — tbs 를 직접
- * 만들면 서로 덮어써서 조용히 무시되므로 전용 쪽만 쓴다. 특히 종횡비는 예전
- * tbs=iar 이 구글에서 중단돼 imgar 로 바뀌었다.
+ * SerpApi takes these as **dedicated params**, no tbs assembly — build tbs by
+ * hand and they overwrite each other and get silently ignored, so use only the
+ * dedicated ones. Aspect ratio in particular moved to imgar after Google
+ * discontinued the old tbs=iar.
  */
-/** google_images 의 ijn 한 칸 = 100건 (공식 문서 + 실측) */
+/** One ijn step on google_images = 100 items (official docs + measured) */
 const GOOGLE_IMAGES_PAGE_SIZE = 100;
-/** serp_image_search.limit 의 스키마 상한 — handlers.ts 와 같은 값이어야 한다 */
+/** Schema cap for serp_image_search.limit — must match handlers.ts */
 export const SERP_IMAGE_MAX_LIMIT = 50;
 export const IMAGE_SIZES = ['large', 'medium', 'icon', '2mp', '4mp', '8mp', '15mp'];
 export const IMAGE_ASPECTS = ['square', 'tall', 'wide', 'panoramic'];
@@ -483,7 +506,7 @@ const IMGSZ = {
     '15mp': '15mp',
 };
 const IMGAR = { square: 's', tall: 't', wide: 'w', panoramic: 'xw' };
-/** 라이선스 코드 — 저작권 안전한 소재만 뽑을 때 fmc(수정·상업 이용 가능)가 가장 좁다 */
+/** License codes — fmc (modify + commercial use allowed) is the narrowest pick for copyright-safe material */
 const LICENSES = {
     free: 'f',
     commercial: 'fc',
@@ -498,8 +521,8 @@ export async function imageSearch(input) {
         q: input.query,
         gl: input.gl,
         hl: input.hl,
-        // 이 엔진은 num 이 없다 — 한 번에 100건을 주고 페이지는 ijn(0부터)으로 넘긴다.
-        // 반환 개수는 서버 슬라이스로 줄이며, 과금은 어느 쪽이든 검색 1회다.
+        // this engine has no num — it returns 100 per call and pages via ijn (0-based).
+        // We trim the returned count with a server-side slice; billing is one search either way.
         ijn: input.page && input.page > 1 ? input.page - 1 : undefined,
         imgsz: input.size ? IMGSZ[input.size] : undefined,
         imgar: input.aspect ? IMGAR[input.aspect] : undefined,
@@ -512,9 +535,10 @@ export async function imageSearch(input) {
         return result;
     const p = json;
     const rawImages = p.images_results ?? [];
-    // 이 엔진의 position 은 **이미 전역**이다 (실측 2026-08-11: ijn=1 → 101~200).
-    // webSearch 는 반대로 페이지마다 1부터 다시 시작하므로 거기서만 오프셋을 더한다
-    // — 두 엔진의 계약이 정반대라 같은 공식을 복사하면 이중 가산이 된다.
+    // This engine's position is **already global** (measured 2026-08-11: ijn=1 →
+    // 101–200). webSearch is the opposite — position restarts at 1 per page, so
+    // only there do we add the offset. The two engines' contracts are inverted;
+    // copy the same formula across and you double-add.
     const images = rawImages.slice(0, max).map((r, i) => compact({
         position: typeof r.position === 'number' ? r.position : i + 1,
         title: r.title,
@@ -524,7 +548,7 @@ export async function imageSearch(input) {
         height: r.original_height,
         source: r.source,
         link: r.link,
-        // 라이선스 필터를 걸었을 때만 실려 오는 필드 — 상업 이용 판단 근거가 된다
+        // only present when a license filter is applied — evidence for commercial-use decisions
         licenseUrl: r.license_details_url,
     }));
     if (images.length === 0)
@@ -532,17 +556,17 @@ export async function imageSearch(input) {
     return {
         text: JSON.stringify(compact({
             query: input.query,
-            note: sliceNote(rawImages.length, max, `이 엔진은 한 번에 ${GOOGLE_IMAGES_PAGE_SIZE}건을 주는데 limit 상한이 ${SERP_IMAGE_MAX_LIMIT} 라 그 이상은 받을 수 없다. page 한 칸이 ${GOOGLE_IMAGES_PAGE_SIZE}건이라 잘린 구간은 page 로도 닿지 않는다 — 필터(size·aspect·license)로 좁혀 재조회할 것`),
+            note: sliceNote(rawImages.length, max, `this engine returns ${GOOGLE_IMAGES_PAGE_SIZE} per call but the limit cap is ${SERP_IMAGE_MAX_LIMIT}, so the rest is unreachable. One page step is ${GOOGLE_IMAGES_PAGE_SIZE} items, so page can't reach the truncated range either — narrow with filters (size·aspect·license) and re-query`),
             images,
             suggested_searches: (p.suggested_searches ?? []).slice(0, 6).map((r) => r.name ?? r.q).filter(Boolean),
         }), null, 1),
         isError: false,
     };
 }
-// ── 급상승 검색어 (engine=google_trends_trending_now) ─────────────
-/** serp_trending_now.hours 의 허용값 — 구글이 미리 정한 창 넷뿐이다 */
+// ── Trending searches (engine=google_trends_trending_now) ─────────
+/** Allowed values for serp_trending_now.hours — only the four windows Google predefines */
 export const TRENDING_HOURS = [4, 24, 48, 168];
-/** serp_trending_now.limit 의 스키마 상한 — handlers.ts 와 같은 값이어야 한다 */
+/** Schema cap for serp_trending_now.limit — must match handlers.ts */
 export const SERP_TRENDING_MAX_LIMIT = 50;
 export const DEFAULT_TRENDING_GEO = 'KR';
 export const DEFAULT_TRENDING_HOURS = 24;
@@ -552,9 +576,9 @@ function unixToIso(value) {
     return typeof value === 'number' && Number.isFinite(value) ? new Date(value * 1000).toISOString() : null;
 }
 /**
- * 급상승 검색어를 파싱된 형태로 받는다 — serp_trending_now 툴과 sns_issue_scout 이
- * 같이 쓴다. 검색량·증가율은 구글이 구간으로 주는 어림값(2,000,000 · 1000%)이라
- * 순위 비교용이지 절대치가 아니다.
+ * Returns trending searches in parsed form — shared by the serp_trending_now tool and
+ * sns_issue_scout. Search volume and increase percentage are rough bucketed figures Google
+ * hands out (2,000,000 · 1000%), good for ranking against each other but not as absolutes.
  */
 export async function fetchTrendingNow(input) {
     const geo = (input.geo ?? DEFAULT_TRENDING_GEO).toUpperCase();
@@ -592,7 +616,7 @@ export async function trendingNow(input) {
         return error;
     if (!data || data.trends.length === 0) {
         return {
-            text: '(급상승 검색어 없음 — geo 코드를 확인하거나 hours 를 168 로 넓혀 1회만 재시도할 것)',
+            text: '(no trending searches — check the geo code, or widen hours to 168 and retry exactly once)',
             isError: false,
         };
     }
@@ -602,15 +626,15 @@ export async function trendingNow(input) {
             geo: data.geo,
             hours: data.hours,
             count: data.count,
-            note: sliceNote(data.received, limit, `이 엔진은 page 가 없다 — 더 보려면 limit 을 ${SERP_TRENDING_MAX_LIMIT} 까지 올리거나 categoryId 로 좁힐 것`),
+            note: sliceNote(data.received, limit, `this engine has no page — to see more, raise limit up to ${SERP_TRENDING_MAX_LIMIT} or narrow with categoryId`),
             trends: data.trends,
         }), null, 1),
         isError: false,
     };
 }
 /**
- * 구글 organic 결과를 슬리밍만 하고 그대로 넘긴다 — 여러 검색을 한 응답으로
- * 묶는 호출자(sns_issue_scout)가 쓴다. 텍스트 포장은 webSearch 가 맡는다.
+ * Slims Google organic results and passes them straight through — for callers that bundle
+ * several searches into one response (sns_issue_scout). webSearch handles the text wrapping.
  */
 export async function fetchGoogleOrganic(input) {
     const { result, json } = await callSerpApi({

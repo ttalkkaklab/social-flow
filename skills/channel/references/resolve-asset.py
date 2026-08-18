@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""채널 assets/catalog.md 에서 kind+id 를 파일 경로로 바꾼다.
+"""Turn a kind+id into a file path via the channel's assets/catalog.md.
 
-사용:
-  resolve-asset.py <채널dir> <kind> [id]
-  resolve-asset.py --list <채널dir>
-  resolve-asset.py --ensure <채널dir> <kind> <id> <path> [note]
+Usage:
+  resolve-asset.py <channel dir> <kind> [id]
+  resolve-asset.py --list <channel dir>
+  resolve-asset.py --ensure <channel dir> <kind> <id> <path> [note]
   resolve-asset.py --selftest
 
-탐색 순서: catalog 표 → 잘 알려진 기본 경로 → 옛 경로(assets/outro.mp4).
-없으면 exit 1. path 는 assets/ 기준 상대이고, 출력은 존재하는 절대(또는
-정규화한 상대) 경로 한 줄이다.
+Lookup order: the catalog table → the well-known default path → the old path
+(assets/outro.mp4). Exit 1 if none hit. path is relative to assets/, and the
+output is one line holding the absolute (or normalized relative) path that exists.
 """
 from __future__ import annotations
 
@@ -19,11 +19,12 @@ from pathlib import Path
 
 HEADER = """# assets catalog
 
-두 편 이상에서 다시 쓰는 채널 공용물만 적는다.
-한 편용 생성물(회차 BGM·씬 PNG·TTS)은 주제 디렉토리의 `.work/` 에 둔다.
+Only channel-shared assets reused in two or more episodes go in here.
+Single-episode artifacts (an episode's BGM, scene PNGs, TTS) go in the topic
+directory's `.work/`.
 
-produce·storyboard 는 `skills/channel/references/resolve-asset.py` 로
-kind+id 를 경로로 바꾼다. path 는 `assets/` 기준 상대 경로다.
+produce and storyboard turn kind+id into a path with
+`skills/channel/references/resolve-asset.py`. path is relative to `assets/`.
 
 """
 
@@ -72,7 +73,7 @@ def load_catalog(channel_dir: Path) -> list[dict[str, str]]:
 
 
 def well_known(channel_dir: Path, kind: str, ident: str) -> list[Path]:
-    """존재하지 않아도 후보를 돌려준다 — 호출 쪽이 exists 를 본다."""
+    """Return candidates even when they don't exist — the caller checks exists."""
     assets = assets_dir(channel_dir)
     slug = channel_dir.name
     kind, ident = kind.lower(), ident.lower()
@@ -98,7 +99,7 @@ def well_known(channel_dir: Path, kind: str, ident: str) -> list[Path]:
         add(assets / "outro" / f"{ident}.mp4")
         if ident != "default":
             add(assets / "outro" / "default.mp4")
-        add(assets / "outro.mp4")  # 옛 경로
+        add(assets / "outro.mp4")  # old path
     elif kind == "bgm":
         add(assets / "audio" / "bgm" / f"{ident}.wav")
         if ident != "default":
@@ -127,20 +128,20 @@ def resolve(channel_dir: Path, kind: str, ident: str = "default") -> Path:
     hit = catalog_hit(channel_dir, kind, ident)
     if hit is not None and hit.exists():
         return hit
-    # catalog 행은 있는데 파일이 없으면 기본 경로로 내려간다
+    # a catalog row with no file behind it falls through to the default path
     for cand in well_known(channel_dir, kind, ident):
         if cand.exists():
             return cand.resolve()
     if hit is not None:
-        die(f"catalog 경로는 있으나 파일이 없다: {hit}")
-    die(f"자산 없음: kind={kind} id={ident} (채널 {channel_dir})")
+        die(f"catalog path exists but the file does not: {hit}")
+    die(f"no asset: kind={kind} id={ident} (channel {channel_dir})")
     raise AssertionError
 
 
 def list_assets(channel_dir: Path) -> None:
     rows = load_catalog(channel_dir)
     if not rows:
-        print("(catalog 비어 있음 — 기본 경로만 탐색)")
+        print("(catalog empty — searching default paths only)")
         return
     assets = assets_dir(channel_dir)
     for row in rows:
@@ -169,7 +170,7 @@ def ensure_row(channel_dir: Path, kind: str, ident: str, rel: str, note: str = "
     if not replaced:
         new_rows.append({"kind": kind, "id": ident, "path": rel, "note": note})
 
-    # 표만 갈아끼운다 — 머리글은 보존
+    # swap out only the table — keep the header
     lines = text.splitlines()
     kept: list[str] = []
     in_table = False
@@ -182,7 +183,7 @@ def ensure_row(channel_dir: Path, kind: str, ident: str, rel: str, note: str = "
             continue
         if in_table and not s.startswith("|"):
             in_table = False
-            # 표를 지나온 뒤의 본문은 버린다 — catalog 는 표가 본체
+            # drop body text after the table — the table is the catalog
             continue
         if not in_table and not table_seen:
             kept.append(line)
@@ -203,31 +204,31 @@ def selftest() -> None:
         (assets / "outro" / "default.mp4").write_bytes(b"x")
         (assets / "audio" / "bgm").mkdir(parents=True)
         (assets / "audio" / "bgm" / "default.wav").write_bytes(b"y")
-        ensure_row(ch, "outro", "default", "outro/default.mp4", "본편 뒤")
+        ensure_row(ch, "outro", "default", "outro/default.mp4", "post-roll")
         ensure_row(ch, "bgm", "default", "audio/bgm/default.wav", "")
         got = resolve(ch, "outro", "default")
         assert got.name == "default.mp4", got
         got = resolve(ch, "bgm", "default")
         assert got.name == "default.wav", got
-        # catalog 없이 옛 경로
+        # old path with no catalog
         ch2 = Path(tmp) / "legacy"
         (ch2 / "assets").mkdir(parents=True)
         (ch2 / "assets" / "outro.mp4").write_bytes(b"z")
         got = resolve(ch2, "outro", "default")
         assert got.name == "outro.mp4", got
-        # 없는 자산
+        # missing asset
         try:
             resolve(ch, "sfx", "whoosh")
         except SystemExit as e:
             assert e.code == 1
         else:
-            raise AssertionError("없는 sfx 가 통과했다")
-        # ensure 갱신
-        ensure_row(ch, "outro", "default", "outro/default.mp4", "갱신")
+            raise AssertionError("a missing sfx passed")
+        # ensure update
+        ensure_row(ch, "outro", "default", "outro/default.mp4", "updated")
         rows = load_catalog(ch)
         outros = [r for r in rows if r["kind"] == "outro"]
         assert len(outros) == 1, outros
-        assert outros[0]["note"] == "갱신"
+        assert outros[0]["note"] == "updated"
     print("selftest ok")
 
 
@@ -240,17 +241,17 @@ def main(argv: list[str]) -> None:
         return
     if argv[0] == "--list":
         if len(argv) < 2:
-            die("사용법: resolve-asset.py --list <채널dir>")
+            die("usage: resolve-asset.py --list <channel dir>")
         list_assets(Path(argv[1]))
         return
     if argv[0] == "--ensure":
         if len(argv) < 5:
-            die("사용법: resolve-asset.py --ensure <채널dir> <kind> <id> <path> [note]")
+            die("usage: resolve-asset.py --ensure <channel dir> <kind> <id> <path> [note]")
         note = argv[5] if len(argv) > 5 else ""
         ensure_row(Path(argv[1]), argv[2], argv[3], argv[4], note)
         return
     if len(argv) < 2:
-        die("사용법: resolve-asset.py <채널dir> <kind> [id]")
+        die("usage: resolve-asset.py <channel dir> <kind> [id]")
     channel = Path(argv[0])
     kind = argv[1]
     ident = argv[2] if len(argv) > 2 else "default"

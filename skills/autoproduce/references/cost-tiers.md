@@ -1,192 +1,234 @@
-# 모델 사다리 — 싼 것부터 쓰고, 지표가 시킬 때만 올린다
+# The model ladder — start cheap, move up only when the metrics say so
 
-자동 저작 한 편의 기본값은 **영상 생성 툴을 한 번도 부르지 않는 구성**이다.
-정지 이미지 서너 장에 켄번즈를 얹고 나레이션과 자막과 BGM을 붙인다. 편당 약
-**$0.27~0.29** (커버 배경이 메타 이미지라 quality high — 절대 규칙 12. 여기가 이
-구성의 최대 비용 항목이다). 여기서 Veo를 한 번 부르는 순간 값이 다섯 배 가까이
-되므로, 부를지 말지는 지표가 정한다.
+The default for an automated episode is **a build that never calls a video
+generation tool**. Three or four still images with Ken Burns on top, plus
+narration, subtitles, and BGM. About **$0.27–0.29** per episode (the cover
+background is the meta image, so quality high — absolute rule 12. It's this
+build's biggest cost item). One Veo call from here nearly quintuples the
+price, so the metrics decide whether to make it.
 
-이 문서는 사다리와 승급 조건을 정한다. **단가 숫자는 여기 없다** —
-`prices.tsv` 가 정본이고 `cost-report.sh` 가 그것만 읽는다. 숫자를 두 군데
-적으면 한쪽이 반드시 낡는다.
+This document sets the ladder and the escalation conditions. **No price
+numbers live here** — `prices.tsv` is the source of truth and `cost-report.sh`
+reads only that. Write a number in two places and one of them always goes
+stale.
 
-## 왜 기본이 켄번즈인가
+## Why Ken Burns is the default
 
-Veo 3.1은 한 번에 8초까지 만든다. 60초짜리를 생성 영상으로만 채우면 클립
-여덟 개를 뽑아 이어 붙이게 되고, 이어 붙이는 편집 층은 어차피 필요하다.
-그러면 남는 질문은 하나다 — **어느 칸을 생성 영상으로 채우나.**
-근거와 Veo 하드 스펙은 [AI 영상 제작 가이드](../../../docs/guides/ai-video-production/index.html)
-가 정본이다. 그 문서 §9는 "편당 비용이 없으면 어느 씬에 생성 영상을 쓸지
-원칙으로 정할 수 없다"고 적어 뒀다. 이 문서가 그 빈칸이다.
+Veo 3.1 makes at most 8 seconds per call. Fill a 60-second video with
+generated footage alone and you're pulling eight clips and stitching them —
+and the stitching edit layer is needed anyway. That leaves exactly one
+question — **which slot gets generated video.**
+The evidence and Veo hard specs are canonical in the
+[AI video production guide](../../../docs/guides/ai-video-production/index.html).
+That document's §9 notes that "without a per-episode budget there is no
+principled way to decide which scene gets generated video." This document
+fills that blank.
 
-답은 **첫 3초만**이다. 훅이 정지컷이면 스크롤이 그냥 지나간다는 것이 쇼트폼
-운영의 상식이다. 본문 구간은 사진이 그대로 보이지만(절대 규칙 14 — 캡션은 상단
-밴드만 쓴다) 씬마다 컷이 바뀌고 켄번즈·캡션 전환·자막이 리듬을 만들어, 생성
-영상까지 없어도 정지컷 티가 덜하다. 그래서 승급이 필요할 때도 **커버 한 칸**만
-올린다.
+The answer is **the first 3 seconds only**. A still-frame hook gets scrolled
+past — short-form operating common sense. In the body the photos show as-is
+(absolute rule 14 — captions use only the top band), but the shot changes per
+scene and Ken Burns, caption swaps, and subtitles carry the rhythm, so it
+reads less like stills even without generated video. That's why even when
+escalation is needed, only **the one cover slot** goes up.
 
-## 경제 기본 (자동 저작의 기본값)
+## Economy baseline (the automated-authoring default)
 
-| 층 | 무엇을 쓰나 | 비고 |
+| Layer | What's used | Notes |
 |---|---|---|
-| 커버 배경 | `gpt_image_text2img` quality **`high`**, 1088x1920, 1장 | 실사 인물 장면(기본 한국 여성) — 커버 프레임이 그대로 썸네일이다(절대 규칙 12). 승급 편은 veo 소스 겸용 |
-| 포인트 배경 | `image_local_generate`(로컬 Z-Image) 1088x1920, **2~4장** — **비용 0** | 사진이 주인공(절대 규칙 14) — 캡션이 상단 밴드만 써서 사진이 그대로 보인다. 내용 축이 바뀔 때 컷을 바꾼다. mflux 미설치 머신만 `gpt_image_text2img` quality `low` 폴백(장당 $0.007) |
-| 모션 | ffmpeg 켄번즈(zoompan 3.5%) | 빌더가 이미 한다. **Veo 0콜** |
-| 나레이션 | profile §2 의 엔진 그대로 | `local`(Supertonic)이면 비용 0, `gemini`면 1,000자당 과금 |
-| BGM | `music_generate_clip` 30초 1개 | 빌더가 `-stream_loop -1` 로 늘려 쓴다. 가변 길이 생성은 단가 미확인이라 쓰지 않는다 |
-| 자막 | 빌더가 `subs.srt`·`subs.ass` 동시 생성 | 비용 없음 |
+| Cover background | `gpt_image_text2img` quality **`high`**, 1088x1920, 1 image | Photorealistic human scene (default: a Korean woman) — the cover frame becomes the thumbnail as-is (absolute rule 12). On escalated episodes it doubles as the veo source |
+| Points backgrounds | `image_local_generate` (local Z-Image) 1088x1920, **2–4 images** — **$0** | The photo is the star (absolute rule 14) — captions use only the top band so the photo shows in full. Change the shot when the content axis changes. Only machines without mflux fall back to `gpt_image_text2img` quality `low` ($0.007/image) |
+| Motion | ffmpeg Ken Burns (zoompan 3.5%) | The builder already does this. **Zero Veo calls** |
+| Narration | whatever engine profile §2 says | `local` (Supertonic) costs 0; `gemini` bills per 1,000 characters |
+| BGM | one 30s `music_generate_clip` | The builder stretches it with `-stream_loop -1`. Variable-length generation has no confirmed price, so it isn't used |
+| Subtitles | the builder emits `subs.srt`·`subs.ass` together | free |
 
-포인트 배경이 로컬 Z-Image 로 가면서(2026-08-12) 그 몫(장당 $0.007 × 2~4장)이
-빠진다 — 로컬 TTS 채널은 편당 **약 $0.26**(high 1장 + BGM 클립 1개), Gemini 엔진
-채널은 나레이션 400자 기준 **$0.015** 가 더 붙어 약 $0.275 다. 장수 상한도
-비용에서 풀린다(2~4장은 화면 리듬 기준으로만 고른다).
-**mflux 미설치 폴백(gpt low)일 때만** 이전 계산이 되살아난다 — prices.tsv 재검산
-기준 로컬 $0.274(low 2장)~$0.288(4장), Gemini $0.289~$0.303 이고, **Gemini 채널이
-low 4장을 쓰면 기본 상한 $0.30 을 넘는다.** 그때는 3장($0.296)까지만 쓴다.
+With points backgrounds moved to local Z-Image (2026-08-12), that share
+($0.007 × 2–4 images) drops out — a local-TTS channel runs **about $0.26** per
+episode (1 high image + 1 BGM clip); a Gemini-engine channel adds **$0.015**
+for a 400-character narration, about $0.275. The image-count cap also stops
+being about cost (pick 2–4 purely on screen rhythm).
+The old arithmetic returns **only on the mflux-missing fallback (gpt low)** —
+recomputed from prices.tsv: local $0.274 (2 low images) to $0.288 (4), Gemini
+$0.289–$0.303, and **a Gemini channel using 4 low images busts the default
+$0.30 cap.** Use at most 3 ($0.296) in that case.
 
-> **엔진을 마음대로 바꾸지 않는다.** 나레이션 비용이 0이라는 말은 그 채널이
-> 이미 `local` 로 설정돼 있을 때만 참이다. 싸다는 이유로 `gemini` 채널을
-> 로컬로 갈아타면 **회차 중간에 나레이터가 다른 사람이 된다** — produce 스킬이
-> 금지한 그 사고다. 엔진 변경은 사용자가 profile §2 를 고칠 때만 일어난다.
+> **Never switch engines on your own.** "Narration costs 0" is true only when
+> the channel is already set to `local`. Move a `gemini` channel to local
+> because it's cheaper and **the narrator turns into a different person
+> partway through the channel's run** — the exact accident the produce skill
+> forbids. Engine changes happen only when the user edits profile §2.
 
-## 승급 — 도입 b-roll 한 칸
+## Escalation — one opening b-roll slot
 
-**스키마 상한은 2칸이지만(scenes-schema §broll), 무인 경로가 스스로 올리는 것은
-1칸까지다** — 커버 다음 구간의 도입 b-roll 이다. veo 과금은 생성 길이(8초) 기준이라
-칸이 하나 늘면 그 회차 지출이 배로 뛰는데, 그 판단은 사람이 스토리보드를 승인할 때
-하는 것이지 무인 루프가 자율로 할 일이 아니다. 사람이 승인한 스토리보드에 2칸이
-적혀 있으면 그때는 **적힌 대로 2칸 다 만든다** — 승인된 씬을 비용을 이유로 조용히
-빼면 영상이 계획과 달라진다(그 회차 예산은 §비용 상한이 따로 막는다).
+**The schema allows 2 slots (scenes-schema §broll), but the unattended path
+escalates at most 1 on its own** — the opening b-roll in the segment after the
+cover. Veo bills on generated length (8s), so one more slot doubles the
+episode's spend — a call a human makes when approving the storyboard, not
+something the unattended loop decides autonomously. If a human-approved
+storyboard has 2 slots written in, then **make both as written** — quietly
+dropping an approved scene over cost makes the video diverge from the plan
+(that episode's budget is guarded separately by §the cap).
 
-`veo_img2video` 로 그 칸의 소스 PNG(도입 칸이면 커버 배경)를 움직인다.
+`veo_img2video` animates that slot's source PNG (for the opening slot, the
+cover background).
 
 ```
-모델 veo-3.1-lite-generate-preview · 1080p · 8초 생성 · 9:16
-사용 길이는 broll 씬 duration(기본 4초) — produce §6 이 원본 앞부분만 잘라 쓴다.
-소스는 반드시 이미 만들어 둔 커버 배경 PNG — veo_text2video 는 쓰지 않는다(절대 규칙 8),
-계획은 content-reviewer 계획 모드 PASS 를 먼저 받는다(절대 규칙 13).
-프롬프트는 영어, 모션만 적는다 — 소스 이미지에 이미 보이는 인물·배경·조명을
-다시 묘사하면 결과가 나빠진다(구글 image-to-video 공식 지침).
-카메라는 veo 어휘로 — 다가가는 컷은 push in 이 아니라 dolly in 이다.
-예: "very slow dolly in, nearly static camera, subtle particle drift.
+model veo-3.1-lite-generate-preview · 1080p · 8s generation · 9:16
+Used length is the broll scene's duration (default 4s) — produce §6 cuts only the head of the original.
+The source must be the already-made cover-background PNG — veo_text2video is never used (absolute rule 8),
+and the plan gets content-reviewer plan-mode PASS first (absolute rule 13).
+Prompt in English, motion only — re-describing the person, background, or lighting
+already visible in the source image degrades the result (Google's official image-to-video guidance).
+Camera in veo vocabulary — a closing-in shot is dolly in, not push in.
+e.g. "very slow dolly in, nearly static camera, subtle particle drift.
      Audio: quiet room tone, no music, no speech."
 ```
 
-과금은 **생성 길이(8초) 기준**이다 — 4초만 써도 비용은 안 줄어든다. 줄이려면
-720p(4·6초 생성 가능)로 내려야 하는데, 본편이 1080×1920 이라 업스케일이 필요해
-쓰지 않는다(사용자 결정 2026-08-11 — "업스케일이 필요하면 그냥 1080").
+Billing is on **generated length (8s)** — using only 4 doesn't cut the cost.
+Cutting it would mean dropping to 720p (4s and 6s generation allowed), which
+the 1080×1920 body would need upscaled, so it isn't used (user decision
+2026-08-11 — "if it needs upscaling, just use 1080").
 
-**커버 자체는 승급 대상이 아니다.** Veo 는 한글을 못 쓰므로 커버(훅 제목·히어로 수치)는
-코드 렌더로 만든다(produce 절대 규칙 10). b-roll 은 커버 **뒤에** 붙는다.
+**The cover itself never escalates.** Veo can't write Korean, so the cover
+(hook title, hero figure) is code-rendered (produce absolute rule 10). The
+b-roll attaches **after** the cover.
 
-**그 구간에는 나레이션이 없다** — 영상 사운드를 쓴다(절대 규칙 9). 그래서 TTS 콜이
-한 씬만큼 줄어든다. 대신 `splice-clip.sh` 접합 단계가 하나 늘고, **팔린드롬은 쓰지 않는다**
-(정+역이라 소리가 거꾸로 재생된다).
+**No narration over that segment** — the video's own sound plays (absolute
+rule 9). That saves one scene's worth of TTS calls. In exchange there's one
+more `splice-clip.sh` splice step, and **no palindrome loops** (forward +
+reverse means the audio plays backwards).
 
-1080p·8초 생성은 720p·4초보다 비싸다. 그래도 이 조합인 이유는 두 가지다 — 본편이
-1080×1920 이라 720p 는 업스케일이 필요하고, 1080p 는 API 가 8초만 허용한다.
-"필요한 만큼만"은 생성이 아니라 **사용 길이**에서 실현된다(트림).
+1080p·8s generation costs more than 720p·4s. It's still the combination, for
+two reasons — the body is 1080×1920 so 720p would need upscaling, and the API
+allows 1080p only at 8 seconds. "Only as much as needed" happens in the **used
+length** (the trim), not in generation.
 
-**승급 조건은 관측값이고, 판정은 절대 임계가 아니라 추세다** (2026-08-15 개정).
-절대 임계(예: skip 55 초과)는 채널 실측이 임계를 상시 초과하면 — 자체 채널
-릴스 4편이 전부 84.8~93.8 이었다 — 무인 루프가 **매편 승급 = 매편 5배 비용**이 되고,
-그 돈이 문제를 안 고친다. b-roll 은 커버 *다음* 구간에 붙는데 스킵은 커버 *안*에서
-일어나기 때문이다. 그래서 판정 셋을 이렇게 바꾼다:
+**Escalation conditions are observed values, and the verdict is a trend, not
+an absolute threshold** (revised 2026-08-15). With an absolute threshold (say,
+skip over 55), a channel whose measured numbers sit above it permanently — our
+own channel's four reels all measured 84.8–93.8 — turns the unattended loop
+into **every episode escalated = every episode at 5x cost**, and that money
+doesn't fix the problem, because the b-roll attaches *after* the cover while
+the skipping happens *inside* it. So the three verdicts become:
 
-| 플랫폼 | 지표 | 승급 판정 |
+| Platform | Metric | Escalation verdict |
 |---|---|---|
-| YouTube | `averageViewPercentage` | 최근 3편 평균이 **직전 3편 평균보다 5%p 이상 하락** |
-| Instagram | `reels_skip_rate` | 최근 3편 평균이 **직전 3편 평균보다 5%p 이상 상승** |
-| 공통 | 게시 이력 6편 미만 (비교 구간이 안 나옴) | **승급하지 않는다** |
+| YouTube | `averageViewPercentage` | last-3-episode average **down 5+ points from the previous 3** |
+| Instagram | `reels_skip_rate` | last-3-episode average **up 5+ points from the previous 3** |
+| Common | under 6 published episodes (no comparison window) | **no escalation** |
 
-**`reels_skip_rate` 는 0~1 비율이 아니라 백분율로 온다** — 실측값이 85.5 처럼
-찍힌다(2026-08-15, 자체 채널 릴스). `averageViewPercentage` 와 같은 단위다.
+**`reels_skip_rate` arrives as a percentage, not a 0–1 ratio** — measured
+values print like 85.5 (2026-08-15, our own channel's reels). Same unit as
+`averageViewPercentage`.
 
-**훅 계약 개정 직후에는 무인 승급을 동결한다** — 커버 세그① 계약
-(scenes-schema §세그①은 시청자에게 하는 약속이다, 2026-08-15) 적용 후 새 기준선
-3편이 쌓일 때까지, 승급 판정 자체를 건너뛰고 경제 기본으로만 돌린다. 훅이 바뀌면
-이전 편들의 지표는 비교 대상이 아니다.
+**Right after a hook-contract revision, unattended escalation is frozen** —
+from the cover segment-① contract (scenes-schema §segment ① is a promise to
+the viewer, 2026-08-15) until 3 new-baseline episodes accumulate, skip the
+escalation verdict entirely and run economy baseline only. Once the hook
+changes, earlier episodes' metrics are no comparison.
 
-승급은 **한 편 단위**다 — 조건이 계속 참이면 다음 편도 승급하되 자동으로
-"승급 모드"에 고정되지는 않는다.
+Escalation is **per episode** — if the condition stays true the next episode
+escalates too, but nothing locks into an "escalated mode" automatically.
 
-## 자율 저작이 쓰지 않는 것
+## What autonomous authoring doesn't use
 
-빠진 이유는 돈이 아니다. **판단이 필요해서**다.
+These aren't excluded over money. They're excluded because **they need
+judgment**.
 
-- **`veo-3.1-generate-preview`(표준)·1080p·4K** — 8초 표준이 편당 $3.20이다.
-  경제 기본의 예순 배를 무인 루프가 결정할 일은 없다. 값만 문제가 아니다 —
-  블라인드 아레나에서 표준은 lite·fast 와 통계적으로 같아, 그 돈으로 사는 품질
-  향상이 측정되지 않는다(video-model-selection §품질).
-- **`veo_reference`(캐릭터 발화 클립)·`veo_extension`** — lite 티어가 아예
-  지원하지 않고, 캐릭터 연기는 사람이 볼 컷이다.
-- **`seedance_*`(두 번째 영상 엔진)** — 무인 루프의 승급 칸은 도입 b-roll 이고,
-  그 구간은 produce 절대 규칙 9 로 **클립이 가진 소리를 쓴다**. 무음이 싸다고
-  거기에 넣으면 4초가 조용해진다 — 돈이 아니라 결과가 나빠지는 교체다.
-  Seedance 가 손해 없이 이기는 자리는 소리를 버리는 모션 배경(`visual.video`)인데
-  무인 경로는 그 칸을 쓰지 않는다. 단가는 `prices.tsv` 의 `seedance.*` 행에
-  올려 뒀으니, 사람이 스토리보드에서 그 칸을 쓸 때 집계는 그대로 돌아간다.
-  판단표 정본은 `skills/produce/references/video-model-selection.md` 다.
-- **감정 연기 나레이션** — 한 영상에 두 TTS 엔진을 섞으면 샘플레이트가 달라
-  이어붙이기가 깨진다. 연기가 필요한 컷이 있는 주제는 **자동 저작 대상이
-  아니다** — 사람이 `/social-flow:storyboard` 로 시작한다.
-- **포인트 배경 quality 승급** — 배경에는 글자가 들어가지 않는다(부정 지시로 막고,
-  화면 텍스트는 전부 코드 렌더다). 배경이 뭉개졌다는 P0 지적을 받았을 때만
-  그 편에 한해 `medium` 으로 1회 재생성하되, **재생성 전에 상한을 재판정한다**
-  — 경제 기본이 이미 ~$0.27 이라 medium 재생성(+$0.05)은 기본 상한 $0.30 을
-  넘는다. exit 2 면 재생성하지 않고 그 P0 를 미해결로 사람에게 보고한다.
-  (커버 배경은 이미 high 라 승급 대상이 아니다.)
+- **`veo-3.1-generate-preview` (standard) · 1080p · 4K** — 8 seconds of
+  standard is $3.20 per episode. Sixty times the economy baseline is not a
+  decision for an unattended loop. And the price isn't the only problem — in
+  blind-arena testing, standard is statistically identical to lite and fast,
+  so the quality that money buys doesn't measure (video-model-selection
+  §quality).
+- **`veo_reference` (character speech clips) · `veo_extension`** — the lite
+  tier doesn't support them at all, and character acting is footage a human
+  should look at.
+- **`seedance_*` (the second video engine)** — the unattended loop's
+  escalation slot is the opening b-roll, and that segment **uses the clip's
+  own audio** under produce absolute rule 9. Put the cheaper silent engine
+  there and 4 seconds go quiet — a swap that hurts the result, not the wallet.
+  The spot where Seedance wins with nothing lost is motion backgrounds that
+  throw the audio away (`visual.video`), and the unattended path doesn't use
+  that slot. The prices sit in `prices.tsv`'s `seedance.*` rows, so when a
+  human uses that slot in a storyboard the tally works as-is. The decision
+  table's source of truth is
+  `skills/produce/references/video-model-selection.md`.
+- **Emotive acted narration** — mix two TTS engines in one video and the
+  differing sample rates break the concatenation. A topic with shots that need
+  acting is **not automated-authoring material** — a human starts it with
+  `/social-flow:storyboard`.
+- **Quality escalation for points backgrounds** — no text goes into
+  backgrounds (negative directives block it, and all screen text is
+  code-rendered). Only on a P0 finding that a background is smeared,
+  regenerate once at `medium` for that episode alone, and **re-run the cap
+  verdict before regenerating** — economy baseline is already ~$0.27, so a
+  medium regeneration (+$0.05) busts the default $0.30 cap. On exit 2, don't
+  regenerate; report that P0 to a human as unresolved.
+  (The cover background is already high, so it never escalates.)
 
-## 상한 — 넘으면 승급을 포기하고 경제 기본으로 간다
+## The cap — over it, drop the escalation and go economy baseline
 
-플랜의 `max_cost_per_video`(기본 **$0.30**)가 편당 상한이다. 커버 배경이 high 가
-되면서(절대 규칙 12) 이 값은 **경제 기본(~$0.27)만 통과시키고 어떤 veo 승급도
-막는다** — lite·1080p·8초 승급은 편당 약 $0.91(경제 기본 + $0.64)이라 상한을
-**$1.00 이상**으로 올려야 지나간다(2026-08-15 이전에는 fast 를 써서 $1.23·상한
-$1.30 이었다 — 블라인드 아레나에서 세 티어의 품질 차이가 신뢰구간 안이라 가장 싼
-티어로 내렸다. `max_cost_per_video` 자체는 사용자 설정이라 건드리지 않았다). 상한 인상은 무인 루프가 결정하지 않는다 —
-사용자가 플랜에서 올려 줄 때까지 승급 조건이 참이어도 경제 기본으로 만든다
-(그 사실을 완료 보고에 적는다).
+The plan's `max_cost_per_video` (default **$0.30**) is the per-episode cap.
+With the cover background at high (absolute rule 12), this value **passes only
+the economy baseline (~$0.27) and blocks every veo escalation** — a
+lite·1080p·8s escalation runs about $0.91 per episode (economy baseline +
+$0.64), so the cap has to rise to **$1.00 or more** to let it through (before
+2026-08-15 it was fast at $1.23 with a $1.30 cap — the three tiers' quality
+differences fell inside the confidence interval in blind-arena testing, so we
+dropped to the cheapest tier. `max_cost_per_video` itself is a user setting
+and wasn't touched). The unattended loop never decides a cap raise — until the
+user raises it in the plan, episodes are made at economy baseline even while
+the escalation condition is true (and the completion report says so).
 
-**상한 판정은 쓰기 전에 한다.** 승급을 결정한 시점에 예상 tally 로
-`cost-report.sh --cap` 을 돌려 exit 2 가 나오면 승급을 취소하고 경제 기본으로
-간다. 중단하지 않는다 — 싸게 만들 수 있는데 안 만들 이유가 없다.
+**The cap verdict happens before spending.** At the moment escalation is
+decided, run `cost-report.sh --cap` on the projected tally; on exit 2, cancel
+the escalation and go economy baseline. Don't abort — there's no reason not to
+make the episode cheaply when you can.
 
-견적은 `.work/cost-estimate.tsv`, 실제 원장은 `.work/cost-tally.tsv` 로 파일이
-따로다(한 파일에 섞으면 사후 리포트가 같은 지출을 두 번 센다). **생성 도중의
-재판정도 견적 파일로 한다** — 재생성을 결정하면 그 줄을 견적에 얹고 다시 `--cap`
-을 돌린다. 실제 원장으로 판정하면 그 시점에 아직 안 나간 지출(BGM·나레이션)이
-빠져서 합계가 작게 보이고, 상한을 넘길 재생성이 통과한다.
+The estimate is `.work/cost-estimate.tsv` and the actual ledger is
+`.work/cost-tally.tsv` — separate files (mix them in one and the post-hoc
+report counts the same spend twice). **Mid-generation re-verdicts also use the
+estimate file** — when you decide to regenerate, put that line on the estimate
+and rerun `--cap`. Judge against the actual ledger and the spend that hasn't
+gone out yet (BGM, narration) is missing, the total looks small, and a
+cap-busting regeneration passes.
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
 $REF/cost-report.sh .work/cost-estimate.tsv --cap 0.30; echo "cost_exit=$?"
 ```
 
-`cost_exit` 를 그대로 읽는다 — 0 이내 / 1 **판정 불가** / 2 상한 초과 / 3 입력
-오류. **1을 통과로 읽지 않는다.** 알 수 없는 키나 단가 미확인(`?`)을 만나면
-합계가 0으로 보인다. 공짜라는 뜻이 아니다 — 계산이 안 된 것이다.
+Read `cost_exit` literally — 0 within / 1 **verdict unavailable** / 2 over the
+cap / 3 input error. **Never read 1 as a pass.** Hit an unknown key or an
+unconfirmed price (`?`) and the total can look like 0. That doesn't mean free
+— it means the math didn't happen.
 
-일·주 단위 누적 상한은 채널 공용 `data/<채널>/growth/autoproduce.json` 에 쌓고
-성장 루프가 저작 전에 확인한다(SKILL.md §예산·락).
+Daily and weekly cumulative caps accumulate in the channel-shared
+`data/<channel>/growth/autoproduce.json`, and the growth loop checks them
+before authoring (SKILL.md §load · lock · budget).
 
-## 돈이 아닌 예산 — 검색 쿼터
+## Non-money budgets — search quotas
 
-조사 단계가 쓰는 것은 돈이 아니라 쿼터다. 소진되면 그날 조사가 막히므로 사다리와
-같은 방식으로 아껴 쓴다.
+What the research stage spends isn't money — it's quota. Run out and that
+day's research is blocked, so spend it as carefully as the ladder.
 
-- **`naver_search` 일 25,000회** — 한국어 소재의 1차 도구. 여기서 시작한다.
-- **내장 WebSearch** — 범용·해외.
-- **`serp_*` 월 250회(무료)** — 정밀 검색 전용. 자동 저작 한 편에 **최대 2회**.
-  같은 검색을 도구만 바꿔 반복하지 않는다.
+- **`naver_search`, 25,000/day** — the first tool for Korean material. Start
+  here.
+- **Built-in WebSearch** — general-purpose and international.
+- **`serp_*`, 250/month (free)** — precision searches only. **At most 2 per
+  automated episode**. Don't repeat the same search with a different tool.
 
-## 단가를 고칠 때
+## When updating a price
 
-`prices.tsv` 한 파일만 고친다. 근거등급(공식/환산/미검증)과 출처를 같은 줄에
-남기고, 확인 못 한 값은 `?` 로 둔다 — `?` 는 리포트를 실패시켜 사람을 부른다.
-숫자를 지어내 채우면 상한이 조용히 무력화된다.
+Edit one file only: `prices.tsv`. Keep the evidence grade
+(official/derived/unverified) and the source on the same line, and leave
+unconfirmed values as `?` — a `?` fails the report and summons a human. Fill
+in an invented number and the cap is silently disarmed.
 
-Veo 초당 단가는 2026-08-15 에 공식 요금 페이지를 직접 열어 확인해 **공식**으로
-올렸다(Seedance 쪽은 공식 예시가를 초로 나눈 **환산**이다). 현재 미검증으로 남은
-것은 **Lyria 클립 단가** 하나다. 실과금 호출로 청구서를 한 번 받아 보면 등급을
-올릴 수 있다.
+Veo's per-second prices were promoted to **official** on 2026-08-15 after
+opening the official pricing page directly (the Seedance side is **derived** —
+official example prices divided by seconds). The Lyria clip price was promoted
+the same day. The one item still unconfirmed is **`music.lyria-realtime`** — the
+official price table has no row for it at all. One billed call and an actual
+invoice would upgrade its grade.

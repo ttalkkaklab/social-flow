@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>data.go.kr — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="data-go-kr.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="data-go-kr.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>data.go.kr</div>
+
+<header class="hero">
+  <div class="kicker">DATA.GO.KR</div>
+  <h1>data.go.kr — Korea's official open-data portal</h1>
+  <p class="sub">Government-published source data beats a news article quoting it. This is the Korean government's open-data portal, so the site, the dataset titles, and the response fields are Korean. It also isn't one API but <strong>five paths with different characters</strong>, and three of them need no authentication at all.</p>
+  <div class="meta">
+    <span>Portal <a href="https://www.data.go.kr">data.go.kr</a></span>
+    <span>Key <code>DATA_GO_KR_API_KEY</code> (two paths only)</span>
+    <span>Implementation <code>server/src/datago-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#paths">Five paths and what each needs</a></li>
+    <li><a href="#trap">The usage-application trap</a></li>
+    <li><a href="#search">Search and detail (HTML parsing)</a></li>
+    <li><a href="#download">File download (two steps)</a></li>
+    <li><a href="#odcloud">odcloud row queries</a></li>
+    <li><a href="#openapi">Standard open APIs</a></li>
+    <li><a href="#impl">Implementation vs. contract</a></li>
+  </ol>
+</nav>
+
+<section id="paths">
+  <h2>1. Five paths and what each needs</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Tool</th><th>Calls</th><th>Response</th><th>Auth</th></tr></thead>
+    <tbody>
+      <tr><td><code>datago_search</code></td><td><code>www.data.go.kr/tcs/dss/selectDataSetList.do</code></td><td>HTML</td><td><span class="badge free">none</span></td></tr>
+      <tr><td><code>datago_detail</code></td><td><code>www.data.go.kr/data/{pk}/{fileData|openapi}.do</code></td><td>HTML</td><td><span class="badge free">none</span></td></tr>
+      <tr><td><code>datago_file_download</code></td><td><code>selectFileDataDownload.do</code> → <code>cmm/cmm/fileDownload.do</code></td><td>JSON → binary</td><td><span class="badge free">none</span></td></tr>
+      <tr><td><code>datago_file_fetch</code></td><td><code>api.odcloud.kr/api/{pk}/v1/{uddi}</code></td><td>JSON</td><td><span class="badge key">key + usage application</span></td></tr>
+      <tr><td><code>datago_api_call</code></td><td><code>apis.data.go.kr/{path}</code></td><td>XML or JSON</td><td><span class="badge key">key + usage application</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>You can get file data all the way through without a key.</strong> Search → detail → download, all three unauthenticated, so when you have no auth key or haven't been approved for an API, <code>datago_file_download</code> is the fastest way to collect data.
+  </div>
+</section>
+
+<section id="trap">
+  <h2>2. The usage-application trap</h2>
+  <div class="danger">
+    <strong>The auth key alone isn't enough.</strong> It's a two-step gate: on the portal you also have to file a <strong>per-API usage application</strong> — 활용신청, mostly auto-approved and instant — before your key is registered against that API. Take the key straight from My Page and call an API you never applied for, and you're refused.
+    <ul>
+      <li>odcloud: <code>code: -4</code></li>
+      <li>Standard open APIs: <code>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</code>, or plain text <code>Unauthorized</code></li>
+    </ul>
+    Translate either of those as "the key is wrong" and the model tries to reissue the key, never reaching the actual fix (file the application).
+  </div>
+</section>
+
+<section id="search">
+  <h2>3. Search and detail (HTML parsing)</h2>
+  <p>The portal offers no JSON API for search or detail, so we parse the server-rendered HTML with regexes.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Extracted</th><th>Pattern it comes from</th></tr></thead>
+    <tbody>
+      <tr><td><code>publicDataPk</code> · <code>type</code></td><td>The <code>fn_preview('12345', 'FILE')</code> call on each list item</td></tr>
+      <tr><td>Title · description · format tags</td><td><code>&lt;span class="title"&gt;</code> · <code>&lt;dd class="ellipsis publicDataDesc"&gt;</code> · <code>&lt;span class="tagset…"&gt;</code></td></tr>
+      <tr><td>Provider · last modified · keywords</td><td>The value following <code>&lt;span class="tit"&gt;label&lt;/span&gt;</code></td></tr>
+      <tr><td>Per-type totals</td><td>The <code>(N건)</code> ("N items") in the tab label</td></tr>
+      <tr><td>Detail metadata</td><td><code>&lt;th&gt;label&lt;/th&gt;&lt;td&gt;value&lt;/td&gt;</code> — only 17 whitelisted labels pass</td></tr>
+      <tr><td>Download identifier <code>uddi</code></td><td><code>fileDataDown('{pk}', '{uddi}')</code> — <strong>pinned by pk</strong></td></tr>
+      <tr><td>Open API endpoint</td><td><code>var swaggerUrl</code> · <code>var swaggerJson</code> · <code>apis.data.go.kr</code> URLs in the body</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>The whitelisted labels are the Korean ones the portal renders — 분류체계 (classification), 제공기관 (provider), 관리부서명 (managing department), API 유형 (API type), 데이터포맷 (data format), 확장자 (file extension), 업데이트 주기 (update cycle), 등록일 (registered), 수정일 (modified), 비용부과유무 (chargeable), 신청가능 트래픽 (allowed traffic), 이용허락범위 (license scope), 키워드 (keywords), 제공형태 (delivery form), 전체 행 (total rows), 매체유형 (media type), 설명 (description). They stay Korean in the code because they're matched against the page.</p>
+  <div class="warn">
+    <strong>Parsing breaks when the portal is redesigned.</strong> So no parser throws — each one fails gracefully with <strong>0 results plus an explanation</strong>: <em>"if this keeps returning 0, a portal redesign may have broken parsing: check … directly with WebFetch and report the parser fix to the user"</em>. The point is to stop the model from retrying forever with different queries.
+  </div>
+  <p>Why the <code>uddi</code> regex hard-codes the pk: the detail page also carries <strong>the uddi of related datasets</strong>, so taking the first match downloads the wrong dataset.</p>
+  <p>The portal can block non-browser User-Agents, so we send a normal one (its robots rules target search crawlers).</p>
+</section>
+
+<section id="download">
+  <h2>4. File download (two steps)</h2>
+  <pre><code># Step 1 — download ticket (JSON)
+GET /tcs/dss/selectFileDataDownload.do?publicDataPk={pk}&publicDataDetailPk={uddi}
+→ { "status": true, "atchFileId": "FILE_00000…", "fileDetailSn": "1" }
+
+# Step 2 — the actual file (binary)
+GET /cmm/cmm/fileDownload.do?atchFileId={atchFileId}&fileDetailSn={fileDetailSn}</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Trap</th><th>Handling</th></tr></thead>
+    <tbody>
+      <tr><td><code>status: false</code> — login-required or discontinued dataset</td><td>"The portal refused the file ticket … open detailUrl in a browser to check"</td></tr>
+      <tr><td>The filename arrives mangled</td><td>fetch exposes headers as latin-1 while the portal puts raw UTF-8 bytes in them. If <code>filename*</code> is %-encoded, URI-decode it; otherwise reinterpret the latin-1 bytes as UTF-8; if it's still broken, keep the original</td></tr>
+      <tr><td>CSV encoding is a mix of EUC-KR and UTF-8</td><td>Read the first 4KB as UTF-8 and reinterpret as EUC-KR if it contains <code>�</code>. The <strong>last 4 characters are excluded</strong> from that check — a 4KB cut can slice a multi-byte character, and that <code>�</code> must not be read as an encoding verdict</td></tr>
+      <tr><td>Large files</td><td>100MB cap. Over it: "query only the rows you need through the odcloud API (datago_file_fetch)"</td></tr>
+      <tr><td>Re-downloading the same name</td><td>Suffixes <code>-1</code>, <code>-2</code> to avoid collisions (up to 99)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>When the preview's <code>encoding</code> says <code>euc-kr</code>, the file needs <code>iconv -f euc-kr -t utf-8</code> before you read it — the response says so explicitly.</p>
+</section>
+
+<section id="odcloud">
+  <h2>5. odcloud row queries</h2>
+  <pre><code>GET https://api.odcloud.kr/api/{publicDataPk}/v1/{uddi}?page=1&perPage=10&returnType=JSON
+# The tool argument is limit — the server converts it to odcloud's perPage
+Authorization: Infuser {auth key}</code></pre>
+  <div class="ok">
+    <strong>The key goes in the <code>Authorization</code> header.</strong> odcloud also accepts a <code>serviceKey</code> query param, but with the header the key can't leak even when an error body echoes the URL.
+  </div>
+  <p>The <code>:</code> inside <code>uddi</code> has to pass through literally (measured) — we encode the segment, then turn <code>%3A</code> back into <code>:</code>.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th><code>code</code></th><th>Meaning</th><th>What the server says</th></tr></thead>
+    <tbody>
+      <tr><td><code>-1</code></td><td>Missing required parameter</td><td>—</td></tr>
+      <tr><td><code>-2</code></td><td>Not authorized</td><td>—</td></tr>
+      <tr><td><code>-3</code></td><td>Service not registered</td><td>"the uddi needs to be complete, including the <code>_YYYYMMDDHHMM</code> suffix"</td></tr>
+      <tr><td><code>-4</code></td><td>Auth key not registered against this API</td><td>"file the usage application (auto-approved) first … before it's approved, <code>datago_file_download</code> (no auth) gets you the raw file faster"</td></tr>
+      <tr><td><code>-5</code></td><td>Traffic exceeded</td><td>"fall back to <code>datago_file_download</code> for today"</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Responses are cut at 12,000 characters with a truncation notice appended — lower <code>limit</code>, or point at the rows you need with <code>page</code>.</p>
+</section>
+
+<section id="openapi">
+  <h2>6. Standard open APIs</h2>
+  <pre><code>GET https://apis.data.go.kr/{path}?{params}&serviceKey={auth key}
+# e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th><code>returnAuthMsg</code></th><th>Guidance</th></tr></thead>
+    <tbody>
+      <tr><td><code>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</code></td><td>Check the usage application and that the key matches. "Do not retry before fixing the key"</td></tr>
+      <tr><td><code>DEADLINE_HAS_EXPIRED_ERROR</code></td><td>Usage period expired — request an extension on the portal</td></tr>
+      <tr><td><code>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</code></td><td>Daily traffic exceeded — no more calls to this API today</td></tr>
+      <tr><td><code>SERVICE_ACCESS_DENIED_ERROR</code></td><td>Check the approval status of the usage application</td></tr>
+      <tr><td><code>TEMPORARILY_DISABLE_THE_SERVICEKEY_ERROR</code></td><td>Key temporarily blocked</td></tr>
+      <tr><td><code>NO_OPENAPI_SERVICE_ERROR</code></td><td>No such path — compare against the request URL in the usage guide</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>The gateway answers HTTP 200 for an unregistered key.</strong> The body may be an XML error or the plain text <code>Unauthorized</code>, so going by the status code alone reads as success. Inspect the body first.
+  </div>
+  <ul>
+    <li>Many of these APIs answer in XML. Where <code>dataType</code>/<code>_type=JSON</code> is supported, asking for JSON is easier to parse.</li>
+    <li>The server injects <code>serviceKey</code> — put it in <code>params</code> yourself and zod rejects the call.</li>
+    <li>Responses are cut at 8,000 characters, with guidance to re-query smaller using <code>numOfRows</code>/<code>pageNo</code>.</li>
+    <li><code>serviceKey=***</code> masking on every output path.</li>
+  </ul>
+  <div class="note">
+    <strong>Don't guess parameters and call repeatedly.</strong> Standard open APIs have daily traffic limits, and calls with wrong parameters count too. The tool description says to read the contract first from <code>datago_detail</code>'s <code>endpoint</code>/<code>requestUrls</code>/<code>docs</code>.
+  </div>
+</section>
+
+<section id="impl">
+  <h2>7. Implementation vs. contract</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Portal contract</th><th>social-flow implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Search and detail</td><td>No JSON API</td><td>HTML regex parsing + graceful failure</td></tr>
+      <tr><td>Search type</td><td><code>dType=API|FILE</code></td><td>With <code>type</code> omitted, <strong>both are searched in parallel</strong></td></tr>
+      <tr><td>Passing credentials</td><td>odcloud allows query or header</td><td>Header only (closes the leak path)</td></tr>
+      <tr><td>Download cap</td><td>None</td><td>100MB — enough for content seeding</td></tr>
+      <tr><td>Download timeout</td><td>—</td><td>120 seconds (separate from the shared 15)</td></tr>
+      <tr><td>Save location</td><td>—</td><td>Without <code>saveDir</code>, <code>social-flow-datago/</code> under the OS temp directory</td></tr>
+      <tr><td>Attribution</td><td>—</td><td>The response says to record the detail URL and the modified date (the data's as-of date) in the research notes</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  As of 2026-07-29 · Implementation <a href="../../server/src/datago-client.ts">server/src/datago-client.ts</a> · <a href="index.en.html">API reference hub</a>
+</footer>
+
+</div>
+</body>
+</html>

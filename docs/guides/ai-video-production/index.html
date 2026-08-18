@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI로 쇼트폼 영상 만들기 — social-flow 가이드</title>
+<link rel="alternate" hreflang="en" href="index.en.html">
 <link rel="stylesheet" href="../../assets/reference.css">
 <style>
   /* 이 문서 전용 소품 — 공용 reference.css 위에 얹는다 */
@@ -50,6 +51,7 @@
 </head>
 <body>
 <div class="wrap">
+<div class="langbar"><a href="index.en.html" hreflang="en">English</a></div>
 
 <div class="crumbs"><a href="../../index.html">문서</a><span>/</span>사용 가이드<span>/</span>AI 영상 제작</div>
 
@@ -58,7 +60,7 @@
   <h1>AI로 쇼트폼 영상 만들기</h1>
   <p class="sub">영상 생성 툴만 쓸 것인가, 이미지에 나레이션을 얹을 것인가, 섞을 것인가. 이 문서는 그 답이 취향이 아니라 스펙에서 나온다는 것을 보인다. 공식 문서와 실제로 돌아가는 코드에서 확인되고 적대적 검증까지 통과한 것만 남겼고, 답을 못 낸 영역은 빈칸으로 뒀다.</p>
   <div class="meta">
-    <span>기준일 <strong>2026-08-11</strong> · 코드 대조 <strong>2026-08-16</strong></span>
+    <span>기준일 <strong>2026-08-11</strong> · 코드 대조 <strong>2026-08-18</strong></span>
     <span>근거 <strong>24개 출처 → 120건 추출 → 25건 3표 검증 → 14건 확정</strong></span>
     <span>파이프라인 <strong><code>/social-flow:storyboard</code> → <code>produce</code></strong></span>
   </div>
@@ -113,6 +115,8 @@
       <p>씬마다 생성 영상과 정지컷을 골라 쓴다. 이어 붙이는 층은 어느 방식이든 필요하므로, 추가 비용 없이 얻는 선택지다.</p>
     </div>
   </div>
+
+  <p><span class="badge key">2026-08-18 추가</span> 두 칸을 채우는 엔진도 늘었다. 정지컷 배경은 온디바이스 <code>image_local_generate</code>(Z-Image Turbo·mflux/MLX)가 기본 경로다 — API 키도 네트워크도 과금도 없다. 글자가 들어가는 프레임만 <code>gpt_image_text2img</code> 로 보낸다. 로컬 생성이 한글 자소를 깨뜨려서다. 나레이션도 같은 구조로 온디바이스가 기본이다(§5).</p>
 
   <div class="note">
     <strong>이 결론의 신뢰도는 낮다.</strong> <span class="badge free">파생 추론</span> 근거가 된 사실 셋(8초 상한 · 순간 하나 규칙 · 클립 분할 처방)은 각각 3-0으로 확정됐지만, 이를 엮어 "하이브리드가 기본값"이라고 말한 건 출처가 아니라 우리다. 그리고 <strong>A가 낫다거나 B가 낫다는 비교 증거는 어느 쪽도 없다</strong> — 어디에 생성 영상을 쓸지 원칙으로 정하려면 편당 비용이 필요한데, 그 숫자가 이번 조사에서 하나도 검증을 통과하지 못했다(§9).
@@ -251,6 +255,8 @@
   </table>
   </div>
 
+  <p><span class="badge key">2026-08-18 추가</span> <strong>그 나레이션을 만드는 엔진도 둘이다.</strong> 본문은 온디바이스 <code>tts_local_generate</code>(Supertonic 3 — API 키도 네트워크도 없다)가 기본이고, 연기가 필요한 컷만 Gemini <code>tts_generate</code> 로 간다. 로컬 쪽에는 스타일·감정 조절이 없어서다. 길이를 재는 일은 더 싸졌다 — <code>tts_local_generate</code> 가 응답에 오디오 길이를 담아 주므로 씬 길이 검사에 ffprobe 를 따로 부르지 않아도 된다. 대신 두 엔진의 샘플레이트가 달라(로컬 44.1kHz · Gemini 24kHz) 한 영상에 섞으면 리샘플링이 필요하다.</p>
+
   <h3>자막 타이밍은 왜 되받아쓰기인가</h3>
   <p>Gemini TTS는 <strong>단어 타임스탬프를 돌려주지 않는다.</strong> 그래서 위 파이프라인들은 자기가 만든 음성을 다시 받아써서(ASR) 단어별 시작·끝을 얻는다. 선택이 아니라 우회로다.</p>
   <div class="warn">
@@ -284,7 +290,7 @@
         <li>IG Content Publishing 컨테이너 파라미터에 <strong>자막 파일 인자가 없다</strong> — <code>caption</code>은 텍스트 설명이다</li>
         <li>앱의 자동 캡션은 API 게시본에서 제어할 수 없다</li>
         <li>번인을 빼면 그냥 <strong>자막 없는 영상</strong>이 된다</li>
-        <li>Threads는 해당 없음 — 이 파이프라인은 Threads에 커버 이미지만 올린다(<code>threads_publish</code>는 <code>imageUrl</code>만 받는다)</li>
+        <li>Threads는 해당 없음 — 영상 회차는 본문만 게시하고 영상 링크는 자기 답글로 단다. 커버 이미지도 붙이지 않는다 <span class="badge key">2026-08-18 갱신</span></li>
       </ul>
     </div>
   </div>
@@ -302,7 +308,7 @@
     <tbody>
       <tr><td><code>video.mp4</code> (클린)</td><td>YouTube · Facebook</td><td><code>subs.srt</code>를 <code>captionFilePath</code>로 함께</td></tr>
       <tr><td><code>video-sub.mp4</code> (번인)</td><td>Instagram</td><td>화면에 태워 나간다</td></tr>
-      <tr><td><code>cover.jpg</code></td><td>Threads · YT 썸네일</td><td>해당 없음 — 클린본에서 뽑는다</td></tr>
+      <tr><td><code>cover.jpg</code></td><td>YT 썸네일(<code>thumbnailFilePath</code>)</td><td>해당 없음 — 클린본에서 뽑는다</td></tr>
     </tbody>
   </table>
   </div>
@@ -341,7 +347,7 @@
       </tr>
       <tr>
         <td>ffmpeg <code>zoompan</code> 함정</td>
-        <td><strong>피해 있다.</strong> <code>build-reel.sh</code>·<code>build-outro.sh</code> 모두 <code>s=1080x1920:fps=$FPS</code>를 명시한다</td>
+        <td><strong>피해 있다.</strong> <code>build-reel.sh</code>·<code>build-outro.sh</code> 모두 캔버스와 fps 를 <code>s=${W}x${H}:fps=$FPS</code>로 못 박는다 — 기본값은 9:16 의 1080×1920 이고, 가로 롱폼이 붙은 뒤로 이 자리는 포맷이 정한다 <span class="badge key">2026-08-18 갱신</span></td>
         <td>소스 확인</td>
       </tr>
       <tr>
@@ -421,7 +427,7 @@
   </div>
 
   <h3>가장 빨리 메울 수 있는 구멍</h3>
-  <p>비용이다. 검색 단계에서 공식 요금 페이지 수치가 나오긴 했다 — Veo 3.1 초당 표준 $0.40, Fast $0.10(720p)·$0.12(1080p), Lite $0.05·$0.08. 8초로 환산하면 각각 <strong>$3.20 / $0.80 / $0.40</strong>이다. <strong>다만 3표 검증을 거치지 않았다.</strong> <span class="badge free">미검증</span> 같은 조사에서 요약기 환각이 실제로 잡혔으므로(§7), 이 숫자는 <strong>실제 과금 호출로 직접 재보는 게 맞다.</strong></p>
+  <p>비용이다. 검색 단계에서 공식 요금 페이지 수치가 나오긴 했다 — Veo 3.1 초당 표준 $0.40, Fast $0.10(720p)·$0.12(1080p), Lite $0.05·$0.08. 8초로 환산하면 각각 <strong>$3.20 / $0.80 / $0.40</strong>이다. <strong>이 숫자는 그 뒤 공식 요금 페이지에서 직접 확인했다</strong> <span class="badge key">2026-08-15 확인</span> — 같은 값 그대로 <code>skills/autoproduce/references/prices.tsv</code> 에 official 등급으로 올라가 있고, 그 파일이 단가 정본이다. 다만 확인한 건 <strong>요금 페이지이지 청구서가 아니다</strong>. 같은 조사에서 요약기 환각이 실제로 잡혔으므로(§7), 실제 과금 호출로 한 번 재보는 일은 아직 안 했다.</p>
 
   <h3>이어서 할 만한 것</h3>
   <p style="color:var(--text-soft);font-size:14.5px">2026-08-16 대조에서 <s>취소선</s>은 그 뒤 끝난 항목이다.</p>
@@ -475,7 +481,7 @@
 </section>
 
 <footer class="foot">
-  <p>social-flow 사용 가이드 · 조사 기준일 2026-08-11 · 코드 대조 2026-08-16 (v0.16.2) · 24개 출처에서 120건 추출 → 25건 3표 검증 → 14건 확정 · 미해결 4개 중 1개(비용) 해소</p>
+  <p>social-flow 사용 가이드 · 조사 기준일 2026-08-11 · 코드 대조 2026-08-18 (v0.23.0) · 24개 출처에서 120건 추출 → 25건 3표 검증 → 14건 확정 · 미해결 4개 중 1개(비용) 해소</p>
   <p>관련 문서: <a href="../youtube-shorts-growth/index.html">유튜브 쇼츠 성장</a> · <a href="../screencast-usage/index.html">스크린캐스트 제작</a> · <a href="../../api-reference/index.html">API 레퍼런스</a></p>
 </footer>
 

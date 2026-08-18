@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Threads growth best practices — social-flow guide</title>
+<link rel="alternate" hreflang="ko" href="index.html">
+<link rel="stylesheet" href="../../assets/reference.css">
+<style>
+  /* Props for this page only — layered on top of the shared reference.css */
+  .lede { font-size: 18px; line-height: 1.7; color: var(--text); margin: 8px 0 4px; }
+  .lede strong { font-weight: 750; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }
+  .col-box { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; background: var(--bg-card); }
+  .col-box.win { border-top: 3px solid var(--green); }
+  .col-box.fail { border-top: 3px solid var(--red); }
+  .col-box h4 { margin: 0 0 10px; font-size: 14.5px; letter-spacing: .02em; }
+  .col-box.win h4 { color: var(--green); }
+  .col-box.fail h4 { color: var(--red); }
+  .col-box ul { margin: 0 0 0 18px; }
+  .col-box li { font-size: 14.5px; margin-bottom: 8px; }
+  .signal-num { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
+  .metric-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+  .metric { flex: 1 1 180px; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; background: var(--bg-soft); }
+  .metric .m-k { font-size: 13px; color: var(--text-soft); }
+  .metric .m-v { font-size: 15.5px; font-weight: 650; margin-top: 2px; }
+  .rule-list { list-style: none; margin-left: 0; }
+  .rule-list > li { position: relative; padding-left: 30px; margin-bottom: 16px; }
+  .rule-list > li .n {
+    position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums;
+  }
+  .quote-ex { border-left: 3px solid var(--border); padding: 2px 0 2px 16px; margin: 10px 0; color: var(--text-soft); font-size: 14.5px; }
+  .quote-ex b { color: var(--text); font-weight: 600; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="langbar"><a href="index.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../../index.en.html">Docs</a><span>/</span>Guides<span>/</span>Threads growth</div>
+
+<header class="hero">
+  <div class="kicker">GROWTH · THREADS</div>
+  <h1>How to grow on Threads</h1>
+  <p class="sub">Threads judges each post on its own rather than your follower count. So growing an account here means writing something that passes that judgment every time, not collecting followers. This page covers what the judgment looks at, and what to do and what to avoid in response.</p>
+  <div class="meta">
+    <span>As of <strong>2026-08-11</strong></span>
+    <span>Updated <strong>2026-08-15 — frequency, blocks, reply reach</strong></span>
+    <span>Evidence <strong>Meta Transparency Center + multi-source cross-checks</strong></span>
+    <span>Automation <strong><code>/social-flow:grow-threads</code></strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#why">Why Threads is different</a></li>
+    <li><a href="#signals">The five signals that set reach</a></li>
+    <li><a href="#do">Four things that create reach</a></li>
+    <li><a href="#dont">What gets suppressed — don't do these</a></li>
+    <li><a href="#rhythm">Operating rhythm</a></li>
+    <li><a href="#writing">Writing — register and form</a></li>
+    <li><a href="#culture">Vocabulary and culture (seuhari)</a></li>
+    <li><a href="#links">Link policy</a></li>
+    <li><a href="#metrics">What to watch</a></li>
+    <li><a href="#automation">Automation — grow-threads</a></li>
+    <li><a href="#sources">Sources</a></li>
+  </ol>
+</nav>
+
+<section id="why">
+  <h2>1. Why Threads is different</h2>
+  <p class="lede"><strong>A post from a zero-follower account hits 100,000 views while a post from a 5,000-follower account stalls at 300, on the same day.</strong></p>
+  <p>This is where Threads differs most from Instagram and YouTube. There, subscribers and followers lay a floor under your reach. Threads doesn't. When a post goes up, the algorithm shows that one post to a small group first, widens it if the response is good, and stops there if it isn't. What sets reach is <strong>this post's response</strong>, not the account's name.</p>
+  <p>So this page is about writing a post that passes, not about getting followers. Followers come out of that.</p>
+</section>
+
+<section id="signals">
+  <h2>2. The five signals that set reach</h2>
+  <p>Meta published five ranking signals for the Threads feed in its Transparency Center. Raising the first four and lowering the last one is the whole job.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Signal</th><th>What the algorithm predicts</th><th>In practice</th></tr></thead>
+    <tbody>
+      <tr><td><span class="signal-num">1</span> Probability of a like</td><td>Will this user like this post</td><td>Something to relate to or use has to land in the first impression</td></tr>
+      <tr><td><span class="signal-num">2</span> Probability of opening the replies</td><td>Will they tap in to read the replies</td><td><strong>The most important one.</strong> A post that collects replies beats one that only collects likes</td></tr>
+      <tr><td><span class="signal-num">3</span> Probability of a follow</td><td>Will they follow the author</td><td>Instagram profile-view history feeds in here too</td></tr>
+      <tr><td><span class="signal-num">4</span> Probability of a profile click</td><td>Will they tap through to the profile</td><td>One post has to produce "I want to see more of this person"</td></tr>
+      <tr><td><span class="signal-num">5</span> Probability of scrolling past</td><td>Will they just scroll on <span class="badge de">lower is better</span></td><td>You have to stop them on the first line</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>Number 2 is the core.</strong> A like ends where it happens; a reply pulls a person into the post. As a working rule it comes down to one thing — <strong>a post that leaves the reader with nothing to say has a low ceiling however well it's written.</strong> Instead of closing with a verdict, leave a gap someone can step into.
+  </div>
+</section>
+
+<section id="do">
+  <h2>3. Four things that create reach</h2>
+  <ul class="rule-list">
+    <li>
+      <span class="n">1</span>
+      <strong>Write posts that collect replies.</strong> An observation or a confession beats a finished argument.
+      <div class="quote-ex"><b>"이래야 합니다"</b> (this is how it should be) draws nothing but rebuttals, while <b>"이거 나만 그런가?"</b> (is this just me?) calls up everyone's own experience.</div>
+    </li>
+    <li>
+      <span class="n">2</span>
+      <strong>Build early velocity.</strong> The same reactions travel much further when they land right after posting than when they pile up over a day. The <strong>first 60–90 minutes</strong> usually decide it. Don't post and walk away — block out the 30 minutes after posting for replies.
+    </li>
+    <li>
+      <span class="n">3</span>
+      <strong>Engage before you post.</strong> Spending the 10–15 minutes before publishing on replies to other people's posts marks you as an active user, which lifts the early distribution of the post that follows. Aim at accounts a little bigger than yours — under a very large account you get buried.
+    </li>
+    <li>
+      <span class="n">4</span>
+      <strong>Run it alongside Instagram.</strong> Instagram profile-view history feeds the follow-probability prediction. Operating both accounts is itself a signal.
+    </li>
+  </ul>
+
+  <h3>Engagement is not a side activity — measured</h3>
+  <p>Rule 3 reads like a pre-post warm-up, but the measurement says more than that. On our own channel, with single-digit followers, querying all 14 replies showed the top two beating <strong>four of the six root posts from the same period</strong> in reach. Standing in front of an audience someone else already gathered is bigger than the reach you can build on your own.</p>
+  <div class="note">
+    <strong>Mosseri said the same thing.</strong> In a Platformer interview he said <em>"If you're really trying to grow your presence, you should reply much more than you post."</em> Read it at a lower grade, though — the Platformer source URL 404s, so first-hand confirmation failed and we only have secondhand quotes. Don't cite it with the weight of the Transparency Center signal list in §2.
+  </div>
+  <p>So in the cold-start stretch it's right to flip the order — <strong>engagement is not the fallback activity for when you can't write a new post.</strong> When there are candidates to engage with, do that first; when they dry up, that's an observation-only tick.</p>
+  <div class="warn">
+    <strong>But don't blend the two axes.</strong> Reach was high while response stayed thin — both top-reach replies had 1 like and 0 sub-replies. A reply opens a conversation but doesn't pull people to the account. Bringing them to the profile is still the root post's job.
+  </div>
+</section>
+
+<section id="dont">
+  <h2>4. What gets suppressed — don't do these</h2>
+  <p>These are the things Meta has named as suppressed. They eat reach, and once the account gets typed this way, they cut the signal of the whole account.</p>
+  <div class="two-col">
+    <div class="col-box fail">
+      <h4>✕ Engagement bait</h4>
+      <ul>
+        <li>"좋아요 눌러" (hit like), "동의하면 댓글 YES" (comment YES if you agree)</li>
+        <li>"팔로우하면 알려드려요" (follow and I'll tell you)</li>
+        <li>Empty questions like "여러분 생각은?" (what do you all think?) sit close to this</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ Organized reciprocity circles</h4>
+      <ul>
+        <li>Seuhari swap rooms, mechanical follow-backs</li>
+        <li>It works as an early boost, but it holds you back once the account gets typed</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ Cross-post copy-paste</h4>
+      <ul>
+        <li>Posts that obviously came straight over from X</li>
+        <li>Every platform has its own grammar — Threads in Threads' voice</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ Stitched-together essays</h4>
+      <ul>
+        <li>Long multi-post threads read like a lecture and don't do well</li>
+        <li>Compress what you need into one post</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="rhythm">
+  <h2>5. Operating rhythm</h2>
+  <p><strong>There's no cap on new posts — write as much as you have to say.</strong> Consistent accounts settling at 1–3 a day is an observation, not a rule to keep. What actually has the big effect isn't the post count but <strong>the time you spend replying to other people before you post</strong> (§3).</p>
+  <div class="metric-row">
+    <div class="metric"><div class="m-k">New posts</div><div class="m-v">As much as you have to say (1–3 observed)</div></div>
+    <div class="metric"><div class="m-k">Pre-post engagement</div><div class="m-v">10–15 min of replies</div></div>
+    <div class="metric"><div class="m-k">Early response window</div><div class="m-v">First 60–90 min after posting</div></div>
+    <div class="metric"><div class="m-k">Hashtags</div><div class="m-v">≤ 1 (zero weight)</div></div>
+  </div>
+  <p>Fixing slots means posting regularly in the hours your target audience is active. Steady posting at a set time collects early response more easily than dumping posts whenever. <strong>Slots are a rhythm guide, not boxes to fill</strong> — filler posts written to keep the rhythm with nothing to say kill an account fastest.</p>
+
+  <h3>The "post too much and you get blocked" belief — we checked</h3>
+  <p>We <strong>found no</strong> mechanism that punishes frequency itself. The Threads evidence is the five ranking signals in §2 — posting frequency isn't on the list Meta published.</p>
+  <div class="warn">
+    <strong>Keep the citation path precise.</strong> The Transparency Center feed/explore ranking cards and the official ranking explainer swept in that same research are <strong>Instagram documents</strong>. We didn't sweep Threads ranking docs, so what was confirmed there — that the distribution-penalty reasons are all content attributes, and the feed-diversity rule — is used only as the <a href="../instagram-growth/index.en.html">Instagram guide</a>'s story.
+  </div>
+  <p>Blocks need splitting too. The API publishing limits are <strong>quota, not sanction</strong> — in a 24-hour sliding window, 250 posts, 1,000 replies, 100 deletes. Going over just returns an error, puts no mark on the account, and clears after 24 hours. Human-judgment posting never comes near those lines. What actually stops an account is the <strong>behavior pattern</strong>, not the count — engagement bait, organized reciprocity, mass copy-paste (§4).</p>
+  <p class="quote-ex">Research record: <a href="../../research/2026-08-15-posting-frequency-and-growth/index.html">Posting frequency and growth (2026-08-15)</a> (Korean)</p>
+</section>
+
+<section id="writing">
+  <h2>6. Writing — register and form</h2>
+  <h3>Pin one register</h3>
+  <p>The default language of the Korean Threads user base is <strong>반말 (banmal — casual, non-honorific speech)</strong>. It makes no difference whether you've met before or how far apart in age you are; small-business and company accounts comment in banmal too. The temperature of the platform runs like "people who know each other" rather than "customer and owner".</p>
+  <p>It isn't mandatory, though. Plenty of accounts run well in honorifics. There's one rule an operator can act on — <strong>pick one register per channel and never switch.</strong> Banmal in some posts and honorifics in others reads as an admin rather than a person.</p>
+
+  <h3>Posts that work vs posts that don't</h3>
+  <div class="two-col">
+    <div class="col-box win">
+      <h4>✓ Works</h4>
+      <ul>
+        <li><strong>1–3 lines.</strong> 500 characters are allowed, but the timeline gets scanned</li>
+        <li>Observation or confession — "이거 나만 그런가?" (is this just me?)</li>
+        <li>Lay down one experience of your own and close with a question that invites theirs</li>
+        <li>Don't spend the whole hook (say the conclusion and there's nothing left to reply with)</li>
+        <li>One image attached (beats text alone)</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ Stalls</h4>
+      <ul>
+        <li>Hard verdicts that leave no room for a reply</li>
+        <li>Long essays that read like a lecture</li>
+        <li>Pure promotion that just throws a link</li>
+        <li>Engagement-bait closers</li>
+        <li>Unexplained jargon, over-compression with no subject</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">
+    <strong>Plain-language principle.</strong> Your reader doesn't necessarily know the background of the topic. If a term is needed, lead with the plain wording and put the term in parentheses on first use. Example: "기준환율" (the base exchange rate) → <b>"뉴스에 나오는 값('기준환율')"</b> (the number you see in the news, the "base rate").
+  </div>
+</section>
+
+<section id="culture">
+  <h2>7. Vocabulary and culture (seuhari)</h2>
+  <p>These aren't official Meta terms — users made them. Without them you can't read the context of the comments.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><strong>스하리 (seuhari)</strong></td><td>Threads follow + heart (like) + repost, all three. "스하리 하고 갑니다" — dropping a seuhari on my way through</td></tr>
+      <tr><td><strong>반하리 (banhari)</strong></td><td>Returning a seuhari you received. It counts as manners, not an obligation</td></tr>
+      <tr><td><strong>맞하리 (mat-hari)</strong></td><td>Both sides have exchanged seuhari</td></tr>
+      <tr><td><strong>또하리 (tto-hari)</strong></td><td>Another seuhari to someone you've already done it for</td></tr>
+      <tr><td><strong>스팔 / 맞스팔 (seupal / matseupal)</strong></td><td>Threads follow / mutual follow</td></tr>
+      <tr><td><strong>스친 (seuchin)</strong></td><td>Threads friend (the Threads version of 인친, an Instagram friend)</td></tr>
+      <tr><td><strong>스린이 · 스친이 (seurini · seuchini)</strong></td><td>Threads beginner</td></tr>
+      <tr><td><strong>쓰플루언서 (sseupluencer)</strong></td><td>An account with influence on Threads</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>What this vocabulary tells you is a culture, not a set of words. Threads is a place where <strong>give-and-take has been put into language explicitly</strong>. Accounts that repost often get reposted often. When a brand account carries none of other people's posts and only pushes its own, people notice before the algorithm does.</p>
+  <div class="warn">
+    <strong>But swap rooms are a different thing.</strong> Answering goodwill with a reply or a repost is culture; organized follow-backs and mechanical seuhari exchange can't be told apart from the suppressed patterns in §4. That's why the automation loop doesn't join swap rooms.
+  </div>
+</section>
+
+<section id="links">
+  <h2>8. Link policy</h2>
+  <p>The 2024 link penalty was <strong>retracted</strong>. Adam Mosseri said directly that they had worked on getting links ranked properly and that it had been working much better for over a month, and link performance analytics were added on top.</p>
+  <p>That only means "body link = penalty" is gone, not that a body link is the best move. A link in the body pulls readers away and cuts that post's replies — a separate problem — and Meta has raised and lowered link reach before.</p>
+
+  <h3>Measured — body without links, link in your own reply</h3>
+  <p>This section used to end with "run the A/B yourself". We ran it, and the result is in. Measured on episode posts.</p>
+  <div class="two-col">
+    <div class="col-box fail">
+      <h4>✕ Body-link version</h4>
+      <ul>
+        <li>Reach <strong>about 1/10 of the link-free posts from the same day</strong></li>
+        <li>Both posts stalled in double digits</li>
+      </ul>
+    </div>
+    <div class="col-box win">
+      <h4>✓ Reply-link version</h4>
+      <ul>
+        <li>Reach <strong>20–30× the body-link version</strong></li>
+        <li>The body is complete without a link; the link goes in your own reply</li>
+      </ul>
+    </div>
+  </div>
+  <p>So the default is fixed at <strong>link in reply</strong> (2026-08-15). The body post stays in casual spoken Korean and has to stand on its own without the link. After posting, add one line — "풀영상은 여기 →" (full video here →) — with the link as your own reply. The link target defaults to the <strong>Instagram Reel</strong> rather than YouTube — same Meta ecosystem, so the exit penalty is smallest. That's also why the publish order runs Instagram first → get the permalink → then Threads.</p>
+  <div class="note">
+    <strong>When Mosseri's statement and our measurement disagree, we follow the measurement.</strong> The link-penalty retraction is an official statement, but the reach distribution we measured on our channel pointed the other way. "There's no penalty" and "body links are favorable" are two different claims.
+  </div>
+</section>
+
+<section id="metrics">
+  <h2>9. What to watch</h2>
+  <p>Four things weekly. Likes are a lagging indicator that changes no decision, so they're out.</p>
+  <div class="metric-row">
+    <div class="metric"><div class="m-k">1</div><div class="m-v">Reach per post</div></div>
+    <div class="metric"><div class="m-k">2</div><div class="m-v">Replies per post</div></div>
+    <div class="metric"><div class="m-k">3</div><div class="m-v">Follower growth rate</div></div>
+    <div class="metric"><div class="m-k">4</div><div class="m-v">Profile visits</div></div>
+  </div>
+  <p>One more on top of those — a learning loop that reads the <strong>type</strong> (subject, form) of the top-reach posts into the next one. Without it the account ends up repeating the same post. In social-flow the <code>threads_insights</code> tool pulls per-post metrics to support that judgment.</p>
+</section>
+
+<section id="automation">
+  <h2>10. Automation — grow-threads</h2>
+  <p>The <code>/social-flow:grow-threads</code> skill runs the principles above as a loop. One call = one growth-cycle tick, and <code>/loop</code> handles the repetition.</p>
+  <pre><code>/social-flow:grow-threads &lt;channel&gt; init      # once — fix the growth plan (approval)
+/loop 30m /social-flow:grow-threads &lt;channel&gt;  # autonomous loop every 30 minutes</code></pre>
+  <p>A tick's priority order is the order of this document:</p>
+  <ol>
+    <li><strong>Inbox replies</strong> — golden hour (first 60 min) unanswered first (§2·§3)</li>
+    <li><strong>Insights snapshot</strong> — deltas against the previous tick, top-reach post types recorded (§9)</li>
+    <li><strong>Keyword conversation engagement</strong> — contributing to other people's public posts on the channel's keywords (§3-3)</li>
+    <li><strong>New-post authoring</strong> — when it judges there's something worth saying (§5·§6)</li>
+  </ol>
+  <div class="ok">
+    <strong>A tick is not a post.</strong> Most ticks end in replies and observation. What holds a post back is judgment, not a count rule — <strong>there's no daily cap</strong>, and slots are a rhythm guide for which window to prefer when a post does go out. The <code>growth-plan.md</code> approved at <code>init</code> acts as the standing authorization, and nothing outside its scope (topic pool, keywords, tone) gets posted. Every piece of copy has to clear the adversarial reviewer's 95-point gate before publishing. The tactical source of truth is the skill's <code>references/growth-playbook.md</code>.
+  </div>
+  <div class="warn">
+    <strong>Keyword search needs a separate app permission.</strong> <code>threads_search</code> (public post search) needs the app's <code>threads_keyword_search</code> feature access on top of the token scope. Without it only that step is skipped — inbox replies, insights, and new posts run normally.
+  </div>
+  <div class="note">
+    <strong>This loop needs Threads credentials to run.</strong> The publish, insights, and search tools appear in <code>tools/list</code> only when a Threads token file exists — <code>threads_token</code>, either flat under <code>&lt;SNS_TOKEN_DIR&gt;</code> or in a channel directory. Without a token everything up to and including production still works — <code>produce</code> writes the finished video plus per-platform text into <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload by hand. What you lose is the publishing and growth-loop half.
+  </div>
+</section>
+
+<section id="sources">
+  <h2>11. Sources</h2>
+  <ul>
+    <li>Meta Transparency Center — Threads feed ranking signals (5 predictions). Evidence for §2 and §5.</li>
+    <li><a href="https://developers.facebook.com/docs/threads/troubleshooting/">Threads API docs</a> — 24-hour publish/reply/delete quotas. Evidence for §5.</li>
+    <li>Adam Mosseri (head of Instagram) — statement that link ranking was fixed · Social Media Today and Engadget coverage. Evidence for §8.</li>
+    <li>Adam Mosseri — "reply much more than you post" (Platformer interview). Evidence for §3. <strong>The source URL 404s, so first-hand confirmation failed</strong>; we only have secondhand quotes, so it isn't used with the weight of an official document.</li>
+    <li>Our own channel measurements — reply reach (2026-08-12), body link vs reply link (2026-08-15). Evidence for §3 and §8. The sample is a single-digit-follower account, so it has to be re-measured at larger scale. The raw absolute numbers stay in the channel data and aren't published.</li>
+    <li>Multi-source cross-checks — replies first, early velocity, engagement-bait suppression, posting rhythm. Precise single-source numbers (for example "only replies of 8+ words count") couldn't be confirmed and were left out.</li>
+    <li>Korean user field material (Naver blogs and cafés) — banmal culture, seuhari vocabulary. Evidence for §6 and §7.</li>
+  </ul>
+  <div class="note">
+    A good share of English-language "Threads algorithm 2026" articles are SEO content-farm pieces. Don't trust precise-looking single-source numbers; what's kept here <strong>came from Meta's own documents or from several sources that agreed</strong>.
+  </div>
+</section>
+
+<footer>
+  As of 2026-08-11 · updated 2026-08-15 (<a href="../../research/2026-08-15-posting-frequency-and-growth/index.html">frequency and blocking research</a>, Korean) · tactical source of truth <code>skills/grow-threads/references/growth-playbook.md</code> · platform grammar <code>skills/platform-guide/references/platform-playbook.md</code> §3 · <a href="../../index.en.html">docs hub</a>
+</footer>
+
+</div>
+</body>
+</html>

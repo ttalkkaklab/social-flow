@@ -1,37 +1,38 @@
 #!/usr/bin/env bash
-# 미디어 호스팅 업로드 — 성공 시 공개 URL 한 줄만 stdout 에 출력한다.
+# Media hosting upload — on success prints exactly one line, the public URL, to stdout.
 #
-# SNS 게시 툴은 이미지·영상을 공개 URL 로 받는다. 이 스크립트는 그 URL 을 만드는
-# 자리이며, 아래 계약을 만족하는 호스팅이면 무엇이든 붙는다. 쓰는 사람이 자기
-# 엔드포인트를 MEDIA_UPLOAD_URL 로 지정한다 — 기본값은 없다.
+# The SNS publish tools take images and videos as public URLs. This script is where
+# that URL gets made, and any hosting that satisfies the contract below plugs in.
+# The operator points MEDIA_UPLOAD_URL at their own endpoint — there is no default.
 #
-#   사용:  upload-media.sh <미디어파일>        # jpg/png/webp/gif ≤10MB, mp4 ≤50MB
-#   필요:  MEDIA_UPLOAD_URL       업로드 엔드포인트 (예: https://<내 도메인>/api/media)
-#          MEDIA_UPLOAD_API_KEY   그 엔드포인트의 API 키 (값은 파일에 적지 않는다)
-#   선택:  MEDIA_UPLOAD_TIMEOUT 초 (기본 60 — 수십 MB 영상이면 300 권장)
-#          옛 이름 MELEON_MEDIA_URL·MELEON_MEDIA_API_KEY·MELEON_UPLOAD_TIMEOUT 도 읽는다
+#   Usage: upload-media.sh <media-file>        # jpg/png/webp/gif ≤10MB, mp4 ≤50MB
+#   Needs: MEDIA_UPLOAD_URL       upload endpoint (e.g. https://<my-domain>/api/media)
+#          MEDIA_UPLOAD_API_KEY   that endpoint's API key (never write the value in a file)
+#   Optional: MEDIA_UPLOAD_TIMEOUT seconds (default 60 — for videos of tens of MB, 300 recommended)
+#          the old names MELEON_MEDIA_URL · MELEON_MEDIA_API_KEY · MELEON_UPLOAD_TIMEOUT are also read
 #
-# 엔드포인트가 만족해야 하는 계약:
-#   POST <MEDIA_UPLOAD_URL>  x-api-key 헤더 + raw 바이트 본문 → 201 {data:{url}}
-#   응답의 url 은 무인증 공개 GET 이어야 한다 — 플랫폼 크롤러가 가져가야 하므로
-#   업로드 후 왕복 검증까지 여기서 한다. 검증 안 된 URL 은 게시 툴에 넘기지 않는다.
+# Contract the endpoint must satisfy:
+#   POST <MEDIA_UPLOAD_URL>  x-api-key header + raw byte body → 201 {data:{url}}
+#   The url in the response must be an unauthenticated public GET — platform
+#   crawlers have to fetch it, so the round-trip check happens right here after
+#   the upload. An unverified URL never goes to a publish tool.
 #
-# exit: 0 성공 / 65 파일 문제(크기·타입) / 69 서비스 미가동(404 미배포·503 키
-#       미설정) / 75 일시적(429 상한 — 다음 틱에 재시도) / 77 키 문제 / 70 왕복
-#       검증 실패 / 78 클라이언트 설정 미비
+# exit: 0 success / 65 file problem (size · type) / 69 service down (404 not
+#       deployed · 503 key unset) / 75 transient (429 cap — retry next tick) /
+#       77 key problem / 70 round-trip check failed / 78 client config missing
 set -euo pipefail
 
-FILE=${1:?사용법: upload-media.sh <미디어파일>}
+FILE=${1:?usage: upload-media.sh <media-file>}
 
 API=${MEDIA_UPLOAD_URL:-${MELEON_MEDIA_URL:-}}
 KEY=${MEDIA_UPLOAD_API_KEY:-${MELEON_MEDIA_API_KEY:-}}
 TIMEOUT=${MEDIA_UPLOAD_TIMEOUT:-${MELEON_UPLOAD_TIMEOUT:-60}}
 
 [ -n "$API" ] || {
-  echo "MEDIA_UPLOAD_URL 미설정 — 미디어 호스팅 엔드포인트가 없어 이미지 단계를 끈다" >&2; exit 78; }
+  echo "MEDIA_UPLOAD_URL unset — no media hosting endpoint, turning the image stage off" >&2; exit 78; }
 [ -n "$KEY" ] || {
-  echo "MEDIA_UPLOAD_API_KEY 미설정 — 이미지 단계를 끈다" >&2; exit 78; }
-[ -f "$FILE" ] || { echo "파일 없음: $FILE" >&2; exit 66; }
+  echo "MEDIA_UPLOAD_API_KEY unset — turning the image stage off" >&2; exit 78; }
+[ -f "$FILE" ] || { echo "file not found: $FILE" >&2; exit 66; }
 
 RES=$(curl -sS --max-time "$TIMEOUT" -w '\n%{http_code}' -X POST "$API" \
   -H "x-api-key: $KEY" \
@@ -41,22 +42,22 @@ BODY=${RES%$'\n'*}
 
 case "$CODE" in
   201) ;;
-  401) echo "401 — API 키 불일치 (호스팅 서버에 설정된 키와 다름)" >&2; exit 77 ;;
-  404) echo "404 — 엔드포인트 없음 (MEDIA_UPLOAD_URL 경로·배포 상태 확인)" >&2; exit 69 ;;
-  413) echo "413 — 상한 초과 (이미지 10MB · 영상 50MB). 줄여서 다시" >&2; exit 65 ;;
-  415) echo "415 — jpg/png/webp/gif/mp4 아님 (바이트 앞머리 판정)" >&2; exit 65 ;;
-  429) echo "429 — 업로드 상한(10분 60건). 다음 틱에" >&2; exit 75 ;;
-  503) echo "503 — 호스팅 서버에 API 키 미설정 (배포 시크릿 확인)" >&2; exit 69 ;;
+  401) echo "401 — API key mismatch (differs from the key set on the hosting server)" >&2; exit 77 ;;
+  404) echo "404 — endpoint missing (check the MEDIA_UPLOAD_URL path and deploy state)" >&2; exit 69 ;;
+  413) echo "413 — over the cap (images 10MB · video 50MB). Shrink and retry" >&2; exit 65 ;;
+  415) echo "415 — not jpg/png/webp/gif/mp4 (judged from the leading bytes)" >&2; exit 65 ;;
+  429) echo "429 — upload cap (60 per 10 minutes). Next tick" >&2; exit 75 ;;
+  503) echo "503 — API key unset on the hosting server (check the deploy secret)" >&2; exit 69 ;;
   *)   echo "HTTP $CODE — ${BODY:0:300}" >&2; exit 1 ;;
 esac
 
 URL=$(printf '%s' "$BODY" \
   | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["url"])') || {
-  echo "201 인데 응답 파싱 실패 — ${BODY:0:300}" >&2; exit 1; }
+  echo "201 but response parsing failed — ${BODY:0:300}" >&2; exit 1; }
 
-# 왕복 검증 — 플랫폼 크롤러가 가져갈 수 있어야 게시가 성립한다
+# Round-trip check — publishing only works if platform crawlers can fetch it
 GET_CODE=$(curl -sSo /dev/null --max-time 30 -w '%{http_code}' "$URL")
 [ "$GET_CODE" = 200 ] || {
-  echo "업로드는 됐지만 GET $URL 이 $GET_CODE — 이 URL 로 게시 금지" >&2; exit 70; }
+  echo "upload succeeded but GET $URL returned $GET_CODE — do not publish with this URL" >&2; exit 70; }
 
 echo "$URL"

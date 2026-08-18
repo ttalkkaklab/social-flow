@@ -1,138 +1,162 @@
-# Threads 개설 플레이북 — 실측 레시피
+# Threads setup playbook — field-tested recipes
 
-이 문서는 SKILL.md 의 각 단계를 실제로 어떻게 조작하는지 담는다. Meta 계열
-사이트(threads.com·threads.net·developers.facebook.com)는 ego 의 편의 헬퍼가
-내부 대기에 걸려 무한 행하는 구간이 많아, **CDP 저수준 호출로만** 안정적으로
-움직인다. 아래는 그 실측 레시피다.
+This document holds how each step in SKILL.md is actually driven. On Meta-family
+sites (threads.com · threads.net · developers.facebook.com), ego's convenience
+helpers get stuck in internal waits and hang forever in many places, so things
+only move reliably **with low-level CDP calls**. Below are the field-tested
+recipes.
 
-## 브라우저 레인과 조작 원칙
+## Browser lanes and driving principles
 
-레인은 둘이다 — ego lite 가 먼저고, 없으면 claude-in-chrome 이다(SKILL.md
-§브라우저 레인). 아래 단계별 레시피는 ego 레인 기준으로 쓰여 있지만, 조작의 뼈대가
-CDP 표준이라 Chrome 레인으로도 거의 그대로 옮겨진다.
+There are two lanes — ego lite first, claude-in-chrome when it's absent
+(SKILL.md §Browser lanes). The per-step recipes below are written against the
+ego lane, but the skeleton of the driving is standard CDP, so it carries over to
+the Chrome lane almost as-is.
 
-### ego lite 레인 (기본)
+### ego lite lane (default)
 
-먼저 `~/.claude/skills/ego-browser/SKILL.md`(사용자 머신의 ego 스킬)를 로드해 CLI
-사용법을 확인한다. 호출은 `Bash` 로 `ego-browser nodejs <<'EOF' ... EOF` 히어독.
+First load `~/.claude/skills/ego-browser/SKILL.md` (the ego skill on the user's
+machine) to check CLI usage. Invoke via `Bash` with an
+`ego-browser nodejs <<'EOF' ... EOF` heredoc.
 
-- **히어독마다 상태가 초기화된다.** 매 히어독 첫 줄에서 task space 를 다시 선점한다:
-  `await useOrCreateTaskSpace('<세션 고유 이름>')` (핸드오프 복귀만
-  `takeOverTaskSpace(id)`). 이름이 겹치면 다른 세션과 탭을 공유하니 세션마다
-  고유한 이름을 쓴다.
-- **Meta 사이트는 CDP 전용.** `click`·`js`·`gotoAndWait`·`snapshotText` 는 행에
-  걸리기 쉽다. 대신:
-  - 페이지 이동: `cdp('Page.navigate', {url})`
-  - 값 읽기·DOM 조회: `cdp('Runtime.evaluate', {expression, returnByValue:true})`
-  - **클릭은 신뢰 입력으로**: `cdp('Input.dispatchMouseEvent', {type:'mousePressed', x, y, button:'left', clickCount:1, buttons:1})` + 곧바로 `mouseReleased`.
-    React 는 신뢰 이벤트(isTrusted)가 아니면 탭 전환·동의 클릭을 무시한다.
-  - 팝업·리다이렉트 탭 찾기: `cdp('Target.getTargets', {})` → `switchTab(전체 targetId)`.
-- **클릭 전 가림 확인**: `document.elementFromPoint(x, y)` 로 그 좌표의 실제 최상단
-  요소를 확인한다. 모달이 덮고 있으면 다른 요소가 잡힌다. `getBoundingClientRect`
-  폭이 490px 이상이면 버튼이 아니라 컨테이너를 잡은 것일 수 있다(오탐 주의).
-- 화면 공유가 필요하면(사람 게이트) `handOffTaskSpace(id)` → 사용자 확인 →
-  `takeOverTaskSpace(id)`. agent task space 탭은 GUI 에 안 보인다.
+- **State resets with every heredoc.** Re-claim the task space on the first line
+  of every heredoc: `await useOrCreateTaskSpace('<session-unique name>')` (only
+  the return from a handoff uses `takeOverTaskSpace(id)`). A duplicated name
+  shares tabs with another session, so use a name unique to each session.
+- **Meta sites are CDP-only.** `click` · `js` · `gotoAndWait` · `snapshotText`
+  hang easily. Instead:
+  - Page navigation: `cdp('Page.navigate', {url})`
+  - Reading values / DOM queries: `cdp('Runtime.evaluate', {expression, returnByValue:true})`
+  - **Click with trusted input**: `cdp('Input.dispatchMouseEvent', {type:'mousePressed', x, y, button:'left', clickCount:1, buttons:1})` followed immediately by `mouseReleased`.
+    React ignores tab switches and consent clicks unless the event is trusted
+    (isTrusted).
+  - Finding popup/redirect tabs: `cdp('Target.getTargets', {})` → `switchTab(full targetId)`.
+- **Check for covering elements before clicking**: use
+  `document.elementFromPoint(x, y)` to see the actual topmost element at those
+  coordinates. If a modal covers it, a different element comes back. If the
+  `getBoundingClientRect` width is 490px or more, you may have grabbed a
+  container instead of the button (beware false positives).
+- When screen sharing is needed (human gates): `handOffTaskSpace(id)` → user
+  confirms → `takeOverTaskSpace(id)`. Agent task space tabs are invisible in the
+  GUI.
 
-### Chrome 레인 (claude-in-chrome)
+### Chrome lane (claude-in-chrome)
 
-위 CDP 호출을 이렇게 옮긴다. 툴 이름은 로드 방식에 따라 프리픽스가 달라질 수 있으니
-`/mcp` 로 실제 이름을 확인하고 쓴다.
+Map the CDP calls above like this. Tool names may carry different prefixes
+depending on how they're loaded, so confirm the actual names with `/mcp` first.
 
-| ego 레인 | Chrome 레인 |
+| ego lane | Chrome lane |
 |---|---|
 | `cdp('Page.navigate',{url})` | `navigate` |
-| `cdp('Runtime.evaluate',{expression,returnByValue:true})` | `javascript_tool` — DOM 읽기·값 입력 둘 다 |
-| `cdp('Input.dispatchMouseEvent', …)` 신뢰 클릭 | `computer` |
-| `cdp('Target.getTargets',{})` → `switchTab(targetId)` | 탭 도구 — `tabs_context_mcp` 로 목록을 받아 전환 |
-| `useOrCreateTaskSpace` 격리 | 없다 — 작업 중 사용자 브라우저를 점유한다 |
-| `handOffTaskSpace`/`takeOverTaskSpace` | 필요 없다 — 화면이 곧 사용자 것이라 완료 확인만 한다 |
+| `cdp('Runtime.evaluate',{expression,returnByValue:true})` | `javascript_tool` — both DOM reads and value entry |
+| `cdp('Input.dispatchMouseEvent', …)` trusted click | `computer` |
+| `cdp('Target.getTargets',{})` → `switchTab(targetId)` | tab tools — get the list with `tabs_context_mcp` and switch |
+| `useOrCreateTaskSpace` isolation | none — occupies the user's browser while working |
+| `handOffTaskSpace`/`takeOverTaskSpace` | not needed — the screen is already the user's, so just confirm completion |
 
-세션 시작에 `tabs_context_mcp` 로 현재 탭을 먼저 확인하고, 작업은 새 탭에서 한다.
-사용자가 열어 둔 탭을 가져다 쓰지 않는다.
+At session start, check the current tabs first with `tabs_context_mcp`, and work
+in a new tab. Don't take over tabs the user left open.
 
-**이 레인은 Meta 사이트 실측 전이다.** 어디서 행에 걸리고 어느 좌표가 컨테이너로
-잡히는지는 ego 레인에서 부딪혀 알아낸 것이다. 첫 실행에서 그 지점들을 다시 확인하고
-이 문서에 적는다. 특히 `computer` 의 클릭이 React 의 신뢰 이벤트 검사를 통과하는지
-(테스터 초대 탭 전환·동의 화면 "허용")는 확인해 본 적이 없다 — 첫 실행에서 볼 지점이다.
+**This lane is untested on Meta sites.** Where things hang and which coordinates
+grab containers was learned by running into them on the ego lane. On the first
+run, re-verify those points and write them into this document. In particular,
+whether `computer`'s click passes React's trusted-event check (the tester-invite
+tab switch, the consent screen's "허용" (allow)) has never been tried — a point
+to watch on the first run.
 
-## 1단계 · 계정 개설
+## Step 1 · Account signup
 
-Threads 는 Instagram 계정으로 로그인한다.
+Threads logs in with an Instagram account.
 
-1. 같은 핸들의 IG 계정이 이미 있는가? 있으면 이 단계는 로그인만이다.
-   없으면 `/social-flow:setup-instagram <채널>` 을 먼저 끝내고 돌아온다.
-2. `Page.navigate` 로 `https://www.threads.net/login` → IG 아이디·비밀번호를
-   `Runtime.evaluate` 로 입력 필드에 채운다(비밀번호는 `<slug>/threads.credentials`
-   에서 읽는다).
-3. **로그인 버튼은 사용자에게 넘긴다** — 자동 클릭은 "연결할 수 없습니다"
-   소프트블록. `handOffTaskSpace` 후 사용자가 누른다.
-4. 로그인 후 프로필이 개설 대상 계정이 맞는지 화면으로 확인한다(절대 규칙 3).
-   공개 계정인지도 본다.
+1. Does an IG account with the same handle already exist? If so, this step is
+   just logging in. If not, finish `/social-flow:setup-instagram <channel>` first
+   and come back.
+2. `Page.navigate` to `https://www.threads.net/login` → fill the IG username and
+   password into the input fields with `Runtime.evaluate` (read the password
+   from `<slug>/threads.credentials`).
+3. **Hand the login button to the user** — an automated click hits the
+   "연결할 수 없습니다" (can't connect) soft-block. `handOffTaskSpace`, then the
+   user presses it.
+4. After login, confirm on screen that the profile is the account being set up
+   (absolute rule 3). Also check that the account is public.
 
-## 2단계 · 프로필 브랜딩
+## Step 2 · Profile branding
 
-프로필 이미지 자산은 `/social-flow:branding` 산출물을 쓴다(여기서 생성하지 않음).
+Profile image assets come from `/social-flow:branding` output (not generated
+here).
 
-- **프로필 사진**: IG 에서 설정한 프로필 사진이 Threads 로 자동 승계된다. IG 를
-  먼저 브랜딩했다면 Threads 는 승계만 확인하면 된다.
-- **bio**: profile.md 의 채널 카피로 채운다. **웹 저장이 2단계다** — "소개 수정"
-  다이얼로그 상단 완료 → 프로필 편집 하단 완료. 자동 클릭이 이 순서와 어긋나
-  저장이 안 되는 일이 잦으니, 마지막 완료는 사용자가 누르게 하거나 저장 후
-  새로고침해 bio 가 실제로 반영됐는지 확인한다.
-- **공개 설정**: 비공개면 도달이 막힌다 — 공개로 둔다.
+- **Profile photo**: the profile photo set on IG carries over to Threads
+  automatically. If you branded IG first, Threads only needs a carry-over check.
+- **bio**: fill with the channel copy from profile.md. **The web save is
+  two-step** — Done at the top of the "소개 수정" (edit bio) dialog → Done at
+  the bottom of profile edit. Automated clicks often fall out of that order and
+  the save silently fails, so either have the user press the final Done, or
+  refresh after saving and confirm the bio actually took.
+- **Visibility**: a private account blocks reach — keep it public.
 
-## 3단계 · Meta 앱 준비 (테스터 + 이용 사례 권한)
+## Step 3 · Meta app prep (tester + use-case permissions)
 
-앱은 `developers.facebook.com` 에서 다룬다. 이 계정을 테스터로 넣고 스코프를 켠다.
+The app lives at `developers.facebook.com`. Add this account as a tester and turn
+on the scopes.
 
-1. **앱 소유 계정 확인** — Meta 앱은 개설하려는 SNS 계정이 아니라 **FB 개발자
-   계정** 소유일 수 있다. 그 계정으로 콘솔에 로그인해야 앱이 보인다. 엉뚱한
-   계정이면 다른 앱만 보인다(오인 주의).
-2. **테스터 추가** — 앱 > 역할(또는 이용 사례 > Threads > 설정)에서 이 계정을
-   **Threads 테스터**로 추가한다. 역할 페이지의 "사람 추가" 다이얼로그는 라디오
-   (IG 테스터/Threads 테스터)가 상호배타 + 재렌더로 좌표가 어긋난다 → 라디오를
-   ref 로 잡아 클릭하고, 추가 버튼은 `aria-disabled` 가 아닌(활성) 상태를 확인해
-   DOM 클릭한다.
-3. **초대 수락** — 추가하면 계정 쪽에서 초대를 수락해야 "대기 중" 이 풀린다.
-   Threads 웹 설정 > 웹사이트 권한 > **초대 탭**에서 수락한다. 탭 전환은 **신뢰
-   입력**(Input.dispatchMouseEvent)이라야 먹는다.
-4. **이용 사례 권한 추가** — 콘솔 이용 사례 > Threads API 액세스 > 권한에서
-   `threads_content_publish` · `threads_manage_replies` · `threads_manage_insights`
-   를 "추가". 기본은 `threads_basic` 만 켜져 있다. **첫 "추가" 클릭이 "문제가
-   발생했습니다" 로 실패해도 30초 뒤 재시도하면 붙는다.**
-   `threads_keyword_search` 는 별도 "추가" 가 필요하고, 개발 모드에서는 **자기
-   계정 게시물만** 검색된다(공개 검색은 App Review 고급 액세스 필요 — 남의 글
-   0건은 정상).
+1. **Confirm the app-owning account** — the Meta app may be owned by a **FB
+   developer account**, not the SNS account being set up. You must log into the
+   console with that account for the app to appear. With the wrong account you'll
+   only see other apps (beware misreading).
+2. **Add the tester** — under App > Roles (or Use cases > Threads > Settings),
+   add this account as a **Threads tester**. The "사람 추가" (add people) dialog
+   on the roles page has mutually exclusive radios (IG tester / Threads tester)
+   plus re-renders that shift coordinates → grab the radio by ref and click it,
+   and click the add button via DOM after confirming it's active (not
+   `aria-disabled`).
+3. **Accept the invite** — after adding, the account side must accept the invite
+   before "대기 중" (pending) clears. Accept it in Threads web settings >
+   Website permissions > **Invites tab**. The tab switch only takes with
+   **trusted input** (Input.dispatchMouseEvent).
+4. **Add use-case permissions** — under console Use cases > Threads API access >
+   Permissions, "추가" (add)
+   `threads_content_publish` · `threads_manage_replies` · `threads_manage_insights`.
+   Only `threads_basic` is on by default. **Even if the first "추가" (add) click
+   fails with "문제가 발생했습니다" (something went wrong), retrying after 30
+   seconds makes it stick.**
+   `threads_keyword_search` needs its own "추가" (add), and in development mode
+   it only searches **your own account's posts** (public search needs App Review
+   advanced access — zero results for others' posts is normal).
 
-## 4단계 · OAuth authorize (code 회수)
+## Step 4 · OAuth authorize (code recovery)
 
-콘솔의 "사용자 토큰 생성기" 는 팝업이 콘솔로 되돌아올 뿐 토큰을 표시하지 않는다.
-쓰지 말고 **표준 OAuth authorize 를 task space 탭에서 직접** 연다.
+The console's "사용자 토큰 생성기" (user token generator) popup just bounces
+back to the console and never displays a token. Don't use it — open **standard
+OAuth authorize directly in a task space tab**.
 
-1. 앱 env 파일에서 App ID 를 읽어 authorize URL 을 만든다:
+1. Read the App ID from the app env file and build the authorize URL:
    ```
    https://threads.net/oauth/authorize?client_id=<THREADS_APP_ID>
      &redirect_uri=https://localhost/callback/
      &scope=threads_basic,threads_content_publish,threads_manage_replies,threads_manage_insights,threads_keyword_search
      &response_type=code
    ```
-   (scope 는 콤마 구분, 한 줄로.) `Page.navigate` 로 연다.
-2. 동의 화면에서 "<계정>으로 계속" 을 **신뢰 클릭**. 개별 체크박스는 없고 scope
-   파라미터로 전부 요청된다. **"액세스 권한 수정" 모달이 계속 계속 버튼을 덮는
-   함정** — `elementFromPoint` 로 확인하고 모달의 X 를 눌러 닫은 뒤 계속을 누른다.
-3. localhost 로 리다이렉트된다. 서버가 없어 chrome-error 가 뜨지만 **code 는 URL
-   에 있다** — `Target.getTargets` 또는 `Page.getNavigationHistory` 엔트리의
-   `localhost/callback?code=...` 에서 회수한다. `#_` 등 fragment 는 떼어 낸다.
-4. code 는 1회용·단명이다. 회수 즉시 §5 로 넘어간다.
+   (scope is comma-separated, on one line.) Open with `Page.navigate`.
+2. On the consent screen, **trusted-click** "<계정>으로 계속" (continue as
+   <account>). There are no individual checkboxes; everything is requested via
+   the scope parameter. **Trap: the "액세스 권한 수정" (edit access) modal keeps
+   covering the continue button** — confirm with `elementFromPoint`, close the
+   modal with its X, then press continue.
+3. It redirects to localhost. With no server, a chrome-error shows, but **the
+   code is in the URL** — recover it from `localhost/callback?code=...` via
+   `Target.getTargets` or a `Page.getNavigationHistory` entry. Strip fragments
+   like `#_`.
+4. The code is single-use and short-lived. Move to §5 the moment you recover it.
 
-## 5단계 · 토큰 교환 (브라우저 무관 — curl)
+## Step 5 · Token exchange (browser-independent — curl)
 
-이 절은 브라우저와 무관하다. **60일 갱신 때도 이 절만 다시 쓴다.** 앱 env 파일
-(App ID/Secret)을 source 하고 curl 로 단기 → 장기 교환한다.
+This section has nothing to do with the browser. **The 60-day refresh also
+reuses only this section.** Source the app env file (App ID/Secret) and exchange
+short-lived → long-lived with curl.
 
 ```bash
 source <SNS_TOKEN_DIR>/<slug>/meta-app.env   # THREADS_APP_ID, THREADS_APP_SECRET
-CODE='<4단계에서 회수한 code>'
+CODE='<code recovered in step 4>'
 DEST=<SNS_TOKEN_DIR>/<slug>/threads_token
 
 SHORT=$(curl -s -X POST https://graph.threads.net/oauth/access_token \
@@ -146,14 +170,16 @@ curl -s "https://graph.threads.net/access_token?grant_type=th_exchange_token&cli
 chmod 600 "$DEST"
 ```
 
-- **셸 예약변수 함정**: bash/zsh 에서 `UID` 는 읽기전용 예약변수다. 스크립트 변수로
-  쓰면 "failed to change user ID" 로 죽고, `set -e` 면 저장 전에 빠져나가 code 가
-  소진된다. 사용자 id 등을 담을 땐 `IGUSER`·`ACCT` 같은 다른 이름을 쓴다.
-- 토큰 값을 `echo` 하지 않는다 — 파일로 바로 리다이렉트한다.
+- **Shell reserved-variable trap**: in bash/zsh, `UID` is a read-only reserved
+  variable. Use it as a script variable and the script dies with "failed to
+  change user ID"; under `set -e` it bails before saving and the code is burned.
+  When holding a user id or similar, use a different name like `IGUSER` or `ACCT`.
+- Don't `echo` the token value — redirect it straight to the file.
 
-## 60일 갱신 (재발급 아님)
+## 60-day refresh (not reissuance)
 
-만료 전(발급 24시간 경과 후) 토큰만 갱신할 때는 §1~§4 를 건너뛰고 이것만:
+To refresh only the token before expiry (24+ hours after issuance), skip §1–§4
+and run just this:
 
 ```bash
 DEST=<SNS_TOKEN_DIR>/<slug>/threads_token
@@ -162,5 +188,5 @@ curl -s "https://graph.threads.net/refresh_access_token?grant_type=th_refresh_to
   && mv "$DEST.new" "$DEST" && chmod 600 "$DEST"
 ```
 
-갱신은 스코프를 늘리지 못한다 — 스코프를 추가하려면 §3~§5 로 재발급한다.
-60일을 넘겨 만료되면 갱신도 불가하니 §3 부터 다시 한다.
+A refresh can't grow scopes — to add scopes, reissue via §3–§5.
+Past 60 days the token expires and can't be refreshed either; start over from §3.

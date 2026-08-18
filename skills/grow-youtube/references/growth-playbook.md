@@ -1,164 +1,206 @@
-# YouTube 쇼츠 성장 플레이북 — grow-youtube 스킬 전술 정본
+# YouTube Shorts growth playbook — tactical source of truth for the grow-youtube skill
 
-2026-08 조사 기반. **근거 등급을 문장마다 밝힌다** — 이 분야는 공식 문서가 침묵하는
-자리에 크리에이터 통설이 들어차 있어서, 등급을 안 적으면 추측이 규칙으로 굳는다.
+Based on 2026-08 research. **Every sentence states its evidence grade** — where
+official docs go quiet, creator folklore moves in, and without grades, guesses
+harden into rules.
 
-- **[공식]** YouTube·Google 1차 문서로 확인
-- **[실측]** 대규모 크리에이터 연구 — 출처와 한계를 함께 적는다
-- **[미확인]** 확인 실패. 규칙으로 쓰지 않는다
+- **[official]** Confirmed in YouTube/Google first-party docs
+- **[measured]** Large-scale creator research — cited with its source and limits
+- **[unverified]** Verification failed. Not used as a rule
 
-플랫폼 공통 문체·게시 규칙은 `skills/platform-guide/references/platform-playbook.md`
-가 정본이고, 이 문서는 **성장 루프 전용 전술**만 담는다. 사람이 읽는 해설판은
-`docs/guides/youtube-shorts-growth/index.html` 이다.
+Platform-wide style and publishing rules live in
+`skills/platform-guide/references/platform-playbook.md`; this document carries
+**growth-loop tactics only**. The companion guide for human readers is
+`docs/guides/youtube-shorts-growth/index.html`.
 
-## 원리 — 무엇이 도달을 만드는가
+## Principle — what creates reach
 
-**[공식]** 쇼츠 성과의 1차 지표는 Studio 의 "How many chose to view"(본 비율 대
-스와이프 이탈 비율)다. YouTube 가 2026-06 쇼츠 싫어요 지표를 없애며 대체 지표로
-직접 지목했다. 리텐션 곡선이 아니라 **첫 순간에 보기를 택한 비율**이라, 훅 신호로
-읽어야 한다.
+**[official]** The primary Shorts performance metric is Studio's "How many
+chose to view" (the viewed rate versus the swipe-away rate). YouTube named it
+directly as the replacement when it removed the Shorts dislike metric in
+2026-06. It's not a retention curve but **the share who chose to watch in the
+first moment**, so read it as a hook signal.
 
-**[공식]** 그런데 이 지표는 Analytics API 에 없다 — 루프는 `youtube_insights` 의
-`averageViewPercentage` 로 대신 판정하고, 스와이프 지표가 필요하면 Studio 에서
-사람이 확인한다.
+**[official]** But that metric isn't in the Analytics API — the loop judges
+with `averageViewPercentage` from `youtube_insights` instead, and when the
+swipe metric is needed, a human checks Studio.
 
-**[공식]** 업로드 빈도는 랭킹 요건이 아니다. 쇼츠는 영상 하나하나가 각자 평가된다 —
-Threads 와 정반대다. Threads 는 게시 리듬과 초기 60~90분 대응이 도달을 좌우하지만,
-쇼츠에서 "매일 올려야 알고리즘이 밀어준다"는 공식 근거가 없다. 슬롯을 고정하는
-이유는 알고리즘이 아니라 제작 리듬과 시청자 습관이다.
+**[official]** Upload frequency is not a ranking requirement. Each Short is
+evaluated on its own — the exact opposite of Threads. On Threads, posting
+rhythm and the first 60–90 minutes decide reach, but on Shorts there's no
+official basis for "upload daily and the algorithm boosts you". Slots are
+fixed for production rhythm and viewer habit, not for the algorithm.
 
-## 훅과 길이
+## Hook and length
 
-**[실측]** Paddy Galloway 의 2023-04 연구(33채널·5,400 쇼츠·33억 조회)가 이 분야
-사실상 유일한 대규모 1차 데이터다. 여기서 나온 수치:
+**[measured]** Paddy Galloway's 2023-04 study (33 channels · 5,400 Shorts ·
+3.3B views) is effectively the only large-scale primary dataset in this field.
+Its numbers:
 
-- 본 비율 60% 미만은 거의 성과가 없었고, 잘 나간 쇼츠는 70~90% 구간에 몰렸다.
-- 40초 이상 영상이 평균적으로 더 잘 나왔고, 평균 시청 지속 50초 초과 쇼츠는
-  평균 410만 조회를 기록했다.
-- 저자 결론: **길이가 아니라 붙잡는 시간이 변수**이고 모든 길이대에 아웃라이어가 있었다.
+- Below a 60% viewed rate almost nothing performed, and Shorts that did well
+  clustered in the 70–90% band.
+- Videos over 40 seconds did better on average, and Shorts with average watch
+  duration past 50 seconds averaged 4.1M views.
+- The author's conclusion: **the variable is held attention, not length**, and
+  every length band had outliers.
 
-**한계를 반드시 함께 기억한다**: 2023년 4월 자료이고 당시 쇼츠 상한은 60초였다 —
-3분 시대에 대해서는 이 데이터가 아무 말도 하지 않는다. 방법론은 비공개이고 통계
-검정이 없다(산점도를 눈으로 읽은 값이다). 영상당 평균 61만 조회라 대형 채널
-표본이며, 컨설팅 회사의 리드 제너레이션 콘텐츠다. **공식 벤치마크가 아니므로
-"60% 넘겨야 한다"를 규칙으로 쓰지 않는다** — 관찰 범위로만 쓴다.
+**Always keep the limits alongside the numbers**: it's April 2023 data, when
+the Shorts cap was 60 seconds — this data says nothing about the 3-minute era.
+The methodology is closed and there's no statistical testing (values read off
+a scatter plot by eye). At an average 610K views per video it's a big-channel
+sample, and it's lead-generation content from a consulting firm. **It's no
+official benchmark, so "you must clear 60%" is not used as a rule** — only as
+an observed range.
 
-**[실측]** "첫 1초를 강하게, 인트로를 썸네일처럼"은 같은 글의 처방이다. 측정
-결과가 아니라 저자 권고라는 점을 구분한다.
+**[measured]** "Make the first second strong, treat the intro like a
+thumbnail" is a prescription from the same article. Keep the distinction:
+author advice, not a measured result.
 
-**[공식]** 길이의 공식 정답은 없다. YouTube 문서는 상한 3분만 정하고(2024-10-15
-이후 업로드분) 그 안에서 몇 초가 좋은지 권고하지 않는다 — 제작 팁 문서 7곳을
-훑어도 길이 권고가 없다. 실무 제약 하나: 음원을 쓰면 대부분 90초까지, 일부
-트랙은 60초·30초로 내려간다. 1분 넘는 쇼츠에 저작권 클레임이 걸리면 전 세계
-차단이다.
+**[official]** There is no official answer on length. YouTube's docs set only
+the 3-minute cap (uploads after 2024-10-15) and recommend no duration inside
+it — a sweep of seven production-tip docs found no length advice. One
+practical constraint: with licensed music, most tracks cap at 90 seconds and
+some drop to 60 or 30. A copyright claim on a Short over one minute means a
+worldwide block.
 
-## AI 고지 — 이 파이프라인의 핵심 규칙
+## AI disclosure — this pipeline's core rule
 
-**[공식]** social-flow 는 영상(Veo)·음악(Lyria)·음성(TTS)을 전부 생성하므로 고지
-대상이다. YouTube 가 명시한 고지 대상에 **"AI generated music"** 과 실제 장소·인물의
-사실적 생성 영상이 그대로 들어 있다.
+**[official]** social-flow generates the video (Veo), music (Lyria), and voice
+(TTS), so it's in disclosure scope. YouTube's stated disclosure targets
+literally include **"AI generated music"** and realistic generated footage of
+real places and people.
 
-**[공식] 면제 목록** — 이것만으로 이뤄진 영상은 고지 대상이 아니다: 대본·제목·
-썸네일·개요 생성, 자막 생성, 아이디어 생성, **자기 목소리 복제**, 사실적이지 않은
-콘텐츠(유니콘·판타지·애니메이션), 색보정·뷰티·특수효과 필터, 화질 개선·업스케일.
+**[official] Exemption list** — a video made only of these is not a disclosure
+target: script/title/thumbnail/outline generation, caption generation, idea
+generation, **cloning your own voice**, unrealistic content (unicorns,
+fantasy, animation), color grading/beauty/effects filters, quality enhancement
+and upscaling.
 
-**[공식]** 고지해도 손해가 없다: *"Disclosing AI content won't limit a video's
-audience or impact its eligibility to earn money."* 반대로 상습 미고지에는 라벨
-강제 부착·콘텐츠 삭제·YPP 정지를 예고한다. **비대칭이 명확하므로 애매하면 켠다** —
-`youtube_publish` 의 `containsSyntheticMedia` 기본값이 true 인 이유다.
+**[official]** Disclosing costs nothing: *"Disclosing AI content won't limit a
+video's audience or impact its eligibility to earn money."* Habitual
+non-disclosure, on the other hand, draws forced labels, content removal, and
+YPP suspension. **The asymmetry is clear, so when in doubt, disclose** —
+that's why `youtube_publish` defaults `containsSyntheticMedia` to true.
 
-라벨 위치: 사실적 AI 콘텐츠는 플레이어에, 비사실적·애니메이션은 확장된 설명란에 붙는다.
+Label placement: realistic AI content gets it on the player; unrealistic and
+animated content gets it in the expanded description.
 
-## 대량 반복 생산 — 이 파이프라인의 두 번째 위험 (2026-08-15 조사)
+## Mass repetitive production — this pipeline's second risk (researched 2026-08-15)
 
-**[공식]** 스팸 정책이 금지하는 것 중에 이 파이프라인이 정면으로 해당하는 조항이
-있다. 제작 도구로 반복 콘텐츠를 쏟아부어 플랫폼을 도배하는 것 — 정책이 예로 든 형태가
-**전 영상에 같은 배경음악과 반복되는 AI 이미지를 쓰고 AI 가 쓴 대본을 읽어 주는
-채널**이다. social-flow 는 음악(Lyria)·이미지·나레이션(TTS)을 전부 생성하므로
-템플릿을 그대로 돌리면 이 문장 안이다. 제재는 콘텐츠 삭제·경고·스트라이크이고
-90일에 3개면 채널 종료다.
+**[official]** Among what the spam policy bans, one clause hits this pipeline
+head-on: flooding the platform with repetitive content churned out by
+production tools. The policy's own example is **a channel using the same
+background music and repeating AI imagery in every video while an AI-written
+script is read aloud**. social-flow generates the music (Lyria), imagery, and
+narration (TTS), so running the template unchanged lands inside that sentence.
+Sanctions are content removal, warnings, and strikes — three strikes in 90
+days ends the channel.
 
-**방아쇠는 빈도가 아니라 반복이다.** 어느 플랫폼도 "하루 N개 넘으면"이라고 쓰지
-않았고 전부 "같은 것을 반복해서"라고 썼다. 하루 다섯 개를 다 다르게 만들면 걸릴
-조항이 없고, 하루 한 개라도 30일 내내 배경음악·구도·나레이션이 똑같으면 해당한다.
-그래서 대응은 게시를 줄이는 게 아니라 **편차를 만드는 것**이다 — 회차마다 BGM·
-커버 구도·오프닝 중 최소 하나는 바꾸고, 대기열을 소진하느라 같은 틀을 연속으로
-내보내지 않는다.
+**The trigger is repetition, not frequency.** No platform wrote "more than N
+per day"; they all wrote "the same thing, repeatedly". Five a day, each made
+differently, matches no clause; one a day for 30 straight days with identical
+BGM, framing, and narration does. So the response isn't publishing less — it's
+**creating variance**: change at least one of BGM, cover framing, or opening
+every episode, and don't push the same mold out back-to-back just to drain
+the queue.
 
-**[공식]** 일일 업로드 한도도 있지만 별개다. 숫자는 공개되지 않고 국가·채널 이력에
-따라 다르며, 커뮤니티 가이드라인 경고를 받으면 줄어든다. 초과해도 제재가 아니라
-업로드 에러이고 24시간 뒤 풀린다.
+**[official]** There's also a daily upload limit, but it's separate. The
+number isn't public, varies by country and channel history, and shrinks after
+a Community Guidelines warning. Exceeding it isn't a sanction — it's an upload
+error that clears after 24 hours.
 
-## 퍼널 — 쇼츠에서 어디로 보낼 것인가
+## Funnel — where to send Shorts viewers
 
-**[공식]** 쇼츠의 설명란과 댓글에 넣은 URL 은 **클릭되지 않는다**(스팸 방지).
-평문으로 붙일 수는 있지만 링크로 동작하지 않는다. 외부 전환을 노리려면 채널
-프로필 링크를 쓴다.
+**[official]** URLs in a Short's description and comments **don't click**
+(spam prevention). You can paste them as plain text but they won't act as
+links. For external conversion, use the channel profile link.
 
-**[공식]** 롱폼으로 보내는 공식 도구는 **Related video** 다. 쇼츠 하나에 같은 채널의
-다른 영상 링크를 붙이는 기능이고, 설정 경로는 Studio > 콘텐츠 > 해당 쇼츠 >
-Related video > 대상 선택 > 저장이다. 업로드 후 **영상 단위로만** 설정할 수 있고
-업로드 플로우나 채널 기본값으로는 지정할 수 없다. Data API 에 대응 필드가 없어
-`youtube_publish` 로는 못 건드린다 — 그래서 루프는 리마인드만 한다.
+**[official]** The official tool for routing to long-form is **Related
+video** — attaching a link to another video on the same channel to one Short.
+The path is Studio > Content > that Short > Related video > pick target >
+Save. It can only be set **per video, after upload** — not in the upload flow
+and not as a channel default. The Data API has no matching field, so
+`youtube_publish` can't touch it — which is why the loop only reminds.
 
-전화번호 인증 이상이 필요하고, 대상 영상은 공개 또는 미등록이어야 한다.
+It needs phone verification or higher, and the target video must be public or
+unlisted.
 
-**[공식]** YouTube 는 "링크만 걸어두면 안 되고 말로 CTA 를 하고, 링크 위치를
-가리키고, 목적지 썸네일을 띄우라"고 권고한다. 다만 **효과 수치는 어디에도 없다** —
-공식 블로그·Creator Insider·헬프센터 전부 CTR·전환율이 0건이다(기계 스캔 확인).
-효과를 알려면 설정한 쇼츠와 안 한 쇼츠를 나눠 Studio 에서 직접 재는 수밖에 없다.
+**[official]** YouTube's advice: don't just place the link — say the CTA out
+loud, point at where the link sits, and show the destination's thumbnail. But
+**there are no effect numbers anywhere** — official blog, Creator Insider,
+Help Center: zero CTR or conversion figures (machine-scanned). To learn the
+effect you'd have to split Shorts with and without it and measure in Studio
+yourself.
 
-## §답글 (인박스 대응)
+## §Replies (inbox handling)
 
-- 1~3문장, 플랜 톤. 정보·공감을 하나 더하고 **상대가 또 답할 틈**을 준다.
-- "감사합니다 😊" 류 영혼 없는 답글은 신호 가치가 없다 — 짧아도 내용을 담는다.
-- 논쟁 유도·시비조에는 사실 하나로 짧게 답하거나 답하지 않는다.
-- YouTube 답글은 최상위 댓글 스레드에 붙는다 — 대댓글 하나에만 대꾸하는 게 아니라
-  그 대화 전체가 읽는다는 걸 염두에 둔다.
+- 1–3 sentences, plan tone. Add one piece of information or empathy and
+  **leave the other person room to answer again**.
+- Soulless "감사합니다 😊" ("thank you 😊") replies carry no signal value —
+  keep content in it, however short.
+- To argument bait and provocation, answer briefly with one fact, or not
+  at all.
+- A YouTube reply lands on the top-level comment thread — you're not answering
+  one nested comment; the whole conversation reads it. Keep that in mind.
 
-## 관찰 지표 (주간 4개)
+## Observed metrics (weekly 4)
 
-engagedViews(초반을 넘겨 본 조회) · averageViewPercentage · 구독 증감 ·
-영상당 조회 분포. 좋아요는 후행 지표라 판단을 바꾸지 않는다. 도달 상위 영상에서
-소재·길이·형식을 읽어 다음 기획에 넘긴다 — 이 학습이 없으면 루프는 같은 영상만
-복제한다. 조회만 낮고 초반 통과·유지가 이번 N편 중앙 이상이면 그 편을 "잘 만든
-형식"으로 복사하지 않는다. 팬이 눌러 지표가 살아 있고 처음 보는 사람은 안 들어온
-읽기다. 다음 편은 제목·커버를 방법·도구가 아니라 그 사람이 이미 느끼는 문제로
-연다. `content_feedback` 이 이 조합을 각도 레버로 단다.
+engagedViews (views that got past the opening) · averageViewPercentage ·
+subscriber delta · per-video view distribution. Likes are a lagging indicator
+and don't change decisions. Read the subject, length, and format of the
+top-reach videos into the next plan — without this learning, the loop just
+clones the same video. If only views are low while early pass-through and
+retention sit at or above the median of the recent N episodes, don't copy that
+episode as a "well-made format". That's the read of fans clicking while
+first-time viewers never came in. Open the next episode's title and cover with
+the problem that person already feels, not the method or tool.
+`content_feedback` exposes this combination as the angle lever.
 
-**[공식]** `views` 는 품질 신호가 아니다 — YouTube 가 조회 정의를 바꿔서 이제
-**최소 시청 시간 요건 없이 재생이 시작되거나 반복된 횟수**를 센다(2026-08-15 확인).
-스와이프로 스쳐 지나간 재생도 조회로 잡히므로, 조회가 늘었다는 사실만으로 영상이
-좋았다고 읽으면 안 된다. 위 네 지표 중 engagedViews·averageViewPercentage 가
-판단축인 이유가 이걸로 더 분명해졌다.
+**[official]** `views` is not a quality signal — YouTube changed the view
+definition, and it now counts **plays started or replayed with no minimum
+watch-time requirement** (confirmed 2026-08-15). A play swiped past still
+counts as a view, so "views went up" alone doesn't mean the video was good.
+This makes it even clearer why engagedViews and averageViewPercentage are the
+judgment axes among the four.
 
-Analytics 는 2~3일 지연된다. 어제 값이 비어 있는 것은 장애가 아니고, 증감은 7일
-구간끼리 비교한다.
+Analytics lags 2–3 days. An empty yesterday is not an outage; compare 7-day
+windows against each other.
 
-## 인용 금지 — 검증에서 기각된 통설
+## Do not cite — folklore rejected in verification
 
-적대적 검증에서 죽은 주장들이다. 플랜·보고·기획 어디에도 쓰지 않는다.
+Claims that died in adversarial verification. Not used in plans, reports, or
+planning — anywhere.
 
-- **쇼츠의 구독 전환 수치 — 양쪽 다.** "1만 조회당 16.9명"(0-3)과 그 반대편인
-  "롱폼이 쇼츠보다 구독 전환이 높다"(1-2)가 **둘 다** 탈락했다. 즉 "쇼츠는 구독자
-  치트키다"도 "아니다"도 근거가 없다 — 어느 방향으로도 말하지 않는다.
-- **"쇼츠 RPM 은 롱폼의 3~14%"** — 니치별 비율 주장은 0-3 으로 기각됐다.
-- **"워터마크가 붙으면 강등된다(공식 정책)"** — 인스타그램 문서에 "no visible
-  watermarks" 문구는 실재하지만 틱톡이나 타 앱 재활용을 명시하지 않는다. 인스타
-  중복 규칙도 **인스타그램 안의 동일 복제본**을 겨냥한 것이라, 크로스 플랫폼
-  페널티의 근거로 쓸 수 없다.
-- **"신규 채널은 Related video 를 못 쓴다"** — 문서끼리 엇갈려 단정 불가로 기각.
+- **Shorts subscription-conversion numbers — both directions.** "16.9
+  subscribers per 10K views" (0-3) and its opposite, "long-form converts
+  subscribers better than Shorts" (1-2), **both** failed. So there's no basis
+  for "Shorts are a subscriber cheat code" nor for its denial — say nothing in
+  either direction.
+- **"Shorts RPM is 3–14% of long-form"** — the per-niche ratio claim was
+  rejected 0-3.
+- **"A watermark gets you demoted (official policy)"** — the phrase "no
+  visible watermarks" does exist in Instagram's docs, but they name neither
+  TikTok nor other-app reuse. Instagram's duplicate rule also targets
+  **identical copies within Instagram**, so it can't serve as evidence of a
+  cross-platform penalty.
+- **"New channels can't use Related video"** — the docs contradict each other;
+  rejected as undecidable.
 
-## 확인 실패 — 모른다고 말해야 하는 것
+## Verification failures — what we have to admit we don't know
 
-- **한국 시장 수치 전부.** 확인된 쇼츠 RPM 표(미국 $0.328 등)에 한국이 아예 없다.
-  한국 채널 RPM·언어 선택 효과·국내 유튜버 소득 분포 원자료 모두 확인 실패다.
-  영어권 수치를 한국에 그대로 옮기지 않는다.
-- **3분 시대의 최적 길이.** 유일한 대규모 데이터가 60초 상한 시절 것이다.
-- **훅 제작 규범의 1차 근거.** 2026-08-15 에 쇼츠 공식 문서 여러 곳(Shorts tips ·
-  Get started creating Shorts · 편집 팁)을 다시 훑었는데 훅·길이 권고가 없었다.
-  "첫 1~2초를 붙잡으라"는 문구는 실재하지만 **Google Ads 광고 문서** 것이라 일반
-  쇼츠 제작 규범으로 인용하면 출처를 갈아 끼우는 셈이다. 인스타 쪽도 같은 결론이라
-  (grow-instagram §확인 실패) 이 빈칸은 두 플랫폼 공통이다.
-- **Related video 의 효과 크기.** 채널 자체 A/B 로만 알 수 있다.
-- **다국어 오디오 트랙의 쇼츠 적용 여부.**
+- **Every Korean-market number.** The verified Shorts RPM table (US $0.328,
+  etc.) has no Korea row at all. Korean channel RPM, language-choice effects,
+  raw data on domestic YouTuber income distribution — all failed verification.
+  Don't transplant English-market numbers onto Korea.
+- **Optimal length in the 3-minute era.** The only large dataset is from the
+  60-second-cap days.
+- **Primary evidence for hook-writing norms.** On 2026-08-15 we re-swept
+  several official Shorts docs (Shorts tips · Get started creating Shorts ·
+  editing tips) — no hook or length advice. The line "grab the first 1–2
+  seconds" does exist, but it comes from a **Google Ads advertising doc** —
+  citing it as a general Shorts production norm swaps out the source. The
+  Instagram side reached the same conclusion (grow-instagram §Verification
+  failures), so this blank is shared by both platforms.
+- **The effect size of Related video.** Only knowable from the channel's own
+  A/B.
+- **Whether multi-language audio tracks apply to Shorts.**

@@ -1,83 +1,91 @@
 /**
- * Supertonic 3 온디바이스 TTS 클라이언트 — 로컬 Python 런타임 서브프로세스 호출.
+ * Supertonic 3 on-device TTS client — invokes a local Python runtime as a subprocess.
  *
- * Gemini TTS(tts-client.ts)와 나란히 두는 **두 번째 음성 경로**다. 네트워크·API 키·
- * 쿼터가 전부 빠지는 대신 로컬에 Python 런타임과 385MB 가중치가 있어야 한다.
+ * The **second speech path**, sitting alongside Gemini TTS (tts-client.ts). Network,
+ * API key, and quota all drop out; in exchange, a local Python runtime and 385MB of
+ * weights are required.
  *
- * 두 경로의 분담(2026-08-11 실측 조사 기준 — docs/research/2026-08-11-local-tts-and-commercial-api):
- *   - 나레이션 본문   → 이쪽. CPU 만으로 실시간 6.3배, 회차당 비용 0
- *   - 감정이 실린 연기 → tts_generate(Gemini). stylePrompt 로 연기 지시가 되는 건 그쪽뿐이다
+ * Division of labor between the two paths (per the 2026-08-11 field study —
+ * docs/research/2026-08-11-local-tts-and-commercial-api):
+ *   - Narration body        → this one. 6.3x real-time on CPU alone, zero cost per episode
+ *   - Emotionally acted read → tts_generate (Gemini). Only that side takes acting direction via stylePrompt
  *
- * ## 왜 서브프로세스인가
+ * ## Why a subprocess
  *
- * Supertonic 은 ONNX Runtime 기반 Python 패키지이고 Node 바인딩이 없다. 실측한
- * 고정 오버헤드는 인터프리터 기동 ~1.8초 + import 0.12초 + 모델 로딩 0.52초로,
- * 호출마다 새 프로세스를 띄워도 씬 하나당 2~3초 수준이다. 모델을 상주시키는
- * 워커·HTTP 서버는 이 오버헤드를 1회로 줄이지만 수명 관리와 포트 경쟁(이 저장소는
- * 다중 세션 동시 작업이 전제다)을 떠안는다 — 필요가 실측으로 입증되기 전에는
- * 상태 없는 서브프로세스가 맞다.
+ * Supertonic is an ONNX Runtime-based Python package with no Node bindings. The
+ * measured fixed overhead is ~1.8s interpreter startup + 0.12s import + 0.52s
+ * model load, so spawning a fresh process per call still lands at 2~3s per scene.
+ * A resident worker or HTTP server would cut that overhead to once, but takes on
+ * lifecycle management and port contention (this repo assumes multiple concurrent
+ * sessions) — until the need is proven by measurement, a stateless subprocess is
+ * the right call.
  *
- * ## 왜 CLI 가 아니라 인라인 스니펫인가
+ * ## Why an inline snippet instead of the CLI
  *
- * `supertonic tts` CLI 로도 같은 합성이 되지만, CLI 는 사람이 읽는 진행 메시지를
- * stdout 에 찍고 **오디오 길이를 돌려주지 않는다**. produce 파이프라인은 씬마다
- * 길이 검사를 하므로 그러면 ffprobe 를 한 번 더 돌려야 한다. 스니펫으로 부르면
- * 합성 결과가 JSON 한 줄로 나와 파싱도 견고하고 길이도 공짜로 얻는다.
+ * The `supertonic tts` CLI does the same synthesis, but it prints human-oriented
+ * progress messages to stdout and **doesn't return the audio duration**. The
+ * produce pipeline checks duration per scene, so that would mean an extra ffprobe
+ * run. Calling via the snippet yields the synthesis result as a single JSON line —
+ * parsing is sturdy and the duration comes for free.
  *
- * 스니펫을 별도 .py 파일로 두지 않는 것도 의도적이다 — package.json 의
- * `files: ["dist"]` 때문에 느슨한 파일은 npm 배포본에 실리지 않아, 로컬에서만
- * 되고 설치본에서 깨지는 구성이 된다.
+ * Not keeping the snippet in a separate .py file is also deliberate — because of
+ * `files: ["dist"]` in package.json, loose files don't ship in the npm package,
+ * producing a setup that works locally and breaks in the installed copy.
  */
 import { execFile } from 'node:child_process';
 import { z } from 'zod';
 import { supertonicPython } from './config.js';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
 /**
- * 내장 보이스 10종.
+ * The 10 built-in voices.
  *
- * Gemini 쪽 TTS_VOICES 와 달리 **성격 라벨을 붙이지 않는다** — 공급사가 공개한
- * 특성 표가 없어서 "차분함"·"밝음" 같은 설명은 지어낸 값이 된다. 이름이 성별과
- * 번호만 뜻한다는 사실을 그대로 노출하는 편이 정직하고, 채널 프로파일이
- * 배정해 두면 어차피 고르는 일 자체가 없다.
+ * Unlike TTS_VOICES on the Gemini side, **no character labels are attached** — the
+ * vendor published no trait table, so descriptions like "calm" or "bright" would
+ * be made up. Exposing the fact that the names mean only gender and a number is
+ * the honest move, and once the channel profile assigns one there's no picking
+ * to do anyway.
  */
 export const SUPERTONIC_VOICE_NAMES = ['F1', 'F2', 'F3', 'F4', 'F5', 'M1', 'M2', 'M3', 'M4', 'M5'];
-/** upstream CLI 기본값과 일치시킨다 — 같은 인자로 부른 결과가 서로 다르면 놀란다. */
+/** Matches the upstream CLI default — the same arguments producing different results would surprise. */
 export const DEFAULT_SUPERTONIC_VOICE = 'M1';
 /**
- * supertonic-3 지원 언어 31종 + 언어 비지정 폴백 `na`.
+ * The 31 languages supported by supertonic-3, plus the no-language fallback `na`.
  *
- * upstream 기본값은 `na` 지만 이 서버는 **`ko` 를 기본으로 둔다.** 한국어 채널
- * 파이프라인이 주 용도이고, `ko` 를 명시해야 한국어용 짧은 청크 길이(120자)가
- * 적용되기 때문이다 — `na` 로 두면 300자 청크가 걸려 문장이 뭉개진다.
+ * The upstream default is `na`, but this server **defaults to `ko`.** The Korean
+ * channel pipeline is the main use, and `ko` must be explicit for the shorter
+ * Korean chunk length (120 chars) to apply — leaving it at `na` gets the 300-char
+ * chunking, which mangles sentences.
  */
 export const SUPERTONIC_LANGUAGES = [
     'ko', 'en', 'ja', 'ar', 'bg', 'cs', 'da', 'de', 'el', 'es', 'et', 'fi', 'fr', 'hi', 'hr', 'hu',
     'id', 'it', 'lt', 'lv', 'nl', 'pl', 'pt', 'ro', 'ru', 'sk', 'sl', 'sv', 'tr', 'uk', 'vi', 'na',
 ];
 export const DEFAULT_SUPERTONIC_LANGUAGE = 'ko';
-/** upstream 기본값 (config.py) — 여기서 바꾸면 CLI 로 뽑은 음성과 톤이 달라진다. */
+/** Upstream defaults (config.py) — changing them here makes the tone diverge from CLI-produced audio. */
 export const DEFAULT_SUPERTONIC_SPEED = 1.05;
 export const DEFAULT_SUPERTONIC_STEPS = 8;
-/** 고정 출력 규격 — Gemini TTS 는 24kHz 라 한 영상 안에서 섞으면 이어붙이기가 깨진다. */
+/** Fixed output spec — Gemini TTS is 24kHz, so mixing the two in one video breaks concatenation. */
 export const SUPERTONIC_SAMPLE_RATE = 44_100;
 /**
- * 입력 상한.
+ * Input cap.
  *
- * 모델 자체는 10만 자까지 받고 내부적으로 청킹하지만, Gemini 쪽(16,000자)과 같은
- * 선을 쓴다 — 한 씬의 나레이션은 수백 자이고, 그보다 긴 입력은 대개 대본을
- * 씬으로 쪼개지 않은 실수다. 상한이 다르면 두 경로를 바꿔 낄 때 걸린다.
+ * The model itself takes up to 100k characters and chunks internally, but we use
+ * the same line as the Gemini side (16,000 chars) — one scene's narration is a few
+ * hundred characters, and anything longer is usually a script that wasn't split
+ * into scenes. Differing caps would bite when swapping one path for the other.
  */
 export const MAX_SUPERTONIC_INPUT_CHARS = 16_000;
 /**
- * 서브프로세스 타임아웃.
+ * Subprocess timeout.
  *
- * 실시간 6배가 실측치지만 머신 부하에 크게 흔들린다(load 21 에서 1.1배까지 떨어지는
- * 것을 확인했다). 기동 여유 60초에 문자당 60ms 를 더하고 15분에서 끊는다.
+ * 6x real-time is the measured figure, but it swings hard with machine load (we
+ * saw it drop to 1.1x at load 21). 60s of startup slack plus 60ms per character,
+ * cut off at 15 minutes.
  */
 function timeoutFor(textLength) {
     return Math.min(15 * 60_000, 60_000 + textLength * 60);
 }
-// ── 요청 스키마 ──────────────────────────────────────────────────
+// ── Request schema ───────────────────────────────────────────────
 export const supertonicGenerateSchema = z.object({
     text: z
         .string()
@@ -90,15 +98,17 @@ export const supertonicGenerateSchema = z.object({
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('audio').optional(),
 });
-// ── Python 스니펫 ────────────────────────────────────────────────
+// ── Python snippet ───────────────────────────────────────────────
 /**
- * 합성 스니펫.
+ * The synthesis snippet.
  *
- * 인자는 argv 로 넘긴다 — 텍스트를 코드에 문자열 보간하면 따옴표·개행·백슬래시가
- * 그대로 파이썬 소스가 되어 깨지거나, 최악의 경우 임의 코드가 된다.
+ * Arguments go through argv — interpolating the text into the code would let
+ * quotes, newlines, and backslashes become Python source verbatim, which breaks,
+ * or at worst becomes arbitrary code.
  *
- * `synthesize` 반환값은 `(wav, duration_array)` 인데 두 원소 모두 ndarray 라
- * 두 번째를 샘플레이트로 오독하기 쉽다. 샘플 수에서 직접 길이를 구해 그 여지를 없앤다.
+ * `synthesize` returns `(wav, duration_array)`, and since both elements are
+ * ndarrays it's easy to misread the second as a sample rate. We compute the
+ * duration directly from the sample count to remove that trap.
  */
 const SYNTH_SNIPPET = `
 import json, sys, time
@@ -128,18 +138,18 @@ try:
 except Exception as e:
     print(json.dumps({"ok": False, "kind": "synthesis", "error": f"{type(e).__name__}: {e}"}))
 `;
-/** 파이썬 실행 실패를 사용자가 고칠 수 있는 안내로 바꾼다. */
+/** Turn a Python execution failure into guidance the user can act on. */
 function installHint(detail) {
     return (`${detail}\n\n` +
-        `로컬 TTS 는 Python 런타임과 Supertonic 패키지를 요구한다:\n` +
+        `Local TTS requires a Python runtime and the Supertonic package:\n` +
         `  pip install supertonic\n` +
-        `가상환경에 설치했다면 그 인터프리터를 SUPERTONIC_PYTHON 으로 지정한다 ` +
-        `(예: SUPERTONIC_PYTHON=/path/to/.venv/bin/python).\n` +
-        `최초 1회 호출 시 가중치 385MB 를 ~/.cache/supertonic3 에 내려받는다(약 24초).\n` +
-        `설치 전까지는 tts_generate(Gemini TTS)를 쓸 것 — 그쪽은 API 키만 있으면 된다.`);
+        `If it's installed in a virtualenv, point SUPERTONIC_PYTHON at that interpreter ` +
+        `(e.g. SUPERTONIC_PYTHON=/path/to/.venv/bin/python).\n` +
+        `The first call downloads 385MB of weights to ~/.cache/supertonic3 (about 24s).\n` +
+        `Until it's installed, use tts_generate (Gemini TTS) — that one only needs an API key.`);
 }
-// ── 합성 ────────────────────────────────────────────────────────
-/** 단일 화자 로컬 합성 — 나레이션·보이스오버 */
+// ── Synthesis ────────────────────────────────────────────────────
+/** Single-speaker local synthesis — narration, voiceover */
 export async function generateLocalSpeech(request) {
     const python = supertonicPython();
     const outFile = resolveOutputFile(request.outputPath || process.cwd(), request.filename || `supertonic_${Date.now()}.wav`, 'audio');
@@ -157,8 +167,9 @@ export async function generateLocalSpeech(request) {
         stdout = await new Promise((resolve, reject) => {
             execFile(python, ['-c', SYNTH_SNIPPET, payload], { timeout: timeoutFor(request.text.length), maxBuffer: 1024 * 1024 }, (error, out, errOut) => {
                 if (error) {
-                    // ENOENT = 인터프리터 자체가 없음. 그 외는 파이썬이 죽은 것(스니펫이 예외를
-                    // 삼키므로 여기 오면 대개 타임아웃이거나 import 이전 단계의 실패다).
+                    // ENOENT = the interpreter itself is missing. Anything else means Python
+                    // died (the snippet swallows exceptions, so landing here usually means a
+                    // timeout or a failure before the import stage).
                     const code = error.code;
                     if (code === 'ENOENT') {
                         reject(new Error(installHint(`Python interpreter not found: "${python}"`)));
@@ -185,8 +196,8 @@ export async function generateLocalSpeech(request) {
     }
     if (!result.ok) {
         const detail = result.error || 'unknown error';
-        // 패키지 미설치만 설치 안내를 붙인다 — 합성 자체의 실패에 설치법을 덧대면
-        // 원인이 묻힌다.
+        // Only a missing package gets the install guidance — stacking install steps
+        // onto a synthesis failure buries the cause.
         return {
             success: false,
             error: result.kind === 'missing_package' ? installHint(detail) : detail,

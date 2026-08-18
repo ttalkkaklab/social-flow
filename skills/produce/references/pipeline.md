@@ -1,90 +1,93 @@
-# 영상 파이프라인 상세 — 계약·게이트·함정
+# Video pipeline details — contracts, gates, pitfalls
 
-build-reel.sh 중심의 합성 계약과 실측으로 검증된 함정 모음. fect-persona
-make-reels 파이프라인에서 승계했다 (동일 스크립트·동일 계약).
+The composition contract around build-reel.sh, plus pitfalls verified in real builds.
+Inherited from the fect-persona make-reels pipeline (same script, same contract).
 
-## 세이프존 (톨폰 실측 — 수치를 줄이지 말 것)
+## Safe zone (measured on tall phones — do not shrink these numbers)
 
 ```
-상단 190px   시스템 UI + IG/YT 좌상단 워드마크
-좌·우 176px  IG 액션바 회피 (중앙 정렬이므로 좌우 대칭)
-하단 570px   번인 자막 밴드(y 1380~1560) + IG 캡션 / YT 채널 오버레이(y≥1580)
-→ 텍스트 존 x 176~904 (폭 728) · y 190~1350. 배경 비주얼만 1080×1920 전체.
+top 190px        system UI + IG/YT top-left wordmark
+left/right 176px IG action-bar avoidance (symmetric, since text is center-aligned)
+bottom 570px     burned-in subtitle band (y 1380–1560) + IG caption / YT channel overlay (y≥1580)
+→ text zone x 176–904 (width 728) · y 190–1350. Only the background visual uses the full 1080×1920.
 ```
 
-- 좌우 176px 근거: 19.5:9 톨폰에서 IG 는 9:16 을 aspect-fill 로 좌우 96px 씩
-  잘라내고, 잘린 화면에서 액션바 아이콘은 영상 좌표 x≈890 부터 들어온다.
-  `reel-qa.html?fit=crop` 이 이 크롭을 재현한다.
-- 켄번즈 여유: 빌드가 3.5% 줌하므로 x=904 요소는 최종 917 까지 커진다.
-  히어로 스탯은 템플릿이 폭 640px 로 자동 축소한다.
+- Why 176px per side: on a 19.5:9 tall phone, IG aspect-fills the 9:16 video and crops
+  96px off each side, and in that cropped view the action-bar icons start at video
+  coordinate x≈890. `reel-qa.html?fit=crop` reproduces this crop.
+- Ken Burns margin: the build zooms 3.5%, so an element at x=904 grows to 917 in the
+  final frame. The template auto-shrinks the hero stat to a 640px width.
 
-## build-reel.sh 가 하는 일 (순서대로)
+## What build-reel.sh does (in order)
 
-무음 트림 → loudnorm -16 → 발화속도 실측·atempo 정규화(±5% 밖, 클램프 0.88~1.18)
-→ 문장 경계 검출(silencedetect — 실패 시 자수 비례 폴백) → 카드 길이 프레임 올림 +
-오디오 샘플 정확 패딩(**드리프트 0**) → reveal 전환 시각 산출(reveal-timing.py) →
-비주얼 체인(영상+알파 합성 → reveal xfade) → 켄번즈 zoompan(3.5%) → concat →
-BGM 사이드체인 덕킹 → 자막 파일 생성(`subs.srt` 게시용 · `subs.ass` 번인용) →
-아웃트로 xfade 0.6초 접합 → loudnorm -14 최종 인코딩(H.264 High 4.1, faststart)
-→ 커버 스틸 추출(`COVER_TS`).
+Silence trim → loudnorm -16 → measured speech rate + atempo normalization (outside ±5%, clamped 0.88–1.18)
+→ sentence-boundary detection (silencedetect — character-count proportional fallback on failure) → card
+duration rounded up to whole frames + sample-accurate audio padding (**zero drift**) → reveal transition
+timing (reveal-timing.py) → visual chain (video + alpha overlay composite → reveal xfade) → Ken Burns
+zoompan (3.5%) → concat → BGM sidechain ducking → subtitle files (`subs.srt` for publishing ·
+`subs.ass` for burn-in) → outro xfade 0.6s splice → loudnorm -14 final encode (H.264 High 4.1, faststart)
+→ cover still extraction (`COVER_TS`).
 
-**영상은 두 벌 나온다** — `reel.mp4`(자막 없는 클린 마스터)와 `reel-sub.mp4`(하단
-밴드 번인). 자막은 영상에 태우지 않고 파일로 따로 올리는 것이 원칙이라 클린본이
-기본이고, 번인본은 자막 파일을 못 받는 IG 릴스용이다. 번인본은 클린본을 다시
-인코딩하지 않고 **같은 원본에서 한 번 더** 뽑는다(둘 다 1세대). SRT 와 ASS 도
-자막 줄을 만드는 그 자리에서 동시에 찍는다 — 역변환하면 두 파일의 시각이 어긋난다.
-`BURN=0` 으로 번인본을 끌 수 있지만, IG 에 올릴 것이 있으면 자막이 사라진다.
+**The build produces two videos** — `reel.mp4` (clean master, no subtitles) and `reel-sub.mp4`
+(bottom-band burn-in). The rule is to upload subtitles as a separate file instead of burning them
+into the video, so the clean copy is the default; the burn-in copy is for IG Reels, which can't
+take a subtitle file. The burn-in copy is not a re-encode of the clean master — it's rendered
+**once more from the same source** (both are first-generation). SRT and ASS are both written at
+the very spot the subtitle lines are produced — converting one from the other lets their timings
+diverge.
 
-**동기화의 원천은 구조다** — 오디오는 카드당 1파일, 카드 길이는 프레임 올림 +
-샘플 정확 패딩으로 확정. reveal 은 순수 비디오 측 타이밍이라 경계 검출이 틀려도
-드리프트는 0. 반드시 build-reel.sh 경로로만 합성한다(-shortest 봉합은 105ms
-누적 실측).
+**Synchronization comes from structure** — audio is one file per card, and card length is fixed
+by frame rounding + sample-accurate padding. Reveals are pure video-side timing, so even a wrong
+boundary detection produces zero drift. Always composite through build-reel.sh (an -shortest mux
+was measured to accumulate 105ms).
 
-## reveal 타이밍 계약 (reveal-timing.py)
+## Reveal timing contract (reveal-timing.py)
 
-- **세그 경계 전환** = 검출된 쉼 **안에서** 페이드하고 다음 문장 시작 0.05s 전 완료.
-- **하위 reveal**(`A|B`, 발화되지 않는 불릿) = 창 안의 미검출 쉼(숨쉬기)에 스냅,
-  없으면 균등 분할.
-- 리포트가 전환마다 `쉼정렬/숨쉬기스냅/균등분할/리드폴백` 근거를 출력한다 —
-  **리드폴백이 보이면 대본 마침표를 정비**하라.
-- `COVER_TS`(커버 스틸 시각)는 리포트의 커버 전환 완료 시각 **이후**로 잡는다 —
-  히어로 수치까지 다 등장한 프레임이어야 훅이 전달된다.
+- **Segment-boundary transition** = fade **inside** the detected pause, completing 0.05s before
+  the next sentence starts.
+- **Sub-reveals** (`A|B`, bullets that aren't spoken) = snap to an undetected pause (a breath)
+  inside the window; if there is none, divide evenly.
+- The report prints a reason for every transition — pause-aligned / breath-snap / even-split /
+  lead-fallback. **If you see lead-fallback, fix the script's sentence periods.**
+- Set `COVER_TS` (the cover still timestamp) **after** the report's cover-transition completion
+  time — the hook only lands on a frame where the hero number has fully appeared.
 
-## 빌드 리포트 게이트 판정표 (build-report.txt)
+## Build report gate table (build-report.txt)
 
-| 리포트 항목 | 판정 |
+| Report line | Verdict |
 |---|---|
-| `drift` ≠ 0.0000s | **진행 금지** — 파이프라인 버그 |
-| `reveal 상태 누락: r<k>` | **진행 금지** — 누락 상태 캡처 + 해당 세그를 `A\|B` 로 분할 후 재빌드 |
-| `마지막 reveal 상태 미사용` | **진행 금지** — 마지막 불릿·출처가 영상에 안 나온다. `reveals.tsv 없음` 이 보이면 이 검사가 꺼진 것 (capture-reveals.sh 를 안 쓴 것) |
-| `⚠ REGEN 권고` (발화속도 [3.2,6.2] 이탈·끝잘림) | 해당 카드만 같은 레지스트리로 1회 재생성 → 재빌드. 반복 시 대본 축약 |
-| `경계 비례폴백` | 계속 가능 — 반복되면 대본 문장 경계(마침표) 정비 |
-| `세그먼트 창 0.9s 미만` | 짧은 문장을 이웃과 병합 |
-| `reveal 사이 여백 최소 <0.40s` | 불릿 축소 또는 문장 연장 |
-| `길이 > 13s` (카드) | 대본 축약 후 해당 카드 TTS 재생성. atempo 상한(1.18) 도달도 축약 신호 |
-| 총길이 | 35~75초 권장, 90초 상한 (본편+아웃트로−0.6초) |
+| `drift` ≠ 0.0000s | **Do not proceed** — pipeline bug |
+| `missing reveal state: r<k>` | **Do not proceed** — capture the missing state and split that segment into `A\|B` sub-reveals, then rebuild |
+| `last reveal state unused` | **Do not proceed** — the last bullet/source never appears in the video. If `no reveals.tsv` shows, this check is off (capture-reveals.sh wasn't used) |
+| `⚠ REGEN recommended` (speech rate outside [3.2,6.2] · clipped ending) | Regenerate only that card once with the same registry → rebuild. If it repeats, shorten the script |
+| `boundary proportional fallback` | OK to continue — if it recurs, fix the script's sentence boundaries (periods) |
+| `segment window under 0.9s` | Merge the short sentence with a neighbor |
+| `min gap between reveals <0.40s` | Trim bullets or lengthen the sentence |
+| `duration > 13s` (card) | Shorten the script and regenerate that card's TTS. Hitting the atempo ceiling (1.18) is also a shorten signal |
+| Total length | 35–75s recommended, 90s cap (main + outro − 0.6s) |
 
-## TTS 장애 3종과 대처 (Gemini TTS 실측)
+## Three TTS failure modes and responses (Gemini TTS, field-tested)
 
-1. **길이 퇴화** — 짧은 대본이 24s·61s·655s 로 나오고 발화 뒤가 전부 무음.
-   생성 직후 ffprobe 길이 검사(자수/4.5 의 2배 초과 → 재생성)를 건너뛰면 빌드가
-   통째로 망가진다.
-2. **`No content parts in response`** — 같은 파라미터로 재생성. **3~4회 연속**이면
-   그 대본은 flash 로는 안 나온다 — `model: "gemini-2.5-pro-preview-tts"` 로 바꾸면
-   한 번에 통과한다(목소리는 voiceName 그대로라 톤 편차 없음).
-3. **`INTERNAL 500`** — 같은 파라미터로 재생성.
+1. **Duration degeneration** — a short script comes out as 24s, 61s, 655s, all silence after the
+   speech. Skip the post-generation ffprobe length check (over 2× chars/4.5 → regenerate) and the
+   whole build breaks.
+2. **`No content parts in response`** — regenerate with the same parameters. **3–4 in a row**
+   means flash won't produce that script — switch to `model: "gemini-2.5-pro-preview-tts"` and it
+   passes in one try (voiceName is unchanged, so no tone shift).
+3. **`INTERNAL 500`** — regenerate with the same parameters.
 
-음성 일관성의 3축: ① stylePrompt/voiceName 고정 ② loudnorm 세그먼트 정규화
-③ atempo 발화속도 정규화. 출력이 raw PCM(24kHz/s16/mono)일 수 있다 — 빌드가
-RIFF 매직으로 자동 판별한다. temperature 0.4.
+The three axes of voice consistency: ① fixed stylePrompt/voiceName ② loudnorm per-segment
+normalization ③ atempo speech-rate normalization. Output may be raw PCM (24kHz/s16/mono) — the
+build auto-detects via the RIFF magic. temperature 0.4.
 
-## 팔린드롬 루프 (8초 클립 → 16초)
+## Palindrome loop (8s clip → 16s)
 
-> **영상 사운드를 쓰는 구간에는 쓰지 않는다.** 정+역 이어붙이기라 후반부에서 소리가
-> 거꾸로 재생된다. produce 절대 규칙 9(생성 영상 구간은 영상 사운드를 쓴다)가 적용되는
-> b-roll 은 **8초 생성본에서 사용 길이(broll 씬 duration, 기본 4초)만 잘라** 쓰고,
-> 길이가 모자라면 씬 구성을 줄인다 — 팔린드롬으로 늘리지 않는다.
-> 팔린드롬은 소리를 버리는 구간(발화 클립 위에 나레이션을 얹는 quote 씬 등)에서만 쓴다.
+> **Never use it in a segment that uses the video's own sound.** It's forward+reverse
+> concatenation, so audio plays backwards in the second half. For b-roll under produce absolute
+> rule 9 (generated-video segments use the clip's own sound), **cut only the used length (the
+> broll scene duration, default 4s) from the 8s generation**; if that's not enough, trim the
+> scene plan — don't stretch with a palindrome. Palindromes are only for segments that discard
+> the sound (e.g. quote scenes that lay narration over a speech clip).
 
 ```bash
 ffmpeg -y -i cover-motion.mp4 -filter_complex \
@@ -92,32 +95,37 @@ ffmpeg -y -i cover-motion.mp4 -filter_complex \
   -map "[v]" -c:v libx264 -preset medium -crf 18 speaker-palin.mp4
 ```
 
-## 실측 함정 모음
+## Field-tested pitfalls
 
-- **reveal 의 계약은 "레이아웃 불변"** — 템플릿은 미래 요소를 `opacity:0` 으로만
-  숨긴다. `display:none`/조건부 렌더로 바꾸면 상태 간 레이아웃이 이동해 xfade 가
-  전면 크로스페이드로 오염된다.
-- **상태 수를 문장 수에 묶지 마라** — 불릿 4개를 3문장으로 읽으면 마지막 전환이
-  불릿 2개+출처를 동시 투하한다. 묶음 세그는 `A|B` 하위 reveal 로 나눈다.
-  검증은 프레임 추출 후 밴드 계수 — 1→2→3→4 로 한 칸씩 늘어야 한다.
-- **경계 검출은 마침표가 만든다** — 쉼표 나열 장문은 무음이 안 생겨 비례 폴백행.
-- **`veo_img2video` 로 정사각 이미지를 9:16 으로 늘리면 레터박스가 베이크된다** —
-  캐릭터 발화는 `veo_reference` 를 쓴다.
-- **발화 클립 배율** — frame-persona-clip.py 는 위치만 맞추고 배율은 못 맞춘다.
-  프롬프트에 "subject appears small in the frame" 을 넣고, 어긋난 클립만 재생성.
-  hstack 비교가 유일한 검출 방법.
-- **bash 변수 뒤에 한글이 붙으면 이름의 일부로 먹힌다** — `"${MV}상태"` 처럼
-  중괄호 필수. 회귀 검사: `grep -nP '\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7F]'`.
-- **BGM 은 반드시 인스트루멘털** — 보컬이 나레이션과 마스킹 충돌 (Lyria 는 기본
-  인스트루멘털이라 안전).
-- **아웃트로를 manifest 에 넣지 않는다** — 클로징 멘트가 두 번 나온다.
-- **초대형 타이포 폭 측정에 scrollWidth 금지** — center flex 에서
-  `scrollWidth == clientWidth` 가 되어 축소 루프가 안 돈다.
-  `getBoundingClientRect().width` 로 잰다 (템플릿 내장).
-- **폰트**: libass 는 woff2 를 못 읽는다 — `.work/fonts/` 에 ttf 를 넣으면 자동
-  사용, 없으면 fontconfig 폴백(Apple SD Gothic Neo)으로도 게시 품질은 나온다.
-- **헤드리스 Chrome --screenshot 은 저장 후 프로세스가 안 죽는 이력** —
-  capture-frames.sh 가 파일 폴링 + kill 로 우회한다.
-- **자막 좌우 마진은 대칭** — 비대칭이면 중앙 정렬 자막이 화면 중심에서 밀린다.
-- **`emulate` 없이 `resize_page` 만으로 폰 검수하면 좁은 스트립만 캡처된다** —
-  viewport "390x844x3,mobile,touch" 필수.
+- **The reveal contract is "layout invariance"** — the template hides future elements with
+  `opacity:0` only. Switching to `display:none`/conditional rendering shifts layout between
+  states and contaminates the xfade into a full-frame crossfade.
+- **Don't tie the state count to the sentence count** — reading 4 bullets in 3 sentences makes
+  the last transition dump 2 bullets + the source at once. Split bundled segments into `A|B`
+  sub-reveals. Verify by extracting frames and counting bands — they must grow 1→2→3→4 one step
+  at a time.
+- **Boundary detection is made by periods** — a long comma-spliced sentence produces no silence
+  and goes down the proportional fallback path.
+- **Stretching a square image to 9:16 with `veo_img2video` bakes in letterboxing** — use
+  `veo_reference` for character speech.
+- **Speech clip scale** — frame-persona-clip.py fixes position but can't fix scale. Put "subject
+  appears small in the frame" in the prompt and regenerate only the misaligned clips. An hstack
+  comparison is the only way to detect it.
+- **Korean glued right after a bash variable gets absorbed into the name** — braces are
+  mandatory, as in `"${MV}상태"`. Regression check:
+  `grep -nP '\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7F]'`.
+- **BGM must be instrumental** — vocals mask-collide with the narration (Lyria defaults to
+  instrumental, so it's safe).
+- **Don't put the outro in the manifest** — the closing line plays twice.
+- **Never measure oversized typography width with scrollWidth** — in a centered flex container
+  `scrollWidth == clientWidth`, so the shrink loop never runs. Measure with
+  `getBoundingClientRect().width` (built into the template).
+- **Fonts**: libass can't read woff2 — drop a ttf into `.work/fonts/` and it's used
+  automatically; without one, the fontconfig fallback (Apple SD Gothic Neo) still yields
+  publishable quality.
+- **Headless Chrome --screenshot has a history of not exiting after saving** — capture-frames.sh
+  works around it with file polling + kill.
+- **Subtitle side margins are symmetric** — asymmetric margins push center-aligned subtitles off
+  the screen center.
+- **Phone-mode review with `resize_page` alone (no `emulate`) captures only a narrow strip** —
+  viewport "390x844x3,mobile,touch" is mandatory.

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>유튜브 쇼츠 성장 베스트 프랙티스 — social-flow 가이드</title>
+<link rel="alternate" hreflang="en" href="index.en.html">
 <link rel="stylesheet" href="../../assets/reference.css">
 <style>
   /* 이 문서 전용 소품 — 공용 reference.css 위에 얹는다 */
@@ -58,6 +59,8 @@
 </head>
 <body>
 <div class="wrap">
+
+<div class="langbar"><a href="index.en.html" hreflang="en">English</a></div>
 
 <div class="crumbs"><a href="../../index.html">문서</a><span>/</span>사용 가이드<span>/</span>유튜브 쇼츠 성장</div>
 
@@ -492,6 +495,9 @@
   </ol>
   <div class="warn">
     <strong>첫 틱에서 스코프 에러가 나는 것이 정상이다.</strong> 게시용으로 발급한 토큰에는 <code>youtube.upload</code> 하나뿐이라 조회·Analytics·댓글 스코프가 없다. 갱신으로는 스코프가 늘지 않으므로 동의 플로우에서 체크박스를 켜고 토큰을 새로 발급해야 하고, 서버 에러에 그 안내가 실려 온다. Analytics API 는 Google Cloud Console 에서 <strong>따로 활성화</strong>해야 하며(스코프와 별개 관문), 데이터는 2~3일 지연된다.
+  </div>
+  <div class="note">
+    <strong>이 루프는 유튜브 자격증명이 있어야 돈다.</strong> 자격증명 파일(<code>youtube-oauth-client.json</code> — <code>&lt;SNS_TOKEN_DIR&gt;</code> 바로 아래든 채널 디렉토리든)이 있어야 게시·인사이트 툴이 <code>tools/list</code> 에 뜬다. 토큰이 없어도 제작까지는 그대로 동작한다 — <code>produce</code> 가 완성 영상과 플랫폼별 문안을 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주고 업로드만 사람이 손으로 한다. 못 쓰는 건 게시와 성장 루프 절반이다.
   </div>
   <div class="ok">
     <strong>AI 고지는 루프가 끄지 못한다.</strong> <code>containsSyntheticMedia</code> 의 기본값이 <code>true</code> 이고 자율 루프는 이 값을 내리지 않는다 — §2에서 확인했듯 고지해도 노출·수익 자격이 깎이지 않는 대신 상습 미고지에는 라벨 강제와 YPP 정지가 걸린다. 값을 내리는 판단은 사람 몫이다.

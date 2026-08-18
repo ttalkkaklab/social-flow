@@ -7,129 +7,142 @@ description: >
   Creates data/<slug>/profile.md defining target audience, tone, TTS voice, visual
   theme, target platforms, and fact-check policy — the SoT every storyboard/produce/publish
   run reads first.
-argument-hint: "[add|list|update] [채널명]"
+argument-hint: "[add|list|update] [channel-name]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices"]
 ---
 
-# 채널 관리 — data/[채널]/profile.md
+# Channel management — data/[channel]/profile.md
 
-채널은 social-flow 파이프라인의 최상위 단위다 — 사용자가 운영하는 **콘텐츠 채널
-(브랜드) 하나**가 `data/` 디렉토리 하나에 대응하며, 그 산출물이 여러 SNS 플랫폼
-(Threads·Instagram·Facebook·YouTube) 계정으로 게시된다. 채널마다 `data/<slug>/`
-디렉토리와 `profile.md`(채널 프로파일)를 두며, 이후 모든 스토리보드·제작·게시가
-이 프로파일을 **첫 단계에서 로드**해 톤·보이스·테마·플랫폼·검증 정책을 상속받는다.
+A channel is the top-level unit of the social-flow pipeline — one **content channel
+(brand)** the user runs maps to one directory under `data/`, and its output gets
+published to accounts on multiple SNS platforms (Threads·Instagram·Facebook·YouTube).
+Each channel has a `data/<slug>/` directory and a `profile.md` (the channel profile);
+every storyboard/production/publish run that follows **loads this profile as its
+first step** and inherits tone, voice, theme, platforms, and verification policy.
 
 ```
 data/
-└── <채널 slug>/
-    ├── profile.md            # 채널 프로파일 (SoT)
-    ├── assets/               # 채널 공용 자산 — catalog.md + branding/ intro/ outro/ …
-    ├── growth/               # 성장 루프 상태
-    └── episodes/<주제 slug>/ # 회차 (storyboard 스킬이 생성)
+└── <channel slug>/
+    ├── profile.md             # channel profile (SoT)
+    ├── assets/                # channel-shared assets — catalog.md + branding/ intro/ outro/ …
+    ├── growth/                # growth-loop state
+    └── episodes/<topic slug>/ # episodes (created by the storyboard skill)
 ```
 
-`assets/` 의 종류 칸·catalog 규약은 `data/README.md` 와
-`references/assets-catalog-template.md` 가 정본이다. 두 편 이상에서 다시
-쓰는 것만 두고, 한 편용 생성물은 주제 `.work/` 에 둔다.
+`data/README.md` and `references/assets-catalog-template.md` are the source of
+truth for the `assets/` kind slots and catalog conventions. Keep only what gets
+reused in two or more episodes; single-episode artifacts go in the topic's `.work/`.
 
-## 인자 해석
+## Argument parsing
 
-`[add|list|update] [채널명]`
+`[add|list|update] [channel-name]`
 
-- `add <이름>` — 새 채널 생성 (아래 절차)
-- `list` — `data/*/profile.md` 를 Glob 으로 찾아 채널·설명·게시 플랫폼을 표로 보고
-- `update <이름>` — 기존 profile.md 를 읽고 사용자가 지정한 항목만 수정
-- 인자가 없으면 `list` 로 현황을 보여준 뒤 다음 행동을 묻는다
+- `add <name>` — create a new channel (procedure below)
+- `list` — Glob for `data/*/profile.md` and report channel, description, and publish platforms as a table
+- `update <name>` — read the existing profile.md and edit only the fields the user specifies
+- With no argument, show the current state via `list`, then ask what to do next
 
-## add 절차
+## add procedure
 
-1. **slug 결정** — 채널명을 kebab-case 영문 slug 로 변환해 제안한다
-   (예: "베트남 생활" → `vn-life`). 디렉토리·경로에 쓰이므로 한글 slug 는 피한다.
-   이미 존재하면 중단하고 update 를 안내한다.
+1. **Pick the slug** — convert the channel name to a kebab-case English slug and
+   propose it (e.g. "베트남 생활" ("Vietnam life") → `vn-life`). It's used in
+   directories and paths, so avoid Korean slugs.
+   If it already exists, stop and point to update.
 
-2. **핵심 정보 수집** — AskUserQuestion 으로 다음을 확인한다 (한 번에 최대 4개,
-   사용자가 이미 준 정보는 다시 묻지 않는다):
-   - 타깃 시청자 (누가, 어떤 순간에 보는가)
-   - 톤 (존댓말 설명형 / 반말 톡톡형 / 다큐 나레이션형 등) — 여기서 정한 격식이
-     이후 전 산출물의 정본이다. 문체 게이트는 이 격식을 바꾸지 않고 AI 티만
-     걷어낸다(platform-guide `references/korean-style.md`)
-   - 게시 플랫폼 (threads / instagram / facebook / youtube 중)
-   - 사실 검증 정책 (정보성=조사 필수 / 창작·일상=생략)
+2. **Collect the core info** — confirm the following with AskUserQuestion (at most
+   4 at a time; don't re-ask anything the user already gave):
+   - Target audience (who watches, and in what moment)
+   - Tone (polite explanatory (존댓말) / casual punchy (반말) / documentary
+     narration, etc.) — the register decided here is the source of truth for every
+     output that follows. The style gate doesn't change this register; it only
+     strips AI tells (platform-guide `references/korean-style.md`)
+   - Publish platforms (threads / instagram / facebook / youtube)
+   - Fact-check policy (informational=research required / creative·daily-life=skip)
 
-3. **TTS 보이스 배정** — `mcp__social-flow__tts_list_voices` 결과 또는
-   `references/profile-template.md` 의 보이스 예시에서 톤에 맞는 Gemini 보이스를
-   1개 제안하고 stylePrompt 를 확정한다. **한번 확정한 voiceName·stylePrompt 는
-   이후 절대 바꾸지 않는다** — Gemini TTS 는 스타일 지시를 자연어로 해석하므로
-   문구가 흔들리면 회차마다 목소리가 달라진다. 변경은 사용자가 명시할 때만.
+3. **Assign the TTS voice** — from the `mcp__social-flow__tts_list_voices` result
+   or the voice examples in `references/profile-template.md`, propose one Gemini
+   voice that fits the tone and pin down the stylePrompt. **Once fixed, never
+   change voiceName·stylePrompt** — Gemini TTS interprets style directions as
+   natural language, so if the wording drifts, the voice changes from episode to
+   episode. Change them only when the user explicitly says so.
 
-4. **비주얼 테마 확정** — `video-template.html` 의 THEME 계약(accent/accent2/ink/brand)에
-   맞춰 색을 제안한다. 기본값은 다크 시네마틱(잉크 네이비 + 블루→바이올렛 그라데이션)
-   이며, 채널 개성은 accent 색과 배경 무드 프롬프트로 낸다.
+4. **Fix the visual theme** — propose colors that fit the THEME contract of
+   `video-template.html` (accent/accent2/ink/brand). The default is dark cinematic
+   (ink navy + blue→violet gradient); channel personality comes from the accent
+   color and the background mood prompt.
 
-5. **profile.md 생성** — `references/profile-template.md` 를 복사해 수집한 값으로
-   채운다. 빈 섹션을 남기지 않는다 — 모르는 값은 사용자에게 묻거나 근거 있는
-   기본값을 쓰고 `(기본값)` 표기를 붙인다.
+5. **Create profile.md** — copy `references/profile-template.md` and fill it with
+   the collected values. Leave no section empty — for unknown values, ask the user
+   or use a well-grounded default and mark it `(default)`.
 
-   **채널 카피(소개문·bio)는 발신 글이다** — setup 스킬이 이 문안을 그대로 플랫폼
-   bio 로 올린다. 쓰고 나면 문체 게이트(check-style `--surface screen`)를 돌린 뒤
-   growth-post-reviewer 에이전트에 `standalone` 표면으로 위임해 **score ≥95 이고
-   p0=0** 을 받은 문안만 profile.md 에 싣는다(최대 3라운드, 미달이면 지적을
-   보여주고 사용자와 함께 다듬는다).
+   **Channel copy (description·bio) is outgoing copy** — the setup skills upload
+   this text as the platform bio verbatim. After writing it, run the style gate
+   (check-style `--surface screen`), then delegate to the growth-post-reviewer
+   agent as a `standalone` surface; only copy that scores **≥95 with p0=0** goes
+   into profile.md (up to 3 rounds; if it falls short, show the findings and
+   refine together with the user).
 
-   **공용 자산 카탈로그** — `data/<slug>/assets/catalog.md` 를
-   `references/assets-catalog-template.md` 에서 복사해 둔다. 빈 종류 폴더는
-   만들지 않는다. branding·intro·outro 가 확정본을 설치할 때
-   `references/resolve-asset.py --ensure` 로 행을 올린다.
+   **Shared-asset catalog** — copy `data/<slug>/assets/catalog.md` from
+   `references/assets-catalog-template.md`. Don't create empty kind folders.
+   When branding·intro·outro install finalized assets, they add rows via
+   `references/resolve-asset.py --ensure`.
 
-   회차 칸 `data/<slug>/episodes/` 는 만들어 둔다. 주제 디렉토리는
-   storyboard 가 그 아래에 연다.
+   Create the episode slot `data/<slug>/episodes/`. Topic directories are opened
+   under it by storyboard.
 
-6. **SNS 토큰 디렉토리 안내** — 게시 자격증명은 채널별 디렉토리
-   `~/.config/social-flow/<slug>/` 에 둔다 (data/<slug> 와 동일 slug — 게시 툴
-   `channel` 인자가 이 디렉토리를 가리킨다. 채널 지정 시 기본 토큰 폴백 없음):
+6. **Point to the SNS token directory** — publishing credentials live in the
+   per-channel directory `~/.config/social-flow/<slug>/` (same slug as data/<slug>
+   — the publish tools' `channel` argument points at this directory. When a
+   channel is specified there is no fallback to default tokens):
 
    ```bash
    mkdir -p ~/.config/social-flow/<slug> && chmod 700 ~/.config/social-flow/<slug>
    ```
 
-   토큰 발급·파일 규약은 publish 스킬의 `references/token-setup.md` 를 안내하고,
-   설정 후 `sns_account_check`(channel=<slug>)로 게시 예정 계정을 확인하게 한다.
-   계정을 처음부터 개설해야 하면 플랫폼별 개설 스킬을 안내한다 — 계정 개설·브랜딩·
-   API 토큰 발급을 ego lite 로 사용자와 함께 진행한다:
-   `/social-flow:setup-threads <채널>` · `/social-flow:setup-instagram <채널>` ·
-   `/social-flow:setup-youtube <채널>`.
-   토큰 없이도 스토리보드·제작은 진행 가능하다 — 게시 시점까지만 준비되면 된다.
+   For token issuance and file conventions, point to the publish skill's
+   `references/token-setup.md`, and after setup have the user confirm the accounts
+   to publish to via `sns_account_check` (channel=<slug>).
+   If accounts must be opened from scratch, point to the per-platform setup skills
+   — they run account opening, branding, and API token issuance together with the
+   user via ego lite:
+   `/social-flow:setup-threads <channel>` · `/social-flow:setup-instagram <channel>` ·
+   `/social-flow:setup-youtube <channel>`.
+   Storyboarding and production work without tokens — they only need to be ready
+   by publish time.
 
-7. **보고** — 생성된 profile.md 전문을 보여주고 다음 단계를 안내한다:
-   프로필 이미지(로고)가 없으면 먼저 `/social-flow:branding <채널>` (4종 후보 →
-   HITL 방향 선택 → 적대적 수렴), 로고 확정 후 선택적으로
-   `/social-flow:intro <채널>` (캐릭터가 연기하는 채널 인트로 영상 — 컨셉 4종
-   HITL → veo 생성), 그다음 `/social-flow:topic-scout <채널>` 로 지금 시장에서
-   검증된 주제를 고른 뒤 `/social-flow:storyboard <채널> <주제>`.
+7. **Report** — show the full generated profile.md and point to the next steps:
+   if there's no profile image (logo) yet, first `/social-flow:branding <channel>`
+   (4 candidates → HITL direction pick → adversarial convergence); once the logo
+   is fixed, optionally `/social-flow:intro <channel>` (a channel intro video
+   where the character acts — 4 concepts HITL → veo generation), then pick a
+   market-validated topic with `/social-flow:topic-scout <channel>` and go to
+   `/social-flow:storyboard <channel> <topic>`.
 
-## update 절차
+## update procedure
 
-1. `data/<slug>/profile.md` 를 Read 한다 (없으면 목록을 보여주고 재확인).
-2. 사용자가 지정한 항목만 Edit 한다 — 특히 **TTS 보이스와 THEME 색 변경 시 경고**:
-   이미 게시된 영상과 톤이 어긋나며, 채널 공용 아웃트로(`assets/outro/`)도
-   다시 만들어야 한다.
-   채널 카피(소개문·bio)를 고쳤으면 add 절차 5와 같은 게이트(check-style +
-   growth-post-reviewer `standalone` ≥95·p0=0)를 다시 통과시킨다.
-3. 변경 전/후를 표로 보고한다.
+1. Read `data/<slug>/profile.md` (if missing, show the list and re-confirm).
+2. Edit only the fields the user specifies — in particular, **warn on TTS voice
+   and THEME color changes**: they clash with the tone of already-published
+   videos, and the channel-shared outro (`assets/outro/`) must be rebuilt too.
+   If the channel copy (description·bio) changed, pass the same gate as add
+   step 5 again (check-style + growth-post-reviewer `standalone` ≥95·p0=0).
+3. Report before/after as a table.
 
-## 규칙
+## Rules
 
-- **profile.md 가 유일한 SoT** — 톤·보이스·테마를 세션 기억이나 다른 파일에 두지
-  않는다. storyboard/produce/publish 스킬은 항상 이 파일을 먼저 읽는다.
-- **플랫폼 시그니처는 플랫폼 문법 안에서** — 해시태그·CTA 는 platform-guide 스킬의
-  플레이북 한도(Threads 해시태그 ≤1, YouTube 3~5개 등)를 넘지 않게 정의한다.
-- 채널 삭제는 제공하지 않는다 — 게시 이력이 담긴 디렉토리라 비가역이다.
-  사용자가 원하면 profile.md 상단에 `status: archived` 를 추가하는 방식을 안내한다.
+- **profile.md is the only SoT** — don't keep tone·voice·theme in session memory
+  or other files. The storyboard/produce/publish skills always read this file first.
+- **Platform signatures stay within platform grammar** — define hashtags·CTA
+  within the platform-guide skill's playbook limits (Threads hashtags ≤1,
+  YouTube 3~5, etc.).
+- Channel deletion is not provided — the directory holds publish history, so
+  deleting is irreversible. If the user wants it, point to adding
+  `status: archived` at the top of profile.md.
 
 ## Additional Resources
 
 ### Reference Files
 
-- **`references/profile-template.md`** — profile.md 표준 템플릿 (섹션 구조·THEME 계약·보이스 예시 포함)
-- **`references/assets-catalog-template.md`** — `assets/catalog.md` 초안 (kind+id 표)
-- **`references/resolve-asset.py`** — catalog·기본 경로로 공용 자산 조회 (`--ensure` 로 행 추가, `--selftest`)
+- **`references/profile-template.md`** — standard profile.md template (section structure, THEME contract, voice examples)
+- **`references/assets-catalog-template.md`** — `assets/catalog.md` starter (kind+id table)
+- **`references/resolve-asset.py`** — resolve shared assets via catalog + well-known paths (`--ensure` adds a row, `--selftest`)

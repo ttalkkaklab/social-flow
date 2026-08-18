@@ -1,70 +1,72 @@
-# 생성 툴 단가 정본 (SoT) — cost-report.sh 가 이 파일만 읽는다.
-# cost-tiers.md 는 이 표를 설명할 뿐 숫자를 복사하지 않는다(사본 드리프트 방지).
+# Generation-tool price source of truth (SoT) — cost-report.sh reads only this file.
+# cost-tiers.md explains this table but never copies the numbers (no copy drift).
 #
-# 열: key <TAB> unit <TAB> usd <TAB> 근거등급 <TAB> 출처·비고
-#   usd = ?  → 단가 미확인. cost-report.sh 가 그 키를 만나면 실패한다(조용한 $0 금지).
-#   근거등급: 공식(벤더 요금 페이지 직접 확인) / 환산(공식값에서 계산) / 미검증(검색 결과·미교차확인)
+# Columns: key <TAB> unit <TAB> usd <TAB> evidence grade <TAB> source·notes
+#   usd = ?  → price unconfirmed. cost-report.sh fails when it meets that key (no silent $0).
+#   Evidence grades: official (vendor pricing page checked directly) / derived (computed from an official value) / unverified (search results, not cross-checked)
 #
-# 갱신일 2026-08-11. 벤더 요금은 바뀐다 — 분기마다 출처를 다시 열어 확인한다.
+# Updated 2026-08-11. Vendor prices change — reopen the sources every quarter.
 
-# ── 이미지 (OpenAI Images) ───────────────────────────────────────────────
-# 공식 표는 프리셋 해상도만 준다. 이 파이프라인은 1088x1920(커스텀)을 쓰므로
-# 1024x1536 값에 픽셀비 1.33배를 곱한 환산값이다 — 실제 청구서로 한 번 재볼 것.
-image.gpt-image-2.low	장	0.007	환산	공식 1024x1536 low $0.005 × 1.33 (developers.openai.com/api/docs/guides/image-generation)
-image.gpt-image-2.medium	장	0.055	환산	공식 1024x1536 medium $0.041 × 1.33
-image.gpt-image-2.high	장	0.220	환산	공식 1024x1536 high $0.165 × 1.33
-# 로컬 생성(image_local_generate)도 원장에 적는다 — 0 이라 합계는 그대로지만,
-# 키가 없으면 리포트가 exit 1(판정 불가)로 죽어서 회차 전체의 집계가 막힌다.
-image.local	장	0.000	공식	Z-Image Turbo via mflux — 온디바이스. 키·네트워크·과금 없음(전기값만)
+# ── Images (OpenAI Images) ───────────────────────────────────────────────
+# The official table lists preset resolutions only. This pipeline uses 1088x1920 (custom),
+# so these are the 1024x1536 values × 1.33 pixel ratio — recheck against a real invoice once.
+image.gpt-image-2.low	image	0.007	derived	official 1024x1536 low $0.005 × 1.33 (developers.openai.com/api/docs/guides/image-generation)
+image.gpt-image-2.medium	image	0.055	derived	official 1024x1536 medium $0.041 × 1.33
+image.gpt-image-2.high	image	0.220	derived	official 1024x1536 high $0.165 × 1.33
+# Local generation (image_local_generate) goes in the ledger too — it's 0 so the total
+# doesn't move, but a missing key kills the report with exit 1 (verdict unavailable)
+# and blocks the whole episode's tally.
+image.local	image	0.000	official	Z-Image Turbo via mflux — on-device. No key, no network, no billing (electricity only)
 
-# ── 영상 (Veo 3.1) ──────────────────────────────────────────────────────
-# 초당 과금이고 **음성이 항상 포함**이라 끌 수 없다. 무료 티어가 없다.
-# 길이가 4·6·8초 격자로 고정이고 1080p·4K 는 8초 전용이라, 4초짜리 1080p 컷도
-# 8초 값을 낸다 — 초당 단가만 비교하면 실제 지출을 과소평가한다.
-# 2026-08-15 ai.google.dev/gemini-api/docs/pricing 직접 확인으로 미검증 → 공식 승급.
-veo.lite.720p	초	0.05	공식	veo-3.1-lite-generate-preview
-veo.fast.720p	초	0.10	공식	veo-3.1-fast-generate-preview
-veo.standard.720p	초	0.40	공식	veo-3.1-generate-preview — 자율 저작 금지 티어
-veo.lite.1080p	초	0.08	공식	1080p 는 8초 전용
-veo.fast.1080p	초	0.12	공식	1080p 는 8초 전용
-veo.standard.1080p	초	0.40	공식	720p 와 같은 단가 — 1080p 는 8초 전용
-veo.fast.4k	초	0.30	공식	4K 는 8초 전용
-veo.standard.4k	초	0.60	공식	4K 는 8초 전용. lite 는 4K 미지원
+# ── Video (Veo 3.1) ──────────────────────────────────────────────────────
+# Billed per second and **audio is always included** — it can't be turned off. No free tier.
+# Lengths are fixed to a 4·6·8s grid and 1080p·4K are 8s-only, so a 4-second 1080p cut
+# still pays the 8-second price — comparing per-second prices alone understates real spend.
+# 2026-08-15: checked directly at ai.google.dev/gemini-api/docs/pricing — promoted unverified → official.
+veo.lite.720p	second	0.05	official	veo-3.1-lite-generate-preview
+veo.fast.720p	second	0.10	official	veo-3.1-fast-generate-preview
+veo.standard.720p	second	0.40	official	veo-3.1-generate-preview — tier banned from autonomous authoring
+veo.lite.1080p	second	0.08	official	1080p is 8s-only
+veo.fast.1080p	second	0.12	official	1080p is 8s-only
+veo.standard.1080p	second	0.40	official	same price as 720p — 1080p is 8s-only
+veo.fast.4k	second	0.30	official	4K is 8s-only
+veo.standard.4k	second	0.60	official	4K is 8s-only. lite doesn't support 4K
 
-# ── 영상 (Seedance / BytePlus ModelArk) ─────────────────────────────────
-# 벤더는 토큰으로 과금한다: 토큰 = (입력영상초 + 출력영상초) × 가로 × 세로 × 24 / 1024.
-# 아래 초당 값은 공식 문서의 "5초·16:9" 예시가(정가)를 5로 나눈 환산이다 —
-# 9:16 은 가로·세로만 바뀌어 토큰 수가 같으므로 같은 값을 쓴다(720p 5초 = 102,960 토큰 실측 대조).
-# Veo 와 달리 **요청한 초 단위 그대로 과금**한다 — 4초를 부르면 4초 값만 나간다.
-# 실제 청구는 응답의 completion_tokens 가 정본이다. 회차 집계는 그 값을 적는다.
-# 한시 할인은 아래 단가에 반영하지 않았다(끝나면 조용히 틀린 값이 되므로):
-#   2.5 1080p 정가의 72% ~2026-09-17 · 2.0 mini 40% ~2026-09-07 · 2.0 fast 75% ~2026-09-07
-seedance.1-0-pro-fast.1080p	초	0.048	환산	seedance-1-0-pro-fast-251015 — 무음 전용·첫 프레임만. 최저가
-seedance.1-0-pro-fast.720p	초	0.020	환산	seedance-1-0-pro-fast-251015
-seedance.1-5-pro-silent.1080p	초	0.058	환산	seedance-1-5-pro-251215 무음 — b-roll 기본 후보(실사 얼굴 입력 허용)
-seedance.1-5-pro-silent.720p	초	0.026	환산	seedance-1-5-pro-251215 무음
-seedance.1-5-pro-audio.1080p	초	0.116	환산	seedance-1-5-pro-251215 음성 — 무음의 정확히 2배
-seedance.1-0-pro.1080p	초	0.122	환산	seedance-1-0-pro-250528 — 무음 전용
-seedance.2-0-mini.720p	초	0.076	환산	dreamina-seedance-2-0-mini-260615 — 실사 얼굴 입력 거부·잔액 $30 관문
-seedance.2-0-fast.720p	초	0.120	환산	dreamina-seedance-2-0-fast-260128 — 실사 얼굴 입력 거부·잔액 $30 관문
-seedance.2-0.1080p	초	0.374	환산	dreamina-seedance-2-0-260128 — 참조 이미지 9장·4K 가능
-seedance.2-5.720p	초	0.231	환산	dreamina-seedance-2-5-260628 — 참조 이미지 30장·최대 30초
+# ── Video (Seedance / BytePlus ModelArk) ─────────────────────────────────
+# The vendor bills in tokens: tokens = (input video s + output video s) × width × height × 24 / 1024.
+# The per-second values below are the official docs' "5s·16:9" example price (list price) divided by 5 —
+# 9:16 only swaps width and height so the token count is the same, so the same value applies
+# (cross-checked against a measured 720p 5s = 102,960 tokens).
+# Unlike Veo, billing is **per requested second as-is** — request 4 seconds, pay for 4.
+# The actual bill's source of truth is the response's completion_tokens. Episode tallies record that value.
+# Limited-time discounts are not baked into these prices (they'd silently go wrong when the promo ends):
+#   2.5 1080p 72% of list ~2026-09-17 · 2.0 mini 40% ~2026-09-07 · 2.0 fast 75% ~2026-09-07
+seedance.1-0-pro-fast.1080p	second	0.048	derived	seedance-1-0-pro-fast-251015 — silent-only, first frame only. Cheapest
+seedance.1-0-pro-fast.720p	second	0.020	derived	seedance-1-0-pro-fast-251015
+seedance.1-5-pro-silent.1080p	second	0.058	derived	seedance-1-5-pro-251215 silent — default b-roll candidate (accepts photoreal face input)
+seedance.1-5-pro-silent.720p	second	0.026	derived	seedance-1-5-pro-251215 silent
+seedance.1-5-pro-audio.1080p	second	0.116	derived	seedance-1-5-pro-251215 audio — exactly 2× silent
+seedance.1-0-pro.1080p	second	0.122	derived	seedance-1-0-pro-250528 — silent-only
+seedance.2-0-mini.720p	second	0.076	derived	dreamina-seedance-2-0-mini-260615 — rejects photoreal face input · $30 balance gate
+seedance.2-0-fast.720p	second	0.120	derived	dreamina-seedance-2-0-fast-260128 — rejects photoreal face input · $30 balance gate
+seedance.2-0.1080p	second	0.374	derived	dreamina-seedance-2-0-260128 — 9 reference images · 4K capable
+seedance.2-5.720p	second	0.231	derived	dreamina-seedance-2-5-260628 — 30 reference images · up to 30s
 
-# ── 음성 ────────────────────────────────────────────────────────────────
-# Gemini 는 문자가 아니라 오디오 토큰(초당 25개)으로 과금한다. 아래는 한국어
-# 발화속도 실측 6.55자/초로 100만 자를 환산한 값을 1,000자 단가로 되돌린 것이다.
-tts.local	1000자	0.000	공식	Supertonic 로컬 — 네트워크·키 없음. 전기값만
-tts.gemini-flash	1000자	0.038	환산	$38/100만 자 (docs/research/2026-08-11-local-tts-and-commercial-api)
-tts.gemini-pro	1000자	0.076	환산	$76/100만 자 — flash 거절 시 폴백
+# ── Speech ───────────────────────────────────────────────────────────────
+# Gemini bills in audio tokens (25/second), not characters. The values below take 1M characters
+# at the measured Korean speech rate of 6.55 chars/s and fold the result back to a per-1,000-char price.
+tts.local	1000 chars	0.000	official	Supertonic local — no network, no key. Electricity only
+tts.gemini-flash	1000 chars	0.038	derived	$38/1M chars (docs/research/2026-08-11-local-tts-and-commercial-api)
+tts.gemini-pro	1000 chars	0.076	derived	$76/1M chars — fallback when flash refuses
 
-# ── 음악 (Lyria) ────────────────────────────────────────────────────────
-# 2026-08-15 ai.google.dev/gemini-api/docs/pricing 직접 확인 — 클립은 "$0.04 per song"
-# 으로 요금표에 그대로 있어 미검증 → 공식으로 올렸다. 같은 표에 풀송(Lyria 3 Pro)
-# $0.08 이 있지만 이 서버에 그 모델을 부르는 툴이 없어 행으로 만들지 않았다.
-music.lyria-clip	클립	0.04	공식	music_generate_clip — lyria-3-clip-preview 30초 고정
-# RealTime(models/lyria-realtime-exp)은 **공식 요금표에 행 자체가 없다**(실험 모델).
-# 그런데 produce 스킬 §3 의 BGM 이 이 툴이라, 손 경로 회차는 이 한 줄 때문에
-# 리포트가 exit 1 로 끝난다. 그것이 정상 동작이다 — 모르는 값을 0 으로 적으면
-# 회차 비용이 조용히 축소된다. 리포트는 나머지 항목의 합계를 그대로 찍으므로
-# 보고에는 "합계 $X + 집계 제외 1건(BGM)" 으로 적는다(cost-tally.md §exit 읽기).
-music.lyria-realtime	초	?	미확인	music_generate 가변 길이 — 공식 요금표에 Lyria RealTime 행 없음(2026-08-15 확인)
+# ── Music (Lyria) ────────────────────────────────────────────────────────
+# 2026-08-15: checked directly at ai.google.dev/gemini-api/docs/pricing — clips are right there
+# in the price table as "$0.04 per song", so promoted unverified → official. The same table lists
+# full songs (Lyria 3 Pro) at $0.08, but this server has no tool that calls that model, so no row.
+music.lyria-clip	clip	0.04	official	music_generate_clip — lyria-3-clip-preview, fixed 30s
+# RealTime (models/lyria-realtime-exp) **has no row in the official price table at all** (experimental model).
+# But produce skill §3's BGM is this tool, so manual-path episodes end their report at exit 1
+# over this one line. That is correct behavior — write an unknown value as 0 and the episode's
+# cost silently shrinks. The report still prints the total of the remaining items, so write the
+# report line as "total $X + 1 item excluded from the tally (BGM)" (cost-tally.md §reading exit codes).
+music.lyria-realtime	second	?	unconfirmed	music_generate variable length — no Lyria RealTime row in the official price table (checked 2026-08-15)

@@ -1,113 +1,132 @@
-# Instagram 개설 플레이북 — 실측 레시피
+# Instagram setup playbook — field-tested recipes
 
-SKILL.md 의 각 단계를 실제로 어떻게 조작하는지 담는다. Meta 계열 사이트
-(instagram.com·developers.facebook.com)는 ego 편의 헬퍼가 무한 행하는 구간이 많아
-**CDP 저수준 호출로만** 안정적으로 움직인다.
+Holds how each step in SKILL.md is actually driven. On Meta-family sites
+(instagram.com · developers.facebook.com), ego's convenience helpers hang forever
+in many places, so things only move reliably **with low-level CDP calls**.
 
-## 브라우저 레인과 조작 원칙
+## Browser lanes and driving principles
 
-레인은 둘이다 — ego lite 가 먼저고, 없으면 claude-in-chrome 이다(SKILL.md
-§브라우저 레인). 아래 단계별 레시피는 ego 레인 기준으로 쓰여 있지만, 조작의 뼈대가
-CDP 표준이라 Chrome 레인으로도 거의 그대로 옮겨진다.
+There are two lanes — ego lite first, claude-in-chrome when it's absent
+(SKILL.md §Browser lanes). The per-step recipes below are written against the
+ego lane, but the skeleton of the driving is standard CDP, so it carries over to
+the Chrome lane almost as-is.
 
-### ego lite 레인 (기본)
+### ego lite lane (default)
 
-먼저 `~/.claude/skills/ego-browser/SKILL.md` 를 로드해 CLI 사용법을 확인한다.
-호출은 `ego-browser nodejs <<'EOF' ... EOF` 히어독.
+First load `~/.claude/skills/ego-browser/SKILL.md` to check CLI usage.
+Invoke via an `ego-browser nodejs <<'EOF' ... EOF` heredoc.
 
-- **히어독마다 상태 초기화** → 매 히어독 첫 줄에서 `await useOrCreateTaskSpace('<세션
-  고유 이름>')`(핸드오프 복귀만 `takeOverTaskSpace(id)`). 세션마다 고유 이름.
-- **CDP 전용**: 이동 `cdp('Page.navigate',{url})`, 읽기 `cdp('Runtime.evaluate',
-  {expression,returnByValue:true})`, **클릭은 신뢰 입력** `cdp('Input.dispatchMouseEvent',
-  {type:'mousePressed',x,y,button:'left',clickCount:1,buttons:1})` + `mouseReleased`.
-  React 는 isTrusted 이벤트가 아니면 무시한다. 팝업·리다이렉트 탭은
-  `cdp('Target.getTargets',{})` → `switchTab(전체 targetId)`.
-- 클릭 전 `document.elementFromPoint(x,y)` 로 가림 확인. 화면 공유는
-  `handOffTaskSpace(id)`(agent 탭은 GUI 에 안 보임).
+- **State resets with every heredoc** → on the first line of every heredoc,
+  `await useOrCreateTaskSpace('<session-unique name>')` (only the return from a
+  handoff uses `takeOverTaskSpace(id)`). A unique name per session.
+- **CDP only**: navigate with `cdp('Page.navigate',{url})`, read with
+  `cdp('Runtime.evaluate', {expression,returnByValue:true})`, **click with
+  trusted input** `cdp('Input.dispatchMouseEvent',
+  {type:'mousePressed',x,y,button:'left',clickCount:1,buttons:1})` +
+  `mouseReleased`. React ignores events that aren't isTrusted. Popup/redirect
+  tabs: `cdp('Target.getTargets',{})` → `switchTab(full targetId)`.
+- Before clicking, check for covering elements with
+  `document.elementFromPoint(x,y)`. Screen sharing is `handOffTaskSpace(id)`
+  (agent tabs are invisible in the GUI).
 
-### Chrome 레인 (claude-in-chrome)
+### Chrome lane (claude-in-chrome)
 
-위 CDP 호출을 이렇게 옮긴다. 툴 이름은 로드 방식에 따라 프리픽스가 달라질 수 있으니
-`/mcp` 로 실제 이름을 확인하고 쓴다.
+Map the CDP calls above like this. Tool names may carry different prefixes
+depending on how they're loaded, so confirm the actual names with `/mcp` first.
 
-| ego 레인 | Chrome 레인 |
+| ego lane | Chrome lane |
 |---|---|
 | `cdp('Page.navigate',{url})` | `navigate` |
-| `cdp('Runtime.evaluate',{expression,returnByValue:true})` | `javascript_tool` — DOM 읽기·값 입력 둘 다 |
-| `cdp('Input.dispatchMouseEvent', …)` 신뢰 클릭 | `computer` |
-| `cdp('Target.getTargets',{})` → `switchTab(targetId)` | 탭 도구 — `tabs_context_mcp` 로 목록을 받아 전환 |
-| `useOrCreateTaskSpace` 격리 | 없다 — 작업 중 사용자 브라우저를 점유한다 |
-| `handOffTaskSpace`/`takeOverTaskSpace` | 필요 없다 — 화면이 곧 사용자 것이라 완료 확인만 한다 |
+| `cdp('Runtime.evaluate',{expression,returnByValue:true})` | `javascript_tool` — both DOM reads and value entry |
+| `cdp('Input.dispatchMouseEvent', …)` trusted click | `computer` |
+| `cdp('Target.getTargets',{})` → `switchTab(targetId)` | tab tools — get the list with `tabs_context_mcp` and switch |
+| `useOrCreateTaskSpace` isolation | none — occupies the user's browser while working |
+| `handOffTaskSpace`/`takeOverTaskSpace` | not needed — the screen is already the user's, so just confirm completion |
 
-세션 시작에 `tabs_context_mcp` 로 현재 탭을 먼저 확인하고, 작업은 새 탭에서 한다.
-사용자가 열어 둔 탭을 가져다 쓰지 않는다. 다른 브랜드 IG 세션이 살아 있을 수 있으니
-로그아웃 판단은 SKILL.md 절대 규칙 3 을 따른다.
+At session start, check the current tabs first with `tabs_context_mcp`, and work
+in a new tab. Don't take over tabs the user left open. Another brand's IG session
+may be alive, so the logout decision follows SKILL.md absolute rule 3.
 
-**이 레인은 Meta 사이트 실측 전이다.** 어디서 행에 걸리고 어느 좌표가 컨테이너로
-잡히는지는 ego 레인에서 부딪혀 알아낸 것이다. 첫 실행에서 그 지점들을 다시 확인하고
-이 문서에 적는다. 특히 `computer` 의 클릭이 React 의 신뢰 이벤트 검사를 통과하는지
-(테스터 초대 탭 전환·동의 화면 "허용")는 확인해 본 적이 없다 — 첫 실행에서 볼 지점이다.
+**This lane is untested on Meta sites.** Where things hang and which coordinates
+grab containers was learned by running into them on the ego lane. On the first
+run, re-verify those points and write them into this document. In particular,
+whether `computer`'s click passes React's trusted-event check (the tester-invite
+tab switch, the consent screen's "허용" (allow)) has never been tried — a point
+to watch on the first run.
 
-## 1단계 · 계정 개설
+## Step 1 · Account signup
 
-1. 가입 전 다른 브랜드 계정이 웹에 로그인돼 있으면 로그아웃이 필요하다 —
-   **사용자 승인 + 복구 credentials 확인 후** 로그아웃한다(절대 규칙 3).
-2. `Page.navigate` 로 `https://www.instagram.com/accounts/emailsignup/` → 이메일·
-   이름·핸들·비밀번호를 `Runtime.evaluate` 로 채운다(비밀번호는
-   `<slug>/instagram.credentials` 에 먼저 저장). IG 핸들 자동완성은 칩이 이중으로
-   붙는 오작동이 있으니 입력 후 값을 검증한다.
-3. **제출·생년월일·이메일 코드는 사용자 핸드오프.** reCAPTCHA 가 뜰 수 있다.
-   사용자가 허락하면 Gmail 에서 코드를 찾아 전달하되 최종 입력은 확인 후.
-4. 가입 완료 후 개설 대상 계정이 맞는지 확인한다.
+1. If another brand's account is logged into the web before signup, a logout is
+   needed — log out **only after user approval + confirming recovery
+   credentials** (absolute rule 3).
+2. `Page.navigate` to `https://www.instagram.com/accounts/emailsignup/` → fill
+   email, name, handle, and password with `Runtime.evaluate` (save the password
+   to `<slug>/instagram.credentials` first). IG handle autocomplete has a glitch
+   where the chip attaches twice, so verify the value after entry.
+3. **Submit, birthdate, and the email code are user handoffs.** reCAPTCHA may
+   appear. With the user's permission, find the code in Gmail and pass it along,
+   but confirm before the final entry.
+4. After signup, confirm this is the account being set up.
 
-## 2단계 · 프로페셔널 전환 + 브랜딩
+## Step 2 · Professional conversion + branding
 
-- **프로페셔널 전환**: 설정 > 계정 유형 및 도구 > 프로페셔널 계정으로 전환 →
-  비즈니스 또는 크리에이터. 확인은 웹 UI 대신 API 가 확실하다:
+- **Professional conversion**: Settings > Account type and tools > Switch to
+  professional account → business or creator. The API is a surer check than the
+  web UI:
   `GET https://graph.instagram.com/v23.0/me?fields=account_type&access_token=...`
-  → `BUSINESS` 또는 `MEDIA_CREATOR` 면 프로페셔널이다. 토큰이 동작한다는 사실만으로도
-  프로페셔널이 확정된다(개인 계정은 연동 자체가 불가).
-- **프로필 사진**: `/social-flow:branding` 로고 자산 업로드. IG→Threads 자동 승계.
-- **bio·이름·카테고리**: profile.md 채널 카피. 공개 계정 확인.
+  → `BUSINESS` or `MEDIA_CREATOR` means professional. The mere fact that the
+  token works already proves professional (a personal account can't integrate at
+  all).
+- **Profile photo**: upload the `/social-flow:branding` logo asset. IG→Threads
+  carries over automatically.
+- **bio · name · category**: channel copy from profile.md. Confirm the account
+  is public.
 
-## 3단계 · 앱 테스터 (Instagram Login) + 초대 수락
+## Step 3 · App tester (Instagram Login) + invite acceptance
 
-**핵심**: IG 게시 토큰은 "Instagram API with Instagram Login"(비즈니스 로그인)으로
-발급한다. 앱 역할 페이지의 "IG 테스터" 라디오 설명이 "Instagram Basic Display
-API"(폐기됨)라고 적혀 있어도 그건 낚시다 — 실제 발급은 instagram.com OAuth 경로다.
+**Key**: the IG publishing token is issued via "Instagram API with Instagram
+Login" (business login). Even though the "IG 테스터" (IG tester) radio's
+description on the app roles page says "Instagram Basic Display API"
+(deprecated), that's bait — actual issuance goes through the instagram.com OAuth
+path.
 
-1. **IG 테스터 추가** — 앱 > 역할 > 사람 추가에서 이 계정을 IG 테스터로. 역할
-   다이얼로그 라디오(IG/Threads 테스터)는 상호배타 + 재렌더로 좌표가 어긋난다 →
-   라디오를 ref 로 잡아 클릭, 추가 버튼은 활성(aria-disabled 아님) 상태 확인 후 클릭.
-2. **초대 수락** — IG 웹에서 수락한다:
-   `https://www.instagram.com/accounts/manage_access/` → **테스터 초대 탭**에서
-   **신뢰 클릭**으로 수락(합성 이벤트로는 안 됨).
+1. **Add the IG tester** — under App > Roles > add people, add this account as
+   an IG tester. The roles dialog's radios (IG/Threads tester) are mutually
+   exclusive plus re-render and shift coordinates → grab the radio by ref and
+   click, and click the add button after confirming it's active (not
+   aria-disabled).
+2. **Accept the invite** — accept on IG web:
+   `https://www.instagram.com/accounts/manage_access/` → **tester invites tab**,
+   accept with a **trusted click** (synthetic events won't work).
 
-## 4단계 · OAuth authorize (code 회수)
+## Step 4 · OAuth authorize (code recovery)
 
-1. 앱 env 에서 App ID 를 읽어 authorize URL 을 만든다(scope 콤마 구분, 한 줄):
+1. Read the App ID from the app env and build the authorize URL (scope
+   comma-separated, one line):
    ```
    https://www.instagram.com/oauth/authorize?client_id=<IG_APP_ID>
      &redirect_uri=https://localhost/callback/
      &scope=instagram_business_basic,instagram_business_content_publish,instagram_business_manage_comments,instagram_business_manage_messages,instagram_business_manage_insights
      &response_type=code
    ```
-   `Page.navigate` 로 연다.
-2. `force_reauth` 로 로그인 폼이 뜨면 아이디·비밀번호를 채우되 **로그인 버튼은
-   사용자 핸드오프**(자동 클릭은 "연결할 수 없습니다" 소프트블록).
-3. 동의 화면 **"허용" 신뢰 클릭**.
-4. `https://localhost/callback/?code=...` 로 리다이렉트된다. 서버가 없어 에러
-   페이지지만 code 는 URL 에 있다 — `Target.getTargets`/`Page.getNavigationHistory`
-   에서 회수한다. 끝의 `#_` 를 떼어 낸다.
-5. code 는 1회용·단명 → 회수 즉시 §5.
+   Open with `Page.navigate`.
+2. If `force_reauth` brings up the login form, fill the username and password but
+   **hand the login button to the user** (an automated click hits the
+   "연결할 수 없습니다" (can't connect) soft-block).
+3. **Trusted-click "허용" (allow)** on the consent screen.
+4. It redirects to `https://localhost/callback/?code=...`. With no server it's an
+   error page, but the code is in the URL — recover it via
+   `Target.getTargets`/`Page.getNavigationHistory`. Strip the trailing `#_`.
+5. The code is single-use and short-lived → §5 the moment you have it.
 
-## 5단계 · 토큰 교환 (브라우저 무관 — curl)
+## Step 5 · Token exchange (browser-independent — curl)
 
-이 절은 브라우저와 무관하다. **60일 갱신 때도 이 절만 다시 쓴다.**
+This section has nothing to do with the browser. **The 60-day refresh also
+reuses only this section.**
 
 ```bash
 source <SNS_TOKEN_DIR>/<slug>/meta-app.env   # IG_APP_ID, IG_APP_SECRET
-CODE='<4단계에서 회수한 code>'
+CODE='<code recovered in step 4>'
 DEST=<SNS_TOKEN_DIR>/<slug>/instagram_token
 
 SHORT_JSON=$(curl -s -X POST https://api.instagram.com/oauth/access_token \
@@ -115,7 +134,7 @@ SHORT_JSON=$(curl -s -X POST https://api.instagram.com/oauth/access_token \
   -F grant_type=authorization_code -F redirect_uri="https://localhost/callback/" \
   -F code="$CODE")
 ST=$(echo "$SHORT_JSON" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("access_token",""))')
-# 주의: 사용자 id 는 IGUSER 등으로 받는다. UID 는 셸 예약변수다(아래 함정).
+# note: take the user id as IGUSER or similar. UID is a shell reserved variable (trap below).
 IGUSER=$(echo "$SHORT_JSON" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("user_id",""))')
 
 curl -s "https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=$IG_APP_SECRET&access_token=$ST" \
@@ -123,16 +142,19 @@ curl -s "https://graph.instagram.com/access_token?grant_type=ig_exchange_token&c
 chmod 600 "$DEST"
 ```
 
-- **셸 예약변수 함정(중요)**: bash/zsh 에서 `UID` 는 읽기전용 예약변수다. 사용자
-  id 를 `UID=$(...)` 로 담으면 "failed to change user ID: operation not permitted"
-  로 죽는다. `set -e` 스크립트면 토큰 저장 전에 빠져나가고 **단명 code 가 소진**돼
-  버린다(실측 사고 1건). 반드시 `IGUSER`·`ACCT` 등 다른 이름을 쓴다.
-- 토큰 값을 `echo` 하지 않고 파일로 바로 리다이렉트한다. 단기 토큰이 214자, 장기가
-  약 158자, `expires_in` 5184000(60일)이면 정상이다.
+- **Shell reserved-variable trap (important)**: in bash/zsh, `UID` is a
+  read-only reserved variable. Put the user id in `UID=$(...)` and the script
+  dies with "failed to change user ID: operation not permitted". In a `set -e`
+  script it bails before the token is saved and **the short-lived code is
+  burned** (one real incident). Always use a different name like `IGUSER` or
+  `ACCT`.
+- Don't `echo` the token value — redirect it straight to the file. A short-lived
+  token of 214 chars, a long-lived one of about 158 chars, and `expires_in`
+  5184000 (60 days) means it worked.
 
-## 60일 갱신 (재발급 아님)
+## 60-day refresh (not reissuance)
 
-만료 전 토큰만 갱신할 때는 §1~§4 를 건너뛰고 이것만:
+To refresh only the token before expiry, skip §1–§4 and run just this:
 
 ```bash
 DEST=<SNS_TOKEN_DIR>/<slug>/instagram_token
@@ -141,5 +163,5 @@ curl -s "https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_
   && mv "$DEST.new" "$DEST" && chmod 600 "$DEST"
 ```
 
-갱신은 스코프를 늘리지 못한다 — 스코프 추가는 §3~§5 로 재발급. 60일 초과 만료면
-갱신 불가, §3 부터 다시.
+A refresh can't grow scopes — adding scopes means reissuing via §3–§5. Past the
+60-day expiry no refresh is possible; start over from §3.

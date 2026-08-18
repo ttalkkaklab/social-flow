@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""시장 키워드 JSON·md 를 도표 위주 A4 HTML 로 뽑는다.
+"""Render the market keyword JSON and md into chart-first A4 HTML.
 
-사람이 보는 화면은 HTML 이다. md 는 grow-youtube / autoproduce 가 읽는
-숫자·고른 구 정본이고, 채팅에 표를 다시 그리지 않는다.
+The screen a human looks at is the HTML. The md is the source of truth for the
+numbers and chosen phrases that grow-youtube / autoproduce read, and the tables
+never get redrawn in chat.
 
-화면의 중심은 키워드가 다루는 콘텐츠와, 우리가 만들 편이다.
-어떻게 골랐나는 마지막 한 섹션이다.
+The center of the screen is the content a keyword covers and the episode we'll
+make. How we picked is one section at the end.
 
-사용:
-  render-report.py --json data/<채널>/growth/keywords/market-keywords.json
-                   [--md data/<채널>/growth/keywords/market-keywords.md]
-                   [--out data/<채널>/growth/keywords/market-keywords.html]
-                   [--name 딸깍랩]
+Usage:
+  render-report.py --json data/<channel>/growth/keywords/market-keywords.json
+                   [--md data/<channel>/growth/keywords/market-keywords.md]
+                   [--out data/<channel>/growth/keywords/market-keywords.html]
+                   [--name my-channel]
 """
 from __future__ import annotations
 
@@ -59,8 +60,8 @@ def num(n, default=0.0) -> float:
 
 
 def parse_chosen(md: str) -> list[tuple[str, str]]:
-    """## 고른 주제 아래 '- 구 — 한 줄' 을 읽는다. '없음' 이면 빈 목록."""
-    m = re.search(r"^## 고른 주제\s*$", md, re.M)
+    """Read '- phrase — one line' under ## Chosen topics. 'None' means empty."""
+    m = re.search(r"^## Chosen topics\s*$", md, re.M)
     if not m:
         return []
     rest = md[m.end() :]
@@ -72,7 +73,7 @@ def parse_chosen(md: str) -> list[tuple[str, str]]:
         if not line.startswith("- "):
             continue
         body = line[2:].strip()
-        if body.startswith("없음"):
+        if body.lower().startswith("none"):
             return []
         if "—" in body:
             phrase, why = body.split("—", 1)
@@ -87,10 +88,10 @@ def parse_chosen(md: str) -> list[tuple[str, str]]:
 
 
 def parse_flags(md: str) -> dict[str, str]:
-    """주제어 표 마지막 칸(이미 씀 / 걸러)을 구 → 표시 로 읽는다."""
+    """Read the last column of the topic-phrase table (yes / skip) as phrase → mark."""
     flags: dict[str, str] = {}
     for line in md.splitlines():
-        if not line.startswith("|") or line.startswith("| ---") or line.startswith("| 구"):
+        if not line.startswith("|") or line.startswith("| ---") or line.startswith("| Phrase"):
             continue
         cells = [c.strip() for c in line.strip("|").split("|")]
         if len(cells) < 5:
@@ -99,164 +100,167 @@ def parse_flags(md: str) -> dict[str, str]:
     return flags
 
 
-# 사람이 보는 HTML 전용. md·json 의 영어·중국어 조각은 그대로 두고,
-# 화면에는 아래 쉬운 말로 옮긴다.
+# For the human-readable HTML only. The English and Chinese fragments in the
+# md and json stay as they are; on screen they become the plain wording below.
+# The Korean alternatives in the patterns still match KR-market titles.
 _LABELS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"secret websites|earn dollars|숨은 사이트", re.I), "돈 되는 숨은 사이트"),
-    (re.compile(r"coding.?sidehustle|sidehustle.*coding|do this sidehustle|코딩으로 부업", re.I), "코딩으로 부업"),
-    (re.compile(r"claude|websitebuilder|appbuilder|클로드로 웹", re.I), "클로드로 웹·앱 만들기"),
-    (re.compile(r"cloud storage|클라우드 저장", re.I), "비싼 클라우드 저장소 대신"),
-    (re.compile(r"powerful websites|aitools|알아두면 좋은", re.I), "알아두면 좋은 AI 사이트"),
-    (re.compile(r"에이스 직원"), "AI로 일 잘하는 직원 뽑기"),
-    (re.compile(r"隐藏的 max|숨은 맥스|codex.*max", re.I), "코덱스 숨은 맥스 모드"),
-    (re.compile(r"做视频搞钱|영상 부업|装完codex", re.I), "코덱스로 영상 부업"),
-    (re.compile(r"带货|띠화|판매 영상", re.I), "AI로 판매 영상 한 번에"),
-    (re.compile(r"cloudflare|클라우드플레어", re.I), "AI로 클라우드플레어 세팅"),
-    (re.compile(r"1200|크레딧|白送", re.I), "코덱스 1200달러 크레딧"),
-    (re.compile(r"robotvacuum|climb stairs|로봇청소기", re.I), "계단 오르는 로봇청소기"),
-    (re.compile(r"perfume|향수", re.I), "향수 리필로 아끼기"),
-    (re.compile(r"baggage|수하물", re.I), "부서진 짐 보상 받는 법"),
-    (re.compile(r"fanvue|ofm|influencer", re.I), "AI 인플루언서 성인 부업"),
-    (re.compile(r"indonesian army|army news|뉴스", re.I), "뉴스 영상"),
-    (re.compile(r"5-camera|smartphone|스마트폰", re.I), "카메라 다섯 개 스마트폰"),
-    (re.compile(r"xchat", re.I), "엑스챗 설치"),
-    (re.compile(r"클로드|gpt|그록", re.I), "클로드·GPT·그록 비교"),
-    (re.compile(r"AI side hustle", re.I), "AI로 부업"),
-    (re.compile(r"AI work automation", re.I), "AI로 업무 자동화"),
-    (re.compile(r"AI tools comparison", re.I), "AI 도구 비교"),
-    (re.compile(r"AI副业"), "AI 부업"),
-    (re.compile(r"AI办公自动化"), "AI 업무 자동화"),
-    (re.compile(r"AI工具对比"), "AI 도구 비교"),
+    (re.compile(r"secret websites|earn dollars|숨은 사이트", re.I), "hidden sites that pay"),
+    (re.compile(r"coding.?sidehustle|sidehustle.*coding|do this sidehustle|코딩으로 부업", re.I), "coding side hustle"),
+    (re.compile(r"claude|websitebuilder|appbuilder|클로드로 웹", re.I), "web and apps with Claude"),
+    (re.compile(r"cloud storage|클라우드 저장", re.I), "instead of pricey cloud storage"),
+    (re.compile(r"powerful websites|aitools|알아두면 좋은", re.I), "AI sites worth knowing"),
+    (re.compile(r"에이스 직원"), "hiring a star worker with AI"),
+    (re.compile(r"隐藏的 max|숨은 맥스|codex.*max", re.I), "Codex hidden max mode"),
+    (re.compile(r"做视频搞钱|영상 부업|装完codex", re.I), "video side hustle with Codex"),
+    (re.compile(r"带货|띠화|판매 영상", re.I), "sales videos in one pass with AI"),
+    (re.compile(r"cloudflare|클라우드플레어", re.I), "Cloudflare setup with AI"),
+    (re.compile(r"1200|크레딧|白送", re.I), "the $1,200 Codex credit"),
+    (re.compile(r"robotvacuum|climb stairs|로봇청소기", re.I), "stair-climbing robot vacuum"),
+    (re.compile(r"perfume|향수", re.I), "saving with perfume refills"),
+    (re.compile(r"baggage|수하물", re.I), "claiming damaged baggage"),
+    (re.compile(r"fanvue|ofm|influencer", re.I), "adult AI influencer side hustle"),
+    (re.compile(r"indonesian army|army news|뉴스", re.I), "news video"),
+    (re.compile(r"5-camera|smartphone|스마트폰", re.I), "five-camera smartphone"),
+    (re.compile(r"xchat", re.I), "installing XChat"),
+    (re.compile(r"클로드|gpt|그록", re.I), "Claude vs GPT vs Grok"),
+    (re.compile(r"AI side hustle", re.I), "AI side hustle"),
+    (re.compile(r"AI work automation", re.I), "AI work automation"),
+    (re.compile(r"AI tools comparison", re.I), "AI tools compared"),
+    (re.compile(r"AI副业"), "AI side hustle"),
+    (re.compile(r"AI办公自动化"), "AI work automation"),
+    (re.compile(r"AI工具对比"), "AI tools compared"),
 ]
 
 
-# 키워드 → (묶음, 시장이 다루는 내용, 우리가 만들 편)
-# 클로드 웹·앱 패턴이 비교 패턴보다 앞에 와야 한다.
+# keyword → (family, what the market covers, the episode we'd make)
+# The Claude web/app pattern has to come before the comparison pattern.
 _BRIEFS: list[tuple[re.Pattern[str], str, str, str]] = [
     (
         re.compile(r"secret websites|earn dollars|숨은 사이트", re.I),
-        "부업 실험",
-        "잘 안 알려진 사이트에서 달러로 일한다는 소개다. 공개 설명에서 이름이 나온 곳은 AI 학습 알바 Outlier 하나다.",
-        "사이트 목록은 베끼지 않는다. 버즈(Buzz) 오픈소스로 우리가 직접 돌려 보고 걸린 시간과 결과만 보여 준다.",
+        "side-hustle test",
+        "A pitch about working for dollars on little-known sites. The only one named in the public description is Outlier, the AI training gig.",
+        "We don't copy the site list. We run the Buzz open-source ourselves and show only how long it took and what came out.",
     ),
     (
         re.compile(r"coding.?sidehustle|sidehustle.*coding|do this sidehustle|코딩으로 부업", re.I),
-        "부업 실험",
-        "코딩으로 돈 버는 부업을 권하는 짧은 영상이다. 무엇을 만들었는지는 제목에 거의 없다.",
-        "남의 부업을 소개하지 않는다. 우리가 쓰는 도구로 한 건을 만들어 보고 숫자로 말한다.",
+        "side-hustle test",
+        "A short video pushing coding as a way to make money. The title almost never says what got built.",
+        "We don't cover someone else's side hustle. We build one thing with the tools we use and let the numbers talk.",
     ),
     (
         re.compile(r"claude|websitebuilder|appbuilder|클로드로 웹", re.I),
-        "도구 실험",
-        "클로드에게 웹이나 앱을 만들게 하는 영상이다. 같은 채널이 비슷한 편을 여러 개 올렸다.",
-        "클로드로 우리가 쓸 페이지 하나를 처음부터 만들고 어디까지 되고 어디서 멈추는지 보여 준다.",
+        "tool test",
+        "Videos that have Claude build a website or app. The same channel posted several like it.",
+        "We build one page we'll actually use with Claude, from scratch, and show how far it gets and where it stops.",
     ),
     (
         re.compile(r"cloud storage|클라우드 저장", re.I),
-        "도구 실험",
-        "비싼 클라우드 저장소 대신 싸게 쓰는 법을 소개한다.",
-        "우리가 쓰는 저장 방법을 골라 한 달 비용을 숫자로 비교한다. 특정 서비스 광고처럼 쓰지 않는다.",
+        "tool test",
+        "How to spend less than you would on pricey cloud storage.",
+        "We pick the storage we use and compare a month of cost in numbers. Not an ad for one service.",
     ),
     (
         re.compile(r"powerful websites|aitools|알아두면 좋은", re.I),
-        "도구 실험",
-        "알아 두면 좋은 AI 사이트 목록이다.",
-        "이미 만든 편이다. 같은 목록을 다시 찍지 않는다.",
+        "tool test",
+        "A list of AI sites worth knowing.",
+        "Already made this one. We don't shoot the same list again.",
     ),
     (
         re.compile(r"에이스 직원", re.I),
-        "도구 실험",
-        "AI로 일 잘하는 직원을 뽑는다는 소개다.",
-        "이미 만든 편이다. 같은 주제를 다시 찍지 않는다.",
+        "tool test",
+        "A pitch about hiring a star worker with AI.",
+        "Already made this one. We don't shoot the same topic again.",
     ),
     (
         re.compile(r"隐藏的 max|숨은 맥스|codex.*max", re.I),
-        "도구 실험",
-        "코덱스에 잘 안 보이는 맥스 모드가 있고 쓰면 사용량이 크게 줄어든다는 소개다.",
-        "맥스 모드를 우리가 켜 보고 같은 일을 할 때 사용량이 정말 줄어드는지 숫자로 보여 준다.",
+        "tool test",
+        "A pitch that Codex has a hard-to-find max mode and that turning it on cuts usage a lot.",
+        "We turn max mode on ourselves and show in numbers whether the same job really uses less.",
     ),
     (
         re.compile(r"做视频搞钱|영상 부업|装完codex", re.I),
-        "부업 실험",
-        "코덱스를 깔고 나서 영상으로 돈 버는 법을 알려 준다.",
-        "코덱스에게 우리 영상 한 편의 초안을 맡겨 보고 쓸 만한지와 실패한 지점까지 보여 준다.",
+        "side-hustle test",
+        "How to make money with video once you've installed Codex.",
+        "We hand Codex the first draft of one of our own videos and show whether it's usable, failures included.",
     ),
     (
         re.compile(r"带货|띠화|판매 영상", re.I),
-        "부업 실험",
-        "AI로 판매용 영상을 한 번에 만든다는 소개다. 수입이 늘었다는 말이 제목에 있다.",
-        "수입 숫자는 베끼지 않는다. 우리 제품 하나로 판매 영상을 만들어 보고 결과물이 어떤지만 보여 준다.",
+        "side-hustle test",
+        "A pitch about making a sales video in one pass with AI. The title claims income went up.",
+        "We don't copy the income figures. We make a sales video for one of our own products and show only how it turned out.",
     ),
     (
         re.compile(r"cloudflare|클라우드플레어", re.I),
-        "도구 실험",
-        "AI에게 클라우드플레어 설정을 맡긴다는 소개다. 댓글에 질문이 남아 있다.",
-        "우리가 쓰는 도메인 하나로 설정을 맡겨 보고 된 것과 막힌 것을 보여 준다.",
+        "tool test",
+        "A pitch about handing Cloudflare setup to an AI. Questions are still sitting in the comments.",
+        "We hand over one domain we use and show what worked and what got stuck.",
     ),
     (
         re.compile(r"1200|크레딧|白送", re.I),
-        "부업 실험",
-        "오픈AI가 코덱스 구독 크레딧 1,200달러를 준다는 소개다. 신청 조건이 댓글에 있다.",
-        "우리가 신청해 보고 조건과 실제로 받은 액수만 보여 준다. 무조건 받을 수 있다고 말하지 않는다.",
+        "side-hustle test",
+        "A pitch that OpenAI hands out $1,200 in Codex subscription credit. The conditions are in the comments.",
+        "We apply ourselves and show only the conditions and what we actually got. We don't say anyone can get it.",
     ),
     (
         re.compile(r"robotvacuum|climb stairs|로봇청소기", re.I),
-        "우리 주제 아님",
-        "계단 오르는 로봇청소기 광고다.",
+        "off our topic",
+        "An ad for a stair-climbing robot vacuum.",
         "",
     ),
     (
         re.compile(r"perfume|향수", re.I),
-        "우리 주제 아님",
-        "향수 리필로 아끼는 법이다. AI 실험이 아니다.",
+        "off our topic",
+        "How to save with perfume refills. Not an AI test.",
         "",
     ),
     (
         re.compile(r"baggage|수하물", re.I),
-        "우리 주제 아님",
-        "부서진 짐 보상을 받는 여행 팁이다.",
+        "off our topic",
+        "A travel tip for claiming payouts on damaged baggage.",
         "",
     ),
     (
         re.compile(r"fanvue|ofm|influencer", re.I),
-        "우리 주제 아님",
-        "성인 쪽 AI 인플루언서 부업이다.",
+        "off our topic",
+        "An adult-side AI influencer side hustle.",
         "",
     ),
     (
         re.compile(r"indonesian army|army news|뉴스", re.I),
-        "우리 주제 아님",
-        "뉴스 영상이다.",
+        "off our topic",
+        "A news video.",
         "",
     ),
     (
         re.compile(r"5-camera|smartphone|스마트폰", re.I),
-        "우리 주제 아님",
-        "카메라 다섯 개 스마트폰 소개다.",
+        "off our topic",
+        "A five-camera smartphone rundown.",
         "",
     ),
     (
         re.compile(r"xchat", re.I),
-        "우리 주제 아님",
-        "메신저 설치 안내다.",
+        "off our topic",
+        "Instructions for installing a messenger.",
         "",
     ),
     (
         re.compile(r"클로드|gpt|그록", re.I),
-        "모델 비교",
-        "세 모델을 나란히 비교한 대박 영상은 아직 없다. 가까운 편은 클로드로 웹·앱 만들기다.",
-        "누가 1등인지 표를 만들지 않는다. 같은 일을 세 모델에 시켜 보고 걸린 시간과 결과만 보여 준다.",
+        "model comparison",
+        "No breakout video puts the three models side by side yet. The closest is building web and apps with Claude.",
+        "We don't build a table of who wins. We give the same job to all three models and show only the time it took and what came out.",
     ),
 ]
 
 
 _EVIDENCE_SENT = re.compile(
-    r"\d+(?:\.\d+)?\s*배|시드|아웃라이어|중앙값|쿼터|조사에|평소보다"
+    r"\d+(?:\.\d+)?\s*[x×]|\bseeds?\b|\boutliers?\b|\bmedian\b|\bquota\b"
+    r"|\bin this scan\b|than usual",
+    re.I,
 )
 
 
-def ko_label(text: str, limit: int = 18) -> str:
-    """영어·중국어 조각·해시태그를 짧은 한국어 주제로 옮긴다."""
+def ko_label(text: str, limit: int = 30) -> str:
+    """Turn an English/Chinese fragment or hashtag into a short readable topic."""
     raw = re.sub(r"#\S+", " ", text or "")
     raw = re.sub(r"\s+", " ", raw).strip()
     for pat, ko in _LABELS:
@@ -264,16 +268,16 @@ def ko_label(text: str, limit: int = 18) -> str:
             return clip(ko, limit)
     if re.search(r"[가-힣]", raw):
         return clip(raw, limit)
-    return clip(raw, limit) if raw else "주제"
+    return clip(raw, limit) if raw else "topic"
 
 
 def ko_seeds(queries: list[str]) -> str:
     seen: list[str] = []
     for q in queries:
-        lab = ko_label(q, 16)
+        lab = ko_label(q, 28)
         if lab not in seen:
             seen.append(lab)
-    return " · ".join(seen) if seen else "검색어"
+    return " · ".join(seen) if seen else "search terms"
 
 
 def lookup_brief(*texts: str) -> tuple[str, str, str] | None:
@@ -287,7 +291,7 @@ def lookup_brief(*texts: str) -> tuple[str, str, str] | None:
 
 
 def _drop_evidence(text: str) -> str:
-    parts = [p.strip() for p in re.split(r"(?<=다)\.\s+|(?<=요)\.\s+", text.strip()) if p.strip()]
+    parts = [p.strip() for p in re.split(r"\.\s+", text.strip()) if p.strip()]
     keep: list[str] = []
     for p in parts:
         p = p.rstrip(".")
@@ -300,10 +304,11 @@ def _drop_evidence(text: str) -> str:
 
 
 def split_why(why: str) -> tuple[str, str]:
-    """md 한 줄에서 근거 문장을 빼고, 시장 내용 / 우리 실험으로 가른다."""
+    """Drop the evidence sentences from one md line and split it into what the
+    market covers / what we'd test."""
     if not why:
         return "", ""
-    m = re.search(r"(우리는\s+.+)$", why.strip())
+    m = re.search(r"(We\b.+)$", why.strip())
     if m:
         covers = _drop_evidence(why[: m.start()])
         make = m.group(1).rstrip(".") + "."
@@ -311,15 +316,15 @@ def split_why(why: str) -> tuple[str, str]:
     cleaned = _drop_evidence(why)
     if not cleaned:
         return "", ""
-    if re.search(r"만들지|실험|시켜|보여", cleaned):
+    if re.search(r"\bmake\b|\bbuild\b|\btest\b|\brun\b|\bshow\b", cleaned, re.I):
         return "", cleaned
     return cleaned, ""
 
 
 def flag_status(flag: str) -> str:
-    if "걸러" in (flag or ""):
+    if "skip" in (flag or "").lower():
         return "skip"
-    if "예" in (flag or ""):
+    if "yes" in (flag or "").lower():
         return "used"
     return "keep"
 
@@ -331,9 +336,9 @@ def topic_brief(
     flag: str = "",
     picked: bool = False,
 ) -> dict:
-    """화면 한 줄에 쓸 콘텐츠 브리프."""
+    """The content brief for one line on screen."""
     hit = lookup_brief(phrase, why, title)
-    family = hit[0] if hit else "후보"
+    family = hit[0] if hit else "candidate"
     covers = hit[1] if hit else ""
     make = hit[2] if hit else ""
     w_covers, w_make = split_why(why)
@@ -341,22 +346,22 @@ def topic_brief(
         covers = w_covers
     if w_make:
         make = w_make
-    covers = re.sub(r"^시장 영상은\s+", "", covers or "")
+    covers = re.sub(r"^The market videos?\s+", "", covers or "", flags=re.I)
     if not covers:
-        lab = ko_label(title or phrase, 22)
-        covers = f"시장 영상은 '{lab}' 를 다룬다."
+        lab = ko_label(title or phrase, 38)
+        covers = f"The market videos cover '{lab}'."
     status = "pick" if picked else flag_status(flag)
     if status == "skip":
         make = ""
-        if family == "후보":
-            family = "우리 주제 아님"
+        if family == "candidate":
+            family = "off our topic"
     elif status == "used" and not make:
-        make = "이미 만든 편이다. 같은 주제를 다시 찍지 않는다."
+        make = "Already made this one. We don't shoot the same topic again."
     elif status in ("keep", "pick") and not make:
-        make = "제목은 베끼지 않는다. 우리가 직접 실험한 숫자만 보여 준다."
+        make = "We don't copy the title. We show only the numbers from our own test."
     return {
         "phrase": phrase,
-        "label": ko_label(phrase, 22),
+        "label": ko_label(phrase, 38),
         "family": family,
         "covers": covers,
         "make": make,
@@ -409,30 +414,30 @@ def funnel_svg(queries: list[str], scanned: dict, n_out: int) -> str:
     seeds = ko_seeds(queries)
     ch = int(scanned.get("channels") or 0)
     vid = int(scanned.get("videos") or 0)
-    return f"""<svg viewBox="0 0 700 248" role="img" aria-label="검색어에서 잘 된 영상까지">
+    return f"""<svg viewBox="0 0 700 248" role="img" aria-label="From search term to the videos that did well">
 {marker_defs(["ar"])}
 <rect x="10" y="10" width="680" height="40" rx="3" fill="{NEUTRAL}" stroke="{NEUTRAL_BD}" stroke-width="1"/>
-<text x="350" y="36" text-anchor="middle" font-size="13.5" font-weight="800" fill="{NAVY}">{esc(clip(seeds, 42))}</text>
+<text x="350" y="36" text-anchor="middle" font-size="13.5" font-weight="800" fill="{NAVY}">{esc(clip(seeds, 70))}</text>
 <line x1="350" y1="50" x2="350" y2="66" stroke="{ACCENT}" stroke-width="1.8" marker-end="url(#ar)"/>
 <rect x="90" y="70" width="520" height="36" rx="3" fill="#fff" stroke="{ACCENT}" stroke-width="1.2"/>
-<text x="350" y="94" text-anchor="middle" font-size="13.5" font-weight="800" fill="{ACCENT}">비슷한 채널 {ch}곳 · 최근 영상 {vid}편</text>
+<text x="350" y="94" text-anchor="middle" font-size="13.5" font-weight="800" fill="{ACCENT}">{ch} similar channels · {vid} recent videos</text>
 <line x1="350" y1="106" x2="350" y2="122" stroke="{ACCENT}" stroke-width="1.8" marker-end="url(#ar)"/>
 <rect x="160" y="126" width="380" height="36" rx="3" fill="{EMPH}" stroke="{ACCENT}" stroke-width="1.6"/>
-<text x="350" y="150" text-anchor="middle" font-size="13.5" font-weight="800" fill="{NAVY}">그 채널 평소보다 조회 5배 넘는 편만</text>
+<text x="350" y="150" text-anchor="middle" font-size="13.5" font-weight="800" fill="{NAVY}">only ones past 5x that channel's usual views</text>
 <line x1="350" y1="162" x2="350" y2="178" stroke="{ACCENT}" stroke-width="1.8" marker-end="url(#ar)"/>
 <rect x="210" y="182" width="280" height="44" rx="3" fill="{NAVY}"/>
-<text x="350" y="210" text-anchor="middle" font-size="15" font-weight="800" fill="#fff">잘 된 영상 {n_out}편</text>
+<text x="350" y="210" text-anchor="middle" font-size="15" font-weight="800" fill="#fff">{n_out} videos that did well</text>
 </svg>"""
 
 
 def families_html(briefs: list[dict]) -> str:
-    """키워드를 콘텐츠 묶음으로 한 줄씩 보여 준다. 근거 차트가 아니다."""
-    order = ["부업 실험", "도구 실험", "모델 비교"]
+    """One line per content family. Not an evidence chart."""
+    order = ["side-hustle test", "tool test", "model comparison"]
     buckets: dict[str, list[dict]] = {k: [] for k in order}
     for b in briefs:
         if b["status"] == "skip":
             continue
-        fam = b["family"] if b["family"] in buckets else "도구 실험"
+        fam = b["family"] if b["family"] in buckets else "tool test"
         if not any(x["label"] == b["label"] for x in buckets[fam]):
             buckets[fam].append(b)
     cols = []
@@ -442,10 +447,10 @@ def families_html(briefs: list[dict]) -> str:
             chips = []
             for b in items:
                 cls = f"chip {b['status']}"
-                chips.append(f'<span class="{cls}">{esc(clip(b["label"], 14))}</span>')
+                chips.append(f'<span class="{cls}">{esc(clip(b["label"], 24))}</span>')
             body = "".join(chips)
         else:
-            body = '<span class="chip empty">이번 조사에 없음</span>'
+            body = '<span class="chip empty">nothing in this scan</span>'
         cols.append(
             f'<div class="fam">'
             f'<span class="fh">{esc(fam)}</span>'
@@ -453,7 +458,7 @@ def families_html(briefs: list[dict]) -> str:
         )
     return (
         '<div class="famstrip">' + "".join(cols)
-        + '<p class="small" style="margin:6px 0 0">푸른 칸 = 이번에 만들 편 · 회색 = 이미 만든 편</p>'
+        + '<p class="small" style="margin:6px 0 0">blue = making it this time · grey = already made</p>'
         + "</div>"
     )
 
@@ -466,9 +471,9 @@ _STOP = {
 
 
 def match_outlier(phrase: str, why: str, outliers: list[dict], keywords: list[dict]) -> dict:
-    """고른 구를 근거 영상에 붙인다. 배수 → 키워드 → 제목 토큰 순."""
-    m = re.search(r"(?:미국|중국|한국)\s+(\d+(?:\.\d+)?)\s*배", why or "")
-    if m and "없다" not in (why or "")[max(0, m.start() - 8) : m.end() + 12]:
+    """Attach a chosen phrase to its evidence video. Multiplier → keyword → title tokens."""
+    m = re.search(r"(?:US|CN|KR)\s+(\d+(?:\.\d+)?)\s*[x×]", why or "", re.I)
+    if m and "none" not in (why or "")[max(0, m.start() - 8) : m.end() + 12].lower():
         target = float(m.group(1))
         for o in outliers:
             if abs(num(o.get("multiplier")) - target) < 0.05:
@@ -476,16 +481,16 @@ def match_outlier(phrase: str, why: str, outliers: list[dict], keywords: list[di
     pl = (phrase or "").lower()
     if not pl:
         return {}
-    plab = ko_label(phrase, 30)
+    plab = ko_label(phrase, 50)
     for kw in keywords:
         kp = (kw.get("phrase") or "").lower()
-        if kp and (kp in pl or pl in kp or ko_label(kp, 30) == plab):
+        if kp and (kp in pl or pl in kp or ko_label(kp, 50) == plab):
             vid = ((kw.get("evidence") or [{}])[0]).get("videoId")
             for o in outliers:
                 if vid and o.get("videoId") == vid:
                     return o
     for o in outliers:
-        if ko_label(o.get("title") or "", 30) == plab:
+        if ko_label(o.get("title") or "", 50) == plab:
             return o
     tokens = [
         t for t in re.findall(r"[가-힣a-z0-9]{2,}", pl)
@@ -510,7 +515,7 @@ def collect_briefs(
     out: list[dict] = []
 
     def add(phrase: str, why: str = "", flag: str = "", picked: bool = False) -> None:
-        key = ko_label(phrase, 30)
+        key = ko_label(phrase, 50)
         if not phrase or key in seen:
             return
         ev = match_outlier(phrase, why, outliers, keywords)
@@ -529,8 +534,8 @@ def collect_briefs(
     ranked = sorted(
         keywords,
         key=lambda kw: (
-            2 if "걸러" in flags.get(kw.get("phrase") or "", "") else
-            1 if "예" in flags.get(kw.get("phrase") or "", "") else 0,
+            2 if "skip" in flags.get(kw.get("phrase") or "", "").lower() else
+            1 if "yes" in flags.get(kw.get("phrase") or "", "").lower() else 0,
             -num(kw.get("bestMultiplier")),
         ),
     )
@@ -545,9 +550,9 @@ def chosen_briefs_html(briefs: list[dict]) -> str:
     if not picked:
         return (
             '<div class="brief">'
-            '<div class="bh">아직 만들 편을 고르지 않았다</div>'
+            '<div class="bh">Nothing picked to make yet</div>'
             '<div class="bg"><div class="bc" style="grid-column:1/-1">'
-            "아래 키워드에서 만들 편을 고르면 이 칸이 채워진다."
+            "Pick what to make from the keywords below and this box fills in."
             "</div></div></div>"
         )
     bits = []
@@ -557,8 +562,8 @@ def chosen_briefs_html(briefs: list[dict]) -> str:
             f'<div class="bh">{i}. {esc(b["label"])}'
             f'<span class="fam">{esc(b["family"])}</span></div>'
             f'<div class="bg">'
-            f'<div class="bc"><div class="bl">시장 영상은</div>{esc(b["covers"])}</div>'
-            f'<div class="bc make"><div class="bl">우리는 이렇게</div>{esc(b["make"])}</div>'
+            f'<div class="bc"><div class="bl">The market videos</div>{esc(b["covers"])}</div>'
+            f'<div class="bc make"><div class="bl">Here is what we do</div>{esc(b["make"])}</div>'
             f"</div></div>"
         )
     return "".join(bits)
@@ -569,22 +574,22 @@ def keyword_rows_html(briefs: list[dict]) -> str:
     used = [b for b in briefs if b["status"] == "used"]
     skipped = [b for b in briefs if b["status"] == "skip"]
     if not rows:
-        return '<p class="small">후보 키워드가 없다.</p>'
+        return '<p class="small">No candidate keywords.</p>'
     bits = []
     for b in rows:
-        tag = "만들 편" if b["status"] == "pick" else "후보"
+        tag = "making it" if b["status"] == "pick" else "candidate"
         bits.append(
             f'<div class="kwcard {esc(b["status"])}">'
             f'<div class="kn">{esc(b["label"])}<span class="tag">{esc(tag)}</span></div>'
-            f'<div class="bl">시장 영상은</div><div>{esc(b["covers"])}</div>'
-            f'<div class="bl">우리는 이렇게</div><div class="wm">{esc(b["make"])}</div>'
+            f'<div class="bl">The market videos</div><div>{esc(b["covers"])}</div>'
+            f'<div class="bl">Here is what we do</div><div class="wm">{esc(b["make"])}</div>'
             "</div>"
         )
     notes = []
     if used:
-        notes.append("이미 만든 편 " + " · ".join(b["label"] for b in used))
+        notes.append("Already made " + " · ".join(b["label"] for b in used))
     if skipped:
-        notes.append("빼 둔 것 " + " · ".join(b["label"] for b in skipped))
+        notes.append("Set aside " + " · ".join(b["label"] for b in skipped))
     note_html = f'<p class="small">{esc(" · ".join(notes))}</p>' if notes else ""
     return f'<div class="kwgrid">{"".join(bits)}</div>{note_html}'
 
@@ -598,14 +603,14 @@ def interpret_pick(briefs: list[dict]) -> tuple[str, str]:
     if not picked:
         n = sum(1 for b in briefs if b["status"] == "keep")
         return (
-            "아직 만들 편을 고르지 않았다",
-            f"후보 키워드 {n}개가 있다. 고르면 이 칸에 우리가 만들 편이 채워진다.",
+            "Nothing picked to make yet",
+            f"There are {n} candidate keywords. Pick one and this box fills in with what we'll make.",
         )
     names = " · ".join(b["label"] for b in picked)
     return (
-        "이번에 만들 편",
-        f"고른 키워드는 <b>{esc(names)}</b> 이다. "
-        "시장 영상 제목은 베끼지 않고 우리가 직접 실험한 숫자만 보여 준다.",
+        "Making this time",
+        f"The chosen keywords are <b>{esc(names)}</b>. "
+        "We don't copy the market videos' titles, we show only the numbers from our own test.",
     )
 
 
@@ -613,12 +618,12 @@ def interpret_funnel(scanned: dict, n_out: int, min_m: float) -> tuple[str, str]
     n_vid = int(scanned.get("videos") or 0)
     n_ch = int(scanned.get("channels") or 0)
     if n_vid <= 0:
-        return "이번 조사", "본 영상이 없다."
+        return "This scan", "No videos seen."
     return (
-        "조회가 크다고 고르지 않았다",
-        f"비슷한 채널 {n_ch}곳, 최근 영상 {n_vid}편을 보고 "
-        f"그 채널 평소보다 {min_m:g}배 잘 된 {n_out}편만 주제로 올렸다. "
-        "큰 채널의 평범한 날을 주제로 쓰지 않기 위해서다.",
+        "Big view counts weren't the reason",
+        f"Out of {n_ch} similar channels and {n_vid} recent videos, only the {n_out} "
+        f"that beat their channel's usual by {min_m:g}x made the topic list. "
+        "That keeps an ordinary day at a big channel from becoming a topic.",
     )
 
 
@@ -630,12 +635,12 @@ def links_html(outliers: list[dict]) -> str:
         )
         if not href:
             continue
-        parts.append(f'<a href="{esc(href)}">{esc(clip(ko_label(o.get("title") or "영상", 14), 18))}</a>')
+        parts.append(f'<a href="{esc(href)}">{esc(clip(ko_label(o.get("title") or "video", 24), 30))}</a>')
     return " · ".join(parts) if parts else "—"
 
 
-_SNS_NAMES = {"threads": "스레드", "x": "X", "instagram": "인스타그램"}
-_SNS_RECENCY = {"day": "하루", "week": "일주일", "month": "한 달"}
+_SNS_NAMES = {"threads": "Threads", "x": "X", "instagram": "Instagram"}
+_SNS_RECENCY = {"day": "day", "week": "week", "month": "month"}
 
 
 def sns_name(platform: str) -> str:
@@ -649,11 +654,11 @@ def sns_stats_html(sns: dict) -> str:
     for p in posts:
         per[p.get("platform")] = per.get(p.get("platform"), 0) + 1
     cells = [
-        f'<div class="stat"><div class="v">{comma(scanned.get("posts") or len(posts))}<small> 건</small></div><div class="l">모은 글</div></div>'
+        f'<div class="stat"><div class="v">{comma(scanned.get("posts") or len(posts))}<small> posts</small></div><div class="l">Collected</div></div>'
     ]
     for key in ("threads", "x", "instagram"):
         cells.append(
-            f'<div class="stat"><div class="v">{comma(per.get(key, 0))}<small> 건</small></div>'
+            f'<div class="stat"><div class="v">{comma(per.get(key, 0))}<small> posts</small></div>'
             f'<div class="l">{esc(sns_name(key))}</div></div>'
         )
     return f'<div class="stats">{"".join(cells)}</div>'
@@ -662,13 +667,13 @@ def sns_stats_html(sns: dict) -> str:
 def sns_keyword_table_html(sns: dict) -> str:
     rows = (sns.get("keywords") or [])[:12]
     if not rows:
-        return '<p class="small">여러 글에 같이 나온 주제어가 없다 — 시드를 바꾸거나 구간을 넓혀 다시 본다.</p>'
+        return '<p class="small">No phrase showed up across several posts — change the seeds or widen the window and look again.</p>'
     bits = []
     for k in rows:
         plats = " · ".join(sns_name(x) for x in (k.get("platforms") or []))
         ev = k.get("evidence") or []
         links = " · ".join(
-            f'<a href="{esc(e.get("url"))}">{esc(clip(e.get("title") or sns_name(e.get("platform", "")), 22))}</a>'
+            f'<a href="{esc(e.get("url"))}">{esc(clip(e.get("title") or sns_name(e.get("platform", "")), 38))}</a>'
             for e in ev[:2]
             if e.get("url")
         )
@@ -680,7 +685,7 @@ def sns_keyword_table_html(sns: dict) -> str:
         )
     return (
         '<table class="tight"><colgroup><col style="width:26%"><col style="width:10%"><col style="width:24%"><col></colgroup>'
-        '<thead><tr><th>주제어</th><th>언급 글</th><th>어디서</th><th>대표 글</th></tr></thead>'
+        '<thead><tr><th>Phrase</th><th>Posts</th><th>Where</th><th>Sample posts</th></tr></thead>'
         f'<tbody>{"".join(bits)}</tbody></table>'
     )
 
@@ -699,13 +704,13 @@ def sns_trending_html(sns: dict) -> str:
     for t in rest:
         chips.append(f'<span class="chip">{esc(t.get("query"))}</span>')
     head = (
-        f"우리 주제와 겹치는 급상승 검색어가 {len(hit)}개 있다 — 시의성 소재 후보다."
+        f"{len(hit)} rising searches overlap our topic — candidates for a timely piece."
         if hit
-        else "우리 주제와 겹치는 급상승 검색어는 없다 — 대부분 연예·사건 검색어라 안 겹치는 게 보통이다."
+        else "No rising search overlaps our topic — most of them are celebrity and news queries, so no overlap is the norm."
     )
     return (
-        f'<h4>최근 {hours}시간 구글 급상승 검색어</h4>'
-        f'<p class="small">{esc(head)} 검색량은 구글 어림값이고 SNS 참여가 아니다.</p>'
+        f'<h4>Google rising searches, last {hours} hours</h4>'
+        f'<p class="small">{esc(head)} The search volume is a Google estimate, not SNS engagement.</p>'
         f'<div class="fam">{"".join(chips)}</div>'
     )
 
@@ -718,7 +723,7 @@ def sns_posts_html(sns: dict) -> str:
         if not mine:
             continue
         links = " · ".join(
-            f'<a href="{esc(p.get("url"))}">{esc(clip(p.get("title") or p.get("author") or "글", 20))}</a>' for p in mine
+            f'<a href="{esc(p.get("url"))}">{esc(clip(p.get("title") or p.get("author") or "post", 34))}</a>' for p in mine
         )
         parts.append(f'<div class="fam"><span class="fh">{esc(sns_name(key))}</span> {links}</div>')
     return f'<div class="famstrip">{"".join(parts)}</div>' if parts else ""
@@ -726,26 +731,27 @@ def sns_posts_html(sns: dict) -> str:
 
 def sns_page_html(sns: dict, display: str, page_no: int) -> str:
     method = sns.get("method") or {}
-    recency = _SNS_RECENCY.get(str(method.get("recency") or "week"), "일주일")
+    recency = _SNS_RECENCY.get(str(method.get("recency") or "week"), "week")
     scanned = sns.get("scanned") or {}
     errors = sns.get("errors") or []
     err_html = (
-        f'<p class="small">일부 검색이 실패했다({len(errors)}건) — 그 플랫폼·시드는 이 장에 없다.</p>' if errors else ""
+        f'<p class="small">Some searches failed ({len(errors)}) — those platforms and seeds are missing from this page.</p>' if errors else ""
     )
     return f"""<section class="page" data-pg="{page_no}">
-  <p class="runhead">{esc(display)} · SNS 에서 지금 오가는 이야기</p>
-  <h3>{page_no - 1}. 스레드·X·인스타그램에서는 무엇을 말하나</h3>
-  <p class="lead">같은 주제로 최근 {esc(recency)} 안에 올라온 글을 모아 <b>여러 글·여러 곳에 같이
-  나온 낱말</b>만 세었습니다. 앞 장의 유튜브 표와는 뜻이 다릅니다 — 여기 숫자는
-  좋아요나 조회가 아니라 <b>그 말을 꺼낸 글의 수</b>입니다. 무엇이 터졌는지가 아니라
-  무엇이 얘기되는지를 봅니다.</p>
+  <p class="runhead">{esc(display)} · what SNS is talking about right now</p>
+  <h3>{page_no - 1}. What Threads, X, and Instagram are saying</h3>
+  <p class="lead">We gathered posts on the same topic from the past {esc(recency)} and counted only
+  <b>the words that showed up across several posts and several places</b>. This means something
+  different from the YouTube table on the earlier page — the numbers here are not likes or views
+  but <b>how many posts brought that word up</b>. It shows what is being talked about, not what
+  blew up.</p>
   {sns_stats_html(sns)}
   {sns_keyword_table_html(sns)}
   {sns_trending_html(sns)}
-  <h4>대표 글</h4>
+  <h4>Sample posts</h4>
   {sns_posts_html(sns)}
   {err_html}
-  <p class="small">숫자 원본: sns-issues.json · 검색 {comma(scanned.get("searches"))}회 · 크레딧 {comma(sns.get("credits"))}건 · 순서는 구글이 준 대로라 인기순이 아니다 · 인용 전에 글을 연다</p>
+  <p class="small">Source numbers: sns-issues.json · {comma(scanned.get("searches"))} searches · {comma(sns.get("credits"))} credits · the order is Google's, not popularity · open a post before quoting it</p>
 </section>"""
 
 
@@ -764,8 +770,9 @@ def render(data: dict, md: str, name: str, out_path: str, sns: dict | None = Non
         generated = os.path.basename(out_path)
     days = int(method.get("publishedAfterDays") or 90)
     duration = method.get("duration") or "short"
-    dur_l = "짧은 영상(4분 미만)" if duration == "short" else "길이 무관"
-    market_names = {"US": "미국", "CN": "중국", "KR": "한국", "JP": "일본", "GB": "영국", "TW": "대만"}
+    dur_l = "short videos (under 4 min)" if duration == "short" else "any length"
+    market_names = {"US": "United States", "CN": "China", "KR": "Korea",
+                    "JP": "Japan", "GB": "United Kingdom", "TW": "Taiwan"}
     raw_markets = data.get("markets") or []
     if raw_markets:
         market_l = " · ".join(
@@ -777,7 +784,7 @@ def render(data: dict, md: str, name: str, out_path: str, sns: dict | None = Non
         code = str(method.get("regionCode") or "US")
         market_l = " · ".join(market_names.get(p, p) for p in code.split("+") if p)
     if not market_l:
-        market_l = "미국"
+        market_l = "United States"
     min_m = num(method.get("minMultiplier"), 5)
     min_v = int(method.get("minViews") or 1000)
     n_out = int(scanned.get("outliers") or len(outliers))
@@ -785,52 +792,52 @@ def render(data: dict, md: str, name: str, out_path: str, sns: dict | None = Non
     css = open(CSS_PATH, encoding="utf-8").read()
     face = font_face(out_path)
     display = name or slug
-    title = f"{display} 지금 만들면 좋은 주제"
+    title = f"{display} topics worth making now"
     k_pick = interpret_pick(briefs)
     k_funnel = interpret_funnel(scanned, n_out, min_m)
 
     page1 = f"""<section class="page" data-pg="1">
-  <h2>{esc(display)} · 이번에 만들 콘텐츠</h2>
-  <p class="lead">최근 {days}일 {esc(market_l)} 에서 우리랑 비슷한 채널이
-  잘 된 주제를 찾아, <b>그 키워드가 실제로 무엇을 다루는지</b>와
-  <b>우리는 어떤 편을 만들지</b>만 적었습니다. 제목과 화면은 베끼지 않습니다.</p>
+  <h2>{esc(display)} · what we're making this time</h2>
+  <p class="lead">We looked for topics that did well for channels like ours in
+  {esc(market_l)} over the last {days} days, and wrote down only <b>what the keyword
+  actually covers</b> and <b>which episode we'd make</b>. We don't copy titles or visuals.</p>
   <div class="stats">
-    <div class="stat"><div class="v">{n_pick}<small> 개</small></div><div class="l">이번에 만들 편</div></div>
-    <div class="stat"><div class="v">{sum(1 for b in briefs if b["status"]=="keep")}<small> 개</small></div><div class="l">다음 후보</div></div>
-    <div class="stat"><div class="v">{sum(1 for b in briefs if b["status"]=="used")}<small> 개</small></div><div class="l">이미 만든 편</div></div>
-    <div class="stat"><div class="v">{n_out}<small> 편</small></div><div class="l">시장에서 잘 된 편</div></div>
+    <div class="stat"><div class="v">{n_pick}<small> topics</small></div><div class="l">Making this time</div></div>
+    <div class="stat"><div class="v">{sum(1 for b in briefs if b["status"]=="keep")}<small> topics</small></div><div class="l">Next candidates</div></div>
+    <div class="stat"><div class="v">{sum(1 for b in briefs if b["status"]=="used")}<small> topics</small></div><div class="l">Already made</div></div>
+    <div class="stat"><div class="v">{n_out}<small> videos</small></div><div class="l">Did well in the market</div></div>
   </div>
   {key_html(*k_pick)}
   {chosen_briefs_html(briefs)}
   <div class="nextbar">
-    <div class="nl">다음에 할 일</div>
-    <div>고른 주제로 스토리보드를 쓰거나, 한 편을 끝까지 만든다. 성장 계획에 넣으려면 그 계획을 따로 승인한 뒤에만 넣는다.</div>
+    <div class="nl">Next steps</div>
+    <div>Write a storyboard for a chosen topic, or take one episode all the way. To put it in a growth plan, only do so after that plan is approved separately.</div>
   </div>
 </section>"""
 
     page2_lead = (
-        "위에 고른 편 말고 같은 조사에서 나온 다음 후보입니다. "
-        "시장이 이미 찍은 내용과 우리가 찍으면 좋은 실험을 나란히 적었습니다."
+        "Beyond the ones picked above, these are the next candidates from the same scan. "
+        "What the market already shot sits next to the test we'd be better off shooting."
         if n_pick else
-        "잘 된 영상에서 뽑은 키워드입니다. "
-        "시장이 이미 찍은 내용과 우리가 찍으면 좋은 실험을 나란히 적었습니다."
+        "These are the keywords pulled out of the videos that did well. "
+        "What the market already shot sits next to the test we'd be better off shooting."
     )
     page2 = f"""<section class="page" data-pg="2">
-  <p class="runhead">{esc(display)} · 키워드가 다루는 콘텐츠</p>
-  <h3>1. 이 키워드로 어떤 영상을 만들까</h3>
+  <p class="runhead">{esc(display)} · the content behind the keywords</p>
+  <h3>1. What video do we make from this keyword</h3>
   <p class="lead">{esc(page2_lead)}</p>
   {families_html(briefs)}
   {keyword_rows_html(briefs)}
 </section>"""
 
     page3 = f"""<section class="page" data-pg="3">
-  <p class="runhead">{esc(display)} · 어떻게 골랐나</p>
-  <h3>2. 고른 근거</h3>
-  <p class="lead">조회수가 크다고 고르지 않았습니다. 그 채널이 늘 올리던 영상보다
-  조회가 {min_m:g}배 넘게 나온 편만 주제로 올렸습니다.</p>
-  {figure(funnel_svg(queries, scanned, n_out), "[그림 2] 어떻게 좁혔나", "비슷한 채널을 모은 뒤, 평소보다 훨씬 잘 된 편만 고른다")}
+  <p class="runhead">{esc(display)} · how we picked</p>
+  <h3>2. The evidence</h3>
+  <p class="lead">Big view counts weren't the reason. Only videos that pulled more
+  than {min_m:g}x what that channel usually gets made the topic list.</p>
+  {figure(funnel_svg(queries, scanned, n_out), "[Figure 2] How we narrowed it", "gather similar channels, then keep only the videos that did far better than usual")}
   {key_html(*k_funnel)}
-  <p class="small">숫자 원본: market-keywords.md · market-keywords.json · 참고 영상 {links_html(outliers)} · 조회 {comma(min_v)} 미만은 빼 둠</p>
+  <p class="small">Source numbers: market-keywords.md · market-keywords.json · reference videos {links_html(outliers)} · anything under {comma(min_v)} views left out</p>
 </section>"""
 
     page4 = sns_page_html(sns, display, 4) if sns else ""
@@ -842,9 +849,9 @@ def render(data: dict, md: str, name: str, out_path: str, sns: dict | None = Non
 </style>
 <div class="toolbar">
   <strong>{esc(title)}</strong>
-  <span class="small" style="color:#bbb">{esc(generated)} · {esc(market_l)} · 최근 {days}일 {esc(dur_l)} · 평소보다 {min_m:g}배</span>
+  <span class="small" style="color:#bbb">{esc(generated)} · {esc(market_l)} · last {days} days · {esc(dur_l)} · {min_m:g}x usual</span>
   <span class="spacer"></span>
-  <button onclick="window.print()">인쇄 / PDF 저장</button>
+  <button onclick="window.print()">Print / Save as PDF</button>
 </div>
 {page1}
 {page2}
@@ -854,20 +861,20 @@ def render(data: dict, md: str, name: str, out_path: str, sns: dict | None = Non
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="시장 키워드 HTML 보고서를 뽑는다")
-    ap.add_argument("--json", required=True, help="youtube_topic_scout 응답을 저장한 json")
-    ap.add_argument("--md", help="고른 주제·걸러 표시가 있는 md (없으면 json 옆)")
-    ap.add_argument("--sns", help="sns_issue_scout 응답을 저장한 json (있으면 SNS 장을 붙인다)")
-    ap.add_argument("--out", help="쓸 HTML 경로 (기본 json 옆 market-keywords.html)")
-    ap.add_argument("--name", help="채널 표시명")
+    ap = argparse.ArgumentParser(description="Render the market keyword HTML report")
+    ap.add_argument("--json", required=True, help="json holding the youtube_topic_scout response")
+    ap.add_argument("--md", help="md with the chosen topics and skip marks (defaults to next to the json)")
+    ap.add_argument("--sns", help="json holding the sns_issue_scout response (adds the SNS page when given)")
+    ap.add_argument("--out", help="HTML path to write (defaults to market-keywords.html next to the json)")
+    ap.add_argument("--name", help="channel display name")
     args = ap.parse_args()
 
     json_path = os.path.abspath(args.json)
     if not os.path.isfile(json_path):
-        print(f"json 없음: {json_path}", file=sys.stderr)
+        print(f"no json: {json_path}", file=sys.stderr)
         return 1
     if not os.path.isfile(CSS_PATH):
-        print(f"report.css 없음: {CSS_PATH}", file=sys.stderr)
+        print(f"no report.css: {CSS_PATH}", file=sys.stderr)
         return 1
 
     data = json.loads(open(json_path, encoding="utf-8").read())
@@ -887,7 +894,7 @@ def main() -> int:
     if args.sns:
         sns_path = os.path.abspath(args.sns)
         if not os.path.isfile(sns_path):
-            print(f"sns json 없음: {sns_path}", file=sys.stderr)
+            print(f"no sns json: {sns_path}", file=sys.stderr)
             return 1
         sns = json.loads(open(sns_path, encoding="utf-8").read())
 

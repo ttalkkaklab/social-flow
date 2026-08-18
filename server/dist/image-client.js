@@ -1,83 +1,84 @@
 /**
- * OpenAI GPT Image 생성 클라이언트 — fect-mcp-server gpt-image 모듈 이식.
+ * OpenAI GPT Image generation client — ported from the fect-mcp-server gpt-image module.
  *
- * `openai` 공식 SDK(v6)를 사용한다.
+ * Uses the official `openai` SDK (v6).
  * - images.generate (text-to-image)
- * - images.edit (image-to-image, 멀티 레퍼런스 최대 16장, optional mask)
+ * - images.edit (image-to-image, up to 16 multi-reference images, optional mask)
  *
- * GPT Image 계열 모델은 항상 b64_json 형식으로 응답한다(response_format 미지원).
+ * GPT Image models always respond in b64_json format (response_format unsupported).
  *
- * 정확성 참고(openai SDK v6 images.d.ts 준거):
- *   - gpt-image-2 는 임의 해상도(WIDTHxHEIGHT)를 지원하므로 size 를 문자열 그대로 전달한다.
- *   - images.edit 도 output_format 을 지원하므로 응답 MIME 은 요청한 outputFormat 을 따른다.
- *   - input_fidelity 는 edit 전용이며 gpt-image-1 / gpt-image-1.5 에서만 전달 가능하다.
- *     gpt-image-2 는 항상 high 로 동작하므로 파라미터를 전달하면 안 되고(공식 가이드),
- *     gpt-image-1-mini 는 미지원이다. (둘 다 스키마 superRefine 에서 사전 차단됨)
+ * Accuracy notes (per openai SDK v6 images.d.ts):
+ *   - gpt-image-2 supports arbitrary resolutions (WIDTHxHEIGHT), so size is passed through as a string.
+ *   - images.edit also supports output_format, so the response MIME follows the requested outputFormat.
+ *   - input_fidelity is edit-only and can be passed only on gpt-image-1 / gpt-image-1.5.
+ *     gpt-image-2 always runs at high, so the parameter must not be sent (official guide),
+ *     and gpt-image-1-mini doesn't support it. (Both are pre-blocked in the schema superRefine.)
  *
- * API 키는 기동 시가 아니라 호출 시점에 검증한다 (config.requireOpenAiKey).
+ * The API key is validated at call time, not at startup (config.requireOpenAiKey).
  */
 import { z } from 'zod';
 import { requireOpenAiKey } from './config.js';
-// 지원되는 OpenAI 이미지 생성 모델 (2026-07 기준, openai SDK v6 ImageModel 준거)
-// - 편의를 위해 GPT Image 계열만 노출한다(dall-e-* 는 2026-05-12 셧다운 완료).
-// - EOL 일정: gpt-image-1 → 2026-10-23, gpt-image-1.5 / gpt-image-1-mini → 2026-12-01.
-//   그 이후 Images API에 남는 모델은 gpt-image-2 하나뿐이다.
+// Supported OpenAI image generation models (as of 2026-07, per openai SDK v6 ImageModel)
+// - For simplicity only the GPT Image family is exposed (dall-e-* finished shutting down 2026-05-12).
+// - EOL schedule: gpt-image-1 → 2026-10-23, gpt-image-1.5 / gpt-image-1-mini → 2026-12-01.
+//   After that, gpt-image-2 is the only model left on the Images API.
 export const VALID_GPT_IMAGE_MODELS = [
-    'gpt-image-2', // 최신 · 권장 기본값 (photorealism + 강한 지시 준수, reasoning 기반)
-    'gpt-image-1.5', // 품질/비용 균형 (mid-tier) — 2026-12-01 셧다운 예정
-    'gpt-image-1', // 이전 세대 — 2026-10-23 셧다운 예정
-    'gpt-image-1-mini', // 저가 · 저품질 옵션 — 2026-12-01 셧다운 예정
+    'gpt-image-2', // newest · recommended default (photorealism + strong instruction adherence, reasoning-based)
+    'gpt-image-1.5', // quality/cost balance (mid-tier) — shutdown scheduled 2026-12-01
+    'gpt-image-1', // previous generation — shutdown scheduled 2026-10-23
+    'gpt-image-1-mini', // cheap, lower-quality option — shutdown scheduled 2026-12-01
 ];
 const DEFAULT_MODEL = 'gpt-image-2';
-// gpt-image-2 만 임의 해상도(WIDTHxHEIGHT)를 지원한다.
+// Only gpt-image-2 supports arbitrary resolutions (WIDTHxHEIGHT).
 const GPT_IMAGE_FLEXIBLE_SIZE_MODELS = ['gpt-image-2'];
-// 모든 GPT Image 모델이 공통으로 지원하는 표준 크기 프리셋.
+// Standard size presets supported by every GPT Image model.
 export const GPT_IMAGE_SIZE_PRESETS = [
     'auto',
     '1024x1024',
     '1536x1024', // landscape
     '1024x1536', // portrait
 ];
-// gpt-image-2 임의 해상도 제약 (openai SDK v6 images.d.ts / image-generation 가이드 준거)
+// gpt-image-2 arbitrary-resolution constraints (per openai SDK v6 images.d.ts / image-generation guide)
 const WH_SIZE_RE = /^(\d+)x(\d+)$/;
-const GPT_IMAGE_MAX_EDGE = 3840; // 최대 변 길이(px)
-const GPT_IMAGE_MIN_TOTAL_PIXELS = 655_360; // 총 픽셀 하한
-const GPT_IMAGE_MAX_TOTAL_PIXELS = 8_294_400; // 총 픽셀 상한
-const GPT_IMAGE_MAX_ASPECT = 3; // 가로세로 비율 1:3 ~ 3:1
+const GPT_IMAGE_MAX_EDGE = 3840; // max edge length (px)
+const GPT_IMAGE_MIN_TOTAL_PIXELS = 655_360; // total pixel floor
+const GPT_IMAGE_MAX_TOTAL_PIXELS = 8_294_400; // total pixel ceiling
+const GPT_IMAGE_MAX_ASPECT = 3; // aspect ratio 1:3 ~ 3:1
 /**
- * size 필드 스키마: 프리셋(auto/1024x1024/1536x1024/1024x1536) 또는
- * 커스텀 "WIDTHxHEIGHT" 문자열(gpt-image-2 전용, 모델 종속 제약은 superRefine에서 검증).
+ * size field schema: a preset (auto/1024x1024/1536x1024/1024x1536) or a custom
+ * "WIDTHxHEIGHT" string (gpt-image-2 only; model-dependent constraints are
+ * validated in superRefine).
  */
 const GptImageSizeSchema = z.string().refine((s) => GPT_IMAGE_SIZE_PRESETS.includes(s) || WH_SIZE_RE.test(s), {
-    message: 'size는 auto/1024x1024/1536x1024/1024x1536 중 하나이거나, 커스텀 "WIDTHxHEIGHT"(예: "1536x864") 형식이어야 합니다.',
+    message: 'size must be one of auto/1024x1024/1536x1024/1024x1536, or a custom "WIDTHxHEIGHT" string (e.g. "1536x864").',
 });
 export const VALID_GPT_IMAGE_QUALITIES = ['low', 'medium', 'high', 'auto'];
 export const VALID_GPT_IMAGE_BACKGROUNDS = ['opaque', 'transparent', 'auto'];
 export const VALID_GPT_IMAGE_FORMATS = ['png', 'jpeg', 'webp'];
-// 입력 디테일 보존 강도 (images.edit 전용)
-// - gpt-image-1-mini: 미지원.
-// - gpt-image-2: 항상 high 로 동작하며 파라미터 자체를 전달할 수 없다(공식 가이드:
-//   "omit this parameter; the API doesn't allow changing it").
+// Input detail preservation strength (images.edit only)
+// - gpt-image-1-mini: unsupported.
+// - gpt-image-2: always runs at high and the parameter itself cannot be passed
+//   (official guide: "omit this parameter; the API doesn't allow changing it").
 export const VALID_GPT_IMAGE_INPUT_FIDELITY = ['high', 'low'];
-// 입력 이미지 MIME
+// input image MIME
 export const VALID_GPT_IMAGE_INPUT_MIME = ['image/png', 'image/jpeg', 'image/webp'];
 /**
- * size 값을 모델 제약에 맞게 검증한다.
- * - 프리셋은 모든 모델에서 허용.
- * - 커스텀 WIDTHxHEIGHT는 gpt-image-2 에서만 허용하며, 16 배수 / 비율(1:3~3:1) /
- *   최대 변 / 총 픽셀 제약을 만족해야 한다.
+ * Validate the size value against the model's constraints.
+ * - Presets are allowed on every model.
+ * - Custom WIDTHxHEIGHT is allowed only on gpt-image-2 and must satisfy the
+ *   multiple-of-16 / aspect ratio (1:3~3:1) / max edge / total pixel constraints.
  */
 function validateSizeAgainstModel(model, size, ctx) {
     if (GPT_IMAGE_SIZE_PRESETS.includes(size))
         return;
     const match = WH_SIZE_RE.exec(size);
     if (!match)
-        return; // 필드 스키마 refine 에서 이미 거부됨
+        return; // already rejected by the field schema refine
     if (!GPT_IMAGE_FLEXIBLE_SIZE_MODELS.includes(model)) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['size'],
-            message: `커스텀 해상도("${size}")는 gpt-image-2 에서만 지원됩니다. 다른 모델은 ${GPT_IMAGE_SIZE_PRESETS.join(' / ')} 만 사용하세요.`,
+            message: `Custom resolutions ("${size}") are only supported on gpt-image-2. On other models use ${GPT_IMAGE_SIZE_PRESETS.join(' / ')} only.`,
         });
         return;
     }
@@ -85,31 +86,31 @@ function validateSizeAgainstModel(model, size, ctx) {
     const height = Number(match[2]);
     const violations = [];
     if (width % 16 !== 0 || height % 16 !== 0) {
-        violations.push('가로·세로는 16의 배수여야 합니다');
+        violations.push('width and height must be multiples of 16');
     }
     if (Math.max(width, height) > GPT_IMAGE_MAX_EDGE) {
-        violations.push(`최대 변은 ${GPT_IMAGE_MAX_EDGE}px 이하여야 합니다`);
+        violations.push(`the longest edge must be at most ${GPT_IMAGE_MAX_EDGE}px`);
     }
     const shortEdge = Math.min(width, height);
     if (shortEdge === 0 || Math.max(width, height) / shortEdge > GPT_IMAGE_MAX_ASPECT) {
-        violations.push('가로세로 비율은 1:3 ~ 3:1 범위여야 합니다');
+        violations.push('the aspect ratio must be within 1:3 ~ 3:1');
     }
     const totalPixels = width * height;
     if (totalPixels < GPT_IMAGE_MIN_TOTAL_PIXELS || totalPixels > GPT_IMAGE_MAX_TOTAL_PIXELS) {
-        violations.push(`총 픽셀 수는 ${GPT_IMAGE_MIN_TOTAL_PIXELS.toLocaleString()}~${GPT_IMAGE_MAX_TOTAL_PIXELS.toLocaleString()} 범위여야 합니다`);
+        violations.push(`the total pixel count must be within ${GPT_IMAGE_MIN_TOTAL_PIXELS.toLocaleString()}~${GPT_IMAGE_MAX_TOTAL_PIXELS.toLocaleString()}`);
     }
     if (violations.length > 0) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['size'],
-            message: `커스텀 해상도 "${size}" 제약 위반: ${violations.join(', ')}`,
+            message: `Custom resolution "${size}" violates constraints: ${violations.join(', ')}`,
         });
     }
 }
 /**
- * background 값을 모델/출력 포맷 제약에 맞게 검증한다.
- * - gpt-image-2 는 transparent 를 지원하지 않는다(문서화된 사실).
- * - transparent 는 투명도를 지원하는 png/webp 출력에서만 가능하다(jpeg 불가).
+ * Validate the background value against model/output-format constraints.
+ * - gpt-image-2 does not support transparent (documented fact).
+ * - transparent is only possible with png/webp output, which support transparency (not jpeg).
  */
 function validateBackground(model, background, outputFormat, ctx) {
     if (background !== 'transparent')
@@ -118,18 +119,18 @@ function validateBackground(model, background, outputFormat, ctx) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['background'],
-            message: 'gpt-image-2 는 투명 배경(transparent)을 지원하지 않습니다. opaque/auto 를 쓰거나 gpt-image-1(EOL 2026-10-23) / gpt-image-1.5(EOL 2026-12-01) 로 변경하세요. EOL 이후에는 투명 배경 지원 모델이 없으므로 후처리(배경 제거)를 검토하세요.',
+            message: 'gpt-image-2 does not support transparent backgrounds. Use opaque/auto, or switch to gpt-image-1 (EOL 2026-10-23) / gpt-image-1.5 (EOL 2026-12-01). After EOL no model supports transparency, so consider post-processing (background removal).',
         });
     }
     if (outputFormat === 'jpeg') {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['outputFormat'],
-            message: '투명 배경(transparent)은 png 또는 webp 출력에서만 가능합니다(jpeg 불가).',
+            message: 'Transparent backgrounds are only possible with png or webp output (not jpeg).',
         });
     }
 }
-// Text-to-Image 요청 스키마 (POST /v1/images/generations)
+// Text-to-Image request schema (POST /v1/images/generations)
 export const text2ImageSchema = z
     .object({
     prompt: z.string().min(1, 'Prompt is required').max(32_000, 'Prompt exceeds the 32,000-character limit for GPT Image models'),
@@ -144,8 +145,8 @@ export const text2ImageSchema = z
     validateSizeAgainstModel(data.model, data.size, ctx);
     validateBackground(data.model, data.background, data.outputFormat, ctx);
 });
-// Image-to-Image (edit / reference 합성) 요청 스키마 (POST /v1/images/edits)
-// 참고: openai SDK v6 부터 images.edit 도 output_format / input_fidelity 를 지원한다.
+// Image-to-Image (edit / reference composition) request schema (POST /v1/images/edits)
+// Note: from openai SDK v6, images.edit also supports output_format / input_fidelity.
 export const img2ImgSchema = z
     .object({
     prompt: z.string().min(1, 'Prompt is required').max(32_000, 'Prompt exceeds the 32,000-character limit for GPT Image models'),
@@ -171,19 +172,19 @@ export const img2ImgSchema = z
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['inputFidelity'],
-                message: 'inputFidelity 는 gpt-image-1-mini 에서 지원되지 않습니다. gpt-image-1 / gpt-image-1.5 를 사용하세요.',
+                message: 'inputFidelity is not supported on gpt-image-1-mini. Use gpt-image-1 / gpt-image-1.5.',
             });
         }
         else if (data.model === 'gpt-image-2') {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: ['inputFidelity'],
-                message: 'gpt-image-2 는 항상 high fidelity 로 동작하며 inputFidelity 파라미터를 받지 않습니다. 파라미터를 생략하세요.',
+                message: 'gpt-image-2 always runs at high fidelity and does not accept the inputFidelity parameter. Omit the parameter.',
             });
         }
     }
 });
-// outputFormat → MIME 매핑
+// outputFormat → MIME mapping
 function formatToMime(format) {
     switch (format) {
         case 'png':
@@ -206,14 +207,14 @@ function mimeToExt(mime) {
             return 'png';
     }
 }
-/** 텍스트 프롬프트로 이미지 생성 (POST /v1/images/generations) */
+/** Generate an image from a text prompt (POST /v1/images/generations) */
 export async function generateFromText(request) {
     const apiKey = requireOpenAiKey();
     const model = request.model || DEFAULT_MODEL;
     const outputFormat = request.outputFormat || 'png';
     const responseMime = formatToMime(outputFormat);
     try {
-        // openai SDK 동적 import — 생성 툴 호출 시에만 로드
+        // dynamic import of the openai SDK — loaded only when a generation tool is called
         const { default: OpenAI } = await import('openai');
         const client = new OpenAI({ apiKey });
         const response = await client.images.generate({
@@ -241,7 +242,7 @@ export async function generateFromText(request) {
         };
     }
 }
-/** 레퍼런스 이미지 + 프롬프트로 편집/합성 (POST /v1/images/edits) */
+/** Edit/compose from reference images + a prompt (POST /v1/images/edits) */
 export async function generateFromImage(request) {
     const apiKey = requireOpenAiKey();
     const model = request.model || DEFAULT_MODEL;
@@ -251,7 +252,7 @@ export async function generateFromImage(request) {
     try {
         const { default: OpenAI, toFile } = await import('openai');
         const client = new OpenAI({ apiKey });
-        // 메모리 압박 완화를 위해 base64 디코딩과 Uploadable 변환을 순차 처리한다.
+        // Decode base64 and convert to Uploadable sequentially, to ease memory pressure.
         const sourceExt = mimeToExt(sourceMime);
         const imageFiles = [];
         for (let i = 0; i < request.sourceImagesBase64.length; i++) {
@@ -289,7 +290,7 @@ export async function generateFromImage(request) {
         };
     }
 }
-/** OpenAI 응답에서 첫 번째 이미지의 base64 추출 */
+/** Extract the first image's base64 from an OpenAI response */
 function extractImage(response, prompt, meta) {
     const fail = (error) => ({
         success: false, base64: '', mimeType: meta.mimeType, prompt, model: meta.model, error,

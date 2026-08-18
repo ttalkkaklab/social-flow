@@ -1,16 +1,16 @@
 /**
- * Google Gemini TTS 음성 합성 클라이언트 — fect-mcp-server tts 모듈 이식.
+ * Google Gemini TTS speech synthesis client — ported from the fect-mcp-server tts module.
  *
- * Google Gen AI SDK 로 텍스트를 음성으로 변환한다.
- * - 기본 모델: gemini-2.5-flash-preview-tts (요청별 model 로 교체 가능)
- * - 단일 화자(내레이션)와 2인 대화 합성 지원
- * - 언어는 요청 필드가 아니라 입력 텍스트에서 자동 감지된다 (103개 언어, zh-TW 제외)
+ * Converts text to speech via the Google Gen AI SDK.
+ * - Default model: gemini-2.5-flash-preview-tts (swappable per request via model)
+ * - Supports single-speaker (narration) and two-person dialogue synthesis
+ * - Language is auto-detected from the input text, not a request field (103 languages, zh-TW excluded)
  *
- * 응답은 컨테이너 없는 16-bit 원시 PCM(audio/L16) 이라 WAV 헤더를 씌워 저장하고
- * 경로만 반환한다 (원본의 클래스 래퍼는 이 서버의 모듈 함수 규약에 맞춰 접었다 —
- * 동작 동일).
+ * The response is container-less raw 16-bit PCM (audio/L16), so we wrap it in a
+ * WAV header, save it, and return only the path (the original's class wrapper was
+ * folded to match this server's module-function convention — behavior identical).
  *
- * API 키는 기동 시가 아니라 호출 시점에 검증한다 (config.requireGeminiKey).
+ * The API key is validated at call time, not at startup (config.requireGeminiKey).
  */
 
 import type { GenerateContentConfig, SpeechConfig } from '@google/genai';
@@ -19,11 +19,12 @@ import { requireGeminiKey } from './config.js';
 import { bareFilenameSchema, pcmToWav, saveAudioFile } from './media-utils.js';
 
 /**
- * 지원 음성 30종과 성격 특성.
+ * The 30 supported voices and their character traits.
  *
- * 원본은 목록(types)·특성 표(handlers)·스키마 enum(tools) 3곳에 같은 30개를
- * 흩어 두었다. 이 서버는 이 레코드 하나를 정본으로 삼고 나머지를 파생시킨다 —
- * 음성이 추가될 때 한 곳만 고치면 된다.
+ * The original scattered the same 30 across three places: a list (types), a trait
+ * table (handlers), and a schema enum (tools). This server treats this one record
+ * as the source of truth and derives the rest — when a voice is added, only one
+ * place changes.
  */
 export const TTS_VOICES = {
   Zephyr: 'Bright',
@@ -60,42 +61,43 @@ export const TTS_VOICES = {
 
 export type VoiceName = keyof typeof TTS_VOICES;
 
-/** 음성 이름 배열 — zod enum·JSON Schema enum 의 단일 출처. */
+/** Voice name array — single source for the zod enum and the JSON Schema enum. */
 export const TTS_VOICE_NAMES = Object.keys(TTS_VOICES) as [VoiceName, ...VoiceName[]];
 
 export const DEFAULT_VOICE: VoiceName = 'Kore';
 
-/** Gemini TTS 모델 (2026-07 기준) */
+/** Gemini TTS models (as of 2026-07) */
 export const VALID_TTS_MODELS = [
-  'gemini-2.5-flash-preview-tts', // 무료 티어 있음 · 최저가 (기본값)
-  'gemini-2.5-pro-preview-tts',   // 고품질 · 무료 티어 없음
-  'gemini-3.1-flash-tts-preview', // TTS 계열 중 유일하게 스트리밍 지원 · 2배 가격
+  'gemini-2.5-flash-preview-tts', // has a free tier · cheapest (default)
+  'gemini-2.5-pro-preview-tts',   // high quality · no free tier
+  'gemini-3.1-flash-tts-preview', // the only TTS model with streaming · 2x the price
 ] as const;
 export type TtsModel = (typeof VALID_TTS_MODELS)[number];
 
 export const DEFAULT_TTS_MODEL: TtsModel = 'gemini-2.5-flash-preview-tts';
 
 /**
- * 세션 컨텍스트 한도 32k 토큰 대비 보수적 상한 (CJK 문자 ≈ 1~2 토큰).
- * 수 분을 넘는 출력은 품질 드리프트가 문서화되어 있어 분할 합성을 권장한다.
+ * Conservative cap against the 32k-token session context limit (CJK characters ≈ 1~2 tokens).
+ * Quality drift on outputs longer than a few minutes is documented, so split synthesis is recommended.
  */
 export const MAX_TTS_INPUT_CHARS = 16_000;
 
 /**
- * TTS 는 LLM 기반이라 회차 간 톤·속도가 흔들린다. 내레이션처럼 컷마다 이어 붙이는
- * 콘텐츠는 낮은 온도가 필수라 공급사 기본값(1.0) 대신 0.4 를 기본으로 둔다.
+ * TTS is LLM-based, so tone and pace wobble between takes. Content stitched cut
+ * by cut, like narration, needs a low temperature, so we default to 0.4 instead
+ * of the vendor default (1.0).
  */
 export const DEFAULT_TTS_TEMPERATURE = 0.4;
 
-/** 오디오 대신 텍스트 토큰이 반환돼 실패하는 현상이 무작위로 발생 — 공급사 문서가 재시도를 요구한다. */
+/** Failures where text tokens come back instead of audio occur at random — the vendor docs call for retries. */
 const MAX_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 400;
 
-/** 원시 PCM 응답의 기본 규격 — mimeType 파라미터로 실제 값이 오면 그쪽을 쓴다. */
+/** Default spec for the raw PCM response — when the mimeType parameter carries a real value, that wins. */
 const PCM_FALLBACK_MIME = 'audio/L16;codec=pcm;rate=24000';
 const PCM_CHANNELS = 1;
 
-// ── 요청 스키마 ──────────────────────────────────────────────────
+// ── Request schemas ──────────────────────────────────────────────
 
 const voiceSchema = z.enum(TTS_VOICE_NAMES);
 const modelSchema = z.enum(VALID_TTS_MODELS).optional().default(DEFAULT_TTS_MODEL);
@@ -137,10 +139,11 @@ export type TtsMultiSpeakerRequest = z.infer<typeof ttsMultiSpeakerSchema>;
 export type SpeakerConfig = z.infer<typeof speakerSchema>;
 
 /**
- * 음성 합성 응답.
+ * Speech synthesis response.
  *
- * error 는 원인 메시지만 담는다 — "TTS generation failed:" 같은 접두어는 핸들러가
- * 붙이므로(video-client 와 같은 규약) 여기서도 붙이면 이중으로 출력된다.
+ * error holds only the cause message — prefixes like "TTS generation failed:" are
+ * added by the handler (same convention as video-client), so adding one here
+ * would print it twice.
  */
 export interface TtsResponse {
   success: boolean;
@@ -151,26 +154,26 @@ export interface TtsResponse {
   model?: string;
 }
 
-// ── 내부 헬퍼 ────────────────────────────────────────────────────
+// ── Internal helpers ─────────────────────────────────────────────
 
-/** MIME 타입이 컨테이너 없는 원시 PCM 인지 판별 (Gemini TTS 는 audio/L16;codec=pcm;rate=24000). */
+/** Detect whether a MIME type is container-less raw PCM (Gemini TTS uses audio/L16;codec=pcm;rate=24000). */
 export function isRawPcmMimeType(mimeType: string): boolean {
   const normalized = mimeType.toLowerCase();
   return normalized.startsWith('audio/l16') || normalized.includes('codec=pcm');
 }
 
-/** MIME 타입 파라미터에서 샘플레이트 추출 (기본 24000). */
+/** Extract the sample rate from the MIME type parameters (default 24000). */
 export function parseSampleRate(mimeType: string): number {
   const match = mimeType.match(/rate=(\d+)/);
   return match ? parseInt(match[1], 10) : 24_000;
 }
 
 /**
- * 스타일 지시문과 대본을 합성용 프롬프트로 조립한다.
+ * Assemble the style directive and transcript into a synthesis prompt.
  *
- * 라벨 없는 `스타일: "본문"` 합성은 분류기 오거절(PROHIBITED_CONTENT)을 유발하거나
- * 지시문을 그대로 낭독하는 실패 모드가 문서화되어 있어, 합성 preamble 과 대본 시작
- * 라벨을 명시한다.
+ * Unlabeled `style: "body"` concatenation has documented failure modes — classifier
+ * false rejections (PROHIBITED_CONTENT) or the directive being read aloud verbatim —
+ * so we make the preamble and the transcript-start label explicit.
  */
 export function buildStyledPrompt(stylePrompt: string | undefined, transcript: string): string {
   if (!stylePrompt) return transcript;
@@ -187,7 +190,7 @@ interface AudioPayload {
   mimeType: string;
 }
 
-/** MIME 타입 → 파일 확장자 (컨테이너 포맷 응답용). */
+/** MIME type → file extension (for container-format responses). */
 function extensionFromMimeType(mimeType: string): string {
   const mimeToExt: Record<string, string> = {
     'audio/wav': 'wav',
@@ -204,11 +207,11 @@ function extensionFromMimeType(mimeType: string): string {
 }
 
 /**
- * generateContent 호출 + 오디오 추출 (자동 재시도 포함).
+ * generateContent call + audio extraction (with automatic retries).
  *
- * 3회 모두 실패하면 마지막 에러에 모델 교체 힌트를 붙인다 — `No content parts in
- * response` 가 연속되는 대본은 flash 로는 끝내 통과하지 않고 pro 로 바꾸면 한 번에
- * 나오는 실패 모드가 실측돼 있다.
+ * When all 3 attempts fail, the last error gets a model-swap hint — the failure
+ * mode where a script keeps hitting `No content parts in response` on flash but
+ * passes on pro in one shot has been measured in practice.
  */
 async function synthesizeWithRetry(
   model: string,
@@ -225,7 +228,7 @@ async function synthesizeWithRetry(
       const config: GenerateContentConfig = {
         responseModalities: ['AUDIO'],
         speechConfig,
-        // undefined 면 공급사 기본값(1.0). 스키마 기본값(0.4)이 주입되는 게 정상 경로다.
+        // undefined means the vendor default (1.0). The normal path is the schema default (0.4) being injected.
         ...(temperature !== undefined ? { temperature } : {}),
       };
 
@@ -243,7 +246,7 @@ async function synthesizeWithRetry(
           return { data: part.inlineData.data, mimeType: part.inlineData.mimeType || PCM_FALLBACK_MIME };
         }
       }
-      // 오디오 대신 텍스트 토큰이 반환된 경우 — 재시도 대상
+      // text tokens came back instead of audio — retry this
       throw new Error('No audio data found in response parts');
     } catch (error) {
       lastError = error;
@@ -262,9 +265,9 @@ async function synthesizeWithRetry(
 }
 
 /**
- * 오디오 페이로드를 파일로 저장한다.
- * - 원시 PCM(audio/L16 등)은 WAV 헤더(모노 16-bit)를 씌워 저장
- * - 컨테이너 포맷(mp3 등)은 그대로 저장
+ * Save the audio payload to a file.
+ * - Raw PCM (audio/L16 etc.) is saved with a WAV header (mono 16-bit)
+ * - Container formats (mp3 etc.) are saved as-is
  */
 function saveAudio(
   audio: AudioPayload,
@@ -284,9 +287,9 @@ function saveAudio(
   );
 }
 
-// ── 합성 함수 2종 ────────────────────────────────────────────────
+// ── The 2 synthesis functions ────────────────────────────────────
 
-/** 단일 화자 합성 — 내레이션·보이스오버 */
+/** Single-speaker synthesis — narration, voiceover */
 export async function generateSpeech(request: TtsGenerateRequest): Promise<TtsResponse> {
   const model = request.model || DEFAULT_TTS_MODEL;
   const voiceName = request.voiceName || DEFAULT_VOICE;
@@ -314,7 +317,7 @@ export async function generateSpeech(request: TtsGenerateRequest): Promise<TtsRe
   }
 }
 
-/** 2인 대화 합성 — 인터뷰·팟캐스트 형식 */
+/** Two-person dialogue synthesis — interview, podcast format */
 export async function generateDialogue(request: TtsMultiSpeakerRequest): Promise<TtsResponse> {
   const model = request.model || DEFAULT_TTS_MODEL;
 

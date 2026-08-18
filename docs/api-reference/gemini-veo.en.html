@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Veo 3.1 — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="gemini-veo.html">
+<link rel="alternate" hreflang="en" href="gemini-veo.en.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="gemini-veo.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>Veo 3.1</div>
+
+<header class="hero">
+  <div class="kicker">GOOGLE GEMINI</div>
+  <h1>Veo 3.1 — video generation</h1>
+  <p class="sub">An async long-running operation API that makes video with native audio. A single <code>generateVideos</code> call splits into four modes depending on the input combination (<code>image</code> · <code>video</code> · <code>referenceImages</code>).</p>
+  <div class="meta">
+    <span>Official <a href="https://ai.google.dev/gemini-api/docs/veo">Veo</a></span>
+    <span>SDK <code>@google/genai</code> 2.13.0</span>
+    <span>Key <code>GEMINI_API_KEY</code></span>
+    <span>Implementation <code>server/src/video-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#models">Models and cross-constraints</a></li>
+    <li><a href="#config">GenerateVideosConfig</a></li>
+    <li><a href="#modes">The four generation modes</a></li>
+    <li><a href="#polling">Async polling and download</a></li>
+    <li><a href="#prompt">Prompt rules</a></li>
+    <li><a href="#impl">Implementation comparison</a></li>
+  </ol>
+</nav>
+
+<section id="models">
+  <h2>1. Models and cross-constraints</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Model ID</th><th>Aspect</th><th>Resolution</th><th>Duration (s)</th><th>Extension</th><th>Reference images</th><th>Relative cost</th></tr></thead>
+    <tbody>
+      <tr><td><code>veo-3.1-generate-preview</code></td><td>16:9 · 9:16</td><td>720p · 1080p · 4k</td><td>4 · 6 · 8</td><td>Yes</td><td>Yes</td><td>1× ($0.40/s @720p) — demoted from the default after tying in the arena</td></tr>
+      <tr><td><code>veo-3.1-fast-generate-preview</code><br><span class="badge free">default</span></td><td>16:9 · 9:16</td><td>720p · 1080p · 4k</td><td>4 · 6 · 8</td><td>Yes</td><td>Yes</td><td>1/4×</td></tr>
+      <tr><td><code>veo-3.1-lite-generate-preview</code></td><td>16:9 · 9:16</td><td>720p · 1080p</td><td>4 · 6 · 8</td><td><strong>No</strong></td><td><strong>No</strong></td><td>1/8×</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Cross-constraints the schema enforces</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Rule</th><th>Rejection message</th></tr></thead>
+    <tbody>
+      <tr><td>1080p · 4k are <strong>8s-only</strong></td><td><code>1080p resolution is only supported at 8s duration (requested: 4s).</code></td></tr>
+      <tr><td>4k is <strong>not on lite</strong></td><td><code>veo-3.1-lite-generate-preview does not support 4k (720p/1080p only).</code></td></tr>
+      <tr><td>Extension is <strong>not on lite</strong></td><td><code>video extension is not supported on veo-3.1-lite-generate-preview. Use veo-3.1-generate-preview or veo-3.1-fast-generate-preview.</code></td></tr>
+      <tr><td>Reference images are <strong>not on lite</strong></td><td><code>reference images is not supported on veo-3.1-lite-generate-preview. Use veo-3.1-generate-preview or veo-3.1-fast-generate-preview.</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    These constraints get caught <strong>at the zod stage, before the call</strong>, for cost reasons. A Veo call takes 1–6 minutes and the wait is spent even when it fails. If the server rejects the combination up front, the model can immediately call again with corrected arguments.
+  </div>
+  <div class="warn">
+    <strong>The veo-3.0 and veo-2.0 families were shut down on 2026-06-30.</strong> Even if you see an ID like <code>veo-3.0-generate-001</code> in other docs or examples, the Gemini API won't call it.
+  </div>
+</section>
+
+<section id="config">
+  <h2>2. GenerateVideosConfig</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Field</th><th>Value</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>aspectRatio</code></td><td><code>16:9</code> · <code>9:16</code></td><td>Not valid in extension mode — the ratio follows the input video</td></tr>
+      <tr><td><code>resolution</code></td><td><code>720p</code> · <code>1080p</code> · <code>4k</code></td><td>Extension output is fixed at 720p</td></tr>
+      <tr><td><code>durationSeconds</code></td><td><code>4</code> · <code>6</code> · <code>8</code></td><td>Fixed at 8 when reference images are used, and not valid in extension mode</td></tr>
+      <tr><td><code>negativePrompt</code></td><td>String, 500 characters or fewer</td><td>Write what to exclude as comma-separated noun or adjective phrases (<code>wall, frame, text overlay</code>). The official docs reject instructive forms like <code>no ~</code> or <code>don't ~</code> — writing "no ~" in the body tends to draw that very noun. This server exposes the field on all four <code>veo_*</code> tools</td></tr>
+      <tr><td><code>lastFrame</code></td><td>Inline image</td><td>Given together with the first frame, it interpolates between the two images</td></tr>
+      <tr><td><code>referenceImages</code></td><td>Up to 3 × <code>{ image, referenceType }</code></td><td><code>referenceType</code> is the SDK enum <code>VideoGenerationReferenceType.ASSET</code></td></tr>
+      <tr><td><code>numberOfVideos</code></td><td>Integer</td><td>Set explicitly on extension calls</td></tr>
+      <tr><td><code>personGeneration</code></td><td><code>allow_all</code> for text-to-video and extension, <code>allow_adult</code> for image-to-video, interpolation, and reference</td><td>Not exposed — the 3.1 family allows <strong>exactly one value per mode</strong>, so nothing is lost by not passing it. Full policy in <a href="veo-portrait.en.html">Veo people and reference policy</a></td></tr>
+      <tr><td><code>seed</code></td><td>Integer (Veo 3 family)</td><td>Not exposed — it doesn't guarantee determinism but improves it slightly. We can't run same-cut reproduction experiments</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>For an episode that feeds in images with people, read the <a href="veo-portrait.en.html">people and reference policy</a> first.</strong> Adult faces pass through as-is (measured 2026-08-15), faces that look underage are blocked with <code>Support code: 17301594</code>, and style reference (<code>referenceType: "style"</code>) is closed off entirely in 3.1.
+  </div>
+</section>
+
+<section id="modes">
+  <h2>3. The four generation modes</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Tool</th><th>Extra input</th><th>Output length</th><th>Mode-specific constraints</th></tr></thead>
+    <tbody>
+      <tr><td><code>veo_text2video</code></td><td>None</td><td>4/6/8s</td><td>—</td></tr>
+      <tr><td><code>veo_img2video</code></td><td><code>image</code> (+ <code>lastFrame</code>)</td><td>4/6/8s</td><td>The image is read from a local file as inline base64</td></tr>
+      <tr><td><code>veo_extension</code></td><td><code>video</code></td><td><strong>+7s</strong></td><td>Input must be a Veo product · 720p · 141s or less. Up to 20 extensions. If the last second has no speech, the audio doesn't carry over</td></tr>
+      <tr><td><code>veo_reference</code></td><td><code>referenceImages</code>, 1–3</td><td><strong>Fixed 8s</strong></td><td>The sharper the images and the more angles, the better the consistency</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <pre><code>// extension — as in the official sample, don't pass durationSeconds or aspectRatio
+const operation = await genai.models.generateVideos({
+  model: 'veo-3.1-generate-preview',
+  prompt: 'the camera slowly pulls back to reveal the wider scene',
+  video: { videoBytes: base64, mimeType: 'video/mp4' },
+  config: { numberOfVideos: 1, resolution: '720p' },
+});</code></pre>
+  <div class="note">
+    The <code>Added Duration</code> in a <code>veo_extension</code> response is the <strong>length added (+7s)</strong>, not the total. Accumulated over 20 calls that's the original 8s plus 140s.
+  </div>
+</section>
+
+<section id="polling">
+  <h2>4. Async polling and download</h2>
+  <p>Generation doesn't finish immediately. Poll the <code>operation.name</code> the SDK returned over REST.</p>
+  <pre><code>GET https://generativelanguage.googleapis.com/v1beta/{operation.name}
+x-goog-api-key: {API_KEY}</code></pre>
+  <div class="note">
+    The key goes in the <code>x-goog-api-key</code> header, not a <code>?key=</code> query — URLs can be echoed into logs and error messages, which makes them a leak surface, while the header has no such path. Measured 2026-07-29: header auth confirmed to clear the unregistered-caller gate.
+  </div>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Response field</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>done</code></td><td>Whether it finished</td></tr>
+      <tr><td><code>error.message</code></td><td>Why generation failed</td></tr>
+      <tr><td><code>response.generateVideoResponse.generatedSamples[].video.uri</code></td><td>Result video URI (current shape)</td></tr>
+      <tr><td><code>response.generatedVideos[].video.uri</code></td><td>Legacy shape — checked too, for compatibility</td></tr>
+      <tr><td><code>response.generateVideoResponse.raiMediaFilteredReasons[]</code></td><td>Why the responsible-AI filter caught it. <strong>If it isn't empty, there's no result</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Downloading the video URI uses the same header auth. The server polls at 10-second intervals up to 60 times (= 10 minutes), and past that fails with <code>Video generation timed out (10 minutes)</code>.</p>
+  <div class="warn">
+    <strong>The RAI filter arrives as <code>done: true</code> plus an empty result.</strong> Without checking <code>raiMediaFilteredReasons</code> first, it turns into a vague "there's no video" error and the model retries with the same prompt — a retry that's certain to be caught again and burns the wait for nothing.
+  </div>
+  <p>Every output carries an invisible <strong>SynthID watermark</strong>.</p>
+
+  <h3>Official limits that bite in operation (rechecked 2026-08-15)</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Limit</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>Result retention</td><td>Deleted from the server after <strong>2 days</strong>. Harmless for this server since it saves locally right away, but extending a clip days later needs the local file</td></tr>
+      <tr><td>Billing when blocked</td><td>If a safety filter or audio processing blocks generation, <strong>you aren't charged</strong></td></tr>
+      <tr><td>Latency</td><td>11 seconds minimum, 6 minutes at peak. This server's 10-minute polling cap has room</td></tr>
+      <tr><td>Language</td><td>Only English is fully supported. Other languages aren't evaluated, so results can differ</td></tr>
+      <tr><td>Multiple video reference</td><td>There's no feature for referencing or reasoning over several videos. Trying it degrades quality</td></tr>
+      <tr><td>Region</td><td>Accounts in the EU, UK, Switzerland, and MENA get <code>personGeneration</code> narrowed to <code>allow_adult</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="prompt">
+  <h2>5. Prompt rules</h2>
+  <ul>
+    <li>Audio is generated natively. <strong>Wrap dialogue in double quotes</strong> and spell out sound effects ("engine roaring") and ambience in the prompt.</li>
+    <li>English prompts are more stable.</li>
+    <li>For short-form, <code>aspectRatio: '9:16'</code> is the default choice.</li>
+    <li>Cost lever: <code>lite</code> (1/8) for drafts and tests, <code>fast</code> (1/4) for mid-quality, the base model only for the final cut.</li>
+  </ul>
+</section>
+
+<section id="impl">
+  <h2>6. Implementation comparison</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Official contract</th><th>social-flow implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Model list</td><td>3 models in the 3.1 family (+ the 3.0 family is shut down)</td><td>Only the 3 in the 3.1 family are in the enum</td></tr>
+      <tr><td>Cross-constraints</td><td>Described in prose in the docs</td><td>Rejected before the call via <code>superRefine</code> (4 rules)</td></tr>
+      <tr><td>Polling</td><td>Operation polling required</td><td>10s × 60, with the RAI check and the download folded into one helper</td></tr>
+      <tr><td>Result return</td><td>Video URI</td><td>Saved as a local <code>.mp4</code>, then <strong>only the path</strong> returned</td></tr>
+      <tr><td>Output filename</td><td>—</td><td>Rejects path separators and <code>..</code> + a video-extension allowlist</td></tr>
+      <tr><td><code>negativePrompt</code></td><td>Exclusion-only field · noun-phrase grammar</td><td>Exposed on all four <code>veo_*</code> tools · zod caps it at 500 characters · the argument description spells out the ban on instructive forms</td></tr>
+      <tr><td><code>personGeneration</code></td><td>Supported</td><td>Not exposed — the vendor default policy applies</td></tr>
+      <tr><td>Multiple generation</td><td><code>numberOfVideos</code></td><td>Not exposed (only set to 1 internally on extension calls) — the short-form pipeline generates one video per cut by default, and generating N costs N times as much</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  As of 2026-07-29 · Parameter table and limits rechecked 2026-08-15 · People policy in <a href="veo-portrait.en.html">Veo people and reference policy</a> · Implementation <a href="../../server/src/video-client.ts">server/src/video-client.ts</a> · <a href="index.en.html">API reference hub</a>
+</footer>
+
+</div>
+</body>
+</html>

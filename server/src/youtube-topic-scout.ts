@@ -1,14 +1,15 @@
 /**
- * 시장 주제 스카우트 — 내 분야에서 이미 터진 유튜브 주제를 찾는다.
+ * Market topic scout — finds YouTube topics that have already taken off in my niche.
  *
- * VidIQ 식 "채널 평균 대비 배수"를 Data API 로 재현한다. 절대 조회수는
- * 채널 크기마다 기본값이 달라 주제를 고르는 잣대가 못 된다. 같은 채널의
- * 최근 업로드 중앙값과 비교해 5배 이상 나온 영상만 아웃라이어로 보고,
- * 그 제목에서 주제어를 뽑는다.
+ * Reproduces the VidIQ-style "multiple of channel average" with the Data API.
+ * Absolute view counts have a different baseline for every channel size, so they
+ * can't serve as the yardstick for picking topics. Only videos that reach 5x or
+ * more of the same channel's recent-upload median count as outliers, and topic
+ * phrases are extracted from their titles.
  *
- * 인증은 YOUTUBE_API_KEY 가 우선이다 — 공개 데이터라 OAuth 가 필요 없고
- * 게시용 쿼터를 건드리지 않는다. 키가 없으면 채널 OAuth(youtube.readonly) 로
- * 같은 엔드포인트를 부른다.
+ * YOUTUBE_API_KEY takes priority for auth — it's public data, so no OAuth is
+ * needed and the publishing quota stays untouched. Without a key, the same
+ * endpoints are called with the channel's OAuth (youtube.readonly).
  */
 
 import { config } from './config.js';
@@ -119,7 +120,7 @@ export function median(values: number[]): number | null {
   return nums.length % 2 === 0 ? (nums[mid - 1] + nums[mid]) / 2 : nums[mid];
 }
 
-/** ISO-8601 기간(PT#H#M#S) → 초. 파싱 실패는 null. */
+/** ISO-8601 duration (PT#H#M#S) → seconds. Parse failure is null. */
 export function parseIsoDurationSeconds(iso: string): number | null {
   if (!iso) return null;
   const match = iso.match(/^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
@@ -132,7 +133,7 @@ export function parseIsoDurationSeconds(iso: string): number | null {
   return total > 0 ? total : null;
 }
 
-/** 제목·본문에서 주제어가 못 되는 토큰. sns-issue-scout 도 같은 목록을 쓴다. */
+/** Tokens that can't be topic phrases in titles/bodies. sns-issue-scout uses the same list. */
 export const STOP = new Set([
   '그',
   '이',
@@ -187,7 +188,7 @@ export const STOP = new Set([
   'what',
 ]);
 
-/** 제목에서 조사·기호를 걷어 토큰을 뽑는다. */
+/** Strip particles and symbols from a title and extract tokens. */
 export function tokenizeTitle(title: string): string[] {
   return title
     .toLowerCase()
@@ -197,7 +198,7 @@ export function tokenizeTitle(title: string): string[] {
     .filter((token) => token.length >= 2 && !STOP.has(token) && !/^\d{4}$/.test(token));
 }
 
-/** 1~3그램 구. 같은 제목 안 중복은 한 번만. */
+/** 1~3-gram phrases. Duplicates within the same title count once. */
 export function extractPhrases(title: string): string[] {
   const tokens = tokenizeTitle(title);
   const phrases = new Set<string>();
@@ -238,7 +239,7 @@ export function scoreKeywords(
   for (const video of outliers) {
     for (const phrase of extractPhrases(video.title)) {
       const grams = phrase.split(' ').length;
-      // 한 글자 토큰은 노이즈가 많아, 두 영상 이상에서 겹칠 때만 살아남게 점수를 낮춘다
+      // single tokens are noisy — lower the score so they survive only when two or more videos share them
       const weight = grams >= 2 ? 1 : 0.35;
       add(phrase, video, weight);
     }
@@ -264,7 +265,7 @@ export function scoreKeywords(
         b.outlierCount - a.outlierCount,
     );
 
-  // 점수가 같으면 긴 구를 남기고, 이미 고른 긴 구의 부분 문자열은 뺀다
+  // on equal scores keep the longer phrase, and drop substrings of longer phrases already picked
   const kept: ScoutedKeyword[] = [];
   for (const row of ranked) {
     if (kept.some((k) => k.phrase.includes(row.phrase) && k.phrase !== row.phrase)) continue;
@@ -302,7 +303,7 @@ async function youtubeGet(path: string, params: Record<string, string>, auth: Au
     return { ok: false, status: res.status, body: maskKey(text) };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return fail(502, `YouTube Data API 호출 실패 (${path}): ${maskKey(message)}`);
+    return fail(502, `YouTube Data API call failed (${path}): ${maskKey(message)}`);
   }
 }
 
@@ -320,11 +321,11 @@ async function resolveAuth(channel?: string): Promise<{ auth?: Auth; error?: Api
       via: 'none',
       error: fail(
         400,
-        (clientError?.body ?? 'YouTube 자격증명이 없다.') +
-          '\n→ youtube_topic_scout 는 공개 조회라 YOUTUBE_API_KEY(권장) 또는 ' +
-          'youtube-oauth-client.json 의 youtube.readonly 가 필요하다. ' +
-          'API 키는 Google Cloud Console 에서 YouTube Data API v3 를 켠 뒤 발급한다. ' +
-          'OAuth 는 게시용 youtube.upload 만 있는 토큰으로는 검색(100유닛)이 거부된다.',
+        (clientError?.body ?? 'No YouTube credentials.') +
+          '\n→ youtube_topic_scout reads public data, so it needs YOUTUBE_API_KEY (recommended) or ' +
+          'youtube.readonly in youtube-oauth-client.json. ' +
+          'Issue the API key in the Google Cloud Console after enabling YouTube Data API v3. ' +
+          'For OAuth, a token that only has the publishing youtube.upload scope gets search (100 units) rejected.',
       ),
     };
   }
@@ -549,11 +550,11 @@ function collectQueries(input: TopicScoutInput): string[] {
 }
 
 /**
- * 시장 주제를 스카우트한다. 성공 시 JSON 본문, 실패 시 안내가 실린 ApiResult.
+ * Scout market topics. On success an ApiResult with a JSON body; on failure one carrying guidance.
  */
 export async function youtubeTopicScout(input: TopicScoutInput): Promise<ApiResult> {
   const queries = collectQueries(input);
-  if (queries.length === 0) return fail(400, 'query 가 비어 있다 — 채널 주제 영역에서 뽑은 검색어를 넣는다.');
+  if (queries.length === 0) return fail(400, 'query is empty — pass a search term drawn from the channel\'s topic area.');
 
   const { auth, error, via } = await resolveAuth(input.channel);
   if (!auth) return error!;
@@ -598,8 +599,8 @@ export async function youtubeTopicScout(input: TopicScoutInput): Promise<ApiResu
   if (uniqueIds.length === 0) {
     return fail(
       404,
-      `검색어(${queries.join(', ')})로 채널을 하나도 못 찾았다. ` +
-        (found.errors[0] ?? '검색어를 주제 영역 한 줄로 줄이거나 regionCode 를 확인한다.'),
+      `Found no channels for the search terms (${queries.join(', ')}). ` +
+        (found.errors[0] ?? 'Trim the search term to a single topic-area line, or check regionCode.'),
     );
   }
 
@@ -620,7 +621,7 @@ export async function youtubeTopicScout(input: TopicScoutInput): Promise<ApiResu
         videoCount: 0,
         baseline: null,
         outlierCount: 0,
-        skipped: 'channels.list 에 없음',
+        skipped: 'not in channels.list',
       });
       continue;
     }
@@ -634,7 +635,7 @@ export async function youtubeTopicScout(input: TopicScoutInput): Promise<ApiResu
         videoCount: bucket.uploads.length,
         baseline: null,
         outlierCount: 0,
-        skipped: `최근 업로드 ${bucket.uploads.length}편 — 중앙값을 계산하려면 ${MIN_BASELINE_SAMPLES}편 이상 조회가 있는 영상이 필요하다`,
+        skipped: `${bucket.uploads.length} recent uploads — computing the median needs at least ${MIN_BASELINE_SAMPLES} videos with views`,
       });
       continue;
     }
@@ -693,9 +694,9 @@ export async function youtubeTopicScout(input: TopicScoutInput): Promise<ApiResu
       language,
       via,
       note:
-        '절대 조회수가 아니라 그 채널 최근 업로드 중앙값 대비 배수다. ' +
-        '슈카월드 10만과 신규 채널 10만은 의미가 다르다. ' +
-        '주제만 참고하고 제목·썸네일·대본은 베끼지 않는다.',
+        'Not absolute views but the multiple over that channel\'s recent-upload median. ' +
+        '100k views on a big channel and 100k on a brand-new one mean different things. ' +
+        'Take only the topic — don\'t copy titles, thumbnails, or scripts.',
     },
     scanned: {
       channels: uniqueIds.length,

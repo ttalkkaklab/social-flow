@@ -19,393 +19,454 @@ description: >
   scene actually says). The per-scene loops pass only when the LOWEST-scoring scene clears
   95, and the storyboard reaches HITL approval only once all four score ≥95 with zero P0
   defects.
-argument-hint: "<채널> <주제 또는 주제 힌트>"
+argument-hint: "<channel> <topic or topic hint>"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img"]
 ---
 
-# 스토리보드 저작 — data/[채널]/episodes/[주제]/storyboard/
+# Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
 
-주제 하나를 받아 **조사 → 씬 설계 → 문안 수렴 → 씬별 수렴 → 어휘 수렴 →
-이미지 생성 → 이미지 수렴 → 스토리보드 승인**까지 진행한다. 여기서 확정된
-`scenes.js` 가 이후 제작(produce)의 유일한 데이터 원천(SoT)이다 — 영상·캡션·플랫폼별
-텍스트가 전부 이 파일에서 파생되므로 플랫폼 간 사실 불일치가 원천 차단된다.
+Takes one topic through **research → scene design → copy convergence → per-scene
+convergence → vocabulary convergence → image generation → image convergence →
+storyboard approval**. The `scenes.js` settled here is the one data source (SoT) for
+production (produce) — video, captions, and per-platform text all derive from this file,
+so factual mismatch between platforms can't arise in the first place.
 
-승인 전에 적대적 리뷰어(`storyboard-reviewer`)가 네 번 막는다.
+Before approval the adversarial reviewer (`storyboard-reviewer`) blocks four times.
 
-| 관문 | 보는 것 | 통과선 |
+| Gate | What it looks at | Pass bar |
 |---|---|---|
-| §4.5 문안 | 스토리보드 전체의 문장 — AI 가 쓴 티·훅·사실 충실 | 총점 ≥95 · P0 0 |
-| §4.6 씬별 | **씬 하나하나**의 역할과 맥락 적절성 | **최저 씬** ≥95 · P0 0 |
-| §4.7 어휘 | 나레이션·타이틀의 **낱말**이 사람 말인가 | **최저 씬** ≥95 · P0 0 |
-| §5.5 이미지 | 씬이 말하는 내용을 그림이 보여주는가 | 총점 ≥95 · P0 0 |
+| §4.5 copy | The sentences of the whole storyboard — AI-sounding phrasing, hook, factual fidelity | total ≥95 · P0 0 |
+| §4.6 per-scene | The role and contextual fit of **each individual scene** | **lowest scene** ≥95 · P0 0 |
+| §4.7 vocabulary | Whether the **words** in narration and titles are words people use | **lowest scene** ≥95 · P0 0 |
+| §5.5 images | Whether the picture shows what the scene is saying | total ≥95 · P0 0 |
 
-씬별 두 관문의 통과선이 평균이 아니라 **가장 낮은 씬**인 이유는 하나다 — 평균은
-무너진 한 씬을 잘 나온 씬들이 가려 준다. 사람이 보기 전에 기계가 먼저 반증을 시도하는
-셈이고, 네 관문을 다 넘어야 사용자 승인 단계로 간다.
-
-```
-data/<채널>/episodes/<주제 slug>/storyboard/
-├── research.md      # 근거·출처·교차검증 기록 (조사 생략 채널은 생략)
-├── storyboard.md    # 사람이 읽는 스토리보드 — 씬 표 + 이미지 임베드
-├── storyboard.html  # 검토용 렌더 — scenes.js 를 직접 로드해 그린다 (템플릿 기반, §6)
-├── scenes.js        # 기계가 읽는 SoT — THEME + SCENES(+나레이션 세그먼트)
-├── images/          # 씬별 9:16 생성 이미지 (scene-<n>.png) — 촬영 모드는 생략
-├── slides/          # 롱폼 슬라이드 씬 HTML — §7 승인 뒤 §8 에서 저작
-└── script.md        # 촬영 모드 한정 — 사용자가 보며 녹화하는 촬영 대본
-```
-
-## 절차
-
-### 1. 프로파일 로드
-
-`data/<채널 slug>/profile.md` 를 Read 한다. 없으면 중단하고
-`/social-flow:channel add` 를 먼저 안내한다. 톤·보이스·테마·검증 정책·주제 slug
-규칙을 이 파일에서 상속한다.
-
-**주제 축 대조** — 받은 주제를 프로파일 §1 주제 영역·타깃 시청자와 대조한다.
-추천은 "이 콘텐츠를 좋아할 시청자"를 예측해 붙이는 매칭이라(grow-instagram
-플레이북 §원리), 채널이 무관한 주제를 오가면 그 예측이 흐려지고 기존 시청자에게는
-스킵 신호가 쌓인다. 축 밖 소재면 진행 전에 AskUserQuestion 으로 알린다 —
-[그대로 진행 / 채널에 맞게 각도 변경 / 보류]. "각도 변경"이 대개 정답이다 — 같은
-소재도 타깃의 문제로 다시 걸면 축 안으로 들어온다(예: 여행 채널의 "환율 급등" →
-"이번 주 환전, 지금 할까 기다릴까"). 주제 영역이 비어 있거나 판단이 안 서면 막지
-않고 확인만 한다 — 이 게이트는 경고이지 차단이 아니다.
-
-### 1.5 포맷 결정 — 쇼트폼 9:16(기본) vs 유튜브 롱폼 16:9
-
-**두 축을 여기서 정한다 — 포맷(가로/세로)과 모드(생성/촬영).** 둘은 직교하므로
-네 조합이 다 성립한다(가로 롱폼을 녹화로 만드는 것도 정상 경로다).
-
-포맷은 **쇼트폼이 기본값**이다. 아래 신호가 있으면 롱폼 후보로 보고
-**AskUserQuestion 으로 확인한다** — 짐작으로 정하지 않는다. 포맷이 틀리면 조사부터
-이미지까지 전부 다시 만들어야 한다.
-
-- 사용자가 말한다 — "롱폼", "긴 영상", "10분짜리", "유튜브 본편", "강의"
-- 소재가 한 회차에 안 들어간다 — 단계가 여럿인 설치·설정, 처음부터 끝까지 따라 하는
-  튜토리얼, 여러 사례를 비교하는 정리
-- 이미 쇼트폼으로 다룬 주제의 **깊은 판**을 만든다
-
-선택지는 이렇게 제시한다. **롱폼이 `provisional` 이라는 사실을 함께 알린다** —
-안전영역을 데스크톱 웹에서만 쟀고, 나중에 자막·제목이 조금 안쪽으로 들어올 수 있다
-(`references/scenes-schema.md` §포맷).
+The two per-scene gates take **the lowest scene** rather than the average for one reason —
+an average lets good scenes hide the one that collapsed. It amounts to a machine trying to
+refute the work before a person looks at it, and all four gates have to fall before the
+user-approval step.
 
 ```
-[쇼트폼 9:16 (기본) — 35~75초·4~7샷, 네 플랫폼 전부]
-[유튜브 롱폼 16:9 — 8~15분·28~70샷·챕터, 유튜브만. 안전영역 잠정값]
+data/<channel>/episodes/<topic slug>/storyboard/
+├── research.md      # evidence, sources, cross-check log (skipped on channels that skip research)
+├── storyboard.md    # the human-readable storyboard — shot tables + embedded images
+├── storyboard.html  # review render — loads scenes.js directly and draws it (template-based, §6)
+├── scenes.js        # the machine-readable SoT — THEME + SCENES (+ narration segments)
+├── images/          # per-scene 9:16 generated images (scene-<n>.png) — omitted in shooting mode
+├── slides/          # long-form slide-scene HTML — authored in §8, after §7 approval
+└── script.md        # shooting mode only — the shooting script the user records against
 ```
 
-정한 값을 `scenes.js` 최상위 `window.FORMAT` 에 적는다. **쇼트폼도 생략하지 말고
-명시한다** — 부재가 곧 쇼트폼이라 동작은 같지만, 적어 두면 나중에 이 편이 어느
-계약으로 검사받았는지가 파일에 그대로 보인다.
+## Procedure
+
+### 1. Load the profile
+
+Read `data/<channel slug>/profile.md`. If it's missing, stop and point the user at
+`/social-flow:channel add` first. Tone, voice, theme, verification policy, and the topic
+slug rule are all inherited from that file.
+
+**Check the topic axis** — compare the incoming topic against profile §1 topic areas and
+target viewers. Recommendation is matching that predicts "viewers who'd like this content"
+(grow-instagram playbook §principles), so a channel wandering across unrelated topics blurs
+that prediction and stacks skip signals for existing viewers. If the material sits outside
+the axis, say so with AskUserQuestion before proceeding — [proceed as is / re-angle to fit
+the channel / hold]. "Re-angle" is usually the right answer — the same material comes back
+inside the axis once you frame it as the target's problem (e.g. a travel channel's
+"exchange rate spike" → "changing money this week — now or wait?"). If the topic area is
+empty or you can't judge, just confirm rather than block — this gate is a warning, not a
+barrier.
+
+### 1.5 Pick the format — short-form 9:16 (default) vs YouTube long-form 16:9
+
+**Two axes get settled here — format (landscape/portrait) and mode (generated/filmed).**
+They're orthogonal, so all four combinations are valid (filming a landscape long-form is a
+normal path).
+
+**Short-form is the default** format. Treat the signals below as long-form candidates and
+**confirm with AskUserQuestion** — don't decide by guessing. Getting the format wrong means
+redoing everything from research through images.
+
+- The user says so — "long-form", "a long video", "a 10-minute one", "the main YouTube
+  video", "a lecture"
+- The material doesn't fit in one episode — multi-step installs and setups, a tutorial you
+  follow start to finish, a roundup comparing several cases
+- You're making the **deep version** of a topic already covered in short-form
+
+Present the options like this. **Say out loud that long-form is `provisional`** — the safe
+area was measured only on desktop web, and subtitles and titles may come in a bit further
+later (`references/scenes-schema.md` §format).
+
+```
+[Short-form 9:16 (default) — 35–75s · 4–7 shots, all four platforms]
+[YouTube long-form 16:9 — 8–15 min · 28–70 shots · chapters, YouTube only. Safe area provisional]
+```
+
+Write the chosen value into the top-level `window.FORMAT` in `scenes.js`. **State it even
+for short-form** — absence means short-form so the behavior is the same, but writing it
+down leaves the file showing which contract this episode was checked against.
 
 ```js
-window.FORMAT = "youtube-long-16x9";   // 또는 "shorts-9x16"
+window.FORMAT = "youtube-long-16x9";   // or "shorts-9x16"
 ```
 
-포맷이 바꾸는 것은 §4 구성 규칙(길이·샷 수·자수·챕터)과 §5 이미지 크기이고, 수렴
-루프 넷(§4.5~§5.5)의 절차는 그대로다.
+What the format changes is the §4 composition rules (length, shot count, character counts,
+chapters) and the §5 image size; the procedure of the four convergence loops (§4.5–§5.5)
+stays the same.
 
-### 1.6 모드 결정 — 생성(기본) vs 촬영(screencast)
+### 1.6 Pick the mode — generated (default) vs filmed (screencast)
 
-**사용자가 직접 화면을 시연·해설하며 녹화할 주제**("촬영 대본 만들어", "내가
-녹화할게", 앱 시연·튜토리얼류)면 **촬영 모드**다. 확실치 않으면 AskUserQuestion
-으로 확인한다. 촬영 모드의 차이 (`references/shot-script-template.md` 계약):
+If it's a topic **the user will record themselves, demoing and narrating on screen**
+("make a shooting script", "I'll record it", app demos and tutorials), it's **shooting
+mode**. Confirm with AskUserQuestion when unsure. What differs in shooting mode (the
+`references/shot-script-template.md` contract):
 
-- 씬 `visual` 은 `{ source: "recording", clip, shot, action }` — §5 이미지 생성을
-  통째로 건너뛴다 (영상 화면은 사용자의 실제 녹화에서 나온다).
-- narration 은 TTS 대본이 아니라 **말할 문장** — 자수 상한 완화 (문장당 40자 권장,
-  씬 목표 8~20s 로 역산).
-- §6 에서 storyboard.md 와 함께 **script.md(촬영 대본)** 를 저작한다.
-- 승인 후 안내가 produce 가 아니라 **녹화**다 (§7 분기).
+- Scene `visual` is `{ source: "recording", clip, shot, action }` — §5 image generation is
+  skipped entirely (the on-screen footage comes from the user's actual recording).
+- narration isn't a TTS script but **the sentences to speak** — the character cap relaxes
+  (40 chars per sentence recommended, derived backwards from an 8–20s scene target).
+- §6 authors **script.md (the shooting script)** alongside storyboard.md.
+- After approval the hand-off is **recording**, not produce (§7 branch).
 
-#### 롱폼은 세 번째 경우다 — 한 편에 섞는다
+#### Long-form is a third case — one episode mixes both
 
-쇼트폼은 편 전체가 생성이거나 전체가 촬영이지만, **롱폼은 촬영 씬과 생성 씬을
-한 편에 섞는 것이 정상 경로다.** 설치 화면·실행 결과·손으로 만지는 장면은 실제로
-찍은 것이 낫고, 배경 설명·개념 그림은 생성이 싸고 빠르다. 12분을 한 종류로만
-채울 이유가 없다.
+A short-form episode is either all generated or all filmed, but **for long-form, mixing
+filmed and generated scenes in one episode is the normal path.** Install screens, running
+results, and hands-on moments are better actually filmed; background explanation and
+concept pictures are cheap and fast to generate. There's no reason to fill 12 minutes with
+one kind.
 
-그래서 롱폼에서는 모드가 편 단위가 아니라 **씬 단위**다. 씬을 설계할 때(§4)
-하나씩 정한다 — 이 장면은 찍을 것인가, 만들 것인가.
+So in long-form the mode isn't per-episode but **per-scene**. Decide it one scene at a time
+while designing them (§4) — is this shot filmed, or made?
 
 ```
-[가로 롱폼 · 섞어 찍기]  ← 롱폼 기본. 촬영 씬은 사용자가 파일로 찍어 준다
-[가로 롱폼 · 전부 생성]  ← 찍을 화면이 없는 주제(정보 정리·해설)
-[가로 롱폼 · 전부 촬영]  ← 처음부터 끝까지 시연. 섞어 찍기의 특수한 경우로 다룬다
+[Landscape long-form · mixed]      ← the long-form default. The user films each filmed scene into a file
+[Landscape long-form · all generated]  ← topics with nothing to film (explainers, roundups)
+[Landscape long-form · all filmed]     ← a demo start to finish. Treated as a special case of mixed
 ```
 
-**"전부 촬영"도 섞어 찍기 레인으로 만든다** — 씬마다 파일 하나로 받고 생성 씬이
-0개일 뿐이다. 쇼트폼의 `build-screencast.sh` 경로(한 번에 쭉 찍고 정합)는 세로
-전용이라 가로로 못 간다. 사용자가 "쭉 찍고 싶다"고 하면 그렇게 찍되 씬 경계에서
-파일을 나눠 저장해 달라고 안내한다.
+**"All filmed" is also built as the mixed lane** — one file per scene, with zero generated
+scenes. Short-form's `build-screencast.sh` path (shoot straight through once, then align)
+is portrait-only and can't go landscape. If the user says "I want to shoot it in one go",
+let them, but ask them to split the file at scene boundaries when saving.
 
-**섞어 찍기의 나레이션은 전 씬 육성이 기본이다** — 사용자가 모든 씬의 대사를 자기
-목소리로 녹음한다(`window.VOICE = "user"`, scenes-schema §전 씬 육성 회차). 한 편
-안에서 사용자 목소리와 TTS 가 번갈아 나오면 화자가 중간에 바뀌기 때문이다. 이때
-script.md 는 전 샷의 대사를 싣고, 촬영 씬이 아닌 샷은 소리만 녹음한다
-(`voice/s<샷번호>.wav`). TTS 로 덮는 회차는 사용자가 그렇게 정할 때만 쓴다.
+**Narration in a mixed shoot defaults to live voice on every scene** — the user records
+every scene's lines in their own voice (`window.VOICE = "user"`, scenes-schema
+§all-live-voice episodes). Alternating the user's voice with TTS inside one episode
+changes the speaker partway through. In that setup script.md carries the lines for every
+shot, and shots that aren't filmed scenes are voice-only recordings
+(`voice/s<shot number>.wav`). An episode covered by TTS happens only when the user asks
+for it.
 
-생성 씬은 §4 에서 다시 두 갈래로 정한다 — 분위기·장소·인물은 **생성 이미지**,
-글자와 도형을 배치해야 전달되는 도해는 **슬라이드**(scenes-schema §슬라이드 씬)다.
-슬라이드 씬은 콘티에 계획만 적고 파일은 승인 뒤 §8 에서 만든다.
+Generated scenes then split two ways in §4 — mood, place, and people become a **generated
+image**, while a diagram that only reads once text and shapes are laid out becomes a
+**slide** (scenes-schema §slide scenes). A slide scene carries only its plan in the
+storyboard; the file is built in §8 after approval.
 
-촬영 씬이 하나라도 있으면 §6 에서 **`script.md`(촬영 대본)** 를 저작하고, 승인
-후 안내가 촬영이다(§7). 계약은 `references/scenes-schema.md` §촬영 씬 ·
-문서 구조는 `references/shot-script-template.md` 가 정본이다.
+If even one filmed scene exists, §6 authors **`script.md` (the shooting script)** and the
+hand-off after approval is filming (§7). The contract is `references/scenes-schema.md`
+§filmed scenes; `references/shot-script-template.md` is the source of truth for the
+document structure.
 
-### 2. 자료조사·사실검증 (프로파일 §5 정책에 따름)
+### 2. Research and fact-checking (follows profile §5 policy)
 
-- **`recording/timeline.md` 가 있으면 (ingest 스킬 산출)** 이를 1차 소스로
-  사용한다 — 씬 구성·핵심 메시지를 타임라인에서 가져오고, 웹 조사는 전사 속
-  시효성 수치의 교차 검증에만 쓴다. 녹화 속 발언은 주장이지 근거가 아니다 —
-  검증 실패 수치는 넣지 않는다. 이 경우 research.md 에는 timeline 씬별 요지와
-  검증 결과 표를 기록한다.
-- 검색 도구 선택: **한국어 소재는 `naver_search` 1차** → 범용·해외는 내장 WebSearch →
-  정밀 검색(연산자·기간 필터)이 필요하면 `serp_web_search`/`serp_news_search`.
-  상황에 맞는 조합을 쓰되 같은 검색을 도구만 바꿔 반복하지 않는다.
-  검색 툴은 인자 이름이 같다 — `query`(검색어)·`limit`(결과 수)·`page`(페이지).
-- `naver_search` 의 `type` 은 8종이고 쓰임이 다르다. 주제 발굴 단계에서는
-  **`kin`(지식iN)** 이 특히 강하다 — 사람들이 실제로 뭘 모르는지가 질문 그대로
-  남아 있어 훅 문장의 재료가 된다. `cafe` 는 여론·불만, `blog` 는 실사용 후기,
-  `encyc` 는 용어 정의(자막에 쓸 한 줄 설명), `local` 은 지역 업체의 주소·좌표,
-  `news` 는 시효성 값 검증용이다.
-- `serp_naver_search` 는 공식 API 에 없는 두 가지를 준다 — **동영상 검색**
-  (`where: "video"` — 같은 주제를 남들이 어떻게 다뤘는지, 길이·조회 흐름 파악)과
-  **기간 필터**(`period: "1d"~"1y"` — 시효성 값을 최근 구간으로 좁힐 때).
-  나머지 용도는 쿼터가 큰 `naver_search` 를 쓴다.
-- 화면에 넣을 **레퍼런스 이미지**는 `serp_image_search`(구도·실물 확인) 또는
-  `naver_search(type: "image")`(국내 소재). 다만 검색으로 찾은 이미지를 영상에
-  그대로 쓰려면 `license` 를 지정해야 한다 — 무지정 결과는 권리 확인이 안 된
-  이미지다. **직접 만들 화면은 검색 대신 생성한다** — 엔진 분담은 §5
-  (기본 `image_local_generate`, 커버·텍스트 포함 화면은 `gpt_image_text2img`).
-- **통계·제도·지역 현황처럼 정부 원천 데이터가 근거인 주제**는 `datago_search`
-  (공공데이터포털)로 원천 데이터셋을 확보한다 — 공식 원천은 그 자체가 1차 출처라
-  기사 재인용보다 우선하며, 원천 1개면 교차검증 요건을 충족한다. 수집 절차·출처
-  표기·데이터 기준일 함정은 **datago 스킬** 참조.
-- 시효성 값(가격·세율·기한·시행일)은 **독립 출처 2개 이상** 교차 검증. 검증 실패
-  주장은 스토리보드에 넣지 않는다 — 수치를 새로 만들거나 반올림으로 의미를 바꾸지
-  않는다("300만~500만"을 "500만"으로 줄이면 왜곡).
-- `research.md` 에 기록: 핵심 주장별 출처 링크·확인 날짜·검증 상태 표.
-  조사 생략 채널(창작·일상)은 이 단계 전체를 건너뛴다.
+- **When `recording/timeline.md` exists (produced by the ingest skill)** use it as the
+  primary source — take the scene structure and key messages from the timeline, and use web
+  research only to cross-check time-sensitive figures inside the transcript. What was said
+  in a recording is a claim, not evidence — figures that fail verification don't go in. In
+  this case research.md records the gist per timeline scene plus a verification result
+  table.
+- Search tool choice: **Korean material goes to `naver_search` first** → general and
+  overseas material to the built-in WebSearch → `serp_web_search`/`serp_news_search` when
+  you need precision search (operators, date filters). Use whatever combination fits, but
+  don't repeat the same search just by swapping tools. The search tools share argument
+  names — `query`, `limit` (result count), `page`.
+- `naver_search` has 8 `type` values and they're used differently. At the topic-discovery
+  stage **`kin` (지식iN, a Q&A site)** is particularly strong — what people actually don't
+  know sits there as their own questions, which is raw material for hook sentences. `cafe`
+  is sentiment and complaints, `blog` is hands-on reviews, `encyc` is term definitions (the
+  one-line explanation for a caption), `local` is addresses and coordinates of local
+  businesses, `news` is for verifying time-sensitive values.
+- `serp_naver_search` gives you two things the official API doesn't — **video search**
+  (`where: "video"` — how others covered the same topic, their lengths and view patterns)
+  and a **date filter** (`period: "1d"~"1y"` — narrowing time-sensitive values to a recent
+  window). For everything else use `naver_search`, which has the larger quota.
+- For **reference images** to put on screen, use `serp_image_search` (composition, seeing
+  the real thing) or `naver_search(type: "image")` (Korean material). To use a searched
+  image in the video as-is you have to specify `license` though — unspecified results are
+  images with no rights check. **Screens you make yourself get generated, not searched** —
+  engine split is in §5 (`image_local_generate` by default, `gpt_image_text2img` for the
+  cover and any screen containing text).
+- **Topics whose evidence is government-origin data — statistics, policy, regional status**
+  — get their source dataset from `datago_search` (data.go.kr). An official origin is
+  itself a primary source, so it outranks a news re-quote, and one origin satisfies the
+  cross-check requirement. For the collection procedure, source attribution, and the
+  data-as-of-date trap, see the **datago skill**.
+- Time-sensitive values (prices, tax rates, deadlines, effective dates) get cross-checked
+  against **two or more independent sources**. Claims that fail verification don't go in the
+  storyboard — don't invent figures and don't change their meaning by rounding (shrinking
+  "3–5 million" to "5 million" is distortion).
+- Record in `research.md`: a table of source link, check date, and verification status per
+  key claim. Channels that skip research (creative, everyday life) skip this whole step.
 
-### 3. 주제 디렉토리 생성
+### 3. Create the topic directory
 
-프로파일 §7 slug 규칙으로 `data/<채널>/episodes/<주제 slug>/storyboard/images/` 를 만든다.
-채널 루트에 주제를 두지 않는다 — `assets/` · `growth/` 와 같은 층의 `episodes/` 아래다.
-이미 존재하면 사용자에게 이어서 작업할지(기존 스토리보드 개정) 확인한다.
+Make `data/<channel>/episodes/<topic slug>/storyboard/images/` using the profile §7 slug
+rule. Topics don't live at the channel root — they go under `episodes/`, the same level as
+`assets/` and `growth/`. If it already exists, ask the user whether to continue from it
+(revising the existing storyboard).
 
-### 4. 씬 설계 — scenes.js 작성
+### 4. Scene design — writing scenes.js
 
-`references/scenes-schema.md` 의 계약대로 작성한다. 배열 이름(`SCENES`)은
-유지하고, 항목 하나는 **샷**이다. 같은 장소·시간은 `scene`+`sceneSlug` 로 묶고,
-목적이 갈릴 때만 `sequence` 를 적는다. 샷마다 `shot.size`·`shot.info` 와
-`visual.picture`(정지 사진 / AI 영상 / 녹화 / 공용 자산)·`visual.overlay`(HTML
-연출 / 없음)를 적는다 — 한 샷이 둘 다 가질 수 있다. 커버가 정지 사진 위에 HTML
-리빌을 얹는 것이 기본값이다. 칸 정의는 스키마 §문법 단위와 제작 층이 정본.
+Write it to the contract in `references/scenes-schema.md`. Keep the array name (`SCENES`);
+one entry is a **shot**. Group the same place and time with `scene`+`sceneSlug`, and write
+`sequence` only when purposes diverge. Per shot, write `shot.size`, `shot.info`, and
+`visual.picture` (still photo / AI video / recording / shared asset) plus `visual.overlay`
+(HTML staging / none) — one shot can have both. A cover laying an HTML reveal over a still
+photo is the default. The source of truth for field definitions is the schema's §grammar
+units and production layers.
 
-핵심 규칙:
+Core rules:
 
-- **구성 — §1.5 에서 정한 포맷이 대역을 정한다.** 상수의 정본은 `formats.js` 이고,
-  `storyboard.html` 점검 스트립이 그 값으로 실측해 준다.
-  - **쇼트폼 9:16**: cover 1 + points/quote 3~6 + outro 참조 = **4~7샷 · 35~75초**.
-    75초를 넘길 때는 중요한 시연·근거를 빼면 결과를 이해할 수 없는 이유를
-    `storyboard.md` 설계 근거에 적는다(90초 절대 상한).
-  - **유튜브 롱폼 16:9**: **28~70샷 · 8~15분**(20분 절대 상한) + **챕터 5~10개**
-    (촬영 레인은 3개 이상). 챕터 계약은 `references/scenes-schema.md` §chapter 다 —
-    씬에 `chapter` 문자열만 적고 타임스탬프는 빌더가 실측 시각에서 만든다.
-    첫 챕터는 커버에 달아 0:00 으로 연다.
+- **Composition — the format picked in §1.5 sets the band.** The source of truth for the
+  constants is `formats.js`, and the `storyboard.html` check strip measures against those
+  values for you.
+  - **Short-form 9:16**: cover 1 + points/quote 3–6 + outro reference = **4–7 shots ·
+    35–75s**. When going over 75s, write into the `storyboard.md` design rationale why
+    dropping the demo or evidence in question would make the result impossible to
+    understand (90s is the absolute cap).
+  - **YouTube long-form 16:9**: **28–70 shots · 8–15 min** (20 min absolute cap) +
+    **5–10 chapters** (3 or more in the filmed lane). The chapter contract is
+    `references/scenes-schema.md` §chapter — write only the `chapter` string on the scene
+    and the builder makes timestamps from measured times. The first chapter goes on the
+    cover so it opens at 0:00.
 
-  채널 Analytics 실측이 있으면 일반 벤치마크보다 **계속 시청함·유효 조회수·영상별
-  구독자 증가**를 우선한다. 원시 조회수가 아니라 유효 조회수와 구독을 만든 회차를
-  기준으로 길이와 포맷을 고른다.
+  When channel Analytics measurements exist, they outrank generic benchmarks — go by
+  **stayed to watch, engaged views, and subscribers gained per video**. Pick length and
+  format from the episodes that produced engaged views and subscriptions, not raw views.
 
-- **롱폼 씬마다 셋 중 하나를 정한다**(§1.6) — 찍을 것인가, 이미지를 만들 것인가,
-  슬라이드로 그릴 것인가. 판단 기준은 한 줄로 잇는다: **증거가 화면에 있으면 찍고,
-  분위기·장소·인물이면 이미지를 만들고, 글자와 도형을 배치해야 전달되면
-  슬라이드다.** 설치가 실제로 되는 장면, 결과물이 도는 화면, 손으로 만지는 순간은
-  생성 그림이 대신할 수 없다. "왜 이게 빠른가" 같은 대목은 찍을 화면 자체가 없고,
-  구조·비교·단계·수치 흐름은 사진 배경보다 도해가 빨리 읽힌다.
-  슬라이드 씬에는 `visual.slide` 에 `file`(`slides/s<샷번호>-<slug>.html` — 샷번호는
-  배열 순번, 스토리보드가 정한다)·`plan`(무엇을 그릴지 한 줄)·`labels`(도형에 그릴
-  글자 전부)를 적는다 — 파일은 승인 뒤 §8 에서 만든다. 전문은 scenes-schema
-  §슬라이드 씬.
-  촬영 씬에는 `visual.clip`(파일명)·`shot`(보이는 것)·`action`(하는 일)을 적고,
-  파일명은 **`footage/s<씬번호>-<slug>.mp4`** 규약으로 스토리보드가 정한다 —
-  사용자가 이름을 고르지 않는다. 소리를 육성으로 쓸지 나레이션을 덮을지도 여기서
-  정한다(육성이면 `narration: []`). 전문은 scenes-schema §촬영 씬.
-- **롱폼은 한 회차 한 결과를 챕터로 펼치는 것이지, 쇼트폼 여러 편을 이어 붙이는 게
-  아니다.** 챕터마다 다른 주제를 넣으면 그건 재생목록이지 한 편이 아니다. 커버 →
-  후킹 → 결과물 → 내용의 뼈대는 포맷과 무관하게 같고, 롱폼은 그 「내용」이 챕터로
-  나뉘어 길어질 뿐이다.
-- **재생 순서는 커버 → 후킹 → 결과물 → 내용**이다. 커버와 후킹은 모든 회차에
-  있고, 결과물 씬은 제작·튜토리얼·전후 비교에서 빠뜨리지 않는다. 커버는 완성본을
-  한눈 보여 주고, 후킹은 왜 필요한지 걸고, **결과물 씬이 방법·단계보다 앞에** 온다.
-  내용(어떻게 만들었는지)은 완성본을 본 뒤에야 푼다. 샷마다 `beat` 를 적는다 —
-  `hook` · `hooking` · `result` · `body` · `cta`. 정본은 scenes-schema §재생 순서.
-- **도입부는 넷 중 하나로 연다 — 공포 · 공감 · 호기심 · 결말 미리 보여주기.**
-  회차마다 이 중 하나는 반드시 쓴다(사용자 전달 크리에이터 강의, 2026-08-18). 도입부
-  (커버 제목 + 세그① + 후킹 — 쇼트폼 첫 20초·롱폼 첫 60초)가 어느 자극으로 시청자를
-  멈춰 세우는지 저작 전에 한 줄로 정하고, 커버 샷에 `hookType`(`fear`·`empathy`·`curiosity`·`spoiler`)으로 적는다.
-  공포는 시청자가 이미 입고 있을지 모르는 손해("당신 영상, 알고리즘한테 이미 버림받았을
-  수도 있습니다"), 공감은 내 얘기다 싶은 문제 장면, 호기심은 반전·수치·미해결 긴장,
-  결말 미리 보여주기는 완성본을 먼저 비추고 어떻게 그리 됐는지를 약속하는 것(제작형
-  기본값)이다. 커버 제목·플랫폼 제목도 같은 자극을 싣는다. 공포를 고르면 위협에
-  research.md 근거가 있거나 가능성 표현으로 완충하고, 본편이 그 위협에 답해야 한다.
-  넷 중 어느 것도 없는 도입부는 문안 모드 P0 다. 정본은 scenes-schema §도입부 전략 넷.
-- **커버 다음 샷은 후킹이다 — 정보형도 예외가 아니다.** 커버가 손가락을 멈추게
-  했다면 후킹은 멈춘 사람을 결과물까지 데려간다. 계약은 넷 — 커버가 던진 것을 그대로
-  **받고**(같은 대상·같은 약속, 새 소재로 새지 않는다), 시청자의 문제·손해·이익을
-  **시청자 주어로 걸고**(문제·피해=공감 / 손해·위험=공포 / 미해결 긴장=호기심 /
-  결심·기준=선언 중 하나 — 커버가 고른 전략을 잇는다), 답·방법·완성본은
-  **풀지 않고**(뒤가 재탕이 된다), **짧다**(쇼트폼 1~3샷·4~15초, 커버부터 20초 안에
-  결과물이나 첫 내용 씬). 인사·자기소개·채널 소개·"오늘은 ~ 알아볼게요" 예고로 채우지
-  않는다 — 화자 보고형 개시 P0 가 후킹 첫 세그에도 걸린다. 정본은 scenes-schema
-  §hooking, 근거는 [후킹 리서치](../../docs/research/2026-08-18-hooking-beat/).
-- **첫 1초 결과 선공개**: 커버 첫 프레임은 완성 화면이나 작동 결과다. 커버 첫
-  대사는 그 결과가 시청자에게 주는 이익·변화를 말한다(넷 중 결말 미리 보여주기).
-  인사, 배경 설명, 도구 정의, "해 봤습니다"는 빼거나 후킹 뒤로 보낸다. 커버의 한눈과
-  결과물 씬의 펼침은 같은 산출물을 가리킨다.
-- **한 회차 한 결과**: 한 영상이 해결하는 문제나 만들어 내는 변화는 하나다. 설치·설정·
-  시연을 한 회차에 전부 넣지 않는다. 남는 단계는 다음 회차로 보내고 이번 결과만 완결한다.
-- **구독 전환은 다음 가치로 설계**: 제작·연재에 맞는 주제면 독립 단편을 흩뿌리지 말고
-  같은 결과물을 진전시키는 시리즈로 묶는다. 마지막 CTA는 "구독해 주세요"가 아니라
-  **다음 편에서 무엇이 완성되는지**를 구체적으로 약속한다. 각 편은 처음 보는 사람도
-  이해할 수 있어야 하며, 시리즈 번호만으로 맥락을 대신하지 않는다.
-- **커버 제목은 16자 이내 + 주제어 필수** — 자극만 있고 무엇의 이야기인지 없으면
-  스킵된다. 자극은 `hookType` 에 적은 그 전략이다 — 제목이 공포로 열고 세그①이 딴
-  얘기를 하면 받는다 위반이다. 강조어는 `**굵게**`(그라데이션 칩). statLabel 은 18자 이내.
-- **화면 텍스트는 필요할 때만 쓴다**(사용자 지시 2026-08-14) — 씬마다 캡션 칸을 채우지
-  않는다. `title`·`footnote`·`bullets` 는 비울 수 있고, **소리가 이미 말한 것을 화면이
-  다시 쓰지 않는다**(나레이션 문장을 줄여 옮긴 캡션은 자막과 겹친다). 글자를 쓰는 자리는
-  커버·숫자·단계 번호·소리에 없는 정보(출처·용어 풀이)·복붙할 원문이다. 세그 1개짜리
-  씬은 캡션이 0개이고 그게 정상이다 — 계약 전문은 `references/scenes-schema.md`
-  §화면 텍스트는 필요할 때만.
-- **씬 제목은 전부 구어 훅이다**(사용자 지시 2026-08-13) — 보는 사람이 속으로
-  내뱉는 말(반말 감탄·의문·전언: "원하던 색이 아닌데 ㅠㅠ", "같은 염색약인데 왜
-  달라?"). 설명형 서술은 제목이 아니라 캡션·나레이션 자리다. 나레이션은 존댓말
-  설명형 유지 — 화면이 감정·의문을 던지고 소리가 존댓말로 답한다
-  (`references/scenes-schema.md` §title 은 구어 훅).
-- **나레이션 = 세그먼트(문장) 배열** — 문장 하나가 reveal 하나와 1:1. 자수 상한도
-  포맷을 따른다(공백·구두점 제외).
-  - 쇼트폼: cover ≤40자 · points/quote ≤50자 · 문장당 8~25자
-  - 롱폼: cover ≤70자 · points/quote ≤90자 · 문장당 12~40자
+- **In long-form, pick one of three per scene** (§1.6) — film it, generate an image, or
+  draw it as a slide. One line joins the criteria: **if the evidence is on screen, film
+  it; if it's mood, place, or people, generate an image; if it only reads once text and
+  shapes are laid out, make it a slide.** A generated picture can't stand in for an
+  install actually completing, a result running on screen, or the moment a hand touches
+  something. A beat like "why is this fast" has no screen to film in the first place, and
+  structure, comparisons, steps, and number flows read faster as a diagram than over a
+  photo background.
+  A slide scene gets `visual.slide` with `file` (`slides/s<shot number>-<slug>.html` —
+  the shot number is the array position, decided by the storyboard), `plan` (one line on
+  what to draw), and `labels` (every piece of text that goes into the shapes) — the file
+  itself is built in §8 after approval. Full text: scenes-schema §slide scenes.
+  Filmed scenes get `visual.clip` (filename), `shot` (what's visible), and `action` (what
+  you do), and the filename follows the **`footage/s<scene number>-<slug>.mp4`** convention
+  set by the storyboard — the user doesn't pick names. Whether the live voice carries the
+  sound or narration covers it is decided here too (live voice means `narration: []`). The
+  full text is scenes-schema §filmed scenes.
+- **Long-form spreads one result across chapters over one episode; it isn't several
+  short-form episodes stitched together.** A different topic per chapter makes a playlist,
+  not an episode. The skeleton of cover → hooking → result → body is the same regardless of
+  format; long-form just has that "body" split into chapters and running longer.
+- **Playback order is cover → hooking → result → body.** Cover and hooking exist in every
+  episode, and the result scene isn't left out of builds, tutorials, or before/after
+  comparisons. The cover shows the finished thing at a glance, hooking hooks why it's
+  needed, and **the result scene comes before the method and steps**. The body (how it was
+  made) unspools only after the finished thing has been seen. Write a `beat` on each shot —
+  `hook` · `hooking` · `result` · `body` · `cta`. The source of truth is scenes-schema
+  §playback order.
+- **The opening runs on one of four — fear · empathy · curiosity · showing the ending.**
+  Every episode uses one of them (user-relayed creator lecture, 2026-08-18). Decide in one
+  line, before authoring, which stimulus the opening (cover title + segment ① + hooking —
+  the first 20s of short-form, the first 60s of long-form) uses to stop the viewer, and
+  write it on the cover shot as `hookType` (`fear`·`empathy`·`curiosity`·`spoiler`).
+  Fear is a loss the viewer may already be carrying ("your videos may already have been
+  written off by the algorithm"), empathy is a problem scene that reads as "that's me",
+  curiosity is a twist, a figure, or unresolved tension, and showing the ending is putting
+  the finished thing on screen first and promising how it got there (the default for build
+  content). The cover title and the platform title carry the same stimulus. If you pick
+  fear, the threat needs evidence in research.md or a hedge to a possibility, and the body
+  has to answer that threat. An opening with none of the four is a copy-mode P0. The source
+  of truth is scenes-schema §the four opening strategies.
+- **The shot after the cover is hooking — informational episodes included.** If the cover
+  stopped the thumb, hooking carries the stopped person to the result. The contract has four
+  parts — **catch** what the cover threw (same subject, same promise; don't drift to new
+  material), **hook** the viewer's problem, loss, or gain **with the viewer as the subject**
+  (problem/harm = empathy / loss/risk = fear / unresolved tension = curiosity /
+  resolve/criteria = declaration — continue the strategy the cover picked), **don't unpack**
+  the answer, the method, or the finished thing (it makes what follows a rerun), and be
+  **short** (short-form 1–3 shots · 4–15s, with the result or first body scene inside 20s
+  counting from the cover). Don't fill it with greetings, self-introduction, channel
+  introduction, or a "today we'll look at ~" trailer — the speaker-report-opening P0 applies
+  to the first hooking segment too. The source of truth is scenes-schema §hooking; the
+  evidence is [hooking research](../../docs/research/2026-08-18-hooking-beat/).
+- **Result revealed in the first second**: the cover's first frame is the finished screen or
+  the working result. The cover's first line says what benefit or change that result gives
+  the viewer (showing the ending, of the four). Greetings, background, tool definitions, and
+  "I tried it" get cut or moved behind hooking. The cover's glance and the result scene's
+  unfolding point at the same artifact.
+- **One result per episode**: one video solves one problem or produces one change. Install,
+  setup, and demo don't all go in one episode. Push the leftover steps to the next episode
+  and finish only this result.
+- **Design subscription conversion as the next value**: for topics suited to builds and
+  serials, don't scatter standalone one-offs — bundle them into a series that advances the
+  same artifact. The closing CTA isn't "please subscribe" but a concrete promise of **what
+  gets finished in the next episode**. Each episode has to make sense to a first-time
+  viewer; a series number doesn't substitute for context.
+- **Cover title within 16 characters + the topic word is mandatory** — stimulus with no
+  sense of what it's about gets skipped. The stimulus is the strategy written in `hookType` —
+  if the title opens on fear and segment ① talks about something else, that's a catch
+  violation. Emphasis is `**bold**` (gradient chip). statLabel within 18 characters.
+- **On-screen text only when it's needed** (user directive, 2026-08-14) — don't fill a
+  caption slot in every scene. `title`, `footnote`, and `bullets` can be empty, and **the
+  screen doesn't rewrite what the sound already said** (a caption that shortens a narration
+  sentence collides with the subtitles). Text belongs on the cover, on numbers, on step
+  numbers, on information not in the sound (sources, term definitions), and on text meant to
+  be copied. A single-segment scene has zero captions and that's normal — the full contract
+  is `references/scenes-schema.md` §on-screen text only when needed.
+- **Every scene title is a spoken hook** (user directive, 2026-08-13) — what the viewer
+  blurts out inwardly (casual-register exclamation, question, or hearsay: "원하던 색이
+  아닌데 ㅠㅠ", "같은 염색약인데 왜 달라?"). Explanatory statements belong to captions and
+  narration, not to the title. Narration stays polite-register explanation — the screen
+  throws the emotion or question and the sound answers politely
+  (`references/scenes-schema.md` §title is a spoken hook).
+- **Narration = an array of segments (sentences)** — one sentence maps 1:1 to one reveal.
+  The character cap follows the format too (spaces and punctuation excluded).
+  - Short-form: cover ≤40 chars · points/quote ≤50 chars · 8–25 chars per sentence
+  - Long-form: cover ≤70 chars · points/quote ≤90 chars · 12–40 chars per sentence
 
-  세로가 더 짧은 이유는 화면이 좁아서가 아니라 **자막을 태우기 때문**이다 — 번인
-  자막은 한 번에 두 줄이 한계다. 가로는 클린 마스터에 `subs.srt` 를 따로 주므로
-  플레이어가 줄바꿈을 맡는다. 어느 쪽이든 마침표로 분명히 끊는다(TTS 무음 경계
-  검출용). 표기 이원화: `tts` 는 한글 발음 표기("4,700만"→"사천칠백만"),
-  `sub` 는 원표기 유지.
-- **쉬운 말 원칙(프로파일 §2)** — 화면 텍스트·나레이션 모두. 덱 저작 단계에서
-  용어를 풀어 써야 나레이션도 쉬워진다.
-- THEME 은 프로파일 §3 값을 그대로 복사한다.
+  Portrait is shorter not because the screen is narrow but **because the subtitles are burned
+  in** — burn-in subtitles top out at two lines at a time. Landscape hands `subs.srt` to the
+  player separately with a clean master, so the player handles line breaks. Either way, cut
+  clearly on periods (the TTS silence-boundary detector needs them). Two notations: `tts`
+  is Korean phonetic spelling ("4,700만"→"사천칠백만"), `sub` keeps the original notation.
+- **Plain-language principle (profile §2)** — for on-screen text and narration alike.
+  Unpacking the terms at the deck-authoring stage is what makes the narration plain too.
+- THEME is copied verbatim from the profile §3 values.
 
-#### 채널 실측을 스토리 구조로 옮기는 법
+#### Turning channel measurements into story structure
 
-`grow-youtube` 산출물이나 YouTube Analytics 기록을 읽을 수 있으면, 저작 전에 아래를
-한 줄씩 결정해 `storyboard.md` 설계 근거와 `SB_DOC.seriesNote`에 적는다.
+If you can read `grow-youtube` output or YouTube Analytics records, settle each of the
+following in one line before authoring and write it into the `storyboard.md` design rationale
+and `SB_DOC.seriesNote`.
 
-1. **멈춤 문제** — `계속 시청함`이 낮으면 첫 프레임·첫 대사를 바꾼다. CTA를 세게 쓰는
-   것으로 대신하지 않는다.
-2. **관심 문제** — 원시 조회수 대비 유효 조회수가 낮으면 설명을 줄이고 결과 도달 시점을
-   앞당긴다.
-3. **전환 단서** — 구독자를 만든 영상의 주제·결과·형식을 다음 3~5편의 공통 축으로 쓴다.
-   조회수만 높고 구독자가 없던 포맷은 그대로 복제하지 않는다.
-   반대로 초반 통과·유지는 좋은데 조회만 낮으면 형식이 아니라 제목 각도가
-   문제다 — 방법·도구가 아니라 느끼는 문제로 다시 연다(platform-playbook §1 ②).
-4. **다음 약속** — 이번 편 결과와 다음 편 결과를 각각 한 문장으로 쓴다. 둘이 이어지지
-   않으면 시리즈가 아니라 주제만 비슷한 단편이다.
+1. **A stopping problem** — if `stayed to watch` is low, change the first frame and the first
+   line. Don't substitute a harder CTA for it.
+2. **An interest problem** — if engaged views are low against raw views, cut explanation and
+   pull the moment of reaching the result earlier.
+3. **Conversion clues** — use the topic, result, and form of the video that produced
+   subscribers as the common axis of the next 3–5 episodes. Don't clone a format that had
+   high views and no subscribers.
+   Conversely, when the early pass-through and retention are good but views alone are low,
+   the problem is the title angle, not the form — reopen on a felt problem rather than a
+   method or tool (platform-playbook §1 ②).
+4. **The next promise** — write this episode's result and the next episode's result as one
+   sentence each. If the two don't connect, it isn't a series, just one-offs on similar
+   topics.
 
-### 4.5 문안 수렴 루프 (storyboard-reviewer 문안 모드, 목표 score ≥95 AND p0 = 0)
+### 4.5 Copy convergence loop (storyboard-reviewer copy mode, target score ≥95 AND p0 = 0)
 
-**이미지를 만들기 전에 문장부터 통과시킨다** — 문안이 바뀌면 그 씬이 보여줄 그림도
-바뀌므로, 순서가 뒤집히면 만든 이미지를 버리게 된다. **하드캡 5회**:
+**Get the sentences through before making any images** — when the copy changes, so does the
+picture that scene will show, so reversing the order means throwing away images you made.
+**Hard cap 5 rounds**:
 
-1. **storyboard-reviewer 에이전트(Agent)에 "문안 모드"로 위임** — `scenes.js`·
-   `research.md`(있으면)·`profile.md` 경로와 이전 라운드 미해결 지적을 전달한다.
-   판정 tail `STORYBOARD_REVIEW: mode=text score=NN p0=N verdict=PASS|FAIL` 을 파싱한다.
-2. **PASS(score ≥95 이고 p0 = 0)** → §4.6 으로.
-3. **FAIL** → 교정 지시대로 `scenes.js` 를 고치고 다시 위임한다.
-   - **빼기만 한다** — AI 티를 지우려다 원문에 없던 비유·상투구를 새로 심지 않는다.
-     넣는 순간 그게 새 AI 티다.
-   - 사실 지적(P0-3·P0-4)은 문장을 다듬어 덮지 않는다. research.md 로 돌아가
-     근거를 다시 확인하고, 근거가 없으면 그 주장을 뺀다.
-   - 같은 지적이 2회 연속 반복되면 그 씬을 다시 쓴다 — 같은 문장을 계속 다듬으면
-     리듬만 더 기계적으로 굳는다.
-4. 하드캡 도달 시 **최고 점수 버전 + 미해결 지적**을 §7 승인 게이트에 그대로 싣고
-   사용자 판단을 받는다. 점수를 꾸며 통과시키지 않는다.
+1. **Delegate to the storyboard-reviewer agent (Agent) in "copy mode"** — pass the paths to
+   `scenes.js`, `research.md` (if present), and `profile.md`, plus unresolved findings from
+   the previous round. Parse the verdict tail
+   `STORYBOARD_REVIEW: mode=text score=NN p0=N verdict=PASS|FAIL`.
+2. **PASS (score ≥95 and p0 = 0)** → on to §4.6.
+3. **FAIL** → fix `scenes.js` as directed and delegate again.
+   - **Only subtract** — don't plant metaphors or stock phrases that weren't in the original
+     while erasing AI tells. The moment you add one, that's the new AI tell.
+   - Don't paper over factual findings (P0-3, P0-4) by smoothing the sentence. Go back to
+     research.md, recheck the evidence, and if there is none, drop the claim.
+   - If the same finding repeats twice in a row, rewrite that scene — polishing the same
+     sentence over and over just hardens the rhythm into something more mechanical.
+4. On hitting the hard cap, carry **the highest-scoring version + the unresolved findings**
+   into the §7 approval gate as they are and let the user judge. Don't dress up the score to
+   force a pass.
 
-**촬영 모드도 이 루프를 돈다** — 사용자가 소리 내 읽을 대사라 AI 티가 더 크게 들린다.
+**Shooting mode runs this loop too** — the lines are what the user reads aloud, so AI tells
+are louder there.
 
-### 4.6 씬별 품질·맥락 수렴 루프 (storyboard-reviewer 씬 모드, **모든 씬** ≥95 AND p0 = 0)
+### 4.6 Per-scene quality and context convergence loop (storyboard-reviewer scene mode, **every scene** ≥95 AND p0 = 0)
 
-§4.5 가 스토리보드를 한 덩어리로 봤다면, 여기서는 **씬을 하나씩 따로 채점한다.**
-전체 평균은 잘 나오는데 한 씬만 무너진 스토리보드가 실제로 나온다 — 평균은 90점짜리
-씬을 100점짜리가 가려 주기 때문이다. 그래서 이 루프의 통과선은 평균이 아니라
-**가장 낮은 씬의 점수**다. 보는 축은 둘이다.
+Where §4.5 looked at the storyboard as one lump, here **each scene is scored on its own.**
+Storyboards where the overall average looks fine but one scene has collapsed do happen — the
+average lets a 100-point scene hide a 90-point one. So this loop's pass bar isn't the average
+but **the lowest scene's score**. There are two axes.
 
-- **품질** — 그 씬이 제 역할을 하는가. 커버는 3초 안에 무엇의 이야기인지 알리고
-  **왜 남아야 하는지도 준다**(세그①이 공포·공감·호기심·결말 미리 보여주기 중 `hookType`
-  에 적은 것 — scenes-schema §도입부 전략 넷),
-  후킹은 커버가 던진 것을 받아 시청자 주어로 걸고 답은 풀지 않으며(§hooking),
-  결과물 씬은 완성본을 펼쳐 보여 주고, 내용 씬은 그 결과를 만든 방법만 말한다.
-  points 는 한 화면에 한 메시지를 주고, quote 는 그 사람 입에서 나올 법한 말을 한다.
-- **맥락 적절성** — 그 씬이 여기 있을 이유가 있는가. 앞 씬이 던진 것을 받고 다음 씬을
-  열어 주는지, 제작형이면 결과물이 내용보다 앞에 있는지, 프로파일 §3 타깃이
-  알아들을 전제인지, 그 주장이 research.md 의 어느 항목에 걸리는지.
+- **Quality** — does that scene do its job. The cover says what the story is about within 3
+  seconds and **also gives a reason to stay** (segment ① carries whichever of fear, empathy,
+  curiosity, or showing the ending is written in `hookType` — scenes-schema §the four opening
+  strategies); hooking catches what the cover threw, hooks it with the viewer as the subject,
+  and doesn't unpack the answer (§hooking); the result scene unfolds the finished thing; and
+  body scenes say only how that result was made. points gives one message per screen, and
+  quote says something that could plausibly come out of that person's mouth.
+- **Contextual fit** — is there a reason for that scene to be here. Does it catch what the
+  previous scene threw and open the next one, does the result come before the body in build
+  content, is the premise something the profile §3 target will follow, and which entry in
+  research.md does that claim hang on.
 
-**하드캡 5회**:
+**Hard cap 5 rounds**:
 
-1. **storyboard-reviewer 에이전트(Agent)에 "씬 모드"로 위임** — `scenes.js`·
-   `research.md`(있으면)·`profile.md` 경로와 이전 라운드 미해결 지적을 전달한다.
-   판정 tail `STORYBOARD_REVIEW: mode=scene score=NN p0=N worst=<씬번호> verdict=PASS|FAIL`
-   을 파싱한다. **`score` 는 최저 씬 점수**이므로 ≥95 는 곧 전 씬 95 이상이다.
-2. **PASS(score ≥95 이고 p0 = 0)** → §4.7 로.
-3. **FAIL** → `worst` 씬부터 고친다. 미달 씬만 손대고 통과한 씬은 건드리지 않는다.
-   - **역할이 비어 있다는 지적은 문장을 다듬어 못 고친다** — 그 씬이 빠져도 영상이
-     성립하면 씬을 합치거나 뺀다. 씬 수가 줄면 남은 씬의 길이를 늘려 총길이를 맞춘다.
-   - 흐름 단절 지적은 그 씬이 아니라 **앞뒤 순서**를 의심한다. 순서를 바꿔도 말이
-     되는 배열이면 애초에 흐름이 없는 것이다. 제작형에서 방법 설명이 완성본보다
-     앞에 있으면 문장을 고치지 말고 결과물 씬을 앞으로 옮긴다.
-   - 씬을 새로 쓰거나 순서를 바꿨으면 **§4.5 를 다시 통과시킨 뒤** 이 루프로 돌아온다
-     (문장이 바뀌었으므로).
-4. 하드캡 도달 시 **최저 씬과 그 점수·미해결 지적**을 §7 승인 게이트에 그대로 싣는다.
+1. **Delegate to the storyboard-reviewer agent (Agent) in "scene mode"** — pass the paths to
+   `scenes.js`, `research.md` (if present), and `profile.md`, plus unresolved findings from
+   the previous round. Parse the verdict tail
+   `STORYBOARD_REVIEW: mode=scene score=NN p0=N worst=<scene number> verdict=PASS|FAIL`.
+   **`score` is the lowest scene's score**, so ≥95 means every scene is at 95 or above.
+2. **PASS (score ≥95 and p0 = 0)** → on to §4.7.
+3. **FAIL** → start with the `worst` scene. Touch only the scenes below the bar; leave the
+   ones that passed alone.
+   - **A finding that says the role is empty can't be fixed by smoothing sentences** — if the
+     video still stands with that scene gone, merge or drop it. When the scene count drops,
+     stretch the remaining scenes to keep the total length.
+   - For a broken-flow finding, suspect **the order around it**, not the scene itself. An
+     arrangement that still makes sense when reordered had no flow to begin with. If, in
+     build content, the method explanation sits before the finished thing, don't fix the
+     sentences — move the result scene forward.
+   - If you rewrote a scene or changed the order, **get through §4.5 again** before returning
+     to this loop (the sentences changed).
+4. On hitting the hard cap, carry **the lowest scene, its score, and the unresolved findings**
+   into the §7 approval gate as they are.
 
-### 4.7 어휘 수렴 루프 (storyboard-reviewer 어휘 모드, **모든 씬** ≥95 AND p0 = 0)
+### 4.7 Vocabulary convergence loop (storyboard-reviewer lexicon mode, **every scene** ≥95 AND p0 = 0)
 
-씬 구성이 확정된 뒤 **낱말만** 본다 — 나레이션과 타이틀에 쓴 말이 사람이 실제로 쓰는
-말인가. 구조·리듬은 §4.5 가, 역할·흐름은 §4.6 이 봤으므로 이 루프는 어휘 층위에만
-머문다. 같은 뜻을 담고도 "제출 기한이 도래합니다"와 "이날까지 안 내면 늦어요"는 다른
-글이고, 시청자가 AI 냄새를 맡는 자리는 대개 낱말이다.
+Once the scene structure is settled, look **only at the words** — are the words used in
+narration and titles words people actually use. Structure and rhythm were §4.5's job, role
+and flow were §4.6's, so this loop stays at the vocabulary layer. Carrying the same meaning,
+"제출 기한이 도래합니다" and "이날까지 안 내면 늦어요" are different writing, and the place a
+viewer smells AI is usually the words.
 
-보는 것: 어려운 한자어·무설명 전문용어, 번역투 낱말(`~를 통해`·`~에 있어서`·
-`수행합니다`), 문어 전용 어휘와 보고체 상태 동사(korean-style §D8·§D9), AI 상투어,
-같은 낱말의 과반복, 프로파일 §3 타깃이 쓰지 않는 말.
+What it looks at: hard Sino-Korean words and unexplained jargon, translationese
+(`~를 통해`·`~에 있어서`·`수행합니다`), written-only vocabulary and report-style stative
+verbs (korean-style §D8, §D9), AI stock phrases, over-repetition of the same word, and words
+the profile §3 target doesn't use.
 
-**하드캡 5회**:
+**Hard cap 5 rounds**:
 
-1. **storyboard-reviewer 에이전트(Agent)에 "어휘 모드"로 위임** — `scenes.js`·
-   `profile.md`·이전 라운드 미해결 지적을 전달한다. 판정 tail
-   `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<씬번호> verdict=PASS|FAIL`
-   을 파싱한다. 여기서도 **`score` 는 최저 씬 점수**다.
-2. **PASS(score ≥95 이고 p0 = 0)** → §5 로.
-3. **FAIL** → 지적받은 낱말을 **바꾸기만 한다.**
-   - **문장을 다시 쓰지 않는다** — 어휘 교정이 문장 재작성으로 번지면 §4.5·§4.6 이
-     본 구조가 무너져 두 루프를 다시 돌아야 한다. 낱말 하나를 바꿔서 안 되면 그때만
-     그 문장을 고치고, 고쳤으면 그 사실을 다음 라운드 위임에 적는다.
-   - **빼기만 한다.** 어려운 말을 지우려다 없던 비유·상투구를 새로 심으면 그게 새
-     AI 티다(문안 루프와 같은 규칙).
-   - 수치·고유명사·`tts` 발음 표기는 건드리지 않는다.
-4. 하드캡 도달 시 최저 씬·미해결 지적을 §7 승인 게이트에 싣는다.
+1. **Delegate to the storyboard-reviewer agent (Agent) in "lexicon mode"** — pass `scenes.js`,
+   `profile.md`, and unresolved findings from the previous round. Parse the verdict tail
+   `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<scene number> verdict=PASS|FAIL`.
+   Here too, **`score` is the lowest scene's score**.
+2. **PASS (score ≥95 and p0 = 0)** → on to §5.
+3. **FAIL** → **only swap** the words that were flagged.
+   - **Don't rewrite sentences** — if vocabulary fixing spreads into rewriting sentences, the
+     structure §4.5 and §4.6 signed off on falls apart and both loops have to run again. Only
+     when swapping a single word won't do do you touch that sentence, and when you do, say so
+     in the next round's delegation.
+   - **Only subtract.** Planting a metaphor or stock phrase that wasn't there while erasing a
+     hard word is a new AI tell (same rule as the copy loop).
+   - Don't touch figures, proper nouns, or `tts` phonetic spellings.
+4. On hitting the hard cap, carry the lowest scene and unresolved findings into the §7
+   approval gate.
 
-**촬영 모드도 §4.6·§4.7 을 돈다** — 사용자가 소리 내 읽을 대본이라 낱말이 더 크게
-들린다. 이미지 축(§5·§5.5)만 건너뛴다.
+**Shooting mode runs §4.6 and §4.7 too** — the user reads the script aloud, so the words
+land louder. Only the image axis (§5, §5.5) is skipped.
 
-### 5. 씬 이미지 생성 (촬영 모드는 건너뛴다)
+### 5. Generate scene images (skipped in shooting mode)
 
-씬별 배경 이미지를 **포맷이 정한 크기**로 생성해 `images/scene-<n>.png` 에 저장한다.
-**슬라이드 씬(`visual.slide`)도 여기서 뺀다** — 그 씬의 화면은 이미지가 아니라
-승인 뒤 §8 이 만드는 슬라이드다. 장수 계산·비용 원장 모두 이미지 씬만 센다.
-크기는 손으로 외우지 말고 프리셋에서 읽는다.
+Generate the per-scene background image **at the size the format sets** and save it to
+`images/scene-<n>.png`. **Slide scenes (`visual.slide`) are excluded here too** — their
+screen is not an image but the slide §8 builds after approval. Both the image count and
+the cost ledger count image scenes only. Don't memorize the sizes — read them from the
+preset.
 
 ```bash
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
@@ -415,281 +476,314 @@ node $PG/format-resolve.js storyboard/scenes.js --json | python3 -c \
 # youtube-long-16x9 {'gpt': '2560x1440', 'local': '2048x1152', …}
 ```
 
-세로 1088×1920 이 9:16 정수비가 아닌 이유는 gpt-image 의 16 배수 제약이다(1080 이
-안 들어간다). 1080×1920 캔버스에 cover 크롭되므로 0.7% 비율 차는 무시된다.
+Portrait is 1088×1920 rather than an exact 9:16 because of gpt-image's multiple-of-16
+constraint (1080 doesn't fit). It gets cover-cropped onto a 1080×1920 canvas, so the 0.7%
+ratio difference is ignorable.
 
-**엔진 분담**(2026-08-12 실측 조사 — docs/research/2026-08-12-local-image-generation):
+**Engine split** (measured 2026-08-12 — docs/research/2026-08-12-local-image-generation):
 
-- **points 배경 = `image_local_generate`(로컬 Z-Image — 기본).** 장당 비용 0.
-  장당 수 분 걸리므로 순차로 걸어 두고, 그동안 §6 중 **이미지와 무관한 부분**
-  (SB_DOC 편집 메타·출처 요약)을 미리 써 둔다. 이미지 임베드와 씬 표는 §5.5 를
-  통과한 뒤에 쓴다 — 재생성이 걸리면 그만큼 다시 손봐야 한다.
-  mflux 미설치 머신이면 툴이 설치 안내와 함께 실패한다 — 그 회차만
-  `gpt_image_text2img`(quality "low")로 폴백한다.
-- **커버 배경(scene-1) = `gpt_image_text2img`(quality "high").** 썸네일이자 veo
-  소스라 품질 조항에 해당한다.
-- **글자가 들어가야 하는 화면은 어느 씬이든 `gpt_image_text2img`** — 로컬은 한글
-  자소가 깨진다(실측: "딸깍연구소" → "달닥연구소").
+- **points backgrounds = `image_local_generate` (local Z-Image — the default).** Cost per
+  image 0. Each takes a few minutes, so queue them sequentially and meanwhile pre-write the
+  **parts of §6 that don't involve images** (SB_DOC editorial metadata, source summary).
+  Write the image embeds and shot tables after §5.5 passes — a regeneration means redoing
+  that much work.
+  On a machine without mflux the tool fails with install instructions — fall back to
+  `gpt_image_text2img` (quality "low") for that episode only.
+- **Cover background (scene-1) = `gpt_image_text2img` (quality "high").** It's the thumbnail
+  and the veo source, so the quality clause applies.
+- **Any screen that has to contain text goes to `gpt_image_text2img`** whatever the scene —
+  the local engine breaks Korean jamo (measured: "딸깍연구소" → "달닥연구소").
 
-- **커버 배경(scene-1)은 이 회차의 메타 이미지다** — 커버 프레임이 그대로
-  `cover.jpg`(YouTube 썸네일이자 IG·FB 영상의 첫 화면)가 된다. 은유 정물이 아니라 **주제가 한눈에
-  보이는 실사 인물 장면**(생성 인물만, 기본 한국 여성 — 프로파일 §3 타깃 기준)으로,
-  **`quality: "high"`**. 부정 지시의 `face not visible` 은 여기서만
-  `seen from behind, face turned away` 로 바꾼다(produce 절대 규칙 11·12).
-  도입 b-roll 을 둔 편은 이 PNG 가 그대로 veo 소스를 겸한다 — 커버가 끝나면 그 사진이
-  움직이기 시작한다.
-- **씬마다 정지/영상을 고른다 — 영상은 회차당 합산 최대 2**(사용자 지시 2026-08-14,
-  정본은 scenes-schema §모션 배경). 두 형태가 있고 합쳐 센다:
-  - **`broll`** — 씬 사이 삽입. 말없이 그림만 움직이는 구간이다(절대 규칙 9 로 그
-    구간은 영상 소리를 쓰고, 두 칸을 다 쓰면 정보를 전하는 시간이 8초 안팎 줄어든다).
-  - **모션 배경(`visual.video`)** — 씬 자체를 영상으로. 스토리보드의 그 이미지를
-    파라미터로 veo 영상을 만들어 배경에 깔고, **나레이션·캡션·자막은 유지된다**.
-    말하면서 배경이 움직여야 하는 씬 — 움직임 자체가 내용인 자리 — 에 쓴다.
-    `duration` ≤ 8초 · points 전용 · 대사별 삽화와 병용 금지.
-  정지로 충분하면 정지가 기본값이다 — 영상은 비용과 이음새 위험을 산다. **veo 소스가
-  되는 배경(broll 이 붙는 씬·모션 배경 씬)은 로컬 엔진이 아니라
-  `gpt_image_text2img`(high)로 만든 인물 실사**여야 한다 — 흐리거나 사람이 없으면
-  그 8초가 정지 컷처럼 보인다. b-roll 두 칸의 `after` 는 서로 달라야 한다.
-- **생성 호출 전에 계획을 검증받는다**(produce 절대 규칙 13) — 커버 bgPrompt 와
-  broll·모션 배경 씬 전부를 content-reviewer **계획 모드**에 위임해 `PLAN_REVIEW: PASS`
-  를 받은 뒤 생성한다. 돈이 나가는 호출(high 이미지·veo) 전의 마지막 관문이다.
-- **points 배경도 화면의 주인공이다**(produce 절대 규칙 14 — 캡션이 상단 밴드만
-  쓰므로 사진이 그대로 보인다). 은유 정물이 아니라 **주제 실사 컷**으로 만들고,
-  프로파일 §3 무드 서술 + **필수 부정 지시**("no text, no logos, no signage,
-  no readable characters, face not visible, no flags, no national emblems, no maps,
-  no government buildings") + "lower third fading into darkness"(하단이 밝으면
-  자막이 안 읽힌다)를 붙인다. 커버 배경도 무드·부정 지시·lower third 를 같이
-  상속한다.
-- 장수는 **cover(gpt high) 1장 + points(로컬) 3~6장** — 한 장을 전 씬에 돌려쓰면 본문
-  수십 초가 같은 정지 컷이다. 내용 축이 바뀌는 지점마다 컷을 바꾸되, 같은
-  인물·같은 공간의 다른 앵글로 연속성을 지킨다. quote 씬은 배경 불요(발화 클립
-  또는 인용 카드).
-  **롱폼 생성 레인은 이 계산이 다르다** — 28~70샷을 전부 새로 만들면 로컬 엔진으로도
-  몇 시간이고 gpt 는 비용이 감당이 안 된다. **챕터 하나에 배경 2~3장**을 만들어 그
-  챕터 안에서 앵글·크롭으로 돌려쓰고, 챕터가 바뀔 때 장면을 바꾼다(켄번즈 팬이 가로
-  포맷에서 열려 있어 한 장에서 두 구도를 뽑을 수 있다). 그래도 30장을 넘으면 촬영
-  레인이 맞는 소재가 아닌지 다시 본다.
-- 생성 문자가 박히면 재생성 — 가짜 문서·간판으로 오독되는 순간 사실 왜곡이 된다.
-- b-roll 씬을 계획하면 칸마다 scenes-schema 의 `broll` 계약대로 **사용 길이
-  `duration`(기본 4초)과 그 근거**·`after`·`src`·모션(영어)·오디오 지시를 적는다 —
-  생성은 1080p·8초 고정이고(API 제약), produce 가 사용 길이만큼 잘라 쓴다.
-  두 칸이 같은 PNG 를 쓰면 같은 장면이 두 번 나온다 — 칸마다 다른 소스를 지정한다.
-- 모션 배경 씬을 계획하면 `visual.video.prompt` 에 **영어 모션만** 적는다(장면
-  재묘사는 모델이 장면을 재설계한다 — produce §3 과 같은 규칙). 클립 소리는 빌드에서
-  쓰이지 않으므로 오디오 지시는 없어도 된다.
+- **The cover background (scene-1) is this episode's meta image** — the cover frame becomes
+  `cover.jpg` (the YouTube thumbnail and the first frame of the IG and FB videos) as-is. Not a
+  metaphorical still life but **a photorealistic person scene where the topic is visible at a
+  glance** (generated people only, Korean women by default — per the profile §3 target), at
+  **`quality: "high"`**. The `face not visible` negative direction is the one place it changes
+  to `seen from behind, face turned away` (produce absolute rules 11 and 12).
+  In episodes with an opening b-roll, this PNG doubles as the veo source — when the cover
+  ends, that photo starts moving.
+- **Pick still or video per scene — video is capped at 2 combined per episode** (user
+  directive, 2026-08-14; the source of truth is scenes-schema §motion background). There are
+  two forms and they count together:
+  - **`broll`** — inserted between scenes. A stretch where only the picture moves and nothing
+    is said (absolute rule 9 means that stretch uses the video's own audio, and using both
+    slots cuts roughly 8 seconds out of the time spent delivering information).
+  - **Motion background (`visual.video`)** — the scene itself as video. The storyboard's image
+    for that scene becomes a parameter for a veo video laid under the background, and
+    **narration, captions, and subtitles stay**. Use it on scenes where the background has to
+    move while you talk — where the movement itself is the content.
+    `duration` ≤ 8s · points only · not combined with per-line illustrations.
+  Still is the default when still is enough — video buys cost and seam risk. **Backgrounds
+  that become veo sources (scenes with b-roll attached, motion-background scenes) have to be
+  photorealistic people made with `gpt_image_text2img` (high)**, not the local engine — blurry
+  or peopleless, and those 8 seconds look like a still frame. The two b-roll slots need
+  different `after` values.
+- **Get the plan reviewed before any generation call** (produce absolute rule 13) — delegate
+  the cover bgPrompt and every b-roll and motion-background scene to content-reviewer
+  **plan mode** and generate only after `PLAN_REVIEW: PASS`. It's the last gate before calls
+  that cost money (high images, veo).
+- **points backgrounds are the star of the screen too** (produce absolute rule 14 — captions
+  use only the top band, so the photo shows through). Make them **photorealistic topic shots**
+  rather than metaphorical still lifes, and attach the profile §3 mood description + the
+  **mandatory negative directions** ("no text, no logos, no signage, no readable characters,
+  face not visible, no flags, no national emblems, no maps, no government buildings") +
+  "lower third fading into darkness" (a bright bottom makes subtitles unreadable). The cover
+  background inherits the same mood, negative directions, and lower third.
+- Count is **1 cover (gpt high) + 3–6 points (local)** — reusing one image across every scene
+  makes the body tens of seconds of the same still frame. Change the shot wherever the content
+  axis turns, but keep continuity with a different angle on the same person and the same space.
+  quote scenes need no background (speech clip or quotation card).
+  **The long-form generated lane does this math differently** — making all 28–70 shots fresh
+  takes hours even on the local engine, and gpt costs more than it's worth. Make **2–3
+  backgrounds per chapter**, reuse them within that chapter through angle and crop, and change
+  the setting when the chapter changes (the Ken Burns pan is enabled in landscape, so you can
+  pull two compositions out of one image). Even so, past 30 images, look again at whether this
+  material belongs in the filmed lane.
+- Regenerate if generated characters get stamped in — the moment it reads as a fake document
+  or signboard it becomes factual distortion.
+- When planning a b-roll scene, write per slot — as the scenes-schema `broll` contract requires
+  — the **used length `duration` (4s by default) and the reason for it**, `after`, `src`,
+  motion (in English), and audio directions. Generation is fixed at 1080p and 8s (an API
+  constraint), and produce trims it to the used length.
+  Two slots using the same PNG means the same shot appears twice — specify a different source
+  per slot.
+- When planning a motion-background scene, write **English motion only** into
+  `visual.video.prompt` (re-describing the scene makes the model redesign it — same rule as
+  produce §3). The clip's audio isn't used in the build, so audio directions are optional.
 
-**호출마다 비용 원장에 한 줄 적는다.** 이 회차의 돈은 여기서 이미 나가기 시작한다 —
-커버 한 장이 $0.22 이고, produce 는 며칠 뒤 다른 세션에서 돌 수도 있다. 그때
-합산하려면 원장이 주제 디렉토리에 있어야 한다. 규약 정본은
-[cost-tally.md](../autoproduce/references/cost-tally.md) 다.
+**Write one line into the cost ledger per call.** This episode's money starts going out here —
+one cover costs $0.22, and produce may run days later in a different session. For it to add up
+then, the ledger has to be in the topic directory. The source of truth for the convention is
+[cost-tally.md](../autoproduce/references/cost-tally.md).
 
 ```bash
 mkdir -p .work
-# 생성 직후 그 호출을 적는다 — 나중에 몰아서 쓰면 재생성분을 빠뜨린다
-printf 'image.gpt-image-2.high\t1\tstoryboard: 커버 배경 scene-1\n' >> .work/cost-tally.tsv
-printf 'image.local\t3\tstoryboard: points 배경 scene-2~4\n'        >> .work/cost-tally.tsv
+# Write the call down right after generating — batching it later loses the regenerations
+printf 'image.gpt-image-2.high\t1\tstoryboard: cover background scene-1\n' >> .work/cost-tally.tsv
+printf 'image.local\t3\tstoryboard: points backgrounds scene-2~4\n'        >> .work/cost-tally.tsv
 ```
 
-로컬 이미지도 적는다 — 단가가 0 이라 합계는 그대로지만, 몇 장을 어디에 썼는지가
-리포트에 보여야 "이미지 비용 0" 이 집계 결과인지 집계 누락인지 구분된다.
-`gpt_image_text2img` 의 `quality` 가 키를 정한다(`high`·`medium`·`low`).
+Log local images too — the unit price is 0 so the total doesn't move, but the report showing
+how many went where is what separates "image cost 0" as a tallied result from a tallying gap.
+The `quality` of `gpt_image_text2img` decides the key (`high`·`medium`·`low`).
 
-### 5.5 이미지 맥락 수렴 루프 (storyboard-reviewer 이미지 모드, 목표 score ≥95 AND p0 = 0)
+### 5.5 Image context convergence loop (storyboard-reviewer image mode, target score ≥95 AND p0 = 0)
 
-생성 전 계획은 content-reviewer 계획 모드가 봤고, 여기서는 **나온 그림 자체**를 본다 —
-"이 그림이 그 씬이 말하는 내용을 보여주는가". 예쁜지가 아니라 맞는지가 기준이다.
-**촬영 모드는 이 루프를 통째로 건너뛴다**(화면이 사용자의 실제 녹화에서 나온다).
-**하드캡 3회** — 재생성은 로컬도 장당 수 분, gpt high 는 돈이 나간다.
+content-reviewer plan mode looked at the plan before generation; here **the picture that came
+out** gets looked at — "does this picture show what that scene is saying". The criterion is
+right, not pretty.
+**Shooting mode skips this loop entirely** (the screen comes from the user's actual recording).
+**Hard cap 3 rounds** — regeneration costs minutes per image even locally, and gpt high costs
+money.
 
-1. **storyboard-reviewer 에이전트(Agent)에 "이미지 모드"로 위임** — `images/scene-*.png`
-   전체 경로와 `scenes.js`·`profile.md`, 삽화 모드면 `narration[].img` 경로들,
-   이전 라운드 미해결 지적을 전달한다. 슬라이드 씬은 대상에서 뺀다고 명시한다 —
-   그 씬의 `scene-N.png` 부재는 결함이 아니다(§8 에서 화면이 나온다). 판정 tail
-   `STORYBOARD_REVIEW: mode=image score=NN p0=N verdict=PASS|FAIL` 을 파싱한다.
-2. **PASS(score ≥95 이고 p0 = 0)** → §6 으로. storyboard.md 는 통과한 이미지로 한 번만
-   쓴다(루프 중에 문서를 미리 쓰면 매 라운드 다시 손봐야 한다).
-3. **FAIL** → 지적받은 장만 다시 만든다. 통과한 장은 건드리지 않는다.
-   - **재생성분도 §5 의 원장에 적는다** — 버린 장도 청구는 된다. 라운드 번호를
-     메모에 넣으면(`storyboard: §5.5 재생성 scene-1 (2라운드)`) 나중에 이 루프가
-     그 편에서 얼마를 썼는지 리포트에서 그대로 읽힌다.
-   - 엔진은 §5 분담 그대로. 프롬프트는 원래 것에 교정 지시만 얹고 **전면 재서술은
-     하지 않는다** — 다 뜯어고치면 통과했던 요소까지 같이 사라진다.
-   - **부정 지시는 프롬프트 본문에 쓰지 않는다** — "no maps" 를 본문에 넣으면 오히려
-     지도가 그려진다(실측 4장 전패). 부정 명사는 배제 전용 인자로 분리한다 —
-     로컬 이미지는 `--negative-prompt`, `veo_*` 는 `negativePrompt` 다. Veo 프롬프트
-     가이드도 본문의 지시문 형태를 not recommended 로 적고 명사구 나열을 권한다.
-     Seedance 에는 그 인자가 없으므로 장면 서술 자체를 바꿔 피한다.
-   - **글자 각인 소품은 부정 지시로 못 막는다**(키보드·계산기·간판). 그 물체를 장면
-     구성에서 빼는 쪽이 정답이다.
-   - 같은 지적이 2회 연속 반복되면 씬의 소재를 바꾼다 — 같은 프롬프트를 다듬어
-     세 번째로 같은 실패를 사지 않는다.
-4. 하드캡 도달 시 **최고 점수 버전 + 미해결 지적**을 §7 승인 게이트에 그대로 싣는다.
-   비용이 계속 나가는 축이라 여기서 사용자 판단을 받는 편이 싸다.
+1. **Delegate to the storyboard-reviewer agent (Agent) in "image mode"** — pass every
+   `images/scene-*.png` path plus `scenes.js` and `profile.md`, the `narration[].img` paths in
+   illustration mode, and unresolved findings from the previous round. Say explicitly that
+   slide scenes are out of scope — a missing `scene-N.png` there is not a defect (their
+   screen arrives in §8). Parse the verdict tail
+   `STORYBOARD_REVIEW: mode=image score=NN p0=N verdict=PASS|FAIL`.
+2. **PASS (score ≥95 and p0 = 0)** → on to §6. Write storyboard.md once, with the images that
+   passed (writing the document during the loop means redoing it every round).
+3. **FAIL** → remake only the images that were flagged. Leave the ones that passed alone.
+   - **Log regenerations in the §5 ledger too** — discarded images still get billed. Putting
+     the round number in the note (`storyboard: §5.5 regenerate scene-1 (round 2)`) means the
+     report later reads back exactly how much this loop spent on that episode.
+   - Engines follow the §5 split. Add only the correction directions on top of the original
+     prompt and **don't re-describe it wholesale** — tearing it all up loses the elements that
+     had passed.
+   - **Don't put negative directions in the prompt body** — putting "no maps" in the body
+     draws a map instead (measured: 4 out of 4 failed). Split negative nouns into the
+     exclusion-only argument — `--negative-prompt` for local images, `negativePrompt` for
+     `veo_*`. The Veo prompt guide also marks the instruction form in the body as not
+     recommended and advises listing noun phrases. Seedance has no such argument, so avoid it
+     by changing the scene description itself.
+   - **Props with text engraved on them can't be blocked with negative directions** (keyboards,
+     calculators, signboards). Taking the object out of the composition is the answer.
+   - If the same finding repeats twice in a row, change the scene's material — don't buy the
+     same failure a third time by polishing the same prompt.
+4. On hitting the hard cap, carry **the highest-scoring version + the unresolved findings** into
+   the §7 approval gate as they are. It's an axis that keeps spending money, so getting the
+   user's judgment here is cheaper.
 
-### 6. storyboard.md 작성
+### 6. Writing storyboard.md
 
-`references/storyboard-template.md` 구조로 사람이 검토할 문서를 만든다 —
-씬 머리(`S#1. 장소 / 시간`) 아래 샷별 표(사이즈·새 정보·화면 본체·HTML 연출·
-나레이션)와 생성 이미지를 `![scene-1](images/scene-1.png)` 로 임베드한다.
-research.md 의 핵심 출처를 말미에 요약 링크한다.
+Build the document a human reviews, in the `references/storyboard-template.md` structure —
+under the scene head (`S#1. place / time`), a per-shot table (size, new information, screen
+body, HTML staging, narration) with the generated images embedded via
+`![scene-1](images/scene-1.png)`. Summarize and link research.md's key sources at the end.
 
-**촬영 씬이 하나라도 있으면** 이미지 임베드 대신 샷별 "화면" 열을 쓰고, 추가로
-`script.md`(촬영 대본)를 `references/shot-script-template.md` 구조로 저작한다 —
-촬영 수칙(가로로 찍기·보조 모니터에 대본·앱 폰트 확대·같은 샷은 처음부터 다시)과
-샷별 [저장할 파일 / 화면 / 행동 / 대사] 블록이다. **사용자가 이 문서를 보며 그대로
-따라 찍는다** — 무엇이 화면에 보여야 하고, 무엇을 조작하고, 무슨 말을 하고, 어느
-파일명으로 저장하는지가 한 덩어리로 붙어 있어야 한다. 대사는 scenes.js narration
-에서 옮긴다(두 벌 관리 금지 — scenes.js 가 SoT).
+**If there's even one filmed scene**, use a per-shot "screen" column instead of image embeds,
+and additionally author `script.md` (the shooting script) in the
+`references/shot-script-template.md` structure — the filming rules (film landscape, script on
+the secondary display, enlarge app fonts, restart the same shot from the top) and per-shot
+[file to save / screen / action / lines] blocks. **The user films by following this document
+straight through** — what has to be on screen, what to operate, what to say, and which filename
+to save it as have to sit together in one block. The lines get carried over from the scenes.js
+narration (no maintaining two copies — scenes.js is the SoT).
 
-롱폼 섞어 찍기는 **`references/make-script.js` 로 렌더한다** — 손으로 옮겨 적지
-않는다(`node make-script.js <storyboard 디렉토리>`, 문안이 바뀔 때마다 다시 돌린다).
-전 씬 육성 회차(기본)는 **전 샷**을 싣는다 — 촬영 샷은 [파일/화면/행동/대사],
-생성·슬라이드 샷은 소리만 녹음(`voice/s<샷번호>.wav`)으로 표시된다. 사용자가
-녹음해야 할 소리가 전 샷에 있기 때문이다. 맨 위 「오늘 찍을 것」 표에 촬영 파일과
-음성 파일이 다 실린다. TTS 회차만 촬영 씬만 싣는다 — 그때 생성 씬은 사용자가 할
-일이 없어서, 넣으면 무엇을 해야 하는지가 흐려진다.
+For long-form mixed shooting, **render it with `references/make-script.js`** — don't copy
+it over by hand (`node make-script.js <storyboard directory>`, re-run whenever the copy
+changes). An all-live-voice episode (the default) carries **every shot** — filmed shots as
+[file / screen / action / lines], generated and slide shots marked voice-only
+(`voice/s<shot number>.wav`). There is sound for the user to record on every shot, which is
+why. The "what to film today" table at the top lists both the footage files and the voice
+files. Only a TTS episode carries filmed scenes alone — there the generated scenes have
+nothing for the user to do, and including them blurs what has to be done.
 
-**storyboard.html (검토용 렌더)** — `references/storyboard-html-template.html` 을
-storyboard/ 에 복사해 **`<title>` 과 `✎ SB_DOC` 블록만** 채운다. 씬 데이터(제목·
-대사·bullets·shot·duration·THEME)는 절대 HTML 에 적지 않는다 — 문서가
-`<script src="./scenes.js">` 로 SoT 를 직접 로드해 그리므로, scenes.js 를 고치면
-문서가 자동으로 따라오고 사본 드리프트가 원천 차단된다. SB_DOC 에는 scenes.js 에
-없는 편집 메타만 담는다(핵심 메시지·씬별 주석·전환·오디오 지시·개인정보 회피·
-출처 요약·플랫폼 계획·촬영 준비·재확인 목록).
+**storyboard.html (the review render)** — copy `references/storyboard-html-template.html` into
+storyboard/ and fill in **only the `<title>` and the `✎ SB_DOC` block**. Never write scene data
+(title, lines, bullets, shot, duration, THEME) into the HTML — the document loads the SoT
+directly with `<script src="./scenes.js">` and renders it, so fixing scenes.js updates the
+document automatically and copy drift is structurally impossible. SB_DOC holds only editorial
+metadata that isn't in scenes.js (core message, per-scene notes, transitions, audio directions,
+privacy avoidance, source summary, platform plan, shooting prep, recheck list).
 
-문서가 보여 주는 것은 셋이다.
+The document shows three things.
 
-- **샷 카드** — `SCENES[]` 항목 하나. 헤더에 역할·사이즈·**beat**(커버·후킹·결과물·
-  내용·CTA — 커버 카드에는 도입부 전략 이름표도)와 **제작 층 두 배지** (화면 본체 = 정지 사진 / AI 영상 / 녹화 / 공용
-  자산, 화면 위 = HTML 리빌·캡션·타이핑 / 없음). `scene` 이 같으면 씬 밴드
-  (`S#1. 장소 / 시간`)로 묶는다. 마지막 본편을 PAYOFF 로 찍지 않는다. 채널색은
-  AI 영상, 테두리만 있는 배지는 HTML 연출이다. 한 배지로 합치지 않는다.
-- **콘티 행** — 리빌(같은 샷 안에서 글자가 나타나는 순간) 하나가 행 하나다. 샷이
-  아니다. 왼쪽에 9:16 프레임, 오른쪽에 그 순간의 글자와 대사. 배경·모션·프롬프트는
-  행 아래 샷 메타가 담는다. 타임라인 칸은 샷이고, b-roll 은 `after` 가 정한 재생
-  위치에 꽂힌다.
-- **계약 점검 스트립** — 위반을 문서 맨 위 한 곳에 모은다. 자수·말속도·씬 길이·총길이·
-  커버 제목에 더해 **프레임 넘침**과 **히어로 수치 폭**을 produce 와 같은 방식으로
-  실측하고(1080px 캔버스 · 3단계 축소 · 640px 가드), b-roll 계약(나레이션 없음·8초 이하·
-  커버 배경과 같은 src·`after` 가 실재 씬)·씬 길이 결측·`tts` 결측·아웃트로 길이 미기재·
-  SB_DOC 미기입 `{{…}}`·**재생 순서**(커버 → 후킹 → 결과물 → 내용 — 후킹 샷이
-  없거나 커버 다음 샷이 후킹이 아니면 경고, 내용이 결과보다 앞에 있으면 위반)·**도입부
-  전략**(커버 `hookType` 이 없거나 넷 밖의 값이면 경고) 도 잡는다. 제작 전에 글자 잘림과 계약 위반을 걸러 내는 자리다 —
-  다만 produce 와 같은 사각이 있어 **위로** 밀려난 글자는 안 걸린다(아래 넘침만 잰다).
+- **Shot cards** — one `SCENES[]` entry. The header carries the role, the size, the **beat**
+  (cover · hooking · result · body · CTA — plus the opening-strategy name tag on the cover
+  card) and the **two production-layer badges** (screen body = still photo / AI video /
+  recording / shared asset, on-screen = HTML reveal · captions · typing / none). Entries
+  sharing `scene` are grouped into a scene band (`S#1. place / time`). The last main shot
+  isn't stamped PAYOFF. Channel color means AI video; an outline-only badge means HTML
+  staging. Don't merge them into one badge.
+- **Scene-frame rows** — one reveal (the moment text appears within the same shot) is one row.
+  Not one shot. A 9:16 frame on the left, the text and lines of that moment on the right.
+  Background, motion, and prompt go in the shot metadata below the row. The timeline slots are
+  shots, and b-roll plugs into the playback position `after` sets.
+- **The contract check strip** — violations collected in one place at the top of the document.
+  On top of character counts, speech rate, scene length, total length, and cover title, it
+  measures **frame overflow** and **hero stat width** the same way produce does (1080px canvas
+  · 3-step shrink · 640px guard), and it also catches the b-roll contract (no narration, 8s or
+  under, same src as the cover background, `after` pointing at a real scene), missing scene
+  length, missing `tts`, unrecorded outro length, unfilled `{{…}}` in SB_DOC, **playback order**
+  (cover → hooking → result → body — a warning when there's no hooking shot or the shot after
+  the cover isn't hooking, a violation when body comes before result), and **opening strategy**
+  (a warning when the cover has no `hookType` or a value outside the four). This is where text
+  clipping and contract violations get filtered out before production — though it shares
+  produce's blind spot, so text pushed **upward** isn't caught (only downward overflow is
+  measured).
 
-승인 제시 때 이 문서를 기본으로 쓴다. 텍스트 존·자막 토글은 샷 구성 절 머리에 있다.
+Use this document as the default when presenting for approval. The text zones and the subtitle
+toggle are at the head of the shot composition section.
 
-### 7. HITL 승인 게이트
+### 7. HITL approval gate
 
-AskUserQuestion 으로 스토리보드를 제시한다 — **포맷**(쇼트폼 9:16 / 롱폼 16:9),
-storyboard.md·storyboard.html 경로(HTML 을 브라우저로 열면 검산 배지까지 보인다),
-샷 수·예상 총길이, 커버 제목, 핵심 수치와 출처. 롱폼이면 **챕터 목록과 안전영역이
-잠정값이라는 사실**을 함께 알린다(§1.5).
-촬영 씬이 있으면 **`script.md` 경로와 찍어야 할 파일 수**를 같이 보여 준다 —
-승인이 곧 촬영 시작이라, 사용자가 무엇을 몇 개 찍어야 하는지 이 화면에서 알아야 한다.
-슬라이드 씬이 있으면 **몇 씬이 슬라이드인지와 각 씬의 `plan` 한 줄**을 같이 보여
-준다 — 승인은 이 계획을 승인하는 것이고, 파일은 승인 뒤 §8 에서 만든다.
-여기에 **네 수렴 루프의 결과를 함께 싣는다** — 문안·씬별·어휘·이미지
-각각의 최종 점수와 라운드 수, 씬별·어휘는 **최저 씬이 몇 번이고 몇 점인지**까지,
-하드캡에 걸렸으면 미해결 지적을 그대로. 선택지:
-[승인 — 제작 진행 / 수정 요청 / 주제 보류]. **승인 없이 produce 로 넘어가지 않는다.**
-수정 요청이면 반영한 뒤 **바뀐 축의 게이트를 다시 통과시키고** 재제시한다 — 문장 구조를
-고쳤으면 §4.5 부터, 씬을 더하거나 뺐으면 §4.6 부터, 낱말만 바꿨으면 §4.7, 이미지를
-다시 만들었으면 §5.5 다(재제시 라운드는 하드캡을 새로 센다).
-승인되면 scenes.js 상단에 `// approved: <YYYY-MM-DD>` 와
-`// review: text=NN(R라운드) scene=NN(R라운드) lexicon=NN(R라운드) image=NN(R라운드)`
-두 줄을 적고 `/social-flow:produce <채널> <주제>` 를 안내한다 — 나중에 어떤 점수의
-문안이 어떤 성과를 냈는지 되짚을 수 있다.
+Present the storyboard with AskUserQuestion — the **format** (short-form 9:16 / long-form 16:9),
+the storyboard.md and storyboard.html paths (opening the HTML in a browser shows the check
+badges too), shot count and expected total length, the cover title, key figures and sources.
+For long-form, also say **the chapter list and that the safe area is provisional** (§1.5).
+If there are filmed scenes, show **the `script.md` path and how many files have to be filmed** —
+approval is the start of filming, so the user needs to know what and how many from this screen.
+If there are slide scenes, show **how many scenes are slides and each one's `plan` line** —
+what's being approved is that plan, and the files get built in §8 afterwards.
+**Carry the results of the four convergence loops here too** — the final score and round count
+for copy, per-scene, vocabulary, and images each, with **which scene was lowest and at what
+score** for the per-scene and vocabulary ones, and any unresolved findings as they are if a
+hard cap was hit. The options:
+[Approve — proceed to production / Request changes / Hold the topic]. **Don't move to produce
+without approval.**
+For a change request, apply it, **get the affected axis back through its gate**, and present
+again — from §4.5 if you fixed sentence structure, from §4.6 if you added or removed scenes,
+§4.7 if you only swapped words, §5.5 if you remade images (the re-presentation round starts the
+hard cap over).
+Once approved, write two lines at the top of scenes.js — `// approved: <YYYY-MM-DD>` and
+`// review: text=NN(R rounds) scene=NN(R rounds) lexicon=NN(R rounds) image=NN(R rounds)` —
+and point the user at `/social-flow:produce <channel> <topic>`, so you can trace later which
+score of copy produced which performance.
 
-**촬영 씬이 있으면** 승인 후 안내가 녹화다. 레인마다 다르다.
+**If there are filmed scenes**, the hand-off after approval is recording. It differs by lane.
 
-- **쇼트폼 전편 촬영** — `/social-flow:ingest <채널> record <주제>` (script.md 를
-  보조 모니터에 띄우고 한 번에 촬영). 녹화·정합이 끝나면 produce 가 편집
-  파이프라인으로 영상을 만든다.
-- **롱폼 섞어 찍기** — 사용자가 `script.md` 「오늘 찍을 것」 표대로 **씬마다 따로
-  찍어** `data/<채널>/episodes/<주제>/footage/` 에 그 파일명으로 저장한다(전 씬 육성
-  회차는 소리만 녹음하는 샷의 `voice/s<n>.wav` 도 같은 표에 있다). ingest
-  정합을 안 거친다(파일명이 곧 정합이다). 파일이 다 모이면
-  `/social-flow:produce <채널> <주제>` 가 촬영 씬과 생성 씬을 한 타임라인으로 붙인다.
-  승인 화면에 **찍어야 할 파일 목록을 그대로 보여 준다** — 사용자가 그 목록을
-  체크리스트로 쓴다.
-  **슬라이드 씬이 있으면 승인 직후 §8 로 간다** — 사용자가 녹화·녹음하는 동안
-  슬라이드를 저작하면 두 작업이 겹쳐 돌아 어느 쪽도 기다리지 않는다.
+- **Short-form whole-episode shoot** — `/social-flow:ingest <channel> record <topic>` (put
+  script.md on the secondary display and shoot it in one go). Once recording and alignment
+  finish, produce builds the video through the editing pipeline.
+- **Long-form mixed** — the user films **scene by scene** per the "what to film today" table in
+  `script.md` and saves each into `data/<channel>/episodes/<topic>/footage/` under that
+  filename (on an all-live-voice episode the same table also lists the `voice/s<n>.wav` files
+  for the voice-only shots). No ingest alignment step (the filename is the alignment). When
+  all the files are there, `/social-flow:produce <channel> <topic>` joins the filmed and
+  generated scenes into one timeline. **Show the list of files to film on the approval screen
+  as-is** — the user uses that list as a checklist.
+  **If there are slide scenes, go straight to §8 after approval** — authoring the slides while
+  the user records means both jobs run at once and neither waits on the other.
 
-### 8. 슬라이드 저작 (승인 뒤 · 슬라이드 씬이 있는 회차만)
+### 8. Slide authoring (after approval · only on episodes with slide scenes)
 
-승인된 콘티의 `plan`·`labels` 대로 씬별 HTML 슬라이드를 만든다. 문안 게이트를 다
-통과한 뒤라 여기서 글자를 새로 쓰지 않는다 — **슬라이드의 모든 글자는 scenes.js
-에서 온다**(`title`·`bullets`·`slide.labels`). 여기 새 한국어 문자열을 심으면 문체
-게이트를 통과한 적 없는 글자가 화면에 나간다.
+Build the per-scene HTML slides from the approved storyboard's `plan` and `labels`. Every copy
+gate has already passed, so no new text gets written here — **every character on a slide comes
+from scenes.js** (`title`, `bullets`, `slide.labels`). Plant a new Korean string here and text
+that never passed the style gate goes on screen.
 
-1. **씬마다** `references/slide-template.html` 을 `slides/<visual.slide.file 이름>` 로
-   복사하고, `SLIDE_SHOT` 을 그 샷 번호(배열 순번)로 바꾼 뒤 `renderSlide()` 하나만
-   그 씬의 도해로 다시 쓴다. 템플릿 머리의 결정성 계약을 지킨다 — CSS
-   애니메이션·트랜지션·웹폰트·`Math.random`/`Date` 금지. 움직임은 빌더의 xfade 가
-   전부다.
-2. **리빌 그룹을 나레이션 세그와 1:1 로 배정한다**(그룹 0 = 기본 골격). 하위
-   reveal(`A|B`)을 쓸 씬만 그룹이 세그보다 많다.
-3. **기계 검사** — `node references/check-slide.js <storyboard 디렉토리>` 가 파일명↔
-   `SLIDE_SHOT`↔scenes.js 삼자 일치, scenes.js 에 없는 한글 리터럴, 결정성 위반을
-   잡는다. exit 0 이 아닐 때 다음으로 가지 않는다.
-4. **상태 캡처 자가 검증** — 씬마다 상태를 열거해 본다.
+1. **Per scene**, copy `references/slide-template.html` to `slides/<the visual.slide.file name>`,
+   change `SLIDE_SHOT` to that shot's number (its array position), and rewrite only
+   `renderSlide()` into that scene's diagram. Keep the determinism contract at the head of the
+   template — no CSS animations or transitions, no web fonts, no `Math.random` / `Date`. All the
+   motion there is comes from the builder's xfade.
+2. **Assign reveal groups 1:1 with the narration segments** (group 0 = the base skeleton). Only
+   scenes using sub-reveals (`A|B`) have more groups than segments.
+3. **Machine check** — `node references/check-slide.js <storyboard directory>` verifies the
+   three-way match between filename, `SLIDE_SHOT`, and scenes.js, catches Korean literals absent
+   from scenes.js, and catches determinism violations. Don't move on unless it exits 0.
+4. **Self-verify the state capture** — enumerate the states for each scene.
 
    ```bash
    REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
-   CAP_W=1920 CAP_H=1080 $REF/capture-reveals.sh <샷번호-1> \
-     "file://$PWD/slides/s<샷번호>-<slug>.html" .work/slide-check/a<샷번호-1>r 0
+   CAP_W=1920 CAP_H=1080 $REF/capture-reveals.sh <shot number - 1> \
+     "file://$PWD/slides/s<shot number>-<slug>.html" .work/slide-check/a<shot number - 1>r 0
    ```
 
-   상태 수가 **세그 수 + 하위 reveal 수 + 1**(그룹 0 포함)과 다르면 rg 배정이 틀린
-   것이다 — produce 의 「reveal 상태 누락」 게이트가 빌드에서 같은 것을 다시 검사한다.
-   마지막 상태 PNG 를 열어 `labels` 가 전부 보이는지, 글자가 존(하단 285px 자막 밴드
-   회피) 안에 있는지 눈으로 확인한다.
-5. 슬라이드는 로컬 캡처라 비용이 나가지 않는다 — 원장(`.work/cost-tally.tsv`)에는
-   적을 것이 없고, 생성 호출이 없었다는 사실이 곧 기록이다.
+   If the state count differs from **segment count + sub-reveal count + 1** (group 0 included),
+   the rg assignment is wrong — produce's "missing reveal state" gate checks the same thing again
+   at build time. Open the last state PNG and confirm by eye that every `labels` entry is
+   visible and that the text sits inside the zone (clear of the 285px subtitle band at the bottom).
+5. Slides are captured locally, so they cost nothing — there's nothing to write in the ledger
+   (`.work/cost-tally.tsv`), and the absence of a generation call is itself the record.
 
-끝나면 대기 상태다 — 사용자의 `footage/`·`voice/` 파일이 모이면 produce 가 슬라이드
-상태 캡처를 세그 비주얼로 쓴다(produce §3.6).
+When that's done you're waiting — once the user's `footage/` and `voice/` files arrive, produce
+uses the slide state captures as the segment visuals (produce §3.6).
 
-## 함정
+## Traps
 
-- **판정 권한은 storyboard-reviewer 에만 있다** — 스킬 실행자가 자기 문안을 읽고
-  "이 정도면 됐다"로 루프를 끝내지 않는다. 자기가 쓴 문장의 AI 티는 자기 눈에 가장
-  안 보인다. 점수 조작·자기 채점 종료 금지이고, 통과는 tail 의 `verdict=PASS` 로만
-  선언한다.
-- **네 루프의 순서를 바꾸지 않는다** — 문안(§4.5) → 씬별(§4.6) → 어휘(§4.7) →
-  이미지(§5.5) 다. 이미지가 마지막인 이유는 문장이 바뀌면 그 씬이 보여줄 그림도
-  바뀌기 때문이고, 어휘가 씬별 뒤인 이유는 빠질 씬의 낱말을 다듬는 게 헛일이기
-  때문이다. 거꾸로 돌면 통과한 작업을 버린다.
-- **씬별·어휘 관문의 점수는 평균이 아니라 최저 씬이다** — tail 의 `score` 가 곧
-  가장 낮은 씬의 점수다. "평균 96이니 통과"로 읽지 않는다.
-- **scenes.js 는 살아있는 파일이 아니다** — 승인 후 produce 가 소비하는 확정본이다.
-  제작 중 고치고 싶으면 스토리보드 개정 → 재승인부터.
-- **범위는 범위로** — 수치 범위를 상한 하나로 줄이지 않는다(실제 발생 사례).
-- **이미지에 국가 상징 금지** — 국기·국장·지도·정부청사·제복 인물은 사전 승인
-  없이 생성하지 않는다.
-- SerpApi 는 검색 1회 = 크레딧 1건(무료 250/월) — naver_search(일 25,000회)와
-  WebSearch 를 우선하고, serp 는 정밀 검색에만 아껴 쓴다.
+- **Only storyboard-reviewer has verdict authority** — whoever is running the skill doesn't read
+  their own copy and end the loop on "good enough". The AI tells in your own sentences are the
+  ones you see least. No score manipulation, no self-scored exit; a pass is declared only by the
+  tail's `verdict=PASS`.
+- **Don't reorder the four loops** — copy (§4.5) → per-scene (§4.6) → vocabulary (§4.7) → images
+  (§5.5). Images are last because changing a sentence changes the picture that scene will show,
+  and vocabulary comes after per-scene because polishing the words of a scene that's about to be
+  dropped is wasted work. Running it backwards throws away work that had passed.
+- **The score at the per-scene and vocabulary gates is the lowest scene, not the average** — the
+  tail's `score` is the lowest scene's score. Don't read it as "average 96, so it passes".
+- **scenes.js isn't a living file** — after approval it's the settled version produce consumes.
+  To change it during production, start from a storyboard revision and re-approval.
+- **A range stays a range** — don't shrink a numeric range to its upper bound alone (this has
+  actually happened).
+- **No national symbols in images** — flags, national emblems, maps, government buildings, and
+  people in uniform don't get generated without prior approval.
+- SerpApi counts 1 search = 1 credit (250/month free) — prefer naver_search (25,000/day) and
+  WebSearch, and spend serp only on precision searches.
 
 ## Additional Resources
 
 ### Reference Files
 
-- **`references/scenes-schema.md`** — scenes.js 데이터 계약 전문 (타입별 필드·나레이션 세그먼트·검증 체크리스트)
-- **`references/storyboard-template.md`** — storyboard.md 표준 구조 + research.md 표 형식
-- **`references/storyboard-html-template.html`** — storyboard.html 렌더 템플릿 — scenes.js 동적 로드 + 계약 검산 자동 표시, `✎ SB_DOC` 블록만 채워 사용
-- **`references/shot-script-template.md`** — 촬영 모드 한정: script.md(촬영 대본) 구조 + 촬영 수칙 + scenes.js 변형 계약
-- **`references/make-script.js`** — 롱폼 script.md 렌더러 — scenes.js 에서 촬영 대본을 만든다(두 벌 관리 금지). 전 씬 육성 회차는 전 샷, TTS 회차는 촬영 씬만
-- **`references/slide-template.html`** — §8 슬라이드 씬 렌더 템플릿 — `?reveal=k` 리빌 계약 + 결정성 계약, `SLIDE_SHOT`·`renderSlide()` 만 바꿔 쓴다
-- **`references/check-slide.js`** — §8 슬라이드 기계 검사 — 파일명↔scenes.js 일치·SoT 밖 한글 리터럴·결정성 위반
-- **`../autoproduce/references/cost-tally.md`** — 회차 비용 원장 규약 (§5·§5.5 가 적는 파일의 위치·줄 형식·단위). 단가 정본은 같은 디렉토리의 `prices.tsv`
+- **`references/scenes-schema.md`** — the full scenes.js data contract (fields by type, narration segments, verification checklist)
+- **`references/storyboard-template.md`** — the standard storyboard.md structure + the research.md table format
+- **`references/storyboard-html-template.html`** — the storyboard.html render template — loads scenes.js dynamically and shows contract checks automatically; fill in only the `✎ SB_DOC` block
+- **`references/shot-script-template.md`** — shooting mode only: the script.md (shooting script) structure + filming rules + the scenes.js variant contract
+- **`references/make-script.js`** — the long-form script.md renderer — builds the shooting script from scenes.js (never maintain two copies). All shots on an all-live-voice episode, filmed scenes only on a TTS episode
+- **`references/slide-template.html`** — the §8 slide-scene render template — the `?reveal=k` reveal contract + the determinism contract; change only `SLIDE_SHOT` and `renderSlide()`
+- **`references/check-slide.js`** — the §8 slide machine check — filename↔scenes.js match, Korean literals outside the SoT, determinism violations
+- **`../autoproduce/references/cost-tally.md`** — the episode cost-ledger convention (where §5 and §5.5 write, the line format, the units). The source of truth for unit prices is `prices.tsv` in the same directory
 
-### 위임 에이전트
+### Delegated agents
 
-- **`storyboard-reviewer`** — 네 모드다. §4.5 문안 모드(AI 티·훅·사실 충실) ·
-  §4.6 씬 모드(씬별 역할·맥락 적절성) · §4.7 어휘 모드(낱말이 사람 말인가) ·
-  §5.5 이미지 모드(씬 내용 대 그림의 맥락 정합). 넷 다 95점·P0 0건이 통과선이고,
-  씬 모드·어휘 모드는 그 95가 **최저 씬** 기준이다. 루브릭·P0 목록·tail 형식은
-  `agents/storyboard-reviewer.md` 가 정본이다
-- **`content-reviewer` 계획 모드** — §5 생성 호출 직전의 프롬프트 검증(`PLAN_REVIEW`).
-  storyboard-reviewer 이미지 모드와 보는 대상이 다르다 — 이쪽은 프롬프트, 저쪽은 결과물
+- **`storyboard-reviewer`** — four modes. §4.5 copy mode (AI tells, hook, factual fidelity) ·
+  §4.6 scene mode (per-scene role and contextual fit) · §4.7 lexicon mode (are the words words
+  people use) · §5.5 image mode (scene content against the picture's contextual fit). All four
+  pass at 95 points with 0 P0 defects, and for scene mode and lexicon mode that 95 is on the
+  **lowest scene**. `agents/storyboard-reviewer.md` is the source of truth for the rubric, the
+  P0 list, and the tail format
+- **`content-reviewer` plan mode** — prompt verification right before the §5 generation calls
+  (`PLAN_REVIEW`). It looks at something different from storyboard-reviewer image mode — this
+  one is the prompt, that one is the output

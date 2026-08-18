@@ -11,177 +11,212 @@ description: >
   <SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json and verifies with sns_account_check.
   Spans multiple days (verification approval is async) — resumable, detects state and
   continues; a status mode reports what is pending.
-argument-hint: "<채널> [status|verify|create|token]"
+argument-hint: "<channel> [status|verify|create|token]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__claude-in-chrome__tabs_context_mcp", "mcp__claude-in-chrome__tabs_create_mcp", "mcp__claude-in-chrome__tabs_close_mcp", "mcp__claude-in-chrome__navigate", "mcp__claude-in-chrome__javascript_tool", "mcp__claude-in-chrome__computer"]
 ---
 
-# YouTube 채널 개설 — 브라우저 HITL
+# YouTube channel setup — browser HITL
 
-채널(브랜드) 하나에 **살아 있는 YouTube 브랜드 채널을 붙이는** 스킬이다. 고급 기능
-신원 인증, 브랜드 채널 생성, 브랜딩, Google OAuth `refresh_token` 발급까지를
-브라우저로 몰고 가되 **사람 손이 필요한 지점만 넘긴다**. 끝나면
-`<SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json` 이 저장되고 쇼츠를
-`channel: "<slug>"` 로 게시할 수 있다.
+This skill attaches **a live YouTube brand channel** to one channel (brand). It
+drives advanced-features identity verification, brand channel creation, branding,
+and Google OAuth `refresh_token` issuance through the browser, but **hands over
+only the points that need human hands**. When it's done,
+`<SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json` is saved and you can publish
+Shorts with `channel: "<slug>"`.
 
-**이 개설은 여러 날에 걸친다** — 새 브랜드 채널을 만들려면 고급 기능 신원 인증
-(전화 + 6초 셀피 영상)이 필요하고 그 **승인이 비동기(수 시간~수 일)**다. 그래서
-선형 1회 실행이 아니라 **상태를 탐지해 이어 가는** 구조로 짠다. 승인 대기 중에는
-`status` 로 현황만 본다.
+**This setup spans multiple days** — creating a new brand channel requires
+advanced-features identity verification (phone + a 6-second selfie video), and
+its **approval is asynchronous (hours to days)**. So it's structured **to detect
+state and continue**, not as a linear one-shot run. While waiting on approval,
+check progress with `status` only.
 
-개설 스킬은 플랫폼별로 분리한다 — 성장 스킬(`grow-<플랫폼>`)과 나란한
-`setup-<플랫폼>` 계열이다. Threads·Instagram 이 Meta 쪽이라면 YouTube 는 Google 쪽
-이라 콘솔·OAuth 가 아예 다르다.
+Setup skills are split per platform — the `setup-<platform>` family, parallel to
+the growth skills (`grow-<platform>`). Where Threads and Instagram are on the
+Meta side, YouTube is on the Google side, so the console and OAuth differ
+altogether.
 
-## 무엇을 자동으로, 무엇을 넘기나
+## What runs automatically, what gets handed over
 
-브라우저로 페이지 이동·폼 입력·동의 진행까지 자동으로 한다. 다음은 사람 게이트라
-**사용자에게 넘긴다**:
+Page navigation, form filling, and consent progression run automatically through
+the browser. The following are human gates, so **hand them to the user**:
 
-- **신원 인증** — 전화번호 수신 코드, QR 로 폰에서 찍는 6초 셀피 영상. 사람만 가능.
-- **Google 로그인·2FA** — 계정 인증.
-- **동의 스코프 체크박스** — 스코프마다 사용자가 직접 체크(§token 함정).
+- **Identity verification** — the phone-number code, and the 6-second selfie
+  video shot on the phone via QR. Humans only.
+- **Google login · 2FA** — account authentication.
+- **Consent scope checkboxes** — the user checks each scope directly (§token
+  trap).
 
-핸드오프 방식은 레인마다 다르다 — ego lite 는 `handOffTaskSpace` → 사용자 완료 확인
-→ `takeOverTaskSpace`. Chrome 레인은 화면이 처음부터 사용자 것이라 노출 절차가 없고
-완료 확인만 한다.
+The handoff works differently per lane — ego lite: `handOffTaskSpace` → confirm
+the user is done → `takeOverTaskSpace`. In the Chrome lane the screen belongs to
+the user from the start, so there's no exposure step; just confirm completion.
 
-## 전제 조건
+## Prerequisites
 
-- `data/<slug>/profile.md` 가 있어야 한다 — 없으면 `/social-flow:channel add` 안내
-  후 중단.
-- **브라우저 레인 하나** — ego lite 또는 claude-in-chrome. 고르는 기준은 아래
-  §브라우저 레인.
-- **Google Cloud OAuth 클라이언트**(데스크톱) — `client_id`/`client_secret`. 기존
-  채널의 것을 재사용해도 된다(같은 Google 프로젝트).
-- YouTube Data API v3 활성화. 성장 루프(grow-youtube)까지 쓰려면 YouTube
-  Analytics API 도 켠다.
+- `data/<slug>/profile.md` must exist — if not, point to `/social-flow:channel add`
+  and stop.
+- **One browser lane** — ego lite or claude-in-chrome. How to pick: §Browser
+  lanes below.
+- **A Google Cloud OAuth client** (desktop) — `client_id`/`client_secret`.
+  Reusing an existing channel's is fine (same Google project).
+- YouTube Data API v3 enabled. To use the growth loop (grow-youtube) as well,
+  also enable the YouTube Analytics API.
 
-## 브라우저 레인 — ego lite 우선, Chrome 폴백
+## Browser lanes — ego lite first, Chrome fallback
 
-브라우저 조작은 세 갈래고 위에서부터 고른다.
+Browser control has three paths; pick from the top.
 
-1. **ego lite** — `command -v ego-browser` 로 확인한다. 사용자 로그인 상태를 쓰면서도
-   agent 전용 task space 에서 돌아 사용자 탭과 부딪히지 않는다. 실측 레시피가 이 레인
-   기준으로 쓰여 있다(`references/setup-playbook.md`).
-2. **claude-in-chrome** — ego 가 없을 때. 윈도우·리눅스가 대표적이다(ego lite 는
-   macOS 전용). 사용자의 실제 Chrome 세션에 붙어 로그인 상태를 그대로 쓰지만
-   **격리가 없다** — 작업 중 사용자 브라우저를 점유하고, 사이트별 권한 승인을 먼저
-   받아야 한다. CDP 레시피와의 대응은 playbook §브라우저 레인의 표를 본다.
-3. **수동 폴백** — 둘 다 없으면 아래 §수동 폴백으로 간다(토큰 발급만 돕는다).
+1. **ego lite** — check with `command -v ego-browser`. It reuses the user's login
+   state while running in an agent-only task space, so it doesn't collide with
+   the user's tabs. The field-tested recipes are written against this lane
+   (`references/setup-playbook.md`).
+2. **claude-in-chrome** — when ego isn't there. Windows/Linux are the typical
+   case (ego lite is macOS-only). It attaches to the user's real Chrome session
+   and reuses login state as-is, but **there is no isolation** — it occupies the
+   user's browser while working, and per-site permission approval must be granted
+   first. For the mapping to the CDP recipes, see the table in the playbook's
+   §Browser lanes.
+3. **Manual fallback** — with neither, go to §Manual fallback below (helps with
+   token issuance only).
 
-레인이 바뀌어도 **사람 게이트는 그대로다** — 신원 인증·로그인·동의 체크는 어느
-레인에서든 사용자가 한다.
+Whichever lane, **the human gates stay the same** — identity verification,
+login, and consent checks get done by the user in every lane.
 
-**활성 채널 확인은 Chrome 레인에서 더 조심한다** — 사용자의 실제 브라우저라 다른
-브랜드 채널이 활성일 가능성이 ego 레인보다 높다. 절대 규칙 1 대로 매 작업 전에 URL
-채널 ID 로 확인한다.
+**Active-channel checks need extra care on the Chrome lane** — it's the user's
+real browser, so the odds that another brand's channel is active are higher than
+on the ego lane. Per absolute rule 1, confirm via the URL's channel ID before
+every action.
 
-## 절대 규칙 (위반 시 즉시 중단)
+## Absolute rules (stop immediately on violation)
 
-1. **활성 채널 확인 — 매 작업 전** — 하나의 Google 계정에 **여러 브랜드 채널**이
-   달릴 수 있다. 채널 전환기로 개설 대상 채널을 고른 뒤 **URL 의 채널 ID·화면으로
-   활성 채널을 확인**하고 진행한다. 다른 브랜드 채널의 Studio·설정·업로드·브랜딩은
-   절대 건드리지 않는다. 확신이 서지 않으면 멈추고 사용자에게 확인한다.
-2. **토큰 값 비노출** — `refresh_token`·`client_secret` 을 화면·로그·커밋에 평문으로
-   남기지 않는다. JSON 파일로만, `chmod 600`.
-3. **채널 디렉토리에만 저장** — `<SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json`.
-4. **프로덕션 단계에서만 발급** — OAuth 동의 화면이 "테스트 중" 상태면 발급된
-   `refresh_token` 이 **7일 만에 만료**된다. 반드시 동의 화면을 "프로덕션" 으로
-   게시한 뒤 발급한다(§token 함정).
-5. **사람 게이트는 넘긴다** — 신원 인증·로그인·동의 체크를 자동으로 뚫지 않는다.
+1. **Confirm the active channel — before every action** — one Google account can
+   carry **multiple brand channels**. Pick the target channel with the channel
+   switcher, then **confirm the active channel via the URL's channel ID and the
+   screen** before proceeding. Never touch another brand channel's Studio,
+   settings, uploads, or branding. When in doubt, stop and check with the user.
+2. **Never expose token values** — no `refresh_token` or `client_secret` in
+   plain text on screen, in logs, or in commits. JSON file only, `chmod 600`.
+3. **Store only in the channel directory** —
+   `<SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json`.
+4. **Issue only at the production stage** — if the OAuth consent screen is in
+   "테스트 중" (testing) status, the issued `refresh_token` **expires in 7
+   days**. Publish the consent screen to "프로덕션" (production) before issuing
+   (§token trap).
+5. **Hand over the human gates** — don't punch through identity verification,
+   login, or consent checks automatically.
 
-## 상태 탐지·재개 (기본 호출)
+## State detection & resume (default invocation)
 
-승인 대기로 며칠이 걸리니 **기본 호출은 현재 상태를 판정하고 다음 단계로 이어
-간다**. 아래 순서로 확인한다:
+Approval waits can take days, so **the default invocation determines the current
+state and continues to the next step**. Check in this order:
 
-1. `<SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json` 이 있으면 →
-   `sns_account_check(channel)` 검증. ok 면 **완료** — 채널·스코프 요약 후 끝.
-2. 브랜드 채널은 있는데 토큰이 없으면(사용자 확인) → §3 OAuth 토큰부터.
-3. 고급 기능 인증은 승인됐는데 채널이 없으면 → §2 채널 생성부터.
-4. 신원 인증 제출은 했는데 미승인이면 → **대기 보고**(status 와 동일). 재촉하지
-   말고 Gmail·계정 페이지로만 승인 여부를 확인한다(다른 브랜드 Studio 접근 금지).
-5. 아무것도 없으면 → §1 신원 인증부터.
+1. If `<SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json` exists → verify with
+   `sns_account_check(channel)`. If ok, **done** — summarize channel and scopes,
+   then stop.
+2. Brand channel exists but no token (user confirms) → start from §3 OAuth
+   token.
+3. Advanced-features verification approved but no channel → start from §2
+   channel creation.
+4. Identity verification submitted but not yet approved → **report the wait**
+   (same as status). Don't push it along — check approval only via Gmail and the
+   account-level page (no touching another brand's Studio).
+5. Nothing yet → start from §1 identity verification.
 
-서브커맨드: `verify`(신원 인증) · `create`(채널 생성+브랜딩) · `token`(OAuth) ·
-`status`.
+Subcommands: `verify` (identity verification) · `create` (channel creation +
+branding) · `token` (OAuth) · `status`.
 
-## 1단계 · 고급 기능 신원 인증 (verify)
+## Step 1 · Advanced-features identity verification (verify)
 
-새 브랜드 채널 생성에는 고급 기능이 필요하고, 고급 기능은 신원 인증을 요구한다.
+Creating a new brand channel requires advanced features, and advanced features
+require identity verification.
 
-절차: `youtube.com/verify` 또는 스튜디오 설정 > 채널 > 기능 사용 자격에서 고급 기능
-신청 → **전화번호 인증**(수신 코드 사용자 입력) → **6초 셀피 영상**(QR 을 폰으로
-찍어 촬영·제출). 둘 다 사람 게이트다 — 화면을 핸드오프해 사용자가 진행한다.
+Procedure: apply for advanced features at `youtube.com/verify` or Studio
+Settings > Channel > Feature eligibility → **phone verification** (the user
+enters the received code) → **6-second selfie video** (the user scans the QR
+with their phone, records, and submits). Both are human gates — hand off the
+screen and let the user proceed.
 
-제출하면 **승인이 비동기**다(수 시간~수 일). 제출 후에는 이 단계를 "대기" 로 두고
-`status`/기본 호출로만 승인 여부를 확인한다 — **Gmail(승인 메일) 또는 계정 단위
-페이지로만** 본다. 다른 브랜드 채널의 Studio 를 열어 확인하지 않는다(절대 규칙 1).
+After submission, **approval is asynchronous** (hours to days). From then on,
+treat this step as waiting and check approval only via `status`/the default
+invocation — **only through Gmail (the approval email) or the account-level
+page**. Don't open another brand channel's Studio to check (absolute rule 1).
 
-## 2단계 · 브랜드 채널 생성 + 브랜딩 (create) — 승인 후
+## Step 2 · Brand channel creation + branding (create) — after approval
 
-고급 기능이 승인된 뒤에만 가능하다.
+Only possible once advanced features are approved.
 
-1. **브랜드 채널 생성** — `youtube.com/account` > 채널 만들기 > 브랜드 계정으로
-   새 채널. 채널명은 profile.md 의 브랜드명. 생성 직후 **활성 채널이 방금 만든
-   채널인지 URL 채널 ID 로 확인**한다(절대 규칙 1).
-2. **브랜딩 적용** — 프로필 사진·배너 **자산은 `/social-flow:branding <채널>`
-   산출물**을 쓴다(이 스킬은 만들지 않고 적용만). 스튜디오 맞춤설정 > 브랜딩에서
-   프로필 사진(`profile-1024`)·배너(`banner-youtube-2048x1152`) 업로드, 설명·링크
-   반영. **개설 대상 채널에서만** 한다.
+1. **Create the brand channel** — `youtube.com/account` > create a channel > new
+   channel with a brand account. The channel name is the brand name from
+   profile.md. Right after creation, **confirm via the URL's channel ID that the
+   active channel is the one just created** (absolute rule 1).
+2. **Apply branding** — the profile photo and banner **assets come from
+   `/social-flow:branding <channel>` output** (this skill doesn't make them, it
+   applies them). In Studio Customization > Branding, upload the profile photo
+   (`profile-1024`) and banner (`banner-youtube-2048x1152`), and set the
+   description and links. **Only on the channel being set up.**
 
-## 3단계 · Google OAuth refresh_token (token)
+## Step 3 · Google OAuth refresh_token (token)
 
-기존 OAuth 클라이언트(`client_id`/`client_secret`)를 재사용하고, 개설 대상 채널을
-선택해 동의로 `refresh_token` 을 새로 발급한다. `references/setup-playbook.md`
-§3~§4 를 정본으로 한다. 요지:
+Reuse the existing OAuth client (`client_id`/`client_secret`), select the target
+channel, and consent to issue a fresh `refresh_token`. Treat
+`references/setup-playbook.md` §3–§4 as the source of truth. The gist:
 
-- **프로덕션 단계 필수** — 동의 화면이 "테스트 중" 이면 refresh_token 이 7일 만료.
-  프로덕션으로 게시 후 발급한다(절대 규칙 4).
-- **루프백 리디렉션** — `redirect_uri=http://localhost:<PORT>` 로 authorize 를 열고
-  scratchpad 의 작은 리스너로 code 를 받는다(playbook §3 에 리스너 포함).
-- **채널 선택** — 동의 중 계정/채널 선택에서 **개설 대상 브랜드 채널**을 고른다.
-  엉뚱한 채널을 고르면 그 채널 토큰이 발급된다(절대 규칙 1).
-- **미인증 앱 경고** — "고급 → 이동" 으로 진행.
-- **스코프 체크박스를 하나씩 다 켠다** — 미체크로 계속하면 "액세스를 허용하지
-  않음" 이 뜨고 스코프 없는 code 가 발급된다. 필요 스코프:
+- **Production stage required** — if the consent screen is "테스트 중" (testing),
+  the refresh_token expires in 7 days. Publish to production, then issue
+  (absolute rule 4).
+- **Loopback redirect** — open authorize with
+  `redirect_uri=http://localhost:<PORT>` and receive the code with a small
+  listener in the scratchpad (listener included in playbook §3).
+- **Channel selection** — during consent, in the account/channel picker, choose
+  **the brand channel being set up**. Pick the wrong channel and you get that
+  channel's token (absolute rule 1).
+- **Unverified-app warning** — proceed via "고급 → 이동" (Advanced → Go to).
+- **Turn on every scope checkbox, one by one** — continuing unchecked brings up
+  "액세스를 허용하지 않음" (access not granted) and issues a scope-less code.
+  Required scopes:
 
-  | 스코프 | 무엇이 열리나 | 시점 |
+  | Scope | What it opens | When |
   |---|---|---|
-  | `youtube.upload` | 영상 업로드 | 게시(필수) |
-  | `youtube.force-ssl` | 자막 업로드 + 댓글 조회·답글 | 게시(필수)·성장 |
-  | `youtube.readonly` | 채널·영상 조회 | 성장 |
-  | `yt-analytics.readonly` | 기간 지표(조회·시청·구독 증감) | 성장 |
-  | `yt-analytics-monetary.readonly` | 수익 지표 | 선택 |
+  | `youtube.upload` | video upload | publish (required) |
+  | `youtube.force-ssl` | caption upload + comment reads/replies | publish (required) · growth |
+  | `youtube.readonly` | channel/video reads | growth |
+  | `yt-analytics.readonly` | period metrics (views, watch time, subscriber change) | growth |
+  | `yt-analytics-monetary.readonly` | revenue metrics | optional |
 
-  `force-ssl` 이 빠지면 **영상은 올라가고 자막만 실패**한다(이 파이프라인은 자막을
-  `captions.insert` 로 따로 올린다). 게시만 할 거면 앞 둘로 되지만, 나중에 성장
-  스코프를 늘리려면 재발급이 필요하니 처음부터 다 켜 두길 권한다.
+  If `force-ssl` is missing, **the video uploads but only the captions fail**
+  (this pipeline uploads captions separately via `captions.insert`). The first
+  two are enough if you'll only publish, but growing scopes later means
+  reissuing, so turning them all on from the start is recommended.
 
-## 저장·검증·기록
+## Save · verify · record
 
-1. `<SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json` 에
-   `{"client_id","client_secret","refresh_token"}` 저장, `chmod 600`. **값 비노출.**
-2. `sns_account_check(channel=<slug>)` → youtube ok, 채널명·채널 ID 확인. 이때
-   **채널 ID 가 개설 대상이 맞는지** 재확인한다(다른 브랜드 채널 토큰이 아닌지).
-3. `data/<slug>/profile.md` §8 의 YouTube 행 갱신(채널명·채널 ID·발급일·스코프,
-   상태 "✅ API 연동 완료").
-4. 한 줄 보고 + 다음 단계(`/social-flow:grow-youtube <채널> init`).
+1. Save `{"client_id","client_secret","refresh_token"}` to
+   `<SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json`, `chmod 600`. **Never
+   expose the values.**
+2. `sns_account_check(channel=<slug>)` → youtube ok, confirm channel name and
+   channel ID. At this point, **re-confirm the channel ID is the setup target**
+   (not another brand channel's token).
+3. Update the YouTube row of `data/<slug>/profile.md` §8 (channel name, channel
+   ID, issue date, scopes, status "✅ API connected").
+4. One-line report + next step (`/social-flow:grow-youtube <channel> init`).
 
-## status — 현황 보고
+## status — current-state report
 
-토큰 유무 + `sns_account_check` 로 연동 상태만 요약한다. 미완이면 어느 단계에서
-멈췄는지 — 특히 **신원 인증 승인 대기**인지 — 를 짚는다. 승인 대기 중이면 Gmail
-확인만 권하고 재촉·재제출을 유도하지 않는다. 게시·변경 없음.
+Summarize integration state only, from token presence + `sns_account_check`. If
+unfinished, point out where it stopped — especially whether it's **waiting on
+identity-verification approval**. While waiting, suggest checking Gmail only;
+don't push for or prompt a resubmission. No publishing, no changes.
 
-## 수동 폴백 (브라우저 레인이 없을 때)
+## Manual fallback (no browser lane)
 
-신원 인증·채널 생성·브랜딩은 사용자가 직접 하고, 이 스킬은 **토큰 발급만** 돕는다:
-루프백 리스너를 띄우고 authorize URL 을 만들어 사용자에게 주면 → 사용자가 브라우저
-에서 개설 대상 채널로 동의(스코프 전부 체크) → 리스너가 code 를 받아 playbook §4
-로 `refresh_token` 교환. 절대 규칙(프로덕션 단계·활성 채널·토큰 비노출)은 그대로.
+The user does identity verification, channel creation, and branding directly,
+and this skill helps with **token issuance only**: start the loopback listener
+and build the authorize URL for the user → the user consents in their browser as
+the target channel (all scopes checked) → the listener receives the code and
+playbook §4 exchanges it for the `refresh_token`. The absolute rules (production
+stage, active channel, no token exposure) still apply.
 
 ## Additional Resources
 
-- **`references/setup-playbook.md`** — ego 조작 원칙, 신원 인증·채널 생성 실측,
-  루프백 리스너 + OAuth code 교환·refresh_token 발급 절.
+- **`references/setup-playbook.md`** — ego driving principles, field-tested
+  identity verification & channel creation, loopback listener + OAuth code
+  exchange & refresh_token issuance sections.

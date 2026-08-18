@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenAI Images — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="openai-images.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="openai-images.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>OpenAI Images</div>
+
+<header class="hero">
+  <div class="kicker">OPENAI</div>
+  <h1>OpenAI Images — generation and editing</h1>
+  <p class="sub">The GPT Image family's <code>/v1/images/generations</code> and <code>/v1/images/edits</code>. Parameter support differs per model, and sending an unsupported parameter is an <strong>error</strong> rather than a no-op, so the per-model matrix has to be enforced in the schema.</p>
+  <div class="meta">
+    <span>Official <a href="https://developers.openai.com/api/docs/guides/images-vision">Images and vision</a></span>
+    <span>SDK <code>openai</code> 6.x</span>
+    <span>Key <code>OPENAI_API_KEY</code></span>
+    <span>Implementation <code>server/src/image-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#models">Models and their lifespans</a></li>
+    <li><a href="#params">Parameter support matrix</a></li>
+    <li><a href="#size">size — arbitrary resolution limits</a></li>
+    <li><a href="#edit">The edit-only contract</a></li>
+    <li><a href="#response">Response</a></li>
+    <li><a href="#impl">Implementation vs. the official contract</a></li>
+  </ol>
+</nav>
+
+<section id="models">
+  <h2>1. Models and their lifespans</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Model</th><th>Where it sits</th><th>Lifespan</th></tr></thead>
+    <tbody>
+      <tr><td><code>gpt-image-2</code> <span class="badge free">default</span></td><td>Newest · reasoning-based. Strongest at photorealism and instruction adherence, and stable at rendering text inside the image</td><td>—</td></tr>
+      <tr><td><code>gpt-image-1.5</code></td><td>Middle of the quality/cost range</td><td>Shutdown 2026-12-01</td></tr>
+      <tr><td><code>gpt-image-1</code></td><td>Previous generation</td><td>Shutdown 2026-10-23</td></tr>
+      <tr><td><code>gpt-image-1-mini</code></td><td>Cheap, lower quality</td><td>Shutdown 2026-12-01</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><code>dall-e-2</code> and <code>dall-e-3</code> finished shutting down on 2026-05-12. Once the scheduled EOLs all pass, the only model left on the Images API is <code>gpt-image-2</code>.</p>
+  <div class="warn">
+    <strong>Transparent backgrounds go away with the EOLs.</strong> <code>background: "transparent"</code> isn't supported by <code>gpt-image-2</code>, and <code>gpt-image-1</code>/<code>1.5</code>, which do support it, end within 2026. Design logo and overlay material on the assumption of post-processing (background removal).
+  </div>
+  <div class="note">
+    <strong>Images get made without a key too — on-device <code>image_local_generate</code>.</strong> It runs Z-Image Turbo through mflux/MLX with no <code>OPENAI_API_KEY</code>, no network, and no billing (Apple Silicon required), and it's the default path for scene backgrounds. But <strong>frames with text on them go to GPT Image</strong> — local generation breaks Korean jamo apart, so it can't be used where the letters have to be readable, like covers and titles. What <code>OPENAI_API_KEY</code> opens is that "text and quality" path. The key is checked at call time rather than at server startup, so on an install without it the rest of the tools run as usual.
+  </div>
+</section>
+
+<section id="params">
+  <h2>2. Parameter support matrix</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Parameter</th><th>Value</th><th>Default</th><th>gpt-image-2</th><th>1.5 / 1</th><th>1-mini</th></tr></thead>
+    <tbody>
+      <tr><td><code>prompt</code></td><td>string (max <strong>32,000 chars</strong>)</td><td>—</td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>n</code></td><td>1–10</td><td>1</td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>size</code></td><td>preset or <code>WxH</code></td><td><code>auto</code></td><td>○ (arbitrary resolution)</td><td>presets only</td><td>presets only</td></tr>
+      <tr><td><code>quality</code></td><td><code>low</code>·<code>medium</code>·<code>high</code>·<code>auto</code></td><td><code>auto</code></td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>background</code></td><td><code>opaque</code>·<code>transparent</code>·<code>auto</code></td><td><code>auto</code></td><td><strong>transparent unavailable</strong></td><td>○</td><td>○</td></tr>
+      <tr><td><code>output_format</code></td><td><code>png</code>·<code>jpeg</code>·<code>webp</code></td><td><code>png</code></td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>output_compression</code></td><td>0–100 (webp/jpeg only)</td><td>100</td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>moderation</code></td><td><code>low</code>·<code>auto</code></td><td><code>auto</code></td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>input_fidelity</code> <em>(edits only)</em></td><td><code>high</code>·<code>low</code></td><td><code>low</code></td><td><strong>rejected</strong> — always runs at high</td><td>○</td><td><strong>unsupported</strong></td></tr>
+      <tr><td><code>response_format</code></td><td>—</td><td>—</td><td colspan="3"><strong>Unsupported on the GPT Image family</strong> — always returned as base64</td></tr>
+      <tr><td><code>stream</code> · <code>partial_images</code></td><td>bool · 0–3</td><td>false · —</td><td>○</td><td>○</td><td>○</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong>Sending <code>input_fidelity</code> to <code>gpt-image-2</code> is an error.</strong> Not "ignored" — the request itself fails. <code>gpt-image-2</code> handles input images at high fidelity <em>always</em>, so omitting the parameter is the right answer, and this server rejects the combination at the schema stage.
+  </div>
+</section>
+
+<section id="size">
+  <h2>3. size — arbitrary resolution limits</h2>
+  <h3>Presets (all models)</h3>
+  <p><code>auto</code> · <code>1024x1024</code> · <code>1536x1024</code> (landscape) · <code>1024x1536</code> (portrait)</p>
+
+  <h3>Arbitrary resolution <code>WIDTHxHEIGHT</code> — <code>gpt-image-2</code> only</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Constraint</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Width and height</td><td>both <strong>multiples of 16</strong></td></tr>
+      <tr><td>Aspect ratio</td><td><strong>1:3 ~ 3:1</strong></td></tr>
+      <tr><td>Longest edge</td><td>3,840px (max resolution 3840×2160)</td></tr>
+      <tr><td>Total pixels</td><td>655,360 ~ 8,294,400</td></tr>
+      <tr><td>Experimental range</td><td>above 2560×1440 is experimental</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>Short-form 9:16 is <code>1088x1920</code>.</strong> 1080×1920 gets rejected because 1080 isn't a multiple of 16, so use 1088 (1088 = 16×68, 1920 = 16×120, 2,088,960px total, ratio 0.567 → passes the constraints).
+  </div>
+  <p>This server checks the four constraints separately and <strong>collects every violation</strong> into one message — reporting them one at a time makes the model fire off several rounds of size corrections.</p>
+  <pre><code>Custom resolution "1080x1921" violates constraints: width and height must be multiples of 16</code></pre>
+</section>
+
+<section id="edit">
+  <h2>4. The edit-only contract (<code>/v1/images/edits</code>)</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Contract</th></tr></thead>
+    <tbody>
+      <tr><td><code>image</code></td><td>png/webp/jpg, each under 50MB, <strong>up to 16</strong>. Several images are used as composition references</td></tr>
+      <tr><td><code>mask</code></td><td>PNG with an alpha channel, under 4MB, <strong>the same size as the first image</strong>. Fully transparent pixels are the area to repaint, and even with several images the mask applies to the first one only</td></tr>
+      <tr><td>Model default</td><td>The API default is <code>gpt-image-1.5</code> (this server pins <code>gpt-image-2</code>)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Editing is strong at mask inpainting, composing several references, and <strong>preserving fine detail</strong> such as faces and logos. For making something from nothing, <code>gpt_image_text2img</code> is the right call.</p>
+</section>
+
+<section id="response">
+  <h2>5. Response</h2>
+  <pre><code>{ "data": [ { "b64_json": "…", "revised_prompt": "…" } ] }</code></pre>
+  <ul>
+    <li>The GPT Image family is <strong>always base64</strong> — there's no URL response.</li>
+    <li><code>revised_prompt</code> is the rewritten prompt the model actually used. Use it to trace the cause when the result differs from what you intended.</li>
+    <li>The response MIME follows the requested <code>output_format</code> (the edit path too).</li>
+  </ul>
+</section>
+
+<section id="impl">
+  <h2>6. Implementation vs. the official contract</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Official contract</th><th>social-flow implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Exposed models</td><td>4 GPT Image models + the dall-e family</td><td>The 4 GPT Image models only (dall-e has finished shutting down)</td></tr>
+      <tr><td>Default model</td><td><code>dall-e-2</code> for generations, <code>gpt-image-1.5</code> for edits</td><td>Both pinned to <code>gpt-image-2</code> — inheriting a default is unpredictable</td></tr>
+      <tr><td><code>n</code></td><td>1–10</td><td>Fixed at 1 (not exposed) — short-form uses one image per cut, and N images cost N times as much</td></tr>
+      <tr><td>Per-model parameter limits</td><td>Described in prose in the docs, runtime error on violation</td><td>Rejected before the call with <code>superRefine</code> (the size, background, and input_fidelity families)</td></tr>
+      <tr><td>Return shape</td><td>base64</td><td>An MCP <code>image</code> block plus summary text. With <code>savePath</code> set, also written to a file</td></tr>
+      <tr><td><code>savePath</code></td><td>—</td><td><code>..</code> rejected plus an image extension whitelist, parent directories created automatically</td></tr>
+      <tr><td><code>output_compression</code>·<code>moderation</code>·<code>stream</code></td><td>Supported</td><td>Not exposed — nothing in the pipeline needs to adjust them</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    Images are the one generation tool that <strong>returns base64 into the context</strong>. That's because the model has to look at the result and decide whether to regenerate. For video, voice, and music the model can't evaluate the output directly anyway, so those return only a path.
+  </div>
+</section>
+
+<footer>
+  Checked 2026-07-29 · implementation <a href="../../server/src/image-client.ts">server/src/image-client.ts</a> · <a href="index.en.html">API reference hub</a>
+</footer>
+
+</div>
+</body>
+</html>
