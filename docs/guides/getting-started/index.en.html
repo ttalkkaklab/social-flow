@@ -579,7 +579,7 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
   <div class="faq">
     <h3>social-flow isn't in <code>/mcp</code></h3>
     <p>Usually <code>npm install</code> was skipped. The repo carries the build output but not the libraries. Running the server directly shows the cause immediately.</p>
-<pre><code>cd ~/social-flow &amp;&amp; node server/dist/index.js</code></pre>
+<pre><code>cd ~/social-flow &amp;&amp; node server/dist/bundle.js</code></pre>
     <p>If <code>social-flow MCP server started</code> prints, the server is fine and the problem is in how the plugin was loaded.</p>
   </div>
 

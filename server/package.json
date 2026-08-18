@@ -9,10 +9,11 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run bundle",
     "start": "node dist/index.js",
     "test": "node --test test/*.test.mjs",
-    "check": "npm run build && npm test"
+    "check": "npm run build && npm test",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/bundle.js --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\""
   },
   "dependencies": {
     "@google/genai": "^2.13.0",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5.6.0"
   },
   "bin": {
