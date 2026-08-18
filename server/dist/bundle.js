@@ -78059,7 +78059,7 @@ Returns: categorized text lists \u2014 32 genres, 25 moods, 22 instruments (non-
     title: "\u26A0\uFE0F Threads publish (immediately public)",
     annotations: HINT.publish,
     outputSchema: publishOutput("postId", "Threads post id \u2014 pass as replyToId to chain a follow-up reply"),
-    description: `\u26A0\uFE0F Direct Threads publishing \u2014 posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without approval). This tool supports text (with an optional link preview card) or a single image \u2014 the platform itself also does video and carousels, but this pipeline exports video to YouTube and Reels and drives traffic on Threads with a conversational body plus a video link (linkUrl). Video episodes attach no cover image \u2014 the link preview card takes that place, and one call completes the publish (the link is not added as a separate reply). Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Direct Threads publishing \u2014 posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive \u2014 one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -78067,11 +78067,16 @@ Returns: categorized text lists \u2014 32 genres, 25 moods, 22 instruments (non-
           type: "string",
           description: "Final post body, \u2264500 chars (\u22641 hashtag recommended \u2014 ranking weight 0). Emoji count as their UTF-8 bytes on this platform, i.e. more than 1 char each"
         },
-        imageUrl: { type: "string", format: "uri", description: "One publicly reachable image URL (the platform crawls it \u2014 local paths won't work); mutually exclusive with linkUrl" },
+        imageUrl: { type: "string", format: "uri", description: "One publicly reachable image URL (the platform crawls it \u2014 local paths won't work); mutually exclusive with videoUrl and linkUrl" },
+        videoUrl: {
+          type: "string",
+          format: "uri",
+          description: "One publicly reachable video URL (.mp4/.mov) carried by the post itself \u2014 mutually exclusive with imageUrl and linkUrl. **This is the default for video episodes.** Give the subtitle-burned cut: the Threads container takes no subtitle file, so burning them into the picture is the only way (same as IG reels). Video containers transcode, and the tool waits up to 2 minutes for FINISHED"
+        },
         linkUrl: {
           type: "string",
           format: "uri",
-          description: "Link preview card URL attached to the post (the Reels/Shorts permalink for video episodes). Text posts only, so mutually exclusive with imageUrl; writing the same URL in the caption still counts as one link to the platform (cap 5)"
+          description: "Link preview card URL attached to the post. Text posts only, so mutually exclusive with imageUrl and videoUrl; writing the same URL in the caption still counts as one link to the platform (cap 5). **Meta's own URLs (an IG reels permalink) come back 400** \u2014 put those in the body text instead"
         },
         replyToId: { type: "string", description: "Publish as a reply to this post id (own reply chain, or joining someone else's post)" },
         channel: SNS_CHANNEL_PROPERTY
@@ -79933,8 +79938,8 @@ function okJson(payload) {
   return { ok: true, status: 200, body: JSON.stringify(payload) };
 }
 async function publishThreads(input, opts) {
-  if (input.imageUrl && input.linkUrl) {
-    return fail2(400, "linkUrl is for text-only posts (link_attachment requires media_type=TEXT)");
+  if ([input.imageUrl, input.videoUrl, input.linkUrl].filter(Boolean).length > 1) {
+    return fail2(400, "imageUrl, videoUrl and linkUrl are mutually exclusive (one media_type per post)");
   }
   const { token, error: error2 } = await loadTokenFile("THREADS", input.channel);
   if (!token) return error2;
@@ -79943,9 +79948,10 @@ async function publishThreads(input, opts) {
   const uid = String(parseJson(me.body)?.id ?? "");
   if (!uid) return fail2(502, `Threads /me returned no id: ${me.body}`);
   const create = await graphRequest("post", `${THREADS_BASE}/${uid}/threads`, {
-    media_type: input.imageUrl ? "IMAGE" : "TEXT",
+    media_type: input.videoUrl ? "VIDEO" : input.imageUrl ? "IMAGE" : "TEXT",
     text: input.caption,
     image_url: input.imageUrl,
+    video_url: input.videoUrl,
     link_attachment: input.linkUrl,
     reply_to_id: input.replyToId,
     access_token: token
@@ -83826,15 +83832,17 @@ var threadsPublishSchema = external_exports.object({
     message: `THREADS caption must be \u2264${THREADS_MAX_CHARS} chars (got ${threadsTextLength(value)} \u2014 emoji are counted as UTF-8 bytes)`
   })),
   imageUrl: external_exports.string().url().optional(),
+  videoUrl: external_exports.string().url().optional(),
   linkUrl: external_exports.string().url().optional(),
   replyToId: external_exports.string().min(1).optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  if (v.linkUrl && v.imageUrl) {
+  const media = ["imageUrl", "videoUrl", "linkUrl"].filter((k) => v[k]);
+  if (media.length > 1) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
-      path: ["linkUrl"],
-      message: "linkUrl is for text-only posts (mutually exclusive with imageUrl)"
+      path: [media[1]],
+      message: `imageUrl, videoUrl and linkUrl are mutually exclusive (got ${media.join(", ")})`
     });
   }
 });
