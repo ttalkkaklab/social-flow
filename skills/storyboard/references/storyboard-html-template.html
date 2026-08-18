@@ -736,6 +736,7 @@ window.SB_DOC = {
       sceneMax: 13, recSceneMax: 20,
       capCover: 40, capBody: 50, sentMin: 8, sentMax: 25,
       videoMax: 2,                              // 8초×2칸 = 16초
+      burn: true,                               // 번인 자막 (formats.js:108)
       chapterMin: null, chapterMax: null        // 쇼트폼에 챕터 개념이 없다
     },
     "youtube-long-16x9": {
@@ -745,6 +746,7 @@ window.SB_DOC = {
       sceneMax: 20, recSceneMax: null,          // 촬영 레인 상한 없음
       capCover: 70, capBody: 90, sentMin: 12, sentMax: 40,
       videoMax: 5,                              // 8초×5칸 = 40초
+      burn: false,                              // 클린 마스터 + subs.srt (formats.js:246)
       chapterMin: 3, chapterMax: 13             // 3=유튜브 요건 · 13=촬영 레인 목표 상한
                                                 // (저작 레인 목표 5~10 은 SKILL §4 안내)
     }
@@ -1198,7 +1200,9 @@ window.SB_DOC = {
       // 캡션 k 는 세그 k+1 과 함께 뜬다 — 그 대사에 캡션 문구가 통째로 들어 있으면
       // 같은 말을 눈과 귀로 두 번 받는 것이다. 자막이 이미 그 문장을 쓰고 있다.
       // 조사·어미 차이를 넘기려고 한글/영숫자만 남겨 비교하고, 짧은 조각(4자 미만)은 세지 않는다.
-      (function () {
+      // 번인 포맷 한정이다 — 롱폼(burn:false)은 자막을 안 태우므로 자막을 안 켠 시청자에게
+      // 캡션이 그 값을 받는 유일한 자리다. 과검출 실측 2026-08-18(상관계수 0 캡션).
+      if (FMT.burn) (function () {
         var norm = function (t) { return String(t || "").replace(/[^가-힣A-Za-z0-9]/g, ""); };
         var narr = s.narration || [], dup = [];
         (s.bullets || []).forEach(function (b, bi) {
