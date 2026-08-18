@@ -159,6 +159,21 @@ Load the plugin by pointing at your clone:
 claude --plugin-dir /path/to/social-flow
 ```
 
+### Codex CLI and Grok CLI
+
+The plugin layout is Claude-compatible across CLIs, so the same repo installs there too:
+
+```bash
+# Grok CLI — skills, agents, and the MCP tools all connect (measured on grok 1.0.5)
+grok plugin install https://github.com/ttalkkaklab/social-flow.git --trust
+
+# Codex CLI — the 18 skills load; MCP tools don't wire up yet (measured on codex 0.147.0)
+codex plugin marketplace add ttalkkaklab/social-flow
+codex plugin add social-flow@social-flow
+```
+
+API keys travel the same way as under Claude — shell environment variables.
+
 Work products accumulate under `data/` relative to the session cwd, so the convenient
 setup is to start Claude Code in the directory where you want your content and add
 the plugin with the flag above.
