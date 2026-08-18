@@ -2050,14 +2050,14 @@ function capInboxPayload(posts) {
     }
     return { posts: keepTop(lo), dropped: ranked.length - lo };
 }
-/** 받은 댓글에 답글 작성 — 호출 즉시 공개. 플랫폼별 답글 엔드포인트 차이를 흡수한다. */
+/** Replies to a received comment — public the moment it's called. Absorbs the per-platform reply endpoint differences. */
 export async function replyToComment(input) {
     if (input.platform === 'THREADS') {
-        // Threads 답글은 별도 엔드포인트가 없다 — reply_to_id 를 단 새 게시물이 곧 답글이다
+        // Threads has no separate reply endpoint — a new post carrying reply_to_id is the reply
         return publishThreads({ caption: input.message, replyToId: input.commentId, channel: input.channel });
     }
     if (input.platform === 'FACEBOOK') {
-        // FB 는 댓글 id 에 댓글을 달면 대댓글 — 게시물 첫 댓글과 같은 엔드포인트다
+        // On FB, commenting on a comment id makes a nested reply — same endpoint as a post's first comment
         return commentFacebook({ postId: input.commentId, message: input.message, channel: input.channel });
     }
     if (input.platform === 'YOUTUBE')
@@ -2077,9 +2077,10 @@ export async function replyToComment(input) {
     return okJson({ platform: 'INSTAGRAM', replyId, permalink: null });
 }
 /**
- * YouTube 답글 — `comments.insert` 의 parentId 는 **최상위 댓글만** 받는다.
- * 대댓글 id 를 그대로 넘기면 실패하므로, 먼저 그 댓글의 부모를 조회해 스레드
- * 루트로 바꿔 단다. 인박스가 대댓글도 응대 대상으로 내놓기 때문에 필요한 단계다.
+ * YouTube reply — the parentId of `comments.insert` accepts **top-level comments only**.
+ * Passing a nested reply's id straight through fails, so we look up that comment's parent
+ * first and attach to the thread root instead. This step is needed because the inbox also
+ * surfaces nested replies as things to answer.
  */
 async function replyYoutubeComment(input) {
     const { client, error: clientError } = await loadYoutubeClient(input.channel);
@@ -2104,22 +2105,23 @@ async function replyYoutubeComment(input) {
     return okJson({
         platform: 'YOUTUBE',
         replyId,
-        // 대댓글 id 로 요청이 오면 실제 부모가 달라진다 — 어디에 붙었는지 알린다
+        // A request made with a nested reply's id lands on a different parent — report where it attached
         parentCommentId: parentId,
         permalink: null,
     });
 }
 /**
- * 댓글 숨김/해제와 FB 댓글 좋아요. **삭제는 의도적으로 제공하지 않는다** —
- * 숨김은 되돌릴 수 있고 작성자에게는 계속 보이지만 삭제는 비가역이라,
- * 스팸·어뷰징 대응에는 숨김이 브랜드 리스크가 더 낮다 (2026-07-26 사용자 확정).
+ * Hiding/unhiding comments and liking FB comments. **Deletion is deliberately not offered** —
+ * hiding is reversible and the author still sees their comment, while deletion is
+ * irreversible, so hiding carries less brand risk when handling spam and abuse
+ * (confirmed by the user, 2026-07-26).
  */
 export async function moderateComment(input) {
     const { platform, commentId, action, channel } = input;
     const hide = action === 'hide';
     if (action === 'like' || action === 'unlike') {
         if (platform !== 'FACEBOOK') {
-            return fail(400, `${platform} 는 댓글 좋아요 API 가 없다 — 답글(sns_comment_reply)로만 반응할 수 있다.`);
+            return fail(400, `${platform} has no comment-like API — the only way to react is a reply (sns_comment_reply).`);
         }
         const { token, error } = await loadTokenFile('FACEBOOK', channel);
         if (!token)
@@ -2156,10 +2158,12 @@ export async function moderateComment(input) {
         return okJson({ platform, commentId, action, done: true });
     }
     if (platform === 'YOUTUBE') {
-        // YouTube 의 숨김은 `setModerationStatus`(rejected/heldForReview)로 의미가 다르고,
-        // 이 툴이 약속한 "되돌릴 수 있는 숨김"과 어긋난다 — 잘못 매핑하느니 거부한다
-        return fail(400, 'YouTube 댓글 숨김은 이 툴이 지원하지 않는다 — 의미가 다른 검토 보류/거부(setModerationStatus)뿐이라 ' +
-            '되돌릴 수 있는 숨김으로 매핑할 수 없다. YouTube Studio > 댓글에서 처리할 것.');
+        // YouTube's hide is `setModerationStatus` (rejected/heldForReview), which means something
+        // else and contradicts the "reversible hide" this tool promises — better to refuse than to
+        // map it wrong
+        return fail(400, 'This tool does not support hiding YouTube comments — all YouTube offers is hold-for-review/reject ' +
+            '(setModerationStatus), which means something different and cannot be mapped to a reversible hide. ' +
+            'Handle it in YouTube Studio > Comments.');
     }
     const { token, error } = await loadTokenFile('FACEBOOK', channel);
     if (!token)
@@ -2172,10 +2176,11 @@ export async function moderateComment(input) {
         return res;
     return okJson({ platform, commentId, action, done: true });
 }
-// ── 계정 점검 ────────────────────────────────────────────────────
+// ── Account checks ───────────────────────────────────────────────
 /**
- * 한 자격증명 세트(채널 하나 또는 기본 토큰)의 4개 플랫폼 점검 — 토큰 값은 절대
- * 싣지 않는다. 플랫폼 점검은 서로 독립이라 병렬로 돌린다(4회 직렬 왕복 → 1회 체감).
+ * Checks all four platforms for one credential set (a single channel or the default tokens)
+ * — token values are never included. The platform checks are independent, so they run in
+ * parallel (4 serial round trips → the latency of one).
  */
 async function checkPlatformSet(channel) {
     const metaChecks = [
@@ -2228,8 +2233,9 @@ async function checkPlatformSet(channel) {
     return Object.fromEntries(await Promise.all([...metaChecks, youtubeCheck]));
 }
 /**
- * SNS 게시 자격증명 일괄 점검 — channel 지정 시 그 채널 세트만, 미지정 시
- * 모든 채널 디렉토리 + 기본(평면) 토큰을 함께 점검한다. 계정 식별 정보만 반환.
+ * Batch check of the SNS publishing credentials — with channel given, only that channel's
+ * set; without it, every channel directory plus the default (flat) tokens. Returns account
+ * identification only.
  */
 export async function checkAccounts(channel) {
     if (channel) {
@@ -2238,16 +2244,16 @@ export async function checkAccounts(channel) {
     }
     const channelEntries = await Promise.all(listChannelDirs().map(async (dir) => [dir.channel, await checkPlatformSet(dir.channel)]));
     const channels = Object.fromEntries(channelEntries);
-    // 기본(평면) 토큰은 존재할 때만 점검한다 — 채널 디렉토리로 전부 이전한 구성에서
-    // 전부-실패 노이즈를 만들지 않기 위해서다.
+    // Check the default (flat) tokens only when they exist — otherwise a setup that has moved
+    // everything into channel directories would produce all-failed noise.
     const hasDefaults = availablePlatformsFor().length > 0;
     const body = {
         channels,
         defaultTokens: hasDefaults
             ? await checkPlatformSet()
-            : '없음 — 채널 미지정(channel 인자 생략) 게시는 불가하다. 게시 툴에 channel 을 지정할 것.',
+            : 'none — publishing without a channel (omitting the channel argument) is not possible. Pass channel to the publish tools.',
     };
-    // 점검이 완료되면 그 자체로 성공이다 — 플랫폼 구성은 선택적이므로 미설정 플랫폼의
-    // ok:false 는 body 상세로만 보고하고 툴 결과 전체를 실패로 표시하지 않는다.
+    // Completing the check is itself the success — platform setup is optional, so an unconfigured
+    // platform's ok:false is reported in the body detail only and doesn't mark the whole tool result failed.
     return { ok: true, status: 200, body: JSON.stringify(body, null, 2) };
 }

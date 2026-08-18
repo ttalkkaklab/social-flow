@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""시장별 youtube_topic_scout JSON 을 하나 로 합친다.
+"""Merge the per-market youtube_topic_scout JSON files into one.
 
-영상·채널은 id 로 중복을 걷고, 쿼터는 더한다. 주제어는 구가 같으면 점수 높은
-쪽만 둔다.
+Videos and channels are deduped by id, quota is summed. For topic phrases, when
+the phrase is the same only the higher-scoring one is kept.
 
-사용:
+Usage:
   merge-scout.py --out market-keywords.json us.json cn.json
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ def load(path: str) -> dict:
 
 def merge(parts: list[dict]) -> dict:
     if not parts:
-        raise ValueError("합칠 json 이 없다")
+        raise ValueError("no json to merge")
     queries: list[str] = []
     seen_q: set[str] = set()
     markets: list[dict] = []
@@ -112,7 +112,7 @@ def merge(parts: list[dict]) -> dict:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="시장별 스카우트 JSON 을 합친다")
+    ap = argparse.ArgumentParser(description="Merge the per-market scout JSON files")
     ap.add_argument("--out", required=True)
     ap.add_argument("inputs", nargs="+")
     args = ap.parse_args()

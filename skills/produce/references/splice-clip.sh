@@ -1,66 +1,68 @@
 #!/usr/bin/env bash
-# 빌드된 본편 중간에 클립을 끼워 넣는다 — build-reel.sh 는 아웃트로만 접합하므로 후처리다.
+# Splices a clip into the middle of a built feature — post-processing, since build-reel.sh only joins the outro.
 #
-#   사용: splice-clip.sh <workdir> <삽입클립.mp4> <삽입시각T초> [<클립2.mp4> <T2초>]
+#   Usage: splice-clip.sh <workdir> <clip.mp4> <insert-time-T-seconds> [<clip2.mp4> <T2-seconds>]
 #
-#   쓰이는 곳:
-#     · 도입 b-roll (produce §3·§6) — 커버 다음 구간에 생성 영상을 넣는다.
-#     · 본문 b-roll — 회차당 생성 영상은 최대 2칸이다 (scenes-schema §broll).
-#     · 시리즈 오프너 스팅어 — 훅 뒤 배치가 프로파일 계약인 채널.
+#   Where it's used:
+#     · Opening b-roll (produce §3·§6) — puts a generated video in the stretch after the cover.
+#     · Body b-roll — at most 2 generated-video slots per episode (scenes-schema §broll).
+#     · Series opener stinger — for channels whose profile contract places it after the hook.
 #
-#   클립이 둘이면 **한 번의 실행에서 함께** 접합한다. 두 번 나눠 부르면 두 번째 호출이
-#   reel.mp4 를 다시 읽어 첫 접합을 지운다 — 입출력 이름이 고정이기 때문이다.
+#   With two clips, splice them **in a single run**. Split across two calls, the second one rereads
+#   reel.mp4 and wipes the first splice — the input and output names are fixed.
 #
-#   T = 앞 씬이 끝나는 시각. build-report.txt 의 해당 card 줄에서 확정 길이를 읽는다.
-#   **T 는 전부 원본(reel.mp4) 타임라인 기준**이다 — 앞 클립이 밀어낼 길이를 미리
-#   더하지 않는다. 미는 계산은 이 스크립트가 한다.
-#   결과: <workdir>/reel-spliced.mp4 · reel-sub-spliced.mp4 · subs-spliced.srt
+#   T = the time the preceding scene ends. Read the fixed duration from that card's line in build-report.txt.
+#   **Every T is on the original (reel.mp4) timeline** — don't pre-add the length an earlier clip will
+#   push out. This script does the pushing.
+#   Result: <workdir>/reel-spliced.mp4 · reel-sub-spliced.mp4 · subs-spliced.srt
 #
-# 왜 프레임 정확이 중요한가: 자막은 절대 시각으로 박혀 있다. 클립을 넣으면 그 시각 이후
-# 모든 자막이 클립 길이만큼 밀리는데, 밀어주는 값이 실제 삽입 길이와 다르면 영상 끝까지
-# 자막이 어긋난다. 그래서 재인코딩 후 실측 길이로 시프트한다(공칭 길이를 믿지 않는다).
-# 클립이 둘이면 각 자막 큐는 **자기 앞에 끼어든 클립들의 실측 길이 합**만큼 밀린다.
+# Why frame accuracy matters: subtitles are pinned to absolute times. Insert a clip and every subtitle
+# after that time shifts by the clip's length; if the shift differs from the real insert length, the
+# subtitles stay off for the rest of the video. So it shifts by the measured length after re-encoding
+# (it doesn't trust the nominal length). With two clips, each subtitle cue shifts by **the sum of the
+# measured lengths of the clips inserted before it**.
 #
-# 번인본은 자막이 이미 화면에 태워져 있어 시프트가 필요 없다 — 클린본과 같은 T·같은
-# 클립으로 분할·접합만 하면 build-reel 의 ASS 스타일이 그대로 보존된다(srt 로 다시
-# 태우면 폰트·위치·아웃라인이 원본과 달라진다).
+# The burn-in needs no shift — its subtitles are already baked into the picture. Splitting and joining
+# it at the same T with the same clips preserves build-reel's ASS styling as-is (re-burning from srt
+# would change the font, position and outline from the original).
 set -euo pipefail
 export LC_ALL=en_US.UTF-8
 
-WORK="${1:?사용법: splice-clip.sh <workdir> <삽입클립.mp4> <T초> [<클립2.mp4> <T2초>]}"
+WORK="${1:?usage: splice-clip.sh <workdir> <clip.mp4> <T-seconds> [<clip2.mp4> <T2-seconds>]}"
 shift
-[ $# -ge 2 ] || { echo "✗ 삽입할 (클립 T) 쌍이 없다" >&2; exit 1; }
-[ $(($# % 2)) -eq 0 ] || { echo "✗ 클립과 T 는 쌍으로 준다 — 인자 수가 홀수다" >&2; exit 1; }
+[ $# -ge 2 ] || { echo "✗ no (clip T) pair to insert" >&2; exit 1; }
+[ $(($# % 2)) -eq 0 ] || { echo "✗ pass clips and Ts in pairs — the argument count is odd" >&2; exit 1; }
 
 CLIPS=(); TS=()
 while [ $# -ge 2 ]; do
   C="$1"; T="$2"; shift 2
-  [ -f "$C" ] || { echo "✗ 삽입 클립 없음: $C" >&2; exit 1; }
+  [ -f "$C" ] || { echo "✗ clip to insert missing: $C" >&2; exit 1; }
   CLIPS+=("$(cd "$(dirname "$C")" && pwd)/$(basename "$C")")
   TS+=("$T")
 done
 N=${#CLIPS[@]}
-[ "$N" -le 2 ] || echo "⚠ 클립 $N 개 — 회차당 생성 영상 상한은 2칸이다(scenes-schema §broll)" >&2
+[ "$N" -le 2 ] || echo "⚠ $N clips — the cap is 2 generated-video slots per episode (scenes-schema §broll)" >&2
 
 cd "$WORK"
-[ -f reel.mp4 ] || { echo "✗ reel.mp4 없음 — build-reel.sh 를 먼저 돌린다" >&2; exit 1; }
-[ -f subs.srt ] || { echo "✗ subs.srt 없음" >&2; exit 1; }
+[ -f reel.mp4 ] || { echo "✗ reel.mp4 missing — run build-reel.sh first" >&2; exit 1; }
+[ -f subs.srt ] || { echo "✗ subs.srt missing" >&2; exit 1; }
 
-# 포맷 프리셋 — 빌더 3종과 같은 계약. 인라인 기본값 **앞**에서 읽는다.
-# 이 줄이 없으면 가드가 정확히 거꾸로 돈다 — 가로에서 정상인 1920x1080 조각이 세로
-# 기본값과 어긋나 매번 경고를 내고, 잡으라고 만든 세로 스팅어는 조용히 통과한다.
+# Format preset — the same contract as the three builders. Read **before** the inline defaults.
+# Without this line the guard runs exactly backwards — a 1920x1080 piece that's correct in landscape
+# clashes with the portrait defaults and warns every time, while the portrait stinger it was built to
+# catch passes silently.
 [ -f format.env ] && . ./format.env
 
 FPS=${FPS:-30}
-W=${W:-1080}; H=${H:-1920}      # 캔버스 — 조각 해상도 단언의 기준
-STRICT_DIM=${STRICT_DIM:-0}     # 1=불일치에 exit 1, 0=경고 한 줄(오늘 동작)
-AFADE=${AFADE:-0.04}      # 조인 클릭음만 없앨 만큼 — 길이는 건드리지 않는다
+W=${W:-1080}; H=${H:-1920}      # canvas — the baseline for the piece-resolution assertion
+STRICT_DIM=${STRICT_DIM:-0}     # 1=exit 1 on mismatch, 0=one warning line (today's behavior)
+AFADE=${AFADE:-0.04}      # just enough to kill the click at the join — it doesn't touch the length
 mkdir -p splice
 rm -f splice/*.mp4 splice/list-*.txt 2>/dev/null || true
 
 say() { printf '%s\n' "$*"; }
 
-# ── 0) 삽입 시각 정렬·검증 (입력 순서와 무관하게 시각 오름차순으로 처리한다)
+# ── 0) Sort and validate the insert times (processed in ascending time order, whatever order they came in)
 for ((i = 0; i < N; i++)); do
   for ((j = 0; j < N - 1 - i; j++)); do
     if awk -v a="${TS[j]}" -v b="${TS[j+1]}" 'BEGIN{exit !(a > b)}'; then
@@ -71,25 +73,26 @@ for ((i = 0; i < N; i++)); do
 done
 
 VDUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 reel.mp4)
-say "── 본편 ${VDUR}s · 삽입 ${N}건"
+say "── main part ${VDUR}s · ${N} inserts"
 for ((i = 0; i < N; i++)); do
   awk -v t="${TS[i]}" -v d="$VDUR" 'BEGIN{ if (t <= 0 || t >= d) exit 1 }' \
-    || { echo "✗ 삽입 시각 ${TS[i]}s 가 영상 범위(0~${VDUR}s)를 벗어난다" >&2; exit 1; }
+    || { echo "✗ insert time ${TS[i]}s is outside the video's range (0~${VDUR}s)" >&2; exit 1; }
   if [ "$i" -gt 0 ]; then
     awk -v a="${TS[i-1]}" -v b="${TS[i]}" 'BEGIN{ if (b - a < 0.5) exit 1 }' \
-      || { echo "✗ 삽입 시각 ${TS[i-1]}s·${TS[i]}s 가 너무 가깝다 — 사이 조각이 0.5s 미만이다" >&2; exit 1; }
+      || { echo "✗ insert times ${TS[i-1]}s and ${TS[i]}s are too close — the piece between them is under 0.5s" >&2; exit 1; }
   fi
   say "   · $(basename "${CLIPS[i]}") → ${TS[i]}s"
 done
 
-# ── 0.5) 해상도 단언
-#   `concat -c copy` 는 1920x1080 과 1080x1920 을 **에러 없이** 붙이고 ffprobe 는 앞 조각
-#   해상도로만 보고한다 — 산출물 중간 프레임을 직접 뽑아야 드러난다【실측】. 그래서 붙이기
-#   전에 잰다. 삽입 클립은 정규화(§2)가 스케일을 안 하므로 자기 해상도를 그대로 들고 간다.
+# ── 0.5) Resolution assertion
+#   `concat -c copy` joins 1920x1080 and 1080x1920 **without an error**, and ffprobe reports only the
+#   first piece's resolution — it only shows up if you pull a middle frame out of the output yourself
+#   [measured]. So it's measured before joining. The inserted clip carries its own resolution through,
+#   because normalization (§2) doesn't scale.
 VDIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x reel.mp4)
 DIMBAD=0
 if [ "$VDIM" != "${W}x${H}" ]; then
-  say "⚠ reel.mp4 가 ${VDIM} 인데 캔버스 선언은 ${W}x${H} 다 — format.env 와 빌드가 어긋났다"
+  say "⚠ reel.mp4 is ${VDIM} but the declared canvas is ${W}x${H} — format.env and the build disagree"
   DIMBAD=1
 fi
 for ((i = 0; i < N; i++)); do
@@ -100,22 +103,22 @@ for ((i = 0; i < N; i++)); do
   fi
 done
 if [ "$DIMBAD" = 1 ] && [ "$STRICT_DIM" = 1 ]; then
-  echo "✗ 해상도 불일치 — STRICT_DIM=1 이라 중단한다" >&2
+  echo "✗ resolution mismatch — STRICT_DIM=1, stopping" >&2
   exit 1
 fi
 
 ENC=(-c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -r $FPS -c:a aac -ar 48000 -ac 2 -b:a 192k)
 
-# ── 1) 본편을 삽입 시각들에서 조각낸다 (프레임 정확 — 재인코딩)
-#    조각 경계 = 0 · T1 · T2 · … · 끝. 조각은 클립 수 + 1 개다.
+# ── 1) Cut the main part at the insert times (frame-accurate — re-encoded)
+#    Piece boundaries = 0 · T1 · T2 · … · end. There are (number of clips + 1) pieces.
 BOUNDS=(0 "${TS[@]}" "$VDUR")
 NSEG=$((N + 1))
 for V in reel reel-sub; do
-  [ -f "$V.mp4" ] || { say "· $V.mp4 없음 — 건너뜀"; continue; }
+  [ -f "$V.mp4" ] || { say "· no $V.mp4 — skipped"; continue; }
   for ((k = 0; k < NSEG; k++)); do
     ST=${BOUNDS[k]}; EN=${BOUNDS[k+1]}
     D=$(awk -v a="$ST" -v b="$EN" 'BEGIN{printf "%.6f", b - a}')
-    # 페이드는 조각의 이음매에만 건다 — 영상 처음(k=0)과 끝(k=NSEG-1)은 원본 그대로 둔다
+    # Fades go only on the seams between pieces — the video's start (k=0) and end (k=NSEG-1) stay untouched
     AF=""
     [ "$k" -gt 0 ] && AF="afade=t=in:st=0:d=$AFADE"
     if [ "$k" -lt $((NSEG - 1)) ]; then
@@ -133,7 +136,7 @@ for V in reel reel-sub; do
   done
 done
 
-# ── 2) 삽입 클립을 같은 인코딩 계약으로 정규화 (오디오는 클립의 것을 그대로 살린다)
+# ── 2) Normalize the inserted clips to the same encoding contract (the clip keeps its own audio)
 for ((i = 0; i < N; i++)); do
   CDUR_RAW=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "${CLIPS[i]}")
   HAS_A=$(ffprobe -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 "${CLIPS[i]}" | head -1)
@@ -142,16 +145,16 @@ for ((i = 0; i < N; i++)); do
       -af "afade=t=in:st=0:d=$AFADE,afade=t=out:st=$(awk -v d="$CDUR_RAW" -v f="$AFADE" 'BEGIN{printf "%.3f", d - f}'):d=$AFADE" \
       "${ENC[@]}" "splice/clip${i}.mp4"
   else
-    # 무음 클립 — 침묵 트랙을 붙여야 concat 이 성립한다
-    say "· $(basename "${CLIPS[i]}") 에 오디오가 없다 — 침묵 트랙을 채운다"
+    # Silent clip — concat only works if a silence track is attached
+    say "· $(basename "${CLIPS[i]}") has no audio — filling in a silence track"
     ffmpeg -y -v error -i "${CLIPS[i]}" -f lavfi -i anullsrc=r=48000:cl=stereo \
       -shortest "${ENC[@]}" "splice/clip${i}.mp4"
   fi
 done
 
-# ── 3) 실측 길이로 시프트량을 확정한다 (공칭 길이를 믿지 않는다)
+# ── 3) Fix the shift amounts from the measured lengths (don't trust the nominal length)
 SHIFTS=(); TOTAL_SHIFT=0
-PIECES="조각"
+PIECES="pieces"
 for ((i = 0; i < N; i++)); do
   S=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "splice/clip${i}.mp4")
   SHIFTS+=("$S")
@@ -160,11 +163,11 @@ done
 for ((k = 0; k < NSEG; k++)); do
   SD=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "splice/reel-s${k}.mp4")
   PIECES="$PIECES s${k}=$(awk -v v="$SD" 'BEGIN{printf "%.3f", v}')s"
-  [ "$k" -lt "$N" ] && PIECES="$PIECES + 클립$((k + 1))=$(awk -v v="${SHIFTS[k]}" 'BEGIN{printf "%.3f", v}')s +"
+  [ "$k" -lt "$N" ] && PIECES="$PIECES + clip$((k + 1))=$(awk -v v="${SHIFTS[k]}" 'BEGIN{printf "%.3f", v}')s +"
 done
 say "── $PIECES"
 
-# ── 4) 이어붙이기 (클린·번인 각각)
+# ── 4) Join them back up (clean and burn-in separately)
 for V in reel reel-sub; do
   [ -f "splice/${V}-s0.mp4" ] || continue
   : > "splice/list-$V.txt"
@@ -174,10 +177,10 @@ for V in reel reel-sub; do
   done
   ffmpeg -y -v error -f concat -safe 0 -i "splice/list-$V.txt" -c copy -movflags +faststart "${V}-spliced.mp4"
   OUTD=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "${V}-spliced.mp4")
-  say "── ${V}-spliced.mp4 ${OUTD}s (기대 $(awk -v d="$VDUR" -v s="$TOTAL_SHIFT" 'BEGIN{printf "%.3f", d + s}')s)"
+  say "── ${V}-spliced.mp4 ${OUTD}s (expected $(awk -v d="$VDUR" -v s="$TOTAL_SHIFT" 'BEGIN{printf "%.3f", d + s}')s)"
 done
 
-# ── 5) 자막 시프트 — 각 큐를 자기 앞에 끼어든 클립들의 실측 길이 합만큼 뒤로
+# ── 5) Subtitle shift — move each cue back by the sum of the measured lengths of the clips inserted before it
 python3 - "${TS[*]}" "${SHIFTS[*]}" <<'PY'
 import re, sys
 TS = [float(x) for x in sys.argv[1].split()]
@@ -195,15 +198,15 @@ def to_ts(v):
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 def shift_for(a):
-    """큐 시작 a 보다 앞선 삽입들의 실측 길이 합 — 뒤 삽입은 이 큐를 밀지 않는다"""
+    """Sum of measured lengths of inserts before cue start a — later inserts don't push this cue"""
     return sum(s for t, s in zip(TS, SH) if a >= t)
 
 def shift_end(b):
-    """큐 종료 b 는 조건이 다르다 — 등호가 빠진다(b 와 같은 시각의 삽입은 안 민다).
+    """Cue end b uses a different condition — no equals sign (an insert at exactly b doesn't push it).
 
-    T 를 걸친 큐(a < t < b)는 종료가 시작보다 한 삽입 더 밀려야 클립 길이만큼
-    늘어난다. 양쪽에 shift_for(a) 를 똑같이 더하면 그 큐는 삽입 길이만큼 일찍
-    사라진다. 걸치지 않는 큐는 두 값이 어차피 같다.
+    A cue straddling T (a < t < b) has to have its end pushed by one more insert than its start, so
+    that it stretches by the clip's length. Adding the same shift_for(a) to both sides makes that cue
+    disappear one insert-length early. For a cue that doesn't straddle, the two values are equal anyway.
     """
     return sum(s for t, s in zip(TS, SH) if t < b)
 
@@ -217,25 +220,27 @@ for line in src.splitlines():
     a, b = to_s(m.group(1)), to_s(m.group(2))
     for i, t in enumerate(TS):
         if a < t < b:
-            straddle[i] += 1       # T 를 걸치는 큐 — 삽입 클립이 자막 중간을 끊는다
+            straddle[i] += 1       # a cue straddling T — the inserted clip cuts the subtitle in half
     da, db = shift_for(a), shift_end(b)
     if da or db:
         a += da; b += db; moved += 1
     out.append(f"{to_ts(a)} --> {to_ts(b)}")
 open('subs-spliced.srt', 'w', encoding='utf-8').write("\n".join(out) + "\n")
-print(f"── 자막: {moved}개 큐 시프트 (총 +{sum(SH):.3f}s)")
+print(f"── subtitles: {moved} cues shifted (total +{sum(SH):.3f}s)")
 for i, t in enumerate(TS):
-    print(f"   · {t}s 삽입(+{SH[i]:.3f}s) — 걸친 큐 {straddle[i]}개")
+    print(f"   · insert at {t}s (+{SH[i]:.3f}s) — {straddle[i]} cues straddled")
 if any(straddle):
-    print("⚠ T 를 걸친 자막이 있다 — 삽입 시각을 문장 경계로 옮겨야 한다")
+    print("⚠ some subtitles straddle a T — move the insert time to a sentence boundary")
 PY
 
-# ── 5.5) 챕터 시프트 — chapters.txt 가 있을 때만
-#   자막과 **같은 shift_for()** 를 쓴다(등호 포함). 챕터는 시작 시각만 있으므로 shift_end()
-#   는 안 쓴다. 등호가 곧 정책이다 — 챕터 경계 T 에 스팅어를 넣으면 챕터 시작이 스팅어
-#   **뒤**로 밀리고, 그래서 스팅어는 앞 챕터 꼬리에 귀속된다. 챕터를 클릭한 시청자는 브랜드
-#   스팅이 아니라 본문에 착지한다.
-#   00:00 은 :69-70 의 `T > 0` 단언이 지킨다 — 삽입 시각이 0 보다 크므로 첫 챕터는 안 밀린다.
+# ── 5.5) Chapter shift — only when chapters.txt exists
+#   It uses **the same shift_for()** as the subtitles (equals sign included). Chapters only have a
+#   start time, so shift_end() isn't used. The equals sign is the policy — put a stinger at a chapter
+#   boundary T and the chapter start moves **after** the stinger, which attaches the stinger to the
+#   tail of the previous chapter. A viewer who clicks the chapter lands in the content, not on a
+#   brand sting.
+#   00:00 is protected by the `T > 0` assertion at :69-70 — insert times are greater than 0, so the
+#   first chapter never moves.
 if [ -f chapters.txt ]; then
 python3 - "${TS[*]}" "${SHIFTS[*]}" <<'CHAPPY'
 import math, sys
@@ -243,7 +248,7 @@ TS = [float(x) for x in sys.argv[1].split()]
 SH = [float(x) for x in sys.argv[2].split()]
 
 def shift_for(a):
-    """자막 큐와 같은 규칙 — 시작 시각 a 보다 앞선 삽입들의 실측 길이 합."""
+    """Same rule as the subtitle cues — sum of measured lengths of inserts before start time a."""
     return sum(s for t, s in zip(TS, SH) if a >= t)
 
 def to_s(ts):
@@ -263,8 +268,9 @@ for line in open('chapters.txt', encoding='utf-8'):
     ts, _, label = line.partition('\t')
     a = to_s(ts.strip())
     d = shift_for(a)
-    # 올림 — 내리면 타임스탬프가 진짜 챕터 시작보다 앞서고, 그 자리를 클릭한 시청자가
-    # 앞 챕터 꼬리부터 듣는다. 0.x초 늦는 쪽이 말 토막을 듣는 쪽보다 낫다.
+    # Round up — rounding down puts the timestamp ahead of the real chapter start, and a viewer who
+    # clicks there hears the tail of the previous chapter. Being 0.x seconds late beats hearing a
+    # fragment of the previous line.
     b = math.ceil(a + d) if d else a
     if b != a:
         moved += 1
@@ -272,16 +278,16 @@ for line in open('chapters.txt', encoding='utf-8'):
 
 bad = []
 if rows and rows[0][0] != 0:
-    bad.append(f"첫 타임스탬프가 {to_ts(rows[0][0])} 다 — 00:00 이어야 한다")
+    bad.append(f"the first timestamp is {to_ts(rows[0][0])} — it must be 00:00")
 if len(rows) < 3:
-    bad.append(f"챕터 {len(rows)}개 — 유튜브는 3개 이상을 요구한다")
+    bad.append(f"{len(rows)} chapters — YouTube requires at least 3")
 for i in range(1, len(rows)):
     gap = rows[i][0] - rows[i - 1][0]
     if gap < 10:
-        bad.append(f"{to_ts(rows[i-1][0])} → {to_ts(rows[i][0])} 간격 {gap}s — 10초 미만이다")
+        bad.append(f"{to_ts(rows[i-1][0])} → {to_ts(rows[i][0])} gap {gap}s — under 10 seconds")
 
 if bad:
-    sys.stderr.write("✗ 시프트 후 챕터가 유튜브 요건을 어긴다\n")
+    sys.stderr.write("✗ after the shift the chapters break YouTube's requirements\n")
     for b in bad:
         sys.stderr.write(f"   · {b}\n")
     sys.exit(1)
@@ -289,17 +295,17 @@ if bad:
 with open('chapters-spliced.txt', 'w', encoding='utf-8') as f:
     for b, label in rows:
         f.write(f"{to_ts(b)}\t{label}\n")
-print(f"── 챕터: {len(rows)}개 중 {moved}개 시프트 → chapters-spliced.txt")
+print(f"── chapters: {moved} of {len(rows)} shifted → chapters-spliced.txt")
 CHAPPY
 fi
 
-# ── 6) 길이 일치 확인 — 두 벌이 어긋나면 게시 후 자막만 밀린다
+# ── 6) Duration match check — if the two copies disagree, only the subtitles end up shifted after publishing
 if [ -f reel-sub-spliced.mp4 ]; then
   CD=$(ffprobe -v error -show_entries format=duration -of csv=p=0 reel-spliced.mp4)
   SD=$(ffprobe -v error -show_entries format=duration -of csv=p=0 reel-sub-spliced.mp4)
   awk -v a="$CD" -v b="$SD" 'BEGIN{ d=a-b; if (d<0) d=-d;
-    printf "── 길이 일치 검사: 클린 %.3fs vs 번인 %.3fs (차 %.3fs)\n", a, b, d;
-    if (d > 0.05) { print "⚠ 두 벌의 길이가 다르다 — 접합 조각을 확인할 것"; } }'
+    printf "── duration match check: clean %.3fs vs burn-in %.3fs (diff %.3fs)\n", a, b, d;
+    if (d > 0.05) { print "⚠ the two copies differ in duration — check the spliced pieces"; } }'
 fi
 
 say "✓ reel-spliced.mp4 · reel-sub-spliced.mp4 · subs-spliced.srt"

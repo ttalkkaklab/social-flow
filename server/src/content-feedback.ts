@@ -133,9 +133,9 @@ export function analyzeYoutubeVideos(
   channelMetrics: Record<string, unknown> | null,
 ): { items: ReviewedItem[]; cohort: Record<string, number | null>; notes: string[] } {
   const notes = [
-    '쇼츠 스와이프 이탈률은 API 에 없다. 초반 통과는 engagedViews/조회 비율로 본다.',
-    '편당 구독 전환은 영상 리포트가 안정적이지 않아 채널 구간 숫자만 적는다.',
-    '조회만 낮고 초반 통과·유지가 중앙 이상이면 각도 레버다. 그 형식을 복제하지 말고 다음 편 제목을 문제로 연다.',
+    'Shorts swipe-away drop-off is not in the API. Opening pass is read as the engagedViews/views ratio.',
+    'Per-episode subscriber conversion is not stable in the video report, so only the channel-window number is recorded.',
+    'When only views are low and opening pass and retention are at or above the median, the lever is angle. Do not clone that format — open the next episode title with the problem.',
   ];
   const rows = videos.map((video) => {
     const period = (video.period as Record<string, unknown> | null) ?? null;
@@ -164,25 +164,25 @@ export function analyzeYoutubeVideos(
     if (!period) {
       steps.push({
         lever: 'pending',
-        problem: '이 편의 Analytics 구간 값이 아직 없다',
-        hypothesis: '업로드 후 2~3일은 집계가 비는 것이 정상이다',
-        next: '다음 리뷰까지 두고 같은 지표로 다시 본다',
+        problem: 'this episode has no Analytics window values yet',
+        hypothesis: 'an empty aggregation for 2-3 days after upload is normal',
+        next: 'leave it until the next review and look at the same metrics again',
       });
     } else {
       if (hook != null && cohort.hook != null && hook < cohort.hook * GAP) {
         steps.push({
           lever: 'hook',
-          problem: `초반 통과 ${hook.toFixed(0)}% — 최근 ${rows.length}편 중앙 ${cohort.hook.toFixed(0)}%보다 낮다`,
-          hypothesis: '첫 1~2초에 제목에서 한 약속이 안 보인다',
-          next: '오프닝 설명을 빼고 첫 컷에서 결과를 바로 보여 준다',
+          problem: `opening pass ${hook.toFixed(0)}% — below the ${cohort.hook.toFixed(0)}% median of the last ${rows.length} episodes`,
+          hypothesis: 'the promise made in the title is not visible in the first 1-2 seconds',
+          next: 'drop the opening explanation and show the result in the first cut',
         });
       }
       if (retain != null && cohort.retain != null && retain < cohort.retain * GAP) {
         steps.push({
           lever: 'retain',
-          problem: `평균 시청 ${retain.toFixed(0)}% — 중앙 ${cohort.retain.toFixed(0)}%보다 낮다`,
-          hypothesis: '중간에 새 정보가 끊기거나 한 주장이 길다',
-          next: '주장 하나만 남기고 컷 간격을 좁힌다',
+          problem: `average view ${retain.toFixed(0)}% — below the ${cohort.retain.toFixed(0)}% median`,
+          hypothesis: 'new information stops partway through, or one claim runs long',
+          next: 'keep a single claim and tighten the gap between cuts',
         });
       }
       const hookOk = hook != null && cohort.hook != null && hook >= cohort.hook * GAP;
@@ -191,15 +191,15 @@ export function analyzeYoutubeVideos(
       if (hookOk && retainOk && viewsLow && views != null && cohort.views != null) {
         steps.push({
           lever: 'angle',
-          problem: `조회 ${Math.round(views)} — 최근 ${rows.length}편 중앙 ${Math.round(cohort.views)}보다 낮다. 초반 통과·유지는 중앙과 같거나 높다`,
-          hypothesis: '팬이 눌러 지표는 좋은데 처음 보는 사람은 자기 일로 안 읽었다',
-          next: '다음 편 제목·커버를 방법·도구가 아니라 그 사람이 이미 느끼는 문제로 연다',
+          problem: `views ${Math.round(views)} — below the ${Math.round(cohort.views)} median of the last ${rows.length} episodes, while opening pass and retention are at or above the median`,
+          hypothesis: 'fans clicked so the metrics look fine, but first-time viewers did not read it as their own problem',
+          next: 'open the next episode title and cover with the problem the viewer already feels, not with a method or a tool',
         });
       }
     }
     return {
       id: String(video.videoId ?? ''),
-      title: String(video.title ?? '(제목 없음)'),
+      title: String(video.title ?? '(no title)'),
       permalink: video.permalink ? String(video.permalink) : null,
       publishedAt: video.publishedAt ? String(video.publishedAt) : null,
       tone: worstTone(steps),
@@ -220,7 +220,7 @@ export function analyzeYoutubeVideos(
   });
 
   if (account && (account as { subscriberCountHidden?: boolean }).subscriberCountHidden) {
-    notes.push('구독자 수가 숨김이라 채널 전환율은 참고만 한다.');
+    notes.push('The subscriber count is hidden, so treat the channel conversion rate as a rough reference only.');
   }
   return { items, cohort, notes };
 }
@@ -230,8 +230,8 @@ export function analyzeInstagramMedia(
   limit: number,
 ): { items: ReviewedItem[]; cohort: Record<string, number | null>; notes: string[] } {
   const notes = [
-    '훅·유지는 릴스에만 있다. 사진·캐러셀은 표에 올리되 채점하지 않는다.',
-    '릴스별 팔로우는 플랫폼이 안 준다. 계정 프로필 방문으로 관심을 본다.',
+    'Hook and retention exist for reels only. Photos and carousels go in the table but are not scored.',
+    'The platform does not give per-reel follows. Read interest from account profile visits instead.',
   ];
   const reels = media.filter((item) => item.mediaProductType === 'REELS').slice(0, limit);
   const picked = reels.length > 0 ? reels : media.slice(0, limit);
@@ -260,46 +260,46 @@ export function analyzeInstagramMedia(
     if (!isReel) {
       steps.push({
         lever: 'pending',
-        problem: '릴스가 아니라 훅·유지 지표가 없다',
-        hypothesis: '이미지·캐러셀은 3초 이탈을 플랫폼이 안 준다',
-        next: '같은 소재를 릴스로 다시 올려 스킵률을 본다',
+        problem: 'not a reel, so there are no hook or retention metrics',
+        hypothesis: 'the platform does not report 3-second drop-off for images and carousels',
+        next: 'post the same material again as a reel and look at the skip rate',
       });
     } else if (!metrics) {
       steps.push({
         lever: 'pending',
-        problem: '이 편의 인사이트가 비어 있다',
-        hypothesis: '막 올렸거나 인사이트 스코프가 빠졌을 수 있다',
-        next: '하루 뒤에 같은 편을 다시 본다',
+        problem: 'insights for this episode are empty',
+        hypothesis: 'it may have just been posted, or the insights scope may be missing',
+        next: 'look at the same episode again a day later',
       });
     } else {
       if (skip != null && cohort.skip != null && skip > cohort.skip / GAP) {
         steps.push({
           lever: 'hook',
-          problem: `3초 이탈 ${skip.toFixed(0)}% — 최근 릴스 중앙 ${cohort.skip.toFixed(0)}%보다 높다`,
-          hypothesis: '첫 3초에 썸네일·캡션 약속이 안 보인다',
-          next: '첫 프레임에서 결과를 증명하고 후킹을 3초 안에 끝낸다',
+          problem: `3-second drop-off ${skip.toFixed(0)}% — above the ${cohort.skip.toFixed(0)}% median of recent reels`,
+          hypothesis: 'the promise made by the thumbnail and caption is not visible in the first 3 seconds',
+          next: 'prove the result in the first frame and finish the hook within 3 seconds',
         });
       }
       if (watch != null && cohort.watch != null && watch < cohort.watch * GAP) {
         steps.push({
           lever: 'retain',
-          problem: `평균 시청 ${watch.toFixed(1)}초 — 중앙 ${cohort.watch.toFixed(1)}초보다 짧다`,
-          hypothesis: '같은 길이대에서 중간에 정보가 끊긴다',
-          next: '같은 길이에서 컷을 더 자주 바꾸고 중간에도 새 정보를 하나씩 넣는다',
+          problem: `average watch ${watch.toFixed(1)}s — shorter than the ${cohort.watch.toFixed(1)}s median`,
+          hypothesis: 'at the same length band, information stops partway through',
+          next: 'at the same length, change cuts more often and drop in one new piece of information mid-way',
         });
       }
       if (shareRate != null && cohort.shareRate != null && shareRate < cohort.shareRate * SHARE_GAP && (reach ?? 0) > 0) {
         steps.push({
           lever: 'share',
-          problem: `도달 대비 공유 ${shareRate.toFixed(2)}% — 중앙 ${cohort.shareRate.toFixed(2)}%보다 낮다`,
-          hypothesis: '넘길 한 줄(반전·숫자·체크리스트)이 없다',
-          next: '화면 한 장에 남이 그대로 보낼 문장을 넣는다',
+          problem: `shares against reach ${shareRate.toFixed(2)}% — below the ${cohort.shareRate.toFixed(2)}% median`,
+          hypothesis: 'there is no single line worth passing on (a twist, a number, a checklist)',
+          next: 'put a sentence someone would forward as-is on one screen',
         });
       }
     }
     return {
       id: String(item.mediaId ?? ''),
-      title: String(item.excerpt ?? '(캡션 없음)'),
+      title: String(item.excerpt ?? '(no caption)'),
       permalink: item.permalink ? String(item.permalink) : null,
       publishedAt: item.timestamp ? String(item.timestamp) : null,
       tone: worstTone(steps),
@@ -335,7 +335,7 @@ function resolveHtmlPath(channel: string | undefined, outputPath: string | undef
     }
     const resolved = isAbsolute(outputPath) ? outputPath : resolve(process.cwd(), outputPath);
     if (!resolved.toLowerCase().endsWith('.html')) {
-      throw new Error(`outputPath 는 .html 이어야 한다: ${outputPath}`);
+      throw new Error(`outputPath must end in .html: ${outputPath}`);
     }
     return resolved;
   }
@@ -394,7 +394,7 @@ function sectionFromYoutube(res: ApiResult, _limit: number): PlatformSection {
       account: null,
       cohort: {},
       items: [],
-      notes: ['유튜브 토큰 또는 인사이트 스코프가 없다. setup-youtube 후 youtube.readonly · yt-analytics.readonly 로 재발급한다.'],
+      notes: ['No YouTube token, or the insights scope is missing. Run setup-youtube and reissue with youtube.readonly and yt-analytics.readonly.'],
     };
   }
   const parsed = parseObject(res.body);
@@ -422,7 +422,7 @@ function sectionFromInstagram(res: ApiResult, limit: number): PlatformSection {
       account: null,
       cohort: {},
       items: [],
-      notes: ['인스타 토큰 또는 instagram_business_manage_insights 스코프가 없다. setup-instagram 으로 재발급한다.'],
+      notes: ['No Instagram token, or the instagram_business_manage_insights scope is missing. Reissue with setup-instagram.'],
     };
   }
   const parsed = parseObject(res.body);

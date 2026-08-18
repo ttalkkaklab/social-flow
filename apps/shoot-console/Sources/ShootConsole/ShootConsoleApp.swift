@@ -8,7 +8,7 @@ struct ShootConsoleApp: App {
     @State private var app = AppState()
 
     var body: some Scene {
-        WindowGroup("촬영 콘솔") {
+        WindowGroup("ShootConsole") {
             ContentView()
                 .environment(app)
                 .onAppear {
@@ -25,28 +25,28 @@ struct ShootConsoleApp: App {
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("대본 열기…") { app.openScriptPanel() }
+                Button("Open script…") { app.openScriptPanel() }
                     .keyboardShortcut("o", modifiers: .command)
-                Button("대본·녹화 목록") { app.showLibrary.toggle() }
+                Button("Scripts and recordings") { app.showLibrary.toggle() }
                     .keyboardShortcut("l", modifiers: .command)
                     .disabled(app.script == nil)
             }
-            CommandMenu("촬영") {
-                Button(app.recorder.isRecording ? "녹화 정지" : "녹화 시작") { app.toggleRecording() }
+            CommandMenu("Shoot") {
+                Button(app.recorder.isRecording ? "Stop recording" : "Start recording") { app.toggleRecording() }
                     .keyboardShortcut("r", modifiers: [.command, .option, .control])
                 Divider()
-                Button("다음 씬") { app.goNext() }
+                Button("Next scene") { app.goNext() }
                     .keyboardShortcut(.rightArrow, modifiers: .command)
-                Button("이전 씬") { app.goPrev() }
+                Button("Previous scene") { app.goPrev() }
                     .keyboardShortcut(.leftArrow, modifiers: .command)
-                Button("이 씬 다시") { app.markRetake() }
+                Button("Redo this scene") { app.markRetake() }
                     .keyboardShortcut("\\", modifiers: [.command, .option])
                 Divider()
-                Toggle("항상 맨 앞에", isOn: Binding(
+                Toggle("Always in front", isOn: Binding(
                     get: { delegate.floatOnTop },
                     set: { delegate.floatOnTop = $0 }
                 ))
-                Button("보조 모니터로 옮기기") { delegate.moveToSecondaryDisplay() }
+                Button("Move to the secondary display") { delegate.moveToSecondaryDisplay() }
             }
         }
     }
@@ -78,41 +78,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
-    /// Finder 에서 script.md 를 이 앱으로 열거나 `open -a 촬영콘솔 script.md` 했을 때.
+    /// When script.md is opened with this app from Finder, or with
+    /// `open -a ShootConsole script.md`.
     func application(_ application: NSApplication, open urls: [URL]) {
         guard let url = urls.first else { return }
         Task { @MainActor in
-            // 창이 아직 없을 수 있어 한 박자 뒤에 넣는다.
+            // The window may not exist yet, so hand it over a beat later.
             try? await Task.sleep(for: .milliseconds(150))
             app?.load(url: url)
         }
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        // 녹화 중 종료를 막는다. record.sh 는 nohup 으로 띄우므로 앱이 죽어도
-        // screencapture 는 계속 돌고, 정지할 방법이 pid 파일밖에 남지 않는다.
+        // Blocks quitting mid-recording. record.sh spawns under nohup, so
+        // screencapture keeps running even when the app dies, and the pid file
+        // becomes the only way to stop it.
         guard let app, app.recorder.isRecording else { return .terminateNow }
         let alert = NSAlert()
-        alert.messageText = "녹화 중입니다"
+        alert.messageText = "Recording is in progress"
         alert.informativeText = """
-        지금 끄면 녹화가 백그라운드에 남습니다. 정지하고 나가시겠습니까?
+        Quitting now leaves the recording running in the background. Stop it and quit?
 
-        그냥 종료하면 터미널에서 아래로 멈춰야 합니다:
-        record.sh stop \(app.recorder.outputURL?.path ?? "<녹화파일>")
+        If you quit anyway, you have to stop it from a terminal with:
+        record.sh stop \(app.recorder.outputURL?.path ?? "<recording file>")
         """
-        alert.addButton(withTitle: "정지하고 종료")
-        alert.addButton(withTitle: "취소")
-        alert.addButton(withTitle: "그냥 종료")
+        alert.addButton(withTitle: "Stop and quit")
+        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: "Quit anyway")
 
         switch alert.runModal() {
         case .alertFirstButtonReturn:
             Task { @MainActor in
                 app.toggleRecording()
-                // isBusy 만 보면 안 된다 — toggleRecording 은 안에서 Task 를 만들고
-                // 바로 돌아오므로, 이 시점의 상태는 아직 .recording 이고 isBusy 는
-                // false 다. 그대로 두면 루프가 한 바퀴도 안 돌고 빠져나가 녹화를
-                // 멈추지 않은 채 앱이 죽는다. 정지가 실제로 끝나는 조건은
-                // "녹화 중도 아니고 작업 중도 아닐 때" 다.
+                // Watching isBusy alone isn't enough — toggleRecording makes a
+                // Task inside and returns right away, so at this point the state
+                // is still .recording and isBusy is false. Left that way the loop
+                // exits without a single pass and the app dies without stopping
+                // the recording. The real condition for the stop being finished
+                // is "not recording and not busy".
                 while app.recorder.isRecording || app.recorder.isBusy {
                     try? await Task.sleep(for: .milliseconds(200))
                 }
@@ -126,18 +129,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // MARK: - 창
+    // MARK: - Window
 
     func configureWindow() {
-        // WindowGroup 이 창을 올리기 전에 불릴 수 있어 한 박자 미룬다.
+        // This can fire before WindowGroup puts the window up, so defer a beat.
         DispatchQueue.main.async { [weak self] in
             guard let self, let window = self.window else { return }
-            window.title = "촬영 콘솔"
+            window.title = "ShootConsole"
             window.titlebarAppearsTransparent = true
 
-            // 한 번 자리를 잡아두면 다음 촬영에도 그대로 쓴다. 저장된 배치가
-            // 없을 때만 보조 모니터로 보낸다 — 사용자가 옮겨둔 창을 되돌리면
-            // 매번 다시 배치해야 한다.
+            // Place it once and the next shoot reuses that spot. Only send it
+            // to the secondary display when there's no saved frame — snapping a
+            // window the user moved back into place would mean rearranging it
+            // every time.
             let hadSavedFrame = window.setFrameUsingName("shootConsoleWindow")
             window.setFrameAutosaveName("shootConsoleWindow")
             if !hadSavedFrame {
@@ -149,20 +153,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let failures = self.app?.installHotkeys() ?? []
             self.app?.hotkeyFailures = failures
             self.app?.isSingleDisplay = NSScreen.screens.count < 2
-            // 창이 올라온 뒤에 묻는다 — 권한 대화상자는 앱이 화면에 떠 있어야 뜬다.
+            // Ask after the window is up — the permission dialog only appears
+            // with the app on screen.
             self.app?.refreshPermissions()
         }
     }
 
     private func applyWindowLevel() {
-        // 보조 모니터에 다른 창(스토리보드 등)을 띄워도 대본이 가리지 않게 한다.
+        // Keeps the script from being covered when another window (a storyboard,
+        // say) opens on the secondary display.
         window?.level = floatOnTop ? .floating : .normal
     }
 
-    /// 대본 창을 메인이 아닌 화면 가운데로 옮긴다.
+    /// Moves the script window to the center of a display other than the main one.
     ///
-    /// 녹화는 메인 디스플레이만 담으므로(record.sh 의 -D 1), 창이 보조 화면에
-    /// 있으면 프레임에 아예 들어오지 않는다. 이게 1차이자 가장 확실한 방어다.
+    /// Recording only takes the main display (-D 1 in record.sh), so a window on
+    /// the secondary screen never enters the frame at all. This is the first and
+    /// surest defense.
     func moveToSecondaryDisplay() {
         guard let window else { return }
         let mainID = CGMainDisplayID()
@@ -170,7 +177,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let secondary = NSScreen.screens.first {
             ($0.deviceDescription[key] as? CGDirectDisplayID) != mainID
         }
-        guard let secondary else { return }   // 단일 모니터면 그대로 둔다
+        guard let secondary else { return }   // leave it where it is on a single monitor
 
         let visible = secondary.visibleFrame
         var frame = window.frame
@@ -181,11 +188,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.setFrame(frame, display: true)
     }
 
-    /// 녹화 중에만 창을 화면 캡처에서 제외한다.
+    /// Excludes the window from screen capture, but only while recording.
     ///
-    /// 보조 모니터 배치가 주된 방어이고 이건 보험이다 — 단일 모니터이거나 창을
-    /// 메인으로 옮겨 뒀을 때를 대비한다. 평소에도 켜두면 스크린샷에 앱이 안 찍혀
-    /// 오히려 곤란하므로 녹화 중에만 건다.
+    /// Placement on the secondary display is the main defense; this is the
+    /// insurance — for a single monitor, or a window the user moved onto the main
+    /// display. Leaving it on all the time would keep the app out of ordinary
+    /// screenshots too, which is its own nuisance, so it only applies while
+    /// recording.
     func setHiddenFromCapture(_ hidden: Bool) {
         window?.sharingType = hidden ? .none : .readOnly
     }

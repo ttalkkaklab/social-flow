@@ -5,7 +5,7 @@
 	<key>CFBundleName</key>
 	<string>ShootConsole</string>
 	<key>CFBundleDisplayName</key>
-	<string>촬영 콘솔</string>
+	<string>ShootConsole</string>
 	<key>CFBundleIdentifier</key>
 	<string>app.socialflow.shootconsole</string>
 	<key>CFBundleExecutable</key>
@@ -20,12 +20,13 @@
 	<string>14.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
-	<!-- screencapture -g 가 이 앱 책임으로 마이크를 잡는다. 이 키가 없으면
-	     권한을 묻지 않고 프로세스가 그냥 죽는다. 화면 기록은 대응 키가 없고
-	     시스템이 알아서 묻는다. -->
+	<!-- screencapture -g takes the microphone under this app's responsibility.
+	     Without this key the process just dies instead of asking for the
+	     permission. Screen recording has no matching key — the system asks on
+	     its own. -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>대본을 보며 화면을 녹화할 때 나레이션 음성을 함께 담습니다.</string>
+	<string>Records your narration along with the screen while you read the script.</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>마이크 입력 볼륨을 확인하고 맞추는 데 씁니다.</string>
+	<string>Used to check and set the microphone input volume.</string>
 </dict>
 </plist>

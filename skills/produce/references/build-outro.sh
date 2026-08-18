@@ -1,43 +1,44 @@
 #!/usr/bin/env bash
-# make-reels 공통 아웃트로 렌더 — 전 릴스에서 재사용하는 브랜드 마무리 영상
-# (1회 렌더 → assets/outro/default.mp4. 옛 assets/outro.mp4 도 resolve 가 찾는다)
+# make-reels shared outro render — the brand closing video reused across every reel
+# (rendered once → assets/outro/default.mp4. resolve also finds the old assets/outro.mp4)
 #
-# 사용법: build-outro.sh <workdir>
-#   <workdir>/outro-card.png   : 브랜드 아웃트로 카드 (1080x1920 풀프레임 권장)
-#   <workdir>/outro-voice.*    : 브랜드 나레이션 (RIFF WAV 또는 raw PCM 24k/s16/mono)
-#   <workdir>/outro-bgm.wav    : (선택) 아웃트로 전용 BGM — 없으면 무음 위 나레이션만
-# 출력: <workdir>/outro.mp4
+# Usage: build-outro.sh <workdir>
+#   <workdir>/outro-card.png   : brand outro card (1080x1920 fullframe recommended)
+#   <workdir>/outro-voice.*    : brand narration (RIFF WAV or raw PCM 24k/s16/mono)
+#   <workdir>/outro-bgm.wav    : (optional) outro-only BGM — without it, narration over silence
+# Output: <workdir>/outro.mp4
 #
-# 본편(build-reel.sh)과 동일한 화면 구성·인코딩 파라미터를 유지해야 xfade 접합이 균질하다.
+# The xfade splice is only seamless if the layout and encoding parameters match the feature
+# (build-reel.sh).
 set -euo pipefail
 export LC_ALL=en_US.UTF-8
 
-WORKDIR="${1:?사용법: build-outro.sh <workdir>}"
+WORKDIR="${1:?usage: build-outro.sh <workdir>}"
 cd "$WORKDIR"
 
-# 포맷 프리셋 — build-reel.sh 와 같은 계약. 인라인 기본값 **앞**에서 읽는다.
+# Format preset — the same contract as build-reel.sh. Read **before** the inline defaults.
 [ -f format.env ] && . ./format.env
 
 FPS=${FPS:-30}
 SPF=$((48000 / FPS))
-W=${W:-1080}; H=${H:-1920}          # 캔버스 — 포맷이 정한다
-ZOOM_BASE=${ZOOM_BASE:-1620x2880}   # 켄번즈 소스 해상도
-ZB=${ZOOM_BASE/x/:}                 # ffmpeg scale= 콜론 표기
+W=${W:-1080}; H=${H:-1920}          # canvas — the format decides it
+ZOOM_BASE=${ZOOM_BASE:-1620x2880}   # Ken Burns source resolution
+ZB=${ZOOM_BASE/x/:}                 # ffmpeg scale= colon notation
 CW=${CW:-1024}; CH=${CH:-1280}
 CX=${CX:-28};   CY=${CY:-200}
-PRE=${PRE:-0.50}                 # 크로스페이드로 들어오므로 본편보다 살짝 긴 프리롤
-TAIL=${TAIL:-1.0}                # CTA 읽을 여운 — 길면 나레이션 끝난 정지 화면이 이어진다
+PRE=${PRE:-0.50}                 # a slightly longer pre-roll than the feature, since it comes in on a crossfade
+TAIL=${TAIL:-1.0}                # room to read the CTA — too long and a still frame lingers after the narration
 BGM_VOL=${BGM_VOL:-0.30}
 DUCK_RELEASE=${DUCK_RELEASE:-250}
-TARGET_RATE=${TARGET_RATE:-4.4}  # 브랜드 나레이션 목표 발화속도 (자/초, 공백·구두점 제외)
-CHARS=${CHARS:-0}                # 대본 자수 — 0 이면 atempo 정규화 생략
+TARGET_RATE=${TARGET_RATE:-4.4}  # target speech rate for the brand narration (chars/sec, spaces and punctuation excluded)
+CHARS=${CHARS:-0}                # script char count — 0 skips atempo normalization
 
 VOICE=$(ls outro-voice.* 2>/dev/null | head -1)
-[ -n "$VOICE" ] || { echo "outro-voice.* 없음"; exit 1; }
-[ -f outro-card.png ] || { echo "outro-card.png 없음"; exit 1; }
+[ -n "$VOICE" ] || { echo "outro-voice.* missing"; exit 1; }
+[ -f outro-card.png ] || { echo "outro-card.png missing"; exit 1; }
 mkdir -p work
 
-# ── 1) 나레이션 정규화 (build-reel.sh 와 동일 규칙: 완화 트림 + loudnorm -16)
+# ── 1) Narration normalization (same rule as build-reel.sh: loose trim + loudnorm -16)
 if head -c 4 "$VOICE" | LC_ALL=C grep -q RIFF; then INARGS=(-i "$VOICE")
 else INARGS=(-f s16le -ar 24000 -ac 1 -i "$VOICE"); fi
 ffmpeg -y -v error "${INARGS[@]}" -af "
@@ -46,7 +47,7 @@ ffmpeg -y -v error "${INARGS[@]}" -af "
   loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000" -ac 1 -ar 48000 work/ov.wav
 L=$(ffprobe -v error -show_entries format=duration -of csv=p=0 work/ov.wav)
 
-# ── 1.5) 발화속도 정규화 (build-reel.sh 와 동일 클램프 [0.88, 1.18], ±5% 이내 생략)
+# ── 1.5) Speech-rate normalization (same clamp as build-reel.sh [0.88, 1.18], skipped within ±5%)
 if [ "$CHARS" -gt 0 ]; then
   R0=$(awk -v c="$CHARS" -v l="$L" 'BEGIN{printf "%.2f", c/l}')
   F=$(awk -v t="$TARGET_RATE" -v r="$R0" 'BEGIN{f=t/r; if (f>0.95 && f<1.05) f=1; if (f<0.88) f=0.88; if (f>1.18) f=1.18; printf "%.4f", f}')
@@ -54,10 +55,10 @@ if [ "$CHARS" -gt 0 ]; then
     ffmpeg -y -v error -i work/ov.wav -af "atempo=$F" work/ov2.wav && mv work/ov2.wav work/ov.wav
     L=$(ffprobe -v error -show_entries format=duration -of csv=p=0 work/ov.wav)
   fi
-  echo "outro: ${CHARS}자, ${R0}자/s → atempo x$F"
+  echo "outro: ${CHARS} chars, ${R0} chars/s → atempo x$F"
 fi
 
-# ── 2) duration 확정 (프레임 올림) + 샘플 정확 오디오
+# ── 2) Fix the duration (frame ceiling) + sample-exact audio
 D0=$(awk -v p="$PRE" -v l="$L" -v t="$TAIL" 'BEGIN{printf "%.6f", p+l+t}')
 FRAMES=$(awk -v d="$D0" -v f="$FPS" 'BEGIN{n=d*f; printf "%d", (n==int(n))?n:int(n)+1}')
 D=$(awk -v n="$FRAMES" -v f="$FPS" 'BEGIN{printf "%.6f", n/f}')
@@ -66,10 +67,10 @@ PRE_MS=$(awk -v p="$PRE" 'BEGIN{printf "%d", p*1000}')
 ffmpeg -y -v error -i work/ov.wav \
   -af "adelay=${PRE_MS}:all=1,apad=whole_len=$SAMPLES,atrim=end_sample=$SAMPLES" \
   -ac 1 -ar 48000 work/on.wav
-echo "outro: 발화 ${L}s → 총 ${D}s (${FRAMES}f)"
+echo "outro: speech ${L}s → total ${D}s (${FRAMES}f)"
 
-# ── 3) 비디오 — 카드가 이미 1080×1920 풀프레임이면 그대로 켄번즈(v4 릴스 네이티브),
-#      아니면 구 4:5 카드로 보고 블러 배경 위에 픽셀 고정 오버레이(v3 호환)
+# ── 3) Video — if the card is already 1080×1920 fullframe, Ken Burns it as-is (v4 reels-native);
+#      otherwise treat it as an old 4:5 card and pixel-pin it over a blurred background (v3 compatible)
 CDIM=$(ffprobe -v error -select_streams v -show_entries stream=width,height -of csv=p=0:s=x outro-card.png)
 if [ "$CDIM" = "${W}x${H}" ]; then
   ffmpeg -y -v error -loop 1 -framerate "$FPS" -t "$D" -i outro-card.png -filter_complex "
@@ -78,19 +79,20 @@ if [ "$CDIM" = "${W}x${H}" ]; then
          s=${W}x${H}:fps=$FPS,fade=t=in:st=0:d=0.45,format=yuv420p
   " -frames:v "$FRAMES" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p work/ovid.mp4
 else
-  # [세로 전용] 구 4:5 카드 호환 — 블러 배경 위에 픽셀 고정 오버레이(v3 계열).
-  # 좌표(CW/CH/CX/CY)와 블러 배경(1440x2560)이 전부 1080x1920 캔버스에 맞춰 잡은 절대값이라
-  # 다른 캔버스로 오면 뜻을 잃는다. 지금은 1920x1080 카드를 넣어도 에러 없이 세로 블러 배경
-  # 위에 세로 카드를 얹은 영상이 나온다 — 그 조용한 실패를 실패로 바꾼다.
+  # [portrait only] Old 4:5 card compatibility — pixel-pinned overlay on a blurred background (the v3
+  # family). The coordinates (CW/CH/CX/CY) and the blurred background (1440x2560) are all absolute
+  # values chosen for a 1080x1920 canvas, so they lose their meaning on any other canvas. As written,
+  # feeding it a 1920x1080 card produces, with no error, a video with a landscape card on a portrait
+  # blurred background — this turns that silent failure into a failure.
   CDW=${CDIM%%x*}; CDH=${CDIM##*x}
   [ "$W" = 1080 ] && [ "$H" = 1920 ] || {
-    echo "✗ ${W}x${H} 아웃트로는 풀프레임 카드여야 한다 — outro-card.png 가 ${CDIM} 이다"
-    echo "  구 4:5 호환 가지는 1080x1920 캔버스 전용이다. 카드를 ${W}x${H} 로 다시 만들어라."
+    echo "✗ a ${W}x${H} outro needs a fullframe card — outro-card.png is ${CDIM}"
+    echo "  the old 4:5 compatibility branch is for the 1080x1920 canvas only. Remake the card at ${W}x${H}."
     exit 1
   }
   [ "$CDW" -lt "$CDH" ] || {
-    echo "✗ outro-card.png 가 가로다(${CDIM}) — 세로 캔버스의 구 4:5 가지는 세로 카드만 받는다"
-    echo "  지금 그대로 두면 세로 블러 배경 위에 가로 카드를 ${CW}x${CH} 로 늘여 얹는다."
+    echo "✗ outro-card.png is landscape (${CDIM}) — the portrait canvas's old 4:5 branch takes portrait cards only"
+    echo "  left as is, it would stretch the landscape card to ${CW}x${CH} over a portrait blurred background."
     exit 1
   }
   ffmpeg -y -v error -loop 1 -framerate "$FPS" -t "$D" -i outro-card.png -filter_complex "
@@ -103,7 +105,7 @@ else
   " -frames:v "$FRAMES" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p work/ovid.mp4
 fi
 
-# ── 4) 오디오 믹스 — BGM 있으면 덕킹, 끝은 완전 페이드아웃 (영상의 최종 마침)
+# ── 4) Audio mix — duck when there's BGM, full fade-out at the end (the video's final close)
 if [ -f outro-bgm.wav ]; then
   FOUT=$(awk -v d="$D" 'BEGIN{printf "%.3f", d-1.8}')
   ffmpeg -y -v error -i work/on.wav -stream_loop -1 -i outro-bgm.wav -filter_complex "

@@ -27,9 +27,9 @@ final class Recorder {
     private(set) var phase: Phase = .idle
     private(set) var outputURL: URL?
     private(set) var startedAt: Date?
-    /// The "입력 장치: … / 입력 볼륨: …" (input device / input volume) line
-    /// record.sh prints. Losing a long take to the wrong microphone is a
-    /// frequent accident, so it goes verbatim at the very top of the UI.
+    /// The "Input device: … / input volume: …" line record.sh prints. Losing a
+    /// long take to the wrong microphone is a frequent accident, so it goes
+    /// verbatim at the very top of the UI.
     private(set) var inputStatus: String?
     private(set) var lastResult: String?
 

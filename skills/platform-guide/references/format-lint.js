@@ -163,7 +163,7 @@ const RULES = [
 
   // ── Thresholds and dimensions embedded in docs ─────────────────────
   { name: 'screencast-pipeline shrink threshold', file: 'skills/produce/references/screencast-pipeline.md',
-    re: /축소 배율 \(>([\d.]+)\)|> ?([\d.]+)\)[^\n]*글씨|\(>([\d.]+)\)/,
+    re: /scaled down \(>([\d.]+)\)|> ?([\d.]+)\)[^\n]*legibility|\(>([\d.]+)\)/,
     want: fix(S.guards.shrinkWarn, 1), optional: true },
 ];
 

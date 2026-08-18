@@ -1,34 +1,35 @@
-# 타임라인 데이터 계약 — recording/
+# Timeline data contract — recording/
 
-`data/<채널>/episodes/<주제>/recording/` — ingest 스킬 산출. `timeline.md` 가
-storyboard 스킬의 자료조사(research.md) 자리를 대체하는 **1차 소스**다.
+`data/<channel>/episodes/<topic>/recording/` — the ingest skill's output.
+`timeline.md` is the **primary source** that takes the place of the storyboard
+skill's research (research.md).
 
 ```
 recording/
-├── raw/                 # transcribe.sh 원신호 (중간 산출 — 재실행 시 덮어씀)
-│   ├── audio.wav        # 16kHz mono 추출 오디오
-│   ├── transcript.json  # whisper.cpp STT (ms 오프셋)
-│   ├── silences.tsv     # 무음 구간 start<TAB>end (초)
-│   ├── scenes.tsv       # 화면 전환 시각 (초)
-│   └── duration.txt     # 원본 길이 (초)
-├── timeline.json        # 기계용 — 아래 스키마
-├── timeline.md          # 사람용 — 씬 표 + 문장별 타임스탬프 + 키프레임 + 화면 설명
-└── keyframes/seg-N.jpg  # 씬 대표 프레임 (960px, vision_analyze 입력)
+├── raw/                 # transcribe.sh raw signals (intermediate — overwritten on re-run)
+│   ├── audio.wav        # 16kHz mono extracted audio
+│   ├── transcript.json  # whisper.cpp STT (ms offsets)
+│   ├── silences.tsv     # silence spans, start<TAB>end (seconds)
+│   ├── scenes.tsv       # screen-change times (seconds)
+│   └── duration.txt     # source length (seconds)
+├── timeline.json        # machine-readable — schema below
+├── timeline.md          # human-readable — scene table + per-sentence timestamps + keyframes + screen descriptions
+└── keyframes/seg-N.jpg  # scene keyframe (960px, the vision_analyze input)
 ```
 
 ## timeline.json
 
 ```json
 {
-  "source": "/abs/path/녹화.mov",        // 원본 절대경로 (복사하지 않는다)
+  "source": "/abs/path/recording.mov",   // absolute path to the source (never copied)
   "duration": 312.4,
   "params": { "min_scene": 8.0, "max_scene": 45.0 },
   "scenes": [
     {
       "idx": 1,
       "start": 0.0, "end": 23.4, "duration": 23.4,
-      "text": "씬 전체 발화 이어붙임",
-      "sentences": [ { "start": 0.8, "end": 4.1, "text": "문장 하나" } ],
+      "text": "all speech in the scene, joined",
+      "sentences": [ { "start": 0.8, "end": 4.1, "text": "one sentence" } ],
       "keyframe": "keyframes/seg-1.jpg"
     }
   ]
@@ -38,95 +39,115 @@ recording/
 ## timeline.md
 
 frontmatter: `source` / `duration` / `scenes` / `generated` / `status`.
-`status` 는 `draft`(build-timeline 직후) → `annotated`(화면 설명·전사 교정 후).
-본문: 씬 요약 표(`| # | 구간 | 길이 | 발화 | 화면 |`) + 씬별 상세(키프레임 임베드,
-문장별 `[mm:ss.s]` 타임스탬프, 화면 설명). **화면 열은 build-timeline 이
-placeholder 로 남기고, ingest 스킬이 vision_analyze 결과로 채운다.**
+`status` goes `draft` (straight out of build-timeline) → `annotated` (after screen
+descriptions and transcript corrections).
+Body: the scene summary table (`| # | Range | Length | Speech | Screen |`) plus
+per-scene detail (embedded keyframe, per-sentence `[mm:ss.s]` timestamps, screen
+description). **build-timeline leaves the Screen column as a placeholder and the
+ingest skill fills it from the vision_analyze results.**
 
-전사 교정 계약: STT 오인식은 본문에 `원문(→교정)` 으로 표기하고(원문 삭제 금지),
-말미 `## 전사 교정 로그` 표(`| 씬 | 시각 | 원문 | 교정 | 근거 |`)에 기록한다.
-근거는 키프레임 OCR 또는 profile.md 용어 대조만 인정 — 근거 없는 교정은 금지.
-`raw/transcript.json`·`timeline.json` 은 원신호 그대로 보존한다 (출처 사슬:
-raw = whisper 원문, timeline.md = 근거 기반 교정본).
+Transcript correction contract: write an STT misrecognition in the body as
+`original(→corrected)` (never delete the original), and log it in the
+`## Transcript correction log` table at the end
+(`| Scene | Time | Original | Corrected | Evidence |`).
+Only keyframe OCR or a profile.md term match counts as evidence — corrections
+without evidence aren't allowed.
+`raw/transcript.json` and `timeline.json` keep the raw signal untouched (the
+chain of custody: raw = whisper's own words, timeline.md = the evidence-backed
+corrected version).
 
-## alignment.json — 대본 정합 (스토리보드 선행 모드 한정)
+## alignment.json — script alignment (storyboard-first mode only)
 
-`storyboard/script.md`(촬영 대본)가 있으면 ingest 가 타임라인 검수 후 **녹화와
-스토리보드 씬의 정합**을 이 파일로 기록한다 — produce 편집 파이프라인
-(produce `references/screencast-pipeline.md`)의 입력이며, `overlay` 필드만 더하면
-그대로 edit.json 이 된다.
+When `storyboard/script.md` (the shooting script) exists, ingest records **the
+alignment between the recording and the storyboard scenes** in this file after the
+timeline review. It's the input to the produce editing pipeline
+(produce `references/screencast-pipeline.md`), and adding only the `overlay` field
+turns it into edit.json as-is.
 
 ```json
 {
-  "source": "/abs/녹화.mov",           // timeline.json 과 같은 원본 절대경로
+  "source": "/abs/recording.mov",      // same absolute source path as timeline.json
   "scenes": [
     {
-      "idx": 1,                        // 스토리보드 씬 번호 (scenes.js 배열 인덱스+1)
-      "start": 3.2, "end": 21.8,       // 원본 시계 컷 구간 — 무음 안에서 타이트하게
-      "crop": [400, 200, 1600, 1200],  // (선택) 시연 초점 영역 [x,y,w,h] — 키프레임 근거
-      "subs": [                        // 자막 — timeline.md 교정 표기, 원본 시계 그대로
-        { "start": 3.4, "end": 6.1, "text": "문장" }
+      "idx": 1,                        // storyboard scene number (scenes.js array index + 1)
+      "start": 3.2, "end": 21.8,       // cut range on the source clock — tight, inside silence
+      "crop": [400, 200, 1600, 1200],  // (optional) demo focus area [x,y,w,h] — evidenced by the keyframe
+      "subs": [                        // subtitles — corrected notation from timeline.md, source clock as-is
+        { "start": 3.4, "end": 6.1, "text": "a sentence" }
       ],
-      "note": "테이크 2 채택 (0:41 재시작)"   // (선택) 정합 판단 기록
+      "note": "took 2 adopted (restarted at 0:41)"   // (optional) record of the alignment call
     }
   ]
 }
 ```
 
-정합 규칙:
+Alignment rules:
 
-- **사람(Claude)이 대조해 작성한다** — timeline.md 씬·문장과 script.md 씬을 읽고
-  매칭한다. 알고리즘 자동 매칭이 아니므로 순서 바뀜·재촬영 테이크도 흡수한다.
-- 컷 경계는 문장 타임스탬프 사이 **무음**에 놓는다 — 씬 시작은 첫 문장 0.2~0.4s
-  앞, 끝은 마지막 문장 0.3~0.6s 뒤.
-- 같은 씬을 여러 번 말했으면(재촬영) **마지막 테이크**를 채택하고 note 에 적는다.
-- `crop` 은 키프레임을 보고 시연 초점 영역으로 잡는다 — 전체 화면(5K)을 그대로
-  두면 1080 폭으로 4.7배 축소돼 글씨가 안 읽힌다 (3배 초과 축소는 빌더가 경고).
-- `subs.text` 는 timeline.md 의 **교정 표기**(원문(→교정)의 교정 쪽, sub 원칙) —
-  raw 원문을 넣으면 오인식이 화면에 박제된다.
-- 대본에 있는데 녹화에 없는 씬(누락)·대본 밖 발화(즉흥)는 사용자에게 보고하고
-  [부분 재촬영 / 씬 제외 / 즉흥 포함] 판단을 받은 뒤 확정한다.
+- **A human (Claude) writes it by comparison** — read the timeline.md scenes and
+  sentences against the script.md scenes and match them. It isn't algorithmic
+  matching, so it absorbs reordering and re-shot takes.
+- Put cut boundaries in the **silence** between sentence timestamps — the scene
+  start 0.2~0.4s before the first sentence, the end 0.3~0.6s after the last.
+- If the same scene was spoken several times (a re-shoot), adopt the **last take**
+  and write it in `note`.
+- Set `crop` from the keyframe, on the demo focus area — leave the full screen (5K)
+  as-is and it shrinks 4.7x to 1080 wide, where the text can't be read (the builder
+  warns past 3x reduction).
+- `subs.text` is the **corrected notation** from timeline.md (the corrected side of
+  original(→corrected), the sub principle) — put the raw original in and the
+  misrecognition is fixed on screen forever.
+- Scenes in the script but missing from the recording, and speech outside the
+  script (improvised), get reported to the user; settle it after they choose
+  [re-shoot that part / drop the scene / keep the improvisation].
 
-## 경계 산출 원리
+## How boundaries are derived
 
-1. `silencedetect` 무음마다 `score_boundary(무음, 화면전환목록)` 점수 부여
-   — ≥1.0 강한 경계 / 0~1 약한 경계 / ≤0 무시.
-2. 강한 경계에서 우선 분할. 경계는 항상 **문장 사이 간극에 스냅**된다
-   (전사 타임스탬프 ±0.2s 오차를 무음이 흡수).
-3. `MAX_SCENE_SEC`(기본 45s) 초과 씬은 내부 최고점 약한 경계에서 재분할,
-   `MIN_SCENE_SEC`(기본 8s) 미만 씬은 더 짧은 이웃과 병합.
-4. 화면 전환만 있고 발화가 이어지는 지점은 경계가 아니다 —
-   말이 계속되는데 씬을 자르면 나레이션 재구성 때 문장이 찢어진다.
+1. Score every `silencedetect` silence with `score_boundary(silence, screen-change list)`
+   — ≥1.0 strong boundary / 0~1 weak boundary / ≤0 ignore.
+2. Split at strong boundaries first. A boundary always **snaps to the gap between
+   sentences** (the silence absorbs the ±0.2s error in transcript timestamps).
+3. Scenes over `MAX_SCENE_SEC` (default 45s) get re-split at their highest-scoring
+   internal weak boundary; scenes under `MIN_SCENE_SEC` (default 8s) merge into the
+   shorter neighbor.
+4. A point with only a screen change while speech continues is not a boundary —
+   cutting a scene mid-speech tears sentences apart when the narration gets rebuilt.
 
-## 조정 노브 (transcribe.sh 환경변수 · build-timeline.py 인자)
+## Tuning knobs (transcribe.sh environment variables · build-timeline.py arguments)
 
-| 노브 | 기본 | 올리면 | 내리면 |
+| Knob | Default | Raise it | Lower it |
 |---|---|---|---|
-| `SIL_DB` | -35dB | 시끄러운 녹음에서 무음 검출 증가 | 조용한 방(-40dB)에서 미세한 쉼까지 검출 |
-| `SIL_MIN` | 0.6s | 숨 고르기 무시(경계 감소) | 경계 후보 증가 |
-| `SCENE_THRESH` | 0.04 | 스크롤 오탐 감소 (과다 시 0.15) | 미세한 화면 변화도 검출 |
-| `--min-scene` | 8s | 잔 씬 병합 증가 | 짧은 씬 허용 |
-| `--max-scene` | 45s | 긴 씬 허용 | 분할 증가 |
+| `SIL_DB` | -35dB | more silence detected in a noisy recording | catches even faint pauses in a quiet room (-40dB) |
+| `SIL_MIN` | 0.6s | ignores catching a breath (fewer boundaries) | more boundary candidates |
+| `SCENE_THRESH` | 0.04 | fewer scroll false positives (0.15 when they pile up) | detects even small screen changes |
+| `--min-scene` | 8s | more merging of tiny scenes | allows short scenes |
+| `--max-scene` | 45s | allows long scenes | more splitting |
 
-`WHISPER_PROMPT`(기본 없음)는 수치 노브가 아니라 **용어집 주입**이다 — 쉼표로
-나열한 고유명사·도메인 용어(profile.md + 주제 예상 용어) 쪽으로 whisper 디코더를
-편향시켜 오인식을 원천 감소시킨다. 설정 시 `--carry-initial-prompt` 로 긴 녹화
-전 구간에 적용된다. 재실행 비용이 가장 싼 개선책 — 오인식이 광범위하면 사후
-교정 대신 용어를 보강해 transcribe.sh 를 다시 돌린다.
+`WHISPER_PROMPT` (no default) isn't a numeric knob but **a glossary injection** — a
+comma-separated list of proper nouns and domain terms (profile.md plus terms you
+expect for the topic) that biases the whisper decoder and cuts misrecognition at
+the source. When set, `--carry-initial-prompt` applies it across a long recording.
+It's the cheapest fix to re-run — when misrecognition is widespread, strengthen the
+glossary and run transcribe.sh again instead of correcting after the fact.
 
-## 함정
+## Traps
 
-- **whisper 한국어 환각** — 무음 구간에서 문장을 지어내거나 같은 문장을
-  반복한다. build-timeline 이 무음 70% 겹침·3연속 반복을 자동 제거하지만,
-  timeline.md 검토 때 "말한 적 없는 문장"이 보이면 해당 구간을 의심하라.
-- **스크롤은 화면 전환이 아니다** — scenes.tsv 에 스크롤 오탐이 다수 보이면
-  `SCENE_THRESH=0.15` 로 재실행. 단 전환 시각은 무음 근처에서만 경계 점수에
-  쓰이므로 발화 중 오탐은 무해하다 (민감한 쪽이 안전).
-- **원본은 복사하지 않는다** — timeline.json 의 source 절대경로 참조.
-  원본을 옮기면 키프레임 재추출이 불가능해지므로 이동 전에 ingest 를 끝낸다.
-- **교정 환각** — LLM 교정은 근거(키프레임 OCR·profile.md 용어) 대조가 있을
-  때만 한다. 근거 없이 "자연스럽게" 고치는 것은 1차 소스 오염 — 실제 발언이
-  사라진다. 표기·로그 규칙은 위 timeline.md 절의 전사 교정 계약 참조.
-- **전사는 인용이 아니다** — 구어 전사에는 필러·말실수·부정확한 수치가 있다.
-  스토리보드 승인 전 시효성 수치는 storyboard 스킬의 검증 정책(교차 검증)을
-  그대로 적용한다. 녹화에서 말했다는 사실이 출처가 되지 않는다.
+- **whisper Korean hallucination** — it invents sentences over silence or repeats
+  the same one. build-timeline automatically drops anything with 70% silence
+  overlap and 3-in-a-row repeats, but if you see a "sentence nobody said" while
+  reviewing timeline.md, be suspicious of that span.
+- **Scrolling is not a screen change** — if scenes.tsv is full of scroll false
+  positives, re-run with `SCENE_THRESH=0.15`. But transition times only feed the
+  boundary score near a silence, so false positives during speech are harmless
+  (the sensitive side is the safe side).
+- **Never copy the source** — timeline.json references the source by absolute path.
+  Moving the source makes keyframe re-extraction impossible, so finish ingest
+  before moving it.
+- **Correction hallucination** — an LLM correction happens only with evidence
+  (keyframe OCR, profile.md terms) to compare against. "Smoothing" it without
+  evidence contaminates the primary source — what was actually said disappears.
+  For the notation and log rules, see the transcript correction contract in the
+  timeline.md section above.
+- **A transcript is not a citation** — spoken transcripts contain fillers, slips,
+  and imprecise numbers. Before storyboard approval, apply the storyboard skill's
+  verification policy (cross-checking) to time-sensitive numbers as written. The
+  fact that it was said in the recording doesn't make it a source.

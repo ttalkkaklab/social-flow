@@ -1,25 +1,28 @@
 #!/usr/bin/env bash
-# record.sh — macOS 내장 screencapture 로 화면+마이크 녹화를 시작/정지한다.
+# record.sh — start/stop a screen+mic recording with macOS's built-in screencapture.
 #
-#   record.sh start <출력.mov>    # 백그라운드 녹화 시작 (메인 모니터만)
-#   record.sh stop  <출력.mov>    # SIGINT 로 종료 → 파일 확정 대기
-#   record.sh status <출력.mov>   # 녹화 중인지 확인
+#   record.sh start <output.mov>    # start recording in the background (main display only)
+#   record.sh stop  <output.mov>    # end with SIGINT → wait for the file to be finalized
+#   record.sh status <output.mov>   # check whether a recording is running
 #
-# 녹화 대상은 항상 시스템 설정의 "메인" 디스플레이 하나다 (-D 1 고정).
-# 멀티 모니터에서 보조 모니터는 녹화되지 않으므로 현황 확인·다른 작업에
-# 자유롭게 쓸 수 있다.
+# It always records the single display marked "main" in System Settings (-D 1, fixed).
+# On a multi-monitor setup the secondary monitor isn't recorded, so it's free for
+# checking status or doing other work.
 #
-# 전제: 터미널 앱에 시스템 설정 → 개인정보 보호 및 보안 → 화면 기록 +
-#       마이크 권한. -g 가 기본 입력 장치(마이크) 오디오를 함께 캡처한다.
+# Prerequisites: the terminal app needs System Settings → Privacy & Security →
+#                Screen Recording + Microphone. -g captures the default input
+#                device (microphone) audio along with the screen.
 #
-# 마이크는 start 시점의 "기본 입력 장치"가 그대로 쓰인다. 아래 환경변수로 고정할 수 있다.
-#   SF_MIC_DEVICE  전환할 입력 장치 이름 (예: "Shure MV6") — SwitchAudioSource 필요
-#   SF_MIC_VOLUME  입력 볼륨 0~100 — 너무 낮으면 녹음이 작고, 너무 높으면 노이즈가 뜬다
-# 설정하지 않으면 현재 값을 그대로 쓰되, start 가 장치·볼륨을 출력해 적는다.
+# The microphone is whatever the "default input device" is at start time. The
+# environment variables below can pin it down.
+#   SF_MIC_DEVICE  name of the input device to switch to (e.g. "Shure MV6") — needs SwitchAudioSource
+#   SF_MIC_VOLUME  input volume 0~100 — too low and the recording is quiet, too high and noise shows up
+# Left unset, the current values stay as they are, but start prints the device and
+# volume so they're on the record.
 set -euo pipefail
 
-CMD="${1:?사용법: record.sh start|stop|status <출력.mov>}"
-OUT="${2:?출력 파일 경로(.mov) 필요}"
+CMD="${1:?usage: record.sh start|stop|status <output.mov>}"
+OUT="${2:?output file path (.mov) required}"
 PIDFILE="${OUT}.pid"
 
 case "$CMD" in

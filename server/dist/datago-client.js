@@ -349,7 +349,7 @@ export async function fetchFileRows(input) {
         json = JSON.parse(res.body);
     }
     catch {
-        return err(`odcloud 응답 파싱 실패 (HTTP ${res.status}): ${maskKey(res.body.slice(0, 300))}`);
+        return err(`failed to parse the odcloud response (HTTP ${res.status}): ${maskKey(res.body.slice(0, 300))}`);
     }
     if (typeof json.code === 'number' && json.code < 0) {
         const help = ODCLOUD_CODE_HELP[json.code] ?? String(json.msg ?? '');
@@ -365,41 +365,41 @@ export async function fetchFileRows(input) {
         data: json.data,
     }), null, 1);
     if (text.length > 12_000) {
-        text = `${text.slice(0, 12_000)}\n…(잘림 — limit 을 줄이거나 필요한 행만 page 로 짚어 조회할 것)`;
+        text = `${text.slice(0, 12_000)}\n…(truncated — lower limit, or use page to pull just the rows you need)`;
     }
     return { text, isError: false };
 }
-/** 표준 오픈API 의 XML/JSON 공통 에러 코드 → 교정 가능한 안내 */
-const OPENAPI_AUTH_HELP = '인증 거부 — 이 API 에 등록되지 않은 인증키다. data.go.kr 에서 해당 API 의 활용신청(대부분 자동승인, 즉시)이 되어 있는지, ' +
-    '마이페이지 > 개인 API 인증키의 키와 DATA_GO_KR_API_KEY 가 일치하는지 확인할 것. 키 교정 전 재시도 금지.';
+/** Common XML/JSON error codes of the standard open API → actionable guidance */
+const OPENAPI_AUTH_HELP = 'auth refused — this key is not registered for this API. Check on data.go.kr that the usage application (활용신청, mostly auto-approved and instant) for that API is in place, ' +
+    'and that the key under 마이페이지 > 개인 API 인증키 (My Page > Personal API keys) matches DATA_GO_KR_API_KEY. Do not retry before fixing the key.';
 const OPENAPI_CODE_HELP = {
     SERVICE_KEY_IS_NOT_REGISTERED_ERROR: OPENAPI_AUTH_HELP,
-    DEADLINE_HAS_EXPIRED_ERROR: '활용기간 만료 — 포털에서 연장 신청 필요',
-    LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR: '일일 트래픽 초과 — 오늘은 이 API 추가 호출 금지',
-    SERVICE_ACCESS_DENIED_ERROR: '접근 거부 — 활용신청 승인 상태 확인 필요',
-    TEMPORARILY_DISABLE_THE_SERVICEKEY_ERROR: '일시 차단된 키 — 포털 공지·키 상태 확인',
-    NO_OPENAPI_SERVICE_ERROR: '존재하지 않는 서비스 경로 — path 를 활용가이드의 요청주소와 대조할 것',
+    DEADLINE_HAS_EXPIRED_ERROR: 'usage period expired — request an extension on the portal',
+    LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR: 'daily traffic exceeded — no more calls to this API today',
+    SERVICE_ACCESS_DENIED_ERROR: 'access denied — check the approval status of the usage application',
+    TEMPORARILY_DISABLE_THE_SERVICEKEY_ERROR: 'key temporarily blocked — check portal notices and the key status',
+    NO_OPENAPI_SERVICE_ERROR: 'service path does not exist — compare path against the request URL in the usage guide',
 };
 export async function callOpenApi(input) {
     const key = requireDataGoKrKey();
     const path = input.path.replace(/^\/+/, '');
     if (path.includes('..') || path.includes('://'))
-        return err('path 는 apis.data.go.kr 이하 경로만 허용 (예: 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)');
+        return err('path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)');
     const url = `${OPENAPI_BASE}/${path}${buildQuery({ ...input.params, serviceKey: key })}`;
     const res = await requestRaw('get', url, { 'User-Agent': BROWSER_UA });
     const body = res.body;
-    // 게이트웨이는 미등록 키에 HTTP 200 + XML 에러 또는 플레인 "Unauthorized" 를 섞어 쓴다
+    // For an unregistered key the gateway mixes HTTP 200 + an XML error with a plain "Unauthorized"
     if (/^\s*Unauthorized\s*$/i.test(body))
         return err(`apis.data.go.kr: ${OPENAPI_AUTH_HELP}`);
     const authCode = body.match(/<returnAuthMsg>([A-Z_]+)/)?.[1];
     if (authCode) {
-        return err(`apis.data.go.kr ${authCode}: ${OPENAPI_CODE_HELP[authCode] ?? '활용가이드의 에러 코드 표 참조'}`);
+        return err(`apis.data.go.kr ${authCode}: ${OPENAPI_CODE_HELP[authCode] ?? 'see the error-code table in the usage guide'}`);
     }
     if (!res.ok)
         return err(`apis.data.go.kr HTTP ${res.status}: ${maskKey(body.slice(0, 400))}`);
     let text = maskKey(body);
     if (text.length > 8_000) {
-        text = `${text.slice(0, 8_000)}\n…(잘림 — numOfRows/pageNo 류 파라미터로 응답을 줄여 재조회할 것)`;
+        text = `${text.slice(0, 8_000)}\n…(truncated — shrink the response with numOfRows/pageNo-style parameters and query again)`;
     }
     return { text, isError: false };
 }

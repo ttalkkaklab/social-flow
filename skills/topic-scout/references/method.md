@@ -1,33 +1,38 @@
-# 시장 주제 스카우트 — 방법
+# Market topic scout — method
 
-`youtube_topic_scout` 가 하는 일과, 에이전트가 시드를 어떻게 쪼갤지의 정본.
+The source of truth for what `youtube_topic_scout` does and how the agent should
+split the seeds.
 
-## 왜 절대 조회수가 아닌가
+## Why not absolute views
 
-같은 10만 조회라도 채널마다 의미가 다르다. 대형 채널의 평균작과 작은 채널의
-대박을 같은 숫자로 보면, 이미 큰 채널의 평범한 주제만 고르게 된다.
+The same 100k views means something different on every channel. Treat a big
+channel's average piece and a small channel's breakout as the same number and
+you'll only ever pick topics that are ordinary for channels that are already big.
 
-그래서 채널을 먼저 모으고, 그 채널의 **최근 업로드 조회수 중앙값**을 구한 뒤
-`조회 ÷ 중앙값 ≥ 5` 인 영상만 아웃라이어로 본다. VidIQ 의 `5x`/`10x` 와 같은
-자리다. 중앙값 표본이 3편 미만인 채널은 건너뛴다.
+So we gather channels first, take the **median views of that channel's recent
+uploads**, and count only videos with `views ÷ median ≥ 5` as outliers. Same
+place VidIQ's `5x`/`10x` sits. Channels with fewer than 3 videos in the median
+sample get skipped.
 
-검색 창에 뜨는 상위 영상만 보면 "지금 랭킹에 있는 것"만 보인다. 이 툴은
-검색으로 **채널을 모은 다음** 그 채널의 업로드를 훑는다. 랭킹 밖이어도
-그 채널 시청자가 열광한 주제는 잡힌다.
+Looking only at the top videos in the search box shows you "what is in the
+ranking right now". This tool uses search to **gather channels**, then sweeps
+their uploads. A topic their audience went wild for still gets caught even when
+it's outside the ranking.
 
-## 시장 — 기본은 미국·중국
+## Markets — US and China by default
 
-한국 검색 랭킹이 기본이 아니다. 쇼트폼에서 먼저 검증되는 자리는 미국과 중국이다.
-사용자가 "한국만"이라고 하기 전에는 두 시장을 따로 훑은 뒤 합친다.
+Korean search rankings are not the default. The place short-form gets validated
+first is the US and China. Until the user says "Korea only", sweep both markets
+separately and then merge.
 
-1. 주제 영역에서 한국어 명사 2~3개를 뽑는다 (내부 메모).
-2. 아래 표로 **영어·중국어 시드**를 만든다. 한국어 시드를 US/CN 검색에
-   그대로 넣지 않는다.
-3. `youtube_topic_scout` 를 두 번 부른다 — `regionCode: US` `language: en` 과
+1. Pull 2~3 Korean nouns out of the topic area (an internal note).
+2. Build the **English and Chinese seeds** with the table below. Don't drop
+   Korean seeds into US/CN search as-is.
+3. Call `youtube_topic_scout` twice — `regionCode: US` `language: en` and
    `regionCode: CN` `language: zh`.
-4. `merge-scout.py` 로 한 json 에 합친다.
+4. Merge into one json with `merge-scout.py`.
 
-| 한국어 (내부) | 미국 시드 | 중국 시드 |
+| Korean (internal) | US seed | CN seed |
 | --- | --- | --- |
 | AI 부업 | `AI side hustle` | `AI副业` |
 | AI 업무 자동화 | `AI work automation` | `AI办公自动化` |
@@ -35,95 +40,113 @@
 | 연말정산 | `tax refund` | `退税` |
 | 직장인 절세 | `paycheck tax` | `工资节税` |
 
-표에 없으면 영어 짧은 명사와 중국어 짧은 명사로 옮긴다. 고유명사를 지어내지 않는다.
+If it isn't in the table, translate it into a short English noun and a short
+Chinese noun. Don't invent proper nouns.
 
-한국만 볼 때: `regionCode: KR` `language: ko`, 한국어 시드 한 번.
+Korea only: `regionCode: KR` `language: ko`, Korean seeds, one call.
 
-`channelLimit` 은 시장당 15 (두 시장이면 합 30 근처).
+`channelLimit` is 15 per market (about 30 across two markets).
 
-## 시드를 쪼개는 법
+## How to split the seeds
 
-profile §1 주제 영역 한 줄을 검색창에 그대로 넣지 않는다. 유튜브 검색은
-짧은 명사에 반응한다.
+Don't drop the one-line profile §1 topic area straight into the search box.
+YouTube search responds to short nouns.
 
-규칙:
+Rules:
 
-- 시장당 시드는 2~3개. 툴이 합쳐 4개에서 자른다 (`search.list` 가 호출당 100유닛).
-- 한 시드는 2~6 어절. 수식 절·타깃 설명("출퇴근 스크롤 중")은 뺀다.
-- 사용자가 검색어를 줬으면 그걸 내부 명사로 두고, 위 표로 EN·ZH 를 만든다.
+- 2~3 seeds per market. The tool merges them and cuts at 4 (`search.list` costs
+  100 units per call).
+- One seed is 2~6 words. Drop modifying clauses and audience description
+  ("while scrolling on the commute").
+- If the user gave a query, keep it as the internal noun and build EN·ZH from the
+  table above.
 
-## 한 가지만 더 잘하기
+## Do one thing better
 
-아웃라이어를 골랐으면 그대로 찍지 않는다. 그 영상보다 **한 칸만** 나아간다.
+Once you've picked an outlier, don't shoot the same thing. Go **one notch**
+past that video.
 
-1. `gaps` — 댓글에 남은 질문. 좋아요가 많은 미해결 질문이 결핍이다.
-2. 인트로·썸네일 — 초반에 보이는 것을 바꾸는 효과가 가장 크다.
-   "안녕하세요 누구입니다" 대신 권위·볼 이유·타깃 중 하나.
-3. 이미 우리 채널에서 다룬 구면 같은 말 재탕이 아니라 **그 결핍**으로
-   후속편을 만든다.
+1. `gaps` — questions left in the comments. A well-liked unanswered question is
+   the gap.
+2. Intro and thumbnail — changing what shows up in the first seconds has the
+   biggest effect. Instead of "hi everyone, I'm so-and-so", use one of:
+   authority, a reason to watch, or the target.
+3. If it's a phrase our channel already covered, make the follow-up out of **that
+   gap** rather than rehashing the same point.
 
-제목·썸네일·대본을 복사하면 안 된다. 주제 자체에는 저작권이 없다.
+Don't copy a title, thumbnail, or script. A topic itself isn't copyrightable.
 
-## 쿼터
+## Quota
 
-| 호출 | 유닛 |
+| Call | Units |
 | --- | --- |
-| `search.list` (시드 1개) | 100 |
+| `search.list` (1 seed) | 100 |
 | `channels.list` / `playlistItems` / `videos.list` / `commentThreads` | 1 |
 
-시장 1곳 · 시드 3 + 채널 15 + 댓글 5 ≈ 330유닛.
-미국+중국이면 약 660유닛. 일 기본 10,000 안이다. 같은 시드를 같은 날에
-반복하지 않는다. 보고서 날짜가 오늘이면 파일을 읽고 다시 부를지 묻는다.
+One market · 3 seeds + 15 channels + 5 comment calls ≈ 330 units.
+US plus China is about 660. That fits inside the default 10,000 per day. Don't
+repeat the same seed on the same day. If the report is dated today, read the file
+and ask whether to call again.
 
-`YOUTUBE_API_KEY` 를 쓰면 게시용 OAuth 쿼터와 분리된다. 키가 없고 OAuth 만
-있으면 업로드·인사이트와 같은 버킷을 나눠 쓴다.
+Using `YOUTUBE_API_KEY` keeps this separate from the publishing OAuth quota.
+With no key and only OAuth, it shares a bucket with uploads and insights.
 
-## SNS 이슈 — 스레드·X·인스타그램은 다른 잣대다
+## SNS issues — Threads, X, and Instagram use a different yardstick
 
-유튜브의 "채널 중앙값 대비 배수"는 Data API 가 채널별 업로드 목록을 싸게 주기
-때문에 가능하다. 세 SNS 는 우리가 가진 API 로 남의 글 참여량을 못 받는다 —
-스레드 키워드 검색은 앱이 고급 액세스(Tech Provider, 비가역)를 받기 전엔 자기
-글만 돌려주고, 인스타 로그인 API 에는 공개 검색이 없고, X 는 종량제 개발자
-계정이 따로 든다(2026-08-18 조사). 그래서 `sns_issue_scout` 은 **SerpApi 구글
-검색에 `site:threads.com` / `site:x.com` / `site:instagram.com` 을 붙여** 최근
-구간 게시물을 모은다. 실측(2026-08-18, "AI 자동화"·gl=kr·recency=week)으로 세
-플랫폼 모두 게시물 단위로 인덱싱돼 있었다 — 스레드는 날짜까지, X·인스타는 URL·
-작성자·스니펫.
+YouTube's "multiple of the channel median" is possible because the Data API hands
+over a per-channel upload list cheaply. On those three networks, the APIs we hold
+can't give us engagement on other people's posts — Threads keyword search returns
+only our own posts until the app gets advanced access (Tech Provider, irreversible),
+the Instagram Login API has no public search, and X needs a separate metered
+developer account (researched 2026-08-18). So `sns_issue_scout` gathers recent
+posts by **appending `site:threads.com` / `site:x.com` / `site:instagram.com` to a
+SerpApi Google search**. Field-tested on 2026-08-18 ("AI 자동화" · gl=kr ·
+recency=week), all three platforms were indexed at post granularity — Threads down
+to the date, X and Instagram with URL, author, and snippet.
 
-이 경로에서 얻는 것과 못 얻는 것:
+What this path gives you and what it doesn't:
 
-- **있다** — 게시물 URL·작성자·제목·스니펫, 스레드는 상대 날짜, 여러 글·여러
-  플랫폼에 같이 나오는 주제어(빈도), 구글 급상승 검색어(검색량·증가율 어림값).
-- **없다** — 좋아요·답글·조회 같은 참여량. 순서도 구글 관련도순이지 인기순이
-  아니다. 그래서 결과는 "무엇이 터졌나"가 아니라 **"이 주제로 지금 무엇이
-  오가나"** 의 언급 목록이다.
+- **You get** — post URL, author, title, snippet; a relative date on Threads; the
+  phrases (with frequency) that show up across several posts and several
+  platforms; Google rising searches (rough search volume and growth).
+- **You don't get** — engagement like likes, replies, or views. The ordering is
+  Google relevance, not popularity. So the result is a mention list answering
+  **"what is going around on this topic right now"**, not "what blew up".
 
-주제어 점수는 `언급 글 수 × (1 + 0.25 × (플랫폼 수 − 1))`, 낱말 하나짜리는 ×0.5 다.
-검색어 그 자체(시드 낱말만으로 된 구)는 모든 글에 있어 빼고, 두 글 이상(낱말
-하나면 세 글 이상)에서 나온 구만 살린다. 같은 문장을 그대로 다시 올린 글(모집
-광고 재게시)은 하나로 접는다 — 안 그러면 그 글의 모든 구가 "두 글에서 나왔다"로
-목록을 차지한다(실측에서 교육 모집 글 2건이 그랬다). 한국어 조사는 어간이 이번
-묶음 어딘가에 홀로 나올 때만 뗀다 — 워크플로→워크플, 전문가→전문 같은 오절단을
-막는 장치다.
+A phrase's score is `posts mentioning it × (1 + 0.25 × (platform count − 1))`,
+halved for single-word phrases. The query itself (a phrase made only of seed
+words) is in every post, so it's dropped, and only phrases appearing in two or
+more posts survive (three or more for single words). Posts that repost the same
+sentence verbatim (a recruiting ad posted again) collapse into one — otherwise
+every phrase in that post takes over the list as "appeared in two posts" (in the
+field test, two course-recruitment posts did exactly that). Korean particles come
+off only when the stem also appears alone somewhere in this batch — the guard that
+stops mis-splits like 워크플로→워크플 or 전문가→전문.
 
-급상승 검색어(`trending`)는 Google Trends 의 것이라 SNS 참여가 아니라 **구글 검색**
-기준이다. 시드·상위 주제어와 겹치면 `matchesSeed` 가 켜진다. 대부분은 연예·사건
-검색어라 안 겹치는 게 정상이다 — 겹칠 때만 시의성 소재로 본다.
+Rising searches (`trending`) come from Google Trends, so they're keyed to **Google
+search**, not SNS engagement. When one overlaps a seed or a top phrase,
+`matchesSeed` turns on. Most of them are celebrity and news queries, so no overlap
+is normal — treat them as timely material only when they do overlap.
 
-보고서에서는 유튜브 배수 표와 **다른 절**에 둔다. 같은 표에 넣으면 언급 수 12 가
-배수 12 로 읽힌다. HTML 도 마지막 장에 따로 붙는다(`render-report.py --sns`).
+In the report they go in a **separate section** from the YouTube multiplier table.
+Put them in the same table and 12 mentions reads as 12x. The HTML attaches them as
+a final page too (`render-report.py --sns`).
 
-크레딧: 플랫폼 3 × 시드 N × 페이지 1 + 급상승 1. 시드 3 이면 10건이고 SerpApi
-무료 250회/월 안이다. 타임아웃·5xx 는 한 번 재시도하는데 같은 검색은 SerpApi
-캐시가 받아 크레딧이 안 든다. 같은 시드를 같은 날 반복하지 않는다.
+Credits: 3 platforms × N seeds × 1 page + 1 for rising searches. Three seeds is 10
+calls, inside SerpApi's free 250/month. Timeouts and 5xx get one retry, and the
+same search is served from SerpApi's cache at no credit cost. Don't repeat the same
+seed on the same day.
 
-스니펫은 구글 요약이라 본문과 다를 수 있다 — 스레드는 페이지의 자동 생성 주제
-요약문이 스니펫으로 오기도 한다(실측 1건). 인용하려면 URL 을 열어 확인한다.
+Snippets are Google summaries and can differ from the post body — for Threads, the
+page's auto-generated topic summary sometimes comes back as the snippet (seen once
+in the field test). Open the URL to check before quoting.
 
-## 이 스킬이 하지 않는 것
+## What this skill does not do
 
-- 조사 전용 유튜브 계정을 만들어 구독하는 일 — 툴이 그 자리를 대신한다.
-- VidIQ 확장 프로그램을 설치하는 일.
-- 주제를 영상으로 만드는 일 — storyboard / autoproduce 로 넘긴다.
-- 스레드 키워드 검색 고급 액세스를 신청하는 일 — Tech Provider 전환이 비가역이라
-  2026-08-12 에 신청하지 않기로 했다(`grow-threads/references/api-limits.md` §2).
+- Create a research-only YouTube account and subscribe with it — the tool takes
+  that place.
+- Install the VidIQ extension.
+- Turn a topic into a video — that goes to storyboard / autoproduce.
+- Apply for Threads keyword-search advanced access — converting to Tech Provider is
+  irreversible, so on 2026-08-12 we decided not to apply
+  (`grow-threads/references/api-limits.md` §2).

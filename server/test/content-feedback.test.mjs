@@ -1,5 +1,5 @@
 /**
- * 최근 게시분 피드백 — 순수 채점·HTML 렌더 (네트워크 없음).
+ * Recent-post feedback — pure scoring and HTML rendering (no network).
  */
 
 import assert from 'node:assert/strict';
@@ -14,24 +14,24 @@ import {
 } from '../dist/content-feedback.js';
 import { escapeHtml, renderFeedbackHtml } from '../dist/content-feedback-html.js';
 
-describe('median / 단위', () => {
-  it('짝수 개면 가운데 둘의 평균이다', () => {
+describe('median / units', () => {
+  it('with an even count it is the average of the middle two', () => {
     assert.equal(median([1, 3, 5, 7]), 4);
   });
-  it('빈 배열은 null 이다', () => {
+  it('an empty array is null', () => {
     assert.equal(median([]), null);
   });
-  it('0~1 은 백분율로 올린다', () => {
+  it('scales 0-1 up to a percentage', () => {
     assert.equal(asPercent(0.41), 41);
     assert.equal(asPercent(41), 41);
   });
-  it('큰 시청 값은 밀리초로 본다', () => {
+  it('reads a large watch value as milliseconds', () => {
     assert.equal(watchSeconds(8500), 8.5);
     assert.equal(watchSeconds(8.5), 8.5);
   });
 });
 
-describe('유튜브 채점', () => {
+describe('YouTube scoring', () => {
   const videos = [
     {
       videoId: 'a',
@@ -59,7 +59,7 @@ describe('유튜브 채점', () => {
     },
   ];
 
-  it('초반 통과가 중앙값보다 낮으면 훅 레버를 단다', () => {
+  it('attaches the hook lever when opening pass is below the median', () => {
     const { items } = analyzeYoutubeVideos(videos, { subscriberCount: 10 }, { views: 2000, subscribersGained: 4 });
     const weak = items.find((i) => i.id === 'b');
     assert.ok(weak);
@@ -67,13 +67,13 @@ describe('유튜브 채점', () => {
     assert.ok(weak.steps.some((s) => s.lever === 'hook'));
   });
 
-  it('period 가 없으면 pending 이다', () => {
+  it('is pending when there is no period', () => {
     const { items } = analyzeYoutubeVideos(videos, {}, {});
     const fresh = items.find((i) => i.id === 'c');
     assert.equal(fresh.tone, 'pending');
   });
 
-  it('훅·유지는 살아 있고 조회만 낮으면 각도 레버다', () => {
+  it('is the angle lever when hook and retention hold up and only views are low', () => {
     const pack = [
       {
         videoId: 'wide',
@@ -110,7 +110,7 @@ describe('유튜브 채점', () => {
   });
 });
 
-describe('인스타 채점', () => {
+describe('Instagram scoring', () => {
   const media = [
     {
       mediaId: '1',
@@ -138,25 +138,25 @@ describe('인스타 채점', () => {
     },
   ];
 
-  it('이탈이 중앙보다 높으면 훅이다', () => {
+  it('is the hook lever when drop-off is above the median', () => {
     const { items } = analyzeInstagramMedia(media, 5);
     const skippy = items.find((i) => i.id === '2');
     assert.ok(skippy.steps.some((s) => s.lever === 'hook'));
   });
 
-  it('릴스가 있으면 피드 사진은 빼고 릴스만 채점한다', () => {
+  it('when reels exist, feed photos are left out and only reels are scored', () => {
     const { items } = analyzeInstagramMedia(media, 5);
     assert.deepEqual(items.map((i) => i.id), ['1', '2']);
   });
 
-  it('릴스가 없으면 피드 사진은 pending 이다', () => {
+  it('with no reels, a feed photo is pending', () => {
     const { items } = analyzeInstagramMedia([media[2]], 5);
     assert.equal(items[0].tone, 'pending');
   });
 });
 
-describe('HTML 보고서', () => {
-  it('유튜브·인스타 섹션과 퍼널·차트가 있다', () => {
+describe('HTML report', () => {
+  it('has the YouTube and Instagram sections plus the funnel and charts', () => {
     const html = renderFeedbackHtml({
       channel: 'demo',
       generatedAt: '2026-08-16T12:00:00.000Z',
@@ -203,7 +203,7 @@ describe('HTML 보고서', () => {
     assert.match(html, /class="funnel"/);
     assert.match(html, /class="chart"/);
     assert.match(html, /class="rail"/);
-    assert.match(html, /다음 편에서 바꿀 것/);
+    assert.match(html, /What to change next episode/);
     assert.equal(escapeHtml('<x>'), '&lt;x&gt;');
   });
 });

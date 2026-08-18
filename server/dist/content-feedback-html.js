@@ -1,6 +1,6 @@
 /**
- * 최근 게시분 피드백 HTML — 글보다 도표·막대·퍼널로 읽히게 한다.
- * 오프라인(file://)에서도 열리게 CDN 차트 라이브러리는 쓰지 않는다.
+ * Recent-post feedback HTML — meant to be read through charts, bars, and funnels rather than prose.
+ * No CDN chart library, so it opens offline (file://) too.
  */
 export function escapeHtml(value) {
     return value
@@ -28,12 +28,12 @@ function clip(text, n = 36) {
 }
 function toneLabel(tone) {
     if (tone === 'ok')
-        return '유지';
+        return 'Keep';
     if (tone === 'watch')
-        return '손볼 점';
+        return 'Watch';
     if (tone === 'fix')
-        return '손대기';
-    return '대기';
+        return 'Fix';
+    return 'Pending';
 }
 function countTones(items) {
     return {
@@ -60,7 +60,7 @@ function chartBlock(title, items, key, higherIsBetter) {
         .join('');
     return `<figure class="chart">
     <figcaption>${escapeHtml(title)}</figcaption>
-    ${rows || '<p class="empty">숫자가 아직 없다</p>'}
+    ${rows || '<p class="empty">no numbers yet</p>'}
   </figure>`;
 }
 function funnel(steps, accent) {
@@ -76,9 +76,9 @@ function funnel(steps, accent) {
 }
 function rail(step) {
     return `<div class="rail">
-    <div><span>문제</span><p>${escapeHtml(step.problem)}</p></div>
-    <div><span>가설</span><p>${escapeHtml(step.hypothesis)}</p></div>
-    <div><span>다음 편</span><p>${escapeHtml(step.next)}</p></div>
+    <div><span>Problem</span><p>${escapeHtml(step.problem)}</p></div>
+    <div><span>Hypothesis</span><p>${escapeHtml(step.hypothesis)}</p></div>
+    <div><span>Next episode</span><p>${escapeHtml(step.next)}</p></div>
   </div>`;
 }
 function itemCard(item, metricCells) {
@@ -108,7 +108,7 @@ function actionBoard(section) {
             if (seen.has(step.next))
                 continue;
             seen.add(step.next);
-            const leverLabel = step.lever === 'hook' ? '훅' : step.lever === 'retain' ? '유지' : step.lever === 'angle' ? '각도' : '공유';
+            const leverLabel = step.lever === 'hook' ? 'Hook' : step.lever === 'retain' ? 'Retention' : step.lever === 'angle' ? 'Angle' : 'Shares';
             actions.push(`<li><b>${leverLabel}</b><span>${escapeHtml(step.next)}</span></li>`);
             if (actions.length >= 4)
                 break;
@@ -117,49 +117,49 @@ function actionBoard(section) {
             break;
     }
     if (actions.length === 0) {
-        return `<aside class="board empty-board">최근 ${section.items.length}편은 중앙값 대비 손댈 레버가 없다. 같은 형식을 한 편 더 올려 표본을 쌓는다.</aside>`;
+        return `<aside class="board empty-board">The last ${section.items.length} episodes have no lever to pull against the median. Post one more in the same format to build up the sample.</aside>`;
     }
-    return `<aside class="board"><h3>다음 편에서 바꿀 것</h3><ol>${actions.join('')}</ol></aside>`;
+    return `<aside class="board"><h3>What to change next episode</h3><ol>${actions.join('')}</ol></aside>`;
 }
 function platformSection(section, title, accent) {
     const id = section.platform.toLowerCase();
     if (!section.available) {
         return `<section id="${id}" class="plat">
       <div class="plat-head ${accent}"><span class="idx">${section.platform === 'YOUTUBE' ? '01' : '02'}</span><h2>${escapeHtml(title)}</h2></div>
-      <div class="skip-card">이 채널에 ${escapeHtml(title)} 토큰이 없거나 인사이트 스코프가 없다.<br>${escapeHtml(section.notes[0] ?? '')}</div>
+      <div class="skip-card">This channel has no ${escapeHtml(title)} token, or the insights scope is missing.<br>${escapeHtml(section.notes[0] ?? '')}</div>
     </section>`;
     }
     const tones = countTones(section.items);
     const accountLine = section.platform === 'YOUTUBE'
-        ? `구독 ${fmt(numish(section.account?.subscriberCount))} · 영상 ${fmt(numish(section.account?.videoCount))}`
-        : `팔로워 ${fmt(numish(section.account?.followersCount))} · 미디어 ${fmt(numish(section.account?.mediaCount))}`;
+        ? `Subscribers ${fmt(numish(section.account?.subscriberCount))} · Videos ${fmt(numish(section.account?.videoCount))}`
+        : `Followers ${fmt(numish(section.account?.followersCount))} · Media ${fmt(numish(section.account?.mediaCount))}`;
     const funnelHtml = section.platform === 'YOUTUBE'
         ? funnel([
-            { k: '조회', v: fmt(section.cohort.views, 0), hint: '품질 신호가 아님' },
-            { k: '초반 통과', v: fmt(section.cohort.hook, 0, '%'), hint: 'engaged / 조회' },
-            { k: '유지', v: fmt(section.cohort.retain, 0, '%'), hint: '평균 시청 비율' },
-            { k: '구독(채널)', v: fmt(section.cohort.channelSubRate, 2, '%'), hint: '편당 숫자는 없음' },
+            { k: 'Views', v: fmt(section.cohort.views, 0), hint: 'not a quality signal' },
+            { k: 'Opening pass', v: fmt(section.cohort.hook, 0, '%'), hint: 'engaged / views' },
+            { k: 'Retention', v: fmt(section.cohort.retain, 0, '%'), hint: 'average view percentage' },
+            { k: 'Subs (channel)', v: fmt(section.cohort.channelSubRate, 2, '%'), hint: 'no per-episode number' },
         ], accent)
         : funnel([
-            { k: '도달', v: fmt(section.cohort.reach, 0), hint: '비팔로워 오디션' },
-            { k: '3초 잔류', v: section.cohort.skip == null ? '—' : `${(100 - section.cohort.skip).toFixed(0)}%`, hint: '이탈의 반대' },
-            { k: '시청', v: fmt(section.cohort.watch, 1, '초'), hint: '같은 길이대 비교' },
-            { k: '공유', v: fmt(section.cohort.shareRate, 2, '%'), hint: '도달 대비' },
+            { k: 'Reach', v: fmt(section.cohort.reach, 0), hint: 'the non-follower audition' },
+            { k: '3s stay', v: section.cohort.skip == null ? '—' : `${(100 - section.cohort.skip).toFixed(0)}%`, hint: 'the inverse of drop-off' },
+            { k: 'Watch', v: fmt(section.cohort.watch, 1, 's'), hint: 'compare within the same length band' },
+            { k: 'Shares', v: fmt(section.cohort.shareRate, 2, '%'), hint: 'against reach' },
         ], accent);
     const charts = section.platform === 'YOUTUBE'
-        ? `${chartBlock('초반 통과 %', section.items, 'hook', true)}${chartBlock('평균 시청 %', section.items, 'retain', true)}`
-        : `${chartBlock('3초 이탈 % · 낮을수록 좋다', section.items, 'skip', false)}${chartBlock('평균 시청 초', section.items, 'watch', true)}`;
+        ? `${chartBlock('Opening pass %', section.items, 'hook', true)}${chartBlock('Average view %', section.items, 'retain', true)}`
+        : `${chartBlock('3s drop-off % · lower is better', section.items, 'skip', false)}${chartBlock('Average watch seconds', section.items, 'watch', true)}`;
     const cards = section.items
         .map((item) => {
         if (section.platform === 'YOUTUBE') {
-            return itemCard(item, metricCell('조회', fmt(item.metrics.views), vsClass(item.vsCohort.views)) +
-                metricCell('초반 통과', fmt(item.metrics.hook, 0, '%'), vsClass(item.vsCohort.hook)) +
-                metricCell('유지', fmt(item.metrics.retain, 0, '%'), vsClass(item.vsCohort.retain)));
+            return itemCard(item, metricCell('Views', fmt(item.metrics.views), vsClass(item.vsCohort.views)) +
+                metricCell('Opening pass', fmt(item.metrics.hook, 0, '%'), vsClass(item.vsCohort.hook)) +
+                metricCell('Retention', fmt(item.metrics.retain, 0, '%'), vsClass(item.vsCohort.retain)));
         }
-        return itemCard(item, metricCell('도달', fmt(item.metrics.reach), '') +
-            metricCell('3초 이탈', fmt(item.metrics.skip, 0, '%'), vsClass(item.vsCohort.skip)) +
-            metricCell('시청', fmt(item.metrics.watch, 1, '초'), vsClass(item.vsCohort.watch)) +
-            metricCell('공유율', fmt(item.metrics.shareRate, 2, '%'), vsClass(item.vsCohort.shareRate)));
+        return itemCard(item, metricCell('Reach', fmt(item.metrics.reach), '') +
+            metricCell('3s drop-off', fmt(item.metrics.skip, 0, '%'), vsClass(item.vsCohort.skip)) +
+            metricCell('Watch', fmt(item.metrics.watch, 1, 's'), vsClass(item.vsCohort.watch)) +
+            metricCell('Share rate', fmt(item.metrics.shareRate, 2, '%'), vsClass(item.vsCohort.shareRate)));
     })
         .join('');
     return `<section id="${id}" class="plat">
@@ -167,15 +167,15 @@ function platformSection(section, title, accent) {
       <span class="idx">${section.platform === 'YOUTUBE' ? '01' : '02'}</span>
       <div>
         <h2>${escapeHtml(title)}</h2>
-        <p class="acct">${escapeHtml(accountLine)} · 유지 ${tones.ok} · 손볼 점 ${tones.watch} · 손대기 ${tones.fix} · 대기 ${tones.pending}</p>
+        <p class="acct">${escapeHtml(accountLine)} · Keep ${tones.ok} · Watch ${tones.watch} · Fix ${tones.fix} · Pending ${tones.pending}</p>
       </div>
     </div>
-    <h3 class="block-label">퍼널 · 최근 ${section.items.length}편 중앙값</h3>
+    <h3 class="block-label">Funnel · median of the last ${section.items.length} episodes</h3>
     ${funnelHtml}
-    <h3 class="block-label">5편 비교</h3>
+    <h3 class="block-label">5-episode comparison</h3>
     <div class="charts">${charts}</div>
-    <h3 class="block-label">편별 채점</h3>
-    <div class="items">${cards || '<p class="empty">게시분이 없다</p>'}</div>
+    <h3 class="block-label">Per-episode scoring</h3>
+    <div class="items">${cards || '<p class="empty">no posts</p>'}</div>
     ${actionBoard(section)}
     <ul class="notes">${section.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>
   </section>`;
@@ -193,13 +193,13 @@ function vsClass(vs) {
 export function renderFeedbackHtml(report) {
     const when = new Date(report.generatedAt);
     const whenLabel = `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')} ${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`;
-    const channel = report.channel ?? '기본 토큰';
+    const channel = report.channel ?? 'default token';
     return `<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>최근 ${report.limit}편 피드백 — ${escapeHtml(channel)}</title>
+<title>Last ${report.limit} episodes feedback — ${escapeHtml(channel)}</title>
 <style>
 :root {
   --paper: #f3efe4;
@@ -322,27 +322,27 @@ footer { margin-top: 40px; font-size: 12px; color: var(--mute); border-top: 1px 
 <div class="wrap">
 <header class="hero">
   <div class="kicker">REVIEW · RECENT ${report.limit}</div>
-  <h1>${escapeHtml(channel)} 최근 ${report.limit}편</h1>
-  <p class="sub">유튜브와 인스타를 같은 틀로 본다. 점수가 아니라 다음 편에서 손댈 레버다. 비교 기준은 이번 ${report.limit}편의 중앙값이다.</p>
+  <h1>${escapeHtml(channel)} last ${report.limit} episodes</h1>
+  <p class="sub">YouTube and Instagram read through the same frame. Not a score — the lever to pull on the next episode. The comparison baseline is the median of these ${report.limit} episodes.</p>
   <div class="meta">
-    <span>작성 ${escapeHtml(whenLabel)}</span>
-    <span>집계 ${report.days}일</span>
-    <span>유튜브 ${report.youtube.available ? `${report.youtube.items.length}편` : '없음'}</span>
-    <span>인스타 ${report.instagram.available ? `${report.instagram.items.length}편` : '없음'}</span>
+    <span>Written ${escapeHtml(whenLabel)}</span>
+    <span>Window ${report.days} days</span>
+    <span>YouTube ${report.youtube.available ? `${report.youtube.items.length} episodes` : 'none'}</span>
+    <span>Instagram ${report.instagram.available ? `${report.instagram.items.length} episodes` : 'none'}</span>
   </div>
 </header>
 <nav class="jump">
-  <a href="#youtube">01 유튜브</a>
-  <a href="#instagram">02 인스타</a>
+  <a href="#youtube">01 YouTube</a>
+  <a href="#instagram">02 Instagram</a>
 </nav>
 <ol class="method">
-  <li><b>01 문제</b>어느 숫자가 중앙값에서 빠졌나</li>
-  <li><b>02 가설</b>포장 · 훅 · 유지 · 공유 중 어디를 의심하나</li>
-  <li><b>03 다음 편</b>한 가지만 바꿔 같은 지표로 다시 본다</li>
+  <li><b>01 Problem</b>which number fell off the median</li>
+  <li><b>02 Hypothesis</b>packaging, hook, retention, or shares — which one to suspect</li>
+  <li><b>03 Next episode</b>change one thing and look at the same metric again</li>
 </ol>
-${platformSection(report.youtube, '유튜브', 'yt')}
-${platformSection(report.instagram, '인스타 릴스', 'ig')}
-<footer>social-flow · content_feedback · 절대 임계 없이 최근 ${report.limit}편 중앙값과 비교한다. 유튜브 Analytics 는 2~3일 늦다.</footer>
+${platformSection(report.youtube, 'YouTube', 'yt')}
+${platformSection(report.instagram, 'Instagram Reels', 'ig')}
+<footer>social-flow · content_feedback · compares against the median of the last ${report.limit} episodes with no absolute thresholds. YouTube Analytics runs 2-3 days behind.</footer>
 </div>
 </body>
 </html>
