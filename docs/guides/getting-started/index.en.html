@@ -341,6 +341,7 @@ claude</code></pre>
 <pre><code>git clone https://github.com/ttalkkaklab/social-flow.git ~/social-flow
 claude --plugin-dir ~/social-flow</code></pre>
       <p>It runs as-is; only after editing <code>server/src</code> do you need <code>cd ~/social-flow/server &amp;&amp; npm install &amp;&amp; npm run check</code> for the build and the self-check tests. They call no external API, so they pass without any keys.</p>
+      <div class="note"><strong>It attaches outside Claude Code too.</strong> Grok CLI connects skills and the MCP tools with one line — <code>grok plugin install https://github.com/ttalkkaklab/social-flow.git --trust</code> (measured on grok 1.0.5). Codex CLI loads the 18 skills via <code>codex plugin marketplace add ttalkkaklab/social-flow</code> then <code>codex plugin add social-flow@social-flow</code> — MCP tools don't wire up yet as of codex 0.147.0. API keys travel the same shell-environment route as under Claude.</div>
     </div>
   </div>
 
