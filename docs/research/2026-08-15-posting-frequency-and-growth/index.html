@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>하루에 많이 올리면 손해인가 — 게시 빈도·차단 조사와 성장 베스트 프랙티스 (2026-08-15)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  nav.toc { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 56px; }
+  nav.toc h2 { font-size: 14px; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 14px; text-transform: uppercase; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  nav.toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a { color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500; }
+  nav.toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent); font-weight: 700; font-size: 12.5px;
+    margin-right: 10px; font-variant-numeric: tabular-nums;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
+  p { margin-bottom: 16px; }
+  p.note { font-size: 14.5px; color: var(--text-soft); }
+  p.lead { font-size: 17px; }
+  ul.plain { margin: 0 0 16px 22px; }
+  ul.plain li { margin-bottom: 8px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px;
+  }
+
+  .callout {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    background: var(--bg-soft); border-radius: 0 10px 10px 0;
+    padding: 16px 20px; margin-bottom: 20px; font-size: 15px;
+  }
+  .callout.green { border-left-color: var(--green); }
+  .callout.amber { border-left-color: var(--amber); }
+  .callout.red { border-left-color: var(--red); }
+  .callout.purple { border-left-color: var(--purple); }
+  .callout b:first-child { display: block; margin-bottom: 4px; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .verdict {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px 32px; margin-bottom: 56px;
+    box-shadow: var(--shadow);
+  }
+  .verdict .v-label {
+    font-size: 12.5px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); margin-bottom: 12px;
+  }
+  .verdict .v-main { font-size: 20px; font-weight: 700; line-height: 1.6; margin-bottom: 16px; letter-spacing: -.01em; }
+  .verdict p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14.5px; }
+  th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; font-size: 13.5px; }
+  .table-scroll { overflow-x: auto; }
+
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+  }
+  .badge.green { color: var(--green); background: var(--green-soft); }
+  .badge.amber { color: var(--amber); background: var(--amber-soft); }
+  .badge.red { color: var(--red); background: var(--red-soft); }
+  .badge.purple { color: var(--purple); background: var(--purple-soft); }
+  .badge.blue { color: var(--accent); background: var(--accent-soft); }
+
+  .grades { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 32px; }
+  .grades div {
+    flex: 1 1 200px; border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; font-size: 14px; color: var(--text-soft); background: var(--bg-card);
+  }
+  .grades div b { display: block; margin-bottom: 4px; }
+
+  .src-group { margin-bottom: 26px; }
+  .src-group h3 { margin-top: 0; }
+  .src-group ul { list-style: none; margin-left: 0; }
+  .src-group li {
+    font-size: 13.5px; margin-bottom: 6px; padding-left: 18px; position: relative;
+    color: var(--text-soft);
+  }
+  .src-group li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .src-group a { word-break: break-all; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 24px; font-size: 13.5px; color: var(--text-soft); }
+  footer p { margin-bottom: 8px; }
+  footer a { color: var(--accent); text-decoration: none; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">RESEARCH</span>
+  <h1>하루에 많이 올리면 손해인가<br>게시 빈도·차단 조사와 성장 베스트 프랙티스</h1>
+  <p class="sub">
+    "SNS에 하루 너무 많이 올리면 성장에 나쁘거나 차단될 수 있다"는 통념을 플랫폼 공식 문서로 확인하고,
+    그 자리에 무엇을 넣어야 하는지까지 조사했다. 대상은 이 저장소가 운영하는 세 플랫폼 — Threads·Instagram·YouTube 쇼츠다.
+  </p>
+  <div class="meta">
+    <span>작성 <strong>2026-08-15</strong></span>
+    <span>대상 <strong>Threads · Instagram · YouTube 쇼츠</strong></span>
+    <span>1차 확인 <strong>Meta 개발자 문서 · 투명성 센터 · YouTube 헬프센터</strong></span>
+    <span>기존 정본 <strong>growth-playbook 3종</strong></span>
+  </div>
+</header>
+
+<div class="verdict">
+  <div class="v-label">결론</div>
+  <div class="v-main">
+    빈도 자체를 벌하는 장치는 어느 플랫폼 문서에도 없다. 차단은 실재하지만 방아쇠가 개수가 아니라 반복이다.
+    그리고 팔로워가 없을 때 가장 크게 움직이는 지렛대는 콘텐츠 품질이 아니라 남의 대화에 들어가는 것이다.
+  </div>
+  <p>
+    통념을 세 조각으로 갈라 각각 확인했다. <b>알고리즘 페널티</b>는 공식 근거가 없고 오히려 반대 방향 근거가 많다.
+    <b>API 하드 리밋</b>은 확실히 있지만 제재가 아니라 수도꼭지이고, 사람이 손으로 올리는 규모는 근처에도 못 간다.
+    <b>정책 제재</b>는 진짜인데, YouTube가 문장으로 지목한 대상은 "많이"가 아니라 "같은 것을 반복해서"다 — 이 파이프라인이
+    AI 음악·AI 이미지·AI 나레이션으로 쇼츠를 찍어내므로 정면으로 해당한다.
+  </p>
+</div>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#grade">근거 등급</a></li>
+    <li><a href="#penalty">빈도 페널티는 근거가 없다</a></li>
+    <li><a href="#block">차단 — 수도꼭지와 제재</a></li>
+    <li><a href="#axis">성장의 축 — 참여가 먼저다</a></li>
+    <li><a href="#platform">플랫폼별로 지금 할 것</a></li>
+    <li><a href="#new">이번 조사가 채운 칸</a></li>
+    <li><a href="#gap">여전히 비어 있는 칸</a></li>
+    <li><a href="#sources">출처</a></li>
+  </ol>
+</nav>
+
+<section id="grade">
+  <h2 class="sec"><span class="no">01</span>근거 등급</h2>
+  <p>
+    이 분야는 공식 문서가 침묵하는 자리에 크리에이터 통설이 들어차 있다. 등급을 안 적으면 추측이 규칙으로 굳으므로
+    문장마다 밝힌다. 저장소의 <code>growth-playbook</code> 3종이 쓰는 등급 체계를 그대로 따랐다.
+  </p>
+  <div class="grades">
+    <div><b><span class="badge green">공식·1차</span></b>플랫폼이 자기 문서에 직접 쓴 것 — 개발자 문서·투명성 센터·헬프센터</div>
+    <div><b><span class="badge blue">실측</span></b>대규모 집계 또는 우리 채널 측정. 방향만 참고하고 숫자를 목표치로 쓰지 않는다</div>
+    <div><b><span class="badge purple">발언·2차 경유</span></b>책임자 발언인데 1차 매체를 열지 못하고 2차 인용으로 확인한 것</div>
+    <div><b><span class="badge red">미확인</span></b>찾았는데 통과한 근거가 없었다. 규칙으로 쓰지 않는다</div>
+  </div>
+</section>
+
+<section id="penalty">
+  <h2 class="sec"><span class="no">02</span>빈도 페널티는 근거가 없다</h2>
+
+  <p class="lead">
+    세 플랫폼 문서를 다 뒤졌지만 "많이 올리면 도달을 깎는다"는 문장을 찾지 못했다. 반대 방향 근거는 여럿이다.
+  </p>
+
+  <h3>YouTube는 명시적으로 부정한다 <span class="badge green">공식</span></h3>
+  <p>
+    업로드 빈도는 랭킹 요건이 아니고, 쇼츠는 영상 하나하나가 각자 평가된다. 어제 세 개 올렸다고 오늘 것이 손해 보지 않는다.
+    슬롯을 고정하는 이유는 알고리즘이 아니라 제작 리듬과 시청자 습관이다.
+  </p>
+
+  <h3>Instagram이 배포를 줄인다고 밝힌 사유에 빈도가 없다 <span class="badge green">1차</span></h3>
+  <p>
+    Meta 투명성 센터의 피드·탐색 랭킹 시스템 카드와 공식 랭킹 해설을 모두 확인했다. 배포를 낮추는 사유로 열거된 것은
+    전부 콘텐츠 속성이다 — 커뮤니티 규정 위반, 추천 가이드라인 위반, 저해상도, 워터마크, 음소거, 테두리,
+    화면 대부분이 텍스트인 릴스, 이미 인스타그램에 올라온 것. 게시 빈도는 목록 어디에도 없다.
+  </p>
+
+  <div class="callout amber">
+    <b>딱 하나 실재하는 제약 — 피드 다양성 <span class="badge green">공식</span></b>
+    <p>
+      Instagram 공식 랭킹 해설에 <i>"같은 사람의 글을 연속으로 너무 많이 보여주지 않으려 한다"</i>는 문장이 있다.
+      계정 페널티가 아니라 한 사람의 피드 안에서 순서를 섞는 규칙이다. 결과는 비슷해 보인다 — 하루에 몰아 올리면
+      뒤엣것이 앞엣것만큼 안 퍼진다. 그래도 벌이 아니라 배분이고, 시간을 벌려 올리면 상당 부분 풀린다.
+    </p>
+  </div>
+
+  <h3>집계 데이터도 같은 쪽이다 <span class="badge blue">실측</span></h3>
+  <p>
+    Buffer가 자사 이용 계정 10만 2천 개·게시물 210만 건을 집계했더니 주간 팔로워 증가율이 빈도에 따라 계속 올라갔다.
+  </p>
+  <div class="table-scroll"><table>
+    <tr><th>주간 게시 빈도</th><th>주간 팔로워 증가율</th></tr>
+    <tr><td>주 1~2회</td><td>+0.12%</td></tr>
+    <tr><td>주 3~5회</td><td>+0.26%</td></tr>
+    <tr><td>주 6~9회</td><td>+0.44%</td></tr>
+    <tr><td>주 10회 이상</td><td>+0.66%</td></tr>
+  </table></div>
+  <p class="note">
+    사다리 숫자만 인용하면 원문 결론이 뒤집힌다. 도달 증가폭은 수확 체감이고, 원문의 최종 권고도 최대치가 아니라
+    "번아웃 없이 도달과 성장을 함께 얻는 지점은 주 3~5회"다. 신뢰도를 낮추는 이유도 셋이다 — 스케줄링 SaaS 벤더의
+    자사 블로그이고, 표본이 Buffer 이용 계정에 한정되며, 표본 대부분이 이미 팔로워 기반을 가진 계정이라
+    팔로워 0~수백 채널에 증가율을 그대로 대입할 수 없다.
+  </p>
+
+  <div class="callout red">
+    <b>그래도 채우기 게시는 계정을 죽인다</b>
+    <p>
+      빈도 페널티가 없다는 게 아무거나 올려도 된다는 뜻은 아니다. 할 말 없이 리듬을 지키려는 채우기 게시가
+      계정을 가장 빨리 죽인다. 개수를 규칙으로 쓰지 않는 대신 "쓸 것이 있는가"를 판단 기준으로 둔다.
+    </p>
+  </div>
+</section>
+
+<section id="block">
+  <h2 class="sec"><span class="no">03</span>차단 — 수도꼭지와 제재</h2>
+
+  <p class="lead">
+    "차단될 수 있다"는 진짜다. 그런데 완전히 다른 두 가지가 같은 말로 불리고 있어서 갈라 봐야 한다.
+  </p>
+
+  <h3>하드 리밋은 제재가 아니다 <span class="badge green">공식</span></h3>
+  <p>
+    API 쿼터는 그냥 수도꼭지다. 넘으면 에러가 나고 24시간 지나면 다시 열린다. 계정에 흠집이 나지 않는다.
+  </p>
+  <div class="table-scroll"><table>
+    <tr><th>플랫폼</th><th>24시간 이동창 상한</th><th>조회 방법</th></tr>
+    <tr>
+      <td><b>Threads</b></td>
+      <td>게시 250건 · 답글 1,000건 · 삭제 100건 · 위치검색 500건</td>
+      <td><code>GET /{threads-user-id}/threads_publishing_limit</code></td>
+    </tr>
+    <tr>
+      <td><b>Instagram</b></td>
+      <td>API 게시 100건 (캐러셀은 여러 장이어도 1건)</td>
+      <td><code>GET /{ig-id}/content_publishing_limit</code></td>
+    </tr>
+    <tr>
+      <td><b>YouTube</b></td>
+      <td>존재하지만 <b>숫자 비공개</b> — 국가·채널 이력에 따라 다르다</td>
+      <td>없음 (초과 시 업로드 에러로만 확인)</td>
+    </tr>
+  </table></div>
+  <p class="note">
+    YouTube는 커뮤니티 가이드라인 경고를 받으면 이 한도가 줄어든다고 밝힌다. 그리고 사람이 하루 한두 개, 많아야
+    대여섯 개 올리는 규모는 이 선의 근처에도 못 간다. 여기 닿는 건 자동화 도배뿐이다.
+  </p>
+
+  <h3>진짜 계정이 멈추는 경로 <span class="badge green">공식</span></h3>
+  <p>
+    YouTube 스팸 정책이 겨냥하는 대상을 그대로 옮기면 이렇다 — 제작 도구로 반복 콘텐츠를 쏟아부어 플랫폼을 도배하는 것,
+    특히 <b>전 영상에 같은 배경음악과 반복되는 AI 이미지를 쓰고 AI가 쓴 대본을 읽어 주는 채널</b>.
+    90일 안에 스트라이크 3개면 채널 종료다.
+  </p>
+  <p>
+    Meta 쪽은 더 부드럽다. 커뮤니티 규정 위반은 아니지만 저품질이면 지우지 않고 추천에서 뺀다. 계정이 반복해서
+    추천 가이드라인을 어기면 일정 기간 그 계정 글 <b>전부</b>가 비팔로워 추천 대상에서 제외된다. 팔로워에게는 계속 노출되지만
+    팔로워가 0~수백이면 실무적으로 성장 정지다.
+  </p>
+
+  <div class="callout red">
+    <b>이 파이프라인에 직접 걸리는 지점</b>
+    <p>
+      읽어야 할 문장은 이거다 — <b>어느 플랫폼도 "하루 N개 넘으면"이라고 쓰지 않았고, 전부 "같은 것을 반복해서"라고 썼다.</b>
+      하루 다섯 개를 다 다르게 만들면 걸릴 조항이 없고, 하루 한 개라도 30일 내내 배경음악·구도·나레이션이 똑같으면
+      정확히 저 조항이다. <code>grow-youtube</code>의 대기열 소진 구조가 여기에 가장 가깝다 — 빈도를 줄일 문제가 아니라
+      편차를 만들 문제다.
+    </p>
+  </div>
+
+  <p class="note">
+    앱 안에서 나오는 일시적 기능 제한("잠시 후 다시 시도")은 팔로우·좋아요 폭주 같은 자동화성 행동에 걸리는 것으로
+    알려져 있다. <span class="badge red">미확인</span> 공식 문서가 조건을 밝히지 않아 이 대목은 확인하지 못했다.
+    다만 하루 몇 건 게시하는 규모와는 관계가 없다.
+  </p>
+</section>
+
+<section id="axis">
+  <h2 class="sec"><span class="no">04</span>성장의 축 — 참여가 먼저다</h2>
+
+  <p class="lead">
+    빈도가 답이 아니라면 무엇이 답인가. 세 플랫폼 근거가 한곳으로 모인다 — 콜드 스타트 구간에서 가장 크게 움직이는
+    지렛대는 콘텐츠 품질이 아니라 <b>남이 이미 모은 독자 앞에 서는 것</b>이다.
+  </p>
+
+  <h3>우리 실측 <span class="badge blue">실측</span></h3>
+  <p>
+    2026-08-12에 우리 Threads 답글 14건을 전수 조회하니, 상위 두 건의 도달이 <b>같은 시점 루트 글 여섯 중 넷을 넘어섰다</b>.
+    팔로워 한 자릿수 계정이 자기 힘으로 만들 수 있는 도달보다, 남의 글 도달에 얹히는 쪽이 크기 때문이다.
+  </p>
+  <p class="note">
+    단서 하나. 도달이 커도 반응은 얇았다(도달 상위 답글 둘 다 좋아요 1·대댓글 0). 답글은 대화를 열되 계정으로 사람을 끌어오지는
+    못한다 — 프로필로 넘어오게 하는 건 여전히 루트 글의 일이다. 두 축을 섞어 판단하지 않는다.
+  </p>
+
+  <h3>여기에 붙은 공식 발언 <span class="badge purple">발언·2차 경유</span></h3>
+  <div class="callout purple">
+    <b>Mosseri, Platformer 인터뷰</b>
+    <p>
+      <i>"존재감을 정말 키우려면 글을 올리는 것보다 답글을 훨씬 더 많이 써야 한다."</i>
+      (원문: "If you're really trying to grow your presence, you should reply much more than you post.")
+    </p>
+    <p class="note" style="margin-top:8px">
+      Platformer 원문 URL이 404라 1차 확인에 실패했고 2차 매체 인용으로만 확보했다. 그래서 등급을 낮춰 적는다.
+      다만 우리 자체 실측과 방향이 정확히 같아서, 지금까지 실측 하나로 붙들던 원칙에 바깥 근거가 하나 붙은 셈이다.
+    </p>
+  </div>
+
+  <h3>Instagram도 같은 방향을 권한다 <span class="badge green">1차</span></h3>
+  <p>
+    공식 크리에이터 문서가 도달을 늘리는 방법으로 <b>공동 게시(Collab)</b>를 직접 권한다 — 게시물 하나가 두 계정의
+    팔로워 양쪽에 함께 나간다(원문: "a single post shared with both sets of followers").
+    우리 IG 플레이북은 "팔로워 0일 때 첫 반응을 확보하는 실행법은 근거가 없다"고 빈칸으로 두었는데,
+    이게 그 칸에 들어갈 유일한 공식 답이다.
+  </p>
+  <div class="callout amber">
+    <b>단, 루프가 실행할 수 없다</b>
+    <p>
+      Collab은 앱 안의 초대 흐름이라 게시 API로 못 건다. 계정 상태(Account Status)·Related video와 같은 패턴이다 —
+      자율 루프는 값을 만들지 못하고 <b>리마인드만</b> 한다. 효과 크기도 공식 수치가 없어 채널 자체 실측으로만 알 수 있다.
+    </p>
+  </div>
+
+  <h3>YouTube만 구조가 다르다 <span class="badge green">공식</span></h3>
+  <p>
+    쇼츠는 영상 하나하나가 각자 평가되고 계정 이력이 덜 붙어서 처음부터 추천 피드에 얹힌다. 그래서 쇼츠에서 할 일은
+    인맥이 아니라 첫 순간이다. Threads가 대화 플랫폼이고 쇼츠가 추천 플랫폼이라는 차이를 섞지 않는다.
+  </p>
+</section>
+
+<section id="platform">
+  <h2 class="sec"><span class="no">05</span>플랫폼별로 지금 할 것</h2>
+
+  <h3>Threads — 답글 비중을 게시보다 높게</h3>
+  <ul class="plain">
+    <li>후보가 있으면 참여를 먼저 하고, 후보가 마르면 그때가 관찰 틱이다. 참여는 새 글을 못 쓸 때 하는 대체 활동이 아니다.</li>
+    <li>글은 고백·관찰형이 정보 전달형을 크게 이긴다 — 같은 나이에 도달이 <b>7.6배</b> 차이 났다. 갈린 축은 문체가 아니라 읽는 사람의 지분이다.</li>
+    <li>쓰기 전에 한 줄로 못박는다: "이 글을 읽는 사람은 누구이고 60초 안에 무엇을 판단하게 되는가."</li>
+    <li>초기 60~90분 안에 붙은 반응이 총량을 이긴다 — 골든아워 답글 대응이 틱의 최우선인 이유다.</li>
+  </ul>
+
+  <h3>Instagram — 관문 순서를 지킨다</h3>
+  <p>
+    도달이 죽으면 편집부터 고치지 않는다. 관문 1이 닫힌 상태에서 편집을 고치면 아무 효과가 없다.
+  </p>
+  <ul class="plain">
+    <li>앱의 <b>계정 상태</b>에서 추천 자격 확인 (사람이 — API 없음)</li>
+    <li>최근 <b>30일 게시물의 오리지널 비중</b> 점검 (재게시·워터마크·속도 변경이 섞였나)</li>
+    <li>그다음이 콘텐츠 — <code>reels_skip_rate</code>와 <code>ig_reels_avg_watch_time</code> 비교</li>
+  </ul>
+  <p class="note">
+    모델이 직접 예측하는 건 끝까지 보는가·3초 만에 나가는가·남에게 보내는가다. 좋아요를 목표로 편집하지 않는다.
+    릴스가 인스타 이용 시간의 절반을 넘는다는 게 공식 수치이니 기본 포맷은 릴스가 맞다. <span class="badge green">1차</span>
+  </p>
+
+  <h3>YouTube — 편차를 만든다</h3>
+  <ul class="plain">
+    <li>배경음악·구도·오프닝이 영상마다 같으면 스팸 정책 조항 안이다. 회차마다 하나는 바꾼다.</li>
+    <li>AI 고지는 켜는 쪽이 항상 유리하다 — 고지해도 도달과 수익 자격에 손해가 없다고 공식 문서에 적혀 있고, 상습 미고지에는 라벨 강제와 YPP 정지를 예고한다. 비대칭이 명확하다.</li>
+    <li>쇼츠 설명란·댓글의 URL은 클릭되지 않는다. 외부 전환은 채널 프로필 링크로 보낸다.</li>
+  </ul>
+</section>
+
+<section id="new">
+  <h2 class="sec"><span class="no">06</span>이번 조사가 채운 칸</h2>
+  <p>
+    기존 플레이북에 없던 것 셋을 새로 확인했다. 각각 어느 문서에 반영했는지 함께 적는다.
+  </p>
+  <div class="table-scroll"><table>
+    <tr><th>발견</th><th>등급</th><th>반영처</th></tr>
+    <tr>
+      <td><b>Mosseri — "게시보다 답글을 훨씬 더"</b><br>실측으로만 붙들던 참여 우위에 바깥 근거가 붙었다</td>
+      <td><span class="badge purple">발언·2차</span></td>
+      <td><code>grow-threads</code> §답글 도달</td>
+    </tr>
+    <tr>
+      <td><b>Instagram Collab</b><br>게시물 하나가 양쪽 팔로워에게 — 콜드 스타트의 유일한 공식 실행법. 단 API 불가</td>
+      <td><span class="badge green">1차</span></td>
+      <td><code>grow-instagram</code> §콜드 스타트</td>
+    </tr>
+    <tr>
+      <td><b>YouTube 조회 정의 변경</b><br>최소 시청 시간 요건 없이 재생 시작·반복 횟수를 센다</td>
+      <td><span class="badge green">공식</span></td>
+      <td><code>grow-youtube</code> §관찰 지표</td>
+    </tr>
+  </table></div>
+  <div class="callout green">
+    <b>조회 정의 변경의 결과</b>
+    <p>
+      조회수가 더 이상 품질 신호가 아니다. 스와이프로 스쳐 지나간 재생도 조회로 잡히므로, 조회가 늘었다는 사실만으로
+      영상이 좋았다고 읽으면 안 된다. <code>engagedViews</code>와 <code>averageViewPercentage</code>를 봐야 한다는
+      기존 지침이 이걸로 더 단단해졌다.
+    </p>
+  </div>
+</section>
+
+<section id="gap">
+  <h2 class="sec"><span class="no">07</span>여전히 비어 있는 칸</h2>
+  <p>
+    "아직 안 찾았다"가 아니라 <b>찾았는데 통과한 근거가 없었다</b>는 뜻이다.
+  </p>
+  <ul class="plain">
+    <li>
+      <b>훅 제작 규범의 1차 근거.</b> <span class="badge red">미확인</span>
+      YouTube 공식 문서 여러 곳을 열어 봤지만 훅·길이 권고가 없었고, "첫 1~2초를 붙잡으라"는 문구는 광고 문서 쪽 것이다.
+      Meta도 마찬가지다 — 확보된 건 "3초 미만 시청 확률이 모델의 예측 항목"이라는 구조뿐이고 그 안은 비어 있다.
+    </li>
+    <li>
+      <b>한국 시장 수치 전부.</b> <span class="badge red">미확인</span>
+      확보한 근거가 전부 글로벌 표본이다. 영어권 수치를 한국에 그대로 옮기지 않는다.
+    </li>
+    <li>
+      <b>Collab의 효과 크기.</b> <span class="badge red">미확인</span>
+      기능이 존재한다는 것까지가 공식이고, 도달이 얼마나 오르는지는 수치가 없다.
+    </li>
+    <li>
+      <b>앱 차원 일시 제한의 발동 조건.</b> <span class="badge red">미확인</span>
+      헬프센터 문서가 조건을 밝히지 않는다.
+    </li>
+  </ul>
+  <div class="callout">
+    <b>빈칸을 채우는 방법</b>
+    <p>
+      남의 블로그가 아니라 우리 채널 실측으로 채운다. 랭킹 문서에서 확인된 예측 항목이 그대로 측정 축이 된다 —
+      같은 소재로 훅만 바꿔 두 판을 내고 <code>reels_skip_rate</code>를 비교하는 식이다. 이건 근거 있는 실험이고,
+      "훅은 3초 안에 질문으로 시작하라" 같은 규범은 근거 없는 복창이다.
+    </p>
+  </div>
+</section>
+
+<section id="sources">
+  <h2 class="sec"><span class="no">08</span>출처</h2>
+
+  <div class="src-group">
+    <h3>공식 문서 <span class="badge green">1차</span></h3>
+    <ul>
+      <li><a href="https://about.instagram.com/blog/announcements/instagram-ranking-explained">Instagram Ranking Explained — About Instagram</a> · 연속 게시 다양성, 배포 감소 사유</li>
+      <li><a href="https://transparency.meta.com/features/explaining-ranking/ig-feed/">Instagram Feed AI system — Meta Transparency Center</a> · 빈도 언급 없음 확인</li>
+      <li><a href="https://transparency.meta.com/features/explaining-ranking/ig-explore/">Instagram Explore AI system — Meta Transparency Center</a></li>
+      <li><a href="https://developers.facebook.com/docs/instagram-platform/content-publishing">Instagram Content Publishing — Meta for Developers</a> · 100건/24h</li>
+      <li><a href="https://developers.facebook.com/docs/threads/troubleshooting/">Threads API Troubleshooting — Meta for Developers</a> · 250/1,000/100/500 (직접 열어 확인한 페이지)</li>
+      <li><a href="https://creators.instagram.com/blog/tips-for-improving-your-reach">Tips for Improving Your Reach — Instagram for Creators</a> · Collab 권고</li>
+      <li><a href="https://creators.instagram.com/how-to-grow">How to grow — Instagram for Creators</a> · 릴스 이용 시간 50%</li>
+      <li><a href="https://help.instagram.com/291200585956732">About collab posts on Instagram</a></li>
+      <li><a href="https://help.instagram.com/653964212890722">Recommendation eligibility on Instagram</a></li>
+      <li><a href="https://support.google.com/youtube/answer/2801973?hl=en">Spam, deceptive practices &amp; scams policies — YouTube Help</a> · 대량 반복 생산</li>
+      <li><a href="https://support.google.com/youtube/answer/10059070?hl=en">Get started creating YouTube Shorts — YouTube Help</a> · 조회 정의</li>
+      <li><a href="https://support.google.com/youtube/answer/10383400?hl=en">Common uploading errors — YouTube Help</a> · 일일 업로드 한도 존재·숫자 비공개</li>
+      <li><a href="https://support.google.com/youtube/answer/12934772?hl=en">Shorts tips — YouTube Help</a> · 훅 권고 없음 확인</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>발언 인용 <span class="badge purple">2차 경유</span></h3>
+    <ul>
+      <li>Mosseri, Platformer 인터뷰 — "reply much more than you post". 원문 URL 404로 1차 확인 실패, <a href="https://posteverywhere.ai/blog/how-to-go-viral-on-threads">2차 매체 인용</a>으로만 확보</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>벤더 집계 <span class="badge blue">실측·방향 참고</span></h3>
+    <ul>
+      <li><a href="https://www.dashsocial.com/blog/how-often-should-you-post-on-instagram">How Often Should You Post on Instagram — Dash Social</a></li>
+      <li><a href="https://blog.hootsuite.com/instagram-algorithm/">Instagram algorithm — Hootsuite</a></li>
+      <li>Buffer 게시 빈도 집계(계정 102,000 · 게시물 2.1M) — <code>grow-instagram/references/growth-playbook.md</code> 경유</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>저장소 정본 <span class="badge blue">실측</span></h3>
+    <ul>
+      <li><code>skills/grow-threads/references/growth-playbook.md</code> — 답글 도달 실측, 형식별 반응 실측</li>
+      <li><code>skills/grow-instagram/references/growth-playbook.md</code> — 두 관문, 랭킹 예측 항목, 기각된 통설 9건</li>
+      <li><code>skills/grow-youtube/references/growth-playbook.md</code> — 업로드 빈도 무관, AI 고지 비대칭</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p>2026-08-15 조사. 이 문서는 조사 기록이고, 루프가 읽는 전술 정본은 <code>skills/grow-*/references/growth-playbook.md</code> 3종이다.</p>
+  <p><a href="../../index.html">← social-flow 문서 홈</a></p>
+</footer>
+
+</div>
+</body>
+</html>

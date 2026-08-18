@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>유튜브 쇼츠 성장 베스트 프랙티스 — social-flow 가이드</title>
+<link rel="alternate" hreflang="en" href="index.en.html">
+<link rel="stylesheet" href="../../assets/reference.css">
+<style>
+  /* 이 문서 전용 소품 — 공용 reference.css 위에 얹는다 */
+  .lede { font-size: 18px; line-height: 1.7; color: var(--text); margin: 8px 0 4px; }
+  .lede strong { font-weight: 750; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }
+  .col-box { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; background: var(--bg-card); }
+  .col-box.win { border-top: 3px solid var(--green); }
+  .col-box.fail { border-top: 3px solid var(--red); }
+  .col-box h4 { margin: 0 0 10px; font-size: 14.5px; letter-spacing: .02em; }
+  .col-box.win h4 { color: var(--green); }
+  .col-box.fail h4 { color: var(--red); }
+  .col-box ul { margin: 0 0 0 18px; }
+  .col-box li { font-size: 14.5px; margin-bottom: 8px; }
+  .signal-num { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
+  .metric-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+  .metric { flex: 1 1 180px; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; background: var(--bg-soft); }
+  .metric .m-k { font-size: 13px; color: var(--text-soft); }
+  .metric .m-v { font-size: 15.5px; font-weight: 650; margin-top: 2px; }
+  .rule-list { list-style: none; margin-left: 0; }
+  .rule-list > li { position: relative; padding-left: 30px; margin-bottom: 16px; }
+  .rule-list > li .n {
+    position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums;
+  }
+  .quote-ex { border-left: 3px solid var(--border); padding: 2px 0 2px 16px; margin: 10px 0; color: var(--text-soft); font-size: 14.5px; }
+  .quote-ex b { color: var(--text); font-weight: 600; }
+  /* 공식 원문 인용 */
+  .src-quote {
+    border-left: 3px solid var(--border); background: var(--bg-soft);
+    border-radius: 0 8px 8px 0; padding: 12px 18px; margin: 14px 0;
+    font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13.5px; line-height: 1.7; color: var(--text-soft); word-break: normal;
+  }
+  .src-quote p { margin-bottom: 10px; }
+  .src-quote p:last-child { margin-bottom: 0; }
+  /* 시행일 타임라인 */
+  .timeline { list-style: none; margin: 18px 0 18px 8px; padding-left: 0; border-left: 2px solid var(--border); }
+  .timeline li { position: relative; padding-left: 26px; margin-bottom: 20px; }
+  .timeline li::before {
+    content: ""; position: absolute; left: -7px; top: 9px; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--accent); border: 3px solid var(--bg);
+  }
+  .timeline li.now::before { background: var(--amber); }
+  .timeline li.soon::before { background: var(--red); }
+  .timeline .t-date { display: block; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .timeline .t-body { font-size: 15px; color: var(--text-soft); }
+  .timeline .t-body strong { color: var(--text); }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="langbar"><a href="index.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../../index.html">문서</a><span>/</span>사용 가이드<span>/</span>유튜브 쇼츠 성장</div>
+
+<header class="hero">
+  <div class="kicker">GROWTH · YOUTUBE SHORTS</div>
+  <h1>유튜브 쇼츠를 성장시키는 법</h1>
+  <p class="sub">쇼츠 성장 조언은 대부분 근거가 없다. 이 문서는 YouTube 공식 문서에서 확인되고 적대적 검증까지 통과한 것만 담는다. AI로 채널을 돌릴 때 수익화가 막히는 조건과 고지 의무의 범위, 2027년 개편이 만든 사실상의 마감일, 쇼츠에서 어디로 보낼 수 있는지, 그리고 YouTube가 직접 부정하는 통념을 다룬다.</p>
+  <div class="meta">
+    <span>기준일 <strong>2026-08-11</strong></span>
+    <span>갱신 <strong>2026-08-15 스팸 정책·업로드 한도 · 2026-08-16 자동화 절</strong></span>
+    <span>근거 <strong>YouTube 공식 문서 (237건 추출 → 50건 3표 검증 → 28건 확정)</strong></span>
+    <span>성장 루프 <strong><code>/social-flow:grow-youtube</code></strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#why">먼저 알아야 할 것</a></li>
+    <li><a href="#ai">AI로 만들 때의 경계선</a></li>
+    <li><a href="#deadline">2027년 개편 — 사실상의 마감일</a></li>
+    <li><a href="#pool">쇼츠 수익은 어떻게 계산되나</a></li>
+    <li><a href="#signals">도달을 정하는 신호</a></li>
+    <li><a href="#funnel">쇼츠에서 어디로 보낼 것인가</a></li>
+    <li><a href="#myth">통념 — 하지 않아도 되는 것</a></li>
+    <li><a href="#views">조회수 정의가 바뀌었다</a></li>
+    <li><a href="#metrics">무엇을 볼 것인가</a></li>
+    <li><a href="#refuted">검증에서 탈락한 주장</a></li>
+    <li><a href="#unknown">아직 모르는 것</a></li>
+    <li><a href="#automation">자동화 — grow-youtube</a></li>
+    <li><a href="#sources">출처</a></li>
+  </ol>
+</nav>
+
+<section id="why">
+  <h2>1. 먼저 알아야 할 것</h2>
+  <p class="lede"><strong>AI로 만드는 것 자체는 아무 문제가 없다. 수익화를 가르는 선은 「AI를 썼는가」가 아니라 「템플릿으로 찍어냈는가」에 그어져 있다.</strong></p>
+  <p>쇼츠에서 채널을 키운다는 건 두 개의 다른 관문을 통과하는 일이다. 하나는 <strong>숫자</strong> — 구독자와 조회수 문턱을 넘는 것. 다른 하나는 <strong>심사</strong> — 콘텐츠가 수익화 정책을 통과하는 것. 둘은 완전히 별개이고, AI 자동화 채널의 실패는 대부분 두 번째에서 난다.</p>
+  <p>그래서 이 문서는 §2(AI 경계선)와 §3(마감일)을 앞에 둔다. 알고리즘 최적화는 그다음 문제다 — 심사에서 걸리면 도달이 아무리 좋아도 돈이 안 되기 때문이다.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>판정</th><th>신뢰도</th></tr></thead>
+    <tbody>
+      <tr><td>AI 생성 콘텐츠의 수익화</td><td>AI 사용 자체는 <strong>금지가 아니다</strong>. 템플릿 양산 인상을 주면서 제작자 관점이 없는 결과물이 대상에서 빠진다</td><td><span class="badge ro">공식 · 3-0</span></td></tr>
+      <tr><td>절대 금지 영역</td><td>건강·법률·금융·정치에서 <strong>사람 전문가처럼 말하는 AI 페르소나</strong>는 독창적이어도 수익화 불가</td><td><span class="badge ro">공식 · 3-0</span></td></tr>
+      <tr><td>2027-02-01 YPP 개편</td><td>신규 진입 문턱 <strong>정확히 2배</strong>. 기존 회원은 제외</td><td><span class="badge ro">공식 · 3-0</span></td></tr>
+      <tr><td>쇼츠 수익 배분</td><td>상시 권리 → <strong>문턱제</strong>. 90일 1,000만 회 미달 시 쇼츠 배분만 정지</td><td><span class="badge ro">공식 · 3-0</span></td></tr>
+      <tr><td>업로드 빈도 · 시각</td><td>둘 다 <strong>랭킹 요건이 아니다</strong>. YouTube가 다년 분석으로 직접 부정</td><td><span class="badge ro">공식 · 3-0</span></td></tr>
+      <tr><td>쇼츠 조회수 (2025-03-31~)</td><td>재생 시작마다 집계 — <strong>리텐션 지표가 아니다</strong></td><td><span class="badge ro">공식 · 3-0</span></td></tr>
+      <tr><td>쇼츠 랭킹 신호</td><td>시청 선택 비율 · 평균 시청 시간 · 평균 시청 비율 + 좋아요 · 시청 후 설문</td><td><span class="badge wr">공식 · 2-1</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <strong>신뢰도 표기.</strong> 여기 남은 항목은 <strong>전부 YouTube 공식 문서</strong>가 출처다. <code>3-0</code>은 검증자 셋 모두 반박에 실패했다는 뜻이고, <code>2-1</code>은 한 명이 반박에 성공했다는 뜻이다(해당 절에 이유를 적었다). 공식 문서 밖의 대규모 실측 중 검증을 통과한 것은 <strong>하나뿐</strong>이다 — Galloway의 33억 조회 연구인데, 60초 상한 시절 자료라는 한계를 달고서만 통과했다(§5). Metricool의 79만 영상 분석 두 건은 3표 전원 반박으로 탈락했다(§10).
+  </div>
+</section>
+
+<section id="ai">
+  <h2>2. AI로 만들 때의 경계선</h2>
+  <p>2025년 7월 15일, YouTube는 <strong>'반복 콘텐츠(repetitious content)'</strong> 정책을 <strong>'진위성 없는 콘텐츠(inauthentic content)'</strong>로 개명하면서 "반복적이거나 양산된 콘텐츠를 포함한다"는 점을 명확히 했다.</p>
+
+  <div class="src-quote">
+    <p>"July 15, 2025: We're making a minor update to our 'repetitious content' policy to better clarify this includes content that is repetitive or mass-produced. We are also renaming this policy from 'repetitious content' to 'inauthentic content.' This type of content has always been ineligible for monetization under our existing policies…"</p>
+  </div>
+
+  <p>YouTube는 이걸 새 AI 단속이 아니라 기존 규정의 명확화라고 설명한다. 다만 그건 YouTube의 프레이밍이지 위험이 작다는 뜻이 아니다 — 정책 본문이 AI를 직접 지목하고 있다.</p>
+
+  <h3>선은 어디에 그어져 있나</h3>
+  <p>공식 문서가 되는 예시와 안 되는 예시를 나란히 든다. 읽어 보면 기준이 명확하다 — <strong>도구가 AI인지가 아니라 결과물이 템플릿 양산인지</strong>를 본다.</p>
+
+  <div class="two-col">
+    <div class="col-box win">
+      <h4>✓ 수익화 가능</h4>
+      <ul>
+        <li>자기가 <strong>창안한 고유 캐릭터와 서사</strong>를 AI로 시각화</li>
+        <li>AI로 대본을 다듬기</li>
+        <li>AI로 고유한 배경 비주얼 생성</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ 수익화 불가</h4>
+      <ul>
+        <li>일반적·비독창적 템플릿으로 만들어 <strong>양산 인상</strong>을 주면서 제작자의 관점이 없는 AI 결과물</li>
+        <li>이미지 슬라이드쇼</li>
+        <li>서사·해설이 거의 없는 <strong>스크롤 텍스트</strong></li>
+        <li>같은 상황을 같은 결말로 반복하는 영상</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>판정 문구는 두 줄이다. <strong>"본인의 원작일 것"</strong>(남의 것을 가져오면 상당히 변형해 자기 것으로 만들 것), 그리고 <strong>"양산·일반적·반복적·조작적이지 않을 것"</strong> — 조회수만을 목적으로가 아니라 시청자의 즐거움이나 교육을 위해 만들 것.</p>
+
+  <div class="danger">
+    <strong>예외 없이 막히는 영역.</strong> 건강 · 법률 · 금융 · 정치 같은 민감 주제에서 <strong>사람 전문가처럼 제시되는 AI 페르소나</strong>는 내용이 아무리 독창적이어도 수익화가 막힌다. 공식 예시는 AI '의사'의 건강 조언, AI 팟캐스트 진행자의 투자 조언이다. AI 파이프라인으로 한국어 채널을 돌린다면 이 네 분야가 지뢰밭이다.
+  </div>
+
+  <h3>실무에서 걸리는 함정</h3>
+  <ul class="rule-list">
+    <li><span class="n">1</span> 정책 페이지의 <strong>실제 섹션 제목은 여전히 "Generic or Repetitive Content"</strong>다. 'inauthentic content'로 검색하면 헤딩을 못 찾는다.</li>
+    <li><span class="n">2</span> 이건 삭제·차단 정책이 아니라 <strong>수익화 자격</strong> 정책이다. 영상이 내려가는 게 아니라 채널이 YPP에서 빠진다.</li>
+    <li><span class="n">3</span> 문서는 '사람이 만든 부가가치'를 문자 그대로 요구하지 않는다. 요구하는 건 <strong>'제작자의 독창적·진솔한 관점'</strong>이고 심사 기준이나 입증 절차는 없다 — 결과물 자체에서 드러나야 한다. 사람이 검수했다는 걸 증빙할 방법이 없으므로 <strong>영상마다 고유한 기획이 실제로 담기는 것</strong>이 유일한 방어선이다.</li>
+  </ul>
+
+  <h3>더 무서운 쪽은 스팸 정책이다 — 관문이 하나 더 있다</h3>
+  <p>위 진위성 정책은 <strong>수익화 자격</strong>만 건다(실무 함정 2번). 그런데 같은 행위를 <strong>삭제와 채널 종료</strong>로 다루는 별도 정책이 있다 — 스팸·기만 행위 정책이다. 둘을 한 덩어리로 읽으면 위험을 절반만 보게 된다.</p>
+
+  <div class="src-quote">
+    <p>"YouTube doesn't allow use of creation tools to flood the platform with repetitive content, including coordinated mass-production and technical manipulation to bypass filters."</p>
+  </div>
+
+  <p>정책이 예로 드는 형태가 <strong>전 영상에 같은 배경음악과 반복되는 AI 이미지를 쓰고 AI가 쓴 대본을 읽어 주는 채널</strong>이다. 이 파이프라인이 음악(Lyria)·이미지·나레이션(TTS)을 전부 생성하므로, 템플릿을 그대로 돌리면 이 문장 안이다.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>정책</th><th>무엇을 잃나</th><th>회복</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>진위성 없는 콘텐츠</strong><br>(채널 수익 창출 정책)</td>
+        <td>수익화 자격 — 채널이 YPP에서 빠진다. 영상 자체는 안 내려간다</td>
+        <td>정책 준수 후 재신청</td>
+      </tr>
+      <tr>
+        <td><strong>스팸·기만 행위</strong><br>(커뮤니티 가이드라인)</td>
+        <td>콘텐츠 삭제 · 경고 · 스트라이크. <strong>90일에 3스트라이크면 채널 종료</strong></td>
+        <td>스트라이크는 90일 후 소멸 · 종료는 이의신청</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="danger">
+    <strong>방아쇠는 빈도가 아니라 반복이다.</strong> 어느 플랫폼도 "하루 N개 넘으면"이라고 쓰지 않았고, 전부 "같은 것을 반복해서"라고 썼다. 하루 다섯 개를 다 다르게 만들면 걸릴 조항이 없고, <strong>하루 한 개라도 30일 내내 배경음악·구도·나레이션이 똑같으면</strong> 정확히 저 조항이다. 그래서 대응은 게시를 줄이는 게 아니라 <strong>편차를 만드는 것</strong>이다 — 회차마다 BGM·커버 구도·오프닝 중 최소 하나는 바꾸고, 대기열을 소진하느라 같은 틀을 연속으로 내보내지 않는다.
+  </div>
+
+  <div class="warn">
+    <strong>자격 심사는 두 개의 다른 관문이다.</strong> YPP 자격 페이지에는 콘텐츠 진위성 기준이 <strong>하나도 없다</strong> — 페이지 전문에 'AI', 'inauthentic', 'reused', 'mass-produced', 'synthetic'이 전부 0회다. 진위성 판단은 별도 문서인 채널 수익 창출 정책이 맡고, 파트너 계약을 수락하는 순간 준수 의무가 생긴다. 위반하면 시청 시간·구독자 수와 <strong>무관하게</strong> 수익화를 잃는다.
+  </div>
+
+  <h3>고지(disclosure)는 또 다른 관문이다 — 그리고 켜는 게 이득이다</h3>
+  <p>수익화 자격과 별개로, 실제처럼 보이는 AI 콘텐츠에는 <strong>업로드 시 고지 의무</strong>가 있다. 앞선 조사에서 범위를 확정하지 못했던 항목인데, 이번에 공식 문서로 확인했다. 결론부터 말하면 <strong>애매하면 켜는 쪽이 항상 낫다.</strong></p>
+
+  <div class="src-quote">
+    <p>"Disclosing AI content won't limit a video's audience or impact its eligibility to earn money."</p>
+    <p>"Creators who consistently choose not to disclose this information may be subject to manual application of a label, or penalties from YouTube, including removal of content or suspension from the YouTube Partner Program."</p>
+  </div>
+
+  <p>고지에는 <strong>불이익이 없고</strong> 미고지에는 <strong>라벨 강제·삭제·YPP 정지</strong>가 걸려 있다. 비용이 한쪽에만 있으니 판단이 어려울 이유가 없다.</p>
+
+  <div class="two-col">
+    <div class="col-box fail">
+      <h4>고지 대상</h4>
+      <ul>
+        <li><strong>AI 생성 음악</strong></li>
+        <li>실제 장소의 AI 생성 추가 영상</li>
+        <li>실존 인물의 사실적 생성 영상</li>
+        <li>하지 않은 말·행동을 한 것처럼 보이게 하기</li>
+        <li>일어나지 않은 사건의 사실적 묘사</li>
+      </ul>
+    </div>
+    <div class="col-box win">
+      <h4>면제</h4>
+      <ul>
+        <li>대본·제목·<strong>썸네일</strong>·개요 생성</li>
+        <li>자막 생성 · 아이디어 생성</li>
+        <li><strong>자기 목소리 복제</strong>(더빙·보이스오버)</li>
+        <li>사실적이지 않은 콘텐츠(판타지·애니메이션)</li>
+        <li>색보정 · 뷰티 필터 · 화질 개선</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>AI 파이프라인으로 돌린다면 사실상 항상 고지 대상이다.</strong> 생성 음악이 목록 맨 앞에 있어서다. 대본·썸네일·자막·자기 목소리만 AI로 만든 채널이라면 면제지만, 생성 배경음악을 한 곡이라도 깔면 선을 넘는다. 라벨 위치는 사실적 콘텐츠면 플레이어에, 애니메이션·비사실적이면 확장된 설명란에 붙는다.
+  </div>
+</section>
+
+<section id="deadline">
+  <h2>3. 2027년 개편 — 사실상의 마감일</h2>
+  <p>2026년 8월 10일 공식 블로그로 발표된 개편이 진입 문턱을 두 배로 올린다. 시행일은 2027년 2월 1일이고, <strong>기존 회원은 인상에서 제외된다</strong>.</p>
+
+  <ul class="timeline">
+    <li class="now">
+      <span class="t-date">지금 ~ 2027-01-31</span>
+      <span class="t-body">진입 경로 둘. 구독자 1,000명 <strong>+</strong> 12개월 유효 시청 4,000시간, 또는 구독자 1,000명 <strong>+</strong> 90일 유효 쇼츠 조회 1,000만 회. 둘 중 하나만 넘기면 된다. 쇼츠 경로로 들어와도 워치페이지 광고·멤버십·Super·쇼핑까지 YPP 혜택 전체를 받는다.</span>
+    </li>
+    <li class="soon">
+      <span class="t-date">2027-02-01 ~ (신규 신청자)</span>
+      <span class="t-body">문턱이 <strong>정확히 두 배</strong>가 된다 — 365일 유효 시청 <strong>8,000시간</strong> 또는 90일 유효 쇼츠 조회 <strong>2,000만 회</strong>. 구독자 1,000명은 그대로다.</span>
+    </li>
+    <li class="soon">
+      <span class="t-date">2027-02-01 ~ (모든 회원)</span>
+      <span class="t-body">쇼츠 광고·구독 수익 배분이 상시 권리에서 <strong>문턱제</strong>로 바뀐다. 최근 90일 유효 쇼츠 조회 <strong>1,000만 회</strong>를 넘는 채널만 받는다. 미달해도 YPP에서 빠지지 않고 롱폼 수익은 유지되며, 다시 넘기면 자동 복구된다.</span>
+    </li>
+  </ul>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>구분</th><th>현행</th><th>2027-02-01 이후</th></tr></thead>
+    <tbody>
+      <tr><td>구독자</td><td>1,000명</td><td>1,000명 (변동 없음)</td></tr>
+      <tr><td>롱폼 경로</td><td>12개월 4,000시간</td><td><strong>365일 8,000시간</strong></td></tr>
+      <tr><td>쇼츠 경로</td><td>90일 1,000만 회</td><td><strong>90일 2,000만 회</strong></td></tr>
+      <tr><td>쇼츠 수익 배분</td><td>YPP면 자동</td><td><strong>90일 1,000만 회 이상 유지 시</strong></td></tr>
+      <tr><td>기존 회원 적용</td><td>—</td><td>진입 문턱은 제외 · 배분 문턱은 적용</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="ok">
+    <strong>실무 결론.</strong> 수익화가 목표라면 <strong>2027년 2월 1일 전에 자격을 넘겨두는 것</strong>이 문턱 두 배를 피하는 유일한 방법이다. 그리고 쇼츠만으로 수익을 내려면 진입에 90일 2,000만 회, 유지에 90일 1,000만 회가 계속 필요하다 — 한 번 넘고 끝나는 관문이 아니라 <strong>계속 굴러가는 러닝머신</strong>이다. 기존 파트너는 2027-01-31까지 Studio에서 갱신 약관을 수락해야 수익화가 온전히 유지된다.
+  </div>
+
+  <p>주의: 출처는 90일 조회 창만 명시하고 평가 주기는 말하지 않는다. "분기마다 켜졌다 꺼진다"고 단정하면 안 된다 — 롤링 윈도우라면 아무 때나 바뀔 수 있다.</p>
+</section>
+
+<section id="pool">
+  <h2>4. 쇼츠 수익은 어떻게 계산되나</h2>
+  <p>롱폼과 구조 자체가 다르다. 롱폼은 워치페이지 광고 순수익의 <strong>55%</strong>를 <strong>영상 단위</strong>로 받는다. 쇼츠는 영상 단위가 아니라 <strong>풀(pool) 방식</strong>이다.</p>
+
+  <div class="note">
+    <strong>매달 반복되는 계산 순서.</strong> 쇼츠 피드의 영상 사이 광고 수익을 한데 모은다 → 음악 라이선스 비용을 뗀다 → 남은 게 <strong>Creator Pool</strong> → engaged view와 음악 사용량 기준으로 <strong>국가별</strong>로 나눈다 → 제작자가 자기 배정액의 <strong>45%</strong>를 가져간다.
+  </div>
+
+  <p>이 45%는 음악을 썼든 안 썼든 같다. 음악은 배분율이 아니라 풀에 들어가는 단계에서 깎인다. 음악 1곡 시 실효 수취율 22.5%라는 계산이 널리 퍼져 있지만, 이 조사에서 3표 전원 반박으로 탈락했으므로 숫자로 단정하면 안 된다.</p>
+
+  <h3>배분 계산에서 빠지는 것</h3>
+  <ul>
+    <li>남의 영화·TV 무편집 클립</li>
+    <li>다른 제작자 콘텐츠 재업로드 (YouTube 및 타 플랫폼)</li>
+    <li>원본 없는 편집 모음(compilation)</li>
+    <li>자동 클릭·스크롤 봇에 의한 인위적 조회</li>
+    <li>광고주 친화 가이드라인 위반 콘텐츠의 조회</li>
+  </ul>
+  <p>이 목록은 "such as"로 열려 있어 닫힌 집합이 아니다. 그리고 '수익이 안 난다'는 건 업로더가 배분을 못 받는다는 뜻이지, 그 콘텐츠 주변 광고 수익이 풀에 안 들어간다는 뜻이 아니다.</p>
+  <p>2024년 10월 15일부터 <strong>3분짜리 쇼츠</strong>도 표준 수익 모델 대상이다.</p>
+</section>
+
+<section id="signals">
+  <h2>5. 도달을 정하는 신호</h2>
+  <p>YouTube가 쇼츠 검색·발견 문서에서 직접 나열한 신호는 이렇다.</p>
+
+  <div class="src-quote">
+    <p>"do they choose to watch it, ignore it, or click 'not interested'? … % of viewers who chose to view, avg. view duration and avg. % viewed … likes and post-watch survey results."</p>
+  </div>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>신호</th><th>알고리즘이 보는 것</th><th>실무 번역</th></tr></thead>
+    <tbody>
+      <tr><td><span class="signal-num">1</span> 시청 선택 비율</td><td>추천했을 때 보기를 택한 사람의 비율</td><td><strong>쇼츠에만 있는 지표.</strong> 첫 화면에서 멈춰 세워야 한다</td></tr>
+      <tr><td><span class="signal-num">2</span> 평균 시청 시간</td><td>실제로 몇 초를 봤나</td><td>길이를 늘릴수록 유지가 어려워진다</td></tr>
+      <tr><td><span class="signal-num">3</span> 평균 시청 비율</td><td>전체 길이 대비 몇 %를 봤나</td><td>짧은 영상이 유리한 구조</td></tr>
+      <tr><td><span class="signal-num">4</span> 좋아요</td><td>만족도 신호</td><td>후행 지표 — 판단을 바꾸지는 않는다</td></tr>
+      <tr><td><span class="signal-num">5</span> 시청 후 설문</td><td>본 다음 만족했는지 직접 물어본 결과</td><td>제작자가 직접 손댈 수 없는 영역</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>애널리틱스 쪽 용어는 <strong>'피드에 표시된 횟수(Shown in feed)'</strong>와 <strong>'시청 대 스와이프 이탈 비율'</strong>이다.</p>
+
+  <div class="warn">
+    <strong>표결이 갈린 이유 — 여기가 중요하다.</strong> 검증자가 같은 문서의 롱폼 버전을 대조하니, 롱폼 페이지도 CTR을 언급하지 않고 "보기를 택했는지, 무시했는지"라는 똑같은 문장을 쓴다. 그러니 <strong>"쇼츠에는 CTR이 없다"는 흔한 설명은 그 자체로 쇼츠의 고유 특징이 아니다.</strong> 문서상 쇼츠에만 있는 진짜 차이는 위 표의 1번 하나다.
+    <p style="margin-top:10px">또 하나 — 피드 밖에서 노출되는 쇼츠(검색 결과, 홈 선반, 채널 페이지)는 여전히 썸네일로 보이고 노출수·CTR이 잡힌다. <strong>"쇼츠는 썸네일이 필요 없다"는 말은 피드 안에서만 맞다.</strong></p>
+  </div>
+
+  <h3>훅과 길이 — 공식 정답이 없는 자리</h3>
+  <p>여기가 시중 자료와 공식 문서의 간극이 가장 큰 지점이다. <strong>YouTube는 쇼츠 길이의 상한(3분)만 정하고 그 안에서 몇 초가 좋은지 한 번도 권고하지 않는다.</strong> 제작 팁 문서 일곱 곳을 훑어도 길이 권고가 없고, 훅 설계나 리텐션 임계에 관한 항목도 없다.</p>
+
+  <p>그 빈자리를 채우는 유일한 대규모 데이터가 Paddy Galloway의 2023년 4월 연구다 — 33개 채널, 5,400개 쇼츠, 33억 조회. 원문에서 확인한 수치는 이렇다.</p>
+
+  <div class="src-quote">
+    <p>"shorts with under 60% VVSA rarely performed well… The best performing shorts were typically between 70 and 90%"</p>
+    <p>"The shorts algorithm does (unsurprisingly) appear to favor longer videos (40 seconds+) that hold viewer duration well. However, there were outliers at all lengths. So don't feel you have to make your video a certain length."</p>
+    <p>"Shorts where the AVD was higher than 50 seconds averaged 4.1 million views. Just making a long short isn't the goal, making a short that holds people for as long as possible is."</p>
+  </div>
+
+  <div class="danger">
+    <strong>이 숫자를 규칙으로 쓰면 안 되는 이유가 넷이다.</strong> ① 2023년 4월 자료이고 <strong>당시 쇼츠 상한은 60초</strong>였다 — 3분 시대에 대해 이 데이터는 아무 말도 하지 않는다. ② 방법론이 비공개이고 통계 검정이 없다. 60%·70~90%는 저자가 산점도를 눈으로 읽은 값이다("As you can see by the line"). ③ 영상당 평균 61만 조회라 대형 채널 표본이다. ④ 컨설팅 회사의 리드 제너레이션 콘텐츠다. 같은 글의 RPM·구독 전환 수치는 별도 검증에서 기각됐다(§10).
+  </div>
+
+  <p>"첫 1초를 강하게, 인트로를 썸네일처럼 다루라"는 조언도 같은 글에서 나왔는데, 이건 측정 결과가 아니라 <strong>저자의 처방</strong>이다. 구분해서 읽어야 한다.</p>
+
+  <p><strong>실무 제약 하나.</strong> 음원을 쓰면 대부분 90초까지만 허용되고 일부 트랙은 60초·30초로 내려간다. 3분 상한은 무음이나 자체 음원일 때 이야기다. 1분 넘는 쇼츠에 저작권 클레임이 걸리면 전 세계 차단이다.</p>
+</section>
+
+<section id="funnel">
+  <h2>6. 쇼츠에서 어디로 보낼 것인가</h2>
+  <p class="lede"><strong>쇼츠의 설명란과 댓글에 넣은 URL은 클릭되지 않는다.</strong> 스팸 방지 조치이고, 어떤 등급의 채널이든 마찬가지다.</p>
+
+  <p>평문으로 붙여 넣을 수는 있지만 링크로 동작하지 않는다. 롱폼 영상 설명란의 클릭 링크는 고급 기능 액세스를 켜면 열리는데 — <strong>쇼츠는 그 예외다.</strong> 외부로 보내려면 채널 프로필 링크를 쓰는 수밖에 없다.</p>
+
+  <h3>공식 도구는 Related video 하나다</h3>
+  <p>쇼츠 하나에 같은 채널의 다른 영상(롱폼·라이브·다른 쇼츠) 링크를 붙이는 기능이다. 시청자에게는 채널 핸들 아래 클릭 링크로 보이고, 2026년 6월 플레이어 개편 이후 제목 아래 스와이프 캐러셀에 묶였다.</p>
+
+  <div class="src-quote">
+    <p>"This feature allows you to attach a clickable link directly to your Short that routes traffic to any long-form video, livestream, or secondary Short on your channel"</p>
+  </div>
+
+  <ul class="rule-list">
+    <li><span class="n">1</span> 설정 경로는 <strong>Studio &gt; 콘텐츠 &gt; 해당 쇼츠 &gt; Related video &gt; 대상 선택 &gt; 저장</strong>이다.</li>
+    <li><span class="n">2</span> <strong>업로드한 뒤 영상 하나씩</strong> 설정한다. 업로드 플로우에도, 채널 기본값에도 없다.</li>
+    <li><span class="n">3</span> <strong>API에 대응 필드가 없다</strong> — 자동화가 불가능하다. 게시 파이프라인을 짰다면 이 단계만 사람이 손으로 해야 한다.</li>
+    <li><span class="n">4</span> 최소 전화번호 인증이 필요하고, 대상 영상은 공개 또는 미등록이어야 한다.</li>
+  </ul>
+
+  <p>YouTube는 링크만 걸어두지 말라고 덧붙인다 — 말로 CTA를 하고, 링크 위치를 손가락으로 가리키고, 목적지 영상의 썸네일을 잠깐 띄우라는 것이다.</p>
+
+  <div class="warn">
+    <strong>그런데 효과 수치가 하나도 없다.</strong> 공식 블로그·Creator Insider 영상·헬프센터를 전부 훑어도 CTR, 전환율, 트래픽 증가폭이 <strong>0건</strong>이다(블로그 본문 5,208자를 기계 스캔해 확인했다). 고정 댓글·엔드스크린·설명란·구독 전환도 이 문서들은 다루지 않는다. 권고는 공식이지만 근거는 붙어 있지 않다 — <strong>효과를 알려면 설정한 쇼츠와 안 한 쇼츠를 나눠 Studio에서 직접 재는 수밖에 없다.</strong>
+  </div>
+
+  <div class="note">
+    <strong>크로스 플랫폼 재활용은 어떤가.</strong> "틱톡 워터마크가 붙으면 릴스에서 강등된다"는 말이 널리 퍼져 있지만, 공식 근거로는 확인되지 않는다. 인스타그램 문서에 "no visible watermarks" 문구가 실재하기는 하는데 틱톡이나 타 앱 재활용을 명시하지 않고, 인스타그램의 중복 콘텐츠 규칙은 <strong>인스타그램 안의 동일 복제본</strong>을 겨냥한 것이다. 밈·패러디·새 보이스오버처럼 실질적으로 편집된 것은 명시적으로 면제다.
+  </div>
+</section>
+
+<section id="myth">
+  <h2>7. 통념 — 하지 않아도 되는 것</h2>
+  <p class="lede"><strong>업로드 빈도와 업로드 시각은 랭킹 요건이 아니다.</strong> 가장 널리 퍼진 통념이 가장 명확하게 부정된다.</p>
+
+  <div class="src-quote">
+    <p>"There is no minimum posting cadence required for your videos to perform well."</p>
+    <p>"Do I need to upload daily or at least once a week?" → "No, we've done analyses over the years and found that growth in views across uploads is not correlated with time between uploads."</p>
+    <p>"We studied thousands of channels that took a break and found no correlation between break length and changes in views."</p>
+  </div>
+
+  <p>게시 시각도 마찬가지다 — <em>"Publish time is not known to impact a video's long-term performance."</em> 다만 라이브·프리미어처럼 시간이 본질인 형식은 예외다. 시청자가 활발한 시간에 올리면 초기 조회에는 도움이 되지만 장기 성과와는 무관하다는 게 공식 입장이다.</p>
+
+  <div class="warn">
+    <strong>"많이 올리는 채널이 더 큰다"는 데이터와 모순 아닌가.</strong> vidIQ가 채널 500만 개(2024-06~2025-06)와 1,021만 개(2025-04~2026-03)를 분석한 결과, 월 12회 이상 올리는 채널의 조회수 증가율 중앙값은 <strong>2.18%</strong>로 월 1회 미만 채널의 <strong>0.53%</strong>보다 높다. 모순이 아니라 <strong>다른 걸 잰 숫자</strong>다. 많이 쏘면 골이 늘어난다는 얘기지, 적게 올린 영상이 랭킹에서 벌을 받는다는 뜻이 아니다. 같은 데이터에서 월 35편을 넘기면 롱폼 성과가 기준선으로 되돌아가는 수확체감도 보인다. vidIQ 자신도 인과를 증명하지 못한다고 적었다.
+    <p style="margin-top:10px">단서 하나 — 같은 FAQ가 홈·추천 트래픽이 줄어드는 흔한 이유로 "평소보다 적게 업로드함"을 든다. YouTube 입장은 '빈도는 랭킹 지렛대가 아니다'이지 '빈도는 아무 상관없다'가 아니다.</p>
+  </div>
+
+  <p><strong>실무 결론:</strong> 매일 올리지 못한다고 채널이 죽지 않는다. 다만 총 산출량이 줄면 기회도 준다. <strong>"스케줄을 지키려 품질을 깎는" 선택은 근거가 없다.</strong> 이건 스레드와 정반대다 — 스레드는 게시 리듬과 초기 60~90분 대응이 도달을 좌우하지만, 쇼츠는 개별 영상이 각자 평가된다.</p>
+
+  <h3>반대편 통념 — "많이 올리면 차단된다"</h3>
+  <p>일일 업로드 한도는 <strong>실재한다</strong>. YouTube가 데스크톱·모바일·API를 합쳐 24시간에 올릴 수 있는 영상 수를 제한한다고 공식 문서에 적혀 있다. 다만 <strong>숫자를 공개하지 않는다</strong> — 국가와 채널 이력에 따라 다르고, 커뮤니티 가이드라인 경고를 받으면 줄어든다.</p>
+  <div class="note">
+    <strong>이건 제재가 아니라 수도꼭지다.</strong> 넘으면 "일일 업로드 한도 도달" 에러가 날 뿐이고 24시간 뒤 풀린다. 계정에 흠집이 남지 않는다. 사람이 하루 한두 편 올리는 규모는 근처에도 못 간다. <strong>계정이 실제로 종료되는 경로는 개수가 아니라 §2의 스팸 정책</strong>이다 — 같은 틀의 반복이 방아쇠다.
+  </div>
+  <p class="quote-ex">조사 기록: <a href="../../research/2026-08-15-posting-frequency-and-growth/index.html">게시 빈도와 성장 (2026-08-15)</a> — 세 플랫폼의 빈도·차단 통념을 한자리에서 비교했다.</p>
+</section>
+
+<section id="views">
+  <h2>8. 조회수 정의가 바뀌었다</h2>
+  <p class="lede"><strong>2025년 3월 31일부터 쇼츠 조회수는 재생 또는 재재생이 시작될 때마다 센다.</strong> 최소 시청 시간 요건이 없다.</p>
+
+  <div class="src-quote">
+    <p>"beginning on 3/31/2025, Shorts views will count the number of times your Short starts to play or replay with no minimum watch time requirement"</p>
+    <p>"This change will not directly impact your earnings or how you can become eligible for the YouTube Partner Program – both will be based on engaged views."</p>
+  </div>
+
+  <p>그날 이후의 공개 조회수는 리텐션 지표가 아니라 재생 시작 횟수에 가깝다. 예전 방식은 사라진 게 아니라 <strong>engaged views</strong>라는 별도 지표로 남았고, 돈과 자격은 그대로 engaged view 기준이다. <strong>조회수 숫자가 커 보인다고 수익화 문턱이 낮아진 게 아니다.</strong></p>
+
+  <p>블로그 한 편의 주장이 아니다. 개발자용 API 변경 이력에 세 번 기록됐다 — 2025-03-26(예고 및 <code>engagedViews</code> 신설), 2025-04-24(API 지표 반영), 2025-06-24(대량 리포트에 <code>engaged_views</code> 컬럼 추가). 기계가 읽는 계약 문서에 남았다는 건 표현 착오가 아니라는 뜻이다.</p>
+
+  <div class="danger">
+    <strong>데이터를 볼 때 걸리는 함정.</strong> 소급 적용이 아니다. 2025년 3월 이전과 이후의 쇼츠 조회수를 나란히 놓고 비교하면 기준이 다른 숫자끼리 비교하는 꼴이 된다 — 연간 성장률, 전년 동월 대비 분석이 전부 왜곡된다. 그리고 <strong>engaged view가 몇 초 이상인지는 YouTube가 공개한 적이 없다.</strong> "3초 이상"류의 숫자를 적은 자료가 많지만 근거가 없다.
+  </div>
+
+  <p>용어가 어긋나는 지점 하나 — 현행 YPP 자격 문서는 'engaged views'라는 말을 쓰지 않고 "qualified Shorts views"라고만 쓰며 계산법을 정의하지 않는다. 모순이 아니라 문서의 서술 공백이다.</p>
+</section>
+
+<section id="metrics">
+  <h2>9. 무엇을 볼 것인가</h2>
+  <p>공개 조회수는 §8의 이유로 판단 지표에서 뺀다. 대신 넷을 본다.</p>
+  <div class="metric-row">
+    <div class="metric"><div class="m-k">1</div><div class="m-v">시청 선택 비율</div></div>
+    <div class="metric"><div class="m-k">2</div><div class="m-v">평균 시청 비율</div></div>
+    <div class="metric"><div class="m-k">3</div><div class="m-v">engaged views</div></div>
+    <div class="metric"><div class="m-k">4</div><div class="m-v">90일 누적 쇼츠 조회</div></div>
+  </div>
+  <p>1·2번은 §5의 랭킹 신호를 직접 반영하고, 3번은 실제 수익 계산 기준이며, 4번은 §3의 문턱(진입 2,000만 · 유지 1,000만) 대비 위치를 알려준다. 여기에 하나 더 — 도달 상위 영상의 <strong>유형</strong>(소재·형식)을 읽어 다음 영상에 반영하는 학습 루프다. 이게 없으면 채널은 같은 영상만 반복하게 된다. 초반 통과·유지는 좋은데 조회만 낮으면 그 형식을 복사하지 말고, 다음 편 제목을 방법·도구가 아니라 그 사람이 이미 느끼는 문제로 연다.</p>
+  <div class="warn">
+    <strong>Shown in feed는 API로 못 가져온다.</strong> Studio UI 전용 지표라 자동 수집 파이프라인에 넣을 수 없다. 자동화하려면 engaged views와 평균 시청 비율을 축으로 삼는다.
+  </div>
+</section>
+
+<section id="refuted">
+  <h2>10. 검증에서 탈락한 주장</h2>
+  <p>세 검증자 중 둘 이상이 반박에 성공한 항목이다. <strong>틀렸다고 확정된 게 아니라 이 조사로는 뒷받침되지 않는다</strong>는 뜻이다. 다른 자료에서 같은 내용을 보더라도 근거를 다시 확인해야 한다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>탈락한 주장</th><th>표결</th><th>사유</th></tr></thead>
+    <tbody>
+      <tr><td>Metricool 79만 영상·7만 계정 분석 — "쇼츠가 전체 조회의 61%", "광고 수익 50% 이상 감소"</td><td><span class="badge de">0-3</span></td><td>수치를 원자료에서 재확인하지 못함</td></tr>
+      <tr><td>"짧은 영상은 상대 시청시간이, 긴 영상은 절대 시청시간이 더 중요하다"</td><td><span class="badge de">0-3</span></td><td>근거 페이지가 'Shorts'를 한 번도 언급하지 않고, YouTube 스스로 "broadly speaking"으로 완충함</td></tr>
+      <tr><td>음악 1곡 사용 시 실효 수취율 22.5%, 2곡 시 15%</td><td><span class="badge de">0-3</span></td><td>공식 문서에 없는 산술 추론</td></tr>
+      <tr><td>"쇼츠 피드 시청 시간은 4,000시간 산정에 들어가지 않는다"</td><td><span class="badge wr">1-2</span></td><td>쇼츠 전용 채널이 롱폼 시청시간 경로로 갈 수 있는지 미확정</td></tr>
+      <tr><td>쇼츠 구독 전환 = 1만 조회당 16.9명</td><td><span class="badge de">0-3</span></td><td>수치를 뒷받침하지 못함</td></tr>
+      <tr><td>그 반대편 — "롱폼의 구독 전환이 쇼츠보다 높다"</td><td><span class="badge wr">1-2</span></td><td>같은 연구의 반대 방향 주장도 함께 탈락했다. <strong>어느 쪽도 확정되지 않았다</strong> — "쇼츠는 구독자 치트키다"도, "아니다"도 근거가 없다</td></tr>
+      <tr><td>"쇼츠 RPM은 롱폼의 3~14%" (274채널·3,044 채널-월 분석)</td><td><span class="badge de">0-3</span></td><td>니치별 비율 주장을 원자료에서 재확인하지 못함</td></tr>
+      <tr><td>"워터마크가 붙으면 강등된다"가 공식 정책이다</td><td><span class="badge wr">1-2</span></td><td>인스타그램 문서에 "no visible watermarks" 문구는 실재하나 <strong>틱톡·타 앱 재활용을 명시하지 않음</strong></td></tr>
+      <tr><td>"신규 채널은 Related video를 아예 쓸 수 없다"</td><td><span class="badge de">0-3</span></td><td>YouTube 문서끼리 서로 어긋난다 — 전용 문서는 "고급 기능 전용", 기능 매트릭스는 전화번호 인증 열에도 체크</td></tr>
+      <tr><td>공식 'Shorts tips' 허브에 훅·리텐션·루프 항목이 하나도 없다</td><td><span class="badge de">0-3</span></td><td>부재 주장 자체가 반박됨 — 다만 <strong>길이 권고가 없다</strong>는 건 별도로 확인됐다(§5)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>이전 판에서 "확정 못 함"이었던 AI 공개 의무는 이번에 확정됐다.</strong> 고지 대상과 면제 목록, 그리고 "고지해도 노출·수익에 불이익이 없다"는 공식 문장까지 §2에 옮겼다. 수익화를 가르는 건 여전히 공개 여부가 아니라 진위성 정책이다 — 라벨을 달았다고 막히지 않고, 떼었다고 통과하지도 않는다.
+  </div>
+</section>
+
+<section id="unknown">
+  <h2>11. 아직 모르는 것</h2>
+  <p>2차 조사로 제작 실무와 퍼널은 채웠고 <strong>AI 고지 범위는 확정했다</strong>(§2). 남은 것은 아래 넷이다. <strong>"근거가 없다"가 아니라 "1차 출처로 확인되지 않는다"</strong>는 뜻이므로, 시중 자료에서 이 숫자들을 보면 출처를 되짚어야 한다.</p>
+  <ul>
+    <li><strong>한국 시장 수치 전부</strong> — 확인된 쇼츠 RPM 표에 <strong>한국이 아예 없다</strong>(미국 $0.328, 호주 $0.193, 영국 $0.166, 캐나다 $0.165, 독일 $0.163). 국내 채널 RPM, 언어 선택(한국어 단일 vs 영어 vs 다국어)이 도달·RPM에 주는 영향, 국세청 신고 기반 유튜버 소득 분포 원자료 모두 확인 실패. <strong>영어권 수치를 한국에 그대로 옮기면 안 된다.</strong></li>
+    <li><strong>3분 시대의 최적 길이</strong> — 유일한 대규모 데이터가 60초 상한 시절 것이라(§5), 60~180초 구간에서 시청 지속과 조회수가 어떻게 움직이는지 근거가 없다. 음원을 쓰면 실질 상한이 60~90초로 내려가는 제약과 함께 봐야 한다.</li>
+    <li><strong>Related video의 효과 크기</strong> — 공식 문서에 CTR·전환율이 0건이다(§6). 설정한 쇼츠와 안 한 쇼츠를 나눠 Studio에서 직접 재는 게 유일한 경로다.</li>
+    <li><strong>다국어 오디오 트랙의 쇼츠 적용 여부</strong> — 롱폼 기능이 쇼츠에도 적용되는지, 한국어 원본에 영어 트랙을 얹으면 도달과 RPM이 어떻게 바뀌는지 확인 실패.</li>
+  </ul>
+  <div class="warn">
+    <strong>시효가 짧다.</strong> 2027년 2월 1일부터 진입 문턱이 두 배가 되고 쇼츠 수익 배분이 문턱제로 바뀐다. 지금의 "1,000만 회로 YPP 진입" 같은 서술은 그날 이후 통하지 않는다. 그리고 2027 개편 발표는 이 문서 기준일 <strong>하루 전</strong>(2026-08-10)이라 후속 세부 지침이 더 나올 수 있다.
+  </div>
+  <p>방법상 한계도 밝힌다. 1차 조사에서 여러 검증자가 세션 웹 검색 한도를 소진해, 일부 항목은 2차 출처 반증 검색 없이 1차 문서 재확인만으로 판정했다. "1차 문서가 무엇을 말하는가"에 관한 주장이라 결론이 뒤집힐 위험은 낮지만, <strong>집행 실태나 현장 편차를 검증한 건 아니다.</strong> 2차 조사에서는 반대 문제가 있었다 — 108건 중 25건만 검증 예산에 들어가 한국 시장과 다국어 항목이 통째로 밀렸다.</p>
+</section>
+
+<section id="automation">
+  <h2>12. 자동화 — grow-youtube</h2>
+  <p>위 원칙을 루프로 돌리는 게 <code>/social-flow:grow-youtube</code> 스킬이다. 호출 1회가 한 틱이고 반복은 <code>/loop</code>가 맡는다.</p>
+  <pre><code>/social-flow:grow-youtube &lt;채널&gt; init      # 최초 1회 — 성장 플랜 확정 (승인)
+/loop 1h /social-flow:grow-youtube &lt;채널&gt;  # 1시간 주기 자율 루프</code></pre>
+  <ol>
+    <li><strong>댓글 응대</strong> — 골든아워 미응대부터</li>
+    <li><strong>지표 관찰</strong> — 채널 통계 + Analytics 기간 지표. §9의 항목을 <code>youtube_insights</code> 로 받는다</li>
+    <li><strong>대기열 보충</strong> — 플랜이 켠 경우에만, 대기열이 마를 때 한 편을 저작한다</li>
+    <li><strong>대기열 게시</strong> — <code>queue: ready</code> 가 찍힌 영상만</li>
+  </ol>
+  <div class="warn">
+    <strong>첫 틱에서 스코프 에러가 나는 것이 정상이다.</strong> 게시용으로 발급한 토큰에는 <code>youtube.upload</code> 하나뿐이라 조회·Analytics·댓글 스코프가 없다. 갱신으로는 스코프가 늘지 않으므로 동의 플로우에서 체크박스를 켜고 토큰을 새로 발급해야 하고, 서버 에러에 그 안내가 실려 온다. Analytics API 는 Google Cloud Console 에서 <strong>따로 활성화</strong>해야 하며(스코프와 별개 관문), 데이터는 2~3일 지연된다.
+  </div>
+  <div class="note">
+    <strong>이 루프는 유튜브 자격증명이 있어야 돈다.</strong> 자격증명 파일(<code>youtube-oauth-client.json</code> — <code>&lt;SNS_TOKEN_DIR&gt;</code> 바로 아래든 채널 디렉토리든)이 있어야 게시·인사이트 툴이 <code>tools/list</code> 에 뜬다. 토큰이 없어도 제작까지는 그대로 동작한다 — <code>produce</code> 가 완성 영상과 플랫폼별 문안을 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주고 업로드만 사람이 손으로 한다. 못 쓰는 건 게시와 성장 루프 절반이다.
+  </div>
+  <div class="ok">
+    <strong>AI 고지는 루프가 끄지 못한다.</strong> <code>containsSyntheticMedia</code> 의 기본값이 <code>true</code> 이고 자율 루프는 이 값을 내리지 않는다 — §2에서 확인했듯 고지해도 노출·수익 자격이 깎이지 않는 대신 상습 미고지에는 라벨 강제와 YPP 정지가 걸린다. 값을 내리는 판단은 사람 몫이다.
+  </div>
+</section>
+
+<section id="sources">
+  <h2>13. 출처</h2>
+  <h4>YouTube 공식 — 정책 · 수익화</h4>
+  <ul>
+    <li><a href="https://support.google.com/youtube/answer/1311392?hl=en">채널 수익 창출 정책</a> — 진위성 없는 콘텐츠 포함. §2의 근거.</li>
+    <li><a href="https://support.google.com/youtube/answer/2801973?hl=en">스팸·기만 행위 정책</a> — 대량 반복 생산, 삭제·스트라이크·채널 종료. §2의 근거. 2026-08-15 확인</li>
+    <li><a href="https://support.google.com/youtube/answer/10383400?hl=en">업로드 오류 안내</a> — 24시간 업로드 한도 존재·숫자 비공개. §7의 근거. 2026-08-15 확인</li>
+    <li><a href="https://support.google.com/youtube/answer/72851">YPP 자격 요건</a> — §1·§3의 근거.</li>
+    <li><a href="https://blog.youtube/news-and-events/youtube-partner-program-updates-2027-new-opportunities-earn/">2027 YPP 개편 발표 (2026-08-10)</a> — §3의 근거.</li>
+    <li><a href="https://support.google.com/youtube/answer/12504220?hl=en">쇼츠 수익 배분 정책</a> · <a href="https://support.google.com/youtube/answer/72902?hl=en">수익 배분 개요</a> — §4의 근거.</li>
+  </ul>
+  <h4>YouTube 공식 — 알고리즘 · 애널리틱스</h4>
+  <ul>
+    <li><a href="https://support.google.com/youtube/answer/11914225?hl=en&amp;co=YOUTUBE._YTVideoType%3Dshorts">쇼츠 검색·발견 팁</a> — §5·§7의 근거.</li>
+    <li><a href="https://support.google.com/youtube/answer/141805?hl=en">성과 FAQ</a> — 업로드 빈도·시각. §7의 근거.</li>
+    <li><a href="https://support.google.com/youtube/answer/12942217?hl=en&amp;co=YOUTUBE._YTVideoType%3Dshorts">쇼츠 애널리틱스</a> · <a href="https://support.google.com/youtube/answer/9314486">노출수·CTR 정의</a> — §5·§9의 근거.</li>
+    <li><a href="https://support.google.com/youtube/thread/333869549/a-change-to-how-we-count-views-on-shorts?hl=en">조회수 집계 변경 공지</a> · <a href="https://developers.google.com/youtube/reporting/revision_history">API 변경 이력</a> — §8의 근거.</li>
+  </ul>
+  <h4>YouTube 공식 — AI 고지 · 퍼널 · 길이</h4>
+  <ul>
+    <li><a href="https://support.google.com/youtube/answer/14328491">변형·합성 콘텐츠 고지</a> — 고지 대상·면제 목록, "고지가 노출·수익에 영향 없음". §2의 근거.</li>
+    <li><a href="https://blog.youtube/creator-and-artist-stories/youtube-related-videos-traffic-guide/">Related videos 트래픽 가이드 (2026-07-14)</a> · <a href="https://support.google.com/youtube/answer/14075157">관련 동영상 추가</a> · <a href="https://support.google.com/youtube/answer/57404">Studio 영상 설정</a> — §6의 근거.</li>
+    <li><a href="https://support.google.com/youtube/answer/13748639">Shorts 설명란·댓글 URL 비클릭</a> · <a href="https://support.google.com/youtube/answer/9890437">기능 액세스 매트릭스</a> — §6의 근거.</li>
+    <li><a href="https://support.google.com/youtube/answer/15424877">쇼츠 3분 상한 (2024-10-15~)</a> · <a href="https://support.google.com/youtube/answer/12921536">쇼츠 만들기</a> — §5의 근거. 길이 권고 부재를 확인한 문서들.</li>
+    <li><a href="https://support.google.com/youtube/thread/445002770/simplifying-the-shorts-player-a-more-intuitive-experience-improved-feedback-tools">쇼츠 플레이어 개편 공지 (2026-06)</a> — 싫어요 지표 폐지와 "chose to view" 대체 지목. §5·§6의 근거.</li>
+  </ul>
+  <h4>업계 보도 · 2차 자료</h4>
+  <ul>
+    <li><a href="https://www.tubefilter.com/2026/07/13/youtube-inauthentic-content-policy-clarification/">Tubefilter — 진위성 정책 해설</a> · <a href="https://www.tubefilter.com/2026/08/10/youtube-partner-program-ad-eligibility-requirements-shorts/">YPP 개편 보도</a></li>
+    <li><a href="https://techcrunch.com/2026/08/10/youtube-now-requires-creators-to-have-twice-as-many-watch-hours-to-start-earning-money/">TechCrunch — YPP 시청시간 2배 인상</a> · <a href="https://techcrunch.com/2025/03/26/youtube-is-changing-how-youtube-shorts-views-are-counted">조회수 집계 변경</a></li>
+    <li><a href="https://www.searchenginejournal.com/youtube-algorithm-myths-debunked-insights-from-the-growth-team/510091/">Search Engine Journal — 알고리즘 통념 반박 (YouTube 성장팀 인터뷰)</a></li>
+    <li><a href="https://vidiq.com/blog/post/youtube-partner-program-changes-2027/">vidIQ — 2027 YPP 변경 비교표 · 업로드 빈도 대규모 분석</a></li>
+    <li><a href="https://threadreaderapp.com/thread/1646898356419981315.html">Paddy Galloway — 33억 조회 쇼츠 연구 (2023-04-14)</a> — §5의 근거. <strong>공식 벤치마크가 아니며 60초 상한 시절 자료다.</strong></li>
+    <li><a href="https://creators.instagram.com/blog/recommendations-and-originality">인스타그램 — 추천과 원본성</a> — §6 크로스 플랫폼 항목의 근거.</li>
+    <li><a href="https://air.io/en/air-data-findings/youtube-shorts-rpm-vs-long-form-how-much-do-shorts-earn-in-2026">AIR — 국가별 쇼츠 RPM</a> — §11의 근거. 업체 단일 출처이고 <strong>한국이 표에 없다.</strong></li>
+  </ul>
+  <div class="note">
+    영어권 "쇼츠 알고리즘 2026" 글 상당수는 SEO 목적의 내용 공장 글이다. 정밀해 보이는 단일 출처 수치는 신뢰하지 말 것. 여기 남긴 건 전부 <strong>3표 적대적 검증을 통과한 것</strong>이고, 대부분 YouTube 공식 문서에서 나왔다. 공식이 아닌 출처는 <strong>마지막 세 개</strong>(Galloway·인스타그램·AIR)뿐이며, 본문에서 각각 한계를 함께 적었다 — 공식 벤치마크로 인용하면 안 된다. 탈락한 것은 §10에 남겼다.
+  </div>
+</section>
+
+<footer>
+  기준일 2026-08-11 · 갱신 2026-08-16(§12 자동화 절 추가) · 2026-08-15(<a href="../../research/2026-08-15-posting-frequency-and-growth/index.html">빈도·차단 조사</a> 반영) · 조사 방식 딥리서치 워크플로우 2회(에이전트 212개) → 48개 출처 → 주장 237건 추출 → 50건 3표 검증 → 28건 확정 ·
+  성장 루프 <code>/social-flow:grow-youtube</code> · 전술 정본 <code>skills/grow-youtube/references/growth-playbook.md</code> ·
+  같은 장르 <a href="../threads-growth/index.html">스레드 성장 가이드</a> · 플랫폼 문법 <code>skills/platform-guide/references/platform-playbook.md</code> · <a href="../../index.html">문서 허브</a>
+  <p style="margin-top:10px"><strong>2027-02-01 이후에는 §3·§4를 반드시 다시 확인할 것.</strong></p>
+</footer>
+
+</div>
+</body>
+</html>

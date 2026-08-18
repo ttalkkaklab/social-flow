@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{CHANNEL}} — Profile Image Direction Pick</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0b1020; color: #e8ecf4;
+    font-family: "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    padding: 32px; min-height: 100vh;
+  }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 { font-size: 22px; font-weight: 800; }
+  header p { color: #8b93a7; font-size: 13px; margin-top: 6px; }
+  .grid {
+    display: grid; grid-template-columns: repeat(2, minmax(280px, 460px));
+    gap: 24px; justify-content: center;
+  }
+  .card {
+    background: #131a2e; border: 1px solid #232c46; border-radius: 16px;
+    padding: 18px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .card .tag {
+    align-self: flex-start; font-size: 13px; font-weight: 800;
+    background: #22304f; color: #9db8ff; border-radius: 8px; padding: 4px 10px;
+  }
+  .card img.main { width: 100%; border-radius: 12px; display: block; }
+  .preview { display: flex; align-items: center; gap: 14px; }
+  .preview img { border-radius: 50%; object-fit: cover; display: block; }
+  .preview .lg { width: 96px; height: 96px; }
+  .preview .sm { width: 40px; height: 40px; }
+  .preview span { color: #8b93a7; font-size: 12px; }
+  .desc { color: #c3cadb; font-size: 13px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>{{CHANNEL}} — Profile Image Direction Pick</h1>
+  <p>The circular previews are how platforms actually display it. Pick A–D in the terminal.</p>
+</header>
+<div class="grid">
+  <div class="card">
+    <span class="tag">A · {{LABEL_A}}</span>
+    <img class="main" src="{{IMG_A}}" alt="Candidate A">
+    <div class="preview">
+      <img class="lg" src="{{IMG_A}}" alt=""><img class="sm" src="{{IMG_A}}" alt="">
+      <span>Circular crop preview</span>
+    </div>
+    <p class="desc">{{DESC_A}}</p>
+  </div>
+  <div class="card">
+    <span class="tag">B · {{LABEL_B}}</span>
+    <img class="main" src="{{IMG_B}}" alt="Candidate B">
+    <div class="preview">
+      <img class="lg" src="{{IMG_B}}" alt=""><img class="sm" src="{{IMG_B}}" alt="">
+      <span>Circular crop preview</span>
+    </div>
+    <p class="desc">{{DESC_B}}</p>
+  </div>
+  <div class="card">
+    <span class="tag">C · {{LABEL_C}}</span>
+    <img class="main" src="{{IMG_C}}" alt="Candidate C">
+    <div class="preview">
+      <img class="lg" src="{{IMG_C}}" alt=""><img class="sm" src="{{IMG_C}}" alt="">
+      <span>Circular crop preview</span>
+    </div>
+    <p class="desc">{{DESC_C}}</p>
+  </div>
+  <div class="card">
+    <span class="tag">D · {{LABEL_D}}</span>
+    <img class="main" src="{{IMG_D}}" alt="Candidate D">
+    <div class="preview">
+      <img class="lg" src="{{IMG_D}}" alt=""><img class="sm" src="{{IMG_D}}" alt="">
+      <span>Circular crop preview</span>
+    </div>
+    <p class="desc">{{DESC_D}}</p>
+  </div>
+</div>
+</body>
+</html>

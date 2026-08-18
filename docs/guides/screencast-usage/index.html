@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>촬영 대본으로 쇼트폼 만들기 — 스토리보드 선행 촬영 가이드</title>
+<link rel="alternate" hreflang="en" href="index.en.html">
+<link rel="alternate" hreflang="ko" href="index.html">
 <style>
   :root {
     --bg: #ffffff;
@@ -56,6 +58,14 @@
     word-break: keep-all;
   }
   .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  /* ── 언어 전환 ── */
+  .langbar { display: flex; justify-content: flex-end; padding-top: 18px; }
+  .langbar a {
+    font-size: 13px; color: var(--text-soft); text-decoration: none;
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+  }
+  .langbar a:hover { color: var(--accent); border-color: var(--accent); }
 
   /* ── Header ── */
   header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
@@ -192,6 +202,8 @@
 <body>
 <div class="wrap">
 
+<div class="langbar"><a href="index.en.html" hreflang="en">English</a></div>
+
 <header class="hero">
   <span class="kicker">USER GUIDE</span>
   <h1>촬영 대본으로 쇼트폼 만들기<br>— 스토리보드 선행 촬영 가이드</h1>
@@ -249,7 +261,7 @@
     <div class="step you">
       <span class="tag">사용자</span>
       <div class="name">④ 게시 승인</div>
-      <div class="desc">채널별 텍스트와 함께 공개</div>
+      <div class="desc">플랫폼별 텍스트와 함께 공개</div>
     </div>
   </div>
 
@@ -263,6 +275,17 @@
     <tr><td>승인 게이트</td><td>스토리보드 · 게시 (2곳)</td><td>대본 · 정합 이탈 · 게시 (3곳)</td></tr>
   </table>
   </div>
+
+  <div class="callout tip">
+    <span class="ct">📼 이 가이드가 다루는 레인</span>
+    <p>여기서 설명하는 것은 <strong>쇼트폼 전편 촬영</strong>(9:16, 한 번에 쭉 찍기)이다.
+    유튜브 <strong>롱폼(16:9)</strong> 도 대본을 먼저 쓰는 것은 같지만, 촬영 씬과 생성 씬을
+    한 편에 섞기 때문에 <strong>씬마다 따로 찍어</strong> 대본이 정한 파일명
+    (<code>footage/s2-install.mp4</code> 식)으로 저장한다. 정합 단계가 없고 파일명이 곧
+    씬과의 짝이라, 아래 4장의 "한 번에 쭉 찍기"와 5장의 정합 이탈 보고는 롱폼에 해당하지
+    않는다. 촬영 수칙과 화면 구성은 두 레인이 거의 같다 — 롱폼은 가로로 찍는다는 것만
+    다르다.</p>
+  </div>
 </section>
 
 <!-- ═══════════════════ 2. 준비 ═══════════════════ -->
@@ -270,12 +293,12 @@
   <h2><span class="num">2.</span>준비 (최초 1회)</h2>
   <p>전제 조건은 즉흥 녹화 흐름과 같다 — whisper.cpp · STT 모델 · 화면 기록/마이크
   권한 · ffmpeg. 상세 확인 방법은 <a href="../ingest-usage/index.html#setup">ingest
-  가이드 2장</a>을 그대로 따른다. 카테고리(<code>/social-flow:category add</code>)도
+  가이드 2장</a>을 그대로 따른다. 채널(<code>/social-flow:channel add</code>)도
   미리 있어야 한다.</p>
   <div class="callout tip">
-    <span class="ct">✓ 이 머신은 준비 완료</span>
-    <p>whisper.cpp · 모델 · 권한이 이미 설치·허용돼 있다 (2026-07-29 실측).
-    바로 3장으로 넘어가면 된다.</p>
+    <span class="ct">✓ 한 번만 깔면 끝</span>
+    <p>whisper.cpp · 모델 · 화면 기록/마이크 권한은 처음 한 번만 챙기면 된다.
+    이미 즉흥 녹화를 해 봤다면 바로 3장으로 넘어간다.</p>
   </div>
 </section>
 
@@ -286,7 +309,7 @@
   <div class="stepcard">
     <span class="who user">사용자</span>
     <h4>촬영 모드로 스토리보드 요청</h4>
-    <pre><code><span class="k">/social-flow:storyboard</span> 재테크 "홈택스 연말정산 미리보기" 촬영 대본으로</code></pre>
+    <pre><code><span class="k">/social-flow:storyboard</span> money "홈택스 연말정산 미리보기" 촬영 대본으로</code></pre>
     <p>"촬영 대본으로", "내가 녹화할게"처럼 <strong>직접 시연할 의사</strong>를 밝히면
     촬영 모드로 진행된다 (애매하면 Claude 가 물어본다).</p>
   </div>
@@ -309,7 +332,7 @@
     <h4>대본 승인 (승인 게이트 1)</h4>
     <p>씬 수 · 커버 제목 · 핵심 수치·출처를 보고 [승인 / 수정 요청 / 보류]를 고른다.
     <strong>승인 전에는 촬영을 안내하지 않는다.</strong> 승인되면 다음 명령이 안내된다:</p>
-    <pre><code><span class="k">/social-flow:ingest</span> 재테크 record "홈택스 연말정산 미리보기"</code></pre>
+    <pre><code><span class="k">/social-flow:ingest</span> money record "홈택스 연말정산 미리보기"</code></pre>
   </div>
 </section>
 
@@ -369,13 +392,13 @@
 
   <div class="stepcard">
     <span class="who claude">Claude</span>
-    <h4>편집 빌드 + 채널 텍스트</h4>
-    <pre><code><span class="k">/social-flow:produce</span> 재테크 "홈택스 연말정산 미리보기"</code></pre>
+    <h4>편집 빌드 + 플랫폼 텍스트</h4>
+    <pre><code><span class="k">/social-flow:produce</span> money "홈택스 연말정산 미리보기"</code></pre>
     <ul class="plain">
       <li>씬별 컷 → 확대 → 9:16 합성 → 타이틀 오버레이 → 자막 번인 → BGM 덕킹(육성에
         맞춰 자동 볼륨 다운) → 아웃트로 접합. 오디오·비디오 드리프트 0 을 빌드가
         단언한다.</li>
-      <li>폰 뷰포트 검수 · 채널별 텍스트(Threads/IG/FB/YT) · 품질 게이트는 일반 제작과
+      <li>폰 뷰포트 검수 · 플랫폼별 텍스트(Threads/IG/FB/YT) · 품질 게이트는 일반 제작과
         동일하게 이어진다.</li>
     </ul>
   </div>
@@ -451,7 +474,7 @@
     </tr>
     <tr>
       <td>총길이 90초 초과</td>
-      <td>컷을 조이거나(씬별 앞뒤 여백 축소) 씬을 줄인다 — 60~75초가 권장 구간.</td>
+      <td>컷을 조이거나(씬별 앞뒤 여백 축소) 씬을 줄인다 — 35~75초가 권장 구간.</td>
     </tr>
   </table>
   </div>
@@ -463,7 +486,7 @@
 
   <div class="summary">
     <span class="ct">한 줄 요약</span>
-    <code>/social-flow:storyboard &lt;카테고리&gt; &lt;주제&gt; 촬영 대본으로</code> →
+    <code>/social-flow:storyboard &lt;채널&gt; &lt;주제&gt; 촬영 대본으로</code> →
     <strong>대본 승인</strong> → 보조 모니터에 대본 띄우고
     <code>record</code> 로 <strong>촬영</strong> → "녹화 끝" →
     이탈 보고 <strong>확인</strong> → 편집·검수 → <strong>게시 승인</strong>.

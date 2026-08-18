@@ -3,30 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>릴스 폰 모드 검수</title>
+<title>reel phone-mode QA</title>
 <!--
-  make-reels 검수 하네스 — 실제 폰 화면 + 플랫폼 UI 오버레이 위에서 릴스를 확인한다.
-  ?v=<영상경로>  기본 ./reel.mp4
-  ?ui=ig|yt|none 플랫폼 UI 목업 (기본 ig)
-  ?fit=crop|full crop=톨폰 실제 표시(세로 채움·좌우 크롭) / full=전체 보이기 (기본 crop)
-  ?t=<초>        시작 지점
-  ?zone=1        세이프존 경계선 표시
+  make-reels QA harness — check the reel on a real phone screen with the platform UI on top.
+  ?v=<video path> default ./reel.mp4 — **for subtitle QA, name ./reel-sub.mp4 explicitly**
+                 (reel.mp4 is the clean master with no subtitles, so clipping and
+                 intrusions don't show)
+  ?ui=ig|yt|none platform UI mockup (default ig)
+  ?fit=crop|full crop=what a tall phone really shows (fills vertically, crops the sides) /
+                 full=show all of it (default crop)
+  ?t=<seconds>   start point
+  ?zone=1        draw the safe zone boundaries
 -->
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:#15161a; display:flex; align-items:center; justify-content:center;
          min-height:100vh; font-family:-apple-system,"Pretendard",sans-serif; }
-  /* 기본은 뷰포트 = 폰 화면 (Chrome 기기 에뮬레이션에 그대로 올라탄다).
-     ?frame=1 이면 데스크톱에서 보기 위한 390×844 목업 프레임. */
+  /* By default the viewport is the phone screen (it rides straight on Chrome's device
+     emulation). With ?frame=1, a 390×844 mockup frame for looking at it on a desktop. */
   #phone { position:relative; width:100vw; height:100vh; overflow:hidden; background:#000; }
   body.framed { padding:24px; }
   body.framed #phone { width:390px; height:844px; border-radius:44px;
            box-shadow:0 0 0 10px #2a2c33, 0 24px 70px rgba(0,0,0,.7); }
   video { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); }
-  body.fit-crop video { height:100%; width:auto; }    /* 세로 채움 → 좌우 크롭 (톨폰 실제) */
-  body.fit-full video { width:100%; height:auto; }    /* 전체 보이기 */
+  body.fit-crop video { height:100%; width:auto; }    /* fill vertically → crop the sides (what a tall phone does) */
+  body.fit-full video { width:100%; height:auto; }    /* show all of it */
   .ui { position:absolute; inset:0; pointer-events:none; }
-  /* ── 인스타그램 릴스 UI ── */
+  /* ── Instagram reels UI ── */
   .ig-top { position:absolute; top:14px; left:0; right:0; display:flex; align-items:center;
             justify-content:space-between; padding:0 16px; color:#fff; }
   .ig-top .t { font-size:20px; font-weight:700; text-shadow:0 1px 6px rgba(0,0,0,.6); }
@@ -44,7 +47,7 @@
   .ig-cap .u .f { border:1px solid #fff; border-radius:5px; padding:1px 7px; font-size:11px; font-weight:600; }
   .ig-cap .x { font-size:12.5px; line-height:1.35; max-height:34px; overflow:hidden; }
   .ig-au { display:flex; align-items:center; gap:6px; font-size:11.5px; margin-top:7px; opacity:.95; }
-  /* ── 유튜브 쇼츠 UI ── */
+  /* ── YouTube shorts UI ── */
   .yt-top { position:absolute; top:14px; left:16px; right:16px; display:flex; justify-content:space-between;
             color:#fff; font-size:19px; text-shadow:0 1px 6px rgba(0,0,0,.6); }
   .yt-bar { position:absolute; right:6px; bottom:96px; display:flex; flex-direction:column;
@@ -57,7 +60,7 @@
   .yt-meta .ch .sub { border:1px solid #fff; border-radius:12px; padding:2px 9px; font-size:11px; }
   .yt-prog { position:absolute; left:0; right:0; bottom:9px; height:2px; background:rgba(255,255,255,.3); }
   .yt-prog i { display:block; height:100%; width:34%; background:#f00; }
-  /* ── 세이프존 가이드 (영상 좌표 1080×1920 기준을 표시 배율로 환산) ── */
+  /* ── Safe zone guides (video coordinates of 1080×1920, converted to display scale) ── */
   .zones { position:absolute; inset:0; display:none; }
   body.zone .zones { display:block; }
   .zones div { position:absolute; border:1px dashed rgba(255,60,60,.85);
@@ -83,40 +86,40 @@ const v = document.getElementById("v");
 v.src = src;
 
 const IG = `
- <div class="ig-top"><div class="t">릴스</div><div class="c">📷</div></div>
+ <div class="ig-top"><div class="t">Reels</div><div class="c">📷</div></div>
  <div class="ig-bar">
-   <div class="it"><div class="ic">♡</div><div class="n">1.2천</div></div>
+   <div class="it"><div class="ic">♡</div><div class="n">1.2K</div></div>
    <div class="it"><div class="ic">💬</div><div class="n">84</div></div>
    <div class="it"><div class="ic">➤</div><div class="n">312</div></div>
    <div class="it"><div class="ic">⋯</div></div>
    <div class="it"><div class="ic">🎵</div></div>
  </div>
  <div class="ig-cap">
-   <div class="u"><div class="av"></div>yourbrand<div class="f">팔로우</div></div>
-   <div class="x">도착 당일에 신고 안 하면 과태료입니다. 7월 24일부터 바뀐 임시거주 신고, 집주인과 나 중 누가…</div>
-   <div class="ig-au">🎵 원본 오디오 · Your Brand</div>
+   <div class="u"><div class="av"></div>yourbrand<div class="f">Follow</div></div>
+   <div class="x">Don't register on the day you arrive and it's a fine. The temporary residence report changed on July 24 — who files it, the landlord or me…</div>
+   <div class="ig-au">🎵 Original audio · Your Brand</div>
  </div>`;
 const YT = `
  <div class="yt-top"><div>Shorts</div><div>🔍 ⋯</div></div>
  <div class="yt-bar">
-   <div>👍<div style="font-size:11px;text-align:center">1.2천</div></div>
-   <div>👎<div style="font-size:11px;text-align:center">싫어요</div></div>
+   <div>👍<div style="font-size:11px;text-align:center">1.2K</div></div>
+   <div>👎<div style="font-size:11px;text-align:center">Dislike</div></div>
    <div>💬<div style="font-size:11px;text-align:center">84</div></div>
-   <div>↗<div style="font-size:11px;text-align:center">공유</div></div>
+   <div>↗<div style="font-size:11px;text-align:center">Share</div></div>
    <div>🎬</div>
  </div>
  <div class="yt-meta">
-   <div class="ttl">베트남 임시거주 신고 '도착 즉시'로 변경 — 2026년 7월 24일 시행</div>
-   <div class="ch"><div class="av"></div>@YourBrand<div class="sub">구독</div></div>
+   <div class="ttl">Vietnam temporary residence report moves to 'immediately on arrival' — in force July 24, 2026</div>
+   <div class="ch"><div class="av"></div>@YourBrand<div class="sub">Subscribe</div></div>
  </div>
  <div class="yt-prog"><i></i></div>`;
 document.getElementById("ui").innerHTML = ui === "ig" ? IG : ui === "yt" ? YT : "";
 
-// 세이프존: 영상 좌표(1080×1920) → 화면 좌표. crop 모드는 세로를 채우므로 배율 = 844/1920.
+// Safe zones: video coordinates (1080×1920) → screen coordinates. crop mode fills vertically, so the scale is 844/1920.
 function drawZones() {
   const P = document.getElementById("phone").getBoundingClientRect();
   const s = fit === "crop" ? P.height / 1920 : P.width / 1080;
-  // 영상은 가운데 정렬 — crop 은 좌우가, full 은 위아래가 잘리거나 남는다. 양쪽 오프셋을 다 보정한다.
+  // The video is centered — crop loses the sides, full clips or pads top and bottom. Correct for both offsets.
   const vw = 1080 * s, off = (P.width - vw) / 2;
   const vh = 1920 * s, voff = (P.height - vh) / 2;
   const box = (x, y, w, h, label) => {
@@ -126,11 +129,11 @@ function drawZones() {
     d.textContent = label; return d;
   };
   const z = document.getElementById("zones"); z.innerHTML = "";
-  z.append(box(0, 0, 1080, 190, "상단 190"));
-  z.append(box(904, 190, 176, 1730, "우 176"));      // 텍스트 존 경계
-  z.append(box(890, 1100, 190, 570, "액션바 실측"));  // 톨폰 크롭에서 아이콘이 실제로 들어오는 영역
-  z.append(box(0, 1350, 904, 570, "하단 570"));
-  z.append(box(176, 1380, 728, 180, "자막밴드"));
+  z.append(box(0, 0, 1080, 190, "top 190"));
+  z.append(box(904, 190, 176, 1730, "right 176"));       // text zone boundary
+  z.append(box(890, 1100, 190, 570, "action bar (measured)"));  // where the icons actually land in a tall-phone crop
+  z.append(box(0, 1350, 904, 570, "bottom 570"));
+  z.append(box(176, 1380, 728, 180, "subtitle band"));
 }
 drawZones();
 

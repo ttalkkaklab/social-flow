@@ -1,23 +1,61 @@
-# OS
+# ── OS ────────────────────────────────────────────────────────────
 .DS_Store
+._*
+Thumbs.db
 
-# Node
+# ── Editors ───────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*~
+
+# ── Node ──────────────────────────────────────────────────────────
 node_modules/
+npm-debug.log*
+*.log
+# server/dist/ is NOT ignored — .mcp.json runs
+# ${CLAUDE_PLUGIN_ROOT}/server/dist/index.js directly with no build step, so it's committed.
 
-# 로컬 세션 설정·시크릿
+# ── Python (skills/**/references/*.py) ────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ── Local session settings ────────────────────────────────────────
 .claude/settings.local.json
 .claude/*.local.md
+CLAUDE.local.md
+
+# ── Secrets·credentials (never commit) ────────────────────────────
 .env
 .env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+client_secret*.json
+token.json
+tokens.json
+*-token.json
 
-# 대용량 산출물 — 영상·오디오 원본은 커밋하지 않는다 (재생성 가능, git 이 비대해짐)
-data/**/output/**/*.mp4
-data/**/output/**/*.mov
-data/**/output/**/*.wav
-data/**/output/**/*.pcm
+# ── git worktrees (sprint workspaces) ─────────────────────────────
+.worktrees/
 
-# 작업 중간 산출물
-data/**/.work/
+# ── Content data ──────────────────────────────────────────────────
+# Channel work products (profile.md·storyboards·images·videos·branding assets) are local artifacts.
+# This repo holds only plugin code and skills. The structure doc is the one committed exception.
+data/*
+!data/README.md
 
-# 녹화 인제스트 원신호 — 추출 오디오·로그는 커밋하지 않는다 (timeline·키프레임은 커밋)
-data/**/recording/raw/
+# Work intermediates (ignored even when created outside data/)
+.work/
+**/assets/scratch/
+
+# ── Swift app (apps/shoot-console) ────────────────────────────────
+# Build artifacts aren't committed — unlike server/dist they're not on the
+# plugin's execution path, and users build and sign them with build-app.sh
+# themselves (the signing identity differs per machine).
+apps/*/.build/
+apps/*/build/

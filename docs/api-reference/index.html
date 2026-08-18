@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API 레퍼런스 — social-flow</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="index.en.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="index.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span>API 레퍼런스</div>
+
+<header class="hero">
+  <div class="kicker">API REFERENCE</div>
+  <h1>social-flow가 호출하는 전체 API</h1>
+  <p class="sub">내부 MCP 서버(<code>server/src</code>)가 실제로 호출하는 외부 API 12종의 공식 계약을 정리한 레퍼런스다. 각 문서는 <strong>공식 문서가 말하는 것</strong>과 <strong>이 저장소의 구현이 실제로 하는 것</strong>을 나란히 적어, 둘이 어긋나는 지점을 바로 볼 수 있게 했다. 이미지·음성은 네트워크를 타지 않는 온디바이스 엔진 2종이 기본 경로이며 그쪽은 호출할 외부 계약이 없다.</p>
+  <div class="meta">
+    <span>기준일 <strong>2026-08-18</strong></span>
+    <span>툴 <strong>46종</strong></span>
+    <span>외부 API <strong>12종</strong> + 로컬 <strong>2종</strong></span>
+    <span>MCP SDK <strong>1.30.0</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#docs">API 문서</a></li>
+    <li><a href="#creds">자격증명 매트릭스</a></li>
+    <li><a href="#map">툴 ↔ API 매핑</a></li>
+    <li><a href="#method">이 문서를 만든 방법</a></li>
+  </ol>
+</nav>
+
+<section id="docs">
+  <h2>API 문서</h2>
+  <div class="cards">
+    <a class="card" href="mcp-tools.html">
+      <h3>MCP 툴 스펙 & 베스트 프랙티스</h3>
+      <p>Tool 정의 필드 전체(title·annotations·outputSchema), CallToolResult 계약, 에러 2계층, 그리고 툴 작성 원칙 7가지와 이 저장소의 평가 루브릭.</p>
+      <div class="tools">프로토콜 · 전 툴 공통</div>
+    </a>
+    <a class="card" href="gemini-tts.html">
+      <h3>Gemini TTS</h3>
+      <p>모델 3종, 프리빌트 음성 30종, 32k 토큰 세션 한도, 단일·2인 화자 설정, PCM 24kHz 모노 출력.</p>
+      <div class="tools">tts_generate · tts_multi_speaker · tts_list_voices</div>
+    </a>
+    <a class="card" href="gemini-veo.html">
+      <h3>Google Veo 3.1</h3>
+      <p>모델 3종의 해상도·길이·비율 교차 제약, 연장(+7초·최대 20회)과 참조 이미지(최대 3장·8초 고정), long-running operation 폴링.</p>
+      <div class="tools">veo_text2video · veo_img2video · veo_extension · veo_reference</div>
+    </a>
+    <a class="card" href="veo-portrait.html">
+      <h3>Veo 인물·참조 정책</h3>
+      <p>성인 얼굴은 통과하고 아이 얼굴은 막히는 <code>personGeneration</code> 계약, 자산 등록소가 없는 이유, 3.1 에서 닫힌 화풍 참조와 구도를 정하는 첫·끝 프레임.</p>
+      <div class="tools">personGeneration · referenceType asset / style · lastFrame</div>
+    </a>
+    <a class="card" href="seedance.html">
+      <h3>ByteDance Seedance</h3>
+      <p>모델 7종의 능력 차이(해상도·길이·참조 이미지·음성·seed), 태스크 생성 → 폴링 → 24시간 URL 회수, 토큰 과금 산식과 실사 얼굴 입력 거부.</p>
+      <div class="tools">seedance_text2video · seedance_img2video · seedance_reference</div>
+    </a>
+    <a class="card" href="seedance-portrait.html">
+      <h3>Seedance 인물·자산 정책</h3>
+      <p>2.x 의 얼굴 입력 거부와 우회로 셋(신뢰 출력물 30일·프리셋 디지털 캐릭터·권리 확보 실인물), 자산 등록 절차와 규격, 참조 이미지를 콘티처럼 쓰면 깨지는 이유.</p>
+      <div class="tools">asset:// · reference_image · first_frame / last_frame</div>
+    </a>
+    <a class="card" href="gemini-lyria.html">
+      <h3>Google Lyria</h3>
+      <p>성격이 다른 두 API — Lyria 3 Clip(Interactions·30초 고정·MP3)과 Lyria RealTime(WebSocket·PCM 48kHz·설정 12종).</p>
+      <div class="tools">music_generate_clip · music_generate · music_generate_advanced · music_list_options</div>
+    </a>
+    <a class="card" href="openai-images.html">
+      <h3>OpenAI Images</h3>
+      <p>GPT Image 4종의 파라미터 지원 행렬, gpt-image-2 임의 해상도 제약(16 배수·1:3~3:1·픽셀 상하한), 편집 전용 파라미터.</p>
+      <div class="tools">gpt_image_text2img · gpt_image_img2img</div>
+    </a>
+    <a class="card" href="../research/2026-08-12-local-image-generation/index.html">
+      <h3>온디바이스 엔진 (Z-Image · Supertonic)</h3>
+      <p>외부 계약이 없는 두 툴. Z-Image Turbo 는 mflux/MLX 로 돌아 1024²가 9스텝에 149~210초, 1088×1920 이 462초다(M4 Max 실측). Supertonic 은 CPU 만 쓰고 44.1kHz wav 를 내며, 둘 다 키·과금·네트워크가 없다.</p>
+      <div class="tools">image_local_generate · tts_local_generate</div>
+    </a>
+    <a class="card" href="serpapi.html">
+      <h3>SerpApi</h3>
+      <p>google · google_news · naver · google_images · google_trends_trending_now 다섯 엔진의 파라미터와 응답 구조, 엔진별로 다른 정렬 값 체계, 문서와 어긋나는 실제 응답 키, 쿼터와 과금 규칙. SNS 이슈 스카우트(스레드·X·인스타 <code>site:</code> 검색)도 여기 붙는다.</p>
+      <div class="tools">serp_web_search · serp_news_search · serp_naver_search · serp_image_search · serp_trending_now · sns_issue_scout</div>
+    </a>
+    <a class="card" href="naver-search.html">
+      <h3>Naver 검색 Open API</h3>
+      <p>8개 엔드포인트(news·blog·webkr·cafearticle·kin·image·encyc·local), 타입별로 다른 정렬·페이징 제약, 종료된 API 5종, 일 25,000회 쿼터.</p>
+      <div class="tools">naver_search</div>
+    </a>
+    <a class="card" href="data-go-kr.html">
+      <h3>공공데이터포털</h3>
+      <p>무인증 3경로(검색·상세·파일 다운로드)와 인증 2경로(odcloud·표준 오픈API), 활용신청 함정, 에러 코드표.</p>
+      <div class="tools">datago_search · datago_detail · datago_file_download · datago_file_fetch · datago_api_call</div>
+    </a>
+    <a class="card" href="meta-graph.html">
+      <h3>Meta Graph (Threads · IG · FB)</h3>
+      <p>컨테이너-후-게시 2단계 흐름, 플랫폼별 길이·미디어 제약, 댓글 능력 비대칭표, 게시 쿼터, 그리고 성장 루프가 읽는 Threads·Instagram 인사이트 계약.</p>
+      <div class="tools">threads_publish · instagram_publish · facebook_publish · facebook_comment · sns_comment_* · threads_insights · threads_search · instagram_insights</div>
+    </a>
+    <a class="card" href="youtube-data.html">
+      <h3>YouTube Data API v3</h3>
+      <p>resumable 업로드 2단계, 2026년 개편된 Video Uploads 쿼터 버킷, categoryId, 썸네일 설정과 인증 요건, Analytics API 를 따로 켜야 하는 이유와 2~3일 지연, 시장 주제 스카우트.</p>
+      <div class="tools">youtube_publish · youtube_update · youtube_insights · youtube_topic_scout · sns_account_check</div>
+    </a>
+    <a class="card" href="tool-audit.html">
+      <h3>툴 품질 감사 리포트</h3>
+      <p>2026-07-29 시점의 툴 31개를 위 계약과 베스트 프랙티스로 채점한 결과, 발견한 결함 전체와 수정 내역. 그 뒤 15종이 추가돼 지금은 46종이고, 그 15종은 아직 감사 대상이 아니다.</p>
+      <div class="tools">감사 · 점수 · 수정 이력</div>
+    </a>
+  </div>
+</section>
+
+<section id="creds">
+  <h2>자격증명 매트릭스</h2>
+  <p><strong>키는 서로 독립인 두 묶음이고, 어느 한쪽에서 멈춰도 된다.</strong></p>
+  <p><strong>① 제작 키</strong> — 영상을 만드는 쪽이다. <code>OPENAI_API_KEY</code> 가 커버와 글자 들어간 프레임을 그리고(로컬 이미지 생성은 한글 자소가 깨진다), <code>GEMINI_API_KEY</code> 가 생성 영상 클립·연기 나레이션·BGM 을 맡는다. 엄밀히 따지면 둘 다 선택이다 — 씬 배경은 온디바이스 <code>image_local_generate</code>, 나레이션은 온디바이스 <code>tts_local_generate</code> 가 기본 경로라 키가 하나도 없어도 영상 한 편이 나온다. 조사 키(<code>SERPAPI_API_KEY</code>·Naver 한 쌍)도 선택이고, 없으면 스토리보드가 내장 WebSearch 로 간다.</p>
+  <p><strong>② 플랫폼 자격증명(Threads · Instagram · YouTube · Facebook) — 선택이다.</strong> 넣으면 파이프라인이 끝까지 가고 그다음부터는 알아서 굴러간다 — <code>publish</code> 가 내 계정에 바로 올리고, 성장 스킬(<code>grow-threads</code>·<code>grow-youtube</code>·<code>grow-instagram</code>)이 <code>/loop</code> 위에서 댓글 답글·지표 관찰·키워드 대화 참여·대기열 보충·게시까지 <code>init</code> 때 한 번 승인한 상시 승인서 안에서 채널을 운영한다. 안 넣어도 제작까지는 전부 돌아간다 — <code>produce</code> 가 완성 영상과 플랫폼별 텍스트를 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주고, 그 파일을 손으로 올리면 된다. 못 쓰는 건 게시·성장 절반뿐이고 자격증명에 묶인 툴 9종은 목록에 나오지도 않는다. 플랫폼 단위라 전부 아니면 전무도 아니다 — YouTube 만 연결하면 YouTube 만 게시·성장하고 나머지는 수동으로 둔다. 나중에 토큰을 넣어도 서버를 다시 띄울 필요가 없다.</p>
+  <p>키는 <strong>기동 시가 아니라 툴 호출 시점에</strong> 검증된다. 검색 키 없이도 게시 툴은 동작해야 하고 그 반대도 마찬가지이기 때문이다. 아래 표의 환경변수 이름만 기록하고 값은 어디에도 커밋하지 않는다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>환경변수</th><th>필요한 툴</th><th>없을 때</th><th>발급처</th></tr></thead>
+    <tbody>
+      <tr><td><code>GEMINI_API_KEY</code><br>(또는 <code>GOOGLE_API_KEY</code>)</td><td><code>veo_*</code> · <code>tts_generate</code> · <code>tts_multi_speaker</code> · <code>music_generate*</code></td><td>영상·음성·음악 생성 불가. 나머지는 정상</td><td><a href="https://aistudio.google.com/apikey">AI Studio</a></td></tr>
+      <tr><td><code>ARK_API_KEY</code></td><td><code>seedance_*</code></td><td>Seedance 영상 생성 불가. <code>veo_*</code> 는 정상</td><td><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/apikey">BytePlus ModelArk</a></td></tr>
+      <tr><td><code>OPENAI_API_KEY</code></td><td><code>gpt_image_*</code></td><td>이미지 생성 불가</td><td><a href="https://platform.openai.com/api-keys">OpenAI</a></td></tr>
+      <tr><td><code>SERPAPI_API_KEY</code></td><td><code>serp_*</code> · <code>sns_issue_scout</code></td><td><code>serp_*</code> 5종과 <code>sns_issue_scout</code> 불가 — <code>naver_search</code>·내장 WebSearch로 대체</td><td><a href="https://serpapi.com/manage-api-key">SerpApi</a></td></tr>
+      <tr><td><code>NAVER_CLIENT_ID</code><br><code>NAVER_CLIENT_SECRET</code></td><td><code>naver_search</code></td><td>한국어 1차 조사 불가 — <code>serp_naver_search</code>로 대체</td><td><a href="https://developers.naver.com/apps">Naver Developers</a></td></tr>
+      <tr><td><code>DATA_GO_KR_API_KEY</code></td><td><code>datago_file_fetch</code> · <code>datago_api_call</code></td><td>검색·상세·파일 다운로드 3종은 <strong>키 없이도 동작</strong></td><td><a href="https://www.data.go.kr">공공데이터포털</a></td></tr>
+      <tr><td><code>YOUTUBE_API_KEY</code></td><td><code>youtube_topic_scout</code></td><td>없으면 채널 OAuth <code>youtube.readonly</code> 로 폴백. 둘 다 없으면 호출이 실패한다</td><td><a href="https://console.cloud.google.com/apis/credentials">Google Cloud Console</a></td></tr>
+      <tr><td><code>SNS_TOKEN_DIR</code><br>(기본 <code>~/.config/social-flow</code>)</td><td>게시·댓글·인사이트 툴 전체</td><td>토큰 파일이 없는 플랫폼의 게시·인사이트 툴 9종은 <strong>ListTools에서 아예 숨겨진다</strong></td><td>플랫폼별 OAuth</td></tr>
+      <tr><td><code>MFLUX_ZIMAGE_BIN</code><br>(기본: PATH 의 <code>mflux-generate-z-image-turbo</code>)</td><td><code>image_local_generate</code></td><td>키가 아니라 <strong>실행 파일 경로</strong>다. 표준 위치에 깔았으면 설정할 필요가 없고, 못 찾으면 설치 안내가 담긴 에러가 온다</td><td><code>uv tool install --python 3.12 mflux</code></td></tr>
+      <tr><td><code>SUPERTONIC_PYTHON</code><br>(기본 <code>python3</code>)</td><td><code>tts_local_generate</code></td><td>가상환경에 깔았으면 그 인터프리터를 지정한다. venv 자동 탐색은 하지 않는다 — 저장소마다 다른 환경을 조용히 집어 목소리가 바뀌는 사고를 막는다</td><td><code>pip install supertonic</code></td></tr>
+      <tr><td><code>HF_HOME</code><br>(기본 <code>~/.cache/huggingface</code>)</td><td><code>image_local_generate</code></td><td>Z-Image 가중치 캐시 위치. 최초 호출에서 31GB 를 내려받으므로 디스크가 빠듯하면 옮긴다</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>토큰은 값이 아니라 파일로 받는다.</strong> Meta의 60일 갱신 절차가 파일을 덮어쓰는 구조라 파일 기반이어야 갱신이 가능하고, 커밋 대상인 <code>.mcp.json</code>에 시크릿이 실리는 것도 막는다. 채널(브랜드)별 토큰은 <code>&lt;SNS_TOKEN_DIR&gt;/&lt;slug&gt;/</code>에 두고 게시 툴의 <code>channel</code> 인자로 지정하며, 지정 시 기본 토큰으로 <strong>폴백하지 않는다</strong>(오계정 게시 방지).
+  </div>
+</section>
+
+<section id="map">
+  <h2>툴 ↔ API 매핑</h2>
+  <p>배지: <span class="badge ro">읽기</span> 부작용 없음 · <span class="badge wr">쓰기</span> 로컬 파일 생성 · <span class="badge de">공개</span> 호출 즉시 외부 공개 · <span class="badge key">키</span> 자격증명 필요 · <span class="badge free">무인증</span></p>
+  <p><strong>46종이 항상 다 보이지는 않는다.</strong> 플랫폼에 묶인 9종(<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>)은 자격증명 파일이 있는 플랫폼만 <code>tools/list</code> 에 나온다. 목록을 요청한 시점에 평가하므로 토큰을 넣으면 서버를 다시 띄우지 않아도 나타나고, 토큰이 하나도 없으면 37종이 보인다. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> 는 게이트 밖이라 토큰이 없어도 목록에 있다 — 유튜브 스카우트는 호출 시점에 <code>YOUTUBE_API_KEY</code> 또는 채널 OAuth 가, SNS 스카우트는 <code>SERPAPI_API_KEY</code> 가 필요하고, 피드백은 토큰이 없는 플랫폼의 절만 건너뛴다. <code>youtube_update</code> 도 마찬가지로 항상 목록에 있고 토큰이 없으면 에러를 낸다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가 온다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>툴</th><th>성격</th><th>호출 대상</th><th>레퍼런스</th></tr></thead>
+    <tbody>
+      <tr><td><code>serp_web_search</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>SerpApi <code>engine=google</code></td><td><a href="serpapi.html">SerpApi</a></td></tr>
+      <tr><td><code>serp_news_search</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>SerpApi <code>engine=google_news</code></td><td><a href="serpapi.html">SerpApi</a></td></tr>
+      <tr><td><code>serp_naver_search</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>SerpApi <code>engine=naver</code></td><td><a href="serpapi.html">SerpApi</a></td></tr>
+      <tr><td><code>serp_image_search</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>SerpApi <code>engine=google_images</code></td><td><a href="serpapi.html">SerpApi</a></td></tr>
+      <tr><td><code>serp_trending_now</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>SerpApi <code>engine=google_trends_trending_now</code></td><td><a href="serpapi.html#trending">SerpApi</a></td></tr>
+      <tr><td><code>sns_issue_scout</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>SerpApi <code>engine=google</code> + <code>site:</code> 스레드·X·인스타 → 게시물 정규화·주제어 빈도 (+ 급상승 1회)</td><td><a href="serpapi.html#trending">SerpApi</a></td></tr>
+      <tr><td><code>naver_search</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td><code>openapi.naver.com/v1/search/*</code></td><td><a href="naver-search.html">Naver</a></td></tr>
+      <tr><td><code>datago_search</code></td><td><span class="badge ro">읽기</span> <span class="badge free">무인증</span></td><td><code>data.go.kr</code> 검색 페이지 (HTML)</td><td><a href="data-go-kr.html">공공데이터</a></td></tr>
+      <tr><td><code>datago_detail</code></td><td><span class="badge ro">읽기</span> <span class="badge free">무인증</span></td><td><code>data.go.kr</code> 상세 페이지 (HTML)</td><td><a href="data-go-kr.html">공공데이터</a></td></tr>
+      <tr><td><code>datago_file_download</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td><code>selectFileDataDownload.do</code> → <code>fileDownload.do</code></td><td><a href="data-go-kr.html">공공데이터</a></td></tr>
+      <tr><td><code>datago_file_fetch</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td><code>api.odcloud.kr/api/{pk}/v1/{uddi}</code></td><td><a href="data-go-kr.html">공공데이터</a></td></tr>
+      <tr><td><code>datago_api_call</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td><code>apis.data.go.kr/{path}</code></td><td><a href="data-go-kr.html">공공데이터</a></td></tr>
+      <tr><td><code>gpt_image_text2img</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>POST /v1/images/generations</code></td><td><a href="openai-images.html">OpenAI</a></td></tr>
+      <tr><td><code>gpt_image_img2img</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>POST /v1/images/edits</code></td><td><a href="openai-images.html">OpenAI</a></td></tr>
+      <tr><td><code>image_local_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>없음 — 로컬 <code>mflux-generate-z-image-turbo</code> 프로세스</td><td><a href="../research/2026-08-12-local-image-generation/index.html">로컬 이미지 조사</a></td></tr>
+      <tr><td><code>veo_text2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateVideos</code> + operation 폴링</td><td><a href="gemini-veo.html">Veo</a></td></tr>
+      <tr><td><code>veo_img2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateVideos</code> (<code>image</code>/<code>lastFrame</code>)</td><td><a href="gemini-veo.html">Veo</a></td></tr>
+      <tr><td><code>veo_extension</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateVideos</code> (<code>video</code>)</td><td><a href="gemini-veo.html">Veo</a></td></tr>
+      <tr><td><code>veo_reference</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateVideos</code> (<code>referenceImages</code>)</td><td><a href="gemini-veo.html">Veo</a></td></tr>
+      <tr><td><code>seedance_text2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>POST /contents/generations/tasks</code> + 폴링</td><td><a href="seedance.html">Seedance</a></td></tr>
+      <tr><td><code>seedance_img2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td>같은 엔드포인트 (<code>role: first_frame/last_frame</code>)</td><td><a href="seedance.html">Seedance</a></td></tr>
+      <tr><td><code>seedance_reference</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td>같은 엔드포인트 (<code>role: reference_image</code>)</td><td><a href="seedance.html">Seedance</a></td></tr>
+      <tr><td><code>tts_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateContent</code> (<code>AUDIO</code>)</td><td><a href="gemini-tts.html">TTS</a></td></tr>
+      <tr><td><code>tts_multi_speaker</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateContent</code> (multiSpeaker)</td><td><a href="gemini-tts.html">TTS</a></td></tr>
+      <tr><td><code>tts_local_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>없음 — 로컬 Supertonic 3 (python)</td><td><a href="../research/2026-08-11-local-tts-and-commercial-api/index.html">로컬 TTS 조사</a></td></tr>
+      <tr><td><code>tts_list_voices</code></td><td><span class="badge ro">읽기</span></td><td>없음 — 서버 내장 상수</td><td><a href="gemini-tts.html">TTS</a></td></tr>
+      <tr><td><code>music_generate_clip</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>interactions.create</code> (<code>lyria-3-clip-preview</code>)</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
+      <tr><td><code>music_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
+      <tr><td><code>music_generate_advanced</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
+      <tr><td><code>music_list_options</code></td><td><span class="badge ro">읽기</span></td><td>없음 — 서버 내장 상수</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
+      <tr><td><code>threads_publish</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td><code>graph.threads.net/v1.0</code></td><td><a href="meta-graph.html">Meta</a></td></tr>
+      <tr><td><code>instagram_publish</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td><code>graph.instagram.com/v23.0</code></td><td><a href="meta-graph.html">Meta</a></td></tr>
+      <tr><td><code>facebook_publish</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td><code>graph.facebook.com/v23.0</code></td><td><a href="meta-graph.html">Meta</a></td></tr>
+      <tr><td><code>facebook_comment</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td><code>graph.facebook.com/v23.0</code></td><td><a href="meta-graph.html">Meta</a></td></tr>
+      <tr><td><code>youtube_publish</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td>OAuth2 갱신 → resumable upload → thumbnails.set</td><td><a href="youtube-data.html">YouTube</a></td></tr>
+      <tr><td><code>youtube_update</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td><code>videos.list</code> → <code>videos.update</code> (이미 올린 영상의 제목·설명·태그·공개범위)</td><td><a href="youtube-data.html">YouTube</a></td></tr>
+      <tr><td><code>youtube_insights</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>Data API 3종 + Analytics <code>reports.query</code></td><td><a href="youtube-data.html">YouTube</a></td></tr>
+      <tr><td><code>sns_comment_inbox</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>Threads · IG · FB 댓글 조회</td><td><a href="meta-graph.html">Meta</a></td></tr>
+      <tr><td><code>sns_comment_reply</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td>플랫폼별 답글 엔드포인트</td><td><a href="meta-graph.html">Meta</a></td></tr>
+      <tr><td><code>sns_comment_moderate</code></td><td><span class="badge de">공개</span> <span class="badge key">키</span></td><td>숨김/해제 · FB 좋아요</td><td><a href="meta-graph.html">Meta</a></td></tr>
+      <tr><td><code>sns_account_check</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>4개 플랫폼 <code>/me</code> · YouTube 채널 조회</td><td><a href="meta-graph.html">Meta</a> · <a href="youtube-data.html">YouTube</a></td></tr>
+      <tr><td><code>instagram_insights</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>계정 <code>/insights</code> + 미디어별 <code>/insights</code></td><td><a href="meta-graph.html#ig-growth">Meta</a></td></tr>
+      <tr><td><code>content_feedback</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td>youtube_insights + instagram_insights → 로컬 HTML</td><td><a href="youtube-data.html">YouTube</a> · <a href="meta-graph.html#ig-growth">Meta</a></td></tr>
+      <tr><td><code>youtube_topic_scout</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td>search + channels + playlistItems + videos → 채널 중앙값 대비 아웃라이어</td><td><a href="youtube-data.html#scout">YouTube</a></td></tr>
+      <tr><td><code>threads_insights</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td><code>/{user-id}/threads_insights</code> · <code>/{media-id}/insights</code></td><td><a href="meta-graph.html#growth">Meta</a></td></tr>
+      <tr><td><code>threads_search</code></td><td><span class="badge ro">읽기</span> <span class="badge key">키</span></td><td><code>GET /keyword_search</code></td><td><a href="meta-graph.html#growth">Meta</a></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="method">
+  <h2>이 문서를 만든 방법</h2>
+  <ul>
+    <li><strong>1차 출처는 공급사 공식 문서</strong>다. 각 페이지 상단에 원문 링크를 달았다.</li>
+    <li>공식 문서가 침묵하거나 실제와 다른 항목은 <strong>SDK 타입 정의</strong>(<code>node_modules/openai/resources/images.d.ts</code>, <code>node_modules/@google/genai/dist/genai.d.ts</code>)와 <strong>실호출 실측</strong>으로 확정했다. 그런 항목은 페이지에 근거를 명시했다.</li>
+    <li>실측으로 공식 문서를 뒤집은 사례가 하나 있다 — <a href="gemini-lyria.html#realtime-apiversion">Lyria RealTime의 apiVersion</a>.</li>
+    <li>구현이 공식 계약보다 <strong>좁게</strong> 잡은 값(예: <code>naver_search</code>의 <code>display</code> 상한 30 vs API 100)은 결함이 아니라 LLM 컨텍스트 보호를 위한 의도된 설계이며, 각 표에 "구현" 열로 구분해 적었다.</li>
+  </ul>
+</section>
+
+<footer>
+  기준일 2026-08-18 · 구현 정본은 <a href="../../server/src">server/src</a>, 툴 목록 정본은 <a href="../../README.md">README.md</a>다.
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Costs and keys — social-flow guide</title>
+<link rel="alternate" hreflang="ko" href="index.html">
+<link rel="alternate" hreflang="en" href="index.en.html">
+<link rel="stylesheet" href="../../assets/reference.css">
+<style>
+  /* Page-local props — layered on top of the shared reference.css */
+  .lede { font-size: 18px; line-height: 1.7; margin: 8px 0 4px; }
+  .lede strong { font-weight: 750; }
+
+  /* Evidence grade badges — the 4th column of prices.tsv */
+  .g { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .03em;
+       padding: 1px 7px; border-radius: 999px; white-space: nowrap; vertical-align: middle; }
+  .g.off { background: var(--green-soft); color: var(--green); }
+  .g.der { background: var(--amber-soft); color: var(--amber); }
+  .g.unk { background: var(--red-soft); color: var(--red); }
+
+  /* One badge reference.css doesn't carry — the optional marker */
+  .badge.opt { background: var(--bg-soft); color: var(--text-soft); border: 1px solid var(--border); }
+
+  /* Free vs paid lane cards */
+  .lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+  .lane { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; background: var(--bg-card); }
+  .lane.free { border-top: 3px solid var(--green); }
+  .lane.paid { border-top: 3px solid var(--purple); }
+  .lane h4 { margin: 0 0 10px; font-size: 14.5px; letter-spacing: .02em; }
+  .lane.free h4 { color: var(--green); }
+  .lane.paid h4 { color: var(--purple); }
+  .lane p, .lane li { font-size: 14.5px; }
+  .lane > :last-child { margin-bottom: 0; }
+  .lane ul { margin: 0 0 0 18px; }
+
+  /* Worked arithmetic */
+  .calc {
+    background: var(--bg-soft); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0; padding: 12px 18px; margin: 14px 0;
+    font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13.5px; line-height: 1.8; word-break: normal; overflow-x: auto;
+  }
+  .calc b { font-weight: 700; color: var(--text); }
+
+  /* Per-key setup blocks */
+  .keyblock { border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; background: var(--bg-card); }
+  .keyblock h3 { margin: 0 0 4px; font-size: 17px; }
+  .keyblock .src { font-size: 13px; color: var(--text-soft); margin-bottom: 12px; }
+  .keyblock > :last-child { margin-bottom: 0; }
+  .keyblock pre { margin-bottom: 12px; }
+
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  @media (max-width: 720px) { .lanes { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="index.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../../index.en.html">Docs</a><span>/</span>Guides<span>/</span>Costs and keys</div>
+
+<header class="hero">
+  <div class="kicker">SETUP · COST</div>
+  <h1>What costs money, and how to set it up</h1>
+  <p class="sub">Of the five generation capabilities — images, video, speech, transcription, music — three have an on-device path that costs nothing and two don't. This page covers what each one is priced at, and how to install and configure both lanes.</p>
+  <div class="meta">
+    <span>Price source of truth <strong><code>skills/autoproduce/references/prices.tsv</code></strong></span>
+    <span>Prices last checked <strong>2026-08-15</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">On this page</div>
+  <ol>
+    <li><a href="#split">Where the money goes, and where it doesn't</a></li>
+    <li><a href="#image">Images</a></li>
+    <li><a href="#video">Video</a></li>
+    <li><a href="#tts">Speech (TTS)</a></li>
+    <li><a href="#stt">Transcription (STT)</a></li>
+    <li><a href="#music">Music</a></li>
+    <li><a href="#quota">Research — quota, not money</a></li>
+    <li><a href="#episode">What one episode costs</a></li>
+    <li><a href="#zero">The zero-cost configuration</a></li>
+    <li><a href="#keys">Key setup, one at a time</a></li>
+    <li><a href="#local">Installing the on-device engines</a></li>
+    <li><a href="#control">Cost control in practice</a></li>
+  </ol>
+</nav>
+
+<!-- ══════════ 1 ══════════ -->
+<section id="split">
+  <h2>Where the money goes, and where it doesn't</h2>
+
+  <p class="lede">Video and music <strong>always bill</strong>. Images and speech can be generated on-device for free on Apple Silicon, and transcription has no paid path at all.</p>
+
+  <p>Each free lane has something it can't do, though. That list of limits is also the list of things worth paying for.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Capability</th><th>Free lane</th><th>What the free lane can't do</th><th>Paid lane</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Images</strong></td>
+        <td><code>image_local_generate</code><br>Z-Image Turbo · on-device</td>
+        <td>No <strong>text inside the image</strong> — Korean jamo break apart</td>
+        <td><code>gpt_image_text2img</code><br><span class="badge key">OPENAI_API_KEY</span></td>
+      </tr>
+      <tr>
+        <td><strong>Video</strong></td>
+        <td><em>none</em></td>
+        <td>—</td>
+        <td><code>veo_*</code> <span class="badge key">GEMINI_API_KEY</span><br><code>seedance_*</code> <span class="badge key">ARK_API_KEY</span></td>
+      </tr>
+      <tr>
+        <td><strong>Speech</strong></td>
+        <td><code>tts_local_generate</code><br>Supertonic 3 · on-device</td>
+        <td>No style or emotion direction</td>
+        <td><code>tts_generate</code><br><span class="badge key">GEMINI_API_KEY</span></td>
+      </tr>
+      <tr>
+        <td><strong>Transcription</strong></td>
+        <td>whisper.cpp · on-device</td>
+        <td>—</td>
+        <td><em>none</em></td>
+      </tr>
+      <tr>
+        <td><strong>Music</strong></td>
+        <td><em>none</em></td>
+        <td>—</td>
+        <td><code>music_generate_clip</code><br><span class="badge key">GEMINI_API_KEY</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="ok">
+    <strong>The default pipeline makes zero video calls.</strong> It fills the runtime with still images under an ffmpeg Ken Burns move, plus narration, subtitles, and BGM, so generated video only appears when <strong>a human or the metrics promote one slot</strong>. That means a real episode is usually just <strong>one cover image plus one BGM clip</strong> — worked out in <a href="#episode">§8</a>.
+  </div>
+
+  <p>Every price on this page comes from one file, <code>skills/autoproduce/references/prices.tsv</code>. Each line carries an evidence grade, and this page repeats that grade rather than flattening it.</p>
+
+  <ul>
+    <li><span class="g off">official</span> read directly off the vendor's pricing page</li>
+    <li><span class="g der">derived</span> computed from an official value — a resolution ratio applied, or an example price divided by seconds</li>
+    <li><span class="g unk">unconfirmed</span> the vendor publishes no price. Written as <code>?</code>, and the calculator refuses to return a verdict when it meets that line</li>
+  </ul>
+</section>
+
+<!-- ══════════ 2 ══════════ -->
+<section id="image">
+  <h2>Images</h2>
+
+  <div class="lanes">
+    <div class="lane free">
+      <h4>Free — <code>image_local_generate</code></h4>
+      <p>Z-Image Turbo running on-device through mflux/MLX. No key, no network, no billing — electricity only.</p>
+      <ul>
+        <li>Apple Silicon only</li>
+        <li><code>uv tool install --python 3.12 mflux</code></li>
+        <li>First call downloads <strong>about 31GB</strong> of weights</li>
+        <li>9:16 is 1088×1920 (both edges must be multiples of 16)</li>
+      </ul>
+    </div>
+    <div class="lane paid">
+      <h4>Paid — <code>gpt_image_text2img</code> · <code>img2img</code></h4>
+      <p>OpenAI GPT Image. Billed per image, and the quality tier changes the price a lot.</p>
+      <ul>
+        <li>Needs <span class="badge key">OPENAI_API_KEY</span></li>
+        <li>Renders text inside the image properly</li>
+        <li>Arbitrary dimensions · up to 16 reference images · mask inpainting</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>The wall on the free lane — text in pictures</h3>
+
+  <p>The local engine <strong>can't produce an image with text in it.</strong> Korean glyphs come apart into scattered jamo and lookalike characters. Measured: "딸깍연구소" came out as "달닥연구소".</p>
+
+  <p>So <strong>the cover and any frame carrying text are pinned to the paid lane.</strong> Text-free pictures — scene backgrounds and the like — all default to local.</p>
+
+  <h3>Prices</h3>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Key</th><th>Unit</th><th class="num">USD</th><th>Grade</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>image.local</code></td><td>image</td><td class="num">0.000</td><td><span class="g off">official</span></td><td>On-device — electricity only</td></tr>
+      <tr><td><code>image.gpt-image-2.low</code></td><td>image</td><td class="num">0.007</td><td><span class="g der">derived</span></td><td>official 1024×1536 low $0.005 × 1.33</td></tr>
+      <tr><td><code>image.gpt-image-2.medium</code></td><td>image</td><td class="num">0.055</td><td><span class="g der">derived</span></td><td>official 1024×1536 medium $0.041 × 1.33</td></tr>
+      <tr><td><code>image.gpt-image-2.high</code></td><td>image</td><td class="num">0.220</td><td><span class="g der">derived</span></td><td>official 1024×1536 high $0.165 × 1.33 — the cover runs at this tier</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="warn">
+    <strong>Why those three lines are <span class="g der">derived</span>.</strong> OpenAI's official table lists preset resolutions only, and this pipeline uses a custom 1088×1920. These are the 1024×1536 values multiplied by the 1.33 pixel ratio. They stay derived until someone checks them against a real invoice.
+  </div>
+
+  <p>Local generation goes in the ledger too, as <code>image.local</code>. The value is 0 so the total doesn't move, but a key the calculator doesn't recognize stops it with exit 1 and blocks the whole episode's tally.</p>
+
+  <p><strong>On a machine without mflux</strong>, scene backgrounds fall back to <code>gpt_image_text2img</code> at quality <code>low</code>. At $0.007 each that's small, but 2–4 of them add $0.014–0.028 to an episode — and that number matters against the cap in <a href="#episode">§8</a>.</p>
+</section>
+
+<!-- ══════════ 3 ══════════ -->
+<section id="video">
+  <h2>Video</h2>
+
+  <p class="lede"><strong>Generated video has no free lane.</strong> This plugin ships no on-device video engine, and both hosted engines bill by the second.</p>
+
+  <div class="ok">
+    <strong>The default is still zero video calls.</strong> The economy tier fills 60 seconds with stills and Ken Burns. Veo makes at most 8 seconds per call, so covering a whole episode with generated footage means pulling eight clips and stitching them — and the stitching layer is needed anyway. That leaves exactly one question: <strong>which single slot gets generated video.</strong>
+  </div>
+
+  <h3>Veo 3.1 — per second, audio always on, lengths on a 4/6/8s grid</h3>
+
+  <p>Veo runs on <span class="badge key">GEMINI_API_KEY</span> and <strong>always includes audio</strong> — it can't be turned off, and there's no free tier. Lengths are locked to a 4/6/8-second grid, and <strong>1080p and 4K are 8-second only</strong>.</p>
+
+  <div class="warn">
+    <strong>A 4-second cut still pays for 8 seconds.</strong> The API has no way to generate 4 seconds at 1080p. Comparing per-second prices alone understates real spend, which is why the ledger records <strong>generated length</strong>, not used length.
+  </div>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Key</th><th class="num">USD/sec</th><th>Grade</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>veo.lite.720p</code></td><td class="num">0.05</td><td><span class="g off">official</span></td><td>veo-3.1-lite-generate-preview</td></tr>
+      <tr><td><code>veo.lite.1080p</code></td><td class="num">0.08</td><td><span class="g off">official</span></td><td>1080p is 8s-only — the combination auto-escalation uses</td></tr>
+      <tr><td><code>veo.fast.720p</code></td><td class="num">0.10</td><td><span class="g off">official</span></td><td>veo-3.1-fast-generate-preview</td></tr>
+      <tr><td><code>veo.fast.1080p</code></td><td class="num">0.12</td><td><span class="g off">official</span></td><td>1080p is 8s-only</td></tr>
+      <tr><td><code>veo.fast.4k</code></td><td class="num">0.30</td><td><span class="g off">official</span></td><td>4K is 8s-only</td></tr>
+      <tr><td><code>veo.standard.720p</code></td><td class="num">0.40</td><td><span class="g off">official</span></td><td>Tier banned from autonomous authoring</td></tr>
+      <tr><td><code>veo.standard.1080p</code></td><td class="num">0.40</td><td><span class="g off">official</span></td><td>Same price as 720p — 1080p is 8s-only</td></tr>
+      <tr><td><code>veo.standard.4k</code></td><td class="num">0.60</td><td><span class="g off">official</span></td><td>4K is 8s-only. lite doesn't support 4K</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="calc">
+    <b>Veo lite · 1080p · one 8-second cut</b><br>
+    8s × $0.08 = <b>$0.64</b><br>
+    Trim it to 4 seconds and it's still $0.64 — the ledger line reads <code>veo.lite.1080p&#9;8</code>.
+  </div>
+
+  <p>The standard tier sits out of autonomous authoring for more than price. $3.20 for eight seconds isn't a call an unattended loop should make, and in blind-arena testing standard came out statistically indistinguishable from lite and fast, so the quality that money buys doesn't measure.</p>
+
+  <h3>Seedance — exactly the seconds you ask for, audio optional</h3>
+
+  <p>Seedance runs on BytePlus ModelArk with <span class="badge key">ARK_API_KEY</span>. Unlike Veo it bills <strong>the requested seconds as-is</strong>, in 1-second steps from 2 to 30. Audio can be turned off, which makes <strong>silent cuts much cheaper</strong>.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Key</th><th class="num">USD/sec</th><th>Grade</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>seedance.1-0-pro-fast.720p</code></td><td class="num">0.020</td><td><span class="g der">derived</span></td><td>Cheapest — silent-only, first frame only</td></tr>
+      <tr><td><code>seedance.1-5-pro-silent.720p</code></td><td class="num">0.026</td><td><span class="g der">derived</span></td><td>seedance-1-5-pro-251215 silent</td></tr>
+      <tr><td><code>seedance.1-0-pro-fast.1080p</code></td><td class="num">0.048</td><td><span class="g der">derived</span></td><td>Silent-only, first frame only</td></tr>
+      <tr><td><code>seedance.1-5-pro-silent.1080p</code></td><td class="num">0.058</td><td><span class="g der">derived</span></td><td>Default b-roll candidate — accepts photoreal face input</td></tr>
+      <tr><td><code>seedance.2-0-mini.720p</code></td><td class="num">0.076</td><td><span class="g der">derived</span></td><td>Rejects photoreal face input · $30 balance gate</td></tr>
+      <tr><td><code>seedance.1-5-pro-audio.1080p</code></td><td class="num">0.116</td><td><span class="g der">derived</span></td><td>With audio — exactly 2× silent</td></tr>
+      <tr><td><code>seedance.2-0-fast.720p</code></td><td class="num">0.120</td><td><span class="g der">derived</span></td><td>Rejects photoreal face input · $30 balance gate</td></tr>
+      <tr><td><code>seedance.1-0-pro.1080p</code></td><td class="num">0.122</td><td><span class="g der">derived</span></td><td>seedance-1-0-pro-250528 — silent-only</td></tr>
+      <tr><td><code>seedance.2-5.720p</code></td><td class="num">0.231</td><td><span class="g der">derived</span></td><td>30 reference images · up to 30s</td></tr>
+      <tr><td><code>seedance.2-0.1080p</code></td><td class="num">0.374</td><td><span class="g der">derived</span></td><td>9 reference images · 4K capable</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="calc">
+    <b>Seedance 1.5 pro silent · 1080p · one 4-second cut</b><br>
+    4s × $0.058 = <b>$0.232</b><br>
+    The same slot on Veo lite 1080p is $0.64 — <b>2.8×</b> the price.
+  </div>
+
+  <p>Every Seedance line is <span class="g der">derived</span> because the vendor bills in tokens. These are the official docs' "5s · 16:9" example price divided by 5; 9:16 only swaps width and height, so the token count and the price are the same. <strong>The bill's real source of truth is the response's <code>completion_tokens</code></strong>, so record that value in the ledger's memo column. Limited-time discounts are deliberately not baked in — they'd turn into silently wrong numbers the day the promo ends.</p>
+
+  <div class="warn">
+    <strong>Seedance 2.x doesn't open on a key alone.</strong> The Dreamina Seedance 2.5 and 2.0 family needs <strong>an account balance over $30, or a resource pack</strong>, before it activates. The 1.5 pro and 1.0 families have no such gate. Separately, every model has to be switched on once under the console's Model activation, or task creation fails with <code>ModelNotOpen</code>.
+  </div>
+
+  <h3>The one escalation slot — when video is worth paying for</h3>
+
+  <p>The only slot the autonomous loop can promote on its own is <strong>the opening b-roll in the segment after the cover</strong>. The schema allows two slots, but the second one is a call a human makes while approving the storyboard. The cover itself never escalates — Veo can't write Korean, so the hook title is code-rendered.</p>
+
+  <p>The escalation verdict is <strong>a trend, not an absolute threshold</strong>. With a fixed threshold, a channel whose measured numbers sit permanently above it escalates every episode, which is 5× the cost every episode — and that money doesn't fix the problem, because the b-roll attaches <em>after</em> the cover while the skipping happens <em>inside</em> it.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Platform</th><th>Metric</th><th>Escalation verdict</th></tr></thead>
+    <tbody>
+      <tr><td>YouTube</td><td><code>averageViewPercentage</code></td><td>last-3-episode average <strong>down 5+ points</strong> from the previous 3</td></tr>
+      <tr><td>Instagram</td><td><code>reels_skip_rate</code></td><td>last-3-episode average <strong>up 5+ points</strong> from the previous 3</td></tr>
+      <tr><td>Both</td><td>under 6 published episodes</td><td>no comparison window, so <strong>no escalation</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Escalation also freezes right after a hook-contract revision. Once the hook changes, earlier episodes' metrics are no comparison, so the loop runs economy baseline only until 3 new-baseline episodes accumulate.</p>
+</section>
+
+<!-- ══════════ 4 ══════════ -->
+<section id="tts">
+  <h2>Speech (TTS)</h2>
+
+  <div class="lanes">
+    <div class="lane free">
+      <h4>Free — <code>tts_local_generate</code></h4>
+      <p>Supertonic 3, on-device. No key, no network. Measured at 6.3× real-time on CPU alone.</p>
+      <ul>
+        <li><code>pip install supertonic</code></li>
+        <li>First call downloads <strong>385MB</strong> of weights into <code>~/.cache/supertonic3</code> (about 24s)</li>
+        <li>10 voices · 31 languages · mono <strong>44.1kHz</strong></li>
+        <li>Installed in a virtualenv? Set <code>SUPERTONIC_PYTHON</code></li>
+      </ul>
+    </div>
+    <div class="lane paid">
+      <h4>Paid — <code>tts_generate</code> · <code>tts_multi_speaker</code></h4>
+      <p>Gemini TTS. Priced per 1,000 characters.</p>
+      <ul>
+        <li>Needs <span class="badge key">GEMINI_API_KEY</span></li>
+        <li><strong>Takes acting direction</strong> (<code>stylePrompt</code>)</li>
+        <li>30 voices · 2-speaker dialogue · mono <strong>24kHz</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Licensing — read this if the channel is commercial</h3>
+
+  <div class="note">
+    Supertonic's <strong>code is MIT and its weights are OpenRAIL-M</strong>. <strong>Commercial use is allowed</strong>, but with use-based restrictions attached: you can't use it for the purposes the license prohibits, and if you redistribute it, the same restrictions travel with it. If you're running a monetized channel, read the license text once.
+  </div>
+
+  <h3>Prices</h3>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Key</th><th>Unit</th><th class="num">USD</th><th>Grade</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>tts.local</code></td><td>1,000 chars</td><td class="num">0.000</td><td><span class="g off">official</span></td><td>Supertonic, local</td></tr>
+      <tr><td><code>tts.gemini-flash</code></td><td>1,000 chars</td><td class="num">0.038</td><td><span class="g der">derived</span></td><td>$38 per 1M characters</td></tr>
+      <tr><td><code>tts.gemini-pro</code></td><td>1,000 chars</td><td class="num">0.076</td><td><span class="g der">derived</span></td><td>$76 per 1M characters — the fallback when flash refuses</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Gemini actually bills in audio tokens (25 per second), not characters. The values above take 1M characters at the measured Korean speech rate of 6.55 chars/s and fold the result back into a per-1,000-character price, which is why they're <span class="g der">derived</span>.</p>
+
+  <div class="warn">
+    <strong>Mixing the two engines in one video breaks on sample rate.</strong> Local is 44.1kHz and Gemini is 24kHz, so concatenating them directly fails. Mixing needs a resampling step, and the automated authoring path sidesteps the problem by using one engine per video.
+  </div>
+
+  <div class="danger">
+    <strong>Never switch a running channel's engine.</strong> Moving a <code>gemini</code> channel to local because local is free means <strong>the narrator becomes a different person partway through the channel's run.</strong> The engine changes only when you edit <code>profile.md</code> §2 yourself — automated authoring has an absolute rule forbidding it.
+  </div>
+
+  <p>Hence the division of labor: <strong>narration bodies go local, and only cuts that need acting go to Gemini.</strong> Intro lines and character dialogue are where the paid engine earns its price.</p>
+</section>
+
+<!-- ══════════ 5 ══════════ -->
+<section id="stt">
+  <h2>Transcription (STT)</h2>
+
+  <p class="lede">Transcription is <strong>free-only</strong>. There is no paid STT in this plugin. The <code>ingest</code> skill, which turns a screen recording into source material, runs whisper.cpp on-device.</p>
+
+  <p>It costs nothing, but it does need two things installed.</p>
+
+  <ul>
+    <li><strong>whisper.cpp itself</strong> — <code>brew install whisper-cpp</code></li>
+    <li><strong>The model file</strong> — download <code>ggml-large-v3-turbo.bin</code> (1.5GB) from <code>huggingface.co/ggerganov/whisper.cpp</code> into <code>~/.cache/whisper-cpp/</code>. Keep it elsewhere and point <code>WHISPER_MODEL</code> at it.</li>
+  </ul>
+
+  <p>Recording also needs <strong>Screen Recording and Microphone</strong> permission for your terminal app (System Settings → Privacy &amp; Security). Without them the recording step stops.</p>
+
+  <p>The tuning knobs are documented at the top of <code>skills/ingest/references/transcribe.sh</code> — language (<code>WHISPER_LANG</code>, default <code>ko</code>), glossary injection (<code>WHISPER_PROMPT</code>), silence threshold (<code>SIL_DB</code>), and scene-change sensitivity (<code>SCENE_THRESH</code>).</p>
+</section>
+
+<!-- ══════════ 6 ══════════ -->
+<section id="music">
+  <h2>Music</h2>
+
+  <p class="lede">BGM has <strong>no free lane</strong> either. It's Lyria, on <span class="badge key">GEMINI_API_KEY</span>.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Key</th><th>Unit</th><th class="num">USD</th><th>Grade</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>music.lyria-clip</code></td><td>clip</td><td class="num">0.04</td><td><span class="g off">official</span></td><td><code>music_generate_clip</code> — fixed 30s</td></tr>
+      <tr><td><code>music.lyria-realtime</code></td><td>second</td><td class="num">?</td><td><span class="g unk">unconfirmed</span></td><td><code>music_generate</code> — no row in the official price table</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><strong>The default BGM path is <code>music_generate_clip</code></strong>: one 30-second clip that the builder stretches with <code>-stream_loop -1</code>. That's what the economy tier uses, and it's the only music item with a confirmed price.</p>
+
+  <div class="warn">
+    <strong>Lyria RealTime has no published price.</strong> It's an experimental model with no row in the official price table at all (checked 2026-08-15). But the manual <code>produce</code> skill builds its BGM with that tool, at 90 seconds, so <strong>an episode made through the manual path ends its cost report at exit 1.</strong>
+    <p>That's correct behavior, not a bug. Write an unknown value as 0 and the episode's cost silently shrinks. The calculator still prints the total of the remaining items, so report it as <strong>"total $X + 1 item excluded from the tally (BGM)"</strong>. Don't write it as 0, and don't delete the line.</p>
+  </div>
+</section>
+
+<!-- ══════════ 7 ══════════ -->
+<section id="quota">
+  <h2>Research — quota, not money</h2>
+
+  <p>What the research stage spends is call quota. Run out and that day's research is blocked, so spend it as carefully as the money.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Tool</th><th>Free allowance</th><th>Where it's used</th></tr></thead>
+    <tbody>
+      <tr><td><code>naver_search</code></td><td><strong>25,000/day</strong></td><td>First tool for Korean material. Start here</td></tr>
+      <tr><td><code>serp_*</code></td><td><strong>250/month</strong></td><td>Precision and international searches. <strong>At most 2</strong> per automated episode</td></tr>
+      <tr><td>Built-in WebSearch</td><td>—</td><td>General-purpose and international. The fallback when keys are missing</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Don't repeat the same search with a different tool. 250 SerpApi calls disappear fast for a month's allowance.</p>
+</section>
+
+<!-- ══════════ 8 ══════════ -->
+<section id="episode">
+  <h2>What one episode costs</h2>
+
+  <p>Three configurations people actually run, computed from <code>prices.tsv</code>. The arithmetic is spelled out so you can redo it when a price changes.</p>
+
+  <h3>Configuration A — economy tier · local narration <span style="font-weight:400;color:var(--text-soft);font-size:14px">(the automated default)</span></h3>
+
+  <p>The cover background is a paid image at quality high; the 2–4 scene backgrounds are local, narration is local, and there's one BGM clip.</p>
+
+  <div class="calc">
+    Cover image <code>image.gpt-image-2.high</code> × 1 = 1 × $0.220 = $0.220<br>
+    Scene backgrounds <code>image.local</code> × 3 &nbsp;&nbsp;= 3 × $0.000 = $0.000<br>
+    Narration <code>tts.local</code>, 400 chars &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 0.4 × $0.000 = $0.000<br>
+    BGM <code>music.lyria-clip</code> × 1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 1 × $0.04 &nbsp;= $0.040<br>
+    ─────────────────────────────<br>
+    total <b>$0.26</b>
+  </div>
+
+  <h3>Configuration B — economy tier · Gemini narration</h3>
+
+  <p>For channels whose profile pins the narration engine to <code>gemini</code>. A 400-character narration adds this much.</p>
+
+  <div class="calc">
+    Images and music from A &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= $0.260<br>
+    Narration <code>tts.gemini-flash</code>, 400 chars = 0.4 × $0.038 = $0.0152<br>
+    ─────────────────────────────<br>
+    total <b>$0.2752</b> — call it <b>$0.275</b>
+  </div>
+
+  <div class="note">
+    <strong>Character counts are divided by 1,000.</strong> 400 characters is <code>0.4</code>. Write <code>400</code> and that line inflates 1,000×. On a local channel the price is 0 so nothing shows; on a Gemini channel it shows up at the size of the invoice.
+  </div>
+
+  <h3>Configuration C — the same, plus one Veo escalation</h3>
+
+  <p>The opening b-roll slot promoted to Veo lite 1080p, 8 seconds.</p>
+
+  <div class="calc">
+    Configuration A (local narration) &nbsp;&nbsp;= $0.260<br>
+    b-roll <code>veo.lite.1080p</code>, 8s &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 8 × $0.08 = $0.640<br>
+    ─────────────────────────────<br>
+    total <b>$0.90</b> &nbsp;(on top of configuration B, $0.915)
+  </div>
+
+  <p>The model-ladder doc quotes this combination at <strong>about $0.91 per episode</strong>, rounding the economy baseline to $0.27. Either way it's <strong>three times over the default $0.30 cap.</strong></p>
+
+  <h3>How that meets the cap</h3>
+
+  <p>The growth plan's <code>max_cost_per_video</code> defaults to <strong>$0.30</strong>. With the cover pinned at high, that value <strong>passes the economy tier and blocks every Veo escalation.</strong> To let one through, you raise the cap in the plan to <strong>$1.00 or more</strong>. The autonomous loop never raises it on its own — while the escalation condition holds, it keeps building at economy baseline and says so in the completion report.</p>
+
+  <h3>Machines without mflux</h3>
+
+  <p>With no local image engine, scene backgrounds fall back to <code>gpt low</code> and the old arithmetic returns.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Narration engine</th><th class="num">2 low images</th><th class="num">3 low images</th><th class="num">4 low images</th></tr></thead>
+    <tbody>
+      <tr><td>Local</td><td class="num">$0.274</td><td class="num">$0.281</td><td class="num">$0.288</td></tr>
+      <tr><td>Gemini (400 chars)</td><td class="num">$0.289</td><td class="num">$0.296</td><td class="num"><strong>$0.303</strong> — over the cap</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>A Gemini channel using 4 low images busts the default $0.30 cap, so use at most 3 in that case. With mflux installed, image count stops being a cost question — pick 2–4 purely on screen rhythm.</p>
+</section>
+
+<!-- ══════════ 9 ══════════ -->
+<section id="zero">
+  <h2>The zero-cost configuration</h2>
+
+  <p>The pipeline runs with no paid keys at all. Here's what you get and what you give up, stated plainly.</p>
+
+  <div class="lanes">
+    <div class="lane free">
+      <h4>Still works</h4>
+      <ul>
+        <li>Scene background images — local generation</li>
+        <li>Narration — local TTS</li>
+        <li>Transcription and timelines — whisper.cpp</li>
+        <li>Subtitles, Ken Burns, the build — ffmpeg</li>
+        <li>Research — built-in WebSearch</li>
+        <li>Per-platform copy and the style gate</li>
+      </ul>
+    </div>
+    <div class="lane paid">
+      <h4>What you give up</h4>
+      <ul>
+        <li><strong>A proper cover</strong> — no text-bearing frames</li>
+        <li><strong>BGM</strong> — the video comes out silent under the voice</li>
+        <li>Generated video — the default is zero calls anyway, so this one barely stings</li>
+        <li>Acted, emotive narration</li>
+        <li>Naver and SerpApi research</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>The two losses that actually hurt are <strong>BGM and cover quality</strong>. Generated video was never in the default build, so its absence changes little. But a short-form video with no music sounds thin, and the cover doubles as the thumbnail — miss the hook there and the viewer scrolls past.</p>
+
+  <div class="note">
+    <strong>There's a middle step.</strong> Add just <code>OPENAI_API_KEY</code> and the cover comes back, at $0.22 an episode. Add <code>GEMINI_API_KEY</code> on top and BGM joins it, at $0.26. Those two keys are the whole economy tier.
+  </div>
+</section>
+
+<!-- ══════════ 10 ══════════ -->
+<section id="keys">
+  <h2>Key setup, one at a time</h2>
+
+  <p>Keys go in as <strong>shell environment variables</strong>. <code>.mcp.json</code> passes your shell environment straight through to the server, so no key value ever lands in a committed file. The variable list and its comments live in <code>.env.example</code> at the repo root.</p>
+
+<pre><code># Working from .env.example
+cp .env.example .env
+$EDITOR .env
+set -a &amp;&amp; . ./.env &amp;&amp; set +a</code></pre>
+
+  <p>Writing <code>export</code> lines into <code>~/.zshrc</code> works the same way. Either way, <strong>a session freezes the environment it started with</strong> — add a key and you have to restart <code>claude</code> for it to take effect.</p>
+
+  <div class="keyblock">
+    <h3><code>OPENAI_API_KEY</code> <span class="badge key">production</span></h3>
+    <div class="src">platform.openai.com/api-keys</div>
+    <p><strong>Unlocks</strong> — <code>gpt_image_text2img</code> · <code>gpt_image_img2img</code>. Covers and text-bearing frames.</p>
+<pre><code>export OPENAI_API_KEY="sk-..."</code></pre>
+    <p><strong>Confirm it works</strong> — listing models isn't billed.</p>
+<pre><code>curl -s https://api.openai.com/v1/models \
+  -H "Authorization: Bearer $OPENAI_API_KEY" | head -c 200</code></pre>
+    <p><strong>The key alone isn't enough.</strong> With no credit on the account, image generation fails — add a payment method and credit under Billing in the OpenAI dashboard. A <code>401</code> or <code>403</code> from the check above means the key is wrong or billing isn't attached.</p>
+  </div>
+
+  <div class="keyblock">
+    <h3><code>GEMINI_API_KEY</code> <span class="badge key">production</span></h3>
+    <div class="src">aistudio.google.com/apikey · <code>GOOGLE_API_KEY</code> works as an alias</div>
+    <p><strong>Unlocks</strong> — <code>veo_*</code> (generated video) · <code>tts_generate</code> and <code>tts_multi_speaker</code> (acted speech) · <code>music_*</code> (BGM). All three share this one key.</p>
+<pre><code>export GEMINI_API_KEY="..."</code></pre>
+    <p><strong>Confirm it works</strong></p>
+<pre><code>curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY" | head -c 200</code></pre>
+    <p>A JSON model list means you're set. A <code>401</code> or <code>403</code> means the key is wrong or billing isn't attached.</p>
+  </div>
+
+  <div class="keyblock">
+    <h3><code>ARK_API_KEY</code> <span class="badge opt">optional</span></h3>
+    <div class="src">ai.byteplus.com/ark — BytePlus ModelArk</div>
+    <p><strong>Unlocks</strong> — <code>seedance_*</code>, the second video engine. Without it, Veo still runs on <code>GEMINI_API_KEY</code>.</p>
+<pre><code>export ARK_API_KEY="ark-..."
+# Leave the region endpoint alone — the video models only exist in ap-southeast-1
+# export ARK_BASE_URL=https://ark.ap-southeast.bytepluses.com/api/v3</code></pre>
+    <p><strong>There are three gates,</strong> and calls only work once you're past all of them.</p>
+    <ol>
+      <li>Use the <strong>API Key</strong> the console issues separately (it starts with <code>ark-</code>), not the signing AccessKeyId/SecretAccessKey.</li>
+      <li>Switch your models on under <strong>Model activation</strong> in the console. Skip this and task creation fails with <code>ModelNotOpen</code>. The first activation asks for TOS, VPC, and ML-platform cross-service authorization, which the account owner has to click.</li>
+      <li>The Dreamina Seedance 2.5/2.0 family additionally needs <strong>a balance over $30 or a resource pack</strong>.</li>
+    </ol>
+    <p><strong>Confirming</strong> — there's no read-only check endpoint, so lean on the tool's own error message, which distinguishes the three gates above. A real generation call is a billed call.</p>
+  </div>
+
+  <div class="keyblock">
+    <h3><code>SERPAPI_API_KEY</code> <span class="badge opt">optional</span></h3>
+    <div class="src">serpapi.com — 250 free searches/month</div>
+    <p><strong>Unlocks</strong> — <code>serp_web_search</code> · <code>serp_news_search</code> · <code>serp_naver_search</code> · <code>serp_image_search</code> · <code>serp_trending_now</code>, and <code>sns_issue_scout</code>.</p>
+<pre><code>export SERPAPI_API_KEY="..."</code></pre>
+    <p>Without it, research falls back to the built-in WebSearch. <strong>Confirming</strong> means calling <code>serp_web_search</code> once — and that once comes out of the 250.</p>
+  </div>
+
+  <div class="keyblock">
+    <h3><code>NAVER_CLIENT_ID</code> · <code>NAVER_CLIENT_SECRET</code> <span class="badge opt">optional</span></h3>
+    <div class="src">developers.naver.com — 25,000 free calls/day</div>
+    <p><strong>Unlocks</strong> — <code>naver_search</code>. Register an application and <strong>apply for the Search API</strong> to get both values.</p>
+<pre><code>export NAVER_CLIENT_ID="..."
+export NAVER_CLIENT_SECRET="..."</code></pre>
+    <p>The allowance is generous and it's the first tool for Korean topics, so it's worth setting if you make Korean-language content. <strong>Confirm it</strong> by calling <code>naver_search</code> once — well inside the free tier.</p>
+  </div>
+
+  <div class="keyblock">
+    <h3><code>DATA_GO_KR_API_KEY</code> <span class="badge opt">optional</span></h3>
+    <div class="src">data.go.kr My Page — Korea's open-data portal</div>
+    <p><strong>Unlocks</strong> — <code>datago_file_fetch</code> · <code>datago_api_call</code>. Dataset search, detail, and file download (<code>datago_search</code> · <code>datago_detail</code> · <code>datago_file_download</code>) work with no key.</p>
+<pre><code>export DATA_GO_KR_API_KEY="..."</code></pre>
+    <div class="warn"><strong>The key alone doesn't open anything.</strong> Each individual API needs its own <strong>usage application</strong> on the portal (usually auto-approved). If the key is set and one specific API still fails, that application is almost always what's missing.</div>
+  </div>
+
+  <div class="keyblock">
+    <h3><code>YOUTUBE_API_KEY</code> <span class="badge opt">optional</span></h3>
+    <div class="src">console.cloud.google.com/apis/credentials</div>
+    <p><strong>Unlocks</strong> — the public-query path of <code>youtube_topic_scout</code>. Unlike OAuth it <strong>doesn't spend your channel's quota</strong>. Without it the scout falls back to channel OAuth (<code>youtube.readonly</code>).</p>
+<pre><code>export YOUTUBE_API_KEY="..."</code></pre>
+    <p>Create an API key in the Cloud console and <strong>enable YouTube Data API v3</strong> in the same project. Issuing the key and enabling the API are separate gates — you need both before calls go through.</p>
+  </div>
+
+  <div class="note">
+    <strong>Platform tokens are files, not keys.</strong> Threads, Instagram, Facebook, and YouTube credentials live as files under <code>~/.config/social-flow/&lt;channel-slug&gt;/</code> (<code>chmod 600</code>), not as environment variables. Issuance is covered in the <a href="../getting-started/index.en.html">getting-started guide</a> and in <code>skills/publish/references/token-setup.md</code>. Skip the whole thing if you don't need publishing or the growth loops.
+  </div>
+</section>
+
+<!-- ══════════ 11 ══════════ -->
+<section id="local">
+  <h2>Installing the on-device engines</h2>
+
+  <p>The three free lanes each install once. All three download weights on their first call, so know going in that <strong>the first run takes a while.</strong></p>
+
+  <div class="keyblock">
+    <h3>mflux — local image generation</h3>
+    <div class="src"><code>image_local_generate</code> · Z-Image Turbo</div>
+    <p><strong>Prerequisite</strong> — <strong>Apple Silicon Macs only</strong> (it's MLX-based). On Intel Macs and Linux this lane doesn't exist, so images go to <code>gpt_image_text2img</code>.</p>
+<pre><code>uv tool install --python 3.12 mflux</code></pre>
+    <p><strong>First call</strong> — downloads <strong>about 31GB</strong> of weights into <code>~/.cache/huggingface</code>. The server detects the first call and adds a separate download allowance to the timeout, so a slow download won't get killed mid-way.</p>
+    <p><strong>Confirm it</strong> — check the executable landed.</p>
+<pre><code>ls ~/.local/bin/mflux-generate-z-image-turbo</code></pre>
+    <p><strong>Installed elsewhere?</strong> Point <code>MFLUX_ZIMAGE_BIN</code> at the executable. There's deliberately no PATH-scanning fallback — silent auto-discovery turns into "what worked yesterday gives different results today".</p>
+<pre><code>export MFLUX_ZIMAGE_BIN=~/.venvs/mflux/bin/mflux-generate-z-image-turbo</code></pre>
+    <p>Measured on an M4 Max at 9 steps: 1024×1024 takes 116–197s, 1088×1920 takes 443s. Peak memory runs 32–39GB.</p>
+  </div>
+
+  <div class="keyblock">
+    <h3>Supertonic — local TTS</h3>
+    <div class="src"><code>tts_local_generate</code> · Supertonic 3</div>
+    <p><strong>Prerequisite</strong> — a Python runtime.</p>
+<pre><code>pip install supertonic</code></pre>
+    <p><strong>First call</strong> — downloads <strong>385MB</strong> of weights into <code>~/.cache/supertonic3</code>, about 24 seconds.</p>
+    <p><strong>Installed in a virtualenv?</strong> Put that interpreter's path in <code>SUPERTONIC_PYTHON</code>. No auto-discovery here either — picking up a different venv per repo changes the voice.</p>
+<pre><code>export SUPERTONIC_PYTHON=~/.venvs/tts/bin/python</code></pre>
+    <p><strong>Confirm it</strong></p>
+<pre><code>$SUPERTONIC_PYTHON -c "from supertonic import TTS; print('ok')"</code></pre>
+    <p>If the package is missing, calling the tool returns an error with install instructions in it. Licensing is in <a href="#tts">§4</a> — MIT code, OpenRAIL-M weights.</p>
+  </div>
+
+  <div class="keyblock">
+    <h3>whisper.cpp — local STT</h3>
+    <div class="src">transcription for the <code>ingest</code> skill</div>
+<pre><code>brew install whisper-cpp</code></pre>
+    <p><strong>The model</strong> — get <code>ggml-large-v3-turbo.bin</code> (1.5GB) from <code>huggingface.co/ggerganov/whisper.cpp</code> and put it in <code>~/.cache/whisper-cpp/</code>.</p>
+    <p><strong>Confirm it</strong> — both lines have to pass before <code>ingest</code> will start.</p>
+<pre><code>command -v whisper-cli
+ls ~/.cache/whisper-cpp/ggml-large-v3-turbo.bin</code></pre>
+    <p><strong>Model somewhere else?</strong> Point <code>WHISPER_MODEL</code> at it.</p>
+<pre><code>export WHISPER_MODEL=~/models/ggml-large-v3-turbo.bin</code></pre>
+    <p>Recording also needs Screen Recording and Microphone permission for your terminal app.</p>
+  </div>
+</section>
+
+<!-- ══════════ 12 ══════════ -->
+<section id="control">
+  <h2>Cost control in practice</h2>
+
+  <h3>The estimate and the actual ledger are different files</h3>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>File</th><th>What goes in it</th><th>When it's used</th></tr></thead>
+    <tbody>
+      <tr><td><code>.work/cost-estimate.tsv</code></td><td>Projection, <strong>before</strong> spending</td><td>Cap verdicts — at the moment escalation is decided</td></tr>
+      <tr><td><code>.work/cost-tally.tsv</code></td><td>What was <strong>actually</strong> used</td><td>Episode tally — storyboard and produce write it in turn</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><strong>Never mix the two.</strong> Merge them into one file and the post-hoc report counts the same spend twice. Conversely, <strong>mid-run re-verdicts also use the estimate file</strong> — when you decide to regenerate something, put that line on the estimate and rerun the cap check. Judge against the actual ledger and the spend that hasn't gone out yet (BGM, narration) is missing, the total looks small, and a cap-busting regeneration passes.</p>
+
+  <p>A ledger line is three tab-separated columns.</p>
+
+<pre><code>image.gpt-image-2.high	1	storyboard: cover background scene-1
+image.local	3	storyboard: points backgrounds scene-2~4
+veo.lite.1080p	8	produce: b-roll a1 — 8s generated, 4s used
+tts.local	0.412	produce: narration, 412 chars
+music.lyria-clip	1	produce: BGM 30s</code></pre>
+
+  <p>The quantity is <strong>an amount in the unit, not a count</strong>. TTS is characters ÷ 1,000; Veo is generated length, not used length; Seedance is the requested seconds as-is. <strong>Log discards too</strong> — images regenerated in a convergence loop, clips redrawn because you didn't like them, TTS rerun after failing a length check. They don't reach the deliverable, but they do get billed.</p>
+
+  <h3>The calculator — read the exit code literally</h3>
+
+<pre><code>REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+$REF/cost-report.sh .work/cost-estimate.tsv --cap 0.30; echo "cost_exit=$?"</code></pre>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Exit</th><th>Meaning</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td class="num">0</td><td>ok (and within the cap, if one was given)</td><td>The total is the episode's cost</td></tr>
+      <tr><td class="num">1</td><td><strong>verdict unavailable</strong></td><td>Copy the <code>!!</code> lines into your report verbatim</td></tr>
+      <tr><td class="num">2</td><td>over the cap</td><td>Cancel the escalation, back to economy baseline</td></tr>
+      <tr><td class="num">3</td><td>input error</td><td>Fix the path or format, then rerun</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="danger">
+    <strong>Never read 1 as a pass.</strong> Hit an unknown key or an unconfirmed price (<code>?</code>) and the total can look like 0. That doesn't mean free — it means the math didn't happen.
+    <p>Exit 1 has two causes with different responses. <code>!! unknown key</code> is our mistake: align the key with <code>prices.tsv</code> and rerun. <code>!! price unconfirmed</code> is an item the vendor doesn't publish a price for, and right now that's exactly one, <code>music.lyria-realtime</code> — report those as "total $X + 1 item excluded from the tally (BGM)".</p>
+  </div>
+
+  <p>Never report a $0 total as-is either. If <code>storyboard/images/*.png</code> exist but the ledger is empty, they weren't made for free — the logging was skipped. Count the files, backfill the ledger, and say you backfilled it.</p>
+
+  <h3>Daily and weekly caps</h3>
+
+  <p>The three cap values live in the growth plan's <code>autoproduce:</code> block.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Setting</th><th>Default</th><th>What it stops</th></tr></thead>
+    <tbody>
+      <tr><td><code>max_cost_per_video</code></td><td class="num">$0.30</td><td>One episode — passes economy tier, blocks Veo escalation</td></tr>
+      <tr><td><code>daily_cost_cap</code></td><td class="num">$0.60</td><td>One day, channel-wide</td></tr>
+      <tr><td><code>weekly_cap</code></td><td class="num">$2.00</td><td>One week, channel-wide</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>The running totals accrue in <code>data/&lt;channel&gt;/growth/autoproduce.json</code>, and the growth loop reads that file against the caps above before it starts authoring. <strong>Episode counts are per caller (plan); money is channel-wide</strong> — episode caps belong per platform, but the money comes out of the same wallet whichever loop spent it. Separately, <strong>2 episodes per platform loop per day</strong> is a hard cap, counting successes and failures together.</p>
+
+  <h3>When prices change</h3>
+
+  <p>One file to edit: <code>skills/autoproduce/references/prices.tsv</code>. The calculator reads only that file, and the explanatory docs never copy the numbers — write a value in two places and one of them always goes stale.</p>
+
+  <ul>
+    <li>Keep the evidence grade (official / derived / unverified) and the source <strong>on the same line</strong>.</li>
+    <li>Leave unconfirmed values as <code>?</code>. A <code>?</code> fails the report and summons a human — fill in an invented number and the cap is silently disarmed.</li>
+    <li>Vendor prices move. Reopen the sources every quarter.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Read next</h2>
+  <ul>
+    <li><a href="../getting-started/index.en.html">Getting started</a> — install through first episode, with a short pass over where keys go</li>
+    <li><a href="../ai-video-production/index.en.html">Making short-form video with AI</a> — where the two video engines diverge and the official prompt rules</li>
+    <li><a href="../../api-reference/index.en.html">API reference</a> — the contracts of the 12 external APIs and the credential matrix</li>
+    <li><a href="../../research/2026-08-12-local-image-generation/index.html">Local image generation, measured</a> (Korean) · <a href="../../research/2026-08-11-local-tts-and-commercial-api/index.html">Local TTS vs commercial APIs</a> (Korean) — the evidence behind both local engines</li>
+  </ul>
+</section>
+
+<footer>
+  social-flow — a channel-based short-form content pipeline. Prices are canonical in <code>skills/autoproduce/references/prices.tsv</code>; structure, skills, and the MCP tool list are canonical in the repo's <a href="../../../README.md">README.md</a>.
+</footer>
+
+</div>
+</body>
+</html>

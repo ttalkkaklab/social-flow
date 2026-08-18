@@ -1,7 +1,7 @@
 import { config } from './config.js';
 /**
- * 공용 fetch 래퍼 — 타임아웃 + 네트워크 오류를 구조화된 결과로 변환.
- * 응답 본문은 파싱하지 않고 원문으로 반환한다 (LLM 소비자가 직접 읽음).
+ * Shared fetch wrapper — turns timeouts and network errors into a structured result.
+ * The response body is returned verbatim, unparsed (the LLM consumer reads it directly).
  */
 export async function requestRaw(method, url, headers, body, timeoutMs) {
     const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;

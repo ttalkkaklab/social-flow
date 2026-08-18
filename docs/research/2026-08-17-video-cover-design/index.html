@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영상 커버 잘 만드는 법 — 표면 셋으로 갈라 본 실증 정리 (2026-08-17)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  nav.toc { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 56px; }
+  nav.toc h2 { font-size: 14px; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 14px; text-transform: uppercase; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  nav.toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a { color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500; }
+  nav.toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent); font-weight: 700; font-size: 12.5px;
+    margin-right: 10px; font-variant-numeric: tabular-nums;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
+  p { margin-bottom: 16px; }
+  p.note { font-size: 14.5px; color: var(--text-soft); }
+  p.lead { font-size: 17px; }
+  ul.plain { margin: 0 0 16px 22px; }
+  ul.plain li { margin-bottom: 8px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px;
+  }
+
+  .callout {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    background: var(--bg-soft); border-radius: 0 10px 10px 0;
+    padding: 16px 20px; margin-bottom: 20px; font-size: 15px;
+  }
+  .callout.green { border-left-color: var(--green); }
+  .callout.amber { border-left-color: var(--amber); }
+  .callout.red { border-left-color: var(--red); }
+  .callout.purple { border-left-color: var(--purple); }
+  .callout b:first-child { display: block; margin-bottom: 4px; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .verdict {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px 32px; margin-bottom: 56px;
+    box-shadow: var(--shadow);
+  }
+  .verdict .v-label {
+    font-size: 12.5px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); margin-bottom: 12px;
+  }
+  .verdict .v-main { font-size: 20px; font-weight: 700; line-height: 1.6; margin-bottom: 16px; letter-spacing: -.01em; }
+  .verdict p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14.5px; }
+  th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; font-size: 13.5px; }
+  .table-scroll { overflow-x: auto; }
+
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+  }
+  .badge.green { color: var(--green); background: var(--green-soft); }
+  .badge.amber { color: var(--amber); background: var(--amber-soft); }
+  .badge.red { color: var(--red); background: var(--red-soft); }
+  .badge.purple { color: var(--purple); background: var(--purple-soft); }
+  .badge.blue { color: var(--accent); background: var(--accent-soft); }
+
+  .grades { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 32px; }
+  .grades div {
+    flex: 1 1 200px; border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; font-size: 14px; color: var(--text-soft); background: var(--bg-card);
+  }
+  .grades div b { display: block; margin-bottom: 4px; }
+
+  .src-group { margin-bottom: 26px; }
+  .src-group h3 { margin-top: 0; }
+  .src-group ul { list-style: none; margin-left: 0; }
+  .src-group li {
+    font-size: 13.5px; margin-bottom: 6px; padding-left: 18px; position: relative;
+    color: var(--text-soft);
+  }
+  .src-group li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .src-group a { word-break: break-all; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 24px; font-size: 13.5px; color: var(--text-soft); }
+  footer p { margin-bottom: 8px; }
+  footer a { color: var(--accent); text-decoration: none; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">RESEARCH</span>
+  <h1>영상 커버 잘 만드는 법<br>표면 셋으로 갈라 본 실증 정리</h1>
+  <p class="sub">
+    유튜브·릴스 영상의 커버를 어떻게 만들어야 잘 되는지 조사했다. 플랫폼 공식 문서와 학술 논문 원문을
+    1차로 열어 확인하고, 블로그에 떠도는 수치는 원출처까지 따라가 봤다.
+  </p>
+  <div class="meta">
+    <span>작성 <strong>2026-08-17</strong></span>
+    <span>대상 <strong>YouTube 쇼츠 · Instagram 릴스</strong></span>
+    <span>1차 확인 <strong>YouTube 공식 블로그·고객센터 · Koh &amp; Cui 2022 논문 원문 · TikTok for Business</strong></span>
+    <span>유령 인용 <strong>3건 적발</strong></span>
+  </div>
+</header>
+
+<div class="verdict">
+  <div class="v-label">결론</div>
+  <div class="v-main">
+    커버는 한 장이 아니다. <b>표면이 셋</b>이고 셋이 서로 다른 일을 한다 —
+    자동재생 피드의 <b>첫 1~3초</b>, 검색·채널의 <b>클릭용 정지 이미지</b>, 프로필의 <b>그리드 타일</b>.
+    우리 스킵률 문제가 있는 자리는 첫째뿐인데, 인터넷의 "썸네일 잘 만드는 법"은 거의 전부 둘째 얘기다.
+  </div>
+  <p>
+    이 구분을 안 하면 조언이 통째로 헛나간다. 릴스·쇼츠 피드는 커버 이미지를 아예 보여 주지 않는다.
+    피드에서 커버 역할을 하는 건 <b>영상이 재생되기 시작한 첫 1~3초 그 화면</b>이다. 반대로 유튜브 검색 결과와
+    채널 페이지에서는 정지 이미지 한 장이 클릭을 만든다. 인스타 프로필 그리드의 커버는 셋 중 영향이 가장 작다 —
+    인스타그램 책임자 본인이 "탐색 탭과 프로필에서만 보이므로 효과는 미미하다"고 여러 번 답했다.
+  </p>
+  <p>
+    새로 생긴 것 하나: <b>2026-07-24부터 쇼츠도 커스텀 썸네일을 올릴 수 있다</b>(YPP 채널 우선).
+    다만 그 썸네일도 쇼츠 피드에는 안 나온다 — 검색·채널·구독·홈에만 붙는다.
+  </p>
+</div>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#s1">표면 셋을 먼저 가른다</a></li>
+    <li><a href="#s2">표면 A — 자동재생 피드의 첫 1~3초</a></li>
+    <li><a href="#s3">표면 B — 클릭을 만드는 정지 썸네일</a></li>
+    <li><a href="#s4">표면 C — 프로필 그리드 커버</a></li>
+    <li><a href="#s5">근거 등급과 유령 인용 3건</a></li>
+    <li><a href="#s6">우리 규칙과 대조 — 확인·상충·확장</a></li>
+    <li><a href="#s7">적용 후보 (기준선 3편 이후)</a></li>
+    <li><a href="#s8">출처</a></li>
+  </ol>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="no">01</span> 표면 셋을 먼저 가른다</h2>
+
+  <p class="lead">
+    "커버"라는 한 단어가 서로 다른 세 자리를 가리킨다. 각 자리에서 무엇이 성패를 정하는지가 다르고,
+    우리가 손댈 수 있는 방법도 다르다.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th style="width:16%">표면</th><th style="width:26%">어디에 보이나</th><th style="width:29%">무엇이 성패를 정하나</th><th style="width:29%">우리가 손대는 방법</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>A. 자동재생 첫 프레임</b><br><span class="badge red">가장 중요</span></td>
+        <td>릴스 피드, 쇼츠 피드, 탐색 탭 자동재생</td>
+        <td>정지 이미지가 아니라 <b>재생 시작 직후 1~3초</b>. 이 구간에서 스와이프가 일어난다</td>
+        <td>스토리보드 세그① 자체 — 문안·화면·움직임</td>
+      </tr>
+      <tr>
+        <td><b>B. 클릭형 썸네일</b></td>
+        <td>YT 검색·홈·채널 페이지·구독·재생목록, 링크 미리보기</td>
+        <td>정지 이미지 한 장의 클릭률</td>
+        <td>롱폼은 <code>thumbnails.set</code> API. 쇼츠는 2026-07-24부터 데스크톱 스튜디오 업로드(YPP)</td>
+      </tr>
+      <tr>
+        <td><b>C. 프로필 그리드 커버</b><br><span class="badge amber">영향 작음</span></td>
+        <td>IG 프로필 그리드, 탐색 탭 타일, YT 채널 쇼츠 탭</td>
+        <td>이미 우리 프로필에 온 사람이 어느 편을 고를지</td>
+        <td>IG 게시 시 커버 지정, YT는 앱 프레임 선택(<code>oar*</code>)</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout red">
+    <b>혼동이 실제 손해를 만든다</b>
+    <p>
+      "썸네일에 얼굴을 크게 넣고 글자는 3단어로" 같은 조언은 표면 B의 연구에서 나온 말이다.
+      우리 릴스 4편이 84.8~93.8%로 스킵당한 자리는 표면 A인데, 거기엔 정지 표지 카드를 놓았다.
+      표면 B의 문법(정지 이미지 한 장으로 설명하기)을 표면 A에 그대로 옮긴 것이 그 사고의 정체다.
+    </p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="no">02</span> 표면 A — 자동재생 피드의 첫 1~3초</h2>
+
+  <p class="lead">
+    피드에서 커버는 그림이 아니라 <b>움직이는 장면</b>이다. 시청자는 이미 재생 중인 영상을 보고 있고,
+    손가락은 위로 밀 준비가 되어 있다.
+  </p>
+
+  <h3>플랫폼이 직접 말하는 것</h3>
+  <p>
+    TikTok for Business 의 크리에이티브 지침은 <b>"첫 3초 안에 콘텐츠의 제안을 꺼내라"</b>고 하고,
+    훅은 <b>"첫 6초 안에 우선 배치하라"</b>고 한다. 회상 효과의 90%가 첫 6초 안에 만들어진다는 수치도 함께 적었다.
+    붙잡는 방법으로는 서스펜스와 놀라움을 들고, 화면에는 크리에이터·직원·고객 같은 <b>사람</b>을 넣으라고 권한다.
+    광고 맥락의 문서지만, 같은 피드·같은 스와이프 동작을 전제로 한 1차 자료다.
+  </p>
+  <p class="note">
+    확인해 두는 것 하나 — 이 문서들에 <b>"첫 프레임에 움직임"이라는 지침은 없다</b>. 전환·스티커·그래픽으로
+    시청을 끌고 가라는 말은 있어도, 1프레임의 정지 여부를 다루지 않는다. 아래 항목의 등급이 낮은 이유다.
+  </p>
+
+  <h3>측정 지표 — 쇼츠에는 이탈률이 실제로 있다</h3>
+  <p>
+    유튜브 스튜디오의 <b>"Viewed vs. swiped away"</b>가 그 지표다. 쇼츠가 피드에 노출됐을 때 시청자가
+    보기를 골랐는지 밀어 버렸는지를 비율로 보여 준다. 웹·모바일 스튜디오 양쪽에서 모든 쇼츠 크리에이터가 볼 수 있다.
+    다만 <b>Analytics API 에는 없다</b> — 우리 <code>grow-youtube</code> 스킬이 적어 둔 그대로다.
+  </p>
+  <p>
+    벤치마크로 도는 수치는 Paddy Galloway 팀의 2023년 분석이 출처다. 33개 채널 5,400편, 조회 33억 회를 훑어
+    <b>70~90%면 잘 되고 60% 미만이면 확산이 무너진다</b>고 정리했다. 원 스레드는 지금 열람이 막혀 있어
+    2차 요약 두 건으로만 확인했으니 <span class="badge amber">2차 요약</span> 등급으로 읽어야 한다.
+  </p>
+
+  <div class="callout amber">
+    <b>우리 숫자와 견줘 보면</b>
+    <p>
+      인스타 <code>reels_skip_rate</code> 84.8~93.8%는 뒤집으면 시청 선택이 6~15%라는 뜻이다.
+      플랫폼이 달라 직접 비교는 못 하지만, 어느 벤치마크에 대도 확산이 무너지는 구간이다.
+      우리가 이미 도입 형식을 원인으로 지목하고 훅 계약을 고친 판단은 이 자료와 같은 방향이다.
+    </p>
+  </div>
+
+  <h3>첫 프레임에 움직임이 있어야 한다</h3>
+  <p>
+    Meta 광고 크리에이티브를 다루는 실무 가이드들이 입을 모으는 지점이다 — 첫 프레임이 정지해 있으면
+    눈이 그것을 <b>이미 끝난 콘텐츠</b>로 읽고 스크롤 반사가 그대로 나온다. 그래서 사람이 카메라를 향해 돌아보거나,
+    사물이 화면 안으로 들어오거나, 글자가 한 자씩 찍히거나, 컷이 바뀌는 식으로 1프레임부터 움직임을 넣으라고 한다.
+    <span class="badge amber">블로그 등급</span> — 메타 공식 문서에서도, TikTok 공식 문서에서도 같은 지침을 찾지 못했다.
+    여러 실무 가이드가 같은 말을 하지만 근거를 대는 곳은 없다. 방향으로만 참고하고 수치로 인용하지 않는다.
+  </p>
+
+  <h3>소리 없이 봐도 통해야 한다</h3>
+  <p>
+    피드 시청자 상당수가 음소거로 본다. 그래서 첫 화면의 글자가 훅을 대신 말해 준다.
+    다만 글자를 화면 어디에 놓느냐가 문제인데, 플랫폼 UI 가 위아래를 덮는다. 우리 파이프라인이 쓰는
+    두 플랫폼 교집합 안전영역(상 15 · 하 35 · 좌 6 · 우 18%)이 이 문제의 답이고, 이번 조사에서 이를 뒤집을 근거는 없다.
+  </p>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="no">03</span> 표면 B — 클릭을 만드는 정지 썸네일</h2>
+
+  <p class="lead">
+    여기가 "썸네일 잘 만드는 법" 자료가 쌓여 있는 자리다. 근거도 이 표면이 제일 두텁다.
+    쇼트폼에도 2026-07-24부터 이 표면이 열렸다.
+  </p>
+
+  <h3>쇼츠 커스텀 썸네일 — 무엇이 열렸고 무엇은 그대로인가</h3>
+  <p>
+    유튜브 공식 블로그가 2026-07-24 에 발표했다. "YouTube Partner Program 크리에이터가 쇼츠 커스텀 썸네일을
+    올릴 수 있다"이고, 대상은 차차 넓힌다고 했다. 데스크톱에서 <b>제안 프레임 3장 중 고르기</b>도 롱폼처럼 쓸 수 있다.
+  </p>
+  <div class="callout amber">
+    <b>피드는 그대로다</b>
+    <p>
+      업계 보도는 커스텀 썸네일이 <b>검색 결과·채널 페이지·구독·재생목록</b>에 붙고 세로 스와이프 피드는 바뀌지 않는다고
+      정리했다(<span class="badge amber">2차 보도</span> — 공식 블로그는 노출 위치를 명시하지 않았다).
+      우리 <code>shorts-surface-adb.md</code> 가 다루는 세로 프레임(<code>oar*</code>)과 이 커스텀 썸네일이
+      같은 자리인지 다른 자리인지는 <b>직접 올려서 확인해야 한다</b>. 표면이 다르면 ADB 절차는 계속 필요하다.
+    </p>
+  </div>
+  <p class="note">
+    권장 규격으로 도는 값은 1080×1920(9:16)·2MB 이하다. 다만 유튜브 고객센터의 썸네일 규격 문서는 아직
+    가로 기준(권장 3840×2160, 최소 폭 640, JPG·GIF·PNG)만 적고 있어 세로 값은 <span class="badge amber">블로그 등급</span>이다.
+  </p>
+
+  <h3>유튜브가 직접 쓴 지침</h3>
+  <ul class="plain">
+    <li><b>글자는 1~5단어.</b> 데스크톱과 모바일 양쪽에서 읽히는 크기로, 또렷하고 굵은 글꼴로.</li>
+    <li><b>주제는 하나.</b> 주 피사체 하나 또는 메시지 하나로 가고 어수선하지 않게 한다.</li>
+    <li><b>대비.</b> 글자와 배경의 대비가 제목을 튀어 보이게 한다.</li>
+    <li><b>얼굴은 대상에 따라.</b> 구독자를 노리면 익숙한 얼굴, 신규 시청자를 노리면 놀란 표정처럼 누구나 읽는 감정.</li>
+    <li><b>너무 복잡하게 만들지 말 것.</b> 색과 구도를 살리되 과하면 오히려 눈이 지친다.</li>
+    <li>유튜브가 함께 붙인 수치 하나 — <b>성과 상위 영상의 90%가 커스텀 썸네일을 쓴다.</b></li>
+  </ul>
+  <p class="note">쇼츠 전용 지침은 이 문서에 아직 없다.</p>
+
+  <h3>학술 근거 — 브랜드 채널 3,743편 분석</h3>
+  <p>
+    Koh &amp; Cui 가 <i>Decision Support Systems</i>(2022)에 실은 연구다. 자동차·음료·외식·완구 4개 산업 38개 브랜드가
+    올린 유튜브 영상 3,743편의 썸네일을 이미지 마이닝으로 뜯어, 시각 속성과 조회 사이 관계를 봤다.
+    논문 원문(저자 공개본)에서 표와 그림을 직접 확인했다.
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th style="width:22%">속성</th><th style="width:20%">관계</th><th style="width:58%">실무로 옮기면</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>요소 종류 수<br><span class="note">사진·글자·그래픽</span></td>
+        <td><b>U자</b><br><span class="note">EC −0.378 / EC² +0.109</span></td>
+        <td>세 종류를 <b>다 넣은</b> 쪽이 가장 높다. 사진만 있는 것보다 사진+글자+그래픽이 정보를 더 잘 전한다</td>
+      </tr>
+      <tr>
+        <td>사물 개수</td>
+        <td><b>역U자</b><br><span class="note">OC +0.348 / OC² −0.139</span></td>
+        <td>정점이 <b>1~1.5개</b>다. 소품을 늘어놓으면 오히려 급락한다 — 한 화면에 사물 하나</td>
+      </tr>
+      <tr>
+        <td>유명인 등장</td>
+        <td>양(+1.03)</td>
+        <td>우리에게는 해당 없음. 대신 "알아보는 얼굴"이라는 축은 채널 캐릭터가 대신할 수 있다</td>
+      </tr>
+      <tr>
+        <td>채도</td>
+        <td><b>U자</b></td>
+        <td>어중간한 채도가 최저다. 거의 무채색으로 밀거나 확 화려하게 — 둘 중 하나로 정한다</td>
+      </tr>
+      <tr>
+        <td>채도 × 밝기</td>
+        <td>상호작용</td>
+        <td><b>저채도면 어둡게, 고채도면 밝게</b>가 유리하다. 채도가 낮은데 밝기만 올리면 성과가 내려간다</td>
+      </tr>
+      <tr>
+        <td>이미지 품질</td>
+        <td><b>역U자</b><br><span class="note">정점 ≈0.35</span></td>
+        <td>흐릿한 것도 나쁘지만 <b>과하게 보정한 것은 더 나쁘다</b>. 논문 표현으로 "왜곡된 것도 과보정한 것도 설득에 못 쓴다"</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout">
+    <b>이 연구의 한계를 같이 읽는다</b>
+    <p>
+      Pseudo R²가 <b>0.019</b>다. 썸네일의 시각 속성이 조회 변동에서 설명하는 몫은 아주 작다는 뜻이다.
+      방향을 정하는 데는 쓰되 "이렇게 만들면 조회가 몇 배"라는 식으로 옮기면 틀린다.
+      대상도 2022년 브랜드 마케팅 영상의 <b>가로 썸네일</b>이라, 세로 쇼트폼 커버로 옮길 때는 가설로 취급한다.
+    </p>
+  </div>
+
+  <h3>A/B 테스트는 쇼츠에서 못 쓴다</h3>
+  <p>
+    유튜브 Test &amp; Compare 는 2025-12-04 전역 출시로 제목과 제목+썸네일 조합까지 시험할 수 있게 됐다.
+    최대 3안, 최장 2주, 승자는 <b>시청 시간</b>이 가장 긴 안이다. 그런데 고객센터가 명시한다 —
+    <b>"쇼츠는 A/B 테스트를 할 수 없다"</b>. 데스크톱 스튜디오 전용이고 고급 기능이 켜져 있어야 한다.
+    영상이 쇼츠로 전환되면 그전에 만든 테스트 접근도 끊긴다.
+  </p>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="no">04</span> 표면 C — 프로필 그리드 커버</h2>
+
+  <p class="lead">
+    투자 대비 효과가 가장 작은 자리다. 그런데도 가장 많은 "커버 템플릿" 콘텐츠가 여기에 붙어 있다.
+  </p>
+
+  <p>
+    인스타그램 책임자 Adam Mosseri 가 스토리 Q&amp;A 에서 여러 차례 답한 요지는 이렇다 —
+    커버는 <b>탐색 탭과 프로필에서만</b> 보이고, 릴스 소비는 대부분 추천에서 일어나므로 커버가 도달에 미치는 영향은 미미하다.
+    커스텀 커버를 쓰든 안 쓰든 도달에 불이익도 없다. <span class="badge amber">2차 보도</span> — 업계 기자의 정리를 통해 확인했고,
+    원 스토리는 이미 만료되어 직접 인용은 못 잡았다.
+  </p>
+
+  <div class="callout red">
+    <b>블로그와 정면 충돌하는 대목</b>
+    <p>
+      커버 관련 마케팅 블로그 상당수가 "커버가 도달·참여를 끌어올린다"고 쓴다. 플랫폼 책임자의 답과 어긋난다.
+      커버가 하는 일은 <b>이미 프로필이나 탐색에 온 사람</b>이 어느 편을 열지 고르게 돕는 것까지다.
+    </p>
+  </div>
+
+  <h3>그리드 크롭이 2026년에 바뀌었다</h3>
+  <p>
+    인스타 프로필 그리드가 정사각(1:1)에서 <b>세로 3:4</b>로 바뀌었다. 9:16 커버를 올리면 그리드 타일에는
+    가운데 3:4 조각만 보인다. 1080×1920 기준으로 계산하면 남는 높이가 1440px 이므로
+    <b>위아래에서 각각 240px, 곧 각 12.5%가 잘려 나간다</b>(직접 계산).
+  </p>
+  <div class="callout green">
+    <b>우리 안전영역은 이미 이걸 견딘다</b>
+    <p>
+      우리가 쓰는 교집합 안전영역은 상 15% · 하 35%다. 그리드 크롭이 먹는 몫은 위아래 각 12.5%라서,
+      안전영역 안에 있는 글자는 그리드에서도 살아 있다. 이번 변경 때문에 규격을 고칠 이유는 없다.
+    </p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="no">05</span> 근거 등급과 유령 인용 3건</h2>
+
+  <p class="lead">
+    이 주제의 검색 결과는 출처 없는 수치로 덮여 있다. 결론을 바꿀 만한 수치는 원문까지 따라가 봤고,
+    끝내 원출처가 없는 것은 아래에 적어 둔다.
+  </p>
+
+  <div class="grades">
+    <div><b>1차 확인</b>YouTube 공식 블로그·고객센터 2건 · TikTok for Business · Koh &amp; Cui 2022 논문 원문(표·그림 직접 열람)</div>
+    <div><b>2차 보도·요약</b>쇼츠 썸네일 노출 위치 · Mosseri 발언 · Paddy Galloway 33억 조회 분석</div>
+    <div><b>블로그 등급</b>첫 프레임 움직임 · 쇼츠 썸네일 세로 규격·안전영역 수치</div>
+    <div><b>근거 없음</b>아래 3건 — 인용하지 않는다</div>
+  </div>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th style="width:36%">떠도는 수치</th><th style="width:30%">추적 결과</th><th style="width:34%">판정</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>"Nielsen 2021 시각주의 연구 — 첫 3초에 장면 전환이 3회 이상이면 완주율 58% 높다"</td>
+        <td>검색 3회를 돌려도 원 보고서가 없다. 2025년 Medium 글 한 편이 유일한 인용처이고 그 글도 링크를 안 걸었다</td>
+        <td><span class="badge red">유령 인용</span> Nielsen 에 이 이름의 연구가 실재하는지부터 확인되지 않는다</td>
+      </tr>
+      <tr>
+        <td>"감정이 드러난 얼굴은 CTR 을 20~30% 올린다"</td>
+        <td>썸네일 도구 업체 블로그에서만 발견. 원 논문 표기 없음</td>
+        <td><span class="badge red">유령 인용</span> 얼굴 관련 학술 근거는 있지만 이 수치와 무관하다</td>
+      </tr>
+      <tr>
+        <td>"글자 4단어 미만이면 클릭률 30% 높다"</td>
+        <td>같은 블로그 계열에서만 반복. 유튜브 공식은 <b>1~5단어</b>를 권할 뿐 수치를 대지 않는다</td>
+        <td><span class="badge red">유령 인용</span> 방향은 공식과 같으나 숫자는 근거가 없다</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout amber">
+    <b>한국 시장 자료는 이번에도 없다</b>
+    <p>
+      네이버 블로그를 훑었지만 커버·썸네일을 바꿔 조회를 비교한 실측 기록을 찾지 못했다.
+      나온 것은 채널 운영기와 AI 도구 후기뿐이다. 앞선 조사들과 같은 결과라서, 한국 시장 수치가 필요하면
+      우리 회차 데이터를 직접 쌓는 편이 빠르다.
+    </p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="no">06</span> 우리 규칙과 대조 — 확인·상충·확장</h2>
+
+  <h3><span class="badge green">확인</span> 지금 규칙이 근거와 맞는 항목</h3>
+  <ul class="plain">
+    <li><b>세그① 훅 계약</b>(약속·문제 제기·반전 중 하나, 화자 보고형 개시 금지) — TikTok 공식의 "첫 3초에 제안을 꺼내라"와 같은 방향이다.</li>
+    <li><b>커버 제목 16자 이내 + 주제어 필수</b> — 유튜브 공식의 "1~5단어, 주제 하나"와 맞는다.</li>
+    <li><b>안전영역 상 15 · 하 35 · 좌 6 · 우 18%</b> — 인스타 그리드가 3:4로 바뀌어 위아래 각 12.5%를 먹지만 이 안에 들어온다.</li>
+    <li><b>커버 = 생성 배경 + HTML 제목 + 배지·스탯</b> — 논문의 요소 U자(사진·글자·그래픽 세 종류를 다 넣은 쪽이 최고)와 정확히 겹친다. 우연히 맞은 셈이라 근거를 이제 붙였다.</li>
+    <li><b>첫 1초 결과 선공개</b> — 첫 3초 안에 무엇의 이야기인지 알리라는 지침과 같다.</li>
+  </ul>
+
+  <h3><span class="badge amber">상충</span> 다시 봐야 할 항목</h3>
+  <ul class="plain">
+    <li>
+      <b>커버 첫 프레임의 정지 상태.</b> 우리 커버는 정지 사진 위에 텍스트를 얹는 구조다.
+      "1프레임부터 움직임이 있어야 스크롤 반사를 피한다"는 조언과 어긋난다.
+      다만 이 조언은 블로그 등급이고, 우리는 8월 15일에 이미 <b>문안 층위</b>로 훅을 고쳤다.
+      화면 층위까지 손대는 건 개정 효과를 확인한 다음의 일이다.
+    </li>
+    <li>
+      <b>커버 이미지를 무엇으로 평가할 것인가.</b> 커버 한 장에 $0.22 를 쓴다. Mosseri 의 답이 깎는 값은
+      그 그림의 <b>정지 썸네일로서의 값</b>뿐이다 — 커버 배경(scene-1)은 세그①이 재생되는 동안 피드 시청자가
+      모두 보는 화면이고, 도입 b-roll 이 있는 편에서는 veo 소스까지 겸한다. 그러니 이 지출은
+      "그리드에서 눈에 띄나"가 아니라 <b>세그①의 훅을 받쳐 주나</b>로 판단한다.
+    </li>
+  </ul>
+
+  <h3><span class="badge blue">확장</span> 규칙에 없던 새 사실</h3>
+  <ul class="plain">
+    <li><b>쇼츠에 클릭형 썸네일 표면이 열렸다</b>(2026-07-24, YPP). 지금 우리는 이 표면을 안 쓴다 — 세로 프레임만 지정한다.</li>
+    <li><b>쇼츠는 A/B 테스트 대상이 아니다.</b> 커버 실험은 우리가 회차를 나눠 직접 비교하는 수밖에 없다.</li>
+    <li><b>VVSA 벤치마크 70~90%</b> — 유튜브 쪽 훅 판정 기준으로 쓸 수 있다. 스튜디오 수동 확인이라 자동 루프에는 못 넣는다.</li>
+    <li><b>사물은 한 화면에 하나</b>(정점 1~1.5개). 커버 배경 프롬프트 계획을 검증할 때 볼 만한 축이다.</li>
+    <li><b>채도와 밝기는 짝으로 정한다</b> — 저채도면 어둡게, 고채도면 밝게. 우리 다크 스크림·라이트 모드 선택과 직결된다.</li>
+    <li><b>과보정은 흐릿함보다 나쁘다</b>(품질 역U자). 생성 이미지를 후처리로 더 화려하게 만드는 손질은 역효과일 수 있다.</li>
+  </ul>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="no">07</span> 적용 후보 (기준선 3편 이후)</h2>
+
+  <div class="callout purple">
+    <b>지금 규칙을 고치지 않는 이유</b>
+    <p>
+      8월 15일 훅 계약 개정의 효과를 아직 못 봤다. 개정 후 첫 3편이 새 기준선이고, 그 전에 계약을 또 건드리면
+      무엇이 효과를 냈는지 영영 못 가른다. 아래는 그 3편을 채운 다음 평가할 후보다.
+    </p>
+  </div>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th style="width:26%">후보</th><th style="width:40%">내용</th><th style="width:34%">먼저 확인할 것</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>쇼츠 커스텀 썸네일 도입</td>
+        <td>publish 단계에 데스크톱 스튜디오 업로드를 추가하고, 되면 ADB 절차를 대체할지 판단</td>
+        <td>딸깍랩 채널이 YPP 인지 · 커스텀 썸네일과 <code>oar*</code> 프레임이 같은 자리인지 실측</td>
+      </tr>
+      <tr>
+        <td>커버 첫 프레임에 움직임</td>
+        <td>세그①을 정지 프레임 대신 짧은 움직임으로 여는 안</td>
+        <td>훅 계약 개정본 3편의 스킵률 · 근거가 블로그 등급이라 우리 실측이 곧 근거다</td>
+      </tr>
+      <tr>
+        <td>커버 계획 검증에 사물 수·색 축 추가</td>
+        <td>PLAN_REVIEW 에 "주 사물 1개" · "채도-밝기 짝" 항목 신설</td>
+        <td>가로 브랜드 썸네일 연구를 세로 커버로 옮겨도 되는지 — 회차 비교로 검증</td>
+      </tr>
+      <tr>
+        <td>VVSA 기준선 기록</td>
+        <td>회차마다 스튜디오에서 수치를 받아 growth-log 에 적어 두기</td>
+        <td>수동이라 손이 간다 — 편당 1회로 제한할지 판단</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="no">08</span> 출처</h2>
+
+  <div class="src-group">
+    <h3>1차 — 플랫폼 공식</h3>
+    <ul>
+      <li>YouTube Blog, <a href="https://blog.youtube/news-and-events/youtube-studio-custom-thumbnail-updates/">New thumbnail updates in YouTube Studio</a> (2026-07-24)</li>
+      <li>YouTube Help, <a href="https://support.google.com/youtube/answer/12340300?hl=en">Thumbnail &amp; title tips</a></li>
+      <li>YouTube Help, <a href="https://support.google.com/youtube/answer/16391400?hl=en-GB">A/B test titles and thumbnails</a></li>
+      <li>YouTube Help, <a href="https://support.google.com/youtube/community-video/273390203/new-youtube-shorts-metric-viewed-vs-swiped-away?hl=en">New YouTube Shorts Metric — Viewed vs Swiped Away</a></li>
+      <li>TikTok for Business, <a href="https://ads.tiktok.com/business/en/blog/creative-best-practices-top-performing-ads">Creative Best Practices for TikTok Ads</a> — 첫 6초·회상 90%</li>
+      <li>TikTok Ads Help, <a href="https://ads.tiktok.com/help/article/creative-best-practices">Creative best practices for performance ads</a> — 첫 3초 제안·사람 등장</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>1차 — 학술</h3>
+    <ul>
+      <li>Byungwan Koh &amp; Fuquan Cui, <a href="https://www.sciencedirect.com/science/article/abs/pii/S0167923622000914">An Exploration of the Relation between the Visual Attributes of Thumbnails and the View-Through of Videos</a>, <i>Decision Support Systems</i> 160 (2022) — 저자 공개본 PDF 로 표 4·그림 9~11 직접 확인</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>2차 — 보도·요약</h3>
+    <ul>
+      <li>Creator Handbook, <a href="https://www.creatorhandbook.net/youtube-rolls-out-custom-thumbnails-for-shorts/">YouTube rolls out custom thumbnails for Shorts</a> (2026-08-05)</li>
+      <li>Lindsey Gamble, <a href="https://www.lindseygamble.com/blog/cover-photos-for-reels-have-minimal-impact-according-to-instagram-head-adam-mosseri">Cover Photos for Reels Have Minimal Impact, According to Adam Mosseri</a></li>
+      <li>Antoine Lacombled, <a href="https://medium.com/@antoinelacombled/cracking-the-youtube-shorts-algorithm-a-study-of-3-3-billion-views-4711fdf7931b">Cracking the YouTube Shorts Algorithm: A Study of 3.3 Billion Views</a> (2023-11-23) — Paddy Galloway 분석 요약</li>
+      <li>Social Media Today, <a href="https://www.socialmediatoday.com/news/youtube-announces-roll-out-plan-for-thumbnail-ab-testing/718647/">YouTube Announces Rollout Plan for Thumbnail A/B Testing</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h3>블로그 등급 — 방향 참고용</h3>
+    <ul>
+      <li>BYSO, <a href="https://byso.online/blog/youtube-shorts-thumbnail-size">YouTube Shorts Thumbnail Size 2026</a> — 세로 규격·안전영역 수치</li>
+      <li>Planoly, <a href="https://www.planoly.com/blog/guide-to-instagrams-new-vertical-grid">Guide to Instagram's New Vertical Grid</a> — 3:4 그리드 전환</li>
+      <li>Meta 광고 크리에이티브 실무 가이드 다수 — 첫 프레임 움직임</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p>social-flow · 리서치 노트 · 2026-08-17</p>
+  <p>관련 문서 — <a href="../2026-08-15-first-scene-live-action-vs-animation/">첫 장면 실사 대 애니메이션</a> · <a href="../2026-08-15-ai-video-camera-technique/">AI 영상 카메라 기법</a> · <a href="../2026-08-15-posting-frequency-and-growth/">게시 빈도와 성장</a></p>
+</footer>
+
+</div>
+</body>
+</html>

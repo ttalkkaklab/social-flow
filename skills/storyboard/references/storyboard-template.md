@@ -1,92 +1,163 @@
-# storyboard.md / research.md 표준 구조
+# storyboard.md / research.md standard structure
 
 ## storyboard.md
 
-사람이 검토·승인하는 문서. 씬별 표와 생성 이미지를 임베드해 **이 문서만 보고
-최종 영상을 상상할 수 있어야** 한다.
+The document a human reviews and approves. With per-shot tables and generated images embedded,
+**this document alone must let you picture the final video**. The source of truth for units is
+`scenes-schema.md` §grammar units and production layers.
 
 ```markdown
 ---
-category: <카테고리 slug>
-topic: <주제 slug>
+channel: <channel slug>
+topic: <topic slug>
 status: draft            # draft | approved | produced | published
 created: <YYYY-MM-DD>
 ---
 
-# <주제 표시명> — 스토리보드
+# <topic display name> — Storyboard
 
-- **카테고리**: <표시명> (`data/<slug>/profile.md`)
-- **예상 총길이**: <NN>초 (본편 <N>씬 + 아웃트로)
-- **핵심 메시지**: <이 영상이 남기는 한 문장>
-- **커버 훅**: "<커버 title>" — 히어로 수치 <stat>
+- **Channel**: <display name> (`data/<slug>/profile.md`)
+- **Expected total length**: <NN>s (main <N> shots + outro)
+- **Core message**: <the one sentence this video delivers>
+- **Playback order**: cover → hooking → result → body
+- **Opening strategy**: <fear / empathy / curiosity / spoiler (show the ending first)> (`hookType: <fear|empathy|curiosity|spoiler>`) — <one line on how the title, segment ①, and the hooking shot carry that stimulus>
+- **Cover hook**: "<cover title>" — hero stat <stat>
 
-## 씬 1 — cover
+## Sequence — <purpose>          # only when one episode has two purposes
+
+## S#1. <location> / <time>
+
+### Shot 1 — cover · wide
 
 ![scene-1](images/scene-1.png)
 
-| 항목 | 내용 |
+| Item | Content |
 |---|---|
-| 길이 목표 | ~<N>초 |
-| kicker | <값> |
-| title | <값> (자수: N) |
-| stat / statLabel | <값> / <값> |
-| 나레이션 ① | tts: "<발음 표기>" · sub: "<원표기>" |
-| 나레이션 ② | tts: "…" · sub: "…" |
-| 비주얼 | 생성 배경 + veo 모션 "<motion>" |
-| 배경 프롬프트 | <bgPrompt 요약> |
+| beat | cover / hooking / result / body / CTA |
+| info of this shot | <one line the viewer newly learns> |
+| picture | still photo / AI video / recording / shared asset |
+| overlay | HTML reveal · captions · typing / none |
+| target length | ~<N>s |
+| kicker | <value> |
+| title | <value> (chars: N) |
+| stat / statLabel | <value> / <value> |
+| narration ① | tts: "<phonetic notation>" · sub: "<original notation>" |
+| narration ② | tts: "…" · sub: "…" |
+| background prompt | <bgPrompt summary> |
 
-## 씬 2 — points
-(같은 형식 — bullets 표, reveal 순서 명시)
+### Shot 2 — points · close-up
+(same format — bullets table, reveal order stated. Same S# means the scene isn't split)
 
-…씬 반복…
+…more shots…
 
-## 출처 (research.md 요약)
+## Sources (research.md summary)
 
-| 주장 | 출처 | 확인일 | 상태 |
+| Claim | Source | Checked | Status |
 |---|---|---|---|
-| <핵심 수치> | [<매체>](<URL>) | <날짜> | ✅ 2개 교차 |
+| <key figure> | [<outlet>](<URL>) | <date> | ✅ 2-source cross-check |
 
-## 채널 계획
+## Platform plan
 
-| 채널 | 형태 | 비고 |
+| Platform | Form | Notes |
 |---|---|---|
-| instagram | 릴스 | |
-| youtube | 쇼츠 | 제목 키워드: <…> |
-| threads | 커버 이미지 + 링크 답글 | |
-| facebook | 영상 게시 | |
+| instagram | Reels | |
+| youtube | Shorts | title keywords: <…> |
+| threads | casual-register body + video link | no attached image — the link is the IG reel |
+| facebook | video post | |
 ```
+
+## storyboard.html (review render — template-based)
+
+Created by copying `references/storyboard-html-template.html` into storyboard/. It doesn't
+copy the scene data — it loads the SoT directly with `<script src="./scenes.js">` and renders
+from it, so fixing scenes.js updates the document automatically. The copy drift that
+storyboard.md and script.md suffer is structurally impossible here.
+
+- The only places to fill in are **`<title>` and the `✎ SB_DOC` block** — styles and renderer
+  are off-limits.
+- SB_DOC holds only editorial metadata that isn't in scenes.js: core message, docNotes,
+  per-scene notes (sceneNotes), transitions, audio directions (audioNotes), privacy avoidance
+  (privacy), source summary (sources), platform plan (platforms), shooting prep (prep), and
+  the recheck list (recheck).
+- Just open `storyboard.html` in a browser (no external resources). Use this document as the
+  default when presenting for HITL approval.
+
+What the document shows:
+
+- **Shot card** — one `SCENES[]` entry. The header carries the role (`COVER`), size, the
+  opening-strategy name tag (cover only), the **beat** (cover, hooking, result, body, CTA),
+  and the two production-layer badges (picture / overlay). Entries sharing `scene` are grouped
+  under a scene band (`S#1. location / time`). The last main shot is not stamped PAYOFF.
+- **Scene-frame rows** — one reveal = one row. A 9:16 frame on the left; on the right, the
+  text and dialogue at that moment. A reveal is not a shot. A channel-color badge means AI
+  video; an outline-only badge means HTML staging.
+- **Contract check** — at the top of the document. Beyond character counts, speech rate, shot
+  length, and frame overflow: whether the recorded `picture`/`overlay` match the structure,
+  whether `shot.info` within the same scene overlaps, and whether the playback order is
+  **cover → hooking → result → body**. Body before result is a violation; a missing hooking
+  shot, or the shot after the cover not being the hooking shot, is a warning (scenes-schema
+  §hooking — informational episodes have a hooking shot too). A missing cover `hookType`, or
+  a value outside the four, is an opening-strategy warning (§the four opening strategies —
+  this is a name-tag check; whether one of the four is actually present in the opening is
+  what the reviewer's copy mode looks at).
+
+The mode (shooting/generated) is auto-detected from `visual.source`, the illustration mode
+from `narration[].img`. Shooting mode has one overlay per shot, so a single reveal row. The
+timeline slots are shots, and b-roll plugs in at the playback position `after` sets.
+
+**Check items** — character counts, speech rate, scene length, total length, cover title 16
+chars, statLabel 18 chars, playback order (cover → hooking → result → body), plus:
+
+- **Frame overflow** — draws each reveal on a 1080px canvas and measures whether text
+  escapes the zone; on overflow it applies the same 3-step shrink as produce. Not fitting
+  after three steps is a violation. Measurement also follows produce — generated mode
+  measures text-zone overflow, shooting mode whether the top block's bottom crosses y=460.
+  It shares produce's blind spot though — only text overflowing downward is caught, so in
+  scenes whose block sits at the bottom or center (cover, quote, outro), text pushed
+  **upward** escapes this check.
+- **Hero stat width** — runs produce's 640px guard as-is. If it still overflows at minimum
+  size, switch to a shorter notation.
+- **b-roll** — at most 2 slots, the two slots' `after` differ, each slot's narration is
+  empty, used length is ≤8s, and `src` matches the `after` scene's background.
+- **Empty narration** — a scene holding out with no sound (speech-clip quote scenes are
+  normal and excluded).
+- **Missing outro length** — an outro scene exists but `SB_DOC.outro` is empty.
+- **Unfilled placeholders** — blocks approval while `{{…}}` remains in SB_DOC.
+
+This is where text clipping and contract violations get caught before production — if it
+flags here, fix and reopen.
 
 ## research.md
 
-조사·검증의 원장. 스토리보드에 실리는 **모든 사실 주장**이 여기 항목과 1:1 로
-연결돼야 한다.
+The ledger of research and verification. **Every factual claim** that lands in the storyboard
+must map 1:1 to an entry here.
 
 ```markdown
-# <주제> — 조사·검증 기록 (<YYYY-MM-DD>)
+# <topic> — research & verification log (<YYYY-MM-DD>)
 
-## 검증 통과
+## Verified
 
-| # | 주장 | 출처 1 | 출처 2 | 도구 | 비고 |
+| # | Claim | Source 1 | Source 2 | Tool | Notes |
 |---|---|---|---|---|---|
-| 1 | <수치·기한·시행일> | <URL> | <URL> | naver_search | 원문 발췌: "…" |
+| 1 | <figure·deadline·effective date> | <URL> | <URL> | naver_search | source excerpt: "…" |
 
-## 검증 실패 → 제외
+## Failed verification → excluded
 
-| 주장 | 사유 |
+| Claim | Reason |
 |---|---|
-| <주장> | 출처 상충 — 본문에서 제외 |
+| <claim> | sources conflict — excluded from the body |
 
-## 검색 이력
+## Search history
 
-| 도구 | 쿼리 | 결과 요지 |
+| Tool | Query | Result summary |
 |---|---|---|
-| naver_search(news) | "<쿼리>" | … |
-| WebSearch | "<쿼리>" | … |
+| naver_search(news) | "<query>" | … |
+| WebSearch | "<query>" | … |
 ```
 
-## 상태 전이
+## Status transitions
 
-`draft` → (HITL 승인) → `approved` → (produce 완료) → `produced` → (publish 완료) → `published`
+`draft` → (HITL approval) → `approved` → (produce done) → `produced` → (publish done) → `published`
 
-각 스킬이 자기 단계 완료 시 storyboard.md frontmatter 의 `status` 를 갱신한다 —
-디렉토리만 봐도 파이프라인 진행 상태를 알 수 있다.
+Each skill updates `status` in the storyboard.md frontmatter when its stage completes — the
+directory alone tells you where the pipeline stands.

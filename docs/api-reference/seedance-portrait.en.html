@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seedance people and asset policy — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="seedance-portrait.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="seedance-portrait.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>Seedance people and assets</div>
+
+<header class="hero">
+  <div class="kicker">BYTEPLUS MODELARK</div>
+  <h1>Seedance people and asset policy</h1>
+  <p class="sub">Dreamina Seedance 2.x <strong>rejects input images with a face in them.</strong> That closes one door and points at three others — reusing trusted outputs, preset digital characters, and rights-cleared real-person assets. This page covers the conditions and procedure for each, plus why using a reference image as a storyboard sheet falls apart.</p>
+  <div class="meta">
+    <span>Official <a href="https://docs.byteplus.com/en/docs/ModelArk/2608626">people-in-video policy</a></span>
+    <span>Capability table <a href="seedance.en.html">Seedance</a></span>
+    <span>Auth <code>ARK_API_KEY</code></span>
+    <span>Implementation <code>server/src/seedance-client.ts</code></span>
+    <span>Checked <strong>2026-08-15</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#probe">Measured — what gets blocked and what goes through</a></li>
+    <li><a href="#bypass">Three ways around it</a></li>
+    <li><a href="#register">Registering assets in the library yourself</a></li>
+    <li><a href="#refimg">Using a reference image as a storyboard sheet falls apart</a></li>
+    <li><a href="#prompt">Shot order goes in the text</a></li>
+    <li><a href="#traps">Traps</a></li>
+    <li><a href="#impl">Implementation vs. the official contract</a></li>
+  </ol>
+</nav>
+
+<section id="probe">
+  <h2>1. Measured — what gets blocked and what goes through</h2>
+  <p>We poked at the boundary three times with <code>dreamina-seedance-2-0-260128</code> (2026-08-15). <strong>Rejection happens at task creation, so there's no charge</strong> — probing the boundary is free.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Image we sent</th><th>Role</th><th>Result</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Close-up of a woman's face filling the frame<br><span class="badge">a frame pulled from a video 2.0 generated</span></td>
+        <td><code>first_frame</code></td>
+        <td><strong>Rejected</strong> — <code>InputImageSensitiveContentDetected.PrivacyInformation</code><br>“input image ‘content[1]’ may contain real person”</td>
+        <td>0</td>
+      </tr>
+      <tr>
+        <td>A back-view cut from the same video (face not visible)</td>
+        <td><code>first_frame</code></td>
+        <td><strong>Passed</strong> — 4-second generation ran fine</td>
+        <td>40,594 tokens</td>
+      </tr>
+      <tr>
+        <td>A photoreal person with their head covered by a helmet (bare hands and neck showing)</td>
+        <td><code>reference_image</code></td>
+        <td><strong>Passed</strong></td>
+        <td>Billed normally</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>What's blocked is the face, not the person.</strong> A photoreal person goes through as long as the face isn't visible. And <strong>the same filter catches AI-generated faces</strong> — the image in row 1 wasn't a real person, it was a face this very model had just generated.
+  </div>
+  <div class="warn">
+    <strong>You can't feed model output back in however you like, either.</strong> That's why row 1 was rejected — the moment you pull a frame with ffmpeg and re-encode it, it stops being "the original output." §2 covers the conditions for the trusted path.
+  </div>
+</section>
+
+<section id="bypass">
+  <h2>2. Three ways around it</h2>
+  <p>The official docs offer three fixes. They work differently, so they belong in different places.</p>
+
+  <h3>2-1. Reuse trusted output — feed back a face we made</h3>
+  <p>ModelArk trusts face-bearing output <strong>made by the same account on this platform</strong> for 30 days. Within that window it clears moderation and goes back in as input to 2.5 or 2.0.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Trusted output</th><th>In effect since</th><th>Validity</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Face-bearing video</strong> made by the 2.5 · 2.0 family</td><td>2026-03-11</td><td>30 days from generation</td></tr>
+      <tr><td>That video's <strong>last-frame image</strong></td><td>2026-04-16</td><td>30 days</td></tr>
+      <tr><td>Face-bearing output of <strong>Seedream 5.0 lite</strong> text-to-image</td><td>2026-04-16</td><td>30 days</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>The conditions are tight. It has to be the same platform and the same account, and <strong>a second round of editing breaks the trust.</strong> Even compression or forwarding can invalidate the verification, so the docs recommend keeping the original in BytePlus TOS as-is. Trust applies to <em>input</em> only, so output failing the security moderation is a separate matter.</p>
+  <div class="ok">
+    <strong>For our pipeline the third row is the useful one.</strong> Generate the person you want with Seedream 5.0 lite and that image goes straight into 2.0 as a <code>reference_image</code> — face moderation and cross-cut character consistency get solved at once. Just finish that episode within 30 days.
+  </div>
+
+  <h3>2-2. Preset digital characters — when it doesn't have to be a specific person</h3>
+  <p>The platform provides a shared digital character library for free. Each asset has an ID, and you use it by putting <code>asset://&lt;asset ID&gt;</code> where the URL goes. It fits places that need a photoreal face but have no reason to need a particular person.</p>
+  <pre><code>{
+  "type": "image_url",
+  "image_url": { "url": "asset://asset-20260410114236-8cdfz" },
+  "role": "reference_image"
+}</code></pre>
+  <div class="warn">
+    <strong>Don't name the asset ID in the prompt.</strong> The ID is only the channel that delivers the asset, so the model can't connect the ID to its contents. In the text, refer to it by <strong>asset type + index</strong>, as in <code>Image 1</code> (the index is the order among assets of the same type within the request body).<br>
+    Right — “The beauty influencer in Image 1” · Wrong — “asset-2026**** is a beauty influencer”
+  </div>
+
+  <h3>2-3. Rights-cleared real-person assets</h3>
+  <p>This path takes a real person's consent and identity verification and uploads them to your account's private asset library. The procedure is in §3.</p>
+</section>
+
+<section id="register">
+  <h2>3. Registering assets in the library yourself</h2>
+  <div class="danger">
+    <strong>Only real people can be registered.</strong> This library is the mechanism for collecting portrait-rights consent, so <strong>face-based identity verification by the person themselves</strong> sits at the center of the procedure. An AI-made character has nobody to verify, so it can't be registered this way — for that, go to §2-1 or §2-2.
+  </div>
+
+  <h3>3-1. Procedure</h3>
+  <p>Three people's steps happen in order.</p>
+  <ol>
+    <li><strong>The side using the asset (us)</strong> — in the ModelArk Model Playground, <em>My assets → Real-human → Add real-human assets → Create an asset group</em>. This account has to complete real-name or business verification first. Set the authorization validity period, agree to the personal-data handling rules, and an invitation QR code is issued.</li>
+    <li><strong>The side granting rights (the performer)</strong> — they scan the QR, sign in with their own BytePlus account, check who's being authorized and for what purpose, consent to face-data processing, and go through identity verification. Then they upload their own photos and videos. Each upload has to pass a face-consistency check before it's stored.</li>
+    <li><strong>Us again</strong> — in the real-human asset library, <em>Accept</em> the pending asset and acknowledge the risk notice, and its state becomes <strong>Active</strong>. <em>Reject</em> turns it <strong>Rejected</strong> and it can't be used.</li>
+  </ol>
+  <div class="note">
+    One asset group is <strong>for one person only</strong>. You can't mix another person's material into the same group. The other way around, more looks and styling for the same person can keep being added, and identity verification isn't repeated then — one verification per performer is enough.
+  </div>
+
+  <h3>3-2. Specs for the material you upload</h3>
+  <p>Even the framing is fixed. <strong>Full body</strong> means portrait orientation, front-facing, whole body; <strong>face</strong> means portrait orientation, front-facing and neutral, cropped above the shoulders so the <strong>face fills roughly 2/3 of the frame</strong>.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th></th><th>Format</th><th>Size</th><th>Length and dimensions</th></tr></thead>
+    <tbody>
+      <tr><td>Image</td><td>jpeg · jpg · png · webp · gif · heic</td><td>under 30MB</td><td>aspect ratio 0.4–2.5 · edges 300–6000px</td></tr>
+      <tr><td>Video</td><td>mp4 · mov</td><td>50MB or less</td><td>2–15s · 24–60fps · ratio 0.4–2.5 · edges 300–6000px · resolution 409,600–927,408</td></tr>
+      <tr><td>Audio</td><td>mp3 · wav</td><td>15MB or less</td><td>2–15s</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Verification failures happen often enough, usually from lighting or angle. The docs just say to try again in that case, and recommend sharp front-facing photos for the material.</p>
+
+  <h3>3-3. Using a registered asset</h3>
+  <p>Once you have the asset ID, all three roles take the same <code>asset://</code> form.</p>
+  <pre><code>"content": [
+  { "type": "text",      "text": "&lt;prompt&gt;" },
+  { "type": "image_url", "image_url": { "url": "asset://&lt;asset ID&gt;" }, "role": "reference_image" },
+  { "type": "video_url", "video_url": { "url": "asset://&lt;asset ID&gt;" }, "role": "reference_video" },
+  { "type": "audio_url", "audio_url": { "url": "asset://&lt;asset ID&gt;" }, "role": "reference_audio" }
+]</code></pre>
+</section>
+
+<section id="refimg">
+  <h2>4. Using a reference image as a storyboard sheet falls apart</h2>
+  <p>It's tempting to hand over one sheet with several shots drawn on it, and that's exactly the shape the official docs warn against. Three reasons.</p>
+
+  <h3>4-1. The drawing style comes along too</h3>
+  <p><code>reference_image</code> carries over three things — <strong>the person's looks, the drawing style, and the framing</strong>. Framing carrying over is what we wanted, but the style rides along with it. The docs' “Style drifting” entry gives the reverse case — you want anime and the reference is photoreal, so the result gets pulled photoreal. Flip it and a sketch pulls the result toward sketch. The fixes the docs recommend are to spell out style constraints, or to <strong>convert the reference into the target style before sending it</strong>.</p>
+
+  <h3>4-2. Several shots on one sheet duplicates the person</h3>
+  <p>The docs explicitly advise against assets holding the same person from several angles (three-view · multi-view). The model reads each panel as <strong>a different person</strong>, producing the “Duplicated characters” symptom where the same person shows up twice in one frame. A storyboard sheet has exactly that shape.</p>
+
+  <h3>4-3. More assets makes it worse</h3>
+  <p>The ceiling is 9 images on 2.0 and 30 on 2.5, but the docs <strong>recommend 4–5 and tell you not to go to the ceiling</strong>. With many assets the model can't work out what to prioritize, which brings style clashes and a blurred subject. Assets have four defined roles, and “shot order” isn't one of them.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Role</th><th>What it pins</th><th>Recommended set</th></tr></thead>
+    <tbody>
+      <tr><td>Character identity</td><td>Character appearance</td><td>1–2 images (face close-up + full body)</td></tr>
+      <tr><td>Scene tone</td><td>Environment and style</td><td>1 image</td></tr>
+      <tr><td>Camera movement</td><td>Shooting language, motion rhythm</td><td>1 video</td></tr>
+      <tr><td>Mood and rhythm</td><td>Emotion and timbre</td><td>1 audio clip</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>When the person wobbles, suspect the face's share of the frame first.</strong> Pack face, outfit, and pose into a single full-body photo and the face occupies so little area that its feature-extraction weight drops, giving you ID drift where the face changes partway through. The docs' prescription is to <strong>prepare a separate headshot with just the head</strong> (neutral expression recommended, distractions like shoulders, neck, and background kept to a minimum), split the roles in the prompt — “Subject 1's face is Image 1, the styling is Image 2” — and <strong>put the important assets first</strong>.
+  </div>
+
+  <h3>4-4. To match the drawing exactly, use a frame, not a reference</h3>
+  <div class="ok">
+    Straight from the docs — <strong>“if the first and last frames must exactly match the images you specify, always use the image-to-video (first and last frame) capability”</strong> (with <code>role</code> as <code>first_frame</code> / <code>last_frame</code>). Pinning the first frame through <code>reference_image</code> is an indirect imitation with no guarantee.
+  </div>
+  <p>So use the storyboard as <strong>the blueprint people read</strong>, and give the model a drawing of that shot in the target style as <code>first_frame</code>. Character consistency is pinned separately with 1–2 <code>reference_image</code>s.</p>
+  <div class="note">
+    Measurement said the same. Describing the same scene in text three times (15-second t2v) flipped the character placement every time, but feeding one frame with the right placement as <code>first_frame</code> held the camera and framing exactly, <strong>without a single line about them</strong>.
+  </div>
+</section>
+
+<section id="prompt">
+  <h2>5. Shot order goes in the text</h2>
+  <p>The docs nail down the ideal prompt shape for a complex video as a <strong>timeline storyboard</strong>. Split the video into shots, number them <code>Shot 1</code> · <code>Shot 2</code> · <code>Shot 3</code>, and in the order events happen write “who + where + what + what the camera does”.</p>
+  <pre><code>Shot 1: Side of an alley. A man slowly starts to run. Ragged breathing.
+Shot 2: The man knocks over a fruit stall. The camera shakes hard and closes in on his frightened face.
+Shot 3: The man clears a low wall and disappears. The camera pulls back slowly and settles on the empty street.</code></pre>
+  <p>The same content as lumped-together prose — “a man runs anxiously down the street, very cinematic” — is the bad example the docs give.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Rule</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>One camera move per shot</td><td>Stacking push, pull, pan, and travel into one shot makes the frame unstable</td></tr>
+      <tr><td>No second-level timing</td><td>Support for precise timing like “0–3s” is unreliable. Forcing a duration can wreck the generation</td></tr>
+      <tr><td>Prefer small, slow motion</td><td>Avoid big motion — sprinting, large jumps, violent rolls</td></tr>
+      <tr><td>Emotion through the body</td><td>Instead of “very sad”, write “head lowered, shoulders trembling slightly”</td></tr>
+      <tr><td>Connect one motion to the next</td><td>“Carrying the momentum of the turn, they naturally raise a hand”</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Separate the kinds of information with symbols — music in <code>（ ）</code>, sound effects in <code>&lt; &gt;</code>, dialogue in <code>{ }</code>, subtitles in <code>【 】</code>. Don't mix languages in the dialogue (proper nouns aside).</p>
+  <div class="warn">
+    <strong>Subtitles can't be blocked 100%.</strong> Subtitles can appear even when you don't ask for them, and all the docs offer is ways to lower the odds — spell out the constraint, wipe unnecessary text out of the reference beforehand, and where possible generate landscape and crop to portrait later. <strong>Portrait produces subtitles significantly more often than landscape.</strong> For this portrait-only pipeline that's an unfavorable condition as-is.
+  </div>
+</section>
+
+<section id="traps">
+  <h2>6. Traps</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Symptom</th><th>Cause</th><th>Response</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Some frames of the i2v result stretch and shrink</td>
+        <td>The input image's width and height differ from the output resolution</td>
+        <td>Crop the input to the output pixel size and leave <code>ratio</code> at <code>adaptive</code></td>
+      </tr>
+      <tr>
+        <td>The i2v source comes out as just the middle band</td>
+        <td>Pin a value in <code>ratio</code> and the server crops from the center</td>
+        <td>For i2v, don't pass <code>ratio</code> at all (default <code>adaptive</code>)</td>
+      </tr>
+      <tr>
+        <td>The picture jumps at the splice</td>
+        <td>Frame mismatch at the video-extension joint</td>
+        <td>Trim the last 6 frames of the leading clip and the first 1 of the following one to match. A faint jump can still remain, so cutting at a transition point works better</td>
+      </tr>
+      <tr>
+        <td>Called the model and got <code>ModelNotOpen</code></td>
+        <td>That model isn't activated in the console</td>
+        <td>Switch it on under Model activation. No charge is incurred (measured with 2.0-fast)</td>
+      </tr>
+      <tr>
+        <td>Went to fetch the result URL and it was gone</td>
+        <td>Generation result URLs last 24 hours</td>
+        <td>Save the moment polling ends. Keep originals you'll reuse as trusted assets in TOS</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>Turning audio on doesn't raise 2.0's token count.</strong> With the same prompt and length (1080p, 15s), silent and audio runs both came out at <strong>731,025 tokens</strong> (measured 2026-08-15). That differs from 1.5 pro, where audio exactly doubles the unit price — on 2.0 there's no reason to turn sound off. That verdict does treat the response's <code>completion_tokens</code> as the billing basis, so if the vendor bills audio as a separate line item it wouldn't show up here.
+  </div>
+  <p>For reference, dropping to 720p takes the same 15 seconds to <strong>324,900 tokens</strong>, 44% of 1080p. The token formula is proportional to width × height, so it falls exactly as predicted.</p>
+</section>
+
+<section id="impl">
+  <h2>7. Implementation vs. the official contract</h2>
+  <p>Things the official API has that <code>server/src/seedance-client.ts</code> doesn't have yet.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>API capability</th><th>Form</th><th>Our implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Asset library reference</td><td><code>"url": "asset://&lt;asset ID&gt;"</code></td><td><strong>Absent</strong> — preset digital characters and registered real people can't be used</td></tr>
+      <tr><td>Video reference</td><td><code>role: "reference_video"</code></td><td><strong>Absent</strong></td></tr>
+      <tr><td>Audio reference</td><td><code>role: "reference_audio"</code></td><td><strong>Absent</strong></td></tr>
+      <tr><td>Retrieving the last frame</td><td><code>"return_last_frame": "true"</code></td><td><strong>Absent</strong> — this is where you match the joint when splicing cuts, and the official route to a face-bearing trusted asset</td></tr>
+      <tr><td>Video editing</td><td>Source video + edit instructions</td><td><strong>Absent</strong> — partial replacement, element removal, attribute changes</td></tr>
+      <tr><td>Video extension</td><td>Source video + what comes next</td><td><strong>Absent</strong></td></tr>
+      <tr><td>First and last frame</td><td><code>role: first_frame / last_frame</code></td><td>Present — <code>generateFromImage</code></td></tr>
+      <tr><td>Image reference</td><td><code>role: reference_image</code></td><td>Present — <code>generateWithReferences</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    Seedream 5.0 lite is an image model rather than a video model, so this client doesn't cover it. Still, the trusted path in §2-1 points at that model's output, so for episodes handling face-bearing people it's worth wiring up a call path.
+  </div>
+</section>
+
+<footer class="meta" style="margin-top:2rem">
+  <span>Source <a href="https://docs.byteplus.com/en/docs/ModelArk/2608626">people-in-video policy</a></span>
+  <span><a href="https://docs.byteplus.com/en/docs/ModelArk/2315856">real-person asset registration</a></span>
+  <span><a href="https://docs.byteplus.com/en/docs/ModelArk/2223965">digital character library</a></span>
+  <span><a href="https://docs.byteplus.com/en/docs/ModelArk/2222480">2.0 prompt guide</a></span>
+  <span><a href="https://docs.byteplus.com/en/docs/ModelArk/2291680">2.0 tutorial</a></span>
+  <span>Compare <a href="veo-portrait.en.html">Veo people and reference policy</a> — Veo lets the same face PNG through</span>
+</footer>
+
+</div>
+</body>
+</html>

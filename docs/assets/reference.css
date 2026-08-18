@@ -1,0 +1,192 @@
+/*
+ * Shared styles for the social-flow API reference.
+ * Same GitHub-family tokens as the inline styles in docs/guides and docs/research,
+ * split into a shared file once the reference grew past a dozen pages
+ * (loaded over a file:// relative path).
+ */
+
+:root {
+  --bg: #ffffff;
+  --bg-soft: #f6f8fa;
+  --bg-card: #ffffff;
+  --text: #1f2328;
+  --text-soft: #59636e;
+  --border: #d1d9e0;
+  --accent: #0969da;
+  --accent-soft: #ddf4ff;
+  --green: #1a7f37;
+  --green-soft: #dafbe1;
+  --amber: #9a6700;
+  --amber-soft: #fff8c5;
+  --red: #cf222e;
+  --red-soft: #ffebe9;
+  --purple: #8250df;
+  --purple-soft: #fbefff;
+  --code-bg: #f6f8fa;
+  --shadow: 0 1px 3px rgba(31, 35, 40, .08), 0 8px 24px rgba(31, 35, 40, .06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --bg-soft: #161b22;
+    --bg-card: #161b22;
+    --text: #e6edf3;
+    --text-soft: #9198a1;
+    --border: #30363d;
+    --accent: #4493f8;
+    --accent-soft: #0c2d6b40;
+    --green: #3fb950;
+    --green-soft: #2ea04326;
+    --amber: #d29922;
+    --amber-soft: #bb800926;
+    --red: #f85149;
+    --red-soft: #f8514926;
+    --purple: #ab7df8;
+    --purple-soft: #8250df26;
+    --code-bg: #161b22;
+    --shadow: 0 1px 3px rgba(0, 0, 0, .4);
+  }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+
+body {
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.75;
+  font-size: 16px;
+  word-break: keep-all;
+}
+
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 24px 120px; }
+
+/* ── 상단 경로 ── */
+.crumbs { padding: 28px 0 0; font-size: 13.5px; color: var(--text-soft); }
+.crumbs a { color: var(--text-soft); text-decoration: none; }
+.crumbs a:hover { color: var(--accent); text-decoration: underline; }
+.crumbs span { margin: 0 6px; opacity: .5; }
+
+/* ── 헤더 ── */
+header.hero { padding: 32px 0 44px; border-bottom: 1px solid var(--border); margin-bottom: 44px; }
+.hero .kicker {
+  display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+  color: var(--accent); background: var(--accent-soft);
+  padding: 4px 12px; border-radius: 999px; margin-bottom: 18px;
+}
+.hero h1 { font-size: 33px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+.hero .sub { margin-top: 14px; font-size: 17px; color: var(--text-soft); max-width: 760px; }
+.hero .meta { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13.5px; color: var(--text-soft); }
+.hero .meta strong { color: var(--text); font-weight: 600; }
+.hero .meta a { color: var(--accent); }
+
+/* ── 목차 ── */
+nav.toc {
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px;
+  padding: 18px 22px; margin-bottom: 48px; font-size: 15px;
+}
+nav.toc .toc-title { font-size: 12.5px; font-weight: 700; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 8px; }
+nav.toc ol { list-style: none; counter-reset: toc; }
+nav.toc li { counter-increment: toc; padding: 2px 0; }
+nav.toc a { color: var(--text); text-decoration: none; }
+nav.toc a::before { content: counter(toc) ". "; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+
+/* ── 섹션 ── */
+section { margin-bottom: 56px; }
+h2 {
+  font-size: 24px; font-weight: 750; letter-spacing: -.01em;
+  padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 22px;
+}
+h3 { font-size: 18.5px; font-weight: 700; margin: 32px 0 12px; }
+h4 { font-size: 15.5px; font-weight: 700; margin: 22px 0 8px; color: var(--text-soft); }
+p { margin-bottom: 14px; }
+ul, ol { margin: 0 0 14px 22px; }
+li { margin-bottom: 6px; }
+a { color: var(--accent); }
+
+/* ── 코드 ── */
+code {
+  font-family: "SFMono-Regular", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: .875em; background: var(--code-bg);
+  border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;
+  word-break: break-all;
+}
+pre {
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; overflow-x: auto; margin-bottom: 16px; font-size: 13.5px; line-height: 1.65;
+}
+pre code { background: none; border: none; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ── 표 ── */
+.table-scroll { overflow-x: auto; margin-bottom: 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+th { background: var(--bg-soft); font-weight: 650; white-space: nowrap; }
+td code { font-size: 13px; }
+tbody tr:hover { background: var(--bg-soft); }
+
+/* ── 콜아웃 ── */
+.note, .warn, .ok, .danger {
+  border-radius: 10px; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  border: 1px solid var(--border); border-left-width: 4px;
+}
+.note { background: var(--accent-soft); border-left-color: var(--accent); }
+.warn { background: var(--amber-soft); border-left-color: var(--amber); }
+.ok { background: var(--green-soft); border-left-color: var(--green); }
+.danger { background: var(--red-soft); border-left-color: var(--red); }
+.note strong, .warn strong, .ok strong, .danger strong { font-weight: 700; }
+.note :last-child, .warn :last-child, .ok :last-child, .danger :last-child { margin-bottom: 0; }
+
+/* ── 배지 ── */
+.badge {
+  display: inline-block; font-size: 11.5px; font-weight: 700; letter-spacing: .03em;
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap; vertical-align: middle;
+}
+.badge.ro { background: var(--green-soft); color: var(--green); }
+.badge.wr { background: var(--accent-soft); color: var(--accent); }
+.badge.de { background: var(--red-soft); color: var(--red); }
+.badge.key { background: var(--purple-soft); color: var(--purple); }
+.badge.free { background: var(--bg-soft); color: var(--text-soft); }
+
+/* ── 카드 그리드 (인덱스) ── */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 18px 20px; text-decoration: none; color: var(--text); display: block; transition: box-shadow .15s, border-color .15s;
+}
+.card:hover { box-shadow: var(--shadow); border-color: var(--accent); }
+.card h3 { margin: 0 0 6px; font-size: 16.5px; }
+.card p { margin: 0; font-size: 14px; color: var(--text-soft); line-height: 1.6; }
+.card .tools { margin-top: 10px; font-size: 12.5px; color: var(--text-soft); font-family: ui-monospace, monospace; }
+
+/* ── 점수 게이지 ── */
+.score { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+.score .num { font-size: 42px; font-weight: 800; letter-spacing: -.03em; }
+.score .of { font-size: 17px; color: var(--text-soft); }
+.bar { height: 10px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 6px; }
+.bar > i { display: block; height: 100%; background: var(--green); }
+.bar.mid > i { background: var(--amber); }
+.bar.low > i { background: var(--red); }
+
+/* ── Language toggle (ko ⇄ en siblings) ── */
+.langbar { display: flex; justify-content: flex-end; padding-top: 18px; }
+.langbar a {
+  font-size: 13px; color: var(--text-soft); text-decoration: none;
+  border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+  background: var(--bg-card);
+}
+.langbar a:hover { color: var(--accent); border-color: var(--accent); }
+
+footer {
+  margin-top: 72px; padding-top: 24px; border-top: 1px solid var(--border);
+  font-size: 13.5px; color: var(--text-soft);
+}
+footer a { color: var(--accent); }
+
+@media (max-width: 640px) {
+  .hero h1 { font-size: 26px; }
+  .wrap { padding: 0 16px 80px; }
+}

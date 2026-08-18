@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veo people and reference policy — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="veo-portrait.html">
+<link rel="alternate" hreflang="en" href="veo-portrait.en.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="veo-portrait.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>Veo people and reference</div>
+
+<header class="hero">
+  <div class="kicker">GOOGLE GEMINI</div>
+  <h1>Veo people and reference policy</h1>
+  <p class="sub"><strong>Veo 3.1 takes adult faces as they are.</strong> We fed it the very close-up PNG Seedance 2.0 refused and got a 4-second clip out. The locked doors sit elsewhere — children's faces, style reference, and the asset registry itself. This page is a record of measuring Veo again from the same angle as the <a href="seedance-portrait.en.html">Seedance people and asset policy</a>.</p>
+  <div class="meta">
+    <span>Official <a href="https://ai.google.dev/gemini-api/docs/veo">Veo guide</a></span>
+    <span>Model capability table <a href="gemini-veo.en.html">Veo 3.1</a></span>
+    <span>Auth <code>GEMINI_API_KEY</code></span>
+    <span>Implementation <code>server/src/video-client.ts</code></span>
+    <span>Checked <strong>2026-08-15</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#probe">Measured — with the image Seedance blocked</a></li>
+    <li><a href="#policy">The policy is expressed as a single value</a></li>
+    <li><a href="#register">There is no asset registry</a></li>
+    <li><a href="#refimg">Using reference images as scene frames breaks</a></li>
+    <li><a href="#prompt">How to write a people shot in words</a></li>
+    <li><a href="#traps">Traps</a></li>
+    <li><a href="#impl">Implementation comparison</a></li>
+  </ol>
+</nav>
+
+<section id="probe">
+  <h2>1. Measured — with the image Seedance blocked</h2>
+  <p>We poked both engines with <strong>the same single file</strong>. It's a 1080×1920 portrait PNG, and the face of a Korean woman looking uneasy on a night street fills nearly the whole frame. It isn't a photo — it's a frame pulled from a video Seedance 2.0 made — and Seedance 2.0 still refused to take its own output back.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Engine</th><th>Call</th><th>Result</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>dreamina-seedance-2-0-260128</code></td>
+        <td><code>first_frame</code> · 480p · 4s</td>
+        <td><strong>Refused</strong> — <code>InputImageSensitiveContentDetected.PrivacyInformation</code><br>“input image ‘content[1]’ may contain real person”</td>
+        <td>0 <span class="badge free">blocked before task creation</span></td>
+      </tr>
+      <tr>
+        <td><code>veo-3.1-lite-generate-preview</code></td>
+        <td><code>veo_img2video</code> · 9:16 · 720p · 4s</td>
+        <td><strong>Passed</strong> — 720×1280 · 24fps · 4.000s, with AAC 48kHz stereo attached (average −21.4 dB)</td>
+        <td>about $0.20</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>The face held.</strong> Putting the input, the first frame, and the 3.6-second frame side by side and comparing by eye, the eyes, nose, jawline, and hair texture stay the same across the 4 seconds. A streetlight brightening in the background and a slight movement of the neckline are the whole of the change. <strong>This was measured on the cheapest tier (lite)</strong>, so there's no reason the tiers above would be worse.
+  </div>
+  <div class="warn">
+    <strong>What this measurement covers is one mode: image-to-video.</strong> Reference-image mode (<code>veo_reference</code>) is documented under the same <code>allow_adult</code> policy, but we haven't paid to confirm it — using reference fixes the length at 8s and rules out lite, so it's <code>fast</code> at 8s, about $0.80. We don't write "it works" for a cell that isn't in the table on the strength of documentation alone.
+  </div>
+
+  <h3>The two engines' people policies side by side</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Axis</th><th>Seedance 2.x</th><th>Veo 3.1</th></tr></thead>
+    <tbody>
+      <tr><td>Adult face input</td><td><strong>Refused</strong> (even AI-generated faces get caught)</td><td><strong>Allowed</strong> — measured</td></tr>
+      <tr><td>Child face input</td><td>Refused</td><td>Refused — subject to an <code>allow_all</code> permission request (§2)</td></tr>
+      <tr><td>Person asset registration</td><td>Yes — the <code>asset://</code> library</td><td><strong>None</strong> — inline per request (§3)</td></tr>
+      <tr><td>Style reference</td><td>Yes — a reference image carries the style over</td><td><strong>Not supported in 3.1</strong> (§4)</td></tr>
+      <tr><td>Reference image count</td><td>Up to 30 on 2.5</td><td>Up to 3 · fixed 8s</td></tr>
+      <tr><td>Taking your own output back</td><td>Trusted outputs, 30 days</td><td>Extension only · 2 days of server retention</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="policy">
+  <h2>2. The policy is expressed as a single value</h2>
+  <p>Seedance runs the input image through a classifier and either refuses it or takes it. Veo works differently — a field called <code>personGeneration</code> has <strong>exactly one allowed value per mode</strong>, and that value is the policy.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Mode</th><th>Veo 3.1 · 3.1 Fast · 3.1 Lite</th><th>Veo 2 (for reference)</th></tr></thead>
+    <tbody>
+      <tr><td>Text-to-video, extension</td><td><code>"allow_all"</code> only</td><td><code>allow_all</code> · <code>allow_adult</code> · <code>dont_allow</code></td></tr>
+      <tr><td>Image-to-video, interpolation, reference images</td><td><code>"allow_adult"</code> only</td><td><code>allow_adult</code> · <code>dont_allow</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>When there's one choice, it's a constant, not a parameter.</strong> That's why this server loses nothing by not passing <code>personGeneration</code> — in the 3.1 family it goes to the same value whether you pass it or not. If we ever bring Veo 2 back, that's when the value has to be chosen.
+  </div>
+  <p><code>allow_adult</code> means <strong>adults only</strong>. So what actually gets blocked in image-to-video is an image with a child in it. Permission-request posts pile up on the developer forum, and this is the error text attached to them.</p>
+  <pre><code>The input image contains content that has been blocked by your
+current safety settings for person/face generation.
+— Support code: 17301594</code></pre>
+  <div class="danger">
+    <strong>Turning it into a drawing doesn't get you through either.</strong> The business owner in that request post converted a child's photo into a 3D storybook-style character <em>illustration</em> and fed in that drawing, and was blocked with the same text. The axis of judgment isn't whether the portrait is photorealistic — it's <strong>whether the subject looks underage</strong>. If we plan a cut with a child in it for one of our episodes, the Veo image-to-video lane isn't a candidate in the first place.
+  </div>
+  <p>A permission path is open, but it isn't light. When a minor is involved it goes not to a standard permission request but to a <strong>policy review by the Vertex AI trust and safety team</strong>, filed through Google Cloud support channels. Google staff answers point at this path too.</p>
+
+  <h3>Regional restriction</h3>
+  <p>In the EU, UK, Switzerland, and MENA, Veo 3 and 3.1 allow only <code>allow_adult</code>. That means text-to-video's <code>allow_all</code> is narrowed to adults in those regions too. Korea isn't affected, but running this plugin on an account in those regions changes the results for cuts made from a text prompt alone.</p>
+
+  <h3>What the API doesn't block — real people</h3>
+  <div class="warn">
+    <strong>Veo takes adult faces without distinction.</strong> The API never asked whether that face is an AI-made fictional person or someone who actually exists. Which means <strong>whether to feed in a real person's likeness isn't a gate, it's our judgment.</strong> The line Google's generative-AI prohibited use policy draws is this.
+    <ul>
+      <li>“Impersonating an individual (living or dead) without explicit disclosure, in order to deceive.” — undisclosed impersonation <strong>done to deceive</strong></li>
+      <li>“using personal data or biometrics without legally-required consent” — using personal or biometric data without consent</li>
+      <li>“Facilitates non-consensual intimate imagery.”</li>
+    </ul>
+    The policy blocks impersonation and non-consent, not likeness itself. So <em>not being refused</em> doesn't mean <em>you may use it</em>. For real-person material we verify the rights ourselves and write down the basis.
+  </div>
+  <p>Generated video carries an invisible <strong>SynthID watermark</strong>, and the output passes through safety filters and a <strong>memorization check</strong> (a check for reproducing training data verbatim). That isn't an option we can turn off.</p>
+</section>
+
+<section id="register">
+  <h2>3. There is no asset registry</h2>
+  <p>The most useful find in the Seedance research was <code>asset://</code> — a library where you register a person or character once and call it by ID every episode. <strong>Veo has no counterpart.</strong> Not because we failed to find it; the design is that way.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>What you put in</th><th>How it's passed</th><th>Reuse</th></tr></thead>
+    <tbody>
+      <tr><td>First and last frame images</td><td>base64 inline in the request body</td><td>None — uploaded again every time</td></tr>
+      <tr><td>1–3 reference images</td><td>base64 inline in the request body</td><td>None</td></tr>
+      <tr><td>Video to extend</td><td>base64 inline in the request body</td><td>Only video Veo made (official contract)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>There is one path for "taking back what we made": <strong>extension</strong> (<code>veo_extension</code>). It serves the same purpose as Seedance's trusted-output path — the model recognizes its own output, so it doesn't run the person check again. But the window is short.</p>
+  <div class="warn">
+    <strong>The server holds generated video for 2 days.</strong> That's midway between Seedance's 30-day trusted outputs and its 24-hour result URLs. Our client downloads a local <code>.mp4</code> as soon as generation finishes, so we can still build an extension input after the 2 days are up — we re-upload the file as base64. That said, <strong>the official contract is "a Veo product, 720p, 141s or less" and our server only checks the extension.</strong> What happens if you feed in an mp4 Veo didn't make is unverified.
+  </div>
+  <div class="note">
+    The Vertex AI path has an option to point <code>storageUri</code> at a GCS bucket, but that's an <strong>output store</strong>, not an asset registry. Reference images are <code>bytesBase64Encoded</code> inline on Vertex too. So the conclusion that there's no registry holds for both paths.
+  </div>
+  <p>Translated into practice: <strong>don't leave character consistency to Veo — manage it ourselves as files.</strong> Keep front, side, and full-body PNGs of the channel character under <code>data/&lt;channel&gt;/assets/characters/&lt;id&gt;/</code> and upload the same files as reference images every episode. The <code>character</code> row in <code>catalog.md</code> and <code>resolve-asset.py</code> find that sheet. No registry also means <strong>the versions are in our hands</strong>, so the accident where fixing a character quietly changes past episodes can't happen on this side.</p>
+</section>
+
+<section id="refimg">
+  <h2>4. Using reference images as scene frames breaks</h2>
+  <p>The question from the Seedance research holds here too — <strong>if we draw the cut as a sketch or a toon and pass it as reference, does it build that composition?</strong> Veo's answer is the same "no" as Seedance's, but it gets blocked at a different point.</p>
+
+  <h3>There are two reference kinds, and one of them is closed in 3.1</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th><code>referenceType</code></th><th>What it does</th><th>Count</th><th>Veo 3.1 family</th></tr></thead>
+    <tbody>
+      <tr><td><code>"asset"</code></td><td>Preserves the appearance of <strong>one</strong> person, character, or product in the output video</td><td>Up to 3</td><td>Supported (except lite)</td></tr>
+      <tr><td><code>"style"</code></td><td>Applies the <strong>style</strong> of the uploaded image to the output video</td><td>1</td><td><strong>Not supported</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    The Vertex docs nail it down — <em>“Veo 3.1 models don't support <code>referenceImages.style</code>. Use <code>veo-2.0-generate-exp</code> when using style images.”</em> The Gemini API side exposes only <code>asset</code>. <strong>The path for passing a sketch or toon style as reference is closed in 3.1</strong>, and what's open is only the experimental 2.0 model, which can't make audio. The reason our pipeline uses Veo is native audio, so that trade doesn't hold.
+  </div>
+
+  <h3><code>asset</code> is appearance, not composition</h3>
+  <p>The name is easy to misread: what <code>asset</code> looks at is "what appears", not "where and how it's placed". Put a scene frame in as <code>asset</code> and instead of imitating that layout, Veo <strong>puts the drawing itself on screen</strong> — line art on paper, moving inside the video. Google's own examples use it that way. They fed in one drawing of an anglerfish and one of a princess dress and asked for "a cartoon of a fish swimming in a dress", and got a video where the two subjects were combined, not one where the two drawings' layout was reproduced.</p>
+  <div class="ok">
+    <strong>The source of truth for composition is the first and last frame.</strong> Put the opening cut in <code>image</code> and the closing cut in <code>lastFrame</code>, and it connects the two. Same conclusion as the Seedance measurements — draw the camera and composition instead of describing them in words, and they're kept. That said, the interpolation mode that takes two frames is also image-to-video and therefore <code>allow_adult</code>, and we haven't measured that combination yet.
+  </div>
+
+  <h3>Google's examples are all generated images</h3>
+  <p>The reference-image examples in the official guide — the three of a dress, a person, and sunglasses, or the two of the anglerfish and the princess dress — are <strong>all drawings made with Nano Banana</strong>. There isn't a single example using a photo as reference. It isn't a prohibition, but it's signal enough that the standard flow the vendor has in mind is "make the asset with an image model and hand it to the video model". Our pipeline's <code>gpt_image_text2img</code> → <code>veo_*</code> order matches that flow.</p>
+
+  <h3>Constraints that come with using reference</h3>
+  <ul>
+    <li>The length is <strong>fixed at 8s</strong> — even to fill a 4-second slot, it bills the 8-second amount.</li>
+    <li><strong>lite can't use reference at all.</strong> You go up to <code>fast</code> at minimum.</li>
+    <li>The sharper the images and the more angles, the better the consistency. Filling the 3 slots with one person's front, side, and full body is the use case here.</li>
+  </ul>
+</section>
+
+<section id="prompt">
+  <h2>5. How to write a people shot in words</h2>
+  <p>Where we can't hand over the composition as a drawing, words are the only channel. The official guide names seven elements, of which only the first three are required and the rest are optional.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Element</th><th>What to write</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Subject</strong> · required</td><td>The object, person, animal, or landscape to put on screen</td></tr>
+      <tr><td><strong>Action</strong> · required</td><td>Walking, running, turning the head</td></tr>
+      <tr><td><strong>Style</strong> · required</td><td>Film noir, horror film, cartoon</td></tr>
+      <tr><td>Camera</td><td>Aerial shot, eye level, dolly shot, low angle</td></tr>
+      <tr><td>Composition</td><td>Wide shot, close-up, single shot, two shot</td></tr>
+      <tr><td>Focus and lens</td><td>Shallow focus, macro lens, wide-angle lens</td></tr>
+      <tr><td>Ambiance</td><td>Blue tones, night, warm tones</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>There's a separate way to raise facial detail</strong> — put <code>portrait</code> in the prompt to make the face the focus. Our measurement prompt didn't have that word and the face held anyway, so it isn't strictly needed when there's a first frame, and it would be worth more in text-to-video.
+  </div>
+  <h3>Sound</h3>
+  <ul>
+    <li><strong>Wrap dialogue in quotes</strong> — unwrapped, it gets read as narration or leaks out as on-screen text.</li>
+    <li>Spell out sound effects and ambience — "tires screeching and the engine roaring", "a faint hum in the background".</li>
+    <li><strong>To extend, there has to be speech in the last second.</strong> A clip that ends quietly won't carry its sound over.</li>
+  </ul>
+  <p>English is the fully supported language and the rest aren't evaluated. A Korean prompt does work, but that means results can differ, so it's safer to write the prompt in English and wrap only the dialogue in Korean.</p>
+</section>
+
+<section id="traps">
+  <h2>6. Traps</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Trap</th><th>What actually happens</th></tr></thead>
+    <tbody>
+      <tr><td><strong>The safety filter catches you quietly</strong></td><td>It arrives as <code>done: true</code> with an empty result. Without checking <code>raiMediaFilteredReasons</code> first it becomes a vague "there's no video" error, and the model retries with the same prompt and burns the wait for nothing</td></tr>
+      <tr><td>When you're blocked, <strong>you aren't charged</strong></td><td>If audio processing or a safety filter blocks generation, there's no bill. Which means experiments that probe the boundary aren't expensive — though a success is billed as usual</td></tr>
+      <tr><td>Generated video is kept on <strong>the server for 2 days</strong></td><td>Deleted after 2 days. Harmless for our client since it saves locally right away, but extending days later needs the local file</td></tr>
+      <tr><td>lite is missing <strong>three features</strong></td><td>Reference images · extension · 4k. This server rejects all three before the call</td></tr>
+      <tr><td>1080p and 4k are <strong>8s-only</strong></td><td>Filling a 4-second slot at 1080p bills the 8-second amount. Reference images are fixed at 8s too</td></tr>
+      <tr><td>Extension output is <strong>fixed at 720p</strong></td><td>Extend a 1080p clip and the resolutions don't line up when you join them</td></tr>
+      <tr><td>Regional restriction</td><td>Accounts in the EU, UK, Switzerland, and MENA are narrowed to <code>allow_adult</code></td></tr>
+      <tr><td>You <strong>can't pass several videos</strong> as reference</td><td>There's no feature for referencing or reasoning over several videos. Trying it degrades quality or produces unexpected results</td></tr>
+      <tr><td>Latency <strong>11 seconds minimum to 6 minutes</strong></td><td>This server's polling cap is 10 minutes, so there's room</td></tr>
+      <tr><td>SynthID <strong>can't be turned off</strong></td><td>It's a different layer from the visible watermark Seedance's <code>watermark: false</code> removes. It doesn't show on screen but verification platforms can detect it</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="impl">
+  <h2>7. Implementation comparison</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Official contract</th><th>social-flow implementation</th></tr></thead>
+    <tbody>
+      <tr><td><code>personGeneration</code></td><td>One allowed value per mode</td><td>Not exposed — one value only, so <strong>nothing is lost</strong></td></tr>
+      <tr><td><code>referenceType</code></td><td><code>asset</code> · <code>style</code> (not supported in 3.1)</td><td>Fixed to <code>ASSET</code> — 3.1 has no <code>style</code>, so <strong>nothing is lost</strong></td></tr>
+      <tr><td><code>seed</code></td><td>Supported on the Veo 3 family (not a determinism guarantee, a slight improvement)</td><td><strong>Not exposed</strong> — we can't run reproduction experiments that pull the same cut again</td></tr>
+      <tr><td>Reference image count</td><td>Up to 3</td><td>1–3 enforced by zod</td></tr>
+      <tr><td>Extension input</td><td>Veo product · 720p · 141s or less</td><td><strong>Only the extension is checked</strong> — origin, resolution, and length are unverified</td></tr>
+      <tr><td>Multiple generation</td><td>1 on the Gemini API / <code>sampleCount</code> 1–4 on Vertex</td><td>Not exposed — one per cut by default, and N costs N times as much</td></tr>
+      <tr><td>Result retention</td><td>2 days on the server</td><td>Saved as a local <code>.mp4</code> as soon as it's generated, then only the path returned</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    A new video model called <strong>Gemini Omni Flash</strong> (<code>gemini-omni-flash-preview</code>) is up on the Vertex-side Interactions API. It takes reference images, makes 3–10 seconds in 1-second steps, and infers the aspect ratio from the prompt — closer to Seedance's freedom than Veo's 4/6/8-second grid. But it presumes a GCS bucket and Vertex auth, which is a different path from this server running on one line of <code>GEMINI_API_KEY</code>. We haven't checked its people policy.
+  </div>
+</section>
+
+<footer class="meta" style="margin-top:2rem">
+  <span>Source <a href="https://ai.google.dev/gemini-api/docs/veo">Veo guide and parameter table</a></span>
+  <span><a href="https://docs.cloud.google.com/vertex-ai/generative-ai/docs/video/use-reference-images-to-guide-video-generation">asset and style reference guide</a></span>
+  <span><a href="https://policies.google.com/terms/generative-ai/use-policy">Generative AI prohibited use policy</a></span>
+  <span><a href="https://discuss.ai.google.dev/t/request-allowlist-access-for-veo-3-1-person-generation-image-to-video-project-795cbc81-551b-444a-9/174028">Person generation permission request thread</a></span>
+  <span>Comparison <a href="seedance-portrait.en.html">Seedance people and asset policy</a></span>
+</footer>
+
+</div>
+</body>
+</html>

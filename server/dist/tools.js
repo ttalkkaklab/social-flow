@@ -1,20 +1,59 @@
+import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
+import { DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
+import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
+import { DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, TTS_VOICE_NAMES, VALID_TTS_MODELS } from './tts-client.js';
+import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MIN_ZIMAGE_DIMENSION, ZIMAGE_DIMENSION_STEP, ZIMAGE_QUANTIZE_OPTIONS, } from './zimage-client.js';
 /**
- * 툴 표면 정의 (24종) — 조사 4종 + 공공데이터 5종 + 생성 6종(이미지 2 + 영상 4) +
- * 채널별 게시 5종 + 받은 댓글 3종 + 계정 점검 1종.
+ * Tool surface definitions (43 tools) — 6 research + 5 open-data +
+ * 18 generation (3 image + 7 video + 4 speech + 4 music) +
+ * 5 per-platform publishing + 3 inbound comments + 1 account check +
+ * 5 growth lookups (Threads insights/keyword search · YouTube insights ·
+ * Instagram insights · recent-content feedback — the insights trio is for the
+ * grow-* skills only; content_feedback covers both video platforms and writes
+ * an HTML report).
  *
- * 게시 툴 description 은 HITL 계약을 내장한다 — 이 서버에는 검토 게이트가 없어
- * 호출 = 즉시 공개 게시이므로, 사용자 승인 없이는 절대 호출하지 않도록 명시한다.
+ * Publish tool descriptions embed the HITL contract — this server has no
+ * review gate, so a call is an immediately public post, and the descriptions
+ * say never to call without user approval.
  *
- * 생성 툴은 fect-mcp-server 이식 — 이미지(gpt_image_*, OPENAI_API_KEY)는
- * gpt-image 모듈, 영상(veo_*, GEMINI_API_KEY)은 video 모듈. description 은
- * 원문을 승계하되 이 서버에 없는 툴의 교차 참조만 제거했다 (키는 호출 시점 검증).
+ * Generation tools are ported from fect-mcp-server — image (gpt_image_*,
+ * OPENAI_API_KEY) comes from the gpt-image module; video (veo_*), speech
+ * (tts_*), and music (music_*) come from the video/tts/music modules, all
+ * three on GEMINI_API_KEY. Descriptions inherit the originals, minus
+ * cross-references to tools this server doesn't have, plus the short-form
+ * pipeline context (channel profile voice, pinned seeds). Keys are validated
+ * at call time.
+ *
+ * Video alone has two engines — veo_* (Google Veo 3.1, GEMINI_API_KEY) and
+ * seedance_* (ByteDance Seedance, ARK_API_KEY). They are not substitutes;
+ * each is good at different jobs, and the source of truth for which to use
+ * when is skills/produce/references/video-model-selection.md. Each tool
+ * description carries its own summary of that decision table — a caller who
+ * sees only the tool list, without reading the skill doc, still has to be
+ * able to pick an engine.
+ *
+ * Voice, scale, and mode lists derive from the canonical constants in each
+ * client module — copying a 30-entry list into the schema invites the
+ * accident where adding a model updates only one side.
+ *
+ * Every tool carries a title (display name) and annotations (behavior hints).
+ * destructiveHint in particular translates "a call is immediately public" —
+ * the nature of this server — into a form **the client can read**: the
+ * description prose reaches only the model, never the approval UI.
+ * The verdict table in docs/api-reference/mcp-tools.html §7 is the source of truth.
  */
-/** Veo 공통 프로퍼티 정의 (Veo 3.1 계열) */
+/**
+ * Shared Veo property definitions (Veo 3.1 family).
+ *
+ * Why the default is fast rather than standard is written down in the
+ * DEFAULT_VIDEO_MODEL comment in video-client.ts — the three tiers are
+ * statistically tied on blind-arena Elo.
+ */
 const VEO_MODEL_PROPERTY = {
     type: 'string',
-    description: 'Veo model (default: "veo-3.1-generate-preview"). fast = same features at 1/4 cost, lite = cheapest (1/8 cost) but no 4k/extension/reference support.',
+    description: 'Veo model (default: "veo-3.1-fast-generate-preview"). Blind-arena Elo puts the three tiers within overlapping confidence intervals on every board — the tier buys features and resolution, not measurably better video — so pick the CHEAPEST tier that has the features you need. lite is 1/2 the cost of fast and 1/8 of standard but drops 4k, extension, and reference images; standard costs 4x fast for no measured preference gain.',
     enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview', 'veo-3.1-lite-generate-preview'],
-    default: 'veo-3.1-generate-preview',
+    default: 'veo-3.1-fast-generate-preview',
 };
 const VEO_RESOLUTION_PROPERTY = {
     type: 'string',
@@ -28,157 +67,694 @@ const VEO_DURATION_PROPERTY = {
     enum: [4, 6, 8],
     default: 8,
 };
-/** 채널별 게시 툴 공통 꼬리 — 완성본 계약 + 게시 후 보고 */
-const SNS_HITL_LINE = '캡션·제목은 재가공 없이 그대로 게시된다 — 해시태그 포함 최종 문안을 넣을 것. 게시 후 응답의 permalink 를 사용자에게 보고한다.';
-const SERP_QUOTA_LINE = '검색 1회 = SerpApi 크레딧 1건(무료 250회/월) — 동일 검색 반복 금지. 한국어 소재 리서치는 쿼터가 큰 naver_search(Naver Open API, 일 25,000회)를 우선 검토할 것.';
+/**
+ * Exclusions — sent through this field, never in the prompt body.
+ *
+ * The official docs pin the grammar: comma-separated noun/adjective phrases,
+ * not instructions. Writing "no ~" in the body tends to draw the very noun
+ * (measured on local images: 4 out of 4 failed).
+ */
+const VEO_NEGATIVE_PROMPT_PROPERTY = {
+    type: 'string',
+    description: 'What to keep OUT of the frame, as comma-separated noun or adjective phrases: "wall, frame, on-screen text, subtitles". Do NOT write instructions such as "no walls" or "don\'t show walls" — Google\'s prompt guide names that form as not recommended, and writing an exclusion into the prompt body tends to summon the very noun you named. Put every exclusion here instead of in prompt.',
+};
+/**
+ * Shared Seedance property definitions (BytePlus ModelArk) — lists and
+ * defaults derive from the capability table in seedance-client.ts. Per-model
+ * constraints (resolution, duration, audio, seed) can't be expressed in a
+ * single schema enum, so the client's superRefine rejects them before the call.
+ */
+const SEEDANCE_MODEL_PROPERTY = {
+    type: 'string',
+    description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no activation gate). ` +
+        'Quality, from the Artificial Analysis blind image-to-video arena: dreamina-seedance-2-0-260128 ranks 1st overall (Elo 1,198), the three Veo 3.1 tiers sit at 1,066-1,086, and seedance-1-5-pro-251215 is the arena baseline at 1,000 — so 2.0 is clearly the best Seedance, and 1.5 pro trades roughly a 59:41 preference against Veo for about a third of the price. ' +
+        'dreamina-seedance-2-5-260628, the 2.0 fast/mini variants, and seedance-1-0-pro-fast-251015 have NO public evaluation at all — prefer them only for cost or for a capability the tested models lack, not for a shot that matters. ' +
+        'The 2.x models REJECT input images containing real human faces and need account balance > $30 to activate, which rules them out for photoreal-person sources.',
+    enum: [...VALID_SEEDANCE_MODELS],
+    default: DEFAULT_SEEDANCE_MODEL,
+};
+const SEEDANCE_RESOLUTION_PROPERTY = {
+    type: 'string',
+    description: `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model — 1080p needs 2.0, 1.5 pro, or 1.0 pro/fast; 4k is 2.0 only; 2.5 and the 2.0 fast/mini models top out at 720p.`,
+    enum: [...VALID_SEEDANCE_RESOLUTIONS],
+    default: DEFAULT_SEEDANCE_RESOLUTION,
+};
+const SEEDANCE_DURATION_PROPERTY = {
+    type: 'number',
+    description: `Clip length in seconds (default: ${DEFAULT_SEEDANCE_DURATION}). Range differs per model — 2.5 accepts 4-30, the 2.0 series 4-15, 1.5 pro 4-12, and 1.0 pro/fast 2-12. Frame rate is fixed at ${SEEDANCE_FPS} fps. Cost scales linearly with duration.`,
+    default: DEFAULT_SEEDANCE_DURATION,
+};
+const SEEDANCE_AUDIO_PROPERTY = {
+    type: 'boolean',
+    description: 'Generate a soundtrack with the video (default: false — this pipeline adds narration separately with tts_*, and on seedance-1-5-pro audio doubles the price). The vendor default is true; set it to true only when you want the model to voice the clip. The 1.0 pro/fast models are silent-only and reject true.',
+    default: false,
+};
+const SEEDANCE_WATERMARK_PROPERTY = {
+    type: 'boolean',
+    description: 'Burn a visible "AI Generated" mark into the bottom-right corner (default: false).',
+    default: false,
+};
+const SEEDANCE_SEED_PROPERTY = {
+    type: 'number',
+    description: 'Random seed, -1 to 2147483647 (default -1). Supported only by seedance-1-5-pro and the 1.0 pro/fast models — the 2.x models reject it, so the reference lane has no seed at all. The API reference calls it a random seed and does not promise that the same seed reproduces the same video: do NOT build shot-to-shot consistency on it. Consistency belongs on reference images (seedance_reference) or first+last frames.',
+};
+const SEEDANCE_CAMERA_FIXED_PROPERTY = {
+    type: 'boolean',
+    description: 'Ask the model to hold the camera still. Supported only by seedance-1-5-pro and the 1.0 pro/fast models — on 2.x, describe the camera in the prompt instead.',
+};
+const SEEDANCE_RATIO_VALUES = [...VALID_SEEDANCE_RATIOS];
+/** Shared TTS property definitions (Gemini TTS) — lists derive from the tts-client.ts source of truth */
+const TTS_VOICE_ENUM = [...TTS_VOICE_NAMES];
+const TTS_VOICE_PROPERTY = {
+    type: 'string',
+    description: `Voice to use (default: "${DEFAULT_VOICE}"). Call tts_list_voices for the personality of each.`,
+    enum: TTS_VOICE_ENUM,
+    default: DEFAULT_VOICE,
+};
+const TTS_MODEL_PROPERTY = {
+    type: 'string',
+    description: 'TTS model (default: gemini-2.5-flash-preview-tts — cheapest, free tier). gemini-2.5-pro-preview-tts: higher quality, no free tier, and the fallback when flash keeps returning no audio for a script. gemini-3.1-flash-tts-preview: newest, streaming-capable, 2x price.',
+    enum: [...VALID_TTS_MODELS],
+    default: DEFAULT_TTS_MODEL,
+};
+const TTS_TEMPERATURE_PROPERTY = {
+    type: 'number',
+    description: `Sampling temperature 0–2 (default ${DEFAULT_TTS_TEMPERATURE} — recommended for take-to-take voice consistency in narration/briefing; use 0.6–0.7 for expressive storytelling; provider default is 1.0)`,
+    minimum: 0,
+    maximum: 2,
+    default: DEFAULT_TTS_TEMPERATURE,
+};
+/** Shared music property definitions (Lyria) — scale/mode lists derive from the music-client.ts source of truth */
+const MUSIC_SCALE_ENUM = [...MUSIC_SCALES];
+const MUSIC_MODE_ENUM = [...MUSIC_GENERATION_MODES];
+const MUSIC_DURATION_PROPERTY = {
+    type: 'number',
+    description: 'Duration of the generated music in seconds (5-300, default: 30)',
+    minimum: 5,
+    maximum: 300,
+    default: 30,
+};
+/** Shared tail for the per-platform publish tools — final-copy contract + post-publish report */
+const SNS_HITL_LINE = 'Captions and titles are posted verbatim, with no rewriting — pass the final copy, hashtags included. After publishing, report the permalink from the response to the user.';
+/**
+ * Shared channel (brand) selector property — names the <SNS_TOKEN_DIR>/<slug>/
+ * token directory paired with the data/<slug>/ channel.
+ */
+const SNS_CHANNEL_PROPERTY = {
+    type: 'string',
+    pattern: '^[a-z0-9][a-z0-9-]{0,63}$',
+    description: 'Channel (brand) slug — the same kebab-case as data/<slug>/. When given, only the tokens in <SNS_TOKEN_DIR>/<slug>/ are used, and a missing directory returns an explicit error (no fallback to the default tokens — prevents posting to the wrong account). When omitted, the default (flat) tokens apply — always pass it if you operate channel directories.',
+};
+const SERP_QUOTA_LINE = 'One search = one SerpApi credit (free tier 250/month) — never repeat an identical search. For Korean-language research, consider naver_search first (Naver Open API, 25,000 calls/day — a much larger quota).';
+/**
+ * Every search tool uses the same argument names — spelled out in the
+ * descriptions too, so switching tools never means relearning the arguments.
+ * Mapping to the backend APIs' q/display/num/start is the server's job.
+ */
+const SEARCH_ARG_LINE = 'Shared search-tool arguments: query (search terms) · limit (result count) · page (page number). ' +
+    'When fewer results come back than the engine produced, the response note says so — the truncated range is unreachable by paging, so read the note when present.';
+/**
+ * MCP behavior-hint presets (readOnly/destructive/idempotent/openWorld).
+ *
+ * The only machine-readable basis a client has for deciding "does this call
+ * need user confirmation". This server has no pre-publish review gate, so a
+ * call is public the moment it happens — stating that only in description
+ * prose reaches the model but never the client.
+ *
+ * The verdict table in docs/api-reference/mcp-tools.html is the source of truth.
+ */
+const HINT = {
+    /** External lookup — no side effects */
+    read: { readOnlyHint: true, openWorldHint: true },
+    /** Server-built-in constants — not even an API call */
+    local: { readOnlyHint: true, openWorldHint: false },
+    /** Creates local files — destroys no existing state, but output is non-deterministic, so not idempotent either */
+    generate: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    /** On-device generation — same as generate, but never touches the network (local model) */
+    generateLocal: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    /** Public the instant it is called · retry = duplicate post */
+    publish: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    /** Sets external state — applies immediately, but repeating it gives the same result */
+    moderate: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+};
+const PERMALINK_PROPERTY = {
+    type: 'string',
+    description: 'Public post URL. null when the publish succeeded but only the permalink lookup failed (do not retry the publish — non-idempotent)',
+};
+const PLATFORM_PROPERTY = { type: 'string', description: 'Platform published to' };
+const publishOutput = (idKey, idDescription) => ({
+    type: 'object',
+    properties: {
+        platform: PLATFORM_PROPERTY,
+        [idKey]: { type: 'string', description: idDescription },
+        permalink: PERMALINK_PROPERTY,
+    },
+    required: ['platform', idKey],
+});
+const YOUTUBE_UPDATE_OUTPUT = {
+    type: 'object',
+    properties: {
+        platform: PLATFORM_PROPERTY,
+        videoId: { type: 'string', description: 'id of the updated video' },
+        permalink: { type: 'string', description: 'https://www.youtube.com/watch?v=<videoId>' },
+        privacyStatus: { type: 'string', description: 'Privacy status after the update (public | unlisted | private)' },
+        title: { type: 'string', description: 'Title after the update' },
+        changed: {
+            type: 'object',
+            description: 'What actually changed — all false means the call changed nothing',
+            properties: {
+                privacyStatus: { type: 'boolean' },
+                title: { type: 'boolean' },
+                description: { type: 'boolean' },
+            },
+        },
+        dryRun: { type: 'boolean', description: 'dryRun calls only — true' },
+        current: { type: 'object', description: 'dryRun calls only — the snippet/status currently on YouTube' },
+        wouldSend: { type: 'object', description: 'dryRun calls only — the body that would actually be sent. This is where you eyeball the merge result' },
+    },
+    required: ['platform', 'videoId'],
+};
+const YOUTUBE_PUBLISH_OUTPUT = {
+    type: 'object',
+    properties: {
+        platform: PLATFORM_PROPERTY,
+        videoId: { type: 'string', description: 'id of the uploaded video' },
+        permalink: { type: 'string', description: 'https://www.youtube.com/watch?v=<videoId>' },
+        fileName: { type: 'string', description: 'Local file name that was uploaded' },
+        thumbnailSet: { type: 'boolean', description: 'Only when thumbnailFilePath was given — whether setting the thumbnail succeeded' },
+        thumbnailWarning: {
+            type: 'string',
+            description: 'Reason when only the thumbnail step failed. The video upload succeeded, so do not re-upload — set the thumbnail in YouTube Studio instead of calling this tool again',
+        },
+        captionSet: { type: 'boolean', description: 'Only when captionFilePath was given — whether the caption track upload succeeded' },
+        captionWarning: {
+            type: 'string',
+            description: 'Reason when only the caption upload failed (a missing scope is the most common — captions.insert needs youtube.force-ssl). The video upload succeeded, so do not re-upload — reissue the token or upload just the captions in YouTube Studio',
+        },
+    },
+    required: ['platform', 'videoId', 'permalink'],
+};
+const FACEBOOK_PUBLISH_OUTPUT = {
+    type: 'object',
+    properties: {
+        platform: PLATFORM_PROPERTY,
+        postId: {
+            type: 'string',
+            description: 'Facebook post id — pass it straight to facebook_comment as postId. For video posts this value is also the video_id',
+        },
+        permalink: PERMALINK_PROPERTY,
+        captionSet: { type: 'boolean', description: 'Only when captionFilePath was given — whether the caption file upload succeeded' },
+        captionWarning: {
+            type: 'string',
+            description: 'Reason when only the caption upload failed. The post itself succeeded, so do not re-publish — the video may still have been processing, so retry just the captions shortly',
+        },
+    },
+    required: ['platform', 'postId'],
+};
+const ACCOUNT_CHECK_OUTPUT = {
+    type: 'object',
+    description: 'Shape is { channel, platforms } when channel is given, { channels, defaultTokens } when omitted',
+    properties: {
+        channel: { type: 'string', description: 'Checked channel slug (when channel was given)' },
+        platforms: { type: 'object', description: 'Per platform: { ok, account } or { ok:false, reason }' },
+        channels: { type: 'object', description: 'Channel slug → per-platform check results (when channel was omitted)' },
+        defaultTokens: { description: 'Check result for the default (flat) tokens. A guidance string when there are none' },
+    },
+};
+const COMMENT_INBOX_OUTPUT = {
+    type: 'object',
+    properties: {
+        channel: { description: 'Channel slug queried (null when omitted)' },
+        accounts: { type: 'object', description: 'Token-owning account info per platform' },
+        summary: {
+            type: 'object',
+            description: 'postsScanned · commentsFetched · actionable · byPlatform · withinGoldenHour (unanswered within their first 60 minutes) · oldestActionableMinutes · filters',
+        },
+        posts: { type: 'array', description: 'Normalized comment list per post', items: { type: 'object' } },
+        skipped: {
+            type: 'array',
+            description: 'Platforms that could not be queried, with reasons (no credentials, missing scope, …)',
+            items: { type: 'object' },
+        },
+    },
+    required: ['summary', 'posts', 'skipped'],
+};
+const COMMENT_REPLY_OUTPUT = {
+    type: 'object',
+    description: 'The reply id key differs per platform — THREADS=postId · FACEBOOK=commentId · INSTAGRAM/YOUTUBE=replyId',
+    properties: {
+        platform: PLATFORM_PROPERTY,
+        postId: { type: 'string', description: 'THREADS — a reply is itself a post' },
+        commentId: { type: 'string', description: 'FACEBOOK — id of the sub-comment added to the comment' },
+        replyId: { type: 'string', description: 'INSTAGRAM/YOUTUBE — reply id' },
+        parentCommentId: {
+            type: 'string',
+            description: 'YOUTUBE — the top-level comment id the reply actually attached to. If you passed a sub-comment id, this is its parent',
+        },
+        permalink: PERMALINK_PROPERTY,
+    },
+    required: ['platform'],
+};
+const COMMENT_MODERATE_OUTPUT = {
+    type: 'object',
+    properties: {
+        platform: PLATFORM_PROPERTY,
+        commentId: { type: 'string', description: 'Target comment id' },
+        action: { type: 'string', description: 'Action applied' },
+        done: { type: 'boolean', description: 'Applied on the platform' },
+    },
+    required: ['platform', 'commentId', 'action', 'done'],
+};
+const THREADS_INSIGHTS_OUTPUT = {
+    type: 'object',
+    properties: {
+        channel: { description: 'Channel slug queried (null when omitted)' },
+        account: { type: 'object', description: 'Token-owning account { id, username }' },
+        period: { type: 'object', description: 'Aggregation window for account metrics { since, until, days }' },
+        user: {
+            type: 'object',
+            description: 'Account metrics — views is a daily time series { total, daily[] }; likes/replies/reposts/quotes are window totals; followers_count is the current value (window-independent)',
+        },
+        posts: {
+            type: 'array',
+            description: 'Per recent root post: { postId, permalink, excerpt, timestamp, metrics: { views, likes, replies, reposts, quotes, shares } } — on individual lookup failure, metrics=null plus metricsError',
+            items: { type: 'object' },
+        },
+    },
+    required: ['account', 'period', 'user', 'posts'],
+};
+const INSTAGRAM_INSIGHTS_OUTPUT = {
+    type: 'object',
+    properties: {
+        channel: { description: 'Channel slug queried (null when omitted)' },
+        account: {
+            type: 'object',
+            description: '{ id, username, accountType, followersCount, followsCount, mediaCount } — follower count is a profile field, not an insight (the insights follower_count comes back empty for accounts with fewer than 100 followers)',
+        },
+        period: { type: 'object', description: 'Aggregation window for account metrics { since, until, days }' },
+        user: {
+            type: 'object',
+            description: 'Account window totals — reach, views, profile_views, accounts_engaged, total_interactions, likes, comments, shares, saves, profile_links_taps',
+        },
+        media: {
+            type: 'array',
+            description: 'Per recent media item: { mediaId, mediaType, mediaProductType, permalink, excerpt, timestamp, metrics } — the shared metrics are views/reach/likes/comments/shares/saved/total_interactions, and surface-specific metrics attach by mediaProductType: REELS gets ig_reels_avg_watch_time (ms), ig_reels_video_view_total_time (ms), and reels_skip_rate; FEED gets follows and profile_visits. The two sets are exclusive — requesting one against the other surface fails with a 400 that empties that media item\'s metrics entirely, so never mix them. On individual lookup failure, metrics=null plus metricsError',
+            items: { type: 'object' },
+        },
+    },
+    required: ['account', 'period', 'user', 'media'],
+};
+const YOUTUBE_INSIGHTS_OUTPUT = {
+    type: 'object',
+    properties: {
+        channel: { description: 'Channel slug queried (null when omitted)' },
+        account: {
+            type: 'object',
+            description: '{ channelId, title, subscriberCount, viewCount, videoCount, subscriberCountHidden } — when subscriberCountHidden=true the subscriber count is rounded and useless for judging growth',
+        },
+        period: { type: 'object', description: 'Aggregation window { startDate, endDate, days } (YYYY-MM-DD)' },
+        metrics: {
+            type: 'object',
+            description: 'Channel window metrics — views, engagedViews (views that got past the opening), estimatedMinutesWatched, averageViewDuration (seconds), averageViewPercentage, subscribersGained/Lost, likes, comments, shares. Analytics data runs 2-3 days behind, so an empty recent window arrives as {} (distinct from 0)',
+        },
+        revenue: { type: 'object', description: 'Only when includeRevenue=true and the revenue scope is present — estimatedRevenue, estimatedAdRevenue, estimatedRedPartnerRevenue, cpm' },
+        revenueError: { type: 'string', description: 'Reason when only the revenue lookup failed (other metrics are fine)' },
+        videos: {
+            type: 'array',
+            description: 'Per recent upload: { videoId, permalink, title, publishedAt, duration, durationSeconds, lifetime: { views, likes, comments }, period: window metrics } — durationSeconds ≤180 marks a Shorts candidate (the API cannot tell whether it is portrait); period is null when no data exists',
+            items: { type: 'object' },
+        },
+        videosError: {
+            type: 'string',
+            description: 'Reason when only the video lookup failed — when present, do not read the empty videos array or its zeros as "no uploads" (channel metrics are fine)',
+        },
+        note: { type: 'string', description: 'Guidance on metrics the API cannot provide' },
+    },
+    required: ['account', 'period', 'metrics', 'videos'],
+};
+const CONTENT_FEEDBACK_OUTPUT = {
+    type: 'object',
+    properties: {
+        channel: { description: 'Channel slug queried (null when omitted)' },
+        generatedAt: { type: 'string', description: 'Report generation time, ISO-8601' },
+        limit: { type: 'number', description: 'Recent posts per platform' },
+        days: { type: 'number', description: 'Days aggregated' },
+        htmlPath: { description: 'Path of the HTML written. null when neither channel nor outputPath was given' },
+        youtube: {
+            type: 'object',
+            description: '{ available, error?, account, cohort, items[], notes[] } — items carries, per recent video, hook (% getting past the opening), retain (average % watched), angle (views low while hook/retention held up), and problem/hypothesis/next-episode notes',
+        },
+        instagram: {
+            type: 'object',
+            description: '{ available, error?, account, cohort, items[], notes[] } — for reels: skip (3-second drop-off %), watch (seconds), shareRate; otherwise pending',
+        },
+    },
+    required: ['generatedAt', 'limit', 'days', 'youtube', 'instagram'],
+};
+const YOUTUBE_TOPIC_SCOUT_OUTPUT = {
+    type: 'object',
+    properties: {
+        channel: { description: 'Channel slug passed on the call (null when omitted)' },
+        queries: { type: 'array', description: 'Seed queries actually run', items: { type: 'string' } },
+        method: {
+            type: 'object',
+            description: '{ baseline, minMultiplier, minViews, publishedAfterDays, duration, regionCode, language, via, note } — the channel-median multiplier contract. Default market is US/en',
+        },
+        scanned: {
+            type: 'object',
+            description: '{ channels, videos, outliers } — channels and videos scanned, and the count of 5x-plus videos',
+        },
+        quotaUnits: { type: 'number', description: 'Estimated YouTube Data API quota spent by this call (search=100, other list calls=1)' },
+        keywords: {
+            type: 'array',
+            description: '{ phrase, score, outlierCount, bestMultiplier, evidence[] } — topic phrases pulled from outlier titles. Score = sum of multipliers',
+            items: { type: 'object' },
+        },
+        outliers: {
+            type: 'array',
+            description: '{ videoId, permalink, title, channelTitle, views, baseline, multiplier, publishedAt, durationSeconds, commentCount, tags, gaps[] } — at least minMultiplier times the channel median',
+            items: { type: 'object' },
+        },
+        channels: {
+            type: 'array',
+            description: '{ channelId, title, subscriberCount, videoCount, baseline, outlierCount, skipped? }',
+            items: { type: 'object' },
+        },
+        errors: { type: 'array', description: 'Partial-failure reasons. Field omitted entirely when none', items: { type: 'string' } },
+        excludedOwnChannelId: { description: 'Own channel id learned via OAuth. null when only the API key was used' },
+    },
+    required: ['queries', 'method', 'scanned', 'quotaUnits', 'keywords', 'outliers', 'channels'],
+};
+const SNS_ISSUE_SCOUT_OUTPUT = {
+    type: 'object',
+    properties: {
+        queries: { type: 'array', description: 'Seed queries actually run', items: { type: 'string' } },
+        platforms: { type: 'array', description: 'Platforms scanned (threads | x | instagram)', items: { type: 'string' } },
+        method: {
+            type: 'object',
+            description: '{ via, recency, gl, hl, pagesPerQuery, sites, ranking, scoring, trending } — the Google site: search contract. ranking is relevance order (not engagement); scoring is mention count × platform weight',
+        },
+        scanned: {
+            type: 'object',
+            description: '{ searches, hits, posts, duplicates, returnedPosts } — searches run (retries included), results received, items judged to be posts (deduplicated), items folded as same-sentence reposts, and items included in the response',
+        },
+        credits: { type: 'number', description: 'Estimated SerpApi credits spent by this call (search count + 1 for trending)' },
+        keywords: {
+            type: 'array',
+            description: '{ phrase, score, postCount, platformCount, platforms[], evidence[{platform,url,title}] } — topic phrases co-occurring across several posts and platforms. The score is mention-count based — a different yardstick from the YouTube multiplier',
+            items: { type: 'object' },
+        },
+        posts: {
+            type: 'array',
+            description: '{ platform, url, author, title, snippet, date?, matchedQueries[] } — post-level items (profile/tag pages excluded; slugs and media paths normalized). There are no engagement fields',
+            items: { type: 'object' },
+        },
+        trending: {
+            type: 'object',
+            description: '{ geo, hours, count, items[{query, searchVolume, increasePct, active, startedAt, categories[], breakdown[], matchesSeed}] } — Google Trends trending searches. Absent when includeTrending=false',
+        },
+        note: { type: 'string', description: 'Guidance when posts were truncated at the cap' },
+        errors: { type: 'array', description: 'Partial-failure reasons. Field omitted entirely when none', items: { type: 'string' } },
+    },
+    required: ['queries', 'platforms', 'method', 'scanned', 'credits', 'keywords', 'posts'],
+};
+const THREADS_SEARCH_OUTPUT = {
+    type: 'object',
+    properties: {
+        channel: { description: 'Channel slug queried (null when omitted)' },
+        query: { type: 'string', description: 'Query executed' },
+        searchType: { type: 'string', description: 'TOP (by popularity) or RECENT (newest first)' },
+        count: { type: 'number', description: 'Number of posts returned' },
+        results: {
+            type: 'array',
+            description: '{ postId, username, text, mediaType, permalink, timestamp, ageMinutes, isReply, isQuotePost, hasReplies } — pass postId as threads_publish replyToId to join with a reply',
+            items: { type: 'object' },
+        },
+    },
+    required: ['query', 'count', 'results'],
+};
 export const TOOLS = [
-    // ── 자료조사·사실검증 ──────────────────────────────────────────
+    // ── Research & fact-checking ──────────────────────────────────────────
     {
         name: 'serp_web_search',
-        description: `Google 웹 검색 (SerpApi) — 스토리보드 저작 전 자료조사·사실검증용. 해외 자료는 gl/hl 로 국가·언어를 지정, 한국어 일반 자료는 gl=kr&hl=ko. 서버가 organic/answer_box/knowledge_graph/related_questions 만 추려 반환. ${SERP_QUOTA_LINE}`,
+        title: 'Google web search (SerpApi)',
+        annotations: HINT.read,
+        description: `Google web search (SerpApi) — for research and fact-checking before storyboard authoring. For non-Korean material set country/language with gl/hl; for general Korean material use gl=kr&hl=ko. The server returns only organic/answer_box/knowledge_graph/related_questions. ${SEARCH_ARG_LINE} ${SERP_QUOTA_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
-                q: { type: 'string', description: '검색어 (site:, filetype: 등 연산자 지원)' },
-                gl: { type: 'string', description: '국가 코드 2자, 예: kr, us, vn' },
-                hl: { type: 'string', description: '언어 코드, 예: ko, en, vi' },
-                location: { type: 'string', description: '결과 기준 지역명 (선택), 예: Seoul, South Korea' },
-                num: { type: 'number', description: '결과 수 (기본 10, 최대 20)' },
-                page: { type: 'number', description: '페이지 (1부터) — 첫 페이지에 근거가 없을 때만' },
+                query: { type: 'string', description: 'Search terms (site:, filetype: and other operators supported)' },
+                gl: { type: 'string', description: 'Two-letter country code, e.g. kr, us, vn' },
+                hl: { type: 'string', description: 'Language code, e.g. ko, en, vi' },
+                location: { type: 'string', description: 'Locality the results should be based on (optional), e.g. Seoul, South Korea' },
+                limit: { type: 'number', description: 'Result count (default 10, max 10 — this engine fixes a page at 10 results). Need more? Raise page by 1. ' },
+                page: { type: 'number', description: 'Page number (1 to 5) — only when page 1 lacks the evidence' },
                 recency: {
                     type: 'string',
                     enum: ['hour', 'day', 'week', 'month', 'year'],
-                    description: '기간 필터 — 시효성 값(가격·기한·시행일) 검증 시 month/year 권장',
+                    description: 'Recency filter — month/year recommended when verifying time-sensitive values (prices, deadlines, effective dates)',
                 },
             },
-            required: ['q'],
+            required: ['query'],
         },
     },
     {
         name: 'serp_news_search',
-        description: `Google 뉴스 검색 (SerpApi) — 최신 동향·발표·시행 소식 확인용. 시효성 값(가격·기한·시행일)을 콘텐츠에 쓰기 전 교차 검증에 사용. ${SERP_QUOTA_LINE}`,
+        title: 'Google news search (SerpApi)',
+        annotations: HINT.read,
+        description: `Google news search (SerpApi) — for checking fresh developments, announcements, and rollouts. Use to cross-verify time-sensitive values (prices, deadlines, effective dates) before they go into content. This engine has no recency filter or sort parameter (they cannot be combined with a query) — to narrow by announcement date use serp_web_search recency, serp_naver_search period, or naver_search (sort=date). ${SEARCH_ARG_LINE} ${SERP_QUOTA_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
-                q: { type: 'string', description: '검색어' },
-                gl: { type: 'string', description: '국가 코드 2자, 예: kr, us' },
-                hl: { type: 'string', description: '언어 코드, 예: ko, en' },
-                max_results: { type: 'number', description: '반환 기사 수 (기본 10, 최대 20)' },
+                query: { type: 'string', description: 'Search terms' },
+                gl: { type: 'string', description: 'Two-letter country code, e.g. kr, us' },
+                hl: { type: 'string', description: 'Language code, e.g. ko, en' },
+                limit: {
+                    type: 'number',
+                    description: 'Articles to return (default 10, max 20). This engine has no result-count parameter — the server trims the response, and a smaller value still bills as one search',
+                },
             },
-            required: ['q'],
+            required: ['query'],
         },
     },
     {
         name: 'serp_naver_search',
-        description: `Naver 검색 (SerpApi 경유) — naver_search(공식 Open API)가 키 미설정·쿼터 소진일 때의 대체 경로. where=web(기본)|news. ${SERP_QUOTA_LINE}`,
+        title: 'Naver search (via SerpApi)',
+        annotations: HINT.read,
+        description: `Naver search (via SerpApi) — the fallback when naver_search (the official Open API) has no key or an exhausted quota, and the lane for **video search** and the period filter, which the official API lacks. where=web(default)|news|image|video. If the official API can run the same search, use naver_search first — its quota is two orders of magnitude larger. ${SEARCH_ARG_LINE} ${SERP_QUOTA_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
-                query: { type: 'string', description: '검색어 (NOT/OR/site: 연산자 지원)' },
-                where: { type: 'string', enum: ['web', 'news'], description: '검색 유형 (기본 web)' },
-                page: { type: 'number', description: '페이지 (1부터)' },
-                sort_by: { type: 'string', enum: ['relevance', 'latest'], description: '정렬 (기본 relevance)' },
-                max_results: { type: 'number', description: '반환 결과 수 (기본 10, 최대 20)' },
+                query: { type: 'string', description: 'Search terms (NOT/OR/site: operators supported)' },
+                where: {
+                    type: 'string',
+                    enum: ['web', 'news', 'image', 'video'],
+                    description: 'web=web documents (default) | news | image | video (a type the official Open API lacks)',
+                },
+                page: { type: 'number', description: 'Page number (1 to 5)' },
+                sort: {
+                    type: 'string',
+                    enum: ['relevance', 'latest', 'oldest'],
+                    description: 'Sort order (default relevance). oldest is where=news only — an error on any other type',
+                },
+                period: {
+                    type: 'string',
+                    enum: ['1h', '1d', '1w', '1m', '3m', '6m', '1y'],
+                    description: 'Recency filter — narrow to a recent window when verifying time-sensitive values. The official Open API does not have this',
+                },
+                limit: { type: 'number', description: 'Results to return (default 10, max 50). How many arrive per call varies by where and query (measured: web 15 · news 10 · video 68 · image 48) — when more arrive than limit, the response note carries the truncated count and what to do' },
             },
             required: ['query'],
+        },
+    },
+    {
+        name: 'serp_image_search',
+        title: 'Google image search (SerpApi)',
+        annotations: HINT.read,
+        description: `Google image search (SerpApi) — for storyboard references and composition research, checking what products/places/people actually look like, and collecting visual grounding for image-generation prompts. Returns source URL, resolution, and origin. **If you are hunting material to place into content as-is, always set license** — unfiltered results are images with unverified copyright, and putting them in a post is infringement. For images you will create yourself, skip this tool and use image_local_generate (default, free) or gpt_image_text2img (text-bearing, higher quality) — no rights issues. ${SEARCH_ARG_LINE} ${SERP_QUOTA_LINE}`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                query: { type: 'string', description: 'Search terms (site: and other operators supported)' },
+                gl: { type: 'string', description: 'Two-letter country code, e.g. kr, us' },
+                hl: { type: 'string', description: 'Language code, e.g. ko, en' },
+                limit: { type: 'number', description: 'Result count (default 20, max 50) — the engine returns 100 at a time, so a smaller value still bills as one search. **One page slot covers 100 items, so items 51-100 are unreachable in any combination** — if you need that range, narrow with filters (size/aspect/license) or the query' },
+                page: { type: 'number', description: 'Page number (1 to 5) — one slot covers 100 items, so page=2 begins at item 101 (51-100 are skipped). The position in results is this engine\'s global rank, unchanged' },
+                size: {
+                    type: 'string',
+                    enum: ['large', 'medium', 'icon', '2mp', '4mp', '8mp', '15mp'],
+                    description: 'Image size — for high-res short-form backgrounds, large or above is recommended',
+                },
+                aspect: {
+                    type: 'string',
+                    enum: ['square', 'tall', 'wide', 'panoramic'],
+                    description: 'Aspect ratio — use tall for 9:16 portrait-format references',
+                },
+                imageType: {
+                    type: 'string',
+                    enum: ['photo', 'clipart', 'lineart', 'animated', 'face'],
+                    description: 'Image kind (photo | clipart | lineart | animated=GIFs | face)',
+                },
+                license: {
+                    type: 'string',
+                    enum: ['free', 'commercial', 'modify', 'modify_commercial', 'creative_commons'],
+                    description: 'License scope — material going into posts needs commercial (commercial use allowed) or stronger; use modify_commercial if you will also edit it',
+                },
+                color: {
+                    type: 'string',
+                    enum: ['bw', 'trans', 'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'white', 'gray', 'black', 'brown'],
+                    description: 'Dominant color — trans=transparent background (logo/overlay material)',
+                },
+                safe: { type: 'boolean', description: 'Adult-content filter (default true=on)' },
+            },
+            required: ['query'],
+        },
+    },
+    {
+        name: 'serp_trending_now',
+        title: 'Google trending searches (SerpApi)',
+        annotations: HINT.read,
+        description: 'Google Trends trending searches (SerpApi engine=google_trends_trending_now) — answers "what is rising in this country right now", with search volume and growth rate (read-only). For the SNS-issue section of topic-scout and timeliness calls in the grow-* loops. It reflects Google search, not SNS engagement, and searchVolume/increasePct are bucketed estimates from Google (2,000,000 · 1000%), so use them only to compare ranks. The engine takes no query — pick the country with geo and the window with hours; only four windows exist: 4, 24, 48, 168. This engine has no page. One call = one SerpApi credit (free tier 250/month) — do not repeat the same geo/hours within a session.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                geo: { type: 'string', description: 'Two-letter country code (default KR). US for the United States, JP for Japan' },
+                hours: {
+                    type: 'number',
+                    enum: [4, 24, 48, 168],
+                    description: 'How many recent hours of trending to cover (default 24). Google\'s four fixed windows — 4 | 24 | 48 | 168 (7 days)',
+                },
+                categoryId: {
+                    type: 'number',
+                    description: 'Optional category narrowing. 3=Business and Finance · 4=Entertainment · 7=Health · 14=Politics · 16=Shopping · 17=Sports · 18=Technology · 19=Travel — all categories when omitted',
+                },
+                onlyActive: { type: 'boolean', description: 'true returns only queries still rising now (default false — everything that spiked at least once inside the window)' },
+                hl: { type: 'string', description: 'Language code, e.g. ko, en — affects only how category names are written' },
+                limit: { type: 'number', description: 'Result count (default 20, max 50). The engine returns hundreds at a time, so a smaller value still bills as one call' },
+            },
         },
     },
     {
         name: 'naver_search',
-        description: 'Naver Open API 검색 (공식, 일 25,000회 무료) — 한국어 소재 리서치의 1차 도구. 뉴스·블로그·웹문서·카페글을 타입으로 선택한다. 한국 트렌드·실사용 후기·국내 뉴스는 Google 보다 이쪽이 정확하다. 서버가 <b> 하이라이트를 제거하고 title/link/description/date 만 추려 반환.',
+        title: 'Naver search (official Open API)',
+        annotations: HINT.read,
+        description: `${SEARCH_ARG_LINE} ` +
+            'Naver Open API search (official, 25,000 free calls/day) — the first-line tool for Korean-language research. type picks one of 8: news | blog=blog reviews | web=web documents | cafe=cafe posts (real-user sentiment) | kin=JisikiN Q&A (questions people genuinely ask — strong for short-form topic mining) | image | encyc=encyclopedia (term definitions) | local=local businesses (address, coordinates, phone). For Korean trends, real-user reviews, and domestic news this beats Google on accuracy. The server strips the <b> highlights and returns only the evidence fields; local converts coordinates to latitude/longitude. ' +
+            '**Parameter constraints differ per type** — web/encyc do not support sorting (the server rejects a sort argument); local uses a sort=random|comment scheme with a 5-result cap and no paging; imageSize is type=image only. Book, shopping, academic, and movie search no longer exist — Naver shut them down (still in the official docs, but calling them returns 404) — fall back to serp_web_search if needed. For video search use serp_naver_search (where=video).',
         inputSchema: {
             type: 'object',
             properties: {
-                query: { type: 'string', description: '검색어' },
+                query: { type: 'string', description: 'Search terms' },
                 type: {
                     type: 'string',
-                    enum: ['news', 'blog', 'web', 'cafe'],
-                    description: 'news=뉴스(기본) | blog=블로그 후기 | web=웹문서 | cafe=카페글(실사용 여론)',
+                    enum: ['news', 'blog', 'web', 'cafe', 'kin', 'image', 'encyc', 'local'],
+                    description: 'news (default) | blog=blog reviews | web=web documents | cafe=cafe posts | kin=JisikiN questions | image | encyc=encyclopedia | local=local businesses',
                 },
-                display: { type: 'number', description: '결과 수 (기본 10, 최대 30)' },
-                start: { type: 'number', description: '시작 위치 (1부터) — 첫 페이지에 근거가 없을 때만' },
-                sort: { type: 'string', enum: ['sim', 'date'], description: 'sim=정확도순(기본) | date=최신순 — web 타입은 미지원' },
+                limit: { type: 'number', description: 'Result count (default 10, max 30 — the API caps local at 5)' },
+                page: { type: 'number', description: 'Page number (from 1) — only when page 1 lacks the evidence. The big quota lets you page deeper than serp_* (1-5), but the API rejects anything where (page-1)×limit+1 exceeds 1,000. local has no paging' },
+                sort: {
+                    type: 'string',
+                    enum: ['sim', 'date', 'random', 'comment'],
+                    description: 'news/blog/cafe/kin/image: sim=by relevance (default) | date=newest first · local: random=by relevance | comment=most-reviewed first · web/encyc: no sorting',
+                },
+                imageSize: {
+                    type: 'string',
+                    enum: ['all', 'large', 'medium', 'small'],
+                    description: 'Image size filter (type=image only)',
+                },
             },
             required: ['query'],
         },
     },
-    // ── 공공데이터포털 (data.go.kr) — 정부 공식 데이터 시드 수집 ──────
+    // ── data.go.kr (Korea open-data portal) — official government data seeds ──────
     {
         name: 'datago_search',
-        description: '공공데이터포털(data.go.kr) 데이터셋 검색 (무인증·무쿼터) — 정부·공공기관 공식 통계·현황 데이터를 키워드로 찾는다. 콘텐츠의 수치 근거로는 기사 재인용보다 이 원천 데이터가 우선이다. type 생략 시 오픈API·파일데이터를 동시 검색. 결과의 publicDataPk+type 을 datago_detail 에 넘겨 수집 경로(다운로드 식별자·엔드포인트)를 얻는다. 검색어는 기관명·주제어 조합이 잘 듣는다 (예: "관광 통계", "소상공인 현황").',
+        title: 'data.go.kr dataset search',
+        annotations: HINT.read,
+        description: 'data.go.kr (Korea open-data portal) dataset search (no auth, no quota) — finds official statistics and status data from government agencies by keyword. As numeric grounding for content, this primary data beats re-quoting articles. Omitting type searches both open-API and file datasets. Pass the result\'s publicDataPk+type to datago_detail for the collection path (download identifier, endpoint). Agency-name + topic combinations work well as queries (e.g. "관광 통계", "소상공인 현황" — the portal is Korean-language).',
         inputSchema: {
             type: 'object',
             properties: {
-                keyword: { type: 'string', description: '검색어 (주제어, 필요시 기관명 병기)' },
-                type: { type: 'string', enum: ['API', 'FILE'], description: 'API=오픈API | FILE=파일데이터(CSV 등) — 생략 시 둘 다 검색' },
-                page: { type: 'number', description: '페이지 (1부터)' },
-                perPage: { type: 'number', description: '타입당 결과 수 (기본 10, 최대 20)' },
+                query: { type: 'string', description: 'Search terms (topic words, plus the agency name when useful)' },
+                type: { type: 'string', enum: ['API', 'FILE'], description: 'API=open API | FILE=file dataset (CSV etc.) — both when omitted' },
+                page: { type: 'number', description: 'Page number (from 1)' },
+                limit: { type: 'number', description: 'Results per type (default 10, max 20)' },
             },
-            required: ['keyword'],
+            required: ['query'],
         },
     },
     {
         name: 'datago_detail',
-        description: '공공데이터포털 데이터셋 상세 조회 (무인증) — FILE 이면 다운로드 식별자(publicDataDetailPk)와 odcloud API 경로를, API 면 엔드포인트 단서(스웨거·요청주소·활용가이드 문서 링크)를 추출한다. 메타(제공기관·수정일·업데이트 주기·이용허락범위)는 출처 표기와 시효 판단에 쓴다. publicDataPk 와 type 은 datago_search 응답값을 그대로 넘긴다.',
+        title: 'data.go.kr dataset detail',
+        annotations: HINT.read,
+        description: 'data.go.kr dataset detail lookup (no auth) — for FILE datasets it extracts the download identifier (publicDataDetailPk) and the odcloud API path; for API datasets, endpoint clues (Swagger, request URLs, usage-guide document links). The metadata (providing agency, modified date, update cadence, license scope) feeds source attribution and freshness judgment. Pass publicDataPk and type through from the datago_search response.',
         inputSchema: {
             type: 'object',
             properties: {
-                publicDataPk: { type: 'string', description: 'datago_search 응답의 publicDataPk (숫자 문자열)' },
-                type: { type: 'string', enum: ['API', 'FILE'], description: 'datago_search 응답의 type' },
+                publicDataPk: { type: 'string', description: 'publicDataPk from the datago_search response (numeric string)' },
+                type: { type: 'string', enum: ['API', 'FILE'], description: 'type from the datago_search response' },
             },
             required: ['publicDataPk', 'type'],
         },
     },
     {
         name: 'datago_file_download',
-        description: '공공데이터포털 파일데이터 원본 다운로드 (무인증) — CSV 등 실파일을 로컬에 저장하고 인코딩 판별 + 선두 6행 미리보기를 반환한다(100MB 상한). publicDataPk/publicDataDetailPk 는 datago_detail 응답값을 그대로 쓴다. 활용신청 없이 즉시 쓸 수 있는 가장 빠른 파일 수집 경로다. 미리보기 encoding 이 euc-kr 이면 Read 전에 iconv 변환이 필요하다. saveDir 는 주제 디렉토리(data/<카테고리>/<주제>/storyboard/) 하위를 권장 — 생략 시 임시 디렉토리에 저장된다.',
+        title: 'data.go.kr file download',
+        annotations: HINT.generate,
+        description: 'data.go.kr raw file download (no auth) — saves the actual file (CSV etc.) locally and returns encoding detection plus a 6-row head preview (100MB cap). Use publicDataPk/publicDataDetailPk straight from the datago_detail response. The fastest file-collection path — usable immediately, no usage application (활용신청) needed. If the preview encoding is euc-kr, convert with iconv before Read. saveDir is best placed under the topic directory (data/<channel>/episodes/<topic>/storyboard/) — omitted, it saves to a temp directory.',
         inputSchema: {
             type: 'object',
             properties: {
-                publicDataPk: { type: 'string', description: 'datago_detail 응답의 publicDataPk' },
-                publicDataDetailPk: { type: 'string', description: 'datago_detail 응답의 publicDataDetailPk (uddi:… 전체 — 접미사 포함)' },
-                saveDir: { type: 'string', description: '저장 디렉토리 절대 경로 (생략 시 OS 임시 디렉토리 하위 social-flow-datago/)' },
+                publicDataPk: { type: 'string', description: 'publicDataPk from the datago_detail response' },
+                publicDataDetailPk: { type: 'string', description: 'publicDataDetailPk from the datago_detail response (the full uddi:… value, suffix included)' },
+                saveDir: { type: 'string', description: 'Absolute directory path to save into (omitted: social-flow-datago/ under the OS temp directory)' },
             },
             required: ['publicDataPk', 'publicDataDetailPk'],
         },
     },
     {
         name: 'datago_file_fetch',
-        description: '공공데이터포털 파일데이터를 odcloud JSON API 로 행 단위 조회 (인증키 + **해당 API 활용신청 필수**) — 파일 전체를 받지 않고 필요한 페이지만 가져온다. 대용량(수십 MB) 데이터셋에서 일부 행만 필요할 때 datago_file_download 대신 쓴다. -4 에러 = 이 API 에 활용신청이 안 된 키 — 포털에서 활용신청(자동승인) 후 재시도하거나 datago_file_download(무인증)로 대체할 것. publicDataPk/uddi 는 datago_detail 의 odcloudPath 구성값이다.',
+        title: 'data.go.kr file row fetch',
+        annotations: HINT.read,
+        description: 'Row-level fetch of a data.go.kr file dataset via the odcloud JSON API (auth key + **a usage application (활용신청) for this specific API is required**) — fetches only the pages you need instead of the whole file. Use instead of datago_file_download when you need a few rows of a large (tens of MB) dataset. Error -4 = the key has no usage application for this API — file one on the portal (auto-approved) and retry, or fall back to datago_file_download (no auth). publicDataPk/uddi are the components of datago_detail\'s odcloudPath.',
         inputSchema: {
             type: 'object',
             properties: {
-                publicDataPk: { type: 'string', description: 'datago_detail 응답의 publicDataPk' },
-                uddi: { type: 'string', description: 'datago_detail 응답의 publicDataDetailPk (uddi:… 전체)' },
-                page: { type: 'number', description: '페이지 (1부터)' },
-                perPage: { type: 'number', description: '행 수 (기본 10, 최대 50)' },
+                publicDataPk: { type: 'string', description: 'publicDataPk from the datago_detail response' },
+                uddi: { type: 'string', description: 'publicDataDetailPk from the datago_detail response (the full uddi:… value)' },
+                page: { type: 'number', description: 'Page number (from 1)' },
+                limit: { type: 'number', description: 'Row count (default 10, max 50)' },
             },
             required: ['publicDataPk', 'uddi'],
         },
     },
     {
         name: 'datago_api_call',
-        description: '공공데이터포털 표준 오픈API(apis.data.go.kr) 호출 (인증키 + **해당 API 활용신청 필수**) — path 이하 경로에 파라미터와 serviceKey 를 자동 조립해 GET 호출한다. path·파라미터 계약은 datago_detail 의 endpoint/requestUrls 또는 활용가이드(docs)에서 먼저 확인할 것 — 파라미터를 추측해 반복 호출하지 않는다(일일 트래픽 소진). 응답이 XML 인 API 가 많다 — dataType/_type=JSON 파라미터를 지원하는 API 는 JSON 을 요청할 것. 인증 거부 시 활용신청 여부부터 확인.',
+        title: 'data.go.kr standard open-API call',
+        annotations: HINT.read,
+        description: 'Calls a data.go.kr standard open API (apis.data.go.kr) (auth key + **a usage application (활용신청) for this specific API is required**) — assembles parameters and serviceKey onto the path and issues a GET. Check the path/parameter contract first in datago_detail\'s endpoint/requestUrls or the usage-guide docs — do not guess parameters and call repeatedly (it burns the daily traffic). Many of these APIs answer in XML — request JSON where the API supports a dataType/_type=JSON parameter. On auth rejection, check the usage application first.',
         inputSchema: {
             type: 'object',
             properties: {
-                path: { type: 'string', description: 'apis.data.go.kr 이하 경로 (예: 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)' },
+                path: { type: 'string', description: 'Path below apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)' },
                 params: {
                     type: 'object',
                     additionalProperties: { type: ['string', 'number', 'boolean'] },
-                    description: '쿼리 파라미터 (serviceKey 는 서버가 주입 — 넣지 말 것)',
+                    description: 'Query parameters (serviceKey is injected by the server — do not include it)',
                 },
             },
             required: ['path'],
         },
     },
-    // ── 이미지 생성 (OpenAI GPT Image — fect-mcp gpt-image 모듈 이식) ──
+    // ── Image generation (OpenAI GPT Image — ported from the fect-mcp gpt-image module) ──
     {
         name: 'gpt_image_text2img',
+        title: 'Image generation (text → image)',
+        annotations: HINT.generate,
         description: `Generate an image from a text prompt using OpenAI GPT Image models.
 
-Use when the user asks to create, draw, generate, or make an image, picture, photo, banner, illustration, or thumbnail from a description (이미지 생성, 그림 그려줘). Strengths: reliable text rendering inside the image (posters, labels, UI mockups, signage), strong photorealism, and exact custom WIDTHxHEIGHT resolutions (e.g. "1088x1920" for 9:16 — gpt-image-2 only, edges multiple of 16).
-Do NOT use to edit or compose existing images — use gpt_image_img2img.
+Use when the image must contain legible text — posters, labels, UI mockups, signage, title cards — or when a quality boost over the local default is worth paying for. The local engine breaks Korean glyphs (measured: "딸깍연구소" came out as "달닥연구소"); every text-bearing image belongs here. Strengths: reliable text rendering inside the image, strong photorealism, and exact custom WIDTHxHEIGHT resolutions (e.g. "1088x1920" for 9:16 — gpt-image-2 only, edges multiple of 16).
+Do NOT use as the first choice for text-free images (cover backgrounds, b-roll, draft exploration) — the plugin's default path is image_local_generate (local Z-Image, free); this tool bills per image. Do NOT use to edit or compose existing images — use gpt_image_img2img.
 Note: gpt-image-2 (default) does NOT support transparent backgrounds; transparent requires the deprecated gpt-image-1/1.5 and png/webp output. Size/quality/background constraints are enforced per model — see each parameter.
 
 Returns: the generated image as MCP image content (always base64), plus a text block with model, size, quality, and the saved file path when savePath is given.`,
@@ -187,7 +763,8 @@ Returns: the generated image as MCP image content (always base64), plus a text b
             properties: {
                 prompt: {
                     type: 'string',
-                    description: 'Image generation prompt',
+                    description: 'Image generation prompt (max 32,000 characters)',
+                    maxLength: 32000,
                 },
                 model: {
                     type: 'string',
@@ -228,6 +805,8 @@ Returns: the generated image as MCP image content (always base64), plus a text b
     },
     {
         name: 'gpt_image_img2img',
+        title: 'Image edit & compose (image → image)',
+        annotations: HINT.generate,
         description: `Edit or compose images using OpenAI GPT Image models (multi-reference + optional mask).
 
 Use when the user asks to inpaint a masked region, combine multiple reference images (1-16 via sourceImagesBase64) into one output, or edit while preserving fine input details such as faces and logos (이미지 합성, 인페인팅, 이미지 수정, 배경 교체).
@@ -240,7 +819,8 @@ Returns: the edited image as MCP image content (always base64, in the requested 
             properties: {
                 prompt: {
                     type: 'string',
-                    description: 'Edit / composition prompt',
+                    description: 'Edit / composition prompt (max 32,000 characters)',
+                    maxLength: 32000,
                 },
                 sourceImagesBase64: {
                     type: 'array',
@@ -301,14 +881,80 @@ Returns: the edited image as MCP image content (always base64, in the requested 
             required: ['prompt', 'sourceImagesBase64'],
         },
     },
-    // ── 영상 생성 (Google Veo 3.1 — fect-mcp video 모듈 이식) ──────────
+    {
+        name: 'image_local_generate',
+        title: 'Image generation (local · Z-Image — default)',
+        annotations: HINT.generateLocal,
+        description: `Generate an image from a text prompt **on this machine** using Z-Image Turbo (6B, Apache 2.0) via mflux — no API key, no network, no per-image cost.
+
+This is the DEFAULT image generation path of this plugin. Use for any text-free image: cover backgrounds, b-roll stills, branding drafts, mood exploration, bulk candidate batches (이미지 생성, 커버 배경). Measured on this class of machine (M4 Max): 1024×1024 in ~2–3.5 min and 1088×1920 (9:16) in ~7.5 min under heavy load — minutes, not seconds, with 32–39GB peak memory; avoid running alongside video renders.
+Do NOT use when the image must contain legible text — Korean glyphs break (measured: "딸깍연구소" rendered as "달닥연구소"); any text-bearing image (poster, label, title card) and any quality-critical shot goes to gpt_image_text2img instead. Do NOT use to edit existing images — gpt_image_img2img.
+Requires mflux (\`uv tool install --python 3.12 mflux\`; Apple Silicon only); set MFLUX_ZIMAGE_BIN if the binary lives elsewhere. The first call downloads the ~31GB weight repository to ~/.cache/huggingface — the tool extends its own timeout by an hour for that download, so a very slow first call is normal, not stuck.
+
+Returns: a text block with the saved .png path, resolution, steps, seed, quantization, and generation time.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Image generation prompt (max 32,000 characters). English prompts recommended; do not ask for text in the image.',
+                    maxLength: 32000,
+                },
+                width: {
+                    type: 'number',
+                    description: `Image width in pixels (default: 1024). ${MIN_ZIMAGE_DIMENSION}–${MAX_ZIMAGE_DIMENSION}, multiple of ${ZIMAGE_DIMENSION_STEP}. For 9:16 portrait use 1088×1920, not 1080×1920.`,
+                    minimum: MIN_ZIMAGE_DIMENSION,
+                    maximum: MAX_ZIMAGE_DIMENSION,
+                    default: 1024,
+                },
+                height: {
+                    type: 'number',
+                    description: `Image height in pixels (default: 1024). Same constraints as width. Generation time scales with width×height — 9:16 full size takes ~4x a 1024² render.`,
+                    minimum: MIN_ZIMAGE_DIMENSION,
+                    maximum: MAX_ZIMAGE_DIMENSION,
+                    default: 1024,
+                },
+                steps: {
+                    type: 'number',
+                    description: `Diffusion steps (default: ${DEFAULT_ZIMAGE_STEPS} — the model card's recommended setting; 9 steps = 8 DiT forwards). More steps rarely help this turbo-distilled model.`,
+                    minimum: 1,
+                    maximum: 50,
+                    default: DEFAULT_ZIMAGE_STEPS,
+                },
+                seed: {
+                    type: 'number',
+                    description: 'Random seed for reproducible output. Omit for a random seed. Re-run the same prompt+seed+size to get the identical image.',
+                    minimum: 0,
+                },
+                quantize: {
+                    type: 'number',
+                    description: `Weight quantization bits (default: ${DEFAULT_ZIMAGE_QUANTIZE}). 8 is the measured baseline; 4 halves memory with a small quality cost.`,
+                    enum: [...ZIMAGE_QUANTIZE_OPTIONS],
+                    default: DEFAULT_ZIMAGE_QUANTIZE,
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the image file (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the image file (default: zimage_<timestamp>.png)',
+                },
+            },
+            required: ['prompt'],
+        },
+    },
+    // ── Video generation (Google Veo 3.1 — ported from the fect-mcp video module) ──────────
     {
         name: 'veo_text2video',
+        title: 'Video generation (text → video)',
+        annotations: HINT.generate,
         description: `Generate a video with native audio from a text prompt using Google Veo 3.1.
 
 Use when the user asks to create, generate, or make a video, clip, footage, or short ad from a description alone (비디오 생성, 영상 만들어줘). Audio is generated natively: wrap dialogue in double quotes, and describe SFX ("engine roaring") and ambient sound explicitly in the prompt.
 Do NOT use when a source visual exists — use veo_img2video to animate a still image, veo_extension to continue a Veo-generated video, or veo_reference to keep a specific subject consistent from photos.
-Cost lever: default model is top quality ($0.40/s at 720p); fast is 1/4 the cost, lite is 1/8 (no 4k). Generation is asynchronous and typically takes 1-6 minutes.
+Prefer seedance_text2video when you need a length off Veo's 4/6/8-second grid, a ratio other than 16:9 or 9:16, or a much cheaper silent shot; keep Veo when native dialogue audio is the point.
+Cost lever: the default is now fast ($0.10/s at 720p) because blind-arena Elo shows no measurable quality gap between the tiers; drop to lite ($0.05/s) whenever 4k, extension, and reference images are not needed. Generation is asynchronous and typically takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolution, and duration in seconds. Videos carry an invisible SynthID watermark.`,
         inputSchema: {
@@ -318,6 +964,7 @@ Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolu
                     type: 'string',
                     description: 'Descriptive text prompt for video generation (English recommended)',
                 },
+                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
                 model: VEO_MODEL_PROPERTY,
                 aspectRatio: {
                     type: 'string',
@@ -341,10 +988,15 @@ Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolu
     },
     {
         name: 'veo_img2video',
+        title: 'Video generation (image → video)',
+        annotations: HINT.generate,
         description: `Animate a still image into a video (first frame, or first+last frame interpolation) using Google Veo 3.1.
 
 Use when the user provides an image to bring to life, animate, or add motion to (이미지로 영상 만들기) — e.g. animate a product photo. Provide sourceImagePath as the first frame; optionally add lastImagePath for a smooth transition between two images. The prompt should describe the desired motion.
 Do NOT use for pure text-to-video (use veo_text2video), continuing an existing video (use veo_extension), or subject consistency from reference photos (use veo_reference).
+For a silent b-roll shot from an already-generated background, seedance_img2video bills only the seconds you ask for — a 4-second 1080p shot runs about $0.23 silent against $0.64 on veo-3.1-lite, which must bill 8 seconds at 1080p and cannot turn audio off. Stay on Veo when the clip needs native audio or a later veo_extension.
+Person policy, measured 2026-08-15: an adult photoreal face in the source image passes here and holds for the clip, while Seedance 2.x rejects the very same file — so this is the image lane for photoreal people. A face that reads as a MINOR is blocked whether it arrives as a photo or an illustration (Support code 17301594); blocked generations are not billed, so redraw the cut instead of hunting for a way around it.
+For composition control — a subject appearing, vanishing, or changing pose exactly as drawn — pass lastImagePath. Reference images (veo_reference) carry appearance, not layout.
 Generation is asynchronous and typically takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, source/last frame image paths, model, aspect ratio, resolution, and duration in seconds.`,
@@ -355,6 +1007,7 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
                     type: 'string',
                     description: 'Text description for video animation/motion',
                 },
+                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
                 sourceImagePath: {
                     type: 'string',
                     description: 'Absolute path to the first frame (starting) image file',
@@ -386,10 +1039,12 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
     },
     {
         name: 'veo_extension',
+        title: 'Video extension (+7s)',
+        annotations: HINT.generate,
         description: `Extend a Veo-generated video by adding 7 seconds of new content per call.
 
 Use when the user asks to continue, lengthen, or extend a video that was previously generated by Veo (비디오 연장, 이어서 만들기). Up to 20 extensions per video; input must be a Veo output at 720p, 16:9 or 9:16, and 141 seconds or shorter.
-Do NOT use on videos not generated by Veo, and do NOT use the lite model (unsupported). For a brand-new scene use veo_text2video instead.
+Do NOT use on videos not generated by Veo, and do NOT use the lite model (unsupported). For a brand-new scene use veo_text2video instead. Seedance has no equivalent for local files — its video input accepts only public URLs — so extension of a local clip always lands here.
 Output is always 720p and follows the input video's aspect ratio. Voice cannot be effectively extended if absent from the last 1 second of the input. Takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, source video path, model, resolution, and the added duration (+7 seconds).`,
@@ -400,15 +1055,16 @@ Returns: a text block with the saved .mp4 file path, source video path, model, r
                     type: 'string',
                     description: 'Text description for the video continuation',
                 },
+                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
                 sourceVideoPath: {
                     type: 'string',
                     description: 'Absolute path to the source video file to extend (must be a Veo-generated 720p video, 141 seconds or shorter)',
                 },
                 model: {
                     type: 'string',
-                    description: 'Veo model (default: "veo-3.1-generate-preview"). The lite model does NOT support extension.',
+                    description: 'Veo model (default: "veo-3.1-fast-generate-preview"). The lite model does NOT support extension. Blind-arena Elo has fast and standard statistically tied, so standard only buys 4k here.',
                     enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview'],
-                    default: 'veo-3.1-generate-preview',
+                    default: 'veo-3.1-fast-generate-preview',
                 },
                 outputPath: {
                     type: 'string',
@@ -424,10 +1080,14 @@ Returns: a text block with the saved .mp4 file path, source video path, model, r
     },
     {
         name: 'veo_reference',
+        title: 'Video generation (reference images · fixed 8s)',
+        annotations: HINT.generate,
         description: `Generate an 8-second video that keeps subjects from 1-3 reference images consistent, using Google Veo 3.1.
 
 Use when the user wants a video featuring a specific person, character, product, or garment shown in reference photos — fashion videos, brand/product marketing, consistent character animation (캐릭터 일관성, 제품 영상). Provide 1-3 clear, well-lit reference images (multiple angles improve consistency) and a detailed prompt describing the scene and interactions.
 Do NOT use the lite model (unsupported). To animate a single image as-is use veo_img2video; for free-form generation use veo_text2video.
+This is the reference tool for REAL people — Seedance's seedance_reference rejects real human faces, while it accepts far more reference images (up to 30) and a free duration, so route drawn characters and products there. The person policy here is documented as the same allow_adult contract veo_img2video runs under, but it is unmeasured on this mode; only the image lane was probed.
+Reference images are ASSET only: they preserve ONE subject's appearance, NOT the layout of the picture. For a cut that must match a drawn composition use veo_img2video with sourceImagePath + lastImagePath. Veo 3.1 has no style reference at all — the official docs send style images to the experimental veo-2.0 model, so route sketch or toon style transfer to seedance_reference instead.
 Duration is fixed at 8 seconds when reference images are used. Takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, reference image list, model, aspect ratio, resolution, and duration.`,
@@ -438,6 +1098,7 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
                     type: 'string',
                     description: 'Detailed text description of the video scene and subject interactions',
                 },
+                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
                 referenceImagePaths: {
                     type: 'array',
                     items: {
@@ -449,9 +1110,9 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
                 },
                 model: {
                     type: 'string',
-                    description: 'Veo model (default: "veo-3.1-generate-preview"). The lite model does NOT support reference images.',
+                    description: 'Veo model (default: "veo-3.1-fast-generate-preview"). The lite model does NOT support reference images. Blind-arena Elo has fast and standard statistically tied, so standard only buys 4k here.',
                     enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview'],
-                    default: 'veo-3.1-generate-preview',
+                    default: 'veo-3.1-fast-generate-preview',
                 },
                 aspectRatio: {
                     type: 'string',
@@ -472,157 +1133,1036 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
             required: ['prompt', 'referenceImagePaths'],
         },
     },
-    // ── 자사 SNS 직접 게시 (채널별 툴 — 로컬 자격증명, 즉시 공개) ──────
-    // 자격증명 파일이 있는 채널의 툴만 ListTools 에 노출된다 (index.ts + SNS_CHANNEL_BY_TOOL).
+    // ── Video generation (ByteDance Seedance — BytePlus ModelArk) ─────────────
+    // The second engine sharing Veo's slot. The source of truth for which to use
+    // when is skills/produce/references/video-model-selection.md.
     {
-        name: 'threads_publish',
-        description: `⚠️ Threads 직접 게시 — 로컬 토큰으로 Threads API 에 **즉시 공개 게시**한다(게시 계정은 토큰의 /me 로 자동 결정). 별도 검토 게이트가 없으므로 반드시 사용자가 최종 문안·미디어를 확인·승인한 직후에만 호출한다(HITL — 승인 없이 호출 금지). 텍스트 또는 이미지 1장 — 영상 불가(영상 콘텐츠는 커버 이미지 본문 + 풀영상 링크 답글 방식). 본문 링크 금지 채널 규칙: 링크는 본문이 아니라 게시 성공 직후 응답 postId 를 replyToId 로 넣은 답글로 이어서 게시한다. ${SNS_HITL_LINE}`,
+        name: 'seedance_text2video',
+        title: 'Video generation (text → video, Seedance)',
+        annotations: HINT.generate,
+        description: `Generate a video from a text prompt using ByteDance Seedance (BytePlus ModelArk).
+
+Use when you need a clip that Veo's fixed 4/6/8-second grid cannot express — an odd length (2-30 seconds, any whole second), a 21:9 or 4:3 frame, or simply the cheapest possible shot: a silent 9:16 1080p 5-second clip costs about $0.24 on seedance-1-0-pro-fast, against $0.64 on veo-3.1-lite and $0.96 on veo-3.1-fast (Veo forces an 8-second bill at 1080p and always includes audio). Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
+Do NOT use when you need Veo's native dialogue audio quality or its +7s extension of an existing clip — veo_text2video and veo_extension keep those. When a source visual already exists use seedance_img2video, and for subject consistency from photos use seedance_reference.
+Model choice drives both price and limits; read the model parameter before overriding the default. Generation is asynchronous and typically takes 1-6 minutes.
+
+Returns: a text block with the saved .mp4 file path, model, ratio, resolution, duration, and the billed completion token count.`,
         inputSchema: {
             type: 'object',
             properties: {
-                caption: { type: 'string', description: '게시 본문 완성본 ≤500자 (해시태그는 ≤1개 권장 — 랭킹 가중치 0)' },
-                imageUrl: { type: 'string', format: 'uri', description: '공개 접근 가능한 이미지 URL 1장 (플랫폼이 크롤 — 로컬 경로 불가)' },
-                replyToId: { type: 'string', description: '이 게시물 id 에 대한 답글로 게시 (자기 답글 체인 — 링크는 본문이 아닌 답글에)' },
+                prompt: {
+                    type: 'string',
+                    description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb — "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" — the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead. Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ...". Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628) — Korean dialogue still works inside quotes on 1.5-pro, which lip-syncs it.',
+                },
+                model: SEEDANCE_MODEL_PROPERTY,
+                ratio: {
+                    type: 'string',
+                    description: 'Aspect ratio of the generated video (default: "16:9"). "adaptive" lets the model pick.',
+                    enum: SEEDANCE_RATIO_VALUES,
+                    default: '16:9',
+                },
+                resolution: SEEDANCE_RESOLUTION_PROPERTY,
+                durationSeconds: SEEDANCE_DURATION_PROPERTY,
+                generateAudio: SEEDANCE_AUDIO_PROPERTY,
+                watermark: SEEDANCE_WATERMARK_PROPERTY,
+                seed: SEEDANCE_SEED_PROPERTY,
+                cameraFixed: SEEDANCE_CAMERA_FIXED_PROPERTY,
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the generated video (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the generated video (default: video_<timestamp>.mp4)',
+                },
+            },
+            required: ['prompt'],
+        },
+    },
+    {
+        name: 'seedance_img2video',
+        title: 'Video generation (image → video, Seedance)',
+        annotations: HINT.generate,
+        description: `Animate a still image into a video (first frame, or first+last frame interpolation) using ByteDance Seedance.
+
+Use for the cheap b-roll lane of this pipeline: animating an already-generated cover or point background PNG. ratio defaults to "adaptive" so the source image is not center-cropped — pass an explicit ratio only when you intend a different frame. Billing follows the requested duration, so ask for the length you will actually cut in.
+The default model (seedance-1-5-pro) accepts photoreal human faces. The dreamina-seedance-2.5/2.0 models REJECT input images containing real human faces, so never route a photoreal-person background through them.
+Do NOT use for pure text-to-video (use seedance_text2video) or for subject consistency across several photos (use seedance_reference). Veo's veo_img2video remains the choice when you want its native audio or Veo-only extension afterwards.
+
+Returns: a text block with the saved .mp4 file path, source/last frame image paths, model, ratio, resolution, duration, and the billed completion token count.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Motion only — do not re-describe people, background, or lighting already visible in the source image, or the model redesigns the scene. Write camera as a span: "starting frame composition + movement + movement amplitude + ending frame composition". Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable). English or Chinese only. There is no negative-prompt parameter here — an unwanted element has to be designed out of the sentence, not forbidden in it.',
+                },
+                sourceImagePath: {
+                    type: 'string',
+                    description: 'Absolute path to the first frame (starting) image file',
+                },
+                lastImagePath: {
+                    type: 'string',
+                    description: 'Optional: Absolute path to the last frame (ending) image file for a smooth interpolation. Not supported by seedance-1-0-pro-fast-251015 (first frame only).',
+                },
+                model: SEEDANCE_MODEL_PROPERTY,
+                ratio: {
+                    type: 'string',
+                    description: 'Aspect ratio of the generated video (default: "adaptive" — follows the source image). A different value makes the server center-crop your image.',
+                    enum: SEEDANCE_RATIO_VALUES,
+                    default: 'adaptive',
+                },
+                resolution: SEEDANCE_RESOLUTION_PROPERTY,
+                durationSeconds: SEEDANCE_DURATION_PROPERTY,
+                generateAudio: SEEDANCE_AUDIO_PROPERTY,
+                watermark: SEEDANCE_WATERMARK_PROPERTY,
+                seed: SEEDANCE_SEED_PROPERTY,
+                cameraFixed: SEEDANCE_CAMERA_FIXED_PROPERTY,
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the generated video (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the generated video (default: video_<timestamp>.mp4)',
+                },
+            },
+            required: ['prompt', 'sourceImagePath'],
+        },
+    },
+    {
+        name: 'seedance_reference',
+        title: 'Video generation (reference images, Seedance 2.x)',
+        annotations: HINT.generate,
+        description: `Generate a video that keeps subjects from reference images consistent, using Dreamina Seedance 2.x.
+
+Use when a character, product, or garment must stay the same across the shot and you have several photos of it (캐릭터 일관성, 제품 영상). dreamina-seedance-2-5-260628 takes 1-30 reference images and up to 30 seconds; the 2.0 series takes 1-9 and up to 15 seconds. Unlike veo_reference the length is not pinned to 8 seconds.
+Do NOT pass reference images containing real human faces — the 2.x models reject them; use veo_reference for real people. The seedance-1-5-pro and 1.0 models do not accept reference images at all and are rejected before the call. These models also need account balance > $30 to activate.
+References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred — this is the only style-transfer lane in the plugin, since Veo 3.1 dropped style references — and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
+Do NOT feed a three-view or multi-view character sheet. ByteDance's own docs advise against it twice: the model reads the separate angles as separate people, which worsens identity drift and produces duplicate characters in one frame. Send a headshot (face only, neutral expression, minimal shoulders and background) plus one full-body shot instead — the docs call those two sufficient. Order is weight: put the asset that must be matched most precisely first in the array.
+
+Returns: a text block with the saved .mp4 file path, reference image list, model, ratio, resolution, duration, and the billed completion token count.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable. English or Chinese only. Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
+                },
+                referenceImagePaths: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    minItems: 1,
+                    maxItems: 30,
+                    description: 'Absolute paths to reference images guiding subject appearance — up to 30 for dreamina-seedance-2-5-260628, up to 9 for the 2.0 series. Must not contain real human faces.',
+                },
+                model: {
+                    type: 'string',
+                    description: `Seedance model (default: "${DEFAULT_SEEDANCE_REFERENCE_MODEL}" — the only reference-capable model with independent quality data: rank 1 on the Artificial Analysis blind image-to-video arena, and it also outputs 1080p and 4k). Only the 2.x models accept reference images. Switch to dreamina-seedance-2-5-260628 when you actually need more than 9 reference images or more than 15 seconds — it is untested in every public arena, so do not pick it for a shot that matters without comparing first. fast and mini trade quality for cost and are likewise untested.`,
+                    enum: [...SEEDANCE_REFERENCE_MODELS],
+                    default: DEFAULT_SEEDANCE_REFERENCE_MODEL,
+                },
+                ratio: {
+                    type: 'string',
+                    description: 'Aspect ratio of the generated video (default: "adaptive").',
+                    enum: SEEDANCE_RATIO_VALUES,
+                    default: 'adaptive',
+                },
+                resolution: SEEDANCE_RESOLUTION_PROPERTY,
+                durationSeconds: SEEDANCE_DURATION_PROPERTY,
+                generateAudio: SEEDANCE_AUDIO_PROPERTY,
+                watermark: SEEDANCE_WATERMARK_PROPERTY,
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the generated video (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the generated video (default: video_ref_<timestamp>.mp4)',
+                },
+            },
+            required: ['prompt', 'referenceImagePaths'],
+        },
+    },
+    // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
+    {
+        name: 'tts_generate',
+        title: 'Speech synthesis (single speaker)',
+        annotations: HINT.generate,
+        description: `Convert text to single-voice speech audio using Google Gemini TTS.
+
+Use when the user asks to read text aloud, narrate, voice-over, or convert text to speech/audio (음성 변환, TTS, 나레이션). 30 voices; 90+ languages are auto-detected from the input text itself (there is no language parameter) — Korean, English, Japanese, Vietnamese and both Simplified (zh-CN) and Traditional (zh-TW) Chinese are all supported. Control delivery with stylePrompt (e.g. "Say cheerfully", "In a spooky whisper").
+Do NOT use for two-person dialogue scripts — use tts_multi_speaker. Unsure which voice fits? Call tts_list_voices first.
+Keep voiceName/stylePrompt/temperature byte-identical across takes of one video — the model re-interprets any wording change and the narrator's voice drifts between cuts. If a script fails repeatedly (the server already retries 3x), switch model to gemini-2.5-pro-preview-tts rather than rewording it.
+
+Returns: a text block with the saved .wav file path, voice name, and text length.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                text: {
+                    type: 'string',
+                    description: 'The text to convert to speech (max 16,000 characters — split longer scripts)',
+                    maxLength: 16000,
+                },
+                voiceName: TTS_VOICE_PROPERTY,
+                model: TTS_MODEL_PROPERTY,
+                stylePrompt: {
+                    type: 'string',
+                    description: 'Optional style instruction (e.g., "Say cheerfully", "In a whisper", "With excitement")',
+                },
+                temperature: TTS_TEMPERATURE_PROPERTY,
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the audio file (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the audio file (default: tts_<timestamp>.wav)',
+                },
+            },
+            required: ['text'],
+        },
+    },
+    {
+        name: 'tts_multi_speaker',
+        title: 'Speech synthesis (2-speaker dialogue)',
+        annotations: HINT.generate,
+        description: `Convert a dialogue script into multi-speaker audio (max 2 voices) using Google Gemini TTS.
+
+Use when the user wants a conversation, interview, or podcast-style dialogue voiced by distinct speakers (대화 음성, 팟캐스트 오디오). Script lines are prefixed with speaker names ("Joe: Hello!\\nJane: Hi!"), and each name must match an entry in the speakers array with its assigned voice.
+Do NOT use for a single narrator — use tts_generate. Maximum 2 speakers; each needs a unique voice.
+
+Returns: a text block with the saved .wav file path, speaker/voice assignments, and script length.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                script: {
+                    type: 'string',
+                    description: 'Conversation script with speaker names (e.g., "Joe: Hello!\\nJane: Hi there!"). Every speaker name used here must match a speakerName in the speakers array. Max 16,000 characters — split longer scripts.',
+                    maxLength: 16000,
+                },
+                speakers: {
+                    type: 'array',
+                    description: 'Array of speaker configurations (max 2 speakers)',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            speakerName: {
+                                type: 'string',
+                                description: 'Name of the speaker (must match names used in the script)',
+                            },
+                            voiceName: {
+                                type: 'string',
+                                description: 'Voice to use for this speaker',
+                                enum: TTS_VOICE_ENUM,
+                            },
+                        },
+                        required: ['speakerName', 'voiceName'],
+                    },
+                    minItems: 1,
+                    maxItems: 2,
+                },
+                model: TTS_MODEL_PROPERTY,
+                stylePrompt: {
+                    type: 'string',
+                    description: 'Optional style instruction for the overall conversation (e.g., "Make Speaker1 sound tired, Speaker2 excited")',
+                },
+                temperature: TTS_TEMPERATURE_PROPERTY,
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the audio file (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the audio file (default: tts_multi_<timestamp>.wav)',
+                },
+            },
+            required: ['script', 'speakers'],
+        },
+    },
+    {
+        name: 'tts_local_generate',
+        title: 'Speech synthesis (local · Supertonic)',
+        annotations: HINT.generateLocal,
+        description: `Convert text to speech **on this machine** using Supertonic 3 — no API key, no network, no quota, no per-character cost.
+
+Use for narration bodies and any bulk voice-over: scene narration in the produce pipeline, long scripts, and repeated takes where API cost or quota would add up. Measured at 6.3x realtime on CPU alone. 10 built-in voices (F1–F5 female, M1–M5 male) across 31 languages; output is 44.1kHz mono WAV and the response includes the exact audio duration, so no ffprobe round-trip is needed for length checks.
+Do NOT use when the line needs acted delivery — there is no style/emotion parameter here, so intro lines, character dialogue, and anything with a stylePrompt belong to tts_generate (Gemini). Do NOT mix both engines inside one video without resampling: this returns 44.1kHz and tts_generate returns 24kHz.
+Requires a local Python runtime with the \`supertonic\` package (pip install supertonic); set SUPERTONIC_PYTHON if it lives in a virtualenv. The first call downloads 385MB of weights to ~/.cache/supertonic3. Model weights are OpenRAIL-M licensed (code is MIT) — commercial use is permitted with use-based restrictions, so review the terms before shipping generated audio.
+
+Returns: a text block with the saved .wav path, voice, language, audio duration, sample rate, and synthesis time.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                text: {
+                    type: 'string',
+                    description: `The text to convert to speech (max ${MAX_SUPERTONIC_INPUT_CHARS} characters — split longer scripts by scene)`,
+                    maxLength: MAX_SUPERTONIC_INPUT_CHARS,
+                },
+                voice: {
+                    type: 'string',
+                    description: `Voice style (default: "${DEFAULT_SUPERTONIC_VOICE}"). F1–F5 are female, M1–M5 male; the vendor publishes no personality labels beyond that. Keep one voice per channel — see data/<slug>/profile.md.`,
+                    enum: [...SUPERTONIC_VOICE_NAMES],
+                    default: DEFAULT_SUPERTONIC_VOICE,
+                },
+                lang: {
+                    type: 'string',
+                    description: `Language code (default: "${DEFAULT_SUPERTONIC_LANGUAGE}"). Unlike tts_generate this is NOT auto-detected — set it, because the code also selects chunking (Korean uses shorter chunks). Use "na" only for text whose language is unsupported.`,
+                    enum: [...SUPERTONIC_LANGUAGES],
+                    default: DEFAULT_SUPERTONIC_LANGUAGE,
+                },
+                speed: {
+                    type: 'number',
+                    description: `Speech speed 0.7–2.0 (default: ${DEFAULT_SUPERTONIC_SPEED}). Keep it identical across every cut of one video.`,
+                    minimum: 0.7,
+                    maximum: 2.0,
+                    default: DEFAULT_SUPERTONIC_SPEED,
+                },
+                steps: {
+                    type: 'number',
+                    description: `Quality steps 1–100 (default: ${DEFAULT_SUPERTONIC_STEPS}). Higher is slower with diminishing returns; the default is the vendor's recommended setting.`,
+                    minimum: 1,
+                    maximum: 100,
+                    default: DEFAULT_SUPERTONIC_STEPS,
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the audio file (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the audio file (default: supertonic_<timestamp>.wav)',
+                },
+            },
+            required: ['text'],
+        },
+    },
+    {
+        name: 'tts_list_voices',
+        title: 'TTS voice list',
+        annotations: HINT.local,
+        description: `List the available voices for both TTS engines — 30 Gemini voices with personality traits, plus the 10 local Supertonic voices.
+
+Use before tts_generate, tts_multi_speaker, or tts_local_generate when the user has not specified a voice, or asks what voices are available (목소리 종류). Read-only; makes no API call.
+Do NOT use to generate audio — use tts_generate (acted delivery) or tts_local_generate (narration, free). The list is static; one call per session is enough. When the channel profile (data/<slug>/profile.md) already fixes a voice, use that instead of picking a new one.
+
+Returns: a text list of the 30 Gemini voice names with one-line personality descriptions (e.g. "Kore — Firm"), followed by the 10 Supertonic voice IDs (F1–F5, M1–M5 — no personality labels are published for these) and a note on which engine to pick.`,
+        inputSchema: {
+            type: 'object',
+            properties: {},
+            required: [],
+        },
+    },
+    // ── Music generation (Google Lyria — ported from the fect-mcp music module) ────────────
+    {
+        name: 'music_generate_clip',
+        title: 'Music generation (30s clip)',
+        annotations: HINT.generate,
+        description: `Generate a fixed 30-second music clip from a text prompt using Google Lyria 3 (batch, single call).
+
+Use as the DEFAULT for short-form BGM, jingles, and post background music (배경음악, BGM) — cheaper ($0.04/clip) and simpler than the streaming tools. Lyria 3 has no structured parameters: describe genre, instruments, BPM, key, mood, and structure in natural language inside the prompt, optionally with section tags ([Intro] [Verse] [Chorus] [Outro]) or timestamps ("[0:00 - 0:10] Intro: ..."). Can generate vocals and lyrics — add "instrumental only, no vocals" to the prompt if unwanted. Output carries a SynthID audio watermark.
+If the request is blocked for "an unspecified policy reason", that is prompt filtering, not a bug — reword the prompt more plainly and retry once rather than repeating the same text.
+Do NOT use when an exact non-30s duration is required, or when the same music must be reproducible — use music_generate / music_generate_advanced (seed) instead. Non-deterministic: the same prompt returns different music each call, so store signature BGM as a reusable asset.
+
+Returns: a text block with the saved .mp3 file path (44.1kHz stereo, exactly 30 seconds).`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Natural-language description including genre, instruments, BPM, key, mood (e.g., "Calm lo-fi hip hop, 80 BPM, C major, soft piano and vinyl crackle, instrumental only")',
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the audio file (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the audio file (default: music_clip_<timestamp>.mp3)',
+                },
+            },
+            required: ['prompt'],
+        },
+    },
+    {
+        name: 'music_generate',
+        title: 'Music generation (set duration)',
+        annotations: HINT.generate,
+        description: `Generate instrumental music from a text prompt using Google Lyria RealTime (streaming).
+
+Use when the requested duration must be controlled (5-300s) — e.g. matching a narration length. For standard 30-second short-form BGM, prefer music_generate_clip (cheaper, single call). Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text — music_list_options shows suggestions, not a closed list.
+Do NOT use for vocals or lyrics — Lyria RealTime is instrumental-only. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
+For BGM under narration, say so in the prompt (e.g. "leaves space for a spoken voiceover, no melody in the vocal frequency range").
+
+Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and applied settings.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Text description of the music to generate (e.g., "upbeat electronic dance music")',
+                },
+                genre: {
+                    type: 'string',
+                    description: 'Optional genre — free text (e.g., "Jazz", "Synthwave", "Bossa Nova"); see music_list_options for suggestions',
+                },
+                mood: {
+                    type: 'string',
+                    description: 'Optional mood/atmosphere — free text (e.g., "Energetic", "Calm", "Epic")',
+                },
+                instruments: {
+                    type: 'array',
+                    description: 'Optional array of instruments — free text (e.g., "Piano", "303 Acid Bass")',
+                    items: { type: 'string' },
+                },
+                durationSeconds: MUSIC_DURATION_PROPERTY,
+                bpm: {
+                    type: 'number',
+                    description: 'Beats per minute (60-200)',
+                    minimum: 60,
+                    maximum: 200,
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the audio file (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the audio file (default: music_<timestamp>.wav)',
+                },
+            },
+            required: ['prompt'],
+        },
+    },
+    {
+        name: 'music_generate_advanced',
+        title: 'Music generation (weighted prompts · fine control)',
+        annotations: HINT.generate,
+        description: `Generate instrumental music by blending multiple weighted prompts with fine-grained controls (Google Lyria RealTime).
+
+Use when the request needs blended musical ideas — e.g. [{"text": "jazz piano", "weight": 1.0}, {"text": "electronic beats", "weight": 0.5}] — or fine tuning of guidance, density, brightness, temperature, scale (key), seed (reproducibility), or bass/drum controls. seed is the ONLY way to regenerate the same music (Lyria 3 Clip has no seed) — record the seed of a channel's signature BGM to keep later episodes consistent.
+Do NOT use for a simple single-idea request — music_generate is sufficient and simpler. No vocals or lyrics (Lyria RealTime is instrumental-only).
+
+Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and the applied prompt weights/config.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompts: {
+                    type: 'array',
+                    description: 'Array of weighted prompts to blend',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            text: {
+                                type: 'string',
+                                description: 'Musical description (e.g., "minimal techno", "jazz piano")',
+                            },
+                            weight: {
+                                type: 'number',
+                                description: 'Weight for this prompt — any non-zero value (0 is invalid; 1.0 is the typical starting point; larger = stronger influence)',
+                                default: 1.0,
+                            },
+                        },
+                        required: ['text'],
+                    },
+                    minItems: 1,
+                },
+                durationSeconds: MUSIC_DURATION_PROPERTY,
+                config: {
+                    type: 'object',
+                    description: 'Optional generation configuration',
+                    properties: {
+                        guidance: {
+                            type: 'number',
+                            description: 'Prompt adherence (0.0-6.0, default: 4.0)',
+                            minimum: 0,
+                            maximum: 6,
+                            default: 4.0,
+                        },
+                        bpm: {
+                            type: 'number',
+                            description: 'Beats per minute (60-200)',
+                            minimum: 60,
+                            maximum: 200,
+                        },
+                        scale: {
+                            type: 'string',
+                            description: 'Musical key/scale. Each value covers both the major key and its relative minor.',
+                            enum: MUSIC_SCALE_ENUM,
+                        },
+                        density: {
+                            type: 'number',
+                            description: 'Note density (0.0-1.0)',
+                            minimum: 0,
+                            maximum: 1,
+                        },
+                        brightness: {
+                            type: 'number',
+                            description: 'Tonal brightness (0.0-1.0)',
+                            minimum: 0,
+                            maximum: 1,
+                        },
+                        temperature: {
+                            type: 'number',
+                            description: 'Creativity level (0.0-3.0; model default 1.1 when omitted)',
+                            minimum: 0,
+                            maximum: 3,
+                        },
+                        topK: {
+                            type: 'number',
+                            description: 'Sampling constraint (1-1000, model default 40)',
+                            minimum: 1,
+                            maximum: 1000,
+                        },
+                        seed: {
+                            type: 'number',
+                            description: 'Random seed (0-2147483647). The only way to reproduce the same music for a channel signature BGM.',
+                            minimum: 0,
+                            maximum: 2147483647,
+                        },
+                        muteBass: {
+                            type: 'boolean',
+                            description: 'Reduce bass elements',
+                            default: false,
+                        },
+                        muteDrums: {
+                            type: 'boolean',
+                            description: 'Reduce drum elements',
+                            default: false,
+                        },
+                        onlyBassAndDrums: {
+                            type: 'boolean',
+                            description: 'Generate only the rhythm section (bass and drums)',
+                            default: false,
+                        },
+                        musicGenerationMode: {
+                            type: 'string',
+                            description: 'QUALITY (default) | DIVERSITY | VOCALIZATION (treats vocalizations as an instrument — still no lyrics)',
+                            enum: MUSIC_MODE_ENUM,
+                        },
+                    },
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the audio file',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the audio file',
+                },
+            },
+            required: ['prompts'],
+        },
+    },
+    {
+        name: 'music_list_options',
+        title: 'Music option list',
+        annotations: HINT.local,
+        description: `List suggested genres, moods, and instruments for music generation.
+
+Use when the user asks what music styles are available (장르 목록) or wants inspiration. The lists are SUGGESTIONS, not a closed set — all music tools accept free-text descriptions beyond these. Read-only; makes no API call.
+Do NOT use to generate music — use music_generate_clip, music_generate, or music_generate_advanced. The list is static; one call per session is enough.
+
+Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exhaustive).`,
+        inputSchema: {
+            type: 'object',
+            properties: {},
+            required: [],
+        },
+    },
+    // ── First-party SNS publishing (per-platform tools — local credentials, immediately public) ──────
+    // Only tools for platforms with a credentials file are exposed in ListTools (index.ts + SNS_PLATFORM_BY_TOOL).
+    // Multi-channel: with channel (brand slug) set, only <SNS_TOKEN_DIR>/<slug>/ tokens are used (no fallback).
+    {
+        name: 'threads_publish',
+        title: '⚠️ Threads publish (immediately public)',
+        annotations: HINT.publish,
+        outputSchema: publishOutput('postId', 'Threads post id — pass as replyToId to chain a follow-up reply'),
+        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). This tool supports text (with an optional link preview card) or a single image — the platform itself also does video and carousels, but this pipeline exports video to YouTube and Reels and drives traffic on Threads with a conversational body plus a video link (linkUrl). Video episodes attach no cover image — the link preview card takes that place, and one call completes the publish (the link is not added as a separate reply). Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                caption: {
+                    type: 'string',
+                    description: 'Final post body, ≤500 chars (≤1 hashtag recommended — ranking weight 0). Emoji count as their UTF-8 bytes on this platform, i.e. more than 1 char each',
+                },
+                imageUrl: { type: 'string', format: 'uri', description: 'One publicly reachable image URL (the platform crawls it — local paths won\'t work); mutually exclusive with linkUrl' },
+                linkUrl: {
+                    type: 'string',
+                    format: 'uri',
+                    description: 'Link preview card URL attached to the post (the Reels/Shorts permalink for video episodes). Text posts only, so mutually exclusive with imageUrl; writing the same URL in the caption still counts as one link to the platform (cap 5)',
+                },
+                replyToId: { type: 'string', description: 'Publish as a reply to this post id (own reply chain, or joining someone else\'s post)' },
+                channel: SNS_CHANNEL_PROPERTY,
             },
             required: ['caption'],
         },
     },
     {
         name: 'instagram_publish',
-        description: `⚠️ Instagram 직접 게시 — 로컬 토큰으로 IG API 에 **즉시 공개 게시**한다(게시 계정은 토큰의 /me 로 자동 결정). 별도 검토 게이트가 없으므로 반드시 사용자가 최종 문안·미디어를 확인·승인한 직후에만 호출한다(HITL — 승인 없이 호출 금지). 이미지 1~10장(2장 이상 캐러셀, JPEG 권장) **또는** 릴스 영상 1개(imageUrls 와 배타). 게시 후 이미지 교체 불가(캡션만 수정 가능). ${SNS_HITL_LINE}`,
+        title: '⚠️ Instagram publish (immediately public)',
+        annotations: HINT.publish,
+        outputSchema: publishOutput('mediaId', 'Instagram media id'),
+        description: `⚠️ Direct Instagram publishing — posts to the IG API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). 1-10 images (2+ makes a carousel) **or** one Reels video (mutually exclusive with imageUrls). Images must be **JPEG only** (PNG/MPO/JPS rejected). Images cannot be replaced after publishing (only the caption can be edited). Publish quota: 100 per rolling 24 hours (a carousel counts as 1). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
-                caption: { type: 'string', description: '게시 캡션 완성본 ≤2200자 (첫 125자가 훅 — 캡션 내 링크는 클릭 불가)' },
+                caption: { type: 'string', description: 'Final caption, ≤2,200 chars (the first 125 are the hook — links in captions are not clickable)' },
                 imageUrls: {
                     type: 'array',
                     items: { type: 'string', format: 'uri' },
-                    description: '공개 접근 가능한 이미지 URL 1~10장 (2장 이상이면 캐러셀 — 첫 장 비율 기준 강제 크롭). videoUrl 과 동시 사용 불가',
+                    description: '1-10 publicly reachable image URLs (2+ makes a carousel — force-cropped to the first image\'s ratio). Cannot be used together with videoUrl',
                 },
-                videoUrl: { type: 'string', format: 'uri', description: '릴스 영상 공개 URL 1개 (.mp4/.mov) — imageUrls 와 동시 사용 불가' },
+                videoUrl: {
+                    type: 'string',
+                    format: 'uri',
+                    description: 'One public Reels video URL (.mp4/.mov) — cannot be used together with imageUrls. **Provide the burned-in subtitle master** — IG Content Publishing has no parameter for a subtitle file, so unlike the platforms that take subtitles separately, subtitles burned into the frame are the only way here',
+                },
+                channel: SNS_CHANNEL_PROPERTY,
             },
             required: ['caption'],
         },
     },
     {
         name: 'facebook_publish',
-        description: `⚠️ Facebook 페이지 직접 게시 — 로컬 페이지 토큰으로 Graph API 에 **즉시 공개 게시**한다(게시 페이지는 토큰의 /me 로 자동 결정). 별도 검토 게이트가 없으므로 반드시 사용자가 최종 문안·미디어를 확인·승인한 직후에만 호출한다(HITL — 승인 없이 호출 금지). 형태: 텍스트 / 이미지 ≤10장 / 영상 1개(일반 영상 — 릴스 아님). 원문 링크는 본문(linkUrl)이 아니라 게시 성공 직후 facebook_comment 첫 댓글로 **반드시** 단다. ${SNS_HITL_LINE}`,
+        title: '⚠️ Facebook Page publish (immediately public)',
+        annotations: HINT.publish,
+        outputSchema: FACEBOOK_PUBLISH_OUTPUT,
+        description: `⚠️ Direct Facebook Page publishing — posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). Forms: text / up to 10 images / one video (regular video — not Reels). Video posts **include a subtitle file** (captionFilePath) — this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
-                caption: { type: 'string', description: '게시 본문 완성본 ≤5000자' },
+                caption: { type: 'string', description: 'Final post body, ≤5,000 chars' },
                 imageUrls: {
                     type: 'array',
                     items: { type: 'string', format: 'uri' },
-                    description: '공개 접근 가능한 이미지 URL ≤10장 — videoUrl 과 동시 사용 불가',
+                    description: 'Up to 10 publicly reachable image URLs — cannot be used together with videoUrl',
                 },
-                videoUrl: { type: 'string', format: 'uri', description: '영상 공개 URL 1개 (.mp4/.mov) — imageUrls 와 동시 사용 불가' },
-                linkUrl: { type: 'string', format: 'uri', description: '(예외용) 링크 첨부 — 텍스트 게시(미디어 없음)에서만. 기본 규칙은 링크를 facebook_comment 첫 댓글로 다는 것' },
+                videoUrl: { type: 'string', format: 'uri', description: 'One public video URL (.mp4/.mov) — cannot be used together with imageUrls. Give the **clean master**, not a burned-in copy (subtitles go separately via captionFilePath)' },
+                captionFilePath: {
+                    type: 'string',
+                    description: '**Local** absolute path to the subtitle file (.srt, ≤200K) — valid only on videoUrl posts. Unlike the video URL it needs no hosting (direct file upload). It uploads automatically right after a successful publish; if only the subtitles fail, captionWarning is returned (the post stands — do not re-publish)',
+                },
+                captionLocale: {
+                    type: 'string',
+                    description: 'Subtitle locale (default ko_KR). Must be of the `ko_KR`/`en_US`/`vi_VN` form — FB derives the locale from whether the uploaded file name is `<name>.<locale>.srt`, and rejects a malformed one with error 386',
+                },
+                linkUrl: { type: 'string', format: 'uri', description: '(Exception only) link attachment — text posts (no media) only. The default rule is to put the link in the first comment via facebook_comment' },
+                channel: SNS_CHANNEL_PROPERTY,
             },
             required: ['caption'],
         },
     },
     {
         name: 'facebook_comment',
-        description: `⚠️ Facebook 페이지 댓글 직접 작성 — 페이지 토큰으로 자기 게시물에 **즉시 공개 댓글**을 단다(작성 주체는 페이지 자신). 별도 검토 게이트가 없으므로 반드시 사용자가 승인한 최종 문안만 게시한다(HITL — 승인 없이 호출 금지). 핵심 용도: facebook_publish 성공 직후 원문 링크를 **첫 댓글**로 다는 링크 규칙(본문 링크 대신 첫 댓글 — FB 댓글 링크는 클릭 가능·프리뷰 렌더). postId 는 facebook_publish 응답의 postId 를 그대로 쓴다. 댓글만 실패했으면 이 툴만 재시도한다(본문 재게시 금지 — 게시 API 비멱등). ${SNS_HITL_LINE}`,
+        title: '⚠️ Facebook comment (immediately public)',
+        annotations: HINT.publish,
+        outputSchema: publishOutput('commentId', 'Facebook comment id'),
+        description: `⚠️ Direct Facebook Page commenting — adds an **immediately public** comment on the Page's own post with the Page token (the author is the Page itself). There is no separate review gate, so publish only copy the user has approved (HITL — never call without approval). Main use: the link rule of putting the source link in the **first comment** right after a facebook_publish success (first comment instead of a body link — FB comment links are clickable and render previews). Use postId straight from the facebook_publish response. If only the comment failed, retry just this tool (do not re-publish the post — the publish API is non-idempotent). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
-                postId: { type: 'string', description: 'facebook_publish 응답의 postId (<pageId>_<postId> 형식)' },
-                message: { type: 'string', description: '댓글 완성본 ≤8000자 — 원문 링크 + 한 줄 안내 문구' },
+                postId: { type: 'string', description: 'postId from the facebook_publish response (<pageId>_<postId> form)' },
+                message: { type: 'string', description: 'Final comment, ≤8,000 chars — the source link plus a one-line note' },
+                channel: SNS_CHANNEL_PROPERTY,
             },
             required: ['postId', 'message'],
         },
     },
     {
         name: 'youtube_publish',
-        description: `⚠️ YouTube 직접 게시 — 로컬 OAuth 리프레시 토큰으로 **로컬 영상 파일을 즉시 공개 업로드**한다(대상 채널은 토큰 소유 계정으로 자동 결정). 별도 검토 게이트가 없으므로 반드시 사용자가 최종 문안·영상을 확인·승인한 직후에만 호출한다(HITL — 승인 없이 호출 금지). 세로 9:16·3분 이하 영상은 쇼츠로 자동 분류(별도 플래그 없음). 유일하게 공개 URL 호스팅이 불필요한 채널이다(파일 직접 업로드). 업로드 쿼터 일 6건. ${SNS_HITL_LINE}`,
+        title: '⚠️ YouTube upload (immediately public)',
+        annotations: HINT.publish,
+        outputSchema: YOUTUBE_PUBLISH_OUTPUT,
+        description: `⚠️ Direct YouTube publishing — uploads a **local video file, immediately public**, with the local OAuth refresh token (the target channel is the token-owning account). There is no separate review gate, so call only right after the user has checked and approved the final copy and video (HITL — never call without approval). Portrait 9:16 videos of 3 minutes or less are auto-classified as Shorts (no separate flag). The only platform that needs no public URL hosting (direct file upload — subtitle files included). **Video and subtitles upload separately** — pass an .srt via captionFilePath and give videoFilePath the clean master with no burned-in subtitles. Uploads draw from the videos.insert-only "Video Uploads" quota bucket — 1 unit per call, 100/day by default, so there is no reason to ration episode publishing (the old "1,600 units = 6/day" limit disappeared in the 2026 quota overhaul). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
-                videoFilePath: { type: 'string', description: '업로드할 로컬 영상 파일 절대 경로 (.mp4/.mov)' },
-                title: { type: 'string', description: '영상 제목 ≤100자 (꺾쇠 <> 금지) — 키워드형 권장(쇼츠는 제목 검색 노출 비중이 큼)' },
-                caption: { type: 'string', description: '영상 설명(description) 완성본 ≤5000자 — 첫 줄 요약 + 핵심 포인트 + 해시태그(#Shorts 포함 3~5개)' },
+                videoFilePath: { type: 'string', description: 'Absolute path of the local video file to upload (.mp4/.mov)' },
+                title: { type: 'string', description: 'Video title, ≤100 chars (angle brackets <> forbidden) — keyword-style recommended (title search weighs heavily for Shorts)' },
+                caption: { type: 'string', description: 'Final video description, **≤5,000 bytes** (not characters — Korean runs 3 bytes per character, about 1,666 chars) — first-line summary plus key points. **Hashtags differ per format** — for 9:16 Shorts attach 3-5 including #Shorts; 16:9 long-form gets no #Shorts (it would be misclassified onto the Shorts surface). Long-form carries **chapter timestamps** instead of hashtags — the documented requirements are a first line at 00:00, 3 or more chapters, each 10+ seconds. **What happens when you break them is not in the official docs** — we confirmed the 10 seconds is not actually enforced (21 two-second chapters rendered fine); the only certainties are that auto-chapters default on for new uploads and a manual list in the description overrides them. Break the requirements and your list may be ignored in favor of auto-chapters.' },
                 thumbnailFilePath: {
                     type: 'string',
-                    description: '커버 스틸 절대 경로 (.jpg/.png ≤2MB) — 필수 권장: 미지정 시 쇼츠는 YouTube 가 임의 프레임을 썸네일로 뽑아 제목 커버가 안 보인다. 채널에 전화번호 인증(중급 기능)이 없으면 지정이 거부되며 게시는 성공하고 thumbnailWarning 으로 보고된다',
+                    description: 'Absolute path of the cover still (.jpg/.png ≤2MB) — **required**. Without it YouTube picks an arbitrary frame as the thumbnail, the title cover never shows, and the vertical surface cannot be reverted via the API after publishing. What this changes is the **landscape surfaces** only (search results, share previews, embeds) — the vertical frame (oar*) in the Shorts feed and the channel Shorts tab changes only through frame selection in the native YouTube app (publish skill §3, the vertical-surface step). Channels without phone verification (intermediate features) get the thumbnail rejected — the publish still succeeds and reports via thumbnailWarning',
+                },
+                captionFilePath: {
+                    type: 'string',
+                    description: 'Absolute path of the subtitle file (.srt) — **pass it by default**. Uploading subtitles separately instead of burning them in means they can be swapped after publishing, viewers can toggle them, and they seed YouTube auto-translation. Give videoFilePath the clean subtitle-free master, not a burned-in copy. The upload needs the **youtube.force-ssl scope** (rejected on the publish-only youtube.upload) and costs a **quota of 400 units** — heavy next to the 1-unit video upload, so once per episode. If only the subtitles fail, captionWarning is returned and the publish stands (do not re-upload)',
+                },
+                captionLanguage: {
+                    type: 'string',
+                    description: 'Subtitle language, BCP-47 (default ko) — e.g. ko, en, vi. Becomes the source language for auto-translation',
                 },
                 privacyStatus: {
                     type: 'string',
                     enum: ['public', 'unlisted', 'private'],
-                    description: '공개 범위 (기본 public)',
+                    description: 'Privacy (default public)',
                 },
+                categoryId: {
+                    type: 'string',
+                    description: 'YouTube category id (default "22" = People & Blogs). Feeds recommendation/browse classification, so set it to match the channel — 24=Entertainment, 25=News & Politics, 26=Howto & Style, 27=Education, 28=Science & Technology.',
+                },
+                madeForKids: {
+                    type: 'boolean',
+                    description: 'Made-for-kids self-declaration (COPPA, default false). If the video targets children, set true — a false declaration is grounds for channel sanctions, and true disables comments and personalized ads.',
+                    default: false,
+                },
+                containsSyntheticMedia: {
+                    type: 'boolean',
+                    description: 'Synthetic-media self-disclosure — **default true** (this pipeline uses Veo video and Lyria music). YouTube requires disclosure for realistic-looking AI-generated or altered content (AI-generated music, realistic generated footage of real places or people) and warns that habitual non-disclosure brings forced labels, removal, and YPP suspension. It also states outright that disclosure "does not affect exposure or monetization eligibility", so when in doubt leaving it on costs nothing. It may be set false only for clearly exempt uses — script/title/thumbnail generation, subtitle generation, idea generation, cloning your own voice, non-realistic animation or fantasy footage, color grading and beauty filters.',
+                    default: true,
+                },
+                channel: SNS_CHANNEL_PROPERTY,
             },
-            required: ['videoFilePath', 'title', 'caption'],
+            required: ['videoFilePath', 'title', 'caption', 'thumbnailFilePath'],
         },
     },
-    // ── 받은 댓글 관리 (인박스 → 답글 → 숨김) ────────────────────────
-    // 채널 횡단 툴이라 SNS_CHANNEL_BY_TOOL 게이트를 걸지 않는다 — 미설정 채널은
-    // skipped 에 사유와 함께 실려 나온다 (sns_account_check 와 같은 취급).
     {
-        name: 'sns_comment_inbox',
-        description: '받은 댓글 인박스 — Threads·Instagram·Facebook 최근 게시물의 댓글·대댓글을 한 번에 모아 정규화 목록으로 반환한다(읽기 전용, 부작용 없음). 기본값은 **우리가 아직 답하지 않은 남의 댓글만**(includeOwn/includeAnswered=false) — "이미 답했는가"는 추측이 아니라 채널 필드(Threads is_reply_owned_by_me · IG username 일치 · FB from.id==pageId)로 판정하므로 중복 답글이 나가지 않는다. 각 댓글에 ageMinutes 가 실려 오며 summary.withinGoldenHour 는 첫 60분 안에 남은 미응대 수다(답글 속도가 확산을 좌우 — 이 값이 0 이 아니면 최우선 처리). 응답의 commentId 를 sns_comment_reply/sns_comment_moderate 에 그대로 넘긴다. YouTube 는 토큰 scope 부족으로 제외된다.',
+        name: 'youtube_update',
+        title: '⚠️ YouTube video metadata & privacy update',
+        annotations: HINT.moderate,
+        outputSchema: YOUTUBE_UPDATE_OUTPUT,
+        description: '⚠️ Edits the privacy, title, or description of an already-published YouTube video (videos.update). **Applies the instant it is called and cannot be undone — never call without human approval.** **This is stage two of the long-form two-stage publish** — upload an 8-15 minute video as privacyStatus "private", have a human check encoding, subtitles, and chapters on the watch page, then flip it public with this tool. Going straight to public, short-form style, means viewers see the failure first. **videos.update overwrites rather than patching**, so this tool first reads the current values via videos.list and merges — fields you did not pass are re-sent as they are now (title, description, tags, language, COPPA declaration, synthetic-media disclosure, all of it). The change is irreversible, so **on a video you have not touched before, call dryRun: true first and eyeball wouldSend.** publishAt (scheduled publish) only takes effect while privacyStatus is private — otherwise a 400 rejection. **Scope**: youtube (read-only youtube.readonly won\'t do, and neither will the publish-only youtube.upload). When missing, the error carries reissue guidance.',
         inputSchema: {
             type: 'object',
             properties: {
-                channels: {
-                    type: 'array',
-                    items: { type: 'string', enum: ['THREADS', 'INSTAGRAM', 'FACEBOOK'] },
-                    description: '조회할 채널 (생략 시 자격증명이 있는 3채널 전부)',
+                videoId: { type: 'string', description: 'Target video id (the v= value in the permalink)' },
+                privacyStatus: {
+                    type: 'string',
+                    enum: ['public', 'unlisted', 'private'],
+                    description: 'Privacy. Omitted keeps the current value',
                 },
-                postLimit: { type: 'number', description: '채널당 훑을 최근 게시물 수 (기본 5, 최대 25)' },
-                commentLimit: { type: 'number', description: '게시물당 가져올 댓글 수 (기본 50, 최대 100)' },
-                sinceHours: { type: 'number', description: '이 시간 이내 댓글만 (예: 24 — 생략 시 전체)' },
-                includeAnswered: { type: 'boolean', description: '우리가 이미 답한 댓글도 포함 (기본 false — 스레드 전체 맥락이 필요할 때만 true)' },
-                includeOwn: { type: 'boolean', description: '우리 계정이 쓴 댓글도 포함 (기본 false — 대화 흐름 확인용)' },
+                title: { type: 'string', description: 'Title, ≤100 chars. Omitted keeps the current title' },
+                description: { type: 'string', description: 'Description, ≤5,000 bytes (about 1,666 Korean chars). For long-form the chapter timestamps live here. Omitted keeps the current description' },
+                categoryId: { type: 'string', description: 'YouTube category id. Omitted keeps the current value' },
+                madeForKids: { type: 'boolean', description: 'COPPA self-declaration. Omitted keeps the current value — this tool guards against the API trap where omitting the field resets it to the default' },
+                containsSyntheticMedia: { type: 'boolean', description: 'Synthetic-media disclosure. Omitted keeps the current value' },
+                publishAt: { type: 'string', description: 'Scheduled publish time (RFC3339, e.g. 2026-08-20T09:00:00Z). Takes effect only when passed together with privacyStatus "private"' },
+                dryRun: { type: 'boolean', description: 'Returns the body that would be sent, without calling. A check before an irreversible change', default: false },
+                channel: SNS_CHANNEL_PROPERTY,
+            },
+            required: ['videoId'],
+        },
+    },
+    {
+        name: 'youtube_insights',
+        title: 'YouTube performance insights',
+        annotations: HINT.read,
+        outputSchema: YOUTUBE_INSIGHTS_OUTPUT,
+        description: 'YouTube performance insights — returns channel stats (subscribers, total views), window metrics (views, engagedViews, average view duration, average view percentage, subscriber gain/loss), and per-recent-upload metrics in one call (read-only, no side effects). The grow-youtube loop snapshots this every tick to judge tick-over-tick change and which video types are landing — storing and comparing is the caller\'s job in data/<channel>/growth/youtube/. **Two scopes required**: youtube.readonly for channel/video lookups, yt-analytics.readonly for window metrics. Tokens issued with publish-only youtube.upload have neither, so a reissue is needed; when missing, the error carries reissue guidance. Revenue metrics (includeRevenue) additionally need yt-analytics-monetary.readonly, and even if that fails the other metrics still arrive. **Analytics data runs 2-3 days behind**, so empty-looking values for yesterday/today are normal — set days to 7+ to see a trend. The swipe-away rate used for Shorts hook verdicts (Studio\'s "How many chose to view") has no corresponding Analytics API metric and cannot be fetched here — substitute averageViewPercentage and check the swipe metric manually in Studio.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                days: { type: 'number', description: 'Days to aggregate (default 7, 1-365). Analytics lags 2-3 days, so under 7 can look empty' },
+                videoLimit: { type: 'number', description: 'Recent uploads to attach metrics to (default 10, max 50; 0 = channel metrics only)' },
+                includeRevenue: {
+                    type: 'boolean',
+                    description: 'Include revenue metrics (default false) — needs the extra yt-analytics-monetary.readonly scope',
+                    default: false,
+                },
+                channel: SNS_CHANNEL_PROPERTY,
+            },
+        },
+    },
+    // ── Inbound comment management (inbox → reply → hide) ────────────────────────
+    // Cross-platform tools, so no SNS_CHANNEL_BY_TOOL gate — unconfigured platforms
+    // come back in skipped with a reason (same treatment as sns_account_check).
+    {
+        name: 'sns_comment_inbox',
+        title: 'Inbound comment inbox',
+        annotations: HINT.read,
+        outputSchema: COMMENT_INBOX_OUTPUT,
+        description: 'Inbound comment inbox — gathers comments and sub-comments on recent Threads/Instagram/Facebook/YouTube posts into one normalized list (read-only, no side effects). The default is **only other people\'s comments we have not yet answered** (includeOwn/includeAnswered=false) — "already answered" is decided by platform fields (Threads is_reply_owned_by_me · IG username match · FB from.id==pageId · YT authorChannelId match), not guesswork, so no duplicate replies go out. YouTube judges by the time of our last reply within the thread, so a new comment arriving **after** our reply counts as unanswered. Threads whose reply list could not be fetched in full (over 100 replies, or a failed lookup) leave no basis for a verdict, so they are **treated as answered and dropped from the list** — a missed comment gets caught on the next pass, while the opposite mistake sends a duplicate reply out in public. Each comment carries ageMinutes, and summary.withinGoldenHour is the count still unanswered within their first 60 minutes (reply speed drives distribution — treat a non-zero value as top priority). Pass the commentId from the response straight into sns_comment_reply/sns_comment_moderate. Without the comment scope (youtube.force-ssl), YouTube lands in skipped with reissue guidance.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                platforms: {
+                    type: 'array',
+                    items: { type: 'string', enum: ['THREADS', 'INSTAGRAM', 'FACEBOOK', 'YOUTUBE'] },
+                    description: 'Platforms to query (omitted: all 4 platforms with credentials)',
+                },
+                channel: SNS_CHANNEL_PROPERTY,
+                postLimit: { type: 'number', description: 'Recent posts to scan per platform (default 5, max 25)' },
+                commentLimit: { type: 'number', description: 'Comments to fetch per post (default 50, max 100)' },
+                sinceHours: { type: 'number', description: 'Only comments within this many hours (e.g. 24 — omitted: all)' },
+                includeAnswered: { type: 'boolean', description: 'Also include comments we already answered (default false — true only when you need the full thread context)' },
+                includeOwn: { type: 'boolean', description: 'Also include comments written by our own account (default false — for reviewing the conversation flow)' },
             },
         },
     },
     {
         name: 'sns_comment_reply',
-        description: `⚠️ 받은 댓글에 답글 작성 — 로컬 토큰으로 **즉시 공개 답글**을 단다(작성 주체는 브랜드 계정 자신). 별도 검토 게이트가 없으므로 사용자가 승인한 최종 문안만 게시한다(HITL — 승인 없이 호출 금지). commentId 는 sns_comment_inbox 응답값을 그대로 쓴다. 채널별 계약: THREADS 는 reply_to_id 를 단 새 게시물이 곧 답글이라 대댓글의 대댓글까지 자유롭게 이어진다 / INSTAGRAM 은 **최상위 댓글에만** 답글이 붙는다(대댓글에 답하려면 그 부모 commentId 를 넘길 것 — parentCommentId 가 있는 댓글은 그 값을 사용) / FACEBOOK 은 댓글 id 에 다는 댓글이 곧 대댓글이다. 실패 시 같은 호출을 맹목 재시도하지 않는다(비멱등 — 중복 답글). ${SNS_HITL_LINE}`,
+        title: '⚠️ Reply to inbound comment (immediately public)',
+        annotations: HINT.publish,
+        outputSchema: COMMENT_REPLY_OUTPUT,
+        description: `⚠️ Replies to an inbound comment — posts an **immediately public** reply with local tokens (the author is the brand account itself). There is no separate review gate, so publish only copy the user has approved (HITL — never call without approval). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS — a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM — replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId — for comments carrying parentCommentId, use that value) / FACEBOOK — a comment on a comment id is the sub-comment / YOUTUBE — also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent — duplicate replies). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
-                channel: { type: 'string', enum: ['THREADS', 'INSTAGRAM', 'FACEBOOK'], description: '대상 채널' },
-                commentId: { type: 'string', description: 'sns_comment_inbox 의 commentId (IG 는 최상위 댓글 id 여야 함)' },
-                message: { type: 'string', description: '답글 완성본 — THREADS ≤500자, IG ≤2200자, FB ≤8000자' },
+                platform: { type: 'string', enum: ['THREADS', 'INSTAGRAM', 'FACEBOOK', 'YOUTUBE'], description: 'Target platform' },
+                commentId: { type: 'string', description: 'commentId from sns_comment_inbox (IG must be a top-level comment id — YT also accepts a sub-comment id)' },
+                message: { type: 'string', description: 'Final reply — THREADS ≤500 chars, IG ≤2,200, FB ≤8,000, YT ≤10,000' },
+                channel: SNS_CHANNEL_PROPERTY,
             },
-            required: ['channel', 'commentId', 'message'],
+            required: ['platform', 'commentId', 'message'],
         },
     },
     {
         name: 'sns_comment_moderate',
-        description: '⚠️ 받은 댓글 숨김/해제와 Facebook 댓글 좋아요 — 호출 즉시 반영된다(HITL — 사용자 승인 없이 호출 금지). **삭제는 제공하지 않는다**: 숨김은 되돌릴 수 있고 작성자 본인에게는 계속 보여 마찰이 적은 반면 삭제는 비가역이라, 스팸·어뷰징 대응에는 숨김이 브랜드 리스크가 낮다. 정당한 비판·불만은 숨기지 않는다 — 숨김은 스팸·광고·혐오·개인정보 노출에만 쓴다. like/unlike 는 FACEBOOK 만 지원한다(Threads·IG 는 댓글 좋아요 API 자체가 없어 답글이 유일한 반응 수단).',
+        title: '⚠️ Comment hide/unhide · FB like',
+        annotations: HINT.moderate,
+        outputSchema: COMMENT_MODERATE_OUTPUT,
+        description: '⚠️ Hides/unhides inbound comments and likes Facebook comments — applies the instant it is called (HITL — never call without user approval). **Deletion is not offered**: hiding is reversible and stays visible to the author, keeping friction low, while deletion is irreversible — for spam and abuse, hiding carries less brand risk. Never hide legitimate criticism or complaints — hiding is for spam, ads, hate, and exposed personal data only. like/unlike is FACEBOOK-only (Threads and IG have no comment-like API at all, so a reply is the only reaction available). **YouTube is not supported** — the API offers only hold-for-review/reject (setModerationStatus), which means something different and cannot map to a reversible hide. Handle YouTube comments in Studio.',
         inputSchema: {
             type: 'object',
             properties: {
-                channel: { type: 'string', enum: ['THREADS', 'INSTAGRAM', 'FACEBOOK'], description: '대상 채널' },
-                commentId: { type: 'string', description: 'sns_comment_inbox 의 commentId' },
+                platform: { type: 'string', enum: ['THREADS', 'INSTAGRAM', 'FACEBOOK'], description: 'Target platform' },
+                commentId: { type: 'string', description: 'commentId from sns_comment_inbox' },
                 action: {
                     type: 'string',
                     enum: ['hide', 'unhide', 'like', 'unlike'],
-                    description: 'hide/unhide 는 3채널 공통, like/unlike 는 FACEBOOK 전용',
+                    description: 'hide/unhide works on all 3 platforms; like/unlike is FACEBOOK-only',
                 },
+                channel: SNS_CHANNEL_PROPERTY,
             },
-            required: ['channel', 'commentId', 'action'],
+            required: ['platform', 'commentId', 'action'],
         },
     },
     {
         name: 'sns_account_check',
-        description: 'SNS 게시용 로컬 자격증명을 일괄 점검한다 — Threads/Instagram/Facebook 페이지는 /me 조회, YouTube 는 리프레시 토큰 교환 + 채널 조회. 계정 id·이름과 유효 여부만 반환하며 토큰 값은 노출하지 않는다. 채널별 *_publish 전 사전 점검과 Meta 토큰 60일 만료 갱신 시점 판단에 사용한다. 자격증명 미설정 채널은 사유와 함께 ok:false 로 표시된다.',
-        inputSchema: { type: 'object', properties: {} },
+        title: 'SNS credential check',
+        annotations: HINT.read,
+        outputSchema: ACCOUNT_CHECK_OUTPUT,
+        description: 'Checks the local SNS publishing credentials in one pass — /me lookups for Threads/Instagram/Facebook Pages, refresh-token exchange plus channel lookup for YouTube. With channel set, only that channel (brand) token set; omitted, it checks every channel directory under <SNS_TOKEN_DIR> plus the default (flat) tokens and returns them grouped per channel. Returns only account ids, names, and validity — token values are never exposed. Use as the pre-flight before each platform\'s *_publish (confirming which account will post) and for timing the 60-day Meta token renewal. Platforms without credentials show as ok:false with a reason.',
+        inputSchema: { type: 'object', properties: { channel: SNS_CHANNEL_PROPERTY } },
+    },
+    // ── Instagram growth lookups (read-only tools for the grow-instagram skill — no side effects) ──
+    {
+        name: 'instagram_insights',
+        title: 'Instagram performance insights',
+        annotations: HINT.read,
+        outputSchema: INSTAGRAM_INSIGHTS_OUTPUT,
+        description: 'Instagram performance insights — returns account window metrics (reach, views, profile visits, accounts engaged, interactions, saves, profile link taps) and per-recent-media metrics in one call (read-only, no side effects). The grow-instagram loop snapshots this every tick to judge tick-over-tick change and which reel types are landing — storing and comparing is the caller\'s job in data/<channel>/growth/instagram/. **Only reels (mediaProductType=REELS)** carry ig_reels_avg_watch_time (average watch time, ms), ig_reels_video_view_total_time (total watch time, ms), and reels_skip_rate (share who skipped) — these three are the primary hook-verdict metrics, and the platform does not support them on images or carousels. **For follower count use the account.followersCount profile value, not insights** (the insights follower_count comes back empty for accounts with fewer than 100 followers, useless on a new channel). **Needs the instagram_business_manage_insights scope** — tokens issued for publishing may lack it; when missing, the error carries reissue guidance. Each media item costs one /insights round trip, so API calls grow with mediaLimit.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                days: { type: 'number', description: 'Days to aggregate account metrics (default 7, 1-90)' },
+                mediaLimit: {
+                    type: 'number',
+                    description: 'Recent media items to attach metrics to (default 10, max 25; 0 = account metrics only)',
+                },
+                channel: SNS_CHANNEL_PROPERTY,
+            },
+        },
+    },
+    {
+        name: 'content_feedback',
+        title: 'Recent-content feedback report',
+        annotations: HINT.generate,
+        outputSchema: CONTENT_FEEDBACK_OUTPUT,
+        description: 'Recent-content feedback — pulls the latest N posts (default 5) from YouTube and Instagram, scores them per platform, and writes a chart-heavy HTML report (tables, funnels, bars) locally (nothing goes public). YouTube looks at opening pass-through (engagedViews/views) and average view percentage; Instagram reels at 3-second drop-off (reels_skip_rate), average watch, and shares vs reach. Levers (hook, retention, share, angle) are picked against this batch\'s median, not absolute thresholds. On YouTube, views low while pass-through and retention sit at or above the median means angle — open the next episode\'s title with the felt problem, not the method or tool. Platforms without tokens just skip their section. **Default HTML path** data/<channel>/growth/review-recent.html — changeable via outputPath. Analytics lags 2-3 days, so days defaults to 28. The review-recent skill calls this tool and then opens the report.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                channel: SNS_CHANNEL_PROPERTY,
+                limit: {
+                    type: 'number',
+                    description: 'Recent posts per platform (default 5, 1-10)',
+                },
+                days: {
+                    type: 'number',
+                    description: 'Days to aggregate (default 28, min 7 — allowing for the YouTube Analytics lag)',
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Path to save the HTML. Relative resolves from cwd. Omitted: data/<channel>/growth/review-recent.html. .html only; .. forbidden',
+                },
+            },
+        },
+    },
+    {
+        name: 'youtube_topic_scout',
+        title: 'YouTube market topic scout',
+        annotations: HINT.read,
+        outputSchema: YOUTUBE_TOPIC_SCOUT_OUTPUT,
+        description: 'Finds YouTube topics that already blew up in your niche (read-only). Gathers related channels from seed queries, takes each channel\'s median views over recent uploads, and counts as outliers only videos at 5x (default) that median or more — absolute view counts vary with channel size and make a poor yardstick for picking topics. Topic phrases pulled from outlier titles come back as keywords. Take the topics only — never copy titles, thumbnails, or scripts. With includeComments=true, unresolved questions (unmet needs) mined from top-outlier comments land in gaps. Auth prefers YOUTUBE_API_KEY (spends no publish quota), else channel OAuth youtube.readonly. search.list costs 100 units per call, so at most 4 seeds.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                query: {
+                    type: 'string',
+                    description: 'Seed query — one line from the channel profile\'s topic area (e.g. "AI workflow automation"). Shared search-tool argument name',
+                },
+                extraQueries: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Extra seeds (max 3; 4 including query). Other phrasings of the same idea, or subtopics',
+                },
+                channel: SNS_CHANNEL_PROPERTY,
+                excludeChannelId: {
+                    type: 'string',
+                    description: 'Channel id to drop from results (UC…). Pass your own channel if you know it. With OAuth, mine is dropped automatically',
+                },
+                regionCode: {
+                    type: 'string',
+                    description: 'Two-letter search region code (default US). KR for Korea-only. The topic-scout skill calls twice, US and CN, by default',
+                },
+                language: {
+                    type: 'string',
+                    description: 'Relevance language (default en). zh for the Chinese market, ko for Korea-only',
+                },
+                publishedAfterDays: {
+                    type: 'number',
+                    description: 'Only videos within this many days feed the search (default 90, 7-365). The window onto "the market right now"',
+                },
+                channelLimit: {
+                    type: 'number',
+                    description: 'Competitor channels to scan (default 20, 5-40). The practical cap on the 30-50 the source video suggests',
+                },
+                videosPerChannel: {
+                    type: 'number',
+                    description: 'Recent uploads per channel (default 15, 5-30). The median sample',
+                },
+                minMultiplier: {
+                    type: 'number',
+                    description: 'Outlier multiplier floor (default 5), against the channel median',
+                },
+                minViews: {
+                    type: 'number',
+                    description: 'Outlier minimum views (default 1000). Filters out a tiny channel\'s 5×20 views',
+                },
+                duration: {
+                    type: 'string',
+                    enum: ['short', 'any'],
+                    default: 'short',
+                    description: 'short=searches under 4 minutes, outliers 3 minutes or less (short-form default) | any=any length',
+                },
+                includeComments: {
+                    type: 'boolean',
+                    description: 'Whether to mine question-shaped unmet needs from the top 5 outliers\' comments (default false — +5 quota)',
+                },
+                limit: {
+                    type: 'number',
+                    description: 'Topic phrases to return (default 15, 3-30). Shared search-tool argument name',
+                },
+            },
+            required: ['query'],
+        },
+    },
+    {
+        name: 'sns_issue_scout',
+        title: 'SNS issue scout (Threads · X · Instagram, SerpApi)',
+        annotations: HINT.read,
+        outputSchema: SNS_ISSUE_SCOUT_OUTPUT,
+        description: 'Collects what is being said right now about your topics on Threads, X, and Instagram, and tallies topic phrases (read-only). It runs SerpApi Google searches with site:threads.com / site:x.com / site:instagram.com over a recent window (recency, default week) per platform × seed, normalizes post URLs to shed duplicates, and returns as keywords the phrases co-occurring across several posts and platforms. **A different yardstick from youtube_topic_scout** — this lane has no engagement counts (likes, replies, views) and the order is Google relevance, so the result is a mention list of "what is being said about this now", not "what blew up". The score is mention count × platform weight, so never mix it into the same table as the YouTube multipliers. With includeTrending (default true), Google Trends trending searches (for the gl country) attach as trending, and entries overlapping the seeds or top phrases are flagged matchesSeed. Credits = platforms × seeds × pagesPerQuery + 1 for trending (default 3×1×1+1=4, free tier 250/month) — do not repeat the same seed on the same day. Snippets may not be verbatim post text (Threads sometimes returns an auto-generated topic summary as the snippet) — open the URL to verify before quoting.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                query: {
+                    type: 'string',
+                    description: 'Seed query — a short noun phrase from the channel profile\'s topic area (e.g. "AI automation"). Shared search-tool argument name',
+                },
+                extraQueries: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Extra seeds (max 3; 4 including query). Other phrasings or subtopics — each seed spends as many credits as there are platforms',
+                },
+                platforms: {
+                    type: 'array',
+                    items: { type: 'string', enum: ['threads', 'x', 'instagram'] },
+                    description: 'Platforms to scan (default: all three). Narrowing saves that many credits',
+                },
+                recency: {
+                    type: 'string',
+                    enum: ['day', 'week', 'month'],
+                    description: 'Recency window (default week). day-week for "issues right now", month for a material pool',
+                },
+                gl: { type: 'string', description: 'Two-letter country code (default kr) — the search region and the trending-searches country' },
+                hl: { type: 'string', description: 'Language code (default ko)' },
+                pagesPerQuery: {
+                    type: 'number',
+                    description: 'Google pages to turn per platform × seed (default 1, max 2 — 10 results per page). Setting 2 doubles the credits',
+                },
+                includeTrending: {
+                    type: 'boolean',
+                    description: 'Whether to include Google Trends trending searches (default true, +1 credit). Set false if you will call serp_trending_now separately',
+                },
+                trendingHours: {
+                    type: 'number',
+                    enum: [4, 24, 48, 168],
+                    description: 'Trending window (default 24). 4 | 24 | 48 | 168',
+                },
+                limit: { type: 'number', description: 'Topic phrases to return (default 15, 3-30). Shared search-tool argument name' },
+            },
+            required: ['query'],
+        },
+    },
+    // ── Threads growth lookups (read-only tools for the grow-threads skill — no side effects) ─────
+    // The insights/keyword-search scopes may be missing from publish-issued tokens —
+    // when they are, the server returns the error with reissue guidance (token-setup.md).
+    {
+        name: 'threads_insights',
+        title: 'Threads performance insights',
+        annotations: HINT.read,
+        outputSchema: THREADS_INSIGHTS_OUTPUT,
+        description: 'Threads performance insights — returns account metrics (follower count, profile-view time series, window totals of likes/replies/reposts/quotes) and per-recent-root-post metrics in one call (read-only, no side effects). The grow-threads loop snapshots this every tick to judge tick-over-tick change and which post types are landing — storing and comparing is the caller\'s job in data/<channel>/growth/threads/. The views/shares metrics are values the platform marks "in development" and may be off, and followers_count arrives as the current value only (window-independent). **Needs the threads_manage_insights scope** — tokens issued for publishing may lack it; when missing, the error carries reissue guidance. Each post costs one /insights round trip, so API calls grow with postLimit.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                days: {
+                    type: 'number',
+                    description: 'Days to aggregate account metrics (default 7, 1-90 — a platform constraint bars data before 2024-04-13)',
+                },
+                postLimit: {
+                    type: 'number',
+                    description: 'Recent root posts to attach metrics to (default 10, max 25; 0 = account metrics only)',
+                },
+                channel: SNS_CHANNEL_PROPERTY,
+            },
+        },
+    },
+    {
+        name: 'threads_search',
+        title: 'Threads keyword search',
+        annotations: HINT.read,
+        outputSchema: THREADS_SEARCH_OUTPUT,
+        description: 'Threads public-post keyword search — finds other people\'s public conversations by the channel\'s interest keywords and picks engagement candidates (read-only, no side effects). Pass a result\'s postId as threads_publish replyToId to join that post with a reply (the reply publish itself follows the publish tool\'s approval policy). For conversation joining, pick fresh posts with searchType=RECENT + sinceHours — replies on stale posts get no reach. **Needs the threads_keyword_search scope** (when missing, the error carries reissue guidance). Quota: 2,200 per account per rolling 24 hours (queries with no results don\'t count) — 1-3 keywords per tick is plenty. Empty results on sensitive/harmful keywords are normal behavior, and before the app\'s advanced-access approval only your own account\'s posts are searchable.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                query: { type: 'string', description: 'Search keyword (an interest keyword from the channel growth-plan)' },
+                searchType: {
+                    type: 'string',
+                    enum: ['TOP', 'RECENT'],
+                    description: 'TOP=by popularity (default) | RECENT=newest first — RECENT recommended for conversation joining',
+                },
+                searchMode: {
+                    type: 'string',
+                    enum: ['KEYWORD', 'TAG'],
+                    description: 'KEYWORD=body search (default) | TAG=match the topic tag attached to posts',
+                },
+                sinceHours: { type: 'number', description: 'Only posts within this many hours (e.g. 24 — best combined with RECENT)' },
+                limit: { type: 'number', description: 'Result count (default 25, max 100)' },
+                channel: SNS_CHANNEL_PROPERTY,
+            },
+            required: ['query'],
+        },
     },
 ];
 /**
- * 채널별 게시 툴 → 필요한 자격증명 채널 매핑 — index.ts 가 ListTools 시점에
- * 자격증명 파일이 존재하는 채널의 툴만 노출하는 데 쓴다 (핸들러는 전부 유지 —
- * 미설정 채널을 직접 호출하면 명시적 토큰 부재 에러가 반환된다).
+ * Per-platform publish tool → required credential platform — index.ts uses this
+ * at ListTools time to expose only tools whose platform has a credentials file
+ * (default tokens ∪ channel directories). All handlers stay registered — calling
+ * an unconfigured platform directly returns an explicit missing-token error.
  */
-export const SNS_CHANNEL_BY_TOOL = {
+export const SNS_PLATFORM_BY_TOOL = {
     threads_publish: 'THREADS',
+    threads_insights: 'THREADS',
+    threads_search: 'THREADS',
     instagram_publish: 'INSTAGRAM',
+    instagram_insights: 'INSTAGRAM',
     facebook_publish: 'FACEBOOK',
     facebook_comment: 'FACEBOOK',
     youtube_publish: 'YOUTUBE',
+    youtube_insights: 'YOUTUBE',
 };
