@@ -84516,7 +84516,7 @@ ADVANCED CONTROLS (music_generate_advanced):
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.11.0" },
+  { name: "social-flow", version: "0.12.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
