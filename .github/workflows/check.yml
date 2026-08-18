@@ -1,0 +1,30 @@
+# Contract tests + style-gate self-test. Nothing here calls an external API —
+# the suite verifies the tool surface (schemas, routing, enums, path safety) and
+# the Korean style checker's own fixtures, so it runs green with zero keys set.
+name: check
+
+on:
+  push:
+    branches: [main, staging, dev]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      # build (tsc) + the 573 contract tests
+      - run: npm ci
+        working-directory: server
+      - run: npm run check
+        working-directory: server
+
+      # the Korean copy gate verifies its own rules against built-in fixtures
+      - run: python3 skills/platform-guide/references/check-style.py --selftest
