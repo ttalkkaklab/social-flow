@@ -312,13 +312,12 @@ footer a { color: var(--accent); }
   <div class="step">
     <div class="step-num">1</div>
     <div class="step-body">
-      <h3>내려받고 서버를 빌드한다</h3>
-      <p>이 한 단계를 빼먹으면 플러그인은 붙어도 도구가 하나도 안 보인다. 저장소에는 빌드 결과까지 들어 있지만 실행에 필요한 라이브러리(<code>node_modules</code>)는 들어 있지 않기 때문이다.</p>
-<pre><code>git clone https://github.com/ttalkkaklab/social-flow.git
-cd social-flow/server
-npm install &amp;&amp; npm run build</code></pre>
-      <p><code>npm run check</code> 로 바꿔 실행하면 빌드와 함께 자체 점검 테스트도 돈다. 외부 API 를 부르지 않아 키가 없어도 통과한다.</p>
-      <div class="note"><strong>공개 저장소다.</strong> 인증 없이 <code>git clone</code> 이 되고 라이선스는 Apache 2.0 이다. 이미 내려받은 폴더가 있으면 그걸 그대로 쓰면 된다.</div>
+      <h3>마켓플레이스에서 설치한다</h3>
+      <p>Claude Code 안에서 두 줄이면 끝난다. 서버가 의존성까지 품은 단일 번들이라 내려받아 빌드할 것이 없다.</p>
+<pre><code><span class="p">/plugin marketplace add</span> ttalkkaklab/social-flow
+<span class="p">/plugin install</span> social-flow@social-flow</code></pre>
+      <p>터미널이 편하면 <code>claude plugin marketplace add ttalkkaklab/social-flow</code> 뒤에 <code>claude plugin install social-flow@social-flow</code> — 같은 일을 한다.</p>
+      <div class="note"><strong>공개 저장소다.</strong> 인증 없이 받아지고 라이선스는 Apache 2.0 이다.</div>
     </div>
   </div>
 
@@ -336,12 +335,11 @@ claude</code></pre>
   <div class="step">
     <div class="step-num">3</div>
     <div class="step-body">
-      <h3>플러그인을 붙인다</h3>
-      <p>내려받은 폴더를 가리켜 Claude Code 를 띄우면 그 세션에서 바로 쓸 수 있다.</p>
-<pre><code>claude --plugin-dir ~/social-flow</code></pre>
-      <p>매번 플래그를 붙이기 싫으면 로컬 마켓플레이스로 등록해 둔다. Claude Code 안에서 두 줄을 친다 — 뒤 줄의 <code>@</code> 뒤는 마켓플레이스 이름이고, 이 저장소의 <code>.claude-plugin/marketplace.json</code> 에 <code>social-flow</code> 로 적혀 있다.</p>
-<pre><code><span class="p">/plugin marketplace add</span> ~/social-flow
-<span class="p">/plugin install</span> social-flow@social-flow</code></pre>
+      <h3>(선택) 코드를 고치며 쓰려면 클론으로 붙인다</h3>
+      <p>스킬이나 서버를 직접 손볼 사람만 해당한다. 클론을 가리켜 띄우면 그 세션은 클론의 코드를 쓴다.</p>
+<pre><code>git clone https://github.com/ttalkkaklab/social-flow.git ~/social-flow
+claude --plugin-dir ~/social-flow</code></pre>
+      <p>실행은 이대로 되고, <code>server/src</code> 를 고쳤을 때만 <code>cd ~/social-flow/server &amp;&amp; npm install &amp;&amp; npm run check</code> 로 빌드와 자체 점검 테스트를 돌린다. 외부 API 를 부르지 않아 키가 없어도 통과한다.</p>
     </div>
   </div>
 
@@ -577,9 +575,10 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
 
   <div class="faq">
     <h3><code>/mcp</code> 에 social-flow 가 안 보인다</h3>
-    <p>대개 <code>npm install</code> 을 안 한 경우다. 저장소에는 빌드 결과만 있고 라이브러리는 들어 있지 않다. 직접 실행해 보면 원인이 바로 나온다.</p>
-<pre><code>cd ~/social-flow &amp;&amp; node server/dist/bundle.js</code></pre>
-    <p><code>social-flow MCP server started</code> 가 찍히면 서버는 멀쩡하니 플러그인 등록 쪽을 다시 본다.</p>
+    <p>서버부터 직접 띄워 본다 — 원인이 바로 나온다. 마켓플레이스로 깔았으면 설치 캐시에서, 클론이면 클론 폴더에서.</p>
+<pre><code>node ~/.claude/plugins/cache/social-flow/social-flow/*/server/dist/bundle.js
+<span class="c"># 클론이면: cd ~/social-flow &amp;&amp; node server/dist/bundle.js</span></code></pre>
+    <p><code>social-flow MCP server started</code> 가 찍히면 서버는 멀쩡하니 플러그인 등록 쪽을 다시 본다. 구버전 Claude Code 에서 <code>claude plugin update social-flow</code> 가 not found 를 내면 <code>uninstall</code> 뒤 <code>install</code> 로 다시 깐다.</p>
   </div>
 
   <div class="faq">
