@@ -39,7 +39,8 @@
 #                         A sound heard only during that seg, plus BGM gating. The audio file can be
 #                         wav or mp4 (a video contributes its own sound); it can be empty with just
 #                         bgm set to off. Times are keyed to the visual's appearance, not sentence boundaries
-#   <workdir>/outro.mp4 : (optional) shared outro — joined with xfade+acrossfade when present
+#   <workdir>/outro.mp4 : (optional) shared outro — joined with a black fade when present
+#                         (total length = feature + outro)
 #   <workdir>/fonts/    : (optional) subtitle fonts ttf/otf — libass can't read woff2
 # Output: <workdir>/reel.mp4 (clean master without subtitles — for platforms that take a separate subtitle file)
 #         <workdir>/reel-sub.mp4 (burned-in copy — for platforms with no subtitle-file path, skipped when BURN=0)
@@ -82,7 +83,6 @@ DUCK_RELEASE=${DUCK_RELEASE:-250}
 SFX_VOL=${SFX_VOL:-0.85}           # per-segment sfx volume (sfx.tsv)
 BGM_GATE_R=${BGM_GATE_R:-0.30}     # ramp around BGM-gated spans — a hard cut sounds chopped
 XFADE=${XFADE:-0.6}                # feature↔outro transition length
-XFADE_T=${XFADE_T:-fadeblack}      # transition type — plain fade double-exposes the last card (person close-up) with the logo
 REVEAL_D=${REVEAL_D:-0.35}         # max reveal fade length (shrinks to fit a shorter pause)
 REVEAL_GAP=${REVEAL_GAP:-0.05}     # finish appearing this long before the next sentence starts
 REVEAL_LEAD=${REVEAL_LEAD:-0.30}   # fallback lead — used only when no pause was found (char-count proportion)
@@ -166,7 +166,7 @@ probe_canvas() {
 [ -f frame.html ] && probe_canvas frame.html
 
 # Asset precheck: strictness differs per asset — decided by how the filter graph consumes it.
-#   joined asset (outro)     straight into xfade  → exact match. ffmpeg dies otherwise
+#   joined asset (outro)     straight into concat → exact match. ffmpeg dies otherwise
 #   overlay PNG (after ::)   overlay=0:0          → exact match. Misaligned means silently shifted
 #   b-roll/background        scale=increase,crop  → orientation only. Any resolution accepted
 # Requiring exact match on b-roll makes healthy episodes warn — 720x1280 b-roll exists in practice.
@@ -718,28 +718,53 @@ fi
 ENC=(-c:v libx264 -profile:v high -level 4.1 -preset slow -crf 19 -pix_fmt yuv420p
      -g $((FPS*2)) -keyint_min "$FPS" -sc_threshold 0 -r "$FPS"
      -c:a aac -b:a 192k -ar 48000 -ac 2 -movflags +faststart)
-OFF=""
-[ -f "$OUTRO_ASSET" ] && OFF=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
+# The splice runs in two steps — **the audio is built in a separate ffmpeg run.**
+# Putting a video chain and an audio chain in one filter_complex makes ffmpeg 7.1.1's
+# scheduler drop audio frames (measured 2026-08-19). ~200 AAC frames then pile up on a
+# single PTS, the sound runs 1.28s ahead of the picture from the 4s mark on, and the
+# outro vanishes entirely while the report still says "spliced". Freezing the audio to a
+# file first and feeding it to the render with -map leaves one chain, which never hits it.
+#
+# The transition does not use xfade. xfade renumbers the tail frames' PTS from 0 (measured:
+# 103.9→104.5 is followed by 0→3.33), so the encoder throws everything after the transition
+# away. setpts, fps_mode and timebase normalisation all fail to fix it because the filter
+# reinit resets the frame counter too. The transition goes through black anyway, so pulling
+# it apart with no overlap looks the same — fade the feature's tail down to black, fade the
+# outro's head up from it, concat. That makes the total feature + outro (not the
+# feature + outro − XFADE of the xfade era).
+AUDSRC="work/mix.wav"; VDUR="$VT"; FO=""
+if [ -f "$OUTRO_ASSET" ]; then
+  OD=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$OUTRO_ASSET")
+  FO=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
+  VDUR=$(awk -v t="$VT" -v o="$OD" 'BEGIN{printf "%.6f", t+o}')
+  AFMT="aformat=sample_fmts=s16:sample_rates=48000:channel_layouts=stereo"
+  ffmpeg -y -v error -i work/mix.wav -i "$OUTRO_ASSET" -filter_complex "
+    [0:a]afade=t=out:st=$FO:d=$XFADE,$AFMT[ab];
+    [1:a]afade=t=in:st=0:d=$XFADE,$AFMT[ao];
+    [ab][ao]concat=n=2:v=0:a=1[a]
+  " -map "[a]" -c:a pcm_s16le work/asplice.wav
+  AUDSRC="work/asplice.wav"
+fi
 
 render() {                          # $1=output file  $2=subtitle filter (empty string = no burn-in)
-  local OUT="$1" SF="${2:-}" VSRC="[0:v]"
-  [ -n "$SF" ] && VSRC="[vsub]"
+  local OUT="$1" SF="${2:-}"
   if [ -f "$OUTRO_ASSET" ]; then
-    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -i "$OUTRO_ASSET" -filter_complex "
-      ${SF:+[0:v]$SF[vsub];}
-      ${VSRC}[2:v]xfade=transition=$XFADE_T:duration=$XFADE:offset=$OFF[v];
-      [1:a][2:a]acrossfade=d=$XFADE:c1=tri:c2=tri[a]
-    " -map "[v]" -map "[a]" "${ENC[@]}" "$OUT"
+    # Subtitles ride the feature only — the outro carries none, so SF goes on [0:v].
+    ffmpeg -y -v error -i work/video.mp4 -i "$AUDSRC" -i "$OUTRO_ASSET" -filter_complex "
+      [0:v]${SF:+$SF,}fade=t=out:st=$FO:d=$XFADE,setsar=1,format=yuv420p[vb];
+      [2:v]fade=t=in:st=0:d=$XFADE,setsar=1,format=yuv420p[vo];
+      [vb][vo]concat=n=2:v=1:a=0[v]
+    " -map "[v]" -map 1:a "${ENC[@]}" "$OUT"
   elif [ -n "$SF" ]; then
-    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -filter_complex "[0:v]$SF[v]" \
+    ffmpeg -y -v error -i work/video.mp4 -i "$AUDSRC" -filter_complex "[0:v]$SF[v]" \
       -map "[v]" -map 1:a "${ENC[@]}" "$OUT"
   else
-    ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -map 0:v -map 1:a "${ENC[@]}" "$OUT"
+    ffmpeg -y -v error -i work/video.mp4 -i "$AUDSRC" -map 0:v -map 1:a "${ENC[@]}" "$OUT"
   fi
 }
 
 render reel.mp4 ""
-if [ -f "$OUTRO_ASSET" ]; then say "── outro splice: xfade ${XFADE_T} ${XFADE}s @ ${OFF}s"
+if [ -f "$OUTRO_ASSET" ]; then say "── outro splice: black fade ${XFADE}s @ ${FO}s → total ${VDUR}s"
 else say "── no outro: muxing the main part alone"; fi
 
 rm -f reel-sub.mp4
@@ -759,6 +784,35 @@ RA=$(ffprobe -v error -select_streams a -show_entries stream=duration -of csv=p=
 LUFS=$(ffmpeg -hide_banner -i reel.mp4 -af loudnorm=I=-14:TP=-1:LRA=11:print_format=summary -f null - 2>&1 | sed -n 's/.*Input Integrated: *\(.*\)/\1/p')
 FSTART=$(xxd -l 48 reel.mp4 | grep -c moov || true)
 say "── reel.mp4: video ${RV}s / audio ${RA}s / loudness ${LUFS} / faststart $([ "$FSTART" -ge 1 ] && echo OK || echo unconfirmed)"
+
+# ── 13a) Splice hard gates — this is the spot where the report said "spliced" while the
+#    outro had silently gone missing (measured 2026-08-19). These exit 1, they don't warn.
+#    A defect that disappears quietly has to be caught by eye by the next person, and it
+#    usually gets caught after the episode is already published.
+#      ① Different video and audio durations mean one of the two got cut.
+#      ② A total that misses the expected duration means the outro dropped or the feature
+#         got truncated.
+#      ③ Audio packets sharing one timestamp (normal spacing 1024/48000 = 0.0213s) make
+#         players run the rest of the sound ahead of the picture.
+ptspile() {   # $1=file → number of audio packets spaced abnormally close
+  ffprobe -v error -select_streams a:0 -show_packets -of csv=p=0 \
+    -show_entries packet=pts_time "$1" \
+    | awk -F, 'NR>1{if($1-p<0.012) n++} {p=$1} END{print n+0}'
+}
+avgate() {    # $1=file $2=role
+  local F="$1" ROLE="$2" V A P
+  V=$(ffprobe -v error -select_streams v -show_entries stream=duration -of csv=p=0 "$F")
+  A=$(ffprobe -v error -select_streams a -show_entries stream=duration -of csv=p=0 "$F")
+  awk -v a="$V" -v b="$A" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<=0.05)}' \
+    || { say "✗ $ROLE: video ${V}s ≠ audio ${A}s — one of the two got cut"; exit 1; }
+  awk -v a="$V" -v b="$VDUR" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<=0.1)}' \
+    || { say "✗ $ROLE: duration ${V}s ≠ expected ${VDUR}s — the outro splice dropped or the feature got cut"; exit 1; }
+  P=$(ptspile "$F")
+  [ "$P" -eq 0 ] \
+    || { say "✗ $ROLE: ${P} audio packets share one timestamp — the sound will run ahead of the picture"; exit 1; }
+  say "── $ROLE splice check: duration ${V}s (expected ${VDUR}s) · A/V gap $(awk -v a="$V" -v b="$A" 'BEGIN{d=a-b; if(d<0)d=-d; printf "%.3f", d}')s · PTS pile-ups 0"
+}
+avgate reel.mp4 "reel.mp4"
 # The burn-in comes from the same source through the same filter chain, so its duration must match the
 # clean copy — a mismatch means one of the two files is a leftover from an older build (which ships a
 # different video to different platforms).
@@ -769,6 +823,7 @@ if [ -f reel-sub.mp4 ]; then
   else
     say "✗ reel-sub.mp4 duration ${SV}s ≠ reel.mp4 ${RV}s — not from the same build"; exit 1
   fi
+  avgate reel-sub.mp4 "reel-sub.mp4"
 fi
 # The subtitle file goes straight to the publish tools — if it's empty here, that only surfaces at publish
 if [ "$SUB" = "1" ]; then

@@ -553,27 +553,41 @@ describe('YouTube per-format caption contract (16:9 long-form lane)', () => {
   });
 });
 
-describe('Threads body-link contract', () => {
-  // Threads for video episodes goes out as one body-link post, not cover image
-  // + link reply (strategy change, 2026-08-14). The link preview card is
-  // media_type=TEXT only, hence exclusive with the image.
+describe('Threads post-media contract', () => {
+  // A video episode carries the video on the post itself (videoUrl), not as a
+  // reply and not as a bare link (user directive 2026-08-19). One media_type per
+  // post, so the three media fields are mutually exclusive.
   const th = () => byName.get('threads_publish');
   const props = () => th().inputSchema.properties;
+
+  it('takes a videoUrl argument (video on the post)', () => {
+    assert.equal(props().videoUrl?.format, 'uri', 'videoUrl missing or not uri format');
+  });
 
   it('takes a linkUrl argument (link preview card)', () => {
     assert.equal(props().linkUrl?.format, 'uri', 'linkUrl missing or not uri format');
   });
 
-  it('the linkUrl and imageUrl descriptions state they are mutually exclusive', () => {
+  it('all three media descriptions state they are mutually exclusive', () => {
     // sent together, the platform rejects at container creation — the schema description blocks it first
-    assert.match(props().linkUrl.description, /mutually exclusive/, 'no exclusivity note in the linkUrl description');
-    assert.match(props().imageUrl.description, /mutually exclusive/, 'no exclusivity note in the imageUrl description');
+    for (const k of ['imageUrl', 'videoUrl', 'linkUrl']) {
+      assert.match(props()[k].description, /mutually exclusive/, `no exclusivity note in the ${k} description`);
+    }
+  });
+
+  it('the videoUrl description asks for the burned-in copy', () => {
+    // Threads has no subtitle parameter, so a clean master ships without subtitles
+    assert.match(props().videoUrl.description, /subtitle-burned|burned-in/i, 'videoUrl does not ask for the burn-in');
   });
 
   it('the tool description does not fall back to the link-reply strategy', () => {
-    // if the old strategy ("cover image body + full-video link reply") lingers
-    // in the description, callers publish one more reply and the same link goes out twice
+    // if the old strategy ("body + full-video link reply") lingers in the
+    // description, callers publish one more reply and the video goes out twice
     assert.doesNotMatch(th().description, /link reply|the link in a reply/, 'the old link-reply strategy lingers in the description');
+  });
+
+  it('argument name matches IG (the video of a post = videoUrl)', () => {
+    assert.ok(byName.get('instagram_publish').inputSchema.properties.videoUrl, 'IG videoUrl has vanished');
   });
 
   it('argument name matches FB (the link of a text post = linkUrl)', () => {

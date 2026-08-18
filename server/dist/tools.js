@@ -1678,7 +1678,7 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         title: '⚠️ Threads publish (immediately public)',
         annotations: HINT.publish,
         outputSchema: publishOutput('postId', 'Threads post id — pass as replyToId to chain a follow-up reply'),
-        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). This tool supports text (with an optional link preview card) or a single image — the platform itself also does video and carousels, but this pipeline exports video to YouTube and Reels and drives traffic on Threads with a conversational body plus a video link (linkUrl). Video episodes attach no cover image — the link preview card takes that place, and one call completes the publish (the link is not added as a separate reply). Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive — one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -1686,11 +1686,16 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
                     type: 'string',
                     description: 'Final post body, ≤500 chars (≤1 hashtag recommended — ranking weight 0). Emoji count as their UTF-8 bytes on this platform, i.e. more than 1 char each',
                 },
-                imageUrl: { type: 'string', format: 'uri', description: 'One publicly reachable image URL (the platform crawls it — local paths won\'t work); mutually exclusive with linkUrl' },
+                imageUrl: { type: 'string', format: 'uri', description: 'One publicly reachable image URL (the platform crawls it — local paths won\'t work); mutually exclusive with videoUrl and linkUrl' },
+                videoUrl: {
+                    type: 'string',
+                    format: 'uri',
+                    description: 'One publicly reachable video URL (.mp4/.mov) carried by the post itself — mutually exclusive with imageUrl and linkUrl. **This is the default for video episodes.** Give the subtitle-burned cut: the Threads container takes no subtitle file, so burning them into the picture is the only way (same as IG reels). Video containers transcode, and the tool waits up to 2 minutes for FINISHED',
+                },
                 linkUrl: {
                     type: 'string',
                     format: 'uri',
-                    description: 'Link preview card URL attached to the post (the Reels/Shorts permalink for video episodes). Text posts only, so mutually exclusive with imageUrl; writing the same URL in the caption still counts as one link to the platform (cap 5)',
+                    description: 'Link preview card URL attached to the post. Text posts only, so mutually exclusive with imageUrl and videoUrl; writing the same URL in the caption still counts as one link to the platform (cap 5). **Meta\'s own URLs (an IG reels permalink) come back 400** — put those in the body text instead',
                 },
                 replyToId: { type: 'string', description: 'Publish as a reply to this post id (own reply chain, or joining someone else\'s post)' },
                 channel: SNS_CHANNEL_PROPERTY,
