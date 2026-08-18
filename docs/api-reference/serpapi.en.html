@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SerpApi — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="serpapi.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="serpapi.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>SerpApi</div>
+
+<header class="hero">
+  <div class="kicker">SERPAPI</div>
+  <h1>SerpApi — reading search results</h1>
+  <p class="sub">Google web, news, and images plus Naver all come from one endpoint, split by the <code>engine</code> parameter. Parameter names and <strong>sort value schemes differ per engine</strong> — the same "newest first" is <code>1</code> on one engine and <code>dd</code> on another.</p>
+  <div class="meta">
+    <span>Official <a href="https://serpapi.com/search-api">Google</a> · <a href="https://serpapi.com/google-news-api">Google News</a> · <a href="https://serpapi.com/naver-search-api">Naver</a></span>
+    <span>Key <code>SERPAPI_API_KEY</code></span>
+    <span>Implementation <code>server/src/serp-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#common">Shared contract</a></li>
+    <li><a href="#google">engine=google</a></li>
+    <li><a href="#news">engine=google_news</a></li>
+    <li><a href="#naver">engine=naver</a></li>
+    <li><a href="#images">engine=google_images</a></li>
+    <li><a href="#trending">Trending searches · SNS issue scout</a></li>
+    <li><a href="#errors">Errors and quota</a></li>
+    <li><a href="#impl">Implementation vs. contract</a></li>
+  </ol>
+</nav>
+
+<section id="common">
+  <h2>1. Shared contract</h2>
+  <pre><code>GET https://serpapi.com/search?engine={engine}&api_key={key}&output=json&…</code></pre>
+  <div class="danger">
+    <strong>The key only travels as a URL query param.</strong> Failure paths like timeouts and unreachable hosts put the URL in the error body, so without masking the API key lands straight in the LLM context. This server applies <code>api_key=[^&amp;\s"']+ → api_key=***</code> to every piece of text going out.
+  </div>
+</section>
+
+<section id="google">
+  <h2>2. <code>engine=google</code> — web search</h2>
+  <p class="tool-line">Tool <code>serp_web_search</code></p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Parameter</th><th>Meaning</th><th>Exposed as</th></tr></thead>
+    <tbody>
+      <tr><td><code>q</code></td><td>Query. Supports the <code>site:</code>, <code>inurl:</code>, <code>intitle:</code>, <code>filetype:</code> operators</td><td>○ — the tool argument is <code>query</code></td></tr>
+      <tr><td><code>gl</code></td><td>Two-letter country code (<code>kr</code>, <code>us</code>, <code>vn</code>)</td><td>○</td></tr>
+      <tr><td><code>hl</code></td><td>Interface language code</td><td>○</td></tr>
+      <tr><td><code>location</code></td><td>City-level origin for results. Can't be combined with <code>uule</code>, <code>lat</code>, <code>lon</code></td><td>○</td></tr>
+      <tr><td><code>start</code></td><td>Result offset — <strong>not a page number</strong>. Counts from 0, and pages break every 10</td><td>△ — taken as <code>page</code> and converted to <code>(page-1)×10</code></td></tr>
+      <tr><td><code>num</code></td><td><strong>A no-op on this engine</strong> — SerpApi doesn't forward it to Google (below)</td><td>Not sent. The tool argument <code>limit</code> (1–10) is a server-side slice</td></tr>
+      <tr><td><code>tbs</code></td><td>Advanced filters, including date range</td><td>△ — taken as <code>recency</code> and converted to <code>qdr:h|d|w|m|y</code></td></tr>
+      <tr><td><code>google_domain</code>·<code>tbm</code>·<code>device</code>·<code>safe</code>·<code>no_cache</code>·<code>async</code></td><td>Domain, search type, device, safe search, cache, async</td><td>Not exposed</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong><code>num</code> is a no-op on this engine.</strong> SerpApi doesn't forward it to Google — measured 2026-08-11, and three things confirm it together.
+    <ul>
+      <li>The response's <code>search_parameters</code> has no <code>num</code> (only <code>engine·q·google_domain·hl·gl·start·device</code>).</li>
+      <li>It doesn't show up in <code>search_metadata.google_url</code> either.</li>
+      <li><code>serpapi_pagination.current</code> counts <code>start</code> 0/10/20 as pages 1/2/3 — <strong>page boundaries fall every 10</strong> (the actual <code>organic_results</code> wobbles between 5 and 10 items as ad and video blocks push things out).</li>
+    </ul>
+    So don't tie the offset unit to <code>limit</code>. Set the offset in multiples of 20 for <code>limit=20</code> and <code>page=2</code> points at Google's page 3, <strong>wiping out page 2 (items 11–20) entirely</strong>. The offset is always in units of 10, and the <code>limit</code> cap matches the real page size of 10 — no promising what can't be delivered.
+    <p>Each result's <code>position</code> is rewritten as a <strong>global rank</strong> by adding <code>(page-1)×10</code>. The original restarts at 1 on every page, so left alone, page 2's #1 reads as the same rank as page 1's #1. With a global rank the model notices when Google reshuffles the same link across a page boundary.</p>
+    </div>
+  <h3>What the slimming keeps</h3>
+  <p>The raw response is 20–60KB per search. Keeping only what can be cited as evidence cuts it to 2–4KB.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Field</th><th>Sub-keys kept</th></tr></thead>
+    <tbody>
+      <tr><td><code>search_information.total_results</code></td><td>—</td></tr>
+      <tr><td><code>answer_box</code></td><td><code>type</code> <code>title</code> <code>answer</code> <code>snippet</code> <code>link</code></td></tr>
+      <tr><td><code>knowledge_graph</code></td><td><code>title</code> <code>type</code> <code>description</code> <code>source</code> <code>website</code></td></tr>
+      <tr><td><code>organic_results</code></td><td><code>position</code> <code>title</code> <code>link</code> <code>snippet</code> <code>date</code> <code>source</code></td></tr>
+      <tr><td><code>related_questions</code></td><td><code>question</code> <code>snippet</code> <code>link</code> (top 4)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Thrown away: ads, inline images and videos, pagination metadata, <code>serpapi_*</code> internal links, thumbnail URLs. None of it helps fact-checking, and all of it is most of the response.</p>
+</section>
+
+<section id="news">
+  <h2>3. <code>engine=google_news</code> — news</h2>
+  <p class="tool-line">Tool <code>serp_news_search</code></p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Parameter</th><th>Meaning</th><th>Exposed as</th></tr></thead>
+    <tbody>
+      <tr><td><code>q</code> · <code>gl</code> · <code>hl</code></td><td>Query · country · language</td><td>○</td></tr>
+      <tr><td><code>so</code></td><td>Sort — <code>0</code>=relevance (default) · <code>1</code>=date. <strong>Can't be used with <code>q</code></strong></td><td>Not exposed (warning below)</td></tr>
+      <tr><td><code>topic_token</code>·<code>publication_token</code>·<code>story_token</code>·<code>section_token</code></td><td>Token-based browsing</td><td>Not exposed</td></tr>
+      <tr><td><code>num</code> · <code>start</code></td><td><strong>Absent</strong> — this engine has no offset pagination</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>With no <code>num</code>, limiting the result count is a server-side slice.</strong> <code>limit</code> doesn't shrink the request, only what comes <em>back</em> — billing is one search either way. Whatever gets cut is disclosed in the response's <code>note</code>.
+  </div>
+  <div class="danger">
+    <strong>The first item in <code>news_results</code> may not be an article but a bundle carrying <code>stories[]</code>.</strong> Measured 2026-08-11: <code>{"position":1,"title":"주요 뉴스","stories":[4 items]}</code> (the title means "top news"). Drop it because it has no <code>link</code> and the 4 articles inside vanish with it — and those are the <strong>freshest</strong> items in the response. Recency checking is this tool's reason to exist, and the newest top-ranked articles were the ones disappearing. Peel off the header, flatten the articles inside, keep them.
+  </div>
+</section>
+
+<section id="naver">
+  <h2>4. <code>engine=naver</code> — Naver</h2>
+  <p class="tool-line">Tool <code>serp_naver_search</code></p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Parameter</th><th>Value</th><th>Tool argument</th></tr></thead>
+    <tbody>
+      <tr><td><code>query</code></td><td>Query. Supports <code>NOT</code>, <code>OR</code>, <code>site:</code></td><td><code>query</code></td></tr>
+      <tr><td><code>where</code></td><td><code>nexearch</code> (default) · <code>web</code> · <code>news</code> · <code>video</code> · <code>image</code></td><td><code>where</code> — web (default) · news · image · video</td></tr>
+      <tr><td><code>page</code> · <code>start</code></td><td>Page number · offset</td><td><code>page</code></td></tr>
+      <tr><td><code>sort_by</code></td><td><strong>The value scheme differs by where</strong> (below)</td><td><code>sort</code></td></tr>
+      <tr><td><code>period</code></td><td>Date filter — <code>1h</code>·<code>1d</code>·<code>1w</code>·<code>1m</code>·<code>3m</code>·<code>6m</code>·<code>1y</code></td><td><code>period</code> — a wrong value is a 400</td></tr>
+      <tr><td><code>num</code></td><td>Image search only, <strong>defaults to 50</strong> (it applies even unsent)</td><td>We send <code>num=10</code> <strong>explicitly</strong> to match the stride — unsent, 48 items arrive against a stride of 10 and 38 came back duplicated (measured)</td></tr>
+      <tr><td><code>page</code> stride</td><td>Differs per where — measured: web 15 · news 10 · video 48 (Naver's own pagination proposes <code>start=49</code>) · image 10</td><td>We ignore SerpApi's <code>page</code> argument and compute <code>start</code> ourselves (the documented web formula makes page=2 a no-op)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong>Pagination's invariant is "items per call = stride".</strong> When they diverge, pages silently overlap (chunk &gt; stride) or skip (chunk &lt; stride). For <code>image</code> we match the chunk to the stride with <code>num</code>; where <code>num</code> has no effect we clamp <code>limit</code> to the stride (and say so in <code>note</code>).
+    <p><code>where=video</code> alone still <strong>overlaps by about 10 items</strong> at page boundaries even with the stride matched — Naver reshuffles results per page (within a page it's a unique 48 of 48 and the boundaries do connect, so it isn't our stride math). A stateless server can't remember the previous page, so we can't remove it; the response's <code>note</code> says to dedupe by link.</p>
+  </div>
+  <div class="danger">
+    <strong><code>sort_by</code> takes different values depending on <code>where</code>.</strong>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th><code>where</code></th><th>Relevance</th><th>Newest</th><th>Oldest</th></tr></thead>
+      <tbody>
+        <tr><td><code>news</code></td><td><code>0</code> (default)</td><td><code>1</code></td><td><code>2</code></td></tr>
+        <tr><td>everything else (<code>web</code> …)</td><td><code>r</code> (default)</td><td><code>dd</code></td><td>—</td></tr>
+      </tbody>
+    </table>
+    </div>
+    Send <code>dd</code> with <code>where=news</code> and the sort simply doesn't apply. It's <strong>silently ignored</strong>, not an error — so if you trust that results came back newest-first and pull recency facts from them, you end up citing old articles as new.
+  </div>
+  <h3>Result array key names — the docs and reality disagree</h3>
+  <div class="danger">
+    <strong>SerpApi's docs say <code>where=web</code> returns <code>web_results</code>, but what actually arrives is <code>organic_results</code> (measured).</strong>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th><code>where</code></th><th>Docs</th><th>Actual response key</th></tr></thead>
+      <tbody>
+        <tr><td><code>web</code></td><td><code>web_results</code></td><td><strong><code>organic_results</code></strong> (<code>position</code> <code>title</code> <code>link</code> <code>displayed_link</code> <code>snippet</code> <code>related_results</code>)</td></tr>
+        <tr><td><code>news</code></td><td><code>news_results</code></td><td><code>news_results</code> ✓</td></tr>
+        <tr><td><code>nexearch</code></td><td>Several arrays</td><td><code>web_results</code> · <code>ads_results</code> · <code>inline_images_results</code></td></tr>
+        <tr><td><code>image</code></td><td><code>inline_images_results</code></td><td><strong><code>images_results</code></strong> (<code>title</code> <code>original</code> <code>thumbnail</code> <code>width</code> <code>height</code> <code>source</code> <code>where</code> <code>link</code>)</td></tr>
+        <tr><td><code>video</code></td><td><code>inline_videos_results</code></td><td><strong><code>video_results</code></strong> (<code>position</code> <code>title</code> <code>link</code> <code>duration</code> <code>origin</code> <code>channel</code> <code>publish_date</code> <code>views</code> <code>thumbnail</code>)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    This server <strong>checks every candidate key</strong>. An implementation that read only <code>web_results</code> returned "no results" every single time on the default path (<code>where=web</code>), and that response was indistinguishable from <em>genuinely having no results</em>, so the model gave up searching — the kind of defect that goes wrong quietly, with no error and no exception. To keep <code>image</code> and <code>video</code> out of the same trap, we read the measured key first and fall back to the documented one.
+  </div>
+  <div class="danger">
+    <strong><code>where=news</code> nests the date and the outlet under <code>news_info</code>.</strong> Read only the top-level <code>date</code> and <code>source</code> and both disappear from news results — recency checking is the reason to use this tool as a news source, it's the reason to attach <code>period</code> and <code>sort=latest</code>, and yet the response gives you no way to confirm the sort applied. The real structure (measured): <code>news_info.news_date</code> <code>"2시간 전"</code> ("2 hours ago") · <code>news_info.press_name</code> <code>"이데일리"</code> (the outlet's name). Measure the array key but skip the item fields, and you walk into this one.
+  </div>
+  <div class="warn">
+    <strong>Screen-reader labels come mixed into the text.</strong> On <code>where=video</code>, <code>title</code>, <code>origin</code>, and <code>channel</code> end with <code>새 창 열림</code> ("opens in a new window") — as in <code>"너만몰라TV새 창 열림"</code>. It's accessibility text from the scraped page, and left in, the model reads it as part of the channel name and copies it into citations. The server strips it.
+  </div>
+</section>
+
+<section id="images">
+  <h2>5. <code>engine=google_images</code> — images</h2>
+  <p class="tool-line">Tool <code>serp_image_search</code></p>
+  <p>Use it to study reference compositions, check what something really looks like (a product, a place), and gather visual evidence for generation prompts. <strong>Frames you're going to make yourself aren't found with this tool, they're generated</strong> — the default path is the free on-device <code>image_local_generate</code>, and frames with text on them or anything needing high quality go to <a href="openai-images.en.html"><code>gpt_image_text2img</code></a>. Generated output carries no rights problem.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Parameter</th><th>Value</th><th>Tool argument</th></tr></thead>
+    <tbody>
+      <tr><td><code>q</code></td><td>Query</td><td><code>query</code></td></tr>
+      <tr><td><code>ijn</code></td><td>Page number — <strong>0-based</strong>, max 99. One page is 100 items</td><td><code>page</code> (taken from 1, converted by −1)</td></tr>
+      <tr><td><code>imgsz</code></td><td><code>l</code>·<code>m</code>·<code>i</code>·<code>2mp</code>–<code>70mp</code></td><td><code>size</code> — <code>large</code>·<code>medium</code>·<code>icon</code>·<code>2mp</code>·<code>4mp</code>·<code>8mp</code>·<code>15mp</code></td></tr>
+      <tr><td><code>imgar</code></td><td><code>s</code>·<code>t</code>·<code>w</code>·<code>xw</code></td><td><code>aspect</code> — <code>square</code>·<code>tall</code>·<code>wide</code>·<code>panoramic</code></td></tr>
+      <tr><td><code>image_type</code></td><td><code>photo</code>·<code>clipart</code>·<code>lineart</code>·<code>animated</code>·<code>face</code></td><td><code>imageType</code> (same values)</td></tr>
+      <tr><td><code>licenses</code></td><td><code>f</code>·<code>fc</code>·<code>fm</code>·<code>fmc</code>·<code>cl</code>·<code>ol</code></td><td><code>license</code> — <code>free</code>·<code>commercial</code>·<code>modify</code>·<code>modify_commercial</code>·<code>creative_commons</code></td></tr>
+      <tr><td><code>image_color</code></td><td><code>bw</code>·<code>trans</code>· 12 colors</td><td><code>color</code> (same values)</td></tr>
+      <tr><td><code>safe</code></td><td><code>active</code> · <code>off</code></td><td><code>safe</code> (boolean, on by default)</td></tr>
+      <tr><td><code>num</code></td><td><strong>Absent</strong> — this engine has no result-count parameter</td><td><code>limit</code> — a server-side slice</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>Don't assemble these filters into <code>tbs</code>.</strong> SerpApi takes dedicated parameters for them, and the official docs say those <strong>override</strong> the matching <code>tbs</code> components (<code>itp</code>, <code>ic</code>, <code>sur</code>). Send both and the response won't tell you which one won. Aspect ratio especially: the old <code>tbs=iar</code> was discontinued by Google and became <code>imgar</code>.
+  </div>
+  <div class="warn">
+    <strong>Results with no license filter are images whose rights you haven't checked.</strong> For research or verification, no filter is fine — but if you're looking for material to put in a post, always set <code>license</code>: <code>commercial</code> or above, and <code>modify_commercial</code> if you'll edit it. With the filter on, the response carries <code>license_details_url</code> so you have the evidence on file.
+  </div>
+  <h3>What the slimming keeps</h3>
+  <p>From <code>images_results</code> we keep <code>position</code> <code>title</code> <code>original</code> (→<code>imageUrl</code>) <code>thumbnail</code> <code>original_width/height</code> <code>source</code> <code>link</code> <code>license_details_url</code>, plus up to 6 <code>suggested_searches</code> names. Thrown away: internal links like <code>related_content_id</code> and <code>serpapi_related_content_link</code>, <code>source_logo</code>, shopping results.</p>
+</section>
+
+<section id="trending">
+  <h2>6. <code>engine=google_trends_trending_now</code> — trending searches</h2>
+  <p class="tool-line">Tools <code>serp_trending_now</code> · <code>sns_issue_scout</code> (<code>includeTrending</code>)</p>
+  <p>Answers "what's rising in this country right now", with search volume and rate of increase. The engine has no query (<code>q</code>), so you pick a country with <code>geo</code> and a window with <code>hours</code>. Measured 2026-08-18 (KR, 24 hours): 159 items, mostly celebrity and incident queries — only the ones overlapping your channel's subject count as timely material.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Parameter</th><th>Value</th><th>Tool argument</th></tr></thead>
+    <tbody>
+      <tr><td><code>geo</code></td><td>Country code (defaults to US)</td><td><code>geo</code> — server default <code>KR</code></td></tr>
+      <tr><td><code>hours</code></td><td><code>4</code>·<code>24</code>·<code>48</code>·<code>168</code> — the four windows Google predefines</td><td><code>hours</code> (same, default 24)</td></tr>
+      <tr><td><code>category_id</code></td><td>Integer — 3 Business and Finance · 4 Entertainment · 7 Health · 14 Politics · 16 Shopping · 17 Sports · 18 Technology · 19 Travel …</td><td><code>categoryId</code></td></tr>
+      <tr><td><code>only_active</code></td><td><code>true</code> — only what's still rising</td><td><code>onlyActive</code> (boolean)</td></tr>
+      <tr><td><code>hl</code></td><td>Language — only affects how category names are spelled</td><td><code>hl</code></td></tr>
+      <tr><td>Pages / result count</td><td><strong>Absent</strong> — hundreds arrive at once</td><td><code>limit</code> — a server-side slice (default 20, max 50); if it cuts, you get a <code>note</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>What the slimming keeps</h3>
+  <p>From <code>trending_searches[]</code> we carry <code>query</code> <code>search_volume</code> (→<code>searchVolume</code>) <code>increase_percentage</code> (→<code>increasePct</code>) <code>active</code> <code>start_timestamp</code> (→<code>startedAt</code>, ISO) <code>categories[].name</code> <code>trend_breakdown</code> (top 8). Thrown away: <code>news_page_token</code>, <code>serpapi_google_trends_link</code>, <code>serpapi_news_link</code>, <code>end_timestamp</code>.</p>
+  <div class="note">
+    <strong>Search volume and increase are bucketed estimates.</strong> Values like 2,000,000 and 1000% are Google's own rounding, so use them for ranking comparisons only. And since they come from Google Trends, they're a <strong>Google-search</strong> measure, not an SNS engagement one.
+  </div>
+  <h3><code>sns_issue_scout</code> — a scout built on the same client</h3>
+  <p>Not a new engine. It runs <code>engine=google</code> searches with <code>site:threads.com</code> / <code>site:x.com</code> / <code>site:instagram.com</code> appended, once per platform × seed, normalizes post URLs to drop duplicates, then counts the topic words that show up across several posts and several platforms (implementation: <code>server/src/sns-issue-scout.ts</code>). Trending searches come from one extra call to the engine above. Credits = platforms × seeds × pages + 1. Timeouts and 5xx get one retry, and since it's the same search, SerpApi's cache serves it with no extra billing.</p>
+  <div class="warn">
+    <strong>This path carries no engagement numbers.</strong> Likes, replies, and views don't come through Google results, and the ordering is by relevance. So the output isn't "what blew up" but a list of mentions — "what people are saying about this right now" — and putting it in the same table as <code>youtube_topic_scout</code>'s channel-median multiples makes 12 mentions read as a 12× multiple. Snippets can also differ from the post body: on Threads, the page's auto-generated topic summary sometimes comes through as the snippet (measured once).
+  </div>
+</section>
+
+<section id="errors">
+  <h2>7. Errors and quota</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Situation</th><th>Response</th><th>What the server tells the model</th></tr></thead>
+    <tbody>
+      <tr><td>Invalid key</td><td>HTTP 401</td><td>"Do not retry before fixing the key (401/400 return the same thing on retry)"</td></tr>
+      <tr><td>Quota exhausted</td><td>HTTP 429</td><td>"Stop searching for this session; write from the evidence already gathered, or drop unverified claims from the copy"</td></tr>
+      <tr><td>No results</td><td><strong>HTTP 200</strong> + an <code>error</code> string</td><td>Treated as an empty result, not a tool error. <strong>Searches with no results are not billed</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>The trap is that "no results" arrives as a 200.</strong> Parse on <code>res.ok</code> alone and an empty result looks like a normal response. Check the body's <code>error</code> field first, and inside that, split off only the <em>"hasn't returned any results"</em> family as an empty result — everything else is a real error.
+  </div>
+  <p>The free plan allows 250 searches a month. One search = one credit, so not repeating the same search is what really governs your effective quota. For Korean-language research, start with <a href="naver-search.en.html">Naver Open API (25,000/day)</a>, which has far more room.</p>
+</section>
+
+<section id="impl">
+  <h2>8. Implementation vs. contract</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Official contract</th><th>social-flow implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Response body</td><td>The whole raw JSON</td><td>Slimmed per engine — a <strong>deliberate exception</strong> to <code>http.ts</code>'s return-it-raw philosophy</td></tr>
+      <tr><td>Argument names</td><td>Differ per engine (<code>q</code> vs <code>query</code>, <code>num</code> vs nothing)</td><td><strong>Every search tool takes <code>query</code>, <code>limit</code>, <code>page</code></strong> — the server handles conversion, and a contract test enforces it</td></tr>
+      <tr><td>Result array keys</td><td>Docs and reality disagree</td><td>Measured key first, documented key as fallback (<code>organic_results</code>·<code>images_results</code>·<code>video_results</code>)</td></tr>
+      <tr><td><code>limit</code> cap</td><td>Differs per engine (on google, <code>num</code> itself is a no-op)</td><td>web 10 (the real page size) · news 20 · naver 50 · image 50. No promising what can't be delivered — the cap and how much arrives in one call are separate things, and cuts are disclosed in <code>note</code></td></tr>
+      <tr><td>Truncated results</td><td>Silence</td><td>Disclosed in the response <code>note</code>, <strong>based on how many items actually arrived</strong> — how to recover the truncated range differs per engine (where the page stride is smaller than one batch, the next page overlaps into it; google_news has no page param at all)</td></tr>
+      <tr><td>Pages</td><td><code>start</code> offset</td><td>Taken as <code>page</code> (1–5) and converted. The description says "only when the first page has no evidence"</td></tr>
+      <tr><td>Key exposure</td><td>URL query, mandatory</td><td>Masked on every output path</td></tr>
+      <tr><td>Timeout</td><td>—</td><td>15 seconds (<code>config.requestTimeoutMs</code>) → structured as a 504</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  As of 2026-08-18 · Implementation <a href="../../server/src/serp-client.ts">server/src/serp-client.ts</a> · <a href="index.en.html">API reference hub</a>
+</footer>
+
+</div>
+</body>
+</html>

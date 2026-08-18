@@ -4,45 +4,49 @@
 <meta charset="utf-8">
 <title>social-flow video frame</title>
 <!--
-  social-flow 쇼트폼 프레임 렌더러 — 1080×1920 캔버스, scenes.js 데이터 구동.
+  social-flow short-form frame renderer — 1080×1920 canvas, driven by scenes.js data.
 
-  ■ 데이터 계약 (같은 디렉토리의 scenes.js 를 <script src> 로 주입):
-      window.THEME  = { accent, accent2, ink, brand }   // 채널 profile.md 의 테마
+  ■ Data contract (inject scenes.js from the same directory with <script src>):
+      window.THEME  = { accent, accent2, ink, brand }   // theme from the channel's profile.md
       window.SCENES = [ {type:"cover"|"points"|"quote"|"outro", ...}, ... ]
-      필드:
-        cover : kicker, title(16자 이내·**강조** 지원), stat, statLabel(18자 이내)
-        points: title(60px 상단 고정), bullets:[{t,d}] — 캡션. 화면에는 **한 번에
-                하나만** 보인다(스왑), footnote(출처 — 제목과 함께 상시)
-        quote : speaker, role("… AI" 등 역할 표기), text
+      fields:
+        cover : kicker, title (16 chars or fewer · **emphasis** supported), stat, statLabel (18 chars or fewer)
+        points: title (60px, pinned to the top), bullets:[{t,d}] — captions. **Only one at
+                a time** is on screen (a swap), footnote (the source — always up, with the title)
+        quote : speaker, role ("… AI" and such — the role label), text
         outro : title, sub
-  ■ 사진이 주인공 (produce 절대 규칙 14): 씬 텍스트는 상·하단 밴드 안에만 산다 —
-      points 는 상단 블록(제목+캡션 1개), cover 는 하단 블록. 화면 중앙을 덮는
-      박스·슬래브·풀스크린 딤을 만들지 않는다. 배경 사진이 그대로 보여야 한다.
-  ■ 포맷 (formats.js 가 정본 · format-lint.js 가 아래 .wide 값을 대조):
-      기본        쇼트폼 9:16 — 1080×1920, 텍스트 존 x176 · top190 · bottom570
-      &format=wide 유튜브 롱폼 16:9 — 1920×1080, 텍스트 존 x96 · top96 · bottom285
-                  (safezone-landscape.md 실측). 글자 크기는 세로의 0.72 배·하한 24px.
-                  capture-frames.sh 가 FORMAT_ENV 의 URL_FMT 로 이 파라미터를 붙인다.
-      ?probe=1    캔버스 전체를 #FF00FF 로 칠한다 — build-reel.sh 의 캔버스 프로브가
-                  네 모서리를 읽어 CSS 캔버스가 창 크기를 따라왔는지 본다.
-      footage 씬  (사용자 촬영 클립 위 로어서드) — 존 하단·좌측 정렬로 제목+캡션+출처.
-                  건너뛰는 자리는 사람 얼굴이 아니라 화면 아래 띠다.
-  ■ URL 파라미터 (capture-frames.sh / capture-reveals.sh 계약):
-      ?i=<n>        씬 인덱스 (0부터)
-      &reveal=<k>   누적 요소(제목·출처·커버)는 그룹 k 이하만 불투명. points 캡션은
-                    **활성 그룹(=min(k, 마지막 캡션))만** 불투명 — 과거 캡션도 숨는다
-                    (스왑). 숨김은 언제나 opacity:0 뿐이고 캡션은 grid 스택으로 같은
-                    자리에 겹쳐 있어 레이아웃 불변 — display:none 금지, xfade 오염 방지
-      &alpha=1      배경·글로우 제거 + body 투명 (영상 위 오버레이 PNG 용)
-      &scrim=1      밴드 스크림 레이어 표시 (alpha 모드에서도 유지 — PNG 에 굽는다)
-      &dim=0|1|2    스크림 강도 (0 감상 우선 / 1 기본 / 2 밝은 배경 전용).
-                    모양은 씬 타입이 정한다 — cover=하단 밴드, points=상단 밴드
-      &bg=<url>     정지 배경 이미지 (불투명 캡처용)
-  ■ 세이프존 (톨폰 실측 — 줄이지 말 것):
-      텍스트 존 x 176~904 (폭 728) · y 190~1350. 하단 570px 은 자막 밴드+플랫폼 UI.
-      배경 비주얼만 1080×1920 전체를 쓴다.
-  ■ 오버플로 가드: 렌더 후 실측 → tight1~3 자동 적용, 잔여를 window.__overflow 로 노출.
-      히어로 스탯은 폭 640px 초과 시 자동 축소 (켄번즈 3.5% + 크롭 편차 여유).
+  ■ The photo is the star (produce absolute rule 14): scene text lives inside the top and
+      bottom bands only — points gets the top block (title + one caption), cover the bottom
+      block. Never build a box, a slab, or a full-screen dim over the middle of the screen.
+      The background photo has to stay visible as it is.
+  ■ Formats (formats.js is the source of truth · format-lint.js checks the .wide values below):
+      default     short-form 9:16 — 1080×1920, text zone x176 · top190 · bottom570
+      &format=wide YouTube long-form 16:9 — 1920×1080, text zone x96 · top96 · bottom285
+                  (measured in safezone-landscape.md). Type sizes are 0.72× the portrait ones, floor 24px.
+                  capture-frames.sh appends this parameter via FORMAT_ENV's URL_FMT.
+      ?probe=1    paints the whole canvas #FF00FF — build-reel.sh's canvas probe reads the
+                  four corners to see whether the CSS canvas followed the window size.
+      footage scene (a lower third over a clip the user shot) — title + caption + source,
+                  aligned to the bottom left of the zone. What it skips past is the band at
+                  the bottom of the screen, not somebody's face.
+  ■ URL parameters (the capture-frames.sh / capture-reveals.sh contract):
+      ?i=<n>        scene index (from 0)
+      &reveal=<k>   cumulative elements (title, source, cover) are opaque for group k and
+                    below. points captions: **only the active group (=min(k, last caption))**
+                    is opaque — past captions hide too (the swap). Hiding is always nothing
+                    but opacity:0, and the captions are stacked in one grid cell so the
+                    layout never moves — no display:none, which would pollute the xfade
+      &alpha=1      drop the background and the glow + transparent body (for the overlay PNG that goes over video)
+      &scrim=1      show the band scrim layer (kept in alpha mode too — it's baked into the PNG)
+      &dim=0|1|2    scrim strength (0 favors the picture / 1 default / 2 for bright backgrounds only).
+                    The shape comes from the scene type — cover=bottom band, points=top band
+      &bg=<url>     still background image (for opaque captures)
+  ■ Safe zone (measured on a tall phone — don't shrink it):
+      text zone x 176~904 (728 wide) · y 190~1350. The bottom 570px is the subtitle band + platform UI.
+      Only the background visual uses the full 1080×1920.
+  ■ Overflow guard: measure after rendering → apply tight1~3 automatically, expose what's
+      left over as window.__overflow.
+      The hero stat shrinks automatically once it passes 640px wide (Ken Burns 3.5% + crop variance headroom).
 -->
 <style>
   :root{
@@ -60,70 +64,77 @@
   body.alpha{background:transparent}
   body.alpha .bg{display:none}
 
-  /* ── 배경 레이어 (배경만 풀블리드) ─────────────────────────── */
+  /* ── Background layer (only the background is full-bleed) ──────────────── */
   .bg{position:absolute;inset:0;background-size:cover;background-position:center}
-  /* 주의: body 토글 클래스는 scrim-on — .scrim 을 body 에 그대로 붙이면
-     display:none 이 body 자신에 걸려 페이지 전체가 사라진다 (실측 사고) */
+  /* Careful: the body toggle class is scrim-on — put .scrim straight on the body and
+     display:none lands on the body itself, wiping out the whole page (a measured incident) */
   .scrim{position:absolute;inset:0;display:none}
   body.scrim-on .scrim{display:block}
-  /* 밴드 스크림 — 풀스크린 딤이 아니라 텍스트 밴드만 어둡게 한다(절대 규칙 14).
-     기본형(cover 등 하단 블록): 위는 맑게 두고 하단 1/3 로 갈수록 어두워진다. */
+  /* Band scrim — darkens the text band only, not a full-screen dim (absolute rule 14).
+     The default form (bottom-block scenes such as cover): the top stays clear and it darkens
+     toward the bottom third. */
   .scrim.d0{background:linear-gradient(180deg,rgba(5,8,20,.10) 0%,rgba(5,8,20,0) 34%,rgba(5,8,20,.30) 62%,rgba(5,8,20,.86) 100%)}
   .scrim.d1{background:linear-gradient(180deg,rgba(5,8,20,.16) 0%,rgba(5,8,20,0) 34%,rgba(5,8,20,.42) 62%,rgba(5,8,20,.90) 100%)}
   .scrim.d2{background:linear-gradient(180deg,rgba(5,8,20,.28) 0%,rgba(5,8,20,.08) 34%,rgba(5,8,20,.55) 62%,rgba(5,8,20,.94) 100%)}
-  /* quote 정지 인용 카드만 예외 — 인용문이 화면 중앙(zone.center)에 앉는 씬이라
-     구 풀워시를 유지한다(절대 규칙 14 의 문서화된 예외). */
+  /* The still quote card is the one exception — the quote sits in the middle of the screen
+     (zone.center), so it keeps the old full wash (a documented exception to absolute rule 14). */
   body.scene-quote .scrim.d0{background:linear-gradient(180deg,rgba(5,8,20,.38) 0%,rgba(5,8,20,.12) 35%,rgba(5,8,20,.30) 62%,rgba(5,8,20,.86) 100%)}
   body.scene-quote .scrim.d1{background:linear-gradient(180deg,rgba(5,8,20,.55) 0%,rgba(5,8,20,.38) 35%,rgba(5,8,20,.52) 62%,rgba(5,8,20,.92) 100%)}
   body.scene-quote .scrim.d2{background:linear-gradient(180deg,rgba(5,8,20,.74) 0%,rgba(5,8,20,.62) 40%,rgba(5,8,20,.70) 62%,rgba(5,8,20,.95) 100%)}
-  /* points(상단 블록): 상단 밴드 + 자막 대비 보험용 얕은 하단. 중앙은 항상 맑다.
-     밴드는 블록 끝(출처 줄, ~y560)까지 끌고 y≈920 전에 완전히 걷는다. */
-  /* 영상 배경 커버 — 텍스트가 상단이고 배경이 8~10초 동안 움직인다. 기본 커버 스크림은
-     아래로 무거워(상단 .10) 위쪽 글자를 못 지킨다. 밝은 피사체가 텍스트 띠를 지나가는
-     최악의 순간을 기준으로 잡았다: 딸깍맨 흰 머리가 서브텍스트 줄을 지날 때 그 자리
-     국소 휘도가 YAVG 121·YMAX 241 이라 흰 글자 대비가 4.35:1 로 게이트(4.5) 아래였다.
-     상단 .62 면 같은 지점이 5:1 을 넘는다(2026-08-15 실측). 하단은 커버 기본값 유지.
-     ★평탄부를 36%(y691)까지 끈다 — 제목이 두 줄이면 서브텍스트가 y580 아래로 내려가는데
-     예전 26%(y499) 스톱은 거기서 이미 걷혀 있었다. 2줄 제목으로 재면 그 줄의 최악 대비가
-     2.85:1 로 게이트 아래고 77프레임 중 51 이 미달이었다(2026-08-16 실측 — 밝은 담벼락이
-     흰 글자 뒤로 지나간다). 36% 로 끌면 같은 프레임이 5.19:1 이다. 화면 중앙(y960)은
-     그대로 맑아 절대 규칙 14 의 밴드 스크림을 지킨다. */
+  /* points (top block): a top band + a shallow bottom as insurance for subtitle contrast.
+     The middle is always clear. The band runs to the end of the block (the source line,
+     ~y560) and lifts completely before y≈920. */
+  /* Video-background cover — the text is up top and the background moves for 8~10 seconds.
+     The default cover scrim is heavy toward the bottom (.10 at the top) and can't protect
+     the type up there. We set it against the worst moment, when a bright subject crosses the
+     text band: as the ttalkkak-lab mascot's white hair passed the subtext line, local
+     luminance there was YAVG 121 · YMAX 241, putting white type at 4.35:1 — below the gate (4.5).
+     At .62 on top, the same spot clears 5:1 (measured 2026-08-15). The bottom keeps the cover default.
+     ★Drag the flat section out to 36% (y691) — with a two-line title the subtext drops below
+     y580, and the old 26% (y499) stop had already lifted by then. Measured with a two-line
+     title, that line's worst contrast was 2.85:1, under the gate, and 51 of 77 frames fell
+     short (measured 2026-08-16 — a bright wall passes behind the white type). Pulled to 36%,
+     that same frame reads 5.19:1. The middle of the screen (y960) stays clear, which keeps
+     absolute rule 14's band scrim. */
   body.scene-cover.cover-video .scrim.d0{background:linear-gradient(180deg,rgba(5,8,20,.62) 0%,rgba(5,8,20,.58) 36%,rgba(5,8,20,0) 52%,rgba(5,8,20,.30) 70%,rgba(5,8,20,.86) 100%)}
   body.scene-points .scrim.d0{background:linear-gradient(180deg,rgba(5,8,20,.50) 0%,rgba(5,8,20,.36) 26%,rgba(5,8,20,0) 46%,rgba(5,8,20,0) 70%,rgba(5,8,20,.42) 100%)}
   body.scene-points .scrim.d1{background:linear-gradient(180deg,rgba(5,8,20,.64) 0%,rgba(5,8,20,.48) 28%,rgba(5,8,20,0) 48%,rgba(5,8,20,0) 68%,rgba(5,8,20,.52) 100%)}
   body.scene-points .scrim.d2{background:linear-gradient(180deg,rgba(5,8,20,.80) 0%,rgba(5,8,20,.62) 30%,rgba(5,8,20,.14) 48%,rgba(5,8,20,0) 66%,rgba(5,8,20,.62) 100%)}
 
-  /* ── 라이트(삽화) 모드 — &light=1: 흰 배경 라인아트 삽화 위 텍스트 ────────
-     다크 스크림은 흰 그림을 회색으로 죽인다(실측) — 대신 텍스트를 잉크색으로
-     뒤집고 밴드는 화이트 워시로만 부드럽게 한다. 커버 텍스트는 상단 앵커로
-     옮긴다(삽화 계약: 상단 1/4 타이틀 여백·중단 주인공·하단 1/3 자막 여백).
-     이 블록은 씬별 스크림보다 뒤에 있어야 한다 — 동률 특이도는 뒤가 이긴다. */
+  /* ── Light (illustration) mode — &light=1: text over white-background line art ──────
+     A dark scrim kills a white drawing into grey (measured) — flip the text to the ink
+     color instead and soften the bands with a white wash only. Cover text moves to the
+     top anchor (the illustration contract: top quarter for the title margin · the subject
+     in the middle · bottom third for the subtitle margin).
+     This block has to sit after the per-scene scrims — on equal specificity, later wins. */
   body.light .scrim.d0{background:linear-gradient(180deg,rgba(255,255,255,.45) 0%,rgba(255,255,255,0) 30%,rgba(255,255,255,0) 68%,rgba(255,255,255,.50) 100%)}
   body.light .scrim.d1{background:linear-gradient(180deg,rgba(255,255,255,.66) 0%,rgba(255,255,255,0) 34%,rgba(255,255,255,0) 64%,rgba(255,255,255,.66) 100%)}
   body.light .scrim.d2{background:linear-gradient(180deg,rgba(255,255,255,.86) 0%,rgba(255,255,255,.28) 36%,rgba(255,255,255,0) 60%,rgba(255,255,255,.82) 100%)}
   body.light .cover-title{color:var(--ink);text-shadow:0 3px 26px rgba(255,255,255,.7)}
-  /* .em 은 글자색이 투명(background-clip:text)이라 text-shadow 가 글자 뒤로 비쳐 씻겨 보인다(실측)
-     — 칩에서는 text-shadow 를 끄고 흰 drop-shadow 필터로 분리한다. 그라데이션도 흰 배경에서는
-     연한 끝색(accent2)이 묻혀 진한 쪽으로 재정의한다. */
+  /* .em has a transparent glyph color (background-clip:text), so a text-shadow shows through
+     the letters and looks washed out (measured) — on the chip, turn text-shadow off and pull it
+     apart with a white drop-shadow filter. On a white background the gradient's pale end
+     (accent2) also disappears, so it's redefined toward the darker end. */
   body.light .cover-title .em, body.light .points-title .em{text-shadow:none;
     background:linear-gradient(105deg,var(--accent),color-mix(in srgb, var(--accent) 55%, var(--ink)));
     -webkit-background-clip:text;background-clip:text}
   body.light .cover-title .em{filter:drop-shadow(0 0 8px rgba(255,255,255,.9)) drop-shadow(0 3px 16px color-mix(in srgb, var(--ink) 22%, transparent))}
   body.light .stat{filter:drop-shadow(0 5px 26px color-mix(in srgb, var(--ink) 22%, transparent))}
   body.light .stat-label{color:color-mix(in srgb, var(--ink) 80%, transparent)}
-  /* 흰 헤일로 — 삽화 선이 텍스트 뒤를 지나도 글자가 분리된다 (워시로는 못 잡는 겹침) */
+  /* White halo — the type stays separated even when an illustration line runs behind it (an overlap the wash can't catch) */
   body.light .points-title{color:var(--ink);text-shadow:0 0 14px #fff,0 0 7px #fff}
   body.light .points-title .em{filter:drop-shadow(0 0 7px rgba(255,255,255,.9)) drop-shadow(0 3px 14px color-mix(in srgb, var(--ink) 20%, transparent))}
   body.light .cap .t{color:var(--ink);text-shadow:0 0 12px #fff,0 0 6px #fff}
   body.light .cap .d{color:color-mix(in srgb, var(--ink) 72%, transparent);text-shadow:0 0 10px #fff,0 0 5px #fff}
-  /* 각주 알파 55%→80% (2026-08-13 실측) — 셀 채색 삽화의 검은 머리·짙은 문이 텍스트 밴드
-     아래로 들어오면 55% 는 1.60~1.96:1 까지 떨어져 안 읽힌다(10개 상태 중 6개가 3:1 미만).
-     같은 배경에서 캡션 설명줄(72%)이 3.35:1 을 내므로 80% 면 큰 글자 기준 3:1 을 넘긴다.
-     흰 배경 라인아트에서는 글자가 진해질 뿐이라 이전 회차 룩에 손해가 없다. */
+  /* Footnote alpha 55%→80% (measured 2026-08-13) — when black hair or a dark door from a
+     cel-shaded illustration comes in under the text band, 55% falls to 1.60~1.96:1 and can't be
+     read (6 of 10 states under 3:1). On the same background the caption description line (72%)
+     gives 3.35:1, so 80% clears 3:1 for large type.
+     On white-background line art the type only gets darker, so earlier episodes' look loses nothing. */
   body.light .footnote{color:color-mix(in srgb, var(--ink) 80%, transparent);text-shadow:0 0 12px #fff,0 0 6px #fff,0 0 6px #fff}
   body.light .kicker{background:color-mix(in srgb, var(--ink) 86%, transparent);border-color:rgba(255,255,255,.25)}
 
-  /* ── 텍스트 존 ─────────────────────────────────────────────── */
+  /* ── Text zone ─────────────────────────────────────────────── */
   .zone{
     position:absolute; left:var(--zone-x); right:var(--zone-x);
     top:var(--zone-top); height:calc(var(--h) - var(--zone-top) - var(--zone-bottom));
@@ -133,19 +144,20 @@
   .zone.center{justify-content:center}
   .zone.top{justify-content:flex-start}
 
-  /* reveal — 미래 요소는 투명하게만 (레이아웃 불변) */
+  /* reveal — elements still to come are only made transparent (the layout never moves) */
   .rv{opacity:1}
   .rv.hide{opacity:0}
 
-  /* kicker 는 방송 칩 — 밝은 배경 위에서도 읽히는 유일한 장치. 12자 남짓의 작은
-     필이라 절대 규칙 14(슬래브 금지)의 예외가 아니라 하단 밴드 텍스트의 일부다. */
+  /* The kicker is the broadcast chip — the one device that stays readable over a bright
+     background. It's a small pill of about 12 characters, so it isn't an exception to
+     absolute rule 14 (no slabs); it's part of the bottom band text. */
   .kicker{display:inline-block;font-size:34px;font-weight:700;letter-spacing:.12em;
     color:rgba(255,255,255,.92);text-transform:uppercase;margin-bottom:30px;
     background:rgba(5,8,20,.38);border:1px solid rgba(255,255,255,.14);
     border-radius:999px;padding:12px 34px;backdrop-filter:blur(4px)}
   .kicker .dot{color:var(--accent)}
 
-  /* 커버 — 썸네일 겸용이라 글자는 크게 유지하되, 블록이 하단 1/3 에 앉도록 조인다 */
+  /* Cover — it doubles as the thumbnail, so keep the type large but tighten the block so it sits in the bottom third */
   .cover-title{font-size:100px;line-height:1.14;font-weight:800;letter-spacing:-0.02em;
     text-shadow:0 6px 40px rgba(0,0,0,.55);word-break:keep-all;margin-bottom:44px}
   .cover-title .em{
@@ -160,9 +172,10 @@
     filter:drop-shadow(0 8px 44px rgba(0,0,0,.6));white-space:nowrap}
   .stat-label{font-size:40px;font-weight:600;color:rgba(255,255,255,.88);margin-top:22px;word-break:keep-all}
 
-  /* 포인트(캡션) 씬 — 사진이 주인공(절대 규칙 14). 박스·슬래브 없이 상단 블록에
-     제목 + 활성 캡션 1개 + 출처만 얹는다. 캡션은 grid 스택으로 같은 자리에 겹쳐
-     있고(레이아웃 불변) 활성 것만 불투명하다 — reveal 전환이 캡션 교체가 된다. */
+  /* points (caption) scene — the photo is the star (absolute rule 14). No box, no slab; the
+     top block carries a title + one active caption + the source, nothing more. The captions
+     stack in one grid cell (the layout never moves) and only the active one is opaque — so a
+     reveal transition becomes a caption swap. */
   .points-title{font-size:60px;line-height:1.2;font-weight:800;letter-spacing:-0.015em;
     text-shadow:0 3px 26px rgba(0,0,0,.6);word-break:keep-all;margin-bottom:34px}
   .points-title .em{background:linear-gradient(105deg,var(--accent),var(--accent2));
@@ -179,12 +192,12 @@
   .footnote{font-size:26px;color:rgba(255,255,255,.60);text-align:center;
     text-shadow:0 2px 12px rgba(0,0,0,.6)}
 
-  /* 인용(발화) 씬 — alpha 오버레이는 상단 서명만, 정지 카드는 인용문 포함 */
+  /* quote (speaking) scene — the alpha overlay carries the top signature only, the still card includes the quote */
   .quote-sign{position:absolute;left:var(--zone-x);right:var(--zone-x);top:230px;text-align:center}
   .quote-sign .name{font-size:52px;font-weight:800;text-shadow:0 4px 24px rgba(0,0,0,.6)}
   .quote-sign .role{font-size:32px;font-weight:600;color:rgba(255,255,255,.85);margin-top:12px}
   .quote-sign .role .ai{color:var(--accent);font-weight:800}
-  /* 발화 오버레이 전용 상/하단 스크림 — PNG 에 굽는다 (서명 대비 + 자막 대비) */
+  /* Top/bottom scrims for the speaking overlay only — baked into the PNG (signature contrast + subtitle contrast) */
   .quote-scrim-top{position:absolute;left:0;right:0;top:0;height:430px;display:none;
     background:linear-gradient(180deg,rgba(5,8,20,.78),rgba(5,8,20,0))}
   .quote-scrim-bot{position:absolute;left:0;right:0;bottom:0;height:640px;display:none;
@@ -194,14 +207,14 @@
   .quote-card::before{content:"“";display:block;font-size:150px;line-height:.6;
     color:var(--accent);margin-bottom:30px}
 
-  /* 아웃트로 */
+  /* Outro */
   .outro-brand{font-size:64px;font-weight:800;letter-spacing:.03em;margin-bottom:40px;
     background:linear-gradient(105deg,var(--accent),var(--accent2));
     -webkit-background-clip:text;background-clip:text;color:transparent}
   .outro-title{font-size:84px;line-height:1.25;font-weight:800;word-break:keep-all;margin-bottom:36px}
   .outro-sub{font-size:42px;line-height:1.4;color:rgba(255,255,255,.85);word-break:keep-all}
 
-  /* 오버플로 가드 — 실측 후 자동 적용 */
+  /* Overflow guard — applied automatically after measuring */
   .tight1 .cover-title{font-size:92px}  .tight1 .points-title{font-size:55px}
   .tight1 .cap .t{font-size:46px}       .tight1 .cap .d{font-size:32px}
   .tight2 .cover-title{font-size:85px}  .tight2 .points-title{font-size:51px}
@@ -210,14 +223,15 @@
   .tight3 .cover-title{font-size:78px}  .tight3 .points-title{font-size:47px}
   .tight3 .cap .t{font-size:40px}       .tight3 .cap .d{font-size:28px}
 
-  /* ══ 가로 롱폼 16:9 — &format=wide ═══════════════════════════════════════
-     캔버스·존은 safezone-landscape.md 실측(2026-08-17), 글자는 세로 비율 × 0.72 ·
-     하한 24px. **정본은 formats.js 이고 format-lint.js 가 아래 px 를 그 비율과 대조한다** —
-     한쪽만 고치면 npm run check 가 잡는다.
+  /* ══ Landscape long-form 16:9 — &format=wide ═════════════════════════════
+     The canvas and zones come from the safezone-landscape.md measurements (2026-08-17);
+     type is the portrait ratio × 0.72, floor 24px. **formats.js is the source of truth, and
+     format-lint.js checks the px below against those ratios** — fix one side only and
+     npm run check catches it.
 
-     클래스가 html·body 두 곳에 다 붙는다. 캔버스 변수는 :root 가 읽어야 하고
-     (html,body{width:var(--w)} — body 에만 붙이면 html 이 세로 폭 그대로다),
-     글자 규칙은 `.tight*` 를 이기려면 body 쪽 특이도가 필요하다. */
+     The class goes on both html and body. :root has to read the canvas variables
+     (html,body{width:var(--w)} — put it on body alone and html keeps the portrait width),
+     and the type rules need body-side specificity to beat `.tight*`. */
   :root.wide{
     --w:1920px; --h:1080px;
     --zone-x:96px; --zone-top:96px; --zone-bottom:285px;
@@ -233,7 +247,7 @@
   body.wide .cap::before{width:40px;height:4px;margin:0 auto 14px}
   body.wide .cap-stack{margin-bottom:16px}
   body.wide .footnote{font-size:24px}
-  /* 아래 넷은 formats.js 에 대응 필드가 없어 린트가 안 본다 — 세로 값 × 0.72 다 */
+  /* The four below have no matching field in formats.js, so the lint doesn't look at them — they're the portrait values × 0.72 */
   body.wide .quote-card{font-size:40px}
   body.wide .quote-card::before{font-size:100px;margin-bottom:18px}
   body.wide .quote-sign{top:120px}
@@ -244,10 +258,11 @@
   body.wide .outro-brand{font-size:46px;margin-bottom:24px}
   body.wide .outro-title{font-size:60px;margin-bottom:22px}
   body.wide .outro-sub{font-size:30px}
-  /* 가로 오버플로 가드 — 세로와 같은 비율(0.92/0.85/0.78)이되 **캡션 설명줄은 24px 에서
-     멈춘다**(formats.js floorPx). 24 아래로 내려간 설명줄은 1920 폭에서 안 읽히므로,
-     거기까지 밀렸다는 건 축소할 일이 아니라 그 씬 글자가 너무 많다는 뜻이다 —
-     storyboard.html 자수 배지가 저작 단계에서 먼저 잡는다. */
+  /* Landscape overflow guard — the same ratios as portrait (0.92/0.85/0.78), except **the
+     caption description line stops at 24px** (formats.js floorPx). A description line under 24
+     isn't readable at 1920 wide, so being pushed that far isn't a cue to shrink — it means that
+     scene has too much text, and storyboard.html's character-count badge catches it first, back
+     at the authoring stage. */
   .tight1 body.wide .cover-title{font-size:66px} .tight1 body.wide .points-title{font-size:39px}
   .tight1 body.wide .cap .t{font-size:33px}      .tight1 body.wide .cap .d{font-size:24px}
   .tight2 body.wide .cover-title{font-size:61px} .tight2 body.wide .points-title{font-size:37px}
@@ -256,25 +271,28 @@
   .tight3 body.wide .cover-title{font-size:56px} .tight3 body.wide .points-title{font-size:34px}
   .tight3 body.wide .cap .t{font-size:29px}      .tight3 body.wide .cap .d{font-size:24px}
 
-  /* ══ 촬영 클립 위 로어서드 — footage 씬 ══════════════════════════════════
-     사용자가 직접 찍은 화면이 주인공이라 존 전체를 글자로 덮지 않는다. 존 **하단에
-     왼쪽 정렬 띠 하나** — 제목 + 활성 캡션 + 출처. 캡션 스왑·reveal 그룹은 points 와
-     같은 기계를 그대로 쓴다(달라지는 건 앉는 자리와 정렬뿐이다).
-     알파 캡처(&alpha=1&scrim=1)로 뽑아 클립 위에 합성한다 — segs.tsv 의 `클립::오버레이` 다. */
+  /* ══ Lower third over a shot clip — the footage scene ═══════════════════
+     The screen the user shot themselves is the star, so don't cover the whole zone in type.
+     **One left-aligned band at the bottom** of the zone — title + active caption + source.
+     The caption swap and the reveal groups use exactly the same machinery as points (all that
+     changes is where it sits and how it's aligned).
+     Pull it with an alpha capture (&alpha=1&scrim=1) and composite it over the clip — that's
+     `clip::overlay` in segs.tsv. */
   .zone.l3{justify-content:flex-end;text-align:left}
   .zone.l3 .points-title{border-left:6px solid var(--accent);padding-left:20px}
   .zone.l3 .cap::before{margin-left:0;margin-right:auto}
-  /* .footnote 는 자기 text-align:center 를 갖고 있어 존 정렬로는 안 따라온다 */
+  /* .footnote carries its own text-align:center, so it doesn't follow the zone's alignment */
   .zone.l3 .footnote{text-align:left}
-  /* 하단 띠 스크림 — 화면 위쪽(사용자가 시연하는 자리)은 끝까지 맑게 둔다 */
+  /* Bottom band scrim — keep the upper screen (where the user is demonstrating) clear all the way */
   body.footage .scrim.d0{background:linear-gradient(0deg,rgba(5,8,20,.72) 0%,rgba(5,8,20,.34) 26%,rgba(5,8,20,0) 46%)}
   body.footage .scrim.d1{background:linear-gradient(0deg,rgba(5,8,20,.82) 0%,rgba(5,8,20,.46) 28%,rgba(5,8,20,0) 48%)}
   body.footage .scrim.d2{background:linear-gradient(0deg,rgba(5,8,20,.90) 0%,rgba(5,8,20,.60) 30%,rgba(5,8,20,0) 50%)}
 
-  /* ══ 캔버스 프로브 — ?probe=1 ═══════════════════════════════════════════
-     build-reel.sh probe_canvas() 가 네 모서리 픽셀을 읽어 정확히 ff00ff 인지 본다.
-     CSS 캔버스가 창 크기를 안 따라오면(가로인데 --w 가 세로 그대로면) 모서리가 어긋난다.
-     html 까지 칠하는 이유는 body 가 캔버스보다 작을 때 뒤가 비치기 때문이다. */
+  /* ══ Canvas probe — ?probe=1 ════════════════════════════════════════════
+     build-reel.sh's probe_canvas() reads the four corner pixels and checks they're exactly ff00ff.
+     If the CSS canvas didn't follow the window size (landscape while --w is still portrait), the
+     corners come out wrong. html gets painted too because when body is smaller than the canvas,
+     what's behind it shows through. */
   html.probe,body.probe{background:#FF00FF}
   body.probe .bg,body.probe .scrim,body.probe .zone,
   body.probe .quote-sign,body.probe .quote-scrim-top,body.probe .quote-scrim-bot{display:none}
@@ -287,10 +305,10 @@
 <div class="quote-scrim-bot"></div>
 <div class="zone" id="zone"></div>
 <script>
-// scenes.js 는 body 닫는 태그 직전에 주입된다(produce §2) — 이 스크립트보다 뒤에
-// 실행되므로 DOMContentLoaded 까지 렌더를 지연해 SCENES/THEME 로드를 보장한다.
-// 주의: 이 파일 어디에도 body 닫는 태그 리터럴을 추가로 쓰면 안 된다 — sed 주입이
-// 그 지점을 치환해 스크립트가 중간에 닫힌다 (실측 사고).
+// scenes.js is injected right before the closing body tag (produce §2) — it runs after this
+// script, so rendering waits for DOMContentLoaded to guarantee SCENES/THEME are loaded.
+// Careful: never write another literal closing body tag anywhere in this file — the sed
+// injection replaces that spot and the script gets closed halfway (a measured incident).
 function __boot() {
   const qs = new URLSearchParams(location.search);
   const i = parseInt(qs.get('i') || '0', 10);
@@ -299,16 +317,16 @@ function __boot() {
   const scrim = qs.get('scrim') === '1';
   const dim = qs.get('dim') || '1';
   const bg = qs.get('bg');
-  const light = qs.get('light') === '1';   // 삽화(라이트) 모드 — 위 CSS 블록 참조
-  const wide = qs.get('format') === 'wide'; // 가로 롱폼 16:9 — 위 CSS 블록 참조
+  const light = qs.get('light') === '1';   // illustration (light) mode — see the CSS block above
+  const wide = qs.get('format') === 'wide'; // landscape long-form 16:9 — see the CSS block above
 
   const THEME = window.THEME || {};
   const root = document.documentElement;
-  // 포맷 클래스는 씬을 읽기 **전에** 붙인다 — 프로브는 scenes.js 없이도 돌아야 하고,
-  // 캔버스 변수(--w/--h)는 html 이 읽으므로 :root 에도 있어야 한다.
+  // Add the format class **before** reading the scene — the probe has to run without scenes.js,
+  // and the canvas variables (--w/--h) are read by html, so they have to be on :root too.
   if (wide) { root.classList.add('wide'); document.body.classList.add('wide'); }
 
-  // 캔버스 프로브 — 씬도 scenes.js 도 안 본다. 여기서 끝내고 나간다.
+  // Canvas probe — looks at neither the scene nor scenes.js. Finish here and leave.
   if (qs.get('probe') === '1') {
     root.classList.add('probe'); document.body.classList.add('probe');
     document.title = 'probe ' + (wide ? 'wide' : 'tall');
@@ -323,11 +341,11 @@ function __boot() {
   const scenes = window.SCENES || [];
   const scene = scenes[i];
   const zone = document.getElementById('zone');
-  if (!scene) { zone.textContent = 'scenes.js 미주입 또는 인덱스 초과: i=' + i; return; }
+  if (!scene) { zone.textContent = 'scenes.js not injected, or index out of range: i=' + i; return; }
 
-  // 촬영 씬 — 사용자가 직접 찍은 클립이 화면 본체다. **씬 하나 단위로 본다**:
-  // 한 편에 생성 씬과 촬영 씬이 섞이는 것이 롱폼의 정상 경로라, 편 전체를 촬영 모드로
-  // 뒤집으면 생성 씬까지 로어서드로 그려진다.
+  // Footage scene — the clip the user shot is the body of the screen. **Judge it one scene at a
+  // time**: mixing generated and shot scenes inside one episode is the normal long-form path, so
+  // flipping the whole episode into footage mode would draw the generated scenes as lower thirds too.
   const isFootage = !!(scene.visual &&
     (scene.visual.source === 'recording' || scene.visual.picture === 'recording'));
 
@@ -341,9 +359,9 @@ function __boot() {
 
   const esc = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  /** **강조** → 그라데이션 칩 */
+  /** **emphasis** → gradient chip */
   const em = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="em">$1</span>');
-  /** reveal 그룹 부여 — rg ≤ reveal 만 불투명 (숨김은 opacity 만, 레이아웃 불변) */
+  /** Assign the reveal group — only rg ≤ reveal is opaque (hiding is opacity alone, layout never moves) */
   const rv = (rg, html) =>
     '<div class="rv' + (rg > reveal ? ' hide' : '') + '" data-rg="' + rg + '">' + html + '</div>';
 
@@ -351,40 +369,49 @@ function __boot() {
   const R = (rg, html) => { if (rg > maxRg) maxRg = rg; return rv(rg, html); };
 
   if (scene.type === 'cover') {
-    // 라이트(삽화) 모드: 커버 텍스트를 상단 앵커로 — 하단 앵커는 중단의 삽화
-    // 주인공(캐릭터)을 덮는다(실측). 삽화 계약이 상단 1/4 을 타이틀 여백으로 비워 둔다.
-    // **영상 배경 커버도 상단이다** — 영상은 피사체가 8초 동안 움직이므로 중앙이
-    // 계속 비어 있다는 보장이 없다. 고정 밴드를 위에 두는 쪽이 안전하다.
-    // **가로 커버도 상단이다** — 존이 699px 로 얕아 하단 앵커면 블록이 자막 띠에 붙는다.
+    // Light (illustration) mode: cover text goes to the top anchor — a bottom anchor covers the
+    // illustration's subject (the character) in the middle (measured). The illustration contract
+    // leaves the top quarter empty as the title margin.
+    // **A video-background cover is top-anchored too** — the subject moves for 8 seconds, so
+    // there's no guarantee the middle stays empty. Keeping the fixed band up top is safer.
+    // **A landscape cover is top-anchored as well** — the zone is a shallow 699px, so a bottom
+    // anchor sticks the block onto the subtitle band.
     if (light || wide || isFootage || (scene.visual && scene.visual.video)) zone.classList.add('top');
-    // 다크 영상 커버만 상단 우세 스크림으로 바꾼다(라이트는 자기 흰 워시가 이미 상단이다).
-    // 촬영 클립 커버도 같다 — 8초 동안 밝은 화면이 글자 뒤를 지나간다.
+    // Only the dark video cover switches to the top-heavy scrim (light already has its white wash
+    // up top). A shot-clip cover is the same — a bright screen passes behind the type for 8 seconds.
     if (!light && scene.visual && (scene.visual.video || isFootage)) document.body.classList.add('cover-video');
     zone.innerHTML =
       (scene.kicker ? R(0, '<div class="kicker">' + esc(scene.kicker).replace(/·/g, '<span class="dot">·</span>') + '</div>') : '') +
       R(1, '<div class="cover-title">' + em(scene.title) + '</div>') +
-      // 히어로 수치 없이 **서브텍스트만** 쓰는 커버가 있다(영상 커버) — 그때도 라벨을
-      // 그린다. 예전 조건은 stat 이 있어야만 블록 자체를 만들어 라벨이 조용히 사라졌다.
+      // Some covers use **subtext only**, with no hero number (video covers) — draw the label
+      // then as well. The old condition built the block only when stat existed, and the label
+      // quietly disappeared.
       ((scene.stat || scene.statLabel) ? R(2, '<div class="stat-wrap">' +
         (scene.stat ? '<div class="stat" id="stat">' + esc(scene.stat) + '</div>' : '') +
         (scene.statLabel ? '<div class="stat-label">' + esc(scene.statLabel) + '</div>' : '') + '</div>') : '');
   } else if (scene.type === 'points') {
-    // 캡션 스왑 — 활성 캡션(rg === capShow)만 불투명. reveal 이 마지막 캡션을
-    // 넘으면 마지막에 캡을 걸어(capShow) 그림이 더 변하지 않는다 —
-    // capture-reveals.sh 의 바이트 동일성 열거가 여기서 멈춘다.
-    // 촬영 씬은 로어서드(존 하단·왼쪽 정렬), 생성 씬은 종전대로 상단 블록이다.
+    // Caption swap — only the active caption (rg === capShow) is opaque. Once reveal passes the
+    // last caption it's capped there (capShow) and the picture stops changing —
+    // which is where capture-reveals.sh's byte-identity enumeration stops.
+    // A footage scene gets the lower third (bottom of the zone, left-aligned); a generated scene
+    // keeps the top block as before.
     zone.classList.add(isFootage ? 'l3' : 'top');
-    // 제목·출처가 없는 씬이 있다 — 화면 텍스트는 필요할 때만 쓴다(scenes-schema, 2026-08-14).
-    // 헤더가 비면 그 rg 를 **차지하지 않는다**: 안 그러면 r0 와 r1 이 똑같은 빈 화면이라
-    // capture-reveals.sh 의 바이트 동일성 열거가 첫 칸에서 멈추고 캡션을 한 장도 못 찍는다(실측).
-    // 빈 문자열을 넣은 title 은 요소 자체를 만들지 않는다 — 빈 div 도 여백을 차지한다.
+    // Some scenes have no title and no source — on-screen text is used only where it's needed
+    // (scenes-schema, 2026-08-14).
+    // When the header is empty it **doesn't take** that rg: otherwise r0 and r1 are the same blank
+    // screen, capture-reveals.sh's byte-identity enumeration stops at the first slot, and not one
+    // caption gets captured (measured).
+    // A title set to an empty string doesn't build the element at all — an empty div takes up space too.
     const caps = scene.bullets ? scene.bullets.filter(b => b && b.t) : [];
     const hasHead = !!(scene.title || scene.footnote);
-    const capBase = hasHead ? 2 : 1;                   // 캡션 rg 시작 — 헤더가 없으면 1 부터
-    // 삽화 모드에서는 **대사 하나가 화면 하나**다. 캡션이 대사보다 적어도 상태 수는 세그 수만큼
-    // 있어야 그 대사의 삽화가 화면에 나온다 — 안 그러면 캡처가 일찍 멈춰 삽화가 통째로 빠진다
-    // (실측: 대사 3 · 캡션 1 인 씬에서 상태 2 만 잡혀 세 번째 삽화가 영상에 없었다).
-    // 캡션 없는 뒤쪽 대사 자리는 '캡션 0개' 상태로 열거된다 — 화면에는 그림만 보인다.
+    const capBase = hasHead ? 2 : 1;                   // caption rg start — with no header it starts at 1
+    // In illustration mode **one line of narration is one screen**. Even with fewer captions than
+    // lines, there have to be as many states as segments for that line's illustration to reach the
+    // screen — otherwise the capture stops early and the illustration drops out entirely
+    // (measured: a scene with 3 lines and 1 caption caught only 2 states, and the third
+    // illustration wasn't in the video).
+    // The later lines with no caption are enumerated as 'zero caption' states — the screen shows
+    // only the picture.
     const segN = (scene.narration || []).length;
     const lastRg = Math.max(capBase - 1 + caps.length, segN - (hasHead ? 0 : 1));
     const capShow = Math.min(reveal, lastRg);
@@ -400,7 +427,7 @@ function __boot() {
       '<div class="cap-stack">' + capHtml + '</div>' +
       (scene.footnote ? R(1, '<div class="footnote">' + esc(scene.footnote) + '</div>') : '');
   } else if (scene.type === 'quote') {
-    // alpha(발화 영상 위): 상단 서명만. 불투명(정지 카드): 서명 + 인용문.
+    // alpha (over speaking video): the top signature only. Opaque (still card): signature + quote.
     document.body.insertAdjacentHTML('beforeend',
       '<div class="quote-sign">' + rv(0,
         '<div class="name">' + esc(scene.speaker) + '</div>' +
@@ -415,16 +442,18 @@ function __boot() {
       (scene.sub ? R(0, '<div class="outro-sub">' + esc(scene.sub) + '</div>') : '');
   }
 
-  // ── 오버플로 가드: 실측 → tight1~3 → 잔여를 __overflow 로 노출 ──
+  // ── Overflow guard: measure → tight1~3 → expose the remainder as __overflow ──
   let tier = 0;
   while (zone.scrollHeight > zone.clientHeight + 1 && tier < 3) {
     tier += 1; root.classList.add('tight' + tier);
   }
   window.__overflow = Math.max(0, zone.scrollHeight - zone.clientHeight);
 
-  // 히어로 스탯 폭 가드 — scrollWidth 는 못 쓴다(center flex 에서 clientWidth 와 같아짐).
-  // getBoundingClientRect 로 실측해 상한 이하로 축소 (켄번즈 3.5% + 기기 크롭 편차 여유).
-  // 세로 640px 은 프레임 폭의 0.593 이다 — 가로는 같은 비율로 1138px, 최소 크기도 ×0.72.
+  // Hero stat width guard — scrollWidth is no use (in a centered flex it equals clientWidth).
+  // Measure with getBoundingClientRect and shrink below the cap (Ken Burns 3.5% + headroom for
+  // device crop variance).
+  // Portrait 640px is 0.593 of the frame width — landscape uses the same ratio at 1138px, and the
+  // minimum size is ×0.72 as well.
   const STAT_MAX = wide ? 1138 : 640;
   const STAT_MIN = wide ? 58 : 80;
   const stat = document.getElementById('stat');

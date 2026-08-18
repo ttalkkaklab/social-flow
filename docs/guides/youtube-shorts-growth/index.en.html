@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Shorts growth best practices — social-flow guide</title>
+<link rel="alternate" hreflang="ko" href="index.html">
+<link rel="stylesheet" href="../../assets/reference.css">
+<style>
+  /* Props for this page only — layered on top of the shared reference.css */
+  .lede { font-size: 18px; line-height: 1.7; color: var(--text); margin: 8px 0 4px; }
+  .lede strong { font-weight: 750; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }
+  .col-box { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; background: var(--bg-card); }
+  .col-box.win { border-top: 3px solid var(--green); }
+  .col-box.fail { border-top: 3px solid var(--red); }
+  .col-box h4 { margin: 0 0 10px; font-size: 14.5px; letter-spacing: .02em; }
+  .col-box.win h4 { color: var(--green); }
+  .col-box.fail h4 { color: var(--red); }
+  .col-box ul { margin: 0 0 0 18px; }
+  .col-box li { font-size: 14.5px; margin-bottom: 8px; }
+  .signal-num { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
+  .metric-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+  .metric { flex: 1 1 180px; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; background: var(--bg-soft); }
+  .metric .m-k { font-size: 13px; color: var(--text-soft); }
+  .metric .m-v { font-size: 15.5px; font-weight: 650; margin-top: 2px; }
+  .rule-list { list-style: none; margin-left: 0; }
+  .rule-list > li { position: relative; padding-left: 30px; margin-bottom: 16px; }
+  .rule-list > li .n {
+    position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums;
+  }
+  .quote-ex { border-left: 3px solid var(--border); padding: 2px 0 2px 16px; margin: 10px 0; color: var(--text-soft); font-size: 14.5px; }
+  .quote-ex b { color: var(--text); font-weight: 600; }
+  /* Verbatim quotes from official sources */
+  .src-quote {
+    border-left: 3px solid var(--border); background: var(--bg-soft);
+    border-radius: 0 8px 8px 0; padding: 12px 18px; margin: 14px 0;
+    font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13.5px; line-height: 1.7; color: var(--text-soft); word-break: normal;
+  }
+  .src-quote p { margin-bottom: 10px; }
+  .src-quote p:last-child { margin-bottom: 0; }
+  /* Effective-date timeline */
+  .timeline { list-style: none; margin: 18px 0 18px 8px; padding-left: 0; border-left: 2px solid var(--border); }
+  .timeline li { position: relative; padding-left: 26px; margin-bottom: 20px; }
+  .timeline li::before {
+    content: ""; position: absolute; left: -7px; top: 9px; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--accent); border: 3px solid var(--bg);
+  }
+  .timeline li.now::before { background: var(--amber); }
+  .timeline li.soon::before { background: var(--red); }
+  .timeline .t-date { display: block; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .timeline .t-body { font-size: 15px; color: var(--text-soft); }
+  .timeline .t-body strong { color: var(--text); }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="langbar"><a href="index.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../../index.en.html">Docs</a><span>/</span>Guides<span>/</span>YouTube Shorts growth</div>
+
+<header class="hero">
+  <div class="kicker">GROWTH · YOUTUBE SHORTS</div>
+  <h1>How to grow on YouTube Shorts</h1>
+  <p class="sub">Most Shorts growth advice has nothing behind it. This page carries only what's confirmed in YouTube's own documents and survived adversarial verification: the conditions that block monetization when you run a channel on AI, how far the disclosure duty reaches, the de-facto deadline the 2027 changes created, where you're allowed to send people from a Short, and the beliefs YouTube itself denies.</p>
+  <div class="meta">
+    <span>As of <strong>2026-08-11</strong></span>
+    <span>Updated <strong>2026-08-15 spam policy and upload limit · 2026-08-16 automation section</strong></span>
+    <span>Evidence <strong>YouTube official docs (237 claims extracted → 50 put to a 3-vote check → 28 confirmed)</strong></span>
+    <span>Growth loop <strong><code>/social-flow:grow-youtube</code></strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#why">What to know first</a></li>
+    <li><a href="#ai">The line when you make it with AI</a></li>
+    <li><a href="#deadline">The 2027 change — a de-facto deadline</a></li>
+    <li><a href="#pool">How Shorts revenue is calculated</a></li>
+    <li><a href="#signals">The signals that set reach</a></li>
+    <li><a href="#funnel">Where to send people from a Short</a></li>
+    <li><a href="#myth">Beliefs — things you don't have to do</a></li>
+    <li><a href="#views">The definition of a view changed</a></li>
+    <li><a href="#metrics">What to watch</a></li>
+    <li><a href="#refuted">Claims that failed verification</a></li>
+    <li><a href="#unknown">What we still don't know</a></li>
+    <li><a href="#automation">Automation — grow-youtube</a></li>
+    <li><a href="#sources">Sources</a></li>
+  </ol>
+</nav>
+
+<section id="why">
+  <h2>1. What to know first</h2>
+  <p class="lede"><strong>Making it with AI is no problem in itself. The line that decides monetization is drawn at "was it stamped out from a template", not at "did you use AI".</strong></p>
+  <p>Growing a channel on Shorts means clearing two different gates. One is <strong>numbers</strong> — getting past the subscriber and view thresholds. The other is <strong>review</strong> — the content passing the monetization policies. They're completely separate, and AI automation channels mostly fail at the second.</p>
+  <p>So this page puts §2 (the AI line) and §3 (the deadline) up front. Algorithm optimization comes after that — if review catches you, reach doesn't turn into money however good it is.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Verdict</th><th>Confidence</th></tr></thead>
+    <tbody>
+      <tr><td>Monetizing AI-generated content</td><td>Using AI is <strong>not banned</strong> in itself. What falls out of scope is output that gives a mass-produced-template impression with no creator's perspective in it</td><td><span class="badge ro">official · 3-0</span></td></tr>
+      <tr><td>Areas blocked outright</td><td>In health, law, finance, and politics, an <strong>AI persona presented as a human expert</strong> can't be monetized however original it is</td><td><span class="badge ro">official · 3-0</span></td></tr>
+      <tr><td>2027-02-01 YPP change</td><td>Entry thresholds <strong>exactly double</strong>. Existing members are excluded</td><td><span class="badge ro">official · 3-0</span></td></tr>
+      <tr><td>Shorts revenue share</td><td>Standing right → <strong>threshold-based</strong>. Below 10M views in 90 days, only the Shorts share stops</td><td><span class="badge ro">official · 3-0</span></td></tr>
+      <tr><td>Upload frequency and time</td><td>Neither is <strong>a ranking requirement</strong>. YouTube denies it directly, from multi-year analysis</td><td><span class="badge ro">official · 3-0</span></td></tr>
+      <tr><td>Shorts views (2025-03-31 onward)</td><td>Counted every time playback starts — <strong>not a retention metric</strong></td><td><span class="badge ro">official · 3-0</span></td></tr>
+      <tr><td>Shorts ranking signals</td><td>Viewed rate · average watch duration · average percentage viewed + likes · post-watch surveys</td><td><span class="badge wr">official · 2-1</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <strong>How the confidence notation works.</strong> Everything kept here is sourced to <strong>YouTube's own documents</strong>. <code>3-0</code> means all three verifiers failed to refute it, and <code>2-1</code> means one succeeded (the reason sits in that section). Of the large-scale outside measurements, exactly <strong>one</strong> passed verification — Galloway's 3.3-billion-view study, and it passed only with the caveat that it's from the 60-second-cap era (§5). Metricool's two analyses of 790,000 videos were refuted by all three votes (§10).
+  </div>
+</section>
+
+<section id="ai">
+  <h2>2. The line when you make it with AI</h2>
+  <p>On 15 July 2025 YouTube renamed its <strong>'repetitious content'</strong> policy to <strong>'inauthentic content'</strong> and clarified that it covers content that is repetitive or mass-produced.</p>
+
+  <div class="src-quote">
+    <p>"July 15, 2025: We're making a minor update to our 'repetitious content' policy to better clarify this includes content that is repetitive or mass-produced. We are also renaming this policy from 'repetitious content' to 'inauthentic content.' This type of content has always been ineligible for monetization under our existing policies…"</p>
+  </div>
+
+  <p>YouTube frames this as clarifying an existing rule rather than a new AI crackdown. That's YouTube's framing, though, not a sign the risk is small — the policy text names AI directly.</p>
+
+  <h3>Where the line sits</h3>
+  <p>The official documents give examples on both sides. Read them and the criterion is clear — what's judged is <strong>whether the output is mass-produced from a template</strong>, not whether the tool was AI.</p>
+
+  <div class="two-col">
+    <div class="col-box win">
+      <h4>✓ Can be monetized</h4>
+      <ul>
+        <li>Visualizing <strong>characters and stories you created</strong> with AI</li>
+        <li>Polishing a script with AI</li>
+        <li>Generating original background visuals with AI</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ Can't be monetized</h4>
+      <ul>
+        <li>AI output made from generic, unoriginal templates that gives a <strong>mass-produced impression</strong> with no creator's perspective</li>
+        <li>Image slideshows</li>
+        <li><strong>Scrolling text</strong> with almost no narrative or commentary</li>
+        <li>Videos repeating the same situation with the same ending</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>The judgment comes down to two lines. <strong>"It has to be your own original work"</strong> (if you take someone else's, transform it substantially into your own), and <strong>"it can't be mass-produced, generic, repetitive, or manipulative"</strong> — made for viewers' enjoyment or education, not purely for views.</p>
+
+  <div class="danger">
+    <strong>The area that's blocked with no exception.</strong> On sensitive subjects like health, law, finance, and politics, an <strong>AI persona presented as a human expert</strong> is blocked from monetization however original the content is. The official examples are health advice from an AI "doctor" and investment advice from an AI podcast host. If you run a Korean-language channel on an AI pipeline, those four fields are the minefield.
+  </div>
+
+  <h3>Traps you hit in practice</h3>
+  <ul class="rule-list">
+    <li><span class="n">1</span> The policy page's <strong>actual section heading is still "Generic or Repetitive Content"</strong>. Searching for 'inauthentic content' won't find the heading.</li>
+    <li><span class="n">2</span> This is a <strong>monetization eligibility</strong> policy, not a removal or blocking one. The video doesn't come down; the channel drops out of YPP.</li>
+    <li><span class="n">3</span> The document doesn't literally require "human-added value". What it requires is the <strong>creator's original, authentic perspective</strong>, with no review criteria or proof procedure — it has to be visible in the output itself. Since there's no way to document that a person reviewed it, <strong>every video actually carrying its own thinking</strong> is the only line of defense.</li>
+  </ul>
+
+  <h3>The scarier one is the spam policy — there's another gate</h3>
+  <p>The authenticity policy above only touches <strong>monetization eligibility</strong> (practical trap 2). But a separate policy treats the same behavior with <strong>removal and channel termination</strong> — the spam and deceptive practices policy. Read the two as one thing and you see half the risk.</p>
+
+  <div class="src-quote">
+    <p>"YouTube doesn't allow use of creation tools to flood the platform with repetitive content, including coordinated mass-production and technical manipulation to bypass filters."</p>
+  </div>
+
+  <p>The form the policy gives as an example is <strong>a channel that uses the same background music and repeating AI imagery in every video while an AI-written script is read aloud</strong>. This pipeline generates the music (Lyria), the imagery, and the narration (TTS), so running the template unchanged lands inside that sentence.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Policy</th><th>What you lose</th><th>Recovery</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Inauthentic content</strong><br>(channel monetization policies)</td>
+        <td>Monetization eligibility — the channel drops out of YPP. The videos themselves stay up</td>
+        <td>Reapply after complying</td>
+      </tr>
+      <tr>
+        <td><strong>Spam and deceptive practices</strong><br>(Community Guidelines)</td>
+        <td>Content removal · warnings · strikes. <strong>Three strikes in 90 days ends the channel</strong></td>
+        <td>Strikes expire after 90 days · termination goes to appeal</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="danger">
+    <strong>The trigger is repetition, not frequency.</strong> No platform wrote "more than N per day"; they all wrote "the same thing, repeatedly". Five a day, each made differently, matches no clause, and <strong>one a day for 30 straight days with identical BGM, framing, and narration</strong> is exactly that clause. So the response isn't publishing less — it's <strong>creating variance</strong>: change at least one of BGM, cover framing, or opening every episode, and don't push the same mold out back-to-back just to drain the queue.
+  </div>
+
+  <div class="warn">
+    <strong>Eligibility review is two different gates.</strong> The YPP eligibility page contains <strong>no</strong> content-authenticity criteria at all — across the whole page, 'AI', 'inauthentic', 'reused', 'mass-produced', and 'synthetic' appear zero times. Authenticity is judged by a separate document, the channel monetization policies, and the duty to comply starts the moment you accept the partner agreement. Break it and you lose monetization <strong>regardless</strong> of watch hours or subscriber count.
+  </div>
+
+  <h3>Disclosure is yet another gate — and turning it on pays</h3>
+  <p>Separately from monetization eligibility, realistic-looking AI content carries a <strong>disclosure duty at upload</strong>. Earlier research couldn't pin the scope; this round confirmed it from official documents. The conclusion first: <strong>when in doubt, turning it on is always better.</strong></p>
+
+  <div class="src-quote">
+    <p>"Disclosing AI content won't limit a video's audience or impact its eligibility to earn money."</p>
+    <p>"Creators who consistently choose not to disclose this information may be subject to manual application of a label, or penalties from YouTube, including removal of content or suspension from the YouTube Partner Program."</p>
+  </div>
+
+  <p>Disclosure carries <strong>no penalty</strong>, and non-disclosure carries <strong>forced labels, removal, and YPP suspension</strong>. The cost sits on one side only, so there's no reason for the decision to be hard.</p>
+
+  <div class="two-col">
+    <div class="col-box fail">
+      <h4>Disclosure required</h4>
+      <ul>
+        <li><strong>AI-generated music</strong></li>
+        <li>AI-generated extra footage of a real place</li>
+        <li>Realistic generated footage of a real person</li>
+        <li>Making someone appear to say or do what they didn't</li>
+        <li>Realistic depiction of an event that didn't happen</li>
+      </ul>
+    </div>
+    <div class="col-box win">
+      <h4>Exempt</h4>
+      <ul>
+        <li>Script, title, <strong>thumbnail</strong>, and outline generation</li>
+        <li>Caption generation · idea generation</li>
+        <li><strong>Cloning your own voice</strong> (dubbing, voiceover)</li>
+        <li>Unrealistic content (fantasy, animation)</li>
+        <li>Color grading · beauty filters · quality enhancement</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>If you run an AI pipeline you're effectively always in scope.</strong> Generated music sits at the top of the list. A channel that uses AI only for the script, thumbnail, captions, and its own voice is exempt, but lay in one generated backing track and you're over the line. Label placement: on the player for realistic content, in the expanded description for animated and unrealistic content.
+  </div>
+</section>
+
+<section id="deadline">
+  <h2>3. The 2027 change — a de-facto deadline</h2>
+  <p>The change announced on the official blog on 10 August 2026 doubles the entry threshold. It takes effect on 1 February 2027, and <strong>existing members are excluded from the increase</strong>.</p>
+
+  <ul class="timeline">
+    <li class="now">
+      <span class="t-date">Now – 2027-01-31</span>
+      <span class="t-body">Two entry paths. 1,000 subscribers <strong>+</strong> 4,000 valid watch hours in 12 months, or 1,000 subscribers <strong>+</strong> 10 million valid Shorts views in 90 days. Clearing either one is enough. Coming in through the Shorts path still gets you the full set of YPP benefits — watch-page ads, memberships, Super features, shopping.</span>
+    </li>
+    <li class="soon">
+      <span class="t-date">2027-02-01 onward (new applicants)</span>
+      <span class="t-body">The threshold <strong>exactly doubles</strong> — <strong>8,000 valid watch hours</strong> in 365 days or <strong>20 million</strong> valid Shorts views in 90 days. The 1,000 subscribers stay as they are.</span>
+    </li>
+    <li class="soon">
+      <span class="t-date">2027-02-01 onward (all members)</span>
+      <span class="t-body">Shorts ad and subscription revenue sharing goes from a standing right to a <strong>threshold</strong>. Only channels above <strong>10 million</strong> valid Shorts views in the last 90 days receive it. Falling short doesn't drop you from YPP and long-form revenue continues, and clearing it again restores the share automatically.</span>
+    </li>
+  </ul>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Current</th><th>After 2027-02-01</th></tr></thead>
+    <tbody>
+      <tr><td>Subscribers</td><td>1,000</td><td>1,000 (unchanged)</td></tr>
+      <tr><td>Long-form path</td><td>4,000 hours in 12 months</td><td><strong>8,000 hours in 365 days</strong></td></tr>
+      <tr><td>Shorts path</td><td>10M views in 90 days</td><td><strong>20M views in 90 days</strong></td></tr>
+      <tr><td>Shorts revenue share</td><td>Automatic with YPP</td><td><strong>While holding 10M+ views over 90 days</strong></td></tr>
+      <tr><td>Applies to existing members</td><td>—</td><td>Entry threshold excluded · sharing threshold applies</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="ok">
+    <strong>What it means in practice.</strong> If monetization is the goal, <strong>clearing eligibility before 1 February 2027</strong> is the only way to avoid the doubled threshold. And to earn from Shorts alone you need 20 million views in 90 days to get in and 10 million in 90 days to stay — a gate you keep clearing rather than clear once, more <strong>treadmill than turnstile</strong>. Existing partners have to accept the updated terms in Studio by 2027-01-31 to keep monetization fully intact.
+  </div>
+
+  <p>One caution: the source states only the 90-day view window and says nothing about the evaluation cycle. Don't assert that it "switches on and off quarterly" — with a rolling window it could change at any time.</p>
+</section>
+
+<section id="pool">
+  <h2>4. How Shorts revenue is calculated</h2>
+  <p>The structure differs from long-form outright. Long-form pays <strong>55%</strong> of net watch-page ad revenue <strong>per video</strong>. Shorts works as a <strong>pool</strong> rather than per video.</p>
+
+  <div class="note">
+    <strong>The calculation that repeats every month.</strong> Ad revenue from between videos in the Shorts feed is gathered together → music licensing costs are taken out → what's left is the <strong>Creator Pool</strong> → it's divided <strong>by country</strong> on engaged views and music usage → the creator takes <strong>45%</strong> of their allocation.
+  </div>
+
+  <p>That 45% is the same whether or not you used music. Music is deducted at the stage where the pool is formed, not from the share rate. The calculation that "one music track means an effective 22.5%" is widely circulated, but all three votes refuted it in this research, so don't state it as a number.</p>
+
+  <h3>What's excluded from the revenue calculation</h3>
+  <ul>
+    <li>Unedited clips of someone else's film or TV</li>
+    <li>Re-uploads of another creator's content (from YouTube and other platforms)</li>
+    <li>Compilations with no original material</li>
+    <li>Artificial views from auto-clicking or scrolling bots</li>
+    <li>Views on content that violates advertiser-friendly guidelines</li>
+  </ul>
+  <p>The list runs on "such as", so it isn't a closed set. And "it doesn't earn" means the uploader gets no allocation, not that the ad revenue around that content stays out of the pool.</p>
+  <p>Since 15 October 2024, <strong>3-minute Shorts</strong> are also covered by the standard revenue model.</p>
+</section>
+
+<section id="signals">
+  <h2>5. The signals that set reach</h2>
+  <p>Here are the signals YouTube lists directly in its Shorts search-and-discovery document.</p>
+
+  <div class="src-quote">
+    <p>"do they choose to watch it, ignore it, or click 'not interested'? … % of viewers who chose to view, avg. view duration and avg. % viewed … likes and post-watch survey results."</p>
+  </div>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Signal</th><th>What the algorithm looks at</th><th>In practice</th></tr></thead>
+    <tbody>
+      <tr><td><span class="signal-num">1</span> Viewed rate</td><td>The share of people who chose to watch when it was recommended</td><td><strong>A metric only Shorts has.</strong> You have to stop them on the first frame</td></tr>
+      <tr><td><span class="signal-num">2</span> Average watch duration</td><td>How many seconds they actually watched</td><td>The longer you make it, the harder it is to hold</td></tr>
+      <tr><td><span class="signal-num">3</span> Average percentage viewed</td><td>What percentage of the total length they watched</td><td>A structure that favors short videos</td></tr>
+      <tr><td><span class="signal-num">4</span> Likes</td><td>A satisfaction signal</td><td>A lagging indicator — it doesn't change decisions</td></tr>
+      <tr><td><span class="signal-num">5</span> Post-watch survey</td><td>Asking directly whether they were satisfied afterwards</td><td>Outside a creator's direct control</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>On the Analytics side the terms are <strong>'Shown in feed'</strong> and <strong>the viewed versus swiped-away ratio</strong>.</p>
+
+  <div class="warn">
+    <strong>Why the vote split — this part matters.</strong> A verifier compared the long-form version of the same document and found that the long-form page also doesn't mention CTR and uses the identical "chose to watch it, ignore it" sentence. So <strong>the common line that "Shorts has no CTR" isn't a distinguishing feature of Shorts at all.</strong> On the documents, the one real difference unique to Shorts is number 1 in the table above.
+    <p style="margin-top:10px">One more — Shorts surfaced outside the feed (search results, home shelves, the channel page) still show as thumbnails and do register impressions and CTR. <strong>"Shorts don't need thumbnails" is only true inside the feed.</strong></p>
+  </div>
+
+  <h3>Hook and length — where there's no official answer</h3>
+  <p>This is where the gap between circulating advice and the official documents is widest. <strong>YouTube sets only the length cap (3 minutes) and has never once recommended a duration inside it.</strong> A sweep of seven production-tip documents finds no length advice, and nothing on hook design or retention thresholds either.</p>
+
+  <p>The only large dataset filling that blank is Paddy Galloway's April 2023 study — 33 channels, 5,400 Shorts, 3.3 billion views. The figures confirmed in the original:</p>
+
+  <div class="src-quote">
+    <p>"shorts with under 60% VVSA rarely performed well… The best performing shorts were typically between 70 and 90%"</p>
+    <p>"The shorts algorithm does (unsurprisingly) appear to favor longer videos (40 seconds+) that hold viewer duration well. However, there were outliers at all lengths. So don't feel you have to make your video a certain length."</p>
+    <p>"Shorts where the AVD was higher than 50 seconds averaged 4.1 million views. Just making a long short isn't the goal, making a short that holds people for as long as possible is."</p>
+  </div>
+
+  <div class="danger">
+    <strong>Four reasons not to use these numbers as rules.</strong> ① It's April 2023 data, when <strong>the Shorts cap was 60 seconds</strong> — this dataset says nothing about the 3-minute era. ② The methodology is closed and there's no statistical testing. The 60% and 70–90% figures were read off a scatter plot by eye ("As you can see by the line"). ③ At an average 610,000 views per video it's a big-channel sample. ④ It's lead-generation content from a consulting firm. The RPM and subscriber-conversion figures in the same article were rejected in a separate check (§10).
+  </div>
+
+  <p>"Make the first second strong, treat the intro like a thumbnail" comes from the same article, but that's <strong>the author's prescription</strong> rather than a measured result. Read the two apart.</p>
+
+  <p><strong>One practical constraint.</strong> With licensed music most tracks cap at 90 seconds and some drop to 60 or 30. The 3-minute cap is for silent audio or your own tracks. A copyright claim on a Short over one minute means a worldwide block.</p>
+</section>
+
+<section id="funnel">
+  <h2>6. Where to send people from a Short</h2>
+  <p class="lede"><strong>URLs in a Short's description and comments don't click.</strong> It's a spam-prevention measure, and it applies at every channel tier.</p>
+
+  <p>You can paste them as plain text, but they won't work as links. Clickable links in a long-form video's description open up once advanced features access is on — <strong>Shorts are the exception to that.</strong> To send people out, the channel profile link is all you have.</p>
+
+  <h3>The one official tool is Related video</h3>
+  <p>It attaches a link from one Short to another video on the same channel — long-form, livestream, or another Short. Viewers see it as a clickable link under the channel handle, and since the June 2026 player redesign it sits in a swipe carousel under the title.</p>
+
+  <div class="src-quote">
+    <p>"This feature allows you to attach a clickable link directly to your Short that routes traffic to any long-form video, livestream, or secondary Short on your channel"</p>
+  </div>
+
+  <ul class="rule-list">
+    <li><span class="n">1</span> The path is <strong>Studio &gt; Content &gt; that Short &gt; Related video &gt; pick a target &gt; Save</strong>.</li>
+    <li><span class="n">2</span> You set it <strong>per video, after uploading</strong>. It's not in the upload flow and not a channel default.</li>
+    <li><span class="n">3</span> <strong>The API has no matching field</strong> — automation is impossible. If you've built a publishing pipeline, this one step has to be done by hand.</li>
+    <li><span class="n">4</span> It needs phone verification at minimum, and the target video has to be public or unlisted.</li>
+  </ul>
+
+  <p>YouTube adds that you shouldn't just place the link — say the CTA out loud, point a finger at where the link sits, and flash the destination video's thumbnail.</p>
+
+  <div class="warn">
+    <strong>But there isn't a single effect number.</strong> Sweep the official blog, the Creator Insider videos, and the Help Center and you find <strong>zero</strong> figures for CTR, conversion, or traffic lift (confirmed by machine-scanning the 5,208 characters of the blog post). These documents don't cover pinned comments, end screens, descriptions, or subscriber conversion either. The advice is official but comes with no evidence attached — <strong>to learn the effect you have to split Shorts with and without it and measure in Studio yourself.</strong>
+  </div>
+
+  <div class="note">
+    <strong>What about cross-platform reuse.</strong> "A TikTok watermark gets you demoted on Reels" circulates widely, but official sources don't confirm it. The phrase "no visible watermarks" does exist in Instagram's documents, but they name neither TikTok nor reuse from other apps, and Instagram's duplicate-content rule targets <strong>identical copies within Instagram</strong>. Substantially edited material — memes, parodies, a new voiceover — is explicitly exempt.
+  </div>
+</section>
+
+<section id="myth">
+  <h2>7. Beliefs — things you don't have to do</h2>
+  <p class="lede"><strong>Upload frequency and upload time are not ranking requirements.</strong> The most widespread belief is the most clearly denied.</p>
+
+  <div class="src-quote">
+    <p>"There is no minimum posting cadence required for your videos to perform well."</p>
+    <p>"Do I need to upload daily or at least once a week?" → "No, we've done analyses over the years and found that growth in views across uploads is not correlated with time between uploads."</p>
+    <p>"We studied thousands of channels that took a break and found no correlation between break length and changes in views."</p>
+  </div>
+
+  <p>Publishing time is the same — <em>"Publish time is not known to impact a video's long-term performance."</em> Formats where timing is the point, like livestreams and premieres, are the exception. The official position is that posting while your viewers are active helps early views but has nothing to do with long-term performance.</p>
+
+  <div class="warn">
+    <strong>Doesn't that contradict the data showing channels that post more grow more?</strong> vidIQ analyzed 5 million channels (2024-06 to 2025-06) and 10.21 million (2025-04 to 2026-03) and found the median view-growth rate for channels posting 12+ times a month is <strong>2.18%</strong>, above the <strong>0.53%</strong> of channels posting less than once a month. That isn't a contradiction — it's <strong>measuring something else</strong>. More shots means more goals; it doesn't mean a video ranks worse because you posted less. The same data shows diminishing returns past 35 uploads a month, where long-form performance falls back to baseline. vidIQ itself writes that it can't prove causation.
+    <p style="margin-top:10px">One caveat — the same FAQ lists "uploading less than usual" as a common reason home and suggested traffic drops. YouTube's position is 'frequency is not a ranking lever', not 'frequency doesn't matter at all'.</p>
+  </div>
+
+  <p><strong>What it means in practice:</strong> your channel doesn't die because you can't post daily. But cutting total output cuts your chances too. <strong>Trimming quality to keep a schedule has nothing behind it.</strong> This is the opposite of Threads — there, posting rhythm and the first 60–90 minutes drive reach, while on Shorts each video is evaluated on its own.</p>
+
+  <h3>The belief on the other side — "post too much and you get blocked"</h3>
+  <p>Daily upload limits <strong>are real</strong>. YouTube's documents state that it limits how many videos you can upload in 24 hours across desktop, mobile, and the API combined. But <strong>it doesn't publish the number</strong> — it varies by country and channel history, and it shrinks if you get a Community Guidelines warning.</p>
+  <div class="note">
+    <strong>This is a tap, not a sanction.</strong> Go over and you get a "daily upload limit reached" error, and it clears after 24 hours. No mark stays on the account. A person posting one or two a day never comes near it. <strong>The path that actually terminates an account is the spam policy in §2</strong>, not the count — repetition of the same mold is the trigger.
+  </div>
+  <p class="quote-ex">Research record: <a href="../../research/2026-08-15-posting-frequency-and-growth/index.html">Posting frequency and growth (2026-08-15)</a> (Korean) — the frequency and blocking beliefs of all three platforms compared side by side.</p>
+</section>
+
+<section id="views">
+  <h2>8. The definition of a view changed</h2>
+  <p class="lede"><strong>Since 31 March 2025, a Shorts view is counted every time playback or replay starts.</strong> There's no minimum watch-time requirement.</p>
+
+  <div class="src-quote">
+    <p>"beginning on 3/31/2025, Shorts views will count the number of times your Short starts to play or replay with no minimum watch time requirement"</p>
+    <p>"This change will not directly impact your earnings or how you can become eligible for the YouTube Partner Program – both will be based on engaged views."</p>
+  </div>
+
+  <p>Public view counts after that date are closer to playback starts than to a retention metric. The old method didn't disappear — it continues as a separate metric called <strong>engaged views</strong>, and money and eligibility still run on engaged views. <strong>A bigger view number doesn't mean the monetization threshold got lower.</strong></p>
+
+  <p>This isn't the claim of a single blog post. It's recorded three times in the developer API revision history — 2025-03-26 (announcement and the new <code>engagedViews</code>), 2025-04-24 (the metric added to the API), 2025-06-24 (an <code>engaged_views</code> column added to bulk reports). Landing in machine-read contract documents means it wasn't a slip of phrasing.</p>
+
+  <div class="danger">
+    <strong>The trap when you look at the data.</strong> It isn't applied retroactively. Put Shorts view counts from before and after March 2025 side by side and you're comparing numbers on different definitions — annual growth rates and year-over-year analyses all get distorted. And <strong>YouTube has never published how many seconds make an engaged view.</strong> Plenty of material puts numbers like "3 seconds or more" on it, with nothing behind them.
+  </div>
+
+  <p>One place where the terminology doesn't line up — the current YPP eligibility document doesn't use the phrase 'engaged views' at all, writing only "qualified Shorts views" without defining the calculation. That's a gap in the documentation rather than a contradiction.</p>
+</section>
+
+<section id="metrics">
+  <h2>9. What to watch</h2>
+  <p>Public view counts are out of the decision set for the reason in §8. Four things instead.</p>
+  <div class="metric-row">
+    <div class="metric"><div class="m-k">1</div><div class="m-v">Viewed rate</div></div>
+    <div class="metric"><div class="m-k">2</div><div class="m-v">Average percentage viewed</div></div>
+    <div class="metric"><div class="m-k">3</div><div class="m-v">engaged views</div></div>
+    <div class="metric"><div class="m-k">4</div><div class="m-v">90-day cumulative Shorts views</div></div>
+  </div>
+  <p>1 and 2 reflect the ranking signals in §5 directly, 3 is the actual basis for revenue, and 4 tells you where you stand against the §3 thresholds (20M to enter, 10M to keep). One more on top — a learning loop that reads the <strong>type</strong> (subject, form) of the top-reach videos into the next one. Without it the channel just repeats the same video. When early pass-through and retention are good but only views are low, don't copy that format; open the next episode's title with the problem that person already feels rather than with a method or a tool.</p>
+  <div class="warn">
+    <strong>Shown in feed can't be fetched through the API.</strong> It's a Studio-UI-only metric, so it can't go into an automated collection pipeline. For automation, use engaged views and average percentage viewed as the axes.
+  </div>
+</section>
+
+<section id="refuted">
+  <h2>10. Claims that failed verification</h2>
+  <p>Items where at least two of the three verifiers succeeded in refuting. <strong>It means this research doesn't support them, not that they're settled as false.</strong> If you see the same claims elsewhere, check the evidence again.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Refuted claim</th><th>Vote</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>Metricool's 790,000-video, 70,000-account analysis — "Shorts are 61% of all views", "ad revenue down more than 50%"</td><td><span class="badge de">0-3</span></td><td>Couldn't reconfirm the figures in the raw source</td></tr>
+      <tr><td>"Relative watch time matters more for short videos, absolute watch time for long ones"</td><td><span class="badge de">0-3</span></td><td>The cited page never mentions 'Shorts', and YouTube itself hedges with "broadly speaking"</td></tr>
+      <tr><td>An effective take of 22.5% with one music track, 15% with two</td><td><span class="badge de">0-3</span></td><td>Arithmetic inference not present in the official documents</td></tr>
+      <tr><td>"Shorts feed watch time doesn't count toward the 4,000 hours"</td><td><span class="badge wr">1-2</span></td><td>Undecided whether a Shorts-only channel can take the long-form watch-hour path</td></tr>
+      <tr><td>Shorts subscriber conversion = 16.9 per 10,000 views</td><td><span class="badge de">0-3</span></td><td>The figure couldn't be supported</td></tr>
+      <tr><td>The opposite claim — "long-form converts subscribers better than Shorts"</td><td><span class="badge wr">1-2</span></td><td>The reverse claim from the same study failed too. <strong>Neither direction is settled</strong> — there's no basis for "Shorts are a subscriber cheat code" nor for its denial</td></tr>
+      <tr><td>"Shorts RPM is 3–14% of long-form" (274 channels, 3,044 channel-months)</td><td><span class="badge de">0-3</span></td><td>Couldn't reconfirm the per-niche ratio claim in the raw source</td></tr>
+      <tr><td>"Watermarks get you demoted" is official policy</td><td><span class="badge wr">1-2</span></td><td>The phrase "no visible watermarks" does exist in Instagram's documents, but they <strong>name neither TikTok nor other-app reuse</strong></td></tr>
+      <tr><td>"New channels can't use Related video at all"</td><td><span class="badge de">0-3</span></td><td>YouTube's documents contradict each other — the dedicated page says "advanced features only", the feature matrix checks the phone-verified column too</td></tr>
+      <tr><td>The official 'Shorts tips' hub has no hook, retention, or loop items at all</td><td><span class="badge de">0-3</span></td><td>The absence claim itself was refuted — though <strong>the lack of length advice</strong> was confirmed separately (§5)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>The AI disclosure duty, "unconfirmed" in the previous edition, is confirmed this time.</strong> The disclosure and exemption lists, plus the official sentence that disclosing costs nothing in reach or revenue, moved into §2. What decides monetization is still the authenticity policy rather than disclosure — a label doesn't block you, and removing one doesn't get you through.
+  </div>
+</section>
+
+<section id="unknown">
+  <h2>11. What we still don't know</h2>
+  <p>The second research round filled in production practice and the funnel, and <strong>settled the AI disclosure scope</strong> (§2). Four things are left. They mean <strong>"not confirmed from a primary source"</strong> rather than "there's no evidence", so if you see these numbers in circulating material, trace the source back.</p>
+  <ul>
+    <li><strong>Every Korean-market number</strong> — the verified Shorts RPM table has <strong>no Korea row at all</strong> (US $0.328, Australia $0.193, UK $0.166, Canada $0.165, Germany $0.163). Domestic channel RPM, the effect of language choice (Korean only vs English vs multilingual) on reach and RPM, and raw data on YouTuber income distribution from tax filings all failed verification. <strong>Don't transplant English-market numbers onto Korea.</strong></li>
+    <li><strong>Optimal length in the 3-minute era</strong> — the only large dataset is from the 60-second-cap days (§5), so there's no evidence for how watch-through and views move in the 60–180-second band. Read it together with the constraint that licensed music pulls the practical cap down to 60–90 seconds.</li>
+    <li><strong>The effect size of Related video</strong> — zero CTR or conversion figures in the official documents (§6). Splitting Shorts with and without it and measuring in Studio is the only route.</li>
+    <li><strong>Whether multi-language audio tracks apply to Shorts</strong> — whether the long-form feature extends to Shorts, and how reach and RPM change if you add an English track to a Korean original, couldn't be confirmed.</li>
+  </ul>
+  <div class="warn">
+    <strong>This has a short shelf life.</strong> From 1 February 2027 the entry threshold doubles and Shorts revenue sharing becomes threshold-based. Statements like today's "10 million views gets you into YPP" won't hold after that date. And the 2027 announcement came <strong>one day before</strong> this page's reference date (2026-08-10), so more detailed follow-up guidance may still appear.
+  </div>
+  <p>A note on method limits. In the first research round several verifiers exhausted their session web-search budget, so some items were judged by re-checking the primary document without a secondary refutation search. These are claims about "what the primary document says", so the risk of the conclusion flipping is low, but <strong>we didn't verify enforcement in practice or variation in the field.</strong> The second round had the opposite problem — only 25 of 108 items fit the verification budget, which pushed the Korean-market and multilingual items out wholesale.</p>
+</section>
+
+<section id="automation">
+  <h2>12. Automation — grow-youtube</h2>
+  <p>The <code>/social-flow:grow-youtube</code> skill runs the principles above as a loop. One call is one tick, and <code>/loop</code> handles the repetition.</p>
+  <pre><code>/social-flow:grow-youtube &lt;channel&gt; init      # once — fix the growth plan (approval)
+/loop 1h /social-flow:grow-youtube &lt;channel&gt;  # autonomous loop every hour</code></pre>
+  <ol>
+    <li><strong>Comment replies</strong> — golden-hour unanswered first</li>
+    <li><strong>Metrics</strong> — channel statistics plus Analytics period metrics. The §9 items come in through <code>youtube_insights</code></li>
+    <li><strong>Queue refill</strong> — only if the plan turned it on, authoring one episode when the queue runs dry</li>
+    <li><strong>Queue publishing</strong> — only videos stamped <code>queue: ready</code></li>
+  </ol>
+  <div class="warn">
+    <strong>A scope error on the first tick is normal.</strong> A token issued for publishing carries only <code>youtube.upload</code>, with no read, Analytics, or comment scopes. Refreshing doesn't add scopes, so you have to tick the boxes in the consent flow and issue a new token — the server error carries that instruction. The Analytics API also has to be <strong>enabled separately</strong> in the Google Cloud Console (a gate distinct from scopes), and its data lags 2–3 days.
+  </div>
+  <div class="note">
+    <strong>This loop needs YouTube credentials to run.</strong> The publish and insights tools appear in <code>tools/list</code> only when a YouTube credential file exists — <code>youtube-oauth-client.json</code>, either flat under <code>&lt;SNS_TOKEN_DIR&gt;</code> or in a channel directory. Without a token everything up to and including production still works — <code>produce</code> writes the finished video plus per-platform text into <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload by hand. What you lose is the publishing and growth-loop half.
+  </div>
+  <div class="ok">
+    <strong>The loop can't turn AI disclosure off.</strong> <code>containsSyntheticMedia</code> defaults to <code>true</code> and the autonomous loop never lowers it — as §2 established, disclosing costs nothing in reach or revenue eligibility, while habitual non-disclosure carries forced labels and YPP suspension. Lowering the value is a human's call.
+  </div>
+</section>
+
+<section id="sources">
+  <h2>13. Sources</h2>
+  <h4>YouTube official — policy and monetization</h4>
+  <ul>
+    <li><a href="https://support.google.com/youtube/answer/1311392?hl=en">Channel monetization policies</a> — includes inauthentic content. Evidence for §2.</li>
+    <li><a href="https://support.google.com/youtube/answer/2801973?hl=en">Spam and deceptive practices policy</a> — mass repetitive production, removal, strikes, channel termination. Evidence for §2. Checked 2026-08-15</li>
+    <li><a href="https://support.google.com/youtube/answer/10383400?hl=en">Upload error guidance</a> — a 24-hour upload limit exists, the number isn't public. Evidence for §7. Checked 2026-08-15</li>
+    <li><a href="https://support.google.com/youtube/answer/72851">YPP eligibility requirements</a> — evidence for §1 and §3.</li>
+    <li><a href="https://blog.youtube/news-and-events/youtube-partner-program-updates-2027-new-opportunities-earn/">2027 YPP change announcement (2026-08-10)</a> — evidence for §3.</li>
+    <li><a href="https://support.google.com/youtube/answer/12504220?hl=en">Shorts revenue sharing policy</a> · <a href="https://support.google.com/youtube/answer/72902?hl=en">revenue sharing overview</a> — evidence for §4.</li>
+  </ul>
+  <h4>YouTube official — algorithm and analytics</h4>
+  <ul>
+    <li><a href="https://support.google.com/youtube/answer/11914225?hl=en&amp;co=YOUTUBE._YTVideoType%3Dshorts">Shorts search and discovery tips</a> — evidence for §5 and §7.</li>
+    <li><a href="https://support.google.com/youtube/answer/141805?hl=en">Performance FAQ</a> — upload frequency and time. Evidence for §7.</li>
+    <li><a href="https://support.google.com/youtube/answer/12942217?hl=en&amp;co=YOUTUBE._YTVideoType%3Dshorts">Shorts analytics</a> · <a href="https://support.google.com/youtube/answer/9314486">impressions and CTR definitions</a> — evidence for §5 and §9.</li>
+    <li><a href="https://support.google.com/youtube/thread/333869549/a-change-to-how-we-count-views-on-shorts?hl=en">View counting change announcement</a> · <a href="https://developers.google.com/youtube/reporting/revision_history">API revision history</a> — evidence for §8.</li>
+  </ul>
+  <h4>YouTube official — AI disclosure, funnel, length</h4>
+  <ul>
+    <li><a href="https://support.google.com/youtube/answer/14328491">Altered or synthetic content disclosure</a> — disclosure and exemption lists, "disclosure doesn't affect reach or revenue". Evidence for §2.</li>
+    <li><a href="https://blog.youtube/creator-and-artist-stories/youtube-related-videos-traffic-guide/">Related videos traffic guide (2026-07-14)</a> · <a href="https://support.google.com/youtube/answer/14075157">Add a related video</a> · <a href="https://support.google.com/youtube/answer/57404">Studio video settings</a> — evidence for §6.</li>
+    <li><a href="https://support.google.com/youtube/answer/13748639">URLs in Shorts descriptions and comments don't click</a> · <a href="https://support.google.com/youtube/answer/9890437">Feature access matrix</a> — evidence for §6.</li>
+    <li><a href="https://support.google.com/youtube/answer/15424877">Shorts 3-minute cap (2024-10-15 onward)</a> · <a href="https://support.google.com/youtube/answer/12921536">Create Shorts</a> — evidence for §5. The documents where the absence of length advice was confirmed.</li>
+    <li><a href="https://support.google.com/youtube/thread/445002770/simplifying-the-shorts-player-a-more-intuitive-experience-improved-feedback-tools">Shorts player redesign announcement (2026-06)</a> — retirement of the dislike metric and "chose to view" named as its replacement. Evidence for §5 and §6.</li>
+  </ul>
+  <h4>Industry coverage and secondary material</h4>
+  <ul>
+    <li><a href="https://www.tubefilter.com/2026/07/13/youtube-inauthentic-content-policy-clarification/">Tubefilter — the authenticity policy explained</a> · <a href="https://www.tubefilter.com/2026/08/10/youtube-partner-program-ad-eligibility-requirements-shorts/">YPP change coverage</a></li>
+    <li><a href="https://techcrunch.com/2026/08/10/youtube-now-requires-creators-to-have-twice-as-many-watch-hours-to-start-earning-money/">TechCrunch — YPP watch hours doubled</a> · <a href="https://techcrunch.com/2025/03/26/youtube-is-changing-how-youtube-shorts-views-are-counted">view counting change</a></li>
+    <li><a href="https://www.searchenginejournal.com/youtube-algorithm-myths-debunked-insights-from-the-growth-team/510091/">Search Engine Journal — algorithm myths debunked (interview with YouTube's growth team)</a></li>
+    <li><a href="https://vidiq.com/blog/post/youtube-partner-program-changes-2027/">vidIQ — 2027 YPP comparison table and large-scale upload frequency analysis</a></li>
+    <li><a href="https://threadreaderapp.com/thread/1646898356419981315.html">Paddy Galloway — 3.3-billion-view Shorts study (2023-04-14)</a> — evidence for §5. <strong>Not an official benchmark, and it's from the 60-second-cap era.</strong></li>
+    <li><a href="https://creators.instagram.com/blog/recommendations-and-originality">Instagram — recommendations and originality</a> — evidence for the cross-platform item in §6.</li>
+    <li><a href="https://air.io/en/air-data-findings/youtube-shorts-rpm-vs-long-form-how-much-do-shorts-earn-in-2026">AIR — Shorts RPM by country</a> — evidence for §11. A single vendor source, and <strong>Korea isn't in the table.</strong></li>
+  </ul>
+  <div class="note">
+    A good share of English-language "Shorts algorithm 2026" articles are SEO content-farm pieces. Don't trust precise-looking single-source numbers. Everything kept here <strong>passed a 3-vote adversarial check</strong>, and most of it came from YouTube's own documents. Only the <strong>last three</strong> sources (Galloway, Instagram, AIR) are unofficial, and each carries its limits in the body — don't cite them as official benchmarks. What failed is recorded in §10.
+  </div>
+</section>
+
+<footer>
+  As of 2026-08-11 · updated 2026-08-16 (§12 automation section added) · 2026-08-15 (<a href="../../research/2026-08-15-posting-frequency-and-growth/index.html">frequency and blocking research</a>, Korean) · method: two deep-research workflow runs (212 agents) → 48 sources → 237 claims extracted → 50 put to a 3-vote check → 28 confirmed ·
+  growth loop <code>/social-flow:grow-youtube</code> · tactical source of truth <code>skills/grow-youtube/references/growth-playbook.md</code> ·
+  same genre <a href="../threads-growth/index.en.html">Threads growth guide</a> · platform grammar <code>skills/platform-guide/references/platform-playbook.md</code> · <a href="../../index.en.html">docs hub</a>
+  <p style="margin-top:10px"><strong>After 2027-02-01, re-check §3 and §4 without fail.</strong></p>
+</footer>
+
+</div>
+</body>
+</html>

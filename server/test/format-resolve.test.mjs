@@ -187,7 +187,7 @@ test('모르는 FORMAT 값은 조용히 세로로 떨어지지 않는다', () =>
   const dir = mkdtempSync(join(tmpdir(), 'fmt-'));
   const scenes = join(dir, 'scenes.js');
   writeFileSync(scenes, 'window.FORMAT="tiktok-9x16";window.SCENES=[];\n');
-  assert.throws(() => run(scenes, '--sh'), /모르는 값/);
+  assert.throws(() => run(scenes, '--sh'), /unknown value/);
 });
 
 /**
@@ -358,8 +358,8 @@ test('build-reel 촬영 레인 — sync 카드가 오디오 머신을 비켜 간
   assert.doesNotMatch(reel, /-v p="\$PRE"/, '루프 안에 전역 PRE 가 남았다');
   assert.match(reel, /--pre "\$CPRE"/, 'reveal 타이밍도 카드 값을 쓴다');
   // 트림·atempo 를 태우면 그만큼 화면과 어긋난다
-  assert.match(reel, /MUTE=1   # 아래 오디오 머신/, 'sync 는 트림·속도 보정을 건너뛴다');
-  assert.match(reel, /SYNCNOTE="무음 클립 — 정규화 생략"/, '무음 클립은 loudnorm 도 안 건다');
+  assert.match(reel, /MUTE=1   # bypasses the audio machine below/, 'sync 는 트림·속도 보정을 건너뛴다');
+  assert.match(reel, /SYNCNOTE="silent clip — normalization skipped"/, '무음 클립은 loudnorm 도 안 건다');
 });
 
 test('build-reel 켄번즈 — 촬영 클립엔 안 걸고, 가로엔 팬을 쓴다', () => {
@@ -386,6 +386,6 @@ test('build-reel 파일 자막 — 전사본 시각을 카드 절대 시각으�
 test('모르는 cards.tsv 옵션은 조용히 무시되지 않는다', () => {
   const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');
   // 오타가 무시되면 sync 가 빠진 촬영 카드가 0.4초 어긋난 채 나가고, 그것을 눈으로 잡아야 한다
-  assert.match(reel, /\*\) say "✗ card \$IDX: cards\.tsv 5열 옵션 모름 — \$KV"; exit 1 ;;/);
-  assert.match(reel, /pan 방향 모름/, '모르는 팬 방향도 멈춘다');
+  assert.match(reel, /\*\) say "✗ card \$IDX: unknown cards\.tsv column-5 option — \$KV"; exit 1 ;;/);
+  assert.match(reel, /unknown pan direction/, '모르는 팬 방향도 멈춘다');
 });

@@ -1,120 +1,125 @@
-# 촬영(스크린캐스트) 편집 파이프라인 — 계약·게이트·함정
+# Shooting (screencast) edit pipeline — contracts, gates, pitfalls
 
-**스토리보드 선행 촬영 흐름**의 제작 절반. 사용자가 `storyboard/script.md`(촬영
-대본)대로 화면을 녹화하면, ingest 가 전사·정합(`recording/alignment.json`)을
-만들고, produce 가 이 문서의 절차로 **녹화 원본을 잘라 9:16 쇼트폼으로 편집**한다.
-TTS·생성 배경 파이프라인(pipeline.md)과 달리 **음성은 사용자 육성, 화면은 실제
-녹화**다 — scenes.js 는 타이틀 오버레이·플랫폼 텍스트의 원천으로만 쓰인다.
-
-```
-storyboard(대본) → 사용자 촬영(ingest record) → 전사·정합(ingest) → 편집(이 문서)
-```
-
-## 합성 지오메트리 (1080×1920)
+The production half of the **storyboard-first shooting flow**. The user records their screen
+following `storyboard/script.md` (the shooting script), ingest produces the transcription and
+alignment (`recording/alignment.json`), and produce follows this document to **cut the raw
+recording into a 9:16 short**. Unlike the TTS/generated-background pipeline (pipeline.md),
+**the voice is the user's own and the screen is a real recording** — scenes.js is used only as
+the source for title overlays and platform text.
 
 ```
-y 190~460    타이틀 블록 — screencast-overlay.html 캡처 (kicker+title, 커버는 +스탯)
-y ≥460       녹화 밴드 — 폭 1080 fit, 높이 상한 BAND_MAX_H(900), 중심 BAND_CY(880)
-y 1380~1560  번인 자막 밴드 — build-reel.sh 와 동일 스타일 (대칭 마진 250)
+storyboard (script) → user shoots (ingest record) → transcribe/align (ingest) → edit (this doc)
 ```
 
-오버레이의 y=460 하한과 빌더의 `BAND_MIN_Y=460` 은 **짝 계약**이다 — 한쪽만
-바꾸면 타이틀이 녹화 밴드에 깔린다.
+## Composite geometry (1080×1920)
 
-## edit.json 계약 (build-screencast.sh 입력)
+```
+y 190–460    title block — screencast-overlay.html capture (kicker+title; cover adds the stat)
+y ≥460       recording band — width 1080 fit, height cap BAND_MAX_H (900), center BAND_CY (880)
+y 1380–1560  burned-in subtitle band — same style as build-reel.sh (symmetric 250 margins)
+```
 
-`recording/alignment.json`(ingest 정합 산출)과 같은 구조에 `overlay` 필드만
-더한 것이다 — produce 가 오버레이를 캡처한 뒤 경로를 채워 `.work/edit.json` 으로
-저장한다.
+The overlay's y=460 lower bound and the builder's `BAND_MIN_Y=460` are a **paired contract** —
+change only one side and the title gets buried under the recording band.
+
+## edit.json contract (build-screencast.sh input)
+
+The same structure as `recording/alignment.json` (the ingest alignment output) plus one extra
+`overlay` field — produce captures the overlays, fills in the paths, and saves it as
+`.work/edit.json`.
 
 ```json
 {
-  "source": "/abs/녹화.mov",           // 원본 절대경로 (alignment.json 그대로)
+  "source": "/abs/recording.mov",      // absolute path to the original (as in alignment.json)
   "scenes": [
     {
-      "idx": 1,                        // 스토리보드 씬 번호 (1부터 — scenes.js 배열 인덱스+1)
-      "start": 3.2, "end": 21.8,       // 원본 시계 컷 구간 (초) — 무음 경계에 맞춰 타이트하게
-      "crop": [400, 200, 1600, 1200],  // (선택) 원본 픽셀 [x,y,w,h] — 시연 초점 영역 확대
-      "overlay": "cards/t1.png",       // (선택) 타이틀 알파 PNG — produce 가 채움
-      "subs": [                        // (선택) 자막 — 원본 시계, 재배치는 빌더가 한다
-        { "start": 3.4, "end": 6.1, "text": "교정 표기 문장" }
+      "idx": 1,                        // storyboard scene number (1-based — scenes.js array index +1)
+      "start": 3.2, "end": 21.8,       // cut range on the source clock (seconds) — tight against silence boundaries
+      "crop": [400, 200, 1600, 1200],  // (optional) source pixels [x,y,w,h] — zoom into the demo focus area
+      "overlay": "cards/t1.png",       // (optional) title alpha PNG — produce fills this in
+      "subs": [                        // (optional) subtitles — source clock; the builder re-times them
+        { "start": 3.4, "end": 6.1, "text": "corrected-notation sentence" }
       ]
     }
   ]
 }
 ```
 
-- **모든 시각은 원본 녹화 시계** — timeline.json 문장 타임스탬프를 그대로 옮긴다.
-  최종 타임라인 재배치(씬 오프셋 가산·경계 클램프)는 빌더의 파이썬 전개가 한다.
-- `subs.text` 는 **timeline.md 의 교정 표기(sub 원칙: 숫자·고유명사 원표기)** 를
-  쓴다 — raw whisper 원문이 아니라 §4 교정을 거친 문장. `{}`·`\`·탭은 빌더가
-  제거하므로 이스케이프 걱정은 없다.
-- `crop` 홀수 좌표는 빌더가 짝수로 스냅한다(yuv420p 크로마 정렬).
-- 씬 사이 전환은 **하드 컷** — 사용자가 씬 경계에서 말을 멈추고 화면을 전환했으므로
-  컷이 자연스럽다. 컷 지점은 무음 안에서 잡는다(발화 중간 컷 금지).
+- **All times are on the source recording clock** — copy sentence timestamps from timeline.json
+  as-is. Final timeline re-placement (adding scene offsets, clamping to boundaries) is done by
+  the builder's Python expansion.
+- `subs.text` uses **the corrected notation from timeline.md (the sub principle: numbers and
+  proper nouns in original notation)** — the sentence after §4 correction, not raw whisper
+  output. The builder strips `{}`, `\`, and tabs, so escaping isn't a concern.
+- Odd `crop` coordinates are snapped to even by the builder (yuv420p chroma alignment).
+- Scene-to-scene transitions are **hard cuts** — the user stopped talking and switched screens
+  at each scene boundary, so the cut feels natural. Place cut points inside silence (never
+  mid-speech).
 
-## 편집 절차 (produce 스킬이 수행)
+## Edit procedure (performed by the produce skill)
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
-# ① 오버레이 렌더 준비 — video-template 과 동일한 sed 주입 (리터럴 함정도 동일)
+# ① prepare the overlay renderer — same sed injection as video-template (same literal pitfall)
 sed 's|</body>|<script src="./scenes.js"></script>\n</body>|' \
   $REF/screencast-overlay.html > .work/overlay.html
 cp storyboard/scenes.js .work/
-# ② 씬별 타이틀 캡처 — ?i 는 0부터 (edit.json idx-1), 파일명은 t<idx>.png
+# ② capture per-scene titles — ?i is 0-based (edit.json idx-1), files named t<idx>.png
 FORMAT_ENV="$PWD/.work/format.env" \
   $REF/capture-frames.sh "file://$PWD/.work/overlay.html?i=0&alpha=1" .work/cards/t1.png 1
-#    접두가 창 크기(CAP_W/CAP_H)와 URL 의 &format= 을 함께 정한다. 빠뜨리면 12분치를
-#    다 찍은 뒤에야 빌더 자산 선검사가 잡는다.
-# ③ alignment.json + overlay 경로 → .work/edit.json 작성, BGM 준비(.work/bgm.wav)
-# ④ 빌드 — BG 는 THEME.ink 를 넘긴다
-BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4(클린) · reel-sub.mp4(번인) · subs.srt · cover.jpg · build-report.txt
+#    the prefix sets the window size (CAP_W/CAP_H) and the URL's &format= together. Skip it
+#    and only the builder's asset precheck catches it — after all 12 minutes are captured.
+# ③ write .work/edit.json from alignment.json + overlay paths, prepare BGM (.work/bgm.wav)
+# ④ build — pass THEME.ink as BG
+BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · reel-sub.mp4 (burn-in) · subs.srt · cover.jpg · build-report.txt
 ```
 
-- 오버레이 캡처 후 `evaluate_script` 또는 육안으로 `window.__overflow === 0` 확인
-  (긴 타이틀은 tight1~3 자동 축소 후 잔여 노출).
-- BGM 은 produce §3 과 같다 — `resolve-asset.py data/<채널> bgm default` 가
-  준 파일을 복사하고, 없을 때만 `music_generate` 인스트루멘털. 육성 위이므로
-  빌더 기본 볼륨이 낮다(BGM_VOL 0.22).
-- 아웃트로는 TTS 파이프라인과 **같은 공용 자산**
-  (`resolve-asset.py data/<채널> outro <플랫폼|default>` —
-  기본 `assets/outro/default.mp4`, 옛 `assets/outro.mp4` 도 찾는다)
-  을 `.work/outro.mp4` 로 복사한다.
-- 이후 폰 모드 검수·플랫폼 텍스트·품질 게이트는 produce SKILL.md §8~10 그대로.
+- After capturing overlays, confirm `window.__overflow === 0` via `evaluate_script` or by eye
+  (long titles auto-shrink through tight1–3, remainder exposed).
+- BGM is the same as produce §3 — copy the file that `resolve-asset.py data/<channel> bgm
+  default` returns, and only when there is none, generate a `music_generate` instrumental. It
+  sits under the user's own voice, so the builder's default volume is low (BGM_VOL 0.22).
+- The outro is the **same shared asset** as the TTS pipeline
+  (`resolve-asset.py data/<channel> outro <platform|default>` —
+  default `assets/outro/default.mp4`; the legacy `assets/outro.mp4` is also found),
+  copied to `.work/outro.mp4`.
+- From here on, phone-mode review, platform text, and the quality gates follow produce
+  SKILL.md §8–10 unchanged.
 
-## 빌드 리포트 게이트 (build-report.txt)
+## Build report gate (build-report.txt)
 
-| 리포트 항목 | 판정 |
+| Report line | Verdict |
 |---|---|
-| `drift` ≠ 0.0000s | **진행 금지** — 파이프라인 버그 |
-| `✗ 원본에 오디오 스트림 없음` | 녹화가 -g(마이크) 없이 됐다 — 재촬영 |
-| `⚠ 화면 축소 N배 (>3.0)` | 글씨 가독 확인 — crop 을 좁히거나(초점 확대) 시연 앱 폰트를 키워 재촬영 |
-| `⚠ scene N 길이 > 20s` | 씬 분할(alignment 에서 두 컷으로) 또는 발화 압축 재촬영 |
-| `⚠ 오버레이 파일 없음` | 캡처 누락 — ②를 다시 |
-| `⚠ 본편 > 90s` | 컷을 조이거나 씬 축소 |
-| 총길이 | 35~75초 권장, 90초 상한 (본편+아웃트로−0.6초) |
+| `drift` ≠ 0.0000s | **Do not proceed** — pipeline bug |
+| `✗ source has no audio stream` | the recording was made without -g (mic) — reshoot |
+| `⚠ screen scaled down N× (>3.0)` | check text legibility — narrow the crop (zoom the focus) or enlarge the demo app's font and reshoot |
+| `⚠ scene N duration > 20s` | split the scene (two cuts in alignment) or reshoot with tighter speech |
+| `⚠ overlay file missing` | capture missed — redo ② |
+| `⚠ main part > 90s` | tighten cuts or drop scenes |
+| Total length | 35–75s recommended, 90s cap (main + outro − 0.6s) |
 
-## 함정
+## Pitfalls
 
-- **컷 경계는 무음에서** — alignment 의 start/end 를 발화 중간에 걸치면 단어가
-  잘린다. timeline.json 의 문장 타임스탬프 사이 간극(무음)에 컷을 놓는다.
-  씬 시작은 첫 문장 0.2~0.4s 앞, 끝은 마지막 문장 0.3~0.6s 뒤가 자연스럽다.
-- **재촬영 테이크는 뒤 테이크 채택** — 사용자가 같은 씬을 다시 말했으면 alignment
-  가 마지막 테이크 구간만 컷하고 앞 테이크는 버린다 (대본의 재촬영 수칙과 짝).
-- **5K 전체 화면을 그대로 밴드에 넣으면 글씨가 안 보인다** — 1080 폭으로 4.7배
-  축소된다. 시연 초점이 화면 일부면 반드시 crop 을 잡아라. 빌더가 3배 초과 축소를
-  경고한다.
-- **crop 은 씬당 하나** — 씬 안에서 초점이 크게 이동하면 씬을 나눠 각각 crop 하는
-  것이 옳다 (팬/줌 애니메이션은 v1 미지원).
-- **자막은 교정 표기** — raw/transcript.json 원문을 그대로 넣으면 오인식이 화면에
-  박제된다. timeline.md 교정본에서 옮긴다.
-- **BGM 인스트루멘털 필수** — 보컬은 육성과 마스킹 충돌 (pipeline.md 와 동일).
-- **육성 정리는 빌더가 한다 — 밖에서 EQ 를 미리 걸지 않는다.** 빌더가 씬별로
-  저역 정리(80Hz 하이패스, 250Hz −3dB) → 명료도 보강(3.2kHz +3dB) → 근접효과
-  대응 다이나믹 저역 압축 → loudnorm 순으로 처리한다. 미리 걸면 이중 처리로
-  목소리가 얇아진다. 카디오이드 마이크는 가까이서 **크게 말할 때만** 저음을
-  부풀리므로("웅~" 하는 울림) 고정 EQ 로 깎으면 조용한 대목이 앙상해진다 —
-  그래서 `sidechaincompress` 로 큰 소리일 때만 저역을 누른다.
-- **-shortest 봉합 금지** — 빌더 밖에서 오디오·비디오를 다시 먹싱하지 않는다.
-- **오버레이 html 에 body 닫는 태그 리터럴 추가 금지** — sed 주입이 그 지점을
-  치환한다 (video-template 실측 사고와 동일 계약).
+- **Cut boundaries go in silence** — alignment start/end landing mid-speech clips words. Place
+  cuts in the gaps (silence) between timeline.json sentence timestamps. Scene start 0.2–0.4s
+  before the first sentence and end 0.3–0.6s after the last feels natural.
+- **Retakes: keep the later take** — if the user re-spoke a scene, alignment cuts only the last
+  take's range and drops the earlier one (paired with the reshoot rule in the shooting script).
+- **A full 5K screen dropped straight into the band makes text unreadable** — it gets scaled
+  down 4.7× to 1080 width. If the demo focus is a region of the screen, set a crop. The builder
+  warns above 3× shrink.
+- **One crop per scene** — if the focus moves a lot within a scene, split the scene and crop
+  each part (pan/zoom animation isn't supported in v1).
+- **Subtitles use corrected notation** — pasting raw/transcript.json text embalms
+  misrecognitions on screen. Copy from the corrected timeline.md.
+- **BGM must be instrumental** — vocals mask-collide with the user's voice (same as
+  pipeline.md).
+- **Voice cleanup is the builder's job — don't pre-EQ outside it.** The builder processes each
+  scene in order: low-end cleanup (80Hz high-pass, 250Hz −3dB) → clarity boost (3.2kHz +3dB) →
+  dynamic low-end compression against proximity effect → loudnorm. Pre-processing doubles up
+  and thins the voice. A cardioid mic inflates the lows only when you speak **loudly up close**
+  (that boomy ring), so a fixed EQ cut hollows out the quiet passages — that's why
+  `sidechaincompress` pushes the lows down only on loud moments.
+- **No -shortest muxing** — never remux audio/video outside the builder.
+- **Never add a literal body-closing tag to the overlay html** — the sed injection replaces
+  that spot (same contract as the measured video-template incident).

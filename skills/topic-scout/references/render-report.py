@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""시장 키워드 JSON·md 를 도표 위주 A4 HTML 로 뽑는다.
+"""Render the market keyword JSON and md into chart-first A4 HTML.
 
-사람이 보는 화면은 HTML 이다. md 는 grow-youtube / autoproduce 가 읽는
-숫자·고른 구 정본이고, 채팅에 표를 다시 그리지 않는다.
+The screen a human looks at is the HTML. The md is the source of truth for the
+numbers and chosen phrases that grow-youtube / autoproduce read, and the tables
+never get redrawn in chat.
 
-화면의 중심은 키워드가 다루는 콘텐츠와, 우리가 만들 편이다.
-어떻게 골랐나는 마지막 한 섹션이다.
+The center of the screen is the content a keyword covers and the episode we'll
+make. How we picked is one section at the end.
 
-사용:
-  render-report.py --json data/<채널>/growth/keywords/market-keywords.json
-                   [--md data/<채널>/growth/keywords/market-keywords.md]
-                   [--out data/<채널>/growth/keywords/market-keywords.html]
-                   [--name 딸깍랩]
+Usage:
+  render-report.py --json data/<channel>/growth/keywords/market-keywords.json
+                   [--md data/<channel>/growth/keywords/market-keywords.md]
+                   [--out data/<channel>/growth/keywords/market-keywords.html]
+                   [--name my-channel]
 """
 from __future__ import annotations
 
@@ -59,8 +60,8 @@ def num(n, default=0.0) -> float:
 
 
 def parse_chosen(md: str) -> list[tuple[str, str]]:
-    """## 고른 주제 아래 '- 구 — 한 줄' 을 읽는다. '없음' 이면 빈 목록."""
-    m = re.search(r"^## 고른 주제\s*$", md, re.M)
+    """Read '- phrase — one line' under ## Chosen topics. 'None' means empty."""
+    m = re.search(r"^## Chosen topics\s*$", md, re.M)
     if not m:
         return []
     rest = md[m.end() :]
@@ -72,7 +73,7 @@ def parse_chosen(md: str) -> list[tuple[str, str]]:
         if not line.startswith("- "):
             continue
         body = line[2:].strip()
-        if body.startswith("없음"):
+        if body.startswith("None"):
             return []
         if "—" in body:
             phrase, why = body.split("—", 1)
@@ -87,10 +88,10 @@ def parse_chosen(md: str) -> list[tuple[str, str]]:
 
 
 def parse_flags(md: str) -> dict[str, str]:
-    """주제어 표 마지막 칸(이미 씀 / 걸러)을 구 → 표시 로 읽는다."""
+    """Read the last column of the topic-phrase table (yes / skip) as phrase → mark."""
     flags: dict[str, str] = {}
     for line in md.splitlines():
-        if not line.startswith("|") or line.startswith("| ---") or line.startswith("| 구"):
+        if not line.startswith("|") or line.startswith("| ---") or line.startswith("| Phrase"):
             continue
         cells = [c.strip() for c in line.strip("|").split("|")]
         if len(cells) < 5:
@@ -99,164 +100,167 @@ def parse_flags(md: str) -> dict[str, str]:
     return flags
 
 
-# 사람이 보는 HTML 전용. md·json 의 영어·중국어 조각은 그대로 두고,
-# 화면에는 아래 쉬운 말로 옮긴다.
+# For the human-readable HTML only. The English and Chinese fragments in the
+# md and json stay as they are; on screen they become the plain wording below.
+# The Korean alternatives in the patterns still match KR-market titles.
 _LABELS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"secret websites|earn dollars|숨은 사이트", re.I), "돈 되는 숨은 사이트"),
-    (re.compile(r"coding.?sidehustle|sidehustle.*coding|do this sidehustle|코딩으로 부업", re.I), "코딩으로 부업"),
-    (re.compile(r"claude|websitebuilder|appbuilder|클로드로 웹", re.I), "클로드로 웹·앱 만들기"),
-    (re.compile(r"cloud storage|클라우드 저장", re.I), "비싼 클라우드 저장소 대신"),
-    (re.compile(r"powerful websites|aitools|알아두면 좋은", re.I), "알아두면 좋은 AI 사이트"),
-    (re.compile(r"에이스 직원"), "AI로 일 잘하는 직원 뽑기"),
-    (re.compile(r"隐藏的 max|숨은 맥스|codex.*max", re.I), "코덱스 숨은 맥스 모드"),
-    (re.compile(r"做视频搞钱|영상 부업|装完codex", re.I), "코덱스로 영상 부업"),
-    (re.compile(r"带货|띠화|판매 영상", re.I), "AI로 판매 영상 한 번에"),
-    (re.compile(r"cloudflare|클라우드플레어", re.I), "AI로 클라우드플레어 세팅"),
-    (re.compile(r"1200|크레딧|白送", re.I), "코덱스 1200달러 크레딧"),
-    (re.compile(r"robotvacuum|climb stairs|로봇청소기", re.I), "계단 오르는 로봇청소기"),
-    (re.compile(r"perfume|향수", re.I), "향수 리필로 아끼기"),
-    (re.compile(r"baggage|수하물", re.I), "부서진 짐 보상 받는 법"),
-    (re.compile(r"fanvue|ofm|influencer", re.I), "AI 인플루언서 성인 부업"),
-    (re.compile(r"indonesian army|army news|뉴스", re.I), "뉴스 영상"),
-    (re.compile(r"5-camera|smartphone|스마트폰", re.I), "카메라 다섯 개 스마트폰"),
-    (re.compile(r"xchat", re.I), "엑스챗 설치"),
-    (re.compile(r"클로드|gpt|그록", re.I), "클로드·GPT·그록 비교"),
-    (re.compile(r"AI side hustle", re.I), "AI로 부업"),
-    (re.compile(r"AI work automation", re.I), "AI로 업무 자동화"),
-    (re.compile(r"AI tools comparison", re.I), "AI 도구 비교"),
-    (re.compile(r"AI副业"), "AI 부업"),
-    (re.compile(r"AI办公自动化"), "AI 업무 자동화"),
-    (re.compile(r"AI工具对比"), "AI 도구 비교"),
+    (re.compile(r"secret websites|earn dollars|숨은 사이트", re.I), "hidden sites that pay"),
+    (re.compile(r"coding.?sidehustle|sidehustle.*coding|do this sidehustle|코딩으로 부업", re.I), "coding side hustle"),
+    (re.compile(r"claude|websitebuilder|appbuilder|클로드로 웹", re.I), "web and apps with Claude"),
+    (re.compile(r"cloud storage|클라우드 저장", re.I), "instead of pricey cloud storage"),
+    (re.compile(r"powerful websites|aitools|알아두면 좋은", re.I), "AI sites worth knowing"),
+    (re.compile(r"에이스 직원"), "hiring a star worker with AI"),
+    (re.compile(r"隐藏的 max|숨은 맥스|codex.*max", re.I), "Codex hidden max mode"),
+    (re.compile(r"做视频搞钱|영상 부업|装完codex", re.I), "video side hustle with Codex"),
+    (re.compile(r"带货|띠화|판매 영상", re.I), "sales videos in one pass with AI"),
+    (re.compile(r"cloudflare|클라우드플레어", re.I), "Cloudflare setup with AI"),
+    (re.compile(r"1200|크레딧|白送", re.I), "the $1,200 Codex credit"),
+    (re.compile(r"robotvacuum|climb stairs|로봇청소기", re.I), "stair-climbing robot vacuum"),
+    (re.compile(r"perfume|향수", re.I), "saving with perfume refills"),
+    (re.compile(r"baggage|수하물", re.I), "claiming damaged baggage"),
+    (re.compile(r"fanvue|ofm|influencer", re.I), "adult AI influencer side hustle"),
+    (re.compile(r"indonesian army|army news|뉴스", re.I), "news video"),
+    (re.compile(r"5-camera|smartphone|스마트폰", re.I), "five-camera smartphone"),
+    (re.compile(r"xchat", re.I), "installing XChat"),
+    (re.compile(r"클로드|gpt|그록", re.I), "Claude vs GPT vs Grok"),
+    (re.compile(r"AI side hustle", re.I), "AI side hustle"),
+    (re.compile(r"AI work automation", re.I), "AI work automation"),
+    (re.compile(r"AI tools comparison", re.I), "AI tools compared"),
+    (re.compile(r"AI副业"), "AI side hustle"),
+    (re.compile(r"AI办公自动化"), "AI work automation"),
+    (re.compile(r"AI工具对比"), "AI tools compared"),
 ]
 
 
-# 키워드 → (묶음, 시장이 다루는 내용, 우리가 만들 편)
-# 클로드 웹·앱 패턴이 비교 패턴보다 앞에 와야 한다.
+# keyword → (family, what the market covers, the episode we'd make)
+# The Claude web/app pattern has to come before the comparison pattern.
 _BRIEFS: list[tuple[re.Pattern[str], str, str, str]] = [
     (
         re.compile(r"secret websites|earn dollars|숨은 사이트", re.I),
-        "부업 실험",
-        "잘 안 알려진 사이트에서 달러로 일한다는 소개다. 공개 설명에서 이름이 나온 곳은 AI 학습 알바 Outlier 하나다.",
-        "사이트 목록은 베끼지 않는다. 버즈(Buzz) 오픈소스로 우리가 직접 돌려 보고 걸린 시간과 결과만 보여 준다.",
+        "side-hustle test",
+        "A pitch about working for dollars on little-known sites. The only one named in the public description is Outlier, the AI training gig.",
+        "We don't copy the site list. We run the Buzz open-source ourselves and show only how long it took and what came out.",
     ),
     (
         re.compile(r"coding.?sidehustle|sidehustle.*coding|do this sidehustle|코딩으로 부업", re.I),
-        "부업 실험",
-        "코딩으로 돈 버는 부업을 권하는 짧은 영상이다. 무엇을 만들었는지는 제목에 거의 없다.",
-        "남의 부업을 소개하지 않는다. 우리가 쓰는 도구로 한 건을 만들어 보고 숫자로 말한다.",
+        "side-hustle test",
+        "A short video pushing coding as a way to make money. The title almost never says what got built.",
+        "We don't cover someone else's side hustle. We build one thing with the tools we use and let the numbers talk.",
     ),
     (
         re.compile(r"claude|websitebuilder|appbuilder|클로드로 웹", re.I),
-        "도구 실험",
-        "클로드에게 웹이나 앱을 만들게 하는 영상이다. 같은 채널이 비슷한 편을 여러 개 올렸다.",
-        "클로드로 우리가 쓸 페이지 하나를 처음부터 만들고 어디까지 되고 어디서 멈추는지 보여 준다.",
+        "tool test",
+        "Videos that have Claude build a website or app. The same channel posted several like it.",
+        "We build one page we'll actually use with Claude, from scratch, and show how far it gets and where it stops.",
     ),
     (
         re.compile(r"cloud storage|클라우드 저장", re.I),
-        "도구 실험",
-        "비싼 클라우드 저장소 대신 싸게 쓰는 법을 소개한다.",
-        "우리가 쓰는 저장 방법을 골라 한 달 비용을 숫자로 비교한다. 특정 서비스 광고처럼 쓰지 않는다.",
+        "tool test",
+        "How to spend less than you would on pricey cloud storage.",
+        "We pick the storage we use and compare a month of cost in numbers. Not an ad for one service.",
     ),
     (
         re.compile(r"powerful websites|aitools|알아두면 좋은", re.I),
-        "도구 실험",
-        "알아 두면 좋은 AI 사이트 목록이다.",
-        "이미 만든 편이다. 같은 목록을 다시 찍지 않는다.",
+        "tool test",
+        "A list of AI sites worth knowing.",
+        "Already made this one. We don't shoot the same list again.",
     ),
     (
         re.compile(r"에이스 직원", re.I),
-        "도구 실험",
-        "AI로 일 잘하는 직원을 뽑는다는 소개다.",
-        "이미 만든 편이다. 같은 주제를 다시 찍지 않는다.",
+        "tool test",
+        "A pitch about hiring a star worker with AI.",
+        "Already made this one. We don't shoot the same topic again.",
     ),
     (
         re.compile(r"隐藏的 max|숨은 맥스|codex.*max", re.I),
-        "도구 실험",
-        "코덱스에 잘 안 보이는 맥스 모드가 있고 쓰면 사용량이 크게 줄어든다는 소개다.",
-        "맥스 모드를 우리가 켜 보고 같은 일을 할 때 사용량이 정말 줄어드는지 숫자로 보여 준다.",
+        "tool test",
+        "A pitch that Codex has a hard-to-find max mode and that turning it on cuts usage a lot.",
+        "We turn max mode on ourselves and show in numbers whether the same job really uses less.",
     ),
     (
         re.compile(r"做视频搞钱|영상 부업|装完codex", re.I),
-        "부업 실험",
-        "코덱스를 깔고 나서 영상으로 돈 버는 법을 알려 준다.",
-        "코덱스에게 우리 영상 한 편의 초안을 맡겨 보고 쓸 만한지와 실패한 지점까지 보여 준다.",
+        "side-hustle test",
+        "How to make money with video once you've installed Codex.",
+        "We hand Codex the first draft of one of our own videos and show whether it's usable, failures included.",
     ),
     (
         re.compile(r"带货|띠화|판매 영상", re.I),
-        "부업 실험",
-        "AI로 판매용 영상을 한 번에 만든다는 소개다. 수입이 늘었다는 말이 제목에 있다.",
-        "수입 숫자는 베끼지 않는다. 우리 제품 하나로 판매 영상을 만들어 보고 결과물이 어떤지만 보여 준다.",
+        "side-hustle test",
+        "A pitch about making a sales video in one pass with AI. The title claims income went up.",
+        "We don't copy the income figures. We make a sales video for one of our own products and show only how it turned out.",
     ),
     (
         re.compile(r"cloudflare|클라우드플레어", re.I),
-        "도구 실험",
-        "AI에게 클라우드플레어 설정을 맡긴다는 소개다. 댓글에 질문이 남아 있다.",
-        "우리가 쓰는 도메인 하나로 설정을 맡겨 보고 된 것과 막힌 것을 보여 준다.",
+        "tool test",
+        "A pitch about handing Cloudflare setup to an AI. Questions are still sitting in the comments.",
+        "We hand over one domain we use and show what worked and what got stuck.",
     ),
     (
         re.compile(r"1200|크레딧|白送", re.I),
-        "부업 실험",
-        "오픈AI가 코덱스 구독 크레딧 1,200달러를 준다는 소개다. 신청 조건이 댓글에 있다.",
-        "우리가 신청해 보고 조건과 실제로 받은 액수만 보여 준다. 무조건 받을 수 있다고 말하지 않는다.",
+        "side-hustle test",
+        "A pitch that OpenAI hands out $1,200 in Codex subscription credit. The conditions are in the comments.",
+        "We apply ourselves and show only the conditions and what we actually got. We don't say anyone can get it.",
     ),
     (
         re.compile(r"robotvacuum|climb stairs|로봇청소기", re.I),
-        "우리 주제 아님",
-        "계단 오르는 로봇청소기 광고다.",
+        "off our topic",
+        "An ad for a stair-climbing robot vacuum.",
         "",
     ),
     (
         re.compile(r"perfume|향수", re.I),
-        "우리 주제 아님",
-        "향수 리필로 아끼는 법이다. AI 실험이 아니다.",
+        "off our topic",
+        "How to save with perfume refills. Not an AI test.",
         "",
     ),
     (
         re.compile(r"baggage|수하물", re.I),
-        "우리 주제 아님",
-        "부서진 짐 보상을 받는 여행 팁이다.",
+        "off our topic",
+        "A travel tip for claiming payouts on damaged baggage.",
         "",
     ),
     (
         re.compile(r"fanvue|ofm|influencer", re.I),
-        "우리 주제 아님",
-        "성인 쪽 AI 인플루언서 부업이다.",
+        "off our topic",
+        "An adult-side AI influencer side hustle.",
         "",
     ),
     (
         re.compile(r"indonesian army|army news|뉴스", re.I),
-        "우리 주제 아님",
-        "뉴스 영상이다.",
+        "off our topic",
+        "A news video.",
         "",
     ),
     (
         re.compile(r"5-camera|smartphone|스마트폰", re.I),
-        "우리 주제 아님",
-        "카메라 다섯 개 스마트폰 소개다.",
+        "off our topic",
+        "A five-camera smartphone rundown.",
         "",
     ),
     (
         re.compile(r"xchat", re.I),
-        "우리 주제 아님",
-        "메신저 설치 안내다.",
+        "off our topic",
+        "Instructions for installing a messenger.",
         "",
     ),
     (
         re.compile(r"클로드|gpt|그록", re.I),
-        "모델 비교",
-        "세 모델을 나란히 비교한 대박 영상은 아직 없다. 가까운 편은 클로드로 웹·앱 만들기다.",
-        "누가 1등인지 표를 만들지 않는다. 같은 일을 세 모델에 시켜 보고 걸린 시간과 결과만 보여 준다.",
+        "model comparison",
+        "No breakout video puts the three models side by side yet. The closest is building web and apps with Claude.",
+        "We don't build a table of who wins. We give the same job to all three models and show only the time it took and what came out.",
     ),
 ]
 
 
 _EVIDENCE_SENT = re.compile(
-    r"\d+(?:\.\d+)?\s*배|시드|아웃라이어|중앙값|쿼터|조사에|평소보다"
+    r"\d+(?:\.\d+)?\s*[x×]|\bseeds?\b|\boutliers?\b|\bmedian\b|\bquota\b"
+    r"|\bin this scan\b|than usual",
+    re.I,
 )
 
 
-def ko_label(text: str, limit: int = 18) -> str:
-    """영어·중국어 조각·해시태그를 짧은 한국어 주제로 옮긴다."""
+def ko_label(text: str, limit: int = 30) -> str:
+    """Turn an English/Chinese fragment or hashtag into a short readable topic."""
     raw = re.sub(r"#\S+", " ", text or "")
     raw = re.sub(r"\s+", " ", raw).strip()
     for pat, ko in _LABELS:
@@ -264,16 +268,16 @@ def ko_label(text: str, limit: int = 18) -> str:
             return clip(ko, limit)
     if re.search(r"[가-힣]", raw):
         return clip(raw, limit)
-    return clip(raw, limit) if raw else "주제"
+    return clip(raw, limit) if raw else "topic"
 
 
 def ko_seeds(queries: list[str]) -> str:
     seen: list[str] = []
     for q in queries:
-        lab = ko_label(q, 16)
+        lab = ko_label(q, 28)
         if lab not in seen:
             seen.append(lab)
-    return " · ".join(seen) if seen else "검색어"
+    return " · ".join(seen) if seen else "search terms"
 
 
 def lookup_brief(*texts: str) -> tuple[str, str, str] | None:
@@ -287,7 +291,7 @@ def lookup_brief(*texts: str) -> tuple[str, str, str] | None:
 
 
 def _drop_evidence(text: str) -> str:
-    parts = [p.strip() for p in re.split(r"(?<=다)\.\s+|(?<=요)\.\s+", text.strip()) if p.strip()]
+    parts = [p.strip() for p in re.split(r"\.\s+", text.strip()) if p.strip()]
     keep: list[str] = []
     for p in parts:
         p = p.rstrip(".")
@@ -300,10 +304,11 @@ def _drop_evidence(text: str) -> str:
 
 
 def split_why(why: str) -> tuple[str, str]:
-    """md 한 줄에서 근거 문장을 빼고, 시장 내용 / 우리 실험으로 가른다."""
+    """Drop the evidence sentences from one md line and split it into what the
+    market covers / what we'd test."""
     if not why:
         return "", ""
-    m = re.search(r"(우리는\s+.+)$", why.strip())
+    m = re.search(r"(We\b.+)$", why.strip())
     if m:
         covers = _drop_evidence(why[: m.start()])
         make = m.group(1).rstrip(".") + "."
@@ -311,15 +316,15 @@ def split_why(why: str) -> tuple[str, str]:
     cleaned = _drop_evidence(why)
     if not cleaned:
         return "", ""
-    if re.search(r"만들지|실험|시켜|보여", cleaned):
+    if re.search(r"\bmake\b|\bbuild\b|\btest\b|\brun\b|\bshow\b", cleaned, re.I):
         return "", cleaned
     return cleaned, ""
 
 
 def flag_status(flag: str) -> str:
-    if "걸러" in (flag or ""):
+    if "skip" in (flag or "").lower():
         return "skip"
-    if "예" in (flag or ""):
+    if "yes" in (flag or "").lower():
         return "used"
     return "keep"
 
@@ -331,9 +336,9 @@ def topic_brief(
     flag: str = "",
     picked: bool = False,
 ) -> dict:
-    """화면 한 줄에 쓸 콘텐츠 브리프."""
+    """The content brief for one line on screen."""
     hit = lookup_brief(phrase, why, title)
-    family = hit[0] if hit else "후보"
+    family = hit[0] if hit else "candidate"
     covers = hit[1] if hit else ""
     make = hit[2] if hit else ""
     w_covers, w_make = split_why(why)
@@ -341,22 +346,22 @@ def topic_brief(
         covers = w_covers
     if w_make:
         make = w_make
-    covers = re.sub(r"^시장 영상은\s+", "", covers or "")
+    covers = re.sub(r"^The market videos?\s+", "", covers or "", flags=re.I)
     if not covers:
-        lab = ko_label(title or phrase, 22)
-        covers = f"시장 영상은 '{lab}' 를 다룬다."
+        lab = ko_label(title or phrase, 38)
+        covers = f"The market videos cover '{lab}'."
     status = "pick" if picked else flag_status(flag)
     if status == "skip":
         make = ""
-        if family == "후보":
-            family = "우리 주제 아님"
+        if family == "candidate":
+            family = "off our topic"
     elif status == "used" and not make:
-        make = "이미 만든 편이다. 같은 주제를 다시 찍지 않는다."
+        make = "Already made this one. We don't shoot the same topic again."
     elif status in ("keep", "pick") and not make:
-        make = "제목은 베끼지 않는다. 우리가 직접 실험한 숫자만 보여 준다."
+        make = "We don't copy the title. We show only the numbers from our own test."
     return {
         "phrase": phrase,
-        "label": ko_label(phrase, 22),
+        "label": ko_label(phrase, 38),
         "family": family,
         "covers": covers,
         "make": make,

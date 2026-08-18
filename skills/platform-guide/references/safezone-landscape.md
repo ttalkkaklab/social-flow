@@ -1,36 +1,40 @@
-# 16:9 롱폼 세이프존 — 실측 정본
+# 16:9 long-form safe zone — measured source of truth
 
-**측정일** 2026-08-17 · **측정 표면** 유튜브 데스크톱 웹(ego lite / chromium 150) ·
-**측정 방법** DOM `getBoundingClientRect()` 를 1920×1080 캔버스 단위로 정규화.
+**Measured** 2026-08-17 · **Surface** YouTube desktop web (ego lite / chromium 150) ·
+**Method** DOM `getBoundingClientRect()` normalized to 1920×1080 canvas units.
 
-좌표는 전부 **캔버스 단위**다. 화면px 를 `S = 1920 / 플레이어폭` 으로 곱해 얻는다.
-정규화가 맞는지는 `플레이어높이 × S == 1080` 으로 매번 검산했다.
+All coordinates are **canvas units**. Multiply screen px by `S = 1920 /
+player-width` to get them. Normalization was cross-checked every time with
+`player-height × S == 1080`.
 
-눈으로 보고 정하지 않았다 — 화면을 캡처해 사람이 재면 배율과 크롭이 섞여 재현이 안 된다.
-DOM 에서 받은 사각형을 캔버스 단위로 환산하는 이 방식이 이 저장소의 계측 계약이다.
+Nothing here was eyeballed — capturing the screen and measuring by hand mixes
+in scaling and crop, so it can't be reproduced. Converting DOM rects to canvas
+units is this repository's measurement contract.
 
-## 확정값
+## Confirmed values
 
 ```js
 zone: { x: 96, top: 96, bottom: 285, anchor: 'top' }
 ```
 
-| 축 | 값 | 근거 |
+| Axis | Value | Grounds |
 |---|---|---|
-| x (좌우) | 96 | 프레임 폭 5%. 우하단 버튼군이 최악 36px 를 먹으므로 여유 60px |
-| top | 96 | 상단 그라디언트가 최악 144px 인데 그건 어둡게 덮을 뿐 가리지 않는다. 96 은 폭 5% 와 같은 값이라 네 변이 시각적으로 균형 잡힌다 |
-| bottom | 285 | **자막 2줄 최악 상단 y795 에서 온다.** 사용자 결정(2026-08-17): 최악 기준 |
+| x (sides) | 96 | 5% of frame width. The bottom-right button cluster eats 36px worst-case, leaving 60px of margin |
+| top | 96 | The top gradient is 144px worst-case, but it only darkens — it doesn't cover. 96 equals the 5%-width inset, so the four edges balance visually |
+| bottom | 285 | **Comes from the worst-case 2-line subtitle top at y795.** User decision (2026-08-17): worst-case basis |
 
-텍스트 영역은 **1728 × 699** 다. 세로(1160)의 0.60 이라 좁아 보인다. 롱폼은 한 화면에
-글자를 덜 얹으므로 이것이 제약이 되지 않는다 — 커버 블록 검산이 §6 에 있다.
+The text area is **1728 × 699**. That's 0.60 of the height (1160), which looks
+narrow. Long-form puts fewer characters on screen at once, so this isn't a
+constraint — the cover-block cross-check is in §6.
 
-## 실측표
+## Measurements
 
-### ① 컨트롤바는 실화면 59px 고정이다
+### ① The control bar is a fixed 59px on the physical screen
 
-캔버스 단위 높이가 창 폭에 **반비례**한다. 작은 창일수록 더 많이 덮는다.
+Its canvas-unit height is **inversely proportional** to window width. Smaller
+windows get covered more.
 
-| 창 폭 | 플레이어 폭 | S | 컨트롤바 (캔버스) | 실화면 |
+| Window width | Player width | S | Control bar (canvas) | Physical |
 |---|---|---|---|---|
 | 1024 | 640 | 3.000 | **177** | 59 |
 | 1280 | 873 | 2.199 | 130 | 59 |
@@ -40,59 +44,66 @@ zone: { x: 96, top: 96, bottom: 285, anchor: 'top' }
 | 2200 | 1540 | 1.247 | 74 | 59 |
 | 2560 | 1801 | 1.066 | 63 | 59 |
 
-진행 바는 실화면 6px 로 역시 고정이다.
+The progress bar is likewise fixed at 6 physical px.
 
-### ② 자막이 하단 제약의 정본이다
+### ② Subtitles are the source of truth for the bottom constraint
 
-자막 2줄의 최악 상단을 창별로 35~70초씩 200ms 간격으로 추적했다. 이 영상에서 3줄은
-한 번도 안 나왔다(표본 456회, 1줄·2줄만).
+The worst-case top of a 2-line subtitle was tracked per window for 35–70s at
+200ms intervals. This video never showed 3 lines (456 samples, only 1 and 2
+lines).
 
-| 플레이어 폭 | 자막 2줄 최악 상단 | 자막이 덮는 하단 높이 | 표본 |
+| Player width | Worst 2-line subtitle top | Bottom height covered | Samples |
 |---|---|---|---|
-| 873 (창 1280) | **y795** | **285** | 160 |
-| 1337 (창 1920) | y846 | 234 | 137 |
-| 1801 (창 2560) | y871 | 209 | 159 |
+| 873 (window 1280) | **y795** | **285** | 160 |
+| 1337 (window 1920) | y846 | 234 | 137 |
+| 1801 (window 2560) | y871 | 209 | 159 |
 
-자막 폰트는 캔버스 단위 **48px 로 일정**하다(실화면 22~45px). 컨트롤바 표시 여부와
-무관하게 자막 위치가 같은 것도 확인했다 — 두 상태에서 y871 로 동일.
+The subtitle font is a constant **48px in canvas units** (22–45px physical).
+Subtitle position was also confirmed independent of control-bar visibility —
+y871 in both states.
 
-### ③ 좌우 인셋
+### ③ Side insets
 
-| 요소 | 1280폭 | 1920폭 | 2560폭 |
+| Element | 1280 wide | 1920 wide | 2560 wide |
 |---|---|---|---|
-| 좌측 버튼군 x | 26 | 17 | 13 |
-| 우측 버튼군 (오른쪽에서) | 27 | 18 | 13 |
-| 전체화면 버튼 (오른쪽에서) | **36** | 23 | 17 |
+| Left button cluster x | 26 | 17 | 13 |
+| Right button cluster (from right) | 27 | 18 | 13 |
+| Fullscreen button (from right) | **36** | 23 | 17 |
 
-최악 36px 이라 x 인셋 96 은 60px 여유다.
+Worst case is 36px, so the x inset of 96 leaves 60px of margin.
 
-### ④ 그라디언트
+### ④ Gradients
 
-| 창 폭 | 상단 (캔버스) | 실화면 |
+| Window width | Top (canvas) | Physical |
 |---|---|---|
 | 1024 | **144** | 48 |
 | 1280 | 106 | 48 |
 | 1920 | 69 | 48 |
 | 2560 | 51 | 48 |
 
-하단 그라디언트는 CSS 높이가 플레이어 전체라 이 값으로는 제약을 못 만든다 —
-그래서 하단은 자막 실측을 쓴다.
+The bottom gradient's CSS height spans the whole player, so it can't produce a
+constraint — which is why the bottom uses the subtitle measurement instead.
 
-## 못 잰 것
+## What couldn't be measured
 
-- **상단 제목바**(`.ytp-title-text`)가 이 클라이언트에서 렌더 0 이다. 일반 재생·전체화면·
-  autohide 강제 해제 셋 다 `hidden` 이었다. 그래서 zone top 96 의 근거는 그라디언트와
-  폭 대칭이지 제목바 회피가 아니다. 제목바가 뜨는 환경(임베드·TV 앱)에서 재측정할 값어치가 있다.
-- **모바일 웹 가로**를 못 쟀다. `Emulation.setDeviceMetricsOverride` 로 iPhone 을 흉내 내도
-  ego lite 가 데스크톱 레이아웃을 그대로 줬다(창 2560×1409 · dpr 1 로 되돌아옴). 실기기나
-  AVD 로 따로 재야 한다.
-- **엔드스크린 좌표**는 저작자가 배치하는 것이라 플레이어에서 못 잰다. 공식 문서가 픽셀
-  규격을 안 준다 — 확인한 것은 규칙뿐이다: 마지막 5~20초 · 영상 25초 이상 · 16:9 는 요소
-  최대 4개【1차 support.google.com/youtube/answer/6388789】. 우리 채널이 엔드스크린을 쓰기로
-  하면 그 배치를 우리가 정하므로 하단 285 안에 넣으면 된다.
-- **카드 티저**(`.ytp-cards-teaser`)는 이 영상에 카드가 없어 `hidden` 이었다. 우상단에 뜨는
-  요소라 zone top 96 이 이미 여유를 준다.
+- **The top title bar** (`.ytp-title-text`) renders 0 in this client. Normal
+  playback, fullscreen, and forced autohide-off were all `hidden`. So the
+  grounds for zone top 96 are the gradient and width symmetry, not title-bar
+  avoidance. Worth re-measuring in environments where the title bar shows
+  (embeds · TV apps).
+- **Mobile web landscape** couldn't be measured. Even with
+  `Emulation.setDeviceMetricsOverride` faking an iPhone, ego lite kept serving
+  the desktop layout (window snapped back to 2560×1409 · dpr 1). Needs a real
+  device or an AVD.
+- **End-screen coordinates** are author-placed, so the player can't measure
+  them. Official docs give no pixel spec — only rules were confirmed: last
+  5–20s · video ≥25s · 16:9 allows at most 4 elements【primary:
+  support.google.com/youtube/answer/6388789】. If our channel adopts end
+  screens we place them ourselves, so keeping them inside the bottom 285 works.
+- **The card teaser** (`.ytp-cards-teaser`) was `hidden` because this video has
+  no cards. It appears top-right, where zone top 96 already gives clearance.
 
-## 한 줄 요약
+## One-line summary
 
-가로 텍스트는 **x 96~1824 · y 96~795** 안에 둔다. 하단 285px 는 자막이 가져간다.
+Landscape text goes inside **x 96–1824 · y 96–795**. The bottom 285px belongs
+to subtitles.

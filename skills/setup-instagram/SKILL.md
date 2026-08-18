@@ -11,154 +11,185 @@ description: >
   code·consent), then saves the 60-day token to
   <SNS_TOKEN_DIR>/<slug>/instagram_token and verifies with sns_account_check.
   Resumable — detects what is already done and continues from the first unfinished step.
-argument-hint: "<채널> [status|signup|brand|token]"
+argument-hint: "<channel> [status|signup|brand|token]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__claude-in-chrome__tabs_context_mcp", "mcp__claude-in-chrome__tabs_create_mcp", "mcp__claude-in-chrome__tabs_close_mcp", "mcp__claude-in-chrome__navigate", "mcp__claude-in-chrome__javascript_tool", "mcp__claude-in-chrome__computer"]
 ---
 
-# Instagram 채널 개설 — 브라우저 HITL
+# Instagram channel setup — browser HITL
 
-채널(브랜드) 하나에 **살아 있는 Instagram 계정을 붙이는** 스킬이다. 계정 개설,
-프로페셔널 전환, 프로필 브랜딩, Meta 앱 테스터 설정, OAuth 토큰 발급까지를
-브라우저로 몰고 가되 **사람 손이 필요한 지점만 사용자에게 넘긴다**. 끝나면 60일 장기
-토큰이 `<SNS_TOKEN_DIR>/<slug>/instagram_token` 에 저장되고 릴스를
-`channel: "<slug>"` 로 게시할 수 있다.
+This skill attaches **a live Instagram account** to one channel (brand). It
+drives account signup, professional conversion, profile branding, Meta app tester
+setup, and OAuth token issuance through the browser, but **hands over only the
+points that need human hands**. When it's done, a 60-day long-lived token sits at
+`<SNS_TOKEN_DIR>/<slug>/instagram_token` and you can publish reels with
+`channel: "<slug>"`.
 
-개설 스킬은 플랫폼별로 분리한다 — 성장 스킬(`grow-<플랫폼>`)과 나란한
-`setup-<플랫폼>` 계열이다. Threads 와 Meta 앱을 공유하지만 **발급 경로가 다르다**
-— IG 는 "Instagram API with Instagram Login"(비즈니스 로그인)이고, "Basic Display
-API" 가 아니다(§token 함정).
+Setup skills are split per platform — the `setup-<platform>` family, parallel to
+the growth skills (`grow-<platform>`). It shares a Meta app with Threads but
+**the issuance path differs** — IG uses "Instagram API with Instagram Login"
+(business login), not the "Basic Display API" (§token trap).
 
-## 무엇을 자동으로, 무엇을 넘기나
+## What runs automatically, what gets handed over
 
-브라우저로 폼 입력·페이지 이동·동의 클릭까지 자동으로 한다. 다음은 자동화가
-소프트블록되니 **사용자에게 넘긴다**:
+Form filling, page navigation, and consent clicks run automatically through the
+browser. The following get soft-blocked under automation, so **hand them to the
+user**:
 
-- **로그인 버튼 클릭** — 자동 클릭 시 "Instagram에 연결할 수 없습니다"
-  소프트블록. 아이디·비밀번호는 채우고 버튼만 사용자가 누른다.
-- **인증코드·reCAPTCHA·생년월일** — 사람 게이트. 웹 로그인 자동화 시 reCAPTCHA
-  챌린지가 뜬다.
+- **Clicking the login button** — an automated click triggers the
+  "Instagram에 연결할 수 없습니다" (can't connect to Instagram) soft-block. Fill
+  in the username and password, and the user presses only the button.
+- **Verification codes · reCAPTCHA · birthdate** — human gates. A reCAPTCHA
+  challenge appears when web login is automated.
 
-핸드오프 방식은 레인마다 다르다 — ego lite 는 `handOffTaskSpace` → 사용자 완료 확인
-→ `takeOverTaskSpace`. Chrome 레인은 화면이 처음부터 사용자 것이라 노출 절차가 없고
-완료 확인만 한다.
+The handoff works differently per lane — ego lite: `handOffTaskSpace` → confirm
+the user is done → `takeOverTaskSpace`. In the Chrome lane the screen belongs to
+the user from the start, so there's no exposure step; just confirm completion.
 
-## 전제 조건
+## Prerequisites
 
-- `data/<slug>/profile.md` 가 있어야 한다 — 없으면 `/social-flow:channel add` 안내
-  후 중단.
-- **브라우저 레인 하나** — ego lite 또는 claude-in-chrome. 고르는 기준은 아래
-  §브라우저 레인.
-- Meta 개발자 앱(Instagram 제품). App ID·Secret 은 채널 디렉토리 앱 env 에 둔다.
-- **프로페셔널 계정 필수** — 개인 계정은 Graph API 연동 자체가 불가하다. 개설 중
-  비즈니스/크리에이터로 전환한다. 계정 유형은 API 로 못 바꾸고 앱/웹 UI 전용이다.
+- `data/<slug>/profile.md` must exist — if not, point to `/social-flow:channel add`
+  and stop.
+- **One browser lane** — ego lite or claude-in-chrome. How to pick: §Browser
+  lanes below.
+- A Meta developer app (Instagram product). Keep the App ID/Secret in the channel
+  directory's app env file.
+- **Professional account required** — a personal account can't integrate with the
+  Graph API at all. Convert to business/creator during setup. Account type can't
+  be changed via API — it's app/web UI only.
 
-## 브라우저 레인 — ego lite 우선, Chrome 폴백
+## Browser lanes — ego lite first, Chrome fallback
 
-브라우저 조작은 세 갈래고 위에서부터 고른다.
+Browser control has three paths; pick from the top.
 
-1. **ego lite** — `command -v ego-browser` 로 확인한다. 사용자 로그인 상태를 쓰면서도
-   agent 전용 task space 에서 돌아 사용자 탭과 부딪히지 않는다. 실측 레시피가 이 레인
-   기준으로 쓰여 있다(`references/setup-playbook.md`).
-2. **claude-in-chrome** — ego 가 없을 때. 윈도우·리눅스가 대표적이다(ego lite 는
-   macOS 전용). 사용자의 실제 Chrome 세션에 붙어 로그인 상태를 그대로 쓰지만
-   **격리가 없다** — 작업 중 사용자 브라우저를 점유하고, 사이트별 권한 승인을 먼저
-   받아야 한다. CDP 레시피와의 대응은 playbook §브라우저 레인의 표를 본다.
-3. **수동 폴백** — 둘 다 없으면 아래 §수동 폴백으로 간다(토큰 발급만 돕는다).
+1. **ego lite** — check with `command -v ego-browser`. It reuses the user's login
+   state while running in an agent-only task space, so it doesn't collide with
+   the user's tabs. The field-tested recipes are written against this lane
+   (`references/setup-playbook.md`).
+2. **claude-in-chrome** — when ego isn't there. Windows/Linux are the typical
+   case (ego lite is macOS-only). It attaches to the user's real Chrome session
+   and reuses login state as-is, but **there is no isolation** — it occupies the
+   user's browser while working, and per-site permission approval must be granted
+   first. For the mapping to the CDP recipes, see the table in the playbook's
+   §Browser lanes.
+3. **Manual fallback** — with neither, go to §Manual fallback below (helps with
+   token issuance only).
 
-레인이 바뀌어도 **사람 게이트는 그대로다** — 로그인 버튼·인증코드·캡차는 어느
-레인에서든 사용자가 누른다. 소프트블록은 ego 의 신뢰 클릭으로도 걸렸으니, Chrome
-레인이라고 뚫리리라 기대하지 않는다.
+Whichever lane, **the human gates stay the same** — the login button,
+verification codes, and CAPTCHAs get pressed by the user in every lane. The
+soft-blocks fired even with ego's trusted clicks, so don't expect the Chrome lane
+to punch through either.
 
-**공유 계정 보호는 Chrome 레인에서 더 조심한다** — 사용자의 실제 브라우저라 다른
-브랜드 IG 세션이 그대로 살아 있다. 로그아웃은 절대 규칙 3 그대로 사용자 승인부터
-받는다.
+**Shared-account protection needs extra care on the Chrome lane** — it's the
+user's real browser, so another brand's IG session may be sitting there alive.
+For logout, follow absolute rule 3 as written: get the user's approval first.
 
-## 절대 규칙 (위반 시 즉시 중단)
+## Absolute rules (stop immediately on violation)
 
-1. **토큰 값 비노출** — 토큰·시크릿·비밀번호를 화면·로그·커밋에 평문으로 남기지
-   않는다. 파일로만, `chmod 600`.
-2. **채널 디렉토리에만 저장** — 토큰은 `<SNS_TOKEN_DIR>/<slug>/instagram_token`.
-   가입 비밀번호는 같은 디렉토리 `instagram.credentials` 규약 파일로.
-3. **공유 계정 보호** — 같은 브라우저 웹 IG 세션에 **다른 브랜드 계정이 로그인돼
-   있을 수 있다.** 가입·로그인으로 그 세션을 밀어냈다면 복구를 사용자와 합의하고,
-   다른 브랜드의 프로필·설정·콘텐츠는 건드리지 않는다. 매 단계 전 지금 계정이
-   개설 대상이 맞는지 `/me`(account_type 조회)·화면으로 확인한다.
-4. **단명 code 즉시 교환** — authorization code 는 1회용·단명. 회수 즉시 교환.
-   실패로 소진되면 authorize 재이동(로그인 유지 시 동의 재확인만)으로 새 code.
-5. **사람 게이트는 넘긴다** — 로그인 버튼·인증코드·캡차를 자동 클릭으로 뚫지 않는다.
+1. **Never expose token values** — no tokens, secrets, or passwords in plain text
+   on screen, in logs, or in commits. File only, `chmod 600`.
+2. **Store only in the channel directory** — the token goes to
+   `<SNS_TOKEN_DIR>/<slug>/instagram_token`. The signup password goes in the same
+   directory as the `instagram.credentials` convention file.
+3. **Protect shared accounts** — **another brand's account may be logged into**
+   the same browser's web IG session. If signup/login pushed that session out,
+   agree on recovery with the user, and don't touch another brand's profile,
+   settings, or content. Before every step, confirm via `/me` (account_type
+   lookup) and on screen that the current account is the one being set up.
+4. **Exchange the short-lived code immediately** — the authorization code is
+   single-use and short-lived. Exchange the moment you recover it. If a failure
+   burns it, re-navigate to authorize (with login intact, just re-confirm
+   consent) for a fresh code.
+5. **Hand over the human gates** — don't punch through the login button,
+   verification codes, or CAPTCHAs with automated clicks.
 
-## 상태 탐지·재개 (기본 호출)
+## State detection & resume (default invocation)
 
-기본 호출은 현재 상태를 판정하고 첫 미완 단계부터 재개한다:
+The default invocation determines the current state and resumes from the first
+unfinished step:
 
-1. `<SNS_TOKEN_DIR>/<slug>/instagram_token` 이 있으면 → `sns_account_check(channel)`
-   검증. ok 면 **완료** — 계정·스코프 요약 보고 후 끝.
-2. 토큰 없고 계정은 있으면 → §3 앱·토큰부터.
-3. 계정도 없으면 → §1 개설부터.
+1. If `<SNS_TOKEN_DIR>/<slug>/instagram_token` exists → verify with
+   `sns_account_check(channel)`. If ok, **done** — report a summary of account
+   and scopes, then stop.
+2. No token but the account exists → start from §3 app & token.
+3. No account either → start from §1 signup.
 
-서브커맨드: `signup` · `brand` · `token` · `status`.
+Subcommands: `signup` · `brand` · `token` · `status`.
 
-## 1단계 · 계정 개설 (signup)
+## Step 1 · Account signup (signup)
 
-`instagram.com` 가입 폼을 ego 로 채운다 — 이메일·이름·핸들·비밀번호(비밀번호는
-`<slug>/instagram.credentials` 규약 파일로 먼저 저장). **로그인/제출·생년월일·
-이메일 코드는 사용자 핸드오프**. reCAPTCHA 가 뜰 수 있다. 상세는
-`references/setup-playbook.md` §1.
+Fill the `instagram.com` signup form with ego — email, name, handle, password
+(save the password to the `<slug>/instagram.credentials` convention file first).
+**Login/submit, birthdate, and the email code are user handoffs**. reCAPTCHA may
+appear. Details in `references/setup-playbook.md` §1.
 
-- **기존 웹 세션 주의**: 가입 전에 다른 브랜드 계정이 로그인돼 있으면 로그아웃이
-  필요하다 — 로그아웃 전에 사용자 승인을 받고, 복구 방법(그 계정 credentials)을
-  확인해 둔다(절대 규칙 3).
+- **Watch for an existing web session**: if another brand's account is logged in
+  before signup, a logout is needed — get the user's approval before logging out,
+  and confirm the recovery path (that account's credentials) first (absolute
+  rule 3).
 
-## 2단계 · 프로페셔널 전환 + 브랜딩 (brand)
+## Step 2 · Professional conversion + branding (brand)
 
-- **프로페셔널 전환** — 설정에서 비즈니스/크리에이터로 전환한다. 이걸 안 하면
-  §3 토큰이 무의미하다(개인 계정은 API 연동 불가).
-- **프로필 사진** — `/social-flow:branding <채널>` 산출물(로고)을 업로드한다. 이
-  스킬은 자산을 만들지 않고 적용만 한다. IG 프로필 사진은 Threads 로 자동 승계된다.
-- **bio·이름·카테고리** — profile.md 의 채널 카피로 채운다. 공개 계정 확인.
+- **Professional conversion** — switch to business/creator in settings. Without
+  this, the §3 token is pointless (a personal account can't integrate with the
+  API).
+- **Profile photo** — upload the `/social-flow:branding <channel>` output (the
+  logo). This skill doesn't make assets, it only applies them. The IG profile
+  photo carries over to Threads automatically.
+- **bio · name · category** — fill with the channel copy from profile.md.
+  Confirm the account is public.
 
-## 3단계 · 앱 테스터 + OAuth 토큰 (token)
+## Step 3 · App tester + OAuth token (token)
 
-**IG 게시 토큰은 "Instagram API with Instagram Login" 으로 발급한다** — 앱 역할의
-"IG 테스터" 라디오 설명이 "Instagram Basic Display API"(2024-12-04 폐기)라고 적혀
-있어도 그 낚시에 걸리지 않는다. 발급은 instagram.com OAuth 로 한다.
-`references/setup-playbook.md` §3~§5 를 정본으로 삼는다. 요지:
+**The IG publishing token is issued via "Instagram API with Instagram Login"** —
+even though the "IG 테스터" (IG tester) radio's description under app roles says
+"Instagram Basic Display API" (deprecated 2024-12-04), don't take that bait.
+Issuance goes through instagram.com OAuth. Treat `references/setup-playbook.md`
+§3–§5 as the source of truth. The gist:
 
-- **IG 테스터 추가·수락** — 앱 역할에서 이 계정을 IG 테스터로 추가하고, 초대는
-  **IG 웹 accounts/manage_access → 테스터 초대 탭에서 신뢰 클릭**으로 수락한다.
-- **OAuth authorize** — `instagram.com/oauth/authorize` 를 task space 탭에서 직접
-  열어 스코프 5종을 콤마로 요청. `force_reauth` 면 로그인 폼을 채우되 **로그인
-  버튼은 사용자 핸드오프**(자동 클릭 소프트블록) → 동의 화면 "허용" 신뢰 클릭 →
-  `https://localhost/callback/` 리다이렉트 URL 에서 code 회수.
-- **토큰 교환** — playbook §5(브라우저 무관, curl). api.instagram.com 단기 →
-  graph.instagram.com 60일 장기. **셸 `UID` 예약변수 함정 주의**(§5).
+- **Add & accept the IG tester** — add this account as an IG tester under app
+  roles, and accept the invite via **IG web accounts/manage_access → tester
+  invites tab with a trusted click**.
+- **OAuth authorize** — open `instagram.com/oauth/authorize` directly in a task
+  space tab and request the 5 scopes comma-separated. With `force_reauth`, fill
+  the login form but **hand the login button to the user** (automated clicks get
+  soft-blocked) → trusted-click "허용" (allow) on the consent screen → recover
+  the code from the `https://localhost/callback/` redirect URL.
+- **Token exchange** — playbook §5 (browser-independent, curl).
+  api.instagram.com short-lived → graph.instagram.com 60-day long-lived.
+  **Watch the shell `UID` reserved-variable trap** (§5).
 
-스코프 5종: `instagram_business_basic` · `instagram_business_content_publish` ·
+The 5 scopes: `instagram_business_basic` · `instagram_business_content_publish` ·
 `instagram_business_manage_comments` · `instagram_business_manage_messages` ·
-`instagram_business_manage_insights`. 마지막은 grow-instagram(성장 루프)용이다.
+`instagram_business_manage_insights`. The last one is for grow-instagram (the
+growth loop).
 
-## 저장·검증·기록
+## Save · verify · record
 
-1. 장기 토큰을 `<SNS_TOKEN_DIR>/<slug>/instagram_token` 저장, `chmod 600`.
-   **값 비노출.**
-2. `sns_account_check(channel=<slug>)` → instagram ok, username·ig_user_id 확인.
-3. `data/<slug>/profile.md` §8 의 Instagram 행 갱신(핸들·ig_user_id·발급일·스코프
-   수, 상태 "✅ API 연동 완료").
-4. 한 줄 보고 + 다음 단계(`/social-flow:grow-instagram <채널> init`). 릴스 게시엔
-   **공개 HTTPS 호스팅**이 필요함을 함께 짚는다(IG 는 로컬 파일 업로드 불가).
+1. Save the long-lived token to `<SNS_TOKEN_DIR>/<slug>/instagram_token`,
+   `chmod 600`. **Never expose the value.**
+2. `sns_account_check(channel=<slug>)` → instagram ok, confirm username and
+   ig_user_id.
+3. Update the Instagram row of `data/<slug>/profile.md` §8 (handle, ig_user_id,
+   issue date, scope count, status "✅ API connected").
+4. One-line report + next step (`/social-flow:grow-instagram <channel> init`).
+   Also point out that reels publishing needs **public HTTPS hosting** (IG can't
+   take local file uploads).
 
-## status — 현황 보고
+## status — current-state report
 
-토큰 유무 + `sns_account_check` + account_type 으로 연동 상태만 요약. 미완 단계와
-사람 게이트를 짚는다. 게시·변경 없음.
+Summarize integration state only, from token presence + `sns_account_check` +
+account_type. Point out unfinished steps and human gates. No publishing, no
+changes.
 
-## 수동 폴백 (브라우저 레인이 없을 때)
+## Manual fallback (no browser lane)
 
-개설·전환·브랜딩은 사용자가 직접 하고, 이 스킬은 토큰 발급만 돕는다: authorize
-URL 을 만들어 주고 → 사용자가 동의 후 리다이렉트된 `localhost/callback/?code=...`
-URL 전체를 붙여넣으면 → code 를 뽑아 playbook §5 로 교환한다. 절대 규칙은 그대로.
+The user does signup, conversion, and branding directly, and this skill helps
+with token issuance only: build the authorize URL and hand it over → after
+consenting, the user pastes the full redirected `localhost/callback/?code=...`
+URL → extract the code and exchange via playbook §5. The absolute rules still
+apply.
 
 ## Additional Resources
 
-- **`references/setup-playbook.md`** — ego CDP 조작 원칙, 단계별 실측 레시피,
-  독립된 토큰 교환·60일 갱신 절.
+- **`references/setup-playbook.md`** — ego CDP driving principles, field-tested
+  per-step recipes, standalone token exchange & 60-day refresh sections.

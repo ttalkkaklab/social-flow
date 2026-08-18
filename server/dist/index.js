@@ -6,13 +6,14 @@ import { config, listChannelDirs } from './config.js';
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
 import { enabledPlatforms } from './sns-client.js';
-// initialize 응답에 실리는 서버 버전 — package.json 의 version 과 같은 값을 쓴다.
-// 둘이 갈라지면 클라이언트가 보는 버전이 실제 패키지와 달라지므로, package.json 을
-// 올릴 때 이 줄도 함께 올린다(계약 테스트가 두 값의 일치를 검사한다).
+// The server version carried in the initialize response — same value as package.json's version.
+// If the two drift, the version clients see stops matching the actual package, so bump this
+// line together with package.json (the contract test checks that the two agree).
 const server = new Server({ name: 'social-flow', version: '0.11.0' }, { capabilities: { tools: {} } });
-// 플랫폼별 게시 툴은 자격증명 파일이 있는(기본 토큰 ∪ 채널 디렉토리) 플랫폼만
-// 노출한다 — 요청 시점 평가라 토큰 파일 추가가 서버 재시작 없이 반영된다.
-// 핸들러는 전부 유지되므로 숨은 툴을 직접 호출해도 명시적 토큰 부재 에러가 반환된다.
+// Per-platform publish tools are exposed only for platforms that have a credential file
+// (default tokens ∪ channel directories) — this is evaluated per request, so adding a token
+// file takes effect without a server restart. Every handler stays registered, so calling a
+// hidden tool directly still returns an explicit "no token" error.
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     const enabled = new Set(enabledPlatforms());
     return {
@@ -26,8 +27,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     try {
         const handler = ROUTES[name];
-        // 알 수 없는 툴은 실행 실패(isError)가 아니라 프로토콜 에러(-32602)다 —
-        // MCP 2계층 에러 모델: 존재하는 툴의 실패만 툴 결과로 표현한다
+        // An unknown tool is a protocol error (-32602), not an execution failure (isError) —
+        // the MCP two-layer error model: only failures of tools that exist become tool results
         if (!handler)
             throw new McpError(ErrorCode.InvalidParams, `Unknown tool: ${name}`);
         return await handler(args ?? {});
@@ -55,7 +56,7 @@ process.once('SIGTERM', gracefulShutdown);
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    // stdout 은 MCP 프로토콜 전용 — 로그는 stderr 로만
+    // stdout is reserved for the MCP protocol — logs go to stderr only
     console.error('social-flow MCP server started');
     const snsEnabled = enabledPlatforms();
     const channelDirs = listChannelDirs();

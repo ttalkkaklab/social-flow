@@ -1,11 +1,12 @@
 <!doctype html>
-<!-- 브랜드 락업 카드 — 1080×1920 헤드리스 캡처용 (capture-frames.sh)
-     sed 토큰: {{INK}} {{ACCENT}} {{ACCENT2}} {{CHANNEL_NAME}} {{TAGLINE}} {{LOGO_SRC}}
-     URL 파라미터 mode:
-       full — 배경+캐릭터+채널명+태그라인 (최종 락업, 기본)
-       char — 배경+캐릭터만 (veo lastImagePath 용 — 텍스트 없는 최종 포즈 카드)
-       text — 채널명+태그라인만, 투명 배경 (텍스트 플레이트 — alpha=1 로 캡처)
-     세 모드의 요소 좌표는 동일하다 — 플레이트 오버레이가 락업과 픽셀 일치해야 한다. -->
+<!-- Brand lockup card — for 1080×1920 headless capture (capture-frames.sh)
+     sed tokens: {{INK}} {{ACCENT}} {{ACCENT2}} {{CHANNEL_NAME}} {{TAGLINE}} {{LOGO_SRC}}
+     URL parameter mode:
+       full — background+character+channel name+tagline (final lockup, default)
+       char — background+character only (for veo lastImagePath — final pose card without text)
+       text — channel name+tagline only, transparent background (text plate — capture with alpha=1)
+     Element coordinates are identical across the three modes — the plate overlay
+     must match the lockup pixel-for-pixel. -->
 <html lang="ko">
 <head>
 <meta charset="utf-8">
@@ -17,7 +18,7 @@
     position: relative; background: transparent;
     font-family: "Apple SD Gothic Neo", "Pretendard", sans-serif;
   }
-  /* 배경 — 딥 잉크 라디얼 + 액센트 글로우 + 비네트 */
+  /* background — deep ink radial + accent glow + vignette */
   .bg {
     position: absolute; inset: 0;
     background:
@@ -28,7 +29,7 @@
     content: ""; position: absolute; inset: 0;
     background: radial-gradient(ellipse 140% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.55) 100%);
   }
-  /* 캐릭터 — 원형 아바타 (플랫폼 노출 형태) + 액센트 그라데이션 링 + 글로우 */
+  /* character — circular avatar (as platforms display it) + accent gradient ring + glow */
   .avatar {
     position: absolute; left: 50%; top: 820px; transform: translate(-50%, -50%);
     width: 600px; height: 600px; border-radius: 50%; padding: 7px;
@@ -39,7 +40,7 @@
   .avatar img {
     width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
   }
-  /* 텍스트 스크림 — 밝은 영상 위에서도 텍스트 대비 보장 (full·text 모드 공통 → 픽셀 일치 유지) */
+  /* text scrim — keeps text contrast even over bright video (shared by full/text modes → preserves the pixel match) */
   .text-scrim {
     position: absolute; left: 50%; top: 1430px; transform: translate(-50%, -50%);
     width: 980px; height: 520px; border-radius: 50%;
@@ -47,7 +48,7 @@
       color-mix(in srgb, var(--ink) 82%, transparent) 0%,
       color-mix(in srgb, var(--ink) 55%, transparent) 55%, transparent 100%);
   }
-  /* 채널명·태그라인 — 세 모드에서 좌표 고정 */
+  /* channel name & tagline — coordinates fixed across the three modes */
   .name {
     position: absolute; left: 50%; top: 1280px; transform: translateX(-50%);
     width: 900px; text-align: center;

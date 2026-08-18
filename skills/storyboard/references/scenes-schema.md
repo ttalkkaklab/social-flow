@@ -1,137 +1,143 @@
-# scenes.js 데이터 계약 (SoT)
+# scenes.js data contract (SoT)
 
-`data/<채널>/episodes/<주제>/storyboard/scenes.js` — 스토리보드 승인 후 produce 가
-소비하는 유일한 데이터 원천. `video-template.html` 이 `<script src="./scenes.js">`
-로 로드한다.
+`data/<channel>/episodes/<topic>/storyboard/scenes.js` — the one data source produce
+consumes after storyboard approval. `video-template.html` loads it with
+`<script src="./scenes.js">`.
 
-## 전체 구조
+## Overall structure
 
 ```js
-// approved: 2026-07-29        ← storyboard 스킬이 HITL 승인 시 기록
-window.FORMAT = "shorts-9x16"; // 포맷 축 — 생략하면 shorts-9x16 (§포맷)
+// approved: 2026-07-29        ← recorded by the storyboard skill at HITL approval
+window.FORMAT = "shorts-9x16"; // format axis — omitted means shorts-9x16 (§format)
 window.THEME = {
-  accent:  "#5b8cff",          // 강조 그라데이션 시작 — profile.md §3 그대로
-  accent2: "#a05bff",          // 강조 그라데이션 끝
-  ink:     "#0b1020",          // 베이스 다크 (배경·자막 아웃라인)
-  brand:   "채널 이름"          // 아웃트로 브랜드 표기
+  accent:  "#5b8cff",          // emphasis gradient start — verbatim from profile.md §3
+  accent2: "#a05bff",          // emphasis gradient end
+  ink:     "#0b1020",          // base dark (background, subtitle outline)
+  brand:   "channel name"      // brand wording on the outro
 };
-window.SCENES = [ /* 샷 배열 — 항목 하나 = 샷 하나. 식별자 이름은 유지 */ ];
+window.SCENES = [ /* the shot array — one entry = one shot. Keep the identifier names */ ];
 ```
 
-배열 이름(`SCENES`)·파일명(`scenes.js`·`images/scene-N.png`)·캡처 인덱스
-(`frame.html?i=n`)는 바꾸지 않는다. produce 가 읽는 기계 식별자다. 사람이 읽는
-라벨만 샷·씬·시퀀스로 옮긴다.
+Don't change the array name (`SCENES`), the filenames (`scenes.js`, `images/scene-N.png`),
+or the capture index (`frame.html?i=n`). Those are the machine identifiers produce reads.
+Only the human-readable labels move to shot, scene, and sequence.
 
-## 포맷 — `window.FORMAT`
+## Format — `window.FORMAT`
 
-이 한 줄이 캔버스·길이·자수·자막·챕터를 한꺼번에 정한다. 값은 둘뿐이다.
+This one line settles canvas, length, character counts, subtitles, and chapters all at once.
+There are only two values.
 
-| 값 | 무엇 | 어디로 |
+| Value | What | Where to |
 |---|---|---|
-| `"shorts-9x16"` | 쇼트폼 세로 1080×1920 (**생략 시 기본값**) | YouTube Shorts · Instagram · Threads · Facebook |
-| `"youtube-long-16x9"` | 유튜브 롱폼 가로 1920×1080 | YouTube 하나 |
+| `"shorts-9x16"` | short-form portrait 1080×1920 (**the default when omitted**) | YouTube Shorts · Instagram · Threads · Facebook |
+| `"youtube-long-16x9"` | YouTube long-form landscape 1920×1080 | YouTube alone |
 
-**상수의 정본은 `skills/platform-guide/references/formats.js` 다.** 아래 표는 저작할 때
-보는 요약이고, 실제 값은 `format-resolve.js` 가 빌더에게 넘긴다. 두 곳이 어긋나면
-프리셋이 맞다.
+**The source of truth for the constants is
+`skills/platform-guide/references/formats.js`.** The table below is the summary you consult
+while authoring; the real values are what `format-resolve.js` hands the builder. When the two
+disagree, the preset is right.
 
-| 계약 | 쇼트폼 9:16 | 롱폼 16:9 |
+| Contract | Short-form 9:16 | Long-form 16:9 |
 |---|---|---|
-| 본편 총길이 | 35~75초 (하드 90) | 8~15분 (하드 20분) |
-| 샷 수 | 4~7 | 28~70 |
-| 씬 길이 | 4~13초 | 6~20초 · **촬영 레인은 상한 없음** |
-| 나레이션 자수 | cover 40 · body 50 | cover 70 · body 90 |
-| 문장 길이 | 8~25자 | 12~40자 |
-| 자막 | 번인(BURN=1) | **클린 마스터 + `subs.srt`** — 태우지 않는다 |
-| 생성 영상 합산 | 16초 (8초×2칸) | 40초 (8초×5칸) |
-| 챕터 | 없음 | 5~10개 (저작) · 촬영 레인은 3개 이상 (파생) |
-| 켄번즈 팬 | 안 씀 | 씀 (배율 1.06~1.35) |
-| 아웃트로 자산 | `outro.mp4` | `outro-16x9.mp4` |
-| 촬영 씬 | 편 전체가 촬영이거나 전체가 생성 | **한 편에 섞는다** (§촬영 씬) |
+| Main total length | 35–75s (hard 90) | 8–15 min (hard 20 min) |
+| Shot count | 4–7 | 28–70 |
+| Scene length | 4–13s | 6–20s · **no cap in the filmed lane** |
+| Narration characters | cover 40 · body 50 | cover 70 · body 90 |
+| Sentence length | 8–25 chars | 12–40 chars |
+| Subtitles | burned in (BURN=1) | **clean master + `subs.srt`** — not burned |
+| Generated video, combined | 16s (8s × 2 slots) | 40s (8s × 5 slots) |
+| Chapters | none | 5–10 (authored) · 3 or more in the filmed lane (derived) |
+| Ken Burns pan | not used | used (scale 1.06–1.35) |
+| Outro asset | `outro.mp4` | `outro-16x9.mp4` |
+| Filmed scenes | the episode is either all filmed or all generated | **mixed within one episode** (§filmed scenes) |
 
-**롱폼은 `provisional` 이다.** 안전영역을 데스크톱 웹에서만 쟀고 모바일 웹 가로와
-상단 제목바를 아직 못 쟀다(`safezone-landscape.md`). 그 둘은 글자 놓는 자리를
-**좁히는** 방향으로만 움직이므로, 지금 값으로 만든 롱폼은 나중에 자막·제목이 조금
-안쪽으로 들어올 수 있다. 저작을 막지는 않지만 승인 게이트에서 사용자에게 알린다.
+**Long-form is `provisional`.** The safe area was measured only on desktop web; mobile web
+landscape and the top title bar haven't been measured yet (`safezone-landscape.md`). Those two
+can only move in the direction of **narrowing** where text can sit, so long-form made with
+today's values may end up with subtitles and titles a bit further in later. It doesn't block
+authoring, but tell the user at the approval gate.
 
-모르는 값을 적으면 `format-resolve.js` 가 `exit 1` 로 멈춘다 — 조용히 세로로 떨어지면
-12분치 캡처를 태운 뒤에야 드러나기 때문이다.
+Writing an unknown value stops `format-resolve.js` with `exit 1` — a silent fall back to
+portrait would only surface after burning 12 minutes' worth of captures.
 
-## 문법 단위와 제작 층
+## Grammar units and production layers
 
-한 편의 쇼트는 책, 시퀀스는 문단, 씬은 문장, 샷은 단어다.
+One short is a book, a sequence is a paragraph, a scene is a sentence, a shot is a word.
 
-| 단위 | 뜻 | 이 파일에서 |
+| Unit | Meaning | In this file |
 |---|---|---|
-| Sequence (시퀀스) | 한 목적으로 묶인 씬들. 「이 대목」 | `sequence` — 목적이 갈릴 때만 적는다. 한 편에 하나면 생략 |
-| Scene (씬) | 한 장소, 연속된 한 시간대의 한 사건. 머리글은 `S#1. 카페 안 / 낮` | `scene` + `sceneSlug`. 장소나 시간이 바뀌면 새 번호 |
-| Shot (샷 / 현장에선 컷) | 녹화 ON~OFF 의 끊기지 않은 한 덩어리 | **`SCENES[]` 항목 하나**. `type` 은 역할(cover/points/…)이지 문법 단위가 아니다 |
-| Reveal (리빌) | 같은 샷 안에서 화면 글자가 나타나는 순간 | `narration` 세그·bullets. 샷이 아니다 — 콘티 행 라벨은 「리빌」 |
-| Take (테이크) | 같은 샷의 재시도 | 촬영 대본·생성 라운드. 이 배열의 항목이 아니다 |
-| Coverage (커버리지) | 한 씬을 여러 사이즈로 나눠 찍은 재료 | 같은 `scene` 번호의 샷들. `shot.info` 가 겹치면 하나면 충분하다 |
+| Sequence | Scenes bound by one purpose. "This stretch" | `sequence` — written only when purposes diverge. Omitted when the episode has one |
+| Scene | One place, one event in one continuous stretch of time. The head is `S#1. inside the café / day` | `scene` + `sceneSlug`. A new number when place or time changes |
+| Shot (a "cut" on set) | One unbroken chunk from recording ON to OFF | **one `SCENES[]` entry**. `type` is the role (cover/points/…), not a grammar unit |
+| Reveal | The moment on-screen text appears within the same shot | `narration` segments and bullets. Not a shot — the scene-frame row label is "reveal" |
+| Take | A retry of the same shot | Shooting script and generation rounds. Not an entry in this array |
+| Coverage | Material from filming one scene at several sizes | Shots sharing a `scene` number. When `shot.info` overlaps, one of them is enough |
 
-쇼트 한 편은 대개 시퀀스 하나다. 씬은 장소·시간이 끊길 때만 나눈다. 샷은 **새 정보
-하나당 하나** — 대화 한 씬에 4~6샷이 기본이지만, 35~75초 정보형은 씬마다 사이즈가
-다른 샷 2개(와이드 + 가까움)가 최소선이다.
+A short is usually one sequence. Scenes divide only when place or time breaks. Shots go **one
+per new piece of information** — 4–6 shots in a dialogue scene is standard, but for a 35–75s
+informational piece the floor is 2 shots at different sizes per scene (wide + close).
 
-`type`(cover/points/quote/broll/outro) 은 화면 종류다. **재생 역할**은 `beat` 다.
-문법 축과 직교한다.
+`type` (cover/points/quote/broll/outro) is the kind of screen. The **playback role** is `beat`.
+It's orthogonal to the grammar axis.
 
-## 재생 순서 — 커버 → 후킹 → 결과물 → 내용
+## Playback order — cover → hooking → result → body
 
-이탈을 줄이는 뼈대다. 커버가 결과를 한눈 보여 주고, 후킹이 왜 필요한지 걸고,
-**완성본을 방법보다 먼저** 보여 준 뒤에야 내용을 푼다. 방법이 결과보다 앞에
-있으면 목적지를 모르는 채 설명을 듣게 된다.
+This is the skeleton that reduces drop-off. The cover shows the result at a glance, hooking
+hooks why it's needed, and the body unspools only after **the finished thing has been shown
+ahead of the method**. Method before result means listening to an explanation without knowing
+the destination.
 
-| `beat` | 한글 | 하는 일 | 자리 |
+| `beat` | Name | What it does | Where |
 |---|---|---|---|
-| `hook` | 커버 | 첫 프레임에 완성본을 비추고, 첫 대사가 남을 이유를 준다 | `type:"cover"` — 적지 않아도 커버다 |
-| `hooking` | 후킹 | 문제·피해·손해·결심. 왜 그 결과가 필요한지 — 커버가 던진 것(고른 도입부 전략)을 받고, 답은 안 푼다 | **커버 바로 다음, 모든 회차에** (§hooking) |
-| `result` | 결과물 | 완성본을 제대로 보여 준다. 스크롤·시연·전후 비교 | **후킹 직후, 내용 앞** |
-| `body` | 내용 | 그 결과를 만든 방법·근거·단계 | 결과물이 보인 뒤 |
-| `cta` | 다음 | 다음 편에서 무엇이 완성되는지 | 맨 끝. `type:"outro"` 는 적지 않아도 여기 |
+| `hook` | cover | Puts the finished thing in the first frame; the first line gives a reason to stay | `type:"cover"` — it's the cover even unwritten |
+| `hooking` | hooking | Problem, harm, loss, resolve. Why that result is needed — catches what the cover threw (the chosen opening strategy) and doesn't unpack the answer | **right after the cover, in every episode** (§hooking) |
+| `result` | result | Shows the finished thing properly. Scrolling, demo, before/after | **right after hooking, before the body** |
+| `body` | body | The method, evidence, and steps that made that result | After the result has been seen |
+| `cta` | next | What gets finished in the next episode | At the very end. `type:"outro"` lands here even unwritten |
 
-커버의 첫 프레임과 결과물 씬은 같은 산출물을 가리킨다. 커버는 한눈, 결과물은
-만들어진 칸이 보이게 펼친다. 내용 끝에 같은 완성본을 다시 펼치지 않는다.
+The cover's first frame and the result scene point at the same artifact. The cover is the
+glance; the result unfolds it so the built parts show. Don't unfold the same finished thing
+again at the end of the body.
 
-적지 않으면 렌더러가 이렇게 읽는다. `type:"cover"` → hook, `type:"outro"` → cta,
-`sequence` 가 `결과` 로 열리면 result, `기획`·`방법`·`단계`·`내용` 이면 body,
-`문제`·`후킹` 으로 열리면 hooking. 후킹 샷이 없거나 커버 다음 샷이 후킹이 아니면,
-그리고 제작·튜토리얼·전후 비교인데 결과물이 내용보다 뒤에 있으면 `storyboard.html`
-이 경고한다.
+Left unwritten, the renderer reads it this way. `type:"cover"` → hook, `type:"outro"` → cta,
+`sequence` opening with `결과` → result, `기획`·`방법`·`단계`·`내용` → body, opening with
+`문제`·`후킹` → hooking. `storyboard.html` warns when there's no hooking shot or the shot after
+the cover isn't hooking, and when the piece is a build, tutorial, or before/after comparison
+whose result sits behind the body.
 
 ```js
 beat: "result"                    // hook | hooking | result | body | cta
-sequence: "결과"                  // 시퀀스 머리글. beat 와 같이 쓰면 문서에서 한 덩어리로 보인다
+sequence: "결과"                  // sequence head. Used with beat, the document groups them into one block
 ```
 
-## 샷 공통 필드
+## Fields common to every shot
 
-| 필드 | 필수 | 설명 |
+| Field | Required | Description |
 |---|---|---|
-| `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` — 역할 |
-| `narration` | ✅(`broll`·`outro` 제외) | 세그먼트 배열 `[{tts, sub}, ...]` — 문장 하나 = 세그먼트 하나 = 리빌 하나 |
-| `visual` | ✅ | 비주얼 계획 객체 (아래) |
-| `duration` | 권장 | 목표 초 — 나레이션 자수/4.5 로 추정, 13초 상한 |
-| `scene` | 권장 | 문법 씬 번호. 같은 장소·시간이면 같은 값. 없으면 렌더러가 항목마다 씬 하나를 가정한다 |
-| `sceneSlug` | `scene` 있으면 권장 | `"장소 / 시간"` — 예: `"미용실 의자 / 낮"` |
-| `sequence` | 선택 | 시퀀스 이름. 한 편에 목적이 둘일 때만 |
-| `beat` | 선택 | `hook` \| `hooking` \| `result` \| `body` \| `cta` — 재생 역할. 위 §재생 순서 |
-| `shot` | 권장 | `{ size, info }` — 아래 |
+| `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` — the role |
+| `narration` | ✅ (except `broll`, `outro`) | Segment array `[{tts, sub}, ...]` — one sentence = one segment = one reveal |
+| `visual` | ✅ | The visual plan object (below) |
+| `duration` | recommended | Target seconds — estimated as narration characters / 4.5, capped at 13s |
+| `scene` | recommended | Grammar scene number. Same value for the same place and time. Without it the renderer assumes one scene per entry |
+| `sceneSlug` | recommended when `scene` is set | `"place / time"` — e.g. `"salon chair / day"` |
+| `sequence` | optional | Sequence name. Only when one episode has two purposes |
+| `beat` | optional | `hook` \| `hooking` \| `result` \| `body` \| `cta` — the playback role. See §playback order above |
+| `shot` | recommended | `{ size, info }` — below |
 
 ```js
 shot: {
-  size: "ws",                         // ws 와이드 · two 투샷 · ms 미디엄 · cu 클로즈업
-  info: "추천이 두 갈래라는 사실"       // 이 샷이 관객에게 새로 알려주는 정보 한 줄
+  size: "ws",                              // ws wide · two two-shot · ms medium · cu close-up
+  info: "that the recommendations split two ways"   // one line on what this shot newly tells the audience
 }
 ```
 
-- `info` 가 같은 씬의 다른 샷과 같으면 그 샷은 버려도 된다. 그게 커버리지 설계다.
-- 클로즈업으로 열면 다음 샷에서 와이드·미디엄으로 「여기가 어디인지」를 갚는다.
-- 옛 `scenes.js` 에 이 칸이 없어도 produce 는 그대로 돈다. 사람 문서와 점검만
-  비어 보인다.
+- If `info` matches another shot in the same scene, that shot can be dropped. That's what
+  coverage design is.
+- When you open on a close-up, pay back "where are we" with a wide or medium in the next shot.
+- produce runs fine on an old `scenes.js` without these fields. Only the human document and the
+  checks look empty.
 
-### narration 세그먼트
+### narration segments
 
 ```js
 narration: [
@@ -140,108 +146,114 @@ narration: [
 ]
 ```
 
-- `tts` — 한글 발음 표기 (숫자·외래어를 소리 나는 대로: "4,700만"→"사천칠백만", "eTax"→"이택스")
-- `sub` — 자막 원표기 (숫자·고유명사 원형 유지)
-- `img`·`imgPrompt` (선택) — **대사별 삽화 모드**: 세그먼트마다 삽화 1장을 붙일 때
-  경로와 생성 프롬프트(장면 내용부)를 적는다. storyboard.html 렌더러가 이 필드를
-  감지하면 삽화 모드로 판별해 패널마다 그 대사의 삽화를 배경에 깔고 라이트 모드로
-  그린다 — 대사가 넘어갈 때 그림이 바뀌는 게 문서에서 그대로 보인다.
-  produce 는 캡처 단계에서 소비한다 — reveal 상태마다 그 대사의 `img` 를 `&bg=` 로
-  넘기고 흰 배경 라인아트면 `&light=1`(라이트 모드)을 켠다 (produce SKILL §4 삽화
-  모드 절차). 커버용 삽화는 캐릭터를 하단 1/3 에 두는 구도로 생성한다(라이트 모드가
-  커버 텍스트를 상단에 앉힌다). `visual.bg` 는 대표 삽화(1행)로 유지 — 커버 정지
-  이미지·썸네일의 원천이다. 첫 사례: 2026-08-12 드롭쉬핑 스토리보드.
-- 문장은 마침표로 분명히 끊는다 — 빌드의 문장 경계 검출(silencedetect)이 마침표
-  무음을 찾는다. 쉼표 나열 장문은 경계가 안 잡힌다.
-- 자수 상한(공백·구두점 제외): cover 총 ≤40자, points/quote 총 ≤50자.
-  문장당 8~25자 — 8자 미만은 reveal 창이 0.9초 미만으로 좁아진다.
-- 마지막 문장은 특히 짧게(전환 직전 여운).
+- `tts` — Korean phonetic spelling (numbers and loanwords as they sound: "4,700만"→"사천칠백만",
+  "eTax"→"이택스")
+- `sub` — the subtitle's original notation (numbers and proper nouns kept as written)
+- `img`, `imgPrompt` (optional) — **per-line illustration mode**: when attaching one
+  illustration per segment, write the path and the generation prompt (the scene-content part).
+  When the storyboard.html renderer detects these fields it switches to illustration mode,
+  laying that line's illustration behind each panel and drawing in light mode — so the picture
+  changing as the line changes is visible in the document itself.
+  produce consumes them at the capture stage — it passes that line's `img` as `&bg=` per reveal
+  state, and turns on `&light=1` (light mode) for white-background line art (the illustration
+  mode procedure in produce SKILL §4). Generate cover illustrations with the character in the
+  bottom third (light mode seats the cover text at the top). Keep `visual.bg` as the
+  representative illustration (row 1) — it's the source for the cover still and the thumbnail.
+  First case: the 2026-08-12 dropshipping storyboard.
+- Cut sentences clearly on periods — the build's sentence-boundary detection (silencedetect)
+  looks for the silence at a period. Long sentences strung together with commas give it no
+  boundary.
+- Character caps (spaces and punctuation excluded): cover ≤40 total, points/quote ≤50 total.
+  8–25 per sentence — under 8 narrows the reveal window below 0.9s.
+- Make the last sentence especially short (the beat before the transition).
 
-### title 은 구어 훅 · 나레이션은 존댓말 설명 (2026-08-13 사용자 지시)
+### title is a spoken hook · narration explains in polite register (user directive, 2026-08-13)
 
-모든 씬의 화면 제목(title)은 **보는 사람이 속으로 내뱉는 말**로 쓴다 — 반말
-감탄·의문·전언 형식이다.
+Every scene's on-screen title is written as **what the viewer blurts out inwardly** — a
+casual-register exclamation, question, or piece of hearsay.
 
 ```
 원하던 색이 아닌데 ㅠㅠ  /  같은 염색약인데 왜 달라?  /  얼룩 없어지는 데 2년이래
 ```
 
-설명형 서술("같은 염색약도 사람마다 다르다")은 제목 자리가 아니다 — 그 정보는
-캡션과 나레이션이 맡는다. 세 표면의 분업:
+An explanatory statement ("같은 염색약도 사람마다 다르다") isn't title material — captions and
+narration carry that information. How the three surfaces divide the work:
 
-| 표면 | 레지스터 | 역할 |
+| Surface | Register | Role |
 |---|---|---|
-| title | **구어 반말** (감탄·의문·`-대`·`-더라`·`-았어`, ㅠㅠ 허용) | 감정·의문을 던진다 |
-| 캡션(bullets) | 문서체 허용 | 정보 한 줄 |
-| narration | **존댓말 설명형** | 화면이 던진 의문에 답한다 |
+| title | **spoken casual** (exclamation, question, `-대`, `-더라`, `-았어`; ㅠㅠ allowed) | Throws the emotion or question |
+| caption (bullets) | written style allowed | One line of information |
+| narration | **polite explanation** | Answers the question the screen threw |
 
-- 제목이 구어 표면이 된 만큼 D9 를 따른다 — `-ㄴ다/-는다` 신문체로 닫지 않는다.
-- **동음 함정을 확인한다** — 화면에 단독으로 뜨는 문구는 앞뒤 맥락이 없어 소리가
-  같은 다른 낱말로 먼저 읽힌다. 실측 2건: `얹힌대`(→ 체했대), 전언 어미
-  `-는 거래`(→ 매매 去來). 쓰기 전에 "이 글자만 보면 뭐로 읽히나"를 한 번 소리
-  내어 확인하고, 걸리면 깨달음형(`-는 거였어?`)·목격형(`-더라`) 등으로 바꾼다.
-- 자수 상한(표시 16자)·주제어 포함 규칙은 그대로다.
-- 커버만이 아니라 **points 씬 전부**에 적용된다.
+- Now that the title is a spoken surface it follows D9 — don't close it with newspaper-style
+  `-ㄴ다/-는다`.
+- **Check for homophone traps** — a phrase standing alone on screen has no surrounding context,
+  so it gets read first as a different word that sounds the same. Two measured cases:
+  `얹힌대` (read as 체했대) and the hearsay ending `-는 거래` (read as 매매 去來). Before writing,
+  say it aloud once and ask "reading only these characters, what does it look like"; if it
+  catches, switch to a realization form (`-는 거였어?`) or a witnessed form (`-더라`).
+- The character cap (16 displayed) and the topic-word rule are unchanged.
+- It applies to **every points scene**, not just the cover.
 
-### visual 계획
+### visual plan
 
 ```js
 visual: {
-  picture: "still",                  // still | ai-video | recording | asset — 화면 본체
-  overlay: "html",                   // html | none — 화면 위 HTML 연출
-  bg: "images/scene-1.png",          // 생성 배경 (storyboard 단계 산출)
-  bgPrompt: "…",                     // 생성에 쓴 프롬프트 (재생성·감사용 기록)
-  motion: "very slow dolly in",      // cover 만: 도입 b-roll 용 veo 카메라 지시
-                                     // veo 어휘로 적는다 — 정본 문서에 push·orbit 이 0건이다
-  video: null,                       // points 만: 모션 배경 샷 구분자 (§모션 배경) — 정지는 생략
-  clip: null,                        // quote 만: 발화 클립 계획 (아래)
-  character: null                    // 채널 공용 캐릭터 id — resolve-asset.py character <id>
+  picture: "still",                  // still | ai-video | recording | asset — the screen body
+  overlay: "html",                   // html | none — HTML staging over the screen
+  bg: "images/scene-1.png",          // generated background (produced at the storyboard stage)
+  bgPrompt: "…",                     // the prompt used to generate it (record for regeneration and audit)
+  motion: "very slow dolly in",      // cover only: the veo camera direction for the opening b-roll
+                                     // written in veo vocabulary — push and orbit appear 0 times in the canonical docs
+  video: null,                       // points only: the motion-background shot marker (§motion background) — omitted for stills
+  clip: null,                        // quote only: the speech clip plan (below)
+  character: null                    // the channel's shared character id — resolve-asset.py character <id>
 }
 ```
 
-한 샷은 **화면 본체**와 **화면 위 연출**이 겹칠 수 있다. 커버가 정지 사진 위에
-제목·수치를 HTML 로 띄우는 것이 기본값이다. 둘을 한 배지로 합치지 않는다.
+One shot can overlap a **screen body** and **staging over the screen**. A cover floating the
+title and figure in HTML over a still photo is the default. Don't merge the two into one badge.
 
-| `picture` | 화면 본체 | 구조로 보는 단서 |
+| `picture` | Screen body | The structural clue |
 |---|---|---|
-| `still` | 정지 사진·삽화. 켄번즈는 빌더가 얹는다 | `visual.bg` 있고 `video`·`clip` 없음 |
-| `ai-video` | 생성 영상 — 모션 배경·b-roll·발화 클립 | `type==="broll"` 또는 `visual.video` 또는 `visual.clip` |
-| `recording` | **사용자가 직접 찍은 클립** (§촬영 씬) | `visual.source==="recording"` |
-| `asset` | 미리 만든 공용 mp4 | `type==="outro"` |
+| `still` | Still photo or illustration. Ken Burns is added by the builder | `visual.bg` present, no `video` or `clip` |
+| `ai-video` | Generated video — motion background, b-roll, speech clip | `type==="broll"`, or `visual.video`, or `visual.clip` |
+| `recording` | **A clip the user filmed themselves** (§filmed scenes) | `visual.source==="recording"` |
+| `asset` | A pre-made shared mp4 | `type==="outro"` |
 
-**판정은 씬 하나 단위다.** 한 편에 생성 씬과 촬영 씬이 섞이는 것이 롱폼의 정상
-경로라, 편 전체를 한 모드로 뒤집으면 안 된다 — 그러면 촬영 씬 하나가 생성 씬까지
-촬영 계약(자수·말속도)으로 검사받게 만든다. 렌더러·검산 배지·리뷰어가 전부 씬별로
-본다.
+**The verdict is per scene.** Generated and filmed scenes mixing within one episode is the
+normal long-form path, so don't flip the whole episode into one mode — that makes a single
+filmed scene put the generated scenes under the filming contract (character counts, speech
+rate) too. The renderer, the check badges, and the reviewer all look per scene.
 
-| `overlay` | 화면 위 | 언제 |
+| `overlay` | Over the screen | When |
 |---|---|---|
-| `html` | `video-template.html` / `screencast-overlay.html` 이 글자를 그린다. 리빌·캡션 스왑·타이핑 카드·서명 | cover·points·인용 카드·촬영 오버레이 |
-| `none` | 글자 오버레이 없음. 영상 자체만 | b-roll, 공용 아웃트로 |
+| `html` | `video-template.html` / `screencast-overlay.html` draws the text. Reveals, caption swaps, typing cards, signature | cover · points · quotation cards · filming overlays |
+| `none` | No text overlay. The video alone | b-roll, the shared outro |
 
-적지 않으면 storyboard.html 이 위 단서로 추론한다. 적어 둔 값이 구조와 어긋나면
-점검 스트립이 잡는다 — `picture:"ai-video"` 인데 `video`/`clip`/broll 이 없으면
-영상을 만들 수 없다.
+Left unwritten, storyboard.html infers from the clues above. When the written value disagrees
+with the structure, the check strip catches it — `picture:"ai-video"` with no `video`, `clip`,
+or broll can't produce a video.
 
-`video` 유무가 produce 가 읽는 **정지 / 이미지→영상** 구분자다. `picture` 는 사람이
-읽는 제작 층이고, 둘은 같아야 한다.
+Whether `video` is present is the **still / image→video** marker produce reads. `picture` is
+the human-readable production layer, and the two have to agree.
 
-## 타입별 계약
+## Contracts by type
 
-### cover — 첫 1초에 결과, 첫 3초에 약속
+### cover — the result in the first second, the promise in the first three
 
 ```js
 {
   type: "cover",
   scene: 1,
-  sceneSlug: "신고 창구 / 낮",
-  shot: { size: "cu", info: "안 내면 과태료라는 사실" },
-  hookType: "fear",                         // 도입부 전략 — fear | empathy | curiosity | spoiler (§도입부 전략 넷)
-  kicker: "베트남 생활 · 행정",              // 상단 시리즈 라벨 (rg0)
-  title: "임시거주 신고, 안 하면 **과태료**",  // 16자 이내 + 주제어 필수 (rg1) — 제목도 그 전략을 탄다
-  stat: "500만₫",                           // 히어로 수치 (rg2)
-  statLabel: "미신고 과태료 상한",            // 18자 이내 한정어
-  narration: [ {tts,sub}, {tts,sub} ],      // 2세그 — ①훅 ②히어로 수치
+  sceneSlug: "reporting desk / day",
+  shot: { size: "cu", info: "that not filing means a fine" },
+  hookType: "fear",                         // opening strategy — fear | empathy | curiosity | spoiler (§the four opening strategies)
+  kicker: "베트남 생활 · 행정",              // top series label (rg0)
+  title: "임시거주 신고, 안 하면 **과태료**",  // within 16 chars + topic word required (rg1) — the title rides that strategy too
+  stat: "500만₫",                           // hero stat (rg2)
+  statLabel: "미신고 과태료 상한",            // qualifier within 18 chars
+  narration: [ {tts,sub}, {tts,sub} ],      // 2 segments — ① the hook ② the hero stat
   visual: {
     picture: "still", overlay: "html",
     bg: "images/scene-1.png", bgPrompt: "…", motion: "very slow dolly in"
@@ -249,553 +261,614 @@ visual: {
 }
 ```
 
-- title: 자극 + **무엇의 이야기인지**(주제 명사)가 반드시 안에. `**…**` 는 그라데이션 칩.
-  각도는 platform-playbook §1 ② — **방법·도구가 아니라 낯선 사람이 이미 느끼는
-  문제**. "노션으로 이렇게" 가 아니라 "하루가 왜 늘 피곤하지". 해결·방법은
-  후킹·내용 씬이 맡는다. 자극의 종류는 §도입부 전략 넷 중 `hookType` 에 적은 것이다
-  — 위 예의 "안 하면 과태료"는 공포(`fear`)다.
-- hookType: 이 회차 도입부가 타는 전략 — `fear`(공포) · `empathy`(공감) ·
-  `curiosity`(호기심) · `spoiler`(결말 미리 보여주기) 중 하나. 커버 샷에만 적는다.
-  없으면 `storyboard.html` 이 경고하고, 넷 중 어느 것도 도입부에 없으면 리뷰어 P0 다.
-- reveal 매핑: rg1=title ← 세그①, rg2=stat ← 세그②.
+- title: the stimulus + **what the story is about** (the topic noun) has to be in there.
+  `**…**` is the gradient chip. The angle is platform-playbook §1 ② — **a problem a stranger
+  already feels, not a method or a tool**. Not "here's how with Notion" but "why am I tired
+  every single day". Solutions and methods belong to the hooking and body scenes. The kind of
+  stimulus is whichever of §the four opening strategies is written in `hookType` — the
+  "안 하면 과태료" in the example above is fear (`fear`).
+- hookType: the strategy this episode's opening rides — one of `fear` · `empathy` ·
+  `curiosity` · `spoiler` (showing the ending). Written on the cover shot only.
+  Without it `storyboard.html` warns, and if none of the four is in the opening, it's a
+  reviewer P0.
+- reveal mapping: rg1=title ← segment ①, rg2=stat ← segment ②.
 
-#### 첫 프레임은 결과, 세그①은 시청자에게 하는 약속이다
+#### The first frame is the result, segment ① is a promise to the viewer
 
-제작·튜토리얼·전후 비교 콘텐츠는 `visual.bg` 또는 `visual.shot`의 **첫 프레임부터
-완성 결과**를 보여 준다. 과정 화면, 앱을 여는 장면, 화자 얼굴 인사로 시작하지 않는다.
-시청자는 첫 1초에 결과를 보고, 세그①에서 왜 계속 봐야 하는지 듣는다. 결과를 화면으로
-보여 줄 수 없는 정보형 주제만 문제 상황·핵심 수치를 첫 프레임으로 쓴다.
+Build, tutorial, and before/after content shows **the finished result from the very first
+frame** of `visual.bg` or `visual.shot`. It doesn't open on process screens, on an app being
+launched, or on the speaker's face saying hello. The viewer sees the result in the first
+second and hears why to keep watching in segment ①. Only informational topics that can't show
+a result on screen use the problem situation or the key figure as the first frame.
 
-커버의 첫 대사(세그①)는 화면 제목과 별개의 훅 표면이다. 계약은 하나 —
-**듣는 사람이 남아야 할 이유를 첫 문장이 준다.** 그 이유는 아래 도입부 전략 넷 중
-하나로 건다.
+The cover's first line (segment ①) is a hook surface separate from the on-screen title. There's
+one contract — **the first sentence gives the listener a reason to stay.** That reason hangs on
+one of the four opening strategies below.
 
-**화자 상황 보고로 열지 않는다** — "~해 봤습니다"·"~하려고 합니다"·"오늘은 ~을
-소개합니다"처럼 화자의 행위·계획을 알리는 첫 문장은 리뷰어 문안 모드 P0 다.
-그 말을 듣고 남을 이유가 없어서다. 같은 내용도 어순만 뒤집으면 계약을 지킨다 —
-"클로드 코드로 홈페이지를 만들어 봤습니다" → "순서 하나 바꿨더니 홈페이지가
-달라졌습니다".
+**Don't open with the speaker reporting their own situation** — a first sentence announcing the
+speaker's actions or plans ("I tried ~", "I'm going to ~", "today I'll introduce ~") is a
+reviewer copy-mode P0. There's no reason to stay after hearing it. The same content keeps the
+contract with the word order flipped — "클로드 코드로 홈페이지를 만들어 봤습니다" →
+"순서 하나 바꿨더니 홈페이지가 달라졌습니다".
 
-근거: 2026 릴스 스킵률 벤치마크는 평균 25~35%, 교육형도 30~40%가 정상선인데
-화자 보고형 개시 4편의 자체 채널 실측이 84.8~93.8%였다(2026-08-15). 해외 훅
-가이드의 공통 조건도 0.5~1.5초 안의 약속·문제 제기 한 문장이다 — 아래 넷으로
-치면 결말 미리 보여주기와 공감이다.
+Evidence: the 2026 Reels skip-rate benchmark averages 25–35%, and even educational content sits
+normally at 30–40%, while our own channel measured 84.8–93.8% across 4 episodes that opened with
+a speaker report (2026-08-15). The shared condition in overseas hook guides is also one sentence
+of promise or problem within 0.5–1.5s — in terms of the four below, that's showing the ending
+and empathy.
 
-#### 도입부 전략 넷 — 공포 · 공감 · 호기심 · 결말 미리 보여주기 (회차마다 하나는 반드시)
+#### The four opening strategies — fear · empathy · curiosity · showing the ending (one per episode, always)
 
-도입부(커버 제목 + 세그① + 후킹 — 쇼트폼 첫 20초·롱폼 첫 60초, §hooking 길이와
-같은 창)는 넷 중 **하나 이상**을 탄다. 어느 것을
-탔는지 커버 샷에 `hookType` 으로 적는다. 둘을 겹쳐도 된다 — 첫 프레임은 결말을
-보여 주고 세그①은 공포로 여는 식 — 그때 `hookType` 에는 소리(세그①)가 타는 것을
-적는다. **넷 중 어느 것도 없는 도입부는 리뷰어 문안 모드 P0 다.**
+The opening (cover title + segment ① + hooking — the first 20s of short-form, the first 60s of
+long-form, the same window as the §hooking length) rides **one or more** of the four. Write
+which one it rode on the cover shot as `hookType`. Overlapping two is fine — the first frame
+showing the ending while segment ① opens on fear, say — and in that case `hookType` records what
+the sound (segment ①) rides. **An opening with none of the four is a reviewer copy-mode P0.**
 
-| `hookType` | 전략 | 무엇을 거는가 | 세그① 예 |
+| `hookType` | Strategy | What it hooks | Segment ① example |
 |---|---|---|---|
-| `fear` | 공포 | 시청자가 **이미** 입고 있을지 모르는 손해·위험 — 멈춰 서서 확인하고 싶어진다 | "당신 영상, 알고리즘한테 이미 버림받았을 수도 있습니다" |
-| `empathy` | 공감 | 시청자가 겪는 문제 장면 — "이거 내 얘기다" | "대부분 이거 반대로 하고 있어요" |
-| `curiosity` | 호기심 | 반전·수치·미해결 긴장 — 알고 싶은 것이 보이는데 아직 안 채워진 상태 | "서버 임대료가 0원이었습니다" |
-| `spoiler` | 결말 미리 보여주기 | 완성본·결과를 먼저 보여 주고 어떻게 그리 됐는지를 약속한다 — 제작형의 기본값 | "순서만 바꾸면 결과가 달라집니다" (첫 프레임은 완성 화면) |
+| `fear` | fear | A loss or risk the viewer may **already** be carrying — it makes them stop and check | "당신 영상, 알고리즘한테 이미 버림받았을 수도 있습니다" |
+| `empathy` | empathy | A problem scene the viewer lives — "that's me" | "대부분 이거 반대로 하고 있어요" |
+| `curiosity` | curiosity | A twist, a figure, unresolved tension — something you want to know is visible but not yet filled in | "서버 임대료가 0원이었습니다" |
+| `spoiler` | showing the ending | Shows the finished thing or the result first and promises how it got there — the default for build content | "순서만 바꾸면 결과가 달라집니다" (the first frame is the finished screen) |
 
-- **제목도 같은 자극이다.** 커버 `title` 은 16자 안에 주제어와 이 자극을 함께 싣되
-  구어 훅 규칙(§title 은 구어 훅)은 그대로다 — "임시거주 신고, 안 하면 과태료"(공포),
-  "하루가 왜 늘 피곤하지"(공감), "서버비가 0원이라고?"(호기심), "순서 하나에 홈페이지가
-  달라졌어"(결말). 플랫폼 제목(YouTube title·IG 첫 줄)도 이 전략을 잇는다
-  (platform-playbook §1 ②·§6).
-- **후킹은 커버가 고른 전략을 이어 간다.** 받는다 계약(같은 대상·같은 약속)이 하드
-  룰이고, 전략까지 같아야 하는 건 아니다 — 커버가 공포로 열고 후킹이 그 손해를 공감
-  장면으로 받는 건 자연스럽다. 제목이 공포인데 세그①이 딴 얘기를 하면 받는다 위반으로
-  본다.
-- **공포는 가드레일 셋을 단다.** ① 위협은 research.md 에 근거가 있거나, 위 예처럼
-  가능성 표현("~일 수도")으로 완충한다 — 근거 없는 단정은 미검증 단정(P0)이다.
-  ② 본편이 그 위협에 답한다 — 후킹이 받고 결과물·내용이 푼다. 위협만 던지고 안 푸는
-  도입은 유튜브 Intro 지표(첫 30초가 제목·썸네일 기대와 맞았는가)를 떨어뜨린다.
-  ③ 말투는 손해를 알려 주는 쪽이다 — 겁주는 어조로 가지 않고, 존댓말·구어 표면
-  규칙(§title 은 구어 훅, korean-style D9)도 그대로다.
-- **옛 이름과의 대응** — 이전 계약의 세그① 세 형태(약속·문제 제기·반전·수치)와
-  후킹 세 형태(문제·피해·미해결 긴장·결심·기준)는 이 넷의 하위다: 약속 = 결말 미리
-  보여주기, 문제 제기·문제·피해 = 공감, 반전·수치·미해결 긴장 = 호기심. 결심·기준은
-  후킹 전용 형태라 전략은 커버 것을 잇는다. 리뷰어는 이 넷으로만 판정한다.
+- **The title carries the same stimulus.** The cover `title` fits the topic word and this
+  stimulus into 16 characters, with the spoken-hook rule (§title is a spoken hook) unchanged —
+  "임시거주 신고, 안 하면 과태료" (fear), "하루가 왜 늘 피곤하지" (empathy), "서버비가 0원이라고?"
+  (curiosity), "순서 하나에 홈페이지가 달라졌어" (showing the ending). The platform title (the
+  YouTube title, the IG first line) continues the strategy too (platform-playbook §1 ②, §6).
+- **Hooking continues the strategy the cover picked.** The catch contract (same subject, same
+  promise) is the hard rule; matching strategies isn't required — a cover opening on fear and
+  hooking catching that loss with an empathy scene is natural. A title on fear with segment ①
+  talking about something else counts as a catch violation.
+- **Fear gets three guardrails.** ① The threat either has evidence in research.md or is hedged
+  to a possibility, as in the example above ("~일 수도") — an unhedged assertion is an
+  unverified assertion (P0). ② The body answers that threat — hooking catches it and the result
+  and body unpack it. An opening that throws a threat and never unpacks it drags down the
+  YouTube Intro metric (did the first 30 seconds match the title and thumbnail's promise).
+  ③ The register is one of telling someone about a loss — not a scaring tone, and the polite
+  register and spoken-surface rules (§title is a spoken hook, korean-style D9) hold.
+- **Mapping from the old names** — the previous contract's three segment-① forms (promise,
+  problem statement, twist/figure) and three hooking forms (problem/harm, unresolved tension,
+  resolve/criteria) are subsets of these four: promise = showing the ending, problem statement,
+  problem, and harm = empathy, twist, figure, and unresolved tension = curiosity. Resolve and
+  criteria are hooking-only forms, so the strategy continues the cover's. The reviewer judges
+  by these four alone.
 
-출처: 사용자가 전달한 크리에이터 강의(2026-08-18) — "지금까지 가장 성과가 좋았던
-도입부 전략 넷, 영상마다 이 중 하나는 반드시". 출처 영상은 확인하지 못했다(실무 관행
-등급). 우리 실측은 위 스킵률 4편뿐이라, 넷 중 무엇이 우리 채널에서 통하는지는 회차
-성적으로 본다 — 기준선 회차에는 변수를 하나만 바꾼다(§모션 배경 형식 개편 항).
+Source: a creator lecture relayed by the user (2026-08-18) — "the four opening strategies that
+have performed best so far; every video uses one of them." The source video couldn't be checked
+(field-practice grade). Our own measurements are only the 4 skip-rate episodes above, so which
+of the four works on our channel is read from episode performance — change one variable at a
+time on baseline episodes (see §motion background, the format-overhaul item).
 
-### hooking — 커버 다음 샷. 왜 남아야 하는지를 건다
+### hooking — the shot after the cover. It hooks why they should stay
 
-커버가 손가락을 멈추게 했다면, 후킹은 멈춘 사람을 결과물까지 데려간다. 두 구간은
-플랫폼이 재는 지표부터 다르다 — 커버는 3초 스킵률, 후킹은 첫 30초·첫 1분의 이탈
-곡선이다. **모든 회차에 있다** — 제작형만이 아니라 정보형에도. 정보형에는 결과물
-씬이 없어도 "왜 남아야 하는지"는 있어야 한다. `type` 은 대개 `points` 이고,
-캐릭터가 묻는 대사형이면 `quote` 로 써도 된다. 어느 쪽이든 `beat: "hooking"` 을 적는다.
+If the cover stopped the thumb, hooking carries the stopped person to the result. The two
+stretches differ even in the metric the platform measures — the cover is the 3-second skip
+rate, hooking is the drop-off curve over the first 30 seconds and first minute. **It exists in
+every episode** — informational pieces too, not just builds. An informational piece may have no
+result scene, but it still needs a "why stay". `type` is usually `points`, and it may be written
+as `quote` when it's a character asking a question. Either way, write `beat: "hooking"`.
 
 ```js
 {
   type: "points",
   beat: "hooking",
-  scene: 1,                                  // 커버와 같은 장소·시간이면 같은 씬 번호
-  sceneSlug: "작업실 / 늦은 밤",
-  shot: { size: "ms", info: "반응이 없을까 봐 두려운 밤이 내 얘기라는 것" },
-  title: "",                                 // 대개 비운다 — 소리가 걸고, 화면은 문제 장면을 보여 준다
-  narration: [ {tts,sub}, {tts,sub} ],       // 1~3세그. 시청자 주어
+  scene: 1,                                  // same scene number when the place and time match the cover
+  sceneSlug: "workroom / late at night",
+  shot: { size: "ms", info: "that a night spent fearing no response is their own story" },
+  title: "",                                 // usually left empty — the sound hooks, the screen shows the problem scene
+  narration: [ {tts,sub}, {tts,sub} ],       // 1–3 segments. The viewer as the subject
   visual: { picture: "still", overlay: "html", bg: "images/scene-2.png", bgPrompt: "…" }
 }
 ```
 
-- **자리** — 커버 바로 다음 샷이다. 도입 b-roll(`after: 0`)은 재생 역할이 아니라
-  커버 그림이 움직이는 4초라 사이에 낄 수 있다 — 그 뒤 첫 샷이 후킹이면 된다.
-  결과물(제작형)·첫 내용 씬 앞이다.
-- **길이** — 쇼트폼 **1~3샷 · 4~15초**. 커버부터 세어 **20초 안에** 결과물(정보형은
-  첫 내용 씬)이 시작한다. 롱폼은 1~3샷 · 20~60초, 첫 60초 안에 결과물이다. 잠정값이다
-  — TikTok 훅 6초·유튜브 Intro 30초 사이에 둔 값이고, 실측 두 편 중 buzz-agents(1샷·
-  10초)는 안, neighborhood-change-radar(4샷·17.2초, 결과물 20.6초 시작)는 밖이다.
-  기준선 3편의 평균 시청 시간·리텐션으로 다시 본다.
-- **하는 일 넷** — 자료가 겹치는 자리다(근거는 [후킹 리서치](../../../docs/research/2026-08-18-hooking-beat/)).
-  1. **받는다** — 커버가 던진 것과 같은 대상, 같은 약속을 이어 간다. 커버에 없던 소재로
-     새지 않는다. 유튜브 Intro 지표의 정의가 이것이다 — 첫 30초가 썸네일·제목의 기대와
-     맞았는가.
-  2. **건다** — 시청자의 문제·손해·이익을 **시청자 주어**로 말한다. 커버가 고른
-     도입부 전략(§도입부 전략 넷)을 이어 가는 자리다. 형태는 넷 중 하나:
+- **Where** — the shot right after the cover. An opening b-roll (`after: 0`) isn't a playback
+  role but 4 seconds of the cover picture moving, so it can sit between — as long as the first
+  shot after it is hooking. It comes before the result (in builds) and the first body scene.
+- **Length** — short-form **1–3 shots · 4–15s**. Counting from the cover, the result (the first
+  body scene for informational pieces) starts **within 20s**. Long-form is 1–3 shots · 20–60s,
+  with the result inside the first 60s. These are provisional — the value sits between TikTok's
+  6-second hook and YouTube's 30-second Intro, and of the two measured episodes buzz-agents
+  (1 shot, 10s) is inside while neighborhood-change-radar (4 shots, 17.2s, result starting at
+  20.6s) is outside. Revisit with average watch time and retention across 3 baseline episodes.
+- **The four things it does** — this is where the sources overlap (evidence:
+  [hooking research](../../../docs/research/2026-08-18-hooking-beat/)).
+  1. **Catch** — continue the same subject and the same promise the cover threw. Don't drift to
+     material the cover never had. This is the definition of the YouTube Intro metric — did the
+     first 30 seconds match the thumbnail and title's promise.
+  2. **Hook** — say the viewer's problem, loss, or gain **with the viewer as the subject**. This
+     is where the opening strategy the cover picked (§the four opening strategies) continues.
+     The form is one of four:
 
-     | 형태 | 전략 | 예 |
+     | Form | Strategy | Example |
      |---|---|---|
-     | 문제·피해 | 공감 | "이 동네 첫 카페 개업이야! … 순식간에 카페거리가 돼버렸네." |
-     | 손해·위험 | 공포 | "첫날 조회수가 두 자리에서 멈춘 적 있죠. 그게 그 신호예요." |
-     | 미해결 긴장 | 호기심 | "반응이 없을 것 같은 영상이면, 너희들 결정은 뭐야?" |
-     | 결심·기준 | 선언 — 전략은 커버 것을 잇는다 | "주변 상가 오픈 정보를 미리 알 수 있게 서비스를 만들어야겠어." |
+     | problem·harm | empathy | "이 동네 첫 카페 개업이야! … 순식간에 카페거리가 돼버렸네." |
+     | loss·risk | fear | "첫날 조회수가 두 자리에서 멈춘 적 있죠. 그게 그 신호예요." |
+     | unresolved tension | curiosity | "반응이 없을 것 같은 영상이면, 너희들 결정은 뭐야?" |
+     | resolve·criteria | declaration — the strategy continues the cover's | "주변 상가 오픈 정보를 미리 알 수 있게 서비스를 만들어야겠어." |
 
-     각도는 커버 제목과 같다 — 방법·도구가 아니라 낯선 사람이 이미 느끼는 문제
-     (platform-playbook §1 ②). 결말 미리 보여주기(`spoiler`)로 연 회차의 후킹은
-     완성본을 화면에 둔 채 위 셋 중 하나로 왜를 건다 — 결말을 한 번 더 보여 주는
-     건 후킹이 아니다.
-  3. **안 푼다** — 답·방법·완성본은 결과물·내용 몫이다. 후킹이 답을 말하면 뒤가
-     재탕이 된다. TikTok 실측에서 이야기 앞머리에 서스펜스를 둔 쪽이 시청 시간 +16% 였고,
-     호기심은 "알고 싶은 것이 보이는데 아직 안 채워진" 상태에서만 생긴다.
-  4. **짧다** — 위 길이 안이다. 후킹이 길어지면 커버 약속과 결과물 사이가 벌어진다.
-- **채우지 않는 것** — 인사·자기소개·채널 소개·"오늘은 ~ 알아볼게요" 예고·도구
-  정의·배경 설명. "무엇을 볼지 말하지 말고 보여 줘라." **화자 보고형 개시 P0 는 커버
-  세그①과 후킹 첫 세그 둘 다에 걸린다.** 다만 캐릭터가 1인칭으로 처지를 말하는 대사
-  ("내가 밤을 새서 영상을 만들었어")는 문제 장면이지 보고가 아니다 — 듣는 사람이
-  남을 이유가 그 문장에 있으면 통과다.
-- **화면도 말한다** — 문제 장면(전·before)이나 커버 정지 유지 중 하나다. 제작형은
-  커버의 결과 화면을 그대로 두고 소리가 왜를 걸어도 되고, 정보형은 문제 상황을
-  그린다. `title` 은 대개 비운다 — 쓴다면 구어 훅이다(§title 은 구어 훅).
-- **렌더러 추론** — `sequence` 가 `문제`·`후킹` 으로 열리면 hooking 으로 읽는다.
-  그래도 `beat` 를 적는다 — 추론은 옛 파일용이다. `storyboard.html` 은 후킹 샷이
-  없거나 커버 다음 샷이 후킹이 아니면 경고한다.
+     The angle matches the cover title — a problem a stranger already feels, not a method or a
+     tool (platform-playbook §1 ②). In an episode opened with showing the ending (`spoiler`),
+     hooking keeps the finished thing on screen and hooks the why with one of the other three —
+     showing the ending a second time isn't hooking.
+  3. **Don't unpack** — the answer, the method, and the finished thing belong to the result and
+     the body. If hooking says the answer, what follows is a rerun. TikTok measurements put
+     watch time +16% when suspense sits at the front of the story, and curiosity only arises in
+     the state where "something you want to know is visible but not yet filled in".
+  4. **Be short** — inside the length above. A long hooking opens a gap between the cover's
+     promise and the result.
+- **What not to fill it with** — greetings, self-introduction, channel introduction, a
+  "today we'll look at ~" trailer, tool definitions, background explanation. "Don't tell them
+  what they'll see — show it." **The speaker-report-opening P0 applies to both the cover's
+  segment ① and hooking's first segment.** That said, a character speaking their own situation
+  in first person ("내가 밤을 새서 영상을 만들었어") is a problem scene, not a report — it passes
+  when the reason to stay is in that sentence.
+- **The screen talks too** — either the problem scene (the before) or holding the cover still.
+  A build can leave the cover's result screen up while the sound hooks the why; an informational
+  piece draws the problem situation. `title` is usually left empty — if you write one, it's a
+  spoken hook (§title is a spoken hook).
+- **Renderer inference** — a `sequence` opening with `문제` or `후킹` reads as hooking. Write
+  `beat` anyway — inference is for old files. `storyboard.html` warns when there's no hooking
+  shot or the shot after the cover isn't hooking.
 
-### points — 한 화면에 한 메시지
+### points — one message per screen
 
 ```js
 {
   type: "points",
   scene: 1,
-  sceneSlug: "신고 창구 / 낮",
-  shot: { size: "ws", info: "기한이 도착 당일로 바뀐 것" },
-  title: "7월 24일부터 **이렇게** 바뀝니다",   // 60px 상단 고정 (rg1) — 없으면 "" (아래 §화면 텍스트는 필요할 때만)
-  bullets: [                                  // 화면에는 한 번에 하나만 (캡션 스왑). 0개도 정상이다
+  sceneSlug: "reporting desk / day",
+  shot: { size: "ws", info: "that the deadline moved to the day of arrival" },
+  title: "7월 24일부터 **이렇게** 바뀝니다",   // fixed at 60px, top (rg1) — "" when absent (see §on-screen text only when needed below)
+  bullets: [                                  // one at a time on screen (caption swap). 0 is normal too
     { t: "도착 즉시 신고", d: "종전 24시간 → 도착 당일로" },
     { t: "온라인 제출 허용", d: "앱·포털 어디서든" }
   ],
-  footnote: "출처: 공안부 시행령 NN/2026",      // 제목과 함께 상시 노출 (rg1) — 없으면 ""
-  narration: [ … ],                            // 세그 수는 샷마다 다르다 (1~3)
+  footnote: "출처: 공안부 시행령 NN/2026",      // shown throughout alongside the title (rg1) — "" when absent
+  narration: [ … ],                            // segment count varies per shot (1–3)
   visual: { picture: "still", overlay: "html", bg: "images/scene-2.png", bgPrompt: "…" }
 }
 ```
 
-- **사진이 주인공이다**(produce 절대 규칙 14) — 불릿이 리스트로 쌓이는 슬라이드가
-  아니라, 상단 블록에 제목·출처와 **활성 캡션 하나**만 얹힌다. 캡션은 한 줄이 좋다 —
-  `t` ≤ 12자, `d` ≤ 22자 권장. 상세는 나레이션·자막이 말한다.
-- **불릿 수 ≠ 문장 수여도 reveal 은 불릿 1개씩** — 불릿 여러 개를 한 문장으로 묶어
-  읽는 건 정상이지만, 화면 등장은 produce 의 하위 reveal(`A|B` 표기)로 하나씩 쪼갠다.
+- **The photo is the star** (produce absolute rule 14) — it isn't a slide where bullets stack
+  into a list; the top block carries the title, the source, and **one active caption**. One line
+  per caption is best — `t` ≤ 12 chars, `d` ≤ 22 chars recommended. The narration and subtitles
+  say the detail.
+- **Bullet count ≠ sentence count, but reveals go one bullet at a time** — reading several
+  bullets as one sentence is normal, but their appearance on screen is split one at a time by
+  produce's sub-reveals (the `A|B` notation).
 
-#### 화면 텍스트는 필요할 때만 (사용자 지시 2026-08-14)
+#### On-screen text only when needed (user directive, 2026-08-14)
 
-**칸을 채우려고 글자를 쓰지 않는다.** 씬마다 캡션 3~4개를 억지로 맞추던 관행을 폐기한다 —
-`title`·`footnote`·`bullets` 는 전부 비울 수 있고, 비우는 게 기본값에 가깝다.
+**Don't write text to fill a slot.** The habit of forcing 3–4 captions into every scene is
+retired — `title`, `footnote`, and `bullets` can all be empty, and empty is closer to the
+default.
 
-기준은 하나다. **소리가 이미 말한 것을 화면이 다시 쓰지 않는다.** 나레이션이 문장으로
-설명하는데 같은 뜻을 캡션이 요약해 얹으면, 보는 사람은 같은 말을 눈과 귀로 두 번 받는다.
-쇼트폼에서 그건 정보가 아니라 소음이고, 그림을 가린다.
+There's one criterion. **The screen doesn't rewrite what the sound already said.** When the
+narration explains something in a sentence and a caption lays the same meaning on top as a
+summary, the viewer takes the same words in twice, through eyes and ears. In short-form that
+isn't information, it's noise, and it covers the picture.
 
-화면 텍스트를 **쓰는** 경우:
+When you **do** use on-screen text:
 
-| 자리 | 왜 필요한가 |
+| Place | Why it's needed |
 |---|---|
-| 커버 | 첫 3초에 소리 없이 스크롤하는 사람을 잡는 자리다. 훅·주제어·수치가 글자로 있어야 한다 |
-| 숫자·고유명·기한 | 귀로 듣고 흘리는 값이다. `4,700만₫`·`7월 24일`처럼 눈으로 확인해야 하는 것 |
-| 순서·단계 번호 | 여러 단계를 훑는 회차에서 지금 몇 번째인지 표시 |
-| 소리와 다른 정보 | 나레이션이 안 말하는 출처·한정어·용어 풀이(`적대적 평가 = 스스로 채점`) |
-| 복붙할 원문 | 커맨드·프롬프트·주소. 한 글자도 틀리면 안 되는 것 |
+| Cover | The place to catch someone scrolling soundlessly in the first 3 seconds. The hook, the topic word, and the figure have to be there as text |
+| Numbers, proper nouns, deadlines | Values that slip past the ear. Things to confirm with the eye, like `4,700만₫` or `7월 24일` |
+| Order and step numbers | Marking which step you're on in an episode that runs through several |
+| Information the sound doesn't carry | Sources, qualifiers, term definitions the narration doesn't say (`적대적 평가 = 스스로 채점`) |
+| Text meant to be copied | Commands, prompts, addresses. Anything where one wrong character breaks it |
 
-**쓰지 않는** 경우 — 나레이션 문장을 짧게 줄여 옮긴 캡션. 그건 자막이 이미 하고 있다.
+When **not** to — a caption that shortens a narration sentence and moves it to the screen. The
+subtitles already do that.
 
-- 세그 1개짜리 씬은 캡션이 **0개**다(캡션 k ← 세그 k+1 이므로 계산상으로도 그렇다).
-  짧고 그림만 지나가는 씬을 두는 게 리듬에 좋다 — 모든 씬이 같은 무게일 이유가 없다.
-- `title` 을 비우면 세그① 구간에는 그림만 보인다. 이때 **캡션 수 = 세그 수 − 1** 이다.
-- 화면 텍스트를 뺀 만큼 **그림이 그 몫을 져야 한다** — 배경이 은유 정물이면 화면이 빈다.
-- reveal 매핑: rg1=title+footnote, rg2..=캡션 순서대로 — 전환이 교체(스왑)로
-  렌더된다. 상태 수 = 1(배경) + 1(제목·출처) + 캡션 수.
+- A scene with one segment has **zero** captions (caption k ← segment k+1, so it works out that
+  way arithmetically too). Keeping a short scene that's just picture passing by is good for the
+  rhythm — there's no reason for every scene to weigh the same.
+- Emptying `title` means only the picture shows during segment ①. In that case **caption count =
+  segment count − 1**.
+- **The picture has to carry whatever the on-screen text gave up** — a metaphorical still life
+  as the background leaves the screen empty.
+- reveal mapping: rg1=title+footnote, rg2..=captions in order — transitions render as swaps.
+  State count = 1 (background) + 1 (title and source) + caption count.
 
-### quote — 발화/인용
+### quote — speech / quotation
 
 ```js
 {
   type: "quote",
   speaker: "민지",
-  role: "3년차 주재원 · AI",       // AI 표기 시 강조 렌더 — AI 명의 은폐 금지
+  role: "3년차 주재원 · AI",       // marking AI renders with emphasis — never hide an AI byline
   text: "저도 작년에 놓쳐서 벌금 냈어요.",
-  narration: [ {tts,sub}, {tts,sub} ],   // 2세그 — 둘 다 같은 오버레이 사용
+  narration: [ {tts,sub}, {tts,sub} ],   // 2 segments — both use the same overlay
   visual: {
-    picture: "ai-video", overlay: "html",  // 클립 없으면 picture:"still" — 정지 인용 카드
+    picture: "ai-video", overlay: "html",  // no clip means picture:"still" — a still quotation card
     bg: null,
-    clip: {                               // 발화 클립 계획 (produce 가 생성) — 없으면 정지 인용 카드
-      avatar: "…아바타 이미지 경로 또는 null",
-      prompt: "…veo_reference 프롬프트 초안 (배경은 THEME 다크로 통일)"
+    clip: {                               // the speech clip plan (produce generates it) — without it, a still quotation card
+      avatar: "…path to the avatar image, or null",
+      prompt: "…draft veo_reference prompt (background unified to THEME dark)"
     }
   }
 }
 ```
 
-- alpha 캡처 시 상단 서명(이름+역할)만 렌더 — 인용문은 나레이션·자막이 말한다.
-- 실존 인물의 얼굴·음성 합성 금지. 캐릭터는 실사로 오인되지 않는 스타일만.
+- On the alpha capture only the top signature (name + role) renders — the quotation itself is
+  said by the narration and subtitles.
+- No synthesizing a real person's face or voice. Characters only in styles that can't be
+  mistaken for live action.
 
-### 모션 배경 (`visual.video`) — 씬 배경을 이미지→영상으로
+### Motion background (`visual.video`) — a scene background from image to video
 
 ```js
 {
   type: "points",
   bullets: [ … ], footnote: "",
-  duration: 8,                        // ≤8초로 잡는다 — 클립 1회 재생이 씬을 덮는다
-  narration: [ {tts, sub}, … ],       // 유지된다 — b-roll 과 달리 말하면서 배경만 움직인다
+  duration: 8,                        // keep it ≤8s — one playthrough of the clip covers the scene
+  narration: [ {tts, sub}, … ],       // kept — unlike b-roll, only the background moves while you talk
   visual: {
     picture: "ai-video", overlay: "html",
-    bg: "images/scene-3.png",         // veo 파라미터 — gpt_image high · §broll 의 소스 조항(인물 실사) 그대로
+    bg: "images/scene-3.png",         // the veo parameter — gpt_image high · the §broll source clause (photorealistic people) applies as-is
     bgPrompt: "…",
     video: {
-      prompt: "very slow dolly in, hair swaying gently, nearly static camera",  // 영어 모션만
-      clip: ".work/motion/motion-i2.mp4"   // produce 산출 기록 — motion-i<씬 인덱스>.mp4
+      prompt: "very slow dolly in, hair swaying gently, nearly static camera",  // English motion only
+      clip: ".work/motion/motion-i2.mp4"   // produce output record — motion-i<scene index>.mp4
     }
   }
 }
 ```
 
-스토리보드가 보여 준 그 이미지를 **파라미터로 영상을 만들어 씬 배경에 까는** 방식이다.
-캡션·자막 오버레이는 alpha 캡처로 그 위에 얹힌다(produce §4·§6).
+This takes the image the storyboard already showed, **makes a video from it as a parameter, and
+lays it under the scene background**. The caption and subtitle overlays go on top via the alpha
+capture (produce §4, §6).
 
-**엔진은 스토리보드가 고르지 않는다** — produce §3 이 얼굴 → 소리 → 격자 순으로 정하고
-(판단표 정본은 produce `references/video-model-selection.md`), 이 자리는 클립의 소리를
-버리므로 기본이 Seedance 무음이다. 스토리보드가 할 일은 그 판단에 필요한 사실을 계획에
-적어 두는 것 하나다 — **소스에 얼굴이 있는지, 있다면 성인인지**. 미성년으로 보이는 얼굴은
-Veo 이미지 레인이 막고 Seedance 2.x 는 실사 얼굴 자체를 거부하므로, 계획 단계에서 걸러야
-그림을 다시 그리는 일이 없다.
+**The storyboard doesn't pick the engine** — produce §3 decides in the order face → sound → grid
+(the decision table's source of truth is produce `references/video-model-selection.md`), and
+since this slot throws the clip's audio away the default is a silent Seedance. The storyboard's
+one job is to write into the plan the facts that decision needs — **whether there's a face in
+the source and, if so, whether it's an adult**. Faces that read as minors are blocked on the Veo
+image lane, and Seedance 2.x refuses photorealistic faces outright, so filtering at the planning
+stage avoids redrawing the picture.
 
-**`prompt` 문장은 Seedance 문법으로 쓴다** — 기본 엔진이 그쪽이기 때문이다. 카메라를
-한 동사로 적지 말고 **구간**으로 적는다: `시작 프레임 구도 + 무브 + 종료 프레임 구도`.
-위 예시의 `very slow dolly in … nearly static camera` 가 그 형태다. 다가가는 무브를
-`dolly in` 으로 적는 이유는 **이 문장이 Veo 로도 갈 수 있기 때문**이다 — `ARK_API_KEY` 가
-없으면 모션 배경은 `veo_img2video` 로 폴백하는데, Veo 정본 전문에 `push` 라는 낱말이
-0건이다. Seedance 쪽 벤더 어휘는 중국어(`推`)라 영어로는 어느 쪽도 확인되지 않으므로,
-두 경로를 다 만족하는 `dolly in` 을 쓴다. **이건 벤더가 요구하는
-형식이 아니다** — Seedance 상위 공식에서 카메라 칸 자체가 `非必须` 이고, 한때 필수 슬롯으로
-적었던 "무브 진폭"은 원문 재확인에 실패했다(2026-08-15 카메라 조사). 구간으로 적는 근거는
-**구도를 재현해야 하는 모션 배경 컷**이라는 우리 쪽 사정이다. 컷당 무브는 기본 모델
-1.5 Pro 에서 2개까지 — 컷당 1종 권고는 Seedance 2.0 한정이라 여기 옮기면 틀린다.
-두 가지를 하지 않는다 — **초를 적지 않고**(길이는 씬의 `duration` 이 정하고 편집이
-자른다), **배제할 소재를 문장에
-적지 않는다**(Seedance 에는 배제 전용 인자가 없다 — 안 나오게 장면을 다시 서술한다.
-Veo 로 갈 때만 `negativePrompt` 인자가 그 자리다). 문장은 영어로 쓴다 — 프롬프트
-본문은 중국어·영어만 받는다.
+**Write the `prompt` sentence in Seedance grammar** — that's the default engine. Don't write the
+camera as a single verb; write it as a **stretch**: `opening frame composition + move + closing
+frame composition`. The `very slow dolly in … nearly static camera` in the example above is that
+form. The reason an approaching move is written as `dolly in` is that **this sentence may also
+go to Veo** — without `ARK_API_KEY` the motion background falls back to `veo_img2video`, and the
+word `push` appears 0 times in the canonical Veo text. Seedance's own vendor vocabulary is
+Chinese (`推`), so neither is confirmed in English, and `dolly in` satisfies both paths. **This
+isn't a format the vendor requires** — in the Seedance top-level formula the camera slot itself
+is `非必须`, and the "move amplitude" once written as a required slot failed re-verification
+against the original (2026-08-15 camera research). The reason for writing it as a stretch is our
+own: **it's a motion-background cut whose composition has to be reproduced.** Moves per cut go
+up to 2 on the default model 1.5 Pro — the one-move-per-cut recommendation is Seedance 2.0 only,
+so carrying it over here would be wrong. Two things to avoid — **don't write seconds** (length is
+set by the scene's `duration` and the edit trims it) and **don't write what to exclude into the
+sentence** (Seedance has no exclusion-only argument — re-describe the scene so it doesn't appear.
+That slot is the `negativePrompt` argument only when going to Veo). Write the sentence in English
+— the prompt body takes only Chinese or English.
 
-- **언제 쓰나**: 움직임 자체가 내용일 때. 말없이 그림만 보여줄 자리면 `broll`
-  (씬 사이 삽입)이고, **말하면서 배경이 움직여야 하면 모션 배경**이다. 정지로
-  충분한 씬은 정지가 기본값이다 — 영상은 비용과 이음새 위험을 산다.
-- **"이 씬은 무거우니까 카메라를 밀자"는 계획을 쓰지 않는다** — 무브가 정서를 바꾼다는
-  통념에 실증이 없다(p=.84, 카메라 조사 §07). 씬의 톤은 배경 그림과 소품이 만들고,
-  무브가 실제로 올린 건 몰입 하나였다. 그러니 무브는 **도입·전환처럼 아직 성격이 안 잡힌
-  자리**에 쓰고, 정서를 바꾸고 싶으면 `bgPrompt` 를 고친다.
-- **중간 씬에 움직임을 섞는 것 자체는 유리하다** — 정지컷 연속은 스크롤 통과
-  신호다(스킵률 실측 2026-08-15). 다만 움직임의 출처가 veo 만이 아니다:
-  켄번즈(빌더가 컷마다 건다)·코드 렌더 애니메이션(커버 4→1 연출·타이핑 카드처럼
-  HTML 을 브라우저 캡처한 클립 — 비용 0·한글 안전)이 먼저다. veo 모션 배경은
-  그것으로 부족하고 **움직임 자체가 내용인 씬**에만 산다. 한 회차의 완전 정지
-  구간이 얼마나 긴지를 먼저 세어 보고, 코드 렌더로 채울 수 없는 자리인지 확인한
-  뒤에 veo 를 계획한다.
-- **캐릭터 단위 veo 금지는 컷 단위로 푼다** — 프로파일이 특정 캐릭터에 veo 를
-  금지했어도(예: 입 없는 얼굴 — 모델이 입을 발명한다, 딸깍랩 실측 5회) 그 금지는
-  **그 캐릭터가 화면에 있는 컷**에만 작동한다. 금지 캐릭터가 안 나오는 컷(다른
-  캐릭터 단독·실루엣·소품 클로즈업)은 여전히 모션 배경 후보다. 단 흰 배경
-  라인아트는 모델이 여백을 발명하는 최악 조건이라(실측) 후보라도 안전하지 않다 —
-  계획 게이트에 이 사실을 함께 넘긴다.
-- **형식 개편 직후 기준선 회차에는 변수를 하나만 바꾼다** — 훅 계약·구성 개정을
-  적용한 첫 회차에 veo 승급까지 얹으면 다음 지표에서 무엇이 효과였는지 못 가른다
-  (cost-tiers §승급 동결과 같은 논리 — 그쪽은 무인 루프, 이쪽은 사람 계획 대상).
-  기준선이 잡힌 뒤에 한 칸씩 실험한다.
-- **생성 영상 합산 상한 — 이 절이 정본이다**: 한 회차에 **b-roll 칸 + 모션 배경 씬을
-  합쳐 최대 2**(사용자 지시 2026-08-14). veo 호출도 2회가 상한이다. quote 발화
-  클립은 이 합산에 들어가지 않는다. 셋 이상은 `storyboard.html` 점검 스트립이
-  빨간 배지로 잡는다.
-- **points 전용** — cover 는 코드 렌더 정지를 유지하고(produce 절대 규칙 10) 영상은
-  도입 b-roll 로 넣는다. quote 는 `clip` 이 그 역할이다.
-  **예외는 사용자가 회차별로 명시 지시했을 때뿐이다**(2026-08-15 딸깍랩 시댄스 편 —
-  "시작 부분에 임팩트"). 그때도 절대 규칙 10 의 본체는 그대로다 — **글자는 여전히 코드
-  렌더 오버레이**이고 생성 영상에 텍스트를 맡기지 않는다. 영상 커버를 쓸 때 딸려 오는
-  계약이 셋이다: 텍스트를 **상단에 앵커**하고(피사체가 움직여 중앙이 비어 있다는 보장이
-  없다), **상단 우세 스크림**으로 바꾸고(기본 커버 스크림은 아래로 무거워 위쪽 글자를
-  못 지킨다 — 흰 피사체가 글자 줄을 지나는 순간 대비가 4.35:1 로 무너진 실측), 나레이션을
-  비우면 그 구간은 **클립이 가진 소리**를 쓴다(절대 규칙 9 와 같은 동작이라 자막도 없다).
-  템플릿은 `visual.video` 가 있는 cover 를 보고 앞의 둘을 자동으로 적용한다.
-- **나레이션·자막을 유지한다** — 절대 규칙 9(영상 소리 사용·나레이션 금지)는 b-roll
-  **삽입 구간** 이야기다. 모션 배경은 빌더가 영상 트랙만 쓰므로 클립의 소리는
-  버려지고 TTS·자막·BGM 이 그대로 간다.
-- **대사별 삽화(`narration[].img`)와 함께 쓰지 않는다** — 모션 배경은 씬 전체에 영상
-  한 편이 깔리는 구조라 세그별 배경 교체가 성립하지 않는다(alpha 캡처에는 텍스트만
-  있다). 삽화 모드 씬을 영상화하려면 대표 삽화 한 장(`visual.bg`)을 소스로 쓴다.
-- `duration` 을 8초 이하로 잡는다 — Veo 로 만들면 8초 고정이라 그 안이면 클립 한 번으로
-  덮고, Seedance 는 적은 초만큼만 만들어 그만큼만 청구한다. 넘기면 루프가 돌아 이음새가
-  보인다.
-- content-reviewer **계획 모드** 게이트는 b-roll 과 같다(절대 규칙 13) —
-  `PLAN_REVIEW: PASS` 없이 veo 를 부르지 않는다.
+- **When to use it**: when the movement itself is the content. A place to show only the picture
+  with nothing said is `broll` (spliced between scenes); **when the background has to move while
+  you talk, that's a motion background**. Still is the default for scenes where still is enough —
+  video buys cost and seam risk.
+- **Don't write a plan that says "this scene is heavy, so push the camera in"** — the notion that
+  moves change emotion has no empirical support (p=.84, camera research §07). A scene's tone comes
+  from the background picture and the props, and the one thing moves actually raised was
+  immersion. So use moves **where the character isn't set yet — openings and transitions** — and
+  fix `bgPrompt` when you want to change the emotion.
+- **Mixing movement into the middle scenes is favorable in itself** — a run of still cuts is a
+  scroll-past signal (skip-rate measurement, 2026-08-15). But veo isn't the only source of
+  movement: Ken Burns (the builder applies it per cut) and code-rendered animation (the cover's
+  4→1 staging, typing cards — clips captured from HTML in a browser, cost 0 and safe for Korean)
+  come first. A veo motion background is bought only when those fall short and **the movement
+  itself is the content**. Count how long the fully-still stretches in the episode are first,
+  confirm the slot can't be filled by a code render, and only then plan veo.
+- **A character-level veo ban is resolved per cut** — even where the profile bans veo for a
+  particular character (e.g. a mouthless face — the model invents a mouth, measured 5 times on
+  Ttalkkak Lab), that ban applies only to **cuts where that character is on screen**. Cuts without
+  the banned character (another character alone, silhouettes, prop close-ups) are still motion-
+  background candidates. White-background line art is the worst case for a model inventing
+  content in the empty space though (measured), so even a candidate isn't safe there — hand that
+  fact to the plan gate along with the rest.
+- **On a baseline episode right after a format overhaul, change one variable only** — piling a
+  veo promotion onto the first episode that applies the hook contract and structure revision
+  makes the next set of metrics unable to separate what worked (the same logic as cost-tiers
+  §promotion freeze — that one is the unattended loop, this one is human planning). Experiment
+  one slot at a time once the baseline is set.
+- **The combined generated-video cap — this section is the source of truth**: **at most 2 per
+  episode, counting b-roll slots + motion-background scenes together** (user directive,
+  2026-08-14). veo calls cap at 2 as well. quote speech clips don't count toward this total.
+  Three or more gets a red badge from the `storyboard.html` check strip.
+- **points only** — the cover keeps its code-rendered still (produce absolute rule 10) and takes
+  video as an opening b-roll. For quote, `clip` plays that role.
+  **The one exception is an explicit per-episode user directive** (2026-08-15, the Ttalkkak Lab
+  Seedance episode — "impact at the start"). Even then the body of absolute rule 10 stands —
+  **the text is still a code-rendered overlay** and generated video isn't trusted with text.
+  Three contracts come attached when using a video cover: **anchor the text at the top** (there's
+  no guarantee the center stays empty when the subject moves), **switch to a top-heavy scrim**
+  (the default cover scrim is bottom-heavy and can't protect text up top — measured, contrast
+  collapsed to 4.35:1 the moment a white subject crossed the text line), and if you leave the
+  narration empty, that stretch **uses the clip's own audio** (the same behavior as absolute rule
+  9, so no subtitles either). The template applies the first two automatically when it sees a
+  cover with `visual.video`.
+- **Narration and subtitles are kept** — absolute rule 9 (use the video's audio, no narration) is
+  about b-roll **splice stretches**. For a motion background the builder uses only the video
+  track, so the clip's audio is discarded and TTS, subtitles, and BGM carry on.
+- **Not combined with per-line illustrations (`narration[].img`)** — a motion background lays one
+  video across the whole scene, so per-segment background swapping can't hold (the alpha capture
+  has only text). To turn an illustration-mode scene into video, use the single representative
+  illustration (`visual.bg`) as the source.
+- Keep `duration` at 8 seconds or under — made with Veo it's fixed at 8s, so anything inside that
+  is covered by one clip, and Seedance makes only as many seconds as you ask and bills that much.
+  Go over and the loop shows its seam.
+- The content-reviewer **plan mode** gate is the same as b-roll's (absolute rule 13) — don't call
+  veo without `PLAN_REVIEW: PASS`.
 
-### broll — 생성 영상 구간 (참조만) · 씬 사이 삽입
+### broll — a generated-video stretch (reference only) · spliced between scenes
 
 ```js
 {
   type: "broll",
-  after: 0,                          // 이 씬 인덱스 뒤에 삽입 (도입 b-roll 은 커버 = 0)
-  narration: [],                     // 비어 있어야 한다 — produce 절대 규칙 9
-  duration: 4,                       // ★사용 길이★ (기본 4, 근거 있으면 6·8) — 주석에 근거를 적는다
-                                     // 생성은 1080p·8초 고정(API 제약) — produce 가 앞부분만 잘라 쓴다
-                                     // 팔린드롬으로 늘리지 않는다(소리가 거꾸로 재생)
+  after: 0,                          // spliced in after this scene index (the opening b-roll goes after the cover = 0)
+  narration: [],                     // has to be empty — produce absolute rule 9
+  duration: 4,                       // ★used length★ (4 by default, 6 or 8 with a reason) — write the reason in the comment
+                                     // generation is fixed at 1080p and 8s (an API constraint) — produce trims the front and uses that
+                                     // don't stretch it with a palindrome (the audio plays backwards)
   visual: {
     picture: "ai-video", overlay: "none",
-    src: "images/scene-1.png",       // SCENES[after] 의 visual.bg 와 같은 파일 — 절대 규칙 8·12
-    clip: ".work/broll/broll-a0-mixed.mp4",   // 트림+loudnorm+BGM 믹스본 (원본 8초는 broll-a0.mp4)
-    motion: "very slow dolly in, nearly static camera",   // veo 호출 — push-in 이 아니다
+    src: "images/scene-1.png",       // the same file as `SCENES[after]`'s visual.bg — absolute rules 8 and 12
+    clip: ".work/broll/broll-a0-mixed.mp4",   // the trim + loudnorm + BGM mix (the 8s original is broll-a0.mp4)
+    motion: "very slow dolly in, nearly static camera",   // the veo call — not push-in
     audio: "quiet studio room tone with a faint fabric rustle, no music, no speech"
   }
 }
 ```
 
-생성 영상 상한은 **§모션 배경의 합산 상한(2)이 정본이다** — b-roll 칸과 모션 배경
-씬을 합쳐 센다. b-roll 하나는 보통 커버 뒤 도입(`after: 0`), 나머지 하나는 본문 어느
-씬 뒤든 둘 수 있다 — 이야기의 축이 바뀌는 자리, 정지 컷이 길게 이어져 늘어지는
-자리가 후보다.
+The generated-video cap **is set by §motion background's combined cap of 2** — b-roll slots and
+motion-background scenes count together. One b-roll is usually the opening after the cover
+(`after: 0`); the other can sit after any body scene — where the story's axis turns, or where a
+run of still cuts is dragging.
 
-- **본편 manifest 에 넣지 않는다** — 빌드 후 `../produce/references/splice-clip.sh` 가
-  `after` 씬 종료 시각에 접합하고 뒤 자막을 실측 삽입 길이만큼 민다. 두 칸을 썼으면
-  **한 번의 호출에 두 클립을 함께** 넘긴다(스크립트가 시각 순으로 정렬해 처리한다).
-  두 번 나눠 부르면 두 번째 호출이 `reel.mp4` 를 다시 읽어 첫 접합이 사라진다.
-- **배열 끝에 둔다** (`outro` 와 같은 취급). 재생 순서상 앞이어도 배열 중간에
-  끼우면 뒤 씬들의 인덱스가 밀려 `frame.html?i=<n>` 캡처 URL 과 `cards.tsv`/`segs.tsv`
-  의 idx 가 전부 어긋난다 — 이미 찍은 상태 PNG 를 다시 찍어야 한다.
-  재생 위치는 배열 순서가 아니라 `after` 가 정한다.
-- **두 칸의 `after` 값이 같으면 안 된다** — 같은 자리에 두 클립을 꽂으면 삽입 순서가
-  정해지지 않고, splice 가 사이 조각을 0.5초 미만으로 잘라야 해서 실패한다.
-- **`quote` 씬 뒤에는 두지 않는다** — quote 는 `visual.bg` 가 `null` 이라(발화 클립이나
-  인용 카드를 쓴다) 소스로 삼을 사진이 없다. 검산도 `bg` 가 없으면 대조를 건너뛰므로
-  이 실수는 조용히 통과한다 — 배경 사진이 있는 씬(cover·points) 뒤에만 둔다.
-- **`narration` 이 비어 있어야 한다.** 이 구간은 영상이 가진 소리를 쓴다 — TTS 를 얹으면
-  두 소리가 싸운다(produce 절대 규칙 9). 그만큼 말이 없는 시간이 생기므로, 두 칸을 다
-  쓰면 본편에서 정보를 전하는 시간이 8초 안팎 줄어든다. 기본 길이 계약(포맷별 총길이 대역) 안에서
-  그 손해를 감당할 만한 자리에만 둔다.
-- **커버에 쓰지 않는다.** Veo 는 한글을 못 쓰므로 훅 제목·히어로 수치가 있는 화면은
-  코드 렌더로 만든다(절대 규칙 10). `after: 0` — 커버 **뒤**다.
-- `src` 는 **`SCENES[after]` 의 `visual.bg` 와 같은 파일**이다(절대 규칙 12) — 앞 씬이
-  정지로 보여 준 사진이 그대로 움직이기 시작하는 전환이라, 이미지 1장이 두 역할을 한다.
-  사람이 있는 실사 인물 장면(기본 한국 여성, profile §3 타깃 기준)을 `quality: "high"`
-  로 만든 PNG 여야 하고, 재현의 기준점이므로 지우지 않는다.
-- **b-roll 이 붙는 씬의 배경은 `gpt_image_text2img`(high) 로 만든다** — points 배경의
-  기본 엔진은 로컬 Z-Image지만(§5 엔진 분담), veo 입력이 되는 장만은 예외다. 흐린
-  소스는 흐린 영상이 되어 veo 비용이 헛돈이 된다. 사람이 없는 정물도 안 된다(절대
-  규칙 11 — 모델이 움직일 대상을 못 찾아 8초가 정지 컷처럼 보인다).
-- **파일명 규약**: 원본 8초 `.work/broll/broll-a<after>.mp4`, 트림+믹스본
-  `.work/broll/broll-a<after>-mixed.mp4`. `after` 를 이름에 넣어 두 칸이 서로 덮어쓰지
-  않게 한다. 옛 회차의 `cover-broll.mp4`·`cover-broll-mixed.mp4` 는 그대로 유효하다.
-- **생성 호출 전에 이 씬들과 커버 bgPrompt 를 content-reviewer 계획 모드로 검증받는다**
-  (절대 규칙 13) — `PLAN_REVIEW: PASS` 없이 이미지·영상 생성(image_local_generate·gpt_image high·veo)을 부르지 않는다.
+- **Don't put it in the main manifest** — after the build, `../produce/references/splice-clip.sh`
+  splices it at the `after` scene's end time and pushes the following subtitles by the measured
+  insert length. If you used both slots, pass **both clips in one call** (the script sorts and
+  processes them by time). Splitting it into two calls makes the second call re-read `reel.mp4`
+  and the first splice disappears.
+- **Put it at the end of the array** (treated like `outro`). Even though it plays earlier,
+  slotting it into the middle of the array shifts the following scenes' indices, so the
+  `frame.html?i=<n>` capture URLs and the idx values in `cards.tsv`/`segs.tsv` all fall out of
+  step — state PNGs already captured have to be recaptured. The playback position comes from
+  `after`, not from array order.
+- **The two slots can't share an `after` value** — plugging two clips into the same spot leaves
+  the insert order undefined, and splice fails because it would have to cut the piece between
+  them to under 0.5s.
+- **Don't put one after a `quote` scene** — quote has `visual.bg` as `null` (it uses a speech clip
+  or a quotation card), so there's no photo to use as a source. The check also skips the
+  comparison when `bg` is missing, so this mistake passes silently — put it only after scenes with
+  a background photo (cover, points).
+- **`narration` has to be empty.** This stretch uses the audio the video has — laying TTS on top
+  makes two sounds fight (produce absolute rule 9). That much time goes without speech, so using
+  both slots cuts roughly 8 seconds of information delivery out of the main body. Put them only
+  where the episode can afford that loss within the length contract (the total-length band per
+  format).
+- **Don't use it on the cover.** Veo can't write Korean, so screens with the hook title and the
+  hero stat are code-rendered (absolute rule 10). `after: 0` — that's **after** the cover.
+- `src` is **the same file as `SCENES[after]`'s `visual.bg`** (absolute rule 12) — the transition
+  is the photo the previous scene showed as a still starting to move, so one image does two jobs.
+  It has to be a PNG of a photorealistic person scene (Korean women by default, per the profile §3
+  target) made at `quality: "high"`, and since it's the reference point for reproduction, don't
+  delete it.
+- **Make the background of a scene with b-roll attached with `gpt_image_text2img` (high)** — the
+  default engine for points backgrounds is the local Z-Image (§5 engine split), but images that
+  become veo input are the exception. A blurry source makes a blurry video and wastes the veo
+  spend. A still life with no people is out too (absolute rule 11 — the model finds nothing to
+  move and the 8 seconds look like a still frame).
+- **Filename convention**: the 8s original is `.work/broll/broll-a<after>.mp4`, the trim + mix is
+  `.work/broll/broll-a<after>-mixed.mp4`. Putting `after` in the name keeps the two slots from
+  overwriting each other. Older episodes' `cover-broll.mp4` and `cover-broll-mixed.mp4` remain
+  valid.
+- **Get these scenes and the cover bgPrompt verified by content-reviewer plan mode before any
+  generation call** (absolute rule 13) — don't call image or video generation
+  (image_local_generate, gpt_image high, veo) without `PLAN_REVIEW: PASS`.
 
-### outro — 다음 가치가 있는 브랜드 클로징 (참조만)
+### outro — a brand close with a next value (reference only)
 
 ```js
 { type: "outro", title: "다음엔 로그인 붙여요", sub: "완성 과정, 다음 편에서 이어집니다" }
 ```
 
-- **본편 manifest 에 넣지 않는다** — 공용 `data/<채널>/assets/outro/default.mp4`
-  (플랫폼별이면 `outro/youtube.mp4` · `outro/instagram.mp4`)를 빌드가 접합한다.
-  `resolve-asset.py` 가 catalog·기본 경로·옛 `assets/outro.mp4` 를 찾는다.
-  이 씬은 outro 최초 생성(build-outro.sh) 시에만 렌더된다.
-- `"매주 올립니다"`·`"구독해 주세요"`처럼 채널 행동만 요구하는 문구를 기본값으로
-  쓰지 않는다. 연재형이면 다음 편에서 얻게 될 결과를 말하고, 단편이면 같은 문제를
-  계속 해결해 주는 채널 가치 한 줄을 말한다. 공용 outro 영상이 고정 문구라면 본편
-  마지막 나레이션에서 다음 결과를 먼저 약속한다.
+- **Don't put it in the main manifest** — the build splices the shared
+  `data/<channel>/assets/outro/default.mp4` (or `outro/youtube.mp4` · `outro/instagram.mp4` when
+  per-platform). `resolve-asset.py` looks through the catalog, the default path, and the old
+  `assets/outro.mp4`. This scene renders only when the outro is first created (build-outro.sh).
+- Don't default to wording that asks only for channel behavior, like `"매주 올립니다"` or
+  `"구독해 주세요"`. For a serial, say the result they'll get in the next episode; for a one-off,
+  say one line of channel value about continuing to solve the same problem. If the shared outro
+  video has fixed wording, promise the next result in the main body's last narration instead.
 
-### chapter — 롱폼 챕터 (`youtube-long-16x9` 전용)
+### chapter — long-form chapters (`youtube-long-16x9` only)
 
-**적는 것은 문자열 하나다.** 챕터를 여는 샷에 `chapter: "제목"` 을 적으면 끝이고,
-타임스탬프·10초 병합·요건 검사는 빌더가 **실측 시각**에서 만든다. 사람이 초를 세지
-않는다 — 씬 길이는 편집에서 확정되므로 손으로 적은 초는 반드시 어긋난다.
+**What you write is one string.** Put `chapter: "title"` on the shot that opens the chapter and
+you're done; timestamps, the 10-second merge, and the requirement checks are made by the builder
+from **measured times**. People don't count seconds — scene lengths are settled in the edit, so
+hand-written seconds are guaranteed to be off.
 
 ```js
 {
   type: "points",
-  chapter: "환율 확인하는 세 가지 방법",   // 이 샷에서 챕터가 열린다
+  chapter: "환율 확인하는 세 가지 방법",   // the chapter opens at this shot
   scene: 3, sceneSlug: "how-to-check",
   // …
 }
 ```
 
-- **경계는 샷 시작에서만 열린다.** 그래서 샷 하나는 반드시 챕터 하나 안에 통째로
-  들어간다. 샷 중간을 자르는 챕터는 만들 수 없다.
-- **첫 챕터는 0:00 이어야 한다**(유튜브 요건). 커버 샷에 `chapter` 를 적는다.
-- **개수**: 저작 레인 5~10개(챕터당 45~120초), 촬영 레인은 3개 이상이면 되고 6~13개를
-  목표로 한다. 촬영 레인에 길이 대역을 걸지 않는 이유는 씬 상한이 없기 때문이다 —
-  상한을 남기면 20초에서 120초로 자리만 옮긴다.
-- **10초 미만 경계는 앞 챕터로 접는다**(유튜브가 안 받는다). 접은 뒤 3개 미만이면
-  빌더가 `chapters.txt` 를 만들지 않고 지나간다.
-- **`title` 을 복사하지 않는다.** `title` 은 화면에 뜨는 구어 훅이고("이거 왜 이래?"),
-  챕터는 설명란에 박히는 검색어다("환율 확인하는 세 가지 방법"). 레지스터가 다르다.
+- **Boundaries open only at a shot start.** So one shot always falls wholly inside one chapter.
+  A chapter that cuts a shot in half can't be made.
+- **The first chapter has to be 0:00** (a YouTube requirement). Write `chapter` on the cover shot.
+- **Count**: 5–10 in the authored lane (45–120s per chapter); the filmed lane needs 3 or more and
+  aims for 6–13. The reason no length band applies to the filmed lane is that scenes have no cap
+  there — keeping a cap would just move the crowding from 20 seconds to 120.
+- **Boundaries under 10 seconds fold into the previous chapter** (YouTube won't take them). If
+  fewer than 3 remain after folding, the builder skips making `chapters.txt`.
+- **Don't copy `title`.** `title` is the spoken hook that appears on screen ("이거 왜 이래?"),
+  while the chapter is the search phrase stamped into the description ("환율 확인하는 세 가지
+  방법"). Different registers.
 
-챕터를 붙이는 근거는 광고가 아니다 — 미드롤 슬롯은 Studio 에서 챕터와 무관하게 놓인다
-(1차 출처인 유튜브 미드롤 도움말에 `chapter` 가 한 번도 안 나온다). 근거는 **탐색
-수단**이다. 한국어 롱폼은 자동 챕터가 사실상 안 붙어서(미저작 59편 전부 0개 · 영어는
-13편 중 7편, Fisher p≈1.2e-06 실측), 챕터를 안 쓰면 시청자가 15분 영상에서 원하는
-대목으로 갈 방법이 없다.
+The reason for adding chapters isn't ads — midroll slots are placed in Studio independently of
+chapters (`chapter` never appears in the primary source, YouTube's midroll help page). The reason
+is **navigation**. Korean long-form gets essentially no automatic chapters (0 across all 59
+unauthored episodes · English had 7 of 13, Fisher p≈1.2e-06 measured), so without chapters a
+viewer has no way to reach the part they want in a 15-minute video.
 
-### 촬영 씬 — 사용자가 직접 찍은 클립 (`visual.source: "recording"`)
+### Filmed scenes — clips the user shot themselves (`visual.source: "recording"`)
 
-롱폼은 한 편 안에 **생성 씬과 촬영 씬이 섞이는 것이 정상 경로**다. 설치 화면·실행
-결과·손으로 만지는 장면은 만들어 낸 그림보다 실제로 찍은 것이 낫고, 배경 설명이나
-개념 그림은 생성이 싸고 빠르다. 둘을 한 편에서 쓴다.
+For long-form, **mixing generated and filmed scenes within one episode is the normal path**.
+Install screens, running results, and hands-on moments are better actually filmed than drawn,
+while background explanation and concept pictures are cheap and fast to generate. Both get used
+in one episode.
 
 ```js
 {
   type: "points",
-  scene: 4, sceneSlug: "터미널 / 낮",
+  scene: 4, sceneSlug: "terminal / day",
   beat: "result",
-  title: "이게 진짜 도는 화면이야",          // 로어서드에 뜨는 구어 훅
+  title: "이게 진짜 도는 화면이야",          // the spoken hook that appears in the lower third
   bullets: [{ t: "명령 한 줄", d: "나머지는 알아서 돈다" }],
-  duration: 24,                               // 촬영 씬은 상한이 없다
-  narration: [],                              // 육성을 쓰면 비운다 (아래 두 갈래)
+  duration: 24,                               // filmed scenes have no cap
+  narration: [],                              // empty when using the live voice (the two lanes below)
   visual: {
     picture: "recording",
     source: "recording",
-    clip: "footage/s4-run-cli.mp4",          // 사용자가 여기에 파일을 둔다
-    shot: "터미널에서 명령을 치고 결과가 뜨는 화면",   // 무엇이 화면에 보이는가
-    action: "명령을 천천히 치고, 결과가 다 뜰 때까지 기다린다"  // 무엇을 하는가
+    clip: "footage/s4-run-cli.mp4",          // the user puts the file here
+    shot: "the terminal with the command being typed and the result appearing",   // what's visible on screen
+    action: "type the command slowly and wait until the whole result is out"      // what you do
   }
 }
 ```
 
-| 칸 | 필수 | 무엇 |
+| Field | Required | What |
 |---|---|---|
-| `source` | ✅ | `"recording"` — 이 한 칸이 촬영 씬 판정자다 |
-| `clip` | ✅ | `footage/s<씬번호>-<slug>.mp4` — **파일명을 스토리보드가 정한다**(아래) |
-| `shot` | ✅ | 화면에 보이는 것 한 줄. `script.md` 의 **화면** 항목이 된다 |
-| `action` | ✅ | 사용자가 하는 동작. `script.md` 의 **행동** 항목이 된다 |
-| `takeSec` | 선택 | 목표 촬영 길이(초). 없으면 `duration` 을 쓴다 |
+| `source` | ✅ | `"recording"` — this one field is what decides a filmed scene |
+| `clip` | ✅ | `footage/s<scene number>-<slug>.mp4` — **the storyboard sets the filename** (below) |
+| `shot` | ✅ | One line on what's visible on screen. Becomes the **화면** item in `script.md` |
+| `action` | ✅ | What the user does. Becomes the **행동** item in `script.md` |
+| `takeSec` | optional | Target filming length in seconds. Falls back to `duration` |
 
-**파일명은 사람이 고르지 않는다.** `footage/s<씬번호>-<sceneSlug 영문 slug>.mp4` 를
-스토리보드가 정해 `clip` 에 적고 `script.md` 에 그대로 찍는다. 사용자는 찍은 파일을
-그 이름으로 저장하기만 하면 되고, produce 는 파일을 찾아 헤매지 않는다.
+**People don't pick the filename.** The storyboard sets `footage/s<scene number>-<English slug of
+sceneSlug>.mp4`, writes it into `clip`, and prints it as-is into `script.md`. The user only has to
+save the filmed file under that name, and produce doesn't have to hunt for files.
 
-#### 소리를 어느 쪽에서 가져오는가 — 두 갈래
+#### Where the sound comes from — two lanes
 
-| 갈래 | `narration` | 소리 | 자막 | 언제 |
+| Lane | `narration` | Sound | Subtitles | When |
 |---|---|---|---|---|
-| **육성** | `[]` (비운다) | 클립이 가진 소리 | 전사본에서 만든다 | 사용자가 화면을 보며 직접 말한 컷 |
-| **나레이션 덮기** | 세그먼트 배열 | TTS | 세그먼트 `sub` | 말없이 찍은 화면 위에 설명을 얹을 때 |
+| **Live voice** | `[]` (empty) | The clip's own audio | Made from the transcript | Cuts where the user spoke while watching the screen |
+| **Narration over** | Segment array | TTS | The segments' `sub` | Laying explanation over a screen filmed in silence |
 
-육성 갈래가 기본이다 — 사용자가 시연하며 말한 그 목소리가 그 화면의 주인이고,
-그 위에 합성 음성을 덮으면 두 소리가 싸운다(produce 절대 규칙 9 와 같은 이유).
-빌더는 이 카드를 **`sync` 레인**으로 태워 무음 트림·속도 보정·프리롤을 전부 건너뛴다.
-그 셋 중 하나만 걸려도 입 모양과 소리가 어긋난다.
+The live-voice lane is the default — the voice the user demoed with owns that screen, and laying
+a synthetic voice over it makes two sounds fight (the same reason as produce absolute rule 9).
+The builder puts this card on the **`sync` lane**, skipping silence trimming, speed correction,
+and preroll entirely. Any one of those three catching would desync the mouth from the sound.
 
-나레이션 덮기 갈래는 그 반대로 쓴다 — 화면만 찍고 말은 안 한 컷(스크롤·실행 대기·
-결과 화면)이라 TTS 를 얹어도 겹칠 소리가 없다.
+The narration-over lane is used for the opposite — a cut filmed with only the screen and no
+speech (scrolling, waiting for a run, a result screen), where TTS has no sound to collide with.
 
-#### 화면 글자는 로어서드다
+#### On-screen text sits in the lower third
 
-촬영 씬의 `title`·`bullets`·`footnote` 는 **화면 아래 왼쪽 띠**에 앉는다. 생성 씬처럼
-존을 채우지 않는 이유는 사용자가 시연하는 자리가 화면 위쪽이기 때문이다 — 거기를
-글자로 덮으면 무엇을 보여 주는 컷인지가 가려진다. 스크림도 아래에서만 올라오고
-화면 위 60%는 끝까지 맑다.
+A filmed scene's `title`, `bullets`, and `footnote` sit in a **band at the bottom left**. They
+don't fill the zones like a generated scene does, because the part the user is demoing is the
+upper screen — covering it with text hides what the cut is showing. The scrim also rises only
+from the bottom, and the top 60% of the screen stays clear throughout.
 
-- 캡션은 여전히 **한 번에 하나**다(스왑). 촬영 씬이라고 여러 개를 늘어놓지 않는다.
-- 글자를 아예 안 쓰는 촬영 씬이 정상이다 — 화면이 이미 말하고 있으면 비운다.
+- Captions are still **one at a time** (a swap). Being a filmed scene doesn't mean lining several
+  up.
+- A filmed scene with no text at all is normal — if the screen is already saying it, leave it
+  empty.
 
-#### 세로로 찍지 않는다
+#### Don't film in portrait
 
-롱폼은 16:9 다. 세로로 찍은 클립을 넣으면 중앙 크롭으로 화각 대부분이 잘리고,
-빌더가 `STRICT_DIM=1` 로 **첫 ffmpeg 전에** 멈춘다(가로 프리셋 기본값). 이 사실은
-`script.md` 촬영 수칙 맨 위에 적힌다 — 다 찍은 뒤에 알면 재촬영이다.
+Long-form is 16:9. A portrait clip gets center-cropped, losing most of the frame, and the builder
+stops with `STRICT_DIM=1` **before the first ffmpeg** (the landscape preset's default). This fact
+is written at the top of `script.md`'s filming rules — learning it after filming everything means
+filming again.
 
-## 저작 검증 체크리스트 (storyboard 스킬이 승인 요청 전 자가 점검)
+## Authoring verification checklist (the storyboard skill's self-check before requesting approval)
 
-아래 항목 중 기계로 재는 것들(자수·말속도·씬 길이·총길이·커버 제목·프레임 넘침·
-히어로 수치 폭·b-roll 계약)은 **`storyboard.html` 을 브라우저로 열면 맨 위 점검
-스트립에 뜬다** — 손으로 세지 말고 그 스트립이 "위반 없음"인지 확인한다.
+The machine-measurable items below (character counts, speech rate, scene length, total length,
+cover title, frame overflow, hero stat width, the b-roll contract) **show up in the check strip at
+the top when you open `storyboard.html` in a browser** — don't count by hand, just confirm the
+strip says no violations.
 
-- [ ] cover title ≤16자 + 주제어 포함, statLabel ≤18자. 제목이 방법·도구가 아니라
-      느끼는 문제로 열린다 (platform-playbook §1 ②)
-- [ ] **커버 `hookType` 이 넷 중 하나**(`fear`·`empathy`·`curiosity`·`spoiler`)이고,
-      제목·세그①·후킹이 그 전략을 실제로 탄다 — 적어만 놓고 도입부가 딴 자극으로
-      열리면 미기입과 같다 (§도입부 전략 넷)
-- [ ] **전 씬 title 이 구어 훅** — 사람이 내뱉는 말(반말 감탄·의문·전언)이고 설명형
-      서술·`-하기` 명사형·`-ㄴ다` 신문체가 아니다 (§title 은 구어 훅)
-- [ ] **`window.FORMAT` 이 이번 편의 포맷과 맞다** — 쇼트폼이면 생략하거나
-      `"shorts-9x16"`, 롱폼이면 `"youtube-long-16x9"`. 빠뜨리면 롱폼 원고가 세로
-      계약으로 검사받고 그대로 통과한다
-- [ ] 샷 수·총길이가 포맷 대역 안이다 (§포맷 표 · 정본은 `formats.js`)
-      - 쇼트폼: cover 1 + 본문 3~6 = **4~7샷 · 35~75초** (90초 하드 상한)
-      - 롱폼: **28~70샷 · 8~15분** (20분 하드 상한) + 챕터 (§chapter).
-        촬영 씬이 많은 편은 샷 수가 이 대역보다 적은 게 정상이다 — 녹화 한 덩어리가
-        한 씬으로 들어오기 때문이다. 배지가 경고로만 뜨고 막지 않는다
-- [ ] **촬영 씬이 있으면** (§촬영 씬) 씬마다 `clip`·`shot`·`action` 이 다 있고,
-      `clip` 이 `footage/s<씬번호>-<slug>.mp4` 규약을 지킨다. 육성 갈래면
-      `narration: []`, 나레이션 덮기 갈래면 세그먼트가 있다 — 둘 다 있으면 소리가 겹친다
-- [ ] **촬영 씬 대사가 `script.md` 와 한 벌이다** — scenes.js 가 SoT 이고 script.md 는
-      렌더다. 촬영 대본에만 있는 문장을 만들지 않는다
-- [ ] 샷마다 `scene`·`sceneSlug`·`shot.size`·`shot.info` — 같은 씬의 `info` 가 겹치지 않는다
-- [ ] `visual.picture`·`visual.overlay` 가 구조와 맞다. AI 영상과 HTML 연출을 한 배지로 합치지 않는다
-- [ ] 제작·튜토리얼·전후 비교는 첫 프레임에 완성 결과가 보이고, 첫 대사는 시청자에게
-      그 결과의 이익·변화를 약속한다
-- [ ] 재생 순서가 **커버 → 후킹 → 결과물 → 내용** 이다. 완성본(`beat:"result"`)이
-      방법·단계(`beat:"body"`)보다 앞에 있다. 커버 한눈과 결과물 펼침을 같은
-      산출물로 맞춘다
-- [ ] **커버 다음 샷이 후킹**(`beat:"hooking"`)이다 — 정보형도. 커버가 던진 것을 받고,
-      시청자 주어로 걸고, 답을 풀지 않는다. 쇼트폼은 커버부터 20초 안에 결과물(정보형은
-      첫 내용 씬)이 시작한다 (§hooking)
-- [ ] 한 회차가 해결하는 문제·결과가 하나다
-- [ ] 연재형 CTA가 막연한 구독 요청이 아니라 다음 편의 구체적인 결과를 약속한다
-- [ ] narration 자수 상한 준수, 문장당 8~25자, 전 문장 마침표 종결
-- [ ] tts/sub 표기 이원화 완료 (숫자·외래어)
-- [ ] 수치 범위 왜곡 없음 (범위는 범위로)
-- [ ] 모든 사실 주장이 research.md 의 검증 통과 항목과 일치
-- [ ] 쉬운 말 원칙 — 무설명 전문용어·과압축 없음
-- [ ] AI 티 없음 — 세 표면 모두 exit 0 (S1 잔존 0):
+- [ ] cover title ≤16 chars + topic word included, statLabel ≤18 chars. The title opens on a felt
+      problem rather than a method or tool (platform-playbook §1 ②)
+- [ ] **The cover `hookType` is one of the four** (`fear`·`empathy`·`curiosity`·`spoiler`), and the
+      title, segment ①, and hooking actually ride that strategy — writing it down while the opening
+      opens on a different stimulus is the same as not writing it (§the four opening strategies)
+- [ ] **Every scene title is a spoken hook** — something a person blurts out (casual-register
+      exclamation, question, hearsay), not an explanatory statement, a `-하기` nominalization, or
+      newspaper-style `-ㄴ다` (§title is a spoken hook)
+- [ ] **`window.FORMAT` matches this episode's format** — omitted or `"shorts-9x16"` for
+      short-form, `"youtube-long-16x9"` for long-form. Leaving it out gets a long-form script
+      checked against the portrait contract, and it passes
+- [ ] Shot count and total length are inside the format band (§format table · the source of truth
+      is `formats.js`)
+      - Short-form: cover 1 + body 3–6 = **4–7 shots · 35–75s** (90s hard cap)
+      - Long-form: **28–70 shots · 8–15 min** (20 min hard cap) + chapters (§chapter).
+        An episode with many filmed scenes normally has fewer shots than this band — one chunk of
+        recording comes in as one scene. The badge only warns; it doesn't block
+- [ ] **If there are filmed scenes** (§filmed scenes), each has `clip`, `shot`, and `action`, and
+      `clip` follows the `footage/s<scene number>-<slug>.mp4` convention. The live-voice lane has
+      `narration: []`, the narration-over lane has segments — having both makes the sound collide
+- [ ] **Filmed-scene lines are one copy with `script.md`** — scenes.js is the SoT and script.md is
+      the render. Don't create sentences that exist only in the shooting script
+- [ ] Every shot has `scene`, `sceneSlug`, `shot.size`, `shot.info` — `info` doesn't overlap within
+      the same scene
+- [ ] `visual.picture` and `visual.overlay` match the structure. AI video and HTML staging aren't
+      merged into one badge
+- [ ] Builds, tutorials, and before/after comparisons show the finished result in the first frame,
+      and the first line promises the viewer that result's benefit or change
+- [ ] The playback order is **cover → hooking → result → body**. The finished thing
+      (`beat:"result"`) comes before the method and steps (`beat:"body"`). The cover's glance and
+      the result's unfolding point at the same artifact
+- [ ] **The shot after the cover is hooking** (`beat:"hooking"`) — informational pieces included.
+      It catches what the cover threw, hooks with the viewer as the subject, and doesn't unpack the
+      answer. In short-form the result (the first body scene for informational pieces) starts within
+      20s of the cover (§hooking)
+- [ ] One episode solves one problem and produces one result
+- [ ] A serial's CTA promises the next episode's concrete result rather than making a vague
+      subscribe request
+- [ ] narration character caps respected, 8–25 chars per sentence, every sentence closed with a
+      period
+- [ ] tts/sub notation split done (numbers, loanwords)
+- [ ] No distortion of numeric ranges (a range stays a range)
+- [ ] Every factual claim matches a verification-passed entry in research.md
+- [ ] Plain-language principle — no unexplained jargon, no over-compression
+- [ ] No AI tells — exit 0 on all three surfaces (0 S1 findings left):
       ```bash
-      set -o pipefail        # 없으면 $? 가 검사기 것이 아니게 된다
+      set -o pipefail        # without it, $? stops being the checker's
       PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
       for S in narration subtitle screen; do
         node $PG/extract-text.js ./scenes.js $S | python3 $PG/check-style.py --surface $S -
         echo "[$S] gate_exit=$?"
       done
       ```
-      규칙·처방은 platform-guide `references/korean-style.md`. exit 3 은 통과가 아니라
-      게이트 미실행이다. 여기서 잡으면 produce §5 에서 재작업이 없다
-- [ ] bgPrompt 에 필수 부정 지시 포함, 생성 이미지에 문자·국가 상징 없음
-- [ ] points 배경: 주제 실사 컷 + 내용 축이 바뀔 때 컷 교체(전 씬 한 장 돌려쓰기
-      금지 — produce 절대 규칙 14), 캡션 `t` ≤ 12자 · `d` ≤ 22자
-- [ ] **화면 텍스트가 소리와 겹치지 않는다** — 나레이션이 말하는 것을 요약해 얹은
-      캡션·제목이 없다. 칸을 채우려고 쓴 글자가 없다(§화면 텍스트는 필요할 때만).
-      비어 있는 `title`·`footnote`·`bullets` 는 결함이 아니라 정상이다
-- [ ] THEME 이 profile.md §3 과 일치
-- [ ] 생성 영상(`broll` + `visual.video` 합산)이 **최대 2** (§모션 배경이 정본) ·
-      content-reviewer 계획 모드 PASS 기록
-- [ ] `broll` 씬을 뒀다면 — 두 칸의 `after` 가 서로 다름 ·
-      각 칸이 `narration: []` · `src` 가 `SCENES[after].visual.bg` 와 같은 실존 PNG
-      (그 장은 gpt_image high 로 만든 인물 실사) · `duration`(사용 길이)이 8 이하이고
-      근거 주석이 있음 (팔린드롬으로 늘리지 않는다)
-- [ ] `visual.video` 씬을 뒀다면 — points 타입 · `duration` ≤ 8 · `narration[].img`
-      미사용 · `prompt` 가 영어 모션만 · 소스 `bg` 가 실존 PNG(gpt_image high)
+      The rules and prescriptions are platform-guide `references/korean-style.md`. exit 3 isn't a
+      pass, it's the gate not running. Catching it here means no rework at produce §5
+- [ ] bgPrompt includes the mandatory negative directions; generated images have no text and no
+      national symbols
+- [ ] points backgrounds: photorealistic topic shots + a new cut whenever the content axis turns
+      (no reusing one image across every scene — produce absolute rule 14), captions `t` ≤ 12 chars
+      · `d` ≤ 22 chars
+- [ ] **On-screen text doesn't duplicate the sound** — no caption or title summarizing what the
+      narration says. No text written to fill a slot (§on-screen text only when needed). Empty
+      `title`, `footnote`, and `bullets` are normal, not defects
+- [ ] THEME matches profile.md §3
+- [ ] Generated video (`broll` + `visual.video` combined) is **at most 2** (§motion background is
+      the source of truth) · content-reviewer plan mode PASS recorded
+- [ ] If you placed `broll` scenes — the two slots' `after` differ · each slot has `narration: []`
+      · `src` is the same real PNG as `SCENES[after].visual.bg` (that image made with gpt_image
+      high as a photorealistic person scene) · `duration` (used length) is 8 or under with a
+      comment giving the reason (not stretched with a palindrome)
+- [ ] If you placed a `visual.video` scene — points type · `duration` ≤ 8 · `narration[].img`
+      unused · `prompt` is English motion only · the source `bg` is a real PNG (gpt_image high)

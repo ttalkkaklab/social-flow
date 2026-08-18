@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>인스타그램 릴스 성장 베스트 프랙티스 — social-flow 가이드</title>
+<link rel="alternate" hreflang="en" href="index.en.html">
 <link rel="stylesheet" href="../../assets/reference.css">
 <style>
   /* 이 문서 전용 소품 — 공용 reference.css 위에 얹는다 */
@@ -44,6 +45,8 @@
 </head>
 <body>
 <div class="wrap">
+
+<div class="langbar"><a href="index.en.html" hreflang="en">English</a></div>
 
 <div class="crumbs"><a href="../../index.html">문서</a><span>/</span>사용 가이드<span>/</span>인스타그램 릴스 성장</div>
 
@@ -456,6 +459,9 @@
   </ol>
   <div class="ok">
     <strong>Threads 루프와 다른 점이 둘이다.</strong> 첫째, 릴스는 영상이라 틱이 즉석에서 쓸 수 없다 — 그래서 게시는 대기열에서만 나가고, 마커는 사람이 찍거나 플랜에서 <code>autoproduce</code> 를 켰을 때 루프가 직접 만들어 찍는다. 마커 키를 YouTube 와 따로 두는 이유는 하나를 공유하면 먼저 도는 루프가 소진해 다른 쪽이 영영 못 올리기 때문이다. 둘째, <strong>남의 대화에 참여하는 단계가 없다</strong> — 이 파이프라인이 쓰는 Instagram Login API 에 공개 게시물 검색이 없어서, 없는 기능을 흉내 내지 않는다.
+  </div>
+  <div class="note">
+    <strong>이 루프는 인스타그램 자격증명이 있어야 돈다.</strong> 토큰 파일(<code>instagram_token</code> — <code>&lt;SNS_TOKEN_DIR&gt;</code> 바로 아래든 채널 디렉토리든)이 있어야 게시·인사이트 툴이 <code>tools/list</code> 에 뜬다. 토큰이 없어도 제작까지는 그대로 동작한다 — <code>produce</code> 가 완성 릴스와 플랫폼별 문안을 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주고 업로드만 사람이 손으로 한다. 못 쓰는 건 게시와 성장 루프 절반이다.
   </div>
   <div class="warn">
     <strong>공개 HTTPS URL 이 없으면 게시 단계가 꺼진다.</strong> 릴스는 플랫폼이 영상을 크롤해 가는 구조라 로컬 파일 경로로는 올라가지 않는다. 루프는 임시 터널을 띄우지 않으므로, 호스팅이 <code>off</code> 인 채널은 게시와 함께 <strong>자동 저작도 끈다</strong> — 나갈 길이 없는 영상을 돈 들여 만들지 않기 위해서다.

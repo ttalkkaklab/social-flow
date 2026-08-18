@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gemini TTS — social-flow API 레퍼런스</title>
 <link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="gemini-tts.en.html">
+<link rel="alternate" hreflang="ko" href="gemini-tts.html">
 </head>
 <body>
 <div class="wrap">
+<div class="langbar"><a href="gemini-tts.en.html" hreflang="en">English</a></div>
 
 <div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Gemini TTS</div>
 
@@ -138,7 +141,7 @@ Director's Notes — Style: 차분하고 신뢰감 있게, 약간 느리게
       <tr><td>지원 언어</td><td>90여 종 (BCP-47 표). <strong>번체 중국어 <code>zh-TW</code> 포함</strong></td><td>언어는 요청 필드가 아니라 입력 텍스트에서 자동 감지된다</td></tr>
       <tr><td>화자 수</td><td>최대 2인</td><td>스키마 <code>maxItems: 2</code></td></tr>
       <tr><td>긴 출력 품질</td><td>수 분을 넘기면 톤·속도가 드리프트</td><td>컷 단위 분할 합성 권장</td></tr>
-      <tr><td>무작위 텍스트 토큰</td><td>오디오 대신 텍스트가 반환되며 500/400이 뜬다</td><td>3회 자동 재시도(400·800·1200ms) 후 pro 폴백 안내</td></tr>
+      <tr><td>무작위 텍스트 토큰</td><td>오디오 대신 텍스트가 반환되며 500/400이 뜬다</td><td>3회 자동 재시도(시도 사이 400·800ms 대기) 후 pro 폴백 안내</td></tr>
       <tr><td>프롬프트 분류기 오거절</td><td>모호한 지시문이 거절을 유발</td><td>합성 preamble 고정(위 §3)</td></tr>
     </tbody>
   </table>

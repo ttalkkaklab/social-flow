@@ -1,25 +1,29 @@
 /**
- * Z-Image Turbo 로컬 이미지 생성 클라이언트 — mflux CLI 서브프로세스 호출.
+ * Z-Image Turbo local image generation client — invokes the mflux CLI as a subprocess.
  *
- * gpt_image(image-client.ts)와 나란히 두는 **두 번째 이미지 경로이자 기본 경로**다.
- * 네트워크·API 키·장당 과금이 전부 빠지는 대신 로컬에 mflux 와 모델 가중치가 있어야 한다.
+ * The **second image path, and the default one**, sitting alongside gpt_image
+ * (image-client.ts). Network, API key, and per-image billing all drop out; in
+ * exchange, mflux and the model weights must be present locally.
  *
- * 두 경로의 분담(2026-08-12 실측 조사 기준 — docs/research/2026-08-12-local-image-generation):
- *   - 텍스트 없는 이미지(커버 배경·b-roll·시안 탐색) → 이쪽. 장당 비용 0
- *   - 글자가 들어가는 이미지·품질 상향이 필요한 건   → gpt_image_text2img.
- *     한글 렌더링을 실측한 결과 "딸깍연구소"가 "달닥연구소"로 깨졌다(자소 파탄·유사문자).
+ * Division of labor between the two paths (per the 2026-08-12 field study —
+ * docs/research/2026-08-12-local-image-generation):
+ *   - Text-free images (cover backgrounds, b-roll, draft exploration) → this one. Zero cost per image
+ *   - Images that carry text, or need a quality boost                 → gpt_image_text2img.
+ *     Measured Korean rendering: "딸깍연구소" came out as "달닥연구소" (broken jamo, lookalike glyphs).
  *
- * ## 왜 서브프로세스인가
+ * ## Why a subprocess
  *
- * mflux 는 Apple MLX 기반 Python 패키지이고 Node 바인딩이 없다. Supertonic
- * (supertonic-client.ts)과 같은 판단이다 — 모델 상주 워커는 수명 관리와 메모리 점유
- * (실측 피크 32~39GB)를 떠안으므로, 필요가 실측으로 입증되기 전에는 상태 없는
- * 서브프로세스가 맞다. Supertonic 과 달리 인라인 스니펫이 아니라 CLI 를 그대로 쓰는
- * 이유: mflux 의 uv tool 설치본은 자체 격리 venv 를 가진 실행 파일이라 인터프리터를
- * 따로 고를 일이 없고, CLI 가 결과 파일 경로 외에 돌려줄 부가 정보(길이 같은)도 없다.
+ * mflux is an Apple MLX-based Python package with no Node bindings. Same judgment
+ * as Supertonic (supertonic-client.ts) — a resident model worker takes on lifecycle
+ * management and memory residency (measured peak 32~39GB), so until the need is
+ * proven by measurement, a stateless subprocess is the right call. Unlike
+ * Supertonic we use the CLI directly rather than an inline snippet, because the
+ * uv tool install of mflux is an executable with its own isolated venv — there's
+ * no interpreter to pick — and the CLI has no extra information (like a duration)
+ * to return beyond the result file path.
  *
- * 실측치(M4 Max 128GB, 로드 평균 74 과부하 상태 — 보수적 하한):
- *   1024×1024 @9스텝 확산 116~197초 · 1088×1920 @9스텝 443초 · 피크 메모리 31.9~38.9GB
+ * Measured figures (M4 Max 128GB, at load average 74 overload — conservative floor):
+ *   1024×1024 @9 steps diffusion 116~197s · 1088×1920 @9 steps 443s · peak memory 31.9~38.9GB
  */
 
 import { execFile } from 'node:child_process';
@@ -30,16 +34,16 @@ import { z } from 'zod';
 import { mfluxZImageBin } from './config.js';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
 
-/** Z-Image Turbo 권장 스텝 — 모델 카드 기준 8 NFE(스텝 9 지정 시 DiT 포워드 8회). */
+/** Z-Image Turbo recommended steps — 8 NFE per the model card (specifying steps=9 runs 8 DiT forwards). */
 export const DEFAULT_ZIMAGE_STEPS = 9;
 
-/** 실측에 쓴 양자화 폭 — 8bit 가 기본, 4bit 는 메모리 절반에 품질 소폭 하락. */
+/** Quantization widths used in the field test — 8-bit is the default; 4-bit halves memory with a slight quality drop. */
 export const ZIMAGE_QUANTIZE_OPTIONS = [4, 6, 8] as const;
 export const DEFAULT_ZIMAGE_QUANTIZE = 8;
 
 /**
- * 해상도 제약 — 변은 16의 배수여야 한다(latent 패치 단위).
- * 9:16 세로형은 1080×1920 이 아니라 **1088×1920** 이다 — 1080 은 16의 배수가 아니다.
+ * Resolution constraint — edges must be multiples of 16 (latent patch unit).
+ * 9:16 portrait is **1088×1920**, not 1080×1920 — 1080 is not a multiple of 16.
  */
 export const ZIMAGE_DIMENSION_STEP = 16;
 export const MIN_ZIMAGE_DIMENSION = 256;
@@ -51,15 +55,16 @@ const dimensionSchema = z
   .min(MIN_ZIMAGE_DIMENSION)
   .max(MAX_ZIMAGE_DIMENSION)
   .refine((v) => v % ZIMAGE_DIMENSION_STEP === 0, {
-    message: `width/height must be a multiple of ${ZIMAGE_DIMENSION_STEP} (9:16 은 1080×1920 이 아니라 1088×1920)`,
+    message: `width/height must be a multiple of ${ZIMAGE_DIMENSION_STEP} (for 9:16 that's 1088×1920, not 1080×1920)`,
   });
 
 /**
- * 서브프로세스 타임아웃.
+ * Subprocess timeout.
  *
- * 실측: 1024²(1.05MP) 9스텝이 부하에 따라 149~210초, 1088×1920(2.09MP) 9스텝이 462초
- * (로드 평균 74 상태). 픽셀 수와 스텝에 선형으로 잡되 부하 변동 여유를 두고,
- * 모델 로드·양자화 기동 여유 120초에 스텝×MP 당 45초를 더해 30분에서 끊는다.
+ * Measured: 1024² (1.05MP) at 9 steps takes 149~210s depending on load, and
+ * 1088×1920 (2.09MP) at 9 steps takes 462s (at load average 74). Scale linearly
+ * with pixel count and steps with slack for load swings: 120s of model-load and
+ * quantization startup allowance plus 45s per step×MP, cut off at 30 minutes.
  */
 export function zimageTimeoutMs(width: number, height: number, steps: number): number {
   const megapixels = (width * height) / 1_000_000;
@@ -67,11 +72,12 @@ export function zimageTimeoutMs(width: number, height: number, steps: number): n
 }
 
 /**
- * 가중치 캐시 디렉토리 — 최초 호출 판정용.
+ * Weight cache directory — used to detect the first call.
  *
- * 위 타임아웃은 생성만 잰 것이라, 새 머신의 첫 호출은 31GB 다운로드가 그 안에
- * 끝나지 못해 execFile 이 다운로드 중간에 프로세스를 죽인다. 캐시가 없으면
- * 다운로드 여유(60분)를 얹는다 — zimageTimeoutMs 자체는 생성 시간 계약으로 남겨 둔다.
+ * The timeout above times only generation, so on a new machine the first call's
+ * 31GB download can't finish inside it and execFile would kill the process
+ * mid-download. When the cache is missing we add a download allowance (60
+ * minutes) — zimageTimeoutMs itself stays a generation-time contract.
  */
 function weightCacheDir(): string {
   const hfHome = process.env.HF_HOME || join(homedir(), '.cache', 'huggingface');
@@ -80,20 +86,20 @@ function weightCacheDir(): string {
 
 const WEIGHT_DOWNLOAD_ALLOWANCE_MS = 60 * 60_000;
 
-/** 실행 실패를 사용자가 고칠 수 있는 안내로 바꾼다. */
+/** Turn an execution failure into guidance the user can act on. */
 function installHint(detail: string): string {
   return (
     `${detail}\n\n` +
-    `로컬 이미지 생성은 mflux(Apple Silicon 전용, MLX)를 요구한다:\n` +
+    `Local image generation requires mflux (Apple Silicon only, MLX):\n` +
     `  uv tool install --python 3.12 mflux\n` +
-    `다른 경로에 설치했다면 실행 파일을 MFLUX_ZIMAGE_BIN 으로 지정한다 ` +
-    `(예: MFLUX_ZIMAGE_BIN=~/.venvs/mflux/bin/mflux-generate-z-image-turbo).\n` +
-    `최초 1회 호출 시 Z-Image Turbo 가중치 저장소 약 31GB 를 ~/.cache/huggingface 에 내려받는다.\n` +
-    `설치 전까지는 gpt_image_text2img 를 쓸 것 — 그쪽은 OPENAI_API_KEY 만 있으면 된다.`
+    `If it's installed elsewhere, point MFLUX_ZIMAGE_BIN at the executable ` +
+    `(e.g. MFLUX_ZIMAGE_BIN=~/.venvs/mflux/bin/mflux-generate-z-image-turbo).\n` +
+    `The first call downloads the ~31GB Z-Image Turbo weight repository to ~/.cache/huggingface.\n` +
+    `Until it's installed, use gpt_image_text2img — that one only needs OPENAI_API_KEY.`
   );
 }
 
-// ── 요청 스키마 ──────────────────────────────────────────────────
+// ── Request schema ───────────────────────────────────────────────
 
 export const zimageGenerateSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required').max(32_000),
@@ -123,9 +129,9 @@ export interface ZImageResponse {
   elapsedSeconds?: number;
 }
 
-// ── 생성 ────────────────────────────────────────────────────────
+// ── Generation ──────────────────────────────────────────────────
 
-/** 텍스트 → 이미지 로컬 생성 — 커버 배경·b-roll·시안 (텍스트 없는 이미지 전용) */
+/** Text → image, generated locally — cover backgrounds, b-roll, drafts (text-free images only) */
 export async function generateLocalImage(request: ZImageGenerateRequest): Promise<ZImageResponse> {
   const bin = mfluxZImageBin();
   if (!existsSync(bin)) {
@@ -138,7 +144,7 @@ export async function generateLocalImage(request: ZImageGenerateRequest): Promis
     'image',
   );
 
-  // 실측에 쓴 플래그 그대로 조립한다 (--prompt/--width/--height/--steps/-q/--output[/--seed]).
+  // Assemble exactly the flags used in the field test (--prompt/--width/--height/--steps/-q/--output[/--seed]).
   const cliArgs = [
     '--prompt', request.prompt,
     '--width', String(request.width),
@@ -167,8 +173,8 @@ export async function generateLocalImage(request: ZImageGenerateRequest): Promis
           timeout:
             zimageTimeoutMs(request.width, request.height, request.steps) +
             (firstCall ? WEIGHT_DOWNLOAD_ALLOWANCE_MS : 0),
-          // 최초 호출은 31GB 다운로드의 tqdm 진행 출력이 수 MB 로 쌓인다 —
-          // Supertonic 의 1MB 를 그대로 쓰면 다운로드 중간에 maxBuffer 로 죽는다.
+          // The first call accumulates several MB of tqdm progress output from the
+          // 31GB download — reusing Supertonic's 1MB would die on maxBuffer mid-download.
           maxBuffer: 16 * 1024 * 1024,
         },
         (error, _out, errOut) => {
@@ -178,7 +184,7 @@ export async function generateLocalImage(request: ZImageGenerateRequest): Promis
               reject(new Error(installHint(`mflux binary not found: "${bin}"`)));
               return;
             }
-            // 진행 바를 제외한 stderr 꼬리만 싣는다 — tqdm 라인은 원인이 아니라 소음이다.
+            // Only include the stderr tail minus progress bars — tqdm lines are noise, not the cause.
             const tail = errOut
               .split('\n')
               .filter((line) => line.trim() && !line.includes('it/s]') && !line.includes('%|'))
@@ -197,7 +203,7 @@ export async function generateLocalImage(request: ZImageGenerateRequest): Promis
     return { success: false, error: message };
   }
 
-  // mflux 는 성공해도 exit 0 에 침묵할 수 있으므로 산출물 존재를 정본으로 판정한다.
+  // mflux can exit 0 silently even on success, so the output file's existence is the authoritative verdict.
   if (!existsSync(outFile)) {
     return {
       success: false,

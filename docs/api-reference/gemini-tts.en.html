@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gemini TTS — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="gemini-tts.html">
+<link rel="alternate" hreflang="en" href="gemini-tts.en.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="gemini-tts.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>Gemini TTS</div>
+
+<header class="hero">
+  <div class="kicker">GOOGLE GEMINI</div>
+  <h1>Gemini TTS — speech synthesis</h1>
+  <p class="sub">A <code>generateContent</code> variant that turns text into speech. It isn't a separate TTS endpoint but an ordinary generation call with <code>responseModalities: ['AUDIO']</code> and <code>speechConfig</code> on top, so an LLM's nondeterminism comes along with it.</p>
+  <div class="meta">
+    <span>Official <a href="https://ai.google.dev/gemini-api/docs/speech-generation">Speech generation</a></span>
+    <span>SDK <code>@google/genai</code> 2.13.0</span>
+    <span>Key <code>GEMINI_API_KEY</code></span>
+    <span>Implementation <code>server/src/tts-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#models">Models</a></li>
+    <li><a href="#voices">The 30 prebuilt voices</a></li>
+    <li><a href="#request">Request shape</a></li>
+    <li><a href="#output">Output format</a></li>
+    <li><a href="#limits">Limits and failure modes</a></li>
+    <li><a href="#impl">Implementation comparison</a></li>
+  </ol>
+</nav>
+
+<section id="models">
+  <h2>1. Models</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Model ID</th><th>Character</th><th>Streaming</th><th>Free tier</th></tr></thead>
+    <tbody>
+      <tr><td><code>gemini-2.5-flash-preview-tts</code></td><td>Cheapest — this server's default</td><td>No</td><td>Yes</td></tr>
+      <tr><td><code>gemini-2.5-pro-preview-tts</code></td><td>High quality. The fallback for scripts flash keeps failing on</td><td>No</td><td>No</td></tr>
+      <tr><td><code>gemini-3.1-flash-tts-preview</code></td><td>Newest. The only TTS model with streaming</td><td>Yes</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>Measured: the flash → pro fallback is a real failure mode.</strong> On a short two-person dialogue script, <code>gemini-2.5-flash-preview-tts</code> kept returning a 400 with <em>"Model tried to generate text, but it should only be used for TTS"</em>, and swapping just the model to <code>gemini-2.5-pro-preview-tts</code> passed on the first try (regardless of whether the speaker names were Korean or English). The server retries 3 times automatically and then points at this fallback in the error message.
+  </div>
+</section>
+
+<section id="voices">
+  <h2>2. The 30 prebuilt voices</h2>
+  <p>The voice list and character descriptors from the official docs are verbatim the source of truth for the <code>TTS_VOICES</code> record.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Voice</th><th>Character</th><th>Voice</th><th>Character</th><th>Voice</th><th>Character</th></tr></thead>
+    <tbody>
+      <tr><td><code>Zephyr</code></td><td>Bright</td><td><code>Puck</code></td><td>Upbeat</td><td><code>Charon</code></td><td>Informative</td></tr>
+      <tr><td><code>Kore</code></td><td>Firm</td><td><code>Fenrir</code></td><td>Excitable</td><td><code>Leda</code></td><td>Youthful</td></tr>
+      <tr><td><code>Orus</code></td><td>Firm</td><td><code>Aoede</code></td><td>Breezy</td><td><code>Callirrhoe</code></td><td>Easy-going</td></tr>
+      <tr><td><code>Autonoe</code></td><td>Bright</td><td><code>Enceladus</code></td><td>Breathy</td><td><code>Iapetus</code></td><td>Clear</td></tr>
+      <tr><td><code>Umbriel</code></td><td>Easy-going</td><td><code>Algieba</code></td><td>Smooth</td><td><code>Despina</code></td><td>Smooth</td></tr>
+      <tr><td><code>Erinome</code></td><td>Clear</td><td><code>Algenib</code></td><td>Gravelly</td><td><code>Rasalgethi</code></td><td>Informative</td></tr>
+      <tr><td><code>Laomedeia</code></td><td>Upbeat</td><td><code>Achernar</code></td><td>Soft</td><td><code>Alnilam</code></td><td>Firm</td></tr>
+      <tr><td><code>Schedar</code></td><td>Even</td><td><code>Gacrux</code></td><td>Mature</td><td><code>Pulcherrima</code></td><td>Forward</td></tr>
+      <tr><td><code>Achird</code></td><td>Friendly</td><td><code>Zubenelgenubi</code></td><td>Casual</td><td><code>Vindemiatrix</code></td><td>Gentle</td></tr>
+      <tr><td><code>Sadachbia</code></td><td>Lively</td><td><code>Sadaltager</code></td><td>Knowledgeable</td><td><code>Sulafat</code></td><td>Warm</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>This server defaults to <code>Kore</code> (Firm). If the channel profile (<code>data/&lt;slug&gt;/profile.md</code>) pins a voice, that value wins — a narrator who changes voice every episode breaks the channel's identity.</p>
+</section>
+
+<section id="request">
+  <h2>3. Request shape</h2>
+  <h3>Single speaker</h3>
+  <pre><code>genai.models.generateContent({
+  model: 'gemini-2.5-flash-preview-tts',
+  contents: [{ role: 'user', parts: [{ text: contentText }] }],
+  config: {
+    responseModalities: ['AUDIO'],
+    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+    temperature: 0.4,
+  },
+});</code></pre>
+
+  <h3>Two speakers</h3>
+  <pre><code>speechConfig: {
+  multiSpeakerVoiceConfig: {
+    speakerVoiceConfigs: [
+      { speaker: 'Host',  voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+      { speaker: 'Panel', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
+    ],
+  },
+}</code></pre>
+  <p>Prefix each line of the script with the speaker name, as in <code>Host: Hello\nPanel: Good to be here</code>. <strong>The name must match the <code>speaker</code> in <code>speakerVoiceConfigs</code> exactly.</strong></p>
+
+  <h3>Style directives</h3>
+  <p>Language, tone, and pace aren't request fields. You direct them in the prompt body.</p>
+  <pre><code>Synthesize the following transcript as speech.
+Director's Notes — Style: calm and trustworthy, slightly slow
+--- TRANSCRIPT BEGINS ---
+&lt;transcript&gt;</code></pre>
+  <div class="warn">
+    <strong>Unlabeled <code>style: "body"</code> synthesis fails in two ways</strong> — the classifier falsely rejects it (<code>PROHIBITED_CONTENT</code>), or the model reads the directive itself out loud. Spelling out the synthesis preamble and the transcript-start label as above avoids both (<code>buildStyledPrompt</code>).
+  </div>
+</section>
+
+<section id="output">
+  <h2>4. Output format</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Response location</td><td><code>candidates[0].content.parts[].inlineData.data</code> (base64)</td></tr>
+      <tr><td>MIME</td><td><code>audio/L16;codec=pcm;rate=24000</code></td></tr>
+      <tr><td>Container</td><td><strong>None</strong> — raw PCM</td></tr>
+      <tr><td>Sample rate</td><td>24,000 Hz (the MIME <code>rate=</code> parameter is the source of truth)</td></tr>
+      <tr><td>Channels · bit depth</td><td>1 (mono) · 16-bit</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>With no container, saving the bytes as they come leaves a file no player can play. The server puts a 44-byte RIFF/WAVE header on it and saves a <code>.wav</code> (<code>media-utils.pcmToWav</code>). The sample rate is parsed from the response MIME rather than hardcoded — if the vendor changes the value, the pitch doesn't go off.</p>
+</section>
+
+<section id="limits">
+  <h2>5. Limits and failure modes</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Limit</th><th>Value</th><th>Handling</th></tr></thead>
+    <tbody>
+      <tr><td>Session context</td><td>32k tokens</td><td>Input capped at 16,000 characters (CJK ≈ 1–2 tokens/char, conservatively converted)</td></tr>
+      <tr><td>Input/output shape</td><td>Text in → audio out only</td><td>—</td></tr>
+      <tr><td>Supported languages</td><td>About 90 (BCP-47 table). <strong>Traditional Chinese <code>zh-TW</code> included</strong></td><td>Language isn't a request field — it's auto-detected from the input text</td></tr>
+      <tr><td>Speaker count</td><td>2 maximum</td><td>Schema <code>maxItems: 2</code></td></tr>
+      <tr><td>Long-output quality</td><td>Tone and pace drift past a few minutes</td><td>Split synthesis per cut is recommended</td></tr>
+      <tr><td>Random text tokens</td><td>Text comes back instead of audio, with a 500/400</td><td>3 automatic retries (400·800ms between attempts), then the pro fallback hint</td></tr>
+      <tr><td>Prompt classifier false rejection</td><td>Vague directives trigger a rejection</td><td>Fixed synthesis preamble (§3 above)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>Cuts inside the same video must keep <code>voiceName</code>, <code>stylePrompt</code>, and <code>temperature</code> byte-identical.</strong> Because it's LLM-based, even a trivial rewording of the directive gets reinterpreted and the narrator's voice wobbles from cut to cut. That's why this server defaults to <code>temperature: 0.4</code> instead of the vendor default (1.0).
+  </div>
+</section>
+
+<section id="impl">
+  <h2>6. Implementation comparison</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Official contract</th><th>social-flow implementation</th><th>Why they differ</th></tr></thead>
+    <tbody>
+      <tr><td>Input length</td><td>32k tokens</td><td>16,000-character hard cap</td><td>A conservative margin on the token↔character conversion. Going over gets an actionable "split the script" error</td></tr>
+      <tr><td>temperature</td><td>Not documented (works as a shared <code>generateContent</code> field)</td><td>Default 0.4, range 0–2</td><td>Voice consistency across episodes. The vendor default of 1.0 is too much for narration</td></tr>
+      <tr><td>Retries</td><td>The docs call for retries</td><td>3 attempts · linear backoff · a model-swap hint on the last one</td><td>—</td></tr>
+      <tr><td>Speaker count</td><td>2 maximum</td><td><code>minItems: 1, maxItems: 2</code></td><td>A single speaker is valid through <code>multiSpeakerVoiceConfig</code> too</td></tr>
+      <tr><td>Output storage</td><td>Returns base64 PCM</td><td>Wrapped in WAV, saved locally, and <strong>only the path</strong> returned</td><td>Several MB of base64 burns context and the model can't evaluate audio anyway</td></tr>
+      <tr><td>Filename</td><td>—</td><td>Rejects path separators and <code>..</code> + an audio-extension allowlist</td><td><code>path.join</code> normalizes <code>../</code> away, so it has to be blocked <em>before</em> assembly</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  As of 2026-07-29 · Implementation <a href="../../server/src/tts-client.ts">server/src/tts-client.ts</a> · <a href="index.en.html">API reference hub</a>
+</footer>
+
+</div>
+</body>
+</html>

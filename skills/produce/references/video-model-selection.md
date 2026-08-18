@@ -1,393 +1,428 @@
-# 영상 엔진 선택 — Veo 와 Seedance
+# Video engine selection — Veo and Seedance
 
-이 플러그인의 영상 생성 엔진은 둘이다. 대체재가 아니라 잘하는 일이 다르다.
+This plugin has two video generation engines. They're not substitutes — they're good at
+different things.
 
-- **Veo 3.1**(`veo_*`, `GEMINI_API_KEY`) — 네이티브 오디오, 로컬 파일 연장, 실사 인물 참조
-- **Seedance**(`seedance_*`, `ARK_API_KEY`) — 자유로운 길이·비율, 훨씬 싼 무음 컷, 참조 이미지 최대 30장
+- **Veo 3.1** (`veo_*`, `GEMINI_API_KEY`) — native audio, extending local files, live-action person references
+- **Seedance** (`seedance_*`, `ARK_API_KEY`) — free-form length/ratio, much cheaper silent cuts, up to 30 reference images
 
-이 문서가 두 엔진 선택의 정본이다. 툴 description 은 여기 요약을 각자 싣고, 숫자
-단가는 `skills/autoproduce/references/prices.tsv` 가 정본이다.
+This document is the source of truth for choosing between the two engines. Tool descriptions
+carry their own summaries of it, and `skills/autoproduce/references/prices.tsv` is the source
+of truth for unit prices.
 
-기준일 2026-08-15. Seedance 쪽 근거는 BytePlus ModelArk 공식 문서를 직접 열어
-확인했고 정리본이 `docs/api-reference/seedance.html` 이다. Veo 쪽 단가는 저장소
-기존 레퍼런스(`docs/api-reference/gemini-veo.html`, 2026-07-29) 값이라 미검증
-등급이라, 두 엔진의 비용 비교는 배수까지 믿을 값이 아니라 자릿수만 믿을 값이다.
+Reference date 2026-08-15. The Seedance side was verified by opening the official BytePlus
+ModelArk docs directly, with the write-up in `docs/api-reference/seedance.html`. The Veo prices
+come from the repo's existing reference (`docs/api-reference/gemini-veo.html`, 2026-07-29) and
+are unverified grade, so cross-engine cost comparisons are trustworthy to the order of
+magnitude, not to the multiplier.
 
 ---
 
-## 선택 규칙 넷 — 이 순서로 정한다
+## The four selection rules — decide in this order
 
-가격표와 아레나 순위를 매번 다시 읽지 않도록, 결론만 네 줄로 굳혔다.
+So we don't reread the price sheet and arena rankings every time, the conclusions are frozen
+into four lines.
 
-**1. 실사 인물이 소스면 2.x 는 후보에서 빠진다.** Dreamina Seedance 2.5·2.0 계열이
-입력 얼굴을 거부하므로 선택지는 Veo 세 티어와 Seedance 1.x 뿐이다. 이 규칙이 먼저다 —
-값도 품질도 이 다음에 본다.
+**1. If the source contains a live-action person, 2.x is out.** The Dreamina Seedance 2.5/2.0
+family rejects input faces, so the choices are the three Veo tiers and Seedance 1.x. This rule
+comes first — price and quality come after.
 
-같은 얼굴 PNG 로 양쪽을 찔러 확인했다(2026-08-15). Seedance 2.0 은 `first_frame` 에서
-거부(`InputImageSensitiveContentDetected.PrivacyInformation`), **Veo 3.1 lite 는 통과**해
-720p 4초를 만들었고 4초 동안 얼굴이 유지됐다. 단 실측한 건 `veo_img2video` 한 모드다 —
-`veo_reference` 는 문서상 같은 정책이지만 미실측이다(8초 고정이라 확인 비용 약 $0.80).
-**아이 얼굴은 Veo 도 막는다** — 사진이든 일러스트든 미성년으로 보이면 차단되고
-(`Support code: 17301594`) 허가는 트러스트·세이프티 정책 심사 대상이다. 상세는
+We probed both sides with the same face PNG (2026-08-15). Seedance 2.0 rejected it at
+`first_frame` (`InputImageSensitiveContentDetected.PrivacyInformation`); **Veo 3.1 lite
+passed**, produced 720p 4s, and the face held for all 4 seconds. Note the only mode actually
+tested was `veo_img2video` — `veo_reference` has the same policy on paper but is untested
+(fixed 8s, so verifying costs about $0.80). **Veo also blocks children's faces** — photo or
+illustration, anything that looks underage is blocked (`Support code: 17301594`), and
+permission goes through trust & safety policy review. Details in
 `docs/api-reference/veo-portrait.html`.
 
-**2. Veo 를 쓰기로 했으면 기능이 되는 가장 싼 티어를 쓴다.** 세 티어의 블라인드
-아레나 Elo 가 통계적으로 같다(§품질). 표준 티어는 fast 의 4배인데 사람이 더 좋아하지
-않는다. 참조 이미지·연장·4K 가 필요하면 lite 가 그걸 못 하니 fast 로 올리고, 그
-셋이 필요 없으면 **lite** 다. 표준 티어는 사람이 명시로 고를 때만 쓴다.
+**2. Once you've picked Veo, use the cheapest tier that has the features you need.** The three
+tiers' blind-arena Elo is statistically identical (§Quality). The standard tier costs 4× fast
+and people don't prefer it. If you need reference images, extension, or 4K, lite can't do
+those, so step up to fast; if you don't need those three, it's **lite**. The standard tier is
+only for when a human explicitly picks it.
 
-**3. 소리를 버리는 자리면 Seedance 무음, 소리를 쓰는 자리면 Veo.** 판단 근거는
-아래 §갈리는 축이다.
+**3. If the slot discards the sound, Seedance silent; if the slot uses the sound, Veo.** The
+reasoning is §The one axis that splits them, below.
 
-**4. 평가가 없는 모델을 중요한 컷의 기본값으로 두지 않는다.** 2.5 · 2.0 fast ·
-2.0 mini · 1.0 pro fast 는 어느 공개 아레나에도 없다(§품질). 값이 싸거나 기능이
-넓다는 이유로 쓰려면, 그 회차에 같은 프롬프트로 한 번 대조하고 정한다.
+**4. Don't make an unevaluated model the default for an important cut.** 2.5 · 2.0 fast ·
+2.0 mini · 1.0 pro fast are on no public arena at all (§Quality). If you want one because it's
+cheap or feature-rich, run the same prompt on both once that episode and decide.
 
-## 한 줄 판단
+## One-line decisions
 
-| 상황 | 쓸 것 |
+| Situation | Use |
 |---|---|
-| **모션 배경**(`visual.video` — 빌더가 소리를 버리는 자리) | `seedance_img2video` · `seedance-1-5-pro-251215` · 1080p · `generateAudio: false` — 값 우선 선택이다. 품질만 보면 Veo lite 가 59:41 로 앞선다(§품질) |
-| **b-roll 칸**(produce 절대 규칙 9 로 클립의 소리를 쓰는 자리) | `veo_img2video` — 무음 클립을 넣으면 그 구간이 조용해진다 |
-| 소스 배경에 **성인 실사 인물**이 있다 | Veo(`veo_img2video` 실측 통과) 또는 Seedance 1.5 pro·1.0 pro — **2.x 만 얼굴 입력을 거부한다** |
-| 소스 그림대로 **구도를 재현**해야 한다 | 참조 이미지가 아니라 **첫·끝 프레임**(`sourceImagePath`+`lastImagePath`) — 양 엔진 공통. 참조는 외형·화풍을 옮기지 구도를 옮기지 않는다 |
-| 캐릭터를 **한 번 등록해 두고 계속 부른다** | Seedance 자산 라이브러리(`asset://`)뿐 — Veo 에는 등록소가 없고 요청마다 base64 인라인이다 |
-| **대사·효과음이 들어간 컷** | `veo_text2video` / `veo_img2video` — 오디오는 Veo 가 낫다 |
-| 이미 만든 Veo 클립을 **이어 붙인다** | `veo_extension` — Seedance 에는 대응 툴이 없다 |
-| **실존 인물 사진**으로 일관된 인물 영상 | `veo_reference` — Seedance 2.x 는 실사 얼굴을 거부한다 *(미실측)* |
-| **캐릭터·제품**을 사진 여러 장으로 일관되게 | `seedance_reference` · 2.5(최대 30장) — Veo 는 3장·8초 고정 |
-| **스케치·툰 화풍**을 참조로 옮긴다 | `seedance_reference` — Veo 3.1 은 `referenceType: "style"` 을 지원하지 않는다 |
-| 소스 이미지에 **아이**가 있다 | Veo 이미지→영상 레인은 막힌다(미성년 차단) — Seedance 1.x 쪽은 확인 안 됨 |
-| **4초·6초·8초가 아닌 길이**가 필요하다 | `seedance_*` — 2~30초를 1초 단위로 받는다 |
-| **21:9·4:3·1:1·3:4** 프레임 | `seedance_*` — Veo 는 16:9·9:16 둘뿐이다 |
-| **4K** | 둘 다 된다 — Veo 3.1(8초 고정) 또는 `dreamina-seedance-2-0-260128` |
-| **가장 싸게** 한 컷 | `seedance-1-0-pro-fast-251015` — 9:16 1080p 5초 ≈ $0.24 |
+| **Motion background** (`visual.video` — a slot where the builder discards the sound) | `seedance_img2video` · `seedance-1-5-pro-251215` · 1080p · `generateAudio: false` — a price-first choice. On quality alone, Veo lite wins 59:41 (§Quality) |
+| **b-roll slot** (produce absolute rule 9 uses the clip's own sound) | `veo_img2video` — a silent clip leaves that segment mute |
+| Source background contains an **adult live-action person** | Veo (`veo_img2video`, verified pass) or Seedance 1.5 pro/1.0 pro — **only 2.x rejects face input** |
+| You must **reproduce the composition** of a source picture | First/last frames (`sourceImagePath`+`lastImagePath`), not reference images — both engines. References carry look and style, not composition |
+| **Register a character once and keep calling it** | Only the Seedance asset library (`asset://`) — Veo has no registry; it's base64 inline per request |
+| **A cut with dialogue/sound effects** | `veo_text2video` / `veo_img2video` — Veo's audio is better |
+| **Extending** an existing Veo clip | `veo_extension` — Seedance has no counterpart tool |
+| Consistent person video from a **real person's photo** | `veo_reference` — Seedance 2.x rejects live-action faces *(untested)* |
+| **Character/product** consistency from several photos | `seedance_reference` · 2.5 (up to 30 images) — Veo is 3 images, fixed 8s |
+| Transfer a **sketch/toon style** by reference | `seedance_reference` — Veo 3.1 doesn't support `referenceType: "style"` |
+| The source image contains a **child** | The Veo image→video lane is blocked (underage block) — the Seedance 1.x side is unverified |
+| A length **other than 4/6/8s** | `seedance_*` — takes 2–30s in 1s steps |
+| **21:9 / 4:3 / 1:1 / 3:4** frame | `seedance_*` — Veo only has 16:9 and 9:16 |
+| **4K** | Both — Veo 3.1 (fixed 8s) or `dreamina-seedance-2-0-260128` |
+| **Cheapest possible** single cut | `seedance-1-0-pro-fast-251015` — 9:16 1080p 5s ≈ $0.24 |
 
 ---
 
-## 갈리는 축은 하나 — 그 구간의 소리를 쓰나
+## The one axis that splits them — does the segment use its sound?
 
-Veo 는 **4·6·8초 격자**로만 만들고 그 길이대로 과금한다. 1080p·4K 는 8초 전용이라,
-4초짜리 칸을 1080p 로 채우려면 8초를 만들고 4초 값을 더 낸다. Seedance 는 **요청한
-초 단위 그대로** 만들고 그만큼만 받는다. 9:16 1080p 5초 무음이 1.5 pro 약 $0.29,
-1.0 pro fast 약 $0.24 — 같은 자리를 veo-3.1-fast(1080p·8초)로 채우면 약 $0.96이다.
+Veo generates only on a **4/6/8-second grid** and bills accordingly. 1080p and 4K are
+8s-only, so filling a 4s slot at 1080p means generating 8s and paying for extra 4s.
+Seedance generates **exactly the seconds you ask for** and charges just that. A 9:16 1080p 5s
+silent clip is about $0.29 on 1.5 pro, about $0.24 on 1.0 pro fast — the same slot filled with
+veo-3.1-fast (1080p, 8s) is about $0.96.
 
-그런데 싸다고 다 옮기면 안 된다. produce 절대 규칙 9 는 **b-roll 구간에 나레이션을
-겹치지 않고 클립이 가진 소리를 쓴다**고 정해 두었다. 그 자리에 무음 클립을 넣으면
-4초가 통째로 조용해진다 — 돈은 아꼈는데 영상이 나빠진다.
+But cheap doesn't mean move everything. Produce absolute rule 9 says **b-roll segments don't
+overlap narration and use the clip's own sound**. Put a silent clip there and 4 whole seconds
+go quiet — you saved money and the video got worse.
 
-반대로 **모션 배경(`visual.video`)은 빌더가 영상 트랙만 깔고 클립의 소리를 버린다.**
-버릴 소리에 Veo 값을 낼 이유가 없다. 여기가 손해 없이 이기는 자리다.
+Conversely, **for motion backgrounds (`visual.video`) the builder lays down the video track
+only and discards the clip's sound.** There's no reason to pay Veo prices for sound you'll
+throw away. This is the slot where you win with no downside.
 
-| 자리 | 소리를 쓰나 | 엔진 |
+| Slot | Uses the sound? | Engine |
 |---|---|---|
-| b-roll 칸 | 쓴다(절대 규칙 9) | Veo — 또는 Seedance `generateAudio: true` |
-| 모션 배경 `visual.video` | 버린다 | **Seedance 무음** |
-| 커버 | 코드 렌더(절대 규칙 10) | 생성 영상 자체를 안 쓴다 |
+| b-roll slot | Yes (absolute rule 9) | Veo — or Seedance with `generateAudio: true` |
+| Motion background `visual.video` | Discarded | **Seedance silent** |
+| Cover | Code-rendered (absolute rule 10) | No generated video at all |
 
 ---
 
-## 가격 비교
+## Price comparison
 
-과금 구조부터 다르다. **Veo 는 초당 정액**인데 길이가 4·6·8초 격자로 고정이고,
-1080p·4K 는 8초 전용이며, **음성이 항상 포함**이라 끌 수 없다. **Seedance 는
-토큰제**(해상도 × 24fps × 길이)라 해상도가 오르면 초당 단가도 같이 오르는 대신,
-길이를 1초 단위로 받고 그만큼만 받는다. 무료 티어는 양쪽 다 없다.
+The billing structures differ from the start. **Veo is flat per second**, but length is fixed
+to the 4/6/8s grid, 1080p/4K are 8s-only, and **audio is always included** — you can't turn it
+off. **Seedance is token-based** (resolution × 24fps × length), so per-second cost rises with
+resolution, but it takes length in 1s steps and charges just that. Neither has a free tier.
 
-**초당 단가 (USD/초)**
+**Per-second price (USD/s)**
 
 | | 480p | 720p | 1080p | 4K |
 |---|---|---|---|---|
-| **Veo 3.1** (음성 포함) | — | 0.40 | 0.40 | 0.60 |
+| **Veo 3.1** (audio included) | — | 0.40 | 0.40 | 0.60 |
 | **Veo 3.1 fast** | — | 0.10 | 0.12 | 0.30 |
-| **Veo 3.1 lite** | — | 0.05 | 0.08 | 미지원 |
-| Seedance 2.5 | 0.103 | 0.231 | 0.569 *(8/17~)* | — |
+| **Veo 3.1 lite** | — | 0.05 | 0.08 | not supported |
+| Seedance 2.5 | 0.103 | 0.231 | 0.569 *(from 8/17)* | — |
 | Seedance 2.0 | 0.070 | 0.152 | 0.374 | 0.778 |
 | Seedance 2.0 fast | 0.056 | 0.120 | — | — |
 | Seedance 2.0 mini | 0.036 | 0.076 | — | — |
-| Seedance 1.5 pro 음성 | 0.024 | 0.052 | 0.116 | — |
-| **Seedance 1.5 pro 무음** | 0.012 | 0.026 | **0.058** | — |
-| Seedance 1.0 pro (무음) | 0.024 | 0.052 | 0.122 | — |
-| **Seedance 1.0 pro fast** (무음) | 0.010 | 0.020 | **0.048** | — |
+| Seedance 1.5 pro, audio | 0.024 | 0.052 | 0.116 | — |
+| **Seedance 1.5 pro, silent** | 0.012 | 0.026 | **0.058** | — |
+| Seedance 1.0 pro (silent) | 0.024 | 0.052 | 0.122 | — |
+| **Seedance 1.0 pro fast** (silent) | 0.010 | 0.020 | **0.048** | — |
 
-**초당 단가만 보면 비교를 그르친다** — Veo 의 최소 청구 길이가 붙기 때문이다.
-실제로 한 컷을 만들 때 나가는 값은 이렇다.
+**Per-second price alone misleads the comparison** — Veo's minimum billed length kicks in.
+What one cut actually costs:
 
-**9:16 한 컷 실비 (USD)**
+**Real cost of one 9:16 cut (USD)**
 
-| 만들 것 | Veo 3.1 lite | Veo 3.1 fast | Seedance 1.5 pro | Seedance 1.0 pro fast |
+| To make | Veo 3.1 lite | Veo 3.1 fast | Seedance 1.5 pro | Seedance 1.0 pro fast |
 |---|---|---|---|---|
-| 720p · 4초 · 음성 | **0.20** | 0.40 | 0.21 | 무음 전용 |
-| 720p · 4초 · 무음 | 0.20 *(못 끈다)* | 0.40 | **0.10** | **0.08** |
-| 1080p · 4초 · 음성 | 0.64 *(8초 청구)* | 0.96 | **0.46** | 무음 전용 |
-| 1080p · 4초 · 무음 | 0.64 *(8초 청구)* | 0.96 | **0.23** | **0.19** |
-| 1080p · 8초 · 무음 | 0.64 | 0.96 | 0.46 | **0.38** |
+| 720p · 4s · audio | **0.20** | 0.40 | 0.21 | silent only |
+| 720p · 4s · silent | 0.20 *(can't turn off)* | 0.40 | **0.10** | **0.08** |
+| 1080p · 4s · audio | 0.64 *(billed as 8s)* | 0.96 | **0.46** | silent only |
+| 1080p · 4s · silent | 0.64 *(billed as 8s)* | 0.96 | **0.23** | **0.19** |
+| 1080p · 8s · silent | 0.64 | 0.96 | 0.46 | **0.38** |
 
-읽는 법은 이렇다. **720p 에 음성이 필요하면 Veo lite 와 Seedance 1.5 pro 가 사실상
-같은 값이다**(0.20 대 0.21) — 여기서 엔진을 갈아탈 이유는 돈이 아니라 품질이다.
-차이는 두 조건이 겹칠 때 벌어진다. **1080p** 로 올리면 Veo 가 8초를 청구하기
-시작하고, **음성을 끄면** Seedance 만 값이 절반으로 내려간다. 둘 다 해당하는
-1080p·4초·무음에서 2.8~3.4배가 된다.
+How to read this: **at 720p with audio, Veo lite and Seedance 1.5 pro cost essentially the
+same** (0.20 vs 0.21) — here the reason to switch engines is quality, not money. The gap opens
+when two conditions stack. Go to **1080p** and Veo starts billing 8s; **turn audio off** and
+only Seedance halves its price. Where both apply — 1080p, 4s, silent — the ratio becomes
+2.8–3.4×.
 
-자율 저작이 쓰는 `veo-3.1-fast` 기준으로는 격차가 더 크다(0.96 대 0.23, 4.2배).
-`veo-3.1-generate-preview`(표준)는 1080p·8초가 $3.20 이라 자릿수가 달라진다.
+Against `veo-3.1-fast`, which autonomous authoring uses, the gap is wider (0.96 vs 0.23,
+4.2×). `veo-3.1-generate-preview` (standard) is $3.20 for 1080p 8s — a different order of
+magnitude.
 
-Seedance 쪽 값은 공식 문서의 5초 예시가를 초로 나눈 환산이고, Veo 쪽은
-[Gemini API 요금 페이지](https://ai.google.dev/gemini-api/docs/pricing) 직접 확인
-값이다(둘 다 2026-08-15). 한시 할인 3건은 반영하지 않았다 — 2.5 의 1080p 가
-정가의 72%(~09-17), 2.0 mini 40%·2.0 fast 75%(~09-07)다.
+The Seedance figures are the official docs' 5s example prices divided down to per-second; the
+Veo figures were confirmed directly on the
+[Gemini API pricing page](https://ai.google.dev/gemini-api/docs/pricing) (both 2026-08-15).
+Three time-limited discounts are not reflected — 2.5's 1080p at 72% of list (through ~09-17),
+2.0 mini at 40% and 2.0 fast at 75% (through ~09-07).
 
 ---
 
-## 품질 — 블라인드 아레나 순위
+## Quality — blind arena rankings
 
-근거는 [Artificial Analysis Video Arena](https://artificialanalysis.ai/video/leaderboard/image-to-video)
-다(2026-08-15 확인). 같은 프롬프트로 만든 두 영상을 어느 모델이 만들었는지 모르는
-채로 사람이 고르게 하고 그 표를 Elo 로 환산한다. 벤더 자체 평가가 아니라 **독립
-블라인드 투표**라는 점에서 이 주제에서 구할 수 있는 가장 강한 근거다.
+The evidence is the
+[Artificial Analysis Video Arena](https://artificialanalysis.ai/video/leaderboard/image-to-video)
+(checked 2026-08-15). People choose between two videos made from the same prompt without
+knowing which model made which, and the tally is converted to Elo. As **independent blind
+voting** rather than vendor self-evaluation, it's the strongest evidence available on this
+question.
 
-**Elo 는 보드 안에서만 비교한다.** 보드마다 기준점 모델이 다르다 — 이미지→영상과
-텍스트→영상(음성 포함) 보드는 Seedance 1.5 pro 를 1000 으로 고정해 놓았고,
-무음 보드는 Mochi 1 이 1000 이다. 같은 1.5 pro 가 한 보드에서 1000, 다른 보드에서
-1170 으로 찍히는 이유가 이것이다. 보드를 건너뛴 숫자 비교는 뜻이 없다.
+**Elo only compares within a board.** Each board anchors a different model — the image→video
+and text→video (with audio) boards pin Seedance 1.5 pro at 1000, while the silent board pins
+Mochi 1 at 1000. That's why the same 1.5 pro reads 1000 on one board and 1170 on another.
+Cross-board number comparisons are meaningless.
 
-**이미지→영상** — 이 파이프라인이 실제로 쓰는 레인이다.
+**Image→video** — the lane this pipeline actually uses.
 
-| 순위 | 모델 | Elo | 95% CI | 표본 |
+| Rank | Model | Elo | 95% CI | Sample |
 |---|---|---|---|---|
 | 1 | Dreamina Seedance 2.0 720p | 1,198 | ±7 | 12,599 |
 | 10 | Veo 3.1 | 1,086 | ±7 | 7,893 |
 | 13 | Veo 3.1 Fast | 1,076 | ±7 | 11,561 |
 | 16 | Veo 3.1 Lite | 1,066 | ±8 | 7,193 |
-| 22 | Seedance 1.5 pro | 1,000 *(기준점)* | 0 | 8,972 |
+| 22 | Seedance 1.5 pro | 1,000 *(anchor)* | 0 | 8,972 |
 
-**텍스트→영상(음성 포함)**: Seedance 2.0 720p 1,222(3위) · Veo 3.1 1,091(11위) ·
-Veo 3.1 Fast 1,090 · Veo 3.1 Lite 1,088(15위) · Seedance 1.5 pro 1,000(21위, 기준점).
+**Text→video (with audio)**: Seedance 2.0 720p 1,222 (3rd) · Veo 3.1 1,091 (11th) ·
+Veo 3.1 Fast 1,090 · Veo 3.1 Lite 1,088 (15th) · Seedance 1.5 pro 1,000 (21st, anchor).
 
-**텍스트→영상(무음)**: Seedance 2.0 720p 1,265(4위) · Veo 3.1 Lite 1,207(20위) ·
-Veo 3.1 1,200 · Veo 3.1 Fast 1,199(22위) · Seedance 1.5 pro 1,170(33위) ·
-Seedance 1.0 1,134(39위).
+**Text→video (silent)**: Seedance 2.0 720p 1,265 (4th) · Veo 3.1 Lite 1,207 (20th) ·
+Veo 3.1 1,200 · Veo 3.1 Fast 1,199 (22nd) · Seedance 1.5 pro 1,170 (33rd) ·
+Seedance 1.0 1,134 (39th).
 
-### 읽을 것 셋
+### Three things to read from it
 
-**1. Veo 세 티어는 품질이 사실상 같다.** 세 보드 모두 격차가 20 Elo 이내이고 신뢰구간이
-겹친다. 무음 보드에서는 순서가 뒤집혀 lite(1,207)가 표준(1,200)보다 위다. 표준 티어에
-8배를 내도 사람이 더 좋아하지 않는다는 뜻이라, 이 저장소의 "표준 티어 자율 저작 금지"
-방침이 값뿐 아니라 품질 근거로도 맞는다.
+**1. The three Veo tiers are effectively equal in quality.** On all three boards the gap is
+within 20 Elo and the confidence intervals overlap. On the silent board the order even flips —
+lite (1,207) sits above standard (1,200). Paying 8× for the standard tier doesn't make people
+prefer it, so this repo's "no standard tier in autonomous authoring" policy holds on quality
+grounds, not just price.
 
-**2. Dreamina Seedance 2.0 이 이미지→영상 1위다.** Veo 3.1 대비 112 Elo(같은 프롬프트로
-붙이면 66:34 로 선호), Seedance 1.5 pro 대비 198 Elo(76:24). 다만 아레나가 시험한 건
-**720p 출력**이고, 이 모델은 실사 얼굴 입력을 거부하며 잔액 $30 관문이 붙는다.
+**2. Dreamina Seedance 2.0 is #1 in image→video.** 112 Elo over Veo 3.1 (66:34 preference on
+the same prompt), 198 Elo over Seedance 1.5 pro (76:24). But what the arena tested is **720p
+output**, this model rejects live-action face input, and it sits behind the $30-balance gate.
 
-**3. Seedance 1.5 pro 는 Veo 세 티어보다 아래다.** 이미지→영상에서 Veo lite 와 66 Elo
-차이(59:41). 값은 1080p 4초 기준 $0.23 대 $0.64 이므로, **2.8배를 아끼는 대신 열 번 중
-한 번쯤 더 지는 그림**을 받는 거래다. 어느 쪽이 맞는지는 그 칸이 얼마나 중요한지에 달렸다.
+**3. Seedance 1.5 pro ranks below all three Veo tiers.** 66 Elo behind Veo lite in
+image→video (59:41). The price is $0.23 vs $0.64 for 1080p 4s, so the trade is **saving 2.8×
+in exchange for losing roughly one match in ten**. Which side is right depends on how much
+that cut matters.
 
-### 아직 평가가 없는 모델 넷
+### The four models with no evaluation yet
 
-`dreamina-seedance-2-5-260628` · `2-0-fast` · `2-0-mini` · `seedance-1-0-pro-fast-251015`
-는 **어느 보드에도 없다**. 2.5 는 ByteDance 가 기술 보고서도 수치 벤치마크도 내지
-않았고(arXiv 에 올라온 2.0 보고서조차 "전문가 평가와 공개 사용자 테스트에서 업계
-선두 수준"이라고만 적고 수치를 주지 않는다), 나머지 셋도 아레나 미등재다.
+`dreamina-seedance-2-5-260628` · `2-0-fast` · `2-0-mini` · `seedance-1-0-pro-fast-251015` are
+**on no board at all**. For 2.5, ByteDance has published neither a tech report nor numeric
+benchmarks (even the 2.0 report on arXiv only says "industry-leading in expert evaluation and
+public user testing" without numbers), and the other three aren't listed either.
 
-즉 **가장 싼 선택지(1.0 pro fast)와 참조 툴 기본값(2.5)이 품질 근거가 없는 쪽**이다.
-그 둘을 중요한 컷에 쓰기 전에는 같은 프롬프트로 한 번 비교해 보고 정한다.
+Which means **the cheapest option (1.0 pro fast) and the reference tool's default (2.5) are
+the ones without quality evidence**. Before using either on an important cut, compare once
+with the same prompt and decide.
 
-2.5 가 비어 있는 이유는 **API 가 갓 열렸기 때문**으로 보인다. 모델 ID 의 날짜(260628)는
-모델 버전이지 API 공개일이 아니다 — 2.0 도 ID 가 `260128` 인데 ModelArk 릴리스 노트에는
-**2026-04** 에 올라왔다. 2.5 는 ModelArk 의 월별 릴리스 노트·제품 업데이트 **어느 쪽에도
-아직 항목이 없고**, 1080p 출력이 2026-08-17 에야 열리며, 출시 할인이 2026-08-14 에
-시작됐다. 아레나는 벤더 API 로 영상을 뽑아 블라인드 투표를 모으는데 등재 모델의 표본이
-2,000~20,000 표다 — 며칠 된 API 로는 그 표가 안 쌓인다. 아레나 쪽 대기열은 공개되지
-않아 확증은 못 했다. 몇 주 안에 등재될 것으로 보고 그때 이 절을 다시 확인한다.
+The likely reason 2.5 is missing is that **its API just opened**. The date in the model ID
+(260628) is the model version, not the API release date — 2.0's ID is `260128` but the
+ModelArk release notes list it in **2026-04**. 2.5 has **no entry yet in either** ModelArk's
+monthly release notes or product updates, its 1080p output only opens on 2026-08-17, and its
+launch discount started 2026-08-14. The arena generates videos through vendor APIs and
+collects blind votes, and listed models carry 2,000–20,000 votes — an API that's days old
+can't have accumulated that. The arena's queue isn't public, so this couldn't be confirmed.
+Expect it to be listed within weeks; recheck this section then.
 
-`seedance-1-0-pro-250528` 은 아레나의 "Seedance 1.0"(2025-06, 무음 보드 1,134)과
-같은 모델로 보이지만 확증하지 못했다 — 버전 표기가 다르다.
+`seedance-1-0-pro-250528` appears to be the same model as the arena's "Seedance 1.0"
+(2025-06, silent board 1,134), but that couldn't be confirmed — the version labels differ.
 
-### 이 순위를 그대로 믿으면 안 되는 지점
+### Where not to take the ranking at face value
 
-아레나는 **일반 프롬프트**로 만든 영상을 사람이 고른 결과다. 이 파이프라인이 이 엔진에
-시키는 일은 "이미 만들어 둔 배경 사진을 아주 느리게 밀어 넣기, 소리는 버림"이라는 훨씬
-좁은 과제다. 일반 선호가 그 좁은 과제로 그대로 옮겨간다는 보장은 없다. 순위는 출발점이지
-결론이 아니고, 실제 판정은 우리 소재로 같은 컷을 양쪽에서 뽑아 비교하는 것이다.
+The arena is people choosing among videos made from **general prompts**. What this pipeline
+asks of the engine is a much narrower task: "push a pre-made background photo very slowly,
+discard the sound." There's no guarantee general preference transfers to that narrow task.
+The ranking is a starting point, not a conclusion — the real verdict is generating the same
+cut from our own material on both sides and comparing.
 
-아레나 표의 $/min 요금 열은 우리가 확인한 벤더 요금과 어긋난다(1.5 pro 를 $11.86/min
-으로 적었는데 공식가로 계산하면 1080p 음성이 $6.96/min 이다). 값은 위 §가격 비교가 정본이다.
-
----
-
-## 파이프라인이 걸리는 함정 넷
-
-**1. 실사 인물 얼굴 — 2.x 는 입력으로 못 받는다.**
-Dreamina Seedance 2.5·2.0 계열은 실제 사람 얼굴이 든 참조 이미지·영상을 거부한다.
-이 파이프라인의 커버 배경은 실사 인물 PNG 라(autoproduce 절대 규칙 12), Seedance 로
-보낼 때는 **1.5 pro 또는 1.0 pro** 로만 간다. 기본 모델이 1.5 pro 인 이유가
-이것이다. 2.x 로 보내면 회차가 통째로 막힌다. Veo 쪽은 성인 얼굴을 받으므로
-(`veo_img2video` 실측) 이 함정에 걸리지 않는다 — 대신 미성년으로 보이는 얼굴은
-Veo 이미지 레인이 막고, 얼굴이 안 보이는 컷(뒷모습·실루엣)은 전 모델이 다 받는다.
-
-**2. `ratio` 를 건드리면 소스가 잘린다.**
-`seedance_img2video` 의 비율 기본값은 `adaptive` — 소스 이미지 비율을 그대로 따른다.
-다른 값을 넣으면 서버가 **중앙 기준으로 잘라낸다**. 1088×1920 커버에 `16:9` 를 넣으면
-화면 가운데 띠만 살아서 나온다. 비율을 바꿀 의도가 없으면 인자를 넘기지 않는다.
-
-**3. `generateAudio` 의 벤더 기본값은 `true`, 우리 기본값은 `false`다.**
-나레이션은 `tts_*` 로 따로 붙이므로 모델이 목소리를 얹으면 두 겹이 된다. 게다가
-1.5 pro 는 음성을 켜면 단가가 **정확히 2배**다($1.2 → $2.4/1M 토큰). 툴 기본값을
-`false` 로 뒤집어 뒀으니 그대로 두면 된다.
-
-**4. 결과 URL 은 24시간짜리다.**
-서버가 폴링이 끝나는 즉시 로컬 mp4 로 저장하고 경로만 돌려주므로 평소에는 신경 쓸
-일이 없다. 다만 타임아웃(15분)으로 실패한 태스크는 ModelArk 콘솔에서 받아야 하고,
-그것도 하루가 지나면 사라진다.
-
-**5. Seedance 2.0 은 세로에서 자막을 더 만든다.**
-요청하지 않은 글자가 화면에 태워지는데, 벤더 문서가 **세로가 가로보다 확률이 뚜렷이
-높다**고 적고 회피책으로 "가로로 만들고 편집으로 세로 크롭"을 권한다. 제약어로 100%
-막지 못한다는 것도 같은 문서가 자백한다. 우리 파이프라인은 9:16 이 전제라 이 회피책을
-그대로 쓸 수 없으므로, **2.0 으로 세로를 뽑으면 프레임을 눈으로 확인**한다. 나머지
-회피책은 참조 자산에서 글자를 지우는 것이다. 2.5 문서는 이 경고를 빼고 대신 자막
-네거티브 제어를 준다 — **2.0 한정** 조언이다.
-
-**6. 삼면도 캐릭터 시트를 참조로 넣지 않는다.**
-업계 통념과 반대인데 ByteDance 가 자기 문서에서 두 번 경고한다 — 다각도 자산을 넣으면
-모델이 각도별 그림을 **서로 다른 인물로 읽어** ID 드리프트가 심해지고 같은 인물이
-화면에 둘 나온다. 권장은 **헤드샷(얼굴만·무표정·어깨와 배경 최소) + 전신** 두 장이다.
-그리고 **자산 순서가 가중치**다 — 정확히 참조돼야 하는 것일수록 `referenceImages`
-배열 앞에 둔다.
+The arena table's $/min price column disagrees with the vendor prices we verified (it lists
+1.5 pro at $11.86/min, but official pricing works out to $6.96/min for 1080p with audio). For
+prices, §Price comparison above is the source of truth.
 
 ---
 
-## 모델 7종 — 무엇이 다른가
+## The traps this pipeline hits
 
-| 모델 ID | 해상도 | 길이 | 참조 이미지 | 음성 | seed | 실사 얼굴 입력 |
+**1. Live-action faces — 2.x won't take them as input.**
+The Dreamina Seedance 2.5/2.0 family rejects reference images and videos containing real
+human faces. This pipeline's cover backgrounds are live-action person PNGs (autoproduce
+absolute rule 12), so anything sent to Seedance goes to **1.5 pro or 1.0 pro only**. That's
+why the default model is 1.5 pro. Send it to 2.x and the whole episode stalls. The Veo side
+accepts adult faces (`veo_img2video`, verified) so it doesn't hit this trap — but faces that
+look underage are blocked on Veo's image lane, and cuts with no visible face (back view,
+silhouette) are accepted by every model.
+
+**2. Touching `ratio` crops the source.**
+`seedance_img2video`'s ratio default is `adaptive` — it follows the source image's ratio.
+Pass anything else and the server **center-crops**. Feed a 1088×1920 cover with `16:9` and
+only the middle band of the frame survives. If you don't intend to change the ratio, don't
+pass the argument.
+
+**3. `generateAudio`'s vendor default is `true`; ours is `false`.**
+Narration is added separately via `tts_*`, so a model-generated voice makes two layers. On
+top of that, 1.5 pro with audio on costs **exactly 2×** ($1.2 → $2.4/1M tokens). The tool
+default is flipped to `false` — leave it.
+
+**4. Result URLs live for 24 hours.**
+The server saves a local mp4 the moment polling completes and returns only the path, so
+normally there's nothing to think about. But a task that failed on timeout (15 min) must be
+retrieved from the ModelArk console, and even that disappears after a day.
+
+**5. Seedance 2.0 hallucinates more captions in portrait.**
+Unrequested text gets burned into the frame, and the vendor docs state the probability is
+**clearly higher in portrait than landscape**, recommending "generate landscape, crop to
+portrait in editing" as the workaround. The same docs admit constraint words can't block it
+100%. Our pipeline assumes 9:16, so that workaround doesn't apply — **when generating
+portrait on 2.0, eyeball the frames**. The other mitigation is removing text from reference
+assets. The 2.5 docs drop this warning and provide caption negative control instead — this
+advice is **2.0-specific**.
+
+**6. Don't use a three-view character sheet as reference.**
+Contrary to industry lore, ByteDance warns about this twice in its own docs — feed
+multi-angle assets and the model **reads each angle as a different person**, worsening ID
+drift and putting the same character on screen twice. The recommendation is two images:
+**a headshot (face only, neutral, minimal shoulders/background) + a full body**. And **asset
+order is weight** — the more precisely something must be referenced, the earlier it goes in
+the `referenceImages` array.
+
+---
+
+## The seven models — what differs
+
+| Model ID | Resolution | Length | Reference images | Audio | seed | Live-action face input |
 |---|---|---|---|---|---|---|
-| `dreamina-seedance-2-5-260628` | 480p·720p | 4–30초 | 1–30장 | ○ | ✗ | **거부** |
-| `dreamina-seedance-2-0-260128` | 480p–4K | 4–15초 | 1–9장 | ○ | ✗ | **거부** |
-| `dreamina-seedance-2-0-fast-260128` | 480p·720p | 4–15초 | 1–9장 | ○ | ✗ | **거부** |
-| `dreamina-seedance-2-0-mini-260615` | 480p·720p | 4–15초 | 1–9장 | ○ | ✗ | **거부** |
-| `seedance-1-5-pro-251215` **기본** | 480p–1080p | 4–12초 | ✗ | ○ | ○ | 허용 |
-| `seedance-1-0-pro-250528` | 480p–1080p | 2–12초 | ✗ | ✗ | ○ | 허용 |
-| `seedance-1-0-pro-fast-251015` | 480p–1080p | 2–12초 | ✗ | ✗ | ○ | 허용 |
+| `dreamina-seedance-2-5-260628` | 480p·720p | 4–30s | 1–30 | ○ | ✗ | **rejected** |
+| `dreamina-seedance-2-0-260128` | 480p–4K | 4–15s | 1–9 | ○ | ✗ | **rejected** |
+| `dreamina-seedance-2-0-fast-260128` | 480p·720p | 4–15s | 1–9 | ○ | ✗ | **rejected** |
+| `dreamina-seedance-2-0-mini-260615` | 480p·720p | 4–15s | 1–9 | ○ | ✗ | **rejected** |
+| `seedance-1-5-pro-251215` **default** | 480p–1080p | 4–12s | ✗ | ○ | ○ | accepted |
+| `seedance-1-0-pro-250528` | 480p–1080p | 2–12s | ✗ | ✗ | ○ | accepted |
+| `seedance-1-0-pro-fast-251015` | 480p–1080p | 2–12s | ✗ | ✗ | ○ | accepted |
 
-전 모델 24fps 고정이고 비율은 16:9·9:16·4:3·3:4·1:1·21:9·adaptive 를 다 받는다.
-`seedance-1-0-pro-fast` 만 첫 프레임 전용이라 첫+끝 프레임 보간을 못 한다.
+All models are fixed 24fps and accept every ratio: 16:9, 9:16, 4:3, 3:4, 1:1, 21:9, adaptive.
+Only `seedance-1-0-pro-fast` is first-frame-only — it can't interpolate first+last frames.
 
-2.5 의 1080p 는 **2026-08-17(UTC+8)** 부터 열린다 — 그날 이후
-`server/src/seedance-client.ts` 능력표의 `dreamina-seedance-2-5-260628.resolutions`
-에 `'1080p'` 를 더한다. 그전까지는 호출 전에 거부된다.
+2.5's 1080p opens on **2026-08-17 (UTC+8)** — after that date, add `'1080p'` to
+`dreamina-seedance-2-5-260628.resolutions` in the `server/src/seedance-client.ts` capability
+table. Until then it's rejected before the call.
 
-**Dreamina Seedance 2.5·2.0 계열은 키만으로 안 열린다** — 계정 잔액 $30 초과이거나
-리소스팩을 사야 활성화된다. 1.5 pro·1.0 계열에는 그 관문이 없다.
+**The Dreamina Seedance 2.5/2.0 family doesn't unlock on a key alone** — it activates only
+with an account balance over $30 or a purchased resource pack. The 1.5 pro and 1.0 family
+have no such gate.
 
 ---
 
-## 프롬프트 문법 — 두 엔진이 다르다
+## Prompt grammar — the two engines differ
 
-엔진 선택이 끝난 다음의 이야기다. 근거는 두 벤더 공식 문서이고 정리본이
-[프롬프트 문법 조사](../../../docs/research/2026-08-15-veo-seedance-prompting/index.html)와
-[카메라 기법 조사](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html) 둘이다.
-뒤엣것이 앞엣것의 문장 골격 항목을 정정했다 — 아래 표가 정정본이다.
+This is what comes after engine selection. The evidence is both vendors' official docs, with
+write-ups in the
+[prompt grammar research](../../../docs/research/2026-08-15-veo-seedance-prompting/index.html)
+and the
+[camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html).
+The latter corrected the former's sentence-skeleton entry — the table below is the corrected
+version.
 
 | | Veo 3.1 | Seedance |
 |---|---|---|
-| 문장 골격 | 슬롯을 열거하되 **순서 규정이 없다** — subject·action·context·camera·lens·style 중 필요한 것만. 레퍼런스 문서 셋에 required·must 가 0건이고 Gemini API 는 카메라를 `[Optional]` 로 적는다 | `주체 + 동작 + 환경 + 카메라 무브 + 미학 + 사운드` — 카메라 칸 자체가 `非必须` |
-| 카메라 서술 | 벤더가 이름 붙여 정의한 무브 12종. `zoom` 은 카메라가 안 움직이고 `dolly` 만 움직인다 | 운경 11종(`推·拉·摇·移·跟·升·降·甩·环绕·旋转·变焦`) + 景别 5단계. **렌즈 규격·카메라 바디 어휘는 문서 전체에 0건** |
-| 배제 지시 | **`negativePrompt` 인자** — 명사구를 콤마로(`wall, frame`) | 인자가 없다 — 장면을 다시 서술해 피한다 |
-| 대사 | 따옴표로 감싼다 | 따옴표 + 감정·속도는 평서문으로(파라미터 없음) |
-| 프롬프트 언어 | 영어 | 중국어·영어만(2.5 만 한국어) — 한국어는 대사 줄에만 |
-| 컷 나누기 | 한 호출에 한 컷 | `Shot 1: … Shot 2: …` 로 한 호출 안에서 전환(1.5·2.0) |
-| 타임코드 | **쓸 수 있다** — 3.1 블로그가 `[00:00-00:02]` 구간 분할을 정식 워크플로로 제시(블로그 등급) | **쓰지 않는다** — 2.0 이 정밀 타이밍 불안정을 자기 고지(2.5 는 정수 초에 응답) |
+| Sentence skeleton | Enumerate slots but **no order rule** — whichever of subject·action·context·camera·lens·style you need. Zero required/must across the three reference docs, and the Gemini API marks camera `[Optional]` | `subject + action + environment + camera move + aesthetics + sound` — the camera slot itself is `非必须` |
+| Camera vocabulary | 12 vendor-named, defined moves. `zoom` doesn't move the camera; only `dolly` does | 11 moves (`推·拉·摇·移·跟·升·降·甩·环绕·旋转·变焦`) + 5 shot-size levels (景别). **Zero lens specs or camera-body vocabulary in the entire doc** |
+| Exclusion directives | **The `negativePrompt` argument** — noun phrases, comma-separated (`wall, frame`) | No argument — re-describe the scene to avoid it |
+| Dialogue | Wrap in quotes | Quotes + emotion/pace as plain sentences (no parameter) |
+| Prompt language | English | Chinese/English only (Korean on 2.5 only) — Korean only in dialogue lines |
+| Cutting shots | One cut per call | `Shot 1: … Shot 2: …` transitions within one call (1.5/2.0) |
+| Timecodes | **Usable** — the 3.1 blog presents `[00:00-00:02]` interval splitting as an official workflow (blog grade) | **Don't** — 2.0 self-reports unstable precision timing (2.5 responds to whole seconds) |
 
-**카메라를 첫 낱말에 두라는 규칙은 폐기했다.** `[촬영]+[주체]+[동작]+[맥락]+[스타일]`
-5부 공식은 구글 클라우드 **블로그 한 곳에만** 있고, 레퍼런스 문서 세 곳(Gemini API·
-DeepMind·Vertex)은 어순을 규정하지 않으며 `Cinematography` 라는 낱말조차 쓰지 않는다.
-Gemini API 의 유일한 주석 예시는 카메라를 문장 **맨 끝**에 둔다. 어순으로 결과가 달라진다는
-근거가 없으므로 슬롯을 채우는 데만 신경 쓰고 순서는 읽기 편한 대로 적는다.
+**The "camera goes first" rule is retired.** The `[cinematography]+[subject]+[action]+
+[context]+[style]` five-part formula exists in **one Google Cloud blog only**; the three
+reference docs (Gemini API, DeepMind, Vertex) prescribe no word order and never even use the
+word `Cinematography`. The Gemini API's only annotated example puts the camera at the **very
+end** of the sentence. With no evidence that order changes results, just fill the slots and
+write them in whatever order reads well.
 
-**배제 지시가 가장 자주 틀리는 자리다.** 본문에 "no ~" 를 적으면 그 명사가 오히려
-그려진다 — 로컬 이미지에서 `"no maps"` 로 지도를 얻은 실측이 있고(4장 전패), Veo
-프롬프트 가이드도 지시문 형태를 not recommended 로 적는다. 서버의 `veo_*` 툴 넷은
-`negativePrompt` 인자를 노출하므로 배제는 전부 그리로 보낸다.
+**Exclusion directives are the most common mistake.** Write "no ~" in the body and that noun
+tends to get drawn — there's a field-tested local-image case where `"no maps"` produced maps
+(4 of 4 failed), and the Veo prompt guide itself marks directive phrasing not recommended.
+The server's four `veo_*` tools expose the `negativePrompt` argument, so route all exclusions
+there.
 
-**세로 비율은 Veo 에서 명시해야 나온다** — `aspectRatio` 기본값이 `16:9` 이고 허용값은
-둘뿐이다. 세로 시작 이미지를 넣어도 따라오지 않는다. 개발자 포럼에 9:16 을 넘겨도
-가로가 나온다는 보고가 있으니 결과 mp4 해상도를 확인한다.
+**Portrait must be explicit on Veo** — `aspectRatio` defaults to `16:9` and only two values
+are allowed. A portrait start image doesn't carry it over. Developer-forum reports exist of
+9:16 requests coming back landscape, so check the output mp4's resolution.
 
-**컷 사이 일관성을 seed 로 잡지 않는다** — Veo 의 결정성 주장은 원문 확인에 실패했고,
-참조를 돌리는 Dreamina 2.x 는 seed 자체가 없다. 일관성은 참조 이미지와 첫·끝
-프레임 위에 올린다.
+**Don't pin cross-cut consistency on seed** — Veo's determinism claim failed source
+verification, and Dreamina 2.x, which handles references, has no seed at all. Build
+consistency on reference images and first/last frames.
 
 ---
 
-## 카메라 — 이 절이 정본이다
+## Camera — this section is the source of truth
 
-근거는 [카메라 기법 조사](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html) 다.
+The evidence is the
+[camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html).
 
-**엔진마다 알아듣는 말이 다르다.** 한 엔진에서 쓰던 지시어를 그대로 옮기면 그 벤더가
-예시한 적 없는 어휘로 지시하게 된다. Veo 정본(Vertex 프롬프트 가이드) 전문에
-`orbit`·`push`·`steadicam`·`gimbal` 은 **한 번도 안 나온다**.
+**Each engine understands different words.** Carrying directives from one engine to the other
+means instructing in vocabulary that vendor never exemplified. The full Veo source of truth
+(the Vertex prompt guide) contains **not one occurrence** of `orbit`, `push`, `steadicam`, or
+`gimbal`.
 
-| 지시 의도 | Veo 3.1 | Seedance |
+| Intent | Veo 3.1 | Seedance |
 |---|---|---|
-| 다가간다 | `dolly in` (`zoom in` 아니다 — 렌즈만 변한다) | `推` |
-| 멀어진다 | `dolly out` | `拉` |
-| 피사체를 돈다 | `arc shot` (`orbit` 아니다) | `环绕` |
-| 좌우로 훑는다 | `pan` | `摇` |
-| 위아래로 훑는다 | `tilt` | (미확인) |
-| 몸체가 좌우 이동 | `truck` | `移` |
-| 몸체가 위아래 이동 | `pedestal` | `升` / `降` |
-| 따라간다 | (예문에만 `tracking`) | `跟` |
-| 고정 | `static` / `fixed` | (미확인) |
+| Move closer | `dolly in` (not `zoom in` — that only changes the lens) | `推` |
+| Move away | `dolly out` | `拉` |
+| Circle the subject | `arc shot` (not `orbit`) | `环绕` |
+| Sweep left/right | `pan` | `摇` |
+| Sweep up/down | `tilt` | (unconfirmed) |
+| Body moves sideways | `truck` | `移` |
+| Body moves up/down | `pedestal` | `升` / `降` |
+| Follow | (`tracking` in examples only) | `跟` |
+| Locked off | `static` / `fixed` | (unconfirmed) |
 
-`(미확인)` 은 "못 알아듣는다"가 아니라 **그 벤더 문서에서 확인되지 않았다**는 뜻이다. 벤더 목록은
-대부분 `等`·`and more` 로 끝나는 열린 목록이라 없는 말이 금지어는 아니다. 다만 있는 말을
-쓰는 편이 안전하다. Seedance 자리에 영어로 적는 지금 관행은 벤더 확인 어휘가 아니지만
-금지 근거도 없어 그대로 둔다 — 궤적이 달라지는지는 우리가 재야 할 항목이다.
+`(unconfirmed)` doesn't mean "not understood" — it means **not confirmed in that vendor's
+docs**. Vendor lists mostly end in `等`/"and more", i.e. open lists, so an absent word isn't a
+banned word. Still, using words that are present is safer. The current practice of writing
+English in the Seedance slot isn't vendor-confirmed vocabulary, but there's no evidence
+against it either, so it stands — whether the trajectory differs is an item we still have to
+measure.
 
-**샷 사이즈 지시어는 무브보다 벤더 보증이 약하다.** Veo 문서에서 "일부 고급 지시어는 공식
-지원이 아니며 결과가 프롬프트에 따라 달라진다"는 경고가 정확히 두 번 나오는데 붙은 자리가
-**앵글 절과 렌즈 절**이고 `close-up`·`medium shot`·`wide shot` 이 거기 들어 있다. 무브
-12항목 절에는 그 경고가 없다. 다만 "그래서 무브가 더 잘 먹힌다"는 침묵으로부터의 추론이다.
+**Shot-size vocabulary has weaker vendor backing than moves.** The Veo docs carry the warning
+"some advanced directives are not officially supported and results vary by prompt" exactly
+twice, and it's attached to the **angle section and the lens section** — `close-up`,
+`medium shot`, `wide shot` live there. The 12-move section has no such warning. But "so moves
+work better" is an inference from silence.
 
-**컷당 무브 개수는 모델별로 다르게 잡는다.** 우리 기본 모델 **Seedance 1.5 Pro 는 벤더가
-조합을 가르치므로**(히치콕 샷 = `推拉`+`变焦`) 2개까지 시도할 수 있다. 컷당 1종 권고는
-**2.0 한정**이고 그것도 `尽量`(가급적)이라는 헤지다. 한 버전에서 읽은 규칙을 형제 버전에
-옮기면 벤더 문서와 정면으로 충돌한다.
+**Set moves-per-cut per model.** Our default model **Seedance 1.5 Pro has the vendor teaching
+combinations** (Hitchcock shot = `推拉`+`变焦`), so up to 2 can be tried. The one-move-per-cut
+advice is **2.0-only**, and even there hedged as `尽量` (where possible). Carrying a rule read
+in one version to a sibling version collides head-on with the vendor docs.
 
-**무브를 정서 연출로 쓰지 않는다.** 다가가는 무브가 보는 사람의 기분(쾌·불쾌)이나 흥분도를
-바꾼다는 통념은 실증이 받쳐 주지 않는다(p=.84 / p=.21, Front Neurosci 2023).
-유의했던 건 몰입 하나이고 그것도
-아직 성격이 모호한 중립 장면에서만 일관됐다. 저자들은 톤을 만든 주된 요인을 카메라가 아니라
-**세트 드레싱**으로 본다 — 컷의 정서 톤은 배경·미술·소품으로 잡고, 무브는 도입·전환의
-몰입에 쓴다. (45초 무성 가로 클립·44명이라 무효 증명이 아니라 미검출이다.)
+**Don't use moves as emotional staging.** The folk belief that an approaching move changes the
+viewer's valence or arousal has no empirical support (p=.84 / p=.21, Front Neurosci 2023). The
+one significant effect was immersion, and even that was only consistent in neutral scenes
+whose character wasn't yet established. The authors credit tone mainly to **set dressing**,
+not the camera — set a cut's emotional tone with background, art, and props, and use moves for
+immersion at openings and transitions. (45s silent landscape clips, n=44 — that's
+non-detection, not proof of absence.)
 
-**대신 앵글에는 실증이 있다.** 하이→아이레벨→로우로 갈수록 인물이 더 크고 강해 보이지만
-(5척도 전부 p<.001) **호감도는 안 움직인다**(p>.05). 토킹헤드 15초 클로즈업에서는 눈높이가
-가장 신뢰받는다(눈높이 대 로우 p=.007). 그래서 **서사가 아직 안 붙은 훅 컷과 발화 클립은
-눈높이**로 두고, 인물을 세워 보여야 하는 컷에만 로우앵글을 쓴다. 하이앵글 금지까지는 못
-받친다 — 눈높이 대 하이는 경향값(p=.082)뿐이다. 이건 게이트가 아니라 기본값 가이드다.
-
----
-
-## Seedance 가 못 하는 것
-
-- **로컬 영상 연장·편집.** ModelArk 의 영상 입력은 공개 URL·에셋 ID 만 받고
-  base64 를 안 받는다. 우리 파이프라인의 mp4 는 로컬 파일이라 그대로 못 넣는다.
-  그래서 `seedance_extension` 을 만들지 않았고, 연장은 `veo_extension` 전담이다.
-  (2.x 의 영상 참조·편집·연장을 쓰려면 먼저 공개 호스팅에 올려야 한다 —
-  `skills/grow-threads/references/upload-media.sh` 가 그 자리다. 지금은 툴로 노출하지 않았다.)
-- **오디오 참조.** 2.x 의 참조 오디오는 지금 툴 표면에 없다.
-- **한국어 프롬프트.** 공식 지원은 2.5 뿐이다. 나머지 모델은 영어로 쓴다.
+**Angles, by contrast, have empirical support.** From high to eye-level to low, the subject
+looks bigger and stronger (all 5 scales p<.001) but **likability doesn't move** (p>.05). In
+15s talking-head close-ups, eye level is trusted most (eye level vs low p=.007). So keep
+**hook cuts and speech clips at eye level** while the narrative isn't established yet, and use
+low angles only on cuts that must make the subject imposing. It won't support banning high
+angles — eye level vs high is only a trend (p=.082). This is a default guide, not a gate.
 
 ---
 
-## 키 설정
+## What Seedance can't do
+
+- **Extend or edit local video.** ModelArk's video input takes public URLs and asset IDs
+  only, no base64. Our pipeline's mp4s are local files, so they can't go in as-is. That's why
+  there is no `seedance_extension` tool, and extension belongs to `veo_extension`.
+  (To use 2.x video reference/edit/extension you'd first upload to public hosting —
+  `skills/grow-threads/references/upload-media.sh` is that slot. Not exposed as a tool for now.)
+- **Audio reference.** 2.x's reference audio isn't on the tool surface yet.
+- **Korean prompts.** Official support is 2.5 only. Write English for the other models.
+
+---
+
+## Key setup
 
 ```bash
 export ARK_API_KEY="..."   # https://ai.byteplus.com/ark/region:ap-southeast-1/apikey
 ```
 
-리전은 `ap-southeast-1`(싱가포르) 하나다. `ARK_BASE_URL` 로 덮을 수 있지만 영상
-모델이 그 리전에만 있어서 평소에는 건드리지 않는다. 키가 없어도 `veo_*` 는
-`GEMINI_API_KEY` 로 그대로 돈다 — 두 엔진은 서로를 막지 않는다.
+The region is `ap-southeast-1` (Singapore), the only one. `ARK_BASE_URL` can override it, but
+the video models live only in that region, so normally leave it alone. Without this key,
+`veo_*` still runs on `GEMINI_API_KEY` — the two engines don't block each other.

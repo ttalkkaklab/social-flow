@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram Reels growth best practices — social-flow guide</title>
+<link rel="alternate" hreflang="ko" href="index.html">
+<link rel="stylesheet" href="../../assets/reference.css">
+<style>
+  /* Props for this page only — layered on top of the shared reference.css */
+  .lede { font-size: 18px; line-height: 1.7; margin: 8px 0 4px; }
+  .lede strong { font-weight: 750; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }
+  .col-box { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; background: var(--bg-card); }
+  .col-box.win { border-top: 3px solid var(--green); }
+  .col-box.fail { border-top: 3px solid var(--red); }
+  .col-box h4 { margin: 0 0 10px; font-size: 14.5px; letter-spacing: .02em; }
+  .col-box.win h4 { color: var(--green); }
+  .col-box.fail h4 { color: var(--red); }
+  .col-box ul { margin: 0 0 0 18px; }
+  .col-box li { font-size: 14.5px; margin-bottom: 8px; }
+  .metric-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+  .metric { flex: 1 1 180px; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; background: var(--bg-soft); }
+  .metric .m-k { font-size: 13px; color: var(--text-soft); }
+  .metric .m-v { font-size: 15.5px; font-weight: 650; margin-top: 2px; }
+  .rule-list { list-style: none; margin-left: 0; }
+  .rule-list > li { position: relative; padding-left: 30px; margin-bottom: 16px; }
+  .rule-list > li .n {
+    position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums;
+  }
+  /* Evidence grade — the core device of this page. Every claim carries one */
+  .ev { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .03em;
+        padding: 2px 8px; border-radius: 999px; white-space: nowrap; vertical-align: middle; margin-left: 6px; }
+  .ev.p1 { background: var(--green-soft); color: var(--green); }      /* Meta primary document */
+  .ev.p2 { background: var(--amber-soft); color: var(--amber); }      /* vendor measurement */
+  .ev.p3 { background: var(--red-soft); color: var(--red); }          /* failed verification / no evidence */
+  .quote-src { border-left: 3px solid var(--border); padding: 6px 0 6px 16px; margin: 12px 0;
+               color: var(--text-soft); font-size: 14px; }
+  .quote-src b { color: var(--text); font-weight: 600; }
+  .pred-tbl td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="langbar"><a href="index.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../../index.en.html">Docs</a><span>/</span>Guides<span>/</span>Instagram Reels growth</div>
+
+<header class="hero">
+  <div class="kicker">GROWTH · INSTAGRAM</div>
+  <h1>How to grow a channel with Instagram Reels</h1>
+  <p class="sub">Written for a brand channel starting from zero followers. Reach on Instagram passes two gates — does the account <strong>qualify to be recommended to non-followers</strong>, and does the Reel you posted earn <strong>a watch response from its first small group</strong>. This page sets out what decides those two gates, using only what's confirmed in Meta's own documents.</p>
+  <div class="meta">
+    <span>As of <strong>2026-08-11</strong></span>
+    <span>Updated <strong>2026-08-15 frequency and Collab · 2026-08-16 automation section</strong></span>
+    <span>Evidence <strong>Meta primary documents + 3-vote adversarial check</strong></span>
+    <span>Verification <strong>22 sources · 107 claims → 16 confirmed · 9 refuted</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#grade">How to read this page — evidence grades</a></li>
+    <li><a href="#gate">The two gates</a></li>
+    <li><a href="#ladder">Reach opens as a ladder</a></li>
+    <li><a href="#signals">What ranking actually predicts</a></li>
+    <li><a href="#eligibility">How you lose eligibility — the mistakes that kill reach</a></li>
+    <li><a href="#format">Format and frequency — what the measurements say</a></li>
+    <li><a href="#profile">The profile funnel and search</a></li>
+    <li><a href="#myth">Beliefs checked — refuted or unsupported</a></li>
+    <li><a href="#unknown">What we still don't know</a></li>
+    <li><a href="#checklist">Operating checklist</a></li>
+    <li><a href="#automation">Automation — grow-instagram</a></li>
+    <li><a href="#sources">Sources</a></li>
+  </ol>
+</nav>
+
+<section id="grade">
+  <h2>1. How to read this page — evidence grades</h2>
+  <p>Most Instagram growth writing has no sources, or cites a vendor blog as if it were an official document. Every claim here carries a grade. <strong>The grade is how much you should trust that sentence enough to act on it.</strong></p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Grade</th><th>Meaning</th><th>How to handle it</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="ev p1">primary</span></td>
+        <td>What Meta wrote in its own documents — Transparency Center system cards, Help Center, creator guidelines</td>
+        <td>Use it as an operating rule as written. It's a company describing its own system, though, so outside verification is impossible</td>
+      </tr>
+      <tr>
+        <td><span class="ev p2">measured</span></td>
+        <td>A third-party vendor aggregating data from accounts using its service (Buffer, Metricool)</td>
+        <td>Take the direction as a reference, don't turn the numbers into targets. The sample skews to accounts using that service</td>
+      </tr>
+      <tr>
+        <td><span class="ev p3">rejected</span></td>
+        <td>Refuted by 2+ votes in the 3-vote adversarial check, or with no primary evidence to support it</td>
+        <td>Don't act on it. §8 and §9 record what failed and why</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>Why go this far.</strong> Of the 107 claims extracted in this research, the top 25 were each handed to three verifiers with an instruction to refute them, and <strong>9 died</strong>. Some of the dead ones are numbers the industry quotes widely (§8). Without grades, those 9 read with the same weight as everything else.
+  </div>
+</section>
+
+<section id="gate">
+  <h2>2. The two gates</h2>
+  <p class="lede"><strong>For an account with no followers, reach isn't given — it's passed.</strong></p>
+  <p>There's effectively one route for a new account to reach people on Instagram: showing up in the Reels tab, Explore, or recommended feeds for <strong>someone who doesn't follow you</strong>. That exposure passes two gates in order.</p>
+  <div class="two-col">
+    <div class="col-box">
+      <h4>Gate 1 — account eligibility (a compliance gate)</h4>
+      <p style="font-size:14.5px;margin:0">Is my <strong>account</strong> in a state where it can be recommended to non-followers. No violations and it stays open; violate and it closes. When it closes, <strong>every post</strong> is blocked, not one of them. <span class="ev p1">primary</span></p>
+    </div>
+    <div class="col-box">
+      <h4>Gate 2 — post response (an audition)</h4>
+      <p style="font-size:14.5px;margin:0">Does the Reel you posted earn watch and share responses from the <strong>small group</strong> it was first shown to. If it does, it goes wider; if it doesn't, it stops there. <span class="ev p1">primary</span></p>
+    </div>
+  </div>
+  <p>The order matters. With gate 1 closed, even the best-made Reel never arrives at gate 2. That's why this page covers <strong>account hygiene before editing craft</strong>.</p>
+  <div class="warn">
+    <strong>You can check which state your account is in.</strong> A professional account can see its current recommendation eligibility under <strong>Account Status</strong> in the app, and appeal an ineligible verdict. When reach suddenly drops, start here instead of guessing. <span class="ev p1">primary</span>
+  </div>
+</section>
+
+<section id="ladder">
+  <h2>3. Reach opens as a ladder</h2>
+  <p>This is the distribution structure Instagram describes itself. Post a Reel and —</p>
+  <ol>
+    <li>it goes first to <strong>a small number of non-followers predicted to like it</strong></li>
+    <li>if that group responds, it widens to a slightly larger group</li>
+    <li>if it performs there too, wider again</li>
+  </ol>
+  <p>So the response rate on the first rung decides entry to the next one. <strong>This is the cold-start bottleneck</strong> — you can get onto the first rung with zero followers, but with no response there, the second rung never opens. <span class="ev p1">primary</span></p>
+  <div class="danger">
+    <strong>"Follower count doesn't matter" is an overstatement.</strong> The original reads "not <b>just</b> the creator's follower count", and the same company's ranking explainer <strong>states that it uses follower count and engagement level as popularity signals</strong>. What's true stops at "new accounts are recommendable too" — writing that follower count is irrelevant contradicts Meta's own documents.
+  </div>
+  <div class="note">
+    <strong>"A fair shot" is design intent, not a measurement.</strong> The creator blog carrying that description was written while Instagram was courting creators during the US TikTok ban. Take the structure as fact, but the expectation that "new accounts therefore do well" doesn't come from it.
+  </div>
+</section>
+
+<section id="signals">
+  <h2>4. What ranking actually predicts</h2>
+  <p>Meta's Transparency Center <strong>Reels chaining system card</strong> (the system that decides what to show after the Reel you're watching) publishes the model's prediction targets by number. Only what's there is confirmed fact; the rest is guesswork.</p>
+  <div class="table-scroll">
+  <table class="pred-tbl">
+    <thead><tr><th>Prediction</th><th>The probability the model computes</th><th>In practice</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Watch retention</td>
+        <td><strong>Probability of watching longer than 95% of users</strong> who watched Reels of the same length</td>
+        <td>A percentile target normalized by length — a 3-minute Reel isn't compared in absolute seconds against a 15-second one. Making it short doesn't help; you have to land <strong>in the top band of your own length class</strong></td>
+      </tr>
+      <tr>
+        <td>Early drop-off</td>
+        <td><strong>Probability of watching less than 3 seconds</strong><span class="badge de">lower is better</span></td>
+        <td>The input signals include "times skipped within 2 seconds of opening" and "times dismissed". This is the evidence that the hook is <strong>an explicit prediction target of the model</strong> rather than marketing advice</td>
+      </tr>
+      <tr>
+        <td>Reshare (no. 7)</td>
+        <td>Probability of resharing this Reel</td>
+        <td>The signals are narrow — watch time and past reshare history</td>
+      </tr>
+      <tr>
+        <td>External share (no. 8)</td>
+        <td>Probability of sharing it <strong>outside</strong> Instagram</td>
+        <td>The inputs include "times this post was shared externally by other people", a <strong>post-level signal</strong> — your Reel's share record feeds straight into that Reel's score</td>
+      </tr>
+      <tr>
+        <td>Follow conversion (no. 9)</td>
+        <td>Probability of following this Reel's author</td>
+        <td>The input is "followers the author gained <strong>from that Reel</strong>". An individual Reel's follow conversion feeds back into that Reel's score</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="quote-src">All <b>verified word for word in the primary source</b>. The system card's stated update date is 2025-11-11; it was queried twice with different prompts and the results compared. <span class="ev p1">primary</span></p>
+
+  <h3>Three lines not to cross here</h3>
+  <ul class="rule-list">
+    <li>
+      <span class="n">1</span>
+      <strong>The weights aren't published.</strong> Which predictions exist is disclosed, but how the 9–10 predictions combine into a final score, and the sign and size of each signal, are not. What's true stops at "early drop-off is modeled" — <strong>"how big the penalty is" is unknowable</strong>.
+    </li>
+    <li>
+      <span class="n">2</span>
+      <strong>The surface coverage is narrow.</strong> Most of the items above come from the Reels chaining card, and there's no evidence they apply as-is to Explore and feed recommendations. Reshare and follow conversion are confirmed in the Explore card too, so they generalize that far.
+    </li>
+    <li>
+      <span class="n">3</span>
+      <strong>The widely quoted 'sends per reach' isn't on this card.</strong> What's on the card is reshares and external shares. The weight on DM sends comes from Mosseri's public statement in January 2025 — he said the three most important signals are watch time, likes, and sends, and to watch <b>average watch time, likes per reach, and sends per reach</b> — which is <strong>a different source grade</strong> from the system card. Cite the two under one URL and the evidence collapses.
+    </li>
+  </ul>
+  <div class="note">
+    <strong>Turned into practice.</strong> Don't edit with likes as the target. What the model predicts directly is <strong>whether they watch it through, whether they leave in 3 seconds, whether they send it to someone</strong>. Shaping the same content into something people want to save or send to a friend has stronger evidence behind it than chasing likes.
+  </div>
+</section>
+
+<section id="eligibility">
+  <h2>5. How you lose eligibility — the mistakes that kill reach</h2>
+  <p class="lede"><strong>This is the most important section on the page.</strong> What you lose by losing eligibility is far bigger and far faster than what you gain by editing well.</p>
+
+  <h3>1) Reposting other people's content — you drop out account-wide</h3>
+  <p>Instagram's original content guidelines state that accounts <strong>mainly</strong> posting Reels, photos, or slideshows they didn't create or meaningfully edit may not appear in recommendations to new viewers. On 2026-04-30 this widened from Reels only to photos and carousels. <span class="ev p1">primary</span></p>
+  <div class="two-col">
+    <div class="col-box fail">
+      <h4>✕ Not counted as original</h4>
+      <ul>
+        <li>Edits that only add a watermark or borders</li>
+        <li>Only changing the speed</li>
+        <li>Only adding a credit to the original creator</li>
+        <li>A screenshot posted with nothing added, even with the source named</li>
+      </ul>
+    </div>
+    <div class="col-box win">
+      <h4>✓ Counted as substantial editing</h4>
+      <ul>
+        <li>Commentary or narration</li>
+        <li>Overlay text that goes beyond simple description</li>
+        <li>Graphics that recontextualize</li>
+      </ul>
+    </div>
+  </div>
+  <div class="ok">
+    <strong>It isn't permanent removal.</strong> If most of your posts are judged original over the recent <strong>30-day rolling window</strong>, you can become recommendable again. That recovery path applies <strong>to originality reasons only</strong>; Community Guidelines violations go through a separate process.
+  </div>
+  <p class="quote-src">The difference in mood is worth recording — the guideline text is hedged ("may not appear"), while Mosseri's 2026-04-30 statement is flat: "no longer going to be recommendable". In practice it's safer to work off the stronger version.</p>
+
+  <h3>2) Attributes of the Reel itself — what Instagram deliberately downranks</h3>
+  <p>The list the ranking explainer sets out directly. <span class="ev p1">primary</span></p>
+  <div class="metric-row">
+    <div class="metric"><div class="m-k">Quality</div><div class="m-v">Low resolution</div></div>
+    <div class="metric"><div class="m-k">Source traces</div><div class="m-v">Watermarks</div></div>
+    <div class="metric"><div class="m-k">Sound</div><div class="m-v">Muted</div></div>
+    <div class="metric"><div class="m-k">Frame</div><div class="m-v">Borders</div></div>
+    <div class="metric"><div class="m-k">Composition</div><div class="m-v">Mostly text</div></div>
+    <div class="metric"><div class="m-k">Duplicate</div><div class="m-v">Already posted on Instagram</div></div>
+  </div>
+  <div class="warn">
+    <strong>Keep the citation path precise.</strong> What downranks a re-uploaded TikTok output is <b>the 'watermark' clause plus the originality policy</b>, not the 'already posted on Instagram' clause. The latter points at duplicate posting <strong>inside</strong> Instagram, so a video from another platform with the watermark removed isn't covered by that one sentence. And the word in the original is <code>borders</code> — rendering it as 'letterbox' is interpretation. The black bars of a 9:16 frame are the typical case, but the original doesn't name letterboxing.
+  </div>
+
+  <h3>3) Policy violations — the whole account stops together</h3>
+  <p>An account that recently violated the recommendation guidelines or community rules loses non-follower recommendation eligibility for <strong>all posts</strong>, not an individual one, across Reels, feed recommendations, Explore, search, and suggested accounts, for a period. The current Help Center wording is if anything stronger than the 2023 blog post. <span class="ev p1">primary</span></p>
+  <p class="quote-src"><b>Help Center wording (Korean-language page):</b> "계정이 추천 요건을 충족하지 않는 경우 콘텐츠가 추천 가이드라인을 위반하는지 여부에 관계없이 <b>어떠한 콘텐츠도 추천되지 않습니다</b>." — if the account doesn't meet the recommendation requirements, none of its content is recommended, regardless of whether the content itself violates the recommendation guidelines.</p>
+  <p>This eligibility system applies <strong>to public accounts only</strong> — private accounts aren't candidates for content recommendation in the first place. What stops isn't all reach but <strong>non-follower recommendation reach</strong>; followers keep seeing you, and shares, DM sends, and direct profile visits stay alive. With 0 to a few hundred followers, though, it amounts to growth stopping.</p>
+  <div class="danger">
+    <strong>The phrase 'eligibility review' invites a misreading.</strong> There's no application-and-approval procedure. It's <strong>a compliance gate that stays open without violations and closes with them</strong>. So the job isn't "earning eligibility", it's "not getting it closed".
+  </div>
+</section>
+
+<section id="format">
+  <h2>6. Format and frequency — what the measurements say</h2>
+
+  <h3>First: "post too much and you get punished" has nothing behind it</h3>
+  <p>Before moving to vendor aggregates, the official side. <strong>There is no sentence anywhere in Meta's documents saying posting frequency reduces distribution.</strong> We swept the Transparency Center's feed and Explore ranking cards and the official ranking explainer, and everything listed as a reason for lowered distribution is a content attribute (the list in §5) — frequency isn't on it. <span class="ev p1">primary</span></p>
+  <div class="warn">
+    <strong>The one real constraint is feed diversity.</strong> The official ranking explainer has a sentence about trying not to show too many posts from the same person in a row. <span class="ev p1">primary</span> It's not a penalty attached to the account but <strong>a rule that shuffles the order inside one person's feed</strong>. The result looks similar — dump several posts in one day and the later ones don't travel as far as the first. Still, it's allocation rather than punishment, so spreading them over time releases much of it.
+  </div>
+  <p>The API publishing limit is quota rather than sanction too — <strong>100 in a 24-hour sliding window</strong>, with a carousel counting as one however many images it holds. Going over just returns an error, and you can query current usage with <code>GET /&lt;IG_ID&gt;/content_publishing_limit</code>. <span class="ev p1">primary</span> Human-scale posting never comes near that line.</p>
+
+  <h3>Posting frequency — 3 to 5 times a week</h3>
+  <p class="note">From here on it's vendor aggregation, not Meta documents. Take the direction as a reference, don't turn the numbers into targets.</p>
+  <p>Buffer analyzed 2.1 million posts from 102,000 accounts using its service and found weekly follower growth rising monotonically with posting frequency. <span class="ev p2">measured</span></p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Posts per week</th><th>Weekly follower growth</th><th>Reach lift per post</th></tr></thead>
+    <tbody>
+      <tr><td>1–2</td><td>+0.12%</td><td>baseline</td></tr>
+      <tr><td><strong>3–5</strong></td><td><strong>+0.26%</strong></td><td>about +12%</td></tr>
+      <tr><td>6–9</td><td>+0.44%</td><td>about +6%p</td></tr>
+      <tr><td>10 or more</td><td>+0.66%</td><td>about +5%p</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>The pattern held after controlling with within-account z-scores. But <strong>the reach lift shows diminishing returns</strong>, and the original's closing recommendation isn't the maximum either — it's that <strong>3–5 a week</strong> is where reach and growth come together without burnout.</p>
+  <div class="warn">
+    <strong>Quote only the ladder numbers and you invert the original's conclusion.</strong> It isn't "the more the better", it's "3–5 is the balance point". Three reasons the confidence is set to medium: it's a scheduling-SaaS vendor's own blog (though the conclusion runs against its interest, which makes inflation unlikely), the sample is limited to Buffer users, and most of the sample already has a follower base, so <strong>you can't transplant those growth percentages onto a channel with 0 to a few hundred followers</strong>.
+  </div>
+
+  <h3>Reels as the default format — which doesn't mean better than carousels</h3>
+  <p>There's one official basis for the format choice. Instagram's creator documentation states that <strong>Reels account for more than 50% of time spent on Instagram</strong>. <span class="ev p1">primary</span> That's as far as the official side goes; the engagement comparison below is vendor aggregation.</p>
+  <p>In Metricool's 2026 study (375,118 accounts · 24,364,803 posts, January–February 2026 against January–February 2025), Reels drew <strong>more than 4× the interactions of single-image posts</strong>, and average watch time more than doubled year over year to <strong>8.5 seconds</strong>. <span class="ev p2">measured</span></p>
+  <div class="note">
+    <strong>That 8.5 seconds is the background for hook design.</strong> On top of that, the maximum Reel length went from 90 seconds to 3 minutes during the same period — <strong>if content got longer while average watch sits at 8.5 seconds</strong>, retention actually got worse. That confound strengthens the case that the first few seconds decide it rather than weakening it.
+  </div>
+  <div class="warn">
+    <strong>What this evidence supports stops at "better than a single image".</strong> Reels versus carousel engagement is 0.55% against 0.52%, near identical. Stretching it into "Reels beat every format" goes past the evidence. The '4×' also looks like absolute interaction count rather than engagement <strong>efficiency</strong>, and since Reels reach is far larger, much of it is tautological.
+  </div>
+</section>
+
+<section id="profile">
+  <h2>7. The profile funnel and search</h2>
+
+  <h3>Profile conversion feeds back into reach — size unknown</h3>
+  <p>Prediction 9 in §4 is the evidence. An individual Reel's follow-conversion record enters that Reel's score, and the Explore card lists "follow-button clicks received from a post" and "how recently the viewer visited that author's profile" as signals — primary evidence that <strong>the profile visit → follow funnel is wired into ranking</strong>. <span class="ev p1">primary</span></p>
+  <div class="danger">
+    <strong>But promoting it to 'the core lever' goes past the evidence.</strong> It's one of nine predictions, the combined weights are undisclosed, and follow conversion isn't among the top signals Mosseri named publicly (watch time, likes per reach, sends per reach). More importantly, the order — <strong>with zero exposure the signal value is zero too.</strong> Profile design can't generate reach; it's a compounding loop that amplifies Reels already seeded. Polishing the profile before you post has the order backwards.
+  </div>
+
+  <h3>Collab posts — the official route to standing in front of someone else's audience</h3>
+  <p>Instagram's creator documentation directly recommends <strong>collab posts</strong> as a way to increase reach. One post goes out to the followers of both accounts. <span class="ev p1">primary</span></p>
+  <p class="quote-src"><b>Original:</b> collaborating lets you make "a single post shared with both sets of followers".</p>
+  <p>This lands directly on the ladder problem in §3. The first rung's response rate is the bottleneck, and an account with zero followers has nobody to put on that rung. A collab post borrows the other account's followers for that first rung — <strong>the answer to a box §9 sat empty on for a long time</strong>.</p>
+  <div class="warn">
+    <strong>Recording exactly what was confirmed.</strong> Official goes as far as: the feature exists and the post goes to both sets of followers. <strong>There are no official numbers for how much reach it adds</strong>, and the participant cap and reach-allocation method couldn't be checked because the Help Center detail page didn't render.
+  </div>
+  <div class="note">
+    <strong>It can't be automated.</strong> The invite flow lives in the app, so the publishing API can't touch it — the same pattern as Account Status (§2), so the growth loop produces no value here and <strong>only reminds</strong>. Approaching another account is a human judgment call and outside autonomous scope; the loop's part ends at putting candidates in the tick report.
+  </div>
+
+  <h3>Search — the text fields are the index</h3>
+  <p>Instagram search ranking is decided by three signals, and among them <strong>the text typed into the search bar is by far the most important</strong>. That text is matched against username (handle), profile name, bio, captions, hashtags, and places. <span class="ev p1">primary</span></p>
+  <p class="quote-src"><b>Original:</b> "The text you enter in the search bar is by far the most important signal for Search." · The other two are the user's past activity and the popularity of the results (clicks, likes, shares, follows).</p>
+  <p>Three official recommendations come out of this.</p>
+  <ul class="rule-list">
+    <li><span class="n">1</span> <strong>Make the handle and profile name relevant to your content subject.</strong> The document calls it the surest way to appear in related searches. It's fixed when you open the account and hard to change later.</li>
+    <li><span class="n">2</span> <strong>Put "who you are and what the account is about" keywords in the bio.</strong> Plus the place name if you're location-based. The bio is conversion copy and a search index at the same time.</li>
+    <li><span class="n">3</span> <strong>Put keywords and hashtags in the caption, not the first comment.</strong> "For a post to be found in Search, put keywords and hashtags in the caption, not the comments." The habit of dumping them into the first comment contradicts the official document, at least for search visibility.</li>
+  </ul>
+  <div class="warn">
+    <strong>Stating the shelf life.</strong> This search document is dated <strong>2021-08-25</strong>. It was verified live as of 2026-08 and Meta hasn't withdrawn it, but a five-year-old document doesn't get the same weight as the 2025–2026 system cards in §4. And the third signal (popularity) creates a structural disadvantage — <strong>when there are many candidates, popular accounts go on top.</strong> A channel with 0 to a few hundred followers loses on competitive keyword searches, so don't count on search for early traffic. Search supports a channel already rolling on Reels recommendations.
+  </div>
+</section>
+
+<section id="myth">
+  <h2>8. Beliefs checked — refuted or unsupported</h2>
+  <p>Widely quoted claims that <strong>died</strong> in this round of verification. Here's why this page doesn't cover them.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Claim</th><th>Vote</th><th>Why it died</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Reels have the widest reach</strong> — 2.25× single images, 1.36× carousels</td>
+        <td>0-3</td>
+        <td>The sample attribution is wrong. It circulates as "based on 45M+ posts", but the original attributes these multiples to <strong>a separate 4M+ post</strong> analysis (2022-01 to 2024-10). The data window also ends at 2024-10, so it holds nothing from 2025–2026</td>
+      </tr>
+      <tr>
+        <td><strong>Using one or more hashtags means 31.7% fewer views and 33.9% less interaction</strong></td>
+        <td>1-2</td>
+        <td>The figures are quoted accurately. What died is the conclusion — it compares presence against absence (0 vs 1+), so it says nothing about "spamming 30", and the relationship may be correlation, with accounts that lean on hashtags performing worse anyway</td>
+      </tr>
+      <tr>
+        <td><strong>Only 21% of accounts under 10K followers grew</strong> — small-account growth is exceptional</td>
+        <td>0-3</td>
+        <td>The same source summarizes it the opposite way. The original offers this number as <strong>grounds for optimism</strong>, that Instagram can still help new brands. It was flipped into a pessimistic conclusion</td>
+      </tr>
+      <tr>
+        <td><strong>Trial Reels</strong> — non-follower-only pre-exposure, a 72-hour (or 24-hour) verdict, automatic rollout</td>
+        <td>0-3 and 4 more</td>
+        <td>All 5 spec claims failed. On top of that, verification turned up Mosseri saying trial Reels can't use warm-audience signals and so <strong>almost always reach less than regular Reels</strong> — hard to recommend as a cold-start experiment</td>
+      </tr>
+      <tr>
+        <td><strong>Losing recommendation eligibility is account-level, not post-level</strong>, stated exclusively</td>
+        <td>0-3</td>
+        <td>The account-level mechanism itself is true, so it's in §5. What died is the exclusive "<b>not</b> post-level" phrasing — the same page also describes post-level judgments</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>What to do about hashtags.</strong> This research didn't turn up primary evidence for "spamming 30 is pointless". What's known: Instagram ended the follow-a-hashtag feature on 2025-12-19, and the search document defines hashtags only as <strong>a search matching field</strong>. The operating rule stops there — <strong>use them as topic markers rather than reach amplifiers, and put them in the caption.</strong> Optimizing the count is unevidenced territory, so this page gives no number.
+  </div>
+</section>
+
+<section id="unknown">
+  <h2>9. What we still don't know</h2>
+  <p class="lede"><strong>This section not being empty is what makes this page honest.</strong></p>
+  <p>A lot of what a typical Instagram guide answers confidently has no evidence once you check. What's listed here means <strong>"we looked and nothing passed"</strong>, not "we haven't looked yet".</p>
+  <ul class="rule-list">
+    <li>
+      <span class="n">1</span>
+      <strong>The details of Reels production craft.</strong> How to build the first 3 seconds of a hook, whether to add subtitles, how to pick audio, what editing drives rewatches, how many seconds is optimal — <strong>not one piece of primary evidence survived.</strong> What we have is the model structure ("probability of watching under 3 seconds is a prediction target") and one measurement ("8.5 seconds average watch"), and the stretch from there to concrete editing instructions is empty. <span class="ev p3">rejected</span>
+    </li>
+    <li>
+      <span class="n">2</span>
+      <strong>The effect size of cold-start seeding.</strong> The <em>mechanism</em> — that the first small group's response rate is the bottleneck — is confirmed in primary documents, and the 2026-08-15 research found one <em>practice</em> as well: <strong>collab posts</strong> (§7). How much reach that adds has no official number, though, and the remaining practices like posting time and initial distribution still have no evidence. <span class="ev p3">effect size unconfirmed</span>
+    </li>
+    <li>
+      <span class="n">3</span>
+      <strong>An optimal posting schedule.</strong> There are plenty of vendor tables, and the vendors publishing them state that they aren't universal and that factors other than time of day matter more. <span class="ev p3">rejected</span>
+    </li>
+    <li>
+      <span class="n">4</span>
+      <strong>Anything specific to the Korean market.</strong> Every piece of evidence gathered in this research is <strong>from global samples</strong>. There isn't a single figure based on Korean accounts. <span class="ev p3">rejected</span>
+    </li>
+  </ul>
+  <div class="ok">
+    <strong>So what do you do.</strong> You fill the empty boxes with <strong>measurements from your own channel</strong> rather than someone's blog. The prediction targets confirmed in §4 — 3-second drop-off, retention, shares, follow conversion — become the measurement axes directly. Run two versions of the same subject with different hook shapes and compare the 3-second drop-off rate. That's an experiment with evidence behind it; a norm like "open the hook with a question in the first 3 seconds" is unevidenced repetition.
+  </div>
+</section>
+
+<section id="checklist">
+  <h2>10. Operating checklist</h2>
+  <p>An action list built only from the evidence above. Nothing unevidenced went in.</p>
+
+  <h3>Fix at account opening</h3>
+  <div class="two-col">
+    <div class="col-box win">
+      <h4>✓ Do</h4>
+      <ul>
+        <li>A public account — private isn't a recommendation candidate at all</li>
+        <li>A professional account — you can check eligibility under 'Account Status'</li>
+        <li>Handle and profile name relevant to the content subject</li>
+        <li>'Who and what' keywords in the bio (+ the place name if location-based)</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ Don't</h4>
+      <ul>
+        <li>Re-uploading other platforms' output with the watermark on it</li>
+        <li>Posting someone else's content with only a credit added</li>
+        <li>Re-edits that only change the speed</li>
+        <li>Adding borders, uploading low resolution, muted video</li>
+        <li>Reels that are mostly text</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Every post</h3>
+  <ol>
+    <li><strong>Did you touch it enough to pass the originality judgment</strong> — is there commentary, narration, or recontextualizing graphics (§5)</li>
+    <li><strong>Is there anything in the first 3 seconds that makes people leave</strong> — the model predicts 'probability of watching under 3 seconds' directly (§4)</li>
+    <li><strong>Is there a reason to send it to someone</strong> — reshare and external share are each separate prediction targets (§4)</li>
+    <li><strong>Are the keywords and hashtags in the caption</strong> — the first comment doesn't get picked up by search (§7)</li>
+  </ol>
+
+  <h3>Weekly</h3>
+  <div class="metric-row">
+    <div class="metric"><div class="m-k">Posting frequency</div><div class="m-v">3–5 a week</div></div>
+    <div class="metric"><div class="m-k">First metric</div><div class="m-v">Average watch time</div></div>
+    <div class="metric"><div class="m-k">Second metric</div><div class="m-v">Shares and sends per reach</div></div>
+    <div class="metric"><div class="m-k">Account hygiene</div><div class="m-v">Check Account Status</div></div>
+  </div>
+  <div class="danger">
+    <strong>When reach suddenly dies, editing is not the first suspect.</strong> There's one order — ① check recommendation eligibility in Account Status → ② review how much of the last 30 days' posts count as original → ③ then content. Fixing the editing while gate 1 is closed does nothing at all.
+  </div>
+</section>
+
+<section id="automation">
+  <h2>11. Automation — grow-instagram</h2>
+  <p>The <code>/social-flow:grow-instagram</code> skill runs the principles above as a loop. One call is one tick, and <code>/loop</code> handles the repetition.</p>
+  <pre><code>/social-flow:grow-instagram &lt;channel&gt; init      # once — fix the growth plan (approval)
+/loop 1h /social-flow:grow-instagram &lt;channel&gt;  # autonomous loop every hour</code></pre>
+  <p>A tick runs in this order.</p>
+  <ol>
+    <li><strong>Inbox replies</strong> — golden-hour unanswered first</li>
+    <li><strong>Insights snapshot</strong> — <code>reels_skip_rate</code> and average watch time read the two §4 predictions directly</li>
+    <li><strong>Queue refill</strong> — only if the plan turned it on, authoring one episode when the queue runs dry</li>
+    <li><strong>Queue publishing</strong> — only Reels stamped <code>queue_instagram: ready</code></li>
+  </ol>
+  <div class="ok">
+    <strong>Two things differ from the Threads loop.</strong> First, a Reel is video, so a tick can't write one on the spot — publishing only comes out of the queue, and the marker is either stamped by a human or created by the loop itself when the plan turns <code>autoproduce</code> on. The marker key is kept separate from YouTube's because sharing one would let whichever loop ran first consume it, leaving the other platform permanently unable to publish. Second, <strong>there's no step for joining other people's conversations</strong> — the Instagram Login API this pipeline uses has no public post search, and we don't imitate a feature that isn't there.
+  </div>
+  <div class="note">
+    <strong>This loop needs Instagram credentials to run.</strong> The publish and insights tools appear in <code>tools/list</code> only when an Instagram token file exists — <code>instagram_token</code>, either flat under <code>&lt;SNS_TOKEN_DIR&gt;</code> or in a channel directory. Without a token everything up to and including production still works — <code>produce</code> writes the finished Reel plus per-platform text into <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload by hand. What you lose is the publishing and growth-loop half.
+  </div>
+  <div class="warn">
+    <strong>Without a public HTTPS URL the publishing stage turns off.</strong> The platform crawls the video itself, so a local file path won't upload. The loop doesn't raise temporary tunnels, so a channel with hosting <code>off</code> has <strong>auto-authoring turned off along with publishing</strong> — to avoid spending money on a video with no road out.
+  </div>
+</section>
+
+<section id="sources">
+  <h2>12. Sources</h2>
+
+  <h3>Meta primary documents <span class="ev p1">primary</span></h3>
+  <ul>
+    <li><a href="https://transparency.meta.com/features/explaining-ranking/ig-reels-chaining/">Reels chaining system card</a> — Transparency Center. All the prediction targets and signals in §4. Stated update date 2025-11-11</li>
+    <li><a href="https://transparency.meta.com/features/explaining-ranking/ig-explore/">Explore system card</a> — evidence for generalizing the reshare and follow-conversion predictions across surfaces. Updated 2026-06-22</li>
+    <li><a href="https://creators.instagram.com/original-content-guidelines">Original content guidelines</a> — the reposting, simple-edit, and 30-day recovery clauses in §5</li>
+    <li><a href="https://www.facebook.com/help/instagram/653964212890722">Recommendation eligibility (Help Center)</a> — the account-level suspension, public-account-only scope, and Account Status in §5</li>
+    <li><a href="https://about.instagram.com/blog/announcements/instagram-ranking-explained">Ranking explained</a> — the low-quality Reels list and popularity signals in §5. Dated 2023-05-31</li>
+    <li><a href="https://creators.instagram.com/blog/helping-creators-of-all-sizes-break-through">Distribution for creators of all sizes</a> — the staged rollout in §3. Dated 2025-02-26</li>
+    <li><a href="https://about.instagram.com/blog/announcements/break-down-how-instagram-search-works">How Instagram search works</a> — the three search signals and recommendations in §7. <strong>Dated 2021-08-25</strong></li>
+    <li><a href="https://creators.instagram.com/blog/tips-for-improving-your-reach">Tips for improving your reach</a> · <a href="https://help.instagram.com/291200585956732">Collab post help</a> — evidence for collab posts in §7. Checked 2026-08-15</li>
+    <li><a href="https://creators.instagram.com/how-to-grow">Creator growth guide</a> — the 50% of Instagram time spent on Reels in §6. Checked 2026-08-15</li>
+    <li><a href="https://transparency.meta.com/features/explaining-ranking/ig-feed/">Feed system card</a> · <a href="https://developers.facebook.com/docs/instagram-platform/content-publishing">Content Publishing API</a> — confirming the absence of a frequency rule and the 100/24h quota in §6</li>
+  </ul>
+
+  <h3>Mosseri's public statements (a different grade)</h3>
+  <ul>
+    <li><a href="https://www.socialmediatoday.com/news/instagram-shares-algorithm-insights-2025/738034/">Social Media Today, 2025-01-22</a> — "the three most important signals are watch time, likes, and sends", with the advice to watch average watch time, likes per reach, and sends per reach. <strong>The evidence for why this can't be cited under the same URL as the system card</strong></li>
+    <li>The 2026-04-30 statement on the originality policy expansion — independently reported by several outlets including <a href="https://techcrunch.com/2026/04/30/instagram-restricts-reach-of-content-aggregators-in-new-crackdown/">TechCrunch</a> and <a href="https://www.tubefilter.com/2026/04/30/instagram-removes-algorithm-recommendations-repost-content-aggregator/">Tubefilter</a></li>
+  </ul>
+
+  <h3>Vendor measurements <span class="ev p2">measured</span></h3>
+  <ul>
+    <li><a href="https://buffer.com/resources/how-often-to-post-on-instagram/">Buffer — posting frequency</a>. 102K accounts · 2.1M posts. The frequency ladder and the 3–5 a week recommendation in §6</li>
+    <li><a href="https://metricool.com/press-release-instagram-study-2026/">Metricool — 2026 Instagram study</a>. 375,118 accounts · 24,364,803 posts. The 4× and 8.5 seconds in §6</li>
+    <li><a href="https://www.socialinsider.io/blog/instagram-reels-statistics/">Socialinsider Reels benchmarks</a> — an independent reproduction of the 30.81% Reels reach rate</li>
+  </ul>
+
+  <div class="note">
+    <strong>How verification ran.</strong> Web searches from 5 angles → 22 sources fetched → 107 claims extracted → the top 25 each handed to <strong>3 independent verifiers with an instruction to refute</strong>, discarded on 2+ refutations. The result was 16 confirmed and 9 refuted, and the 9 are in §8 with their reasons. Even for the confirmed ones, the qualifications the verifiers attached (undisclosed weights, surface coverage, sample skew) are carried into the body — the versions circulating online are the ones with those qualifications cut off.
+  </div>
+  <div class="warn">
+    <strong>Shelf life.</strong> Meta itself states that ranking signals change often. The signal descriptions here are a <strong>snapshot as of 2026-08</strong>, and the originality policy (expanded 2026-04-30) is both the newest and the likeliest to move. The signal lists quoted start with "include", so they're non-exhaustive — nothing here says there are no other signals.
+  </div>
+</section>
+
+<footer>
+  As of 2026-08-11 · updated 2026-08-16 (§11 automation section added) · 2026-08-15 (<a href="../../research/2026-08-15-posting-frequency-and-growth/index.html">frequency and blocking research</a>, Korean) · platform grammar <code>skills/platform-guide/references/platform-playbook.md</code> · Threads is in the <a href="../threads-growth/index.en.html">Threads growth guide</a> · Shorts in the <a href="../youtube-shorts-growth/index.en.html">YouTube Shorts growth guide</a> · <a href="../../index.en.html">docs hub</a>
+</footer>
+
+</div>
+</body>
+</html>

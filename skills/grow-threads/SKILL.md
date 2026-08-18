@@ -13,11 +13,12 @@ description: >
   data/<channel>/growth/threads/growth-plan.md. Recur with /loop <interval>
   /social-flow:grow-threads <channel>. First run: /social-flow:grow-threads
   <channel> init.
-argument-hint: "<채널> [init|tick|status]"
-# ⚠️ 의도적 사전 승인 — 이 스킬은 플러그인의 "게시 툴 사전 승인 금지" 계약의
-# **명시적 예외**다. 사용자가 완전 자율 모드를 선택했고(2026-08-11 결정),
-# init 에서 HITL 로 확정한 growth-plan.md 가 게시별 승인을 대신하는 상시
-# 승인서다. 플랜 없이 게시 툴을 호출하는 것은 금지다(§절대 규칙 1).
+argument-hint: "<channel> [init|tick|status]"
+# ⚠️ Deliberate pre-approval — this skill is an **explicit exception** to the
+# plugin's "no pre-approved publish tools" contract. The user chose fully
+# autonomous mode (decided 2026-08-11), and the growth-plan.md confirmed via
+# HITL at init is the standing authorization that replaces per-post approval.
+# Calling a publish tool without a plan is forbidden (§Absolute rules, 1).
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "mcp__social-flow__sns_account_check", "mcp__social-flow__sns_comment_inbox",
   "mcp__social-flow__threads_insights", "mcp__social-flow__threads_search",
@@ -25,133 +26,158 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img"]
 ---
 
-# Threads 성장 루프 — 자율 1틱
+# Threads growth loop — one autonomous tick
 
-성장 스킬은 **플랫폼별로 분리**한다 — 전술·툴·상태가 플랫폼마다 달라서다.
-이 스킬은 Threads 전용이고, 이후 grow-instagram·grow-youtube·grow-tiktok 이
-같은 골격(플랜=상시 승인서 · 판단 기반 게시 + 검증 게이트 · state 멱등)으로
-추가된다. 상태 경로가 `growth/threads/` 로 스코프된 것도 그 대비다.
+Growth skills are **split per platform** — tactics, tools, and state differ
+platform by platform. This skill is Threads-only; grow-instagram, grow-youtube,
+and grow-tiktok get added later on the same skeleton (plan = standing
+authorization · judgment-based publishing + review gate · idempotent state).
+That's also why the state path is scoped to `growth/threads/`.
 
-호출 1회 = 성장 사이클 1틱. 반복은 하니스가 맡는다:
-
-```
-/social-flow:grow-threads <채널> init      # 최초 1회 — 플랜 확정 (HITL)
-/loop 30m /social-flow:grow-threads <채널> # 30분 주기 자율 루프 (주기는 사용자가 지정)
-```
-
-30분 주기를 권장한다 — 인박스 골든아워(첫 60분) 안에 두 번 볼 수 있는 간격이다.
-루프는 세션이 열려 있는 동안 돈다. 세션을 닫으면 멈추고, 다음 `/loop` 로 재개된다
-(state.json 이 이어받는다).
-
-**전제 — 왜 이 구조인가**: Threads 는 팔로워 수가 아니라 게시물 단위로 도달을
-심사하고, 답글 참여와 초기 반응 속도가 가장 강한 신호다. 그래서 틱의 우선순위는
-① 받은 답글에 빨리 답하기 → ② 성과 관찰 → ③ 남의 대화 참여 → ④ 새 글이다.
-게시 빈도에 고정 상한은 없다 — **몇 건을 게시할지는 개수 규칙이 아니라 판단이
-정한다**. 기여할 말이 있는 대화에는 언제든 끼고, 할 말이 생긴 글감은 언제든
-쓴다. 반대로 할 말이 없으면 아무것도 게시하지 않는 틱이 정상이다 — 볼륨을
-지키려는 채우기 게시가 계정을 가장 빨리 죽인다. 전술 근거와 문체 규칙은
-`references/growth-playbook.md` 가 정본이다(작성 전 반드시 로드).
-
-## 절대 규칙 (위반 시 즉시 중단)
-
-1. **플랜 없이 게시 금지** — `data/<채널>/growth/threads/growth-plan.md` 가 없거나
-   frontmatter `status: approved` 가 아니면 어떤 게시 툴도 호출하지 않는다.
-   init 부터 안내한다. 플랜이 상시 승인서다 — 플랜 범위(소재 풀·키워드·톤)
-   밖의 게시가 필요하면 자율로 하지 말고 사용자에게 플랜 갱신을 요청한다.
-2. **참여 구걸 금지** — "좋아요 눌러", "댓글 YES", "팔로우하면 알려드려요" 류는
-   Meta 가 노출 억제를 못박은 패턴이다. 스하리 품앗이 방·조직적 맞팔에도 참여하지
-   않는다.
-3. **비멱등 게시 재시도 금지** — threads_publish/sns_comment_reply 실패 시 같은
-   호출을 맹목 재시도하지 않는다(중복 게시). 실패는 growth-log 에 적고 다음 틱으로.
-4. **토큰 평문 노출 금지** — 토큰은 `~/.config/social-flow/<채널slug>/` 파일로만.
-   state.json·growth-log.md 에 API 응답을 통째로 저장하지 않는다(필요 필드만).
-5. **검증 게이트 미통과 게시 금지** — 밖으로 나가는 모든 문안(새 글·검색 참여·
-   인박스 답글)은 §적대적 검증 게이트를 통과해야 한다(score ≥95 이고 P0=0 —
-   통과선은 2026-08-12 에 사용자가 95 에서 90 으로 내렸다가 2026-08-13 에 철회해
-   95 로 되돌렸다. P0 조건과 3라운드 상한은 그대로다).
-   3라운드 안에 못 넘으면 그 문안은 게시하지 않고 growth-log 에 점수와 함께
-   스킵으로 적는다. 일·틱 단위 개수 상한은 없다 — 남는 한계는 플랫폼 자체
-   쿼터(게시 250/24h·검색 2,200/24h)와 질적 규칙(같은 글 재참여 금지, 같은
-   계정을 따라다니며 연달아 답글 달지 않기)뿐이다.
-6. **모든 툴 호출에 `channel: <채널slug>` 지정** — 채널 토큰만 쓰며 기본 토큰
-   폴백 없음(오계정 게시 방지).
-
-## 파일 배치 (전부 로컬 — data/ 는 커밋 대상 아님)
+One invocation = one growth-cycle tick. The harness handles repetition:
 
 ```
-data/<채널 slug>/growth/threads/
-├── growth-plan.md   # 상시 승인서 (init 이 HITL 로 작성, status: approved)
-├── state.json       # 틱 간 이월 상태 (이중 게시 방지의 근거)
-├── growth-log.md    # 틱별 한 줄 기록 + 인사이트 증감 (관찰 원장)
-└── posts.md         # 게시한 새 글 문안 원장 (`## <postId> <시각>` + 본문) — 묶음 검사 입력
+/social-flow:grow-threads <channel> init      # once — confirm the plan (HITL)
+/loop 30m /social-flow:grow-threads <channel> # 30-min autonomous loop (the user picks the interval)
 ```
 
-`posts.md` 가 따로 있는 이유: 묶음 동질화는 **게시한 문안들을 한자리에 놓아야** 보인다.
-growth-log 는 틱 요약 한 줄이라 문안이 남지 않고, `threads_insights` 는 지표만 준다.
+A 30-minute interval is the recommendation — it fits two inbox checks inside the
+golden hour (first 60 minutes). The loop runs while the session is open. Closing
+the session stops it; the next `/loop` resumes it (state.json carries over).
 
-템플릿과 state 스키마는 `references/growth-plan-template.md` 를 쓴다.
+**Premise — why this structure**: Threads judges reach post by post, not by
+follower count, and reply engagement plus early response speed are the strongest
+signals. So the tick's priorities are ① reply fast to replies received →
+② observe performance → ③ join other people's conversations → ④ new posts.
+There is no fixed cap on publishing frequency — **judgment decides how many
+posts go out, not a count rule**. Join any conversation where there's something
+real to contribute, and write whenever a topic gives you something to say.
+Conversely, a tick that publishes nothing because there's nothing to say is
+normal — filler posts written to keep up volume are the fastest way to kill an
+account. Tactics and style rules live in `references/growth-playbook.md`
+(the source of truth — load it before authoring).
 
-## init — 플랜 확정 (최초 1회, HITL)
+## Absolute rules (stop immediately on violation)
 
-1. `data/<채널>/profile.md` 로드 — 없으면 `/social-flow:channel add` 부터 안내하고
-   중단. 톤·타깃·금기 소재를 플랜의 기본값으로 상속한다.
-2. `sns_account_check(channel)` 로 THREADS 토큰 확인 →
-   `threads_insights(channel, postLimit: 3)` 1회로 **스코프 검증**. 스코프 에러가
-   오면 에러에 실린 재발급 안내(token-setup.md)를 사용자에게 전하고 중단한다 —
-   인사이트 없이 루프를 시작하지 않는다(성과 관찰이 루프의 눈이다).
-   `threads_search` 도 1회 검증한다(threads_keyword_search 스코프).
-3. AskUserQuestion 으로 플랜 항목을 확정한다: 관심 키워드 3~5개(검색 참여용),
-   포스팅 리듬 슬롯 1~3개(예: 09:00·12:30·21:00 — 타깃 활동 시간대. 상한이
-   아니라 리듬 가이드임을 설명한다), 소재 풀(글감 카테고리), 금지 소재,
-   말투(프로파일 상속이 기본).
-4. `growth-plan.md` 를 템플릿대로 작성하고 **전문을 보여준 뒤 명시 승인**을 받아
-   `status: approved` 로 저장한다. 이때 반드시 고지한다: *"이 플랜이 상시
-   승인서입니다 — 루프는 이 범위(소재 풀·키워드·톤) 안에서 게시별 승인 없이
-   즉시 공개 게시하며, 게시 빈도는 고정 상한 없이 루프가 판단합니다. 모든
-   문안은 적대적 검증 게이트(95점)를 통과한 것만 나갑니다. 중단은 /loop 중지,
-   범위 변경은 플랜 수정으로 합니다."*
-5. `state.json` 초기화, growth-log.md 헤더 작성.
+1. **No publishing without a plan** — if `data/<channel>/growth/threads/growth-plan.md`
+   is missing or its frontmatter isn't `status: approved`, call no publish tool.
+   Point the user to init. The plan is the standing authorization — if a post
+   outside the plan's scope (topic pool, keywords, tone) is needed, don't do it
+   autonomously; ask the user for a plan update.
+2. **No engagement begging** — "좋아요 눌러" (hit like), "댓글 YES" (comment
+   YES), "팔로우하면 알려드려요" (follow and I'll let you know) are patterns
+   Meta has explicitly said it suppresses. Don't join seuhari swap rooms
+   (Korean follow/like/repost reciprocity — playbook §Seuhari culture) or
+   organized follow-for-follow either.
+3. **No blind retry of non-idempotent publishes** — when threads_publish /
+   sns_comment_reply fails, don't blindly repeat the same call (duplicate post).
+   Log the failure in growth-log and move on to the next tick.
+4. **No plaintext token exposure** — tokens live only in files under
+   `~/.config/social-flow/<channel-slug>/`. Don't store whole API responses in
+   state.json or growth-log.md (only the fields you need).
+5. **No publishing without passing the review gate** — every outgoing piece of
+   copy (new post, search engagement, inbox reply) must pass the §Adversarial
+   review gate (score ≥95 and P0=0 — the user lowered the bar from 95 to 90 on
+   2026-08-12, then retracted that on 2026-08-13 and restored 95. The P0
+   condition and the 3-round cap are unchanged).
+   If a draft can't clear it within 3 rounds, don't publish it — record it in
+   growth-log as skipped, with its score. There is no per-day or per-tick count
+   cap — the only remaining limits are the platform's own quotas (publish
+   250/24h · search 2,200/24h) and the qualitative rules (no re-engaging the
+   same post, no trailing the same account with back-to-back replies).
+6. **Every tool call specifies `channel: <channel-slug>`** — use only the
+   channel's token, with no fallback to a default token (prevents
+   wrong-account publishing).
 
-## 적대적 검증 게이트 (게시 전 필수 — 모든 문안 공통)
+## File layout (all local — data/ is not committed)
 
-밖으로 나가는 텍스트(새 글·검색 참여 답글·인박스 답글)는 전부 이 게이트를 통과한
-것만 게시한다. 확인하는 건 둘이다 — **사람이 쓴 글로 읽히는가**(AI 티 없음),
-**맥락에 맞는가**(원문·플랜·채널 정체성 정합).
+```
+data/<channel slug>/growth/threads/
+├── growth-plan.md   # standing authorization (init writes it via HITL, status: approved)
+├── state.json       # state carried between ticks (the basis for double-post prevention)
+├── growth-log.md    # one line per tick + insight deltas (observation ledger)
+└── posts.md         # ledger of published new-post copy (`## <postId> <time>` + body) — batch-check input
+```
 
-1. **자가 문체 검사 (결정적, 즉시)** — 문안마다 검사기를 돌린다:
+Why `posts.md` exists separately: batch homogenization only shows when **the
+published drafts sit in one place**. growth-log is one summary line per tick so
+no copy survives there, and `threads_insights` gives metrics only.
+
+The template and the state schema are in `references/growth-plan-template.md`.
+
+## init — plan confirmation (once, HITL)
+
+1. Load `data/<channel>/profile.md` — if missing, point to `/social-flow:channel add`
+   first and stop. The plan inherits tone, target, and banned topics as defaults.
+2. `sns_account_check(channel)` to confirm the THREADS token → one call to
+   `threads_insights(channel, postLimit: 3)` to **verify scopes**. On a scope
+   error, relay the reissue guidance embedded in the error (token-setup.md) to
+   the user and stop — don't start the loop without insights (performance
+   observation is the loop's eyes). Also verify `threads_search` once
+   (the threads_keyword_search scope).
+3. Confirm the plan items via AskUserQuestion: 3–5 keywords of interest (for
+   search engagement), 1–3 posting-rhythm slots (e.g. 09:00 · 12:30 · 21:00 —
+   the target audience's active hours; explain that these are a rhythm guide,
+   not a cap), the topic pool (post-idea categories), banned topics, and speech
+   style (inheriting the profile is the default).
+4. Write `growth-plan.md` from the template and, **after showing the full text,
+   get explicit approval**, then save with `status: approved`. At that moment,
+   disclose without fail: *"This plan is the standing authorization — within its
+   scope (topic pool, keywords, tone) the loop publishes publicly and
+   immediately without per-post approval, and publishing frequency has no fixed
+   cap; the loop decides. Only copy that passes the adversarial review gate
+   (95 points) goes out. To stop, stop /loop; to change scope, edit the plan."*
+5. Initialize `state.json`, write the growth-log.md header.
+
+## Adversarial review gate (required before publishing — all copy)
+
+Every outgoing text (new post, search-engagement reply, inbox reply) gets
+published only after passing this gate. It checks two things — **does it read
+as written by a person** (no AI tells), and **does it fit the context**
+(consistent with the source post, the plan, and the channel identity).
+
+1. **Self style check (deterministic, immediate)** — run the checker on every
+   draft:
 
    ```bash
    CS=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py
-   printf '%s\n' "$문안" | python3 $CS --surface threads -   # 새 글
-   printf '%s\n' "$문안" | python3 $CS --surface reply -     # 답글 (검색 참여·인박스)
+   printf '%s\n' "$draft" | python3 $CS --surface threads -   # new post
+   printf '%s\n' "$draft" | python3 $CS --surface reply -     # replies (search engagement · inbox)
    ```
 
-   exit 2(S1)면 고쳐서 재검사한다. exit 0 이어도 탐지 목록을 읽는다 — S2 는
-   점수만 깎고 통과시키므로 "초록이면 보낸다"로 쓰면 죽는다. 특히 **C7(장문
-   부재)이 뜬 새 글은 그대로 두지 않는다** — 짧은 문장만 이어진 글이다(채널
-   실측: C7 이 뜬 글은 같은 나이에 도달이 2.6배 뒤처졌다). 기계 판정이 정본이다 —
-   자가 판단으로 덮어쓰지 않는다. 규칙은 platform-guide `references/korean-style.md`.
+   On exit 2 (S1), fix and re-check. Even on exit 0, read the detection list —
+   S2 only deducts points and still passes, so "green means send" will kill you.
+   In particular, **never leave a new post where C7 (no long sentence) fired** —
+   it's a post of nothing but short sentences (channel measurement: posts
+   flagged C7 trailed 2.6x in reach at the same age). The machine verdict is the
+   source of truth — don't override it with your own judgment. The rules are in
+   platform-guide `references/korean-style.md`.
 
-   **검사기가 못 보는 표기 두 가지는 손으로 훑는다** — 오탈자와 **숫자·영문 뒤 조사
-   띄어쓰기**다. 후자는 사람이 타이핑으로 만들지 않는 공백이라(토큰을 이어 붙일 때만
-   생긴다) 그 자체가 AI 표기 신호다. 하루에 3회 반복됐다(실측 — "200 으로" ·
-   "AI 한테" · "반응 0 이"). 게시 직전에 기계로 훑는다:
+   **Two orthographic issues the checker can't see get a manual sweep** — typos,
+   and **a space between a digit/Latin token and the particle that follows it**.
+   The latter is whitespace human typing never produces (it only appears when
+   tokens get concatenated), so it's an AI orthography signal in itself. It
+   recurred three times in one day (measured — "200 으로" · "AI 한테" ·
+   "반응 0 이"). Sweep mechanically right before publishing:
 
    ```bash
    python3 - <<'PY'
    import re
-   t = open('문안.txt').read()
+   t = open('draft.txt').read()
    print(re.findall(r'[0-9A-Za-z]+\s+(?:이|가|은|는|을|를|에|의|로|으로|와|과|도|만'
-                    r'|한테|에서|부터|까지|랑|이랑)\b', t) or '없음')
+                    r'|한테|에서|부터|까지|랑|이랑)\b', t) or 'none')
    PY
    ```
 
-   **내부 문서 어휘가 문안으로 새는 경로도 기계로 막는다.** 전술 문서를 읽고 바로
-   쓰면 그 문서의 **분석 어휘**가 공개 문안에 그대로 실린다 — 2026-08-12 에 두 번
-   걸렸다: `뿌려지고`(플레이북 §형식의 "정보만 던지는 글은 뿌려지고")가 새 글에,
-   `드러날 자리였어`(growth-log 의 리뷰어 판정문 "안 읽은 게 드러나는 자리")가 그
-   교정본에. 독자에게는 우리 내부 은어이고 어디서 왔는지 알 수 없는 말이다.
-   대조 대상에 **로그와 state 까지** 넣는다(판정문이 거기 쌓인다):
+   **The path where internal-document vocabulary leaks into copy is also
+   blocked mechanically.** Read a tactics document and write right after, and
+   that document's **analysis vocabulary** lands verbatim in public copy —
+   caught twice on 2026-08-12: `뿌려지고` (from the playbook §Form line
+   "정보만 던지는 글은 뿌려지고") in a new post, and `드러날 자리였어` (from a
+   reviewer verdict in growth-log, "안 읽은 게 드러나는 자리") in its revision.
+   To the reader these are our internal jargon, words with no visible origin.
+   Include **the log and state** in the comparison corpus (verdicts pile up
+   there):
 
    ```bash
    python3 - <<'PY'
@@ -159,282 +185,355 @@ growth-log 는 틱 요약 한 줄이라 문안이 남지 않고, `threads_insigh
    docs = ''.join(open(f, encoding='utf-8').read() for f in [
      'skills/grow-threads/references/growth-playbook.md',
      'skills/grow-threads/SKILL.md',
-     'data/<채널>/growth/threads/growth-log.md',
-     'data/<채널>/growth/threads/state.json'])
-   draft = open('문안.txt', encoding='utf-8').read()
-   pairs = re.findall(r'([가-힣]{2,})\s+([가-힣]{2,})', draft)   # 2어절 연쇄로 본다
-   print([f'{a} {b}' for a, b in pairs if f'{a} {b}' in docs] or '없음')
+     'data/<channel>/growth/threads/growth-log.md',
+     'data/<channel>/growth/threads/state.json'])
+   draft = open('draft.txt', encoding='utf-8').read()
+   pairs = re.findall(r'([가-힣]{2,})\s+([가-힣]{2,})', draft)   # look at two-word chains
+   print([f'{a} {b}' for a, b in pairs if f'{a} {b}' in docs] or 'none')
    PY
    ```
 
-   단일 어절로 보면 일반 어휘까지 걸려 쓸 수 없다 — **2어절 연쇄**가 분석 어휘를
-   가른다. 걸린 연쇄가 원 대화나 소재 자체에서 온 말이면 그대로 두고, 우리가
-   현상을 분석하려고 만든 말이면 문안 안에 이미 있는 재료로 되돌린다.
+   Single-word matching flags ordinary vocabulary and is unusable — **two-word
+   chains** are what separate out analysis vocabulary. If a flagged chain came
+   from the source conversation or the subject matter itself, leave it; if it's
+   wording we coined to analyze a phenomenon, rewrite it from material already
+   inside the draft.
 
-   **이 스캔에는 사각이 둘 있어서 기계만으로 끝나지 않는다**(2026-08-12 실측):
-   ① **1어절 표기는 안 걸린다** — `3단계` 가 우리 내부 표기인데 통과했다(상대는
-   화살표만 썼고 번호는 우리가 세어 붙인 것이라 "3단계에 있다"가 오참조였다).
-   ② **직전 라운드 리뷰어 지적문은 대조할 파일이 없다** — 판정문은 대화에만 있어
-   스캔이 볼 수 없다. 실제로 `헛것이 위로 올라오는` 이 리뷰어 지적문에서 그대로
-   옮겨와 P0 가 됐다(같은 경로 3번째).
+   **This scan has two blind spots, so the machine alone doesn't finish the
+   job** (measured 2026-08-12): ① **single-token notation slips through** —
+   `3단계` ("stage 3") is our internal notation and it passed (the other person
+   had only used arrows; the numbering was ours, so "at stage 3" was a false
+   reference). ② **the previous round's reviewer critique has no file to
+   compare against** — the verdict exists only in the conversation, where the
+   scan can't see it. In practice `헛것이 위로 올라오는` was carried over
+   verbatim from a reviewer critique and became a P0 (third incident on this
+   same path).
 
-   **②는 파일로 만들면 메워진다** — 같은 날 13:55 에 실제로 막았다. 리뷰어 판정은
-   `<세션 tasks 디렉토리>/<agentId>.output` 에 전문이 떨어지고, 위임 전에 받은 조언도
-   스크래치패드에 적어 두면 된다. 둘을 코퍼스에 넣고 **출처를 코드로 가른다**:
+   **② closes once you turn it into a file** — actually blocked that way at
+   13:55 the same day. Reviewer verdicts land in full at
+   `<session tasks directory>/<agentId>.output`, and advice received before
+   delegating can be jotted into the scratchpad. Put both into the corpus and
+   **separate the sources in code**:
 
    ```python
-   corpus = 내부문서 + 리뷰어_지적문_전문 + 조언문      # 대조 대상
-   prior  = 내가_올린_이전_초안_전부                    # 여기 있는 말은 누출이 아니다
-   hits = [ph for ph in 2어절연쇄(draft) if ph in corpus and ph not in prior]
+   corpus = internal_docs + reviewer_verdict_full + advice_notes   # compare against these
+   prior  = all_my_previous_drafts                                 # words here are not leaks
+   hits = [ph for ph in two_word_chains(draft) if ph in corpus and ph not in prior]
    ```
 
-   `prior` 를 빼는 것이 핵심이다 — 지적문은 내 문안을 인용하므로 그 대목이 전부
-   오탐으로 올라온다(실측: 4건 중 3건이 내 이전 초안, 1건은 상대 본문 인용).
-   이 스캔이 잡은 실제 유입은 둘이었다: 조언문 표현 3건이 첫 초안에 그대로 들어간
-   것(`기본 셸이`·`섹션에 이런`), 그리고 **내 초안 어디에도 없던 `셸 루프` 가 리뷰어
-   비평에서 처음 나와 교정본에 실릴 뻔한 것.** 조언·판정을 읽은 직후에 쓰면 그 문구가
-   그대로 흘러든다 — 교정본은 **원사건만 보고** 다시 쓴다.
+   Excluding `prior` is the key — the critique quotes my copy, so those passages
+   all surface as false positives (measured: 3 of 4 hits were my earlier drafts,
+   1 was a quote of the other person's post). The real inflows this scan caught
+   were two: three advice-note expressions landing verbatim in the first draft
+   (`기본 셸이` · `섹션에 이런`), and **`셸 루프` ("shell loop"), absent from
+   every draft of mine, first appearing in the reviewer's critique and nearly
+   landing in the revision.** Write right after reading advice or a verdict and
+   its phrasing flows straight in — write revisions **from the original event
+   only**.
 
-2. **적대적 리뷰 (growth-post-reviewer 에이전트 위임)** — 자가 검사를 통과한
-   문안을 단계별로 묶어 한 번에 위임한다(인박스 답글 묶음 · 검색 참여 묶음 ·
-   새 글). 위임 프롬프트에 반드시 싣는다: 문안 전문(번호·표면 명시), 답글이면
-   원문 맥락(대상 글·원 댓글 전문 — 이것 없이는 맥락 축이 0점이다),
-   `growth-plan.md`·`profile.md` 경로, 자가 검사 exit code. 리뷰어는 문안마다
-   `GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL` tail 을 반환한다.
+2. **Adversarial review (delegated to the growth-post-reviewer agent)** —
+   batch the drafts that passed the self-check by stage and delegate them in
+   one call (inbox-reply batch · search-engagement batch · new post). The
+   delegation prompt must carry: the full draft texts (numbered, surface
+   stated), for replies the source context (target post and original comment in
+   full — without this the context axis scores 0), the paths to
+   `growth-plan.md` and `profile.md`, and the self-check exit code. The
+   reviewer returns a
+   `GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL` tail per draft.
 
-3. **개선 루프 (최대 3라운드)** — FAIL 문안은 교정 지시대로 고친다. 고칠 때는
-   **빼기만 한다** — 없던 비유·상투구를 새로 심으면 그게 새 AI 티다.
+3. **Improvement loop (3 rounds max)** — fix FAIL drafts as the correction
+   directives say. When fixing, **only delete** — plant a metaphor or stock
+   phrase that wasn't there and that's the new AI tell.
 
-   **가장 비싼 함정은 비유가 아니라 빈 자리를 채우려는 충동이다.** 지적받은 표현을
-   지우면 문장이 짧아지고 "이해가 안 될 것 같다"는 느낌이 든다. 그때 넣은 재료가
-   다음 라운드의 결함이 된다 — 2026-08-12 새 글은 3라운드가 **전부 이 구조로**
-   실패해 스킵됐다: 전술 문서 어휘(`뿌려지고`) → 로그의 리뷰어 판정 어휘
-   (`드러날 자리였어`) → **미검증 사실 추가**(상대 글을 요약하며 원문에 없는
-   서술을 지어 넣었고, 그 답글이 상대 글 밑에 붙어 있어 본인이 읽을 수 있는
-   자리였다). 규칙은 하나다 — **교정은 삭제로 끝낸다.** 지운 뒤 허전하면 새
-   재료를 찾지 말고 **앞 절이 이미 그 자리를 메우는지 먼저 읽는다**(세 번 다
-   메우고 있었다).
+   **The costliest trap is not metaphor but the urge to fill the empty spot.**
+   Delete the flagged expression and the text gets shorter and starts to feel
+   like it "won't be understood." The material added at that moment becomes the
+   next round's defect — the 2026-08-12 new post failed all 3 rounds **in
+   exactly this structure** and was skipped: tactics-document vocabulary
+   (`뿌려지고`) → reviewer-verdict vocabulary from the log (`드러날 자리였어`)
+   → **an unverified factual addition** (summarizing the other person's post,
+   it invented a claim not in the original — and that reply would have sat
+   under their post, where the author could read it). One rule — **end every
+   fix with deletion.** If it feels bare after deleting, don't hunt for new
+   material; **first read whether the preceding passage already fills that
+   spot** (all three times, it did).
 
-   **지적이 P0 인지 감점인지 먼저 확인하고, 감점이면 감수한다.** 같은 날 참여
-   답글 두 안의 결과가 이 규칙으로 뒤집혔다 — 삭제만 한 안은 감점 −2(상대가 안 쓴 전제 하나)를
-   안고 **96점 통과**했고, 그 −2 까지 없애려 첫 문장을 고친 안은 **77점 P0 2건**
-   이었다(리뷰어 지적문 어휘 유입 + 상대가 안 쓴 내부 표기). 통과선을 넘긴 문안을
-   **만점으로 끌어올리려는 시도가 P0 를 만든다.**
+   **Check first whether a finding is a P0 or a deduction; if a deduction,
+   absorb it.** The same day, two candidate engagement replies flipped on this
+   rule — the delete-only version carried a −2 deduction (one premise the other
+   person hadn't stated) and **passed at 96**, while the version that reworked
+   its first sentence to erase even that −2 scored **77 with two P0s**
+   (reviewer-critique vocabulary inflow + internal notation the other person
+   never used). **Trying to push copy that already cleared the bar toward a
+   perfect score is what creates P0s.**
 
-   판단이 갈리면 혼자 정하지 말고 **두 안을 함께 위임한다**. 위 사례에서 그 덕에
-   나쁜 안이 게시되지 않았다. 리뷰어가 권하지 않은 방향이라도 근거가 있으면 함께
-   올린다 — 같은 날 13:55 에 그렇게 해서 권고안(90점)보다 2점 높은 92점을 받았고,
-   그 2점이 통과선이 90 으로 내려간 직후 게시 여부를 갈랐다.
+   When the call could go either way, don't decide alone — **delegate both
+   versions together**. In the case above that's what kept the bad version off
+   the feed. Even a direction the reviewer didn't recommend goes up alongside
+   if there are grounds — doing so at 13:55 the same day earned 92, two points
+   above the recommended version's 90, and those two points decided
+   publish-or-skip right after the bar had been lowered to 90.
 
-   **단 근거로 점수 계산을 대지 않는다.** 그때 근거 셋 중 하나가 기각됐다 —
-   "권고안 상한이 91 이라 마지막 라운드를 태워도 스킵과 같다"는 **문안에 대한
-   사실이 아니다.** 감점 분포를 역산해 "몇 점이 필요하다"로 접근하면 누적 감점
-   가계 중 하나를 이번만 면제해 달라는 요구가 된다 — 결과에 맞춘 채점이다.
-   `3라운드 미달 = 스킵` 규칙이 정확히 그 상황을 위해 있다. 근거는 문안 안에
-   있는 것(검증된 사실인가, 리뷰어가 조건을 걸어 뒀나)으로만 댄다.
+   **But never argue from score arithmetic.** One of the three grounds that
+   time was rejected — "the recommended version caps at 91, so burning the
+   last round equals a skip" is **not a fact about the copy.** Working
+   backwards from the deduction ledger to "I need N points" amounts to asking
+   for a one-time exemption from one of the accumulated deductions — scoring
+   fitted to the outcome. The `3 rounds short = skip` rule exists precisely
+   for that situation. Grounds come only from what's inside the copy (is the
+   fact verified, did the reviewer attach a condition).
 
-   고친 문안만 모아 재위임하고, 이전 라운드 지적을 함께 실어 해소 여부를 판정받는다.
+   Re-delegate only the fixed drafts, and include the previous round's
+   findings so the reviewer rules on whether they're resolved.
 
-4. **판정** — **score ≥95 이고 p0=0 인 문안만 게시한다.** 3라운드에도 미달이면
-   게시하지 않고 growth-log 에 `스킵(게이트 NN점)` 으로 적는다 — 안 올리는 것이
-   미달 글을 올리는 것보다 낫다. 게시한 문안의 최종 점수도 growth-log 메모에
-   적는다 — 게이트가 실제로 동작하는지 사용자가 관찰하는 창이다.
+4. **Verdict** — **only drafts with score ≥95 and p0=0 get published.** Still
+   short after 3 rounds — don't publish; write `skipped (gate NN)` in
+   growth-log. Not posting beats posting a sub-par post. Also note each
+   published draft's final score in the growth-log memo — that's the window
+   through which the user observes whether the gate actually works.
 
-## 이미지 절차 — 생성·업로드
+## Image procedure — generate and upload
 
-새 글에 이미지가 필요하다고 판단되면(§4 판단 기준) 이 절차로 공개 URL 을 만든다.
-threads_publish 의 `imageUrl` 은 플랫폼이 크롤하는 공개 URL 만 받으므로, 로컬
-파일을 사용자가 지정한 미디어 호스팅에 올려 URL 을 얻는다.
+When a new post is judged to need an image (§4 criteria), produce a public URL
+with this procedure. `threads_publish`'s `imageUrl` only accepts a public URL
+the platform can crawl, so upload the local file to the user-designated media
+hosting to get one.
 
-1. **호스팅 게이트** — `MEDIA_UPLOAD_URL`·`MEDIA_UPLOAD_API_KEY` 셸 환경변수가
-   없으면 이미지 단계 전체를 끄고 텍스트만 게시한다. 자율 루프가 대체 호스팅·
-   임시 터널을 찾지 않는다(grow-instagram 호스팅 게이트와 같은 원칙). 업로드가
-   404(엔드포인트 없음)나 503(서버 키 미설정)으로 떨어져도 같다 — growth-log 에
-   한 줄 적어 두고 이미지 없이 진행한다.
-2. **생성** — `image_local_generate`(로컬 Z-Image — 기본, 비용 0)로 만든다.
-   프로파일 §THEME 색·채널 톤을 프롬프트에 반영하고, **이미지 안에 글자를 넣지
-   않는다** — 한글 렌더는 깨지기 쉽고(로컬 실측: "딸깍연구소" → "달닥연구소")
-   깨진 글자는 그 자체로 AI 티다. 말은 본문이 하고 이미지는 장면·수치의 분위기만
-   만든다. 글자 없는 첨부 이미지라 로컬 품질로 충분하다 — 품질을 특별히 올릴
-   이유가 있는 컷만 `gpt_image_text2img`. 저장은 `data/<채널>/growth/threads/.work/` 에.
-3. **업로드·검증** — `references/upload-media.sh <파일>` 이 업로드와 공개 URL
-   왕복 검증(GET 200)까지 하고 URL 한 줄을 돌려준다. 검증 안 된 URL 을
-   `imageUrl` 에 넣지 않는다. jpg/png/webp/gif · 10MB 이하(초과 시 sips 로
-   축소) · 타입은 바이트 앞머리로 판정되므로 확장자 위장은 통하지 않는다.
-   429(10분 60건 상한)는 이번 틱에서 이미지를 포기하고 다음 틱에.
-4. **게시** — 게이트(§적대적 검증)를 통과한 본문과 함께
-   `threads_publish(caption, imageUrl, channel)`.
+1. **Hosting gate** — if the `MEDIA_UPLOAD_URL` and `MEDIA_UPLOAD_API_KEY`
+   shell environment variables are missing, turn the whole image stage off and
+   publish text only. The autonomous loop does not go hunting for alternative
+   hosting or temporary tunnels (same principle as the grow-instagram hosting
+   gate). The same applies when the upload fails with 404 (no endpoint) or 503
+   (server key unset) — write one line in growth-log and proceed without the
+   image.
+2. **Generate** — use `image_local_generate` (local Z-Image — the default,
+   zero cost). Reflect the profile's §THEME colors and channel tone in the
+   prompt, and **put no text inside the image** — Korean glyph rendering
+   breaks easily (local measurement: "딸깍연구소" → "달닥연구소") and broken
+   glyphs are an AI tell all by themselves. The body copy does the talking;
+   the image only sets the scene or the mood of a number. Since the attachment
+   carries no text, local quality is enough — use `gpt_image_text2img` only
+   for a cut with a specific reason to raise quality. Save under
+   `data/<channel>/growth/threads/.work/`.
+3. **Upload · verify** — `references/upload-media.sh <file>` does the upload
+   plus a round-trip check of the public URL (GET 200) and returns the URL as
+   a single line. Never put an unverified URL into `imageUrl`. jpg/png/webp/gif
+   · ≤10MB (shrink with sips if over) · type is judged from the leading bytes,
+   so a disguised extension won't pass. On 429 (60-per-10-minutes cap), give
+   up on the image this tick and try next tick.
+4. **Publish** — `threads_publish(caption, imageUrl, channel)` with body copy
+   that passed the gate (§Adversarial review).
 
-> 호스팅은 쓰는 사람이 준비한다 — `POST` 에 `x-api-key` 헤더와 raw 바이트를 받아
-> `201 {data:{url}}` 을 돌려주고, 그 url 을 무인증 공개 GET 으로 서빙하면 무엇이든
-> 붙는다(스크립트 머리말의 계약). 준비 전에는 호스팅 게이트가 이미지 단계를 꺼
-> 두므로 텍스트 글은 그대로 나간다.
+> Hosting is the operator's to provide — any endpoint that accepts `POST` with
+> an `x-api-key` header and raw bytes, returns `201 {data:{url}}`, and serves
+> that url as an unauthenticated public GET will plug in (the contract in the
+> script header). Until it's ready, the hosting gate keeps the image stage off
+> and text posts go out as they are.
 
-## tick — 자율 사이클 (기본 모드)
+## tick — autonomous cycle (default mode)
 
-### 0. 로드·게이트
+### 0. Load · gate
 
-`growth-plan.md`(approved 확인)·`state.json`·`references/growth-playbook.md` 로드.
-state 의 날짜 버킷이 오늘이 아니면 리셋한다.
+Load `growth-plan.md` (confirm approved), `state.json`, and
+`references/growth-playbook.md`. If the state's date bucket isn't today,
+reset it.
 
-### 1. 인박스 답글 (최우선 — 골든아워)
+### 1. Inbox replies (top priority — golden hour)
 
-`sns_comment_inbox(channel, platforms: ["THREADS"])` → `summary.withinGoldenHour`
-가 0 이 아니면 그 댓글부터. `state.gateSkippedCommentIds` 에 있는 댓글은
-건너뛴다(아래). 답글 문안은 플레이북 §답글 규칙(플랜 톤, 1~3문장, 상대가 또
-답할 틈 남기기)으로 작성해 §게이트를 통과시킨 뒤 `sns_comment_reply` 로 단다 —
-답글은 사람 대 사람의 대화라 AI 티가 가장 빨리 들킨다. 게시 성공분의 중복
-방지는 인박스의 `answeredByUs` 필터가 보장한다.
+`sns_comment_inbox(channel, platforms: ["THREADS"])` → if
+`summary.withinGoldenHour` is non-zero, start with those comments. Skip
+comments listed in `state.gateSkippedCommentIds` (below). Write the reply per
+playbook §Replies (plan tone, 1–3 sentences, leave room for the other person
+to answer again), pass it through the §gate, then post via
+`sns_comment_reply` — replies are person-to-person conversation, where AI
+tells get caught fastest. For successful posts, the inbox's `answeredByUs`
+filter guarantees dedup.
 
-**게이트 3라운드 미달 댓글은 `gateSkippedCommentIds` 에 기록하고 종결한다** —
-answeredByUs 가 안 찍히는 채로 두면 다음 틱마다 같은 댓글에 초안·리뷰를
-영원히 반복한다(무인 루프에서 리뷰어 콜 낭비의 최대 구멍). 틱 요약에 "게이트
-미달로 미응답 n건"으로 보고해 사람이 직접 답할지 판단하게 한다.
+**Comments that fail the gate's 3 rounds get recorded in
+`gateSkippedCommentIds` and closed out** — leave them without `answeredByUs`
+and every tick will re-draft and re-review the same comment forever (the
+biggest reviewer-call leak in an unattended loop). Report "n unanswered due to
+gate" in the tick summary so a human can decide whether to reply personally.
 
-**인박스만 보면 대화 절반을 놓친다** — `sns_comment_inbox` 는 우리 **루트 글**만
-훑으므로, 남의 글에 단 우리 답글에 상대가 답한 것은 안 잡힌다. 대화가 이어지는
-자리인데 골든아워를 통째로 놓치는 구멍이다. `state.recentReplyIds` 의 최근 답글
-ID 로 `/{id}/replies` 를 직접 조회해 함께 응대한다(`references/api-limits.md` §4).
+**Watching only the inbox misses half the conversation** —
+`sns_comment_inbox` scans only our **root posts**, so when someone answers a
+reply we left on their post, it never shows up. That's exactly where
+conversations continue, and the golden hour gets missed wholesale. Query
+`/{id}/replies` directly with the recent reply IDs in
+`state.recentReplyIds` and handle those too (`references/api-limits.md` §4).
 
-답글 게시가 `code 24 / subcode 4279009`("미디어를 찾을 수 없음")로 실패하면 권한
-문제가 아니라 컨테이너 폴링 문제다 — 같은 문서 §3 의 우회로 처리하고 맹목
-재시도는 하지 않는다(중복 게시).
+If a reply post fails with `code 24 / subcode 4279009` ("media not found"),
+it's a container-polling problem, not permissions — handle it with the
+workaround in §3 of the same document and never blind-retry (duplicate post).
 
-스팸·혐오 댓글은 답하지 않고 다음 틱 요약에 보고만 한다(숨김은 자율 범위 밖 —
-사용자 결정).
+Spam and hate comments get no reply — just report them in the next tick
+summary (hiding is outside autonomous scope — the user decides).
 
-### 2. 인사이트 스냅샷 (관찰)
+### 2. Insights snapshot (observation)
 
-`threads_insights(channel, days: 7, postLimit: 10)` → `state.lastInsights` 와
-비교해 팔로워 증감·조회 추이를 growth-log 에 한 줄 적고 state 를 갱신한다.
-게시물별 지표에서 **도달 상위 글의 유형**(소재·형식)을 파악해 4단계 소재 선택에
-반영한다 — 이 학습 루프가 없으면 자동화는 같은 글만 반복한다.
+`threads_insights(channel, days: 7, postLimit: 10)` → compare with
+`state.lastInsights`, write one growth-log line with follower delta and view
+trend, and update state. From the per-post metrics, identify **the type of
+post reaching the widest** (topic · form) and feed it into step 4's topic
+selection — without this learning loop, automation just repeats the same post.
 
-### 3. 키워드 대화 참여
+### 3. Keyword conversation engagement
 
-플랜 키워드를 `state.keywordCursor` 로 로테이션해 이번 틱 1~2개만
-`threads_search(channel, searchType: "RECENT", sinceHours: 24)`. 후보 조건:
-루트 글(`isReply: false`), `state.engagedPostIds` 에 없음, 채널이 실제로 기여할
-내용이 있음. **몇 건에 참여할지는 후보의 질이 정한다** — 기여할 말이 실제로
-있는 글에만, 있는 만큼 참여한다. 개수 상한은 없지만, 기여가 아닌 존재감용
-답글을 하나라도 섞는 순간 계정 전체 신호가 깎인다는 걸 기준으로 삼는다.
-문안은 플레이북 §검색 참여 규칙(경험·정보 기여만, 홍보·링크 금지, 8단어
-이상)으로 작성해 §게이트를 통과시킨 뒤 `threads_publish(replyToId: <postId>)` 로
-게시한다. 게시한 postId 는 `engagedPostIds` 에 추가한다(최근 500개 유지 — 같은
-글 재참여 방지). **게이트 3라운드 미달로 스킵한 postId 도 똑같이 추가한다** —
-"시도했음"의 기록이다. 안 그러면 그 글이 24시간 검색 윈도우에서 빠질 때까지
-틱마다 초안·리뷰를 반복한다.
+Rotate the plan keywords via `state.keywordCursor` and search only 1–2 this
+tick: `threads_search(channel, searchType: "RECENT", sinceHours: 24)`.
+Candidate criteria: root post (`isReply: false`), not in
+`state.engagedPostIds`, and the channel actually has something to contribute.
+**How many to engage is decided by candidate quality** — only posts where a
+real contribution exists, and exactly as many as exist. There's no count cap,
+but the moment even one presence-only reply slips in, the whole account's
+signal takes the hit — that's the yardstick. Write the copy per playbook
+§Search engagement (experience and information contributions only, no
+promotion or links, 8+ words), pass the §gate, then publish via
+`threads_publish(replyToId: <postId>)`. Add the postId to `engagedPostIds`
+(keep the latest 500 — prevents re-engaging the same post). **Add postIds
+skipped after 3 failed gate rounds exactly the same way** — it's the record of
+"attempted". Otherwise every tick re-drafts and re-reviews that post until it
+ages out of the 24-hour search window.
 
-**소재를 고르기 전에 `state.gateSkippedDrafts` 를 먼저 읽는다** — 게이트가 막은
-소재를 표면만 바꿔(새 글 → 답글) 다시 꺼내면 같은 P0 가 그대로 따라온다. 표면
-변경은 결함 수정이 아니다. 실측(2026-08-12): 전날 52점으로 스킵된 소재를 다음 날
-답글로 재사용해 60점으로 다시 막혔고, 스킵 사유가 문자 그대로 재현됐다. 스킵
-기록에 `lesson`·`reusable` 이 있으면 그 지시를 따른다.
+**Before picking a topic, read `state.gateSkippedDrafts` first** — resurface a
+gate-blocked topic with only the surface changed (new post → reply) and the
+same P0 follows it. A surface change is not a defect fix. Measured
+(2026-08-12): a topic skipped at 52 the previous day was reused as a reply the
+next day and blocked again at 60, with the skip reason reproduced word for
+word. If a skip record carries `lesson` · `reusable`, follow those directives.
 
-**대조는 `topic` 이 아니라 `why` 의 결함 유형으로 한다** — 소재가 달라도 같은 결함이
-따라오는 경로가 있다. 같은 날 11:50 에 소재 축이 완전히 다른 문안(남의 말투 예시
-얘기)이 07:30 스킵과 **같은 결함**으로 막혔다: "도구명만 빼고 기능으로 남긴 자동화
-자기 노출". topic 만 훑으면 이걸 못 본다.
+**Compare by the defect type in `why`, not by `topic`** — there are paths
+where the same defect follows even when the topic differs completely. At 11:50
+the same day, a draft on an entirely different topic axis (about someone
+else's speech-style example) was blocked with **the same defect** as the 07:30
+skip: "automation self-exposure with only the tool name removed, function left
+in". Scanning topics alone won't show it.
 
-**P0 둘이 서로를 막으면 라운드를 돌리지 않고 스킵한다.** 그 문안은 사실대로 쓰면
-자동화 저작이 드러나고, 그걸 피하면 겪지 않은 결과를 말해야 하는 구조였다 — 어느
-쪽을 지워도 남는 재료가 0이다. 삭제로 살아난 라운드(같은 날 10:00, 73→96점)와
-갈리는 지점은 **지운 뒤에 진짜 재료가 남는가**다. 남지 않으면 그 대상은 우리가 줄
-것이 없는 대상이고, 스킵이 정답이다.
+**When two P0s block each other, skip without running rounds.** That draft's
+structure was: write it truthfully and the automated authorship shows; avoid
+that and you must claim outcomes never experienced — delete either side and
+zero material remains. The dividing line from the round deletion saved (10:00
+the same day, 73→96) is **whether real material remains after deleting.** If
+none remains, that's a target we have nothing to give, and skipping is the
+answer.
 
-**`threads_search` 가 남의 글을 0건으로 돌려주면 그게 정상이다** — 앱이 고급 액세스
-승인 전이면 자기 글만 나온다(버그 아님). 그때는 브라우저로 찾고 API 로 답한다.
-발견 경로·ID 뽑는 규칙(함정 3건)·게시 직전 재대조는 `references/api-limits.md` §2 가
-정본이다. **본문과 ID 를 다른 곳에서 뽑으면 한 칸 어긋나 엉뚱한 글에 답글이 달린다** —
-실측으로 정치 글에 오답글 낼 뻔했다.
+**If `threads_search` returns zero posts from other people, that's normal** —
+before the app's advanced-access approval, only your own posts come back (not
+a bug). Then find in the browser and reply via the API. The discovery path,
+the ID-extraction rules (3 traps), and the pre-publish re-check are in
+`references/api-limits.md` §2 — the source of truth. **Pull the body and the
+ID from different places and they shift by one — the reply lands on the wrong
+post** — measured; we nearly replied to a political post.
 
-대상 선정 기준은 플레이북 §참여 대상 — 노출이 아니라 **우리가 실제로 겪은 것을 줄 수
-있는가**다. 도달만 큰 글(키보드 앱 7,232노출·낚시 훅 617노출)은 건너뛴 실측 사례가 있다.
+Target selection criteria are in playbook §Engagement targets — not exposure,
+but **whether we can give something we actually experienced**. There are
+measured cases of skipping big-reach posts (a keyboard app at 7,232 exposures
+· a clickbait hook at 617).
 
-### 4. 새 글 저작 (판단 기반 — 슬롯은 리듬 가이드)
+### 4. New post authoring (judgment-based — slots are a rhythm guide)
 
-**할 말이 있으면 언제든 쓴다.** 새 글의 게이트는 시각이 아니라 글감이다 —
-소재 풀 × 2단계 학습으로 "지금 이 채널이 말할 가치가 있는 것"이 있는지 먼저
-판단하고, 있으면 플레이북 §새 글 문체(1~3줄, 훅 비소진, 질문 종결, 해시태그
-≤1)로 저작해 §게이트를 통과시킨 뒤 `threads_publish` 한다. 없으면 슬롯
-시각이어도 쓰지 않는다 — 채우기 게시가 최악이다.
+**When there's something to say, write — any time.** The gate on a new post is
+the material, not the clock — first judge, from the topic pool × step-2
+learning, whether there is "something this channel is worth hearing on right
+now"; if yes, author it per playbook §New-post style (1–3 lines, hook not
+spent, question ending, hashtags ≤1), pass the §gate, then `threads_publish`.
+If not, don't write even at slot time — filler posting is the worst move.
 
-플랜 슬롯은 상한이 아니라 **리듬 가이드**다: 타깃 활동 시간대에 글이 나가도록
-돕는 알림이다. 슬롯 시각이 지났고 `filledSlots[오늘]` 에 없으면 그 시간대용
-글감을 우선 검토하고, 게시 성공 시 슬롯을 filledSlots 에 기록한다(같은 슬롯
-중복 방지). 슬롯 밖이라도 시의성 있는 글감(방금 참여한 대화에서 발견한 소재,
-그날의 관찰)이 생기면 게시한다. 반대로 직전 글이 아직 골든아워(60~90분) 안이면
-새 글은 미룬다 — 자기 글끼리 초기 분배를 나눠 먹는다. **게시 실패 시 이번 틱
-안에서 재시도하지 않는다**(다음 틱이 다시 시도 — 중복 게시 방지).
+Plan slots are not a cap but a **rhythm guide**: reminders that help posts go
+out during the target audience's active hours. If a slot time has passed and
+it isn't in `filledSlots[today]`, review material for that slot first, and on
+a successful publish record the slot into filledSlots (prevents double-filling
+a slot). Outside slots, publish whenever timely material appears (something
+found in a conversation just joined, the day's observation). Conversely, if
+the previous post is still inside its golden hour (60–90 min), hold the new
+one — your own posts would split the early distribution. **On a publish
+failure, don't retry within the tick** (the next tick retries — duplicate-post
+prevention).
 
-**이미지가 글을 돕는다고 판단하면 붙인다** — 이미지 글이 텍스트만보다 도달
-우위다(플레이북 §새 글 문체 5). 수치·비교·장면이 있는 글감이 후보다. 생성과
-업로드는 §이미지 절차를 따르고, 얻은 공개 URL 을 `imageUrl` 로 넣는다.
-이미지가 없어도 성립하는 글이면 텍스트만으로 게시한다 — 장식용 이미지는
-붙이지 않는다.
+**If an image would help the post, attach one** — image posts beat text-only
+on reach (playbook §New-post style, rule 5). Material with a number, a
+comparison, or a scene is the candidate. Generation and upload follow §Image
+procedure; put the verified public URL into `imageUrl`. If the post stands
+without an image, publish text-only — no decorative images.
 
-**쓰기 전에 독자를 한 줄로 못박는다** — "이 글을 읽는 사람은 profile.md 타깃 중
-누구이고, 60초 안에 무엇을 판단하게 되는가". 답에 우리 도구·파이프라인 이름이
-들어가야만 성립하면 소재를 바꾼다. 소재 풀 안이어도 그렇다.
+**Before writing, pin the reader in one line** — "who among profile.md's
+targets reads this, and what will they be able to judge within 60 seconds."
+If the answer only works with our tool or pipeline names in it, change the
+topic. Even if it's inside the topic pool.
 
-실측 근거(2026-08-11): 같은 날 같은 시간대에 올린 두 글의 결과가 달랐다. 우리 API 함정을
-번호로 정리한 글은 같은 나이에 30조회·좋아요 0, 우리 지표를 그대로 깐 고백형 글은
-78조회(3시간 뒤 267·좋아요 5·답글 3)였다. 어휘 티는 둘 다 없었다. 차이는 **읽는
-사람이 그 글에 지분이 있는가**였다 — 전자는 스레드 자동화를 API 로 만드는 사람만
-해당되고, 후자는 계정을 키우는 누구나 자기 얘기로 읽는다.
+Measured evidence (2026-08-11): two posts published the same day in the same
+time band ended differently. The one organizing our API traps into a numbered
+list: 30 views · 0 likes at the same age. The confessional one laying our
+metrics bare: 78 views (267 three hours later · 5 likes · 3 replies). Neither
+had vocabulary tells. The difference was **whether the reader has a stake in
+the post** — the former applies only to people building Threads automation on
+the API; the latter reads as their own story to anyone growing an account.
 
-그래서 훅 첫 문장에는 **독자가 아는 숫자나 상황**을 둔다. 도구 이름·내부 용어로
-시작하지 않는다.
+So the hook's first sentence carries **a number or situation the reader
+knows**. Never open with tool names or internal terms.
 
-**첫 문장을 바로 쓰지 말고 진입점 3~4개를 먼저 적는다** — 겪은 일 / 숫자 / 되묻기 /
-반대 사례 중에서 고른다. 그냥 쓰면 모델이 매번 가장 무난한 도입으로 수렴해서, 글
-하나하나는 게이트를 통과하는데 타임라인 전체가 한 목소리로 보인다. 근거 등급은 낮다
-— 후보를 먼저 벌리면 다양성이 1.6~2.1배 오른다는 측정이 있지만 영어 창작
-프리프린트고 한국어 실측은 없다. 비용이 거의 안 드는 절차라 넣었다.
+**Don't write the first sentence right away — jot down 3–4 entry points
+first** — pick among a lived incident / a number / a question back / a
+counter-example. Write cold and the model converges on the blandest opening
+every time, so each post passes the gate while the whole timeline speaks in
+one voice. The evidence grade is low — one measurement has candidate-widening
+lifting diversity 1.6–2.1x, but it's an English creative-writing preprint with
+no Korean field data. The procedure costs nearly nothing, so it's in.
 
-### 5. 저장·보고
+### 5. Save · report
 
-`state.json` 저장(lastTickAt 갱신) → 새 글을 게시했으면 `posts.md` 에
-`## <postId> <시각>` 헤더로 문안 원문을 append → growth-log.md 에 틱 요약 한 줄
-append — 메모에 게시 문안별 게이트 점수(스킵 포함)를 적는다 → 사용자 보고 한 줄:
-`[틱 hh:mm] 답글 n · 참여 n · 새 글 n · 게이트 통과 n/스킵 n · 팔로워 ±n`.
-아무 액션이 없던 틱은 "관찰만" 으로 적는다 — 조용한 틱이 정상이다.
+Save `state.json` (update lastTickAt) → if a new post was published, append
+its full copy to `posts.md` under a `## <postId> <time>` header → append one
+tick-summary line to growth-log.md — the memo carries each published draft's
+gate score (skips included) → one report line to the user:
+`[tick hh:mm] replies n · engagements n · new posts n · gate passed n/skipped n · followers ±n`.
+A tick with no actions gets "observation only" — quiet ticks are normal.
 
-**새 글이 다섯 편 쌓일 때마다 묶음을 잰다** (`posts.md` 의 `##` 개수가 5의 배수가
-된 틱). 게이트는 문안을 한 편씩 보므로 루프 전체가 한 틀로 수렴하는 것을 **원리적으로
-못 본다** — 개별 품질과 묶음 다양성은 반대로 움직인다(자매 플러그인 실측: 소재만
-바꾼 두 문안이 각각 100/100 인데 서로 겹침 0.77). 이 루프가 그 위험면의 한복판이다.
+**Measure the batch every five new posts** (the tick where the `##` count in
+`posts.md` hits a multiple of 5). The gate sees one draft at a time, so it
+**can't in principle see** the whole loop converging on one mold — individual
+quality and batch diversity move in opposite directions (sister-plugin
+measurement: two drafts differing only in topic scored 100/100 each with 0.77
+mutual overlap). This loop sits in the middle of that risk surface.
 
 ```sh
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-batch.py \
-  --split data/<채널>/growth/threads/posts.md
+  --split data/<channel>/growth/threads/posts.md
 ```
 
-반려하지 않는다 — 문턱으로 쓸 실측 근거가 없어서 순위만 낸다. "돌려쓴 구절"에 뜬
-표현과 "같은 말로 시작" 비율을 growth-log 에 적고, **다음 글부터 그 표현·도입을
-쓰지 않는다**(이미 나간 글은 고치지 않는다). 겹침이 눈에 띄면 소재 풀부터 다시 본다.
+Don't reject on it — there's no measured basis for a threshold, so it only
+ranks. Write the expressions it lists under "reused phrases" and the
+"same-opening" ratio into growth-log, and **stop using those expressions and
+openings from the next post on** (published posts don't get edited). If the
+overlap is conspicuous, revisit the topic pool first.
 
-## status — 상태 보고
+## status — status report
 
-state.json + growth-log.md 최근 20줄 + `threads_insights` 1회로 현황을 요약한다:
-팔로워 추이, 최근 7일 게시·참여 수, 도달 상위 글 3개, 다음 슬롯. 게시 없음.
+Summarize from state.json + the last 20 lines of growth-log.md + one
+`threads_insights` call: follower trend, posts and engagements over the last
+7 days, top 3 posts by reach, next slot. No publishing.
 
-## 에러 대응 (루프는 계속 돈다)
+## Error handling (the loop keeps running)
 
-- **스코프 에러**(재발급 안내 포함) → 그 단계만 건너뛰고 틱 요약에 안내를 실어
-  보고한다. 다음 틱에도 반복되면 루프 중지를 권한다.
-- **쿼터 초과**(검색 2,200/24h·게시 250/24h) → 해당 단계 건너뜀, 다음 틱 재개.
-- **토큰 만료**(Meta 60일) → 게시가 전부 막히므로 루프 중지를 권하고
-  token-setup.md 갱신 절차를 안내한다.
-- **답글이 `code 24 / subcode 4279009`** → 컨테이너가 아직 `IN_PROGRESS` 인데 발행한
-  것이다(권한 아님). `references/api-limits.md` §3 의 2단계 우회로 처리한다. 서버는
-  고쳤지만 **MCP 프로세스는 세션 시작 때 로드한 dist 로 도니 재시작 전에는 계속
-  실패한다** — 재시작을 권하고 그 틱은 우회로 넘긴다.
-- **게시물 조회가 0** → 실패가 아니라 집계 전이다(계정 일별이 먼저 오른다). 같은
-  나이끼리 비교해 판단하고, 즉시 값이 필요하면 브라우저에서 `impression_count` 를
-  읽는다(같은 문서 §5).
+- **Scope error** (with reissue guidance) → skip just that stage and carry the
+  guidance in the tick summary. If it repeats next tick, recommend stopping
+  the loop.
+- **Quota exceeded** (search 2,200/24h · publish 250/24h) → skip that stage,
+  resume next tick.
+- **Token expiry** (Meta, 60 days) → all publishing is blocked, so recommend
+  stopping the loop and walk through the token-setup.md renewal procedure.
+- **Reply fails with `code 24 / subcode 4279009`** → the container was still
+  `IN_PROGRESS` when published (not permissions). Handle with the 2-step
+  workaround in `references/api-limits.md` §3. The server is fixed, but **the
+  MCP process runs on the dist loaded at session start, so it keeps failing
+  until a restart** — recommend restarting and take the workaround for this
+  tick.
+- **Post views showing 0** → not a failure but pre-aggregation (the account
+  daily total rises first). Compare posts of the same age, and if an immediate
+  value is needed, read `impression_count` in the browser (same document §5).
 
-전부 겪고 정리한 도구 벽·우회는 `references/api-limits.md` 가 정본이다 —
-팔로우 API 부재, 키워드 검색 고급 액세스, ID 뽑기 함정 3건, 컨테이너 폴링,
-인박스 루트글 한정, 지표 지연. **새 세션은 그 문서를 먼저 읽는다**(같은 벽에서
-두 번 시간 쓰지 않기).
+The wall-by-wall tool limits and workarounds, all experienced firsthand, are
+in `references/api-limits.md` — no follow API, keyword-search advanced access,
+the 3 ID-extraction traps, container polling, inbox limited to root posts,
+metric lag. **A new session reads that document first** (never spend time on
+the same wall twice).

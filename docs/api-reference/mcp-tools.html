@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MCP 툴 스펙 &amp; 작성 베스트 프랙티스 — social-flow</title>
 <link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="mcp-tools.en.html">
 </head>
 <body>
 <div class="wrap">
+<div class="langbar"><a href="mcp-tools.en.html" hreflang="en">English</a></div>
 
 <div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>MCP 툴</div>
 
@@ -43,10 +45,10 @@
     <thead><tr><th>필드</th><th>필수</th><th>용도</th><th>social-flow</th></tr></thead>
     <tbody>
       <tr><td><code>name</code></td><td>필수</td><td>고유 식별자. 모델이 호출할 때 쓰는 이름</td><td>사용</td></tr>
-      <tr><td><code>title</code></td><td>선택</td><td>사람에게 보여줄 표시 이름. 클라이언트 UI가 툴 목록·승인 창에 띄운다</td><td>사용 (한국어)</td></tr>
+      <tr><td><code>title</code></td><td>선택</td><td>사람에게 보여줄 표시 이름. 클라이언트 UI가 툴 목록·승인 창에 띄운다</td><td>사용</td></tr>
       <tr><td><code>description</code></td><td>선택</td><td>모델이 읽는 사용 설명. 사실상 프롬프트다</td><td>사용</td></tr>
       <tr><td><code>inputSchema</code></td><td>필수</td><td>인자 JSON Schema. <code>type: "object"</code> 고정</td><td>사용</td></tr>
-      <tr><td><code>outputSchema</code></td><td>선택</td><td>구조화 결과의 JSON Schema. 선언하면 서버는 <strong>MUST</strong> 이에 맞는 <code>structuredContent</code>를 반환해야 한다</td><td>SNS·성장 조회 툴 14종에 사용</td></tr>
+      <tr><td><code>outputSchema</code></td><td>선택</td><td>구조화 결과의 JSON Schema. 선언하면 서버는 <strong>MUST</strong> 이에 맞는 <code>structuredContent</code>를 반환해야 한다</td><td>SNS·성장 툴 17종에 사용</td></tr>
       <tr><td><code>annotations</code></td><td>선택</td><td>동작 힌트 4종 + 표시용 title (아래 §2)</td><td>전 툴 사용</td></tr>
       <tr><td><code>execution</code></td><td>선택</td><td><code>taskSupport</code> — 장시간 작업의 task 위임 여부</td><td>미사용</td></tr>
       <tr><td><code>_meta</code> · <code>icons</code></td><td>선택</td><td>구현별 확장 메타 · 아이콘</td><td>미사용</td></tr>
@@ -74,7 +76,7 @@
   </table>
   </div>
   <div class="danger">
-    <strong>이 서버에는 게시 전 검토 게이트가 없다 — 호출이 곧 공개다.</strong> <code>threads_publish</code>·<code>instagram_publish</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>sns_comment_reply</code>·<code>sns_comment_moderate</code> 7종은 호출 즉시 외부에 공개되고, 게시 API는 비멱등이라 재시도가 중복 게시를 만든다. 이 사실은 원래 각 툴의 <code>description</code> 산문으로만 적혀 있었다 — 즉 <strong>모델은 읽지만 클라이언트는 읽지 못하는 형태</strong>였다. 이제 <code>destructiveHint: true</code> + <code>idempotentHint: false</code>로 기계가 읽을 수 있게 선언한다.
+    <strong>이 서버에는 게시 전 검토 게이트가 없다 — 호출이 곧 공개다.</strong> <code>threads_publish</code>·<code>instagram_publish</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_update</code>·<code>sns_comment_reply</code>·<code>sns_comment_moderate</code> 8종은 호출 즉시 외부에 반영되고, 그중 게시 API는 비멱등이라 재시도가 중복 게시를 만든다. 이 사실은 원래 각 툴의 <code>description</code> 산문으로만 적혀 있었다 — 즉 <strong>모델은 읽지만 클라이언트는 읽지 못하는 형태</strong>였다. 이제 <code>destructiveHint: true</code> + <code>idempotentHint: false</code>로 기계가 읽을 수 있게 선언한다.
   </div>
 </section>
 
@@ -106,7 +108,7 @@
   </table>
   </div>
   <p>실행 에러를 <code>isError</code>로 돌려주는 이유는 <strong>모델이 그걸 읽고 스스로 교정</strong>할 수 있어야 하기 때문이다. 프로토콜 에러로 던지면 모델은 실패 사실만 알고 원인을 못 본다. 이 서버는 zod 검증 실패도 필드 경로와 함께 실행 에러로 변환한다.</p>
-  <pre><code>Invalid arguments — durationSeconds: 1080p 해상도는 8초 길이에서만 지원됩니다 (요청: 4초).</code></pre>
+  <pre><code>Invalid arguments — durationSeconds: 1080p resolution is only supported at 8s duration (requested: 4s).</code></pre>
 </section>
 
 <section id="practices">
@@ -183,11 +185,12 @@
   <table>
     <thead><tr><th>툴 부류</th><th>readOnly</th><th>destructive</th><th>idempotent</th><th>openWorld</th><th>근거</th></tr></thead>
     <tbody>
-      <tr><td>검색·조회 (<code>serp_*</code>, <code>naver_search</code>, <code>datago_search|detail|file_fetch|api_call</code>, <code>sns_comment_inbox</code>, <code>sns_account_check</code>, <code>threads_insights</code>, <code>threads_search</code>, <code>youtube_insights</code>)</td><td>true</td><td>—</td><td>—</td><td>true</td><td>부작용 없음</td></tr>
+      <tr><td>검색·조회 (<code>serp_*</code>, <code>naver_search</code>, <code>datago_search|detail|file_fetch|api_call</code>, <code>sns_comment_inbox</code>, <code>sns_account_check</code>, <code>threads_insights</code>, <code>threads_search</code>, <code>instagram_insights</code>, <code>youtube_insights</code>, <code>youtube_topic_scout</code>, <code>sns_issue_scout</code>)</td><td>true</td><td>—</td><td>—</td><td>true</td><td>부작용 없음</td></tr>
       <tr><td>목록 상수 (<code>tts_list_voices</code>, <code>music_list_options</code>)</td><td>true</td><td>—</td><td>—</td><td><strong>false</strong></td><td>API 호출 자체가 없다</td></tr>
-      <tr><td>로컬 파일 생성 (<code>gpt_image_*</code>, <code>veo_*</code>, <code>tts_generate|multi_speaker</code>, <code>music_generate*</code>, <code>datago_file_download</code>, <code>content_feedback</code>)</td><td>false</td><td><strong>false</strong></td><td>false</td><td>true</td><td>새 파일을 쓸 뿐 기존 상태를 파괴하지 않는다. 다만 같은 <code>filename</code>이면 덮어쓰고 생성 결과는 비결정론적이라 멱등이 아니다</td></tr>
+      <tr><td>로컬 파일 생성 (<code>gpt_image_*</code>, <code>veo_*</code>, <code>seedance_*</code>, <code>tts_generate|multi_speaker</code>, <code>music_generate*</code>, <code>datago_file_download</code>, <code>content_feedback</code>)</td><td>false</td><td><strong>false</strong></td><td>false</td><td>true</td><td>새 파일을 쓸 뿐 기존 상태를 파괴하지 않는다. 다만 같은 <code>filename</code>이면 덮어쓰고 생성 결과는 비결정론적이라 멱등이 아니다</td></tr>
+      <tr><td>온디바이스 생성 (<code>image_local_generate</code>, <code>tts_local_generate</code>)</td><td>false</td><td><strong>false</strong></td><td>false</td><td><strong>false</strong></td><td>위와 같되 네트워크를 타지 않는다 — 로컬 모델이라 열린 세계와 상호작용하지 않는다</td></tr>
       <tr><td>즉시 공개 게시·답글 (<code>*_publish</code>, <code>facebook_comment</code>, <code>sns_comment_reply</code>)</td><td>false</td><td><strong>true</strong></td><td><strong>false</strong></td><td>true</td><td>되돌리려면 삭제해야 하고, 재시도는 중복 게시를 만든다</td></tr>
-      <tr><td>모더레이션 (<code>sns_comment_moderate</code>)</td><td>false</td><td><strong>true</strong></td><td><strong>true</strong></td><td>true</td><td>숨김/해제는 상태 설정이라 반복해도 결과가 같다. 그래도 외부에 즉시 반영되므로 destructive다</td></tr>
+      <tr><td>모더레이션·메타데이터 수정 (<code>sns_comment_moderate</code>, <code>youtube_update</code>)</td><td>false</td><td><strong>true</strong></td><td><strong>true</strong></td><td>true</td><td>숨김/해제와 게시물 메타데이터 수정은 상태 설정이라 반복해도 결과가 같다. 그래도 외부에 즉시 반영되므로 destructive다</td></tr>
     </tbody>
   </table>
   </div>
@@ -200,7 +203,7 @@ Do NOT use …                 ← 형제 툴과의 경계
 &lt;비용·시간·제약 한 줄&gt;
 
 Returns: &lt;반환물의 정확한 형태&gt;</code></pre>
-  <p>게시 툴은 여기에 <strong>HITL 계약</strong>을 앞세운다 — <code>⚠️ … 즉시 공개 게시한다 … 사용자가 최종 문안·미디어를 확인·승인한 직후에만 호출한다(승인 없이 호출 금지)</code>.</p>
+  <p>게시 툴은 여기에 <strong>HITL 계약</strong>을 앞세운다 — ⚠️ 로 시작해 "호출 즉시 공개 게시되며, 사용자가 최종 문안·미디어를 확인·승인한 직후에만 호출한다(승인 없이 호출 금지)"를 설명 맨 앞에 적는다.</p>
 
   <h3>단일 출처 상수</h3>
   <p>목록형 값(TTS 음성 30종, 조성 13종, 생성 모드 3종)은 클라이언트 모듈의 상수 하나를 정본으로 두고 <code>tools.ts</code>의 JSON Schema enum과 zod enum을 <strong>파생</strong>시킨다. 목록을 스키마에 복사해두면 값이 추가될 때 한쪽만 고쳐지는 사고가 반드시 난다.</p>
@@ -215,7 +218,7 @@ const voiceSchema = z.enum(TTS_VOICE_NAMES);</code></pre>
 </section>
 
 <footer>
-  기준일 2026-07-29 · <a href="index.html">API 레퍼런스 허브</a> · <a href="tool-audit.html">툴 품질 감사 리포트</a>
+  기준일 2026-08-18 · <a href="index.html">API 레퍼런스 허브</a> · <a href="tool-audit.html">툴 품질 감사 리포트</a>
 </footer>
 
 </div>

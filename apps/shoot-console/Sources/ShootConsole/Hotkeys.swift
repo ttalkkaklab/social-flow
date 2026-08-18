@@ -1,16 +1,17 @@
 import AppKit
 import Carbon.HIToolbox
 
-// 전역 단축키 — 이 앱에서 빼면 안 되는 기능이다.
+// Global hotkeys — the one feature this app can't do without.
 //
-// 녹화는 메인 모니터만 담고(record.sh -D 1) 앱은 보조 모니터에 둔다. 그런데
-// 보조 모니터의 앱 창을 마우스로 클릭하면 포커스가 옮겨가면서 메인 모니터
-// 위쪽의 메뉴 막대가 '촬영 콘솔' 로 바뀐다 — 그 순간이 그대로 녹화에 찍힌다.
-// 손을 대지 않고 조작할 수단이 있어야 화면이 깨끗하다.
+// The recording covers only the main display (record.sh -D 1) and the app sits
+// on the secondary one. But clicking the app window on the secondary display
+// moves focus, and the menu bar at the top of the main display flips to
+// 'ShootConsole' — that moment lands straight in the recording. Hands-off
+// control is what keeps the screen clean.
 //
-// CGEventTap 이 아니라 Carbon 의 RegisterEventHotKey 를 쓰는 이유는 권한이다.
-// 이벤트 탭은 손쉬운 사용(Accessibility) 허용을 받아야 하지만, 이쪽은 아무
-// 권한 없이 동작한다. API 가 낡았을 뿐 현재도 지원된다.
+// Why Carbon's RegisterEventHotKey instead of CGEventTap: permissions. An
+// event tap needs Accessibility approval; this one works with no permission
+// at all. The API is old but still supported.
 
 @MainActor
 final class HotkeyCenter {
@@ -26,13 +27,13 @@ final class HotkeyCenter {
     struct Combo {
         let keyCode: Int
         let modifiers: UInt32
-        /// 화면에 보여줄 표기 — ⌃⌥⌘R 처럼.
+        /// The notation to show on screen — like ⌃⌥⌘R.
         let label: String
     }
 
-    /// 시스템에 조합을 걸고 눌렸을 때 실행할 동작을 등록한다.
-    /// 성공하면 noErr, 실패하면 그 이유를 담은 OSStatus 를 돌려준다
-    /// (-9878 eventHotKeyExistsErr = 이미 잡혀 있는 조합).
+    /// Registers a combo with the system and the action to run when pressed.
+    /// Returns noErr on success, otherwise the OSStatus explaining why
+    /// (-9878 eventHotKeyExistsErr = the combo is already taken).
     @discardableResult
     func register(_ combo: Combo, action: @escaping () -> Void) -> OSStatus {
         installHandlerIfNeeded()
@@ -51,7 +52,7 @@ final class HotkeyCenter {
             &ref
         )
         guard status == noErr else {
-            NSLog("[ShootConsole] 단축키 등록 실패 \(combo.label): OSStatus \(status)")
+            NSLog("[ShootConsole] hotkey registration failed \(combo.label): OSStatus \(status)")
             return status
         }
 
@@ -80,7 +81,8 @@ final class HotkeyCenter {
     }
 }
 
-// Carbon 콜백은 C 함수 포인터라 컨텍스트를 캡처할 수 없다 — 싱글턴으로 되돌아온다.
+// The Carbon callback is a C function pointer and can't capture context — it
+// routes back through the singleton.
 private let hotkeyCallback: EventHandlerUPP = { _, event, _ in
     guard let event else { return OSStatus(eventNotHandledErr) }
     var hotKeyID = EventHotKeyID()
@@ -100,21 +102,23 @@ private let hotkeyCallback: EventHandlerUPP = { _, event, _ in
     return noErr
 }
 
-// MARK: - 기본 조합
+// MARK: - Default combos
 
 enum Hotkeys {
     private static let cmdOpt = UInt32(cmdKey | optionKey)
     private static let hyper = UInt32(cmdKey | optionKey | controlKey)
 
-    /// 녹화 시작·정지. 잘못 눌리면 테이크가 통째로 날아가므로 일부러 세 손가락
-    /// 조합을 쓴다 — 다른 앱이 선점했을 가능성도 사실상 없다.
+    /// Start/stop recording. A stray press loses the whole take, so this is a
+    /// deliberate three-finger combo — and the odds of another app holding it
+    /// are practically zero.
     static let toggleRecording = HotkeyCenter.Combo(
         keyCode: kVK_ANSI_R, modifiers: hyper, label: "⌃⌥⌘R"
     )
 
-    /// 씬 이동은 촬영 내내 반복해서 누르므로 두 손가락으로 둔다.
-    /// ⌘[ ·⌘] 는 브라우저의 뒤로·앞으로, ⇧⌘[ ·⇧⌘] 와 ⌥⌘← ·⌥⌘→ 는 탭 이동이라
-    /// 시연 중 자주 쓴다. ⌥⌘[ ·⌥⌘] 는 그 사이에 비어 있는 자리다.
+    /// Scene navigation gets pressed over and over throughout the shoot, so it
+    /// stays a two-finger combo. ⌘[ and ⌘] are the browser's back/forward,
+    /// ⇧⌘[ / ⇧⌘] and ⌥⌘← / ⌥⌘→ switch tabs — all in heavy use mid-demo.
+    /// ⌥⌘[ and ⌥⌘] are the free slot in between.
     static let nextScene = HotkeyCenter.Combo(
         keyCode: kVK_ANSI_RightBracket, modifiers: cmdOpt, label: "⌥⌘]"
     )
@@ -122,7 +126,8 @@ enum Hotkeys {
         keyCode: kVK_ANSI_LeftBracket, modifiers: cmdOpt, label: "⌥⌘["
     )
 
-    /// 방금 씬을 망쳤다는 표시. ⌥⌘M 은 일부 앱의 '모두 최소화' 와 겹쳐 피했다.
+    /// Marks the scene just botched. ⌥⌘M was avoided — it collides with
+    /// 'minimize all' in some apps.
     static let markRetake = HotkeyCenter.Combo(
         keyCode: kVK_ANSI_Backslash, modifiers: cmdOpt, label: "⌥⌘\\"
     )

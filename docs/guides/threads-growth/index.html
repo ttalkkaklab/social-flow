@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>스레드 성장 베스트 프랙티스 — social-flow 가이드</title>
+<link rel="alternate" hreflang="en" href="index.en.html">
 <link rel="stylesheet" href="../../assets/reference.css">
 <style>
   /* 이 문서 전용 소품 — 공용 reference.css 위에 얹는다 */
@@ -38,6 +39,8 @@
 <body>
 <div class="wrap">
 
+<div class="langbar"><a href="index.en.html" hreflang="en">English</a></div>
+
 <div class="crumbs"><a href="../../index.html">문서</a><span>/</span>사용 가이드<span>/</span>스레드 성장</div>
 
 <header class="hero">
@@ -45,7 +48,7 @@
   <h1>스레드를 성장시키는 법</h1>
   <p class="sub">스레드는 팔로워 수가 아니라 게시물 하나하나를 심사한다. 그래서 계정을 키운다는 건 팔로워를 모으는 일이 아니라, 매번 심사를 통과할 글을 쓰는 일이다. 이 문서는 그 심사가 무엇을 보는지와, 거기에 맞춰 무엇을 하고 무엇을 하지 말지를 정리한다.</p>
   <div class="meta">
-    <span>기준일 <strong>2026-08-11</strong> · 갱신 <strong>2026-08-15</strong></span>
+    <span>기준일 <strong>2026-08-11</strong></span>
     <span>갱신 <strong>2026-08-15 — 빈도·차단·답글 도달 반영</strong></span>
     <span>근거 <strong>Meta 투명성 센터 + 다출처 교차 확인</strong></span>
     <span>자동화 <strong><code>/social-flow:grow-threads</code></strong></span>
@@ -300,7 +303,10 @@
     <strong>틱 ≠ 게시.</strong> 대부분의 틱은 답글·관찰로 끝난다. 다만 게시를 막는 건 개수 규칙이 아니라 판단이다 — <strong>일 상한은 없고</strong>, 슬롯은 글이 나갈 때 그 시간대를 우선하라는 리듬 가이드다. <code>init</code>에서 승인한 <code>growth-plan.md</code>가 상시 승인서 역할을 하며, 그 범위(소재 풀·키워드·톤) 밖의 게시는 하지 않는다. 모든 문안은 게시 전 적대적 리뷰어의 95점 게이트를 통과해야 한다. 전술 정본은 스킬의 <code>references/growth-playbook.md</code>다.
   </div>
   <div class="warn">
-    <strong>키워드 검색은 앱 권한이 따로 필요하다.</strong> <code>threads_search</code>(공개 게시물 검색)는 토큰 스코프에 더해 앱의 <code>threads_keyword_search</code> 기능 액세스가 있어야 한다. 없으면 그 단계만 건너뛰고 인박스 답글·인사이트·슬롯 게시는 정상 동작한다.
+    <strong>키워드 검색은 앱 권한이 따로 필요하다.</strong> <code>threads_search</code>(공개 게시물 검색)는 토큰 스코프에 더해 앱의 <code>threads_keyword_search</code> 기능 액세스가 있어야 한다. 없으면 그 단계만 건너뛰고 인박스 답글·인사이트·새 글 게시는 정상 동작한다.
+  </div>
+  <div class="note">
+    <strong>이 루프는 스레드 자격증명이 있어야 돈다.</strong> 토큰 파일(<code>threads_token</code> — <code>&lt;SNS_TOKEN_DIR&gt;</code> 바로 아래든 채널 디렉토리든)이 있어야 게시·인사이트·검색 툴이 <code>tools/list</code> 에 뜬다. 토큰이 없어도 제작까지는 그대로 동작한다 — <code>produce</code> 가 완성 영상과 플랫폼별 문안을 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주고 업로드만 사람이 손으로 한다. 못 쓰는 건 게시와 성장 루프 절반이다.
   </div>
 </section>
 

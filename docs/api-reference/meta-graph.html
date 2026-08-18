@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meta Graph (Threads · Instagram · Facebook) — social-flow API 레퍼런스</title>
 <link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="meta-graph.en.html">
 </head>
 <body>
 <div class="wrap">
+<div class="langbar"><a href="meta-graph.en.html" hreflang="en">English</a></div>
 
 <div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Meta Graph</div>
 
@@ -95,7 +97,7 @@ POST /{user-id}/threads_publish 또는 /{ig-id}/media_publish?creation_id=…</c
   <div class="warn">
     <strong>Threads 영상 미지원은 플랫폼 제약이 아니라 이 서버의 선택이다.</strong> 플랫폼은 <code>VIDEO</code>·<code>CAROUSEL</code>을 지원한다. 이 파이프라인은 쇼트폼 영상을 YouTube/IG 릴스로 내보내고, Threads에는 <em>반말 구어체 본문 + 영상 링크 한 건</em>으로 유입을 만드는 전략을 쓴다. 툴 설명이 이를 플랫폼 한계처럼 적으면 안 된다.
   </div>
-  <p><strong>본문 링크 규칙(2026-08-14 변경):</strong> 영상 회차의 링크는 본문에 둔다. 본문 마지막 줄에 URL을 적고 <code>linkUrl</code>(플랫폼 파라미터 <code>link_attachment</code>)에 같은 URL을 넣으면 링크 프리뷰 카드가 붙는다 — 본문 URL과 같으면 링크 1개로 계산된다(상한 5개). <code>link_attachment</code>는 <code>media_type=TEXT</code> 전용이라 <code>imageUrl</code>과 배타이며, 서버가 400으로 먼저 막는다. 커버 이미지 첨부와 링크 답글은 쓰지 않는다. 2024년의 본문 링크 페널티는 철회됐지만(Mosseri 공식) 링크가 답글을 줄이는 효과는 그대로라, 링크를 붙일 이유가 있는 회차에만 붙인다. 해시태그는 랭킹 가중치가 0이라 1개 이하를 권한다.</p>
+  <p><strong>본문 링크 규칙(2026-08-15 개정):</strong> 영상 회차는 <strong>링크 없는 구어체 본문</strong>을 먼저 게시하고, IG 릴스 permalink 를 <strong>자기 답글</strong>로 단다 — 2026-08-14 의 "본문에 링크 1개" 방식을 철회한 것이다. 커버 이미지도 붙이지 않는다. 근거는 실측이다 — 본문 링크 글 2건이 조회 9·21 로 같은 날 링크 없는 글의 1/10 이었고, 답글 링크 글 2건은 257·623 이었다. 2024년의 본문 링크 페널티를 Mosseri 가 공개 철회했지만 우리 도달 분포는 반대로 나왔으므로 실측을 따른다. 링크는 YouTube 가 아니라 IG 릴스가 기본이다(같은 Meta 생태계라 이탈 손실이 가장 작다) — 게시 순서도 IG 먼저, permalink 를 받아 Threads 다. <code>linkUrl</code>(플랫폼 파라미터 <code>link_attachment</code>)은 API 능력 자체는 그대로여서, <code>media_type=TEXT</code> 전용이라 <code>imageUrl</code>과 배타이며 서버가 400으로 먼저 막는다. 해시태그는 랭킹 가중치가 0이라 1개 이하를 권한다.</p>
 </section>
 
 <section id="instagram">
@@ -209,6 +211,9 @@ captions_file=@caption.ko_KR.srt   ← 파일명이 계약이다</code></pre>
   </div>
   <p>토큰 <strong>값</strong>은 환경변수로 받지 않는다. Meta의 60일 갱신 절차가 파일을 덮어쓰는 구조라 파일 기반이어야 갱신이 가능하고, 커밋 대상인 <code>.mcp.json</code>에 시크릿이 실리는 것도 막는다.</p>
   <p>ListTools 시점에 자격증명 파일이 존재하는 플랫폼의 게시 툴만 노출된다. 요청 시점 평가라 <strong>토큰 파일 추가가 서버 재시작 없이 반영</strong>된다. 핸들러는 전부 유지되므로 숨은 툴을 직접 호출하면 명시적 토큰 부재 에러가 돌아온다.</p>
+  <div class="ok">
+    <strong>플랫폼 자격증명은 전부 선택이다.</strong> Meta 3종의 토큰이 여는 것은 <code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code> 일곱이고, 여기에 <code>youtube_publish</code>·<code>youtube_insights</code>를 더한 아홉이 게이트 대상이다(토큰이 하나도 없으면 <code>tools/list</code> 는 46 대신 37을 보여 준다). 토큰을 건너뛰면 제작까지는 그대로 돌아가고 — <code>produce</code> 가 완성 영상과 플랫폼별 문안을 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 쓰고 사람이 직접 올린다 — 게시·성장 절반만 못 쓴다. 플랫폼 단위라 YouTube 만 연결해 두는 구성도 된다.
+  </div>
 </section>
 
 <section id="impl">
@@ -291,7 +296,7 @@ captions_file=@caption.ko_KR.srt   ← 파일명이 계약이다</code></pre>
 </section>
 
 <footer>
-  기준일 2026-08-16 · 구현 <a href="../../server/src/sns-client.ts">server/src/sns-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+  기준일 2026-08-18 · 구현 <a href="../../server/src/sns-client.ts">server/src/sns-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
 </footer>
 
 </div>

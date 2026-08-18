@@ -1,79 +1,84 @@
-# 시장 키워드 보고서 템플릿
+# Market keyword report template
 
-`data/<채널>/growth/keywords/market-keywords.md` 에 아래 칸을 채운다. 빈 칸을
-남기지 않는다. 숫자는 툴 응답을 그대로 쓰고 윤문하지 않는다.
+Fill the slots below into `data/<channel>/growth/keywords/market-keywords.md`.
+Leave no slot empty. Copy the numbers straight from the tool response, don't polish them.
 
-사람이 보는 화면은 HTML 이다. md 를 쓴 뒤 `render-report.py` 를 돌린다.
-HTML 을 손으로 짜지 않는다. 화면의 중심은 키워드가 다루는 콘텐츠와
-우리가 만들 편이다. 어떻게 골랐나는 마지막 한 섹션이다. 영어·중국어
-조각을 그대로 두지 않고, 시드·구·아웃라이어 같은 은어를 쓰지 않는다.
-`## 고른 주제` 한 줄은 "시장 영상은 ~다. 우리는 ~한다." 를 쉬운 말로
-적는다. 배수·조사 방법 문장은 넣지 않는다. 주제어 표의 마지막 칸
-(`이미 씀` · `걸러`)을 스크립트가 읽어 카드·묶음 그림에 반영한다.
-해석 블록도 스크립트가 숫자에서 채운다. md 에 같은 해설을 다시 쓰지
-않는다. `## SNS 이슈` 절은 `sns_issue_scout` 을 돌렸을 때만 채운다 — 없으면
-절 자체를 빼고, HTML 도 `--sns` 없이 뽑는다.
+The screen a human looks at is the HTML. Write the md, then run `render-report.py`.
+Don't hand-write the HTML. The center of the screen is the content a keyword
+covers and the episode we'll make. How we picked is one section at the end.
+Don't leave English or Chinese fragments as they are, and don't use jargon like
+seed, phrase, or outlier. The `## Chosen topics` line says "The market videos
+cover ~. We ~." in plain words. Don't put multiplier or research-method
+sentences in it. The script reads the last column of the topic-phrase table
+(`yes` · `skip`) and reflects it in the cards and the family strip. The script
+fills the interpretation blocks from the numbers too. Don't rewrite the same
+commentary in the md. Fill the `## SNS issues` section only when you ran
+`sns_issue_scout` — without it, drop the section entirely and render the HTML
+without `--sns`.
 
 ```markdown
 ---
 channel: <slug>
 generated: <YYYY-MM-DD>
-queries: ["<US 시드>", "<CN 시드>"]
+queries: ["<US seed>", "<CN seed>"]
 markets: ["US", "CN"]
 minMultiplier: 5
 duration: short
 via: api_key
 ---
 
-# <채널 표시명> 시장 키워드
+# <channel display name> market keywords
 
-<오늘 날짜> 기준, 최근 90일 미국·중국 유튜브에서 채널 중앙값 대비 5배
-이상 나온 주제. 절대 조회수가 아니다.
+As of <today's date>, topics from the last 90 days on US and Chinese YouTube
+that came in at 5x or more the channel median. Not absolute views.
 
-## 고른 주제
+## Chosen topics
 
-- <사용자가 고른 주제> — <시장 영상은 ~다. 우리는 ~한다. 배수는 적지 않는다>
-- (아직 안 골랐으면 "없음 — 만들 주제를 고르는 중")
+- <topic the user picked> — <The market videos cover ~. We ~. Don't write the multiplier>
+- (if nothing is picked yet: "None — still choosing what to make")
 
-## 주제어
+## Topic phrases
 
-| 구 | 점수 | 아웃라이어 수 | 최고 배수 | 이미 씀 |
+| Phrase | Score | Outliers | Best multiplier | Already used |
 | --- | --- | --- | --- | --- |
-| | | | | 예/아니오 |
+| | | | | yes/no |
 
-## 아웃라이어 (근거)
+## Outliers (evidence)
 
-| 배수 | 조회 | 채널 중앙값 | 채널 | 제목 | 결핍 |
+| Multiplier | Views | Channel median | Channel | Title | Gap |
 | --- | --- | --- | --- | --- | --- |
-| | | | | [제목](permalink) | 댓글 질문 한 줄 또는 — |
+| | | | | [title](permalink) | one-line comment question, or — |
 
-상위 15편만 적는다. 나머지는 json 에 있다.
+Only the top 15. The rest are in the json.
 
-## 훑은 채널
+## Channels scanned
 
-채널 N · 영상 N · 아웃라이어 N · 쿼터 약 N유닛.
+N channels · N videos · N outliers · about N quota units.
 
-표본이 부족해 건너뛴 채널은 한 줄로 적는다.
+Write one line for the channels skipped for too small a sample.
 
-## SNS 이슈
+## SNS issues
 
-스레드·X·인스타그램에서 같은 주제로 최근 <구간> 안에 오간 글 N건(sns-issues.json).
-좋아요·조회 수는 없는 경로라 아래 수는 **언급 글 수**다 — 위 배수 표와 다른 잣대.
+N posts on Threads, X, and Instagram about the same topic within the last
+<window> (sns-issues.json). This path has no likes or views, so the numbers
+below are **how many posts mentioned it** — a different yardstick from the
+multiplier table above.
 
-| 주제어 | 언급 글 | 플랫폼 |
+| Phrase | Posts | Platforms |
 | --- | --- | --- |
-| | | threads · x · instagram 중 나온 것 |
+| | | whichever of threads · x · instagram it showed up on |
 
-상위 8개만 적는다. 급상승 검색어 중 시드와 겹친 것: <없으면 "없음">.
+Only the top 8. Rising searches that overlap a seed: <"none" if there are none>.
 
-대표 글: [플랫폼 · 작성자](url) · [플랫폼 · 작성자](url) · [플랫폼 · 작성자](url)
+Sample posts: [platform · author](url) · [platform · author](url) · [platform · author](url)
 
-검색 N회 · 급상승 1회 · 크레딧 N건. 빠진 플랫폼·시드가 있으면 한 줄로 적는다.
+N searches · 1 rising-search call · N credits. Write one line if a platform or
+seed dropped out.
 
-## 다음에 할 일
+## Next steps
 
-- 고른 구로 `/social-flow:storyboard <채널> "<구>"` 또는
-  `/social-flow:autoproduce <채널> "<구>"`
-- 성장 루프에 쓰려면 grow-youtube 플랜 `topic_source: scout` 또는
-  `topic_pool` 에 구를 추가 (플랜 승인 확인)
+- With a chosen phrase, `/social-flow:storyboard <channel> "<phrase>"` or
+  `/social-flow:autoproduce <channel> "<phrase>"`
+- To use it in the growth loop, add the phrase to the grow-youtube plan's
+  `topic_source: scout` or `topic_pool` (confirm plan approval)
 ```

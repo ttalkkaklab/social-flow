@@ -1,94 +1,104 @@
-# 촬영 콘솔 (ShootConsole)
+# ShootConsole
 
-대본을 보조 모니터에 띄워놓고, 메인 모니터 화면을 녹화하는 macOS 앱.
-`storyboard/script.md` 를 읽어 씬 단위로 보여주고, 손대지 않고 전역 단축키로
-녹화 시작·정지와 씬 넘기기를 한다.
+A macOS app that puts the script on your secondary display and records the main
+display. It reads `storyboard/script.md` and shows it scene by scene, and global
+hotkeys start and stop the recording and move between scenes without you
+touching the app.
 
-social-flow 파이프라인의 **촬영 단계**를 위한 도구다:
+It's the tool for the **shooting stage** of the social-flow pipeline:
 
 ```
-storyboard(대본 승인) → [촬영 콘솔] → ingest(전사·정합) → produce(편집)
+storyboard (script approved) → [shoot console] → ingest (transcribe · align) → produce (edit)
 ```
 
-## 빌드
+## Build
 
 ```bash
 cd apps/shoot-console
 ./build-app.sh --run
 ```
 
-`build/ShootConsole.app` 이 만들어진다. Applications 로 옮겨도 되고 그 자리에서
-써도 된다. Apple Development 인증서가 있으면 그걸로 서명하므로 **다시 빌드해도
-권한이 유지된다**. 인증서가 없으면 ad-hoc 서명으로 넘어가고, 그때는 빌드할 때마다
-화면 기록 권한을 다시 승인해야 한다.
+This makes `build/ShootConsole.app`. Move it into Applications or use it where
+it is. If you have an Apple Development certificate the script signs with it, so
+**permissions survive a rebuild**. Without a certificate it falls back to ad-hoc
+signing, and then you have to approve screen recording again on every build.
 
-## 권한 (처음 한 번)
+## Permissions (once)
 
-앱을 한 번 실행하면 시스템 설정 → 개인정보 보호 및 보안 → **화면 및 시스템
-오디오 녹음** 목록에 `ShootConsole` 이 나타난다. 켜고 **앱을 껐다 켠다**.
-마이크도 같은 화면의 **마이크** 항목에서 켠다.
+Run the app once and `ShootConsole` shows up under System Settings → Privacy &
+Security → **Screen & System Audio Recording**. Turn it on and **quit and reopen
+the app**. Turn the microphone on too, under **Microphone** on the same screen.
 
-목록에는 앱이 스스로 권한을 요청해야 올라온다. 그런데 화면 캡처는 이 앱이
-아니라 `record.sh` 가 띄우는 `screencapture` 가 한다 — 앱 자신은 TCC 를 건드린
-적이 없어 목록에 뜨지 않았고, 그래서 켤 방법도 없었다. 지금은 앱이 켜질 때
-ScreenCaptureKit 으로 화면 목록을 한 번 조회해 등록을 유발한다
-(`Permissions.swift`). 캡처를 자식이 하는 건 그대로 둬도 된다 — TCC 의 책임
-프로세스는 띄운 시점에 정해져 `nohup`·`disown` 으로 부모가 바뀌어도 유지되므로,
-앱에 권한을 주면 그 아래 캡처도 함께 통과한다.
+An app only lands in that list by asking for the permission itself. But this app
+isn't what captures the screen — the `screencapture` that `record.sh` spawns is.
+The app had never touched TCC, so it never appeared in the list, and there was
+no way to turn it on. Now the app queries the display list through
+ScreenCaptureKit once at launch to trigger registration (`Permissions.swift`).
+Letting the child do the capture is fine — TCC fixes the responsible process at
+spawn time and keeps it even when `nohup` or `disown` changes the parent, so
+granting the app permission carries the capture underneath it.
 
-권한이 없는 채로 녹화를 누르면 `record.sh` 를 부르지 않고 배너로 막는다 —
-버튼을 누르면 해당 설정 화면이 열린다.
+Hit record without the permission and the app blocks it with a banner instead of
+calling `record.sh` — the button opens the matching settings pane.
 
-> macOS 26 실측: `CGRequestScreenCaptureAccess()` 는 등록도 프롬프트도 하지
-> 않는다. 상태 확인은 `CGPreflightScreenCaptureAccess()` 가 정확하고, 등록은
-> ScreenCaptureKit 조회로만 된다. 설정 URL 도 예전
-> `com.apple.preference.security` 는 "일반"으로 떨어지고
-> `com.apple.settings.PrivacySecurity.extension` 이라야 해당 항목으로 간다.
+> Measured on macOS 26: `CGRequestScreenCaptureAccess()` neither registers nor
+> prompts. `CGPreflightScreenCaptureAccess()` is the accurate way to read the
+> state, and registration happens only through the ScreenCaptureKit query. Same
+> for the settings URL — the old `com.apple.preference.security` drops you on
+> "General", and only `com.apple.settings.PrivacySecurity.extension` goes to the
+> right item.
 
-## 폴더와 목록
+## Folders and lists
 
-톱니 버튼에서 **대본 폴더**와 **저장 폴더** 두 곳을 정한다.
+The gear button sets two places: the **script folder** and the **output folder**.
 
-- **대본 폴더** — 그 아래를 훑어 `script.md` 를 전부 찾는다. `data/` 를 잡으면
-  채널별로 묶인 목록이 나오고, 제목·씬 수·목표 길이·수정 시각이 함께 보인다.
-  촬영마다 주제가 늘어나므로 뿌리 하나만 잡아두면 다음부터는 목록에서 고른다.
-  정하지 않아도 ⌘O 나 끌어다 놓기로 여는 길은 그대로 있다.
-- **저장 폴더** — 녹화가 떨어질 곳. 비워두면 `~/Movies` 다. 바꿔도 **찍고 있는
-  녹화는 시작할 때 정한 자리에 그대로** 저장된다.
+- **Script folder** — the app walks it and finds every `script.md`. Point it at
+  `data/` and you get a list grouped by channel, showing the title, scene count,
+  target length, and modification time. Topics pile up with every shoot, so set
+  the root once and after that you pick from the list. Even without setting it,
+  ⌘O and drag-and-drop still work.
+- **Output folder** — where recordings land. Leave it empty for `~/Movies`.
+  Change it and **a recording already rolling still saves where it was headed
+  when it started**.
 
-목록은 대본을 열어둔 채로도 ⌘L(또는 상단 목록 버튼)로 다시 연다. 녹화 목록에는
-파일 크기·시각과 함께 씬 마크가 남았는지가 배지로 붙고, 지금 찍는 중인 파일은
-`녹화 중` 으로 구분한다(아직 완성이 아니다). 항목에서 **경로 복사**로 바로
-`/social-flow:ingest` 에 넘길 경로를 집는다.
+⌘L (or the list button up top) reopens the list with a script still open. The
+recording list carries file size and time plus a badge for whether scene marks
+were written, and the file being shot right now is marked `Recording` (it isn't
+finished yet). **Copy path** on a row grabs the path to hand to
+`/social-flow:ingest`.
 
-## 쓰는 법
+## How to use it
 
-대본을 열고(목록에서 고르기, ⌘O, 창에 끌어다 놓기, Finder 에서 앱으로 열기)
-씬을 따라가며 촬영한다.
+Open a script (pick it from the list, ⌘O, drop it on the window, or open it with
+the app from Finder) and film along the scenes.
 
-| 단축키 | 하는 일 |
+| Hotkey | What it does |
 |---|---|
-| `⌃⌥⌘R` | 녹화 시작 / 정지 |
-| `⌥⌘]` | 다음 씬 |
-| `⌥⌘[` | 이전 씬 |
-| `⌥⌘\` | 이 씬 다시 (재촬영 표시) |
+| `⌃⌥⌘R` | Start / stop recording |
+| `⌥⌘]` | Next scene |
+| `⌥⌘[` | Previous scene |
+| `⌥⌘\` | Redo this scene (marks a retake) |
 
-**전역 단축키다** — 앱이 뒤에 있어도, 시연 중인 브라우저나 터미널이 앞에 있어도
-먹는다. 이게 핵심이다: 보조 모니터의 앱 창을 마우스로 클릭하면 포커스가 옮겨가면서
-메인 모니터 위쪽 메뉴 막대가 바뀌고, 그 순간이 그대로 녹화에 찍힌다.
+**They're global hotkeys** — they fire with the app in the background and the
+browser or terminal you're demoing in front. That's the whole point: clicking
+the app window on the secondary display moves focus, the menu bar at the top of
+the main display changes with it, and that moment goes straight into the
+recording.
 
-화면 위쪽에는 녹화 경과 시간과 함께 **입력 장치·볼륨**이 뜬다. 외장 마이크를
-꽂아도 macOS 기본 입력은 자동으로 바뀌지 않으므로, 긴 테이크를 시작하기 전에
-이 줄을 확인한다. 톱니 버튼에서 장치 이름과 볼륨을 고정할 수 있다
-(`SF_MIC_DEVICE` / `SF_MIC_VOLUME` 에 그대로 들어간다).
+The top of the window shows the elapsed recording time along with the **input
+device and volume**. Plugging in an external mic doesn't change the macOS
+default input, so check this line before starting a long take. The gear button
+pins the device name and volume (they go straight into `SF_MIC_DEVICE` /
+`SF_MIC_VOLUME`).
 
-씬 제목 오른쪽에는 이 씬에 쓴 시간이 목표 대비로 표시된다. 목표를 넘기면 주황색이
-된다 — 20초를 넘긴 씬은 편집에서 경고가 뜨므로 그 자리에서 다시 찍는 편이 싸다.
+To the right of the scene title, the time spent on this scene shows against its
+target. Past the target it turns orange — a scene over 20 seconds trips a
+warning in editing, so reshooting it on the spot is cheaper.
 
-## 산출물
+## Output
 
-녹화는 `<저장 폴더>/social-flow-<주제>-<날짜시각>.mov` 로 저장된다(기본 `~/Movies`).
-그 옆에 `<같은 이름>.mov.scene-marks.json` 이 함께 남는다:
+Recordings save as `<output folder>/social-flow-<topic>-<datetime>.mov` (default
+`~/Movies`). Next to it sits `<same name>.mov.scene-marks.json`:
 
 ```json
 {
@@ -97,59 +107,62 @@ ScreenCaptureKit 으로 화면 목록을 한 번 조회해 등록을 유발한�
   "topic": "20260730-social-page-1-profile",
   "startedAt": "2026-08-09T12:20:41Z",
   "marks": [
-    { "scene": 1, "title": "프로필 이미지, AI가 심사", "t": 0.0,  "event": "enter",  "take": 1, "superseded": false },
-    { "scene": 2, "title": "브라우저부터 AI 손에",     "t": 9.4,  "event": "enter",  "take": 1, "superseded": true  },
-    { "scene": 2, "title": "브라우저부터 AI 손에",     "t": 21.7, "event": "retake", "take": 2, "superseded": false },
-    { "scene": 3, "title": "이미지 도구를 직접 붙인다", "t": 40.2, "event": "enter",  "take": 1, "superseded": false }
+    { "scene": 1, "title": "AI screens the profile image", "t": 0.0,  "event": "enter",  "take": 1, "superseded": false },
+    { "scene": 2, "title": "The browser goes to the AI first", "t": 9.4,  "event": "enter",  "take": 1, "superseded": true  },
+    { "scene": 2, "title": "The browser goes to the AI first", "t": 21.7, "event": "retake", "take": 2, "superseded": false },
+    { "scene": 3, "title": "Wiring up the image tool yourself", "t": 40.2, "event": "enter",  "take": 1, "superseded": false }
   ]
 }
 ```
 
-씬을 넘긴 시각 기록이다. ingest 가 대본 씬 ↔ 녹화 구간을 맞출 때(alignment.json)
-쓰는 힌트로, 지금까지 전사 문장만 보고 추정하던 경계를 확인으로 바꿔준다.
-어디까지나 힌트다 — 실제 컷은 ingest 가 무음 지점에 스냅한다.
+It's a record of when you moved between scenes. ingest uses it as a hint when
+matching script scenes to recording ranges (alignment.json), turning boundaries
+it used to guess from transcript sentences alone into something confirmed. It
+stays a hint — ingest snaps the actual cuts to silence.
 
-**같은 씬을 다시 찍으면 앞 테이크를 지우지 않고 `superseded: true` 로 표시한다.**
-편집이 쓸 구간은 `superseded == false` 인 마크들이라 고르기는 단순하고, 버려진
-테이크의 시작 시각이 남아 두 가지가 따라온다 — 전사에 같은 문장이 두 번 나올 때
-앞엣것이 버린 테이크임을 알 수 있고, 어느 씬을 몇 번 다시 찍었는지가 그대로
-촬영 기록이 된다. `take` 는 그 씬의 몇 번째 시도인지다.
+**Reshooting a scene doesn't erase the earlier take; it marks it `superseded:
+true`.** Editing uses the marks where `superseded == false`, so picking is
+simple, and keeping the discarded take's start time buys two things — when the
+same sentence turns up twice in the transcript you can tell the first one is the
+dropped take, and which scene you reshot how many times becomes the shooting
+record itself. `take` is which attempt at that scene it was.
 
-마크는 시각순으로 정렬해 저장한다 — ⌥⌘[ 로 앞 씬에 돌아가 다시 찍으면 기록
-순서와 실제 시각이 어긋나기 때문이다.
+Marks are sorted by time before they're written — going back to an earlier scene
+with ⌥⌘[ and reshooting puts the record order out of step with the real times.
 
-촬영이 끝나면:
+When the shoot is done:
 
 ```
-/social-flow:ingest <채널> <녹화파일 경로> <주제 slug>
+/social-flow:ingest <channel> <recording file path> <topic slug>
 ```
 
-## 알아둘 것
+## Things to know
 
-- **녹화 대상은 메인 모니터 하나뿐**이다(`record.sh` 의 `-D 1`). 앱은 보조
-  모니터에 두고, 시연은 메인에서 한다. 모니터가 하나면 앱이 화면에 함께 찍히므로
-  경고가 뜬다 — 녹화 중에는 창을 화면 캡처에서 숨기지만, 대본을 보려면 창을
-  띄워야 하니 보조 모니터를 쓰는 편이 확실하다.
-- **씬을 넘겨도 소리를 내지 않는다.** 씬 전환은 "말을 멈추고 1초" 하는 무음
-  구간이고, ingest 가 바로 그 무음에서 컷 지점을 찾는다. 효과음이 섞이면 씬
-  경계가 어긋난다.
-- **앱을 꺼도 녹화는 계속된다.** `record.sh` 가 `nohup` 으로 띄우기 때문이다.
-  크래시가 테이크를 날리지 않는 대신, 앱 없이 멈추려면 터미널에서
-  `record.sh stop <녹화파일>` 을 실행해야 한다. 녹화 중 종료하면 앱이 그 경로를
-  알려준다.
-- 녹화 실행부는 `skills/ingest/references/record.sh` 를 그대로 쓴다.
-  `build-app.sh` 가 번들 안으로 복사하므로, **record.sh 를 고치면 앱을 다시
-  빌드**해야 반영된다.
+- **Only the main display gets recorded** (`-D 1` in `record.sh`). Keep the app
+  on the secondary display and demo on the main one. With a single monitor the
+  app is filmed along with everything else, so a warning shows up — the window
+  is hidden from screen capture while recording, but you have to have it up to
+  read the script, so a secondary display is the safe route.
+- **Moving between scenes makes no sound.** A scene change is a silent gap where
+  you "stop talking for a second", and that silence is exactly where ingest
+  looks for the cut point. Mix in a sound effect and the scene boundary goes off.
+- **Quitting the app doesn't stop the recording**, because `record.sh` spawns it
+  under `nohup`. A crash won't cost you the take; the trade is that stopping
+  without the app means running `record.sh stop <recording file>` in a terminal.
+  Quit while recording and the app tells you that path.
+- The recording itself is run by `skills/ingest/references/record.sh` as-is.
+  `build-app.sh` copies it into the bundle, so **editing record.sh means
+  rebuilding the app** before the change takes.
 
-## 구성
+## Layout
 
-| 파일 | 하는 일 |
+| File | What it does |
 |---|---|
-| `ShootScript.swift` | script.md 파서 — 씬·대사·자막 표기·화면 지시·전환 분해 |
-| `Recorder.swift` | record.sh 호출, 녹화 상태·경과 시간·마이크 상태 |
-| `Hotkeys.swift` | Carbon RegisterEventHotKey 기반 전역 단축키 |
-| `SceneMarks.swift` | 씬 전환 시각 기록 + scene-marks.json 저장 |
-| `Library.swift` | 대본 폴더·저장 폴더 설정, 두 폴더를 훑어 만든 목록 |
-| `AppState.swift` | 위를 묶는 상태 |
-| `ContentView.swift` | 화면 |
-| `ShootConsoleApp.swift` | 진입점, 창 배치(보조 모니터·캡처 제외) |
+| `ShootScript.swift` | script.md parser — breaks out scenes, spoken lines, caption notation, screen directions, transitions |
+| `Recorder.swift` | calls record.sh; recording state, elapsed time, mic state |
+| `Hotkeys.swift` | global hotkeys on Carbon RegisterEventHotKey |
+| `SceneMarks.swift` | records scene-change times and writes scene-marks.json |
+| `Library.swift` | script-folder and output-folder settings, and the lists built by walking both |
+| `AppState.swift` | the state that ties the above together |
+| `ContentView.swift` | the screen |
+| `ShootConsoleApp.swift` | entry point, window placement (secondary display, excluded from capture) |

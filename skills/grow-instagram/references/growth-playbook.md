@@ -1,260 +1,340 @@
-# Instagram 릴스 성장 플레이북 — grow-instagram 스킬 전술 정본
+# Instagram Reels growth playbook — tactical source of truth for the grow-instagram skill
 
-2026-08 조사 기반(소스 22개 → 주장 107개 → 상위 25개 3표 적대 검증 → 확인 16·반증 9).
-**근거 등급을 문장마다 밝힌다** — 인스타 성장 글은 대부분 출처가 없고, 있어도
-벤더 블로그를 공식 문서처럼 인용한다. 등급을 안 적으면 반증된 9개가 확인된 16개와
-같은 무게로 읽힌다.
+Based on 2026-08 research (22 sources → 107 claims → top 25 through 3-vote
+adversarial verification → 16 confirmed · 9 refuted).
+**Every sentence states its evidence grade** — most Instagram growth writing
+has no sources, and what does cites vendor blogs as if they were official
+docs. Without grades, the 9 refuted claims read with the same weight as the
+16 confirmed ones.
 
-- **[1차]** Meta 가 자기 문서에 직접 쓴 것 — 투명성 센터 시스템 카드·고객센터·가이드라인
-- **[실측]** 서드파티 벤더가 자사 이용 계정을 집계한 것. 방향만 참고하고 숫자를 목표치로 쓰지 않는다
-- **[탈락]** 검증에서 죽었거나 1차 근거를 못 찾은 것. 규칙으로 쓰지 않는다
+- **[primary]** What Meta wrote in its own docs — Transparency Center system
+  cards, Help Center, guidelines
+- **[measured]** Third-party vendors aggregating their own customer accounts.
+  Take the direction only; never use the numbers as targets
+- **[rejected]** Died in verification, or no primary source found. Not used as
+  a rule
 
-플랫폼 공통 문체·게시 규칙은 `skills/platform-guide/references/platform-playbook.md`
-가 정본이고, 이 문서는 **성장 루프 전용 전술**만 담는다. 사람이 읽는 해설판은
-`docs/guides/instagram-growth/index.html` 이다.
+Platform-wide style and publishing rules live in
+`skills/platform-guide/references/platform-playbook.md`; this document carries
+**growth-loop tactics only**. The companion guide for human readers is
+`docs/guides/instagram-growth/index.html`.
 
-## 원리 — 도달은 두 관문을 지난다
+## Principle — reach passes two gates
 
-팔로워 0인 계정이 사람들에게 닿는 길은 사실상 하나다. 릴스 탭·탐색·추천 피드에서
-**나를 팔로우하지 않는 사람**에게 뜨는 것. 이 노출은 관문 두 개를 순서대로 지난다.
+For an account with zero followers there's practically one road to people:
+appearing to **people who don't follow you** in the Reels tab, Explore, and
+the recommended feed. That exposure passes two gates in order.
 
-1. **계정 자격** — 내 계정이 비팔로워에게 추천될 수 있는 상태인가. 위반이 없으면
-   유지되고 위반하면 닫힌다. 닫히면 게시물 하나가 아니라 **모든 게시물**이 함께
-   막힌다. **[1차]**
-2. **게시물 오디션** — 올린 릴스가 처음 노출된 소집단에서 반응을 얻는가. 얻으면 더
-   넓은 집단으로, 못 얻으면 거기서 멈춘다. **[1차]**
+1. **Account eligibility** — can my account be recommended to non-followers at
+   all. No violations and it stays open; violate and it closes. When it
+   closes, it's not one post — **every post** is blocked together. **[primary]**
+2. **The post's audition** — does the uploaded reel get a response from the
+   small group it's first shown to. If yes, a wider group; if not, it stops
+   there. **[primary]**
 
-순서가 이 루프의 구조를 정한다. **관문 1이 닫혀 있으면 아무리 잘 만든 릴스도 관문
-2에 도착하지 못한다** — 그래서 도달이 급락했을 때 편집부터 의심하는 건 순서가
-거꾸로다(§진단 순서).
+The order sets this loop's structure. **With gate 1 closed, even the
+best-made reel never reaches gate 2** — so when reach craters, suspecting the
+editing first has the order backwards (§Diagnosis order).
 
-배포는 사다리다 **[1차]** — 좋아할 것으로 예측되는 소수에게 먼저 보여주고, 반응하면
-조금 더 넓은 집단으로, 거기서도 좋으면 다시 더 넓게. **첫 계단의 반응률이 다음 계단
-진입을 결정한다.** 콜드 스타트의 병목이 여기다.
+Distribution is a ladder **[primary]** — shown first to a few people
+predicted to like it; if they respond, a somewhat wider group; if that goes
+well too, wider again. **The first rung's response rate decides entry to the
+next.** The cold-start bottleneck sits here.
 
-"팔로워 수는 상관없다"는 과장이다. 원문은 "크리에이터의 팔로워 수만이 아니라"이고,
-같은 회사의 랭킹 문서는 팔로워 수와 참여 수준을 인기 신호로 쓴다고 적는다. 신규
-계정도 추천 대상이라는 것까지가 사실이다.
+"Follower count doesn't matter" is an exaggeration. The original wording is
+"not just the creator's follower count", and the same company's ranking doc
+says follower count and engagement level are used as popularity signals. What
+is true — and no more — is that new accounts are also recommendation
+candidates.
 
-## 랭킹이 실제로 예측하는 것 **[1차]**
+## Ranking — what the model actually predicts **[primary]**
 
-투명성 센터의 **릴스 체이닝 시스템 카드**(보고 있는 릴스 다음에 뭘 띄울지 정하는
-시스템)가 모델의 예측 항목을 번호로 공개한다. 여기 있는 것만 확인된 사실이다.
+The Transparency Center's **Reels chaining system card** (the system that
+decides what to show after the reel you're watching) publishes the model's
+prediction targets by number. Only what's here is confirmed fact.
 
-| 예측 항목 | 모델이 계산하는 확률 | 루프가 읽는 지표 |
+| Prediction | The probability the model computes | Metric the loop reads |
 | --- | --- | --- |
-| 시청 유지 | 같은 길이 릴스 시청자의 95%보다 오래 볼 확률 | `ig_reels_avg_watch_time` |
-| 초반 이탈 | 3초 미만만 볼 확률(낮을수록 좋음) | `reels_skip_rate` |
-| 리셰어 | 이 릴스를 다시 공유할 확률 | `shares` |
-| 외부 공유 | 인스타 밖으로 공유할 확률 | `shares`(구분 불가 — 합산값) |
-| 팔로우 전환 | 이 릴스 작성자를 팔로우할 확률 | 릴스에는 대응 지표가 없다 — 계정 `profile_views`·`followersCount` 로 대신 본다 |
+| Watch retention | watching longer than 95% of viewers of same-length reels | `ig_reels_avg_watch_time` |
+| Early skip | watching under 3 seconds (lower is better) | `reels_skip_rate` |
+| Reshare | resharing this reel | `shares` |
+| External share | sharing outside Instagram | `shares` (indistinguishable — a combined value) |
+| Follow conversion | following this reel's author | no per-reel metric — read account `profile_views` · `followersCount` instead |
 
-시청 유지는 **길이로 정규화된 백분위**다. 3분짜리가 15초짜리와 절대 초로 비교되지
-않는다 — 짧게 만들어 유리해지는 게 아니라 내 길이대의 상위권에 들어야 한다.
+Watch retention is a **length-normalized percentile**. A 3-minute reel isn't
+compared to a 15-second one in absolute seconds — you don't win by making it
+short; you have to sit in the top band of your own length class.
 
-초반 이탈의 입력 신호에 "열린 뒤 2초 안에 건너뛴 횟수"가 들어 있다. 훅이 마케팅
-조언이 아니라 **모델의 명시적 예측 대상**이라는 근거가 여기다. 그리고 인스타는
-이 이탈률을 API 로 준다(`reels_skip_rate`) — 쇼츠에는 없는 지표다.
+The early-skip inputs include "count of skips within 2 seconds of opening".
+That's the evidence that the hook is not marketing advice but **an explicit
+prediction target of the model**. And Instagram serves this skip rate through
+the API (`reels_skip_rate`) — a metric Shorts doesn't have.
 
-**넘지 말아야 할 선 셋:**
+**Three lines not to cross:**
 
-1. **가중치는 공개되지 않았다.** 어떤 예측이 존재하는지는 밝히지만 9~10개가 최종
-   점수로 어떻게 합쳐지는지, 각 신호의 부호와 크기는 없다. "초반 이탈이 모델링된다"
-   까지가 사실이고 "얼마나 큰 페널티인가"는 알 수 없다.
-2. **표면 범위가 좁다.** 위 항목 대부분은 릴스 체이닝 카드 것이고, 탐색·피드 추천에
-   그대로 적용된다는 근거는 없다. 리셰어와 팔로우 전환만 탐색 카드에서도 확인된다.
-3. **'DM 전송(sends per reach)'은 이 카드에 없다.** 카드에 있는 건 리셰어와 외부
-   공유다. 전송 가중은 Mosseri 의 2025-01 발언이 출처이고 — "가장 중요한 세 신호는
-   시청 시간, 좋아요, 전송" — 시스템 카드와 **출처 등급이 다르다**. 둘을 같은
-   근거로 묶어 인용하면 무너진다.
+1. **The weights are not public.** Which predictions exist is disclosed, but
+   not how the 9–10 combine into a final score, nor each signal's sign and
+   size. "Early skip is modeled" is fact; "how big the penalty is" is
+   unknowable.
+2. **The surface scope is narrow.** Most of the items above come from the
+   Reels chaining card, and there's no evidence they carry over as-is to
+   Explore or feed recommendations. Only reshare and follow conversion are
+   also confirmed in the Explore card.
+3. **"DM sends (sends per reach)" is not on this card.** What the card has is
+   reshare and external share. Send weighting comes from Mosseri's 2025-01
+   remark — "the three most important signals are watch time, likes, sends" —
+   which is a **different evidence grade** from the system card. Cite the two
+   as one source and the argument collapses.
 
-실행으로 옮기면: **좋아요를 목표로 편집하지 않는다.** 모델이 직접 예측하는 건 끝까지
-보는가·3초 만에 나가는가·남에게 보내는가다.
+Put into practice: **don't edit for likes.** What the model directly predicts
+is whether they watch to the end, whether they leave within 3 seconds, and
+whether they send it to someone.
 
-## 자격을 잃는 길 — 이 루프가 가장 조심할 것
+## Losing eligibility — what this loop guards hardest
 
-편집을 잘해서 얻는 것보다 자격을 잃어서 잃는 게 훨씬 크고 훨씬 빠르다.
+What you lose by losing eligibility is far bigger and far faster than what
+you gain by editing well.
 
-**남의 콘텐츠 재게시 — 계정 단위로 빠진다 [1차]** 원본 콘텐츠 가이드라인은 직접
-만들었거나 유의미하게 수정하지 않은 릴스·사진·슬라이드를 주로 올리는 계정은 새
-시청자 대상 추천에 표시되지 않을 수 있다고 적는다. 2026-04-30 에 릴스 전용에서
-사진·캐러셀까지 확대됐다.
+**Reposting others' content — you drop at the account level [primary]** The
+original-content guideline says accounts that mostly post reels, photos, or
+slides they didn't create or meaningfully edit may not be shown in
+recommendations to new audiences. On 2026-04-30 it expanded from reels-only
+to photos and carousels.
 
-- 오리지널로 **인정되지 않는 것**: 워터마크·테두리만 얹은 편집 / 속도만 바꾼 것 /
-  원작자 표시만 붙인 것 / 출처를 밝혔더라도 별 추가 없는 스크린샷
-- 실질 편집으로 **인정되는 것**: 해설·내레이션 / 단순 설명을 넘어서는 오버레이 텍스트 /
-  재맥락화하는 그래픽
+- **Not recognized** as original: edits that only add a watermark or border /
+  speed changes only / creator credit alone / screenshots with nothing added,
+  even with the source named
+- **Recognized** as substantive editing: commentary or narration / overlay
+  text that goes beyond bare description / graphics that recontextualize
 
-영구 박탈은 아니다. 최근 **30일 롤링 창**에서 게시물 대부분이 오리지널로 판정되면
-다시 추천 대상이 될 수 있다. 이 회복 경로는 원본성 사유에만 해당하고 커뮤니티
-가이드라인 위반은 별도 절차다.
+It's not a permanent ban. If most posts in the recent **30-day rolling
+window** are judged original, the account can become recommendable again.
+That recovery path applies only to the originality reason; Community
+Guidelines violations follow a separate process.
 
-서법 차이를 적어 둔다 — 가이드라인 원문은 "표시되지 않을 수 있습니다"로 완화형인데
-Mosseri 의 2026-04-30 발언은 "no longer going to be recommendable"로 단정적이다.
-**실무에서는 강한 쪽을 기준으로 잡는다.**
+Note the modality gap — the guideline text is the hedged "표시되지 않을 수
+있습니다" ("may not be shown"), while Mosseri's 2026-04-30 remark is
+categorical: "no longer going to be recommendable". **In practice, anchor on
+the stronger one.**
 
-**릴스 자체의 속성 — 인스타가 의도적으로 낮추는 것 [1차]** 랭킹 문서가 직접 열거한
-목록이다: 저해상도 / 워터마크 / 음소거 / 테두리(borders) / 대부분이 텍스트 /
-이미 인스타그램에 올라온 것.
+**Properties of the reel itself — what Instagram deliberately downranks
+[primary]** The ranking doc lists them outright: low resolution / watermarks /
+muted / borders / mostly text / already posted on Instagram.
 
-인용 경로를 정확히 해둔다. 틱톡 결과물 재업로드가 깎이는 근거는 **워터마크 조항 +
-원본성 정책**이지 '이미 인스타그램에 올라온 것' 조항이 아니다. 후자는 인스타 내부
-중복을 가리킨다. 또 원문 단어는 `borders` 이며 이를 '레터박스'로 옮기는 건 해석이다.
+Keep the citation path exact. The reason a TikTok export gets downranked is
+**the watermark clause plus the originality policy**, not the "already posted
+on Instagram" clause — the latter refers to duplicates within Instagram.
+Also, the source word is `borders`; reading that as "letterbox" is
+interpretation.
 
-**정책 위반 — 계정 전체가 함께 멈춘다 [1차]** 추천 가이드라인이나 커뮤니티 규정을
-최근 위반한 계정은 개별 게시물이 아니라 모든 게시물이 일정 기간 릴스·피드 추천·탐색·
-검색에서 비팔로워 대상 추천 자격을 잃는다. 고객센터 원문: *"계정이 추천 요건을
-충족하지 않는 경우 콘텐츠가 추천 가이드라인을 위반하는지 여부에 관계없이 어떠한
-콘텐츠도 추천되지 않습니다."*
+**Policy violations — the whole account stops together [primary]** An account
+that recently violated the Recommendations Guidelines or the community rules
+loses non-follower recommendation eligibility for a period across Reels, feed
+recommendations, Explore, and search — for all posts, not the individual one.
+Help Center original (Korean localization): *"계정이 추천 요건을 충족하지
+않는 경우 콘텐츠가 추천 가이드라인을 위반하는지 여부에 관계없이 어떠한
+콘텐츠도 추천되지 않습니다."* ("If the account doesn't meet the
+recommendation requirements, no content is recommended, whether or not that
+content violates the recommendation guidelines.")
 
-이 체계는 **공개 계정에만** 적용된다(비공개는 애초에 추천 대상이 아니다). 멈추는 건
-도달 전체가 아니라 비팔로워 추천 도달이고 팔로워에게는 계속 노출된다 — 다만 팔로워가
-0~수백이면 실무적으로 성장 정지다.
+This regime applies to **public accounts only** (private ones were never
+recommendation candidates). What stops is non-follower recommendation reach,
+not all reach — followers still see you. But with 0 to a few hundred
+followers, in practice that means growth halted.
 
-'자격 심사'라는 말이 오해를 부른다. 신청하고 승인받는 절차가 아니라 **위반이 없으면
-유지되고 위반하면 닫히는 준수 게이트**다. 할 일은 자격을 따는 게 아니라 닫히지 않게
-하는 것이다.
+The phrase "eligibility review" misleads. It's not an apply-and-get-approved
+procedure but **a compliance gate that stays open without violations and
+closes with them**. The job isn't earning eligibility; it's not letting it
+close.
 
-## 계정 상태 — API 가 없다
+## Account Status — there is no API
 
-프로페셔널 계정은 앱 안의 **계정 상태(Account Status)** 에서 현재 추천 자격을
-확인하고 부적격 판정에 이의를 제기할 수 있다 **[1차]**. 그런데 이 상태를 주는 API 는
-없다 — 루프는 값을 읽지 못하고 **리마인드만** 한다(YouTube 의 Related video 와 같은
-패턴). 플랜에 점검 주기를 적고, 도달 급락 시 틱 보고에 확인 요청을 싣는다.
+Professional accounts can check their current recommendation eligibility in
+the app's **Account Status** and appeal an ineligible verdict **[primary]**.
+But no API serves this state — the loop can't read the value and **only
+reminds** (same pattern as YouTube's Related video). Put a check cadence in
+the plan, and when reach craters, put a check request in the tick report.
 
-## 진단 순서 — 도달이 죽었을 때
+## Diagnosis order — when reach dies
 
-편집부터 고치지 않는다. 관문 1이 닫힌 상태에서 편집을 고치는 건 아무 효과가 없다.
+Don't fix the editing first. Fixing the editing while gate 1 is closed does
+nothing.
 
-1. 앱의 **계정 상태**에서 추천 자격 확인 (사람이 — API 없음)
-2. 최근 **30일 게시물의 오리지널 비중** 점검 (재게시·워터마크·속도 변경 섞였나)
-3. 그다음이 콘텐츠 — `reels_skip_rate` 와 `ig_reels_avg_watch_time` 비교
+1. Check recommendation eligibility in the app's **Account Status** (a
+   human — no API)
+2. Check the **originals share of the last 30 days** of posts (any reposts,
+   watermarks, speed-changed cuts mixed in?)
+3. Then the content — compare `reels_skip_rate` and `ig_reels_avg_watch_time`
 
-## 리듬과 포맷 **[실측]**
+## Rhythm and format **[measured]**
 
-여기부터는 Meta 문서가 아니라 벤더 집계다. 방향만 참고하고 숫자를 목표치로 쓰지 않는다.
+From here on it's vendor aggregates, not Meta docs. Take the direction only;
+don't use the numbers as targets.
 
-**게시 빈도 — 주 3~5회.** Buffer 가 자사 이용 계정 10만 2천 개·게시물 210만 건을
-분석한 결과 주간 팔로워 증가율이 빈도에 따라 단조 증가했다(주 1~2회 +0.12% → 3~5회
-+0.26% → 6~9회 +0.44% → 10회 이상 +0.66%). 다만 **도달 증가폭은 수확 체감**이고,
-원문의 최종 권고도 최대치가 아니라 "번아웃 없이 도달과 성장을 동시에 얻는 지점은
-주 3~5회"다. 사다리 숫자만 인용하면 원문 결론이 뒤집힌다.
+**Posting frequency — 3–5 per week.** Buffer's analysis of 102K of its own
+customer accounts and 2.1M posts found weekly follower growth rising
+monotonically with frequency (1–2/week +0.12% → 3–5 +0.26% → 6–9 +0.44% →
+10+ +0.66%). But **the reach gain shows diminishing returns**, and the
+original's final advice isn't the maximum either — "the point that gets reach
+and growth without burnout is 3–5 a week". Quote only the ladder numbers and
+you invert the source's conclusion.
 
-신뢰도를 낮추는 이유 셋: 스케줄링 SaaS 벤더의 자사 블로그이고(다만 결론이 이해관계와
-반대 방향이라 부풀리기로 보긴 어렵다), 표본이 Buffer 이용 계정에 한정되며, 표본
-대부분이 이미 팔로워 기반을 가진 계정이라 **팔로워 0~수백 채널에 증가율 %를 그대로
-대입할 수 없다**.
+Three reasons to discount it: it's a scheduling-SaaS vendor's own blog
+(though the conclusion runs against its interest, so inflation is unlikely),
+the sample is limited to Buffer customers, and most of the sample already had
+a follower base, so **the growth percentages can't be transplanted onto a
+channel with 0 to a few hundred followers**.
 
-**빈도 페널티는 공식 문서에 없다 [1차]** (2026-08-15 조사). 투명성 센터의 피드·탐색
-랭킹 카드와 공식 랭킹 해설에 열거된 배포 감소 사유는 전부 콘텐츠 속성이고(§자격),
-게시 빈도는 목록에 없다. 실재하는 제약 하나는 피드 다양성이다 — 공식 해설에 "같은
-사람의 글을 연속으로 너무 많이 보여주지 않으려 한다"고 적혀 있다. 계정 페널티가
-아니라 한 사람의 피드 안에서 순서를 섞는 규칙이라, 몰아 올리는 대신 시간을 벌리면
-상당 부분 풀린다. API 게시 상한은 24시간 이동창 100건이고(캐러셀은 1건) 제재가
-아니라 쿼터다 — `GET /{ig-id}/content_publishing_limit`.
+**There is no frequency penalty in official docs [primary]** (researched
+2026-08-15). The distribution-reduction reasons listed in the Transparency
+Center's feed and Explore ranking cards and the official ranking explainer
+are all content properties (§Losing eligibility); posting frequency isn't on
+the list. The one real constraint is feed diversity — the official explainer
+says it "tries not to show too many posts from the same person in a row".
+That's not an account penalty but a rule that shuffles order within one
+person's feed, so spacing posts out instead of bursting resolves most of it.
+The API publishing cap is 100 per 24-hour rolling window (a carousel counts
+as 1) and it's a quota, not a sanction —
+`GET /{ig-id}/content_publishing_limit`.
 
-**릴스를 기본 포맷으로 — 단, 캐러셀보다 낫다는 뜻은 아니다.** 인스타 공식 크리에이터
-문서가 **릴스가 인스타그램 이용 시간의 50% 이상을 차지한다**고 밝힌다 **[1차]** —
-포맷 선택의 근거는 여기까지가 공식이고, 아래 참여율 비교는 벤더 집계다.
-Metricool 의 2026년
-연구(계정 375,118개·게시물 24,364,803건)에서 릴스는 단일 이미지 게시물보다 상호작용이
-4배 이상 많았고 평균 시청 시간이 전년 대비 2배 이상 늘어 **8.5초**가 됐다. 이 근거가
-지지하는 범위는 "단일 이미지보다 낫다"까지다 — 릴스 대 캐러셀 참여율은 0.55% 대
-0.52%로 거의 같다. '4배'도 참여 효율이 아니라 절대 상호작용 수로 보이며, 릴스 도달이
-훨씬 크므로 상당 부분 동어반복이다.
+**Reels as the default format — which doesn't mean better than carousels.**
+Instagram's official creator docs state that **reels take up more than 50% of
+time spent on Instagram** **[primary]** — that's as far as the official basis
+for format choice goes; the engagement comparison below is vendor aggregate.
+Metricool's 2026 study (375,118 accounts · 24,364,803 posts) found reels drew
+over 4x the interactions of single-image posts, and average watch time more
+than doubled year-over-year to **8.5 seconds**. What this evidence supports
+ends at "better than a single image" — reels vs carousel engagement is 0.55%
+vs 0.52%, nearly equal. The "4x" also looks like absolute interaction counts
+rather than engagement efficiency, and since reels reach is much larger, much
+of it restates the reach gap.
 
-8.5초가 훅 설계의 배경이다. 같은 기간에 릴스 상한이 90초에서 3분으로 늘었는데 평균
-시청이 8.5초라면 유지율은 오히려 나빠진 것이다.
+8.5 seconds is the backdrop for hook design. Over the same period the reels
+cap grew from 90 seconds to 3 minutes — if average watch is 8.5 seconds, the
+retention rate actually got worse.
 
-## §캡션 (게시 문안)
+## §Captions (post copy)
 
-- **첫 125자가 훅**이다 — 그 뒤는 접힌다. 캡션 상한은 2,200자.
-- **키워드·해시태그는 첫 댓글이 아니라 캡션에** 넣는다 **[1차]**. 원문: *"For a post
-  to be found in Search, put keywords and hashtags in the caption, not the comments."*
-  첫 댓글 몰아넣기 관행은 최소한 검색 노출에서 공식 문서와 배치된다.
-- 해시태그는 **주제 표시**로 쓴다. 도달 증폭 장치가 아니다 — 개수 최적화는 근거 없는
-  영역이라 이 문서가 숫자를 제시하지 않는다(§인용 금지).
-- 캡션 안의 링크는 **클릭되지 않는다**. 외부 전환은 프로필 링크로 보낸다.
+- **The first 125 characters are the hook** — everything after folds away.
+  The caption cap is 2,200 characters.
+- **Keywords and hashtags go in the caption, not the first comment**
+  **[primary]**. Original: *"For a post to be found in Search, put keywords
+  and hashtags in the caption, not the comments."* The first-comment-dump
+  habit contradicts the official docs, at least for search visibility.
+- Use hashtags as **topic markers**. They're not reach amplifiers — count
+  optimization is unsupported ground, so this document gives no number
+  (§Do not cite).
+- Links inside captions **don't click**. Send external conversion through the
+  profile link.
 
-## §답글 (인박스 대응)
+## §Replies (inbox handling)
 
-- 1~3문장, 플랜 톤. 정보·공감을 하나 더하고 **상대가 또 답할 틈**을 준다.
-- "감사합니다 😊" 류 영혼 없는 답글은 신호 가치가 없다 — 짧아도 내용을 담는다.
-- 논쟁 유도·시비조에는 사실 하나로 짧게 답하거나 답하지 않는다.
-- **인스타 답글은 최상위 댓글에만 붙는다** — 대댓글에 답하려면 그 부모 commentId 를
-  넘긴다(인박스 응답의 `parentCommentId`). 그 대화 전체가 읽는다는 걸 염두에 둔다.
+- 1–3 sentences, plan tone. Add one piece of information or empathy and
+  **leave the other person room to answer again**.
+- Soulless "감사합니다 😊" ("thank you 😊") replies carry no signal value —
+  keep content in it, however short.
+- To argument bait and provocation, answer briefly with one fact, or not
+  at all.
+- **Instagram replies attach only to top-level comments** — to answer a
+  nested comment, pass its parent commentId (the inbox response's
+  `parentCommentId`). Keep in mind that the whole conversation reads it.
 
-## 검색 — 텍스트 필드가 곧 인덱스다 **[1차]**
+## Search — the text fields are the index **[primary]**
 
-검색 랭킹은 세 신호로 결정되고 그중 **검색창에 입력된 텍스트가 압도적으로 중요**하다.
-이 텍스트는 사용자명(핸들)·프로필명·소개(bio)·캡션·해시태그·장소와 매칭된다.
+Search ranking is decided by three signals, and among them **the text typed
+into the search box dominates**. That text is matched against the username
+(handle), profile name, bio, captions, hashtags, and location.
 
-공식 권고는 셋 — 핸들과 프로필명을 콘텐츠 주제와 관련되게 짓고, 소개에 '누구이고
-무엇에 관한 계정인지' 키워드를 넣고, 키워드·해시태그를 캡션에 넣는다.
+The official advice is three things — make the handle and profile name
+relevant to the content's topic, put "who you are and what the account is
+about" keywords in the bio, and put keywords and hashtags in captions.
 
-두 가지 단서. 이 검색 문서는 **2021-08-25 자**라 §랭킹의 2025~2026 시스템 카드와 같은
-무게로 다루지 않는다. 그리고 세 번째 신호(인기도)가 구조적 불리함을 만든다 — 후보가
-많으면 인기 계정이 위로 간다. **팔로워 0~수백 채널은 초기 유입을 검색에 기대면 안
-된다.** 검색은 릴스 추천으로 이미 굴러가는 채널을 보조하는 경로다.
+Two caveats. This search doc is **dated 2021-08-25**, so it doesn't carry the
+same weight as the 2025–2026 system cards in §Ranking. And the third signal
+(popularity) creates a structural disadvantage — when candidates are many,
+popular accounts rise. **A channel with 0 to a few hundred followers must not
+lean on search for early inflow.** Search is a road that assists channels
+already rolling on reels recommendation.
 
-## 콜드 스타트 — 공동 게시가 유일한 공식 실행법 **[1차]**
+## Cold start — Collabs are the only official play **[primary]**
 
-인스타 공식 크리에이터 문서가 도달을 늘리는 방법으로 **공동 게시(Collab)** 를 직접
-권한다. 게시물 하나가 두 계정의 팔로워 양쪽에 함께 나가는 기능이다(원문: *"a single
-post shared with both sets of followers"*). 팔로워 0~수백 구간에서 자기 힘으로 못 만드는
-도달을 남의 독자로 메우는 경로이고, 이 문서가 §확인 실패에 오래 비워 둔 칸의 답이다.
+Instagram's official creator docs directly recommend **Collab posts** as a
+way to grow reach. One post goes out to both accounts' followers together
+(original: *"a single post shared with both sets of followers"*). In the
+0-to-few-hundred band it's the road that fills the reach you can't create
+yourself with someone else's readers — the answer to the box §Verification
+failures left empty for so long.
 
-**루프는 이걸 실행하지 못한다.** 앱 안의 초대 흐름이라 게시 API 로 못 건다 — 계정
-상태·YouTube Related video 와 같은 패턴이라 **리마인드만** 한다. 상대 계정 섭외는
-사람이 판단할 일이므로 자율 범위 밖이다. 틱 보고에 후보를 올리는 데까지가 루프 몫이다.
+**The loop can't execute this.** It's an in-app invite flow the publishing
+API can't touch — same pattern as Account Status and YouTube's Related video,
+so it **only reminds**. Choosing a partner account is a human judgment,
+outside autonomous scope. The loop's share ends at putting candidates in the
+tick report.
 
-확인한 범위를 정확히 적어 둔다 — 기능이 존재하고 양쪽 팔로워에게 나간다는 것까지가
-공식이다. 참여자 수 상한·도달 배분 방식은 헬프센터 상세 페이지가 렌더링되지 않아
-확인하지 못했고, **효과 크기는 공식 수치가 없다**(채널 자체 실측으로만 알 수 있다).
+Record the verified range precisely — that the feature exists and reaches
+both follower sets is official. Participant caps and reach-splitting
+mechanics couldn't be confirmed (the Help Center detail page wouldn't
+render), and **there is no official number for the effect size** (only your
+own channel's measurements can tell).
 
-## 관찰 지표 (주간 4개)
+## Observed metrics (weekly 4)
 
-`reels_skip_rate`(훅) · `ig_reels_avg_watch_time`(유지) · 도달당 공유 · 계정
-`profile_views`(관심 전환 — 릴스별 `follows` 는 플랫폼이 주지 않는다).
-좋아요는 후행 지표라 판단을 바꾸지 않는다. 도달 상위 릴스에서
-소재·길이·형식을 읽어 다음 기획에 넘긴다 — 이 학습이 없으면 루프는 같은 영상만
-복제한다. 기획 반영은 storyboard 파이프라인에서 사람이 한다.
+`reels_skip_rate` (hook) · `ig_reels_avg_watch_time` (retention) · shares per
+reach · account `profile_views` (interest conversion — the platform gives no
+per-reel `follows`). Likes are a lagging indicator and don't change
+decisions. Read the subject, length, and format off the top-reach reels into
+the next plan — without this learning, the loop just clones the same video.
+Planning changes happen with a human in the storyboard pipeline.
 
-팔로워 수는 인사이트가 아니라 `account.followersCount` 프로필 값을 쓴다. 인사이트의
-`follower_count` 는 **팔로워 100 미만 계정에서 빈 값**이라 신규 채널에서 못 쓴다(실측).
+The follower count uses the `account.followersCount` profile value, not
+insights. Insights' `follower_count` is **an empty value for accounts under
+100 followers**, so it's unusable on a new channel (measured in practice).
 
-## 인용 금지 — 검증에서 기각된 통설
+## Do not cite — folklore rejected in verification
 
-적대적 검증에서 죽은 주장들이다. 플랜·보고·기획 어디에도 쓰지 않는다.
+Claims that died in adversarial verification. Not used in plans, reports, or
+planning — anywhere.
 
-- **"릴스 도달이 단일 이미지의 2.25배·캐러셀의 1.36배"**(0-3) — 표본 귀속이 틀렸다.
-  "45M+ 게시물 기준"으로 유통되지만 원문은 별도의 4M+ 게시물 분석에 귀속시킨다.
-- **"해시태그 1개 이상 쓰면 조회 31.7% 낮다"**(1-2) — 숫자 인용은 정확하나 결론이
-  죽었다. 유무(0개 대 1개 이상) 비교라 "30개 도배"에 대해 아무 말도 하지 않는다.
-- **"팔로워 1만 미만 중 21%만 성장했다"**(0-3) — 같은 출처가 정반대로 요약한다.
-  원문은 이 숫자를 "신생 브랜드를 여전히 도울 수 있다"는 낙관 근거로 내놓는다.
-- **Trial Reels 사양 주장 5건 전부**(0-3 외 4건) — 비팔로워 전용 선노출·72시간 판정·
-  자동 확산 모두 탈락. 검증 중에 Mosseri 가 "트라이얼 릴스는 warm-audience 신호를 못
-  써서 **거의 항상 일반 릴스보다 도달이 낮다**"고 밝힌 정황이 나왔다. 콜드 스타트
-  실험 수단으로 권하지 않는다.
-- **"추천 자격 박탈은 게시물이 아니라 계정 단위"** 의 배타 표현(0-3) — 계정 단위
-  메커니즘 자체는 사실이지만(§자격), 같은 페이지가 게시물 단위 판정도 함께 기술한다.
+- **"Reels reach is 2.25x single images · 1.36x carousels"** (0-3) — wrong
+  sample attribution. It circulates as "based on 45M+ posts" but the original
+  attributes it to a separate 4M+ post analysis.
+- **"One or more hashtags means 31.7% fewer views"** (1-2) — the number is
+  quoted accurately but the conclusion died. It's a presence comparison
+  (0 vs 1+), so it says nothing about "stuffing 30".
+- **"Only 21% of sub-10K accounts grew"** (0-3) — the same source summarizes
+  it the opposite way. The original offers the number as optimistic evidence
+  that it "can still help young brands".
+- **All 5 Trial Reels spec claims** (0-3 and 4 more) — non-follower-only
+  pre-exposure, the 72-hour verdict, auto-amplification: all failed. During
+  verification, context surfaced of Mosseri saying trial reels can't use
+  warm-audience signals and so **"almost always reach less than regular
+  reels"**. Not recommended as a cold-start experiment tool.
+- The exclusive phrasing of **"recommendation ineligibility is account-level,
+  not post-level"** (0-3) — the account-level mechanism itself is real
+  (§Losing eligibility), but the same page also describes post-level
+  verdicts.
 
-## 확인 실패 — 모른다고 말해야 하는 것
+## Verification failures — what we have to admit we don't know
 
-"아직 안 찾았다"가 아니라 **찾았는데 통과한 근거가 없었다**는 뜻이다.
+Not "haven't looked yet" — **looked, and no evidence passed**.
 
-- **릴스 제작 규범의 세부.** 훅 첫 3초 구성법·자막 유무·오디오 선택·최적 길이 —
-  1차 근거가 하나도 살아남지 못했다. 확보된 건 "3초 미만 시청 확률이 예측 항목"이라는
-  모델 구조와 "평균 시청 8.5초"라는 실측치뿐이다. 그 사이는 비어 있다.
-- **콜드 스타트 초기 시드의 효과 크기.** 첫 소집단 반응률이 병목이라는 메커니즘은
-  1차 문서로 확인됐고, 실행법도 하나는 찾았다 — 공동 게시(§콜드 스타트, 2026-08-15
-  조사). 다만 그게 도달을 얼마나 올리는지는 공식 수치가 없고, 공동 게시 말고 다른
-  실행법은 여전히 근거를 못 찾았다.
-- **최적 게시 시간표.** 표를 내는 벤더 자신이 "보편적이지 않다"고 고지한다.
-- **한국 시장 특수성.** 확보한 근거가 전부 글로벌 표본이고 한국 계정 수치는 하나도 없다.
+- **The specifics of reel production norms.** How to build the first 3
+  seconds, subtitles or not, audio choice, optimal length — not one primary
+  source survived. What's secured is the model structure ("under-3-seconds
+  probability is a prediction target") and the measured 8.5-second average
+  watch. The space between is empty.
+- **The effect size of cold-start seeding.** The mechanism — the first
+  group's response rate as the bottleneck — is confirmed in primary docs, and
+  one execution path was found: Collab posts (§Cold start, researched
+  2026-08-15). But how much that lifts reach has no official number, and no
+  execution path other than Collabs has found evidence.
+- **Optimal posting timetables.** The vendors publishing the tables disclose
+  themselves that they aren't universal.
+- **Korea-market specifics.** All the evidence gathered is global samples;
+  not a single Korean-account number.
 
-비어 있는 칸은 남의 블로그가 아니라 **우리 채널 실측**으로 채운다. §랭킹에서 확인된
-예측 항목이 그대로 측정 축이 된다 — 같은 소재로 훅 형태를 바꿔 두 판을 내고
-`reels_skip_rate` 를 비교하는 식이다. 이건 근거 있는 실험이고, "훅은 3초 안에 질문으로
-시작하라" 같은 규범은 근거 없는 복창이다.
+Empty boxes get filled by **our own channel's measurements**, not someone's
+blog. The prediction targets confirmed in §Ranking become the measurement
+axes as-is — same subject, two cuts with different hook shapes, compare
+`reels_skip_rate`. That's a grounded experiment; a norm like "open with a
+question within 3 seconds" is ungrounded parroting.

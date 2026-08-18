@@ -1,54 +1,56 @@
-# growth-plan.md 템플릿 + state.json 스키마
+# growth-plan.md template + state.json schema
 
-## growth-plan.md — 상시 승인서
+## growth-plan.md — the standing authorization
 
-init 이 HITL 로 작성한다. `status: approved` 가 아니면 grow-threads 는 게시하지
-않는다. 경로는 `data/<채널>/growth/threads/` — 성장 스킬은 플랫폼별로 분리되므로
-플랫폼마다 자기 하위 디렉토리를 쓴다.
-플랜 수정 후에는 사용자 승인을 다시 받아 approved 로 되돌린다.
+init writes this via HITL. Unless it says `status: approved`, grow-threads
+publishes nothing. The path is `data/<channel>/growth/threads/` — growth
+skills are split per platform, so each platform uses its own subdirectory.
+After editing the plan, get the user's approval again and set it back to
+approved.
 
 ```markdown
 ---
-channel: ttalkkak-lab
-status: approved            # draft | approved — approved 만 자율 게시 허용
+channel: my-channel
+status: approved            # draft | approved — only approved allows autonomous publishing
 approved_at: 2026-08-11
-tone: 반말                  # 반말 | 존댓말 — 채널 전체에 하나만 (profile.md 상속)
-slots: ["09:00", "21:00"]   # 새 글 리듬 슬롯 1~3개 (현지 시각, 타깃 활동 시간대)
-                            # 상한이 아니라 리듬 가이드 — 게시 빈도는 루프가 판단
+tone: 반말                  # 반말 (casual) | 존댓말 (polite) — one per channel (inherited from profile.md)
+slots: ["09:00", "21:00"]   # 1–3 new-post rhythm slots (local time, target audience's active hours)
+                            # a rhythm guide, not a cap — the loop judges publishing frequency
 ---
 
-# <채널명> Threads 성장 플랜
+# <channel name> Threads growth plan
 
-## 관심 키워드 (검색 참여용, 3~5개 — 틱마다 로테이션)
+## Keywords of interest (for search engagement, 3–5 — rotated each tick)
 
-- 베트남 임시거주
-- 주재원 생활
-- 하노이 맛집
+- visa renewals abroad
+- expat daily life
+- Hanoi restaurants
 
-## 소재 풀 (새 글 글감 카테고리 — 이 밖의 소재는 자율 게시 금지)
+## Topic pool (new-post idea categories — topics outside it are barred from autonomous publishing)
 
-- 비자·행정 절차에서 겪는 실수담
-- 현지 물가·환율 관찰
-- 한국과 다른 생활 디테일
+- mistakes made in visa and paperwork procedures
+- local price and exchange-rate observations
+- everyday details that differ from home
 
-## 금지 소재 (플랜 갱신 없이는 절대 게시 금지)
+## Banned topics (never published without a plan update)
 
-- 정치·종교·특정 국적 비하
-- 미검증 제도 정보 (시행일·금액은 storyboard 파이프라인의 검증을 거친 것만)
+- politics, religion, disparaging any nationality
+- unverified policy information (effective dates and amounts only after the storyboard pipeline's verification)
 
-## 링크 정책
+## Link policy
 
-기본: 링크는 자기 답글로. 본문 링크 A/B 실측 결과가 쌓이면 여기 갱신한다.
+Default: links go in a self-reply. Update here once body-link A/B measurements accumulate.
 ```
 
-## state.json — 틱 간 이월 상태
+## state.json — state carried between ticks
 
-이중 게시 방지의 근거가 이 파일이다. 틱마다 읽고 끝에 저장한다.
-날짜 키가 오늘이 아니면 그 버킷은 리셋한다. API 응답 원문은 저장하지 않는다.
+This file is the basis for double-post prevention. Read it at the start of
+every tick, save it at the end. If a date key isn't today, reset that bucket.
+Never store raw API responses.
 
 ```json
 {
-  "channel": "ttalkkak-lab",
+  "channel": "my-channel",
   "lastTickAt": "2026-08-11T09:30:00+09:00",
   "filledSlots": { "2026-08-11": ["09:00"] },
   "engagedPostIds": ["17891234567890123"],
@@ -63,40 +65,46 @@ slots: ["09:00", "21:00"]   # 새 글 리듬 슬롯 1~3개 (현지 시각, 타�
 }
 ```
 
-- `filledSlots` — 슬롯 게시 성공 시에만 기록. 실패 슬롯은 다음 틱이 재시도한다.
-- `engagedPostIds` — 검색 참여를 **시도한** 글(게시 성공 + 게이트 3라운드 미달
-  스킵 모두). 최근 500개만 유지(오래된 것부터 제거). 스킵분을 안 넣으면 같은
-  글에 틱마다 초안·리뷰를 반복한다.
-- `gateSkippedCommentIds` — 게이트 3라운드 미달로 답하지 않기로 종결한 인박스
-  댓글 id. 다음 틱부터 건너뛰고, 사람이 직접 답할지 판단하도록 보고만 한다.
-- `keywordCursor` — 키워드 로테이션 위치(0부터, 키워드 수로 순환).
+- `filledSlots` — recorded only on a successful slot publish. A failed slot
+  gets retried by the next tick.
+- `engagedPostIds` — posts where search engagement was **attempted**
+  (successful publishes and 3-round gate-failure skips alike). Keep only the
+  latest 500 (drop the oldest first). Leave the skips out and every tick
+  re-drafts and re-reviews the same post.
+- `gateSkippedCommentIds` — inbox comment ids closed out as not-answered after
+  3 failed gate rounds. Skipped from the next tick on; only reported, so a
+  human can decide whether to answer personally.
+- `keywordCursor` — keyword rotation position (from 0, cycling through the
+  keyword count).
 
-**레거시 키** — 구버전 플랜의 `daily_caps` frontmatter 와 state.json 의
-`searchRepliesToday` 는 폐기됐다(일 상한 제도 자체가 없어짐). 기존 파일에서
-읽혀도 무시하고, state 저장 시 함께 제거한다. 기존 채널 플랜은 다음 init 또는
-플랜 수정 때 이 템플릿으로 갱신해 재승인받는다.
+**Legacy keys** — the old plan's `daily_caps` frontmatter and state.json's
+`searchRepliesToday` are retired (the daily-cap regime itself is gone). Ignore
+them if read from existing files, and drop them when saving state. Existing
+channel plans get migrated to this template and re-approved at the next init
+or plan edit.
 
-## growth-log.md — 관찰 원장 (append only)
+## growth-log.md — observation ledger (append only)
 
 ```markdown
-# <채널명> 성장 로그
+# <channel name> growth log
 
-| 시각 | 답글 | 참여 | 새 글 | 팔로워 | 메모 |
+| time | replies | engagements | new posts | followers | memo |
 | --- | --- | --- | --- | --- | --- |
-| 08-11 09:30 | 2 | 1 | 1(09:00) | 132(+3) | 환율 글 도달 상위 |
-| 08-11 10:00 | 0 | 0 | 0 | - | 관찰만 |
+| 08-11 09:30 | 2 | 1 | 1(09:00) | 132(+3) | FX post top reach |
+| 08-11 10:00 | 0 | 0 | 0 | - | observation only |
 ```
 
-주 1회(월요일 첫 틱) 요약 줄을 추가한다: 주간 4지표(게시물당 도달·답글·팔로워
-증가율·프로필 방문) + 도달 상위 글 유형 한 줄.
+Once a week (Monday's first tick), add a summary line: the 4 weekly metrics
+(reach per post · replies per post · follower growth rate · profile visits)
+plus one line on the top-reach post types.
 
-## posts.md — 게시 문안 원장 (append only)
+## posts.md — published-copy ledger (append only)
 
-새 글을 게시할 때마다 문안 원문을 붙인다. 헤더가 `##` 인 이유는 묶음 검사기가
-`--split` 으로 이 헤더마다 한 편으로 나눠 읽기 때문이다.
+Every time a new post is published, append its copy verbatim. The headers are
+`##` because the batch checker's `--split` reads each header as one piece.
 
 ```markdown
-# <채널명> Threads 게시 문안
+# <channel name> Threads published copy
 
 ## 17841400000000000 08-11 09:12
 
@@ -108,6 +116,8 @@ slots: ["09:00", "21:00"]   # 새 글 리듬 슬롯 1~3개 (현지 시각, 타�
 …
 ```
 
-**왜 따로 두나**: growth-log 는 틱 요약 한 줄이라 문안이 남지 않고, `threads_insights`
-는 지표만 준다. 묶음 동질화는 게시한 문안들을 한자리에 놓아야 보인다 — 다섯 편마다
-`check-batch.py --split` 로 재는 입력이 이 파일이다(SKILL.md §5).
+**Why a separate file**: growth-log is one summary line per tick so no copy
+survives there, and `threads_insights` gives metrics only. Batch
+homogenization only shows when the published drafts sit in one place — this
+file is the input measured with `check-batch.py --split` every five posts
+(SKILL.md §5).

@@ -1,16 +1,16 @@
 /**
- * Google Lyria 음악 생성 클라이언트 — fect-mcp-server music 모듈 이식.
+ * Google Lyria music generation client — ported from the fect-mcp-server music module.
  *
- * 성격이 다른 두 갈래 Lyria API 를 모두 감싼다:
- * - Lyria 3 Clip (배치): interactions 단일 호출 · 30초 고정 · MP3 44.1kHz 스테레오.
- *   쇼트폼 BGM 의 기본 경로 — 싸고 호출이 한 번이다.
- * - Lyria RealTime (WebSocket): 스트리밍 PCM 48kHz 스테레오 · 길이 5~300초 가변.
- *   내레이션 길이에 정확히 맞춰야 하거나 seed 재현성이 필요할 때 쓴다.
+ * Wraps both branches of the Lyria API, which differ in character:
+ * - Lyria 3 Clip (batch): single interactions call · fixed 30s · MP3 44.1kHz stereo.
+ *   The default path for short-form BGM — cheap and one call.
+ * - Lyria RealTime (WebSocket): streaming PCM 48kHz stereo · variable 5~300s length.
+ *   Used when the length must match the narration exactly or when seed reproducibility is needed.
  *
- * 두 API 모두 인스트루멘털 지향이며 결과는 비결정론적이다 — 시그니처 BGM 은
- * 생성물을 에셋으로 저장해 재사용해야 한다 (RealTime 은 seed 로만 재현 가능).
+ * Both APIs lean instrumental and the results are nondeterministic — a signature
+ * BGM must be saved as an asset and reused (RealTime is reproducible only via seed).
  *
- * API 키는 기동 시가 아니라 호출 시점에 검증한다 (config.requireGeminiKey).
+ * The API key is validated at call time, not at startup (config.requireGeminiKey).
  */
 
 import type {
@@ -24,24 +24,24 @@ import { z } from 'zod';
 import { requireGeminiKey } from './config.js';
 import { bareFilenameSchema, pcmToWav, saveAudioFile } from './media-utils.js';
 
-/** Lyria 모델 ID */
-export const LYRIA_CLIP_MODEL = 'lyria-3-clip-preview';          // 배치 · 30초 고정 · MP3
-export const LYRIA_REALTIME_MODEL = 'models/lyria-realtime-exp'; // WebSocket · 스트리밍 PCM
+/** Lyria model IDs */
+export const LYRIA_CLIP_MODEL = 'lyria-3-clip-preview';          // batch · fixed 30s · MP3
+export const LYRIA_REALTIME_MODEL = 'models/lyria-realtime-exp'; // WebSocket · streaming PCM
 
-/** Clip 은 항상 30초 고정 (API 제약) */
+/** Clip is always fixed at 30s (API constraint) */
 const CLIP_DURATION_SECONDS = 30;
 
-/** Lyria RealTime 출력 규격 — 수신 바이트로 길이를 역산하는 데도 쓴다. */
+/** Lyria RealTime output spec — also used to derive duration from received bytes. */
 const REALTIME_SAMPLE_RATE = 48_000;
 const REALTIME_CHANNELS = 2;
 const REALTIME_BYTES_PER_SAMPLE = 2; // 16-bit
 const REALTIME_BYTES_PER_SECOND = REALTIME_SAMPLE_RATE * REALTIME_CHANNELS * REALTIME_BYTES_PER_SAMPLE;
 
-/** 목표 길이를 채우지 못할 때의 여유 — 요청 길이 + 이 값까지만 기다린다. */
+/** Slack for when the target length isn't reached — wait only up to requested length + this. */
 const REALTIME_TIMEOUT_MARGIN_MS = 30_000;
 const REALTIME_POLL_INTERVAL_MS = 100;
 
-/** 장르 제안 목록 (API 가 강제하는 enum 이 아님 — Lyria 는 자유 텍스트를 받는다) */
+/** Suggested genre list (not an API-enforced enum — Lyria accepts free text) */
 export const MUSIC_GENRES = [
   'Acid Jazz', 'Afrobeat', 'Ambient', 'Blues', 'Bossa Nova', 'Breakbeat', 'Classical',
   'Country', 'Disco', 'Drum and Bass', 'Dub', 'Dubstep', 'EDM', 'Electronic', 'Funk',
@@ -49,7 +49,7 @@ export const MUSIC_GENRES = [
   'Pop', 'R&B', 'Reggae', 'Rock', 'Soul', 'Synthwave', 'Techno', 'Trance', 'World Music',
 ] as const;
 
-/** 분위기 제안 목록 (자유 텍스트 허용) */
+/** Suggested mood list (free text allowed) */
 export const MUSIC_MOODS = [
   'Ambient', 'Atmospheric', 'Calm', 'Cheerful', 'Cinematic', 'Dark', 'Dreamy', 'Emotional',
   'Energetic', 'Epic', 'Experimental', 'Happy', 'Hopeful', 'Intense', 'Melancholic',
@@ -57,7 +57,7 @@ export const MUSIC_MOODS = [
   'Sad', 'Suspenseful', 'Uplifting',
 ] as const;
 
-/** 악기 제안 목록 (자유 텍스트 허용) */
+/** Suggested instrument list (free text allowed) */
 export const MUSIC_INSTRUMENTS = [
   '303 Acid Bass', 'Acoustic Guitar', 'Bass Guitar', 'Cello', 'Drums', 'Electric Guitar',
   'Flute', 'Harp', 'Keyboard', 'Orchestra', 'Organ', 'Percussion', 'Piano', 'Saxophone',
@@ -65,7 +65,7 @@ export const MUSIC_INSTRUMENTS = [
   'Vocal Chops',
 ] as const;
 
-/** 조성 enum — 모델은 나란한조를 구분하지 않으므로 각 값이 장·단조 양쪽에 대응한다. */
+/** Key/scale enum — the model doesn't distinguish relative keys, so each value maps to both the major and its relative minor. */
 export const MUSIC_SCALES = [
   'C_MAJOR_A_MINOR', 'D_FLAT_MAJOR_B_FLAT_MINOR', 'D_MAJOR_B_MINOR', 'E_FLAT_MAJOR_C_MINOR',
   'E_MAJOR_D_FLAT_MINOR', 'F_MAJOR_D_MINOR', 'G_FLAT_MAJOR_E_FLAT_MINOR', 'G_MAJOR_E_MINOR',
@@ -73,14 +73,14 @@ export const MUSIC_SCALES = [
   'SCALE_UNSPECIFIED',
 ] as const;
 
-/** 생성 모드 enum */
+/** Generation mode enum */
 export const MUSIC_GENERATION_MODES = ['QUALITY', 'DIVERSITY', 'VOCALIZATION'] as const;
 
-// ── 요청 스키마 ──────────────────────────────────────────────────
+// ── Request schemas ──────────────────────────────────────────────
 
 const durationSchema = z.number().min(5).max(300).default(30);
 
-/** weight 는 0 을 제외한 임의의 값 (±1 상·하한은 API 스펙에 없다) */
+/** weight is any non-zero value (the API spec has no ±1 bounds) */
 const weightedPromptSchema = z.object({
   text: z.string().min(1, 'Prompt text is required'),
   weight: z.number().refine((v) => v !== 0, 'Weight must be a non-zero value').default(1.0),
@@ -93,16 +93,16 @@ const musicConfigSchema = z.object({
   scale: z.enum(MUSIC_SCALES).optional(),
   density: z.number().min(0).max(1).optional(),
   brightness: z.number().min(0).max(1).optional(),
-  temperature: z.number().min(0).max(3).optional(), // 미지정 시 모델 기본값 1.1
+  temperature: z.number().min(0).max(3).optional(), // model default 1.1 when unspecified
   topK: z.number().int().min(1).max(1000).optional(),
-  seed: z.number().int().min(0).max(2_147_483_647).optional(), // 유일한 재현성 제어 수단
+  seed: z.number().int().min(0).max(2_147_483_647).optional(), // the only reproducibility control
   muteBass: z.boolean().optional(),
   muteDrums: z.boolean().optional(),
   onlyBassAndDrums: z.boolean().optional(),
   musicGenerationMode: z.enum(MUSIC_GENERATION_MODES).optional(),
 });
 
-/** 프롬프트 하나로 생성 (RealTime) */
+/** Generate from a single prompt (RealTime) */
 export const musicGenerateSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required'),
   genre: z.string().optional(),
@@ -114,7 +114,7 @@ export const musicGenerateSchema = z.object({
   filename: bareFilenameSchema('audio').optional(),
 });
 
-/** 가중 프롬프트 혼합 + 세부 제어 (RealTime) */
+/** Weighted prompt blend + fine-grained control (RealTime) */
 export const musicAdvancedSchema = z.object({
   prompts: z.array(weightedPromptSchema).min(1, 'At least one prompt is required'),
   durationSeconds: durationSchema,
@@ -124,8 +124,9 @@ export const musicAdvancedSchema = z.object({
 });
 
 /**
- * Lyria 3 Clip (배치 · 30초 고정).
- * BPM·조성·악기 등의 구조화 파라미터가 없으므로 프롬프트 본문에 자연어로 기술한다.
+ * Lyria 3 Clip (batch · fixed 30s).
+ * There are no structured parameters for BPM, key, instruments, etc., so describe
+ * them in natural language in the prompt body.
  */
 export const musicClipSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required'),
@@ -140,10 +141,11 @@ export type MusicConfig = z.infer<typeof musicConfigSchema>;
 export type WeightedPrompt = z.infer<typeof weightedPromptSchema>;
 
 /**
- * 음악 생성 응답.
+ * Music generation response.
  *
- * error 는 원인 메시지만 담는다 — "Music generation failed:" 같은 접두어는 핸들러가
- * 붙이므로(video-client 와 같은 규약) 여기서도 붙이면 이중으로 출력된다.
+ * error holds only the cause message — prefixes like "Music generation failed:"
+ * are added by the handler (same convention as video-client), so adding one here
+ * would print it twice.
  */
 export interface MusicResponse {
   success: boolean;
@@ -154,13 +156,13 @@ export interface MusicResponse {
   model?: string;
 }
 
-// ── Lyria 3 Clip (배치) ──────────────────────────────────────────
+// ── Lyria 3 Clip (batch) ─────────────────────────────────────────
 
 /**
- * 30초 고정 클립 생성 — 단일 호출.
+ * Generate a fixed 30s clip — a single call.
  *
- * 결과는 비결정론적이며 seed 가 없으므로, 시그니처 BGM 은 생성물을 에셋으로
- * 저장해 재사용해야 한다.
+ * The result is nondeterministic and there is no seed, so a signature BGM must be
+ * saved as an asset and reused.
  */
 export async function generateClip(request: MusicClipRequest): Promise<MusicResponse> {
   try {
@@ -175,8 +177,9 @@ export async function generateClip(request: MusicClipRequest): Promise<MusicResp
       input: request.prompt,
     });
 
-    // Interactions API 는 2026-05 스키마 개편으로 평면 outputs[] 를 steps[].content[] 로
-    // 바꿨다 (SDK 2.0 미만은 서버가 아예 거부한다). 오디오는 model_output 스텝 안에 있다.
+    // The 2026-05 schema overhaul of the Interactions API replaced the flat
+    // outputs[] with steps[].content[] (SDK below 2.0 is rejected by the server
+    // outright). The audio lives inside the model_output step.
     for (const step of interaction.steps ?? []) {
       if (step.type !== 'model_output') continue;
 
@@ -210,13 +213,13 @@ export async function generateClip(request: MusicClipRequest): Promise<MusicResp
   }
 }
 
-// ── Lyria RealTime (스트리밍) ────────────────────────────────────
+// ── Lyria RealTime (streaming) ───────────────────────────────────
 
 /**
- * 간단한 프롬프트로 길이 지정 생성.
+ * Generate a given length from a simple prompt.
  *
- * genre/mood/instruments 를 프롬프트 문자열로 접어 generateAdvanced 에 위임한다 —
- * RealTime API 에는 이런 구조화 필드가 없다.
+ * Folds genre/mood/instruments into the prompt string and delegates to
+ * generateAdvanced — the RealTime API has no such structured fields.
  */
 export async function generateSimple(request: MusicGenerateRequest): Promise<MusicResponse> {
   const promptParts = [request.prompt];
@@ -235,7 +238,7 @@ export async function generateSimple(request: MusicGenerateRequest): Promise<Mus
   });
 }
 
-/** zod 로 검증된 config 를 SDK 타입으로 옮긴다 (명시된 키만 — 모델 기본값을 존중). */
+/** Move the zod-validated config into the SDK type (explicit keys only — respect model defaults). */
 function toLiveMusicConfig(config: MusicConfig): LiveMusicGenerationConfig {
   const result: LiveMusicGenerationConfig = {};
   if (config.guidance !== undefined) result.guidance = config.guidance;
@@ -256,10 +259,11 @@ function toLiveMusicConfig(config: MusicConfig): LiveMusicGenerationConfig {
 }
 
 /**
- * 가중 프롬프트 혼합 + 세부 제어 생성 (WebSocket 스트리밍).
+ * Weighted prompt blend + fine-grained control generation (WebSocket streaming).
  *
- * 목표 길이만큼의 PCM 바이트가 모이면 세션을 닫고 WAV 로 감싸 저장한다.
- * 스트림은 끝을 알리지 않으므로 "받은 양"이 종료 조건이다.
+ * Once the target length's worth of PCM bytes has arrived, the session is closed
+ * and the audio is wrapped as WAV and saved. The stream never signals an end, so
+ * "how much we've received" is the termination condition.
  */
 export async function generateAdvanced(request: MusicAdvancedRequest): Promise<MusicResponse> {
   const targetDuration = request.durationSeconds ?? 30;
@@ -277,7 +281,7 @@ export async function generateAdvanced(request: MusicAdvancedRequest): Promise<M
 
   try {
     const { GoogleGenAI } = await import('@google/genai');
-    // RealTime(live.music)은 v1alpha 에서만 노출된다.
+    // RealTime (live.music) is exposed only under v1alpha.
     const genai = new GoogleGenAI({ apiKey: requireGeminiKey(), apiVersion: 'v1alpha' });
 
     console.error(`[Lyria] Streaming ${targetDuration}s... (model: ${LYRIA_REALTIME_MODEL})`);
@@ -300,7 +304,7 @@ export async function generateAdvanced(request: MusicAdvancedRequest): Promise<M
           state.error = error instanceof Error ? error : new Error(String(error));
         },
         onclose: () => {
-          // 종료 처리는 아래 수신 대기 루프가 담당한다.
+          // shutdown is handled by the receive-wait loop below.
         },
       },
     });
@@ -316,7 +320,7 @@ export async function generateAdvanced(request: MusicAdvancedRequest): Promise<M
 
     await session.play();
 
-    // 목표 바이트 수신까지 대기 (타임아웃: 요청 길이 + 30초)
+    // wait until the target bytes arrive (timeout: requested length + 30s)
     const startTime = Date.now();
     const timeoutMs = targetDuration * 1000 + REALTIME_TIMEOUT_MARGIN_MS;
     while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
@@ -332,9 +336,10 @@ export async function generateAdvanced(request: MusicAdvancedRequest): Promise<M
       return { success: false, error: 'No audio data received from Lyria RealTime' };
     }
 
-    // 마지막 청크가 목표를 넘겨 도착하므로 요청 길이로 정확히 자른다 — 이 툴의
-    // 존재 이유가 "길이를 지정할 수 있다"인데 31초가 나오면 계약을 어기는 것이다.
-    // 샘플 경계(채널 × 2byte)에 맞춰 잘라야 스테레오 위상이 어긋나지 않는다.
+    // The last chunk arrives past the target, so trim exactly to the requested
+    // length — this tool exists because "you can specify the length", and a 31s
+    // result breaks that contract. Trim on a sample boundary (channels × 2 bytes)
+    // or the stereo phase drifts apart.
     const rawPcm = Buffer.concat(audioChunks);
     const frameBytes = REALTIME_CHANNELS * REALTIME_BYTES_PER_SAMPLE;
     const trimTo = Math.floor(Math.min(rawPcm.length, targetBytes) / frameBytes) * frameBytes;
@@ -365,7 +370,7 @@ export async function generateAdvanced(request: MusicAdvancedRequest): Promise<M
   }
 }
 
-/** 세션 종료 실패는 이미 결정된 결과를 뒤집지 않는다 — 삼키고 로그만 적는다. */
+/** A failed session close doesn't overturn an already-decided result — swallow it and just log. */
 function closeQuietly(session: LiveMusicSession): void {
   try {
     session.close();

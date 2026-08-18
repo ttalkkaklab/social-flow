@@ -3,59 +3,66 @@ import AppKit
 import CoreGraphics
 import ScreenCaptureKit
 
-// 화면 기록·마이크 권한.
+// Screen recording and microphone permissions.
 //
-// 시스템 설정 → 개인정보 보호 및 보안 → "화면 및 시스템 오디오 녹음" 목록에는
-// 권한을 요청한 적이 있는 앱이 올라온다. 그런데 이 앱은 화면을 직접 캡처하지
-// 않는다 — record.sh 가 띄우는 screencapture 가 한다. 그래서 앱 자신은 TCC 를
-// 건드린 적이 없어 목록에 나타나지 않고, 켜줄 방법이 없다. 여기서 직접 묻는 이유다.
+// The System Settings → Privacy & Security → "Screen & System Audio Recording"
+// list shows apps that have requested the permission at some point. But this
+// app doesn't capture the screen itself — the screencapture that record.sh
+// launches does. So the app never touched TCC, never appeared in the list, and
+// there was no way to turn it on. That's why we ask directly here.
 //
-// 캡처를 자식 프로세스가 하는 건 그대로 둬도 된다. TCC 의 책임 프로세스는 스폰
-// 시점에 정해져 nohup·disown 으로 부모가 바뀌어도 유지되므로, 앱에 권한이
-// 붙으면 그 아래 screencapture 도 함께 통과한다.
+// Letting the child process do the capture is fine to keep. TCC's responsible
+// process is fixed at spawn time and survives the parent changing via
+// nohup/disown, so once the app has the permission, the screencapture under it
+// passes too.
 //
-// 실측(macOS 26.5) — 두 API 를 각자 잘하는 일에만 쓴다.
-//   CGRequestScreenCaptureAccess()  등록도 프롬프트도 일어나지 않는다. 못 쓴다.
-//   SCShareableContent 조회          앱을 목록에 등록시킨다. 단 권한이 없어도
-//                                    성공해서 돌아오므로 판정에는 쓸 수 없다.
-//   CGPreflightScreenCaptureAccess() 상태는 정확히 알려준다. 대신 묻지는 않는다.
+// Measured on macOS 26.5 — each API gets used only for what it's good at.
+//   CGRequestScreenCaptureAccess()   neither registers nor prompts. Unusable.
+//   SCShareableContent query         registers the app in the list. But it
+//                                    succeeds even without permission, so it
+//                                    can't be used as the verdict.
+//   CGPreflightScreenCaptureAccess() reports the state accurately. Doesn't ask.
 enum Permissions {
 
-    // MARK: - 화면 기록
+    // MARK: - Screen recording
 
-    /// 지금 녹화할 수 있는지 확인하고, 권한이 없으면 등록을 시도한다.
+    /// Checks whether recording is possible right now, and if the permission
+    /// is missing, tries to get the app registered.
     ///
-    /// 사용자가 설정에서 켜도 이번 실행에는 반영되지 않는다 — macOS 가 앱을
-    /// 다시 띄우라고 한다. 그래서 반환값은 "지금 찍을 수 있는가"이지 "사용자가
-    /// 거부했는가"가 아니다.
+    /// Even if the user flips the toggle in Settings, this run doesn't pick it
+    /// up — macOS tells them to relaunch the app. So the return value means
+    /// "can we record now", not "did the user deny".
     static func checkScreenCapture() async -> Bool {
         if CGPreflightScreenCaptureAccess() { return true }
-        // 목록 등록을 노린 호출이다. 반환값·예외 여부는 보지 않는다.
+        // This call exists to trigger list registration. Its return value and
+        // whether it throws are ignored.
         _ = try? await SCShareableContent.excludingDesktopWindows(
             false, onScreenWindowsOnly: true
         )
         return CGPreflightScreenCaptureAccess()
     }
 
-    // MARK: - 마이크
+    // MARK: - Microphone
 
     static var microphoneStatus: AVAuthorizationStatus {
         AVCaptureDevice.authorizationStatus(for: .audio)
     }
 
-    /// 마이크도 사정이 같다 — screencapture -g 가 대신 잡으므로 앱은 물은 적이 없다.
+    /// Same story for the mic — screencapture -g grabs it on the app's behalf,
+    /// so the app itself never asked.
     static func requestMicrophone() async {
         guard microphoneStatus == .notDetermined else { return }
         _ = await AVCaptureDevice.requestAccess(for: .audio)
     }
 
-    // MARK: - 시스템 설정 열기
+    // MARK: - Opening System Settings
 
     static func openScreenCaptureSettings() { openPrivacyPane("Privacy_ScreenCapture") }
     static func openMicrophoneSettings() { openPrivacyPane("Privacy_Microphone") }
 
-    /// 실측(macOS 26.5): 예전 com.apple.preference.security 주소는 설정 앱을
-    /// 열기만 하고 "일반"에 떨어진다. 확장 번들 id 를 써야 해당 항목으로 간다.
+    /// Measured on macOS 26.5: the old com.apple.preference.security address
+    /// only opens the Settings app and lands on "General". The extension bundle
+    /// id is what reaches the right pane.
     private static func openPrivacyPane(_ anchor: String) {
         guard let url = URL(
             string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?\(anchor)"

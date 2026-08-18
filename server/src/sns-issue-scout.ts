@@ -1,16 +1,20 @@
 /**
- * SNS 이슈 스카우트 — 스레드·X·인스타그램에서 지금 무엇이 오가는지를 SerpApi
- * 구글 검색(`site:` 연산자)으로 훑는다.
+ * SNS issue scout — sweeps what is being said right now on Threads, X, and
+ * Instagram with SerpApi Google searches (the `site:` operator).
  *
- * 유튜브 스카우트와 잣대가 다르다. 유튜브는 채널 중앙값 대비 배수로 "검증된
- * 아웃라이어"를 고르지만, 세 SNS 는 우리가 가진 API 로 남의 글 참여량을 못 받는다
- * (스레드 키워드 검색은 고급 액세스 전엔 자기 글만, 인스타 로그인 API 엔 공개
- * 검색이 없고, X 는 종량제 별도 계정). 그래서 이 툴이 주는 것은 **언급 목록**이다 —
- * 구글이 인덱싱한 게시물을 최근 구간으로 모아, 여러 글·여러 플랫폼에 같이 나오는
- * 주제어를 빈도로 세운다. 좋아요·조회 수는 없고 순서도 구글 관련도순이라, 결과를
- * 유튜브 배수 표와 같은 칸에 섞지 않는다.
+ * A different yardstick from the YouTube scout. YouTube picks "verified outliers"
+ * by the multiple over a channel's median, but for these three networks the APIs we
+ * have can't get us engagement counts on other people's posts (Threads keyword
+ * search returns only our own posts until advanced access, the Instagram Login API
+ * has no public search, and X is pay-as-you-go on a separate account). So what this
+ * tool hands back is a **mention list** — it gathers Google-indexed posts over a
+ * recent window and counts the topic phrases that show up across several posts and
+ * several platforms. There are no likes or view counts and the order is Google
+ * relevance, so the result doesn't go in the same column as the YouTube multiplier
+ * table.
  *
- * 곁들여 Google Trends 급상승 검색어를 붙여 "지금 뜨는 것"과 시드가 겹치는지 표시한다.
+ * Alongside that it attaches Google Trends trending searches to show whether the
+ * seeds overlap with "what is rising right now".
  */
 
 import type { ApiResult } from './http.js';
@@ -37,16 +41,16 @@ export const DEFAULT_SNS_KEYWORD_LIMIT = 15;
 export const DEFAULT_SNS_TRENDING_LIMIT = 20;
 export const MAX_SNS_QUERIES = 4;
 export const MAX_SNS_PAGES_PER_QUERY = 2;
-/** 응답에 싣는 게시물 상한 — 3플랫폼 × 4시드 × 2페이지면 240건까지 올 수 있다 */
+/** Cap on posts carried in the response — 3 platforms × 4 seeds × 2 pages can bring up to 240 */
 export const SNS_POST_CAP = 90;
 const SNIPPET_CAP = 200;
 const EVIDENCE_CAP = 3;
 const UNIGRAM_WEIGHT = 0.5;
-/** 이 길이 이상 스니펫이 글자 그대로 같으면 같은 글(재게시·복붙 홍보)로 본다 */
+/** Snippets at least this long that match character for character count as the same post (reposts, copy-pasted promos) */
 const DUP_SNIPPET_MIN = 60;
 const RETRY_RE = /timed out|HTTP 5\d\d/;
 
-/** 구글 `site:` 에 넣는 도메인. 스레드는 2025 년에 threads.net → threads.com 으로 옮겼다 */
+/** Domains fed to Google's `site:`. Threads moved from threads.net to threads.com in 2025 */
 export const SNS_SITE: Record<SnsPlatform, string> = {
   threads: 'threads.com',
   x: 'x.com',
@@ -97,16 +101,17 @@ function okJson(payload: Record<string, unknown>): ApiResult {
   return { ok: true, status: 200, body: JSON.stringify(payload) };
 }
 
-// ── URL 정규화 — 같은 글이 슬러그·미디어 경로로 여러 번 오는 것을 하나로 ──
+// ── URL normalization — folds one post arriving several times via slug/media paths into one ──
 
 const THREADS_POST_RE = /^https?:\/\/(?:www\.)?threads\.(?:com|net)\/@([^/?#]+)\/post\/([A-Za-z0-9_-]+)/i;
 const X_POST_RE = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/([^/?#]+)\/status\/(\d+)/i;
 const IG_POST_RE = /^https?:\/\/(?:www\.)?instagram\.com\/(?:([^/?#]+)\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i;
 
 /**
- * 게시물 URL 이면 정규 URL 과 작성자를, 프로필·태그·탐색 페이지면 null 을 돌려준다.
- * 구글 결과에는 `/@user`(프로필)·`/post/<code>/media`·`/post/<code>/<슬러그>`·
- * `/status/<id>/photo/1` 이 섞여 오는데, 전부 한 글이거나 글이 아니다.
+ * Returns the canonical URL and the author for a post URL, null for profile, tag, or
+ * explore pages. Google results mix in `/@user` (profile), `/post/<code>/media`,
+ * `/post/<code>/<slug>`, and `/status/<id>/photo/1` — every one of them is either the
+ * same post or not a post at all.
  */
 export function canonicalPost(platform: SnsPlatform, link: string): { url: string; author: string | null } | null {
   if (platform === 'threads') {
@@ -117,7 +122,7 @@ export function canonicalPost(platform: SnsPlatform, link: string): { url: strin
   if (platform === 'x') {
     const m = X_POST_RE.exec(link);
     if (!m) return null;
-    // x.com/i/status/<id> 는 작성자 없는 짧은 주소다
+    // x.com/i/status/<id> is the short form, with no author
     return { url: `https://x.com/${m[1]}/status/${m[2]}`, author: m[1] === 'i' ? null : m[1] };
   }
   const m = IG_POST_RE.exec(link);
@@ -126,7 +131,7 @@ export function canonicalPost(platform: SnsPlatform, link: string): { url: strin
   return { url: `https://www.instagram.com/${kind}/${m[3]}/`, author: m[1] ?? null };
 }
 
-/** 구글 source 필드("X · ffreedomkr" · "Instagram · jeong_creator")에서 작성자를 뽑는다 */
+/** Pulls the author out of Google's source field ("X · ffreedomkr" · "Instagram · jeong_creator") */
 export function authorFromSource(source: string | undefined): string | null {
   if (!source) return null;
   const parts = source.split('·').map((s) => s.trim()).filter(Boolean);
@@ -135,17 +140,19 @@ export function authorFromSource(source: string | undefined): string | null {
   return /^(x|threads|instagram|twitter)$/i.test(tail) ? null : tail;
 }
 
-// ── 토큰 — 유튜브 스카우트의 토크나이저에 한국어 조사 떼기를 얹는다 ──
+// ── Tokens — the YouTube scout's tokenizer plus Korean particle stripping ──
 
 /**
- * SNS 본문은 제목과 달리 산문이라 "자동화를·자동화는·자동화가" 가 따로 세어진다.
- * 흔한 조사만 어절 끝에서 떼되, 남는 어간이 2자 미만이면 손대지 않고, 단음절 "이" 는
- * 고양이·어린이처럼 명사 끝에 흔해 4자 이상에서만 뗀다.
+ * SNS bodies are prose, not titles, so "자동화를 · 자동화는 · 자동화가" get counted
+ * separately. Only common particles come off the end of a word; the word is left alone
+ * when under 2 characters of stem would remain, and the single syllable "이" is common
+ * at the end of nouns (고양이, 어린이) so it only comes off from 4 characters up.
  *
- * 그래도 워크플로→워크플, 전문가→전문 같은 오절단이 남아서 **떼는 건 어간이 이번
- * 묶음 어딘가에 홀로 나올 때만** 한다(normalizeTokens 의 vocab). "자동화" 가 다른
- * 글에 있으면 "자동화를" 은 거기 합쳐지고, "워크플" 은 어디에도 없으니 "워크플로" 는
- * 그대로다. 목적은 같은 낱말의 조사 변형을 한 칸에 모으는 것뿐이다.
+ * Even so, mis-cuts like 워크플로→워크플 and 전문가→전문 get through, so **stripping
+ * happens only when the stem shows up on its own somewhere in this batch**
+ * (normalizeTokens' vocab). If "자동화" is in another post, "자동화를" merges into it;
+ * "워크플" is nowhere, so "워크플로" stays as it is. The only goal is to gather a
+ * word's particle variants into one bucket.
  */
 const KO_MULTI_SUFFIX = /(에서는|에서도|으로는|으로도|에게는|까지는|부터는|에서|으로|에게|까지|부터|보다|처럼|에는|에도)$/;
 const KO_SINGLE_SUFFIX = /[가은는을를의에로도와과]$/;
@@ -334,14 +341,14 @@ function keepToken(token: string): boolean {
   return token.length >= 2 && !STOP.has(token) && !SNS_STOP.has(token) && !/^\d+$/.test(token);
 }
 
-/** SNS 본문(제목+스니펫)을 날 토큰으로 — 소문자·기호 제거·불용어. 조사는 아직 안 뗀다 */
+/** SNS body (title + snippet) to raw tokens — lowercased, symbols dropped, stop words removed. Particles come off later */
 export function tokenizeSnsText(text: string): string[] {
   return tokenizeTitle(text).filter(keepToken);
 }
 
 /**
- * 날 토큰의 조사를 뗀다 — 어간이 vocab(이번 묶음의 날 토큰 전체)에 있을 때만.
- * 뗀 뒤 불용어가 되면("이유는"→"이유") 버린다.
+ * Strips particles off the raw tokens — only when the stem is in vocab (every raw
+ * token in this batch). Drop it if stripping turns it into a stop word ("이유는"→"이유").
  */
 export function normalizeTokens(tokens: string[], vocab: Set<string>): string[] {
   const out: string[] = [];
@@ -353,7 +360,7 @@ export function normalizeTokens(tokens: string[], vocab: Set<string>): string[] 
   return out;
 }
 
-/** 1~3그램 구. 한 글 안 중복은 한 번만 — 글 수를 셀 때 같은 글이 두 번 잡히지 않게 */
+/** 1~3-gram phrases. Duplicates within one post count once — so counting posts never picks the same post twice */
 export function phrasesFromTokens(tokens: string[]): string[] {
   const phrases = new Set<string>();
   for (let n = 1; n <= 3; n++) {
@@ -365,12 +372,14 @@ export function phrasesFromTokens(tokens: string[]): string[] {
 }
 
 /**
- * 게시물 묶음에서 주제어를 세운다.
+ * Counts topic phrases over a batch of posts.
  *
- * 점수 = 언급 글 수 × (1 + 0.25 × (플랫폼 수 − 1)), 낱말 하나짜리는 × 0.5.
- * 참여량이 없는 경로라 "여러 글이 같이 말하는가"와 "여러 플랫폼에 동시에
- * 뜨는가"만 신호로 쓴다. 시드 토큰만으로 된 구(검색어 그 자체)는 모든 글에 있어
- * 정보가 없으니 뺀다. 두 글 이상(낱말 하나짜리 구는 세 글 이상)에서 나온 구만 살린다.
+ * Score = mention count × (1 + 0.25 × (platform count − 1)), single words × 0.5.
+ * This lane has no engagement counts, so the only signals are "do several posts say
+ * it together" and "does it surface on several platforms at once". Phrases made only
+ * of seed tokens (the search term itself) sit in every post and carry no information,
+ * so they come out. Only phrases from two or more posts survive — three or more for
+ * single-word phrases.
  */
 export function scoreSnsKeywords(posts: SnsPost[], queries: string[], limit: number): SnsKeyword[] {
   const rawByPost = posts.map((post) => tokenizeSnsText(`${post.title} ${post.snippet}`));
@@ -403,7 +412,7 @@ export function scoreSnsKeywords(posts: SnsPost[], queries: string[], limit: num
     .map(([phrase, v]) => {
       const postCount = v.urls.size;
       const platformCount = v.platforms.size;
-      // 낱말 하나짜리 구는 어디에나 있어 점수를 반으로 — 두 낱말 이상 구가 목록에 오르게
+      // single-word phrases are everywhere, so halve the score — it lets longer phrases reach the list
       const weight = phrase.includes(' ') ? 1 : UNIGRAM_WEIGHT;
       return {
         phrase,
@@ -423,7 +432,7 @@ export function scoreSnsKeywords(posts: SnsPost[], queries: string[], limit: num
         a.phrase.localeCompare(b.phrase),
     );
 
-  // 이미 고른 긴 구의 부분 문자열은 뺀다 — "클로드 코드"를 골랐으면 "클로드"는 중복이다
+  // drop substrings of longer phrases already picked — with "클로드 코드" taken, "클로드" is a duplicate
   const covered = (longer: string, shorter: string): boolean =>
     shorter.includes(' ') ? longer.includes(shorter) : longer.split(' ').includes(shorter);
   const kept: SnsKeyword[] = [];
@@ -477,12 +486,13 @@ function clamp(n: number, min: number, max: number): number {
 }
 
 /**
- * SNS 이슈를 스카우트한다. 성공 시 JSON 본문, 실패 시 안내가 실린 ApiResult.
- * 검색은 플랫폼 × 시드 × 페이지만큼 순차로 돈다(SerpApi 크레딧 = 그 횟수 + 급상승 1).
+ * Scout SNS issues. On success an ApiResult with a JSON body; on failure one carrying guidance.
+ * Searches run one after another, platforms × seeds × pages of them (SerpApi credits =
+ * that count + 1 for trending).
  */
 export async function snsIssueScout(input: SnsIssueScoutInput): Promise<ApiResult> {
   const queries = collectQueries(input);
-  if (queries.length === 0) return fail(400, 'query 가 비어 있다 — 채널 주제 영역에서 뽑은 검색어를 넣는다.');
+  if (queries.length === 0) return fail(400, 'query is empty — pass a search term drawn from the channel\'s topic area.');
 
   const platforms = (input.platforms && input.platforms.length > 0 ? input.platforms : [...SNS_SCOUT_PLATFORMS]).filter(
     (p, i, arr) => arr.indexOf(p) === i,
@@ -507,14 +517,14 @@ export async function snsIssueScout(input: SnsIssueScoutInput): Promise<ApiResul
         searches += 1;
         const params = { query: `site:${SNS_SITE[platform]} ${query}`, gl, hl, page, recency };
         let { error, hits } = await fetchGoogleOrganic(params);
-        // 타임아웃·5xx 는 한 번 더 — 같은 검색은 SerpApi 캐시가 받아 크레딧이 안 든다
+        // retry timeouts and 5xx once — SerpApi serves an identical search from cache, so it costs no credit
         if (error && RETRY_RE.test(error.text)) {
           searches += 1;
           ({ error, hits } = await fetchGoogleOrganic(params));
         }
         if (error) {
           errors.push(`${platform} "${query}" p${page}: ${error.text}`);
-          // 키·쿼터 오류는 다음 검색도 같은 결과다 — 크레딧을 더 태우지 않는다
+          // key and quota errors come back the same on the next search — don't burn more credits
           if (/401|429/.test(error.text)) return fail(/401/.test(error.text) ? 401 : 429, error.text);
           break;
         }
@@ -529,8 +539,9 @@ export async function snsIssueScout(input: SnsIssueScoutInput): Promise<ApiResul
             if (!cur.author && post.author) cur.author = post.author;
             continue;
           }
-          // 같은 문장을 그대로 다시 올린 글(모집 광고 재게시 등)은 하나로 — 안 그러면
-          // 그 글의 모든 구가 "두 글에서 나왔다"로 올라와 주제어 목록을 차지한다
+          // posts re-uploading the same sentence verbatim (a recruiting ad reposted, say) fold
+          // into one — otherwise every phrase in them climbs as "seen in two posts" and takes
+          // over the topic-phrase list
           if (post.snippet.length >= DUP_SNIPPET_MIN) {
             const twin = bySnippet.get(post.snippet);
             if (twin && twin !== post.url) {
@@ -543,7 +554,7 @@ export async function snsIssueScout(input: SnsIssueScoutInput): Promise<ApiResul
           }
           byUrl.set(post.url, post);
         }
-        // 한 페이지가 덜 찼으면 다음 페이지는 비어 있다
+        // a page that came back short means the next one is empty
         if (hits.length < GOOGLE_PAGE_SIZE) break;
       }
     }
@@ -568,7 +579,7 @@ export async function snsIssueScout(input: SnsIssueScoutInput): Promise<ApiResul
   }
 
   if (posts.length === 0 && errors.length > 0 && !trending) {
-    return fail(502, `SNS 스카우트 실패 — 검색이 모두 실패했다:\n${errors.join('\n')}`);
+    return fail(502, `SNS scout failed — every search failed:\n${errors.join('\n')}`);
   }
 
   const platformOrder = new Map(platforms.map((p, i) => [p, i]));
@@ -580,17 +591,17 @@ export async function snsIssueScout(input: SnsIssueScoutInput): Promise<ApiResul
     queries,
     platforms,
     method: {
-      via: 'serpapi google site: 검색',
+      via: 'serpapi google site: search',
       recency,
       gl,
       hl,
       pagesPerQuery: pages,
       sites: Object.fromEntries(platforms.map((p) => [p, SNS_SITE[p]])),
-      ranking: '구글 관련도순 — 좋아요·답글·조회 같은 참여량은 이 경로에 없다',
+      ranking: 'Google relevance order — this lane carries no engagement counts such as likes, replies, or views',
       scoring:
-        '주제어 점수 = 언급 글 수 × (1 + 0.25 × (플랫폼 수 − 1)). 유튜브 스카우트의 채널 중앙값 배수와 다른 잣대라 같은 표에 섞지 말 것',
+        'Topic-phrase score = mention count × (1 + 0.25 × (platform count − 1)). A different yardstick from the YouTube scout\'s channel-median multiple, so never mix it into the same table',
       trending: includeTrending
-        ? `Google Trends 급상승 검색어(${gl.toUpperCase()}, ${input.trendingHours ?? DEFAULT_TRENDING_HOURS}시간) — 구글 검색 기준이지 SNS 참여 기준이 아니다`
+        ? `Google Trends trending searches (${gl.toUpperCase()}, ${input.trendingHours ?? DEFAULT_TRENDING_HOURS}h) — measured on Google search, not on SNS engagement`
         : 'off',
     },
     scanned: {
@@ -606,7 +617,7 @@ export async function snsIssueScout(input: SnsIssueScoutInput): Promise<ApiResul
     trending,
     note:
       posts.length > SNS_POST_CAP
-        ? `게시물 ${posts.length}건 중 ${SNS_POST_CAP}건만 실었다 — 주제어(keywords)는 전체로 셌다. 더 보려면 시드를 줄이거나 platforms 를 좁혀 다시 부를 것`
+        ? `Carried only ${SNS_POST_CAP} of ${posts.length} posts — the topic phrases (keywords) were counted over all of them. To see more, trim the seeds or narrow platforms and call again`
         : undefined,
     errors: errors.length > 0 ? errors : undefined,
   });

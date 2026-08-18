@@ -13,7 +13,7 @@ description: >
   single scene, on the vocabulary of every narration and title, and on the generated
   images, build report, content-reviewer copy ≥95 with zero P0, cost cap) stand in for
   the human approval gates of storyboard/produce.
-argument-hint: "<채널> \"<주제>\" [unattended]"
+argument-hint: "<channel> \"<topic>\" [unattended]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
@@ -25,126 +25,137 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__music_generate_clip"]
 ---
 
-# 주제 하나로 영상까지 — 무인 저작
+# From one topic to a finished video — unattended authoring
 
-`storyboard → produce` 를 사람 승인 없이 한 번에 통과시킨다. 입력은 주제
-문자열 하나, 출력은 게시 가능한 `output/` 한 벌이다.
+Runs `storyboard → produce` end to end without human approval. The input is a
+single topic string; the output is a publishable `output/` set.
 
-**두 스킬을 대체하지 않는다.** 계약·템플릿·빌더는 전부 그쪽 것을 그대로 쓴다
-— 이 문서가 정하는 것은 **사람이 없을 때 누가 판단하나** 와 **어느 모델을
-쓰나** 둘뿐이다.
+**This does not replace those two skills.** Contracts, templates, and builders
+are all used as-is from them — this document decides only two things: **who
+judges when no human is present** and **which model to use**.
 
 ```
-/social-flow:autoproduce <채널> "<주제>"              # 사람 호출 — 끝에 결과 확인
-/social-flow:autoproduce <채널> "<주제>" unattended    # 성장 루프 호출 — 질문 없음
+/social-flow:autoproduce <channel> "<topic>"              # human invocation — confirm the result at the end
+/social-flow:autoproduce <channel> "<topic>" unattended    # growth-loop invocation — no questions
 ```
 
-## 사람 게이트를 무엇이 대신하나
+## What stands in for the human gates
 
-파이프라인의 안전은 HITL 이중 게이트(스토리보드 승인·게시 승인)에 걸려 있었다.
-무인 모드는 그 자리에 **기계 판정 아홉**을 세운다. 하나라도 떨어지면 영상은
-만들어지되 **큐에 들어가지 않는다**(`queue_*: hold`) — 사람이 볼 때까지 게시되지
-않는다는 뜻이다.
+The pipeline's safety used to hang on the double HITL gate (storyboard
+approval, publish approval). Unattended mode puts **nine machine verdicts** in
+their place. If even one fails, the video still gets made but **does not enter
+the queue** (`queue_*: hold`) — meaning it won't publish until a human looks at it.
 
-| 원래 사람이 보던 것 | 무인 대체 | 떨어지면 |
+| What a human used to check | Unattended replacement | On failure |
 |---|---|---|
-| 사실이 맞나 | 시효성 값 독립 출처 2개 교차검증 + 검증 통과 사실 **3건 이상** | 주제 폐기 (§2) |
-| 문장이 사람 글인가 | `check-style.py` 표면별 exit ≤ 1 | 고쳐서 재시도, 2회 실패면 중단 (§4·§9) |
-| 스토리보드 문안이 승인할 만한가 | storyboard-reviewer 문안 모드 **≥95 · P0 = 0** (무인 최대 2라운드) | 저작 중단 (§4.5) |
-| 씬 하나하나가 제 역할을 하나 | storyboard-reviewer 씬 모드 **최저 씬 ≥95 · P0 = 0** (무인 최대 2라운드) | 저작 중단 (§4.6) |
-| 낱말이 사람이 쓰는 말인가 | storyboard-reviewer 어휘 모드 **최저 씬 ≥95 · P0 = 0** (무인 최대 2라운드) | 저작 중단 (§4.7) |
-| 그림이 씬 내용에 맞나 | storyboard-reviewer 이미지 모드 **≥95 · P0 = 0** (무인 최대 2라운드) | `queue_*: hold` (§6.5) |
-| 영상이 성립하나 | `build-report.txt` drift 0 · reveal 누락 0 | 중단 (§8) |
-| 게시해도 되나 | content-reviewer **카피 ≥95 · P0 = 0** (무인 최대 2라운드) | `queue_*: hold` (§10) |
-| 돈이 나가도 되나 | `cost-report.sh --cap` exit 0 | 승급 취소 후 경제 기본 (§5) |
+| Are the facts right | Time-sensitive values cross-checked against 2 independent sources + **3 or more** verified facts | Topic discarded (§2) |
+| Does the copy read like a human wrote it | `check-style.py` exit ≤ 1 per surface | Fix and retry; abort after 2 failures (§4·§9) |
+| Is the storyboard copy approvable | storyboard-reviewer copy mode **≥95 · P0 = 0** (max 2 rounds unattended) | Authoring aborted (§4.5) |
+| Does every single scene do its job | storyboard-reviewer scene mode **lowest scene ≥95 · P0 = 0** (max 2 rounds unattended) | Authoring aborted (§4.6) |
+| Is the wording what a person would say | storyboard-reviewer vocabulary mode **lowest scene ≥95 · P0 = 0** (max 2 rounds unattended) | Authoring aborted (§4.7) |
+| Do the images match the scene content | storyboard-reviewer image mode **≥95 · P0 = 0** (max 2 rounds unattended) | `queue_*: hold` (§6.5) |
+| Does the video hold together | `build-report.txt` drift 0 · 0 missing reveals | Abort (§8) |
+| Is it fit to publish | content-reviewer **copy ≥95 · P0 = 0** (max 2 rounds unattended) | `queue_*: hold` (§10) |
+| Is the spend allowed | `cost-report.sh --cap` exit 0 | Escalation cancelled, back to economy baseline (§5) |
 
-## 절대 규칙
+## Absolute rules
 
-1. **금지 소재는 상속한다** — profile §3 금지 소재와, 무인 호출이면 성장 플랜의
-   금지 소재 목록. 정치·종교·국적 비하, 미검증 제도 정보는 어느 경로로도 나가지
-   않는다.
-2. **없는 사실을 만들지 않는다** — 검증에 실패한 수치는 넣지 않고, 범위를 상한
-   하나로 줄이지 않는다. 자동 저작이라고 기준이 낮아지지 않는다.
-3. **profile §2 의 TTS 엔진·보이스를 바꾸지 않는다** — 로컬이 싸다는 이유로
-   `gemini` 채널을 갈아타지 않는다. 회차마다 나레이터가 바뀐다.
-4. **경제 기본으로 시작한다** — 모델 사다리와 승급 조건은
-   `references/cost-tiers.md` 가 정본이다. 승급은 관측 지표가 시킬 때만.
-5. **무인 모드는 게시하지 않는다** — 이 스킬은 큐 마커까지만 찍는다. 게시는
-   성장 루프의 슬롯 단계나 publish 스킬이 한다.
-6. **락 없이 저작하지 않는다** — 두 성장 루프가 같은 채널에서 동시에 돌 수 있다
-   (§0). 락 없이 들어가면 같은 주제를 두 번 만들고 돈도 두 번 나간다.
-7. **플랫폼 루프당 하루 2편을 넘지 않는다** — YouTube 플랜과 Instagram 플랜이
-   각각 하루 최대 2편이다. 성공·실패를 합쳐 세고, 호출자(플랜)별로 센다 —
-   `autoproduce.json` 의 일 버킷이 호출자 구분을 담는 이유다. 플랜의
-   `daily_produce_cap` 은 이 안에서만 내릴 수 있고 올리지 못한다. 사람이 직접
-   부르는 호출은 이 캡 밖이다 — 사람이 그 자리에서 편수를 결정하고 있어서다.
-8. **같은 이야기를 두 번 만들지 않는다** — 후보 주제는 §1 의
-   `check-duplicate.py` 판정을 통과해야 한다. slug 이 달라도 내용이 같으면
-   재탕이고, 재탕은 IG 원본성 판정과 채널 신뢰 양쪽을 깎는다.
+1. **Banned subject matter is inherited** — profile §3's banned subjects, plus
+   the growth plan's banned list on unattended calls. Politics, religion,
+   nationality-based disparagement, and unverified regulatory information go out
+   through no path.
+2. **Never invent facts** — numbers that failed verification stay out, and a
+   range is never collapsed into its upper bound. Automated authoring doesn't
+   lower the bar.
+3. **Never change the TTS engine/voice set in profile §2** — don't move a
+   `gemini` channel to local because local is cheaper. The narrator would change
+   from episode to episode.
+4. **Start at the economy baseline** — `references/cost-tiers.md` is the source
+   of truth for the model ladder and escalation conditions. Escalate only when
+   observed metrics say so.
+5. **Unattended mode does not publish** — this skill goes no further than
+   stamping the queue markers. Publishing is done by the growth loop's slot step
+   or the publish skill.
+6. **Never author without the lock** — two growth loops can run on the same
+   channel at once (§0). Enter without the lock and the same topic gets made
+   twice, and paid for twice.
+7. **No more than 2 episodes per platform loop per day** — the YouTube plan and
+   the Instagram plan each get at most 2 a day. Successes and failures count
+   together, per caller (plan) — that's why `autoproduce.json`'s daily bucket
+   keeps callers separate. A plan's `daily_produce_cap` can only lower this,
+   never raise it. Calls made directly by a human sit outside this cap — the
+   human is deciding the episode count right there.
+8. **Never tell the same story twice** — a candidate topic must pass §1's
+   `check-duplicate.py` verdict. Different slug, same content is still a rehash,
+   and a rehash costs you both Instagram's originality assessment and the
+   channel's credibility.
 
-## 산출물
+## Deliverables
 
-`storyboard/` 를 통째로 보관한다 — 무인 게이트는 근거 없이 감사할 수 없고,
-publish·큐·QA 하네스가 전부 이 파일들을 읽는다.
+Keep `storyboard/` in its entirety — the unattended gates can't be audited
+without evidence, and the publish, queue, and QA harnesses all read these files.
 
 ```
-data/<채널>/episodes/<주제 slug>/
+data/<channel>/episodes/<topic-slug>/
 ├── storyboard/
-│   ├── research.md      # 출처·확인일·검증 상태 — 자동 저작일수록 이게 유일한 감사 흔적
+│   ├── research.md      # sources, check dates, verification status — for automated authoring this is the only audit trail
 │   ├── scenes.js        # SoT
-│   ├── storyboard.md    # frontmatter 에 status·auto_produced·queue 마커
+│   ├── storyboard.md    # status, auto_produced, queue markers in the frontmatter
 │   ├── storyboard.html
 │   └── images/
 ├── .work/
-│   ├── cost-estimate.tsv # 쓰기 전 예상 — 상한 판정 전용 (§5)
-│   ├── cost-tally.tsv   # 실제로 무엇을 몇 개 썼나 (§6 부터 한 줄씩 append)
+│   ├── cost-estimate.tsv # pre-spend projection — for cap verdicts only (§5)
+│   ├── cost-tally.tsv   # what was actually used and how much (appended line by line from §6 on)
 │   └── …
 └── output/
-    ├── video/           # video.mp4(클린) · video-sub.mp4(번인) · subs.srt · cover.jpg
+    ├── video/           # video.mp4 (clean) · video-sub.mp4 (burned-in) · subs.srt · cover.jpg
     │                    #   · build-report.txt · cost-report.txt
-    ├── instagram/caption.md · youtube/meta.md · (플랫폼별)
+    ├── instagram/caption.md · youtube/meta.md · (per platform)
     └── publish-log.md
 ```
 
-## 절차
+## Procedure
 
-### 0. 로드·락·예산
+### 0. Load · lock · budget
 
-`data/<채널>/profile.md` 로드(없으면 중단). 무인 호출이면 호출한 성장 플랜의
-`autoproduce:` 블록도 함께 읽는다.
+Load `data/<channel>/profile.md` (abort if missing). On an unattended call,
+also read the calling growth plan's `autoproduce:` block.
 
-**락은 채널 단위다** — 두 성장 루프가 한 채널을 공유하므로 플랫폼별로 잠그면
-소용이 없다. `mkdir` 의 원자성을 쓴다.
+**The lock is per channel** — two growth loops share one channel, so a
+per-platform lock is useless. Use `mkdir`'s atomicity.
 
 ```bash
-G=data/<채널>/growth; LOCK=$G/.autoproduce.lock
-TOKEN=$(uuidgen)                     # 이번 실행의 소유권 증표
+G=data/<channel>/growth; LOCK=$G/.autoproduce.lock
+TOKEN=$(uuidgen)                     # ownership token for this run
 mkdir -p "$G"
-# 60분 넘게 잡혀 있으면 죽은 락이다 (Veo 비동기가 최대 6분이라 여유를 크게 둔다)
+# held longer than 60 minutes = dead lock (Veo async takes at most 6 minutes, so the margin is generous)
 [ -d "$LOCK" ] && [ -n "$(find "$LOCK" -maxdepth 0 -mmin +60 2>/dev/null)" ] && rm -rf "$LOCK"
-mkdir "$LOCK" 2>/dev/null || { echo "다른 루프가 저작 중 — 이번 틱은 건너뛴다"; exit 0; }
-printf '%s %s <호출자>\n' "$TOKEN" "$(date -u +%FT%TZ)" > "$LOCK/owner"
+mkdir "$LOCK" 2>/dev/null || { echo "another loop is authoring — skipping this tick"; exit 0; }
+printf '%s %s <caller>\n' "$TOKEN" "$(date -u +%FT%TZ)" > "$LOCK/owner"
 ```
 
-락을 잡았으면 **성공·실패·중단 어느 경로로 끝나든 해제한다.** 잊으면 다음 틱이
-60분을 기다린다. 다만 지우기 전에 **그 락이 아직 내 것인지 확인한다.**
+Once you hold the lock, **release it no matter how the run ends — success,
+failure, or abort.** Forget, and the next tick waits 60 minutes. But before
+deleting, **check the lock is still yours.**
 
 ```bash
 grep -qF "$TOKEN" "$LOCK/owner" 2>/dev/null && rm -rf "$LOCK"
 ```
 
-무조건 `rm -rf` 하면 이런 일이 난다 — 내가 60분을 넘겨 늘어지는 사이 다음 틱이
-죽은 락으로 보고 회수해 자기 락을 새로 만든다. 뒤늦게 끝난 내가 **남의 락을
-지운다.** 그러면 세 번째 루프가 그 틈으로 들어와 같은 채널에서 저작이 겹친다.
+An unconditional `rm -rf` fails like this — while my run drags past 60 minutes,
+the next tick declares the lock dead, reclaims it, and creates its own. My run
+finishes late and **deletes someone else's lock.** A third loop then slips
+through the gap and authoring overlaps on the same channel.
 
-`$G/autoproduce.json`(없으면 생성)에서 오늘·이번 주 누적을 읽는다. 다음 중
-하나라도 걸리면 저작하지 않고 사유를 보고한다.
+Read today's and this week's totals from `$G/autoproduce.json` (create if
+missing). If any of the following trips, don't author — report the reason.
 
-- 무인 호출: 오늘 **이 호출자(플랜)의** 저작 편수(성공·실패 합산) ≥
-  **min(플랜 `daily_produce_cap`, 2)** — 2 는 절대 규칙 7 의 플랫폼별 하드캡이라
-  플랜으로도 올리지 못한다. 사람 호출(`user`)은 편수 캡을 받지 않는다.
-- 비용 누적(채널 합산 — 호출자 구분 없이 다 더한다)이 플랜
-  `daily_cost_cap`·`weekly_cap` 초과
+- Unattended call: today's authored count **for this caller (plan)**
+  (successes + failures combined) ≥ **min(plan `daily_produce_cap`, 2)** — the
+  2 is absolute rule 7's per-platform hard cap, which no plan can raise. Human
+  calls (`user`) get no episode cap.
+- Accumulated cost (channel-wide — summed across all callers) exceeds the
+  plan's `daily_cost_cap` or `weekly_cap`
 
 ```json
 {
@@ -158,101 +169,121 @@ grep -qF "$TOKEN" "$LOCK/owner" 2>/dev/null && rm -rf "$LOCK"
 }
 ```
 
-편수는 호출자별(`counts`), 비용은 채널 합산(`usd`)이다 — 편수 상한은 플랫폼마다
-따로 받으라는 요구이고, 돈은 어느 루프가 썼든 같은 지갑에서 나가기 때문이다.
+Counts are per caller (`counts`), cost is channel-wide (`usd`) — episode caps
+are meant to apply per platform, while the money comes out of the same wallet
+no matter which loop spent it.
 
-### 1. 주제 확정
+### 1. Settle the topic
 
-인자로 주제가 왔으면 그대로 쓴다. 무인 호출이고 인자가 없으면 플랜의
-`topic_source` 를 따른다.
+If a topic came in as the argument, use it as-is. On an unattended call with no
+argument, follow the plan's `topic_source`.
 
-- **`pool`(기본)** — 플랜 `topic_pool` 의 미사용 항목에서 하나. 사람이 승인한
-  목록이라 소재 위험이 없다. **비었으면 저작하지 않고 "주제 풀 소진" 을
-  보고한다** — 주제를 지어내지 않는다.
-- **`keywords`** — 플랜 `topic_keywords` 로 `naver_search(type: "kin")` 을 돌려
-  사람들이 실제로 묻는 것 중 하나를 고른다. 지식iN은 "무엇을 모르는지"가 질문
-  그대로 남아 있어 훅의 재료가 된다. 이 모드는 init 에서 사용자가 명시로 고른
-  경우만 쓴다.
-- **`scout`** — `data/<채널>/growth/keywords/market-keywords.md` 에서 고른
-  주제(없으면 주제어 표 위) 하나를 쓴다. `/social-flow:topic-scout` 가 채널
-  중앙값 대비 5배 이상 영상에서 뽑은 구다. 파일이 없거나 14일이 지났으면
-  저작하지 않고 topic-scout 를 안내한다. 툴을 틱마다 다시 부르지 않는다 —
-  search.list 가 호출당 100유닛이다.
+- **`pool` (default)** — one unused entry from the plan's `topic_pool`. The
+  list was human-approved, so there's no subject-matter risk. **If it's empty,
+  don't author — report "topic pool exhausted"** — never make topics up.
+- **`keywords`** — run `naver_search(type: "kin")` on the plan's
+  `topic_keywords` and pick something people are actually asking. On Naver
+  Knowledge-iN, "what people don't know" sits there in their own question
+  wording — raw material for hooks. Use this mode only when the user explicitly
+  picked it at init.
+- **`scout`** — use one topic picked in
+  `data/<channel>/growth/keywords/market-keywords.md` (or the top of the
+  keyword table if none is marked). These are phrases `/social-flow:topic-scout`
+  extracted from videos at 5x or more the channel median. If the file is
+  missing or older than 14 days, don't author — point to topic-scout. Don't
+  re-call the tool every tick — search.list costs 100 units per call.
 
-**주제 축 게이트** — 후보를 profile §1 주제 영역·타깃과 대조한다. `pool` 은
-사람이 승인한 목록이라 대개 자연 통과하고, 이 게이트가 실제로 잡는 건 `keywords`
-검색 결과와 인자로 받은 주제다. 축 밖이면 — 무인 모드는 그 후보를 버리고 다음
-후보로 간다(중복 게이트와 같은 카운터 — 합쳐서 두 번 버리면 이번 저작 포기).
-사람 호출 모드는 어긋난 지점을 보여주고 계속할지 묻는다. 주제 영역이 비어 있으면
-통과로 처리하되 보고에 적는다.
+**Topic-axis gate** — check the candidate against profile §1's topic areas and
+target. `pool` usually passes naturally (it's a human-approved list); what this
+gate actually catches is `keywords` search results and topics passed in as
+arguments. Off-axis: unattended mode drops the candidate and moves to the next
+(same counter as the duplicate gate — two drops combined and this run gives
+up). Human-invocation mode shows where it diverges and asks whether to
+continue. If the topic areas are empty, treat it as a pass but note it in the
+report.
 
-**중복 게이트 (절대 규칙 8)** — 후보가 정해지면 저작을 시작하기 전에 판정한다.
-slug 정확 일치(`producedTopics`·기존 디렉토리)는 앞에서 걸러졌어도, "비자 수수료
-인상"과 "베트남 비자 수수료 오른다"처럼 **말만 바꾼 같은 이야기**는 사람 없이
-잡아야 하므로 결정적 검사기를 돌린다.
+**Duplicate gate (absolute rule 8)** — once a candidate is set, judge it before
+authoring starts. Exact slug matches (`producedTopics`, existing directories)
+were filtered earlier, but **the same story in different words** — like
+"비자 수수료 인상" and "베트남 비자 수수료 오른다" (two phrasings of "visa fees
+are going up") — has to be caught without a human, so run the deterministic
+checker.
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
-python3 $REF/check-duplicate.py --channel-dir data/<채널> \
-  --title "<후보 제목>" --message "<핵심 메시지 한 문장>"; echo "dup_exit=$?"
+python3 $REF/check-duplicate.py --channel-dir data/<channel> \
+  --title "<candidate title>" --message "<one-sentence core message>"; echo "dup_exit=$?"
 ```
 
-채널의 **기존 주제 전부**(사람이 만든 것 포함)에서 slug·storyboard.md 제목·
-scenes.js 커버 title 을 뽑아 비교한다. `dup_exit` 를 그대로 읽는다 —
-0 신규 / 2 **중복 의심** / 1 판정 불가 / 3 입력 오류.
+It compares against **every existing topic** on the channel (human-made ones
+included), extracting the slug, the storyboard.md title, and the scenes.js
+cover title from each. Read `dup_exit` literally —
+0 new / 2 **suspected duplicate** / 1 verdict unavailable / 3 input error.
 
-- **2** — 무인 모드는 그 후보를 버리고 다음 후보로 간다(§2 와 같이 두 번 버리면
-  이번 저작 포기). 사람 호출 모드는 가장 닮은 기존 주제를 보여주고 계속할지
-  묻는다 — 같은 소재의 후속편(다른 각도)은 사람만 판단할 수 있다.
-- **1 을 신규로 읽지 않는다** — 채널 디렉토리를 못 읽었다는 뜻이므로 중단하고
-  보고한다.
-- 시리즈물처럼 제목 접두어가 같은 채널은 임계에 걸리기 쉽다. 플랜의
-  `duplicate_threshold`(기본 0.5)를 올려 `--threshold` 로 넘기거나 그 채널은
-  사람이 storyboard 로 만든다.
+- **2** — unattended mode drops the candidate and moves on (as in §2, two drops
+  and this run gives up). Human-invocation mode shows the closest existing
+  topic and asks whether to continue — only a human can judge a follow-up on
+  the same material (a different angle).
+- **Never read 1 as new** — it means the channel directory couldn't be read, so
+  abort and report.
+- Channels whose titles share a series prefix trip the threshold easily. Raise
+  the plan's `duplicate_threshold` (default 0.5) and pass it via `--threshold`,
+  or have a human make that channel's episodes with storyboard.
 
-slug 은 profile §7 규칙으로 만든다.
+Build the slug by profile §7's rules.
 
-### 2. 조사·검증 (게이트 1)
+### 2. Research & verification (gate 1)
 
-profile §5 정책대로 조사한다. 도구 순서와 쿼터 절약은 `references/cost-tiers.md`
-§돈이 아닌 예산 — **`serp_*` 는 한 편에 최대 2회**.
+Research per profile §5 policy. Tool order and quota thrift:
+`references/cost-tiers.md` §non-money budgets — **`serp_*` at most twice per
+episode**.
 
-`research.md` 에 주장별로 [출처 링크 · 확인일 · 검증 상태]를 적는다.
-시효성 값(가격·세율·기한·시행일)은 독립 출처 2개 이상.
+In `research.md`, record [source link · date checked · verification status] per
+claim. Time-sensitive values (prices, tax rates, deadlines, effective dates)
+need 2 or more independent sources.
 
-**검증을 통과한 사실이 3건 미만이면 그 주제를 버리고 다음 후보로 간다.**
-사람이라면 "이걸로는 영상이 안 나오는데" 하고 멈출 자리다. 사실이 부족한 채로
-진행하면 남는 건 화면만 그럴듯한 빈 영상이다. 후보를 두 번 버리면 저작을
-포기하고 보고한다.
+**Fewer than 3 verified facts: drop the topic and move to the next candidate.**
+This is where a human would stop and say "there's no video in this." Push on
+short of facts and what you end up with is an empty video that only looks the
+part. Two dropped candidates and the run gives up and reports.
 
-### 3. scenes.js 저작
+### 3. Authoring scenes.js
 
-`../storyboard/references/scenes-schema.md` 가 계약 정본이고, 설계 규칙은
-storyboard 스킬 §4 를 그대로 따른다. 특히 자동 저작이 자주 어기는 것:
+`../storyboard/references/scenes-schema.md` is the contract's source of truth;
+design rules follow storyboard skill §4 as-is. The ones automated authoring
+breaks most often:
 
-- 커버 제목 **16자 이내 + 주제어 필수**. 자극만 있고 무엇의 이야기인지 없으면
-  스킵된다. 제목은 방법·도구가 아니라 **낯선 사람이 이미 느끼는 문제**로 연다
-  (platform-playbook §1 ② · scenes-schema §cover).
-- 나레이션은 **세그먼트(문장) 배열** — 문장 하나가 reveal 하나. 자수 상한은
-  cover ≤40자, points/quote ≤50자, 문장당 8~25자.
-- `tts` 는 한글 발음 표기("4,700만"→"사천칠백만"), `sub` 는 원표기.
-- THEME 은 profile §3 값을 그대로 복사.
-- 구성은 cover 1 + points/quote 3~5, 본편 35~75초.
-- 도입부는 **공포·공감·호기심·결말 미리 보여주기** 중 하나로 연다 — 회차마다 반드시
-  하나. 저작 전에 고르고 커버 샷에 `hookType`(`fear`·`empathy`·`curiosity`·`spoiler`)
-  으로 적는다. 커버 제목·세그①·후킹·플랫폼 제목이 그 자극을 싣는다. 공포는 위협에
-  research.md 근거가 있거나 가능성 표현으로 완충하고 본편이 답해야 한다 — 무인
-  루프에서 근거 없는 공포는 문안 게이트 P0-4 로 막힌다(scenes-schema §도입부 전략 넷).
-- 재생 순서는 **커버 → 후킹 → 결과물 → 내용**. 샷마다 `beat` 를 적는다
-  (`hook`·`hooking`·`result`·`body`·`cta`). **커버 다음 샷은 후킹이다 — 정보형도**
-  (커버가 던진 것을 받아 시청자 주어로 걸고 답은 안 푼다, 커버부터 20초 안에
-  결과물이나 첫 내용 씬 — scenes-schema §hooking). 제작·튜토리얼은 완성본이
-  방법보다 앞에 온다 (scenes-schema §재생 순서).
-- 항목 하나는 샷이다. `scene`·`sceneSlug`·`shot.size`·`shot.info` 와
-  `visual.picture`·`visual.overlay` 를 적는다(정본은 scenes-schema §문법 단위와
-  제작 층). AI 영상과 HTML 연출을 한 칸에 합치지 않는다.
+- Cover title **within 16 characters + topic word required**. All stimulus and
+  no subject gets swiped past. Open the title with **a problem a stranger
+  already feels**, not a method or a tool (platform-playbook §1 ② ·
+  scenes-schema §cover).
+- Narration is **an array of segments (sentences)** — one sentence, one reveal.
+  Character caps: cover ≤40, points/quote ≤50, 8–25 per sentence.
+- `tts` holds the Korean phonetic spelling ("4,700만"→"사천칠백만"), `sub` the
+  original notation.
+- THEME copies profile §3's values verbatim.
+- Structure: 1 cover + 3–5 points/quote; main body 35–75 seconds.
+- The opening leads with one of **fear, empathy, curiosity, or showing the
+  ending first** — exactly one per episode, always. Pick it before authoring
+  and record it on the cover shot as `hookType`
+  (`fear`·`empathy`·`curiosity`·`spoiler`). The cover title, segment ①, the
+  hooking beat, and the platform titles all carry that stimulus. Fear needs the
+  threat backed in research.md or cushioned with possibility phrasing, and the
+  body must answer it — in the unattended loop, unbacked fear is blocked by
+  copy-gate P0-4 (scenes-schema §the four opening strategies).
+- Playback order is **cover → hooking → result → body**. Write a `beat` on
+  every shot (`hook`·`hooking`·`result`·`body`·`cta`). **The shot after the
+  cover is the hooking beat — informational episodes too** (it picks up what
+  the cover threw, hangs it on the viewer as the subject, and doesn't give the
+  answer; the result or first body scene lands within 20 seconds of the cover —
+  scenes-schema §hooking). In maker/tutorial episodes the finished piece comes
+  before the method (scenes-schema §playback order).
+- One entry is one shot. Write `scene`·`sceneSlug`·`shot.size`·`shot.info` and
+  `visual.picture`·`visual.overlay` (source of truth: scenes-schema §grammar
+  units and production layers). Never merge AI video and HTML staging into one
+  slot.
 
-### 4. 문체 게이트 — 영상 표면 (게이트 2)
+### 4. Style gate — video surfaces (gate 2)
 
 ```bash
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
@@ -262,201 +293,248 @@ for S in narration subtitle screen; do
 done
 ```
 
-0 통과 / 1 경고 / 2 S1 검출 / **3 은 게이트가 안 돈 것이지 통과가 아니다**.
-2 면 **scenes.js 를 고쳐** §4 부터 다시 한다 — `.work/text-*.txt` 만 고치면
-영상과 어긋난다.
-두 번 고쳐도 2 면 중단하고 보고한다 — 무인 루프가 같은 문장을 무한히 다듬는
-것을 막는다.
+0 pass / 1 warning / 2 S1 detected / **3 means the gate didn't run — that is
+not a pass**. On 2, **fix scenes.js** and redo from §4 — fixing only
+`.work/text-*.txt` desyncs it from the video.
+Still 2 after two fixes: abort and report — this keeps the unattended loop from
+polishing the same sentence forever.
 
-### 4.5 문안 리뷰 게이트 (게이트 6 — storyboard-reviewer 문안 모드)
+### 4.5 Copy review gate (gate 6 — storyboard-reviewer copy mode)
 
-위 검사가 값싼 선별이라면, 이쪽이 판정이다. 기계가 못 잡는 층위 — 대구 남용·
-3개 나열·훈계형 마무리·같은 길이로 낭독되는 리듬·근거 없는 단정 — 을 리뷰어가 본다.
-**게이트 2를 먼저 통과시키고 부른다**: exit 2 인 채로 위임하면 라운드 하나를
-기계가 이미 아는 사실에 쓴다.
+The check above is the cheap screen; this is the verdict. The reviewer sees the
+layers a machine can't catch — overworked antithesis, lists of three,
+sermonizing wrap-ups, rhythm that reads out in same-length sentences, unbacked
+assertions. **Pass gate 2 first, then call**: delegating with exit 2 still
+standing spends a round on what the machine already knows.
 
-**storyboard-reviewer 에이전트(Agent)에 "문안 모드"로 위임**하고 tail
-`STORYBOARD_REVIEW: mode=text score=NN p0=N verdict=PASS|FAIL` 을 파싱한다.
-`scenes.js`·`research.md`·`profile.md` 경로와 이전 라운드 지적을 전달한다.
+**Delegate to the storyboard-reviewer agent (Agent) in "copy mode"** and parse
+the tail `STORYBOARD_REVIEW: mode=text score=NN p0=N verdict=PASS|FAIL`.
+Pass the `scenes.js`·`research.md`·`profile.md` paths and the previous round's
+findings.
 
-- **PASS(≥95 · p0 = 0)** → §4.6 으로.
-- **FAIL** → 교정 지시대로 scenes.js 를 고치고 한 번 더 위임한다. **무인 캡 2라운드.**
-- 2라운드에도 FAIL 이면 **저작을 멈춘다.** 영상을 만들지 않는다 — 문안이 안 된 채로
-  이미지·TTS·빌드에 돈과 시간을 쓰는 것이 가장 비싼 실패다. 이 경로에서는 §10 까지
-  못 가므로 **storyboard.md 를 여기서 만들어** (§10 의 frontmatter 형식,
-  `status: draft` · `queue_*: hold`) 미해결 지적을 본문에 적고 보고한다 — 사람이
-  이어받을 실마리가 파일에 있어야 한다.
+- **PASS (≥95 · p0 = 0)** → on to §4.6.
+- **FAIL** → fix scenes.js per the correction directives and delegate once
+  more. **Unattended cap: 2 rounds.**
+- FAIL on round 2 too: **stop authoring.** Don't make the video — spending
+  money and time on images, TTS, and the build while the copy isn't there is
+  the most expensive failure. This path never reaches §10, so **create
+  storyboard.md here** (§10's frontmatter format, `status: draft` ·
+  `queue_*: hold`), write the unresolved findings into the body, and report —
+  the thread a human picks up has to be in the file.
 
-**빼기만 한다** — AI 티를 지우려다 없던 비유·상투구를 새로 심으면 그게 새 AI 티다.
+**Only subtract** — plant a new simile or stock phrase while scrubbing AI tells
+and that's the new AI tell.
 
-### 4.6 씬별 리뷰 게이트 (게이트 6b — storyboard-reviewer 씬 모드)
+### 4.6 Per-scene review gate (gate 6b — storyboard-reviewer scene mode)
 
-문안 게이트가 스토리보드를 한 덩어리로 봤다면, 여기서는 **씬을 하나씩** 본다 — 평균은
-좋은데 한 씬만 무너진 회차를 잡는 자리다. 사람이 스토리보드를 넘겨보며 "이 씬 왜
-있지?" 하는 그 눈이 무인 경로엔 없으므로 이 게이트가 대신한다.
+The copy gate saw the storyboard as one block; here each **scene is judged on
+its own** — this catches the episode whose average is fine while one scene has
+collapsed. The unattended path has no human flipping through the storyboard
+asking "why is this scene here?", so this gate stands in for that eye.
 
-**storyboard-reviewer 에이전트(Agent)에 "씬 모드"로 위임**하고 tail
-`STORYBOARD_REVIEW: mode=scene score=NN p0=N worst=N verdict=PASS|FAIL` 을 파싱한다.
-**`score` 는 최저 씬 점수**이므로 ≥95 가 곧 전 씬 95 이상이다.
+**Delegate to the storyboard-reviewer agent (Agent) in "scene mode"** and parse
+the tail `STORYBOARD_REVIEW: mode=scene score=NN p0=N worst=N verdict=PASS|FAIL`.
+**`score` is the lowest-scene score**, so ≥95 means every scene is at 95 or
+above.
 
-- **PASS(≥95 · p0 = 0)** → §4.7 로.
-- **FAIL** → `worst` 씬만 고치고 한 번 더 위임한다. **무인 캡 2라운드.** 역할 공백·
-  중복 지적은 문장을 다듬어 못 고친다 — 그 씬을 합치거나 빼고 남은 씬 길이로 총길이를
-  맞춘다. 방법이 결과보다 앞에 있으면 문장을 고치지 말고 결과물 씬을 앞으로 옮긴다.
-  씬을 더하거나 뺐으면 §4.5 를 다시 통과시킨 뒤 돌아온다.
-- 2라운드에도 FAIL 이면 **§4.5 와 같이 저작을 멈춘다** — 이미지·TTS 에 돈을 쓰기 전이다.
+- **PASS (≥95 · p0 = 0)** → on to §4.7.
+- **FAIL** → fix only the `worst` scene and delegate once more. **Unattended
+  cap: 2 rounds.** Role-gap and duplication findings can't be fixed by
+  polishing sentences — merge or drop that scene and rebalance total length
+  across the remaining scenes. If the method sits ahead of the result, don't
+  touch the sentences — move the result scene forward. Added or dropped a
+  scene: pass §4.5 again before coming back.
+- FAIL on round 2 too: **stop authoring as in §4.5** — this is still before
+  money goes to images and TTS.
 
-### 4.7 어휘 리뷰 게이트 (게이트 6c — storyboard-reviewer 어휘 모드)
+### 4.7 Vocabulary review gate (gate 6c — storyboard-reviewer vocabulary mode)
 
-씬 구성이 확정된 뒤 **낱말만** 본다. 검사기가 잡는 것은 규칙에 적힌 형태뿐이라,
-"기한이 도래합니다" 같은 문어 어휘는 exit 0 으로 통과한다 — 그 층을 리뷰어가 맡는다.
+With the scene structure settled, this looks at **words only**. The checker
+catches only the forms written into its rules, so literary vocabulary like
+"기한이 도래합니다" (stiff officialese for "the deadline is coming") passes
+with exit 0 — the reviewer covers that layer.
 
-**storyboard-reviewer 에이전트(Agent)에 "어휘 모드"로 위임**하고 tail
-`STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=N verdict=PASS|FAIL` 을 파싱한다.
-여기서도 `score` 는 최저 씬 점수다.
+**Delegate to the storyboard-reviewer agent (Agent) in "vocabulary mode"** and
+parse the tail
+`STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=N verdict=PASS|FAIL`.
+Here too `score` is the lowest-scene score.
 
-- **PASS(≥95 · p0 = 0)** → §5 로.
-- **FAIL** → 지적받은 **낱말만 바꾸고** 한 번 더 위임한다. **무인 캡 2라운드.**
-  문장을 다시 쓰면 §4.5·§4.6 이 본 구조가 무너져 두 게이트를 다시 돌아야 한다.
-- 2라운드에도 FAIL 이면 저작을 멈춘다(§4.5 와 같은 처리).
+- **PASS (≥95 · p0 = 0)** → on to §5.
+- **FAIL** → swap **only the flagged words** and delegate once more.
+  **Unattended cap: 2 rounds.** Rewrite whole sentences and the structure
+  §4.5·§4.6 signed off on collapses, and both gates have to run again.
+- FAIL on round 2 too: stop authoring (handled as in §4.5).
 
-### 5. 티어 결정 + 사전 견적 (게이트 5)
+### 5. Tier decision + pre-spend estimate (gate 5)
 
-`references/cost-tiers.md` 의 승급 조건을 확인한다. 무인 호출이면 성장 루프가
-방금 읽은 인사이트(YouTube `averageViewPercentage` / Instagram
-`reels_skip_rate`)를 인자로 받아 **추세로 판정한다** — 최근 3편 평균 대 직전
-3편 평균, 5%p 이상 악화일 때만 승급. 게시 이력 6편 미만이거나 훅 계약 개정 후
-새 기준선 3편이 안 쌓였으면 **승급하지 않는다**(둘 다 cost-tiers 정본).
+Check the escalation conditions in `references/cost-tiers.md`. On an unattended
+call, the growth loop passes in the insights it just read (YouTube
+`averageViewPercentage` / Instagram `reels_skip_rate`) and **the verdict is a
+trend** — average of the last 3 episodes vs. the 3 before, escalate only on a
+worsening of 5+ points. Under 6 published episodes, or fewer than 3
+new-baseline episodes since a hook-contract revision: **no escalation** (both
+rules canonical in cost-tiers).
 
-예상 tally 는 **`.work/cost-estimate.tsv`** 에 적는다. 실제 원장(`cost-tally.tsv`)과
-파일을 갈라 두는 이유는 하나다 — 한 파일에 예상과 실사용이 같이 쌓이면 §마무리의
-사후 리포트가 같은 지출을 두 번 센다.
+Write the projected tally to **`.work/cost-estimate.tsv`**. It stays separate
+from the actual ledger (`cost-tally.tsv`) for one reason — pile estimates and
+actuals into one file and §wrap-up's post-hoc report counts the same spend
+twice.
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
-$REF/cost-report.sh .work/cost-estimate.tsv --cap <플랜 max_cost_per_video>; echo "cost_exit=$?"
+$REF/cost-report.sh .work/cost-estimate.tsv --cap <plan max_cost_per_video>; echo "cost_exit=$?"
 ```
 
-exit 2(초과)면 **승급을 취소하고 경제 기본으로 내려온다** — 중단이 아니다.
-exit 1(판정 불가)이면 중단한다. 단가를 모르는 채로 돈을 쓰지 않는다.
+exit 2 (over the cap): **cancel the escalation and come back down to economy
+baseline** — not an abort. exit 1 (verdict unavailable): abort. Never spend
+money without knowing the price.
 
-### 6. 비주얼 생성
+### 6. Visual generation
 
-- **배경 — 커버 1장 + points 2~4장** — `size: "1088x1920"`.
-  - **커버 배경 = `gpt_image_text2img` `quality: "high"` 실사 인물 장면**(생성 인물만,
-    기본 한국 여성 — profile §3 타깃 기준. 절대 규칙 11·12) — 커버 프레임이 그대로
-    cover.jpg(썸네일)가 된다. 주제가 한눈에 보이는 장면으로, `face not visible` 대신
-    `seen from behind, face turned away`. 승급 편은 이 PNG 가 veo 소스를 겸한다.
-  - points 배경은 **`image_local_generate`(로컬 Z-Image — 기본, 장당 비용 0)**,
-    **주제 실사 컷 2~4장** — 사진이 주인공이라(절대 규칙 14) 한 장 돌려쓰기는 본문
-    전체를 같은 정지 컷으로 만든다. 내용 축이 바뀔 때 컷을 바꾸되 같은 인물·공간의
-    다른 앵글로 연속성을 지킨다. 프롬프트는 storyboard §5 규약(profile §3 무드 +
-    필수 부정 지시 + "lower third fading into darkness").
-    `storyboard/images/scene-<n>.png`. 장당 수 분 걸린다 — 무인 경로에선 문제가
-    없지만 영상 렌더와 동시 실행은 피한다. mflux 미설치 머신이면 툴이 설치 안내와
-    함께 실패한다 — 그 회차만 `gpt_image_text2img`(`quality: "low"`)로 폴백하며,
-    그때는 **Gemini TTS 채널 3장 상한**이 되살아난다(4장이면 기본 상한 $0.30 초과 —
-    cost-tiers).
-  - **생성 전에 content-reviewer 계획 모드에 위임**해 `PLAN_REVIEW: PASS p0=0` 를
-    확인한다(절대 규칙 13) — 무인 경로에서도 이 게이트는 기계 판정이라 사람이 필요
-    없다. FAIL 이면 계획을 고쳐 재위임한다(최대 2라운드, 미달 시 그 편 중단).
-- **도입 b-roll (승급했을 때만)** — `veo_img2video`(`aspectRatio: "9:16"`,
-  `resolution: "1080p"`, `durationSeconds: 8`, model `veo-3.1-lite-generate-preview`
-  — 블라인드 아레나에서 세 티어의 품질이 통계적으로 같아 가장 싼 티어를 쓴다).
-  **소스는 §6 에서 이미 만든 커버 배경 PNG** 다 — produce 절대 규칙 8 이 `veo_text2video`
-  를 금지한다(같은 프롬프트로도 매번 다른 장면이 나와 되돌릴 기준이 없다).
-  이 칸이 Veo 고정인 이유는 소리다 — 절대 규칙 9 로 b-roll 구간은 클립이 가진 소리를
-  쓰므로 무음이 싼 Seedance 로 옮길 자리가 아니다. 커버 배경이 성인 실사 인물이어도
-  Veo 이미지 레인은 그대로 받는다(실측 2026-08-15). **다만 소스에 아이·청소년으로 보이는
-  인물이 있으면 이 레인이 차단된다**(Support code 17301594) — 계획 게이트가 P0-10 으로
-  먼저 잡지만, 생성이 무응답으로 떨어지면 그 편은 인물을 성인으로 다시 만들고 재시도한다.
-  **생성은 8초(1080p 는 8초 전용), 사용은 broll 씬 `duration`(기본 4초)만** — produce
-  §6 트림+믹스 규약대로 원본 앞부분만 잘라 쓰고 원본은 보관한다. 업스케일하지
-  않는다(본편이 1080×1920 — 720p 로 내리지 않는 사용자 결정 2026-08-11).
-  **프롬프트는 영어로 모션만** + 끝에 오디오 지시 한 줄. 소스 이미지에 이미 보이는
-  것을 다시 묘사하면 모델이 장면을 재설계한다. `.work/broll/broll-a<after>.mp4`
-  (도입 칸이면 `broll-a0.mp4`).
-  - **무인 루프가 스스로 올리는 것은 1칸까지다**(cost-tiers §승급). 스키마 상한은
-    2칸이지만 veo 과금이 생성 길이 기준이라 칸이 늘면 회차 지출이 배로 뛴다. 다만
-    **스토리보드에 2칸이 적혀 있으면 적힌 대로 둘 다 만든다** — 승인된 씬을 비용을
-    이유로 빼면 영상이 계획과 달라진다.
-  - **커버 자체를 생성 영상으로 만들지 않는다** — Veo 는 한글을 못 쓴다(절대 규칙 10).
-    커버는 코드 렌더로 두고 b-roll 은 **커버 다음 구간**에 넣는다.
-  - **그 구간에는 나레이션이 없다**(절대 규칙 9) — 영상 사운드를 쓴다. 그 씬은
-    `narration: []` 이고, 자막도 없으므로 §8 빌드 후 `splice-clip.sh` 가 뒤 자막을
-    실측 삽입 길이만큼 민다. **팔린드롬 금지** — 소리가 거꾸로 재생된다.
-- **BGM** — 채널 공용 침대가 있으면 복사만 한다.
-  `python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py data/<채널> bgm default`
-  경로가 나오면 `.work/bgm.wav` 로 복사. 없으면 `music_generate_clip`
-  인스트루멘털 30초를 `.work/bgm.wav` 에 둔다. 프롬프트에
-  "leaves space for a spoken voiceover, no melody in the vocal frequency range".
-  빌더가 루프로 늘린다. 같은 톤을 다음 편에도 쓰려면
-  `assets/audio/bgm/default.wav` 로 복사하고 catalog 에 올린다.
+- **Backgrounds — 1 cover + 2–4 points** — `size: "1088x1920"`.
+  - **Cover background = `gpt_image_text2img` `quality: "high"`, a
+    photorealistic human scene** (generated people only; default a Korean
+    woman — per profile §3's target. Absolute rules 11·12) — the cover frame
+    becomes cover.jpg (the thumbnail) as-is. Make the topic legible at a
+    glance; use `seen from behind, face turned away` instead of
+    `face not visible`. On escalated episodes this PNG doubles as the veo
+    source.
+  - Points backgrounds: **`image_local_generate` (local Z-Image — the default,
+    $0 per image)**, **2–4 photorealistic shots of the topic** — the photo is
+    the star (absolute rule 14), so reusing one image turns the whole body into
+    a single frozen frame. Change the shot when the content axis changes, but
+    keep continuity: same person and space, different angle. Prompts follow
+    storyboard §5's conventions (profile §3 mood + the required negative
+    directives + "lower third fading into darkness").
+    `storyboard/images/scene-<n>.png`. Each image takes minutes — no problem on
+    the unattended path, but avoid running alongside the video render. On a
+    machine without mflux, the tool fails with install guidance — fall back to
+    `gpt_image_text2img` (`quality: "low"`) for that episode only, and the
+    **3-image cap for Gemini-TTS channels** comes back into force (4 images
+    busts the default $0.30 cap — cost-tiers).
+  - **Before generating, delegate to content-reviewer plan mode** and confirm
+    `PLAN_REVIEW: PASS p0=0` (absolute rule 13) — this gate is a machine
+    verdict, so the unattended path needs no human here. On FAIL, fix the plan
+    and re-delegate (max 2 rounds; still short, abort the episode).
+- **Opening b-roll (only when escalated)** — `veo_img2video`
+  (`aspectRatio: "9:16"`, `resolution: "1080p"`, `durationSeconds: 8`, model
+  `veo-3.1-lite-generate-preview` — in blind-arena testing the three tiers'
+  quality was statistically identical, so use the cheapest).
+  **The source is the cover-background PNG already made in §6** — produce
+  absolute rule 8 bans `veo_text2video` (the same prompt renders a different
+  scene every time, so there's no baseline to roll back to).
+  This slot is Veo-only because of sound — under absolute rule 9 the b-roll
+  segment uses the clip's own audio, so it's no place for the cheaper-but-silent
+  Seedance. A photorealistic adult person in the cover background is accepted
+  as-is by Veo's image lane (measured 2026-08-15). **But if the source shows
+  anyone who reads as a child or teenager, this lane is blocked**
+  (Support code 17301594) — the plan gate catches it first as P0-10, but if
+  generation drops into no-response, remake the person as an adult and retry
+  that episode.
+  **Generate 8 seconds (1080p is 8-second-only); use only the broll scene's
+  `duration` (default 4s)** — per produce §6's trim+mix conventions, cut from
+  the head of the original and keep the original. No upscaling (the body is
+  1080×1920 — user decision 2026-08-11 not to go down to 720p).
+  **Prompt in English, motion only** + one line of audio directives at the end.
+  Re-describing what's already visible in the source image makes the model
+  redesign the scene. `.work/broll/broll-a<after>.mp4`
+  (`broll-a0.mp4` for the opening slot).
+  - **The unattended loop escalates at most 1 slot on its own** (cost-tiers
+    §escalation). The schema allows 2, but veo bills on generated length, so
+    one more slot doubles the episode's spend. Still, **if the storyboard has 2
+    slots written in, make both as written** — dropping an approved scene over
+    cost makes the video diverge from the plan.
+  - **Never make the cover itself a generated video** — Veo can't write Korean
+    text (absolute rule 10). The cover stays code-rendered; the b-roll goes in
+    **the segment after the cover**.
+  - **No narration over that segment** (absolute rule 9) — the video's own
+    sound plays. That scene is `narration: []` with no subtitles either, so
+    after the §8 build `splice-clip.sh` shifts the later subtitles by the
+    measured inserted length. **No palindrome loops** — the audio plays
+    backwards.
+- **BGM** — if the channel has a shared bed, just copy it.
+  `python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py data/<channel> bgm default`
+  — if a path comes back, copy it to `.work/bgm.wav`. Otherwise put a
+  30-second `music_generate_clip` instrumental at `.work/bgm.wav`. Include
+  "leaves space for a spoken voiceover, no melody in the vocal frequency range"
+  in the prompt. The builder loop-extends it. To reuse the same tone next
+  episode, copy it to `assets/audio/bgm/default.wav` and add it to the catalog.
 
-호출마다 `.work/cost-tally.tsv` 에 실제 사용량을 한 줄씩 append 한다 — §5 의
-견적 파일이 아니라 이쪽이다. 줄 형식·단위(veo 는 생성 길이, tts 는 자수÷1000)는
-`references/cost-tally.md` 가 정본이고, 손 경로(storyboard·produce)도 같은 규약으로
-같은 이름의 파일에 적는다.
+After every call, append one line of actual usage to `.work/cost-tally.tsv` —
+this file, not §5's estimate file. Line format and units (veo = generated
+length, tts = characters ÷ 1000) are canonical in `references/cost-tally.md`,
+and the manual path (storyboard·produce) writes the same-named file under the
+same conventions.
 
-### 6.5 이미지 리뷰 게이트 (게이트 7 — storyboard-reviewer 이미지 모드)
+### 6.5 Image review gate (gate 7 — storyboard-reviewer image mode)
 
-계획 모드가 프롬프트를 봤다면, 여기서는 **나온 그림**을 본다. 무인 경로는 사람이
-이미지를 볼 기회가 없으니 이 게이트가 유일한 눈이다 — 씬이 말하는 내용과 무관한
-그림, 박힌 유사문자, 밝은 하단(자막이 묻힌다)을 여기서 잡는다.
+Plan mode saw the prompts; this sees **the images that came out**. On the
+unattended path no human ever looks at the images, so this gate is the only
+eye — it catches images unrelated to what the scene says, baked-in
+pseudo-characters, and bright lower thirds (which drown the subtitles).
 
-**storyboard-reviewer 에이전트(Agent)에 "이미지 모드"로 위임**하고 tail
-`STORYBOARD_REVIEW: mode=image score=NN p0=N verdict=PASS|FAIL` 을 파싱한다.
-`images/scene-*.png` 전체 경로와 `scenes.js`·`profile.md` 를 전달한다.
+**Delegate to the storyboard-reviewer agent (Agent) in "image mode"** and parse
+the tail `STORYBOARD_REVIEW: mode=image score=NN p0=N verdict=PASS|FAIL`.
+Pass the full `images/scene-*.png` paths plus `scenes.js`·`profile.md`.
 
-- **PASS(≥95 · p0 = 0)** → §7 로.
-- **FAIL** → 지적받은 장만 다시 만들고 한 번 더 위임한다. **무인 캡 2라운드.**
-  재생성을 결정하면 **그 줄을 먼저 `.work/cost-estimate.tsv` 에 얹고** §5 와 같은
-  방식으로 `--cap` 재판정을 돌린다 — 상한을 넘기면(exit 2) 재생성 대신 그 자리에서
-  hold 다. 판정을 실제 원장으로 돌리지 않는다: 그 시점의 원장에는 BGM·나레이션처럼
-  **아직 안 나간 지출**이 빠져 있어 합계가 작게 보이고, 넘길 재생성이 통과한다.
-  호출이 끝나면 실사용을 `.work/cost-tally.tsv` 에 적는다(§6 그대로).
-- 2라운드에도 FAIL 이면 영상은 끝까지 만들되, **§10 마무리에서 `queue_*: hold`** 로
-  적고 미해결 지적을 함께 적는다. 맥락이 어긋난 커버는 그대로 썸네일이 되므로
-  사람이 봐야 한다.
+- **PASS (≥95 · p0 = 0)** → on to §7.
+- **FAIL** → regenerate only the flagged images and delegate once more.
+  **Unattended cap: 2 rounds.** When you decide to regenerate, **put that line
+  on `.work/cost-estimate.tsv` first** and rerun the `--cap` verdict as in §5 —
+  over the cap (exit 2) means hold right there instead of regenerating. Don't
+  run the verdict on the actual ledger: at that point it's missing **spend that
+  hasn't gone out yet** (BGM, narration), the total looks small, and a
+  cap-busting regeneration passes. When the call finishes, write actual usage
+  to `.work/cost-tally.tsv` (§6 as-is).
+- FAIL on round 2 too: finish the video anyway, but at **§10 wrap-up write
+  `queue_*: hold`** along with the unresolved findings. An off-context cover
+  becomes the thumbnail as-is, so a human has to see it.
 
-### 7. 나레이션
+### 7. Narration
 
-produce 스킬 §5 그대로다 — **씬당 1콜**, profile §2 엔진·보이스 고정,
-대본은 narration 세그먼트의 `tts` 문장을 마침표로 이어 붙인 전문,
-`.work/pcm/c<n>.wav`. 생성 직후 길이 검사(자수/4.5 의 2배 초과 → 1회 재생성).
+Exactly produce skill §5 — **1 call per scene**, engine and voice pinned to
+profile §2, the script is the full text of the narration segments' `tts`
+sentences joined with periods, `.work/pcm/c<n>.wav`. Length check right after
+generation (over 2× characters/4.5 → regenerate once).
 
-로컬 엔진이 "Python interpreter not found" / "No module named 'supertonic'" 으로
-실패하면 **Gemini 로 갈아타지 않고 그 자리에서 중단**한다. 목소리가 바뀐 영상이
-자동으로 게시되는 것이 이 파이프라인 최악의 사고다.
+If the local engine fails with "Python interpreter not found" /
+"No module named 'supertonic'", **abort right there — do not switch to
+Gemini**. A video with a changed voice publishing automatically is this
+pipeline's worst possible accident.
 
-### 8. 렌더·빌드 (게이트 3)
+### 8. Render & build (gate 3)
 
-produce 스킬 §2(frame.html 재생성) · §4(reveal 캡처) · §6(manifest) 을 그대로
-따라 `build-reel.sh` 로 빌드한다. 무인 모드에서는 chrome-devtools 오버플로
-확인을 못 할 수 있으므로, 캡처한 상태 PNG 의 파일 크기가 0 이 아닌지와 씬별
-상태 수가 manifest 와 맞는지를 대신 확인한다.
+Build with `build-reel.sh`, following produce skill §2 (frame.html
+regeneration) · §4 (reveal capture) · §6 (manifest) as-is. Unattended mode may
+not be able to do the chrome-devtools overflow check, so instead verify the
+captured state PNGs are non-zero-size and the per-scene state counts match the
+manifest.
 
-`build-report.txt` 판정은 `../produce/references/pipeline.md` §리포트 게이트 표.
-**drift ≠ 0 · reveal 상태 누락 · 마지막 reveal 미사용은 진행 금지**다. 무인
-모드에서 진행 금지는 곧 중단이며, 큐에 넣지 않는다.
+The `build-report.txt` verdict follows `../produce/references/pipeline.md`
+§report gate table.
+**drift ≠ 0, a missing reveal state, or an unused final reveal blocks
+progress**. In unattended mode, blocked progress means abort — nothing enters
+the queue.
 
-**b-roll 을 만들었으면 여기서 접합한다** (produce §6 끝 — 트림+믹스 먼저, 그다음 접합):
+**If b-roll was made, splice it here** (end of produce §6 — trim+mix first,
+then splice):
 
 ```bash
-mix_broll 0 4                                   # produce §6 의 mix_broll — broll-a0-mixed.mp4
+mix_broll 0 4                                   # produce §6's mix_broll — broll-a0-mixed.mp4
 $REF_P/splice-clip.sh .work .work/broll/broll-a0-mixed.mp4 "$(cardend 0)"
 ```
 
-`T` 는 눈대중으로 잡지 않는다 — `cardend <after>`(produce §6)가 `card 0..after` 확정
-길이를 더한 값이 그 씬 종료 시각이다. **원본을 그대로 접합하지 않는다** — 믹스 단계를
-건너뛰면 veo 사운드가 본편보다 4dB 넘게 작고 BGM 이 그 구간만 끊긴다.
-스토리보드에 b-roll 이 2칸이면 **한 번의 호출에 두 클립을 함께** 넘긴다(두 번 나눠
-부르면 두 번째 호출이 첫 접합을 지운다).
-접합 출력에서 **`걸친 큐 0개`** 와 **클린·번인 길이 일치**를 확인한다. 어긋나면
-큐에 넣지 않는다. 이후 §9 는 `reel-spliced.mp4`·`reel-sub-spliced.mp4`·`subs-spliced.srt`
-를 output 으로 옮긴다.
+Never eyeball `T` — `cardend <after>` (produce §6) sums the confirmed lengths
+of `card 0..after`, and that value is the scene's end time. **Never splice the
+raw original** — skip the mix step and the veo sound sits 4+ dB under the body
+while the BGM cuts out for just that stretch.
+If the storyboard has 2 b-roll slots, pass **both clips in a single
+invocation** (call it twice and the second run wipes the first splice).
+In the splice output confirm **`0 straddled cues`** and **matching clean/burned
+lengths**. If they diverge, don't queue it. §9 then moves
+`reel-spliced.mp4`·`reel-sub-spliced.mp4`·`subs-spliced.srt` to output.
 
-### 9. output 확정 + 플랫폼 텍스트
+### 9. Finalize output + platform text
 
 ```bash
 cp .work/reel.mp4 output/video/video.mp4
@@ -464,73 +542,84 @@ cp .work/reel-sub.mp4 output/video/video-sub.mp4
 cp .work/subs.srt .work/cover.jpg .work/build-report.txt output/video/
 ```
 
-**세 파일이 다 있어야 게시가 완결된다** — 클린본과 `subs.srt` 는 YouTube·
-Facebook 으로, 번인본은 Instagram 으로 간다(publish 스킬 규칙 8).
+**Publishing is complete only with all three files** — the clean master and
+`subs.srt` go to YouTube and Facebook, the burned-in copy to Instagram
+(publish skill rule 8).
 
-플랫폼 텍스트는 platform-guide 플레이북대로 플랫폼마다 다시 쓰고, 저장 직후
-표면별 문체 검사를 돌린다(produce §9 의 스크립트 그대로). exit 2 면 고쳐서 재실행,
-두 번 실패면 그 플랫폼 큐 마커를 찍지 않는다. **produce §9 의 묶음 검사(check-batch)도
-같이 돌린다** — 무인 경로라 사람이 "지난 편이랑 똑같네"를 알아챌 자리가 없고, 성장
-루프가 이 스킬을 반복 호출하는 만큼 채널 동질화가 가장 빨리 쌓이는 자리다. 판정은
-없다(순위만) — 돌려쓴 구절이 이번 편에 있으면 그 문장을 고치고 넘어간다.
+Rewrite the platform text per platform following the platform-guide playbooks,
+and run the per-surface style check right after saving (produce §9's script
+as-is). exit 2: fix and rerun; two failures and that platform's queue marker
+doesn't get stamped. **Also run produce §9's batch check (check-batch)** — on
+the unattended path nobody is around to notice "this reads just like the last
+one", and since the growth loops call this skill repeatedly, this is where
+channel homogenization piles up fastest. There's no verdict (rankings only) —
+if a recycled phrase shows up in this episode, fix that sentence and move on.
 
-### 10. 품질 게이트 (게이트 4) + 마무리
+### 10. Quality gate (gate 4) + wrap-up
 
-content-reviewer 에이전트에 위임한다 — **번인본에서 뽑은 프레임**(클린본에는
-자막이 없어 오탈자·잘림이 안 보인다)·플랫폼 카피·scenes.js·§4·§9 의 exit code.
-조사 생략 채널이면 그 사실도 명시한다(사실 축 만점 환산).
-**tail(`CONTENT_REVIEW:`)의 카피 ≥95 이고 P0 = 0 이 될 때까지 수정, 무인 모드는
-최대 2라운드.**
+Delegate to the content-reviewer agent — **frames pulled from the burned-in
+copy** (the clean master has no subtitles, so typos and clipping don't show),
+the platform copy, scenes.js, and §4·§9's exit codes.
+If the channel skips research, state that too (the facts axis converts to full
+marks).
+**Revise until the tail (`CONTENT_REVIEW:`) shows copy ≥95 and P0 = 0;
+unattended mode caps at 2 rounds.**
 
-마무리 순서:
+Wrap-up order:
 
 1. `cost-report.sh .work/cost-tally.tsv > output/video/cost-report.txt`
-2. `autoproduce.json` 에 누적(일·주 count·usd)과 `producedTopics` 항목 추가
-3. storyboard.md frontmatter 갱신
+2. Add the totals (daily/weekly count·usd) and a `producedTopics` entry to
+   `autoproduce.json`
+3. Update the storyboard.md frontmatter
 
 ```yaml
 status: produced
 auto_produced: true
-approved_by: autoproduce/<호출한 성장 플랜 또는 user>
+approved_by: autoproduce/<calling growth plan, or user>
 tier: economy            # economy | escalated
-queue: ready             # 승인된 플랫폼만 — P0 미해결이면 hold
+queue: ready             # approved platforms only — hold while P0s are unresolved
 queue_instagram: ready
 queue_at: 2026-08-11
 ```
 
-4. 락 해제(`rm -rf "$LOCK"`)
-5. 보고 — 주제·slug·총길이·티어·비용·찍은 큐·미해결 지적
+4. Release the lock (`rm -rf "$LOCK"`)
+5. Report — topic, slug, total length, tier, cost, queues stamped, unresolved
+   findings
 
-**사람 호출 모드**는 여기서 AskUserQuestion 으로 결과를 제시하고 큐 마커를 찍을지
-묻는다(경로·총길이·비용·커버 제목·핵심 수치). 무인 모드는 묻지 않는다 — 플랜이
-이미 승인서다.
+**Human-invocation mode** presents the result here via AskUserQuestion and asks
+whether to stamp the queue markers (paths, total length, cost, cover title,
+key figures). Unattended mode doesn't ask — the plan is already the
+authorization.
 
-## 함정
+## Pitfalls
 
-- **`queue_*` 를 찍기 전에 `status` 부터 쓰지 않는다.** 순서가 뒤집히면 게이트에
-  떨어진 영상이 `status: produced` 만으로 다른 루프에 보일 수 있다.
-- **락 해제를 빼먹으면 채널이 60분 얼어붙는다.** 중단 경로마다 확인한다.
-- **`serp_*` 를 조사 루프에서 반복 호출하지 않는다** — 월 250회는 자동 저작
-  몇 편이면 소진된다.
-- **승급이 습관이 되지 않게 한다.** 지표가 좋아지면 다음 편은 다시 경제 기본이다.
-- **주제 풀이 비면 멈춘다.** 자동화가 소재를 발명하기 시작하면 그때부터
-  사실 검증이 무의미해진다.
+- **Never write `status` before stamping `queue_*`.** Flip the order and a
+  gate-failed video can become visible to another loop on `status: produced`
+  alone.
+- **Skip the lock release and the channel freezes for 60 minutes.** Check it on
+  every abort path.
+- **Never call `serp_*` repeatedly in the research loop** — 250 calls a month
+  is gone within a few automated episodes.
+- **Don't let escalation become a habit.** When the metrics recover, the next
+  episode is back on economy baseline.
+- **Stop when the topic pool runs dry.** The moment automation starts inventing
+  material, fact verification stops meaning anything.
 
 ## Additional Resources
 
 ### Reference Files
 
-- **`references/cost-tiers.md`** — 모델 사다리·승급 조건·자율 금지 티어·상한 판정 (정본)
-- **`references/prices.tsv`** — 생성 툴 단가 SoT (근거등급·출처 포함, `?` 는 미확인)
-- **`references/cost-report.sh`** — tally × 단가 → 리포트. 사전 견적과 사후 리포트에 같은 계산기를 쓴다
-- **`references/cost-tally.md`** — 회차 원장 규약 (파일 위치·줄 형식·단위·exit 읽기). 손 경로 storyboard·produce 도 이 규약으로 같은 파일에 적는다
-- **`references/check-duplicate.py`** — 주제 중복 판정 (기존 전 주제 대비 글자 바이그램 포함도, 임계 0.5 · `--selftest` 픽스처 11쌍)
+- **`references/cost-tiers.md`** — model ladder, escalation conditions, tiers banned from autonomous use, cap verdicts (source of truth)
+- **`references/prices.tsv`** — generation-tool price SoT (with evidence grade and source; `?` = unconfirmed)
+- **`references/cost-report.sh`** — tally × prices → report. The same calculator serves the pre-spend estimate and the post-hoc report
+- **`references/cost-tally.md`** — per-episode ledger conventions (file location, line format, units, reading exits). The manual storyboard·produce path writes the same file under these conventions
+- **`references/check-duplicate.py`** — topic duplicate verdict (character-bigram overlap against every existing topic, threshold 0.5 · 11 `--selftest` fixture pairs)
 
-### 다른 스킬의 계약을 그대로 쓴다
+### Contracts reused from other skills
 
-- `../storyboard/references/scenes-schema.md` — scenes.js 데이터 계약
+- `../storyboard/references/scenes-schema.md` — the scenes.js data contract
 - `../storyboard/references/storyboard-template.md` · `storyboard-html-template.html`
-- `../produce/references/pipeline.md` — 빌드 계약·리포트 게이트 판정표·팔린드롬
-- `../produce/references/build-reel.sh` — 합성 파이프라인
+- `../produce/references/pipeline.md` — build contract, report-gate verdict table, palindromes
+- `../produce/references/build-reel.sh` — the compositing pipeline
 - `../platform-guide/references/platform-playbook.md` · `korean-style.md` · `check-style.py`
-- `../../docs/guides/ai-video-production/index.html` — 하이브리드가 기본인 이유·Veo 하드 스펙·프롬프트 규칙
+- `../../docs/guides/ai-video-production/index.html` — why hybrid is the default, Veo hard specs, prompt rules

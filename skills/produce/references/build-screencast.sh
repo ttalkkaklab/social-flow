@@ -1,78 +1,81 @@
 #!/usr/bin/env bash
-# build-screencast.sh — 촬영(스크린캐스트) 편집 파이프라인
-#   사용자가 스토리보드 대본대로 촬영한 화면 녹화를 edit.json 정합대로 잘라
-#   9:16 쇼트폼으로 조립한다. 오디오는 사용자 육성(녹화 원음) — TTS 없음.
+# build-screencast.sh — filmed (screencast) edit pipeline
+#   Cuts the screen recording the user filmed against the storyboard script per the edit.json
+#   alignment and assembles a 9:16 short. The audio is the user's live voice (the recording's own
+#   sound) — no TTS.
 #
-#   드리프트 0 원리는 build-reel.sh v2 승계: 씬 길이를 프레임 올림으로 확정하고
-#   오디오를 정확히 FRAMES*(48000/FPS) 샘플로 패딩 → concat 누적 오차 0.
+#   The zero-drift principle carries over from build-reel.sh v2: fix the scene duration by frame
+#   ceiling and pad the audio to exactly FRAMES*(48000/FPS) samples → zero cumulative concat error.
 #
-# 사용법: build-screencast.sh <workdir>
-#   <workdir>/edit.json   : 편집 매니페스트 (screencast-pipeline.md §edit.json 계약)
+# Usage: build-screencast.sh <workdir>
+#   <workdir>/edit.json   : edit manifest (screencast-pipeline.md §edit.json contract)
 #                           {source, scenes:[{idx,start,end,crop?,overlay?,subs?}]}
-#                           start/end/subs 시각은 전부 원본 녹화 시계(초) — 재배치는 빌드가 한다
-#   <workdir>/cards/tN.png: (선택) 씬 타이틀 알파 오버레이 (screencast-overlay.html 캡처)
-#   <workdir>/bgm.wav     : 배경음악 (본편보다 짧으면 루프)
-#   <workdir>/outro.mp4   : (선택) 공통 아웃트로 — 있으면 xfade+acrossfade 접합
-#   <workdir>/fonts/      : (선택) 자막 폰트 ttf — libass 는 woff2 를 못 읽는다
-# 출력: <workdir>/reel.mp4 (자막 없는 클린 마스터) · reel-sub.mp4 (번인본, BURN=0 이면 생략)
-#       subs.srt (게시용) · subs.ass (번인 원본) · cover.jpg · build-report.txt
+#                           start/end/subs times are all on the original recording's clock (seconds) —
+#                           the build does the repositioning
+#   <workdir>/cards/tN.png: (optional) scene title alpha overlay (screencast-overlay.html capture)
+#   <workdir>/bgm.wav     : background music (loops if shorter than the feature)
+#   <workdir>/outro.mp4   : (optional) shared outro — joined with xfade+acrossfade when present
+#   <workdir>/fonts/      : (optional) subtitle font ttf — libass can't read woff2
+# Output: <workdir>/reel.mp4 (clean master without subtitles) · reel-sub.mp4 (burned-in copy, skipped when BURN=0)
+#         subs.srt (for publishing) · subs.ass (burn-in source) · cover.jpg · build-report.txt
 #
-# 합성 지오메트리 (1080×1920 캔버스):
-#   상단 y 190~460   타이틀 블록 (오버레이 PNG — screencast-overlay.html 의 y=460 계약과 짝)
-#   중단 y≥460       녹화 밴드 — 폭 1080 fit, 높이 상한 BAND_MAX_H, 중심 BAND_CY 정렬
-#   하단 y 1380~1560 번인 자막 밴드 (build-reel.sh 와 동일 스타일·마진)
+# Composite geometry (1080×1920 canvas):
+#   top    y 190~460   title block (overlay PNG — pairs with screencast-overlay.html's y=460 contract)
+#   middle y≥460       recording band — fit to width 1080, height capped at BAND_MAX_H, centered on BAND_CY
+#   bottom y 1380~1560 burned-in subtitle band (same style and margins as build-reel.sh)
 set -euo pipefail
 export LC_ALL=en_US.UTF-8
 
-WORKDIR="${1:?사용법: build-screencast.sh <workdir>}"
+WORKDIR="${1:?usage: build-screencast.sh <workdir>}"
 cd "$WORKDIR"
 
-# 포맷 프리셋 — build-reel.sh 와 같은 계약. 인라인 기본값 **앞**에서 읽는다.
+# Format preset — same contract as build-reel.sh. Read **before** the inline defaults.
 [ -f format.env ] && . ./format.env
 
 FPS=${FPS:-30}
-SPF=$((48000 / FPS))               # 프레임당 오디오 샘플 수
-BG=${BG:-#0b1020}                  # 캔버스 배경 — THEME.ink 를 넘긴다
-BG="${BG#\#}"; BG="${BG#0x}"; BG="0x${BG}"   # '#'/'0x' 어느 표기든 0xRRGGBB 로 정규화
-# 캔버스 — 지금 쓰는 곳은 ASS PlayRes 와 4단계 자산 선검사다. 배경 합성(:144)과
-# 축소 배율(:142)은 13단계가 가로 가지를 따로 만들 때까지 세로 리터럴 그대로다.
-# 밴드 상수(BAND_MAX_H 900 · BAND_CY 880 · BAND_MIN_Y 460)가 절대 px 라
-# 캔버스만 변수로 바꾸면 720x1280 도 되는 것처럼 보이는 없는 일반성이 생긴다.
-W=${W:-1080}                       # 캔버스 폭
-H=${H:-1920}                       # 캔버스 높이
-BAND_MAX_H=${BAND_MAX_H:-900}      # 녹화 밴드 높이 상한 (1380 자막 밴드 침범 방지)
-BAND_CY=${BAND_CY:-880}            # 밴드 수직 중심 목표
-BAND_MIN_Y=${BAND_MIN_Y:-460}      # 밴드 상단 하한 (타이틀 블록 y=460 계약)
-MAX_SCENE=${MAX_SCENE:-20}         # 초과 시 경고 (씬 분할·재촬영 신호)
-SHRINK_WARN=${SHRINK_WARN:-3.0}    # 화면 축소 배율 경고 임계 (글씨 가독)
-BGM_VOL=${BGM_VOL:-0.22}           # 육성은 TTS 보다 다이내믹 — 낮게 시작
+SPF=$((48000 / FPS))               # audio samples per frame
+BG=${BG:-#0b1020}                  # canvas background — THEME.ink is passed in
+BG="${BG#\#}"; BG="${BG#0x}"; BG="0x${BG}"   # normalize either '#' or '0x' notation to 0xRRGGBB
+# Canvas — used today for the ASS PlayRes and the stage-4 asset precheck. The background composite
+# (:144) and the shrink factor (:142) stay portrait literals until stage 13 builds a separate
+# landscape branch. The band constants (BAND_MAX_H 900 · BAND_CY 880 · BAND_MIN_Y 460) are absolute
+# px, so turning only the canvas into a variable would fake a generality that isn't there — it would
+# look as if 720x1280 works.
+W=${W:-1080}                       # canvas width
+H=${H:-1920}                       # canvas height
+BAND_MAX_H=${BAND_MAX_H:-900}      # recording band height cap (keeps it out of the 1380 subtitle band)
+BAND_CY=${BAND_CY:-880}            # target vertical center of the band
+BAND_MIN_Y=${BAND_MIN_Y:-460}      # floor for the band's top edge (title block y=460 contract)
+MAX_SCENE=${MAX_SCENE:-20}         # warn above this (a signal to split the scene or reshoot)
+SHRINK_WARN=${SHRINK_WARN:-3.0}    # screen shrink-factor warning threshold (text legibility)
+BGM_VOL=${BGM_VOL:-0.22}           # live voice is more dynamic than TTS — start low
 DUCK_RELEASE=${DUCK_RELEASE:-250}
-XFADE=${XFADE:-0.6}                # 본편↔아웃트로 전환 길이
+XFADE=${XFADE:-0.6}                # feature↔outro transition length
 XFADE_T=${XFADE_T:-fadeblack}
-SUB=${SUB:-1}                      # 1=자막 데이터 생성(subs.srt·subs.ass), 0=자막 없음
-BURN=${BURN:-1}                    # 1=번인본 reel-sub.mp4 도 산출, 0=클린 마스터만
-SUB_FONT=${SUB_FONT:-Pretendard}   # fonts/ 에 ttf 가 없으면 fontconfig 폴백
-SUB_SIZE=${SUB_SIZE:-58}           # ASS Fontsize — build-reel.sh 와 같은 값이어야 한다
-SUB_ML=${SUB_ML:-250}              # 자막 좌 마진
-SUB_MR=${SUB_MR:-250}              # 자막 우 마진
-SUB_MV=${SUB_MV:-380}              # 자막 하단 마진
-SUB_OUT=${SUB_OUT:-5}              # 외곽선 두께
-SUB_SHA=${SUB_SHA:-1.7}            # 그림자
-COVER_TS=${COVER_TS:-1.2}          # 커버 스틸 시각 (타이틀 오버레이가 보이는 프레임)
-OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}   # 접합할 아웃트로 — 포맷마다 다른 파일이다
-STRICT_DIM=${STRICT_DIM:-0}        # 1=자산 해상도 불일치에 exit 1, 0=경고 한 줄
+SUB=${SUB:-1}                      # 1=generate subtitle data (subs.srt·subs.ass), 0=no subtitles
+BURN=${BURN:-1}                    # 1=also produce the burn-in reel-sub.mp4, 0=clean master only
+SUB_FONT=${SUB_FONT:-Pretendard}   # falls back to fontconfig when fonts/ has no ttf
+SUB_SIZE=${SUB_SIZE:-58}           # ASS Fontsize — must match build-reel.sh
+SUB_ML=${SUB_ML:-250}              # subtitle left margin
+SUB_MR=${SUB_MR:-250}              # subtitle right margin
+SUB_MV=${SUB_MV:-380}              # subtitle bottom margin
+SUB_OUT=${SUB_OUT:-5}              # outline thickness
+SUB_SHA=${SUB_SHA:-1.7}            # shadow
+COVER_TS=${COVER_TS:-1.2}          # cover still timestamp (a frame where the title overlay is visible)
+OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}   # outro to splice — a different file per format
+STRICT_DIM=${STRICT_DIM:-0}        # 1=exit 1 on asset dimension mismatch, 0=one warning line
 
 rm -rf work && mkdir -p work
-# 옛 빌드의 자막·번인본을 먼저 지운다 — SUB=0 으로 다시 빌드했을 때 이전 subs.srt 가
-# 남아 있으면 타이밍이 어긋난 자막이 게시된다(publish 는 파일 존재만 보고 복사한다)
+# Delete the old build's subtitles and burned-in copy first — rebuilding with SUB=0 while the
+# previous subs.srt survives publishes mistimed subtitles (publish copies on file existence alone)
 rm -f subs.srt subs.ass reel-sub.mp4
 REPORT=build-report.txt
 : > "$REPORT"
 WARN=0
 say() { echo "$1"; echo "$1" >> "$REPORT"; }
 
-[ -f edit.json ] || { echo "edit.json 없음"; exit 1; }
-[ -f bgm.wav ] || { echo "bgm.wav 없음"; exit 1; }
+[ -f edit.json ] || { echo "edit.json missing"; exit 1; }
+[ -f bgm.wav ] || { echo "bgm.wav missing"; exit 1; }
 
 say "── screencast build v1 ($(basename "$WORKDIR"))"
 

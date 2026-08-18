@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Lyria — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="gemini-lyria.html">
+<link rel="alternate" hreflang="en" href="gemini-lyria.en.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="gemini-lyria.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>Lyria</div>
+
+<header class="hero">
+  <div class="kicker">GOOGLE GEMINI</div>
+  <h1>Lyria — music generation</h1>
+  <p class="sub">One name, two APIs. <strong>Lyria 3</strong> takes a single Interactions API call and hands back a finished track; <strong>Lyria RealTime</strong> streams PCM over WebSocket. The parameter systems, the output formats, and the reproducibility are all different.</p>
+  <div class="meta">
+    <span>Official <a href="https://ai.google.dev/gemini-api/docs/music-generation">Lyria 3</a> · <a href="https://ai.google.dev/gemini-api/docs/realtime-music-generation">Lyria RealTime</a></span>
+    <span>SDK <code>@google/genai</code> <strong>2.x required</strong></span>
+    <span>Key <code>GEMINI_API_KEY</code></span>
+    <span>Implementation <code>server/src/music-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#compare">The two APIs compared</a></li>
+    <li><a href="#clip">Lyria 3 Clip (Interactions)</a></li>
+    <li><a href="#realtime">Lyria RealTime (WebSocket)</a></li>
+    <li><a href="#config">MusicGenerationConfig in full</a></li>
+    <li><a href="#impl">Implementation comparison</a></li>
+  </ol>
+</nav>
+
+<section id="compare">
+  <h2>1. The two APIs compared</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th></th><th>Lyria 3 Clip</th><th>Lyria RealTime</th></tr></thead>
+    <tbody>
+      <tr><td>Model ID</td><td><code>lyria-3-clip-preview</code></td><td><code>models/lyria-realtime-exp</code></td></tr>
+      <tr><td>Transport</td><td>Single HTTP call (<code>interactions.create</code>)</td><td>WebSocket (<code>live.music.connect</code>)</td></tr>
+      <tr><td>Length</td><td><strong>Fixed 30s</strong></td><td>Variable (5–300s on this server)</td></tr>
+      <tr><td>Output</td><td>MP3 44.1kHz stereo</td><td>Raw PCM 16-bit 48kHz stereo</td></tr>
+      <tr><td>Structured parameters</td><td>None — all natural language in the prompt</td><td>12 (BPM, key, density, brightness, seed…)</td></tr>
+      <tr><td>Vocals</td><td>Can generate lyrics (<code>[Verse]</code>·<code>[Chorus]</code> tags, timestamps)</td><td>Instrumental only (<code>VOCALIZATION</code> mode just uses voice as an instrument — no lyrics)</td></tr>
+      <tr><td>Reproducibility</td><td><strong>No</strong> — there's no seed</td><td>Yes, via <code>seed</code></td></tr>
+      <tr><td>Cost</td><td>$0.04/clip</td><td>Billed on streaming time</td></tr>
+      <tr><td>This server's tools</td><td><code>music_generate_clip</code></td><td><code>music_generate</code> · <code>music_generate_advanced</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>Clip is the default path for short-form BGM.</strong> It's one call, it's cheap, and 30 seconds fits short-form length. Use RealTime only when <em>the length has to match the narration exactly</em> or <em>the same track has to be reproduced across episodes</em>.
+  </div>
+  <p>There is also a <code>lyria-3-pro-preview</code> in the same family (about 1–2 minutes, MP3 or WAV), but this server doesn't expose it — a two-minute track has nowhere to go in a short-form pipeline and only adds cost.</p>
+</section>
+
+<section id="clip">
+  <h2>2. Lyria 3 Clip (Interactions API)</h2>
+  <pre><code>const interaction = await genai.interactions.create({
+  model: 'lyria-3-clip-preview',
+  input: 'calm acoustic guitar loop, 90 BPM, warm tone, instrumental only',
+});</code></pre>
+
+  <h3>Response shape</h3>
+  <pre><code>interaction.steps[]
+  ├─ type: "model_output"
+  └─ content[]
+       ├─ { type: "text",  text: "…lyrics or song structure…" }
+       └─ { type: "audio", data: "&lt;base64&gt;", mime_type: "audio/mpeg" }</code></pre>
+  <p>The SDK also provides the convenience accessor <code>interaction.output_audio</code>. The field names are <strong>snake_case</strong> (<code>mime_type</code>, <code>output_audio</code>) — watch out, since the rest of the Gen AI SDK is camelCase.</p>
+
+  <div class="danger">
+    <strong>Below @google/genai 2.0 this path doesn't work at all.</strong> The Interactions API's 2026-05 schema overhaul replaced the flat <code>outputs[]</code> with <code>steps[].content[]</code>, and the server rejects requests on the old schema:
+    <pre><code>The legacy Interactions API schema is no longer supported.
+Please upgrade your @google/genai JS/TS SDK to version &gt;= 2.0.0</code></pre>
+    This repo requires <code>^2.13.0</code>.
+  </div>
+
+  <h3>What you control through the prompt</h3>
+  <ul>
+    <li>Genre, instruments, BPM, key, mood, and structure all go in <strong>as natural language</strong>. There are no structured fields.</li>
+    <li>If you don't want vocals, say <code>instrumental only, no vocals</code> — by default vocals can show up.</li>
+    <li>Specify lyric structure with the <code>[Intro]</code>·<code>[Verse]</code>·<code>[Chorus]</code>·<code>[Bridge]</code>·<code>[Outro]</code> tags and timestamps in the form <code>[0:00 - 0:10] Intro: …</code>.</li>
+    <li>Input is multimodal — you can pass up to 10 images along with it to direct the mood (this server exposes text only).</li>
+  </ul>
+
+  <div class="warn">
+    <strong>The policy filter is touchy (measured).</strong> <em>"Calm lo-fi hip hop, 80 BPM, C major, soft piano and vinyl crackle"</em> was blocked with <code>Request blocked for an unspecified policy reason</code>, and two alternative prompts describing the same mood in plainer words both passed. The block is a prompt problem, not a code problem, so the right response is <strong>one retry with different wording</strong>.
+  </div>
+  <p>The output carries a <strong>SynthID audio watermark</strong>.</p>
+</section>
+
+<section id="realtime">
+  <h2>3. Lyria RealTime (WebSocket)</h2>
+  <pre><code>const genai = new GoogleGenAI({ apiKey, apiVersion: 'v1alpha' });
+const session = await genai.live.music.connect({
+  model: 'models/lyria-realtime-exp',
+  callbacks: { onmessage, onerror, onclose },
+});
+await session.setWeightedPrompts({ weightedPrompts: [{ text: 'minimal techno', weight: 1.0 }] });
+await session.setMusicGenerationConfig({ musicGenerationConfig: { bpm: 120, density: 0.4 } });
+await session.play();</code></pre>
+
+  <h3 id="realtime-apiversion">apiVersion — the docs and reality disagree</h3>
+  <div class="danger">
+    <strong>The official docs say <code>v1beta</code>, but what works when measured is <code>v1alpha</code>.</strong> We connected all three combinations directly and checked:
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th>apiVersion</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><code>v1alpha</code></td><td>Works — 384,000 bytes received for a 4-second request (exactly 48,000 × 2ch × 2 bytes × 4s)</td></tr>
+        <tr><td><code>v1beta</code></td><td><code>connect()</code> never returns and hangs</td></tr>
+        <tr><td>(unspecified)</td><td>—</td></tr>
+      </tbody>
+    </table>
+    </div>
+    So this server stays on <code>v1alpha</code>. Switch to <code>v1beta</code> on the strength of the docs and the tool stops silently.
+  </div>
+
+  <h3>Stream end condition</h3>
+  <p>The server doesn't signal the end of the stream. The end condition is "how much has arrived".</p>
+  <pre><code>target bytes = requested seconds × 48,000 × 2 (channels) × 2 (16-bit)
+timeout      = requested seconds × 1000 + 30,000ms</code></pre>
+  <p>Once the target bytes are met, it closes the session, trims to exactly the requested length, puts a WAV header on it, and saves.</p>
+
+  <h3>Session control</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Method</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>play()</code> · <code>pause()</code> · <code>stop()</code></td><td>Playback control</td></tr>
+      <tr><td><code>setWeightedPrompts()</code></td><td>Change the prompt mid-generation for a smooth transition</td></tr>
+      <tr><td><code>setMusicGenerationConfig()</code></td><td>Change settings. <strong><code>bpm</code> and <code>scale</code> don't take effect without <code>reset_context()</code> or a stop/play</strong></td></tr>
+      <tr><td><code>reset_context()</code></td><td>Reset just the context without cutting the stream</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    This server puts the settings in once <strong>before</strong> <code>play()</code> and doesn't change them afterward. That keeps it clear of the <code>bpm</code>/<code>scale</code> reset_context trap — passed as initial settings, they apply as given.
+  </div>
+</section>
+
+<section id="config">
+  <h2>4. MusicGenerationConfig in full</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Field</th><th>Type</th><th>Range</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>guidance</code></td><td>float</td><td>0.0–6.0</td><td>4.0</td><td>Higher follows the prompt more closely · transitions get abrupt</td></tr>
+      <tr><td><code>bpm</code></td><td>int</td><td>60–200</td><td>model's choice</td><td>Changing it needs reset_context</td></tr>
+      <tr><td><code>density</code></td><td>float</td><td>0.0–1.0</td><td>model's choice</td><td>Note density — low is sparse, high is packed</td></tr>
+      <tr><td><code>brightness</code></td><td>float</td><td>0.0–1.0</td><td>model's choice</td><td>Timbral brightness</td></tr>
+      <tr><td><code>scale</code></td><td>enum</td><td>13 values (below)</td><td><code>SCALE_UNSPECIFIED</code></td><td>Changing it needs reset_context</td></tr>
+      <tr><td><code>temperature</code></td><td>float</td><td>0.0–3.0</td><td><strong>1.1</strong></td><td>—</td></tr>
+      <tr><td><code>topK</code></td><td>int</td><td>1–1000</td><td><strong>40</strong></td><td>—</td></tr>
+      <tr><td><code>seed</code></td><td>int</td><td>0–2,147,483,647</td><td>random</td><td><strong>The only way to reproduce</strong></td></tr>
+      <tr><td><code>muteBass</code></td><td>bool</td><td>—</td><td>false</td><td>Reduce bass</td></tr>
+      <tr><td><code>muteDrums</code></td><td>bool</td><td>—</td><td>false</td><td>Reduce drums</td></tr>
+      <tr><td><code>onlyBassAndDrums</code></td><td>bool</td><td>—</td><td>false</td><td>Rhythm section only</td></tr>
+      <tr><td><code>musicGenerationMode</code></td><td>enum</td><td><code>QUALITY</code> · <code>DIVERSITY</code> · <code>VOCALIZATION</code></td><td><code>QUALITY</code></td><td>VOCALIZATION uses vocal sounds as an instrument — there are no lyrics</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Scale enum (13 values)</h3>
+  <p>The model doesn't distinguish relative keys — each value maps to both a major and its relative minor.</p>
+  <pre><code>C_MAJOR_A_MINOR         D_FLAT_MAJOR_B_FLAT_MINOR  D_MAJOR_B_MINOR       E_FLAT_MAJOR_C_MINOR
+E_MAJOR_D_FLAT_MINOR    F_MAJOR_D_MINOR            G_FLAT_MAJOR_E_FLAT_MINOR  G_MAJOR_E_MINOR
+A_FLAT_MAJOR_F_MINOR    A_MAJOR_G_FLAT_MINOR       B_FLAT_MAJOR_G_MINOR  B_MAJOR_A_FLAT_MINOR
+SCALE_UNSPECIFIED</code></pre>
+
+  <h3>WeightedPrompt</h3>
+  <pre><code>{ text: "jazz piano", weight: 1.0 }</code></pre>
+  <p><code>weight</code> takes any value <strong>as long as it isn't 0</strong>. The official spec has no ±1 bounds; 1.0 is the usual starting point and larger values have more influence. Mix several prompts and they blend in relative proportion.</p>
+</section>
+
+<section id="impl">
+  <h2>5. Implementation comparison</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Official contract</th><th>social-flow implementation</th></tr></thead>
+    <tbody>
+      <tr><td>RealTime length</td><td>Unlimited, as long as the session lasts</td><td>5–300s (default 30) — end decided by received bytes, then trimmed exactly and saved</td></tr>
+      <tr><td>apiVersion</td><td>Docs say <code>v1beta</code></td><td><strong><code>v1alpha</code></strong> — measured evidence (§3)</td></tr>
+      <tr><td>Genre, mood, instruments</td><td>No such fields in the API</td><td><code>music_generate</code> takes them as convenience fields and folds them into the prompt string. The lists are <strong>suggestions</strong>, not a closed enum (free text allowed)</td></tr>
+      <tr><td>Clip response parsing</td><td><code>steps[].content[]</code> or <code>output_audio</code></td><td>Walks <code>steps[]</code> directly — looks for <code>type: "audio"</code> content in the <code>model_output</code> step</td></tr>
+      <tr><td>Clip vocals</td><td>Can be generated by default</td><td>No schema enforcement; the description points at spelling out <code>instrumental only</code></td></tr>
+      <tr><td>Lyria 3 Pro</td><td><code>lyria-3-pro-preview</code> exists</td><td>Not exposed — a two-minute track is unnecessary for short-form</td></tr>
+      <tr><td>Session close failure</td><td>—</td><td>Swallowed, with a log line — a close failure shouldn't overturn a generation result that's already settled</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  As of 2026-07-29 · Implementation <a href="../../server/src/music-client.ts">server/src/music-client.ts</a> · <a href="index.en.html">API reference hub</a>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,127 +1,139 @@
-# 촬영 대본(script.md) 표준 구조
+# Standard structure of the shooting script (script.md)
 
-`data/<채널>/episodes/<주제>/storyboard/script.md` — 스토리보드 승인 후 **사용자가 이
-대본을 보며 화면을 녹화**한다. 사람이 읽고 그대로 따라 하는 문서라, 샷마다
-[화면 / 행동 / 대사 / 저장할 파일명]이 한 덩어리로 붙어 있어야 한다.
+`data/<channel>/episodes/<topic>/storyboard/script.md` — after storyboard approval **the user
+records the screen while reading this script**. It's a document a person reads and follows
+literally, so per shot the [screen / action / lines / filename to save] have to sit together in
+one block.
 
-## 두 레인 — 어느 쪽인지 먼저 정한다
+## Two lanes — decide which one first
 
-| | **전편 촬영** (쇼트폼) | **섞어 찍기** (롱폼) |
+| | **Whole-episode shoot** (short-form) | **Mixed** (long-form) |
 |---|---|---|
-| 포맷 | `shorts-9x16` 세로 | `youtube-long-16x9` 가로 |
-| 씬 구성 | 전 씬이 녹화 | 촬영 씬 + 생성 씬이 한 편에 |
-| 녹화 | 한 번에 쭉 찍는다 | **씬마다 따로 찍어 파일로 저장** |
-| 정합 | ingest 가 `alignment.json` 을 만든다 | 없다 — 파일명이 곧 정합이다 |
-| 편집 | `build-screencast.sh` | `build-reel.sh` (생성 씬과 같은 빌더) |
-| script.md | 전 샷을 싣는다 | **촬영 씬만** 싣는다 |
+| Format | `shorts-9x16` portrait | `youtube-long-16x9` landscape |
+| Scene makeup | every scene is recorded | filmed scenes + generated scenes in one episode |
+| Recording | shot straight through in one go | **filmed scene by scene, saved as files** |
+| Alignment | ingest makes `alignment.json` | none — the filename is the alignment |
+| Editing | `build-screencast.sh` | `build-reel.sh` (the same builder as generated scenes) |
+| script.md | carries every shot | carries **only the filmed scenes** |
 
-전편 촬영은 화면을 켠 채 처음부터 끝까지 말하고, 편집이 무음에서 컷을 잡는다.
-섞어 찍기는 그럴 수가 없다 — 사이사이에 생성 씬이 들어가므로 **촬영 씬 하나가
-파일 하나**다. 그래서 롱폼 대본은 샷마다 저장할 파일명을 찍어 준다.
+A whole-episode shoot talks start to finish with the screen rolling, and the edit finds the cuts
+in the silences. Mixed can't do that — generated scenes go in between, so **one filmed scene is
+one file**. That's why the long-form script prints the filename to save for each shot.
 
-## scenes.js 쪽 계약
+## The scenes.js side of the contract
 
-- 촬영 씬의 `visual` 은 생성 이미지 대신 **촬영 지시**다 —
-  `{ source: "recording", clip, shot, action }`. 칸별 뜻은
-  `scenes-schema.md` §촬영 씬이 정본이고, `bg`/`bgPrompt`/이미지 생성이 전부 빠진다.
-- `narration` 세그먼트는 TTS 대본이 아니라 **말할 문장**이다 — `tts` = 말할 문장,
-  `sub` = 자막 원표기(숫자·고유명사 원형). 실제 자막은 녹화 전사의 교정본에서
-  나오므로 여기 문장은 촬영 가이드 + 정합 대조 기준으로 쓰인다.
-  육성 대신 나레이션을 덮는 씬이면 그때는 TTS 대본 그대로다(§촬영 씬 두 갈래).
-- **자수 상한 완화**: 사람이 자연스럽게 말할 길이면 된다 — 문장당 40자 이내 권장,
-  씬당 문장 수 제한 없음. 단 **말이 길수록 씬이 길어진다** — 씬 목표 길이로 역산해
-  문장 수를 잡는다(말속도 대략 5~6자/초). 쇼트폼은 씬 8~20초, 롱폼 촬영 씬은 상한이
-  없다 — 녹화 한 덩어리가 한 씬으로 들어오는 것이 정상이다.
-- 화면 글자는 레인마다 앉는 자리가 다르다. 쇼트폼 전편 촬영은 상단 블록에
-  **kicker + title 만**(커버는 +stat/statLabel), 롱폼 촬영 씬은 **하단 왼쪽
-  로어서드**에 title + 캡션 하나 + 출처가 뜬다. 어느 쪽이든 캡션은 한 번에 하나다.
-- 제작·튜토리얼 촬영은 **완성 화면을 첫 프레임에 띄운 상태**로 시작한다. cover 첫
-  문장은 첫 3초 안에 그 결과가 주는 이익·변화를 말한다.
-- **첫 문장은 도입부 전략 넷 중 하나로 연다** — 공포·공감·호기심·결말 미리
-  보여주기(scenes-schema §도입부 전략 넷). 어느 것인지 scenes.js 커버 `hookType` 에
-  적혀 있고, 촬영 대본은 그 문장을 사용자가 소리 내 말하는 표면이라 같은 자극을
-  그대로 싣는다. "~해 봤습니다"·"오늘은 ~ 보여 드릴게요"로 시작하는 문장은 대본에
-  넣지 않는다 — 녹화 뒤에 알면 첫 씬 재촬영이다.
-- 녹화 순서는 **커버 → 후킹 → 결과물 → 내용**이다. 완성본을 한눈 보여 준 뒤
-  문제를 걸고, 결과물을 펼친 다음에야 방법을 찍는다. 방법 화면을 결과보다 먼저
-  녹화하지 않는다. 후킹은 정보형에도 있다 — 커버 다음 샷에서 왜 남아야 하는지를
-  시청자 주어로 걸고 답은 뒤로 미룬다(scenes-schema §hooking). 샷마다 scenes.js
-  `beat`(`hook`·`hooking`·`result`·`body`·`cta`)와 맞춘다.
+- A filmed scene's `visual` is **filming directions** instead of a generated image —
+  `{ source: "recording", clip, shot, action }`. `scenes-schema.md` §filmed scenes is the source
+  of truth for what each field means, and `bg`/`bgPrompt`/image generation all drop out.
+- The `narration` segments aren't a TTS script but **the sentences to speak** — `tts` = the
+  sentence to say, `sub` = the subtitle's original notation (numbers and proper nouns as
+  written). The real subtitles come from the corrected transcript of the recording, so the
+  sentences here serve as the filming guide and the alignment reference.
+  For scenes that lay narration over instead of using the live voice, they're a TTS script as
+  usual (§filmed scenes, two lanes).
+- **The character cap relaxes**: whatever length a person says naturally is fine — 40 characters
+  per sentence recommended, no limit on sentences per scene. But **the longer you talk, the
+  longer the scene** — derive the sentence count backwards from the scene's target length
+  (speech runs roughly 5–6 characters a second). Short-form scenes are 8–20s; long-form filmed
+  scenes have no cap — one chunk of recording coming in as one scene is normal.
+- On-screen text sits in a different place per lane. A short-form whole-episode shoot puts
+  **only kicker + title** in the top block (the cover adds stat/statLabel); long-form filmed
+  scenes get the title, one caption, and the source in the **lower third at the bottom left**.
+  Either way, one caption at a time.
+- Build and tutorial shoots start **with the finished screen already up in the first frame**. The
+  cover's first sentence says, within 3 seconds, what benefit or change that result brings.
+- **The first sentence opens on one of the four opening strategies** — fear, empathy, curiosity,
+  or showing the ending (scenes-schema §the four opening strategies). Which one is written in the
+  scenes.js cover `hookType`, and since the shooting script is the surface where the user says
+  that sentence out loud, it carries the same stimulus verbatim. Sentences starting with
+  "~해 봤습니다" or "오늘은 ~ 보여 드릴게요" don't go in the script — finding out after recording
+  means refilming the first scene.
+- The recording order is **cover → hooking → result → body**. Show the finished thing at a
+  glance, hook the problem, unfold the result, and only then film the method. Don't record the
+  method screens before the result. Hooking exists in informational pieces too — the shot after
+  the cover hooks why to stay, with the viewer as the subject, and defers the answer
+  (scenes-schema §hooking). Match each shot to its scenes.js `beat`
+  (`hook`·`hooking`·`result`·`body`·`cta`).
 
-## script.md 구조
+## The script.md structure
 
 ```markdown
 ---
-topic: <주제 slug>
-mode: screencast          # 전편 촬영 | mixed — 섞어 찍기(롱폼)
-format: youtube-long-16x9 # 또는 shorts-9x16
-scenes: <촬영할 샷 수> / <전체 샷 수>
-target: 8~15분            # 쇼트폼이면 35~75s
+topic: <topic slug>
+mode: screencast          # screencast = whole-episode shoot | mixed = long-form mixed lane
+format: youtube-long-16x9 # or shorts-9x16
+scenes: <shots to film> / <shots in total>
+target: 8–15 min          # 35–75s for short-form
 generated: <YYYY-MM-DD>
 ---
 
-# 촬영 대본 — <커버 제목>
+# 촬영 대본 — <cover title>
 
-## 오늘 찍을 것 (한눈에)
+## What to film today (at a glance)
 
-| 파일명 | 씬 | 무엇을 찍나 | 목표 길이 |
+| Filename | Scene | What to film | Target length |
 |---|---|---|---|
-| `footage/s2-install.mp4` | S#2 | 설치 명령 치고 결과 뜨는 화면 | ~40초 |
-| `footage/s5-run-cli.mp4` | S#5 | 만든 영상이 재생되는 화면 | ~25초 |
+| `footage/s2-install.mp4` | S#2 | typing the install command, the result appearing | ~40s |
+| `footage/s5-run-cli.mp4` | S#5 | the finished video playing | ~25s |
 
-> 파일은 전부 `data/<채널>/episodes/<주제>/footage/` 아래에 **이 이름 그대로**
-> 저장한다. 이름이 다르면 편집이 그 씬을 못 찾는다.
+> Save every file under `data/<channel>/episodes/<topic>/footage/` **under exactly these
+> names**. A different name means the edit can't find that scene.
 
-## 촬영 수칙 (녹화 시작 전 한 번 읽기)
+## 촬영 수칙 (read once before you start recording)
 
-- **가로로 찍는다** — 롱폼은 16:9 다. 세로 클립을 넣으면 화각 대부분이 잘리고
-  빌더가 첫 ffmpeg 전에 멈춘다. 다 찍은 뒤에 알면 재촬영이다.
-- **이 대본을 보조 모니터에 띄워라** — 녹화는 메인 모니터만 찍는다 (record.sh -D 1).
-- **샷 하나 = 파일 하나** (섞어 찍기 레인). 녹화를 시작해 그 샷만 찍고 멈춘다.
-  앞뒤로 1초쯤 여유를 두되, 그 여유에 말을 얹지 않는다.
-- **시연 앱의 폰트·창을 키워라** (브라우저 ⌘+) — 화면이 축소되므로 작은 글씨는
-  안 보인다. 시연 초점이 화면 일부면 편집에서 그 영역만 확대(crop)한다.
-- 틀리면 녹화를 끊지 말고 **그 샷 처음부터 다시 말한다** — 편집이 마지막 테이크만
-  쓴다. (섞어 찍기 레인이면 그 파일을 지우고 다시 찍는 편이 빠르다.)
-- 방해 금지 모드 켜기 — 메인 화면의 알림 배너까지 전부 찍힌다.
-- 문장을 정확히 암송할 필요 없다 — 자연스럽게 말하되 **핵심 수치·고유명사만 대본
-  그대로** 말한다 (자막·사실검증의 기준값이다).
+- **Film landscape** — long-form is 16:9. A portrait clip loses most of the frame and the
+  builder stops before the first ffmpeg. Finding out after filming everything means refilming.
+- **Put this script on your secondary display** — the recording captures the main display only
+  (record.sh -D 1).
+- **One shot = one file** (mixed lane). Start recording, film only that shot, stop. Leave about
+  a second of slack at each end, and don't talk during that slack.
+- **Enlarge the fonts and windows of the app you're demoing** (browser ⌘+) — the screen gets
+  scaled down, so small text won't read. If the demo focus is part of the screen, the edit crops
+  in on that area.
+- If you fumble, don't stop recording — **say that shot again from the top**; the edit uses the
+  last take only. (In the mixed lane it's faster to delete that file and refilm.)
+- Turn on do-not-disturb — notification banners on the main screen get recorded too.
+- You don't have to recite the sentences exactly — speak naturally, but say **the key figures
+  and proper nouns exactly as scripted** (they're the reference values for the subtitles and the
+  fact check).
 
-## S#2. 터미널 / 낮
+## S#2. terminal / day
 
-### 샷 4 — 설치가 진짜 되는지 (result · 목표 ~40초)
+### 샷 4 — does the install really work (result · 목표 ~40초)
 
 **저장할 파일**: `footage/s2-install.mp4`
-**이 샷의 정보**: 명령 한 줄로 설치가 끝난다는 것
-**화면**: 빈 터미널 창 — 계정명·토큰이 보이는 탭은 미리 닫는다
-**행동**: 설치 명령을 천천히 치고, 결과가 다 뜰 때까지 기다린다
+**이 샷의 정보**: that one command line finishes the install
+**화면**: an empty terminal window — close any tab showing account names or tokens beforehand
+**행동**: type the install command slowly and wait until the whole result is out
 **대사**:
-1. <말할 문장 — scenes.js narration 세그먼트 순서대로>
+1. <the sentence to say — in the order of the scenes.js narration segments>
 2. <...>
 
-**끝나면**: 녹화 정지 → 위 파일명으로 저장
+**끝나면**: stop recording → save under the filename above
 
 ### 샷 5 — ...
 ```
 
-- 샷 헤딩의 제목·목표 길이는 scenes.js 와 일치시킨다 (정합 대조 기준).
-- **대사 번호 = narration 세그먼트 순서** — 문장을 새로 쓰지 말고 scenes.js 에서
-  옮긴다 (두 벌 관리 금지: scenes.js 가 SoT, script.md 는 렌더).
-- **말없이 찍는 샷**은 대사 자리에 `(말하지 않는다 — 나레이션을 나중에 얹는다)` 를
-  적고 무엇을 조작하는지만 **행동**에 쓴다.
-- 전편 촬영 레인은 마지막 씬 뒤에 "녹화 종료: '녹화 끝'이라고 말하고 정지" 안내를
-  넣는다. 섞어 찍기 레인은 샷마다 끝나므로 그 안내가 필요 없다.
+- Match the shot heading's title and target length to scenes.js (they're the alignment
+  reference).
+- **Line number = narration segment order** — don't write new sentences, carry them over from
+  scenes.js (no maintaining two copies: scenes.js is the SoT, script.md is the render).
+- For a **shot filmed in silence**, write `(don't speak — narration goes on later)` in the lines
+  slot and put only what you operate under **행동**.
+- The whole-episode lane adds a "recording done: say '녹화 끝' and stop" note after the last
+  scene. The mixed lane ends at each shot, so it doesn't need that note.
 
-## 함정
+## Traps
 
-- **대본과 발화가 달라도 사실이 같으면 정상** — 정합·자막은 실제 발화(교정본)를
-  따른다. 단 수치·고유명사가 대본과 다르게 발화됐으면 ingest 가 보고하고, 재촬영
-  또는 자막 교정 여부는 사용자가 정한다 (녹화 속 발언은 근거가 아니다 —
-  scenes.js 수치는 이미 교차 검증을 통과한 값이라 대본 쪽이 기준).
-- **쇼트폼 샷 하나가 20초를 넘기면** 편집 리포트가 경고한다 — 대본 단계에서 샷을
-  쪼개는 것이 재촬영보다 싸다. 롱폼 촬영 씬에는 이 상한이 없다.
-- **화면에 개인정보 띄우지 않기** — 계정명·이메일·토큰이 보이는 화면은 대본
-  단계에서 피하도록 **화면** 항목에 명시한다 (ingest §4 가 검출하지만 사전 회피가
-  최선).
-- **파일명을 사용자가 고치지 않는다** — 스토리보드가 정한 이름이 scenes.js `clip`
-  과 짝이다. 바꾸려면 스토리보드를 고쳐 재승인한다.
+- **Script and speech differing is fine as long as the facts match** — alignment and subtitles
+  follow the actual speech (the corrected transcript). But if a figure or proper noun was spoken
+  differently from the script, ingest reports it, and the user decides between refilming and
+  correcting the subtitle (what's said in a recording isn't evidence — the scenes.js figures
+  already passed cross-checking, so the script is the reference).
+- **When a short-form shot goes over 20 seconds** the edit report warns — splitting the shot at
+  the script stage is cheaper than refilming. Long-form filmed scenes have no such cap.
+- **Don't put personal information on screen** — spell out in the **화면** item that screens
+  showing account names, emails, or tokens are to be avoided at the script stage (ingest §4
+  detects them, but avoiding them up front is better).
+- **The user doesn't change the filenames** — the name the storyboard set is paired with the
+  scenes.js `clip`. Changing it means fixing the storyboard and getting it re-approved.

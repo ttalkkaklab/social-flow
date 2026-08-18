@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ByteDance Seedance — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="seedance.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="seedance.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>Seedance</div>
+
+<header class="hero">
+  <div class="kicker">BYTEPLUS MODELARK</div>
+  <h1>Seedance — video generation</h1>
+  <p class="sub">This server's second video engine. An async REST API where you create a task and poll it — unlike Veo it takes <strong>2–30 seconds in 1-second steps</strong> and bills only for the length you ask for. In exchange, real-face inputs are restricted and the models differ widely in what they can do.</p>
+  <div class="meta">
+    <span>Official <a href="https://docs.byteplus.com/en/docs/ModelArk/1520757">ModelArk video API</a></span>
+    <span>Auth <code>ARK_API_KEY</code></span>
+    <span>Region <code>ap-southeast-1</code></span>
+    <span>Implementation <code>server/src/seedance-client.ts</code></span>
+    <span>Checked <strong>2026-08-15</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#models">Seven models and the capability table</a></li>
+    <li><a href="#api">REST contract — create, then poll</a></li>
+    <li><a href="#params">Request parameters</a></li>
+    <li><a href="#price">Billing — the token formula and real costs</a></li>
+    <li><a href="#traps">Traps</a></li>
+    <li><a href="#impl">Implementation vs. the official contract</a></li>
+  </ol>
+</nav>
+
+<section id="models">
+  <h2>1. Seven models and the capability table</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Model ID</th><th>Resolutions</th><th>Duration</th><th>Reference images</th><th>Audio</th><th>seed</th><th>Real-face input</th><th>Activation gate</th></tr></thead>
+    <tbody>
+      <tr><td><code>dreamina-seedance-2-5-260628</code></td><td>480p · 720p</td><td>4–30s</td><td>1–30</td><td>Yes</td><td><strong>No</strong></td><td><strong>Rejected</strong></td><td>$30 balance</td></tr>
+      <tr><td><code>dreamina-seedance-2-0-260128</code></td><td>480p · 720p · 1080p · 4K</td><td>4–15s</td><td>1–9</td><td>Yes</td><td><strong>No</strong></td><td><strong>Rejected</strong></td><td>$30 balance</td></tr>
+      <tr><td><code>dreamina-seedance-2-0-fast-260128</code></td><td>480p · 720p</td><td>4–15s</td><td>1–9</td><td>Yes</td><td><strong>No</strong></td><td><strong>Rejected</strong></td><td>$30 balance</td></tr>
+      <tr><td><code>dreamina-seedance-2-0-mini-260615</code></td><td>480p · 720p</td><td>4–15s</td><td>1–9</td><td>Yes</td><td><strong>No</strong></td><td><strong>Rejected</strong></td><td>$30 balance</td></tr>
+      <tr><td><code>seedance-1-5-pro-251215</code><br><span class="badge free">default</span></td><td>480p · 720p · 1080p</td><td>4–12s</td><td><strong>No</strong></td><td>Yes</td><td>Yes</td><td>Allowed</td><td>None</td></tr>
+      <tr><td><code>seedance-1-0-pro-250528</code></td><td>480p · 720p · 1080p</td><td>2–12s</td><td><strong>No</strong></td><td><strong>Silent only</strong></td><td>Yes</td><td>Allowed</td><td>None</td></tr>
+      <tr><td><code>seedance-1-0-pro-fast-251015</code></td><td>480p · 720p · 1080p</td><td>2–12s</td><td><strong>No</strong></td><td><strong>Silent only</strong></td><td>Yes</td><td>Allowed</td><td>None</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Every model is <strong>fixed at 24fps</strong> and accepts all of <code>16:9</code> · <code>9:16</code> · <code>4:3</code> · <code>3:4</code> · <code>1:1</code> · <code>21:9</code> · <code>adaptive</code>. Only <code>seedance-1-0-pro-fast</code> is first-frame only, so it can't interpolate first+last frames.</p>
+  <p>The activation-gate column flags <strong>the money gate only</strong> — 2.x opens with an account balance over $30 or a resource pack, and 1.5 pro and the 1.0 family have no such condition. But <strong>"None" doesn't mean "works out of the box."</strong> Every model has to be switched on first under Model activation in the console, and calling one that isn't enabled fails task creation with <code>ModelNotOpen</code> (no charge). First-time activation also asks for TOS, VPC, and ML platform cross-service authorization.</p>
+  <div class="note">
+    <code>seedance-1-5-pro-251215</code> is the default for three reasons — it can output 1080p today, <strong>it accepts photoreal person inputs</strong>, and it has no balance gate. This pipeline's cover backgrounds are photoreal person PNGs, so sending them to 2.x blocks the whole episode.
+  </div>
+  <div class="warn">
+    <strong>2.5's 1080p opened on 2026-08-17 (UTC+8). The implementation hasn't followed yet.</strong> As of 2026-08-18, <code>dreamina-seedance-2-5-260628.resolutions</code> in the <code>seedance-client.ts</code> capability table still holds only <code>480p</code> and <code>720p</code>, so asking 2.5 for 1080p is rejected by the schema before it reaches the API. Adding <code>'1080p'</code> to the capability table unblocks it.
+  </div>
+</section>
+
+<section id="api">
+  <h2>2. REST contract — create, then poll</h2>
+  <p>Generation is async. POST returns nothing but a task ID; you poll with GET until <code>succeeded</code>, then download the mp4 from the result URL.</p>
+  <pre><code>POST https://ark.ap-southeast.bytepluses.com/api/v3/contents/generations/tasks
+Authorization: Bearer $ARK_API_KEY
+
+{ "model": "seedance-1-5-pro-251215",
+  "content": [ { "type": "text", "text": "..." },
+               { "type": "image_url", "image_url": { "url": "data:image/png;base64,..." },
+                 "role": "first_frame" } ],
+  "ratio": "adaptive", "resolution": "1080p", "duration": 5,
+  "generate_audio": false, "watermark": false }
+→ { "id": "cgt-2026..." }
+
+GET .../contents/generations/tasks/cgt-2026...
+→ { "status": "succeeded",
+    "content": { "video_url": "https://...tos-ap-southeast-1.volces.com/..." },
+    "usage": { "completion_tokens": 244800 },
+    "duration": 5, "ratio": "9:16", "resolution": "1080p", "framespersecond": 24 }</code></pre>
+  <p class="note">The address prefix comes from <code>ARK_BASE_URL</code>, which defaults to <code>https://ark.ap-southeast.bytepluses.com/api/v3</code>. The video models exist only in <code>ap-southeast-1</code> (Singapore), so normally leave it alone — change it only for another region, such as mainland-China Ark (volcengine). Auth is <code>ARK_API_KEY</code>, the API Key the console issues separately, starting with <code>ark-</code> (not the signing AccessKeyId/SecretAccessKey).</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>queued</code> / <code>running</code></td><td>Keep polling</td></tr>
+      <tr><td><code>succeeded</code></td><td>Download from <code>content.video_url</code> right away</td></tr>
+      <tr><td><code>failed</code></td><td>Reason in <code>error.code</code> · <code>error.message</code>. Failed runs aren't billed</td></tr>
+      <tr><td><code>expired</code></td><td>Ended after passing <code>execution_expires_after</code> (48 hours by default)</td></tr>
+      <tr><td><code>cancelled</code></td><td>Cancelled while queued — auto-deleted after 24 hours</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>Result URLs last 24 hours</strong> (2.5 adds a 100-download cap). Task lookup only reaches back 7 days. This server saves the mp4 locally the moment polling ends and returns only the path — hand the URL to the caller and it's a dead link a day later.
+  </div>
+</section>
+
+<section id="params">
+  <h2>3. Request parameters</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Field</th><th>Value</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>content[]</code></td><td><code>text</code> · <code>image_url</code> · <code>video_url</code> · <code>audio_url</code></td><td>Images take a public URL or a base64 data URI. <strong>Video and audio references take a public URL only</strong> (no base64)</td></tr>
+      <tr><td><code>content[].role</code></td><td><code>first_frame</code> · <code>last_frame</code> · <code>reference_image</code></td><td>The three scenarios are <strong>mutually exclusive</strong> and can't be mixed</td></tr>
+      <tr><td><code>ratio</code></td><td>7 values + <code>adaptive</code></td><td>If an image input has a different ratio, the server <strong>crops it from the center</strong></td></tr>
+      <tr><td><code>resolution</code></td><td><code>480p</code> ~ <code>4k</code></td><td>Varies per model (§1). 4K is 10-bit H.265, so watch playback compatibility</td></tr>
+      <tr><td><code>duration</code></td><td>Whole seconds, or <code>-1</code> (auto)</td><td>The range varies per model. Billing is directly proportional to this value</td></tr>
+      <tr><td><code>generate_audio</code></td><td>Defaults to <strong><code>true</code></strong></td><td>The 1.0 family is silent-only and refuses <code>true</code>. On 1.5 pro, turning it on exactly doubles the unit price</td></tr>
+      <tr><td><code>seed</code> · <code>camera_fixed</code></td><td>1.5 pro · 1.0 family only</td><td>2.x has neither — direct a fixed camera through the prompt</td></tr>
+      <tr><td><code>watermark</code></td><td>Defaults to <code>false</code></td><td><code>true</code> stamps "AI Generated" in the bottom-right corner</td></tr>
+      <tr><td><code>frames</code></td><td><code>25 + 4n</code></td><td>For fractional-second lengths. 1.0 pro·fast only, and it takes precedence over <code>duration</code></td></tr>
+      <tr><td><code>callback_url</code></td><td>Webhook address</td><td>Receive status changes instead of polling. This server polls (a local process has no address to receive on)</td></tr>
+      <tr><td><code>service_tier</code></td><td><code>default</code> · <code>flex</code></td><td><code>flex</code> is half-price offline inference — <strong>1.x only</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>Input image limits</h3>
+  <p>Formats jpeg·png·webp·bmp·tiff·gif, ratio 0.4–2.5, edges 300–6000px, 30MB per image, 64MB total request body. Prompts should stay under 500 characters (Korean) or 1,000 words (English). <strong>2.5 is the only model with official Korean prompt support</strong>; the 2.0 family takes English, Spanish, Indonesian, Portuguese, and Japanese, and 1.x takes English.</p>
+</section>
+
+<section id="price">
+  <h2>4. Billing — the token formula and real costs</h2>
+  <pre><code>tokens = (input video length + output video length) × output width × output height × fps / 1024
+price  = per-model, per-resolution token rate × tokens</code></pre>
+  <p>Only the <strong>product</strong> of width and height counts, so 9:16 comes out the same as 16:9 (720p 5s = 102,960 tokens). The bill follows <code>usage.completion_tokens</code> in the response, and generations that fail or get blocked by moderation aren't charged.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Model</th><th>480p</th><th>720p</th><th>1080p</th><th>4K</th></tr></thead>
+    <tbody>
+      <tr><td>Seedance 2.5</td><td>$0.514</td><td>$1.156</td><td>$2.843 <span class="badge">8/17~</span></td><td>—</td></tr>
+      <tr><td>Seedance 2.0</td><td>$0.35</td><td>$0.76</td><td>$1.87</td><td>$3.89</td></tr>
+      <tr><td>2.0 fast</td><td>$0.28</td><td>$0.60</td><td>—</td><td>—</td></tr>
+      <tr><td>2.0 mini</td><td>$0.18</td><td>$0.38</td><td>—</td><td>—</td></tr>
+      <tr><td>1.5 pro (silent)</td><td>$0.06</td><td>$0.13</td><td>$0.29</td><td>—</td></tr>
+      <tr><td>1.5 pro (audio)</td><td>$0.12</td><td>$0.26</td><td>$0.58</td><td>—</td></tr>
+      <tr><td>1.0 pro</td><td>$0.12</td><td>$0.26</td><td>$0.61</td><td>—</td></tr>
+      <tr><td>1.0 pro fast</td><td>$0.05</td><td>$0.10</td><td>$0.24</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">These are the official docs' 5-second 16:9 examples (list price). 9:16 costs the same. For per-second rates, the <code>seedance.*</code> rows in <code>skills/autoproduce/references/prices.tsv</code> are the source of truth.</p>
+  <div class="note">
+    <strong>Three temporary discounts</strong> (not folded into the list prices — they'd quietly go wrong once they end): 2.5 at 1080p is 72% of list (through ~2026-09-17), 2.0 mini 40% (through ~2026-09-07), 2.0 fast 75% (through ~2026-09-07).
+  </div>
+  <div class="warn">
+    <strong>Video models have no free quota.</strong> The ModelArk free trial credit is for LLM and vision models, and the free-quota column in the model list is attached only to 3D and embedding models. The "2 million free Seedance tokens" that turns up in search results is 1.0-era blog copy.
+  </div>
+</section>
+
+<section id="traps">
+  <h2>5. Traps</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Trap</th><th>Symptom</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td><strong>2.x rejects real faces</strong></td><td>An image with a face in it comes back as <code>InputImageSensitiveContentDetected.PrivacyInformation</code>. AI-generated faces get caught too</td><td>Send it to the 1.5 pro · 1.0 pro family. The server default is already there. If you must use 2.x, see the three ways around it in <a href="seedance-portrait.en.html">people and asset policy</a></td></tr>
+      <tr><td><strong>Ratio-mismatch crop</strong></td><td>Give a 1088×1920 cover <code>16:9</code> and only the middle band survives</td><td>Leave the image tools' default <code>adaptive</code> alone</td></tr>
+      <tr><td><strong><code>generate_audio</code> defaults to true</strong></td><td>TTS narration and the model's own audio stack on top of each other, and 1.5 pro costs twice as much</td><td>The server flips the default to <code>false</code></td></tr>
+      <tr><td><strong>2.x activation gate</strong></td><td>The key is right but the model won't open</td><td>Not a permission problem, a balance one — over $30, or a resource pack</td></tr>
+      <tr><td><strong>Video input is URL-only</strong></td><td>You can't feed a local mp4 as base64</td><td>Extension and video editing are <code>veo_extension</code>'s job (§6)</td></tr>
+      <tr><td><strong>24-hour result URL</strong></td><td>A day-old link is dead</td><td>Save locally right after polling. For runs that timed out, collect from the ModelArk console the same day</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="impl">
+  <h2>6. Implementation vs. the official contract</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Official contract</th><th>social-flow implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Tool surface</td><td>One endpoint covers every scenario</td><td>Three tools, one per scenario — <code>seedance_text2video</code> · <code>seedance_img2video</code> · <code>seedance_reference</code></td></tr>
+      <tr><td>Model list</td><td>7</td><td>All 7 exposed. Only the reference tool is narrowed to 2.x (1.x can't take reference images), and its default is <code>dreamina-seedance-2-0-260128</code>, #1 on the public arena's image-to-video board — 2.5 has wider features but no evaluation, so it's used only when explicitly chosen</td></tr>
+      <tr><td>Cross-constraints</td><td>Scattered through prose, model by model</td><td>Collected into one capability table, with <code>superRefine</code> rejecting before the call — resolution, duration, audio, seed, first/last frame, reference count</td></tr>
+      <tr><td><code>generate_audio</code></td><td>Defaults to <code>true</code></td><td>Defaults to <strong><code>false</code></strong> — narration is attached separately by <code>tts_*</code>. Silent-only models don't get the field at all</td></tr>
+      <tr><td>Image input</td><td>URL · base64 · asset ID</td><td>Local paths only, converted to base64 data URIs. The 30MB per-image and 64MB total limits are checked before sending</td></tr>
+      <tr><td>Video extension and editing</td><td>2.x supports it (input is a public URL)</td><td><strong>Not implemented</strong> — the pipeline's mp4s are local files and can't go in. For extension, <code>veo_extension</code></td></tr>
+      <tr><td>Polling</td><td>Polling or webhook</td><td>10s × 90 (15 minutes). A local process has no address to receive a webhook on</td></tr>
+      <tr><td>Returned result</td><td>A 24-hour URL</td><td>Downloaded immediately, saved as a local <code>.mp4</code>, and <strong>only the path</strong> is returned</td></tr>
+      <tr><td>Cost reporting</td><td><code>usage.completion_tokens</code></td><td>Passed through in the response text as-is — this value is the billing basis, not an estimate converted from unit prices</td></tr>
+      <tr><td>Output filename</td><td>—</td><td>Same rule as Veo — path separators and <code>..</code> rejected, plus a video extension whitelist</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    The source of truth for which engine to use when is <a href="../../skills/produce/references/video-model-selection.md">skills/produce/references/video-model-selection.md</a>. In short, <strong>Veo for stretches that use sound, Seedance for stretches that throw it away</strong> — b-roll slots use the clip's own audio (produce absolute rule 9) so they stay on Veo, and Seedance's place is the motion background (<code>visual.video</code>), where the builder lays down the video track alone.
+  </div>
+</section>
+
+<footer>
+  Checked 2026-08-15 · implementation <a href="../../server/src/seedance-client.ts">server/src/seedance-client.ts</a> · <a href="index.en.html">API reference hub</a>
+</footer>
+
+</div>
+</body>
+</html>

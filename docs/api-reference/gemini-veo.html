@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Google Veo 3.1 — social-flow API 레퍼런스</title>
 <link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="gemini-veo.en.html">
+<link rel="alternate" hreflang="ko" href="gemini-veo.html">
 </head>
 <body>
 <div class="wrap">
+<div class="langbar"><a href="gemini-veo.en.html" hreflang="en">English</a></div>
 
 <div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Veo 3.1</div>
 
@@ -53,10 +56,10 @@
   <table>
     <thead><tr><th>규칙</th><th>거부 메시지</th></tr></thead>
     <tbody>
-      <tr><td>1080p · 4k는 <strong>8초 전용</strong></td><td><code>1080p 해상도는 8초 길이에서만 지원됩니다 (요청: 4초).</code></td></tr>
-      <tr><td>4k는 <strong>lite 미지원</strong></td><td><code>veo-3.1-lite-generate-preview 는 4k 를 지원하지 않습니다 (720p/1080p 만).</code></td></tr>
-      <tr><td>연장은 <strong>lite 미지원</strong></td><td><code>video extension 은(는) veo-3.1-lite-generate-preview 에서 지원되지 않습니다.</code></td></tr>
-      <tr><td>참조 이미지는 <strong>lite 미지원</strong></td><td><code>reference images 은(는) veo-3.1-lite-generate-preview 에서 지원되지 않습니다.</code></td></tr>
+      <tr><td>1080p · 4k는 <strong>8초 전용</strong></td><td><code>1080p resolution is only supported at 8s duration (requested: 4s).</code></td></tr>
+      <tr><td>4k는 <strong>lite 미지원</strong></td><td><code>veo-3.1-lite-generate-preview does not support 4k (720p/1080p only).</code></td></tr>
+      <tr><td>연장은 <strong>lite 미지원</strong></td><td><code>video extension is not supported on veo-3.1-lite-generate-preview. Use veo-3.1-generate-preview or veo-3.1-fast-generate-preview.</code></td></tr>
+      <tr><td>참조 이미지는 <strong>lite 미지원</strong></td><td><code>reference images is not supported on veo-3.1-lite-generate-preview. Use veo-3.1-generate-preview or veo-3.1-fast-generate-preview.</code></td></tr>
     </tbody>
   </table>
   </div>
@@ -77,6 +80,7 @@
       <tr><td><code>aspectRatio</code></td><td><code>16:9</code> · <code>9:16</code></td><td>연장 모드에서는 무효 — 입력 영상 비율을 따른다</td></tr>
       <tr><td><code>resolution</code></td><td><code>720p</code> · <code>1080p</code> · <code>4k</code></td><td>연장 결과는 720p 고정</td></tr>
       <tr><td><code>durationSeconds</code></td><td><code>4</code> · <code>6</code> · <code>8</code></td><td>참조 이미지 사용 시 8 고정, 연장 모드에서는 무효</td></tr>
+      <tr><td><code>negativePrompt</code></td><td>500자 이하 문자열</td><td>제외할 것을 명사·형용사구로 콤마 구분해 적는다(<code>wall, frame, text overlay</code>). <code>no ~</code>·<code>don't ~</code> 같은 지시문 형태는 공식 문서가 거부한다 — 본문에 "no ~"를 쓰면 그 명사가 오히려 나온다. 이 서버는 <code>veo_*</code> 툴 4종 전부에 노출한다</td></tr>
       <tr><td><code>lastFrame</code></td><td>인라인 이미지</td><td>첫 프레임과 함께 주면 두 이미지 사이를 보간</td></tr>
       <tr><td><code>referenceImages</code></td><td>최대 3장 <code>{ image, referenceType }</code></td><td><code>referenceType</code>은 SDK enum <code>VideoGenerationReferenceType.ASSET</code></td></tr>
       <tr><td><code>numberOfVideos</code></td><td>정수</td><td>연장 호출에서 명시</td></tr>
@@ -178,6 +182,7 @@ x-goog-api-key: {API_KEY}</code></pre>
       <tr><td>폴링</td><td>operation 폴링 필요</td><td>10초 × 60회, RAI 확인 후 다운로드까지 한 헬퍼로 통합</td></tr>
       <tr><td>결과 반환</td><td>영상 URI</td><td>로컬 <code>.mp4</code>로 저장 후 <strong>경로만</strong> 반환</td></tr>
       <tr><td>출력 파일명</td><td>—</td><td>경로 분리자·<code>..</code> 거부 + 비디오 확장자 화이트리스트</td></tr>
+      <tr><td><code>negativePrompt</code></td><td>제외 전용 필드 · 명사구 문법</td><td><code>veo_*</code> 4종 전부에 노출 · zod 500자 상한 · 지시문 금지를 인자 설명에 적어 둔다</td></tr>
       <tr><td><code>personGeneration</code></td><td>지원</td><td>미노출 — 공급사 기본 정책 사용</td></tr>
       <tr><td>다중 생성</td><td><code>numberOfVideos</code></td><td>미노출 (연장 호출에만 내부적으로 1 지정) — 쇼트폼 파이프라인은 컷 단위 1개 생성이 기본이고, N개 생성은 비용이 N배다</td></tr>
     </tbody>

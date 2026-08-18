@@ -1,15 +1,16 @@
 import Foundation
 import Observation
 
-// 녹화 실행은 ingest 스킬의 record.sh 에 맡긴다.
+// Recording itself is delegated to the ingest skill's record.sh.
 //
-// 앱이 screencapture 를 직접 띄우지 않는 이유: stop 경로(SIGINT → mov 컨테이너
-// 확정 대기 → 빈 파일 검사)가 이미 실전에서 다듬어져 있고, .pid 사이드카와 출력
-// 규약이 같아야 촬영 뒤 /social-flow:ingest 가 손대지 않고 그대로 붙는다.
+// Why the app doesn't spawn screencapture directly: the stop path (SIGINT →
+// wait for the mov container to finalize → empty-file check) is already
+// battle-tested there, and the .pid sidecar and output conventions must match
+// so /social-flow:ingest picks the recording up untouched after the shoot.
 //
-// record.sh 는 nohup + disown 으로 녹화를 띄운다. 그래서 이 앱이 죽어도 녹화는
-// 살아남는다 — 크래시가 테이크를 날리지 않는 대신, 정지는 pid 파일로 따로
-// 해줘야 하므로 UI 에 그 경로를 남긴다.
+// record.sh launches the recording with nohup + disown. So the recording
+// survives even if this app dies — a crash doesn't lose the take, but stopping
+// then has to go through the pid file, so the UI shows that path.
 
 @MainActor
 @Observable
@@ -26,26 +27,27 @@ final class Recorder {
     private(set) var phase: Phase = .idle
     private(set) var outputURL: URL?
     private(set) var startedAt: Date?
-    /// record.sh 가 찍는 "입력 장치: … / 입력 볼륨: …" 줄. 엉뚱한 마이크로 긴
-    /// 테이크를 날리는 사고가 잦아 UI 최상단에 그대로 노출한다.
+    /// The "입력 장치: … / 입력 볼륨: …" (input device / input volume) line
+    /// record.sh prints. Losing a long take to the wrong microphone is a
+    /// frequent accident, so it goes verbatim at the very top of the UI.
     private(set) var inputStatus: String?
     private(set) var lastResult: String?
 
-    /// 화면에 표시할 경과 시간. 타이머가 0.5초마다 흔든다.
+    /// Elapsed time for display. A timer nudges it every 0.5s.
     private(set) var elapsed: TimeInterval = 0
 
-    /// 지금 이 순간의 경과 시간. 화면 표시용 `elapsed` 는 최대 0.5초 묵은 값이라,
-    /// 씬 마크처럼 시각 자체가 의미인 곳에서는 이쪽을 쓴다.
+    /// Elapsed time right now. The display `elapsed` can be up to 0.5s stale,
+    /// so places where the timestamp itself matters — like scene marks — use this.
     var preciseElapsed: TimeInterval {
         guard let startedAt else { return 0 }
         return Date().timeIntervalSince(startedAt)
     }
 
-    /// SF_MIC_DEVICE — 비우면 현재 기본 입력 장치를 그대로 쓴다.
+    /// SF_MIC_DEVICE — empty means use the current default input device as is.
     var micDevice: String = UserDefaults.standard.string(forKey: "micDevice") ?? "" {
         didSet { UserDefaults.standard.set(micDevice, forKey: "micDevice") }
     }
-    /// SF_MIC_VOLUME — 비우면 현재 볼륨 유지.
+    /// SF_MIC_VOLUME — empty means keep the current volume.
     var micVolume: String = UserDefaults.standard.string(forKey: "micVolume") ?? "" {
         didSet { UserDefaults.standard.set(micVolume, forKey: "micVolume") }
     }
@@ -55,7 +57,7 @@ final class Recorder {
 
     private var ticker: Timer?
 
-    // MARK: - 시작 / 정지
+    // MARK: - Start / stop
 
     func start(topic: String?) async {
         guard phase == .idle || isFailed else { return }
@@ -65,21 +67,23 @@ final class Recorder {
         let url = Self.makeOutputURL(topic: topic)
         outputURL = url
 
-        // 폴더가 없으면 screencapture 는 아무 말 없이 죽는다 — 사용자가 지정한
-        // 저장 폴더를 나중에 옮기거나 지웠을 때 실제로 걸린다.
+        // If the folder is missing, screencapture dies without a word — this
+        // actually happens when the user later moves or deletes the save folder
+        // they picked.
         do {
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(), withIntermediateDirectories: true
             )
         } catch {
-            phase = .failed("저장 폴더를 만들 수 없습니다: \(url.deletingLastPathComponent().path)\n\(error.localizedDescription)")
+            phase = .failed("Can't create the save folder: \(url.deletingLastPathComponent().path)\n\(error.localizedDescription)")
             outputURL = nil
             return
         }
 
-        // t0 를 프로세스 실행 "직전"으로 잡는다. record.sh 는 스폰 뒤 sleep 1 로
-        // 생존을 확인하고 나서야 반환하므로, 반환 시각을 쓰면 씬 마크가 통째로
-        // 1초 밀린다. 실제 screencapture 시작과는 스폰 지연(~0.1s)만큼 어긋난다.
+        // Take t0 right *before* launching the process. record.sh spawns, then
+        // sleeps 1s to confirm survival before returning, so using the return
+        // time would shift every scene mark by a full second. The offset from
+        // the actual screencapture start is only the spawn delay (~0.1s).
         let t0 = Date()
 
         do {
@@ -103,10 +107,10 @@ final class Recorder {
 
         do {
             let out = try await runScript(args: ["stop", url.path])
-            lastResult = out.split(separator: "\n").last.map(String.init) ?? "녹화 종료"
+            lastResult = out.split(separator: "\n").last.map(String.init) ?? "Recording stopped"
             phase = .idle
         } catch {
-            // 정지 실패는 파일이 남아 있을 수 있으므로 경로를 살려둔다.
+            // A failed stop may still leave the file behind, so keep the path.
             phase = .failed(Self.explain(error))
         }
         startedAt = nil
@@ -121,7 +125,7 @@ final class Recorder {
         return false
     }
 
-    // MARK: - record.sh 실행
+    // MARK: - Running record.sh
 
     private func runScript(args: [String]) async throws -> String {
         let script = Self.recordScriptURL()
@@ -136,8 +140,9 @@ final class Recorder {
         if !micVolume.trimmingCharacters(in: .whitespaces).isEmpty {
             env["SF_MIC_VOLUME"] = micVolume.trimmingCharacters(in: .whitespaces)
         }
-        // .app 은 로그인 셸의 PATH 를 물려받지 않는다. record.sh 가 부르는
-        // SwitchAudioSource·ffprobe 가 Homebrew 에 있으므로 직접 얹어준다.
+        // A .app doesn't inherit the login shell's PATH. record.sh calls
+        // SwitchAudioSource and ffprobe, which live in Homebrew, so add those
+        // directories ourselves.
         let extraPaths = ["/opt/homebrew/bin", "/usr/local/bin"]
         env["PATH"] = (extraPaths + [env["PATH"] ?? "/usr/bin:/bin"]).joined(separator: ":")
 
@@ -152,8 +157,9 @@ final class Recorder {
             proc.standardError = pipe
 
             try proc.run()
-            // 파이프를 먼저 비운 뒤 기다린다 — 순서가 뒤집히면 64KB 버퍼가 차서
-            // 교착한다(정지 경로는 출력이 짧지만 규칙은 지킨다).
+            // Drain the pipe first, then wait — in the other order the 64KB
+            // buffer fills up and deadlocks (the stop path's output is short,
+            // but the rule holds anyway).
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             proc.waitUntilExit()
 
@@ -166,11 +172,11 @@ final class Recorder {
     }
 
     private static func recordScriptURL() -> URL {
-        // 정상 경로: build-app.sh 가 번들 Resources 에 복사해 둔 사본.
+        // Normal path: the copy build-app.sh placed in the bundle Resources.
         if let bundled = Bundle.main.url(forResource: "record", withExtension: "sh") {
             return bundled
         }
-        // swift run 으로 띄웠을 때의 폴백 — 소스 트리 기준 상대 경로.
+        // Fallback for `swift run` — relative path within the source tree.
         return URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()   // ShootConsole
             .deletingLastPathComponent()   // Sources
@@ -179,9 +185,9 @@ final class Recorder {
             .appendingPathComponent("skills/ingest/references/record.sh")
     }
 
-    /// 저장 폴더 설정을 읽는 곳은 여기 하나다. 시작 시점에 정한 경로를
-    /// outputURL 이 들고 있다가 정지에 그대로 쓰므로, 녹화 도중 설정을 바꿔도
-    /// 찍고 있는 파일은 흔들리지 않는다.
+    /// This is the one place that reads the save-folder setting. outputURL
+    /// holds the path decided at start time and stop uses it as is, so changing
+    /// the setting mid-recording doesn't disturb the file being written.
     private static func makeOutputURL(topic: String?) -> URL {
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyyMMdd-HHmmss"
@@ -197,12 +203,12 @@ final class Recorder {
         }
         let text = output.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.contains("권한") || text.contains("시작 실패") {
-            return "녹화를 시작하지 못했습니다. 시스템 설정 → 개인정보 보호 및 보안 → 화면 및 시스템 오디오 녹음 에서 ‘ShootConsole’을 켜세요.\n\n\(text)"
+            return "Couldn't start recording. Turn on 'ShootConsole' in System Settings → Privacy & Security → Screen & System Audio Recording.\n\n\(text)"
         }
-        return text.isEmpty ? "record.sh 실행 실패" : text
+        return text.isEmpty ? "record.sh failed" : text
     }
 
-    // MARK: - 경과 시간
+    // MARK: - Elapsed time
 
     private func startTicker() {
         stopTicker()
@@ -228,13 +234,13 @@ enum RecorderError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .scriptMissing(let path): "record.sh 를 찾을 수 없습니다: \(path)"
+        case .scriptMissing(let path): "Can't find record.sh: \(path)"
         case .scriptFailed(_, let output): output
         }
     }
 }
 
-// MARK: - 시간 표기
+// MARK: - Time formatting
 
 func formatClock(_ seconds: TimeInterval) -> String {
     let total = max(0, Int(seconds.rounded()))

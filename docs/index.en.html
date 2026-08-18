@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>social-flow docs</title>
+<link rel="stylesheet" href="assets/reference.css">
+<link rel="alternate" hreflang="ko" href="index.html">
+<link rel="alternate" hreflang="en" href="index.en.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="index.html" hreflang="ko">한국어</a></div>
+
+<header class="hero">
+  <div class="kicker">SOCIAL-FLOW DOCS</div>
+  <h1>social-flow docs</h1>
+  <p class="sub">Documentation for the Claude Code plugin that runs a channel-based short-form/long-form content pipeline. Skill guides, research notes, and a reference for every external API the internal MCP server calls.</p>
+  <div class="meta">
+    <span>Plugin <strong>v0.23.0</strong></span>
+    <span>Skills <strong>18</strong></span>
+    <span>MCP tools <strong>46</strong></span>
+    <span>Updated <strong>2026-08-18</strong></span>
+  </div>
+  <div class="meta">
+    <span>Source of truth: <a href="../README.md">README.md</a></span>
+    <span>Project instructions: <a href="../CLAUDE.md">CLAUDE.md</a></span>
+  </div>
+</header>
+
+<section>
+  <h2>Start here</h2>
+  <div class="cards">
+    <a class="card" href="guides/getting-started/index.en.html">
+      <h3>Getting started — install to first video →</h3>
+      <p>Requirements, install, API keys, the four steps to a first video, publish tokens, and the places people get stuck. The page to read if this plugin is new to you.</p>
+    </a>
+    <a class="card" href="guides/costs-and-keys/index.en.html">
+      <h3>Costs and key setup — what you pay for →</h3>
+      <p>Images, voice, and transcription can run on your own machine for nothing; video and music cannot. What each free path can't do, what the paid path costs per unit, and how to install and key up both.</p>
+    </a>
+    <a class="card" href="guides/marketing-basics/index.en.html">
+      <h3>The words a marketing beginner needs first →</h3>
+      <p>A CTA is a door, a funnel is a hallway, a lead is someone you can talk to again. Plain-language definitions for the vocabulary that shows up when you start counting people, money, and targets.</p>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>API keys — how far to go before stopping</h2>
+  <p>The keys come in two independent groups. <strong>Stop after either one and the pipeline still runs.</strong></p>
+  <p><strong>Production keys.</strong> <code>OPENAI_API_KEY</code> draws the cover and any frame with text on it; <code>GEMINI_API_KEY</code> covers generated video clips, acted narration, and BGM. Strictly speaking both are optional — scene backgrounds default to on-device <code>image_local_generate</code> (Z-Image Turbo, Apple Silicon) and narration to on-device <code>tts_local_generate</code> (Supertonic 3), so a run with no keys still produces a video. What you give up without <code>OPENAI_API_KEY</code> is text-bearing frames (local image generation garbles Korean glyphs); without <code>GEMINI_API_KEY</code> you lose generated motion and music. Research keys (<code>SERPAPI_API_KEY</code> and the Naver pair) are optional too, and the storyboard skill falls back to WebSearch.</p>
+  <p><strong>Platform credentials (Threads · Instagram · YouTube · Facebook) — optional.</strong> Configure them and <code>publish</code> posts straight to your accounts. <code>grow-threads</code>, <code>grow-youtube</code>, and <code>grow-instagram</code> then take over day-to-day operation on <code>/loop</code> — comment replies, insight watching, keyword conversations, queue refills, and posting, all inside the standing authorization you approved once at <code>init</code>. Skip them and everything through production works as before: <code>produce</code> writes the finished video plus per-platform text into <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload those files by hand. In that case the nine publish/insight tools aren't listed at all, so <code>tools/list</code> shows 37 tools instead of 46. Credentials are per platform, so this is not all-or-nothing, and adding a token later needs no server restart.</p>
+  <div class="note">
+    <a href="../README.md">README.md</a> is the source of truth for variable names, defaults, and the credential-file convention. For the order to actually do it in, see <a href="guides/getting-started/index.en.html">Getting started — install to first video</a>.
+  </div>
+</section>
+
+<section>
+  <h2>The 18 skills — what to call when</h2>
+  <p>This is the order from opening a channel to putting content out. Each step checks the previous step's output: <code>produce</code> stops on an unapproved storyboard, <code>publish</code> stops on unfinished production, and each points you back to the step that's missing. <a href="../README.md">README.md</a> is the source of truth for argument shapes and the full contract.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Stage</th><th>Skill</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="3">Channel setup<br>(once)</td><td><code>channel</code></td><td>Create and edit the channel profile — tone, voice, theme, and publish targets pinned in <code>profile.md</code></td></tr>
+      <tr><td><code>branding</code> · <code>intro</code></td><td>Profile image (4 candidates → your pick → convergence at 95) and the channel intro video (4 concepts → character acting → convergence at 90)</td></tr>
+      <tr><td><code>setup-threads</code><br><code>setup-instagram</code><br><code>setup-youtube</code></td><td>Account signup, branding, and API token issuance driven in the ego lite browser. It hands back only at the steps that need a human (login, verification codes, consent screens) — YouTube identity verification takes days to approve, so the skill detects state and resumes</td></tr>
+      <tr><td rowspan="3">Source material</td><td><code>topic-scout</code></td><td>YouTube topics the market has already validated — 5× the channel's recent-upload median. People read the funnel and multiplier-bar HTML; the loops read the md. An SNS issues section comes with it (<code>sns_issue_scout</code> — a mention list swept from Threads, X, and Instagram with <code>site:</code> search. It carries no engagement numbers, so don't mix it into the same table as the YouTube multipliers)</td></tr>
+      <tr><td><code>ingest</code></td><td>Screen recording (+ voice) into a timeline — a research source that stands in for the web</td></tr>
+      <tr><td><code>datago</code></td><td>Open-data research, collection, and seed records</td></tr>
+      <tr><td rowspan="3">Production</td><td><code>storyboard</code></td><td>Research → scene design → <strong>four adversarial convergence gates</strong> → approval. Copy (§4.5), per-scene (§4.6), and vocabulary (§4.7) have to pass before any image gets made, and the image gate (§5.5) then reads the generated PNGs. All four must clear 95 with zero P0 before the approval screen (hard caps 5·5·5·3). The two per-scene gates judge the <strong>lowest scene</strong> rather than the average — an average hides one broken scene behind the good ones</td></tr>
+      <tr><td><code>produce</code></td><td>Video build plus per-platform text. Two formats: 9:16 short-form (1080×1920/30fps, 35–75s, the default) and 16:9 YouTube long-form (1920×1080, 8–15 min, chapters). You pick which while authoring the storyboard, and one <code>window.FORMAT</code> line in <code>scenes.js</code> fixes every downstream build constant. Long-form mixes clips you film yourself with generated scenes, and for the filmed ones you follow the shooting script (<code>script.md</code>) the storyboard writes</td></tr>
+      <tr><td><code>autoproduce</code></td><td>One topic string straight through research to build, unattended — nine machine gates stand where the human approvals were</td></tr>
+      <tr><td>Publish</td><td><code>publish</code></td><td>Account check → media hosting → <strong>HITL approval</strong> → publish → record permalinks</td></tr>
+      <tr><td>Operations</td><td><code>grow-threads</code><br><code>grow-youtube</code><br><code>grow-instagram</code><br><code>review-recent</code></td><td>One tick of an autonomous growth loop — approve the plan (standing authorization) once, then repeat it on <code>/loop</code>: comment replies, insight watching, conversation joining, posting. <code>review-recent</code> scores your last 5 episodes split across YouTube and Instagram into funnel and comparison-bar HTML</td></tr>
+      <tr><td>Knowledge</td><td><code>platform-guide</code></td><td>Source of truth for platform grammar, video specs, and the Korean style rules. Other skills load and read it</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>Every outgoing text passes a gate.</strong> Wherever Korean text gets produced, <code>check-style.py</code> deterministically flags translationese, stock phrases, and assistant register; above it the adversarial reviewers (<code>storyboard-reviewer</code> · <code>content-reviewer</code> · <code>growth-post-reviewer</code>) demand 95 points with zero P0. What a rule can catch and what a person has to read to feel are two different layers.
+  </div>
+</section>
+
+<section>
+  <h2>API reference</h2>
+  <p>The official contract of every external API the internal MCP server (<code>server/src</code>) actually calls, alongside how this implementation honors each one — or deliberately narrows it.</p>
+  <div class="cards">
+    <a class="card" href="api-reference/index.en.html">
+      <h3>API reference hub →</h3>
+      <p>Inventory of the 12 external APIs and the 2 on-device engines, the credential matrix, and the 46-tool ↔ API map.</p>
+    </a>
+    <a class="card" href="api-reference/tool-audit.en.html">
+      <h3>Tool quality audit →</h3>
+      <p>Scores and fixes for the 31 tools as of 2026-07-29, judged against the official API contracts, the MCP spec, and tool-authoring practice. The 15 tools added since aren't in this audit yet.</p>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>Guides</h2>
+  <div class="cards">
+    <a class="card" href="guides/ingest-usage/index.en.html">
+      <h3>Making short-form from a screen recording →</h3>
+      <p><code>/social-flow:ingest</code> — collecting source material as a screen recording and a voice timeline.</p>
+    </a>
+    <a class="card" href="guides/screencast-usage/index.en.html">
+      <h3>Making a screencast →</h3>
+      <p>The screencast pipeline: script → filming → alignment → edit. Filming runs on the macOS app in <code>apps/shoot-console</code> — it puts <code>script.md</code> on your second monitor scene by scene, and global hotkeys drive recording and scene advance so your hands never show up on screen.</p>
+    </a>
+    <a class="card" href="guides/ai-video-production/index.en.html">
+      <h3>Making short-form video with AI →</h3>
+      <p>The axis that separates Veo from Seedance is sound across a stretch rather than the length of it. Official prompt rules, whether to burn subtitles into the video, and three areas with no answer yet.</p>
+    </a>
+    <a class="card" href="guides/threads-growth/index.en.html">
+      <h3>Threads growth best practices →</h3>
+      <p><code>/social-flow:grow-threads</code> — growing on Threads with per-post review, the 5 ranking signals, banmal register, and seuhari reply culture (follow + heart + repost).</p>
+    </a>
+    <a class="card" href="guides/youtube-shorts-growth/index.en.html">
+      <h3>YouTube Shorts growth best practices →</h3>
+      <p>Where making it with AI crosses the monetization line, the deadline the 2027 YPP changes created, and the myths the official docs deny outright.</p>
+    </a>
+    <a class="card" href="guides/instagram-growth/index.en.html">
+      <h3>Instagram Reels growth best practices →</h3>
+      <p>Two gates — account-level recommendation eligibility and the per-post audition — what ranking actually predicts, and 9 myths that died in verification.</p>
+    </a>
+    <a class="card" href="guides/affiliate-video-compliance/index.en.html">
+      <h3>Affiliate video compliance →</h3>
+      <p>The five gates when promoting Shopping Connect products in a YouTube video. Wording for products you haven't used, AI-character disclosure, and why product photos can't be fed to an AI.</p>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>Product concepts <span class="badge free">Korean only</span></h2>
+  <p>Service ideas that start from open data and short-form material and are worth validating as real products. These are planning memos with a date on them rather than manuals for using the plugin, so there's no English edition.</p>
+  <div class="cards">
+    <a class="card" href="product-concepts/neighborhood-change-radar/index.html">
+      <h3>Neighborhood Change Radar (Korean) →</h3>
+      <p>Subscribe to an address and get the official changes around it — construction, storefronts, public works — collected into one alert.</p>
+    </a>
+    <a class="card" href="product-concepts/related-store-radar/index.html">
+      <h3>Related Store Radar (Korean) →</h3>
+      <p>Pick a location before opening a shop by watching openings and closings in the same trade area and the same business type. Actors, personas, interview pain points, and the ideas that got adopted.</p>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>Research <span class="badge free">Korean only</span></h2>
+  <p>Notes from checking something against primary sources, written down with the date attached. They record what held on that day rather than teaching how to use the plugin, so later facts may have moved and there's no English edition.</p>
+  <div class="cards">
+    <a class="card" href="research/2026-07-29-us-format-korea-localization/index.html">
+      <h3>Localizing US formats for Korea (Korean) →</h3>
+      <p>2026-07-29. How to judge whether a foreign short-form format carries over to a Korean channel.</p>
+    </a>
+    <a class="card" href="research/2026-07-29-cloudflare-limits-billing/index.html">
+      <h3>Cloudflare limits and billing (Korean) →</h3>
+      <p>2026-07-29.</p>
+    </a>
+    <a class="card" href="research/2026-08-11-local-tts-and-commercial-api/index.html">
+      <h3>Local TTS vs commercial APIs (Korean) →</h3>
+      <p>2026-08-11. Open-source TTS measured on an M4 Max, and 13 commercial APIs priced out per million Korean characters.</p>
+    </a>
+    <a class="card" href="research/2026-08-12-local-image-generation/index.html">
+      <h3>Local image generation on a MacBook (Korean) →</h3>
+      <p>2026-08-12. mflux + Z-Image Turbo measured directly on an M4 Max, and where the 3 commercially usable model families stand against the API route.</p>
+    </a>
+    <a class="card" href="research/2026-08-15-posting-frequency-and-growth/index.html">
+      <h3>Posting frequency and growth (Korean) →</h3>
+      <p>2026-08-15. What the official docs say about the "post too much in a day and you get throttled" belief, and what to put in its place.</p>
+    </a>
+    <a class="card" href="research/2026-08-15-first-scene-live-action-vs-animation/index.html">
+      <h3>Does a live-action first scene get more views? (Korean) →</h3>
+      <p>2026-08-15. The live-action vs animation hunch about Reels and Shorts openings, checked against primary sources. What lifted views was people, voice, and motion — not the medium.</p>
+    </a>
+    <a class="card" href="research/2026-08-15-ugc-concept/index.html">
+      <h3>What UGC actually means (Korean) →</h3>
+      <p>2026-08-15. The three criteria in the original OECD definition, and the "UGC creator" standing where the third one collapsed. AI virtual-persona disclosure is already in force.</p>
+    </a>
+    <a class="card" href="research/2026-08-15-ai-video-camera-technique/index.html">
+      <h3>Camera technique in AI video (Korean) →</h3>
+      <p>2026-08-15. Each engine understands a different camera vocabulary. And the psychological effect of a move has no evidence behind it — the evidence is on the angle side.</p>
+    </a>
+    <a class="card" href="research/2026-08-15-veo-seedance-prompting/index.html">
+      <h3>Getting good portrait short-form out of Veo and Seedance (Korean) →</h3>
+      <p>2026-08-15. The two engines' official prompt docs read side by side in the original. Sentence skeletons, where negative instructions belong, how to carry a character between cuts, and the traps that only appear at 9:16.</p>
+    </a>
+    <a class="card" href="research/2026-08-17-video-cover-design/index.html">
+      <h3>Designing a video cover (Korean) →</h3>
+      <p>2026-08-17. A cover works across three surfaces rather than one image — the first 1–3 seconds in the feed, the still thumbnail in search and on the channel, and the profile grid. Most internet advice is about the second one.</p>
+    </a>
+    <a class="card" href="research/2026-08-18-hooking-beat/index.html">
+      <h3>The hooking beat after the cover (Korean) →</h3>
+      <p>2026-08-18. The cover stops the thumb; the hooking beat carries whoever stopped through to the payoff. Four places where platform docs, leaked memos, and papers overlap — take it up, hook it, don't resolve it, keep it short — moved into the storyboard §hooking contract.</p>
+    </a>
+  </div>
+</section>
+
+<footer>
+  social-flow — a channel-based short-form/long-form content pipeline. <a href="../README.md">README.md</a> is the source of truth for structure, skills, and the MCP tool list.
+</footer>
+
+</div>
+</body>
+</html>

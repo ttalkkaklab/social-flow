@@ -16,7 +16,7 @@ import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import type { ApiResult } from './http.js';
 
-/** MCP content 블록 — 생성 이미지는 base64 image 블록으로 함께 반환한다. */
+/** MCP content blocks — generated images are also returned as base64 image blocks. */
 export type ToolContent =
   | { type: 'text'; text: string }
   | { type: 'image'; data: string; mimeType: string };
@@ -24,7 +24,7 @@ export type ToolContent =
 export interface ToolResult {
   [key: string]: unknown;
   content: ToolContent[];
-  /** outputSchema 를 선언한 툴의 성공 응답에만 싣는다 (MCP: 스키마 준수가 MUST). */
+  /** Only set on successful responses of tools that declare outputSchema (MCP: schema conformance is a MUST). */
   structuredContent?: Record<string, unknown>;
   isError?: boolean;
 }
@@ -33,7 +33,7 @@ function text(message: string, isError = false): ToolResult {
   return { content: [{ type: 'text', text: message }], isError };
 }
 
-/** 생성 이미지 응답 — base64 이미지 블록 + 요약 텍스트 블록 (fect-mcp 계약 승계). */
+/** Generated-image response — base64 image block + summary text block (contract inherited from fect-mcp). */
 function imageResult(message: string, base64Data: string, mimeType: string): ToolResult {
   return {
     content: [
@@ -44,10 +44,11 @@ function imageResult(message: string, base64Data: string, mimeType: string): Too
 }
 
 /**
- * Seedance 결과의 공통 메타 줄 — 세 툴이 같은 형식으로 보고한다.
+ * Common meta lines for Seedance results — all three tools report in the same format.
  *
- * 토큰 수를 싣는 이유는 이 값이 곧 청구서이기 때문이다. 단가표로 환산한 추정치는
- * 벤더가 요금을 바꾸면 조용히 틀리지만, completion_tokens 는 호출마다 실측이다.
+ * The token count is included because it IS the bill. An estimate converted from a
+ * price sheet silently drifts when the vendor changes rates, but completion_tokens
+ * is measured on every call.
  */
 function seedanceMeta(result: {
   model?: string;
@@ -60,24 +61,26 @@ function seedanceMeta(result: {
   const tokens =
     result.completionTokens === undefined
       ? ''
-      : `\nBilled tokens: ${result.completionTokens.toLocaleString('en-US')} (completion_tokens — 과금 근거)`;
+      : `\nBilled tokens: ${result.completionTokens.toLocaleString('en-US')} (completion_tokens — what the vendor bills on)`;
   return `Model: ${result.model}\nRatio: ${result.ratio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds${tokens}\nTask ID: ${result.taskId}`;
 }
 
 /**
- * 플랫폼 API 결과 → MCP 툴 결과.
+ * Platform API result → MCP tool result.
  *
- * 성공 시 본문이 JSON 객체면 structuredContent 로도 실어 outputSchema 계약을
- * 만족시킨다(스펙은 직렬화 JSON 을 텍스트 블록으로도 함께 실으라고 권한다).
- * 실패 시에는 structuredContent 를 채우지 않는다 — 실패 본문은 플랫폼 원문
- * 에러라 우리 스키마를 만족하지 않으며, isError 로 이미 구분된다.
+ * On success, if the body is a JSON object it also goes into structuredContent to
+ * satisfy the outputSchema contract (the spec recommends carrying the serialized
+ * JSON in a text block as well). On failure structuredContent stays empty — the
+ * failure body is the platform's raw error, which doesn't satisfy our schema,
+ * and isError already marks it.
  */
 function fromApi(result: ApiResult, note?: string): ToolResult {
   if (!result.ok) {
     return text(`HTTP ${result.status}\n${result.body}`, true);
   }
-  // 노트는 성공 경로에만 붙인다 — 게시 실패에 "게시 완료" 안내가 실리면
-  // 호출자가 실패를 성공으로 보고하고 후속 절차(FB 첫 댓글 등)를 건너뛴다.
+  // The note attaches to the success path only — if a failed publish carried a
+  // "published" notice, the caller would report the failure as success and skip
+  // the follow-up steps (FB first comment, etc.).
   const out = text(note ? `${note}\n${result.body}` : result.body);
   const parsed = tryParseObject(result.body);
   if (parsed) out.structuredContent = parsed;
@@ -96,14 +99,14 @@ function tryParseObject(body: string): Record<string, unknown> | undefined {
 }
 
 /**
- * Zod 파싱 실패를 모델이 교정 가능한 메시지로 변환한다.
+ * Turns a Zod parse failure into a message the model can correct from.
  *
- * 스키마에 없는 최상위 인자는 **거절한다**. zod 의 기본 object 는 미지의 키를
- * 조용히 벗겨내는데, 그 침묵이 정확히 이 서버가 없애려는 실패 모드다 — 예컨대
- * 네이버 공식 문서를 읽은 모델이 `filter`(우리 툴에서는 `imageSize`)를 그대로
- * 보내면, 필터가 걸리지 않은 결과를 받고도 걸렸다고 믿는다. 스키마마다
- * `.strict()` 를 다는 대신 여기 한 곳에서 잡아 새 스키마가 규약을 빠뜨릴 수 없게
- * 한다.
+ * Top-level arguments not in the schema are **rejected**. Zod's default object
+ * silently strips unknown keys, and that silence is exactly the failure mode this
+ * server is built to remove — e.g. a model that read Naver's official docs sends
+ * `filter` (our tool calls it `imageSize`) as-is, gets unfiltered results, and
+ * believes the filter was applied. Instead of adding `.strict()` to every schema,
+ * catch it here in one place so a new schema can't miss the rule.
  */
 function parseArgs<T extends z.ZodTypeAny>(schema: T, args: unknown): z.infer<T> {
   const parsed = schema.safeParse(args);
@@ -116,28 +119,29 @@ function parseArgs<T extends z.ZodTypeAny>(schema: T, args: unknown): z.infer<T>
     const unknown = Object.keys(args as Record<string, unknown>).filter((k) => !known.has(k));
     if (unknown.length > 0) {
       throw new Error(
-        `Invalid arguments — 알 수 없는 인자: ${unknown.join(', ')}. ` +
-          `이 툴이 받는 인자: ${[...known].join(', ')}. ` +
-          '인자를 무시하고 진행하면 걸리지 않은 필터를 걸렸다고 오해하게 되므로 거절한다.',
+        `Invalid arguments — unknown argument(s): ${unknown.join(', ')}. ` +
+          `This tool accepts: ${[...known].join(', ')}. ` +
+          'Proceeding while ignoring an argument would make you believe a filter was applied when it was not, so the call is rejected.',
       );
     }
   }
   return parsed.data;
 }
 
-/** 스키마의 최상위 키 집합 — object 가 아니면 undefined(검사 생략) */
+/** Set of the schema's top-level keys — undefined when not an object (check skipped) */
 function knownKeys(schema: z.ZodTypeAny): Set<string> | undefined {
   const def = (schema as { _def?: { typeName?: string; shape?: () => Record<string, unknown> } })._def;
   if (def?.typeName !== 'ZodObject' || typeof def.shape !== 'function') return undefined;
   return new Set(Object.keys(def.shape()));
 }
 
-// ── 조사 스키마 ──────────────────────────────────────────────────
+// ── research schemas ─────────────────────────────────────────────
 
 /**
- * 검색 툴 공통 인자 — 이름을 하나로 묶어 두면 모델이 툴을 갈아탈 때 인자를
- * 다시 배우지 않는다. 검색어는 query, 결과 수는 limit, 페이지는 page 다.
- * (백엔드 API 의 q/display/num/start 로의 환산은 각 클라이언트가 맡는다.)
+ * Shared search-tool arguments — keeping the names unified means the model doesn't
+ * relearn arguments when switching tools. The search term is query, result count is
+ * limit, and the page is page. (Each client owns the mapping to the backend API's
+ * q/display/num/start.)
  */
 const searchQuery = z.string().min(1).max(300);
 const searchPage = z.number().int().min(1).max(5).optional();
@@ -149,8 +153,9 @@ const serpWebSchema = z.object({
   gl: countryCode,
   hl: langCode,
   location: z.string().max(120).optional(),
-  // 이 엔진은 한 페이지가 10건 고정이다(num 이 구글로 전달되지 않는다 — 실측).
-  // 20 을 받아 두면 지킬 수 없는 약속이 되므로 상한을 실제 페이지 크기에 맞춘다
+  // This engine returns a fixed 10 results per page (num is not passed through to
+  // Google — measured in practice). Accepting 20 would be a promise we can't keep,
+  // so the cap matches the actual page size
   limit: z.number().int().min(1).max(10).optional(),
   page: searchPage,
   recency: z.enum(['hour', 'day', 'week', 'month', 'year']).optional(),
@@ -201,26 +206,28 @@ const naverSearchSchema = z.object({
   query: searchQuery,
   type: z
     .enum(naver.NAVER_SEARCH_TYPES as [string, ...string[]], {
-      // 종료된 API 안내를 여기 실어야 모델에게 도달한다. 클라이언트의 같은 안내는
-      // zod 가 먼저 자르므로 실행되지 않는다 — 네이버 공식 문서를 읽고 type:"book"
-      // 을 보내는 것이 가장 흔한 오호출이라, 그 순간 왜 없는지를 알려줘야 한다.
+      // The retired-API notice has to live here to reach the model. The client's
+      // copy of the same notice never runs because zod cuts the call first —
+      // reading Naver's official docs and sending type:"book" is the most common
+      // miscall, so the moment it happens the model must learn why it's gone.
       errorMap: () => ({
         message:
-          `사용 가능: ${naver.NAVER_SEARCH_TYPES.join(' | ')}. ` +
-          'book(책)·doc(전문자료)·shop(쇼핑)·movie(영화)는 네이버가 종료한 API 라 ' +
-          '공식 문서에 남아 있어도 호출하면 404 다 — 재시도 대신 serp_web_search 로 대체할 것.',
+          `Available: ${naver.NAVER_SEARCH_TYPES.join(' | ')}. ` +
+          'book, doc, shop, and movie are APIs Naver has retired — they linger in the official docs ' +
+          'but calling them returns 404. Do not retry; use serp_web_search instead.',
       }),
     })
     .optional(),
   limit: z.number().int().min(1).max(30).optional(),
-  // page 는 항목 오프셋이 아니라 페이지다 — 클라이언트가 (page-1)*limit+1 로
-  // 환산하며, API start 상한 1000 초과는 환산 후 거절한다(limit 에 따라 달라짐)
+  // page is a page, not an item offset — the client converts it as (page-1)*limit+1
+  // and rejects values that exceed the API's start cap of 1000 after conversion
+  // (which depends on limit)
   page: z.number().int().min(1).max(1000).optional(),
   sort: z.enum(naver.NAVER_SORTS as [string, ...string[]]).optional(),
   imageSize: z.enum(naver.NAVER_IMAGE_FILTERS).optional(),
 });
 
-// ── 공공데이터포털 스키마 ────────────────────────────────────────
+// ── data.go.kr (Korea open-data portal) schemas ──────────────────
 
 const datagoTypeSchema = z.enum(['API', 'FILE']);
 
@@ -266,24 +273,26 @@ const datagoApiCallSchema = z.object({
     .optional(),
 });
 
-// ── SNS 게시 스키마 ──────────────────────────────────────────────
+// ── SNS publish schemas ──────────────────────────────────────────
 
-const SNS_PUBLISHED_NOTE = '게시 완료 — 이미 외부에 공개된 상태다. permalink 를 사용자에게 보고할 것.';
+const SNS_PUBLISHED_NOTE = 'Published — this is already publicly visible. Report the permalink to the user.';
 
 const isVideoUrl = (u: string) => /\.(mp4|mov)(\?|#|$)/i.test(u);
 
-/** 채널(브랜드) slug — data/<slug> 규약과 동일. 지정 시 채널 토큰만 사용(기본 토큰 폴백 없음). */
+/** Channel (brand) slug — same convention as data/<slug>. When given, only the channel token is used (no fallback to the default token). */
 const channelSlugSchema = z
   .string()
   .regex(/^[a-z0-9][a-z0-9-]{0,63}$/, 'channel must be a kebab-case slug (same as data/<slug>)')
   .optional();
 
 /**
- * Threads 본문 길이 — 플랫폼은 500자 상한을 세되 **이모지는 UTF-8 바이트로** 센다.
+ * Threads body length — the platform enforces a 500-char cap but counts **emoji as
+ * UTF-8 bytes**.
  *
- * JS 의 `.length`(UTF-16 코드 유닛)는 이모지를 2로 세어 플랫폼(대개 4)보다 적게
- * 잡는다. 즉 이 검증을 통과한 캡션이 플랫폼에서 거부될 수 있다. BMP 밖 문자만
- * 실제 UTF-8 바이트 수로 세어 과소 계산을 없앤다 (한글·ASCII 는 그대로 1).
+ * JS `.length` (UTF-16 code units) counts an emoji as 2, less than the platform
+ * (usually 4). So a caption that passes this validation could still be rejected by
+ * the platform. Only characters outside the BMP are counted as their actual UTF-8
+ * byte length, removing the undercount (Hangul and ASCII stay 1).
  */
 export function threadsTextLength(text: string): number {
   let count = 0;
@@ -301,7 +310,7 @@ const threadsPublishSchema = z
       .string()
       .min(1)
       .refine((value) => threadsTextLength(value) <= THREADS_MAX_CHARS, (value) => ({
-        message: `THREADS caption must be ≤${THREADS_MAX_CHARS} chars (got ${threadsTextLength(value)} — 이모지는 UTF-8 바이트로 계산된다)`,
+        message: `THREADS caption must be ≤${THREADS_MAX_CHARS} chars (got ${threadsTextLength(value)} — emoji are counted as UTF-8 bytes)`,
       })),
     imageUrl: z.string().url().optional(),
     linkUrl: z.string().url().optional(),
@@ -309,7 +318,7 @@ const threadsPublishSchema = z
     channel: channelSlugSchema,
   })
   .superRefine((v, ctx) => {
-    // link_attachment 는 media_type=TEXT 전용 — 이미지와 같이 보내면 플랫폼이 거부한다
+    // link_attachment is media_type=TEXT only — the platform rejects it alongside an image
     if (v.linkUrl && v.imageUrl) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -353,7 +362,7 @@ const facebookPublishSchema = z
     if (v.imageUrls && v.videoUrl) issue('videoUrl', 'imageUrls and videoUrl are mutually exclusive');
     if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue('videoUrl', 'videoUrl must be a .mp4/.mov URL');
     if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue('linkUrl', 'linkUrl is for text-only posts (no media)');
-    // 자막은 영상에만 붙는다 — 이미지·텍스트 게시에 딸려 오면 조용히 버려지므로 여기서 막는다
+    // Captions attach to video only — sent with an image or text post they're silently dropped, so block them here
     if (v.captionFilePath && !v.videoUrl) issue('captionFilePath', 'captionFilePath requires videoUrl');
     if (v.captionLocale && !v.captionFilePath) issue('captionLocale', 'captionLocale requires captionFilePath');
   });
@@ -364,15 +373,15 @@ const facebookCommentSchema = z.object({
   channel: channelSlugSchema,
 });
 
-/** YouTube description 은 5000 **바이트** 상한이다. 한국어는 글자당 3바이트다. */
+/** YouTube caps the description at 5000 **bytes**. Korean is 3 bytes per character. */
 const YT_DESCRIPTION_MAX_BYTES = 5000;
 const ytDescription = z
   .string()
   .min(1)
   .refine((v) => Buffer.byteLength(v, 'utf8') <= YT_DESCRIPTION_MAX_BYTES, (v) => ({
     message:
-      `설명이 ${Buffer.byteLength(v, 'utf8')}바이트다 — YouTube 상한은 ${YT_DESCRIPTION_MAX_BYTES}바이트다(글자 수가 아니다). ` +
-      `한국어는 글자당 3바이트라 실효 한도가 약 ${Math.floor(YT_DESCRIPTION_MAX_BYTES / 3)}자다.`,
+      `The description is ${Buffer.byteLength(v, 'utf8')} bytes — YouTube's cap is ${YT_DESCRIPTION_MAX_BYTES} bytes (not characters). ` +
+      `Korean is 3 bytes per character, so the effective limit is about ${Math.floor(YT_DESCRIPTION_MAX_BYTES / 3)} characters.`,
   }));
 
 const youtubePublishSchema = z.object({
@@ -382,14 +391,16 @@ const youtubePublishSchema = z.object({
     .min(1)
     .max(100)
     .regex(/^[^<>]*$/, 'YouTube rejects angle brackets in titles'),
-  // YouTube 는 description 을 **바이트**로 잰다(5000 bytes) — 글자가 아니다.
-  // z.string().max(5000) 은 UTF-16 코드 단위를 세므로 한국어 5000자를 통과시키는데
-  // 그게 15,000바이트라 API 가 거절한다. 롱폼은 챕터 목록까지 실어 설명이 가장
-  // 길어지는 경로라 여기서 막는다 — 업로드를 다 태운 뒤 400 을 받으면 쿼터가 날아간다.
+  // YouTube measures the description in **bytes** (5000) — not characters.
+  // z.string().max(5000) counts UTF-16 code units, so it would pass 5000 Korean
+  // characters — which is 15,000 bytes and the API rejects it. Long-form carries the
+  // chapter list too, making it the longest-description path, so block it here —
+  // getting a 400 after burning the whole upload costs the quota.
   caption: ytDescription,
   privacyStatus: z.enum(['public', 'unlisted', 'private']).optional(),
-  // 썸네일은 필수다 — 미지정 업로드는 임의 프레임이 커버가 되고, 게시 후에는
-  // 쇼츠 세로 표면을 API 로 되돌릴 수 없다(2026-08-13 사용자 지시로 강제).
+  // The thumbnail is required — without one an arbitrary frame becomes the cover,
+  // and after publishing the Shorts portrait surface can't be reverted via the API
+  // (enforced by user directive, 2026-08-13).
   thumbnailFilePath: z.string().min(1),
   captionFilePath: z.string().min(1).optional(),
   captionLanguage: z
@@ -405,17 +416,18 @@ const youtubePublishSchema = z.object({
   channel: channelSlugSchema,
 });
 
-// ── 받은 댓글 관리 스키마 (인박스는 읽기 전용, 답글·숨김은 즉시 공개) ─────
+// ── incoming-comment schemas (inbox is read-only; replies and hides go public immediately) ─────
 
 const commentPlatform = z.enum(['THREADS', 'INSTAGRAM', 'FACEBOOK', 'YOUTUBE']);
 
 /**
- * 숨김·좋아요 대상 플랫폼 — YouTube 는 제외한다. API 가 주는 것은 의미가 다른
- * 검토 보류/거부(setModerationStatus)뿐이라 "되돌릴 수 있는 숨김"으로 매핑할 수 없다.
+ * Platforms for hide/like — YouTube is excluded. All its API offers is
+ * hold-for-review/reject (setModerationStatus), which means something different
+ * and can't be mapped to a "reversible hide".
  */
 const moderatePlatform = z.enum(['THREADS', 'INSTAGRAM', 'FACEBOOK']);
 
-/** 플랫폼별 답글 길이 상한 — 게시 본문 상한과 같다(플랫폼 하드 리밋). */
+/** Per-platform reply length caps — same as the post body caps (platform hard limits). */
 const REPLY_MAX_CHARS = { THREADS: 500, INSTAGRAM: 2200, FACEBOOK: 8000, YOUTUBE: 10_000 } as const;
 
 const commentInboxSchema = z.object({
@@ -437,7 +449,7 @@ const commentReplySchema = z
   })
   .superRefine((v, ctx) => {
     const max = REPLY_MAX_CHARS[v.platform];
-    // THREADS 는 게시 본문과 같은 이모지 바이트 규칙을 쓴다 (답글 = 새 게시물)
+    // THREADS uses the same emoji-byte rule as post bodies (a reply = a new post)
     const length = v.platform === 'THREADS' ? threadsTextLength(v.message) : v.message.length;
     if (length > max) {
       ctx.addIssue({
@@ -459,7 +471,7 @@ const accountCheckSchema = z.object({
   channel: channelSlugSchema,
 });
 
-// ── Threads 성장 조회 스키마 (읽기 전용) ─────────────────────────
+// ── Threads growth query schemas (read-only) ─────────────────────
 
 const threadsInsightsSchema = z.object({
   days: z.number().int().min(1).max(90).optional(),
@@ -476,7 +488,7 @@ const threadsSearchSchema = z.object({
   channel: channelSlugSchema,
 });
 
-// ── Instagram 성장 조회 스키마 (읽기 전용) ───────────────────────
+// ── Instagram growth query schemas (read-only) ───────────────────
 
 const instagramInsightsSchema = z.object({
   days: z.number().int().min(1).max(90).optional(),
@@ -484,7 +496,7 @@ const instagramInsightsSchema = z.object({
   channel: channelSlugSchema,
 });
 
-// ── YouTube 성장 조회 스키마 (읽기 전용) ─────────────────────────
+// ── YouTube growth query schemas (read-only) ─────────────────────
 
 const youtubeUpdateSchema = z.object({
   videoId: z.string().min(1),
@@ -543,7 +555,7 @@ const snsIssueScoutSchema = z.object({
   limit: z.number().int().min(3).max(30).optional(),
 });
 
-// ── 라우팅 ───────────────────────────────────────────────────────
+// ── routing ──────────────────────────────────────────────────────
 
 export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   serp_web_search: async (args) => {
@@ -571,7 +583,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     return text(result.text, result.isError);
   },
 
-  // ── 공공데이터포털 (검색·상세·다운로드는 무인증 / fetch·api_call 은 키+활용신청) ──
+  // ── data.go.kr (search/detail/download need no auth; fetch/api_call need a key + per-API use application) ──
   datago_search: async (args) => {
     const result = await datago.searchDatasets(parseArgs(datagoSearchSchema, args));
     return text(result.text, result.isError);
@@ -593,7 +605,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     return text(result.text, result.isError);
   },
 
-  // ── 이미지 생성 (OpenAI GPT Image) — base64 이미지 블록 + 요약 텍스트 반환 ──
+  // ── image generation (OpenAI GPT Image) — returns base64 image block + summary text ──
   gpt_image_text2img: async (args) => {
     const request = parseArgs(image.text2ImageSchema, args);
     const result = await image.generateFromText(request);
@@ -630,9 +642,9 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     }
     return imageResult(summary, result.base64, result.mimeType);
   },
-  // 로컬 생성(Z-Image Turbo) — 서브프로세스로 온디바이스 실행. 키·네트워크·과금 없음.
-  // gpt_image 와 달리 base64 블록을 싣지 않는다 — 이 툴은 항상 로컬 파일을 쓰므로
-  // 호출자는 경로로 읽으면 되고, 9:16 PNG 를 base64 로 반향하면 컨텍스트만 태운다.
+  // Local generation (Z-Image Turbo) — runs on-device as a subprocess. No key, network, or billing.
+  // Unlike gpt_image it carries no base64 block — this tool always writes a local
+  // file, so the caller reads it by path; echoing a 9:16 PNG as base64 just burns context.
   image_local_generate: async (args) => {
     const request = parseArgs(zimage.zimageGenerateSchema, args);
     const result = await zimage.generateLocalImage(request);
@@ -644,7 +656,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     );
   },
 
-  // ── 영상 생성 (Veo 3.1) — mp4 로컬 저장 후 경로·메타 텍스트 반환 ──
+  // ── video generation (Veo 3.1) — saves the mp4 locally, returns path + meta text ──
   veo_text2video: async (args) => {
     const result = await video.generateFromText(parseArgs(video.text2VideoSchema, args));
     if (!result.success) return text(`Video generation failed: ${result.error}`, true);
@@ -677,9 +689,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     );
   },
 
-  // ── 영상 생성 (Seedance) — mp4 로컬 저장 후 경로·메타 텍스트 반환 ──
-  // 과금 토큰(completionTokens)을 함께 돌려준다 — 예상 단가 환산이 아니라 이
-  // 값이 벤더 청구 기준이라, 회차 비용 집계는 이쪽을 적어야 맞는다.
+  // ── video generation (Seedance) — saves the mp4 locally, returns path + meta text ──
+  // The billed tokens (completionTokens) come back too — this value is the vendor's
+  // billing basis, not a rate-sheet estimate, so per-episode cost tallies should
+  // record this number.
   seedance_text2video: async (args) => {
     const result = await seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, args));
     if (!result.success) return text(`Seedance video generation failed: ${result.error}`, true);
@@ -703,9 +716,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     );
   },
 
-  // ── 음성 합성 (Gemini TTS) — wav 로컬 저장 후 경로·메타 텍스트 반환 ──
-  // 대본 전문이 아니라 길이만 돌려준다 — 16k 자 대본을 그대로 반향하면
-  // 호출자 컨텍스트만 태우고, 이미 자기가 보낸 문자열이라 정보가 없다.
+  // ── speech synthesis (Gemini TTS) — saves the wav locally, returns path + meta text ──
+  // Returns the script length, not the full text — echoing a 16k-char script back
+  // just burns the caller's context, and it's a string they already sent, so it
+  // carries no information.
   tts_generate: async (args) => {
     const request = parseArgs(tts.ttsGenerateSchema, args);
     const result = await tts.generateSpeech(request);
@@ -724,7 +738,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
       `Multi-speaker audio generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\nSpeakers:\n${speakerInfo}\nScript length: ${request.script.length} chars`,
     );
   },
-  // 로컬 합성(Supertonic) — 서브프로세스로 온디바이스 실행. 키·네트워크·쿼터 없음.
+  // Local synthesis (Supertonic) — runs on-device as a subprocess. No key, network, or quota.
   tts_local_generate: async (args) => {
     const request = parseArgs(supertonic.supertonicGenerateSchema, args);
     const result = await supertonic.generateLocalSpeech(request);
@@ -750,22 +764,22 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         `- For clear narration: Iapetus, Erinome, Schedar\n\n` +
         `Supertonic 3 — ${supertonic.SUPERTONIC_VOICE_NAMES.length} voices, on-device (tts_local_generate):\n\n` +
         `  ${supertonic.SUPERTONIC_VOICE_NAMES.join(', ')}\n` +
-        `  F1–F5 는 여성, M1–M5 는 남성이라는 것 외에 공급사가 공개한 성격 라벨은 없다.\n` +
-        `  들어보고 고를 것 — 같은 문장을 두세 개 보이스로 뽑아 비교하면 된다.\n\n` +
-        `엔진 선택: 나레이션 본문·긴 대본은 tts_local_generate(비용 0, 실시간 6.3배), ` +
-        `연기가 필요한 짧은 컷은 tts_generate(stylePrompt 가 있는 쪽은 여기뿐).\n` +
-        `채널 프로파일(data/<slug>/profile.md)에 보이스가 지정돼 있으면 그 값을 그대로 쓸 것 — ` +
-        `회차마다 목소리가 바뀌면 채널 정체성이 깨진다.`,
+        `  Beyond F1–F5 being female and M1–M5 male, the vendor publishes no character labels.\n` +
+        `  Pick by listening — render the same sentence with two or three voices and compare.\n\n` +
+        `Engine choice: narration bodies and long scripts go to tts_local_generate (zero cost, 6.3x realtime); ` +
+        `short cuts that need acting go to tts_generate (the only one with stylePrompt).\n` +
+        `If the channel profile (data/<slug>/profile.md) names a voice, use that value as-is — ` +
+        `a voice that changes every episode breaks the channel's identity.`,
     );
   },
 
-  // ── 음악 생성 (Lyria) — 30초 배치 클립 / 길이 지정 스트리밍 ──
+  // ── music generation (Lyria) — 30s batch clip / streaming with an exact duration ──
   music_generate_clip: async (args) => {
     const result = await music.generateClip(parseArgs(music.musicClipSchema, args));
     if (!result.success) return text(`Clip music generation failed: ${result.error}`, true);
     return text(
       `Music clip generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\nDuration: 30 seconds (fixed)\nPrompt: ${result.prompt}\n\n` +
-        `44.1kHz stereo MP3. Lyria 3 는 비결정론적이다 — 재사용할 BGM 이면 이 파일을 에셋으로 보관할 것(같은 프롬프트로 같은 곡이 다시 나오지 않는다).`,
+        `44.1kHz stereo MP3. Lyria 3 is non-deterministic — if this BGM will be reused, keep this file as an asset (the same prompt won't produce the same track again).`,
     );
   },
   music_generate: async (args) => {
@@ -825,7 +839,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     );
   },
 
-  // ── 자사 SNS 직접 게시 (플랫폼별 툴 — 즉시 공개, HITL 승인 후 호출) ──
+  // ── direct SNS publishing to our own accounts (per-platform tools — public immediately; call after HITL approval) ──
   threads_publish: async (args) => {
     const input = parseArgs(threadsPublishSchema, args);
     return fromApi(await sns.publishThreads(input), SNS_PUBLISHED_NOTE);
@@ -883,7 +897,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   youtube_update: async (args) => {
     const input = parseArgs(youtubeUpdateSchema, args);
-    // dryRun 은 아무것도 안 바꾸므로 게시 주의 문구를 붙이지 않는다.
+    // dryRun changes nothing, so the publish notice is not attached.
     return fromApi(await sns.youtubeUpdate(input), input.dryRun ? undefined : SNS_PUBLISHED_NOTE);
   },
   youtube_insights: async (args) => {
@@ -891,7 +905,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     return fromApi(await sns.youtubeInsights(input));
   },
 
-  // ── Instagram 성장 조회 (읽기 전용 — grow-instagram 스킬이 틱마다 호출) ──
+  // ── Instagram growth queries (read-only — the grow-instagram skill calls these every tick) ──
   instagram_insights: async (args) => {
     const input = parseArgs(instagramInsightsSchema, args);
     return fromApi(await sns.instagramInsights(input));
@@ -913,7 +927,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     return fromApi(await sns.checkAccounts(input.channel));
   },
 
-  // ── 받은 댓글 관리 (인박스는 읽기 전용, 답글·숨김은 즉시 공개) ──
+  // ── incoming-comment management (inbox is read-only; replies and hides go public immediately) ──
   sns_comment_inbox: async (args) => {
     const input = parseArgs(commentInboxSchema, args);
     return fromApi(await sns.commentInbox(input));
@@ -924,10 +938,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   sns_comment_moderate: async (args) => {
     const input = parseArgs(commentModerateSchema, args);
-    return fromApi(await sns.moderateComment(input), '모더레이션 반영 완료 — 이미 플랫폼에 적용된 상태다.');
+    return fromApi(await sns.moderateComment(input), 'Moderation applied — this is already live on the platform.');
   },
 
-  // ── Threads 성장 조회 (읽기 전용 — grow-threads 스킬이 틱마다 호출) ──
+  // ── Threads growth queries (read-only — the grow-threads skill calls these every tick) ──
   threads_insights: async (args) => {
     const input = parseArgs(threadsInsightsSchema, args);
     return fromApi(await sns.threadsInsights(input));

@@ -8,33 +8,36 @@ final class AppState {
 
     var script: ShootScript?
     var loadError: String?
-    /// 현재 씬 위치 (0부터).
+    /// Current scene position (0-based).
     var sceneIndex: Int = 0
-    /// 대사 글자 크기 배율 — 보조 모니터 거리에 맞춰 조절한다.
+    /// Line text scale — adjust for the distance to the secondary display.
     var textScale: Double = UserDefaults.standard.object(forKey: "textScale") as? Double ?? 1.0 {
         didSet { UserDefaults.standard.set(textScale, forKey: "textScale") }
     }
     var showPrep = false
     var showSettings = false
-    /// 대본을 열어둔 채로 목록을 다시 볼 때 켠다 — 다음 주제로 넘어가려고
-    /// 파일 대화상자를 여는 대신 목록에서 고른다.
+    /// On when reopening the library with a script still loaded — to move on
+    /// to the next topic, pick from the list instead of opening a file dialog.
     var showLibrary = false
-    /// 다른 앱이 선점해 등록하지 못한 단축키 표기. 비어 있으면 전부 정상.
+    /// Labels of shortcuts another app grabbed first, so registration failed.
+    /// Empty means everything is fine.
     var hotkeyFailures: [String] = []
-    /// 모니터가 하나뿐이면 앱 창이 녹화에 찍힌다 — 경고해야 한다.
+    /// With only one display, the app window ends up in the recording — warn.
     var isSingleDisplay = false
-    /// 화면 기록 권한이 없다 — 이 상태로는 녹화 자체가 시작되지 않는다.
+    /// Screen recording permission is missing — recording won't even start.
     var screenPermissionMissing = false
-    /// 마이크가 거부된 상태 — 화면은 찍히는데 목소리만 빠진다. 가장 늦게 알아채는 사고다.
+    /// Microphone denied — the screen gets recorded but the voice is missing.
+    /// The accident you notice last.
     var micPermissionDenied = false
-    /// 마지막으로 저장한 씬 마크 파일 경로 — 촬영이 끝나면 안내에 쓴다.
+    /// Path of the last saved scene-mark file — used for guidance after the shoot.
     var savedMarksPath: String?
 
     let recorder = Recorder()
     let marks = MarkLog()
     let library = Library()
 
-    /// 현재 씬에 들어온 시각(녹화 시작 기준 초). 씬별 경과 표시에 쓴다.
+    /// When the current scene was entered (seconds from recording start).
+    /// Used for the per-scene elapsed display.
     private var sceneEnteredAt: TimeInterval = 0
 
     var recentScripts: [URL] {
@@ -53,14 +56,15 @@ final class AppState {
         return max(0, recorder.elapsed - sceneEnteredAt)
     }
 
-    /// 이 씬의 목표 길이를 넘겼는지 — 넘겼다고 잘못된 건 아니고, 편집이 20초 넘는
-    /// 씬을 경고하므로 촬영 중에 알아채라는 신호다.
+    /// Whether this scene has run past its target length — going over isn't
+    /// wrong by itself, but editing warns on scenes over 20 seconds, so this
+    /// is the signal to notice while still filming.
     var isOverTarget: Bool {
         guard recorder.isRecording, let target = currentScene?.targetSeconds else { return false }
         return sceneElapsed > Double(target)
     }
 
-    // MARK: - 대본
+    // MARK: - Script
 
     func openScriptPanel() {
         let panel = NSOpenPanel()
@@ -68,8 +72,8 @@ final class AppState {
         panel.allowsOtherFileTypes = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.message = "촬영 대본(script.md)을 고르세요"
-        panel.prompt = "열기"
+        panel.message = "Choose a shooting script (script.md)"
+        panel.prompt = "Open"
         if panel.runModal() == .OK, let url = panel.url {
             load(url: url)
         }
@@ -84,8 +88,9 @@ final class AppState {
             savedMarksPath = nil
             showLibrary = false
             rememberRecent(url)
-            // 촬영 전 준비·수칙이 있으면 먼저 보여준다 — 녹화를 시작하고 나서
-            // 읽으면 이미 늦은 것들이다(스크롤백 비우기, 방해 금지 모드 등).
+            // If there are pre-shoot prep notes and rules, show them first —
+            // reading them after recording has started is already too late
+            // (clearing scrollback, Do Not Disturb, and so on).
             showPrep = !parsed.prep.isEmpty
         } catch {
             script = nil
@@ -93,9 +98,9 @@ final class AppState {
         }
     }
 
-    // MARK: - 폴더
+    // MARK: - Folders
 
-    /// 대본 뿌리·저장 폴더를 고른다. 둘 다 같은 대화상자를 쓴다.
+    /// Picks the script root or the save folder. Both use the same dialog.
     func chooseFolder(message: String, current: URL?, apply: @escaping (URL) -> Void) {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
@@ -103,7 +108,7 @@ final class AppState {
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
         panel.message = message
-        panel.prompt = "선택"
+        panel.prompt = "Choose"
         panel.directoryURL = current
         if panel.runModal() == .OK, let url = panel.url { apply(url) }
     }
@@ -115,7 +120,7 @@ final class AppState {
         UserDefaults.standard.set(Array(list.prefix(8)), forKey: "recentScripts")
     }
 
-    // MARK: - 씬 이동
+    // MARK: - Scene navigation
 
     func goNext() { go(to: sceneIndex + 1) }
     func goPrev() { go(to: sceneIndex - 1) }
@@ -130,7 +135,7 @@ final class AppState {
         marks.add(scene: scene.number, title: scene.title, t: now, event: SceneMark.Event.enter)
     }
 
-    /// 방금 씬을 망쳤다 — 같은 씬을 다시 간다는 표시.
+    /// The scene just went wrong — mark that the same scene starts over.
     func markRetake() {
         guard recorder.isRecording, let scene = currentScene else { return }
         let now = recorder.preciseElapsed
@@ -138,7 +143,7 @@ final class AppState {
         marks.add(scene: scene.number, title: scene.title, t: now, event: SceneMark.Event.retake)
     }
 
-    // MARK: - 녹화
+    // MARK: - Recording
 
     func toggleRecording() {
         Task {
@@ -150,10 +155,10 @@ final class AppState {
         }
     }
 
-    /// 권한 상태를 확인하고, 아직 물어본 적이 없으면 묻는다.
+    /// Checks permission state, and asks if it was never asked before.
     ///
-    /// 앱을 켤 때마다 부른다. 이미 거부된 상태면 시스템이 다시 묻지 않으므로
-    /// 사용자를 귀찮게 하지 않는다 — 대신 배너로 알린다.
+    /// Called on every app launch. If already denied, the system won't ask
+    /// again, so the user isn't pestered — a banner tells them instead.
     func refreshPermissions() {
         Task {
             screenPermissionMissing = !(await Permissions.checkScreenCapture())
@@ -163,8 +168,9 @@ final class AppState {
     }
 
     private func startRecording() async {
-        // record.sh 를 부르기 전에 막는다. 권한이 없으면 screencapture 가 조용히
-        // 죽고 "시작 실패" 한 줄만 남는데, 그것만 보고는 무엇을 켜야 하는지 모른다.
+        // Block before calling record.sh. Without permission, screencapture
+        // dies quietly with a single "failed to start" line, and that alone
+        // doesn't tell the user what to turn on.
         guard await Permissions.checkScreenCapture() else {
             screenPermissionMissing = true
             return
@@ -186,8 +192,9 @@ final class AppState {
         if let scene = currentScene {
             marks.add(scene: scene.number, title: scene.title, t: recorder.preciseElapsed, event: SceneMark.Event.wrap)
         }
-        // 마크는 정지 "전에" 저장한다 — record.sh stop 은 mov 확정까지 최대 20초
-        // 기다리므로, 그 사이 앱이 죽으면 마크만 통째로 날아간다.
+        // Save the marks *before* stopping — record.sh stop waits up to 20s for
+        // the mov to finalize, and if the app dies in that window the marks are
+        // lost wholesale.
         let recording = recorder.outputURL
         let startedAt = recorder.startedAt ?? Date()
         if let recording, let script {
@@ -196,15 +203,16 @@ final class AppState {
             )?.path
         }
         await recorder.stop()
-        // 방금 찍은 파일을 목록에 올린다 — 촬영이 끝나면 바로 경로를 집어
-        // ingest 로 넘기게 된다.
+        // Put the fresh file in the library — right after the shoot the path
+        // gets picked up and handed to ingest.
         library.refresh()
     }
 
-    // MARK: - 단축키 연결
+    // MARK: - Hotkey wiring
 
-    /// 창이 다시 뜰 때 onAppear 가 또 불릴 수 있는데, 그때 재등록하면 이미 잡아둔
-    /// 조합이라 전부 eventHotKeyExistsErr 로 실패해 "충돌" 로 오인된다.
+    /// onAppear can fire again when the window comes back, and re-registering
+    /// then fails wholesale with eventHotKeyExistsErr — combos we already hold —
+    /// which would be misread as "conflicts".
     private var hotkeysInstalled = false
 
     func installHotkeys() -> [String] {
@@ -225,6 +233,7 @@ final class AppState {
     }
 }
 
-// 씬을 넘길 때 확인음을 내지 않는다 — 씬 전환은 "말을 멈추고 1초" 하는 무음
-// 구간이고, ingest 가 바로 그 무음에서 컷 지점을 찾는다. 여기에 효과음이 섞이면
-// 무음 검출이 깨져 씬 경계가 어긋난다. 넘어간 것은 화면으로 확인한다.
+// No confirmation sound on scene changes — a scene change is a "stop talking
+// for one second" silence gap, and ingest finds the cut point in exactly that
+// silence. A sound effect there breaks silence detection and shifts the scene
+// boundary. Confirm the change on screen instead.

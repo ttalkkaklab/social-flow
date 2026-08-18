@@ -5,13 +5,13 @@
     "email": "zeans@astratech.vn"
   },
   "metadata": {
-    "description": "social-flow 마켓플레이스 — 채널 기반 쇼트폼 콘텐츠 파이프라인 플러그인(내부 MCP 서버 포함)을 설치합니다."
+    "description": "social-flow marketplace — installs the channel-based short-form and long-form content pipeline plugin (built-in MCP server included)."
   },
   "plugins": [
     {
       "name": "social-flow",
       "source": "./",
-      "description": "채널 기반 쇼트폼 콘텐츠 파이프라인 — data/[채널]/[주제]/storyboard 에 이미지 포함 스토리보드를 저작·승인하고, output 에 플랫폼별(Threads·Instagram·Facebook·YouTube) 텍스트·영상 콘텐츠를 제작해 HITL 승인 후 직접 게시하는 플러그인 (내부 MCP 서버: SNS 게시 + SerpApi·Naver 검색 + 공공데이터포털 수집 + 이미지·영상 생성)"
+      "description": "Channel-based short-form and long-form content pipeline — authors an image-included storyboard under data/[channel]/episodes/[topic]/storyboard and takes it through four adversarial convergence gates before approval, builds the 9:16 or 16:9 video plus per-platform text (Threads·Instagram·Facebook·YouTube) into output/, and publishes after HITL approval. Platform credentials are optional: with them the growth skills run the channel autonomously, without them the pipeline still delivers the finished video to upload by hand. Built-in MCP server (46 tools, no external MCP dependency): SNS publishing and insights, SerpApi/Naver search, data.go.kr collection, and image/video/voice/music generation with on-device engines that need no API key."
     }
   ]
 }

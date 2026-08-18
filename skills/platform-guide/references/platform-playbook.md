@@ -1,144 +1,194 @@
-# 플랫폼 플레이북 (SoT)
+# Platform playbook (SoT)
 
-fect-persona publish-social·make-reels 운영에서 실측 검증된 규칙을 일반화했다.
-produce 의 플랫폼별 텍스트 저작, publish 의 승인 검토, content-reviewer 의 루브릭이
-전부 이 문서를 기준으로 삼는다.
+Generalized from rules field-tested in fect-persona publish-social·make-reels
+operations. produce's per-platform text authoring, publish's approval review,
+and content-reviewer's rubric all take this document as their baseline.
 
-## §1 플랫폼 결정 트리
+## §1 Platform decision tree
 
-소재 선별 게이트: ① 세 관문(새 정보 · 감정 자극 · 시의성) 중 1개 이상 통과
-② 독자 지분 — **"이 글을 읽는 사람은 누구이고 60초 안에 무엇을 판단하게 되는가"**
-에 한 줄로 답한다. 답에 우리 도구·파이프라인 이름이 들어가야만 성립하면 소재를
-바꾼다(§8 체크리스트와 같은 축 — 실측에서 같은 나이의 도달 7.6배를 가른 축이다).
-문 앞에 거는 말(제목·커버·첫 줄)은 **방법·도구가 아니라 그 사람이 이미 느끼는
-문제**다. "노션으로 할 일 관리하는 법"은 노션 쓰는 사람만 들어오고, "하루가 늘
-피곤한 이유"는 피곤한 사람 전체가 대상이다. 해결책은 본문에서 준다. 도구 이름을
-빼도 방법명으로 열면 처음 보는 사람이 자기 일로 못 읽는다.
-그 문제를 어떤 자극으로 거는지는 **도입부 전략 넷 — 공포·공감·호기심·결말 미리
-보여주기 — 중 하나**다(회차마다 반드시 하나, storyboard scenes-schema §도입부 전략 넷).
-영상 회차면 스토리보드 커버 `hookType` 이 이미 골라 놓았으므로 플랫폼 제목·첫 줄은
-그 전략을 잇는다 — 커버는 공포로 열었는데 YouTube 제목이 방법 설명이면 썸네일·제목
-기대와 첫 30초가 어긋난다. 공포는 손해를 알려 주는 말투로, 위협에 근거가 있거나
-가능성 표현("~일 수도")으로 완충한다.
-③ 플랫폼 적합성 — IG 는 "누가 이걸 저장하는가"에 답할 수 있어야 하고(체크리스트·
-수치·차트 재료 — 정보성 소재는 시청 직후 따라 할 수 있게 실행 단계가 짧고 단순해야
-저장할 이유가 생긴다. 고백·관찰형에는 이 잣대를 대지 않는다 — 실측 1위 글에는 실행
-단계가 없었다), FB 는 근거 밀도, Threads 는 한 줄 관찰로 압축 가능해야 한다
-④ 사실 검증을 거친 소재일 것(research.md 통과 항목).
+Material selection gate: ① pass at least 1 of the three gates (new information ·
+emotional pull · timeliness)
+② reader stake — answer in one line: **"who reads this post, and what will they
+be able to decide within 60 seconds?"** If the answer only works when our tool
+or pipeline name is in it, change the material (same axis as the §8 checklist —
+the axis that split reach 7.6× between same-age posts in our field data).
+What you hang at the door (title · cover · first line) is **the problem the
+person already feels, not a method or a tool**. "노션으로 할 일 관리하는 법"
+("how to manage todos with Notion") only pulls in Notion users; "하루가 늘
+피곤한 이유" ("why you're always tired") addresses everyone who is tired. The
+solution comes in the body. Opening with a method name — even with the tool name
+removed — keeps a first-time viewer from reading it as their own problem.
+Which stimulus you use to hang that problem is **one of the four opening
+strategies — fear · empathy · curiosity · showing the ending first** (exactly
+one per episode, storyboard scenes-schema §four opening strategies).
+For a video episode the storyboard cover's `hookType` has already picked it, so
+the platform title and first line carry that strategy through — if the cover
+opened on fear but the YouTube title explains a method, the thumbnail/title
+expectation and the first 30 seconds fall out of step. Fear speaks in
+tell-them-what-they-lose terms, and the threat is either grounded in evidence or
+cushioned with possibility phrasing ("~일 수도", "might be").
+③ platform fit — IG must answer "who saves this" (checklists · figures · chart
+material — informational material earns a save only when the action steps are
+short and simple enough to follow right after watching. Don't apply this bar to
+confession/observation posts — our top post by field data had no action steps at
+all), FB wants evidence density, Threads must compress into a one-line
+observation
+④ the material has passed fact verification (items cleared in research.md).
 
-확신이 없으면 Threads 부터 — 가장 가볍고 실패 비용이 작다.
+When unsure, start with Threads — lightest, cheapest to fail.
 
-## §2 문체 3분할 (상속 관계)
+## §2 Three-way style split (inheritance)
 
-- **FB = 기사체 그대로** — 소제목 구조화 + 사례 수집형 마무리("여러분은 어떻게
-  하고 계신가요?"). 근거·조문·수치를 아끼지 않는다.
-- **IG 캡션 = 기사체에서 훅만 추출** — 첫 125자(접히기 전 전부)에서 훅을 끝내고,
-  뒤에 맥락·저장/공유 CTA. 캡션 내 링크는 클릭 불가 — 링크는 댓글로.
-- **Threads = 구어체** — 반말 1~3줄 + 질문 1개 종결. 훅을 소진하지 않는다
-  (다 말하면 클릭할 이유가 없다). 해시태그 ≤1. 영상 회차는 커버 이미지를 붙이는
-  대신 영상 링크를 자기 답글로 단다(§3).
+- **FB = article register as-is** — subheading structure + case-collecting
+  closer ("여러분은 어떻게 하고 계신가요?", "how do you all handle this?").
+  Don't skimp on evidence, clauses, figures.
+- **IG caption = only the hook extracted from the article register** — finish
+  the hook inside the first 125 characters (everything before the fold), then
+  context and a save/share CTA. Links in captions aren't clickable — the link
+  goes in a comment.
+- **Threads = spoken register** — casual speech, 1–3 lines + one closing
+  question. Don't spend the whole hook (say everything and there's no reason to
+  click). Hashtags ≤1. Video episodes attach no cover image; the video link goes
+  in a self-reply (§3).
 
-### 쉬운 말 원칙 (전 플랫폼·전 표면)
+### Plain-language principle (all platforms · all surfaces)
 
-무설명 전문용어·직역어·주어 없는 과압축 금지. 실측 교체 사례:
-"기준환율" → "뉴스 값('기준환율')" · "은행 매도" → "은행 창구 값 — 내가 달러를
-살 때 실제로 내는 값" · "달러로 받으면 유리하고" → "달러로 받는 **월급은** 늘고"
-(주어 복원). 용어가 꼭 필요하면 쉬운 말을 앞세우고 첫 등장에서만 괄호 병기.
+No unexplained jargon, no translationese, no over-compressed sentences missing
+their subject. Field-tested replacements: "기준환율" → "뉴스 값('기준환율')"
+(lead with "the number on the news", keep the term in parentheses) · "은행 매도"
+→ "은행 창구 값 — 내가 달러를 살 때 실제로 내는 값" (the bank-counter rate —
+what I actually pay when buying dollars) · "달러로 받으면 유리하고" → "달러로
+받는 **월급은** 늘고" (subject restored: the **salary** paid in dollars grows).
+If a term is unavoidable, lead with the plain word and gloss the term in
+parentheses on first appearance only.
 
 ## §3 Threads
 
-- 본문 ≤500자이지만 **1~3줄이 정답** — 타임라인은 스캔되지 회독되지 않는다.
-- 구조: 관찰/발견 한 줄 → (선택) 부연 한 줄 → 질문 종결.
-- **영상 회차는 링크 없는 본문 반말 글 + 링크 자기 답글이다** (2026-08-15 —
-  2026-08-14 "본문 링크 한 건" 방식의 **철회**). 커버 이미지는 첨부하지 않고,
-  본문을 게시한 뒤 IG 릴스 permalink 를 자기 답글("풀영상은 여기 →" 한 줄 +
-  링크)로 단다. 근거는 실측이다 — 본문 링크 방식 첫 2건이 9·21조회로 같은 날
-  링크 없는 글들의 1/10 이었고, 답글 링크 방식 2건은 257·623 이었다. Mosseri 가
-  링크 페널티 철회를 공언했어도(2024) 도달 분배 실측이 반대라 실측을 따른다.
-- 본문 글은 반말 구어체 그대로이고 그 자체로 완결이다 — 링크 없이도 성립하는
-  글이어야 한다. 앞 1~3줄이 글이고, 링크는 답글이다.
-- 링크는 YouTube 가 아니라 **IG 릴스가 기본** — 같은 Meta 생태계라 이탈 감점이
-  가장 작다. 따라서 게시 순서는 IG 먼저 → permalink 확보 → Threads.
-- 성장 루프의 일반 텍스트 글은 채널 `growth-plan.md` 의 링크 정책을 따른다.
-- 해시태그 ≤1 (랭킹 가중치 0 — 사실상 안 쓴다).
+- Body limit is 500 chars, but **1–3 lines is the right answer** — the timeline
+  gets scanned, not read closely.
+- Structure: one line of observation/discovery → (optional) one line of
+  elaboration → closing question.
+- **A video episode is a link-free casual-register body post + the link in a
+  self-reply** (2026-08-15 — a **retraction** of the 2026-08-14 "one link in
+  the body" approach). Attach no cover image; publish the body, then reply to
+  yourself with the IG reel permalink (one line, "풀영상은 여기 →" / "full video
+  here →", plus the link). The grounds are field data — the first 2 link-in-body
+  posts drew 9 and 21 views, 1/10th of the link-free posts from the same day,
+  while the 2 reply-link posts drew 257 and 623. Even though Mosseri publicly
+  walked back the link penalty (2024), our measured reach distribution says
+  otherwise, so we follow the measurements.
+- The body post stays in casual spoken register and is complete in itself — it
+  has to stand as a post without the link. The 1–3 lines are the post; the link
+  is a reply.
+- The link defaults to the **IG reel, not YouTube** — same Meta ecosystem, so
+  the exit penalty is smallest. Publishing order follows: IG first → get the
+  permalink → Threads.
+- Regular text posts in the growth loop follow the link policy in the channel's
+  `growth-plan.md`.
+- Hashtags ≤1 (ranking weight 0 — in practice we don't use them).
 
 ## §4 Instagram
 
-- **릴스**: videoUrl 공개 HTTPS 1개. 캡션 첫 125자에 훅 완결 + 저장/공유 유도
-  문장. 프로필 그리드는 중앙 크롭(정사각) — 제목·수치가 세로 중앙 밴드
-  (y≈420~1500)에 있어야 그리드에서도 읽힌다.
-- **캐러셀**: 이미지 1~10장(API 하드 리밋 10), 전 카드 JPEG 통일(IG API 는 JPEG,
-  첫 장 비율 기준 강제 크롭).
-- 게시 후 이미지·영상 교체 불가(캡션만 수정 가능) — 승인 게이트가 마지막 기회다.
-- 해시태그 3~5개.
+- **Reels**: one public HTTPS videoUrl. Complete the hook in the caption's
+  first 125 chars + a save/share prompt. The profile grid center-crops to a
+  square — titles and figures must sit in the vertical center band (y≈420–1500)
+  to stay readable in the grid.
+- **Carousel**: 1–10 images (API hard limit 10), all cards unified as JPEG
+  (the IG API takes JPEG and force-crops to the first card's aspect ratio).
+- Images and video can't be swapped after publishing (only the caption is
+  editable) — the approval gate is the last chance.
+- Hashtags 3–5.
 
 ## §5 Facebook
 
-- 페이지 게시. 영상은 `/videos` 일반 영상으로 올라간다(릴스 아님).
-- 본문에 소제목·불릿 구조화 허용 — 4개 플랫폼 중 정보 밀도가 가장 높다.
-- **링크는 본문 금지 → 게시 성공 직후 facebook_comment 첫 댓글로** (FB 댓글
-  링크는 클릭 가능·프리뷰 렌더). 첫 댓글까지가 게시 완료다.
-- 마무리는 사례 수집형 질문 — FB 알고리즘은 댓글 체류를 가장 높게 친다.
+- Page posts. Video goes up via `/videos` as a regular video (not a reel).
+- Subheadings and bullet structure are allowed in the body — the highest
+  information density of the four platforms.
+- **Links are banned in the body → post them as the first comment via
+  facebook_comment right after the post succeeds** (FB comment links are
+  clickable and render a preview). Publishing isn't done until the first
+  comment is up.
+- Close with a case-collecting question — the FB algorithm weights comment
+  dwell the highest.
 
-## §6 YouTube 쇼츠
+## §6 YouTube Shorts
 
-- 세로 1080×1920 · 3분 이하 = 자동 쇼츠 분류(별도 플래그 없음). 로컬 업로드라
-  공개 호스팅 불필요. 업로드 쿼터는 videos.insert 전용 Video Uploads 버킷 —
-  호출당 1유닛·기본 일 100회이므로 회차 게시를 아낄 이유가 없다.
-- **title 필수** — 키워드형 ≤100자, 꺾쇠 `<>` 금지. 핵심 키워드(지역·제도명·연도)
-  를 제목에 넣되 **각도는 §1 ②** — 방법·도구가 아니라 낯선 사람이 이미 느끼는
-  문제. 예: "스쿼트할 때 무릎 안 아프게" 가 아니라 "무릎이 아픈 이유".
-  검색용 고유명(제도명·지역)은 문제 옆에 붙인다:
-  "베트남 임시거주 신고 안 하면 과태료 — 2026년 7월부터". 자극은 스토리보드 커버
-  `hookType` 과 같은 전략이다(위 예는 공포) — 제목이 다른 자극으로 갈아타면 첫 30초
-  잔존(Intro 지표)이 떨어진다.
-- **thumbnailFilePath = 빌드가 뽑은 cover.jpg 필수** — 미지정 시 임의 프레임이
-  썸네일이 된다. 전화번호 인증(중급 기능) 없으면 거부되고 thumbnailWarning 으로
-  보고된다(게시는 성공).
-- 커스텀 썸네일은 **가로 표면만** 적용 — 쇼츠 피드·쇼츠 탭 세로 표면은 네이티브
-  앱의 프레임 지정으로만 바꿀 수 있다. 판정은
-  `i.ytimg.com/vi/<id>/oardefault.jpg` HTTP 200.
-- description 첫 줄이 두 번째 훅 — 제목을 반복하지 말고 다른 표현으로 보강.
-- 해시태그 3~5개, **#Shorts 필수**(쇼츠 셸프 분류). 초과 시 도달 억제.
+- Portrait 1080×1920 · 3 minutes or less = automatic Shorts classification (no
+  separate flag). Local upload, so no public hosting needed. Upload quota is the
+  videos.insert-only Video Uploads bucket — 1 unit per call, default 100/day,
+  so there's no reason to ration episode publishing.
+- **title required** — keyword-style ≤100 chars, angle brackets `<>` banned.
+  Put the core keywords (region · program name · year) in the title, but **the
+  angle is §1 ②** — not the method or tool, the problem a stranger already
+  feels. Example: not "스쿼트할 때 무릎 안 아프게" ("keep your knees from
+  hurting when you squat") but "무릎이 아픈 이유" ("why your knees hurt").
+  Searchable proper nouns (program names · regions) attach next to the problem:
+  "베트남 임시거주 신고 안 하면 과태료 — 2026년 7월부터" ("fines if you skip
+  Vietnam temporary-residence registration — from July 2026"). The stimulus is
+  the same strategy as the storyboard cover's `hookType` (the example above is
+  fear) — if the title switches to a different stimulus, first-30-second
+  retention (the Intro metric) drops.
+- **thumbnailFilePath = the build's cover.jpg, required** — unset, a random
+  frame becomes the thumbnail. Without phone verification (intermediate
+  features) it's rejected and reported as thumbnailWarning (the publish still
+  succeeds).
+- Custom thumbnails apply to **landscape surfaces only** — the portrait
+  surfaces (Shorts feed · Shorts tab) can only be changed by picking a frame in
+  the native app. The check is `i.ytimg.com/vi/<id>/oardefault.jpg` HTTP 200.
+- The description's first line is the second hook — don't repeat the title;
+  reinforce it in different words.
+- Hashtags 3–5, **#Shorts required** (Shorts shelf classification). Going over
+  suppresses reach.
 
-## §7 영상 규격 (produce 계약과 동일)
+## §7 Video specs (same as the produce contract)
 
-- 1080×1920 / 30fps / H.264 High 4.1 / faststart. 본편 35~75초 권장, 90초 상한.
-- 세이프존: 텍스트 존 x 176~904 · y 190~1350. 자막 밴드 y 1380~1560.
-  - **플랫폼 광고 규격은 이보다 넓게 비우라고 한다** — Meta 릴스 상 14%·하 35%·좌우 6%,
-    YouTube 세로 광고 좌 48·우 192·상 288·하 672px. 교집합이 **상 288 · 하 1248 이후 ·
-    좌 65 · 우 888 이후**라 우리 텍스트 존이 위로 98px, 아래로 102px, 오른쪽으로 16px
-    모자라고 자막 밴드는 통째로 그 밖이다.
-  - **그렇다고 값을 옮기지 않았다.** 둘 다 **광고 규격**이고 오가닉 수치는 어느 플랫폼도
-    주지 않는다. 규정 대상도 텍스트·로고이지 피사체가 아니다. 게시된 릴스에서 자막이
-    가려지지 않고 보인다는 사실 자체가 이 상한의 과잉을 보여준다.
-  - 재려면 `skills/publish/references/shorts-surface-adb.md` 의 AVD 로 실제 릴스·쇼츠
-    화면을 띄우고 UI 가 덮는 픽셀을 직접 잰다. 그 실측이 나오기 전까지 위 수치는
-    **참고 상한**이고 `video-template.html` 의 `--zone-*` 이 정본이다.
-  - 근거: [카메라 기법 조사 §06](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html#vertical)
-- 폰트 실측 하한: 커버 제목 108px · 뉴스 제목 74px · 불릿 제목 44px · 본문 34px ·
-  번인 자막 58px — 이보다 작으면 폰에서 안 읽힌다.
-- 커버(첫 화면) 규칙: 훅 제목(16자 이내+주제어) + 히어로 수치, 부제·출처 금지.
-  **모든 표면의 첫 화면은 커버여야 한다** — 자동 프레임(발화 장면 등)이 남아
-  있으면 게시 미완.
-- 무음 시청이 다수 — 번인 자막은 끄지 않는다.
+- 1080×1920 / 30fps / H.264 High 4.1 / faststart. Main body 35–75s recommended,
+  90s hard cap.
+- Safe zones: text zone x 176–904 · y 190–1350. Subtitle band y 1380–1560.
+  - **The platforms' ad specs ask for more clearance than this** — Meta reels
+    top 14% · bottom 35% · sides 6%, YouTube portrait ads left 48 · right 192 ·
+    top 288 · bottom 672px. The intersection is **top 288 · below 1248 · left
+    65 · beyond 888 right**, so our text zone falls short by 98px at the top,
+    102px at the bottom, 16px on the right, and the subtitle band sits entirely
+    outside it.
+  - **We did not move the values anyway.** Both are **ad specs**, and no
+    platform publishes organic numbers. They also govern text and logos, not
+    subjects. The fact that subtitles on our published reels are visible and
+    uncovered shows this ceiling overshoots.
+  - To measure it, bring up actual reels/Shorts screens on the AVD in
+    `skills/publish/references/shorts-surface-adb.md` and measure the pixels
+    the UI covers directly. Until that measurement exists, the numbers above
+    are a **reference ceiling** and `video-template.html`'s `--zone-*` is the
+    source of truth.
+  - Grounds: [camera technique research §06](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html#vertical)
+- Field-tested font minimums: cover title 108px · news title 74px · bullet
+  title 44px · body 34px · burned-in subtitles 58px — smaller than this is
+  unreadable on a phone.
+- Cover (first screen) rules: hook title (≤16 chars + topic word) + hero
+  figure; no subtitle line, no source. **The first frame of every surface must
+  be the cover** — if an automatic frame (mid-speech, etc.) is still there,
+  publishing isn't done.
+- Most viewing is muted — never turn off burned-in subtitles.
 
-## §8 안티패턴 체크리스트 (승인 게이트 전 자가 점검)
+## §8 Anti-pattern checklist (self-check before the approval gate)
 
-- [ ] 두 플랫폼에 같은 문장이 그대로 들어가 있다 → 복붙 금지 위반
-- [ ] FB 본문에 링크가 있다 → 첫 댓글로 이동 (Threads 는 영상 링크를 자기 답글로)
-- [ ] Threads 본문에 링크가 있다 → 자기 답글로 이동 (본문은 링크 없이 완결)
-- [ ] IG 캡션 훅이 125자 밖에 있다
-- [ ] YT 제목에 키워드가 없거나 <> 가 있다, #Shorts 누락
-- [ ] 제목·커버가 방법·도구로만 열린다 — 처음 보는 사람이 자기 문제로 못 읽는다 (§1 ②)
-- [ ] 제목·첫 줄이 도입부 전략 넷(공포·공감·호기심·결말 미리 보여주기) 중 어느 것도
-      타지 않거나, 스토리보드 커버 `hookType` 과 다른 자극으로 열린다 (§1 ②)
-- [ ] 무설명 전문용어·과압축 문장 (쉬운 말 원칙 위반)
-- [ ] **읽는 사람에게 지분이 없다** — 우리 도구·파이프라인 이름이 들어가야만
-      성립하는 글이면 소재를 바꾼다. 채널 실측(Threads): 어휘 티가 없고 문체
-      게이트를 통과했는데도 우리 API 함정 목록은 같은 나이에 우리 지표를 그대로 깐
-      고백형 글의 1/7.6 도달에 그쳤다. 갈린 축은 문체가 아니라 독자 지분이다
-- [ ] 수치 범위를 상한 하나로 줄였다 (사실 왜곡)
-- [ ] AI 생성·캐릭터 발화를 실제 인물·보도 화면처럼 보이게 연출했다
-- [ ] 해시태그 한도 초과 (Threads >1, IG/YT >5)
-- [ ] 커버 첫 3초에 브랜드 로고가 노출된다 (스킵 신호)
+- [ ] The same sentence appears verbatim on two platforms → copy-paste violation
+- [ ] A link in the FB body → move to first comment (Threads: video link goes in a self-reply)
+- [ ] A link in the Threads body → move to a self-reply (the body stands complete without links)
+- [ ] The IG caption hook sits past the 125-char fold
+- [ ] The YT title has no keyword or contains <>, or #Shorts is missing
+- [ ] The title/cover opens on a method or tool only — a first-time viewer can't read it as their own problem (§1 ②)
+- [ ] The title/first line rides none of the four opening strategies (fear ·
+      empathy · curiosity · showing the ending first), or opens on a different
+      stimulus than the storyboard cover's `hookType` (§1 ②)
+- [ ] Unexplained jargon · over-compressed sentences (plain-language violation)
+- [ ] **The reader has no stake** — if the post only works with our tool or
+      pipeline name in it, change the material. Channel field data (Threads):
+      with zero vocabulary tells and a clean style-gate pass, our API-pitfall
+      list still reached 1/7.6 of a same-age confession post that laid our own
+      metrics bare. The axis that split them wasn't style — it was reader stake
+- [ ] A numeric range got collapsed to its upper bound (fact distortion)
+- [ ] AI-generated or character speech staged to look like a real person or
+      news footage
+- [ ] Hashtag limits exceeded (Threads >1, IG/YT >5)
+- [ ] The brand logo shows in the cover's first 3 seconds (a skip signal)

@@ -1,10 +1,11 @@
 /**
- * 최근 게시분 피드백 — YouTube · Instagram 을 같은 틀(문제→가설→계획)로 채점한다.
+ * Recent-post feedback — scores YouTube and Instagram in the same frame
+ * (problem → hypothesis → plan).
  *
- * 숫자 자체는 youtube_insights / instagram_insights 가 가져오고, 이 모듈은
- * 최근 N편의 중앙값 대비로 레버(훅·유지·공유·각도)를 고른 뒤 HTML 보고서를 쓴다.
- * 절대 임계(유튜브 30초 70% 같은 값)는 쓰지 않는다 — 성장 플레이북이
- * 벤치마크를 규칙으로 쓰지 말라고 못 박아 두었기 때문이다.
+ * The numbers themselves come from youtube_insights / instagram_insights; this module picks
+ * the lever (hook, retention, shares, angle) against the median of the last N episodes and
+ * writes an HTML report. It uses no absolute thresholds (nothing like "70% at 30 seconds on
+ * YouTube") — the growth playbook is explicit that benchmarks aren't to be used as rules.
  */
 
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -57,11 +58,11 @@ export interface FeedbackReport {
 
 export interface ContentFeedbackInput {
   channel?: string;
-  /** 플랫폼당 최근 게시 수 (기본 5, 1~10) */
+  /** Number of recent posts per platform (default 5, 1-10) */
   limit?: number;
-  /** 집계 일수 (기본 28 — Analytics 2~3일 지연을 감안) */
+  /** Aggregation window in days (default 28 — allows for the 2-3 day Analytics delay) */
   days?: number;
-  /** HTML 저장 경로. 생략 시 data/<channel>/growth/review-recent.html */
+  /** HTML save path. Defaults to data/<channel>/growth/review-recent.html */
   outputPath?: string;
 }
 
@@ -75,7 +76,7 @@ export function median(values: number[]): number | null {
   return nums.length % 2 === 0 ? (nums[mid - 1] + nums[mid]) / 2 : nums[mid];
 }
 
-/** 0~1 구간이면 백분율로, 이미 백분율이면 그대로. */
+/** Scales a 0-1 value to a percentage; leaves it alone if it already is one. */
 export function asPercent(value: number | null | undefined): number | null {
   if (value == null || !Number.isFinite(value)) return null;
   if (value >= 0 && value <= 1) return value * 100;
