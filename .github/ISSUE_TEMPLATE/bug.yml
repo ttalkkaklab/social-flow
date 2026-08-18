@@ -1,0 +1,38 @@
+name: Bug report
+description: The pipeline ran but produced the wrong thing
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      placeholder: "0.24.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what you got instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: |
+        The channel profile settings that matter (format, TTS engine, platforms), the
+        topic or scene setup, and the skill invocation. If it's a build problem,
+        `output/video/build-report.txt` is usually the fastest thing to attach.
+      render: shell
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Before filing
+      options:
+        - label: There are no API keys, tokens, or credential file contents in this issue
+          required: true
