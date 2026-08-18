@@ -131,6 +131,16 @@ steps, the on-device installs, worked cost arithmetic, and how the caps work:
 
 ## Install
 
+The quickest path is the marketplace — two commands, nothing to build:
+
+```bash
+claude plugin marketplace add ttalkkaklab/social-flow
+claude plugin install social-flow@social-flow
+```
+
+The MCP server ships as a self-contained bundle, so the plugin works right after
+install — no `npm install` step. To hack on the plugin itself, clone instead:
+
 ```bash
 git clone https://github.com/ttalkkaklab/social-flow.git
 cd social-flow/server && npm install && npm run build
