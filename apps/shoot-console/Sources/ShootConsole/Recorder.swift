@@ -88,7 +88,7 @@ final class Recorder {
 
         do {
             let out = try await runScript(args: ["start", url.path])
-            inputStatus = out.split(separator: "\n").first { $0.hasPrefix("입력 장치") }.map(String.init)
+            inputStatus = out.split(separator: "\n").first { $0.hasPrefix("Input device") }.map(String.init)
             startedAt = t0
             elapsed = 0
             phase = .recording
@@ -202,7 +202,7 @@ final class Recorder {
             return error.localizedDescription
         }
         let text = output.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.contains("권한") || text.contains("시작 실패") {
+        if text.contains("permission") || text.contains("failed to start") {
             return "Couldn't start recording. Turn on 'ShootConsole' in System Settings → Privacy & Security → Screen & System Audio Recording.\n\n\(text)"
         }
         return text.isEmpty ? "record.sh failed" : text
