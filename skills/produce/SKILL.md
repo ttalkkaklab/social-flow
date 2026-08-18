@@ -152,7 +152,9 @@ data/<채널>/episodes/<주제>/
   뒤 마지막 캔버스 대조에서 죽는다.
 
   **섞어 찍기**는 촬영 씬과 생성 씬을 한 타임라인에 붙인다 — 빌더는 생성 회차와
-  같은 `build-reel.sh` 이고, 촬영 씬만 §3.5 의 준비를 더 거친다.
+  같은 `build-reel.sh` 이고, 촬영 씬만 §3.5 의 준비를 더 거친다. 슬라이드 씬
+  (`visual.slide`)과 전 씬 육성 회차(`window.VOICE === "user"`)는 §3.6 을 더 거친다 —
+  슬라이드 상태 캡처와 사용자 음성(`voice/s<n>.wav`) 수용이다.
 - 작업 디렉토리 준비: `.work/{cards,broll,motion,pcm,fonts}` 생성, 플랫폼 목록 확정
   (인자 CSV 또는 profile §4 게시 플랫폼).
 - **포맷 확정 — `.work/format.env` 를 쓴다. 건너뛰지 않는다.**
@@ -419,6 +421,49 @@ done
   를 쓴다. 이 파일을 §6 의 `cards.tsv` 5열 `subs=` 로 넘긴다 — 육성 씬은 발화 경계
   검출을 안 거치므로 자막 시각이 전사에서만 나온다.
 
+### 3.6 슬라이드 씬·육성 음성 수용 (해당 회차만)
+
+**슬라이드 씬**(`visual.slide`, scenes-schema §슬라이드 씬)의 세그 비주얼은
+`frame.html` 이 아니라 **storyboard 의 슬라이드 파일에서** 캡처한다. 저작·자가
+검증은 storyboard §8 이 끝냈고, 여기서는 상태를 열거해 카드 재료로 만들 뿐이다.
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
+# 불투명 캡처(alpha 0) — 슬라이드가 화면 전체라 배경 합성이 없다
+FORMAT_ENV="$PWD/.work/format.env" \
+  $REF/capture-reveals.sh <idx> "file://$PWD/storyboard/slides/s<샷번호>-<slug>.html" \
+  .work/cards/a<idx>r 0
+```
+
+- 슬라이드는 `../scenes.js` 를 상대 경로로 읽으므로 **storyboard/slides/ 제자리에서**
+  캡처한다 — .work 로 복사하면 SoT 를 못 찾는다.
+- 상태 수가 세그 수와 안 맞으면 §7 리포트의 「reveal 상태 누락」이 잡는다 — 그때는
+  슬라이드의 rg 배정을 고치고 다시 캡처한다(스토리보드 §8 계약).
+
+**전 씬 육성 회차**(`window.VOICE === "user"`)는 TTS 를 만들지 않는다(§5 통째로
+건너뜀). 촬영 씬은 §3.5 대로 클립에서 소리를 뽑고, 나머지 씬은 사용자가 녹음한
+`voice/s<샷번호>.wav`(샷번호 = 배열 순번 1부터 = 카드 idx+1)를 쓴다.
+
+```bash
+mkdir -p .work/pcm
+for SRC in voice/s*.wav; do
+  [ -f "$SRC" ] || continue
+  # 트림·정규화는 빌더가 한다 — 여기서는 48k 모노로만 맞춘다
+  ffmpeg -y -v error -i "$SRC" -ar 48000 -ac 1 ".work/pcm/$(basename "$SRC")"
+done
+```
+
+- **먼저 확인한다** — narration 이 있는 비촬영 씬 전부에 voice 파일이 실재하는가.
+  하나라도 없으면 멈추고 어느 샷이 비었는지 사용자에게 알린다.
+- 카드 계약(§6): 오디오 = 그 wav, **일반 레인**이다 — `sync=1` 을 걸지 않는다.
+  트림·loudnorm·문장 경계 검출이 다 필요하고(경계가 리빌 전환을 몰아 준다),
+  입 모양이 화면에 없어 동기 제약도 없다.
+- **빌드는 `ATEMPO_MIN=1 ATEMPO_MAX=1` 로 돌린다** — 사람 발화에 기계 속도 보정을
+  걸지 않는다(잠정 2026-08-18, 첫 육성 회차 빌드에서 확인). 발화속도 REGEN 권고가
+  떠도 재생성 대상이 아니다 — 그 샷은 재녹음이거나 대본 조정이다.
+- 녹음 앞머리 소음이 트림 문턱(-50dB)에 안 걸려 데드에어로 나오면 그 카드만
+  수동 트림한다 — 이것도 첫 회차에서 잰다.
+
 ### 4. reveal 상태 캡처
 
 씬마다 `capture-reveals.sh` 로 **상태 수를 스스로 도출**시킨다 (몇 개 찍을지
@@ -476,6 +521,10 @@ chrome-devtools 가 있으면 `navigate_page`(같은 URL) 후 `evaluate_script` 
 (잘림·겹침 — 템플릿이 tight1~3 자동 축소 후 잔여만 노출).
 
 ### 5. TTS 생성 (씬당 1콜)
+
+**전 씬 육성 회차(`window.VOICE === "user"`)는 이 절 전체를 건너뛴다** — 카드
+오디오가 전부 클립(§3.5)과 `voice/`(§3.6)에서 나온다. 문체 게이트는 스토리보드가
+이미 통과시켰다.
 
 **읽히기 전에 문체를 본다.** 나레이션은 소리로 한 번 지나가서 되감기가 없고,
 자막·카드 텍스트는 게시 후 고칠 수 없다. TTS 콜 전에 세 표면을 검사한다.
@@ -566,7 +615,15 @@ chapters.tsv : 챕터첫카드idx <TAB> 챕터 제목                       (롱
 ```
 # 촬영 씬(육성) 한 줄 예
 3	pcm/s3-run-cli.wav	0	none	sync=1,subs=cards/s3subs.tsv
+# 슬라이드·생성 씬(사용자 녹음 나레이션 — window.VOICE) 한 줄 예: 일반 레인, sync 없음
+11	pcm/s12.wav	0	none
 ```
+
+**슬라이드 씬의 세그 비주얼**은 §3.6 에서 캡처한 상태 PNG(`cards/a<idx>r<k>.png`)를
+생성 씬과 똑같이 적는다 — 상태 전환(xfade)이 곧 슬라이드 애니메이션이다. 켄번즈는
+글자 화면에 어울리지 않으므로 `zoom` 은 `none` 이다. 사용자 녹음 카드의 목표자/초
+(3열)는 0 으로 두고 빌드를 `ATEMPO_MIN=1 ATEMPO_MAX=1` 로 돌린다(§3.6 — 속도 보정
+차단).
 
 `sync` 카드의 오디오는 **그 클립에서 뽑은 wav** 를 준다(§3.5). 카드 길이가 곧 그
 오디오 길이라, 원본 mov 에서 뽑은 것과 정규화본에서 뽑은 것이 다르면 그 차이만큼

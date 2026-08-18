@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>슬라이드 씬</title>
+<!--
+  social-flow 슬라이드 씬 렌더러 — 1920×1080 고정 (롱폼 16:9 전용).
+  scenes-schema §슬라이드 씬 · storyboard SKILL §8 이 이 파일의 사용 계약이다.
+
+  ■ 사용법 (storyboard §8 — 승인 뒤에만):
+      1. 이 파일을 storyboard/slides/s<샷번호>-<slug>.html 로 복사한다
+         (샷번호 = SCENES 배열 순번 1부터 — visual.slide.file 과 같은 이름).
+      2. 아래 SLIDE_SHOT 을 그 샷번호로 바꾼다.
+      3. renderSlide() 하나만 그 씬의 도해로 다시 쓴다 — 다른 부분은 건드리지 않는다.
+      4. 글자는 전부 scenes.js 에서 온다(S.title·S.bullets·S.visual.slide.labels).
+         여기 새 한국어 문자열 리터럴을 쓰지 않는다 — 문체 게이트(screen 표면)를
+         통과한 적 없는 글자가 화면에 나가는 길이고, check-slide.js 가 기계로 잡는다.
+
+  ■ URL 파라미터 (capture-reveals.sh / capture-frames.sh 계약):
+      ?reveal=<k>   리빌 그룹 k 이하만 불투명. 생략하면 전부 표시.
+                    그룹은 나레이션 세그와 1:1 이 기본(0 = 기본 골격), 하위
+                    reveal(A|B)을 쓰면 그룹이 세그보다 많아진다.
+      그 밖의 파라미터(format= 등)는 무시한다 — capture-frames 가 붙여도 안전하다.
+
+  ■ 결정성 계약 (capture-reveals.sh 는 연속 캡처의 바이트 동일성으로 상태 수를 센다):
+      - CSS 애니메이션·트랜지션·커서 깜빡임 금지. 움직임은 빌더의 xfade 가 전부다.
+      - 웹폰트 로드 금지 — 로컬 폰트 스택만 쓴다.
+      - Math.random()·Date 등 렌더마다 달라지는 값 금지.
+
+  ■ 리빌 규칙 (video-template 와 같은 계약):
+      숨김은 opacity 만 — display·visibility·transform 으로 숨기면 상태 간
+      레이아웃이 이동해 xfade 가 전면 크로스페이드로 오염된다. 모든 그룹이
+      항상 같은 자리에 있고, 미래 그룹만 투명하다.
+
+  ■ 존: 글자는 x 96 · top 96 · bottom 285 안에 앉힌다(formats.js wide.zone).
+      하단 285px 는 자막 밴드다 — 배경 채색만 풀블리드.
+
+  ■ 캡처(자가 검증·produce 공용):
+      CAP_W=1920 CAP_H=1080 capture-reveals.sh <idx> \
+        "file://<절대경로>/slides/s12-<slug>.html" .work/cards/a12r 0
+-->
+<style>
+  :root{
+    --accent:#5b8cff; --accent2:#a05bff; --ink:#0b1020;
+    --w:1920px; --h:1080px;
+    --zone-x:96px; --zone-top:96px; --zone-bottom:285px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:var(--w);height:var(--h);overflow:hidden}
+  body{
+    font-family:"Pretendard","Pretendard Variable","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    background:var(--ink); color:#fff; position:relative;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* 리빌 — 숨김은 opacity 만 (레이아웃 불변). 트랜지션 금지. */
+  .rv{opacity:1}
+  .rv.hide{opacity:0}
+
+  .stage{
+    position:absolute; left:var(--zone-x); right:var(--zone-x);
+    top:var(--zone-top); bottom:var(--zone-bottom);
+    display:flex; flex-direction:column; gap:44px;
+  }
+  .slide-title{font-size:64px; font-weight:800; letter-spacing:-.02em; line-height:1.25}
+  .em{
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+
+  /* ── 기본 부품 — renderSlide 가 조합한다. 필요한 것만 쓰고 새 부품은 아래에 더한다. */
+  .row{display:flex; gap:28px; align-items:stretch}
+  .col{display:flex; flex-direction:column; gap:28px}
+  .box{
+    flex:1; padding:36px 40px; border-radius:20px;
+    background:color-mix(in srgb,#fff 7%,transparent);
+    border:1.5px solid color-mix(in srgb,#fff 16%,transparent);
+  }
+  .box .k{font-size:40px; font-weight:800}
+  .box .d{font-size:30px; line-height:1.5; margin-top:12px; color:color-mix(in srgb,#fff 78%,transparent)}
+  .box.hot{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  .arrow{align-self:center; font-size:44px; color:var(--accent); font-weight:800}
+  .big{font-size:150px; font-weight:900; letter-spacing:-.03em}
+  .cap{font-size:30px; color:color-mix(in srgb,#fff 66%,transparent)}
+  .mono{font-family:"SF Mono","JetBrains Mono",Menlo,monospace}
+</style>
+</head>
+<body>
+<div class="stage" id="stage"></div>
+<script src="../scenes.js"></script>
+<script>
+// ✎ 이 슬라이드의 샷 번호 — SCENES 배열 순번(1부터). 파일명 s<번호> 와 같다.
+const SLIDE_SHOT = 0;
+
+(function () {
+  const qs = new URLSearchParams(location.search);
+  const REVEAL = qs.has('reveal') ? parseInt(qs.get('reveal'), 10) : Infinity;
+
+  const THEME = window.THEME || {};
+  const root = document.documentElement;
+  if (THEME.accent)  root.style.setProperty('--accent',  THEME.accent);
+  if (THEME.accent2) root.style.setProperty('--accent2', THEME.accent2);
+  if (THEME.ink)     root.style.setProperty('--ink',     THEME.ink);
+
+  const S = (window.SCENES || [])[SLIDE_SHOT - 1];
+  const stage = document.getElementById('stage');
+  if (!S) { stage.textContent = 'check scenes.js / SLIDE_SHOT: ' + SLIDE_SHOT; return; }
+
+  const esc = s => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  /* **강조** → 그라데이션 칩 (scenes.js 표기 그대로) */
+  const em = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="em">$1</span>');
+  /* 리빌 래퍼 — 그룹 rg 는 REVEAL 이하일 때만 불투명 */
+  const rv = (rg, html) =>
+    '<div class="rv' + (rg > REVEAL ? ' hide' : '') + '" data-rg="' + rg + '">' + html + '</div>';
+  const h = { esc, em, rv, labels: (S.visual && S.visual.slide && S.visual.slide.labels) || [] };
+
+  /* ✎ 이 함수만 씬의 도해로 다시 쓴다 ──────────────────────────────
+     아래 기본형은 제목 + 불릿을 세그 순서로 리빌한다 — 저작 전 캡처 셀프테스트용.
+     글자 소스는 S(title·bullets)와 h.labels 만 쓴다. */
+  function renderSlide(S, h) {
+    let out = h.rv(0, '<div class="slide-title">' + h.em(S.title || '') + '</div>');
+    const items = (S.bullets || []).map(b =>
+      '<div class="box"><div class="k">' + h.em(b.t || '') + '</div>' +
+      (b.d ? '<div class="d">' + h.em(b.d) + '</div>' : '') + '</div>');
+    out += '<div class="col">' + items.map((x, i) => h.rv(i + 1, x)).join('') + '</div>';
+    return out;
+  }
+
+  stage.innerHTML = renderSlide(S, h);
+})();
+</script>
+</body>
+</html>

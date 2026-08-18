@@ -50,6 +50,7 @@ data/<채널>/episodes/<주제 slug>/storyboard/
 ├── storyboard.html  # 검토용 렌더 — scenes.js 를 직접 로드해 그린다 (템플릿 기반, §6)
 ├── scenes.js        # 기계가 읽는 SoT — THEME + SCENES(+나레이션 세그먼트)
 ├── images/          # 씬별 9:16 생성 이미지 (scene-<n>.png) — 촬영 모드는 생략
+├── slides/          # 롱폼 슬라이드 씬 HTML — §7 승인 뒤 §8 에서 저작
 └── script.md        # 촬영 모드 한정 — 사용자가 보며 녹화하는 촬영 대본
 ```
 
@@ -138,6 +139,16 @@ window.FORMAT = "youtube-long-16x9";   // 또는 "shorts-9x16"
 전용이라 가로로 못 간다. 사용자가 "쭉 찍고 싶다"고 하면 그렇게 찍되 씬 경계에서
 파일을 나눠 저장해 달라고 안내한다.
 
+**섞어 찍기의 나레이션은 전 씬 육성이 기본이다** — 사용자가 모든 씬의 대사를 자기
+목소리로 녹음한다(`window.VOICE = "user"`, scenes-schema §전 씬 육성 회차). 한 편
+안에서 사용자 목소리와 TTS 가 번갈아 나오면 화자가 중간에 바뀌기 때문이다. 이때
+script.md 는 전 샷의 대사를 싣고, 촬영 씬이 아닌 샷은 소리만 녹음한다
+(`voice/s<샷번호>.wav`). TTS 로 덮는 회차는 사용자가 그렇게 정할 때만 쓴다.
+
+생성 씬은 §4 에서 다시 두 갈래로 정한다 — 분위기·장소·인물은 **생성 이미지**,
+글자와 도형을 배치해야 전달되는 도해는 **슬라이드**(scenes-schema §슬라이드 씬)다.
+슬라이드 씬은 콘티에 계획만 적고 파일은 승인 뒤 §8 에서 만든다.
+
 촬영 씬이 하나라도 있으면 §6 에서 **`script.md`(촬영 대본)** 를 저작하고, 승인
 후 안내가 촬영이다(§7). 계약은 `references/scenes-schema.md` §촬영 씬 ·
 문서 구조는 `references/shot-script-template.md` 가 정본이다.
@@ -208,10 +219,16 @@ window.FORMAT = "youtube-long-16x9";   // 또는 "shorts-9x16"
   구독자 증가**를 우선한다. 원시 조회수가 아니라 유효 조회수와 구독을 만든 회차를
   기준으로 길이와 포맷을 고른다.
 
-- **롱폼 씬마다 찍을지 만들지를 정한다**(§1.6). 판단 기준은 하나다 — **증거가
-  화면에 있으면 찍고, 설명이 필요하면 만든다.** 설치가 실제로 되는 장면, 결과물이
-  도는 화면, 손으로 만지는 순간은 생성 그림이 대신할 수 없다. 반대로 "왜 이게
-  빠른가" 같은 대목은 찍을 화면 자체가 없다.
+- **롱폼 씬마다 셋 중 하나를 정한다**(§1.6) — 찍을 것인가, 이미지를 만들 것인가,
+  슬라이드로 그릴 것인가. 판단 기준은 한 줄로 잇는다: **증거가 화면에 있으면 찍고,
+  분위기·장소·인물이면 이미지를 만들고, 글자와 도형을 배치해야 전달되면
+  슬라이드다.** 설치가 실제로 되는 장면, 결과물이 도는 화면, 손으로 만지는 순간은
+  생성 그림이 대신할 수 없다. "왜 이게 빠른가" 같은 대목은 찍을 화면 자체가 없고,
+  구조·비교·단계·수치 흐름은 사진 배경보다 도해가 빨리 읽힌다.
+  슬라이드 씬에는 `visual.slide` 에 `file`(`slides/s<샷번호>-<slug>.html` — 샷번호는
+  배열 순번, 스토리보드가 정한다)·`plan`(무엇을 그릴지 한 줄)·`labels`(도형에 그릴
+  글자 전부)를 적는다 — 파일은 승인 뒤 §8 에서 만든다. 전문은 scenes-schema
+  §슬라이드 씬.
   촬영 씬에는 `visual.clip`(파일명)·`shot`(보이는 것)·`action`(하는 일)을 적고,
   파일명은 **`footage/s<씬번호>-<slug>.mp4`** 규약으로 스토리보드가 정한다 —
   사용자가 이름을 고르지 않는다. 소리를 육성으로 쓸지 나레이션을 덮을지도 여기서
@@ -386,6 +403,8 @@ window.FORMAT = "youtube-long-16x9";   // 또는 "shorts-9x16"
 ### 5. 씬 이미지 생성 (촬영 모드는 건너뛴다)
 
 씬별 배경 이미지를 **포맷이 정한 크기**로 생성해 `images/scene-<n>.png` 에 저장한다.
+**슬라이드 씬(`visual.slide`)도 여기서 뺀다** — 그 씬의 화면은 이미지가 아니라
+승인 뒤 §8 이 만드는 슬라이드다. 장수 계산·비용 원장 모두 이미지 씬만 센다.
 크기는 손으로 외우지 말고 프리셋에서 읽는다.
 
 ```bash
@@ -484,7 +503,8 @@ printf 'image.local\t3\tstoryboard: points 배경 scene-2~4\n'        >> .work/c
 
 1. **storyboard-reviewer 에이전트(Agent)에 "이미지 모드"로 위임** — `images/scene-*.png`
    전체 경로와 `scenes.js`·`profile.md`, 삽화 모드면 `narration[].img` 경로들,
-   이전 라운드 미해결 지적을 전달한다. 판정 tail
+   이전 라운드 미해결 지적을 전달한다. 슬라이드 씬은 대상에서 뺀다고 명시한다 —
+   그 씬의 `scene-N.png` 부재는 결함이 아니다(§8 에서 화면이 나온다). 판정 tail
    `STORYBOARD_REVIEW: mode=image score=NN p0=N verdict=PASS|FAIL` 을 파싱한다.
 2. **PASS(score ≥95 이고 p0 = 0)** → §6 으로. storyboard.md 는 통과한 이미지로 한 번만
    쓴다(루프 중에 문서를 미리 쓰면 매 라운드 다시 손봐야 한다).
@@ -521,9 +541,13 @@ research.md 의 핵심 출처를 말미에 요약 링크한다.
 파일명으로 저장하는지가 한 덩어리로 붙어 있어야 한다. 대사는 scenes.js narration
 에서 옮긴다(두 벌 관리 금지 — scenes.js 가 SoT).
 
-롱폼 섞어 찍기면 **촬영 씬만** 싣고, 맨 위에 「오늘 찍을 것」 표(파일명·씬·무엇을
-찍나·목표 길이)를 둔다. 생성 씬은 사용자가 찍을 것이 없으므로 대본에 안 넣는다 —
-넣으면 무엇을 해야 하는지가 흐려진다.
+롱폼 섞어 찍기는 **`references/make-script.js` 로 렌더한다** — 손으로 옮겨 적지
+않는다(`node make-script.js <storyboard 디렉토리>`, 문안이 바뀔 때마다 다시 돌린다).
+전 씬 육성 회차(기본)는 **전 샷**을 싣는다 — 촬영 샷은 [파일/화면/행동/대사],
+생성·슬라이드 샷은 소리만 녹음(`voice/s<샷번호>.wav`)으로 표시된다. 사용자가
+녹음해야 할 소리가 전 샷에 있기 때문이다. 맨 위 「오늘 찍을 것」 표에 촬영 파일과
+음성 파일이 다 실린다. TTS 회차만 촬영 씬만 싣는다 — 그때 생성 씬은 사용자가 할
+일이 없어서, 넣으면 무엇을 해야 하는지가 흐려진다.
 
 **storyboard.html (검토용 렌더)** — `references/storyboard-html-template.html` 을
 storyboard/ 에 복사해 **`<title>` 과 `✎ SB_DOC` 블록만** 채운다. 씬 데이터(제목·
@@ -563,6 +587,8 @@ storyboard.md·storyboard.html 경로(HTML 을 브라우저로 열면 검산 배
 잠정값이라는 사실**을 함께 알린다(§1.5).
 촬영 씬이 있으면 **`script.md` 경로와 찍어야 할 파일 수**를 같이 보여 준다 —
 승인이 곧 촬영 시작이라, 사용자가 무엇을 몇 개 찍어야 하는지 이 화면에서 알아야 한다.
+슬라이드 씬이 있으면 **몇 씬이 슬라이드인지와 각 씬의 `plan` 한 줄**을 같이 보여
+준다 — 승인은 이 계획을 승인하는 것이고, 파일은 승인 뒤 §8 에서 만든다.
 여기에 **네 수렴 루프의 결과를 함께 싣는다** — 문안·씬별·어휘·이미지
 각각의 최종 점수와 라운드 수, 씬별·어휘는 **최저 씬이 몇 번이고 몇 점인지**까지,
 하드캡에 걸렸으면 미해결 지적을 그대로. 선택지:
@@ -581,11 +607,49 @@ storyboard.md·storyboard.html 경로(HTML 을 브라우저로 열면 검산 배
   보조 모니터에 띄우고 한 번에 촬영). 녹화·정합이 끝나면 produce 가 편집
   파이프라인으로 영상을 만든다.
 - **롱폼 섞어 찍기** — 사용자가 `script.md` 「오늘 찍을 것」 표대로 **씬마다 따로
-  찍어** `data/<채널>/episodes/<주제>/footage/` 에 그 파일명으로 저장한다. ingest
+  찍어** `data/<채널>/episodes/<주제>/footage/` 에 그 파일명으로 저장한다(전 씬 육성
+  회차는 소리만 녹음하는 샷의 `voice/s<n>.wav` 도 같은 표에 있다). ingest
   정합을 안 거친다(파일명이 곧 정합이다). 파일이 다 모이면
   `/social-flow:produce <채널> <주제>` 가 촬영 씬과 생성 씬을 한 타임라인으로 붙인다.
   승인 화면에 **찍어야 할 파일 목록을 그대로 보여 준다** — 사용자가 그 목록을
   체크리스트로 쓴다.
+  **슬라이드 씬이 있으면 승인 직후 §8 로 간다** — 사용자가 녹화·녹음하는 동안
+  슬라이드를 저작하면 두 작업이 겹쳐 돌아 어느 쪽도 기다리지 않는다.
+
+### 8. 슬라이드 저작 (승인 뒤 · 슬라이드 씬이 있는 회차만)
+
+승인된 콘티의 `plan`·`labels` 대로 씬별 HTML 슬라이드를 만든다. 문안 게이트를 다
+통과한 뒤라 여기서 글자를 새로 쓰지 않는다 — **슬라이드의 모든 글자는 scenes.js
+에서 온다**(`title`·`bullets`·`slide.labels`). 여기 새 한국어 문자열을 심으면 문체
+게이트를 통과한 적 없는 글자가 화면에 나간다.
+
+1. **씬마다** `references/slide-template.html` 을 `slides/<visual.slide.file 이름>` 로
+   복사하고, `SLIDE_SHOT` 을 그 샷 번호(배열 순번)로 바꾼 뒤 `renderSlide()` 하나만
+   그 씬의 도해로 다시 쓴다. 템플릿 머리의 결정성 계약을 지킨다 — CSS
+   애니메이션·트랜지션·웹폰트·`Math.random`/`Date` 금지. 움직임은 빌더의 xfade 가
+   전부다.
+2. **리빌 그룹을 나레이션 세그와 1:1 로 배정한다**(그룹 0 = 기본 골격). 하위
+   reveal(`A|B`)을 쓸 씬만 그룹이 세그보다 많다.
+3. **기계 검사** — `node references/check-slide.js <storyboard 디렉토리>` 가 파일명↔
+   `SLIDE_SHOT`↔scenes.js 삼자 일치, scenes.js 에 없는 한글 리터럴, 결정성 위반을
+   잡는다. exit 0 이 아닐 때 다음으로 가지 않는다.
+4. **상태 캡처 자가 검증** — 씬마다 상태를 열거해 본다.
+
+   ```bash
+   REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
+   CAP_W=1920 CAP_H=1080 $REF/capture-reveals.sh <샷번호-1> \
+     "file://$PWD/slides/s<샷번호>-<slug>.html" .work/slide-check/a<샷번호-1>r 0
+   ```
+
+   상태 수가 **세그 수 + 하위 reveal 수 + 1**(그룹 0 포함)과 다르면 rg 배정이 틀린
+   것이다 — produce 의 「reveal 상태 누락」 게이트가 빌드에서 같은 것을 다시 검사한다.
+   마지막 상태 PNG 를 열어 `labels` 가 전부 보이는지, 글자가 존(하단 285px 자막 밴드
+   회피) 안에 있는지 눈으로 확인한다.
+5. 슬라이드는 로컬 캡처라 비용이 나가지 않는다 — 원장(`.work/cost-tally.tsv`)에는
+   적을 것이 없고, 생성 호출이 없었다는 사실이 곧 기록이다.
+
+끝나면 대기 상태다 — 사용자의 `footage/`·`voice/` 파일이 모이면 produce 가 슬라이드
+상태 캡처를 세그 비주얼로 쓴다(produce §3.6).
 
 ## 함정
 
@@ -615,6 +679,9 @@ storyboard.md·storyboard.html 경로(HTML 을 브라우저로 열면 검산 배
 - **`references/storyboard-template.md`** — storyboard.md 표준 구조 + research.md 표 형식
 - **`references/storyboard-html-template.html`** — storyboard.html 렌더 템플릿 — scenes.js 동적 로드 + 계약 검산 자동 표시, `✎ SB_DOC` 블록만 채워 사용
 - **`references/shot-script-template.md`** — 촬영 모드 한정: script.md(촬영 대본) 구조 + 촬영 수칙 + scenes.js 변형 계약
+- **`references/make-script.js`** — 롱폼 script.md 렌더러 — scenes.js 에서 촬영 대본을 만든다(두 벌 관리 금지). 전 씬 육성 회차는 전 샷, TTS 회차는 촬영 씬만
+- **`references/slide-template.html`** — §8 슬라이드 씬 렌더 템플릿 — `?reveal=k` 리빌 계약 + 결정성 계약, `SLIDE_SHOT`·`renderSlide()` 만 바꿔 쓴다
+- **`references/check-slide.js`** — §8 슬라이드 기계 검사 — 파일명↔scenes.js 일치·SoT 밖 한글 리터럴·결정성 위반
 - **`../autoproduce/references/cost-tally.md`** — 회차 비용 원장 규약 (§5·§5.5 가 적는 파일의 위치·줄 형식·단위). 단가 정본은 같은 디렉토리의 `prices.tsv`
 
 ### 위임 에이전트
