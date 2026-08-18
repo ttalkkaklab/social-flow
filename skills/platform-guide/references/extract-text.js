@@ -13,7 +13,8 @@
  *   narration — the sentences TTS reads (`narration[].tts`). Heard once, in passing.
  *   subtitle  — subtitles burned into the frame (`narration[].sub`). Spelled differently from tts.
  *   screen    — card text: kicker·title·stat·statLabel·bullets(t·d)·footnote,
- *               plus text·role on quote scenes. This surface cannot be fixed after publishing.
+ *               text·role on quote scenes, and visual.slide.labels on slide scenes.
+ *               This surface cannot be fixed after publishing.
  *               speaker (a person's name) is left out, being a proper noun.
  *
  * exit 0 ok / 2 bad arguments / 3 could not read scenes.js.
@@ -61,6 +62,11 @@ for (const s of scenes) {
     for (const b of s.bullets || []) {
       if (b && b.t) out.push(strip(b.t));
       if (b && b.d) out.push(strip(b.d));
+    }
+    // 슬라이드 씬의 도형 라벨 — 화면에 그대로 나가는 글자다 (scenes-schema §슬라이드 씬)
+    const sl = s.visual && s.visual.slide;
+    for (const t of (sl && sl.labels) || []) {
+      if (t) out.push(strip(t));
     }
   }
 }

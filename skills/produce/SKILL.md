@@ -171,7 +171,9 @@ data/<channel>/episodes/<topic>/
 
   **Mixed shooting** puts filmed and generated scenes on one timeline — the builder is the
   same `build-reel.sh` as a generated episode, and only the filmed scenes go through the
-  extra prep in §3.5.
+  extra prep in §3.5. Slide scenes (`visual.slide`) and all-live-voice episodes
+  (`window.VOICE === "user"`) additionally go through §3.6 — capturing slide states and
+  taking in the user's recordings (`voice/s<n>.wav`).
 - Prepare the working directory: create `.work/{cards,broll,motion,pcm,fonts}` and settle
   the platform list (the CSV argument, or profile §4's publish platforms).
 - **Settle the format — write `.work/format.env`. Don't skip it.**
@@ -481,6 +483,53 @@ done
   the 5th `cards.tsv` column `subs=` in §6 — live-voice scenes skip speech-boundary
   detection, so the subtitle times can only come from the transcript.
 
+### 3.6 Slide scenes and live-voice audio (only on episodes that have them)
+
+A **slide scene**'s segment visuals (`visual.slide`, scenes-schema §slide scenes) are
+captured from **the storyboard's slide files**, not from `frame.html`. Authoring and
+self-verification finished back in storyboard §8; here you only enumerate the states and
+turn them into card material.
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
+# Opaque capture (alpha 0) — a slide fills the frame, so there is no background to composite
+FORMAT_ENV="$PWD/.work/format.env" \
+  $REF/capture-reveals.sh <idx> "file://$PWD/storyboard/slides/s<shot number>-<slug>.html" \
+  .work/cards/a<idx>r 0
+```
+
+- A slide reads `../scenes.js` over a relative path, so capture it **in place under
+  storyboard/slides/** — copy it into .work and it can't find the source of truth.
+- If the state count doesn't match the segment count, §7's report catches it as "missing
+  reveal state". Fix the slide's rg assignment and capture again (the storyboard §8
+  contract).
+
+An **all-live-voice episode** (`window.VOICE === "user"`) generates no TTS (§5 is skipped
+entirely). Filmed scenes pull their audio from the clip per §3.5; every other scene uses
+the user's recording at `voice/s<shot number>.wav` (shot number = array position from 1 =
+card idx + 1).
+
+```bash
+mkdir -p .work/pcm
+for SRC in voice/s*.wav; do
+  [ -f "$SRC" ] || continue
+  # The builder handles trimming and normalization — here we only conform to 48k mono
+  ffmpeg -y -v error -i "$SRC" -ar 48000 -ac 1 ".work/pcm/$(basename "$SRC")"
+done
+```
+
+- **Check first** — does a voice file actually exist for every non-filmed scene that has
+  narration? If even one is missing, stop and tell the user which shot is empty.
+- Card contract (§6): audio = that wav, on the **normal lane** — do not set `sync=1`.
+  Trimming, loudnorm, and sentence-boundary detection are all wanted here (the boundaries
+  drive the reveal transitions), and with no mouth on screen there's no sync constraint.
+- **Run the build with `ATEMPO_MIN=1 ATEMPO_MAX=1`** — don't apply machine speed
+  correction to a human voice (provisional, 2026-08-18, measured on the first live-voice
+  build). A speaking-rate REGEN recommendation is not a regeneration target here — that
+  shot needs a re-record or a script change.
+- If noise at the head of a recording slips under the trim threshold (-50dB) and comes out
+  as dead air, trim that one card by hand — also measured on the first episode.
+
 ### 4. Capture the reveal states
 
 Per scene, let `capture-reveals.sh` **derive the state count itself** (a person choosing how
@@ -545,6 +594,10 @@ chrome-devtools is available, `navigate_page` (same URL) then `evaluate_script` 
 template auto-shrinks through tight1–3 and only exposes what's left).
 
 ### 5. Generate the TTS (one call per scene)
+
+**An all-live-voice episode (`window.VOICE === "user"`) skips this whole section** — every
+card's audio comes from the clips (§3.5) and `voice/` (§3.6). The style gate already
+passed back in the storyboard.
 
 **Look at the style before anything gets read aloud.** Narration passes by once with no
 rewind, and subtitle and card text can't be fixed after publishing. Check the three surfaces
@@ -640,7 +693,15 @@ of it shakes the frame. Filmed-scene cards are usually `none` + `sync=1`.
 ```
 # one line for a filmed scene (live voice)
 3	pcm/s3-run-cli.wav	0	none	sync=1,subs=cards/s3subs.tsv
+# 슬라이드·생성 씬(사용자 녹음 나레이션 — window.VOICE) 한 줄 예: 일반 레인, sync 없음
+11	pcm/s12.wav	0	none
 ```
+
+**A slide scene's segment visuals** are written exactly like a generated scene's, using the
+state PNGs captured in §3.6 (`cards/a<idx>r<k>.png`) — the state transition (xfade) *is* the
+slide animation. Ken Burns doesn't suit a screen full of text, so `zoom` is `none`. For a
+user-recorded card, leave the target chars/sec (column 3) at 0 and run the build with
+`ATEMPO_MIN=1 ATEMPO_MAX=1` (§3.6 — speed correction off).
 
 A `sync` card's audio is **the wav pulled from that clip** (§3.5). The card's length is that
 audio's length, so if one came from the original mov and the other from the normalized file,

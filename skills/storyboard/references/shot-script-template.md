@@ -14,11 +14,23 @@ one block.
 | Recording | shot straight through in one go | **filmed scene by scene, saved as files** |
 | Alignment | ingest makes `alignment.json` | none — the filename is the alignment |
 | Editing | `build-screencast.sh` | `build-reel.sh` (the same builder as generated scenes) |
-| script.md | carries every shot | carries **only the filmed scenes** |
+| script.md | carries every shot | **every shot** by default (voice-only shots included) — filmed scenes only on a TTS episode |
 
 A whole-episode shoot talks start to finish with the screen rolling, and the edit finds the cuts
 in the silences. Mixed can't do that — generated scenes go in between, so **one filmed scene is
 one file**. That's why the long-form script prints the filename to save for each shot.
+
+**A long-form mixed shoot defaults to live voice on every scene** (scenes-schema
+§all-live-voice episodes, `window.VOICE = "user"`). The user speaks every scene's narration
+in their own voice, so the script carries **every shot** — filmed shots as
+[file / screen / action / lines], the rest as voice-only recordings
+(`voice/s<shot number>.wav`, shot number = array position). Only an episode where TTS covers
+the narration carries filmed scenes alone — there the generated scenes leave the user nothing
+to do.
+
+**Never hand-write a long-form script.md** — `references/make-script.js` renders it from
+scenes.js (`node make-script.js <storyboard directory>`). Re-run it whenever the copy changes.
+This document is the source of truth for the structure that render has to produce.
 
 ## The scenes.js side of the contract
 
@@ -48,6 +60,9 @@ one file**. That's why the long-form script prints the filename to save for each
   that sentence out loud, it carries the same stimulus verbatim. Sentences starting with
   "~해 봤습니다" or "오늘은 ~ 보여 드릴게요" don't go in the script — finding out after recording
   means refilming the first scene.
+- **Slide scenes** (`visual.slide`, scenes-schema §slide scenes) have nothing to film — they
+  go into the script as voice-only recordings, and the screen entry shows the slide's `plan`.
+  The slide file itself is built by storyboard §8 after approval.
 - The recording order is **cover → hooking → result → body**. Show the finished thing at a
   glance, hook the problem, unfold the result, and only then film the method. Don't record the
   method screens before the result. Hooking exists in informational pieces too — the shot after
@@ -120,6 +135,12 @@ generated: <YYYY-MM-DD>
   scenes.js (no maintaining two copies: scenes.js is the SoT, script.md is the render).
 - For a **shot filmed in silence**, write `(don't speak — narration goes on later)` in the lines
   slot and put only what you operate under **행동**.
+- A **voice-only shot** (a generated or slide scene on an all-live-voice episode) saves to
+  `voice/s<shot number>.wav`, and its screen entry says outright that there's nothing to film.
+  Put a rule in the note at the top of the script: **record it in the same spot, on the same
+  mic, in the same sitting as the filmed shots** — move seats and the tone jumps, and you hear
+  the join in the edit. Say there too that the half-beat pause between sentences is the
+  reference point for the on-screen transitions (reveals).
 - The whole-episode lane adds a "recording done: say '녹화 끝' and stop" note after the last
   scene. The mixed lane ends at each shot, so it doesn't need that note.
 

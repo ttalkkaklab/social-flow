@@ -768,6 +768,7 @@ window.SB_DOC = {
       sceneMax: 13, recSceneMax: 20,
       capCover: 40, capBody: 50, sentMin: 8, sentMax: 25,
       videoMax: 2,                              // 8s × 2 slots = 16s
+      burn: true,                               // burned-in subtitles (formats.js:108)
       chapterMin: null, chapterMax: null        // short-form has no notion of chapters
     },
     "youtube-long-16x9": {
@@ -777,6 +778,7 @@ window.SB_DOC = {
       sceneMax: 20, recSceneMax: null,          // no cap on the shooting lane
       capCover: 70, capBody: 90, sentMin: 12, sentMax: 40,
       videoMax: 5,                              // 8s × 5 slots = 40s
+      burn: false,                              // clean master + subs.srt (formats.js:246)
       chapterMin: 3, chapterMax: 13             // 3 = YouTube requirement · 13 = target cap for the shooting lane
                                                 // (the authoring lane target of 5~10 is in SKILL §4)
     }
@@ -820,9 +822,10 @@ window.SB_DOC = {
      the source of truth. An empty field is inferred from the structure. An older scenes.js
      still draws as it is. */
   var SIZE_KO = { ws: "wide", two: "two-shot", ms: "medium", cu: "close-up" };
-  var PIC_KO = { still: "still photo", "ai-video": "AI video", recording: "recording", asset: "shared asset" };
+  var PIC_KO = { still: "still photo", "ai-video": "AI video", recording: "recording", asset: "shared asset", slide: "HTML slide" };
   function inferredPicture(s) {
     if (s.visual && s.visual.source === "recording") return "recording";
+    if (s.visual && s.visual.slide) return "slide";
     if (s.type === "outro") return "asset";
     if (s.type === "broll" || (s.visual && s.visual.video) || (s.type === "quote" && s.visual && s.visual.clip))
       return "ai-video";
@@ -830,6 +833,7 @@ window.SB_DOC = {
   }
   function inferredOverlay(s) {
     if (s.type === "broll" || s.type === "outro") return "none";
+    if (s.visual && s.visual.slide) return "none";   // 글자를 슬라이드가 직접 그린다
     return "html";
   }
   function pictureOf(s) { return (s.visual && s.visual.picture) || inferredPicture(s); }
@@ -1140,8 +1144,30 @@ window.SB_DOC = {
       }
       if (!vz.shot) flag("bad", "Shot " + no, "a shooting scene with no visual.shot (what is on screen)");
       if (!vz.action) flag("bad", "Shot " + no, "a shooting scene with no visual.action (what the user does)");
-      chips.push(badge("", narr.length ? "narration over it" : "live voice"));
+      // On an all-live-voice episode (window.VOICE === "user") a filmed scene fills narration too —
+      // those segments are lines to speak, not a TTS script (scenes-schema §all-live-voice episodes).
+      chips.push(badge("", narr.length ? (window.VOICE === "user" ? "live-voice script" : "narration over it") : "live voice"));
     } else if (s.type !== "broll" && s.type !== "outro") {
+      /* Slide-scene contract (scenes-schema §slide scenes) — the filename and the plan are what
+         gets approved; the file itself arrives after approval. Coexisting with bg is a
+         contradiction (there is only one screen). */
+      var sl = s.visual && s.visual.slide;
+      if (sl) {
+        chips.push(badge("", "slide"));
+        if (!sl.plan) {
+          chips.push(badge("bad", "no plan"));
+          flag("bad", "Shot " + no, "a slide scene with no slide.plan (what to draw) — approval reads this plan");
+        }
+        if (!sl.file) {
+          chips.push(badge("bad", "no file"));
+          flag("bad", "Shot " + no, "a slide scene with no slide.file");
+        } else if (!new RegExp("^slides/s" + no + "-[a-z0-9-]+\\.html$").test(sl.file)) {
+          chips.push(badge("warn", "file naming"));
+          flag("warn", "Shot " + no, 'slide.file "' + sl.file + '" — the convention is slides/s' + no + "-<slug>.html (shot number = array position)");
+        }
+        if (s.visual.bg)
+          flag("warn", "Shot " + no, "a slide scene also carrying bg — the screen is the slide alone");
+      }
       var cap = s.type === "cover" ? FMT.capCover : FMT.capBody;
       if (narr.length) {
         chips.push(badge(syl <= cap ? "ok" : "bad", "chars " + syl + "/" + cap));
@@ -1227,7 +1253,10 @@ window.SB_DOC = {
       // is already writing that sentence out.
       // To see past differences in particles and endings, only Hangul and alphanumerics are kept
       // for the comparison, and short fragments (under 4 characters) are not counted.
-      (function () {
+      // Burn-in formats only — long-form (burn:false) doesn't burn subtitles, so for a viewer who
+      // never turns them on the caption is the only place that value lands. Over-detection
+      // measured 2026-08-18 (captions with zero correlation).
+      if (FMT.burn) (function () {
         var norm = function (t) { return String(t || "").replace(/[^가-힣A-Za-z0-9]/g, ""); };
         var narr = s.narration || [], dup = [];
         (s.bullets || []).forEach(function (b, bi) {
@@ -1429,6 +1458,16 @@ window.SB_DOC = {
   // Stops an unfilled template placeholder from reaching the approval gate
   var blanks = (JSON.stringify(DOC).match(/\{\{/g) || []).length;
   if (blanks) flag("bad", "SB_DOC", "unfilled placeholders: " + blanks + " — clear the {{…}} and reopen the document");
+
+  /* All-live-voice episodes — narration IS the recording script, so an empty one means that
+     shot has no sound */
+  if (window.VOICE === "user") {
+    SCENES.forEach(function (s, i) {
+      if (s.type === "broll" || s.type === "outro") return;
+      if (!(s.narration || []).length)
+        flag("warn", "Shot " + (i + 1), "an all-live-voice episode (window.VOICE) with empty narration — the lines to speak never reach the script");
+    });
+  }
 
   /* Scene checks are collected during the card render, so they run first */
   var sceneChips = SCENES.map(function (s, i) { return sceneCheck(s, i + 1); });
@@ -1665,6 +1704,14 @@ window.SB_DOC = {
           meta += '<details class="prompt"><summary>speech clip prompt</summary><p>' + esc(vis.clip.prompt) + "</p></details>";
         if (vis.bgPrompt)
           meta += '<details class="prompt"><summary>background prompt</summary><p>' + esc(vis.bgPrompt) + "</p></details>";
+        if (vis.slide) {
+          meta += '<div class="row"><b>slide</b><div class="v"><code>' + esc(vis.slide.file || "?") +
+               "</code> — authored in §8 after approval</div></div>";
+          if (vis.slide.plan)
+            meta += '<details class="prompt"><summary>slide plan</summary><p>' + esc(vis.slide.plan) +
+                 (vis.slide.labels && vis.slide.labels.length ? " · labels: " + esc(vis.slide.labels.join(", ")) : "") +
+                 "</p></details>";
+        }
       }
       if (DOC.privacy && DOC.privacy[no])
         meta += '<div class="note pv">Privacy avoidance — ' + mark(DOC.privacy[no]) + "</div>";

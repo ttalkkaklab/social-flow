@@ -52,6 +52,7 @@ data/<channel>/episodes/<topic slug>/storyboard/
 ├── storyboard.html  # review render — loads scenes.js directly and draws it (template-based, §6)
 ├── scenes.js        # the machine-readable SoT — THEME + SCENES (+ narration segments)
 ├── images/          # per-scene 9:16 generated images (scene-<n>.png) — omitted in shooting mode
+├── slides/          # long-form slide-scene HTML — authored in §8, after §7 approval
 └── script.md        # shooting mode only — the shooting script the user records against
 ```
 
@@ -147,6 +148,19 @@ scenes. Short-form's `build-screencast.sh` path (shoot straight through once, th
 is portrait-only and can't go landscape. If the user says "I want to shoot it in one go",
 let them, but ask them to split the file at scene boundaries when saving.
 
+**Narration in a mixed shoot defaults to live voice on every scene** — the user records
+every scene's lines in their own voice (`window.VOICE = "user"`, scenes-schema
+§all-live-voice episodes). Alternating the user's voice with TTS inside one episode
+changes the speaker partway through. In that setup script.md carries the lines for every
+shot, and shots that aren't filmed scenes are voice-only recordings
+(`voice/s<shot number>.wav`). An episode covered by TTS happens only when the user asks
+for it.
+
+Generated scenes then split two ways in §4 — mood, place, and people become a **generated
+image**, while a diagram that only reads once text and shapes are laid out becomes a
+**slide** (scenes-schema §slide scenes). A slide scene carries only its plan in the
+storyboard; the file is built in §8 after approval.
+
 If even one filmed scene exists, §6 authors **`script.md` (the shooting script)** and the
 hand-off after approval is filming (§7). The contract is `references/scenes-schema.md`
 §filmed scenes; `references/shot-script-template.md` is the source of truth for the
@@ -229,11 +243,18 @@ Core rules:
   **stayed to watch, engaged views, and subscribers gained per video**. Pick length and
   format from the episodes that produced engaged views and subscriptions, not raw views.
 
-- **In long-form, decide per scene whether to film or generate it** (§1.6). There's one
-  criterion — **if the evidence is on screen, film it; if it needs explaining, make it.**
-  A generated picture can't stand in for an install actually completing, a result running
-  on screen, or the moment a hand touches something. Conversely, a beat like "why is this
-  fast" has no screen to film in the first place.
+- **In long-form, pick one of three per scene** (§1.6) — film it, generate an image, or
+  draw it as a slide. One line joins the criteria: **if the evidence is on screen, film
+  it; if it's mood, place, or people, generate an image; if it only reads once text and
+  shapes are laid out, make it a slide.** A generated picture can't stand in for an
+  install actually completing, a result running on screen, or the moment a hand touches
+  something. A beat like "why is this fast" has no screen to film in the first place, and
+  structure, comparisons, steps, and number flows read faster as a diagram than over a
+  photo background.
+  A slide scene gets `visual.slide` with `file` (`slides/s<shot number>-<slug>.html` —
+  the shot number is the array position, decided by the storyboard), `plan` (one line on
+  what to draw), and `labels` (every piece of text that goes into the shapes) — the file
+  itself is built in §8 after approval. Full text: scenes-schema §slide scenes.
   Filmed scenes get `visual.clip` (filename), `shot` (what's visible), and `action` (what
   you do), and the filename follows the **`footage/s<scene number>-<slug>.mp4`** convention
   set by the storyboard — the user doesn't pick names. Whether the live voice carries the
@@ -442,7 +463,10 @@ land louder. Only the image axis (§5, §5.5) is skipped.
 ### 5. Generate scene images (skipped in shooting mode)
 
 Generate the per-scene background image **at the size the format sets** and save it to
-`images/scene-<n>.png`. Don't memorize the sizes — read them from the preset.
+`images/scene-<n>.png`. **Slide scenes (`visual.slide`) are excluded here too** — their
+screen is not an image but the slide §8 builds after approval. Both the image count and
+the cost ledger count image scenes only. Don't memorize the sizes — read them from the
+preset.
 
 ```bash
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
@@ -554,7 +578,9 @@ money.
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "image mode"** — pass every
    `images/scene-*.png` path plus `scenes.js` and `profile.md`, the `narration[].img` paths in
-   illustration mode, and unresolved findings from the previous round. Parse the verdict tail
+   illustration mode, and unresolved findings from the previous round. Say explicitly that
+   slide scenes are out of scope — a missing `scene-N.png` there is not a defect (their
+   screen arrives in §8). Parse the verdict tail
    `STORYBOARD_REVIEW: mode=image score=NN p0=N verdict=PASS|FAIL`.
 2. **PASS (score ≥95 and p0 = 0)** → on to §6. Write storyboard.md once, with the images that
    passed (writing the document during the loop means redoing it every round).
@@ -595,10 +621,14 @@ straight through** — what has to be on screen, what to operate, what to say, a
 to save it as have to sit together in one block. The lines get carried over from the scenes.js
 narration (no maintaining two copies — scenes.js is the SoT).
 
-For long-form mixed shooting, carry **only the filmed scenes** and put a "what to film today"
-table (filename, scene, what to film, target length) at the top. Generated scenes have nothing
-for the user to film, so they don't go in the script — putting them in blurs what has to be
-done.
+For long-form mixed shooting, **render it with `references/make-script.js`** — don't copy
+it over by hand (`node make-script.js <storyboard directory>`, re-run whenever the copy
+changes). An all-live-voice episode (the default) carries **every shot** — filmed shots as
+[file / screen / action / lines], generated and slide shots marked voice-only
+(`voice/s<shot number>.wav`). There is sound for the user to record on every shot, which is
+why. The "what to film today" table at the top lists both the footage files and the voice
+files. Only a TTS episode carries filmed scenes alone — there the generated scenes have
+nothing for the user to do, and including them blurs what has to be done.
 
 **storyboard.html (the review render)** — copy `references/storyboard-html-template.html` into
 storyboard/ and fill in **only the `<title>` and the `✎ SB_DOC` block**. Never write scene data
@@ -645,6 +675,8 @@ badges too), shot count and expected total length, the cover title, key figures 
 For long-form, also say **the chapter list and that the safe area is provisional** (§1.5).
 If there are filmed scenes, show **the `script.md` path and how many files have to be filmed** —
 approval is the start of filming, so the user needs to know what and how many from this screen.
+If there are slide scenes, show **how many scenes are slides and each one's `plan` line** —
+what's being approved is that plan, and the files get built in §8 afterwards.
 **Carry the results of the four convergence loops here too** — the final score and round count
 for copy, per-scene, vocabulary, and images each, with **which scene was lowest and at what
 score** for the per-scene and vocabulary ones, and any unresolved findings as they are if a
@@ -667,10 +699,48 @@ score of copy produced which performance.
   finish, produce builds the video through the editing pipeline.
 - **Long-form mixed** — the user films **scene by scene** per the "what to film today" table in
   `script.md` and saves each into `data/<channel>/episodes/<topic>/footage/` under that
-  filename. No ingest alignment step (the filename is the alignment). When all the files are
-  there, `/social-flow:produce <channel> <topic>` joins the filmed and generated scenes into one
-  timeline. **Show the list of files to film on the approval screen as-is** — the user uses that
-  list as a checklist.
+  filename (on an all-live-voice episode the same table also lists the `voice/s<n>.wav` files
+  for the voice-only shots). No ingest alignment step (the filename is the alignment). When
+  all the files are there, `/social-flow:produce <channel> <topic>` joins the filmed and
+  generated scenes into one timeline. **Show the list of files to film on the approval screen
+  as-is** — the user uses that list as a checklist.
+  **If there are slide scenes, go straight to §8 after approval** — authoring the slides while
+  the user records means both jobs run at once and neither waits on the other.
+
+### 8. Slide authoring (after approval · only on episodes with slide scenes)
+
+Build the per-scene HTML slides from the approved storyboard's `plan` and `labels`. Every copy
+gate has already passed, so no new text gets written here — **every character on a slide comes
+from scenes.js** (`title`, `bullets`, `slide.labels`). Plant a new Korean string here and text
+that never passed the style gate goes on screen.
+
+1. **Per scene**, copy `references/slide-template.html` to `slides/<the visual.slide.file name>`,
+   change `SLIDE_SHOT` to that shot's number (its array position), and rewrite only
+   `renderSlide()` into that scene's diagram. Keep the determinism contract at the head of the
+   template — no CSS animations or transitions, no web fonts, no `Math.random` / `Date`. All the
+   motion there is comes from the builder's xfade.
+2. **Assign reveal groups 1:1 with the narration segments** (group 0 = the base skeleton). Only
+   scenes using sub-reveals (`A|B`) have more groups than segments.
+3. **Machine check** — `node references/check-slide.js <storyboard directory>` verifies the
+   three-way match between filename, `SLIDE_SHOT`, and scenes.js, catches Korean literals absent
+   from scenes.js, and catches determinism violations. Don't move on unless it exits 0.
+4. **Self-verify the state capture** — enumerate the states for each scene.
+
+   ```bash
+   REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
+   CAP_W=1920 CAP_H=1080 $REF/capture-reveals.sh <shot number - 1> \
+     "file://$PWD/slides/s<shot number>-<slug>.html" .work/slide-check/a<shot number - 1>r 0
+   ```
+
+   If the state count differs from **segment count + sub-reveal count + 1** (group 0 included),
+   the rg assignment is wrong — produce's "missing reveal state" gate checks the same thing again
+   at build time. Open the last state PNG and confirm by eye that every `labels` entry is
+   visible and that the text sits inside the zone (clear of the 285px subtitle band at the bottom).
+5. Slides are captured locally, so they cost nothing — there's nothing to write in the ledger
+   (`.work/cost-tally.tsv`), and the absence of a generation call is itself the record.
+
+When that's done you're waiting — once the user's `footage/` and `voice/` files arrive, produce
+uses the slide state captures as the segment visuals (produce §3.6).
 
 ## Traps
 
@@ -701,6 +771,9 @@ score of copy produced which performance.
 - **`references/storyboard-template.md`** — the standard storyboard.md structure + the research.md table format
 - **`references/storyboard-html-template.html`** — the storyboard.html render template — loads scenes.js dynamically and shows contract checks automatically; fill in only the `✎ SB_DOC` block
 - **`references/shot-script-template.md`** — shooting mode only: the script.md (shooting script) structure + filming rules + the scenes.js variant contract
+- **`references/make-script.js`** — the long-form script.md renderer — builds the shooting script from scenes.js (never maintain two copies). All shots on an all-live-voice episode, filmed scenes only on a TTS episode
+- **`references/slide-template.html`** — the §8 slide-scene render template — the `?reveal=k` reveal contract + the determinism contract; change only `SLIDE_SHOT` and `renderSlide()`
+- **`references/check-slide.js`** — the §8 slide machine check — filename↔scenes.js match, Korean literals outside the SoT, determinism violations
 - **`../autoproduce/references/cost-tally.md`** — the episode cost-ledger convention (where §5 and §5.5 write, the line format, the units). The source of truth for unit prices is `prices.tsv` in the same directory
 
 ### Delegated agents

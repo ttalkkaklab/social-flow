@@ -12,10 +12,13 @@ Video comes in two formats. The default is 9:16 short-form (1080×1920/30fps), d
 per platform; YouTube long-form uses 16:9 (1920×1080). You pick the format while
 authoring the storyboard, and a single `window.FORMAT` line in `scenes.js` fixes every
 build constant downstream. Long-form episodes **mix clips you film yourself with
-generated scenes** — where the evidence lives on screen (installs, live runs) you film
-it, and where something needs explaining the pipeline generates it. The storyboard
-writes a shooting script (`script.md`) that says what to show, what to say, and which
-filename to save each clip as, so you can just follow it.
+generated scenes** — where the evidence lives on screen you film it, where the point is
+a mood or a place the pipeline generates an image, and scenes that need words or
+diagrams on screen become **HTML slides**: planned in the storyboard, authored only
+after you approve the plan. Narration defaults to **your own voice on every scene**, so
+the shooting script (`script.md`) carries the lines for every shot — filmed shots get
+what to show, what to say, and the filename to save it as; the rest are voice-only
+recordings.
 
 The video pipeline (safe zones, reveal sync, subtitle contracts) and the SNS publishing
 client carry over from an earlier in-house plugin where they were verified in

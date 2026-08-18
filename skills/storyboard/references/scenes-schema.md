@@ -9,6 +9,7 @@ consumes after storyboard approval. `video-template.html` loads it with
 ```js
 // approved: 2026-07-29        ← recorded by the storyboard skill at HITL approval
 window.FORMAT = "shorts-9x16"; // format axis — omitted means shorts-9x16 (§format)
+window.VOICE = "user";         // all-live-voice episodes only (§all-live-voice episodes) — omitted means TTS
 window.THEME = {
   accent:  "#5b8cff",          // emphasis gradient start — verbatim from profile.md §3
   accent2: "#a05bff",          // emphasis gradient end
@@ -199,7 +200,7 @@ narration carry that information. How the three surfaces divide the work:
 
 ```js
 visual: {
-  picture: "still",                  // still | ai-video | recording | asset — the screen body
+  picture: "still",                  // still | ai-video | recording | asset | slide — the screen body
   overlay: "html",                   // html | none — HTML staging over the screen
   bg: "images/scene-1.png",          // generated background (produced at the storyboard stage)
   bgPrompt: "…",                     // the prompt used to generate it (record for regeneration and audit)
@@ -207,6 +208,7 @@ visual: {
                                      // written in veo vocabulary — push and orbit appear 0 times in the canonical docs
   video: null,                       // points only: the motion-background shot marker (§motion background) — omitted for stills
   clip: null,                        // quote only: the speech clip plan (below)
+  slide: null,                       // long-form slide scene (§slide scenes) — { file, plan, labels }
   character: null                    // the channel's shared character id — resolve-asset.py character <id>
 }
 ```
@@ -220,6 +222,7 @@ title and figure in HTML over a still photo is the default. Don't merge the two 
 | `ai-video` | Generated video — motion background, b-roll, speech clip | `type==="broll"`, or `visual.video`, or `visual.clip` |
 | `recording` | **A clip the user filmed themselves** (§filmed scenes) | `visual.source==="recording"` |
 | `asset` | A pre-made shared mp4 | `type==="outro"` |
+| `slide` | **An HTML slide** — a text-and-shape diagram filling the frame (§slide scenes, long-form only) | `visual.slide` present |
 
 **The verdict is per scene.** Generated and filmed scenes mixing within one episode is the
 normal long-form path, so don't flip the whole episode into one mode — that makes a single
@@ -228,8 +231,7 @@ rate) too. The renderer, the check badges, and the reviewer all look per scene.
 
 | `overlay` | Over the screen | When |
 |---|---|---|
-| `html` | `video-template.html` / `screencast-overlay.html` draws the text. Reveals, caption swaps, typing cards, signature | cover · points · quotation cards · filming overlays |
-| `none` | No text overlay. The video alone | b-roll, the shared outro |
+| `none` | No text overlay. Just the video itself | b-roll, the shared outro, slide scenes (the slide draws its own text) |
 
 Left unwritten, storyboard.html infers from the clues above. When the written value disagrees
 with the structure, the check strip catches it — `picture:"ai-video"` with no `video`, `clip`,
@@ -774,6 +776,32 @@ and preroll entirely. Any one of those three catching would desync the mouth fro
 The narration-over lane is used for the opposite — a cut filmed with only the screen and no
 speech (scrolling, waiting for a run, a result screen), where TTS has no sound to collide with.
 
+#### All-live-voice episodes — `window.VOICE = "user"` (the long-form default)
+
+An episode where the user **records every scene's narration in their own voice** says so in
+one top-level line. On the mixed lane this is the default — alternating the user's voice with
+TTS inside one episode changes the speaker partway through (the same reason produce is barred
+from quietly switching TTS engines). An episode covered by TTS happens only when the user
+decides on it.
+
+```js
+window.VOICE = "user";   // narration on every scene = the user's own voice. Omitted means TTS
+```
+
+On such an episode the "live voice = `narration: []`" rule from the two-lane table above does
+not apply — **every scene fills `narration`.** Those segments are not a TTS script but **the
+sentences to speak** (a recording guide plus the reference for subtitles and alignment), and
+they are why script.md carries the lines for every shot. Only the source of the sound differs
+per scene.
+
+| Scene | Sound | File |
+|---|---|---|
+| Filmed scene | the sound the clip already has (sync lane) | `footage/s<scene number>-<slug>.mp4` |
+| Generated or slide scene | a separately recorded voice | `voice/s<shot number>.wav` — **shot number = the SCENES array position (from 1)**, the same number script.md uses |
+
+`voice/` sits at the same level as `footage/` (the episode root), and the storyboard decides
+the filenames and prints them in script.md — the same rule as the filmed clips.
+
 #### On-screen text sits in the lower third
 
 A filmed scene's `title`, `bullets`, and `footnote` sit in a **band at the bottom left**. They
@@ -792,6 +820,59 @@ Long-form is 16:9. A portrait clip gets center-cropped, losing most of the frame
 stops with `STRICT_DIM=1` **before the first ffmpeg** (the landscape preset's default). This fact
 is written at the top of `script.md`'s filming rules — learning it after filming everything means
 filming again.
+
+### Slide scenes — a screen where text and shapes are the subject (`visual.slide`, long-form only)
+
+For a passage where **the explanation has to be the screen** — structure, comparison, steps, a
+flow of numbers — a slide beats a caption over a photo background. The criterion joins the one
+in §filmed scenes in a single line: if the evidence is on screen, film it; if it's mood, place,
+or people, generate an image; **if it only reads once text and shapes are laid out, make it a
+slide.**
+
+```js
+{
+  type: "points",
+  scene: 8, sceneSlug: "the workroom / day",
+  beat: "body",
+  title: "세 폴더가 전부야",
+  duration: 18,
+  narration: [ /* segments — 1:1 with the slide's reveal groups */ ],
+  visual: {
+    picture: "slide",
+    overlay: "none",                 // the slide IS the screen — nothing gets layered on top
+    slide: {
+      // If this shot is 12th in the array it's s12 — the array position, not the scene number (8)
+      file: "slides/s12-plugin-layout.html",
+      plan: "the plugin folder structure revealing itself top to bottom, one entry at a time",
+      labels: ["skills/", "agents/", "server/"]
+    }
+  }
+}
+```
+
+| Field | Required | What |
+|---|---|---|
+| `slide.file` | ✅ | `slides/s<shot number>-<slug>.html` — **shot number = the SCENES array position (from 1)**, the same number as script.md's shot and `voice/s<n>.wav` |
+| `slide.plan` | ✅ | One line on what to draw. The §7 approval reads this plan — the file is built afterwards |
+| `slide.labels` | ✅ when the shapes carry text | Every piece of text to draw on the slide beyond `title` and `bullets`. The style gate's screen surface checks this array — plant Korean text in the slide file that isn't here and characters that never passed the check go on screen |
+
+**The file is not built at the storyboard stage.** The storyboard carries only `plan` and
+`labels`; once §7 approval is done, storyboard §8 authors it against the
+`references/slide-template.html` contract. Copy changes change the slide, so flipping the order
+throws away slides you already made — the same reason as §5 images, except here what you spend
+is authoring time rather than money.
+
+- A slide scene has no `bg` or `bgPrompt` — it drops out of §5 image generation and the §5.5
+  image loop, and storyboard-reviewer's image mode doesn't treat its missing `scene-N.png` as
+  a defect.
+- **Reveal groups are 1:1 with narration segments** by default, and using sub-reveals (`A|B`)
+  makes more groups than segments — the same contract as video-template, so produce's state
+  capture and xfade become the slide animation as they are.
+- **The builder's xfade is all the animation there is.** Add a CSS animation, a transition, or
+  a blinking cursor and the state capture's byte-identity check (capture-reveals.sh's exit
+  condition) never finishes. A slide has to render deterministically for a given `?reveal=k`.
+- Keep text inside the zone (x 96 · top 96 · bottom 285) — even with no Ken Burns
+  (`zoom=none`), the bottom 285px is the subtitle band.
 
 ## Authoring verification checklist (the storyboard skill's self-check before requesting approval)
 
@@ -821,7 +902,15 @@ strip says no violations.
       `clip` follows the `footage/s<scene number>-<slug>.mp4` convention. The live-voice lane has
       `narration: []`, the narration-over lane has segments — having both makes the sound collide
 - [ ] **Filmed-scene lines are one copy with `script.md`** — scenes.js is the SoT and script.md is
-      the render. Don't create sentences that exist only in the shooting script
+      the render. Don't create sentences that exist only in the shooting script (the render is
+      `make-script.js`)
+- [ ] **If there are slide scenes** (§slide scenes) each one has `slide.file` and `slide.plan`,
+      and file follows the `slides/s<shot number>-<slug>.html` convention (shot number = array
+      position). Every piece of text to draw on the shapes is in `slide.labels` — the file itself
+      is built in §8 after approval
+- [ ] **On an all-live-voice episode** `window.VOICE = "user"` is present and every scene that
+      has narration filled it (§all-live-voice episodes) — the filmed-scene "live voice = `[]`"
+      rule is for TTS episodes only
 - [ ] Every shot has `scene`, `sceneSlug`, `shot.size`, `shot.info` — `info` doesn't overlap within
       the same scene
 - [ ] `visual.picture` and `visual.overlay` match the structure. AI video and HTML staging aren't

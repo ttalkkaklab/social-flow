@@ -122,7 +122,21 @@ Three things to look at in a filmed scene.
 - Are the lines **something you can say over that screen.** Lines explaining what isn't on
   screen belong to a generated scene, not this one.
 - Does a live-voice scene (`narration: []`) carry lines, or a narration-over scene sit
-  empty. Either one makes the audio double up or go silent (P0).
+  empty. Either one makes the audio double up or go silent (P0). **This test does not
+  apply to an all-live-voice episode (`window.VOICE === "user"`)** — there the contract
+  is that every scene fills narration (scenes-schema §all-live-voice episodes), and a
+  filmed scene's segments are lines to speak, not a TTS script. In that case the defect
+  is the reverse: **an empty scene**.
+
+**Slide scenes (`visual.slide`) also have three things to look at**
+(scenes-schema §slide scenes).
+- Does `plan` **actually turn that scene's narration into a picture.** If the narration
+  describes a structure and the plan is a mood shot, the scene has no reason to be a slide.
+- Is `labels` **complete.** If a structural element the narration names — a folder, a
+  step, an item — appears in neither labels nor title/bullets, the screen can't carry
+  the sound.
+- A missing slide file (`slides/*.html`) is **not a defect** — the files come out of
+  storyboard §8 after approval. What you're reading here is the plan, not the artifact.
 
 ---
 
@@ -543,6 +557,10 @@ scene is saying**. Judge fit, not looks.
 
 If any image file won't open, mark that one "unverified" and withhold its share of the
 points.
+
+**Slide scenes (`visual.slide`) are out of scope for this mode** — their screen is not a
+generated image but an HTML slide that storyboard §8 builds after approval, so having no
+`scene-N.png` is normal. Don't raise the absence as a defect.
 
 ## P0 defects (any one of them fails the storyboard)
 
