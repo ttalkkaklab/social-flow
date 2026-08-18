@@ -829,7 +829,7 @@ window.SB_DOC = {
     var seq = String(s.sequence || "");
     if (/^결과/.test(seq)) return "result";
     if (/^(기획|방법|단계|내용)/.test(seq)) return "body";
-    if (/^문제/.test(seq)) return "hooking";
+    if (/^(문제|후킹)/.test(seq)) return "hooking";
     return "";
   }
   function playbackOrder(list) {
@@ -1304,12 +1304,19 @@ window.SB_DOC = {
          (firstBeat.body.i + 1) + " 을 샷 " + (firstBeat.result.i + 1) + " 뒤로 옮긴다");
     orderOk = false;
   }
-  if (firstBeat.hooking && firstBeat.result && firstBeat.result.pos < firstBeat.hooking.pos) {
-    flag("warn", "재생 순서", "결과물이 후킹보다 앞에 있다 — 왜 필요한지 건 다음에 완성본을 펼친다");
+  /* 후킹은 모든 회차에 있다 — 정보형도(scenes-schema §hooking). 커버 바로 다음 샷이어야
+     한다. 도입 b-roll(after:0)은 재생 역할이 아니라 커버 그림이 움직이는 4초라 건너뛴다.
+     beat 를 안 적은 옛 파일은 여기서 경고를 받는다 — 감점이 아니라 이름표를 달라는 뜻이다. */
+  var mainOrder = order.filter(function (o) { return o.s.type !== "broll"; });
+  var afterCover = mainOrder.length > 1 && mainOrder[0].s.type === "cover" ? mainOrder[1] : null;
+  if (mainOrder.length > 1 && !firstBeat.hooking) {
+    flag("warn", "재생 순서", "후킹 샷이 없다 — 커버 다음에 왜 남아야 하는지 거는 샷(beat:\"hooking\")을 넣는다. 정보형도 예외가 아니다");
     orderOk = false;
-  }
-  if (processy && firstBeat.result && !firstBeat.hooking) {
-    flag("warn", "재생 순서", "결과물 앞에 후킹이 없다 — 왜 그 결과가 필요한지 거는 샷이 없다");
+  } else if (afterCover && beatOf(afterCover.s) !== "hooking") {
+    var ab = beatOf(afterCover.s);
+    flag("warn", "재생 순서", "커버 다음 샷이 후킹이 아니다 — 샷 " + (afterCover.i + 1) +
+         (ab ? "(" + (BEAT_KO[ab] || ab) + ")" : "(beat 없음)") + " 이 후킹(샷 " +
+         (firstBeat.hooking.i + 1) + ")보다 앞에 있다. 커버 → 후킹 → 결과물 → 내용 순으로 옮긴다");
     orderOk = false;
   }
 
