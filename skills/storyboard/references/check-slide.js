@@ -28,10 +28,9 @@ const sot = JSON.stringify(SCENES) + JSON.stringify(global.window.THEME || {});
 
 const slidesDir = path.join(dir, "slides");
 let files = process.argv.slice(3);
-if (!files.length) {
-  if (!fs.existsSync(slidesDir)) { console.error(`slides/ 없음: ${slidesDir}`); process.exit(2); }
+if (!files.length && fs.existsSync(slidesDir))
   files = fs.readdirSync(slidesDir).filter(f => f.endsWith(".html"));
-}
+// slides/ 가 아직 없는 것은 오류가 아니다 — §8 전(승인 전) 호출이면 미저작 목록만 보고한다.
 
 let bad = 0;
 const fail = (f, msg) => { console.error(`✗ ${f}: ${msg}`); bad++; };
