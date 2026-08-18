@@ -11,7 +11,7 @@ import { enabledPlatforms } from './sns-client.js';
 // 둘이 갈라지면 클라이언트가 보는 버전이 실제 패키지와 달라지므로, package.json 을
 // 올릴 때 이 줄도 함께 올린다(계약 테스트가 두 값의 일치를 검사한다).
 const server = new Server(
-  { name: 'social-flow', version: '0.10.0' },
+  { name: 'social-flow', version: '0.11.0' },
   { capabilities: { tools: {} } },
 );
 
@@ -66,7 +66,7 @@ async function main() {
   const snsEnabled = enabledPlatforms();
   const channelDirs = listChannelDirs();
   console.error(
-    `Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* tools will fail)'}, ` +
+    `Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* and sns_issue_scout tools will fail)'}, ` +
       `naver keys ${config.naverClientId && config.naverClientSecret ? 'set' : 'MISSING (naver_search will fail)'}, ` +
       `data.go.kr key ${config.dataGoKrApiKey ? 'set' : 'MISSING (datago_file_fetch/datago_api_call will fail — search/detail/download still work)'}, ` +
       `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail — tts_local_generate does not need it)'}, ` +

@@ -63,7 +63,7 @@ social-flow/
 │   ├── grow-instagram/          # /social-flow:grow-instagram — Instagram 자율 성장 루프 1틱 (댓글 응대·이탈률/시청 관찰·대기열 보충 저작·대기열 게시 — 릴스는 queue_instagram: ready + 공개 URL 이 있어야만)
 │   │   └── references/          #   growth-playbook.md(두 관문·자격 상실 정본)·growth-plan-template.md
 │   ├── review-recent/           # /social-flow:review-recent — 최근 5편 유튜브·인스타 피드백 HTML (퍼널·막대·문제→가설→다음 편)
-│   ├── topic-scout/             # /social-flow:topic-scout — 시장에서 검증된 유튜브 주제 (채널 중앙값 대비 5배 · 도표 HTML)
+│   ├── topic-scout/             # /social-flow:topic-scout — 시장에서 검증된 유튜브 주제 (채널 중앙값 대비 5배 · 도표 HTML) + SNS 이슈 절(스레드·X·인스타 언급 목록·급상승 검색어)
 │   └── platform-guide/          # 지식형 — 플랫폼 문법·영상 규격·한국어 문체 SoT
 │       └── references/          #   platform-playbook.md·korean-style.md·check-style.py(문체 게이트)
 ├── agents/
@@ -152,23 +152,25 @@ Threads 반말이나 FB 사례 수집형 마무리처럼 플레이북이 요구�
 /social-flow:publish 재테크 <주제>                    # [승인]→게시
 ```
 
-## MCP 툴 표면 (43종)
+## MCP 툴 표면 (46종)
 
-**`tools/list` 에는 43종이 다 보이지 않는다.** 게시·인사이트 툴 9종
+**`tools/list` 에는 46종이 다 보이지 않는다.** 게시·인사이트 툴 9종
 (`threads_publish`·`instagram_publish`·`facebook_publish`·`facebook_comment`·
 `youtube_publish`·`threads_insights`·`instagram_insights`·`youtube_insights`·
 `threads_search`)은 **자격증명 파일이 있는 플랫폼만** 노출된다 — 목록을 요청한 시점에
 평가하므로 토큰을 추가하면 서버를 다시 띄우지 않아도 나타난다. 토큰이 하나도 없는
-환경에서 세면 34종이다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가
-돌아온다(조용히 실패하지 않는다). `content_feedback`·`youtube_topic_scout` 는
-플랫폼 게이트 밖이라 토큰이 없어도 목록에 있다. 스카우트는 `YOUTUBE_API_KEY` 또는
-채널 OAuth 가 호출 시점에 필요하고, 피드백은 없는 쪽 섹션만 건너뛴다.
+환경에서 세면 37종이다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가
+돌아온다(조용히 실패하지 않는다). `content_feedback`·`youtube_topic_scout`·
+`sns_issue_scout` 는 플랫폼 게이트 밖이라 토큰이 없어도 목록에 있다. 유튜브
+스카우트는 `YOUTUBE_API_KEY` 또는 채널 OAuth 가, SNS 스카우트는 `SERPAPI_API_KEY` 가
+호출 시점에 필요하고, 피드백은 없는 쪽 섹션만 건너뛴다.
 
 | 그룹 | 툴 | 백엔드 |
 |---|---|---|
 | 조사 | `youtube_topic_scout` | YouTube Data API — 내 분야 채널을 모아 최근 업로드 중앙값 대비 5배 이상 영상을 찾고 제목에서 주제어를 뽑는다 (`YOUTUBE_API_KEY` 우선, 없으면 OAuth `youtube.readonly`) |
+| 조사 | `sns_issue_scout` | SerpApi 구글 검색에 `site:threads.com`·`site:x.com`·`site:instagram.com` 을 붙여 최근 게시물을 모으고, 여러 글·여러 플랫폼에 같이 나오는 주제어를 센다 (+ 구글 급상승 검색어). **참여량 없는 언급 목록**이라 유튜브 배수와 같은 표에 섞지 않는다 — 스레드 키워드 검색은 고급 액세스 전엔 자기 글만, 인스타 로그인 API 엔 공개 검색이 없어 이 경로가 셋을 한 번에 보는 유일한 무계정 길이다 |
 | 조사 | `naver_search` | Naver Open API (일 25,000회 무료 — 한국어 1차). type 8종: news·blog·web·cafe·kin(지식iN)·image·encyc(백과)·local(지역) |
-| 조사 | `serp_web_search` / `serp_news_search` / `serp_naver_search` / `serp_image_search` | SerpApi (무료 250회/월 — 정밀·해외). naver 는 where=web·news·image·video + period 기간 필터, image 는 라이선스·크기·종횡비 필터 |
+| 조사 | `serp_web_search` / `serp_news_search` / `serp_naver_search` / `serp_image_search` / `serp_trending_now` | SerpApi (무료 250회/월 — 정밀·해외). naver 는 where=web·news·image·video + period 기간 필터, image 는 라이선스·크기·종횡비 필터, trending_now 는 나라별 구글 급상승 검색어(창 4·24·48·168시간, 검색량·증가율 어림값) |
 | 공공데이터 | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (무인증 — 검색·상세·파일 원본) |
 | 공공데이터 | `datago_file_fetch` / `datago_api_call` | odcloud·apis.data.go.kr (인증키 + **API 별 활용신청** 필수) |
 | 이미지 생성 | `image_local_generate` | Z-Image Turbo 온디바이스, mflux/MLX (**API 키·네트워크·과금 없음 — 기본 경로**. Apple Silicon + `uv tool install --python 3.12 mflux` 필요, 최초 호출 시 가중치 31GB 다운로드. 텍스트 포함 이미지 금지 — 한글 자소가 깨진다) |
@@ -178,7 +180,7 @@ Threads 반말이나 FB 사례 수집형 마무리처럼 플레이북이 요구�
 | 음성 생성 | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 보이스 30종, 언어 자동 감지, wav 모노 24kHz 저장) |
 | 음성 생성 | `tts_local_generate` | Supertonic 3 온디바이스 (**API 키·네트워크 없음** — 보이스 10종, 언어 31종 명시 지정, wav 모노 44.1kHz. 로컬 python + `pip install supertonic` 필요) |
 | 음악 생성 | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip(30초 고정 mp3 — BGM 기본 경로) · Lyria RealTime(5~300초 가변 wav 48kHz, seed 재현) |
-| 게시 | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` | 각 플랫폼 API 직접 호출 — **자격증명 파일이 있는 플랫폼만 노출** |
+| 게시 | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | 각 플랫폼 API 직접 호출 — **자격증명 파일이 있는 플랫폼만 노출**(`youtube_update` 는 이미 올린 영상의 제목·설명·태그·공개 범위 수정) |
 | 받은 댓글 | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | 플랫폼 횡단 정규화 인박스 · 답글 · 숨김(삭제 미제공). 인박스·답글은 4플랫폼, 숨김은 YouTube 제외(API 가 주는 건 의미가 다른 검토 보류뿐) |
 | 점검 | `sns_account_check` | 토큰 /me 일괄 점검 (토큰 값 비노출) |
 | 성장 조회 | `threads_insights` / `threads_search` | Threads 인사이트(계정·게시물 지표)·공개 게시물 키워드 검색 — grow-threads 전용 (`threads_manage_insights`·`threads_keyword_search` 스코프) |

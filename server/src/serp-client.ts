@@ -184,7 +184,7 @@ export interface WebSearchInput {
  * 3페이지였기 때문이고, num=5·start=5 의 중복은 start=5 가 1페이지 안쪽을
  * 가리켰기 때문이다.)
  */
-const GOOGLE_PAGE_SIZE = 10;
+export const GOOGLE_PAGE_SIZE = 10;
 
 export async function webSearch(input: WebSearchInput): Promise<SerpResult> {
   const limit = input.limit ?? 10;
@@ -662,4 +662,161 @@ export async function imageSearch(input: ImageSearchInput): Promise<SerpResult> 
     ),
     isError: false,
   };
+}
+
+// ── 급상승 검색어 (engine=google_trends_trending_now) ─────────────
+
+/** serp_trending_now.hours 의 허용값 — 구글이 미리 정한 창 넷뿐이다 */
+export const TRENDING_HOURS = [4, 24, 48, 168] as const;
+/** serp_trending_now.limit 의 스키마 상한 — handlers.ts 와 같은 값이어야 한다 */
+export const SERP_TRENDING_MAX_LIMIT = 50;
+export const DEFAULT_TRENDING_GEO = 'KR';
+export const DEFAULT_TRENDING_HOURS = 24;
+export const DEFAULT_TRENDING_LIMIT = 20;
+const TREND_BREAKDOWN_CAP = 8;
+
+export interface TrendingNowInput {
+  geo?: string;
+  hours?: (typeof TRENDING_HOURS)[number];
+  categoryId?: number;
+  onlyActive?: boolean;
+  hl?: string;
+  limit?: number;
+}
+
+export interface TrendingItem {
+  query: string;
+  searchVolume: number | null;
+  increasePct: number | null;
+  active: boolean;
+  startedAt: string | null;
+  categories: string[];
+  breakdown: string[];
+}
+
+export interface TrendingNowData {
+  geo: string;
+  hours: number;
+  count: number;
+  received: number;
+  trends: TrendingItem[];
+}
+
+function unixToIso(value: unknown): string | null {
+  return typeof value === 'number' && Number.isFinite(value) ? new Date(value * 1000).toISOString() : null;
+}
+
+/**
+ * 급상승 검색어를 파싱된 형태로 받는다 — serp_trending_now 툴과 sns_issue_scout 이
+ * 같이 쓴다. 검색량·증가율은 구글이 구간으로 주는 어림값(2,000,000 · 1000%)이라
+ * 순위 비교용이지 절대치가 아니다.
+ */
+export async function fetchTrendingNow(
+  input: TrendingNowInput,
+): Promise<{ error?: SerpResult; data?: TrendingNowData }> {
+  const geo = (input.geo ?? DEFAULT_TRENDING_GEO).toUpperCase();
+  const hours = input.hours ?? DEFAULT_TRENDING_HOURS;
+  const limit = input.limit ?? DEFAULT_TRENDING_LIMIT;
+  const { result, json } = await callSerpApi({
+    engine: 'google_trends_trending_now',
+    geo,
+    hours,
+    hl: input.hl,
+    category_id: input.categoryId,
+    only_active: input.onlyActive ? 'true' : undefined,
+  });
+  if (result) return result.isError ? { error: result } : { data: { geo, hours, count: 0, received: 0, trends: [] } };
+
+  const p = json as Record<string, any>;
+  const raw = (p.trending_searches as any[]) ?? [];
+  const trends: TrendingItem[] = raw.slice(0, limit).map((t) => ({
+    query: str(t.query),
+    searchVolume: typeof t.search_volume === 'number' ? t.search_volume : null,
+    increasePct: typeof t.increase_percentage === 'number' ? t.increase_percentage : null,
+    active: t.active === true,
+    startedAt: unixToIso(t.start_timestamp),
+    categories: ((t.categories as any[]) ?? []).map((c) => str(c?.name)).filter(Boolean),
+    breakdown: ((t.trend_breakdown as any[]) ?? []).slice(0, TREND_BREAKDOWN_CAP).map(str).filter(Boolean),
+  }));
+  return { data: { geo, hours, count: trends.length, received: raw.length, trends } };
+}
+
+function str(value: unknown): string {
+  return typeof value === 'string' ? value : value == null ? '' : String(value);
+}
+
+export async function trendingNow(input: TrendingNowInput): Promise<SerpResult> {
+  const { error, data } = await fetchTrendingNow(input);
+  if (error) return error;
+  if (!data || data.trends.length === 0) {
+    return {
+      text: '(급상승 검색어 없음 — geo 코드를 확인하거나 hours 를 168 로 넓혀 1회만 재시도할 것)',
+      isError: false,
+    };
+  }
+  const limit = input.limit ?? DEFAULT_TRENDING_LIMIT;
+  return {
+    text: JSON.stringify(
+      compact({
+        geo: data.geo,
+        hours: data.hours,
+        count: data.count,
+        note: sliceNote(
+          data.received,
+          limit,
+          `이 엔진은 page 가 없다 — 더 보려면 limit 을 ${SERP_TRENDING_MAX_LIMIT} 까지 올리거나 categoryId 로 좁힐 것`,
+        ),
+        trends: data.trends,
+      }),
+      null,
+      1,
+    ),
+    isError: false,
+  };
+}
+
+// ── 구글 웹 검색 원자료 (sns_issue_scout 전용) ────────────────────
+
+export interface OrganicHit {
+  position: number;
+  title: string;
+  link: string;
+  snippet: string;
+  date?: string;
+  source?: string;
+}
+
+/**
+ * 구글 organic 결과를 슬리밍만 하고 그대로 넘긴다 — 여러 검색을 한 응답으로
+ * 묶는 호출자(sns_issue_scout)가 쓴다. 텍스트 포장은 webSearch 가 맡는다.
+ */
+export async function fetchGoogleOrganic(input: {
+  query: string;
+  gl?: string;
+  hl?: string;
+  page?: number;
+  recency?: WebSearchInput['recency'];
+}): Promise<{ error?: SerpResult; hits: OrganicHit[] }> {
+  const { result, json } = await callSerpApi({
+    engine: 'google',
+    q: input.query,
+    gl: input.gl,
+    hl: input.hl,
+    start: input.page && input.page > 1 ? (input.page - 1) * GOOGLE_PAGE_SIZE : undefined,
+    tbs: input.recency ? RECENCY_TBS[input.recency] : undefined,
+  });
+  if (result) return result.isError ? { error: result, hits: [] } : { hits: [] };
+  const p = json as Record<string, any>;
+  const offset = input.page && input.page > 1 ? (input.page - 1) * GOOGLE_PAGE_SIZE : 0;
+  const hits: OrganicHit[] = ((p.organic_results as any[]) ?? [])
+    .filter((r) => typeof r?.link === 'string')
+    .map((r, i) => ({
+      position: offset + (typeof r.position === 'number' ? r.position : i + 1),
+      title: str(r.title),
+      link: r.link as string,
+      snippet: str(r.snippet),
+      date: typeof r.date === 'string' ? r.date : undefined,
+      source: typeof r.source === 'string' ? r.source : undefined,
+    }));
+  return { hits };
 }

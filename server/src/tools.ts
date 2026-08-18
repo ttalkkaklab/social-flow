@@ -539,6 +539,44 @@ const YOUTUBE_TOPIC_SCOUT_OUTPUT: OutputSchema = {
   required: ['queries', 'method', 'scanned', 'quotaUnits', 'keywords', 'outliers', 'channels'],
 };
 
+const SNS_ISSUE_SCOUT_OUTPUT: OutputSchema = {
+  type: 'object',
+  properties: {
+    queries: { type: 'array', description: '실제로 돌린 시드 검색어', items: { type: 'string' } },
+    platforms: { type: 'array', description: '훑은 플랫폼 (threads | x | instagram)', items: { type: 'string' } },
+    method: {
+      type: 'object',
+      description:
+        '{ via, recency, gl, hl, pagesPerQuery, sites, ranking, scoring, trending } — 구글 site: 검색 계약. ranking 은 관련도순(참여량 아님), scoring 은 언급 글 수 × 플랫폼 가중',
+    },
+    scanned: {
+      type: 'object',
+      description: '{ searches, hits, posts, duplicates, returnedPosts } — 돌린 검색 수(재시도 포함)·받은 결과 수·게시물로 판정된 수(중복 제거)·같은 문장 재게시로 접은 수·응답에 실은 수',
+    },
+    credits: { type: 'number', description: '이번 호출이 쓴 SerpApi 크레딧 추정치 (검색 수 + 급상승 1)' },
+    keywords: {
+      type: 'array',
+      description:
+        '{ phrase, score, postCount, platformCount, platforms[], evidence[{platform,url,title}] } — 여러 글·여러 플랫폼에 같이 나온 주제어. 점수는 언급 글 수 기반이라 유튜브 배수와 다른 잣대',
+      items: { type: 'object' },
+    },
+    posts: {
+      type: 'array',
+      description:
+        '{ platform, url, author, title, snippet, date?, matchedQueries[] } — 게시물 단위(프로필·태그 페이지 제외, 슬러그·미디어 경로 정규화). 참여량 필드는 없다',
+      items: { type: 'object' },
+    },
+    trending: {
+      type: 'object',
+      description:
+        '{ geo, hours, count, items[{query, searchVolume, increasePct, active, startedAt, categories[], breakdown[], matchesSeed}] } — Google Trends 급상승 검색어. includeTrending=false 면 없음',
+    },
+    note: { type: 'string', description: '게시물을 상한까지만 실었을 때의 안내' },
+    errors: { type: 'array', description: '부분 실패 사유. 없으면 필드 자체 생략', items: { type: 'string' } },
+  },
+  required: ['queries', 'platforms', 'method', 'scanned', 'credits', 'keywords', 'posts'],
+};
+
 const THREADS_SEARCH_OUTPUT: OutputSchema = {
   type: 'object',
   properties: {
@@ -672,6 +710,32 @@ export const TOOLS: Tool[] = [
         safe: { type: 'boolean', description: '성인 콘텐츠 필터 (기본 true=켬)' },
       },
       required: ['query'],
+    },
+  },
+  {
+    name: 'serp_trending_now',
+    title: 'Google 급상승 검색어 (SerpApi)',
+    annotations: HINT.read,
+    description:
+      'Google Trends 급상승 검색어 (SerpApi engine=google_trends_trending_now) — "지금 이 나라에서 뭐가 뜨나"를 검색량·증가율과 함께 받는다(읽기 전용). topic-scout 의 SNS 이슈 절과 grow-* 루프의 시의성 소재 판단용. 구글 검색 기준이지 SNS 참여 기준이 아니며, searchVolume·increasePct 는 구글이 구간으로 주는 어림값(2,000,000 · 1000%)이라 순위 비교로만 쓴다. 검색어(query)가 없는 엔진이라 geo 로 나라를 고르고 hours 로 창을 정한다 — 창은 4·24·48·168 넷뿐. 이 엔진은 page 가 없다. 호출 1회 = SerpApi 크레딧 1건(무료 250회/월) — 같은 geo·hours 를 한 세션에 반복하지 말 것.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        geo: { type: 'string', description: '나라 코드 2자 (기본 KR). 미국 US, 일본 JP' },
+        hours: {
+          type: 'number',
+          enum: [4, 24, 48, 168],
+          description: '최근 몇 시간의 급상승인지 (기본 24). 구글이 정한 창 넷 — 4 | 24 | 48 | 168(7일)',
+        },
+        categoryId: {
+          type: 'number',
+          description:
+            '카테고리로 좁힐 때 (선택). 3=Business and Finance · 4=Entertainment · 7=Health · 14=Politics · 16=Shopping · 17=Sports · 18=Technology · 19=Travel — 없으면 전체',
+        },
+        onlyActive: { type: 'boolean', description: 'true 면 지금도 오르는 중인 검색어만 (기본 false — 창 안에 한 번이라도 급상승한 것 전부)' },
+        hl: { type: 'string', description: '언어 코드, 예: ko, en — 카테고리 이름 표기에만 영향' },
+        limit: { type: 'number', description: '결과 수 (기본 20, 최대 50). 엔진이 한 번에 수백 건을 주므로 값을 줄여도 과금은 1회다' },
+      },
     },
   },
   {
@@ -2132,6 +2196,56 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
           type: 'number',
           description: '반환할 주제어 수 (기본 15, 3~30). 검색 툴 공통 인자명',
         },
+      },
+      required: ['query'],
+    },
+  },
+
+  {
+    name: 'sns_issue_scout',
+    title: 'SNS 이슈 스카우트 (스레드·X·인스타, SerpApi)',
+    annotations: HINT.read,
+    outputSchema: SNS_ISSUE_SCOUT_OUTPUT,
+    description:
+      '스레드·X·인스타그램에서 내 주제로 지금 오가는 글을 모아 주제어를 세운다(읽기 전용). SerpApi 구글 검색에 site:threads.com / site:x.com / site:instagram.com 을 붙여 최근 구간(recency, 기본 week) 게시물을 플랫폼 × 시드마다 훑고, 게시물 URL 을 정규화해 중복을 걷어낸 뒤 여러 글·여러 플랫폼에 같이 나오는 주제어를 keywords 로 돌려준다. **youtube_topic_scout 과 잣대가 다르다** — 이 경로에는 좋아요·답글·조회 같은 참여량이 없고 순서도 구글 관련도순이라, 결과는 "무엇이 터졌나"가 아니라 "이 주제로 지금 무엇이 오가나"의 언급 목록이다. 점수는 언급 글 수 × 플랫폼 가중이므로 유튜브 배수 표와 같은 칸에 섞지 말 것. includeTrending(기본 true)이면 Google Trends 급상승 검색어(gl 나라)를 trending 에 붙이고 시드·상위 주제어와 겹치는 항목에 matchesSeed 를 표시한다. 크레딧 = 플랫폼 수 × 시드 수 × pagesPerQuery + 급상승 1 (기본 3×1×1+1=4건, 무료 250회/월) — 같은 시드를 같은 날 반복하지 말 것. 스니펫이 본문 그대로가 아닐 수 있다(스레드는 자동 생성 주제 요약문이 스니펫으로 오기도 한다) — 인용하려면 URL 을 열어 확인할 것.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: '시드 검색어 — 채널 profile 주제 영역에서 뽑은 짧은 명사구(예: "AI 자동화"). 검색 툴 공통 인자명',
+        },
+        extraQueries: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '추가 시드(최대 3개, query 와 합쳐 4개). 같은 말의 다른 표현·하위 주제 — 시드 하나가 플랫폼 수만큼 크레딧을 쓴다',
+        },
+        platforms: {
+          type: 'array',
+          items: { type: 'string', enum: ['threads', 'x', 'instagram'] },
+          description: '훑을 플랫폼 (기본 셋 다). 좁히면 크레딧이 그만큼 준다',
+        },
+        recency: {
+          type: 'string',
+          enum: ['day', 'week', 'month'],
+          description: '최근 구간 (기본 week). "지금 이슈"는 day~week, 소재 풀은 month',
+        },
+        gl: { type: 'string', description: '국가 코드 2자 (기본 kr) — 검색 지역이자 급상승 검색어의 나라' },
+        hl: { type: 'string', description: '언어 코드 (기본 ko)' },
+        pagesPerQuery: {
+          type: 'number',
+          description: '플랫폼 × 시드마다 넘길 구글 페이지 수 (기본 1, 최대 2 — 한 페이지 10건). 2 로 두면 크레딧이 두 배',
+        },
+        includeTrending: {
+          type: 'boolean',
+          description: 'Google Trends 급상승 검색어를 함께 받을지 (기본 true, 크레딧 +1). serp_trending_now 를 따로 부를 거면 false',
+        },
+        trendingHours: {
+          type: 'number',
+          enum: [4, 24, 48, 168],
+          description: '급상승 검색어 창 (기본 24). 4 | 24 | 48 | 168',
+        },
+        limit: { type: 'number', description: '반환할 주제어 수 (기본 15, 3~30). 검색 툴 공통 인자명' },
       },
       required: ['query'],
     },
