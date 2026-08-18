@@ -75,7 +75,7 @@ turns it into edit.json as-is.
       "subs": [                        // subtitles — corrected notation from timeline.md, source clock as-is
         { "start": 3.4, "end": 6.1, "text": "a sentence" }
       ],
-      "note": "took 2 adopted (restarted at 0:41)"   // (optional) record of the alignment call
+      "note": "take 2 adopted (restarted at 0:41)"   // (optional) record of the alignment call
     }
   ]
 }

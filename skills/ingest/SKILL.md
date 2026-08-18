@@ -176,8 +176,8 @@ alignment.json and takes the editing pipeline).
 
 ## Traps
 
-- **A spoken transcript is not narration** — fillers ("uh", "so now here"),
-  repetitions, and slips are all in there. It's raw material for the storyboard to
+- **A spoken transcript is not narration** — fillers ("어", "이제 여기서" — "uh",
+  "now here"), repetitions, and slips are all in there. It's raw material for the storyboard to
   rebuild, not sentences to copy into scenes.js (the character limits and the plain-
   language principle get applied at the storyboard stage).
 - **A spoken number is not a source** — time-sensitive values (prices, tax rates,
