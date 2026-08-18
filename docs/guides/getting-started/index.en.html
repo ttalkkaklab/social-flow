@@ -313,13 +313,12 @@ footer a { color: var(--accent); }
   <div class="step">
     <div class="step-num">1</div>
     <div class="step-body">
-      <h3>Clone it and build the server</h3>
-      <p>Skip this one step and the plugin loads with no tools at all. The repo ships the build output, but not the libraries it needs to run (<code>node_modules</code>).</p>
-<pre><code>git clone https://github.com/ttalkkaklab/social-flow.git
-cd social-flow/server
-npm install &amp;&amp; npm run build</code></pre>
-      <p>Run <code>npm run check</code> instead and you get the build plus the self-check tests. They call no external API, so they pass without any keys.</p>
-      <div class="note"><strong>The repo is public.</strong> <code>git clone</code> works without authentication, and the license is Apache 2.0. If you already have a copy, use that one.</div>
+      <h3>Install from the marketplace</h3>
+      <p>Two lines inside Claude Code and you're done. The server ships as a single dependency-inlined bundle, so there is nothing to download or build.</p>
+<pre><code><span class="p">/plugin marketplace add</span> ttalkkaklab/social-flow
+<span class="p">/plugin install</span> social-flow@social-flow</code></pre>
+      <p>Prefer the terminal? <code>claude plugin marketplace add ttalkkaklab/social-flow</code> followed by <code>claude plugin install social-flow@social-flow</code> does the same thing.</p>
+      <div class="note"><strong>The repo is public.</strong> It installs without authentication, and the license is Apache 2.0.</div>
     </div>
   </div>
 
@@ -337,12 +336,11 @@ claude</code></pre>
   <div class="step">
     <div class="step-num">3</div>
     <div class="step-body">
-      <h3>Load the plugin</h3>
-      <p>Point Claude Code at the folder you cloned and it's available in that session.</p>
-<pre><code>claude --plugin-dir ~/social-flow</code></pre>
-      <p>If you'd rather not type the flag every time, register it as a local marketplace. Two lines inside Claude Code — what follows <code>@</code> on the second line is the marketplace name, which this repo declares as <code>social-flow</code> in <code>.claude-plugin/marketplace.json</code>.</p>
-<pre><code><span class="p">/plugin marketplace add</span> ~/social-flow
-<span class="p">/plugin install</span> social-flow@social-flow</code></pre>
+      <h3>(Optional) Clone it if you want to hack on the code</h3>
+      <p>Only for people who plan to edit the skills or the server. Point Claude Code at your clone and that session runs the clone's code.</p>
+<pre><code>git clone https://github.com/ttalkkaklab/social-flow.git ~/social-flow
+claude --plugin-dir ~/social-flow</code></pre>
+      <p>It runs as-is; only after editing <code>server/src</code> do you need <code>cd ~/social-flow/server &amp;&amp; npm install &amp;&amp; npm run check</code> for the build and the self-check tests. They call no external API, so they pass without any keys.</p>
     </div>
   </div>
 
@@ -578,9 +576,10 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
 
   <div class="faq">
     <h3>social-flow isn't in <code>/mcp</code></h3>
-    <p>Usually <code>npm install</code> was skipped. The repo carries the build output but not the libraries. Running the server directly shows the cause immediately.</p>
-<pre><code>cd ~/social-flow &amp;&amp; node server/dist/bundle.js</code></pre>
-    <p>If <code>social-flow MCP server started</code> prints, the server is fine and the problem is in how the plugin was loaded.</p>
+    <p>Start the server directly — the cause shows up immediately. From the install cache for a marketplace install, from your clone otherwise.</p>
+<pre><code>node ~/.claude/plugins/cache/social-flow/social-flow/*/server/dist/bundle.js
+<span class="c"># from a clone: cd ~/social-flow &amp;&amp; node server/dist/bundle.js</span></code></pre>
+    <p>If <code>social-flow MCP server started</code> prints, the server is fine and the problem is in how the plugin was loaded. On older Claude Code versions <code>claude plugin update social-flow</code> can answer not found — reinstall with <code>uninstall</code> then <code>install</code>.</p>
   </div>
 
   <div class="faq">
