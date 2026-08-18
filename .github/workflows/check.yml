@@ -26,5 +26,8 @@ jobs:
       - run: npm run check
         working-directory: server
 
+      # committed dist must match a fresh build — catches "edited src, forgot dist"
+      - run: git diff --exit-code server/dist && test -z "$(git status --porcelain server/dist)"
+
       # the Korean copy gate verifies its own rules against built-in fixtures
       - run: python3 skills/platform-guide/references/check-style.py --selftest
