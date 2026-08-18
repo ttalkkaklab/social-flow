@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Lyria — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="gemini-lyria.en.html">
+<link rel="alternate" hreflang="ko" href="gemini-lyria.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="gemini-lyria.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Lyria</div>
+
+<header class="hero">
+  <div class="kicker">GOOGLE GEMINI</div>
+  <h1>Lyria — 음악 생성</h1>
+  <p class="sub">이름은 하나지만 API는 둘이다. <strong>Lyria 3</strong>는 Interactions API로 한 번 호출해 완성 트랙을 받고, <strong>Lyria RealTime</strong>은 WebSocket으로 PCM을 스트리밍한다. 파라미터 체계도, 출력 포맷도, 재현성도 전부 다르다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://ai.google.dev/gemini-api/docs/music-generation">Lyria 3</a> · <a href="https://ai.google.dev/gemini-api/docs/realtime-music-generation">Lyria RealTime</a></span>
+    <span>SDK <code>@google/genai</code> <strong>2.x 필수</strong></span>
+    <span>키 <code>GEMINI_API_KEY</code></span>
+    <span>구현 <code>server/src/music-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#compare">두 API 비교</a></li>
+    <li><a href="#clip">Lyria 3 Clip (Interactions)</a></li>
+    <li><a href="#realtime">Lyria RealTime (WebSocket)</a></li>
+    <li><a href="#config">MusicGenerationConfig 전체</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="compare">
+  <h2>1. 두 API 비교</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th></th><th>Lyria 3 Clip</th><th>Lyria RealTime</th></tr></thead>
+    <tbody>
+      <tr><td>모델 ID</td><td><code>lyria-3-clip-preview</code></td><td><code>models/lyria-realtime-exp</code></td></tr>
+      <tr><td>전송</td><td>HTTP 단일 호출 (<code>interactions.create</code>)</td><td>WebSocket (<code>live.music.connect</code>)</td></tr>
+      <tr><td>길이</td><td><strong>30초 고정</strong></td><td>가변 (이 서버 5~300초)</td></tr>
+      <tr><td>출력</td><td>MP3 44.1kHz 스테레오</td><td>원시 PCM 16-bit 48kHz 스테레오</td></tr>
+      <tr><td>구조화 파라미터</td><td>없음 — 전부 프롬프트 자연어</td><td>12종 (BPM·조성·밀도·밝기·seed…)</td></tr>
+      <tr><td>보컬</td><td>가사 생성 가능 (<code>[Verse]</code>·<code>[Chorus]</code> 태그, 타임스탬프)</td><td>인스트루멘털 전용 (<code>VOCALIZATION</code> 모드는 보컬을 악기처럼 쓸 뿐 가사 없음)</td></tr>
+      <tr><td>재현성</td><td><strong>불가</strong> — seed 없음</td><td><code>seed</code>로 가능</td></tr>
+      <tr><td>비용</td><td>$0.04/클립</td><td>스트리밍 시간 기준</td></tr>
+      <tr><td>이 서버의 툴</td><td><code>music_generate_clip</code></td><td><code>music_generate</code> · <code>music_generate_advanced</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>쇼트폼 BGM의 기본 경로는 Clip이다.</strong> 호출이 한 번이고 싸며 30초는 쇼트폼 길이와 맞다. RealTime은 <em>내레이션 길이에 정확히 맞춰야 하거나</em> <em>회차 간 같은 곡을 재현해야 할 때</em>만 쓴다.
+  </div>
+  <p>같은 계열의 <code>lyria-3-pro-preview</code>(약 1~2분, MP3/WAV 선택)도 존재하지만 이 서버는 노출하지 않는다 — 쇼트폼 파이프라인에서 2분짜리 트랙은 쓸 자리가 없고 비용만 커진다.</p>
+</section>
+
+<section id="clip">
+  <h2>2. Lyria 3 Clip (Interactions API)</h2>
+  <pre><code>const interaction = await genai.interactions.create({
+  model: 'lyria-3-clip-preview',
+  input: '차분한 어쿠스틱 기타 루프, 90 BPM, 따뜻한 톤, instrumental only',
+});</code></pre>
+
+  <h3>응답 구조</h3>
+  <pre><code>interaction.steps[]
+  ├─ type: "model_output"
+  └─ content[]
+       ├─ { type: "text",  text: "…가사 또는 곡 구조…" }
+       └─ { type: "audio", data: "&lt;base64&gt;", mime_type: "audio/mpeg" }</code></pre>
+  <p>SDK는 편의 접근자 <code>interaction.output_audio</code>도 제공한다. 필드명은 <strong>snake_case</strong>다(<code>mime_type</code>, <code>output_audio</code>) — Gen AI SDK의 다른 영역이 camelCase인 것과 다르니 주의.</p>
+
+  <div class="danger">
+    <strong>@google/genai 2.0 미만은 이 경로가 아예 동작하지 않는다.</strong> Interactions API는 2026-05 스키마 개편으로 평면 <code>outputs[]</code>를 <code>steps[].content[]</code>로 바꿨고, 서버가 구 스키마 요청을 거부한다:
+    <pre><code>The legacy Interactions API schema is no longer supported.
+Please upgrade your @google/genai JS/TS SDK to version &gt;= 2.0.0</code></pre>
+    이 저장소는 <code>^2.13.0</code>을 요구한다.
+  </div>
+
+  <h3>프롬프트로 제어하는 것들</h3>
+  <ul>
+    <li>장르·악기·BPM·조성·분위기·구조를 <strong>전부 자연어로</strong> 적는다. 구조화 필드가 없다.</li>
+    <li>보컬을 원치 않으면 <code>instrumental only, no vocals</code>를 명시한다 — 기본은 보컬이 나올 수 있다.</li>
+    <li>가사 구조는 <code>[Intro]</code>·<code>[Verse]</code>·<code>[Chorus]</code>·<code>[Bridge]</code>·<code>[Outro]</code> 태그와 <code>[0:00 - 0:10] Intro: …</code> 형식의 타임스탬프로 지정한다.</li>
+    <li>입력은 멀티모달이다 — 이미지 최대 10장을 함께 넣어 분위기를 지시할 수 있다(이 서버는 텍스트만 노출).</li>
+  </ul>
+
+  <div class="warn">
+    <strong>정책 필터가 예민하다(실측).</strong> <em>"Calm lo-fi hip hop, 80 BPM, C major, soft piano and vinyl crackle"</em>은 <code>Request blocked for an unspecified policy reason</code>으로 차단됐고, 같은 분위기를 평이하게 서술한 두 개의 대체 프롬프트는 모두 통과했다. 차단은 코드 문제가 아니라 프롬프트 문제이므로 <strong>표현을 바꿔 1회 재시도</strong>가 올바른 대응이다.
+  </div>
+  <p>출력에는 <strong>SynthID 오디오 워터마크</strong>가 들어간다.</p>
+</section>
+
+<section id="realtime">
+  <h2>3. Lyria RealTime (WebSocket)</h2>
+  <pre><code>const genai = new GoogleGenAI({ apiKey, apiVersion: 'v1alpha' });
+const session = await genai.live.music.connect({
+  model: 'models/lyria-realtime-exp',
+  callbacks: { onmessage, onerror, onclose },
+});
+await session.setWeightedPrompts({ weightedPrompts: [{ text: 'minimal techno', weight: 1.0 }] });
+await session.setMusicGenerationConfig({ musicGenerationConfig: { bpm: 120, density: 0.4 } });
+await session.play();</code></pre>
+
+  <h3 id="realtime-apiversion">apiVersion — 문서와 실제가 다르다</h3>
+  <div class="danger">
+    <strong>공식 문서는 <code>v1beta</code>라고 적지만, 실측 결과 동작하는 것은 <code>v1alpha</code>다.</strong> 세 조합을 직접 붙여 확인했다:
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th>apiVersion</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td><code>v1alpha</code></td><td>정상 — 4초 요청에 384,000바이트 수신 (48,000 × 2ch × 2byte × 4s와 정확히 일치)</td></tr>
+        <tr><td><code>v1beta</code></td><td><code>connect()</code>가 반환되지 않고 무한 대기</td></tr>
+        <tr><td>(미지정)</td><td>—</td></tr>
+      </tbody>
+    </table>
+    </div>
+    따라서 이 서버는 <code>v1alpha</code>를 유지한다. 문서를 근거로 <code>v1beta</code>로 바꾸면 툴이 조용히 멈춘다.
+  </div>
+
+  <h3>스트림 종료 조건</h3>
+  <p>서버는 스트림의 끝을 알리지 않는다. 종료 조건은 "받은 양"이다.</p>
+  <pre><code>목표 바이트 = 요청 초 × 48,000 × 2(채널) × 2(16-bit)
+타임아웃    = 요청 초 × 1000 + 30,000ms</code></pre>
+  <p>목표 바이트를 채우면 세션을 닫고, 정확히 요청한 길이만큼 잘라 WAV 헤더를 씌워 저장한다.</p>
+
+  <h3>세션 제어</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>메서드</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td><code>play()</code> · <code>pause()</code> · <code>stop()</code></td><td>재생 제어</td></tr>
+      <tr><td><code>setWeightedPrompts()</code></td><td>생성 중에도 프롬프트를 바꿔 부드럽게 전이시킬 수 있다</td></tr>
+      <tr><td><code>setMusicGenerationConfig()</code></td><td>설정 변경. <strong><code>bpm</code>·<code>scale</code>은 <code>reset_context()</code> 또는 stop/play 없이는 반영되지 않는다</strong></td></tr>
+      <tr><td><code>reset_context()</code></td><td>스트림을 끊지 않고 컨텍스트만 초기화</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    이 서버는 <code>play()</code> <strong>이전에</strong> 설정을 한 번만 넣고 이후 바꾸지 않는다. 그래서 <code>bpm</code>·<code>scale</code>의 reset_context 함정에 걸리지 않는다 — 초기 설정으로 전달되면 그대로 적용된다.
+  </div>
+</section>
+
+<section id="config">
+  <h2>4. MusicGenerationConfig 전체</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>필드</th><th>타입</th><th>범위</th><th>기본</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td><code>guidance</code></td><td>float</td><td>0.0–6.0</td><td>4.0</td><td>높을수록 프롬프트 충실 · 전이가 급해진다</td></tr>
+      <tr><td><code>bpm</code></td><td>int</td><td>60–200</td><td>모델 결정</td><td>변경 시 reset_context 필요</td></tr>
+      <tr><td><code>density</code></td><td>float</td><td>0.0–1.0</td><td>모델 결정</td><td>음 밀도 — 낮으면 성글고 높으면 촘촘</td></tr>
+      <tr><td><code>brightness</code></td><td>float</td><td>0.0–1.0</td><td>모델 결정</td><td>음색 밝기</td></tr>
+      <tr><td><code>scale</code></td><td>enum</td><td>13종 (아래)</td><td><code>SCALE_UNSPECIFIED</code></td><td>변경 시 reset_context 필요</td></tr>
+      <tr><td><code>temperature</code></td><td>float</td><td>0.0–3.0</td><td><strong>1.1</strong></td><td>—</td></tr>
+      <tr><td><code>topK</code></td><td>int</td><td>1–1000</td><td><strong>40</strong></td><td>—</td></tr>
+      <tr><td><code>seed</code></td><td>int</td><td>0–2,147,483,647</td><td>무작위</td><td><strong>재현의 유일한 수단</strong></td></tr>
+      <tr><td><code>muteBass</code></td><td>bool</td><td>—</td><td>false</td><td>베이스 축소</td></tr>
+      <tr><td><code>muteDrums</code></td><td>bool</td><td>—</td><td>false</td><td>드럼 축소</td></tr>
+      <tr><td><code>onlyBassAndDrums</code></td><td>bool</td><td>—</td><td>false</td><td>리듬 섹션만</td></tr>
+      <tr><td><code>musicGenerationMode</code></td><td>enum</td><td><code>QUALITY</code> · <code>DIVERSITY</code> · <code>VOCALIZATION</code></td><td><code>QUALITY</code></td><td>VOCALIZATION은 보컬 소리를 악기처럼 쓴다 — 가사는 없다</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Scale enum (13종)</h3>
+  <p>모델은 나란한조를 구분하지 않는다 — 각 값이 장조와 그 나란한단조 양쪽에 대응한다.</p>
+  <pre><code>C_MAJOR_A_MINOR         D_FLAT_MAJOR_B_FLAT_MINOR  D_MAJOR_B_MINOR       E_FLAT_MAJOR_C_MINOR
+E_MAJOR_D_FLAT_MINOR    F_MAJOR_D_MINOR            G_FLAT_MAJOR_E_FLAT_MINOR  G_MAJOR_E_MINOR
+A_FLAT_MAJOR_F_MINOR    A_MAJOR_G_FLAT_MINOR       B_FLAT_MAJOR_G_MINOR  B_MAJOR_A_FLAT_MINOR
+SCALE_UNSPECIFIED</code></pre>
+
+  <h3>WeightedPrompt</h3>
+  <pre><code>{ text: "jazz piano", weight: 1.0 }</code></pre>
+  <p><code>weight</code>는 <strong>0만 아니면</strong> 어떤 값이든 된다. 공식 스펙에 ±1 상·하한은 없고, 1.0이 통상적인 출발점이며 값이 클수록 영향이 커진다. 여러 프롬프트를 섞으면 상대 비율로 블렌딩된다.</p>
+</section>
+
+<section id="impl">
+  <h2>5. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th></tr></thead>
+    <tbody>
+      <tr><td>RealTime 길이</td><td>세션 지속 시간만큼 무제한</td><td>5~300초 (기본 30) — 수신 바이트로 종료 판정 후 정확히 잘라 저장</td></tr>
+      <tr><td>apiVersion</td><td>문서 <code>v1beta</code></td><td><strong><code>v1alpha</code></strong> — 실측 근거(§3)</td></tr>
+      <tr><td>장르·분위기·악기</td><td>API에 필드 없음</td><td><code>music_generate</code>가 편의 필드로 받아 프롬프트 문자열로 접어 넣는다. 목록은 <strong>제안</strong>이지 닫힌 enum이 아니다(자유 텍스트 허용)</td></tr>
+      <tr><td>Clip 응답 파싱</td><td><code>steps[].content[]</code> 또는 <code>output_audio</code></td><td><code>steps[]</code>를 직접 순회 — <code>model_output</code> 스텝의 <code>type: "audio"</code> 콘텐츠를 찾는다</td></tr>
+      <tr><td>Clip 보컬</td><td>기본적으로 생성될 수 있음</td><td>스키마 강제는 없고 설명이 <code>instrumental only</code> 명시를 안내</td></tr>
+      <tr><td>Lyria 3 Pro</td><td><code>lyria-3-pro-preview</code> 존재</td><td>미노출 — 쇼트폼에 2분 트랙은 불필요</td></tr>
+      <tr><td>세션 종료 실패</td><td>—</td><td>삼키고 로그만 적는다 — 이미 결정된 생성 결과를 close 실패가 뒤집으면 안 된다</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  기준일 2026-07-29 · 구현 <a href="../../server/src/music-client.ts">server/src/music-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+</footer>
+
+</div>
+</body>
+</html>

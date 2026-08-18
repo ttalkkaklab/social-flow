@@ -1,0 +1,107 @@
+---
+name: platform-guide
+description: >
+  This skill should be used when the user asks about "플랫폼 문법", "플랫폼별 작성 규칙",
+  "인스타 캡션 어떻게", "쇼츠 제목 규칙", "platform grammar", "how to write for
+  Threads/Instagram/Facebook/YouTube", or when any social-flow skill needs the
+  per-platform writing rules, video specs, safe zones, or posting-limit reference.
+  Knowledge-only skill — the SoT for platform grammar lives in
+  references/platform-playbook.md.
+---
+
+# Platform guide — the SoT for grammar and specs
+
+A knowledge-only skill holding the writing grammar, video specs, limits, and
+anti-patterns for the four publishing platforms: Threads · Instagram · Facebook ·
+YouTube. produce (§9 per-platform text), publish (approval-gate review), and the
+content-reviewer agent all take this skill's playbook as their baseline.
+
+## Core principles (summary)
+
+1. **"Share the facts, never the sentences"** — even with the same material,
+   redesign the speaker, register, sentence endings, and information density for
+   each platform. Automatic cross-posting is banned.
+2. **Plain language** — viewers are non-experts. No unexplained jargon, no
+   translationese, no over-compressed sentences with the subject dropped. If a
+   term is unavoidable, lead with the plain word and gloss the term in
+   parentheses on first appearance only.
+3. **The first encounter is everything** — the first line on Threads, the first
+   125 characters of an IG caption, the YT title+thumbnail, the first 3 seconds
+   of the video. If you don't win there, the rest never gets read.
+4. **Golden-hour replies** — how fast you answer comments in the first 60
+   minutes after publishing decides reach (Buffer's analysis of 1.9M posts:
+   replying lifts engagement Threads +42% / IG +21% / FB +9.5%).
+5. **Korean without AI tells** — one sentence of translationese, stock phrasing,
+   or assistant-speak makes the whole post read as an ad and get scrolled past.
+   The rules live in `references/korean-style.md`; the verdict comes from
+   `references/check-style.py`. Narration, subtitles, copy, titles, and comment
+   drafts are all in scope.
+
+## Platforms at a glance
+
+| | Threads | Instagram | Facebook | YouTube |
+|---|---|---|---|---|
+| Form | text (+link card)/1 image (no video) | reels · carousel ≤10 images | text/image/regular video | Shorts (9:16 ≤3 min) |
+| Body limit | 500 chars | caption 2,200 chars | 5,000 chars | title 100 · description 5,000 |
+| Register | casual spoken, 1–3 lines | hook + save CTA | structured expository | keyword-style |
+| Links | 1 in body (`linkUrl` card) | caption links not clickable → comment | banned in body → first comment | description OK |
+| Hashtags | ≤1 (ranking weight 0) | 3–5 | 0–2 | 3–5 (#Shorts required) |
+| Media | link card (video episodes) · public HTTPS URL | public HTTPS URL | public HTTPS URL | local file upload |
+| Limits | 250 posts/24h | 100 posts/24h | — | 100 uploads/day |
+
+Detailed grammar, copy formulas, the anti-pattern checklist, and video specs
+(safe zones, subtitles, length) are in `references/platform-playbook.md` —
+Read it before writing for any platform, without exception.
+
+## Style gate
+
+After writing or editing any Korean text, run the checker for its surface.
+The code gives the verdict; a human or agent fixes the sentences.
+
+```bash
+PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
+python3 $PG/check-style.py --surface <surface> <file>
+node $PG/extract-text.js ./storyboard/scenes.js <narration|subtitle|screen> | \
+  python3 $PG/check-style.py --surface <surface> -
+```
+
+8 surfaces: `narration` `subtitle` `screen` `threads` `ig` `fb` `yt` `reply`.
+exit 0 pass / 1 warning (S2 accumulation) / 2 fail (S1) / 3 gate did not run
+(empty input · path error).
+
+**S1 gets fixed and re-run, no exceptions.** exit 3 is not a pass either — fix
+the path and run again. Write paths against `${CLAUDE_PLUGIN_ROOT}`
+(produce·publish run from `data/<channel>/episodes/<topic>/`, so relative paths
+won't resolve).
+
+## Adversarial review gate — the shared contract for outgoing copy
+
+Every piece of Korean copy the plugin authors for the outside world publishes
+only after passing two stages. Stage 1 is the style checker above (the machine
+verdict is the source of truth); stage 2 is an adversarial reviewer agent — it
+tries to refute the copy: does it sound AI-written, and can a first-time reader
+follow the vocabulary. **Publish only at score ≥95 with P0=0**; if the copy
+can't clear that within 3 rounds (2 on unattended paths), don't publish —
+not posting beats posting copy that falls short.
+
+| Outgoing copy | Authored by | Reviewer | Verdict tail |
+|---|---|---|---|
+| Storyboard copy (narration · subtitles · screen) | storyboard · autoproduce | storyboard-reviewer copy mode | `STORYBOARD_REVIEW` |
+| Platform copy (threads · ig · fb · yt) | produce · autoproduce | content-reviewer copy axis | `CONTENT_REVIEW` |
+| Growth copy (new posts · search-driven engagement · inbox replies) | grow-threads · grow-instagram · grow-youtube | growth-post-reviewer | `GROWTH_POST_REVIEW` |
+| Post-publish replies | publish | growth-post-reviewer | `GROWTH_POST_REVIEW` |
+| bio · channel description · tagline | channel · intro | growth-post-reviewer `standalone` | `GROWTH_POST_REVIEW` |
+
+The 95 bar is a user directive from 2026-08-13 (growth copy was lowered to 90
+on 2026-08-12, then restored to 95 by that directive). Don't build a new skill
+with an outgoing-copy path that bypasses the reviewer — when a new surface
+appears, add a row to this table and extend an existing reviewer.
+
+## Additional Resources
+
+### Reference Files
+
+- **`references/platform-playbook.md`** — per-platform grammar in detail, copy formulas, video specs, anti-pattern checklist (SoT)
+- **`references/korean-style.md`** — Korean style SoT: AI-tell pattern tables (T·D·C·A), severities, per-surface application, delete-only principle
+- **`references/check-style.py`** — deterministic style checker (stdlib only; `--surface` · `--json` · `--doc` · `--selftest`)
+- **`references/extract-text.js`** — scenes.js → per-surface text extraction (narration · subtitle · screen; handles the `window.SCENES` global contract)

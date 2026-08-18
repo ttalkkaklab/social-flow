@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gemini TTS — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="gemini-tts.en.html">
+<link rel="alternate" hreflang="ko" href="gemini-tts.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="gemini-tts.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Gemini TTS</div>
+
+<header class="hero">
+  <div class="kicker">GOOGLE GEMINI</div>
+  <h1>Gemini TTS — 음성 합성</h1>
+  <p class="sub">텍스트를 음성으로 바꾸는 <code>generateContent</code> 변형. 별도 TTS 엔드포인트가 아니라 <code>responseModalities: ['AUDIO']</code>와 <code>speechConfig</code>를 얹은 일반 생성 호출이라, LLM의 비결정성이 그대로 따라온다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://ai.google.dev/gemini-api/docs/speech-generation">Speech generation</a></span>
+    <span>SDK <code>@google/genai</code> 2.13.0</span>
+    <span>키 <code>GEMINI_API_KEY</code></span>
+    <span>구현 <code>server/src/tts-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#models">모델</a></li>
+    <li><a href="#voices">프리빌트 음성 30종</a></li>
+    <li><a href="#request">요청 구조</a></li>
+    <li><a href="#output">출력 포맷</a></li>
+    <li><a href="#limits">제약과 실패 모드</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="models">
+  <h2>1. 모델</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>모델 ID</th><th>특징</th><th>스트리밍</th><th>무료 티어</th></tr></thead>
+    <tbody>
+      <tr><td><code>gemini-2.5-flash-preview-tts</code></td><td>최저가 — 이 서버의 기본값</td><td>미지원</td><td>있음</td></tr>
+      <tr><td><code>gemini-2.5-pro-preview-tts</code></td><td>고품질. flash가 반복 실패하는 대본의 폴백</td><td>미지원</td><td>없음</td></tr>
+      <tr><td><code>gemini-3.1-flash-tts-preview</code></td><td>최신. TTS 계열 중 유일하게 스트리밍 지원</td><td>지원</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>실측: flash → pro 폴백은 실재하는 실패 모드다.</strong> 짧은 2인 대화 대본에서 <code>gemini-2.5-flash-preview-tts</code>가 <em>"Model tried to generate text, but it should only be used for TTS"</em> 400을 반복 반환하다가, 모델만 <code>gemini-2.5-pro-preview-tts</code>로 바꾸면 한 번에 통과했다(화자 이름의 한/영 여부와 무관). 서버는 3회 자동 재시도 후 이 폴백을 에러 메시지에 안내한다.
+  </div>
+</section>
+
+<section id="voices">
+  <h2>2. 프리빌트 음성 30종</h2>
+  <p>공식 문서의 음성 목록과 성격 서술어가 그대로 <code>TTS_VOICES</code> 레코드의 정본이다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>음성</th><th>성격</th><th>음성</th><th>성격</th><th>음성</th><th>성격</th></tr></thead>
+    <tbody>
+      <tr><td><code>Zephyr</code></td><td>Bright</td><td><code>Puck</code></td><td>Upbeat</td><td><code>Charon</code></td><td>Informative</td></tr>
+      <tr><td><code>Kore</code></td><td>Firm</td><td><code>Fenrir</code></td><td>Excitable</td><td><code>Leda</code></td><td>Youthful</td></tr>
+      <tr><td><code>Orus</code></td><td>Firm</td><td><code>Aoede</code></td><td>Breezy</td><td><code>Callirrhoe</code></td><td>Easy-going</td></tr>
+      <tr><td><code>Autonoe</code></td><td>Bright</td><td><code>Enceladus</code></td><td>Breathy</td><td><code>Iapetus</code></td><td>Clear</td></tr>
+      <tr><td><code>Umbriel</code></td><td>Easy-going</td><td><code>Algieba</code></td><td>Smooth</td><td><code>Despina</code></td><td>Smooth</td></tr>
+      <tr><td><code>Erinome</code></td><td>Clear</td><td><code>Algenib</code></td><td>Gravelly</td><td><code>Rasalgethi</code></td><td>Informative</td></tr>
+      <tr><td><code>Laomedeia</code></td><td>Upbeat</td><td><code>Achernar</code></td><td>Soft</td><td><code>Alnilam</code></td><td>Firm</td></tr>
+      <tr><td><code>Schedar</code></td><td>Even</td><td><code>Gacrux</code></td><td>Mature</td><td><code>Pulcherrima</code></td><td>Forward</td></tr>
+      <tr><td><code>Achird</code></td><td>Friendly</td><td><code>Zubenelgenubi</code></td><td>Casual</td><td><code>Vindemiatrix</code></td><td>Gentle</td></tr>
+      <tr><td><code>Sadachbia</code></td><td>Lively</td><td><code>Sadaltager</code></td><td>Knowledgeable</td><td><code>Sulafat</code></td><td>Warm</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>이 서버의 기본값은 <code>Kore</code>(Firm)다. 채널 프로파일(<code>data/&lt;slug&gt;/profile.md</code>)이 보이스를 고정해 두었으면 그 값이 우선한다 — 회차마다 목소리가 바뀌면 채널 정체성이 깨진다.</p>
+</section>
+
+<section id="request">
+  <h2>3. 요청 구조</h2>
+  <h3>단일 화자</h3>
+  <pre><code>genai.models.generateContent({
+  model: 'gemini-2.5-flash-preview-tts',
+  contents: [{ role: 'user', parts: [{ text: contentText }] }],
+  config: {
+    responseModalities: ['AUDIO'],
+    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+    temperature: 0.4,
+  },
+});</code></pre>
+
+  <h3>2인 화자</h3>
+  <pre><code>speechConfig: {
+  multiSpeakerVoiceConfig: {
+    speakerVoiceConfigs: [
+      { speaker: '진행자', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+      { speaker: '패널',   voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
+    ],
+  },
+}</code></pre>
+  <p>대본은 <code>진행자: 안녕하세요\n패널: 반갑습니다</code>처럼 화자 이름을 접두어로 붙인다. <strong>이름은 <code>speakerVoiceConfigs</code>의 <code>speaker</code>와 정확히 같아야</strong> 한다.</p>
+
+  <h3>스타일 지시</h3>
+  <p>언어·톤·속도를 요청 필드로 받지 않는다. 프롬프트 본문으로 지시한다.</p>
+  <pre><code>Synthesize the following transcript as speech.
+Director's Notes — Style: 차분하고 신뢰감 있게, 약간 느리게
+--- TRANSCRIPT BEGINS ---
+&lt;대본&gt;</code></pre>
+  <div class="warn">
+    <strong>라벨 없는 <code>스타일: "본문"</code> 합성은 두 가지로 실패한다</strong> — 분류기가 오거절(<code>PROHIBITED_CONTENT</code>)하거나, 모델이 지시문 자체를 소리내어 읽는다. 위처럼 합성 preamble과 대본 시작 라벨을 명시하면 둘 다 피할 수 있다(<code>buildStyledPrompt</code>).
+  </div>
+</section>
+
+<section id="output">
+  <h2>4. 출력 포맷</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>값</th></tr></thead>
+    <tbody>
+      <tr><td>응답 위치</td><td><code>candidates[0].content.parts[].inlineData.data</code> (base64)</td></tr>
+      <tr><td>MIME</td><td><code>audio/L16;codec=pcm;rate=24000</code></td></tr>
+      <tr><td>컨테이너</td><td><strong>없음</strong> — 원시 PCM</td></tr>
+      <tr><td>샘플레이트</td><td>24,000 Hz (MIME의 <code>rate=</code> 파라미터가 정본)</td></tr>
+      <tr><td>채널 · 비트심도</td><td>1 (모노) · 16-bit</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>컨테이너가 없으므로 그대로 저장하면 어떤 플레이어도 재생하지 못한다. 서버가 44바이트 RIFF/WAVE 헤더를 씌워 <code>.wav</code>로 저장한다(<code>media-utils.pcmToWav</code>). 샘플레이트는 상수가 아니라 응답 MIME에서 파싱한다 — 공급사가 값을 바꿔도 피치가 틀어지지 않는다.</p>
+</section>
+
+<section id="limits">
+  <h2>5. 제약과 실패 모드</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>제약</th><th>값</th><th>대응</th></tr></thead>
+    <tbody>
+      <tr><td>세션 컨텍스트</td><td>32k 토큰</td><td>입력을 16,000자로 제한(CJK ≈ 1~2 토큰/자 보수 환산)</td></tr>
+      <tr><td>입출력 형태</td><td>텍스트 입력 → 오디오 출력 전용</td><td>—</td></tr>
+      <tr><td>지원 언어</td><td>90여 종 (BCP-47 표). <strong>번체 중국어 <code>zh-TW</code> 포함</strong></td><td>언어는 요청 필드가 아니라 입력 텍스트에서 자동 감지된다</td></tr>
+      <tr><td>화자 수</td><td>최대 2인</td><td>스키마 <code>maxItems: 2</code></td></tr>
+      <tr><td>긴 출력 품질</td><td>수 분을 넘기면 톤·속도가 드리프트</td><td>컷 단위 분할 합성 권장</td></tr>
+      <tr><td>무작위 텍스트 토큰</td><td>오디오 대신 텍스트가 반환되며 500/400이 뜬다</td><td>3회 자동 재시도(시도 사이 400·800ms 대기) 후 pro 폴백 안내</td></tr>
+      <tr><td>프롬프트 분류기 오거절</td><td>모호한 지시문이 거절을 유발</td><td>합성 preamble 고정(위 §3)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>같은 영상 안의 컷은 <code>voiceName</code>·<code>stylePrompt</code>·<code>temperature</code>를 바이트 단위로 동일하게 유지해야 한다.</strong> LLM 기반이라 지시문의 사소한 표현 변경도 재해석되어 내레이터 목소리가 컷마다 흔들린다. 이 서버가 공급사 기본값(1.0) 대신 <code>temperature: 0.4</code>를 기본으로 두는 이유다.
+  </div>
+</section>
+
+<section id="impl">
+  <h2>6. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th><th>차이의 이유</th></tr></thead>
+    <tbody>
+      <tr><td>입력 길이</td><td>32k 토큰</td><td>16,000자 하드 상한</td><td>토큰↔문자 환산의 보수적 마진. 초과 시 "대본을 나누라"는 실행 가능한 에러</td></tr>
+      <tr><td>temperature</td><td>문서에 명시 없음 (<code>generateContent</code> 공통 필드로 동작)</td><td>기본 0.4, 범위 0–2</td><td>회차 간 보이스 일관성. 공급사 기본 1.0은 내레이션에 과하다</td></tr>
+      <tr><td>재시도</td><td>문서가 재시도를 권고</td><td>3회 · 선형 백오프 · 마지막에 모델 교체 힌트</td><td>—</td></tr>
+      <tr><td>화자 수</td><td>최대 2</td><td><code>minItems: 1, maxItems: 2</code></td><td>1인도 <code>multiSpeakerVoiceConfig</code>로 유효</td></tr>
+      <tr><td>출력 저장</td><td>base64 PCM 반환</td><td>WAV로 감싸 로컬 저장 후 <strong>경로만</strong> 반환</td><td>수 MB base64는 컨텍스트를 태우는데 모델은 오디오를 평가하지 못한다</td></tr>
+      <tr><td>파일명</td><td>—</td><td>경로 분리자·<code>..</code> 거부 + 오디오 확장자 화이트리스트</td><td><code>path.join</code>이 <code>../</code>를 정규화해 없애므로 조립 <em>전</em>에 막아야 한다</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  기준일 2026-07-29 · 구현 <a href="../../server/src/tts-client.ts">server/src/tts-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+</footer>
+
+</div>
+</body>
+</html>

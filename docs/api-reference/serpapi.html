@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SerpApi — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="serpapi.en.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="serpapi.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>SerpApi</div>
+
+<header class="hero">
+  <div class="kicker">SERPAPI</div>
+  <h1>SerpApi — 검색 결과 조회</h1>
+  <p class="sub">Google 웹·뉴스·이미지와 Naver를 하나의 엔드포인트에서 <code>engine</code> 파라미터로 갈라 쓴다. 엔진마다 파라미터 이름과 <strong>정렬 값 체계가 다르다</strong> — 같은 "최신순"이 엔진에 따라 <code>1</code>이기도 하고 <code>dd</code>이기도 하다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://serpapi.com/search-api">Google</a> · <a href="https://serpapi.com/google-news-api">Google News</a> · <a href="https://serpapi.com/naver-search-api">Naver</a></span>
+    <span>키 <code>SERPAPI_API_KEY</code></span>
+    <span>구현 <code>server/src/serp-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#common">공통 계약</a></li>
+    <li><a href="#google">engine=google</a></li>
+    <li><a href="#news">engine=google_news</a></li>
+    <li><a href="#naver">engine=naver</a></li>
+    <li><a href="#images">engine=google_images</a></li>
+    <li><a href="#trending">급상승 검색어 · SNS 이슈 스카우트</a></li>
+    <li><a href="#errors">에러와 쿼터</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="common">
+  <h2>1. 공통 계약</h2>
+  <pre><code>GET https://serpapi.com/search?engine={엔진}&api_key={키}&output=json&…</code></pre>
+  <div class="danger">
+    <strong>키가 URL 쿼리로만 전달된다.</strong> 타임아웃·도달 불가 같은 실패 경로는 URL을 에러 본문에 싣기 때문에, 마스킹하지 않으면 API 키가 그대로 LLM 컨텍스트에 들어간다. 이 서버는 밖으로 나가는 모든 텍스트에 <code>api_key=[^&amp;\s"']+ → api_key=***</code> 치환을 건다.
+  </div>
+</section>
+
+<section id="google">
+  <h2>2. <code>engine=google</code> — 웹 검색</h2>
+  <p class="tool-line">툴 <code>serp_web_search</code></p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>파라미터</th><th>의미</th><th>구현 노출</th></tr></thead>
+    <tbody>
+      <tr><td><code>q</code></td><td>검색어. <code>site:</code>·<code>inurl:</code>·<code>intitle:</code>·<code>filetype:</code> 연산자 지원</td><td>○ — 툴 인자는 <code>query</code></td></tr>
+      <tr><td><code>gl</code></td><td>국가 코드 2자 (<code>kr</code>·<code>us</code>·<code>vn</code>)</td><td>○</td></tr>
+      <tr><td><code>hl</code></td><td>인터페이스 언어 코드</td><td>○</td></tr>
+      <tr><td><code>location</code></td><td>도시 단위 검색 기준지. <code>uule</code>·<code>lat</code>·<code>lon</code>과 병용 불가</td><td>○</td></tr>
+      <tr><td><code>start</code></td><td>결과 오프셋 — <strong>페이지 번호가 아니다</strong>. 0부터 세며 10 단위로 페이지를 끊는다</td><td>△ — <code>page</code>로 받아 <code>(page-1)×10</code>으로 환산</td></tr>
+      <tr><td><code>num</code></td><td><strong>이 엔진에서 무효</strong> — SerpApi가 구글로 넘기지 않는다(아래)</td><td>미전송. 툴 인자 <code>limit</code>(1–10)은 서버 슬라이스</td></tr>
+      <tr><td><code>tbs</code></td><td>기간 필터 등 고급 필터</td><td>△ — <code>recency</code>로 받아 <code>qdr:h|d|w|m|y</code>로 환산</td></tr>
+      <tr><td><code>google_domain</code>·<code>tbm</code>·<code>device</code>·<code>safe</code>·<code>no_cache</code>·<code>async</code></td><td>도메인·검색유형·기기·세이프서치·캐시·비동기</td><td>미노출</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong><code>num</code>은 이 엔진에서 무효다.</strong> SerpApi가 구글로 넘기지 않는다 — 실측(2026-08-11)으로 세 가지가 함께 확인된다.
+    <ul>
+      <li>응답의 <code>search_parameters</code>에 <code>num</code>이 없다 (<code>engine·q·google_domain·hl·gl·start·device</code>만).</li>
+      <li><code>search_metadata.google_url</code>에도 실리지 않는다.</li>
+      <li><code>serpapi_pagination.current</code>가 <code>start</code> 0/10/20을 각각 1/2/3페이지로 센다 — <strong>페이지 경계는 10 단위</strong>다(실제 <code>organic_results</code>는 광고·비디오 블록에 밀려 5~10건으로 흔들린다).</li>
+    </ul>
+    그래서 오프셋 단위를 <code>limit</code>에 연동하면 안 된다. <code>limit=20</code>을 20 배수로 잡으면 <code>page=2</code>가 구글 3페이지를 가리켜 <strong>2페이지(11~20번)가 통째로 사라진다</strong>. 오프셋은 항상 10 단위이고, <code>limit</code> 상한도 실제 페이지 크기인 10으로 맞췄다 — 지킬 수 없는 20을 약속하지 않는다.
+    <p>결과의 <code>position</code>은 <code>(page-1)×10</code>을 더한 <strong>전역 순번</strong>으로 바꿔 싣는다. 원본은 페이지마다 1부터 다시 시작해서, 그대로 두면 2페이지의 1번이 1페이지의 1번과 같은 순위로 읽힌다. 전역 순번이면 구글이 페이지 경계에서 같은 링크를 재배치해도 모델이 알아본다.</p>
+    </div>
+  <h3>슬리밍 대상 필드</h3>
+  <p>원본 응답은 검색 1회에 20~60KB다. 근거로 쓸 수 있는 것만 남겨 2~4KB로 줄인다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>필드</th><th>남기는 하위 키</th></tr></thead>
+    <tbody>
+      <tr><td><code>search_information.total_results</code></td><td>—</td></tr>
+      <tr><td><code>answer_box</code></td><td><code>type</code> <code>title</code> <code>answer</code> <code>snippet</code> <code>link</code></td></tr>
+      <tr><td><code>knowledge_graph</code></td><td><code>title</code> <code>type</code> <code>description</code> <code>source</code> <code>website</code></td></tr>
+      <tr><td><code>organic_results</code></td><td><code>position</code> <code>title</code> <code>link</code> <code>snippet</code> <code>date</code> <code>source</code></td></tr>
+      <tr><td><code>related_questions</code></td><td><code>question</code> <code>snippet</code> <code>link</code> (상위 4개)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>버려지는 것: 광고, 인라인 이미지·비디오, 페이지네이션 메타, <code>serpapi_*</code> 내부 링크, 썸네일 URL. 전부 사실검증에 기여하지 않으면서 응답의 대부분을 차지한다.</p>
+</section>
+
+<section id="news">
+  <h2>3. <code>engine=google_news</code> — 뉴스</h2>
+  <p class="tool-line">툴 <code>serp_news_search</code></p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>파라미터</th><th>의미</th><th>구현 노출</th></tr></thead>
+    <tbody>
+      <tr><td><code>q</code> · <code>gl</code> · <code>hl</code></td><td>검색어 · 국가 · 언어</td><td>○</td></tr>
+      <tr><td><code>so</code></td><td>정렬 — <code>0</code>=관련도(기본) · <code>1</code>=날짜. <strong><code>q</code>와 병용 불가</strong></td><td>미노출 (아래 경고)</td></tr>
+      <tr><td><code>topic_token</code>·<code>publication_token</code>·<code>story_token</code>·<code>section_token</code></td><td>토큰 기반 탐색</td><td>미노출</td></tr>
+      <tr><td><code>num</code> · <code>start</code></td><td><strong>없음</strong> — 이 엔진은 오프셋 페이지네이션을 지원하지 않는다</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong><code>num</code>이 없으므로 결과 수 제한은 서버 측 슬라이스다.</strong> <code>limit</code>은 요청 크기를 줄이지 않고 <em>반환</em>만 줄인다 — 과금은 동일하게 검색 1회다. 잘라낸 만큼은 응답 <code>note</code>로 알린다.
+  </div>
+  <div class="danger">
+    <strong><code>news_results</code>의 첫 항목은 기사가 아니라 <code>stories[]</code>를 단 묶음일 수 있다.</strong> 실측(2026-08-11): <code>{"position":1,"title":"주요 뉴스","stories":[4건]}</code>. <code>link</code>가 없다고 버리면 그 안의 4건이 함께 사라지는데, 그것들이 응답에서 <strong>가장 최신</strong>이다 — 시효성 검증이 이 툴의 존재 이유인데 최상위 랭크의 최신 기사가 없어진다. 헤더는 벗기되 안의 기사는 평탄화해 살린다.
+  </div>
+</section>
+
+<section id="naver">
+  <h2>4. <code>engine=naver</code> — Naver</h2>
+  <p class="tool-line">툴 <code>serp_naver_search</code></p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>파라미터</th><th>값</th><th>툴 인자</th></tr></thead>
+    <tbody>
+      <tr><td><code>query</code></td><td>검색어. <code>NOT</code>·<code>OR</code>·<code>site:</code> 지원</td><td><code>query</code></td></tr>
+      <tr><td><code>where</code></td><td><code>nexearch</code>(기본) · <code>web</code> · <code>news</code> · <code>video</code> · <code>image</code></td><td><code>where</code> — web(기본)·news·image·video</td></tr>
+      <tr><td><code>page</code> · <code>start</code></td><td>페이지 번호 · 오프셋</td><td><code>page</code></td></tr>
+      <tr><td><code>sort_by</code></td><td><strong>where 에 따라 값 체계가 다르다</strong> (아래)</td><td><code>sort</code></td></tr>
+      <tr><td><code>period</code></td><td>기간 필터 — <code>1h</code>·<code>1d</code>·<code>1w</code>·<code>1m</code>·<code>3m</code>·<code>6m</code>·<code>1y</code></td><td><code>period</code> — 오값은 400</td></tr>
+      <tr><td><code>num</code></td><td>이미지 검색 전용, <strong>기본 50</strong>(미전송해도 적용된다)</td><td><code>num=10</code>을 <strong>명시</strong>해 보폭과 같게 맞춘다 — 미전송하면 48건이 와서 보폭 10과 어긋나 38건이 중복됐다(실측)</td></tr>
+      <tr><td><code>page</code> 보폭</td><td>where마다 다르다 — 실측 web 15 · news 10 · video 48(네이버 자체 pagination이 <code>start=49</code>를 제시) · image 10</td><td>SerpApi의 <code>page</code> 인자를 버리고 <code>start</code>를 직접 계산한다 (web 공식이 page=2를 무동작으로 만든다)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong>페이지네이션의 불변식은 "한 번에 오는 건수 = 보폭"이다.</strong> 어긋나면 조용히 겹치거나(청크 &gt; 보폭) 빠진다(청크 &lt; 보폭). <code>image</code>는 <code>num</code>으로 청크를 보폭에 맞추고, <code>num</code>이 안 먹는 where는 <code>limit</code>을 보폭으로 클램프한다(줄인 사실은 <code>note</code>에 싣는다).
+    <p><code>where=video</code>만은 보폭을 맞춰도 page 경계에서 <strong>10건 안팎이 겹친다</strong> — 네이버가 페이지마다 결과를 재배치하기 때문이다(페이지 내부는 고유 48/48이고 경계도 이어지므로 보폭 계산 문제가 아니다). stateless 서버가 직전 페이지를 기억할 수 없으니 없애지 못하고, 응답 <code>note</code>로 "링크로 중복을 걸러내라"고 알린다.</p>
+  </div>
+  <div class="danger">
+    <strong><code>sort_by</code>는 <code>where</code>에 따라 값이 다르다.</strong>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th><code>where</code></th><th>관련도</th><th>최신</th><th>오래된순</th></tr></thead>
+      <tbody>
+        <tr><td><code>news</code></td><td><code>0</code> (기본)</td><td><code>1</code></td><td><code>2</code></td></tr>
+        <tr><td>그 외 (<code>web</code> 등)</td><td><code>r</code> (기본)</td><td><code>dd</code></td><td>—</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <code>where=news</code>에 <code>dd</code>를 보내면 정렬이 적용되지 않는다. 에러가 아니라 <strong>조용히 무시</strong>되므로, 최신순으로 정렬됐다고 믿고 시효성 값을 뽑으면 오래된 기사를 최신으로 인용하게 된다.
+  </div>
+  <h3>결과 배열의 키 이름 — 문서와 실제가 다르다</h3>
+  <div class="danger">
+    <strong>SerpApi 문서는 <code>where=web</code>이 <code>web_results</code>를 준다고 적지만, 실제로 오는 것은 <code>organic_results</code>다(실측).</strong>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th><code>where</code></th><th>문서</th><th>실제 응답 키</th></tr></thead>
+      <tbody>
+        <tr><td><code>web</code></td><td><code>web_results</code></td><td><strong><code>organic_results</code></strong> (<code>position</code> <code>title</code> <code>link</code> <code>displayed_link</code> <code>snippet</code> <code>related_results</code>)</td></tr>
+        <tr><td><code>news</code></td><td><code>news_results</code></td><td><code>news_results</code> ✓</td></tr>
+        <tr><td><code>nexearch</code></td><td>여러 배열</td><td><code>web_results</code> · <code>ads_results</code> · <code>inline_images_results</code></td></tr>
+        <tr><td><code>image</code></td><td><code>inline_images_results</code></td><td><strong><code>images_results</code></strong> (<code>title</code> <code>original</code> <code>thumbnail</code> <code>width</code> <code>height</code> <code>source</code> <code>where</code> <code>link</code>)</td></tr>
+        <tr><td><code>video</code></td><td><code>inline_videos_results</code></td><td><strong><code>video_results</code></strong> (<code>position</code> <code>title</code> <code>link</code> <code>duration</code> <code>origin</code> <code>channel</code> <code>publish_date</code> <code>views</code> <code>thumbnail</code>)</td></tr>
+      </tbody>
+    </table>
+    </div>
+    이 서버는 <strong>키 후보를 모두 확인</strong>한다. <code>web_results</code>만 읽던 구현은 기본 경로(<code>where=web</code>)에서 매번 "결과 없음"을 반환했고, 그 응답이 <em>진짜로 결과가 없는 경우</em>와 구분되지 않아 모델이 검색을 포기했다 — 에러도 예외도 없이 조용히 틀리는 부류의 결함이다. <code>image</code>·<code>video</code>도 같은 함정을 반복하지 않도록 실측 키를 먼저 보고 문서상 키로 폴백한다.
+  </div>
+  <div class="danger">
+    <strong><code>where=news</code>는 날짜와 언론사를 <code>news_info</code> 하위에 중첩해 준다.</strong> 최상위 <code>date</code>·<code>source</code>만 보면 뉴스 결과에서 둘 다 사라진다 — 이 툴을 뉴스로 쓰는 이유가 시효성 검증이고 <code>period</code>·<code>sort=latest</code>를 붙이는 이유도 그건데, 정작 응답으로 정렬이 걸렸는지 확인할 수 없게 된다. 실제 구조(실측): <code>news_info.news_date</code> <code>"2시간 전"</code> · <code>news_info.press_name</code> <code>"이데일리"</code>. 배열 키만 실측하고 항목 필드를 안 보면 이 함정을 반복한다.
+  </div>
+  <div class="warn">
+    <strong>스크린리더 라벨이 본문에 섞여 온다.</strong> <code>where=video</code>의 <code>title</code>·<code>origin</code>·<code>channel</code> 끝에 <code>새 창 열림</code>이 붙는다(<code>"너만몰라TV새 창 열림"</code>). 스크래핑 원본의 접근성 텍스트인데, 남겨두면 모델이 채널명의 일부로 읽어 인용문에 그대로 복사한다. 서버가 제거한다.
+  </div>
+</section>
+
+<section id="images">
+  <h2>5. <code>engine=google_images</code> — 이미지</h2>
+  <p class="tool-line">툴 <code>serp_image_search</code></p>
+  <p>레퍼런스 구도 조사, 실물 확인(제품·장소가 실제로 어떻게 생겼는지), 생성 프롬프트의 시각 근거 수집에 쓴다. <strong>직접 만들 화면은 이 툴로 찾지 않고 생성한다</strong> — 기본 경로는 무료·온디바이스인 <code>image_local_generate</code>이고, 글자가 들어가는 프레임이나 고품질이 필요한 자리는 <a href="openai-images.html"><code>gpt_image_text2img</code></a>다. 생성물에는 권리 문제가 없다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>파라미터</th><th>값</th><th>툴 인자</th></tr></thead>
+    <tbody>
+      <tr><td><code>q</code></td><td>검색어</td><td><code>query</code></td></tr>
+      <tr><td><code>ijn</code></td><td>페이지 번호 — <strong>0부터</strong>, 최대 99. 한 페이지가 100건</td><td><code>page</code> (1부터 받아 −1 환산)</td></tr>
+      <tr><td><code>imgsz</code></td><td><code>l</code>·<code>m</code>·<code>i</code>·<code>2mp</code>~<code>70mp</code></td><td><code>size</code> — <code>large</code>·<code>medium</code>·<code>icon</code>·<code>2mp</code>·<code>4mp</code>·<code>8mp</code>·<code>15mp</code></td></tr>
+      <tr><td><code>imgar</code></td><td><code>s</code>·<code>t</code>·<code>w</code>·<code>xw</code></td><td><code>aspect</code> — <code>square</code>·<code>tall</code>·<code>wide</code>·<code>panoramic</code></td></tr>
+      <tr><td><code>image_type</code></td><td><code>photo</code>·<code>clipart</code>·<code>lineart</code>·<code>animated</code>·<code>face</code></td><td><code>imageType</code> (동일)</td></tr>
+      <tr><td><code>licenses</code></td><td><code>f</code>·<code>fc</code>·<code>fm</code>·<code>fmc</code>·<code>cl</code>·<code>ol</code></td><td><code>license</code> — <code>free</code>·<code>commercial</code>·<code>modify</code>·<code>modify_commercial</code>·<code>creative_commons</code></td></tr>
+      <tr><td><code>image_color</code></td><td><code>bw</code>·<code>trans</code>·색상 12종</td><td><code>color</code> (동일)</td></tr>
+      <tr><td><code>safe</code></td><td><code>active</code> · <code>off</code></td><td><code>safe</code> (불리언, 기본 켬)</td></tr>
+      <tr><td><code>num</code></td><td><strong>없음</strong> — 이 엔진은 결과 수 파라미터가 없다</td><td><code>limit</code> — 서버 슬라이스</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>필터는 <code>tbs</code>로 조립하지 않는다.</strong> SerpApi가 전용 파라미터를 따로 받으며, 공식 문서상 이들이 <code>tbs</code>의 대응 성분(<code>itp</code>·<code>ic</code>·<code>sur</code>)을 <strong>덮어쓴다</strong>. 둘을 함께 보내면 어느 쪽이 이겼는지 응답만 봐서는 알 수 없다. 특히 종횡비는 예전 <code>tbs=iar</code>이 구글에서 중단돼 <code>imgar</code>로 바뀌었다.
+  </div>
+  <div class="warn">
+    <strong>라이선스를 지정하지 않은 결과는 권리 확인이 안 된 이미지다.</strong> 조사·확인 용도면 무지정으로 충분하지만, 게시물에 실을 소재를 찾는 중이라면 <code>license</code>를 반드시 건다 — <code>commercial</code>(상업 이용) 이상, 편집까지 하면 <code>modify_commercial</code>. 필터를 걸면 응답에 <code>license_details_url</code>이 실려 근거를 남길 수 있다.
+  </div>
+  <h3>슬리밍 대상</h3>
+  <p><code>images_results</code>에서 <code>position</code> <code>title</code> <code>original</code>(→<code>imageUrl</code>) <code>thumbnail</code> <code>original_width/height</code> <code>source</code> <code>link</code> <code>license_details_url</code>만 남기고, <code>suggested_searches</code>는 이름만 6개까지 싣는다. 버려지는 것: <code>related_content_id</code>·<code>serpapi_related_content_link</code> 같은 내부 링크, <code>source_logo</code>, 쇼핑 결과.</p>
+</section>
+
+<section id="trending">
+  <h2>6. <code>engine=google_trends_trending_now</code> — 급상승 검색어</h2>
+  <p class="tool-line">툴 <code>serp_trending_now</code> · <code>sns_issue_scout</code>(<code>includeTrending</code>)</p>
+  <p>"지금 이 나라에서 뭐가 뜨나"를 검색량·증가율과 함께 받는다. 검색어(<code>q</code>)가 없는 엔진이라 <code>geo</code> 로 나라를 고르고 <code>hours</code> 로 창을 정한다. 2026-08-18 실측(KR·24시간)으로 159건이 왔고 대부분 연예·사건 검색어였다 — 채널 주제와 겹치는 것만 시의성 소재로 본다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>파라미터</th><th>값</th><th>툴 인자</th></tr></thead>
+    <tbody>
+      <tr><td><code>geo</code></td><td>나라 코드 (기본 US)</td><td><code>geo</code> — 서버 기본 <code>KR</code></td></tr>
+      <tr><td><code>hours</code></td><td><code>4</code>·<code>24</code>·<code>48</code>·<code>168</code> — 구글이 정한 창 넷뿐</td><td><code>hours</code> (동일, 기본 24)</td></tr>
+      <tr><td><code>category_id</code></td><td>정수 — 3 Business and Finance · 4 Entertainment · 7 Health · 14 Politics · 16 Shopping · 17 Sports · 18 Technology · 19 Travel …</td><td><code>categoryId</code></td></tr>
+      <tr><td><code>only_active</code></td><td><code>true</code> — 지금도 오르는 중인 것만</td><td><code>onlyActive</code> (불리언)</td></tr>
+      <tr><td><code>hl</code></td><td>언어 — 카테고리 이름 표기에만 영향</td><td><code>hl</code></td></tr>
+      <tr><td>페이지·결과 수</td><td><strong>없음</strong> — 한 번에 수백 건</td><td><code>limit</code> — 서버 슬라이스(기본 20, 최대 50), 잘리면 <code>note</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>슬리밍 대상</h3>
+  <p><code>trending_searches[]</code>에서 <code>query</code> <code>search_volume</code>(→<code>searchVolume</code>) <code>increase_percentage</code>(→<code>increasePct</code>) <code>active</code> <code>start_timestamp</code>(→<code>startedAt</code> ISO) <code>categories[].name</code> <code>trend_breakdown</code>(상위 8) 만 싣는다. 버려지는 것: <code>news_page_token</code>·<code>serpapi_google_trends_link</code>·<code>serpapi_news_link</code>·<code>end_timestamp</code>.</p>
+  <div class="note">
+    <strong>검색량·증가율은 구간 어림값이다.</strong> 2,000,000 · 1000% 처럼 구글이 반올림한 값이라 순위 비교로만 쓴다. Google Trends 의 것이므로 <strong>구글 검색 기준</strong>이지 SNS 참여 기준이 아니다.
+  </div>
+  <h3><code>sns_issue_scout</code> — 같은 클라이언트를 조합한 스카우트</h3>
+  <p>새 엔진이 아니라 <code>engine=google</code> 검색에 <code>site:threads.com</code> / <code>site:x.com</code> / <code>site:instagram.com</code> 을 붙여 플랫폼 × 시드마다 돌리고, 게시물 URL 을 정규화해 중복을 걷어낸 뒤 여러 글·여러 플랫폼에 같이 나오는 주제어를 세는 툴이다(구현 <code>server/src/sns-issue-scout.ts</code>). 급상승 검색어는 위 엔진으로 한 번 더 부른다. 크레딧 = 플랫폼 수 × 시드 수 × 페이지 수 + 1. 타임아웃·5xx 는 한 번 재시도하는데 같은 검색은 SerpApi 캐시가 받아 과금이 없다.</p>
+  <div class="warn">
+    <strong>참여량이 없는 경로다.</strong> 좋아요·답글·조회는 구글 결과에 실려 오지 않고 순서도 관련도순이다. 그래서 결과는 "무엇이 터졌나"가 아니라 "이 주제로 지금 무엇이 오가나"의 언급 목록이며, <code>youtube_topic_scout</code> 의 채널 중앙값 배수와 같은 표에 섞으면 언급 수 12 가 배수 12 로 읽힌다. 스니펫이 본문과 다를 수 있다 — 스레드는 페이지의 자동 생성 주제 요약문이 스니펫으로 오기도 한다(실측 1건).
+  </div>
+</section>
+
+<section id="errors">
+  <h2>7. 에러와 쿼터</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>상황</th><th>응답</th><th>서버의 대응 지시</th></tr></thead>
+    <tbody>
+      <tr><td>키 무효</td><td>HTTP 401</td><td>"키를 교정하기 전 재시도 금지 (401/400은 재시도해도 같은 결과)"</td></tr>
+      <tr><td>쿼터 소진</td><td>HTTP 429</td><td>"이번 세션에서는 추가 검색을 중단하고, 이미 확보한 근거 안에서만 저작하거나 미검증 주장을 본문에서 제외할 것"</td></tr>
+      <tr><td>결과 없음</td><td><strong>HTTP 200</strong> + <code>error</code> 문자열</td><td>툴 에러가 아니라 "빈 결과"로 취급. <strong>결과 없는 검색은 과금되지 않는다</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>결과 없음이 200으로 온다는 게 함정이다.</strong> <code>res.ok</code>만 보고 파싱하면 빈 결과를 정상 응답으로 오해한다. 본문의 <code>error</code> 필드를 먼저 검사하고, 그 안에서도 <em>"hasn't returned any results"</em> 계열만 빈 결과로, 나머지는 진짜 에러로 갈라야 한다.
+  </div>
+  <p>무료 플랜은 월 250회다. 검색 1회 = 크레딧 1건이므로 같은 검색을 반복하지 않는 것이 실질 쿼터를 좌우한다. 한국어 소재 리서치는 쿼터가 큰 <a href="naver-search.html">Naver Open API(일 25,000회)</a>를 먼저 쓴다.</p>
+</section>
+
+<section id="impl">
+  <h2>8. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th></tr></thead>
+    <tbody>
+      <tr><td>응답 본문</td><td>원본 JSON 전체</td><td>엔진별 슬리밍 — <code>http.ts</code>의 "원문 그대로 반환" 철학의 <strong>의도적 예외</strong></td></tr>
+      <tr><td>인자 이름</td><td>엔진마다 상이 (<code>q</code> vs <code>query</code>, <code>num</code> vs 없음)</td><td><strong>검색 툴 전체가 <code>query</code>·<code>limit</code>·<code>page</code></strong> — 환산은 서버가 맡고, 계약 테스트가 강제한다</td></tr>
+      <tr><td>결과 배열 키</td><td>문서와 실제가 어긋남</td><td>실측 키 우선 + 문서 키 폴백 (<code>organic_results</code>·<code>images_results</code>·<code>video_results</code>)</td></tr>
+      <tr><td><code>limit</code> 상한</td><td>엔진마다 다름 (google은 <code>num</code> 자체가 무효)</td><td>web 10(실제 페이지 크기) · news 20 · naver 50 · image 50. 지킬 수 없는 값을 약속하지 않는다 — 상한과 한 호출 수신량은 별개이며, 잘리면 <code>note</code>로 알린다</td></tr>
+      <tr><td>잘린 결과</td><td>침묵</td><td><strong>실제 받은 건수 기준</strong>으로 응답 <code>note</code>에 고지 — 잘린 구간을 되찾는 방법이 엔진마다 다르기 때문이다(page 보폭이 묶음보다 작으면 다음 page가 겹쳐 가져오고, google_news는 page 인자가 아예 없다)</td></tr>
+      <tr><td>페이지</td><td><code>start</code> 오프셋</td><td><code>page</code>(1–5)로 받아 환산. 설명에 "첫 페이지에 근거가 없을 때만"</td></tr>
+      <tr><td>키 노출</td><td>URL 쿼리 필수</td><td>모든 출력 경로에 마스킹</td></tr>
+      <tr><td>타임아웃</td><td>—</td><td>15초 (<code>config.requestTimeoutMs</code>) → 504로 구조화</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  기준일 2026-08-18 · 구현 <a href="../../server/src/serp-client.ts">server/src/serp-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+</footer>
+
+</div>
+</body>
+</html>

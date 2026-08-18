@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Making short-form video with AI — social-flow guide</title>
+<link rel="alternate" hreflang="ko" href="index.html">
+<link rel="stylesheet" href="../../assets/reference.css">
+<style>
+  /* Props for this page only — layered on top of the shared reference.css */
+  .lede { font-size: 18px; line-height: 1.7; color: var(--text); margin: 8px 0 4px; }
+  .lede strong { font-weight: 750; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }
+  .col-box { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; background: var(--bg-card); }
+  .col-box.win { border-top: 3px solid var(--green); }
+  .col-box.fail { border-top: 3px solid var(--red); }
+  .col-box h4 { margin: 0 0 10px; font-size: 14.5px; letter-spacing: .02em; }
+  .col-box.win h4 { color: var(--green); }
+  .col-box.fail h4 { color: var(--red); }
+  .col-box ul { margin: 0 0 0 18px; }
+  .col-box li { font-size: 14.5px; margin-bottom: 8px; }
+  .metric-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+  .metric { flex: 1 1 170px; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; background: var(--bg-soft); }
+  .metric .m-k { font-size: 13px; color: var(--text-soft); }
+  .metric .m-v { font-size: 15.5px; font-weight: 650; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .rule-list { list-style: none; margin-left: 0; }
+  .rule-list > li { position: relative; padding-left: 30px; margin-bottom: 16px; }
+  .rule-list > li .n {
+    position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums;
+  }
+  .src-quote {
+    border-left: 3px solid var(--border); background: var(--bg-soft);
+    border-radius: 0 8px 8px 0; padding: 12px 18px; margin: 14px 0;
+    font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13.5px; line-height: 1.7; color: var(--text-soft); word-break: normal;
+  }
+  .src-quote p { margin-bottom: 10px; }
+  .src-quote p:last-child { margin-bottom: 0; }
+  /* Route comparison cards */
+  .route-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0; }
+  .route { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; background: var(--bg-card); }
+  .route.pick { border-color: var(--green); box-shadow: 0 0 0 1px var(--green-soft); }
+  .route .r-tag { font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--text-soft); }
+  .route.pick .r-tag { color: var(--green); }
+  .route h4 { margin: 6px 0 8px; font-size: 15px; }
+  .route p { font-size: 14px; color: var(--text-soft); margin: 0; }
+  @media (max-width: 720px) { .two-col, .route-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="index.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../../index.en.html">Docs</a><span>/</span>Guides<span>/</span>AI video production</div>
+
+<header class="hero">
+  <div class="kicker">PRODUCTION · AI VIDEO</div>
+  <h1>Making short-form video with AI</h1>
+  <p class="sub">Generate every clip with a video model, lay narration over stills, or mix the two? This page shows that the answer comes from the specs, not from taste. Only what's confirmed in official docs and in code that actually runs — and that survived adversarial verification — is written down; where we couldn't answer, the space is left blank.</p>
+  <div class="meta">
+    <span>Reference date <strong>2026-08-11</strong> · code cross-check <strong>2026-08-18</strong></span>
+    <span>Evidence <strong>24 sources → 120 claims extracted → 25 put to a 3-vote check → 14 confirmed</strong></span>
+    <span>Pipeline <strong><code>/social-flow:storyboard</code> → <code>produce</code></strong></span>
+  </div>
+</header>
+
+<div class="warn">
+  <strong>2026-08-16 update — three things changed since.</strong> The body stays exactly as the August 11 research left it; the places where the code moved are collected here.
+  <ul style="margin:10px 0 0">
+    <li><strong>There are two video engines now.</strong> Seedance (<code>seedance_*</code>) joined and makes 2–30 seconds in 1-second steps — the "8-second grid" in §2 below is now a constraint on the Veo side only. Which engine when: <a href="../../../skills/produce/references/video-model-selection.md">video-model-selection.md</a> is the source of truth.</li>
+    <li><strong><code>negativePrompt</code> exists.</strong> The field written up as "missing" in the §7 table is now on all four Veo tools. The negative-prompt rule in §3 is directly usable.</li>
+    <li><strong>Per-episode cost has numbers.</strong> The hole §9 described as "not one value passed verification" was filled by <code>skills/autoproduce/references/prices.tsv</code> and <code>cost-tiers.md</code>. The economy tier — the default for autonomous authoring — never calls Veo once and runs <strong>about $0.26–0.29</strong> per episode (capped at $0.30).</li>
+  </ul>
+</div>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#route">There's no route to choose</a></li>
+    <li><a href="#spec">The Veo specs decide the pipeline</a></li>
+    <li><a href="#prompt">Prompt design — four official rules</a></li>
+    <li><a href="#consistency">Consistency across clips — tools and limits</a></li>
+    <li><a href="#audio">Narration comes first</a></li>
+    <li><a href="#subtitle">Should subtitles be burned into the video</a></li>
+    <li><a href="#ours">Our pipeline, checked against the code</a></li>
+    <li><a href="#refuted">Claims that died in verification</a></li>
+    <li><a href="#unknown">What we couldn't answer</a></li>
+    <li><a href="#sources">Sources</a></li>
+  </ol>
+</nav>
+
+<section id="route">
+  <h2>1. There's no route to choose</h2>
+  <p class="lede"><strong>Hybrid is the default — not by taste, but because Veo makes at most 8 seconds per call.</strong></p>
+  <p>For a 30–60 second short, people assume there are three options: generate everything with a video model, lay narration over images like a slideshow, or mix the two. In practice there's nothing to choose.</p>
+  <p>Veo 3.1 makes <strong>8 seconds at most</strong> per call. On top of that, Google's docs recommend putting "one moment per prompt" for short videos — cram several events into one prompt and the result often smears. The prescription in that same doc is to split generation into "Clip 1 / Clip 2 / Clip 3". Use it the way Google recommends and the output is a bundle of clips from the start: 4 of them for 30 seconds, 8 for 60.</p>
+  <p>Which means an editing layer that joins clips is needed either way. Once that layer exists, the only remaining decision is "which slots get generated video and which get stills". That's the hybrid.</p>
+
+  <div class="route-row">
+    <div class="route">
+      <div class="r-tag">A</div>
+      <h4>Generated video only</h4>
+      <p>Pull every clip from Veo. The 8-second ceiling means you end up joining clips anyway, so despite the name it isn't "only".</p>
+    </div>
+    <div class="route">
+      <div class="r-tag">B</div>
+      <h4>Images + TTS</h4>
+      <p>Ken Burns over stills, plus narration, subtitles, and BGM. Widely shipped in practice, but we found no comparative evidence that it's better.</p>
+    </div>
+    <div class="route pick">
+      <div class="r-tag">C · default</div>
+      <h4>Hybrid</h4>
+      <p>Pick generated video or a still per scene. The joining layer is needed on any route, so this option costs nothing extra.</p>
+    </div>
+  </div>
+
+  <p><span class="badge key">added 2026-08-18</span> The engines that fill those slots have grown too. Still backgrounds default to on-device <code>image_local_generate</code> (Z-Image Turbo via mflux/MLX) — no API key, no network, no billing. Only frames carrying text go to <code>gpt_image_text2img</code>, because local generation breaks Korean jamo apart. Narration has the same shape: on-device by default (§5).</p>
+
+  <div class="note">
+    <strong>Confidence in this conclusion is low.</strong> <span class="badge free">derived inference</span> The three facts under it (the 8-second ceiling, the one-moment rule, the split-into-clips prescription) each landed 3-0, but tying them into "hybrid is the default" is us, not the sources. And <strong>there's no comparative evidence for A over B or B over A</strong> — turning "where to use generated video" into a principle needs per-episode cost, and not one of those numbers passed verification in this round (§9).
+  </div>
+</section>
+
+<section id="spec">
+  <h2>2. The Veo specs decide the pipeline</h2>
+  <p>These numbers can't be changed by preference. The pipeline's structure follows from them.</p>
+
+  <div class="metric-row">
+    <div class="metric"><div class="m-k">Clip length</div><div class="m-v">4 · 6 · 8s</div></div>
+    <div class="metric"><div class="m-k">Frame rate</div><div class="m-v">24fps fixed</div></div>
+    <div class="metric"><div class="m-k">9:16 portrait</div><div class="m-v">native</div></div>
+    <div class="metric"><div class="m-k">Videos per request</div><div class="m-v">1</div></div>
+  </div>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Detail</th><th>Confidence</th></tr></thead>
+    <tbody>
+      <tr><td>Ceiling per generation</td><td><strong>8 seconds</strong>. 30s = 4 clips, 60s = 8 clips</td><td><span class="badge ro">official · 3-0</span></td></tr>
+      <tr><td>Frame rate</td><td>24fps, <strong>fixed</strong> — not selectable</td><td><span class="badge ro">official · 3-0</span></td></tr>
+      <tr><td>Aspect ratio</td><td>16:9 (default) and <strong>9:16</strong>. Portrait comes out directly, no crop or reframe</td><td><span class="badge ro">official · 3-0</span></td></tr>
+      <tr><td>Resolution</td><td>720p at every length, <strong>1080p and 4K at 8 seconds only</strong></td><td><span class="badge ro">official · 3-0</span></td></tr>
+      <tr><td>Video extension</td><td>+7 seconds, up to 20 times. But <strong>extending drops you to 720p</strong></td><td><span class="badge ro">official · 3-0</span></td></tr>
+      <tr><td>Audio</td><td>Veo 3.1 is <strong>always on</strong> — there's no option to ask for silence</td><td><span class="badge wr">official · 2-1</span></td></tr>
+      <tr><td>Prompt language</td><td>The model card's <code>Prompt languages</code> reads <strong>English only</strong> on every variant</td><td><span class="badge ro">official · 3-0</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Where Korean goes</h3>
+  <p>The asymmetry in the docs is real. The Vertex model card lists English as the only prompt language for every Veo 3.1 variant, and the Gemini API docs say English is fully supported while other languages haven't been evaluated. The Gemini TTS docs, in the other direction, list <code>Korean | ko</code> explicitly in a table of 87 languages.</p>
+  <p>So <strong>write video prompts in English and keep Korean in the narration and subtitle layers.</strong> That's the only arrangement the docs support.</p>
+  <div class="note">
+    <strong>Overstate it and you're wrong.</strong> "Not evaluated" is not "doesn't work". Veo 3.x producing Korean speech is common in practice, so turning this into "Veo can't do Korean" makes it false. What the docs let you say stops at <strong>there's no vendor guarantee</strong>, and "generate TTS separately and mix it in" is an architecture decision of ours, not something Google said.
+  </div>
+  <div class="warn">
+    <strong>The docs disagree with each other in places.</strong> Vertex's "Generate videos from text" page lists 4K as "Preview models only", which collides with the GA model card (the model card wins), and the <code>Sound generation: Not supported</code> line on the <code>veo-3.1-generate-001</code> card sits badly with other Google docs. Treating individual fields as spot-check material is the safe move. <strong>The 9:16 + 1080p combination is also worth generating once to confirm</strong> — the older Veo 3.0 had a constraint where 1080p was 16:9 only.
+  </div>
+
+  <h3>That grid is now a Veo-side constraint <span class="badge key">added 2026-08-16</span></h3>
+  <p>At research time Veo was the only video engine, so the 8-second grid was the pipeline's constraint. Seedance (<code>seedance_*</code>, BytePlus ModelArk) is here too now, and the two engines aren't substitutes — they're good at different things.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Veo 3.1</th><th>Seedance</th></tr></thead>
+    <tbody>
+      <tr><td>Length</td><td>4 · 6 · 8s grid</td><td><strong>2–30s in 1-second steps</strong> — billed for what you request</td></tr>
+      <tr><td>Ratios</td><td>16:9 · 9:16</td><td>7 of them (21:9 · 4:3 · 1:1 · 3:4 …)</td></tr>
+      <tr><td>Audio</td><td>Always on — dialogue and sound effects are its strength</td><td>Can be turned off — which makes silent cuts far cheaper</td></tr>
+      <tr><td>Reference images</td><td>Up to 3 · fixed 8s</td><td>Up to 30 · has an asset registry (<code>asset://</code>)</td></tr>
+      <tr><td>Live-action person input</td><td>Adult faces pass (children blocked)</td><td><strong>The 2.x family rejects them</strong> — only 1.5 pro and the 1.0 family accept</td></tr>
+      <tr><td>Extension</td><td><code>veo_extension</code> — +7s, up to 20 times</td><td>No counterpart tool</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>So §1's "hybrid is the default" conclusion stands, with one more reason behind it. The length constraint loosened, but <strong>Google's "one moment per prompt" recommendation didn't</strong>, so pulling 30 seconds in one piece is still not the recommended usage. The axis that splits the cost isn't length, it's <strong>whether that segment uses its sound</strong> — motion backgrounds throw the sound away, so they go to Seedance silent; b-roll that uses the clip's own sound goes to Veo. The decision table's source of truth is <a href="../../../skills/produce/references/video-model-selection.md">video-model-selection.md</a>, and the API contract is the <a href="../../api-reference/seedance.en.html">Seedance reference</a>.</p>
+</section>
+
+<section id="prompt">
+  <h2>3. Prompt design — four official rules</h2>
+  <p>These are the rules Google's docs state. The docs were last updated 2026-08-07, so they're current.</p>
+
+  <ol class="rule-list">
+    <li><span class="n">1</span>
+      <strong>Break the prompt into slots.</strong> subject · action · scene/context · camera angle · camera movement · lens/optical · visual style (lighting · tone-mood · artistic style · ambiance) · temporal · audio.
+      <strong>You don't have to fill them all</strong> — required, must, and mandatory appear nowhere in the whole document.
+    </li>
+    <li><span class="n">2</span>
+      <strong>Don't use negation words in the negative prompt.</strong> Instead of "no cars", just describe what you don't want.
+      Google's own example is <code>urban background, man-made structures, dark, stormy, or threatening atmosphere</code> — adjectives and "or". Narrowing this to "nouns only" gets it wrong.
+    </li>
+    <li><span class="n">3</span>
+      <strong>Put dialogue in quotes and those letters get stamped on screen.</strong> To have the line only spoken, use the <code>~ says:</code> colon form.
+      This lever only applies to dialogue, though — it won't stop signage, posters, or UI text.
+    </li>
+    <li><span class="n">4</span>
+      <strong>One moment per prompt.</strong> Bundle A→B→C into one call and the result often smears.
+      The doc's phrasing is hedged as "often leads to", not stated flatly.
+    </li>
+  </ol>
+
+  <div class="note">
+    <strong>These rules are recommendations, not measured efficacy.</strong> The negative-prompt item reads "We recommend", not "must", and there's no A/B, no failure rate, no benchmark. The words <code>storyboard</code> and <code>shot list</code> never appear in the docs either — framing this as a storyboard pipeline is our reading, not Google's.
+  </div>
+
+  <h3>image-to-video is a different kind of prompt</h3>
+  <p>This is the most frequently botched point. <strong>When making video from an image, write motion only.</strong> Don't re-describe the person, background, or lighting already visible in the source image.</p>
+  <div class="src-quote">
+    <p>Not recommended: Re-describe the character, the background, or the lighting depicted in the image. Redundant prompts confuse the model and lead to poor results.</p>
+  </div>
+  <p>Call the character by a generic name too — <code>the subject</code>, <code>the woman</code>, <code>he/she</code> — instead of a proper name. The source image is treated as the film's first frame, so its sharpness and composition set the floor for the result's quality.</p>
+  <p>The same document <strong>prescribes the exact opposite for text-to-video</strong>: give the character a name, build an unchanging appearance-description block, and paste it whole into every scene prompt. Two paths diverge inside one document, so merging prompt-generation logic into a single path guarantees one of them is wrong.</p>
+  <div class="note">
+    <strong>Watch the scope.</strong> The generic-name rule applies only to "a character inside the source image" — people the prompt newly introduces aren't covered. And the rule addresses the visual layer only (audio prompting is separate).
+  </div>
+</section>
+
+<section id="consistency">
+  <h2>4. Consistency across clips — tools and limits</h2>
+  <p>Once the structure is joined clips, "keep the same person and the same color across several clips" becomes a problem immediately. The available tools are few, and the docs enumerate them.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Tool</th><th>Detail</th><th>Limit</th></tr></thead>
+    <tbody>
+      <tr><td>Reference images</td><td>Up to <strong>3</strong> — assets of one person, character, or product</td><td>The docs only say <code>asset</code> and <strong>never use the word style</strong></td></tr>
+      <tr><td>First-frame pinning</td><td>The input image becomes the first frame as-is</td><td>Sets only where the next clip starts; the middle is uncontrolled</td></tr>
+      <tr><td>First/last frame interpolation</td><td>Specify the end frame with <code>lastFrame</code></td><td>—</td></tr>
+      <tr><td>Video extension</td><td>+7 seconds, up to 20 times</td><td>Extending is <strong>720p only</strong></td></tr>
+      <tr><td>Referencing several videos</td><td colspan="2"><strong>Not supported</strong> — "Referencing or reasoning across multiple videos is not currently supported."</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="warn">
+    <strong>"Paste the description block + pin the seed" is not the answer to consistency.</strong> <span class="badge de">3-0 refuted</span> The claim presenting this two-step recipe as a rule was rebutted by all three verifiers. The docs do <em>describe</em> such a workflow, but there's no efficacy evidence, and the claim ran harder than the docs. In the docs <code>seed</code> is a reproducibility lever, not a cross-clip consistency technique — the docs themselves say it doesn't guarantee determinism and only improves it slightly.
+  </div>
+  <p style="font-size:14px;color:var(--text-soft)">This section's confirmation level is 2-1. The verification session ran out of WebSearch budget, so the third-party refutation sweep and the Vertex-side cross-check never ran.</p>
+</section>
+
+<section id="audio">
+  <h2>5. Narration comes first</h2>
+  <p class="lede"><strong>Make the TTS first, and its measured length sets the video's length.</strong></p>
+  <p>Confirmed in three open-source pipelines that actually ship. The evidence is running code, not vendor advice.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Project</th><th>Structure</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>MoneyPrinterTurbo</td><td>script → terms → <strong>audio</strong> → subtitle → materials → final. Reads the real length with <code>AudioFileClip</code> and takes it as the target</td><td><span class="badge ro">code · 3-0</span></td></tr>
+      <tr><td>ShortGPT</td><td>A sequential runner enforces 12 steps — 1 script → 2 <strong>audio</strong> → 3 speedUp → 4 timeCaptions → 5 imageSearchTerms. The image step can't get in ahead of subtitle timing</td><td><span class="badge ro">code · 3-0</span></td></tr>
+      <tr><td>revideo example</td><td>Does the same thing with Deepgram nova-2</td><td><span class="badge wr">code · 2-1</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><span class="badge key">added 2026-08-18</span> <strong>There are two engines making that narration too.</strong> Bodies go to on-device <code>tts_local_generate</code> (Supertonic 3 — no API key, no network) by default, and only cuts that need acting go to Gemini <code>tts_generate</code>, because the local side has no style or emotion controls. Measuring length got cheaper: <code>tts_local_generate</code> returns the audio duration in its response, so a scene-length check doesn't need a separate ffprobe call. The two engines differ in sample rate, though — local 44.1kHz, Gemini 24kHz — so mixing them in one video needs resampling.</p>
+
+  <h3>Why subtitle timing is a re-transcription</h3>
+  <p>Gemini TTS <strong>doesn't return word timestamps.</strong> So those pipelines transcribe their own generated speech (ASR) to get per-word start and end times. It's a detour, not a choice.</p>
+  <div class="warn">
+    <strong>In Korean this path is risky.</strong> Re-transcription isn't aligning against the script, it's hearing it again, so it drifts from the script on numbers, loanwords, and proper nouns. And what gets stamped into burned-in subtitles is <strong>the misrecognition, not the script.</strong> Deepgram's docs also state that <code>smart_format</code> has its widest support in English. Korean accuracy is unverified.
+  </div>
+
+  <div class="note">
+    <strong>This isn't comparative evidence.</strong> It's not "audio-first beats video-first", it's an existence proof that "this is how it actually ships". And both ShortGPT and MoneyPrinterTurbo <strong>use stock footage, so they've never hit the fragmentation Veo's 8-second ceiling creates</strong> — don't cite them as evidence that the same order carries over to a generated-video stack.
+  </div>
+</section>
+
+<section id="subtitle">
+  <h2>6. Should subtitles be burned into the video</h2>
+  <p class="lede"><strong>Not burning them became this pipeline's rule. Platforms that take a subtitle file get one uploaded separately; only Instagram, which doesn't, gets its own burned-in copy.</strong> <span class="badge key">implemented</span></p>
+  <p>The problem with burned-in subtitles (baked into the video's pixels) is clear. <strong>You can't fix them after publishing.</strong> One typo brings a re-encode and a re-post. They can't be turned off, can't be translated, and don't show up in search. They also carry a standing risk of colliding with platform UI elements.</p>
+  <p>But whether an alternative exists differs per platform. That's the fork.</p>
+
+  <div class="two-col">
+    <div class="col-box win">
+      <h4>YouTube · Facebook — there's a subtitle-file path</h4>
+      <ul>
+        <li><strong>YouTube</strong>: Data API <code>captions.insert</code>. Scope is <code>youtube.force-ssl</code> (or <code>youtubepartner</code>), <strong>quota 400 units</strong></li>
+        <li><strong>Facebook</strong>: Graph API <code>POST /{video_id}/captions</code>. SRT only, filename in <code>name.locale.srt</code> form, 200K limit</li>
+        <li>Subtitles can be fixed and re-uploaded after publishing — no video re-upload</li>
+        <li>Viewers can toggle them, and on YouTube they feed auto-translation</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>Instagram — burning them in is the only way</h4>
+      <ul>
+        <li>IG Content Publishing container parameters have <strong>no subtitle-file argument</strong> — <code>caption</code> is the text description</li>
+        <li>The app's automatic captions can't be controlled on an API-published post</li>
+        <li>Drop the burn-in and you just get a <strong>video with no subtitles</strong></li>
+        <li>Threads doesn't apply — a video episode posts the body only and puts the video link in a self-reply. No cover image is attached either <span class="badge key">updated 2026-08-18</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>The API facts in this section were confirmed outside this round of research.</strong> <span class="badge free">checked separately · no 3-vote check</span> They weren't among the 25 claims in the deep-research verification; the doc pages were opened directly (<a href="https://developers.google.com/youtube/v3/docs/captions/insert">captions.insert</a> · <a href="https://developers.facebook.com/docs/graph-api/reference/video/captions/">FB video captions</a> · <a href="https://developers.facebook.com/docs/instagram-platform/content-publishing">IG content publishing</a>).
+    <p style="margin-top:10px"><strong>An earlier edition (morning of 2026-08-11) left FB as "Reels, so applicability unconfirmed" — that was us misreading our own implementation.</strong> <code>facebook_publish</code> uploads a <strong>regular video</strong> via <code>POST /{page-id}/videos</code> (not a Reel), so the caption edge applies as written. This is now <a href="../../api-reference/meta-graph.en.html#facebook">confirmed against the code</a>. That YouTube's docs don't mention Shorts stays unconfirmed.</p>
+  </div>
+
+  <h3>So we make two copies of the video</h3>
+  <p>Make one mp4 and post it everywhere and you can't take the subtitles back out. So the builder pulls <strong>two copies from the same source</strong> — a clean master and a burned-in one. The clean copy isn't re-encoded from the other; each comes from the source, so both are first-generation, and the builder verifies their lengths match.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Artifact</th><th>Goes to</th><th>Subtitles</th></tr></thead>
+    <tbody>
+      <tr><td><code>video.mp4</code> (clean)</td><td>YouTube · Facebook</td><td><code>subs.srt</code> alongside it as <code>captionFilePath</code></td></tr>
+      <tr><td><code>video-sub.mp4</code> (burned in)</td><td>Instagram</td><td>burned into the frame</td></tr>
+      <tr><td><code>cover.jpg</code></td><td>YT thumbnail (<code>thumbnailFilePath</code>)</td><td>n/a — pulled from the clean copy</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>SRT and ASS are <strong>stamped separately from the same origin</strong>. ASS is never converted back into SRT — the two formats differ in digit count and separator (<code>h:mm:ss.cc</code> vs <code>hh:mm:ss,mmm</code>), and a conversion leaves room for the burned-in copy and the subtitle file to disagree on timing. The builder writes both formats at the same spot where it makes each subtitle line.</p>
+
+  <div class="ok">
+    <strong>The publish tools have subtitle arguments now.</strong> The earlier edition's "there's no subtitle-file argument anywhere in the publish tools" is resolved. <code>youtube_publish</code> takes <code>captionFilePath</code>+<code>captionLanguage</code>, and <code>facebook_publish</code> takes <code>captionFilePath</code>+<code>captionLocale</code>. Both validate the file <strong>before publishing</strong> (extension, size, existence), and if only the subtitle upload fails they downgrade it to a <code>captionWarning</code> — the video is already public, and re-publishing isn't idempotent, so it would create a duplicate post.
+    <p style="margin-top:10px"><strong>YouTube needs one more scope.</strong> <code>captions.insert</code> requires <code>youtube.force-ssl</code>, which the publishing scope <code>youtube.upload</code> doesn't include. Publish with an old upload-only token and <strong>the video goes up while the subtitles alone fail</strong>. The quotas differ too — 1 unit for the upload, 400 for the captions.</p>
+  </div>
+
+  <div class="warn">
+    <strong>Neither side can be pushed with data.</strong> <span class="badge free">zero surviving evidence</span> <strong>Not one claim about subtitle design passed verification</strong> in this round. "Subtitles raise retention" and "cut them at 15 characters" both died (§8). The judgment above is a feature comparison of <strong>what each platform accepts</strong>, not an answer about how subtitles affect performance.
+  </div>
+  <div class="note">
+    <strong>Our subtitle placement is tuned from measurements.</strong> The band sits at y≈1380–1560, above the IG caption zone, with symmetric 250px side margins — at 168 a long single line crosses the action bar's start line (x≈890; measured 907px), and at 200 the clearance drops to 39–61px, the smallest of any on-screen element. Asymmetric margins push center-aligned subtitles 60px off the screen's center (measured).
+  </div>
+</section>
+
+<section id="ours">
+  <h2>7. Our pipeline, checked against the code</h2>
+  <p>The research results, verified against this repository. <span class="badge key">measured</span></p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Status</th><th>How it was checked</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>negativePrompt</code> field</td>
+        <td><strong>It exists now.</strong> <span class="badge key">updated 2026-08-16</span> Added to all four Veo tools. At research time it was missing, so §3's negative-prompt rule was unusable; now it applies — what you want excluded goes into this field as noun phrases, not into the prompt body</td>
+        <td>source check (<code>tools.ts</code> ×4 · <code>video-client.ts</code>)</td>
+      </tr>
+      <tr>
+        <td>Veo <code>seed</code></td>
+        <td><strong>Still missing.</strong> Nothing on the Veo side even now; Seedance takes <code>seed</code>, but only on the 1.5 pro and 1.0 families (2.x refuses). Since the vendor docs don't promise that the same seed reproduces, <strong>we don't hang cross-cut consistency on it</strong> — that's the job of reference images and first/last frames</td>
+        <td>source check (<code>tools.ts</code>)</td>
+      </tr>
+      <tr>
+        <td>ffmpeg <code>zoompan</code> trap</td>
+        <td><strong>Avoided.</strong> <code>build-reel.sh</code> and <code>build-outro.sh</code> both pin the canvas and fps with <code>s=${W}x${H}:fps=$FPS</code> — the default is 9:16's 1080×1920, and since landscape long-form arrived this slot is decided by the format <span class="badge key">updated 2026-08-18</span></td>
+        <td>source check</td>
+      </tr>
+      <tr>
+        <td>Korean ASR subtitle risk</td>
+        <td><strong>Applies to half of it.</strong> Generated mode fits subtitles from the <code>scenes.js</code> text and per-scene TTS lengths, so no ASR is involved. Shooting mode uses whisper.cpp, but the two-layer misrecognition handling is already in place</td>
+        <td>pipeline structure</td>
+      </tr>
+      <tr>
+        <td>Subtitle file upload</td>
+        <td><strong>It exists now.</strong> <span class="badge key">landed 2026-08-11</span> <code>captionFilePath</code>+<code>captionLanguage</code> on <code>youtube_publish</code>, <code>captionFilePath</code>+<code>captionLocale</code> on <code>facebook_publish</code>. The builder emits <code>subs.srt</code> and the burned-in <code>reel-sub.mp4</code> together (§6)</td>
+        <td>intercepted request bytes — multipart/related part layout, SRT byte match, FB filename <code>caption.ko_KR.srt</code></td>
+      </tr>
+      <tr>
+        <td>Is the FB post a Reel</td>
+        <td><strong>No.</strong> It uploads a <strong>regular video</strong> via <code>POST /{page-id}/videos</code>. The earlier edition's "it's a Reel, so subtitle support is unconfirmed" was us misreading our own implementation</td>
+        <td>source check (<code>sns-client.ts</code>)</td>
+      </tr>
+      <tr>
+        <td>Instagram AI disclosure</td>
+        <td><strong>Missing.</strong> The IG container has an <code>is_ai_generated</code> parameter and our <code>instagram_publish</code> doesn't use it — YouTube gets <code>containsSyntheticMedia</code> and IG alone is skipped</td>
+        <td>full-tree grep, 0 hits</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>What the zoompan trap was</h3>
+  <p>We avoid it, but it's worth recording. The defaults of ffmpeg's <code>zoompan</code> filter are <strong>1280×720 · 25fps · 90 frames per image</strong>. Leave out <code>s=</code> and <code>fps=</code> on a 9:16 source and the portrait video comes out landscape 720p <strong>without a single warning</strong>. And not as a center crop — the whole frame is squashed and stretched. A verifier confirmed it matched the output of <code>scale=1280:720</code> at SSIM 1.000 (identical).</p>
+  <div class="warn">
+    <strong>A summarizer hallucination was caught during the research.</strong> The WebFetch summarizer returned the same ffmpeg doc summarized wrongly as "d defaults to 1, s keeps the input size". Both the original text and the binary's <code>-h filter=zoompan</code> refuted it immediately. If a re-run meets the same summary, ignore it.
+  </div>
+</section>
+
+<section id="refuted">
+  <h2>8. Claims that died in verification</h2>
+  <p>25 claims were checked and 11 died. Listed with the easiest to resurrect first.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Claim</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Veo output always carries a SynthID watermark and the caller can't remove it</strong></td><td><span class="badge de">3-0 refuted</span></td></tr>
+      <tr><td><strong>Pasting a character description block + pinning the seed is the answer to consistency</strong></td><td><span class="badge de">3-0 refuted</span></td></tr>
+      <tr><td><strong>Veo's native dialogue + lip sync is a first-class alternative to separate TTS</strong></td><td><span class="badge de">3-0 refuted</span></td></tr>
+      <tr><td>Burned-in subtitles break at 15 characters / 5 words</td><td><span class="badge de">1-2 refuted</span></td></tr>
+      <tr><td>Narration past 57 seconds gets compressed with <code>atempo</code> · script budget is 20.5 characters per second</td><td><span class="badge de">3-0 refuted</span></td></tr>
+      <tr><td>Word-level subtitles need WhisperX forced alignment (2 related claims)</td><td><span class="badge de">3-0 refuted</span></td></tr>
+      <tr><td>Smooth Ken Burns requires <code>d=1</code> + accumulating <code>pzoom</code></td><td><span class="badge de">3-0 refuted</span></td></tr>
+      <tr><td>MoneyPrinterTurbo is an existence proof that you can skip generated video</td><td><span class="badge de">3-0 refuted</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <strong>Don't misread what the SynthID refutation means.</strong> What was refuted is the <em>flat assertion</em> "always attached and impossible to remove", not "SynthID doesn't exist". How far watermarking actually reaches on Veo output is <strong>still unconfirmed</strong> (§9).
+  </div>
+</section>
+
+<section id="unknown">
+  <h2>9. What we couldn't answer</h2>
+  <p class="lede"><strong>At research time, four of eight questions had zero claims that passed verification.</strong> We didn't fill them with plausible sentences, and one of them — cost — was filled by the code afterward, marked in the table below.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Area</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Cost and re-roll economics</strong> <span class="badge key">closed</span></td><td>All unsettled at research time. Now <code>skills/autoproduce/references/prices.tsv</code> is the unit-price source of truth and <code>cost-tiers.md</code> sets the model ladder and promotion rules — the economy tier, the default for autonomous authoring, uses no generated video in any cut and runs $0.26–0.29 per episode, promoting only the 4-second cover to <code>veo-3.1-lite</code> when hook metrics fall below threshold. "The hole we can fill fastest" below was that work</td></tr>
+      <tr><td><strong>Sequencing rules</strong></td><td>Which material suits the hook (first 1–3 seconds), the body, and the close; cut lengths; subtitle design — zero surviving claims. Separating subtitles in §6 was also decided on <strong>features, not performance</strong></td></tr>
+      <tr><td><strong>Quality gates</strong></td><td>How to automatically catch broken hands, mangled text, morphing, and flicker — nothing passed verification</td></tr>
+      <tr><td><strong>Platform AI policy</strong></td><td>SynthID's coverage unconfirmed. The folk belief that "disclosure cuts your reach" was neither refuted nor proven</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <strong>One disclosure-policy question has an answer from outside this research.</strong> An earlier round confirmed it in YouTube's official docs as a primary source and it's already in <code>skills/publish/SKILL.md</code> — <em>"Disclosing AI content won't limit a video's audience or impact its eligibility to earn money."</em> Disclosure doesn't affect reach or monetization eligibility; what it does warn about is forced labels, removal, and YPP suspension for habitual non-disclosure. Details are in the <a href="../youtube-shorts-growth/index.en.html">YouTube Shorts growth guide</a>.
+  </div>
+
+  <h3>The hole we can fill fastest</h3>
+  <p>Cost. The search step did turn up figures from the official pricing page — Veo 3.1 per second: standard $0.40, Fast $0.10 (720p) / $0.12 (1080p), Lite $0.05 / $0.08. Over 8 seconds that's <strong>$3.20 / $0.80 / $0.40</strong>. <strong>These numbers were since confirmed directly on the official pricing page</strong> <span class="badge key">confirmed 2026-08-15</span> — the same values sit in <code>skills/autoproduce/references/prices.tsv</code> at official grade, and that file is the unit-price source of truth. What was confirmed, though, is <strong>a pricing page, not an invoice</strong>. A summarizer hallucination was caught in this same research (§7), so measuring once with a real billed call hasn't been done yet.</p>
+
+  <h3>Worth doing next</h3>
+  <p style="color:var(--text-soft);font-size:14.5px">In the 2026-08-16 cross-check, <s>struck-through</s> items are the ones finished since.</p>
+  <ul>
+    <li><s>Expose <code>negativePrompt</code> and <code>seed</code> on the <code>veo_*</code> tools</s> — <code>negativePrompt</code> was added to all four. <code>seed</code> was <strong>deliberately left out</strong>: the vendor doesn't promise the same seed reproduces, so cross-cut consistency is held by reference images and first/last frames</li>
+    <li><s>Pin <strong>video prompts are English</strong> into the storyboard and produce instructions (§2)</s> — it's in <code>produce/SKILL.md</code>. The same rule catches Seedance too, whose prompt body takes Chinese and English only</li>
+    <li>Generate once to confirm 1080p and 4K actually come out at 9:16</li>
+    <li>Add <code>is_ai_generated</code> to <code>instagram_publish</code> — YouTube discloses AI and IG doesn't (§7)</li>
+    <li><strong>Run the subtitle path through one real publish</strong> — the request bytes are verified, but whether the platform accepts them is only known by publishing. Two things in particular: reissuing the YouTube token with <code>force-ssl</code>, and whether the caption call catches while FB processes the video asynchronously</li>
+    <li>Check that CRLF line endings in subtitles pass on both platforms — we matched the original SubRip spec, but whether some parsers take LF only is unconfirmed</li>
+  </ul>
+</section>
+
+<section id="sources">
+  <h2>10. Sources</h2>
+  <p>120 claims were pulled from 24 sources, 25 went into a 3-vote adversarial check, and 14 survived. Below is where the confirmed claims actually came from.</p>
+
+  <h3>Official docs (primary)</h3>
+  <ul>
+    <li><a href="https://ai.google.dev/gemini-api/docs/veo">Generate videos with Veo — Gemini API</a> — hard specs, consistency tools, language support</li>
+    <li><a href="https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/veo/3-1-generate">Veo 3.1 model card — Vertex AI</a> — per-model resolution, prompt language</li>
+    <li><a href="https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/video-gen-prompt-guide">Video generation prompt guide</a> — prompt anatomy, negative prompts, dialogue notation</li>
+    <li><a href="https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/best-practice">Video generation best practices</a> — image-to-video rules, character consistency</li>
+    <li><a href="https://ai.google.dev/gemini-api/docs/speech-generation">Speech generation — Gemini API</a> — the 87-language support table (<code>ko</code> included)</li>
+    <li><a href="https://ffmpeg.org/ffmpeg-filters.html#zoompan">FFmpeg filters — zoompan</a> — hardcoded defaults</li>
+  </ul>
+
+  <h3>Code that actually runs (primary)</h3>
+  <ul>
+    <li><a href="https://github.com/harry0703/MoneyPrinterTurbo">MoneyPrinterTurbo</a> — audio-first order, length safety margin</li>
+    <li><a href="https://github.com/RayVentura/ShortGPT">ShortGPT</a> — enforced 12-step sequence, whisper_timestamped subtitles</li>
+    <li><a href="https://github.com/midrender/examples">midrender/examples</a> — Deepgram word timing<br>
+      <span style="font-size:13.5px;color:var(--text-soft)">Citation correction: this code is not in <code>redotvideo/revideo</code> itself but in the sibling repo <code>examples</code>, at <code>youtube-shorts/src/utils.ts</code>.</span></li>
+  </ul>
+
+  <h3>Outside this research — API docs read directly <span class="badge free">no 3-vote check</span></h3>
+  <p style="font-size:14.5px;color:var(--text-soft)">The evidence for §6 (subtitles). Not among the 25 deep-research claims; the doc pages were opened and read directly.</p>
+  <ul>
+    <li><a href="https://developers.google.com/youtube/v3/docs/captions/insert">YouTube Data API — captions.insert</a> — <code>youtube.force-ssl</code>, quota 400 units, no mention of Shorts</li>
+    <li><a href="https://developers.facebook.com/docs/graph-api/reference/video/captions/">Graph API — Video Captions</a> — SRT, <code>name.locale.srt</code>, 200K, no mention of Reels</li>
+    <li><a href="https://developers.facebook.com/docs/instagram-platform/content-publishing">Instagram Content Publishing</a> — no subtitle-file parameter, <code>is_ai_generated</code> present</li>
+  </ul>
+
+  <div class="note">
+    <strong>Don't read the two kinds of source as one.</strong> Everything from Google's docs is <strong>usage the vendor recommends</strong>, not measured efficacy — no A/B, no failure rate, no benchmark. The open-source code is <strong>an existence proof that "this is how it ships"</strong>, not comparative evidence that "this way is better".
+  </div>
+
+  <div class="warn">
+    <strong>Limits of the verification itself.</strong> Several verification sessions ran out of WebSearch budget, so the third-party refutation sweep never ran. For claims about "what the docs say", reading the original is the decisive test, so the impact is small — but <strong>claims about actual behavior (consistency tools and Korean handling especially) got less cross-checking.</strong> Paid Veo calls weren't measured, on cost grounds.
+  </div>
+</section>
+
+<footer class="foot">
+  <p>social-flow guide · research reference date 2026-08-11 · code cross-check 2026-08-18 (v0.23.0) · 120 claims from 24 sources → 25 put to a 3-vote check → 14 confirmed · 1 of the 4 open questions (cost) closed</p>
+  <p>Related: <a href="../youtube-shorts-growth/index.en.html">YouTube Shorts growth</a> · <a href="../screencast-usage/index.en.html">Screencast production</a> · <a href="../../api-reference/index.en.html">API reference</a></p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,53 +1,71 @@
 /**
- * Google Veo 3.1 비디오 생성 클라이언트 — fect-mcp-server video 모듈 이식.
+ * Google Veo 3.1 video generation client — ported from the fect-mcp-server video module.
  *
- * Google Gen AI SDK를 사용하여 비디오를 생성한다.
- * - 모델: veo-3.1-generate-preview(기본) / veo-3.1-fast-generate-preview / veo-3.1-lite-generate-preview
- * - Text-to-Video, Image-to-Video, Video Extension, Reference Images 지원
- * - 해상도 720p/1080p/4k, 길이 4/6/8초 (제약은 스키마 검증 준거)
- * - Extension 은 +7초 증분 · 720p 고정 (3.1 / 3.1 Fast 전용)
+ * Generates video via the Google Gen AI SDK.
+ * - Models: veo-3.1-generate-preview (default) / veo-3.1-fast-generate-preview / veo-3.1-lite-generate-preview
+ * - Supports Text-to-Video, Image-to-Video, Video Extension, Reference Images
+ * - Resolution 720p/1080p/4k, duration 4/6/8s (constraints enforced by schema validation)
+ * - Extension adds +7s per call · fixed 720p (3.1 / 3.1 Fast only)
  *
- * 생성은 비동기 long-running operation — REST 폴링(10초 간격, 최대 10분)으로
- * 완료를 기다린 뒤 mp4 를 로컬에 저장하고 경로만 반환한다 (원본 4중 중복
- * 폴링 루프를 awaitVideoAndSave 헬퍼 하나로 접었다 — 동작 동일).
+ * Generation is an async long-running operation — REST polling (10s interval, up
+ * to 10 minutes) waits for completion, then the mp4 is saved locally and only the
+ * path is returned (the original's four duplicated polling loops were folded into
+ * a single awaitVideoAndSave helper — behavior identical).
  *
- * API 키는 기동 시가 아니라 호출 시점에 검증한다 (config.requireGeminiKey).
+ * The API key is validated at call time, not at startup (config.requireGeminiKey).
  */
 
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import type { GenerateVideosConfig, VideoGenerationReferenceImage } from '@google/genai';
 import { z } from 'zod';
 import { requireGeminiKey } from './config.js';
-import { ALLOWED_EXTENSIONS, mimeFromExtension, validateFilePath } from './media-utils.js';
+import {
+  ALLOWED_EXTENSIONS,
+  bareFilenameSchema,
+  mimeFromExtension,
+  resolveOutputFile,
+  validateFilePath,
+} from './media-utils.js';
 
-// 지원되는 Veo 모델 (2026-07 기준 — Gemini API 에서 호출 가능한 현역 모델 3종)
-// veo-3.0-* / veo-2.0-* 계열은 2026-06-30 자로 셧다운되어 호출할 수 없다.
+// Supported Veo models (as of 2026-07 — the 3 active models callable via the Gemini API)
+// The veo-3.0-* / veo-2.0-* families were shut down on 2026-06-30 and can no longer be called.
 export const VALID_VIDEO_MODELS = [
-  'veo-3.1-generate-preview',      // 최고 품질 (기본값) — 720p $0.40/초
-  'veo-3.1-fast-generate-preview', // 저지연·저가 — 720p $0.10/초 (기본 대비 4배 절감)
-  'veo-3.1-lite-generate-preview', // 최저가 — 720p $0.05/초 (8배 절감). 4K/Extension/Reference 미지원
+  'veo-3.1-generate-preview',      // top quality (default) — 720p $0.40/s
+  'veo-3.1-fast-generate-preview', // low latency, low cost — 720p $0.10/s (4x cheaper than default)
+  'veo-3.1-lite-generate-preview', // cheapest — 720p $0.05/s (8x cheaper). No 4K/Extension/Reference
 ] as const;
 export type VideoModel = (typeof VALID_VIDEO_MODELS)[number];
 
-export const DEFAULT_VIDEO_MODEL: VideoModel = 'veo-3.1-generate-preview';
+/**
+ * Default model — fast.
+ *
+ * The reason the standard tier isn't the default is not price but **quality
+ * measurement**. In the Artificial Analysis blind arena, the Elo gap between the
+ * three tiers is within 20 on all three boards and the confidence intervals
+ * overlap (image-to-video 1,086 / 1,076 / 1,066 · text-to-video with audio
+ * 1,091 / 1,090 / 1,088 · silent 1,200 / 1,199 / 1,207 — on the silent board
+ * the order even flips and lite sits above standard, checked 2026-08-15). A
+ * default that costs 4x without people preferring it is no default. The standard
+ * tier stays selectable.
+ */
+export const DEFAULT_VIDEO_MODEL: VideoModel = 'veo-3.1-fast-generate-preview';
 
 export const VALID_VIDEO_ASPECT_RATIOS = ['16:9', '9:16'] as const;
 export const VALID_VIDEO_RESOLUTIONS = ['720p', '1080p', '4k'] as const;
 export type VideoResolution = (typeof VALID_VIDEO_RESOLUTIONS)[number];
 
 const DEFAULT_DURATION_SECONDS = 8;
-const EXTENSION_ADDED_SECONDS = 7; // extension 1회당 추가되는 길이 (공식 문서)
+const EXTENSION_ADDED_SECONDS = 7; // length added per extension call (official docs)
 const POLL_INTERVAL_MS = 10_000;
-const MAX_POLLS = 60; // 10분 최대 대기 (10초 * 60)
+const MAX_POLLS = 60; // 10-minute max wait (10s * 60)
 const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 
 const DurationSchema = z.union([z.literal(4), z.literal(6), z.literal(8)]).optional().default(8);
 
 /**
- * 해상도 × 길이 × 모델 교차 제약 검증 (공식 문서 준거)
- * - 1080p / 4k 는 8초 전용.
- * - 4k 는 lite 미지원.
+ * Resolution × duration × model cross-constraint validation (per official docs)
+ * - 1080p / 4k are 8s-only.
+ * - 4k is not supported on lite.
  */
 function validateResolutionConstraints(
   model: VideoModel,
@@ -59,48 +77,68 @@ function validateResolutionConstraints(
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['durationSeconds'],
-      message: `${resolution} 해상도는 8초 길이에서만 지원됩니다 (요청: ${durationSeconds}초).`,
+      message: `${resolution} resolution is only supported at 8s duration (requested: ${durationSeconds}s).`,
     });
   }
   if (resolution === '4k' && model === 'veo-3.1-lite-generate-preview') {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['resolution'],
-      message: 'veo-3.1-lite-generate-preview 는 4k 를 지원하지 않습니다 (720p/1080p 만).',
+      message: 'veo-3.1-lite-generate-preview does not support 4k (720p/1080p only).',
     });
   }
 }
 
-/** lite 모델이 지원하지 않는 기능(extension·reference)에 대한 공통 검증 */
+/** Shared validation for features (extension·reference) the lite model doesn't support */
 function rejectLiteModel(feature: string, model: VideoModel, ctx: z.RefinementCtx): void {
   if (model === 'veo-3.1-lite-generate-preview') {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['model'],
-      message: `${feature} 은(는) veo-3.1-lite-generate-preview 에서 지원되지 않습니다. veo-3.1-generate-preview 또는 veo-3.1-fast-generate-preview 를 사용하세요.`,
+      message: `${feature} is not supported on veo-3.1-lite-generate-preview. Use veo-3.1-generate-preview or veo-3.1-fast-generate-preview.`,
     });
   }
 }
 
-// Text-to-Video 요청 스키마
+/**
+ * Exclusion-only field.
+ *
+ * The official docs pin the grammar — not instructions ("no walls" · "don't show
+ * walls") but comma-separated noun/adjective phrases ("wall, frame"). Writing
+ * "no ~" in the prompt body tends to draw that very noun (measured with local
+ * image generation: 4 out of 4 failed), so every exclusion goes through this field.
+ * Evidence: Vertex AI video-gen-prompt-guide · docs/research/2026-08-15-veo-seedance-prompting/
+ */
+const negativePromptSchema = z
+  .string()
+  .max(500)
+  .optional()
+  .describe(
+    'Comma-separated noun or adjective phrases to exclude (e.g. "wall, frame, text overlay"). ' +
+      'Never use instructive language such as "no" or "don\'t" — the API docs reject that form.',
+  );
+
+// Text-to-Video request schema
 export const text2VideoSchema = z
   .object({
     prompt: z.string().min(1, 'Prompt is required'),
+    negativePrompt: negativePromptSchema,
     model: z.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
     aspectRatio: z.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default('16:9'),
     resolution: z.enum(VALID_VIDEO_RESOLUTIONS).optional().default('720p'),
     durationSeconds: DurationSchema,
     outputPath: z.string().optional(),
-    filename: z.string().optional(),
+    filename: bareFilenameSchema('video').optional(),
   })
   .superRefine((data, ctx) => {
     validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
   });
 
-// Image-to-Video 요청 스키마
+// Image-to-Video request schema
 export const img2VideoSchema = z
   .object({
     prompt: z.string().min(1, 'Prompt is required'),
+    negativePrompt: negativePromptSchema,
     sourceImagePath: z.string().min(1, 'Source image path is required'),
     lastImagePath: z.string().optional(),
     model: z.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
@@ -108,30 +146,33 @@ export const img2VideoSchema = z
     resolution: z.enum(VALID_VIDEO_RESOLUTIONS).optional().default('720p'),
     durationSeconds: DurationSchema,
     outputPath: z.string().optional(),
-    filename: z.string().optional(),
+    filename: bareFilenameSchema('video').optional(),
   })
   .superRefine((data, ctx) => {
     validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
   });
 
-// Video Extension 요청 스키마
-// 제약(공식 문서): 3.1 / 3.1 Fast 전용, 입력 영상은 Veo 생성물 · 720p · 141초 이하,
-// 결과는 +7초 증분. 해상도는 720p 고정이며 aspect ratio 는 입력 영상을 따른다.
+// Video Extension request schema
+// Constraints (official docs): 3.1 / 3.1 Fast only; the input video must be a Veo
+// product · 720p · at most 141s; the result adds +7s. Resolution is fixed at 720p
+// and the aspect ratio follows the input video.
 export const videoExtensionSchema = z
   .object({
     prompt: z.string().min(1, 'Prompt is required'),
+    negativePrompt: negativePromptSchema,
     sourceVideoPath: z.string().min(1, 'Source video path is required'),
     model: z.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
     outputPath: z.string().optional(),
-    filename: z.string().optional(),
+    filename: bareFilenameSchema('video').optional(),
   })
   .superRefine((data, ctx) => rejectLiteModel('video extension', data.model, ctx));
 
-// Reference Image Video 요청 스키마
-// 제약(공식 문서): 3.1 / 3.1 Fast 전용, 참조 이미지 최대 3장, 길이 8초 고정.
+// Reference Image Video request schema
+// Constraints (official docs): 3.1 / 3.1 Fast only, at most 3 reference images, duration fixed at 8s.
 export const referenceVideoSchema = z
   .object({
     prompt: z.string().min(1, 'Prompt is required'),
+    negativePrompt: negativePromptSchema,
     referenceImagePaths: z
       .array(z.string())
       .min(1, 'At least one reference image is required')
@@ -140,11 +181,11 @@ export const referenceVideoSchema = z
     aspectRatio: z.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default('16:9'),
     resolution: z.enum(VALID_VIDEO_RESOLUTIONS).optional().default('720p'),
     outputPath: z.string().optional(),
-    filename: z.string().optional(),
+    filename: bareFilenameSchema('video').optional(),
   })
   .superRefine((data, ctx) => {
     rejectLiteModel('reference images', data.model, ctx);
-    // 길이는 8초 고정이므로 4k 여부만 확인하면 된다
+    // duration is fixed at 8s, so only the 4k case needs checking
     validateResolutionConstraints(data.model, data.resolution, 8, ctx);
   });
 
@@ -153,7 +194,7 @@ export type Img2VideoRequest = z.infer<typeof img2VideoSchema>;
 export type VideoExtensionRequest = z.infer<typeof videoExtensionSchema>;
 export type ReferenceVideoRequest = z.infer<typeof referenceVideoSchema>;
 
-// 비디오 생성 응답
+// video generation response
 export interface VideoGenerationResponse {
   success: boolean;
   videoPath?: string;
@@ -169,28 +210,34 @@ export interface VideoGenerationResponse {
   referenceImages?: string[];
 }
 
-// ── 공통 폴링·저장 헬퍼 ──────────────────────────────────────────
+// ── Shared polling·saving helpers ────────────────────────────────
 
 interface OperationStatus {
   done?: boolean;
   response?: {
-    // 새로운 API 형식 (generateVideoResponse.generatedSamples)
+    // new API shape (generateVideoResponse.generatedSamples)
     generateVideoResponse?: {
       generatedSamples?: Array<{ video?: { uri?: string } }>;
-      // RAI (Responsible AI) 콘텐츠 필터링 관련 필드
+      // RAI (Responsible AI) content-filtering fields
       raiMediaFilteredCount?: number;
       raiMediaFilteredReasons?: string[];
     };
-    // 레거시 API 형식 (호환성)
+    // legacy API shape (compatibility)
     generatedVideos?: Array<{ video?: { uri?: string } }>;
   };
   error?: { code?: number; message?: string };
 }
 
-/** REST API를 통해 operation 상태 조회 */
+/**
+ * Query operation status via the REST API.
+ * The key goes in the x-goog-api-key header, not the URL query (?key=) — URLs
+ * can be echoed into logs and error messages, making them a leak surface, while
+ * the header has no such path (same key-masking philosophy as the serp/datago
+ * clients).
+ */
 async function getOperationStatus(apiKey: string, operationName: string): Promise<OperationStatus> {
-  const url = `${API_BASE_URL}/${operationName}?key=${apiKey}`;
-  const response = await fetch(url);
+  const url = `${API_BASE_URL}/${operationName}`;
+  const response = await fetch(url, { headers: { 'x-goog-api-key': apiKey } });
 
   if (!response.ok) {
     const error = await response.text();
@@ -200,11 +247,9 @@ async function getOperationStatus(apiKey: string, operationName: string): Promis
   return response.json() as Promise<OperationStatus>;
 }
 
-/** 비디오 파일 다운로드 */
+/** Download the video file — key in the header only (same reason as getOperationStatus) */
 async function downloadVideo(apiKey: string, videoUri: string): Promise<Buffer> {
-  // videoUri에 API 키가 필요한 경우 추가
-  const url = videoUri.includes('?') ? `${videoUri}&key=${apiKey}` : `${videoUri}?key=${apiKey}`;
-  const response = await fetch(url);
+  const response = await fetch(videoUri, { headers: { 'x-goog-api-key': apiKey } });
 
   if (!response.ok) {
     throw new Error(`Failed to download video: ${response.status}`);
@@ -219,8 +264,8 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * operation 완료 폴링 → RAI 필터링 확인 → 비디오 다운로드 → 로컬 저장.
- * 성공 시 저장된 절대 경로를, 실패 시 error 메시지를 반환한다.
+ * Poll the operation to completion → check RAI filtering → download the video → save locally.
+ * Returns the saved absolute path on success, or an error message on failure.
  */
 async function awaitVideoAndSave(
   apiKey: string,
@@ -243,7 +288,7 @@ async function awaitVideoAndSave(
 
     if (!status.done) continue;
 
-    // RAI 필터링 확인
+    // check RAI filtering
     const raiReasons = status.response?.generateVideoResponse?.raiMediaFilteredReasons;
     if (raiReasons && raiReasons.length > 0) {
       const reason = raiReasons.join('; ');
@@ -251,7 +296,7 @@ async function awaitVideoAndSave(
       return { error: `Content policy violation: ${reason}` };
     }
 
-    // 생성된 비디오 확인 (새로운/레거시 형식 모두 지원)
+    // check the generated videos (both new and legacy shapes supported)
     const generatedVideos =
       status.response?.generateVideoResponse?.generatedSamples ?? status.response?.generatedVideos;
     if (!generatedVideos || generatedVideos.length === 0) {
@@ -263,11 +308,10 @@ async function awaitVideoAndSave(
       return { error: 'No video URI in response' };
     }
 
-    // 디렉토리 생성 + 다운로드·저장
-    const fullPath = path.join(outputPath, filename);
-    if (!fs.existsSync(outputPath)) {
-      fs.mkdirSync(outputPath, { recursive: true });
-    }
+    // Path validation (traversal·extension) + directory creation + download·save.
+    // Validation happens before the download — rejecting after receiving tens of
+    // MB wastes bandwidth.
+    const fullPath = resolveOutputFile(outputPath, filename, 'video');
     const videoBuffer = await downloadVideo(apiKey, videoUri);
     fs.writeFileSync(fullPath, videoBuffer);
 
@@ -278,21 +322,21 @@ async function awaitVideoAndSave(
   return { error: 'Video generation timed out (10 minutes)' };
 }
 
-/** 로컬 이미지 파일을 base64 인라인 이미지 객체로 읽는다. */
+/** Read a local image file as a base64 inline image object. */
 function readInlineImage(filePath: string): { imageBytes: string; mimeType: string } {
   const buffer = fs.readFileSync(filePath);
   return { imageBytes: buffer.toString('base64'), mimeType: mimeFromExtension(filePath, 'image') };
 }
 
-/** 로컬 비디오 파일을 base64 인라인 비디오 객체로 읽는다. */
+/** Read a local video file as a base64 inline video object. */
 function readInlineVideo(filePath: string): { videoBytes: string; mimeType: string } {
   const buffer = fs.readFileSync(filePath);
   return { videoBytes: buffer.toString('base64'), mimeType: mimeFromExtension(filePath, 'video') };
 }
 
-// ── 생성 함수 4종 ────────────────────────────────────────────────
+// ── The 4 generation functions ───────────────────────────────────
 
-/** 텍스트 프롬프트로 비디오 생성 */
+/** Generate video from a text prompt */
 export async function generateFromText(request: Text2VideoRequest): Promise<VideoGenerationResponse> {
   const apiKey = requireGeminiKey();
   const model = request.model || DEFAULT_VIDEO_MODEL;
@@ -311,6 +355,7 @@ export async function generateFromText(request: Text2VideoRequest): Promise<Vide
       resolution,
       durationSeconds,
     };
+    if (request.negativePrompt) config.negativePrompt = request.negativePrompt;
     const operation = await genai.models.generateVideos({ model, prompt: request.prompt, config });
 
     if (!operation.name) return { success: false, error: 'No operation name returned from API' };
@@ -336,13 +381,13 @@ export async function generateFromText(request: Text2VideoRequest): Promise<Vide
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[Veo] Error: ${errorMessage}`);
-    return { success: false, error: `Video generation failed: ${errorMessage}` };
+    return { success: false, error: errorMessage };
   }
 }
 
 /**
- * 이미지에서 비디오 생성
- * 시작 이미지만 사용하거나, 시작/종료 이미지 둘 다 사용하여 프레임 보간 비디오 생성
+ * Generate video from an image
+ * Uses the start image alone, or both start/end images for frame-interpolated video
  */
 export async function generateFromImage(request: Img2VideoRequest): Promise<VideoGenerationResponse> {
   const apiKey = requireGeminiKey();
@@ -351,7 +396,7 @@ export async function generateFromImage(request: Img2VideoRequest): Promise<Vide
   const durationSeconds = request.durationSeconds ?? DEFAULT_DURATION_SECONDS;
 
   try {
-    // 소스·종료 이미지 경로 검증
+    // validate the source and last-frame image paths
     validateFilePath(request.sourceImagePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
     if (!fs.existsSync(request.sourceImagePath)) {
       return { success: false, error: `Source image not found: ${request.sourceImagePath}` };
@@ -376,7 +421,8 @@ export async function generateFromImage(request: Img2VideoRequest): Promise<Vide
       resolution,
       durationSeconds,
     };
-    // 종료 이미지가 제공된 경우 lastFrame 추가
+    if (request.negativePrompt) config.negativePrompt = request.negativePrompt;
+    // add lastFrame when an end image was provided
     if (request.lastImagePath) {
       config.lastFrame = readInlineImage(request.lastImagePath);
     }
@@ -413,23 +459,24 @@ export async function generateFromImage(request: Img2VideoRequest): Promise<Vide
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[Veo] Error: ${errorMessage}`);
-    return { success: false, error: `Video generation from image failed: ${errorMessage}` };
+    return { success: false, error: errorMessage };
   }
 }
 
 /**
- * 비디오 확장
+ * Video extension
  *
- * 공식 제약: Veo 로 생성된 720p · 141초 이하 영상만 입력 가능하며, 결과는 +7초 증분.
- * config 는 공식 샘플과 동일하게 numberOfVideos + resolution(720p 고정)만 전달한다
- * (durationSeconds / aspectRatio 는 extension 에서 유효하지 않음 — 비율은 입력 영상을 따름).
+ * Official constraints: only Veo-generated videos at 720p and at most 141s can be
+ * input, and the result adds +7s. The config passes only numberOfVideos +
+ * resolution (fixed 720p), matching the official sample (durationSeconds /
+ * aspectRatio aren't valid for extension — the ratio follows the input video).
  */
 export async function extendVideo(request: VideoExtensionRequest): Promise<VideoGenerationResponse> {
   const apiKey = requireGeminiKey();
   const model = request.model || DEFAULT_VIDEO_MODEL;
 
   try {
-    // 소스 비디오 경로 검증
+    // validate the source video path
     validateFilePath(request.sourceVideoPath, { allowedExtensions: ALLOWED_EXTENSIONS.video });
     if (!fs.existsSync(request.sourceVideoPath)) {
       return { success: false, error: `Source video not found: ${request.sourceVideoPath}` };
@@ -442,11 +489,12 @@ export async function extendVideo(request: VideoExtensionRequest): Promise<Video
     console.error(`[Veo] Source video: ${request.sourceVideoPath}`);
     console.error(`[Veo] Prompt: ${request.prompt.substring(0, 100)}...`);
 
-    // 비디오 확장 요청 (공식 샘플 준거: durationSeconds / aspectRatio 미전달)
+    // video extension request (per the official sample: no durationSeconds / aspectRatio)
     const config: GenerateVideosConfig = {
       numberOfVideos: 1,
       resolution: '720p',
     };
+    if (request.negativePrompt) config.negativePrompt = request.negativePrompt;
     const operation = await genai.models.generateVideos({
       model,
       prompt: request.prompt,
@@ -471,19 +519,19 @@ export async function extendVideo(request: VideoExtensionRequest): Promise<Video
       prompt: request.prompt,
       model,
       resolution: '720p',
-      duration: EXTENSION_ADDED_SECONDS, // 추가된 길이(+7초). 전체 길이 아님
+      duration: EXTENSION_ADDED_SECONDS, // the added length (+7s), not the total
       sourceVideo: request.sourceVideoPath,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[Veo] Error: ${errorMessage}`);
-    return { success: false, error: `Video extension failed: ${errorMessage}` };
+    return { success: false, error: errorMessage };
   }
 }
 
 /**
- * 참조 이미지를 사용한 비디오 생성
- * 최대 3개의 참조 이미지로 캐릭터/제품 일관성을 유지하는 비디오 생성
+ * Generate video using reference images
+ * Keeps character/product consistency across the video with up to 3 reference images
  */
 export async function generateWithReferences(request: ReferenceVideoRequest): Promise<VideoGenerationResponse> {
   const apiKey = requireGeminiKey();
@@ -491,7 +539,7 @@ export async function generateWithReferences(request: ReferenceVideoRequest): Pr
   const resolution = request.resolution || '720p';
 
   try {
-    // 참조 이미지 경로 검증
+    // validate the reference image paths
     for (const imagePath of request.referenceImagePaths) {
       validateFilePath(imagePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
       if (!fs.existsSync(imagePath)) {
@@ -509,18 +557,19 @@ export async function generateWithReferences(request: ReferenceVideoRequest): Pr
     const referenceImages: VideoGenerationReferenceImage[] = request.referenceImagePaths.map(
       (imagePath) => ({
         image: readInlineImage(imagePath),
-        // SDK enum 값은 대문자 "ASSET" (소문자 'asset' 은 서버의 관대 처리에 기대는 비공식 값)
+        // the SDK enum value is uppercase "ASSET" (lowercase 'asset' is an unofficial value relying on server leniency)
         referenceType: VideoGenerationReferenceType.ASSET,
       }),
     );
 
-    // 비디오 생성 요청 (reference images 사용 시 durationSeconds 는 8초 강제)
+    // video generation request (with reference images, durationSeconds is forced to 8s)
     const config: GenerateVideosConfig = {
       aspectRatio: request.aspectRatio || '16:9',
       resolution,
       durationSeconds: DEFAULT_DURATION_SECONDS,
       referenceImages,
     };
+    if (request.negativePrompt) config.negativePrompt = request.negativePrompt;
     const operation = await genai.models.generateVideos({ model, prompt: request.prompt, config });
 
     if (!operation.name) return { success: false, error: 'No operation name returned from API' };
@@ -547,6 +596,6 @@ export async function generateWithReferences(request: ReferenceVideoRequest): Pr
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[Veo] Error: ${errorMessage}`);
-    return { success: false, error: `Video generation with references failed: ${errorMessage}` };
+    return { success: false, error: errorMessage };
   }
 }

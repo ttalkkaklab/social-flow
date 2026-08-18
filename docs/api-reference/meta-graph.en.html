@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meta Graph (Threads · Instagram · Facebook) — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="meta-graph.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="meta-graph.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>Meta Graph</div>
+
+<header class="hero">
+  <div class="kicker">META</div>
+  <h1>Meta Graph — Threads · Instagram · Facebook</h1>
+  <p class="sub">The three platforms share Graph syntax, but their publish flows, length limits, and comment capabilities are all different. <strong>Comment capability in particular is badly asymmetric</strong>, and a cross-platform tool has to absorb that difference.</p>
+  <div class="meta">
+    <span>Official <a href="https://developers.facebook.com/docs/threads/posts">Threads</a> · <a href="https://developers.facebook.com/docs/instagram-platform/content-publishing">Instagram</a> · <a href="https://developers.facebook.com/docs/graph-api">Graph API</a></span>
+    <span>Credentials <code>&lt;SNS_TOKEN_DIR&gt;/[&lt;channel&gt;/]*_token</code></span>
+    <span>Implementation <code>server/src/sns-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#bases">Base URLs and versions</a></li>
+    <li><a href="#flow">Container, then publish</a></li>
+    <li><a href="#threads">Threads</a></li>
+    <li><a href="#instagram">Instagram</a></li>
+    <li><a href="#facebook">Facebook Pages</a></li>
+    <li><a href="#comments">Comment capability asymmetry</a></li>
+    <li><a href="#tokens">Tokens and account resolution</a></li>
+    <li><a href="#impl">Implementation vs. contract</a></li>
+    <li><a href="#growth">Threads growth reads (insights · keyword search)</a></li>
+    <li><a href="#ig-growth">Instagram growth reads (insights)</a></li>
+  </ol>
+</nav>
+
+<section id="bases">
+  <h2>1. Base URLs and versions</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Platform</th><th>Base</th><th>Token file</th><th>Token lifetime</th></tr></thead>
+    <tbody>
+      <tr><td>Threads</td><td><code>https://graph.threads.net/v1.0</code></td><td><code>threads_token</code></td><td>60 days (renewable)</td></tr>
+      <tr><td>Instagram</td><td><code>https://graph.instagram.com/v23.0</code></td><td><code>instagram_token</code></td><td>60 days (renewable)</td></tr>
+      <tr><td>Facebook Page</td><td><code>https://graph.facebook.com/v23.0</code></td><td><code>facebook_page_token</code></td><td>Non-expiring (page token)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>The latest Graph API version is v25.0 (2026-02).</strong> This server pinning v23.0 isn't a defect — Meta versions stay valid for about two years after release, so v23.0 (2025-05) lives until 2027, and pinning is what keeps publishing from <em>quietly breaking when a newer version lands a breaking change</em>. What it does require is <strong>keeping the version in one constant</strong> so the upgrade decision has a single place to happen.
+  </div>
+</section>
+
+<section id="flow">
+  <h2>2. Container, then publish</h2>
+  <p>Threads and Instagram don't publish media immediately. You create a container, wait for processing to finish, then publish with a separate call.</p>
+  <pre><code>POST /{user-id}/threads      or  /{ig-id}/media        → { id: creationId }
+GET  /{creationId}?fields=status | status_code         → poll until FINISHED
+POST /{user-id}/threads_publish or /{ig-id}/media_publish?creation_id=…</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Platform</th><th>Status field</th><th>Values</th></tr></thead>
+    <tbody>
+      <tr><td>Threads</td><td><code>status</code></td><td><code>IN_PROGRESS</code> · <code>FINISHED</code> · <code>PUBLISHED</code> · <code>ERROR</code> · <code>EXPIRED</code></td></tr>
+      <tr><td>Instagram</td><td><code>status_code</code></td><td>The same five. <code>EXPIRED</code> = not published within 24 hours</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>This server polls every 2 seconds up to 60 times (2 minutes) and splits <code>ERROR</code>/<code>EXPIRED</code> off as immediate failures — waiting two minutes on a container that's already doomed is wasted time.</p>
+  <div class="danger">
+    <strong>The publish API is not idempotent.</strong> Retrying the whole thing because the permalink lookup failed after <code>media_publish</code> succeeded <strong>posts the same thing twice</strong>. This server downgrades a failed permalink lookup to <code>permalink: null</code> and reports the publish itself as a success.
+  </div>
+</section>
+
+<section id="threads">
+  <h2>3. Threads</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Platform contract</th><th>This server</th></tr></thead>
+    <tbody>
+      <tr><td><code>media_type</code></td><td><code>TEXT</code> · <code>IMAGE</code> · <code>VIDEO</code> · <code>CAROUSEL</code> (2–20)</td><td><strong><code>TEXT</code> and <code>IMAGE</code> only</strong></td></tr>
+      <tr><td>Body length</td><td>500 characters. <strong>Emoji count as UTF-8 bytes</strong></td><td>500 characters (JS string length)</td></tr>
+      <tr><td>Images</td><td>JPEG/PNG, ≤8MB, 320–1440px wide, aspect up to 10:1</td><td>One public URL (the platform crawls it)</td></tr>
+      <tr><td>Video</td><td>MOV/MP4, H264/HEVC, 0–300s, ≤1GB</td><td>Not supported</td></tr>
+      <tr><td>Link card</td><td><code>link_attachment</code> — <strong><code>media_type=TEXT</code> only</strong>. Up to 5 links per post; a link matching one in the body counts once</td><td>Exposed as <code>linkUrl</code> (mutually exclusive with <code>imageUrl</code> — both together is a 400)</td></tr>
+      <tr><td>Replies</td><td>A new post carrying <code>reply_to_id</code> is the reply — no depth limit</td><td>Exposed as <code>replyToId</code></td></tr>
+      <tr><td>Publish quota</td><td><strong>250 per 24 hours</strong> (a carousel counts as one)</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>No video on Threads is this server's choice, not a platform limit.</strong> The platform supports <code>VIDEO</code> and <code>CAROUSEL</code>. This pipeline sends short-form video out to YouTube and IG Reels, and uses Threads for a <em>casual-register body post plus one link to the video</em> to drive traffic. Tool descriptions must not write that up as a platform limitation.
+  </div>
+  <p><strong>Body-link rule (revised 2026-08-15):</strong> a video episode publishes a <strong>link-free casual-register body post</strong> first, then attaches the IG reel permalink as a <strong>self-reply</strong> — a retraction of the 2026-08-14 "one link in the body" approach. No cover image either. The grounds are field data: the two link-in-body posts drew 9 and 21 views, a tenth of the link-free posts from the same day, while the two reply-link posts drew 257 and 623. Mosseri publicly walked back the 2024 link penalty, but our measured reach distribution says otherwise, so we follow the measurements. The link defaults to the IG reel rather than YouTube (same Meta ecosystem, smallest exit penalty), which also fixes the publishing order: IG first, then take the permalink to Threads. <code>linkUrl</code> (platform parameter <code>link_attachment</code>) remains available as an API capability, still <code>media_type=TEXT</code>-only and mutually exclusive with <code>imageUrl</code>, blocked by the server with a 400. Hashtags carry zero ranking weight, so we recommend at most one.</p>
+</section>
+
+<section id="instagram">
+  <h2>4. Instagram</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Platform contract</th></tr></thead>
+    <tbody>
+      <tr><td><code>media_type</code></td><td><code>IMAGE</code> · <code>VIDEO</code> · <code>REELS</code> · <code>CAROUSEL</code> · <code>STORIES</code></td></tr>
+      <tr><td>Caption</td><td>2,200 characters. The hook has to land in the first 125, before the fold. <strong>Links in captions aren't clickable</strong></td></tr>
+      <tr><td>Images</td><td><strong>JPEG only</strong> — extended formats like MPO and JPS are rejected</td></tr>
+      <tr><td>Carousel</td><td>Up to 10 items (images and video can mix). <strong>The first item's aspect ratio force-crops the rest</strong> (1:1 by default)</td></tr>
+      <tr><td>Publish quota</td><td><strong>100 per rolling 24 hours</strong> (a carousel counts as one)</td></tr>
+      <tr><td>Editing after publish</td><td>Caption only — the image can't be swapped</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>Carousel flow</h3>
+  <pre><code>for each image:
+  POST /{ig-id}/media?image_url=…&is_carousel_item=true   → childId
+for each childId:
+  GET /{childId}?fields=status_code                        → wait for FINISHED
+POST /{ig-id}/media?media_type=CAROUSEL&children={id,id,…}&caption=…
+POST /{ig-id}/media_publish?creation_id=…</code></pre>
+  <p><strong>Every</strong> child container has to reach FINISHED before you bundle them. If even one is still processing, creating the CAROUSEL fails.</p>
+  <p>A reel is one call — <code>media_type=REELS</code> plus <code>video_url</code> — and is mutually exclusive with <code>imageUrls</code>.</p>
+</section>
+
+<section id="facebook">
+  <h2>5. Facebook Pages</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Form</th><th>Endpoint</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Text (+link)</td><td><code>POST /{page-id}/feed</code> <code>message</code> <code>link</code></td><td>—</td></tr>
+      <tr><td>Images ≤10</td><td><code>POST /{page-id}/photos</code> (<code>published=false</code>) → <code>/feed</code> + <code>attached_media[N]</code></td><td>Create unpublished photos, then bundle them into the feed post</td></tr>
+      <tr><td>Video</td><td><code>POST /{page-id}/videos</code> <code>file_url</code> <code>description</code></td><td>A regular video, not a reel. 120-second timeout. <strong>The <code>id</code> in the response is the video_id</strong></td></tr>
+      <tr><td>Captions</td><td><code>POST /{video-id}/captions</code> <code>captions_file</code> <code>default_locale</code></td><td>SRT file attached as multipart/form-data · <strong>200K cap</strong></td></tr>
+      <tr><td>Comments</td><td><code>POST /{post-id}/comments</code> <code>message</code></td><td>Scope <code>pages_manage_engagement</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Body length is effectively generous, but this server caps it at 5,000 characters. Comments cap at 8,000.</p>
+  <div class="note">
+    <strong>The source link goes in the first comment, not the body.</strong> Facebook suppresses reach on posts carrying an external link. Right after <code>facebook_publish</code> succeeds, pass the response's <code>postId</code> to <code>facebook_comment</code> and put the link in the first comment — links in FB comments are clickable and still render a preview. <code>linkUrl</code> stays only as the exception path for text posts with no media.
+  </div>
+  <div class="danger">
+    When only the comment failed, <strong>don't republish the post</strong>. Retry <code>facebook_comment</code> alone. The publish API isn't idempotent, so retrying the post duplicates it. The same goes for captions (<code>captionWarning</code>).
+  </div>
+  <h3>Captions upload separately from the video</h3>
+  <p>Of the four Meta surfaces, <strong>only Facebook accepts a caption file</strong>. The <code>id</code> in the video publish response is the video_id, so it goes straight to the captions edge.</p>
+  <pre><code>POST /{video-id}/captions
+Content-Type: multipart/form-data
+
+access_token=…
+default_locale=ko_KR
+captions_file=@caption.ko_KR.srt   ← the filename is the contract</code></pre>
+  <div class="warn">
+    <strong>The filename decides the locale.</strong> Anything that isn't <code>&lt;name&gt;.&lt;locale&gt;.srt</code> is rejected with <strong>error 386</strong> (locales look like <code>ko_KR</code>, <code>en_US</code>). This server validates <code>captionLocale</code> with a regex and assembles the filename itself, which removes the trap. Files over 200K are blocked before the call too.
+    <p style="margin-top:10px">FB processes <code>file_url</code> videos <strong>asynchronously</strong>. A caption call right after publishing can hit the still-processing state and fail — the post is valid regardless, so we report a warning and re-upload only the captions.</p>
+  </div>
+  <div class="danger">
+    <strong>Instagram and Threads have no caption-file path at all.</strong> The IG Content Publishing container has no caption parameter, so for IG reels the only way is uploading a video with the subtitles burned into the picture (<code>video-sub.mp4</code>). That's why this pipeline builds two copies of every video — the clean master goes to YouTube and Facebook, the burned-in copy to Instagram.
+  </div>
+</section>
+
+<section id="comments">
+  <h2>6. Comment capability asymmetry</h2>
+  <p>These are the platform differences that received-comment management (<code>sns_comment_*</code>) has to absorb. The three Meta surfaces were measured against live tokens on 2026-07-26; YouTube joined on 2026-08-11.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th></th><th>Threads</th><th>Instagram</th><th>Facebook</th><th>YouTube</th></tr></thead>
+    <tbody>
+      <tr><td>Read</td><td><code>/{post}/conversation</code><br>flattened at any depth</td><td><code>/{post}/comments</code><br><code>replies{…}</code> nested</td><td><code>/{post}/comments?filter=stream</code><br>flat, replies included</td><td><code>commentThreads.list</code><br>per video · <code>replies</code> up to 5</td></tr>
+      <tr><td>Reply</td><td>New post with <code>reply_to_id</code><br>no depth limit</td><td><code>/{comment}/replies</code><br><strong>top-level comments only</strong></td><td><code>/{comment}/comments</code></td><td><code>comments.insert</code><br><strong>top-level comments only</strong></td></tr>
+      <tr><td>Hide</td><td><code>/{id}/manage_reply?hide=</code></td><td><code>/{id}?hide=</code></td><td><code>/{id}?is_hidden=</code></td><td>Unsupported — means something else</td></tr>
+      <tr><td>Like</td><td><strong>No API</strong></td><td><strong>No API</strong></td><td><code>/{id}/likes</code> POST·DELETE</td><td>Unsupported</td></tr>
+      <tr><td>"Did we answer this?"</td><td><code>is_reply_owned_by_me</code></td><td><code>username</code> match</td><td><code>from.id == pageId</code></td><td><strong>timestamp of our last reply</strong> in the thread</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>Why only YouTube's verdict is time-based.</strong> The other three give you a per-comment field saying whether it's ours; YouTube has none. Lump it together per thread and you miss new comments that landed after our reply; go strictly per comment and you answer a thread you already answered. So <strong>only comments newer than our last reply</strong> count as unanswered. The <code>replies</code> part only returns 5, so when it's truncated we re-fetch the whole thread with <code>comments.list</code>; if it's still incomplete (over 100, or the lookup failed) there's no basis for a verdict, so we <strong>treat it as answered and drop it from the list</strong> — a missed comment shows up on the next pass, whereas the opposite error posts a duplicate reply in public.
+  </div>
+  <div class="warn">
+    <strong>YouTube joined the inbox and replies in 2026-08</strong> (<code>commentThreads.list</code> + <code>comments.insert</code>). It needs the <code>youtube.force-ssl</code> scope, which a token issued for publishing doesn't have — in that case the inbox isn't silently skipped; it's reported under <code>skipped</code> with reissue instructions. "YouTube has 0 comments" and "we couldn't read YouTube" are different facts.
+    <p style="margin-top:10px">Hiding and liking still aren't supported on YouTube. What the API offers is held-for-review / rejected moderation (<code>setModerationStatus</code>), which means something different and can't be mapped onto "a reversible hide" — better an explicit refusal than a wrong mapping.</p>
+  </div>
+  <h3>How the inbox is designed</h3>
+  <ul>
+    <li>The default is <strong>other people's comments we haven't answered yet</strong>. "Have we answered?" comes from a platform field rather than a guess, so no duplicate replies go out.</li>
+    <li>Listing is <strong>newest first</strong> (<code>reverse=true</code> · <code>order=reverse_chronological</code>) — when <code>limit</code> truncates, what has to survive is the golden-hour comments, not the old ones.</li>
+    <li>Each comment carries <code>ageMinutes</code>, and the summary carries <code>withinGoldenHour</code> (unanswered comments inside the first 60 minutes). Reply speed drives distribution, so that number is the first signal for prioritizing.</li>
+    <li>Items marked <code>is_reply</code> in a Threads listing are our own replies, so they're excluded from the inbox roots.</li>
+    <li>If one platform fails the rest still come back, with the reason in <code>skipped</code> — a partial failure doesn't block everything.</li>
+  </ul>
+  <h3>Why moderation has no delete</h3>
+  <p>Hiding is reversible and stays visible to the author, so it creates little friction; deleting can't be undone. For spam and abuse, hiding carries less brand risk. Legitimate criticism and complaints don't get hidden — hiding is for spam, ads, hate, and exposed personal data only.</p>
+</section>
+
+<section id="tokens">
+  <h2>7. Tokens and account resolution</h2>
+  <div class="ok">
+    <strong>The publishing account isn't configured.</strong> We resolve it by calling the token's <code>/me</code> — configuring an account ID leaves room for token/account mismatch (publishing to the wrong account), and <code>/me</code> makes that mismatch structurally impossible.
+  </div>
+  <h3>Two layers for channels (brands)</h3>
+  <pre><code>&lt;SNS_TOKEN_DIR&gt;/&lt;channel slug&gt;/threads_token   ← when the channel argument is given
+&lt;SNS_TOKEN_DIR&gt;/threads_token                   ← when it isn't (single-channel / legacy)</code></pre>
+  <div class="danger">
+    <strong>With a channel specified there is no fallback to the flat token.</strong> Fall back, and a missing channel token quietly publishes to a different brand's account. Instead we return an explicit error listing the channels that are available.
+  </div>
+  <p>Token <strong>values</strong> don't come from environment variables. Meta's 60-day renewal overwrites the file, so it has to be file-based for renewal to work, and it also keeps secrets out of the committed <code>.mcp.json</code>.</p>
+  <p>At ListTools time, only platforms with a credential file present get their publish tools exposed. It's evaluated per request, so <strong>adding a token file takes effect without restarting the server</strong>. All handlers stay registered, so calling a hidden tool directly returns an explicit missing-token error.</p>
+  <div class="ok">
+    <strong>Platform credentials are entirely optional.</strong> The three Meta tokens unlock seven tools — <code>threads_publish</code>, <code>threads_insights</code>, <code>threads_search</code>, <code>instagram_publish</code>, <code>instagram_insights</code>, <code>facebook_publish</code>, <code>facebook_comment</code> — and with <code>youtube_publish</code> and <code>youtube_insights</code> that's the nine gated tools (with no tokens at all, <code>tools/list</code> shows 37 instead of 46). Skip them and everything through production still works: <code>produce</code> writes the finished video plus per-platform text into <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload by hand. Only the publish and growth half is unavailable. It's per platform, so a YouTube-only setup is a valid configuration.
+  </div>
+</section>
+
+<section id="impl">
+  <h2>8. Implementation vs. contract</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Platform contract</th><th>social-flow implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Threads media</td><td>TEXT·IMAGE·VIDEO·CAROUSEL</td><td>TEXT·IMAGE (a strategy choice)</td></tr>
+      <tr><td>IG media</td><td>IMAGE·VIDEO·REELS·CAROUSEL·STORIES</td><td>IMAGE·CAROUSEL·REELS</td></tr>
+      <tr><td>FB media</td><td>Text · photos · video · reels</td><td>Text · photos ≤10 · regular video</td></tr>
+      <tr><td>Captions</td><td>FB only, <code>/{video-id}/captions</code> (nothing on IG or Threads)</td><td><strong>FB uploads the file separately</strong> (<code>captionFilePath</code>, video posts only) · <strong>IG gets a burned-in video</strong>. Filename and size are validated before the call, and a failure is downgraded to <code>captionWarning</code></td></tr>
+      <tr><td>Sending POST params</td><td>Query string or form body, both allowed</td><td><strong>Form body</strong> (<code>application/x-www-form-urlencoded</code>) — a caption at the platform cap (IG 2,200 · FB 5,000) becomes tens of KB once %-encoded (×9 for Korean) and can hit request-line length limits, and this keeps the token out of the URL. GET and DELETE keep the query string</td></tr>
+      <tr><td>Token exposure</td><td>—</td><td>Error messages never carry the full URL (base URL only), and POSTs put the token in the body</td></tr>
+      <tr><td>permalink</td><td>Separate lookup</td><td>Looked up after a successful publish. A failed lookup still reports the publish as a success (<code>permalink: null</code>)</td></tr>
+      <tr><td>Inbox caps</td><td>—</td><td>25 posts per platform · 100 comments per post</td></tr>
+      <tr><td>Moderation</td><td>Hide · delete · like</td><td><strong>No delete</strong> (§6)</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="growth">
+  <h2>9. Threads growth reads (insights · keyword search)</h2>
+  <p>Two read endpoints used only by the grow-threads skill — the backends of the <code>threads_insights</code> and <code>threads_search</code> tools. Based on the official docs as of 2026-08-11 (<a href="https://developers.facebook.com/docs/threads/insights">Insights</a> · <a href="https://developers.facebook.com/docs/threads/keyword-search">Keyword Search</a>).</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Insights</th><th>Keyword search</th></tr></thead>
+    <tbody>
+      <tr><td>Endpoint</td><td>Account <code>GET /{user-id}/threads_insights</code><br>Post <code>GET /{media-id}/insights</code></td><td><code>GET /keyword_search</code> (no uid needed)</td></tr>
+      <tr><td>Scope required</td><td><code>threads_manage_insights</code></td><td><code>threads_keyword_search</code></td></tr>
+      <tr><td>Main parameters</td><td><code>metric</code> · <code>since</code>/<code>until</code> (unix seconds)</td><td><code>q</code> · <code>search_type=TOP|RECENT</code> · <code>search_mode=KEYWORD|TAG</code> · <code>since</code>/<code>until</code> · <code>limit</code> (default 25, max 100)</td></tr>
+      <tr><td>Quota</td><td>Normal Graph limits</td><td><strong>2,200 per rolling 24 hours per account</strong> — queries with no results don't count</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>Account metrics come in two response shapes</h3>
+  <ul>
+    <li><code>views</code> arrives as a <strong>daily time series</strong> (<code>values[]</code>), while <code>likes</code>, <code>replies</code>, <code>reposts</code>, and <code>quotes</code> arrive as period totals (<code>total_value</code>) — the server normalizes them into <code>{ total, daily[] }</code> and scalars.</li>
+    <li><code>followers_count</code> and <code>follower_demographics</code> <strong>don't take since/until</strong> — the server splits followers_count into its own call (mixed into the same request, it fails). Demographics don't appear below 100 followers, so they aren't exposed.</li>
+    <li>since/until can't reach further back than 2024-04-13 (platform limit).</li>
+    <li>The post metrics <code>views</code> and <code>shares</code> are documented as "in development" — assume error and use them for trends only.</li>
+  </ul>
+  <h3>Keyword search, measured</h3>
+  <ul>
+    <li>Response fields: <code>id,text,media_type,permalink,timestamp,username,has_replies,is_quote_post,is_reply</code> — there is no <code>owner</code> field.</li>
+    <li><strong>Before the app has advanced access, only the authenticated account's own posts come back</strong> — "empty results" and "insufficient permission" are different facts, so grow-threads init has to catch it in its scope check.</li>
+    <li>Sensitive or harmful keywords return an <strong>empty array</strong> rather than an error — that's normal behavior.</li>
+    <li>A postId from search results can be replied to by publishing with <code>reply_to_id</code> (<code>threads_publish</code>'s <code>replyToId</code>), which is how you join someone else's public conversation — if their reply restrictions block it, the platform error comes back at the publish step.</li>
+  </ul>
+  <div class="warn">
+    <strong>Scopes only grow by reissuing.</strong> A token issued for publishing doesn't carry these two — <code>refresh_access_token</code> renewal can't change scopes, so you have to tick the boxes in the consent flow and <strong>issue a new token</strong>. The server attaches that guidance (token-setup.md) to insufficient-scope errors.
+  </div>
+</section>
+
+<section id="ig-growth">
+  <h2>10. Instagram growth reads (insights)</h2>
+  <p>The read endpoint used only by the grow-instagram skill — the backend of the <code>instagram_insights</code> tool. It fetches account-period metrics and per-media metrics for recent posts in one tool call and normalizes them. The scope is a single one, <code>instagram_business_manage_insights</code>.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Target</th><th>Endpoint</th><th>Metrics requested</th></tr></thead>
+    <tbody>
+      <tr><td>Account</td><td><code>GET /{ig-user-id}/insights</code></td><td><code>reach · views · profile_views · accounts_engaged · total_interactions · likes · comments · shares · saves · profile_links_taps</code></td></tr>
+      <tr><td>Media (common)</td><td><code>GET /{media-id}/insights</code></td><td><code>views · reach · likes · comments · shares · saved · total_interactions</code></td></tr>
+      <tr><td>Reels only</td><td>Same endpoint</td><td><code>ig_reels_avg_watch_time · ig_reels_video_view_total_time · reels_skip_rate</code></td></tr>
+      <tr><td>Feed only</td><td>Same endpoint</td><td><code>follows · profile_visits</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>Four traps found by calling it for real</h3>
+  <ul>
+    <li><strong>Leave out <code>metric_type=total_value</code> and metrics vanish silently.</strong> Metrics like <code>views</code> that don't support a time series drop out of the response with no error — so account metrics are all requested as period totals.</li>
+    <li><strong>Follower count is a profile field, not an insight.</strong> The insights <code>follower_count</code> returns an empty array on accounts under 100 followers, which makes it useless on a fresh channel. The server reads <code>followers_count</code> from <code>/me</code> instead.</li>
+    <li><strong>Accounts say <code>saves</code>, media say <code>saved</code>.</strong> Same meaning, different number.</li>
+    <li><strong>Mix reels metrics with feed metrics and the whole response is a 400.</strong> Ask a reel for <code>follows</code>/<code>profile_visits</code> and it fails with <code>does not support ... metric</code>; ask a feed post (image or carousel) for the three reels metrics and it's the same. The server splits them by <code>media_product_type</code>.</li>
+  </ul>
+  <div class="note">
+    <strong><code>reels_skip_rate</code> exists only on this platform.</strong> The ranking model directly predicts the probability of a sub-3-second view, and this is the only API that hands that drop-off rate back. YouTube Analytics has no equivalent metric, so Shorts hooks are judged through <code>averageViewPercentage</code> instead (see <a href="youtube-data.en.html">YouTube Data API</a>).
+  </div>
+</section>
+
+<footer>
+  As of 2026-08-18 · Implementation <a href="../../server/src/sns-client.ts">server/src/sns-client.ts</a> · <a href="index.en.html">API reference hub</a>
+</footer>
+
+</div>
+</body>
+</html>

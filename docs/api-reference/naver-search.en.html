@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Naver Search Open API — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="naver-search.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="naver-search.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>Naver Search</div>
+
+<header class="hero">
+  <div class="kicker">NAVER OPEN API</div>
+  <h1>Naver Search Open API</h1>
+  <p class="sub">Naver is Korea's dominant search portal, and this is its official search API — the first tool for Korean-language research. The free tier allows 25,000 calls a day, two orders of magnitude above SerpApi's 250 a month, and for Korean news, blog reviews, and community opinion it beats Google's index. Responses come back in Korean, field names included.</p>
+  <div class="meta">
+    <span>Official <a href="https://developers.naver.com/docs/serviceapi/search/news/news.md">Search API</a></span>
+    <span>Keys <code>NAVER_CLIENT_ID</code> · <code>NAVER_CLIENT_SECRET</code></span>
+    <span>Implementation <code>server/src/naver-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#endpoints">The 8 endpoints</a></li>
+    <li><a href="#params">Parameters</a></li>
+    <li><a href="#response">Responses and cleanup</a></li>
+    <li><a href="#errors">Errors and quota</a></li>
+    <li><a href="#impl">Implementation vs. contract</a></li>
+  </ol>
+</nav>
+
+<section id="endpoints">
+  <h2>1. The 8 endpoints</h2>
+  <pre><code>GET https://openapi.naver.com/v1/search/{endpoint}
+X-Naver-Client-Id:     {client id}
+X-Naver-Client-Secret: {client secret}</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th><code>type</code></th><th>Endpoint</th><th>Used for</th><th><code>sort</code></th><th><code>limit</code> cap</th></tr></thead>
+    <tbody>
+      <tr><td><code>news</code> <span class="badge free">default</span></td><td><code>news.json</code></td><td>Korean news — cross-checking values that go stale (prices, effective dates)</td><td><code>sim</code>·<code>date</code></td><td>30</td></tr>
+      <tr><td><code>blog</code></td><td><code>blog.json</code></td><td>Blog reviews — real usage experience</td><td><code>sim</code>·<code>date</code></td><td>30</td></tr>
+      <tr><td><code>web</code></td><td><code>webkr.json</code></td><td>Web documents — official pages and source material</td><td><strong>unsupported</strong></td><td>30</td></tr>
+      <tr><td><code>cafe</code></td><td><code>cafearticle.json</code></td><td>Naver Cafe posts (member community forums) — public opinion and complaints</td><td><code>sim</code>·<code>date</code></td><td>30</td></tr>
+      <tr><td><code>kin</code></td><td><code>kin.json</code></td><td>Naver 지식iN ("Knowledge iN", a Q&amp;A service) — what people actually don't know. Raw material for hooks</td><td><code>sim</code>·<code>date</code></td><td>30</td></tr>
+      <tr><td><code>image</code></td><td><code>image.json</code></td><td>Images — references for Korean subjects</td><td><code>sim</code>·<code>date</code></td><td>30</td></tr>
+      <tr><td><code>encyc</code></td><td><code>encyc.json</code></td><td>Encyclopedia — term definitions for subtitles</td><td><strong>unsupported</strong></td><td>30</td></tr>
+      <tr><td><code>local</code></td><td><code>local.json</code></td><td>Local businesses — address, coordinates, phone, category</td><td><code>random</code>·<code>comment</code></td><td><strong>5</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong>Five APIs are in the official docs but dead in practice.</strong> Naver's official swagger (<code>naver/naver-openapi-guide</code>) still lists <code>book</code>, <code>book_adv</code>, <code>doc</code> (specialist documents), <code>shop</code> (shopping), and <code>movie</code>, but every real call returns <strong>404 <code>SE05</code> "존재하지 않는 검색 api"</strong> ("no such search api") — measured 2026-08-11. Add a tool from the docs alone and you ship a dead tool, so we expose only the 8 confirmed alive.
+  </div>
+  <div class="danger">
+    <strong>The parameter surface differs per type, and violations are either silently ignored or a 400.</strong>
+    <ul>
+      <li><code>web</code> and <code>encyc</code> are documented as <strong>not taking <code>sort</code></strong>. A real call answers 200 rather than 400 (measured), but that doesn't mean it's supported — it means it's <strong>silently ignored</strong>.</li>
+      <li><code>local</code> doesn't use <code>sim</code>/<code>date</code> — it has its own <strong><code>random</code>/<code>comment</code> scheme</strong>. Raise <code>display</code> to 10 and you still get 5, and passing <code>start</code> returns the same results (no paging).</li>
+      <li><code>filter</code> (image size) is <code>image</code>-only.</li>
+    </ul>
+    The dangerous part is the wrong value being <strong>ignored without an error</strong> — the model believes results are sorted newest-first and cites old material as current. So the server rejects it <strong>before the call</strong>.
+  </div>
+  <p>Credentials travel <strong>in headers only</strong>. Unlike SerpApi, the key never rides in the URL, so even when an error body echoes the URL nothing leaks.</p>
+  <div class="note">
+    <strong>This API has no video search.</strong> Use <code>serp_naver_search(where: "video")</code> when you need it.
+  </div>
+</section>
+
+<section id="params">
+  <h2>2. Parameters</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Tool argument</th><th>API parameter · range</th><th>Default</th><th>Implementation</th></tr></thead>
+    <tbody>
+      <tr><td><code>query</code></td><td><code>query</code></td><td>required</td><td>1–300 characters</td></tr>
+      <tr><td><code>limit</code></td><td><code>display</code> 1–100</td><td>10</td><td><strong>narrowed to 1–30</strong> (<code>local</code> is 5)</td></tr>
+      <tr><td><code>page</code></td><td><code>start</code> 1–1000 — <strong>an item offset, not a page</strong></td><td>1</td><td>Converted as <code>(page-1)×limit+1</code>. Over the cap, or on <code>local</code>, it's rejected</td></tr>
+      <tr><td><code>sort</code></td><td><code>sort</code> — value scheme differs per type</td><td>API default</td><td>Rejected if the type doesn't support it</td></tr>
+      <tr><td><code>imageSize</code></td><td><code>filter</code> — <code>all</code>·<code>large</code>·<code>medium</code>·<code>small</code></td><td>—</td><td><code>image</code>-only — rejected on other types</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>With <code>start</code> capped at 1000, a single query can yield at most about 1,099 results.</p>
+  <div class="note">
+    <strong>Naver's <code>start</code> is not a page number.</strong> It's a 1-based <strong>item position</strong>, so passing <code>page</code> through directly makes <code>page=2</code> mean "from the 2nd item" and the results overlap (at <code>limit=3</code>, two of the three repeat the previous page). The server converts with <code>(page-1)×limit+1</code>, so a tool user can just think of <code>page</code> as a page — the point of a shared name is that it means the same thing everywhere.
+  </div>
+  <div class="note">
+    <strong>Every search tool shares the same argument names</strong> — <code>query</code>, <code>limit</code>, <code>page</code>. Whether the backend calls them <code>q</code>, <code>display</code>, <code>num</code>, or <code>start</code>, the server does the conversion. Let the names wobble per tool and the model re-learns the arguments every time it switches tools, and that cost comes back as wrong-argument calls and <code>-32602</code> round trips. A contract test enforces the convention.
+  </div>
+  <div class="note">
+    <strong>Narrowing <code>display</code> to 30 is a design decision, not a defect.</strong> Taking the API's full 100 eats a large slice of the LLM context, and in research the 31st result essentially never changes the conclusion. If you do need more, stepping through with <code>start</code> is the right move.
+  </div>
+</section>
+
+<section id="response">
+  <h2>3. Responses and cleanup</h2>
+  <pre><code>{
+  "total": 12345,
+  "start": 1,
+  "display": 10,
+  "items": [
+    {
+      "title": "&lt;b&gt;검색어&lt;/b&gt;가 포함된 제목",
+      "originallink": "https://…",
+      "link": "https://n.news.naver.com/…",
+      "description": "…&lt;b&gt;하이라이트&lt;/b&gt;…",
+      "pubDate": "Tue, 29 Jul 2026 09:00:00 +0900"
+    }
+  ]
+}</code></pre>
+  <p>The sample values are Korean: the title reads "a title containing &lt;b&gt;the query&lt;/b&gt;" and the description holds a &lt;b&gt;highlight&lt;/b&gt;. Field names are English, but the content is not.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Raw field</th><th>After cleanup</th><th>Handling</th></tr></thead>
+    <tbody>
+      <tr><td><code>title</code></td><td><code>title</code></td><td>Strip <code>&lt;b&gt;</code> tags, restore HTML entities</td></tr>
+      <tr><td><code>originallink</code> / <code>link</code></td><td><code>link</code></td><td><strong><code>originallink</code> wins</strong> — the outlet's own article, not Naver's news mirror, is what belongs in a citation</td></tr>
+      <tr><td><code>description</code></td><td><code>description</code></td><td>Same cleanup</td></tr>
+      <tr><td><code>bloggername</code> / <code>cafename</code></td><td><code>source</code></td><td>Whichever the type provides</td></tr>
+      <tr><td><code>pubDate</code> / <code>postdate</code></td><td><code>date</code></td><td>Whichever the type provides</td></tr>
+      <tr><td><code>sizewidth</code> / <code>sizeheight</code></td><td><code>width</code> / <code>height</code></td><td><code>image</code>-only — <code>link</code> is renamed <code>imageUrl</code> to make clear it's the original image URL</td></tr>
+      <tr><td><code>mapx</code> / <code>mapy</code></td><td><code>coords</code></td><td><code>local</code>-only — <strong>divided by 10<sup>7</sup> into lat/lng</strong></td></tr>
+      <tr><td><code>total</code></td><td>—</td><td><strong>removed</strong> on <code>local</code> (warning below)</td></tr>
+      <tr><td><code>address</code> / <code>roadAddress</code> / <code>telephone</code> / <code>category</code></td><td>same names</td><td><code>local</code>-only — passed through as-is</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong><code>local</code>'s <code>total</code> is not the number of businesses.</strong> It echoes back however many you asked for (measured: <code>limit=2</code> → <code>total:2</code>, <code>limit=3</code> → <code>total:3</code>). Passed through, the model reads it as "there are 2 cafés in Gangnam", so we <strong>drop it entirely</strong>. Instead the response always carries a <code>note</code> about the cap and the missing paging, so a short result isn't mistaken for a failed search.
+  </div>
+  <div class="warn">
+    <strong>Don't let <code>local</code>'s coordinates through raw.</strong> <code>mapx: "1269719531"</code> is an integer string with the decimal point removed; divide by 10<sup>7</sup> and it becomes longitude <code>126.9719531</code>. Left raw, the model mistakes it for a coordinate and cites the wrong place. If the converted value falls outside the Korean peninsula, the coordinate-system assumption has broken, so we <strong>omit the field rather than emit a guess</strong>.
+  </div>
+  <p><strong>Response fields differ per type</strong> — <code>image</code> has no <code>description</code> at all and brings <code>thumbnail</code> plus dimensions, while <code>local</code> brings address, coordinates, and phone. One common slimming path would erase local search's coordinates, so we branch per type.</p>
+  <p>Leave the <code>&lt;b&gt;</code> highlights in and the model reads them as emphasis or copies them straight into a citation. <code>&amp;quot;</code>, <code>&amp;amp;</code>, <code>&amp;lt;</code>, <code>&amp;gt;</code>, and <code>&amp;apos;</code> are restored along with them.</p>
+</section>
+
+<section id="errors">
+  <h2>4. Errors and quota</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Situation</th><th>Response</th><th>What the server tells the model</th></tr></thead>
+    <tbody>
+      <tr><td>Invalid key / search API not applied for</td><td>401 · 403</td><td>"Do not retry before fixing the key" + a link to the app settings</td></tr>
+      <tr><td>Quota exhausted</td><td>429</td><td>"Daily quota (25,000) exhausted — fall back to WebSearch/serp_* for this session"</td></tr>
+      <tr><td>No results</td><td>200 + empty <code>items</code></td><td>"Retry once with a different query, or drop claims you could not verify from the copy"</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>A 403 may not mean a bad key — it may be an app that never applied for the search API.</strong> Creating an app on Naver Developers isn't enough; each API needs its own usage application. The error message has to offer both possibilities, or the model heads off in the wrong direction and reissues the key.
+  </div>
+</section>
+
+<section id="impl">
+  <h2>5. Implementation vs. contract</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Official contract</th><th>social-flow implementation</th></tr></thead>
+    <tbody>
+      <tr><td><code>display</code></td><td>up to 100</td><td>up to 30 (context protection)</td></tr>
+      <tr><td><code>sort</code></td><td>Support differs per endpoint — a violation is ignored, not a 400</td><td><strong>Rejected before the call</strong> (the per-type allowed-value table is the source of truth)</td></tr>
+      <tr><td>Links</td><td><code>link</code> and <code>originallink</code> both present</td><td>Collapsed to <code>originallink</code> first</td></tr>
+      <tr><td>Markup</td><td><code>&lt;b&gt;</code> highlights included</td><td>Stripped, entities restored</td></tr>
+      <tr><td>Types exposed</td><td>13 in the docs</td><td><strong>8</strong> — only those confirmed alive by real calls (<code>book</code>·<code>doc</code>·<code>shop</code>·<code>movie</code> are 404; <code>adult</code>·<code>errata</code> aren't research tools)</td></tr>
+      <tr><td>Per-type constraints</td><td>Violations ignored or 400</td><td><strong>Rejected before the call</strong> — sort, paging, and the image filter are validated per type</td></tr>
+      <tr><td><code>local</code> coordinates</td><td><code>mapx</code>/<code>mapy</code> integer strings</td><td>Converted to WGS84 lat/lng (<code>coords.lat</code>/<code>lng</code>)</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  As of 2026-08-11 · Implementation <a href="../../server/src/naver-client.ts">server/src/naver-client.ts</a> · <a href="index.en.html">API reference hub</a>
+</footer>
+
+</div>
+</body>
+</html>

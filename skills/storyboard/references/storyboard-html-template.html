@@ -1,0 +1,1833 @@
+<!doctype html>
+<html lang="ko">
+<!--
+  ═══════════════════════════════════════════════════════════════════════
+  storyboard.html template — the storyboard people review (scenes.js is the SoT)
+  ═══════════════════════════════════════════════════════════════════════
+
+  How to use it (storyboard skill §6):
+  1. Copy this file to data/<channel>/episodes/<topic>/storyboard/storyboard.html.
+  2. Fill in only <title> and the "✎ SB_DOC" block — leave the rest (styles, renderer) alone.
+  3. Open it in a browser: it loads scenes.js from the same directory and draws from it.
+
+  How drift is blocked:
+  - Scene data (title, dialogue, bullets, shot, duration, THEME) is never written in
+    this file — the renderer draws the window.SCENES that <script src="./scenes.js">
+    loaded. Fix scenes.js and this document follows on its own.
+  - SB_DOC holds only editorial metadata that is not in scenes.js: core message,
+    per-scene notes, transitions, audio directions, privacy avoidance, source summary,
+    platform plan, shooting prep, recheck list.
+  - Character counts, speech rate, scene length and total length are computed by the
+    renderer against the contract (scenes-schema / shot-script-template) and shown as
+    badges; violations are collected in the check strip at the top of the document.
+
+  ■ Shot card structure — scene-frame sheet layout (2026-08-17 grammar units)
+    · One SCENES[] entry = one shot. Entries sharing a scene number group under a scene
+      band, and only a sequence with a different purpose opens a sequence line.
+      Identifier names (SCENES, scene-N.png) stay as they are.
+    · One reveal (the moment text appears inside the same shot) = one row. The 9:16 frame
+      on the left, that reveal's screen text and dialogue on the right. A reveal is not a shot.
+    · The shot header carries two production layers — the picture itself (still photo /
+      AI video / recording / shared asset) and the staging over it (HTML reveal, caption,
+      typing / none). Do not merge them into one badge.
+    · The palette is fixed light (no dark media query — a review document is read on the
+      same white ground as the print and approval screens). This layout converged over four
+      adversarial designer reviews (97 points, zero P0).
+
+  ■ Frame geometry is the produce renderer's ratios carried over as-is (rough preview)
+    · Generated mode = video-template.html — text zone x 176/1080 · top 190/1920 ·
+      bottom 570/1920, cover anchored bottom · points anchored top · quote/outro centered.
+    · Shooting mode = screencast-overlay.html — top block y190~460 + recording band y≥460
+      (build-screencast.sh BAND_MIN_Y 460 · BAND_CY 880 · BAND_MAX_H 900).
+    · Subtitles = build-reel.sh ASS Style Sub — font 58 · MarginV 380 · MarginL/R 250.
+    When the geometry changes in those three produce files, change the constants here too.
+
+  Modes: both shooting (screencast) and generated are supported — visual.source==="recording"
+  draws the recording-band frame, anything else draws the generated-background frame.
+  With narration[].img it goes to per-line illustration mode (light) and the background
+  changes with every line.
+-->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{topic display name}} — Storyboard · {{channel name}}</title>
+<style>
+  /* ── Tokens ──────────────────────────────────────────────
+     The channel colors (--accent/--accent2/--ink) are overwritten by the renderer from THEME.
+     The document palette is neutral — color carries only the channel accent and the
+     verdicts (ok/warn/bad). */
+  :root {
+    color-scheme: light;   /* fixed light — native checkboxes included (2026-08-14) */
+    --accent: #3f6cff; --accent2: #7b4dff; --ink: #0b1020;
+
+    --bg: #f7f7f5; --card: #ffffff; --sunk: #f2f2ef;
+    --text: #17191d; --muted: #555b64; --faint: #5f6773;
+    --line: #e4e3de; --hair: #eeede9;
+    --ok: #0f6d43; --warn: #855400; --bad: #b52f24;
+    --shadow: 0 1px 2px rgba(18,20,24,.05), 0 12px 28px -22px rgba(18,20,24,.35);
+    /* Links and emphasis push the channel color toward the text color to keep body-text
+       legibility — the pure accent goes only where there are no letters: badge dots,
+       timeline slots, swatches */
+    --accent-ink: color-mix(in srgb, var(--accent) 62%, var(--text));
+
+    /* Type scale — 1.25 ratio */
+    --t-micro: 11px; --t-cap: 12px; --t-aux: 13px; --t-body: 15px;
+    --t-scene: 17px; --t-lead: 19px; --t-title: 29px;
+    /* Spacing rhythm — 4px grid */
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 36px; --s7: 56px;
+    /* Preview frame width */
+    --fw: 164px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: var(--t-body)/1.65 "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: var(--s6) var(--s5) 96px; }
+  a { color: var(--accent-ink); text-decoration: none; border-bottom: 1px solid transparent; }
+  a:hover { border-bottom-color: currentColor; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; }
+
+  /* ── Header ───────────────────────────────────────────── */
+  .doc-kicker {
+    /* .16em tracking scatters a short Korean channel name into loose letters — label
+       tracking belongs on .sec only (review round 2) */
+    font-size: var(--t-cap); letter-spacing: .05em; color: var(--muted); font-weight: 600;
+  }
+  .doc-title {
+    font-size: var(--t-title); font-weight: 700; letter-spacing: -.02em;
+    margin: var(--s3) 0 var(--s4); line-height: 1.28; word-break: keep-all;
+  }
+  .badges { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+  .badge {
+    font-size: var(--t-cap); font-weight: 600; padding: 3px 9px; border-radius: 5px;
+    background: var(--sunk); color: var(--muted); border: 1px solid var(--hair);
+    white-space: nowrap;
+  }
+  .badge.ok   { color: var(--ok);   background: color-mix(in srgb, var(--ok) 8%, transparent);   border-color: color-mix(in srgb, var(--ok) 24%, transparent); }
+  .badge.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+  .badge.bad  { color: var(--bad);  background: color-mix(in srgb, var(--bad) 9%, transparent);  border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
+  .badge.mode { color: var(--text); background: transparent; border-color: var(--line); font-weight: 700; }
+  .badge.mode::before {
+    content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); margin-right: 6px; vertical-align: 1px;
+  }
+
+  .meta-grid {
+    display: grid; grid-template-columns: 92px 1fr; gap: var(--s2) var(--s4);
+    margin: var(--s5) 0 0; font-size: var(--t-body); align-items: baseline;
+  }
+  .meta-grid dt { color: var(--faint); font-size: var(--t-aux); font-weight: 600; }
+  .meta-grid dd { margin: 0; word-break: keep-all; }
+
+  /* Check strip — collects contract violations at the top of the document */
+  .audit {
+    margin: var(--s5) 0 0; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--card); overflow: hidden;
+  }
+  .audit-head {
+    display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s4);
+    font-size: var(--t-aux); font-weight: 700; border-bottom: 1px solid var(--hair);
+  }
+  .audit-head .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+  .audit.has-warn .audit-head .dot { background: var(--warn); }
+  .audit.has-bad  .audit-head .dot { background: var(--bad); }
+  .audit-head .count { margin-left: auto; color: var(--text); font-weight: 600; }
+  .audit ul { margin: 0; padding: var(--s3) var(--s4) var(--s3) 0; list-style: none; }
+  .audit li {
+    display: grid; grid-template-columns: 84px 1fr; gap: var(--s3);
+    padding: var(--s1) var(--s4); font-size: var(--t-aux);
+  }
+  .audit li .where { color: var(--text); font-weight: 700; }
+  /* Color alone never carries the difference — a violation has to show in grayscale
+     print and to a color-blind reader */
+  .audit li .where::before { content: "· "; color: var(--faint); font-weight: 400; }
+  .audit li.bad .where::before { content: "! "; color: var(--bad); font-weight: 700; }
+  .audit li.bad  .what { color: var(--bad); }
+  .audit li.warn .what { color: var(--warn); }
+  .audit li.warn .where { font-weight: 600; color: var(--muted); }
+  .audit .clean { padding: var(--s3) var(--s4); font-size: var(--t-aux); color: var(--muted); }
+
+  .note {
+    background: var(--sunk); border-radius: 8px; padding: var(--s3) var(--s4);
+    margin: var(--s2) 0; font-size: var(--t-aux); line-height: 1.6; color: var(--text);
+    border-left: 2px solid var(--line);
+  }
+  .note.pv { border-left-color: var(--bad); }
+
+  /* ── Sections ─────────────────────────────────────────── */
+  .sec {
+    font-size: var(--t-cap); font-weight: 700; letter-spacing: .14em; color: var(--faint);
+    margin: var(--s7) 0 var(--s4); padding-bottom: var(--s2);
+    border-bottom: 1px solid var(--line);
+  }
+  .sec .aside { float: right; font-weight: 500; letter-spacing: 0; color: var(--faint); }
+
+  /* ── Timeline ─────────────────────────────────────────── */
+  .timeline { display: flex; gap: 2px; height: 40px; }
+  .tl-seg {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-radius: 4px; font-size: var(--t-micro); font-weight: 700; min-width: 26px;
+    background: color-mix(in srgb, var(--accent) 14%, var(--card));
+    color: var(--text);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    overflow: hidden; white-space: nowrap;
+  }
+  /* The cover slot stands out by weight, not saturation — white letters on the channel
+     color lose contrast depending on the hue */
+  .tl-seg.cover {
+    background: color-mix(in srgb, var(--accent) 26%, var(--card));
+    color: var(--text); border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .tl-seg.broll { background: repeating-linear-gradient(135deg,
+      color-mix(in srgb, var(--accent) 14%, var(--card)) 0 5px,
+      color-mix(in srgb, var(--accent) 5%, var(--card)) 5px 10px); }
+  .tl-seg.outro { background: var(--sunk); color: var(--muted); border-color: var(--line); }
+  .tl-seg.outro small { opacity: 1; }
+  .tl-seg small { font-weight: 500; opacity: .8; font-size: 10px; }
+  .tl-ruler { display: flex; margin-top: var(--s1); font-size: 10px; color: var(--faint); }
+  .tl-ruler span { border-left: 1px solid var(--line); padding-left: 3px; }
+  .tl-ruler span:last-child { text-align: right; border-left: none; border-right: 1px solid var(--line); padding: 0 3px 0 0; }
+  .tl-cap { font-size: var(--t-cap); color: var(--faint); margin-bottom: var(--s2); }
+
+  /* ── Sequence · scene band · shot card ────────────────── */
+  .seq-head {
+    font-size: var(--t-aux); font-weight: 700; letter-spacing: .08em;
+    color: var(--accent-ink); margin: var(--s6) 0 var(--s3);
+  }
+  .scene-band {
+    margin: var(--s5) 0; padding: var(--s4);
+    border: 1px solid var(--line); border-radius: 14px;
+    background: color-mix(in srgb, var(--sunk) 62%, var(--card));
+  }
+  .scene-band-head {
+    display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
+    font-size: var(--t-scene); font-weight: 700; letter-spacing: -.01em;
+    margin: 0 0 var(--s3);
+  }
+  .scene-band-head .sn {
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em;
+    color: var(--faint); border: 1px solid var(--line); border-radius: 4px;
+    padding: 2px 7px;
+  }
+  .scene-band .scene { margin: var(--s3) 0; }
+  .scene-band .scene:first-of-type { margin-top: 0; }
+  .scene-band .scene:last-of-type { margin-bottom: 0; }
+  .scene {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: var(--s5); margin: var(--s4) 0; box-shadow: var(--shadow);
+  }
+  /* The scene-frame card is narrowed to the width it actually uses (frame 156 + gap 24 +
+     content ≤560) — stretched to 1060px the right quarter shows as empty background
+     (design review round 3) */
+  .scene:has(.conti) { max-width: 760px; }
+  .scene-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2) var(--s3); }
+  .scene-no {
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em; color: var(--faint);
+    border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px;
+  }
+  .scene-title { font-size: var(--t-scene); font-weight: 700; letter-spacing: -.01em; word-break: keep-all; }
+  .scene-beat { font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em; color: var(--accent-ink); }
+  .scene-beat.beat-result { color: var(--ok); }
+  .scene-beat.beat-body { color: var(--faint); }
+  .scene-beat.beat-hooktype { color: var(--accent-ink); opacity: .8; }
+  .scene-checks { margin-left: auto; display: flex; gap: var(--s1); flex-wrap: wrap; }
+  /* Three or more badges bunched together drop to the line below the title, so the badges
+     do not push the title into a wrap (review round 3) */
+  .scene-checks:has(> :nth-child(3)) { flex-basis: 100%; margin-left: 0; }
+
+  /* Scene-frame layout — one reveal = one row, the 9:16 frame on the left · that reveal's
+     content on the right. Text is centered vertically with a width cap — short content
+     used to pile up top-left and make the row look like an empty box (design review round 1). */
+  .conti { --fw: 156px; margin-top: var(--s4); }
+  .conti-row {
+    display: grid; grid-template-columns: var(--fw) minmax(0, 1fr);
+    gap: var(--s5); align-items: center; padding: var(--s4) 0;
+    border-top: 1px solid var(--hair);
+  }
+  .conti-row:first-child { border-top: none; padding-top: 0; }
+  .conti-row:last-child { padding-bottom: 0; }
+  .panel { margin: 0; width: var(--fw); }
+
+  .cut { min-width: 0; max-width: 560px; }
+  /* The reveal label sits one step above body text (15px vs 13px) so it does not read at
+     the same level as the bold screen copy */
+  .cut-head {
+    display: flex; align-items: baseline; gap: var(--s2);
+    font-size: var(--t-body); font-weight: 700; color: var(--text);
+  }
+  /* The reveal number/type badge and the shot header's production-layer badge are the
+     same pill part. */
+  .vtag, .cut-head .no {
+    font-size: var(--t-micro); border-radius: 5px; padding: 2px 8px; line-height: 1.4;
+    white-space: nowrap; font-weight: 600;
+  }
+  .cut-head .no {
+    color: var(--faint); letter-spacing: .08em; font-weight: 700;
+    border: 1px solid var(--line); font-variant-numeric: tabular-nums;
+  }
+  .vtag {
+    color: var(--muted); background: var(--sunk); border: 1px solid var(--hair);
+  }
+  .cut-head .vtag { margin-left: auto; }
+  .craft { display: flex; flex-wrap: wrap; gap: var(--s1); }
+  .shot-meta {
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3);
+    margin: var(--s2) 0 0;
+  }
+  .shot-meta .shot-info { margin: 0; }
+  .vtag.html {
+    color: var(--text); background: transparent; border-color: var(--line);
+  }
+  .vtag.gen {
+    color: var(--accent-ink);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 24%, transparent);
+  }
+  .shot-size {
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: .06em;
+    color: var(--muted); border: 1px solid var(--hair); border-radius: 4px;
+    padding: 2px 7px;
+  }
+  .shot-info {
+    margin: var(--s2) 0 0; font-size: var(--t-aux); color: var(--text);
+    word-break: keep-all;
+  }
+  .shot-info b { color: var(--faint); font-weight: 600; margin-right: var(--s2); }
+  .cut-sec {
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: .16em;
+    color: var(--faint); margin: var(--s3) 0 var(--s1);
+  }
+  /* The character count is inline right after the sentence — pinned to the right edge it
+     leaves a gaping hole between text and badge on short sentences (design review round 2). */
+  .cut-line {
+    display: flex; align-items: baseline; gap: var(--s2);
+    font-size: var(--t-aux); padding: var(--s1) 0;
+  }
+  .cut-line .k { flex: none; min-width: 15px; color: var(--faint); font-weight: 700; font-size: var(--t-micro); }
+  .cut-line .b { flex: 1 1 auto; min-width: 0; line-height: 1.6; }
+  .cut-line .len { color: var(--faint); font-size: var(--t-micro); white-space: nowrap; }
+  .cut-carry { font-size: var(--t-aux); color: var(--muted); padding: var(--s1) 0; }
+
+  /* 9:16 frame — a proportional approximation of the produce renderer's geometry */
+  .fr {
+    position: relative; width: var(--fw); aspect-ratio: 9 / 16; overflow: hidden;
+    background: var(--ink); border-radius: calc(var(--fw) * .05);
+    border: 1px solid var(--line);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    color: #fff; text-align: center; line-height: 1.2;
+  }
+  .fr .fbg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  .fr .fscrim { position: absolute; inset: 0; }
+  /* Scrim — the d1 strength from video-template.html */
+  .fr.t-cover  .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.16) 0%, rgba(5,8,20,0) 34%, rgba(5,8,20,.42) 62%, rgba(5,8,20,.90) 100%); }
+  .fr.t-points .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.64) 0%, rgba(5,8,20,.48) 28%, rgba(5,8,20,0) 48%, rgba(5,8,20,0) 68%, rgba(5,8,20,.52) 100%); }
+  .fr.t-quote  .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.55) 0%, rgba(5,8,20,.38) 35%, rgba(5,8,20,.52) 62%, rgba(5,8,20,.92) 100%); }
+  /* Over a speech clip (alpha) there is no full wash like the still card — only top and
+     bottom scrims for the signature and the subtitles */
+  .fr.t-quote.fclip .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.78) 0%, rgba(5,8,20,0) 22.4%, rgba(5,8,20,0) 66.7%, rgba(5,8,20,.85) 100%); }
+  /* Light (illustration) mode — ink text over white-background line art + a white wash */
+  .fr.light .fscrim { background: linear-gradient(180deg, rgba(255,255,255,.66) 0%, rgba(255,255,255,0) 34%, rgba(255,255,255,0) 64%, rgba(255,255,255,.66) 100%); }
+  .fr.light { color: var(--ink); }
+
+  /* Text zone — left/right 176/1080, top 190/1920, bottom 570/1920 */
+  .fr .fzone {
+    position: absolute; left: 16.30%; right: 16.30%; top: 9.90%; bottom: 29.69%;
+    display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
+  }
+  .fr .fzone.top { justify-content: flex-start; }
+  .fr .fzone.center { justify-content: center; }
+
+  .fr .f-kicker {
+    align-self: center; font-size: calc(var(--fw) * .0315); font-weight: 700;
+    letter-spacing: .1em; color: rgba(255,255,255,.92); background: rgba(5,8,20,.38);
+    border: 1px solid rgba(255,255,255,.14); border-radius: 999px;
+    padding: calc(var(--fw) * .011) calc(var(--fw) * .031);
+    margin-bottom: calc(var(--fw) * .028);
+  }
+  .fr.light .f-kicker { color: rgba(255,255,255,.95); background: color-mix(in srgb, var(--ink) 86%, transparent); }
+  .fr .f-title {
+    font-size: calc(var(--fw) * .0926); line-height: 1.14; font-weight: 800;
+    letter-spacing: -.02em; word-break: keep-all; text-shadow: 0 1px 5px rgba(0,0,0,.55);
+    margin-bottom: calc(var(--fw) * .041);
+  }
+  /* inline-block is what makes the width the width of the glyphs — the same value produce's
+     640px guard measures */
+  .fr .f-stat {
+    font-size: calc(var(--fw) * var(--stat-fs, .1898)); line-height: 1; font-weight: 800;
+    letter-spacing: -.03em; white-space: nowrap; display: inline-block;
+  }
+  .fr .f-statlabel {
+    font-size: calc(var(--fw) * .037); font-weight: 600; color: rgba(255,255,255,.88);
+    margin-top: calc(var(--fw) * .02); word-break: keep-all;
+  }
+  .fr.light .f-statlabel { color: color-mix(in srgb, var(--ink) 80%, transparent); }
+  .fr .f-ptitle {
+    font-size: calc(var(--fw) * .0556); line-height: 1.2; font-weight: 800;
+    letter-spacing: -.015em; word-break: keep-all; text-shadow: 0 1px 4px rgba(0,0,0,.6);
+    margin-bottom: calc(var(--fw) * .031);
+  }
+  .fr.light .f-ptitle, .fr.light .f-title { text-shadow: 0 0 4px #fff, 0 0 2px #fff; }
+  .fr .f-cap::before {
+    content: ""; display: block; width: calc(var(--fw) * .0519);
+    height: calc(var(--fw) * .00556); border-radius: calc(var(--fw) * .00278);
+    margin: 0 auto calc(var(--fw) * .0185);
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .fr .f-cap .t { font-size: calc(var(--fw) * .046); line-height: 1.25; font-weight: 700; word-break: keep-all; text-shadow: 0 1px 4px rgba(0,0,0,.65); }
+  .fr .f-cap .d { font-size: calc(var(--fw) * .0324); line-height: 1.4; font-weight: 500; color: rgba(255,255,255,.85); margin-top: calc(var(--fw) * .011); word-break: keep-all; }
+  .fr.light .f-cap .t { text-shadow: 0 0 4px #fff, 0 0 2px #fff; }
+  /* On white the pale accent2 end disappears — produce redefines it toward the darker
+     side, measured in practice */
+  .fr.light .f-em {
+    background: linear-gradient(105deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--ink)));
+    -webkit-background-clip: text; background-clip: text;
+    text-shadow: none;   /* the shadow shows through transparent glyphs and washes them out (measured in produce) */
+  }
+  .fr.light .f-cap .d, .fr.light .f-foot { text-shadow: 0 0 4px #fff, 0 0 2px #fff; }
+  .fr.light .f-cap .d { color: color-mix(in srgb, var(--ink) 72%, transparent); }
+  .fr .f-foot { font-size: calc(var(--fw) * .0241); color: rgba(255,255,255,.6); }
+  .fr.light .f-foot { color: color-mix(in srgb, var(--ink) 55%, transparent); }
+  /* Reveals hide with opacity only — an unchanging layout is the contract of the produce
+     capture, so an element that has not appeared yet still holds its space
+     (video-template.html .rv.hide). */
+  .fr .fhide { opacity: 0; }
+  .fr .f-capstack { display: grid; margin-bottom: calc(var(--fw) * .0241); }
+  .fr .f-capstack > .f-cap { grid-area: 1 / 1; }
+  .fr .f-statwrap { margin-bottom: calc(var(--fw) * .0444); }
+  .fr .f-em {
+    background: linear-gradient(105deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .fr .f-sign { position: absolute; left: 16.3%; right: 16.3%; top: 11.98%; text-align: center; }
+  /* The signature sits over the speech clip, so it is always white — if light (illustration)
+     mode passed its ink color down, it would be black on black over the clip scrim (the dark
+     top). Reverted on clip frames only. */
+  .fr.fclip .f-sign { color: #fff; }
+  .fr .f-sign .nm { font-size: calc(var(--fw) * .048); font-weight: 800; }
+  .fr .f-sign .rl { font-size: calc(var(--fw) * .0296); font-weight: 600; color: rgba(255,255,255,.85); margin-top: calc(var(--fw) * .0111); }
+  .fr .f-sign .rl .ai { color: var(--accent); font-weight: 800; }
+  .fr .f-quote { font-size: calc(var(--fw) * .0519); line-height: 1.45; font-weight: 650; word-break: keep-all; }
+  .fr .f-quote::before {
+    content: "“"; display: block; font-size: calc(var(--fw) * .1389); line-height: .6;
+    color: var(--accent); margin-bottom: calc(var(--fw) * .0278);
+  }
+  .fr .f-obrand { font-size: calc(var(--fw) * .059); font-weight: 800; letter-spacing: .03em; margin-bottom: calc(var(--fw) * .037); }
+  .fr .f-otitle { font-size: calc(var(--fw) * .078); line-height: 1.25; font-weight: 800; word-break: keep-all; margin-bottom: calc(var(--fw) * .033); }
+  .fr .f-osub { font-size: calc(var(--fw) * .039); line-height: 1.4; color: rgba(255,255,255,.85); word-break: keep-all; }
+
+  /* Subtitles — ASS Style Sub: font 58/1080, MarginV 380/1920, MarginL/R 250/1080 */
+  .fr .f-sub {
+    position: absolute; left: 23.15%; right: 23.15%; bottom: 19.79%;
+    font-size: calc(var(--fw) * .0537); line-height: 1.25; font-weight: 700;
+    color: #fff; text-shadow: 0 0 3px #101828, 0 1px 2px #101828, 0 0 5px rgba(0,0,0,.9);
+    word-break: keep-all;
+  }
+
+  /* Shooting mode — top block (y190~460) + recording band
+     Band: a 16:9 recording fitted to width 1080 is 607 tall · center y880 → y576~1184 */
+  /* produce's `.top` has no height constraint — it grows with its content, and overflow is
+     measured by whether its bottom crosses y=460 (screencast-overlay.html). Pinning bottom
+     here would stop it at 460 every time and measure nothing. */
+  .fr .f-top { position: absolute; left: 16.3%; right: 16.3%; top: 9.9%; }
+  .fr .f-top .f-title { font-size: calc(var(--fw) * .0667); line-height: 1.18; margin-bottom: 0; }
+  .fr.t-cover .f-top .f-title { font-size: calc(var(--fw) * .0778); }
+  /* In shooting mode the kicker is plain text, not a pill (screencast-overlay.html .kicker) */
+  .fr.rec .f-kicker {
+    display: block; background: none; border: none; padding: 0;
+    font-size: calc(var(--fw) * .0296); letter-spacing: .14em;
+    color: rgba(255,255,255,.82); margin-bottom: calc(var(--fw) * .0241);
+  }
+  .fr.rec.tight2 .f-kicker { margin-bottom: calc(var(--fw) * .0167); }
+  .fr .f-statrow { display: flex; align-items: baseline; justify-content: center; gap: calc(var(--fw) * .018); margin-top: calc(var(--fw) * .024); }
+  .fr .f-statrow .f-stat { font-size: calc(var(--fw) * .07); }
+  .fr .f-statrow .f-statlabel { font-size: calc(var(--fw) * .03); margin-top: 0; }
+  .fr .f-band {
+    position: absolute; left: 0; right: 0; top: 30%; height: 31.64%;
+    background: rgba(255,255,255,.06); border-top: 1px dashed rgba(255,255,255,.24);
+    border-bottom: 1px dashed rgba(255,255,255,.24);
+    display: flex; align-items: center; justify-content: center;
+    font-size: calc(var(--fw) * .03); color: rgba(255,255,255,.55); font-weight: 600;
+    letter-spacing: .06em;
+  }
+  /* Speech-clip slot — produce lays a veo clip over this stretch, so there is no picture yet.
+     The scrim is lifted in the middle, so the slot carries its own contrast to keep from
+     matching the background. At the same specificity as `.f-band` it would lose on source
+     order, so both classes are used together. */
+  .fr .f-band.f-band-clip {
+    top: 26%; height: 34%; background: rgba(5,8,20,.55);
+    border-color: rgba(255,255,255,.3); color: rgba(255,255,255,.9);
+  }
+
+  /* Overflow guard — the same tight1~3 steps as video-template.html / screencast-overlay.html.
+     The renderer measures on a 1080px canvas and assigns them (see the measurement harness). */
+  .fr.tight1 .f-title { font-size: calc(var(--fw) * .0852); }
+  .fr.tight1 .f-ptitle { font-size: calc(var(--fw) * .0509); }
+  .fr.tight1 .f-cap .t { font-size: calc(var(--fw) * .0426); }
+  .fr.tight1 .f-cap .d { font-size: calc(var(--fw) * .0296); }
+  .fr.tight2 .f-title { font-size: calc(var(--fw) * .0787); }
+  .fr.tight2 .f-ptitle { font-size: calc(var(--fw) * .0472); }
+  .fr.tight2 .f-cap .t { font-size: calc(var(--fw) * .0398); }
+  .fr.tight2 .f-cap .d { font-size: calc(var(--fw) * .0278); }
+  .fr.tight2 .f-stat { --stat-fs: .1667; }
+  .fr.tight3 .f-title { font-size: calc(var(--fw) * .0722); }
+  .fr.tight3 .f-ptitle { font-size: calc(var(--fw) * .0435); }
+  .fr.tight3 .f-cap .t { font-size: calc(var(--fw) * .037); }
+  .fr.tight3 .f-cap .d { font-size: calc(var(--fw) * .0259); }
+  .fr.tight1 .f-top .f-title { font-size: calc(var(--fw) * .0593); }
+  .fr.tight1.t-cover .f-top .f-title { font-size: calc(var(--fw) * .0685); }
+  .fr.tight1 .f-statrow .f-stat { font-size: calc(var(--fw) * .0611); }
+  .fr.tight2 .f-top .f-title { font-size: calc(var(--fw) * .0519); }
+  /* The shooting cover title follows produce's cascade as-is (measured):
+     tight1 = 74px, while tight2 and tight3 fall back to the base 84px because
+     `.tight2 .title` (56/50px) loses on specificity to `body.scene-cover .title` (84px).
+     It looks wrong, but that is what actually renders. */
+  .fr.rec.t-cover.tight1 .f-top .f-title { font-size: calc(var(--fw) * .0685); }
+  .fr.rec.t-cover.tight2 .f-top .f-title,
+  .fr.rec.t-cover.tight3 .f-top .f-title { font-size: calc(var(--fw) * .0778); }
+  .fr.tight2 .f-statrow .f-stat { font-size: calc(var(--fw) * .0537); }
+  .fr.tight3 .f-top .f-title { font-size: calc(var(--fw) * .0463); }
+  .fr.tight3 .f-statrow { margin-top: calc(var(--fw) * .015); }
+
+  /* ══ Landscape long-form 16:9 scene frame ════════════════════════════════
+     Every portrait-frame ratio is based on the canvas width (1080), so it means something
+     else in landscape (1920). formats.js is the source of truth for these values too, and
+     format-lint.js cross-checks them — the font ratios are that file's `fonts` as-is
+     (absolute px / 1920). */
+  .fr.wide { aspect-ratio: 16 / 9; border-radius: calc(var(--fw) * .012); }
+  /* Zone — x 96/1920 · top 96/1080 · bottom 285/1080 (measured in safezone-landscape.md) */
+  .fr.wide .fzone { left: 5.00%; right: 5.00%; top: 8.89%; bottom: 26.39%; }
+  .fr.wide .fsafe::before { left: 5.00%; right: 5.00%; top: 8.89%; bottom: 26.39%; }
+  .fr.wide .fsafe::after { height: 26.39%; }
+  .fr.wide .f-kicker { font-size: calc(var(--fw) * .0125);
+    padding: calc(var(--fw) * .004) calc(var(--fw) * .012); margin-bottom: calc(var(--fw) * .009); }
+  .fr.wide .f-title { font-size: calc(var(--fw) * .0375); margin-bottom: calc(var(--fw) * .014); }
+  .fr.wide .f-stat { font-size: calc(var(--fw) * .0771); }
+  .fr.wide .f-statlabel { font-size: calc(var(--fw) * .0151); }
+  .fr.wide .f-ptitle { font-size: calc(var(--fw) * .0224); margin-bottom: calc(var(--fw) * .010); }
+  .fr.wide .f-cap .t { font-size: calc(var(--fw) * .0188); }
+  .fr.wide .f-cap .d { font-size: calc(var(--fw) * .0130); }
+  .fr.wide .f-foot { font-size: calc(var(--fw) * .0125); }
+  /* We do not burn subtitles here (BURN=0) — the YouTube player draws them. They are drawn
+     at measured size (48px on the canvas = .025) inside the reserved bottom strip so the
+     author can see the space they take. The dashed line marks "not our output"
+     【safezone-landscape.md §②】. */
+  .fr.wide .f-sub { left: 12%; right: 12%; bottom: 8.5%;
+    font-size: calc(var(--fw) * .025); color: rgba(255,255,255,.86);
+    outline: 1px dashed rgba(255,255,255,.22); outline-offset: calc(var(--fw) * .004); }
+  /* Lower third on shooting scenes — bottom left of the zone. The top of the frame stays
+     empty; that is where the user demonstrates */
+  .fr.wide .fzone.l3 { justify-content: flex-end; text-align: left; }
+  .fr.wide .fzone.l3 .f-ptitle { border-left: calc(var(--fw) * .003) solid var(--accent);
+    padding-left: calc(var(--fw) * .010); }
+  .fr.wide .fzone.l3 .f-foot { text-align: left; }
+  .fr.wide.rec .fscrim { background: linear-gradient(0deg, rgba(5,8,20,.82) 0%, rgba(5,8,20,.46) 28%, rgba(5,8,20,0) 48%); }
+
+  /* Measurement harness — measures on a 1080px canvas (off-screen).
+     The border is dropped — the produce canvas has none, and it would narrow the text zone by 2px.
+     On landscape episodes JS switches --fw to 1920px — the font ratios are based on the canvas
+     width, so measuring at 1080 inflates landscape text 1.78× and flags overflow that is not there. */
+  #fr-probe { position: fixed; left: -12000px; top: 0; --fw: 1080px; pointer-events: none; }
+  #fr-probe .fr { border: 0; border-radius: 0; }
+
+  /* Safe-zone guide — toggle */
+  .fr .fsafe { position: absolute; inset: 0; display: none; }
+  body.safe .fr .fsafe { display: block; }
+  .fr .fsafe::before {
+    content: ""; position: absolute; left: 16.30%; right: 16.30%; top: 9.90%; bottom: 29.69%;
+    border: 1px dashed rgba(120,200,255,.55);
+  }
+  .fr .fsafe::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 29.69%;
+    background: repeating-linear-gradient(135deg, rgba(120,200,255,.10) 0 4px, transparent 4px 8px);
+    border-top: 1px solid rgba(120,200,255,.35);
+  }
+  body:not(.subs) .fr .f-sub { display: none; }
+
+  /* Card for a scene with no frame (b-roll) */
+  .clip {
+    display: flex; gap: var(--s4); align-items: flex-start; margin-top: var(--s4);
+    background: var(--sunk); border-radius: 10px; padding: var(--s4);
+  }
+  .clip img { width: calc(var(--fw) * .72); aspect-ratio: 9/16; object-fit: cover; border-radius: 8px; flex: none; }
+  .clip .meta { font-size: var(--t-aux); line-height: 1.7; }
+  .clip .meta b { color: var(--faint); font-weight: 600; margin-right: var(--s2); }
+
+  /* ── Scene meta — background, motion, prompts: what sits outside the cut ── */
+  .cmeta { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--hair); }
+  .cmeta .row { display: grid; grid-template-columns: 62px 1fr; gap: var(--s3); font-size: var(--t-aux); margin-bottom: var(--s2); }
+  .cmeta .row > b { color: var(--faint); font-weight: 600; }
+  .cmeta .row .v { min-width: 0; word-break: break-word; line-height: 1.6; }
+  .cmeta .shot { font-size: var(--t-aux); line-height: 1.7; }
+  /* Screen text — inside the frame it is 8px and unreadable. The actual wording is read here. */
+  .capline { font-size: var(--t-aux); line-height: 1.6; padding: 2px 0; }
+  .capline .k {
+    display: inline-block; min-width: 15px; color: var(--faint);
+    font-size: var(--t-micro); font-weight: 700;
+  }
+  .capline .t { font-weight: 600; }
+  .capline .d { color: var(--muted); margin-left: 6px; }
+  .capline .f { color: var(--faint); font-size: var(--t-micro); }
+  details.prompt { margin-top: var(--s2); }
+  details.prompt summary {
+    font-size: var(--t-micro); color: var(--faint); cursor: pointer; letter-spacing: .04em;
+    list-style: none; display: inline-flex; align-items: center; gap: var(--s1);
+  }
+  details.prompt summary::-webkit-details-marker { display: none; }
+  details.prompt summary::before { content: "▸"; font-size: 9px; }
+  details.prompt[open] summary::before { content: "▾"; }
+  details.prompt p {
+    margin: var(--s2) 0 0; font-size: var(--t-micro); line-height: 1.65; color: var(--muted);
+    background: var(--sunk); border-radius: 6px; padding: var(--s3); word-break: break-word;
+  }
+
+  .sub-diff { color: var(--muted); font-size: var(--t-micro); margin-top: 2px; }
+  .sub-diff b { color: var(--faint); font-weight: 600; }
+
+  .transition {
+    font-size: var(--t-aux); color: var(--muted); margin-top: var(--s4);
+    padding-top: var(--s3); border-top: 1px dashed var(--line);
+  }
+  .transition b { color: var(--faint); font-weight: 600; letter-spacing: .06em; font-size: var(--t-micro); margin-right: var(--s2); }
+  .scene-notes { margin-top: var(--s4); }
+
+  /* ── Tables · lists ───────────────────────────────────── */
+  table.grid { width: 100%; border-collapse: collapse; font-size: var(--t-aux); }
+  table.grid th, table.grid td { text-align: left; padding: var(--s2) var(--s3); border-bottom: 1px solid var(--hair); vertical-align: top; }
+  table.grid th { font-size: var(--t-micro); color: var(--faint); font-weight: 600; letter-spacing: .06em; }
+  table.grid th:first-child, table.grid td:first-child { padding-left: 0; }
+  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin-right: var(--s1); border: 1px solid var(--line); }
+  /* The leading emoji on a source status is redrawn in the document's badge color language (review round 2) */
+  table.grid .src-mark { font-weight: 700; }
+  table.grid .src-mark.ok { color: var(--ok); }
+  table.grid .src-mark.warn { color: var(--warn); }
+  table.grid .src-mark.bad { color: var(--bad); }
+  ul.checklist { list-style: none; padding: 0; margin: 0; }
+  ul.checklist li { padding: var(--s1) 0 var(--s1) 22px; position: relative; font-size: var(--t-aux); }
+  ul.checklist li::before {
+    content: ""; position: absolute; left: 0; top: 8px; width: 11px; height: 11px;
+    border: 1px solid var(--line); border-radius: 3px;
+  }
+  /* **emphasis** in the document body — color only in the header summary, weight alone in the body */
+  .mark { color: var(--accent-ink); font-weight: 700; }
+  .note .mark, .scene-title .mark, table.grid .mark, .transition .mark { color: inherit; }
+  .scene-title .mark { color: var(--accent-ink); }
+
+  /* docNotes — design rationale stays folded (the first screen carries only what the approval decision needs) */
+  details.docnotes, details.scenenotes { margin-top: var(--s4); }
+  details.docnotes > summary, details.scenenotes > summary {
+    font-size: var(--t-aux); color: var(--muted); cursor: pointer; list-style: none;
+    display: inline-flex; align-items: center; gap: var(--s2);
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px;
+  }
+  details.docnotes > summary::-webkit-details-marker,
+  details.scenenotes > summary::-webkit-details-marker { display: none; }
+  details.docnotes > summary::before,
+  details.scenenotes > summary::before { content: "▸"; font-size: 9px; }
+  details.docnotes[open] > summary::before,
+  details.scenenotes[open] > summary::before { content: "▾"; }
+  details.docnotes > summary:hover,
+  details.scenenotes > summary:hover { border-color: var(--muted); }
+
+  /* Toolbar */
+  .toolbar { display: flex; gap: var(--s4); align-items: center; margin: var(--s4) 0 0; font-size: var(--t-cap); color: var(--muted); }
+  .toolbar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  .toolbar input { accent-color: var(--accent); margin: 0; }
+  .toolbar .legend { color: var(--faint); }
+
+  .doc-foot {
+    margin-top: var(--s7); padding-top: var(--s4); border-top: 1px solid var(--line);
+    font-size: var(--t-cap); color: var(--faint); line-height: 1.8;
+  }
+  .error-box {
+    background: color-mix(in srgb, var(--bad) 8%, var(--card)); border: 1px solid var(--bad);
+    border-radius: 10px; padding: var(--s5); margin: var(--s6) 0; font-weight: 600;
+  }
+
+  @media (max-width: 620px) {
+    .conti { --fw: 132px; }
+    .conti-row { gap: var(--s4); }
+  }
+  @media (max-width: 480px) {
+    .conti-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 720px) {
+    .meta-grid { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    /* Paper is always white — someone reading in dark mode still prints on the light palette.
+       Switching only the background to white and leaving dark text colors prints white on
+       white (measured). */
+    :root, :root:not([data-theme]) {
+      --bg: #fff; --card: #fff; --sunk: #f2f2ef; --shadow: none;
+      --text: #17191d; --muted: #555b64; --faint: #5f6773;
+      --line: #d8d7d2; --hair: #e8e7e3;
+      --ok: #0f6d43; --warn: #855400; --bad: #b52f24;
+      --accent-ink: color-mix(in srgb, var(--accent) 62%, var(--text));
+    }
+    .conti { --fw: 104px; }
+    body { background: #fff; }
+    .wrap { max-width: none; padding: 0; }
+    /* break-inside: avoid on the whole card leaves the bottom of an A4 page blank — only the
+       units that must not be split are held together */
+    .scene { break-inside: auto; border-color: #ddd; padding: var(--s4); margin: var(--s3) 0; }
+    .scene:has(.conti) { max-width: none; }   /* on paper the print margin decides the width */
+    .scene-head { break-after: avoid; }
+    .conti-row, .cmeta, .clip { break-inside: avoid; }
+    .toolbar, .tl-cap { display: none; }
+    details.prompt, details.docnotes { display: none; }
+    details.scenenotes > summary { display: none; }
+    details.scenenotes[open] > *, details.scenenotes:not([open]) > *:not(summary) { display: block; }
+    .sec { break-after: avoid; }
+    a { color: inherit; }
+    .fr, .badge, .tl-seg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body class="subs">
+<div class="wrap"><div id="app"><noscript>This document renders by loading scenes.js — please turn JavaScript on.</noscript></div></div>
+
+<script src="./scenes.js"></script>
+<script>
+/* ✎ SB_DOC BEGIN — fill in this block only (editorial metadata that is not in scenes.js).
+   Scene titles, dialogue, bullets, shot and duration are never written here — scenes.js is the SoT. */
+window.SB_DOC = {
+  channel: "{{channel slug}}",
+  channelName: "{{channel display name}}",
+  topic: "{{topic slug}}",
+  displayTitle: "{{topic display name — e.g. Building a social page, part 1 · profile image}}",
+  series: "{{series label, or an empty string — e.g. Building a social page (1/3)}}",
+  status: "draft",                       // draft | approved | produced | published — kept in sync with the storyboard.md frontmatter
+  created: "{{YYYY-MM-DD}}",
+  outro: { seconds: 9, note: "shared outro — assets/outro/default.mp4" },   // null if there is none
+  keyMessage: "{{the one sentence this video delivers}}",
+  hook: "{{cover hook summary — e.g. \"title\" — hero stat X (statLabel)}}",
+  seriesNote: "{{position in the series, standalone-viewing design, etc. — empty string if none}}",
+  // Document-level notes — design decisions that belong to no single scene (use [] if none)
+  docNotes: [],
+
+  // Scene number (from 1) → array of notes. The gist of the storyboard.md notes — what the
+  // call was based on, and what is off-limits.
+  sceneNotes: {
+    1: ["{{example note — why the three cover elements are placed this way}}"]
+  },
+  // Transition direction after scene i ends (same length as the scene count — the last one
+  // tells the user to stop recording)
+  transitions: [
+    "{{stop talking for 1 second → next scene's screen}}"
+  ],
+  // Scene number → privacy-avoidance direction (that scene only)
+  privacy: {},
+  // Scene number → audio direction (BGM, sound effects, tone). Attached to the scene meta
+  // (what sits outside the cut). Use {} if none
+  audioNotes: {},
+
+  // Source summary — a digest of the verified table in research.md (research.md is the ledger)
+  // For a source with no URL, such as an internal measurement or our own contract, leave url
+  // empty (only the label is shown).
+  sources: [
+    { claim: "{{claim}}", links: [ { label: "{{outlet}}", url: "{{URL}}" } ], date: "{{YYYY-MM-DD}}", status: "{{✅ crossed against 2 independent sources, etc.}}" }
+  ],
+  // Platform plan
+  platforms: [
+    { name: "youtube", form: "{{Shorts}}", note: "{{title keywords · hashtags · CTA}}" }
+  ],
+  // Shooting prep (shooting mode only — [] in generated mode)
+  prep: [],
+  // Recheck right before publishing (time-sensitive values — [] if none)
+  recheck: []
+};
+/* ✎ SB_DOC END */
+</script>
+<script>
+/* ⚙ RENDERER — the shared part of the template. Off-limits (change styles and check logic in the template). */
+(function () {
+  "use strict";
+  var app = document.getElementById("app");
+  if (!window.SCENES || !window.THEME) {
+    app.innerHTML = '<div class="error-box">Could not load scenes.js — open this file inside the storyboard/ directory, next to scenes.js.</div>';
+    return;
+  }
+  var THEME = window.THEME, SCENES = window.SCENES, DOC = window.SB_DOC || {};
+
+  /* ══ Format mirror ══
+     The source of truth is skills/platform-guide/references/formats.js. The browser cannot
+     build a path to that file (this document lives under data/<channel>/…), so a copy sits
+     here. format-lint.js machine-compares this block against the presets, so when a value
+     changes, change the preset first and run the linter. No window.FORMAT = shorts-9x16
+     (the entry point that has kept regressions at zero). */
+  var FMT_MIRROR = {
+    "shorts-9x16": {
+      label: "Short-form 9:16",
+      totalMin: 35, totalMax: 75, totalHard: 90,
+      sceneCountMin: 4, sceneCountMax: 7,
+      sceneMax: 13, recSceneMax: 20,
+      capCover: 40, capBody: 50, sentMin: 8, sentMax: 25,
+      videoMax: 2,                              // 8s × 2 slots = 16s
+      burn: true,                               // burned-in subtitles (formats.js:108)
+      chapterMin: null, chapterMax: null        // short-form has no notion of chapters
+    },
+    "youtube-long-16x9": {
+      label: "YouTube long-form 16:9",
+      totalMin: 480, totalMax: 900, totalHard: 1200,
+      sceneCountMin: 28, sceneCountMax: 70,
+      sceneMax: 20, recSceneMax: null,          // no cap on the shooting lane
+      capCover: 70, capBody: 90, sentMin: 12, sentMax: 40,
+      videoMax: 5,                              // 8s × 5 slots = 40s
+      burn: false,                              // clean master + subs.srt (formats.js:246)
+      chapterMin: 3, chapterMax: 13             // 3 = YouTube requirement · 13 = target cap for the shooting lane
+                                                // (the authoring lane target of 5~10 is in SKILL §4)
+    }
+  };
+  var FMT_KEY = FMT_MIRROR[window.FORMAT] ? window.FORMAT : "shorts-9x16";
+  var FMT = FMT_MIRROR[FMT_KEY];
+  var WIDE = FMT_KEY === "youtube-long-16x9";
+
+  /* Long-form produces hard-to-read numbers like 900s — anything past 2 minutes is written in minutes. */
+  function durTxt(t) {
+    t = Math.round(t || 0);
+    return t >= 120 ? (t / 60).toFixed(1) + "min" : t + "s";
+  }
+  var root = document.documentElement.style;
+  // A missing value would go straight in as --accent: undefined and void every color-mix
+  if (THEME.accent) root.setProperty("--accent", THEME.accent);
+  if (THEME.accent2) root.setProperty("--accent2", THEME.accent2);
+  if (THEME.ink) root.setProperty("--ink", THEME.ink);
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function strip(s) { return String(s == null ? "" : s).replace(/\*\*/g, ""); }
+  /** **emphasis** in the document body — restrained color emphasis */
+  function mark(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="mark">$1</span>'); }
+  /** **emphasis** inside a frame — the gradient, the way it actually renders */
+  function femph(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="f-em">$1</span>'); }
+  // Character count: displayed = full length after ** is stripped / net = whitespace and punctuation excluded
+  function dispLen(s) { return strip(s).length; }
+  function netLen(s) { return strip(s).replace(/[\s.,·:;!?…"'“”‘’()\[\]〔〕\-–—~%]/g, "").length; }
+  function badge(cls, text) { return '<span class="badge ' + cls + '">' + esc(text) + "</span>"; }
+  /** One line of screen text in the scene-frame row's right column — arguments come in pre-escaped */
+  function capline(t, d, f2, num) {
+    return '<div class="capline">' +
+      (num ? '<span class="k">' + num + "</span>" : "") +
+      (t ? '<span class="t">' + t + "</span>" : "") +
+      (d ? '<span class="d">' + d + "</span>" : "") +
+      (f2 ? '<span class="f">' + f2 + "</span>" : "") + "</div>";
+  }
+
+  /* Grammar units · production layers — scenes-schema §grammar units and production layers is
+     the source of truth. An empty field is inferred from the structure. An older scenes.js
+     still draws as it is. */
+  var SIZE_KO = { ws: "wide", two: "two-shot", ms: "medium", cu: "close-up" };
+  var PIC_KO = { still: "still photo", "ai-video": "AI video", recording: "recording", asset: "shared asset", slide: "HTML slide" };
+  function inferredPicture(s) {
+    if (s.visual && s.visual.source === "recording") return "recording";
+    if (s.visual && s.visual.slide) return "slide";
+    if (s.type === "outro") return "asset";
+    if (s.type === "broll" || (s.visual && s.visual.video) || (s.type === "quote" && s.visual && s.visual.clip))
+      return "ai-video";
+    return "still";
+  }
+  function inferredOverlay(s) {
+    if (s.type === "broll" || s.type === "outro") return "none";
+    if (s.visual && s.visual.slide) return "none";   // 글자를 슬라이드가 직접 그린다
+    return "html";
+  }
+  function pictureOf(s) { return (s.visual && s.visual.picture) || inferredPicture(s); }
+  function overlayOf(s) { return (s.visual && s.visual.overlay) || inferredOverlay(s); }
+  function overlayLabel(s) {
+    if (overlayOf(s) === "none") return "no overlay";
+    var narr = s.narration || [];
+    if (narr.some(function (n) { return /^card:/.test(n.imgPrompt || ""); })) return "HTML typing";
+    if (s.type === "points" && (s.bullets || []).length) return "HTML caption";
+    if (s.type === "cover") return "HTML reveal";
+    if (s.type === "quote") return "HTML signature";
+    return "HTML staging";
+  }
+  function grammarOf(s, i) {
+    return {
+      scene: (s.scene != null) ? s.scene : (i + 1),
+      slug: s.sceneSlug || "",
+      sequence: s.sequence || "",
+      size: (s.shot && s.shot.size) || "",
+      info: (s.shot && s.shot.info) || ""
+    };
+  }
+  // Playback role — orthogonal to type. scenes-schema §playback order is the source of truth.
+  // cover → hooking → result → body. Left unwritten, it is read off type and the sequence heading.
+  var BEAT_KO = { hook: "cover", hooking: "hooking", result: "result", body: "body", cta: "CTA" };
+  // Opening strategy — the cover shot's hookType. Every episode uses one of the four
+  // (scenes-schema §the four opening strategies). Missing, or a value outside the four, and the
+  // check strip warns — that is a request for a name tag; docking points is the reviewer's job.
+  var HOOK_KO = { fear: "fear", empathy: "empathy", curiosity: "curiosity", spoiler: "ending first" };
+  function beatOf(s) {
+    if (s.beat) return s.beat;
+    if (s.type === "cover") return "hook";
+    if (s.type === "outro") return "cta";
+    if (s.type === "broll") return "";
+    var seq = String(s.sequence || "");
+    if (/^결과/.test(seq)) return "result";
+    if (/^(기획|방법|단계|내용)/.test(seq)) return "body";
+    if (/^(문제|후킹)/.test(seq)) return "hooking";
+    return "";
+  }
+  function playbackOrder(list) {
+    var order = [];
+    list.forEach(function (s, i) { if (s.type !== "broll") order.push({ s: s, i: i }); });
+    list.forEach(function (s, i) {
+      if (s.type !== "broll") return;
+      var at = order.findIndex(function (o) { return o.i === (s.after || 0); });
+      order.splice(at < 0 ? order.length : at + 1, 0, { s: s, i: i });
+    });
+    return order;
+  }
+  var hasSceneField = SCENES.some(function (s) { return s.scene != null; });
+
+  /* Whether a scene is a shooting scene is decided **one scene at a time**. In long-form,
+     shooting scenes and generated scenes mixing within one episode is the normal path
+     (scenes-schema §shooting scenes), so flipping the whole episode into a single mode would
+     let one shooting scene drag the generated scenes into the shooting contract too
+     (40 characters, 5~6 characters per second). */
+  function recOf(s) { return !!(s && s.visual && s.visual.source === "recording"); }
+  /* Only the portrait shooting lane is "top block + recording band" — a 16:9 recording gets
+     seated as a strip to fit the portrait canvas (screencast-overlay). In landscape the clip
+     fills the frame, so there is no strip and the text goes to the lower third. */
+  function recTall(s) { return recOf(s) && !WIDE; }
+  var recCount = SCENES.filter(recOf).length;
+  var hasRec = recCount > 0;                    // used only for episode-level questions
+  var allRec = hasRec && recCount === SCENES.filter(function (s) {
+    return s.type !== "outro"; }).length;
+  var isLine = SCENES.some(function (s) {
+    return (s.narration || []).some(function (n) { return n.img; }); });
+  var main = SCENES.filter(function (s) { return s.type !== "outro"; });
+  var total = main.reduce(function (a, s) { return a + (s.duration || 0); }, 0);
+  // The outro is a shared mp4, so its length lives outside scenes.js — SB_DOC.outro is the
+  // source of truth, and even without it an outro scene still shows the splice on the timeline
+  var hasOutro = SCENES.some(function (s) { return s.type === "outro"; });
+  var outroSec = DOC.outro ? DOC.outro.seconds || 0 : 0;
+  var outroUnknown = hasOutro && !outroSec;
+  var cover = SCENES[0] && SCENES[0].type === "cover" ? SCENES[0] : null;
+  var order = playbackOrder(main);
+
+  /* ── Check-strip collector ──
+     The strip is drawn at the top of the document, but violations keep turning up further down
+     during the render. So the slot is reserved first and filled at the end — that structure
+     prevents the incident where a late violation quietly vanished (a flag raised after sealing
+     logs a console warning). */
+  var audit = [], auditSealed = false;
+  function flag(level, where, what) {
+    if (auditSealed && window.console)
+      console.warn("[storyboard] flag raised after the check strip was rendered:", where, what);
+    audit.push({ level: level, where: where, what: what });
+  }
+
+  /* ── Reveal states — one panel = one moment the screen changes ──
+     Mapping basis: scenes-schema §per-type contract (cover rg1=title/rg2=stat,
+     points rg1=title+source/rg2..=captions, quote rg0=signature/rg1=quote). */
+  function revealsOf(s) {
+    var narr = s.narration || [], out = [];
+    if (recOf(s)) {
+      // Shooting mode has one overlay per scene (screencast-overlay) — what changes on screen
+      // is the recording and the subtitles. Rather than repeating the same frame once per
+      // sentence, only the first cut is drawn.
+      return [{ label: "overlay + first subtitle", seg: narr.length ? 0 : -1, cap: -1 }];
+    }
+    if (s.type === "cover") {
+      out.push({ label: "title", seg: 0, cap: -1 });
+      if (s.stat) out.push({ label: "hero stat", seg: 1, cap: -1 });
+    } else if (s.type === "points") {
+      // What divides cuts is "the moment the screen changes". On the caption edition (bullets)
+      // the caption makes that moment, but on the per-line illustration edition
+      // (narration[].img) the background picture differs sentence by sentence — that edition
+      // has no captions, so the sentences divide the cuts. Without this branch, an
+      // illustration-edition scene draws as one bunched row no matter how many cuts it has,
+      // and the prompt cards disappear from the document entirely (measured 2026-08-15 — all
+      // four cards were missing and the user pointed it out twice).
+      // Consecutive sentences on the same picture are not a new cut — only the subtitle
+      // changes, so they attach to the previous cut.
+      var lineMode = narr.some(function (n) { return !!n.img; });
+      if (lineMode) {
+        var prevImg = null;
+        narr.forEach(function (n, k) {
+          var im = n.img || prevImg;
+          if (k === 0 || im !== prevImg) {
+            out.push({ label: /^card:/.test(n.imgPrompt || "") ? "prompt card"
+                            : k === 0 ? "title · source" : "illustration swap",
+                       seg: k, cap: -1 });
+          }
+          prevImg = im;
+        });
+      } else {
+        out.push({ label: "title · source", seg: 0, cap: -1 });
+        (s.bullets || []).forEach(function (b, k) {
+          out.push({ label: "caption " + (k + 1), seg: k + 1, cap: k }); });
+      }
+    } else if (s.type === "quote") {
+      // Over a speech clip (alpha) only the signature is laid on, so the screen never changes —
+      // one panel. Only the still quote card has two states, signature → quote
+      // (video-template `if (!alpha)`).
+      if (s.visual && s.visual.clip) {
+        out.push({ label: "signature overlay", seg: 0, cap: -1 });
+      } else {
+        out.push({ label: "signature", seg: 0, cap: -1 });
+        out.push({ label: "quote", seg: 1, cap: -1 });
+      }
+    } else {
+      out.push({ label: "whole frame", seg: 0, cap: -1 });
+    }
+    // When one sentence covers two captions the subtitle stays put for the duration — the last
+    // line carries over. Which sentence gets split is decided by produce, via sub-reveals (A|B).
+    out.forEach(function (st) {
+      if (st.seg >= narr.length) { st.seg = narr.length - 1; st.carry = true; }
+    });
+    return out;
+  }
+
+  /* ── 9:16 frame ── */
+  function frame(s, st, idx, tier, statScale) {
+    var narr = s.narration || [];
+    var seg = st.seg >= 0 && narr[st.seg] ? narr[st.seg] : null;
+    var lineImg = seg && seg.img ? seg.img : null;
+    var bg = lineImg || (s.visual && s.visual.bg) || null;
+    var light = !!lineImg;
+    var hasClip = s.type === "quote" && !!(s.visual && s.visual.clip);
+    var cls = "fr t-" + esc(s.type) + (recOf(s) ? " rec" : "") + (light ? " light" : "") +
+              (WIDE ? " wide" : "") +
+              (hasClip ? " fclip" : "") + (tier ? " tight" + tier : "");
+    var h = '<div class="' + cls + '">';
+    if (bg) h += '<div class="fbg" style="background-image:url(\'' + esc(bg) + '\')"></div>';
+    h += '<div class="fscrim"></div>';
+
+    if (recTall(s)) {
+      h += '<div class="f-band">recorded screen</div><div class="f-top">';
+      if (s.kicker) h += '<div class="f-kicker">' + esc(s.kicker) + "</div>";
+      h += '<div class="f-title">' + femph(s.title || "") + "</div>";
+      if (s.type === "cover" && s.stat)
+        h += '<div class="f-statrow"><div class="f-stat f-em">' + esc(s.stat) + "</div>" +
+             (s.statLabel ? '<div class="f-statlabel">' + esc(s.statLabel) + "</div>" : "") + "</div>";
+      h += "</div>";
+    } else if (s.type === "cover") {
+      // In illustration (light) mode the cover anchors to the top — the body.light branch in video-template.html
+      h += '<div class="fzone' + (light ? " top" : "") + '">';
+      if (s.kicker) h += '<div class="f-kicker">' + esc(s.kicker) + "</div>";
+      h += '<div class="f-title">' + femph(s.title || "") + "</div>";
+      if (s.stat)
+        h += '<div class="f-statwrap' + (idx < 1 ? " fhide" : "") + '"><div class="f-stat f-em"' +
+             (statScale ? ' style="--stat-fs:' + statScale.toFixed(5) + '"' : "") +
+             ">" + esc(s.stat) + "</div>" +
+             (s.statLabel ? '<div class="f-statlabel">' + esc(s.statLabel) + "</div>" : "") + "</div>";
+      h += "</div>";
+    } else if (s.type === "points") {
+      // A landscape shooting scene uses the lower third (bottom left of the zone) — the same spot as .zone.l3 in video-template.
+      h += '<div class="fzone ' + (recOf(s) ? "l3" : "top") + '"><div class="f-ptitle">' + femph(s.title || "") + "</div>";
+      var caps = s.bullets || [];
+      if (caps.length) {
+        // Captions stack on the same spot and only the active one is visible (caption swap)
+        h += '<div class="f-capstack">' + caps.map(function (b, k) {
+          return '<div class="f-cap' + (k === st.cap ? "" : " fhide") + '"><div class="t">' + femph(b.t) + "</div>" +
+                 (b.d ? '<div class="d">' + esc(b.d) + "</div>" : "") + "</div>"; }).join("") + "</div>";
+      }
+      if (s.footnote) h += '<div class="f-foot">' + esc(s.footnote) + "</div>";
+      h += "</div>";
+    } else if (s.type === "quote") {
+      // When a speech clip is planned, produce captures with alpha — only the signature goes
+      // on screen and the narration and subtitles say the quote (the capture table in the
+      // produce SKILL · scenes-schema §quote). Without a clip it becomes a still quote card
+      // (signature + quote + full wash).
+      h += '<div class="f-sign"><div class="nm">' + esc(s.speaker || "") + "</div>" +
+           '<div class="rl">' + esc(s.role || "").replace(/AI/g, '<span class="ai">AI</span>') + "</div></div>";
+      h += hasClip
+        ? '<div class="f-band f-band-clip">speech clip · signature only</div>'
+        : '<div class="fzone center"><div class="f-quote' + (idx < 1 ? " fhide" : "") + '">' +
+          femph(s.text || "") + "</div></div>";
+    } else if (s.type === "outro") {
+      h += '<div class="fzone center"><div class="f-obrand f-em">' + esc(THEME.brand || "") + "</div>" +
+           '<div class="f-otitle">' + femph(s.title || "") + "</div>" +
+           (s.sub ? '<div class="f-osub">' + esc(s.sub) + "</div>" : "") + "</div>";
+    }
+
+    if (seg && seg.sub) h += '<div class="f-sub">' + esc(seg.sub) + "</div>";
+    h += '<div class="fsafe"></div></div>';
+    return h;
+  }
+
+  /* ── Measuring frame overflow ──
+     Draws on the same 1080px canvas as the produce renderer (video-template.html /
+     screencast-overlay.html), measures whether text escapes the zone, and shrinks it through
+     the same tight1~3 steps. If three steps still are not enough it warns with the leftover
+     px — this is where clipped text gets caught before production. */
+  var probe = document.createElement("div");
+  probe.id = "fr-probe";
+  if (WIDE) probe.style.setProperty("--fw", "1920px");
+  document.body.appendChild(probe);
+  var fit = {};
+  SCENES.forEach(function (s, i) {
+    if (s.type === "broll") return;
+    revealsOf(s).forEach(function (st, k) {
+      probe.innerHTML = frame(s, st, k, 0);
+      var fr = probe.firstChild;
+      var box = fr.querySelector(recTall(s) ? ".f-top" : ".fzone");
+      // How it measures also follows produce — generated mode uses the zone's scrollHeight,
+      // shooting mode whether the block's bottom crosses y=460 (BAND_MIN_Y). Using
+      // scrollHeight in shooting mode shrinks a step too early because of the glyph box on a
+      // line-height:1 stat, and raises a false warning.
+      var REC_LIMIT = 460;
+      function over() {
+        if (!box) return 0;
+        return recTall(s)
+          ? box.getBoundingClientRect().bottom - fr.getBoundingClientRect().top - REC_LIMIT
+          : box.scrollHeight - box.clientHeight;
+      }
+      // tight steps accumulate — replacing one sends the rules the lower step lacks back to their defaults
+      var tier = 0;
+      while (over() > 1 && tier < 3) { tier += 1; fr.classList.add("tight" + tier); }
+
+      // The width guard measures on the font left after the step shrink (the execution order in video-template.html)
+      var statPx = 0, statOvf = 0;
+      var stat = !recOf(s) && s.type === "cover" ? fr.querySelector(".f-stat") : null;
+      if (stat) {
+        var size = parseFloat(getComputedStyle(stat).fontSize), guard = 0;
+        while (stat.getBoundingClientRect().width > 640 && size > 80 && guard < 40) {
+          size -= 6; stat.style.fontSize = size + "px"; guard += 1;
+        }
+        statPx = size;
+        statOvf = Math.round(Math.max(0, stat.getBoundingClientRect().width - 640));
+      }
+      fit[i + ":" + k] = {
+        tier: tier, ovf: Math.max(0, Math.round(over())),
+        // Font px at 1080 → ratio of the frame width. The panel gets the same shrink.
+        statScale: statPx ? statPx / 1080 : 0, statOvf: statOvf
+      };
+    });
+  });
+  probe.innerHTML = "";
+
+  /* ── Per-scene check badges ── */
+  function sceneCheck(s, no) {
+    var narr = s.narration || [];
+    var syl = narr.reduce(function (a, n) { return a + netLen(n.tts); }, 0);
+    var rate = s.duration ? syl / s.duration : 0;
+    var maxSent = narr.reduce(function (a, n) { return Math.max(a, netLen(n.tts)); }, 0);
+    var chips = [badge("", (s.duration || "?") + "s")];
+    if (recOf(s)) {
+      if (syl) {
+        chips.push(badge("", syl + " chars"));
+        var rOk = rate >= 4.5 && rate <= 6.5;
+        chips.push(badge(rOk ? "ok" : "warn", rate.toFixed(2) + " chars/s"));
+        if (!rOk) flag("warn", "Shot " + no, "speech rate " + rate.toFixed(2) + " chars/s — the shooting standard is 5~6 chars/s (4.5~6.5 allowed)");
+      }
+      // The long-form shooting lane has no scene cap (recSceneMax: null) — one continuous
+      // recording arriving as one scene is the normal path, and a cap would force the user to
+      // chop up a natural take.
+      if (FMT.recSceneMax !== null && s.duration > FMT.recSceneMax) {
+        chips.push(badge("bad", "over " + FMT.recSceneMax + "s"));
+        flag("bad", "Shot " + no, "length " + s.duration + "s — the shooting-mode scene cap is " + FMT.recSceneMax + "s");
+      } else if (s.duration && s.duration < 8) {
+        chips.push(badge("warn", "under 8s"));
+        flag("warn", "Shot " + no, "length " + s.duration + "s — shooting-mode scenes target 8s or more");
+      }
+      if (maxSent > 40) { chips.push(badge("warn", "sentence " + maxSent + " chars")); flag("warn", "Shot " + no, "longest sentence " + maxSent + " chars — the shooting script recommends 40"); }
+
+      /* Shooting-scene contract (scenes-schema §shooting scenes) — all three fields have to be
+         there for the user to know what to film and for produce to find the file. Discovering
+         one is empty after approval means starting the shoot over. */
+      var vz = s.visual || {};
+      if (!vz.clip) {
+        chips.push(badge("bad", "no clip"));
+        flag("bad", "Shot " + no, "a shooting scene with no visual.clip (filename) — the user has nowhere to save it");
+      } else if (!/^footage\/s\d+-[a-z0-9-]+\.(mp4|mov|m4v)$/.test(vz.clip)) {
+        chips.push(badge("warn", "clip naming"));
+        flag("warn", "Shot " + no, "clip \"" + vz.clip + "\" — the convention is footage/s<scene number>-<slug>.mp4");
+      }
+      if (!vz.shot) flag("bad", "Shot " + no, "a shooting scene with no visual.shot (what is on screen)");
+      if (!vz.action) flag("bad", "Shot " + no, "a shooting scene with no visual.action (what the user does)");
+      // On an all-live-voice episode (window.VOICE === "user") a filmed scene fills narration too —
+      // those segments are lines to speak, not a TTS script (scenes-schema §all-live-voice episodes).
+      chips.push(badge("", narr.length ? (window.VOICE === "user" ? "live-voice script" : "narration over it") : "live voice"));
+    } else if (s.type !== "broll" && s.type !== "outro") {
+      /* Slide-scene contract (scenes-schema §slide scenes) — the filename and the plan are what
+         gets approved; the file itself arrives after approval. Coexisting with bg is a
+         contradiction (there is only one screen). */
+      var sl = s.visual && s.visual.slide;
+      if (sl) {
+        chips.push(badge("", "slide"));
+        if (!sl.plan) {
+          chips.push(badge("bad", "no plan"));
+          flag("bad", "Shot " + no, "a slide scene with no slide.plan (what to draw) — approval reads this plan");
+        }
+        if (!sl.file) {
+          chips.push(badge("bad", "no file"));
+          flag("bad", "Shot " + no, "a slide scene with no slide.file");
+        } else if (!new RegExp("^slides/s" + no + "-[a-z0-9-]+\\.html$").test(sl.file)) {
+          chips.push(badge("warn", "file naming"));
+          flag("warn", "Shot " + no, 'slide.file "' + sl.file + '" — the convention is slides/s' + no + "-<slug>.html (shot number = array position)");
+        }
+        if (s.visual.bg)
+          flag("warn", "Shot " + no, "a slide scene also carrying bg — the screen is the slide alone");
+      }
+      var cap = s.type === "cover" ? FMT.capCover : FMT.capBody;
+      if (narr.length) {
+        chips.push(badge(syl <= cap ? "ok" : "bad", "chars " + syl + "/" + cap));
+        if (syl > cap) flag("bad", "Shot " + no, "narration " + syl + " chars — cap " + cap + " (" + s.type + ")");
+      } else if (s.type === "quote" && s.visual && s.visual.clip) {
+        // Only a speech-clip quote is exempt — the actor speaks, so having no TTS narration is
+        // normal. A still quote card with no clip has no sound at all, so it drops to the
+        // violation branch below.
+        chips.push(badge("", "speech clip"));
+      } else if (s.type === "cover" && s.visual && s.visual.video) {
+        // A video cover is exempt too — that stretch uses the audio the clip carries (the same
+        // behavior as absolute rule 9). A still-background cover with empty narration drops to
+        // the violation branch below.
+        chips.push(badge("", "clip audio"));
+      } else {
+        chips.push(badge("bad", "no narration"));
+        flag("bad", "Shot " + no, "narration is empty — it holds " + (s.duration || "?") + " seconds with no sound");
+      }
+      var sentBand = FMT.sentMin + "~" + FMT.sentMax + " chars";
+      var shortSent = narr.some(function (n) { return netLen(n.tts) < FMT.sentMin; });
+      if (maxSent > FMT.sentMax || shortSent) {
+        chips.push(badge("warn", "sentence " + sentBand));
+        flag("warn", "Shot " + no, (maxSent > FMT.sentMax ? "longest sentence " + maxSent + " chars"
+             : "a sentence under " + FMT.sentMin + " chars") + " — per sentence " + sentBand);
+      }
+      if (s.duration > FMT.sceneMax) {
+        chips.push(badge("warn", "over " + FMT.sceneMax + "s"));
+        flag("warn", "Shot " + no, "length " + s.duration + "s — the generated-mode scene cap is " + FMT.sceneMax + "s");
+      }
+      // Motion-background scene contract (scenes-schema §motion background) — the cut badge (vtag) carries the type
+      if (s.visual && s.visual.video) {
+        // cover is an exception that opens only when the user asks for it on that episode
+        // (scenes-schema §motion background). Text still has to be a code-rendered overlay, so
+        // this also watches for text handed off to the generated video.
+        if (s.type !== "points" && s.type !== "cover")
+          flag("bad", "Shot " + no, "a motion background (visual.video) is points-only — it cannot be used on " + s.type);
+        // The engine sets the cap — veo is fixed at 8s and loops beyond that, while Seedance
+        // makes as many seconds as asked, up to 15. The real danger is not the second count but
+        // a clip shorter than its scene.
+        if (s.duration > 15)
+          flag("warn", "Shot " + no, "motion background " + s.duration + "s — past the generation cap (Seedance 15s), so the clip loops and the seam shows");
+        if (narr.some(function (n) { return n.img; }))
+          flag("bad", "Shot " + no, "motion background together with per-line illustrations — swapping the background per segment cannot work (scenes-schema)");
+      }
+    }
+    if (!(s.duration > 0) && s.type !== "outro")
+      flag("bad", "Shot " + no, "duration is " + (s.duration === undefined ? "missing" : s.duration + "s") + " — write it as a positive number of seconds");
+    narr.forEach(function (n, j) {
+      if (!n.tts) flag("bad", "Shot " + no, "line " + (j + 1) + " has no tts — the sentence to read out is empty");
+    });
+    if (s.type === "broll") {
+      // b-roll uses the audio the video carries — laying TTS on top makes two sounds fight
+      if (narr.length) flag("bad", "Shot " + no, "b-roll carries narration (" + narr.length + ") — it has to be empty");
+      if (s.duration > 8) flag("bad", "Shot " + no, "b-roll used for " + s.duration + "s — generation is fixed at 8s, so anything past that is unusable");
+      var af = s.after || 0;
+      if (!SCENES[af] || SCENES[af].type === "broll")
+        flag("bad", "Shot " + no, "after: " + af + " points at no scene — the insert position cannot be resolved");
+      // The source is the photo the previous scene showed as a still — that still is what starts moving
+      var src = (s.visual || {}).src;
+      var base = SCENES[af] && SCENES[af].visual ? SCENES[af].visual.bg : null;
+      if (src && base && src !== base)
+        flag("warn", "Shot " + no, "the b-roll src differs from scene " + (af + 1) + "'s background (" + base + ")");
+    } else {
+      var worst = 0, ovf = 0;
+      revealsOf(s).forEach(function (st, k) {
+        var f = fit[(no - 1) + ":" + k];
+        if (!f) return;
+        if (f.tier > worst) worst = f.tier;
+        if (f.ovf > ovf) ovf = f.ovf;
+      });
+      var swide = 0;
+      revealsOf(s).forEach(function (st, k) {
+        var f = fit[(no - 1) + ":" + k];
+        if (f && f.statOvf > swide) swide = f.statOvf;
+      });
+      if (swide > 0) {
+        chips.push(badge("bad", "stat too wide"));
+        flag("bad", "Shot " + no, "even at minimum size the hero stat exceeds the safe zone by " + swide + "px — switch to a shorter notation");
+      }
+      // Whether the screen text overlaps the sound (scenes-schema §screen text only when needed,
+      // 2026-08-14). Caption k appears together with segment k+1 — if that line contains the
+      // caption wording verbatim, the same words arrive twice, by eye and by ear. The subtitle
+      // is already writing that sentence out.
+      // To see past differences in particles and endings, only Hangul and alphanumerics are kept
+      // for the comparison, and short fragments (under 4 characters) are not counted.
+      // Burn-in formats only — long-form (burn:false) doesn't burn subtitles, so for a viewer who
+      // never turns them on the caption is the only place that value lands. Over-detection
+      // measured 2026-08-18 (captions with zero correlation).
+      if (FMT.burn) (function () {
+        var norm = function (t) { return String(t || "").replace(/[^가-힣A-Za-z0-9]/g, ""); };
+        var narr = s.narration || [], dup = [];
+        (s.bullets || []).forEach(function (b, bi) {
+          var seg = narr[bi + 1];                       // caption k ← segment k+1
+          if (!seg) return;
+          var said = norm(seg.sub || seg.tts);
+          [b.t, b.d].forEach(function (cap) {
+            var c = norm(cap);
+            if (c.length >= 4 && said.indexOf(c) !== -1) dup.push(cap);
+          });
+        });
+        if (dup.length) {
+          chips.push(badge("warn", "overlaps the audio " + dup.length));
+          flag("warn", "Shot " + no, "the caption sits in the line verbatim — " + dup.join(" · ") +
+               ". The screen does not rewrite what the audio just said (empty the caption if it is not needed)");
+        }
+      })();
+      if (ovf > 0) {
+        chips.push(badge("bad", "frame overflow"));
+        flag("bad", "Shot " + no, "screen text still overflows by " + ovf + "px after the 3-step shrink — cut the title or the captions");
+      } else if (worst) {
+        chips.push(badge("warn", "auto-shrunk " + worst + " step(s)"));
+        flag("warn", "Shot " + no, "screen text escapes the zone, so the renderer shrinks it by " + worst + " step(s)");
+      }
+    }
+    return chips.join("");
+  }
+
+  /* ══ Header ══ */
+  var h = "";
+  h += "<header>";
+  h += '<div class="doc-kicker">' + esc(DOC.channelName || DOC.channel || THEME.brand) +
+       (DOC.series ? " · " + esc(DOC.series) : "") + "</div>";
+  h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic || "") + "</h1>";
+
+  var lenCls = total >= FMT.totalMin && total <= FMT.totalMax ? "ok"
+             : total <= FMT.totalHard ? "warn" : "bad";
+  var lenBand = durTxt(FMT.totalMin) + "~" + durTxt(FMT.totalMax);
+  if (lenCls === "bad")
+    flag("bad", "Total length", "main body " + durTxt(total) + " — past the cap of " + durTxt(FMT.totalHard));
+  else if (lenCls === "warn")
+    flag("warn", "Total length", "main body " + durTxt(total) + " — outside the default " + lenBand +
+         " (going over needs a design reason; cap " + durTxt(FMT.totalHard) + ")");
+
+  // Shot count has a format band too — a long-form built on short-form shot counts stretches
+  // single scenes out to minutes.
+  if (main.length < FMT.sceneCountMin || main.length > FMT.sceneCountMax)
+    flag("warn", "Shot count", "main body " + main.length + " shots — the " + FMT.label + " band is " +
+         FMT.sceneCountMin + "~" + FMT.sceneCountMax + " shots");
+
+  // Combined cap on generated video — b-roll slots + motion-background scenes
+  // (scenes-schema §motion background is the source of truth)
+  var genVid = SCENES.filter(function (s) {
+    return s.type === "broll" || (s.visual && s.visual.video); }).length;
+  if (genVid > FMT.videoMax)
+    flag("bad", "Generated video", "b-roll and motion backgrounds together " + genVid + " shots — cap " +
+         FMT.videoMax + " (scenes-schema §motion background)");
+
+  // Long-form chapter requirement (scenes-schema §chapter) — short-form has no notion of chapters
+  if (FMT.chapterMin) {
+    var chaps = SCENES.filter(function (s) { return s.chapter; });
+    if (chaps.length < FMT.chapterMin)
+      flag("bad", "Chapters", chaps.length + " — YouTube requires at least " + FMT.chapterMin +
+           ". Write a chapter string on the scene (§chapter)");
+    else if (chaps.length > FMT.chapterMax)
+      flag("warn", "Chapters", chaps.length + " — the authoring target is " + FMT.chapterMin + "~" +
+           FMT.chapterMax);
+    if (chaps.length && SCENES.indexOf(chaps[0]) !== 0)
+      flag("bad", "Chapters", "the first chapter is not at 0:00 — put a chapter on the cover shot (YouTube requirement)");
+  }
+
+  /* Production-layer mismatch · coverage — only shots that filled the fields are checked. Older files pass quietly. */
+  SCENES.forEach(function (s, i) {
+    var no = i + 1, vis = s.visual || {};
+    if (vis.picture && vis.picture !== inferredPicture(s))
+      flag("warn", "Shot " + no, "picture:\"" + vis.picture + "\" but the structure says " + inferredPicture(s) +
+           " — for AI video there has to be a video, clip or broll");
+    if (vis.overlay && vis.overlay !== inferredOverlay(s))
+      flag("warn", "Shot " + no, "overlay:\"" + vis.overlay + "\" but the default for this type is " + inferredOverlay(s));
+  });
+  if (hasSceneField) {
+    var byScene = {};
+    SCENES.forEach(function (s, i) {
+      if (s.type === "outro") return;
+      var g = grammarOf(s, i);
+      (byScene[g.scene] || (byScene[g.scene] = [])).push({ s: s, i: i, g: g });
+    });
+    Object.keys(byScene).forEach(function (sc) {
+      var rows = byScene[sc], seenInfo = {};
+      rows.forEach(function (row) {
+        var info = String(row.g.info || "").replace(/\s+/g, "");
+        if (info.length < 2) return;
+        if (seenInfo[info] != null)
+          flag("warn", "S#" + sc, "shot " + (seenInfo[info] + 1) + " and shot " + (row.i + 1) +
+               " carry the same new information — one of them is enough");
+        else seenInfo[info] = row.i;
+      });
+      var first = rows[0];
+      if (first && first.g.size === "cu" && rows[1] &&
+          rows[1].g.size && rows[1].g.size !== "ws" && rows[1].g.size !== "ms" && rows[1].g.size !== "two")
+        flag("warn", "S#" + sc, "opening on a close-up owes the viewer a wider next shot that says where this is");
+    });
+  }
+  // b-roll slots — two slots in the same position leave the insert order undecided (scenes-schema §broll)
+  var seenAfter = {};
+  SCENES.filter(function (s) { return s.type === "broll"; }).forEach(function (s) {
+    var af = s.after || 0;
+    if (seenAfter[af]) flag("bad", "b-roll", "two slots collide on after: " + af + " — the insert order is undecided");
+    seenAfter[af] = 1;
+  });
+
+  /* Playback order — cover → hooking → result → body (scenes-schema §playback order)
+     The last main shot is not stamped PAYOFF. Drop-off falls when the how comes after the result. */
+  var firstBeat = {};
+  order.forEach(function (o, pos) {
+    if (o.s.type === "broll") return;
+    var b = beatOf(o.s);
+    if (b && firstBeat[b] == null) firstBeat[b] = { pos: pos, i: o.i };
+  });
+  var processy = !!(firstBeat.result || firstBeat.body || hasRec);
+  var orderOk = true;
+  if (order.length && order[0].s.type !== "cover") {
+    flag("warn", "Playback order", "the first shot is not the cover — the result at a glance and the hook come first");
+    orderOk = false;
+  }
+  if (processy && firstBeat.body && !firstBeat.result) {
+    flag("warn", "Playback order", "there is body but no result scene — put a shot after the hooking that lays out the finished thing");
+    orderOk = false;
+  }
+  if (firstBeat.result && firstBeat.body && firstBeat.body.pos < firstBeat.result.pos) {
+    flag("bad", "Playback order", "body comes before result — move shot " +
+         (firstBeat.body.i + 1) + " after shot " + (firstBeat.result.i + 1));
+    orderOk = false;
+  }
+  /* Every episode has a hooking shot — informational ones too (scenes-schema §hooking). It has
+     to be the shot right after the cover. An opening b-roll (after:0) is skipped: it is not a
+     playback role, just 4 seconds of the cover picture moving. An older file with no beat gets
+     a warning here — not a deduction, a request for a name tag. */
+  var mainOrder = order.filter(function (o) { return o.s.type !== "broll"; });
+  var afterCover = mainOrder.length > 1 && mainOrder[0].s.type === "cover" ? mainOrder[1] : null;
+  if (mainOrder.length > 1 && !firstBeat.hooking) {
+    flag("warn", "Playback order", "there is no hooking shot — after the cover, add the shot that hooks why to stay (beat:\"hooking\"). Informational episodes are no exception");
+    orderOk = false;
+  } else if (afterCover && beatOf(afterCover.s) !== "hooking") {
+    var ab = beatOf(afterCover.s);
+    flag("warn", "Playback order", "the shot after the cover is not the hooking — shot " + (afterCover.i + 1) +
+         (ab ? "(" + (BEAT_KO[ab] || ab) + ")" : "(no beat)") + " comes before the hooking (shot " +
+         (firstBeat.hooking.i + 1) + "). Reorder to cover → hooking → result → body");
+    orderOk = false;
+  }
+
+  /* Opening strategy — is the cover hookType one of the four (scenes-schema §the four opening
+     strategies). Whether none of the four is actually present in the opening is what the
+     reviewer's copy mode looks at — this only checks the name tag. */
+  var hookKo = cover && cover.hookType ? HOOK_KO[cover.hookType] : "";
+  if (cover && !cover.hookType) {
+    flag("warn", "Opening strategy", "the cover has no hookType — write fear|empathy|curiosity|spoiler to say whether this episode opens (title, segment ①, hooking) on fear, empathy, curiosity, or showing the ending first");
+  } else if (cover && !hookKo) {
+    flag("warn", "Opening strategy", "hookType \"" + cover.hookType + "\" is outside the four — change it to one of fear|empathy|curiosity|spoiler");
+  }
+
+  h += '<div class="badges">' +
+       badge("mode", allRec ? "shooting mode" : hasRec ? "mixed lanes · " + recCount + " filmed scenes"
+             : isLine ? "generated mode · per-line illustrations" : "generated mode") +
+       (cover ? badge(hookKo ? "ok" : "warn", "opening · " + (hookKo || (cover.hookType ? cover.hookType + " (outside the four)" : "strategy not written"))) : "") +
+       badge((DOC.status || "draft") === "draft" ? "" : "ok", DOC.status || "draft") +
+       (DOC.created ? badge("", DOC.created) : "") +
+       badge(lenCls, "main body " + total + "s") +
+       (outroSec ? badge("", "with outro ≈" + (total + outroSec) + "s") : "") +
+       badge("", main.length + " shots") +
+       (hasSceneField ? badge("", (function () {
+         var seen = {};
+         SCENES.forEach(function (s, i) { seen[grammarOf(s, i).scene] = 1; });
+         return Object.keys(seen).length + " scenes";
+       })()) : "") +
+       badge(orderOk ? "ok" : (firstBeat.result && firstBeat.body && firstBeat.body.pos < firstBeat.result.pos ? "bad" : "warn"),
+             "cover → hooking → result → body") + "</div>";
+
+  h += '<dl class="meta-grid">';
+  if (DOC.keyMessage) h += "<dt>Key message</dt><dd>" + mark(DOC.keyMessage) + "</dd>";
+  if (DOC.hook) h += "<dt>Cover hook</dt><dd>" + mark(DOC.hook) + "</dd>";
+  if (DOC.seriesNote) h += "<dt>Series</dt><dd>" + mark(DOC.seriesNote) + "</dd>";
+  h += "<dt>Source</dt><dd><code>scenes.js</code> — this document reads it and draws from it, so the two cannot diverge</dd>";
+  h += "</dl>";
+
+  /* Cover contract — as a check item, not a badge */
+  if (cover) {
+    if (dispLen(cover.title) > 16) flag("bad", "Cover", "title displays " + dispLen(cover.title) + " chars — cap 16");
+    // statLabel plays two roles — under a hero stat it is a short tag qualifying that number, so
+    // 18 characters; used alone with no stat it is the cover subtext and has to hold a sentence,
+    // so 28. One 40px line fits 28 characters across 1080 (measured: 23 chars = 728px).
+    var labCap = cover.stat ? 18 : 28;
+    if (cover.statLabel && dispLen(cover.statLabel) > labCap)
+      flag("warn", "Cover", "statLabel displays " + dispLen(cover.statLabel) + " chars — cap " + labCap + (cover.stat ? "" : " (subtext)"));
+  }
+  if (DOC.transitions && DOC.transitions.length && DOC.transitions.length !== SCENES.length)
+    flag("warn", "Transitions", "SB_DOC.transitions: " + DOC.transitions.length + " — the shot count is " + SCENES.length);
+
+  // Stops an unfilled template placeholder from reaching the approval gate
+  var blanks = (JSON.stringify(DOC).match(/\{\{/g) || []).length;
+  if (blanks) flag("bad", "SB_DOC", "unfilled placeholders: " + blanks + " — clear the {{…}} and reopen the document");
+
+  /* All-live-voice episodes — narration IS the recording script, so an empty one means that
+     shot has no sound */
+  if (window.VOICE === "user") {
+    SCENES.forEach(function (s, i) {
+      if (s.type === "broll" || s.type === "outro") return;
+      if (!(s.narration || []).length)
+        flag("warn", "Shot " + (i + 1), "an all-live-voice episode (window.VOICE) with empty narration — the lines to speak never reach the script");
+    });
+  }
+
+  /* Scene checks are collected during the card render, so they run first */
+  var sceneChips = SCENES.map(function (s, i) { return sceneCheck(s, i + 1); });
+
+  // Reserve the slot only — the content goes in after the render (see the flag comment above)
+  h += '<section class="audit" id="audit"></section>';
+
+  if (DOC.docNotes && DOC.docNotes.length)
+    h += '<details class="docnotes"><summary>Design rationale · ' + DOC.docNotes.length + "</summary>" +
+      DOC.docNotes.map(function (n) { return '<div class="note">' + mark(n) + "</div>"; }).join("") + "</details>";
+  h += "</header>";
+
+  /* ══ Timeline ══ */
+  h += '<h2 class="sec">Timeline<span class="aside">one slot = one shot · width proportional to length</span></h2>';
+  h += '<div class="timeline">';
+  // Drawn in playback order — b-roll sits at the end of the array but actually cuts in after
+  // its `after` scene (scenes-schema §broll: putting it mid-array throws off every capture index)
+  // order was already computed in the header checks
+  var acc = 0, marks = [];
+  order.forEach(function (o) {
+    var d = Math.max(0.1, o.s.duration || 1);
+    marks.push({ at: acc, d: d });
+    acc += d;
+    h += '<div class="tl-seg ' + esc(o.s.type) + '" style="flex:' + d + '" title="' +
+         esc(strip(o.s.title || o.s.type)) + '">#' + (o.i + 1) + "<small>" + (o.s.duration || "?") + "s</small></div>";
+  });
+  if (outroSec || outroUnknown)
+    h += '<div class="tl-seg outro" style="flex:' + (outroSec || 9) + '" title="' +
+         esc((DOC.outro && DOC.outro.note) || "shared outro") + '">outro<small>' +
+         (outroSec ? outroSec + "s" : "length not written") + "</small></div>";
+  h += "</div>";
+  h += '<div class="tl-ruler">' + marks.map(function (m) {
+    return '<span style="flex:' + m.d + '">' + m.at + "s</span>"; }).join("") +
+    (outroSec ? '<span style="flex:' + outroSec + '">' + acc + "s</span>" +
+      '<span style="flex:0 0 auto">' + (acc + outroSec) + "s</span>"
+      : '<span style="flex:0 0 auto">' + acc + "s</span>") + "</div>";
+  if (outroUnknown) flag("warn", "Outro", "there is an outro scene but no SB_DOC.outro length — it does not count toward the total");
+
+  /* ══ Shot cards ══ */
+  h += '<h2 class="sec">Shot composition<span class="aside">one entry = one shot · a reveal is a screen state within that shot</span></h2>';
+  h += '<div class="toolbar">' +
+       '<label><input type="checkbox" id="tg-safe"> Show text area</label>' +
+       '<label><input type="checkbox" id="tg-subs" checked> Subtitles</label>' +
+       '<span class="legend">dashed = where the text goes · hatched = the bottom covered by subtitles and app buttons · channel color = AI video · outline only = HTML staging</span>' +
+       '<span style="margin-left:auto">a preview drawn at reduced scale from the real screen</span></div>';
+
+  var shotGroups = [];
+  SCENES.forEach(function (s, i) {
+    var g = grammarOf(s, i);
+    var last = shotGroups[shotGroups.length - 1];
+    if (hasSceneField && last && last.scene === g.scene) last.items.push({ s: s, i: i, g: g });
+    else shotGroups.push({ scene: g.scene, slug: g.slug, sequence: g.sequence, items: [{ s: s, i: i, g: g }] });
+  });
+
+  var carryNoted = false, prevSeq = "";
+  shotGroups.forEach(function (grp) {
+    if (grp.sequence && grp.sequence !== prevSeq) {
+      h += '<div class="seq-head">Sequence · ' + esc(grp.sequence) + "</div>";
+      prevSeq = grp.sequence;
+    }
+    if (hasSceneField)
+      h += '<section class="scene-band"><div class="scene-band-head"><span class="sn">S#' +
+           esc(String(grp.scene)) + "</span><span>" + esc(grp.slug || ("Scene " + grp.scene)) + "</span></div>";
+    grp.items.forEach(function (item) {
+    var s = item.s, i = item.i, g = item.g, no = i + 1;
+    var narr = s.narration || [];
+    var pic = pictureOf(s), ov = overlayOf(s);
+    h += '<article class="scene"><div class="scene-head">';
+    h += '<span class="scene-no">Shot ' + no + " · " + esc(s.type).toUpperCase() + "</span>";
+    if (g.size && SIZE_KO[g.size]) h += '<span class="shot-size">' + SIZE_KO[g.size] + "</span>";
+    // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
+    var headTitle = s.title || (s.type === "quote" ? s.text : "");
+    if (headTitle) h += '<span class="scene-title">' + mark(headTitle) + "</span>";
+    var beat = beatOf(s);
+    if (beat && BEAT_KO[beat])
+      h += '<span class="scene-beat beat-' + beat + '">' + BEAT_KO[beat] + "</span>";
+    // The cover shot also carries the opening-strategy name tag — the title and segment ① have to carry that pull
+    if (s.type === "cover")
+      h += '<span class="scene-beat beat-hooktype">' + esc(HOOK_KO[s.hookType] || (s.hookType ? s.hookType + " (outside the four)" : "strategy not written")) + "</span>";
+    h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
+    h += '<div class="shot-meta"><span class="craft">' +
+         '<span class="vtag' + (pic === "ai-video" ? " gen" : "") + '">' + esc(PIC_KO[pic] || pic) + "</span>" +
+         '<span class="vtag' + (ov === "html" ? " html" : "") + '">' + esc(overlayLabel(s)) + "</span></span>" +
+         (g.info ? '<span class="shot-info"><b>What this shot adds</b>' + esc(g.info) + "</span>" : "") +
+         "</div>";
+
+    if (s.type === "broll") {
+      var v = s.visual || {};
+      h += '<div class="clip">' +
+        (v.src ? '<img src="' + esc(v.src) + '" alt="b-roll source" onerror="this.remove()">' : "") +
+        '<div class="meta">' +
+        "<div><b>Picture</b>AI video — generated with the source photo as the parameter</div>" +
+        "<div><b>Staging</b>no overlay — the audio the video carries</div>" +
+        "<div><b>Insert</b>right after shot " + ((s.after || 0) + 1) + " ends · using " + (s.duration || "?") + "s (the front of the 8s generated clip)</div>" +
+        (v.src ? "<div><b>Source</b><code>" + esc(v.src) + "</code> — the same file as the background of shot " + ((s.after || 0) + 1) + "</div>" : "") +
+        (v.motion ? "<div><b>Motion</b>" + esc(v.motion) + "</div>" : "") +
+        (v.audio ? "<div><b>Audio</b>" + esc(v.audio) + "</div>" : "") +
+        (v.clip ? "<div><b>Output</b><code>" + esc(v.clip) + "</code></div>" : "") +
+        "<div><b>Narration</b>" + (narr.length ? "present — b-roll has to be empty" : "none (the audio the video carries)") + "</div>" +
+        "</div></div>";
+    } else {
+      var vis = s.visual || {};
+      var states = revealsOf(s);
+      // Segment → cut assignment: sentence j attaches to the last real cut (carry cuts excluded)
+      // whose seg ≤ j. With more sentences than cuts, the last cut absorbs the rest (the screen
+      // holds still and only the subtitle changes).
+      var segRows = states.map(function () { return []; });
+      narr.forEach(function (n, j) {
+        var at = 0;
+        states.forEach(function (st, k) { if (!st.carry && st.seg >= 0 && st.seg <= j) at = k; });
+        segRows[at].push(j);
+      });
+
+      h += '<div class="conti">' + states.map(function (st, k) {
+        var f = fit[i + ":" + k] || {};
+        // Cut type — a still image, or a generated video made with an image as the parameter.
+        // visual.video in scenes.js (the explicit marker) is the source of truth; without it the
+        // structure decides.
+        var seg = st.seg >= 0 && narr[st.seg] ? narr[st.seg] : null;
+        var vt =
+          recOf(s) ? ["recorded screen", ""] :
+          s.type === "outro" ? ["shared outro mp4", "gen"] :
+          (s.type === "quote" && vis.clip) ? ["speech clip video · veo", "gen"] :
+          vis.video ? ["image→video · veo", "gen"] :
+          (seg && /^card:/.test(seg.imgPrompt || "")) ? ["typing video · code render", "gen"] :
+          (seg && seg.img) ? ["still illustration", ""] :
+          ["still background", ""];
+        var cell = '<div class="cut-head"><span class="no">reveal ' + (k + 1) + "</span>" + esc(st.label) +
+          '<span class="vtag' + (vt[1] ? " " + vt[1] : "") + '">' + vt[0] + "</span></div>";
+
+        // Screen — the text that appears on this cut. Letters inside the frame are tiny, so they are read here.
+        var sc = "";
+        if (recOf(s)) {
+          if (s.kicker) sc += capline(null, null, esc(s.kicker));
+          if (s.title) sc += capline(esc(strip(s.title)));
+          if (s.type === "cover" && s.stat) sc += capline(esc(s.stat), esc(s.statLabel || ""));
+          sc += (s.bullets || []).map(function (b, m) {
+            return capline(esc(b.t), b.d ? esc(b.d) : null, null, m + 1); }).join("");
+          // The portrait shooting overlay draws only kicker and title (screencast-overlay).
+          // In landscape the captions show up in the lower third too, so printing that note
+          // there would be a lie.
+          if ((s.bullets || []).length && !WIDE)
+            sc += capline(null, null, "captions are not rendered on screen — the dialogue and subtitles say them");
+          if (s.footnote) sc += capline(null, null, esc(s.footnote));
+        } else if (s.type === "cover") {
+          if (k === 0) {
+            if (s.kicker) sc += capline(null, null, esc(s.kicker));
+            if (s.title) sc += capline(esc(strip(s.title)));
+          } else if (s.stat) {
+            sc += capline(esc(s.stat), esc(s.statLabel || ""));
+          }
+        } else if (s.type === "points") {
+          if (k === 0) {
+            if (s.title) sc += capline(esc(strip(s.title)));
+            if (s.footnote) sc += capline(null, null, esc(s.footnote));
+            if (!s.title && !s.footnote) sc += capline(null, null, "no screen text — picture only");
+          } else {
+            var b = (s.bullets || [])[st.cap];
+            if (b) sc += capline(esc(b.t), b.d ? esc(b.d) : null, null, st.cap + 1);
+          }
+        } else if (s.type === "quote") {
+          if (k === 0) {
+            sc += capline(esc(s.speaker || ""), esc(s.role || ""));
+            // On a clip quote the quote itself never appears on screen — it goes out as audio only, so that is what is written
+            if (vis.clip && s.text) sc += capline(null, null, "the quote does not appear on screen — audio only: " + esc(strip(s.text)));
+          } else if (s.text) {
+            sc += capline(null, esc(strip(s.text)));
+          }
+        } else if (s.type === "outro") {
+          if (THEME.brand) sc += capline(esc(THEME.brand));
+          if (s.title) sc += capline(esc(strip(s.title)), s.sub ? esc(s.sub) : null);
+        }
+        if (sc) cell += '<div class="cut-sec">SCREEN</div>' + sc;
+
+        // Audio — the lines that go out during this cut
+        var lines = "";
+        if (st.carry && st.seg >= 0)
+          lines += '<div class="cut-carry">line ' + (st.seg + 1) + " carries over — only the screen (the caption) changes</div>";
+        segRows[k].forEach(function (j) {
+          var n = narr[j], same = strip(n.tts) === strip(n.sub);
+          lines += '<div class="cut-line"><span class="k">' + (j + 1) + '</span><div class="b">' + esc(n.tts) +
+            '<span class="len"> · ' + netLen(n.tts) + " chars</span>" +
+            (same ? "" : '<div class="sub-diff"><b>Subtitle</b> ' + esc(n.sub) + "</div>") +
+            "</div></div>";
+        });
+        if (!lines && s.type === "quote" && vis.clip)
+          lines = '<div class="cut-carry">speech clip — the actor speaks, so there is no TTS narration</div>';
+        if (lines) cell += '<div class="cut-sec">AUDIO</div>' + lines;
+
+        return '<div class="conti-row"><figure class="panel">' +
+          frame(s, st, k, f.tier || 0, f.statScale || 0) + "</figure>" +
+          '<div class="cut">' + cell + "</div></div>";
+      }).join("") + "</div>";
+
+      // The same note is not repeated on every scene — only the first time.
+      if (!recOf(s) && s.type === "points" && narr.length && narr.length !== states.length && !carryNoted) {
+        carryNoted = true;
+        h += '<div class="note">The screen changes ' + states.length + " times but there are " + narr.length +
+             " sentences — one sentence ends up holding two captions, and which one is decided at production.</div>";
+      }
+
+      /* Outside the cut — background, motion, prompts, audio directions */
+      var meta = "";
+      if (recOf(s)) {
+        // The user films a shooting scene from this document — what is visible (shot), what to
+        // do (action) and which file to save it as (clip) all have to be here for the shoot to work.
+        meta += '<div class="shot">' + mark(vis.shot || "—") + "</div>";
+        if (vis.action) meta += '<div class="row"><b>Action</b><div class="v">' + mark(vis.action) + "</div></div>";
+        meta += '<div class="row"><b>Save as</b><div class="v"><code>' + esc(vis.clip || "— filename undecided") +
+                "</code>" + (narr.length ? " · narration over it (TTS)" : " · live voice (uses the clip audio)") + "</div></div>";
+      } else {
+        var lineImgs = narr.filter(function (n) { return n.img; });
+        if (lineImgs.length) {
+          meta += '<div class="row"><b>Art</b><div class="v">one per line · ' + lineImgs.length +
+               " total <span style='color:var(--faint)'>(light mode · white-background line art)</span></div></div>";
+          meta += '<div class="row"><b>Key art</b><div class="v"><code>' + esc(vis.bg || "—") + "</code> — the source for the cover still and the thumbnail</div></div>";
+          meta += lineImgs.map(function (n, j) {
+            return n.imgPrompt ? '<details class="prompt"><summary>illustration ' + (j + 1) + " prompt</summary><p>" +
+              esc(n.imgPrompt) + "</p></details>" : ""; }).join("");
+        } else if (vis.bg || s.type === "quote") {
+          meta += '<div class="row"><b>Background</b><div class="v">' +
+               (vis.bg ? "<code>" + esc(vis.bg) + "</code>" : "none — speech clip or quote card") + "</div></div>";
+        }
+        if (vis.motion) meta += '<div class="row"><b>Motion</b><div class="v">' + esc(vis.motion) + "</div></div>";
+        if (vis.video) {
+          // Motion-background scene — this image becomes the parameter for veo img2video (scenes-schema §motion background)
+          meta += '<div class="row"><b>Video</b><div class="v">image→video generation — veo img2video with <code>' + esc(vis.bg || "?") +
+               "</code> as the parameter" +
+               (vis.video.clip ? " → <code>" + esc(vis.video.clip) + "</code>" : "") + "</div></div>";
+          if (vis.video.prompt)
+            meta += '<details class="prompt"><summary>motion prompt</summary><p>' + esc(vis.video.prompt) + "</p></details>";
+        }
+        if (vis.clip && vis.clip.prompt)
+          meta += '<details class="prompt"><summary>speech clip prompt</summary><p>' + esc(vis.clip.prompt) + "</p></details>";
+        if (vis.bgPrompt)
+          meta += '<details class="prompt"><summary>background prompt</summary><p>' + esc(vis.bgPrompt) + "</p></details>";
+        if (vis.slide) {
+          meta += '<div class="row"><b>slide</b><div class="v"><code>' + esc(vis.slide.file || "?") +
+               "</code> — authored in §8 after approval</div></div>";
+          if (vis.slide.plan)
+            meta += '<details class="prompt"><summary>slide plan</summary><p>' + esc(vis.slide.plan) +
+                 (vis.slide.labels && vis.slide.labels.length ? " · labels: " + esc(vis.slide.labels.join(", ")) : "") +
+                 "</p></details>";
+        }
+      }
+      if (DOC.privacy && DOC.privacy[no])
+        meta += '<div class="note pv">Privacy avoidance — ' + mark(DOC.privacy[no]) + "</div>";
+      if (DOC.audioNotes && DOC.audioNotes[no])
+        meta += '<div class="note">' + mark(DOC.audioNotes[no]) + "</div>";
+      if (meta) h += '<div class="cmeta">' + meta + "</div>";
+    }
+
+    // Three or more scene notes fold away — what feeds the decision directly is privacy avoidance and the transition
+    var sn = (DOC.sceneNotes && DOC.sceneNotes[no]) || [];
+    if (sn.length) {
+      var body = sn.map(function (n) { return '<div class="note">' + mark(n) + "</div>"; }).join("");
+      h += sn.length > 2
+        ? '<details class="scenenotes"><summary>Design rationale · ' + sn.length + "</summary>" + body + "</details>"
+        : '<div class="scene-notes">' + body + "</div>";
+    }
+    if (DOC.transitions && DOC.transitions[i])
+      h += '<div class="transition"><b>TRANSITION</b>' + mark(DOC.transitions[i]) + "</div>";
+    h += "</article>";
+    });
+    if (hasSceneField) h += "</section>";
+  });
+
+  /* ══ Contract · sources · platforms ══ */
+  h += '<h2 class="sec">Contract limits<span class="aside">computed at render time</span></h2><table class="grid"><tbody>';
+  h += "<tr><th>Format</th><td>" + esc(FMT.label) + " <code>" + esc(FMT_KEY) + "</code>" +
+       (window.FORMAT ? "" : " <span class=\"aside\">no window.FORMAT — default</span>") +
+       (FMT_KEY === "youtube-long-16x9"
+         ? " <span class=\"aside\">safe-zone values provisional (mobile web landscape and the top title bar are unmeasured)</span>" : "") +
+       "</td></tr>";
+  h += "<tr><th>Main-body length</th><td>" + durTxt(total) + " — default " +
+       durTxt(FMT.totalMin) + "~" + durTxt(FMT.totalMax) + " · cap " + durTxt(FMT.totalHard) +
+       (outroSec ? " · with outro ≈" + durTxt(total + outroSec) : "") + "</td></tr>";
+  h += "<tr><th>Shot count</th><td>" + main.length + " shots — band " +
+       FMT.sceneCountMin + "~" + FMT.sceneCountMax + "</td></tr>";
+  if (cover) {
+    h += "<tr><th>Cover title</th><td>" + mark(cover.title) + " — displays " + dispLen(cover.title) + "/16 chars</td></tr>";
+    h += "<tr><th>Opening strategy</th><td>" + (HOOK_KO[cover.hookType]
+         ? esc(HOOK_KO[cover.hookType]) + " (<code>" + esc(cover.hookType) + "</code>) — the title, segment ① and the hooking ride this pull"
+         : (cover.hookType ? "<code>" + esc(cover.hookType) + "</code> is outside the four — " : "not written — ") +
+           "one of fear|empathy|curiosity|spoiler (scenes-schema §the four opening strategies)") + "</td></tr>";
+    if (cover.statLabel) h += "<tr><th>statLabel</th><td>" + esc(cover.statLabel) + " — displays " + dispLen(cover.statLabel) + "/18 chars</td></tr>";
+  }
+  h += "<tr><th>Speech rate</th><td>" +
+     (allRec ? "shooting 5~6 chars/s (4.5~6.5 allowed) · scenes 8~20s"
+      : hasRec ? "shooting scenes 5~6 chars/s · generated scenes derived from TTS at 4.5 chars/s (measured scene by scene)"
+      : "derived from TTS at 4.5 chars/s · scene cap " + FMT.sceneMax + "s") + "</td></tr>";
+  h += "<tr><th>THEME</th><td>" + ["accent", "accent2", "ink"].map(function (k) {
+    return '<span class="swatch" style="background:' + esc(THEME[k]) + '"></span><code>' + esc(THEME[k]) + "</code>"; }).join(" &nbsp; ") +
+    " &nbsp; brand <code>" + esc(THEME.brand) + "</code></td></tr>";
+  h += "</tbody></table>";
+
+  if (DOC.prep && DOC.prep.length)
+    h += '<h2 class="sec">Before the shoot</h2><ul class="checklist">' +
+      DOC.prep.map(function (p) { return "<li>" + mark(p) + "</li>"; }).join("") + "</ul>";
+
+  if (DOC.sources && DOC.sources.length) {
+    h += '<h2 class="sec">Sources<span class="aside">ledger: research.md</span></h2>' +
+      '<table class="grid"><thead><tr><th>Claim</th><th>Source</th><th>Checked</th><th>Status</th></tr></thead><tbody>';
+    DOC.sources.forEach(function (r) {
+      // A leading emoji jumps out in saturation — the content stays, only the render moves to the badge color language (review round 2)
+      var st = r.status || "", stHtml = mark(st);
+      var lead = st.match(/^(✅|⚠️|❌)\s*/);
+      if (lead) {
+        var sc = lead[1] === "✅" ? ["ok", "✓"] : lead[1] === "⚠️" ? ["warn", "!"] : ["bad", "×"];
+        stHtml = '<span class="src-mark ' + sc[0] + '">' + sc[1] + "</span> " + mark(st.slice(lead[0].length));
+      }
+      h += "<tr><td>" + mark(r.claim) + "</td><td>" +
+        (r.links || []).map(function (l) {
+          return l.url ? '<a href="' + esc(l.url) + '">' + esc(l.label) + "</a>" : "<span>" + esc(l.label) + "</span>";
+        }).join(" · ") + "</td><td>" + esc(r.date || "") + "</td><td>" + stHtml + "</td></tr>";
+    });
+    h += "</tbody></table>";
+  }
+  if (DOC.platforms && DOC.platforms.length) {
+    h += '<h2 class="sec">Platform plan</h2><table class="grid"><thead><tr><th>Platform</th><th>Form</th><th>Notes</th></tr></thead><tbody>';
+    DOC.platforms.forEach(function (p) {
+      h += "<tr><td><b>" + esc(p.name) + "</b></td><td>" + esc(p.form) + "</td><td>" + mark(p.note || "") + "</td></tr>";
+    });
+    h += "</tbody></table>";
+  }
+  if (DOC.recheck && DOC.recheck.length)
+    h += '<h2 class="sec">Recheck before publishing<span class="aside">time-sensitive</span></h2><ul class="checklist">' +
+      DOC.recheck.map(function (r) { return "<li>" + mark(r) + "</li>"; }).join("") + "</ul>";
+
+  h += '<footer class="doc-foot"><b>scenes.js is the original</b> — this document only draws it, so when a shot looks wrong, fix scenes.js. ' +
+       "In this file, edit SB_DOC only (notes, audio directions, sources, platform plan).<br>" +
+       '<a href="./storyboard.md">storyboard.md</a> · <a href="./script.md">script.md</a> · ' +
+       '<a href="./research.md">research.md</a> · <a href="./scenes.js">scenes.js</a></footer>';
+
+  app.innerHTML = h;
+
+  /* Filling the check strip — nothing is missed only once every violation has been registered */
+  auditSealed = true;
+  // Violations first — a skimming eye has to hit them before anything else (within a level, registration order holds)
+  audit = audit.filter(function (a) { return a.level === "bad"; })
+    .concat(audit.filter(function (a) { return a.level !== "bad"; }));
+  var nBad = audit.filter(function (a) { return a.level === "bad"; }).length;
+  var nWarn = audit.length - nBad;
+  var box = document.getElementById("audit");
+  box.className = "audit" + (nBad ? " has-bad" : nWarn ? " has-warn" : "");
+  box.innerHTML = '<div class="audit-head"><span class="dot"></span>Contract check' +
+    '<span class="count">' + (audit.length ? "violations " + nBad + " · to check " + nWarn : "no violations") + "</span></div>" +
+    (audit.length
+      ? "<ul>" + audit.map(function (a) {
+          return '<li class="' + a.level + '"><span class="where">' + esc(a.where) + "</span>" +
+                 '<span class="what">' + esc(a.what) + "</span></li>"; }).join("") + "</ul>"
+      : '<div class="clean">Character counts, speech rate, shot length, frame overflow, total length, cover title, playback order, opening strategy — every contract item passes.</div>');
+
+  var safe = document.getElementById("tg-safe"), subs = document.getElementById("tg-subs");
+  if (safe) safe.addEventListener("change", function () { document.body.classList.toggle("safe", safe.checked); });
+  if (subs) subs.addEventListener("change", function () { document.body.classList.toggle("subs", subs.checked); });
+
+  var who = DOC.channelName || DOC.channel || THEME.brand || "";
+  document.title = (DOC.displayTitle || DOC.topic || "Storyboard") + (who ? " — Storyboard · " + who : " — Storyboard");
+})();
+</script>
+</body>
+</html>

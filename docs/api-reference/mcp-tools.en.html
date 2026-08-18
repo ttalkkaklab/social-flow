@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCP tool spec &amp; authoring best practices — social-flow</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="mcp-tools.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="mcp-tools.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>MCP tools</div>
+
+<header class="hero">
+  <div class="kicker">PROTOCOL</div>
+  <h1>MCP tool spec &amp; authoring best practices</h1>
+  <p class="sub">The protocol contract this server has to honor (Model Context Protocol 2025-06-18), and the design principles that make a tool one the model actually uses well. Together the two axes define this repo's quality rubric.</p>
+  <div class="meta">
+    <span>Spec <a href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools">MCP 2025-06-18 · Tools</a></span>
+    <span>Guide <a href="https://www.anthropic.com/engineering/writing-tools-for-agents">Anthropic — Writing tools for agents</a></span>
+    <span>SDK <strong>@modelcontextprotocol/sdk 1.30.0</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#tool">Tool definition fields</a></li>
+    <li><a href="#annotations">Behavior hints (annotations)</a></li>
+    <li><a href="#result">The CallToolResult contract</a></li>
+    <li><a href="#errors">Two layers of error reporting</a></li>
+    <li><a href="#practices">7 principles for authoring tools</a></li>
+    <li><a href="#rubric">Scoring rubric</a></li>
+    <li><a href="#apply">How this repo applies them</a></li>
+  </ol>
+</nav>
+
+<section id="tool">
+  <h2>1. Tool definition fields</h2>
+  <p>These are the fields of the Tool object carried in MCP's <code>tools/list</code> response. SDK 1.30.0's <code>ToolSchema</code> is the source of truth.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Field</th><th>Required</th><th>Purpose</th><th>social-flow</th></tr></thead>
+    <tbody>
+      <tr><td><code>name</code></td><td>required</td><td>Unique identifier — the name the model calls</td><td>used</td></tr>
+      <tr><td><code>title</code></td><td>optional</td><td>Display name for humans. Clients show it in tool lists and approval dialogs</td><td>used</td></tr>
+      <tr><td><code>description</code></td><td>optional</td><td>Usage notes the model reads. In practice, a prompt</td><td>used</td></tr>
+      <tr><td><code>inputSchema</code></td><td>required</td><td>JSON Schema for the arguments. Fixed at <code>type: "object"</code></td><td>used</td></tr>
+      <tr><td><code>outputSchema</code></td><td>optional</td><td>JSON Schema for the structured result. Declare it and the server <strong>MUST</strong> return <code>structuredContent</code> matching it</td><td>used on the 17 SNS and growth tools</td></tr>
+      <tr><td><code>annotations</code></td><td>optional</td><td>4 behavior hints + a display title (§2 below)</td><td>used on every tool</td></tr>
+      <tr><td><code>execution</code></td><td>optional</td><td><code>taskSupport</code> — whether long work can be delegated to a task</td><td>unused</td></tr>
+      <tr><td><code>_meta</code> · <code>icons</code></td><td>optional</td><td>Implementation-specific metadata · icons</td><td>unused</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>Declaring <code>outputSchema</code> makes it a contract.</strong> The spec is blunt: "Servers MUST provide structured results that conform to this schema." If there's any failure path where you can't fill <code>structuredContent</code>, you're better off not declaring it. This repo marks as <code>required</code> only <strong>fields that are always filled on the success path</strong>, and returns failures as <code>isError: true</code> plus text, which keeps the contract intact.
+  </div>
+</section>
+
+<section id="annotations">
+  <h2>2. Behavior hints (annotations)</h2>
+  <p>This is what a client uses to decide "does this call need user confirmation". The spec defines them as <strong>hints</strong> and warns that a client must not trust hints from an untrusted server — but if a <em>trusted</em> server leaves these fields empty, the client loses any way to tell a dangerous tool from a safe one.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Hint</th><th>Default</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>readOnlyHint</code></td><td><code>false</code></td><td>Doesn't modify its environment</td></tr>
+      <tr><td><code>destructiveHint</code></td><td><code>true</code></td><td>May perform destructive or hard-to-undo updates. Only meaningful when <code>readOnlyHint: false</code></td></tr>
+      <tr><td><code>idempotentHint</code></td><td><code>false</code></td><td>Repeated calls with the same arguments have no additional effect. Only meaningful when <code>readOnlyHint: false</code></td></tr>
+      <tr><td><code>openWorldHint</code></td><td><code>true</code></td><td>Interacts with an open world (the internet, say)</td></tr>
+      <tr><td><code>title</code></td><td>—</td><td>Display name (the older location for the Tool's top-level <code>title</code>)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong>This server has no pre-publish review gate — the call is the publication.</strong> Eight tools take effect outside the moment they're called: <code>threads_publish</code>·<code>instagram_publish</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_update</code>·<code>sns_comment_reply</code>·<code>sns_comment_moderate</code>, and among them the publish APIs are non-idempotent, so a retry means a duplicate post. That fact used to live only in each tool's <code>description</code> prose — <strong>a form the model reads but the client can't</strong>. Now it's declared machine-readably with <code>destructiveHint: true</code> + <code>idempotentHint: false</code>.
+  </div>
+</section>
+
+<section id="result">
+  <h2>3. The CallToolResult contract</h2>
+  <p>Unstructured results go in <code>content[]</code>, structured ones in <code>structuredContent</code>. The two aren't exclusive but <strong>parallel</strong> — the spec recommends (SHOULD) that even tools returning structured results also carry the serialized JSON as a text block, for backward compatibility.</p>
+  <h3>Content block types</h3>
+  <ul>
+    <li><code>text</code> — <code>{ type, text }</code></li>
+    <li><code>image</code> — <code>{ type, data(base64), mimeType }</code></li>
+    <li><code>audio</code> — <code>{ type, data(base64), mimeType }</code></li>
+    <li><code>resource_link</code> — <code>{ type, uri, name, description?, mimeType? }</code></li>
+    <li><code>resource</code> — an embedded resource</li>
+  </ul>
+  <div class="note">
+    <strong>When to return generated media as base64 and when to return only a path.</strong> Images (<code>gpt_image_*</code>) come back as an <code>image</code> block, because the model has to see the result to decide whether to regenerate. Video, voice, and music return <strong>the path only</strong>: several MB of base64 burns context, and the model can't evaluate audio or video directly anyway.
+  </div>
+</section>
+
+<section id="errors">
+  <h2>4. Two layers of error reporting</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Layer</th><th>Form</th><th>When to use it</th><th>This server</th></tr></thead>
+    <tbody>
+      <tr><td>Protocol error</td><td>JSON-RPC <code>error</code></td><td>Unknown tool, bad arguments, internal server failure</td><td>Handled by the SDK at the transport layer</td></tr>
+      <tr><td>Tool execution error</td><td><code>result.isError: true</code> + text</td><td>API failure, bad input data, business-logic failure</td><td><code>index.ts</code> converts every exception into this</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Execution errors come back as <code>isError</code> so that <strong>the model can read them and correct itself</strong>. Thrown as protocol errors, the model learns only that something failed and never sees why. This server also converts zod validation failures into execution errors, complete with the field path.</p>
+  <pre><code>Invalid arguments — durationSeconds: 1080p resolution is only supported at 8s duration (requested: 4s).</code></pre>
+</section>
+
+<section id="practices">
+  <h2>5. 7 principles for authoring tools</h2>
+  <p>The principles from Anthropic's <a href="https://www.anthropic.com/engineering/writing-tools-for-agents">Writing tools for agents</a>, and how this repo honors each.</p>
+
+  <h3>① Consolidate around workflows</h3>
+  <p>Don't wrap API endpoints one-to-one; bundle them into real units of work. One <code>schedule_event</code> instead of <code>list_users</code>+<code>list_events</code>+<code>create_event</code>.</p>
+  <div class="ok"><strong>Applied:</strong> a single <code>instagram_publish</code> handles six steps — <code>/me</code> lookup → create N child containers → poll all of them to <code>FINISHED</code> → bundle the carousel → <code>media_publish</code> → fetch the permalink. The model passes only the caption and the image URLs.</div>
+
+  <h3>② Namespacing</h3>
+  <p>Group tools under a shared prefix per service or resource so the model can tell similar ones apart.</p>
+  <div class="ok"><strong>Applied:</strong> <code>serp_</code>·<code>naver_</code>·<code>datago_</code>·<code>gpt_image_</code>·<code>veo_</code>·<code>tts_</code>·<code>music_</code>·<code>sns_</code>. Only publish tools lead with the platform name (<code>threads_publish</code>) — for publishing, choosing the platform <em>is</em> the decision, so the prefix has to be the platform or the model gets confused.</div>
+
+  <h3>③ Return only high-signal context</h3>
+  <p>Meaningful language over technical identifiers (UUIDs, MIME types). Relevance over flexibility.</p>
+  <div class="ok"><strong>Applied:</strong> raw SERP JSON is 20–60KB per search. Keeping only <code>organic_results</code>·<code>answer_box</code>·<code>knowledge_graph</code>·<code>related_questions</code> brings it to 2–4KB. <code>sns_comment_inbox</code> absorbs the per-platform field-name differences and computes <strong>derived values you can act on directly</strong>, like <code>ageMinutes</code> and <code>withinGoldenHour</code>.</div>
+
+  <h3>④ Token efficiency — pagination, filters, truncation</h3>
+  <p>Pick sensible defaults, and when output is cut, say so with actionable guidance.</p>
+  <div class="ok"><strong>Applied:</strong> <code>datago_file_fetch</code> cuts at 12,000 characters and appends <code>…(truncated — lower limit, or point at the rows you need with page)</code>. <code>tts_*</code> doesn't echo back a 16,000-character script, only <strong>its length</strong> — the caller sent that string, so echoing it carries zero information and burns context.</div>
+
+  <h3>⑤ Actionable error messages</h3>
+  <p>Say what to fix and how, not just an error code.</p>
+  <div class="ok"><strong>Applied:</strong> an <code>odcloud -4</code> isn't passed through raw; it's translated into <em>"this auth key isn't registered for this API — file a usage application on the portal first (auto-approved). Before that, datago_file_download (no auth) is the faster way to get the raw file."</em> SerpApi 401/429 go further and dictate <strong>the retry policy</strong>: <em>"don't retry until the key is fixed"</em>, <em>"stop further searches in this session"</em>.</div>
+
+  <h3>⑥ Write descriptions like onboarding a new hire</h3>
+  <p>Make implicit context explicit, and name parameters unambiguously (<code>user_id</code>, not <code>user</code>).</p>
+  <div class="ok"><strong>Applied:</strong> generation-tool descriptions keep a fixed three-part structure — <em>Use when… / Do NOT use… / Returns:</em>. This is what prevents the <strong>wrong-tool picks</strong> that "what it does"-only descriptions cause — a model reaching for <code>veo_text2video</code> when it should use <code>veo_img2video</code> fails for lack of a boundary, not for lack of a feature list.</div>
+
+  <h3>⑦ Evaluate systematically</h3>
+  <p>Evaluate with multi-step tasks drawn from real workflows, and watch runtime, call count, tokens, and errors alongside accuracy.</p>
+  <div class="warn"><strong>Applied (partly):</strong> this repo automatically verifies the <strong>static contract</strong> (schema validity, routing consistency, hint coherence) via <code>server/test/contract.test.mjs</code>. There's no behavioral eval that runs an actual model yet — because publish tools make real public posts, a safe eval harness needs a dry-run layer first.</div>
+</section>
+
+<section id="rubric">
+  <h2>6. Scoring rubric</h2>
+  <p>This repo scores tool quality on the five axes below, out of 100. The <a href="tool-audit.en.html">audit report</a> is the result of applying this rubric.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Axis</th><th>Points</th><th>What's scored</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>A. API contract fidelity</strong></td><td>30</td>
+        <td>Do model IDs, endpoints, and versions match the current official docs / do parameter ranges, enums, and ceilings match the official values / are the facts stated in descriptions (quotas, limits, supported languages) true / are cross-constraints (resolution × length × model) enforced in the schema</td>
+      </tr>
+      <tr>
+        <td><strong>B. MCP protocol compliance</strong></td><td>20</td>
+        <td>Use of the Tool fields (<code>title</code>·<code>annotations</code>·<code>outputSchema</code>) / hints matching actual side effects / <code>structuredContent</code> consistent with <code>outputSchema</code> / the two error layers kept separate / honesty in capability declarations</td>
+      </tr>
+      <tr>
+        <td><strong>C. Tool design best practices</strong></td><td>25</td>
+        <td>Workflow consolidation / namespacing consistency / the Use·Do NOT·Returns three-part description / clarity of parameter names and descriptions / response token efficiency and truncation notices / how actionable error messages are</td>
+      </tr>
+      <tr>
+        <td><strong>D. Implementation correctness &amp; safety</strong></td><td>15</td>
+        <td>Path traversal and extension allowlists / closing off secret leaks (URL echoes, error bodies) / retry safety for non-idempotent operations / partial-failure isolation / no output pollution like duplicated error prefixes</td>
+      </tr>
+      <tr>
+        <td><strong>E. Verifiability</strong></td><td>10</td>
+        <td>Tests that automatically verify the tool surface contract / routing consistency (definition ↔ handler, both directions) / build output in sync with source / single-source constants (no duplicated lists)</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p>A P0 (a defect that fails the call or causes an accident) drops that axis to 0, a P1 costs points per item, and a P2 only shows up in the summary.</p>
+</section>
+
+<section id="apply">
+  <h2>7. How this repo applies them</h2>
+  <h3>Behavior-hint decision table</h3>
+  <p>Pinning the ambiguous boundaries down in advance keeps the judgment steady as tools are added.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Tool class</th><th>readOnly</th><th>destructive</th><th>idempotent</th><th>openWorld</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Search and read (<code>serp_*</code>, <code>naver_search</code>, <code>datago_search|detail|file_fetch|api_call</code>, <code>sns_comment_inbox</code>, <code>sns_account_check</code>, <code>threads_insights</code>, <code>threads_search</code>, <code>instagram_insights</code>, <code>youtube_insights</code>, <code>youtube_topic_scout</code>, <code>sns_issue_scout</code>)</td><td>true</td><td>—</td><td>—</td><td>true</td><td>No side effects</td></tr>
+      <tr><td>Constant lists (<code>tts_list_voices</code>, <code>music_list_options</code>)</td><td>true</td><td>—</td><td>—</td><td><strong>false</strong></td><td>There's no API call at all</td></tr>
+      <tr><td>Local file creation (<code>gpt_image_*</code>, <code>veo_*</code>, <code>seedance_*</code>, <code>tts_generate|multi_speaker</code>, <code>music_generate*</code>, <code>datago_file_download</code>, <code>content_feedback</code>)</td><td>false</td><td><strong>false</strong></td><td>false</td><td>true</td><td>They write a new file without destroying existing state. But the same <code>filename</code> overwrites, and generation is non-deterministic, so they aren't idempotent either</td></tr>
+      <tr><td>On-device generation (<code>image_local_generate</code>, <code>tts_local_generate</code>)</td><td>false</td><td><strong>false</strong></td><td>false</td><td><strong>false</strong></td><td>Same as above except they never touch the network — a local model doesn't interact with an open world</td></tr>
+      <tr><td>Immediate public posts and replies (<code>*_publish</code>, <code>facebook_comment</code>, <code>sns_comment_reply</code>)</td><td>false</td><td><strong>true</strong></td><td><strong>false</strong></td><td>true</td><td>Undoing means deleting, and a retry produces a duplicate post</td></tr>
+      <tr><td>Moderation and metadata edits (<code>sns_comment_moderate</code>, <code>youtube_update</code>)</td><td>false</td><td><strong>true</strong></td><td><strong>true</strong></td><td>true</td><td>Hiding/unhiding and editing a post's metadata set state, so repeating gives the same result. They still land outside immediately, which makes them destructive</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>The three-part description</h3>
+  <pre><code>&lt;one-line summary: what it does&gt;
+
+Use when the user asks to …  ← the basis for picking it (Korean trigger words alongside)
+Do NOT use …                 ← the boundary against sibling tools
+&lt;one line on cost, time, limits&gt;
+
+Returns: &lt;the exact shape of what comes back&gt;</code></pre>
+  <p>Publish tools put the <strong>HITL contract</strong> ahead of all that — the description opens with ⚠️ and says it posts publicly the moment it's called, so it may be called only right after the user has reviewed and approved the final copy and media, never without approval.</p>
+
+  <h3>Single-source constants</h3>
+  <p>List-shaped values (30 TTS voices, 13 keys, 3 generation modes) keep one constant in the client module as the source of truth, and the JSON Schema enum in <code>tools.ts</code> and the zod enum are <strong>derived</strong> from it. Copy a list into the schema and sooner or later a value gets added on one side only.</p>
+  <pre><code>// tts-client.ts — source of truth
+export const TTS_VOICES = { Zephyr: 'Bright', /* …30 of them… */ } as const;
+export const TTS_VOICE_NAMES = Object.keys(TTS_VOICES) as [VoiceName, ...VoiceName[]];
+
+// tools.ts — derived
+enum: [...TTS_VOICE_NAMES]
+// tts-client.ts — derived
+const voiceSchema = z.enum(TTS_VOICE_NAMES);</code></pre>
+</section>
+
+<footer>
+  As of 2026-08-18 · <a href="index.en.html">API reference hub</a> · <a href="tool-audit.en.html">Tool quality audit report</a>
+</footer>
+
+</div>
+</body>
+</html>

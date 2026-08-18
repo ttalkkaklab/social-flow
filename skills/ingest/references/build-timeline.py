@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
-"""build-timeline.py — 원신호 3종을 병합해 타임라인을 산출한다.
+"""build-timeline.py — merge the three raw signals into a timeline.
 
-사용법:
-  build-timeline.py <출력디렉토리> --src <녹화파일> [--min-scene 8] [--max-scene 45]
+Usage:
+  build-timeline.py <outdir> --src <recording> [--min-scene 8] [--max-scene 45]
 
-입력  (transcribe.sh 산출):
-  <출력디렉토리>/raw/transcript.json   whisper.cpp STT (ms 오프셋)
-  <출력디렉토리>/raw/silences.tsv     무음 구간 (start<TAB>end, 초)
-  <출력디렉토리>/raw/scenes.tsv       화면 전환 시각 (초)
-  <출력디렉토리>/raw/duration.txt     원본 길이 (초)
+Input (produced by transcribe.sh):
+  <outdir>/raw/transcript.json   whisper.cpp STT (ms offsets)
+  <outdir>/raw/silences.tsv      silence spans (start<TAB>end, seconds)
+  <outdir>/raw/scenes.tsv        screen-change times (seconds)
+  <outdir>/raw/duration.txt      source length (seconds)
 
-출력:
-  <출력디렉토리>/timeline.json        기계용 타임라인 (씬 경계·문장·키프레임)
-  <출력디렉토리>/timeline.md          사람용 타임라인 표 (화면 열은 vision_analyze로 후속 기입)
-  <출력디렉토리>/keyframes/seg-N.jpg  씬 대표 프레임 (--src 지정 시)
+Output:
+  <outdir>/timeline.json         machine timeline (scene boundaries, sentences, keyframes)
+  <outdir>/timeline.md           human timeline table (the Screen column is filled in later by vision_analyze)
+  <outdir>/keyframes/seg-N.jpg   scene keyframe (when --src is given)
 
-경계 산출 원리: 발화 쉼(무음)마다 score_boundary() 로 점수를 매기고,
-강한 경계(>=1.0)에서 우선 분할 → MAX 초과 씬은 약한 경계에서 재분할 →
-MIN 미만 씬은 이웃과 병합한다. 경계는 항상 문장 사이 간극에 스냅된다.
+How boundaries are derived: score every speech pause (silence) with
+score_boundary(), split at strong boundaries (>=1.0) first → re-split scenes over
+MAX at a weak boundary → merge scenes under MIN into a neighbor. Boundaries always
+snap to the gap between sentences.
 """
 import argparse
 import datetime
@@ -27,47 +28,49 @@ import sys
 from pathlib import Path
 
 # ──────────────────────────────────────────────────────────────
-# 경계 점수 정책
+# Boundary scoring policy
 # ──────────────────────────────────────────────────────────────
 
 def score_boundary(silence, scene_times):
-    """이 무음(쉼)이 '씬 경계'로서 얼마나 강한가를 점수로 반환한다.
+    """Score how strong this silence (pause) is as a 'scene boundary'.
 
-    입력:
-      silence     — {"start": float, "end": float}  # 초 단위. 길이 = end - start
-      scene_times — list[float]                     # 화면 전환 시각들 (초)
+    Input:
+      silence     — {"start": float, "end": float}  # seconds. length = end - start
+      scene_times — list[float]                     # screen-change times (seconds)
 
-    반환(float) 계약:
-      >= 1.0  강한 경계 — 이 지점에서 무조건 씬을 나눈다
-      0 ~ 1   약한 경계 — MAX_SCENE_SEC 초과 씬을 쪼갤 때만 후보로 쓴다
-      <= 0.0  경계 아님
+    Return (float) contract:
+      >= 1.0  strong boundary — always split the scene here
+      0 ~ 1   weak boundary — only a candidate when splitting a scene over MAX_SCENE_SEC
+      <= 0.0  not a boundary
 
-    ── 설계 노트 ────────────────────────────────────────────
-    쓸 수 있는 신호는 둘:
-      1) 무음 길이 — 길게 쉴수록 "다음 얘기로 넘어간" 신호.
-         (0.6s 안팎은 문장 사이 숨, 1.5s 이상은 화제 전환에 가깝다)
-      2) 무음 중심 근처(예: ±1.5s)에 화면 전환이 있는가 —
-         말을 멈추고 화면을 넘겼다면 거의 확실한 씬 경계.
-    트레이드오프:
-      - 무음 길이만 후하게 치면 숨 고르기마다 씬이 쪼개진다 (씬 과다).
-      - 화면 전환을 필수 조건으로 걸면 같은 화면에서 화제만 바뀐
-        경우(말로만 단락 전환)를 놓친다.
+    ── Design note ──────────────────────────────────────────
+    There are two usable signals:
+      1) Silence length — the longer the pause, the more it signals "moved on to
+         the next thing". (Around 0.6s is a breath between sentences, 1.5s and up
+         is closer to a subject change.)
+      2) Whether a screen change sits near the middle of the silence (say ±1.5s) —
+         if they stopped talking and flipped the screen, it's almost certainly a
+         scene boundary.
+    Trade-offs:
+      - Score silence length generously and every breath splits a scene (too many scenes).
+      - Require a screen change and you miss the case where the subject changed on
+         the same screen (a paragraph break carried by speech alone).
 
-    채택한 정책: 길이 기여분 + 화면 전환 가산점.
-      - 1.5s 이상 쉬면 그것만으로 강한 경계 (말로만 단락 전환도 잡는다)
-      - 0.9s 쉼 + 근처 화면 전환 = 강한 경계 (0.4 + 0.6 = 1.0)
-      - 화면 전환 없는 짧은 쉼은 약한 경계로만 남는다 (숨 고르기)
+    The policy we picked: a length contribution plus a screen-change bonus.
+      - A pause of 1.5s or more is a strong boundary on its own (catches speech-only breaks)
+      - A 0.9s pause + a nearby screen change = strong boundary (0.4 + 0.6 = 1.0)
+      - A short pause with no screen change only ever reaches weak (catching a breath)
     """
     dur = silence["end"] - silence["start"]
     center = (silence["start"] + silence["end"]) / 2
-    score = (dur - 0.5) / 1.0  # 0.6s≈0.1 … 1.5s=1.0 — 길이 단독으로도 강한 경계 가능
+    score = (dur - 0.5) / 1.0  # 0.6s≈0.1 … 1.5s=1.0 — length alone can reach strong
     if any(abs(t - center) <= 1.5 for t in scene_times):
-        score += 0.6           # 말을 멈추고 화면을 넘겼다 — 거의 확실한 화제 전환
+        score += 0.6           # stopped talking and flipped the screen — almost certainly a subject change
     return score
 
 
 # ──────────────────────────────────────────────────────────────
-# 입력 로드
+# Load input
 # ──────────────────────────────────────────────────────────────
 
 def load_transcript(path):
@@ -105,7 +108,7 @@ def load_scalar_list(path):
 
 
 # ──────────────────────────────────────────────────────────────
-# whisper 환각 필터 — 무음 위 전사·반복 루프 제거
+# whisper hallucination filter — drop transcription over silence and repeat loops
 # ──────────────────────────────────────────────────────────────
 
 def filter_hallucinations(segs, silences):
@@ -118,10 +121,10 @@ def filter_hallucinations(segs, silences):
             covered += max(0.0, hi - lo)
         return covered / dur
 
-    # 1) 세그먼트의 70% 이상이 검출 무음 위에 있으면 환각으로 간주
+    # 1) if 70% or more of a segment sits over detected silence, treat it as a hallucination
     kept = [s for s in segs if silence_overlap_ratio(s) < 0.7]
 
-    # 2) 같은 문장이 3회 이상 연속되면 반복 루프 — 첫 회만 유지
+    # 2) the same sentence 3 times in a row is a repeat loop — keep only the first
     out, run = [], 0
     for i, s in enumerate(kept):
         norm = s["text"].replace(" ", "")
@@ -131,36 +134,36 @@ def filter_hallucinations(segs, silences):
             out.append(s)
     dropped = len(segs) - len(out)
     if dropped:
-        print(f"  환각 필터: {dropped}개 세그먼트 제거")
+        print(f"  hallucination filter: dropped {dropped} segments")
     return out
 
 
 # ──────────────────────────────────────────────────────────────
-# 경계 산출 + 씬 조립
+# Boundary derivation + scene assembly
 # ──────────────────────────────────────────────────────────────
 
 def assign_gap_scores(segs, silences, scene_times):
-    """문장 사이 간극(gap)마다 경계 점수를 배정한다. gap i = seg[i]와 seg[i+1] 사이."""
+    """Assign a boundary score to each gap between sentences. gap i = between seg[i] and seg[i+1]."""
     gap_scores = {}
     for sil in silences:
         score = score_boundary(sil, scene_times)
         if score <= 0:
             continue
         center = (sil["start"] + sil["end"]) / 2
-        # 무음 중심이 속한(또는 가장 가까운) 문장 간극에 스냅
+        # snap to the sentence gap the silence center falls in (or the nearest one)
         best_i, best_d = None, None
         for i in range(len(segs) - 1):
             lo, hi = segs[i]["end"], segs[i + 1]["start"]
             d = 0.0 if lo <= center <= hi else min(abs(center - lo), abs(center - hi))
             if best_d is None or d < best_d:
                 best_i, best_d = i, d
-        if best_i is not None and best_d <= 1.0:  # 간극에서 1초 이상 먼 무음은 무시
+        if best_i is not None and best_d <= 1.0:  # ignore silences more than a second from a gap
             gap_scores[best_i] = max(gap_scores.get(best_i, 0.0), score)
     return gap_scores
 
 
 def assemble_scenes(segs, gap_scores, min_sec, max_sec):
-    # 1) 강한 경계에서 분할
+    # 1) split at strong boundaries
     groups, cur = [], [segs[0]]
     for i in range(len(segs) - 1):
         if gap_scores.get(i, 0.0) >= 1.0:
@@ -173,9 +176,9 @@ def assemble_scenes(segs, gap_scores, min_sec, max_sec):
         return g[-1]["end"] - g[0]["start"]
 
     def gap_index(seg):
-        return segs.index(seg)  # 전역 gap 번호 = 앞 문장의 전역 인덱스
+        return segs.index(seg)  # global gap number = global index of the preceding sentence
 
-    # 2) MAX 초과 씬 → 내부 최고점 약한 경계에서 재분할 (없으면 최장 간극)
+    # 2) scenes over MAX → re-split at the highest-scoring weak boundary inside (or the longest gap)
     changed = True
     while changed:
         changed = False
@@ -187,13 +190,13 @@ def assemble_scenes(segs, gap_scores, min_sec, max_sec):
             scored = [w for w in weak if w[0] > 0]
             if scored:
                 _, j = max(scored)
-            else:  # 점수 있는 간극이 없으면 시간 간극이 가장 넓은 곳
+            else:  # with no scored gap, take the widest gap in time
                 j = max(cand, key=lambda k: g[k + 1]["start"] - g[k]["end"])
             groups[gi:gi + 1] = [g[:j + 1], g[j + 1:]]
             changed = True
             break
 
-    # 3) MIN 미만 씬 → 더 짧은 이웃과 병합
+    # 3) scenes under MIN → merge into the shorter neighbor
     changed = True
     while changed and len(groups) > 1:
         changed = False
@@ -210,7 +213,7 @@ def assemble_scenes(segs, gap_scores, min_sec, max_sec):
 
 
 # ──────────────────────────────────────────────────────────────
-# 출력
+# Output
 # ──────────────────────────────────────────────────────────────
 
 def fmt_ts(t):
@@ -227,7 +230,7 @@ def extract_keyframe(src, t, out_path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("outdir")
-    ap.add_argument("--src", help="키프레임 추출용 원본 녹화 경로")
+    ap.add_argument("--src", help="path to the source recording, for keyframe extraction")
     ap.add_argument("--min-scene", type=float, default=8.0)
     ap.add_argument("--max-scene", type=float, default=45.0)
     args = ap.parse_args()
@@ -236,7 +239,7 @@ def main():
     raw = out / "raw"
     segs = load_transcript(raw / "transcript.json")
     if not segs:
-        sys.exit("ERROR: 전사 결과가 비어 있음 — raw/whisper.log 확인")
+        sys.exit("ERROR: transcript is empty — check raw/whisper.log")
     silences = load_tsv_pairs(raw / "silences.tsv")
     scene_times = load_scalar_list(raw / "scenes.tsv")
     duration = float((raw / "duration.txt").read_text().strip())
@@ -269,18 +272,18 @@ def main():
         "scenes": scenes,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # 사람용 timeline.md
+    # human-readable timeline.md
     today = datetime.date.today().isoformat()
-    lines = ["---", f"source: {args.src or '(미지정)'}",
+    lines = ["---", f"source: {args.src or '(unspecified)'}",
              f"duration: {duration:.1f}s", f"scenes: {len(scenes)}",
              f"generated: {today}", "status: draft", "---", "",
-             "# 타임라인", "",
-             "| # | 구간 | 길이 | 발화 | 화면 |", "|---|---|---|---|---|"]
+             "# Timeline", "",
+             "| # | Range | Length | Speech | Screen |", "|---|---|---|---|---|"]
     for sc in scenes:
         summary = sc["text"][:60] + ("…" if len(sc["text"]) > 60 else "")
         lines.append(f"| {sc['idx']} | {fmt_ts(sc['start'])}–{fmt_ts(sc['end'])} "
-                     f"| {sc['duration']:.0f}s | {summary} | _(vision_analyze로 기입)_ |")
-    lines += ["", "## 세그먼트 상세", ""]
+                     f"| {sc['duration']:.0f}s | {summary} | _(filled in by vision_analyze)_ |")
+    lines += ["", "## Segment detail", ""]
     for sc in scenes:
         lines.append(f"### {sc['idx']}. {fmt_ts(sc['start'])}–{fmt_ts(sc['end'])} ({sc['duration']:.0f}s)")
         if sc["keyframe"]:
@@ -288,10 +291,10 @@ def main():
         lines.append("")
         for s in sc["sentences"]:
             lines.append(f"- `[{fmt_ts(s['start'])}]` {s['text']}")
-        lines += ["", "**화면 설명**: _(vision_analyze로 기입)_", ""]
+        lines += ["", "**Screen description**: _(filled in by vision_analyze)_", ""]
     (out / "timeline.md").write_text("\n".join(lines), encoding="utf-8")
 
-    print(f"타임라인 산출 완료: 씬 {len(scenes)}개 / {duration:.0f}s → {out}/timeline.md")
+    print(f"timeline done: {len(scenes)} scenes / {duration:.0f}s → {out}/timeline.md")
 
 
 if __name__ == "__main__":

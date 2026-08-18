@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Short-form from a screen recording — /social-flow:ingest guide</title>
+<link rel="alternate" hreflang="ko" href="index.html">
+<link rel="alternate" hreflang="en" href="index.en.html">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  /* ── Language toggle ── */
+  .langbar { display: flex; justify-content: flex-end; padding-top: 18px; }
+  .langbar a {
+    font-size: 13px; color: var(--text-soft); text-decoration: none;
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+  }
+  .langbar a:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ── Header ── */
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  /* ── TOC ── */
+  nav.toc {
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 56px; font-size: 15px;
+  }
+  nav.toc .toc-title { font-size: 13px; font-weight: 700; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 10px; }
+  nav.toc ol { list-style: none; counter-reset: toc; }
+  nav.toc li { counter-increment: toc; padding: 3px 0; }
+  nav.toc a { color: var(--text); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc li::before { content: counter(toc) ". "; color: var(--accent); font-weight: 700; margin-right: 4px; }
+
+  /* ── Sections ── */
+  section { margin-bottom: 64px; }
+  h2 {
+    font-size: 24px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+  }
+  h2 .num { color: var(--accent); margin-right: 8px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
+  p { margin-bottom: 14px; }
+  p.lead { font-size: 16.5px; }
+  ul.plain, ol.plain { margin: 0 0 16px 22px; }
+  ul.plain li, ol.plain li { margin-bottom: 8px; }
+  strong { font-weight: 700; }
+  em { font-style: normal; color: var(--accent); font-weight: 600; }
+
+  /* ── Code ── */
+  code {
+    font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: .875em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px;
+  }
+  pre {
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 20px; margin: 14px 0 20px; overflow-x: auto;
+    font-size: 14px; line-height: 1.7;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: inherit; }
+  pre .c { color: var(--text-soft); }
+  pre .k { color: var(--accent); font-weight: 600; }
+
+  /* ── Pipeline flow ── */
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 20px 0 24px; }
+  .flow .step {
+    flex: 1 1 150px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow); position: relative;
+  }
+  .flow .step .tag { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; color: var(--accent); }
+  .flow .step .name { font-weight: 700; font-size: 15px; margin-top: 2px; }
+  .flow .step .desc { font-size: 13px; color: var(--text-soft); margin-top: 4px; line-height: 1.55; }
+  .flow .step.you { border-color: var(--green); }
+  .flow .step.you .tag { color: var(--green); }
+  .flow .arrow { align-self: center; color: var(--text-soft); font-size: 18px; flex: 0 0 auto; }
+
+  /* ── Step cards ── */
+  .stepcard {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: 10px; background: var(--bg-card); box-shadow: var(--shadow);
+    padding: 20px 24px; margin: 20px 0;
+  }
+  .stepcard .who {
+    display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .05em;
+    padding: 2px 10px; border-radius: 999px; margin-bottom: 8px;
+  }
+  .who.user { color: var(--green); background: var(--green-soft); }
+  .who.claude { color: var(--purple); background: var(--purple-soft); }
+  .stepcard h4 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .stepcard p:last-child, .stepcard pre:last-child, .stepcard ul:last-child { margin-bottom: 0; }
+
+  /* ── Callouts ── */
+  .callout { border-radius: 10px; padding: 14px 18px; margin: 16px 0 20px; font-size: 15px; border: 1px solid; }
+  .callout .ct { font-weight: 700; font-size: 13px; letter-spacing: .05em; display: block; margin-bottom: 4px; }
+  .callout.tip  { background: var(--green-soft); border-color: var(--green); }
+  .callout.tip .ct { color: var(--green); }
+  .callout.warn { background: var(--amber-soft); border-color: var(--amber); }
+  .callout.warn .ct { color: var(--amber); }
+  .callout.danger { background: var(--red-soft); border-color: var(--red); }
+  .callout.danger .ct { color: var(--red); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ── Tables ── */
+  .tblwrap { overflow-x: auto; margin: 14px 0 20px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { border: 1px solid var(--border); padding: 9px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+  td code { white-space: nowrap; }
+
+  /* ── File tree ── */
+  pre.tree { line-height: 1.6; }
+
+  /* ── Summary card ── */
+  .summary {
+    background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px;
+    padding: 24px 28px; font-size: 16.5px;
+  }
+  .summary .ct { font-weight: 800; color: var(--accent); letter-spacing: .04em; font-size: 13px; display: block; margin-bottom: 8px; }
+
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--text-soft); }
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 26px; }
+    .flow { flex-direction: column; }
+    .flow .arrow { transform: rotate(90deg); align-self: flex-start; margin-left: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="langbar"><a href="index.html" hreflang="ko">한국어</a></div>
+
+<header class="hero">
+  <span class="kicker">USER GUIDE</span>
+  <h1>Short-form from a screen recording<br>— the <code>/social-flow:ingest</code> guide</h1>
+  <p class="sub">One recording of you working a screen and talking through it, all the way to
+  timeline → storyboard → 9:16 video → published. Your part is <strong>demonstrating out loud
+  and checking and approving the intermediate results</strong>, and nothing else.</p>
+  <div class="meta">
+    <span><strong>Plugin</strong> social-flow</span>
+    <span><strong>Skills</strong> ingest → storyboard → produce → publish</span>
+    <span><strong>Written</strong> 2026-07-29</span>
+    <span><strong>Platform</strong> macOS (screencapture · whisper.cpp)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <span class="toc-title">CONTENTS</span>
+  <ol>
+    <li><a href="#overview">The whole picture — what connects to what</a></li>
+    <li><a href="#setup">Setup (once)</a></li>
+    <li><a href="#record">Recording while you talk</a></li>
+    <li><a href="#auto">Automatic processing — recording to timeline</a></li>
+    <li><a href="#content">Turning it into content — storyboard through publishing</a></li>
+    <li><a href="#script-first">The script-first flow — storyboard, then filming</a></li>
+    <li><a href="#trouble">Troubleshooting and tuning knobs</a></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════════ 1. The whole picture ═══════════════════ -->
+<section id="overview">
+  <h2><span class="num">1.</span>The whole picture — what connects to what</h2>
+  <p class="lead">The core idea: <em>the recording, not web research, is the primary source</em>.
+  What you said while showing the screen becomes a <code>timeline.md</code> with per-sentence
+  timestamps, and the storyboard skill designs scenes out of that material.</p>
+
+  <div class="flow">
+    <div class="step you">
+      <span class="tag">YOU</span>
+      <div class="name">Record + talk</div>
+      <div class="desc">demonstrate on screen with voice-over, then say "recording done"</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <span class="tag">AUTO</span>
+      <div class="name">Timeline</div>
+      <div class="desc">STT transcript · scene split · keyframes · screen descriptions · corrections</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">YOU</span>
+      <div class="name">Check · approve</div>
+      <div class="desc">review the timeline → approve the storyboard</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <span class="tag">AUTO</span>
+      <div class="name">Video build</div>
+      <div class="desc">9:16 short-form + per-platform text</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">YOU</span>
+      <div class="name">Publish approval</div>
+      <div class="desc">Threads · IG · FB · YouTube</div>
+    </div>
+  </div>
+
+  <p>Green borders are your turn; Claude runs the rest. There are two approval gates —
+  <strong>storyboard approval</strong> (before production) and
+  <strong>publish approval</strong> (before anything goes public).</p>
+</section>
+
+<!-- ═══════════════════ 2. Setup ═══════════════════ -->
+<section id="setup">
+  <h2><span class="num">2.</span>Setup (once)</h2>
+
+  <h3>2-1. Load the plugin</h3>
+  <p>Start from a Claude Code session with this repo loaded as a plugin:</p>
+  <pre><code>claude --plugin-dir /path/to/social-flow</code></pre>
+
+  <h3>2-2. Check the prerequisites</h3>
+  <div class="tblwrap">
+  <table>
+    <tr><th>Item</th><th>How to check</th><th>If it's missing</th></tr>
+    <tr>
+      <td>whisper.cpp</td>
+      <td><code>command -v whisper-cli</code></td>
+      <td><code>brew install whisper-cpp</code></td>
+    </tr>
+    <tr>
+      <td>STT model (1.5GB)</td>
+      <td><code>ls ~/.cache/whisper-cpp/ggml-large-v3-turbo.bin</code></td>
+      <td>download it from <code>ggerganov/whisper.cpp</code> on huggingface</td>
+    </tr>
+    <tr>
+      <td>Screen Recording · Microphone permission</td>
+      <td>checked automatically on the first recording attempt</td>
+      <td>System Settings → Privacy &amp; Security → Screen Recording / Microphone, allow your terminal app</td>
+    </tr>
+    <tr>
+      <td>ffmpeg · python3</td>
+      <td><code>command -v ffmpeg python3</code></td>
+      <td><code>brew install ffmpeg</code></td>
+    </tr>
+  </table>
+  </div>
+  <div class="callout tip">
+    <span class="ct">✓ INSTALL ONCE, DONE</span>
+    <p>whisper.cpp and the model are installed once, and the Screen Recording and Microphone
+    permissions are granted once. After that you go straight to section 3.</p>
+  </div>
+
+  <h3>2-3. Create a channel</h3>
+  <p>Content accumulates as <code>data/[channel]/episodes/[topic]/</code>. If you don't have a
+  channel yet, make the profile first (channel tone, domain vocabulary, and visual theme are
+  recorded there):</p>
+  <pre><code>/social-flow:channel add "Money Talk"</code></pre>
+  <p>The channel name is converted into an English slug used as the directory name — the
+  <code>money</code> in the examples below is that slug. <strong>From here on, the channel you
+  type in commands is the slug, not the original name.</strong></p>
+</section>
+
+<!-- ═══════════════════ 3. Recording ═══════════════════ -->
+<section id="record">
+  <h2><span class="num">3.</span>Recording while you talk</h2>
+
+  <div class="stepcard">
+    <span class="who user">YOU</span>
+    <h4>Start recording</h4>
+    <pre><code>/social-flow:ingest money record</code></pre>
+    <p>Claude starts a screen + microphone recording with <code>screencapture</code> and tells you
+    to go ahead and demonstrate while talking.</p>
+  </div>
+
+  <div class="stepcard">
+    <span class="who user">YOU</span>
+    <h4>Demonstrate out loud</h4>
+    <ul class="plain">
+      <li><strong>Explain into the microphone</strong> while you work the screen — what you show
+        and what you say is the raw material.</li>
+      <li><strong>When you change subject, pause for a second or more and then switch the
+        screen</strong> — this one habit decides how accurate the scene boundaries are. A long
+        pause overlapping a screen change is what gets read as a boundary.</li>
+      <li>When you're done, type <strong>"recording done"</strong> in the chat.</li>
+    </ul>
+  </div>
+
+  <div class="callout tip">
+    <span class="ct">🖥 ONLY THE MAIN DISPLAY IS RECORDED</span>
+    <p>The recording captures <strong>only the display set as main</strong> in System Settings.
+    With two or more monitors, demonstrate on the main one and use the secondary freely for
+    script notes or progress — it won't be in the recording.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="ct">⚠ BEFORE YOU HIT RECORD</span>
+    <p>Turn on <strong>Do Not Disturb</strong> — notification banners on the main screen are
+    captured too. Avoid screens showing <strong>anything sensitive</strong>: emails, account
+    names, tokens, amounts. (If they do get recorded, the review step catches and reports them,
+    but not recording them in the first place is better.)</p>
+  </div>
+
+  <h3>If you already have a recording</h3>
+  <p>Give a file path instead of <code>record</code>. Leave the topic slug out and you'll be
+  offered one based on the transcript:</p>
+  <pre><code>/social-flow:ingest money ~/Movies/demo.mov fx-app-intro</code></pre>
+</section>
+
+<!-- ═══════════════════ 4. Automatic processing ═══════════════════ -->
+<section id="auto">
+  <h2><span class="num">4.</span>Automatic processing — recording to timeline</h2>
+  <p class="lead">After "recording done", Claude works through the steps in order. The only
+  place you step in is the final check.</p>
+
+  <div class="flow">
+    <div class="step">
+      <span class="tag">STT</span>
+      <div class="name">① Transcribe</div>
+      <div class="desc">whisper.cpp + a domain glossary injected (heads off misheard terms)</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <span class="tag">SIGNAL MERGE</span>
+      <div class="name">② Scene split</div>
+      <div class="desc">boundaries computed from silence length + screen changes</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <span class="tag">VISION</span>
+      <div class="name">③ Screen analysis</div>
+      <div class="desc">keyframe per scene → screen description · transcript correction · sensitive-data review</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">YOU</span>
+      <div class="name">④ Check</div>
+      <div class="desc">review scene count and summaries → pick the next step</div>
+    </div>
+  </div>
+
+  <h3>What comes out</h3>
+  <pre class="tree"><code>data/money/episodes/&lt;topic&gt;/recording/
+├── raw/                 <span class="c"># raw STT · silence · screen-change signals (whisper output kept verbatim)</span>
+├── timeline.json        <span class="c"># machine-readable scene timeline</span>
+├── timeline.md          <span class="c"># ★ for humans — scene table + per-sentence timestamps + screen descriptions + correction log</span>
+└── keyframes/seg-N.jpg  <span class="c"># representative frame per scene</span></code></pre>
+
+  <h3>Your three jobs</h3>
+  <ol class="plain">
+    <li><strong>Check the timeline</strong> — when the scene count and per-scene summaries come
+      up, skim them and choose [go to storyboard / adjust boundaries / stop here].</li>
+    <li><strong>Report mishearings</strong> — if the transcript is off, just say
+      <em>"it heard ○○ as △△"</em>. The glossary gets reinforced and it re-transcribes, or the
+      text is corrected against screen OCR. Corrections are written as
+      <code>original(→corrected)</code> plus a correction log, so they stay auditable.</li>
+    <li><strong>Decide on sensitive data</strong> — scenes with personal information on screen
+      are reported as a list. All you decide is whether those frames can be used in the video.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="ct">✓ HOW LONG IT TAKES</span>
+    <p>large-v3-turbo transcribes at roughly 3–5× realtime on Apple Silicon — a 10-minute
+    recording is 2–3 minutes of STT. The whole pipeline usually finishes inside half the
+    recording's length.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 5. Turning it into content ═══════════════════ -->
+<section id="content">
+  <h2><span class="num">5.</span>Turning it into content — storyboard through publishing</h2>
+
+  <pre><code><span class="k">/social-flow:storyboard</span> money &lt;topic&gt;   <span class="c"># scene design with the timeline as the primary source → [approval]</span>
+<span class="k">/social-flow:produce</span> money &lt;topic&gt;      <span class="c"># 9:16 video + per-platform text</span>
+<span class="k">/social-flow:publish</span> money &lt;topic&gt;      <span class="c"># [approval] → Threads · IG · FB · YouTube</span></code></pre>
+
+  <p>When <code>recording/timeline.md</code> exists, storyboard uses it as material instead of
+  doing web research. Each step checks the previous step's output — produce stops on an
+  unapproved storyboard, publish stops on unfinished production, and each points you back to
+  the step that's missing.</p>
+
+  <div class="callout danger">
+    <span class="ct">✗ WHAT YOU SAID ON THE RECORDING IS NOT A SOURCE</span>
+    <p>Numbers you said while recording — prices, tax rates, deadlines, anything time-sensitive —
+    are <strong>claims, not sources</strong>. They go through the same two-independent-source
+    cross-check at the storyboard step. Fillers and slips of the tongue in the spoken transcript
+    aren't copied into the narration either; the sentences get rebuilt.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 6. The script-first flow ═══════════════════ -->
+<section id="script-first">
+  <h2><span class="num">6.</span>The script-first flow — storyboard, then filming</h2>
+
+  <p class="lead">This mode <em>flips</em> the flow of sections 3–5 (improvised recording →
+  timeline → storyboard). <strong>The storyboard and shooting script are settled first</strong>,
+  you record against the script, and Claude cuts the raw recording into the final
+  <strong>edit</strong>. Because what you'll say is designed up front, the quality is even, and
+  the picture and the voice are a real demonstration in your own voice rather than generated.</p>
+
+  <div class="flow">
+    <div class="step">
+      <span class="tag">AUTO</span>
+      <div class="name">Script design</div>
+      <div class="desc">research · scene design · shooting script (script.md)</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">YOU</span>
+      <div class="name">Approve + film</div>
+      <div class="desc">script on the secondary display, demo on the main one</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <span class="tag">AUTO</span>
+      <div class="name">Align + edit</div>
+      <div class="desc">transcript → scene alignment → cuts · zoom · subtitles · BGM</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">YOU</span>
+      <div class="name">Publish approval</div>
+      <div class="desc">along with the per-platform text</div>
+    </div>
+  </div>
+
+  <pre><code><span class="k">/social-flow:storyboard</span> money &lt;topic&gt; as a shooting script   <span class="c"># scene design + script.md → [approval]</span>
+<span class="k">/social-flow:ingest</span> money record &lt;topic&gt;                    <span class="c"># film against the script → transcript · alignment</span>
+<span class="k">/social-flow:produce</span> money &lt;topic&gt;                          <span class="c"># cut the recording into a 9:16 edit + platform text</span>
+<span class="k">/social-flow:publish</span> money &lt;topic&gt;                          <span class="c"># [approval] → publish</span></code></pre>
+
+  <div class="stepcard">
+    <span class="who user">YOU</span>
+    <h4>Filming rules (also printed at the top of script.md)</h4>
+    <ul class="plain">
+      <li><strong>Put the script on the secondary display</strong> — only the main display is recorded.</li>
+      <li>At the end of a scene, <strong>stop talking for a second, then switch the screen</strong> — that point becomes the edit cut.</li>
+      <li><strong>Enlarge the fonts and windows of whatever you're demoing</strong> (⌘+ in a browser) — it all gets scaled down to a 1080px-wide portrait video, so small text disappears. If the focus is one part of the screen, the edit crops in on that area.</li>
+      <li>If you fumble, don't stop the recording — <strong>start that scene over from the top</strong>. The edit uses the last take.</li>
+      <li>No need to recite the sentences — just <strong>keep the key numbers and proper nouns word for word</strong>.</li>
+    </ul>
+  </div>
+
+  <p>The edited video is a dark canvas with <strong>the scene title (top) + a band of your
+  recording (middle) + subtitles (bottom)</strong>. The subtitles come from the
+  <em>corrected transcript of what you actually said</em>, not from the script, and the BGM
+  automatically drops its volume under your voice (ducking). Improvised lines that aren't in the
+  script, missing scenes, and numbers that don't match get reported as a table before the edit,
+  for you to decide on.</p>
+
+  <div class="callout tip">
+    <span class="ct">💡 WHICH FLOW TO USE</span>
+    <p>To get something already clear in your head out fast, use <strong>improvised recording</strong>
+    (sections 3–5) — the recording becomes the storyboard's material. For a polished tutorial or
+    demo, use <strong>script-first filming</strong> (this section) — the storyboard becomes the
+    plan for the recording.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="ct">📼 TWO FILMING LANES</span>
+    <p><strong>Short-form full shoot (9:16)</strong> is the flow above — you film it in one pass,
+    ingest builds the alignment (<code>alignment.json</code>), and the edit places cuts in the
+    silences. <strong>YouTube long-form (16:9)</strong> mixes filmed scenes with generated ones in
+    one episode, so you <strong>film each scene separately</strong> and save it under the filename
+    the script assigns — there's no alignment step, because the filename is what pairs a clip with
+    its scene. Which lane you're in is decided along with the format while writing the storyboard,
+    and the files to shoot are listed in the "What to film today" table at the top of
+    <code>script.md</code>.</p>
+  </div>
+
+  <p>For the details (all the filming rules, alignment drift reports, the edit's screen layout,
+  troubleshooting), see the dedicated guide,
+  <a href="../screencast-usage/index.en.html">Short-form from a shooting script</a>.</p>
+</section>
+
+<!-- ═══════════════════ 7. Troubleshooting ═══════════════════ -->
+<section id="trouble">
+  <h2><span class="num">7.</span>Troubleshooting and tuning knobs</h2>
+
+  <div class="tblwrap">
+  <table>
+    <tr><th>Symptom</th><th>What to do</th></tr>
+    <tr>
+      <td>Recording won't start</td>
+      <td>System Settings → Privacy &amp; Security → allow your terminal app under
+      <strong>Screen Recording</strong> and <strong>Microphone</strong>, then retry.</td>
+    </tr>
+    <tr>
+      <td>Proper nouns or jargon misheard</td>
+      <td>Say "it heard ○○ as △△". If it's widespread, reinforce the <code>WHISPER_PROMPT</code>
+      glossary and re-transcribe (cheapest); if it's a handful, correct them against screen OCR.</td>
+    </tr>
+    <tr>
+      <td>Sentences you never said</td>
+      <td>whisper hallucination — it invents sentences over silent stretches. The automatic filter
+      removes most of them; point out any that survive.</td>
+    </tr>
+    <tr>
+      <td>Too many / too few scenes</td>
+      <td>Ask for a boundary recompute — the <code>--min-scene</code> (default 8s) and
+      <code>--max-scene</code> (default 45s) knobs (fast, since it reuses the raw signals).</td>
+    </tr>
+    <tr>
+      <td>Scrolling read as a screen change</td>
+      <td>Raise <code>SCENE_THRESH</code> from 0.04 to 0.15 and rerun. False positives during
+      speech are harmless anyway — they don't count toward the boundary score.</td>
+    </tr>
+    <tr>
+      <td>Pauses not detected in a quiet room</td>
+      <td>Lower <code>SIL_DB</code> from -35dB to -40dB and rerun.</td>
+    </tr>
+  </table>
+  </div>
+
+  <p>What each knob means and where its default comes from is in
+  <code>skills/ingest/references/timeline-schema.md</code>.
+  All of these adjustments happen if you just describe the symptom to Claude — you don't have to
+  memorize the knob names.</p>
+
+  <div class="summary">
+    <span class="ct">IN ONE LINE</span>
+    <code>/social-flow:channel add</code> once →
+    <code>/social-flow:ingest &lt;channel&gt; record</code> →
+    <strong>demonstrate out loud</strong> → "recording done" →
+    <strong>check the results</strong> and it carries on to storyboard, video, and publishing.
+  </div>
+</section>
+
+<footer>
+  social-flow plugin docs · <code>docs/guides/ingest-usage/</code> ·
+  related: <code>skills/ingest/SKILL.md</code> (procedure) ·
+  <code>skills/ingest/references/timeline-schema.md</code> (data contract) ·
+  <code>README.md</code> (the whole pipeline)
+</footer>
+
+</div>
+</body>
+</html>

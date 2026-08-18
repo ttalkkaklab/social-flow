@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>툴 품질 감사 리포트 — social-flow</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="tool-audit.en.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="tool-audit.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>툴 품질 감사</div>
+
+<header class="hero">
+  <div class="kicker">AUDIT · 2026-07-29</div>
+  <h1>툴 품질 감사 리포트</h1>
+  <p class="sub">31개 툴을 각 API의 공식 문서 계약, MCP 2025-06-18 스펙, 그리고 툴 작성 베스트 프랙티스로 채점하고 결함을 수정한 기록. 루브릭은 <a href="mcp-tools.html#rubric">MCP 툴 스펙 §6</a>이 정본이다.</p>
+  <div class="meta">
+    <span>대상 <strong>31개 툴 · 5,700줄</strong> (현재 46종 중)</span>
+    <span>검증 <strong>계약 테스트 239개</strong> (현재 573개)</span>
+    <span>수정 <strong>P0 2건 · P1 11건 · P2 9건</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#score">점수</a></li>
+    <li><a href="#p0">P0 — 조용히 틀리던 것</a></li>
+    <li><a href="#p1">P1 — 수정한 결함</a></li>
+    <li><a href="#p2">P2 — 정확도·안내 개선</a></li>
+    <li><a href="#verify">검증 방법</a></li>
+    <li><a href="#open">남긴 것과 그 이유</a></li>
+    <li><a href="#second-pass">2차 감사 (같은 날, v0.4.1)</a></li>
+    <li><a href="#since">감사 뒤에 늘어난 툴 (미감사)</a></li>
+  </ol>
+</nav>
+
+<section id="score">
+  <h2>1. 점수</h2>
+  <div class="score"><span class="num">96</span><span class="of">/ 100</span></div>
+  <div class="bar"><i style="width:96%"></i></div>
+  <p style="color:var(--text-soft);font-size:14.5px">감사 전 추정 <strong>74점</strong> → 수정 후 <strong>96점</strong>. P0는 해당 축을 0으로 내리고, P1은 항목당 감점한다.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>축</th><th>배점</th><th>점수</th><th>감점 사유</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>A. API 계약 정합성</strong></td><td>30</td><td><strong>29</strong></td>
+        <td>Meta Graph를 v23.0에 고정 유지 — 의도된 선택이지만 만료(2027) 추적을 사람이 해야 한다</td>
+      </tr>
+      <tr>
+        <td><strong>B. MCP 프로토콜 준수</strong></td><td>20</td><td><strong>19</strong></td>
+        <td><code>serp_*</code>·<code>datago_*</code>는 JSON 텍스트를 반환하면서 <code>outputSchema</code>를 선언하지 않는다 (§5 참조)</td>
+      </tr>
+      <tr>
+        <td><strong>C. 툴 설계 베스트 프랙티스</strong></td><td>25</td><td><strong>24</strong></td>
+        <td>설명 형식이 두 계열이다 — 생성 툴은 <em>Use / Do NOT / Returns</em> 3부 구조, SNS·조사 툴은 자유 산문</td>
+      </tr>
+      <tr>
+        <td><strong>D. 구현 정확성·안전성</strong></td><td>15</td><td><strong>15</strong></td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><strong>E. 검증 가능성</strong></td><td>10</td><td><strong>9</strong></td>
+        <td>정적 계약 테스트는 있으나 모델을 실제로 돌리는 행동 평가가 없다 (§5)</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="p0">
+  <h2>2. P0 — 조용히 틀리던 것</h2>
+  <p>에러도 예외도 내지 않으면서 결과를 무의미하게 만들던 두 가지. 툴 감사의 가치는 대부분 여기에 있다 — 실패하는 툴은 로그에 남지만, <strong>그럴듯한 빈 결과를 반환하는 툴</strong>은 아무도 눈치채지 못한다.</p>
+
+  <h3>P0-1 · <code>serp_naver_search</code>의 기본 경로가 항상 빈 결과였다</h3>
+  <div class="danger">
+    이 툴의 기본값은 <code>where='web'</code>이다. 코드는 응답에서 <code>web_results</code>와 <code>news_results</code>만 읽었는데, SerpApi가 <code>where=web</code>에 실제로 반환하는 키는 <strong><code>organic_results</code></strong>다. 그래서 <strong>기본 경로로 호출한 모든 검색이 "(검색 결과 없음)"을 반환</strong>했다.
+    <p>그 응답은 <em>진짜로 결과가 없는 경우</em>와 글자 하나 다르지 않아, 모델은 검색이 고장 났다고 판단할 근거가 없었다. 툴 설명이 지시한 대로 "검색어를 바꿔 1회 재시도"한 뒤 주장을 본문에서 빼는 것이 합리적 행동이 된다 — 즉 <strong>있는 근거를 못 찾고 콘텐츠가 빈약해지는</strong> 방향으로 조용히 편향됐다.</p>
+  </div>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th><code>where</code></th><th>SerpApi 문서</th><th>실제 응답 키 (실측)</th></tr></thead>
+    <tbody>
+      <tr><td><code>web</code></td><td><code>web_results</code></td><td><strong><code>organic_results</code></strong></td></tr>
+      <tr><td><code>news</code></td><td><code>news_results</code></td><td><code>news_results</code> ✓</td></tr>
+      <tr><td><code>nexearch</code></td><td>여러 배열</td><td><code>web_results</code> · <code>ads_results</code> · <code>inline_images_results</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><strong>수정:</strong> 세 키를 모두 확인한다. 공식 문서만 읽고 구현했다면 이 결함은 그대로 남았다 — 실호출로 응답 키를 직접 확인해야 잡힌다.</p>
+
+  <h3>P0-2 · 즉시 공개 게시 툴을 클라이언트가 구분할 수 없었다</h3>
+  <div class="danger">
+    이 서버에는 게시 전 검토 게이트가 없다. <code>threads_publish</code>를 호출하면 그 순간 공개 게시되고, 게시 API는 비멱등이라 재시도는 중복 게시가 된다. 이 사실은 각 툴의 <code>description</code> 산문에만 적혀 있었다 — <strong>모델은 읽지만 클라이언트의 승인 UI는 읽지 못하는 형태</strong>였다.
+    <p>MCP는 정확히 이 목적의 필드를 정의한다(<code>annotations.destructiveHint</code>). 비워두면 클라이언트는 <code>tts_list_voices</code>(상수 목록 반환)와 <code>youtube_publish</code>(즉시 공개 업로드)를 같은 위험도로 다루게 된다.</p>
+  </div>
+  <p><strong>수정:</strong> 31개 툴 전부에 <code>title</code>과 <code>annotations</code>를 달고, 판정 기준을 <a href="mcp-tools.html#apply">판정표</a>로 고정했다. 계약 테스트가 힌트와 설명의 모순(예: <code>readOnly</code>인데 설명이 "즉시 공개"라고 말함)을 매 빌드 검사한다.</p>
+  <pre><code>// 실제 tools/list 응답
+{ "name": "youtube_publish",  "annotations": { "readOnlyHint": false, "destructiveHint": true,
+                                               "idempotentHint": false, "openWorldHint": true } }
+{ "name": "tts_list_voices",  "annotations": { "readOnlyHint": true,  "openWorldHint": false } }</code></pre>
+</section>
+
+<section id="p1">
+  <h2>3. P1 — 수정한 결함</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>#</th><th>결함</th><th>영향</th><th>수정</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td><strong>에러 접두어 이중 출력</strong> — 클라이언트와 핸들러가 같은 접두어를 붙였다 (이미지 2곳 · 영상 4곳)</td>
+        <td><code>Video generation failed: Video generation failed: …</code></td>
+        <td>클라이언트는 원인 메시지만 담는다 (TTS·음악 클라이언트와 같은 규약)</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td><strong>영상 출력 경로 미검증</strong> — <code>filename</code>에 <code>../</code>나 임의 확장자를 넣어도 통과했다</td>
+        <td><code>outputPath</code> 밖으로 파일을 쓸 수 있었다. 오디오 경로는 이미 막혀 있었으나 영상만 누락</td>
+        <td><code>resolveOutputFile</code>로 통합. 나아가 <strong>zod 스키마 단계</strong>에서 먼저 거부한다 — 저장 시점에만 막으면 1~6분짜리 생성이 끝난 뒤 거부되어 비용이 통째로 날아간다</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td><strong><code>sort_by</code> 값 체계 오류</strong> — SerpApi naver 엔진은 <code>where=news</code>에서 <code>0/1/2</code>를, 그 외에서 <code>r/dd</code>를 쓴다. 코드는 항상 <code>r/dd</code>를 보냈다</td>
+        <td>뉴스 최신순 정렬이 <strong>조용히 무시</strong>됐다 — 에러가 없으므로 오래된 기사를 최신으로 인용하게 된다</td>
+        <td><code>where</code>별로 값을 매핑</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td><strong>YouTube <code>categoryId</code>가 25(News &amp; Politics)로 하드코딩</strong>되고 노출되지도 않았다</td>
+        <td>모든 업로드가 시사·정치로 분류돼 추천·탐색에서 엉뚱한 관심사 집단에 노출된다</td>
+        <td>기본값 <code>22</code>(People &amp; Blogs)로 바꾸고 파라미터로 노출</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td><strong>YouTube 쿼터 설명이 낡았다</strong> — "업로드 쿼터 일 6건"</td>
+        <td>2026년 개편으로 <code>videos.insert</code>는 전용 버킷에서 호출당 1유닛(기본 일 100회)을 쓴다. 낡은 안내는 모델이 필요한 게시를 미루게 만든다</td>
+        <td>설명과 코드 주석을 현행 계약으로 교체</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td><strong>TTS 지원 언어 설명이 사실과 달랐다</strong> — "103개 언어 … 번체 중국어 <code>zh-TW</code>는 미지원"</td>
+        <td>공식 문서의 언어표는 90여 종이며 <strong><code>zh-TW</code>를 포함</strong>한다. 모델이 가능한 작업을 거절하게 만드는 오정보</td>
+        <td>사실대로 교정</td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td><strong>Lyria RealTime이 요청 길이를 지키지 않았다</strong> — 마지막 청크가 목표를 넘겨 도착해 30초 요청에 31초가 나왔다</td>
+        <td>이 툴의 존재 이유가 "길이를 지정할 수 있다"인데 그 계약을 어긴다. 내레이션에 정확히 맞춰야 하는 용도에서 매번 어긋난다</td>
+        <td>샘플 경계(채널 × 2바이트)에 맞춰 목표 길이로 정확히 자른다. 실측: 7초 요청 → 1,344,044바이트 = 44 + 7×48000×2×2 <strong>정확히 일치</strong></td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td><strong>Threads 본문 길이를 과소 계산</strong> — JS <code>.length</code>는 이모지를 2로 세지만 플랫폼은 UTF-8 바이트(대개 4)로 센다</td>
+        <td>검증을 통과한 캡션이 플랫폼에서 거부된다. 게시 시점 실패라 승인 절차를 다시 밟아야 한다</td>
+        <td>BMP 밖 문자만 실제 UTF-8 바이트로 세는 계산으로 교체 (한글·ASCII는 그대로 1). 답글 길이 검증에도 적용</td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td><strong><code>outputSchema</code>·<code>structuredContent</code> 부재</strong></td>
+        <td>게시 응답의 <code>postId</code>·<code>permalink</code>는 후속 호출(링크 답글, 첫 댓글)에 그대로 넘겨야 하는 값인데, 텍스트를 파싱해 꺼내야 했다</td>
+        <td>SNS 툴 9종에 <code>outputSchema</code> 선언 + <code>fromApi</code>가 성공 응답에 <code>structuredContent</code>를 싣는다. 실패 경로에는 싣지 않는다 — 스펙이 스키마 준수를 MUST로 요구하기 때문</td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td><strong>응답에 "HTTP 200" 접두어</strong>가 JSON 본문 앞에 붙었다</td>
+        <td>본문이 유효한 JSON이 아니게 되어 호출자가 바로 파싱하지 못한다</td>
+        <td>성공 시 본문만 반환(상태는 성공으로 이미 함의). 실패 시에는 상태 코드를 유지 — 진단에 필요하다</td>
+      </tr>
+      <tr>
+        <td>11</td>
+        <td><strong>계약 테스트 부재</strong></td>
+        <td>라우팅 누락·enum 불일치·힌트 모순을 잡을 자동 수단이 없었다</td>
+        <td><code>server/test/contract.test.mjs</code> — 239개 검사 (§4)</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="p2">
+  <h2>4. P2 — 정확도·안내 개선</h2>
+  <ul>
+    <li><strong>Instagram 이미지</strong> — "JPEG 권장" → "<strong>JPEG만</strong>"(플랫폼이 PNG·MPO·JPS를 거부). 게시 쿼터(24시간 100건) 명시.</li>
+    <li><strong>Threads 영상</strong> — "영상 불가"가 플랫폼 한계처럼 읽혔다. 플랫폼은 <code>VIDEO</code>·<code>CAROUSEL</code>을 지원하며, 미지원은 <em>이 파이프라인의 전략적 선택</em>임을 명시. 게시 쿼터(24시간 250건) 추가.</li>
+    <li><strong>Google 뉴스 정렬</strong> — 정렬 파라미터 <code>so</code>를 노출하려다 실호출에서 <code>"`q` and `so` parameters can't be used together."</code> 400을 받았다. <code>so</code>는 토큰 탐색 전용이라 검색어와 병용할 수 없다. 노출을 철회하고, 대신 <strong>대안 경로</strong>(<code>serp_web_search</code>의 <code>recency</code>, <code>naver_search</code>의 <code>sort=date</code>)를 설명에 적었다.</li>
+    <li><strong>GPT Image 프롬프트 상한</strong> — 32,000자 제한을 스키마와 설명에 명시.</li>
+    <li><strong>Lyria 3 Clip</strong> — 가사 생성과 구조 태그(<code>[Verse]</code>·<code>[Chorus]</code>·타임스탬프)를 안내하고, 정책 차단 시 "코드 문제가 아니라 프롬프트 문제 — 표현을 바꿔 1회 재시도"를 명시.</li>
+    <li><strong>댓글 인박스 응답 크기</strong> — 상한(25 게시물 × 100 댓글)을 다 채우면 응답이 호출자 컨텍스트를 크게 잠식한다. 60,000자 상한을 두고 <strong>오래된 댓글부터</strong> 버린다(골든타임 댓글이 남아야 한다). 집계는 <strong>자르기 전 값</strong>을 유지한다 — 잘린 목록으로 다시 세면 "미응대 3건"처럼 실제보다 적게 보고되어 남은 응대를 놓친다.</li>
+    <li><strong>Meta Graph 버전 상수화</strong> — 두 곳에 흩어져 있던 <code>v23.0</code>을 상수 하나로. 고정 이유(2027년까지 유효 · 상위 버전의 파괴적 변경 차단)를 주석에 남겼다.</li>
+    <li><strong>버전 3중 불일치</strong> — <code>plugin.json</code> 0.4.0 · <code>server/package.json</code> 0.3.0 · <code>index.ts</code> 0.3.0 → 전부 0.4.0.</li>
+    <li><strong><code>tts_multi_speaker</code> 설명의 이스케이프</strong> — 예시의 <code>\n</code>이 실제 줄바꿈으로 렌더돼 형식을 잘못 보여줬다. 화자 이름이 <code>speakers</code> 배열과 일치해야 한다는 조건도 명시.</li>
+  </ul>
+</section>
+
+<section id="verify">
+  <h2>5. 검증 방법</h2>
+  <h3>정적 계약 테스트 — 239개</h3>
+  <pre><code>cd server && npm run check   # 빌드 + 테스트</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>검사</th><th>잡는 결함</th></tr></thead>
+    <tbody>
+      <tr><td>툴마다 <code>title</code>·<code>description</code>·<code>annotations</code> 존재</td><td>새 툴 추가 시 메타 누락</td></tr>
+      <tr><td><strong>모든 파라미터에 <code>description</code></strong> (중첩 객체·배열 항목까지 재귀)</td><td>모델이 무엇을 넣을지 모르는 인자</td></tr>
+      <tr><td><code>required</code> ⊆ <code>properties</code>, <code>default</code> ∈ <code>enum</code></td><td>호출 불가능한 스키마</td></tr>
+      <tr><td>힌트 조합 모순 (<code>readOnly</code> ⇒ destructive/idempotent 없음, 쓰기 툴은 둘 다 명시)</td><td>기본값에 맡겨 생성 툴이 파괴적으로 오인되는 것</td></tr>
+      <tr><td>정의 ↔ 핸들러 <strong>양방향</strong> 라우팅</td><td>고아 툴 / 고아 핸들러</td></tr>
+      <tr><td><strong>힌트와 설명의 일치</strong> — destructive 툴은 ⚠️와 HITL 문구를, readOnly 툴은 "즉시 공개"를 말하지 않아야 한다</td><td>한쪽만 고쳐 둘 중 하나가 거짓이 되는 것</td></tr>
+      <tr><td>enum이 정본 상수와 동일 (음성 30·모델 3·조성 13·모드 3)</td><td>목록 추가 시 한쪽만 갱신</td></tr>
+      <tr><td>경로 트래버설·확장자 거부, WAV 헤더 필드별 검증</td><td>보안·포맷 회귀</td></tr>
+      <tr><td>Threads 이모지 길이 계산</td><td><code>.length</code>로 되돌아가는 회귀</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>실호출 검증</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>대상</th><th>결과</th></tr></thead>
+    <tbody>
+      <tr><td>stdio MCP 서버 <code>initialize</code> → <code>tools/list</code> → <code>tools/call</code></td><td>29개 노출(FB 토큰 없어 2개 숨김), <code>title</code>/<code>annotations</code> 누락 0, <code>outputSchema</code> 7종</td></tr>
+      <tr><td>Lyria RealTime 7초</td><td>1,344,044바이트 = 44 + 7×48000×2×2 <strong>정확히 일치</strong></td></tr>
+      <tr><td>Lyria RealTime <code>apiVersion</code></td><td><code>v1alpha</code> 정상 / <code>v1beta</code>(공식 문서 값) 무한 대기 → <a href="gemini-lyria.html#realtime-apiversion">v1alpha 유지</a></td></tr>
+      <tr><td><code>serp_naver_search</code> web·news</td><td>둘 다 결과 반환 (수정 전 web은 0건)</td></tr>
+      <tr><td><code>tts_generate</code></td><td>회귀 없음</td></tr>
+      <tr><td><code>sns_account_check</code></td><td><code>structuredContent</code> 반환, <code>outputSchema</code> 준수</td></tr>
+      <tr><td>잘못된 <code>filename</code> 3종</td><td>API 호출 전 거부</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    게시·답글·모더레이션 툴은 <strong>실호출로 검증하지 않았다</strong> — 호출이 곧 공개 게시이기 때문이다. 이들의 검증은 정적 계약 테스트와, 같은 코드 경로를 공유하는 읽기 전용 툴(<code>sns_account_check</code>)의 실호출로 대신했다.
+  </div>
+</section>
+
+<section id="open">
+  <h2>6. 남긴 것과 그 이유</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>행동 평가(behavioral eval) 하네스</strong> — 실제 모델로 다단계 워크플로를 돌려 툴 선택·호출 수·토큰을 측정하는 평가</td>
+        <td>베스트 프랙티스의 7번째 원칙이자 이 감사의 유일한 미달 항목이다. 게시 툴이 실호출로 공개 게시를 만들기 때문에, 안전한 평가에는 <strong>드라이런 계층이 선행</strong>해야 한다. 그 계층을 만드는 것은 이 감사의 범위를 넘는 설계 변경이다.</td>
+      </tr>
+      <tr>
+        <td><code>serp_*</code>·<code>datago_*</code>의 <code>outputSchema</code></td>
+        <td>이들은 JSON 텍스트를 반환하지만 응답 형태가 고정돼 있지 않다 — 특히 <code>datago_*</code>는 포털 HTML 파싱 결과라 필드 구성이 데이터셋마다 다르다. MCP는 <code>outputSchema</code>를 선언하면 준수를 <strong>MUST</strong>로 요구하므로, 지킬 수 없는 계약을 선언하는 것보다 선언하지 않는 편이 정직하다.</td>
+      </tr>
+      <tr>
+        <td>Meta Graph <strong>v23.0 유지</strong> (최신 v25.0)</td>
+        <td>Meta 버전은 릴리스 후 약 2년 유효하므로 v23.0(2025-05)은 2027년까지 살아 있다. 버전 고정은 상위 버전의 파괴적 변경이 게시를 조용히 깨뜨리는 것을 막는 장치다. 대신 상수 한 곳으로 모아 갱신 시점에 한 줄만 고치면 되게 했다.</td>
+      </tr>
+      <tr>
+        <td>Instagram 이미지 URL의 JPEG 검증</td>
+        <td>CDN URL에는 확장자가 없는 경우가 흔해, URL로 포맷을 판정하면 정상 요청을 거부하게 된다. 설명에 명시하되 강제하지 않는다.</td>
+      </tr>
+      <tr>
+        <td><code>lyria-3-pro-preview</code> 미노출</td>
+        <td>1~2분 트랙은 쇼트폼 파이프라인에 쓸 자리가 없고 비용만 커진다.</td>
+      </tr>
+      <tr>
+        <td>Veo <code>numberOfVideos</code> · OpenAI <code>n</code> 미노출</td>
+        <td>쇼트폼은 컷 단위 1개 생성이 기본이고, N개 생성은 비용이 N배다.</td>
+      </tr>
+      <tr>
+        <td><code>skills/ingest</code>의 <code>mcp__fect-mcp__vision_analyze</code>·<code>vision_ocr</code></td>
+        <td>플러그인에 남은 <strong>유일한 외부 MCP 의존</strong>이다. 이번 감사는 이 서버가 제공하는 31개 툴이 대상이며, vision 모듈 이식은 별개 작업이다. npm 배포 시 완전 단독 동작을 원하면 이것부터 처리해야 한다.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="second-pass">
+  <h2>7. 2차 감사 (같은 날, v0.4.1)</h2>
+  <p>1차 감사 수렴 후 전체 소스를 다시 적대적으로 읽었다. 발견은 전부 <strong>1차에서 검증하지 않기로 한 경계</strong> — 게시 경로(실호출 금지)와 극단 입력(최대 길이 캡션, 100MB 파일) — 에서 나왔다. 실호출로 눌러본 경로에서는 추가 결함이 없었다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>등급</th><th>발견</th><th>조치</th><th>검증</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="badge de">P1</span></td>
+        <td>Meta POST 파라미터가 URL 쿼리스트링으로 전송 — 캡션 상한(IG 2,200자·FB 5,000자)이 %-인코딩(한글 ×9)되면 URL이 20~45KB가 되어, 스키마가 허용한 입력이 요청 라인 길이 한계에서 실패할 수 있다</td>
+        <td>POST는 <code>application/x-www-form-urlencoded</code> 본문으로 이동 (GET/DELETE는 쿼리 유지). 토큰도 URL에서 빠진다</td>
+        <td>Threads <strong>미게시 컨테이너</strong>(생성만 하고 publish 안 함 — 외부 비공개, 24h 자동 만료)로 500자 꽉 채운 한글 캡션 실전송 성공</td>
+      </tr>
+      <tr>
+        <td><span class="badge wr">P2</span></td>
+        <td><code>selfDeclaredMadeForKids: false</code> 하드코딩 — 아동 대상 콘텐츠를 올리면 COPPA 허위 선언이 된다</td>
+        <td><code>madeForKids</code> 인자 노출(기본 false, 제재 사유 명시)</td>
+        <td>stdio ListTools에서 파라미터·설명 확인</td>
+      </tr>
+      <tr>
+        <td><span class="badge wr">P2</span></td>
+        <td><code>serp_web_search</code>·<code>serp_news_search</code>가 error 필드 없는 200+빈 결과에 빈 스켈레톤 JSON만 반환 — 1차 P0(빈 결과 구분 불가)과 같은 계열의 잔여 구멍</td>
+        <td>세 검색 툴 모두 동일한 "(검색 결과 없음 — 1회만 재시도…)" 안내로 통일</td>
+        <td>실호출로 무결과 검색 확인</td>
+      </tr>
+      <tr>
+        <td><span class="badge wr">P2</span></td>
+        <td>video-client만 API 키를 <code>?key=</code> URL 쿼리로 전송 — serp/datago의 키 마스킹 철학과 불일치(로그·에러 에코 유출면)</td>
+        <td>폴링·다운로드 모두 <code>x-goog-api-key</code> 헤더로 이동</td>
+        <td>실측: 헤더 인증으로 unregistered-caller 게이트 통과 확인(비용 0 프로브)</td>
+      </tr>
+      <tr>
+        <td><span class="badge free">P3</span></td>
+        <td>다듬기 5건</td>
+        <td>알 수 없는 툴 → JSON-RPC <code>-32602</code> 프로토콜 에러(2계층 에러 모델 정합) · 인박스 플랫폼 병렬 수집 · <code>sns_account_check</code> 병렬화(655ms 실측) · 인박스 상한 절단을 이분 탐색으로(과잉 절단 제거) · naver <code>&amp;#39;</code> 복원 · datago 파일명 충돌 100회 초과 시 덮어쓰기 대신 에러</td>
+        <td><code>npm run check</code> 239개 + stdio 스모크(-32602 확인) + <code>sns_account_check</code> 실호출</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p>이번에도 남긴 것: 생성 이미지의 base64 image 블록 상시 반환(HITL 검토에 즉시 보이는 가치가 커 유지), 생성 오디오 filename 확장자와 실제 포맷 불일치 허용(생성 후 임의 개명이 더 나쁨), datago 다운로드의 전량 메모리 버퍼링(100MB 상한으로 유계). 점수는 <strong>96 유지</strong> — 수정분은 1차 감점 항목이 아니라 신규 발견이며, 유일한 감점(행동 평가 하네스)은 그대로 남아 있다.</p>
+</section>
+
+<section id="since">
+  <h2>8. 감사 뒤에 늘어난 툴 (미감사)</h2>
+  <div class="warn">
+    <strong>위 96점은 2026-07-29 시점의 31개 툴에 대한 점수다.</strong> 그 뒤 <strong>15종이 늘어 지금은 46종</strong>이고, 채점을 거친 것은 그중 31종뿐이다 — 아래 15종은 이 감사를 거치지 않았다. 숫자를 46으로 고쳐 적으면 돌지 않은 감사를 돌았다고 말하는 셈이라 31 그대로 둔다.
+  </div>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>추가된 툴</th><th>무엇</th><th>백엔드</th></tr></thead>
+    <tbody>
+      <tr><td><code>seedance_text2video</code> · <code>seedance_img2video</code> · <code>seedance_reference</code></td><td>두 번째 영상 엔진 — 2~30초를 1초 단위로 끊어 요청한 만큼만 과금한다</td><td>BytePlus ModelArk (<code>ARK_API_KEY</code>)</td></tr>
+      <tr><td><code>image_local_generate</code></td><td>온디바이스 이미지 생성 — 이미지의 기본 경로가 여기로 옮겨 왔다</td><td>mflux / Z-Image Turbo (로컬)</td></tr>
+      <tr><td><code>tts_local_generate</code></td><td>온디바이스 음성 합성 — 나레이션 본문의 기본 경로</td><td>Supertonic 3 (로컬)</td></tr>
+      <tr><td><code>serp_image_search</code></td><td>이미지 검색 — 라이선스·크기·종횡비 필터</td><td>SerpApi <code>google_images</code></td></tr>
+      <tr><td><code>threads_insights</code> · <code>threads_search</code></td><td>grow-threads 전용 읽기</td><td>Threads Graph</td></tr>
+      <tr><td><code>instagram_insights</code></td><td>grow-instagram 전용 읽기</td><td>Instagram Graph</td></tr>
+      <tr><td><code>youtube_insights</code></td><td>grow-youtube 전용 읽기</td><td>YouTube Data + Analytics</td></tr>
+      <tr><td><code>youtube_update</code></td><td>이미 올린 영상의 제목·설명·태그·공개범위 수정 — 롱폼을 private 로 올려 확인한 뒤 public 으로 돌리는 2단 게시의 뒷단</td><td>YouTube Data <code>videos.list</code> → <code>videos.update</code></td></tr>
+      <tr><td><code>content_feedback</code></td><td>최근 5편 유튜브·인스타 채점 → 로컬 HTML</td><td>위 인사이트 둘 + 파일 쓰기</td></tr>
+      <tr><td><code>youtube_topic_scout</code></td><td>분야 채널을 모아 중앙값 대비 5배 영상에서 주제어를 뽑는다</td><td>YouTube Data API search/channels/videos (<code>YOUTUBE_API_KEY</code> 또는 OAuth)</td></tr>
+      <tr><td><code>serp_trending_now</code></td><td>나라별 구글 급상승 검색어 — 검색량·증가율 어림값, 창은 4·24·48·168시간</td><td>SerpApi <code>google_trends_trending_now</code></td></tr>
+      <tr><td><code>sns_issue_scout</code></td><td>스레드·X·인스타 <code>site:</code> 검색으로 최근 게시물을 모아 여러 글·여러 플랫폼에 같이 나오는 주제어를 센다 — 참여량 없는 언급 목록</td><td>SerpApi <code>google</code> + 급상승 1회</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>감사를 다시 돌리지 않았을 뿐 이 목록도 같은 계약 테스트 그물에는 들어 있다 — <code>npm run check</code> 의 테스트가 239개에서 <strong>573개</strong>로 늘었다(2026-08-18 확인). 다음 감사 때 채점 대상은 46종이다.</p>
+</section>
+
+<footer>
+  감사일 2026-07-29 (1차 v0.4.0 · 2차 v0.4.1) · 툴 목록 확인 2026-08-18 (v0.23.0 · 46종 중 31종 감사분) · 루브릭 <a href="mcp-tools.html#rubric">MCP 툴 스펙 §6</a> · 재현 <code>cd server &amp;&amp; npm run check</code>
+</footer>
+
+</div>
+</body>
+</html>

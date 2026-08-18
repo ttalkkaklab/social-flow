@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool quality audit report — social-flow</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="tool-audit.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="tool-audit.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>Tool quality audit</div>
+
+<header class="hero">
+  <div class="kicker">AUDIT · 2026-07-29</div>
+  <h1>Tool quality audit report</h1>
+  <p class="sub">A record of scoring 31 tools against each API's official contract, the MCP 2025-06-18 spec, and tool-authoring best practices, then fixing what the scoring found. The rubric's source of truth is <a href="mcp-tools.en.html#rubric">MCP tool spec §6</a>.</p>
+  <div class="meta">
+    <span>Scope <strong>31 tools · 5,700 lines</strong> (of today's 46)</span>
+    <span>Verification <strong>239 contract tests</strong> (573 today)</span>
+    <span>Fixed <strong>2 P0 · 11 P1 · 9 P2</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#score">Score</a></li>
+    <li><a href="#p0">P0 — the quietly wrong</a></li>
+    <li><a href="#p1">P1 — defects fixed</a></li>
+    <li><a href="#p2">P2 — accuracy and guidance</a></li>
+    <li><a href="#verify">How it was verified</a></li>
+    <li><a href="#open">What was left alone, and why</a></li>
+    <li><a href="#second-pass">Second pass (same day, v0.4.1)</a></li>
+    <li><a href="#since">Tools added after the audit (unaudited)</a></li>
+  </ol>
+</nav>
+
+<section id="score">
+  <h2>1. Score</h2>
+  <div class="score"><span class="num">96</span><span class="of">/ 100</span></div>
+  <div class="bar"><i style="width:96%"></i></div>
+  <p style="color:var(--text-soft);font-size:14.5px">Estimated <strong>74</strong> before the audit → <strong>96</strong> after the fixes. A P0 drops its axis to 0; a P1 costs points per item.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Axis</th><th>Points</th><th>Score</th><th>Why points came off</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>A. API contract fidelity</strong></td><td>30</td><td><strong>29</strong></td>
+        <td>Meta Graph stays pinned to v23.0 — a deliberate choice, but tracking its 2027 expiry falls on a human</td>
+      </tr>
+      <tr>
+        <td><strong>B. MCP protocol compliance</strong></td><td>20</td><td><strong>19</strong></td>
+        <td><code>serp_*</code> and <code>datago_*</code> return JSON text without declaring an <code>outputSchema</code> (see §5)</td>
+      </tr>
+      <tr>
+        <td><strong>C. Tool design best practices</strong></td><td>25</td><td><strong>24</strong></td>
+        <td>Descriptions come in two styles — generation tools use the <em>Use / Do NOT / Returns</em> three-parter, SNS and research tools use free prose</td>
+      </tr>
+      <tr>
+        <td><strong>D. Implementation correctness &amp; safety</strong></td><td>15</td><td><strong>15</strong></td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><strong>E. Verifiability</strong></td><td>10</td><td><strong>9</strong></td>
+        <td>Static contract tests exist, but there's no behavioral eval that runs an actual model (§5)</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="p0">
+  <h2>2. P0 — the quietly wrong</h2>
+  <p>Two things that raised no error and threw no exception while making the result meaningless. Most of the value in a tool audit is right here — a tool that fails leaves a log line, but <strong>a tool that returns a plausible empty result</strong> nobody notices.</p>
+
+  <h3>P0-1 · <code>serp_naver_search</code>'s default path always came back empty</h3>
+  <div class="danger">
+    This tool defaults to <code>where='web'</code>. The code read only <code>web_results</code> and <code>news_results</code> from the response, but the key SerpApi actually returns for <code>where=web</code> is <strong><code>organic_results</code></strong>. So <strong>every search on the default path returned "(no results)"</strong>.
+    <p>That response is indistinguishable, character for character, from <em>a search that genuinely found nothing</em>, so the model had no basis for concluding the search was broken. Following the tool description's instruction to "reword the query and retry once" and then dropping the claim from the copy becomes the reasonable behavior — meaning the bias ran quietly toward <strong>evidence that existed going unfound and the content coming out thin</strong>.</p>
+  </div>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th><code>where</code></th><th>SerpApi docs</th><th>Actual response key (measured)</th></tr></thead>
+    <tbody>
+      <tr><td><code>web</code></td><td><code>web_results</code></td><td><strong><code>organic_results</code></strong></td></tr>
+      <tr><td><code>news</code></td><td><code>news_results</code></td><td><code>news_results</code> ✓</td></tr>
+      <tr><td><code>nexearch</code></td><td>several arrays</td><td><code>web_results</code> · <code>ads_results</code> · <code>inline_images_results</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><strong>Fix:</strong> check all three keys. Implementing from the official docs alone would have left this defect in place — catching it takes a real call and a look at the actual response keys.</p>
+
+  <h3>P0-2 · Clients couldn't tell which tools post publicly on the spot</h3>
+  <div class="danger">
+    This server has no pre-publish review gate. Call <code>threads_publish</code> and it publishes at that moment, and because the publish APIs are non-idempotent, a retry means a duplicate post. That fact lived only in each tool's <code>description</code> prose — <strong>a form the model reads but the client's approval UI can't</strong>.
+    <p>MCP defines a field for exactly this purpose (<code>annotations.destructiveHint</code>). Leave it empty and the client treats <code>tts_list_voices</code> (returns a constant list) and <code>youtube_publish</code> (uploads publicly, immediately) as equally risky.</p>
+  </div>
+  <p><strong>Fix:</strong> all 31 tools got a <code>title</code> and <code>annotations</code>, and the criteria were pinned down in a <a href="mcp-tools.en.html#apply">decision table</a>. The contract tests check every build for contradictions between hint and description (a <code>readOnly</code> tool whose description says "posts publicly", say).</p>
+  <pre><code>// actual tools/list response
+{ "name": "youtube_publish",  "annotations": { "readOnlyHint": false, "destructiveHint": true,
+                                               "idempotentHint": false, "openWorldHint": true } }
+{ "name": "tts_list_voices",  "annotations": { "readOnlyHint": true,  "openWorldHint": false } }</code></pre>
+</section>
+
+<section id="p1">
+  <h2>3. P1 — defects fixed</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>#</th><th>Defect</th><th>Impact</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td><strong>Doubled error prefix</strong> — client and handler both added the same prefix (2 places in image, 4 in video)</td>
+        <td><code>Video generation failed: Video generation failed: …</code></td>
+        <td>The client carries only the cause message (same convention as the TTS and music clients)</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td><strong>Video output path unvalidated</strong> — a <code>filename</code> with <code>../</code> or an arbitrary extension went straight through</td>
+        <td>Files could be written outside <code>outputPath</code>. The audio path was already closed; only video was missing</td>
+        <td>Consolidated into <code>resolveOutputFile</code>. Better still, rejection now happens <strong>at the zod schema stage</strong> — blocking only at save time means a 1–6 minute generation finishes and is then rejected, wasting the whole cost</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td><strong>Wrong <code>sort_by</code> value system</strong> — SerpApi's naver engine uses <code>0/1/2</code> for <code>where=news</code> and <code>r/dd</code> everywhere else. The code always sent <code>r/dd</code></td>
+        <td>News sorting by recency was <strong>silently ignored</strong> — no error, so old articles get cited as current</td>
+        <td>Map the value per <code>where</code></td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td><strong>YouTube <code>categoryId</code> hardcoded to 25 (News &amp; Politics)</strong> and not exposed at all</td>
+        <td>Every upload got classified as news and politics, surfacing to entirely the wrong interest audience in recommendations and browse</td>
+        <td>Default changed to <code>22</code> (People &amp; Blogs) and exposed as a parameter</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td><strong>Stale YouTube quota description</strong> — "upload quota: 6 per day"</td>
+        <td>After the 2026 rework, <code>videos.insert</code> spends 1 unit per call from a dedicated bucket (100/day by default). Stale guidance makes the model postpone publishing it should do</td>
+        <td>Description and code comments replaced with the current contract</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td><strong>TTS supported-language description didn't match reality</strong> — "103 languages … Traditional Chinese <code>zh-TW</code> unsupported"</td>
+        <td>The official language table lists around 90 and <strong>includes <code>zh-TW</code></strong>. Misinformation that makes the model refuse work it can do</td>
+        <td>Corrected to the facts</td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td><strong>Lyria RealTime didn't honor the requested length</strong> — the last chunk arrived past the target, so a 30-second request produced 31 seconds</td>
+        <td>The entire reason this tool exists is "you can specify the length", and it broke that contract — every time, in exactly the use that needs to match narration</td>
+        <td>Cut to the target length exactly, on the sample boundary (channels × 2 bytes). Measured: a 7-second request → 1,344,044 bytes = 44 + 7×48000×2×2, <strong>an exact match</strong></td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td><strong>Threads body length undercounted</strong> — JS <code>.length</code> counts an emoji as 2, but the platform counts UTF-8 bytes (usually 4)</td>
+        <td>A caption that passed validation gets rejected by the platform. Failing at publish time means walking the whole approval process again</td>
+        <td>Replaced with a count that uses real UTF-8 bytes only for characters outside the BMP (Korean and ASCII stay at 1). Applied to reply length validation too</td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td><strong>No <code>outputSchema</code> or <code>structuredContent</code></strong></td>
+        <td>A publish response's <code>postId</code> and <code>permalink</code> are values you hand straight to the next call (a link reply, a first comment), yet they had to be parsed back out of text</td>
+        <td>9 SNS tools got an <code>outputSchema</code>, and <code>fromApi</code> attaches <code>structuredContent</code> to successful responses. Not on failure paths — the spec makes schema conformance a MUST</td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td><strong>An "HTTP 200" prefix</strong> sat in front of the JSON body</td>
+        <td>The body stopped being valid JSON, so callers couldn't parse it directly</td>
+        <td>On success, return the body only (success is already implied). On failure the status code stays — diagnosis needs it</td>
+      </tr>
+      <tr>
+        <td>11</td>
+        <td><strong>No contract tests</strong></td>
+        <td>Nothing automatic caught missing routes, enum drift, or contradictory hints</td>
+        <td><code>server/test/contract.test.mjs</code> — 239 checks (§4)</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="p2">
+  <h2>4. P2 — accuracy and guidance</h2>
+  <ul>
+    <li><strong>Instagram images</strong> — "JPEG recommended" → "<strong>JPEG only</strong>" (the platform rejects PNG, MPO, and JPS). Publish quota (100 per 24 hours) stated.</li>
+    <li><strong>Threads video</strong> — "no video" read like a platform limit. The platform supports <code>VIDEO</code> and <code>CAROUSEL</code>; not supporting them is <em>this pipeline's strategic choice</em>, and the description now says so. Publish quota (250 per 24 hours) added.</li>
+    <li><strong>Google news sorting</strong> — an attempt to expose the <code>so</code> sort parameter got a 400 on a real call: <code>"`q` and `so` parameters can't be used together."</code> <code>so</code> is for token navigation only and can't be combined with a query. Exposure was withdrawn, and the description now points at <strong>the alternatives</strong> (<code>serp_web_search</code>'s <code>recency</code>, <code>naver_search</code>'s <code>sort=date</code>).</li>
+    <li><strong>GPT Image prompt ceiling</strong> — the 32,000-character limit stated in the schema and the description.</li>
+    <li><strong>Lyria 3 Clip</strong> — lyric generation and structure tags (<code>[Verse]</code>·<code>[Chorus]</code>·timestamps) documented, and on a policy block the description says "this is a prompt problem, not a code problem — reword and retry once".</li>
+    <li><strong>Comment inbox response size</strong> — filling the ceiling (25 posts × 100 comments) eats a large share of the caller's context. There's now a 60,000-character cap that drops <strong>the oldest comments first</strong> (golden-hour comments have to survive). Aggregates keep <strong>the pre-truncation values</strong> — recounting from a truncated list under-reports, "3 unanswered" when there are more, and the remaining replies get missed.</li>
+    <li><strong>Meta Graph version as a constant</strong> — <code>v23.0</code> was scattered in two places and is now one constant. The reason for pinning (valid through 2027 · blocks breaking changes in later versions) is in a comment.</li>
+    <li><strong>Three-way version mismatch</strong> — <code>plugin.json</code> 0.4.0 · <code>server/package.json</code> 0.3.0 · <code>index.ts</code> 0.3.0 → all 0.4.0.</li>
+    <li><strong>Escaping in the <code>tts_multi_speaker</code> description</strong> — the example's <code>\n</code> rendered as an actual newline and showed the wrong format. Also stated: speaker names must match the <code>speakers</code> array.</li>
+  </ul>
+</section>
+
+<section id="verify">
+  <h2>5. How it was verified</h2>
+  <h3>Static contract tests — 239</h3>
+  <pre><code>cd server &amp;&amp; npm run check   # build + test</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Check</th><th>What it catches</th></tr></thead>
+    <tbody>
+      <tr><td>Every tool has <code>title</code>·<code>description</code>·<code>annotations</code></td><td>Metadata forgotten when a tool is added</td></tr>
+      <tr><td><strong>Every parameter has a <code>description</code></strong> (recursing into nested objects and array items)</td><td>Arguments where the model can't tell what to put</td></tr>
+      <tr><td><code>required</code> ⊆ <code>properties</code>, <code>default</code> ∈ <code>enum</code></td><td>Schemas that can't be called</td></tr>
+      <tr><td>Contradictory hint combinations (<code>readOnly</code> ⇒ no destructive/idempotent; write tools state both)</td><td>Generation tools mistaken for destructive ones because the default was left in place</td></tr>
+      <tr><td><strong>Two-way</strong> routing, definition ↔ handler</td><td>Orphan tools / orphan handlers</td></tr>
+      <tr><td><strong>Hints agreeing with descriptions</strong> — destructive tools must carry ⚠️ and the HITL wording; readOnly tools must not say "posts publicly"</td><td>One side being fixed and the other turning into a lie</td></tr>
+      <tr><td>Enums identical to the source-of-truth constants (30 voices · 3 models · 13 keys · 3 modes)</td><td>Only one side updated when a list grows</td></tr>
+      <tr><td>Path traversal and extension rejection, WAV header checked field by field</td><td>Security and format regressions</td></tr>
+      <tr><td>Threads emoji length counting</td><td>Regressing back to <code>.length</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Real-call verification</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Target</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>stdio MCP server <code>initialize</code> → <code>tools/list</code> → <code>tools/call</code></td><td>29 exposed (2 hidden for want of an FB token), 0 missing <code>title</code>/<code>annotations</code>, <code>outputSchema</code> on 7</td></tr>
+      <tr><td>Lyria RealTime, 7 seconds</td><td>1,344,044 bytes = 44 + 7×48000×2×2, <strong>an exact match</strong></td></tr>
+      <tr><td>Lyria RealTime <code>apiVersion</code></td><td><code>v1alpha</code> works / <code>v1beta</code> (the documented value) hangs forever → <a href="gemini-lyria.en.html#realtime-apiversion">keep v1alpha</a></td></tr>
+      <tr><td><code>serp_naver_search</code> web·news</td><td>Both return results (web returned 0 before the fix)</td></tr>
+      <tr><td><code>tts_generate</code></td><td>No regression</td></tr>
+      <tr><td><code>sns_account_check</code></td><td>Returns <code>structuredContent</code>, conforms to <code>outputSchema</code></td></tr>
+      <tr><td>3 malformed <code>filename</code> values</td><td>Rejected before the API call</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    Publish, reply, and moderation tools were <strong>not verified with real calls</strong> — calling them is publishing. Their verification rests on the static contract tests plus real calls to a read-only tool that shares the same code path (<code>sns_account_check</code>).
+  </div>
+</section>
+
+<section id="open">
+  <h2>6. What was left alone, and why</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>A behavioral eval harness</strong> — running multi-step workflows with a real model and measuring tool choice, call count, and tokens</td>
+        <td>The seventh best-practice principle, and the one item this audit fell short on. Because publish tools make real public posts, a safe evaluation needs <strong>a dry-run layer first</strong>. Building that layer is a design change beyond this audit's scope.</td>
+      </tr>
+      <tr>
+        <td><code>outputSchema</code> for <code>serp_*</code> and <code>datago_*</code></td>
+        <td>They return JSON text, but the response shape isn't fixed — <code>datago_*</code> especially is parsed out of portal HTML, so the field set differs per dataset. MCP makes conformance a <strong>MUST</strong> once you declare an <code>outputSchema</code>, so not declaring one is more honest than declaring a contract you can't keep.</td>
+      </tr>
+      <tr>
+        <td>Meta Graph <strong>staying on v23.0</strong> (latest is v25.0)</td>
+        <td>Meta versions stay valid for roughly two years after release, so v23.0 (2025-05) lives until 2027. Pinning is what stops a breaking change in a later version from quietly breaking publishing. Instead, it's gathered into one constant, so updating means changing one line.</td>
+      </tr>
+      <tr>
+        <td>JPEG validation on Instagram image URLs</td>
+        <td>CDN URLs often carry no extension, so judging format from the URL would reject valid requests. Stated in the description, not enforced.</td>
+      </tr>
+      <tr>
+        <td><code>lyria-3-pro-preview</code> not exposed</td>
+        <td>A 1–2 minute track has nowhere to go in a short-form pipeline and only costs more.</td>
+      </tr>
+      <tr>
+        <td>Veo <code>numberOfVideos</code> · OpenAI <code>n</code> not exposed</td>
+        <td>Short-form generates one cut at a time by default, and N variants cost N times as much.</td>
+      </tr>
+      <tr>
+        <td><code>mcp__fect-mcp__vision_analyze</code>·<code>vision_ocr</code> in <code>skills/ingest</code></td>
+        <td>The <strong>one remaining external MCP dependency</strong> in the plugin. This audit covers the 31 tools this server provides; porting the vision module is separate work. Anyone wanting fully standalone operation for an npm release has to handle this first.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="second-pass">
+  <h2>7. Second pass (same day, v0.4.1)</h2>
+  <p>After the first audit converged, the whole source was read adversarially again. Every finding came from <strong>a boundary the first pass had decided not to test</strong> — the publish path (no real calls allowed) and extreme inputs (max-length captions, 100MB files). The paths that had been pushed on with real calls turned up nothing more.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Grade</th><th>Finding</th><th>Action</th><th>Verification</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="badge de">P1</span></td>
+        <td>Meta POST parameters were sent in the URL query string — a caption at the ceiling (IG 2,200 chars · FB 5,000) becomes a 20–45KB URL once %-encoded (×9 for Korean), so input the schema allows can fail against the request-line length limit</td>
+        <td>POSTs moved to an <code>application/x-www-form-urlencoded</code> body (GET/DELETE keep the query). The token leaves the URL too</td>
+        <td>A Korean caption filling all 500 characters was really sent, using a Threads <strong>unpublished container</strong> (created but never published — not publicly visible, auto-expires in 24h)</td>
+      </tr>
+      <tr>
+        <td><span class="badge wr">P2</span></td>
+        <td><code>selfDeclaredMadeForKids: false</code> hardcoded — uploading content aimed at children would make it a false COPPA declaration</td>
+        <td><code>madeForKids</code> exposed as an argument (default false, with the penalty stated)</td>
+        <td>Parameter and description confirmed through stdio ListTools</td>
+      </tr>
+      <tr>
+        <td><span class="badge wr">P2</span></td>
+        <td><code>serp_web_search</code> and <code>serp_news_search</code> returned only an empty skeleton JSON on a 200 with no results and no error field — the same family of hole as the first pass's P0 (an empty result you can't distinguish)</td>
+        <td>All three search tools unified on the same "(no results — retry once…)" guidance</td>
+        <td>A real call on a query with no results</td>
+      </tr>
+      <tr>
+        <td><span class="badge wr">P2</span></td>
+        <td>Only video-client sent the API key as a <code>?key=</code> URL query — inconsistent with the key-masking philosophy of serp and datago (a leak surface in logs and error echoes)</td>
+        <td>Polling and download both moved to the <code>x-goog-api-key</code> header</td>
+        <td>Measured: header auth confirmed to pass the unregistered-caller gate (a zero-cost probe)</td>
+      </tr>
+      <tr>
+        <td><span class="badge free">P3</span></td>
+        <td>5 pieces of polish</td>
+        <td>Unknown tool → JSON-RPC <code>-32602</code> protocol error (consistent with the two-layer error model) · inbox platforms collected in parallel · <code>sns_account_check</code> parallelized (655ms measured) · inbox ceiling truncation via binary search (removing over-truncation) · naver <code>&amp;#39;</code> restored · datago errors instead of overwriting when filename collisions pass 100</td>
+        <td><code>npm run check</code> 239 checks + an stdio smoke test (-32602 confirmed) + a real <code>sns_account_check</code> call</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Left alone this time too: always returning a base64 image block for generated images (its immediate value in HITL review is worth more), tolerating a mismatch between a generated audio file's extension and its real format (renaming arbitrarily after generation is worse), and datago downloads buffering entirely in memory (bounded by the 100MB ceiling). The score <strong>stays at 96</strong> — these fixes are new findings rather than items the first pass docked points for, and the one deduction (the behavioral eval harness) is still open.</p>
+</section>
+
+<section id="since">
+  <h2>8. Tools added after the audit (unaudited)</h2>
+  <div class="warn">
+    <strong>The 96 above is a score for the 31 tools as they stood on 2026-07-29.</strong> <strong>15 have been added since, bringing the count to 46</strong>, and only 31 of those were ever scored — the 15 below never went through this audit. Rewriting the number as 46 would amount to claiming an audit that never ran, so 31 stays.
+  </div>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Tool added</th><th>What it is</th><th>Backend</th></tr></thead>
+    <tbody>
+      <tr><td><code>seedance_text2video</code> · <code>seedance_img2video</code> · <code>seedance_reference</code></td><td>The second video engine — 2–30s in 1-second steps, billed for what you request</td><td>BytePlus ModelArk (<code>ARK_API_KEY</code>)</td></tr>
+      <tr><td><code>image_local_generate</code></td><td>On-device image generation — the default path for images moved here</td><td>mflux / Z-Image Turbo (local)</td></tr>
+      <tr><td><code>tts_local_generate</code></td><td>On-device speech synthesis — the default path for narration bodies</td><td>Supertonic 3 (local)</td></tr>
+      <tr><td><code>serp_image_search</code></td><td>Image search — license, size, and aspect-ratio filters</td><td>SerpApi <code>google_images</code></td></tr>
+      <tr><td><code>threads_insights</code> · <code>threads_search</code></td><td>Reads for grow-threads</td><td>Threads Graph</td></tr>
+      <tr><td><code>instagram_insights</code></td><td>Reads for grow-instagram</td><td>Instagram Graph</td></tr>
+      <tr><td><code>youtube_insights</code></td><td>Reads for grow-youtube</td><td>YouTube Data + Analytics</td></tr>
+      <tr><td><code>youtube_update</code></td><td>Edits title, description, tags, and visibility of an already-uploaded video — the back half of two-stage long-form publishing, where you upload private, check, then flip to public</td><td>YouTube Data <code>videos.list</code> → <code>videos.update</code></td></tr>
+      <tr><td><code>content_feedback</code></td><td>Scores the last 5 episodes across YouTube and Instagram → local HTML</td><td>the two insight tools above + a file write</td></tr>
+      <tr><td><code>youtube_topic_scout</code></td><td>Collects channels in a niche and pulls topic phrases from videos at 5× their median</td><td>YouTube Data API search/channels/videos (<code>YOUTUBE_API_KEY</code> or OAuth)</td></tr>
+      <tr><td><code>serp_trending_now</code></td><td>Google trending searches per country — approximate volume and growth, windows of 4·24·48·168 hours</td><td>SerpApi <code>google_trends_trending_now</code></td></tr>
+      <tr><td><code>sns_issue_scout</code></td><td>Collects recent posts by <code>site:</code> search across Threads, X, and Instagram and counts topic phrases recurring across posts and platforms — a mention list with no engagement counts</td><td>SerpApi <code>google</code> + one trending call</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>The audit simply hasn't been rerun; this list is inside the same contract-test net — <code>npm run check</code> has grown from 239 tests to <strong>573</strong> (checked 2026-08-18). The next audit scores 46 tools.</p>
+</section>
+
+<footer>
+  Audited 2026-07-29 (first pass v0.4.0 · second pass v0.4.1) · tool list checked 2026-08-18 (v0.23.0 · 31 of 46 audited) · rubric <a href="mcp-tools.en.html#rubric">MCP tool spec §6</a> · reproduce with <code>cd server &amp;&amp; npm run check</code>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API reference — social-flow</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="index.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="index.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span>API reference</div>
+
+<header class="hero">
+  <div class="kicker">API REFERENCE</div>
+  <h1>Every API social-flow calls</h1>
+  <p class="sub">A reference for the official contracts of the 12 external APIs the internal MCP server (<code>server/src</code>) actually calls. Each page puts <strong>what the official docs say</strong> next to <strong>what this repo's implementation actually does</strong>, so you can see where the two diverge. For images and voice the default path is two on-device engines that never touch the network, and those have no external contract to call.</p>
+  <div class="meta">
+    <span>As of <strong>2026-08-18</strong></span>
+    <span>Tools <strong>46</strong></span>
+    <span>External APIs <strong>12</strong> + local <strong>2</strong></span>
+    <span>MCP SDK <strong>1.30.0</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#docs">API pages</a></li>
+    <li><a href="#creds">Credential matrix</a></li>
+    <li><a href="#map">Tool ↔ API map</a></li>
+    <li><a href="#method">How this reference was built</a></li>
+  </ol>
+</nav>
+
+<section id="docs">
+  <h2>API pages</h2>
+  <div class="cards">
+    <a class="card" href="mcp-tools.en.html">
+      <h3>MCP tool spec &amp; best practices</h3>
+      <p>Every Tool definition field (title·annotations·outputSchema), the CallToolResult contract, the two error layers, plus 7 tool-authoring principles and this repo's quality rubric.</p>
+      <div class="tools">protocol · all tools</div>
+    </a>
+    <a class="card" href="gemini-tts.en.html">
+      <h3>Gemini TTS</h3>
+      <p>3 models, 30 prebuilt voices, the 32k-token session limit, single- and two-speaker configuration, PCM 24kHz mono output.</p>
+      <div class="tools">tts_generate · tts_multi_speaker · tts_list_voices</div>
+    </a>
+    <a class="card" href="gemini-veo.en.html">
+      <h3>Google Veo 3.1</h3>
+      <p>How resolution, length and aspect ratio constrain each other across 3 models, extension (+7s, up to 20 times) and reference images (up to 3, fixed 8s), long-running operation polling.</p>
+      <div class="tools">veo_text2video · veo_img2video · veo_extension · veo_reference</div>
+    </a>
+    <a class="card" href="veo-portrait.en.html">
+      <h3>Veo people &amp; reference policy</h3>
+      <p>The <code>personGeneration</code> contract that lets adult faces through and blocks children's, why there is no asset registry, style reference closed off in 3.1, and first/last frames as the way to fix composition.</p>
+      <div class="tools">personGeneration · referenceType asset / style · lastFrame</div>
+    </a>
+    <a class="card" href="seedance.en.html">
+      <h3>ByteDance Seedance</h3>
+      <p>What 7 models can and can't do (resolution·length·reference images·audio·seed), task creation → polling → retrieving the 24-hour URL, the token billing formula, and rejection of real-face input.</p>
+      <div class="tools">seedance_text2video · seedance_img2video · seedance_reference</div>
+    </a>
+    <a class="card" href="seedance-portrait.en.html">
+      <h3>Seedance people &amp; asset policy</h3>
+      <p>2.x rejecting face input and the three ways around it (trusted output within 30 days · preset digital characters · real people with rights secured), asset registration steps and specs, and why using reference images like scene frames falls apart.</p>
+      <div class="tools">asset:// · reference_image · first_frame / last_frame</div>
+    </a>
+    <a class="card" href="gemini-lyria.en.html">
+      <h3>Google Lyria</h3>
+      <p>Two APIs with different characters — Lyria 3 Clip (Interactions · fixed 30s · MP3) and Lyria RealTime (WebSocket · PCM 48kHz · 12 settings).</p>
+      <div class="tools">music_generate_clip · music_generate · music_generate_advanced · music_list_options</div>
+    </a>
+    <a class="card" href="openai-images.en.html">
+      <h3>OpenAI Images</h3>
+      <p>Which parameters each of the 4 GPT Image models supports, gpt-image-2's arbitrary-resolution constraints (multiples of 16 · 1:3–3:1 · pixel floor and ceiling), and the edit-only parameters.</p>
+      <div class="tools">gpt_image_text2img · gpt_image_img2img</div>
+    </a>
+    <a class="card" href="../research/2026-08-12-local-image-generation/index.html">
+      <h3>On-device engines — Z-Image · Supertonic (Korean)</h3>
+      <p>The two tools with no external contract. Z-Image Turbo runs on mflux/MLX — 1024² takes 149–210s at 9 steps, 1088×1920 takes 462s (measured on an M4 Max). Supertonic uses CPU only and emits 44.1kHz wav. Neither needs a key, billing, or the network.</p>
+      <div class="tools">image_local_generate · tts_local_generate</div>
+    </a>
+    <a class="card" href="serpapi.en.html">
+      <h3>SerpApi</h3>
+      <p>Parameters and response shapes for five engines — google · google_news · naver · google_images · google_trends_trending_now — the different sort-value systems per engine, response keys that contradict the docs, and quota and billing rules. The SNS issue scout (Threads/X/Instagram <code>site:</code> search) hangs off this one too.</p>
+      <div class="tools">serp_web_search · serp_news_search · serp_naver_search · serp_image_search · serp_trending_now · sns_issue_scout</div>
+    </a>
+    <a class="card" href="naver-search.en.html">
+      <h3>Naver Search Open API</h3>
+      <p>8 endpoints (news·blog·webkr·cafearticle·kin·image·encyc·local), per-type differences in sorting and paging, 5 discontinued APIs, and the 25,000-call daily quota.</p>
+      <div class="tools">naver_search</div>
+    </a>
+    <a class="card" href="data-go-kr.en.html">
+      <h3>data.go.kr (Korea open-data portal)</h3>
+      <p>Three no-auth paths (search·detail·file download) and two authenticated ones (odcloud·standard open API), the usage-application trap, and the error code table.</p>
+      <div class="tools">datago_search · datago_detail · datago_file_download · datago_file_fetch · datago_api_call</div>
+    </a>
+    <a class="card" href="meta-graph.en.html">
+      <h3>Meta Graph (Threads · IG · FB)</h3>
+      <p>The two-step container-then-publish flow, per-platform length and media limits, the asymmetry table for comment capabilities, publish quotas, and the Threads/Instagram insight contracts the growth loops read.</p>
+      <div class="tools">threads_publish · instagram_publish · facebook_publish · facebook_comment · sns_comment_* · threads_insights · threads_search · instagram_insights</div>
+    </a>
+    <a class="card" href="youtube-data.en.html">
+      <h3>YouTube Data API v3</h3>
+      <p>Two-step resumable upload, the Video Uploads quota bucket reworked in 2026, categoryId, thumbnail setting and its auth requirements, why the Analytics API has to be switched on separately and its 2–3 day lag, and the market topic scout.</p>
+      <div class="tools">youtube_publish · youtube_update · youtube_insights · youtube_topic_scout · sns_account_check</div>
+    </a>
+    <a class="card" href="tool-audit.en.html">
+      <h3>Tool quality audit report</h3>
+      <p>Scoring the 31 tools as they stood on 2026-07-29 against the contracts above and the best practices, with every defect found and how it was fixed. 15 tools have been added since, bringing the count to 46, and those 15 have not been audited.</p>
+      <div class="tools">audit · scores · fix log</div>
+    </a>
+  </div>
+</section>
+
+<section id="creds">
+  <h2>Credential matrix</h2>
+  <p><strong>The keys come in two independent groups, and you can stop after either one.</strong></p>
+  <p><strong>① Production keys</strong> — these make the video. <code>OPENAI_API_KEY</code> renders the cover and any frame with text on it (local image generation garbles Korean glyphs), and <code>GEMINI_API_KEY</code> covers generated video clips, acted narration, and BGM. Strictly speaking both are optional — scene backgrounds default to on-device <code>image_local_generate</code> and narration to on-device <code>tts_local_generate</code>, so a run with no keys at all still produces a video. The research keys (<code>SERPAPI_API_KEY</code> and the Naver pair) are optional too; without them the storyboard skill falls back to the built-in WebSearch.</p>
+  <p><strong>② Platform credentials (Threads · Instagram · YouTube · Facebook) — optional.</strong> Set them up and the pipeline runs end to end and keeps running on its own: <code>publish</code> posts straight to your accounts, and the growth skills (<code>grow-threads</code>·<code>grow-youtube</code>·<code>grow-instagram</code>) operate the channel on <code>/loop</code> — comment replies, insight watching, keyword conversations, queue refill, posting — inside the standing authorization you approved once at <code>init</code>. Skip them and everything up to and including production still works: <code>produce</code> writes the finished video plus per-platform text into <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload those files by hand. Only the publishing and growth half is unavailable, and the nine credential-gated tools aren't even listed. It's per platform, not all-or-nothing — connect only YouTube and YouTube publishes and grows while the rest stays manual. Add a token later and nothing needs a server restart.</p>
+  <p>Keys are validated <strong>when a tool is called, not at startup</strong>, because publish tools have to work without search keys and vice versa. Record only the variable names below; never commit a value anywhere.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Variable</th><th>Tools that need it</th><th>Without it</th><th>Where to get it</th></tr></thead>
+    <tbody>
+      <tr><td><code>GEMINI_API_KEY</code><br>(or <code>GOOGLE_API_KEY</code>)</td><td><code>veo_*</code> · <code>tts_generate</code> · <code>tts_multi_speaker</code> · <code>music_generate*</code></td><td>No video, voice, or music generation. Everything else is fine</td><td><a href="https://aistudio.google.com/apikey">AI Studio</a></td></tr>
+      <tr><td><code>ARK_API_KEY</code></td><td><code>seedance_*</code></td><td>No Seedance video generation. <code>veo_*</code> is unaffected</td><td><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/apikey">BytePlus ModelArk</a></td></tr>
+      <tr><td><code>OPENAI_API_KEY</code></td><td><code>gpt_image_*</code></td><td>No GPT Image generation</td><td><a href="https://platform.openai.com/api-keys">OpenAI</a></td></tr>
+      <tr><td><code>SERPAPI_API_KEY</code></td><td><code>serp_*</code> · <code>sns_issue_scout</code></td><td>The five <code>serp_*</code> tools and <code>sns_issue_scout</code> are out — fall back to <code>naver_search</code> or the built-in WebSearch</td><td><a href="https://serpapi.com/manage-api-key">SerpApi</a></td></tr>
+      <tr><td><code>NAVER_CLIENT_ID</code><br><code>NAVER_CLIENT_SECRET</code></td><td><code>naver_search</code></td><td>No first-pass Korean research — use <code>serp_naver_search</code> instead</td><td><a href="https://developers.naver.com/apps">Naver Developers</a></td></tr>
+      <tr><td><code>DATA_GO_KR_API_KEY</code></td><td><code>datago_file_fetch</code> · <code>datago_api_call</code></td><td>Search, detail, and file download <strong>work without a key</strong></td><td><a href="https://www.data.go.kr">data.go.kr</a></td></tr>
+      <tr><td><code>YOUTUBE_API_KEY</code></td><td><code>youtube_topic_scout</code></td><td>Falls back to channel OAuth <code>youtube.readonly</code>. With neither, the call fails</td><td><a href="https://console.cloud.google.com/apis/credentials">Google Cloud Console</a></td></tr>
+      <tr><td><code>SNS_TOKEN_DIR</code><br>(default <code>~/.config/social-flow</code>)</td><td>all publish, comment, and insight tools</td><td>For a platform with no credential file, its publish/insight tools — nine in total — are <strong>hidden from ListTools entirely</strong></td><td>per-platform OAuth</td></tr>
+      <tr><td><code>MFLUX_ZIMAGE_BIN</code><br>(default: <code>mflux-generate-z-image-turbo</code> on PATH)</td><td><code>image_local_generate</code></td><td>This is an <strong>executable path</strong>, not a key. Installed in the standard location it needs no setting; if it can't be found the error tells you how to install it</td><td><code>uv tool install --python 3.12 mflux</code></td></tr>
+      <tr><td><code>SUPERTONIC_PYTHON</code><br>(default <code>python3</code>)</td><td><code>tts_local_generate</code></td><td>Point it at your interpreter if you installed into a virtualenv. There is no venv auto-discovery — quietly picking up a different environment per repo and changing the voice is exactly the accident this avoids</td><td><code>pip install supertonic</code></td></tr>
+      <tr><td><code>HF_HOME</code><br>(default <code>~/.cache/huggingface</code>)</td><td><code>image_local_generate</code></td><td>Where Z-Image weights are cached. The first call downloads 31GB, so move it if the disk is tight</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>Tokens are read from files, not from values.</strong> Meta's 60-day renewal works by overwriting a file, so renewal needs the file-based form, and it also keeps secrets out of <code>.mcp.json</code>, which is committed. Per-channel (per-brand) tokens live in <code>&lt;SNS_TOKEN_DIR&gt;/&lt;slug&gt;/</code> and are selected with the publish tools' <code>channel</code> argument; when a channel is given there is <strong>no fallback</strong> to the default tokens (this is what prevents publishing to the wrong account).
+  </div>
+</section>
+
+<section id="map">
+  <h2>Tool ↔ API map</h2>
+  <p>Badges: <span class="badge ro">read</span> no side effects · <span class="badge wr">write</span> creates a local file · <span class="badge de">public</span> takes effect publicly the moment it's called · <span class="badge key">key</span> needs a credential · <span class="badge free">no auth</span></p>
+  <p><strong>You won't always see all 46.</strong> The nine platform-bound tools (<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>) appear in <code>tools/list</code> only for platforms that have a credential file. That's evaluated when the list is requested, so adding a token makes them appear without restarting the server; with no tokens at all you see 37. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> sit outside the gate and stay listed without tokens — the YouTube scout needs <code>YOUTUBE_API_KEY</code> or channel OAuth at call time, the SNS scout needs <code>SERPAPI_API_KEY</code>, and feedback simply skips the sections it has no token for. <code>youtube_update</code> is likewise always listed and errors without a token. Hidden tools still have live handlers — call one directly and you get a missing-token error.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Tool</th><th>Character</th><th>What it calls</th><th>Reference</th></tr></thead>
+    <tbody>
+      <tr><td><code>serp_web_search</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td>SerpApi <code>engine=google</code></td><td><a href="serpapi.en.html">SerpApi</a></td></tr>
+      <tr><td><code>serp_news_search</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td>SerpApi <code>engine=google_news</code></td><td><a href="serpapi.en.html">SerpApi</a></td></tr>
+      <tr><td><code>serp_naver_search</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td>SerpApi <code>engine=naver</code></td><td><a href="serpapi.en.html">SerpApi</a></td></tr>
+      <tr><td><code>serp_image_search</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td>SerpApi <code>engine=google_images</code></td><td><a href="serpapi.en.html">SerpApi</a></td></tr>
+      <tr><td><code>serp_trending_now</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td>SerpApi <code>engine=google_trends_trending_now</code></td><td><a href="serpapi.en.html#trending">SerpApi</a></td></tr>
+      <tr><td><code>sns_issue_scout</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td>SerpApi <code>engine=google</code> + <code>site:</code> over Threads·X·Instagram → normalized posts, topic-phrase frequency (+ one trending call)</td><td><a href="serpapi.en.html#trending">SerpApi</a></td></tr>
+      <tr><td><code>naver_search</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td><code>openapi.naver.com/v1/search/*</code></td><td><a href="naver-search.en.html">Naver</a></td></tr>
+      <tr><td><code>datago_search</code></td><td><span class="badge ro">read</span> <span class="badge free">no auth</span></td><td><code>data.go.kr</code> search page (HTML)</td><td><a href="data-go-kr.en.html">Open data</a></td></tr>
+      <tr><td><code>datago_detail</code></td><td><span class="badge ro">read</span> <span class="badge free">no auth</span></td><td><code>data.go.kr</code> detail page (HTML)</td><td><a href="data-go-kr.en.html">Open data</a></td></tr>
+      <tr><td><code>datago_file_download</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td><code>selectFileDataDownload.do</code> → <code>fileDownload.do</code></td><td><a href="data-go-kr.en.html">Open data</a></td></tr>
+      <tr><td><code>datago_file_fetch</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td><code>api.odcloud.kr/api/{pk}/v1/{uddi}</code></td><td><a href="data-go-kr.en.html">Open data</a></td></tr>
+      <tr><td><code>datago_api_call</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td><code>apis.data.go.kr/{path}</code></td><td><a href="data-go-kr.en.html">Open data</a></td></tr>
+      <tr><td><code>gpt_image_text2img</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /v1/images/generations</code></td><td><a href="openai-images.en.html">OpenAI</a></td></tr>
+      <tr><td><code>gpt_image_img2img</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /v1/images/edits</code></td><td><a href="openai-images.en.html">OpenAI</a></td></tr>
+      <tr><td><code>image_local_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>none — local <code>mflux-generate-z-image-turbo</code> process</td><td><a href="../research/2026-08-12-local-image-generation/index.html">Local image research (Korean)</a></td></tr>
+      <tr><td><code>veo_text2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateVideos</code> + operation polling</td><td><a href="gemini-veo.en.html">Veo</a></td></tr>
+      <tr><td><code>veo_img2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateVideos</code> (<code>image</code>/<code>lastFrame</code>)</td><td><a href="gemini-veo.en.html">Veo</a></td></tr>
+      <tr><td><code>veo_extension</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateVideos</code> (<code>video</code>)</td><td><a href="gemini-veo.en.html">Veo</a></td></tr>
+      <tr><td><code>veo_reference</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateVideos</code> (<code>referenceImages</code>)</td><td><a href="gemini-veo.en.html">Veo</a></td></tr>
+      <tr><td><code>seedance_text2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /contents/generations/tasks</code> + polling</td><td><a href="seedance.en.html">Seedance</a></td></tr>
+      <tr><td><code>seedance_img2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td>same endpoint (<code>role: first_frame/last_frame</code>)</td><td><a href="seedance.en.html">Seedance</a></td></tr>
+      <tr><td><code>seedance_reference</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td>same endpoint (<code>role: reference_image</code>)</td><td><a href="seedance.en.html">Seedance</a></td></tr>
+      <tr><td><code>tts_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateContent</code> (<code>AUDIO</code>)</td><td><a href="gemini-tts.en.html">TTS</a></td></tr>
+      <tr><td><code>tts_multi_speaker</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateContent</code> (multiSpeaker)</td><td><a href="gemini-tts.en.html">TTS</a></td></tr>
+      <tr><td><code>tts_local_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>none — local Supertonic 3 (python)</td><td><a href="../research/2026-08-11-local-tts-and-commercial-api/index.html">Local TTS research (Korean)</a></td></tr>
+      <tr><td><code>tts_list_voices</code></td><td><span class="badge ro">read</span></td><td>none — a constant built into the server</td><td><a href="gemini-tts.en.html">TTS</a></td></tr>
+      <tr><td><code>music_generate_clip</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>interactions.create</code> (<code>lyria-3-clip-preview</code>)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
+      <tr><td><code>music_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
+      <tr><td><code>music_generate_advanced</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
+      <tr><td><code>music_list_options</code></td><td><span class="badge ro">read</span></td><td>none — a constant built into the server</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
+      <tr><td><code>threads_publish</code></td><td><span class="badge de">public</span> <span class="badge key">key</span></td><td><code>graph.threads.net/v1.0</code></td><td><a href="meta-graph.en.html">Meta</a></td></tr>
+      <tr><td><code>instagram_publish</code></td><td><span class="badge de">public</span> <span class="badge key">key</span></td><td><code>graph.instagram.com/v23.0</code></td><td><a href="meta-graph.en.html">Meta</a></td></tr>
+      <tr><td><code>facebook_publish</code></td><td><span class="badge de">public</span> <span class="badge key">key</span></td><td><code>graph.facebook.com/v23.0</code></td><td><a href="meta-graph.en.html">Meta</a></td></tr>
+      <tr><td><code>facebook_comment</code></td><td><span class="badge de">public</span> <span class="badge key">key</span></td><td><code>graph.facebook.com/v23.0</code></td><td><a href="meta-graph.en.html">Meta</a></td></tr>
+      <tr><td><code>youtube_publish</code></td><td><span class="badge de">public</span> <span class="badge key">key</span></td><td>OAuth2 refresh → resumable upload → thumbnails.set</td><td><a href="youtube-data.en.html">YouTube</a></td></tr>
+      <tr><td><code>youtube_update</code></td><td><span class="badge de">public</span> <span class="badge key">key</span></td><td><code>videos.list</code> → <code>videos.update</code> (title·description·tags·visibility of an already-uploaded video)</td><td><a href="youtube-data.en.html">YouTube</a></td></tr>
+      <tr><td><code>youtube_insights</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td>3 Data API calls + Analytics <code>reports.query</code></td><td><a href="youtube-data.en.html">YouTube</a></td></tr>
+      <tr><td><code>sns_comment_inbox</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td>Threads · IG · FB comment reads</td><td><a href="meta-graph.en.html">Meta</a></td></tr>
+      <tr><td><code>sns_comment_reply</code></td><td><span class="badge de">public</span> <span class="badge key">key</span></td><td>per-platform reply endpoints</td><td><a href="meta-graph.en.html">Meta</a></td></tr>
+      <tr><td><code>sns_comment_moderate</code></td><td><span class="badge de">public</span> <span class="badge key">key</span></td><td>hide/unhide · FB likes</td><td><a href="meta-graph.en.html">Meta</a></td></tr>
+      <tr><td><code>sns_account_check</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td><code>/me</code> across 4 platforms · YouTube channel lookup</td><td><a href="meta-graph.en.html">Meta</a> · <a href="youtube-data.en.html">YouTube</a></td></tr>
+      <tr><td><code>instagram_insights</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td>account <code>/insights</code> + per-media <code>/insights</code></td><td><a href="meta-graph.en.html#ig-growth">Meta</a></td></tr>
+      <tr><td><code>content_feedback</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td>youtube_insights + instagram_insights → local HTML</td><td><a href="youtube-data.en.html">YouTube</a> · <a href="meta-graph.en.html#ig-growth">Meta</a></td></tr>
+      <tr><td><code>youtube_topic_scout</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td>search + channels + playlistItems + videos → outliers against the channel median</td><td><a href="youtube-data.en.html#scout">YouTube</a></td></tr>
+      <tr><td><code>threads_insights</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td><code>/{user-id}/threads_insights</code> · <code>/{media-id}/insights</code></td><td><a href="meta-graph.en.html#growth">Meta</a></td></tr>
+      <tr><td><code>threads_search</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td><code>GET /keyword_search</code></td><td><a href="meta-graph.en.html#growth">Meta</a></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="method">
+  <h2>How this reference was built</h2>
+  <ul>
+    <li><strong>The primary source is the vendor's official documentation.</strong> Each page links the original at the top.</li>
+    <li>Where the official docs are silent or don't match reality, the answer was settled with <strong>SDK type definitions</strong> (<code>node_modules/openai/resources/images.d.ts</code>, <code>node_modules/@google/genai/dist/genai.d.ts</code>) and <strong>real calls</strong>. Those items say so on the page.</li>
+    <li>One case where a real call overturned the official docs — <a href="gemini-lyria.en.html#realtime-apiversion">Lyria RealTime's apiVersion</a>.</li>
+    <li>Where the implementation is <strong>narrower</strong> than the official contract (say <code>naver_search</code>'s <code>display</code> ceiling of 30 against the API's 100), that's deliberate design to protect LLM context rather than a defect, and each table separates it out in an "implementation" column.</li>
+  </ul>
+</section>
+
+<footer>
+  As of 2026-08-18 · the implementation source of truth is <a href="../../server/src">server/src</a>, and the tool list source of truth is <a href="../../README.md">README.md</a>.
+</footer>
+
+</div>
+</body>
+</html>

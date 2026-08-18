@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seedance 인물·자산 정책 — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="seedance-portrait.en.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="seedance-portrait.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Seedance 인물·자산</div>
+
+<header class="hero">
+  <div class="kicker">BYTEPLUS MODELARK</div>
+  <h1>Seedance 인물·자산 정책</h1>
+  <p class="sub">Dreamina Seedance 2.x 는 <strong>얼굴이 든 입력 이미지를 거부한다.</strong> 다만 막다른 길이 아니라 다른 문으로 가라는 뜻이다 — 신뢰 출력물 재사용, 프리셋 디지털 캐릭터, 권리 확보 실인물 자산 셋이 열려 있다. 이 문서는 그 셋의 조건과 절차, 그리고 참조 이미지를 콘티처럼 쓰면 왜 깨지는지를 정리한다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://docs.byteplus.com/en/docs/ModelArk/2608626">인물 영상 정책</a></span>
+    <span>모델 능력표 <a href="seedance.html">Seedance</a></span>
+    <span>인증 <code>ARK_API_KEY</code></span>
+    <span>구현 <code>server/src/seedance-client.ts</code></span>
+    <span>확인일 <strong>2026-08-15</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#probe">실측 — 무엇이 막히고 무엇이 통하나</a></li>
+    <li><a href="#bypass">우회로 셋</a></li>
+    <li><a href="#register">자산 라이브러리에 직접 등록하기</a></li>
+    <li><a href="#refimg">참조 이미지를 콘티처럼 쓰면 깨진다</a></li>
+    <li><a href="#prompt">컷 순서는 글로 준다</a></li>
+    <li><a href="#traps">함정</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="probe">
+  <h2>1. 실측 — 무엇이 막히고 무엇이 통하나</h2>
+  <p><code>dreamina-seedance-2-0-260128</code> 으로 세 번 찔러 경계를 확인했다(2026-08-15). <strong>거부는 태스크 생성 단계에서 떨어지므로 과금이 없다</strong> — 경계를 재는 실험은 공짜다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>넣은 이미지</th><th>역할</th><th>결과</th><th>비용</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>여성 얼굴이 화면을 채운 클로즈업<br><span class="badge">2.0 이 만든 영상에서 뽑은 프레임</span></td>
+        <td><code>first_frame</code></td>
+        <td><strong>거부</strong> — <code>InputImageSensitiveContentDetected.PrivacyInformation</code><br>“input image ‘content[1]’ may contain real person”</td>
+        <td>0</td>
+      </tr>
+      <tr>
+        <td>같은 영상의 뒷모습 컷(얼굴 안 보임)</td>
+        <td><code>first_frame</code></td>
+        <td><strong>통과</strong> — 4초 생성 정상</td>
+        <td>40,594 토큰</td>
+      </tr>
+      <tr>
+        <td>헬멧으로 머리를 덮은 실사 인물(맨손·목 노출)</td>
+        <td><code>reference_image</code></td>
+        <td><strong>통과</strong></td>
+        <td>정상 과금</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>막는 건 사람이 아니라 얼굴이다.</strong> 실사 인물이 찍혀 있어도 얼굴이 안 보이면 들어간다. 그리고 <strong>AI 가 만든 얼굴에도 같은 필터가 걸린다</strong> — 위 1행의 이미지는 실존 인물이 아니라 이 모델이 방금 생성한 얼굴이었다.
+  </div>
+  <div class="warn">
+    <strong>모델 출력물이라고 아무렇게나 다시 넣을 수는 없다.</strong> 위 1행이 거부된 이유가 여기 있다 — ffmpeg 로 프레임을 뽑아 다시 인코딩한 순간 “원본 출력물”이 아니게 된다. 신뢰 경로의 조건은 §2 에서 다룬다.
+  </div>
+</section>
+
+<section id="bypass">
+  <h2>2. 우회로 셋</h2>
+  <p>공식 문서가 제시하는 해결책이 셋이다. 성격이 서로 다르므로 쓸 자리도 다르다.</p>
+
+  <h3>2-1. 신뢰 출력물 재사용 — 우리가 만든 얼굴을 다시 넣는다</h3>
+  <p>ModelArk 는 <strong>같은 계정이 이 플랫폼에서 만든</strong> 얼굴 있는 출력물을 30일간 신뢰한다. 그 기간 안에는 검열에 걸리지 않고 2.5·2.0 의 입력으로 다시 들어간다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>신뢰되는 출력물</th><th>적용 시작</th><th>유효기간</th></tr></thead>
+    <tbody>
+      <tr><td>2.5 · 2.0 계열이 만든 <strong>얼굴 있는 영상</strong></td><td>2026-03-11</td><td>생성 시각부터 30일</td></tr>
+      <tr><td>그 영상의 <strong>마지막 프레임 이미지</strong></td><td>2026-04-16</td><td>30일</td></tr>
+      <tr><td><strong>Seedream 5.0 lite</strong> 텍스트→이미지의 얼굴 있는 결과물</td><td>2026-04-16</td><td>30일</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>조건이 빡빡하다. 같은 플랫폼·같은 계정이어야 하고, <strong>2차 편집을 거치면 신뢰가 깨진다.</strong> 압축이나 전달만으로도 검증이 무효가 될 수 있어, 문서는 원본을 BytePlus TOS 에 그대로 저장해 두라고 권한다. 신뢰는 <em>입력</em>에만 적용되므로 출력이 보안 검열에서 떨어지는 건 별개다.</p>
+  <div class="ok">
+    <strong>우리 파이프라인에는 세 번째 줄이 가장 쓸모 있다.</strong> 원하는 인물을 Seedream 5.0 lite 로 만들어 두면 그 이미지가 곧바로 2.0 의 <code>reference_image</code> 로 들어간다 — 얼굴 검열과 컷 간 인물 일관성이 한 번에 풀린다. 30일 안에 그 회차를 끝내면 된다.
+  </div>
+
+  <h3>2-2. 프리셋 디지털 캐릭터 — 특정 인물일 필요가 없을 때</h3>
+  <p>플랫폼이 공용 디지털 캐릭터 라이브러리를 무료로 제공한다. 자산마다 ID 가 있고 <code>asset://&lt;asset ID&gt;</code> 를 URL 자리에 넣어 쓴다. 실사풍 얼굴은 필요하지만 특정 인물이어야 할 이유가 없는 자리에 맞는다.</p>
+  <pre><code>{
+  "type": "image_url",
+  "image_url": { "url": "asset://asset-20260410114236-8cdfz" },
+  "role": "reference_image"
+}</code></pre>
+  <div class="warn">
+    <strong>프롬프트에서 asset ID 를 그대로 부르면 안 된다.</strong> ID 는 자산을 넘기는 통로일 뿐이라 모델이 ID 와 내용을 연결하지 못한다. 본문에서는 <code>Image 1</code> 처럼 <strong>자산 종류 + 순번</strong>으로 지칭한다(순번은 요청 본문 안에서 같은 종류 자산끼리의 순서다).<br>
+    맞는 표현 — “The beauty influencer in Image 1” · 틀린 표현 — “asset-2026**** is a beauty influencer”
+  </div>
+
+  <h3>2-3. 권리 확보 실인물 자산</h3>
+  <p>실제 사람의 동의와 본인 인증을 받아 자기 계정의 비공개 자산 라이브러리에 올리는 경로다. 절차는 §3.</p>
+</section>
+
+<section id="register">
+  <h2>3. 자산 라이브러리에 직접 등록하기</h2>
+  <div class="danger">
+    <strong>등록할 수 있는 건 실제 사람뿐이다.</strong> 이 라이브러리는 초상권 동의를 받는 장치라, 절차의 중심이 <strong>당사자 본인의 얼굴 실인증</strong>이다. AI 로 만든 캐릭터는 인증할 사람이 없으므로 이 경로로 등록하지 못한다 — 그런 경우는 §2-1 이나 §2-2 로 간다.
+  </div>
+
+  <h3>3-1. 절차</h3>
+  <p>세 사람 몫의 단계가 순서대로 있다.</p>
+  <ol>
+    <li><strong>자산을 쓸 쪽(우리)</strong> — ModelArk Model Playground 에서 <em>My assets → Real-human → Add real-human assets → Create an asset group</em>. 이 계정은 실명 또는 기업 인증을 먼저 마쳐야 한다. 권한 유효기간을 정하고 개인정보 처리 규칙에 동의하면 초대 QR 코드가 발급된다.</li>
+    <li><strong>권한을 주는 쪽(출연자)</strong> — QR 을 찍어 자기 BytePlus 계정으로 로그인하고, 권한 주체와 사용 목적을 확인한 뒤 얼굴 정보 처리에 동의하고 실인증을 진행한다. 그다음 자기 사진·영상을 올린다. 올릴 때마다 얼굴 일관성 검사를 통과해야 저장된다.</li>
+    <li><strong>다시 우리</strong> — 실인물 자산 라이브러리에서 수령 대기 자산을 <em>Accept</em> 하고 위험 고지를 확인하면 상태가 <strong>Active</strong> 가 된다. <em>Reject</em> 하면 <strong>Rejected</strong> 로 바뀌어 쓰지 못한다.</li>
+  </ol>
+  <div class="note">
+    한 자산 그룹은 <strong>한 사람 전용</strong>이다. 다른 사람의 자료를 같은 그룹에 섞지 못한다. 반대로 같은 사람의 다른 메이크업·스타일링은 계속 추가할 수 있고, 그때는 실인증을 다시 하지 않는다 — 배우 한 명당 인증 한 번이면 된다.
+  </div>
+
+  <h3>3-2. 올릴 자료의 규격</h3>
+  <p>구도부터 정해져 있다. <strong>전신</strong>은 세로 방향에 정면 전신, <strong>얼굴</strong>은 세로 방향에 정면 무표정으로 어깨 위를 잘라 <strong>얼굴이 화면의 약 2/3</strong>를 차지하게 찍는다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th></th><th>형식</th><th>용량</th><th>길이·크기</th></tr></thead>
+    <tbody>
+      <tr><td>이미지</td><td>jpeg · jpg · png · webp · gif · heic</td><td>30MB 미만</td><td>가로세로비 0.4~2.5 · 변 300~6000px</td></tr>
+      <tr><td>영상</td><td>mp4 · mov</td><td>50MB 이하</td><td>2~15초 · 24~60fps · 비 0.4~2.5 · 변 300~6000px · 해상도 409,600~927,408</td></tr>
+      <tr><td>오디오</td><td>mp3 · wav</td><td>15MB 이하</td><td>2~15초</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>인증 실패는 조명·각도 탓으로 종종 일어난다. 문서도 그때는 다시 시도하라고만 안내하며, 자료는 선명한 정면 사진을 권한다.</p>
+
+  <h3>3-3. 등록한 자산 쓰기</h3>
+  <p>자산 ID 를 확인한 뒤 세 역할 모두 같은 <code>asset://</code> 형식으로 넘긴다.</p>
+  <pre><code>"content": [
+  { "type": "text",      "text": "&lt;프롬프트&gt;" },
+  { "type": "image_url", "image_url": { "url": "asset://&lt;asset ID&gt;" }, "role": "reference_image" },
+  { "type": "video_url", "video_url": { "url": "asset://&lt;asset ID&gt;" }, "role": "reference_video" },
+  { "type": "audio_url", "audio_url": { "url": "asset://&lt;asset ID&gt;" }, "role": "reference_audio" }
+]</code></pre>
+</section>
+
+<section id="refimg">
+  <h2>4. 참조 이미지를 콘티처럼 쓰면 깨진다</h2>
+  <p>여러 컷을 그린 콘티 한 장을 참조로 넣고 싶어지는데, 공식 문서가 말리는 형태가 정확히 그것이다. 이유가 셋이다.</p>
+
+  <h3>4-1. 화풍까지 따라온다</h3>
+  <p><code>reference_image</code> 는 <strong>인물 생김새 · 화풍 · 화면 구도</strong> 셋을 물려받는다. 구도가 옮겨오는 건 우리가 노린 것이지만 화풍도 같이 온다. 문서의 “Style drifting” 항목이 그 반대 사례를 든다 — 애니를 원하는데 레퍼런스가 실사면 결과가 실사로 끌린다는 것이다. 뒤집으면 스케치를 넣으면 결과도 스케치로 끌린다. 해결책으로 문서가 권하는 건 스타일 제약어를 명시하거나, <strong>레퍼런스를 먼저 목표 화풍으로 변환해서 넣는 것</strong>이다.</p>
+
+  <h3>4-2. 한 장에 여러 컷을 담으면 인물이 복제된다</h3>
+  <p>같은 인물을 여러 각도로 담은 자산(three-view · multi-view)을 문서가 명시적으로 비권장한다. 모델이 각 패널을 <strong>서로 다른 인물</strong>로 인식해, 한 프레임에 같은 사람이 둘 나오는 “Duplicated characters” 증상이 생긴다. 콘티 시트가 바로 그 형태다.</p>
+
+  <h3>4-3. 자산은 많을수록 나빠진다</h3>
+  <p>상한은 2.0 이 9장, 2.5 가 30장이지만 문서는 <strong>4~5장을 권하고 상한까지 쓰지 말라</strong>고 한다. 자산이 많으면 모델이 무엇을 우선할지 판단하지 못해 화풍 충돌과 주체 흐림이 일어난다. 자산의 역할은 넷으로 정해져 있고, “컷 순서”는 그중에 없다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>역할</th><th>거는 것</th><th>권장 구성</th></tr></thead>
+    <tbody>
+      <tr><td>인물 고정</td><td>캐릭터 외형</td><td>이미지 1~2장(얼굴 클로즈업 + 전신)</td></tr>
+      <tr><td>장면 톤</td><td>환경·스타일</td><td>이미지 1장</td></tr>
+      <tr><td>카메라 무빙</td><td>촬영 언어·동작 리듬</td><td>영상 1편</td></tr>
+      <tr><td>분위기·리듬</td><td>감정·음색</td><td>오디오 1편</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>인물이 흔들리면 얼굴 비중부터 의심한다.</strong> 전신 사진 한 장에 얼굴·의상·포즈를 다 담으면 얼굴이 차지하는 면적이 작아 특징 추출 가중치가 떨어지고, 중간에 얼굴이 바뀌는 ID 드리프트가 난다. 문서의 처방은 <strong>머리만 담은 헤드샷을 따로 준비</strong>하고(무표정 권장, 어깨·목·배경 같은 방해 요소 최소화), 프롬프트에서 “Subject 1 의 얼굴은 Image 1, 스타일링은 Image 2” 로 역할을 나눠 지정하며, <strong>중요한 자산을 앞에 배치</strong>하는 것이다.
+  </div>
+
+  <h3>4-4. 그림대로 정확히 가려면 참조가 아니라 프레임이다</h3>
+  <div class="ok">
+    문서 원문 그대로다 — <strong>“첫·끝 프레임이 지정한 이미지와 정확히 일치해야 한다면 언제나 image-to-video(first and last frame) 기능을 쓰라”</strong>(<code>role</code> 을 <code>first_frame</code> / <code>last_frame</code> 으로). <code>reference_image</code> 로 첫 프레임을 지정하는 건 간접적인 흉내라 보장이 없다.
+  </div>
+  <p>그래서 콘티는 <strong>사람이 보는 설계도</strong>로 쓰고, 모델에는 그 컷을 목표 화풍으로 그린 그림을 <code>first_frame</code> 으로 넣는다. 인물 일관성은 <code>reference_image</code> 1~2장으로 따로 잡는다.</p>
+  <div class="note">
+    실측으로도 같은 답이 나왔다. 같은 장면을 글로 세 번(15초 t2v) 지시했을 때는 인물 배치가 매번 뒤집혔는데, 배치가 맞는 프레임 한 장을 <code>first_frame</code> 으로 넣자 카메라·구도를 <strong>한 줄도 쓰지 않고</strong> 그대로 유지됐다.
+  </div>
+</section>
+
+<section id="prompt">
+  <h2>5. 컷 순서는 글로 준다</h2>
+  <p>복잡한 영상의 이상적인 프롬프트 형태를 문서가 <strong>타임라인 콘티</strong>로 못 박는다. 영상을 컷으로 쪼개 <code>Shot 1</code> · <code>Shot 2</code> · <code>Shot 3</code> 으로 번호를 붙이고, 사건이 일어나는 순서대로 “누가 + 어디서 + 무엇을 + 카메라는 어떻게”를 쓴다.</p>
+  <pre><code>Shot 1: 골목 측면. 남자가 천천히 뛰기 시작한다. 가쁜 숨소리.
+Shot 2: 남자가 과일 좌판을 넘어뜨린다. 카메라가 빠르게 흔들리며 겁먹은 얼굴을 클로즈업.
+Shot 3: 남자가 낮은 담을 넘어 사라진다. 카메라가 천천히 물러나 빈 거리에서 멈춘다.</code></pre>
+  <p>같은 내용을 “남자가 초조하게 거리를 달린다, 매우 영화적인 느낌” 처럼 뭉뚱그린 산문은 문서가 든 나쁜 예다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>규칙</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td>컷당 카메라 무빙 1종</td><td>푸시·풀·팬·이동을 한 컷에 겹쳐 요구하면 화면이 불안정해진다</td></tr>
+      <tr><td>초 단위 지정 금지</td><td>“0~3초” 같은 정밀 타이밍 지원이 불안정하다. 길이를 강제하면 생성이 망가질 수 있다</td></tr>
+      <tr><td>작고 느린 동작 우선</td><td>전력질주·큰 점프·격한 구르기 같은 큰 동작은 피한다</td></tr>
+      <tr><td>감정은 몸으로</td><td>“매우 슬프다” 대신 “고개를 숙이고 어깨가 살짝 떨린다”</td></tr>
+      <tr><td>동작 사이를 잇는다</td><td>“돌아서는 관성을 이어 자연스럽게 손을 든다”</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>정보 종류를 기호로 나눠 준다 — 음악은 <code>（ ）</code>, 효과음은 <code>&lt; &gt;</code>, 대사는 <code>{ }</code>, 자막은 <code>【 】</code> 다. 대사 언어를 섞지 않는다(고유명사 제외).</p>
+  <div class="warn">
+    <strong>자막은 100% 막지 못한다.</strong> 요구하지 않아도 자막이 생성될 수 있고, 문서가 주는 건 확률을 낮추는 방법뿐이다 — 제약어를 명시하고, 레퍼런스에 든 불필요한 글자를 미리 지우고, 가능하면 가로로 만들어 나중에 세로로 자른다. <strong>세로가 가로보다 자막 생성 확률이 유의하게 높다.</strong> 9:16 전용인 이 파이프라인에는 그대로 불리한 조건이다.
+  </div>
+</section>
+
+<section id="traps">
+  <h2>6. 함정</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>증상</th><th>원인</th><th>대응</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>i2v 결과의 일부 프레임이 늘었다 줄었다 한다</td>
+        <td>입력 이미지의 가로·세로가 출력 해상도와 다르다</td>
+        <td>입력을 출력 픽셀 크기에 맞춰 자르고 <code>ratio</code> 를 <code>adaptive</code> 로 둔다</td>
+      </tr>
+      <tr>
+        <td>i2v 소스가 가운데 띠만 남아 나온다</td>
+        <td><code>ratio</code> 에 값을 박으면 서버가 중앙 기준으로 잘라낸다</td>
+        <td>i2v 에서는 <code>ratio</code> 를 아예 넘기지 않는다(기본 <code>adaptive</code>)</td>
+      </tr>
+      <tr>
+        <td>이어 붙인 지점에서 화면이 튄다</td>
+        <td>영상 연장 접합부의 프레임 불일치</td>
+        <td>앞 클립 끝 6프레임과 뒤 클립 앞 1프레임을 잘라 맞춘다. 그래도 미세한 튐이 남을 수 있어, 전환 컷 지점에서 끊는 편이 낫다</td>
+      </tr>
+      <tr>
+        <td>모델을 불렀는데 <code>ModelNotOpen</code></td>
+        <td>콘솔에서 그 모델을 활성화하지 않았다</td>
+        <td>Model activation 에서 켠다. 과금은 붙지 않는다(2.0-fast 로 실측)</td>
+      </tr>
+      <tr>
+        <td>결과 URL 로 받으려니 사라졌다</td>
+        <td>생성 결과 URL 은 24시간짜리다</td>
+        <td>폴링이 끝나는 즉시 저장한다. 신뢰 자산으로 재사용할 원본은 TOS 에 보관한다</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>2.0 은 소리를 켜도 토큰이 오르지 않는다.</strong> 같은 프롬프트·같은 길이(1080p 15초)로 무음과 소리를 각각 뽑았더니 둘 다 <strong>731,025 토큰</strong>이었다(2026-08-15 실측). 1.5 pro 가 소리를 켜면 단가가 정확히 2배인 것과 다르다 — 2.0 에서는 소리를 끌 이유가 없다. 다만 이 판정은 응답의 <code>completion_tokens</code> 를 청구 근거로 본 것이라, 벤더가 오디오를 별도 항목으로 청구한다면 여기 잡히지 않는다.
+  </div>
+  <p>참고로 해상도를 720p 로 내리면 같은 15초가 <strong>324,900 토큰</strong>으로 1080p 의 44% 다. 토큰 산식이 가로 × 세로에 비례하므로 예측대로 떨어진다.</p>
+</section>
+
+<section id="impl">
+  <h2>7. 구현 대조표</h2>
+  <p>공식 API 에는 있는데 <code>server/src/seedance-client.ts</code> 에는 아직 없는 것들이다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>API 기능</th><th>형태</th><th>우리 구현</th></tr></thead>
+    <tbody>
+      <tr><td>자산 라이브러리 참조</td><td><code>"url": "asset://&lt;asset ID&gt;"</code></td><td><strong>없음</strong> — 프리셋 디지털 캐릭터·등록 실인물을 못 쓴다</td></tr>
+      <tr><td>영상 참조</td><td><code>role: "reference_video"</code></td><td><strong>없음</strong></td></tr>
+      <tr><td>오디오 참조</td><td><code>role: "reference_audio"</code></td><td><strong>없음</strong></td></tr>
+      <tr><td>마지막 프레임 회수</td><td><code>"return_last_frame": "true"</code></td><td><strong>없음</strong> — 컷을 이어 붙일 때 이음매를 맞추는 자리이자, 얼굴 있는 신뢰 자산을 얻는 정식 경로다</td></tr>
+      <tr><td>영상 편집</td><td>원본 영상 + 수정 지시</td><td><strong>없음</strong> — 부분 교체·요소 삭제·속성 변경</td></tr>
+      <tr><td>영상 연장</td><td>원본 영상 + 이어 갈 내용</td><td><strong>없음</strong></td></tr>
+      <tr><td>첫·끝 프레임</td><td><code>role: first_frame / last_frame</code></td><td>있음 — <code>generateFromImage</code></td></tr>
+      <tr><td>이미지 참조</td><td><code>role: reference_image</code></td><td>있음 — <code>generateWithReferences</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    Seedream 5.0 lite 는 영상 모델이 아니라 이미지 모델이라 이 클라이언트의 대상이 아니다. 다만 §2-1 의 신뢰 경로가 이 모델의 출력을 지목하므로, 얼굴 있는 인물을 다루는 회차에서는 호출 경로를 붙일 값어치가 있다.
+  </div>
+</section>
+
+<footer class="meta" style="margin-top:2rem">
+  <span>출처 <a href="https://docs.byteplus.com/en/docs/ModelArk/2608626">인물 영상 정책</a></span>
+  <span><a href="https://docs.byteplus.com/en/docs/ModelArk/2315856">실인물 자산 등록</a></span>
+  <span><a href="https://docs.byteplus.com/en/docs/ModelArk/2223965">디지털 캐릭터 라이브러리</a></span>
+  <span><a href="https://docs.byteplus.com/en/docs/ModelArk/2222480">2.0 프롬프트 가이드</a></span>
+  <span><a href="https://docs.byteplus.com/en/docs/ModelArk/2291680">2.0 튜토리얼</a></span>
+  <span>대조 <a href="veo-portrait.html">Veo 인물·참조 정책</a> — 같은 얼굴 PNG 를 Veo 는 통과시킨다</span>
+</footer>
+
+</div>
+</body>
+</html>

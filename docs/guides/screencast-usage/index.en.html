@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Short-form from a shooting script — the storyboard-first filming guide</title>
+<link rel="alternate" hreflang="ko" href="index.html">
+<link rel="alternate" hreflang="en" href="index.en.html">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  /* ── Language toggle ── */
+  .langbar { display: flex; justify-content: flex-end; padding-top: 18px; }
+  .langbar a {
+    font-size: 13px; color: var(--text-soft); text-decoration: none;
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+  }
+  .langbar a:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ── Header ── */
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  /* ── TOC ── */
+  nav.toc {
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 56px; font-size: 15px;
+  }
+  nav.toc .toc-title { font-size: 13px; font-weight: 700; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 10px; }
+  nav.toc ol { list-style: none; counter-reset: toc; }
+  nav.toc li { counter-increment: toc; padding: 3px 0; }
+  nav.toc a { color: var(--text); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc li::before { content: counter(toc) ". "; color: var(--accent); font-weight: 700; margin-right: 4px; }
+
+  /* ── Sections ── */
+  section { margin-bottom: 64px; }
+  h2 {
+    font-size: 24px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+  }
+  h2 .num { color: var(--accent); margin-right: 8px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
+  p { margin-bottom: 14px; }
+  p.lead { font-size: 16.5px; }
+  ul.plain, ol.plain { margin: 0 0 16px 22px; }
+  ul.plain li, ol.plain li { margin-bottom: 8px; }
+  strong { font-weight: 700; }
+  em { font-style: normal; color: var(--accent); font-weight: 600; }
+
+  /* ── Code ── */
+  code {
+    font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: .875em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px;
+  }
+  pre {
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 20px; margin: 14px 0 20px; overflow-x: auto;
+    font-size: 14px; line-height: 1.7;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: inherit; }
+  pre .c { color: var(--text-soft); }
+  pre .k { color: var(--accent); font-weight: 600; }
+
+  /* ── Pipeline flow ── */
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 20px 0 24px; }
+  .flow .step {
+    flex: 1 1 150px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow); position: relative;
+  }
+  .flow .step .tag { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; color: var(--accent); }
+  .flow .step .name { font-weight: 700; font-size: 15px; margin-top: 2px; }
+  .flow .step .desc { font-size: 13px; color: var(--text-soft); margin-top: 4px; line-height: 1.55; }
+  .flow .step.you { border-color: var(--green); }
+  .flow .step.you .tag { color: var(--green); }
+  .flow .arrow { align-self: center; color: var(--text-soft); font-size: 18px; flex: 0 0 auto; }
+
+  /* ── Step cards ── */
+  .stepcard {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: 10px; background: var(--bg-card); box-shadow: var(--shadow);
+    padding: 20px 24px; margin: 20px 0;
+  }
+  .stepcard .who {
+    display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .05em;
+    padding: 2px 10px; border-radius: 999px; margin-bottom: 8px;
+  }
+  .who.user { color: var(--green); background: var(--green-soft); }
+  .who.claude { color: var(--purple); background: var(--purple-soft); }
+  .stepcard h4 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .stepcard p:last-child, .stepcard pre:last-child, .stepcard ul:last-child { margin-bottom: 0; }
+
+  /* ── Callouts ── */
+  .callout { border-radius: 10px; padding: 14px 18px; margin: 16px 0 20px; font-size: 15px; border: 1px solid; }
+  .callout .ct { font-weight: 700; font-size: 13px; letter-spacing: .05em; display: block; margin-bottom: 4px; }
+  .callout.tip  { background: var(--green-soft); border-color: var(--green); }
+  .callout.tip .ct { color: var(--green); }
+  .callout.warn { background: var(--amber-soft); border-color: var(--amber); }
+  .callout.warn .ct { color: var(--amber); }
+  .callout.danger { background: var(--red-soft); border-color: var(--red); }
+  .callout.danger .ct { color: var(--red); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ── Tables ── */
+  .tblwrap { overflow-x: auto; margin: 14px 0 20px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { border: 1px solid var(--border); padding: 9px 14px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; white-space: nowrap; }
+  td code { white-space: nowrap; }
+
+  /* ── Layout diagram ── */
+  .canvas {
+    width: 260px; margin: 20px auto; border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden; box-shadow: var(--shadow); background: #0b1020; color: #fff;
+    font-size: 12.5px; text-align: center;
+  }
+  .canvas .zone { padding: 10px 8px; line-height: 1.5; }
+  .canvas .z-title { height: 88px; display: flex; flex-direction: column; justify-content: center; }
+  .canvas .z-title .zt { font-weight: 800; font-size: 14px; }
+  .canvas .z-title .zs { color: #9fb3ff; font-size: 11px; }
+  .canvas .z-band { height: 150px; margin: 0 10px; border-radius: 8px;
+    background: repeating-linear-gradient(45deg, #1c2440, #1c2440 8px, #232c50 8px, #232c50 16px);
+    display: flex; align-items: center; justify-content: center; color: #aab8e8; }
+  .canvas .z-sub { height: 72px; display: flex; align-items: center; justify-content: center; color: #e8ecf8; }
+  .canvas .z-ui { height: 40px; background: #060912; color: #5a6480; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .canvas .lbl { color: #7f8db4; font-size: 10.5px; letter-spacing: .06em; }
+
+  /* ── Summary card ── */
+  .summary {
+    background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px;
+    padding: 24px 28px; font-size: 16.5px;
+  }
+  .summary .ct { font-weight: 800; color: var(--accent); letter-spacing: .04em; font-size: 13px; display: block; margin-bottom: 8px; }
+
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--text-soft); }
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 26px; }
+    .flow { flex-direction: column; }
+    .flow .arrow { transform: rotate(90deg); align-self: flex-start; margin-left: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="langbar"><a href="index.html" hreflang="ko">한국어</a></div>
+
+<header class="hero">
+  <span class="kicker">USER GUIDE</span>
+  <h1>Short-form from a shooting script<br>— the storyboard-first filming guide</h1>
+  <p class="sub">Settle the storyboard and the shooting script <strong>first</strong>, record your
+  screen against the script, and Claude <strong>edits</strong> the raw recording into a 9:16 short.
+  The picture is a real demonstration and the audio is your own voice; no generated backgrounds
+  and no TTS.</p>
+  <div class="meta">
+    <span><strong>Plugin</strong> social-flow</span>
+    <span><strong>Skills</strong> storyboard (shooting mode) → ingest → produce → publish</span>
+    <span><strong>Written</strong> 2026-07-29</span>
+    <span><strong>Platform</strong> macOS (screencapture · whisper.cpp · ffmpeg)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <span class="toc-title">CONTENTS</span>
+  <ol>
+    <li><a href="#overview">The whole picture — how it differs from improvised recording</a></li>
+    <li><a href="#setup">Setup (once)</a></li>
+    <li><a href="#storyboard">Step 1 — the storyboard and shooting script</a></li>
+    <li><a href="#shoot">Step 2 — filming against the script</a></li>
+    <li><a href="#edit">Step 3 — alignment, edit, publish</a></li>
+    <li><a href="#layout">The layout of the edited video</a></li>
+    <li><a href="#trouble">Troubleshooting</a></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════════ 1. The whole picture ═══════════════════ -->
+<section id="overview">
+  <h2><span class="num">1.</span>The whole picture — how it differs from improvised recording</h2>
+  <p class="lead">In the improvised flow (<a href="../ingest-usage/index.en.html">the ingest
+  guide</a>), <em>the recording is the storyboard's material</em>. Here it's the other way round:
+  <em>the storyboard is the plan for the recording</em> — what you'll say and what you'll show are
+  designed up front, so the finished quality is even and the edit is precise because it has the
+  script to measure against.</p>
+
+  <div class="flow">
+    <div class="step">
+      <span class="tag">AUTO</span>
+      <div class="name">① Script design</div>
+      <div class="desc">research · scene design · shooting script (script.md)</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">YOU</span>
+      <div class="name">② Approve + film</div>
+      <div class="desc">script on the secondary display, demo on the main one</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <span class="tag">AUTO</span>
+      <div class="name">③ Align + edit</div>
+      <div class="desc">transcript → scene matching → cuts · zoom · subtitles · BGM</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step you">
+      <span class="tag">YOU</span>
+      <div class="name">④ Publish approval</div>
+      <div class="desc">published together with the per-platform text</div>
+    </div>
+  </div>
+
+  <div class="tblwrap">
+  <table>
+    <tr><th></th><th>Improvised recording (ingest guide)</th><th>Script filming (this guide)</th></tr>
+    <tr><td>Order</td><td>record → timeline → storyboard → produce</td><td><strong>storyboard → record</strong> → edit</td></tr>
+    <tr><td>Picture</td><td>generated backgrounds + text cards</td><td><strong>your actual recording</strong> (cut and zoomed per scene)</td></tr>
+    <tr><td>Audio</td><td>TTS narration</td><td><strong>your own voice</strong> (the recording's audio)</td></tr>
+    <tr><td>Good for</td><td>explainers · news · list formats</td><td>tutorials · app demos · showing a process</td></tr>
+    <tr><td>Approval gates</td><td>storyboard · publish (2)</td><td>script · alignment drift · publish (3)</td></tr>
+  </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="ct">📼 THE LANE THIS GUIDE COVERS</span>
+    <p>What's described here is the <strong>short-form full shoot</strong> (9:16, filmed in one
+    pass). YouTube <strong>long-form (16:9)</strong> also writes the script first, but it mixes
+    filmed scenes with generated ones in a single episode, so you <strong>film each scene
+    separately</strong> and save it under the filename the script assigns
+    (<code>footage/s2-install.mp4</code> and so on). There's no alignment step — the filename is
+    what pairs a clip with its scene — so section 4's "film it in one pass" and section 5's
+    alignment drift report don't apply to long-form. The filming rules and the layout are nearly
+    the same for both lanes; long-form just films in landscape.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 2. Setup ═══════════════════ -->
+<section id="setup">
+  <h2><span class="num">2.</span>Setup (once)</h2>
+  <p>The prerequisites are the same as the improvised flow — whisper.cpp, the STT model, Screen
+  Recording and Microphone permission, ffmpeg. For how to check each one, follow
+  <a href="../ingest-usage/index.en.html#setup">section 2 of the ingest guide</a> as is. You also
+  need a channel (<code>/social-flow:channel add</code>) already in place.</p>
+  <div class="callout tip">
+    <span class="ct">✓ INSTALL ONCE, DONE</span>
+    <p>whisper.cpp, the model, and the Screen Recording / Microphone permissions are a one-time
+    setup. If you've already done an improvised recording, go straight to section 3.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 3. Step 1 — the script ═══════════════════ -->
+<section id="storyboard">
+  <h2><span class="num">3.</span>Step 1 — the storyboard and shooting script</h2>
+
+  <div class="stepcard">
+    <span class="who user">YOU</span>
+    <h4>Ask for a storyboard in shooting mode</h4>
+    <pre><code><span class="k">/social-flow:storyboard</span> money "Hometax year-end tax preview" as a shooting script</code></pre>
+    <p>Say "as a shooting script", "I'll record it myself", or anything else that signals
+    <strong>you intend to demonstrate it yourself</strong>, and it goes into shooting mode
+    (if it's ambiguous, Claude asks).</p>
+  </div>
+
+  <div class="stepcard">
+    <span class="who claude">CLAUDE</span>
+    <h4>Research → scene design → writing the shooting script</h4>
+    <ul class="plain">
+      <li>Research and fact-checking work exactly as in a normal storyboard — a time-sensitive
+        number only reaches the script after clearing two independent sources.</li>
+      <li>For each scene it designs <strong>what to show, what to say, the transition cue, and the
+        target length</strong>, and writes it up as <code>storyboard/script.md</code>, the shooting
+        script. No scene images are generated — the picture comes from your filming.</li>
+      <li>Target scene length is 8–20 seconds — the number of sentences is worked backwards from
+        speaking rate (roughly 5–6 Korean characters a second).</li>
+    </ul>
+  </div>
+
+  <div class="stepcard">
+    <span class="who user">YOU</span>
+    <h4>Approve the script (approval gate 1)</h4>
+    <p>You see the scene count, the cover title, and the key numbers with their sources, and pick
+    [approve / request changes / hold]. <strong>Nothing about filming is shown before you
+    approve.</strong> Once approved, the next command is handed to you:</p>
+    <pre><code><span class="k">/social-flow:ingest</span> money record "Hometax year-end tax preview"</code></pre>
+  </div>
+</section>
+
+<!-- ═══════════════════ 4. Step 2 — filming ═══════════════════ -->
+<section id="shoot">
+  <h2><span class="num">4.</span>Step 2 — filming against the script</h2>
+
+  <p class="lead">Only the <strong>main display</strong> is recorded. Put the script
+  (script.md) on the <strong>secondary display</strong> and read from it while you talk — that
+  screen won't be in the recording.</p>
+
+  <h3>Five filming rules (also printed at the top of script.md)</h3>
+  <ul class="plain">
+    <li><strong>At the end of a scene, stop talking for a second, then switch the screen</strong> —
+      that silence-plus-transition point becomes the edit cut. This one habit decides how accurate
+      the edit is.</li>
+    <li><strong>Enlarge the fonts and windows of whatever you're demoing</strong>
+      (<code>⌘+</code> in a browser) — it gets scaled down to a 1080px-wide portrait video, so
+      small text disappears.</li>
+    <li>If you fumble, don't stop the recording — <strong>say that scene again from the
+      top</strong>. The edit uses the last take and throws the earlier ones away.</li>
+    <li>You don't have to recite the sentences exactly — speak naturally, but keep
+      <strong>the key numbers and proper nouns word for word</strong> (they're the reference values
+      for subtitles and fact-checking).</li>
+    <li>Turn on Do Not Disturb — notification banners on the main screen are captured too. Screens
+      showing account names or emails are designed around in advance, in the script's "screen"
+      field.</li>
+  </ul>
+
+  <p>When you're done, type <strong>"recording done"</strong> in the chat. Transcription and
+  timeline generation then run automatically,
+  <a href="../ingest-usage/index.en.html#auto">the same as in the improvised flow</a>
+  (2–3 minutes for a 10-minute recording).</p>
+</section>
+
+<!-- ═══════════════════ 5. Step 3 — alignment and edit ═══════════════════ -->
+<section id="edit">
+  <h2><span class="num">5.</span>Step 3 — alignment, edit, publish</h2>
+
+  <div class="stepcard">
+    <span class="who claude">CLAUDE</span>
+    <h4>Script alignment — matching the recording to the storyboard scenes</h4>
+    <ul class="plain">
+      <li>It compares the transcript timeline against the script to find the <strong>cut range for
+        each scene</strong> (<code>recording/alignment.json</code>). Cuts always land inside
+        silence — nothing gets cut mid-sentence.</li>
+      <li>If you said the same scene several times, <strong>the last take wins</strong>.</li>
+      <li>Looking at each scene's keyframe, if the demo's focus is one part of the screen it sets
+        up a <strong>crop to that area</strong> — fitting a whole 5K screen in shrinks the text
+        4.7× and nobody can read it.</li>
+      <li>Subtitles come from <strong>the corrected transcript of what you actually said</strong>,
+        not from the script (with numbers and proper nouns in their original form).</li>
+    </ul>
+  </div>
+
+  <div class="stepcard">
+    <span class="who user">YOU</span>
+    <h4>Review the drift report (approval gate 2)</h4>
+    <p>Improvised lines that aren't in the script, missing scenes, reordered scenes, and
+    <strong>numbers or proper nouns spoken differently from the script</strong> are reported as a
+    table — pick [refilm that part / drop the scene / take it as is] and the alignment is
+    settled.</p>
+  </div>
+
+  <div class="stepcard">
+    <span class="who claude">CLAUDE</span>
+    <h4>The edit build + platform text</h4>
+    <pre><code><span class="k">/social-flow:produce</span> money "Hometax year-end tax preview"</code></pre>
+    <ul class="plain">
+      <li>Cut per scene → crop → 9:16 composite → title overlay → burned subtitles → BGM ducking
+        (volume drops automatically under your voice) → outro joined. The build asserts zero
+        audio/video drift.</li>
+      <li>Phone-viewport review, per-platform text (Threads/IG/FB/YT), and the quality gates
+        continue exactly as in normal production.</li>
+    </ul>
+  </div>
+
+  <div class="callout danger">
+    <span class="ct">✗ WHAT YOU SAID ON THE RECORDING IS NOT A SOURCE</span>
+    <p>The numbers in the script have already cleared cross-verification. If what you said while
+    filming differs from the script, <strong>the script is the reference</strong> — you decide
+    whether to refilm or correct the subtitle. A new number improvised on camera doesn't reach the
+    video unverified.</p>
+  </div>
+
+  <p>From there, the publish approval in <code>/social-flow:publish</code> (approval gate 3) is the
+  same as the normal flow.</p>
+</section>
+
+<!-- ═══════════════════ 6. Layout ═══════════════════ -->
+<section id="layout">
+  <h2><span class="num">6.</span>The layout of the edited video</h2>
+
+  <p>Three layers composited on a 1080×1920 dark canvas:</p>
+
+  <div class="canvas">
+    <div class="zone z-title">
+      <span class="lbl">y 190–460</span>
+      <span class="zt">Scene title</span>
+      <span class="zs">kicker + title (the cover adds the key number)</span>
+    </div>
+    <div class="zone z-band">Recording band<br>(cut per scene · cropped where needed)</div>
+    <div class="zone z-sub"><span>“corrected subtitle of what was said”</span></div>
+    <div class="zone z-ui">y 1380–1560 subtitle band · below it, the platform UI zone</div>
+  </div>
+
+  <ul class="plain">
+    <li><strong>Title (top)</strong> — the storyboard's scene title, shown for the whole scene. You
+      can tell which stage you're in with the sound off.</li>
+    <li><strong>Recording band (middle)</strong> — the scene's demo footage. Either the full screen
+      or the cropped focus area. If the shrink goes past 3×, the build raises a legibility
+      warning.</li>
+    <li><strong>Subtitles (bottom)</strong> — the corrected transcript of what you said, burned in
+      at a position that dodges Instagram's action bar and caption zone.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════════ 7. Troubleshooting ═══════════════════ -->
+<section id="trouble">
+  <h2><span class="num">7.</span>Troubleshooting</h2>
+
+  <div class="tblwrap">
+  <table>
+    <tr><th>Symptom / report</th><th>What to do</th></tr>
+    <tr>
+      <td>Warning: shrink over 3×</td>
+      <td>Ask for a tighter crop, or enlarge the demo app's font and refilm just that scene.</td>
+    </tr>
+    <tr>
+      <td>Warning: scene longer than 20 seconds</td>
+      <td>Ask for the scene to be split in two (an extra cut in the alignment), or compress what
+      you say and refilm. Designing scenes small at the script stage is cheaper.</td>
+    </tr>
+    <tr>
+      <td>Report: missing scene / reordered scenes</td>
+      <td>Refilm just that scene — run <code>ingest</code> again with the new recording file and
+      only that scene's cut is replaced. No need to refilm everything.</td>
+    </tr>
+    <tr>
+      <td>You refilmed but an earlier take was used</td>
+      <td>Ask to see the alignment notes (the take-selection record), then request a fix to that
+      scene's cut range.</td>
+    </tr>
+    <tr>
+      <td>Misheard proper nouns · scene boundary problems</td>
+      <td>Those live at the transcript and timeline layer — use the knobs
+      (<code>WHISPER_PROMPT</code> and friends) from
+      <a href="../ingest-usage/index.en.html#trouble">section 7 of the ingest guide</a>.</td>
+    </tr>
+    <tr>
+      <td>Total length over 90 seconds</td>
+      <td>Tighten the cuts (less padding around each scene) or drop scenes — 35–75 seconds is the
+      recommended range.</td>
+    </tr>
+  </table>
+  </div>
+
+  <p>The technical contracts (edit.json · alignment.json · the build gates) are detailed in
+  <code>skills/produce/references/screencast-pipeline.md</code> and
+  <code>skills/ingest/references/timeline-schema.md</code> §alignment.json.
+  You only have to describe the symptom.</p>
+
+  <div class="summary">
+    <span class="ct">IN ONE LINE</span>
+    <code>/social-flow:storyboard &lt;channel&gt; &lt;topic&gt; as a shooting script</code> →
+    <strong>approve the script</strong> → script on the secondary display,
+    <strong>film</strong> with <code>record</code> → "recording done" →
+    <strong>review</strong> the drift report → edit and QA → <strong>publish approval</strong>.
+  </div>
+</section>
+
+<footer>
+  social-flow plugin docs · <code>docs/guides/screencast-usage/</code> ·
+  related: <a href="../ingest-usage/index.en.html">the improvised recording guide</a> (prerequisites and transcript knobs) ·
+  <code>skills/storyboard/references/shot-script-template.md</code> (script contract) ·
+  <code>skills/produce/references/screencast-pipeline.md</code> (edit contract)
+</footer>
+
+</div>
+</body>
+</html>

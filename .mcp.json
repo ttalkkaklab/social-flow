@@ -11,6 +11,8 @@
         "GEMINI_API_KEY": "${GEMINI_API_KEY:-}",
         "GOOGLE_API_KEY": "${GOOGLE_API_KEY:-}",
         "OPENAI_API_KEY": "${OPENAI_API_KEY:-}",
+        "ARK_API_KEY": "${ARK_API_KEY:-}",
+        "ARK_BASE_URL": "${ARK_BASE_URL:-}",
         "SNS_TOKEN_DIR": "${SNS_TOKEN_DIR:-}",
         "THREADS_TOKEN_FILE": "${THREADS_TOKEN_FILE:-}",
         "INSTAGRAM_TOKEN_FILE": "${INSTAGRAM_TOKEN_FILE:-}",

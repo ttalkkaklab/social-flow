@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>맥북에서 쓸 TTS — 로컬 오픈소스와 상용 API 조사 보고서 (2026-08-11)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  /* ── Header ── */
+  header.hero {
+    padding: 72px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .hero .kicker {
+    display: inline-block;
+    font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px;
+    margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta {
+    margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px;
+    font-size: 13.5px; color: var(--text-soft);
+  }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  /* ── 파형 (실측 산출물 증거) ── */
+  .wave-block { margin-top: 32px; }
+  .wave { width: 100%; height: 64px; display: block; color: var(--accent); }
+  .wave-cap {
+    display: flex; justify-content: space-between; gap: 16px;
+    font-size: 12.5px; color: var(--text-soft);
+    border-top: 1px solid var(--border); padding-top: 8px; margin-top: 6px;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+
+  /* ── TOC ── */
+  nav.toc {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 56px;
+  }
+  nav.toc h2 { font-size: 14px; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 14px; text-transform: uppercase; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  nav.toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a { color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500; }
+  nav.toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent); font-weight: 700; font-size: 12.5px;
+    margin-right: 10px; font-variant-numeric: tabular-nums;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+
+  /* ── Sections ── */
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 19px; font-weight: 700; margin: 36px 0 14px; }
+  h4 { font-size: 16px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 14px; }
+  p.lead { font-size: 17.5px; }
+  ul, ol { margin: 0 0 16px 22px; }
+  li { margin-bottom: 8px; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+  .muted { color: var(--text-soft); font-size: 14px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 5px;
+    padding: 1px 6px;
+  }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    padding: 2px 10px; border-radius: 999px; vertical-align: 2px;
+    white-space: nowrap;
+  }
+  .b-green  { background: var(--green-soft);  color: var(--green); }
+  .b-amber  { background: var(--amber-soft);  color: var(--amber); }
+  .b-red    { background: var(--red-soft);    color: var(--red); }
+  .b-blue   { background: var(--accent-soft); color: var(--accent); }
+  .b-purple { background: var(--purple-soft); color: var(--purple); }
+
+  /* ── Callouts ── */
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    background: var(--bg-soft);
+    border-radius: 0 10px 10px 0;
+    padding: 18px 22px;
+    margin: 20px 0;
+  }
+  .callout.green  { border-left-color: var(--green); }
+  .callout.amber  { border-left-color: var(--amber); }
+  .callout.red    { border-left-color: var(--red); }
+  .callout.purple { border-left-color: var(--purple); }
+  .callout .co-title {
+    font-weight: 800; font-size: 14px; letter-spacing: .04em;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ── Verdict hero card ── */
+  .verdict {
+    background: linear-gradient(135deg, var(--accent-soft), transparent 70%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 36px;
+    box-shadow: var(--shadow);
+    margin-bottom: 32px;
+  }
+  .verdict .v-label { font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--accent); margin-bottom: 10px; }
+  .verdict .v-main { font-size: 21px; font-weight: 800; line-height: 1.55; margin-bottom: 14px; }
+  .verdict p { color: var(--text-soft); margin-bottom: 0; font-size: 15.5px; }
+
+  /* ── Tables ── */
+  .tbl-wrap { overflow-x: auto; margin: 18px 0 24px; border: 1px solid var(--border); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 560px; }
+  th {
+    background: var(--bg-soft); text-align: left; font-weight: 700;
+    padding: 11px 16px; border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .hi { background: var(--amber-soft); }
+
+  /* ── 실측 수치 타일 ── */
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--border); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; margin: 22px 0 24px;
+  }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--bg-card); padding: 18px 20px; }
+  .stat .s-k { font-size: 12.5px; color: var(--text-soft); font-weight: 600; letter-spacing: .03em; }
+  .stat .s-v {
+    font-size: 26px; font-weight: 800; letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums; line-height: 1.3; margin-top: 2px;
+  }
+  .stat .s-v small { font-size: 14px; font-weight: 600; color: var(--text-soft); letter-spacing: 0; }
+  .stat .s-n { font-size: 12.5px; color: var(--text-soft); line-height: 1.55; margin-top: 4px; }
+
+  /* ── STT 대조 ── */
+  .diff {
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--bg-card); padding: 20px 24px; margin: 20px 0;
+  }
+  .diff-row { display: grid; grid-template-columns: 72px 1fr; gap: 14px; margin-bottom: 14px; }
+  .diff-row:last-child { margin-bottom: 0; }
+  .diff-row .d-k {
+    font-size: 12px; font-weight: 700; color: var(--text-soft);
+    letter-spacing: .04em; padding-top: 3px;
+  }
+  .diff-row .d-t { font-size: 14.5px; line-height: 1.7; }
+  .diff mark {
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 4px; padding: 0 4px; font-weight: 700;
+  }
+  @media (max-width: 560px) { .diff-row { grid-template-columns: 1fr; gap: 2px; } }
+
+  /* ── 비용 막대 (표 내부) ── */
+  .cost-bar { display: flex; align-items: center; gap: 10px; min-width: 190px; }
+  .cost-bar .cb-track { flex: 1; height: 9px; background: var(--bg-soft); border-radius: 5px; overflow: hidden; }
+  .cost-bar .cb-fill { height: 100%; background: var(--accent); border-radius: 5px; }
+  .cost-bar .cb-fill.est {
+    background: repeating-linear-gradient(135deg, var(--accent) 0 5px, var(--accent-soft) 5px 9px);
+  }
+  .cost-bar .cb-v { font-variant-numeric: tabular-nums; font-weight: 700; width: 46px; text-align: right; }
+  #s5 td:nth-child(3) { white-space: nowrap; }
+  .legend-est {
+    display: inline-block; width: 26px; height: 9px; border-radius: 4px; vertical-align: middle;
+    background: repeating-linear-gradient(135deg, var(--accent) 0 5px, var(--accent-soft) 5px 9px);
+  }
+
+  /* ── 권장 카드 ── */
+  .recs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 24px 0; }
+  @media (max-width: 860px) { .recs { grid-template-columns: 1fr; } }
+  .rec {
+    border: 1px solid var(--border); border-radius: 14px;
+    background: var(--bg-card); box-shadow: var(--shadow);
+    padding: 22px 24px;
+  }
+  .rec .r-role { font-size: 12.5px; font-weight: 700; color: var(--text-soft); letter-spacing: .05em; }
+  .rec h3 { margin: 4px 0 10px; font-size: 18px; }
+  .rec p { font-size: 14.5px; color: var(--text-soft); margin-bottom: 12px; }
+  .rec .r-cost {
+    font-size: 13px; font-weight: 700; color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Source list ── */
+  .src-group { margin-bottom: 26px; }
+  .src-group h4 { margin-top: 0; }
+  .src-group ul { list-style: none; margin-left: 0; }
+  .src-group li {
+    font-size: 13.5px; margin-bottom: 6px; padding-left: 18px; position: relative;
+    color: var(--text-soft);
+  }
+  .src-group li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .src-group a { word-break: break-all; }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 28px; font-size: 13.5px; color: var(--text-soft);
+  }
+  footer p { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">조사 보고서</span>
+  <h1>맥북에서 쓸 TTS — 로컬 오픈소스와 상용 API</h1>
+  <p class="sub">
+    social-flow 나레이션 파이프라인의 음성 합성 선택지를 정리한다. 로컬 모델 두 종은 이 맥에서 직접 실행해
+    속도와 발음 정확도를 측정했고, 상용 API 13종은 과금 단위가 제각각이라 한국어 100만 자 기준으로 환산해 비교했다.
+  </p>
+  <div class="meta">
+    <span>작성일 <strong>2026-08-11</strong></span>
+    <span>실측 환경 <strong>MacBook Pro M4 Max · 128GB</strong></span>
+    <span>실측 모델 <strong>Supertonic 3 · Qwen3-TTS 1.7B</strong></span>
+    <span>환산 대상 <strong>상용 API 13종</strong></span>
+  </div>
+
+  <div class="wave-block">
+    <svg class="wave" viewBox="0 0 900 64" preserveAspectRatio="none" role="img"
+         aria-label="이 조사에서 Supertonic 3으로 생성한 한국어 음성 19.4초의 파형">
+      <g id="wavebars" fill="currentColor"></g>
+    </svg>
+    <div class="wave-cap">
+      <span>Supertonic 3 · F1 · 한국어 127자 · 실제 생성 산출물의 피크 파형</span>
+      <span>19.4s / 44.1kHz</span>
+    </div>
+  </div>
+</header>
+
+<div class="verdict">
+  <div class="v-label">결론</div>
+  <div class="v-main">
+    기본 나레이션은 로컬 Supertonic 3으로 돌리고, 목소리 복제가 필요한 컷만 Qwen3-TTS,
+    감정 연기가 들어가는 짧은 구간만 지금 쓰는 Gemini TTS를 유지한다.
+  </div>
+  <p>
+    이 맥은 통합 메모리 128GB라 모델 크기 제약이 사실상 없다. 그래서 선택 기준은 하드웨어가 아니라
+    한국어 발음 품질과 가중치 라이선스 둘이다. 이 기준으로 Supertonic 3은 385MB로 CPU만 써서 실시간의 6.3배를 냈고,
+    발음도 STT 왕복 검증을 통과했다. 상용 API는 한국어 100만 자당 $4~160으로 갈리는데, 현재 쓰는
+    Gemini 2.5 Flash TTS는 약 $38로 중간이다.
+  </p>
+</div>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#s1">검증 환경</a></li>
+    <li><a href="#s2">Supertonic 3 실측</a></li>
+    <li><a href="#s3">Qwen3-TTS 실측</a></li>
+    <li><a href="#s4">로컬 모델 — 라이선스 분류</a></li>
+    <li><a href="#s5">상용 API — 100만 자 환산</a></li>
+    <li><a href="#s6">권장 구성</a></li>
+  </ol>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="no">01</span> 검증 환경</h2>
+
+  <p class="lead">
+    측정에 쓴 맥의 사양이다. GPU 40코어보다 <strong>통합 메모리 128GB</strong>가 결정적이다 —
+    별도 VRAM을 쓰는 PC와 달리 모델 크기 상한이 없어, 1.7B급 TTS를 여러 개 띄워놓고 비교해도 여유가 있다.
+  </p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>항목</th><th>값</th><th>메모</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>모델</td><td>MacBook Pro (Mac16,6)</td><td>Apple M4 Max</td></tr>
+        <tr><td>CPU</td><td><span class="num">16</span>코어</td><td>성능 12 + 효율 4</td></tr>
+        <tr><td>GPU</td><td><span class="num">40</span>코어</td><td>Metal 4</td></tr>
+        <tr class="hi"><td>통합 메모리</td><td><span class="num">128</span> GB</td><td>모델 크기 제약이 사라지는 지점</td></tr>
+        <tr><td>OS</td><td>macOS 26.5.2</td><td>빌드 25F84</td></tr>
+        <tr><td>디스크 여유</td><td><span class="num">167</span> GB</td><td>가중치 캐시에 충분</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    측정에 쓴 도구는 <code>whisper-cli</code>(whisper.cpp, large-v3-turbo), <code>ffmpeg</code>,
+    <code>uv</code>로 만든 격리 파이썬 환경이다. 셋 다 이 맥에 이미 깔려 있다.
+    참고로 HuggingFace 캐시에는 Qwen3-TTS 1.7B(4.2GB)와 Chatterbox(3.0GB) 가중치가 이미 받아져 있었다.
+  </p>
+
+  <div class="callout">
+    <div class="co-title">발음 검증 방법</div>
+    <p>
+      음성 품질은 사람 귀로 판단하면 기록에 남지 않는다. 그래서 <strong>생성한 음성을 다시 STT로 받아써서
+      원문과 대조</strong>하는 방식을 썼다. 숫자·영어 약어처럼 한국어 TTS가 흔히 틀리는 지점을 문장에 심어두면,
+      받아쓰기 결과가 원문과 어긋나는 자리가 곧 발음이 무너진 자리다.
+    </p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="no">02</span> Supertonic 3 실측</h2>
+
+  <p>
+    슈퍼톤(하이브 자회사)이 공개한 온디바이스 TTS다. ONNX 런타임으로 돌아 파이썬 말고도
+    Node·Swift·Rust·Flutter 등에서 같은 가중치를 그대로 쓴다. 31개 언어를 99M 파라미터로 처리한다.
+    <code>pip install supertonic</code> 한 줄로 설치가 끝났고, 첫 음성까지 1분이 걸리지 않았다.
+  </p>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="s-k">모델 크기</div>
+      <div class="s-v">385<small> MB</small></div>
+      <div class="s-n">ONNX 4개 + 보이스 10종</div>
+    </div>
+    <div class="stat">
+      <div class="s-k">모델 로딩</div>
+      <div class="s-v">0.25<small> 초</small></div>
+      <div class="s-n">최초 내려받기만 24초</div>
+    </div>
+    <div class="stat">
+      <div class="s-k">합성 속도</div>
+      <div class="s-v">6.3<small> × 실시간</small></div>
+      <div class="s-n">19.4초 오디오를 3.1초에</div>
+    </div>
+    <div class="stat">
+      <div class="s-k">사용 자원</div>
+      <div class="s-v">CPU<small> 만</small></div>
+      <div class="s-n">GPU·네트워크 미사용</div>
+    </div>
+  </div>
+
+  <p>
+    보이스는 모델에 딸려온 고정 10종(F1~F5 여성, M1~M5 남성)이고, 공개본에 음성 클로닝 파이프라인은 없다.
+    출력은 44.1kHz WAV다. 같은 문장을 F1·M1·F3으로 각각 뽑아 속도 편차를 봤는데
+    <span class="num">6.1~6.4배</span> 사이로 일정했다.
+  </p>
+
+  <h3>발음 검증 — STT 왕복 대조</h3>
+
+  <div class="diff">
+    <div class="diff-row">
+      <div class="d-k">원문</div>
+      <div class="d-t">숫자도 읽어볼게요. <mark>2026년 8월 11일</mark>, <mark>3만 5천 원</mark>입니다.</div>
+    </div>
+    <div class="diff-row">
+      <div class="d-k">받아쓰기</div>
+      <div class="d-t">숫자도 읽어 볼게요. <mark>2026년 8월 11일</mark>, <mark>35,000원</mark>입니다.</div>
+    </div>
+    <div class="diff-row">
+      <div class="d-k">원문</div>
+      <div class="d-t">
+        <mark>API</mark> 키는 <mark>SNS</mark> 계정마다 따로 발급받습니다. <mark>GPU</mark> 없이
+        <mark>CPU</mark>만으로도 실시간의 여섯 배 속도가 나왔어요. <mark>TTS</mark> 품질은 ElevenLabs와 비교해도 나쁘지 않네요.
+      </div>
+    </div>
+    <div class="diff-row">
+      <div class="d-k">받아쓰기</div>
+      <div class="d-t">
+        <mark>API</mark> 키는 <mark>SNS</mark> 계정마다 따로 발급받습니다. <mark>GPU</mark> 없이
+        <mark>CPU</mark>만으로도 실시간에 6배 속도가 나왔어요. <mark>TTS</mark> 품질은 11 Labs와 비교해도 나쁘지 않네요.
+      </div>
+    </div>
+  </div>
+
+  <p>
+    한국어 문장은 그대로 복원됐고, 숫자와 영어 약어 다섯 개도 전부 살아남았다.
+    어긋난 자리는 띄어쓰기("읽어 볼게요")와 STT 쪽 표기 관습("35,000원", "11 Labs")뿐이라 발음 문제로 볼 수 없다.
+  </p>
+
+  <div class="callout amber">
+    <div class="co-title">기록 — 중간 관찰의 정정</div>
+    <p>
+      첫 테스트에서 "API"가 "APA"로 받아써져 약어 처리가 약한 것으로 보고했으나,
+      약어를 다섯 개 몰아넣어 다시 시험하니 전부 정확했다. 재현되지 않으므로 약점으로 기록하지 않는다.
+      한 번의 관찰로 모델 특성을 단정하지 말 것.
+    </p>
+  </div>
+
+  <div class="callout">
+    <div class="co-title">라이선스 주의</div>
+    <p>
+      코드는 MIT지만 <strong>가중치는 OpenRAIL-M</strong>이다. 상업 이용은 되되 용도 제한 조항이 붙으므로,
+      게시물 파이프라인에 넣기 전에 조항을 한 번 확인할 것.
+    </p>
+  </div>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="no">03</span> Qwen3-TTS 실측</h2>
+
+  <p>
+    알리바바 Qwen 팀이 Apache-2.0으로 공개한 모델이다. 3초짜리 참조 음성으로 목소리를 복제하고,
+    말로 설명해 목소리를 만드는 보이스 디자인도 된다. 라인업은 0.6B와 1.7B이며, 이번엔
+    이미 캐시에 있던 <code>Qwen3-TTS-12Hz-1.7B-CustomVoice</code>를 MPS로 돌렸다.
+  </p>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="s-k">모델 크기</div>
+      <div class="s-v">4.2<small> GB</small></div>
+      <div class="s-n">1.7B CustomVoice</div>
+    </div>
+    <div class="stat">
+      <div class="s-k">모델 로딩</div>
+      <div class="s-v">7.1<small> 초</small></div>
+      <div class="s-n">MPS · 128GB라 여유</div>
+    </div>
+    <div class="stat">
+      <div class="s-k">합성 속도</div>
+      <div class="s-v">0.19<small> × 실시간</small></div>
+      <div class="s-n">19.1초 오디오에 98.8초</div>
+    </div>
+    <div class="stat">
+      <div class="s-k">화자</div>
+      <div class="s-v">9<small> + 복제</small></div>
+      <div class="s-n">한국어 <code>sohee</code> 포함</div>
+    </div>
+  </div>
+
+  <p>
+    지원 언어는 <code>chinese · english · french · german · italian · japanese · korean ·
+    portuguese · russian · spanish</code>이고, 화자 프리셋에 한국어 이름 <code>sohee</code>가 있다.
+    발음은 Supertonic과 같은 방식으로 검증해 역시 전부 통과했다.
+  </p>
+
+  <div class="callout red">
+    <div class="co-title">속도가 발목을 잡는다</div>
+    <p>
+      같은 문장에 <strong>98.8초</strong>가 걸렸다. 실시간의 0.19배이고 Supertonic의 27분의 1이다.
+      화자를 <code>sohee</code>로 바꿔도 98.4초로 같았다. flash-attn이 애플 실리콘에서 동작하지 않아
+      수동 PyTorch 경로로 떨어지는 것이 큰 원인이다. 나레이션을 통째로 뽑는 용도로는 쓰기 어렵고,
+      <strong>목소리 복제가 꼭 필요한 짧은 컷</strong>에 한정하는 게 맞다.
+    </p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="no">04</span> 로컬 모델 — 라이선스 분류</h2>
+
+  <p class="lead">
+    채널을 운영해 수익을 내는 이상 가중치 라이선스가 첫 번째 기준이고 품질은 그다음이다.
+    아래는 한국어를 지원하는 것만 남긴 목록이다.
+  </p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>모델</th><th>라이선스</th><th>크기</th><th>클로닝</th><th>메모</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Qwen3-TTS</strong></td>
+          <td><span class="badge b-green">Apache-2.0</span></td>
+          <td>0.6B / 1.7B</td>
+          <td>3초 참조</td>
+          <td>보이스 디자인도 지원. 이 맥에서 실측 완료 — 느림</td>
+        </tr>
+        <tr>
+          <td><strong>MeloTTS-Korean</strong></td>
+          <td><span class="badge b-green">MIT</span></td>
+          <td>소형</td>
+          <td>없음</td>
+          <td>CPU 실시간. 가볍고 안정적</td>
+        </tr>
+        <tr>
+          <td><strong>GPT-SoVITS</strong></td>
+          <td><span class="badge b-green">MIT</span></td>
+          <td>중형</td>
+          <td>지원</td>
+          <td>한국 커뮤니티의 클로닝 표준. 학습 품이 든다</td>
+        </tr>
+        <tr>
+          <td><strong>Fun-CosyVoice3</strong></td>
+          <td><span class="badge b-green">Apache-2.0</span></td>
+          <td>0.5B</td>
+          <td>지원</td>
+          <td>알리바바 계열 다국어</td>
+        </tr>
+        <tr class="hi">
+          <td><strong>Supertonic 3</strong></td>
+          <td><span class="badge b-amber">OpenRAIL-M</span></td>
+          <td>99M</td>
+          <td>없음</td>
+          <td>코드는 MIT. 용도 제한 조항 확인 필요 — 실측 결과 가장 빠름</td>
+        </tr>
+        <tr>
+          <td>IndexTTS-2</td>
+          <td><span class="badge b-red">비상업</span></td>
+          <td>중형</td>
+          <td>지원</td>
+          <td>아시아 언어 품질 평가는 좋으나 게시물에 못 쓴다</td>
+        </tr>
+        <tr>
+          <td>Meta MMS (kor)</td>
+          <td><span class="badge b-red">CC-BY-NC</span></td>
+          <td>소형</td>
+          <td>없음</td>
+          <td>같은 이유로 제외</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout red">
+    <div class="co-title">비교 글에 자주 속는 지점</div>
+    <p>
+      Kokoro(82M)·Chatterbox·VibeVoice는 "2026 최고의 오픈소스 TTS" 류 글에서 상위권으로 꼽히지만
+      <strong>한국어를 지원하지 않는다</strong>. 특히 Kokoro는 한국어가 된다고 적은 요약 글이 많은데,
+      <code>kokoro/pipeline.py</code>의 <code>LANG_CODES</code>에는 영어(미/영)·스페인어·프랑스어·힌디어·
+      이탈리아어·포르투갈어·일본어·중국어만 있고 한국어가 없다. 소스를 직접 확인한 사항이다.
+      요약 사이트 대신 모델 카드나 소스를 볼 것.
+    </p>
+  </div>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="no">05</span> 상용 API — 100만 자 환산</h2>
+
+  <p>
+    업체마다 과금 단위가 문자·크레딧·오디오 토큰·원화로 제각각이라 표를 나열해서는 비교가 되지 않는다.
+    §02 실측에서 나온 한국어 발화 속도(<strong>초당 6.55자</strong>, 100만 자 = 42.4시간)를 써서
+    전부 한국어 100만 자당 비용으로 환산했다.
+  </p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>서비스</th><th style="min-width:210px">100만 자당</th><th>과금 방식</th><th>비고</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Google Standard / WaveNet</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill" style="width:2.5%"></div></div><span class="cb-v">$4</span></div></td>
+          <td>문자</td><td>월 400만 자 무료</td>
+        </tr>
+        <tr>
+          <td>OpenAI tts-1</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill" style="width:9.4%"></div></div><span class="cb-v">$15</span></div></td>
+          <td>문자</td><td>음성이 영어에 최적화됐다고 명시</td>
+        </tr>
+        <tr>
+          <td>Google Neural2 · Azure Neural · Polly Neural</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill" style="width:10%"></div></div><span class="cb-v">$16</span></div></td>
+          <td>문자</td><td>가장 흔한 가격대</td>
+        </tr>
+        <tr>
+          <td>Azure Neural HD</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill" style="width:13.8%"></div></div><span class="cb-v">$22</span></div></td>
+          <td>문자</td><td>2026-03 $30에서 인하 <span class="badge b-amber">2차</span></td>
+        </tr>
+        <tr>
+          <td>Google Chirp 3 HD</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill" style="width:18.8%"></div></div><span class="cb-v">$30</span></div></td>
+          <td>문자</td><td>구글 최신 고음질</td>
+        </tr>
+        <tr>
+          <td>OpenAI tts-1-hd · Polly Generative</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill" style="width:18.8%"></div></div><span class="cb-v">$30</span></div></td>
+          <td>문자</td><td></td>
+        </tr>
+        <tr class="hi">
+          <td><strong>Gemini 2.5 Flash TTS</strong></td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill est" style="width:23.8%"></div></div><span class="cb-v">$38</span></div></td>
+          <td>오디오 토큰</td><td>현재 social-flow가 쓰는 모델 · 무료 티어 있음</td>
+        </tr>
+        <tr>
+          <td>ElevenLabs Flash / Turbo v2.5</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill est" style="width:31.3%"></div></div><span class="cb-v">$50</span></div></td>
+          <td>크레딧</td><td>1천 자당 $0.05 · 지연 75ms</td>
+        </tr>
+        <tr>
+          <td>네이버 CLOVA Voice Premium</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill est" style="width:42.5%"></div></div><span class="cb-v">$68</span></div></td>
+          <td>원화</td><td>기본료 9만 원(100만 자 포함), 초과 1천 자당 100원</td>
+        </tr>
+        <tr>
+          <td>Gemini 2.5 Pro TTS · 3.1 Flash TTS</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill est" style="width:47.5%"></div></div><span class="cb-v">$76</span></div></td>
+          <td>오디오 토큰</td><td></td>
+        </tr>
+        <tr>
+          <td>Typecast API</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill est" style="width:50%"></div></div><span class="cb-v">$80</span></div></td>
+          <td>크레딧</td><td>1자 = 1크레딧 · 플랜에 따라 $70~90 <span class="badge b-amber">2차</span></td>
+        </tr>
+        <tr>
+          <td>ElevenLabs Multilingual v2 / v3</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill est" style="width:62.5%"></div></div><span class="cb-v">$100</span></div></td>
+          <td>크레딧</td><td>1천 자당 $0.10 · 감정 표현 평가가 가장 좋다</td>
+        </tr>
+        <tr>
+          <td>Google Studio</td>
+          <td><div class="cost-bar"><div class="cb-track"><div class="cb-fill" style="width:100%"></div></div><span class="cb-v">$160</span></div></td>
+          <td>문자</td><td>한국어 지원 제한적</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="muted">
+    <span class="legend-est"></span>
+    빗금은 환산값이다 — 오디오 길이·크레딧·원화로 과금하는 것들이라 발화 속도나 환율에 따라 달라진다.
+    원화 환산은 1달러 1,390원 기준.
+  </p>
+
+  <h3>읽는 법</h3>
+
+  <p>
+    <strong>무료 구간이 생각보다 크다.</strong> Google Cloud는 음성 등급별로 월 100만~400만 자가 무료고,
+    AWS Polly는 Standard 500만 자를 기간 제한 없이 준다. Gemini 2.5 Flash TTS에도 무료 티어가 있다.
+    쇼트폼 나레이션 분량이면 상당 부분 무료 구간에서 끝난다.
+  </p>
+
+  <p>
+    <strong>Gemini는 문자가 아니라 시간으로 센다.</strong> 오디오 토큰은 초당 25개로 계산되므로,
+    같은 대본이라도 읽기 속도를 올리면 그만큼 싸진다. 문자 과금 서비스에는 없는 조절 여지다.
+  </p>
+
+  <p>
+    <strong>CLOVA는 구조가 다르다.</strong> Premium 기본료 9만 원에 100만 자가 포함되고 넘으면 1,000자당 100원이다(VAT 별도).
+    ncloud 요금계산기로 100만 자 9만 원, 200만 자 19만 원, 300만 자 29만 원을 확인해 역산한 값이다.
+    글로벌 서비스보다 비싸지만 한국어 억양은 여전히 강점이다.
+  </p>
+
+  <div class="callout amber">
+    <div class="co-title">환산이 애매한 항목</div>
+    <p>
+      OpenAI <code>gpt-4o-mini-tts</code>는 오디오 출력 토큰 100만 개당 $12인데 초당 토큰 수가 공개돼 있지 않아
+      문자 단가로 정확히 옮기기 어렵다. 문자로 과금하는 <code>tts-1</code>($15) 기준으로 잡는 편이 안전하다.
+    </p>
+  </div>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="no">06</span> 권장 구성</h2>
+
+  <div class="recs">
+    <div class="rec">
+      <div class="r-role">기본 나레이션</div>
+      <h3>Supertonic 3</h3>
+      <p>
+        쇼트폼 나레이션의 기본값. 1분짜리 대본이 10초면 나오고 42시간을 뽑아도 전기값뿐이다.
+        보이스 10종 고정이 제약인데, 채널마다 하나씩 배정하면 오히려 목소리가 일관된다.
+      </p>
+      <div class="r-cost">비용 0 · 6.3× 실시간</div>
+    </div>
+    <div class="rec">
+      <div class="r-role">목소리 복제</div>
+      <h3>Qwen3-TTS</h3>
+      <p>
+        진행자 목소리를 복제하거나 캐릭터별로 다른 목소리가 필요한 컷에.
+        Apache-2.0이라 걸리는 게 없고 가중치는 이미 이 맥에 있다. 느리니 짧은 구간만.
+      </p>
+      <div class="r-cost">비용 0 · 0.19× 실시간</div>
+    </div>
+    <div class="rec">
+      <div class="r-role">감정 · 연기 컷</div>
+      <h3>Gemini TTS 유지</h3>
+      <p>
+        인트로 멘트처럼 연기가 들어가는 짧은 구간은 지금 구성 그대로 둔다.
+        품질을 더 원하면 ElevenLabs v3, 한국어 억양이 최우선이면 CLOVA를 따로 검토한다.
+      </p>
+      <div class="r-cost">$38 / 100만 자</div>
+    </div>
+  </div>
+
+  <div class="callout green">
+    <div class="co-title">파이프라인에 적용한다면</div>
+    <p>
+      produce 스킬의 나레이션 단계를 Supertonic 로컬 호출로 바꾸면 API 호출과 쿼터 관리가 통째로 빠진다.
+      네트워크를 타지 않으므로 실패 재시도 로직도 단순해진다. 감정 연기가 필요한 컷만 기존 <code>tts_generate</code>를
+      남겨 두 경로를 병행하는 구성이 현실적이다.
+    </p>
+  </div>
+</section>
+
+<section id="src">
+  <h2 class="sec"><span class="no">07</span> 출처</h2>
+
+  <div class="src-group">
+    <h4>실측 <span class="badge b-blue">이 맥에서 직접 실행</span></h4>
+    <ul>
+      <li>Supertonic 3 (pip <code>supertonic</code> 1.3.1) — 로딩·합성 시간, 보이스 3종 편차</li>
+      <li>Qwen3-TTS 12Hz 1.7B CustomVoice (torch 2.13.0 · MPS) — 로딩·합성 시간, 화자 2종</li>
+      <li>whisper.cpp large-v3-turbo — 생성 음성 STT 왕복 대조</li>
+      <li>ncloud 요금계산기 — CLOVA Voice Premium 100만/200만/300만 자 요금 조회 후 단가 역산</li>
+      <li><code>kokoro/pipeline.py</code> 소스 — 지원 언어 코드 목록 확인(한국어 없음)</li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h4>모델 <span class="badge b-green">1차</span></h4>
+    <ul>
+      <li><a href="https://github.com/supertone-inc/supertonic">Supertonic — GitHub</a></li>
+      <li><a href="https://huggingface.co/Supertone/supertonic-3">Supertonic 3 — 모델 카드(라이선스·언어 목록)</a></li>
+      <li><a href="https://github.com/QwenLM/Qwen3-TTS">Qwen3-TTS — GitHub</a></li>
+      <li><a href="https://github.com/hexgrad/kokoro">Kokoro — GitHub</a></li>
+      <li><a href="https://github.com/HeeJayC/Awesome-Korean-TTS-Local-">Awesome Korean TTS (Local) — 한국어 로컬 TTS 목록</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h4>요금 <span class="badge b-green">1차</span></h4>
+    <ul>
+      <li><a href="https://developers.openai.com/api/docs/pricing">OpenAI — API Pricing</a></li>
+      <li><a href="https://cloud.google.com/text-to-speech/pricing">Google Cloud Text-to-Speech — Pricing</a></li>
+      <li><a href="https://ai.google.dev/gemini-api/docs/pricing">Gemini API — Pricing</a></li>
+      <li><a href="https://elevenlabs.io/pricing/api">ElevenLabs — API Pricing</a></li>
+      <li><a href="https://elevenlabs.io/docs/models">ElevenLabs — Models(한국어 지원 모델 확인)</a></li>
+      <li><a href="https://aws.amazon.com/polly/pricing/">Amazon Polly — Pricing</a></li>
+      <li><a href="https://www.ncloud.com/charge/calc/ko?category=aiService">NAVER Cloud — 요금 계산기</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h4>보조 <span class="badge b-amber">2차 — 공식 페이지에서 재확인 못 함</span></h4>
+    <ul>
+      <li>Azure AI Speech 단가($16 / Neural HD $22) — 요약 자료 기준</li>
+      <li>Typecast API 단가($70~90 / 100만 자) — 플랜 안내 기준</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p><strong>맥북에서 쓸 TTS — 로컬 오픈소스와 상용 API 조사 보고서</strong> · 작성일 2026-08-11</p>
+  <p>
+    실측 수치는 M4 Max·128GB 환경 기준이며 다른 사양에서는 달라진다.
+    요금은 조사 시점 기준이고 각 사의 정책·환율은 변경될 수 있으니 결제 전 공식 페이지에서 재확인할 것.
+  </p>
+</footer>
+
+</div>
+
+<script>
+  // 이 조사에서 Supertonic 3으로 생성한 음성(supertonic_ko_F1.wav)의 실제 피크값 180구간
+  var PEAKS = [0,0,0,0,0.003,0.754,0.692,0.638,0.528,0.624,0.607,0.305,0.003,0.003,0.003,0.593,0.585,0.599,0.429,0.96,0.952,0.206,0.497,0.59,0.441,0.497,0.686,0.607,0.571,0.489,0.511,0.528,0.556,0.503,0.483,0.381,0.175,0.446,0.46,0.384,0.562,0.54,0.497,0.178,0.466,0.438,0.418,0.401,0.441,0.316,0.339,0.503,0.418,0.062,0.003,0.003,0,0.068,0.311,0.799,0.695,0.723,0.624,0.763,0.523,0.065,0.506,0.542,0.531,0.198,0.011,0,0,0.234,0.483,0.263,0.593,0.342,0.336,0.483,0.494,0.503,0.658,0.672,0.455,0.266,0.497,0.52,0.494,0.175,0.167,0.308,0.37,0.475,0.342,0.237,0.02,0.031,0.438,0.602,0.808,0.599,0.525,0.475,0.585,0.528,0.291,0.218,0.525,0.164,0.006,0.006,0.003,0.455,0.743,0.667,0.542,0.302,0.412,0.452,0.441,0.525,0.435,0.379,0.342,0.342,0.46,0.458,0.254,0.003,0,0,0,0,0,0,0,0,0,0,0.003,0.74,0.799,0.254,0.314,0.282,0.568,0.675,0.531,1,0.638,0.61,0.667,0.444,0.206,0.271,0.438,0.593,0.508,0.579,0.562,0.305,0.466,0.345,0.444,0.441,0.452,0.525,0.602,0.562,0.429,0.407,0.322,0.299,0.367,0.062,0.003,0,0,0];
+
+  (function () {
+    var g = document.getElementById('wavebars');
+    if (!g) return;
+    var W = 900, H = 64, mid = H / 2;
+    var step = W / PEAKS.length;
+    var bw = Math.max(1.4, step * 0.5);
+    var ns = 'http://www.w3.org/2000/svg';
+    for (var i = 0; i < PEAKS.length; i++) {
+      var p = PEAKS[i];
+      var h = Math.max(1.2, p * (H - 6));
+      var r = document.createElementNS(ns, 'rect');
+      r.setAttribute('x', (i * step + (step - bw) / 2).toFixed(2));
+      r.setAttribute('y', (mid - h / 2).toFixed(2));
+      r.setAttribute('width', bw.toFixed(2));
+      r.setAttribute('height', h.toFixed(2));
+      r.setAttribute('rx', Math.min(bw / 2, 1.2).toFixed(2));
+      r.setAttribute('opacity', p < 0.02 ? '0.3' : '1');
+      g.appendChild(r);
+    }
+  })();
+</script>
+</body>
+</html>

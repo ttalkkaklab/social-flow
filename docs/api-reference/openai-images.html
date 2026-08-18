@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenAI Images — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="openai-images.en.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="openai-images.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>OpenAI Images</div>
+
+<header class="hero">
+  <div class="kicker">OPENAI</div>
+  <h1>OpenAI Images — 이미지 생성·편집</h1>
+  <p class="sub">GPT Image 계열의 <code>/v1/images/generations</code>와 <code>/v1/images/edits</code>. 파라미터 지원 여부가 모델마다 다르고, 지원하지 않는 파라미터를 보내면 무시가 아니라 <strong>에러</strong>라서 모델별 행렬을 스키마에서 강제해야 한다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://developers.openai.com/api/docs/guides/images-vision">Images and vision</a></span>
+    <span>SDK <code>openai</code> 6.x</span>
+    <span>키 <code>OPENAI_API_KEY</code></span>
+    <span>구현 <code>server/src/image-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#models">모델과 수명</a></li>
+    <li><a href="#params">파라미터 지원 행렬</a></li>
+    <li><a href="#size">size — 임의 해상도 제약</a></li>
+    <li><a href="#edit">편집 전용 계약</a></li>
+    <li><a href="#response">응답</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="models">
+  <h2>1. 모델과 수명</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>모델</th><th>위치</th><th>수명</th></tr></thead>
+    <tbody>
+      <tr><td><code>gpt-image-2</code> <span class="badge free">기본값</span></td><td>최신 · 추론 기반. 사진 사실감과 지시 준수가 가장 강하고, 이미지 안 텍스트 렌더링이 안정적이다</td><td>—</td></tr>
+      <tr><td><code>gpt-image-1.5</code></td><td>품질/비용 중간</td><td>2026-12-01 셧다운</td></tr>
+      <tr><td><code>gpt-image-1</code></td><td>이전 세대</td><td>2026-10-23 셧다운</td></tr>
+      <tr><td><code>gpt-image-1-mini</code></td><td>저가·저품질</td><td>2026-12-01 셧다운</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><code>dall-e-2</code>·<code>dall-e-3</code>는 2026-05-12 셧다운을 마쳤다. 예정된 EOL이 모두 지나면 Images API에 남는 모델은 <code>gpt-image-2</code> 하나다.</p>
+  <div class="warn">
+    <strong>투명 배경은 EOL과 함께 사라진다.</strong> <code>background: "transparent"</code>는 <code>gpt-image-2</code>가 지원하지 않고, 지원하는 <code>gpt-image-1</code>/<code>1.5</code>는 2026년 안에 종료된다. 로고·오버레이 소재는 후처리(배경 제거)를 전제로 설계해야 한다.
+  </div>
+  <div class="note">
+    <strong>키가 없어도 이미지는 만든다 — 온디바이스 <code>image_local_generate</code>.</strong> Z-Image Turbo 를 mflux/MLX 로 돌려 <code>OPENAI_API_KEY</code> 도 네트워크도 과금도 없이 그리며(Apple Silicon 필요), 씬 배경의 기본 경로가 그쪽이다. 다만 <strong>글자가 들어가는 프레임은 GPT Image 로 보낸다</strong> — 로컬 생성은 한글 자소를 깨뜨려서 커버·타이틀처럼 글자를 읽혀야 하는 자리에 쓰지 못한다. <code>OPENAI_API_KEY</code> 가 여는 건 그 "글자와 품질" 경로다. 키는 서버 기동이 아니라 호출 시점에 확인하므로, 키가 없는 설치에서도 나머지 툴은 그대로 돈다.
+  </div>
+</section>
+
+<section id="params">
+  <h2>2. 파라미터 지원 행렬</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>파라미터</th><th>값</th><th>기본</th><th>gpt-image-2</th><th>1.5 / 1</th><th>1-mini</th></tr></thead>
+    <tbody>
+      <tr><td><code>prompt</code></td><td>문자열 (최대 <strong>32,000자</strong>)</td><td>—</td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>n</code></td><td>1–10</td><td>1</td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>size</code></td><td>프리셋 또는 <code>WxH</code></td><td><code>auto</code></td><td>○ (임의 해상도)</td><td>프리셋만</td><td>프리셋만</td></tr>
+      <tr><td><code>quality</code></td><td><code>low</code>·<code>medium</code>·<code>high</code>·<code>auto</code></td><td><code>auto</code></td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>background</code></td><td><code>opaque</code>·<code>transparent</code>·<code>auto</code></td><td><code>auto</code></td><td><strong>transparent 불가</strong></td><td>○</td><td>○</td></tr>
+      <tr><td><code>output_format</code></td><td><code>png</code>·<code>jpeg</code>·<code>webp</code></td><td><code>png</code></td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>output_compression</code></td><td>0–100 (webp/jpeg 전용)</td><td>100</td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>moderation</code></td><td><code>low</code>·<code>auto</code></td><td><code>auto</code></td><td>○</td><td>○</td><td>○</td></tr>
+      <tr><td><code>input_fidelity</code> <em>(edits 전용)</em></td><td><code>high</code>·<code>low</code></td><td><code>low</code></td><td><strong>거부됨</strong> — 항상 high로 동작</td><td>○</td><td><strong>미지원</strong></td></tr>
+      <tr><td><code>response_format</code></td><td>—</td><td>—</td><td colspan="3"><strong>GPT Image 계열은 미지원</strong> — 항상 base64로 반환된다</td></tr>
+      <tr><td><code>stream</code> · <code>partial_images</code></td><td>bool · 0–3</td><td>false · —</td><td>○</td><td>○</td><td>○</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    <strong><code>input_fidelity</code>를 <code>gpt-image-2</code>에 보내면 에러다.</strong> "무시"가 아니라 요청 자체가 실패한다. <code>gpt-image-2</code>는 입력 이미지를 <em>항상</em> high fidelity로 처리하므로 파라미터를 생략하는 것이 정답이며, 이 서버는 스키마 단계에서 조합을 미리 거부한다.
+  </div>
+</section>
+
+<section id="size">
+  <h2>3. size — 임의 해상도 제약</h2>
+  <h3>프리셋 (전 모델 공통)</h3>
+  <p><code>auto</code> · <code>1024x1024</code> · <code>1536x1024</code>(가로) · <code>1024x1536</code>(세로)</p>
+
+  <h3>임의 해상도 <code>WIDTHxHEIGHT</code> — <code>gpt-image-2</code> 전용</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>제약</th><th>값</th></tr></thead>
+    <tbody>
+      <tr><td>가로·세로</td><td>둘 다 <strong>16의 배수</strong></td></tr>
+      <tr><td>가로세로비</td><td><strong>1:3 ~ 3:1</strong></td></tr>
+      <tr><td>최대 변</td><td>3,840px (최대 해상도 3840×2160)</td></tr>
+      <tr><td>총 픽셀</td><td>655,360 ~ 8,294,400</td></tr>
+      <tr><td>실험적 구간</td><td>2560×1440 초과는 실험적</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>쇼트폼 9:16은 <code>1088x1920</code>.</strong> 1080×1920은 1080이 16의 배수가 아니라 거부되므로 1088을 쓴다(1088 = 16×68, 1920 = 16×120, 총 2,088,960px, 비율 0.567 → 제약 통과).
+  </div>
+  <p>이 서버는 네 제약을 각각 검사해 <strong>위반 항목을 모두 모아</strong> 한 번에 알린다 — 한 번에 하나씩 알리면 모델이 크기를 여러 번 고쳐 쏘게 된다.</p>
+  <pre><code>Custom resolution "1080x1921" violates constraints: width and height must be multiples of 16</code></pre>
+</section>
+
+<section id="edit">
+  <h2>4. 편집 전용 계약 (<code>/v1/images/edits</code>)</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>계약</th></tr></thead>
+    <tbody>
+      <tr><td><code>image</code></td><td>png/webp/jpg, 각 50MB 미만, <strong>최대 16장</strong>. 여러 장을 주면 합성 레퍼런스로 쓰인다</td></tr>
+      <tr><td><code>mask</code></td><td>알파 채널이 있는 PNG, 4MB 미만, <strong>첫 번째 이미지와 같은 크기</strong>. 완전 투명한 픽셀이 다시 그릴 영역이며, 여러 장을 줘도 마스크는 첫 장에만 적용된다</td></tr>
+      <tr><td>모델 기본값</td><td>API 기본은 <code>gpt-image-1.5</code> (이 서버는 <code>gpt-image-2</code>로 고정)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>편집이 강한 경우: 마스크 인페인팅, 여러 레퍼런스 합성, 얼굴·로고 같은 <strong>미세 디테일 보존</strong>. 반대로 맨바닥에서 만드는 생성은 <code>gpt_image_text2img</code>가 맞다.</p>
+</section>
+
+<section id="response">
+  <h2>5. 응답</h2>
+  <pre><code>{ "data": [ { "b64_json": "…", "revised_prompt": "…" } ] }</code></pre>
+  <ul>
+    <li>GPT Image 계열은 <strong>항상 base64</strong>다 — URL 응답은 없다.</li>
+    <li><code>revised_prompt</code>는 모델이 실제로 사용한 재작성 프롬프트다. 결과가 의도와 다를 때 원인 추적에 쓴다.</li>
+    <li>응답 MIME은 요청한 <code>output_format</code>을 따른다(편집 경로도 동일).</li>
+  </ul>
+</section>
+
+<section id="impl">
+  <h2>6. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th></tr></thead>
+    <tbody>
+      <tr><td>노출 모델</td><td>GPT Image 4종 + dall-e 계열</td><td>GPT Image 4종만 (dall-e는 셧다운 완료)</td></tr>
+      <tr><td>기본 모델</td><td>generations는 <code>dall-e-2</code>, edits는 <code>gpt-image-1.5</code></td><td>둘 다 <code>gpt-image-2</code>로 명시 — 기본값 상속은 예측 불가능하다</td></tr>
+      <tr><td><code>n</code></td><td>1–10</td><td>1 고정 (미노출) — 쇼트폼은 컷 단위 1장이 기본이고 N장은 비용이 N배다</td></tr>
+      <tr><td>모델별 파라미터 제약</td><td>문서에 산문 서술, 위반 시 런타임 에러</td><td><code>superRefine</code>으로 호출 전 거부 (size·background·input_fidelity 3계열)</td></tr>
+      <tr><td>반환 형태</td><td>base64</td><td>MCP <code>image</code> 블록 + 요약 텍스트. <code>savePath</code> 지정 시 파일로도 저장</td></tr>
+      <tr><td><code>savePath</code></td><td>—</td><td><code>..</code> 거부 + 이미지 확장자 화이트리스트, 부모 디렉토리 자동 생성</td></tr>
+      <tr><td><code>output_compression</code>·<code>moderation</code>·<code>stream</code></td><td>지원</td><td>미노출 — 파이프라인에서 조정할 일이 없다</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    이미지만 <strong>base64를 컨텍스트로 돌려주는</strong> 유일한 생성 툴이다. 모델이 결과를 눈으로 보고 재생성 여부를 판단해야 하기 때문이다. 영상·음성·음악은 모델이 어차피 직접 평가하지 못하므로 경로만 반환한다.
+  </div>
+</section>
+
+<footer>
+  기준일 2026-07-29 · 구현 <a href="../../server/src/image-client.ts">server/src/image-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+</footer>
+
+</div>
+</body>
+</html>

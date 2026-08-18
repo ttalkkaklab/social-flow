@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meta Graph (Threads · Instagram · Facebook) — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="meta-graph.en.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="meta-graph.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Meta Graph</div>
+
+<header class="hero">
+  <div class="kicker">META</div>
+  <h1>Meta Graph — Threads · Instagram · Facebook</h1>
+  <p class="sub">세 플랫폼이 같은 Graph 문법을 쓰지만 게시 흐름·길이 제약·댓글 능력이 전부 다르다. 특히 <strong>댓글 API 능력은 심하게 비대칭</strong>이라, 플랫폼 횡단 툴은 이 차이를 흡수해야 한다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://developers.facebook.com/docs/threads/posts">Threads</a> · <a href="https://developers.facebook.com/docs/instagram-platform/content-publishing">Instagram</a> · <a href="https://developers.facebook.com/docs/graph-api">Graph API</a></span>
+    <span>자격증명 <code>&lt;SNS_TOKEN_DIR&gt;/[&lt;channel&gt;/]*_token</code></span>
+    <span>구현 <code>server/src/sns-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#bases">베이스 URL과 버전</a></li>
+    <li><a href="#flow">컨테이너-후-게시 2단계</a></li>
+    <li><a href="#threads">Threads</a></li>
+    <li><a href="#instagram">Instagram</a></li>
+    <li><a href="#facebook">Facebook 페이지</a></li>
+    <li><a href="#comments">댓글 능력 비대칭</a></li>
+    <li><a href="#tokens">토큰과 계정 결정</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+    <li><a href="#growth">Threads 성장 조회 (인사이트·키워드 검색)</a></li>
+    <li><a href="#ig-growth">Instagram 성장 조회 (인사이트)</a></li>
+  </ol>
+</nav>
+
+<section id="bases">
+  <h2>1. 베이스 URL과 버전</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>플랫폼</th><th>베이스</th><th>토큰 파일</th><th>토큰 수명</th></tr></thead>
+    <tbody>
+      <tr><td>Threads</td><td><code>https://graph.threads.net/v1.0</code></td><td><code>threads_token</code></td><td>60일 (갱신형)</td></tr>
+      <tr><td>Instagram</td><td><code>https://graph.instagram.com/v23.0</code></td><td><code>instagram_token</code></td><td>60일 (갱신형)</td></tr>
+      <tr><td>Facebook 페이지</td><td><code>https://graph.facebook.com/v23.0</code></td><td><code>facebook_page_token</code></td><td>무기한 (페이지 토큰)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>Graph API 최신 버전은 v25.0(2026-02)이다.</strong> 이 서버가 v23.0에 고정된 것은 결함이 아니다 — Meta 버전은 릴리스 후 약 2년간 유효하고 v23.0(2025-05)은 2027년까지 살아 있으며, 버전 고정은 <em>상위 버전에서 파괴적 변경이 들어와도 게시가 조용히 깨지지 않게</em> 하는 장치다. 다만 갱신 시점 판단을 위해 <strong>버전을 상수 한 곳에서만 관리</strong>해야 한다.
+  </div>
+</section>
+
+<section id="flow">
+  <h2>2. 컨테이너-후-게시 2단계</h2>
+  <p>Threads와 Instagram은 미디어를 즉시 게시하지 않는다. 컨테이너를 만들고, 처리가 끝나기를 기다린 뒤, 별도 호출로 게시한다.</p>
+  <pre><code>POST /{user-id}/threads      또는  /{ig-id}/media        → { id: creationId }
+GET  /{creationId}?fields=status | status_code           → FINISHED 까지 폴링
+POST /{user-id}/threads_publish 또는 /{ig-id}/media_publish?creation_id=…</code></pre>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>플랫폼</th><th>상태 필드</th><th>값</th></tr></thead>
+    <tbody>
+      <tr><td>Threads</td><td><code>status</code></td><td><code>IN_PROGRESS</code> · <code>FINISHED</code> · <code>PUBLISHED</code> · <code>ERROR</code> · <code>EXPIRED</code></td></tr>
+      <tr><td>Instagram</td><td><code>status_code</code></td><td>동일 5종. <code>EXPIRED</code> = 24시간 안에 게시하지 않음</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>이 서버는 2초 간격 최대 60회(2분) 폴링하고, <code>ERROR</code>/<code>EXPIRED</code>는 즉시 실패로 갈라 낸다 — 실패가 확정된 컨테이너를 2분간 기다리는 것은 낭비다.</p>
+  <div class="danger">
+    <strong>게시 API는 비멱등이다.</strong> <code>media_publish</code>가 성공한 뒤 permalink 조회가 실패했다고 해서 전체를 재시도하면 <strong>같은 글이 두 번 게시된다</strong>. 이 서버는 permalink 조회 실패를 <code>permalink: null</code>로 낮춰 보고하고 게시 자체는 성공으로 반환한다.
+  </div>
+</section>
+
+<section id="threads">
+  <h2>3. Threads</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>플랫폼 계약</th><th>이 서버</th></tr></thead>
+    <tbody>
+      <tr><td><code>media_type</code></td><td><code>TEXT</code> · <code>IMAGE</code> · <code>VIDEO</code> · <code>CAROUSEL</code>(2–20)</td><td><strong><code>TEXT</code> · <code>IMAGE</code>만</strong></td></tr>
+      <tr><td>본문 길이</td><td>500자. <strong>이모지는 UTF-8 바이트로 계산</strong>된다</td><td>500자 (JS 문자 길이 기준)</td></tr>
+      <tr><td>이미지</td><td>JPEG/PNG, 8MB 이하, 가로 320–1440px, 비율 최대 10:1</td><td>공개 URL 1장 (플랫폼이 크롤)</td></tr>
+      <tr><td>영상</td><td>MOV/MP4, H264/HEVC, 0–300초, 1GB 이하</td><td>미지원</td></tr>
+      <tr><td>링크 카드</td><td><code>link_attachment</code> — <strong><code>media_type=TEXT</code> 전용</strong>. 게시물당 링크 5개까지, 본문 URL과 같으면 1개로 계산</td><td><code>linkUrl</code>로 노출 (<code>imageUrl</code>과 배타 — 같이 오면 400)</td></tr>
+      <tr><td>답글</td><td><code>reply_to_id</code>를 단 새 게시물이 곧 답글 — 깊이 제한 없음</td><td><code>replyToId</code>로 노출</td></tr>
+      <tr><td>게시 쿼터</td><td><strong>24시간당 250건</strong> (캐러셀은 1건)</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>Threads 영상 미지원은 플랫폼 제약이 아니라 이 서버의 선택이다.</strong> 플랫폼은 <code>VIDEO</code>·<code>CAROUSEL</code>을 지원한다. 이 파이프라인은 쇼트폼 영상을 YouTube/IG 릴스로 내보내고, Threads에는 <em>반말 구어체 본문 + 영상 링크 한 건</em>으로 유입을 만드는 전략을 쓴다. 툴 설명이 이를 플랫폼 한계처럼 적으면 안 된다.
+  </div>
+  <p><strong>본문 링크 규칙(2026-08-15 개정):</strong> 영상 회차는 <strong>링크 없는 구어체 본문</strong>을 먼저 게시하고, IG 릴스 permalink 를 <strong>자기 답글</strong>로 단다 — 2026-08-14 의 "본문에 링크 1개" 방식을 철회한 것이다. 커버 이미지도 붙이지 않는다. 근거는 실측이다 — 본문 링크 글 2건이 조회 9·21 로 같은 날 링크 없는 글의 1/10 이었고, 답글 링크 글 2건은 257·623 이었다. 2024년의 본문 링크 페널티를 Mosseri 가 공개 철회했지만 우리 도달 분포는 반대로 나왔으므로 실측을 따른다. 링크는 YouTube 가 아니라 IG 릴스가 기본이다(같은 Meta 생태계라 이탈 손실이 가장 작다) — 게시 순서도 IG 먼저, permalink 를 받아 Threads 다. <code>linkUrl</code>(플랫폼 파라미터 <code>link_attachment</code>)은 API 능력 자체는 그대로여서, <code>media_type=TEXT</code> 전용이라 <code>imageUrl</code>과 배타이며 서버가 400으로 먼저 막는다. 해시태그는 랭킹 가중치가 0이라 1개 이하를 권한다.</p>
+</section>
+
+<section id="instagram">
+  <h2>4. Instagram</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>플랫폼 계약</th></tr></thead>
+    <tbody>
+      <tr><td><code>media_type</code></td><td><code>IMAGE</code> · <code>VIDEO</code> · <code>REELS</code> · <code>CAROUSEL</code> · <code>STORIES</code></td></tr>
+      <tr><td>캡션</td><td>2,200자. 첫 125자가 접히기 전 훅. <strong>캡션 내 링크는 클릭 불가</strong></td></tr>
+      <tr><td>이미지</td><td><strong>JPEG만</strong> — MPO·JPS 등 확장 포맷 거부</td></tr>
+      <tr><td>캐러셀</td><td>최대 10개(이미지·영상 혼합 가능). <strong>첫 항목 비율로 나머지를 강제 크롭</strong>(기본 1:1)</td></tr>
+      <tr><td>게시 쿼터</td><td><strong>24시간 이동 구간당 100건</strong> (캐러셀은 1건)</td></tr>
+      <tr><td>게시 후 수정</td><td>캡션만 가능 — 이미지 교체 불가</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>캐러셀 흐름</h3>
+  <pre><code>for 각 이미지:
+  POST /{ig-id}/media?image_url=…&is_carousel_item=true   → childId
+for 각 childId:
+  GET /{childId}?fields=status_code                        → FINISHED 대기
+POST /{ig-id}/media?media_type=CAROUSEL&children={id,id,…}&caption=…
+POST /{ig-id}/media_publish?creation_id=…</code></pre>
+  <p>자식 컨테이너를 <strong>전부</strong> FINISHED로 만든 뒤 묶어야 한다. 하나라도 처리 중이면 CAROUSEL 생성이 실패한다.</p>
+  <p>릴스는 <code>media_type=REELS</code> + <code>video_url</code> 한 번이면 되고, <code>imageUrls</code>와는 배타다.</p>
+</section>
+
+<section id="facebook">
+  <h2>5. Facebook 페이지</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>형태</th><th>엔드포인트</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>텍스트 (+링크)</td><td><code>POST /{page-id}/feed</code> <code>message</code> <code>link</code></td><td>—</td></tr>
+      <tr><td>이미지 ≤10장</td><td><code>POST /{page-id}/photos</code> (<code>published=false</code>) → <code>/feed</code> + <code>attached_media[N]</code></td><td>미게시 사진을 만들고 피드에 묶는다</td></tr>
+      <tr><td>영상</td><td><code>POST /{page-id}/videos</code> <code>file_url</code> <code>description</code></td><td>일반 영상 — 릴스가 아니다. 타임아웃 120초. <strong>응답의 <code>id</code>가 곧 video_id</strong></td></tr>
+      <tr><td>자막</td><td><code>POST /{video-id}/captions</code> <code>captions_file</code> <code>default_locale</code></td><td>SRT 파일 첨부(multipart/form-data) · <strong>200K 상한</strong></td></tr>
+      <tr><td>댓글</td><td><code>POST /{post-id}/comments</code> <code>message</code></td><td>scope <code>pages_manage_engagement</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>본문 길이는 사실상 넉넉하지만 이 서버는 5,000자로 제한한다. 댓글은 8,000자.</p>
+  <div class="note">
+    <strong>원문 링크는 본문이 아니라 첫 댓글로.</strong> 페이스북은 외부 링크가 붙은 게시물의 도달을 낮춘다. <code>facebook_publish</code> 성공 직후 응답의 <code>postId</code>를 <code>facebook_comment</code>에 넘겨 첫 댓글로 링크를 단다 — FB 댓글의 링크는 클릭 가능하고 프리뷰도 렌더된다. <code>linkUrl</code>은 미디어가 없는 텍스트 게시의 예외 경로로만 남겼다.
+  </div>
+  <div class="danger">
+    댓글만 실패했을 때 <strong>본문을 재게시하면 안 된다</strong>. <code>facebook_comment</code>만 재시도한다. 게시 API가 비멱등이라 본문 재시도는 중복 게시가 된다. 자막(<code>captionWarning</code>)도 같다.
+  </div>
+  <h3>자막은 영상과 따로 올린다</h3>
+  <p>Meta 4종 중 <strong>Facebook만 자막 파일을 받는다</strong>. 영상 게시 응답의 <code>id</code>가 그대로 video_id라 곧바로 자막 엣지에 넘길 수 있다.</p>
+  <pre><code>POST /{video-id}/captions
+Content-Type: multipart/form-data
+
+access_token=…
+default_locale=ko_KR
+captions_file=@caption.ko_KR.srt   ← 파일명이 계약이다</code></pre>
+  <div class="warn">
+    <strong>파일명이 로케일을 결정한다.</strong> <code>&lt;이름&gt;.&lt;locale&gt;.srt</code> 형식이 아니면 <strong>error 386</strong>으로 거부된다(<code>ko_KR</code>·<code>en_US</code> 꼴). 이 서버는 <code>captionLocale</code>을 정규식으로 검증하고 파일명을 직접 조립해 이 함정을 없앴다. 200K를 넘는 파일도 호출 전에 막는다.
+    <p style="margin-top:10px">FB는 <code>file_url</code> 영상을 <strong>비동기로 처리</strong>한다. 게시 직후 자막 호출이 처리 중 상태에 걸리면 실패할 수 있는데, 그때도 게시는 유효하므로 경고로만 보고하고 자막만 다시 올린다.</p>
+  </div>
+  <div class="danger">
+    <strong>Instagram·Threads에는 자막 파일 경로가 없다.</strong> IG Content Publishing 컨테이너에 자막 파라미터가 없어서, IG 릴스는 화면에 자막을 태운 영상(<code>video-sub.mp4</code>)을 올리는 것이 유일한 방법이다. 그래서 이 파이프라인은 영상을 두 벌 만든다 — 클린 마스터는 YouTube·Facebook으로, 번인본은 Instagram으로.
+  </div>
+</section>
+
+<section id="comments">
+  <h2>6. 댓글 능력 비대칭</h2>
+  <p>받은 댓글 관리(<code>sns_comment_*</code>)가 흡수해야 하는 플랫폼 차이다. Meta 3종은 2026-07-26 토큰 실측, YouTube는 2026-08-11 편입 기준.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th></th><th>Threads</th><th>Instagram</th><th>Facebook</th><th>YouTube</th></tr></thead>
+    <tbody>
+      <tr><td>읽기</td><td><code>/{post}/conversation</code><br>깊이 무관 평면화</td><td><code>/{post}/comments</code><br><code>replies{…}</code> 중첩</td><td><code>/{post}/comments?filter=stream</code><br>대댓글까지 평면</td><td><code>commentThreads.list</code><br>영상별 · <code>replies</code>는 5건까지</td></tr>
+      <tr><td>답글</td><td><code>reply_to_id</code> 새 게시물<br>깊이 제한 없음</td><td><code>/{comment}/replies</code><br><strong>최상위 댓글에만</strong></td><td><code>/{comment}/comments</code></td><td><code>comments.insert</code><br><strong>최상위 댓글에만</strong></td></tr>
+      <tr><td>숨김</td><td><code>/{id}/manage_reply?hide=</code></td><td><code>/{id}?hide=</code></td><td><code>/{id}?is_hidden=</code></td><td>미지원 — 의미가 다름</td></tr>
+      <tr><td>좋아요</td><td><strong>API 없음</strong></td><td><strong>API 없음</strong></td><td><code>/{id}/likes</code> POST·DELETE</td><td>미지원</td></tr>
+      <tr><td>"내가 답했나" 판정</td><td><code>is_reply_owned_by_me</code></td><td><code>username</code> 일치</td><td><code>from.id == pageId</code></td><td>스레드 내 <strong>우리 마지막 답글 시각</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>YouTube의 판정만 시각 기준인 이유.</strong> 다른 셋은 댓글마다 "우리 것인가"를 알려주는 필드가 있지만 YouTube에는 없다. 스레드 단위로 뭉뚱그리면 우리 답글 뒤에 붙은 새 댓글을 놓치고, 댓글 단위로만 보면 이미 답한 스레드에 또 답한다. 그래서 <strong>우리 마지막 답글보다 나중에 달린 것만 미응대</strong>로 잡는다. <code>replies</code> part가 5건만 주므로 잘렸으면 <code>comments.list</code>로 전체를 다시 받고, 그래도 불완전하면(100건 초과·조회 실패) 판정 근거가 없으니 <strong>응대됨으로 처리해 목록에서 뺀다</strong> — 놓친 댓글은 다음 조회에 잡히지만 반대로 틀리면 중복 답글이 공개로 나간다.
+  </div>
+  <div class="warn">
+    <strong>YouTube는 2026-08부터 인박스·답글에 편입됐다</strong>(<code>commentThreads.list</code> + <code>comments.insert</code>). 다만 <code>youtube.force-ssl</code> 스코프가 있어야 하고, 게시용으로 발급한 토큰에는 없다 — 이때 인박스는 조용히 빼지 않고 <code>skipped</code>에 재발급 안내와 함께 실어 보고한다. "YouTube 댓글이 0건"과 "YouTube를 조회하지 못함"은 다른 사실이다.
+    <p style="margin-top:10px">숨김·좋아요는 여전히 YouTube를 지원하지 않는다. API가 주는 것은 의미가 다른 검토 보류/거부(<code>setModerationStatus</code>)뿐이라 "되돌릴 수 있는 숨김"으로 매핑할 수 없다 — 잘못 매핑하느니 명시적으로 거부한다.</p>
+  </div>
+  <h3>인박스 설계</h3>
+  <ul>
+    <li>기본값은 <strong>우리가 아직 답하지 않은 남의 댓글만</strong>이다. "이미 답했는가"를 추측이 아니라 플랫폼 필드로 판정하므로 중복 답글이 나가지 않는다.</li>
+    <li>목록은 <strong>최신순</strong>으로 가져온다(<code>reverse=true</code> · <code>order=reverse_chronological</code>) — limit로 잘릴 때 남겨야 하는 건 오래된 댓글이 아니라 골든아워 댓글이다.</li>
+    <li>각 댓글에 <code>ageMinutes</code>를, 요약에 <code>withinGoldenHour</code>(첫 60분 안 미응대 수)를 계산해 싣는다. 답글 속도가 확산을 좌우하므로 이 값이 우선순위 판단의 1순위 신호다.</li>
+    <li>Threads 목록에서 <code>is_reply</code>인 항목은 우리 자기 답글이라 인박스 루트에서 제외한다.</li>
+    <li>플랫폼 하나가 실패해도 나머지는 그대로 반환하고 사유를 <code>skipped</code>에 싣는다 — 부분 실패가 전체를 막지 않는다.</li>
+  </ul>
+  <h3>모더레이션에 삭제가 없는 이유</h3>
+  <p>숨김은 되돌릴 수 있고 작성자 본인에게는 계속 보여 마찰이 적은 반면 삭제는 비가역이다. 스팸·어뷰징 대응에는 숨김이 브랜드 리스크가 낮다. 정당한 비판·불만은 숨기지 않는다 — 숨김은 스팸·광고·혐오·개인정보 노출에만 쓴다.</p>
+</section>
+
+<section id="tokens">
+  <h2>7. 토큰과 계정 결정</h2>
+  <div class="ok">
+    <strong>게시 계정을 설정으로 받지 않는다.</strong> 토큰의 <code>/me</code>를 조회해 결정한다 — 계정 ID를 설정으로 받으면 토큰·계정 불일치(잘못된 계정으로 게시)의 여지가 생기는데, <code>/me</code>는 그 불일치가 구조적으로 불가능하다.
+  </div>
+  <h3>채널(브랜드) 2계층</h3>
+  <pre><code>&lt;SNS_TOKEN_DIR&gt;/&lt;채널 slug&gt;/threads_token   ← channel 인자 지정 시
+&lt;SNS_TOKEN_DIR&gt;/threads_token                ← 미지정 시 (단일 채널·레거시)</code></pre>
+  <div class="danger">
+    <strong>채널 지정 시 기본 토큰으로 폴백하지 않는다.</strong> 폴백하면 채널 토큰이 없을 때 다른 브랜드 계정으로 조용히 게시되는 사고가 난다. 대신 사용 가능한 채널 목록을 담은 명시적 에러를 반환한다.
+  </div>
+  <p>토큰 <strong>값</strong>은 환경변수로 받지 않는다. Meta의 60일 갱신 절차가 파일을 덮어쓰는 구조라 파일 기반이어야 갱신이 가능하고, 커밋 대상인 <code>.mcp.json</code>에 시크릿이 실리는 것도 막는다.</p>
+  <p>ListTools 시점에 자격증명 파일이 존재하는 플랫폼의 게시 툴만 노출된다. 요청 시점 평가라 <strong>토큰 파일 추가가 서버 재시작 없이 반영</strong>된다. 핸들러는 전부 유지되므로 숨은 툴을 직접 호출하면 명시적 토큰 부재 에러가 돌아온다.</p>
+  <div class="ok">
+    <strong>플랫폼 자격증명은 전부 선택이다.</strong> Meta 3종의 토큰이 여는 것은 <code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code> 일곱이고, 여기에 <code>youtube_publish</code>·<code>youtube_insights</code>를 더한 아홉이 게이트 대상이다(토큰이 하나도 없으면 <code>tools/list</code> 는 46 대신 37을 보여 준다). 토큰을 건너뛰면 제작까지는 그대로 돌아가고 — <code>produce</code> 가 완성 영상과 플랫폼별 문안을 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 쓰고 사람이 직접 올린다 — 게시·성장 절반만 못 쓴다. 플랫폼 단위라 YouTube 만 연결해 두는 구성도 된다.
+  </div>
+</section>
+
+<section id="impl">
+  <h2>8. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>플랫폼 계약</th><th>social-flow 구현</th></tr></thead>
+    <tbody>
+      <tr><td>Threads 미디어</td><td>TEXT·IMAGE·VIDEO·CAROUSEL</td><td>TEXT·IMAGE (전략적 선택)</td></tr>
+      <tr><td>IG 미디어</td><td>IMAGE·VIDEO·REELS·CAROUSEL·STORIES</td><td>IMAGE·CAROUSEL·REELS</td></tr>
+      <tr><td>FB 미디어</td><td>텍스트·사진·영상·릴스</td><td>텍스트·사진 ≤10·일반 영상</td></tr>
+      <tr><td>자막</td><td>FB만 <code>/{video-id}/captions</code> (IG·Threads 없음)</td><td><strong>FB는 파일 별도 업로드</strong>(<code>captionFilePath</code>, 영상 게시에서만) · <strong>IG는 번인본 영상</strong>으로 대응. 파일명·크기는 호출 전 검증, 실패는 <code>captionWarning</code>으로 강등</td></tr>
+      <tr><td>POST 파라미터 전송</td><td>쿼리스트링·form 본문 모두 허용</td><td><strong>form 본문</strong>(<code>application/x-www-form-urlencoded</code>) — 캡션 상한(IG 2,200자·FB 5,000자)이 %-인코딩(한글 ×9)되면 URL이 수십 KB가 되어 요청 라인 길이 한계에 걸릴 수 있고, 토큰이 URL에 남지 않는다. GET/DELETE는 쿼리스트링 유지</td></tr>
+      <tr><td>토큰 노출</td><td>—</td><td>에러 메시지에 전체 URL을 싣지 않는다 (베이스 URL만) + POST는 토큰도 본문으로</td></tr>
+      <tr><td>permalink</td><td>별도 조회</td><td>게시 성공 후 조회. 실패해도 게시는 성공으로 보고(<code>permalink: null</code>)</td></tr>
+      <tr><td>인박스 상한</td><td>—</td><td>플랫폼당 게시물 25 · 게시물당 댓글 100</td></tr>
+      <tr><td>모더레이션</td><td>숨김·삭제·좋아요</td><td><strong>삭제 미제공</strong> (§6)</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="growth">
+  <h2>9. Threads 성장 조회 (인사이트·키워드 검색)</h2>
+  <p>grow-threads 스킬 전용 읽기 엔드포인트 2종 — <code>threads_insights</code>·<code>threads_search</code> 툴의 백엔드다. 2026-08-11 공식 문서(<a href="https://developers.facebook.com/docs/threads/insights">Insights</a> · <a href="https://developers.facebook.com/docs/threads/keyword-search">Keyword Search</a>) 기준.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>인사이트</th><th>키워드 검색</th></tr></thead>
+    <tbody>
+      <tr><td>엔드포인트</td><td>계정 <code>GET /{user-id}/threads_insights</code><br>게시물 <code>GET /{media-id}/insights</code></td><td><code>GET /keyword_search</code> (uid 불필요)</td></tr>
+      <tr><td>필요 스코프</td><td><code>threads_manage_insights</code></td><td><code>threads_keyword_search</code></td></tr>
+      <tr><td>주요 파라미터</td><td><code>metric</code> · <code>since</code>/<code>until</code>(unix 초)</td><td><code>q</code> · <code>search_type=TOP|RECENT</code> · <code>search_mode=KEYWORD|TAG</code> · <code>since</code>/<code>until</code> · <code>limit</code>(기본 25 최대 100)</td></tr>
+      <tr><td>쿼터</td><td>일반 Graph 한도</td><td><strong>계정당 24시간 롤링 2,200회</strong> — 결과 없는 쿼리는 미포함</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>계정 지표의 두 가지 응답 형태</h3>
+  <ul>
+    <li><code>views</code>는 <strong>일 단위 시계열</strong>(<code>values[]</code>), <code>likes</code>·<code>replies</code>·<code>reposts</code>·<code>quotes</code>는 구간 합계(<code>total_value</code>)로 온다 — 서버가 <code>{ total, daily[] }</code> / 스칼라로 정규화한다.</li>
+    <li><code>followers_count</code>·<code>follower_demographics</code>는 <strong>since/until 미지원</strong> — 서버는 followers_count 를 별도 호출로 분리한다(같은 요청에 섞으면 실패). demographics 는 팔로워 100명 미만이면 안 나오므로 미노출.</li>
+    <li>since/until 은 2024-04-13 이전으로 내려가지 않는다(플랫폼 제약).</li>
+    <li>게시물 지표 <code>views</code>·<code>shares</code>는 문서상 "개발 중" — 오차 전제로 추이 판단에만 쓴다.</li>
+  </ul>
+  <h3>키워드 검색 실측 주의</h3>
+  <ul>
+    <li>응답 필드: <code>id,text,media_type,permalink,timestamp,username,has_replies,is_quote_post,is_reply</code> — <code>owner</code> 필드는 없다.</li>
+    <li><strong>앱이 고급 접근 승인 전이면 인증된 자기 계정 게시물만 반환된다</strong> — 검색이 "빈 결과"인 것과 "권한 부족"은 다른 사실이므로 grow-threads init 의 스코프 검증에서 걸러야 한다.</li>
+    <li>민감·유해 키워드는 에러가 아니라 <strong>빈 배열</strong>로 온다 — 정상 동작이다.</li>
+    <li>검색 결과 postId 에 <code>reply_to_id</code> 게시(= <code>threads_publish</code> 의 <code>replyToId</code>)로 남의 공개 글에 답글 참여가 가능하다 — 상대 계정의 답글 제한 설정에 막히면 게시 단계에서 플랫폼 에러가 돌아온다.</li>
+  </ul>
+  <div class="warn">
+    <strong>스코프는 재발급으로만 늘어난다.</strong> 게시용으로 발급한 기존 토큰에는 이 두 스코프가 없다 — <code>refresh_access_token</code> 갱신은 스코프를 바꾸지 못하므로, 동의 플로우에서 체크박스를 켜고 <strong>토큰을 새로 발급</strong>해야 한다. 서버는 스코프 부족 에러에 이 안내(token-setup.md)를 얹어 반환한다.
+  </div>
+</section>
+
+<section id="ig-growth">
+  <h2>10. Instagram 성장 조회 (인사이트)</h2>
+  <p>grow-instagram 스킬 전용 읽기 엔드포인트 — <code>instagram_insights</code> 툴의 백엔드다. 계정 구간 지표와 최근 미디어별 지표를 한 번의 툴 호출로 받아 정규화한다. 스코프는 <code>instagram_business_manage_insights</code> 하나다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>대상</th><th>엔드포인트</th><th>요청 지표</th></tr></thead>
+    <tbody>
+      <tr><td>계정</td><td><code>GET /{ig-user-id}/insights</code></td><td><code>reach · views · profile_views · accounts_engaged · total_interactions · likes · comments · shares · saves · profile_links_taps</code></td></tr>
+      <tr><td>미디어 공통</td><td><code>GET /{media-id}/insights</code></td><td><code>views · reach · likes · comments · shares · saved · total_interactions</code></td></tr>
+      <tr><td>릴스 전용</td><td>같은 엔드포인트</td><td><code>ig_reels_avg_watch_time · ig_reels_video_view_total_time · reels_skip_rate</code></td></tr>
+      <tr><td>피드 전용</td><td>같은 엔드포인트</td><td><code>follows · profile_visits</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>실호출로 확인한 함정 넷</h3>
+  <ul>
+    <li><strong><code>metric_type=total_value</code> 를 빼면 지표가 조용히 사라진다.</strong> <code>views</code> 처럼 시계열을 지원하지 않는 지표가 에러 없이 응답에서 빠진다 — 그래서 계정 지표는 전부 구간 합계로 요청한다.</li>
+    <li><strong>팔로워 수는 인사이트가 아니라 프로필 필드다.</strong> 인사이트의 <code>follower_count</code> 는 팔로워 100명 미만 계정에서 빈 배열을 돌려주므로 갓 만든 채널에서는 쓸모가 없다. 서버는 <code>/me</code> 의 <code>followers_count</code> 를 읽는다.</li>
+    <li><strong>계정은 <code>saves</code>, 미디어는 <code>saved</code>.</strong> 같은 뜻인데 단·복수가 다르다.</li>
+    <li><strong>릴스 지표와 피드 지표를 섞으면 응답 전체가 400 이다.</strong> 릴스에 <code>follows</code>·<code>profile_visits</code> 를 요청하면 <code>does not support ... metric</code> 으로 실패하고, 반대로 피드(이미지·캐러셀)에 릴스 3종을 요청해도 같다. 서버는 <code>media_product_type</code> 으로 갈라 붙인다.</li>
+  </ul>
+  <div class="note">
+    <strong><code>reels_skip_rate</code> 는 이 플랫폼에만 있다.</strong> 3초 미만 시청 확률을 랭킹 모델이 직접 예측하는데, 그 이탈률을 API 로 돌려주는 곳이 여기뿐이다. YouTube Analytics 에는 대응 메트릭이 없어 쇼츠 훅은 <code>averageViewPercentage</code> 로 우회한다(<a href="youtube-data.html">YouTube Data API</a> 참조).
+  </div>
+</section>
+
+<footer>
+  기준일 2026-08-18 · 구현 <a href="../../server/src/sns-client.ts">server/src/sns-client.ts</a> · <a href="index.html">API 레퍼런스 허브</a>
+</footer>
+
+</div>
+</body>
+</html>

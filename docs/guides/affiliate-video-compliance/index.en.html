@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Affiliate video rules (Korea) — promoting Shopping Connect products on YouTube | social-flow guide</title>
+<link rel="alternate" hreflang="ko" href="index.html">
+<link rel="stylesheet" href="../../assets/reference.css">
+<style>
+  /* Props for this page only — layered on top of the shared reference.css */
+  .lede { font-size: 18px; line-height: 1.7; margin: 8px 0 4px; }
+  .lede strong { font-weight: 750; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }
+  .col-box { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; background: var(--bg-card); }
+  .col-box.win { border-top: 3px solid var(--green); }
+  .col-box.fail { border-top: 3px solid var(--red); }
+  .col-box h4 { margin: 0 0 10px; font-size: 14.5px; letter-spacing: .02em; }
+  .col-box.win h4 { color: var(--green); }
+  .col-box.fail h4 { color: var(--red); }
+  .col-box ul { margin: 0 0 0 18px; }
+  .col-box li { font-size: 14.5px; margin-bottom: 8px; }
+  .rule-list { list-style: none; margin-left: 0; }
+  .rule-list > li { position: relative; padding-left: 30px; margin-bottom: 16px; }
+  .rule-list > li .n {
+    position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums;
+  }
+  /* Evidence grade */
+  .ev { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .03em;
+        padding: 2px 8px; border-radius: 999px; white-space: nowrap; vertical-align: middle; margin-left: 6px; }
+  .ev.p1 { background: var(--green-soft); color: var(--green); }   /* terms and statutes read directly */
+  .ev.p2 { background: var(--amber-soft); color: var(--amber); }   /* via a government announcement or law-firm commentary */
+  .ev.p3 { background: var(--red-soft); color: var(--red); }       /* secondary material, unconfirmed */
+  .ev.obs { background: var(--accent-soft); color: var(--accent); } /* observed on the live service screen */
+  .quote-src { border-left: 3px solid var(--border); padding: 6px 0 6px 16px; margin: 12px 0;
+               color: var(--text-soft); font-size: 14px; }
+  .quote-src b { color: var(--text); font-weight: 600; }
+  .clause { border-left: 3px solid var(--accent); background: var(--bg-soft);
+            padding: 12px 16px; margin: 14px 0; border-radius: 0 8px 8px 0; font-size: 14.5px; }
+  .clause .src { display: block; margin-top: 6px; font-size: 12.5px; color: var(--text-soft); }
+  /* Gate summary cards */
+  .gates { display: flex; flex-wrap: wrap; gap: 12px; margin: 22px 0 8px; }
+  .gate { flex: 1 1 260px; border: 1px solid var(--border); border-left: 4px solid var(--accent);
+          border-radius: 0 10px 10px 0; padding: 14px 16px; background: var(--bg-card); }
+  .gate.hot { border-left-color: var(--red); }
+  .gate .g-n { font-size: 12px; font-weight: 700; color: var(--text-soft); letter-spacing: .06em; }
+  .gate .g-t { font-size: 15.5px; font-weight: 700; margin: 4px 0 6px; }
+  .gate p { font-size: 14px; color: var(--text-soft); margin: 0; }
+  /* Checklist */
+  .stage { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+  .stage > h4 { margin: 0; padding: 12px 18px; background: var(--bg-soft);
+                border-bottom: 1px solid var(--border); font-size: 15px; }
+  .stage ul { list-style: none; margin: 0; padding: 14px 18px; }
+  .stage li { position: relative; padding-left: 26px; margin-bottom: 10px; font-size: 14.5px; }
+  .stage li::before {
+    content: "☐"; position: absolute; left: 0; top: -1px; color: var(--accent); font-size: 15px;
+  }
+  .stage li:last-child { margin-bottom: 0; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="index.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../../index.en.html">Docs</a><span>/</span>Guides<span>/</span>Affiliate video rules</div>
+
+<header class="hero">
+  <div class="kicker">COMPLIANCE · AFFILIATE</div>
+  <h1>Affiliate video rules</h1>
+  <p class="sub">
+    <strong>This page is about Korean platform rules.</strong> It follows one flow: pick a product yourself in
+    Naver Shopping Connect (쇼핑 커넥트), make a promotional video, and upload it to YouTube. Gates ① to ④
+    come from Naver's own terms and the Korea Fair Trade Commission's endorsement guidelines, so they're
+    Korea-specific and don't transfer to other countries' affiliate programs. Gate ⑤ is the exception —
+    it's YouTube's own policy and applies to any channel anywhere.
+    <strong>Doing this is fine in itself</strong> — the terms define it as the creator "posting on media
+    at their own discretion". There are five gates to pass, and
+    <strong>three of them collide head-on with the way we shoot video with AI.</strong>
+  </p>
+  <div class="meta">
+    <span>Reference date <strong>2026-08-15</strong></span>
+    <span>Scope <strong>Shopping Connect × YouTube (Korea)</strong></span>
+    <span>Evidence <strong>full text of Naver's terms and operating policy + KFTC review guidelines + live screens</strong></span>
+    <span>Nature <strong>a practitioner's guide, not legal advice</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#grade">How to read this page — evidence grades</a></li>
+    <li><a href="#gates">The five gates at a glance</a></li>
+    <li><a href="#g1">Gate ① Commission disclosure is a contractual duty</a></li>
+    <li><a href="#g2">Gate ② No review voice for a product you haven't used</a></li>
+    <li><a href="#g3">Gate ③ AI people need a "virtual person" label</a></li>
+    <li><a href="#g4">Gate ④ Product image copyright</a></li>
+    <li><a href="#g5">Gate ⑤ YouTube — publishing and monetization are different axes</a></li>
+    <li><a href="#etc">More to pick up from the terms</a></li>
+    <li><a href="#checklist">Production checklist</a></li>
+    <li><a href="#unknown">Still unconfirmed</a></li>
+    <li><a href="#sources">Sources</a></li>
+  </ol>
+</nav>
+
+<section id="grade">
+  <h2>1. How to read this page — evidence grades</h2>
+  <p class="lede">
+    Affiliate-marketing advice is everywhere in Korean blogs and YouTube courses, and almost none of it
+    was written by someone who read the terms. This page was written
+    <strong>with Naver's terms and operating policy pulled and read in full</strong>, and every claim carries a grade.
+  </p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Grade</th><th>Meaning</th><th>How to treat it</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="ev p1">primary</span></td>
+        <td>Naver's terms and operating policy, or a KFTC press release, opened directly and confirmed down to the clause wording</td>
+        <td>Use it as an operating rule as-is</td>
+      </tr>
+      <tr>
+        <td><span class="ev p2">via</span></td>
+        <td>Confirmed through a government announcement or a commonly accepted reading of a statute. We couldn't open the statutory text itself</td>
+        <td>Trust the direction, but check the original text first if it's ever disputed</td>
+      </tr>
+      <tr>
+        <td><span class="ev p3">secondary</span></td>
+        <td>Trade press or community material. The original source wasn't confirmed</td>
+        <td>Reference only. Don't build a rule on it</td>
+      </tr>
+      <tr>
+        <td><span class="ev obs">observed</span></td>
+        <td>Opened the live service screen and watched what it does. Means "that screen behaved this way that day", not that any clause says so</td>
+        <td>Use it as an operating rule, but read the date with it. Screens change without notice</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>This page is not legal advice.</strong> It's a practitioner's baseline written from reading the terms and the guidelines.
+    Once the money gets large or a dispute starts, check with a lawyer.
+  </div>
+</section>
+
+<section id="gates">
+  <h2>2. The five gates at a glance</h2>
+  <div class="gates">
+    <div class="gate">
+      <div class="g-n">GATE 1</div>
+      <div class="g-t">Commission disclosure</div>
+      <p>The terms make disclosure of the economic relationship, in the manner the KFTC guidelines set, an obligation. In the title and the opening.</p>
+    </div>
+    <div class="gate hot">
+      <div class="g-n">GATE 2 · most important</div>
+      <div class="g-t">No review voice</div>
+      <p>A product picked for its margin isn't a product you used. Every experience-claiming line is closed off.</p>
+    </div>
+    <div class="gate hot">
+      <div class="g-n">GATE 3 · collides with our pipeline</div>
+      <div class="g-t">Virtual-person label</div>
+      <p>Ads featuring an AI character need a label next to the person. In force since 2026-06-01.</p>
+    </div>
+    <div class="gate hot">
+      <div class="g-n">GATE 4 · collides with our pipeline</div>
+      <div class="g-t">Image copyright</div>
+      <p>Screenshotting the product page is blocked, and so is running it through AI. The way to get permission is the seller's chat.</p>
+    </div>
+    <div class="gate">
+      <div class="g-n">GATE 5</div>
+      <div class="g-t">Keeping the YouTube channel</div>
+      <p>Publishing is allowed. The real risk is channel-level enforcement for mass-produced content.</p>
+    </div>
+  </div>
+  <p class="quote-src">
+    <b>The premise we checked first.</b> Shopping Connect has no campaign-acceptance step — you pick products directly.
+    Article 2 (1) of the terms defines it as "the creator posting products displayed by Naver on media
+    <b>at their own discretion</b>" (원문: "네이버가 전시한 상품을 크리에이터가 <b>자율적으로</b> 미디어에 게재").
+    Nor does it limit the posting channel to blogs. <span class="ev p1">primary</span>
+  </p>
+</section>
+
+<section id="g1">
+  <h2>3. Gate ① Commission disclosure is a contractual duty</h2>
+  <p class="lede">
+    Skip the disclosure and it's <strong>a breach of the terms</strong> before it's a legal problem. Naver wrote it in two places.
+  </p>
+
+  <div class="clause">
+    제5조 ② 크리에이터는 쇼핑 커넥트 활동시 미디어 게시물 등에 「추천·보증 등에 관한 표시·광고 심사지침」이
+    정한 방식으로 경제적 이해관계 표시를 하여야 합니다.
+    <span class="src">Article 5 (2) — "In Shopping Connect activity, the creator shall disclose the economic relationship on media posts in the manner set by the 「추천·보증 등에 관한 표시·광고 심사지침」 (unofficial: Review Guidelines on Labeling and Advertising Involving Endorsements and Testimonials)." Shopping Connect Terms of Use (2026.07) <span class="ev p1">primary</span></span>
+  </div>
+  <div class="clause">
+    제8조 ① 21. 쇼핑 커넥트 활동과 관련하여 「추천·보증 등에 관한 표시·광고 심사지침」이 정한 내용을 준수하지 않는 행위
+    <span class="src">Article 8 (1) 21 — "failing to comply, in connection with Shopping Connect activity, with what the endorsement review guidelines set out." Prohibited-conduct clause of the same terms <span class="ev p1">primary</span></span>
+  </div>
+
+  <h3>So where, and how</h3>
+  <ul class="rule-list">
+    <li>
+      <span class="n">1</span>
+      <strong>The place is the title or the opening.</strong> The guidelines make the accessibility of the disclosure's position a general principle,
+      and require a spot where the consumer can see it before taking in the content. For video, putting it in <strong>both the title and the opening</strong> is the safe move.
+      Inside the description's "show more" fold is a spot you have to expand, so it's unlikely to count. <span class="ev p2">via</span>
+    </li>
+    <li>
+      <span class="n">2</span>
+      <strong>Conditional phrasing doesn't count as disclosure.</strong> Wording like "일정 수수료를 지급받을 수 있음" ("may receive a commission")
+      is explicitly not accepted as valid disclosure in the amendment. Write it as a fact: you do receive it. <span class="ev p2">via</span>
+    </li>
+    <li>
+      <span class="n">3</span>
+      <strong>Take the wording from the service's own guidance.</strong> The operating policy states that "example wording is provided on pages inside the service".
+      Using the examples Naver provides is safer than inventing your own. <span class="ev p1">primary</span>
+    </li>
+  </ul>
+
+  <div class="warn">
+    <strong>Free goods count as consideration too.</strong> Beyond cash, free products, discounts, and even employment or family ties fall under the economic relationship.
+    "I wasn't paid, so it isn't an ad" doesn't hold.
+  </div>
+</section>
+
+<section id="g2">
+  <h2>4. Gate ② No review voice for a product you haven't used</h2>
+  <p class="lede">
+    <strong>This is the most important section on the page.</strong> Picking a product on quality and margin means you didn't pick it by using it,
+    and at that moment the set of usable phrasings shrinks a lot.
+  </p>
+
+  <div class="clause">
+    제8조 ① 18. 미디어에 사실과 다르거나, 과장·왜곡·오인의 가능성이 있는 내용을 표시하는 등
+    표시광고법 기타 관련 법령에 위반되는 내용을 게시하는 행위
+    <span class="src">Article 8 (1) 18 — "posting content that violates 표시광고법 (Korea's Act on Fair Labeling and Advertising) or other relevant statutes, such as displaying content on media that is untrue or carries a possibility of exaggeration, distortion, or misleading." Prohibited conduct, Shopping Connect Terms of Use <span class="ev p1">primary</span></span>
+  </div>
+  <div class="clause">
+    제9조 ③ 1. 상품 등에 대한 명백한 허위, 과장 광고 행위
+    <span class="src">Article 9 (3) 1 — "plainly false or exaggerated advertising about products." Brand Connect Member Terms of Use (2026.01) <span class="ev p1">primary</span></span>
+  </div>
+
+  <p>
+    <strong>Nowhere in the terms is there a clause saying you must have actually used the product.</strong> We read the full text and confirmed that.
+    Unlike press coverage that describes the program as "writing product reviews after use", what the terms require isn't experience —
+    it's <strong>not saying things that differ from fact</strong>. So the road isn't blocked; <strong>the voice is decided for you</strong>.
+  </p>
+
+  <div class="two-col">
+    <div class="col-box fail">
+      <h4>✕ Phrasing you can't use</h4>
+      <ul>
+        <li>"제가 3주 써봤는데요" (I've been using it for three weeks)</li>
+        <li>"직접 먹어보니 확실히 달라요" (I ate it myself and it's clearly different)</li>
+        <li>"이거 쓰고 나서 고민이 없어졌어요" (after using this, the problem went away)</li>
+        <li>"제 최애템입니다" (this is my favorite item)</li>
+        <li>Any sentence asserting an effect or performance — if you can't cite a basis, it's exaggeration</li>
+      </ul>
+    </div>
+    <div class="col-box win">
+      <h4>✓ Phrasing that stays open</h4>
+      <ul>
+        <li>"이 가격대에서 이 스펙이 나오는 건 흔치 않다" (these specs at this price aren't common)</li>
+        <li>"A와 B는 용도가 다르다 — 차이가 나는 지점은 여기다" (A and B are for different uses — here's where they differ)</li>
+        <li>"이런 사람한테 맞고, 이런 사람한테는 안 맞는다" (it fits this kind of person, and not that kind)</li>
+        <li>"판매 페이지에 적힌 사양은 이렇다" (here's what the sales page lists as the spec) — attributed and passed along</li>
+        <li>Giving the criteria for choosing and leaving the judgment to the viewer</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ok">
+    <strong>The informational format isn't the losing one, either.</strong> "I tried it" works when it's a real review,
+    and viewers can tell an imitated one. Giving comparison and selection criteria is also a stronger reason to come back to the channel.
+  </div>
+</section>
+
+<section id="g3">
+  <h2>5. Gate ③ AI people need a "virtual person" label</h2>
+  <p class="lede">
+    Because our pipeline uses AI characters and synthetic voice by default, this gate <strong>demands a design change.</strong>
+  </p>
+
+  <p>
+    The Korea Fair Trade Commission amended the 「추천·보증 등에 관한 표시·광고 심사지침」 (unofficial: Review Guidelines on
+    Labeling and Advertising Involving Endorsements and Testimonials) to <strong>add AI-generated virtual people as endorsement subjects,
+    in force since 1 June 2026.</strong> A promotional video earning affiliate commission is endorsement advertising, so it's caught directly. <span class="ev p1">primary</span>
+  </p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Medium</th><th>Where the label goes</th><th>Label wording</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Text-led (blogs, cafés)</td>
+        <td>The post's <strong>title or opening</strong> — a spot visible before reading</td>
+        <td>"AI를 기반으로 생성된 가상인물이 포함된 게시물입니다" (this post contains an AI-generated virtual person) or "가상인물 포함" (contains a virtual person)</td>
+      </tr>
+      <tr>
+        <td>Photo and video</td>
+        <td><strong>While the virtual person is on screen, close to that person</strong></td>
+        <td>Wording such as "가상인물" (virtual person)</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="danger">
+    <strong>Labeling it isn't the end.</strong> The amendment also added that even with the virtual-person disclosure, if what that person endorses
+    is expressed as though it rests on use or experience and differs from actual experiential fact, it can still be unfair labeling or advertising.
+    <strong>Gate ② catches you a second time here</strong> — making an AI character say "I tried it" is blocked on two layers.
+  </div>
+
+  <h3>What has to change in our production flow</h3>
+  <ul class="rule-list">
+    <li>
+      <span class="n">1</span>
+      <strong>One subtitle line won't discharge the label.</strong> It has to stay near the person the whole time they're on screen,
+      so the layout needs a persistent overlay across the character's segments.
+    </li>
+    <li>
+      <span class="n">2</span>
+      <strong>The AI disclosure is a separate thing.</strong> YouTube's synthetic-media disclosure on upload
+      (<code>containsSyntheticMedia</code>, default <code>true</code> at <code>server/src/sns-client.ts:1337</code>)
+      answers to the platform; the KFTC label answers to advertising regulation. Both have to be done.
+    </li>
+    <li>
+      <span class="n">3</span>
+      <strong>A format with no character is also an option.</strong> With no person on screen, this gate disappears.
+      A build around product information and comparison graphics carries less labeling burden.
+    </li>
+  </ul>
+</section>
+
+<section id="g4">
+  <h2>6. Gate ④ Product image copyright</h2>
+
+  <div class="clause">
+    제8조 ① 2. 네이버 또는 제3자의 저작권 등 지식재산권을 침해하는 행위
+    <span class="src">Article 8 (1) 2 — "infringing the copyright or other intellectual property rights of Naver or a third party." Shopping Connect Terms of Use <span class="ev p1">primary</span></span>
+  </div>
+
+  <p>
+    <strong>There's no clause in the terms granting permission to use product images.</strong> What Shopping Connect gives you is a promotional link, not an image license.
+    Screenshotting a seller's product page into your video is caught the moment the seller objects.
+    Opening three products for real, all the screen handed over was link issuance. <span class="ev obs">observed</span>
+  </p>
+
+  <h3>a) Running it through AI doesn't clear it — it adds one more problem</h3>
+  <p>
+    Here's the idea that comes up most naturally: if using the photo as-is is a problem, run it through AI once and make it a different picture.
+    Copyright runs the other way. Making a new work on the basis of an original is <strong>creating a derivative work</strong>, and that right belongs to the original author too.
+    The more you work on it, the more points of permission you need, not fewer. <span class="ev p2">via</span>
+  </p>
+  <p>
+    And Gate ② overlaps here once more. If the thing AI drew differs from the real product even slightly, that screen itself creates a possibility of misleading.
+    Mangled logo letters or a different number of buttons is enough. The more accurately you reproduce it the worse the copyright side gets,
+    and the more differently you draw it the worse the labeling side gets — there's no gap to slip through.
+  </p>
+  <div class="danger">
+    <strong>The rule this puts on the pipeline.</strong> Without written permission, a product image never goes into
+    <code>gpt_image_img2img</code>, <code>veo_img2video</code>, <code>veo_reference</code>,
+    <code>seedance_img2video</code>, <code>seedance_reference</code>, or
+    <strong>any other generation path that takes an image as input</strong>. More tools later, same rule.
+    Attaching just one as a reference is the same thing — if the shape carries into the output, it's the same problem.
+  </div>
+
+  <h3>b) The way to get permission is 톡톡 (TalkTalk), Naver's seller chat</h3>
+  <p>
+    So get permission — except there are two routes to the seller and they differ enormously in difficulty. We opened both.
+  </p>
+  <p>
+    <strong>Email is effectively closed.</strong> The product page data has a seller-email field, but the value comes down masked with asterisks.
+    Business registration number and main phone line are the same. It isn't the screen hiding it — the server erases it before sending, so there's nothing to dig at.
+    The one place to view it, the seller-information popup, sits behind a captcha that asks you to match a receipt amount, and
+    <strong>that captcha reappears for every seller</strong> — clear one and the next store starts over. <span class="ev obs">observed</span>
+  </p>
+  <div class="clause">
+    판매자정보(전화번호, 이메일, 주소 등)는 해당 판매자의 명시적 동의 없이 영리 목적인 마케팅·광고 등 용도로 활용할 수 없습니다.
+    (…) 정보통신망법 등 관련 법령에 의거하여 과태료 부과 및 형사처벌의 대상이 될 수 있습니다.
+    <span class="src">"Seller information (phone, email, address, etc.) may not be used for commercial purposes such as marketing or advertising without that seller's explicit consent. (…) Under 정보통신망법 (Korea's Network Act) and other relevant statutes, this may be subject to administrative fines and criminal punishment." The notice on the seller-information screen you reach after the captcha <span class="ev obs">observed</span></span>
+  </div>
+  <p>
+    <strong>톡톡 inquiry has no captcha.</strong> A link of the form <code>talk.naver.com/ct/{account}</code> sits unmasked inside the product page,
+    and if you're logged in to Naver the chat room opens straight away. Confirmed on two stores. The difference makes sense —
+    seller information is posted because the law requires disclosure, so Naver has reason to block automated harvesting,
+    while 톡톡 is a channel the seller opened themselves to receive inquiries, so there's no reason to add friction. <span class="ev obs">observed</span>
+  </p>
+  <div class="ok">
+    <strong>톡톡 alone solves three things at once.</strong> It's a channel the seller opened, so making contact is unproblematic;
+    the "explicit consent" that notice demands can be obtained right there; and the conversation is kept in writing, which becomes the evidence of permission.
+    A licence is only worth something as a record, so this beats a phone call.
+  </div>
+  <p>
+    When you ask, <strong>a narrow, specific request</strong> is easier to get granted.
+    Write down which image of which product, in which channel's video, and in what form you'll use it.
+    <strong>If you plan to transform it with AI, that has to be in there</strong> — get permission for the original only and transforming it falls outside the grant.
+  </p>
+
+  <div class="two-col">
+    <div class="col-box win">
+      <h4>✓ Safe options</h4>
+      <ul>
+        <li>Screens and photos you shot yourself</li>
+        <li>Assets permitted over 톡톡 — inside the scope you got granted, transformation plans included</li>
+        <li>A format that doesn't draw the product — info graphics, comparison tables, text-led</li>
+      </ul>
+    </div>
+    <div class="col-box fail">
+      <h4>✕ Risky options</h4>
+      <ul>
+        <li>Screenshots of the product page or thumbnail</li>
+        <li>Cutting up the seller's promotional video</li>
+        <li><strong>Feeding a product photo to AI to transform it</strong> — a derivative work goes further than using the original</li>
+        <li><strong>Having AI draw a lookalike of the product</strong> — if it differs from the real thing, that alone is a "possibility of misleading"</li>
+        <li>Sending a business pitch to an email obtained past the captcha — the on-screen notice blocks it head-on</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="g5">
+  <h2>7. Gate ⑤ YouTube — publishing and monetization are different axes</h2>
+  <p class="lede">
+    Mix the two and the judgment goes wrong. Publishing is allowed; the risk sits somewhere else.
+  </p>
+
+  <h3>a) Publishing and disclosure</h3>
+  <p>
+    Affiliate links in the description are allowed under the Community Guidelines and the Partner Program policies.
+    For the paid-promotion checkbox, <strong>YouTube's docs don't explicitly address the case of affiliate links alone</strong> —
+    there's only the definition, "content made for a third party in return for payment."
+    It's an ambiguous spot, so <strong>ticking it is the safer side.</strong> Tick it and a notice runs over the first 10 seconds.
+    YouTube's docs also state that complying with local law is the creator's responsibility — the checkbox doesn't stand in for Gate ①. <span class="ev p1">primary</span>
+  </p>
+
+  <h3>b) Monetization and keeping the channel — the real risk is here</h3>
+  <p>
+    In July 2025 YouTube renamed its "repetitious content" policy to <strong>"inauthentic content"</strong>,
+    made clear that mass-produced and templated content can't be monetized, and reviews it at the level of the <strong>whole channel</strong> rather than the individual video.
+    Uploading AI promo videos in bulk with only the product swapped inside the same frame is exactly that enforcement profile. <span class="ev p3">secondary</span>
+  </p>
+  <div class="danger">
+    <strong>Affiliate income arrives without YPP, but if the channel is removed the whole plan goes with it.</strong>
+    Putting a genuinely different angle and structure into each video isn't regulatory evasion, it's a survival condition.
+    Using AI as a tool isn't itself a violation — that's the policy's intent. The problem is <strong>mass production without variation</strong>.
+  </div>
+</section>
+
+<section id="etc">
+  <h2>8. More to pick up from the terms</h2>
+  <p>Clauses outside the five gates that are easy to trip over. All <span class="ev p1">primary</span> confirmed.</p>
+  <ul class="rule-list">
+    <li>
+      <span class="n">1</span>
+      <strong>Buying through your own link, or a family member's, is prohibited conduct.</strong> Article 8 (1) 16 blocks "the creator or their family
+      generating revenue by purchasing through their own link." Even buying through your own link as a test should be avoided.
+    </li>
+    <li>
+      <span class="n">2</span>
+      <strong>Commission rates and statistics can't be disclosed externally.</strong> The operating policy states that "statistical metrics provided by Shopping Connect
+      are prohibited from external disclosure." Avoid a format that reveals "this product pays X%" in the video.
+    </li>
+    <li>
+      <span class="n">3</span>
+      <strong>There's a list of restricted channels.</strong> It's defined by content type — adult, gambling, moneylending, imitation goods and the like —
+      and traffic originating from such a channel is voided. YouTube itself is not on the restricted list.
+    </li>
+    <li>
+      <span class="n">4</span>
+      <strong>Invalid clicks and artificial traffic are prohibited.</strong> Repeated visits with no purchase intent, sending links through channels that didn't consent,
+      and hiding a link to call it are all spelled out.
+    </li>
+    <li>
+      <span class="n">5</span>
+      <strong>Restricted categories are in the parent terms too.</strong> Article 9 (3) 5 of the Brand Connect member terms
+      blocks promoting products whose advertising or sale is prohibited by statute or that risk consumer harm. Check this first when picking a product.
+    </li>
+  </ul>
+</section>
+
+<section id="checklist">
+  <h2>9. Production checklist</h2>
+  <p class="lede">Organized by stage so you don't have to come looking every time you plan an episode.</p>
+
+  <div class="stage">
+    <h4>Planning — picking the product</h4>
+    <ul>
+      <li>Is the product clear of the restricted categories?</li>
+      <li>Have I actually used it — if not, <strong>lock in the informational format</strong> and go into the script that way</li>
+      <li>Is there a checkable basis beyond the sales page (manufacturer specs, accredited test results)?</li>
+      <li>If the format needs product images, <strong>did I get permission over 톡톡 first</strong> — before production starts</li>
+      <li>Does the format overlap with the channel's recent videos? (Gate ⑤)</li>
+    </ul>
+  </div>
+
+  <div class="stage">
+    <h4>Script — settling the voice</h4>
+    <ul>
+      <li>Is there not one line of experience-claiming voice ("써봤다 · 먹어봤다 · 바꿨다" — tried it, ate it, switched)?</li>
+      <li>Did I turn assertions of effect and performance into statements with a basis?</li>
+      <li>Are specs taken from the sales page attributed?</li>
+      <li>Does it avoid mentioning commission rates and affiliate statistics?</li>
+      <li>Is the disclosure wording for the title settled — at a length that won't get truncated?</li>
+    </ul>
+  </div>
+
+  <div class="stage">
+    <h4>Production — making the screens</h4>
+    <ul>
+      <li>Is every product image either shot by me or a permitted asset?</li>
+      <li>Did I keep seller images out of the <code>img2img</code> and <code>reference</code> tools — without permission, not even one as a reference</li>
+      <li>Did I avoid reproducing the product's shape with AI?</li>
+      <li>For permitted assets, did I keep the 톡톡 conversation log in the channel folder?</li>
+      <li>If an AI character appears, is the "가상인물" (virtual person) label next to them <strong>for the whole time they're on screen</strong>?</li>
+      <li>Does the affiliate disclosure appear in the opening both on screen and in voice?</li>
+    </ul>
+  </div>
+
+  <div class="stage">
+    <h4>Publishing — right before upload</h4>
+    <ul>
+      <li>Is the affiliate disclosure in the front part of the title?</li>
+      <li>Did I tick the paid-promotion checkbox?</li>
+      <li>Is the synthetic-media disclosure on (default <code>true</code> — check it wasn't turned off)?</li>
+      <li>Is the affiliate disclosure in the description's first lines (above the "show more" fold)?</li>
+      <li>Is the disclosure wording a statement of fact rather than conditional ("받을 수 있음" — may receive)?</li>
+    </ul>
+  </div>
+</section>
+
+<section id="unknown">
+  <h2>10. Still unconfirmed</h2>
+  <p>The holes whoever edits this page next should know about.</p>
+  <ul class="rule-list">
+    <li>
+      <span class="n">1</span>
+      <strong>The authoritative example wording from the KFTC.</strong> We couldn't open the guidance PDF itself.
+      Next job is to find the example wording Naver provides inside the service and copy it into this page.
+    </li>
+    <li>
+      <span class="n">2</span>
+      <strong>The boundary of the virtual-person label.</strong> Since the guidelines are advertising norms, we read them as "it catches endorsement advertising."
+      Whether they also reach a character appearing in unsponsored informational content needs the clause text read directly.
+    </li>
+    <li>
+      <span class="n">3</span>
+      <strong>The YouTube checkbox for affiliate-links-only.</strong> YouTube's docs don't address this case,
+      so we settled on "ticking it is safer". Update when an official answer appears.
+    </li>
+    <li>
+      <span class="n">4</span>
+      <strong>Whether the 2024 amendment on disclosure position was finalized.</strong> We saw material from the administrative-notice stage and couldn't compare it against the final text.
+      This is separate from the virtual-person amendment that took effect in June 2026.
+    </li>
+    <li>
+      <span class="n">5</span>
+      <strong>Whether the seller owns the copyright in that image.</strong> Permission over 톡톡 only has effect if the image is one the seller holds rights in.
+      If it came from the manufacturer or is a photo studio's work, the seller's permission alone isn't enough.
+      Next job is to also ask "did you shoot or produce this image yourself?" when requesting.
+    </li>
+  </ul>
+</section>
+
+<section id="sources">
+  <h2>11. Sources</h2>
+
+  <h3>Naver terms and policies <span class="ev p1">read in full</span></h3>
+  <ul>
+    <li><a href="https://brandconnect.naver.com/service/term/affiliate/creator">Shopping Connect Terms of Use (creators, 2026.07)</a> (Korean) — Article 2 definitions, Article 5 disclosure duty, Article 8's 22 prohibited acts</li>
+    <li><a href="https://brandconnect.naver.com/service/policy/affiliate/creator">Shopping Connect Operating Policy (2026.07)</a> (Korean) — restricted channels, undisclosed economic relationships, unsuitable content, settlement schedule</li>
+    <li><a href="https://brandconnect.naver.com/service/term/creator">Brand Connect Member Terms of Use (2026.01)</a> (Korean) — Article 9 affiliate content, false/exaggerated advertising ban, restricted categories</li>
+  </ul>
+
+  <h3>Copyright Act <span class="ev p2">via</span></h3>
+  <ul>
+    <li><a href="https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EC%A0%80%EC%9E%91%EA%B6%8C%EB%B2%95">저작권법 (Copyright Act) — Korean Law Information Center</a> (Korean) — Article 5 definition of derivative works, Article 22 the right to produce derivative works. We couldn't open the clause screen directly, so this is written from the commonly accepted reading</li>
+  </ul>
+
+  <h3>Live service screens <span class="ev obs">observed 2026-08-15</span></h3>
+  <ul>
+    <li>Three products across Smart Store and Brand Store — seller email, business registration number, and main phone all come down masked with asterisks</li>
+    <li>Seller-information popup — receipt-amount captcha, confirmed reappearing across 2 stores, notice prohibiting commercial use</li>
+    <li>Entering 톡톡 inquiry — the chat room opens with no captcha on 2 stores</li>
+    <li>Shopping Connect product detail — no contact field, only promotional link issuance</li>
+  </ul>
+
+  <h3>Korea Fair Trade Commission <span class="ev p1">primary</span> · <span class="ev p2">via</span></h3>
+  <ul>
+    <li><a href="https://www.ftc.go.kr/www/selectBbsNttView.do?key=12&amp;bordCd=3&amp;nttSn=47547">Amendment and entry into force of the 「추천·보증 등에 관한 표시·광고 심사지침」</a> (Korean) — AI virtual people added, in force 2026-06-01</li>
+    <li><a href="https://www.law.go.kr/%ED%96%89%EC%A0%95%EA%B7%9C%EC%B9%99/%EC%B6%94%EC%B2%9C%C2%B7%EB%B3%B4%EC%A6%9D%EB%93%B1%EC%97%90%EA%B4%80%ED%95%9C%ED%91%9C%EC%8B%9C%C2%B7%EA%B4%91%EA%B3%A0%EC%8B%AC%EC%82%AC%EC%A7%80%EC%B9%A8">Text of the review guidelines — Korean Law Information Center</a> (Korean)</li>
+    <li><a href="https://www.kimchang.com/ko/insights/detail.kc?sch_section=4&amp;idx=30241">Administrative notice of the amendment — Kim &amp; Chang</a> (Korean) — disclosure position, conditional phrasing not accepted</li>
+    <li><a href="https://imnews.imbc.com/news/2026/econo/article/6826539_36932.html">"AI person ads" must carry a virtual-person label from June — MBC</a> (Korean)</li>
+  </ul>
+
+  <h3>YouTube <span class="ev p1">primary</span> · <span class="ev p3">secondary</span></h3>
+  <ul>
+    <li><a href="https://support.google.com/youtube/answer/154235?hl=ko">Add paid product placements, sponsorships and endorsements — YouTube Help</a> (Korean)</li>
+    <li><a href="https://techcrunch.com/2026/07/20/youtube-clarifies-policies-around-ai-slop-and-upsetting-videos/">YouTube clarifies policies around AI slop — TechCrunch</a> — the inauthentic-content policy</li>
+  </ul>
+
+  <h3>Background <span class="ev p3">secondary</span></h3>
+  <ul>
+    <li><a href="../../research/2026-08-15-ugc-concept/index.html">What UGC is — social-flow research</a> (Korean) — the conceptual background for this page</li>
+    <li><a href="https://www.yna.co.kr/view/AKR20250313075500017">Naver enters e-commerce creator affiliates with "Shopping Connect" — Yonhap News</a> (Korean)</li>
+  </ul>
+</section>
+
+<footer>
+  Reference date 2026-08-15 · terms get amended, so check the revision date of the linked original before acting · conceptual background in the <a href="../../research/2026-08-15-ugc-concept/index.html">UGC research</a> (Korean) · video production in the <a href="../ai-video-production/index.en.html">AI video production guide</a> · <a href="../../index.en.html">docs hub</a>
+</footer>
+
+</div>
+</body>
+</html>

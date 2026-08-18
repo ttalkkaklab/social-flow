@@ -1,0 +1,72 @@
+# Generation-tool price source of truth (SoT) — cost-report.sh reads only this file.
+# cost-tiers.md explains this table but never copies the numbers (no copy drift).
+#
+# Columns: key <TAB> unit <TAB> usd <TAB> evidence grade <TAB> source·notes
+#   usd = ?  → price unconfirmed. cost-report.sh fails when it meets that key (no silent $0).
+#   Evidence grades: official (vendor pricing page checked directly) / derived (computed from an official value) / unverified (search results, not cross-checked)
+#
+# Updated 2026-08-11. Vendor prices change — reopen the sources every quarter.
+
+# ── Images (OpenAI Images) ───────────────────────────────────────────────
+# The official table lists preset resolutions only. This pipeline uses 1088x1920 (custom),
+# so these are the 1024x1536 values × 1.33 pixel ratio — recheck against a real invoice once.
+image.gpt-image-2.low	image	0.007	derived	official 1024x1536 low $0.005 × 1.33 (developers.openai.com/api/docs/guides/image-generation)
+image.gpt-image-2.medium	image	0.055	derived	official 1024x1536 medium $0.041 × 1.33
+image.gpt-image-2.high	image	0.220	derived	official 1024x1536 high $0.165 × 1.33
+# Local generation (image_local_generate) goes in the ledger too — it's 0 so the total
+# doesn't move, but a missing key kills the report with exit 1 (verdict unavailable)
+# and blocks the whole episode's tally.
+image.local	image	0.000	official	Z-Image Turbo via mflux — on-device. No key, no network, no billing (electricity only)
+
+# ── Video (Veo 3.1) ──────────────────────────────────────────────────────
+# Billed per second and **audio is always included** — it can't be turned off. No free tier.
+# Lengths are fixed to a 4·6·8s grid and 1080p·4K are 8s-only, so a 4-second 1080p cut
+# still pays the 8-second price — comparing per-second prices alone understates real spend.
+# 2026-08-15: checked directly at ai.google.dev/gemini-api/docs/pricing — promoted unverified → official.
+veo.lite.720p	second	0.05	official	veo-3.1-lite-generate-preview
+veo.fast.720p	second	0.10	official	veo-3.1-fast-generate-preview
+veo.standard.720p	second	0.40	official	veo-3.1-generate-preview — tier banned from autonomous authoring
+veo.lite.1080p	second	0.08	official	1080p is 8s-only
+veo.fast.1080p	second	0.12	official	1080p is 8s-only
+veo.standard.1080p	second	0.40	official	same price as 720p — 1080p is 8s-only
+veo.fast.4k	second	0.30	official	4K is 8s-only
+veo.standard.4k	second	0.60	official	4K is 8s-only. lite doesn't support 4K
+
+# ── Video (Seedance / BytePlus ModelArk) ─────────────────────────────────
+# The vendor bills in tokens: tokens = (input video s + output video s) × width × height × 24 / 1024.
+# The per-second values below are the official docs' "5s·16:9" example price (list price) divided by 5 —
+# 9:16 only swaps width and height so the token count is the same, so the same value applies
+# (cross-checked against a measured 720p 5s = 102,960 tokens).
+# Unlike Veo, billing is **per requested second as-is** — request 4 seconds, pay for 4.
+# The actual bill's source of truth is the response's completion_tokens. Episode tallies record that value.
+# Limited-time discounts are not baked into these prices (they'd silently go wrong when the promo ends):
+#   2.5 1080p 72% of list ~2026-09-17 · 2.0 mini 40% ~2026-09-07 · 2.0 fast 75% ~2026-09-07
+seedance.1-0-pro-fast.1080p	second	0.048	derived	seedance-1-0-pro-fast-251015 — silent-only, first frame only. Cheapest
+seedance.1-0-pro-fast.720p	second	0.020	derived	seedance-1-0-pro-fast-251015
+seedance.1-5-pro-silent.1080p	second	0.058	derived	seedance-1-5-pro-251215 silent — default b-roll candidate (accepts photoreal face input)
+seedance.1-5-pro-silent.720p	second	0.026	derived	seedance-1-5-pro-251215 silent
+seedance.1-5-pro-audio.1080p	second	0.116	derived	seedance-1-5-pro-251215 audio — exactly 2× silent
+seedance.1-0-pro.1080p	second	0.122	derived	seedance-1-0-pro-250528 — silent-only
+seedance.2-0-mini.720p	second	0.076	derived	dreamina-seedance-2-0-mini-260615 — rejects photoreal face input · $30 balance gate
+seedance.2-0-fast.720p	second	0.120	derived	dreamina-seedance-2-0-fast-260128 — rejects photoreal face input · $30 balance gate
+seedance.2-0.1080p	second	0.374	derived	dreamina-seedance-2-0-260128 — 9 reference images · 4K capable
+seedance.2-5.720p	second	0.231	derived	dreamina-seedance-2-5-260628 — 30 reference images · up to 30s
+
+# ── Speech ───────────────────────────────────────────────────────────────
+# Gemini bills in audio tokens (25/second), not characters. The values below take 1M characters
+# at the measured Korean speech rate of 6.55 chars/s and fold the result back to a per-1,000-char price.
+tts.local	1000 chars	0.000	official	Supertonic local — no network, no key. Electricity only
+tts.gemini-flash	1000 chars	0.038	derived	$38/1M chars (docs/research/2026-08-11-local-tts-and-commercial-api)
+tts.gemini-pro	1000 chars	0.076	derived	$76/1M chars — fallback when flash refuses
+
+# ── Music (Lyria) ────────────────────────────────────────────────────────
+# 2026-08-15: checked directly at ai.google.dev/gemini-api/docs/pricing — clips are right there
+# in the price table as "$0.04 per song", so promoted unverified → official. The same table lists
+# full songs (Lyria 3 Pro) at $0.08, but this server has no tool that calls that model, so no row.
+music.lyria-clip	clip	0.04	official	music_generate_clip — lyria-3-clip-preview, fixed 30s
+# RealTime (models/lyria-realtime-exp) **has no row in the official price table at all** (experimental model).
+# But produce skill §3's BGM is this tool, so manual-path episodes end their report at exit 1
+# over this one line. That is correct behavior — write an unknown value as 0 and the episode's
+# cost silently shrinks. The report still prints the total of the remaining items, so write the
+# report line as "total $X + 1 item excluded from the tally (BGM)" (cost-tally.md §reading exit codes).
+music.lyria-realtime	second	?	unconfirmed	music_generate variable length — no Lyria RealTime row in the official price table (checked 2026-08-15)

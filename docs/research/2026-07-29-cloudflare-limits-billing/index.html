@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cloudflare 전송량·업로드 제약과 결제 단위 — 조사 보고서 (2026-07-29)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+
+  /* ── Header ── */
+  header.hero {
+    padding: 72px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .hero .kicker {
+    display: inline-block;
+    font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px;
+    margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta {
+    margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px;
+    font-size: 13.5px; color: var(--text-soft);
+  }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+
+  /* ── TOC ── */
+  nav.toc {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 56px;
+  }
+  nav.toc h2 { font-size: 14px; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 14px; text-transform: uppercase; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  nav.toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a { color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500; }
+  nav.toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent); font-weight: 700; font-size: 12.5px;
+    margin-right: 10px; font-variant-numeric: tabular-nums;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+
+  /* ── Sections ── */
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 19px; font-weight: 700; margin: 36px 0 14px; }
+  h4 { font-size: 16px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 14px; }
+  p.lead { font-size: 17.5px; }
+  ul, ol { margin: 0 0 16px 22px; }
+  li { margin-bottom: 8px; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+  .muted { color: var(--text-soft); font-size: 14px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 5px;
+    padding: 1px 6px;
+  }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    padding: 2px 10px; border-radius: 999px; vertical-align: 2px;
+    white-space: nowrap;
+  }
+  .b-green  { background: var(--green-soft);  color: var(--green); }
+  .b-amber  { background: var(--amber-soft);  color: var(--amber); }
+  .b-red    { background: var(--red-soft);    color: var(--red); }
+  .b-blue   { background: var(--accent-soft); color: var(--accent); }
+  .b-purple { background: var(--purple-soft); color: var(--purple); }
+
+  /* ── Callouts ── */
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    background: var(--bg-soft);
+    border-radius: 0 10px 10px 0;
+    padding: 18px 22px;
+    margin: 20px 0;
+  }
+  .callout.green  { border-left-color: var(--green); }
+  .callout.amber  { border-left-color: var(--amber); }
+  .callout.red    { border-left-color: var(--red); }
+  .callout.purple { border-left-color: var(--purple); }
+  .callout .co-title {
+    font-weight: 800; font-size: 14px; letter-spacing: .04em;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ── Verdict hero card ── */
+  .verdict {
+    background: linear-gradient(135deg, var(--accent-soft), transparent 70%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 36px;
+    box-shadow: var(--shadow);
+    margin-bottom: 32px;
+  }
+  .verdict .v-label { font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--accent); margin-bottom: 10px; }
+  .verdict .v-main { font-size: 21px; font-weight: 800; line-height: 1.55; margin-bottom: 14px; }
+  .verdict p { color: var(--text-soft); margin-bottom: 0; font-size: 15.5px; }
+
+  /* ── Quote block (약관 원문) ── */
+  blockquote {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--purple);
+    background: var(--purple-soft);
+    border-radius: 0 10px 10px 0;
+    padding: 18px 22px;
+    margin: 18px 0;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  blockquote .q-src {
+    display: block; margin-top: 10px;
+    font-size: 12.5px; color: var(--text-soft); font-style: normal;
+  }
+
+  /* ── Tables ── */
+  .tbl-wrap { overflow-x: auto; margin: 18px 0 24px; border: 1px solid var(--border); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 560px; }
+  th {
+    background: var(--bg-soft); text-align: left; font-weight: 700;
+    padding: 11px 16px; border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .hi { background: var(--amber-soft); }
+  .up { color: var(--green); font-weight: 700; }
+  .down { color: var(--red); font-weight: 700; }
+
+  /* ── Split cards (결제 단위 대조) ── */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0; }
+  @media (max-width: 720px) { .split { grid-template-columns: 1fr; } }
+  .unit-card {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow);
+    padding: 24px 26px;
+  }
+  .unit-card .uc-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .unit-card .uc-icon {
+    flex: none; width: 40px; height: 40px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 800; color: #fff;
+  }
+  .uc-icon.zone { background: var(--accent); }
+  .uc-icon.acct { background: var(--purple); }
+  .unit-card h3 { margin: 0; font-size: 18px; }
+  .unit-card .uc-sub { font-size: 13px; color: var(--text-soft); margin-top: 2px; }
+  .unit-card ul { margin: 0 0 0 18px; font-size: 14.5px; }
+  .unit-card li { margin-bottom: 7px; }
+
+  /* ── Checklist ── */
+  .check-list { list-style: none; margin-left: 0; }
+  .check-list li { position: relative; padding-left: 34px; margin-bottom: 12px; }
+  .check-list li::before {
+    content: "✓"; position: absolute; left: 0; top: 1px;
+    width: 22px; height: 22px; border-radius: 6px;
+    background: var(--green-soft); color: var(--green);
+    font-weight: 800; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .check-list.x li::before { content: "✕"; background: var(--red-soft); color: var(--red); }
+
+  /* ── Flow (요청 경로 다이어그램) ── */
+  .flow {
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--bg-soft); padding: 24px 26px; margin: 22px 0;
+  }
+  .flow-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .flow-row:last-child { margin-bottom: 0; }
+  .flow-node {
+    border: 1px solid var(--border); background: var(--bg-card);
+    border-radius: 9px; padding: 8px 14px; font-size: 13.5px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .flow-node.gate { border-color: var(--red); background: var(--red-soft); color: var(--red); }
+  .flow-node.ok { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .flow-arrow { color: var(--text-soft); font-size: 15px; flex: none; }
+  .flow-label { font-size: 12.5px; color: var(--text-soft); width: 100%; margin-bottom: 4px; font-weight: 600; letter-spacing: .03em; }
+
+  /* ── Source list ── */
+  .src-group { margin-bottom: 26px; }
+  .src-group h4 { margin-top: 0; }
+  .src-group ul { list-style: none; margin-left: 0; }
+  .src-group li {
+    font-size: 13.5px; margin-bottom: 6px; padding-left: 18px; position: relative;
+    color: var(--text-soft);
+  }
+  .src-group li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .src-group a { word-break: break-all; }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 28px; font-size: 13.5px; color: var(--text-soft);
+  }
+
+  /* ── Print ── */
+  @media print {
+    body { font-size: 12px; }
+    .wrap { max-width: none; padding: 0; }
+    .unit-card, .verdict, .callout, .flow { box-shadow: none; break-inside: avoid; }
+    nav.toc { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">INFRA RESEARCH</span>
+  <h1>Cloudflare 전송량·업로드 제약과<br>결제 단위 조사 보고서</h1>
+  <p class="sub">요금제(Free/Pro/Business/Enterprise)별 전송량 제약이 실제로 무엇인지, 업로드(요청 본문) 한도는 어떻게 다른지, 그리고 결제가 도메인 단위인지 계정 단위인지 — 그에 따라 제약이 모든 도메인에 공유되는지를 1차 출처 기준으로 정리한다.</p>
+  <div class="meta">
+    <span><strong>조사일</strong> 2026-07-29</span>
+    <span><strong>기준 약관</strong> Service-Specific Terms 2026-06-02 갱신</span>
+    <span><strong>1차 출처</strong> developers.cloudflare.com · cloudflare.com/terms</span>
+    <span><strong>범위</strong> CDN · Workers · R2 · Stream · Images · Pages</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#verdict">핵심 결론 (Executive Summary)</a></li>
+    <li><a href="#bandwidth">전송량(대역폭) — 전 요금제 무제한</a></li>
+    <li><a href="#content">진짜 제약은 콘텐츠 종류</a></li>
+    <li><a href="#plan-table">요금제별 제약 비교표</a></li>
+    <li><a href="#upload">업로드(요청 본문) 제한</a></li>
+    <li><a href="#bypass">업로드 제한 우회 경로</a></li>
+    <li><a href="#product-limits">제품별 업로드·전송 한도</a></li>
+    <li><a href="#billing">결제 단위 — 도메인별 vs 계정별</a></li>
+    <li><a href="#scenario">실무 시나리오와 비용 설계</a></li>
+    <li><a href="#caveats">주의사항 및 확인 필요 항목</a></li>
+    <li><a href="#sources">출처 목록</a></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════ 1. 핵심 결론 ═══════════════ -->
+<section id="verdict">
+  <h2 class="sec"><span class="no">01</span>핵심 결론 (Executive Summary)</h2>
+
+  <div class="verdict">
+    <div class="v-label">FINAL VERDICT</div>
+    <div class="v-main">Cloudflare에는 “요금제별 월 전송량(GB) 한도”가 존재하지 않는다. 실제로 요금제에 따라 숫자가 달라지는 유일한 전송 제약은 <strong>업로드(요청 본문) 크기</strong>이며, 이 한도는 <strong>도메인(zone) 단위로 결제한 CDN 요금제</strong>를 따른다.</div>
+    <p>다운로드 방향은 Free 플랜에서도 무제한이다. 대신 Cloudflare는 “얼마나”가 아니라 <strong>“무엇을”</strong> 전송하느냐를 약관으로 통제한다 — 자사 유료 제품 없이 비디오·대용량 파일을 CDN으로 흘리면 차단 대상이다. 결제 구조는 이원적이어서, CDN 요금제는 도메인마다 따로 청구되고 Workers·R2 같은 개발자 플랫폼은 계정당 1회 청구되며 포함량을 전 도메인이 공유한다.</p>
+  </div>
+
+  <h3>질문별 직답 요약</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>질문</th><th>결론</th><th>근거 등급</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>요금제별 전송량(대역폭) 한도가 있는가</td>
+          <td><strong>없음.</strong> Free 포함 전 요금제 무제한. 공식 문서에 수치 항목 자체가 부재</td>
+          <td><span class="badge b-green">1차 출처</span></td>
+        </tr>
+        <tr>
+          <td>그럼 무엇이 제한되는가</td>
+          <td><strong>콘텐츠 종류.</strong> 유료 제품 없이 비디오·대용량 파일 서빙 시 CDN 접근 제한·차단 가능 (Enterprise 제외)</td>
+          <td><span class="badge b-green">약관 원문</span></td>
+        </tr>
+        <tr>
+          <td>요금제별로 실제 다른 전송 수치</td>
+          <td><strong>업로드 본문 100 / 100 / 200 / 500 MB</strong>, 캐시 파일 512 MB(Free·Pro·Business) / 5 GB(Enterprise)</td>
+          <td><span class="badge b-green">1차 출처</span></td>
+        </tr>
+        <tr>
+          <td>결제는 도메인별인가 계정별인가</td>
+          <td><strong>둘 다.</strong> CDN 요금제 = 도메인(zone)별 / 개발자 플랫폼·사용량 제품 = 계정별</td>
+          <td><span class="badge b-green">1차 출처</span></td>
+        </tr>
+        <tr>
+          <td>계정 결제 시 제약이 전 도메인에 적용되는가</td>
+          <td><strong>제품에 따라 다름.</strong> CDN 대역폭은 애초에 쿼터가 없어 공유 개념 자체가 성립하지 않음. Workers·R2 포함량만 전 도메인 공유</td>
+          <td><span class="badge b-green">1차 출처</span></td>
+        </tr>
+        <tr>
+          <td>Workers Paid 결제로 업로드 한도가 올라가는가</td>
+          <td><strong>아니오.</strong> 문서 명시 — 업로드 한도는 Workers 플랜이 아니라 Cloudflare 요금제를 따름</td>
+          <td><span class="badge b-green">문서 명시</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 2. 전송량 ═══════════════ -->
+<section id="bandwidth">
+  <h2 class="sec"><span class="no">02</span>전송량(대역폭) — 전 요금제 무제한</h2>
+
+  <p class="lead">Free / Pro / Business / Enterprise 어디에도 월 전송량 상한이 없다. 공식 문서 어느 페이지에도 “Free는 월 <span class="num">N</span> GB” 같은 수치가 없고, Pages 한도 문서에도 <strong>대역폭 항목 자체가 존재하지 않는다.</strong></p>
+
+  <div class="callout green">
+    <div class="co-title">✓ 이것이 Cloudflare의 구조적 차별점</div>
+    <p>AWS CloudFront가 GB당 과금하고 Vercel이 플랜별 대역폭 쿼터를 두는 자리에서, Cloudflare는 전송량 축을 아예 비워둔다. R2의 egress <strong>$0</strong>가 그 정책의 정점이다.</p>
+  </div>
+
+  <h3>과금 축이 다르다</h3>
+  <p>Cloudflare의 과금 모델은 <strong>전송량</strong>이 아니라 <strong>연산·저장·요청</strong> 축으로 설계돼 있다. 그래서 “대역폭 제한”을 찾으면 나오지 않고, 대신 약관상 콘텐츠 제한으로 남용을 통제한다. 수치 쿼터가 아니라 재량 조항이라는 점에서 예측 가능성은 떨어진다.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>제품</th><th>전송(egress) 과금</th><th>실제 과금 축</th></tr></thead>
+      <tbody>
+        <tr><td><strong>CDN</strong> (Free~Enterprise)</td><td><span class="up">없음 — 무제한</span></td><td>요금제 정액 (도메인당)</td></tr>
+        <tr><td><strong>R2</strong></td><td><span class="up">$0 (완전 무료)</span></td><td>저장 $0.015/GB-월 · Class A $4.50/백만 · Class B $0.36/백만</td></tr>
+        <tr><td><strong>Stream</strong></td><td>$1 / 1,000분 전송</td><td>저장 $5 / 1,000분 (인그레스·인코딩 무료)</td></tr>
+        <tr><td><strong>Workers</strong></td><td><span class="up">대역폭 과금 없음</span></td><td>요청 수 · CPU 시간</td></tr>
+        <tr><td><strong>Pages</strong></td><td><span class="up">문서상 한도 없음</span></td><td>빌드 횟수 (500 / 5,000 / 20,000회)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="muted">R2 무료 티어: 저장 10 GB-월 · Class A 100만 요청/월 · Class B 1,000만 요청/월.</p>
+</section>
+
+<!-- ═══════════════ 3. 콘텐츠 종류 제약 ═══════════════ -->
+<section id="content">
+  <h2 class="sec"><span class="no">03</span>진짜 제약은 콘텐츠 종류</h2>
+
+  <p>수치 쿼터가 없는 대신, Cloudflare는 <strong>Service-Specific Terms</strong>(최종 갱신 2026-06-02)의 CDN 섹션에서 콘텐츠 종류로 제한을 건다.</p>
+
+  <blockquote>
+    “Cloudflare reserves the right to disable or limit your access to or use of the CDN, or to limit your End Users' access to certain of your resources through the CDN, if you use or are suspected of using the CDN <strong>without such Paid Services to serve video or a disproportionate percentage of pictures, audio files, or other large files.</strong>”
+    <span class="q-src">— Cloudflare Service-Specific Terms, CDN (Free, Pro, Business) 섹션</span>
+  </blockquote>
+
+  <p>즉 <strong>Stream · Images · R2 · Developer Platform 같은 유료 제품 없이</strong> 비디오나 대용량 파일을 CDN으로 흘리면 제한·차단 대상이다. Enterprise 요금제는 이 조항에서 제외된다. Cloudflare는 조치 전 합리적 범위에서 이메일 사전 통지를 제공한다.</p>
+
+  <div class="callout amber">
+    <div class="co-title">⚠ 흔한 오해 — Section 2.8은 이미 폐지됐다</div>
+    <p>예전 약관의 악명 높은 <strong>Section 2.8(“HTML vs 비-HTML”)은 2023년 5월 16일자로 삭제</strong>됐다. 지금 기준은 콘텐츠의 파일 형식이 아니라 <strong>“Cloudflare 자사 제품에 호스팅했는가”</strong>다. R2나 Stream에 올린 비디오는 <strong>Free 플랜에서도 CDN 전송이 정상 허용</strong>된다. 반대로 외부 오리진에 둔 비디오를 CDN으로 흘리는 것은 유료 플랜이어도 제한 대상이다.</p>
+  </div>
+
+  <h3>허용되는 비디오 전송 경로</h3>
+  <ul class="check-list">
+    <li><strong>Cloudflare Stream</strong> — 인코딩·저장·최적화 전송 포함. 전 요금제에서 사용 가능</li>
+    <li><strong>R2 + CDN</strong> — 자사 스토리지 호스팅이므로 허용. egress $0</li>
+    <li><strong>Images</strong> — 이미지 저장·변환·전송</li>
+    <li><strong>Stream Delivery</strong> — 자체 스토리지 유지하며 CDN만 사용. <span class="badge b-purple">Enterprise 전용</span></li>
+  </ul>
+  <ul class="check-list x">
+    <li>외부 오리진(자체 서버·타 클라우드)의 비디오를 CDN으로 프록시 — 제한 대상</li>
+    <li>대용량 파일 배포용 무료 미러 운영 — “disproportionate percentage of large files”에 해당</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 4. 요금제별 비교 ═══════════════ -->
+<section id="plan-table">
+  <h2 class="sec"><span class="no">04</span>요금제별 제약 비교표</h2>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>Free</th><th>Pro</th><th>Business</th><th>Enterprise</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>CDN 전송량 상한</strong></td>
+          <td colspan="4" style="text-align:center"><span class="up">없음 — 전 요금제 무제한</span></td>
+        </tr>
+        <tr class="hi">
+          <td><strong>최대 업로드(요청 본문)</strong></td>
+          <td><span class="num">100 MB</span></td>
+          <td><span class="num">100 MB</span></td>
+          <td><span class="num">200 MB</span></td>
+          <td><span class="num">500 MB</span> (기본)</td>
+        </tr>
+        <tr>
+          <td><strong>캐시 가능 최대 파일</strong></td>
+          <td><span class="num">512 MB</span></td>
+          <td><span class="num">512 MB</span></td>
+          <td><span class="num">512 MB</span></td>
+          <td><span class="num">5 GB</span></td>
+        </tr>
+        <tr>
+          <td>비디오/대용량 파일 서빙</td>
+          <td>유료 제품 필요</td>
+          <td>유료 제품 필요</td>
+          <td>유료 제품 필요</td>
+          <td><span class="badge b-green">조항 제외</span></td>
+        </tr>
+        <tr>
+          <td>Cache Rules 개수</td>
+          <td><span class="num">10</span></td>
+          <td><span class="num">25</span></td>
+          <td><span class="num">50</span></td>
+          <td><span class="num">300</span></td>
+        </tr>
+        <tr>
+          <td>Edge Cache TTL 최소값</td>
+          <td>2시간</td>
+          <td>1시간</td>
+          <td>1초</td>
+          <td>1초</td>
+        </tr>
+        <tr>
+          <td>Purge 요청 한도</td>
+          <td>5회/분</td>
+          <td>5회/초</td>
+          <td>10회/초</td>
+          <td>50회/초</td>
+        </tr>
+        <tr>
+          <td>DNS 레코드 수</td>
+          <td><span class="num">200</span><span class="muted"> ¹</span></td>
+          <td><span class="num">3,500</span></td>
+          <td><span class="num">3,500</span></td>
+          <td>계정 단위 쿼터</td>
+        </tr>
+        <tr>
+          <td>Pages 월 빌드</td>
+          <td><span class="num">500</span></td>
+          <td><span class="num">5,000</span></td>
+          <td><span class="num">20,000</span></td>
+          <td>협의</td>
+        </tr>
+        <tr>
+          <td><strong>가격 (월납 / 연납)</strong></td>
+          <td>$0</td>
+          <td>$25 / $20</td>
+          <td>$250 / $200</td>
+          <td>영업 협의</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">¹ 2024-09-01 이후 생성된 Free zone 기준. 그 이전 생성분은 1,000개.</p>
+
+  <div class="callout">
+    <div class="co-title">💡 읽는 법</div>
+    <p>표에서 <strong>강조된 두 행(업로드·캐시 파일 크기)만이 요금제에 따라 숫자가 달라지는 전송 제약</strong>이다. 나머지는 전송량이 아니라 기능·운영 한도다. 특히 <strong>Pro는 업로드·캐시 양쪽에서 Free와 완전히 동일</strong>하므로, 파일 크기 문제 해결을 목적으로 Pro를 결제하는 것은 효과가 없다.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 5. 업로드 제한 ═══════════════ -->
+<section id="upload">
+  <h2 class="sec"><span class="no">05</span>업로드(요청 본문) 제한</h2>
+
+  <p class="lead">앞서 다룬 512 MB는 <strong>다운로드(캐시) 방향</strong>이고, 클라이언트가 오리진으로 파일을 올리는 <strong>업로드 방향</strong>은 완전히 별개의 한도가 걸린다. 이쪽이 요금제별로 실제 숫자가 달라지는 유일한 전송 제약이다.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Cloudflare 요금제</th><th>최대 요청 본문 크기</th><th>초과 시</th></tr></thead>
+      <tbody>
+        <tr><td>Free</td><td><span class="num">100 MB</span></td><td rowspan="4" style="vertical-align:middle"><code>HTTP 413 Request Entity Too Large</code><br><span class="muted">오리진 도달 전 Cloudflare가 차단</span></td></tr>
+        <tr><td>Pro</td><td><span class="num">100 MB</span></td></tr>
+        <tr><td>Business</td><td><span class="num">200 MB</span></td></tr>
+        <tr><td>Enterprise</td><td><span class="num">500 MB</span> (기본값 · 상향 협의 가능)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout red">
+    <div class="co-title">🚨 함정 — Workers Paid를 결제해도 올라가지 않는다</div>
+    <p>Workers 공식 문서 원문: <em>“Request body size limits depend on your <strong>Cloudflare account plan, not your Workers plan</strong>.”</em></p>
+    <p style="margin-top:10px">계정 단위 $5짜리 Workers Paid를 결제해도 업로드 한도는 100 MB 그대로다. 이 한도는 <strong>프록시를 통과하는 그 도메인의 CDN 요금제</strong>가 결정한다. 도메인 A만 Business로 올렸다면 200 MB는 A에만 적용되고, 같은 계정의 도메인 B는 여전히 100 MB다.</p>
+  </div>
+
+  <h3>요청 경로에 따라 한도가 다르다</h3>
+  <div class="flow">
+    <div class="flow-row">
+      <span class="flow-label">경로 ① — CDN 프록시 경유 (오렌지 구름)</span>
+      <span class="flow-node">클라이언트</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-node gate">Cloudflare 프록시<br><span style="font-weight:400">zone 요금제 한도 적용</span></span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-node">오리진 / Worker</span>
+    </div>
+    <div class="flow-row">
+      <span class="flow-label">경로 ② — 제품 엔드포인트 직접 호출</span>
+      <span class="flow-node">클라이언트</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-node ok">R2 / Stream 엔드포인트<br><span style="font-weight:400">제품 자체 한도만 적용</span></span>
+    </div>
+  </div>
+
+  <p>Cloudflare의 한도는 <strong>누가 트래픽을 처리하느냐</strong>에 따라 다르다. 프록시를 지나면 zone 요금제 한도를, 계정 단위 제품의 자체 엔드포인트로 직접 가면 그 제품 한도를 따른다. 그래서 “업로드가 413으로 막힌다”의 정석 해법은 요금제 업그레이드가 아니라 <strong>업로드 경로를 프록시 밖으로 빼는 것</strong>이다.</p>
+
+  <h3>부수 주의 — WAF가 검사하는 본문은 훨씬 작다</h3>
+  <p><code>http.request.body.*</code> 필드가 처리하는 본문 크기는 업로드 허용치보다 한참 작다. 초과분은 잘려서 <code>http.request.body.truncated</code>가 <code>true</code>가 되고, 이 필드에 의존하는 WAF 규칙은 그 지점부터 무력해진다. <strong>오리진은 전체 본문을 그대로 수신</strong>하므로, 대용량 업로드는 WAF 본문 검사를 사실상 통과한다고 보고 오리진 측 검증을 반드시 설계해야 한다.</p>
+  <p class="muted">문서상 Enterprise 128 KB, Free 1 MB로 표기되며 다른 유료 플랜은 기본값이 더 낮다고만 서술된다(상향은 계정팀 문의). 표기 체계가 직관과 어긋나므로 실제 적용값은 대시보드에서 확인할 것.</p>
+</section>
+
+<!-- ═══════════════ 6. 우회 ═══════════════ -->
+<section id="bypass">
+  <h2 class="sec"><span class="no">06</span>업로드 제한 우회 경로</h2>
+
+  <p>요금제 인상 없이 100 MB 제한을 넘기는 방법. 위에서부터 권장 순이다.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>방법</th><th>효과</th><th>한도</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>R2 presigned URL 직접 업로드</strong></td>
+          <td><span class="up">프록시 미경유 → 제한 우회</span></td>
+          <td>단일 PUT <span class="num">4.995 GiB</span></td>
+          <td>egress $0. 가장 권장</td>
+        </tr>
+        <tr>
+          <td><strong>R2 multipart 업로드</strong></td>
+          <td><span class="up">사실상 무제한</span></td>
+          <td>파트당 <span class="num">5 GiB</span> × 최대 <span class="num">10,000</span>파트</td>
+          <td>객체 총 <span class="num">4.995 TiB</span>까지</td>
+        </tr>
+        <tr>
+          <td><strong>Stream tus 업로드</strong></td>
+          <td>대용량 영상 전용</td>
+          <td>파일당 <span class="num">30 GB</span></td>
+          <td>재개 가능 업로드 지원</td>
+        </tr>
+        <tr>
+          <td><strong>클라이언트 청크 분할</strong></td>
+          <td>기존 오리진 유지</td>
+          <td>조각당 100 MB 미만</td>
+          <td>오리진에서 재조립 로직 필요</td>
+        </tr>
+        <tr>
+          <td>DNS only (회색 구름)</td>
+          <td>프록시 미경유 → 제한 없음</td>
+          <td>—</td>
+          <td><span class="badge b-red">비권장</span> CDN·WAF·DDoS 보호 전부 상실, 오리진 IP 노출</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout purple">
+    <div class="co-title">◆ 설계 원칙</div>
+    <p>대용량 업로드가 요구되면 <strong>Business 결제($250/월 · 도메인당 · 200 MB)보다 R2 직접 업로드 경로가 비용·한도 양쪽에서 압도적으로 유리하다.</strong> R2는 계정당 1회 설정으로 모든 도메인이 함께 쓰고, 한도는 GiB~TiB 단위이며, egress 비용도 0이다.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 7. 제품별 한도 ═══════════════ -->
+<section id="product-limits">
+  <h2 class="sec"><span class="no">07</span>제품별 업로드·전송 한도</h2>
+
+  <p>아래 한도는 모두 <strong>계정 단위</strong>이며 zone 요금제와 무관하다.</p>
+
+  <h3>스토리지 · 미디어</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>제품</th><th>항목</th><th>한도</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="4"><strong>R2</strong></td><td>단일 PUT 업로드</td><td><span class="num">4.995 GiB</span></td></tr>
+        <tr><td>객체 최대 크기 (multipart)</td><td><span class="num">4.995 TiB</span></td></tr>
+        <tr><td>multipart 파트 개수</td><td>최대 <span class="num">10,000</span>개</td></tr>
+        <tr><td>계정당 버킷 수</td><td><span class="num">1,000,000</span>개</td></tr>
+        <tr><td><strong>Stream</strong></td><td>비디오 파일</td><td><span class="num">30 GB</span></td></tr>
+        <tr><td rowspan="3"><strong>Images</strong></td><td>호스팅 업로드</td><td><span class="num">10 MB</span></td></tr>
+        <tr><td>원격 이미지 변환</td><td><span class="num">100 MB</span> / <span class="num">100 MP</span></td></tr>
+        <tr><td>Images binding <code>.input()</code></td><td><span class="num">20 MB</span></td></tr>
+        <tr><td><strong>Media Transformations</strong></td><td>입력 파일 / 출력 길이</td><td><span class="num">100 MB</span> / <span class="num">1분</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>컴퓨트 · 배포</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>제품</th><th>항목</th><th>한도</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="4"><strong>Workers</strong></td><td>요청 본문</td><td><span class="down">zone 요금제 따름 (100~500 MB)</span></td></tr>
+        <tr><td>응답 본문</td><td><span class="up">강제 한도 없음</span></td></tr>
+        <tr><td>URL 크기 / 요청 헤더</td><td><span class="num">16 KB</span> / <span class="num">128 KB</span></td></tr>
+        <tr><td>서브리퀘스트</td><td>Free 50 / Paid 10,000 (요청당)</td></tr>
+        <tr><td rowspan="3"><strong>Pages</strong></td><td>단일 자산</td><td><span class="num">25 MiB</span></td></tr>
+        <tr><td>파일 개수</td><td>Free 20,000 / 유료 100,000</td></tr>
+        <tr><td>커스텀 도메인</td><td>100 / 250 / 500 / 500</td></tr>
+        <tr><td><strong>AI Search</strong></td><td>색인 대상 파일</td><td><span class="num">4 MB</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="muted">Workers Free는 일 100,000 요청 · 호출당 CPU 10 ms. Workers Paid는 $5/월에 월 1,000만 요청 + 3,000만 CPU-ms 포함, 초과분은 백만 요청당 $0.30 · 백만 CPU-ms당 $0.02.</p>
+</section>
+
+<!-- ═══════════════ 8. 결제 단위 ═══════════════ -->
+<section id="billing">
+  <h2 class="sec"><span class="no">08</span>결제 단위 — 도메인별 vs 계정별</h2>
+
+  <p class="lead">답은 <strong>“둘 다”</strong>이며, 제품군에 따라 다르다. 이 이원 구조를 이해하지 못하면 비용 설계가 크게 어긋난다.</p>
+
+  <div class="split">
+    <div class="unit-card">
+      <div class="uc-head">
+        <div class="uc-icon zone">Z</div>
+        <div>
+          <h3>도메인(zone) 단위</h3>
+          <div class="uc-sub">CDN 요금제 — Pro · Business</div>
+        </div>
+      </div>
+      <p class="muted" style="margin-bottom:12px">“Cloudflare plans are billed per domain on your account.”</p>
+      <ul>
+        <li><code>test1.com</code> · <code>test2.com</code>을 각각 Pro로 올리면 <strong>청구 항목 2개</strong> = $50/월</li>
+        <li>서브도메인(<code>blog.test1.com</code>)은 <strong>별도 청구 없음</strong> — 상위 zone에 포함</li>
+        <li>업그레이드 혜택은 <strong>그 도메인에만</strong> 적용. 나머지는 여전히 Free</li>
+        <li>업로드 한도·캐시 한도·WAF 기능이 여기 묶임</li>
+        <li>Enterprise만 여러 zone을 한 계약으로 묶어 계정 단위 협상</li>
+      </ul>
+    </div>
+
+    <div class="unit-card">
+      <div class="uc-head">
+        <div class="uc-icon acct">A</div>
+        <div>
+          <h3>계정(account) 단위</h3>
+          <div class="uc-sub">개발자 플랫폼 · 사용량 기반 제품</div>
+        </div>
+      </div>
+      <p class="muted" style="margin-bottom:12px">계정당 1회 청구 · 포함량을 전 도메인이 공유</p>
+      <ul>
+        <li><strong>Workers Paid $5/월은 계정당 1회</strong> — 계정 내 모든 도메인의 Workers를 커버</li>
+        <li>포함량(월 1,000만 요청 · 3,000만 CPU-ms)도 <strong>계정 전체 합산</strong></li>
+        <li>Pages Functions · KV · Hyperdrive · Durable Objects가 이 구독에 포함</li>
+        <li>R2 · Stream · Images 무료 티어도 <strong>계정 단위 공유</strong></li>
+        <li>예: R2 무료 10 GB는 도메인이 10개여도 <strong>총합 10 GB</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>“계정 결제 시 제약이 모든 도메인에 적용되는가”에 대한 직답</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>제약 유형</th><th>공유 여부</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>CDN 대역폭</strong></td>
+          <td><span class="badge b-blue">해당 없음</span></td>
+          <td>애초에 수치 쿼터가 없으므로 “공유 한도” 개념이 성립하지 않음. 도메인이 몇 개든 전송량 무제한</td>
+        </tr>
+        <tr>
+          <td><strong>업로드 · 캐시 한도</strong></td>
+          <td><span class="badge b-red">공유 안 됨</span></td>
+          <td>zone 단위. 도메인마다 개별 적용 — Business 도메인만 200 MB, 나머지는 100 MB</td>
+        </tr>
+        <tr>
+          <td><strong>콘텐츠 종류 제한</strong></td>
+          <td><span class="badge b-amber">계정 리스크</span></td>
+          <td>약관 문구가 <em>“your access to or use of the CDN”</em>이라 <strong>계정 전체 조치도 가능</strong>. 한 도메인의 위반이 계정 전체 리스크가 됨</td>
+        </tr>
+        <tr>
+          <td><strong>Workers·R2 포함량</strong></td>
+          <td><span class="badge b-green">전 도메인 공유</span></td>
+          <td>여기서만 “계정별 결제 → 전 도메인 공유”가 성립. 하나의 풀을 모든 도메인이 나눠 씀</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 9. 실무 시나리오 ═══════════════ -->
+<section id="scenario">
+  <h2 class="sec"><span class="no">09</span>실무 시나리오와 비용 설계</h2>
+
+  <h3>시나리오 — 도메인 10개 운영, 대용량 미디어 배포 필요</h3>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>접근</th><th>월 비용</th><th>업로드 한도</th><th>평가</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>전 도메인 Pro 결제</td>
+          <td><span class="num">$250</span> (10 × $25)</td>
+          <td>100 MB <span class="muted">(Free와 동일)</span></td>
+          <td><span class="badge b-red">최악</span> 업로드 한도가 전혀 오르지 않음</td>
+        </tr>
+        <tr>
+          <td>전 도메인 Business 결제</td>
+          <td><span class="num">$2,500</span> (10 × $250)</td>
+          <td>200 MB</td>
+          <td><span class="badge b-red">비효율</span> 한도 대비 비용 과다</td>
+        </tr>
+        <tr>
+          <td>필요 도메인만 Business + 나머지 Free</td>
+          <td><span class="num">$250</span> (1 × $250)</td>
+          <td>해당 도메인만 200 MB</td>
+          <td><span class="badge b-amber">차선</span> 단일 진입점 설계 시 유효</td>
+        </tr>
+        <tr>
+          <td><strong>Workers Paid + R2 직접 업로드</strong></td>
+          <td><span class="num">$5</span> + 사용량</td>
+          <td><span class="up">4.995 GiB ~ TiB</span></td>
+          <td><span class="badge b-green">권장</span> 계정 1회 결제로 10개 도메인 전부 커버</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout green">
+    <div class="co-title">✓ 결론적 권고</div>
+    <p>도메인 10개면 Pro 10개 = $250/월이지만, <strong>Workers Paid는 $5 하나로 10개 전부 커버</strong>된다. 비디오·대용량 자산은 도메인마다 요금제를 올리는 게 아니라 <strong>R2 / Stream(계정 단위)으로 옮기는 것이 정답</strong>이다. R2는 egress가 $0이라 전송량이 아무리 커져도 저장·요청 비용만 발생하며, 동시에 약관상 비디오 서빙 제한도 해소된다.</p>
+  </div>
+
+  <h3>요금제를 올려야 하는 진짜 이유</h3>
+  <p>Pro·Business의 가치는 전송량이 아니라 다른 축에 있다. 전송 제약 해소를 목적으로 결제를 검토 중이라면 아래에 해당하지 않는 한 재고할 것.</p>
+  <ul>
+    <li><strong>Pro</strong> — WAF 관리형 룰셋, 이미지 최적화(Polish), Cache Analytics, 업타임 모니터링</li>
+    <li><strong>Business</strong> — 업로드 200 MB, CNAME(부분) 설정, Edge Cache TTL 1초, 100% 업타임 SLA, 사용자 정의 WAF 규칙 확장</li>
+    <li><strong>Enterprise</strong> — 업로드 500 MB+, 캐시 5 GB, 비디오 조항 제외, Stream Delivery, 계정 단위 계약·협상</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 10. 주의사항 ═══════════════ -->
+<section id="caveats">
+  <h2 class="sec"><span class="no">10</span>주의사항 및 확인 필요 항목</h2>
+
+  <div class="callout amber">
+    <div class="co-title">⚠ 문서 표기가 모호한 지점</div>
+    <p>Workers 문서는 업로드 한도를 <em>“your Cloudflare <strong>account</strong> plan”</em>이라 표현하지만, Cloudflare 요금제 자체는 zone 단위로 판매된다. 실제 동작은 <strong>요청이 프록시되는 호스트네임이 속한 zone의 플랜</strong>을 기준으로 판정된다고 보는 것이 정합적이다. 여러 도메인의 플랜이 섞인 계정이라면 도메인별로 실측 확인을 권장한다.</p>
+  </div>
+
+  <ul>
+    <li><strong>가격 정보</strong> — Pro $25/$20, Business $250/$200은 2026년 중반 기준 공개 자료다. 연 20% 할인 구조는 Cloudflare 공식 블로그로 확인되나, 정확한 청구 금액은 대시보드에서 확인할 것.</li>
+    <li><strong>WAF 본문 검사 한도</strong> — Enterprise 128 KB / Free 1 MB라는 문서 표기는 직관과 어긋난다. 2025-12-05 자로 “Increased WAF payload limit for all plans” 변경 이력이 있으므로 최신값 재확인이 필요하다.</li>
+    <li><strong>콘텐츠 제한은 재량 조항</strong> — “disproportionate percentage”에 대한 수치 기준이 공개돼 있지 않다. 명시적 임계값이 아니라 Cloudflare의 판단에 따른 조치이므로, 대용량 미디어 비중이 높은 서비스는 사전에 자사 제품 경로로 설계하는 편이 안전하다.</li>
+    <li><strong>Pages 대역폭</strong> — 공식 문서에 한도 항목이 없어 무제한으로 통용되나, 명문 보장이 아니라 “문서화된 한도 부재” 상태임에 유의.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 11. 출처 ═══════════════ -->
+<section id="sources">
+  <h2 class="sec"><span class="no">11</span>출처 목록</h2>
+
+  <div class="src-group">
+    <h4>약관 · 정책 <span class="badge b-green">1차</span></h4>
+    <ul>
+      <li><a href="https://www.cloudflare.com/service-specific-terms-application-services/">Service-Specific Terms — Application Services (CDN 제한 조항, 2026-06-02 갱신)</a></li>
+      <li><a href="https://www.cloudflare.com/terms/">Self-Serve Subscription Agreement (2025-09-12 갱신)</a></li>
+      <li><a href="https://blog.cloudflare.com/updated-tos/">Goodbye, section 2.8 and hello to Cloudflare's new terms of service (2023-05-16)</a></li>
+      <li><a href="https://developers.cloudflare.com/fundamentals/reference/policies-compliances/delivering-videos-with-cloudflare/">Delivering Videos with Cloudflare</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h4>한도 문서 <span class="badge b-green">1차</span></h4>
+    <ul>
+      <li><a href="https://developers.cloudflare.com/workers/platform/limits/">Workers Limits — Request and response limits (업로드 한도 표 · 캐시 한도)</a></li>
+      <li><a href="https://developers.cloudflare.com/r2/platform/limits/">R2 Limits</a></li>
+      <li><a href="https://developers.cloudflare.com/images/get-started/limits/">Images — Limits</a></li>
+      <li><a href="https://developers.cloudflare.com/stream/uploading-videos/">Stream — Uploading videos (30 GB)</a></li>
+      <li><a href="https://developers.cloudflare.com/pages/platform/limits/">Pages — Limits</a></li>
+      <li><a href="https://developers.cloudflare.com/fundamentals/reference/connection-limits/">Fundamentals — Connection limits</a></li>
+      <li><a href="https://developers.cloudflare.com/cache/plans/">Cache — Features by plan type</a></li>
+      <li><a href="https://developers.cloudflare.com/dns/manage-dns-records/">DNS records quota (per-zone vs per-account)</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h4>청구 · 요금 <span class="badge b-green">1차</span></h4>
+    <ul>
+      <li><a href="https://developers.cloudflare.com/billing/understand/billing-policy/">Cloudflare Billing policy (“billed per domain”)</a></li>
+      <li><a href="https://developers.cloudflare.com/workers/platform/pricing/">Workers Pricing (계정 단위 $5/월)</a></li>
+      <li><a href="https://developers.cloudflare.com/r2/pricing/">R2 Pricing (egress $0)</a></li>
+      <li><a href="https://www.cloudflare.com/plans/">Cloudflare Plans</a></li>
+      <li><a href="https://blog.cloudflare.com/adjusting-pricing-introducing-annual-plans-and-accelerating-innovation-ko-kr">가격 조정, 연간 요금제 도입 (연 20% 할인)</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h4>보조 · 변경 이력</h4>
+    <ul>
+      <li><a href="https://developers.cloudflare.com/ruleset-engine/rules-language/fields/reference/http.request.body.truncated/">http.request.body.truncated (WAF 본문 한도)</a></li>
+      <li><a href="https://developers.cloudflare.com/support/troubleshooting/http-status-codes/4xx-client-error/error-413/">Error 413 문제 해결</a></li>
+      <li><a href="https://developers.cloudflare.com/changelog/post/2025-06-10-media-transformations-limits-increase/">Media Transformations 한도 상향 (2025-06-10)</a></li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p><strong>Cloudflare 전송량·업로드 제약과 결제 단위 조사 보고서</strong> · 작성일 2026-07-29</p>
+  <p>본 문서의 수치는 조사 시점 기준이며 Cloudflare 정책·요금은 변경될 수 있다. 결제 전 대시보드와 공식 문서에서 재확인할 것.</p>
+</footer>
+
+</div>
+</body>
+</html>

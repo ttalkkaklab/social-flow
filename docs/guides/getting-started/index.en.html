@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Getting started — social-flow</title>
+<link rel="alternate" hreflang="ko" href="index.html">
+<link rel="alternate" hreflang="en" href="index.en.html">
+<style>
+/*
+ * Styles for the getting-started guide only — fixed light theme.
+ * The color tokens are the light values from docs/assets/reference.css, but
+ * since this page is for first-time readers it stays on one screen with no
+ * dark switch.
+ */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-soft: #f6f8fa;
+  --bg-card: #ffffff;
+  --text: #1f2328;
+  --text-soft: #59636e;
+  /* #818b98 measured 3.2:1 on code comments and TOC numbers — below AA, so it was darkened past 4.5:1 */
+  --text-mute: #69737f;
+  --border: #d1d9e0;
+  --border-soft: #e4e8ed;
+  --accent: #0969da;
+  --accent-soft: #ddf4ff;
+  --green: #1a7f37;
+  --green-soft: #dafbe1;
+  --amber: #9a6700;
+  --amber-soft: #fff8c5;
+  --red: #cf222e;
+  --red-soft: #ffebe9;
+  --code-bg: #f6f8fa;
+  --shadow: 0 1px 3px rgba(31, 35, 40, .06), 0 10px 30px rgba(31, 35, 40, .05);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 28px; }
+
+body {
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.78;
+  font-size: 16px;
+  word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 24px 120px; }
+
+.langbar { display: flex; justify-content: flex-end; padding-top: 18px; }
+.langbar a {
+  font-size: 13px; color: var(--text-soft); text-decoration: none;
+  border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+}
+.langbar a:hover { color: var(--accent); border-color: var(--accent); }
+
+.crumbs { padding: 28px 0 0; font-size: 13.5px; color: var(--text-soft); }
+.crumbs a { color: var(--text-soft); text-decoration: none; }
+.crumbs a:hover { color: var(--accent); text-decoration: underline; }
+.crumbs span { margin: 0 6px; opacity: .5; }
+
+/* ── Header ── */
+header.hero { padding: 40px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 52px; }
+.hero .kicker {
+  display: inline-block; font-size: 12.5px; font-weight: 700; letter-spacing: .09em;
+  color: var(--accent); background: var(--accent-soft);
+  padding: 5px 13px; border-radius: 999px; margin-bottom: 20px;
+}
+.hero h1 { font-size: 38px; line-height: 1.3; font-weight: 800; letter-spacing: -.028em; }
+.hero .sub { margin-top: 16px; font-size: 18px; color: var(--text-soft); max-width: 700px; line-height: 1.7; }
+
+/* ── Table of contents ── */
+nav.toc {
+  background: var(--bg-soft); border: 1px solid var(--border-soft); border-radius: 14px;
+  padding: 20px 24px; margin-bottom: 56px;
+}
+nav.toc .toc-title { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--text-mute); margin-bottom: 10px; }
+nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 32px; }
+nav.toc li { counter-increment: toc; padding: 3px 0; font-size: 15px; break-inside: avoid; }
+nav.toc a { color: var(--text); text-decoration: none; }
+nav.toc a::before { content: counter(toc) "."; color: var(--text-mute); font-variant-numeric: tabular-nums; margin-right: 7px; }
+nav.toc a:hover { color: var(--accent); }
+
+/* ── Sections ── */
+section { margin-bottom: 64px; }
+h2 {
+  font-size: 25px; font-weight: 780; letter-spacing: -.018em;
+  padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+}
+h3 { font-size: 18px; font-weight: 700; margin: 34px 0 12px; letter-spacing: -.01em; }
+p { margin-bottom: 15px; }
+ul, ol { margin: 0 0 15px 22px; }
+li { margin-bottom: 7px; }
+a { color: var(--accent); }
+strong { font-weight: 700; }
+
+/* ── Pipeline diagram ── */
+.flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 26px 0 8px; }
+.flow-step {
+  border: 1px solid var(--border-soft); border-radius: 12px; padding: 16px 14px;
+  background: var(--bg-card); position: relative; text-align: center; min-width: 0;
+}
+.flow-step .n {
+  font-size: 11px; font-weight: 700; letter-spacing: .07em; color: var(--accent);
+  display: block; margin-bottom: 6px;
+}
+.flow-step .t { font-size: 15px; font-weight: 700; display: block; }
+.flow-step .d { font-size: 13px; color: var(--text-soft); line-height: 1.55; margin-top: 5px; display: block; }
+.flow-step::after {
+  content: "→"; position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
+  color: var(--text-mute); font-size: 15px; z-index: 1;
+}
+.flow-step:last-child::after { content: none; }
+.flow-note { font-size: 13.5px; color: var(--text-soft); text-align: center; margin-top: 14px; }
+
+/* ── Numbered steps ── */
+.step { display: grid; grid-template-columns: 38px 1fr; gap: 18px; margin-bottom: 34px; }
+.step-num {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff;
+  font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  margin-top: 3px;
+}
+/* the default min-width:auto on grid children has to be released, or the code block inside pushes the column out */
+.step-body { min-width: 0; }
+.step-body h3 { margin: 0 0 8px; font-size: 18px; }
+.step-body > :last-child { margin-bottom: 0; }
+
+/* ── Code ── */
+code {
+  font-family: "SFMono-Regular", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: .875em; background: var(--code-bg);
+  border: 1px solid var(--border-soft); border-radius: 5px; padding: 1px 5px;
+  /* keeps env var and tool names from splitting character by character — break only on overflow */
+  word-break: keep-all; overflow-wrap: anywhere;
+}
+pre {
+  background: var(--code-bg); border: 1px solid var(--border-soft); border-radius: 11px;
+  padding: 16px 18px; overflow-x: auto; margin-bottom: 16px; font-size: 13.5px; line-height: 1.7;
+}
+pre code { background: none; border: none; padding: 0; font-size: inherit; word-break: normal; }
+pre .c { color: var(--text-mute); }
+pre .p { color: var(--accent); }
+
+/* ── Tables ── */
+.table-scroll { overflow-x: auto; margin-bottom: 20px; }
+/* on narrow screens the table scrolls sideways instead of squeezing its cells */
+table { border-collapse: collapse; width: 100%; min-width: 580px; font-size: 14.5px; }
+th, td { border-bottom: 1px solid var(--border-soft); padding: 11px 14px; text-align: left; vertical-align: top; }
+th { background: var(--bg-soft); font-weight: 650; white-space: nowrap; border-bottom-color: var(--border); }
+tbody tr:last-child td { border-bottom: none; }
+/* key and command names have to read as one piece — if they overflow, the table scrolls */
+td:first-child code, td:nth-child(2) code { white-space: nowrap; }
+td code { font-size: 13px; }
+
+/* ── Callouts ── */
+.note, .warn, .ok {
+  border-radius: 11px; padding: 15px 19px; margin: 20px 0; font-size: 15px;
+  border: 1px solid var(--border-soft); border-left-width: 3px;
+}
+.note { background: var(--accent-soft); border-left-color: var(--accent); }
+.warn { background: var(--amber-soft); border-left-color: var(--amber); }
+.ok { background: var(--green-soft); border-left-color: var(--green); }
+.note :last-child, .warn :last-child, .ok :last-child { margin-bottom: 0; }
+
+/* ── Badges ── */
+.badge {
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .03em;
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap; vertical-align: middle;
+}
+.badge.req { background: var(--red-soft); color: var(--red); }
+.badge.opt { background: var(--bg-soft); color: var(--text-soft); border: 1px solid var(--border-soft); }
+
+/* ── Cards ── */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin: 22px 0; }
+.card {
+  background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 12px;
+  padding: 18px 20px; transition: box-shadow .16s, border-color .16s;
+  display: flex; flex-direction: column; min-width: 0;
+}
+.card:hover { box-shadow: var(--shadow); border-color: var(--border); }
+.card h4 { font-size: 15.5px; font-weight: 700; margin-bottom: 6px; }
+.card p { font-size: 14px; color: var(--text-soft); line-height: 1.62; margin: 0; }
+.card .cmd {
+  display: block; margin-top: auto; padding-top: 12px; font-family: ui-monospace, monospace;
+  font-size: 12.5px; color: var(--accent);
+  word-break: keep-all; overflow-wrap: anywhere;
+}
+
+/* ── FAQ ── */
+.faq { border-top: 1px solid var(--border-soft); padding: 20px 0; }
+.faq:first-of-type { border-top: none; padding-top: 6px; }  /* so it doesn't collide with the h2 underline */
+.faq h3 { margin: 0 0 8px; font-size: 16.5px; }
+.faq > :last-child { margin-bottom: 0; }
+
+footer {
+  margin-top: 80px; padding-top: 26px; border-top: 1px solid var(--border);
+  font-size: 13.5px; color: var(--text-soft);
+}
+footer a { color: var(--accent); }
+
+@media (max-width: 720px) {
+  .hero h1 { font-size: 29px; }
+  .hero .sub { font-size: 16.5px; }
+  .wrap { padding: 0 18px 80px; }
+  .flow { grid-template-columns: 1fr 1fr; }
+  .flow-step:nth-child(2)::after { content: none; }
+  nav.toc ol { columns: 1; }
+  .step { grid-template-columns: 30px 1fr; gap: 14px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="langbar"><a href="index.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../../index.en.html">social-flow docs</a><span>/</span>Guides<span>/</span>Getting started</div>
+
+<header class="hero">
+  <div class="kicker">GETTING STARTED</div>
+  <h1>From install to your first video</h1>
+  <p class="sub">social-flow is a Claude Code plugin that takes one topic, makes a short-form video and the social posts to go with it, and — once you approve — puts them on your accounts. Install takes five minutes; the first video takes four commands.</p>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">ON THIS PAGE</div>
+  <ol>
+    <li><a href="#what">What this tool does</a></li>
+    <li><a href="#prep">What you need</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#keys">Setting up API keys</a></li>
+    <li><a href="#first">Making your first video</a></li>
+    <li><a href="#publish">Publishing to social accounts</a></li>
+    <li><a href="#more">What else it can do</a></li>
+    <li><a href="#trouble">When you get stuck</a></li>
+  </ol>
+</nav>
+
+<!-- ══════════ 1 ══════════ -->
+<section id="what">
+  <h2>What this tool does</h2>
+
+  <p>Putting up one video usually means all of this: find the material, write the script, get the pictures, record a voice, add subtitles, then write a different post for every platform. social-flow bundles that into four commands.</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="n">STEP 1</span>
+      <span class="t">Channel</span>
+      <span class="d">decide once who you're talking to and in what voice</span>
+    </div>
+    <div class="flow-step">
+      <span class="n">STEP 2</span>
+      <span class="t">Storyboard</span>
+      <span class="d">research, then a script and scene images</span>
+    </div>
+    <div class="flow-step">
+      <span class="n">STEP 3</span>
+      <span class="t">Produce</span>
+      <span class="d">one video plus per-platform text</span>
+    </div>
+    <div class="flow-step">
+      <span class="n">STEP 4</span>
+      <span class="t">Publish</span>
+      <span class="d">you look it over, approve, and it goes up</span>
+    </div>
+  </div>
+  <p class="flow-note">Each step needs the one before it. Skip ahead and it stops right there and tells you what's missing.</p>
+
+  <h3>Three things worth knowing up front</h3>
+  <ul>
+    <li><strong>There are two video formats.</strong> The default is one 9:16 portrait build (1080×1920 · 30fps), exported for Reels, Shorts, and Threads. YouTube long-form is 16:9 landscape (1920×1080). You pick which one while writing the storyboard, and a single <code>window.FORMAT</code> line in <code>scenes.js</code> fixes the canvas, length, and subtitle values for every step after it.</li>
+    <li><strong>The same post never gets pasted in several places.</strong> The facts stay the same; the sentences get rewritten per platform. Threads is casual spoken Korean, YouTube is a searchable title and description — different jobs.</li>
+    <li><strong>The default flow has two human approvals.</strong> One when the storyboard is settled, one right before anything goes public. The growth loops are the exception — the <code>grow-*</code> skills run your account on a growth plan you approve once, and that plan stands in for per-post approval. Inside its scope they post without asking, so keep the scope tight when you approve it.</li>
+  </ul>
+</section>
+
+<!-- ══════════ 2 ══════════ -->
+<section id="prep">
+  <h2>What you need</h2>
+
+  <p>This assumes a Mac or Linux terminal with Claude Code already installed.</p>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>What</th><th>Check / install</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Node 20+</strong> <span class="badge req">required</span></td><td><code>node -v</code></td><td>the server inside the plugin is written in Node</td></tr>
+      <tr><td><strong>ffmpeg</strong> <span class="badge req">required</span></td><td><code>brew install ffmpeg</code></td><td>cuts and joins video and audio. Without it step 3 stops</td></tr>
+      <tr><td><strong>python3</strong> <span class="badge req">required</span></td><td><code>python3 -V</code></td><td>the Korean copy style checker is a Python script</td></tr>
+      <tr><td><strong>Google Chrome</strong> <span class="badge req">required</span></td><td>nothing to do if it's installed</td><td>video frames are drawn as a web page and captured</td></tr>
+      <tr><td>whisper.cpp <span class="badge opt">optional</span></td><td><code>brew install whisper-cpp</code></td><td>only for transcribing screen recordings</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <strong>Does it have to be a Mac?</strong> Everything through video production runs on Linux too. Screen recording and on-device image generation are macOS + Apple Silicon only.
+  </div>
+
+  <div class="warn">
+    <strong>If you plan to cut cost with the local engines, install them first.</strong> The two local alternatives described later need their own setup — for images, <code>uv tool install --python 3.12 mflux</code>, and <strong>the first call downloads 31GB of weights</strong>. For voice, <code>pip install supertonic</code> is enough; if you juggle several Pythons, point <code>SUPERTONIC_PYTHON</code> at the one to use. Even with both installed you still want <code>OPENAI_API_KEY</code> — the cover and any frame with text on it are pinned to the API because the local engine garbles Korean glyphs.
+  </div>
+</section>
+
+<!-- ══════════ 3 ══════════ -->
+<section id="install">
+  <h2>Install</h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Clone it and build the server</h3>
+      <p>Skip this one step and the plugin loads with no tools at all. The repo ships the build output, but not the libraries it needs to run (<code>node_modules</code>).</p>
+<pre><code>git clone https://github.com/ttalkkaklab/social-flow.git
+cd social-flow/server
+npm install &amp;&amp; npm run build</code></pre>
+      <p>Run <code>npm run check</code> instead and you get the build plus the self-check tests. They call no external API, so they pass without any keys.</p>
+      <div class="note"><strong>The repo is public.</strong> <code>git clone</code> works without authentication, and the license is Apache 2.0. If you already have a copy, use that one.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Pick a working folder and start Claude Code inside it</h3>
+      <p>Finished videos and scripts pile up in a <code>data/</code> folder, and that folder is created <strong>where you started Claude Code</strong> — not where you cloned the plugin. So pick one working folder and always start there.</p>
+<pre><code><span class="c"># e.g. one working folder under your home directory</span>
+mkdir -p ~/social-work &amp;&amp; cd ~/social-work
+claude</code></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Load the plugin</h3>
+      <p>Point Claude Code at the folder you cloned and it's available in that session.</p>
+<pre><code>claude --plugin-dir ~/social-flow</code></pre>
+      <p>If you'd rather not type the flag every time, register it as a local marketplace. Two lines inside Claude Code — what follows <code>@</code> on the second line is the marketplace name, which this repo declares as <code>social-flow</code> in <code>.claude-plugin/marketplace.json</code>.</p>
+<pre><code><span class="p">/plugin marketplace add</span> ~/social-flow
+<span class="p">/plugin install</span> social-flow@social-flow</code></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Check that it loaded</h3>
+      <p><code>/mcp</code> lists the connected servers. If <code>social-flow</code> is there with a list of tools, you're done.</p>
+      <div class="ok"><strong>Seeing only 37 tools is normal.</strong> Of the 46 total, the nine publish and insight tools show up only for platforms whose credential file exists. If you haven't connected an account yet, they're supposed to be missing.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 4 ══════════ -->
+<section id="keys">
+  <h2>Setting up API keys</h2>
+
+  <p>The keys come in two groups that have nothing to do with each other. <strong>Stopping after either one still leaves you a usable tool.</strong></p>
+  <ul>
+    <li><strong>Production keys</strong> — the video-making half. <code>OPENAI_API_KEY</code> and <code>GEMINI_API_KEY</code> are enough for a first video.</li>
+    <li><strong>Platform credentials</strong> (Threads · Instagram · YouTube · Facebook) — <strong>optional.</strong> Set them up and the tool handles publishing and day-to-day account operation; skip them and the finished video and per-platform text land in <code>output/</code>, and uploading is the only part you do by hand.</li>
+  </ul>
+
+  <h3>Where the keys go</h3>
+  <p>Keys go in as <strong>shell environment variables</strong>, not in a config file. Put them in <code>~/.zshrc</code> (or <code>~/.bashrc</code>) and open a new terminal.</p>
+
+<pre><code>export OPENAI_API_KEY="sk-..."     <span class="c"># cover and any frame with text</span>
+export GEMINI_API_KEY="..."        <span class="c"># generated video, acted narration, BGM</span>
+
+<span class="c"># everything below is optional</span>
+export NAVER_CLIENT_ID="..."       <span class="c"># Korean-language research</span>
+export NAVER_CLIENT_SECRET="..."
+export SERPAPI_API_KEY="..."       <span class="c"># precision and international search</span>
+export ARK_API_KEY="..."           <span class="c"># the second video engine (Seedance)</span>
+export DATA_GO_KR_API_KEY="..."    <span class="c"># data.go.kr API calls</span></code></pre>
+
+  <div class="warn">
+    <strong>Never write key values inside the repo.</strong> <code>.mcp.json</code> only passes your shell environment through to the server, so no committed file holds a key. If a value is missing, only the tools that need it say so — plainly, at call time — and everything else keeps working. <strong>A session carries the environment it was started with</strong>, so after adding one of these API keys, restart <code>claude</code> for it to take effect. Platform tokens are a different story — see below.
+  </div>
+
+  <h3>Production keys — what you lose without each</h3>
+
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Key</th><th>Where to get it</th><th>What happens without it</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>OPENAI_API_KEY</code><br><span class="badge req">production</span></td>
+        <td>platform.openai.com/api-keys</td>
+        <td>no cover and no <strong>frames with text on them</strong>. Scene backgrounds still come out, because on-device generation (<code>image_local_generate</code>) is the default path there — but the local engine breaks Korean glyphs apart, so text frames are pinned to this key</td>
+      </tr>
+      <tr>
+        <td><code>GEMINI_API_KEY</code><br>(or <code>GOOGLE_API_KEY</code>)<br><span class="badge req">production</span></td>
+        <td>aistudio.google.com/apikey</td>
+        <td>no generated video (Veo 3.1), no BGM, no acted voice. Narration bodies still get sound, since the on-device engine (<code>tts_local_generate</code>) is the default there</td>
+      </tr>
+      <tr>
+        <td><code>NAVER_CLIENT_ID</code><br><code>NAVER_CLIENT_SECRET</code><br><span class="badge opt">optional</span></td>
+        <td>developers.naver.com</td>
+        <td>Korean-language research falls back to plain web search. It's free up to 25,000 calls a day, so it's worth adding if you cover Korean topics</td>
+      </tr>
+      <tr>
+        <td><code>SERPAPI_API_KEY</code><br><span class="badge opt">optional</span></td>
+        <td>serpapi.com</td>
+        <td>precision and international research, plus the SNS issue scout (<code>sns_issue_scout</code>), get skipped (250 free calls a month). Research falls back to WebSearch</td>
+      </tr>
+      <tr>
+        <td><code>ARK_API_KEY</code><br><span class="badge opt">optional</span></td>
+        <td>ai.byteplus.com/ark</td>
+        <td>only the second video engine, Seedance, is unavailable. Its niche is 2–30 seconds in 1-second steps and cheap silent cuts — Veo keeps running on <code>GEMINI_API_KEY</code></td>
+      </tr>
+      <tr>
+        <td><code>DATA_GO_KR_API_KEY</code><br><span class="badge opt">optional</span></td>
+        <td>My Page on data.go.kr</td>
+        <td>only data.go.kr API calls stop. Dataset search and file downloads work without a key. Even with the key, <strong>each API needs its own usage application</strong> before it opens up</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Two engines that need no key at all</h3>
+  <p>On an Apple Silicon Mac, scene backgrounds and narration are made on the machine — no key, no network, no billing. They each need one install first.</p>
+  <ul>
+    <li><code>image_local_generate</code> (Z-Image Turbo) — <code>uv tool install --python 3.12 mflux</code>. <strong>The first call downloads 31GB of weights.</strong> It can't put text inside an image.</li>
+    <li><code>tts_local_generate</code> (Supertonic 3) — <code>pip install supertonic</code>. The first call pulls 385MB of weights into <code>~/.cache/supertonic3</code> (about 24 seconds). If you installed it in a virtualenv, put that interpreter's path in <code>SUPERTONIC_PYTHON</code>. It has no acting or emotion controls, so intro lines and character dialogue go to <code>tts_generate</code> (Gemini) instead.</li>
+  </ul>
+
+  <h3>Platform credentials are optional</h3>
+  <p>Threads, Instagram, YouTube, and Facebook tokens are set up <strong>one platform at a time</strong>. Connect YouTube alone and YouTube publishes itself while Threads and Instagram stay manual — it isn't all-or-nothing.</p>
+  <ul>
+    <li><strong>With them</strong> — <code>publish</code> posts straight to your accounts, and the <code>grow-*</code> skills run on <code>/loop</code>: comment replies, insight snapshots, keyword conversations, queue refills, posting. The scope is whatever the growth plan you approved once at <code>init</code> allows.</li>
+    <li><strong>Without them</strong> — research, storyboard, images, voice, and the build all run as usual. <code>produce</code> writes the finished video and per-platform text to <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload those files yourself. The only consequences are that the nine publish/insight tools aren't listed and the growth loops have nothing to drive.</li>
+  </ul>
+  <p>Tokens are files rather than environment variables, so <strong>adding one later needs no server restart</strong>. The next time the tool list is read, that platform's tools are there and the count moves from 37 toward 46. Account signup and token issuance are covered in <a href="#publish">section 6</a> below.</p>
+
+  <h3>Checking that a key works</h3>
+  <p>Two lines, before you spend anything on a video. Both are list calls, so neither is billed.</p>
+
+<pre><code>curl -s https://api.openai.com/v1/models \
+  -H "Authorization: Bearer $OPENAI_API_KEY" | head -c 200
+
+curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY" | head -c 200</code></pre>
+
+  <p>A JSON list of models means you're set. <code>401</code> or <code>403</code> means the key is wrong or no payment method is attached. For platform tokens, the <code>sns_account_check</code> tool checks them all at once — it never prints token values, only which account each one resolves to.</p>
+</section>
+
+<!-- ══════════ 5 ══════════ -->
+<section id="first">
+  <h2>Making your first video</h2>
+
+  <p>Say you run a personal-finance channel and want one video about exchange rates. Type the commands in order inside Claude Code.</p>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Create the channel <span style="font-weight:400;color:var(--text-soft);font-size:14px">— once per channel</span></h3>
+<pre><code><span class="p">/social-flow:channel</span> add "Money Talk"</code></pre>
+      <p>The first thing it does is propose a kebab-case English slug for the channel name — here, something like <code>money</code>. That value becomes the directory name and the key for publish accounts, so a name in Korean or any other non-Latin script gets converted rather than used as is. <strong>From here on, the channel you type in commands is that slug, not the original name.</strong></p>
+      <p>Then it asks a few questions — who's watching, what voice to use, where you publish — and writes the answers to <code>data/money/profile.md</code>. Every later step reads that file first and inherits the tone and voice from it.</p>
+      <p>The narration voice is also picked and pinned here. A channel whose voice changes every episode doesn't sound like one channel.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Write the storyboard <span style="font-weight:400;color:var(--text-soft);font-size:14px">— the longest step</span></h3>
+<pre><code><span class="p">/social-flow:storyboard</span> money "July FX swings"</code></pre>
+      <p>It asks about format first — 9:16 short-form by default, 16:9 if you want a chaptered YouTube long-form. Then it researches, splits the scenes, writes the lines, and generates an image per scene. The result is a <code>storyboard.html</code> you can open in a browser.</p>
+      <p>Before any of it reaches you, a review agent reads the copy and the images four separate times — whether the sentences sound AI-written, whether each scene does its job, whether the word choice is how people actually talk, and whether each picture matches what its scene says. Anything below the bar gets fixed and read again. <strong>This step taking a while is normal. When it finally asks for a decision, approve it.</strong></p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Build the video and the posts</h3>
+<pre><code><span class="p">/social-flow:produce</span> money 20260729-fx</code></pre>
+      <p>The topic name is the folder name step 2 created. It draws and captures the frames, lays in the voice, adds BGM, burns subtitles, and builds the video — plus separate posts for Threads, Instagram, Facebook, and YouTube.</p>
+      <p>Everything lands in <code>data/money/episodes/20260729-fx/output/</code>. You get a version with subtitles burned in and one without: Instagram can't take a subtitle file so it uses the burned one, while YouTube and Facebook get the subtitles uploaded separately.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Publish</h3>
+<pre><code><span class="p">/social-flow:publish</span> money 20260729-fx</code></pre>
+      <p>It shows you the final copy for every platform and the accounts they'd go to, and waits for approval. Nothing is called until you approve; the resulting links are recorded in <code>publish-log.md</code>.</p>
+      <p>If you haven't connected social accounts yet, skip this step. The video files are already in your hands — upload them yourself.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>If you want it in one shot</strong> — <code>/social-flow:autoproduce money "July FX swings"</code> drives steps 2 and 3 with no human check-in. Nine machine gates stand where the approvals were, and any one of them failing hands the episode back to a person. The default economy tier makes no generated-video calls at all, so an episode costs roughly <strong>$0.26–0.29</strong> (capped at $0.30).
+  </div>
+</section>
+
+<!-- ══════════ 6 ══════════ -->
+<section id="publish">
+  <h2>Publishing to social accounts</h2>
+
+  <p>Publishing needs each platform's API token. Only platforms with a token file get their publish and insight tools, so seeing none right after install is normal.</p>
+
+  <p><strong>You can skip this whole section.</strong> With no tokens at all, everything through step 3 still runs, and you upload the video and per-platform text sitting in <code>output/</code> yourself. Tokens are per platform, so connecting YouTube first is fine — YouTube then publishes itself while the rest stays manual. The moment a token exists, it opens up not just publishing but the <a href="#more">growth loops</a> and metrics too.</p>
+
+  <h3>Letting the tool do the setup</h3>
+  <p>Each platform has a skill that drives the browser for you, from account signup through token issuance. It hands control back only where a human is unavoidable — logging in, typing a verification code.</p>
+
+<pre><code><span class="p">/social-flow:setup-threads</span> money
+<span class="p">/social-flow:setup-instagram</span> money
+<span class="p">/social-flow:setup-youtube</span> money</code></pre>
+
+  <h3>Where tokens live</h3>
+  <p>One directory per channel, so running several brands never mixes the accounts up.</p>
+
+<pre><code>~/.config/social-flow/&lt;channel-slug&gt;/
+├── threads_token
+├── instagram_token
+├── facebook_page_token
+└── youtube-oauth-client.json</code></pre>
+
+  <p>Lock the files down with <code>chmod 600</code>. The issuance procedure is written per platform in <code>skills/publish/references/token-setup.md</code>.</p>
+
+  <div class="warn">
+    <strong>A publish tool call is immediately public.</strong> There's no review state and no draft. That's why the publish skill's approval screen and Claude Code's own permission prompt both stand in front of it. Don't raise that prompt to "always allow".
+  </div>
+</section>
+
+<!-- ══════════ 7 ══════════ -->
+<section id="more">
+  <h2>What else it can do</h2>
+
+  <div class="cards">
+    <div class="card">
+      <h4>Channel logo</h4>
+      <p>Four candidates for you to choose from, then a review agent polishes the winner up to 95 points.</p>
+      <span class="cmd">/social-flow:branding money</span>
+    </div>
+    <div class="card">
+      <h4>Channel intro video</h4>
+      <p>A 4-second intro with your character acting. It goes after the episode, not before — brand eating the first 3 seconds gets you swiped away.</p>
+      <span class="cmd">/social-flow:intro money</span>
+    </div>
+    <div class="card">
+      <h4>Build from a screen recording</h4>
+      <p>Use your own screen and voice as the source instead of web research. It transcribes and turns that into a timeline.</p>
+      <span class="cmd">/social-flow:ingest money record</span>
+    </div>
+    <div class="card">
+      <h4>Film against a script</h4>
+      <p>For demos and tutorials. The script comes first, you record while reading it, then it gets edited.</p>
+      <span class="cmd">/social-flow:storyboard money &lt;topic&gt; as a shooting script</span>
+    </div>
+    <div class="card">
+      <h4>Find open data</h4>
+      <p>Dig up statistics on data.go.kr to back a claim and stash them as material.</p>
+      <span class="cmd">/social-flow:datago jeonse fraud statistics</span>
+    </div>
+    <div class="card">
+      <h4>Grow the account by itself</h4>
+      <p>Comment replies, metric watching, and posting run autonomously inside the growth plan you approved.</p>
+      <span class="cmd">/social-flow:grow-threads money init</span>
+    </div>
+  </div>
+
+  <p>Once a growth plan is approved, you run the loop on a schedule — <code>/loop 30m /social-flow:grow-threads money</code>. Every sentence that goes out has to clear the review agent's 95-point bar before it publishes. Per-platform strategy is written up in the <a href="../threads-growth/index.en.html">Threads</a> · <a href="../youtube-shorts-growth/index.en.html">YouTube Shorts</a> · <a href="../instagram-growth/index.en.html">Instagram</a> guides.</p>
+</section>
+
+<!-- ══════════ 8 ══════════ -->
+<section id="trouble">
+  <h2>When you get stuck</h2>
+
+  <div class="faq">
+    <h3>social-flow isn't in <code>/mcp</code></h3>
+    <p>Usually <code>npm install</code> was skipped. The repo carries the build output but not the libraries. Running the server directly shows the cause immediately.</p>
+<pre><code>cd ~/social-flow &amp;&amp; node server/dist/index.js</code></pre>
+    <p>If <code>social-flow MCP server started</code> prints, the server is fine and the problem is in how the plugin was loaded.</p>
+  </div>
+
+  <div class="faq">
+    <h3>The publish tools aren't in the list</h3>
+    <p>That's normal. Only platforms with a credential file get their tools. If you just added a token, you don't have to restart Claude Code — the next read of the tool list picks it up.</p>
+  </div>
+
+  <div class="faq">
+    <h3>The data folder showed up somewhere unexpected</h3>
+    <p><code>data/</code> is created where you started Claude Code. Pick one working folder and always run <code>claude</code> inside it and nothing scatters.</p>
+  </div>
+
+  <div class="faq">
+    <h3>It stalls while making the video</h3>
+    <p>Check <code>ffmpeg -version</code> first. If it stalls at the frame-capture step, check that Chrome is installed.</p>
+  </div>
+
+  <div class="faq">
+    <h3>The voice breaks up oddly</h3>
+    <p>One long sentence read in a single pass can fall apart toward the end. Splitting the line into shorter sentences and regenerating usually fixes it.</p>
+  </div>
+
+  <div class="faq">
+    <h3>The storyboard keeps getting rewritten</h3>
+    <p>The review agent is fixing what fell short and reading it again. It doesn't loop forever — once it hits the set number of rounds, it shows you the best version along with the findings it couldn't resolve and waits for your call.</p>
+  </div>
+</section>
+
+<section>
+  <h2>What to read next</h2>
+  <ul>
+    <li><a href="../../index.en.html">Full documentation index</a> — guides, API reference, research notes</li>
+    <li><a href="../../api-reference/index.en.html">API reference</a> — the contracts of the 12 external APIs the internal server calls</li>
+    <li><a href="../ai-video-production/index.en.html">Making short-form video with AI</a> — why the pipeline looks the way it does</li>
+    <li><a href="../ingest-usage/index.en.html">Screen recording guide</a> · <a href="../screencast-usage/index.en.html">Shooting script guide</a></li>
+  </ul>
+</section>
+
+<footer>
+  social-flow — a channel-based short-form content pipeline. The source of truth for structure, skills, and the MCP tool list is the repository's <a href="../../../README.md">README.md</a>.
+</footer>
+
+</div>
+</body>
+</html>

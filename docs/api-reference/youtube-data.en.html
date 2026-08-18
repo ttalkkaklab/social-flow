@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Data API v3 — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="ko" href="youtube-data.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="youtube-data.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>YouTube Data API</div>
+
+<header class="hero">
+  <div class="kicker">GOOGLE</div>
+  <h1>YouTube Data API v3 — video upload</h1>
+  <p class="sub">The only publishing path that needs no public URL hosting — a local file goes up directly through a resumable upload. In exchange it brings its own traps: OAuth refresh-token management and quota buckets.</p>
+  <div class="meta">
+    <span>Official <a href="https://developers.google.com/youtube/v3/docs/videos/insert">videos.insert</a> · <a href="https://developers.google.com/youtube/v3/determine_quota_cost">Quota</a></span>
+    <span>Credentials <code>youtube-oauth-client.json</code></span>
+    <span>Implementation <code>server/src/sns-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#auth">OAuth token exchange</a></li>
+    <li><a href="#upload">Resumable upload in two steps</a></li>
+    <li><a href="#fields">snippet · status fields</a></li>
+    <li><a href="#thumb">Thumbnails</a></li>
+    <li><a href="#captions">Caption tracks — uploaded separately</a></li>
+    <li><a href="#quota">Quota — the 2026 change</a></li>
+    <li><a href="#shorts">Shorts classification</a></li>
+    <li><a href="#scout">Market topic scouting</a></li>
+    <li><a href="#impl">Implementation vs. contract</a></li>
+  </ol>
+</nav>
+
+<section id="auth">
+  <h2>1. OAuth token exchange</h2>
+  <p>The credential file isn't an API key — it's an OAuth client plus a refresh token, as JSON. The path is <code>&lt;SNS_TOKEN_DIR&gt;/[&lt;channel slug&gt;/]youtube-oauth-client.json</code>.</p>
+  <div class="ok">
+    <strong>What this file unlocks.</strong> <code>youtube_publish</code> and <code>youtube_insights</code> appear in <code>tools/list</code> only for channels that have it (two of the nine tools gated on platform credentials — the other seven belong to the <a href="meta-graph.en.html">three Meta surfaces</a>). It's evaluated per request, so adding a token needs no server restart. <code>youtube_update</code> sits outside the gate and is always listed, erroring if there's no token, and <code>youtube_topic_scout</code> reads public data, so <code>YOUTUBE_API_KEY</code> alone drives it. All of it is optional: with no token, everything through production still works, and once the finished video and copy land in <code>output/</code> you upload by hand.
+  </div>
+  <pre><code>{ "client_id": "…", "client_secret": "…", "refresh_token": "…" }</code></pre>
+  <pre><code>POST https://oauth2.googleapis.com/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id=…&client_secret=…&refresh_token=…&grant_type=refresh_token
+→ { "access_token": "…", "expires_in": 3599 }</code></pre>
+  <div class="danger">
+    <strong>A refresh_token issued in testing mode expires in 7 days.</strong> Tokens from a project whose OAuth consent screen is still in "testing" go invalid after a week and uploads suddenly fail. You have to <strong>publish the project to production and reissue</strong> to get a permanent refresh token. Ticking the scope checkboxes in the consent flow is the other thing that's easy to miss at the same moment.
+  </div>
+  <h3>Scopes you need</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Scope</th><th>What it enables</th></tr></thead>
+    <tbody>
+      <tr><td><code>youtube.upload</code></td><td>Video upload — <code>youtube_publish</code></td></tr>
+      <tr><td><code>youtube</code></td><td>Upload + channel reads + thumbnails</td></tr>
+      <tr><td><code>youtube.readonly</code></td><td>Channel and video reads — the statistics half of <code>youtube_insights</code></td></tr>
+      <tr><td><code>yt-analytics.readonly</code></td><td>Period metrics (views, watch time, subscriber change) — the Analytics half of <code>youtube_insights</code></td></tr>
+      <tr><td><code>youtube.force-ssl</code></td><td>All of the above + <strong>caption upload</strong> (<code>captions.insert</code>) + <strong>the comments API</strong> — <code>youtube_publish</code>'s <code>captionFilePath</code>, plus <code>sns_comment_inbox</code>/<code>sns_comment_reply</code></td></tr>
+      <tr><td><code>yt-analytics-monetary.readonly</code></td><td>Revenue metrics — <code>includeRevenue: true</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>A token issued for publishing has only the first one (<code>youtube.upload</code>).</strong> But <code>force-ssl</code> is now <strong>needed for publishing too</strong> — this pipeline doesn't burn subtitles into the picture, it uploads them separately (§5), and that call is refused by the upload scope. Publish with an old token and the video goes up while the captions fail. The growth loop (<code>/social-flow:grow-youtube</code>) needs the rest, so a scope error on its first call is normal, and the error body carries the reissue instructions. Tick every checkbox in the consent flow, reissue, and swap in the new <code>refresh_token</code>. Read scopes and comment scopes are separate, so <strong>only one of them can be blocked</strong>.
+  </div>
+  <h3>Two other APIs the growth loop uses</h3>
+  <p><code>youtube_insights</code> doesn't end at the Data API. Channel statistics and the recent-upload list come from it (<code>channels.list</code> → <code>playlistItems.list</code> → <code>videos.list</code>, 3 units in total), but period metrics come from a <strong>separate service</strong>, the YouTube Analytics API.</p>
+  <pre><code>GET https://youtubeanalytics.googleapis.com/v2/reports
+  ?ids=channel==MINE&startDate=…&endDate=…
+  &metrics=views,engagedViews,averageViewPercentage,subscribersGained,…
+  &dimensions=video&filters=video==id1,id2,…   # per-video comes back in one batch</code></pre>
+  <div class="warn">
+    <strong>You have to enable the YouTube Analytics API separately in Google Cloud Console.</strong> With only the Data API enabled you get a 403 even with the right scopes. And <strong>Analytics data lags 2–3 days</strong> — yesterday and today being empty isn't an outage, so keep <code>days</code> at 7 or more. When <code>rows</code> comes back empty we return an empty object rather than 0, which keeps "delayed" distinguishable from "genuinely zero".
+    <p style="margin-top:10px">Studio's <strong>"How many chose to view"</strong> (watched vs. swiped away) has <strong>no counterpart</strong> in the Analytics API metric list. Shorts hook verdicts fall back to <code>averageViewPercentage</code>, and the swipe metric has to be read by a human in Studio. <a href="https://developers.google.com/youtube/analytics/metrics">Metric list</a> · <a href="https://developers.google.com/youtube/analytics/reference/reports/query">reports.query</a></p>
+  </div>
+</section>
+
+<section id="upload">
+  <h2>2. Resumable upload in two steps</h2>
+  <pre><code># Step 1 — open the session (metadata)
+POST https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{ "snippet": { "title": "…", "description": "…", "categoryId": "22" },
+  "status":  { "privacyStatus": "public", "selfDeclaredMadeForKids": false } }
+→ 200, Location: https://…   ← this header is the upload URL
+
+# Step 2 — send the bytes
+PUT {Location}
+Content-Type: video/mp4
+&lt;file bytes&gt;
+→ { "id": "VIDEO_ID", … }</code></pre>
+  <p>Without the <code>Location</code> header nothing downstream is possible, so that has to fail immediately. This server puts a 30-second timeout on opening the session.</p>
+  <p>Supported formats are <code>video/*</code>, up to 256GB. This server accepts only <code>.mp4</code> (video/mp4) and <code>.mov</code> (video/quicktime).</p>
+  <h3>Step 2 is chunked PUTs with resume</h3>
+  <p>The bytes don't go in a single PUT. They're split into <strong>8MB chunks by default</strong> (tunable with <code>SOCIAL_FLOW_YT_CHUNK_MB</code>; the protocol requires every chunk but the last to be a multiple of 256KiB), each carrying a <code>Content-Range</code>. One chunk's timeout is 300 seconds. The file never goes into the heap whole — one file handle and one chunk buffer — because long-form past 8 minutes runs to hundreds of MB and loading it all becomes the memory peak.</p>
+  <p>There's no size threshold branching the code. The dangerous path is the rarely-taken one, and short-form has to walk it daily so a regression shows up in that day's publish rather than in a long-form pilot. The extra round trips for 3–7 chunks cost 100–300ms each over keep-alive, under 2 seconds total.</p>
+  <div class="ok">
+    <strong>An interrupted upload continues where it stopped.</strong> The session URL, file size, and mtime are written under <code>&lt;SNS_TOKEN_DIR&gt;/.yt-upload/</code> (24-hour lifetime — YouTube allows 7 days, we don't trust it that far), and calling again for the same file <strong>asks the server for the offset first</strong>. Trusting our own remembered offset isn't safe: sometimes the bytes arrived and only the response was cut, and resending then creates a duplicate video. If it turns out to be finished already, we return that <code>videoId</code> with <code>resumed: true</code> and upload nothing. If writing the state file is blocked, we skip it silently and fall back to the no-resume behavior — a failed state write must not become a failed publish.
+  </div>
+</section>
+
+<section id="fields">
+  <h2>3. snippet · status fields</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Field</th><th>Value</th><th>This server</th></tr></thead>
+    <tbody>
+      <tr><td><code>snippet.title</code></td><td>Up to 100 characters. <strong>Angle brackets <code>&lt;&gt;</code> rejected</strong></td><td>Length and brackets validated in zod</td></tr>
+      <tr><td><code>snippet.description</code></td><td>Up to 5,000</td><td>Same — but counted in <strong>bytes</strong>, so Korean at 3 bytes per character caps out around 1,666 characters</td></tr>
+      <tr><td><code>snippet.categoryId</code></td><td>Required. <code>22</code>=People &amp; Blogs · <code>24</code>=Entertainment · <code>25</code>=News &amp; Politics · <code>27</code>=Education · <code>28</code>=Science &amp; Tech</td><td><strong>Exposed · defaults to <code>22</code></strong></td></tr>
+      <tr><td><code>snippet.tags</code></td><td>Keyword array</td><td>Not exposed — on Shorts, title and description keywords weigh more than tags</td></tr>
+      <tr><td><code>status.privacyStatus</code></td><td><code>public</code> · <code>unlisted</code> · <code>private</code></td><td>Defaults to <code>public</code></td></tr>
+      <tr><td><code>status.selfDeclaredMadeForKids</code></td><td>bool — COPPA self-declaration</td><td><strong>Exposed as <code>madeForKids</code></strong> · defaults to <code>false</code>. Content for children must be declared <code>true</code> (a false declaration is grounds for channel action; <code>true</code> disables comments and personalized ads)</td></tr>
+      <tr><td><code>status.containsSyntheticMedia</code></td><td>bool — self-disclosure of AI-generated or altered content</td><td><strong>Exposed as <code>containsSyntheticMedia</code> · defaults to <code>true</code></strong>. This pipeline uses Veo video and Lyria music, so on is the right default. YouTube states the disclosure doesn't affect reach or monetization eligibility, so leaving it on costs nothing when in doubt; the only place to set <code>false</code> is a clear exemption — generating scripts, titles, or thumbnails, generating subtitles, cloning your own voice, non-realistic animation, color grading and beauty filters</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong><code>categoryId</code> is required, and getting it wrong costs you quietly.</strong> The category feeds recommendation and browse classification, so a general-interest channel's video uploaded as <code>25</code> (News &amp; Politics) surfaces to the wrong interest group. <code>22</code> (People &amp; Blogs) is the right default for short-form, and the caller has to be able to change it to suit the channel.
+  </div>
+  <div class="note">
+    <strong>Partial edits go through <code>youtube_update</code>.</strong> It changes visibility, title, description, <code>categoryId</code>, <code>madeForKids</code>, <code>containsSyntheticMedia</code>, and scheduled publishing (<code>publishAt</code>) on a video that's already up. <code>videos.update</code> <strong>resets any field you omit</strong> to its default, so this tool reads the current values first and sends the unspecified ones back unchanged. Before a change you can't undo, call it with <code>dryRun: true</code> to see the body it would send.
+  </div>
+  <div class="danger">
+    An <strong>unverified project</strong> created after 2020-07-28 has its uploads forced to <code>private</code>. If you send <code>privacyStatus: "public"</code> and it still goes up private, the API project hasn't passed its compliance audit.
+  </div>
+</section>
+
+<section id="thumb">
+  <h2>4. Thumbnails</h2>
+  <pre><code>POST https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId={id}
+Authorization: Bearer {access_token}
+Content-Type: image/jpeg | image/png
+&lt;image bytes&gt;</code></pre>
+  <ul>
+    <li>Format <code>.jpg</code>/<code>.jpeg</code>/<code>.png</code>, <strong>2MB or less</strong>.</li>
+    <li>Refused unless the channel has <strong>phone verification (intermediate features)</strong>.</li>
+    <li><code>thumbnailFilePath</code> is a <strong>required argument</strong> on <code>youtube_publish</code>. Upload without one and YouTube picks an arbitrary frame, the title cover never shows, and the vertical surface can't be undone through the API afterwards.</li>
+    <li>What it changes is the <strong>landscape surface</strong> only (search results, share previews, embeds) — the vertical frame in the Shorts feed and the channel's Shorts tab changes only through frame selection in the YouTube app.</li>
+  </ul>
+  <div class="ok">
+    <strong>Two ordering rules.</strong> ① Validating the thumbnail file (exists, extension, 2MB) happens <strong>before the upload</strong> — failing after it wastes quota and time already spent. ② Conversely, a failing <code>thumbnails.set</code> <em>call</em> <strong>doesn't fail the whole operation</strong> — the video is already up and re-uploading is non-idempotent and costs quota, so it's downgraded to <code>thumbnailWarning</code>.
+  </div>
+</section>
+
+<section id="captions">
+  <h2>5. Caption tracks — uploaded separately</h2>
+  <p>Uploading subtitles as a file instead of burning them into the picture means you can swap the subtitles alone after publishing, viewers can turn them off, and YouTube's auto-translation has a source. Burned-in subtitles turn one typo into a re-encode and a re-post.</p>
+  <pre><code>POST https://www.googleapis.com/upload/youtube/v3/captions?uploadType=multipart&amp;part=snippet
+Authorization: Bearer {access_token}
+Content-Type: multipart/related; boundary={boundary}
+
+--{boundary}
+Content-Type: application/json; charset=UTF-8
+
+{"snippet":{"videoId":"...","language":"ko","name":"","isDraft":false}}
+--{boundary}
+Content-Type: application/octet-stream
+
+&lt;SRT bytes&gt;
+--{boundary}--</code></pre>
+  <ul>
+    <li><code>snippet.videoId</code>, <code>snippet.language</code>, and <code>snippet.name</code> are required. <code>language</code> comes from the tool argument <code>captionLanguage</code> (BCP-47, defaults to <code>ko</code>) and becomes the source language for YouTube's auto-translation. <code>name</code> is the track's display name, so <strong>an empty string is the default track</strong>.</li>
+    <li>Up to 100MB. Accepted MIME types are <code>text/xml</code>, <code>application/octet-stream</code>, and <code>*/*</code>.</li>
+    <li>The upload protocol follows Google's common convention — <code>uploadType=multipart</code>, metadata and file in one request, is the standard for small files like an SRT (video uses <code>resumable</code>).</li>
+  </ul>
+  <div class="danger">
+    <strong>Two things differ from the video upload.</strong> ① The scope is <code>youtube.force-ssl</code> (or <code>youtubepartner</code>) — the publishing scope <code>youtube.upload</code> is <strong>refused</strong>. Publish with an old upload-only token and the video goes up while the captions fail. ② The quota is <strong>400 units per call</strong> — 400 times <code>videos.insert</code>'s single unit, so it's called once per episode.
+  </div>
+  <div class="ok">
+    <strong>The ordering rule matches thumbnails.</strong> Caption file validation (extension, existence, size) happens <strong>before the upload</strong>, and a failing <code>captions.insert</code> doesn't fail the whole operation — the video is already public and re-uploading is non-idempotent, so it's downgraded to <code>captionWarning</code>. When insufficient scope is detected, the warning carries the reissue procedure.
+  </div>
+</section>
+
+<section id="quota">
+  <h2>6. Quota — the 2026 change</h2>
+  <div class="danger">
+    <strong>How videos.insert is charged has changed.</strong> It used to draw roughly 1,600 units per call from a shared 10,000-unit daily bucket, which made <strong>6 uploads a day</strong> the effective ceiling. Now <code>videos.insert</code> and <code>search.list</code> have separate buckets, and <strong>videos.insert costs 1 unit from the Video Uploads bucket (100 a day by default)</strong>.
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th></th><th>Before</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td>Bucket</td><td>Shared, 10,000 units/day</td><td><strong>Video Uploads</strong>, dedicated</td></tr>
+        <tr><td>Cost per call</td><td>About 1,600 units</td><td>1 unit</td></tr>
+        <tr><td>Effective daily ceiling</td><td>About 6</td><td>About 100</td></tr>
+      </tbody>
+    </table>
+    </div>
+    Any explanation that rations uploads because of "6 a day" is now wrong guidance — it makes the model postpone publishing it should do.
+  </div>
+  <p>The remaining methods, <code>channels.list</code> among them, still draw on the shared bucket. <code>sns_account_check</code>'s channel lookup is one of those.</p>
+</section>
+
+<section id="shorts">
+  <h2>7. Shorts classification</h2>
+  <p>There's no flag that makes something a Short. YouTube classifies it automatically from <strong>a vertical (9:16) aspect ratio and a length of 3 minutes or less</strong>.</p>
+  <ul>
+    <li>Keyword-style titles do better — for Shorts, a large share of exposure comes from title search.</li>
+    <li>The description wants a one-line summary, the key points, and 3–5 hashtags (including <code>#Shorts</code>).</li>
+  </ul>
+</section>
+
+<section id="scout">
+  <h2>8. Market topic scouting</h2>
+  <p><code>youtube_topic_scout</code> isn't about publishing or your own channel's insights. It gathers related channels from seed queries, takes the median view count of each channel's recent uploads, and pulls topic phrases from the titles of videos that beat that median by 5× or more. Absolute view counts can't be a yardstick for picking topics, because the baseline differs with channel size.</p>
+  <pre><code>GET /search?part=snippet&amp;type=video&amp;order=viewCount&amp;publishedAfter=…   # 100 units
+GET /channels?part=snippet,statistics,contentDetails&amp;id=…             # 1 unit
+GET /playlistItems?part=contentDetails&amp;playlistId=uploads             # 1 unit
+GET /videos?part=snippet,statistics,contentDetails&amp;id=…               # 1 unit</code></pre>
+  <p><code>YOUTUBE_API_KEY</code> takes precedence for authentication — this is public data, so no OAuth is needed and the publishing quota stays untouched. Without a key, the same endpoints go through the channel's OAuth using <code>youtube.readonly</code>. A token holding only the publishing scope <code>youtube.upload</code> gets search refused.</p>
+  <p>The <code>/social-flow:topic-scout</code> skill defaults to the US (<code>US</code>/<code>en</code>) and China (<code>CN</code>/<code>zh</code>) markets. Rather than feeding Korean seeds in directly, it translates them into English and Chinese nouns, calls the tool once per market, and merges with <code>merge-scout.py</code>. For Korea only, pass <code>regionCode: KR</code> explicitly. The output is the md and html under <code>data/&lt;channel&gt;/growth/keywords/</code>; a grow-youtube plan with <code>topic_source: scout</code> reads the md.</p>
+</section>
+
+<section id="impl">
+  <h2>9. Implementation vs. contract</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Item</th><th>Official contract</th><th>social-flow implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Upload method</td><td>multipart · resumable</td><td>resumable (stable for large files)</td></tr>
+      <tr><td>Video format</td><td><code>video/*</code>, 256GB</td><td><code>.mp4</code> and <code>.mov</code> only — MIME decided by extension</td></tr>
+      <tr><td><code>categoryId</code></td><td>Required</td><td>Exposed · defaults to <code>22</code></td></tr>
+      <tr><td>Thumbnail</td><td>Separate call</td><td><strong>Required argument</strong> — validated before upload → set after upload → failure downgraded to a warning</td></tr>
+      <tr><td>AI disclosure</td><td><code>status.containsSyntheticMedia</code></td><td>Defaults to <code>true</code> — this pipeline's video and music are generated</td></tr>
+      <tr><td>Captions</td><td><code>captions.insert</code> (force-ssl · 400 units)</td><td><strong>Default behavior</strong> — takes an <code>.srt</code> via <code>captionFilePath</code> and registers it after the upload. Same ordering rule as thumbnails (validate first, downgrade failure to a warning). The video itself goes up as a clean master with no subtitles</td></tr>
+      <tr><td>Target channel</td><td>Decided by the token</td><td>Not configured — confirm in advance with <code>sns_account_check</code></td></tr>
+      <tr><td>Transfer</td><td>Single PUT or chunked PUT</td><td>8MB chunks by default (<code>SOCIAL_FLOW_YT_CHUNK_MB</code>) · 300 seconds per chunk · the file never sits in memory whole</td></tr>
+      <tr><td>Retries</td><td>—</td><td>No blind re-upload — uploads are non-idempotent and it would duplicate the video. Instead, <strong>chunk-level resume</strong>: ask the server for the offset, continue from there, and if it's already finished return that <code>videoId</code></td></tr>
+      <tr><td>Result</td><td><code>{ id }</code></td><td><code>videoId</code> + <code>permalink</code> + <code>thumbnailSet</code>/<code>thumbnailWarning</code> + <code>captionSet</code>/<code>captionWarning</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  As of 2026-08-18 · Implementation <a href="../../server/src/sns-client.ts">server/src/sns-client.ts</a> · <a href="index.en.html">API reference hub</a>
+</footer>
+
+</div>
+</body>
+</html>

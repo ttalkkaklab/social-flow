@@ -1,21 +1,25 @@
 #!/usr/bin/env node
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { config } from './config.js';
-import { SNS_CHANNEL_BY_TOOL, TOOLS } from './tools.js';
+import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { config, listChannelDirs } from './config.js';
+import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
-import { enabledChannels } from './sns-client.js';
-const server = new Server({ name: 'social-flow', version: '0.2.0' }, { capabilities: { tools: {} } });
-// 채널별 게시 툴은 자격증명 파일이 있는 채널만 노출한다 — 요청 시점 평가라
-// 토큰 파일 추가가 서버 재시작 없이 반영된다. 핸들러는 전부 유지되므로 숨은
-// 툴을 직접 호출해도 명시적 토큰 부재 에러가 반환된다.
+import { enabledPlatforms } from './sns-client.js';
+// The server version carried in the initialize response — same value as package.json's version.
+// If the two drift, the version clients see stops matching the actual package, so bump this
+// line together with package.json (the contract test checks that the two agree).
+const server = new Server({ name: 'social-flow', version: '0.11.0' }, { capabilities: { tools: {} } });
+// Per-platform publish tools are exposed only for platforms that have a credential file
+// (default tokens ∪ channel directories) — this is evaluated per request, so adding a token
+// file takes effect without a server restart. Every handler stays registered, so calling a
+// hidden tool directly still returns an explicit "no token" error.
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const enabled = new Set(enabledChannels());
+    const enabled = new Set(enabledPlatforms());
     return {
         tools: TOOLS.filter((tool) => {
-            const channel = SNS_CHANNEL_BY_TOOL[tool.name];
-            return channel === undefined || enabled.has(channel);
+            const platform = SNS_PLATFORM_BY_TOOL[tool.name];
+            return platform === undefined || enabled.has(platform);
         }),
     };
 });
@@ -23,11 +27,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     try {
         const handler = ROUTES[name];
+        // An unknown tool is a protocol error (-32602), not an execution failure (isError) —
+        // the MCP two-layer error model: only failures of tools that exist become tool results
         if (!handler)
-            throw new Error(`Unknown tool: ${name}`);
+            throw new McpError(ErrorCode.InvalidParams, `Unknown tool: ${name}`);
         return await handler(args ?? {});
     }
     catch (error) {
+        if (error instanceof McpError)
+            throw error;
         const message = error instanceof Error ? error.message : String(error);
         return {
             content: [{ type: 'text', text: `Error executing tool "${name}": ${message}` }],
@@ -48,15 +56,20 @@ process.once('SIGTERM', gracefulShutdown);
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    // stdout 은 MCP 프로토콜 전용 — 로그는 stderr 로만
+    // stdout is reserved for the MCP protocol — logs go to stderr only
     console.error('social-flow MCP server started');
-    const snsEnabled = enabledChannels();
-    console.error(`Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* tools will fail)'}, ` +
+    const snsEnabled = enabledPlatforms();
+    const channelDirs = listChannelDirs();
+    console.error(`Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* and sns_issue_scout tools will fail)'}, ` +
         `naver keys ${config.naverClientId && config.naverClientSecret ? 'set' : 'MISSING (naver_search will fail)'}, ` +
         `data.go.kr key ${config.dataGoKrApiKey ? 'set' : 'MISSING (datago_file_fetch/datago_api_call will fail — search/detail/download still work)'}, ` +
-        `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_* video generation tools will fail)'}, ` +
-        `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail)'}, ` +
-        `sns channels ${snsEnabled.length > 0 ? snsEnabled.join(',') : 'none'} (credential files found — others hidden from ListTools)`);
+        `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail — tts_local_generate does not need it)'}, ` +
+        `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail — image_local_generate does not need it)'}, ` +
+        `local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : 'python3 (default — set SUPERTONIC_PYTHON for a virtualenv)'}, ` +
+        `local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : '~/.local/bin/mflux-generate-z-image-turbo (default — set MFLUX_ZIMAGE_BIN if elsewhere)'}, ` +
+        `youtube data key ${config.youtubeApiKey ? 'set' : 'MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)'}, ` +
+        `sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(',') : 'none'} (credential files found — others hidden from ListTools), ` +
+        `sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(',')}]`).join(' ') : 'none (flat/default tokens only)'}`);
 }
 main().catch((error) => {
     console.error('Failed to start social-flow MCP server:', error);

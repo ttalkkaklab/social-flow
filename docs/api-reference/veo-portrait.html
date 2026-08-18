@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veo 인물·참조 정책 — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="veo-portrait.en.html">
+<link rel="alternate" hreflang="ko" href="veo-portrait.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="veo-portrait.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Veo 인물·참조</div>
+
+<header class="hero">
+  <div class="kicker">GOOGLE GEMINI</div>
+  <h1>Veo 인물·참조 정책</h1>
+  <p class="sub"><strong>Veo 3.1 은 성인 얼굴을 그대로 받는다.</strong> Seedance 2.0 이 거부한 바로 그 클로즈업 PNG 를 넣어 4초 클립을 뽑았다. 대신 잠긴 문이 다른 자리에 있다 — 아이 얼굴, 화풍 참조, 그리고 자산 등록소 자체다. 이 문서는 <a href="seedance-portrait.html">Seedance 인물·자산 정책</a>과 같은 관점으로 Veo 를 다시 잰 기록이다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://ai.google.dev/gemini-api/docs/veo">Veo 가이드</a></span>
+    <span>모델 능력표 <a href="gemini-veo.html">Veo 3.1</a></span>
+    <span>인증 <code>GEMINI_API_KEY</code></span>
+    <span>구현 <code>server/src/video-client.ts</code></span>
+    <span>확인일 <strong>2026-08-15</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#probe">실측 — Seedance 가 막은 그 이미지로</a></li>
+    <li><a href="#policy">정책은 값 하나로 표현된다</a></li>
+    <li><a href="#register">자산 등록소는 없다</a></li>
+    <li><a href="#refimg">참조 이미지를 콘티처럼 쓰면 깨진다</a></li>
+    <li><a href="#prompt">인물 컷을 글로 쓰는 법</a></li>
+    <li><a href="#traps">함정</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="probe">
+  <h2>1. 실측 — Seedance 가 막은 그 이미지로</h2>
+  <p>두 엔진을 <strong>같은 파일 하나</strong>로 찔렀다. 1080×1920 세로 PNG 이고, 밤길에서 불안한 표정을 짓는 한국 여성의 얼굴이 화면을 거의 채운다. 사진이 아니라 Seedance 2.0 이 만든 영상에서 뽑은 프레임인데도 Seedance 2.0 은 자기 출력물을 되받기를 거부했다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>엔진</th><th>호출</th><th>결과</th><th>비용</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>dreamina-seedance-2-0-260128</code></td>
+        <td><code>first_frame</code> · 480p · 4초</td>
+        <td><strong>거부</strong> — <code>InputImageSensitiveContentDetected.PrivacyInformation</code><br>“input image ‘content[1]’ may contain real person”</td>
+        <td>0 <span class="badge free">태스크 생성 전 차단</span></td>
+      </tr>
+      <tr>
+        <td><code>veo-3.1-lite-generate-preview</code></td>
+        <td><code>veo_img2video</code> · 9:16 · 720p · 4초</td>
+        <td><strong>통과</strong> — 720×1280 · 24fps · 4.000초, AAC 48kHz 스테레오 동봉(평균 −21.4 dB)</td>
+        <td>약 $0.20</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ok">
+    <strong>얼굴이 유지됐다.</strong> 입력·첫 프레임·3.6초 프레임을 나란히 붙여 눈으로 대조한 결과, 4초 동안 눈매·코·턱선·머리 결이 그대로다. 배경 가로등이 밝아지고 목선이 미세하게 움직이는 정도가 변화의 전부다. <strong>가장 싼 티어(lite)에서 잰 값</strong>이므로 위 티어는 이보다 나쁠 이유가 없다.
+  </div>
+  <div class="warn">
+    <strong>이 실측이 덮는 범위는 이미지→영상 한 모드다.</strong> 참조 이미지 모드(<code>veo_reference</code>)는 문서상 같은 <code>allow_adult</code> 정책이지만 아직 돈을 내고 확인하지 않았다 — 참조를 쓰면 길이가 8초로 고정되고 lite 가 막혀 <code>fast</code> 8초, 약 $0.80 이 든다. 표에 없는 칸을 문서만 보고 “된다”로 쓰지 않는다.
+  </div>
+
+  <h3>두 엔진의 인물 정책 대조</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>축</th><th>Seedance 2.x</th><th>Veo 3.1</th></tr></thead>
+    <tbody>
+      <tr><td>성인 얼굴 입력</td><td><strong>거부</strong>(AI가 만든 얼굴도 걸린다)</td><td><strong>허용</strong> — 실측</td></tr>
+      <tr><td>아이 얼굴 입력</td><td>거부</td><td>거부 — <code>allow_all</code> 허가 신청 대상(§2)</td></tr>
+      <tr><td>인물 자산 등록</td><td>있음 — <code>asset://</code> 라이브러리</td><td><strong>없음</strong> — 요청마다 인라인(§3)</td></tr>
+      <tr><td>화풍 참조</td><td>있음 — 참조 이미지가 화풍을 옮긴다</td><td><strong>3.1 은 미지원</strong>(§4)</td></tr>
+      <tr><td>참조 장수</td><td>2.5 최대 30장</td><td>최대 3장 · 8초 고정</td></tr>
+      <tr><td>자기 출력물 되받기</td><td>신뢰 출력물 30일</td><td>연장 전용 · 서버 보관 2일</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="policy">
+  <h2>2. 정책은 값 하나로 표현된다</h2>
+  <p>Seedance 는 입력 이미지를 분류기에 통과시켜 거부하거나 받는다. Veo 는 방식이 다르다 — <code>personGeneration</code> 이라는 필드에 <strong>모드마다 허용되는 값이 하나씩만</strong> 정해져 있고, 그 값이 곧 정책이다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>모드</th><th>Veo 3.1 · 3.1 Fast · 3.1 Lite</th><th>Veo 2(참고)</th></tr></thead>
+    <tbody>
+      <tr><td>텍스트→영상, 연장</td><td><code>"allow_all"</code> 만</td><td><code>allow_all</code> · <code>allow_adult</code> · <code>dont_allow</code></td></tr>
+      <tr><td>이미지→영상, 보간, 참조 이미지</td><td><code>"allow_adult"</code> 만</td><td><code>allow_adult</code> · <code>dont_allow</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>선택지가 하나면 파라미터가 아니라 상수다.</strong> 이 서버가 <code>personGeneration</code> 을 안 넘기는데도 잃는 게 없는 이유가 이것이다 — 3.1 계열에서는 넘기든 말든 같은 값으로 간다. Veo 2 를 되살릴 일이 생기면 그때는 값을 골라야 한다.
+  </div>
+  <p><code>allow_adult</code> 는 <strong>어른만</strong> 이라는 뜻이다. 그래서 이미지→영상에서 실제로 막히는 건 아이가 든 이미지다. 개발자 포럼에 허가 신청 글이 쌓여 있고, 거기 붙은 오류 문구가 이것이다.</p>
+  <pre><code>The input image contains content that has been blocked by your
+current safety settings for person/face generation.
+— Support code: 17301594</code></pre>
+  <div class="danger">
+    <strong>그림으로 바꿔도 안 통한다.</strong> 위 신청 글의 사업자는 아이 사진을 3D 동화풍 캐릭터 <em>일러스트</em>로 바꾼 뒤 그 그림을 넣었는데도 같은 문구로 막혔다. 사실적 초상이냐 아니냐가 아니라 <strong>미성년으로 보이느냐</strong>가 판정 축이다. 우리 회차에서 아이가 나오는 컷을 계획한다면 Veo 이미지→영상 레인은 애초에 후보가 아니다.
+  </div>
+  <p>허가 경로는 열려 있지만 가볍지 않다. 미성년이 걸리면 표준 허가 신청이 아니라 <strong>Vertex AI 트러스트·세이프티 팀의 정책 심사</strong>로 넘어가고, Google Cloud 지원 채널을 통해 접수해야 한다. 구글 직원 답변도 이 경로를 지목한다.</p>
+
+  <h3>지역 제한</h3>
+  <p>EU·영국·스위스·MENA 에서는 Veo 3·3.1 이 <code>allow_adult</code> 만 허용한다. 텍스트→영상의 <code>allow_all</code> 도 그 지역에서는 어른으로 좁혀진다는 뜻이다. 한국은 해당하지 않지만, 이 플러그인을 그 지역 계정으로 돌리면 텍스트 프롬프트만으로 만드는 컷의 결과가 달라진다.</p>
+
+  <h3>API 가 안 막는 것 — 실존 인물</h3>
+  <div class="warn">
+    <strong>Veo 는 어른 얼굴을 구분 없이 받는다.</strong> 그 얼굴이 AI 가 만든 가상 인물인지 실제로 존재하는 사람인지 API 는 묻지 않았다. 즉 <strong>실존 인물의 초상을 넣을지 말지는 게이트가 아니라 우리 판단이다.</strong> 구글의 생성형 AI 금지 정책이 거는 선은 이렇다.
+    <ul>
+      <li>“Impersonating an individual (living or dead) without explicit disclosure, in order to deceive.” — <strong>속일 목적</strong>의 무고지 사칭</li>
+      <li>“using personal data or biometrics without legally-required consent” — 동의 없는 개인정보·생체정보 사용</li>
+      <li>“Facilitates non-consensual intimate imagery.”</li>
+    </ul>
+    정책은 사칭·무동의를 막지 초상 자체를 막지 않는다. 그래서 <em>거부당하지 않았다</em>가 <em>써도 된다</em>를 뜻하지 않는다. 실인물 소재는 권리 확인을 우리가 하고 근거를 적어 둔다.
+  </div>
+  <p>생성 영상에는 눈에 보이지 않는 <strong>SynthID 워터마크</strong>가 들어가고, 출력은 안전 필터와 <strong>암기 검사</strong>(학습 데이터를 그대로 재현하는지 보는 검사)를 통과한다. 이건 우리가 끌 수 있는 옵션이 아니다.</p>
+</section>
+
+<section id="register">
+  <h2>3. 자산 등록소는 없다</h2>
+  <p>Seedance 쪽 조사에서 가장 쓸모 있던 발견은 <code>asset://</code> 였다 — 인물·캐릭터를 한 번 등록해 두고 회차마다 ID 로 불러 쓰는 라이브러리다. <strong>Veo 에는 그 대응물이 없다.</strong> 없는 게 우리가 못 찾은 게 아니라, 설계가 그렇다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>넣는 것</th><th>전달 방식</th><th>재사용</th></tr></thead>
+    <tbody>
+      <tr><td>첫·끝 프레임 이미지</td><td>요청 본문에 base64 인라인</td><td>없음 — 매번 다시 올린다</td></tr>
+      <tr><td>참조 이미지 1~3장</td><td>요청 본문에 base64 인라인</td><td>없음</td></tr>
+      <tr><td>연장할 영상</td><td>요청 본문에 base64 인라인</td><td>Veo 가 만든 영상만(공식 계약)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>“우리가 만든 결과물을 되받는” 경로가 하나 있긴 하다. <strong>연장</strong>(<code>veo_extension</code>)이다. Seedance 의 신뢰 출력물 경로와 목적이 같다 — 모델이 자기 출력물임을 알아보므로 인물 검사를 다시 걸지 않는다. 그런데 유효기간이 짧다.</p>
+  <div class="warn">
+    <strong>서버가 생성 영상을 갖고 있는 기간은 2일이다.</strong> Seedance 의 신뢰 출력물 30일, 결과 URL 24시간과 견줘 중간쯤이다. 우리 클라이언트는 생성 즉시 로컬 <code>.mp4</code> 로 내려받으므로 2일이 지나도 연장 입력을 만들 수는 있다 — 파일을 base64 로 다시 올리기 때문이다. 다만 <strong>공식 계약은 “Veo 생성물·720p·141초 이하”이고 우리 서버는 확장자만 검사한다.</strong> Veo 가 만들지 않은 mp4 를 넣으면 어떻게 되는지는 확인하지 않았다.
+  </div>
+  <div class="note">
+    Vertex AI 경로에는 <code>storageUri</code> 로 GCS 버킷을 지정하는 옵션이 있는데, 이건 <strong>출력 저장소</strong>이지 자산 등록소가 아니다. 참조 이미지는 Vertex 에서도 <code>bytesBase64Encoded</code> 인라인이다. 즉 등록소가 없다는 결론은 두 경로 모두에 해당한다.
+  </div>
+  <p>실무로 옮기면 이렇다. <strong>캐릭터 일관성은 Veo 쪽에 맡기지 말고 우리가 파일로 관리한다.</strong> 채널 캐릭터의 정면·측면·전신 PNG 를 <code>data/&lt;채널&gt;/assets/characters/&lt;id&gt;/</code> 에 두고 회차마다 같은 파일을 참조 이미지로 올린다. <code>catalog.md</code> 의 <code>character</code> 행과 <code>resolve-asset.py</code> 가 그 시트를 찾는다. 등록소가 없다는 건 곧 <strong>버전이 우리 손에 있다</strong>는 뜻이라, 캐릭터를 고쳤을 때 과거 회차가 조용히 바뀌는 사고는 이쪽에서 안 난다.</p>
+</section>
+
+<section id="refimg">
+  <h2>4. 참조 이미지를 콘티처럼 쓰면 깨진다</h2>
+  <p>Seedance 조사에서 나온 질문이 여기서도 그대로 유효하다 — <strong>스케치·툰으로 컷을 그려서 참조로 넘기면 그 구도대로 만들어 주나?</strong> Veo 의 답은 Seedance 와 같은 “아니오”인데, 막히는 지점이 다르다.</p>
+
+  <h3>참조 종류는 둘, 그중 하나가 3.1 에서 닫혀 있다</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th><code>referenceType</code></th><th>하는 일</th><th>장수</th><th>Veo 3.1 계열</th></tr></thead>
+    <tbody>
+      <tr><td><code>"asset"</code></td><td>인물·캐릭터·제품 <strong>하나</strong>의 외형을 출력 영상에 보존</td><td>최대 3장</td><td>지원(lite 제외)</td></tr>
+      <tr><td><code>"style"</code></td><td>올린 이미지의 <strong>화풍</strong>을 출력 영상에 적용</td><td>1장</td><td><strong>미지원</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="danger">
+    Vertex 문서가 못을 박아 둔다 — <em>“Veo 3.1 models don't support <code>referenceImages.style</code>. Use <code>veo-2.0-generate-exp</code> when using style images.”</em> Gemini API 쪽은 아예 <code>asset</code> 만 노출한다. <strong>스케치·툰 화풍을 참조로 넘기는 길이 3.1 에서 닫혀 있고</strong>, 열려 있는 건 오디오도 못 만드는 실험용 2.0 모델뿐이다. 우리 파이프라인이 Veo 를 쓰는 이유가 네이티브 오디오라 이 교환은 성립하지 않는다.
+  </div>
+
+  <h3><code>asset</code> 은 구도가 아니라 외형이다</h3>
+  <p>이름이 헷갈리기 쉬운데, <code>asset</code> 이 보는 건 “무엇이 나오느냐”이지 “어디에 어떻게 놓이느냐”가 아니다. 콘티 한 장을 <code>asset</code> 으로 넣으면 Veo 는 그 배치를 흉내 내는 대신 <strong>그림 자체를 등장시킨다</strong> — 종이에 그린 선화가 영상 안에서 움직이는 결과다. 구글 예제도 그렇게 쓴다. 아귀 그림 한 장과 공주 옷 한 장을 넣고 “옷 입고 헤엄치는 물고기 만화”를 시켰더니 두 대상이 합쳐진 영상이 나왔지, 두 그림의 배치가 재현된 게 아니다.</p>
+  <div class="ok">
+    <strong>구도를 정하는 정본은 첫·끝 프레임이다.</strong> <code>image</code> 에 시작 컷, <code>lastFrame</code> 에 끝 컷을 넣으면 그 사이를 이어 준다. Seedance 실측에서 나온 결론과 같다 — 카메라·구도를 말로 설명하는 대신 그려서 주면 그대로 지켜진다. 다만 두 프레임을 넣는 보간 모드도 이미지→영상이라 <code>allow_adult</code> 이고, 이 조합은 아직 실측하지 않았다.
+  </div>
+
+  <h3>구글 예제가 전부 생성 이미지다</h3>
+  <p>공식 가이드의 참조 이미지 예제는 드레스·인물·선글라스 세 장이든 아귀와 공주 옷 두 장이든 <strong>전부 Nano Banana 로 만든 그림</strong>이다. 사진을 참조로 쓰는 예제가 하나도 없다. 금지는 아니지만, 벤더가 상정한 표준 흐름이 “이미지 모델로 자산을 만들고 그걸 영상 모델에 넘긴다”라는 신호로는 충분하다. 우리 파이프라인의 <code>gpt_image_text2img</code> → <code>veo_*</code> 순서가 그 흐름과 같다.</p>
+
+  <h3>참조를 쓰면 따라붙는 제약</h3>
+  <ul>
+    <li>길이가 <strong>8초 고정</strong>이다 — 4초짜리 칸을 채우려 해도 8초 값을 낸다.</li>
+    <li><strong>lite 는 참조 자체를 못 쓴다.</strong> 최소 <code>fast</code> 로 올라간다.</li>
+    <li>여러 각도의 선명한 이미지일수록 일관성이 오른다. 3장을 한 인물의 정면·측면·전신으로 채우는 쓰임이 여기다.</li>
+  </ul>
+</section>
+
+<section id="prompt">
+  <h2>5. 인물 컷을 글로 쓰는 법</h2>
+  <p>구도를 그림으로 못 주는 자리에서는 글이 유일한 통로다. 공식 가이드가 꼽는 요소는 일곱인데, 앞의 셋만 필수이고 나머지는 선택이다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>요소</th><th>쓰는 말</th></tr></thead>
+    <tbody>
+      <tr><td><strong>주제</strong> · 필수</td><td>화면에 담을 사물·사람·동물·풍경</td></tr>
+      <tr><td><strong>동작</strong> · 필수</td><td>걷기, 달리기, 고개 돌리기</td></tr>
+      <tr><td><strong>스타일</strong> · 필수</td><td>필름 누아르, 공포 영화, 만화</td></tr>
+      <tr><td>카메라</td><td>공중 촬영, 눈높이, 돌리 샷, 로우 앵글</td></tr>
+      <tr><td>구도</td><td>와이드 샷, 클로즈업, 싱글 샷, 투 샷</td></tr>
+      <tr><td>포커스·렌즈</td><td>얕은 포커스, 매크로 렌즈, 광각 렌즈</td></tr>
+      <tr><td>분위기</td><td>파란 톤, 야간, 따뜻한 색조</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>얼굴 디테일을 올리는 방법이 따로 있다</strong> — 프롬프트에 <code>portrait</code>(인물 사진)를 넣어 얼굴을 초점으로 지정한다. 우리 실측 프롬프트에는 이 말이 없었는데도 얼굴이 유지됐으니, 첫 프레임이 있으면 굳이 필요하지 않고 텍스트→영상에서 값어치가 크겠다.
+  </div>
+  <h3>소리</h3>
+  <ul>
+    <li><strong>대사는 따옴표로 감싼다</strong> — 감싸지 않으면 나레이션으로 읽거나 화면 글자로 새어 나온다.</li>
+    <li>효과음과 주변음은 명시한다 — “타이어가 삐걱이고 엔진이 굉음을 냄”, “희미한 험이 배경에 깔림”.</li>
+    <li><strong>연장하려면 마지막 1초에 음성이 있어야 한다.</strong> 조용히 끝난 클립은 소리가 이어지지 않는다.</li>
+  </ul>
+  <p>영어가 완전 지원 언어이고 나머지는 평가되지 않았다. 한국어 프롬프트가 되기는 하는데 결과가 달라질 수 있다는 뜻이라, 프롬프트는 영어로 쓰고 대사만 한국어로 감싸는 게 안전하다.</p>
+</section>
+
+<section id="traps">
+  <h2>6. 함정</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>함정</th><th>실제로 벌어지는 일</th></tr></thead>
+    <tbody>
+      <tr><td><strong>안전 필터는 조용히 걸린다</strong></td><td><code>done: true</code> 에 결과가 비어서 온다. <code>raiMediaFilteredReasons</code> 를 먼저 안 보면 “영상이 없다”는 모호한 오류가 되고, 모델이 같은 프롬프트로 재시도해 대기 시간만 태운다</td></tr>
+      <tr><td>차단되면 <strong>돈은 안 나간다</strong></td><td>오디오 처리나 안전 필터로 생성이 막히면 청구가 없다. 경계를 재는 실험이 비싸지 않다는 뜻이다 — 다만 성공하면 그대로 청구된다</td></tr>
+      <tr><td>생성 영상 <strong>서버 보관 2일</strong></td><td>2일 뒤 삭제된다. 우리 클라이언트는 즉시 로컬 저장이라 무해하지만, 연장을 며칠 뒤에 하려면 로컬 파일이 있어야 한다</td></tr>
+      <tr><td>lite 에 <strong>세 기능이 없다</strong></td><td>참조 이미지 · 연장 · 4k. 이 서버는 셋 다 호출 전에 거부한다</td></tr>
+      <tr><td>1080p·4k 는 <strong>8초 전용</strong></td><td>4초짜리 칸을 1080p 로 채우면 8초 값을 낸다. 참조 이미지도 8초 고정이다</td></tr>
+      <tr><td>연장 결과는 <strong>720p 고정</strong></td><td>1080p 클립을 연장하면 이어붙일 때 해상도가 어긋난다</td></tr>
+      <tr><td>지역 제한</td><td>EU·영국·스위스·MENA 계정은 <code>allow_adult</code> 로 좁혀진다</td></tr>
+      <tr><td>여러 영상을 <strong>참조로 못 준다</strong></td><td>영상 여러 개를 참조·추론하는 기능이 없다. 시도하면 품질이 떨어지거나 예상 밖 결과가 나온다</td></tr>
+      <tr><td>지연 <strong>최소 11초 ~ 최대 6분</strong></td><td>이 서버의 폴링 상한은 10분이라 여유가 있다</td></tr>
+      <tr><td>SynthID 는 <strong>못 끈다</strong></td><td>Seedance 의 <code>watermark: false</code> 로 지우는 눈에 보이는 워터마크와 다른 층이다. 화면에는 안 보이지만 검증 플랫폼으로 판별된다</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="impl">
+  <h2>7. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th></tr></thead>
+    <tbody>
+      <tr><td><code>personGeneration</code></td><td>모드마다 허용 값 1개</td><td>미노출 — 값이 하나뿐이라 <strong>손실 없음</strong></td></tr>
+      <tr><td><code>referenceType</code></td><td><code>asset</code> · <code>style</code>(3.1 미지원)</td><td><code>ASSET</code> 고정 — 3.1 에 <code>style</code> 이 없으므로 <strong>손실 없음</strong></td></tr>
+      <tr><td><code>seed</code></td><td>Veo 3 계열 지원(결정성 보장은 아니고 약간 개선)</td><td><strong>미노출</strong> — 같은 컷을 다시 뽑는 재현 실험을 못 한다</td></tr>
+      <tr><td>참조 장수</td><td>최대 3장</td><td>zod 로 1~3장 강제</td></tr>
+      <tr><td>연장 입력</td><td>Veo 생성물 · 720p · 141초 이하</td><td><strong>확장자만 검사</strong> — 출처·해상도·길이는 미검증</td></tr>
+      <tr><td>다중 생성</td><td>Gemini API 1개 / Vertex <code>sampleCount</code> 1~4</td><td>미노출 — 컷 단위 1개가 기본이고 N개는 값이 N배</td></tr>
+      <tr><td>결과 보관</td><td>서버 2일</td><td>생성 즉시 로컬 <code>.mp4</code> 저장 후 경로만 반환</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>Gemini Omni Flash</strong>(<code>gemini-omni-flash-preview</code>)라는 새 영상 모델이 Vertex 쪽 Interactions API 에 올라와 있다. 참조 이미지를 받고 3~10초를 1초 단위로 만들며 비율을 프롬프트에서 추론한다 — Veo 의 4·6·8초 격자보다 Seedance 쪽 자유도에 가깝다. 다만 GCS 버킷과 Vertex 인증이 전제라 <code>GEMINI_API_KEY</code> 한 줄로 도는 이 서버의 경로와 다르다. 인물 정책은 확인하지 않았다.
+  </div>
+</section>
+
+<footer class="meta" style="margin-top:2rem">
+  <span>출처 <a href="https://ai.google.dev/gemini-api/docs/veo">Veo 가이드·파라미터표</a></span>
+  <span><a href="https://docs.cloud.google.com/vertex-ai/generative-ai/docs/video/use-reference-images-to-guide-video-generation">asset·style 참조 가이드</a></span>
+  <span><a href="https://policies.google.com/terms/generative-ai/use-policy">생성형 AI 금지 정책</a></span>
+  <span><a href="https://discuss.ai.google.dev/t/request-allowlist-access-for-veo-3-1-person-generation-image-to-video-project-795cbc81-551b-444a-9/174028">인물 생성 허가 신청 스레드</a></span>
+  <span>대조 <a href="seedance-portrait.html">Seedance 인물·자산 정책</a></span>
+</footer>
+
+</div>
+</body>
+</html>

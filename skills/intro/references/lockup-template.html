@@ -1,0 +1,80 @@
+<!doctype html>
+<!-- Brand lockup card — for 1080×1920 headless capture (capture-frames.sh)
+     sed tokens: {{INK}} {{ACCENT}} {{ACCENT2}} {{CHANNEL_NAME}} {{TAGLINE}} {{LOGO_SRC}}
+     URL parameter mode:
+       full — background+character+channel name+tagline (final lockup, default)
+       char — background+character only (for veo lastImagePath — final pose card without text)
+       text — channel name+tagline only, transparent background (text plate — capture with alpha=1)
+     Element coordinates are identical across the three modes — the plate overlay
+     must match the lockup pixel-for-pixel. -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --ink: {{INK}}; --accent: {{ACCENT}}; --accent2: {{ACCENT2}}; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  body {
+    position: relative; background: transparent;
+    font-family: "Apple SD Gothic Neo", "Pretendard", sans-serif;
+  }
+  /* background — deep ink radial + accent glow + vignette */
+  .bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 120% 60% at 50% 38%, color-mix(in srgb, var(--accent) 16%, var(--ink)) 0%, var(--ink) 62%),
+      var(--ink);
+  }
+  .bg::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 140% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.55) 100%);
+  }
+  /* character — circular avatar (as platforms display it) + accent gradient ring + glow */
+  .avatar {
+    position: absolute; left: 50%; top: 820px; transform: translate(-50%, -50%);
+    width: 600px; height: 600px; border-radius: 50%; padding: 7px;
+    background: linear-gradient(140deg, var(--accent), var(--accent2));
+    box-shadow: 0 0 140px color-mix(in srgb, var(--accent) 55%, transparent),
+                0 30px 80px rgba(0,0,0,0.5);
+  }
+  .avatar img {
+    width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+  }
+  /* text scrim — keeps text contrast even over bright video (shared by full/text modes → preserves the pixel match) */
+  .text-scrim {
+    position: absolute; left: 50%; top: 1430px; transform: translate(-50%, -50%);
+    width: 980px; height: 520px; border-radius: 50%;
+    background: radial-gradient(closest-side,
+      color-mix(in srgb, var(--ink) 82%, transparent) 0%,
+      color-mix(in srgb, var(--ink) 55%, transparent) 55%, transparent 100%);
+  }
+  /* channel name & tagline — coordinates fixed across the three modes */
+  .name {
+    position: absolute; left: 50%; top: 1280px; transform: translateX(-50%);
+    width: 900px; text-align: center;
+    font-size: 96px; font-weight: 900; letter-spacing: -0.02em; color: #ffffff;
+    text-shadow: 0 4px 28px rgba(0,0,0,0.6);
+  }
+  .tagline {
+    position: absolute; left: 50%; top: 1442px; transform: translateX(-50%);
+    width: 860px; text-align: center;
+    font-size: 40px; font-weight: 600; line-height: 1.45;
+    color: color-mix(in srgb, var(--accent2) 72%, #ffffff);
+    text-shadow: 0 2px 18px rgba(0,0,0,0.55);
+  }
+  body.mode-char .name, body.mode-char .tagline, body.mode-char .text-scrim { display: none; }
+  body.mode-text .bg, body.mode-text .avatar { display: none; }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="avatar"><img src="{{LOGO_SRC}}" alt=""></div>
+  <div class="text-scrim"></div>
+  <div class="name">{{CHANNEL_NAME}}</div>
+  <div class="tagline">{{TAGLINE}}</div>
+<script>
+  const mode = new URLSearchParams(location.search).get('mode') || 'full';
+  document.body.className = 'mode-' + mode;
+</script>
+</body>
+</html>
