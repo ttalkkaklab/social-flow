@@ -12,12 +12,20 @@
  */
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
-import { CHANNEL_SLUG_RE, SNS_PLATFORMS, snsCredentialFile, snsTokenDir } from '../dist/config.js';
+import {
+  CHANNEL_SLUG_RE,
+  SNS_PLATFORMS,
+  disabledToolPatterns,
+  isToolDisabled,
+  snsCredentialFile,
+  snsTokenDir,
+} from '../dist/config.js';
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from '../dist/tools.js';
 import { ROUTES, threadsTextLength } from '../dist/handlers.js';
 import { TTS_VOICE_NAMES, VALID_TTS_MODELS } from '../dist/tts-client.js';
@@ -292,6 +300,44 @@ describe('routing consistency', () => {
     for (const name of Object.keys(SNS_PLATFORM_BY_TOOL)) {
       assert.ok(byName.has(name), `"${name}" from SNS_PLATFORM_BY_TOOL is not in the tool list`);
     }
+  });
+});
+
+/*
+ * Operator tool on/off — <SNS_TOKEN_DIR>/disabled-tools.json holds a JSON array of
+ * tool-name patterns. A listed tool is hidden from ListTools AND refused by CallTool
+ * (a stale client tool list must not bypass the switch). The file is read per
+ * request, so edits apply without a server restart.
+ */
+describe('tool on/off (disabled-tools.json)', () => {
+  it('a pattern is an exact name or a trailing-* prefix family, nothing fancier', () => {
+    assert.equal(isToolDisabled('seedance_text2video', ['seedance_*']), true);
+    assert.equal(isToolDisabled('seedance_reference', ['seedance_reference']), true);
+    assert.equal(isToolDisabled('veo_text2video', ['seedance_*']), false);
+    assert.equal(isToolDisabled('seedance_text2video', []), false);
+    // the "*" is a suffix wildcard only — it does not float mid-name
+    assert.equal(isToolDisabled('tts_local_generate', ['tts_*generate']), false);
+    // a bare "*" prefixes everything, i.e. turns the whole server off
+    assert.equal(isToolDisabled('naver_search', ['*']), true);
+  });
+
+  it('reads a JSON string array; a missing or malformed file turns nothing off', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sf-disabled-tools-'));
+    try {
+      const file = join(dir, 'disabled-tools.json');
+      assert.deepEqual(disabledToolPatterns(file), [], 'missing file must disable nothing');
+      writeFileSync(file, JSON.stringify(['seedance_*', 'naver_search']));
+      assert.deepEqual(disabledToolPatterns(file), ['seedance_*', 'naver_search']);
+      writeFileSync(file, '{"seedance_*": false}'); // wrong shape — object, not array
+      assert.deepEqual(disabledToolPatterns(file), [], 'malformed file must disable nothing');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('the documented seedance family pattern hides exactly the three seedance tools', () => {
+    const hidden = TOOLS.filter((tool) => isToolDisabled(tool.name, ['seedance_*'])).map((t) => t.name).sort();
+    assert.deepEqual(hidden, ['seedance_img2video', 'seedance_reference', 'seedance_text2video']);
   });
 });
 

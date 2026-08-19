@@ -454,6 +454,13 @@ channel specified, only that directory is used, with no fallback to the flat tok
 tools listed** (union of flat and channel directories). Issuance and renewal:
 `skills/publish/references/token-setup.md`.
 
+**Turning individual tools off**: write `<SNS_TOKEN_DIR>/disabled-tools.json` — a
+JSON array of tool names, where a trailing `*` covers a family. For example
+`["seedance_*"]` turns off all three Seedance video tools while keeping `veo_*` on.
+A listed tool disappears from ListTools and direct calls get an explicit refusal.
+The file is read per request, so edits apply without a server restart; remove the
+entry (or delete the file) to turn the tools back on.
+
 ## Documentation (docs/)
 
 Manuals are bilingual — Korean pages with English siblings (`*.en.html`).

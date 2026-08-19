@@ -5,7 +5,7 @@
  * time**, not at startup — the publish tools must work without a search key, and
  * vice versa.
  */
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 export const config = {
@@ -137,6 +137,38 @@ export function listChannelDirs() {
     }))
         .filter((dir) => dir.platforms.length > 0)
         .sort((a, b) => a.channel.localeCompare(b.channel));
+}
+/** Tool on/off file — a JSON array of tool-name patterns; a trailing "*" covers a family ("seedance_*"). */
+export const disabledToolsFile = join(snsTokenDir, 'disabled-tools.json');
+/**
+ * Reads the disabled-tool patterns. Missing file = every tool stays on. Read per
+ * request like the SNS credential gate, so edits apply without a server restart.
+ * A malformed file turns nothing off — it is reported on stderr, not half-guessed.
+ */
+export function disabledToolPatterns(file = disabledToolsFile) {
+    let raw;
+    try {
+        raw = readFileSync(file, 'utf8');
+    }
+    catch {
+        return [];
+    }
+    try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || !parsed.every((entry) => typeof entry === 'string')) {
+            throw new Error('expected a JSON array of strings');
+        }
+        return parsed;
+    }
+    catch (error) {
+        console.error(`[social-flow] ${file} ignored (${error instanceof Error ? error.message : String(error)}) — ` +
+            'write a JSON array of tool names, e.g. ["seedance_*"]');
+        return [];
+    }
+}
+/** True when the tool name hits one of the patterns — an exact name, or a trailing-"*" prefix. */
+export function isToolDisabled(name, patterns) {
+    return patterns.some((pattern) => pattern.endsWith('*') ? name.startsWith(pattern.slice(0, -1)) : name === pattern);
 }
 export function requireSerpApiKey() {
     if (!config.serpApiKey) {

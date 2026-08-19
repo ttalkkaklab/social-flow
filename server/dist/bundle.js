@@ -75063,7 +75063,7 @@ var StdioServerTransport = class {
 };
 
 // src/config.ts
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 var config2 = {
@@ -75131,6 +75131,32 @@ function listChannelDirs() {
     channel,
     platforms: SNS_PLATFORMS.filter((platform) => existsSync(snsCredentialFile(platform, channel)))
   })).filter((dir) => dir.platforms.length > 0).sort((a, b) => a.channel.localeCompare(b.channel));
+}
+var disabledToolsFile = join(snsTokenDir, "disabled-tools.json");
+function disabledToolPatterns(file = disabledToolsFile) {
+  let raw;
+  try {
+    raw = readFileSync(file, "utf8");
+  } catch {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every((entry) => typeof entry === "string")) {
+      throw new Error("expected a JSON array of strings");
+    }
+    return parsed;
+  } catch (error2) {
+    console.error(
+      `[social-flow] ${file} ignored (${error2 instanceof Error ? error2.message : String(error2)}) \u2014 write a JSON array of tool names, e.g. ["seedance_*"]`
+    );
+    return [];
+  }
+}
+function isToolDisabled(name, patterns) {
+  return patterns.some(
+    (pattern) => pattern.endsWith("*") ? name.startsWith(pattern.slice(0, -1)) : name === pattern
+  );
 }
 function requireSerpApiKey() {
   if (!config2.serpApiKey) {
@@ -84516,13 +84542,15 @@ ADVANCED CONTROLS (music_generate_advanced):
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.12.0" },
+  { name: "social-flow", version: "0.13.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const enabled = new Set(enabledPlatforms());
+  const disabled = disabledToolPatterns();
   return {
     tools: TOOLS.filter((tool) => {
+      if (isToolDisabled(tool.name, disabled)) return false;
       const platform = SNS_PLATFORM_BY_TOOL[tool.name];
       return platform === void 0 || enabled.has(platform);
     })
@@ -84533,6 +84561,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     const handler = ROUTES[name];
     if (!handler) throw new McpError(ErrorCode.InvalidParams, `Unknown tool: ${name}`);
+    if (isToolDisabled(name, disabledToolPatterns())) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Tool "${name}" is turned off by ${disabledToolsFile}. Remove its entry (or the family pattern covering it) from that JSON array to re-enable \u2014 no server restart needed.`
+          }
+        ],
+        isError: true
+      };
+    }
     return await handler(args ?? {});
   } catch (error2) {
     if (error2 instanceof McpError) throw error2;
@@ -84559,8 +84598,10 @@ async function main() {
   console.error("social-flow MCP server started");
   const snsEnabled = enabledPlatforms();
   const channelDirs = listChannelDirs();
+  const disabledPatterns = disabledToolPatterns();
+  const disabledCount = TOOLS.filter((tool) => isToolDisabled(tool.name, disabledPatterns)).length;
   console.error(
-    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}`
+    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, disabled tools ${disabledPatterns.length > 0 ? `${disabledPatterns.join(" ")} \u2192 ${disabledCount} hidden (${disabledToolsFile})` : "none"}`
   );
 }
 main().catch((error2) => {
