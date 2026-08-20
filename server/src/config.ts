@@ -6,7 +6,7 @@
  * vice versa.
  */
 
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -24,6 +24,13 @@ export const config = {
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   /** BytePlus ModelArk API key (required by the seedance_* video generation tools) — https://ai.byteplus.com/ark/region:ap-southeast-1/apikey */
   arkApiKey: process.env.ARK_API_KEY || '',
+  /**
+   * Suno API key (required by the suno_* music tools) — https://sunoapi.org/api-key
+   *
+   * Not an official Suno Inc. key. sunoapi.org (Kie.ai family) is a third-party
+   * REST wrapper. Lyria (`music_*`) keeps working on GEMINI_API_KEY without this.
+   */
+  sunoApiKey: process.env.SUNO_API_KEY || '',
   /**
    * YouTube Data API key (youtube_topic_scout's preferred public-query path).
    * Unlike OAuth it doesn't spend your channel's quota. Without it, falls back to
@@ -150,6 +157,43 @@ export function listChannelDirs(): Array<{ channel: string; platforms: SnsPlatfo
     .sort((a, b) => a.channel.localeCompare(b.channel));
 }
 
+/** Tool on/off file — a JSON array of tool-name patterns; a trailing "*" covers a family ("seedance_*"). */
+export const disabledToolsFile = join(snsTokenDir, 'disabled-tools.json');
+
+/**
+ * Reads the disabled-tool patterns. Missing file = every tool stays on. Read per
+ * request like the SNS credential gate, so edits apply without a server restart.
+ * A malformed file turns nothing off — it is reported on stderr, not half-guessed.
+ */
+export function disabledToolPatterns(file: string = disabledToolsFile): string[] {
+  let raw: string;
+  try {
+    raw = readFileSync(file, 'utf8');
+  } catch {
+    return [];
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every((entry): entry is string => typeof entry === 'string')) {
+      throw new Error('expected a JSON array of strings');
+    }
+    return parsed;
+  } catch (error) {
+    console.error(
+      `[social-flow] ${file} ignored (${error instanceof Error ? error.message : String(error)}) — ` +
+        'write a JSON array of tool names, e.g. ["seedance_*"]',
+    );
+    return [];
+  }
+}
+
+/** True when the tool name hits one of the patterns — an exact name, or a trailing-"*" prefix. */
+export function isToolDisabled(name: string, patterns: string[]): boolean {
+  return patterns.some((pattern) =>
+    pattern.endsWith('*') ? name.startsWith(pattern.slice(0, -1)) : name === pattern,
+  );
+}
+
 export function requireSerpApiKey(): string {
   if (!config.serpApiKey) {
     throw new Error(
@@ -191,6 +235,27 @@ export function requireOpenAiKey(): string {
     );
   }
   return config.openaiApiKey;
+}
+
+/**
+ * sunoapi.org REST base. Default is the public host. The env override is for a
+ * same-spec self-host or regional mirror — other vendors (TTAPI, EvoLink) use
+ * different auth headers and paths and must not be pointed here.
+ */
+export function sunoBaseUrl(): string {
+  return (process.env.SUNO_BASE_URL || 'https://api.sunoapi.org').replace(/\/+$/, '');
+}
+
+export function requireSunoKey(): string {
+  if (!config.sunoApiKey) {
+    throw new Error(
+      'SUNO_API_KEY is not set. suno_* music tools talk to sunoapi.org (https://sunoapi.org/api-key), ' +
+        'a third-party REST wrapper — Suno Inc. has no public self-serve API as of 2026-08. ' +
+        'music_*(Lyria) still works on GEMINI_API_KEY without this key. Set it only when you need ' +
+        'a sung full song or a loopable Suno bed.',
+    );
+  }
+  return config.sunoApiKey;
 }
 
 export function requireArkKey(): string {

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suno — social-flow API reference</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="suno.en.html">
+<link rel="alternate" hreflang="ko" href="suno.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="suno.html" hreflang="ko">한국어</a></div>
+
+<div class="crumbs"><a href="../index.en.html">Docs</a><span>/</span><a href="index.en.html">API reference</a><span>/</span>Suno</div>
+
+<header class="hero">
+  <div class="kicker">SUNOAPI.ORG</div>
+  <h1>Suno — sung full songs · loop BGM</h1>
+  <p class="sub">Suno Inc. has no public self-serve API as of 2026-08. This server talks to <strong>sunoapi.org</strong> (Kie.ai family), a third-party REST wrapper. The key is <code>SUNO_API_KEY</code>, not the Gemini key. The default narration-under bed is still Lyria (<code>music_*</code>).</p>
+  <div class="meta">
+    <span>Vendor <a href="https://docs.sunoapi.org/suno-api/generate-music">sunoapi.org docs</a></span>
+    <span>Key <code>SUNO_API_KEY</code></span>
+    <span>Code <code>server/src/suno-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#when">When to use which</a></li>
+    <li><a href="#generate">suno_generate</a></li>
+    <li><a href="#sound">suno_generate_sound</a></li>
+    <li><a href="#impl">What this implementation narrows</a></li>
+  </ol>
+</nav>
+
+<section id="when">
+  <h2>1. When to use which</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>Job</th><th>Tool</th><th>Key</th></tr></thead>
+    <tbody>
+      <tr><td>Narration-under bed (default)</td><td><code>music_generate_clip</code> 30s, builder loops it</td><td><code>GEMINI_API_KEY</code></td></tr>
+      <tr><td>Exact seconds, or a seed to reproduce</td><td><code>music_generate</code> / <code>music_generate_advanced</code></td><td><code>GEMINI_API_KEY</code></td></tr>
+      <tr><td>Narration-under bed (Suno)</td><td><code>suno_generate_sound</code> loop + BPM</td><td><code>SUNO_API_KEY</code></td></tr>
+      <tr><td>The song is the content</td><td><code>suno_generate</code></td><td><code>SUNO_API_KEY</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>The unattended path (autoproduce) never calls <code>suno_*</code>.</strong> Vocals fight the voiceover, and each call takes 2–3 minutes. An episode where the song is the piece goes through the human produce path.
+  </div>
+</section>
+
+<section id="generate">
+  <h2>2. suno_generate</h2>
+  <p>Exactly two tracks per call. Remote URLs expire after 15 days, so files are saved locally as soon as polling finishes. MCP stdio has no webhook server, so <code>callBackUrl</code> is a dummy (<code>https://httpbin.org/post</code>) and we finish by polling. A callback exception with an audio URL present is treated as success.</p>
+  <ul>
+    <li><code>customMode=false</code> — the model writes lyrics and style from prompt alone.</li>
+    <li><code>customMode=true</code> with vocals — prompt is sung as the lyrics. style and title required.</li>
+    <li><code>customMode=true</code> + <code>instrumental=true</code> — no vocals. style and title required.</li>
+  </ul>
+  <p>Default model V5 (up to 8 minutes). <code>duration</code> (10–360s) is accepted only on V5_5 + customMode. Generate costs about 12 credits/call (≈ $0.06 at the $5/1000 pack).</p>
+</section>
+
+<section id="sound">
+  <h2>3. suno_generate_sound</h2>
+  <p>V5-only Sounds task. A loop without intro/outro, with optional BPM and key. The builder stretches it with <code>-stream_loop -1</code>. Set <code>filename</code> to <code>.wav</code> to transcode to 48kHz stereo PCM for <code>.work/bgm.wav</code>.</p>
+</section>
+
+<section id="impl">
+  <h2>4. What this implementation narrows</h2>
+  <ul>
+    <li>Auth is Bearer <code>SUNO_API_KEY</code>. The Gemini key is not a substitute.</li>
+    <li>Default host <code>https://api.sunoapi.org</code>. <code>SUNO_BASE_URL</code> is for a same-spec mirror — other vendors (TTAPI, EvoLink) use different headers and paths and must not be pointed here.</li>
+    <li>Lyrics only: <code>suno_generate_lyrics</code>. Remaining credits: <code>suno_credits</code>.</li>
+    <li>The key is checked at call time, not startup. Lyria keeps working without it.</li>
+  </ul>
+</section>
+
+</div>
+</body>
+</html>

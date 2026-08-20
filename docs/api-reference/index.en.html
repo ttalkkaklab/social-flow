@@ -16,11 +16,11 @@
 <header class="hero">
   <div class="kicker">API REFERENCE</div>
   <h1>Every API social-flow calls</h1>
-  <p class="sub">A reference for the official contracts of the 12 external APIs the internal MCP server (<code>server/src</code>) actually calls. Each page puts <strong>what the official docs say</strong> next to <strong>what this repo's implementation actually does</strong>, so you can see where the two diverge. For images and voice the default path is two on-device engines that never touch the network, and those have no external contract to call.</p>
+  <p class="sub">A reference for the official contracts of the 13 external APIs the internal MCP server (<code>server/src</code>) actually calls. Each page puts <strong>what the official docs say</strong> next to <strong>what this repo's implementation actually does</strong>, so you can see where the two diverge. For images and voice the default path is two on-device engines that never touch the network, and those have no external contract to call.</p>
   <div class="meta">
-    <span>As of <strong>2026-08-18</strong></span>
-    <span>Tools <strong>46</strong></span>
-    <span>External APIs <strong>12</strong> + local <strong>2</strong></span>
+    <span>As of <strong>2026-08-20</strong></span>
+    <span>Tools <strong>50</strong></span>
+    <span>External APIs <strong>13</strong> + local <strong>2</strong></span>
     <span>MCP SDK <strong>1.30.0</strong></span>
   </div>
 </header>
@@ -73,6 +73,11 @@
       <p>Two APIs with different characters — Lyria 3 Clip (Interactions · fixed 30s · MP3) and Lyria RealTime (WebSocket · PCM 48kHz · 12 settings).</p>
       <div class="tools">music_generate_clip · music_generate · music_generate_advanced · music_list_options</div>
     </a>
+    <a class="card" href="suno.en.html">
+      <h3>Suno (sunoapi.org)</h3>
+      <p>Third-party REST, not an official Suno Inc. API. Two sung tracks (2–8 min), loopable beds, lyrics only, remaining credits. Key is <code>SUNO_API_KEY</code> — not the Gemini key.</p>
+      <div class="tools">suno_generate · suno_generate_sound · suno_generate_lyrics · suno_credits</div>
+    </a>
     <a class="card" href="openai-images.en.html">
       <h3>OpenAI Images</h3>
       <p>Which parameters each of the 4 GPT Image models supports, gpt-image-2's arbitrary-resolution constraints (multiples of 16 · 1:3–3:1 · pixel floor and ceiling), and the edit-only parameters.</p>
@@ -110,7 +115,7 @@
     </a>
     <a class="card" href="tool-audit.en.html">
       <h3>Tool quality audit report</h3>
-      <p>Scoring the 31 tools as they stood on 2026-07-29 against the contracts above and the best practices, with every defect found and how it was fixed. 15 tools have been added since, bringing the count to 46, and those 15 have not been audited.</p>
+      <p>Scoring the 31 tools as they stood on 2026-07-29 against the contracts above and the best practices, with every defect found and how it was fixed. 19 tools have been added since, bringing the count to 50, and those 19 have not been audited.</p>
       <div class="tools">audit · scores · fix log</div>
     </a>
   </div>
@@ -128,6 +133,7 @@
     <tbody>
       <tr><td><code>GEMINI_API_KEY</code><br>(or <code>GOOGLE_API_KEY</code>)</td><td><code>veo_*</code> · <code>tts_generate</code> · <code>tts_multi_speaker</code> · <code>music_generate*</code></td><td>No video, voice, or music generation. Everything else is fine</td><td><a href="https://aistudio.google.com/apikey">AI Studio</a></td></tr>
       <tr><td><code>ARK_API_KEY</code></td><td><code>seedance_*</code></td><td>No Seedance video generation. <code>veo_*</code> is unaffected</td><td><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/apikey">BytePlus ModelArk</a></td></tr>
+      <tr><td><code>SUNO_API_KEY</code></td><td><code>suno_*</code></td><td>No sung full songs or Suno loop beds. <code>music_*</code> (Lyria) is unaffected</td><td><a href="https://sunoapi.org/api-key">sunoapi.org</a></td></tr>
       <tr><td><code>OPENAI_API_KEY</code></td><td><code>gpt_image_*</code></td><td>No GPT Image generation</td><td><a href="https://platform.openai.com/api-keys">OpenAI</a></td></tr>
       <tr><td><code>SERPAPI_API_KEY</code></td><td><code>serp_*</code> · <code>sns_issue_scout</code></td><td>The five <code>serp_*</code> tools and <code>sns_issue_scout</code> are out — fall back to <code>naver_search</code> or the built-in WebSearch</td><td><a href="https://serpapi.com/manage-api-key">SerpApi</a></td></tr>
       <tr><td><code>NAVER_CLIENT_ID</code><br><code>NAVER_CLIENT_SECRET</code></td><td><code>naver_search</code></td><td>No first-pass Korean research — use <code>serp_naver_search</code> instead</td><td><a href="https://developers.naver.com/apps">Naver Developers</a></td></tr>
@@ -148,7 +154,7 @@
 <section id="map">
   <h2>Tool ↔ API map</h2>
   <p>Badges: <span class="badge ro">read</span> no side effects · <span class="badge wr">write</span> creates a local file · <span class="badge de">public</span> takes effect publicly the moment it's called · <span class="badge key">key</span> needs a credential · <span class="badge free">no auth</span></p>
-  <p><strong>You won't always see all 46.</strong> The nine platform-bound tools (<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>) appear in <code>tools/list</code> only for platforms that have a credential file. That's evaluated when the list is requested, so adding a token makes them appear without restarting the server; with no tokens at all you see 37. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> sit outside the gate and stay listed without tokens — the YouTube scout needs <code>YOUTUBE_API_KEY</code> or channel OAuth at call time, the SNS scout needs <code>SERPAPI_API_KEY</code>, and feedback simply skips the sections it has no token for. <code>youtube_update</code> is likewise always listed and errors without a token. Hidden tools still have live handlers — call one directly and you get a missing-token error.</p>
+  <p><strong>You won't always see all 50.</strong> The nine platform-bound tools (<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>) appear in <code>tools/list</code> only for platforms that have a credential file. That's evaluated when the list is requested, so adding a token makes them appear without restarting the server; with no tokens at all you see 41. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> sit outside the gate and stay listed without tokens — the YouTube scout needs <code>YOUTUBE_API_KEY</code> or channel OAuth at call time, the SNS scout needs <code>SERPAPI_API_KEY</code>, and feedback simply skips the sections it has no token for. <code>youtube_update</code> is likewise always listed and errors without a token. Hidden tools still have live handlers — call one directly and you get a missing-token error.</p>
   <div class="table-scroll">
   <table>
     <thead><tr><th>Tool</th><th>Character</th><th>What it calls</th><th>Reference</th></tr></thead>
@@ -183,6 +189,10 @@
       <tr><td><code>music_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
       <tr><td><code>music_generate_advanced</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
       <tr><td><code>music_list_options</code></td><td><span class="badge ro">read</span></td><td>none — a constant built into the server</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
+      <tr><td><code>suno_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /api/v1/generate</code> + poll</td><td><a href="suno.en.html">Suno</a></td></tr>
+      <tr><td><code>suno_generate_sound</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /api/v1/generate/sounds</code> + poll</td><td><a href="suno.en.html">Suno</a></td></tr>
+      <tr><td><code>suno_generate_lyrics</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /api/v1/lyrics</code> + poll</td><td><a href="suno.en.html">Suno</a></td></tr>
+      <tr><td><code>suno_credits</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td><code>GET /api/v1/generate/credit</code></td><td><a href="suno.en.html">Suno</a></td></tr>
       <tr><td><code>threads_publish</code></td><td><span class="badge de">public</span> <span class="badge key">key</span></td><td><code>graph.threads.net/v1.0</code></td><td><a href="meta-graph.en.html">Meta</a></td></tr>
       <tr><td><code>instagram_publish</code></td><td><span class="badge de">public</span> <span class="badge key">key</span></td><td><code>graph.instagram.com/v23.0</code></td><td><a href="meta-graph.en.html">Meta</a></td></tr>
       <tr><td><code>facebook_publish</code></td><td><span class="badge de">public</span> <span class="badge key">key</span></td><td><code>graph.facebook.com/v23.0</code></td><td><a href="meta-graph.en.html">Meta</a></td></tr>
