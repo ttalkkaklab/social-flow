@@ -29,15 +29,23 @@ import {
   ZIMAGE_DIMENSION_STEP,
   ZIMAGE_QUANTIZE_OPTIONS,
 } from './zimage-client.js';
+import {
+  DEFAULT_SUNO_MODEL,
+  SUNO_MODELS,
+  SUNO_PERSONA_MODELS,
+  SUNO_SOUND_KEYS,
+  SUNO_VOCAL_GENDERS,
+} from './suno-client.js';
 
 /**
- * Tool surface definitions (43 tools) — 6 research + 5 open-data +
- * 18 generation (3 image + 7 video + 4 speech + 4 music) +
+ * Tool surface definitions (50 tools) — 6 research + 5 open-data +
+ * 22 generation (3 image + 7 video + 4 speech + 8 music) +
  * 5 per-platform publishing + 3 inbound comments + 1 account check +
  * 5 growth lookups (Threads insights/keyword search · YouTube insights ·
  * Instagram insights · recent-content feedback — the insights trio is for the
  * grow-* skills only; content_feedback covers both video platforms and writes
- * an HTML report).
+ * an HTML report). 46 of those were already on origin/dev; the four suno_*
+ * tools are the sung-song / loop-bed path.
  *
  * Publish tool descriptions embed the HITL contract — this server has no
  * review gate, so a call is an immediately public post, and the descriptions
@@ -46,7 +54,9 @@ import {
  * Generation tools are ported from fect-mcp-server — image (gpt_image_*,
  * OPENAI_API_KEY) comes from the gpt-image module; video (veo_*), speech
  * (tts_*), and music (music_*) come from the video/tts/music modules, all
- * three on GEMINI_API_KEY. Descriptions inherit the originals, minus
+ * three on GEMINI_API_KEY. Sung full songs and loopable beds are suno_*
+ * (sunoapi.org third-party REST, SUNO_API_KEY). Lyria stays the default
+ * 30s instrumental BGM path. Descriptions inherit the originals, minus
  * cross-references to tools this server doesn't have, plus the short-form
  * pipeline context (channel profile voice, pinned seeds). Keys are validated
  * at call time.
@@ -1626,7 +1636,7 @@ Returns: a text block with the saved .mp3 file path (44.1kHz stereo, exactly 30 
     description: `Generate instrumental music from a text prompt using Google Lyria RealTime (streaming).
 
 Use when the requested duration must be controlled (5-300s) — e.g. matching a narration length. For standard 30-second short-form BGM, prefer music_generate_clip (cheaper, single call). Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text — music_list_options shows suggestions, not a closed list.
-Do NOT use for vocals or lyrics — Lyria RealTime is instrumental-only. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
+Do NOT use for vocals or lyrics — Lyria RealTime is instrumental-only. For a sung song use suno_generate. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
 For BGM under narration, say so in the prompt (e.g. "leaves space for a spoken voiceover, no melody in the vocal frequency range").
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and applied settings.`,
@@ -1676,7 +1686,7 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
     description: `Generate instrumental music by blending multiple weighted prompts with fine-grained controls (Google Lyria RealTime).
 
 Use when the request needs blended musical ideas — e.g. [{"text": "jazz piano", "weight": 1.0}, {"text": "electronic beats", "weight": 0.5}] — or fine tuning of guidance, density, brightness, temperature, scale (key), seed (reproducibility), or bass/drum controls. seed is the ONLY way to regenerate the same music (Lyria 3 Clip has no seed) — record the seed of a channel's signature BGM to keep later episodes consistent.
-Do NOT use for a simple single-idea request — music_generate is sufficient and simpler. No vocals or lyrics (Lyria RealTime is instrumental-only).
+Do NOT use for a simple single-idea request — music_generate is sufficient and simpler. No vocals or lyrics (Lyria RealTime is instrumental-only — sung songs go to suno_generate).
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and the applied prompt weights/config.`,
     inputSchema: {
@@ -1799,6 +1809,185 @@ Use when the user asks what music styles are available (장르 목록) or wants 
 Do NOT use to generate music — use music_generate_clip, music_generate, or music_generate_advanced. The list is static; one call per session is enough.
 
 Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exhaustive).`,
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+
+  // ── Music generation (Suno — sunoapi.org third-party REST, not an official API) ────
+  {
+    name: 'suno_generate',
+    title: 'Suno full song',
+    annotations: HINT.generate,
+    description: `Generate a full Suno song (exactly 2 variants) via sunoapi.org. This is a third-party REST wrapper — Suno Inc. has no public self-serve API as of 2026-08.
+
+Use when the user wants a SUNG song, jingle, or original track with lyrics — the thing Lyria cannot do well. customMode=false: only prompt, the model writes lyrics. customMode=true + instrumental=false: prompt IS the lyrics (write them first with suno_generate_lyrics if needed). customMode=true + instrumental=true: no vocals; style and title required. Default model V5 (up to 8 min). Each call takes 2–3 minutes and returns two mp3 files downloaded locally (remote URLs expire in 15 days).
+Do NOT use as the default narration-under BGM bed — vocals fight the voiceover, and a 3-minute song does not loop cleanly. For looping beds prefer suno_generate_sound or music_generate_clip (Lyria, $0.04, 30s, GEMINI_API_KEY). For an exact duration 5–300s or seed reproducibility use music_generate.
+Requires SUNO_API_KEY. This key being unset does not block music_*(Lyria).
+
+Returns: saved file paths for both tracks, durations, titles, taskId.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description:
+            'In non-custom mode: the idea the model turns into lyrics+music (required, max 3000 chars). In custom mode with vocals: the EXACT lyrics to sing (required, V4 max 3000, V4_5+ max 5000). Omit when customMode+instrumental.',
+        },
+        customMode: {
+          type: 'boolean',
+          description: 'false (default): prompt-only, auto lyrics. true: you supply style+title, and lyrics via prompt unless instrumental.',
+          default: false,
+        },
+        instrumental: {
+          type: 'boolean',
+          description: 'true = no vocals. In custom mode this drops the lyrics requirement (style+title still required). Default false.',
+          default: false,
+        },
+        style: {
+          type: 'string',
+          description: 'Genre/style for custom mode (required when customMode=true). V4 max 200 chars, later models max 1000. Example: "calm lo-fi, soft piano, space for voiceover"',
+        },
+        title: {
+          type: 'string',
+          description: 'Track title for custom mode (required when customMode=true). V4/V4_5ALL max 80 chars, others max 100.',
+        },
+        model: {
+          type: 'string',
+          description: `Suno model (default: "${DEFAULT_SUNO_MODEL}"). V4 ≤4 min; V4_5 / V4_5PLUS / V4_5ALL / V5 / V5_5 ≤8 min. V5_5 is the only model that accepts duration. Pick V5 unless you need V5_5 duration or V4_5ALL structure.`,
+          enum: [...SUNO_MODELS],
+          default: DEFAULT_SUNO_MODEL,
+        },
+        duration: {
+          type: 'number',
+          description: 'Length in seconds (10–360). Only valid when model=V5_5 AND customMode=true. Integer.',
+          minimum: 10,
+          maximum: 360,
+        },
+        negativeTags: {
+          type: 'string',
+          description: 'Styles to exclude, comma-separated (e.g. "Heavy Metal, Upbeat Drums")',
+        },
+        vocalGender: {
+          type: 'string',
+          description: 'Preferred vocal gender when not instrumental.',
+          enum: [...SUNO_VOCAL_GENDERS],
+        },
+        personaId: {
+          type: 'string',
+          description: 'Optional persona or Suno Voice id for custom mode.',
+        },
+        personaModel: {
+          type: 'string',
+          description: 'style_persona (default) for Generate Persona ids, voice_persona for Suno Voice ids (V5/V5_5 only).',
+          enum: [...SUNO_PERSONA_MODELS],
+        },
+        pickTrack: {
+          type: 'number',
+          description: 'Which of the two variants to treat as primary (0 or 1, default 0). Both files are still saved.',
+          minimum: 0,
+          maximum: 1,
+          default: 0,
+        },
+        outputPath: {
+          type: 'string',
+          description: 'Directory to save the audio files (default: current working directory)',
+        },
+        filename: {
+          type: 'string',
+          description:
+            'Primary filename (default: suno_<timestamp>.mp3). Use .wav to transcode the picked track to 48kHz stereo PCM for build-reel.sh (bgm.wav). The other variant is saved as <stem>_a.mp3 / <stem>_b.mp3.',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'suno_generate_sound',
+    title: 'Suno loopable BGM',
+    annotations: HINT.generate,
+    description: `Generate a loopable Suno sound/bed (V5 only) with optional BPM and musical key.
+
+Use as the Suno path for short-form BGM under narration — looping ambient, beds, stings. soundLoop defaults to true. Prompt max 500 chars. Takes about 1–3 minutes. For a cheap 30s bed without SUNO_API_KEY, use music_generate_clip (Lyria).
+Do NOT use for a sung song — that is suno_generate. Do NOT use when you need an exact second-accurate length other than what the model returns; trim with ffmpeg afterwards.
+
+Returns: saved file path(s). Pass filename ending in .wav to transcode for .work/bgm.wav.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Sound description, max 500 chars (e.g. "soft lo-fi bed, muted keys, leaves space for a spoken voiceover, no melody in the vocal range")',
+        },
+        soundLoop: {
+          type: 'boolean',
+          description: 'Make the result loop-friendly (default true).',
+          default: true,
+        },
+        soundTempo: {
+          type: 'number',
+          description: 'BPM 1–300. Omit for Auto.',
+          minimum: 1,
+          maximum: 300,
+        },
+        soundKey: {
+          type: 'string',
+          description: 'Musical key (default Any).',
+          enum: [...SUNO_SOUND_KEYS],
+        },
+        pickTrack: {
+          type: 'number',
+          description: 'Which variant to treat as primary (0 or 1, default 0).',
+          minimum: 0,
+          maximum: 1,
+          default: 0,
+        },
+        outputPath: {
+          type: 'string',
+          description: 'Directory to save the audio file (default: current working directory)',
+        },
+        filename: {
+          type: 'string',
+          description: 'Filename (default: suno_<timestamp>.mp3). Use .wav for 48kHz stereo PCM.',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'suno_generate_lyrics',
+    title: 'Suno lyrics',
+    annotations: HINT.generate,
+    description: `Generate lyrics only (no audio) via sunoapi.org. Several variants come back, typically with [Verse]/[Chorus] markers.
+
+Use to draft lyrics before suno_generate in customMode (pass the chosen text as prompt). Prompt max 200 characters — describe theme, mood, structure; do not paste a full song here.
+Do NOT use when you already have lyrics. Do NOT use for narration copy — that is TTS / scenes.js.
+
+Returns: title + lyrics text for each variant, plus taskId.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Theme/mood/structure for the lyrics, max 200 characters (e.g. "a hopeful song about starting over in a new city, verse-chorus, Korean")',
+          maxLength: 200,
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'suno_credits',
+    title: 'Suno remaining credits',
+    annotations: HINT.read,
+    description: `Read remaining sunoapi.org credits for SUNO_API_KEY.
+
+Use before a batch of suno_generate calls. Generate consumes about 12 credits per request (≈ $0.06 at the $5/1000-credit pack). Insufficient credits fail with code 429.
+Do NOT use to generate music.
+
+Returns: integer credit balance.`,
     inputSchema: {
       type: 'object',
       properties: {},

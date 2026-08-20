@@ -2,7 +2,8 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { config, disabledToolPatterns, disabledToolsFile, isToolDisabled, listChannelDirs } from './config.js';
+import { config, disabledToolPatterns, disabledToolsFile, listChannelDirs } from './config.js';
+import { describeToolGate, resolveToolGate, warnUnknownPatterns } from './tool-gate.js';
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
 import { enabledPlatforms } from './sns-client.js';
@@ -19,14 +20,15 @@ const server = new Server(
 // (default tokens ∪ channel directories) — this is evaluated per request, so adding a token
 // file takes effect without a server restart. Every handler stays registered, so calling a
 // hidden tool directly still returns an explicit "no token" error.
-// On top of that, <SNS_TOKEN_DIR>/disabled-tools.json turns individual tools off by name
-// (trailing "*" covers a family) — also read per request, and CallTool refuses them too.
+// On top of that, env (SOCIAL_FLOW_*) and <SNS_TOKEN_DIR>/disabled-tools.json turn
+// individual tools off by name (trailing "*" covers a family) — also read per
+// request, and CallTool refuses them too.
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const enabled = new Set<string>(enabledPlatforms());
-  const disabled = disabledToolPatterns();
+  const jsonPatterns = disabledToolPatterns();
   return {
     tools: TOOLS.filter((tool) => {
-      if (isToolDisabled(tool.name, disabled)) return false;
+      if (!resolveToolGate(tool.name, { jsonPatterns, jsonFile: disabledToolsFile }).enabled) return false;
       const platform = SNS_PLATFORM_BY_TOOL[tool.name];
       return platform === undefined || enabled.has(platform);
     }),
@@ -42,14 +44,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (!handler) throw new McpError(ErrorCode.InvalidParams, `Unknown tool: ${name}`);
     // A tool the operator turned off is refused even when called directly with a
     // stale tool list — hiding it from ListTools alone would not block the call.
-    if (isToolDisabled(name, disabledToolPatterns())) {
+    const gate = resolveToolGate(name, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
+    if (!gate.enabled) {
       return {
         content: [
           {
             type: 'text',
             text:
-              `Tool "${name}" is turned off by ${disabledToolsFile}. ` +
-              'Remove its entry (or the family pattern covering it) from that JSON array to re-enable — no server restart needed.',
+              `Tool "${name}" is turned off (${gate.reason}). ` +
+              'Clear the matching SOCIAL_FLOW_* env or remove its entry from disabled-tools.json to re-enable — no server restart needed for the JSON file.',
           },
         ],
         isError: true,
@@ -85,9 +88,11 @@ async function main() {
   console.error('social-flow MCP server started');
   const snsEnabled = enabledPlatforms();
   const channelDirs = listChannelDirs();
-  const disabledPatterns = disabledToolPatterns();
-  // The hidden count surfaces typos: a pattern matching 0 tools is doing nothing.
-  const disabledCount = TOOLS.filter((tool) => isToolDisabled(tool.name, disabledPatterns)).length;
+  const jsonPatterns = disabledToolPatterns();
+  const toolNames = TOOLS.map((tool) => tool.name);
+  for (const warning of warnUnknownPatterns(toolNames)) {
+    console.error(`[social-flow] ${warning}`);
+  }
   console.error(
     `Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* and sns_issue_scout tools will fail)'}, ` +
       `naver keys ${config.naverClientId && config.naverClientSecret ? 'set' : 'MISSING (naver_search will fail)'}, ` +
@@ -95,12 +100,13 @@ async function main() {
       `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail — tts_local_generate does not need it)'}, ` +
       `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail — image_local_generate does not need it)'}, ` +
       `ark key ${config.arkApiKey ? 'set' : 'MISSING (seedance_* video generation tools will fail — veo_* does not need it)'}, ` +
+      `suno key ${config.sunoApiKey ? 'set' : 'MISSING (suno_* will fail — music_*(Lyria) does not need it)'}, ` +
       `local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : 'python3 (default — set SUPERTONIC_PYTHON for a virtualenv)'}, ` +
       `local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : '~/.local/bin/mflux-generate-z-image-turbo (default — set MFLUX_ZIMAGE_BIN if elsewhere)'}, ` +
       `youtube data key ${config.youtubeApiKey ? 'set' : 'MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)'}, ` +
       `sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(',') : 'none'} (credential files found — others hidden from ListTools), ` +
       `sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(',')}]`).join(' ') : 'none (flat/default tokens only)'}, ` +
-      `disabled tools ${disabledPatterns.length > 0 ? `${disabledPatterns.join(' ')} → ${disabledCount} hidden (${disabledToolsFile})` : 'none'}`,
+      describeToolGate(toolNames, process.env, jsonPatterns),
   );
 }
 

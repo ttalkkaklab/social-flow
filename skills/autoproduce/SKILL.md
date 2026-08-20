@@ -459,6 +459,8 @@ money without knowing the price.
   "leaves space for a spoken voiceover, no melody in the vocal frequency range"
   in the prompt. The builder loop-extends it. To reuse the same tone next
   episode, copy it to `assets/audio/bgm/default.wav` and add it to the catalog.
+  **Never call `suno_*` unattended** — vocals fight the narration. An episode
+  where the song is the content is the human produce path's `suno_generate`.
 
 After every call, append one line of actual usage to `.work/cost-tally.tsv` —
 this file, not §5's estimate file. Line format and units (veo = generated

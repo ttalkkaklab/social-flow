@@ -341,6 +341,25 @@ describe('tool on/off (disabled-tools.json)', () => {
   });
 });
 
+describe('suno_* tools', () => {
+  const SUNO = ['suno_generate', 'suno_generate_sound', 'suno_generate_lyrics', 'suno_credits'];
+
+  it('all four suno tools are listed and routed', () => {
+    for (const name of SUNO) {
+      assert.ok(TOOLS.some((tool) => tool.name === name), `missing tool ${name}`);
+      assert.equal(typeof ROUTES[name], 'function', `missing route ${name}`);
+    }
+  });
+
+  it('suno_generate describes the third-party REST and does not claim an official Suno API', () => {
+    const tool = TOOLS.find((t) => t.name === 'suno_generate');
+    assert.match(tool.description, /sunoapi\.org/);
+    assert.match(tool.description, /no public self-serve API/);
+    assert.match(tool.description, /SUNO_API_KEY/);
+    assert.match(tool.description, /does not block music_/);
+  });
+});
+
 describe('HITL contract', () => {
   const destructive = TOOLS.filter((t) => t.annotations?.destructiveHint === true);
 
