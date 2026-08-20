@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suno — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="suno.en.html">
+<link rel="alternate" hreflang="ko" href="suno.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="suno.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>Suno</div>
+
+<header class="hero">
+  <div class="kicker">SUNOAPI.ORG</div>
+  <h1>Suno — 보컬 풀송 · 루프 BGM</h1>
+  <p class="sub">Suno Inc. 는 2026-08 기준 공개 셀프서브 API 가 없다. 이 서버가 부르는 것은 <strong>sunoapi.org</strong>(Kie.ai 계열) 서드파티 REST 다. 키는 <code>SUNO_API_KEY</code> 이고 Gemini 키와는 다르다. 나레이션 밑 침대의 기본 경로는 그대로 Lyria(<code>music_*</code>)다.</p>
+  <div class="meta">
+    <span>벤더 <a href="https://docs.sunoapi.org/suno-api/generate-music">sunoapi.org docs</a></span>
+    <span>키 <code>SUNO_API_KEY</code></span>
+    <span>구현 <code>server/src/suno-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#when">언제 쓰나</a></li>
+    <li><a href="#generate">suno_generate</a></li>
+    <li><a href="#sound">suno_generate_sound</a></li>
+    <li><a href="#impl">구현이 좁힌 것</a></li>
+  </ol>
+</nav>
+
+<section id="when">
+  <h2>1. 언제 쓰나</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>할 일</th><th>툴</th><th>키</th></tr></thead>
+    <tbody>
+      <tr><td>나레이션 밑 침대 (기본)</td><td><code>music_generate_clip</code> 30초, 빌더가 루프</td><td><code>GEMINI_API_KEY</code></td></tr>
+      <tr><td>길이를 초 단위로, 또는 seed 재현</td><td><code>music_generate</code> / <code>music_generate_advanced</code></td><td><code>GEMINI_API_KEY</code></td></tr>
+      <tr><td>나레이션 밑 침대 (Suno)</td><td><code>suno_generate_sound</code> 루프+BPM</td><td><code>SUNO_API_KEY</code></td></tr>
+      <tr><td>노래가 콘텐츠</td><td><code>suno_generate</code></td><td><code>SUNO_API_KEY</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>무인 경로(autoproduce)는 <code>suno_*</code> 를 부르지 않는다.</strong> 보컬이 나레이션과 싸우고, 호출당 2~3분이 든다. 노래가 본편인 회차는 사람 경로 produce 다.
+  </div>
+</section>
+
+<section id="generate">
+  <h2>2. suno_generate</h2>
+  <p>호출당 정확히 두 곡. 원격 URL 은 15일 뒤 사라지므로 폴링이 끝나는 즉시 로컬에 저장한다. 웹훅 서버가 없는 MCP stdio 환경이라 <code>callBackUrl</code> 은 더미(<code>https://httpbin.org/post</code>)를 보내고 폴링으로 끝낸다. 콜백만 실패하고 오디오 URL 이 있으면 성공으로 읽는다.</p>
+  <ul>
+    <li><code>customMode=false</code> — prompt 만으로 가사·스타일을 모델이 정한다.</li>
+    <li><code>customMode=true</code> + 보컬 — prompt 가 가사 그대로 불린다. style·title 필수.</li>
+    <li><code>customMode=true</code> + <code>instrumental=true</code> — 보컬 없음. style·title 필수.</li>
+  </ul>
+  <p>기본 모델 V5 (최대 8분). <code>duration</code>(10–360초)는 V5_5 + customMode 만 받는다. 생성은 약 12 크레딧/호출(≈ $0.06, $5/1000 팩).</p>
+</section>
+
+<section id="sound">
+  <h2>3. suno_generate_sound</h2>
+  <p>V5 전용 Sounds 태스크. 인트로·아웃트로 없는 루프, BPM·조성을 지정할 수 있다. 빌더가 <code>-stream_loop -1</code> 로 늘린다. <code>filename</code> 을 <code>.wav</code> 로 두면 48kHz 스테레오 PCM 으로 바꿔 <code>.work/bgm.wav</code> 에 맞춘다.</p>
+</section>
+
+<section id="impl">
+  <h2>4. 구현이 좁힌 것</h2>
+  <ul>
+    <li>인증은 Bearer <code>SUNO_API_KEY</code>. Gemini 키로 대체하지 않는다.</li>
+    <li>기본 호스트 <code>https://api.sunoapi.org</code>. <code>SUNO_BASE_URL</code> 은 같은 스펙의 미러용이고, 다른 벤더(TTAPI·EvoLink)는 헤더와 경로가 달라 여기 넣으면 안 된다.</li>
+    <li>가사는 <code>suno_generate_lyrics</code>, 잔량은 <code>suno_credits</code>.</li>
+    <li>키는 기동이 아니라 호출 시점에 검사한다. 키가 없어도 Lyria 는 그대로 돈다.</li>
+  </ul>
+</section>
+
+</div>
+</body>
+</html>

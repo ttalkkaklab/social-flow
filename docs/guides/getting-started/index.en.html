@@ -350,7 +350,7 @@ claude --plugin-dir ~/social-flow</code></pre>
     <div class="step-body">
       <h3>Check that it loaded</h3>
       <p><code>/mcp</code> lists the connected servers. If <code>social-flow</code> is there with a list of tools, you're done.</p>
-      <div class="ok"><strong>Seeing only 37 tools is normal.</strong> Of the 46 total, the nine publish and insight tools show up only for platforms whose credential file exists. If you haven't connected an account yet, they're supposed to be missing.</div>
+      <div class="ok"><strong>Seeing only 41 tools is normal.</strong> Of the 50 total, the nine publish and insight tools show up only for platforms whose credential file exists. If you haven't connected an account yet, they're supposed to be missing.</div>
     </div>
   </div>
 </section>
@@ -376,6 +376,7 @@ export NAVER_CLIENT_ID="..."       <span class="c"># Korean-language research</s
 export NAVER_CLIENT_SECRET="..."
 export SERPAPI_API_KEY="..."       <span class="c"># precision and international search</span>
 export ARK_API_KEY="..."           <span class="c"># the second video engine (Seedance)</span>
+export SUNO_API_KEY="..."          <span class="c"># sung songs / Suno loop beds (sunoapi.org, not Gemini)</span>
 export DATA_GO_KR_API_KEY="..."    <span class="c"># data.go.kr API calls</span></code></pre>
 
   <div class="warn">
@@ -414,6 +415,11 @@ export DATA_GO_KR_API_KEY="..."    <span class="c"># data.go.kr API calls</span>
         <td>only the second video engine, Seedance, is unavailable. Its niche is 2–30 seconds in 1-second steps and cheap silent cuts — Veo keeps running on <code>GEMINI_API_KEY</code></td>
       </tr>
       <tr>
+        <td><code>SUNO_API_KEY</code><br><span class="badge opt">optional</span></td>
+        <td>sunoapi.org/api-key</td>
+        <td>no sung full songs and no Suno loop beds. Lyria BGM (<code>music_*</code>) keeps running on <code>GEMINI_API_KEY</code>. This is not a Gemini key, and there is no official Suno Inc. API</td>
+      </tr>
+      <tr>
         <td><code>DATA_GO_KR_API_KEY</code><br><span class="badge opt">optional</span></td>
         <td>My Page on data.go.kr</td>
         <td>only data.go.kr API calls stop. Dataset search and file downloads work without a key. Even with the key, <strong>each API needs its own usage application</strong> before it opens up</td>
@@ -435,7 +441,7 @@ export DATA_GO_KR_API_KEY="..."    <span class="c"># data.go.kr API calls</span>
     <li><strong>With them</strong> — <code>publish</code> posts straight to your accounts, and the <code>grow-*</code> skills run on <code>/loop</code>: comment replies, insight snapshots, keyword conversations, queue refills, posting. The scope is whatever the growth plan you approved once at <code>init</code> allows.</li>
     <li><strong>Without them</strong> — research, storyboard, images, voice, and the build all run as usual. <code>produce</code> writes the finished video and per-platform text to <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload those files yourself. The only consequences are that the nine publish/insight tools aren't listed and the growth loops have nothing to drive.</li>
   </ul>
-  <p>Tokens are files rather than environment variables, so <strong>adding one later needs no server restart</strong>. The next time the tool list is read, that platform's tools are there and the count moves from 37 toward 46. Account signup and token issuance are covered in <a href="#publish">section 6</a> below.</p>
+  <p>Tokens are files rather than environment variables, so <strong>adding one later needs no server restart</strong>. The next time the tool list is read, that platform's tools are there and the count moves from 41 toward 50. Account signup and token issuance are covered in <a href="#publish">section 6</a> below.</p>
 
   <h3>Checking that a key works</h3>
   <p>Two lines, before you spend anything on a video. Both are list calls, so neither is billed.</p>
@@ -613,7 +619,7 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
   <h2>What to read next</h2>
   <ul>
     <li><a href="../../index.en.html">Full documentation index</a> — guides, API reference, research notes</li>
-    <li><a href="../../api-reference/index.en.html">API reference</a> — the contracts of the 12 external APIs the internal server calls</li>
+    <li><a href="../../api-reference/index.en.html">API reference</a> — the contracts of the 13 external APIs the internal server calls</li>
     <li><a href="../ai-video-production/index.en.html">Making short-form video with AI</a> — why the pipeline looks the way it does</li>
     <li><a href="../ingest-usage/index.en.html">Screen recording guide</a> · <a href="../screencast-usage/index.en.html">Shooting script guide</a></li>
   </ul>

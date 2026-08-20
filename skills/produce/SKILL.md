@@ -12,7 +12,7 @@ description: >
   into the 9:16 video (cut per scene, focus crop, title overlays, burned subtitles,
   BGM ducking) via build-screencast.sh.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
 ---
 
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
@@ -404,11 +404,22 @@ only the summary is here.
   else
     # generate only when there isn't one — to reuse it next episode, copy it to
     # assets/audio/bgm/default.wav and register it in the catalog with resolve-asset.py --ensure
-    : # music_generate (Lyria, instrumental) 90s → .work/bgm.wav
+    : # default: music_generate_clip (Lyria, 30s instrumental) → .work/bgm.wav
   fi
   ```
   Generation prompt: "leaves space for a spoken voiceover, no melody in the vocal
   frequency range". **`.work/bgm.wav`** is the name the builder looks for.
+
+  | Job | Tool | Key |
+  |---|---|---|
+  | Narration-under bed (default) | `music_generate_clip` 30s, builder loops it | `GEMINI_API_KEY` |
+  | Exact length 5–300s, or a seed to reproduce | `music_generate` / `music_generate_advanced` | `GEMINI_API_KEY` |
+  | Narration-under bed (Suno) | `suno_generate_sound` loop + BPM. `filename: "bgm.wav"` | `SUNO_API_KEY` |
+  | The song IS the content | `suno_generate` (customMode; lyrics from `suno_generate_lyrics` or written) | `SUNO_API_KEY` |
+
+  Default BGM is Lyria. Sung vocals fight the voiceover, so `suno_generate` is
+  for episodes where the song itself is the piece. There is no official Suno
+  API (2026-08); `suno_*` talks to sunoapi.org.
 
 **Write one line to `.work/cost-tally.tsv` per call** — carry on the same ledger storyboard
 was using. The convention's source of truth is
@@ -419,6 +430,8 @@ printf 'image.gpt-image-2.high\t1\tproduce: cover background regenerated\n'     
 printf 'veo.lite.1080p\t8\tproduce: b-roll a1 — generated 8s, used 4s\n'             >> .work/cost-tally.tsv
 printf 'seedance.1-5-pro-silent.1080p\t5\tproduce: motion background i3 (completion_tokens 102960)\n' >> .work/cost-tally.tsv
 printf 'music.lyria-realtime\t90\tproduce: BGM 90s — unit price unconfirmed\n'       >> .work/cost-tally.tsv
+printf 'music.suno-generate\t1\tproduce: Suno full song, 1 call (2 tracks)\n'        >> .work/cost-tally.tsv
+printf 'music.suno-sound\t1\tproduce: Suno loop BGM\n'                                >> .work/cost-tally.tsv
 ```
 
 Two places where the unit is easy to get wrong.

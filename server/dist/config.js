@@ -23,6 +23,13 @@ export const config = {
     /** BytePlus ModelArk API key (required by the seedance_* video generation tools) — https://ai.byteplus.com/ark/region:ap-southeast-1/apikey */
     arkApiKey: process.env.ARK_API_KEY || '',
     /**
+     * Suno API key (required by the suno_* music tools) — https://sunoapi.org/api-key
+     *
+     * Not an official Suno Inc. key. sunoapi.org (Kie.ai family) is a third-party
+     * REST wrapper. Lyria (`music_*`) keeps working on GEMINI_API_KEY without this.
+     */
+    sunoApiKey: process.env.SUNO_API_KEY || '',
+    /**
      * YouTube Data API key (youtube_topic_scout's preferred public-query path).
      * Unlike OAuth it doesn't spend your channel's quota. Without it, falls back to
      * channel OAuth (youtube.readonly).
@@ -200,6 +207,23 @@ export function requireOpenAiKey() {
             'search, publish, and video tools work fine without it.');
     }
     return config.openaiApiKey;
+}
+/**
+ * sunoapi.org REST base. Default is the public host. The env override is for a
+ * same-spec self-host or regional mirror — other vendors (TTAPI, EvoLink) use
+ * different auth headers and paths and must not be pointed here.
+ */
+export function sunoBaseUrl() {
+    return (process.env.SUNO_BASE_URL || 'https://api.sunoapi.org').replace(/\/+$/, '');
+}
+export function requireSunoKey() {
+    if (!config.sunoApiKey) {
+        throw new Error('SUNO_API_KEY is not set. suno_* music tools talk to sunoapi.org (https://sunoapi.org/api-key), ' +
+            'a third-party REST wrapper — Suno Inc. has no public self-serve API as of 2026-08. ' +
+            'music_*(Lyria) still works on GEMINI_API_KEY without this key. Set it only when you need ' +
+            'a sung full song or a loopable Suno bed.');
+    }
+    return config.sunoApiKey;
 }
 export function requireArkKey() {
     if (!config.arkApiKey) {
