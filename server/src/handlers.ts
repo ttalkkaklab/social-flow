@@ -2,6 +2,7 @@ import { z } from 'zod';
 import * as datago from './datago-client.js';
 import * as image from './image-client.js';
 import * as music from './music-client.js';
+import * as suno from './suno-client.js';
 import * as naver from './naver-client.js';
 import * as seedance from './seedance-client.js';
 import * as serp from './serp-client.js';
@@ -839,6 +840,58 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         `- seed (0-2147483647): Reproducibility — the ONLY way to regenerate the same music\n` +
         `- muteBass/muteDrums/onlyBassAndDrums: Rhythm section control\n` +
         `- musicGenerationMode: QUALITY (default) | DIVERSITY | VOCALIZATION`,
+    );
+  },
+
+  // ── music generation (Suno / sunoapi.org) ──
+  suno_generate: async (args) => {
+    const request = parseArgs(suno.sunoGenerateSchema, args);
+    const result = await suno.generateMusic(request);
+    if (!result.success) return text(`Suno generation failed: ${result.error}`, true);
+    const tracks = result.tracks ?? [];
+    const lines = tracks.map(
+      (track, index) =>
+        `  ${index + 1}. ${track.audioPath}` +
+        (track.title ? `  "${track.title}"` : '') +
+        (track.durationSeconds ? `  ${Math.round(track.durationSeconds)}s` : '') +
+        (track.tags ? `  [${track.tags}]` : ''),
+    );
+    return text(
+      `Suno tracks generated.\n\nPrimary: ${result.audioPath}\nModel: ${result.model}\nTask: ${result.taskId}\nTracks (${tracks.length}):\n${lines.join('\n')}\n\n` +
+        `Remote URLs expire in 15 days — these local files are the keepers. ` +
+        `For a bed under narration, pick the instrumental variant and set filename to .wav so it matches .work/bgm.wav.`,
+    );
+  },
+  suno_generate_sound: async (args) => {
+    const request = parseArgs(suno.sunoSoundSchema, args);
+    const result = await suno.generateSound(request);
+    if (!result.success) return text(`Suno sound generation failed: ${result.error}`, true);
+    const tracks = result.tracks ?? [];
+    const lines = tracks.map((track, index) => `  ${index + 1}. ${track.audioPath}`);
+    return text(
+      `Suno sound generated.\n\nFile: ${result.audioPath}\nModel: ${result.model}\nTask: ${result.taskId}\nTracks:\n${lines.join('\n')}\n\n` +
+        `Loop-friendly bed. The builder stretches it with -stream_loop.`,
+    );
+  },
+  suno_generate_lyrics: async (args) => {
+    const request = parseArgs(suno.sunoLyricsSchema, args);
+    const result = await suno.generateLyrics(request);
+    if (!result.success) return text(`Suno lyrics generation failed: ${result.error}`, true);
+    const blocks = (result.lyrics ?? []).map((item, index) => {
+      const heading = item.title ? `Variant ${index + 1} — ${item.title}` : `Variant ${index + 1}`;
+      return `${heading}\n${item.text}`;
+    });
+    return text(
+      `Suno lyrics generated (${result.lyrics?.length ?? 0} variants). Task: ${result.taskId}\n\n${blocks.join('\n\n---\n\n')}\n\n` +
+        `To sing them in custom mode, pass the chosen lyrics as suno_generate prompt (customMode=true, instrumental=false, style+title required).`,
+    );
+  },
+  suno_credits: async () => {
+    const result = await suno.getCredits();
+    if (!result.success) return text(`Suno credits lookup failed: ${result.error}`, true);
+    return text(
+      `Suno remaining credits: ${result.credits}\n\n` +
+        `suno_generate uses about 12 credits per call (≈ $0.06 at the $5/1000 pack). Less than that means top up first.`,
     );
   },
 

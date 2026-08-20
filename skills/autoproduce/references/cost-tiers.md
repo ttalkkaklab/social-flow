@@ -154,6 +154,10 @@ judgment**.
   human uses that slot in a storyboard the tally works as-is. The decision
   table's source of truth is
   `skills/produce/references/video-model-selection.md`.
+- **`suno_*` (sung full songs and loop beds)** — about $0.06 and 2–3 minutes
+  per call, and vocals fight the narration. The unattended path stays on the
+  30-second `music_generate_clip` instrumental. An episode where the song is
+  the content goes through the human produce path's `suno_generate`.
 - **Emotive acted narration** — mix two TTS engines in one video and the
   differing sample rates break the concatenation. A topic with shots that need
   acting is **not automated-authoring material** — a human starts it with
