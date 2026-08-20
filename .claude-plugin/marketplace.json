@@ -5,7 +5,7 @@
     "email": "zeans@astratech.vn"
   },
   "metadata": {
-    "description": "social-flow marketplace \u2014 installs the channel-based short-form and long-form content pipeline plugin (built-in MCP server included)."
+    "description": "social-flow marketplace — installs the channel-based short-form and long-form content pipeline plugin (built-in MCP server included)."
   },
   "plugins": [
     {
@@ -30,7 +30,7 @@
         "publishing",
         "mcp"
       ],
-      "description": "Channel-based short-form and long-form content pipeline \u2014 authors an image-included storyboard under data/[channel]/episodes/[topic]/storyboard and takes it through four adversarial convergence gates before approval, builds the 9:16 or 16:9 video plus per-platform text (Threads\u00b7Instagram\u00b7Facebook\u00b7YouTube) into output/, and publishes after HITL approval. Platform credentials are optional: with them the growth skills run the channel autonomously, without them the pipeline still delivers the finished video to upload by hand. Built-in MCP server (46 tools, no external MCP dependency): SNS publishing and insights, SerpApi/Naver search, data.go.kr collection, and image/video/voice/music generation with on-device engines that need no API key."
+      "description": "Channel-based short-form and long-form content pipeline — authors an image-included storyboard under data/[channel]/episodes/[topic]/storyboard and takes it through four adversarial convergence gates before approval, builds the 9:16 or 16:9 video plus per-platform text (Threads·Instagram·Facebook·YouTube) into output/, and publishes after HITL approval. Platform credentials are optional: with them the growth skills run the channel autonomously, without them the pipeline still delivers the finished video to upload by hand. Built-in MCP server (50 tools, no external MCP dependency): SNS publishing and insights, SerpApi/Naver search, data.go.kr collection, and image/video/voice/music generation with on-device engines that need no API key."
     }
   ]
 }
