@@ -40,9 +40,13 @@ production, generalized here to per-channel operation.
   downloads 385MB of weights into `~/.cache/supertonic3` (~24s). If you installed it in
   a virtualenv, point `SUPERTONIC_PYTHON` at that interpreter. Code is MIT; **the
   weights are OpenRAIL-M** (commercial use allowed, with use-based restrictions)
+- `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"` — for `stt_local_transcribe`
+  and ingest's Korean STT. The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights
+  into `~/.cache/huggingface`. Installed elsewhere, point `QWEN3_ASR_BIN` at it
 - whisper.cpp (`brew install whisper-cpp`) + `~/.cache/whisper-cpp/ggml-large-v3-turbo.bin`
-  — for ingest (recording → timeline). Recording mode needs **Screen Recording and
-  Microphone** permission for your terminal app (System Settings → Privacy & Security)
+  — the ingest STT fallback when mlx-qwen3-asr is missing. Recording mode needs
+  **Screen Recording and Microphone** permission for your terminal app
+  (System Settings → Privacy & Security)
 - chrome-devtools MCP (for produce §8 phone-viewport QA — optional; a capture script
   covers it otherwise)
 - API keys and platform credentials — see the next section for what each one unlocks
@@ -82,7 +86,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the nine publish/insight tools
-  aren't even listed (`tools/list` shows 41 instead of 50), and the growth skills have
+  aren't even listed (`tools/list` shows 42 instead of 51), and the growth skills have
   nothing to drive.
 
 Credentials are per platform, so this is not all-or-nothing — a YouTube-only setup
@@ -105,10 +109,10 @@ capabilities, four different answers:
 | **Images** | `image_local_generate` — Z-Image Turbo via mflux/MLX, $0 | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame have to go to the paid path |
 | **Video** | none | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you generate no video at all. **The default build does exactly that** — stills plus ffmpeg Ken Burns, zero video calls |
 | **Speech (TTS)** | `tts_local_generate` — Supertonic 3, $0 | `tts_generate` / `tts_multi_speaker` — Gemini, per 1,000 chars | …you don't need acted delivery. The local engine has no style or emotion control |
-| **Transcription (STT)** | whisper.cpp, $0 | none | never — there is no paid STT path here |
+| **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
 | **Music (BGM)** | none | Lyria clip via Gemini | …you ship without BGM |
 
-So a zero-cost run is possible: local images, local narration, whisper
+So a zero-cost run is possible: local images, local narration, local
 transcription, no generated video, no BGM. What you give up is a proper cover
 frame (it needs rendered text) and background music.
 
@@ -278,7 +282,7 @@ with a 2-round cap (falling short halts authoring).
 social-flow/
 ├── .claude-plugin/plugin.json   # plugin manifest
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 50 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 51 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -289,6 +293,7 @@ social-flow/
 │       ├── datago-client.ts     # data.go.kr (search·detail·download·odcloud·standard open API)
 │       ├── image-client.ts      # OpenAI GPT Image generation
 │       ├── zimage-client.ts     # Z-Image Turbo on-device generation (mflux/MLX)
+│       ├── qwen3-asr-client.ts  # Qwen3-ASR on-device STT (mlx-qwen3-asr CLI)
 │       ├── video-client.ts      # Veo 3.1 — t2v·i2v·extension·reference
 │       ├── seedance-client.ts   # Seedance — t2v·i2v·reference (BytePlus ModelArk)
 │       ├── tts-client.ts        # Gemini TTS — single speaker + 2-speaker dialogue
@@ -334,7 +339,7 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (50 tools)
+## MCP tool surface (51 tools)
 
 **`tools/list` does not show all 50.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
@@ -363,6 +368,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |
 | Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |
+| Speech recognition | `stt_local_transcribe` | Qwen3-ASR on-device via mlx-qwen3-asr/MLX (**no API key, no network, no billing — the default Korean STT**. Needs Apple Silicon + `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"`; the first call downloads ~3.4GB of weights. ingest runs the same engine and falls back to whisper.cpp without it) |
 | Music generation | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip (fixed 30s mp3 — the default BGM path) · Lyria RealTime (5–300s variable wav 48kHz, seed reproducibility). `GEMINI_API_KEY` |
 | Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
@@ -443,6 +449,7 @@ explicit error and everything else works.
 | `SUNO_BASE_URL` | | `https://api.sunoapi.org` | Same-spec self-host or regional mirror. Other vendors use different auth/paths — do not point this there |
 | `ARK_BASE_URL` | | `https://ark.ap-southeast.bytepluses.com/api/v3` | ModelArk region endpoint. The video models only exist in ap-southeast-1, so normally leave it alone |
 | `SUPERTONIC_PYTHON` | | `python3` | Python interpreter for local TTS. Point it at your virtualenv if you used one (e.g. `~/venvs/tts/bin/python`). No venv auto-discovery — quietly picking up a different environment per repo and changing the voice is exactly the accident this avoids |
+| `QWEN3_ASR_BIN` | | `~/.local/bin/mlx-qwen3-asr` | Local STT executable. With the default uv tool install location there is nothing to set |
 | `SNS_TOKEN_DIR` | | `~/.config/social-flow` | Root directory for SNS credentials |
 | `MEDIA_UPLOAD_URL` / `MEDIA_UPLOAD_API_KEY` | grow-threads image posts | — | Media hosting endpoint + key. Threads only accepts images as **public URLs**, so local files need somewhere to live. Anything works that accepts `POST` with an `x-api-key` header + raw bytes, returns `201 {data:{url}}`, and serves that url as unauthenticated public GET (the header of `skills/grow-threads/references/upload-media.sh` is the contract SoT). Unset, only the image step turns off — text posts still go out |
 | `THREADS_TOKEN_FILE` and friends | | `<SNS_TOKEN_DIR>/conventional name` | Per-platform override of the default (flat) path — not applied to channel directories |
@@ -505,7 +512,8 @@ server calls, and how this implementation honors (or deliberately narrows) each 
   [Meta Graph](docs/api-reference/meta-graph.html) ·
   [YouTube Data](docs/api-reference/youtube-data.html)
 
-The two local engines (`image_local_generate` · `tts_local_generate`) have no
+The three local engines (`image_local_generate` · `tts_local_generate` ·
+`stt_local_transcribe`) have no
 external contract to document, so their evidence lives in research notes instead —
 [local image generation](docs/research/2026-08-12-local-image-generation/index.html) ·
 [local TTS vs commercial APIs](docs/research/2026-08-11-local-tts-and-commercial-api/index.html)

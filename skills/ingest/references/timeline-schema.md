@@ -8,7 +8,7 @@ skill's research (research.md).
 recording/
 ├── raw/                 # transcribe.sh raw signals (intermediate — overwritten on re-run)
 │   ├── audio.wav        # 16kHz mono extracted audio
-│   ├── transcript.json  # whisper.cpp STT (ms offsets)
+│   ├── transcript.json  # STT (ms offsets) — Qwen3-ASR or whisper.cpp
 │   ├── silences.tsv     # silence spans, start<TAB>end (seconds)
 │   ├── scenes.tsv       # screen-change times (seconds)
 │   └── duration.txt     # source length (seconds)
@@ -124,17 +124,19 @@ Alignment rules:
 
 `WHISPER_PROMPT` (no default) isn't a numeric knob but **a glossary injection** — a
 comma-separated list of proper nouns and domain terms (profile.md plus terms you
-expect for the topic) that biases the whisper decoder and cuts misrecognition at
-the source. When set, `--carry-initial-prompt` applies it across a long recording.
+expect for the topic). Qwen3-ASR takes it as `--context`, the whisper fallback as
+`--prompt` (with `--carry-initial-prompt` across a long recording) — either way the
+decoder biases toward that vocabulary and misrecognition drops at the source.
 It's the cheapest fix to re-run — when misrecognition is widespread, strengthen the
 glossary and run transcribe.sh again instead of correcting after the fact.
 
 ## Traps
 
-- **whisper Korean hallucination** — it invents sentences over silence or repeats
-  the same one. build-timeline automatically drops anything with 70% silence
-  overlap and 3-in-a-row repeats, but if you see a "sentence nobody said" while
-  reviewing timeline.md, be suspicious of that span.
+- **STT Korean hallucination** — the engine invents sentences over silence or
+  repeats the same one (Qwen3-ASR does it less than whisper). build-timeline
+  automatically drops anything with 70% silence overlap and 3-in-a-row repeats,
+  but if you see a "sentence nobody said" while reviewing timeline.md, be
+  suspicious of that span.
 - **Scrolling is not a screen change** — if scenes.tsv is full of scroll false
   positives, re-run with `SCENE_THRESH=0.15`. But transition times only feed the
   boundary score near a silence, so false positives during speech are harmless

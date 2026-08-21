@@ -6,7 +6,7 @@ description: >
   recording", "녹화 시작해", "화면 녹화 해줘", or provides a screen recording
   (with voice narration) to turn into content. Can start/stop the screen+mic
   recording itself (record.sh, macOS screencapture), then extracts timestamped
-  speech (whisper.cpp STT) + silence/scene-change signals from the recording,
+  speech (Qwen3-ASR STT, whisper.cpp fallback) + silence/scene-change signals from the recording,
   merges them into a per-scene timeline (data/<channel>/episodes/<topic>/recording/
   timeline.md with keyframes + vision descriptions), which then feeds the
   storyboard skill as the primary source replacing web research. In the
@@ -14,7 +14,7 @@ description: >
   aligns the recording to the storyboard scenes (recording/alignment.json) so
   produce can edit the footage into the final video.
 argument-hint: "<channel> <recording path|record> [topic slug]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__fect-mcp__vision_analyze", "mcp__fect-mcp__vision_ocr"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe", "mcp__fect-mcp__vision_analyze", "mcp__fect-mcp__vision_ocr"]
 ---
 
 # Recording ingest — data/[channel]/episodes/[topic]/recording/
@@ -71,12 +71,15 @@ bash $REF/record.sh start ~/Movies/social-flow-rec-$(date +%Y%m%d-%H%M%S).mov
 ### 1. Check prerequisites
 
 ```bash
-command -v whisper-cli && ls ~/.cache/whisper-cpp/ggml-large-v3-turbo.bin
+command -v mlx-qwen3-asr || command -v whisper-cli
 ```
 
-If missing, explain and stop: `brew install whisper-cpp`, and download
-`ggml-large-v3-turbo.bin` (1.5GB) from `huggingface.co/ggerganov/whisper.cpp` into
-`~/.cache/whisper-cpp/`. Check that the recording file exists and plays (ffprobe).
+The default Korean STT is `mlx-qwen3-asr` (Qwen3-ASR-1.7B). If missing:
+`uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"` — the first call downloads
+~3.4GB of weights into `~/.cache/huggingface`. Until then the fallback is
+`brew install whisper-cpp` plus `~/.cache/whisper-cpp/ggml-large-v3-turbo.bin`.
+Check that the recording file exists and plays (ffprobe). Stop if neither engine
+is available.
 
 ### 2. Load the profile + settle the topic
 
@@ -91,8 +94,9 @@ the slug and move it to the real path).
 
 First **build a glossary to prevent misrecognition** — list the domain terms from
 profile.md and the proper nouns you expect for the topic (app, product, and service
-names, technical terms) comma-separated, and inject them as `WHISPER_PROMPT`. The
-whisper decoder biases toward that vocabulary, which cuts transliteration errors
+names, technical terms) comma-separated, and inject them as `WHISPER_PROMPT`.
+Qwen3-ASR takes it as `--context`, the whisper fallback as `--prompt` — either way
+the decoder biases toward that vocabulary, which cuts transliteration errors
 ("클라우드 코드" ← Claude Code) at the source.
 
 ```bash
@@ -183,17 +187,18 @@ alignment.json and takes the editing pipeline).
 - **A spoken number is not a source** — time-sensitive values (prices, tax rates,
   deadlines) still have to pass the storyboard's cross-checking policy as written. A
   statement in the recording is a claim, not evidence.
-- **whisper hallucination, scroll false positives, sensitivity tuning** —
+- **STT hallucination, scroll false positives, sensitivity tuning** —
   `references/timeline-schema.md` §Traps.
-- **Long recordings** — large-v3-turbo transcribes at roughly 3~5x real time on
-  Apple Silicon. A 10-minute recording takes 2~3 minutes — run it in the background
-  (run_in_background) and prepare other things meanwhile.
+- **Long recordings** — Qwen3-ASR-1.7B transcribes faster than real time on this
+  class of Mac; whisper large-v3-turbo runs at roughly 3~5x real time. A 10-minute
+  recording is usually 1~3 minutes — run it in the background (run_in_background)
+  and prepare other things meanwhile.
 
 ## Additional Resources
 
 ### Reference Files
 
 - **`references/record.sh`** — start/stop the screen+mic recording (macOS screencapture, PID file management)
-- **`references/transcribe.sh`** — extract audio → whisper.cpp STT → silence detection → screen-change detection (4 raw signals)
+- **`references/transcribe.sh`** — extract audio → Qwen3-ASR STT (whisper fallback) → silence detection → screen-change detection (4 raw signals)
 - **`references/build-timeline.py`** — merge the signals → derive scene boundaries → timeline.json/md + keyframe extraction
 - **`references/timeline-schema.md`** — the recording/ data contract · how boundaries are derived · tuning knobs · traps
