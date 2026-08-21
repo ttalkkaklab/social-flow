@@ -292,7 +292,8 @@ footer a { color: var(--accent); }
       <tr><td><strong>ffmpeg</strong> <span class="badge req">required</span></td><td><code>brew install ffmpeg</code></td><td>cuts and joins video and audio. Without it step 3 stops</td></tr>
       <tr><td><strong>python3</strong> <span class="badge req">required</span></td><td><code>python3 -V</code></td><td>the Korean copy style checker is a Python script</td></tr>
       <tr><td><strong>Google Chrome</strong> <span class="badge req">required</span></td><td>nothing to do if it's installed</td><td>video frames are drawn as a web page and captured</td></tr>
-      <tr><td>whisper.cpp <span class="badge opt">optional</span></td><td><code>brew install whisper-cpp</code></td><td>only for transcribing screen recordings</td></tr>
+      <tr><td>mlx-qwen3-asr <span class="badge opt">optional</span></td><td><code>uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"</code></td><td>the default Korean STT for transcribing screen recordings</td></tr>
+      <tr><td>whisper.cpp <span class="badge opt">optional</span></td><td><code>brew install whisper-cpp</code></td><td>the ingest fallback when Qwen3-ASR is missing</td></tr>
     </tbody>
   </table>
   </div>
@@ -313,13 +314,12 @@ footer a { color: var(--accent); }
   <div class="step">
     <div class="step-num">1</div>
     <div class="step-body">
-      <h3>Clone it and build the server</h3>
-      <p>Skip this one step and the plugin loads with no tools at all. The repo ships the build output, but not the libraries it needs to run (<code>node_modules</code>).</p>
-<pre><code>git clone https://github.com/ttalkkaklab/social-flow.git
-cd social-flow/server
-npm install &amp;&amp; npm run build</code></pre>
-      <p>Run <code>npm run check</code> instead and you get the build plus the self-check tests. They call no external API, so they pass without any keys.</p>
-      <div class="note"><strong>The repo is public.</strong> <code>git clone</code> works without authentication, and the license is Apache 2.0. If you already have a copy, use that one.</div>
+      <h3>Install from the marketplace</h3>
+      <p>Two lines inside Claude Code and you're done. The server ships as a single dependency-inlined bundle, so there is nothing to download or build.</p>
+<pre><code><span class="p">/plugin marketplace add</span> ttalkkaklab/social-flow
+<span class="p">/plugin install</span> social-flow@social-flow</code></pre>
+      <p>Prefer the terminal? <code>claude plugin marketplace add ttalkkaklab/social-flow</code> followed by <code>claude plugin install social-flow@social-flow</code> does the same thing.</p>
+      <div class="note"><strong>The repo is public.</strong> It installs without authentication, and the license is Apache 2.0.</div>
     </div>
   </div>
 
@@ -337,12 +337,12 @@ claude</code></pre>
   <div class="step">
     <div class="step-num">3</div>
     <div class="step-body">
-      <h3>Load the plugin</h3>
-      <p>Point Claude Code at the folder you cloned and it's available in that session.</p>
-<pre><code>claude --plugin-dir ~/social-flow</code></pre>
-      <p>If you'd rather not type the flag every time, register it as a local marketplace. Two lines inside Claude Code — what follows <code>@</code> on the second line is the marketplace name, which this repo declares as <code>social-flow</code> in <code>.claude-plugin/marketplace.json</code>.</p>
-<pre><code><span class="p">/plugin marketplace add</span> ~/social-flow
-<span class="p">/plugin install</span> social-flow@social-flow</code></pre>
+      <h3>(Optional) Clone it if you want to hack on the code</h3>
+      <p>Only for people who plan to edit the skills or the server. Point Claude Code at your clone and that session runs the clone's code.</p>
+<pre><code>git clone https://github.com/ttalkkaklab/social-flow.git ~/social-flow
+claude --plugin-dir ~/social-flow</code></pre>
+      <p>It runs as-is; only after editing <code>server/src</code> do you need <code>cd ~/social-flow/server &amp;&amp; npm install &amp;&amp; npm run check</code> for the build and the self-check tests. They call no external API, so they pass without any keys.</p>
+      <div class="note"><strong>It attaches outside Claude Code too.</strong> Grok CLI connects skills and the MCP tools with one line — <code>grok plugin install https://github.com/ttalkkaklab/social-flow.git --trust</code> (measured on grok 1.0.5). Codex CLI loads the 18 skills via <code>codex plugin marketplace add ttalkkaklab/social-flow</code> then <code>codex plugin add social-flow@social-flow</code> — MCP tools don't wire up yet as of codex 0.147.0. API keys travel the same shell-environment route as under Claude.</div>
     </div>
   </div>
 
@@ -351,7 +351,7 @@ claude</code></pre>
     <div class="step-body">
       <h3>Check that it loaded</h3>
       <p><code>/mcp</code> lists the connected servers. If <code>social-flow</code> is there with a list of tools, you're done.</p>
-      <div class="ok"><strong>Seeing only 37 tools is normal.</strong> Of the 46 total, the nine publish and insight tools show up only for platforms whose credential file exists. If you haven't connected an account yet, they're supposed to be missing.</div>
+      <div class="ok"><strong>Seeing only 42 tools is normal.</strong> Of the 51 total, the nine publish and insight tools show up only for platforms whose credential file exists. If you haven't connected an account yet, they're supposed to be missing.</div>
     </div>
   </div>
 </section>
@@ -377,6 +377,7 @@ export NAVER_CLIENT_ID="..."       <span class="c"># Korean-language research</s
 export NAVER_CLIENT_SECRET="..."
 export SERPAPI_API_KEY="..."       <span class="c"># precision and international search</span>
 export ARK_API_KEY="..."           <span class="c"># the second video engine (Seedance)</span>
+export SUNO_API_KEY="..."          <span class="c"># sung songs / Suno loop beds (sunoapi.org, not Gemini)</span>
 export DATA_GO_KR_API_KEY="..."    <span class="c"># data.go.kr API calls</span></code></pre>
 
   <div class="warn">
@@ -415,6 +416,11 @@ export DATA_GO_KR_API_KEY="..."    <span class="c"># data.go.kr API calls</span>
         <td>only the second video engine, Seedance, is unavailable. Its niche is 2–30 seconds in 1-second steps and cheap silent cuts — Veo keeps running on <code>GEMINI_API_KEY</code></td>
       </tr>
       <tr>
+        <td><code>SUNO_API_KEY</code><br><span class="badge opt">optional</span></td>
+        <td>sunoapi.org/api-key</td>
+        <td>no sung full songs and no Suno loop beds. Lyria BGM (<code>music_*</code>) keeps running on <code>GEMINI_API_KEY</code>. This is not a Gemini key, and there is no official Suno Inc. API</td>
+      </tr>
+      <tr>
         <td><code>DATA_GO_KR_API_KEY</code><br><span class="badge opt">optional</span></td>
         <td>My Page on data.go.kr</td>
         <td>only data.go.kr API calls stop. Dataset search and file downloads work without a key. Even with the key, <strong>each API needs its own usage application</strong> before it opens up</td>
@@ -436,7 +442,7 @@ export DATA_GO_KR_API_KEY="..."    <span class="c"># data.go.kr API calls</span>
     <li><strong>With them</strong> — <code>publish</code> posts straight to your accounts, and the <code>grow-*</code> skills run on <code>/loop</code>: comment replies, insight snapshots, keyword conversations, queue refills, posting. The scope is whatever the growth plan you approved once at <code>init</code> allows.</li>
     <li><strong>Without them</strong> — research, storyboard, images, voice, and the build all run as usual. <code>produce</code> writes the finished video and per-platform text to <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload those files yourself. The only consequences are that the nine publish/insight tools aren't listed and the growth loops have nothing to drive.</li>
   </ul>
-  <p>Tokens are files rather than environment variables, so <strong>adding one later needs no server restart</strong>. The next time the tool list is read, that platform's tools are there and the count moves from 37 toward 46. Account signup and token issuance are covered in <a href="#publish">section 6</a> below.</p>
+  <p>Tokens are files rather than environment variables, so <strong>adding one later needs no server restart</strong>. The next time the tool list is read, that platform's tools are there and the count moves from 41 toward 50. Account signup and token issuance are covered in <a href="#publish">section 6</a> below.</p>
 
   <h3>Checking that a key works</h3>
   <p>Two lines, before you spend anything on a video. Both are list calls, so neither is billed.</p>
@@ -578,9 +584,10 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
 
   <div class="faq">
     <h3>social-flow isn't in <code>/mcp</code></h3>
-    <p>Usually <code>npm install</code> was skipped. The repo carries the build output but not the libraries. Running the server directly shows the cause immediately.</p>
-<pre><code>cd ~/social-flow &amp;&amp; node server/dist/bundle.js</code></pre>
-    <p>If <code>social-flow MCP server started</code> prints, the server is fine and the problem is in how the plugin was loaded.</p>
+    <p>Start the server directly — the cause shows up immediately. From the install cache for a marketplace install, from your clone otherwise.</p>
+<pre><code>node ~/.claude/plugins/cache/social-flow/social-flow/*/server/dist/bundle.js
+<span class="c"># from a clone: cd ~/social-flow &amp;&amp; node server/dist/bundle.js</span></code></pre>
+    <p>If <code>social-flow MCP server started</code> prints, the server is fine and the problem is in how the plugin was loaded. On older Claude Code versions <code>claude plugin update social-flow</code> can answer not found — reinstall with <code>uninstall</code> then <code>install</code>.</p>
   </div>
 
   <div class="faq">
@@ -613,7 +620,7 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
   <h2>What to read next</h2>
   <ul>
     <li><a href="../../index.en.html">Full documentation index</a> — guides, API reference, research notes</li>
-    <li><a href="../../api-reference/index.en.html">API reference</a> — the contracts of the 12 external APIs the internal server calls</li>
+    <li><a href="../../api-reference/index.en.html">API reference</a> — the contracts of the 13 external APIs the internal server calls</li>
     <li><a href="../ai-video-production/index.en.html">Making short-form video with AI</a> — why the pipeline looks the way it does</li>
     <li><a href="../ingest-usage/index.en.html">Screen recording guide</a> · <a href="../screencast-usage/index.en.html">Shooting script guide</a></li>
   </ul>

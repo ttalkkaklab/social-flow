@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>일레븐랩스 TTS API 조사 — 모델·요금·파이프라인 적용 (2026-08-22)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+  nav.toc {
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px 26px; margin-bottom: 56px;
+  }
+  nav.toc .t { font-size: 13px; font-weight: 800; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 12px; }
+  nav.toc ol { list-style: none; margin: 0; columns: 2; column-gap: 32px; }
+  nav.toc li { margin-bottom: 7px; font-size: 14.5px; break-inside: avoid; }
+  nav.toc a { text-decoration: none; color: var(--text); }
+  nav.toc .no { color: var(--accent); font-weight: 700; font-size: 12.5px; margin-right: 10px; font-variant-numeric: tabular-nums; }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 19px; font-weight: 700; margin: 36px 0 14px; }
+  h4 { font-size: 16px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 14px; }
+  p.lead { font-size: 17.5px; }
+  ul, ol { margin: 0 0 16px 22px; }
+  li { margin-bottom: 8px; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+  .muted { color: var(--text-soft); font-size: 14px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px;
+  }
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    padding: 2px 10px; border-radius: 999px; vertical-align: 2px; white-space: nowrap;
+  }
+  .b-green  { background: var(--green-soft);  color: var(--green); }
+  .b-amber  { background: var(--amber-soft);  color: var(--amber); }
+  .b-red    { background: var(--red-soft);    color: var(--red); }
+  .b-blue   { background: var(--accent-soft); color: var(--accent); }
+  .b-purple { background: var(--purple-soft); color: var(--purple); }
+  .callout {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    background: var(--bg-soft); border-radius: 0 10px 10px 0;
+    padding: 18px 22px; margin: 20px 0;
+  }
+  .callout.green  { border-left-color: var(--green); }
+  .callout.amber  { border-left-color: var(--amber); }
+  .callout.red    { border-left-color: var(--red); }
+  .callout .co-title { font-weight: 800; font-size: 14px; letter-spacing: .04em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .callout p:last-child { margin-bottom: 0; }
+  .verdict {
+    background: linear-gradient(135deg, var(--accent-soft), transparent 70%);
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 32px 36px; box-shadow: var(--shadow); margin-bottom: 32px;
+  }
+  .verdict .v-label { font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--accent); margin-bottom: 10px; }
+  .verdict .v-main { font-size: 21px; font-weight: 800; line-height: 1.55; margin-bottom: 14px; }
+  .verdict p { color: var(--text-soft); margin-bottom: 0; font-size: 15.5px; }
+  .tbl-wrap { overflow-x: auto; margin: 18px 0 24px; border: 1px solid var(--border); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 560px; }
+  th {
+    background: var(--bg-soft); text-align: left; font-weight: 700;
+    padding: 11px 16px; border-bottom: 2px solid var(--border); white-space: nowrap;
+  }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--border); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; margin: 22px 0 24px;
+  }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--bg-card); padding: 18px 20px; }
+  .stat .s-k { font-size: 12.5px; color: var(--text-soft); font-weight: 600; letter-spacing: .03em; }
+  .stat .s-v { font-size: 26px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.3; margin-top: 2px; }
+  .stat .s-v small { font-size: 14px; font-weight: 600; color: var(--text-soft); letter-spacing: 0; }
+  .stat .s-n { font-size: 12.5px; color: var(--text-soft); line-height: 1.55; margin-top: 4px; }
+  .src-group { margin-bottom: 26px; }
+  .src-group h4 { margin-top: 0; }
+  .src-group ul { list-style: none; margin-left: 0; }
+  .src-group li { font-size: 13.5px; margin-bottom: 6px; padding-left: 18px; position: relative; color: var(--text-soft); }
+  .src-group li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .src-group a { word-break: break-all; }
+  footer { border-top: 1px solid var(--border); padding-top: 28px; font-size: 13.5px; color: var(--text-soft); }
+  footer p { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">조사 보고서</div>
+  <h1>일레븐랩스 TTS API — 모델·요금·social-flow 적용 조사</h1>
+  <p class="sub">
+    <a href="../2026-08-11-local-tts-and-commercial-api/index.html">2026-08-11 TTS 전반 조사</a>에서
+    요금 비교 수준으로만 다뤘던 ElevenLabs를 API 단위로 파고들었다.
+    공식 문서·요금 페이지를 오늘 다시 읽었고, API 실호출 실측은 아직 하지 않았다.
+  </p>
+  <div class="meta">
+    <span><strong>조사일</strong> 2026-08-22</span>
+    <span><strong>방법</strong> 공식 docs·pricing 열람 + 한국어 실사용 평 검색</span>
+    <span><strong>실측</strong> 없음 (문서 조사)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="t">차례</div>
+  <ol>
+    <li><a href="#s1"><span class="no">1</span>결론 요약</a></li>
+    <li><a href="#s2"><span class="no">2</span>모델 라인업</a></li>
+    <li><a href="#s3"><span class="no">3</span>API 구조와 파라미터</a></li>
+    <li><a href="#s4"><span class="no">4</span>v3 오디오 태그 — 감정 연출</a></li>
+    <li><a href="#s5"><span class="no">5</span>목소리 — 라이브러리·복제</a></li>
+    <li><a href="#s6"><span class="no">6</span>한국어 품질</a></li>
+    <li><a href="#s7"><span class="no">7</span>요금·한도·라이선스</a></li>
+    <li><a href="#s8"><span class="no">8</span>social-flow 파이프라인 대응</a></li>
+    <li><a href="#s9"><span class="no">9</span>출처</a></li>
+  </ol>
+</nav>
+
+<section id="s1">
+  <h2 class="sec"><span class="no">01</span>결론 요약</h2>
+
+  <div class="verdict">
+    <div class="v-label">VERDICT</div>
+    <div class="v-main">
+      대량 나레이션용은 아니다 — Gemini의 1.3~2.6배 값이다.
+      대신 우리 파이프라인의 우회 코드 두 곳을 정면으로 없앤다:
+      다화자 씬(요청 하나에 보이스 10종)과 자막 동기(글자 단위 타임스탬프 native 반환).
+    </div>
+    <p>
+      감정 연기 컷은 v3 오디오 태그([laughs]·[whispers]·[sarcastic])가 Gemini 연기 지시문과 경쟁한다.
+      상업 게시는 Starter($6)부터, 한국어 커뮤니티 보이스·전문 복제(PVC)는 Creator($22)부터다.
+      한국어 실제 음질은 샘플을 들어 봐야 판정할 수 있다 — 49종 청취 문서 방식의 후속 작업이 필요하다.
+    </p>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="s-k">표준 단가 (v2·v3)</div>
+      <div class="s-v">$100<small> /100만 자</small></div>
+      <div class="s-n">1자 = 1크레딧(v2 기준 · v3 배수는 §7). Gemini $38의 2.6배</div>
+    </div>
+    <div class="stat">
+      <div class="s-k">Flash v2.5 단가</div>
+      <div class="s-v">$50<small> /100만 자</small></div>
+      <div class="s-n">API 호출은 0.5크레딧/자 · 지연 ~75ms</div>
+    </div>
+    <div class="stat">
+      <div class="s-k">다화자 한 요청</div>
+      <div class="s-v">10<small> 보이스</small></div>
+      <div class="s-n">Text to Dialogue · 요청당 2,000자</div>
+    </div>
+    <div class="stat">
+      <div class="s-k">타임스탬프 정밀도</div>
+      <div class="s-v">글자<small> 단위</small></div>
+      <div class="s-n">with-timestamps 응답에 시작·끝 초 포함</div>
+    </div>
+  </div>
+</section>
+
+<section id="s2">
+  <h2 class="sec"><span class="no">02</span>모델 라인업</h2>
+  <p class="lead">
+    현역은 셋 — 표현력의 v3, 균형의 Multilingual v2, 속도의 Flash v2.5.
+    셋 모두 한국어를 지원 언어 목록에 올려 두었다.
+  </p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>모델 (model_id)</th><th>요청 상한</th><th>지연</th><th>언어</th><th>자리</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Eleven v3</strong><br><code>eleven_v3</code></td>
+          <td><span class="num">5,000자</span></td>
+          <td>느림 (실시간 불가)</td>
+          <td>70+</td>
+          <td>오디오북·감정 대사·다화자. 오디오 태그 지원. GA 2026-03-14 <span class="badge b-amber">2차</span></td>
+        </tr>
+        <tr>
+          <td><strong>Eleven v3 Conversational</strong></td>
+          <td>미확인</td>
+          <td><span class="num">~280ms</span></td>
+          <td>미확인</td>
+          <td>실시간 대화용 v3 계열</td>
+        </tr>
+        <tr>
+          <td><strong>Multilingual v2</strong><br><code>eleven_multilingual_v2</code></td>
+          <td><span class="num">10,000자</span></td>
+          <td>중간</td>
+          <td>29</td>
+          <td>안정 품질의 기본값. convert 엔드포인트 기본 모델</td>
+        </tr>
+        <tr>
+          <td><strong>Flash v2.5</strong><br><code>eleven_flash_v2_5</code></td>
+          <td><span class="num">40,000자</span></td>
+          <td><span class="num">~75ms</span></td>
+          <td>32</td>
+          <td>실시간·대량 처리. API 0.5크레딧/자. 숫자 정규화 기본 꺼짐</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ul>
+    <li><strong>Turbo v2·v2.5는 Flash 계열로 대체</strong>됐다(문서상 superseded). 신규 코드는 Flash를 쓴다.</li>
+    <li><strong>v1 모델 두 종은 2026-07-09에 제거</strong>됐다 <span class="badge b-amber">2차</span>. 예제 코드 복붙 시 model_id를 확인해야 한다.</li>
+    <li>Flash v2.5의 추가 3개 언어는 헝가리어·노르웨이어·베트남어다.</li>
+    <li>Flash v2.5는 숫자를 그대로 읽는 편이라 날짜·금액이 많은 문안은 <code>apply_text_normalization</code>을 켜거나 한글로 풀어 적는 쪽이 안전하다.</li>
+  </ul>
+</section>
+
+<section id="s3">
+  <h2 class="sec"><span class="no">03</span>API 구조와 파라미터</h2>
+  <p>인증은 <code>xi-api-key</code> 헤더 하나다. 엔드포인트는 용도별로 넷.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>엔드포인트</th><th>반환</th><th>용도</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>POST /v1/text-to-speech/{voice_id}</code></td>
+          <td>오디오 바이너리</td>
+          <td>기본 합성</td>
+        </tr>
+        <tr>
+          <td><code>…/{voice_id}/stream</code></td>
+          <td>오디오 스트림</td>
+          <td>HTTP 스트리밍 재생</td>
+        </tr>
+        <tr>
+          <td><code>…/{voice_id}/with-timestamps</code></td>
+          <td><code>audio_base64</code> + <code>alignment</code></td>
+          <td>글자별 시작·끝 초 — 자막 동기용. 정규화 전·후 정렬(<code>normalized_alignment</code>) 둘 다 온다. <strong>모델별 지원 여부는 문서에 명시가 없다 — 실측 항목</strong>(v3는 출시 초기에 미지원이었다)</td>
+        </tr>
+        <tr>
+          <td><code>POST /v1/text-to-dialogue</code></td>
+          <td>오디오 바이너리</td>
+          <td>다화자 대화. <code>inputs: [{text, voice_id}…]</code> 배열, 기본 모델 <code>eleven_v3</code>, 보이스 최대 10종, 요청당 총 2,000자 권장</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>본문 파라미터</h3>
+  <ul>
+    <li><code>model_id</code> — 기본 <code>eleven_multilingual_v2</code></li>
+    <li><code>language_code</code> — ISO 639-1 강제 지정. <strong>multilingual_v2는 이 파라미터를 지원하지 않고</strong>, 2026-07부터 미지원 코드는 거부 대신 무시된다 <span class="badge b-amber">2차</span></li>
+    <li><code>output_format</code> — 기본 <code>mp3_44100_128</code>. mp3 22.05~44.1kHz·32~192kbps / PCM 8~48kHz / μ-law·A-law 8kHz / Opus 48kHz. 고품질 포맷은 유료 플랜용</li>
+    <li><code>seed</code> — 0~4294967295. 같은 요청의 결정적 재현</li>
+    <li><code>previous_text</code> / <code>next_text</code> — 문장을 나눠 합성할 때 앞뒤 문맥을 넘겨 이음새 톤을 맞춘다</li>
+    <li><code>pronunciation_dictionary_locators</code> — 발음 사전 최대 3개. 고유명사 발음 교정 창구</li>
+    <li><code>apply_text_normalization</code> — <code>auto</code>/<code>on</code>/<code>off</code>. 숫자·날짜 읽기 변환</li>
+  </ul>
+
+  <h3>voice_settings</h3>
+  <ul>
+    <li><code>stability</code> 0~1 (기본 0.5) — 높을수록 일정하고 단조로움</li>
+    <li><code>similarity_boost</code> (기본 0.75) — 원화자 유사도</li>
+    <li><code>style</code> (기본 0) — 과장 강도. 올리면 지연도 는다</li>
+    <li><code>use_speaker_boost</code> (기본 true), <code>speed</code> (기본 1.0)</li>
+  </ul>
+
+  <div class="callout">
+    <div class="co-title">파이프라인 관점 메모</div>
+    <p>
+      <code>seed</code> + <code>previous_text/next_text</code> 조합은 우리처럼 문장 단위로 끊어
+      합성·검수·재합성하는 흐름과 잘 맞는다. 특정 문장만 다시 만들 때 앞뒤 문맥을 주면
+      이어붙인 티가 덜 난다. 발음 교정도 지금처럼 표기를 바꿔치기(「에이트」류)하는 대신
+      발음 사전으로 정식 처리할 수 있다.
+    </p>
+  </div>
+</section>
+
+<section id="s4">
+  <h2 class="sec"><span class="no">04</span>v3 오디오 태그 — 감정 연출</h2>
+  <p class="lead">
+    본문에 대괄호 태그를 심으면 그 자리에서 연기가 바뀐다.
+    Gemini TTS의 프롬프트 지시문("차분하게 읽어줘")보다 위치 제어가 정밀하다.
+  </p>
+  <ul>
+    <li><strong>감정·전달</strong> — <code>[laughs]</code> <code>[laughs harder]</code> <code>[whispers]</code> <code>[sighs]</code> <code>[sarcastic]</code> <code>[curious]</code> <code>[excited]</code> <code>[crying]</code> <code>[mischievously]</code></li>
+    <li><strong>효과음</strong> — <code>[applause]</code> <code>[clapping]</code> <code>[explosion]</code> <code>[gulps]</code> 등</li>
+    <li><strong>실험적</strong> — <code>[sings]</code> <code>[strong X accent]</code> 등. 일관성이 떨어져 주의 표기가 붙어 있다</li>
+  </ul>
+  <p>
+    태그 효과는 보이스의 학습 샘플 성격을 탄다 — 속삭이는 보이스에 <code>[shout]</code>를 붙여도
+    설득력 있게 소리치지 못한다. v3의 stability는 슬라이더가 아니라 3모드다:
+    <strong>Creative</strong>(표현 최대·환각 위험)·<strong>Natural</strong>(균형)·<strong>Robust</strong>(안정적이나 태그 반응 둔함).
+    태그를 쓰려면 Creative나 Natural을 고른다.
+  </p>
+  <p class="muted">
+    한국어 문안에서 태그가 얼마나 먹히는지는 문서에 없다. 실청취 검증 항목이다.
+  </p>
+</section>
+
+<section id="s5">
+  <h2 class="sec"><span class="no">05</span>목소리 — 라이브러리·복제</h2>
+  <ul>
+    <li><strong>기본 보이스는 2026-12-31에 만료</strong>되고 새 보이스 세트로 교체된다. 지금 기본 보이스에 파이프라인을 묶으면 연말에 갈아타야 한다.</li>
+    <li><strong>Voice Library</strong> — 커뮤니티 공유 보이스 1만 종 이상. 제작자가 조건을 정하고 수익을 나눈다. <strong>무료 티어 API에서는 못 쓴다.</strong></li>
+    <li><strong>IVC(즉석 복제)</strong> — 2분 미만 샘플로 복제. 대부분의 유료 플랜에서 가능</li>
+    <li><strong>PVC(전문 복제)</strong> — 장시간 학습 오디오 + 본인 확인(voice captcha) 필수. <strong>Creator 플랜 이상.</strong> 품질은 IVC보다 위</li>
+    <li><strong>Voice Design</strong> — 텍스트 설명(20~1,000자)으로 새 보이스 생성, 시안 3개 반환. v3 기반은 오디오 태그 대응 보이스를 만든다</li>
+  </ul>
+</section>
+
+<section id="s6">
+  <h2 class="sec"><span class="no">06</span>한국어 품질</h2>
+  <p class="lead">
+    문서상 지원과 실제 음질은 별개다. 커뮤니티 실사용 평의 공통 결론은
+    "<strong>영어 기본 보이스로 한국어를 돌리면 외국인 억양이 난다</strong> —
+    한국어 화자가 만든 PVC 보이스를 Voice Library에서 골라야 자연스럽다"이다 <span class="badge b-amber">2차</span>.
+  </p>
+  <ul>
+    <li>2024년 무렵의 평가는 기계적 억양·어색한 호흡으로 박했고, v3에서 한국어 발음이 크게 나아졌다는 게 2026년 국내 블로그들의 일치된 평이다 <span class="badge b-amber">2차</span></li>
+    <li>결국 모델 선택보다 <strong>보이스 선택</strong>이 한국어 품질을 가른다는 얘기다 — 한국어 보이스 실청취 없이 도입 판단을 내릴 수 없다</li>
+  </ul>
+  <div class="callout amber">
+    <div class="co-title">미검증</div>
+    <p>
+      한국어 보이스별 음질, v3 태그의 한국어 반응, 그리고 우리가 Gemini에서 겪은
+      길이 퇴화·받침 탈락류 함정의 재현 여부 — 셋 다 들어 보기 전엔 모른다.
+      2026-08-11 조사의 49종 청취 문서와 같은 방식의 샘플 페이지가 후속 작업이다.
+    </p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2 class="sec"><span class="no">07</span>요금·한도·라이선스</h2>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>플랜</th><th>월</th><th>크레딧/월</th><th>동시 요청</th><th>열리는 것</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Free</strong></td><td class="num">$0</td><td class="num">10,000</td><td class="num">2</td><td>상업 불가 · attribution 필수 · Voice Library API 불가</td></tr>
+        <tr><td><strong>Starter</strong></td><td class="num">$6</td><td class="num">30,000</td><td class="num">3</td><td>상업 라이선스 시작점 · IVC</td></tr>
+        <tr><td><strong>Creator</strong></td><td class="num">$22 <span class="muted">(첫 달 $11)</span></td><td class="num">121,000</td><td class="num">5</td><td>PVC · 192kbps mp3</td></tr>
+        <tr><td><strong>Pro</strong></td><td class="num">$99</td><td class="num">600,000</td><td class="num">10</td><td></td></tr>
+        <tr><td><strong>Scale</strong></td><td class="num">$299</td><td class="num">1,800,000</td><td class="num">15</td><td></td></tr>
+        <tr><td><strong>Business</strong></td><td class="num">$990</td><td class="num">6,000,000</td><td class="num">15</td><td>zero-retention 등 기업 옵션</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ul>
+    <li><strong>1자 = 1크레딧</strong>이 표준이고, Flash·Turbo 계열은 API 호출에서 0.5크레딧/자다. 초과분 단가는 표준 $0.10/1천 자·Flash $0.05/1천 자 — 100만 자로 환산하면 $100·$50</li>
+    <li><strong>무료 플랜은 상업 이용 불가</strong>다. 게시물 제목이나 크레딧에 "elevenlabs.io" 표기를 요구한다. 유료 플랜에서 만든 오디오는 해지 후에도 상업 권리가 유지된다</li>
+    <li>동시 한도를 넘기면 <code>429</code>가 돌아온다. 우리 볼륨(에피소드당 수십 콜, 순차)엔 Starter의 3동시로도 걸릴 일이 없다</li>
+  </ul>
+
+  <div class="callout amber">
+    <div class="co-title">표기 불일치 — 결제 전 재확인</div>
+    <p>
+      구독 페이지(/pricing)와 API 요금 페이지(/pricing/api)의 플랜별 포함량 표기가
+      서로 다르게 읽혔다(예: Starter 3만 크레딧 vs "v3 1만 자"). 위 표는 구독 페이지 기준이다.
+      v3는 크레딧 배수가 다르게 적용될 가능성이 있으니 결제 전에 대시보드 견적으로 확인한다.
+    </p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2 class="sec"><span class="no">08</span>social-flow 파이프라인 대응</h2>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>지금 우리가 하는 일</th><th>ElevenLabs로 하면</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>3화자 씬 — Gemini <code>tts_multi_speaker</code>가 2화자 상한이라 화자별 콜 + 쉼 0.75초 이어붙임</td>
+          <td><code>text-to-dialogue</code> 한 요청에 보이스 10종. 우회 코드가 통째로 빠진다. 요청당 2,000자 상한이라 씬 단위 분할은 유지</td>
+        </tr>
+        <tr>
+          <td>자막 동기 — TTS 출력물을 ASR로 되읽어 단어 타임스탬프 추출·검증</td>
+          <td><code>with-timestamps</code>가 글자 단위 정렬을 합성과 같이 반환. 재STT 단계가 사라진다</td>
+        </tr>
+        <tr>
+          <td>감정 연기 컷 — Gemini TTS 프롬프트 지시문</td>
+          <td>v3 오디오 태그가 문장 안 정확한 위치에 연기를 건다. 5,000자 상한·실시간 불가는 사전 렌더 파이프라인엔 무관</td>
+        </tr>
+        <tr>
+          <td>발음 교정 — 표기 바꿔치기(「에이트」류)</td>
+          <td>발음 사전(pronunciation dictionary) 최대 3개로 정식 관리</td>
+        </tr>
+        <tr>
+          <td>대량 나레이션 — Supertonic 로컬(0원) / Gemini($38/100만 자)</td>
+          <td>여기는 안 바꾼다. Flash $50·표준 $100은 대량용으로 비싸다</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    도입한다면 자리는 셋 — 다화자 씬, 감정 연기 컷, 그리고 자막 타임스탬프.
+    최소 플랜은 상업 게시 조건 때문에 Starter($6)가 바닥이고,
+    한국어 커뮤니티 보이스와 PVC까지 쓰려면 Creator($22)다.
+    딸깍랩 4배역(Charon·Kore·Leda·Zubenelgenubi)을 옮기려면 비슷한 색의 한국어 보이스를
+    Voice Library에서 찾아 실청취로 고르는 작업이 선행돼야 한다.
+  </p>
+
+  <div class="callout green">
+    <div class="co-title">다음 단계 (도입을 결정할 경우)</div>
+    <p>
+      ① 무료 티어로 한국어 기본 보이스 실청취(단 Voice Library는 유료 전환 후) →
+      ② 49종 문서 형식의 한국어 샘플 페이지 →
+      ③ 3화자 씬 하나를 text-to-dialogue로 재현해 Gemini 이어붙임본과 A/B →
+      ④ with-timestamps 정렬을 build 스크립트 자막 입력과 맞대 보기.
+    </p>
+  </div>
+</section>
+
+<section id="s9">
+  <h2 class="sec"><span class="no">09</span>출처</h2>
+
+  <div class="src-group">
+    <h4>1차 <span class="badge b-green">공식 문서·요금 페이지</span></h4>
+    <ul>
+      <li><a href="https://elevenlabs.io/docs/models">ElevenLabs Docs — Models</a> (모델별 상한·언어·지연)</li>
+      <li><a href="https://elevenlabs.io/docs/api-reference/text-to-speech/convert">API Reference — Text to Speech convert</a> (파라미터 전체)</li>
+      <li><a href="https://elevenlabs.io/docs/api-reference/text-to-speech/convert-with-timestamps">API Reference — convert with timestamps</a> (글자 단위 정렬 구조)</li>
+      <li><a href="https://elevenlabs.io/docs/api-reference/text-to-dialogue/convert">API Reference — Text to Dialogue</a> (10보이스·2,000자)</li>
+      <li><a href="https://elevenlabs.io/docs/capabilities/text-to-speech">Capabilities — Text to Speech</a> (포맷·언어 목록)</li>
+      <li><a href="https://elevenlabs.io/docs/capabilities/voices">Capabilities — Voices</a> (기본 보이스 만료·IVC/PVC 조건)</li>
+      <li><a href="https://elevenlabs.io/docs/best-practices/prompting/eleven-v3">Best Practices — Prompting Eleven v3</a> (오디오 태그·stability 3모드)</li>
+      <li><a href="https://elevenlabs.io/pricing">ElevenLabs — Pricing</a> (플랜 표 기준, 2026-08-22 열람)</li>
+      <li><a href="https://help.elevenlabs.io/hc/en-us/articles/14312733311761">Help Center — 동시 요청 한도</a> · <a href="https://help.elevenlabs.io/hc/en-us/articles/19571824571921-API-Error-Code-429">429 안내</a> · <a href="https://help.elevenlabs.io/hc/en-us/articles/13313564601361">게시·상업 이용 조건</a></li>
+    </ul>
+  </div>
+
+  <div class="src-group">
+    <h4>2차 <span class="badge b-amber">공식 페이지에서 재확인 못 함</span></h4>
+    <ul>
+      <li><a href="https://inworld.ai/resources/elevenlabs-v3-review">Inworld — ElevenLabs v3 GA 리뷰</a> (GA 일자 2026-03-14, 실시간 불가 판단)</li>
+      <li><a href="https://releasebot.io/updates/eleven-labs">Releasebot — 6~8월 변경 이력</a> (v1 제거 2026-07-09, language_code 무시 처리 — 공식 changelog가 404라 여기서 확인)</li>
+      <li><a href="https://elevenlabs.io/pricing/api">ElevenLabs — API Pricing</a> (구독 페이지와 표기 불일치, §7 참고)</li>
+      <li>한국어 실사용 평 — <a href="https://www.elancer.co.kr/blog/detail/1047">이랜서 블로그</a> · <a href="https://carat.im/blog/elevenlabs-usage-guide">캐럿 블로그</a> · <a href="https://brunch.co.kr/@sukistory/101">brunch</a> · <a href="https://namu.wiki/w/Elevenlabs">나무위키</a></li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p>social-flow 조사 문서 · 2026-08-22 · 선행 조사: <a href="../2026-08-11-local-tts-and-commercial-api/index.html">로컬 TTS와 상용 API</a> · <a href="../tts/index.html">TTS 목소리 49종 청취</a></p>
+  <p>이 문서는 공식 문서·요금 페이지 열람 결과다. API 실호출·한국어 실청취 실측은 아직 없다.</p>
+</footer>
+
+</div>
+</body>
+</html>

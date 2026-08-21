@@ -12,12 +12,20 @@
  */
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
-import { CHANNEL_SLUG_RE, SNS_PLATFORMS, snsCredentialFile, snsTokenDir } from '../dist/config.js';
+import {
+  CHANNEL_SLUG_RE,
+  SNS_PLATFORMS,
+  disabledToolPatterns,
+  isToolDisabled,
+  snsCredentialFile,
+  snsTokenDir,
+} from '../dist/config.js';
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from '../dist/tools.js';
 import { ROUTES, threadsTextLength } from '../dist/handlers.js';
 import { TTS_VOICE_NAMES, VALID_TTS_MODELS } from '../dist/tts-client.js';
@@ -295,6 +303,63 @@ describe('routing consistency', () => {
   });
 });
 
+/*
+ * Operator tool on/off — <SNS_TOKEN_DIR>/disabled-tools.json holds a JSON array of
+ * tool-name patterns. A listed tool is hidden from ListTools AND refused by CallTool
+ * (a stale client tool list must not bypass the switch). The file is read per
+ * request, so edits apply without a server restart.
+ */
+describe('tool on/off (disabled-tools.json)', () => {
+  it('a pattern is an exact name or a trailing-* prefix family, nothing fancier', () => {
+    assert.equal(isToolDisabled('seedance_text2video', ['seedance_*']), true);
+    assert.equal(isToolDisabled('seedance_reference', ['seedance_reference']), true);
+    assert.equal(isToolDisabled('veo_text2video', ['seedance_*']), false);
+    assert.equal(isToolDisabled('seedance_text2video', []), false);
+    // the "*" is a suffix wildcard only — it does not float mid-name
+    assert.equal(isToolDisabled('tts_local_generate', ['tts_*generate']), false);
+    // a bare "*" prefixes everything, i.e. turns the whole server off
+    assert.equal(isToolDisabled('naver_search', ['*']), true);
+  });
+
+  it('reads a JSON string array; a missing or malformed file turns nothing off', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sf-disabled-tools-'));
+    try {
+      const file = join(dir, 'disabled-tools.json');
+      assert.deepEqual(disabledToolPatterns(file), [], 'missing file must disable nothing');
+      writeFileSync(file, JSON.stringify(['seedance_*', 'naver_search']));
+      assert.deepEqual(disabledToolPatterns(file), ['seedance_*', 'naver_search']);
+      writeFileSync(file, '{"seedance_*": false}'); // wrong shape — object, not array
+      assert.deepEqual(disabledToolPatterns(file), [], 'malformed file must disable nothing');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('the documented seedance family pattern hides exactly the three seedance tools', () => {
+    const hidden = TOOLS.filter((tool) => isToolDisabled(tool.name, ['seedance_*'])).map((t) => t.name).sort();
+    assert.deepEqual(hidden, ['seedance_img2video', 'seedance_reference', 'seedance_text2video']);
+  });
+});
+
+describe('suno_* tools', () => {
+  const SUNO = ['suno_generate', 'suno_generate_sound', 'suno_generate_lyrics', 'suno_credits'];
+
+  it('all four suno tools are listed and routed', () => {
+    for (const name of SUNO) {
+      assert.ok(TOOLS.some((tool) => tool.name === name), `missing tool ${name}`);
+      assert.equal(typeof ROUTES[name], 'function', `missing route ${name}`);
+    }
+  });
+
+  it('suno_generate describes the third-party REST and does not claim an official Suno API', () => {
+    const tool = TOOLS.find((t) => t.name === 'suno_generate');
+    assert.match(tool.description, /sunoapi\.org/);
+    assert.match(tool.description, /no public self-serve API/);
+    assert.match(tool.description, /SUNO_API_KEY/);
+    assert.match(tool.description, /does not block music_/);
+  });
+});
+
 describe('HITL contract', () => {
   const destructive = TOOLS.filter((t) => t.annotations?.destructiveHint === true);
 
@@ -553,27 +618,41 @@ describe('YouTube per-format caption contract (16:9 long-form lane)', () => {
   });
 });
 
-describe('Threads body-link contract', () => {
-  // Threads for video episodes goes out as one body-link post, not cover image
-  // + link reply (strategy change, 2026-08-14). The link preview card is
-  // media_type=TEXT only, hence exclusive with the image.
+describe('Threads post-media contract', () => {
+  // A video episode carries the video on the post itself (videoUrl), not as a
+  // reply and not as a bare link (user directive 2026-08-19). One media_type per
+  // post, so the three media fields are mutually exclusive.
   const th = () => byName.get('threads_publish');
   const props = () => th().inputSchema.properties;
+
+  it('takes a videoUrl argument (video on the post)', () => {
+    assert.equal(props().videoUrl?.format, 'uri', 'videoUrl missing or not uri format');
+  });
 
   it('takes a linkUrl argument (link preview card)', () => {
     assert.equal(props().linkUrl?.format, 'uri', 'linkUrl missing or not uri format');
   });
 
-  it('the linkUrl and imageUrl descriptions state they are mutually exclusive', () => {
+  it('all three media descriptions state they are mutually exclusive', () => {
     // sent together, the platform rejects at container creation — the schema description blocks it first
-    assert.match(props().linkUrl.description, /mutually exclusive/, 'no exclusivity note in the linkUrl description');
-    assert.match(props().imageUrl.description, /mutually exclusive/, 'no exclusivity note in the imageUrl description');
+    for (const k of ['imageUrl', 'videoUrl', 'linkUrl']) {
+      assert.match(props()[k].description, /mutually exclusive/, `no exclusivity note in the ${k} description`);
+    }
+  });
+
+  it('the videoUrl description asks for the burned-in copy', () => {
+    // Threads has no subtitle parameter, so a clean master ships without subtitles
+    assert.match(props().videoUrl.description, /subtitle-burned|burned-in/i, 'videoUrl does not ask for the burn-in');
   });
 
   it('the tool description does not fall back to the link-reply strategy', () => {
-    // if the old strategy ("cover image body + full-video link reply") lingers
-    // in the description, callers publish one more reply and the same link goes out twice
+    // if the old strategy ("body + full-video link reply") lingers in the
+    // description, callers publish one more reply and the video goes out twice
     assert.doesNotMatch(th().description, /link reply|the link in a reply/, 'the old link-reply strategy lingers in the description');
+  });
+
+  it('argument name matches IG (the video of a post = videoUrl)', () => {
+    assert.ok(byName.get('instagram_publish').inputSchema.properties.videoUrl, 'IG videoUrl has vanished');
   });
 
   it('argument name matches FB (the link of a text post = linkUrl)', () => {

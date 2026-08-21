@@ -18,7 +18,7 @@
   <h1>Tool quality audit report</h1>
   <p class="sub">A record of scoring 31 tools against each API's official contract, the MCP 2025-06-18 spec, and tool-authoring best practices, then fixing what the scoring found. The rubric's source of truth is <a href="mcp-tools.en.html#rubric">MCP tool spec §6</a>.</p>
   <div class="meta">
-    <span>Scope <strong>31 tools · 5,700 lines</strong> (of today's 46)</span>
+    <span>Scope <strong>31 tools · 5,700 lines</strong> (of today's 51)</span>
     <span>Verification <strong>239 contract tests</strong> (573 today)</span>
     <span>Fixed <strong>2 P0 · 11 P1 · 9 P2</strong></span>
   </div>
@@ -324,7 +324,7 @@
 <section id="since">
   <h2>8. Tools added after the audit (unaudited)</h2>
   <div class="warn">
-    <strong>The 96 above is a score for the 31 tools as they stood on 2026-07-29.</strong> <strong>15 have been added since, bringing the count to 46</strong>, and only 31 of those were ever scored — the 15 below never went through this audit. Rewriting the number as 46 would amount to claiming an audit that never ran, so 31 stays.
+    <strong>The 96 above is a score for the 31 tools as they stood on 2026-07-29.</strong> <strong>16 have been added since, bringing the count to 51</strong>, and only 31 of those were ever scored — the 20 below never went through this audit. Rewriting the number as 47 would amount to claiming an audit that never ran, so 31 stays.
   </div>
   <div class="table-scroll">
   <table>
@@ -333,6 +333,7 @@
       <tr><td><code>seedance_text2video</code> · <code>seedance_img2video</code> · <code>seedance_reference</code></td><td>The second video engine — 2–30s in 1-second steps, billed for what you request</td><td>BytePlus ModelArk (<code>ARK_API_KEY</code>)</td></tr>
       <tr><td><code>image_local_generate</code></td><td>On-device image generation — the default path for images moved here</td><td>mflux / Z-Image Turbo (local)</td></tr>
       <tr><td><code>tts_local_generate</code></td><td>On-device speech synthesis — the default path for narration bodies</td><td>Supertonic 3 (local)</td></tr>
+      <tr><td><code>stt_local_transcribe</code></td><td>On-device Korean STT — the default path for ingest</td><td>Qwen3-ASR / mlx-qwen3-asr (local)</td></tr>
       <tr><td><code>serp_image_search</code></td><td>Image search — license, size, and aspect-ratio filters</td><td>SerpApi <code>google_images</code></td></tr>
       <tr><td><code>threads_insights</code> · <code>threads_search</code></td><td>Reads for grow-threads</td><td>Threads Graph</td></tr>
       <tr><td><code>instagram_insights</code></td><td>Reads for grow-instagram</td><td>Instagram Graph</td></tr>
@@ -345,11 +346,11 @@
     </tbody>
   </table>
   </div>
-  <p>The audit simply hasn't been rerun; this list is inside the same contract-test net — <code>npm run check</code> has grown from 239 tests to <strong>573</strong> (checked 2026-08-18). The next audit scores 46 tools.</p>
+  <p>The audit simply hasn't been rerun; this list is inside the same contract-test net — <code>npm run check</code> has grown from 239 tests to <strong>573</strong> (checked 2026-08-18). The next audit scores 51 tools.</p>
 </section>
 
 <footer>
-  Audited 2026-07-29 (first pass v0.4.0 · second pass v0.4.1) · tool list checked 2026-08-18 (v0.23.0 · 31 of 46 audited) · rubric <a href="mcp-tools.en.html#rubric">MCP tool spec §6</a> · reproduce with <code>cd server &amp;&amp; npm run check</code>
+  Audited 2026-07-29 (first pass v0.4.0 · second pass v0.4.1) · tool list checked 2026-08-18 (v0.23.0 check · 31 of the current 51 audited) · rubric <a href="mcp-tools.en.html#rubric">MCP tool spec §6</a> · reproduce with <code>cd server &amp;&amp; npm run check</code>
 </footer>
 
 </div>

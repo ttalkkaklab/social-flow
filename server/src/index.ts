@@ -2,7 +2,8 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { config, listChannelDirs } from './config.js';
+import { config, disabledToolPatterns, disabledToolsFile, listChannelDirs } from './config.js';
+import { describeToolGate, resolveToolGate, warnUnknownPatterns } from './tool-gate.js';
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
 import { checkStageGate } from './production-stage.js';
@@ -12,7 +13,7 @@ import { enabledPlatforms } from './sns-client.js';
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
 const server = new Server(
-  { name: 'social-flow', version: '0.11.0' },
+  { name: 'social-flow', version: '0.14.0' },
   { capabilities: { tools: {} } },
 );
 
@@ -20,10 +21,15 @@ const server = new Server(
 // (default tokens ∪ channel directories) — this is evaluated per request, so adding a token
 // file takes effect without a server restart. Every handler stays registered, so calling a
 // hidden tool directly still returns an explicit "no token" error.
+// On top of that, env (SOCIAL_FLOW_*) and <SNS_TOKEN_DIR>/disabled-tools.json turn
+// individual tools off by name (trailing "*" covers a family) — also read per
+// request, and CallTool refuses them too.
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const enabled = new Set<string>(enabledPlatforms());
+  const jsonPatterns = disabledToolPatterns();
   return {
     tools: TOOLS.filter((tool) => {
+      if (!resolveToolGate(tool.name, { jsonPatterns, jsonFile: disabledToolsFile }).enabled) return false;
       const platform = SNS_PLATFORM_BY_TOOL[tool.name];
       return platform === undefined || enabled.has(platform);
     }),
@@ -37,12 +43,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // An unknown tool is a protocol error (-32602), not an execution failure (isError) —
     // the MCP two-layer error model: only failures of tools that exist become tool results
     if (!handler) throw new McpError(ErrorCode.InvalidParams, `Unknown tool: ${name}`);
+    // A tool the operator turned off is refused even when called directly with a
+    // stale tool list — hiding it from ListTools alone would not block the call.
+    const gate = resolveToolGate(name, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
+    if (!gate.enabled) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text:
+              `Tool "${name}" is turned off (${gate.reason}). ` +
+              'Clear the matching SOCIAL_FLOW_* env or remove its entry from disabled-tools.json to re-enable — no server restart needed for the JSON file.',
+          },
+        ],
+        isError: true,
+      };
+    }
     // Production stage gate — refuses a step the episode is not standing at. Allows everything
     // outside a gated episode, so other channels and untracked episodes run unchanged.
-    const gate = checkStageGate(name, args ?? {});
-    if (!gate.allowed) {
+    const stageGate = checkStageGate(name, args ?? {});
+    if (!stageGate.allowed) {
       return {
-        content: [{ type: 'text', text: `단계 게이트가 막았습니다.\n\n${gate.reason}` }],
+        content: [{ type: 'text', text: `단계 게이트가 막았습니다.\n\n${stageGate.reason}` }],
         isError: true,
       };
     }
@@ -76,17 +98,26 @@ async function main() {
   console.error('social-flow MCP server started');
   const snsEnabled = enabledPlatforms();
   const channelDirs = listChannelDirs();
+  const jsonPatterns = disabledToolPatterns();
+  const toolNames = TOOLS.map((tool) => tool.name);
+  for (const warning of warnUnknownPatterns(toolNames)) {
+    console.error(`[social-flow] ${warning}`);
+  }
   console.error(
     `Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* and sns_issue_scout tools will fail)'}, ` +
       `naver keys ${config.naverClientId && config.naverClientSecret ? 'set' : 'MISSING (naver_search will fail)'}, ` +
       `data.go.kr key ${config.dataGoKrApiKey ? 'set' : 'MISSING (datago_file_fetch/datago_api_call will fail — search/detail/download still work)'}, ` +
       `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail — tts_local_generate does not need it)'}, ` +
       `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail — image_local_generate does not need it)'}, ` +
+      `ark key ${config.arkApiKey ? 'set' : 'MISSING (seedance_* video generation tools will fail — veo_* does not need it)'}, ` +
+      `suno key ${config.sunoApiKey ? 'set' : 'MISSING (suno_* will fail — music_*(Lyria) does not need it)'}, ` +
       `local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : 'python3 (default — set SUPERTONIC_PYTHON for a virtualenv)'}, ` +
       `local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : '~/.local/bin/mflux-generate-z-image-turbo (default — set MFLUX_ZIMAGE_BIN if elsewhere)'}, ` +
+      `local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : '~/.local/bin/mlx-qwen3-asr (default — set QWEN3_ASR_BIN if elsewhere)'}, ` +
       `youtube data key ${config.youtubeApiKey ? 'set' : 'MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)'}, ` +
       `sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(',') : 'none'} (credential files found — others hidden from ListTools), ` +
-      `sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(',')}]`).join(' ') : 'none (flat/default tokens only)'}`,
+      `sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(',')}]`).join(' ') : 'none (flat/default tokens only)'}, ` +
+      describeToolGate(toolNames, process.env, jsonPatterns),
   );
 }
 

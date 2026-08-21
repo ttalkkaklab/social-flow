@@ -2,7 +2,7 @@
   "mcpServers": {
     "social-flow": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT:-.}/server/dist/bundle.js"],
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/dist/bundle.js"],
       "env": {
         "SERPAPI_API_KEY": "${SERPAPI_API_KEY:-}",
         "NAVER_CLIENT_ID": "${NAVER_CLIENT_ID:-}",
@@ -13,6 +13,11 @@
         "OPENAI_API_KEY": "${OPENAI_API_KEY:-}",
         "ARK_API_KEY": "${ARK_API_KEY:-}",
         "ARK_BASE_URL": "${ARK_BASE_URL:-}",
+        "SUNO_API_KEY": "${SUNO_API_KEY:-}",
+        "SUNO_BASE_URL": "${SUNO_BASE_URL:-}",
+        "SOCIAL_FLOW_TOOLS": "${SOCIAL_FLOW_TOOLS:-}",
+        "SOCIAL_FLOW_DISABLE_TOOLS": "${SOCIAL_FLOW_DISABLE_TOOLS:-}",
+        "SOCIAL_FLOW_TOOL_FLAGS": "${SOCIAL_FLOW_TOOL_FLAGS:-}",
         "SNS_TOKEN_DIR": "${SNS_TOKEN_DIR:-}",
         "THREADS_TOKEN_FILE": "${THREADS_TOKEN_FILE:-}",
         "INSTAGRAM_TOKEN_FILE": "${INSTAGRAM_TOKEN_FILE:-}",

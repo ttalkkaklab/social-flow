@@ -351,7 +351,7 @@ if [ "$RDIM" != "${W}x${H}" ]; then
   say "✗ reel.mp4 is ${RDIM} but the declared canvas is ${W}x${H} — an asset or a filter is off"
   exit 1
 fi
-[ -f format.env ] && say "── 캔버스: 선언 ${W}x${H} · 실측 ${RDIM}"
+[ -f format.env ] && say "── canvas: declared ${W}x${H} · measured ${RDIM}"
 
 ffmpeg -y -v error -ss "$COVER_TS" -i reel.mp4 -frames:v 1 -q:v 2 cover.jpg
 [ "$WARN" -eq 1 ] && say "── warnings present: check the ⚠ items above"

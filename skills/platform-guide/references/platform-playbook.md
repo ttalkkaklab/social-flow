@@ -48,8 +48,8 @@ When unsure, start with Threads — lightest, cheapest to fail.
   goes in a comment.
 - **Threads = spoken register** — casual speech, 1–3 lines + one closing
   question. Don't spend the whole hook (say everything and there's no reason to
-  click). Hashtags ≤1. Video episodes attach no cover image; the video link goes
-  in a self-reply (§3).
+  click). Hashtags ≤1. Video episodes carry no cover image — **the video rides on
+  the post itself** (§3).
 
 ### Plain-language principle (all platforms · all surfaces)
 
@@ -68,21 +68,27 @@ parentheses on first appearance only.
   gets scanned, not read closely.
 - Structure: one line of observation/discovery → (optional) one line of
   elaboration → closing question.
-- **A video episode is a link-free casual-register body post + the link in a
-  self-reply** (2026-08-15 — a **retraction** of the 2026-08-14 "one link in
-  the body" approach). Attach no cover image; publish the body, then reply to
-  yourself with the IG reel permalink (one line, "풀영상은 여기 →" / "full video
-  here →", plus the link). The grounds are field data — the first 2 link-in-body
-  posts drew 9 and 21 views, 1/10th of the link-free posts from the same day,
-  while the 2 reply-link posts drew 257 and 623. Even though Mosseri publicly
-  walked back the link penalty (2024), our measured reach distribution says
-  otherwise, so we follow the measurements.
+- **A video episode carries the video on the post itself** — pass the public URL
+  of the subtitle-burned cut (`video-sub.mp4`) as `threads_publish`'s `videoUrl`
+  (user directive 2026-08-19). Don't attach the video as a reply and don't settle
+  for a bare link. One call completes it. The video plays inline in the timeline,
+  so nothing links out and the link penalty below never applies.
+- **No external link in the body.** The grounds are field data — the first 2
+  link-in-body posts drew 9 and 21 views, 1/10th of the link-free posts from the
+  same day, while the 2 reply-link posts drew 257 and 623 (2026-08-15). Even
+  though Mosseri publicly walked back the link penalty (2024), our measured reach
+  distribution says otherwise, so we follow the measurements. **Carrying the video
+  on the post removes the problem outright** — which is why the reply link dropped
+  to being the fallback for episodes that can't carry one.
 - The body post stays in casual spoken register and is complete in itself — it
-  has to stand as a post without the link. The 1–3 lines are the post; the link
-  is a reply.
-- The link defaults to the **IG reel, not YouTube** — same Meta ecosystem, so
-  the exit penalty is smallest. Publishing order follows: IG first → get the
-  permalink → Threads.
+  has to stand as a post without the video. The 1–3 lines are the post; the video
+  hangs off it.
+- The fallback (no video file, or hosting is blocked) is a self-reply link — one
+  line, "풀영상은 여기 →" / "full video here →", plus the IG reel permalink. The
+  link defaults to the **IG reel, not YouTube** (same Meta ecosystem, so the exit
+  penalty is smallest). Only with this fallback does publishing order matter:
+  IG first → get the permalink → Threads. Putting an IG permalink in the `linkUrl`
+  preview card returns 400, so it goes in the body text.
 - Regular text posts in the growth loop follow the link policy in the channel's
   `growth-plan.md`.
 - Hashtags ≤1 (ranking weight 0 — in practice we don't use them).
@@ -132,9 +138,21 @@ parentheses on first appearance only.
   frame becomes the thumbnail. Without phone verification (intermediate
   features) it's rejected and reported as thumbnailWarning (the publish still
   succeeds).
-- Custom thumbnails apply to **landscape surfaces only** — the portrait
-  surfaces (Shorts feed · Shorts tab) can only be changed by picking a frame in
-  the native app. The check is `i.ytimg.com/vi/<id>/oardefault.jpg` HTTP 200.
+- **Always upload private first** (user directive 2026-08-19) — attach the
+  thumbnail, subtitles, playlist and the portrait first frame, then flip to
+  public. Publishing straight to public shows a mid-sentence frame while the
+  cover is still being attached (publish §3-1).
+- Custom thumbnails apply to **landscape surfaces only** — the portrait surfaces
+  (Shorts feed · Shorts tab) take a separate frame, set in a browser at
+  `studio.youtube.com/video/<id>/edit` → `⋮` over the portrait image →
+  **"Select from video"** (measured 2026-08-19). Any browser we drive works; the
+  native app isn't needed, and `Change` in that menu is file upload, which only
+  swaps the landscape surface. The emulator route in publish
+  `references/shorts-surface-adb.md` is the fallback.
+- **The verdict is not `oardefault.jpg`** — it stays 404 after the frame is set,
+  and `oar2.jpg` answers 200 with a cached older frame. Read the tile's `img` src
+  from the channel Shorts tab DOM (`youtube.com/@<handle>/shorts`) and confirm by
+  eye. This only works once the video is public.
 - The description's first line is the second hook — don't repeat the title;
   reinforce it in different words.
 - Hashtags 3–5, **#Shorts required** (Shorts shelf classification). Going over
@@ -173,8 +191,11 @@ parentheses on first appearance only.
 ## §8 Anti-pattern checklist (self-check before the approval gate)
 
 - [ ] The same sentence appears verbatim on two platforms → copy-paste violation
-- [ ] A link in the FB body → move to first comment (Threads: video link goes in a self-reply)
-- [ ] A link in the Threads body → move to a self-reply (the body stands complete without links)
+- [ ] A link in the FB body → move to first comment
+- [ ] A link in the Threads body → drop the link and carry the video on the post (§3).
+      Only an episode with no video file falls back to a self-reply link
+- [ ] **A Threads video episode with no video on the post** → `videoUrl` is missing.
+      Attaching the video as a reply is the fallback, not the default
 - [ ] The IG caption hook sits past the 125-char fold
 - [ ] The YT title has no keyword or contains <>, or #Shorts is missing
 - [ ] The title/cover opens on a method or tool only — a first-time viewer can't read it as their own problem (§1 ②)

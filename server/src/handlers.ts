@@ -2,6 +2,8 @@ import { z } from 'zod';
 import * as datago from './datago-client.js';
 import * as image from './image-client.js';
 import * as music from './music-client.js';
+import * as qwen3asr from './qwen3-asr-client.js';
+import * as suno from './suno-client.js';
 import * as naver from './naver-client.js';
 import * as seedance from './seedance-client.js';
 import * as serp from './serp-client.js';
@@ -314,17 +316,20 @@ const threadsPublishSchema = z
         message: `THREADS caption must be ≤${THREADS_MAX_CHARS} chars (got ${threadsTextLength(value)} — emoji are counted as UTF-8 bytes)`,
       })),
     imageUrl: z.string().url().optional(),
+    videoUrl: z.string().url().optional(),
     linkUrl: z.string().url().optional(),
     replyToId: z.string().min(1).optional(),
     channel: channelSlugSchema,
   })
   .superRefine((v, ctx) => {
-    // link_attachment is media_type=TEXT only — the platform rejects it alongside an image
-    if (v.linkUrl && v.imageUrl) {
+    // One media_type per post — VIDEO, IMAGE or TEXT(link_attachment). The platform
+    // rejects two together, so catch it before the call is spent.
+    const media = (['imageUrl', 'videoUrl', 'linkUrl'] as const).filter((k) => v[k]);
+    if (media.length > 1) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['linkUrl'],
-        message: 'linkUrl is for text-only posts (mutually exclusive with imageUrl)',
+        path: [media[1]],
+        message: `imageUrl, videoUrl and linkUrl are mutually exclusive (got ${media.join(', ')})`,
       });
     }
   });
@@ -794,6 +799,20 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     );
   },
 
+  // Local transcription (Qwen3-ASR) — on-device via subprocess. No key, no network, no billing.
+  stt_local_transcribe: async (args) => {
+    const request = parseArgs(qwen3asr.qwen3AsrTranscribeSchema, args);
+    const result = await qwen3asr.transcribeLocal(request);
+    if (!result.success) return text(`Local transcription failed: ${result.error}`, true);
+    const preview = (result.text || '').length > 4000 ? `${(result.text || '').slice(0, 4000)}\n…(truncated — full text in the JSON)` : result.text || '';
+    return text(
+      `Audio transcribed locally!\n\nFile: ${result.transcriptPath}\nEngine: Qwen3-ASR via mlx-qwen3-asr (on-device)\n` +
+        `Model: ${result.model}\nLanguage: ${result.language}\n` +
+        `Segments: ${result.segments?.length ?? 0}\n` +
+        `Elapsed: ${result.elapsedSeconds}s\n\nTranscript:\n${preview}`,
+    );
+  },
+
   // ── music generation (Lyria) — 30s batch clip / streaming with an exact duration ──
   music_generate_clip: async (args) => {
     const result = await music.generateClip(parseArgs(music.musicClipSchema, args));
@@ -857,6 +876,58 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         `- seed (0-2147483647): Reproducibility — the ONLY way to regenerate the same music\n` +
         `- muteBass/muteDrums/onlyBassAndDrums: Rhythm section control\n` +
         `- musicGenerationMode: QUALITY (default) | DIVERSITY | VOCALIZATION`,
+    );
+  },
+
+  // ── music generation (Suno / sunoapi.org) ──
+  suno_generate: async (args) => {
+    const request = parseArgs(suno.sunoGenerateSchema, args);
+    const result = await suno.generateMusic(request);
+    if (!result.success) return text(`Suno generation failed: ${result.error}`, true);
+    const tracks = result.tracks ?? [];
+    const lines = tracks.map(
+      (track, index) =>
+        `  ${index + 1}. ${track.audioPath}` +
+        (track.title ? `  "${track.title}"` : '') +
+        (track.durationSeconds ? `  ${Math.round(track.durationSeconds)}s` : '') +
+        (track.tags ? `  [${track.tags}]` : ''),
+    );
+    return text(
+      `Suno tracks generated.\n\nPrimary: ${result.audioPath}\nModel: ${result.model}\nTask: ${result.taskId}\nTracks (${tracks.length}):\n${lines.join('\n')}\n\n` +
+        `Remote URLs expire in 15 days — these local files are the keepers. ` +
+        `For a bed under narration, pick the instrumental variant and set filename to .wav so it matches .work/bgm.wav.`,
+    );
+  },
+  suno_generate_sound: async (args) => {
+    const request = parseArgs(suno.sunoSoundSchema, args);
+    const result = await suno.generateSound(request);
+    if (!result.success) return text(`Suno sound generation failed: ${result.error}`, true);
+    const tracks = result.tracks ?? [];
+    const lines = tracks.map((track, index) => `  ${index + 1}. ${track.audioPath}`);
+    return text(
+      `Suno sound generated.\n\nFile: ${result.audioPath}\nModel: ${result.model}\nTask: ${result.taskId}\nTracks:\n${lines.join('\n')}\n\n` +
+        `Loop-friendly bed. The builder stretches it with -stream_loop.`,
+    );
+  },
+  suno_generate_lyrics: async (args) => {
+    const request = parseArgs(suno.sunoLyricsSchema, args);
+    const result = await suno.generateLyrics(request);
+    if (!result.success) return text(`Suno lyrics generation failed: ${result.error}`, true);
+    const blocks = (result.lyrics ?? []).map((item, index) => {
+      const heading = item.title ? `Variant ${index + 1} — ${item.title}` : `Variant ${index + 1}`;
+      return `${heading}\n${item.text}`;
+    });
+    return text(
+      `Suno lyrics generated (${result.lyrics?.length ?? 0} variants). Task: ${result.taskId}\n\n${blocks.join('\n\n---\n\n')}\n\n` +
+        `To sing them in custom mode, pass the chosen lyrics as suno_generate prompt (customMode=true, instrumental=false, style+title required).`,
+    );
+  },
+  suno_credits: async () => {
+    const result = await suno.getCredits();
+    if (!result.success) return text(`Suno credits lookup failed: ${result.error}`, true);
+    return text(
+      `Suno remaining credits: ${result.credits}\n\n` +
+        `suno_generate uses about 12 credits per call (≈ $0.06 at the $5/1000 pack). Less than that means top up first.`,
     );
   },
 

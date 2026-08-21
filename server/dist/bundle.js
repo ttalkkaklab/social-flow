@@ -116,7 +116,7 @@ var require_code = __commonJS({
     }
     exports._ = _;
     var plus = new _Code("+");
-    function str5(strs, ...args) {
+    function str6(strs, ...args) {
       const expr = [safeStringify(strs[0])];
       let i2 = 0;
       while (i2 < args.length) {
@@ -127,7 +127,7 @@ var require_code = __commonJS({
       optimize(expr);
       return new _Code(expr);
     }
-    exports.str = str5;
+    exports.str = str6;
     function addCodeArg(code, arg) {
       if (arg instanceof _Code)
         code.push(...arg._items);
@@ -170,7 +170,7 @@ var require_code = __commonJS({
       return;
     }
     function strConcat(c1, c2) {
-      return c2.emptyStr() ? c1 : c1.emptyStr() ? c2 : str5`${c1}${c2}`;
+      return c2.emptyStr() ? c1 : c1.emptyStr() ? c2 : str6`${c1}${c2}`;
     }
     exports.strConcat = strConcat;
     function interpolate(x2) {
@@ -1132,22 +1132,22 @@ var require_util = __commonJS({
       return (0, codegen_1._)`${topSchemaRef}${schemaPath}${(0, codegen_1.getProperty)(keyword)}`;
     }
     exports.schemaRefOrVal = schemaRefOrVal;
-    function unescapeFragment(str5) {
-      return unescapeJsonPointer(decodeURIComponent(str5));
+    function unescapeFragment(str6) {
+      return unescapeJsonPointer(decodeURIComponent(str6));
     }
     exports.unescapeFragment = unescapeFragment;
-    function escapeFragment(str5) {
-      return encodeURIComponent(escapeJsonPointer(str5));
+    function escapeFragment(str6) {
+      return encodeURIComponent(escapeJsonPointer(str6));
     }
     exports.escapeFragment = escapeFragment;
-    function escapeJsonPointer(str5) {
-      if (typeof str5 == "number")
-        return `${str5}`;
-      return str5.replace(/~/g, "~0").replace(/\//g, "~1");
+    function escapeJsonPointer(str6) {
+      if (typeof str6 == "number")
+        return `${str6}`;
+      return str6.replace(/~/g, "~0").replace(/\//g, "~1");
     }
     exports.escapeJsonPointer = escapeJsonPointer;
-    function unescapeJsonPointer(str5) {
-      return str5.replace(/~1/g, "/").replace(/~0/g, "~");
+    function unescapeJsonPointer(str6) {
+      return str6.replace(/~1/g, "/").replace(/~0/g, "~");
     }
     exports.unescapeJsonPointer = unescapeJsonPointer;
     function eachItem(xs, f3) {
@@ -2172,8 +2172,8 @@ var require_json_schema_traverse = __commonJS({
         post(schema, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
       }
     }
-    function escapeJsonPtr(str5) {
-      return str5.replace(/~/g, "~0").replace(/\//g, "~1");
+    function escapeJsonPtr(str6) {
+      return str6.replace(/~/g, "~0").replace(/\//g, "~1");
     }
   }
 });
@@ -3237,15 +3237,15 @@ var require_utils = __commonJS({
         return { host, isIPV6: false };
       }
     }
-    function findToken(str5, token) {
+    function findToken(str6, token) {
       let ind = 0;
-      for (let i2 = 0; i2 < str5.length; i2++) {
-        if (str5[i2] === token) ind++;
+      for (let i2 = 0; i2 < str6.length; i2++) {
+        if (str6[i2] === token) ind++;
       }
       return ind;
     }
-    function removeDotSegments(path5) {
-      let input = path5;
+    function removeDotSegments(path6) {
+      let input = path6;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3497,8 +3497,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path5, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path5 && path5 !== "/" ? path5 : void 0;
+        const [path6, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path6 && path6 !== "/" ? path6 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -4003,7 +4003,7 @@ var require_core = __commonJS({
     var util_1 = require_util();
     var $dataRefSchema = require_data();
     var uri_1 = require_uri();
-    var defaultRegExp = (str5, flags) => new RegExp(str5, flags);
+    var defaultRegExp = (str6, flags) => new RegExp(str6, flags);
     defaultRegExp.code = "new RegExp";
     var META_IGNORE_OPTIONS = ["removeAdditional", "useDefaults", "coerceTypes"];
     var EXT_SCOPE_NAMES = /* @__PURE__ */ new Set([
@@ -4798,16 +4798,16 @@ var require_ucs2length = __commonJS({
   "../../../social-flow/server/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    function ucs2length(str5) {
-      const len = str5.length;
+    function ucs2length(str6) {
+      const len = str6.length;
       let length = 0;
       let pos = 0;
       let value;
       while (pos < len) {
         length++;
-        value = str5.charCodeAt(pos++);
+        value = str6.charCodeAt(pos++);
         if (value >= 55296 && value <= 56319 && pos < len) {
-          value = str5.charCodeAt(pos);
+          value = str6.charCodeAt(pos);
           if ((value & 64512) === 56320)
             pos++;
         }
@@ -6690,8 +6690,8 @@ var require_formats = __commonJS({
     }
     var DATE = /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
     var DAYS = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    function date3(str5) {
-      const matches = DATE.exec(str5);
+    function date3(str6) {
+      const matches = DATE.exec(str6);
       if (!matches)
         return false;
       const year = +matches[1];
@@ -6710,8 +6710,8 @@ var require_formats = __commonJS({
     }
     var TIME = /^(\d\d):(\d\d):(\d\d(?:\.\d+)?)(z|([+-])(\d\d)(?::?(\d\d))?)?$/i;
     function getTime(strictTimeZone) {
-      return function time3(str5) {
-        const matches = TIME.exec(str5);
+      return function time3(str6) {
+        const matches = TIME.exec(str6);
         if (!matches)
           return false;
         const hr = +matches[1];
@@ -6757,8 +6757,8 @@ var require_formats = __commonJS({
     var DATE_TIME_SEPARATOR = /t|\s/i;
     function getDateTime(strictTimeZone) {
       const time3 = getTime(strictTimeZone);
-      return function date_time(str5) {
-        const dateTime = str5.split(DATE_TIME_SEPARATOR);
+      return function date_time(str6) {
+        const dateTime = str6.split(DATE_TIME_SEPARATOR);
         return dateTime.length === 2 && date3(dateTime[0]) && time3(dateTime[1]);
       };
     }
@@ -6783,13 +6783,13 @@ var require_formats = __commonJS({
     }
     var NOT_URI_FRAGMENT = /\/|:/;
     var URI = /^(?:[a-z][a-z0-9+\-.]*:)(?:\/?\/(?:(?:[a-z0-9\-._~!$&'()*+,;=:]|%[0-9a-f]{2})*@)?(?:\[(?:(?:(?:(?:[0-9a-f]{1,4}:){6}|::(?:[0-9a-f]{1,4}:){5}|(?:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){4}|(?:(?:[0-9a-f]{1,4}:){0,1}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){3}|(?:(?:[0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){2}|(?:(?:[0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:|(?:(?:[0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::)(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?))|(?:(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(?:(?:[0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|[Vv][0-9a-f]+\.[a-z0-9\-._~!$&'()*+,;=:]+)\]|(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)|(?:[a-z0-9\-._~!$&'()*+,;=]|%[0-9a-f]{2})*)(?::\d*)?(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*|\/(?:(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})+(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*)?|(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})+(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*)(?:\?(?:[a-z0-9\-._~!$&'()*+,;=:@/?]|%[0-9a-f]{2})*)?(?:#(?:[a-z0-9\-._~!$&'()*+,;=:@/?]|%[0-9a-f]{2})*)?$/i;
-    function uri(str5) {
-      return NOT_URI_FRAGMENT.test(str5) && URI.test(str5);
+    function uri(str6) {
+      return NOT_URI_FRAGMENT.test(str6) && URI.test(str6);
     }
     var BYTE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/gm;
-    function byte(str5) {
+    function byte(str6) {
       BYTE.lastIndex = 0;
-      return BYTE.test(str5);
+      return BYTE.test(str6);
     }
     var MIN_INT32 = -(2 ** 31);
     var MAX_INT32 = 2 ** 31 - 1;
@@ -6803,11 +6803,11 @@ var require_formats = __commonJS({
       return true;
     }
     var Z_ANCHOR = /[^\\]\\Z/;
-    function regex(str5) {
-      if (Z_ANCHOR.test(str5))
+    function regex(str6) {
+      if (Z_ANCHOR.test(str6))
         return false;
       try {
-        new RegExp(str5);
+        new RegExp(str6);
         return true;
       } catch (e2) {
         return false;
@@ -7828,13 +7828,13 @@ var require_ms = __commonJS({
         "val is not a non-empty string or a valid number. val=" + JSON.stringify(val)
       );
     };
-    function parse3(str5) {
-      str5 = String(str5);
-      if (str5.length > 100) {
+    function parse3(str6) {
+      str6 = String(str6);
+      if (str6.length > 100) {
         return;
       }
       var match2 = /^(-?(?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(
-        str5
+        str6
       );
       if (!match2) {
         return;
@@ -8435,7 +8435,7 @@ var require_node = __commonJS({
     var { formatters: formatters2 } = module.exports;
     formatters2.o = function(v) {
       this.inspectOpts.colors = this.useColors;
-      return util2.inspect(v, this.inspectOpts).split("\n").map((str5) => str5.trim()).join(" ");
+      return util2.inspect(v, this.inspectOpts).split("\n").map((str6) => str6.trim()).join(" ");
     };
     formatters2.O = function(v) {
       this.inspectOpts.colors = this.useColors;
@@ -8502,12 +8502,12 @@ var require_helpers = __commonJS({
     exports.toBuffer = toBuffer;
     async function json2(stream) {
       const buf = await toBuffer(stream);
-      const str5 = buf.toString("utf8");
+      const str6 = buf.toString("utf8");
       try {
-        return JSON.parse(str5);
+        return JSON.parse(str6);
       } catch (_err) {
         const err4 = _err;
-        err4.message += ` (input: ${str5})`;
+        err4.message += ` (input: ${str6})`;
         throw err4;
       }
     }
@@ -8696,17 +8696,17 @@ var require_parse_proxy_response = __commonJS({
       return new Promise((resolve3, reject) => {
         let buffersLength = 0;
         const buffers = [];
-        function read() {
+        function read2() {
           const b = socket.read();
           if (b)
             ondata(b);
           else
-            socket.once("readable", read);
+            socket.once("readable", read2);
         }
         function cleanup() {
           socket.removeListener("end", onend);
           socket.removeListener("error", onerror);
-          socket.removeListener("readable", read);
+          socket.removeListener("readable", read2);
         }
         function onend() {
           cleanup();
@@ -8725,7 +8725,7 @@ var require_parse_proxy_response = __commonJS({
           const endOfHeaders = buffered.indexOf("\r\n\r\n");
           if (endOfHeaders === -1) {
             debug("have not received end of HTTP headers yet...");
-            read();
+            read2();
             return;
           }
           const headerParts = buffered.slice(0, endOfHeaders).toString("ascii").split("\r\n");
@@ -8770,7 +8770,7 @@ var require_parse_proxy_response = __commonJS({
         }
         socket.on("error", onerror);
         socket.on("end", onend);
-        read();
+        read2();
       });
     }
     exports.parseProxyResponse = parseProxyResponse;
@@ -13398,12 +13398,12 @@ var init_fetch_blob = __esm({
        */
       async text() {
         const decoder = new TextDecoder();
-        let str5 = "";
+        let str6 = "";
         for await (const part of toIterator(this.#parts, false)) {
-          str5 += decoder.decode(part, { stream: true });
+          str6 += decoder.decode(part, { stream: true });
         }
-        str5 += decoder.decode();
-        return str5;
+        str6 += decoder.decode();
+        return str6;
       }
       /**
        * The arrayBuffer() method in the Blob interface returns a
@@ -13731,22 +13731,22 @@ var init_from = __esm({
     init_file();
     init_fetch_blob();
     ({ stat } = fs2);
-    blobFromSync = (path5, type) => fromBlob(statSync(path5), path5, type);
-    blobFrom = (path5, type) => stat(path5).then((stat4) => fromBlob(stat4, path5, type));
-    fileFrom = (path5, type) => stat(path5).then((stat4) => fromFile(stat4, path5, type));
-    fileFromSync = (path5, type) => fromFile(statSync(path5), path5, type);
-    fromBlob = (stat4, path5, type = "") => new fetch_blob_default([new BlobDataItem({
-      path: path5,
+    blobFromSync = (path6, type) => fromBlob(statSync(path6), path6, type);
+    blobFrom = (path6, type) => stat(path6).then((stat4) => fromBlob(stat4, path6, type));
+    fileFrom = (path6, type) => stat(path6).then((stat4) => fromFile(stat4, path6, type));
+    fileFromSync = (path6, type) => fromFile(statSync(path6), path6, type);
+    fromBlob = (stat4, path6, type = "") => new fetch_blob_default([new BlobDataItem({
+      path: path6,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
     })], { type });
-    fromFile = (stat4, path5, type = "") => new file_default([new BlobDataItem({
-      path: path5,
+    fromFile = (stat4, path6, type = "") => new file_default([new BlobDataItem({
+      path: path6,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
-    })], basename(path5), { type, lastModified: stat4.mtimeMs });
+    })], basename(path6), { type, lastModified: stat4.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -15946,7 +15946,7 @@ var require_bignumber = __commonJS({
           suffix: ""
         }, ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz", alphabetHasNormalDecimalDigits = true;
         function BigNumber2(v, b) {
-          var alphabet, c, caseChanged, e2, i2, isNum, len, str5, x2 = this;
+          var alphabet, c, caseChanged, e2, i2, isNum, len, str6, x2 = this;
           if (!(x2 instanceof BigNumber2)) return new BigNumber2(v, b);
           if (b == null) {
             if (v && v._isBigNumber === true) {
@@ -15973,18 +15973,18 @@ var require_bignumber = __commonJS({
                 }
                 return;
               }
-              str5 = String(v);
+              str6 = String(v);
             } else {
-              if (!isNumeric.test(str5 = String(v))) return parseNumeric(x2, str5, isNum);
-              x2.s = str5.charCodeAt(0) == 45 ? (str5 = str5.slice(1), -1) : 1;
+              if (!isNumeric.test(str6 = String(v))) return parseNumeric(x2, str6, isNum);
+              x2.s = str6.charCodeAt(0) == 45 ? (str6 = str6.slice(1), -1) : 1;
             }
-            if ((e2 = str5.indexOf(".")) > -1) str5 = str5.replace(".", "");
-            if ((i2 = str5.search(/e/i)) > 0) {
+            if ((e2 = str6.indexOf(".")) > -1) str6 = str6.replace(".", "");
+            if ((i2 = str6.search(/e/i)) > 0) {
               if (e2 < 0) e2 = i2;
-              e2 += +str5.slice(i2 + 1);
-              str5 = str5.substring(0, i2);
+              e2 += +str6.slice(i2 + 1);
+              str6 = str6.substring(0, i2);
             } else if (e2 < 0) {
-              e2 = str5.length;
+              e2 = str6.length;
             }
           } else {
             intCheck(b, 2, ALPHABET.length, "Base");
@@ -15992,27 +15992,27 @@ var require_bignumber = __commonJS({
               x2 = new BigNumber2(v);
               return round(x2, DECIMAL_PLACES + x2.e + 1, ROUNDING_MODE);
             }
-            str5 = String(v);
+            str6 = String(v);
             if (isNum = typeof v == "number") {
-              if (v * 0 != 0) return parseNumeric(x2, str5, isNum, b);
-              x2.s = 1 / v < 0 ? (str5 = str5.slice(1), -1) : 1;
-              if (BigNumber2.DEBUG && str5.replace(/^0\.0*|\./, "").length > 15) {
+              if (v * 0 != 0) return parseNumeric(x2, str6, isNum, b);
+              x2.s = 1 / v < 0 ? (str6 = str6.slice(1), -1) : 1;
+              if (BigNumber2.DEBUG && str6.replace(/^0\.0*|\./, "").length > 15) {
                 throw Error(tooManyDigits + v);
               }
             } else {
-              x2.s = str5.charCodeAt(0) === 45 ? (str5 = str5.slice(1), -1) : 1;
+              x2.s = str6.charCodeAt(0) === 45 ? (str6 = str6.slice(1), -1) : 1;
             }
             alphabet = ALPHABET.slice(0, b);
             e2 = i2 = 0;
-            for (len = str5.length; i2 < len; i2++) {
-              if (alphabet.indexOf(c = str5.charAt(i2)) < 0) {
+            for (len = str6.length; i2 < len; i2++) {
+              if (alphabet.indexOf(c = str6.charAt(i2)) < 0) {
                 if (c == ".") {
                   if (i2 > e2) {
                     e2 = len;
                     continue;
                   }
                 } else if (!caseChanged) {
-                  if (str5 == str5.toUpperCase() && (str5 = str5.toLowerCase()) || str5 == str5.toLowerCase() && (str5 = str5.toUpperCase())) {
+                  if (str6 == str6.toUpperCase() && (str6 = str6.toLowerCase()) || str6 == str6.toLowerCase() && (str6 = str6.toUpperCase())) {
                     caseChanged = true;
                     i2 = -1;
                     e2 = 0;
@@ -16023,13 +16023,13 @@ var require_bignumber = __commonJS({
               }
             }
             isNum = false;
-            str5 = convertBase(str5, b, 10, x2.s);
-            if ((e2 = str5.indexOf(".")) > -1) str5 = str5.replace(".", "");
-            else e2 = str5.length;
+            str6 = convertBase(str6, b, 10, x2.s);
+            if ((e2 = str6.indexOf(".")) > -1) str6 = str6.replace(".", "");
+            else e2 = str6.length;
           }
-          for (i2 = 0; str5.charCodeAt(i2) === 48; i2++) ;
-          for (len = str5.length; str5.charCodeAt(--len) === 48; ) ;
-          if (str5 = str5.slice(i2, ++len)) {
+          for (i2 = 0; str6.charCodeAt(i2) === 48; i2++) ;
+          for (len = str6.length; str6.charCodeAt(--len) === 48; ) ;
+          if (str6 = str6.slice(i2, ++len)) {
             len -= i2;
             if (isNum && BigNumber2.DEBUG && len > 15 && (v > MAX_SAFE_INTEGER || v !== mathfloor(v))) {
               throw Error(tooManyDigits + x2.s * v);
@@ -16044,16 +16044,16 @@ var require_bignumber = __commonJS({
               i2 = (e2 + 1) % LOG_BASE;
               if (e2 < 0) i2 += LOG_BASE;
               if (i2 < len) {
-                if (i2) x2.c.push(+str5.slice(0, i2));
+                if (i2) x2.c.push(+str6.slice(0, i2));
                 for (len -= LOG_BASE; i2 < len; ) {
-                  x2.c.push(+str5.slice(i2, i2 += LOG_BASE));
+                  x2.c.push(+str6.slice(i2, i2 += LOG_BASE));
                 }
-                i2 = LOG_BASE - (str5 = str5.slice(i2)).length;
+                i2 = LOG_BASE - (str6 = str6.slice(i2)).length;
               } else {
                 i2 -= len;
               }
-              for (; i2--; str5 += "0") ;
-              x2.c.push(+str5);
+              for (; i2--; str6 += "0") ;
+              x2.c.push(+str6);
             }
           } else {
             x2.c = [x2.e = 0];
@@ -16276,11 +16276,11 @@ var require_bignumber = __commonJS({
         };
         convertBase = /* @__PURE__ */ (function() {
           var decimal = "0123456789";
-          function toBaseOut(str5, baseIn, baseOut, alphabet) {
-            var j, arr = [0], arrL, i2 = 0, len = str5.length;
+          function toBaseOut(str6, baseIn, baseOut, alphabet) {
+            var j, arr = [0], arrL, i2 = 0, len = str6.length;
             for (; i2 < len; ) {
               for (arrL = arr.length; arrL--; arr[arrL] *= baseIn) ;
-              arr[0] += alphabet.indexOf(str5.charAt(i2++));
+              arr[0] += alphabet.indexOf(str6.charAt(i2++));
               for (j = 0; j < arr.length; j++) {
                 if (arr[j] > baseOut - 1) {
                   if (arr[j + 1] == null) arr[j + 1] = 0;
@@ -16291,14 +16291,14 @@ var require_bignumber = __commonJS({
             }
             return arr.reverse();
           }
-          return function(str5, baseIn, baseOut, sign, callerIsToString) {
-            var alphabet, d, e2, k, r2, x2, xc, y, i2 = str5.indexOf("."), dp = DECIMAL_PLACES, rm = ROUNDING_MODE;
+          return function(str6, baseIn, baseOut, sign, callerIsToString) {
+            var alphabet, d, e2, k, r2, x2, xc, y, i2 = str6.indexOf("."), dp = DECIMAL_PLACES, rm = ROUNDING_MODE;
             if (i2 >= 0) {
               k = POW_PRECISION;
               POW_PRECISION = 0;
-              str5 = str5.replace(".", "");
+              str6 = str6.replace(".", "");
               y = new BigNumber2(baseIn);
-              x2 = y.pow(str5.length - i2);
+              x2 = y.pow(str6.length - i2);
               POW_PRECISION = k;
               y.c = toBaseOut(
                 toFixedPoint(coeffToString(x2.c), x2.e, "0"),
@@ -16308,7 +16308,7 @@ var require_bignumber = __commonJS({
               );
               y.e = y.c.length;
             }
-            xc = toBaseOut(str5, baseIn, baseOut, callerIsToString ? (alphabet = ALPHABET, decimal) : (alphabet = decimal, ALPHABET));
+            xc = toBaseOut(str6, baseIn, baseOut, callerIsToString ? (alphabet = ALPHABET, decimal) : (alphabet = decimal, ALPHABET));
             e2 = k = xc.length;
             for (; xc[--k] == 0; xc.pop()) ;
             if (!xc[0]) return alphabet.charAt(0);
@@ -16329,7 +16329,7 @@ var require_bignumber = __commonJS({
             r2 = r2 || d < 0 || xc[d + 1] != null;
             r2 = rm < 4 ? (i2 != null || r2) && (rm == 0 || rm == (x2.s < 0 ? 3 : 2)) : i2 > k || i2 == k && (rm == 4 || r2 || rm == 6 && xc[d - 1] & 1 || rm == (x2.s < 0 ? 8 : 7));
             if (d < 1 || !xc[0]) {
-              str5 = r2 ? toFixedPoint(alphabet.charAt(1), -dp, alphabet.charAt(0)) : alphabet.charAt(0);
+              str6 = r2 ? toFixedPoint(alphabet.charAt(1), -dp, alphabet.charAt(0)) : alphabet.charAt(0);
             } else {
               xc.length = d;
               if (r2) {
@@ -16342,10 +16342,10 @@ var require_bignumber = __commonJS({
                 }
               }
               for (k = xc.length; !xc[--k]; ) ;
-              for (i2 = 0, str5 = ""; i2 <= k; str5 += alphabet.charAt(xc[i2++])) ;
-              str5 = toFixedPoint(str5, e2, alphabet.charAt(0));
+              for (i2 = 0, str6 = ""; i2 <= k; str6 += alphabet.charAt(xc[i2++])) ;
+              str6 = toFixedPoint(str6, e2, alphabet.charAt(0));
             }
-            return str5;
+            return str6;
           };
         })();
         div = /* @__PURE__ */ (function() {
@@ -16491,38 +16491,38 @@ var require_bignumber = __commonJS({
           };
         })();
         function format(n, i2, rm, id) {
-          var c0, e2, ne, len, str5;
+          var c0, e2, ne, len, str6;
           if (rm == null) rm = ROUNDING_MODE;
           else intCheck(rm, 0, 8);
           if (!n.c) return n.toString();
           c0 = n.c[0];
           ne = n.e;
           if (i2 == null) {
-            str5 = coeffToString(n.c);
-            str5 = id == 1 || id == 2 && (ne <= TO_EXP_NEG || ne >= TO_EXP_POS) ? toExponential(str5, ne) : toFixedPoint(str5, ne, "0");
+            str6 = coeffToString(n.c);
+            str6 = id == 1 || id == 2 && (ne <= TO_EXP_NEG || ne >= TO_EXP_POS) ? toExponential(str6, ne) : toFixedPoint(str6, ne, "0");
           } else {
             n = round(new BigNumber2(n), i2, rm);
             e2 = n.e;
-            str5 = coeffToString(n.c);
-            len = str5.length;
+            str6 = coeffToString(n.c);
+            len = str6.length;
             if (id == 1 || id == 2 && (i2 <= e2 || e2 <= TO_EXP_NEG)) {
-              for (; len < i2; str5 += "0", len++) ;
-              str5 = toExponential(str5, e2);
+              for (; len < i2; str6 += "0", len++) ;
+              str6 = toExponential(str6, e2);
             } else {
               i2 -= ne + (id === 2 && e2 > ne);
-              str5 = toFixedPoint(str5, e2, "0");
+              str6 = toFixedPoint(str6, e2, "0");
               if (e2 + 1 > len) {
-                if (--i2 > 0) for (str5 += "."; i2--; str5 += "0") ;
+                if (--i2 > 0) for (str6 += "."; i2--; str6 += "0") ;
               } else {
                 i2 += e2 - len;
                 if (i2 > 0) {
-                  if (e2 + 1 == len) str5 += ".";
-                  for (; i2--; str5 += "0") ;
+                  if (e2 + 1 == len) str6 += ".";
+                  for (; i2--; str6 += "0") ;
                 }
               }
             }
           }
-          return n.s < 0 && c0 ? "-" + str5 : str5;
+          return n.s < 0 && c0 ? "-" + str6 : str6;
         }
         function maxOrMin(args, n) {
           var k, y, i2 = 1, x2 = new BigNumber2(args[0]);
@@ -16550,8 +16550,8 @@ var require_bignumber = __commonJS({
         }
         parseNumeric = /* @__PURE__ */ (function() {
           var basePrefix = /^(-?)0([xbo])(?=\w[\w.]*$)/i, dotAfter = /^([^.]+)\.$/, dotBefore = /^\.([^.]+)$/, isInfinityOrNaN = /^-?(Infinity|NaN)$/, whitespaceOrPlus = /^\s*\+(?=[\w.])|^\s+|\s+$/g;
-          return function(x2, str5, isNum, b) {
-            var base, s2 = isNum ? str5 : str5.replace(whitespaceOrPlus, "");
+          return function(x2, str6, isNum, b) {
+            var base, s2 = isNum ? str6 : str6.replace(whitespaceOrPlus, "");
             if (isInfinityOrNaN.test(s2)) {
               x2.s = isNaN(s2) ? null : s2 < 0 ? -1 : 1;
             } else {
@@ -16564,10 +16564,10 @@ var require_bignumber = __commonJS({
                   base = b;
                   s2 = s2.replace(dotAfter, "$1").replace(dotBefore, "0.$1");
                 }
-                if (str5 != s2) return new BigNumber2(s2, base);
+                if (str6 != s2) return new BigNumber2(s2, base);
               }
               if (BigNumber2.DEBUG) {
-                throw Error(bignumberError + "Not a" + (b ? " base " + b : "") + " number: " + str5);
+                throw Error(bignumberError + "Not a" + (b ? " base " + b : "") + " number: " + str6);
               }
               x2.s = null;
             }
@@ -16661,11 +16661,11 @@ var require_bignumber = __commonJS({
           return x2;
         }
         function valueOf(n) {
-          var str5, e2 = n.e;
+          var str6, e2 = n.e;
           if (e2 === null) return n.toString();
-          str5 = coeffToString(n.c);
-          str5 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(str5, e2) : toFixedPoint(str5, e2, "0");
-          return n.s < 0 ? "-" + str5 : str5;
+          str6 = coeffToString(n.c);
+          str6 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(str6, e2) : toFixedPoint(str6, e2, "0");
+          return n.s < 0 ? "-" + str6 : str6;
         }
         P.absoluteValue = P.abs = function() {
           var x2 = new BigNumber2(this);
@@ -17086,7 +17086,7 @@ var require_bignumber = __commonJS({
           return format(this, dp, rm);
         };
         P.toFormat = function(dp, rm, format2) {
-          var str5, x2 = this;
+          var str6, x2 = this;
           if (format2 == null) {
             if (dp != null && rm && typeof rm == "object") {
               format2 = rm;
@@ -17100,9 +17100,9 @@ var require_bignumber = __commonJS({
           } else if (typeof format2 != "object") {
             throw Error(bignumberError + "Argument not an object: " + format2);
           }
-          str5 = x2.toFixed(dp, rm);
+          str6 = x2.toFixed(dp, rm);
           if (x2.c) {
-            var i2, arr = str5.split("."), g1 = +format2.groupSize, g2 = +format2.secondaryGroupSize, groupSeparator = format2.groupSeparator || "", intPart = arr[0], fractionPart = arr[1], isNeg = x2.s < 0, intDigits = isNeg ? intPart.slice(1) : intPart, len = intDigits.length;
+            var i2, arr = str6.split("."), g1 = +format2.groupSize, g2 = +format2.secondaryGroupSize, groupSeparator = format2.groupSeparator || "", intPart = arr[0], fractionPart = arr[1], isNeg = x2.s < 0, intDigits = isNeg ? intPart.slice(1) : intPart, len = intDigits.length;
             if (g2) {
               i2 = g1;
               g1 = g2;
@@ -17116,12 +17116,12 @@ var require_bignumber = __commonJS({
               if (g2 > 0) intPart += groupSeparator + intDigits.slice(i2);
               if (isNeg) intPart = "-" + intPart;
             }
-            str5 = fractionPart ? intPart + (format2.decimalSeparator || "") + ((g2 = +format2.fractionGroupSize) ? fractionPart.replace(
+            str6 = fractionPart ? intPart + (format2.decimalSeparator || "") + ((g2 = +format2.fractionGroupSize) ? fractionPart.replace(
               new RegExp("\\d{" + g2 + "}\\B", "g"),
               "$&" + (format2.fractionGroupSeparator || "")
             ) : fractionPart) : intPart;
           }
-          return (format2.prefix || "") + str5 + (format2.suffix || "");
+          return (format2.prefix || "") + str6 + (format2.suffix || "");
         };
         P.toFraction = function(md) {
           var d, d0, d1, d2, e2, exp, n, n0, n1, q, r2, s2, x2 = this, xc = x2.c;
@@ -17173,27 +17173,27 @@ var require_bignumber = __commonJS({
           return format(this, sd, rm, 2);
         };
         P.toString = function(b) {
-          var str5, n = this, s2 = n.s, e2 = n.e;
+          var str6, n = this, s2 = n.s, e2 = n.e;
           if (e2 === null) {
             if (s2) {
-              str5 = "Infinity";
-              if (s2 < 0) str5 = "-" + str5;
+              str6 = "Infinity";
+              if (s2 < 0) str6 = "-" + str6;
             } else {
-              str5 = "NaN";
+              str6 = "NaN";
             }
           } else {
             if (b == null) {
-              str5 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(coeffToString(n.c), e2) : toFixedPoint(coeffToString(n.c), e2, "0");
+              str6 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(coeffToString(n.c), e2) : toFixedPoint(coeffToString(n.c), e2, "0");
             } else if (b === 10 && alphabetHasNormalDecimalDigits) {
               n = round(new BigNumber2(n), DECIMAL_PLACES + e2 + 1, ROUNDING_MODE);
-              str5 = toFixedPoint(coeffToString(n.c), n.e, "0");
+              str6 = toFixedPoint(coeffToString(n.c), n.e, "0");
             } else {
               intCheck(b, 2, ALPHABET.length, "Base");
-              str5 = convertBase(toFixedPoint(coeffToString(n.c), e2, "0"), 10, b, s2, true);
+              str6 = convertBase(toFixedPoint(coeffToString(n.c), e2, "0"), 10, b, s2, true);
             }
-            if (s2 < 0 && n.c[0]) str5 = "-" + str5;
+            if (s2 < 0 && n.c[0]) str6 = "-" + str6;
           }
-          return str5;
+          return str6;
         };
         P.valueOf = P.toJSON = function() {
           return valueOf(this);
@@ -17241,24 +17241,24 @@ var require_bignumber = __commonJS({
         var k = n.c.length - 1;
         return bitFloor(n.e / LOG_BASE) == k && n.c[k] % 2 != 0;
       }
-      function toExponential(str5, e2) {
-        return (str5.length > 1 ? str5.charAt(0) + "." + str5.slice(1) : str5) + (e2 < 0 ? "e" : "e+") + e2;
+      function toExponential(str6, e2) {
+        return (str6.length > 1 ? str6.charAt(0) + "." + str6.slice(1) : str6) + (e2 < 0 ? "e" : "e+") + e2;
       }
-      function toFixedPoint(str5, e2, z) {
+      function toFixedPoint(str6, e2, z) {
         var len, zs;
         if (e2 < 0) {
           for (zs = z + "."; ++e2; zs += z) ;
-          str5 = zs + str5;
+          str6 = zs + str6;
         } else {
-          len = str5.length;
+          len = str6.length;
           if (++e2 > len) {
             for (zs = z, e2 -= len; --e2; zs += z) ;
-            str5 += zs;
+            str6 += zs;
           } else if (e2 < len) {
-            str5 = str5.slice(0, e2) + "." + str5.slice(e2);
+            str6 = str6.slice(0, e2) + "." + str6.slice(e2);
           }
         }
-        return str5;
+        return str6;
       }
       BigNumber = clone3();
       BigNumber["default"] = BigNumber.BigNumber = BigNumber;
@@ -17305,7 +17305,7 @@ var require_stringify = __commonJS({
           return typeof c === "string" ? c : "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
         }) + '"' : '"' + string3 + '"';
       }
-      function str5(key, holder) {
+      function str6(key, holder) {
         var i2, k, v, length, mind = gap, partial2, value = holder[key], isBigNumber = value != null && (value instanceof BigNumber || BigNumber.isBigNumber(value));
         if (value && typeof value === "object" && typeof value.toJSON === "function") {
           value = value.toJSON(key);
@@ -17337,7 +17337,7 @@ var require_stringify = __commonJS({
             if (Object.prototype.toString.apply(value) === "[object Array]") {
               length = value.length;
               for (i2 = 0; i2 < length; i2 += 1) {
-                partial2[i2] = str5(i2, value) || "null";
+                partial2[i2] = str6(i2, value) || "null";
               }
               v = partial2.length === 0 ? "[]" : gap ? "[\n" + gap + partial2.join(",\n" + gap) + "\n" + mind + "]" : "[" + partial2.join(",") + "]";
               gap = mind;
@@ -17348,7 +17348,7 @@ var require_stringify = __commonJS({
               for (i2 = 0; i2 < length; i2 += 1) {
                 if (typeof rep[i2] === "string") {
                   k = rep[i2];
-                  v = str5(k, value);
+                  v = str6(k, value);
                   if (v) {
                     partial2.push(quote(k) + (gap ? ": " : ":") + v);
                   }
@@ -17356,7 +17356,7 @@ var require_stringify = __commonJS({
               }
             } else {
               Object.keys(value).forEach(function(k2) {
-                var v2 = str5(k2, value);
+                var v2 = str6(k2, value);
                 if (v2) {
                   partial2.push(quote(k2) + (gap ? ": " : ":") + v2);
                 }
@@ -17383,7 +17383,7 @@ var require_stringify = __commonJS({
           if (replacer && typeof replacer !== "function" && (typeof replacer !== "object" || typeof replacer.length !== "number")) {
             throw new Error("JSON.stringify");
           }
-          return str5("", { "": value });
+          return str6("", { "": value });
         };
       }
     })();
@@ -18437,8 +18437,8 @@ var require_base64_js = __commonJS({
       }
       return arr;
     }
-    function tripletToBase64(num2) {
-      return lookup[num2 >> 18 & 63] + lookup[num2 >> 12 & 63] + lookup[num2 >> 6 & 63] + lookup[num2 & 63];
+    function tripletToBase64(num3) {
+      return lookup[num3 >> 18 & 63] + lookup[num3 >> 12 & 63] + lookup[num3 >> 6 & 63] + lookup[num3 & 63];
     }
     function encodeChunk(uint8, start, end) {
       var tmp;
@@ -18503,8 +18503,8 @@ var require_crypto = __commonJS({
           throw new Error("SubtleCrypto not found. Make sure it's an https:// website.");
         }
       }
-      async sha256DigestBase64(str5) {
-        const inputBuffer = new TextEncoder().encode(str5);
+      async sha256DigestBase64(str6) {
+        const inputBuffer = new TextEncoder().encode(str6);
         const outputBuffer = await window.crypto.subtle.digest("SHA-256", inputBuffer);
         return base64js.fromByteArray(new Uint8Array(outputBuffer));
       }
@@ -18556,8 +18556,8 @@ var require_crypto = __commonJS({
        * @return A promise that resolves with the SHA-256 hash of the provided
        *   string in hexadecimal encoding.
        */
-      async sha256DigestHex(str5) {
-        const inputBuffer = new TextEncoder().encode(str5);
+      async sha256DigestHex(str6) {
+        const inputBuffer = new TextEncoder().encode(str6);
         const outputBuffer = await window.crypto.subtle.digest("SHA-256", inputBuffer);
         return (0, shared_1.fromArrayBufferToHex)(outputBuffer);
       }
@@ -18593,8 +18593,8 @@ var require_crypto2 = __commonJS({
     exports.NodeCrypto = void 0;
     var crypto2 = __require("crypto");
     var NodeCrypto = class {
-      async sha256DigestBase64(str5) {
-        return crypto2.createHash("sha256").update(str5).digest("base64");
+      async sha256DigestBase64(str6) {
+        return crypto2.createHash("sha256").update(str6).digest("base64");
       }
       randomBytesBase64(count) {
         return crypto2.randomBytes(count).toString("base64");
@@ -18623,8 +18623,8 @@ var require_crypto2 = __commonJS({
        * @return A promise that resolves with the SHA-256 hash of the provided
        *   string in hexadecimal encoding.
        */
-      async sha256DigestHex(str5) {
-        return crypto2.createHash("sha256").update(str5).digest("hex");
+      async sha256DigestHex(str6) {
+        return crypto2.createHash("sha256").update(str6).digest("hex");
       }
       /**
        * Computes the HMAC hash of a message using the provided crypto key and the
@@ -18927,11 +18927,11 @@ var require_util3 = __commonJS({
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
     var fs6 = __require("fs");
     var os = __require("os");
-    var path5 = __require("path");
+    var path6 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
-    function snakeToCamel(str5) {
-      return str5.replace(/([_][^_])/g, (match2) => match2.slice(1).toUpperCase());
+    function snakeToCamel(str6) {
+      return str6.replace(/([_][^_])/g, (match2) => match2.slice(1).toUpperCase());
     }
     function originalOrCamelOptions(obj) {
       function get(key) {
@@ -19020,8 +19020,8 @@ var require_util3 = __commonJS({
       }
     }
     function getWellKnownCertificateConfigFileLocation() {
-      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path5.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path5.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
-      return path5.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
+      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path6.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path6.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
+      return path6.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
       return os.platform().startsWith("win");
@@ -20967,7 +20967,7 @@ var require_getCredentials = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
-    var path5 = __require("path");
+    var path6 = __require("path");
     var fs6 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
@@ -21039,7 +21039,7 @@ var require_getCredentials = __commonJS({
        * @returns An instance of a class that implements ICredentialsProvider.
        */
       static create(keyFilePath) {
-        const keyFileExtension = path5.extname(keyFilePath);
+        const keyFileExtension = path6.extname(keyFilePath);
         switch (keyFileExtension) {
           case ExtensionFiles.JSON:
             return new JsonCredentialsProvider(keyFilePath);
@@ -24388,8 +24388,8 @@ var require_gdchclient = __commonJS({
       [/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")]() {
         return this.toJSON();
       }
-      base64UrlEncode(str5) {
-        const buffer = typeof str5 === "string" ? Buffer.from(str5) : str5;
+      base64UrlEncode(str6) {
+        const buffer = typeof str6 === "string" ? Buffer.from(str6) : str6;
         return buffer.toString("base64url");
       }
     };
@@ -24408,7 +24408,7 @@ var require_googleauth = __commonJS({
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os = __require("os");
-    var path5 = __require("path");
+    var path6 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
     var idtokenclient_1 = require_idtokenclient();
@@ -24693,19 +24693,19 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           if (this._isWindows()) {
             if (process.env["APPDATA"]) {
-              configDir = path5.join(process.env["APPDATA"], "gcloud");
+              configDir = path6.join(process.env["APPDATA"], "gcloud");
             }
           } else {
             const home = process.env["HOME"];
             if (home) {
-              configDir = path5.join(home, ".config", "gcloud");
+              configDir = path6.join(home, ".config", "gcloud");
             }
           }
         }
         if (!configDir) {
           return null;
         }
-        const location = path5.join(configDir, "application_default_credentials.json");
+        const location = path6.join(configDir, "application_default_credentials.json");
         if (!fs6.existsSync(location)) {
           return null;
         }
@@ -25060,7 +25060,7 @@ var require_googleauth = __commonJS({
         if (this.jsonContent) {
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
-          const filePath = path5.resolve(this.keyFilename);
+          const filePath = path6.resolve(this.keyFilename);
           const stream = fs6.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
@@ -25948,26 +25948,26 @@ var require_permessage_deflate = __commonJS({
             value = value[0];
             if (key === "client_max_window_bits") {
               if (value !== true) {
-                const num2 = +value;
-                if (!Number.isInteger(num2) || num2 < 8 || num2 > 15) {
+                const num3 = +value;
+                if (!Number.isInteger(num3) || num3 < 8 || num3 > 15) {
                   throw new TypeError(
                     `Invalid value for parameter "${key}": ${value}`
                   );
                 }
-                value = num2;
+                value = num3;
               } else if (!this._isServer) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
             } else if (key === "server_max_window_bits") {
-              const num2 = +value;
-              if (!Number.isInteger(num2) || num2 < 8 || num2 > 15) {
+              const num3 = +value;
+              if (!Number.isInteger(num3) || num3 < 8 || num3 > 15) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
-              value = num2;
+              value = num3;
             } else if (key === "client_no_context_takeover" || key === "server_no_context_takeover") {
               if (value !== true) {
                 throw new TypeError(
@@ -26681,8 +26681,8 @@ var require_receiver = __commonJS({
           return;
         }
         const buf = this.consume(8);
-        const num2 = buf.readUInt32BE(0);
-        if (num2 > Math.pow(2, 53 - 32) - 1) {
+        const num3 = buf.readUInt32BE(0);
+        if (num3 > Math.pow(2, 53 - 32) - 1) {
           const error2 = this.createError(
             RangeError,
             "Unsupported WebSocket frame: payload length > 2^53 - 1",
@@ -26693,7 +26693,7 @@ var require_receiver = __commonJS({
           cb(error2);
           return;
         }
-        this._payloadLength = num2 * Math.pow(2, 32) + buf.readUInt32BE(4);
+        this._payloadLength = num3 * Math.pow(2, 32) + buf.readUInt32BE(4);
         this.haveLength(cb);
       }
       /**
@@ -39550,11 +39550,11 @@ function ERR(error2) {
 function bytesToBase64(u8arr) {
   return btoa(String.fromCodePoint(...u8arr));
 }
-function stringToBytes(str5) {
-  return new TextEncoder().encode(str5);
+function stringToBytes(str6) {
+  return new TextEncoder().encode(str6);
 }
-function stringToBase64(str5) {
-  return bytesToBase64(stringToBytes(str5));
+function stringToBase64(str6) {
+  return bytesToBase64(stringToBytes(str6));
 }
 function pathToFunc(pathPattern, options) {
   const paramRE = /\{([a-zA-Z0-9_][a-zA-Z0-9_-]*?)\}/g;
@@ -40445,7 +40445,7 @@ async function $do$l(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path5 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path6 = pathToFunc("/{api_version}/agents")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40476,7 +40476,7 @@ async function $do$l(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40520,7 +40520,7 @@ async function $do$k(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path6 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40550,7 +40550,7 @@ async function $do$k(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40594,7 +40594,7 @@ async function $do$j(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path6 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40624,7 +40624,7 @@ async function $do$j(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40666,7 +40666,7 @@ async function $do$i(client, api_version, page_size, page_token, parent, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path5 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path6 = pathToFunc("/{api_version}/agents")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token,
@@ -40701,7 +40701,7 @@ async function $do$i(client, api_version, page_size, page_token, parent, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     query,
     body,
@@ -40746,7 +40746,7 @@ async function $do$h(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
+  const path6 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40776,7 +40776,7 @@ async function $do$h(client, id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40819,7 +40819,7 @@ async function $do$g(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path5 = pathToFunc("/{api_version}/interactions")(pathParams);
+  const path6 = pathToFunc("/{api_version}/interactions")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: ((_b = input === null || input === void 0 ? void 0 : input.body) === null || _b === void 0 ? void 0 : _b.stream) ? "text/event-stream" : "application/json"
@@ -40850,7 +40850,7 @@ async function $do$g(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40900,7 +40900,7 @@ async function $do$f(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path6 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40930,7 +40930,7 @@ async function $do$f(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40980,7 +40980,7 @@ async function $do$e(client, id, stream, last_event_id, include_input, api_versi
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path6 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const query = encodeFormQuery({
     "include_input": payload.include_input,
     "last_event_id": payload.last_event_id,
@@ -41015,7 +41015,7 @@ async function $do$e(client, id, stream, last_event_id, include_input, api_versi
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     query,
     body,
@@ -41062,7 +41062,7 @@ async function $do$d(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path5 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path6 = pathToFunc("/{api_version}/triggers")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41093,7 +41093,7 @@ async function $do$d(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41137,7 +41137,7 @@ async function $do$c(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path6 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41167,7 +41167,7 @@ async function $do$c(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41211,7 +41211,7 @@ async function $do$b(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path6 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41241,7 +41241,7 @@ async function $do$b(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41287,7 +41287,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path6 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload.page_size,
     "page_token": payload.page_token
@@ -41321,7 +41321,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     query,
     body,
@@ -41364,7 +41364,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path5 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path6 = pathToFunc("/{api_version}/triggers")(pathParams);
   const query = encodeFormQuery({
     "filter": payload === null || payload === void 0 ? void 0 : payload.filter,
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
@@ -41399,7 +41399,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     query,
     body,
@@ -41444,7 +41444,7 @@ async function $do$8(client, trigger_id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path6 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41474,7 +41474,7 @@ async function $do$8(client, trigger_id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41519,7 +41519,7 @@ async function $do$7(client, id, body, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path6 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41550,7 +41550,7 @@ async function $do$7(client, id, body, api_version, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41590,7 +41590,7 @@ async function $do$6(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path5 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path6 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41621,7 +41621,7 @@ async function $do$6(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41665,7 +41665,7 @@ async function $do$5(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path6 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41695,7 +41695,7 @@ async function $do$5(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41739,7 +41739,7 @@ async function $do$4(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path6 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41769,7 +41769,7 @@ async function $do$4(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41810,7 +41810,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path5 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path6 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -41844,7 +41844,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     query,
     body,
@@ -41890,7 +41890,7 @@ async function $do$2(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
+  const path6 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41921,7 +41921,7 @@ async function $do$2(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41966,7 +41966,7 @@ async function $do$1(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
+  const path6 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41997,7 +41997,7 @@ async function $do$1(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42043,7 +42043,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
       charEncoding: "percent"
     })
   };
-  const path5 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path6 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const query = encodeFormQuery({
     "update_mask": payload.update_mask
   });
@@ -42077,7 +42077,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path5,
+    path: path6,
     headers,
     query,
     body: body$,
@@ -43899,11 +43899,11 @@ function getEnv(env2) {
   var _a4, _b, _c;
   return (_c = (_b = (_a4 = process === null || process === void 0 ? void 0 : process.env) === null || _a4 === void 0 ? void 0 : _a4[env2]) === null || _b === void 0 ? void 0 : _b.trim()) !== null && _c !== void 0 ? _c : void 0;
 }
-function stringToBoolean(str5) {
-  if (str5 === void 0) {
+function stringToBoolean(str6) {
+  if (str6 === void 0) {
     return false;
   }
-  return str5.toLowerCase() === "true";
+  return str6.toLowerCase() === "true";
 }
 function getApiKeyFromEnv() {
   const envGoogleApiKey = getEnv("GOOGLE_API_KEY");
@@ -45191,7 +45191,7 @@ var init_node = __esm({
           params
         );
         const urlParams = body["_url"];
-        const path5 = formatMap("{model}:batchGenerateContent", urlParams);
+        const path6 = formatMap("{model}:batchGenerateContent", urlParams);
         const batch = body["batch"];
         const inputConfig = batch["inputConfig"];
         const requestsWrapper = inputConfig["requests"];
@@ -45212,7 +45212,7 @@ var init_node = __esm({
         delete body["config"];
         delete body["_url"];
         delete body["_query"];
-        return { path: path5, body };
+        return { path: path6, body };
       }
       // Helper function to get the first GCS URI
       getGcsUri(src) {
@@ -45268,16 +45268,16 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createBatchJobParametersToVertex(this.apiClient, params);
-          path5 = formatMap("batchPredictionJobs", body["_url"]);
+          path6 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45292,12 +45292,12 @@ var init_node = __esm({
           });
         } else {
           const body = createBatchJobParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{model}:batchGenerateContent", body["_url"]);
+          path6 = formatMap("{model}:batchGenerateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45322,18 +45322,18 @@ var init_node = __esm({
       async createEmbeddingsInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createEmbeddingsBatchJobParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
+          path6 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45362,16 +45362,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getBatchJobParametersToVertex(this.apiClient, params);
-          path5 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path6 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45386,12 +45386,12 @@ var init_node = __esm({
           });
         } else {
           const body = getBatchJobParametersToMldev(this.apiClient, params);
-          path5 = formatMap("batches/{name}", body["_url"]);
+          path6 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45419,16 +45419,16 @@ var init_node = __esm({
        */
       async cancel(params) {
         var _a4, _b, _c, _d;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelBatchJobParametersToVertex(this.apiClient, params);
-          path5 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
+          path6 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45437,12 +45437,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelBatchJobParametersToMldev(this.apiClient, params);
-          path5 = formatMap("batches/{name}:cancel", body["_url"]);
+          path6 = formatMap("batches/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45454,16 +45454,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listBatchJobsParametersToVertex(params);
-          path5 = formatMap("batchPredictionJobs", body["_url"]);
+          path6 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45486,12 +45486,12 @@ var init_node = __esm({
           });
         } else {
           const body = listBatchJobsParametersToMldev(params);
-          path5 = formatMap("batches", body["_url"]);
+          path6 = formatMap("batches", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45528,16 +45528,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteBatchJobParametersToVertex(this.apiClient, params);
-          path5 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path6 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45558,12 +45558,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteBatchJobParametersToMldev(this.apiClient, params);
-          path5 = formatMap("batches/{name}", body["_url"]);
+          path6 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45622,16 +45622,16 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createCachedContentParametersToVertex(this.apiClient, params);
-          path5 = formatMap("cachedContents", body["_url"]);
+          path6 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45645,12 +45645,12 @@ var init_node = __esm({
           });
         } else {
           const body = createCachedContentParametersToMldev(this.apiClient, params);
-          path5 = formatMap("cachedContents", body["_url"]);
+          path6 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45678,16 +45678,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getCachedContentParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45701,12 +45701,12 @@ var init_node = __esm({
           });
         } else {
           const body = getCachedContentParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45734,16 +45734,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteCachedContentParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45766,12 +45766,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteCachedContentParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45811,16 +45811,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateCachedContentParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -45834,12 +45834,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateCachedContentParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -45856,16 +45856,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listCachedContentsParametersToVertex(params);
-          path5 = formatMap("cachedContents", body["_url"]);
+          path6 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45888,12 +45888,12 @@ var init_node = __esm({
           });
         } else {
           const body = listCachedContentsParametersToMldev(params);
-          path5 = formatMap("cachedContents", body["_url"]);
+          path6 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46224,18 +46224,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFilesParametersToMldev(params);
-          path5 = formatMap("files", body["_url"]);
+          path6 = formatMap("files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46261,18 +46261,18 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileParametersToMldev(params);
-          path5 = formatMap("upload/v1beta/files", body["_url"]);
+          path6 = formatMap("upload/v1beta/files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46307,18 +46307,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileParametersToMldev(params);
-          path5 = formatMap("files/{file}", body["_url"]);
+          path6 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46348,18 +46348,18 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileParametersToMldev(params);
-          path5 = formatMap("files/{file}", body["_url"]);
+          path6 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46385,18 +46385,18 @@ var init_node = __esm({
       async registerFilesInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = internalRegisterFilesParametersToMldev(params);
-          path5 = formatMap("files:register", body["_url"]);
+          path6 = formatMap("files:register", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46556,13 +46556,13 @@ var init_node = __esm({
           throw new Error("HTTP options are not correctly set.");
         }
       }
-      constructUrl(path5, httpOptions, prependProjectLocation) {
+      constructUrl(path6, httpOptions, prependProjectLocation) {
         const urlElement = [this.getRequestUrlInternal(httpOptions)];
         if (prependProjectLocation) {
           urlElement.push(this.getBaseResourcePath());
         }
-        if (path5 !== "") {
-          urlElement.push(path5);
+        if (path6 !== "") {
+          urlElement.push(path6);
         }
         const url = new URL(`${urlElement.join("/")}`);
         return url;
@@ -46861,8 +46861,8 @@ var init_node = __esm({
           file: fileToUpload
         };
         const fileName = this.getFileName(file);
-        const path5 = formatMap("upload/v1beta/files", body["_url"]);
-        const uploadUrl = await this.fetchUploadUrl(path5, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const path6 = formatMap("upload/v1beta/files", body["_url"]);
+        const uploadUrl = await this.fetchUploadUrl(path6, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.upload(file, uploadUrl, this);
       }
       /**
@@ -46886,13 +46886,13 @@ var init_node = __esm({
         if (mimeType === void 0 || mimeType === "") {
           throw new Error("Can not determine mimeType. Please provide mimeType in the config.");
         }
-        const path5 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
+        const path6 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
         const fileName = this.getFileName(file);
         const body = {};
         if (config3 != null) {
           uploadToFileSearchStoreConfigToMldev(config3, body);
         }
-        const uploadUrl = await this.fetchUploadUrl(path5, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const uploadUrl = await this.fetchUploadUrl(path6, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.uploadToFileSearchStore(file, uploadUrl, this);
       }
       /**
@@ -46905,7 +46905,7 @@ var init_node = __esm({
         const downloader = this.clientOptions.downloader;
         await downloader.download(params, this);
       }
-      async fetchUploadUrl(path5, sizeBytes, mimeType, fileName, body, configHttpOptions) {
+      async fetchUploadUrl(path6, sizeBytes, mimeType, fileName, body, configHttpOptions) {
         var _a4;
         let httpOptions = {};
         if (configHttpOptions) {
@@ -46918,7 +46918,7 @@ var init_node = __esm({
           };
         }
         const httpResponse = await this.request({
-          path: path5,
+          path: path6,
           body: JSON.stringify(body),
           httpMethod: "POST",
           httpOptions
@@ -47918,16 +47918,16 @@ var init_node = __esm({
       async generateContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{model}:generateContent", body["_url"]);
+          path6 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -47950,12 +47950,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{model}:generateContent", body["_url"]);
+          path6 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -47981,17 +47981,17 @@ var init_node = __esm({
       async generateContentStreamInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path6 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48027,13 +48027,13 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path6 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48093,17 +48093,17 @@ var init_node = __esm({
       async embedContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = embedContentParametersPrivateToVertex(this.apiClient, params, params);
           const endpointUrl = tIsVertexEmbedContentModel(params.model) ? "{model}:embedContent" : "{model}:predict";
-          path5 = formatMap(endpointUrl, body["_url"]);
+          path6 = formatMap(endpointUrl, body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48126,12 +48126,12 @@ var init_node = __esm({
           });
         } else {
           const body = embedContentParametersPrivateToMldev(this.apiClient, params);
-          path5 = formatMap("{model}:batchEmbedContents", body["_url"]);
+          path6 = formatMap("{model}:batchEmbedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48160,16 +48160,16 @@ var init_node = __esm({
       async generateImagesInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateImagesParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{model}:predict", body["_url"]);
+          path6 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48192,12 +48192,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateImagesParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{model}:predict", body["_url"]);
+          path6 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48226,16 +48226,16 @@ var init_node = __esm({
       async editImageInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = editImageParametersInternalToVertex(this.apiClient, params);
-          path5 = formatMap("{model}:predict", body["_url"]);
+          path6 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48266,16 +48266,16 @@ var init_node = __esm({
       async upscaleImageInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = upscaleImageAPIParametersInternalToVertex(this.apiClient, params);
-          path5 = formatMap("{model}:predict", body["_url"]);
+          path6 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48327,16 +48327,16 @@ var init_node = __esm({
       async recontextImage(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = recontextImageParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{model}:predict", body["_url"]);
+          path6 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48378,16 +48378,16 @@ var init_node = __esm({
       async segmentImage(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = segmentImageParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{model}:predict", body["_url"]);
+          path6 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48417,16 +48417,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getModelParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48441,12 +48441,12 @@ var init_node = __esm({
           });
         } else {
           const body = getModelParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48464,16 +48464,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listModelsParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{models_url}", body["_url"]);
+          path6 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48496,12 +48496,12 @@ var init_node = __esm({
           });
         } else {
           const body = listModelsParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{models_url}", body["_url"]);
+          path6 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48544,16 +48544,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateModelParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{model}", body["_url"]);
+          path6 = formatMap("{model}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48568,12 +48568,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateModelParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48602,16 +48602,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteModelParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48634,12 +48634,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteModelParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48681,16 +48681,16 @@ var init_node = __esm({
       async countTokens(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = countTokensParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{model}:countTokens", body["_url"]);
+          path6 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48713,12 +48713,12 @@ var init_node = __esm({
           });
         } else {
           const body = countTokensParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{model}:countTokens", body["_url"]);
+          path6 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48762,16 +48762,16 @@ var init_node = __esm({
       async computeTokens(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = computeTokensParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{model}:computeTokens", body["_url"]);
+          path6 = formatMap("{model}:computeTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48802,16 +48802,16 @@ var init_node = __esm({
       async generateVideosInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateVideosParametersToVertex(this.apiClient, params);
-          path5 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path6 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48828,12 +48828,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateVideosParametersToMldev(this.apiClient, params);
-          path5 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path6 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48935,16 +48935,16 @@ var init_node = __esm({
       async getVideosOperationInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getOperationParametersToVertex(params);
-          path5 = formatMap("{operationName}", body["_url"]);
+          path6 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48956,12 +48956,12 @@ var init_node = __esm({
           return response;
         } else {
           const body = getOperationParametersToMldev(params);
-          path5 = formatMap("{operationName}", body["_url"]);
+          path6 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48976,16 +48976,16 @@ var init_node = __esm({
       async fetchPredictVideosOperationInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = fetchPredictOperationParametersToVertex(params);
-          path5 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
+          path6 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49091,20 +49091,20 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("The client.tokens.create method is only supported by the Gemini Developer API.");
         } else {
           const body = createAuthTokenParametersToMldev(this.apiClient, params);
-          path5 = formatMap("auth_tokens", body["_url"]);
+          path6 = formatMap("auth_tokens", body["_url"]);
           queryParams = body["_query"];
           delete body["config"];
           delete body["_url"];
           delete body["_query"];
           const transformedBody = convertBidiSetupToTokenSetup(body, params.config);
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(transformedBody),
             httpMethod: "POST",
@@ -49136,18 +49136,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getDocumentParametersToMldev(params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49168,18 +49168,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteDocumentParametersToMldev(params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49191,18 +49191,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listDocumentsParametersToMldev(params);
-          path5 = formatMap("{parent}/documents", body["_url"]);
+          path6 = formatMap("{parent}/documents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49319,18 +49319,18 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileSearchStoreParametersToMldev(this.apiClient, params);
-          path5 = formatMap("fileSearchStores", body["_url"]);
+          path6 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49353,18 +49353,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileSearchStoreParametersToMldev(params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49385,18 +49385,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileSearchStoreParametersToMldev(params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49408,18 +49408,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFileSearchStoresParametersToMldev(params);
-          path5 = formatMap("fileSearchStores", body["_url"]);
+          path6 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49439,18 +49439,18 @@ var init_node = __esm({
       async uploadToFileSearchStoreInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = uploadToFileSearchStoreParametersToMldev(params);
-          path5 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
+          path6 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49478,18 +49478,18 @@ var init_node = __esm({
       async importFile(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = importFileParametersToMldev(params);
-          path5 = formatMap("{file_search_store_name}:importFile", body["_url"]);
+          path6 = formatMap("{file_search_store_name}:importFile", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49933,16 +49933,16 @@ var init_node = __esm({
       }
       _createRequest(context, conf, options) {
         var _a4, _b, _c, _d, _e;
-        const { method, path: path5, query, headers: opHeaders, security } = conf;
+        const { method, path: path6, query, headers: opHeaders, security } = conf;
         const base = (_a4 = conf.baseURL) !== null && _a4 !== void 0 ? _a4 : this._baseURL;
         if (!base) {
           return ERR(new InvalidRequestError("No base URL provided for operation"));
         }
         const baseURL = new URL(base);
         let reqURL;
-        if (path5) {
+        if (path6) {
           baseURL.pathname = baseURL.pathname.replace(/\/+$/, "") + "/";
-          reqURL = new URL(path5, baseURL);
+          reqURL = new URL(path6, baseURL);
           if (!reqURL.search && baseURL.search) {
             reqURL.search = baseURL.search;
           }
@@ -50858,16 +50858,16 @@ var init_node = __esm({
       async getInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getTuningJobParametersToVertex(params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -50888,12 +50888,12 @@ var init_node = __esm({
           });
         } else {
           const body = getTuningJobParametersToMldev(params);
-          path5 = formatMap("{name}", body["_url"]);
+          path6 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -50917,16 +50917,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listTuningJobsParametersToVertex(params);
-          path5 = formatMap("tuningJobs", body["_url"]);
+          path6 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -50965,16 +50965,16 @@ var init_node = __esm({
       async cancel(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelTuningJobParametersToVertex(params);
-          path5 = formatMap("{name}:cancel", body["_url"]);
+          path6 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -50997,12 +50997,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelTuningJobParametersToMldev(params);
-          path5 = formatMap("{name}:cancel", body["_url"]);
+          path6 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51028,16 +51028,16 @@ var init_node = __esm({
       async tuneInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createTuningJobParametersPrivateToVertex(params, params);
-          path5 = formatMap("tuningJobs", body["_url"]);
+          path6 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51063,18 +51063,18 @@ var init_node = __esm({
       async tuneMldevInternal(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createTuningJobParametersPrivateToMldev(params);
-          path5 = formatMap("tunedModels", body["_url"]);
+          path6 = formatMap("tunedModels", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51098,16 +51098,16 @@ var init_node = __esm({
       async validateReward(params) {
         var _a4, _b;
         let response;
-        let path5 = "";
+        let path6 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = validateRewardParametersToVertex(params);
-          path5 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
+          path6 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path5,
+            path: path6,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51755,10 +51755,10 @@ var init_values = __esm({
 });
 
 // ../../../social-flow/server/node_modules/openai/internal/utils/sleep.mjs
-var sleep3;
+var sleep4;
 var init_sleep = __esm({
   "../../../social-flow/server/node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep3 = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms));
+    sleep4 = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms));
   }
 });
 
@@ -52045,15 +52045,15 @@ var init_utils = __esm({
       return array2;
     })();
     limit = 1024;
-    encode = (str5, _defaultEncoder, charset, _kind, format) => {
-      if (str5.length === 0) {
-        return str5;
+    encode = (str6, _defaultEncoder, charset, _kind, format) => {
+      if (str6.length === 0) {
+        return str6;
       }
-      let string3 = str5;
-      if (typeof str5 === "symbol") {
-        string3 = Symbol.prototype.toString.call(str5);
-      } else if (typeof str5 !== "string") {
-        string3 = String(str5);
+      let string3 = str6;
+      if (typeof str6 === "symbol") {
+        string3 = Symbol.prototype.toString.call(str6);
+      } else if (typeof str6 !== "string") {
+        string3 = String(str6);
       }
       if (charset === "iso-8859-1") {
         return escape(string3).replace(/%u[0-9a-f]{4}/gi, function($0) {
@@ -52409,9 +52409,9 @@ function concatBytes(buffers) {
   }
   return output;
 }
-function encodeUTF8(str5) {
+function encodeUTF8(str6) {
   let encoder;
-  return (encodeUTF8_ ?? (encoder = new globalThis.TextEncoder(), encodeUTF8_ = encoder.encode.bind(encoder)))(str5);
+  return (encodeUTF8_ ?? (encoder = new globalThis.TextEncoder(), encodeUTF8_ = encoder.encode.bind(encoder)))(str6);
 }
 function decodeUTF8(bytes) {
   let decoder;
@@ -52630,12 +52630,12 @@ async function* iterSSEChunks(iterator) {
     yield data;
   }
 }
-function partition(str5, delimiter) {
-  const index = str5.indexOf(delimiter);
+function partition(str6, delimiter) {
+  const index = str6.indexOf(delimiter);
   if (index !== -1) {
-    return [str5.substring(0, index), delimiter, str5.substring(index + delimiter.length)];
+    return [str6.substring(0, index), delimiter, str6.substring(index + delimiter.length)];
   }
-  return [str5, "", ""];
+  return [str6, "", ""];
 }
 var _Stream_client, Stream4, SSEDecoder;
 var init_streaming = __esm({
@@ -53675,20 +53675,20 @@ var init_resource = __esm({
 });
 
 // ../../../social-flow/server/node_modules/openai/internal/utils/path.mjs
-function encodeURIPath(str5) {
-  return str5.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
+function encodeURIPath(str6) {
+  return str6.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
-var EMPTY, createPathTagFunction, path4;
+var EMPTY, createPathTagFunction, path5;
 var init_path = __esm({
   "../../../social-flow/server/node_modules/openai/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path5(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path6(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path6 = statics.reduce((previousValue, currentValue, index) => {
+      const path7 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -53705,7 +53705,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path6.split(/[?#]/, 1)[0];
+      const pathOnly = path7.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match2;
       while ((match2 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -53726,12 +53726,12 @@ var init_path = __esm({
         }, "");
         throw new OpenAIError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e2) => e2.error).join("\n")}
-${path6}
+${path7}
 ${underline}`);
       }
-      return path6;
+      return path7;
     };
-    path4 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+    path5 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
 });
 
@@ -53758,7 +53758,7 @@ var init_messages = __esm({
        * ```
        */
       list(completionID, query = {}, options) {
-        return this._client.getAPIList(path4`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path5`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -54882,15 +54882,15 @@ function finalizeChatCompletion(snapshot, params, audioDoneChoiceIndexes) {
               const { arguments: args, name, ...fnRest } = fn || {};
               if (type == null) {
                 throw new OpenAIError(`missing choices[${index}].tool_calls[${i2}].type
-${str(snapshot)}`);
+${str2(snapshot)}`);
               }
               if (name == null) {
                 throw new OpenAIError(`missing choices[${index}].tool_calls[${i2}].function.name
-${str(snapshot)}`);
+${str2(snapshot)}`);
               }
               if (args == null) {
                 throw new OpenAIError(`missing choices[${index}].tool_calls[${i2}].function.arguments
-${str(snapshot)}`);
+${str2(snapshot)}`);
               }
               return {
                 ...toolRest,
@@ -54920,7 +54920,7 @@ ${str(snapshot)}`);
 function isCompleteAudio(audio) {
   return audio?.id != null && audio.data != null && audio.transcript != null && audio.expires_at != null;
 }
-function str(x2) {
+function str2(x2) {
   return JSON.stringify(x2);
 }
 function assertIsEmpty(obj) {
@@ -55496,7 +55496,7 @@ var init_completions = __esm({
        * ```
        */
       retrieve(completionID, options) {
-        return this._client.get(path4`/chat/completions/${completionID}`, {
+        return this._client.get(path5`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -55515,7 +55515,7 @@ var init_completions = __esm({
        * ```
        */
       update(completionID, body, options) {
-        return this._client.post(path4`/chat/completions/${completionID}`, {
+        return this._client.post(path5`/chat/completions/${completionID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -55551,7 +55551,7 @@ var init_completions = __esm({
        * ```
        */
       delete(completionID, options) {
-        return this._client.delete(path4`/chat/completions/${completionID}`, {
+        return this._client.delete(path5`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -55661,7 +55661,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       retrieve(keyID, options) {
-        return this._client.get(path4`/organization/admin_api_keys/${keyID}`, {
+        return this._client.get(path5`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -55696,7 +55696,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       delete(keyID, options) {
-        return this._client.delete(path4`/organization/admin_api_keys/${keyID}`, {
+        return this._client.delete(path5`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -55777,7 +55777,7 @@ var init_certificates = __esm({
        * ```
        */
       retrieve(certificateID, query = {}, options) {
-        return this._client.get(path4`/organization/certificates/${certificateID}`, {
+        return this._client.get(path5`/organization/certificates/${certificateID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -55795,7 +55795,7 @@ var init_certificates = __esm({
        * ```
        */
       update(certificateID, body, options) {
-        return this._client.post(path4`/organization/certificates/${certificateID}`, {
+        return this._client.post(path5`/organization/certificates/${certificateID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -55829,7 +55829,7 @@ var init_certificates = __esm({
        * ```
        */
       delete(certificateID, options) {
-        return this._client.delete(path4`/organization/certificates/${certificateID}`, {
+        return this._client.delete(path5`/organization/certificates/${certificateID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -55962,7 +55962,7 @@ var init_invites = __esm({
        * ```
        */
       retrieve(inviteID, options) {
-        return this._client.get(path4`/organization/invites/${inviteID}`, {
+        return this._client.get(path5`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -55997,7 +55997,7 @@ var init_invites = __esm({
        * ```
        */
       delete(inviteID, options) {
-        return this._client.delete(path4`/organization/invites/${inviteID}`, {
+        return this._client.delete(path5`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56043,7 +56043,7 @@ var init_roles = __esm({
        * ```
        */
       retrieve(roleID, options) {
-        return this._client.get(path4`/organization/roles/${roleID}`, {
+        return this._client.get(path5`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56059,7 +56059,7 @@ var init_roles = __esm({
        * ```
        */
       update(roleID, body, options) {
-        return this._client.post(path4`/organization/roles/${roleID}`, {
+        return this._client.post(path5`/organization/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56094,7 +56094,7 @@ var init_roles = __esm({
        * ```
        */
       delete(roleID, options) {
-        return this._client.delete(path4`/organization/roles/${roleID}`, {
+        return this._client.delete(path5`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56147,7 +56147,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       retrieve(alertID, options) {
-        return this._client.get(path4`/organization/spend_alerts/${alertID}`, {
+        return this._client.get(path5`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56173,7 +56173,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       update(alertID, body, options) {
-        return this._client.post(path4`/organization/spend_alerts/${alertID}`, {
+        return this._client.post(path5`/organization/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56205,7 +56205,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       delete(alertID, options) {
-        return this._client.delete(path4`/organization/spend_alerts/${alertID}`, {
+        return this._client.delete(path5`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56503,7 +56503,7 @@ var init_roles2 = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path4`/organization/groups/${groupID}/roles`, {
+        return this._client.post(path5`/organization/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56523,7 +56523,7 @@ var init_roles2 = __esm({
        */
       retrieve(roleID, params, options) {
         const { group_id } = params;
-        return this._client.get(path4`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path5`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56542,7 +56542,7 @@ var init_roles2 = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path4`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a group within the organization.
@@ -56558,7 +56558,7 @@ var init_roles2 = __esm({
        */
       delete(roleID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path4`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path5`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56588,7 +56588,7 @@ var init_users = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path4`/organization/groups/${groupID}/users`, {
+        return this._client.post(path5`/organization/groups/${groupID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56608,7 +56608,7 @@ var init_users = __esm({
        */
       retrieve(userID, params, options) {
         const { group_id } = params;
-        return this._client.get(path4`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.get(path5`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56627,7 +56627,7 @@ var init_users = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path4`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Removes a user from a group.
@@ -56643,7 +56643,7 @@ var init_users = __esm({
        */
       delete(userID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path4`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.delete(path5`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56698,7 +56698,7 @@ var init_groups = __esm({
        * ```
        */
       retrieve(groupID, options) {
-        return this._client.get(path4`/organization/groups/${groupID}`, {
+        return this._client.get(path5`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56715,7 +56715,7 @@ var init_groups = __esm({
        * ```
        */
       update(groupID, body, options) {
-        return this._client.post(path4`/organization/groups/${groupID}`, {
+        return this._client.post(path5`/organization/groups/${groupID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56750,7 +56750,7 @@ var init_groups = __esm({
        * ```
        */
       delete(groupID, options) {
-        return this._client.delete(path4`/organization/groups/${groupID}`, {
+        return this._client.delete(path5`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56783,7 +56783,7 @@ var init_api_keys = __esm({
        */
       retrieve(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.get(path4`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.get(path5`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56802,7 +56802,7 @@ var init_api_keys = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path4`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes an API key from the project.
@@ -56821,7 +56821,7 @@ var init_api_keys = __esm({
        */
       delete(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path4`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.delete(path5`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56852,7 +56852,7 @@ var init_certificates2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path4`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Activate certificates at the project level.
@@ -56871,7 +56871,7 @@ var init_certificates2 = __esm({
        * ```
        */
       activate(projectID, body, options) {
-        return this._client.getAPIList(path4`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deactivate certificates at the project level. You can atomically and
@@ -56889,7 +56889,7 @@ var init_certificates2 = __esm({
        * ```
        */
       deactivate(projectID, body, options) {
-        return this._client.getAPIList(path4`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -56914,7 +56914,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path4`/organization/projects/${projectID}/data_retention`, {
+        return this._client.get(path5`/organization/projects/${projectID}/data_retention`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56932,7 +56932,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path4`/organization/projects/${projectID}/data_retention`, {
+        return this._client.post(path5`/organization/projects/${projectID}/data_retention`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56961,7 +56961,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path4`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.get(path5`/organization/projects/${projectID}/hosted_tool_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56978,7 +56978,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path4`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.post(path5`/organization/projects/${projectID}/hosted_tool_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57007,7 +57007,7 @@ var init_model_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path4`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.get(path5`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57025,7 +57025,7 @@ var init_model_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path4`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.post(path5`/organization/projects/${projectID}/model_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57043,7 +57043,7 @@ var init_model_permissions = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path4`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.delete(path5`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57074,7 +57074,7 @@ var init_rate_limits = __esm({
        * ```
        */
       listRateLimits(projectID, query = {}, options) {
-        return this._client.getAPIList(path4`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Updates a project rate limit.
@@ -57090,7 +57090,7 @@ var init_rate_limits = __esm({
        */
       updateRateLimit(rateLimitID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path4`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
+        return this._client.post(path5`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57121,7 +57121,7 @@ var init_roles3 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path4`/projects/${projectID}/roles`, {
+        return this._client.post(path5`/projects/${projectID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57141,7 +57141,7 @@ var init_roles3 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id } = params;
-        return this._client.get(path4`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.get(path5`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57160,7 +57160,7 @@ var init_roles3 = __esm({
        */
       update(roleID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path4`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.post(path5`/projects/${project_id}/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57180,7 +57180,7 @@ var init_roles3 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path4`/projects/${projectID}/roles`, NextCursorPage, {
+        return this._client.getAPIList(path5`/projects/${projectID}/roles`, NextCursorPage, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57200,7 +57200,7 @@ var init_roles3 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path4`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.delete(path5`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57238,7 +57238,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path4`/organization/projects/${projectID}/spend_alerts`, {
+        return this._client.post(path5`/organization/projects/${projectID}/spend_alerts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57258,7 +57258,7 @@ var init_spend_alerts2 = __esm({
        */
       retrieve(alertID, params, options) {
         const { project_id } = params;
-        return this._client.get(path4`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.get(path5`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57286,7 +57286,7 @@ var init_spend_alerts2 = __esm({
        */
       update(alertID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path4`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.post(path5`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57306,7 +57306,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path4`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a project spend alert.
@@ -57322,7 +57322,7 @@ var init_spend_alerts2 = __esm({
        */
       delete(alertID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path4`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.delete(path5`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57350,7 +57350,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path4`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.get(path5`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57372,7 +57372,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path4`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.post(path5`/organization/projects/${projectID}/spend_limit`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57390,7 +57390,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path4`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.delete(path5`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57421,7 +57421,7 @@ var init_roles4 = __esm({
        */
       create(groupID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path4`/projects/${project_id}/groups/${groupID}/roles`, {
+        return this._client.post(path5`/projects/${project_id}/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57441,7 +57441,7 @@ var init_roles4 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.get(path4`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path5`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57462,7 +57462,7 @@ var init_roles4 = __esm({
        */
       list(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path4`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a group within a project.
@@ -57478,7 +57478,7 @@ var init_roles4 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.delete(path4`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path5`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57514,7 +57514,7 @@ var init_groups2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path4`/organization/projects/${projectID}/groups`, {
+        return this._client.post(path5`/organization/projects/${projectID}/groups`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57534,7 +57534,7 @@ var init_groups2 = __esm({
        */
       retrieve(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.get(path4`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.get(path5`/organization/projects/${project_id}/groups/${groupID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57554,7 +57554,7 @@ var init_groups2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path4`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Revokes a group's access to a project.
@@ -57570,7 +57570,7 @@ var init_groups2 = __esm({
        */
       delete(groupID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path4`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.delete(path5`/organization/projects/${project_id}/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57601,7 +57601,7 @@ var init_api_keys2 = __esm({
        */
       create(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path4`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path5`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -57635,7 +57635,7 @@ var init_service_accounts = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path4`/organization/projects/${projectID}/service_accounts`, {
+        return this._client.post(path5`/organization/projects/${projectID}/service_accounts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57655,7 +57655,7 @@ var init_service_accounts = __esm({
        */
       retrieve(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.get(path4`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
+        return this._client.get(path5`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57674,7 +57674,7 @@ var init_service_accounts = __esm({
        */
       update(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path4`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path5`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Returns a list of service accounts in the project.
@@ -57690,7 +57690,7 @@ var init_service_accounts = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path4`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a service account from the project.
@@ -57709,7 +57709,7 @@ var init_service_accounts = __esm({
        */
       delete(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path4`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path5`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
     ServiceAccounts.APIKeys = APIKeys2;
@@ -57738,7 +57738,7 @@ var init_roles5 = __esm({
        */
       create(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path4`/projects/${project_id}/users/${userID}/roles`, {
+        return this._client.post(path5`/projects/${project_id}/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57758,7 +57758,7 @@ var init_roles5 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.get(path4`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path5`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57779,7 +57779,7 @@ var init_roles5 = __esm({
        */
       list(userID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path4`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a user within a project.
@@ -57795,7 +57795,7 @@ var init_roles5 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.delete(path4`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path5`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57832,7 +57832,7 @@ var init_users2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path4`/organization/projects/${projectID}/users`, {
+        return this._client.post(path5`/organization/projects/${projectID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57852,7 +57852,7 @@ var init_users2 = __esm({
        */
       retrieve(userID, params, options) {
         const { project_id } = params;
-        return this._client.get(path4`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.get(path5`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57871,7 +57871,7 @@ var init_users2 = __esm({
        */
       update(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path4`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.post(path5`/organization/projects/${project_id}/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57891,7 +57891,7 @@ var init_users2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path4`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a user from the project.
@@ -57910,7 +57910,7 @@ var init_users2 = __esm({
        */
       delete(userID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path4`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.delete(path5`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57998,7 +57998,7 @@ var init_projects = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path4`/organization/projects/${projectID}`, {
+        return this._client.get(path5`/organization/projects/${projectID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58015,7 +58015,7 @@ var init_projects = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path4`/organization/projects/${projectID}`, {
+        return this._client.post(path5`/organization/projects/${projectID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58052,7 +58052,7 @@ var init_projects = __esm({
        * ```
        */
       archive(projectID, options) {
-        return this._client.post(path4`/organization/projects/${projectID}/archive`, {
+        return this._client.post(path5`/organization/projects/${projectID}/archive`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58094,7 +58094,7 @@ var init_roles6 = __esm({
        * ```
        */
       create(userID, body, options) {
-        return this._client.post(path4`/organization/users/${userID}/roles`, {
+        return this._client.post(path5`/organization/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58114,7 +58114,7 @@ var init_roles6 = __esm({
        */
       retrieve(roleID, params, options) {
         const { user_id } = params;
-        return this._client.get(path4`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path5`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58133,7 +58133,7 @@ var init_roles6 = __esm({
        * ```
        */
       list(userID, query = {}, options) {
-        return this._client.getAPIList(path4`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a user within the organization.
@@ -58149,7 +58149,7 @@ var init_roles6 = __esm({
        */
       delete(roleID, params, options) {
         const { user_id } = params;
-        return this._client.delete(path4`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path5`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58182,7 +58182,7 @@ var init_users3 = __esm({
        * ```
        */
       retrieve(userID, options) {
-        return this._client.get(path4`/organization/users/${userID}`, {
+        return this._client.get(path5`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58197,7 +58197,7 @@ var init_users3 = __esm({
        * ```
        */
       update(userID, body, options) {
-        return this._client.post(path4`/organization/users/${userID}`, {
+        return this._client.post(path5`/organization/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58232,7 +58232,7 @@ var init_users3 = __esm({
        * ```
        */
       delete(userID, options) {
-        return this._client.delete(path4`/organization/users/${userID}`, {
+        return this._client.delete(path5`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58434,7 +58434,7 @@ var init_batches = __esm({
        * Retrieves a batch.
        */
       retrieve(batchID, options) {
-        return this._client.get(path4`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path5`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List your organization's batches.
@@ -58452,7 +58452,7 @@ var init_batches = __esm({
        * (if any) available in the output file.
        */
       cancel(batchID, options) {
-        return this._client.post(path4`/batches/${batchID}/cancel`, {
+        return this._client.post(path5`/batches/${batchID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -58489,7 +58489,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       retrieve(assistantID, options) {
-        return this._client.get(path4`/assistants/${assistantID}`, {
+        return this._client.get(path5`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58501,7 +58501,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       update(assistantID, body, options) {
-        return this._client.post(path4`/assistants/${assistantID}`, {
+        return this._client.post(path5`/assistants/${assistantID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -58527,7 +58527,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       delete(assistantID, options) {
-        return this._client.delete(path4`/assistants/${assistantID}`, {
+        return this._client.delete(path5`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58666,7 +58666,7 @@ var init_sessions2 = __esm({
        * ```
        */
       cancel(sessionID, options) {
-        return this._client.post(path4`/chatkit/sessions/${sessionID}/cancel`, {
+        return this._client.post(path5`/chatkit/sessions/${sessionID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58695,7 +58695,7 @@ var init_threads = __esm({
        * ```
        */
       retrieve(threadID, options) {
-        return this._client.get(path4`/chatkit/threads/${threadID}`, {
+        return this._client.get(path5`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58731,7 +58731,7 @@ var init_threads = __esm({
        * ```
        */
       delete(threadID, options) {
-        return this._client.delete(path4`/chatkit/threads/${threadID}`, {
+        return this._client.delete(path5`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58751,7 +58751,7 @@ var init_threads = __esm({
        * ```
        */
       listItems(threadID, query = {}, options) {
-        return this._client.getAPIList(path4`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
+        return this._client.getAPIList(path5`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
@@ -58807,7 +58807,7 @@ var init_input_items = __esm({
        */
       list(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList(path4`/responses/${responseID}/input_items?beta=true`, CursorPage, {
+        return this._client.getAPIList(path5`/responses/${responseID}/input_items?beta=true`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([
@@ -58888,7 +58888,7 @@ var init_responses = __esm({
       }
       retrieve(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.get(path4`/responses/${responseID}?beta=true`, {
+        return this._client.get(path5`/responses/${responseID}?beta=true`, {
           query,
           ...options,
           headers: buildHeaders([
@@ -58911,7 +58911,7 @@ var init_responses = __esm({
        */
       delete(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path4`/responses/${responseID}?beta=true`, {
+        return this._client.delete(path5`/responses/${responseID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { Accept: "*/*", ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -58934,7 +58934,7 @@ var init_responses = __esm({
        */
       cancel(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.post(path4`/responses/${responseID}/cancel?beta=true`, {
+        return this._client.post(path5`/responses/${responseID}/cancel?beta=true`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -58992,7 +58992,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       create(threadID, body, options) {
-        return this._client.post(path4`/threads/${threadID}/messages`, {
+        return this._client.post(path5`/threads/${threadID}/messages`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59006,7 +59006,7 @@ var init_messages2 = __esm({
        */
       retrieve(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path4`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.get(path5`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59019,7 +59019,7 @@ var init_messages2 = __esm({
        */
       update(messageID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path4`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.post(path5`/threads/${thread_id}/messages/${messageID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59032,7 +59032,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path4`/threads/${threadID}/messages`, CursorPage, {
+        return this._client.getAPIList(path5`/threads/${threadID}/messages`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59046,7 +59046,7 @@ var init_messages2 = __esm({
        */
       delete(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.delete(path4`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.delete(path5`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59072,7 +59072,7 @@ var init_steps = __esm({
        */
       retrieve(stepID, params, options) {
         const { thread_id, run_id, ...query } = params;
-        return this._client.get(path4`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
+        return this._client.get(path5`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59086,7 +59086,7 @@ var init_steps = __esm({
        */
       list(runID, params, options) {
         const { thread_id, ...query } = params;
-        return this._client.getAPIList(path4`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
+        return this._client.getAPIList(path5`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59675,7 +59675,7 @@ var init_runs = __esm({
       }
       create(threadID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path4`/threads/${threadID}/runs`, {
+        return this._client.post(path5`/threads/${threadID}/runs`, {
           query: { include },
           body,
           ...options,
@@ -59692,7 +59692,7 @@ var init_runs = __esm({
        */
       retrieve(runID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path4`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.get(path5`/threads/${thread_id}/runs/${runID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59705,7 +59705,7 @@ var init_runs = __esm({
        */
       update(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path4`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.post(path5`/threads/${thread_id}/runs/${runID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59718,7 +59718,7 @@ var init_runs = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path4`/threads/${threadID}/runs`, CursorPage, {
+        return this._client.getAPIList(path5`/threads/${threadID}/runs`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59732,7 +59732,7 @@ var init_runs = __esm({
        */
       cancel(runID, params, options) {
         const { thread_id } = params;
-        return this._client.post(path4`/threads/${thread_id}/runs/${runID}/cancel`, {
+        return this._client.post(path5`/threads/${thread_id}/runs/${runID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59790,7 +59790,7 @@ var init_runs = __esm({
                   }
                 }
               }
-              await sleep3(sleepInterval);
+              await sleep4(sleepInterval);
               break;
             //We return the run in any terminal state.
             case "requires_action":
@@ -59811,7 +59811,7 @@ var init_runs = __esm({
       }
       submitToolOutputs(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path4`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
+        return this._client.post(path5`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59879,7 +59879,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       retrieve(threadID, options) {
-        return this._client.get(path4`/threads/${threadID}`, {
+        return this._client.get(path5`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59891,7 +59891,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       update(threadID, body, options) {
-        return this._client.post(path4`/threads/${threadID}`, {
+        return this._client.post(path5`/threads/${threadID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59904,7 +59904,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       delete(threadID, options) {
-        return this._client.delete(path4`/threads/${threadID}`, {
+        return this._client.delete(path5`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60005,7 +60005,7 @@ var init_content = __esm({
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path4`/containers/${container_id}/files/${fileID}/content`, {
+        return this._client.get(path5`/containers/${container_id}/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -60039,14 +60039,14 @@ var init_files = __esm({
        * a JSON request with a file ID.
        */
       create(containerID, body, options) {
-        return this._client.post(path4`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path5`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Retrieve Container File
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path4`/containers/${container_id}/files/${fileID}`, {
+        return this._client.get(path5`/containers/${container_id}/files/${fileID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60055,7 +60055,7 @@ var init_files = __esm({
        * List Container files
        */
       list(containerID, query = {}, options) {
-        return this._client.getAPIList(path4`/containers/${containerID}/files`, CursorPage, {
+        return this._client.getAPIList(path5`/containers/${containerID}/files`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60066,7 +60066,7 @@ var init_files = __esm({
        */
       delete(fileID, params, options) {
         const { container_id } = params;
-        return this._client.delete(path4`/containers/${container_id}/files/${fileID}`, {
+        return this._client.delete(path5`/containers/${container_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60102,7 +60102,7 @@ var init_containers = __esm({
        * Retrieve Container
        */
       retrieve(containerID, options) {
-        return this._client.get(path4`/containers/${containerID}`, {
+        return this._client.get(path5`/containers/${containerID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60121,7 +60121,7 @@ var init_containers = __esm({
        * Delete Container
        */
       delete(containerID, options) {
-        return this._client.delete(path4`/containers/${containerID}`, {
+        return this._client.delete(path5`/containers/${containerID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60145,7 +60145,7 @@ var init_items = __esm({
        */
       create(conversationID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path4`/conversations/${conversationID}/items`, {
+        return this._client.post(path5`/conversations/${conversationID}/items`, {
           query: { include },
           body,
           ...options,
@@ -60157,7 +60157,7 @@ var init_items = __esm({
        */
       retrieve(itemID, params, options) {
         const { conversation_id, ...query } = params;
-        return this._client.get(path4`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.get(path5`/conversations/${conversation_id}/items/${itemID}`, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60167,14 +60167,14 @@ var init_items = __esm({
        * List all items for a conversation with the given ID.
        */
       list(conversationID, query = {}, options) {
-        return this._client.getAPIList(path4`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path5`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Delete an item from a conversation with the given IDs.
        */
       delete(itemID, params, options) {
         const { conversation_id } = params;
-        return this._client.delete(path4`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.delete(path5`/conversations/${conversation_id}/items/${itemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60206,7 +60206,7 @@ var init_conversations = __esm({
        * Get a conversation
        */
       retrieve(conversationID, options) {
-        return this._client.get(path4`/conversations/${conversationID}`, {
+        return this._client.get(path5`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60215,7 +60215,7 @@ var init_conversations = __esm({
        * Update a conversation
        */
       update(conversationID, body, options) {
-        return this._client.post(path4`/conversations/${conversationID}`, {
+        return this._client.post(path5`/conversations/${conversationID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60225,7 +60225,7 @@ var init_conversations = __esm({
        * Delete a conversation. Items in the conversation will not be deleted.
        */
       delete(conversationID, options) {
-        return this._client.delete(path4`/conversations/${conversationID}`, {
+        return this._client.delete(path5`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60299,7 +60299,7 @@ var init_output_items = __esm({
        */
       retrieve(outputItemID, params, options) {
         const { eval_id, run_id } = params;
-        return this._client.get(path4`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
+        return this._client.get(path5`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60309,7 +60309,7 @@ var init_output_items = __esm({
        */
       list(runID, params, options) {
         const { eval_id, ...query } = params;
-        return this._client.getAPIList(path4`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path5`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -60335,7 +60335,7 @@ var init_runs2 = __esm({
        * schema specified in the config of the evaluation.
        */
       create(evalID, body, options) {
-        return this._client.post(path4`/evals/${evalID}/runs`, {
+        return this._client.post(path5`/evals/${evalID}/runs`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60346,7 +60346,7 @@ var init_runs2 = __esm({
        */
       retrieve(runID, params, options) {
         const { eval_id } = params;
-        return this._client.get(path4`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.get(path5`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60355,7 +60355,7 @@ var init_runs2 = __esm({
        * Get a list of runs for an evaluation.
        */
       list(evalID, query = {}, options) {
-        return this._client.getAPIList(path4`/evals/${evalID}/runs`, CursorPage, {
+        return this._client.getAPIList(path5`/evals/${evalID}/runs`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60366,7 +60366,7 @@ var init_runs2 = __esm({
        */
       delete(runID, params, options) {
         const { eval_id } = params;
-        return this._client.delete(path4`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.delete(path5`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60376,7 +60376,7 @@ var init_runs2 = __esm({
        */
       cancel(runID, params, options) {
         const { eval_id } = params;
-        return this._client.post(path4`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.post(path5`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60415,13 +60415,13 @@ var init_evals = __esm({
        * Get an evaluation by ID.
        */
       retrieve(evalID, options) {
-        return this._client.get(path4`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path5`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update certain properties of an evaluation.
        */
       update(evalID, body, options) {
-        return this._client.post(path4`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
+        return this._client.post(path5`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
       }
       /**
        * List evaluations for a project.
@@ -60437,7 +60437,7 @@ var init_evals = __esm({
        * Delete an evaluation.
        */
       delete(evalID, options) {
-        return this._client.delete(path4`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path5`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Evals.Runs = Runs2;
@@ -60492,7 +60492,7 @@ var init_files2 = __esm({
        * Returns information about a specific file.
        */
       retrieve(fileID, options) {
-        return this._client.get(path4`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path5`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns a list of files.
@@ -60508,13 +60508,13 @@ var init_files2 = __esm({
        * Delete a file and remove it from all vector stores.
        */
       delete(fileID, options) {
-        return this._client.delete(path4`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path5`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns the contents of the specified file.
        */
       content(fileID, options) {
-        return this._client.get(path4`/files/${fileID}/content`, {
+        return this._client.get(path5`/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -60529,7 +60529,7 @@ var init_files2 = __esm({
         const start = Date.now();
         let file = await this.retrieve(id);
         while (!file.status || !TERMINAL_STATES.has(file.status)) {
-          await sleep3(pollInterval);
+          await sleep4(pollInterval);
           file = await this.retrieve(id);
           if (Date.now() - start > maxWait) {
             throw new APIConnectionTimeoutError2({
@@ -60654,7 +60654,7 @@ var init_permissions = __esm({
        * ```
        */
       create(fineTunedModelCheckpoint, body, options) {
-        return this._client.getAPIList(path4`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -60665,7 +60665,7 @@ var init_permissions = __esm({
        * @deprecated Retrieve is deprecated. Please swap to the paginated list method instead.
        */
       retrieve(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.get(path4`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
+        return this._client.get(path5`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -60688,7 +60688,7 @@ var init_permissions = __esm({
        * ```
        */
       list(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.getAPIList(path4`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path5`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -60710,7 +60710,7 @@ var init_permissions = __esm({
        */
       delete(permissionID, params, options) {
         const { fine_tuned_model_checkpoint } = params;
-        return this._client.delete(path4`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path5`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -60755,7 +60755,7 @@ var init_checkpoints2 = __esm({
        * ```
        */
       list(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path4`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path5`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -60808,7 +60808,7 @@ var init_jobs = __esm({
        * ```
        */
       retrieve(fineTuningJobID, options) {
-        return this._client.get(path4`/fine_tuning/jobs/${fineTuningJobID}`, {
+        return this._client.get(path5`/fine_tuning/jobs/${fineTuningJobID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60842,7 +60842,7 @@ var init_jobs = __esm({
        * ```
        */
       cancel(fineTuningJobID, options) {
-        return this._client.post(path4`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
+        return this._client.post(path5`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60861,7 +60861,7 @@ var init_jobs = __esm({
        * ```
        */
       listEvents(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path4`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path5`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Pause a fine-tune job.
@@ -60874,7 +60874,7 @@ var init_jobs = __esm({
        * ```
        */
       pause(fineTuningJobID, options) {
-        return this._client.post(path4`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
+        return this._client.post(path5`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60890,7 +60890,7 @@ var init_jobs = __esm({
        * ```
        */
       resume(fineTuningJobID, options) {
-        return this._client.post(path4`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
+        return this._client.post(path5`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61004,7 +61004,7 @@ var init_models = __esm({
        * the owner and permissioning.
        */
       retrieve(model, options) {
-        return this._client.get(path4`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path5`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Lists the currently available models, and provides basic information about each
@@ -61018,7 +61018,7 @@ var init_models = __esm({
        * delete a model.
        */
       delete(model, options) {
-        return this._client.delete(path4`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path5`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -61061,7 +61061,7 @@ var init_calls = __esm({
        * ```
        */
       accept(callID, body, options) {
-        return this._client.post(path4`/realtime/calls/${callID}/accept`, {
+        return this._client.post(path5`/realtime/calls/${callID}/accept`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61077,7 +61077,7 @@ var init_calls = __esm({
        * ```
        */
       hangup(callID, options) {
-        return this._client.post(path4`/realtime/calls/${callID}/hangup`, {
+        return this._client.post(path5`/realtime/calls/${callID}/hangup`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -61094,7 +61094,7 @@ var init_calls = __esm({
        * ```
        */
       refer(callID, body, options) {
-        return this._client.post(path4`/realtime/calls/${callID}/refer`, {
+        return this._client.post(path5`/realtime/calls/${callID}/refer`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61110,7 +61110,7 @@ var init_calls = __esm({
        * ```
        */
       reject(callID, body = {}, options) {
-        return this._client.post(path4`/realtime/calls/${callID}/reject`, {
+        return this._client.post(path5`/realtime/calls/${callID}/reject`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61929,7 +61929,7 @@ var init_input_items2 = __esm({
        * ```
        */
       list(responseID, query = {}, options) {
-        return this._client.getAPIList(path4`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path5`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -61996,7 +61996,7 @@ var init_responses2 = __esm({
         });
       }
       retrieve(responseID, query = {}, options) {
-        return this._client.get(path4`/responses/${responseID}`, {
+        return this._client.get(path5`/responses/${responseID}`, {
           query,
           ...options,
           stream: query?.stream ?? false,
@@ -62019,7 +62019,7 @@ var init_responses2 = __esm({
        * ```
        */
       delete(responseID, options) {
-        return this._client.delete(path4`/responses/${responseID}`, {
+        return this._client.delete(path5`/responses/${responseID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62047,7 +62047,7 @@ var init_responses2 = __esm({
        * ```
        */
       cancel(responseID, options) {
-        return this._client.post(path4`/responses/${responseID}/cancel`, {
+        return this._client.post(path5`/responses/${responseID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62088,7 +62088,7 @@ var init_content2 = __esm({
        * Download a skill zip bundle by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path4`/skills/${skillID}/content`, {
+        return this._client.get(path5`/skills/${skillID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62112,7 +62112,7 @@ var init_content3 = __esm({
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path4`/skills/${skill_id}/versions/${version2}/content`, {
+        return this._client.get(path5`/skills/${skill_id}/versions/${version2}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62142,14 +62142,14 @@ var init_versions = __esm({
        * Create a new immutable skill version.
        */
       create(skillID, body = {}, options) {
-        return this._client.post(path4`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path5`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Get a specific skill version.
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path4`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.get(path5`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62158,7 +62158,7 @@ var init_versions = __esm({
        * List skill versions for a skill.
        */
       list(skillID, query = {}, options) {
-        return this._client.getAPIList(path4`/skills/${skillID}/versions`, CursorPage, {
+        return this._client.getAPIList(path5`/skills/${skillID}/versions`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -62169,7 +62169,7 @@ var init_versions = __esm({
        */
       delete(version2, params, options) {
         const { skill_id } = params;
-        return this._client.delete(path4`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.delete(path5`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62207,13 +62207,13 @@ var init_skills = __esm({
        * Get a skill by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path4`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path5`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update the default version pointer for a skill.
        */
       update(skillID, body, options) {
-        return this._client.post(path4`/skills/${skillID}`, {
+        return this._client.post(path5`/skills/${skillID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62233,7 +62233,7 @@ var init_skills = __esm({
        * Delete a skill by its ID.
        */
       delete(skillID, options) {
-        return this._client.delete(path4`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path5`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Skills.Content = Content2;
@@ -62263,7 +62263,7 @@ var init_parts = __esm({
        * [complete the Upload](https://platform.openai.com/docs/api-reference/uploads/complete).
        */
       create(uploadID, body, options) {
-        return this._client.post(path4`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path5`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -62314,7 +62314,7 @@ var init_uploads3 = __esm({
        * Returns the Upload object with status `cancelled`.
        */
       cancel(uploadID, options) {
-        return this._client.post(path4`/uploads/${uploadID}/cancel`, {
+        return this._client.post(path5`/uploads/${uploadID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62337,7 +62337,7 @@ var init_uploads3 = __esm({
        * object.
        */
       complete(uploadID, body, options) {
-        return this._client.post(path4`/uploads/${uploadID}/complete`, {
+        return this._client.post(path5`/uploads/${uploadID}/complete`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62387,7 +62387,7 @@ var init_file_batches = __esm({
        * Create a vector store file batch.
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path4`/vector_stores/${vectorStoreID}/file_batches`, {
+        return this._client.post(path5`/vector_stores/${vectorStoreID}/file_batches`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62399,7 +62399,7 @@ var init_file_batches = __esm({
        */
       retrieve(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path4`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
+        return this._client.get(path5`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62411,7 +62411,7 @@ var init_file_batches = __esm({
        */
       cancel(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.post(path4`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
+        return this._client.post(path5`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62429,7 +62429,7 @@ var init_file_batches = __esm({
        */
       listFiles(batchID, params, options) {
         const { vector_store_id, ...query } = params;
-        return this._client.getAPIList(path4`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
+        return this._client.getAPIList(path5`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62469,7 +62469,7 @@ var init_file_batches = __esm({
                   }
                 }
               }
-              await sleep3(sleepInterval);
+              await sleep4(sleepInterval);
               break;
             case "failed":
             case "cancelled":
@@ -62524,7 +62524,7 @@ var init_files3 = __esm({
        * [vector store](https://platform.openai.com/docs/api-reference/vector-stores/object).
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path4`/vector_stores/${vectorStoreID}/files`, {
+        return this._client.post(path5`/vector_stores/${vectorStoreID}/files`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62536,7 +62536,7 @@ var init_files3 = __esm({
        */
       retrieve(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path4`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.get(path5`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62547,7 +62547,7 @@ var init_files3 = __esm({
        */
       update(fileID, params, options) {
         const { vector_store_id, ...body } = params;
-        return this._client.post(path4`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.post(path5`/vector_stores/${vector_store_id}/files/${fileID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62558,7 +62558,7 @@ var init_files3 = __esm({
        * Returns a list of vector store files.
        */
       list(vectorStoreID, query = {}, options) {
-        return this._client.getAPIList(path4`/vector_stores/${vectorStoreID}/files`, CursorPage, {
+        return this._client.getAPIList(path5`/vector_stores/${vectorStoreID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62573,7 +62573,7 @@ var init_files3 = __esm({
        */
       delete(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.delete(path4`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.delete(path5`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62619,7 +62619,7 @@ var init_files3 = __esm({
                   }
                 }
               }
-              await sleep3(sleepInterval);
+              await sleep4(sleepInterval);
               break;
             case "failed":
             case "completed":
@@ -62649,7 +62649,7 @@ var init_files3 = __esm({
        */
       content(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.getAPIList(path4`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
+        return this._client.getAPIList(path5`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62692,7 +62692,7 @@ var init_vector_stores = __esm({
        * Retrieves a vector store.
        */
       retrieve(vectorStoreID, options) {
-        return this._client.get(path4`/vector_stores/${vectorStoreID}`, {
+        return this._client.get(path5`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62702,7 +62702,7 @@ var init_vector_stores = __esm({
        * Modifies a vector store.
        */
       update(vectorStoreID, body, options) {
-        return this._client.post(path4`/vector_stores/${vectorStoreID}`, {
+        return this._client.post(path5`/vector_stores/${vectorStoreID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62724,7 +62724,7 @@ var init_vector_stores = __esm({
        * Delete a vector store.
        */
       delete(vectorStoreID, options) {
-        return this._client.delete(path4`/vector_stores/${vectorStoreID}`, {
+        return this._client.delete(path5`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62735,7 +62735,7 @@ var init_vector_stores = __esm({
        * filter.
        */
       search(vectorStoreID, body, options) {
-        return this._client.getAPIList(path4`/vector_stores/${vectorStoreID}/search`, Page, {
+        return this._client.getAPIList(path5`/vector_stores/${vectorStoreID}/search`, Page, {
           body,
           method: "post",
           ...options,
@@ -62769,7 +62769,7 @@ var init_videos = __esm({
        * Fetch the latest metadata for a generated video.
        */
       retrieve(videoID, options) {
-        return this._client.get(path4`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path5`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List recently generated videos for the current project.
@@ -62785,7 +62785,7 @@ var init_videos = __esm({
        * Permanently delete a completed or failed video and its stored assets.
        */
       delete(videoID, options) {
-        return this._client.delete(path4`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path5`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Create a character from an uploaded video.
@@ -62799,7 +62799,7 @@ var init_videos = __esm({
        * Streams the rendered video content for the specified video job.
        */
       downloadContent(videoID, query = {}, options) {
-        return this._client.get(path4`/videos/${videoID}/content`, {
+        return this._client.get(path5`/videos/${videoID}/content`, {
           query,
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
@@ -62824,7 +62824,7 @@ var init_videos = __esm({
        * Fetch a character.
        */
       getCharacter(characterID, options) {
-        return this._client.get(path4`/videos/characters/${characterID}`, {
+        return this._client.get(path5`/videos/characters/${characterID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62833,7 +62833,7 @@ var init_videos = __esm({
        * Create a remix of a completed video using a refreshed prompt.
        */
       remix(videoID, body, options) {
-        return this._client.post(path4`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path5`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -63281,9 +63281,9 @@ var init_client = __esm({
         this.apiKey = token;
         return true;
       }
-      buildURL(path5, query, defaultBaseURL) {
+      buildURL(path6, query, defaultBaseURL) {
         const baseURL = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-        const url = isAbsoluteURL(path5) ? new URL(path5) : new URL(baseURL + (baseURL.endsWith("/") && path5.startsWith("/") ? path5.slice(1) : path5));
+        const url = isAbsoluteURL(path6) ? new URL(path6) : new URL(baseURL + (baseURL.endsWith("/") && path6.startsWith("/") ? path6.slice(1) : path6));
         const defaultQuery = this.defaultQuery();
         const pathQuery = Object.fromEntries(url.searchParams);
         if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -63313,24 +63313,24 @@ var init_client = __esm({
        */
       async prepareRequest(request, { url, options }) {
       }
-      get(path5, opts) {
-        return this.methodRequest("get", path5, opts);
+      get(path6, opts) {
+        return this.methodRequest("get", path6, opts);
       }
-      post(path5, opts) {
-        return this.methodRequest("post", path5, opts);
+      post(path6, opts) {
+        return this.methodRequest("post", path6, opts);
       }
-      patch(path5, opts) {
-        return this.methodRequest("patch", path5, opts);
+      patch(path6, opts) {
+        return this.methodRequest("patch", path6, opts);
       }
-      put(path5, opts) {
-        return this.methodRequest("put", path5, opts);
+      put(path6, opts) {
+        return this.methodRequest("put", path6, opts);
       }
-      delete(path5, opts) {
-        return this.methodRequest("delete", path5, opts);
+      delete(path6, opts) {
+        return this.methodRequest("delete", path6, opts);
       }
-      methodRequest(method, path5, opts) {
+      methodRequest(method, path6, opts) {
         return this.request(Promise.resolve(opts).then((opts2) => {
-          return { method, path: path5, ...opts2 };
+          return { method, path: path6, ...opts2 };
         }));
       }
       request(options, remainingRetries = null) {
@@ -63455,8 +63455,8 @@ var init_client = __esm({
         }));
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
       }
-      getAPIList(path5, Page2, opts) {
-        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path5, ...opts2 })) : { method: "get", path: path5, ...opts });
+      getAPIList(path6, Page2, opts) {
+        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path6, ...opts2 })) : { method: "get", path: path6, ...opts });
       }
       requestAPIList(Page2, options) {
         const request = this.makeRequest(options, null, void 0);
@@ -63537,7 +63537,7 @@ var init_client = __esm({
           const maxRetries = options.maxRetries ?? this.maxRetries;
           timeoutMillis = this.calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries);
         }
-        await sleep3(timeoutMillis);
+        await sleep4(timeoutMillis);
         return this.makeRequest(options, retriesRemaining - 1, requestLogID);
       }
       calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries) {
@@ -63550,8 +63550,8 @@ var init_client = __esm({
       }
       async buildRequest(inputOptions, { retryCount = 0 } = {}) {
         const options = { ...inputOptions };
-        const { method, path: path5, query, defaultBaseURL } = options;
-        const url = this.buildURL(path5, query, defaultBaseURL);
+        const { method, path: path6, query, defaultBaseURL } = options;
+        const url = this.buildURL(path6, query, defaultBaseURL);
         if ("timeout" in options)
           validatePositiveInteger("timeout", options.timeout);
         options.timeout = options.timeout ?? this.timeout;
@@ -64411,8 +64411,8 @@ function getErrorMap() {
 
 // ../../../social-flow/server/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path5, errorMaps, issueData } = params;
-  const fullPath = [...path5, ...issueData.path || []];
+  const { data, path: path6, errorMaps, issueData } = params;
+  const fullPath = [...path6, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -64528,11 +64528,11 @@ var errorUtil;
 
 // ../../../social-flow/server/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path5, key) {
+  constructor(parent, value, path6, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path5;
+    this._path = path6;
     this._key = key;
   }
   get path() {
@@ -68169,10 +68169,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path5) {
-  if (!path5)
+function getElementAtPath(obj, path6) {
+  if (!path6)
     return obj;
-  return path5.reduce((acc, key) => acc?.[key], obj);
+  return path6.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -68187,14 +68187,14 @@ function promiseAllObject(promisesObj) {
 }
 function randomString(length = 10) {
   const chars = "abcdefghijklmnopqrstuvwxyz";
-  let str5 = "";
+  let str6 = "";
   for (let i2 = 0; i2 < length; i2++) {
-    str5 += chars[Math.floor(Math.random() * chars.length)];
+    str6 += chars[Math.floor(Math.random() * chars.length)];
   }
-  return str5;
+  return str6;
 }
-function esc(str5) {
-  return JSON.stringify(str5);
+function esc(str6) {
+  return JSON.stringify(str6);
 }
 var captureStackTrace = Error.captureStackTrace ? Error.captureStackTrace : (..._args) => {
 };
@@ -68282,8 +68282,8 @@ var getParsedType2 = (data) => {
 };
 var propertyKeyTypes = /* @__PURE__ */ new Set(["string", "number", "symbol"]);
 var primitiveTypes = /* @__PURE__ */ new Set(["string", "number", "bigint", "boolean", "symbol", "undefined"]);
-function escapeRegex(str5) {
-  return str5.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function escapeRegex(str6) {
+  return str6.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 function clone(inst, def, params) {
   const cl = new inst._zod.constr(def ?? inst._zod.def);
@@ -68492,11 +68492,11 @@ function aborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path5, issues) {
+function prefixIssues(path6, issues) {
   return issues.map((iss) => {
     var _a4;
     (_a4 = iss).path ?? (_a4.path = []);
-    iss.path.unshift(path5);
+    iss.path.unshift(path6);
     return iss;
   });
 }
@@ -75063,7 +75063,7 @@ var StdioServerTransport = class {
 };
 
 // src/config.ts
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 var config2 = {
@@ -75081,6 +75081,13 @@ var config2 = {
   /** BytePlus ModelArk API key (required by the seedance_* video generation tools) — https://ai.byteplus.com/ark/region:ap-southeast-1/apikey */
   arkApiKey: process.env.ARK_API_KEY || "",
   /**
+   * Suno API key (required by the suno_* music tools) — https://sunoapi.org/api-key
+   *
+   * Not an official Suno Inc. key. sunoapi.org (Kie.ai family) is a third-party
+   * REST wrapper. Lyria (`music_*`) keeps working on GEMINI_API_KEY without this.
+   */
+  sunoApiKey: process.env.SUNO_API_KEY || "",
+  /**
    * YouTube Data API key (youtube_topic_scout's preferred public-query path).
    * Unlike OAuth it doesn't spend your channel's quota. Without it, falls back to
    * channel OAuth (youtube.readonly).
@@ -75097,6 +75104,9 @@ function supertonicPython() {
 }
 function mfluxZImageBin() {
   return process.env.MFLUX_ZIMAGE_BIN || join(homedir(), ".local", "bin", "mflux-generate-z-image-turbo");
+}
+function qwen3AsrBin() {
+  return process.env.QWEN3_ASR_BIN || join(homedir(), ".local", "bin", "mlx-qwen3-asr");
 }
 var snsTokenDir = process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow");
 var SNS_PLATFORMS = ["THREADS", "INSTAGRAM", "FACEBOOK", "YOUTUBE"];
@@ -75132,6 +75142,27 @@ function listChannelDirs() {
     platforms: SNS_PLATFORMS.filter((platform) => existsSync(snsCredentialFile(platform, channel)))
   })).filter((dir) => dir.platforms.length > 0).sort((a, b) => a.channel.localeCompare(b.channel));
 }
+var disabledToolsFile = join(snsTokenDir, "disabled-tools.json");
+function disabledToolPatterns(file = disabledToolsFile) {
+  let raw;
+  try {
+    raw = readFileSync(file, "utf8");
+  } catch {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every((entry) => typeof entry === "string")) {
+      throw new Error("expected a JSON array of strings");
+    }
+    return parsed;
+  } catch (error2) {
+    console.error(
+      `[social-flow] ${file} ignored (${error2 instanceof Error ? error2.message : String(error2)}) \u2014 write a JSON array of tool names, e.g. ["seedance_*"]`
+    );
+    return [];
+  }
+}
 function requireSerpApiKey() {
   if (!config2.serpApiKey) {
     throw new Error(
@@ -75164,6 +75195,17 @@ function requireOpenAiKey() {
   }
   return config2.openaiApiKey;
 }
+function sunoBaseUrl() {
+  return (process.env.SUNO_BASE_URL || "https://api.sunoapi.org").replace(/\/+$/, "");
+}
+function requireSunoKey() {
+  if (!config2.sunoApiKey) {
+    throw new Error(
+      "SUNO_API_KEY is not set. suno_* music tools talk to sunoapi.org (https://sunoapi.org/api-key), a third-party REST wrapper \u2014 Suno Inc. has no public self-serve API as of 2026-08. music_*(Lyria) still works on GEMINI_API_KEY without this key. Set it only when you need a sung full song or a loopable Suno bed."
+    );
+  }
+  return config2.sunoApiKey;
+}
 function requireArkKey() {
   if (!config2.arkApiKey) {
     throw new Error(
@@ -75181,9 +75223,160 @@ function requireNaverKeys() {
   return { id: config2.naverClientId, secret: config2.naverClientSecret };
 }
 
+// src/tool-gate.ts
+var ALLOW_VAR = "SOCIAL_FLOW_TOOLS";
+var DENY_VAR = "SOCIAL_FLOW_DISABLE_TOOLS";
+var FLAGS_VAR = "SOCIAL_FLOW_TOOL_FLAGS";
+var TOOL_VAR_PREFIX = "SOCIAL_FLOW_TOOL_";
+var TRUE_VALUES = /* @__PURE__ */ new Set(["1", "true", "on", "yes", "enable", "enabled"]);
+var FALSE_VALUES = /* @__PURE__ */ new Set(["0", "false", "off", "no", "disable", "disabled"]);
+function read(env2, key) {
+  if (Object.prototype.hasOwnProperty.call(env2, key)) return env2[key];
+  const upper = key.toUpperCase();
+  if (upper !== key && Object.prototype.hasOwnProperty.call(env2, upper)) return env2[upper];
+  return void 0;
+}
+function parsePatternList(raw) {
+  if (!raw) return [];
+  return raw.split(/[,\s]+/).map((item) => item.trim()).filter((item) => item.length > 0);
+}
+function toolOverrideVar(name) {
+  return `${TOOL_VAR_PREFIX}${name.toUpperCase()}`;
+}
+function matchesPattern(name, pattern) {
+  const needle = name.toLowerCase();
+  const pat = pattern.trim().toLowerCase();
+  if (!pat) return false;
+  if (pat === "*") return true;
+  if (pat.endsWith("*") && !pat.slice(0, -1).includes("*")) {
+    return needle.startsWith(pat.slice(0, -1));
+  }
+  return needle === pat;
+}
+function matchesJsonPattern(name, pattern) {
+  return pattern.endsWith("*") ? name.startsWith(pattern.slice(0, -1)) : name === pattern;
+}
+function listMatches(name, patterns) {
+  return patterns.some((pattern) => matchesPattern(name, pattern));
+}
+function parseFlag(raw, source) {
+  const value = raw.trim().toLowerCase();
+  if (TRUE_VALUES.has(value)) return true;
+  if (FALSE_VALUES.has(value)) return false;
+  throw new Error(`Invalid ${source}="${raw}" \u2014 use 1/0, on/off, or true/false.`);
+}
+function parseToolFlags(raw) {
+  const out = /* @__PURE__ */ new Map();
+  if (!raw || !raw.trim()) return out;
+  for (const item of parsePatternList(raw)) {
+    const eq = item.indexOf("=");
+    if (eq <= 0 || eq === item.length - 1) {
+      throw new Error(
+        `Invalid ${FLAGS_VAR} entry "${item}" \u2014 use name=on|off (example: suno_generate=0,veo_*=off).`
+      );
+    }
+    const key = item.slice(0, eq).trim();
+    const value = item.slice(eq + 1).trim();
+    out.set(key, value);
+  }
+  return out;
+}
+function flagFor(name, flags) {
+  let prefixHit;
+  for (const [pattern, raw] of flags) {
+    if (!matchesPattern(name, pattern)) continue;
+    const exact = pattern.toLowerCase() === name.toLowerCase();
+    if (exact) return { pattern, raw };
+    if (!prefixHit) prefixHit = { pattern, raw };
+  }
+  return prefixHit;
+}
+function resolveToolGate(name, opts = {}) {
+  const env2 = opts.env ?? process.env;
+  const jsonPatterns = opts.jsonPatterns ?? [];
+  const jsonFile = opts.jsonFile;
+  const overrideRaw = read(env2, toolOverrideVar(name));
+  if (overrideRaw !== void 0 && overrideRaw.trim() !== "") {
+    const enabled = parseFlag(overrideRaw, toolOverrideVar(name));
+    return {
+      enabled,
+      reason: enabled ? `${toolOverrideVar(name)}=${overrideRaw.trim()}` : `${toolOverrideVar(name)}=${overrideRaw.trim()} (per-tool off)`
+    };
+  }
+  const flags = parseToolFlags(read(env2, FLAGS_VAR));
+  const flag = flagFor(name, flags);
+  if (flag) {
+    const enabled = parseFlag(flag.raw, `${FLAGS_VAR}:${flag.pattern}`);
+    return {
+      enabled,
+      reason: `${FLAGS_VAR} ${flag.pattern}=${flag.raw.trim()}`
+    };
+  }
+  const allow = parsePatternList(read(env2, ALLOW_VAR));
+  const deny = parsePatternList(read(env2, DENY_VAR));
+  if (allow.length > 0 && !listMatches(name, allow)) {
+    return { enabled: false, reason: `${ALLOW_VAR} allowlist does not include ${name}` };
+  }
+  if (deny.length > 0 && listMatches(name, deny)) {
+    return { enabled: false, reason: `${DENY_VAR} matches ${name}` };
+  }
+  const jsonHit = jsonPatterns.find((pattern) => matchesJsonPattern(name, pattern));
+  if (jsonHit !== void 0) {
+    const where = jsonFile ? `${jsonFile}` : "disabled-tools.json";
+    return { enabled: false, reason: `${where} matches ${jsonHit}` };
+  }
+  if (allow.length > 0) {
+    return { enabled: true, reason: `${ALLOW_VAR} allowlist` };
+  }
+  return { enabled: true, reason: "default on" };
+}
+function warnUnknownPatterns(knownNames, env2 = process.env) {
+  const known = new Set(knownNames.map((n) => n.toLowerCase()));
+  const warnings = [];
+  const check2 = (varName) => {
+    for (const pattern of parsePatternList(read(env2, varName))) {
+      if (pattern === "*") continue;
+      const lower2 = pattern.toLowerCase();
+      if (lower2.endsWith("*") && !lower2.slice(0, -1).includes("*")) {
+        const prefix = lower2.slice(0, -1);
+        if (![...known].some((n) => n.startsWith(prefix))) {
+          warnings.push(`${varName}: no tool matches prefix "${pattern}"`);
+        }
+        continue;
+      }
+      if (!known.has(lower2)) warnings.push(`${varName}: unknown tool "${pattern}"`);
+    }
+  };
+  check2(ALLOW_VAR);
+  check2(DENY_VAR);
+  return warnings;
+}
+function describeToolGate(knownNames, env2 = process.env, jsonPatterns = []) {
+  const allow = parsePatternList(read(env2, ALLOW_VAR));
+  const deny = parsePatternList(read(env2, DENY_VAR));
+  const flags = parseToolFlags(read(env2, FLAGS_VAR));
+  const overrides = knownNames.filter((name) => {
+    const raw = read(env2, toolOverrideVar(name));
+    return raw !== void 0 && raw.trim() !== "";
+  });
+  if (allow.length === 0 && deny.length === 0 && flags.size === 0 && overrides.length === 0 && jsonPatterns.length === 0) {
+    return `tool gate default on (${knownNames.length} tools)`;
+  }
+  const on = knownNames.filter((name) => resolveToolGate(name, { env: env2, jsonPatterns }).enabled);
+  const off = knownNames.length - on.length;
+  const bits = [
+    allow.length > 0 ? `${ALLOW_VAR}=${allow.join(",")}` : "",
+    deny.length > 0 ? `${DENY_VAR}=${deny.join(",")}` : "",
+    flags.size > 0 ? `${FLAGS_VAR} ${flags.size} flag(s)` : "",
+    overrides.length > 0 ? `${overrides.length} per-tool override(s)` : "",
+    jsonPatterns.length > 0 ? `json ${jsonPatterns.join(" ")}` : ""
+  ].filter(Boolean);
+  return `tool gate ${on.length} on / ${off} off (${bits.join("; ")})`;
+}
+
 // src/production-stage.ts
 import { createHash } from "node:crypto";
-import { existsSync as existsSync2, readFileSync, readdirSync as readdirSync2, writeFileSync } from "node:fs";
+import { existsSync as existsSync2, readFileSync as readFileSync2, readdirSync as readdirSync2, writeFileSync } from "node:fs";
 import { dirname, join as join2, sep } from "node:path";
 var GATED_PATH_MARK = `${sep}data${sep}pundago${sep}`;
 var STATE_FILENAME = "production-state.json";
@@ -75223,9 +75416,9 @@ function collectStrings(value, out = []) {
   else if (value && typeof value === "object") for (const item of Object.values(value)) collectStrings(item, out);
   return out;
 }
-function findEpisodeDir(path5) {
-  if (!path5.includes(GATED_PATH_MARK)) return void 0;
-  let dir = path5.endsWith(sep) ? path5.slice(0, -1) : dirname(path5);
+function findEpisodeDir(path6) {
+  if (!path6.includes(GATED_PATH_MARK)) return void 0;
+  let dir = path6.endsWith(sep) ? path6.slice(0, -1) : dirname(path6);
   while (dir.includes(GATED_PATH_MARK)) {
     if (existsSync2(join2(dir, STATE_FILENAME))) return dir;
     const parent = dirname(dir);
@@ -75238,7 +75431,7 @@ function readState(episodeDir) {
   const file = join2(episodeDir, STATE_FILENAME);
   if (!existsSync2(file)) return void 0;
   try {
-    return JSON.parse(readFileSync(file, "utf8"));
+    return JSON.parse(readFileSync2(file, "utf8"));
   } catch {
     return void 0;
   }
@@ -75247,8 +75440,8 @@ function writeState(episodeDir, state) {
   writeFileSync(join2(episodeDir, STATE_FILENAME), `${JSON.stringify(state, null, 2)}
 `, "utf8");
 }
-function sha256File(path5) {
-  return createHash("sha256").update(readFileSync(path5)).digest("hex");
+function sha256File(path6) {
+  return createHash("sha256").update(readFileSync2(path6)).digest("hex");
 }
 function hashStills(episodeDir) {
   const dir = join2(episodeDir, "storyboard", "images");
@@ -75307,7 +75500,8 @@ import * as path from "node:path";
 var ALLOWED_EXTENSIONS = {
   image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
   video: [".mp4", ".webm", ".mov", ".avi"],
-  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"]
+  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
+  json: [".json"]
 };
 function validateFilePath(filePath, options) {
   const resolved = path.resolve(filePath);
@@ -76588,6 +76782,690 @@ ${tail}` : ""}`));
     quantize: request.quantize,
     elapsedSeconds: elapsed
   };
+}
+
+// src/qwen3-asr-client.ts
+import { execFile as execFile3 } from "node:child_process";
+import { existsSync as existsSync5, mkdirSync as mkdirSync2, mkdtempSync, readFileSync as readFileSync4, renameSync, rmSync } from "node:fs";
+import { homedir as homedir3 } from "node:os";
+import { basename as basename4, extname as extname2, join as join5 } from "node:path";
+var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
+var DEFAULT_QWEN3_ASR_MODEL = "Qwen/Qwen3-ASR-1.7B";
+var QWEN3_ASR_LANGUAGES = [
+  "Korean",
+  "English",
+  "Chinese",
+  "Japanese",
+  "Arabic",
+  "German",
+  "French",
+  "Spanish",
+  "Portuguese",
+  "Russian",
+  "Hindi",
+  "Italian",
+  "Turkish",
+  "Dutch"
+];
+var DEFAULT_QWEN3_ASR_LANGUAGE = "Korean";
+var LANGUAGE_ALIASES = {
+  ko: "Korean",
+  "ko-kr": "Korean",
+  korean: "Korean",
+  en: "English",
+  "en-us": "English",
+  "en-gb": "English",
+  english: "English",
+  zh: "Chinese",
+  "zh-cn": "Chinese",
+  "zh-tw": "Chinese",
+  cmn: "Chinese",
+  mandarin: "Chinese",
+  chinese: "Chinese",
+  ja: "Japanese",
+  "ja-jp": "Japanese",
+  japanese: "Japanese",
+  ar: "Arabic",
+  "ar-eg": "Arabic",
+  arabic: "Arabic",
+  de: "German",
+  "de-de": "German",
+  german: "German",
+  fr: "French",
+  "fr-fr": "French",
+  french: "French",
+  es: "Spanish",
+  "es-es": "Spanish",
+  "es-419": "Spanish",
+  spanish: "Spanish",
+  pt: "Portuguese",
+  "pt-br": "Portuguese",
+  "pt-pt": "Portuguese",
+  portuguese: "Portuguese",
+  ru: "Russian",
+  "ru-ru": "Russian",
+  russian: "Russian",
+  hi: "Hindi",
+  "hi-in": "Hindi",
+  hindi: "Hindi",
+  it: "Italian",
+  "it-it": "Italian",
+  italian: "Italian",
+  tr: "Turkish",
+  "tr-tr": "Turkish",
+  turkish: "Turkish",
+  nl: "Dutch",
+  "nl-nl": "Dutch",
+  dutch: "Dutch"
+};
+function canonicalizeLanguage(value) {
+  if (QWEN3_ASR_LANGUAGES.includes(value)) {
+    return value;
+  }
+  const mapped = LANGUAGE_ALIASES[value.trim().toLowerCase()];
+  if (!mapped) {
+    throw new Error(
+      `Unsupported language "${value}". Use one of: ${QWEN3_ASR_LANGUAGES.join(", ")} (aliases like ko/en/ja also work).`
+    );
+  }
+  return mapped;
+}
+var AUDIO_INPUT_EXTENSIONS = [
+  ".wav",
+  ".mp3",
+  ".m4a",
+  ".flac",
+  ".ogg",
+  ".aac",
+  ".mp4",
+  ".mov",
+  ".webm",
+  ".mkv"
+];
+function qwen3AsrTimeoutMs(audioSeconds) {
+  return Math.min(30 * 6e4, 9e4 + Math.ceil(Math.max(audioSeconds, 1) * 2e3));
+}
+var WEIGHT_DOWNLOAD_ALLOWANCE_MS2 = 60 * 6e4;
+function weightCacheDir2(model) {
+  const hfHome = process.env.HF_HOME || join5(homedir3(), ".cache", "huggingface");
+  const slug = model.replaceAll("/", "--");
+  return join5(hfHome, "hub", `models--${slug}`);
+}
+function alignerCacheDir() {
+  const hfHome = process.env.HF_HOME || join5(homedir3(), ".cache", "huggingface");
+  return join5(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
+}
+function installHint3(detail) {
+  return `${detail}
+
+Local STT requires mlx-qwen3-asr (Apple Silicon only, MLX):
+  uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"
+If installed elsewhere, point QWEN3_ASR_BIN at the executable (e.g. QWEN3_ASR_BIN=~/.local/bin/mlx-qwen3-asr).
+The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus the ForcedAligner) to ~/.cache/huggingface. Until it is installed, ingest uses the whisper.cpp fallback.`;
+}
+var qwen3AsrTranscribeSchema = external_exports.object({
+  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname2(p).toLowerCase()), {
+    message: `audioPath extension must be one of: ${AUDIO_INPUT_EXTENSIONS.join(", ")}`
+  }),
+  language: external_exports.string().optional().default(DEFAULT_QWEN3_ASR_LANGUAGE).transform((value) => canonicalizeLanguage(value)),
+  model: external_exports.enum(QWEN3_ASR_MODELS).optional().default(DEFAULT_QWEN3_ASR_MODEL),
+  context: external_exports.string().max(4e3).optional(),
+  timestamps: external_exports.boolean().optional().default(true),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("json").optional()
+});
+function probeDurationSeconds(audioPath) {
+  return new Promise((resolve3) => {
+    execFile3(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
+      { timeout: 15e3 },
+      (error2, out) => {
+        const seconds = Number.parseFloat((out || "").trim());
+        if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
+          resolve3(60);
+          return;
+        }
+        resolve3(seconds);
+      }
+    );
+  });
+}
+function parseCliJson(raw) {
+  return JSON.parse(raw);
+}
+function normalizeSegments(data) {
+  return (data.segments ?? []).map((seg) => ({
+    text: (seg.text ?? "").trim(),
+    start: Number(seg.start ?? 0),
+    end: Number(seg.end ?? 0)
+  })).filter((seg) => seg.text.length > 0);
+}
+async function transcribeLocal(request) {
+  const bin = qwen3AsrBin();
+  if (!existsSync5(bin)) {
+    return { success: false, error: installHint3(`mlx-qwen3-asr binary not found: "${bin}"`) };
+  }
+  if (!existsSync5(request.audioPath)) {
+    return { success: false, error: `Audio file not found: ${request.audioPath}` };
+  }
+  const outFile = resolveOutputFile(
+    request.outputPath || process.cwd(),
+    request.filename || `stt_${Date.now()}.json`,
+    "json"
+  );
+  const outDir = request.outputPath || process.cwd();
+  mkdirSync2(outDir, { recursive: true });
+  const scratchDir = mkdtempSync(join5(outDir, ".qwen3-asr-"));
+  const firstCall = !existsSync5(weightCacheDir2(request.model)) || request.timestamps && !existsSync5(alignerCacheDir());
+  if (firstCall) {
+    console.error(
+      "[Qwen3-ASR] First call \u2014 downloading ~3.4GB of weights (plus ForcedAligner if timestamps) to the huggingface cache. This can take a while."
+    );
+  }
+  const duration3 = await probeDurationSeconds(request.audioPath);
+  const cliArgs = [
+    request.audioPath,
+    "--model",
+    request.model,
+    "--language",
+    request.language,
+    "-f",
+    "json",
+    "-o",
+    scratchDir,
+    "--quiet"
+  ];
+  if (request.timestamps) cliArgs.push("--timestamps");
+  if (request.context?.trim()) cliArgs.push("--context", request.context.trim());
+  console.error(
+    `[Qwen3-ASR] Transcribing locally... (${request.model}, ${request.language}, ${duration3.toFixed(1)}s audio)`
+  );
+  const startedAt = Date.now();
+  try {
+    await new Promise((resolve3, reject) => {
+      execFile3(
+        bin,
+        cliArgs,
+        {
+          timeout: qwen3AsrTimeoutMs(duration3) + (firstCall ? WEIGHT_DOWNLOAD_ALLOWANCE_MS2 : 0),
+          maxBuffer: 16 * 1024 * 1024
+        },
+        (error2, _out, errOut) => {
+          if (error2) {
+            const code = error2.code;
+            if (code === "ENOENT") {
+              reject(new Error(installHint3(`mlx-qwen3-asr binary not found: "${bin}"`)));
+              return;
+            }
+            const tail = (errOut || "").split("\n").filter((line) => line.trim() && !line.includes("%|") && !line.includes("it/s]")).slice(-8).join("\n");
+            reject(new Error(`${error2.message}${tail ? `
+${tail}` : ""}`));
+            return;
+          }
+          resolve3();
+        }
+      );
+    });
+  } catch (error2) {
+    rmSync(scratchDir, { recursive: true, force: true });
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
+    return { success: false, error: message };
+  }
+  const cliJsonPath = join5(scratchDir, `${basename4(request.audioPath, extname2(request.audioPath))}.json`);
+  if (!existsSync5(cliJsonPath)) {
+    rmSync(scratchDir, { recursive: true, force: true });
+    return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
+  }
+  let parsed;
+  try {
+    parsed = parseCliJson(readFileSync4(cliJsonPath, "utf8"));
+  } catch (error2) {
+    rmSync(scratchDir, { recursive: true, force: true });
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return { success: false, error: `Failed to parse CLI JSON: ${message}` };
+  }
+  renameSync(cliJsonPath, outFile);
+  rmSync(scratchDir, { recursive: true, force: true });
+  const segments = normalizeSegments(parsed);
+  const text2 = (parsed.text ?? segments.map((s2) => s2.text).join("")).trim();
+  const elapsed = Math.round((Date.now() - startedAt) / 100) / 10;
+  console.error(`[Qwen3-ASR] Transcript saved to: ${outFile} (${segments.length} segments in ${elapsed}s)`);
+  return {
+    success: true,
+    transcriptPath: outFile,
+    text: text2,
+    language: parsed.language || request.language,
+    model: request.model,
+    segments,
+    elapsedSeconds: elapsed
+  };
+}
+
+// src/suno-client.ts
+import { spawnSync } from "node:child_process";
+import * as path4 from "node:path";
+var SUNO_MODELS = ["V4", "V4_5", "V4_5PLUS", "V4_5ALL", "V5", "V5_5"];
+var DEFAULT_SUNO_MODEL = "V5";
+var SUNO_SOUND_MODEL = "V5";
+var SUNO_SOUND_KEYS = [
+  "Any",
+  "Cm",
+  "C#m",
+  "Dm",
+  "D#m",
+  "Em",
+  "Fm",
+  "F#m",
+  "Gm",
+  "G#m",
+  "Am",
+  "A#m",
+  "Bm",
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B"
+];
+var SUNO_VOCAL_GENDERS = ["m", "f"];
+var SUNO_PERSONA_MODELS = ["style_persona", "voice_persona"];
+var POLL_INTERVAL_MS2 = 15e3;
+var MAX_POLLS2 = 40;
+var LYRICS_POLL_INTERVAL_MS = 5e3;
+var LYRICS_MAX_POLLS = 36;
+var SOUND_POLL_INTERVAL_MS = 1e4;
+var SOUND_MAX_POLLS = 36;
+var DUMMY_CALLBACK_URL = "https://httpbin.org/post";
+var FAILED_STATUSES = /* @__PURE__ */ new Set([
+  "CREATE_TASK_FAILED",
+  "GENERATE_AUDIO_FAILED",
+  "GENERATE_LYRICS_FAILED",
+  "SENSITIVE_WORD_ERROR",
+  "FAILED"
+]);
+var DONE_STATUSES = /* @__PURE__ */ new Set(["SUCCESS", "FIRST_SUCCESS"]);
+var sunoGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1).optional(),
+  customMode: external_exports.boolean().default(false),
+  instrumental: external_exports.boolean().default(false),
+  style: external_exports.string().optional(),
+  title: external_exports.string().optional(),
+  model: external_exports.enum(SUNO_MODELS).default(DEFAULT_SUNO_MODEL),
+  duration: external_exports.number().int().min(10).max(360).optional(),
+  negativeTags: external_exports.string().optional(),
+  vocalGender: external_exports.enum(SUNO_VOCAL_GENDERS).optional(),
+  personaId: external_exports.string().min(1).optional(),
+  personaModel: external_exports.enum(SUNO_PERSONA_MODELS).optional(),
+  pickTrack: external_exports.number().int().min(0).max(1).default(0),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+});
+var sunoSoundSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(500),
+  soundLoop: external_exports.boolean().default(true),
+  soundTempo: external_exports.number().int().min(1).max(300).optional(),
+  soundKey: external_exports.enum(SUNO_SOUND_KEYS).optional(),
+  pickTrack: external_exports.number().int().min(0).max(1).default(0),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+});
+var sunoLyricsSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(200)
+});
+function sleep3(ms) {
+  return new Promise((resolve3) => setTimeout(resolve3, ms));
+}
+function describeSunoError(code, msg, httpStatus) {
+  const text2 = (msg || "").trim() || "(no message)";
+  switch (code) {
+    case 400:
+      return `Invalid parameters: ${text2}`;
+    case 401:
+      return `Unauthorized \u2014 SUNO_API_KEY is missing or expired (https://sunoapi.org/api-key). ${text2}`;
+    case 405:
+      return `Rate limit exceeded (20 req / 10s): ${text2}`;
+    case 413:
+      return `Prompt or style too long: ${text2}`;
+    case 429:
+      return `Insufficient credits \u2014 top up at the sunoapi.org dashboard. ${text2}`;
+    case 430:
+      return `Call frequency too high, retry later: ${text2}`;
+    case 455:
+      return `Suno API under maintenance: ${text2}`;
+    default:
+      if (httpStatus && httpStatus >= 400) return `HTTP ${httpStatus} (code ${code ?? "?"}): ${text2}`;
+      return `Suno API error (code ${code ?? "?"}): ${text2}`;
+  }
+}
+async function sunoFetch(pathName, init = {}) {
+  const apiKey = requireSunoKey();
+  const url = `${sunoBaseUrl()}${pathName}`;
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    ...init.headers
+  };
+  if (init.body) headers["Content-Type"] = "application/json";
+  const response = await fetch(url, { ...init, headers });
+  const bodyText = await response.text();
+  let parsed;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {
+    throw new Error(
+      response.ok ? `Suno API returned non-JSON: ${bodyText.slice(0, 400)}` : `HTTP ${response.status} \u2014 ${bodyText.slice(0, 400)}`
+    );
+  }
+  if (!response.ok || parsed.code !== void 0 && parsed.code !== 200) {
+    throw new Error(describeSunoError(parsed.code, parsed.msg, response.status));
+  }
+  return parsed;
+}
+function taskIdFrom(data) {
+  if (typeof data === "string" && data.length > 0) return data;
+  if (data && typeof data === "object" && "taskId" in data) {
+    const id = data.taskId;
+    if (typeof id === "string" && id.length > 0) return id;
+  }
+  throw new Error("Suno API returned no taskId");
+}
+function asRecord(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : void 0;
+}
+function str(record2, ...keys) {
+  for (const key of keys) {
+    const value = record2[key];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return void 0;
+}
+function num(record2, ...keys) {
+  for (const key of keys) {
+    const value = record2[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  }
+  return void 0;
+}
+function parseTrack(raw, index) {
+  const record2 = asRecord(raw);
+  if (!record2) return void 0;
+  const audioUrl = str(record2, "audioUrl", "audio_url", "sourceAudioUrl", "source_audio_url");
+  if (!audioUrl) return void 0;
+  return {
+    id: str(record2, "id") || `track-${index}`,
+    audioUrl,
+    title: str(record2, "title"),
+    tags: str(record2, "tags"),
+    durationSeconds: num(record2, "duration"),
+    imageUrl: str(record2, "imageUrl", "image_url"),
+    prompt: str(record2, "prompt")
+  };
+}
+function tracksFromRecord(info) {
+  const payload = info.response;
+  const list = payload?.sunoData ?? payload?.data ?? [];
+  if (!Array.isArray(list)) return [];
+  return list.map((item, index) => parseTrack(item, index)).filter((t2) => t2 !== void 0);
+}
+function lyricsFromRecord(info) {
+  const list = info.response?.data ?? [];
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const item of list) {
+    const record2 = asRecord(item);
+    if (!record2) continue;
+    const text2 = str(record2, "text");
+    if (!text2) continue;
+    out.push({ text: text2, title: str(record2, "title") });
+  }
+  return out;
+}
+async function downloadBuffer(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to download audio: HTTP ${response.status} (URLs expire after 15 days)`);
+  }
+  return Buffer.from(await response.arrayBuffer());
+}
+function stemFromFilename(filename) {
+  return filename.replace(/\.[^.]+$/, "");
+}
+function extOf(filename) {
+  return path4.extname(filename).toLowerCase();
+}
+function transcodeToWav(src, dest) {
+  const result = spawnSync(
+    "ffmpeg",
+    ["-y", "-v", "error", "-i", src, "-acodec", "pcm_s16le", "-ar", "48000", "-ac", "2", dest],
+    { encoding: "utf8", timeout: 12e4 }
+  );
+  if (result.error) {
+    throw new Error(
+      `ffmpeg failed to start (${result.error.message}). This plugin requires ffmpeg \u2014 brew install ffmpeg.`
+    );
+  }
+  if (result.status !== 0) {
+    throw new Error(`ffmpeg convert failed: ${(result.stderr || result.stdout || `exit ${result.status}`).slice(0, 400)}`);
+  }
+}
+async function saveTracks(parsed, outputDir, filename, pickTrack) {
+  if (parsed.length === 0) throw new Error("Task succeeded but no audio URL in response");
+  const primaryName = filename || `suno_${Date.now()}.mp3`;
+  const stem = stemFromFilename(primaryName);
+  const wantWav = extOf(primaryName) === ".wav";
+  const tracks = [];
+  for (let i2 = 0; i2 < parsed.length; i2 += 1) {
+    const item = parsed[i2];
+    const isPick = i2 === pickTrack || pickTrack >= parsed.length && i2 === 0;
+    const mp3Name = isPick && !wantWav ? extOf(primaryName) === ".mp3" ? primaryName : `${stem}.mp3` : `${stem}_${i2 === 0 ? "a" : "b"}.mp3`;
+    const buffer = await downloadBuffer(item.audioUrl);
+    const mp3Path = saveAudioFile(outputDir, mp3Name, buffer);
+    let audioPath = mp3Path;
+    if (isPick && wantWav) {
+      const wavPath = path4.join(path4.dirname(mp3Path), primaryName);
+      transcodeToWav(mp3Path, wavPath);
+      audioPath = wavPath;
+    }
+    tracks.push({
+      id: item.id,
+      audioPath,
+      audioUrl: item.audioUrl,
+      title: item.title,
+      tags: item.tags,
+      durationSeconds: item.durationSeconds,
+      imageUrl: item.imageUrl,
+      prompt: item.prompt
+    });
+  }
+  if (pickTrack > 0 && pickTrack < tracks.length) {
+    const [picked] = tracks.splice(pickTrack, 1);
+    tracks.unshift(picked);
+  }
+  return tracks;
+}
+function isTerminalFailure(status) {
+  return !!status && FAILED_STATUSES.has(status);
+}
+function isDone(status, tracksReady) {
+  if (!status) return false;
+  if (DONE_STATUSES.has(status) && tracksReady) return true;
+  if (status === "CALLBACK_EXCEPTION" && tracksReady) return true;
+  return false;
+}
+async function pollRecord(taskId, opts) {
+  let last = {};
+  for (let poll = 1; poll <= opts.maxPolls; poll += 1) {
+    console.error(`[Suno] ${opts.label} in progress... (polling ${poll}/${opts.maxPolls}, task ${taskId})`);
+    await sleep3(opts.intervalMs);
+    const envelope = await sunoFetch(`/api/v1/generate/record-info?taskId=${encodeURIComponent(taskId)}`);
+    last = asRecord(envelope.data) ?? {};
+    const status = last.status;
+    const tracks = tracksFromRecord(last);
+    if (isTerminalFailure(status)) {
+      throw new Error(`Generation ${status}: ${last.errorMessage || last.errorCode || status}`);
+    }
+    if (isDone(status, tracks.length > 0)) return last;
+    if (status === "SUCCESS" || status === "CALLBACK_EXCEPTION") {
+      if (poll > 2) {
+        throw new Error(`Task ${status} but no audio URL yet (task ${taskId})`);
+      }
+    }
+  }
+  throw new Error(
+    `${opts.label} timed out (${opts.maxPolls * opts.intervalMs / 6e4} minutes). Task ${taskId} may still be running \u2014 check the sunoapi.org dashboard.`
+  );
+}
+async function pollLyrics(taskId) {
+  let last = {};
+  for (let poll = 1; poll <= LYRICS_MAX_POLLS; poll += 1) {
+    console.error(`[Suno] Lyrics in progress... (polling ${poll}/${LYRICS_MAX_POLLS}, task ${taskId})`);
+    await sleep3(LYRICS_POLL_INTERVAL_MS);
+    const envelope = await sunoFetch(`/api/v1/lyrics/record-info?taskId=${encodeURIComponent(taskId)}`);
+    last = asRecord(envelope.data) ?? {};
+    const status = last.status;
+    const lyrics = lyricsFromRecord(last);
+    if (isTerminalFailure(status)) {
+      throw new Error(`Lyrics ${status}: ${last.errorMessage || last.errorCode || status}`);
+    }
+    if (status === "SUCCESS" && lyrics.length > 0) return last;
+    if (status === "CALLBACK_EXCEPTION" && lyrics.length > 0) return last;
+  }
+  throw new Error(
+    `Lyrics timed out (${LYRICS_MAX_POLLS * LYRICS_POLL_INTERVAL_MS / 6e4} minutes). Task ${taskId}`
+  );
+}
+function assertGenerateArgs(request) {
+  const custom3 = request.customMode === true;
+  const instrumental = request.instrumental === true;
+  if (!custom3) {
+    if (!request.prompt) throw new Error("prompt is required when customMode is false");
+    return;
+  }
+  if (!request.style) throw new Error("style is required when customMode is true");
+  if (!request.title) throw new Error("title is required when customMode is true");
+  if (!instrumental && !request.prompt) {
+    throw new Error("prompt (lyrics) is required when customMode is true and instrumental is false");
+  }
+  if (request.duration !== void 0 && (request.model !== "V5_5" || !custom3)) {
+    throw new Error("duration is only supported when model is V5_5 and customMode is true");
+  }
+}
+async function generateMusic(request) {
+  try {
+    assertGenerateArgs(request);
+    const model = request.model ?? DEFAULT_SUNO_MODEL;
+    const customMode = request.customMode === true;
+    const body = {
+      customMode,
+      instrumental: request.instrumental === true,
+      model,
+      callBackUrl: DUMMY_CALLBACK_URL
+    };
+    if (request.prompt) body.prompt = request.prompt;
+    if (customMode) {
+      if (request.style) body.style = request.style;
+      if (request.title) body.title = request.title;
+    }
+    if (request.duration !== void 0) body.duration = request.duration;
+    if (request.negativeTags) body.negativeTags = request.negativeTags;
+    if (request.vocalGender) body.vocalGender = request.vocalGender;
+    if (request.personaId) body.personaId = request.personaId;
+    if (request.personaModel) body.personaModel = request.personaModel;
+    console.error(`[Suno] Generating music... (model: ${model}, customMode: ${customMode}, instrumental: ${body.instrumental})`);
+    const created = await sunoFetch("/api/v1/generate", { method: "POST", body: JSON.stringify(body) });
+    const taskId = taskIdFrom(created.data);
+    const info = await pollRecord(taskId, {
+      intervalMs: POLL_INTERVAL_MS2,
+      maxPolls: MAX_POLLS2,
+      label: "Music generation"
+    });
+    const parsed = tracksFromRecord(info).filter((t2) => t2 !== void 0);
+    const tracks = await saveTracks(
+      parsed,
+      request.outputPath || process.cwd(),
+      request.filename,
+      request.pickTrack ?? 0
+    );
+    console.error(`[Suno] Saved ${tracks.length} track(s): ${tracks.map((t2) => t2.audioPath).join(", ")}`);
+    return { success: true, taskId, model, tracks, audioPath: tracks[0]?.audioPath };
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`[Suno] Error: ${message}`);
+    return { success: false, error: message };
+  }
+}
+async function generateSound(request) {
+  try {
+    const body = {
+      prompt: request.prompt,
+      model: SUNO_SOUND_MODEL,
+      soundLoop: request.soundLoop !== false,
+      callBackUrl: DUMMY_CALLBACK_URL
+    };
+    if (request.soundTempo !== void 0) body.soundTempo = request.soundTempo;
+    if (request.soundKey) body.soundKey = request.soundKey;
+    console.error(`[Suno] Generating sound loop... (tempo: ${request.soundTempo ?? "auto"}, key: ${request.soundKey ?? "Any"})`);
+    const created = await sunoFetch("/api/v1/generate/sounds", { method: "POST", body: JSON.stringify(body) });
+    const taskId = taskIdFrom(created.data);
+    const info = await pollRecord(taskId, {
+      intervalMs: SOUND_POLL_INTERVAL_MS,
+      maxPolls: SOUND_MAX_POLLS,
+      label: "Sound generation"
+    });
+    const parsed = tracksFromRecord(info).filter((t2) => t2 !== void 0);
+    const tracks = await saveTracks(
+      parsed,
+      request.outputPath || process.cwd(),
+      request.filename,
+      request.pickTrack ?? 0
+    );
+    console.error(`[Suno] Sound saved: ${tracks.map((t2) => t2.audioPath).join(", ")}`);
+    return { success: true, taskId, model: SUNO_SOUND_MODEL, tracks, audioPath: tracks[0]?.audioPath };
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`[Suno] Error: ${message}`);
+    return { success: false, error: message };
+  }
+}
+async function generateLyrics(request) {
+  try {
+    console.error(`[Suno] Generating lyrics...`);
+    const created = await sunoFetch("/api/v1/lyrics", {
+      method: "POST",
+      body: JSON.stringify({ prompt: request.prompt, callBackUrl: DUMMY_CALLBACK_URL })
+    });
+    const taskId = taskIdFrom(created.data);
+    const info = await pollLyrics(taskId);
+    const lyrics = lyricsFromRecord(info);
+    if (lyrics.length === 0) return { success: false, error: "Lyrics task succeeded but returned no text", taskId };
+    return { success: true, taskId, lyrics };
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`[Suno] Error: ${message}`);
+    return { success: false, error: message };
+  }
+}
+async function getCredits() {
+  try {
+    const envelope = await sunoFetch("/api/v1/generate/credit");
+    const credits = typeof envelope.data === "number" ? envelope.data : num(asRecord(envelope.data) ?? {}, "credits", "credit");
+    if (credits === void 0) {
+      return { success: false, error: `Unexpected credits payload: ${JSON.stringify(envelope.data)}` };
+    }
+    return { success: true, credits };
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return { success: false, error: message };
+  }
 }
 
 // src/tools.ts
@@ -77954,6 +78832,57 @@ Returns: a text list of the 30 Gemini voice names with one-line personality desc
       required: []
     }
   },
+  {
+    name: "stt_local_transcribe",
+    title: "Local speech-to-text (Qwen3-ASR)",
+    annotations: HINT.generateLocal,
+    description: `Transcribe speech to text **on this machine** using Qwen3-ASR via mlx-qwen3-asr \u2014 no API key, no network, no per-minute cost.
+
+Use when the user asks to transcribe, caption, or turn speech into text (\uBC1B\uC544\uC4F0\uAE30, STT, \uC804\uC0AC), especially Korean. This is the DEFAULT local STT path: Korean is a first-class language (published Common Voice CER 5.88% / FLEURS CER 2.57% on the 1.7B). ingest (\uB179\uD654\u2192\uD0C0\uC784\uB77C\uC778) uses the same engine when the binary is installed, and falls back to whisper.cpp if it is not.
+Do NOT use this as a substitute for a finished timeline.md \u2014 timestamps here are word/segment offsets, not scene boundaries. Do NOT send the audio to a cloud STT when this tool is available.
+Requires Apple Silicon and mlx-qwen3-asr (\`uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"\`); set QWEN3_ASR_BIN if the binary lives elsewhere. The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus ForcedAligner when timestamps are on) to ~/.cache/huggingface \u2014 a slow first call is the download, not a hang. Weights are Apache 2.0.
+
+Returns: a text block with the saved .json path, detected language, segment count, elapsed time, and the full transcript.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        audioPath: {
+          type: "string",
+          description: 'Absolute path to the audio or video file to transcribe. Common containers work (wav/mp3/m4a/flac/mp4/mov) \u2014 ffmpeg extracts audio. Path must not contain "..".'
+        },
+        language: {
+          type: "string",
+          description: `Spoken language (default: "${DEFAULT_QWEN3_ASR_LANGUAGE}"). Aliases such as ko/en/ja are folded to these names. Set it for short clips \u2014 auto-detect can miss a few seconds of Korean.`,
+          enum: [...QWEN3_ASR_LANGUAGES],
+          default: DEFAULT_QWEN3_ASR_LANGUAGE
+        },
+        model: {
+          type: "string",
+          description: `ASR model (default: "${DEFAULT_QWEN3_ASR_MODEL}" \u2014 best Korean). Qwen/Qwen3-ASR-0.6B is smaller and faster when the clip is clean and speed matters more than a few CER points.`,
+          enum: [...QWEN3_ASR_MODELS],
+          default: DEFAULT_QWEN3_ASR_MODEL
+        },
+        context: {
+          type: "string",
+          description: 'Optional domain glossary, space- or comma-separated (\uC571 \uC774\uB984, \uACE0\uC720\uBA85\uC0AC). Biases the decoder toward those terms \u2014 same job WHISPER_PROMPT does for whisper.cpp. Example: "Claude Code ISA \uB538\uAE4D\uC5F0\uAD6C\uC18C".'
+        },
+        timestamps: {
+          type: "boolean",
+          description: "Attach start/end seconds per segment (default: true). ingest and subtitle work need this; turn it off only for a plain text dump.",
+          default: true
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the transcript JSON (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the transcript JSON (default: stt_<timestamp>.json)"
+        }
+      },
+      required: ["audioPath"]
+    }
+  },
   // ── Music generation (Google Lyria — ported from the fect-mcp music module) ────────────
   {
     name: "music_generate_clip",
@@ -77992,7 +78921,7 @@ Returns: a text block with the saved .mp3 file path (44.1kHz stereo, exactly 30 
     description: `Generate instrumental music from a text prompt using Google Lyria RealTime (streaming).
 
 Use when the requested duration must be controlled (5-300s) \u2014 e.g. matching a narration length. For standard 30-second short-form BGM, prefer music_generate_clip (cheaper, single call). Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text \u2014 music_list_options shows suggestions, not a closed list.
-Do NOT use for vocals or lyrics \u2014 Lyria RealTime is instrumental-only. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
+Do NOT use for vocals or lyrics \u2014 Lyria RealTime is instrumental-only. For a sung song use suno_generate. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
 For BGM under narration, say so in the prompt (e.g. "leaves space for a spoken voiceover, no melody in the vocal frequency range").
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and applied settings.`,
@@ -78042,7 +78971,7 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
     description: `Generate instrumental music by blending multiple weighted prompts with fine-grained controls (Google Lyria RealTime).
 
 Use when the request needs blended musical ideas \u2014 e.g. [{"text": "jazz piano", "weight": 1.0}, {"text": "electronic beats", "weight": 0.5}] \u2014 or fine tuning of guidance, density, brightness, temperature, scale (key), seed (reproducibility), or bass/drum controls. seed is the ONLY way to regenerate the same music (Lyria 3 Clip has no seed) \u2014 record the seed of a channel's signature BGM to keep later episodes consistent.
-Do NOT use for a simple single-idea request \u2014 music_generate is sufficient and simpler. No vocals or lyrics (Lyria RealTime is instrumental-only).
+Do NOT use for a simple single-idea request \u2014 music_generate is sufficient and simpler. No vocals or lyrics (Lyria RealTime is instrumental-only \u2014 sung songs go to suno_generate).
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and the applied prompt weights/config.`,
     inputSchema: {
@@ -78171,6 +79100,182 @@ Returns: categorized text lists \u2014 32 genres, 25 moods, 22 instruments (non-
       required: []
     }
   },
+  // ── Music generation (Suno — sunoapi.org third-party REST, not an official API) ────
+  {
+    name: "suno_generate",
+    title: "Suno full song",
+    annotations: HINT.generate,
+    description: `Generate a full Suno song (exactly 2 variants) via sunoapi.org. This is a third-party REST wrapper \u2014 Suno Inc. has no public self-serve API as of 2026-08.
+
+Use when the user wants a SUNG song, jingle, or original track with lyrics \u2014 the thing Lyria cannot do well. customMode=false: only prompt, the model writes lyrics. customMode=true + instrumental=false: prompt IS the lyrics (write them first with suno_generate_lyrics if needed). customMode=true + instrumental=true: no vocals; style and title required. Default model V5 (up to 8 min). Each call takes 2\u20133 minutes and returns two mp3 files downloaded locally (remote URLs expire in 15 days).
+Do NOT use as the default narration-under BGM bed \u2014 vocals fight the voiceover, and a 3-minute song does not loop cleanly. For looping beds prefer suno_generate_sound or music_generate_clip (Lyria, $0.04, 30s, GEMINI_API_KEY). For an exact duration 5\u2013300s or seed reproducibility use music_generate.
+Requires SUNO_API_KEY. This key being unset does not block music_*(Lyria).
+
+Returns: saved file paths for both tracks, durations, titles, taskId.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "In non-custom mode: the idea the model turns into lyrics+music (required, max 3000 chars). In custom mode with vocals: the EXACT lyrics to sing (required, V4 max 3000, V4_5+ max 5000). Omit when customMode+instrumental."
+        },
+        customMode: {
+          type: "boolean",
+          description: "false (default): prompt-only, auto lyrics. true: you supply style+title, and lyrics via prompt unless instrumental.",
+          default: false
+        },
+        instrumental: {
+          type: "boolean",
+          description: "true = no vocals. In custom mode this drops the lyrics requirement (style+title still required). Default false.",
+          default: false
+        },
+        style: {
+          type: "string",
+          description: 'Genre/style for custom mode (required when customMode=true). V4 max 200 chars, later models max 1000. Example: "calm lo-fi, soft piano, space for voiceover"'
+        },
+        title: {
+          type: "string",
+          description: "Track title for custom mode (required when customMode=true). V4/V4_5ALL max 80 chars, others max 100."
+        },
+        model: {
+          type: "string",
+          description: `Suno model (default: "${DEFAULT_SUNO_MODEL}"). V4 \u22644 min; V4_5 / V4_5PLUS / V4_5ALL / V5 / V5_5 \u22648 min. V5_5 is the only model that accepts duration. Pick V5 unless you need V5_5 duration or V4_5ALL structure.`,
+          enum: [...SUNO_MODELS],
+          default: DEFAULT_SUNO_MODEL
+        },
+        duration: {
+          type: "number",
+          description: "Length in seconds (10\u2013360). Only valid when model=V5_5 AND customMode=true. Integer.",
+          minimum: 10,
+          maximum: 360
+        },
+        negativeTags: {
+          type: "string",
+          description: 'Styles to exclude, comma-separated (e.g. "Heavy Metal, Upbeat Drums")'
+        },
+        vocalGender: {
+          type: "string",
+          description: "Preferred vocal gender when not instrumental.",
+          enum: [...SUNO_VOCAL_GENDERS]
+        },
+        personaId: {
+          type: "string",
+          description: "Optional persona or Suno Voice id for custom mode."
+        },
+        personaModel: {
+          type: "string",
+          description: "style_persona (default) for Generate Persona ids, voice_persona for Suno Voice ids (V5/V5_5 only).",
+          enum: [...SUNO_PERSONA_MODELS]
+        },
+        pickTrack: {
+          type: "number",
+          description: "Which of the two variants to treat as primary (0 or 1, default 0). Both files are still saved.",
+          minimum: 0,
+          maximum: 1,
+          default: 0
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory to save the audio files (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Primary filename (default: suno_<timestamp>.mp3). Use .wav to transcode the picked track to 48kHz stereo PCM for build-reel.sh (bgm.wav). The other variant is saved as <stem>_a.mp3 / <stem>_b.mp3."
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: "suno_generate_sound",
+    title: "Suno loopable BGM",
+    annotations: HINT.generate,
+    description: `Generate a loopable Suno sound/bed (V5 only) with optional BPM and musical key.
+
+Use as the Suno path for short-form BGM under narration \u2014 looping ambient, beds, stings. soundLoop defaults to true. Prompt max 500 chars. Takes about 1\u20133 minutes. For a cheap 30s bed without SUNO_API_KEY, use music_generate_clip (Lyria).
+Do NOT use for a sung song \u2014 that is suno_generate. Do NOT use when you need an exact second-accurate length other than what the model returns; trim with ffmpeg afterwards.
+
+Returns: saved file path(s). Pass filename ending in .wav to transcode for .work/bgm.wav.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: 'Sound description, max 500 chars (e.g. "soft lo-fi bed, muted keys, leaves space for a spoken voiceover, no melody in the vocal range")'
+        },
+        soundLoop: {
+          type: "boolean",
+          description: "Make the result loop-friendly (default true).",
+          default: true
+        },
+        soundTempo: {
+          type: "number",
+          description: "BPM 1\u2013300. Omit for Auto.",
+          minimum: 1,
+          maximum: 300
+        },
+        soundKey: {
+          type: "string",
+          description: "Musical key (default Any).",
+          enum: [...SUNO_SOUND_KEYS]
+        },
+        pickTrack: {
+          type: "number",
+          description: "Which variant to treat as primary (0 or 1, default 0).",
+          minimum: 0,
+          maximum: 1,
+          default: 0
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory to save the audio file (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename (default: suno_<timestamp>.mp3). Use .wav for 48kHz stereo PCM."
+        }
+      },
+      required: ["prompt"]
+    }
+  },
+  {
+    name: "suno_generate_lyrics",
+    title: "Suno lyrics",
+    annotations: HINT.generate,
+    description: `Generate lyrics only (no audio) via sunoapi.org. Several variants come back, typically with [Verse]/[Chorus] markers.
+
+Use to draft lyrics before suno_generate in customMode (pass the chosen text as prompt). Prompt max 200 characters \u2014 describe theme, mood, structure; do not paste a full song here.
+Do NOT use when you already have lyrics. Do NOT use for narration copy \u2014 that is TTS / scenes.js.
+
+Returns: title + lyrics text for each variant, plus taskId.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: 'Theme/mood/structure for the lyrics, max 200 characters (e.g. "a hopeful song about starting over in a new city, verse-chorus, Korean")',
+          maxLength: 200
+        }
+      },
+      required: ["prompt"]
+    }
+  },
+  {
+    name: "suno_credits",
+    title: "Suno remaining credits",
+    annotations: HINT.read,
+    description: `Read remaining sunoapi.org credits for SUNO_API_KEY.
+
+Use before a batch of suno_generate calls. Generate consumes about 12 credits per request (\u2248 $0.06 at the $5/1000-credit pack). Insufficient credits fail with code 429.
+Do NOT use to generate music.
+
+Returns: integer credit balance.`,
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: []
+    }
+  },
   // ── First-party SNS publishing (per-platform tools — local credentials, immediately public) ──────
   // Only tools for platforms with a credentials file are exposed in ListTools (index.ts + SNS_PLATFORM_BY_TOOL).
   // Multi-channel: with channel (brand slug) set, only <SNS_TOKEN_DIR>/<slug>/ tokens are used (no fallback).
@@ -78179,7 +79284,7 @@ Returns: categorized text lists \u2014 32 genres, 25 moods, 22 instruments (non-
     title: "\u26A0\uFE0F Threads publish (immediately public)",
     annotations: HINT.publish,
     outputSchema: publishOutput("postId", "Threads post id \u2014 pass as replyToId to chain a follow-up reply"),
-    description: `\u26A0\uFE0F Direct Threads publishing \u2014 posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without approval). This tool supports text (with an optional link preview card) or a single image \u2014 the platform itself also does video and carousels, but this pipeline exports video to YouTube and Reels and drives traffic on Threads with a conversational body plus a video link (linkUrl). Video episodes attach no cover image \u2014 the link preview card takes that place, and one call completes the publish (the link is not added as a separate reply). Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Direct Threads publishing \u2014 posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive \u2014 one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -78187,11 +79292,16 @@ Returns: categorized text lists \u2014 32 genres, 25 moods, 22 instruments (non-
           type: "string",
           description: "Final post body, \u2264500 chars (\u22641 hashtag recommended \u2014 ranking weight 0). Emoji count as their UTF-8 bytes on this platform, i.e. more than 1 char each"
         },
-        imageUrl: { type: "string", format: "uri", description: "One publicly reachable image URL (the platform crawls it \u2014 local paths won't work); mutually exclusive with linkUrl" },
+        imageUrl: { type: "string", format: "uri", description: "One publicly reachable image URL (the platform crawls it \u2014 local paths won't work); mutually exclusive with videoUrl and linkUrl" },
+        videoUrl: {
+          type: "string",
+          format: "uri",
+          description: "One publicly reachable video URL (.mp4/.mov) carried by the post itself \u2014 mutually exclusive with imageUrl and linkUrl. **This is the default for video episodes.** Give the subtitle-burned cut: the Threads container takes no subtitle file, so burning them into the picture is the only way (same as IG reels). Video containers transcode, and the tool waits up to 2 minutes for FINISHED"
+        },
         linkUrl: {
           type: "string",
           format: "uri",
-          description: "Link preview card URL attached to the post (the Reels/Shorts permalink for video episodes). Text posts only, so mutually exclusive with imageUrl; writing the same URL in the caption still counts as one link to the platform (cap 5)"
+          description: "Link preview card URL attached to the post. Text posts only, so mutually exclusive with imageUrl and videoUrl; writing the same URL in the caption still counts as one link to the platform (cap 5). **Meta's own URLs (an IG reels permalink) come back 400** \u2014 put those in the body text instead"
         },
         replyToId: { type: "string", description: "Publish as a reply to this post id (own reply chain, or joining someone else's post)" },
         channel: SNS_CHANNEL_PROPERTY
@@ -78723,9 +79833,9 @@ var SNS_PLATFORM_BY_TOOL = {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync5 } from "node:fs";
+import { existsSync as existsSync6 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join as join5 } from "node:path";
+import { join as join7 } from "node:path";
 
 // src/http.ts
 async function requestRaw(method, url, headers, body, timeoutMs) {
@@ -78998,14 +80108,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join5(tmpdir(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join7(tmpdir(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join5(saveDir, filename);
-  for (let i2 = 1; existsSync5(savedPath); i2++) {
+  let savedPath = join7(saveDir, filename);
+  for (let i2 = 1; existsSync6(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join5(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join7(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview = decodePreview(buf.subarray(0, 4096));
@@ -79082,9 +80192,9 @@ var OPENAPI_CODE_HELP = {
 };
 async function callOpenApi(input) {
   const key = requireDataGoKrKey();
-  const path5 = input.path.replace(/^\/+/, "");
-  if (path5.includes("..") || path5.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
-  const url = `${OPENAPI_BASE}/${path5}${buildQuery({ ...input.params, serviceKey: key })}`;
+  const path6 = input.path.replace(/^\/+/, "");
+  if (path6.includes("..") || path6.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
+  const url = `${OPENAPI_BASE}/${path6}${buildQuery({ ...input.params, serviceKey: key })}`;
   const res = await requestRaw("get", url, { "User-Agent": BROWSER_UA });
   const body = res.body;
   if (/^\s*Unauthorized\s*$/i.test(body)) return err(`apis.data.go.kr: ${OPENAPI_AUTH_HELP}`);
@@ -79944,17 +81054,17 @@ async function fetchTrendingNow(input) {
   const p = json2;
   const raw = p.trending_searches ?? [];
   const trends = raw.slice(0, limit2).map((t2) => ({
-    query: str2(t2.query),
+    query: str3(t2.query),
     searchVolume: typeof t2.search_volume === "number" ? t2.search_volume : null,
     increasePct: typeof t2.increase_percentage === "number" ? t2.increase_percentage : null,
     active: t2.active === true,
     startedAt: unixToIso(t2.start_timestamp),
-    categories: (t2.categories ?? []).map((c) => str2(c?.name)).filter(Boolean),
-    breakdown: (t2.trend_breakdown ?? []).slice(0, TREND_BREAKDOWN_CAP).map(str2).filter(Boolean)
+    categories: (t2.categories ?? []).map((c) => str3(c?.name)).filter(Boolean),
+    breakdown: (t2.trend_breakdown ?? []).slice(0, TREND_BREAKDOWN_CAP).map(str3).filter(Boolean)
   }));
   return { data: { geo, hours, count: trends.length, received: raw.length, trends } };
 }
-function str2(value) {
+function str3(value) {
   return typeof value === "string" ? value : value == null ? "" : String(value);
 }
 async function trendingNow(input) {
@@ -80000,9 +81110,9 @@ async function fetchGoogleOrganic(input) {
   const offset = input.page && input.page > 1 ? (input.page - 1) * GOOGLE_PAGE_SIZE : 0;
   const hits = (p.organic_results ?? []).filter((r2) => typeof r2?.link === "string").map((r2, i2) => ({
     position: offset + (typeof r2.position === "number" ? r2.position : i2 + 1),
-    title: str2(r2.title),
+    title: str3(r2.title),
     link: r2.link,
-    snippet: str2(r2.snippet),
+    snippet: str3(r2.snippet),
     date: typeof r2.date === "string" ? r2.date : void 0,
     source: typeof r2.source === "string" ? r2.source : void 0
   }));
@@ -80012,22 +81122,22 @@ async function fetchGoogleOrganic(input) {
 // src/sns-client.ts
 import { createHash as createHash2, randomUUID } from "node:crypto";
 import {
-  existsSync as existsSync6,
+  existsSync as existsSync7,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename4, dirname as dirname3, extname as extname2, join as join6 } from "node:path";
+import { basename as basename5, dirname as dirname4, extname as extname4, join as join8 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync6(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync7(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync6(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync7(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -80035,7 +81145,7 @@ var IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
-var sleep4 = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms));
+var sleep5 = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -80101,7 +81211,7 @@ async function pollContainer(baseUrl, containerId, accessToken, statusField, opt
     if (status === "ERROR" || status === "EXPIRED") {
       return fail2(502, `Media container ${containerId} failed: ${status}`);
     }
-    await sleep4(interval);
+    await sleep5(interval);
   }
   return fail2(504, `Media container ${containerId} not FINISHED after ${maxTries} tries`);
 }
@@ -80112,8 +81222,8 @@ function okJson(payload) {
   return { ok: true, status: 200, body: JSON.stringify(payload) };
 }
 async function publishThreads(input, opts) {
-  if (input.imageUrl && input.linkUrl) {
-    return fail2(400, "linkUrl is for text-only posts (link_attachment requires media_type=TEXT)");
+  if ([input.imageUrl, input.videoUrl, input.linkUrl].filter(Boolean).length > 1) {
+    return fail2(400, "imageUrl, videoUrl and linkUrl are mutually exclusive (one media_type per post)");
   }
   const { token, error: error2 } = await loadTokenFile("THREADS", input.channel);
   if (!token) return error2;
@@ -80122,9 +81232,10 @@ async function publishThreads(input, opts) {
   const uid = String(parseJson(me.body)?.id ?? "");
   if (!uid) return fail2(502, `Threads /me returned no id: ${me.body}`);
   const create = await graphRequest("post", `${THREADS_BASE}/${uid}/threads`, {
-    media_type: input.imageUrl ? "IMAGE" : "TEXT",
+    media_type: input.videoUrl ? "VIDEO" : input.imageUrl ? "IMAGE" : "TEXT",
     text: input.caption,
     image_url: input.imageUrl,
+    video_url: input.videoUrl,
     link_attachment: input.linkUrl,
     reply_to_id: input.replyToId,
     access_token: token
@@ -80167,7 +81278,7 @@ async function threadsInsights(input) {
   const me = await fetchMe(THREADS_BASE, token, "id,username");
   if (!me.ok) return me;
   const account = parseJson(me.body) ?? {};
-  const uid = str3(account.id);
+  const uid = str4(account.id);
   if (!uid) return fail2(502, `Threads /me returned no id: ${me.body}`);
   const days = input.days ?? 7;
   const nowSec = Math.floor(Date.now() / 1e3);
@@ -80188,14 +81299,14 @@ async function threadsInsights(input) {
   if (!followers.ok) return withScopeHint(followers, "threads_manage_insights");
   const userMetrics = {};
   for (const item of [...rawList(ranged.body), ...rawList(followers.body)]) {
-    const name = str3(item.name);
+    const name = str4(item.name);
     if (!name) continue;
     const totalValue = item.total_value?.value;
     if (totalValue !== void 0) {
       userMetrics[name] = totalValue;
     } else if (Array.isArray(item.values)) {
       const daily = item.values.map((v) => ({
-        date: str3(v.end_time).slice(0, 10),
+        date: str4(v.end_time).slice(0, 10),
         value: numOrNull(v.value) ?? 0
       }));
       userMetrics[name] = { total: daily.reduce((sum, v) => sum + v.value, 0), daily };
@@ -80214,7 +81325,7 @@ async function threadsInsights(input) {
     const roots = rawList(list.body).filter((item) => item.is_reply !== true).slice(0, postLimit);
     posts = await Promise.all(
       roots.map(async (item) => {
-        const postId = str3(item.id);
+        const postId = str4(item.id);
         const ins = await graphRequest("get", `${THREADS_BASE}/${postId}/insights`, {
           metric: THREADS_MEDIA_METRICS,
           access_token: token
@@ -80223,14 +81334,14 @@ async function threadsInsights(input) {
         if (ins.ok) {
           for (const m2 of rawList(ins.body)) {
             const values = m2.values;
-            metrics[str3(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
+            metrics[str4(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
           }
         }
         return {
           postId,
-          permalink: item.permalink ? str3(item.permalink) : null,
-          excerpt: excerpt(str3(item.text)),
-          timestamp: item.timestamp ? str3(item.timestamp) : null,
+          permalink: item.permalink ? str4(item.permalink) : null,
+          excerpt: excerpt(str4(item.text)),
+          timestamp: item.timestamp ? str4(item.timestamp) : null,
           metrics: ins.ok ? metrics : null,
           ...ins.ok ? {} : { metricsError: `HTTP ${ins.status}: ${ins.body.slice(0, 200)}` }
         };
@@ -80239,7 +81350,7 @@ async function threadsInsights(input) {
   }
   return okJson({
     channel: input.channel ?? null,
-    account: { id: uid, username: str3(account.username) },
+    account: { id: uid, username: str4(account.username) },
     period: { since: new Date(since * 1e3).toISOString(), until: new Date(nowSec * 1e3).toISOString(), days },
     user: userMetrics,
     posts
@@ -80260,13 +81371,13 @@ async function threadsKeywordSearch(input) {
   });
   if (!res.ok) return withScopeHint(res, "threads_keyword_search");
   const results = rawList(res.body).map((item) => {
-    const timestamp = item.timestamp ? str3(item.timestamp) : null;
+    const timestamp = item.timestamp ? str4(item.timestamp) : null;
     return {
-      postId: str3(item.id),
-      username: str3(item.username),
-      text: str3(item.text),
-      mediaType: str3(item.media_type) || null,
-      permalink: item.permalink ? str3(item.permalink) : null,
+      postId: str4(item.id),
+      username: str4(item.username),
+      text: str4(item.text),
+      mediaType: str4(item.media_type) || null,
+      permalink: item.permalink ? str4(item.permalink) : null,
       timestamp,
       ageMinutes: minutesSince(timestamp, now),
       isReply: item.is_reply === true,
@@ -80366,7 +81477,7 @@ async function instagramInsights(input) {
   );
   if (!me.ok) return me;
   const profile = parseJson(me.body) ?? {};
-  const uid = str3(profile.id);
+  const uid = str4(profile.id);
   if (!uid) return fail2(502, `Instagram /me returned no id: ${me.body}`);
   const days = input.days ?? 7;
   const nowSec = Math.floor(Date.now() / 1e3);
@@ -80382,7 +81493,7 @@ async function instagramInsights(input) {
   if (!ranged.ok) return withScopeHint(ranged, "instagram_business_manage_insights");
   const userMetrics = {};
   for (const item of rawList(ranged.body)) {
-    const name = str3(item.name);
+    const name = str4(item.name);
     if (!name) continue;
     userMetrics[name] = numOrNull(item.total_value?.value);
   }
@@ -80397,8 +81508,8 @@ async function instagramInsights(input) {
     if (!list.ok) return list;
     media = await Promise.all(
       rawList(list.body).map(async (item) => {
-        const mediaId = str3(item.id);
-        const productType = str3(item.media_product_type) || null;
+        const mediaId = str4(item.id);
+        const productType = str4(item.media_product_type) || null;
         const surfaceMetrics = productType === "REELS" ? IG_REELS_METRICS : productType === "FEED" ? IG_FEED_METRICS : "";
         const ins = await graphRequest("get", `${IG_BASE}/${mediaId}/insights`, {
           metric: surfaceMetrics ? `${IG_MEDIA_METRICS},${surfaceMetrics}` : IG_MEDIA_METRICS,
@@ -80408,16 +81519,16 @@ async function instagramInsights(input) {
         if (ins.ok) {
           for (const m2 of rawList(ins.body)) {
             const values = m2.values;
-            metrics[str3(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
+            metrics[str4(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
           }
         }
         return {
           mediaId,
-          mediaType: str3(item.media_type) || null,
+          mediaType: str4(item.media_type) || null,
           mediaProductType: productType,
-          permalink: item.permalink ? str3(item.permalink) : null,
-          excerpt: excerpt(str3(item.caption)),
-          timestamp: item.timestamp ? str3(item.timestamp) : null,
+          permalink: item.permalink ? str4(item.permalink) : null,
+          excerpt: excerpt(str4(item.caption)),
+          timestamp: item.timestamp ? str4(item.timestamp) : null,
           metrics: ins.ok ? metrics : null,
           ...ins.ok ? {} : { metricsError: `HTTP ${ins.status}: ${ins.body.slice(0, 200)}` }
         };
@@ -80428,8 +81539,8 @@ async function instagramInsights(input) {
     channel: input.channel ?? null,
     account: {
       id: uid,
-      username: str3(profile.username),
-      accountType: str3(profile.account_type) || null,
+      username: str4(profile.username),
+      accountType: str4(profile.account_type) || null,
       followersCount: numOrNull(profile.followers_count),
       followsCount: numOrNull(profile.follows_count),
       mediaCount: numOrNull(profile.media_count)
@@ -80582,19 +81693,19 @@ var YT_THUMB_MIME_BY_EXT = {
 var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
-async function readCaptionFile(path5, maxBytes) {
-  if (extname2(path5).toLowerCase() !== ".srt") {
-    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path5}`) };
+async function readCaptionFile(path6, maxBytes) {
+  if (extname4(path6).toLowerCase() !== ".srt") {
+    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path6}`) };
   }
   let bytes;
   try {
-    bytes = await readFile(path5);
+    bytes = await readFile(path6);
   } catch (error2) {
     return { error: fail2(400, `Cannot read caption file: ${error2 instanceof Error ? error2.message : String(error2)}`) };
   }
-  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path5}`) };
+  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path6}`) };
   if (bytes.byteLength > maxBytes) {
-    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path5} (${bytes.byteLength} bytes)`) };
+    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path6} (${bytes.byteLength} bytes)`) };
   }
   return { bytes };
 }
@@ -80696,7 +81807,7 @@ function parseResumeOffset(range) {
 }
 function sessionStateFile(filePath) {
   const key = createHash2("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join6(snsTokenDir, ".yt-upload", `${key}.json`);
+  return join8(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState2(filePath) {
   try {
@@ -80715,7 +81826,7 @@ function writeState2(filePath, s2) {
       nodeRmSync(p, { force: true });
       return;
     }
-    nodeMkdirSync(dirname3(p), { recursive: true });
+    nodeMkdirSync(dirname4(p), { recursive: true });
     nodeWriteFileSync(p, JSON.stringify(s2), "utf8");
   } catch {
   }
@@ -80796,7 +81907,7 @@ async function queryResumeOffset(sessionUrl, total, mimeType) {
   }
 }
 async function publishYoutube(input) {
-  const mimeType = YT_VIDEO_MIME_BY_EXT[extname2(input.videoFilePath).toLowerCase()];
+  const mimeType = YT_VIDEO_MIME_BY_EXT[extname4(input.videoFilePath).toLowerCase()];
   if (!mimeType) return fail2(400, `Unsupported video extension: ${input.videoFilePath} (.mp4/.mov)`);
   let videoSize;
   let videoMtimeMs;
@@ -80811,7 +81922,7 @@ async function publishYoutube(input) {
   }
   let thumb;
   if (input.thumbnailFilePath) {
-    const thumbMime = YT_THUMB_MIME_BY_EXT[extname2(input.thumbnailFilePath).toLowerCase()];
+    const thumbMime = YT_THUMB_MIME_BY_EXT[extname4(input.thumbnailFilePath).toLowerCase()];
     if (!thumbMime) {
       return fail2(400, `Unsupported thumbnail extension: ${input.thumbnailFilePath} (.jpg/.jpeg/.png)`);
     }
@@ -80899,7 +82010,7 @@ async function publishYoutube(input) {
             platform: "YOUTUBE",
             videoId: doneId,
             permalink: `https://www.youtube.com/watch?v=${doneId}`,
-            fileName: basename4(input.videoFilePath),
+            fileName: basename5(input.videoFilePath),
             resumed: true,
             note: `This file is already up from the upload started at ${new Date(sessionStartedAt).toISOString()}. It was not re-uploaded.`
           });
@@ -80929,7 +82040,7 @@ async function publishYoutube(input) {
       platform: "YOUTUBE",
       videoId,
       permalink: `https://www.youtube.com/watch?v=${videoId}`,
-      fileName: basename4(input.videoFilePath),
+      fileName: basename5(input.videoFilePath),
       ...thumb ? { thumbnailSet: !thumbnailWarning } : {},
       ...thumbnailWarning ? { thumbnailWarning } : {},
       ...captionBytes ? { captionSet: !captionWarning } : {},
@@ -81064,7 +82175,7 @@ async function youtubeInsights(input) {
   const channelItem = parseJson(mine.body)?.items?.[0];
   if (!channelItem) return fail2(502, `YouTube channels.list returned no channel: ${mine.body}`);
   const stats = channelItem.statistics ?? {};
-  const uploadsPlaylist = str3(
+  const uploadsPlaylist = str4(
     channelItem.contentDetails?.relatedPlaylists?.uploads
   );
   const analytics = await youtubeRequest(
@@ -81101,7 +82212,7 @@ async function youtubeInsights(input) {
     if (!list.ok) videoErrors.push(`playlistItems HTTP ${list.status}: ${list.body.slice(0, 200)}`);
     if (list.ok) {
       const items = parseJson(list.body)?.items ?? [];
-      const ids = items.map((item) => str3(item.contentDetails?.videoId)).filter(Boolean);
+      const ids = items.map((item) => str4(item.contentDetails?.videoId)).filter(Boolean);
       const [detail, perVideo] = await Promise.all([
         ids.length ? youtubeRequest("get", `${YT_DATA_BASE}/videos`, { part: "snippet,statistics,contentDetails", id: ids.join(",") }, token) : Promise.resolve(okJson({ items: [] })),
         ids.length ? youtubeRequest(
@@ -81123,19 +82234,19 @@ async function youtubeInsights(input) {
       if (!perVideo.ok) videoErrors.push(`per-video Analytics HTTP ${perVideo.status}: ${perVideo.body.slice(0, 200)} (period will be null)`);
       const detailById = /* @__PURE__ */ new Map();
       for (const item of parseJson(detail.body)?.items ?? []) {
-        detailById.set(str3(item.id), item);
+        detailById.set(str4(item.id), item);
       }
       const metricsById = perVideo.ok ? ytReportRowsByKey(perVideo.body) : /* @__PURE__ */ new Map();
       videos = ids.map((videoId) => {
         const item = detailById.get(videoId);
         const snippet = item?.snippet ?? {};
         const videoStats = item?.statistics ?? {};
-        const duration3 = str3(item?.contentDetails?.duration);
+        const duration3 = str4(item?.contentDetails?.duration);
         return {
           videoId,
           permalink: `https://www.youtube.com/watch?v=${videoId}`,
-          title: excerpt(str3(snippet.title), 100),
-          publishedAt: snippet.publishedAt ? str3(snippet.publishedAt) : null,
+          title: excerpt(str4(snippet.title), 100),
+          publishedAt: snippet.publishedAt ? str4(snippet.publishedAt) : null,
           duration: duration3 || null,
           // Seconds pulled from the ISO8601 duration, used to tell whether it's a Short (portrait, 3 minutes or less)
           durationSeconds: ytDurationSeconds(duration3),
@@ -81152,8 +82263,8 @@ async function youtubeInsights(input) {
   return okJson({
     channel: input.channel ?? null,
     account: {
-      channelId: str3(channelItem.id),
-      title: str3(channelItem.snippet?.title),
+      channelId: str4(channelItem.id),
+      title: str4(channelItem.snippet?.title),
       subscriberCount: Number(stats.subscriberCount ?? 0),
       viewCount: Number(stats.viewCount ?? 0),
       videoCount: Number(stats.videoCount ?? 0),
@@ -81176,7 +82287,7 @@ function ytReportRow(body) {
   if (!row) return {};
   const out = {};
   headers.forEach((header, index) => {
-    const name = str3(header.name);
+    const name = str4(header.name);
     if (name) out[name] = Number(row[index] ?? 0);
   });
   return out;
@@ -81187,12 +82298,12 @@ function ytReportRowsByKey(body) {
   const rows = parsed?.rows ?? [];
   const out = /* @__PURE__ */ new Map();
   for (const row of rows) {
-    const key = str3(row[0]);
+    const key = str4(row[0]);
     if (!key) continue;
     const metrics = {};
     headers.forEach((header, index) => {
       if (index === 0) return;
-      const name = str3(header.name);
+      const name = str4(header.name);
       if (name) metrics[name] = Number(row[index] ?? 0);
     });
     out.set(key, metrics);
@@ -81210,7 +82321,7 @@ var rawList = (body) => {
   const data = parseJson(body)?.data;
   return Array.isArray(data) ? data : [];
 };
-var str3 = (value) => value === void 0 || value === null ? "" : String(value);
+var str4 = (value) => value === void 0 || value === null ? "" : String(value);
 var numOrNull = (value) => typeof value === "number" ? value : null;
 var excerpt = (text2, max = 140) => text2.length > max ? `${text2.slice(0, max)}\u2026` : text2;
 function minutesSince(timestamp, now) {
@@ -81224,7 +82335,7 @@ async function inboxThreads(input, now, channel) {
   const me = await fetchMe(THREADS_BASE, token, "id,username");
   if (!me.ok) return { error: me };
   const account = parseJson(me.body) ?? {};
-  const uid = str3(account.id);
+  const uid = str4(account.id);
   if (!uid) return { error: fail2(502, `Threads /me returned no id: ${me.body}`) };
   const list = await graphRequest("get", `${THREADS_BASE}/${uid}/threads`, {
     fields: "id,text,timestamp,permalink,is_reply",
@@ -81234,14 +82345,14 @@ async function inboxThreads(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const item of rawList(list.body).filter((item2) => item2.is_reply !== true)) {
-    const postId = str3(item.id);
+    const postId = str4(item.id);
     if (!postId) continue;
     const post = {
       platform: "THREADS",
       postId,
-      permalink: item.permalink ? str3(item.permalink) : null,
-      excerpt: excerpt(str3(item.text)),
-      timestamp: item.timestamp ? str3(item.timestamp) : null,
+      permalink: item.permalink ? str4(item.permalink) : null,
+      excerpt: excerpt(str4(item.text)),
+      timestamp: item.timestamp ? str4(item.timestamp) : null,
       comments: []
     };
     const conv = await graphRequest("get", `${THREADS_BASE}/${postId}/conversation`, {
@@ -81260,29 +82371,29 @@ async function inboxThreads(input, now, channel) {
     const answered = /* @__PURE__ */ new Set();
     for (const reply of replies) {
       if (reply.is_reply_owned_by_me !== true) continue;
-      const parent = str3(reply.replied_to?.id);
+      const parent = str4(reply.replied_to?.id);
       if (parent) answered.add(parent);
     }
     for (const reply of replies) {
-      const commentId = str3(reply.id);
+      const commentId = str4(reply.id);
       if (!commentId) continue;
-      const timestamp = reply.timestamp ? str3(reply.timestamp) : null;
-      const parentId = str3(reply.replied_to?.id);
+      const timestamp = reply.timestamp ? str4(reply.timestamp) : null;
+      const parentId = str4(reply.replied_to?.id);
       post.comments.push({
         platform: "THREADS",
         postId,
         commentId,
         parentCommentId: parentId && parentId !== postId ? parentId : null,
-        author: str3(reply.username),
+        author: str4(reply.username),
         isOwn: reply.is_reply_owned_by_me === true,
         answeredByUs: answered.has(commentId),
-        text: str3(reply.text),
+        text: str4(reply.text),
         timestamp,
         ageMinutes: minutesSince(timestamp, now),
         likeCount: null,
         // Threads replies have no public like-count field
-        hidden: str3(reply.hide_status) === "HIDDEN",
-        permalink: reply.permalink ? str3(reply.permalink) : null
+        hidden: str4(reply.hide_status) === "HIDDEN",
+        permalink: reply.permalink ? str4(reply.permalink) : null
       });
     }
     posts.push(post);
@@ -81295,8 +82406,8 @@ async function inboxInstagram(input, now, channel) {
   const me = await fetchMe(IG_BASE, token, "id,username");
   if (!me.ok) return { error: me };
   const account = parseJson(me.body) ?? {};
-  const uid = str3(account.id);
-  const ourName = str3(account.username);
+  const uid = str4(account.id);
+  const ourName = str4(account.username);
   if (!uid) return { error: fail2(502, `Instagram /me returned no id: ${me.body}`) };
   const list = await graphRequest("get", `${IG_BASE}/${uid}/media`, {
     fields: "id,permalink,caption,timestamp,comments_count",
@@ -81306,14 +82417,14 @@ async function inboxInstagram(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const item of rawList(list.body)) {
-    const postId = str3(item.id);
+    const postId = str4(item.id);
     if (!postId) continue;
     const post = {
       platform: "INSTAGRAM",
       postId,
-      permalink: item.permalink ? str3(item.permalink) : null,
-      excerpt: excerpt(str3(item.caption)),
-      timestamp: item.timestamp ? str3(item.timestamp) : null,
+      permalink: item.permalink ? str4(item.permalink) : null,
+      excerpt: excerpt(str4(item.caption)),
+      timestamp: item.timestamp ? str4(item.timestamp) : null,
       comments: []
     };
     if (numOrNull(item.comments_count) === 0) {
@@ -81331,14 +82442,14 @@ async function inboxInstagram(input, now, channel) {
       continue;
     }
     for (const top of rawList(comments.body)) {
-      const topId = str3(top.id);
+      const topId = str4(top.id);
       if (!topId) continue;
       const nested = Array.isArray(top.replies?.data) ? top.replies.data : [];
       const push = (node, parentCommentId) => {
-        const commentId = str3(node.id);
+        const commentId = str4(node.id);
         if (!commentId) return;
-        const timestamp = node.timestamp ? str3(node.timestamp) : null;
-        const author = str3(node.username);
+        const timestamp = node.timestamp ? str4(node.timestamp) : null;
+        const author = str4(node.username);
         post.comments.push({
           platform: "INSTAGRAM",
           postId,
@@ -81347,8 +82458,8 @@ async function inboxInstagram(input, now, channel) {
           author,
           isOwn: !!ourName && author === ourName,
           // On IG replies also hang off the top-level comment, so one of ours among the children means it's handled
-          answeredByUs: parentCommentId === null && nested.some((reply) => !!ourName && str3(reply.username) === ourName),
-          text: str3(node.text),
+          answeredByUs: parentCommentId === null && nested.some((reply) => !!ourName && str4(reply.username) === ourName),
+          text: str4(node.text),
           timestamp,
           ageMinutes: minutesSince(timestamp, now),
           likeCount: numOrNull(node.like_count),
@@ -81370,7 +82481,7 @@ async function inboxFacebook(input, now, channel) {
   const me = await fetchMe(FB_BASE, token, "id,name");
   if (!me.ok) return { error: me };
   const account = parseJson(me.body) ?? {};
-  const pageId = str3(account.id);
+  const pageId = str4(account.id);
   if (!pageId) return { error: fail2(502, `Facebook /me returned no id: ${me.body}`) };
   const list = await graphRequest("get", `${FB_BASE}/${pageId}/posts`, {
     fields: "id,message,created_time,permalink_url",
@@ -81380,14 +82491,14 @@ async function inboxFacebook(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const item of rawList(list.body)) {
-    const postId = str3(item.id);
+    const postId = str4(item.id);
     if (!postId) continue;
     const post = {
       platform: "FACEBOOK",
       postId,
-      permalink: item.permalink_url ? str3(item.permalink_url) : null,
-      excerpt: excerpt(str3(item.message)),
-      timestamp: item.created_time ? str3(item.created_time) : null,
+      permalink: item.permalink_url ? str4(item.permalink_url) : null,
+      excerpt: excerpt(str4(item.message)),
+      timestamp: item.created_time ? str4(item.created_time) : null,
       comments: []
     };
     const comments = await graphRequest("get", `${FB_BASE}/${postId}/comments`, {
@@ -81406,29 +82517,29 @@ async function inboxFacebook(input, now, channel) {
     const rows = rawList(comments.body);
     const answered = /* @__PURE__ */ new Set();
     for (const row of rows) {
-      if (str3(row.from?.id) !== pageId) continue;
-      const parent = str3(row.parent?.id);
+      if (str4(row.from?.id) !== pageId) continue;
+      const parent = str4(row.parent?.id);
       if (parent) answered.add(parent);
     }
     for (const row of rows) {
-      const commentId = str3(row.id);
+      const commentId = str4(row.id);
       if (!commentId) continue;
-      const timestamp = row.created_time ? str3(row.created_time) : null;
+      const timestamp = row.created_time ? str4(row.created_time) : null;
       const from = row.from;
       post.comments.push({
         platform: "FACEBOOK",
         postId,
         commentId,
-        parentCommentId: str3(row.parent?.id) || null,
-        author: str3(from?.name) || str3(from?.id),
-        isOwn: str3(from?.id) === pageId,
+        parentCommentId: str4(row.parent?.id) || null,
+        author: str4(from?.name) || str4(from?.id),
+        isOwn: str4(from?.id) === pageId,
         answeredByUs: answered.has(commentId),
-        text: str3(row.message),
+        text: str4(row.message),
         timestamp,
         ageMinutes: minutesSince(timestamp, now),
         likeCount: numOrNull(row.like_count),
         hidden: row.is_hidden === true,
-        permalink: row.permalink_url ? str3(row.permalink_url) : null
+        permalink: row.permalink_url ? str4(row.permalink_url) : null
       });
     }
     posts.push(post);
@@ -81449,9 +82560,9 @@ async function inboxYoutube(input, now, channel) {
   if (!mine.ok) return { error: withYoutubeScopeHint(mine, "youtube.readonly (or youtube)") };
   const channelItem = parseJson(mine.body)?.items?.[0];
   if (!channelItem) return { error: fail2(502, `YouTube channels.list returned no channel: ${mine.body}`) };
-  const myChannelId = str3(channelItem.id);
-  const account = { id: myChannelId, title: str3(channelItem.snippet?.title) };
-  const uploads = str3(
+  const myChannelId = str4(channelItem.id);
+  const account = { id: myChannelId, title: str4(channelItem.snippet?.title) };
+  const uploads = str4(
     channelItem.contentDetails?.relatedPlaylists?.uploads
   );
   if (!uploads) return { account, error: fail2(502, "YouTube channel has no uploads playlist") };
@@ -81464,15 +82575,15 @@ async function inboxYoutube(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const entry of parseJson(list.body)?.items ?? []) {
-    const videoId = str3(entry.contentDetails?.videoId);
+    const videoId = str4(entry.contentDetails?.videoId);
     if (!videoId) continue;
     const snippet = entry.snippet ?? {};
     const post = {
       platform: "YOUTUBE",
       postId: videoId,
       permalink: `https://www.youtube.com/watch?v=${videoId}`,
-      excerpt: excerpt(str3(snippet.title)),
-      timestamp: snippet.publishedAt ? str3(snippet.publishedAt) : null,
+      excerpt: excerpt(str4(snippet.title)),
+      timestamp: snippet.publishedAt ? str4(snippet.publishedAt) : null,
       comments: []
     };
     const threads = await youtubeRequest(
@@ -81495,7 +82606,7 @@ async function inboxYoutube(input, now, channel) {
     for (const thread of parseJson(threads.body)?.items ?? []) {
       const threadSnippet = thread.snippet ?? {};
       const top = threadSnippet.topLevelComment ?? {};
-      const topId = str3(top.id);
+      const topId = str4(top.id);
       if (!topId) continue;
       const totalReplies = Number(threadSnippet.totalReplyCount ?? 0);
       let replies = thread.replies?.comments ?? [];
@@ -81515,30 +82626,30 @@ async function inboxYoutube(input, now, channel) {
           post.commentsError = [post.commentsError, `replies HTTP ${full.status}: ${full.body.slice(0, 120)}`].filter(Boolean).join(" \xB7 ");
         }
       }
-      const authorChannelId = (comment) => str3(comment.snippet?.authorChannelId?.value);
+      const authorChannelId = (comment) => str4(comment.snippet?.authorChannelId?.value);
       const publishedMs = (comment) => {
-        const parsed = Date.parse(str3(comment.snippet?.publishedAt));
+        const parsed = Date.parse(str4(comment.snippet?.publishedAt));
         return Number.isNaN(parsed) ? 0 : parsed;
       };
       const myLastReplyMs = replies.filter((reply) => authorChannelId(reply) === myChannelId).reduce((max, reply) => Math.max(max, publishedMs(reply)), 0);
       const push = (comment, parentCommentId) => {
-        const commentId = str3(comment.id);
+        const commentId = str4(comment.id);
         if (!commentId) return;
         const commentSnippet = comment.snippet ?? {};
-        const timestamp = commentSnippet.publishedAt ? str3(commentSnippet.publishedAt) : null;
+        const timestamp = commentSnippet.publishedAt ? str4(commentSnippet.publishedAt) : null;
         post.comments.push({
           platform: "YOUTUBE",
           postId: videoId,
           commentId,
           parentCommentId,
-          author: str3(commentSnippet.authorDisplayName),
+          author: str4(commentSnippet.authorDisplayName),
           isOwn: authorChannelId(comment) === myChannelId,
           // With an incomplete reply list there's no basis for claiming "not answered yet" —
           // our reply may just be cut off, so treat it as handled and drop it from the
           // default filter. A missed comment gets caught next tick; erring the other way
           // sends a duplicate reply out in public.
           answeredByUs: repliesIncomplete || myLastReplyMs > 0 && publishedMs(comment) <= myLastReplyMs,
-          text: str3(commentSnippet.textOriginal || commentSnippet.textDisplay),
+          text: str4(commentSnippet.textOriginal || commentSnippet.textDisplay),
           timestamp,
           ageMinutes: minutesSince(timestamp, now),
           likeCount: numOrNull(commentSnippet.likeCount),
@@ -81665,7 +82776,7 @@ async function replyToComment(input) {
     access_token: token
   });
   if (!create.ok) return create;
-  const replyId = str3(parseJson(create.body)?.id);
+  const replyId = str4(parseJson(create.body)?.id);
   if (!replyId) return fail2(502, `Instagram reply returned no id: ${create.body}`);
   return okJson({ platform: "INSTAGRAM", replyId, permalink: null });
 }
@@ -81683,7 +82794,7 @@ async function replyYoutubeComment(input) {
   if (!lookup.ok) return withYoutubeScopeHint(lookup, "youtube.force-ssl");
   const found = parseJson(lookup.body)?.items?.[0];
   if (!found) return fail2(404, `YouTube comment not found: ${input.commentId}`);
-  const parentId = str3(found.snippet?.parentId) || input.commentId;
+  const parentId = str4(found.snippet?.parentId) || input.commentId;
   const created = await youtubeRequest(
     "post",
     `${YT_DATA_BASE}/comments`,
@@ -81692,7 +82803,7 @@ async function replyYoutubeComment(input) {
     { snippet: { parentId, textOriginal: input.message } }
   );
   if (!created.ok) return withYoutubeScopeHint(created, "youtube.force-ssl");
-  const replyId = str3(parseJson(created.body)?.id);
+  const replyId = str4(parseJson(created.body)?.id);
   if (!replyId) return fail2(502, `YouTube comment insert returned no id: ${created.body}`);
   return okJson({
     platform: "YOUTUBE",
@@ -81826,8 +82937,8 @@ var VALID_VIDEO_ASPECT_RATIOS = ["16:9", "9:16"];
 var VALID_VIDEO_RESOLUTIONS = ["720p", "1080p", "4k"];
 var DEFAULT_DURATION_SECONDS = 8;
 var EXTENSION_ADDED_SECONDS = 7;
-var POLL_INTERVAL_MS2 = 1e4;
-var MAX_POLLS2 = 60;
+var POLL_INTERVAL_MS3 = 1e4;
+var MAX_POLLS3 = 60;
 var API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 var DurationSchema = external_exports.union([external_exports.literal(4), external_exports.literal(6), external_exports.literal(8)]).optional().default(8);
 function validateResolutionConstraints(model, resolution, durationSeconds, ctx) {
@@ -81922,14 +83033,14 @@ async function downloadVideo(apiKey, videoUri) {
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
 }
-function sleep5(ms) {
+function sleep6(ms) {
   return new Promise((resolve3) => setTimeout(resolve3, ms));
 }
 async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, label) {
   let pollCount = 0;
-  while (pollCount < MAX_POLLS2) {
-    console.error(`[Veo] ${label} in progress... (polling ${++pollCount}/${MAX_POLLS2})`);
-    await sleep5(POLL_INTERVAL_MS2);
+  while (pollCount < MAX_POLLS3) {
+    console.error(`[Veo] ${label} in progress... (polling ${++pollCount}/${MAX_POLLS3})`);
+    await sleep6(POLL_INTERVAL_MS3);
     const status = await getOperationStatus(apiKey, operationName);
     if (status.error) {
       return { error: `Generation error: ${status.error.message || "Unknown error"}` };
@@ -82176,8 +83287,8 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync2, writeFileSync as writeFileSync5 } from "node:fs";
-import { dirname as dirname4, isAbsolute, join as join7, resolve as resolve2 } from "node:path";
+import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync5 } from "node:fs";
+import { dirname as dirname5, isAbsolute, join as join9, resolve as resolve2 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -82551,7 +83662,7 @@ function parseObject(body) {
     return null;
   }
 }
-function num(value) {
+function num2(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() !== "") {
     const n = Number(value);
@@ -82568,10 +83679,10 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
   const rows = videos.map((video) => {
     const period = video.period ?? null;
     const lifetime = video.lifetime ?? {};
-    const views = num(period?.views) ?? num(lifetime.views);
-    const engaged = num(period?.engagedViews);
+    const views = num2(period?.views) ?? num2(lifetime.views);
+    const engaged = num2(period?.engagedViews);
     const hook = views && views > 0 && engaged != null ? engaged / views * 100 : null;
-    const retain = num(period?.averageViewPercentage);
+    const retain = num2(period?.averageViewPercentage);
     return { video, period, views, hook, retain };
   });
   const cohort = {
@@ -82579,8 +83690,8 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
     retain: median(rows.map((r2) => r2.retain).filter((n) => n != null)),
     views: median(rows.map((r2) => r2.views).filter((n) => n != null)),
     channelSubRate: (() => {
-      const gained = num(channelMetrics?.subscribersGained);
-      const views = num(channelMetrics?.views);
+      const gained = num2(channelMetrics?.subscribersGained);
+      const views = num2(channelMetrics?.views);
       if (gained == null || views == null || views <= 0) return null;
       return gained / views * 100;
     })()
@@ -82633,8 +83744,8 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
         views,
         hook,
         retain,
-        likes: num(period?.likes) ?? num(video.lifetime?.likes),
-        comments: num(period?.comments) ?? num(video.lifetime?.comments)
+        likes: num2(period?.likes) ?? num2(video.lifetime?.likes),
+        comments: num2(period?.comments) ?? num2(video.lifetime?.comments)
       },
       vsCohort: {
         hook: vsMedian(hook, cohort.hook, true),
@@ -82658,10 +83769,10 @@ function analyzeInstagramMedia(media, limit2) {
   const picked = reels.length > 0 ? reels : media.slice(0, limit2);
   const rows = picked.map((item) => {
     const metrics = item.metrics ?? null;
-    const skip = asPercent(num(metrics?.reels_skip_rate));
-    const watch = watchSeconds(num(metrics?.ig_reels_avg_watch_time));
-    const reach = num(metrics?.reach);
-    const shares = num(metrics?.shares);
+    const skip = asPercent(num2(metrics?.reels_skip_rate));
+    const watch = watchSeconds(num2(metrics?.ig_reels_avg_watch_time));
+    const reach = num2(metrics?.reach);
+    const shares = num2(metrics?.shares);
     const shareRate = reach && reach > 0 && shares != null ? shares / reach * 100 : null;
     return { item, metrics, skip, watch, reach, shares, shareRate };
   });
@@ -82722,13 +83833,13 @@ function analyzeInstagramMedia(media, limit2) {
       publishedAt: item.timestamp ? String(item.timestamp) : null,
       tone: worstTone(steps),
       metrics: {
-        views: num(metrics?.views),
+        views: num2(metrics?.views),
         reach,
         skip,
         watch,
         shares,
         shareRate,
-        likes: num(metrics?.likes)
+        likes: num2(metrics?.likes)
       },
       vsCohort: {
         skip: vsMedian(skip, cohort.skip, false),
@@ -82741,7 +83852,7 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join7(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join9(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
@@ -82787,7 +83898,7 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync2(dirname4(htmlPath), { recursive: true });
+    mkdirSync3(dirname5(htmlPath), { recursive: true });
     writeFileSync5(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
@@ -82836,7 +83947,7 @@ function sectionFromInstagram(res, limit2) {
   const account = parsed?.account ?? null;
   const user = parsed?.user ?? {};
   const analyzed = analyzeInstagramMedia(media, limit2);
-  const profileViews = num(user.profile_views);
+  const profileViews = num2(user.profile_views);
   if (profileViews != null) analyzed.cohort.profileViews = profileViews;
   return {
     platform: "INSTAGRAM",
@@ -82874,7 +83985,7 @@ function parseJson2(body) {
     return null;
   }
 }
-function str4(value) {
+function str5(value) {
   return typeof value === "string" ? value : value == null ? "" : String(value);
 }
 function maskKey3(text2) {
@@ -83018,9 +84129,9 @@ function isShortEnough(seconds, duration3) {
   if (seconds == null) return true;
   return seconds <= 180;
 }
-async function youtubeGet(path5, params, auth) {
+async function youtubeGet(path6, params, auth) {
   const query = auth.kind === "key" ? { ...params, key: auth.key } : params;
-  const url = `${YT_DATA_BASE2}/${path5}${buildQuery(query)}`;
+  const url = `${YT_DATA_BASE2}/${path6}${buildQuery(query)}`;
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -83032,7 +84143,7 @@ async function youtubeGet(path5, params, auth) {
     return { ok: false, status: res.status, body: maskKey3(text2) };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return fail3(502, `YouTube Data API call failed (${path5}): ${maskKey3(message)}`);
+    return fail3(502, `YouTube Data API call failed (${path6}): ${maskKey3(message)}`);
   }
 }
 function chunk(items, size) {
@@ -83060,7 +84171,7 @@ async function ownChannelId(auth) {
   if (auth.kind !== "bearer") return void 0;
   const res = await youtubeGet("channels", { part: "id", mine: "true" }, auth);
   if (!res.ok) return void 0;
-  const id = str4((parseJson2(res.body)?.items?.[0] ?? {}).id);
+  const id = str5((parseJson2(res.body)?.items?.[0] ?? {}).id);
   return id || void 0;
 }
 async function searchChannels(queries, auth, opts) {
@@ -83088,9 +84199,9 @@ async function searchChannels(queries, auth, opts) {
     }
     for (const item of parseJson2(res.body)?.items ?? []) {
       const snippet = item.snippet ?? {};
-      const channelId = str4(snippet.channelId);
+      const channelId = str5(snippet.channelId);
       if (!channelId) continue;
-      hits.push({ channelId, channelTitle: str4(snippet.channelTitle) });
+      hits.push({ channelId, channelTitle: str5(snippet.channelTitle) });
     }
   }
   return { hits, units, errors };
@@ -83112,15 +84223,15 @@ async function loadChannelUploads(channelIds, auth, videosPerChannel) {
       continue;
     }
     for (const item of parseJson2(res.body)?.items ?? []) {
-      const channelId = str4(item.id);
+      const channelId = str5(item.id);
       const snippet = item.snippet ?? {};
       const stats = item.statistics ?? {};
-      const uploads = str4(
+      const uploads = str5(
         item.contentDetails?.relatedPlaylists?.uploads
       );
       const hidden = stats.hiddenSubscriberCount === true || stats.hiddenSubscriberCount === "true";
       byChannel.set(channelId, {
-        title: str4(snippet.title),
+        title: str5(snippet.title),
         subscriberCount: hidden ? null : Number(stats.subscriberCount ?? 0),
         uploads: []
       });
@@ -83148,7 +84259,7 @@ async function loadChannelUploads(channelIds, auth, videosPerChannel) {
         return;
       }
       for (const item of parseJson2(res.body)?.items ?? []) {
-        const videoId = str4(item.contentDetails?.videoId);
+        const videoId = str5(item.contentDetails?.videoId);
         if (!videoId) continue;
         videoIds.push(videoId);
         ownerByVideo.set(videoId, channelId);
@@ -83167,21 +84278,21 @@ async function loadChannelUploads(channelIds, auth, videosPerChannel) {
       continue;
     }
     for (const item of parseJson2(res.body)?.items ?? []) {
-      const videoId = str4(item.id);
-      const channelId = ownerByVideo.get(videoId) ?? str4(item.snippet?.channelId);
+      const videoId = str5(item.id);
+      const channelId = ownerByVideo.get(videoId) ?? str5(item.snippet?.channelId);
       const bucket = byChannel.get(channelId);
       if (!bucket) continue;
       const snippet = item.snippet ?? {};
       const stats = item.statistics ?? {};
-      const tags = Array.isArray(snippet.tags) ? snippet.tags.map((t2) => str4(t2)).filter(Boolean) : [];
+      const tags = Array.isArray(snippet.tags) ? snippet.tags.map((t2) => str5(t2)).filter(Boolean) : [];
       bucket.uploads.push({
         videoId,
-        title: str4(snippet.title),
+        title: str5(snippet.title),
         channelId,
-        channelTitle: bucket.title || str4(snippet.channelTitle),
+        channelTitle: bucket.title || str5(snippet.channelTitle),
         views: Number(stats.viewCount ?? 0),
-        publishedAt: snippet.publishedAt ? str4(snippet.publishedAt) : null,
-        durationSeconds: parseIsoDurationSeconds(str4(item.contentDetails?.duration)),
+        publishedAt: snippet.publishedAt ? str5(snippet.publishedAt) : null,
+        durationSeconds: parseIsoDurationSeconds(str5(item.contentDetails?.duration)),
         commentCount: Number(stats.commentCount ?? 0),
         tags
       });
@@ -83207,7 +84318,7 @@ async function loadCommentGaps(outliers, auth) {
     const gaps = [];
     for (const item of parseJson2(res.body)?.items ?? []) {
       const top = item.snippet?.topLevelComment?.snippet;
-      const text2 = str4(top?.textDisplay || top?.textOriginal).replace(/\s+/g, " ").trim();
+      const text2 = str5(top?.textDisplay || top?.textOriginal).replace(/\s+/g, " ").trim();
       if (!text2 || !looksLikeQuestion(text2)) continue;
       if (gaps.length >= 3) break;
       gaps.push(text2.slice(0, 140));
@@ -84005,15 +85116,17 @@ var threadsPublishSchema = external_exports.object({
     message: `THREADS caption must be \u2264${THREADS_MAX_CHARS} chars (got ${threadsTextLength(value)} \u2014 emoji are counted as UTF-8 bytes)`
   })),
   imageUrl: external_exports.string().url().optional(),
+  videoUrl: external_exports.string().url().optional(),
   linkUrl: external_exports.string().url().optional(),
   replyToId: external_exports.string().min(1).optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  if (v.linkUrl && v.imageUrl) {
+  const media = ["imageUrl", "videoUrl", "linkUrl"].filter((k) => v[k]);
+  if (media.length > 1) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
-      path: ["linkUrl"],
-      message: "linkUrl is for text-only posts (mutually exclusive with imageUrl)"
+      path: [media[1]],
+      message: `imageUrl, videoUrl and linkUrl are mutually exclusive (got ${media.join(", ")})`
     });
   }
 });
@@ -84023,7 +85136,7 @@ var instagramPublishSchema = external_exports.object({
   videoUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path5, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path5], message });
+  const issue2 = (path6, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path6], message });
   if (!v.imageUrls && !v.videoUrl) issue2("imageUrls", "INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)");
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
@@ -84037,7 +85150,7 @@ var facebookPublishSchema = external_exports.object({
   linkUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path5, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path5], message });
+  const issue2 = (path6, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path6], message });
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
   if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue2("linkUrl", "linkUrl is for text-only posts (no media)");
@@ -84504,6 +85617,27 @@ Engine choice: narration bodies and long scripts go to tts_local_generate (zero 
 If the channel profile (data/<slug>/profile.md) names a voice, use that value as-is \u2014 a voice that changes every episode breaks the channel's identity.`
     );
   },
+  // Local transcription (Qwen3-ASR) — on-device via subprocess. No key, no network, no billing.
+  stt_local_transcribe: async (args) => {
+    const request = parseArgs(qwen3AsrTranscribeSchema, args);
+    const result = await transcribeLocal(request);
+    if (!result.success) return text(`Local transcription failed: ${result.error}`, true);
+    const preview = (result.text || "").length > 4e3 ? `${(result.text || "").slice(0, 4e3)}
+\u2026(truncated \u2014 full text in the JSON)` : result.text || "";
+    return text(
+      `Audio transcribed locally!
+
+File: ${result.transcriptPath}
+Engine: Qwen3-ASR via mlx-qwen3-asr (on-device)
+Model: ${result.model}
+Language: ${result.language}
+Segments: ${result.segments?.length ?? 0}
+Elapsed: ${result.elapsedSeconds}s
+
+Transcript:
+${preview}`
+    );
+  },
   // ── music generation (Lyria) — 30s batch clip / streaming with an exact duration ──
   music_generate_clip: async (args) => {
     const result = await generateClip(parseArgs(musicClipSchema, args));
@@ -84594,6 +85728,71 @@ ADVANCED CONTROLS (music_generate_advanced):
 - seed (0-2147483647): Reproducibility \u2014 the ONLY way to regenerate the same music
 - muteBass/muteDrums/onlyBassAndDrums: Rhythm section control
 - musicGenerationMode: QUALITY (default) | DIVERSITY | VOCALIZATION`
+    );
+  },
+  // ── music generation (Suno / sunoapi.org) ──
+  suno_generate: async (args) => {
+    const request = parseArgs(sunoGenerateSchema, args);
+    const result = await generateMusic(request);
+    if (!result.success) return text(`Suno generation failed: ${result.error}`, true);
+    const tracks = result.tracks ?? [];
+    const lines = tracks.map(
+      (track, index) => `  ${index + 1}. ${track.audioPath}` + (track.title ? `  "${track.title}"` : "") + (track.durationSeconds ? `  ${Math.round(track.durationSeconds)}s` : "") + (track.tags ? `  [${track.tags}]` : "")
+    );
+    return text(
+      `Suno tracks generated.
+
+Primary: ${result.audioPath}
+Model: ${result.model}
+Task: ${result.taskId}
+Tracks (${tracks.length}):
+${lines.join("\n")}
+
+Remote URLs expire in 15 days \u2014 these local files are the keepers. For a bed under narration, pick the instrumental variant and set filename to .wav so it matches .work/bgm.wav.`
+    );
+  },
+  suno_generate_sound: async (args) => {
+    const request = parseArgs(sunoSoundSchema, args);
+    const result = await generateSound(request);
+    if (!result.success) return text(`Suno sound generation failed: ${result.error}`, true);
+    const tracks = result.tracks ?? [];
+    const lines = tracks.map((track, index) => `  ${index + 1}. ${track.audioPath}`);
+    return text(
+      `Suno sound generated.
+
+File: ${result.audioPath}
+Model: ${result.model}
+Task: ${result.taskId}
+Tracks:
+${lines.join("\n")}
+
+Loop-friendly bed. The builder stretches it with -stream_loop.`
+    );
+  },
+  suno_generate_lyrics: async (args) => {
+    const request = parseArgs(sunoLyricsSchema, args);
+    const result = await generateLyrics(request);
+    if (!result.success) return text(`Suno lyrics generation failed: ${result.error}`, true);
+    const blocks = (result.lyrics ?? []).map((item, index) => {
+      const heading = item.title ? `Variant ${index + 1} \u2014 ${item.title}` : `Variant ${index + 1}`;
+      return `${heading}
+${item.text}`;
+    });
+    return text(
+      `Suno lyrics generated (${result.lyrics?.length ?? 0} variants). Task: ${result.taskId}
+
+${blocks.join("\n\n---\n\n")}
+
+To sing them in custom mode, pass the chosen lyrics as suno_generate prompt (customMode=true, instrumental=false, style+title required).`
+    );
+  },
+  suno_credits: async () => {
+    const result = await getCredits();
+    if (!result.success) return text(`Suno credits lookup failed: ${result.error}`, true);
+    return text(
+      `Suno remaining credits: ${result.credits}
+
+suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack). Less than that means top up first.`
     );
   },
   // ── direct SNS publishing to our own accounts (per-platform tools — public immediately; call after HITL approval) ──
@@ -84758,13 +85957,15 @@ production_stage_init \uC73C\uB85C \uBA3C\uC800 \uB9CC\uB4DC\uC138\uC694.`, true
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.11.0" },
+  { name: "social-flow", version: "0.14.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const enabled = new Set(enabledPlatforms());
+  const jsonPatterns = disabledToolPatterns();
   return {
     tools: TOOLS.filter((tool) => {
+      if (!resolveToolGate(tool.name, { jsonPatterns, jsonFile: disabledToolsFile }).enabled) return false;
       const platform = SNS_PLATFORM_BY_TOOL[tool.name];
       return platform === void 0 || enabled.has(platform);
     })
@@ -84775,12 +85976,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     const handler = ROUTES[name];
     if (!handler) throw new McpError(ErrorCode.InvalidParams, `Unknown tool: ${name}`);
-    const gate = checkStageGate(name, args ?? {});
-    if (!gate.allowed) {
+    const gate = resolveToolGate(name, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
+    if (!gate.enabled) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Tool "${name}" is turned off (${gate.reason}). Clear the matching SOCIAL_FLOW_* env or remove its entry from disabled-tools.json to re-enable \u2014 no server restart needed for the JSON file.`
+          }
+        ],
+        isError: true
+      };
+    }
+    const stageGate = checkStageGate(name, args ?? {});
+    if (!stageGate.allowed) {
       return {
         content: [{ type: "text", text: `\uB2E8\uACC4 \uAC8C\uC774\uD2B8\uAC00 \uB9C9\uC558\uC2B5\uB2C8\uB2E4.
 
-${gate.reason}` }],
+${stageGate.reason}` }],
         isError: true
       };
     }
@@ -84810,8 +86023,13 @@ async function main() {
   console.error("social-flow MCP server started");
   const snsEnabled = enabledPlatforms();
   const channelDirs = listChannelDirs();
+  const jsonPatterns = disabledToolPatterns();
+  const toolNames = TOOLS.map((tool) => tool.name);
+  for (const warning of warnUnknownPatterns(toolNames)) {
+    console.error(`[social-flow] ${warning}`);
+  }
   console.error(
-    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}`
+    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, suno key ${config2.sunoApiKey ? "set" : "MISSING (suno_* will fail \u2014 music_*(Lyria) does not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : "~/.local/bin/mlx-qwen3-asr (default \u2014 set QWEN3_ASR_BIN if elsewhere)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, ` + describeToolGate(toolNames, process.env, jsonPatterns)
   );
 }
 main().catch((error2) => {

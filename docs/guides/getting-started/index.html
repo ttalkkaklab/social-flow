@@ -291,7 +291,8 @@ footer a { color: var(--accent); }
       <tr><td><strong>ffmpeg</strong> <span class="badge req">필수</span></td><td><code>brew install ffmpeg</code></td><td>영상·소리를 자르고 붙인다. 없으면 3단계에서 멈춘다</td></tr>
       <tr><td><strong>python3</strong> <span class="badge req">필수</span></td><td><code>python3 -V</code></td><td>한국어 문장을 검사하는 스크립트가 파이썬이다</td></tr>
       <tr><td><strong>Google Chrome</strong> <span class="badge req">필수</span></td><td>이미 깔려 있으면 그대로</td><td>영상 화면을 웹 페이지로 그린 뒤 캡처한다</td></tr>
-      <tr><td>whisper.cpp <span class="badge opt">선택</span></td><td><code>brew install whisper-cpp</code></td><td>화면 녹화를 받아쓰기할 때만 쓴다</td></tr>
+      <tr><td>mlx-qwen3-asr <span class="badge opt">선택</span></td><td><code>uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"</code></td><td>화면 녹화를 받아쓰기할 때 한글 STT 기본</td></tr>
+      <tr><td>whisper.cpp <span class="badge opt">선택</span></td><td><code>brew install whisper-cpp</code></td><td>Qwen3-ASR 이 없을 때 ingest 폴백</td></tr>
     </tbody>
   </table>
   </div>
@@ -312,13 +313,12 @@ footer a { color: var(--accent); }
   <div class="step">
     <div class="step-num">1</div>
     <div class="step-body">
-      <h3>내려받고 서버를 빌드한다</h3>
-      <p>이 한 단계를 빼먹으면 플러그인은 붙어도 도구가 하나도 안 보인다. 저장소에는 빌드 결과까지 들어 있지만 실행에 필요한 라이브러리(<code>node_modules</code>)는 들어 있지 않기 때문이다.</p>
-<pre><code>git clone https://github.com/ttalkkaklab/social-flow.git
-cd social-flow/server
-npm install &amp;&amp; npm run build</code></pre>
-      <p><code>npm run check</code> 로 바꿔 실행하면 빌드와 함께 자체 점검 테스트도 돈다. 외부 API 를 부르지 않아 키가 없어도 통과한다.</p>
-      <div class="note"><strong>공개 저장소다.</strong> 인증 없이 <code>git clone</code> 이 되고 라이선스는 Apache 2.0 이다. 이미 내려받은 폴더가 있으면 그걸 그대로 쓰면 된다.</div>
+      <h3>마켓플레이스에서 설치한다</h3>
+      <p>Claude Code 안에서 두 줄이면 끝난다. 서버가 의존성까지 품은 단일 번들이라 내려받아 빌드할 것이 없다.</p>
+<pre><code><span class="p">/plugin marketplace add</span> ttalkkaklab/social-flow
+<span class="p">/plugin install</span> social-flow@social-flow</code></pre>
+      <p>터미널이 편하면 <code>claude plugin marketplace add ttalkkaklab/social-flow</code> 뒤에 <code>claude plugin install social-flow@social-flow</code> — 같은 일을 한다.</p>
+      <div class="note"><strong>공개 저장소다.</strong> 인증 없이 받아지고 라이선스는 Apache 2.0 이다.</div>
     </div>
   </div>
 
@@ -336,12 +336,12 @@ claude</code></pre>
   <div class="step">
     <div class="step-num">3</div>
     <div class="step-body">
-      <h3>플러그인을 붙인다</h3>
-      <p>내려받은 폴더를 가리켜 Claude Code 를 띄우면 그 세션에서 바로 쓸 수 있다.</p>
-<pre><code>claude --plugin-dir ~/social-flow</code></pre>
-      <p>매번 플래그를 붙이기 싫으면 로컬 마켓플레이스로 등록해 둔다. Claude Code 안에서 두 줄을 친다 — 뒤 줄의 <code>@</code> 뒤는 마켓플레이스 이름이고, 이 저장소의 <code>.claude-plugin/marketplace.json</code> 에 <code>social-flow</code> 로 적혀 있다.</p>
-<pre><code><span class="p">/plugin marketplace add</span> ~/social-flow
-<span class="p">/plugin install</span> social-flow@social-flow</code></pre>
+      <h3>(선택) 코드를 고치며 쓰려면 클론으로 붙인다</h3>
+      <p>스킬이나 서버를 직접 손볼 사람만 해당한다. 클론을 가리켜 띄우면 그 세션은 클론의 코드를 쓴다.</p>
+<pre><code>git clone https://github.com/ttalkkaklab/social-flow.git ~/social-flow
+claude --plugin-dir ~/social-flow</code></pre>
+      <p>실행은 이대로 되고, <code>server/src</code> 를 고쳤을 때만 <code>cd ~/social-flow/server &amp;&amp; npm install &amp;&amp; npm run check</code> 로 빌드와 자체 점검 테스트를 돌린다. 외부 API 를 부르지 않아 키가 없어도 통과한다.</p>
+      <div class="note"><strong>Claude Code 밖에서도 붙는다.</strong> Grok CLI 는 <code>grok plugin install https://github.com/ttalkkaklab/social-flow.git --trust</code> 한 줄로 스킬·MCP 툴까지 전부 연결되고(grok 1.0.5 실측), Codex CLI 는 <code>codex plugin marketplace add ttalkkaklab/social-flow</code> 뒤 <code>codex plugin add social-flow@social-flow</code> 로 스킬 18종이 뜬다 — MCP 툴은 codex 0.147.0 기준 아직 연결되지 않는다. 키는 Claude 와 같은 셸 환경변수 경로다.</div>
     </div>
   </div>
 
@@ -350,7 +350,7 @@ claude</code></pre>
     <div class="step-body">
       <h3>제대로 붙었는지 본다</h3>
       <p><code>/mcp</code> 를 치면 연결된 서버 목록이 나온다. <code>social-flow</code> 가 있고 도구 목록이 보이면 끝났다.</p>
-      <div class="ok"><strong>도구가 37개만 보여도 정상이다.</strong> 전체 46종 가운데 게시·인사이트 툴 9종은 그 계정의 자격증명 파일이 있는 플랫폼만 나타난다. 아직 계정을 연결하지 않았다면 안 보이는 게 맞다.</div>
+      <div class="ok"><strong>도구가 42개만 보여도 정상이다.</strong> 전체 51종 가운데 게시·인사이트 툴 9종은 그 계정의 자격증명 파일이 있는 플랫폼만 나타난다. 아직 계정을 연결하지 않았다면 안 보이는 게 맞다.</div>
     </div>
   </div>
 </section>
@@ -376,6 +376,7 @@ export NAVER_CLIENT_ID="..."       <span class="c"># 한국어 자료 조사</sp
 export NAVER_CLIENT_SECRET="..."
 export SERPAPI_API_KEY="..."       <span class="c"># 정밀·해외 검색</span>
 export ARK_API_KEY="..."           <span class="c"># 두 번째 영상 엔진(Seedance)</span>
+export SUNO_API_KEY="..."          <span class="c"># 보컬 풀송·Suno 루프 BGM (sunoapi.org, Gemini 아님)</span>
 export DATA_GO_KR_API_KEY="..."    <span class="c"># 공공데이터 API 호출</span></code></pre>
 
   <div class="warn">
@@ -414,6 +415,11 @@ export DATA_GO_KR_API_KEY="..."    <span class="c"># 공공데이터 API 호출<
         <td>두 번째 영상 엔진 Seedance 만 막힌다. 2~30초를 1초 단위로 끊어 쓰고 무음 컷이 싸다는 게 이 엔진의 자리다 — Veo 쪽은 <code>GEMINI_API_KEY</code> 로 그대로 돈다</td>
       </tr>
       <tr>
+        <td><code>SUNO_API_KEY</code><br><span class="badge opt">선택</span></td>
+        <td>sunoapi.org/api-key</td>
+        <td>보컬 풀송과 Suno 루프 침대만 막힌다. Lyria BGM(<code>music_*</code>)은 <code>GEMINI_API_KEY</code> 로 그대로 돈다. Gemini 키가 아니고, Suno Inc. 공식 API 도 없다</td>
+      </tr>
+      <tr>
         <td><code>DATA_GO_KR_API_KEY</code><br><span class="badge opt">선택</span></td>
         <td>data.go.kr 마이페이지</td>
         <td>공공데이터 API 호출만 막힌다. 데이터셋 검색·파일 내려받기는 키 없이도 된다. 키를 받아도 <strong>API 하나하나에 활용신청</strong>을 따로 넣어야 열린다</td>
@@ -435,7 +441,7 @@ export DATA_GO_KR_API_KEY="..."    <span class="c"># 공공데이터 API 호출<
     <li><strong>넣으면</strong> — <code>publish</code> 가 계정에 직접 올리고, <code>grow-*</code> 스킬이 <code>/loop</code> 로 댓글 응대·지표 관찰·키워드 대화·대기열 보충·게시까지 스스로 돈다. 범위는 <code>init</code> 때 한 번 승인한 성장 계획이 정한다.</li>
     <li><strong>안 넣으면</strong> — 조사·스토리보드·이미지·목소리·빌드까지 그대로 돌아간다. <code>produce</code> 가 완성 영상과 플랫폼별 글을 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주고, 그 파일을 직접 올리면 된다. 게시·인사이트 툴 9종이 목록에 안 나오고 성장 루프가 돌 거리가 없을 뿐이다.</li>
   </ul>
-  <p>토큰은 환경변수가 아니라 파일이라, <strong>나중에 넣어도 서버를 다시 띄울 필요가 없다.</strong> 도구 목록을 다시 볼 때 그 플랫폼 도구가 붙어 37종이 46종 쪽으로 늘어난다. 계정 개설과 토큰 발급 절차는 <a href="#publish">아래 6장</a>에 있다.</p>
+  <p>토큰은 환경변수가 아니라 파일이라, <strong>나중에 넣어도 서버를 다시 띄울 필요가 없다.</strong> 도구 목록을 다시 볼 때 그 플랫폼 도구가 붙어 42종이 51종 쪽으로 늘어난다. 계정 개설과 토큰 발급 절차는 <a href="#publish">아래 6장</a>에 있다.</p>
 
   <h3>키가 살아 있는지 보기</h3>
   <p>영상을 한 편 태워 보기 전에 두 줄로 확인한다. 둘 다 목록 조회라 과금이 붙지 않는다.</p>
@@ -577,9 +583,10 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
 
   <div class="faq">
     <h3><code>/mcp</code> 에 social-flow 가 안 보인다</h3>
-    <p>대개 <code>npm install</code> 을 안 한 경우다. 저장소에는 빌드 결과만 있고 라이브러리는 들어 있지 않다. 직접 실행해 보면 원인이 바로 나온다.</p>
-<pre><code>cd ~/social-flow &amp;&amp; node server/dist/bundle.js</code></pre>
-    <p><code>social-flow MCP server started</code> 가 찍히면 서버는 멀쩡하니 플러그인 등록 쪽을 다시 본다.</p>
+    <p>서버부터 직접 띄워 본다 — 원인이 바로 나온다. 마켓플레이스로 깔았으면 설치 캐시에서, 클론이면 클론 폴더에서.</p>
+<pre><code>node ~/.claude/plugins/cache/social-flow/social-flow/*/server/dist/bundle.js
+<span class="c"># 클론이면: cd ~/social-flow &amp;&amp; node server/dist/bundle.js</span></code></pre>
+    <p><code>social-flow MCP server started</code> 가 찍히면 서버는 멀쩡하니 플러그인 등록 쪽을 다시 본다. 구버전 Claude Code 에서 <code>claude plugin update social-flow</code> 가 not found 를 내면 <code>uninstall</code> 뒤 <code>install</code> 로 다시 깐다.</p>
   </div>
 
   <div class="faq">
@@ -612,7 +619,7 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
   <h2>다음에 읽을 것</h2>
   <ul>
     <li><a href="../../index.html">문서 전체 색인</a> — 가이드·API 레퍼런스·리서치 기록</li>
-    <li><a href="../../api-reference/index.html">API 레퍼런스</a> — 내부 서버가 부르는 외부 API 12종의 계약</li>
+    <li><a href="../../api-reference/index.html">API 레퍼런스</a> — 내부 서버가 부르는 외부 API 13종의 계약</li>
     <li><a href="../ai-video-production/index.html">AI 로 쇼트폼 영상 만들기</a> — 파이프라인이 지금 모양이 된 이유</li>
     <li><a href="../ingest-usage/index.html">화면 녹화 가이드</a> · <a href="../screencast-usage/index.html">촬영 대본 가이드</a></li>
   </ul>

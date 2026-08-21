@@ -4,14 +4,17 @@ import { DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTON
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
 import { DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, TTS_VOICE_NAMES, VALID_TTS_MODELS } from './tts-client.js';
 import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MIN_ZIMAGE_DIMENSION, ZIMAGE_DIMENSION_STEP, ZIMAGE_QUANTIZE_OPTIONS, } from './zimage-client.js';
+import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGES, QWEN3_ASR_MODELS, } from './qwen3-asr-client.js';
+import { DEFAULT_SUNO_MODEL, SUNO_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
 /**
- * Tool surface definitions (43 tools) — 6 research + 5 open-data +
- * 18 generation (3 image + 7 video + 4 speech + 4 music) +
+ * Tool surface definitions (50 tools) — 6 research + 5 open-data +
+ * 22 generation (3 image + 7 video + 4 speech + 8 music) +
  * 5 per-platform publishing + 3 inbound comments + 1 account check +
  * 5 growth lookups (Threads insights/keyword search · YouTube insights ·
  * Instagram insights · recent-content feedback — the insights trio is for the
  * grow-* skills only; content_feedback covers both video platforms and writes
- * an HTML report).
+ * an HTML report). 46 of those were already on origin/dev; the four suno_*
+ * tools are the sung-song / loop-bed path.
  *
  * Publish tool descriptions embed the HITL contract — this server has no
  * review gate, so a call is an immediately public post, and the descriptions
@@ -20,7 +23,9 @@ import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MI
  * Generation tools are ported from fect-mcp-server — image (gpt_image_*,
  * OPENAI_API_KEY) comes from the gpt-image module; video (veo_*), speech
  * (tts_*), and music (music_*) come from the video/tts/music modules, all
- * three on GEMINI_API_KEY. Descriptions inherit the originals, minus
+ * three on GEMINI_API_KEY. Sung full songs and loopable beds are suno_*
+ * (sunoapi.org third-party REST, SUNO_API_KEY). Lyria stays the default
+ * 30s instrumental BGM path. Descriptions inherit the originals, minus
  * cross-references to tools this server doesn't have, plus the short-form
  * pipeline context (channel profile voice, pinned seeds). Keys are validated
  * at call time.
@@ -1454,6 +1459,57 @@ Returns: a text list of the 30 Gemini voice names with one-line personality desc
             required: [],
         },
     },
+    {
+        name: 'stt_local_transcribe',
+        title: 'Local speech-to-text (Qwen3-ASR)',
+        annotations: HINT.generateLocal,
+        description: `Transcribe speech to text **on this machine** using Qwen3-ASR via mlx-qwen3-asr — no API key, no network, no per-minute cost.
+
+Use when the user asks to transcribe, caption, or turn speech into text (받아쓰기, STT, 전사), especially Korean. This is the DEFAULT local STT path: Korean is a first-class language (published Common Voice CER 5.88% / FLEURS CER 2.57% on the 1.7B). ingest (녹화→타임라인) uses the same engine when the binary is installed, and falls back to whisper.cpp if it is not.
+Do NOT use this as a substitute for a finished timeline.md — timestamps here are word/segment offsets, not scene boundaries. Do NOT send the audio to a cloud STT when this tool is available.
+Requires Apple Silicon and mlx-qwen3-asr (\`uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"\`); set QWEN3_ASR_BIN if the binary lives elsewhere. The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus ForcedAligner when timestamps are on) to ~/.cache/huggingface — a slow first call is the download, not a hang. Weights are Apache 2.0.
+
+Returns: a text block with the saved .json path, detected language, segment count, elapsed time, and the full transcript.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                audioPath: {
+                    type: 'string',
+                    description: 'Absolute path to the audio or video file to transcribe. Common containers work (wav/mp3/m4a/flac/mp4/mov) — ffmpeg extracts audio. Path must not contain "..".',
+                },
+                language: {
+                    type: 'string',
+                    description: `Spoken language (default: "${DEFAULT_QWEN3_ASR_LANGUAGE}"). Aliases such as ko/en/ja are folded to these names. Set it for short clips — auto-detect can miss a few seconds of Korean.`,
+                    enum: [...QWEN3_ASR_LANGUAGES],
+                    default: DEFAULT_QWEN3_ASR_LANGUAGE,
+                },
+                model: {
+                    type: 'string',
+                    description: `ASR model (default: "${DEFAULT_QWEN3_ASR_MODEL}" — best Korean). Qwen/Qwen3-ASR-0.6B is smaller and faster when the clip is clean and speed matters more than a few CER points.`,
+                    enum: [...QWEN3_ASR_MODELS],
+                    default: DEFAULT_QWEN3_ASR_MODEL,
+                },
+                context: {
+                    type: 'string',
+                    description: 'Optional domain glossary, space- or comma-separated (앱 이름, 고유명사). Biases the decoder toward those terms — same job WHISPER_PROMPT does for whisper.cpp. Example: "Claude Code ISA 딸깍연구소".',
+                },
+                timestamps: {
+                    type: 'boolean',
+                    description: 'Attach start/end seconds per segment (default: true). ingest and subtitle work need this; turn it off only for a plain text dump.',
+                    default: true,
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the transcript JSON (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the transcript JSON (default: stt_<timestamp>.json)',
+                },
+            },
+            required: ['audioPath'],
+        },
+    },
     // ── Music generation (Google Lyria — ported from the fect-mcp music module) ────────────
     {
         name: 'music_generate_clip',
@@ -1492,7 +1548,7 @@ Returns: a text block with the saved .mp3 file path (44.1kHz stereo, exactly 30 
         description: `Generate instrumental music from a text prompt using Google Lyria RealTime (streaming).
 
 Use when the requested duration must be controlled (5-300s) — e.g. matching a narration length. For standard 30-second short-form BGM, prefer music_generate_clip (cheaper, single call). Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text — music_list_options shows suggestions, not a closed list.
-Do NOT use for vocals or lyrics — Lyria RealTime is instrumental-only. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
+Do NOT use for vocals or lyrics — Lyria RealTime is instrumental-only. For a sung song use suno_generate. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
 For BGM under narration, say so in the prompt (e.g. "leaves space for a spoken voiceover, no melody in the vocal frequency range").
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and applied settings.`,
@@ -1542,7 +1598,7 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
         description: `Generate instrumental music by blending multiple weighted prompts with fine-grained controls (Google Lyria RealTime).
 
 Use when the request needs blended musical ideas — e.g. [{"text": "jazz piano", "weight": 1.0}, {"text": "electronic beats", "weight": 0.5}] — or fine tuning of guidance, density, brightness, temperature, scale (key), seed (reproducibility), or bass/drum controls. seed is the ONLY way to regenerate the same music (Lyria 3 Clip has no seed) — record the seed of a channel's signature BGM to keep later episodes consistent.
-Do NOT use for a simple single-idea request — music_generate is sufficient and simpler. No vocals or lyrics (Lyria RealTime is instrumental-only).
+Do NOT use for a simple single-idea request — music_generate is sufficient and simpler. No vocals or lyrics (Lyria RealTime is instrumental-only — sung songs go to suno_generate).
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and the applied prompt weights/config.`,
         inputSchema: {
@@ -1671,6 +1727,182 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
             required: [],
         },
     },
+    // ── Music generation (Suno — sunoapi.org third-party REST, not an official API) ────
+    {
+        name: 'suno_generate',
+        title: 'Suno full song',
+        annotations: HINT.generate,
+        description: `Generate a full Suno song (exactly 2 variants) via sunoapi.org. This is a third-party REST wrapper — Suno Inc. has no public self-serve API as of 2026-08.
+
+Use when the user wants a SUNG song, jingle, or original track with lyrics — the thing Lyria cannot do well. customMode=false: only prompt, the model writes lyrics. customMode=true + instrumental=false: prompt IS the lyrics (write them first with suno_generate_lyrics if needed). customMode=true + instrumental=true: no vocals; style and title required. Default model V5 (up to 8 min). Each call takes 2–3 minutes and returns two mp3 files downloaded locally (remote URLs expire in 15 days).
+Do NOT use as the default narration-under BGM bed — vocals fight the voiceover, and a 3-minute song does not loop cleanly. For looping beds prefer suno_generate_sound or music_generate_clip (Lyria, $0.04, 30s, GEMINI_API_KEY). For an exact duration 5–300s or seed reproducibility use music_generate.
+Requires SUNO_API_KEY. This key being unset does not block music_*(Lyria).
+
+Returns: saved file paths for both tracks, durations, titles, taskId.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'In non-custom mode: the idea the model turns into lyrics+music (required, max 3000 chars). In custom mode with vocals: the EXACT lyrics to sing (required, V4 max 3000, V4_5+ max 5000). Omit when customMode+instrumental.',
+                },
+                customMode: {
+                    type: 'boolean',
+                    description: 'false (default): prompt-only, auto lyrics. true: you supply style+title, and lyrics via prompt unless instrumental.',
+                    default: false,
+                },
+                instrumental: {
+                    type: 'boolean',
+                    description: 'true = no vocals. In custom mode this drops the lyrics requirement (style+title still required). Default false.',
+                    default: false,
+                },
+                style: {
+                    type: 'string',
+                    description: 'Genre/style for custom mode (required when customMode=true). V4 max 200 chars, later models max 1000. Example: "calm lo-fi, soft piano, space for voiceover"',
+                },
+                title: {
+                    type: 'string',
+                    description: 'Track title for custom mode (required when customMode=true). V4/V4_5ALL max 80 chars, others max 100.',
+                },
+                model: {
+                    type: 'string',
+                    description: `Suno model (default: "${DEFAULT_SUNO_MODEL}"). V4 ≤4 min; V4_5 / V4_5PLUS / V4_5ALL / V5 / V5_5 ≤8 min. V5_5 is the only model that accepts duration. Pick V5 unless you need V5_5 duration or V4_5ALL structure.`,
+                    enum: [...SUNO_MODELS],
+                    default: DEFAULT_SUNO_MODEL,
+                },
+                duration: {
+                    type: 'number',
+                    description: 'Length in seconds (10–360). Only valid when model=V5_5 AND customMode=true. Integer.',
+                    minimum: 10,
+                    maximum: 360,
+                },
+                negativeTags: {
+                    type: 'string',
+                    description: 'Styles to exclude, comma-separated (e.g. "Heavy Metal, Upbeat Drums")',
+                },
+                vocalGender: {
+                    type: 'string',
+                    description: 'Preferred vocal gender when not instrumental.',
+                    enum: [...SUNO_VOCAL_GENDERS],
+                },
+                personaId: {
+                    type: 'string',
+                    description: 'Optional persona or Suno Voice id for custom mode.',
+                },
+                personaModel: {
+                    type: 'string',
+                    description: 'style_persona (default) for Generate Persona ids, voice_persona for Suno Voice ids (V5/V5_5 only).',
+                    enum: [...SUNO_PERSONA_MODELS],
+                },
+                pickTrack: {
+                    type: 'number',
+                    description: 'Which of the two variants to treat as primary (0 or 1, default 0). Both files are still saved.',
+                    minimum: 0,
+                    maximum: 1,
+                    default: 0,
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory to save the audio files (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Primary filename (default: suno_<timestamp>.mp3). Use .wav to transcode the picked track to 48kHz stereo PCM for build-reel.sh (bgm.wav). The other variant is saved as <stem>_a.mp3 / <stem>_b.mp3.',
+                },
+            },
+            required: [],
+        },
+    },
+    {
+        name: 'suno_generate_sound',
+        title: 'Suno loopable BGM',
+        annotations: HINT.generate,
+        description: `Generate a loopable Suno sound/bed (V5 only) with optional BPM and musical key.
+
+Use as the Suno path for short-form BGM under narration — looping ambient, beds, stings. soundLoop defaults to true. Prompt max 500 chars. Takes about 1–3 minutes. For a cheap 30s bed without SUNO_API_KEY, use music_generate_clip (Lyria).
+Do NOT use for a sung song — that is suno_generate. Do NOT use when you need an exact second-accurate length other than what the model returns; trim with ffmpeg afterwards.
+
+Returns: saved file path(s). Pass filename ending in .wav to transcode for .work/bgm.wav.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Sound description, max 500 chars (e.g. "soft lo-fi bed, muted keys, leaves space for a spoken voiceover, no melody in the vocal range")',
+                },
+                soundLoop: {
+                    type: 'boolean',
+                    description: 'Make the result loop-friendly (default true).',
+                    default: true,
+                },
+                soundTempo: {
+                    type: 'number',
+                    description: 'BPM 1–300. Omit for Auto.',
+                    minimum: 1,
+                    maximum: 300,
+                },
+                soundKey: {
+                    type: 'string',
+                    description: 'Musical key (default Any).',
+                    enum: [...SUNO_SOUND_KEYS],
+                },
+                pickTrack: {
+                    type: 'number',
+                    description: 'Which variant to treat as primary (0 or 1, default 0).',
+                    minimum: 0,
+                    maximum: 1,
+                    default: 0,
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory to save the audio file (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename (default: suno_<timestamp>.mp3). Use .wav for 48kHz stereo PCM.',
+                },
+            },
+            required: ['prompt'],
+        },
+    },
+    {
+        name: 'suno_generate_lyrics',
+        title: 'Suno lyrics',
+        annotations: HINT.generate,
+        description: `Generate lyrics only (no audio) via sunoapi.org. Several variants come back, typically with [Verse]/[Chorus] markers.
+
+Use to draft lyrics before suno_generate in customMode (pass the chosen text as prompt). Prompt max 200 characters — describe theme, mood, structure; do not paste a full song here.
+Do NOT use when you already have lyrics. Do NOT use for narration copy — that is TTS / scenes.js.
+
+Returns: title + lyrics text for each variant, plus taskId.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Theme/mood/structure for the lyrics, max 200 characters (e.g. "a hopeful song about starting over in a new city, verse-chorus, Korean")',
+                    maxLength: 200,
+                },
+            },
+            required: ['prompt'],
+        },
+    },
+    {
+        name: 'suno_credits',
+        title: 'Suno remaining credits',
+        annotations: HINT.read,
+        description: `Read remaining sunoapi.org credits for SUNO_API_KEY.
+
+Use before a batch of suno_generate calls. Generate consumes about 12 credits per request (≈ $0.06 at the $5/1000-credit pack). Insufficient credits fail with code 429.
+Do NOT use to generate music.
+
+Returns: integer credit balance.`,
+        inputSchema: {
+            type: 'object',
+            properties: {},
+            required: [],
+        },
+    },
     // ── First-party SNS publishing (per-platform tools — local credentials, immediately public) ──────
     // Only tools for platforms with a credentials file are exposed in ListTools (index.ts + SNS_PLATFORM_BY_TOOL).
     // Multi-channel: with channel (brand slug) set, only <SNS_TOKEN_DIR>/<slug>/ tokens are used (no fallback).
@@ -1679,7 +1911,7 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         title: '⚠️ Threads publish (immediately public)',
         annotations: HINT.publish,
         outputSchema: publishOutput('postId', 'Threads post id — pass as replyToId to chain a follow-up reply'),
-        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). This tool supports text (with an optional link preview card) or a single image — the platform itself also does video and carousels, but this pipeline exports video to YouTube and Reels and drives traffic on Threads with a conversational body plus a video link (linkUrl). Video episodes attach no cover image — the link preview card takes that place, and one call completes the publish (the link is not added as a separate reply). Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive — one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -1687,11 +1919,16 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
                     type: 'string',
                     description: 'Final post body, ≤500 chars (≤1 hashtag recommended — ranking weight 0). Emoji count as their UTF-8 bytes on this platform, i.e. more than 1 char each',
                 },
-                imageUrl: { type: 'string', format: 'uri', description: 'One publicly reachable image URL (the platform crawls it — local paths won\'t work); mutually exclusive with linkUrl' },
+                imageUrl: { type: 'string', format: 'uri', description: 'One publicly reachable image URL (the platform crawls it — local paths won\'t work); mutually exclusive with videoUrl and linkUrl' },
+                videoUrl: {
+                    type: 'string',
+                    format: 'uri',
+                    description: 'One publicly reachable video URL (.mp4/.mov) carried by the post itself — mutually exclusive with imageUrl and linkUrl. **This is the default for video episodes.** Give the subtitle-burned cut: the Threads container takes no subtitle file, so burning them into the picture is the only way (same as IG reels). Video containers transcode, and the tool waits up to 2 minutes for FINISHED',
+                },
                 linkUrl: {
                     type: 'string',
                     format: 'uri',
-                    description: 'Link preview card URL attached to the post (the Reels/Shorts permalink for video episodes). Text posts only, so mutually exclusive with imageUrl; writing the same URL in the caption still counts as one link to the platform (cap 5)',
+                    description: 'Link preview card URL attached to the post. Text posts only, so mutually exclusive with imageUrl and videoUrl; writing the same URL in the caption still counts as one link to the platform (cap 5). **Meta\'s own URLs (an IG reels permalink) come back 400** — put those in the body text instead',
                 },
                 replyToId: { type: 'string', description: 'Publish as a reply to this post id (own reply chain, or joining someone else\'s post)' },
                 channel: SNS_CHANNEL_PROPERTY,

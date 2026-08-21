@@ -157,8 +157,10 @@ function okJson(payload) {
     return { ok: true, status: 200, body: JSON.stringify(payload) };
 }
 export async function publishThreads(input, opts) {
-    if (input.imageUrl && input.linkUrl) {
-        return fail(400, 'linkUrl is for text-only posts (link_attachment requires media_type=TEXT)');
+    // One media_type per post — VIDEO, IMAGE or TEXT(link_attachment). Sending two
+    // gets rejected by the platform, so reject before spending the call.
+    if ([input.imageUrl, input.videoUrl, input.linkUrl].filter(Boolean).length > 1) {
+        return fail(400, 'imageUrl, videoUrl and linkUrl are mutually exclusive (one media_type per post)');
     }
     const { token, error } = await loadTokenFile('THREADS', input.channel);
     if (!token)
@@ -170,9 +172,10 @@ export async function publishThreads(input, opts) {
     if (!uid)
         return fail(502, `Threads /me returned no id: ${me.body}`);
     const create = await graphRequest('post', `${THREADS_BASE}/${uid}/threads`, {
-        media_type: input.imageUrl ? 'IMAGE' : 'TEXT',
+        media_type: input.videoUrl ? 'VIDEO' : input.imageUrl ? 'IMAGE' : 'TEXT',
         text: input.caption,
         image_url: input.imageUrl,
+        video_url: input.videoUrl,
         link_attachment: input.linkUrl,
         reply_to_id: input.replyToId,
         access_token: token,
@@ -182,7 +185,9 @@ export async function publishThreads(input, opts) {
     const creationId = String(parseJson(create.body)?.id ?? '');
     if (!creationId)
         return fail(502, `Threads container create returned no id: ${create.body}`);
-    // Wait for the container to reach FINISHED regardless of media.
+    // Wait for the container to reach FINISHED regardless of media. Video containers
+    // need the wait most — they transcode, and the poll budget here is the same one
+    // IG reels use (2s x 60 = 2 minutes).
     // Text containers report status too, and in particular **replies to someone
     // else's post** (reply_to_id not pointing at our own post) fail with
     // code 24 / subcode 4279009 "media not found" when published right after
