@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TTS 목소리 카탈로그 — 세 엔진 49종 듣기 (2026-08-19)</title>
+<style>
+/*
+ * social-flow API 레퍼런스 공용 스타일.
+ * docs/guides·docs/research 의 인라인 스타일과 같은 GitHub 계열 토큰을 쓰되,
+ * 레퍼런스 문서는 11개로 늘어나므로 공용 파일로 분리했다 (file:// 상대 경로로 로드).
+ */
+
+:root {
+  --bg: #ffffff;
+  --bg-soft: #f6f8fa;
+  --bg-card: #ffffff;
+  --text: #1f2328;
+  --text-soft: #59636e;
+  --border: #d1d9e0;
+  --accent: #0969da;
+  --accent-soft: #ddf4ff;
+  --green: #1a7f37;
+  --green-soft: #dafbe1;
+  --amber: #9a6700;
+  --amber-soft: #fff8c5;
+  --red: #cf222e;
+  --red-soft: #ffebe9;
+  --purple: #8250df;
+  --purple-soft: #fbefff;
+  --code-bg: #f6f8fa;
+  --shadow: 0 1px 3px rgba(31, 35, 40, .08), 0 8px 24px rgba(31, 35, 40, .06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --bg-soft: #161b22;
+    --bg-card: #161b22;
+    --text: #e6edf3;
+    --text-soft: #9198a1;
+    --border: #30363d;
+    --accent: #4493f8;
+    --accent-soft: #0c2d6b40;
+    --green: #3fb950;
+    --green-soft: #2ea04326;
+    --amber: #d29922;
+    --amber-soft: #bb800926;
+    --red: #f85149;
+    --red-soft: #f8514926;
+    --purple: #ab7df8;
+    --purple-soft: #8250df26;
+    --code-bg: #161b22;
+    --shadow: 0 1px 3px rgba(0, 0, 0, .4);
+  }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+
+body {
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.75;
+  font-size: 16px;
+  word-break: keep-all;
+}
+
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 24px 120px; }
+
+/* ── 상단 경로 ── */
+.crumbs { padding: 28px 0 0; font-size: 13.5px; color: var(--text-soft); }
+.crumbs a { color: var(--text-soft); text-decoration: none; }
+.crumbs a:hover { color: var(--accent); text-decoration: underline; }
+.crumbs span { margin: 0 6px; opacity: .5; }
+
+/* ── 헤더 ── */
+header.hero { padding: 32px 0 44px; border-bottom: 1px solid var(--border); margin-bottom: 44px; }
+.hero .kicker {
+  display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+  color: var(--accent); background: var(--accent-soft);
+  padding: 4px 12px; border-radius: 999px; margin-bottom: 18px;
+}
+.hero h1 { font-size: 33px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+.hero .sub { margin-top: 14px; font-size: 17px; color: var(--text-soft); max-width: 760px; }
+.hero .meta { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13.5px; color: var(--text-soft); }
+.hero .meta strong { color: var(--text); font-weight: 600; }
+.hero .meta a { color: var(--accent); }
+
+/* ── 목차 ── */
+nav.toc {
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px;
+  padding: 18px 22px; margin-bottom: 48px; font-size: 15px;
+}
+nav.toc .toc-title { font-size: 12.5px; font-weight: 700; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 8px; }
+nav.toc ol { list-style: none; counter-reset: toc; }
+nav.toc li { counter-increment: toc; padding: 2px 0; }
+nav.toc a { color: var(--text); text-decoration: none; }
+nav.toc a::before { content: counter(toc) ". "; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+
+/* ── 섹션 ── */
+section { margin-bottom: 56px; }
+h2 {
+  font-size: 24px; font-weight: 750; letter-spacing: -.01em;
+  padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 22px;
+}
+h3 { font-size: 18.5px; font-weight: 700; margin: 32px 0 12px; }
+h4 { font-size: 15.5px; font-weight: 700; margin: 22px 0 8px; color: var(--text-soft); }
+p { margin-bottom: 14px; }
+ul, ol { margin: 0 0 14px 22px; }
+li { margin-bottom: 6px; }
+a { color: var(--accent); }
+
+/* ── 코드 ── */
+code {
+  font-family: "SFMono-Regular", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: .875em; background: var(--code-bg);
+  border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;
+  word-break: break-all;
+}
+pre {
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; overflow-x: auto; margin-bottom: 16px; font-size: 13.5px; line-height: 1.65;
+}
+pre code { background: none; border: none; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ── 표 ── */
+.table-scroll { overflow-x: auto; margin-bottom: 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+th { background: var(--bg-soft); font-weight: 650; white-space: nowrap; }
+td code { font-size: 13px; }
+tbody tr:hover { background: var(--bg-soft); }
+
+/* ── 콜아웃 ── */
+.note, .warn, .ok, .danger {
+  border-radius: 10px; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  border: 1px solid var(--border); border-left-width: 4px;
+}
+.note { background: var(--accent-soft); border-left-color: var(--accent); }
+.warn { background: var(--amber-soft); border-left-color: var(--amber); }
+.ok { background: var(--green-soft); border-left-color: var(--green); }
+.danger { background: var(--red-soft); border-left-color: var(--red); }
+.note strong, .warn strong, .ok strong, .danger strong { font-weight: 700; }
+.note :last-child, .warn :last-child, .ok :last-child, .danger :last-child { margin-bottom: 0; }
+
+/* ── 배지 ── */
+.badge {
+  display: inline-block; font-size: 11.5px; font-weight: 700; letter-spacing: .03em;
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap; vertical-align: middle;
+}
+.badge.ro { background: var(--green-soft); color: var(--green); }
+.badge.wr { background: var(--accent-soft); color: var(--accent); }
+.badge.de { background: var(--red-soft); color: var(--red); }
+.badge.key { background: var(--purple-soft); color: var(--purple); }
+.badge.free { background: var(--bg-soft); color: var(--text-soft); }
+
+/* ── 카드 그리드 (인덱스) ── */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 18px 20px; text-decoration: none; color: var(--text); display: block; transition: box-shadow .15s, border-color .15s;
+}
+.card:hover { box-shadow: var(--shadow); border-color: var(--accent); }
+.card h3 { margin: 0 0 6px; font-size: 16.5px; }
+.card p { margin: 0; font-size: 14px; color: var(--text-soft); line-height: 1.6; }
+.card .tools { margin-top: 10px; font-size: 12.5px; color: var(--text-soft); font-family: ui-monospace, monospace; }
+
+/* ── 점수 게이지 ── */
+.score { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+.score .num { font-size: 42px; font-weight: 800; letter-spacing: -.03em; }
+.score .of { font-size: 17px; color: var(--text-soft); }
+.bar { height: 10px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 6px; }
+.bar > i { display: block; height: 100%; background: var(--green); }
+.bar.mid > i { background: var(--amber); }
+.bar.low > i { background: var(--red); }
+
+footer {
+  margin-top: 72px; padding-top: 24px; border-top: 1px solid var(--border);
+  font-size: 13.5px; color: var(--text-soft);
+}
+footer a { color: var(--accent); }
+
+@media (max-width: 640px) {
+  .hero h1 { font-size: 26px; }
+  .wrap { padding: 0 16px 80px; }
+}
+
+</style>
+<style>
+  /* 이 문서 전용 소품 — 위 공용 토큰(docs/assets/reference.css 사본) 위에 얹는다 */
+  .lede { font-size: 18px; line-height: 1.7; color: var(--text); margin: 8px 0 4px; }
+  .lede strong { font-weight: 750; }
+  .sample-line {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    background: var(--bg-soft); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: 10px; padding: 12px 16px; margin: 18px 0;
+  }
+  .sample-line .k { font-size: 12.5px; font-weight: 700; letter-spacing: .04em; color: var(--text-soft); }
+  .sample-line .v { font-size: 16.5px; font-weight: 600; }
+
+  .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 20px; }
+  .filters .flabel { font-size: 12.5px; font-weight: 700; letter-spacing: .04em; color: var(--text-soft); margin-right: 4px; }
+  .chip {
+    font: inherit; font-size: 13.5px; cursor: pointer; background: var(--bg-card); color: var(--text-soft);
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 13px;
+  }
+  .chip:hover { color: var(--accent); border-color: var(--accent); }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  .eng-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 14px; }
+  .eng-head h3 { margin: 0; display: flex; align-items: center; gap: 10px; }
+  .eng-head .n { font-size: 13.5px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+  .playall {
+    font: inherit; font-size: 13.5px; cursor: pointer; background: none; color: var(--accent);
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px;
+  }
+  .playall:hover { border-color: var(--accent); }
+
+  .voice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .vcard {
+    position: relative; overflow: hidden; width: 100%; text-align: left; font: inherit; color: var(--text);
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 13px 14px; display: flex; gap: 12px; align-items: flex-start; cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, opacity .18s; scroll-margin-top: 24px;
+  }
+  .vcard:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+  .vcard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .vcard.dim { opacity: .3; }
+  .vcard.on { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber) inset; }
+  .vcard::after {
+    content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%;
+    background: var(--amber); transform: scaleX(var(--p, 0)); transform-origin: left; transition: transform .1s linear;
+  }
+  .knob {
+    flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent-soft); border: 1px solid var(--border); color: var(--accent);
+    display: grid; place-items: center;
+  }
+  .vcard.on .knob { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+  .knob svg { width: 12px; height: 12px; display: block; }
+  .vcard.on .tri { display: none; }
+  .meter { display: none; gap: 2px; align-items: flex-end; height: 12px; }
+  .vcard.on .meter { display: flex; }
+  .meter i { display: block; width: 2.5px; background: currentColor; border-radius: 1px; animation: vu .62s ease-in-out infinite alternate; }
+  .meter i:nth-child(1) { height: 5px; animation-delay: -.2s; }
+  .meter i:nth-child(2) { height: 11px; animation-delay: -.44s; }
+  .meter i:nth-child(3) { height: 8px; }
+  @keyframes vu { from { transform: scaleY(.34); } to { transform: scaleY(1); } }
+  .vbody { min-width: 0; flex: 1; }
+  .vname { font-size: 15.5px; font-weight: 700; line-height: 1.35; }
+  .vsub { font-size: 12.5px; color: var(--text-soft); line-height: 1.5; word-break: break-all; }
+  .vsub em { font-style: normal; font-family: ui-monospace, monospace; font-size: 11.5px; opacity: .8; }
+  .vlen { display: flex; align-items: center; gap: 7px; margin-top: 7px; }
+  .vbar { flex: 1; height: 3px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+  .vbar > span { display: block; height: 100%; background: var(--accent); }
+  .vsecs { font-size: 11.5px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">VOICE CATALOG</div>
+  <h1>듣고 고르는 TTS 목소리 49종</h1>
+  <p class="sub">이 저장소에서 부를 수 있는 음성 합성 엔진은 셋이다. 클라우드 Gemini TTS 30개, 온디바이스 Supertonic 10개, 그리고 맥에 이미 깔려 있는 시스템 음성 9개. 아래 카드를 누르면 세 엔진이 <strong>같은 문장</strong>을 읽은 소리가 난다.</p>
+  <div class="meta">
+    <span>엔진 <strong>3종</strong></span>
+    <span>목소리 <strong>49개</strong></span>
+    <span>샘플 <strong>49개 (mp3)</strong></span>
+    <span>측정 <strong>2026-08-19</strong></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#engines">엔진 셋을 가르는 것</a></li>
+    <li><a href="#voices">목소리 49종 듣기</a></li>
+    <li><a href="#tools">도구와 파라미터</a></li>
+    <li><a href="#choose">고를 때 보는 것</a></li>
+    <li><a href="#method">샘플을 만든 방법</a></li>
+  </ol>
+</nav>
+
+<section id="engines">
+  <h2>엔진 셋을 가르는 것</h2>
+  <p class="lede">셋을 가르는 축은 음질이 아니라 <strong>연기 지시가 되느냐, 돈이 드느냐</strong>다. 감정을 지시할 수 있는 건 Gemini뿐이고, 나머지 둘은 공짜다.</p>
+  <div class="sample-line">
+    <span class="k">샘플 문장</span>
+    <span class="v">“안녕하세요, 이 목소리로 읽으면 이런 느낌이에요.”</span>
+  </div>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>엔진</th><th>목소리</th><th>비용</th><th>연기 지시</th><th>언어</th><th>출력</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Gemini TTS</strong><br><span class="badge key">API 키</span></td>
+        <td>30</td>
+        <td>글자당 과금, flash는 무료 티어 있음</td>
+        <td><code>stylePrompt</code> 있음</td>
+        <td>103개 자동 감지<br>(zh-TW 제외)</td>
+        <td>24kHz WAV</td>
+      </tr>
+      <tr>
+        <td><strong>Supertonic 3</strong><br><span class="badge free">온디바이스</span></td>
+        <td>10</td>
+        <td>0</td>
+        <td>없음, 속도만</td>
+        <td>31개<br>(<code>lang</code> 직접 지정)</td>
+        <td>44.1kHz 모노 WAV</td>
+      </tr>
+      <tr>
+        <td><strong>macOS 시스템 음성</strong><br><span class="badge free">기본 탑재</span></td>
+        <td>한국어 9<br>(전체 184)</td>
+        <td>0</td>
+        <td>없음, 속도만</td>
+        <td>OS에 설치된 만큼<br>(현재 26개 로케일)</td>
+        <td>AIFF</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <strong>MCP 툴이 있는 건 앞의 둘뿐이다.</strong> macOS 음성은 <code>say</code> 명령을 직접 부르는 경로라 서버를 거치지 않는다. 파이프라인에 넣으려면 AIFF를 <code>ffmpeg</code>로 변환하는 단계가 하나 더 붙는다.
+  </div>
+</section>
+
+<section id="voices">
+  <h2>목소리 49종 듣기</h2>
+  <p>카드를 누르면 재생되고, 다시 누르면 멈춘다. 카드에 적힌 초는 앞뒤 무음을 자르고 음량을 -16 LUFS로 맞춘 뒤 잰 값이라 <strong>그대로 말하는 속도</strong>로 읽어도 된다. 막대가 길수록 느리게 읽는다.</p>
+
+  <div class="filters" role="group" aria-label="용도별 추천 필터">
+    <span class="flabel">용도 (Gemini 라벨 기준)</span>
+    <button class="chip" data-filter="all" aria-pressed="true">전체 49</button>
+    <button class="chip" data-filter="pro" aria-pressed="false">업무·브리핑</button>
+    <button class="chip" data-filter="casual" aria-pressed="false">친근·캐주얼</button>
+    <button class="chip" data-filter="calm" aria-pressed="false">차분</button>
+    <button class="chip" data-filter="lively" aria-pressed="false">활기</button>
+    <button class="chip" data-filter="narration" aria-pressed="false">나레이션</button>
+  </div>
+
+  <div class="eng-head" id="eng-gemini">
+    <h3>Gemini TTS <span class="n">30 voices</span></h3>
+    <button class="playall" data-section="grid-gemini">이어서 모두 듣기</button>
+  </div>
+  <div class="voice-grid" id="grid-gemini"></div>
+
+  <div class="eng-head" id="eng-supertonic">
+    <h3>Supertonic 3 <span class="n">10 voices</span></h3>
+    <button class="playall" data-section="grid-supertonic">이어서 모두 듣기</button>
+  </div>
+  <div class="voice-grid" id="grid-supertonic"></div>
+  <p style="font-size:14.5px;color:var(--text-soft)">벤더가 공개한 정보는 F가 여성, M이 남성이라는 것뿐이다. 성격 라벨은 없으니 들어보고 고른다.</p>
+
+  <div class="eng-head" id="eng-macos">
+    <h3>macOS 시스템 음성 <span class="n">한국어 9 voices</span></h3>
+    <button class="playall" data-section="grid-macos">이어서 모두 듣기</button>
+  </div>
+  <div class="voice-grid" id="grid-macos"></div>
+  <p style="font-size:14.5px;color:var(--text-soft)">카드 아래 회색 글씨가 그대로 실행 명령이다. Apple은 이 음성들의 성별·성격을 문서로 공개하지 않는다. Yuna만 이름 하나로 지정되고 나머지 여덟은 괄호까지 포함한 전체 이름이 필요하다.</p>
+</section>
+
+<section id="tools">
+  <h2>도구와 파라미터</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>도구</th><th>엔진</th><th>쓰는 자리</th><th>주요 인자</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>tts_generate</code></td><td>Gemini</td>
+        <td>연기가 필요한 짧은 컷. 인트로 대사, 캐릭터 대사</td>
+        <td><code>voiceName</code>, <code>stylePrompt</code>, <code>temperature</code>(기본 0.4), <code>model</code></td>
+      </tr>
+      <tr>
+        <td><code>tts_multi_speaker</code></td><td>Gemini</td>
+        <td>두 사람 대화. 인터뷰나 팟캐스트 형식</td>
+        <td><code>script</code>(“이름: 대사”), <code>speakers</code> 최대 2명, 각각 다른 목소리</td>
+      </tr>
+      <tr>
+        <td><code>tts_local_generate</code></td><td>Supertonic</td>
+        <td>나레이션 본문, 긴 대본, 재촬영이 잦은 대량 작업</td>
+        <td><code>voice</code>, <code>lang</code>(기본 ko), <code>speed</code>(기본 1.05), <code>steps</code>(기본 8)</td>
+      </tr>
+      <tr>
+        <td><code>say</code> <span class="badge free">CLI</span></td><td>macOS</td>
+        <td>서버 없이 즉석에서 소리를 확인할 때, 개발 중 임시 더미 음성</td>
+        <td><code>-v</code> 음성 이름, <code>-r</code> 분당 단어 수, <code>-o</code> 출력 파일</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Gemini 모델 세 가지</h3>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>모델 ID</th><th>성격</th><th>비용</th></tr></thead>
+    <tbody>
+      <tr><td><code>gemini-2.5-flash-preview-tts</code></td><td>기본값</td><td>가장 저렴, 무료 티어 있음</td></tr>
+      <tr><td><code>gemini-2.5-pro-preview-tts</code></td><td>품질 우선</td><td>무료 티어 없음</td></tr>
+      <tr><td><code>gemini-3.1-flash-tts-preview</code></td><td>최신, 스트리밍 가능</td><td>flash의 2배</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>목소리 30종은 세 모델이 공유한다. 모델을 바꿔도 이름은 그대로다.</p>
+</section>
+
+<section id="choose">
+  <h2>고를 때 보는 것</h2>
+
+  <h3>엔진은 이렇게 고른다</h3>
+  <p>분량이 길거나 여러 번 다시 뽑을 작업은 <strong>Supertonic</strong>이다. 돈이 들지 않고 CPU만으로 실시간의 6.3배 속도로 뽑는다. 감정·억양을 지시해야 하면 <strong>Gemini</strong>로 간다. <code>stylePrompt</code>가 있는 쪽은 여기뿐이다. <strong>macOS 음성</strong>은 품질이 앞의 둘에 못 미치지만 설치도 키도 필요 없어서, 파이프라인을 짜는 도중 소리가 나는지만 보고 싶을 때 가장 빠르다.</p>
+
+  <div class="warn">
+    <strong>한 채널엔 한 목소리.</strong> 채널 프로필(<code>data/&lt;slug&gt;/profile.md</code>)에 목소리가 적혀 있으면 그 값을 그대로 쓴다. 회차마다 목소리가 바뀌면 채널 정체성이 무너진다.
+  </div>
+
+  <h3>섞어 쓸 때 샘플레이트</h3>
+  <p>Gemini는 24kHz, Supertonic은 44.1kHz, macOS <code>say</code>는 AIFF로 나온다. 한 영상 안에서 섞으려면 리샘플이 필요하다. <code>produce</code>의 빌드 스크립트는 모든 트랙을 48kHz로 맞추니 그 파이프라인 안에서는 안전하다.</p>
+
+  <h3>Supertonic 실행 조건</h3>
+  <p>파이썬 <code>supertonic</code> 패키지가 필요하고, 가상환경에 설치했다면 <code>SUPERTONIC_PYTHON</code>이 그 인터프리터를 가리켜야 한다. 첫 호출에서 가중치 385MB를 <code>~/.cache/supertonic3</code>로 받는다. 코드는 MIT, 가중치는 OpenRAIL-M이라 상업적 사용은 되지만 용도 제한이 붙는다.</p>
+</section>
+
+<section id="method">
+  <h2>샘플을 만든 방법</h2>
+  <p>49개 모두 같은 문장을 같은 조건으로 합성했다. 엔진별 기본값을 그대로 썼고, 비교를 위해 앞뒤 무음만 잘라내고 음량을 맞췄다.</p>
+  <pre><code># Gemini — 30 voices (기본 모델 gemini-2.5-flash-preview-tts)
+tts_generate(text=SAMPLE, voiceName=&lt;voice&gt;)
+
+# Supertonic — 10 voices
+tts_local_generate(text=SAMPLE, voice=&lt;F1..M5&gt;, lang="ko", speed=1.05, steps=8)
+
+# macOS — 한국어 9 voices
+say -v "&lt;voice&gt;" -o &lt;voice&gt;.aiff "$SAMPLE"
+
+# 공통 후처리 — 앞뒤 무음 제거 + 라우드니스 정규화 + mp3
+ffmpeg -i in.wav -af "silenceremove=start_periods=1:start_duration=0.03:start_threshold=-45dB,\
+areverse,silenceremove=start_periods=1:start_duration=0.03:start_threshold=-45dB,areverse,\
+loudnorm=I=-16:TP=-1.5:LRA=11" -ac 1 -ar 24000 -b:a 48k out.mp3</code></pre>
+  <p>측정된 길이는 2.52초(가장 빠름)부터 4.13초(가장 느림)까지 퍼진다. 같은 문장이므로 이 차이가 곧 읽는 속도다.</p>
+</section>
+
+<footer>
+  <p>샘플 원본은 <code>samples/</code> 아래 엔진별로 나뉘어 있다. 목소리를 추가하거나 다시 뽑을 때는 위 명령을 그대로 쓰면 조건이 맞는다.</p>
+  <p>관련 문서: <a href="../2026-08-11-local-tts-and-commercial-api/index.html">로컬 TTS와 상용 API 조사</a> · <a href="../../api-reference/gemini-tts.html">Gemini TTS API 레퍼런스</a> · <a href="../../index.html">문서 홈</a></p>
+</footer>
+
+</div>
+
+<script>
+const VOICES = [{"id": "Zephyr", "engine": "gemini", "sub": "밝은 톤 <em>Bright</em>", "tags": [], "sec": 3.7, "src": "samples/gemini/Zephyr.mp3"}, {"id": "Puck", "engine": "gemini", "sub": "경쾌한 <em>Upbeat</em>", "tags": ["casual"], "sec": 3.41, "src": "samples/gemini/Puck.mp3"}, {"id": "Charon", "engine": "gemini", "sub": "전달력 있는 <em>Informative</em>", "tags": ["pro"], "sec": 3.65, "src": "samples/gemini/Charon.mp3"}, {"id": "Kore", "engine": "gemini", "sub": "단단한 <em>Firm</em>", "tags": ["pro"], "sec": 3.79, "src": "samples/gemini/Kore.mp3"}, {"id": "Fenrir", "engine": "gemini", "sub": "들뜬 <em>Excitable</em>", "tags": ["lively"], "sec": 4.08, "src": "samples/gemini/Fenrir.mp3"}, {"id": "Leda", "engine": "gemini", "sub": "앳된 <em>Youthful</em>", "tags": [], "sec": 3.65, "src": "samples/gemini/Leda.mp3"}, {"id": "Orus", "engine": "gemini", "sub": "단단한 <em>Firm</em>", "tags": [], "sec": 3.36, "src": "samples/gemini/Orus.mp3"}, {"id": "Aoede", "engine": "gemini", "sub": "산뜻한 <em>Breezy</em>", "tags": [], "sec": 3.77, "src": "samples/gemini/Aoede.mp3"}, {"id": "Callirrhoe", "engine": "gemini", "sub": "느긋한 <em>Easygoing</em>", "tags": [], "sec": 3.58, "src": "samples/gemini/Callirrhoe.mp3"}, {"id": "Autonoe", "engine": "gemini", "sub": "밝은 톤 <em>Bright</em>", "tags": [], "sec": 3.86, "src": "samples/gemini/Autonoe.mp3"}, {"id": "Enceladus", "engine": "gemini", "sub": "숨결 섞인 <em>Breathy</em>", "tags": [], "sec": 3.79, "src": "samples/gemini/Enceladus.mp3"}, {"id": "Iapetus", "engine": "gemini", "sub": "또렷한 <em>Clear</em>", "tags": ["narration"], "sec": 3.6, "src": "samples/gemini/Iapetus.mp3"}, {"id": "Umbriel", "engine": "gemini", "sub": "느긋한 <em>Easygoing</em>", "tags": ["calm"], "sec": 3.31, "src": "samples/gemini/Umbriel.mp3"}, {"id": "Algieba", "engine": "gemini", "sub": "매끄러운 <em>Smooth</em>", "tags": [], "sec": 3.41, "src": "samples/gemini/Algieba.mp3"}, {"id": "Despina", "engine": "gemini", "sub": "매끄러운 <em>Smooth</em>", "tags": [], "sec": 3.86, "src": "samples/gemini/Despina.mp3"}, {"id": "Erinome", "engine": "gemini", "sub": "또렷한 <em>Clear</em>", "tags": ["narration"], "sec": 4.01, "src": "samples/gemini/Erinome.mp3"}, {"id": "Algenib", "engine": "gemini", "sub": "거친 저음 <em>Gravelly</em>", "tags": [], "sec": 3.38, "src": "samples/gemini/Algenib.mp3"}, {"id": "Rasalgethi", "engine": "gemini", "sub": "전달력 있는 <em>Informative</em>", "tags": ["pro"], "sec": 3.31, "src": "samples/gemini/Rasalgethi.mp3"}, {"id": "Laomedeia", "engine": "gemini", "sub": "경쾌한 <em>Upbeat</em>", "tags": ["lively"], "sec": 4.01, "src": "samples/gemini/Laomedeia.mp3"}, {"id": "Achernar", "engine": "gemini", "sub": "부드러운 <em>Soft</em>", "tags": ["calm"], "sec": 4.13, "src": "samples/gemini/Achernar.mp3"}, {"id": "Alnilam", "engine": "gemini", "sub": "단단한 <em>Firm</em>", "tags": ["pro"], "sec": 3.29, "src": "samples/gemini/Alnilam.mp3"}, {"id": "Schedar", "engine": "gemini", "sub": "고른 <em>Even</em>", "tags": ["narration"], "sec": 3.43, "src": "samples/gemini/Schedar.mp3"}, {"id": "Gacrux", "engine": "gemini", "sub": "원숙한 <em>Mature</em>", "tags": [], "sec": 4.08, "src": "samples/gemini/Gacrux.mp3"}, {"id": "Pulcherrima", "engine": "gemini", "sub": "앞으로 미는 <em>Forward</em>", "tags": [], "sec": 3.89, "src": "samples/gemini/Pulcherrima.mp3"}, {"id": "Achird", "engine": "gemini", "sub": "친근한 <em>Friendly</em>", "tags": ["casual"], "sec": 3.55, "src": "samples/gemini/Achird.mp3"}, {"id": "Zubenelgenubi", "engine": "gemini", "sub": "편안한 <em>Casual</em>", "tags": ["casual"], "sec": 3.74, "src": "samples/gemini/Zubenelgenubi.mp3"}, {"id": "Vindemiatrix", "engine": "gemini", "sub": "온화한 <em>Gentle</em>", "tags": ["calm"], "sec": 4.1, "src": "samples/gemini/Vindemiatrix.mp3"}, {"id": "Sadachbia", "engine": "gemini", "sub": "활기찬 <em>Lively</em>", "tags": ["lively"], "sec": 3.58, "src": "samples/gemini/Sadachbia.mp3"}, {"id": "Sadaltager", "engine": "gemini", "sub": "박식한 <em>Knowledgeable</em>", "tags": [], "sec": 3.58, "src": "samples/gemini/Sadaltager.mp3"}, {"id": "Sulafat", "engine": "gemini", "sub": "따뜻한 <em>Warm</em>", "tags": ["casual"], "sec": 3.86, "src": "samples/gemini/Sulafat.mp3"}, {"id": "F1", "engine": "supertonic", "sub": "여성", "tags": [], "sec": 3.17, "src": "samples/supertonic/F1.mp3"}, {"id": "F2", "engine": "supertonic", "sub": "여성", "tags": [], "sec": 2.69, "src": "samples/supertonic/F2.mp3"}, {"id": "F3", "engine": "supertonic", "sub": "여성", "tags": [], "sec": 3.46, "src": "samples/supertonic/F3.mp3"}, {"id": "F4", "engine": "supertonic", "sub": "여성", "tags": [], "sec": 2.69, "src": "samples/supertonic/F4.mp3"}, {"id": "F5", "engine": "supertonic", "sub": "여성", "tags": [], "sec": 3.07, "src": "samples/supertonic/F5.mp3"}, {"id": "M1", "engine": "supertonic", "sub": "남성", "tags": [], "sec": 3.07, "src": "samples/supertonic/M1.mp3"}, {"id": "M2", "engine": "supertonic", "sub": "남성", "tags": [], "sec": 2.88, "src": "samples/supertonic/M2.mp3"}, {"id": "M3", "engine": "supertonic", "sub": "남성", "tags": [], "sec": 2.52, "src": "samples/supertonic/M3.mp3"}, {"id": "M4", "engine": "supertonic", "sub": "남성", "tags": [], "sec": 2.86, "src": "samples/supertonic/M4.mp3"}, {"id": "M5", "engine": "supertonic", "sub": "남성", "tags": [], "sec": 3.12, "src": "samples/supertonic/M5.mp3"}, {"id": "Eddy", "engine": "macos", "sub": "<em>say -v \"Eddy (한국어(한국))\"</em>", "tags": [], "sec": 3.84, "src": "samples/macos/Eddy.mp3"}, {"id": "Flo", "engine": "macos", "sub": "<em>say -v \"Flo (한국어(한국))\"</em>", "tags": [], "sec": 3.82, "src": "samples/macos/Flo.mp3"}, {"id": "Grandma", "engine": "macos", "sub": "<em>say -v \"Grandma (한국어(한국))\"</em>", "tags": [], "sec": 3.82, "src": "samples/macos/Grandma.mp3"}, {"id": "Grandpa", "engine": "macos", "sub": "<em>say -v \"Grandpa (한국어(한국))\"</em>", "tags": [], "sec": 3.82, "src": "samples/macos/Grandpa.mp3"}, {"id": "Reed", "engine": "macos", "sub": "<em>say -v \"Reed (한국어(한국))\"</em>", "tags": [], "sec": 3.82, "src": "samples/macos/Reed.mp3"}, {"id": "Rocko", "engine": "macos", "sub": "<em>say -v \"Rocko (한국어(한국))\"</em>", "tags": [], "sec": 3.84, "src": "samples/macos/Rocko.mp3"}, {"id": "Sandy", "engine": "macos", "sub": "<em>say -v \"Sandy (한국어(한국))\"</em>", "tags": [], "sec": 3.82, "src": "samples/macos/Sandy.mp3"}, {"id": "Shelley", "engine": "macos", "sub": "<em>say -v \"Shelley (한국어(한국))\"</em>", "tags": [], "sec": 3.82, "src": "samples/macos/Shelley.mp3"}, {"id": "Yuna", "engine": "macos", "sub": "<em>say -v Yuna</em>", "tags": [], "sec": 3.48, "src": "samples/macos/Yuna.mp3"}];
+const MIN = 2.52, MAX = 4.13;
+
+const grids = {
+  gemini: document.getElementById('grid-gemini'),
+  supertonic: document.getElementById('grid-supertonic'),
+  macos: document.getElementById('grid-macos'),
+};
+
+for (const v of VOICES) {
+  const btn = document.createElement('button');
+  btn.className = 'vcard';
+  btn.dataset.src = v.src;
+  btn.dataset.tags = (v.tags || []).join(' ');
+  btn.setAttribute('aria-label', v.id + ' 목소리 들어보기');
+  const pct = Math.round(((v.sec - MIN) / (MAX - MIN)) * 82 + 18);
+  btn.innerHTML =
+    '<span class="knob">' +
+      '<svg class="tri" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 1.2 10.3 6 2.5 10.8Z" fill="currentColor"/></svg>' +
+      '<span class="meter" aria-hidden="true"><i></i><i></i><i></i></span>' +
+    '</span>' +
+    '<span class="vbody">' +
+      '<span class="vname">' + v.id + '</span><br>' +
+      '<span class="vsub">' + v.sub + '</span>' +
+      '<span class="vlen"><span class="vbar"><span style="width:' + pct + '%"></span></span>' +
+      '<span class="vsecs">' + v.sec.toFixed(2) + 's</span></span>' +
+    '</span>';
+  grids[v.engine].appendChild(btn);
+}
+
+const player = new Audio();
+let current = null, queue = [];
+
+function clearState() {
+  if (current) { current.classList.remove('on'); current.style.setProperty('--p', 0); current = null; }
+}
+function play(card) {
+  clearState();
+  current = card;
+  card.classList.add('on');
+  player.src = card.dataset.src;
+  player.play().catch(() => { queue = []; clearState(); });
+}
+player.addEventListener('timeupdate', () => {
+  if (current && player.duration) current.style.setProperty('--p', player.currentTime / player.duration);
+});
+player.addEventListener('ended', () => {
+  clearState();
+  if (queue.length) play(queue.shift());
+});
+
+document.addEventListener('click', (e) => {
+  const card = e.target.closest('.vcard');
+  if (card) {
+    queue = [];
+    if (card === current) { player.pause(); clearState(); }
+    else play(card);
+    return;
+  }
+  const all = e.target.closest('.playall');
+  if (all) {
+    const cards = [...document.querySelectorAll('#' + all.dataset.section + ' .vcard:not(.dim)')];
+    if (!cards.length) return;
+    queue = cards.slice(1);
+    play(cards[0]);
+    return;
+  }
+  const chip = e.target.closest('.chip');
+  if (chip) {
+    document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
+    const f = chip.dataset.filter;
+    document.querySelectorAll('.vcard').forEach(c => {
+      c.classList.toggle('dim', f !== 'all' && !c.dataset.tags.split(' ').includes(f));
+    });
+  }
+});
+</script>
+</body>
+</html>

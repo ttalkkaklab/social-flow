@@ -16,11 +16,11 @@
 <header class="hero">
   <div class="kicker">API REFERENCE</div>
   <h1>Every API social-flow calls</h1>
-  <p class="sub">A reference for the official contracts of the 13 external APIs the internal MCP server (<code>server/src</code>) actually calls. Each page puts <strong>what the official docs say</strong> next to <strong>what this repo's implementation actually does</strong>, so you can see where the two diverge. For images and voice the default path is two on-device engines that never touch the network, and those have no external contract to call.</p>
+  <p class="sub">A reference for the official contracts of the 13 external APIs the internal MCP server (<code>server/src</code>) actually calls. Each page puts <strong>what the official docs say</strong> next to <strong>what this repo's implementation actually does</strong>, so you can see where the two diverge. For images, voice, and transcription the default path is three on-device engines that never touch the network, and those have no external contract to call.</p>
   <div class="meta">
     <span>As of <strong>2026-08-20</strong></span>
-    <span>Tools <strong>50</strong></span>
-    <span>External APIs <strong>13</strong> + local <strong>2</strong></span>
+    <span>Tools <strong>51</strong></span>
+    <span>External APIs <strong>13</strong> + local <strong>3</strong></span>
     <span>MCP SDK <strong>1.30.0</strong></span>
   </div>
 </header>
@@ -84,9 +84,9 @@
       <div class="tools">gpt_image_text2img · gpt_image_img2img</div>
     </a>
     <a class="card" href="../research/2026-08-12-local-image-generation/index.html">
-      <h3>On-device engines — Z-Image · Supertonic (Korean)</h3>
-      <p>The two tools with no external contract. Z-Image Turbo runs on mflux/MLX — 1024² takes 149–210s at 9 steps, 1088×1920 takes 462s (measured on an M4 Max). Supertonic uses CPU only and emits 44.1kHz wav. Neither needs a key, billing, or the network.</p>
-      <div class="tools">image_local_generate · tts_local_generate</div>
+      <h3>On-device engines — Z-Image · Supertonic · Qwen3-ASR (Korean)</h3>
+      <p>The three tools with no external contract. Z-Image Turbo runs on mflux/MLX — 1024² takes 149–210s at 9 steps, 1088×1920 takes 462s (measured on an M4 Max). Supertonic uses CPU only and emits 44.1kHz wav. Qwen3-ASR is the default Korean STT path. None of the three needs a key, billing, or the network.</p>
+      <div class="tools">image_local_generate · tts_local_generate · stt_local_transcribe</div>
     </a>
     <a class="card" href="serpapi.en.html">
       <h3>SerpApi</h3>
@@ -115,7 +115,7 @@
     </a>
     <a class="card" href="tool-audit.en.html">
       <h3>Tool quality audit report</h3>
-      <p>Scoring the 31 tools as they stood on 2026-07-29 against the contracts above and the best practices, with every defect found and how it was fixed. 19 tools have been added since, bringing the count to 50, and those 19 have not been audited.</p>
+      <p>Scoring the 31 tools as they stood on 2026-07-29 against the contracts above and the best practices, with every defect found and how it was fixed. 20 tools have been added since, bringing the count to 51, and those 20 have not been audited.</p>
       <div class="tools">audit · scores · fix log</div>
     </a>
   </div>
@@ -142,6 +142,7 @@
       <tr><td><code>SNS_TOKEN_DIR</code><br>(default <code>~/.config/social-flow</code>)</td><td>all publish, comment, and insight tools</td><td>For a platform with no credential file, its publish/insight tools — nine in total — are <strong>hidden from ListTools entirely</strong></td><td>per-platform OAuth</td></tr>
       <tr><td><code>MFLUX_ZIMAGE_BIN</code><br>(default: <code>mflux-generate-z-image-turbo</code> on PATH)</td><td><code>image_local_generate</code></td><td>This is an <strong>executable path</strong>, not a key. Installed in the standard location it needs no setting; if it can't be found the error tells you how to install it</td><td><code>uv tool install --python 3.12 mflux</code></td></tr>
       <tr><td><code>SUPERTONIC_PYTHON</code><br>(default <code>python3</code>)</td><td><code>tts_local_generate</code></td><td>Point it at your interpreter if you installed into a virtualenv. There is no venv auto-discovery — quietly picking up a different environment per repo and changing the voice is exactly the accident this avoids</td><td><code>pip install supertonic</code></td></tr>
+      <tr><td><code>QWEN3_ASR_BIN</code><br>(default <code>~/.local/bin/mlx-qwen3-asr</code>)</td><td><code>stt_local_transcribe</code></td><td>This is an <strong>executable path</strong>, not a key. Installed in the standard location it needs no setting; if it can't be found the error tells you how to install it</td><td><code>uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"</code></td></tr>
       <tr><td><code>HF_HOME</code><br>(default <code>~/.cache/huggingface</code>)</td><td><code>image_local_generate</code></td><td>Where Z-Image weights are cached. The first call downloads 31GB, so move it if the disk is tight</td><td>—</td></tr>
     </tbody>
   </table>
@@ -184,6 +185,7 @@
       <tr><td><code>tts_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateContent</code> (<code>AUDIO</code>)</td><td><a href="gemini-tts.en.html">TTS</a></td></tr>
       <tr><td><code>tts_multi_speaker</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateContent</code> (multiSpeaker)</td><td><a href="gemini-tts.en.html">TTS</a></td></tr>
       <tr><td><code>tts_local_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>none — local Supertonic 3 (python)</td><td><a href="../research/2026-08-11-local-tts-and-commercial-api/index.html">Local TTS research (Korean)</a></td></tr>
+      <tr><td><code>stt_local_transcribe</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>none — local Qwen3-ASR (mlx-qwen3-asr)</td><td>—</td></tr>
       <tr><td><code>tts_list_voices</code></td><td><span class="badge ro">read</span></td><td>none — a constant built into the server</td><td><a href="gemini-tts.en.html">TTS</a></td></tr>
       <tr><td><code>music_generate_clip</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>interactions.create</code> (<code>lyria-3-clip-preview</code>)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
       <tr><td><code>music_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>

@@ -82,6 +82,17 @@ export function mfluxZImageBin(): string {
 }
 
 /**
+ * The mlx-qwen3-asr CLI that runs local STT (Qwen3-ASR).
+ *
+ * Same principle as mfluxZImageBin — the server boots without it, and a call
+ * fails at invocation time with an install hint (qwen3-asr-client). The
+ * default is uv tool's deterministic install path.
+ */
+export function qwen3AsrBin(): string {
+  return process.env.QWEN3_ASR_BIN || join(homedir(), '.local', 'bin', 'mlx-qwen3-asr');
+}
+
+/**
  * Credential paths for direct SNS publishing (per-platform publish tools).
  *
  * Terminology contract: **channel = an operated brand** (1:1 with data/<slug>),
