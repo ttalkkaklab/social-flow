@@ -16,6 +16,7 @@ import { contentFeedback } from './content-feedback.js';
 import { youtubeTopicScout } from './youtube-topic-scout.js';
 import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
+import * as stage from './production-stage.js';
 function text(message, isError = false) {
     return { content: [{ type: 'text', text: message }], isError };
 }
@@ -412,6 +413,22 @@ const commentModerateSchema = z.object({
     commentId: z.string().min(1),
     action: z.enum(['hide', 'unhide', 'like', 'unlike']),
     channel: channelSlugSchema,
+});
+const stageEnum = z.enum(stage.STAGES);
+const stageGetSchema = z.object({
+    episodeDir: z.string().min(1),
+});
+const stageInitSchema = z.object({
+    episodeDir: z.string().min(1),
+    episode: z.string().min(1),
+    stage: stageEnum,
+    humanEventId: z.string().min(1),
+});
+const stageAdvanceSchema = z.object({
+    episodeDir: z.string().min(1),
+    to: stageEnum,
+    humanEventId: z.string().min(1),
+    note: z.string().optional(),
 });
 const accountCheckSchema = z.object({
     channel: channelSlugSchema,
@@ -903,5 +920,61 @@ export const ROUTES = {
     threads_search: async (args) => {
         const input = parseArgs(threadsSearchSchema, args);
         return fromApi(await sns.threadsKeywordSearch(input));
+    },
+    // ── production stage gate (pundago) — the episode advances only on a human's word ──
+    production_stage_get: async (args) => {
+        const input = parseArgs(stageGetSchema, args);
+        const state = stage.readState(input.episodeDir);
+        if (!state)
+            return text(`단계 파일이 없습니다: ${input.episodeDir}/production-state.json\nproduction_stage_init 으로 먼저 만드세요.`, true);
+        const drifted = stage.changedStills(input.episodeDir, state);
+        const lines = [
+            `에피소드: ${state.episode}`,
+            `현재 단계: ${state.stage}`,
+            `승인 스틸: ${Object.keys(state.approvedStills ?? {}).length}장`,
+            drifted.length > 0 ? `⚠ 승인과 다른 스틸: ${drifted.join(', ')}` : '스틸 변경 없음',
+            '',
+            '이력:',
+            ...state.history.map((h) => `  ${h.at}  ${h.stage}  ← ${h.humanEventId}${h.note ? `  (${h.note})` : ''}`),
+        ];
+        return text(lines.join('\n'));
+    },
+    production_stage_init: async (args) => {
+        const input = parseArgs(stageInitSchema, args);
+        if (stage.readState(input.episodeDir))
+            return text(`이미 단계 파일이 있습니다: ${input.episodeDir}`, true);
+        const state = {
+            episode: input.episode,
+            stage: input.stage,
+            history: [{ stage: input.stage, humanEventId: input.humanEventId, at: new Date().toISOString(), note: 'init' }],
+            approvedStills: {},
+        };
+        stage.writeState(input.episodeDir, state);
+        return text(`단계 파일을 만들었습니다.\n에피소드: ${state.episode}\n시작 단계: ${state.stage}\n근거 이벤트: ${input.humanEventId}`);
+    },
+    production_stage_advance: async (args) => {
+        const input = parseArgs(stageAdvanceSchema, args);
+        const state = stage.readState(input.episodeDir);
+        if (!state)
+            return text(`단계 파일이 없습니다: ${input.episodeDir}`, true);
+        if (!input.humanEventId.trim())
+            return text('사람 지시의 이벤트 ID가 있어야 단계를 옮길 수 있습니다.', true);
+        const from = stage.STAGES.indexOf(state.stage);
+        const to = stage.STAGES.indexOf(input.to);
+        const goingBack = to < from;
+        state.stage = input.to;
+        state.history.push({ stage: input.to, humanEventId: input.humanEventId, at: new Date().toISOString(), note: input.note });
+        // Leaving the still gate freezes the pictures — from here on a changed still blocks the next step.
+        if (state.stage === 'human_review' || state.stage === 'video_authorized') {
+            state.approvedStills = stage.hashStills(input.episodeDir);
+        }
+        // Going back to redo the stills clears the frozen set, so a redo is not read as drift.
+        if (input.to === 'image_draft' || input.to === 'still_gate')
+            state.approvedStills = {};
+        stage.writeState(input.episodeDir, state);
+        const approved = Object.keys(state.approvedStills ?? {}).length;
+        return text(`${goingBack ? '되돌림' : '전진'}: ${stage.STAGES[from]} → ${input.to}\n` +
+            `근거 이벤트: ${input.humanEventId}\n` +
+            (approved > 0 ? `승인 스틸 ${approved}장을 잠갔습니다.` : '승인 스틸 없음(이미지 단계).'));
     },
 };

@@ -6,6 +6,7 @@ import { config, disabledToolPatterns, disabledToolsFile, listChannelDirs } from
 import { describeToolGate, resolveToolGate, warnUnknownPatterns } from './tool-gate.js';
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
+import { checkStageGate } from './production-stage.js';
 import { enabledPlatforms } from './sns-client.js';
 // The server version carried in the initialize response — same value as package.json's version.
 // If the two drift, the version clients see stops matching the actual package, so bump this
@@ -50,6 +51,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                             'Clear the matching SOCIAL_FLOW_* env or remove its entry from disabled-tools.json to re-enable — no server restart needed for the JSON file.',
                     },
                 ],
+                isError: true,
+            };
+        }
+        // Production stage gate — refuses a step the episode is not standing at. Allows everything
+        // outside a gated episode, so other channels and untracked episodes run unchanged.
+        const stageGate = checkStageGate(name, args ?? {});
+        if (!stageGate.allowed) {
+            return {
+                content: [{ type: 'text', text: `단계 게이트가 막았습니다.\n\n${stageGate.reason}` }],
                 isError: true,
             };
         }

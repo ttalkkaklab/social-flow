@@ -44,6 +44,18 @@ created: <YYYY-MM-DD>
 | narration ① | tts: "<phonetic notation>" · sub: "<original notation>" |
 | narration ② | tts: "…" · sub: "…" |
 | background prompt | <bgPrompt summary> |
+| action | <who does what — one action, and it has to be the thing this shot's line is about> |
+| camera | <opening framing + move + closing framing — the move follows the action> |
+
+`action` and `camera` are filled per shot on a **motion-first channel** (one whose `profile.md`
+declares it — see scenes-schema §motion background). A still cut writes `action: —` and says in
+one line why a still is enough there. Writing `Ken Burns on a still` or `the prop moves` into
+`action` does not satisfy it: a person-shaped character has to be doing the thing.
+
+Keep `camera` in the same stretch form the video prompt takes — `opening frame + move + closing
+frame` — so the shot table and `scenes.js` `motion` say the same scene. Do not add a move for
+mood alone (§motion background: moves don't shift emotion, p=.84); the move exists to follow the
+action.
 
 ### Shot 2 — points · close-up
 (same format — bullets table, reveal order stated. Same S# means the scene isn't split)

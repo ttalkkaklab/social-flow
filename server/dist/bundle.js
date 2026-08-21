@@ -27846,7 +27846,7 @@ var require_websocket = __commonJS({
     var http3 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes, createHash: createHash2 } = __require("crypto");
+    var { randomBytes, createHash: createHash3 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -28514,7 +28514,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash2("sha1").update(key + GUID).digest("base64");
+        const digest = createHash3("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -28883,7 +28883,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http3 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash2 } = __require("crypto");
+    var { createHash: createHash3 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -29190,7 +29190,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash2("sha1").update(key + GUID).digest("base64");
+        const digest = createHash3("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -39659,7 +39659,7 @@ function isPlainObject$1(value) {
     return false;
   }
 }
-function formEncoder(sep) {
+function formEncoder(sep2) {
   return (key, value, options) => {
     let out = "";
     const pairs = (options === null || options === void 0 ? void 0 : options.explode) ? explode(key, value) : [[key, value]];
@@ -39670,7 +39670,7 @@ function formEncoder(sep) {
       return (options === null || options === void 0 ? void 0 : options.charEncoding) === "percent" ? encodeURIComponent(v) : v;
     };
     const encodeValue = (v) => encodeString(serializeValue(v));
-    const encodedSep = encodeString(sep);
+    const encodedSep = encodeString(sep2);
     pairs.forEach(([pk, pv]) => {
       var _a4, _b;
       let tmp = "";
@@ -75374,6 +75374,126 @@ function describeToolGate(knownNames, env2 = process.env, jsonPatterns = []) {
   return `tool gate ${on.length} on / ${off} off (${bits.join("; ")})`;
 }
 
+// src/production-stage.ts
+import { createHash } from "node:crypto";
+import { existsSync as existsSync2, readFileSync as readFileSync2, readdirSync as readdirSync2, writeFileSync } from "node:fs";
+import { dirname, join as join2, sep } from "node:path";
+var GATED_PATH_MARK = `${sep}data${sep}pundago${sep}`;
+var STATE_FILENAME = "production-state.json";
+var STAGES = [
+  "storyboard_draft",
+  "storyboard_review",
+  "image_draft",
+  "still_gate",
+  "human_review",
+  "video_authorized",
+  "video_generation",
+  "render",
+  "publish",
+  "published"
+];
+var TOOL_STAGES = [
+  {
+    match: /^(image_local_generate|gpt_image_)/,
+    allow: ["image_draft", "still_gate"],
+    label: "\uC774\uBBF8\uC9C0 \uC0DD\uC131"
+  },
+  {
+    match: /^(veo_|seedance_)/,
+    allow: ["video_generation", "render"],
+    label: "\uC601\uC0C1 \uC0DD\uC131"
+  },
+  {
+    match: /_publish$/,
+    allow: ["publish"],
+    label: "\uAC8C\uC2DC"
+  }
+];
+var ALLOWED = { allowed: true };
+function collectStrings(value, out = []) {
+  if (typeof value === "string") out.push(value);
+  else if (Array.isArray(value)) for (const item of value) collectStrings(item, out);
+  else if (value && typeof value === "object") for (const item of Object.values(value)) collectStrings(item, out);
+  return out;
+}
+function findEpisodeDir(path6) {
+  if (!path6.includes(GATED_PATH_MARK)) return void 0;
+  let dir = path6.endsWith(sep) ? path6.slice(0, -1) : dirname(path6);
+  while (dir.includes(GATED_PATH_MARK)) {
+    if (existsSync2(join2(dir, STATE_FILENAME))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return void 0;
+}
+function readState(episodeDir) {
+  const file = join2(episodeDir, STATE_FILENAME);
+  if (!existsSync2(file)) return void 0;
+  try {
+    return JSON.parse(readFileSync2(file, "utf8"));
+  } catch {
+    return void 0;
+  }
+}
+function writeState(episodeDir, state) {
+  writeFileSync(join2(episodeDir, STATE_FILENAME), `${JSON.stringify(state, null, 2)}
+`, "utf8");
+}
+function sha256File(path6) {
+  return createHash("sha256").update(readFileSync2(path6)).digest("hex");
+}
+function hashStills(episodeDir) {
+  const dir = join2(episodeDir, "storyboard", "images");
+  if (!existsSync2(dir)) return {};
+  const hashes = {};
+  for (const name of readdirSync2(dir).sort()) {
+    if (!/^scene-\d+\.png$/.test(name)) continue;
+    hashes[name] = sha256File(join2(dir, name));
+  }
+  return hashes;
+}
+function changedStills(episodeDir, state) {
+  const approved = state.approvedStills;
+  if (!approved || Object.keys(approved).length === 0) return [];
+  const current = hashStills(episodeDir);
+  const names = /* @__PURE__ */ new Set([...Object.keys(approved), ...Object.keys(current)]);
+  return [...names].filter((name) => approved[name] !== current[name]).sort();
+}
+function stageRule(toolName) {
+  return TOOL_STAGES.find((rule) => rule.match.test(toolName));
+}
+function checkStageGate(toolName, args) {
+  const rule = stageRule(toolName);
+  if (!rule) return ALLOWED;
+  const episodeDirs = /* @__PURE__ */ new Set();
+  for (const value of collectStrings(args)) {
+    const dir = findEpisodeDir(value);
+    if (dir) episodeDirs.add(dir);
+  }
+  if (episodeDirs.size === 0) return ALLOWED;
+  for (const episodeDir of episodeDirs) {
+    const state = readState(episodeDir);
+    if (!state) continue;
+    if (!rule.allow.includes(state.stage)) {
+      return {
+        allowed: false,
+        reason: `${rule.label}\uC740 ${rule.allow.join(" \uB610\uB294 ")} \uB2E8\uACC4\uC5D0\uC11C\uB9CC \uB429\uB2C8\uB2E4. \uC9C0\uAE08 ${state.episode}\uC758 \uB2E8\uACC4\uB294 ${state.stage}\uC785\uB2C8\uB2E4.
+\uC0AC\uB78C\uC758 \uC9C0\uC2DC\uB97C \uBC1B\uC740 \uB4A4 production_stage_advance \uB85C \uB2E8\uACC4\uB97C \uC62E\uAE30\uACE0 \uB2E4\uC2DC \uBD80\uB974\uC138\uC694 (\uADF8 \uC9C0\uC2DC \uBA54\uC2DC\uC9C0\uC758 \uC774\uBCA4\uD2B8 ID\uAC00 \uC788\uC5B4\uC57C \uD569\uB2C8\uB2E4).`
+      };
+    }
+    const drifted = changedStills(episodeDir, state);
+    if (drifted.length > 0) {
+      return {
+        allowed: false,
+        reason: `${state.episode}\uC758 \uC2A4\uD2F8\uC774 \uC2B9\uC778\uB41C \uAC83\uACFC \uB2E4\uB985\uB2C8\uB2E4: ${drifted.join(", ")}.
+still_gate \uC5D0\uC11C \uC2B9\uC778\uB41C \uADF8\uB9BC\uC774 \uC544\uB2D9\uB2C8\uB2E4. \uC0AC\uB78C\uC758 \uC7AC\uC791\uC5C5 \uC2B9\uC778\uC744 \uBC1B\uC544 production_stage_advance --to still_gate \uB85C \uB418\uB3CC\uB9B0 \uB4A4 \uB2E4\uC2DC \uAC80\uC218\uD558\uC138\uC694.`
+      };
+    }
+  }
+  return ALLOWED;
+}
+
 // src/media-utils.ts
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -76539,9 +76659,9 @@ async function generateDialogue(request) {
 
 // src/zimage-client.ts
 import { execFile as execFile2 } from "node:child_process";
-import { existsSync as existsSync3 } from "node:fs";
+import { existsSync as existsSync4 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { join as join3 } from "node:path";
+import { join as join4 } from "node:path";
 var DEFAULT_ZIMAGE_STEPS = 9;
 var ZIMAGE_QUANTIZE_OPTIONS = [4, 6, 8];
 var DEFAULT_ZIMAGE_QUANTIZE = 8;
@@ -76556,8 +76676,8 @@ function zimageTimeoutMs(width, height, steps) {
   return Math.min(30 * 6e4, 12e4 + Math.ceil(steps * megapixels * 45e3));
 }
 function weightCacheDir() {
-  const hfHome = process.env.HF_HOME || join3(homedir2(), ".cache", "huggingface");
-  return join3(hfHome, "hub", "models--Tongyi-MAI--Z-Image-Turbo");
+  const hfHome = process.env.HF_HOME || join4(homedir2(), ".cache", "huggingface");
+  return join4(hfHome, "hub", "models--Tongyi-MAI--Z-Image-Turbo");
 }
 var WEIGHT_DOWNLOAD_ALLOWANCE_MS = 60 * 6e4;
 function installHint2(detail) {
@@ -76581,7 +76701,7 @@ var zimageGenerateSchema = external_exports.object({
 });
 async function generateLocalImage(request) {
   const bin = mfluxZImageBin();
-  if (!existsSync3(bin)) {
+  if (!existsSync4(bin)) {
     return { success: false, error: installHint2(`mflux binary not found: "${bin}"`) };
   }
   const outFile = resolveOutputFile(
@@ -76604,7 +76724,7 @@ async function generateLocalImage(request) {
     outFile
   ];
   if (request.seed !== void 0) cliArgs.push("--seed", String(request.seed));
-  const firstCall = !existsSync3(weightCacheDir());
+  const firstCall = !existsSync4(weightCacheDir());
   if (firstCall) {
     console.error("[Z-Image] First call \u2014 downloading ~31GB of weights to the huggingface cache first. This can take a long time.");
   }
@@ -76644,7 +76764,7 @@ ${tail}` : ""}`));
     console.error(`[Z-Image] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  if (!existsSync3(outFile)) {
+  if (!existsSync4(outFile)) {
     return {
       success: false,
       error: `mflux exited without producing the output file: ${outFile}`
@@ -76666,9 +76786,9 @@ ${tail}` : ""}`));
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile3 } from "node:child_process";
-import { existsSync as existsSync4, mkdirSync as mkdirSync2, mkdtempSync, readFileSync as readFileSync3, renameSync, rmSync } from "node:fs";
+import { existsSync as existsSync5, mkdirSync as mkdirSync2, mkdtempSync, readFileSync as readFileSync4, renameSync, rmSync } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { basename as basename4, extname as extname2, join as join4 } from "node:path";
+import { basename as basename4, extname as extname2, join as join5 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
 var DEFAULT_QWEN3_ASR_MODEL = "Qwen/Qwen3-ASR-1.7B";
 var QWEN3_ASR_LANGUAGES = [
@@ -76767,13 +76887,13 @@ function qwen3AsrTimeoutMs(audioSeconds) {
 }
 var WEIGHT_DOWNLOAD_ALLOWANCE_MS2 = 60 * 6e4;
 function weightCacheDir2(model) {
-  const hfHome = process.env.HF_HOME || join4(homedir3(), ".cache", "huggingface");
+  const hfHome = process.env.HF_HOME || join5(homedir3(), ".cache", "huggingface");
   const slug = model.replaceAll("/", "--");
-  return join4(hfHome, "hub", `models--${slug}`);
+  return join5(hfHome, "hub", `models--${slug}`);
 }
 function alignerCacheDir() {
-  const hfHome = process.env.HF_HOME || join4(homedir3(), ".cache", "huggingface");
-  return join4(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
+  const hfHome = process.env.HF_HOME || join5(homedir3(), ".cache", "huggingface");
+  return join5(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
 }
 function installHint3(detail) {
   return `${detail}
@@ -76823,10 +76943,10 @@ function normalizeSegments(data) {
 }
 async function transcribeLocal(request) {
   const bin = qwen3AsrBin();
-  if (!existsSync4(bin)) {
+  if (!existsSync5(bin)) {
     return { success: false, error: installHint3(`mlx-qwen3-asr binary not found: "${bin}"`) };
   }
-  if (!existsSync4(request.audioPath)) {
+  if (!existsSync5(request.audioPath)) {
     return { success: false, error: `Audio file not found: ${request.audioPath}` };
   }
   const outFile = resolveOutputFile(
@@ -76836,8 +76956,8 @@ async function transcribeLocal(request) {
   );
   const outDir = request.outputPath || process.cwd();
   mkdirSync2(outDir, { recursive: true });
-  const scratchDir = mkdtempSync(join4(outDir, ".qwen3-asr-"));
-  const firstCall = !existsSync4(weightCacheDir2(request.model)) || request.timestamps && !existsSync4(alignerCacheDir());
+  const scratchDir = mkdtempSync(join5(outDir, ".qwen3-asr-"));
+  const firstCall = !existsSync5(weightCacheDir2(request.model)) || request.timestamps && !existsSync5(alignerCacheDir());
   if (firstCall) {
     console.error(
       "[Qwen3-ASR] First call \u2014 downloading ~3.4GB of weights (plus ForcedAligner if timestamps) to the huggingface cache. This can take a while."
@@ -76893,14 +77013,14 @@ ${tail}` : ""}`));
     console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  const cliJsonPath = join4(scratchDir, `${basename4(request.audioPath, extname2(request.audioPath))}.json`);
-  if (!existsSync4(cliJsonPath)) {
+  const cliJsonPath = join5(scratchDir, `${basename4(request.audioPath, extname2(request.audioPath))}.json`);
+  if (!existsSync5(cliJsonPath)) {
     rmSync(scratchDir, { recursive: true, force: true });
     return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
   }
   let parsed;
   try {
-    parsed = parseCliJson(readFileSync3(cliJsonPath, "utf8"));
+    parsed = parseCliJson(readFileSync4(cliJsonPath, "utf8"));
   } catch (error2) {
     rmSync(scratchDir, { recursive: true, force: true });
     const message = error2 instanceof Error ? error2.message : String(error2);
@@ -79638,6 +79758,65 @@ Returns: integer credit balance.`,
       },
       required: ["query"]
     }
+  },
+  {
+    name: "production_stage_get",
+    title: "Production stage \u2014 read",
+    annotations: HINT.local,
+    description: `Read an episode's current production stage, the stage history with the human event ID that opened each stage, and whether any approved still has changed since the still gate.
+
+Call this before starting work on a pundago episode so you know which step is open. Read-only. Stages in order: storyboard_draft | storyboard_review | image_draft | still_gate | human_review | video_authorized | video_generation | render | publish | published.
+
+Returns: current stage, approved-still count, a warning listing stills that differ from the approved set, and the stage history.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        episodeDir: { type: "string", description: "Absolute path of the episode directory (the one holding production-state.json)" }
+      },
+      required: ["episodeDir"]
+    }
+  },
+  {
+    name: "production_stage_init",
+    title: "Production stage \u2014 create",
+    annotations: HINT.generateLocal,
+    description: `Create production-state.json for an episode. Run once per episode. Until this file exists the stage gate lets every call through, so an episode without it is ungated.
+
+Requires humanEventId \u2014 the Buzz event ID of the message in which a person asked for this. Do not invent one; without a real instruction there is nothing to record.
+
+Returns: the episode name, the starting stage, and the event ID it was recorded against.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        episodeDir: { type: "string", description: "Absolute path of the episode directory" },
+        episode: { type: "string", description: "Episode slug, e.g. ep01-pacemaker-resistor" },
+        stage: { type: "string", enum: [...STAGES], description: "Starting stage" },
+        humanEventId: { type: "string", description: "Buzz event ID of the human instruction this is based on" }
+      },
+      required: ["episodeDir", "episode", "stage", "humanEventId"]
+    }
+  },
+  {
+    name: "production_stage_advance",
+    title: "Production stage \u2014 move",
+    annotations: HINT.generateLocal,
+    description: `Move an episode to another stage, forward or back. This is the only way the stage changes, and it always records the human event ID that authorised it.
+
+Moving to human_review or video_authorized freezes the current scene-N.png hashes as the approved set \u2014 after that a changed still blocks video generation and publishing until someone authorises a redo. Moving back to image_draft or still_gate clears that set, so a sanctioned redo is not read as drift.
+
+Requires humanEventId. An agent may not advance a stage on its own judgement \u2014 that is the whole point of the file.
+
+Returns: the move that was recorded, the event ID, and how many stills were frozen.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        episodeDir: { type: "string", description: "Absolute path of the episode directory" },
+        to: { type: "string", enum: [...STAGES], description: "Stage to move to" },
+        humanEventId: { type: "string", description: "Buzz event ID of the human instruction authorising this move" },
+        note: { type: "string", description: 'Short reason, e.g. "7\uCEF7 \uC7AC\uC791\uC5C5 \uC2B9\uC778"' }
+      },
+      required: ["episodeDir", "to", "humanEventId"]
+    }
   }
 ];
 var SNS_PLATFORM_BY_TOOL = {
@@ -79654,9 +79833,9 @@ var SNS_PLATFORM_BY_TOOL = {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync5 } from "node:fs";
+import { existsSync as existsSync6 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join as join6 } from "node:path";
+import { join as join7 } from "node:path";
 
 // src/http.ts
 async function requestRaw(method, url, headers, body, timeoutMs) {
@@ -79929,14 +80108,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join6(tmpdir(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join7(tmpdir(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join6(saveDir, filename);
-  for (let i2 = 1; existsSync5(savedPath); i2++) {
+  let savedPath = join7(saveDir, filename);
+  for (let i2 = 1; existsSync6(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join6(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join7(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview = decodePreview(buf.subarray(0, 4096));
@@ -80941,24 +81120,24 @@ async function fetchGoogleOrganic(input) {
 }
 
 // src/sns-client.ts
-import { createHash, randomUUID } from "node:crypto";
+import { createHash as createHash2, randomUUID } from "node:crypto";
 import {
-  existsSync as existsSync6,
+  existsSync as existsSync7,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename5, dirname as dirname3, extname as extname4, join as join7 } from "node:path";
+import { basename as basename5, dirname as dirname4, extname as extname4, join as join8 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync6(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync7(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync6(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync7(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -81627,10 +81806,10 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join7(snsTokenDir, ".yt-upload", `${key}.json`);
+  const key = createHash2("sha256").update(filePath).digest("hex").slice(0, 16);
+  return join8(snsTokenDir, ".yt-upload", `${key}.json`);
 }
-function readState(filePath) {
+function readState2(filePath) {
   try {
     const raw = nodeReadFileSync(sessionStateFile(filePath), "utf8");
     const s2 = JSON.parse(raw);
@@ -81640,14 +81819,14 @@ function readState(filePath) {
     return null;
   }
 }
-function writeState(filePath, s2) {
+function writeState2(filePath, s2) {
   const p = sessionStateFile(filePath);
   try {
     if (s2 === null) {
       nodeRmSync(p, { force: true });
       return;
     }
-    nodeMkdirSync(dirname3(p), { recursive: true });
+    nodeMkdirSync(dirname4(p), { recursive: true });
     nodeWriteFileSync(p, JSON.stringify(s2), "utf8");
   } catch {
   }
@@ -81768,7 +81947,7 @@ async function publishYoutube(input) {
   if (!client) return clientError;
   const { token, error: tokenError } = await exchangeYoutubeAccessToken(client);
   if (!token) return tokenError;
-  const prior = readState(input.videoFilePath);
+  const prior = readState2(input.videoFilePath);
   const reusable = prior && prior.size === videoSize && prior.mtimeMs === videoMtimeMs ? prior : null;
   let location = reusable ? reusable.sessionUrl : null;
   let sessionStartedAt = reusable ? reusable.startedAt : Date.now();
@@ -81813,7 +81992,7 @@ async function publishYoutube(input) {
     return fail2(502, `YouTube resumable init failed: ${error2 instanceof Error ? error2.message : String(error2)}`);
   }
   if (!location) return fail2(502, "YouTube resumable init returned no Location header");
-  writeState(input.videoFilePath, {
+  writeState2(input.videoFilePath, {
     sessionUrl: location,
     size: videoSize,
     mtimeMs: videoMtimeMs,
@@ -81826,7 +82005,7 @@ async function publishYoutube(input) {
       if (sync.done) {
         const doneId = String(parseJson(sync.body)?.id ?? "");
         if (doneId) {
-          writeState(input.videoFilePath, null);
+          writeState2(input.videoFilePath, null);
           return okJson({
             platform: "YOUTUBE",
             videoId: doneId,
@@ -81838,7 +82017,7 @@ async function publishYoutube(input) {
         }
       }
       if (sync.offset === null) {
-        writeState(input.videoFilePath, null);
+        writeState2(input.videoFilePath, null);
         return fail2(502, `YouTube resumable session expired \u2014 call again with the same arguments to upload in a new session`);
       }
       startOffset = sync.offset;
@@ -81851,7 +82030,7 @@ async function publishYoutube(input) {
     const text2 = up.body;
     const videoId = String(parseJson(text2)?.id ?? "");
     if (!videoId) return fail2(502, `YouTube upload returned no video id: ${text2}`);
-    writeState(input.videoFilePath, null);
+    writeState2(input.videoFilePath, null);
     const thumbnailWarning = thumb ? await setYoutubeThumbnail(token, videoId, thumb) : void 0;
     const captionWarning = captionBytes ? await uploadYoutubeCaption(token, videoId, {
       bytes: captionBytes,
@@ -83108,8 +83287,8 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync4 } from "node:fs";
-import { dirname as dirname4, isAbsolute, join as join8, resolve as resolve2 } from "node:path";
+import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync5 } from "node:fs";
+import { dirname as dirname5, isAbsolute, join as join9, resolve as resolve2 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -83673,7 +83852,7 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join8(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join9(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
@@ -83719,8 +83898,8 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync3(dirname4(htmlPath), { recursive: true });
-    writeFileSync4(htmlPath, renderFeedbackHtml(report), "utf8");
+    mkdirSync3(dirname5(htmlPath), { recursive: true });
+    writeFileSync5(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -85042,6 +85221,22 @@ var commentModerateSchema = external_exports.object({
   action: external_exports.enum(["hide", "unhide", "like", "unlike"]),
   channel: channelSlugSchema
 });
+var stageEnum = external_exports.enum(STAGES);
+var stageGetSchema = external_exports.object({
+  episodeDir: external_exports.string().min(1)
+});
+var stageInitSchema = external_exports.object({
+  episodeDir: external_exports.string().min(1),
+  episode: external_exports.string().min(1),
+  stage: stageEnum,
+  humanEventId: external_exports.string().min(1)
+});
+var stageAdvanceSchema = external_exports.object({
+  episodeDir: external_exports.string().min(1),
+  to: stageEnum,
+  humanEventId: external_exports.string().min(1),
+  note: external_exports.string().optional()
+});
 var accountCheckSchema = external_exports.object({
   channel: channelSlugSchema
 });
@@ -85702,6 +85897,61 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   threads_search: async (args) => {
     const input = parseArgs(threadsSearchSchema, args);
     return fromApi(await threadsKeywordSearch(input));
+  },
+  // ── production stage gate (pundago) — the episode advances only on a human's word ──
+  production_stage_get: async (args) => {
+    const input = parseArgs(stageGetSchema, args);
+    const state = readState(input.episodeDir);
+    if (!state) return text(`\uB2E8\uACC4 \uD30C\uC77C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4: ${input.episodeDir}/production-state.json
+production_stage_init \uC73C\uB85C \uBA3C\uC800 \uB9CC\uB4DC\uC138\uC694.`, true);
+    const drifted = changedStills(input.episodeDir, state);
+    const lines = [
+      `\uC5D0\uD53C\uC18C\uB4DC: ${state.episode}`,
+      `\uD604\uC7AC \uB2E8\uACC4: ${state.stage}`,
+      `\uC2B9\uC778 \uC2A4\uD2F8: ${Object.keys(state.approvedStills ?? {}).length}\uC7A5`,
+      drifted.length > 0 ? `\u26A0 \uC2B9\uC778\uACFC \uB2E4\uB978 \uC2A4\uD2F8: ${drifted.join(", ")}` : "\uC2A4\uD2F8 \uBCC0\uACBD \uC5C6\uC74C",
+      "",
+      "\uC774\uB825:",
+      ...state.history.map((h2) => `  ${h2.at}  ${h2.stage}  \u2190 ${h2.humanEventId}${h2.note ? `  (${h2.note})` : ""}`)
+    ];
+    return text(lines.join("\n"));
+  },
+  production_stage_init: async (args) => {
+    const input = parseArgs(stageInitSchema, args);
+    if (readState(input.episodeDir)) return text(`\uC774\uBBF8 \uB2E8\uACC4 \uD30C\uC77C\uC774 \uC788\uC2B5\uB2C8\uB2E4: ${input.episodeDir}`, true);
+    const state = {
+      episode: input.episode,
+      stage: input.stage,
+      history: [{ stage: input.stage, humanEventId: input.humanEventId, at: (/* @__PURE__ */ new Date()).toISOString(), note: "init" }],
+      approvedStills: {}
+    };
+    writeState(input.episodeDir, state);
+    return text(`\uB2E8\uACC4 \uD30C\uC77C\uC744 \uB9CC\uB4E4\uC5C8\uC2B5\uB2C8\uB2E4.
+\uC5D0\uD53C\uC18C\uB4DC: ${state.episode}
+\uC2DC\uC791 \uB2E8\uACC4: ${state.stage}
+\uADFC\uAC70 \uC774\uBCA4\uD2B8: ${input.humanEventId}`);
+  },
+  production_stage_advance: async (args) => {
+    const input = parseArgs(stageAdvanceSchema, args);
+    const state = readState(input.episodeDir);
+    if (!state) return text(`\uB2E8\uACC4 \uD30C\uC77C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4: ${input.episodeDir}`, true);
+    if (!input.humanEventId.trim()) return text("\uC0AC\uB78C \uC9C0\uC2DC\uC758 \uC774\uBCA4\uD2B8 ID\uAC00 \uC788\uC5B4\uC57C \uB2E8\uACC4\uB97C \uC62E\uAE38 \uC218 \uC788\uC2B5\uB2C8\uB2E4.", true);
+    const from = STAGES.indexOf(state.stage);
+    const to = STAGES.indexOf(input.to);
+    const goingBack = to < from;
+    state.stage = input.to;
+    state.history.push({ stage: input.to, humanEventId: input.humanEventId, at: (/* @__PURE__ */ new Date()).toISOString(), note: input.note });
+    if (state.stage === "human_review" || state.stage === "video_authorized") {
+      state.approvedStills = hashStills(input.episodeDir);
+    }
+    if (input.to === "image_draft" || input.to === "still_gate") state.approvedStills = {};
+    writeState(input.episodeDir, state);
+    const approved = Object.keys(state.approvedStills ?? {}).length;
+    return text(
+      `${goingBack ? "\uB418\uB3CC\uB9BC" : "\uC804\uC9C4"}: ${STAGES[from]} \u2192 ${input.to}
+\uADFC\uAC70 \uC774\uBCA4\uD2B8: ${input.humanEventId}
+` + (approved > 0 ? `\uC2B9\uC778 \uC2A4\uD2F8 ${approved}\uC7A5\uC744 \uC7A0\uAC14\uC2B5\uB2C8\uB2E4.` : "\uC2B9\uC778 \uC2A4\uD2F8 \uC5C6\uC74C(\uC774\uBBF8\uC9C0 \uB2E8\uACC4).")
+    );
   }
 };
 
@@ -85735,6 +85985,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             text: `Tool "${name}" is turned off (${gate.reason}). Clear the matching SOCIAL_FLOW_* env or remove its entry from disabled-tools.json to re-enable \u2014 no server restart needed for the JSON file.`
           }
         ],
+        isError: true
+      };
+    }
+    const stageGate = checkStageGate(name, args ?? {});
+    if (!stageGate.allowed) {
+      return {
+        content: [{ type: "text", text: `\uB2E8\uACC4 \uAC8C\uC774\uD2B8\uAC00 \uB9C9\uC558\uC2B5\uB2C8\uB2E4.
+
+${stageGate.reason}` }],
         isError: true
       };
     }
