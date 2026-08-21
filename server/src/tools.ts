@@ -30,6 +30,12 @@ import {
   ZIMAGE_QUANTIZE_OPTIONS,
 } from './zimage-client.js';
 import {
+  DEFAULT_QWEN3_ASR_LANGUAGE,
+  DEFAULT_QWEN3_ASR_MODEL,
+  QWEN3_ASR_LANGUAGES,
+  QWEN3_ASR_MODELS,
+} from './qwen3-asr-client.js';
+import {
   DEFAULT_SUNO_MODEL,
   SUNO_MODELS,
   SUNO_PERSONA_MODELS,
@@ -1595,6 +1601,61 @@ Returns: a text list of the 30 Gemini voice names with one-line personality desc
       type: 'object',
       properties: {},
       required: [],
+    },
+  },
+
+  {
+    name: 'stt_local_transcribe',
+    title: 'Local speech-to-text (Qwen3-ASR)',
+    annotations: HINT.generateLocal,
+    description: `Transcribe speech to text **on this machine** using Qwen3-ASR via mlx-qwen3-asr — no API key, no network, no per-minute cost.
+
+Use when the user asks to transcribe, caption, or turn speech into text (받아쓰기, STT, 전사), especially Korean. This is the DEFAULT local STT path: Korean is a first-class language (published Common Voice CER 5.88% / FLEURS CER 2.57% on the 1.7B). ingest (녹화→타임라인) uses the same engine when the binary is installed, and falls back to whisper.cpp if it is not.
+Do NOT use this as a substitute for a finished timeline.md — timestamps here are word/segment offsets, not scene boundaries. Do NOT send the audio to a cloud STT when this tool is available.
+Requires Apple Silicon and mlx-qwen3-asr (\`uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"\`); set QWEN3_ASR_BIN if the binary lives elsewhere. The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus ForcedAligner when timestamps are on) to ~/.cache/huggingface — a slow first call is the download, not a hang. Weights are Apache 2.0.
+
+Returns: a text block with the saved .json path, detected language, segment count, elapsed time, and the full transcript.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        audioPath: {
+          type: 'string',
+          description:
+            'Absolute path to the audio or video file to transcribe. Common containers work (wav/mp3/m4a/flac/mp4/mov) — ffmpeg extracts audio. Path must not contain "..".',
+        },
+        language: {
+          type: 'string',
+          description: `Spoken language (default: "${DEFAULT_QWEN3_ASR_LANGUAGE}"). Aliases such as ko/en/ja are folded to these names. Set it for short clips — auto-detect can miss a few seconds of Korean.`,
+          enum: [...QWEN3_ASR_LANGUAGES],
+          default: DEFAULT_QWEN3_ASR_LANGUAGE,
+        },
+        model: {
+          type: 'string',
+          description: `ASR model (default: "${DEFAULT_QWEN3_ASR_MODEL}" — best Korean). Qwen/Qwen3-ASR-0.6B is smaller and faster when the clip is clean and speed matters more than a few CER points.`,
+          enum: [...QWEN3_ASR_MODELS],
+          default: DEFAULT_QWEN3_ASR_MODEL,
+        },
+        context: {
+          type: 'string',
+          description:
+            'Optional domain glossary, space- or comma-separated (앱 이름, 고유명사). Biases the decoder toward those terms — same job WHISPER_PROMPT does for whisper.cpp. Example: "Claude Code ISA 딸깍연구소".',
+        },
+        timestamps: {
+          type: 'boolean',
+          description:
+            'Attach start/end seconds per segment (default: true). ingest and subtitle work need this; turn it off only for a plain text dump.',
+          default: true,
+        },
+        outputPath: {
+          type: 'string',
+          description: 'Directory path to save the transcript JSON (default: current working directory)',
+        },
+        filename: {
+          type: 'string',
+          description: 'Filename for the transcript JSON (default: stt_<timestamp>.json)',
+        },
+      },
+      required: ['audioPath'],
     },
   },
 

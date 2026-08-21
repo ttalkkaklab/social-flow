@@ -200,7 +200,7 @@
     <span><strong>Plugin</strong> social-flow</span>
     <span><strong>Skills</strong> ingest → storyboard → produce → publish</span>
     <span><strong>Written</strong> 2026-07-29</span>
-    <span><strong>Platform</strong> macOS (screencapture · whisper.cpp)</span>
+    <span><strong>Platform</strong> macOS (screencapture · Qwen3-ASR · whisper.cpp)</span>
   </div>
 </header>
 
@@ -274,7 +274,12 @@
   <table>
     <tr><th>Item</th><th>How to check</th><th>If it's missing</th></tr>
     <tr>
-      <td>whisper.cpp</td>
+      <td>mlx-qwen3-asr (default Korean STT)</td>
+      <td><code>command -v mlx-qwen3-asr</code></td>
+      <td><code>uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"</code></td>
+    </tr>
+    <tr>
+      <td>whisper.cpp (fallback)</td>
       <td><code>command -v whisper-cli</code></td>
       <td><code>brew install whisper-cpp</code></td>
     </tr>
@@ -297,7 +302,7 @@
   </div>
   <div class="callout tip">
     <span class="ct">✓ INSTALL ONCE, DONE</span>
-    <p>whisper.cpp and the model are installed once, and the Screen Recording and Microphone
+    <p>The STT engine (mlx-qwen3-asr, or the whisper.cpp fallback) and the model are installed once, and the Screen Recording and Microphone
     permissions are granted once. After that you go straight to section 3.</p>
   </div>
 
@@ -367,7 +372,7 @@
     <div class="step">
       <span class="tag">STT</span>
       <div class="name">① Transcribe</div>
-      <div class="desc">whisper.cpp + a domain glossary injected (heads off misheard terms)</div>
+      <div class="desc">Qwen3-ASR + a domain glossary injected (heads off misheard terms) — whisper.cpp fallback without it</div>
     </div>
     <div class="arrow">→</div>
     <div class="step">

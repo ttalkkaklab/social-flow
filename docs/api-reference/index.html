@@ -16,11 +16,11 @@
 <header class="hero">
   <div class="kicker">API REFERENCE</div>
   <h1>social-flow가 호출하는 전체 API</h1>
-  <p class="sub">내부 MCP 서버(<code>server/src</code>)가 실제로 호출하는 외부 API 13종의 공식 계약을 정리한 레퍼런스다. 각 문서는 <strong>공식 문서가 말하는 것</strong>과 <strong>이 저장소의 구현이 실제로 하는 것</strong>을 나란히 적어, 둘이 어긋나는 지점을 바로 볼 수 있게 했다. 이미지·음성은 네트워크를 타지 않는 온디바이스 엔진 2종이 기본 경로이며 그쪽은 호출할 외부 계약이 없다.</p>
+  <p class="sub">내부 MCP 서버(<code>server/src</code>)가 실제로 호출하는 외부 API 13종의 공식 계약을 정리한 레퍼런스다. 각 문서는 <strong>공식 문서가 말하는 것</strong>과 <strong>이 저장소의 구현이 실제로 하는 것</strong>을 나란히 적어, 둘이 어긋나는 지점을 바로 볼 수 있게 했다. 이미지·음성·받아쓰기는 네트워크를 타지 않는 온디바이스 엔진 3종이 기본 경로이며 그쪽은 호출할 외부 계약이 없다.</p>
   <div class="meta">
     <span>기준일 <strong>2026-08-18</strong></span>
-    <span>툴 <strong>50종</strong></span>
-    <span>외부 API <strong>13종</strong> + 로컬 <strong>2종</strong></span>
+    <span>툴 <strong>51종</strong></span>
+    <span>외부 API <strong>13종</strong> + 로컬 <strong>3종</strong></span>
     <span>MCP SDK <strong>1.30.0</strong></span>
   </div>
 </header>
@@ -84,9 +84,9 @@
       <div class="tools">gpt_image_text2img · gpt_image_img2img</div>
     </a>
     <a class="card" href="../research/2026-08-12-local-image-generation/index.html">
-      <h3>온디바이스 엔진 (Z-Image · Supertonic)</h3>
-      <p>외부 계약이 없는 두 툴. Z-Image Turbo 는 mflux/MLX 로 돌아 1024²가 9스텝에 149~210초, 1088×1920 이 462초다(M4 Max 실측). Supertonic 은 CPU 만 쓰고 44.1kHz wav 를 내며, 둘 다 키·과금·네트워크가 없다.</p>
-      <div class="tools">image_local_generate · tts_local_generate</div>
+      <h3>온디바이스 엔진 (Z-Image · Supertonic · Qwen3-ASR)</h3>
+      <p>외부 계약이 없는 세 툴. Z-Image Turbo 는 mflux/MLX 로 돌아 1024²가 9스텝에 149~210초, 1088×1920 이 462초다(M4 Max 실측). Supertonic 은 CPU 만 쓰고 44.1kHz wav 를 낸다. Qwen3-ASR 은 한글 STT 기본 경로다. 셋 다 키·과금·네트워크가 없다.</p>
+      <div class="tools">image_local_generate · tts_local_generate · stt_local_transcribe</div>
     </a>
     <a class="card" href="serpapi.html">
       <h3>SerpApi</h3>
@@ -115,7 +115,7 @@
     </a>
     <a class="card" href="tool-audit.html">
       <h3>툴 품질 감사 리포트</h3>
-      <p>2026-07-29 시점의 툴 31개를 위 계약과 베스트 프랙티스로 채점한 결과, 발견한 결함 전체와 수정 내역. 그 뒤 19종이 추가돼 지금은 50종이고, 그 19종은 아직 감사 대상이 아니다.</p>
+      <p>2026-07-29 시점의 툴 31개를 위 계약과 베스트 프랙티스로 채점한 결과, 발견한 결함 전체와 수정 내역. 그 뒤 20종이 추가돼 지금은 51종이고, 그 20종은 아직 감사 대상이 아니다.</p>
       <div class="tools">감사 · 점수 · 수정 이력</div>
     </a>
   </div>
@@ -142,6 +142,7 @@
       <tr><td><code>SNS_TOKEN_DIR</code><br>(기본 <code>~/.config/social-flow</code>)</td><td>게시·댓글·인사이트 툴 전체</td><td>토큰 파일이 없는 플랫폼의 게시·인사이트 툴 9종은 <strong>ListTools에서 아예 숨겨진다</strong></td><td>플랫폼별 OAuth</td></tr>
       <tr><td><code>MFLUX_ZIMAGE_BIN</code><br>(기본: PATH 의 <code>mflux-generate-z-image-turbo</code>)</td><td><code>image_local_generate</code></td><td>키가 아니라 <strong>실행 파일 경로</strong>다. 표준 위치에 깔았으면 설정할 필요가 없고, 못 찾으면 설치 안내가 담긴 에러가 온다</td><td><code>uv tool install --python 3.12 mflux</code></td></tr>
       <tr><td><code>SUPERTONIC_PYTHON</code><br>(기본 <code>python3</code>)</td><td><code>tts_local_generate</code></td><td>가상환경에 깔았으면 그 인터프리터를 지정한다. venv 자동 탐색은 하지 않는다 — 저장소마다 다른 환경을 조용히 집어 목소리가 바뀌는 사고를 막는다</td><td><code>pip install supertonic</code></td></tr>
+      <tr><td><code>QWEN3_ASR_BIN</code><br>(기본 <code>~/.local/bin/mlx-qwen3-asr</code>)</td><td><code>stt_local_transcribe</code></td><td>키가 아니라 <strong>실행 파일 경로</strong>다. <code>uv tool install</code> 기본 위치면 설정할 필요가 없고, 못 찾으면 설치 안내가 담긴 에러가 온다</td><td><code>uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"</code></td></tr>
       <tr><td><code>HF_HOME</code><br>(기본 <code>~/.cache/huggingface</code>)</td><td><code>image_local_generate</code></td><td>Z-Image 가중치 캐시 위치. 최초 호출에서 31GB 를 내려받으므로 디스크가 빠듯하면 옮긴다</td><td>—</td></tr>
     </tbody>
   </table>
@@ -184,6 +185,7 @@
       <tr><td><code>tts_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateContent</code> (<code>AUDIO</code>)</td><td><a href="gemini-tts.html">TTS</a></td></tr>
       <tr><td><code>tts_multi_speaker</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateContent</code> (multiSpeaker)</td><td><a href="gemini-tts.html">TTS</a></td></tr>
       <tr><td><code>tts_local_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>없음 — 로컬 Supertonic 3 (python)</td><td><a href="../research/2026-08-11-local-tts-and-commercial-api/index.html">로컬 TTS 조사</a></td></tr>
+      <tr><td><code>stt_local_transcribe</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>없음 — 로컬 Qwen3-ASR (mlx-qwen3-asr)</td><td>—</td></tr>
       <tr><td><code>tts_list_voices</code></td><td><span class="badge ro">읽기</span></td><td>없음 — 서버 내장 상수</td><td><a href="gemini-tts.html">TTS</a></td></tr>
       <tr><td><code>music_generate_clip</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>interactions.create</code> (<code>lyria-3-clip-preview</code>)</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
       <tr><td><code>music_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>

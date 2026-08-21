@@ -13,6 +13,7 @@ export const ALLOWED_EXTENSIONS = {
     image: ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'],
     video: ['.mp4', '.webm', '.mov', '.avi'],
     audio: ['.wav', '.mp3', '.ogg', '.webm', '.aac', '.flac'],
+    json: ['.json'],
 };
 /**
  * Validates that a file path is safe.

@@ -5,7 +5,7 @@ Usage:
   build-timeline.py <outdir> --src <recording> [--min-scene 8] [--max-scene 45]
 
 Input (produced by transcribe.sh):
-  <outdir>/raw/transcript.json   whisper.cpp STT (ms offsets)
+  <outdir>/raw/transcript.json   STT (ms offsets — Qwen3-ASR or whisper.cpp)
   <outdir>/raw/silences.tsv      silence spans (start<TAB>end, seconds)
   <outdir>/raw/scenes.tsv        screen-change times (seconds)
   <outdir>/raw/duration.txt      source length (seconds)
@@ -76,13 +76,28 @@ def score_boundary(silence, scene_times):
 def load_transcript(path):
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     segs = []
+    # whisper.cpp (-oj), or the compatible shape transcribe.sh folds Qwen3-ASR output into
     for item in data.get("transcription", []):
-        text = item["text"].strip()
+        text = (item.get("text") or "").strip()
+        if not text:
+            continue
+        offsets = item.get("offsets") or {}
+        segs.append({
+            "start": offsets.get("from", 0) / 1000.0,
+            "end": offsets.get("to", 0) / 1000.0,
+            "text": text,
+        })
+    if segs:
+        return segs
+    # raw Qwen3-ASR JSON (seconds) — in case the transcribe.sh conversion was skipped.
+    # Prefer utterance-level chunks; segments are word fragments and must not become scenes.
+    for item in data.get("chunks") or data.get("segments") or []:
+        text = (item.get("text") or "").strip()
         if not text:
             continue
         segs.append({
-            "start": item["offsets"]["from"] / 1000.0,
-            "end": item["offsets"]["to"] / 1000.0,
+            "start": float(item.get("start") or 0),
+            "end": float(item.get("end") or 0),
             "text": text,
         })
     return segs
@@ -239,7 +254,7 @@ def main():
     raw = out / "raw"
     segs = load_transcript(raw / "transcript.json")
     if not segs:
-        sys.exit("ERROR: transcript is empty — check raw/whisper.log")
+        sys.exit("ERROR: transcript is empty — check raw/qwen3-asr.log or raw/whisper.log")
     silences = load_tsv_pairs(raw / "silences.tsv")
     scene_times = load_scalar_list(raw / "scenes.tsv")
     duration = float((raw / "duration.txt").read_text().strip())
