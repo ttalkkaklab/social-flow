@@ -3659,12 +3659,7 @@ var require_fast_uri = __commonJS({
     }
     function resolve3(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
-      const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
-      const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
-      if (baseMalformed || relativeMalformed) {
-        throw new Error(baseParsed.error || relativeParsed.error || "URI is malformed.");
-      }
-      const resolved = resolveComponent(baseParsed, relativeParsed, schemelessOptions, true);
+      const resolved = resolveComponent(parse3(baseURI, schemelessOptions), parse3(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
@@ -3790,7 +3785,6 @@ var require_fast_uri = __commonJS({
     }
     var URI_PARSE = /^(?:([^#/:?]+):)?(?:\/\/((?:([^#/?@]*)@)?(\[[^#/?\]]+\]|[^#/:?]*)(?::(\d*))?))?([^#?]*)(?:\?([^#]*))?(?:#((?:.|[\n\r])*))?/u;
     var AUTHORITY_PREFIX = /^(?:[^#/:?]+:)?\/\/([^/?#]*)/;
-    var AUTHORITY_INTRODUCER_REGION = /^(?:[^#/:?]+:)?([/\\\t\n\r]*)/;
     function getParseError(parsed, matches) {
       if (matches[2] !== void 0 && parsed.path && parsed.path[0] !== "/") {
         return 'URI path must start with "/" when authority is present.';
@@ -3824,20 +3818,6 @@ var require_fast_uri = __commonJS({
       if (authorityMatch !== null && authorityMatch[1].indexOf("\\") !== -1) {
         parsed.error = "URI authority must not contain a literal backslash.";
         malformedAuthorityOrPort = true;
-      }
-      const introducerMatch = uri.match(AUTHORITY_INTRODUCER_REGION);
-      if (introducerMatch !== null) {
-        const region = introducerMatch[1];
-        const normalizedRegion = region.replace(/[\t\n\r]/g, "");
-        if (normalizedRegion.length >= 2) {
-          if (normalizedRegion.slice(0, 2) !== "//") {
-            parsed.error = parsed.error || "URI authority must not contain a literal backslash.";
-            malformedAuthorityOrPort = true;
-          } else if (region.length !== normalizedRegion.length) {
-            parsed.error = parsed.error || "URI authority introducer must not contain whitespace.";
-            malformedAuthorityOrPort = true;
-          }
-        }
       }
       const matches = uri.match(URI_PARSE);
       if (matches) {
@@ -75105,6 +75085,9 @@ function supertonicPython() {
 function mfluxZImageBin() {
   return process.env.MFLUX_ZIMAGE_BIN || join(homedir(), ".local", "bin", "mflux-generate-z-image-turbo");
 }
+function qwen3AsrBin() {
+  return process.env.QWEN3_ASR_BIN || join(homedir(), ".local", "bin", "mlx-qwen3-asr");
+}
 var snsTokenDir = process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow");
 var SNS_PLATFORMS = ["THREADS", "INSTAGRAM", "FACEBOOK", "YOUTUBE"];
 var SNS_CREDENTIAL_FILENAMES = {
@@ -75377,7 +75360,8 @@ import * as path from "node:path";
 var ALLOWED_EXTENSIONS = {
   image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
   video: [".mp4", ".webm", ".mov", ".avi"],
-  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"]
+  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
+  json: [".json"]
 };
 function validateFilePath(filePath, options) {
   const resolved = path.resolve(filePath);
@@ -76656,6 +76640,265 @@ ${tail}` : ""}`));
     steps: request.steps,
     seed: request.seed,
     quantize: request.quantize,
+    elapsedSeconds: elapsed
+  };
+}
+
+// src/qwen3-asr-client.ts
+import { execFile as execFile3 } from "node:child_process";
+import { existsSync as existsSync4, mkdirSync as mkdirSync2, mkdtempSync, readFileSync as readFileSync3, renameSync, rmSync } from "node:fs";
+import { homedir as homedir3 } from "node:os";
+import { basename as basename4, extname as extname2, join as join4 } from "node:path";
+var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
+var DEFAULT_QWEN3_ASR_MODEL = "Qwen/Qwen3-ASR-1.7B";
+var QWEN3_ASR_LANGUAGES = [
+  "Korean",
+  "English",
+  "Chinese",
+  "Japanese",
+  "Arabic",
+  "German",
+  "French",
+  "Spanish",
+  "Portuguese",
+  "Russian",
+  "Hindi",
+  "Italian",
+  "Turkish",
+  "Dutch"
+];
+var DEFAULT_QWEN3_ASR_LANGUAGE = "Korean";
+var LANGUAGE_ALIASES = {
+  ko: "Korean",
+  "ko-kr": "Korean",
+  korean: "Korean",
+  en: "English",
+  "en-us": "English",
+  "en-gb": "English",
+  english: "English",
+  zh: "Chinese",
+  "zh-cn": "Chinese",
+  "zh-tw": "Chinese",
+  cmn: "Chinese",
+  mandarin: "Chinese",
+  chinese: "Chinese",
+  ja: "Japanese",
+  "ja-jp": "Japanese",
+  japanese: "Japanese",
+  ar: "Arabic",
+  "ar-eg": "Arabic",
+  arabic: "Arabic",
+  de: "German",
+  "de-de": "German",
+  german: "German",
+  fr: "French",
+  "fr-fr": "French",
+  french: "French",
+  es: "Spanish",
+  "es-es": "Spanish",
+  "es-419": "Spanish",
+  spanish: "Spanish",
+  pt: "Portuguese",
+  "pt-br": "Portuguese",
+  "pt-pt": "Portuguese",
+  portuguese: "Portuguese",
+  ru: "Russian",
+  "ru-ru": "Russian",
+  russian: "Russian",
+  hi: "Hindi",
+  "hi-in": "Hindi",
+  hindi: "Hindi",
+  it: "Italian",
+  "it-it": "Italian",
+  italian: "Italian",
+  tr: "Turkish",
+  "tr-tr": "Turkish",
+  turkish: "Turkish",
+  nl: "Dutch",
+  "nl-nl": "Dutch",
+  dutch: "Dutch"
+};
+function canonicalizeLanguage(value) {
+  if (QWEN3_ASR_LANGUAGES.includes(value)) {
+    return value;
+  }
+  const mapped = LANGUAGE_ALIASES[value.trim().toLowerCase()];
+  if (!mapped) {
+    throw new Error(
+      `Unsupported language "${value}". Use one of: ${QWEN3_ASR_LANGUAGES.join(", ")} (aliases like ko/en/ja also work).`
+    );
+  }
+  return mapped;
+}
+var AUDIO_INPUT_EXTENSIONS = [
+  ".wav",
+  ".mp3",
+  ".m4a",
+  ".flac",
+  ".ogg",
+  ".aac",
+  ".mp4",
+  ".mov",
+  ".webm",
+  ".mkv"
+];
+function qwen3AsrTimeoutMs(audioSeconds) {
+  return Math.min(30 * 6e4, 9e4 + Math.ceil(Math.max(audioSeconds, 1) * 2e3));
+}
+var WEIGHT_DOWNLOAD_ALLOWANCE_MS2 = 60 * 6e4;
+function weightCacheDir2(model) {
+  const hfHome = process.env.HF_HOME || join4(homedir3(), ".cache", "huggingface");
+  const slug = model.replaceAll("/", "--");
+  return join4(hfHome, "hub", `models--${slug}`);
+}
+function alignerCacheDir() {
+  const hfHome = process.env.HF_HOME || join4(homedir3(), ".cache", "huggingface");
+  return join4(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
+}
+function installHint3(detail) {
+  return `${detail}
+
+Local STT requires mlx-qwen3-asr (Apple Silicon only, MLX):
+  uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"
+If installed elsewhere, point QWEN3_ASR_BIN at the executable (e.g. QWEN3_ASR_BIN=~/.local/bin/mlx-qwen3-asr).
+The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus the ForcedAligner) to ~/.cache/huggingface. Until it is installed, ingest uses the whisper.cpp fallback.`;
+}
+var qwen3AsrTranscribeSchema = external_exports.object({
+  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname2(p).toLowerCase()), {
+    message: `audioPath extension must be one of: ${AUDIO_INPUT_EXTENSIONS.join(", ")}`
+  }),
+  language: external_exports.string().optional().default(DEFAULT_QWEN3_ASR_LANGUAGE).transform((value) => canonicalizeLanguage(value)),
+  model: external_exports.enum(QWEN3_ASR_MODELS).optional().default(DEFAULT_QWEN3_ASR_MODEL),
+  context: external_exports.string().max(4e3).optional(),
+  timestamps: external_exports.boolean().optional().default(true),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("json").optional()
+});
+function probeDurationSeconds(audioPath) {
+  return new Promise((resolve3) => {
+    execFile3(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
+      { timeout: 15e3 },
+      (error2, out) => {
+        const seconds = Number.parseFloat((out || "").trim());
+        if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
+          resolve3(60);
+          return;
+        }
+        resolve3(seconds);
+      }
+    );
+  });
+}
+function parseCliJson(raw) {
+  return JSON.parse(raw);
+}
+function normalizeSegments(data) {
+  return (data.segments ?? []).map((seg) => ({
+    text: (seg.text ?? "").trim(),
+    start: Number(seg.start ?? 0),
+    end: Number(seg.end ?? 0)
+  })).filter((seg) => seg.text.length > 0);
+}
+async function transcribeLocal(request) {
+  const bin = qwen3AsrBin();
+  if (!existsSync4(bin)) {
+    return { success: false, error: installHint3(`mlx-qwen3-asr binary not found: "${bin}"`) };
+  }
+  if (!existsSync4(request.audioPath)) {
+    return { success: false, error: `Audio file not found: ${request.audioPath}` };
+  }
+  const outFile = resolveOutputFile(
+    request.outputPath || process.cwd(),
+    request.filename || `stt_${Date.now()}.json`,
+    "json"
+  );
+  const outDir = request.outputPath || process.cwd();
+  mkdirSync2(outDir, { recursive: true });
+  const scratchDir = mkdtempSync(join4(outDir, ".qwen3-asr-"));
+  const firstCall = !existsSync4(weightCacheDir2(request.model)) || request.timestamps && !existsSync4(alignerCacheDir());
+  if (firstCall) {
+    console.error(
+      "[Qwen3-ASR] First call \u2014 downloading ~3.4GB of weights (plus ForcedAligner if timestamps) to the huggingface cache. This can take a while."
+    );
+  }
+  const duration3 = await probeDurationSeconds(request.audioPath);
+  const cliArgs = [
+    request.audioPath,
+    "--model",
+    request.model,
+    "--language",
+    request.language,
+    "-f",
+    "json",
+    "-o",
+    scratchDir,
+    "--quiet"
+  ];
+  if (request.timestamps) cliArgs.push("--timestamps");
+  if (request.context?.trim()) cliArgs.push("--context", request.context.trim());
+  console.error(
+    `[Qwen3-ASR] Transcribing locally... (${request.model}, ${request.language}, ${duration3.toFixed(1)}s audio)`
+  );
+  const startedAt = Date.now();
+  try {
+    await new Promise((resolve3, reject) => {
+      execFile3(
+        bin,
+        cliArgs,
+        {
+          timeout: qwen3AsrTimeoutMs(duration3) + (firstCall ? WEIGHT_DOWNLOAD_ALLOWANCE_MS2 : 0),
+          maxBuffer: 16 * 1024 * 1024
+        },
+        (error2, _out, errOut) => {
+          if (error2) {
+            const code = error2.code;
+            if (code === "ENOENT") {
+              reject(new Error(installHint3(`mlx-qwen3-asr binary not found: "${bin}"`)));
+              return;
+            }
+            const tail = (errOut || "").split("\n").filter((line) => line.trim() && !line.includes("%|") && !line.includes("it/s]")).slice(-8).join("\n");
+            reject(new Error(`${error2.message}${tail ? `
+${tail}` : ""}`));
+            return;
+          }
+          resolve3();
+        }
+      );
+    });
+  } catch (error2) {
+    rmSync(scratchDir, { recursive: true, force: true });
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
+    return { success: false, error: message };
+  }
+  const cliJsonPath = join4(scratchDir, `${basename4(request.audioPath, extname2(request.audioPath))}.json`);
+  if (!existsSync4(cliJsonPath)) {
+    rmSync(scratchDir, { recursive: true, force: true });
+    return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
+  }
+  let parsed;
+  try {
+    parsed = parseCliJson(readFileSync3(cliJsonPath, "utf8"));
+  } catch (error2) {
+    rmSync(scratchDir, { recursive: true, force: true });
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return { success: false, error: `Failed to parse CLI JSON: ${message}` };
+  }
+  renameSync(cliJsonPath, outFile);
+  rmSync(scratchDir, { recursive: true, force: true });
+  const segments = normalizeSegments(parsed);
+  const text2 = (parsed.text ?? segments.map((s2) => s2.text).join("")).trim();
+  const elapsed = Math.round((Date.now() - startedAt) / 100) / 10;
+  console.error(`[Qwen3-ASR] Transcript saved to: ${outFile} (${segments.length} segments in ${elapsed}s)`);
+  return {
+    success: true,
+    transcriptPath: outFile,
+    text: text2,
+    language: parsed.language || request.language,
+    model: request.model,
+    segments,
     elapsedSeconds: elapsed
   };
 }
@@ -78449,6 +78692,57 @@ Returns: a text list of the 30 Gemini voice names with one-line personality desc
       required: []
     }
   },
+  {
+    name: "stt_local_transcribe",
+    title: "Local speech-to-text (Qwen3-ASR)",
+    annotations: HINT.generateLocal,
+    description: `Transcribe speech to text **on this machine** using Qwen3-ASR via mlx-qwen3-asr \u2014 no API key, no network, no per-minute cost.
+
+Use when the user asks to transcribe, caption, or turn speech into text (\uBC1B\uC544\uC4F0\uAE30, STT, \uC804\uC0AC), especially Korean. This is the DEFAULT local STT path: Korean is a first-class language (published Common Voice CER 5.88% / FLEURS CER 2.57% on the 1.7B). ingest (\uB179\uD654\u2192\uD0C0\uC784\uB77C\uC778) uses the same engine when the binary is installed, and falls back to whisper.cpp if it is not.
+Do NOT use this as a substitute for a finished timeline.md \u2014 timestamps here are word/segment offsets, not scene boundaries. Do NOT send the audio to a cloud STT when this tool is available.
+Requires Apple Silicon and mlx-qwen3-asr (\`uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"\`); set QWEN3_ASR_BIN if the binary lives elsewhere. The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus ForcedAligner when timestamps are on) to ~/.cache/huggingface \u2014 a slow first call is the download, not a hang. Weights are Apache 2.0.
+
+Returns: a text block with the saved .json path, detected language, segment count, elapsed time, and the full transcript.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        audioPath: {
+          type: "string",
+          description: 'Absolute path to the audio or video file to transcribe. Common containers work (wav/mp3/m4a/flac/mp4/mov) \u2014 ffmpeg extracts audio. Path must not contain "..".'
+        },
+        language: {
+          type: "string",
+          description: `Spoken language (default: "${DEFAULT_QWEN3_ASR_LANGUAGE}"). Aliases such as ko/en/ja are folded to these names. Set it for short clips \u2014 auto-detect can miss a few seconds of Korean.`,
+          enum: [...QWEN3_ASR_LANGUAGES],
+          default: DEFAULT_QWEN3_ASR_LANGUAGE
+        },
+        model: {
+          type: "string",
+          description: `ASR model (default: "${DEFAULT_QWEN3_ASR_MODEL}" \u2014 best Korean). Qwen/Qwen3-ASR-0.6B is smaller and faster when the clip is clean and speed matters more than a few CER points.`,
+          enum: [...QWEN3_ASR_MODELS],
+          default: DEFAULT_QWEN3_ASR_MODEL
+        },
+        context: {
+          type: "string",
+          description: 'Optional domain glossary, space- or comma-separated (\uC571 \uC774\uB984, \uACE0\uC720\uBA85\uC0AC). Biases the decoder toward those terms \u2014 same job WHISPER_PROMPT does for whisper.cpp. Example: "Claude Code ISA \uB538\uAE4D\uC5F0\uAD6C\uC18C".'
+        },
+        timestamps: {
+          type: "boolean",
+          description: "Attach start/end seconds per segment (default: true). ingest and subtitle work need this; turn it off only for a plain text dump.",
+          default: true
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the transcript JSON (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the transcript JSON (default: stt_<timestamp>.json)"
+        }
+      },
+      required: ["audioPath"]
+    }
+  },
   // ── Music generation (Google Lyria — ported from the fect-mcp music module) ────────────
   {
     name: "music_generate_clip",
@@ -79340,9 +79634,9 @@ var SNS_PLATFORM_BY_TOOL = {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync4 } from "node:fs";
+import { existsSync as existsSync5 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join as join5 } from "node:path";
+import { join as join6 } from "node:path";
 
 // src/http.ts
 async function requestRaw(method, url, headers, body, timeoutMs) {
@@ -79615,14 +79909,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join5(tmpdir(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join6(tmpdir(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join5(saveDir, filename);
-  for (let i2 = 1; existsSync4(savedPath); i2++) {
+  let savedPath = join6(saveDir, filename);
+  for (let i2 = 1; existsSync5(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join5(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join6(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview = decodePreview(buf.subarray(0, 4096));
@@ -80629,22 +80923,22 @@ async function fetchGoogleOrganic(input) {
 // src/sns-client.ts
 import { createHash, randomUUID } from "node:crypto";
 import {
-  existsSync as existsSync5,
+  existsSync as existsSync6,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename4, dirname as dirname3, extname as extname3, join as join6 } from "node:path";
+import { basename as basename5, dirname as dirname3, extname as extname4, join as join7 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync5(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync6(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync5(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync6(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -81201,7 +81495,7 @@ var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
 async function readCaptionFile(path6, maxBytes) {
-  if (extname3(path6).toLowerCase() !== ".srt") {
+  if (extname4(path6).toLowerCase() !== ".srt") {
     return { error: fail2(400, `Caption file must be .srt (SubRip): ${path6}`) };
   }
   let bytes;
@@ -81314,7 +81608,7 @@ function parseResumeOffset(range) {
 }
 function sessionStateFile(filePath) {
   const key = createHash("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join6(snsTokenDir, ".yt-upload", `${key}.json`);
+  return join7(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
   try {
@@ -81414,7 +81708,7 @@ async function queryResumeOffset(sessionUrl, total, mimeType) {
   }
 }
 async function publishYoutube(input) {
-  const mimeType = YT_VIDEO_MIME_BY_EXT[extname3(input.videoFilePath).toLowerCase()];
+  const mimeType = YT_VIDEO_MIME_BY_EXT[extname4(input.videoFilePath).toLowerCase()];
   if (!mimeType) return fail2(400, `Unsupported video extension: ${input.videoFilePath} (.mp4/.mov)`);
   let videoSize;
   let videoMtimeMs;
@@ -81429,7 +81723,7 @@ async function publishYoutube(input) {
   }
   let thumb;
   if (input.thumbnailFilePath) {
-    const thumbMime = YT_THUMB_MIME_BY_EXT[extname3(input.thumbnailFilePath).toLowerCase()];
+    const thumbMime = YT_THUMB_MIME_BY_EXT[extname4(input.thumbnailFilePath).toLowerCase()];
     if (!thumbMime) {
       return fail2(400, `Unsupported thumbnail extension: ${input.thumbnailFilePath} (.jpg/.jpeg/.png)`);
     }
@@ -81517,7 +81811,7 @@ async function publishYoutube(input) {
             platform: "YOUTUBE",
             videoId: doneId,
             permalink: `https://www.youtube.com/watch?v=${doneId}`,
-            fileName: basename4(input.videoFilePath),
+            fileName: basename5(input.videoFilePath),
             resumed: true,
             note: `This file is already up from the upload started at ${new Date(sessionStartedAt).toISOString()}. It was not re-uploaded.`
           });
@@ -81547,7 +81841,7 @@ async function publishYoutube(input) {
       platform: "YOUTUBE",
       videoId,
       permalink: `https://www.youtube.com/watch?v=${videoId}`,
-      fileName: basename4(input.videoFilePath),
+      fileName: basename5(input.videoFilePath),
       ...thumb ? { thumbnailSet: !thumbnailWarning } : {},
       ...thumbnailWarning ? { thumbnailWarning } : {},
       ...captionBytes ? { captionSet: !captionWarning } : {},
@@ -82794,8 +83088,8 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync2, writeFileSync as writeFileSync4 } from "node:fs";
-import { dirname as dirname4, isAbsolute, join as join7, resolve as resolve2 } from "node:path";
+import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync4 } from "node:fs";
+import { dirname as dirname4, isAbsolute, join as join8, resolve as resolve2 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -83359,7 +83653,7 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join7(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join8(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
@@ -83405,7 +83699,7 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync2(dirname4(htmlPath), { recursive: true });
+    mkdirSync3(dirname4(htmlPath), { recursive: true });
     writeFileSync4(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
@@ -85108,6 +85402,27 @@ Engine choice: narration bodies and long scripts go to tts_local_generate (zero 
 If the channel profile (data/<slug>/profile.md) names a voice, use that value as-is \u2014 a voice that changes every episode breaks the channel's identity.`
     );
   },
+  // Local transcription (Qwen3-ASR) — on-device via subprocess. No key, no network, no billing.
+  stt_local_transcribe: async (args) => {
+    const request = parseArgs(qwen3AsrTranscribeSchema, args);
+    const result = await transcribeLocal(request);
+    if (!result.success) return text(`Local transcription failed: ${result.error}`, true);
+    const preview = (result.text || "").length > 4e3 ? `${(result.text || "").slice(0, 4e3)}
+\u2026(truncated \u2014 full text in the JSON)` : result.text || "";
+    return text(
+      `Audio transcribed locally!
+
+File: ${result.transcriptPath}
+Engine: Qwen3-ASR via mlx-qwen3-asr (on-device)
+Model: ${result.model}
+Language: ${result.language}
+Segments: ${result.segments?.length ?? 0}
+Elapsed: ${result.elapsedSeconds}s
+
+Transcript:
+${preview}`
+    );
+  },
   // ── music generation (Lyria) — 30s batch clip / streaming with an exact duration ──
   music_generate_clip: async (args) => {
     const result = await generateClip(parseArgs(musicClipSchema, args));
@@ -85372,7 +85687,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.13.0" },
+  { name: "social-flow", version: "0.14.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -85435,7 +85750,7 @@ async function main() {
     console.error(`[social-flow] ${warning}`);
   }
   console.error(
-    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, suno key ${config2.sunoApiKey ? "set" : "MISSING (suno_* will fail \u2014 music_*(Lyria) does not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, ` + describeToolGate(toolNames, process.env, jsonPatterns)
+    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, suno key ${config2.sunoApiKey ? "set" : "MISSING (suno_* will fail \u2014 music_*(Lyria) does not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : "~/.local/bin/mlx-qwen3-asr (default \u2014 set QWEN3_ASR_BIN if elsewhere)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, ` + describeToolGate(toolNames, process.env, jsonPatterns)
   );
 }
 main().catch((error2) => {

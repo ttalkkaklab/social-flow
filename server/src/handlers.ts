@@ -2,6 +2,7 @@ import { z } from 'zod';
 import * as datago from './datago-client.js';
 import * as image from './image-client.js';
 import * as music from './music-client.js';
+import * as qwen3asr from './qwen3-asr-client.js';
 import * as suno from './suno-client.js';
 import * as naver from './naver-client.js';
 import * as seedance from './seedance-client.js';
@@ -774,6 +775,20 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         `short cuts that need acting go to tts_generate (the only one with stylePrompt).\n` +
         `If the channel profile (data/<slug>/profile.md) names a voice, use that value as-is — ` +
         `a voice that changes every episode breaks the channel's identity.`,
+    );
+  },
+
+  // Local transcription (Qwen3-ASR) — on-device via subprocess. No key, no network, no billing.
+  stt_local_transcribe: async (args) => {
+    const request = parseArgs(qwen3asr.qwen3AsrTranscribeSchema, args);
+    const result = await qwen3asr.transcribeLocal(request);
+    if (!result.success) return text(`Local transcription failed: ${result.error}`, true);
+    const preview = (result.text || '').length > 4000 ? `${(result.text || '').slice(0, 4000)}\n…(truncated — full text in the JSON)` : result.text || '';
+    return text(
+      `Audio transcribed locally!\n\nFile: ${result.transcriptPath}\nEngine: Qwen3-ASR via mlx-qwen3-asr (on-device)\n` +
+        `Model: ${result.model}\nLanguage: ${result.language}\n` +
+        `Segments: ${result.segments?.length ?? 0}\n` +
+        `Elapsed: ${result.elapsedSeconds}s\n\nTranscript:\n${preview}`,
     );
   },
 

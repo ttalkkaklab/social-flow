@@ -292,7 +292,8 @@ footer a { color: var(--accent); }
       <tr><td><strong>ffmpeg</strong> <span class="badge req">required</span></td><td><code>brew install ffmpeg</code></td><td>cuts and joins video and audio. Without it step 3 stops</td></tr>
       <tr><td><strong>python3</strong> <span class="badge req">required</span></td><td><code>python3 -V</code></td><td>the Korean copy style checker is a Python script</td></tr>
       <tr><td><strong>Google Chrome</strong> <span class="badge req">required</span></td><td>nothing to do if it's installed</td><td>video frames are drawn as a web page and captured</td></tr>
-      <tr><td>whisper.cpp <span class="badge opt">optional</span></td><td><code>brew install whisper-cpp</code></td><td>only for transcribing screen recordings</td></tr>
+      <tr><td>mlx-qwen3-asr <span class="badge opt">optional</span></td><td><code>uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"</code></td><td>the default Korean STT for transcribing screen recordings</td></tr>
+      <tr><td>whisper.cpp <span class="badge opt">optional</span></td><td><code>brew install whisper-cpp</code></td><td>the ingest fallback when Qwen3-ASR is missing</td></tr>
     </tbody>
   </table>
   </div>
@@ -350,7 +351,7 @@ claude --plugin-dir ~/social-flow</code></pre>
     <div class="step-body">
       <h3>Check that it loaded</h3>
       <p><code>/mcp</code> lists the connected servers. If <code>social-flow</code> is there with a list of tools, you're done.</p>
-      <div class="ok"><strong>Seeing only 41 tools is normal.</strong> Of the 50 total, the nine publish and insight tools show up only for platforms whose credential file exists. If you haven't connected an account yet, they're supposed to be missing.</div>
+      <div class="ok"><strong>Seeing only 42 tools is normal.</strong> Of the 51 total, the nine publish and insight tools show up only for platforms whose credential file exists. If you haven't connected an account yet, they're supposed to be missing.</div>
     </div>
   </div>
 </section>
