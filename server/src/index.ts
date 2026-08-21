@@ -5,6 +5,7 @@ import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } fr
 import { config, listChannelDirs } from './config.js';
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
+import { checkStageGate } from './production-stage.js';
 import { enabledPlatforms } from './sns-client.js';
 
 // The server version carried in the initialize response — same value as package.json's version.
@@ -36,6 +37,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // An unknown tool is a protocol error (-32602), not an execution failure (isError) —
     // the MCP two-layer error model: only failures of tools that exist become tool results
     if (!handler) throw new McpError(ErrorCode.InvalidParams, `Unknown tool: ${name}`);
+    // Production stage gate — refuses a step the episode is not standing at. Allows everything
+    // outside a gated episode, so other channels and untracked episodes run unchanged.
+    const gate = checkStageGate(name, args ?? {});
+    if (!gate.allowed) {
+      return {
+        content: [{ type: 'text', text: `단계 게이트가 막았습니다.\n\n${gate.reason}` }],
+        isError: true,
+      };
+    }
     return await handler(args ?? {});
   } catch (error) {
     if (error instanceof McpError) throw error;

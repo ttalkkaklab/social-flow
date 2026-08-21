@@ -1,3 +1,4 @@
+import { STAGES as STAGE_NAMES } from './production-stage.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
@@ -2146,6 +2147,65 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
                 channel: SNS_CHANNEL_PROPERTY,
             },
             required: ['query'],
+        },
+    },
+    {
+        name: 'production_stage_get',
+        title: 'Production stage — read',
+        annotations: HINT.local,
+        description: `Read an episode's current production stage, the stage history with the human event ID that opened each stage, and whether any approved still has changed since the still gate.
+
+Call this before starting work on a pundago episode so you know which step is open. Read-only. Stages in order: storyboard_draft | storyboard_review | image_draft | still_gate | human_review | video_authorized | video_generation | render | publish | published.
+
+Returns: current stage, approved-still count, a warning listing stills that differ from the approved set, and the stage history.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                episodeDir: { type: 'string', description: 'Absolute path of the episode directory (the one holding production-state.json)' },
+            },
+            required: ['episodeDir'],
+        },
+    },
+    {
+        name: 'production_stage_init',
+        title: 'Production stage — create',
+        annotations: HINT.generateLocal,
+        description: `Create production-state.json for an episode. Run once per episode. Until this file exists the stage gate lets every call through, so an episode without it is ungated.
+
+Requires humanEventId — the Buzz event ID of the message in which a person asked for this. Do not invent one; without a real instruction there is nothing to record.
+
+Returns: the episode name, the starting stage, and the event ID it was recorded against.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                episodeDir: { type: 'string', description: 'Absolute path of the episode directory' },
+                episode: { type: 'string', description: 'Episode slug, e.g. ep01-pacemaker-resistor' },
+                stage: { type: 'string', enum: [...STAGE_NAMES], description: 'Starting stage' },
+                humanEventId: { type: 'string', description: "Buzz event ID of the human instruction this is based on" },
+            },
+            required: ['episodeDir', 'episode', 'stage', 'humanEventId'],
+        },
+    },
+    {
+        name: 'production_stage_advance',
+        title: 'Production stage — move',
+        annotations: HINT.generateLocal,
+        description: `Move an episode to another stage, forward or back. This is the only way the stage changes, and it always records the human event ID that authorised it.
+
+Moving to human_review or video_authorized freezes the current scene-N.png hashes as the approved set — after that a changed still blocks video generation and publishing until someone authorises a redo. Moving back to image_draft or still_gate clears that set, so a sanctioned redo is not read as drift.
+
+Requires humanEventId. An agent may not advance a stage on its own judgement — that is the whole point of the file.
+
+Returns: the move that was recorded, the event ID, and how many stills were frozen.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                episodeDir: { type: 'string', description: 'Absolute path of the episode directory' },
+                to: { type: 'string', enum: [...STAGE_NAMES], description: 'Stage to move to' },
+                humanEventId: { type: 'string', description: 'Buzz event ID of the human instruction authorising this move' },
+                note: { type: 'string', description: 'Short reason, e.g. "7컷 재작업 승인"' },
+            },
+            required: ['episodeDir', 'to', 'humanEventId'],
         },
     },
 ];
