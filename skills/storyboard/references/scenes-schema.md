@@ -582,6 +582,22 @@ That slot is the `negativePrompt` argument only when going to Veo). Write the se
   episode, counting b-roll slots + motion-background scenes together** (user directive,
   2026-08-14). veo calls cap at 2 as well. quote speech clips don't count toward this total.
   Three or more gets a red badge from the `storyboard.html` check strip.
+- **A motion-first channel lifts that cap, and only its own `profile.md` may declare it**
+  (user directive 2026-08-21, in force on pundago). On such a channel three things all have to
+  hold, not just the first: **① most cuts are video rather than a still, ② a person-shaped
+  character performs the action that cut's line is about, and ③ the camera move follows that
+  action.** Ken Burns over a still, a prop moving on its own, a character merely standing there,
+  and a generic pan or zoom none of them satisfy it — the first assemblies of pundago ep01 and
+  ep02 were rejected for exactly that.
+  Read this as a change of **subject matter, not of mood dressing** — the point right above still
+  holds, a move added for tone alone has no support (p=.84). The move earns its place by following
+  an action.
+  What the channel writes in `profile.md` is the declaration plus its own cap, because the 2-per-
+  episode number above is the still-first default and a motion-first channel needs its own
+  ceiling (pundago runs one clip per cut, 8 cuts). Cost stops being the reason to say no here, so
+  say what the reason is instead: **one action per cut** (§one cut one thing) and the per-cut
+  contract in the shot table's `action`/`camera` rows.
+  A channel that declares nothing keeps the still-first default and the cap of 2.
 - **points only** — the cover keeps its code-rendered still (produce absolute rule 10) and takes
   video as an opening b-roll. For quote, `clip` plays that role.
   **The one exception is an explicit per-episode user directive** (2026-08-15, the Ttalkkak Lab
@@ -953,7 +969,7 @@ strip says no violations.
       narration says. No text written to fill a slot (§on-screen text only when needed). Empty
       `title`, `footnote`, and `bullets` are normal, not defects
 - [ ] THEME matches profile.md §3
-- [ ] Generated video (`broll` + `visual.video` combined) is **at most 2** (§motion background is
+- [ ] Generated video (`broll` + `visual.video` combined) is **at most 2** — unless `profile.md` declares the channel motion-first, in which case that channel's own cap applies (§motion background is
       the source of truth) · content-reviewer plan mode PASS recorded
 - [ ] If you placed `broll` scenes — the two slots' `after` differ · each slot has `narration: []`
       · `src` is the same real PNG as `SCENES[after].visual.bg` (that image made with gpt_image
