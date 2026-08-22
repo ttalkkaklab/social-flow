@@ -489,18 +489,21 @@ money without knowing the price.
     after the §8 build `splice-clip.sh` shifts the later subtitles by the
     measured inserted length. **No palindrome loops** — the audio plays
     backwards.
-- **BGM** — **no `window.MUSIC` in scenes.js** means one bed, which is the usual
-  unattended case. If the channel has a shared bed, just copy it.
+- **BGM** — **unattended runs take one bed**: the storyboard step leaves `window.MUSIC`
+  out and this step copies or generates a single `.work/bgm.wav`. If the channel has a
+  shared bed, just copy it.
   `python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py data/<channel> bgm default`
   — if a path comes back, copy it to `.work/bgm.wav`. Otherwise put a
   30-second `music_generate_clip` instrumental at `.work/bgm.wav`. Include
   "leaves space for a spoken voiceover, no melody in the vocal frequency range"
   in the prompt. To reuse the same tone next episode, copy it to
   `assets/audio/bgm/default.wav` and add it to the catalog.
-  **With `window.MUSIC`**, follow produce §3 as written — one file per cue,
-  `.work/bgm-<name>.wav`, and a `.work/bgm.tsv` row per shot that changes the cue.
-  Every cue is one more generation call, so it lands in the tier estimate (§5) and
-  gets its own `cost-tally.tsv` line.
+  **No `window.MUSIC` cues unattended.** Cues are made with `music_generate`
+  (variable length), whose price is unconfirmed in `prices.tsv` — `cost-report.sh`
+  would answer "verdict unavailable" and §5 would abort the run (cost-tiers §BGM says
+  the same: the economy tier takes one bed, not cues). If a scenes.js arrives with
+  `window.MUSIC` anyway, remove it and every shot's `sound.cue` before §6 and go on
+  with one bed; cue-based scoring is the human produce path.
   **Never call `suno_*` unattended** — vocals fight the narration. An episode
   where the song is the content is the human produce path's `suno_generate`.
   The level is not a decision here: the builder measures the narration, sets the

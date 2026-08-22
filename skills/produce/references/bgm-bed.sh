@@ -86,7 +86,7 @@ render_seg() {
 
 # ── Read the cue list, turn starts into spans.
 STARTS=(); FILES=()
-while IFS=$'\t' read -r S F; do
+while IFS=$'\t' read -r S F || [ -n "${S:-}" ]; do
   [ -z "${S:-}" ] && continue
   [ -f "$F" ] || { echo "✗ bgm-bed: cue file missing — $F" >&2; exit 1; }
   STARTS+=("$S"); FILES+=("$F")

@@ -16,7 +16,7 @@ window.THEME = {
   ink:     "#0b1020",          // base dark (background, subtitle outline)
   brand:   "channel name"      // brand wording on the outro
 };
-window.MUSIC = { /* named music cues (§music cues) — omit entirely for one bed all the way through */ };
+// window.MUSIC = { … };   // named music cues (§music cues) — leave the line out for one bed all the way through
 window.SCENES = [ /* the shot array — one entry = one shot. Keep the identifier names */ ];
 ```
 

@@ -465,8 +465,9 @@ only the summary is here.
   ```
   4	bgm-tense.wav
   ```
-  `idx` is the **card number**, which is the shot's position among the narrated shots (`broll` and
-  `outro` are spliced in after the build and are not cards). Paths are relative to `.work/`.
+  `idx` is the **card idx** — 0-based, the shot's array position in scenes.js, the same number
+  `sfx.tsv` and `chapters.tsv` use (`broll` and `outro` are spliced in after the build and are
+  not cards). Paths are relative to `.work/`.
   A shot with `sound.drop` becomes an `sfx.tsv` row per segment of that shot, audio column empty
   and `bgm` set to `off` (§sfx below). A shot with `sound.sfx` becomes one row on **seg 0** — the
   shot's first frame — with the path `resolve-asset.py <channel dir> sfx <id>` returns.
@@ -843,8 +844,9 @@ picture. Ducking is keyed on the voice alone, so an effect doesn't push the BGM 
 is `SFX_VOL` (0.85 by default) and the BGM cut ramp is `BGM_GATE_R` (0.30s by default).
 
 **Music cues (`bgm.tsv`)** — `idx <TAB> audio file`, the bed changing at that card and staying
-until the next row. A row for card 1 replaces `bgm.wav` as the opening bed; without one, `bgm.wav`
-opens. Cue changes crossfade over `BGM_CUE_XF` (2.0s), landing the incoming cue on the card start.
+until the next row. `idx` is the 0-based card idx. A row for card 0 overrides `bgm.wav` as the
+opening bed; without one, `bgm.wav` opens — and `bgm.wav` must exist either way (the builder
+checks for it before anything else). Cue changes crossfade over `BGM_CUE_XF` (2.0s), landing the incoming cue on the card start.
 Every cue is measured and gained to the same distance under the narration, so cues recorded at
 different levels don't step up and down.
 
@@ -919,7 +921,7 @@ mix_broll() {           # mix_broll <after> <used length in seconds> [cue file]
   # measured and set 10 LU under that. A raw multiplier here would put the b-roll's music at a
   # different distance from the voice than the rest of the episode, on the same bed file.
   printf '0.0000\t%s\n' "$SRC" > .work/bedcue.list
-  ( cd .work && "$BED" bed-broll.wav "$USE" "$((-20 - ${BGM_SEP:-10}))" bedcue.list )
+  ( cd .work && "$BED" bed-broll.wav "$USE" "$(awk -v s="${BGM_SEP:-10}" 'BEGIN{print -20 - s}')" bedcue.list )
   ffmpeg -y -i .work/broll/broll-a$A.mp4 -i .work/bed-broll.wav \
     -filter_complex "[0:a]loudnorm=I=-20:TP=-2:LRA=7[va];
       [1:a]afade=t=in:st=0:d=0.4,afade=t=out:st=$((USE-1)):d=1[bg];

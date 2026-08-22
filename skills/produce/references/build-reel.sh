@@ -36,9 +36,11 @@
 #                         subtitle-display = for the screen (numbers/units as written)
 #   <workdir>/bgm.wav   : background music — the bed the episode opens on. Shorter than the
 #                         feature is fine; it gets crossfaded onto itself, not butt-joined
-#   <workdir>/bgm.tsv   : (optional) idx <TAB> audio-file — a music cue. The bed changes to this
-#                         file at card idx and stays until the next row. A row for card 1 replaces
-#                         bgm.wav as the opening bed. Cue changes crossfade over BGM_CUE_XF
+#   <workdir>/bgm.tsv   : (optional) idx <TAB> audio-file — a music cue. idx is the card idx
+#                         (0-based, the scenes.js array index — the same number sfx.tsv and
+#                         chapters.tsv use). The bed changes to this file at that card and stays
+#                         until the next row. A row for card 0 overrides bgm.wav as the opening bed;
+#                         bgm.wav is still required either way. Cue changes crossfade over BGM_CUE_XF
 #   <workdir>/sfx.tsv   : (optional) idx <TAB> seg <TAB> audio-file <TAB> bgm(on|off)
 #                         A sound heard only during that seg, plus BGM gating. The audio file can be
 #                         wav or mp4 (a video contributes its own sound); it can be empty with just
@@ -664,7 +666,7 @@ BED_I=$(awk -v s="$SPEECH_I" -v d="$BGM_SEP" 'BEGIN{printf "%.2f", s-d}')
 
 : > work/bgmcue.list
 if [ -f bgm.tsv ]; then
-  while IFS=$'\t' read -r CI CF; do
+  while IFS=$'\t' read -r CI CF || [ -n "${CI:-}" ]; do
     [ -z "${CI:-}" ] && continue
     CT=$(awk -F'\t' -v i="$CI" '$1==i{print $2; exit}' work/cardstart.tsv)
     [ -n "$CT" ] || { say "✗ bgm.tsv names card $CI, which isn't in this build"; exit 1; }
@@ -672,7 +674,7 @@ if [ -f bgm.tsv ]; then
   done < bgm.tsv
   sort -n -o work/bgmcue.list work/bgmcue.list
 fi
-# Something has to be playing at 0s. Without a cue on card 1, bgm.wav opens the episode.
+# Something has to be playing at 0s. Without a cue on card 0 (t=0), bgm.wav opens the episode.
 CUE0=$(head -1 work/bgmcue.list | cut -f1)
 if [ -z "$CUE0" ] || ! awk -v s="$CUE0" 'BEGIN{exit !(s < 0.001)}'; then
   { printf '0.0000\tbgm.wav\n'; cat work/bgmcue.list; } > work/bgmcue.tmp
