@@ -32,6 +32,14 @@ export const config = {
    */
   sunoApiKey: process.env.SUNO_API_KEY || '',
   /**
+   * ElevenLabs API key (required by the tts_elevenlabs_* speech tools) — https://elevenlabs.io/app/settings/api-keys
+   *
+   * The third speech lane next to Gemini (tts_generate) and on-device Supertonic
+   * (tts_local_generate). Keys can be restricted per permission — synthesis needs
+   * `text_to_speech`, the voice listing needs `voices_read`.
+   */
+  elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || '',
+  /**
    * YouTube Data API key (youtube_topic_scout's preferred public-query path).
    * Unlike OAuth it doesn't spend your channel's quota. Without it, falls back to
    * channel OAuth (youtube.readonly).
@@ -267,6 +275,27 @@ export function requireSunoKey(): string {
     );
   }
   return config.sunoApiKey;
+}
+
+/**
+ * ElevenLabs REST base. The env override is for a same-spec proxy or a regional
+ * host — the EU residency endpoint (api.eu.residency.elevenlabs.io) is the only
+ * official alternative; other vendors' "ElevenLabs-compatible" hosts are not.
+ */
+export function elevenLabsBaseUrl(): string {
+  return (process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io').replace(/\/+$/, '');
+}
+
+export function requireElevenLabsKey(): string {
+  if (!config.elevenLabsApiKey) {
+    throw new Error(
+      'ELEVENLABS_API_KEY is not set. tts_elevenlabs_* speech tools require an ElevenLabs API key ' +
+        '(https://elevenlabs.io/app/settings/api-keys — a restricted key needs the text_to_speech permission, ' +
+        'plus voices_read for tts_elevenlabs_voices). ' +
+        'Without it, tts_generate/tts_multi_speaker (Gemini, GEMINI_API_KEY) and tts_local_generate (on-device, no key) still work.',
+    );
+  }
+  return config.elevenLabsApiKey;
 }
 
 export function requireArkKey(): string {

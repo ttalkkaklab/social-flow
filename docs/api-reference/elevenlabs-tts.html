@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ElevenLabs TTS — social-flow API 레퍼런스</title>
+<link rel="stylesheet" href="../assets/reference.css">
+<link rel="alternate" hreflang="en" href="elevenlabs-tts.en.html">
+<link rel="alternate" hreflang="ko" href="elevenlabs-tts.html">
+</head>
+<body>
+<div class="wrap">
+<div class="langbar"><a href="elevenlabs-tts.en.html" hreflang="en">English</a></div>
+
+<div class="crumbs"><a href="../index.html">문서</a><span>/</span><a href="index.html">API 레퍼런스</a><span>/</span>ElevenLabs TTS</div>
+
+<header class="hero">
+  <div class="kicker">ELEVENLABS</div>
+  <h1>ElevenLabs TTS — 세 번째 음성 레인</h1>
+  <p class="sub"><code>xi-api-key</code> 헤더 하나로 도는 평범한 REST다. POST 한 번이면 오디오 바이트가 오고, 쌍둥이 엔드포인트 <code>/with-timestamps</code> 는 base64 오디오에 글자별 시각을 얹어 주며, <code>/v1/text-to-dialogue</code> 는 다화자 씬 하나를 요청 한 번에 읽는다. 유료이고 계정마다 보이스가 다르니 채널 단위로 켜는 레인이다 — 다른 두 레인이 못 하는 일은 둘, <code>eleven_v3</code> 의 오디오 태그 연기와 보이스 10종 대화다.</p>
+  <div class="meta">
+    <span>공식 <a href="https://elevenlabs.io/docs/api-reference/text-to-speech/convert">Text to Speech</a> · <a href="https://elevenlabs.io/docs/api-reference/text-to-dialogue/convert">Text to Dialogue</a> · <a href="https://elevenlabs.io/docs/overview/models">Models</a></span>
+    <span>SDK 없음 — <code>fetch</code></span>
+    <span>키 <code>ELEVENLABS_API_KEY</code></span>
+    <span>구현 <code>server/src/elevenlabs-client.ts</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">목차</div>
+  <ol>
+    <li><a href="#models">모델</a></li>
+    <li><a href="#request">엔드포인트와 요청 구조</a></li>
+    <li><a href="#formats">출력 포맷과 티어 게이트</a></li>
+    <li><a href="#timestamps">타임스탬프와 대화</a></li>
+    <li><a href="#voices">보이스·키·오류·한도</a></li>
+    <li><a href="#pricing">요금과 라이선스</a></li>
+    <li><a href="#impl">구현 대조표</a></li>
+  </ol>
+</nav>
+
+<section id="models">
+  <h2>1. 모델</h2>
+  <p>Models 페이지의 TTS 가능 모델은 다섯이고, 이 서버는 아래 넷에 폐기 예고된 Turbo 하나를 더해 노출한다(아직 서비스 중이라 기존 프로파일이 깨지지 않게). 요청당 상한은 같은 페이지의 "Character limits" 표 값이다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>model_id</th><th>성격</th><th>요청당 상한</th><th>API 단가</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td><code>eleven_multilingual_v2</code></td><td>안정적·자연스러움 — 벤더 convert 기본값이자 이 서버의 기본값</td><td>10,000자</td><td>$0.10 / 1K</td><td><code>language_code</code> 를 무시한다(본문에서 언어 감지)</td></tr>
+      <tr><td><code>eleven_v3</code></td><td>표현력 최대, 오디오 태그, dialogue 유일 모델</td><td>5,000자</td><td>$0.10 / 1K</td><td>설계상 느리다(실시간 아님). <code>previous_text</code>/<code>next_text</code> 를 거부한다(400 실측)</td></tr>
+      <tr><td><code>eleven_v3_conversational</code></td><td>v3 계열의 실시간 튜닝판</td><td>5,000자(벤더 표에 없어 v3 값을 적용)</td><td>$0.05 / 1K</td><td>convert·with-timestamps 는 받는다(실측). dialogue 는 <code>invalid_argument</code> 로 거부</td></tr>
+      <tr><td><code>eleven_flash_v2_5</code></td><td>가장 빠름(~75ms)</td><td>40,000자</td><td>$0.05 / 1K</td><td><code>language_code</code> 를 따른다. 정규화를 <code>on</code> 으로 두지 않으면 숫자를 그대로 읽는다</td></tr>
+      <tr><td><code>eleven_turbo_v2_5</code></td><td>폐기 예고 → flash_v2_5 (스펙에 <code>deprecated: true</code>)</td><td>40,000자</td><td>$0.05 / 1K</td><td>기능은 같고 지연만 크다</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>노출하지 않은 것: <code>eleven_flash_v2</code>(영어 전용인데 한국어에도 200 을 돌려준다 — 그게 함정이다), 제거된 v1 모델들(라이브 OpenAPI 스펙에 0건). <strong>text-to-dialogue 는 <code>eleven_v3</code> 만 받는다</strong> — multilingual_v2 는 <code>model_does_not_support_dialogue</code>, v3 conversational 은 <code>invalid_argument</code>, 둘 다 실측.</p>
+  <div class="note">
+    <strong>기본값이 v3 가 아니라 multilingual_v2 인 이유.</strong> 벤더 convert 기본값이 v2 이고, v2 의 with-timestamps 는 실측됐고, 값은 v3 와 같으며, v3 는 실패 모드가 더 있다(Creative 모드 환각, 앞뒤 문맥 미지원). v3 는 필요할 때 라우팅한다 — 오디오 태그와 dialogue. Supertonic 레인이 업스트림 CLI 기본값을 따른 것과 같은 논리다. 같은 요청이 여기서만 다르게 들리면 안 된다.
+  </div>
+</section>
+
+<section id="request">
+  <h2>2. 엔드포인트와 요청 구조</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>엔드포인트</th><th>반환</th><th>쓰는 툴</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /v1/text-to-speech/{voice_id}</code></td><td>오디오 바이트(포맷별 Content-Type)</td><td><code>tts_elevenlabs_generate</code></td></tr>
+      <tr><td><code>POST /v1/text-to-speech/{voice_id}/with-timestamps</code></td><td>JSON: <code>audio_base64</code> + 정렬 둘</td><td><code>tts_elevenlabs_generate</code> (<code>timestamps: true</code>)</td></tr>
+      <tr><td><code>POST /v1/text-to-dialogue</code> · <code>/with-timestamps</code></td><td>오디오 · <code>voice_segments</code> 가 붙은 JSON</td><td><code>tts_elevenlabs_dialogue</code></td></tr>
+      <tr><td><code>GET /v2/voices</code> · <code>GET /v1/user/subscription</code></td><td>보이스 목록 · 플랜 사용량</td><td><code>tts_elevenlabs_voices</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><strong>쿼리 파라미터는 셋뿐이다</strong> — <code>output_format</code>, <code>enable_logging</code>, 폐기된 <code>optimize_streaming_latency</code>. 나머지는 전부 JSON 본문이다. <code>output_format</code> 을 본문에 넣으면 조용히 무시된다(실측 — mp3 가 돌아왔다).</p>
+  <pre><code>POST /v1/text-to-speech/JBFqnCBsd6RMkjVDRZzb?output_format=wav_24000
+xi-api-key: …
+{
+  "text": "오늘 주제는 환율입니다.",
+  "model_id": "eleven_multilingual_v2",
+  "voice_settings": { "stability": 0.5, "speed": 1.0 },   // 일부만 보내도 된다
+  "seed": 42,                                              // 같은 seed·문장·보이스 → 바이트 단위 동일 파일(실측)
+  "previous_text": "…", "next_text": "…",                  // 한 컷만 다시 만들 때 앞뒤 톤 이어 붙이기 — v3 는 불가
+  "apply_text_normalization": "on"                         // auto | on | off
+}</code></pre>
+  <p>본문 필드와 범위: <code>voice_settings.stability</code> 0~1(기본 0.5. v3 에선 슬라이더가 아니라 3모드 — 0.0 Creative · 0.5 Natural · 1.0 Robust, 그 외 값은 붙여 맞춘다), <code>similarity_boost</code> 0~1(0.75), <code>style</code> 0~1(0), <code>use_speaker_boost</code>(true), <code>speed</code> 0.7~1.2(1.0); <code>seed</code> 0~4294967295; <code>language_code</code> ISO 639-1 — flash/turbo v2.5 와 v3 는 따르고 multilingual_v2 는 무시; <code>pronunciation_dictionary_locators</code> 최대 3개(아직 노출 안 함). 툴 인자는 같은 이름의 camelCase 다.</p>
+</section>
+
+<section id="formats">
+  <h2>3. 출력 포맷과 티어 게이트</h2>
+  <p>비스트리밍 엔드포인트의 열거값은 28종(라이브 API 는 29종 — <code>m4a_aac_44100_128</code> 을 받는데 스펙엔 없다): mp3 8 · pcm 7 · <strong>wav 7</strong> · opus 5 · ulaw · alaw. 스트리밍 쌍둥이는 wav_* 를 통째로 뺀다. 이 서버는 제작에 쓰이는 부분집합만 노출한다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>포맷</th><th>Content-Type(실측)</th><th>플랜</th><th>여기서</th></tr></thead>
+    <tbody>
+      <tr><td><code>wav_24000</code></td><td><code>audio/wav</code> — 크기 필드가 맞는 정상 RIFF, 모노 16비트, data 앞에 LIST/INFO 청크 하나</td><td>전 플랜</td><td><strong>기본값</strong> — Gemini 레인과 같은 규격, 빌더가 그대로 읽는다</td></tr>
+      <tr><td><code>wav_16000</code> · <code>wav_22050</code> · <code>wav_48000</code></td><td><code>audio/wav</code></td><td>전 플랜</td><td>노출</td></tr>
+      <tr><td><code>wav_44100</code> · <code>pcm_44100</code></td><td>—</td><td>Pro 이상(그 아래는 403 <code>output_format_not_allowed</code>, 실측)</td><td>wav_44100 노출(Pro 계정이면 Supertonic 의 44.1kHz 와 맞는다)</td></tr>
+      <tr><td><code>mp3_44100_64/128/192</code></td><td><code>audio/mpeg</code></td><td>192kbps 는 Creator 이상</td><td>파이프라인 밖 용도로 노출</td></tr>
+      <tr><td><code>pcm_*</code> · <code>opus_*</code> · <code>m4a</code> · <code>ulaw</code> · <code>alaw</code></td><td><code>audio/pcm</code>(컨테이너 없음) · <code>audio/opus</code>(Ogg, "OggS") · <code>audio/mp4</code></td><td>—</td><td>노출 안 함 — 영상 파이프라인에 자리가 없다</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <strong>왜 WAV 인가, 왜 mp3 는 나레이션 입력이 아닌가.</strong> <code>build-reel.sh</code> 는 나레이션 파일의 첫 4바이트를 본다. RIFF 면 컨테이너로 열고, 아니면 raw s16le 24kHz PCM 으로 읽는다. 그래서 mp3 나레이션 파일은 타임라인에서 잡음이 된다. 같은 이유로 툴은 포맷과 어긋나는 확장자의 filename 을 거부한다.
+  </div>
+</section>
+
+<section id="timestamps">
+  <h2>4. 타임스탬프와 대화</h2>
+  <h3>with-timestamps</h3>
+  <pre><code>{
+  "audio_base64": "UklGR…",                       // 요청한 포맷 그대로의 오디오(wav_* 면 RIFF)
+  "alignment":            { "characters": ["안","녕",…], "character_start_times_seconds": […], "character_end_times_seconds": […] },
+  "normalized_alignment": { "characters": [" ","a","n","n","y","e","o",…], … },   // 벤더가 정규화한 텍스트 기준
+  "voice_segments": [ { "voice_id", "start_time_seconds", "end_time_seconds", "character_start_index", "character_end_index", "dialogue_input_index" } ]  // dialogue 전용
+}</code></pre>
+  <div class="warn">
+    <strong><code>normalized_alignment</code> 는 한국어를 로마자로 돌려준다.</strong> 한글 14자가 라틴 33자("annyeo…")로 왔으니 원문 인덱스로 못 쓴다. 사이드카 <code>&lt;오디오 이름&gt;.alignment.json</code> 엔 두 객체를 원문 그대로 두고, 서버가 찍는 요약은 전부 <code>alignment</code> 를 읽는다. v3 에선 오디오 태그 글자(<code>[whispers] </code>)도 정렬에 들어오는데, 시각은 0 에 가깝다.
+  </div>
+  <h3>text-to-dialogue</h3>
+  <p>본문: <code>inputs: [{ text, voice_id }]</code>(둘 다 필수, 줄마다 다른 필드 없음), <code>model_id</code>(기본이자 유일한 값 <code>eleven_v3</code>), <code>settings: { stability }</code> — 스펙의 <code>ModelSettingsResponseModel</code> 은 속성이 이것 하나라 <code>use_speaker_boost</code> 류는 무시된다(엉뚱한 필드를 넣어도 200, 실측). 한도: 요청당 서로 다른 voice_id 최대 10개(capability 페이지의 "화자 수 제한 없음"은 낡은 문장이다 — 10 에 맞춰 짠다), 안정적 생성을 위해 총 2,000자 이하 권장, 하드 상한은 v3 의 5,000자. 실측한 <code>voice_segments</code> 에서 레거시 보이스 ID(Rachel <code>21m00…</code>)가 현재 ID(<code>eLDc7xhWxG2FElT3kUTj</code>)로 찍혔다 — 레거시 ID 는 아직 먹지만 내부에서 바꿔 쓴다.</p>
+</section>
+
+<section id="voices">
+  <h2>5. 보이스·키·오류·한도</h2>
+  <p><strong>보이스는 계정마다 다르다</strong> — <code>GET /v2/voices</code>(쿼리 파라미터 20개 중 이 서버는 <code>page_size</code> ≤ 100, <code>search</code>, <code>category</code> ∈ premade · cloned · generated · professional, <code>include_total_count</code> 를 쓴다)는 <code>voices[]</code> 에 <code>voice_id</code>, <code>name</code>, <code>category</code>, <code>labels {gender, age, accent, language, use_case, descriptive}</code>, <code>description</code>, <code>preview_url</code>, <code>verified_languages[]</code> 를, 바깥에 <code>has_more</code>/<code>next_page_token</code> 을 돌려준다. 레거시 프리메이드 세트(Rachel·George…)는 2026-12-31 에 만료되고, 헬프 센터엔 계정 나이 관문도 있다 — <em>기본 보이스는 2026년 3월 이전에 만든 계정에만 제공</em>된다. 새 계정엔 교체 세트(Darian·Talia·Elara… 문서엔 이름만)가 보이므로, 흔히 도는 레거시 ID 21개가 2026-08-23 에 전부 200 이었던 것도 오래된 계정에서의 결과다. <code>category: premade</code> 로 목록을 뽑으면 그 계정이 가진 세트가 나온다. Voice Library 보이스는 무료 플랜 API 에선 못 쓴다. 한국어 품질은 모델이 아니라 보이스가 정한다 — <code>profile.md</code> 에 <code>voice_id</code> 를 고정하고 표시 이름은 절대 쓰지 않는다.</p>
+  <p><strong>키는 권한 단위다</strong>(스펙의 권한 이름 49종): 합성은 <code>text_to_speech</code>, 목록은 <code>voices_read</code>, 플랜 줄은 <code>user_read</code>, <code>GET /v1/models</code> 는 <code>models_read</code>. 제한 키는 401 <code>missing_permissions</code> 에 권한 이름을 찍어 돌려준다 — 실측에 쓴 맥미니 키는 <code>text_to_speech</code> 만 있는 키였다.</p>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>오류</th><th>형태 / status</th><th>여기서의 처리</th></tr></thead>
+    <tbody>
+      <tr><td>현행</td><td><code>{detail:{type, code, message, status, request_id, param}}</code> — 문서는 <code>status</code> 를 "레거시"라 하지만 여전히 채워지고 <code>code</code> 보다 세밀하다(401: <code>code=unauthorized</code>, <code>status=invalid_api_key</code> / <code>needs_authorization</code> / <code>missing_permissions</code>)</td><td><code>status</code> 로 분기하고 <code>code</code> 로 폴백</td></tr>
+      <tr><td>구형</td><td><code>{detail:{status, message}}</code> — <code>model_not_found</code> 가 아직 이 꼴</td><td>같은 분기</td></tr>
+      <tr><td>422</td><td>FastAPI 배열 <code>{detail:[{loc, msg, type}]}</code></td><td><code>body</code> 접두 없이 한 줄로 합친다</td></tr>
+      <tr><td>429</td><td><code>rate_limit_exceeded</code> · <code>concurrent_limit_exceeded</code> · <code>system_busy</code>; 플랜별 동시 한도 Free 2 · Starter 3 · Creator 5 · Pro 10 · Scale/Business 15(flash 는 두 배); 헤더 <code>current-concurrent-requests</code>/<code>maximum-concurrent-requests</code></td><td>3회 시도, 1초·2초 백오프, 그 뒤 "씬을 하나씩 돌려라" 안내</td></tr>
+      <tr><td>403</td><td><code>output_format_not_allowed</code>("Pro tier and above"), <code>invalid_output_format</code>(본문이 유효값 전체를 열거)</td><td>wav_24000 / wav_48000 또는 플랜 업그레이드 안내</td></tr>
+      <tr><td>400 / 404</td><td><code>model_not_found</code>, <code>model_does_not_support_dialogue</code>, <code>unsupported_model</code>(v3 + previous_text), <code>voice_not_found</code></td><td>각각 안내문 매핑. v3 + 문맥은 호출 전에 스키마가 거른다</td></tr>
+      <tr><td>401 / 402</td><td><code>quota_exceeded</code> / <code>payment_required</code></td><td>충전 안내</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>읽을 만한 응답 헤더: <code>character-cost</code>(벤더의 계량치 — 실측한 모든 호출에서 원문 글자 수보다 적었다: 한국어 18 → 10, 영어 28 → 15), <code>request-id</code>, <code>tts-latency-ms</code>. 서버는 셋 다 보고한다.</p>
+</section>
+
+<section id="pricing">
+  <h2>6. 요금과 라이선스</h2>
+  <p><strong>API 사용은 1,000자당 달러로 매기고 어느 플랜이든 같다</strong>(pricing/api, 2026-08-23 열람): multilingual_v2·eleven_v3 $0.10, flash/turbo·v3 conversational $0.05. 플랜마다 이 계량기 기준 월 글자 할당이 들어 있다(Free 10,000 · Starter $6 → 60,000 · Creator $22 → 220,000 · Pro $99 → 990,000 — $0.10 모델 기준이고 $0.05 모델은 두 배). 메인 요금 페이지의 "크레딧" 표는 웹 UI 계량기라 API 와 다르다. 원장엔 키 <code>tts.elevenlabs</code>(v2·v3) 또는 <code>tts.elevenlabs-flash</code>(flash·v3 conversational), 수량은 <code>character-cost</code> ÷ 1000 으로 적는다.</p>
+  <div class="warn">
+    <strong>무료 플랜엔 상업 라이선스가 없고</strong>("cannot be used for any commercial purpose") 출처 표기 — 제목에 "elevenlabs.io" 또는 "11.ai" — 를 요구한다. 유료 플랜은 전부 상업 라이선스를 포함하니 수익 채널은 Starter($6)가 바닥이다. Voice Library 보이스·IVC·192kbps 는 Starter/Creator 부터, 44.1kHz PCM/WAV 는 Pro 부터다.
+  </div>
+</section>
+
+<section id="impl">
+  <h2>7. 구현 대조표</h2>
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>항목</th><th>공식 계약</th><th>social-flow 구현</th><th>다른 이유</th></tr></thead>
+    <tbody>
+      <tr><td>출력 포맷</td><td>기본 <code>mp3_44100_128</code>, 쿼리 파라미터</td><td>기본 <code>wav_24000</code>; wav/mp3 8종 노출; filename 확장자는 포맷과 일치해야 함</td><td>빌더의 RIFF 판별, Gemini 레인의 24kHz 규격</td></tr>
+      <tr><td>보이스</td><td><code>voice_id</code> 경로 파라미터, 기본값 없음</td><td>필수, 경로 안전 정규식, 기본값 없음</td><td>프리메이드 세트가 바뀐다. profile.md 가 ID 를 고정한다</td></tr>
+      <tr><td>모델</td><td>자유 문자열, 기본 multilingual_v2</td><td>5종 enum(+ v3 상한은 호출 전에 검사)</td><td>거부된 요청은 공짜다. 상한은 스키마에 없다</td></tr>
+      <tr><td>입력 길이</td><td>스펙에 <code>maxLength</code> 없음, 문서에 모델별 표</td><td>스키마 상한 10,000, v3·v3 conversational 은 superRefine 으로 5,000</td><td>씬은 수백 자다. 상한 근처면 안 나눈 대본이다</td></tr>
+      <tr><td>타임스탬프</td><td>별도 엔드포인트, base64 오디오</td><td>불리언 하나; 오디오는 디코드해 저장, 사이드카 JSON 에 정렬 둘을 원문대로</td><td>재가공이 없으니 어긋날 게 없다. base64 가 모델 컨텍스트에 들어오지 않는다</td></tr>
+      <tr><td>대화 설정</td><td><code>{stability}</code></td><td><code>stability</code> 만</td><td>나머지 필드는 API 가 무시한다(실측)</td></tr>
+      <tr><td>v3 + 앞뒤 문맥</td><td>런타임 400</td><td>스키마 거부</td><td>결과는 같고 과금은 0</td></tr>
+      <tr><td>재시도</td><td>레이트 리밋은 백오프, 동시 한도는 기다리기</td><td>429/5xx 에만 3회</td><td>4xx 는 두 번째도 같은 답이다</td></tr>
+      <tr><td>비용</td><td><code>character-cost</code> 헤더</td><td>그대로 보고, 글자 수로 추정하지 않는다</td><td>계량치가 원문 글자 수보다 적다</td></tr>
+      <tr><td>보이스 목록</td><td>쿼리 파라미터 20개, 0페이지는 page_size 를 넘을 수 있음</td><td><code>limit</code> · <code>search</code> · <code>category</code>; 플랜 줄은 best-effort</td><td><code>limit</code> 이 서버 공통 페이징 이름이고, 제한 키엔 보통 user_read 가 없다</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  2026-08-23 기준 · 구현 <a href="../../server/src/elevenlabs-client.ts">server/src/elevenlabs-client.ts</a> · 조사 <a href="../research/2026-08-22-elevenlabs-tts-api/index.html">일레븐랩스 TTS API 조사(실호출 부록 포함)</a> · <a href="index.html">API 레퍼런스 허브</a>
+</footer>
+
+</div>
+</body>
+</html>

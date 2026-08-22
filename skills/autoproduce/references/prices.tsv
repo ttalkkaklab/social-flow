@@ -58,6 +58,11 @@ seedance.2-5.720p	second	0.231	derived	dreamina-seedance-2-5-260628 — 30 refer
 tts.local	1000 chars	0.000	official	Supertonic local — no network, no key. Electricity only
 tts.gemini-flash	1000 chars	0.038	derived	$38/1M chars (docs/research/2026-08-11-local-tts-and-commercial-api)
 tts.gemini-pro	1000 chars	0.076	derived	$76/1M chars — fallback when flash refuses
+# ElevenLabs API pricing (elevenlabs.io/pricing/api, read 2026-08-23): $0.10 per 1,000 characters on multilingual_v2·v3,
+# $0.05 on flash_v2_5·v3_conversational, the same on every plan. The response header character-cost is the vendor's
+# metered quantity and sits below the raw count (Korean 18 chars → 10, measured) — log that header ÷ 1000, not the text length.
+tts.elevenlabs	1000 chars (metered)	0.100	official	$0.10/1K chars — multilingual_v2 · eleven_v3 (docs/research/2026-08-22-elevenlabs-tts-api §7·§10); quantity = character-cost header ÷ 1000
+tts.elevenlabs-flash	1000 chars (metered)	0.050	official	$0.05/1K chars — flash_v2_5 · v3_conversational; same quantity rule
 
 # ── Music (Lyria) ────────────────────────────────────────────────────────
 # 2026-08-15: checked directly at ai.google.dev/gemini-api/docs/pricing — clips are right there

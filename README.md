@@ -218,10 +218,10 @@ them the pipeline ends at `produce` with the finished video and per-platform tex
 /social-flow:autoproduce my-channel "July FX swings"   # research → scenes.js → images → TTS → build → output
 ```
 
-Nine machine gates stand where the approval gates were — fact verification (3+
-cross-verified claims), the copy style checker, storyboard-reviewer copy at 95,
-per-scene at 95 (lowest scene), vocabulary at 95 (lowest scene), images at 95, build
-report (drift 0), content-reviewer P0=0, and a cost cap. The **economy tier is the
+Eleven machine gates stand where the approval gates were — fact verification (3+
+cross-verified claims), the copy style checker, six one-round storyboard-reviewer reads
+(copy · per-scene · vocabulary · camera · sound · images) where an unresolved P0 stops the
+run, build report (drift 0), content-reviewer P0=0, and a cost cap. The **economy tier is the
 default**: no Veo calls at all (still backgrounds + Ken Burns), roughly $0.26–0.29
 per episode (capped at $0.30); only when hook metrics fall below threshold does the
 4-second cover get promoted to `veo-3.1-lite`. Authoring is capped at **2 episodes
@@ -244,28 +244,32 @@ scenes.js. The rule source of truth is
 `skills/platform-guide/references/korean-style.md`; the code renders the verdict and
 the agent fixes the sentences.
 
-**Storyboard convergence gates** — the checker catches what rules can catch; the
+**Storyboard adversarial reviews** — the checker catches what rules can catch; the
 layer above it is what a person has to read to feel. Overused antithesis, triple
 lists, sermon-style closers, a rhythm where every sentence reads at the same length.
 Images are the same — a machine can check resolution, but "does this picture show
 what the scene is saying" takes a reader. So the storyboard skill calls the
-adversarial reviewer `storyboard-reviewer` **four times** before approval:
+adversarial reviewer `storyboard-reviewer` **six times, once each**, before approval:
 
-| Gate | What it reads | Hard cap | Pass bar |
-|---|---|---|---|
-| Copy mode (§4.5) | the storyboard's prose as a whole | 5 rounds | total ≥95 · P0 0 |
-| Scene mode (§4.6) | each scene's role and context | 5 rounds | **lowest scene** ≥95 · P0 0 |
-| Vocabulary mode (§4.7) | word choice in narration and titles | 5 rounds | **lowest scene** ≥95 · P0 0 |
-| Image mode (§5.5) | generated PNGs against scene content | 3 rounds | total ≥95 · P0 0 |
+| Review | What it reads | Score is |
+|---|---|---|
+| Copy mode (§4.5) | the storyboard's prose as a whole | total |
+| Scene mode (§4.6) | each scene's role and context | **lowest scene** |
+| Vocabulary mode (§4.7) | word choice in narration and titles | **lowest scene** |
+| Camera mode (§4.8) | the four camera slots, cut length and engine fit of every generated shot | **lowest shot** |
+| Sound mode (§4.9) | clip audio, voice casting, and where the sound gets out of the way | total |
+| Image mode (§5.5) | generated PNGs against scene content | total |
 
-The two per-scene gates judge the **lowest-scoring scene** rather than the average,
+None of the six is a pass/fail gate — each returns findings once, they get applied, and
+anything left over goes onto the human approval screen, which is the one thing that blocks.
+The per-item reviews report the **lowest-scoring** scene or shot rather than the average,
 because an average lets one broken scene hide behind the good ones. The order has a
 reason too — images come last because a changed sentence changes what its scene
-should show, and vocabulary comes after the scene gate because polishing the words
-of a scene that's about to be cut is wasted work. If a gate hits its hard cap, the
-best-scoring version ships to the approval screen with its unresolved findings
-attached, and the human decides. autoproduce's unattended path runs the same gates
-with a 2-round cap (falling short halts authoring).
+should show, and vocabulary comes after the scene review because polishing the words
+of a scene that's about to be cut is wasted work. Whatever the one round of fixes
+doesn't resolve rides to the approval screen with the finding attached, and the human
+decides. autoproduce has no human to decide, so there a P0 still standing after those
+fixes halts authoring.
 
 **Storyboard-first shooting flow** (for polished demos and tutorials — the order flips):
 
@@ -282,7 +286,7 @@ with a 2-round cap (falling short halts authoring).
 social-flow/
 ├── .claude-plugin/plugin.json   # plugin manifest
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 51 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 54 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -298,6 +302,7 @@ social-flow/
 │       ├── seedance-client.ts   # Seedance — t2v·i2v·reference (BytePlus ModelArk)
 │       ├── tts-client.ts        # Gemini TTS — single speaker + 2-speaker dialogue
 │       ├── supertonic-client.ts # Supertonic 3 on-device TTS
+│       ├── elevenlabs-client.ts # ElevenLabs TTS — single voice · multi-voice dialogue · voice list (REST)
 │       ├── music-client.ts      # Lyria — 30s clips (batch) + variable length (streaming)
 │       └── media-utils.ts       # path validation · base64 saves · PCM→WAV utils
 ├── skills/
@@ -312,10 +317,10 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap · Chrome lane map)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
-│   ├── storyboard/              # /social-flow:storyboard — research → scene design → copy/per-scene/vocabulary convergence (95) → images → image convergence (95) → approval
+│   ├── storyboard/              # /social-flow:storyboard — research → scene design → six one-round reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval
 │   ├── produce/                 # /social-flow:produce — video build + per-platform text
-│   │   └── references/          #   build-reel.sh · video-template.html · QA harness
-│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research→authoring→video unattended (human gates replaced by nine machine gates, economy tier default)
+│   │   └── references/          #   build-reel.sh · bgm-bed.sh · bgm-scoring.md · video-template.html · QA harness
+│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research→authoring→video unattended (human gates replaced by eleven machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
 │   ├── publish/                 # /social-flow:publish — HITL approval, then platform publishing
@@ -333,13 +338,13 @@ social-flow/
 │   ├── brand-reviewer.md        # adversarial review of profile images & intro videos (95/90-point convergence gates)
 │   ├── content-reviewer.md      # adversarial pre-publish verification (P0 gate)
 │   ├── growth-post-reviewer.md  # adversarial review of growth-loop copy (AI tells · context — 95-point gate)
-│   └── storyboard-reviewer.md   # adversarial storyboard review (copy AI tells / per-scene role·context / vocabulary / image fit — 95-point gates)
+│   └── storyboard-reviewer.md   # adversarial storyboard review, 6 modes read once each (copy AI tells / per-scene role·context / vocabulary / camera slots / sound plan / image fit)
 ├── apps/
 │   └── shoot-console/           # macOS SwiftUI recording console for the shooting-script flow (built locally via build-app.sh)
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (51 tools)
+## MCP tool surface (54 tools)
 
 **`tools/list` does not show all 50.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
@@ -368,6 +373,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |
 | Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |
+| Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (ELEVENLABS_API_KEY — the paid third lane: inline audio-tag acting on eleven_v3, text-to-dialogue with **up to 10 voices in one request**, per-character timestamps for subtitle sync, any cloned or Voice Library voice. Saves mono 24kHz wav by default, so the builder reads it like the Gemini lane. API rate $0.10 per 1,000 characters on v2·v3, $0.05 on flash and v3 conversational, the same on every plan; the Free tier is non-commercial) |
 | Speech recognition | `stt_local_transcribe` | Qwen3-ASR on-device via mlx-qwen3-asr/MLX (**no API key, no network, no billing — the default Korean STT**. Needs Apple Silicon + `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"`; the first call downloads ~3.4GB of weights. ingest runs the same engine and falls back to whisper.cpp without it) |
 | Music generation | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip (fixed 30s mp3 — the default BGM path) · Lyria RealTime (5–300s variable wav 48kHz, seed reproducibility). `GEMINI_API_KEY` |
 | Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
@@ -398,16 +404,16 @@ out, and the markers are per-platform (YouTube `queue: ready` · Instagram
 consume the marker and the other platform would never publish. Two things set
 markers: a human, or — when the plan enables `autoproduce` — the loop itself
 authoring one episode when the queue runs dry. Auto-authored episodes become `ready`
-only after passing all nine machine gates (fact verification · style · the
-storyboard-reviewer copy/per-scene/vocabulary/image gates · build report ·
+only after passing all eleven machine gates (fact verification · style · the six
+storyboard-reviewer reads for copy/per-scene/vocabulary/camera/sound/images · build report ·
 content-reviewer P0 · cost cap); failing any one leaves them `hold`, waiting for a
 human. grow-instagram publishes only with a public HTTPS URL, and with no hosting
 configured it disables both publishing and auto-authoring (the loop won't start
 tunnels, and it won't spend money making a video with no way out).
 
-All 18 generation tools run **inside this plugin — no external MCP server required**.
+All 21 generation tools run **inside this plugin — no external MCP server required**.
 Two keys cover the hosted ones: OPENAI_API_KEY for images, GEMINI_API_KEY for
-video/voice/music (Seedance adds ARK_API_KEY). Two of them —
+video/voice/music (Seedance adds ARK_API_KEY, ElevenLabs adds ELEVENLABS_API_KEY). Two of them —
 `image_local_generate` and `tts_local_generate` — run on-device and need no key at
 all.
 
@@ -422,6 +428,17 @@ Findings from porting the voice/music modules:
 - **The two engines differ in sample rate — local 44.1kHz, Gemini 24kHz.** Mixing
   them in one video needs resampling. `tts_local_generate` returns audio duration in
   its response, so scene-length checks don't need a separate ffprobe call.
+- **ElevenLabs is the third speech lane, opt-in per channel** (`engine: elevenlabs` in
+  profile §2) — for acted cuts with inline audio tags (eleven_v3), scenes with 3+
+  speakers (`tts_elevenlabs_dialogue`, one request instead of per-speaker stitching),
+  and subtitle timing (`timestamps: true` writes per-character start/end seconds).
+  Measured against the live API: `output_format` is a query parameter (in the body it
+  is silently ignored); the default `wav_24000` comes back as a real RIFF WAV at the
+  Gemini spec, so **never pass an mp3 format for narration** — build-reel.sh reads any
+  non-RIFF file as raw PCM; `normalized_alignment` romanizes Korean, so the sidecar's
+  `alignment` is the one to read; text-to-dialogue runs on eleven_v3 only. Background:
+  [ElevenLabs API research](docs/research/2026-08-22-elevenlabs-tts-api/index.html) (Korean) ·
+  [API reference](docs/api-reference/elevenlabs-tts.html).
 - **The default BGM path is `music_generate_clip`** (Lyria 3, fixed 30s, ~$0.04 per
   clip). Use the `music_generate` family only when you need exact length
   (narration-fitted) or seed reproducibility.
@@ -447,6 +464,8 @@ explicit error and everything else works.
 | `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — the second video engine. Dreamina Seedance 2.x models additionally require **an account balance over $30 or a resource pack** to activate; 1.5 pro and 1.0 have no such gate. `veo_*` works fine without this key) |
 | `SUNO_API_KEY` | suno_* | — | sunoapi.org API key (https://sunoapi.org/api-key — third-party REST, not Gemini and not an official Suno Inc. API). Unset, `music_*(Lyria)` still works |
 | `SUNO_BASE_URL` | | `https://api.sunoapi.org` | Same-spec self-host or regional mirror. Other vendors use different auth/paths — do not point this there |
+| `ELEVENLABS_API_KEY` | tts_elevenlabs_* | — | ElevenLabs API key (elevenlabs.io/app/settings/api-keys — a restricted key needs the `text_to_speech` permission, plus `voices_read` for `tts_elevenlabs_voices`). Unset, `tts_generate` (Gemini) and `tts_local_generate` still work |
+| `ELEVENLABS_BASE_URL` | | `https://api.elevenlabs.io` | Same-spec proxy or the EU residency host (`api.eu.residency.elevenlabs.io`). Normally leave it alone |
 | `ARK_BASE_URL` | | `https://ark.ap-southeast.bytepluses.com/api/v3` | ModelArk region endpoint. The video models only exist in ap-southeast-1, so normally leave it alone |
 | `SUPERTONIC_PYTHON` | | `python3` | Python interpreter for local TTS. Point it at your virtualenv if you used one (e.g. `~/venvs/tts/bin/python`). No venv auto-discovery — quietly picking up a different environment per repo and changing the voice is exactly the accident this avoids |
 | `QWEN3_ASR_BIN` | | `~/.local/bin/mlx-qwen3-asr` | Local STT executable. With the default uv tool install location there is nothing to set |
@@ -497,8 +516,9 @@ server calls, and how this implementation honors (or deliberately narrows) each 
 - **[MCP tool spec & best practices](docs/api-reference/mcp-tools.html)** — Tool
   fields, behavior-hint decision table, 7 authoring principles, quality rubric
 - **[Tool quality audit](docs/api-reference/tool-audit.html)** — scores and fixes for
-  the 31 tools as of 2026-07-29 (the 15 added since are unaudited)
+  the 31 tools as of 2026-07-29 (the 23 added since are unaudited)
 - Individual APIs — [Gemini TTS](docs/api-reference/gemini-tts.html) ·
+  [ElevenLabs TTS](docs/api-reference/elevenlabs-tts.html) ·
   [Veo 3.1](docs/api-reference/gemini-veo.html) ·
   [Veo people & reference policy](docs/api-reference/veo-portrait.html) ·
   [Seedance](docs/api-reference/seedance.html) ·
@@ -553,9 +573,9 @@ external contract to document, so their evidence lives in research notes instead
 ## Safety contract (summary)
 
 - **Double HITL gate** — storyboard approval (before production) + publish approval
-  (before going public). No publish tool call without approval. Adversarial
-  convergence gates (copy and image, 95 points · zero P0 each) stand in front of
-  storyboard approval.
+  (before going public). No publish tool call without approval. Six adversarial
+  reviews run once each in front of storyboard approval; they don't block on a score,
+  so the approval screen is where an unresolved finding gets its human look.
 - **No fact distortion** — time-sensitive values get two independent sources; ranges
   stay ranges.
 - **No cross-post copy-paste** — every platform gets its sentences redesigned.

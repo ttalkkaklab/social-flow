@@ -12,7 +12,7 @@ description: >
   into the 9:16 video (cut per scene, focus crop, title overlays, burned subtitles,
   BGM ducking) via build-screencast.sh.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
 ---
 
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
@@ -226,6 +226,43 @@ generated them under this rule). The cover background = b-roll source stays on
 veo's input, and any image that needs lettering always goes to gpt_image (local Hangul,
 measured: "딸깍연구소" came out as "달닥연구소").
 
+**What the storyboard already settled — pass it through, don't re-decide it.** Three values
+arrive from scenes.js already chosen and already reviewed. Inventing a replacement at call time
+means generating something nobody approved.
+
+- **`visual.camera` — the four camera slots.** Assemble the camera part of the prompt in this
+  order — `framing`, then `speed movement`, then `ending on end`:
+
+  ```
+  { movement:"dolly in", speed:"very slow", framing:"chest-up on the subject", end:"subject centred at mid-frame" }
+  → "chest-up on the subject, very slow dolly in, ending with the subject centred at mid-frame"
+  ```
+
+  Then append the subject motion, and for b-roll the audio line. **An empty `end` is a storyboard
+  defect, not something to fill in here** — send it back. Older episodes carry a single
+  `visual.motion` string instead; use that as-is.
+
+- **`visual.character` — who is on screen.** Resolve the id to its panel directory and attach the
+  panels as reference images:
+
+  ```bash
+  CH=$(python3 ../channel/references/resolve-asset.py "$CHANNEL_DIR" character claude)
+  # → …/assets/characters/claude — reference set: $CH/face.png then $CH/body.png
+  ```
+
+  **Order is weight** — face first, body second, and `back.png` third only when the shot is
+  back-facing. No panels yet means falling back to that character's `front.png`; a live-action
+  character keeps its single image (`real.png`). Drawn character → `seedance_reference`,
+  photoreal person → `veo_reference` (**3 images max**, validated in code). The full rule is
+  [video-model-selection.md](references/video-model-selection.md) §6.
+
+- **`duration` — the used length.** On a generated clip this is what the cut needs
+  (scenes-schema §cut length), not a default: an insert is 3–4s, a face carrying emotion is
+  7–10s. **Ask for exactly that** — Seedance makes and bills the seconds you request, so
+  `durationSeconds` is the used length. Veo's reference lane is the exception, pinned at 8s, so
+  there you generate 8 and trim. Handing a model more seconds than the idea holds is how the
+  middle of a clip goes dead — it fills the time it is given.
+
 **Video engines, split by job** — there are two (`veo_*` · `seedance_*`) and they're good at
 different things. The decision table's source of truth is
 [video-model-selection.md](references/video-model-selection.md), and this skill follows that
@@ -346,17 +383,19 @@ only the summary is here.
   **Make exactly what the storyboard has** — skip a planned slot and an approved scene
   quietly disappears; add a slot that isn't there and you've broken the contract and wasted
   money.
-  - **Generate 8 seconds, use what you need** — the API only allows 8 seconds at 1080p. The
-    body is 1080×1920, so don't generate at 720p and upscale (user decision 2026-08-11 — if
+  - **Generate 8 seconds, use what you need** — on Veo the API only allows 8 seconds at 1080p.
+    The body is 1080×1920, so don't generate at 720p and upscale (user decision 2026-08-11 — if
     you need an upscale, just use 1080p). The length actually used is the storyboard broll
-    scene's `duration` (4 seconds by default), and you trim the head of the original right
-    before the splice in §6. Keep the 8-second original
+    scene's `duration`, and you trim the head of the original right before the splice in §6.
+    **On Seedance ask for the used length directly** (`durationSeconds` = that scene's
+    `duration`) — it makes only those seconds, so there is nothing to trim and nothing to pay
+    for twice. Keep the 8-second original
     (**`.work/broll/broll-a<after>.mp4`**) — it's the reference point for a retrim.
     There's one reason `after` is in the filename — two slots with the same name overwrite
     each other.
-  Move scenes.js's `visual.motion` ("very slow dolly in / nearly static camera") into the
-  prompt as **motion only, in English**, and add the audio instruction at the end — this slot
-  is a Veo call, so it's `dolly in`, not `push in` (the vocabulary rule above). For example:
+  Assemble the camera sentence from that scene's `visual.camera` four slots (above), keep it
+  **motion only, in English**, and add the audio instruction at the end — this slot is a Veo
+  call, so it's `dolly in`, not `push in` (the vocabulary rule above). For example:
   `Audio: quiet studio room tone with a faint fabric rustle, no music, no speech.`
   Re-describe the person, background, or lighting already visible in the image and the model
   redesigns the scene.
@@ -382,11 +421,15 @@ only the summary is here.
   instruction is optional. The plan gate (absolute rule 13) comes back in the same delegation
   as the b-roll. **Make exactly what the storyboard has** — 2 combined with the b-roll is the
   ceiling (scenes-schema §Motion background is the source of truth).
-- **quote speaking clip** (when planned): `veo_reference` (1 avatar image, 9:16, 720p,
+- **quote speaking clip** (when planned): `veo_reference` (the speaker's panel set — `face.png`
+  then `body.png`, 3 images max; 9:16, 720p,
   `veo-3.1-fast-generate-preview` — lite doesn't support reference images, so fast is the
   lowest tier. The standard tier ties with fast in the arena, so there's no reason to pay 4×) —
   repeat the character description in the prompt + "static camera" + "wide chest-up framing …
-  subject appears small in the frame" + a background unified to THEME dark. **Exclusions go
+  subject appears small in the frame" + a background unified to THEME dark. **Those two camera
+  phrases are the default `visual.camera` for a quote clip, not a competing instruction** — when
+  the scene carries its own `visual.camera`, assemble from that instead (§what the storyboard
+  already settled). **Exclusions go
   in the `negativePrompt` argument, not the body** — `text, subtitles, black bars,
   letterboxing`. Run `frame-persona-clip.py <input> .work/broll/<speaker>-palin.mp4` to unify
   the framing and make the palindrome. With several clips, hstack them side by side and
@@ -396,7 +439,10 @@ only the summary is here.
   to the static quote card. A reference carries appearance only, so **when the avatar's
   composition has to be preserved exactly, it's `veo_img2video` first/last frames, not a
   reference**.
-- **BGM**: if the channel has a shared bed, use it.
+- **BGM**: the storyboard already decided this. Read `window.MUSIC` and each shot's `sound`
+  (scenes-schema §music cues) and turn them into files the builder can find.
+
+  **No `window.MUSIC`** — a one-bed episode, which is the common case:
   ```bash
   ASSET=${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py
   if BGM=$(python3 "$ASSET" data/<channel> bgm default 2>/dev/null); then
@@ -407,13 +453,36 @@ only the summary is here.
     : # default: music_generate_clip (Lyria, 30s instrumental) → .work/bgm.wav
   fi
   ```
-  Generation prompt: "leaves space for a spoken voiceover, no melody in the vocal
-  frequency range". **`.work/bgm.wav`** is the name the builder looks for.
+
+  **With `window.MUSIC`**, one file per cue. `base` (or the channel's shared bed when there is no
+  `base`) becomes `.work/bgm.wav`; every other cue becomes `.work/bgm-<name>.wav`. A cue with
+  `asset` comes from `resolve-asset.py <channel dir> bgm <id>` instead of being generated. Add up the durations of
+  the shots each cue covers and ask `music_generate` for that many seconds — the bed then never
+  loops. Past 300s the builder crossfades it onto itself, so a long-form cue is fine too, just
+  more repetitive.
+
+  Then write **`.work/bgm.tsv`** — `idx <TAB> audio-file`, one row per shot that changes the cue:
+  ```
+  4	bgm-tense.wav
+  ```
+  `idx` is the **card idx** — 0-based, the shot's array position in scenes.js, the same number
+  `sfx.tsv` and `chapters.tsv` use (`broll` and `outro` are spliced in after the build and are
+  not cards). Paths are relative to `.work/`.
+  A shot with `sound.drop` becomes an `sfx.tsv` row per segment of that shot, audio column empty
+  and `bgm` set to `off` (§sfx below). A shot with `sound.sfx` becomes one row on **seg 0** — the
+  shot's first frame — with the path `resolve-asset.py <channel dir> sfx <id>` returns.
+
+  **The level is not a knob here.** The builder measures the narration and sets the bed
+  `BGM_SEP` LU under it (10 by default), clamps the bed's true peak, and stops the build if the
+  voice-to-bed separation lands under 4 LU. So the prompt only has to make the bed *fit* — the
+  established wording is "leaves space for a spoken voiceover, no melody in the vocal frequency
+  range". Where those numbers come from, and which parts of this are evidence and which are our
+  own practice: [bgm-scoring.md](references/bgm-scoring.md).
 
   | Job | Tool | Key |
   |---|---|---|
-  | Narration-under bed (default) | `music_generate_clip` 30s, builder loops it | `GEMINI_API_KEY` |
-  | Exact length 5–300s, or a seed to reproduce | `music_generate` / `music_generate_advanced` | `GEMINI_API_KEY` |
+  | A cue that has to fit a span, or a seed to reproduce | `music_generate` / `music_generate_advanced` (5–300s) | `GEMINI_API_KEY` |
+  | A bed with no span to fit | `music_generate_clip` 30s, the builder extends it | `GEMINI_API_KEY` |
   | Narration-under bed (Suno) | `suno_generate_sound` loop + BPM. `filename: "bgm.wav"` | `SUNO_API_KEY` |
   | The song IS the content | `suno_generate` (customMode; lyrics from `suno_generate_lyrics` or written) | `SUNO_API_KEY` |
 
@@ -429,7 +498,8 @@ was using. The convention's source of truth is
 printf 'image.gpt-image-2.high\t1\tproduce: cover background regenerated\n'          >> .work/cost-tally.tsv
 printf 'veo.lite.1080p\t8\tproduce: b-roll a1 — generated 8s, used 4s\n'             >> .work/cost-tally.tsv
 printf 'seedance.1-5-pro-silent.1080p\t5\tproduce: motion background i3 (completion_tokens 102960)\n' >> .work/cost-tally.tsv
-printf 'music.lyria-realtime\t90\tproduce: BGM 90s — unit price unconfirmed\n'       >> .work/cost-tally.tsv
+printf 'music.lyria-realtime\t90\tproduce: BGM cue "base" 90s — unit price unconfirmed\n' >> .work/cost-tally.tsv
+# one line per cue in window.MUSIC — a three-cue episode is three calls, not one
 printf 'music.suno-generate\t1\tproduce: Suno full song, 1 call (2 tracks)\n'        >> .work/cost-tally.tsv
 printf 'music.suno-sound\t1\tproduce: Suno loop BGM\n'                                >> .work/cost-tally.tsv
 ```
@@ -647,20 +717,30 @@ Don't split a scene into several calls by sentence (the voice varies between cal
 (Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
 so regenerating is free. Only lines that need a style instruction, meaning shots where an
 emotion has to be acted, go to `tts_generate` (Gemini). The local side has no stylePrompt.
+A profile with `engine: elevenlabs` calls `tts_elevenlabs_generate` with the profile's
+voiceId · model · stability (and seed, if pinned) and leaves `outputFormat` at its default
+`wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is.
+**Never pass an mp3_* outputFormat for narration**: build-reel.sh reads any non-RIFF audio
+file as raw PCM and that card becomes noise. A scene with three or more speakers goes to
+`tts_elevenlabs_dialogue` in one call (no per-speaker stitching, no 0.75s gaps). Audio tags
+for acted lines (`[whispers]`, `[laughs]`) only work on `eleven_v3`, and the v3 cap is 5,000
+characters per call — scenes are far under it.
 
 **An existing profile with no engine field counts as `gemini` and keeps the voiceName written
 there.** Don't switch it over just because local is the default — a channel a few episodes in
 would change narrators mid-run. A move to local happens only when the user updates profile §2
 and names the engine.
 
-**Don't mix the two engines inside one video** — 44.1kHz (local) and 24kHz (Gemini) on one
-timeline break the concatenation. If you really have to mix, resample one side before the
-build.
+**Don't mix engines with different sample rates inside one video** — 44.1kHz (local) and
+24kHz (Gemini · ElevenLabs default) on one timeline break the concatenation. Gemini and
+ElevenLabs at `wav_24000` share a spec and can sit on one timeline; local can't join either
+without resampling one side before the build.
 
 **Length check right after generation** — anything over twice chars/4.5 gets one regeneration
-at the same parameters. `tts_local_generate` returns the audio length in its response so you
-can use that value directly, and `tts_generate` gets measured with ffprobe (handling Gemini
-TTS's anomalous output is in `references/pipeline.md` §Three TTS failure modes).
+at the same parameters. `tts_local_generate` and `tts_elevenlabs_generate` return the audio
+length in their responses so you can use that value directly, and `tts_generate` gets measured
+with ffprobe (handling Gemini TTS's anomalous output is in `references/pipeline.md` §Three TTS
+failure modes).
 
 Once the whole scene is out, write a line to the ledger. **The quantity is chars÷1000, not
 the character count** — the unit price is per 1,000 characters, so writing 412 characters as
@@ -673,12 +753,18 @@ for its share.
 printf 'tts.local\t1.840\tproduce: narration, 5 scenes, 1840 chars\n' >> .work/cost-tally.tsv
 # on a Gemini channel, use the key for the model (flash by default)
 printf 'tts.gemini-flash\t1.840\tproduce: narration, 5 scenes, 1840 chars\n' >> .work/cost-tally.tsv
+# on an ElevenLabs channel the quantity is the response's "Character cost" ÷ 1000 (the vendor's
+# metered count — it sits below the raw character count, measured), key by model family
+printf 'tts.elevenlabs\t1.120\tproduce: narration, 5 scenes, character cost 1120\n' >> .work/cost-tally.tsv
+# (flash_v2_5 / v3_conversational → tts.elevenlabs-flash)
 ```
 
 If the local engine fails with "Python interpreter not found" or
 "No module named 'supertonic'", **stop right there and ask the user to install it.** Don't
 quietly switch to Gemini — the video gets made with a changed voice, and the speaker differs
-from episode to episode.
+from episode to episode. The same rule covers ElevenLabs: a key, permission, quota, or
+`output_format_not_allowed` error stops the run and goes to the user — no silent fallback to
+another engine.
 
 ### 6. Write the manifest + build
 
@@ -688,6 +774,7 @@ Convert `.work/cards.tsv` and `segs.tsv` from scenes.js (tab-separated, outro ex
 cards.tsv : idx <TAB> absolute audio path <TAB> target chars/sec <TAB> zoom(in|out|auto|none) [<TAB> options]
 segs.tsv  : idx <TAB> seg (0-based) <TAB> visual <TAB> tts sentence <TAB> sub sentence
 sfx.tsv   : idx <TAB> seg <TAB> audio file <TAB> bgm(on|off)          (optional)
+bgm.tsv   : idx <TAB> audio file — the music cue changes at that card (optional)
 chapters.tsv : idx of the chapter's first card <TAB> chapter title    (long-form)
 ```
 
@@ -756,6 +843,13 @@ the offset, so aligning to the boundary puts the sound three or four syllables a
 picture. Ducking is keyed on the voice alone, so an effect doesn't push the BGM down. Volume
 is `SFX_VOL` (0.85 by default) and the BGM cut ramp is `BGM_GATE_R` (0.30s by default).
 
+**Music cues (`bgm.tsv`)** — `idx <TAB> audio file`, the bed changing at that card and staying
+until the next row. `idx` is the 0-based card idx. A row for card 0 overrides `bgm.wav` as the
+opening bed; without one, `bgm.wav` opens — and `bgm.wav` must exist either way (the builder
+checks for it before anything else). Cue changes crossfade over `BGM_CUE_XF` (2.0s), landing the incoming cue on the card start.
+Every cue is measured and gained to the same distance under the narration, so cues recorded at
+different levels don't step up and down.
+
 **Chapters (long-form)** — attach scenes.js's `chapter` string to that shot's card idx.
 Don't write timestamps. The builder makes them from the measured times and checks YouTube's
 three requirements (first chapter at 0:00 · 3 or more · at least 10 seconds apart), and
@@ -820,11 +914,17 @@ matching the veo sound to the body's level and laying the BGM on (generated soun
 than the body — measured at mean −18 to −22dB on person sources):
 
 ```bash
-mix_broll() {           # mix_broll <after> <used length in seconds>
-  local A=$1 USE=$2
-  ffmpeg -y -i .work/broll/broll-a$A.mp4 -stream_loop -1 -i .work/bgm.wav -t $USE \
+BED=${CLAUDE_PLUGIN_ROOT}/skills/produce/references/bgm-bed.sh
+mix_broll() {           # mix_broll <after> <used length in seconds> [cue file]
+  local A=$1 USE=$2 SRC=${3:-bgm.wav}
+  # Same conditioning the feature gets: the clip's own voice is normalized to -20, so the bed is
+  # measured and set 10 LU under that. A raw multiplier here would put the b-roll's music at a
+  # different distance from the voice than the rest of the episode, on the same bed file.
+  printf '0.0000\t%s\n' "$SRC" > .work/bedcue.list
+  ( cd .work && "$BED" bed-broll.wav "$USE" "$(awk -v s="${BGM_SEP:-10}" 'BEGIN{print -20 - s}')" bedcue.list )
+  ffmpeg -y -i .work/broll/broll-a$A.mp4 -i .work/bed-broll.wav \
     -filter_complex "[0:a]loudnorm=I=-20:TP=-2:LRA=7[va];
-      [1:a]volume=0.15,afade=t=in:st=0:d=0.4,afade=t=out:st=$((USE-1)):d=1[bg];
+      [1:a]afade=t=in:st=0:d=0.4,afade=t=out:st=$((USE-1)):d=1[bg];
       [va][bg]amix=inputs=2:duration=first:normalize=0[a]" \
     -map 0:v -map "[a]" -r 30 -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p \
     -c:a aac -ar 48000 -ac 2 -b:a 192k .work/broll/broll-a$A-mixed.mp4
@@ -832,6 +932,10 @@ mix_broll() {           # mix_broll <after> <used length in seconds>
 mix_broll 0 4          # pass the broll scene's after and duration from scenes.js as they are
 mix_broll 3 4          # if there's a second slot
 ```
+
+**A b-roll stretch gets the cue that is playing where it splices in** — pass that cue's file as
+the third argument. Leave it out and it plays the opening bed, which under a `tense` section is an
+audible jump back to the theme in the middle of a scene.
 
 **Don't cut the mixed file again** — the fades are pinned to its length, so cutting loses the
 tail fade and shifts the BGM fade out of place. To change the length, re-mix from the
@@ -1029,7 +1133,7 @@ that split.
 ```
 Cost — what this episode ran to (storyboard → video)
   storyboard   6 images (gpt high 2 · local 4)              $0.44
-    · of which 1 regenerated (§5.5 round 2)                 $0.22
+    · of which 1 regenerated (§5.5 review)                   $0.22
   produce      b-roll veo lite 1080p, 8s generated          $0.64
                narration 1,840 chars (local)                $0.00
                BGM 90s                                      excluded — unit price unconfirmed
@@ -1057,6 +1161,8 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/screencast-overlay.html`** — scene title alpha overlay renderer (top block y 190–460, scenes.js injected)
 - **`references/video-template.html`** — 1080×1920 scene renderer (THEME injection · reveal · alpha · safe zone · overflow guard)
 - **`references/build-reel.sh`** — the compositing pipeline SoT (silence trim → loudnorm → boundary detection → reveal xfade → Ken Burns → subtitles → outro splice)
+- **`references/bgm-bed.sh`** — renders the music bed the mix lays under the voice: every cue measured and gained to one distance under the narration, a short cue crossfaded onto itself instead of butt-joined, cue changes crossfaded. Called by both builders and by the b-roll premix
+- **`references/bgm-scoring.md`** — where the bed's numbers come from, which of them are published listening tests and which are our own practice, and the widely-quoted figures that failed verification
 - **`references/build-outro.sh`** — generates the channel's shared outro
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)

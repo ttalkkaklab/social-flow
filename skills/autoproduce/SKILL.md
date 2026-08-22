@@ -9,17 +9,18 @@ description: >
   build the 9:16 video (clean master + burned copy + subs.srt) and per-platform
   text under data/<channel>/episodes/<topic>/output/ — on the cheapest model tier that
   works, escalating only when measured metrics say the hook is failing. Machine
-  gates (fact verification, style checker, storyboard-reviewer ≥95 on copy, on every
-  single scene, on the vocabulary of every narration and title, and on the generated
-  images, build report, content-reviewer copy ≥95 with zero P0, cost cap) stand in for
-  the human approval gates of storyboard/produce.
+  gates (fact verification, style checker, six one-round storyboard-reviewer reads —
+  copy, every single scene, the vocabulary of every narration and title, the camera plan,
+  the sound plan, and the generated images — build report, content-reviewer copy ≥95 with
+  zero P0, cost cap) stand in for the human approval gates of storyboard/produce. The six
+  reads don't score-gate; an unresolved P0 is what stops the run.
 argument-hint: "<channel> \"<topic>\" [unattended]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
   "mcp__social-flow__serp_news_search",
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img",
-  "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate",
+  "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue",
   "mcp__social-flow__tts_list_voices",
   "mcp__social-flow__veo_img2video",
   "mcp__social-flow__music_generate_clip"]
@@ -42,19 +43,26 @@ judges when no human is present** and **which model to use**.
 ## What stands in for the human gates
 
 The pipeline's safety used to hang on the double HITL gate (storyboard
-approval, publish approval). Unattended mode puts **nine machine verdicts** in
+approval, publish approval). Unattended mode puts **eleven machine verdicts** in
 their place. If even one fails, the video still gets made but **does not enter
 the queue** (`queue_*: hold`) — meaning it won't publish until a human looks at it.
+
+The six storyboard-reviewer reads run **once each, with no score to clear** (storyboard
+§4.5–§5.5). What stops the run here is a **P0 still standing after that one round's fixes**
+— on the unattended path nobody is going to look at a merely low score, and nobody is going
+to ignore a P0 either.
 
 | What a human used to check | Unattended replacement | On failure |
 |---|---|---|
 | Are the facts right | Time-sensitive values cross-checked against 2 independent sources + **3 or more** verified facts | Topic discarded (§2) |
 | Does the copy read like a human wrote it | `check-style.py` exit ≤ 1 per surface | Fix and retry; abort after 2 failures (§4·§9) |
-| Is the storyboard copy approvable | storyboard-reviewer copy mode **≥95 · P0 = 0** (max 2 rounds unattended) | Authoring aborted (§4.5) |
-| Does every single scene do its job | storyboard-reviewer scene mode **lowest scene ≥95 · P0 = 0** (max 2 rounds unattended) | Authoring aborted (§4.6) |
-| Is the wording what a person would say | storyboard-reviewer vocabulary mode **lowest scene ≥95 · P0 = 0** (max 2 rounds unattended) | Authoring aborted (§4.7) |
-| Do the images match the scene content | storyboard-reviewer image mode **≥95 · P0 = 0** (max 2 rounds unattended) | `queue_*: hold` (§6.5) |
-| Does the video hold together | `build-report.txt` drift 0 · 0 missing reveals | Abort (§8) |
+| Is the storyboard copy approvable | storyboard-reviewer copy mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.5) |
+| Does every single scene do its job | storyboard-reviewer scene mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.6) |
+| Is the wording what a person would say | storyboard-reviewer vocabulary mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.7) |
+| Is the camera plan buildable | storyboard-reviewer camera mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.8) |
+| Does the episode's sound hold up | storyboard-reviewer sound mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.9) |
+| Do the images match the scene content | storyboard-reviewer image mode, one round → **P0 = 0 after the fixes** | `queue_*: hold` (§6.5) |
+| Does the video hold together | `build-report.txt` drift 0 · 0 missing reveals · voice-to-bed separation ≥ 4 LU | Abort (§8) |
 | Is it fit to publish | content-reviewer **copy ≥95 · P0 = 0** (max 2 rounds unattended) | `queue_*: hold` (§10) |
 | Is the spend allowed | `cost-report.sh --cap` exit 0 | Escalation cancelled, back to economy baseline (§5) |
 
@@ -307,20 +315,19 @@ sermonizing wrap-ups, rhythm that reads out in same-length sentences, unbacked
 assertions. **Pass gate 2 first, then call**: delegating with exit 2 still
 standing spends a round on what the machine already knows.
 
-**Delegate to the storyboard-reviewer agent (Agent) in "copy mode"** and parse
-the tail `STORYBOARD_REVIEW: mode=text score=NN p0=N verdict=PASS|FAIL`.
-Pass the `scenes.js`·`research.md`·`profile.md` paths and the previous round's
-findings.
+**Delegate to the storyboard-reviewer agent (Agent) in "copy mode"** and read
+the tail `STORYBOARD_REVIEW: mode=text score=NN p0=N`. Pass the
+`scenes.js`·`research.md`·`profile.md` paths. **One round — don't delegate copy
+mode again.**
 
-- **PASS (≥95 · p0 = 0)** → on to §4.6.
-- **FAIL** → fix scenes.js per the correction directives and delegate once
-  more. **Unattended cap: 2 rounds.**
-- FAIL on round 2 too: **stop authoring.** Don't make the video — spending
+- **Apply the findings, P0 first**, then on to §4.6. The score goes in the §10
+  report; nothing branches on it.
+- **A P0 you could not resolve stops the run.** Don't make the video — spending
   money and time on images, TTS, and the build while the copy isn't there is
   the most expensive failure. This path never reaches §10, so **create
   storyboard.md here** (§10's frontmatter format, `status: draft` ·
-  `queue_*: hold`), write the unresolved findings into the body, and report —
-  the thread a human picks up has to be in the file.
+  `queue_*: hold`), write the unresolved P0 into the body, and report — the
+  thread a human picks up has to be in the file.
 
 **Only subtract** — plant a new simile or stock phrase while scrubbing AI tells
 and that's the new AI tell.
@@ -332,20 +339,18 @@ its own** — this catches the episode whose average is fine while one scene has
 collapsed. The unattended path has no human flipping through the storyboard
 asking "why is this scene here?", so this gate stands in for that eye.
 
-**Delegate to the storyboard-reviewer agent (Agent) in "scene mode"** and parse
-the tail `STORYBOARD_REVIEW: mode=scene score=NN p0=N worst=N verdict=PASS|FAIL`.
-**`score` is the lowest-scene score**, so ≥95 means every scene is at 95 or
-above.
+**Delegate to the storyboard-reviewer agent (Agent) in "scene mode"** and read
+the tail `STORYBOARD_REVIEW: mode=scene score=NN p0=N worst=N`. **`score` is the
+lowest-scene score**, so it points at the thinnest scene. **One round.**
 
-- **PASS (≥95 · p0 = 0)** → on to §4.7.
-- **FAIL** → fix only the `worst` scene and delegate once more. **Unattended
-  cap: 2 rounds.** Role-gap and duplication findings can't be fixed by
-  polishing sentences — merge or drop that scene and rebalance total length
-  across the remaining scenes. If the method sits ahead of the result, don't
-  touch the sentences — move the result scene forward. Added or dropped a
-  scene: pass §4.5 again before coming back.
-- FAIL on round 2 too: **stop authoring as in §4.5** — this is still before
-  money goes to images and TTS.
+- **Apply the findings, starting at `worst`**, then on to §4.7. Role-gap and
+  duplication findings can't be fixed by polishing sentences — merge or drop
+  that scene and rebalance total length across the remaining scenes. If the
+  method sits ahead of the result, don't touch the sentences — move the result
+  scene forward. Adding or dropping a scene changes sentences §4.5 already read;
+  apply its rule (only subtract) as you rewrite instead of rerunning it.
+- **A P0 you could not resolve stops the run, as in §4.5** — this is still
+  before money goes to images and TTS.
 
 ### 4.7 Vocabulary review gate (gate 6c — storyboard-reviewer vocabulary mode)
 
@@ -355,15 +360,47 @@ catches only the forms written into its rules, so literary vocabulary like
 with exit 0 — the reviewer covers that layer.
 
 **Delegate to the storyboard-reviewer agent (Agent) in "vocabulary mode"** and
-parse the tail
-`STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=N verdict=PASS|FAIL`.
-Here too `score` is the lowest-scene score.
+read the tail `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=N`. Here too
+`score` is the lowest-scene score. **One round.**
 
-- **PASS (≥95 · p0 = 0)** → on to §5.
-- **FAIL** → swap **only the flagged words** and delegate once more.
-  **Unattended cap: 2 rounds.** Rewrite whole sentences and the structure
-  §4.5·§4.6 signed off on collapses, and both gates have to run again.
-- FAIL on round 2 too: stop authoring (handled as in §4.5).
+- **Swap only the flagged words**, then on to §4.8. Rewriting whole sentences
+  collapses the structure §4.5·§4.6 already read, and nothing runs again to
+  catch it.
+- **A P0 you could not resolve stops the run** (handled as in §4.5).
+
+### 4.8 Camera review gate (gate 6d — storyboard-reviewer camera mode)
+
+Every shot that becomes a generated video carries four camera slots. Unattended
+this gate matters more than anywhere else: an empty `end` slot buys a clip whose
+last second drifts, and on this path nobody watches it before it publishes.
+
+**Delegate to the storyboard-reviewer agent (Agent) in "camera mode"** and read
+the tail `STORYBOARD_REVIEW: mode=camera score=NN p0=N worst=N`. Pass
+`scenes.js`·`profile.md` plus the `video-model-selection.md` and `scenes-schema.md`
+paths. **One round.**
+
+- **Apply the findings, starting at `worst`**, then on to §4.9.
+- **An episode with no generated shots skips this gate** — the tail comes back
+  `score=n/a`, which is not a failure.
+- **A P0 you could not resolve stops the run** (handled as in §4.5). An engine
+  misassignment or a length that fights the purpose is money about to be spent
+  wrong, so stopping here is the cheap outcome.
+
+### 4.9 Sound review gate (gate 6e — storyboard-reviewer sound mode)
+
+The picture has been read twice by now — its role and its camera — and the sound not at
+all. This gate reads it while it is still text.
+
+**Delegate to the storyboard-reviewer agent (Agent) in "sound mode"** and read
+the tail `STORYBOARD_REVIEW: mode=sound score=NN p0=N`. Pass
+`scenes.js`·`profile.md`·`scenes-schema.md`. **One round.**
+
+- **Apply the findings**, then on to §5. Cues, drops and cue prompts are scenes.js
+  fields, so those get fixed here, in the file.
+- **Carry the "hand to produce" lines forward** — what is left is what has no
+  field: the generation call, the engine. §6's BGM step is where they get used,
+  and losing them here means nobody reads them at all on this path.
+- **A P0 you could not resolve stops the run** (handled as in §4.5).
 
 ### 5. Tier decision + pre-spend estimate (gate 5)
 
@@ -452,15 +489,26 @@ money without knowing the price.
     after the §8 build `splice-clip.sh` shifts the later subtitles by the
     measured inserted length. **No palindrome loops** — the audio plays
     backwards.
-- **BGM** — if the channel has a shared bed, just copy it.
+- **BGM** — **unattended runs take one bed**: the storyboard step leaves `window.MUSIC`
+  out and this step copies or generates a single `.work/bgm.wav`. If the channel has a
+  shared bed, just copy it.
   `python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py data/<channel> bgm default`
   — if a path comes back, copy it to `.work/bgm.wav`. Otherwise put a
   30-second `music_generate_clip` instrumental at `.work/bgm.wav`. Include
   "leaves space for a spoken voiceover, no melody in the vocal frequency range"
-  in the prompt. The builder loop-extends it. To reuse the same tone next
-  episode, copy it to `assets/audio/bgm/default.wav` and add it to the catalog.
+  in the prompt. To reuse the same tone next episode, copy it to
+  `assets/audio/bgm/default.wav` and add it to the catalog.
+  **No `window.MUSIC` cues unattended.** Cues are made with `music_generate`
+  (variable length), whose price is unconfirmed in `prices.tsv` — `cost-report.sh`
+  would answer "verdict unavailable" and §5 would abort the run (cost-tiers §BGM says
+  the same: the economy tier takes one bed, not cues). If a scenes.js arrives with
+  `window.MUSIC` anyway, remove it and every shot's `sound.cue` before §6 and go on
+  with one bed; cue-based scoring is the human produce path.
   **Never call `suno_*` unattended** — vocals fight the narration. An episode
   where the song is the content is the human produce path's `suno_generate`.
+  The level is not a decision here: the builder measures the narration, sets the
+  bed 10 LU under it, and **stops the run if the separation lands under 4 LU**
+  (produce `references/bgm-scoring.md`).
 
 After every call, append one line of actual usage to `.work/cost-tally.tsv` —
 this file, not §5's estimate file. Line format and units (veo = generated
@@ -475,22 +523,22 @@ unattended path no human ever looks at the images, so this gate is the only
 eye — it catches images unrelated to what the scene says, baked-in
 pseudo-characters, and bright lower thirds (which drown the subtitles).
 
-**Delegate to the storyboard-reviewer agent (Agent) in "image mode"** and parse
-the tail `STORYBOARD_REVIEW: mode=image score=NN p0=N verdict=PASS|FAIL`.
-Pass the full `images/scene-*.png` paths plus `scenes.js`·`profile.md`.
+**Delegate to the storyboard-reviewer agent (Agent) in "image mode"** and read
+the tail `STORYBOARD_REVIEW: mode=image score=NN p0=N`. Pass the full
+`images/scene-*.png` paths plus `scenes.js`·`profile.md`. **One round.**
 
-- **PASS (≥95 · p0 = 0)** → on to §7.
-- **FAIL** → regenerate only the flagged images and delegate once more.
-  **Unattended cap: 2 rounds.** When you decide to regenerate, **put that line
-  on `.work/cost-estimate.tsv` first** and rerun the `--cap` verdict as in §5 —
-  over the cap (exit 2) means hold right there instead of regenerating. Don't
-  run the verdict on the actual ledger: at that point it's missing **spend that
-  hasn't gone out yet** (BGM, narration), the total looks small, and a
-  cap-busting regeneration passes. When the call finishes, write actual usage
-  to `.work/cost-tally.tsv` (§6 as-is).
-- FAIL on round 2 too: finish the video anyway, but at **§10 wrap-up write
-  `queue_*: hold`** along with the unresolved findings. An off-context cover
-  becomes the thumbnail as-is, so a human has to see it.
+- **Regenerate only the flagged images**, then on to §7. When you decide to
+  regenerate, **put that line on `.work/cost-estimate.tsv` first** and rerun the
+  `--cap` verdict as in §5 — over the cap (exit 2) means hold right there
+  instead of regenerating. Don't run the verdict on the actual ledger: at that
+  point it's missing **spend that hasn't gone out yet** (BGM, narration), the
+  total looks small, and a cap-busting regeneration passes. When the call
+  finishes, write actual usage to `.work/cost-tally.tsv` (§6 as-is).
+- **The regenerated image is not read again** — one round means one read.
+- **A P0 still standing** (including one on an image you just remade): finish
+  the video anyway, but at **§10 wrap-up write `queue_*: hold`** along with the
+  unresolved findings. An off-context cover becomes the thumbnail as-is, so a
+  human has to see it.
 
 ### 7. Narration
 

@@ -84,16 +84,24 @@ follow the vocabulary. **Publish only at score ≥95 with P0=0**; if the copy
 can't clear that within 3 rounds (2 on unattended paths), don't publish —
 not posting beats posting copy that falls short.
 
+**Storyboard copy is the one surface outside that bar** (user directive,
+2026-08-22). Its reviewer runs once, its findings get applied once, and the
+score is filed rather than cleared — the human approval step in storyboard §7
+is what stops that surface, and on the unattended path an unresolved P0 does.
+Everything else in the table below keeps the 95 bar.
+
 | Outgoing copy | Authored by | Reviewer | Verdict tail |
 |---|---|---|---|
-| Storyboard copy (narration · subtitles · screen) | storyboard · autoproduce | storyboard-reviewer copy mode | `STORYBOARD_REVIEW` |
+| Storyboard copy (narration · subtitles · screen) | storyboard · autoproduce | storyboard-reviewer copy mode — **one round, no score bar** | `STORYBOARD_REVIEW` |
 | Platform copy (threads · ig · fb · yt) | produce · autoproduce | content-reviewer copy axis | `CONTENT_REVIEW` |
 | Growth copy (new posts · search-driven engagement · inbox replies) | grow-threads · grow-instagram · grow-youtube | growth-post-reviewer | `GROWTH_POST_REVIEW` |
 | Post-publish replies | publish | growth-post-reviewer | `GROWTH_POST_REVIEW` |
 | bio · channel description · tagline | channel · intro | growth-post-reviewer `standalone` | `GROWTH_POST_REVIEW` |
 
 The 95 bar is a user directive from 2026-08-13 (growth copy was lowered to 90
-on 2026-08-12, then restored to 95 by that directive). Don't build a new skill
+on 2026-08-12, then restored to 95 by that directive). The storyboard row came
+out from under it on 2026-08-22, by a later directive that replaced its
+convergence loops with single reads. Don't build a new skill
 with an outgoing-copy path that bypasses the reviewer — when a new surface
 appears, add a row to this table and extend an existing reviewer.
 

@@ -26,6 +26,7 @@
 set -euo pipefail
 export LC_ALL=en_US.UTF-8
 
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # grab before cd (path to bgm-bed.sh)
 WORKDIR="${1:?usage: build-screencast.sh <workdir>}"
 cd "$WORKDIR"
 
@@ -48,7 +49,11 @@ BAND_CY=${BAND_CY:-880}            # target vertical center of the band
 BAND_MIN_Y=${BAND_MIN_Y:-460}      # floor for the band's top edge (title block y=460 contract)
 MAX_SCENE=${MAX_SCENE:-20}         # warn above this (a signal to split the scene or reshoot)
 SHRINK_WARN=${SHRINK_WARN:-3.0}    # screen shrink-factor warning threshold (text legibility)
-BGM_VOL=${BGM_VOL:-0.22}           # live voice is more dynamic than TTS — start low
+BGM_SEP=${BGM_SEP:-12}             # LU the bed sits under the measured voice — 2 wider than a TTS
+                                   # episode, because a live voice swings more than a synthetic one
+BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # below this the build stops (bgm-scoring.md §1)
+BGM_LOOP_XF=${BGM_LOOP_XF:-2.0}
+export BGM_LOOP_XF
 DUCK_RELEASE=${DUCK_RELEASE:-250}
 XFADE=${XFADE:-0.6}                # feature↔outro transition length
 XFADE_T=${XFADE_T:-fadeblack}
@@ -257,15 +262,38 @@ if awk -v t="$VT" 'BEGIN{exit !(t>90)}'; then
 fi
 
 # ── 3) BGM ducking mix (the same machine as build-reel.sh)
+#   The bed is measured and gained to sit BGM_SEP under the voice, and a bed shorter than the
+#   recording is crossfaded onto itself instead of butt-joined. Cue changes are the one thing
+#   this builder doesn't take — a screencast is one continuous take, so it gets one bed.
 FOUT=$(awk -v t="$NT" 'BEGIN{printf "%.3f", t-2.2}')
-ffmpeg -y -v error -i work/narration.wav -stream_loop -1 -i bgm.wav -filter_complex "
+SPEECH_I=$(ffmpeg -hide_banner -nostats -i work/narration.wav -af loudnorm=print_format=json -f null - 2>&1 \
+  | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
+BED_I=$(awk -v s="$SPEECH_I" -v d="$BGM_SEP" 'BEGIN{printf "%.2f", s-d}')
+say "── BGM bed: voice ${SPEECH_I} LUFS → bed ${BED_I} LUFS (${BGM_SEP} LU under)"
+printf '0.0000\tbgm.wav\n' > work/bgmcue.list
+"$HERE/bgm-bed.sh" work/bed.wav "$NT" "$BED_I" work/bgmcue.list > work/bed.log 2>&1 \
+  || { cat work/bed.log; say "✗ the music bed failed to render"; exit 1; }
+while IFS= read -r L; do say "$L"; done < work/bed.log
+
+ffmpeg -y -v error -i work/narration.wav -i work/bed.wav -filter_complex "
   [0:a]aformat=channel_layouts=stereo,asplit=2[vo_key][vo_mix];
-  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,volume=$BGM_VOL,
+  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,
        afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=2.2[bgv];
-  [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=8:attack=20:release=$DUCK_RELEASE:makeup=1[duck];
+  [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=8:attack=20:release=$DUCK_RELEASE:makeup=1,
+       asplit=2[duck][duckqa];
   [vo_mix][duck]amix=inputs=2:duration=first:dropout_transition=0,
        loudnorm=I=-14:TP=-1.0:LRA=11,aresample=48000[out]
-" -map "[out]" -ac 2 -ar 48000 work/mix.wav
+" -map "[out]" -ac 2 -ar 48000 work/mix.wav \
+  -map "[duckqa]" -ac 2 -ar 48000 work/bed-ducked.wav
+
+BED_D=$(ffmpeg -hide_banner -nostats -i work/bed-ducked.wav -af loudnorm=print_format=json -f null - 2>&1 \
+  | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
+SEP=$(awk -v s="$SPEECH_I" -v b="$BED_D" 'BEGIN{printf "%.1f", s-b}')
+say "── voice-to-bed separation ${SEP} LU (voice ${SPEECH_I} / ducked bed ${BED_D})"
+if awk -v v="$SEP" -v m="$BGM_SEP_MIN" 'BEGIN{exit !(v < m)}'; then
+  say "✗ separation ${SEP} LU is under the ${BGM_SEP_MIN} LU floor — the bed is competing with the voice"
+  exit 1
+fi
 
 # ── 4) ASS subtitle file — same style as build-reel.sh (band y≈1380~1560, symmetric margins 250)
 SUBFILTER=""

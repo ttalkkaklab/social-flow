@@ -15,6 +15,10 @@ Well-known files are found even without a row in the table below.
 - bgm / default → `audio/bgm/default.wav`
 - sfx / `<id>` → `audio/sfx/<id>.wav`
 - character / `<id>` → `characters/<id>/`
+  — inside it: `identity.md` (the canonical description), `face.png` (face close-up),
+  `body.png` (full body, front, no head), `back.png` (full body, back — optional),
+  `front.png` (legacy full body with the head). The reference set handed to generation is
+  face → body; never paste the panels into one sheet (`video-model-selection.md` §6)
 - still / `<id>` → `stills/<id>`
 
 A row goes up only after the file exists. `resolve-asset.py --ensure` does that job.
