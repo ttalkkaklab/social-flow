@@ -16,7 +16,8 @@
     loaded. Fix scenes.js and this document follows on its own.
   - SB_DOC holds only editorial metadata that is not in scenes.js: core message,
     per-scene notes, transitions, audio directions, privacy avoidance, source summary,
-    platform plan, shooting prep, recheck list.
+    platform plan, shooting prep, recheck list, and the cast (SB_DOC.characters — the
+    channel characters this episode uses, with their panel paths).
   - Character counts, speech rate, scene length and total length are computed by the
     renderer against the contract (scenes-schema / shot-script-template) and shown as
     badges; violations are collected in the check strip at the top of the document.
@@ -162,8 +163,72 @@
     font-size: var(--t-cap); font-weight: 700; letter-spacing: .14em; color: var(--faint);
     margin: var(--s7) 0 var(--s4); padding-bottom: var(--s2);
     border-bottom: 1px solid var(--line);
+    scroll-margin-top: 56px;   /* the sticky menu must not cover the heading it jumped to */
   }
   .sec .aside { float: right; font-weight: 500; letter-spacing: 0; color: var(--faint); }
+
+  /* ── Section menu ─────────────────────────────────────── */
+  .docnav {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; flex-wrap: wrap; gap: var(--s1);
+    padding: var(--s2) 0; margin-top: var(--s4);
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--line);
+  }
+  .docnav a {
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em;
+    color: var(--faint); background: var(--card);
+    border: 1px solid var(--hair); border-radius: 5px; padding: 4px 10px;
+  }
+  .docnav a:hover {
+    color: var(--accent-ink);
+    border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+
+  /* ── Cast ─────────────────────────────────────────────── */
+  .cast { display: grid; gap: var(--s4); }
+  .cast-card {
+    display: grid; grid-template-columns: auto 1fr; gap: var(--s4);
+    border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+    padding: var(--s4); box-shadow: var(--shadow);
+  }
+  .cast-panels { display: flex; gap: var(--s2); }
+  .cast-panel img {
+    width: 96px; height: 144px; object-fit: contain; display: block;
+    background: var(--sunk); border: 1px solid var(--hair); border-radius: 6px;
+  }
+  .cast-panel .lb {
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: .08em;
+    color: var(--faint); text-align: center; padding-top: var(--s1);
+  }
+  .cast-name { font-size: var(--t-scene); font-weight: 700; }
+  .cast-name code { font-weight: 500; color: var(--muted); font-size: var(--t-aux); }
+  .cast-role, .cast-note {
+    font-size: var(--t-aux); margin-top: var(--s2); word-break: keep-all; line-height: 1.7;
+  }
+  .cast-role { color: var(--text); }
+  .cast-note { color: var(--muted); }
+  .cast-shots { font-size: var(--t-micro); color: var(--faint); margin-top: var(--s3); }
+  .cast-shots b { color: var(--faint); letter-spacing: .08em; margin-right: var(--s2); }
+
+  /* ── Camera slots ─────────────────────────────────────── */
+  .cam { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s1); }
+  .cam span {
+    font-size: var(--t-micro); color: var(--text); background: var(--sunk);
+    border: 1px solid var(--hair); border-radius: 4px; padding: 2px 7px;
+  }
+  .cam b { color: var(--faint); font-weight: 700; letter-spacing: .06em; margin-right: 5px; }
+  .cam .miss {
+    color: var(--bad); background: color-mix(in srgb, var(--bad) 9%, transparent);
+    border-color: color-mix(in srgb, var(--bad) 30%, transparent);
+  }
+  .char-tag {
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: .06em;
+    color: var(--accent-ink); border-radius: 4px; padding: 2px 7px;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  }
 
   /* ── Timeline ─────────────────────────────────────────── */
   .timeline { display: flex; gap: 2px; height: 40px; }
@@ -710,6 +775,19 @@ window.SB_DOC = {
   // Document-level notes — design decisions that belong to no single scene (use [] if none)
   docNotes: [],
 
+  // The cast — only the characters this episode uses (the ids appearing in any scene's
+  // visual.character). Leave it out and the document has no cast section.
+  // panels: the panel files that actually exist, relative to this directory.
+  // The reference set going into generation is face → body (order is weight), plus back
+  // only for a back-facing shot — video-model-selection.md §6.
+  characters: [
+    // { id: "claude", name: "클로드", role: "AI 역 — 신중하게 답한다",
+    //   panels: { face: "../../../assets/characters/claude/face.png",
+    //             body: "../../../assets/characters/claude/body.png",
+    //             back: "../../../assets/characters/claude/back.png" },
+    //   note: "글자 워드마크 금지 · 목소리는 profile §2 Leda", veo: "" }
+  ],
+
   // Scene number (from 1) → array of notes. The gist of the storyboard.md notes — what the
   // call was based on, and what is off-limits.
   sceneNotes: {
@@ -753,6 +831,7 @@ window.SB_DOC = {
     return;
   }
   var THEME = window.THEME, SCENES = window.SCENES, DOC = window.SB_DOC || {};
+  var MUSIC = window.MUSIC || null;   // named music cues — absent means one bed all the way through
 
   /* ══ Format mirror ══
      The source of truth is skills/platform-guide/references/formats.js. The browser cannot
@@ -809,6 +888,35 @@ window.SB_DOC = {
   function dispLen(s) { return strip(s).length; }
   function netLen(s) { return strip(s).replace(/[\s.,·:;!?…"'“”‘’()\[\]〔〕\-–—~%]/g, "").length; }
   function badge(cls, text) { return '<span class="badge ' + cls + '">' + esc(text) + "</span>"; }
+
+  /* ══ Camera and cast ══
+     The four camera slots are settled in scenes.js (scenes-schema §camera) — produce assembles
+     the prompt out of them and adds nothing, so a slot left empty is a defect here, not there. */
+  var CAM_SLOTS = [["movement", "MOVE"], ["speed", "SPEED"], ["framing", "FRAME"], ["end", "END"]];
+  function camOf(s) { return (s.visual && s.visual.camera) || null; }
+  function camHtml(cam) {
+    if (!cam) return "";
+    return '<div class="cam">' + CAM_SLOTS.map(function (pr) {
+      var v = cam[pr[0]];
+      return "<span" + (v ? "" : ' class="miss"') + "><b>" + pr[1] + "</b>" +
+             esc(v || "not written") + "</span>";
+    }).join("") + "</div>";
+  }
+  /* Shots that turn into generated video — b-roll, motion background, speech clip */
+  function genVideo(s) {
+    var v = s.visual || {};
+    return s.type === "broll" || !!v.video || !!(v.clip && v.clip.prompt);
+  }
+  function charsOf(s) {
+    var c = s.visual && s.visual.character;
+    if (!c) return [];
+    return (Array.isArray(c) ? c : [c]).filter(Boolean);
+  }
+  var CAST = (DOC.characters || []).filter(function (c) { return c && c.id; });
+  function castName(id) {
+    for (var i = 0; i < CAST.length; i++) if (CAST[i].id === id) return CAST[i].name || id;
+    return id;
+  }
   /** One line of screen text in the scene-frame row's right column — arguments come in pre-escaped */
   function capline(t, d, f2, num) {
     return '<div class="capline">' +
@@ -1418,7 +1526,71 @@ window.SB_DOC = {
     flag("warn", "Opening strategy", "hookType \"" + cover.hookType + "\" is outside the four — change it to one of fear|empathy|curiosity|spoiler");
   }
 
+  /* Camera slots — every shot that becomes generated video leaves the storyboard with all four
+     filled (scenes-schema §camera). produce assembles the prompt out of them, so an empty slot
+     means produce would have to invent an instruction nobody reviewed. A legacy one-string
+     visual.motion still passes. */
+  var camGaps = 0;
+  SCENES.forEach(function (s, i) {
+    if (!genVideo(s)) return;
+    var cam = camOf(s);
+    if (!cam) {
+      if (!(s.visual && s.visual.motion)) {
+        camGaps++;
+        flag("warn", "Shot " + (i + 1), "generated video with no visual.camera — fill movement · speed · framing · end before the call (scenes-schema §camera)");
+      }
+      return;
+    }
+    var missing = CAM_SLOTS.filter(function (pr) { return !cam[pr[0]]; }).map(function (pr) { return pr[0]; });
+    if (missing.length) {
+      camGaps++;
+      flag("warn", "Shot " + (i + 1), "visual.camera is missing " + missing.join(", ") +
+           (missing.indexOf("end") >= 0 ? " — with no end the model is not told where to stop, and the last second drifts" : ""));
+    }
+  });
+
+  /* Cast — an id used in a shot but absent from SB_DOC.characters draws no panels, so the
+     reviewer cannot see what reference set the call will get. */
+  var castIds = {};
+  CAST.forEach(function (c) { castIds[c.id] = 1; });
+  var unknownCast = {};
+  SCENES.forEach(function (s, i) {
+    charsOf(s).forEach(function (id) {
+      if (!castIds[id] && !unknownCast[id]) {
+        unknownCast[id] = 1;
+        flag("warn", "Shot " + (i + 1), 'character "' + id + '" is not in SB_DOC.characters — add it so the panels going into generation are visible here');
+      }
+    });
+  });
+
+  /* Music cues — a sound.cue naming nothing leaves the bed where it was, so the change the
+     storyboard planned never reaches the mix. No window.MUSIC at all is a one-bed episode,
+     which is a normal design and draws nothing. */
+  var cueCount = 0, dropCount = 0;
+  SCENES.forEach(function (s, i) {
+    var sd = s.sound; if (!sd) return;
+    if (sd.drop) dropCount++;
+    if (sd.cue) {
+      cueCount++;
+      if (!MUSIC || !MUSIC[sd.cue]) {
+        flag("warn", "Shot " + (i + 1), 'sound.cue "' + sd.cue + '" is not in window.MUSIC — produce has no file to fetch, so the bed stays where it was');
+      }
+      if (sd.drop) {
+        flag("warn", "Shot " + (i + 1), "sound.cue and sound.drop on the same shot — the cue fades in muted, so the change lands on the next shot instead");
+      }
+    }
+  });
+  if (dropCount > 1 && FMT_KEY === "shorts-9x16") {
+    flag("warn", "Sound", dropCount + " music drops in a short — spend one on the line the episode is about; past that neither reads");
+  }
+
   h += '<div class="badges">' +
+       (CAST.length ? badge("", "cast " + CAST.length) : "") +
+       (camGaps ? badge("warn", "camera · " + camGaps + " shot" + (camGaps > 1 ? "s" : "") + " incomplete") : "") +
+       (MUSIC || cueCount || dropCount
+          ? badge("", "music · " + (MUSIC ? Object.keys(MUSIC).length + " cue" + (Object.keys(MUSIC).length > 1 ? "s" : "") : "one bed")
+                  + (dropCount ? " · " + dropCount + " drop" + (dropCount > 1 ? "s" : "") : ""))
+          : "") +
        badge("mode", allRec ? "shooting mode" : hasRec ? "mixed lanes · " + recCount + " filmed scenes"
              : isLine ? "generated mode · per-line illustrations" : "generated mode") +
        (cover ? badge(hookKo ? "ok" : "warn", "opening · " + (hookKo || (cover.hookType ? cover.hookType + " (outside the four)" : "strategy not written"))) : "") +
@@ -1480,8 +1652,20 @@ window.SB_DOC = {
       DOC.docNotes.map(function (n) { return '<div class="note">' + mark(n) + "</div>"; }).join("") + "</details>";
   h += "</header>";
 
+  /* ══ Section menu ══ — only the sections this document actually draws */
+  var navItems = [["timeline", "Timeline"], ["shots", "Shots"]];
+  if (CAST.length) navItems.push(["cast", "Cast"]);
+  navItems.push(["contract", "Contract"]);
+  if (DOC.prep && DOC.prep.length) navItems.push(["prep", "Shoot prep"]);
+  if (DOC.sources && DOC.sources.length) navItems.push(["sources", "Sources"]);
+  if (DOC.platforms && DOC.platforms.length) navItems.push(["platforms", "Platforms"]);
+  if (DOC.recheck && DOC.recheck.length) navItems.push(["recheck", "Recheck"]);
+  h += '<nav class="docnav"><a href="#audit">Checks</a>' +
+       navItems.map(function (it) { return '<a href="#' + it[0] + '">' + it[1] + "</a>"; }).join("") +
+       "</nav>";
+
   /* ══ Timeline ══ */
-  h += '<h2 class="sec">Timeline<span class="aside">one slot = one shot · width proportional to length</span></h2>';
+  h += '<h2 class="sec" id="timeline">Timeline<span class="aside">one slot = one shot · width proportional to length</span></h2>';
   h += '<div class="timeline">';
   // Drawn in playback order — b-roll sits at the end of the array but actually cuts in after
   // its `after` scene (scenes-schema §broll: putting it mid-array throws off every capture index)
@@ -1507,7 +1691,7 @@ window.SB_DOC = {
   if (outroUnknown) flag("warn", "Outro", "there is an outro scene but no SB_DOC.outro length — it does not count toward the total");
 
   /* ══ Shot cards ══ */
-  h += '<h2 class="sec">Shot composition<span class="aside">one entry = one shot · a reveal is a screen state within that shot</span></h2>';
+  h += '<h2 class="sec" id="shots">Shot composition<span class="aside">one entry = one shot · a reveal is a screen state within that shot</span></h2>';
   h += '<div class="toolbar">' +
        '<label><input type="checkbox" id="tg-safe"> Show text area</label>' +
        '<label><input type="checkbox" id="tg-subs" checked> Subtitles</label>' +
@@ -1550,7 +1734,9 @@ window.SB_DOC = {
     h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
     h += '<div class="shot-meta"><span class="craft">' +
          '<span class="vtag' + (pic === "ai-video" ? " gen" : "") + '">' + esc(PIC_KO[pic] || pic) + "</span>" +
-         '<span class="vtag' + (ov === "html" ? " html" : "") + '">' + esc(overlayLabel(s)) + "</span></span>" +
+         '<span class="vtag' + (ov === "html" ? " html" : "") + '">' + esc(overlayLabel(s)) + "</span>" +
+         charsOf(s).map(function (id) {
+           return '<span class="char-tag">' + esc(castName(id)) + "</span>"; }).join("") + "</span>" +
          (g.info ? '<span class="shot-info"><b>What this shot adds</b>' + esc(g.info) + "</span>" : "") +
          "</div>";
 
@@ -1561,9 +1747,10 @@ window.SB_DOC = {
         '<div class="meta">' +
         "<div><b>Picture</b>AI video — generated with the source photo as the parameter</div>" +
         "<div><b>Staging</b>no overlay — the audio the video carries</div>" +
-        "<div><b>Insert</b>right after shot " + ((s.after || 0) + 1) + " ends · using " + (s.duration || "?") + "s (the front of the 8s generated clip)</div>" +
+        "<div><b>Insert</b>right after shot " + ((s.after || 0) + 1) + " ends · using " + (s.duration || "?") + "s (Veo: the front of the 8s original · Seedance: generated at this length)</div>" +
         (v.src ? "<div><b>Source</b><code>" + esc(v.src) + "</code> — the same file as the background of shot " + ((s.after || 0) + 1) + "</div>" : "") +
-        (v.motion ? "<div><b>Motion</b>" + esc(v.motion) + "</div>" : "") +
+        (camOf(s) ? "<div><b>Camera</b>" + camHtml(camOf(s)) + "</div>"
+                  : v.motion ? "<div><b>Motion</b>" + esc(v.motion) + "</div>" : "") +
         (v.audio ? "<div><b>Audio</b>" + esc(v.audio) + "</div>" : "") +
         (v.clip ? "<div><b>Output</b><code>" + esc(v.clip) + "</code></div>" : "") +
         "<div><b>Narration</b>" + (narr.length ? "present — b-roll has to be empty" : "none (the audio the video carries)") + "</div>" +
@@ -1691,7 +1878,10 @@ window.SB_DOC = {
           meta += '<div class="row"><b>Background</b><div class="v">' +
                (vis.bg ? "<code>" + esc(vis.bg) + "</code>" : "none — speech clip or quote card") + "</div></div>";
         }
-        if (vis.motion) meta += '<div class="row"><b>Motion</b><div class="v">' + esc(vis.motion) + "</div></div>";
+        if (camOf(s))
+          meta += '<div class="row"><b>Camera</b><div class="v">' + camHtml(camOf(s)) + "</div></div>";
+        else if (vis.motion)
+          meta += '<div class="row"><b>Motion</b><div class="v">' + esc(vis.motion) + "</div></div>";
         if (vis.video) {
           // Motion-background scene — this image becomes the parameter for veo img2video (scenes-schema §motion background)
           meta += '<div class="row"><b>Video</b><div class="v">image→video generation — veo img2video with <code>' + esc(vis.bg || "?") +
@@ -1735,8 +1925,42 @@ window.SB_DOC = {
     if (hasSceneField) h += "</section>";
   });
 
+  /* ══ Cast ══ — the channel characters this episode uses, with the panels that will be
+     handed to the generation call. Absent SB_DOC.characters, nothing is drawn. */
+  if (CAST.length) {
+    h += '<h2 class="sec" id="cast">Cast<span class="aside">reference set — face first, then body (array order is weight)</span></h2>';
+    h += '<div class="cast">';
+    var PANEL_LABELS = [["face", "FACE"], ["body", "BODY · no head"], ["back", "BACK"],
+                        ["front", "FRONT · legacy"], ["real", "LIVE ACTION"]];
+    CAST.forEach(function (c) {
+      var panels = c.panels || {};
+      var shots = [];
+      SCENES.forEach(function (s, i) { if (charsOf(s).indexOf(c.id) >= 0) shots.push("#" + (i + 1)); });
+      h += '<div class="cast-card"><div class="cast-panels">';
+      var drawn = 0;
+      PANEL_LABELS.forEach(function (pr) {
+        var src = panels[pr[0]];
+        if (!src) return;
+        drawn++;
+        h += '<div class="cast-panel"><img src="' + esc(src) + '" alt="' + esc(c.id + " " + pr[0]) +
+             '" onerror="this.style.visibility=\'hidden\'"><div class="lb">' + esc(pr[1]) + "</div></div>";
+      });
+      if (!drawn) h += '<div class="cast-panel"><div class="lb">no panel path written</div></div>';
+      h += "</div><div>";
+      h += '<div class="cast-name">' + esc(c.name || c.id) + " <code>" + esc(c.id) + "</code>" +
+           (c.veo === "banned" ? " " + badge("bad", "veo banned") : "") + "</div>";
+      if (c.role) h += '<div class="cast-role">' + mark(c.role) + "</div>";
+      if (c.note) h += '<div class="cast-note">' + mark(c.note) + "</div>";
+      h += '<div class="cast-shots"><b>SHOTS</b>' +
+           (shots.length ? shots.join(" · ")
+                         : "appears in no shot — check visual.character") + "</div>";
+      h += "</div></div>";
+    });
+    h += "</div>";
+  }
+
   /* ══ Contract · sources · platforms ══ */
-  h += '<h2 class="sec">Contract limits<span class="aside">computed at render time</span></h2><table class="grid"><tbody>';
+  h += '<h2 class="sec" id="contract">Contract limits<span class="aside">computed at render time</span></h2><table class="grid"><tbody>';
   h += "<tr><th>Format</th><td>" + esc(FMT.label) + " <code>" + esc(FMT_KEY) + "</code>" +
        (window.FORMAT ? "" : " <span class=\"aside\">no window.FORMAT — default</span>") +
        (FMT_KEY === "youtube-long-16x9"
@@ -1765,11 +1989,11 @@ window.SB_DOC = {
   h += "</tbody></table>";
 
   if (DOC.prep && DOC.prep.length)
-    h += '<h2 class="sec">Before the shoot</h2><ul class="checklist">' +
+    h += '<h2 class="sec" id="prep">Before the shoot</h2><ul class="checklist">' +
       DOC.prep.map(function (p) { return "<li>" + mark(p) + "</li>"; }).join("") + "</ul>";
 
   if (DOC.sources && DOC.sources.length) {
-    h += '<h2 class="sec">Sources<span class="aside">ledger: research.md</span></h2>' +
+    h += '<h2 class="sec" id="sources">Sources<span class="aside">ledger: research.md</span></h2>' +
       '<table class="grid"><thead><tr><th>Claim</th><th>Source</th><th>Checked</th><th>Status</th></tr></thead><tbody>';
     DOC.sources.forEach(function (r) {
       // A leading emoji jumps out in saturation — the content stays, only the render moves to the badge color language (review round 2)
@@ -1787,14 +2011,14 @@ window.SB_DOC = {
     h += "</tbody></table>";
   }
   if (DOC.platforms && DOC.platforms.length) {
-    h += '<h2 class="sec">Platform plan</h2><table class="grid"><thead><tr><th>Platform</th><th>Form</th><th>Notes</th></tr></thead><tbody>';
+    h += '<h2 class="sec" id="platforms">Platform plan</h2><table class="grid"><thead><tr><th>Platform</th><th>Form</th><th>Notes</th></tr></thead><tbody>';
     DOC.platforms.forEach(function (p) {
       h += "<tr><td><b>" + esc(p.name) + "</b></td><td>" + esc(p.form) + "</td><td>" + mark(p.note || "") + "</td></tr>";
     });
     h += "</tbody></table>";
   }
   if (DOC.recheck && DOC.recheck.length)
-    h += '<h2 class="sec">Recheck before publishing<span class="aside">time-sensitive</span></h2><ul class="checklist">' +
+    h += '<h2 class="sec" id="recheck">Recheck before publishing<span class="aside">time-sensitive</span></h2><ul class="checklist">' +
       DOC.recheck.map(function (r) { return "<li>" + mark(r) + "</li>"; }).join("") + "</ul>";
 
   h += '<footer class="doc-foot"><b>scenes.js is the original</b> — this document only draws it, so when a shot looks wrong, fix scenes.js. ' +

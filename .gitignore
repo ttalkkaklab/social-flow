@@ -59,3 +59,6 @@ data/*
 # themselves (the signing identity differs per machine).
 apps/*/.build/
 apps/*/build/
+
+# scratch frames from the 2026-08-16 mouse-character test — local only
+.tmp-mouse-vid/

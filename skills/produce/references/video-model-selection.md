@@ -278,6 +278,46 @@ drift and putting the same character on screen twice. The recommendation is two 
 order is weight** — the more precisely something must be referenced, the earlier it goes in
 the `referenceImages` array.
 
+### The character panels — how a channel cast is stored
+
+The rule above says *don't hand the model one sheet with several angles drawn on it*. It does
+not say keep only one picture. Store the angles as **separate files**, one subject per file, and
+hand over the two or three the shot actually needs:
+
+```
+data/<channel>/assets/characters/<id>/
+  identity.md   # the canonical description — look, marks, expression, voice, veo verdict
+  face.png      # face close-up — neutral, minimal shoulders, plain background. The headshot the vendor asks for
+  body.png      # full body, front, HEADLESS — body, clothes, shoes. No face
+  back.png      # full body, back (optional — add it when back-facing shots happen)
+  front.png     # legacy: full body with the head on. Fallback when the panels don't exist yet
+```
+
+**The reference set is `[face.png, body.png]`, in that order.** That is the vendor's headshot +
+full body, and array order is weight, so the face leads. Add `back.png` only for a shot where the
+character is seen from behind. Never build a combined sheet out of the panels — the moment two
+angles share one image, this whole section's warning applies again.
+
+**Why the front panel is headless.** The face is already carried by `face.png` at a much larger
+size, so a head on the body panel is the same information twice, and the more human figures a
+reference set carries the more readily the model reads them as several people — the doppelgänger
+failure. **This part is a creator practice, not vendor guidance**: ByteDance documents the
+two-image set but says nothing about removing the head from the full body. Treat it as our
+working default and settle it with an A/B (same shot, headless body vs `front.png`, ID drift
+compared over a few 8-second cuts) — the open question is already logged in the camera research.
+
+**A live-action character keeps its single image.** The panel convention is for drawn characters.
+Where the canonical asset is a photograph (Ttalkkak Lab's `mouse/real.png` — the mouse-helmet
+figure), that one file stays the reference and goes to `veo_reference`, because that is the path
+we measured: the model invented a mouth on the drawn line art 5 times out of 5, and 0 times out
+of 8 on the live-action helmet photo.
+
+**Engine routing doesn't change** — a drawn character goes to `seedance_reference` (1–30 images
+on 2.5, 1–9 on 2.0), a photorealistic human face goes to `veo_reference` (**at most 3 images** —
+`server/src/video-client.ts` validates `.max(3)`, which is the source of truth here), and
+Seedance 2.x rejects real faces outright. On the image lane, the same panels go to
+`gpt_image_img2img` / `nanobanana_img2img` as input images, same order, same reason.
+
 ---
 
 ## The seven models — what differs
