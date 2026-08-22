@@ -11,39 +11,46 @@ description: >
   with the user first (9:16 shorts by default, or 16:9 YouTube long-form with chapters);
   long-form episodes mix scenes the user films with generated ones, and for every filmed
   scene the shooting script spells out what is on screen, what to do, what to say, and the
-  exact filename to save it as, so the user can just follow it. Four adversarial
-  convergence loops run before approval — the storyboard-reviewer agent scores the copy as
-  a whole (AI-sounding phrasing, hook, factual fidelity), then every single scene for
-  quality and contextual fit, then the word choice of every narration and title for
-  human-sounding vocabulary, and finally the generated images (do they match what each
-  scene actually says). The per-scene loops pass only when the LOWEST-scoring scene clears
-  95, and the storyboard reaches HITL approval only once all four score ≥95 with zero P0
-  defects.
+  exact filename to save it as, so the user can just follow it. Six adversarial reviews run
+  **once each** before approval — the storyboard-reviewer agent reads the copy as a whole
+  (AI-sounding phrasing, hook, factual fidelity), then every single scene for quality and
+  contextual fit, the word choice of every narration and title, the camera plan of every
+  generated shot, the episode's sound design, and finally the generated images (do they
+  match what each scene actually says). There is no score to clear and nothing is delegated
+  twice: each review's findings get applied once, and whatever is left over goes onto the
+  HITL approval screen for the user to decide.
 argument-hint: "<channel> <topic or topic hint>"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__suno_generate_lyrics"]
 ---
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
 
-Takes one topic through **research → scene design → copy convergence → per-scene
-convergence → vocabulary convergence → image generation → image convergence →
-storyboard approval**. The `scenes.js` settled here is the one data source (SoT) for
+Takes one topic through **research → scene design → six adversarial reviews (copy ·
+per-scene · vocabulary · camera · sound) → image generation → image review → storyboard
+approval**. The `scenes.js` settled here is the one data source (SoT) for
 production (produce) — video, captions, and per-platform text all derive from this file,
 so factual mismatch between platforms can't arise in the first place.
 
-Before approval the adversarial reviewer (`storyboard-reviewer`) blocks four times.
+Before approval the adversarial reviewer (`storyboard-reviewer`) reads the storyboard six
+times, **once each**. None of the six is a gate — there's no score to clear and nothing gets
+delegated twice. Each one hands back findings, the findings get applied, and the run moves on.
 
-| Gate | What it looks at | Pass bar |
+| Review | What it looks at | What comes back |
 |---|---|---|
-| §4.5 copy | The sentences of the whole storyboard — AI-sounding phrasing, hook, factual fidelity | total ≥95 · P0 0 |
-| §4.6 per-scene | The role and contextual fit of **each individual scene** | **lowest scene** ≥95 · P0 0 |
-| §4.7 vocabulary | Whether the **words** in narration and titles are words people use | **lowest scene** ≥95 · P0 0 |
-| §5.5 images | Whether the picture shows what the scene is saying | total ≥95 · P0 0 |
+| §4.5 copy | The sentences of the whole storyboard — AI-sounding phrasing, hook, factual fidelity | one total score |
+| §4.6 per-scene | The role and contextual fit of **each individual scene** | a score per scene + the lowest |
+| §4.7 vocabulary | Whether the **words** in narration and titles are words people use | a score per scene + the lowest |
+| §4.8 camera | The four camera slots, the cut length, and the engine fit of every generated shot | a score per shot + the lowest |
+| §4.9 sound | The episode's sound design — the music cue plan, clip audio, voice casting | one total score |
+| §5.5 images | Whether the picture shows what the scene is saying | one total score |
 
-The two per-scene gates take **the lowest scene** rather than the average for one reason —
-an average lets good scenes hide the one that collapsed. It amounts to a machine trying to
-refute the work before a person looks at it, and all four gates have to fall before the
-user-approval step.
+**The scores are a record, not a bar.** They go into `scenes.js` at approval so you can read
+back later which storyboard produced which performance. The gate is the person: a finding the
+single round didn't resolve doesn't stop the run — it goes onto the §7 approval screen with
+the storyboard and the user decides.
+
+The three per-shot reviews report **the lowest** alongside the list, since an average lets a
+good scene hide the one that collapsed.
 
 ```
 data/<channel>/episodes/<topic slug>/storyboard/
@@ -109,8 +116,7 @@ window.FORMAT = "youtube-long-16x9";   // or "shorts-9x16"
 ```
 
 What the format changes is the §4 composition rules (length, shot count, character counts,
-chapters) and the §5 image size; the procedure of the four convergence loops (§4.5–§5.5)
-stays the same.
+chapters) and the §5 image size; the six reviews (§4.5–§5.5) run the same way either way.
 
 ### 1.6 Pick the mode — generated (default) vs filmed (screencast)
 
@@ -339,6 +345,35 @@ Core rules:
 - **Plain-language principle (profile §2)** — for on-screen text and narration alike.
   Unpacking the terms at the deck-authoring stage is what makes the narration plain too.
 - THEME is copied verbatim from the profile §3 values.
+- **Every generated-video shot leaves here with its camera decided** — `visual.camera`'s four
+  slots (`movement` · `speed` · `framing` · `end`) filled on b-roll, motion-background scenes,
+  and quote speech clips. produce assembles the prompt out of them and adds nothing; leave `end`
+  empty and produce has to invent an ending nobody reviewed, which is exactly the last second
+  that drifts. `movement: "static"` is a decision, not a blank. On stills the block is optional —
+  write it when the Ken Burns drift matters. The vocabulary rules (vendor words, one move,
+  no seconds, no exclusions, moves are not emotion) are `references/scenes-schema.md` §camera.
+- **Name whoever from the channel cast is on screen** in `visual.character` — one id, or an array
+  with the shot's subject first (order is reference weight). It is what lets produce attach the
+  character panels without re-reading the scene, and what resolves a character's veo ban per cut
+  instead of per episode. Ids come from the channel's `assets/catalog.md`
+  (`resolve-asset.py --list <channel dir>`).
+- **A generated clip's `duration` comes from what the cut is for**, not from a default — insert
+  3–4s, action 5–7s, a face carrying emotion 7–10s, an establishing shot 5–8s, a deliberate long
+  take 10s+ with one move. The model fills whatever time it is handed, so asking 8 seconds for a
+  4-second idea buys 4 seconds of invention (§cut length). Narration-carrying scenes keep the
+  speech math — characters / 4.5.
+- **Write what the episode sounds like, not only what it looks like.** Every shot that becomes a
+  generated video gets `visual.audio` — one sentence on what that clip sounds like, ending in
+  `no music, no speech` unless speech is the point. Leave it out and the engine invents a
+  soundtrack under a line the TTS is already speaking.
+  **Then decide whether the music stays one bed.** One bed all the way through is a real design
+  and the default — leave `window.MUSIC` out and the channel's shared bed carries the episode.
+  Where the episode turns, name a cue in `window.MUSIC` and point the shot at it with
+  `sound.cue`; where one line has to land alone, give that shot `sound.drop: true`. A short
+  usually gets one change or none, and one drop at most. The contract is
+  `references/scenes-schema.md` §music cues, and the levels behind it —
+  the bed sits 10 LU under the narration, the build stops below 4 — are
+  `../produce/references/bgm-scoring.md`.
 
 #### Turning channel measurements into story structure
 
@@ -360,37 +395,33 @@ and `SB_DOC.seriesNote`.
    sentence each. If the two don't connect, it isn't a series, just one-offs on similar
    topics.
 
-### 4.5 Copy convergence loop (storyboard-reviewer copy mode, target score ≥95 AND p0 = 0)
+### 4.5 Copy review (storyboard-reviewer copy mode — one round)
 
-**Get the sentences through before making any images** — when the copy changes, so does the
+**Get the sentences read before making any images** — when the copy changes, so does the
 picture that scene will show, so reversing the order means throwing away images you made.
-**Hard cap 5 rounds**:
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "copy mode"** — pass the paths to
-   `scenes.js`, `research.md` (if present), and `profile.md`, plus unresolved findings from
-   the previous round. Parse the verdict tail
-   `STORYBOARD_REVIEW: mode=text score=NN p0=N verdict=PASS|FAIL`.
-2. **PASS (score ≥95 and p0 = 0)** → on to §4.6.
-3. **FAIL** → fix `scenes.js` as directed and delegate again.
+   `scenes.js`, `research.md` (if present), and `profile.md`. Read the tail
+   `STORYBOARD_REVIEW: mode=text score=NN p0=N`.
+2. **Apply the findings to `scenes.js`, P0 first**, then go to §4.6. **Don't delegate copy
+   mode a second time.**
    - **Only subtract** — don't plant metaphors or stock phrases that weren't in the original
      while erasing AI tells. The moment you add one, that's the new AI tell.
    - Don't paper over factual findings (P0-3, P0-4) by smoothing the sentence. Go back to
      research.md, recheck the evidence, and if there is none, drop the claim.
-   - If the same finding repeats twice in a row, rewrite that scene — polishing the same
-     sentence over and over just hardens the rhythm into something more mechanical.
-4. On hitting the hard cap, carry **the highest-scoring version + the unresolved findings**
-   into the §7 approval gate as they are and let the user judge. Don't dress up the score to
-   force a pass.
+3. **Write down whatever you didn't apply** — one line per finding, in the reviewer's own
+   words, into the §7 hand-off note. A finding you disagreed with goes down as a
+   disagreement with its reason, not as a deletion.
 
-**Shooting mode runs this loop too** — the lines are what the user reads aloud, so AI tells
+**Shooting mode runs this review too** — the lines are what the user reads aloud, so AI tells
 are louder there.
 
-### 4.6 Per-scene quality and context convergence loop (storyboard-reviewer scene mode, **every scene** ≥95 AND p0 = 0)
+### 4.6 Per-scene quality and context review (storyboard-reviewer scene mode — one round)
 
 Where §4.5 looked at the storyboard as one lump, here **each scene is scored on its own.**
 Storyboards where the overall average looks fine but one scene has collapsed do happen — the
-average lets a 100-point scene hide a 90-point one. So this loop's pass bar isn't the average
-but **the lowest scene's score**. There are two axes.
+average lets a 100-point scene hide a 90-point one, which is why the reviewer reports **the
+lowest scene** next to the list. There are two axes.
 
 - **Quality** — does that scene do its job. The cover says what the story is about within 3
   seconds and **also gives a reason to stay** (segment ① carries whichever of fear, empathy,
@@ -404,16 +435,12 @@ but **the lowest scene's score**. There are two axes.
   content, is the premise something the profile §3 target will follow, and which entry in
   research.md does that claim hang on.
 
-**Hard cap 5 rounds**:
-
 1. **Delegate to the storyboard-reviewer agent (Agent) in "scene mode"** — pass the paths to
-   `scenes.js`, `research.md` (if present), and `profile.md`, plus unresolved findings from
-   the previous round. Parse the verdict tail
-   `STORYBOARD_REVIEW: mode=scene score=NN p0=N worst=<scene number> verdict=PASS|FAIL`.
-   **`score` is the lowest scene's score**, so ≥95 means every scene is at 95 or above.
-2. **PASS (score ≥95 and p0 = 0)** → on to §4.7.
-3. **FAIL** → start with the `worst` scene. Touch only the scenes below the bar; leave the
-   ones that passed alone.
+   `scenes.js`, `research.md` (if present), and `profile.md`. Read the tail
+   `STORYBOARD_REVIEW: mode=scene score=NN p0=N worst=<scene number>`. **`score` is the
+   lowest scene's score**, so it tells you where the storyboard is thinnest.
+2. **Apply the findings, starting at the `worst` scene**, then go to §4.7. Touch only the
+   scenes that were flagged; leave the rest alone.
    - **A finding that says the role is empty can't be fixed by smoothing sentences** — if the
      video still stands with that scene gone, merge or drop it. When the scene count drops,
      stretch the remaining scenes to keep the total length.
@@ -421,16 +448,16 @@ but **the lowest scene's score**. There are two axes.
      arrangement that still makes sense when reordered had no flow to begin with. If, in
      build content, the method explanation sits before the finished thing, don't fix the
      sentences — move the result scene forward.
-   - If you rewrote a scene or changed the order, **get through §4.5 again** before returning
-     to this loop (the sentences changed).
-4. On hitting the hard cap, carry **the lowest scene, its score, and the unresolved findings**
-   into the §7 approval gate as they are.
+   - **Rewriting a scene or reordering changes the sentences §4.5 already read.** Don't rerun
+     copy mode for it — apply the same rule you got there (only subtract) as you rewrite, and
+     say in the §7 note which scenes moved after the copy review.
+3. **Write down whatever you didn't apply**, with the lowest scene and its score, for §7.
 
-### 4.7 Vocabulary convergence loop (storyboard-reviewer lexicon mode, **every scene** ≥95 AND p0 = 0)
+### 4.7 Vocabulary review (storyboard-reviewer lexicon mode — one round)
 
 Once the scene structure is settled, look **only at the words** — are the words used in
 narration and titles words people actually use. Structure and rhythm were §4.5's job, role
-and flow were §4.6's, so this loop stays at the vocabulary layer. Carrying the same meaning,
+and flow were §4.6's, so this review stays at the vocabulary layer. Carrying the same meaning,
 "제출 기한이 도래합니다" and "이날까지 안 내면 늦어요" are different writing, and the place a
 viewer smells AI is usually the words.
 
@@ -439,26 +466,90 @@ What it looks at: hard Sino-Korean words and unexplained jargon, translationese
 verbs (korean-style §D8, §D9), AI stock phrases, over-repetition of the same word, and words
 the profile §3 target doesn't use.
 
-**Hard cap 5 rounds**:
-
-1. **Delegate to the storyboard-reviewer agent (Agent) in "lexicon mode"** — pass `scenes.js`,
-   `profile.md`, and unresolved findings from the previous round. Parse the verdict tail
-   `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<scene number> verdict=PASS|FAIL`.
-   Here too, **`score` is the lowest scene's score**.
-2. **PASS (score ≥95 and p0 = 0)** → on to §5.
-3. **FAIL** → **only swap** the words that were flagged.
+1. **Delegate to the storyboard-reviewer agent (Agent) in "lexicon mode"** — pass `scenes.js`
+   and `profile.md`. Read the tail
+   `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<scene number>`. Here too, **`score`
+   is the lowest scene's score**.
+2. **Swap only the words that were flagged**, then go to §4.8.
    - **Don't rewrite sentences** — if vocabulary fixing spreads into rewriting sentences, the
-     structure §4.5 and §4.6 signed off on falls apart and both loops have to run again. Only
-     when swapping a single word won't do do you touch that sentence, and when you do, say so
-     in the next round's delegation.
+     structure §4.5 and §4.6 already read falls apart. Only when swapping a single word won't
+     do do you touch that sentence, and when you do, note it for §7.
    - **Only subtract.** Planting a metaphor or stock phrase that wasn't there while erasing a
-     hard word is a new AI tell (same rule as the copy loop).
+     hard word is a new AI tell (same rule as the copy review).
    - Don't touch figures, proper nouns, or `tts` phonetic spellings.
-4. On hitting the hard cap, carry the lowest scene and unresolved findings into the §7
-   approval gate.
+3. **Write down whatever you didn't swap**, with the lowest scene, for §7.
 
 **Shooting mode runs §4.6 and §4.7 too** — the user reads the script aloud, so the words
-land louder. Only the image axis (§5, §5.5) is skipped.
+land louder. Of the rest, §4.8 comes back `n/a` (nothing is generated), §4.9 runs on the live
+voice's own layer — pauses, speaker, spellings the user will read — and §5 and §5.5 are the
+only ones skipped.
+
+### 4.8 Camera review (storyboard-reviewer camera mode — one round)
+
+Every shot that becomes a generated video carries four camera slots — `movement`, `speed`,
+`framing`, `end` (scenes-schema §camera). This review reads them **before the first call that
+costs money**, because a slot fixed here costs nothing and the same slot fixed after generation
+costs the clip.
+
+What it looks at, per generated shot:
+
+- **The four slots, filled and in vendor words.** `end` is the one that goes missing, and with
+  nothing in it the model is never told where to stop, so the last second drifts. `dolly in`,
+  not `push in`; `arc shot`, not `orbit` — `push` appears 0 times in the canonical Veo text.
+- **One move per cut**, and `static` written out rather than left blank. A move picked to carry
+  an emotion is a finding: moves changing how a viewer feels has no empirical support (p=.84),
+  and tone comes from `bgPrompt` and the props.
+- **The cut length against what the cut is for** — the table in scenes-schema §cut length. A
+  3-second face carrying a line, or a 12-second insert, is the model being handed time it will
+  fill by inventing.
+- **Engine fit** — a drawn character sent to `veo_reference`, a real face sent to Seedance 2.x
+  (which refuses them), more than 3 references on Veo, a `visual.character` id that isn't in the
+  cast.
+- **Slots that swallowed something else** — seconds written into a slot, an exclusion written
+  into a slot instead of `negativePrompt`, or the camera direction and the scene description
+  mashed into one blob so the camera block can't be reused on the next scene.
+
+1. **Delegate to the storyboard-reviewer agent (Agent) in "camera mode"** — pass `scenes.js`,
+   `profile.md`, and `${CLAUDE_PLUGIN_ROOT}/skills/produce/references/video-model-selection.md`.
+   Read the tail `STORYBOARD_REVIEW: mode=camera score=NN p0=N worst=<shot number>`.
+2. **Apply the findings to `scenes.js`**, starting at `worst`, then go to §4.9.
+3. **Write down whatever you didn't apply**, for §7.
+
+**An episode with no generated video skips this review** — write `camera=n/a` in the §7 review
+line. Filmed shots have no slots to read; how the user holds the camera is script.md's job.
+
+### 4.9 Sound review (storyboard-reviewer sound mode — one round)
+
+The picture gets read three times over — its role, its camera, then the frame that came out —
+and the sound gets read none. That gap is what this review closes. It reads the sound the episode will actually make, while changing it is still free.
+
+What it looks at:
+
+- **Clip audio on every generated video shot.** Leave `visual.audio` unwritten and the engine
+  invents its own sound — speech or music that then fights the TTS laid over it. A shot whose
+  own audio is thrown away says so, and a shot that keeps its audio says what that audio is.
+- **Voice casting against profile §2.** A character speaking in someone else's voice is a P0;
+  so is a scene with three speakers, since multi-speaker TTS tops out at two and the third
+  voice has to be a separate call spliced in.
+- **`tts` phonetic spellings.** Numbers and units written as digits, and the endings the engine
+  swallows — the final sound of 팔·에잇·Eight goes missing, so it gets spelled 「에이트」.
+- **The music plan** (`window.MUSIC` + each shot's `sound`). Whether the cue changes where the
+  episode turns rather than on a timer, whether the drop is spent on the line the episode is
+  about, and whether every `sound.cue` names a cue that exists — a name with nothing behind it is
+  a P0, because the bed then silently stays where it was. A reveal that lands while the music is
+  at full level doesn't land, but **one bed with no drop is a design, not a defect** — that costs
+  points, it doesn't stop anything.
+- **The narration's own rhythm** — every sentence the same length reads out flat no matter what
+  the bed does, and a scene with no pause anywhere gives the builder no sentence boundary to cut
+  on.
+
+1. **Delegate to the storyboard-reviewer agent (Agent) in "sound mode"** — pass `scenes.js`,
+   `profile.md`, and `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenes-schema.md`.
+   Read the tail `STORYBOARD_REVIEW: mode=sound score=NN p0=N`.
+2. **Apply the findings to `scenes.js`**, then go to §5.
+3. **What has no field goes to produce** — the mix, the generation call, the engine. Cues, drops
+   and cue prompts are all scenes.js fields, so those get fixed here. Write the rest into the §7
+   note under "hand to produce" and let it travel with the approval.
 
 ### 5. Generate scene images (skipped in shooting mode)
 
@@ -479,6 +570,13 @@ node $PG/format-resolve.js storyboard/scenes.js --json | python3 -c \
 Portrait is 1088×1920 rather than an exact 9:16 because of gpt-image's multiple-of-16
 constraint (1080 doesn't fit). It gets cover-cropped onto a 1080×1920 canvas, so the 0.7%
 ratio difference is ignorable.
+
+**When the scene has a `visual.character`, the image is a reference call, not a text call** —
+resolve the id and pass that character's panels as input images (`gpt_image_img2img` /
+`nanobanana_img2img`), face first, then body; `back.png` only for a back-facing shot. This is
+the same set produce hands to the video engines, and using it here is what keeps the character
+the same person from the still to the clip. Never merge the panels into one sheet before
+passing them (`../produce/references/video-model-selection.md` §6).
 
 **Engine split** (measured 2026-08-12 — docs/research/2026-08-12-local-image-generation):
 
@@ -567,27 +665,23 @@ Log local images too — the unit price is 0 so the total doesn't move, but the 
 how many went where is what separates "image cost 0" as a tallied result from a tallying gap.
 The `quality` of `gpt_image_text2img` decides the key (`high`·`medium`·`low`).
 
-### 5.5 Image context convergence loop (storyboard-reviewer image mode, target score ≥95 AND p0 = 0)
+### 5.5 Image context review (storyboard-reviewer image mode — one round)
 
 content-reviewer plan mode looked at the plan before generation; here **the picture that came
 out** gets looked at — "does this picture show what that scene is saying". The criterion is
 right, not pretty.
-**Shooting mode skips this loop entirely** (the screen comes from the user's actual recording).
-**Hard cap 3 rounds** — regeneration costs minutes per image even locally, and gpt high costs
-money.
+**Shooting mode skips this review entirely** (the screen comes from the user's actual recording).
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "image mode"** — pass every
-   `images/scene-*.png` path plus `scenes.js` and `profile.md`, the `narration[].img` paths in
-   illustration mode, and unresolved findings from the previous round. Say explicitly that
-   slide scenes are out of scope — a missing `scene-N.png` there is not a defect (their
-   screen arrives in §8). Parse the verdict tail
-   `STORYBOARD_REVIEW: mode=image score=NN p0=N verdict=PASS|FAIL`.
-2. **PASS (score ≥95 and p0 = 0)** → on to §6. Write storyboard.md once, with the images that
-   passed (writing the document during the loop means redoing it every round).
-3. **FAIL** → remake only the images that were flagged. Leave the ones that passed alone.
-   - **Log regenerations in the §5 ledger too** — discarded images still get billed. Putting
-     the round number in the note (`storyboard: §5.5 regenerate scene-1 (round 2)`) means the
-     report later reads back exactly how much this loop spent on that episode.
+   `images/scene-*.png` path plus `scenes.js` and `profile.md`, and the `narration[].img` paths
+   in illustration mode. Say explicitly that slide scenes are out of scope — a missing
+   `scene-N.png` there is not a defect (their screen arrives in §8). Read the tail
+   `STORYBOARD_REVIEW: mode=image score=NN p0=N`.
+2. **Remake only the images that were flagged**, leave the rest alone, then go to §6 and write
+   storyboard.md once.
+   - **Log regenerations in the §5 ledger too** — discarded images still get billed. Say so in
+     the note (`storyboard: §5.5 regenerate scene-1`) and the report later reads back exactly
+     what this review cost on that episode.
    - Engines follow the §5 split. Add only the correction directions on top of the original
      prompt and **don't re-describe it wholesale** — tearing it all up loses the elements that
      had passed.
@@ -599,11 +693,10 @@ money.
      by changing the scene description itself.
    - **Props with text engraved on them can't be blocked with negative directions** (keyboards,
      calculators, signboards). Taking the object out of the composition is the answer.
-   - If the same finding repeats twice in a row, change the scene's material — don't buy the
-     same failure a third time by polishing the same prompt.
-4. On hitting the hard cap, carry **the highest-scoring version + the unresolved findings** into
-   the §7 approval gate as they are. It's an axis that keeps spending money, so getting the
-   user's judgment here is cheaper.
+   - **A regenerated image is not read again.** One round means one read — if the remake looks
+     wrong to you, don't buy a third attempt; put it on the §7 screen and let the user look.
+3. **Write down whatever you didn't remake**, for §7. This axis spends money on every attempt,
+   so the user's judgment is the cheaper one.
 
 ### 6. Writing storyboard.md
 
@@ -636,9 +729,17 @@ storyboard/ and fill in **only the `<title>` and the `✎ SB_DOC` block**. Never
 directly with `<script src="./scenes.js">` and renders it, so fixing scenes.js updates the
 document automatically and copy drift is structurally impossible. SB_DOC holds only editorial
 metadata that isn't in scenes.js (core message, per-scene notes, transitions, audio directions,
-privacy avoidance, source summary, platform plan, shooting prep, recheck list).
+privacy avoidance, source summary, platform plan, shooting prep, recheck list, **the cast**).
 
-The document shows three things.
+**Fill `SB_DOC.characters` with the characters this episode actually uses** — the ids that appear
+in any scene's `visual.character`, no more. One entry each: `id`, `name`, `role` (one line from
+`identity.md`), `panels` (the panel paths relative to the storyboard directory —
+`../../../assets/characters/<id>/face.png` and so on; list only files that exist), `note` (what
+governs this character on screen — a veo ban, a fixed voice), and `veo` (`"banned"` when the
+profile bans it, otherwise omitted). Leave the array out entirely and the document simply has no
+cast section. `resolve-asset.py --list <channel dir>` prints the ids and paths.
+
+The document shows four things.
 
 - **Shot cards** — one `SCENES[]` entry. The header carries the role, the size, the **beat**
   (cover · hooking · result · body · CTA — plus the opening-strategy name tag on the cover
@@ -651,6 +752,10 @@ The document shows three things.
   Not one shot. A 9:16 frame on the left, the text and lines of that moment on the right.
   Background, motion, and prompt go in the shot metadata below the row. The timeline slots are
   shots, and b-roll plugs into the playback position `after` sets.
+- **The cast section** — the characters in `SB_DOC.characters`, each with its panels (face,
+  body, back), the line that governs it, and the shots it appears in (read off `visual.character`).
+  It's reachable from the menu at the top, and it's where a reviewer checks that the reference
+  set going into generation is the right one before any money is spent.
 - **The contract check strip** — violations collected in one place at the top of the document.
   On top of character counts, speech rate, scene length, total length, and cover title, it
   measures **frame overflow** and **hero stat width** the same way produce does (1080px canvas
@@ -677,20 +782,23 @@ If there are filmed scenes, show **the `script.md` path and how many files have 
 approval is the start of filming, so the user needs to know what and how many from this screen.
 If there are slide scenes, show **how many scenes are slides and each one's `plan` line** —
 what's being approved is that plan, and the files get built in §8 afterwards.
-**Carry the results of the four convergence loops here too** — the final score and round count
-for copy, per-scene, vocabulary, and images each, with **which scene was lowest and at what
-score** for the per-scene and vocabulary ones, and any unresolved findings as they are if a
-hard cap was hit. The options:
+**Carry the results of the six reviews here too** — one score each for copy, per-scene,
+vocabulary, camera, sound, and images, with **which scene or shot was lowest and at what score**
+for the three per-item ones, and **every finding you didn't apply, in the reviewer's own words**.
+That last list is the point of the screen: the reviews no longer block, so this is where a
+defect gets its only human look. The options:
 [Approve — proceed to production / Request changes / Hold the topic]. **Don't move to produce
 without approval.**
-For a change request, apply it, **get the affected axis back through its gate**, and present
-again — from §4.5 if you fixed sentence structure, from §4.6 if you added or removed scenes,
-§4.7 if you only swapped words, §5.5 if you remade images (the re-presentation round starts the
-hard cap over).
+For a change request, apply it and present again. **A user-requested change may be re-read by
+the one review that covers it** — §4.5 for sentence structure, §4.6 for scenes added or removed,
+§4.7 for word swaps, §4.8 for camera slots, §4.9 for sound, §5.5 for remade images. That is the
+one place a mode runs twice, and it runs because a person asked, not because a score fell short.
 Once approved, write two lines at the top of scenes.js — `// approved: <YYYY-MM-DD>` and
-`// review: text=NN(R rounds) scene=NN(R rounds) lexicon=NN(R rounds) image=NN(R rounds)` —
-and point the user at `/social-flow:produce <channel> <topic>`, so you can trace later which
-score of copy produced which performance.
+`// review: text=NN scene=NN lexicon=NN camera=NN sound=NN image=NN unresolved=N` — and point
+the user at `/social-flow:produce <channel> <topic>`, so you can trace later which score of copy
+produced which performance. `unresolved` is how many findings went to the user unfixed; `n/a`
+goes in any slot whose review didn't run (camera on an episode with no generated video, image in
+shooting mode).
 
 **If there are filmed scenes**, the hand-off after approval is recording. It differs by lane.
 
@@ -744,16 +852,22 @@ uses the slide state captures as the segment visuals (produce §3.6).
 
 ## Traps
 
-- **Only storyboard-reviewer has verdict authority** — whoever is running the skill doesn't read
-  their own copy and end the loop on "good enough". The AI tells in your own sentences are the
-  ones you see least. No score manipulation, no self-scored exit; a pass is declared only by the
-  tail's `verdict=PASS`.
-- **Don't reorder the four loops** — copy (§4.5) → per-scene (§4.6) → vocabulary (§4.7) → images
-  (§5.5). Images are last because changing a sentence changes the picture that scene will show,
-  and vocabulary comes after per-scene because polishing the words of a scene that's about to be
-  dropped is wasted work. Running it backwards throws away work that had passed.
-- **The score at the per-scene and vocabulary gates is the lowest scene, not the average** — the
-  tail's `score` is the lowest scene's score. Don't read it as "average 96, so it passes".
+- **Don't skip a review because you think the copy is fine** — whoever is running the skill
+  doesn't get to read their own sentences and call it good. The AI tells in your own writing are
+  the ones you see least, and the review costs one delegation. Six run, every episode.
+- **Don't delegate the same mode twice to chase a number.** One round is the contract. A second
+  round happens only when the user asks for a change at §7 and that change lands in that mode's
+  layer. Re-delegating on your own judgment brings back the loop this skill just dropped.
+- **Don't reorder the six** — copy (§4.5) → per-scene (§4.6) → vocabulary (§4.7) → camera (§4.8)
+  → sound (§4.9) → images (§5.5). Images are last because changing a sentence changes the picture
+  that scene will show; vocabulary comes after per-scene because polishing the words of a scene
+  that's about to be dropped is wasted work; camera and sound come after the scenes are settled
+  because a shot that gets merged away takes its camera block with it.
+- **The score at the per-scene, vocabulary, and camera reviews is the lowest one, not the
+  average** — the tail's `score` is the lowest item's score. Don't read it as "average 96, fine".
+- **A score is a record, not permission.** Nothing in §4 or §5 stops on a number. The only stop
+  in this skill is the user at §7, so a finding you decided not to apply has to reach that
+  screen in writing — dropping it silently removes the last look anyone gives it.
 - **scenes.js isn't a living file** — after approval it's the settled version produce consumes.
   To change it during production, start from a storyboard revision and re-approval.
 - **A range stays a range** — don't shrink a numeric range to its upper bound alone (this has
@@ -778,12 +892,14 @@ uses the slide state captures as the segment visuals (produce §3.6).
 
 ### Delegated agents
 
-- **`storyboard-reviewer`** — four modes. §4.5 copy mode (AI tells, hook, factual fidelity) ·
-  §4.6 scene mode (per-scene role and contextual fit) · §4.7 lexicon mode (are the words words
-  people use) · §5.5 image mode (scene content against the picture's contextual fit). All four
-  pass at 95 points with 0 P0 defects, and for scene mode and lexicon mode that 95 is on the
-  **lowest scene**. `agents/storyboard-reviewer.md` is the source of truth for the rubric, the
-  P0 list, and the tail format
+- **`storyboard-reviewer`** — six modes, one round each. §4.5 copy mode (AI tells, hook, factual
+  fidelity) · §4.6 scene mode (per-scene role and contextual fit) · §4.7 lexicon mode (are the
+  words words people use) · §4.8 camera mode (the four slots, cut length, engine fit) · §4.9
+  sound mode (clip audio, voice casting, where the sound gets out of the way) · §5.5 image mode
+  (scene content against the picture's contextual fit). None of them is a pass/fail gate — each
+  returns a score and its findings, and scene, lexicon, and camera mode report **the lowest
+  item**. `agents/storyboard-reviewer.md` is the source of truth for the rubric, the P0 list, and
+  the tail format
 - **`content-reviewer` plan mode** — prompt verification right before the §5 generation calls
   (`PLAN_REVIEW`). It looks at something different from storyboard-reviewer image mode — this
   one is the prompt, that one is the output

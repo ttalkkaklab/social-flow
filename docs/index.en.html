@@ -17,10 +17,10 @@
   <h1>social-flow docs</h1>
   <p class="sub">Documentation for the Claude Code plugin that runs a channel-based short-form/long-form content pipeline. Skill guides, research notes, and a reference for every external API the internal MCP server calls.</p>
   <div class="meta">
-    <span>Plugin <strong>v0.23.0</strong></span>
+    <span>Plugin <strong>v0.29.0</strong></span>
     <span>Skills <strong>18</strong></span>
-    <span>MCP tools <strong>50</strong></span>
-    <span>Updated <strong>2026-08-18</strong></span>
+    <span>MCP tools <strong>54</strong></span>
+    <span>Updated <strong>2026-08-23</strong></span>
   </div>
   <div class="meta">
     <span>Source of truth: <a href="../README.md">README.md</a></span>
@@ -50,7 +50,7 @@
   <h2>API keys — how far to go before stopping</h2>
   <p>The keys come in two independent groups. <strong>Stop after either one and the pipeline still runs.</strong></p>
   <p><strong>Production keys.</strong> <code>OPENAI_API_KEY</code> draws the cover and any frame with text on it; <code>GEMINI_API_KEY</code> covers generated video clips, acted narration, and BGM. Strictly speaking both are optional — scene backgrounds default to on-device <code>image_local_generate</code> (Z-Image Turbo, Apple Silicon) and narration to on-device <code>tts_local_generate</code> (Supertonic 3), so a run with no keys still produces a video. What you give up without <code>OPENAI_API_KEY</code> is text-bearing frames (local image generation garbles Korean glyphs); without <code>GEMINI_API_KEY</code> you lose generated motion and music. Research keys (<code>SERPAPI_API_KEY</code> and the Naver pair) are optional too, and the storyboard skill falls back to WebSearch.</p>
-  <p><strong>Platform credentials (Threads · Instagram · YouTube · Facebook) — optional.</strong> Configure them and <code>publish</code> posts straight to your accounts. <code>grow-threads</code>, <code>grow-youtube</code>, and <code>grow-instagram</code> then take over day-to-day operation on <code>/loop</code> — comment replies, insight watching, keyword conversations, queue refills, and posting, all inside the standing authorization you approved once at <code>init</code>. Skip them and everything through production works as before: <code>produce</code> writes the finished video plus per-platform text into <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload those files by hand. In that case the nine publish/insight tools aren't listed at all, so <code>tools/list</code> shows 37 tools instead of 46. Credentials are per platform, so this is not all-or-nothing, and adding a token later needs no server restart.</p>
+  <p><strong>Platform credentials (Threads · Instagram · YouTube · Facebook) — optional.</strong> Configure them and <code>publish</code> posts straight to your accounts. <code>grow-threads</code>, <code>grow-youtube</code>, and <code>grow-instagram</code> then take over day-to-day operation on <code>/loop</code> — comment replies, insight watching, keyword conversations, queue refills, and posting, all inside the standing authorization you approved once at <code>init</code>. Skip them and everything through production works as before: <code>produce</code> writes the finished video plus per-platform text into <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload those files by hand. In that case the nine publish/insight tools aren't listed at all, so <code>tools/list</code> shows 45 tools instead of 54. Credentials are per platform, so this is not all-or-nothing, and adding a token later needs no server restart.</p>
   <div class="note">
     <a href="../README.md">README.md</a> is the source of truth for variable names, defaults, and the credential-file convention. For the order to actually do it in, see <a href="guides/getting-started/index.en.html">Getting started — install to first video</a>.
   </div>
@@ -69,9 +69,9 @@
       <tr><td rowspan="3">Source material</td><td><code>topic-scout</code></td><td>YouTube topics the market has already validated — 5× the channel's recent-upload median. People read the funnel and multiplier-bar HTML; the loops read the md. An SNS issues section comes with it (<code>sns_issue_scout</code> — a mention list swept from Threads, X, and Instagram with <code>site:</code> search. It carries no engagement numbers, so don't mix it into the same table as the YouTube multipliers)</td></tr>
       <tr><td><code>ingest</code></td><td>Screen recording (+ voice) into a timeline — a research source that stands in for the web</td></tr>
       <tr><td><code>datago</code></td><td>Open-data research, collection, and seed records</td></tr>
-      <tr><td rowspan="3">Production</td><td><code>storyboard</code></td><td>Research → scene design → <strong>four adversarial convergence gates</strong> → approval. Copy (§4.5), per-scene (§4.6), and vocabulary (§4.7) have to pass before any image gets made, and the image gate (§5.5) then reads the generated PNGs. All four must clear 95 with zero P0 before the approval screen (hard caps 5·5·5·3). The two per-scene gates judge the <strong>lowest scene</strong> rather than the average — an average hides one broken scene behind the good ones</td></tr>
+      <tr><td rowspan="3">Production</td><td><code>storyboard</code></td><td>Research → scene design → <strong>six adversarial reviews, once each</strong> → approval. Copy (§4.5), per-scene (§4.6), vocabulary (§4.7), camera (§4.8) and sound (§4.9) get read before any image is made, and the image review (§5.5) then reads the generated PNGs. There is no score to clear — findings get applied once, and whatever is left goes onto the approval screen. The person is the gate. The per-item reviews report the <strong>lowest</strong> rather than the average — an average hides one broken scene behind the good ones</td></tr>
       <tr><td><code>produce</code></td><td>Video build plus per-platform text. Two formats: 9:16 short-form (1080×1920/30fps, 35–75s, the default) and 16:9 YouTube long-form (1920×1080, 8–15 min, chapters). You pick which while authoring the storyboard, and one <code>window.FORMAT</code> line in <code>scenes.js</code> fixes every downstream build constant. Long-form mixes clips you film yourself with generated scenes, and for the filmed ones you follow the shooting script (<code>script.md</code>) the storyboard writes</td></tr>
-      <tr><td><code>autoproduce</code></td><td>One topic string straight through research to build, unattended — nine machine gates stand where the human approvals were</td></tr>
+      <tr><td><code>autoproduce</code></td><td>One topic string straight through research to build, unattended — eleven machine gates stand where the human approvals were</td></tr>
       <tr><td>Publish</td><td><code>publish</code></td><td>Account check → media hosting → <strong>HITL approval</strong> → publish → record permalinks</td></tr>
       <tr><td>Operations</td><td><code>grow-threads</code><br><code>grow-youtube</code><br><code>grow-instagram</code><br><code>review-recent</code></td><td>One tick of an autonomous growth loop — approve the plan (standing authorization) once, then repeat it on <code>/loop</code>: comment replies, insight watching, conversation joining, posting. <code>review-recent</code> scores your last 5 episodes split across YouTube and Instagram into funnel and comparison-bar HTML</td></tr>
       <tr><td>Knowledge</td><td><code>platform-guide</code></td><td>Source of truth for platform grammar, video specs, and the Korean style rules. Other skills load and read it</td></tr>
@@ -79,7 +79,7 @@
   </table>
   </div>
   <div class="note">
-    <strong>Every outgoing text passes a gate.</strong> Wherever Korean text gets produced, <code>check-style.py</code> deterministically flags translationese, stock phrases, and assistant register; above it the adversarial reviewers (<code>storyboard-reviewer</code> · <code>content-reviewer</code> · <code>growth-post-reviewer</code>) demand 95 points with zero P0. What a rule can catch and what a person has to read to feel are two different layers.
+    <strong>Every outgoing text passes a gate.</strong> Wherever Korean text gets produced, <code>check-style.py</code> deterministically flags translationese, stock phrases, and assistant register; above it the adversarial reviewers (<code>storyboard-reviewer</code> · <code>content-reviewer</code> · <code>growth-post-reviewer</code>) read it again. Outgoing copy has to reach 95 with zero P0; storyboard copy alone is read once and handed to the person approving it. What a rule can catch and what a person has to read to feel are two different layers.
   </div>
 </section>
 
@@ -89,7 +89,7 @@
   <div class="cards">
     <a class="card" href="api-reference/index.en.html">
       <h3>API reference hub →</h3>
-      <p>Inventory of the 13 external APIs and the 3 on-device engines, the credential matrix, and the 51-tool ↔ API map.</p>
+      <p>Inventory of the 13 external APIs and the 3 on-device engines, the credential matrix, and the 54-tool ↔ API map.</p>
     </a>
     <a class="card" href="api-reference/tool-audit.en.html">
       <h3>Tool quality audit →</h3>

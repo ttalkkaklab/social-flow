@@ -39,7 +39,7 @@ escalation is needed, only **the one cover slot** goes up.
 | Points backgrounds | `image_local_generate` (local Z-Image) 1088x1920, **2–4 images** — **$0** | The photo is the star (absolute rule 14) — captions use only the top band so the photo shows in full. Change the shot when the content axis changes. Only machines without mflux fall back to `gpt_image_text2img` quality `low` ($0.007/image) |
 | Motion | ffmpeg Ken Burns (zoompan 3.5%) | The builder already does this. **Zero Veo calls** |
 | Narration | whatever engine profile §2 says | `local` (Supertonic) costs 0; `gemini` bills per 1,000 characters |
-| BGM | one 30s `music_generate_clip` | The builder stretches it with `-stream_loop -1`. Variable-length generation has no confirmed price, so it isn't used |
+| BGM | one 30s `music_generate_clip` | The builder crossfades it onto itself to reach length. Variable-length generation has no confirmed price, so it isn't used — which also means the economy tier takes one bed, not cues |
 | Subtitles | the builder emits `subs.srt`·`subs.ass` together | free |
 
 With points backgrounds moved to local Z-Image (2026-08-12), that share

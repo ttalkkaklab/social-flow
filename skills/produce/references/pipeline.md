@@ -64,6 +64,9 @@ was measured to accumulate 105ms).
 | `segment window under 0.9s` | Merge the short sentence with a neighbor |
 | `min gap between reveals <0.40s` | Trim bullets or lengthen the sentence |
 | `duration > 13s` (card) | Shorten the script and regenerate that card's TTS. Hitting the atempo ceiling (1.18) is also a shorten signal |
+| `✗ separation <N> LU is under the <floor> LU floor` | **Do not proceed** — the build exits 1; the bed is competing with the voice. Lower the bed (`BGM_SEP`), swap in a quieter cue, or fix a narration track that came in hot, then rebuild |
+| `⚠ separation <N> LU is no wider than the <N> LU resting distance` | The ducking never fired — the voice key went silent or the bed reached the mix around it. Rebuild after fixing; continue only if the voice is audibly clear over the music |
+| `── voice-to-bed separation <N> LU` (no mark) | OK — at or above the 4 LU floor and wider than the resting distance |
 | Total length | 35–75s recommended, 90s cap (main + outro − 0.6s) |
 
 ## Three TTS failure modes and responses (Gemini TTS, field-tested)

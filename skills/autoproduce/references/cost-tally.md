@@ -41,7 +41,7 @@ music.lyria-clip	1	produce: BGM 30s
 - **Prefix the memo with `storyboard:` / `produce:`.** The report table then
   separates the stages without adding a column (add a column and the format
   diverges from what autoproduce writes).
-- **Log discards too.** Images regenerated in the convergence loop, clips
+- **Log discards too.** Images regenerated after the §5.5 image review, clips
   redrawn because you didn't like them, TTS rerun after failing the length
   check — they don't reach the deliverable, but they do get billed.
 

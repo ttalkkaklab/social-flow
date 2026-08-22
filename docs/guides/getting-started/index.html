@@ -350,7 +350,7 @@ claude --plugin-dir ~/social-flow</code></pre>
     <div class="step-body">
       <h3>제대로 붙었는지 본다</h3>
       <p><code>/mcp</code> 를 치면 연결된 서버 목록이 나온다. <code>social-flow</code> 가 있고 도구 목록이 보이면 끝났다.</p>
-      <div class="ok"><strong>도구가 42개만 보여도 정상이다.</strong> 전체 51종 가운데 게시·인사이트 툴 9종은 그 계정의 자격증명 파일이 있는 플랫폼만 나타난다. 아직 계정을 연결하지 않았다면 안 보이는 게 맞다.</div>
+      <div class="ok"><strong>도구가 45개만 보여도 정상이다.</strong> 전체 54종 가운데 게시·인사이트 툴 9종은 그 계정의 자격증명 파일이 있는 플랫폼만 나타난다. 아직 계정을 연결하지 않았다면 안 보이는 게 맞다.</div>
     </div>
   </div>
 </section>
@@ -447,7 +447,7 @@ export DATA_GO_KR_API_KEY="..."    <span class="c"># 공공데이터 API 호출<
     <li><strong>넣으면</strong> — <code>publish</code> 가 계정에 직접 올리고, <code>grow-*</code> 스킬이 <code>/loop</code> 로 댓글 응대·지표 관찰·키워드 대화·대기열 보충·게시까지 스스로 돈다. 범위는 <code>init</code> 때 한 번 승인한 성장 계획이 정한다.</li>
     <li><strong>안 넣으면</strong> — 조사·스토리보드·이미지·목소리·빌드까지 그대로 돌아간다. <code>produce</code> 가 완성 영상과 플랫폼별 글을 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주고, 그 파일을 직접 올리면 된다. 게시·인사이트 툴 9종이 목록에 안 나오고 성장 루프가 돌 거리가 없을 뿐이다.</li>
   </ul>
-  <p>토큰은 환경변수가 아니라 파일이라, <strong>나중에 넣어도 서버를 다시 띄울 필요가 없다.</strong> 도구 목록을 다시 볼 때 그 플랫폼 도구가 붙어 42종이 51종 쪽으로 늘어난다. 계정 개설과 토큰 발급 절차는 <a href="#publish">아래 6장</a>에 있다.</p>
+  <p>토큰은 환경변수가 아니라 파일이라, <strong>나중에 넣어도 서버를 다시 띄울 필요가 없다.</strong> 도구 목록을 다시 볼 때 그 플랫폼 도구가 붙어 45종이 54종 쪽으로 늘어난다. 계정 개설과 토큰 발급 절차는 <a href="#publish">아래 6장</a>에 있다.</p>
 
   <h3>키가 살아 있는지 보기</h3>
   <p>영상을 한 편 태워 보기 전에 두 줄로 확인한다. 둘 다 목록 조회라 과금이 붙지 않는다.</p>
@@ -483,7 +483,7 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
       <h3>스토리보드를 만든다 <span style="font-weight:400;color:var(--text-soft);font-size:14px">— 가장 오래 걸리는 단계</span></h3>
 <pre><code><span class="p">/social-flow:storyboard</span> money "7월 환율 변동"</code></pre>
       <p>맨 먼저 포맷을 묻는다 — 9:16 쇼트폼이 기본이고, 챕터가 있는 유튜브 롱폼이면 16:9 다. 그다음 자료를 찾고, 씬을 나누고, 대사를 쓰고, 씬마다 그림을 만든다. 결과는 브라우저로 열어 볼 수 있는 <code>storyboard.html</code> 로 나온다.</p>
-      <p>사람에게 보여 주기 전에 검토용 에이전트가 원고와 그림을 네 번 다시 본다 — 문장이 AI 가 쓴 티가 나는지, 씬 하나하나가 제 역할을 하는지, 낱말이 사람이 쓰는 말인지, 그림이 그 씬 내용과 맞는지. 기준에 못 미치면 스스로 고쳐 다시 본다. <strong>여기서 시간이 걸리는 건 정상이다. 마지막에 확인 요청이 오면 승인한다.</strong></p>
+      <p>사람에게 보여 주기 전에 검토용 에이전트가 여섯 번, 한 번씩 읽는다 — 문장이 AI 가 쓴 티가 나는지, 씬 하나하나가 제 역할을 하는지, 낱말이 사람이 쓰는 말인지, 카메라를 어떻게 움직이고 어디서 멈출지 정해 뒀는지, 소리가 어떻게 날지, 그림이 그 씬 내용과 맞는지. 지적을 한 번 반영하고 넘어가며, 못 고친 지적은 승인 화면에 그대로 올라온다. <strong>여기서 시간이 걸리는 건 정상이다. 마지막에 확인 요청이 오면 승인한다.</strong></p>
     </div>
   </div>
 
@@ -508,7 +508,7 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
   </div>
 
   <div class="note">
-    <strong>한 번에 끝내고 싶다면</strong> — <code>/social-flow:autoproduce money "7월 환율 변동"</code> 한 줄이 2·3단계를 사람 확인 없이 관통한다. 승인 대신 기계 검사 아홉을 세워 두고 하나라도 걸리면 사람을 기다린다. 기본값인 경제 티어는 생성 영상을 한 컷도 부르지 않아서 영상 한 편에 대략 <strong>$0.26~0.29</strong> 가 든다(상한 $0.30).
+    <strong>한 번에 끝내고 싶다면</strong> — <code>/social-flow:autoproduce money "7월 환율 변동"</code> 한 줄이 2·3단계를 사람 확인 없이 관통한다. 승인 대신 기계 검사 열하나를 세워 두고 하나라도 걸리면 사람을 기다린다. 기본값인 경제 티어는 생성 영상을 한 컷도 부르지 않아서 영상 한 편에 대략 <strong>$0.26~0.29</strong> 가 든다(상한 $0.30).
   </div>
 </section>
 
@@ -616,8 +616,8 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
   </div>
 
   <div class="faq">
-    <h3>스토리보드가 계속 다시 고쳐진다</h3>
-    <p>검토 에이전트가 기준에 못 미친 곳을 고쳐 다시 보는 중이다. 무한정 돌지는 않는다 — 정해진 횟수를 채우면 가장 잘 나온 안과 남아 있는 지적을 함께 보여 주고 사람 판단을 기다린다.</p>
+    <h3>스토리보드에서 오래 걸린다</h3>
+    <p>검토 에이전트가 여섯 번 읽고 그림을 만드는 중이다. 같은 곳을 두 번 읽지는 않는다 — 여섯 번이 끝나면 못 고친 지적을 함께 보여 주고 사람 판단을 기다린다.</p>
   </div>
 </section>
 

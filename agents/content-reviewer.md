@@ -124,13 +124,17 @@ In this mode skip the style check and per-axis scores — judge only the plan P0
    must be reproduced exactly (references carry appearance and style, not
    framing). The decision table's source of truth is produce
    `references/video-model-selection.md`
-12. **Reference-asset composition violation** — the Seedance reference plan
-   includes a three-view or multi-angle character sheet. ByteDance's docs
-   prohibit multi-angle assets — the model reads per-angle drawings as
-   different people, ID drift worsens, and the same person shows up twice on
-   screen. The recommended set is a headshot (face only, neutral expression,
-   minimal shoulders and background) plus one full-body shot, and the assets
-   that must be referenced most precisely go first in the array
+12. **Reference-asset composition violation** — the reference plan includes a
+   three-view or multi-angle character sheet, meaning **several angles drawn
+   inside one image**. ByteDance's docs prohibit that — the model reads
+   per-angle drawings as different people, ID drift worsens, and the same
+   person shows up twice on screen. The approved shape is the channel's
+   character panels as **separate files** (`characters/<id>/face.png` +
+   `body.png`, plus `back.png` only for a back-facing shot), passed face
+   first because array order is weight. A live-action character keeps its
+   single image. Panels handed over as separate files are not a finding;
+   panels pasted together into one sheet are. The rule's source of truth is
+   produce `references/video-model-selection.md` §6
 
 Output carries only the P0 list + fix suggestions, and the last line is fixed as
 a machine-parseable tail:
