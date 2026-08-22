@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import * as datago from './datago-client.js';
+import * as elevenlabs from './elevenlabs-client.js';
 import * as image from './image-client.js';
 import * as music from './music-client.js';
 import * as qwen3asr from './qwen3-asr-client.js';
@@ -35,6 +36,25 @@ function imageResult(message, base64Data, mimeType) {
  * price sheet silently drifts when the vendor changes rates, but completion_tokens
  * is measured on every call.
  */
+/** Format footnote for ElevenLabs results — the builder cares about RIFF vs not. */
+function elevenlabsFormatNote(format) {
+    if (!format)
+        return '';
+    return format.startsWith('wav_')
+        ? ` (mono 16-bit WAV ${Number(format.split('_')[1]) / 1000}kHz — RIFF, builder-ready)`
+        : ' (mp3 — not for build-reel.sh narration input)';
+}
+/** Common meta lines for ElevenLabs results — duration, the measured bill, trace id, alignment sidecar. */
+function elevenlabsMeta(result) {
+    return ((result.durationSeconds !== undefined ? `Duration: ${result.durationSeconds}s\n` : '') +
+        (result.characterCost !== undefined ? `Character cost: ${result.characterCost} (vendor-metered characters — the billing quantity; log this ÷ 1000 in the cost ledger)\n` : '') +
+        (result.latencyMs !== undefined ? `Vendor latency: ${result.latencyMs} ms\n` : '') +
+        (result.requestId ? `Request ID: ${result.requestId}\n` : '') +
+        (result.alignmentPath
+            ? `Alignment: ${result.alignmentPath} (${result.alignedCharacters ?? '?'} characters` +
+                `${result.speechEndSeconds !== undefined ? `, speech ends at ${result.speechEndSeconds}s` : ''})\n`
+            : ''));
+}
 function seedanceMeta(result) {
     const tokens = result.completionTokens === undefined
         ? ''
@@ -688,10 +708,68 @@ export const ROUTES = {
             `  ${supertonic.SUPERTONIC_VOICE_NAMES.join(', ')}\n` +
             `  Beyond F1–F5 being female and M1–M5 male, the vendor publishes no character labels.\n` +
             `  Pick by listening — render the same sentence with two or three voices and compare.\n\n` +
+            `ElevenLabs — account-specific voices (tts_elevenlabs_generate / tts_elevenlabs_dialogue):\n\n` +
+            `  Not listed here: premade, cloned and Voice Library voices differ per account. Call tts_elevenlabs_voices ` +
+            `(needs the voices_read permission on the key) and pin the voice_id in the channel profile.\n\n` +
             `Engine choice: narration bodies and long scripts go to tts_local_generate (zero cost, 6.3x realtime); ` +
-            `short cuts that need acting go to tts_generate (the only one with stylePrompt).\n` +
+            `short cuts that need acting go to tts_generate (stylePrompt) or tts_elevenlabs_generate on eleven_v3 ` +
+            `(inline audio tags, the dearer of the two); scenes with 3+ speakers go to tts_elevenlabs_dialogue.\n` +
             `If the channel profile (data/<slug>/profile.md) names a voice, use that value as-is — ` +
             `a voice that changes every episode breaks the channel's identity.`);
+    },
+    // ── speech synthesis (ElevenLabs) — REST, saves the file locally, returns path + measured cost ──
+    // character-cost is the vendor's billing header, so it is reported as measured rather
+    // than estimated from a price sheet (the same reasoning as Seedance's token count).
+    tts_elevenlabs_generate: async (args) => {
+        const request = parseArgs(elevenlabs.elevenLabsGenerateSchema, args);
+        const result = await elevenlabs.generateElevenLabsSpeech(request);
+        if (!result.success)
+            return text(`ElevenLabs TTS generation failed: ${result.error}`, true);
+        return text(`Audio generated successfully!\n\nFile: ${result.audioPath}\nEngine: ElevenLabs ${result.model}\n` +
+            `Voice: ${request.voiceId}\nFormat: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}\n` +
+            elevenlabsMeta(result) +
+            `Text length: ${request.text.length} chars`);
+    },
+    tts_elevenlabs_dialogue: async (args) => {
+        const request = parseArgs(elevenlabs.elevenLabsDialogueSchema, args);
+        const result = await elevenlabs.generateElevenLabsDialogue(request);
+        if (!result.success)
+            return text(`ElevenLabs dialogue generation failed: ${result.error}`, true);
+        const voices = new Set(request.inputs.map((line) => line.voiceId));
+        const totalChars = request.inputs.reduce((sum, line) => sum + line.text.length, 0);
+        return text(`Dialogue audio generated successfully!\n\nFile: ${result.audioPath}\nEngine: ElevenLabs ${result.model}\n` +
+            `Lines: ${request.inputs.length} (${voices.size} voices)\nFormat: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}\n` +
+            elevenlabsMeta(result) +
+            (result.voiceSegments !== undefined ? `Voice segments: ${result.voiceSegments}\n` : '') +
+            `Script length: ${totalChars} chars`);
+    },
+    tts_elevenlabs_voices: async (args) => {
+        const request = parseArgs(elevenlabs.elevenLabsVoicesSchema, args);
+        const result = await elevenlabs.listElevenLabsVoices(request);
+        if (!result.success)
+            return text(`ElevenLabs voice listing failed: ${result.error}`, true);
+        const voices = result.voices ?? [];
+        const lines = voices.map((voice) => {
+            const labels = Object.entries(voice.labels)
+                .map(([key, value]) => `${key}=${value}`)
+                .join(' ');
+            const langs = voice.verifiedLanguages.length ? ` · languages: ${voice.verifiedLanguages.join(',')}` : '';
+            const desc = voice.description ? ` — ${voice.description.slice(0, 120)}` : '';
+            return `  - ${voice.name} — ${voice.voiceId} · ${voice.category ?? 'unknown'}${labels ? ` · ${labels}` : ''}${langs}${desc}`;
+        });
+        const filter = [request.search ? `search="${request.search}"` : '', request.category ? `category=${request.category}` : '']
+            .filter(Boolean)
+            .join(', ');
+        const sub = result.subscription;
+        const subLine = sub
+            ? `Plan: ${sub.tier ?? '?'} (${sub.status ?? '?'}) — ${sub.characterCount ?? '?'} / ${sub.characterLimit ?? '?'} characters used this cycle` +
+                `${sub.resetsAt ? `, resets ${sub.resetsAt.slice(0, 10)}` : ''}` +
+                `${sub.tier === 'free' ? ' — FREE tier: output is non-commercial and needs attribution' : ''}\n`
+            : 'Plan: not readable with this key (needs user_read) — check the tier at https://elevenlabs.io/app/subscription before publishing commercially\n';
+        return text(`ElevenLabs voices — ${voices.length} shown${result.totalCount !== undefined ? ` of ${result.totalCount}` : ''}${filter ? ` (${filter})` : ''}` +
+            `${result.hasMore ? ', more pages exist — narrow with search/category' : ''}:\n\n${lines.join('\n') || '  (none)'}\n\n` +
+            subLine +
+            `Pin the chosen voice_id in data/<slug>/profile.md §2 — the legacy premade voices retire 2026-12-31.`);
     },
     // Local transcription (Qwen3-ASR) — on-device via subprocess. No key, no network, no billing.
     stt_local_transcribe: async (args) => {

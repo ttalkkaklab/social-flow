@@ -116,7 +116,7 @@
         <td><strong>Speech</strong></td>
         <td><code>tts_local_generate</code><br>Supertonic 3 · on-device</td>
         <td>No style or emotion direction</td>
-        <td><code>tts_generate</code><br><span class="badge key">GEMINI_API_KEY</span></td>
+        <td><code>tts_generate</code><br><span class="badge key">GEMINI_API_KEY</span><br><code>tts_elevenlabs_generate</code><br><span class="badge key">ELEVENLABS_API_KEY</span></td>
       </tr>
       <tr>
         <td><strong>Transcription</strong></td>
@@ -324,6 +324,12 @@
     </div>
   </div>
 
+  <h3>Third lane — ElevenLabs (<code>tts_elevenlabs_generate</code> · <code>tts_elevenlabs_dialogue</code>)</h3>
+  <p>Paid, opt-in per channel (<code>engine: elevenlabs</code> in profile §2), needs <span class="badge key">ELEVENLABS_API_KEY</span>. Dearer than Gemini — $0.10 per 1,000 characters on multilingual_v2 and v3, $0.05 on flash and v3 conversational, the same on every plan (the vendor's metered count in the <code>character-cost</code> header sits below the raw character count — Korean 18 characters billed as 10, measured) — so it is not the narration default. Three things only it does: inline acting with audio tags on <code>eleven_v3</code> (<code>[whispers]</code>, <code>[laughs]</code> exactly where the delivery changes), a dialogue scene with <strong>up to 10 voices in one request</strong>, and per-character timestamps for subtitle sync. The default output is mono 24kHz WAV — the same spec as the Gemini lane, so the builder takes it as-is; <strong>never pick an mp3 format for narration</strong>, the builder reads non-RIFF files as raw PCM. Korean quality depends on the voice more than the model: English-trained premade voices carry an accent, Korean Voice Library voices (paid plans) don't.</p>
+  <div class="warn">
+    <strong>Free-tier audio is non-commercial</strong> and the vendor asks for attribution; a monetized channel needs Starter ($6/month) or above. The account's plan is visible from <code>tts_elevenlabs_voices</code> when the key carries <code>user_read</code>.
+  </div>
+
   <h3>Licensing — read this if the channel is commercial</h3>
 
   <div class="note">
@@ -339,6 +345,8 @@
       <tr><td><code>tts.local</code></td><td>1,000 chars</td><td class="num">0.000</td><td><span class="g off">official</span></td><td>Supertonic, local</td></tr>
       <tr><td><code>tts.gemini-flash</code></td><td>1,000 chars</td><td class="num">0.038</td><td><span class="g der">derived</span></td><td>$38 per 1M characters</td></tr>
       <tr><td><code>tts.gemini-pro</code></td><td>1,000 chars</td><td class="num">0.076</td><td><span class="g der">derived</span></td><td>$76 per 1M characters — the fallback when flash refuses</td></tr>
+      <tr><td><code>tts.elevenlabs</code></td><td>1,000 chars (metered)</td><td class="num">0.100</td><td><span class="g off">official</span></td><td>multilingual_v2 · eleven_v3 — pricing/api, the same on every plan. Log the response's character cost ÷ 1,000, not the text length</td></tr>
+      <tr><td><code>tts.elevenlabs-flash</code></td><td>1,000 chars (metered)</td><td class="num">0.050</td><td><span class="g off">official</span></td><td>flash_v2_5 · v3 conversational — half the v2/v3 rate</td></tr>
     </tbody>
   </table>
   </div>
@@ -571,6 +579,17 @@ set -a &amp;&amp; . ./.env &amp;&amp; set +a</code></pre>
       <li>The Dreamina Seedance 2.5/2.0 family additionally needs <strong>a balance over $30 or a resource pack</strong>.</li>
     </ol>
     <p><strong>Confirming</strong> — there's no read-only check endpoint, so lean on the tool's own error message, which distinguishes the three gates above. A real generation call is a billed call.</p>
+  </div>
+
+  <div class="keyblock">
+    <h3><code>ELEVENLABS_API_KEY</code> <span class="badge opt">optional</span></h3>
+    <div class="src">elevenlabs.io/app/settings/api-keys — ElevenLabs</div>
+    <p><strong>Unlocks</strong> — <code>tts_elevenlabs_generate</code> · <code>tts_elevenlabs_dialogue</code> · <code>tts_elevenlabs_voices</code>, the third speech lane. Without it, Gemini (<code>tts_generate</code>) and the on-device engine keep running.</p>
+<pre><code>export ELEVENLABS_API_KEY="..."</code></pre>
+    <p>Keys can be <strong>restricted per permission</strong>. Synthesis needs <code>text_to_speech</code>; the voice listing needs <code>voices_read</code>; the plan-usage line needs <code>user_read</code>. A key missing one of these fails with <code>missing_permissions</code> naming the permission — that is the key's scope, not a wrong key.</p>
+    <p><strong>Confirming</strong> — with <code>voices_read</code>:</p>
+<pre><code>curl -s -H "xi-api-key: $ELEVENLABS_API_KEY" "https://api.elevenlabs.io/v2/voices?page_size=1" | head -c 200</code></pre>
+    <p>A JSON voice list means you're set; <code>invalid_api_key</code> means the value is wrong. A synthesis-only key has no free check — the first <code>tts_elevenlabs_generate</code> call is the check, and it bills a handful of characters.</p>
   </div>
 
   <div class="keyblock">

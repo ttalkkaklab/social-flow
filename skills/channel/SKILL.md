@@ -8,7 +8,7 @@ description: >
   theme, target platforms, and fact-check policy — the SoT every storyboard/produce/publish
   run reads first.
 argument-hint: "[add|list|update] [channel-name]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate"]
 ---
 
 # Channel management — data/[channel]/profile.md

@@ -377,6 +377,7 @@ export NAVER_CLIENT_SECRET="..."
 export SERPAPI_API_KEY="..."       <span class="c"># 정밀·해외 검색</span>
 export ARK_API_KEY="..."           <span class="c"># 두 번째 영상 엔진(Seedance)</span>
 export SUNO_API_KEY="..."          <span class="c"># 보컬 풀송·Suno 루프 BGM (sunoapi.org, Gemini 아님)</span>
+export ELEVENLABS_API_KEY="..."    <span class="c"># 세 번째 음성 레인 — 연기 컷·3인 이상 대화·타임스탬프</span>
 export DATA_GO_KR_API_KEY="..."    <span class="c"># 공공데이터 API 호출</span></code></pre>
 
   <div class="warn">
@@ -418,6 +419,11 @@ export DATA_GO_KR_API_KEY="..."    <span class="c"># 공공데이터 API 호출<
         <td><code>SUNO_API_KEY</code><br><span class="badge opt">선택</span></td>
         <td>sunoapi.org/api-key</td>
         <td>보컬 풀송과 Suno 루프 침대만 막힌다. Lyria BGM(<code>music_*</code>)은 <code>GEMINI_API_KEY</code> 로 그대로 돈다. Gemini 키가 아니고, Suno Inc. 공식 API 도 없다</td>
+      </tr>
+      <tr>
+        <td><code>ELEVENLABS_API_KEY</code><br><span class="badge opt">선택</span></td>
+        <td>elevenlabs.io/app/settings/api-keys</td>
+        <td>세 번째 음성 레인만 막힌다 — eleven_v3 오디오 태그 연기, 한 요청에 보이스 10종까지 넣는 대화, 글자 단위 타임스탬프, 복제·Voice Library 보이스. 나레이션은 온디바이스 엔진, 연기 컷은 Gemini 로 그대로 돈다. 무료 티어 출력은 상업 이용 불가</td>
       </tr>
       <tr>
         <td><code>DATA_GO_KR_API_KEY</code><br><span class="badge opt">선택</span></td>

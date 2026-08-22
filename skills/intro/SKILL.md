@@ -10,7 +10,7 @@ description: >
   to the landing frame, gates through brand-reviewer's intro mode (score ≥90, p0=0),
   and installs master/stinger/lockup/sonic assets under data/<slug>/assets/intro/.
 argument-hint: "<channel> [extra instructions]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__music_generate_clip", "mcp__social-flow__tts_generate"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__music_generate_clip", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue"]
 ---
 
 # Channel intro video — data/[channel]/assets/intro/

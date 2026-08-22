@@ -378,6 +378,7 @@ export NAVER_CLIENT_SECRET="..."
 export SERPAPI_API_KEY="..."       <span class="c"># precision and international search</span>
 export ARK_API_KEY="..."           <span class="c"># the second video engine (Seedance)</span>
 export SUNO_API_KEY="..."          <span class="c"># sung songs / Suno loop beds (sunoapi.org, not Gemini)</span>
+export ELEVENLABS_API_KEY="..."    <span class="c"># third speech lane — acted cuts, 3+ speaker dialogue, timestamps</span>
 export DATA_GO_KR_API_KEY="..."    <span class="c"># data.go.kr API calls</span></code></pre>
 
   <div class="warn">
@@ -419,6 +420,11 @@ export DATA_GO_KR_API_KEY="..."    <span class="c"># data.go.kr API calls</span>
         <td><code>SUNO_API_KEY</code><br><span class="badge opt">optional</span></td>
         <td>sunoapi.org/api-key</td>
         <td>no sung full songs and no Suno loop beds. Lyria BGM (<code>music_*</code>) keeps running on <code>GEMINI_API_KEY</code>. This is not a Gemini key, and there is no official Suno Inc. API</td>
+      </tr>
+      <tr>
+        <td><code>ELEVENLABS_API_KEY</code><br><span class="badge opt">optional</span></td>
+        <td>elevenlabs.io/app/settings/api-keys</td>
+        <td>only the third speech lane is unavailable — audio-tag acting on eleven_v3, dialogue with up to 10 voices in one request, per-character timestamps, cloned or Voice Library voices. Narration keeps running on the on-device engine and acted cuts on Gemini. Free-tier output is non-commercial</td>
       </tr>
       <tr>
         <td><code>DATA_GO_KR_API_KEY</code><br><span class="badge opt">optional</span></td>

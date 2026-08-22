@@ -2,6 +2,7 @@ import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
 import { DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, TTS_VOICE_NAMES, VALID_TTS_MODELS } from './tts-client.js';
+import { DEFAULT_ELEVENLABS_MODEL, DEFAULT_ELEVENLABS_OUTPUT_FORMAT, ELEVENLABS_DIALOGUE_MAX_INPUTS, ELEVENLABS_DIALOGUE_MAX_VOICES, ELEVENLABS_DIALOGUE_MODEL, ELEVENLABS_MODELS, ELEVENLABS_MODEL_CHAR_CAPS, ELEVENLABS_OUTPUT_FORMATS, ELEVENLABS_TEXT_NORMALIZATION, ELEVENLABS_VOICE_CATEGORIES, MAX_ELEVENLABS_DIALOGUE_CHARS, MAX_ELEVENLABS_INPUT_CHARS, } from './elevenlabs-client.js';
 import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MIN_ZIMAGE_DIMENSION, ZIMAGE_DIMENSION_STEP, ZIMAGE_QUANTIZE_OPTIONS, } from './zimage-client.js';
 import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGES, QWEN3_ASR_MODELS, } from './qwen3-asr-client.js';
 import { DEFAULT_SUNO_MODEL, SUNO_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
@@ -148,6 +149,45 @@ const TTS_TEMPERATURE_PROPERTY = {
     minimum: 0,
     maximum: 2,
     default: DEFAULT_TTS_TEMPERATURE,
+};
+/** Shared ElevenLabs property definitions — lists derive from the elevenlabs-client.ts source of truth */
+const ELEVENLABS_VOICE_ID_PROPERTY = {
+    type: 'string',
+    description: 'ElevenLabs voice_id (the 20-character ID, not the display name — e.g. "21m00Tcm4TlvDq8ikWAM"). No default: the premade set rotates (the legacy voices retire 2026-12-31), so pin one in data/<slug>/profile.md §2 and reuse it. Find IDs with tts_elevenlabs_voices or on the Voice Library page.',
+    pattern: '^[A-Za-z0-9_-]{1,64}$',
+};
+const ELEVENLABS_OUTPUT_FORMAT_PROPERTY = {
+    type: 'string',
+    description: `Audio container and sample rate (default: "${DEFAULT_ELEVENLABS_OUTPUT_FORMAT}" — mono 16-bit WAV at 24kHz, the same spec as tts_generate, so the produce builder takes it as-is). wav_48000 is also on every plan; wav_44100 needs the Pro tier or above (403 below that, measured). mp3_* is for non-pipeline use only — build-reel.sh reads any non-RIFF narration file as raw PCM. The filename extension, if given, must match (.wav / .mp3).`,
+    enum: [...ELEVENLABS_OUTPUT_FORMATS],
+    default: DEFAULT_ELEVENLABS_OUTPUT_FORMAT,
+};
+const ELEVENLABS_TIMESTAMPS_PROPERTY = {
+    type: 'boolean',
+    description: 'Also fetch per-character timing (default: false). Uses the with-timestamps endpoint at the same price and writes <audio basename>.alignment.json next to the audio — the vendor\'s `alignment` (start/end seconds for every input character) and `normalized_alignment` verbatim. Read `alignment`: for Korean the normalized one is romanized and cannot index the source text.',
+    default: false,
+};
+const ELEVENLABS_LANGUAGE_CODE_PROPERTY = {
+    type: 'string',
+    description: 'ISO 639-1 code to enforce ("ko", "en", "ja"). Only eleven_flash_v2_5 / eleven_turbo_v2_5 / eleven_v3 honor it; eleven_multilingual_v2 detects the language from the text and ignores this. Set it for short Korean lines on flash — a two-word line can be misdetected.',
+    pattern: '^[a-z]{2}$',
+};
+const ELEVENLABS_SEED_PROPERTY = {
+    type: 'number',
+    description: 'Deterministic seed 0–4294967295. The same seed, text, voice and settings reproduce the take — keep it when re-rendering one sentence of a finished scene.',
+    minimum: 0,
+    maximum: 4294967295,
+};
+const ELEVENLABS_NORMALIZATION_PROPERTY = {
+    type: 'string',
+    description: 'Number/date reading: "auto" (vendor default), "on" (always spell out digits and dates — flash_v2_5 reads them raw otherwise, so turn this on for copy with prices or dates), "off" (never).',
+    enum: [...ELEVENLABS_TEXT_NORMALIZATION],
+};
+const ELEVENLABS_STABILITY_PROPERTY = {
+    type: 'number',
+    description: 'Voice stability 0–1 (vendor default 0.5). Higher is steadier and flatter; lower is more expressive and can wobble between takes. On eleven_v3 this is a 3-way mode, not a slider — 0.0 Creative (audio tags react most, occasional hallucinated words), 0.5 Natural, 1.0 Robust (tags barely react); other values are snapped. Keep it identical across every cut of one video.',
+    minimum: 0,
+    maximum: 1,
 };
 /** Shared music property definitions (Lyria) — scale/mode lists derive from the music-client.ts source of truth */
 const MUSIC_SCALE_ENUM = [...MUSIC_SCALES];
@@ -1446,15 +1486,168 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
         name: 'tts_list_voices',
         title: 'TTS voice list',
         annotations: HINT.local,
-        description: `List the available voices for both TTS engines — 30 Gemini voices with personality traits, plus the 10 local Supertonic voices.
+        description: `List the built-in voices of the two static TTS engines — 30 Gemini voices with personality traits, plus the 10 local Supertonic voices — and point at the third lane.
 
-Use before tts_generate, tts_multi_speaker, or tts_local_generate when the user has not specified a voice, or asks what voices are available (목소리 종류). Read-only; makes no API call.
+Use before tts_generate, tts_multi_speaker, or tts_local_generate when the user has not specified a voice, or asks what voices are available (목소리 종류). Read-only; makes no API call. ElevenLabs voices are account-specific and NOT listed here — call tts_elevenlabs_voices for those.
 Do NOT use to generate audio — use tts_generate (acted delivery) or tts_local_generate (narration, free). The list is static; one call per session is enough. When the channel profile (data/<slug>/profile.md) already fixes a voice, use that instead of picking a new one.
 
-Returns: a text list of the 30 Gemini voice names with one-line personality descriptions (e.g. "Kore — Firm"), followed by the 10 Supertonic voice IDs (F1–F5, M1–M5 — no personality labels are published for these) and a note on which engine to pick.`,
+Returns: a text list of the 30 Gemini voice names with one-line personality descriptions (e.g. "Kore — Firm"), followed by the 10 Supertonic voice IDs (F1–F5, M1–M5 — no personality labels are published for these), and a note on which of the three engines to pick.`,
         inputSchema: {
             type: 'object',
             properties: {},
+            required: [],
+        },
+    },
+    // ── Speech synthesis (ElevenLabs — REST, xi-api-key) ─────────────────────────
+    {
+        name: 'tts_elevenlabs_generate',
+        title: 'Speech synthesis (ElevenLabs · single voice)',
+        annotations: HINT.generate,
+        description: `Convert text to single-voice speech with ElevenLabs — the paid third lane for cuts that need acted delivery, a specific cloned or library voice, or per-character timestamps.
+
+Use when the channel profile names engine \`elevenlabs\`, when a line needs inline acting on eleven_v3 (audio tags in the text: "[whispers] 이건 비밀인데요", "[laughs]", "[sarcastic]", "[sighs]" — more precise than a Gemini stylePrompt because the tag sits exactly where the delivery changes), when the voice must be a Voice Library / cloned voice, or when subtitles need exact timing (timestamps: true). Korean is supported on every model here, but quality tracks the VOICE more than the model — an English-trained premade voice reads Korean with an accent; pick a Korean voice from the Voice Library (paid plans) and pin it in profile.md.
+Do NOT use for narration bodies by default — tts_local_generate is free and tts_generate is 1.3–2.6x cheaper; the API rate is $0.10 per 1,000 characters on multilingual_v2 and v3, $0.05 on flash_v2_5 and v3_conversational (the same on every plan; each plan includes a monthly character allowance). Do NOT use for a multi-voice scene — use tts_elevenlabs_dialogue. Do NOT switch voiceId, model, stability or seed between cuts of one video. Free-tier output is non-commercial and needs attribution — check the plan before publishing.
+Per-request caps: ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_v3} characters on eleven_v3, ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_multilingual_v2} on multilingual_v2, ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_flash_v2_5} on flash_v2_5 — one scene per call. previousText/nextText carry the neighboring sentences so a re-rendered cut matches its neighbors' tone. The server retries 429/5xx 3x; a 403 output_format_not_allowed means the plan lacks that format — use wav_24000.
+
+Returns: a text block with the saved audio path (WAV by default — the builder needs RIFF), model, voice, format, duration, the vendor's metered character cost (the character-cost header, the billing quantity), request id, and the alignment sidecar path when timestamps were requested.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                text: {
+                    type: 'string',
+                    description: `The text to convert to speech (max ${MAX_ELEVENLABS_INPUT_CHARS} characters — ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_v3} on eleven_v3; split the script by scene). On eleven_v3, square-bracket audio tags inside the text direct the delivery.`,
+                    maxLength: MAX_ELEVENLABS_INPUT_CHARS,
+                },
+                voiceId: ELEVENLABS_VOICE_ID_PROPERTY,
+                model: {
+                    type: 'string',
+                    description: `TTS model (default: "${DEFAULT_ELEVENLABS_MODEL}" — the vendor default, stable, 10k chars, $0.10/1K). eleven_v3: audio tags and the most expressive read, 5k chars, slow (not real-time), $0.10/1K. eleven_v3_conversational: the v3 family tuned for realtime at half price ($0.05/1K), 5k-char cap applied here; accepted by this tool but not by dialogue. eleven_flash_v2_5: fastest, $0.05/1K, 40k chars, honors languageCode, reads digits raw unless applyTextNormalization is "on". eleven_turbo_v2_5 is deprecated in favor of flash_v2_5 and kept only for existing profiles.`,
+                    enum: [...ELEVENLABS_MODELS],
+                    default: DEFAULT_ELEVENLABS_MODEL,
+                },
+                languageCode: ELEVENLABS_LANGUAGE_CODE_PROPERTY,
+                stability: ELEVENLABS_STABILITY_PROPERTY,
+                similarityBoost: {
+                    type: 'number',
+                    description: 'How closely to track the original voice, 0–1 (vendor default 0.75). Very high values can reproduce artifacts from the voice\'s training sample.',
+                    minimum: 0,
+                    maximum: 1,
+                },
+                style: {
+                    type: 'number',
+                    description: 'Style exaggeration 0–1 (vendor default 0). Raising it adds expressiveness and latency; 0 is the steady choice for narration. multilingual_v2 only — the per-model settings schemas give eleven_v3 {stability} and flash_v2_5 {stability, similarity_boost, speed}, so it is ignored there (use audio tags on v3).',
+                    minimum: 0,
+                    maximum: 1,
+                },
+                speed: {
+                    type: 'number',
+                    description: 'Speaking rate 0.7–1.2 (vendor default 1.0). Keep it identical across every cut of one video.',
+                    minimum: 0.7,
+                    maximum: 1.2,
+                },
+                useSpeakerBoost: {
+                    type: 'boolean',
+                    description: 'Boost similarity to the original speaker (vendor default true). Adds a little latency. multilingual_v2 only — ignored on eleven_v3 and flash_v2_5.',
+                },
+                seed: ELEVENLABS_SEED_PROPERTY,
+                previousText: {
+                    type: 'string',
+                    description: 'The sentence(s) spoken right before this text in the finished audio — not synthesized, only used so the take continues the neighbor\'s tone. Use when re-rendering one cut of a scene. Not accepted by eleven_v3 (the vendor returns 400; the schema rejects it first).',
+                },
+                nextText: {
+                    type: 'string',
+                    description: 'The sentence(s) spoken right after this text — same purpose as previousText.',
+                },
+                applyTextNormalization: ELEVENLABS_NORMALIZATION_PROPERTY,
+                outputFormat: ELEVENLABS_OUTPUT_FORMAT_PROPERTY,
+                timestamps: ELEVENLABS_TIMESTAMPS_PROPERTY,
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the audio file (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the audio file (default: elevenlabs_<timestamp>.wav — .mp3 when outputFormat is mp3_*). The extension must match outputFormat.',
+                },
+            },
+            required: ['text', 'voiceId'],
+        },
+    },
+    {
+        name: 'tts_elevenlabs_dialogue',
+        title: 'Speech synthesis (ElevenLabs · multi-voice dialogue)',
+        annotations: HINT.generate,
+        description: `Voice a multi-speaker scene in ONE request with ElevenLabs text-to-dialogue (eleven_v3, up to ${ELEVENLABS_DIALOGUE_MAX_VOICES} distinct voices) — the lines come out as one continuous take with natural turn-taking.
+
+Use when a scene has more than the 2 speakers tts_multi_speaker allows (the Gemini lane's 3-speaker workaround — one call per speaker plus 0.75s of silence between them — goes away), or when a 2-speaker scene should sound like one conversation rather than stitched cuts. Each line is {text, voiceId}; audio tags inside a line ("[laughs] 그게 말이 돼요?") direct that speaker. With timestamps: true the sidecar also carries voice_segments (which input/voice covers which span) — that is the subtitle speaker map for free.
+Do NOT use for a single narrator — tts_elevenlabs_generate (or the free local lane) is cheaper per call and steadier. Do NOT exceed ~2,000 characters per request even though the hard cap is ${MAX_ELEVENLABS_DIALOGUE_CHARS} — the vendor recommends short requests for quality; split long scenes. The model is fixed to ${ELEVENLABS_DIALOGUE_MODEL} (every other model, v3_conversational included, is rejected). $0.10 per 1,000 characters; free-tier output is non-commercial.
+
+Returns: a text block with the saved audio path (WAV by default), line and voice counts, duration, the vendor's measured character cost, request id, and the alignment sidecar path when timestamps were requested.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                inputs: {
+                    type: 'array',
+                    description: `Ordered dialogue lines. Each line is spoken by its voiceId; consecutive lines may share a voice. 1–${ELEVENLABS_DIALOGUE_MAX_INPUTS} lines, at most ${ELEVENLABS_DIALOGUE_MAX_VOICES} distinct voices, ${MAX_ELEVENLABS_DIALOGUE_CHARS} characters in total (≈2,000 recommended).`,
+                    items: {
+                        type: 'object',
+                        properties: {
+                            text: { type: 'string', description: 'What this speaker says (audio tags allowed, e.g. "[whispers] …")' },
+                            voiceId: ELEVENLABS_VOICE_ID_PROPERTY,
+                        },
+                        required: ['text', 'voiceId'],
+                    },
+                    minItems: 1,
+                    maxItems: ELEVENLABS_DIALOGUE_MAX_INPUTS,
+                },
+                stability: ELEVENLABS_STABILITY_PROPERTY,
+                seed: ELEVENLABS_SEED_PROPERTY,
+                languageCode: ELEVENLABS_LANGUAGE_CODE_PROPERTY,
+                applyTextNormalization: ELEVENLABS_NORMALIZATION_PROPERTY,
+                outputFormat: ELEVENLABS_OUTPUT_FORMAT_PROPERTY,
+                timestamps: ELEVENLABS_TIMESTAMPS_PROPERTY,
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the audio file (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the audio file (default: elevenlabs_dialogue_<timestamp>.wav — .mp3 when outputFormat is mp3_*). The extension must match outputFormat.',
+                },
+            },
+            required: ['inputs'],
+        },
+    },
+    {
+        name: 'tts_elevenlabs_voices',
+        title: 'ElevenLabs voice list',
+        annotations: HINT.read,
+        description: `List the ElevenLabs voices this account can use — premade, cloned, designed, and Voice Library picks — with IDs, category, labels (gender · age · accent · use case) and verified languages, plus the plan's character usage when the key allows.
+
+Use before tts_elevenlabs_generate / tts_elevenlabs_dialogue when no voiceId is pinned yet, or to find a Korean voice (search: "korean", or read the verified-languages column). Read-only; one GET per call. The Gemini and Supertonic voices are NOT here — tts_list_voices has those. Needs a key with the voices_read permission (a restricted key without it still synthesizes but returns missing_permissions here — then take the ID from the Voice Library page instead).
+Do NOT pick a new voice per episode — pin one in data/<slug>/profile.md §2. The legacy premade voices retire 2026-12-31; prefer the current premade set or a library voice.
+
+Returns: a text list "name — voice_id · category · labels · languages", the total count, whether more pages exist, and (when the key has user_read) the subscription tier with used/total characters and the reset date — Free tier output is non-commercial.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                search: {
+                    type: 'string',
+                    description: 'Substring filter on name, description and labels (e.g. "korean", "calm female"). Omit to list everything.',
+                },
+                category: {
+                    type: 'string',
+                    description: 'Restrict to one category: premade (vendor defaults), cloned (your IVC/PVC), generated (Voice Design), professional (library PVC).',
+                    enum: [...ELEVENLABS_VOICE_CATEGORIES],
+                },
+                limit: {
+                    type: 'number',
+                    description: 'Voices per page 1–100 (default: 30)',
+                    minimum: 1,
+                    maximum: 100,
+                    default: 30,
+                },
+            },
             required: [],
         },
     },

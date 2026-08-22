@@ -165,12 +165,13 @@
   <p class="sub">
     <a href="../2026-08-11-local-tts-and-commercial-api/index.html">2026-08-11 TTS 전반 조사</a>에서
     요금 비교 수준으로만 다뤘던 ElevenLabs를 API 단위로 파고들었다.
-    공식 문서·요금 페이지를 오늘 다시 읽었고, API 실호출 실측은 아직 하지 않았다.
+    공식 문서·요금 페이지를 오늘 다시 읽었고, 이튿날(08-23) 실제 키로 API 를 호출해 본 결과를
+    <a href="#s10">10장 실측 부록</a>에 붙였다. 그 부록이 <code>tts_elevenlabs_*</code> 툴 3종의 근거다.
   </p>
   <div class="meta">
-    <span><strong>조사일</strong> 2026-08-22</span>
-    <span><strong>방법</strong> 공식 docs·pricing 열람 + 한국어 실사용 평 검색</span>
-    <span><strong>실측</strong> 없음 (문서 조사)</span>
+    <span><strong>조사일</strong> 2026-08-22 (부록 08-23)</span>
+    <span><strong>방법</strong> 공식 docs·pricing 열람 + 한국어 실사용 평 검색 + API 실호출 30여 건</span>
+    <span><strong>실측</strong> API 호출 있음 · 한국어 실청취 없음</span>
   </div>
 </header>
 
@@ -186,6 +187,7 @@
     <li><a href="#s7"><span class="no">7</span>요금·한도·라이선스</a></li>
     <li><a href="#s8"><span class="no">8</span>social-flow 파이프라인 대응</a></li>
     <li><a href="#s9"><span class="no">9</span>출처</a></li>
+    <li><a href="#s10"><span class="no">10</span>실측 부록 — API 실호출 (08-23)</a></li>
   </ol>
 </nav>
 
@@ -511,9 +513,101 @@
   </div>
 </section>
 
+<section id="s10">
+  <h2 class="sec"><span class="no">10</span>실측 부록 — API 실호출 (2026-08-23)</h2>
+  <p>
+    문서만 읽고 코드를 짜면 한 번은 틀린다. 그래서 구현에 들어가기 전에 제한 키(<code>text_to_speech</code> 권한만 있는 키) 하나로
+    convert·with-timestamps·text-to-dialogue 를 30여 번 호출했다. 아래는 문서에 없거나 문서와 다르게 읽혔던 것만 추렸다.
+    전부 <code>server/src/elevenlabs-client.ts</code> 에 그대로 반영돼 있다.
+  </p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>확인한 것</th><th>결과</th><th>구현에 미친 영향</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>output_format</code> 의 자리</td>
+          <td>JSON 본문에 넣으면 <strong>조용히 무시</strong>되고 기본 mp3(<code>audio/mpeg</code>)가 온다. 쿼리 파라미터 <code>?output_format=</code> 로 넣어야 먹는다</td>
+          <td>클라이언트는 항상 쿼리로 보낸다</td>
+        </tr>
+        <tr>
+          <td>포맷 전체 목록</td>
+          <td>일부러 틀린 값을 보내면 403 <code>invalid_output_format</code> 본문이 유효값 29종을 열거한다 — mp3 8종·pcm 7종·<strong>wav 7종</strong>·opus 5종·m4a·ulaw·alaw. 문서의 목록엔 wav_* 가 빠져 있다</td>
+          <td>기본값을 <code>wav_24000</code> 으로 잡았다</td>
+        </tr>
+        <tr>
+          <td><code>wav_24000</code> 의 헤더</td>
+          <td>RIFF 크기 필드·data 크기 필드가 실제 바이트와 일치하는 정상 WAV(모노 16비트). fmt 와 data 사이에 LIST/INFO 청크가 하나 끼어 있다</td>
+          <td>길이 계산은 44바이트 고정 오프셋이 아니라 청크를 걸어가며 읽는다. build-reel.sh 는 첫 4바이트가 RIFF 가 아니면 raw PCM 으로 읽으므로 나레이션엔 mp3 를 못 쓴다</td>
+        </tr>
+        <tr>
+          <td>티어 게이트</td>
+          <td><code>wav_44100</code>·<code>pcm_44100</code> 은 403 <code>output_format_not_allowed</code> "Pro tier and above". <code>wav_48000</code>·<code>pcm_48000</code>·<code>mp3_44100_192</code> 는 이 계정에서 200</td>
+          <td>기본값은 전 플랜에서 도는 24kHz. 44.1kHz 는 Pro 부터</td>
+        </tr>
+        <tr>
+          <td>with-timestamps 의 두 정렬</td>
+          <td><code>alignment</code> 는 입력 글자 그대로("안","녕","하"…), <code>normalized_alignment</code> 는 <strong>한국어를 로마자로</strong>("a","n","n","y","e","o"…) 돌려준다. v3 에선 <code>[whispers]</code> 태그 글자까지 정렬에 들어온다</td>
+          <td>사이드카엔 둘 다 원문대로 저장하되, 요약·자막 용도는 <code>alignment</code> 만 읽는다</td>
+        </tr>
+        <tr>
+          <td>v3 + with-timestamps</td>
+          <td>200. 문서엔 모델별 지원 표기가 없었는데 v3 도 된다. <code>eleven_v3_conversational</code>(반값 v3 계열)도 convert·with-timestamps 모두 200 — 단 dialogue 에 주면 400 <code>invalid_argument</code></td>
+          <td>timestamps 옵션에 모델 제한을 두지 않았고, v3 conversational 을 generate 모델 목록에 넣되 dialogue 는 v3 고정</td>
+        </tr>
+        <tr>
+          <td>v3 + previous_text / next_text</td>
+          <td>400 <code>unsupported_model</code> "not yet supported with the 'eleven_v3' model"</td>
+          <td>스키마가 호출 전에 거른다(과금 0)</td>
+        </tr>
+        <tr>
+          <td>text-to-dialogue 의 모델</td>
+          <td><code>eleven_multilingual_v2</code> 를 주면 400 <code>model_does_not_support_dialogue</code>. v3 만 받는다. with-timestamps 변형은 <code>voice_segments</code>(입력 인덱스·보이스·시작·끝 초)를 추가로 돌려준다</td>
+          <td>dialogue 툴은 모델 인자 없이 v3 고정, 사이드카에 voice_segments 포함</td>
+        </tr>
+        <tr>
+          <td><code>language_code</code>·<code>voice_settings</code></td>
+          <td>v2 에 <code>language_code: ko</code> 를 줘도 200(문서대로 무시). v3 에 stability 0.3 을 줘도 200(3모드 외 값은 붙여 맞추는 듯). stability·speed 만 부분 지정해도 200</td>
+          <td>부분 voice_settings 를 그대로 넘긴다</td>
+        </tr>
+        <tr>
+          <td>seed 재현성</td>
+          <td>같은 seed·문장·보이스로 두 번 → <strong>바이트 단위로 같은 파일</strong>(80,326B = 80,326B)</td>
+          <td>한 문장만 다시 만들 때 seed 를 고정하면 나머지와 톤이 안 흔들린다</td>
+        </tr>
+        <tr>
+          <td>과금 헤더</td>
+          <td>응답 헤더 <code>character-cost</code> 가 벤더의 계량치다. 한국어 18자 → 10, 30자 → 16, flash 24자 → 8, 영어 28자 → 15 — <strong>원문 글자 수보다 적게</strong> 찍힌다. 동시 한도 헤더 <code>maximum-concurrent-requests: 5</code> 도 같이 온다. 단가는 pricing/api 기준 v2·v3 $0.10/1K, flash·v3 conversational $0.05/1K 로 플랜 무관(§7 의 "크레딧" 표는 웹 UI 계량이고 API 는 달러 단가다)</td>
+          <td>툴 응답에 측정값으로 보고하고, 원장엔 글자 수 대신 이 값 ÷ 1000 을 적는다</td>
+        </tr>
+        <tr>
+          <td>오류 본문 세 가지</td>
+          <td>현행 <code>{detail:{type,code,message,status,request_id}}</code>, 구형 <code>{detail:{status,message}}</code>(model_not_found 가 아직 이 꼴), FastAPI 422 배열. 키 없음은 <code>needs_authorization</code>, 틀린 키는 <code>invalid_api_key</code>, 권한 부족은 <code>missing_permissions</code> 에 권한 이름이 찍힌다</td>
+          <td>HTTP 코드가 아니라 status 문자열로 안내문을 고른다</td>
+        </tr>
+        <tr>
+          <td>프리메이드 보이스 ID</td>
+          <td>Rachel·George 를 비롯해 흔히 도는 ID 21개가 전부 200. 단 dialogue 의 voice_segments 에는 Rachel(21m00…)이 <code>eLDc7xhWxG2FElT3kUTj</code> 로 찍힌다 — 레거시 ID 가 내부적으로 새 ID 로 매핑된다</td>
+          <td>기본 보이스는 두지 않고 profile.md 에 ID 를 고정하게 했다</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout green">
+    <div class="co-title">구현 결과</div>
+    <p>
+      <code>tts_elevenlabs_generate</code>(단일 보이스, 타임스탬프 옵션) · <code>tts_elevenlabs_dialogue</code>(v3 대화, 보이스 10종) ·
+      <code>tts_elevenlabs_voices</code>(계정 보이스 목록 + 플랜) 세 툴이 <code>ELEVENLABS_API_KEY</code> 로 돈다.
+      레퍼런스는 <a href="../../api-reference/elevenlabs-tts.html">API 레퍼런스 — ElevenLabs TTS</a>.
+      §8 의 "다음 단계" 중 ③ dialogue 재현과 ④ 정렬 확인은 이 부록으로 끝났고, ①·② 한국어 실청취는 아직 남아 있는 숙제다.
+    </p>
+  </div>
+</section>
+
 <footer>
-  <p>social-flow 조사 문서 · 2026-08-22 · 선행 조사: <a href="../2026-08-11-local-tts-and-commercial-api/index.html">로컬 TTS와 상용 API</a> · <a href="../tts/index.html">TTS 목소리 49종 청취</a></p>
-  <p>이 문서는 공식 문서·요금 페이지 열람 결과다. API 실호출·한국어 실청취 실측은 아직 없다.</p>
+  <p>social-flow 조사 문서 · 2026-08-22 (실측 부록 08-23) · 선행 조사: <a href="../2026-08-11-local-tts-and-commercial-api/index.html">로컬 TTS와 상용 API</a> · <a href="../tts/index.html">TTS 목소리 49종 청취</a></p>
+  <p>본문은 공식 문서·요금 페이지 열람 결과이고, 10장은 API 실호출 결과다. 한국어 실청취는 아직 없다.</p>
 </footer>
 
 </div>
