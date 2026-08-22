@@ -180,9 +180,10 @@ The template and state schema are in `references/growth-plan-template.md`.
    platform's hard cap of 2); minimum queue level (default 1); which platform
    queues to stamp on success (`mark_queues` — offer only platforms with an
    approved growth plan). If hosting is `off`, say right there that
-   autoproduce won't run either. If the profile §2 TTS engine is `gemini`,
-   also say each episode carries a voice cost (about $0.015 per 400
-   characters — switching to local changes the voice).
+   autoproduce won't run either. If the profile §2 TTS engine is `gemini` or
+   `elevenlabs`, also say each episode carries a voice cost (about $0.015 per
+   400 characters on Gemini, $0.04 on ElevenLabs — switching to local changes
+   the voice).
 4. Write `growth-plan.md` from the template, **show the full text and get
    explicit approval**, then save with `status: approved`. Always state:
    *"This plan is the standing authorization — the loop publishes reels

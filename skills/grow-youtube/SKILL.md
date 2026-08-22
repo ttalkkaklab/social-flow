@@ -160,10 +160,11 @@ The template and state schema are in `references/growth-plan-template.md`.
    weekly cost caps; authoring runs per day (default 1 — within this platform's
    hard cap of 2); minimum queue level (default 1); which platform queues to
    stamp on success (`mark_queues` — offer only platforms with an approved
-   growth plan). If the channel profile §2 TTS engine is `gemini`, say so right
-   there: *"This channel uses the Gemini engine, so every episode carries a
-   voice cost (about $0.015 per 400 characters). Switching to the zero-cost
-   local engine means editing profile §2, and the narrator's voice will change."*
+   growth plan). If the channel profile §2 TTS engine is `gemini` or
+   `elevenlabs`, say so right there: *"This channel uses a paid voice engine,
+   so every episode carries a voice cost (about $0.015 per 400 characters on
+   Gemini, $0.04 on ElevenLabs). Switching to the zero-cost local engine means
+   editing profile §2, and the narrator's voice will change."*
 4. Write `growth-plan.md` from the template, **show the full text and get
    explicit approval**, then save with `status: approved`. Always state:
    *"This plan is the standing authorization — the loop publishes videos stamped

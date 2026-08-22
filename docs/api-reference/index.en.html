@@ -19,7 +19,7 @@
   <p class="sub">A reference for the official contracts of the 13 external APIs the internal MCP server (<code>server/src</code>) actually calls. Each page puts <strong>what the official docs say</strong> next to <strong>what this repo's implementation actually does</strong>, so you can see where the two diverge. For images, voice, and transcription the default path is three on-device engines that never touch the network, and those have no external contract to call.</p>
   <div class="meta">
     <span>As of <strong>2026-08-20</strong></span>
-    <span>Tools <strong>51</strong></span>
+    <span>Tools <strong>54</strong></span>
     <span>External APIs <strong>13</strong> + local <strong>3</strong></span>
     <span>MCP SDK <strong>1.30.0</strong></span>
   </div>
@@ -47,6 +47,11 @@
       <h3>Gemini TTS</h3>
       <p>3 models, 30 prebuilt voices, the 32k-token session limit, single- and two-speaker configuration, PCM 24kHz mono output.</p>
       <div class="tools">tts_generate · tts_multi_speaker · tts_list_voices</div>
+    </a>
+    <a class="card" href="elevenlabs-tts.en.html">
+      <h3>ElevenLabs TTS</h3>
+      <p>The third speech lane. Four models and their per-request caps, the 29 <code>output_format</code> values (a query parameter) and their tier gates, two per-character alignments (the normalized one romanizes Korean), 10-voice dialogue, permission-scoped keys and the error status list — with live-call measurements.</p>
+      <div class="tools">tts_elevenlabs_generate · tts_elevenlabs_dialogue · tts_elevenlabs_voices</div>
     </a>
     <a class="card" href="gemini-veo.en.html">
       <h3>Google Veo 3.1</h3>
@@ -134,6 +139,7 @@
       <tr><td><code>GEMINI_API_KEY</code><br>(or <code>GOOGLE_API_KEY</code>)</td><td><code>veo_*</code> · <code>tts_generate</code> · <code>tts_multi_speaker</code> · <code>music_generate*</code></td><td>No video, voice, or music generation. Everything else is fine</td><td><a href="https://aistudio.google.com/apikey">AI Studio</a></td></tr>
       <tr><td><code>ARK_API_KEY</code></td><td><code>seedance_*</code></td><td>No Seedance video generation. <code>veo_*</code> is unaffected</td><td><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/apikey">BytePlus ModelArk</a></td></tr>
       <tr><td><code>SUNO_API_KEY</code></td><td><code>suno_*</code></td><td>No sung full songs or Suno loop beds. <code>music_*</code> (Lyria) is unaffected</td><td><a href="https://sunoapi.org/api-key">sunoapi.org</a></td></tr>
+      <tr><td><code>ELEVENLABS_API_KEY</code></td><td><code>tts_elevenlabs_*</code></td><td>No third speech lane. <code>tts_generate</code> (Gemini) and <code>tts_local_generate</code> are unaffected. A restricted key needs <code>text_to_speech</code>; the listing needs <code>voices_read</code></td><td><a href="https://elevenlabs.io/app/settings/api-keys">ElevenLabs</a></td></tr>
       <tr><td><code>OPENAI_API_KEY</code></td><td><code>gpt_image_*</code></td><td>No GPT Image generation</td><td><a href="https://platform.openai.com/api-keys">OpenAI</a></td></tr>
       <tr><td><code>SERPAPI_API_KEY</code></td><td><code>serp_*</code> · <code>sns_issue_scout</code></td><td>The five <code>serp_*</code> tools and <code>sns_issue_scout</code> are out — fall back to <code>naver_search</code> or the built-in WebSearch</td><td><a href="https://serpapi.com/manage-api-key">SerpApi</a></td></tr>
       <tr><td><code>NAVER_CLIENT_ID</code><br><code>NAVER_CLIENT_SECRET</code></td><td><code>naver_search</code></td><td>No first-pass Korean research — use <code>serp_naver_search</code> instead</td><td><a href="https://developers.naver.com/apps">Naver Developers</a></td></tr>
@@ -155,7 +161,7 @@
 <section id="map">
   <h2>Tool ↔ API map</h2>
   <p>Badges: <span class="badge ro">read</span> no side effects · <span class="badge wr">write</span> creates a local file · <span class="badge de">public</span> takes effect publicly the moment it's called · <span class="badge key">key</span> needs a credential · <span class="badge free">no auth</span></p>
-  <p><strong>You won't always see all 50.</strong> The nine platform-bound tools (<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>) appear in <code>tools/list</code> only for platforms that have a credential file. That's evaluated when the list is requested, so adding a token makes them appear without restarting the server; with no tokens at all you see 41. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> sit outside the gate and stay listed without tokens — the YouTube scout needs <code>YOUTUBE_API_KEY</code> or channel OAuth at call time, the SNS scout needs <code>SERPAPI_API_KEY</code>, and feedback simply skips the sections it has no token for. <code>youtube_update</code> is likewise always listed and errors without a token. Hidden tools still have live handlers — call one directly and you get a missing-token error.</p>
+  <p><strong>You won't always see all 54.</strong> The nine platform-bound tools (<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>) appear in <code>tools/list</code> only for platforms that have a credential file. That's evaluated when the list is requested, so adding a token makes them appear without restarting the server; with no tokens at all you see 41. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> sit outside the gate and stay listed without tokens — the YouTube scout needs <code>YOUTUBE_API_KEY</code> or channel OAuth at call time, the SNS scout needs <code>SERPAPI_API_KEY</code>, and feedback simply skips the sections it has no token for. <code>youtube_update</code> is likewise always listed and errors without a token. Hidden tools still have live handlers — call one directly and you get a missing-token error.</p>
   <div class="table-scroll">
   <table>
     <thead><tr><th>Tool</th><th>Character</th><th>What it calls</th><th>Reference</th></tr></thead>
@@ -187,6 +193,9 @@
       <tr><td><code>tts_local_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>none — local Supertonic 3 (python)</td><td><a href="../research/2026-08-11-local-tts-and-commercial-api/index.html">Local TTS research (Korean)</a></td></tr>
       <tr><td><code>stt_local_transcribe</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>none — local Qwen3-ASR (mlx-qwen3-asr)</td><td>—</td></tr>
       <tr><td><code>tts_list_voices</code></td><td><span class="badge ro">read</span></td><td>none — a constant built into the server</td><td><a href="gemini-tts.en.html">TTS</a></td></tr>
+      <tr><td><code>tts_elevenlabs_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /v1/text-to-speech/{voice_id}</code> (<code>/with-timestamps</code>)</td><td><a href="elevenlabs-tts.en.html">ElevenLabs</a></td></tr>
+      <tr><td><code>tts_elevenlabs_dialogue</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /v1/text-to-dialogue</code> (<code>/with-timestamps</code>)</td><td><a href="elevenlabs-tts.en.html">ElevenLabs</a></td></tr>
+      <tr><td><code>tts_elevenlabs_voices</code></td><td><span class="badge ro">read</span> <span class="badge key">key</span></td><td><code>GET /v2/voices</code> (+ <code>GET /v1/user/subscription</code>)</td><td><a href="elevenlabs-tts.en.html">ElevenLabs</a></td></tr>
       <tr><td><code>music_generate_clip</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>interactions.create</code> (<code>lyria-3-clip-preview</code>)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
       <tr><td><code>music_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
       <tr><td><code>music_generate_advanced</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>

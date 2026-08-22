@@ -30,11 +30,17 @@ created: <YYYY-MM-DD>
 - **Register**: <polite explanatory (존댓말) | casual punchy (반말) | documentary narration | ...>
 - **Narrator personality**: <e.g. a calm news-briefing anchor>
 - **TTS voice (fixed — do not change)**:
-  - Engine: `<local | gemini>` — the default for narration is `local` (zero cost,
-    6.3x real time); use `gemini` only when acted emotion is the channel's identity
+  - Engine: `<local | gemini | elevenlabs>` — the default for narration is `local` (zero cost,
+    6.3x real time); use `gemini` only when acted emotion is the channel's identity, and
+    `elevenlabs` when the channel needs a specific cloned or Voice Library voice, inline
+    audio-tag acting (eleven_v3), or scenes with three or more speakers (paid — about 2.6x Gemini)
   - With local → voice: `<F1~F5 | M1~M5>` · lang: `ko` · speed: `<0.7~2.0, default 1.05>`
   - With gemini → voiceName: `<Gemini voice name>` ·
     stylePrompt: `<the English style direction — reused without changing a character>`
+  - With elevenlabs → voiceId: `<the 20-character voice_id, not the display name>` ·
+    model: `<eleven_multilingual_v2 | eleven_v3 | eleven_flash_v2_5>` ·
+    stability: `<0–1; on eleven_v3 one of 0.0 / 0.5 / 1.0>` · seed: `<optional integer — once set, never changes>` ·
+    outputFormat stays `wav_24000` (the builder needs RIFF; mp3 is not narration input)
   - Target speaking rate: <characters/sec, default 4.5>
 - **Plain-language principle**: no unexplained jargon, no literal translationese, no
   over-compressed subjectless sentences. When a term is genuinely needed, lead with
@@ -152,6 +158,34 @@ mcp__social-flow__tts_local_generate
 ```
 
 Play them with `afplay` to compare, then write the chosen value into §2 above.
+
+## ElevenLabs voices
+
+The list is account-specific — premade voices, your clones, and whatever you added
+from the Voice Library — so there is no table here. List what the key can see and
+filter for the language:
+
+```
+mcp__social-flow__tts_elevenlabs_voices
+  search: "korean"   # or category: "premade" / "professional"
+```
+
+Then audition exactly like the local lane, one real narration sentence per candidate:
+
+```
+mcp__social-flow__tts_elevenlabs_generate
+  text: "<two representative narration sentences>"  voiceId: "<voice_id>"  model: "eleven_multilingual_v2"
+  outputPath: "data/<slug>/assets/scratch"  filename: "voice-test-<name>.wav"
+```
+
+- **Korean quality tracks the voice, not the model.** An English-trained premade voice
+  reads Korean with an accent; a Korean speaker's voice from the Voice Library (paid
+  plans) reads it natively. Judge by ear before pinning.
+- Pin the **voice_id** (e.g. `JBFqnCBsd6RMkjVDRZzb`), never the display name — names are
+  not unique and the legacy premade set retires 2026-12-31.
+- The Free tier's output is non-commercial and needs attribution; a monetized channel
+  needs Starter or above. If the listing call fails with `missing_permissions`, the key
+  lacks `voices_read` — take the ID from the Voice Library page instead.
 
 There's no style-direction argument, so the tone comes **from the sentences
 themselves** — cut them short and punctuate properly and the delivery settles.

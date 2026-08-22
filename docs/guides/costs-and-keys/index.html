@@ -116,7 +116,7 @@
         <td><strong>목소리</strong></td>
         <td><code>tts_local_generate</code><br>Supertonic 3 · 기기 안</td>
         <td>연기·감정 지시를 못 준다</td>
-        <td><code>tts_generate</code><br><span class="badge key">GEMINI_API_KEY</span></td>
+        <td><code>tts_generate</code><br><span class="badge key">GEMINI_API_KEY</span><br><code>tts_elevenlabs_generate</code><br><span class="badge key">ELEVENLABS_API_KEY</span></td>
       </tr>
       <tr>
         <td><strong>받아쓰기</strong></td>
@@ -324,6 +324,12 @@
     </div>
   </div>
 
+  <h3>세 번째 레인 — ElevenLabs (<code>tts_elevenlabs_generate</code> · <code>tts_elevenlabs_dialogue</code>)</h3>
+  <p>유료이고 채널 단위로 켠다(profile §2 에 <code>engine: elevenlabs</code>). <span class="badge key">ELEVENLABS_API_KEY</span> 가 필요하다. Gemini 보다 비싸다 — multilingual_v2·v3 는 1,000자에 $0.10, flash·v3 conversational 은 $0.05 이고 어느 플랜이든 같다(응답 헤더 <code>character-cost</code> 의 계량치는 원문 글자 수보다 적게 찍힌다 — 한국어 18자가 10, 실측) — 그래서 나레이션 기본값이 아니다. 이 레인만 하는 일이 셋이다: <code>eleven_v3</code> 의 오디오 태그 연기(<code>[whispers]</code>·<code>[laughs]</code> 를 연기가 바뀌는 자리에 심는다), 한 요청에 <strong>보이스 10종까지</strong> 넣는 대화 씬, 자막 동기용 글자 단위 타임스탬프. 기본 출력은 모노 24kHz WAV 로 Gemini 레인과 같은 규격이라 빌더가 그대로 읽는다. <strong>나레이션에 mp3 포맷을 고르지 않는다</strong> — 빌더는 RIFF 가 아닌 파일을 raw PCM 으로 읽는다. 한국어 품질은 모델보다 목소리가 정한다: 영어로 학습된 기본 보이스는 억양이 묻어나고, Voice Library 의 한국어 화자 보이스(유료 플랜)는 그렇지 않다.</p>
+  <div class="warn">
+    <strong>무료 티어 오디오는 상업 이용 불가</strong>이고 출처 표기를 요구한다. 수익 채널이면 Starter(월 $6) 이상이 바닥이다. 키에 <code>user_read</code> 권한이 있으면 <code>tts_elevenlabs_voices</code> 가 플랜을 같이 보여 준다.
+  </div>
+
   <h3>라이선스 — 상업 채널이라면 읽고 넘어간다</h3>
 
   <div class="note">
@@ -338,6 +344,8 @@
     <tbody>
       <tr><td><code>tts.local</code></td><td>1,000자</td><td class="num">0.000</td><td><span class="g off">official</span></td><td>Supertonic 로컬</td></tr>
       <tr><td><code>tts.gemini-flash</code></td><td>1,000자</td><td class="num">0.038</td><td><span class="g der">derived</span></td><td>100만 자에 $38</td></tr>
+      <tr><td><code>tts.elevenlabs</code></td><td>1,000자(계량)</td><td class="num">0.100</td><td><span class="g off">official</span></td><td>multilingual_v2 · eleven_v3 — pricing/api, 플랜 무관. 수량은 글자 수가 아니라 응답의 character cost ÷ 1,000</td></tr>
+      <tr><td><code>tts.elevenlabs-flash</code></td><td>1,000자(계량)</td><td class="num">0.050</td><td><span class="g off">official</span></td><td>flash_v2_5 · v3 conversational — v2/v3 의 절반</td></tr>
       <tr><td><code>tts.gemini-pro</code></td><td>1,000자</td><td class="num">0.076</td><td><span class="g der">derived</span></td><td>100만 자에 $76 — flash 가 거부할 때의 폴백</td></tr>
     </tbody>
   </table>
@@ -571,6 +579,17 @@ set -a &amp;&amp; . ./.env &amp;&amp; set +a</code></pre>
       <li>Dreamina Seedance 2.5·2.0 계열만 <strong>잔액 $30 이상 또는 리소스 팩</strong>이 추가로 필요하다.</li>
     </ol>
     <p><strong>확인</strong> — 읽기 전용 점검 엔드포인트가 없어서, 키를 빼먹으면 도구가 위 세 가지를 구분해 알려 주는 오류 메시지에 기대는 편이 낫다. 실제 생성 호출은 곧 과금이다.</p>
+  </div>
+
+  <div class="keyblock">
+    <h3><code>ELEVENLABS_API_KEY</code> <span class="badge opt">선택</span></h3>
+    <div class="src">elevenlabs.io/app/settings/api-keys — ElevenLabs</div>
+    <p><strong>여는 것</strong> — <code>tts_elevenlabs_generate</code>·<code>tts_elevenlabs_dialogue</code>·<code>tts_elevenlabs_voices</code>, 세 번째 음성 레인. 이 키가 없어도 Gemini(<code>tts_generate</code>)와 온디바이스 엔진은 그대로 돈다.</p>
+<pre><code>export ELEVENLABS_API_KEY="..."</code></pre>
+    <p>키는 <strong>권한 단위로 제한</strong>할 수 있다. 합성은 <code>text_to_speech</code>, 보이스 목록은 <code>voices_read</code>, 플랜 사용량 표시는 <code>user_read</code> 가 필요하다. 빠진 권한이 있으면 <code>missing_permissions</code> 에 그 권한 이름이 찍혀서 돌아온다 — 키 값이 틀린 게 아니라 범위 문제다.</p>
+    <p><strong>확인</strong> — <code>voices_read</code> 가 있으면:</p>
+<pre><code>curl -s -H "xi-api-key: $ELEVENLABS_API_KEY" "https://api.elevenlabs.io/v2/voices?page_size=1" | head -c 200</code></pre>
+    <p>보이스 목록이 JSON 으로 오면 된 것이고, <code>invalid_api_key</code> 면 값이 틀렸다. 합성 전용 키는 공짜 점검이 없다 — 첫 <code>tts_elevenlabs_generate</code> 호출이 곧 점검이고, 글자 몇 개 값이 나간다.</p>
   </div>
 
   <div class="keyblock">
