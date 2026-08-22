@@ -216,6 +216,14 @@ def selftest() -> None:
         (ch2 / "assets" / "outro.mp4").write_bytes(b"z")
         got = resolve(ch2, "outro", "default")
         assert got.name == "outro.mp4", got
+        # character panels — produce resolves them one file at a time (video-model-selection §6)
+        (assets / "characters" / "hero").mkdir(parents=True)
+        (assets / "characters" / "hero" / "face.png").write_bytes(b"f")
+        (assets / "characters" / "hero" / "body.png").write_bytes(b"b")
+        got = resolve(ch, "character", "hero")
+        assert got.name == "hero" and got.is_dir(), got
+        got = resolve(ch, "character", "hero/face.png")
+        assert got.name == "face.png", got
         # missing asset
         try:
             resolve(ch, "sfx", "whoosh")

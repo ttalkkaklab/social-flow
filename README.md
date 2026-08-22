@@ -218,10 +218,10 @@ them the pipeline ends at `produce` with the finished video and per-platform tex
 /social-flow:autoproduce my-channel "July FX swings"   # research → scenes.js → images → TTS → build → output
 ```
 
-Nine machine gates stand where the approval gates were — fact verification (3+
-cross-verified claims), the copy style checker, storyboard-reviewer copy at 95,
-per-scene at 95 (lowest scene), vocabulary at 95 (lowest scene), images at 95, build
-report (drift 0), content-reviewer P0=0, and a cost cap. The **economy tier is the
+Eleven machine gates stand where the approval gates were — fact verification (3+
+cross-verified claims), the copy style checker, six one-round storyboard-reviewer reads
+(copy · per-scene · vocabulary · camera · sound · images) where an unresolved P0 stops the
+run, build report (drift 0), content-reviewer P0=0, and a cost cap. The **economy tier is the
 default**: no Veo calls at all (still backgrounds + Ken Burns), roughly $0.26–0.29
 per episode (capped at $0.30); only when hook metrics fall below threshold does the
 4-second cover get promoted to `veo-3.1-lite`. Authoring is capped at **2 episodes
@@ -244,28 +244,32 @@ scenes.js. The rule source of truth is
 `skills/platform-guide/references/korean-style.md`; the code renders the verdict and
 the agent fixes the sentences.
 
-**Storyboard convergence gates** — the checker catches what rules can catch; the
+**Storyboard adversarial reviews** — the checker catches what rules can catch; the
 layer above it is what a person has to read to feel. Overused antithesis, triple
 lists, sermon-style closers, a rhythm where every sentence reads at the same length.
 Images are the same — a machine can check resolution, but "does this picture show
 what the scene is saying" takes a reader. So the storyboard skill calls the
-adversarial reviewer `storyboard-reviewer` **four times** before approval:
+adversarial reviewer `storyboard-reviewer` **six times, once each**, before approval:
 
-| Gate | What it reads | Hard cap | Pass bar |
-|---|---|---|---|
-| Copy mode (§4.5) | the storyboard's prose as a whole | 5 rounds | total ≥95 · P0 0 |
-| Scene mode (§4.6) | each scene's role and context | 5 rounds | **lowest scene** ≥95 · P0 0 |
-| Vocabulary mode (§4.7) | word choice in narration and titles | 5 rounds | **lowest scene** ≥95 · P0 0 |
-| Image mode (§5.5) | generated PNGs against scene content | 3 rounds | total ≥95 · P0 0 |
+| Review | What it reads | Score is |
+|---|---|---|
+| Copy mode (§4.5) | the storyboard's prose as a whole | total |
+| Scene mode (§4.6) | each scene's role and context | **lowest scene** |
+| Vocabulary mode (§4.7) | word choice in narration and titles | **lowest scene** |
+| Camera mode (§4.8) | the four camera slots, cut length and engine fit of every generated shot | **lowest shot** |
+| Sound mode (§4.9) | clip audio, voice casting, and where the sound gets out of the way | total |
+| Image mode (§5.5) | generated PNGs against scene content | total |
 
-The two per-scene gates judge the **lowest-scoring scene** rather than the average,
+None of the six is a pass/fail gate — each returns findings once, they get applied, and
+anything left over goes onto the human approval screen, which is the one thing that blocks.
+The per-item reviews report the **lowest-scoring** scene or shot rather than the average,
 because an average lets one broken scene hide behind the good ones. The order has a
 reason too — images come last because a changed sentence changes what its scene
-should show, and vocabulary comes after the scene gate because polishing the words
-of a scene that's about to be cut is wasted work. If a gate hits its hard cap, the
-best-scoring version ships to the approval screen with its unresolved findings
-attached, and the human decides. autoproduce's unattended path runs the same gates
-with a 2-round cap (falling short halts authoring).
+should show, and vocabulary comes after the scene review because polishing the words
+of a scene that's about to be cut is wasted work. Whatever the one round of fixes
+doesn't resolve rides to the approval screen with the finding attached, and the human
+decides. autoproduce has no human to decide, so there a P0 still standing after those
+fixes halts authoring.
 
 **Storyboard-first shooting flow** (for polished demos and tutorials — the order flips):
 
@@ -312,10 +316,10 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap · Chrome lane map)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
-│   ├── storyboard/              # /social-flow:storyboard — research → scene design → copy/per-scene/vocabulary convergence (95) → images → image convergence (95) → approval
+│   ├── storyboard/              # /social-flow:storyboard — research → scene design → six one-round reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval
 │   ├── produce/                 # /social-flow:produce — video build + per-platform text
-│   │   └── references/          #   build-reel.sh · video-template.html · QA harness
-│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research→authoring→video unattended (human gates replaced by nine machine gates, economy tier default)
+│   │   └── references/          #   build-reel.sh · bgm-bed.sh · bgm-scoring.md · video-template.html · QA harness
+│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research→authoring→video unattended (human gates replaced by eleven machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
 │   ├── publish/                 # /social-flow:publish — HITL approval, then platform publishing
@@ -333,7 +337,7 @@ social-flow/
 │   ├── brand-reviewer.md        # adversarial review of profile images & intro videos (95/90-point convergence gates)
 │   ├── content-reviewer.md      # adversarial pre-publish verification (P0 gate)
 │   ├── growth-post-reviewer.md  # adversarial review of growth-loop copy (AI tells · context — 95-point gate)
-│   └── storyboard-reviewer.md   # adversarial storyboard review (copy AI tells / per-scene role·context / vocabulary / image fit — 95-point gates)
+│   └── storyboard-reviewer.md   # adversarial storyboard review, 6 modes read once each (copy AI tells / per-scene role·context / vocabulary / camera slots / sound plan / image fit)
 ├── apps/
 │   └── shoot-console/           # macOS SwiftUI recording console for the shooting-script flow (built locally via build-app.sh)
 └── data/                        # content data root (see data/README.md)
@@ -398,8 +402,8 @@ out, and the markers are per-platform (YouTube `queue: ready` · Instagram
 consume the marker and the other platform would never publish. Two things set
 markers: a human, or — when the plan enables `autoproduce` — the loop itself
 authoring one episode when the queue runs dry. Auto-authored episodes become `ready`
-only after passing all nine machine gates (fact verification · style · the
-storyboard-reviewer copy/per-scene/vocabulary/image gates · build report ·
+only after passing all eleven machine gates (fact verification · style · the six
+storyboard-reviewer reads for copy/per-scene/vocabulary/camera/sound/images · build report ·
 content-reviewer P0 · cost cap); failing any one leaves them `hold`, waiting for a
 human. grow-instagram publishes only with a public HTTPS URL, and with no hosting
 configured it disables both publishing and auto-authoring (the loop won't start
@@ -553,9 +557,9 @@ external contract to document, so their evidence lives in research notes instead
 ## Safety contract (summary)
 
 - **Double HITL gate** — storyboard approval (before production) + publish approval
-  (before going public). No publish tool call without approval. Adversarial
-  convergence gates (copy and image, 95 points · zero P0 each) stand in front of
-  storyboard approval.
+  (before going public). No publish tool call without approval. Six adversarial
+  reviews run once each in front of storyboard approval; they don't block on a score,
+  so the approval screen is where an unresolved finding gets its human look.
 - **No fact distortion** — time-sensitive values get two independent sources; ranges
   stay ranges.
 - **No cross-post copy-paste** — every platform gets its sentences redesigned.

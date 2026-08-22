@@ -16,6 +16,7 @@ window.THEME = {
   ink:     "#0b1020",          // base dark (background, subtitle outline)
   brand:   "channel name"      // brand wording on the outro
 };
+window.MUSIC = { /* named music cues (§music cues) — omit entirely for one bed all the way through */ };
 window.SCENES = [ /* the shot array — one entry = one shot. Keep the identifier names */ ];
 ```
 
@@ -118,12 +119,13 @@ sequence: "결과"                  // sequence head. Used with beat, the docume
 | `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` — the role |
 | `narration` | ✅ (except `broll`, `outro`) | Segment array `[{tts, sub}, ...]` — one sentence = one segment = one reveal |
 | `visual` | ✅ | The visual plan object (below) |
-| `duration` | recommended | Target seconds — estimated as narration characters / 4.5, capped at 13s |
+| `duration` | recommended | Target seconds — narration characters / 4.5, capped at 13s. A generated-video shot takes its length from what the cut is for instead (§cut length) |
 | `scene` | recommended | Grammar scene number. Same value for the same place and time. Without it the renderer assumes one scene per entry |
 | `sceneSlug` | recommended when `scene` is set | `"place / time"` — e.g. `"salon chair / day"` |
 | `sequence` | optional | Sequence name. Only when one episode has two purposes |
 | `beat` | optional | `hook` \| `hooking` \| `result` \| `body` \| `cta` — the playback role. See §playback order above |
 | `shot` | recommended | `{ size, info }` — below |
+| `sound` | optional | `{ cue, drop, sfx }` — what the audience hears under this shot (§music cues). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
 
 ```js
 shot: {
@@ -209,7 +211,8 @@ visual: {
   video: null,                       // points only: the motion-background shot marker (§motion background) — omitted for stills
   clip: null,                        // quote only: the speech clip plan (below)
   slide: null,                       // long-form slide scene (§slide scenes) — { file, plan, labels }
-  character: null                    // the channel's shared character id — resolve-asset.py character <id>
+  character: null,                   // who is on screen (§character reference) — "<id>" | ["<id>", …] | null
+  camera: null                       // the four camera slots (§camera) — required on every generated-video shot
 }
 ```
 
@@ -500,6 +503,163 @@ subtitles already do that.
 - No synthesizing a real person's face or voice. Characters only in styles that can't be
   mistaken for live action.
 
+### Camera — the four slots (`visual.camera`)
+
+```js
+camera: {
+  movement: "dolly in",                                   // what the camera does — `static` is a choice, not an empty slot
+  speed: "very slow",                                     // how fast it does it
+  framing: "chest-up, eyes on the upper third",           // what is held while it moves
+  end: "subject centred, hands entering the lower third"  // where it stops
+}
+```
+
+**Required on every shot that becomes a generated video** — `broll`, a motion-background scene
+(`visual.video`), and a `quote` speech clip (`visual.clip`). Optional on a still, where it says
+which way the builder's Ken Burns should drift. The reason it is written here and not at
+generation time: **the four values are settled before the first call that costs money.** produce
+assembles the prompt out of these slots, it doesn't invent them.
+
+`end` is the slot that gets dropped. Leave it empty and nothing tells the model where to stop, so
+the last second drifts. It is also the slot our own vendor reading asks for — Seedance's camera
+sub-formula is `opening frame composition + move + closing frame composition`, and `end` is that
+closing composition.
+
+**produce assembles them in this order** — `framing`, then `speed movement`, then `ending on end`:
+
+> `chest-up on the subject, very slow dolly in, ending with the subject centred at mid-frame`
+
+The rules that applied to the old one-string camera line now apply per slot:
+
+- **Vendor vocabulary only** — `dolly in` not `push in`, `arc shot` not `orbit`. `push` appears 0
+  times in the canonical Veo text, and without `ARK_API_KEY` a motion background falls back to
+  Veo (§motion background).
+- **`movement` holds one move.** Two is the ceiling on the default 1.5 Pro, and the
+  one-move-per-cut rule is Seedance 2.0's alone — write a second move only with a reason. On a
+  deliberate long take (10s+) it is one, no exception.
+- **No seconds in any slot** — length is `duration` (§cut length).
+- **No exclusions in any slot** — that is Veo's `negativePrompt` argument, and for Seedance it
+  means re-describing the scene so the thing doesn't appear (§motion background).
+- **Don't pick a move to carry an emotion.** Moves changing emotion has no empirical support
+  (p=.84, camera research §07) — tone comes from `bgPrompt` and the props. For most body shots
+  `movement: "static"` is the honest answer, and the camera research says the same thing: spend
+  moves on openings and transitions, where the character isn't set yet.
+
+`shot.size` is a different axis and stays where it is — `size` is where the frame cuts the
+person, `camera` is what the camera does and where it stops.
+
+### Character reference (`visual.character`)
+
+```js
+character: "claude"                  // one character on screen
+character: ["mouse", "claude"]       // two — array order is reference weight, so the shot's subject goes first
+character: null                      // nobody from the channel cast is on screen
+```
+
+The id is the channel's shared character. `resolve-asset.py <channel dir> character <id>` turns it
+into `assets/characters/<id>/`, and the panels inside that directory are the reference set
+(`video-model-selection.md` §6). The storyboard says **who is on screen**; which panels go into
+the call is produce's decision, because that depends on the framing.
+
+Writing it buys three things — produce attaches the reference images without re-reading the scene
+text, a veo ban attached to a character (a mouthless face: the model invents a mouth, measured 5
+times) resolves per cut instead of per episode, and storyboard.html can show the cast with the
+shots each one appears in.
+
+### Clip audio (`visual.audio`)
+
+```js
+audio: "quiet studio room tone with a faint fabric rustle, no music, no speech"
+```
+
+One sentence saying what that clip sounds like. **Write it on every shot that becomes a generated
+video** — the same three the camera slots cover (`broll`, a motion-background scene, a `quote`
+speech clip). produce appends it to the call as `Audio: <this sentence>.`
+
+Leave it out and the engine decides for itself, which on Veo means invented speech and invented
+music arriving under a line the TTS is already speaking. Naming the room tone and saying what
+isn't there is what keeps that stretch clear for the voice — and unlike picture prompts, where a
+negative noun in the body draws the thing (measured 4 out of 4), the exclusion belongs **in this
+sentence**: `no music, no speech` is the established wording (produce §b-roll).
+
+What to write depends on whether the clip's own sound survives the build:
+
+| The shot | What its audio does | What to write |
+|---|---|---|
+| `broll` | kept — `narration` is empty and the clip's own sound plays (absolute rule 9) | what the viewer should hear: room tone, one texture, no speech |
+| motion background (`visual.video`) | discarded — TTS, subtitles and BGM carry on over it | write it anyway; the model composes a calmer clip when it isn't left to invent a soundtrack |
+| `quote` speech clip | the character speaking is the point | what is heard besides the voice — the room, and nothing else |
+
+### Music cues (`window.MUSIC` · `sound`)
+
+One bed under the whole episode is the default and a perfectly good design. This is for when the
+episode changes what it is doing and the music should say so.
+
+```js
+window.MUSIC = {
+  base:  { prompt: "warm low strings under a calm explanation, leaves space for a spoken voiceover, no melody in the vocal frequency range", bpm: 88 },
+  tense: { prompt: "same strings with a low pulsing bass, tighter, still no melody in the vocal range", bpm: 120 },
+  close: { asset: "reflect" }            // a channel asset instead of a generated cue
+};
+```
+
+Each key is a cue name. `prompt` goes to `music_generate`; `bpm`, `scale` and `seed` are optional
+and passed through (`seed` is the only way to get the same cue twice). `asset` skips generation and
+uses a channel bed instead — the id `resolve-asset.py <channel dir> bgm <id>` resolves, which is
+`assets/audio/bgm/<id>.wav`. produce works out how long each cue has to run from the shots that use
+it; don't write a length.
+
+**`base` is optional.** With only `{ tense: … }` the episode still opens on the channel's shared
+bed and switches at the first shot that asks for `tense`.
+
+Per shot:
+
+```js
+sound: {
+  cue:  "tense",    // the bed changes to this cue here and stays until another shot changes it
+  drop: false,      // true = the bed goes silent under this shot (0.30s ramp, not a cut)
+  sfx:  "whoosh"    // a shared sfx asset id, heard at the shot's first frame
+}
+```
+
+- **`cue` names a key in `window.MUSIC`.** A name that isn't there is an error, not a new cue.
+- **Omitting `sound` carries the previous bed.** Only write a cue where it changes.
+- **Don't put `cue` and `drop` on the same shot** — the incoming cue would fade in muted, so the
+  change lands on the following shot, where nobody planned it.
+- **A drop is louder than a hit.** Spend it on the one line the episode is about. Two drops in a
+  45-second short and neither reads.
+- **Change the cue where the episode turns**, not on a timer — out of the hook into the body, into
+  the close. Usually once in a short, often not at all.
+
+Where the numbers under all this come from, and which of them are evidence and which are our own
+practice: [bgm-scoring.md](../../produce/references/bgm-scoring.md). The short version — the bed
+is set 10 LU under the measured narration and the build stops below 4 LU, and those two are the
+only figures here with published listening tests behind them. Where a cue changes is craft.
+
+### Cut length (`duration`) — decided by what the cut is for
+
+A shot carrying narration takes its length from the speech — narration characters / 4.5, capped at
+13s. That math is fixed; TTS, reveals and subtitles are synced to it.
+
+**A generated video clip is a different question.** Its length is a design choice, and the model
+fills whatever time it is handed: ask 8 seconds for a 4-second idea and it invents the other 4 —
+the subject drifts, the middle goes dead. Pick the length from what the cut is for:
+
+| What the cut is for | Length |
+|---|---|
+| Object close-up, insert | 3–4s |
+| A person moving, an action | 5–7s |
+| A face carrying emotion, a line of speech | 7–10s |
+| A shot establishing the space | 5–8s |
+| A deliberate long take | 10s+ — and `camera.movement` stays one move |
+
+**Ask for the length you will use.** Seedance makes only the seconds you request and bills them,
+so `durationSeconds` is the used length. Veo is the exception — its reference lane is pinned to 8s,
+so there the extra seconds get made and produce trims them (§broll).
+
+The existing caps stand: a motion background stays ≤8s (one playthrough covers the scene), and a
+b-roll's used length is 4s by default.
+
 ### Motion background (`visual.video`) — a scene background from image to video
 
 ```js
@@ -513,9 +673,11 @@ subtitles already do that.
     bg: "images/scene-3.png",         // the veo parameter — gpt_image high · the §broll source clause (photorealistic people) applies as-is
     bgPrompt: "…",
     video: {
-      prompt: "very slow dolly in, hair swaying gently, nearly static camera",  // English motion only
+      prompt: "chest-up framing, very slow dolly in, ending centred; hair swaying gently",
+                                           // English motion only — assembled from visual.camera (§camera)
       clip: ".work/motion/motion-i2.mp4"   // produce output record — motion-i<scene index>.mp4
-    }
+    },
+    camera: { movement: "dolly in", speed: "very slow", framing: "chest-up", end: "subject centred" }
   }
 }
 ```
@@ -532,10 +694,11 @@ the source and, if so, whether it's an adult**. Faces that read as minors are bl
 image lane, and Seedance 2.x refuses photorealistic faces outright, so filtering at the planning
 stage avoids redrawing the picture.
 
-**Write the `prompt` sentence in Seedance grammar** — that's the default engine. Don't write the
-camera as a single verb; write it as a **stretch**: `opening frame composition + move + closing
-frame composition`. The `very slow dolly in … nearly static camera` in the example above is that
-form. The reason an approaching move is written as `dolly in` is that **this sentence may also
+**Write the `prompt` sentence in Seedance grammar** — that's the default engine. The camera part
+of it is not written by hand here: it is assembled from the four `visual.camera` slots (§camera),
+which is exactly Seedance's `opening frame composition + move + closing frame composition`. What
+the `prompt` adds on top is the subject motion — what moves in the picture while the camera does
+its one thing. The reason an approaching move is written as `dolly in` is that **this sentence may also
 go to Veo** — without `ARK_API_KEY` the motion background falls back to `veo_img2video`, and the
 word `push` appears 0 times in the canonical Veo text. Seedance's own vendor vocabulary is
 Chinese (`推`), so neither is confirmed in English, and `dolly in` satisfies both paths. **This
@@ -614,14 +777,17 @@ That slot is the `negativePrompt` argument only when going to Veo). Write the se
   type: "broll",
   after: 0,                          // spliced in after this scene index (the opening b-roll goes after the cover = 0)
   narration: [],                     // has to be empty — produce absolute rule 9
-  duration: 4,                       // ★used length★ (4 by default, 6 or 8 with a reason) — write the reason in the comment
-                                     // generation is fixed at 1080p and 8s (an API constraint) — produce trims the front and uses that
+  duration: 4,                       // ★used length★ — from what the cut is for (§cut length); write the reason in the comment
+                                     // Veo: generation is pinned to 8s, so produce trims the front. Seedance: this is what gets requested
                                      // don't stretch it with a palindrome (the audio plays backwards)
   visual: {
     picture: "ai-video", overlay: "none",
     src: "images/scene-1.png",       // the same file as `SCENES[after]`'s visual.bg — absolute rules 8 and 12
     clip: ".work/broll/broll-a0-mixed.mp4",   // the trim + loudnorm + BGM mix (the 8s original is broll-a0.mp4)
-    motion: "very slow dolly in, nearly static camera",   // the veo call — not push-in
+    camera: {                                 // §camera — produce assembles the call sentence from these four
+      movement: "dolly in", speed: "very slow",
+      framing: "chest-up on the subject", end: "subject centred at mid-frame"
+    },
     audio: "quiet studio room tone with a faint fabric rustle, no music, no speech"
   }
 }
@@ -863,7 +1029,7 @@ throws away slides you already made — the same reason as §5 images, except he
 is authoring time rather than money.
 
 - A slide scene has no `bg` or `bgPrompt` — it drops out of §5 image generation and the §5.5
-  image loop, and storyboard-reviewer's image mode doesn't treat its missing `scene-N.png` as
+  image review, and storyboard-reviewer's image mode doesn't treat its missing `scene-N.png` as
   a defect.
 - **Reveal groups are 1:1 with narration segments** by default, and using sub-reveals (`A|B`)
   makes more groups than segments — the same contract as video-template, so produce's state
@@ -952,6 +1118,10 @@ strip says no violations.
 - [ ] **On-screen text doesn't duplicate the sound** — no caption or title summarizing what the
       narration says. No text written to fill a slot (§on-screen text only when needed). Empty
       `title`, `footnote`, and `bullets` are normal, not defects
+- [ ] **Sound plan** (§music cues) — every `sound.cue` names a key that exists in `window.MUSIC`,
+      no shot carries `cue` and `drop` together, and the drop count is what the episode can carry
+      (one in a short). `window.MUSIC` missing entirely is a valid single-bed episode, not a gap.
+      Every shot that becomes a generated video has `visual.audio` (§clip audio)
 - [ ] THEME matches profile.md §3
 - [ ] Generated video (`broll` + `visual.video` combined) is **at most 2** (§motion background is
       the source of truth) · content-reviewer plan mode PASS recorded
@@ -961,3 +1131,12 @@ strip says no violations.
       comment giving the reason (not stretched with a palindrome)
 - [ ] If you placed a `visual.video` scene — points type · `duration` ≤ 8 · `narration[].img`
       unused · `prompt` is English motion only · the source `bg` is a real PNG (gpt_image high)
+- [ ] **Every generated-video shot has all four `visual.camera` slots filled** (§camera) — b-roll,
+      motion background, and quote speech clips. An empty `end` is the defect this checks for;
+      `movement: "static"` is a filled slot, not an empty one
+- [ ] **A generated clip's `duration` matches what the cut is for** (§cut length) — an insert
+      isn't 8 seconds because 8 was the default
+- [ ] **`visual.character` names whoever from the channel cast is on screen** (§character
+      reference) — the subject of the shot first in the array
+- [ ] **Every generated-video shot says what it sounds like in `visual.audio`** (§clip audio) —
+      left blank, the engine invents speech under the narration

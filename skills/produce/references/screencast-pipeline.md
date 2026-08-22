@@ -78,7 +78,9 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · reel-sub
   (long titles auto-shrink through tight1–3, remainder exposed).
 - BGM is the same as produce §3 — copy the file that `resolve-asset.py data/<channel> bgm
   default` returns, and only when there is none, generate a `music_generate` instrumental. It
-  sits under the user's own voice, so the builder's default volume is low (BGM_VOL 0.22).
+  sits under a live voice, which swings more than TTS, so the builder puts it 12 LU under the
+  measured voice rather than the 10 a TTS episode gets (`BGM_SEP`). Cues aren't taken here — a
+  screencast is one continuous take, so it gets one bed.
 - The outro is the **same shared asset** as the TTS pipeline
   (`resolve-asset.py data/<channel> outro <platform|default>` —
   default `assets/outro/default.mp4`; the legacy `assets/outro.mp4` is also found),

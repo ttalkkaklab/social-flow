@@ -1,0 +1,42 @@
+{
+  "name": "social-flow",
+  "version": "0.29.0",
+  "description": "Plan, produce, review, and publish channel-based social content for Threads, Instagram, Facebook, and YouTube.",
+  "author": {
+    "name": "Zeans",
+    "email": "zeans@astratech.vn",
+    "url": "https://github.com/ttalkkaklab"
+  },
+  "homepage": "https://github.com/ttalkkaklab/social-flow",
+  "repository": "https://github.com/ttalkkaklab/social-flow",
+  "license": "Apache-2.0",
+  "keywords": [
+    "social-media",
+    "short-form-video",
+    "youtube",
+    "instagram",
+    "threads",
+    "storyboard",
+    "publishing"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./codex.mcp.json",
+  "interface": {
+    "displayName": "Social Flow",
+    "shortDescription": "Create, review, and publish social content",
+    "longDescription": "A channel-based content pipeline for research, storyboards, short-form and long-form production, adversarial review, publishing, and growth workflows across major social platforms.",
+    "developerName": "Zeans",
+    "category": "Marketing",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/ttalkkaklab/social-flow",
+    "defaultPrompt": [
+      "Create a social content plan for my channel.",
+      "Turn this topic into a reviewed short-form video.",
+      "Review my latest social content before publishing."
+    ]
+  }
+}

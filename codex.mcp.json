@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "social-flow": {
+      "command": "node",
+      "args": [
+        "./server/dist/bundle.js"
+      ],
+      "cwd": ".",
+      "env_vars": [
+        "SERPAPI_API_KEY",
+        "NAVER_CLIENT_ID",
+        "NAVER_CLIENT_SECRET",
+        "DATA_GO_KR_API_KEY",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+        "OPENAI_API_KEY",
+        "ARK_API_KEY",
+        "ARK_BASE_URL",
+        "SUNO_API_KEY",
+        "SUNO_BASE_URL",
+        "ELEVENLABS_API_KEY",
+        "ELEVENLABS_BASE_URL",
+        "SOCIAL_FLOW_TOOLS",
+        "SOCIAL_FLOW_DISABLE_TOOLS",
+        "SOCIAL_FLOW_TOOL_FLAGS",
+        "SNS_TOKEN_DIR",
+        "THREADS_TOKEN_FILE",
+        "INSTAGRAM_TOKEN_FILE",
+        "FACEBOOK_PAGE_TOKEN_FILE",
+        "YOUTUBE_OAUTH_FILE",
+        "SUPERTONIC_PYTHON",
+        "MFLUX_ZIMAGE_BIN",
+        "QWEN3_ASR_BIN"
+      ]
+    }
+  }
+}

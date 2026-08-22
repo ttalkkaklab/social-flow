@@ -34,7 +34,11 @@
 #                         start to end, like a typing card. "@video.mp4::overlay.png" works with an overlay
 #                         TTS-script = for char count/proportional fallback (Korean phonetic spelling) /
 #                         subtitle-display = for the screen (numbers/units as written)
-#   <workdir>/bgm.wav   : background music (loops if shorter than the feature)
+#   <workdir>/bgm.wav   : background music — the bed the episode opens on. Shorter than the
+#                         feature is fine; it gets crossfaded onto itself, not butt-joined
+#   <workdir>/bgm.tsv   : (optional) idx <TAB> audio-file — a music cue. The bed changes to this
+#                         file at card idx and stays until the next row. A row for card 1 replaces
+#                         bgm.wav as the opening bed. Cue changes crossfade over BGM_CUE_XF
 #   <workdir>/sfx.tsv   : (optional) idx <TAB> seg <TAB> audio-file <TAB> bgm(on|off)
 #                         A sound heard only during that seg, plus BGM gating. The audio file can be
 #                         wav or mp4 (a video contributes its own sound); it can be empty with just
@@ -78,7 +82,11 @@ MAX_DUR=${MAX_DUR:-13.0}           # warn when exceeded (signal to shorten the s
 RATE_TOL=${RATE_TOL:-0.05}
 ATEMPO_MIN=${ATEMPO_MIN:-0.88}; ATEMPO_MAX=${ATEMPO_MAX:-1.18}
 RATE_LO=${RATE_LO:-3.2}; RATE_HI=${RATE_HI:-6.2}
-BGM_VOL=${BGM_VOL:-0.28}
+BGM_SEP=${BGM_SEP:-10}             # LU the bed sits under the measured speech loudness (see bgm-scoring.md)
+BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # below this the build stops — the music is competing with the voice
+BGM_LOOP_XF=${BGM_LOOP_XF:-2.0}    # crossfade when a cue is shorter than its span
+BGM_CUE_XF=${BGM_CUE_XF:-2.0}      # crossfade between two cues (bgm.tsv)
+export BGM_LOOP_XF BGM_CUE_XF
 DUCK_RELEASE=${DUCK_RELEASE:-250}
 SFX_VOL=${SFX_VOL:-0.85}           # per-segment sfx volume (sfx.tsv)
 BGM_GATE_R=${BGM_GATE_R:-0.30}     # ramp around BGM-gated spans — a hard cut sounds chopped
@@ -262,8 +270,9 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # A filmed card (sync) gets no margins — with pre-roll the picture runs from 0s while the sound alone lags 0.4s.
   if [ "$SYNC" -eq 1 ]; then CPRE=0; CPOST=0; CMIN=0; else CPRE=$PRE; CPOST=$POST; CMIN=$MIN_DUR; fi
 
-  # If this card opens a chapter, note its absolute start frame — TOTF doesn't include this card
-  # yet, so it is exactly this card's start. Step 10's bgm.tsv uses the same value.
+  # TOTF doesn't include this card yet, so it is exactly this card's start. Chapter marks and
+  # step 9.5's music cues both key off this one number.
+  printf '%s\t%s\n' "$IDX" "$(awk -v f="$TOTF" -v fps="$FPS" 'BEGIN{printf "%.4f", f/fps}')" >> work/cardstart.tsv
   if [ -n "$CHAPTSV" ]; then
     CHTS=$(awk -F'\t' -v i="$IDX" '$1==i{print $2; exit}' "$CHAPTSV")
     [ -n "$CHTS" ] && printf '%s\t%s\n' "$TOTF" "$CHTS" >> work/chapstart.tsv
@@ -642,6 +651,38 @@ DRIFT=$(awk -v a="$VT" -v b="$NT" 'BEGIN{d=a-b; if(d<0)d=-d; printf "%.4f", d}')
 say "── main part: video ${VT}s / narration ${NT}s / drift ${DRIFT}s"
 awk -v d="$DRIFT" 'BEGIN{exit !(d<=0.002)}' || { say "✗ drift over the 2ms tolerance — build stopped"; exit 1; }
 
+# ── 9.5) The music bed — conditioned, cue-sequenced, seam-free, exactly as long as the feature.
+#   The old mix multiplied whatever file the channel handed over by a fixed 0.28, so the gap
+#   between the voice and the music was whatever that file happened to be: across 11 episodes the
+#   source beds measured -4.2 to +1.0 dBTP. Here the speech is measured first and the bed is set
+#   a stated number of LU under it, which is what makes the gap a decision instead of an accident.
+#   Why the speech is the reference and not a fixed LUFS: the final loudnorm rescales the whole
+#   mix anyway, so only the distance between the two survives to the listener.
+SPEECH_I=$(ffmpeg -hide_banner -nostats -i work/narration.wav -af loudnorm=print_format=json -f null - 2>&1 \
+  | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
+BED_I=$(awk -v s="$SPEECH_I" -v d="$BGM_SEP" 'BEGIN{printf "%.2f", s-d}')
+
+: > work/bgmcue.list
+if [ -f bgm.tsv ]; then
+  while IFS=$'\t' read -r CI CF; do
+    [ -z "${CI:-}" ] && continue
+    CT=$(awk -F'\t' -v i="$CI" '$1==i{print $2; exit}' work/cardstart.tsv)
+    [ -n "$CT" ] || { say "✗ bgm.tsv names card $CI, which isn't in this build"; exit 1; }
+    printf '%s\t%s\n' "$CT" "$CF" >> work/bgmcue.list
+  done < bgm.tsv
+  sort -n -o work/bgmcue.list work/bgmcue.list
+fi
+# Something has to be playing at 0s. Without a cue on card 1, bgm.wav opens the episode.
+CUE0=$(head -1 work/bgmcue.list | cut -f1)
+if [ -z "$CUE0" ] || ! awk -v s="$CUE0" 'BEGIN{exit !(s < 0.001)}'; then
+  { printf '0.0000\tbgm.wav\n'; cat work/bgmcue.list; } > work/bgmcue.tmp
+  mv work/bgmcue.tmp work/bgmcue.list
+fi
+say "── BGM bed: speech ${SPEECH_I} LUFS → bed ${BED_I} LUFS (${BGM_SEP} LU under) · $(wc -l < work/bgmcue.list | tr -d ' ') cue(s)"
+"$HERE/bgm-bed.sh" work/bed.wav "$NT" "$BED_I" work/bgmcue.list > work/bed.log 2>&1 \
+  || { cat work/bed.log; say "✗ the music bed failed to render"; exit 1; }
+while IFS= read -r L; do say "$L"; done < work/bed.log
+
 # ── 10) BGM ducking mix (same as v2) — with sfx.tsv, the sfx track and BGM mute windows go on top
 FOUT=$(awk -v t="$NT" 'BEGIN{printf "%.3f", t-2.2}')
 
@@ -675,16 +716,40 @@ fi
 
 if [ -n "$SFXIN" ]; then VOMIX="[vo_raw][sfxa]amix=inputs=2:duration=first:normalize=0[vo_mix];"
 else VOMIX="[vo_raw]anull[vo_mix];"; fi
-ffmpeg -y -v error -i work/narration.wav -stream_loop -1 -i bgm.wav $SFXIN -filter_complex "
+#      The bed arrives already gained and already the right length, so this stage only shapes it:
+#      head and tail fades, the gate windows, then ducking. bed-ducked.wav is tapped off for the
+#      separation check below — measuring it after the amix would be measuring the voice too.
+ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN -filter_complex "
   [0:a]aformat=channel_layouts=stereo,asplit=2[vo_key][vo_raw];
   ${SFXIN:+[2:a]aformat=channel_layouts=stereo[sfxa];}
   $VOMIX
-  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,volume=$BGM_VOL,
+  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,
        afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=2.2$BGMGATE[bgv];
-  [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=8:attack=20:release=$DUCK_RELEASE:makeup=1[duck];
+  [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=8:attack=20:release=$DUCK_RELEASE:makeup=1,
+       asplit=2[duck][duckqa];
   [vo_mix][duck]amix=inputs=2:duration=first:dropout_transition=0,
        loudnorm=I=-14:TP=-1.0:LRA=11,aresample=48000[out]
-" -map "[out]" -ac 2 -ar 48000 work/mix.wav
+" -map "[out]" -ac 2 -ar 48000 work/mix.wav \
+  -map "[duckqa]" -ac 2 -ar 48000 work/bed-ducked.wav
+
+# 10c) Voice-to-bed separation — the one number that says whether the music is sitting under the
+#      voice or next to it. Listening tests put the preferred commentary-over-music distance at
+#      10 LU or more and treat 4 LU as the floor where speech stops being comfortably above the
+#      background (bgm-scoring.md §1). Measured across the whole timeline, so the un-ducked gaps
+#      are in it too — that makes this reading conservative, never flattering.
+BED_D=$(ffmpeg -hide_banner -nostats -i work/bed-ducked.wav -af loudnorm=print_format=json -f null - 2>&1 \
+  | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
+SEP=$(awk -v s="$SPEECH_I" -v b="$BED_D" 'BEGIN{printf "%.1f", s-b}')
+say "── voice-to-bed separation ${SEP} LU (speech ${SPEECH_I} / ducked bed ${BED_D})"
+if awk -v v="$SEP" -v m="$BGM_SEP_MIN" 'BEGIN{exit !(v < m)}'; then
+  say "✗ separation ${SEP} LU is under the ${BGM_SEP_MIN} LU floor — the bed is competing with the voice"
+  exit 1
+elif awk -v v="$SEP" -v d="$BGM_SEP" 'BEGIN{exit !(v < d)}'; then
+  # Ducking can only widen the gap, so a reading at or under the resting distance means the
+  # sidechain never fired — the key went silent, or the bed reached the mix around it.
+  say "⚠ separation ${SEP} LU is no wider than the ${BGM_SEP} LU resting distance — the ducking isn't firing"
+  WARN=1
+fi
 
 # ── 11) ASS subtitle file — band y≈1380~1560 (a contract with the template's bottom safe zone,
 #      above the IG caption zone)

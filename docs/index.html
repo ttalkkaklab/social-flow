@@ -69,9 +69,9 @@
       <tr><td rowspan="3">소재</td><td><code>topic-scout</code></td><td>지금 시장에서 검증된 유튜브 주제 — 채널 최근 업로드 중앙값 대비 5배. 사람이 보는 화면은 퍼널·배수 막대 HTML, 루프는 md를 읽는다. 여기에 SNS 이슈 절을 덧붙인다(<code>sns_issue_scout</code> — 스레드·X·인스타를 <code>site:</code> 검색으로 훑은 언급 목록이다. 참여량 수치가 없으므로 유튜브 배수 표와 같은 표에 섞지 않는다)</td></tr>
       <tr><td><code>ingest</code></td><td>화면 녹화(+음성)를 타임라인으로 — 웹 조사를 대신하는 소스</td></tr>
       <tr><td><code>datago</code></td><td>공공데이터 조사·수집·시드 기록</td></tr>
-      <tr><td rowspan="3">제작</td><td><code>storyboard</code></td><td>조사 → 씬 설계 → <strong>적대적 수렴 게이트 넷</strong> → 승인. 문안(§4.5)·씬별(§4.6)·어휘(§4.7)를 먼저 통과해야 이미지를 만들고, 만든 이미지를 이미지 게이트(§5.5)가 다시 본다. 넷 다 95점 이상·P0 0건이라야 승인 화면으로 간다(하드캡 5·5·5·3회). 씬 관문 둘은 평균이 아니라 <strong>최저 씬 점수</strong>로 판정한다 — 평균은 무너진 한 씬을 잘 나온 씬들 뒤에 숨겨 준다</td></tr>
+      <tr><td rowspan="3">제작</td><td><code>storyboard</code></td><td>조사 → 씬 설계 → <strong>적대적 검증 여섯, 각 1회</strong> → 승인. 문안(§4.5)·씬별(§4.6)·어휘(§4.7)·카메라(§4.8)·사운드(§4.9)를 읽고 나서 이미지를 만들고, 만든 이미지를 이미지 검증(§5.5)이 본다. 통과 점수는 없다 — 지적을 한 번 반영하고 넘어가며, 못 고친 지적은 그대로 승인 화면에 올라간다. 막는 건 사람이다. 씬·어휘·카메라는 평균이 아니라 <strong>최저 점수</strong>를 보고한다 — 평균은 무너진 하나를 잘 나온 것들 뒤에 숨겨 준다</td></tr>
       <tr><td><code>produce</code></td><td>영상 합성과 플랫폼별 텍스트. 포맷은 두 가지다 — 쇼트폼 9:16(1080×1920/30fps·35~75초, 기본값)과 유튜브 롱폼 16:9(1920×1080·8~15분·챕터). 어느 쪽인지는 스토리보드를 쓸 때 정하고, <code>scenes.js</code> 의 <code>window.FORMAT</code> 한 줄이 이후 빌드 상수를 전부 결정한다. 롱폼은 사용자가 직접 찍은 클립과 생성 씬을 한 편에 섞으며, 촬영 씬은 스토리보드가 내주는 촬영 대본(<code>script.md</code>)을 보고 그대로 찍는다</td></tr>
-      <tr><td><code>autoproduce</code></td><td>주제 문자열 하나로 조사부터 빌드까지 무인 관통 — 사람 승인 자리에 기계 게이트 아홉을 세운다</td></tr>
+      <tr><td><code>autoproduce</code></td><td>주제 문자열 하나로 조사부터 빌드까지 무인 관통 — 사람 승인 자리에 기계 게이트 열하나를 세운다</td></tr>
       <tr><td>게시</td><td><code>publish</code></td><td>계정 점검 → 미디어 호스팅 → <strong>HITL 승인</strong> → 게시 → permalink 기록</td></tr>
       <tr><td>운영</td><td><code>grow-threads</code><br><code>grow-youtube</code><br><code>grow-instagram</code><br><code>review-recent</code></td><td>플랜(상시 승인서)을 한 번 승인해 두고 <code>/loop</code> 로 반복하는 자율 성장 루프 1틱 — 댓글 응대·지표 관찰·대화 참여·게시. <code>review-recent</code> 는 최근 5편을 유튜브·인스타로 나눠 퍼널·비교 막대 HTML 로 채점한다</td></tr>
       <tr><td>지식</td><td><code>platform-guide</code></td><td>플랫폼 문법·영상 규격·한국어 문체 규칙의 정본. 다른 스킬이 불러 읽는다</td></tr>
@@ -79,7 +79,7 @@
   </table>
   </div>
   <div class="note">
-    <strong>나가는 글은 전부 게이트를 지난다.</strong> 한국어 텍스트가 생기는 지점마다 <code>check-style.py</code> 가 번역투·상투구·조수 말투를 기계로 잡고, 그 위에서 적대적 리뷰어(<code>storyboard-reviewer</code> · <code>content-reviewer</code> · <code>growth-post-reviewer</code>)가 95점·P0 0건을 요구한다. 검사기가 규칙으로 잡는 층과 사람이 읽어야 느끼는 층이 다르기 때문이다.
+    <strong>나가는 글은 전부 게이트를 지난다.</strong> 한국어 텍스트가 생기는 지점마다 <code>check-style.py</code> 가 번역투·상투구·조수 말투를 기계로 잡고, 그 위에서 적대적 리뷰어(<code>storyboard-reviewer</code> · <code>content-reviewer</code> · <code>growth-post-reviewer</code>)가 한 번 더 읽는다. 나가는 글은 95점·P0 0건을 요구하고, 스토리보드 원고만 1회 읽기로 사람 승인에 맡긴다. 검사기가 규칙으로 잡는 층과 사람이 읽어야 느끼는 층이 다르기 때문이다.
   </div>
 </section>
 

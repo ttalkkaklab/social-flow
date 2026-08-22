@@ -478,7 +478,7 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
       <h3>Write the storyboard <span style="font-weight:400;color:var(--text-soft);font-size:14px">— the longest step</span></h3>
 <pre><code><span class="p">/social-flow:storyboard</span> money "July FX swings"</code></pre>
       <p>It asks about format first — 9:16 short-form by default, 16:9 if you want a chaptered YouTube long-form. Then it researches, splits the scenes, writes the lines, and generates an image per scene. The result is a <code>storyboard.html</code> you can open in a browser.</p>
-      <p>Before any of it reaches you, a review agent reads the copy and the images four separate times — whether the sentences sound AI-written, whether each scene does its job, whether the word choice is how people actually talk, and whether each picture matches what its scene says. Anything below the bar gets fixed and read again. <strong>This step taking a while is normal. When it finally asks for a decision, approve it.</strong></p>
+      <p>Before any of it reaches you, a review agent reads the storyboard six separate times, once each — whether the sentences sound AI-written, whether each scene does its job, whether the word choice is how people actually talk, whether the camera knows where to move and where to stop, what the episode will sound like, and whether each picture matches what its scene says. Findings get applied once, and anything left over shows up on the approval screen. <strong>This step taking a while is normal. When it finally asks for a decision, approve it.</strong></p>
     </div>
   </div>
 
@@ -503,7 +503,7 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
   </div>
 
   <div class="note">
-    <strong>If you want it in one shot</strong> — <code>/social-flow:autoproduce money "July FX swings"</code> drives steps 2 and 3 with no human check-in. Nine machine gates stand where the approvals were, and any one of them failing hands the episode back to a person. The default economy tier makes no generated-video calls at all, so an episode costs roughly <strong>$0.26–0.29</strong> (capped at $0.30).
+    <strong>If you want it in one shot</strong> — <code>/social-flow:autoproduce money "July FX swings"</code> drives steps 2 and 3 with no human check-in. Eleven machine gates stand where the approvals were, and any one of them failing hands the episode back to a person. The default economy tier makes no generated-video calls at all, so an episode costs roughly <strong>$0.26–0.29</strong> (capped at $0.30).
   </div>
 </section>
 
@@ -611,8 +611,8 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API
   </div>
 
   <div class="faq">
-    <h3>The storyboard keeps getting rewritten</h3>
-    <p>The review agent is fixing what fell short and reading it again. It doesn't loop forever — once it hits the set number of rounds, it shows you the best version along with the findings it couldn't resolve and waits for your call.</p>
+    <h3>The storyboard step is taking a while</h3>
+    <p>The review agent is reading it six times and generating the images. It doesn't read the same thing twice — once the six are done it shows you the findings it couldn't resolve and waits for your call.</p>
   </div>
 </section>
 
