@@ -27,7 +27,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
   "mcp__social-flow__serp_news_search", "mcp__social-flow__youtube_topic_scout",
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img",
-  "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate",
+  "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue",
   "mcp__social-flow__tts_list_voices",
   "mcp__social-flow__veo_img2video",
   "mcp__social-flow__music_generate_clip"]
