@@ -19,7 +19,7 @@
   <div class="meta">
     <span>플러그인 <strong>v0.23.0</strong></span>
     <span>스킬 <strong>18종</strong></span>
-    <span>MCP 툴 <strong>51종</strong></span>
+    <span>MCP 툴 <strong>54종</strong></span>
     <span>갱신 <strong>2026-08-18</strong></span>
   </div>
   <div class="meta">
@@ -50,7 +50,7 @@
   <h2>API 키 — 어디까지 넣고 멈출지</h2>
   <p>키는 서로 독립인 두 묶음이다. <strong>어느 한쪽에서 멈춰도 파이프라인은 돈다.</strong></p>
   <p><strong>제작 키.</strong> <code>OPENAI_API_KEY</code> 는 커버와 글자가 들어가는 프레임을 그리고 <code>GEMINI_API_KEY</code> 는 생성 영상 클립·연기 나레이션·BGM 을 맡는다. 엄밀히는 둘 다 선택이다 — 씬 배경은 온디바이스 <code>image_local_generate</code>(Z-Image Turbo, 애플 실리콘), 나레이션은 온디바이스 <code>tts_local_generate</code>(Supertonic 3)가 기본 경로라 키 없이도 영상 한 편이 나온다. 다만 <code>OPENAI_API_KEY</code> 가 없으면 글자가 들어간 프레임을 포기해야 한다(로컬 이미지 생성은 한글 자소를 깨뜨린다). <code>GEMINI_API_KEY</code> 가 없으면 움직이는 컷과 음악이 빠진다. 조사용 키(<code>SERPAPI_API_KEY</code>·네이버 한 쌍)도 선택이며, 없으면 스토리보드가 WebSearch 로 조사한다.</p>
-  <p><strong>플랫폼 자격증명(스레드·인스타그램·유튜브·페이스북) — 선택.</strong> 넣어 두면 <code>publish</code> 가 내 계정에 바로 올린다. <code>grow-threads</code>·<code>grow-youtube</code>·<code>grow-instagram</code> 은 <code>/loop</code> 로 채널의 하루 운영을 넘겨받는다 — 댓글 응대, 지표 관찰, 키워드 대화 참여, 대기열 채우기, 게시를 init 때 한 번 승인한 상시 승인서 안에서 알아서 한다. 안 넣어도 제작까지는 그대로 쓴다. <code>produce</code> 가 완성 영상과 플랫폼별 텍스트를 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주므로 그 파일을 손으로 올리면 된다. 이때는 게시·인사이트 툴 아홉이 목록에 뜨지 않아 <code>tools/list</code> 가 50종 대신 41종을 보여 준다. 플랫폼별로 따로 걸리는 문제라 전부 아니면 전무가 아니다. 나중에 토큰을 추가해도 서버를 다시 띄울 필요가 없다.</p>
+  <p><strong>플랫폼 자격증명(스레드·인스타그램·유튜브·페이스북) — 선택.</strong> 넣어 두면 <code>publish</code> 가 내 계정에 바로 올린다. <code>grow-threads</code>·<code>grow-youtube</code>·<code>grow-instagram</code> 은 <code>/loop</code> 로 채널의 하루 운영을 넘겨받는다 — 댓글 응대, 지표 관찰, 키워드 대화 참여, 대기열 채우기, 게시를 init 때 한 번 승인한 상시 승인서 안에서 알아서 한다. 안 넣어도 제작까지는 그대로 쓴다. <code>produce</code> 가 완성 영상과 플랫폼별 텍스트를 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 써 주므로 그 파일을 손으로 올리면 된다. 이때는 게시·인사이트 툴 아홉이 목록에 뜨지 않아 <code>tools/list</code> 가 54종 대신 45종을 보여 준다. 플랫폼별로 따로 걸리는 문제라 전부 아니면 전무가 아니다. 나중에 토큰을 추가해도 서버를 다시 띄울 필요가 없다.</p>
   <div class="note">
     변수 이름·기본값·자격증명 파일 규약의 정본은 <a href="../README.md">README.md</a> 다. 실제로 넣는 순서는 <a href="guides/getting-started/index.html">시작하기 — 설치부터 첫 영상까지</a>가 안내한다.
   </div>
@@ -89,7 +89,7 @@
   <div class="cards">
     <a class="card" href="api-reference/index.html">
       <h3>API 레퍼런스 허브 →</h3>
-      <p>외부 API 13종 인벤토리와 로컬 엔진 3종, 자격증명 매트릭스, 툴 51종 ↔ API 매핑표.</p>
+      <p>외부 API 13종 인벤토리와 로컬 엔진 3종, 자격증명 매트릭스, 툴 54종 ↔ API 매핑표.</p>
     </a>
     <a class="card" href="api-reference/tool-audit.html">
       <h3>툴 품질 감사 리포트 →</h3>
