@@ -282,7 +282,7 @@ with a 2-round cap (falling short halts authoring).
 social-flow/
 ├── .claude-plugin/plugin.json   # plugin manifest
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 51 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 54 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -298,6 +298,7 @@ social-flow/
 │       ├── seedance-client.ts   # Seedance — t2v·i2v·reference (BytePlus ModelArk)
 │       ├── tts-client.ts        # Gemini TTS — single speaker + 2-speaker dialogue
 │       ├── supertonic-client.ts # Supertonic 3 on-device TTS
+│       ├── elevenlabs-client.ts # ElevenLabs TTS — single voice · multi-voice dialogue · voice list (REST)
 │       ├── music-client.ts      # Lyria — 30s clips (batch) + variable length (streaming)
 │       └── media-utils.ts       # path validation · base64 saves · PCM→WAV utils
 ├── skills/
@@ -339,7 +340,7 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (51 tools)
+## MCP tool surface (54 tools)
 
 **`tools/list` does not show all 50.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
@@ -368,6 +369,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |
 | Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |
+| Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (ELEVENLABS_API_KEY — the paid third lane: inline audio-tag acting on eleven_v3, text-to-dialogue with **up to 10 voices in one request**, per-character timestamps for subtitle sync, any cloned or Voice Library voice. Saves mono 24kHz wav by default, so the builder reads it like the Gemini lane. API rate $0.10 per 1,000 characters on v2·v3, $0.05 on flash and v3 conversational, the same on every plan; the Free tier is non-commercial) |
 | Speech recognition | `stt_local_transcribe` | Qwen3-ASR on-device via mlx-qwen3-asr/MLX (**no API key, no network, no billing — the default Korean STT**. Needs Apple Silicon + `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"`; the first call downloads ~3.4GB of weights. ingest runs the same engine and falls back to whisper.cpp without it) |
 | Music generation | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip (fixed 30s mp3 — the default BGM path) · Lyria RealTime (5–300s variable wav 48kHz, seed reproducibility). `GEMINI_API_KEY` |
 | Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
@@ -405,9 +407,9 @@ human. grow-instagram publishes only with a public HTTPS URL, and with no hostin
 configured it disables both publishing and auto-authoring (the loop won't start
 tunnels, and it won't spend money making a video with no way out).
 
-All 18 generation tools run **inside this plugin — no external MCP server required**.
+All 21 generation tools run **inside this plugin — no external MCP server required**.
 Two keys cover the hosted ones: OPENAI_API_KEY for images, GEMINI_API_KEY for
-video/voice/music (Seedance adds ARK_API_KEY). Two of them —
+video/voice/music (Seedance adds ARK_API_KEY, ElevenLabs adds ELEVENLABS_API_KEY). Two of them —
 `image_local_generate` and `tts_local_generate` — run on-device and need no key at
 all.
 
@@ -422,6 +424,17 @@ Findings from porting the voice/music modules:
 - **The two engines differ in sample rate — local 44.1kHz, Gemini 24kHz.** Mixing
   them in one video needs resampling. `tts_local_generate` returns audio duration in
   its response, so scene-length checks don't need a separate ffprobe call.
+- **ElevenLabs is the third speech lane, opt-in per channel** (`engine: elevenlabs` in
+  profile §2) — for acted cuts with inline audio tags (eleven_v3), scenes with 3+
+  speakers (`tts_elevenlabs_dialogue`, one request instead of per-speaker stitching),
+  and subtitle timing (`timestamps: true` writes per-character start/end seconds).
+  Measured against the live API: `output_format` is a query parameter (in the body it
+  is silently ignored); the default `wav_24000` comes back as a real RIFF WAV at the
+  Gemini spec, so **never pass an mp3 format for narration** — build-reel.sh reads any
+  non-RIFF file as raw PCM; `normalized_alignment` romanizes Korean, so the sidecar's
+  `alignment` is the one to read; text-to-dialogue runs on eleven_v3 only. Background:
+  [ElevenLabs API research](docs/research/2026-08-22-elevenlabs-tts-api/index.html) (Korean) ·
+  [API reference](docs/api-reference/elevenlabs-tts.html).
 - **The default BGM path is `music_generate_clip`** (Lyria 3, fixed 30s, ~$0.04 per
   clip). Use the `music_generate` family only when you need exact length
   (narration-fitted) or seed reproducibility.
@@ -447,6 +460,8 @@ explicit error and everything else works.
 | `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — the second video engine. Dreamina Seedance 2.x models additionally require **an account balance over $30 or a resource pack** to activate; 1.5 pro and 1.0 have no such gate. `veo_*` works fine without this key) |
 | `SUNO_API_KEY` | suno_* | — | sunoapi.org API key (https://sunoapi.org/api-key — third-party REST, not Gemini and not an official Suno Inc. API). Unset, `music_*(Lyria)` still works |
 | `SUNO_BASE_URL` | | `https://api.sunoapi.org` | Same-spec self-host or regional mirror. Other vendors use different auth/paths — do not point this there |
+| `ELEVENLABS_API_KEY` | tts_elevenlabs_* | — | ElevenLabs API key (elevenlabs.io/app/settings/api-keys — a restricted key needs the `text_to_speech` permission, plus `voices_read` for `tts_elevenlabs_voices`). Unset, `tts_generate` (Gemini) and `tts_local_generate` still work |
+| `ELEVENLABS_BASE_URL` | | `https://api.elevenlabs.io` | Same-spec proxy or the EU residency host (`api.eu.residency.elevenlabs.io`). Normally leave it alone |
 | `ARK_BASE_URL` | | `https://ark.ap-southeast.bytepluses.com/api/v3` | ModelArk region endpoint. The video models only exist in ap-southeast-1, so normally leave it alone |
 | `SUPERTONIC_PYTHON` | | `python3` | Python interpreter for local TTS. Point it at your virtualenv if you used one (e.g. `~/venvs/tts/bin/python`). No venv auto-discovery — quietly picking up a different environment per repo and changing the voice is exactly the accident this avoids |
 | `QWEN3_ASR_BIN` | | `~/.local/bin/mlx-qwen3-asr` | Local STT executable. With the default uv tool install location there is nothing to set |
@@ -497,8 +512,9 @@ server calls, and how this implementation honors (or deliberately narrows) each 
 - **[MCP tool spec & best practices](docs/api-reference/mcp-tools.html)** — Tool
   fields, behavior-hint decision table, 7 authoring principles, quality rubric
 - **[Tool quality audit](docs/api-reference/tool-audit.html)** — scores and fixes for
-  the 31 tools as of 2026-07-29 (the 15 added since are unaudited)
+  the 31 tools as of 2026-07-29 (the 23 added since are unaudited)
 - Individual APIs — [Gemini TTS](docs/api-reference/gemini-tts.html) ·
+  [ElevenLabs TTS](docs/api-reference/elevenlabs-tts.html) ·
   [Veo 3.1](docs/api-reference/gemini-veo.html) ·
   [Veo people & reference policy](docs/api-reference/veo-portrait.html) ·
   [Seedance](docs/api-reference/seedance.html) ·

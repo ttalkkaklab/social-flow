@@ -12,7 +12,7 @@ description: >
   into the 9:16 video (cut per scene, focus crop, title overlays, burned subtitles,
   BGM ducking) via build-screencast.sh.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
 ---
 
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
@@ -647,20 +647,30 @@ Don't split a scene into several calls by sentence (the voice varies between cal
 (Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
 so regenerating is free. Only lines that need a style instruction, meaning shots where an
 emotion has to be acted, go to `tts_generate` (Gemini). The local side has no stylePrompt.
+A profile with `engine: elevenlabs` calls `tts_elevenlabs_generate` with the profile's
+voiceId · model · stability (and seed, if pinned) and leaves `outputFormat` at its default
+`wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is.
+**Never pass an mp3_* outputFormat for narration**: build-reel.sh reads any non-RIFF audio
+file as raw PCM and that card becomes noise. A scene with three or more speakers goes to
+`tts_elevenlabs_dialogue` in one call (no per-speaker stitching, no 0.75s gaps). Audio tags
+for acted lines (`[whispers]`, `[laughs]`) only work on `eleven_v3`, and the v3 cap is 5,000
+characters per call — scenes are far under it.
 
 **An existing profile with no engine field counts as `gemini` and keeps the voiceName written
 there.** Don't switch it over just because local is the default — a channel a few episodes in
 would change narrators mid-run. A move to local happens only when the user updates profile §2
 and names the engine.
 
-**Don't mix the two engines inside one video** — 44.1kHz (local) and 24kHz (Gemini) on one
-timeline break the concatenation. If you really have to mix, resample one side before the
-build.
+**Don't mix engines with different sample rates inside one video** — 44.1kHz (local) and
+24kHz (Gemini · ElevenLabs default) on one timeline break the concatenation. Gemini and
+ElevenLabs at `wav_24000` share a spec and can sit on one timeline; local can't join either
+without resampling one side before the build.
 
 **Length check right after generation** — anything over twice chars/4.5 gets one regeneration
-at the same parameters. `tts_local_generate` returns the audio length in its response so you
-can use that value directly, and `tts_generate` gets measured with ffprobe (handling Gemini
-TTS's anomalous output is in `references/pipeline.md` §Three TTS failure modes).
+at the same parameters. `tts_local_generate` and `tts_elevenlabs_generate` return the audio
+length in their responses so you can use that value directly, and `tts_generate` gets measured
+with ffprobe (handling Gemini TTS's anomalous output is in `references/pipeline.md` §Three TTS
+failure modes).
 
 Once the whole scene is out, write a line to the ledger. **The quantity is chars÷1000, not
 the character count** — the unit price is per 1,000 characters, so writing 412 characters as
@@ -673,12 +683,18 @@ for its share.
 printf 'tts.local\t1.840\tproduce: narration, 5 scenes, 1840 chars\n' >> .work/cost-tally.tsv
 # on a Gemini channel, use the key for the model (flash by default)
 printf 'tts.gemini-flash\t1.840\tproduce: narration, 5 scenes, 1840 chars\n' >> .work/cost-tally.tsv
+# on an ElevenLabs channel the quantity is the response's "Character cost" ÷ 1000 (the vendor's
+# metered count — it sits below the raw character count, measured), key by model family
+printf 'tts.elevenlabs\t1.120\tproduce: narration, 5 scenes, character cost 1120\n' >> .work/cost-tally.tsv
+# (flash_v2_5 / v3_conversational → tts.elevenlabs-flash)
 ```
 
 If the local engine fails with "Python interpreter not found" or
 "No module named 'supertonic'", **stop right there and ask the user to install it.** Don't
 quietly switch to Gemini — the video gets made with a changed voice, and the speaker differs
-from episode to episode.
+from episode to episode. The same rule covers ElevenLabs: a key, permission, quota, or
+`output_format_not_allowed` error stops the run and goes to the user — no silent fallback to
+another engine.
 
 ### 6. Write the manifest + build
 

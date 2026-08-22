@@ -159,8 +159,10 @@ judgment**.
   30-second `music_generate_clip` instrumental. An episode where the song is
   the content goes through the human produce path's `suno_generate`.
 - **Emotive acted narration** — mix two TTS engines in one video and the
-  differing sample rates break the concatenation. A topic with shots that need
-  acting is **not automated-authoring material** — a human starts it with
+  differing sample rates break the concatenation (ElevenLabs at its default
+  `wav_24000` matches Gemini's 24kHz and could share a timeline; local 44.1kHz
+  can't join either). A topic with shots that need acting is **not
+  automated-authoring material** — a human starts it with
   `/social-flow:storyboard`.
 - **Quality escalation for points backgrounds** — no text goes into
   backgrounds (negative directives block it, and all screen text is

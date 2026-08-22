@@ -36,6 +36,16 @@ import {
   SUPERTONIC_SAMPLE_RATE,
   SUPERTONIC_VOICE_NAMES,
 } from '../dist/supertonic-client.js';
+import {
+  DEFAULT_ELEVENLABS_MODEL,
+  DEFAULT_ELEVENLABS_OUTPUT_FORMAT,
+  ELEVENLABS_DIALOGUE_MAX_INPUTS,
+  ELEVENLABS_MODELS,
+  ELEVENLABS_OUTPUT_FORMATS,
+  ELEVENLABS_TEXT_NORMALIZATION,
+  ELEVENLABS_VOICE_CATEGORIES,
+  MAX_ELEVENLABS_INPUT_CHARS,
+} from '../dist/elevenlabs-client.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from '../dist/music-client.js';
 import { DEFAULT_VIDEO_MODEL, img2VideoSchema } from '../dist/video-client.js';
 import {
@@ -753,6 +763,17 @@ describe('single-source constants', () => {
     assert.deepEqual(enumOf('tts_local_generate', 'voice'), [...SUPERTONIC_VOICE_NAMES]);
     assert.deepEqual(enumOf('tts_local_generate', 'lang'), [...SUPERTONIC_LANGUAGES]);
   });
+
+  it('ElevenLabs model/format/normalization/category enums match the elevenlabs-client source of truth', () => {
+    assert.deepEqual(enumOf('tts_elevenlabs_generate', 'model'), [...ELEVENLABS_MODELS]);
+    assert.equal(byName.get('tts_elevenlabs_generate').inputSchema.properties.model.default, DEFAULT_ELEVENLABS_MODEL);
+    for (const tool of ['tts_elevenlabs_generate', 'tts_elevenlabs_dialogue']) {
+      assert.deepEqual(enumOf(tool, 'outputFormat'), [...ELEVENLABS_OUTPUT_FORMATS], tool);
+      assert.equal(byName.get(tool).inputSchema.properties.outputFormat.default, DEFAULT_ELEVENLABS_OUTPUT_FORMAT, tool);
+      assert.deepEqual(enumOf(tool, 'applyTextNormalization'), [...ELEVENLABS_TEXT_NORMALIZATION], tool);
+    }
+    assert.deepEqual(enumOf('tts_elevenlabs_voices', 'category'), [...ELEVENLABS_VOICE_CATEGORIES]);
+  });
 });
 
 /**
@@ -804,6 +825,71 @@ describe('speech lane separation (local · Gemini)', () => {
       byName.get('tts_generate').inputSchema.properties.text.maxLength,
       MAX_SUPERTONIC_INPUT_CHARS,
     );
+  });
+});
+
+/**
+ * The third speech lane (ElevenLabs) is paid and account-specific, so its
+ * contract is the opposite of the two above on three points: the voice is a
+ * required account ID with no default, the file that comes back has to be RIFF
+ * for the builder, and the voice listing is a separate keyed tool instead of a
+ * server constant. Lose any of these from the surface and a profile engine
+ * switch breaks at runtime.
+ */
+describe('speech lane separation (ElevenLabs)', () => {
+  const generate = byName.get('tts_elevenlabs_generate');
+  const dialogue = byName.get('tts_elevenlabs_dialogue');
+  const voices = byName.get('tts_elevenlabs_voices');
+
+  it('the three tools exist with the right behavior hints', () => {
+    for (const tool of [generate, dialogue]) {
+      assert.equal(tool.annotations.readOnlyHint, false);
+      assert.equal(tool.annotations.openWorldHint, true, 'paid API — open world');
+      assert.equal(tool.annotations.destructiveHint, false);
+    }
+    assert.equal(voices.annotations.readOnlyHint, true);
+    assert.equal(voices.annotations.openWorldHint, true, 'account listing is an API call, not a constant');
+  });
+
+  it('voiceId is required with no default on both synthesis tools — the premade set rotates', () => {
+    for (const tool of [generate]) {
+      assert.ok(tool.inputSchema.required.includes('voiceId'), `${tool.name} voiceId not required`);
+      assert.ok(!('default' in tool.inputSchema.properties.voiceId), `${tool.name} has a default voice`);
+      assert.match(tool.inputSchema.properties.voiceId.description, /tts_elevenlabs_voices/, 'no pointer to the listing');
+    }
+    const item = dialogue.inputSchema.properties.inputs.items;
+    assert.ok(item.required.includes('voiceId') && item.required.includes('text'));
+    assert.equal(dialogue.inputSchema.properties.inputs.maxItems, ELEVENLABS_DIALOGUE_MAX_INPUTS);
+    assert.ok(!('model' in dialogue.inputSchema.properties), 'dialogue is v3-only — no model argument');
+  });
+
+  it('the output contract names the RIFF default and warns that mp3 is not builder input', () => {
+    for (const tool of [generate, dialogue]) {
+      assert.match(tool.inputSchema.properties.outputFormat.description, /wav_24000/, `${tool.name} default not named`);
+      assert.match(tool.inputSchema.properties.outputFormat.description, /RIFF/, `${tool.name} no RIFF note`);
+      assert.match(tool.inputSchema.properties.outputFormat.description, /wav_44100.*Pro/, `${tool.name} no tier gate note`);
+    }
+    assert.match(generate.description, /RIFF/);
+  });
+
+  it('input caps: schema cap is the default model cap, the v3 cap is spelled out', () => {
+    assert.equal(generate.inputSchema.properties.text.maxLength, MAX_ELEVENLABS_INPUT_CHARS);
+    assert.match(generate.inputSchema.properties.text.description, /5000 on eleven_v3/);
+  });
+
+  it('routes the caller: cost vs the other lanes, dialogue vs single, voices vs tts_list_voices', () => {
+    assert.match(generate.description, /tts_local_generate/, 'no free-lane pointer');
+    assert.match(generate.description, /tts_elevenlabs_dialogue/, 'no dialogue pointer');
+    assert.match(generate.description, /non-commercial/, 'no free-tier license caution');
+    assert.match(dialogue.description, /tts_multi_speaker/, 'no Gemini 2-speaker contrast');
+    assert.match(voices.description, /voices_read/, 'no permission note');
+    assert.match(voices.description, /tts_list_voices/, 'no pointer to the static list');
+    assert.match(byName.get('tts_list_voices').description, /tts_elevenlabs_voices/, 'the static list does not point at the third lane');
+  });
+
+  it('pagination on the voice listing uses the server-wide `limit` name', () => {
+    assert.ok('limit' in voices.inputSchema.properties);
+    assert.equal(voices.inputSchema.properties.limit.maximum, 100);
   });
 });
 
