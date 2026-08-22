@@ -1535,7 +1535,7 @@ Returns: a text block with the saved audio path (WAV by default — the builder 
                 },
                 style: {
                     type: 'number',
-                    description: 'Style exaggeration 0–1 (vendor default 0). Raising it adds expressiveness and latency; 0 is the steady choice for narration. Not an eleven_v3 control (use audio tags there).',
+                    description: 'Style exaggeration 0–1 (vendor default 0). Raising it adds expressiveness and latency; 0 is the steady choice for narration. multilingual_v2 only — the per-model settings schemas give eleven_v3 {stability} and flash_v2_5 {stability, similarity_boost, speed}, so it is ignored there (use audio tags on v3).',
                     minimum: 0,
                     maximum: 1,
                 },
@@ -1547,7 +1547,7 @@ Returns: a text block with the saved audio path (WAV by default — the builder 
                 },
                 useSpeakerBoost: {
                     type: 'boolean',
-                    description: 'Boost similarity to the original speaker (vendor default true). Adds a little latency.',
+                    description: 'Boost similarity to the original speaker (vendor default true). Adds a little latency. multilingual_v2 only — ignored on eleven_v3 and flash_v2_5.',
                 },
                 seed: ELEVENLABS_SEED_PROPERTY,
                 previousText: {

@@ -182,7 +182,8 @@ mcp__social-flow__tts_elevenlabs_generate
   reads Korean with an accent; a Korean speaker's voice from the Voice Library (paid
   plans) reads it natively. Judge by ear before pinning.
 - Pin the **voice_id** (e.g. `JBFqnCBsd6RMkjVDRZzb`), never the display name — names are
-  not unique and the legacy premade set retires 2026-12-31.
+  not unique, the legacy premade set retires 2026-12-31, and accounts created after
+  March 2026 don't get it at all (they see a replacement set — list with `category: premade`).
 - The Free tier's output is non-commercial and needs attribution; a monetized channel
   needs Starter or above. If the listing call fails with `missing_permissions`, the key
   lacks `voices_read` — take the ID from the Voice Library page instead.
