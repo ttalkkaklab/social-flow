@@ -26,10 +26,12 @@ venv/
 .claude/settings.local.json
 .claude/*.local.md
 CLAUDE.local.md
+.grok/
 
 # ── Secrets·credentials (never commit) ────────────────────────────
 .env
 .env.*
+.envrc
 !.env.example
 *.pem
 *.key
