@@ -2,19 +2,19 @@
 
 **What this file owns.** For every shot the storyboard writes down **what the audience should
 feel or understand at that moment** (`shot.feel`), and only then picks the technique that serves
-it — the shot size, the camera height, the move (on generated video), the cut length, and what
-the shot sounds like. This file is the source of truth for that mapping: feel → size · angle ·
-move · length · sound. `../../produce/references/video-model-selection.md` §Camera stays the
-source of truth for **engine vocabulary and routing** (which word each vendor understands, moves
-per cut per model); `scenes-schema.md` owns the field contract. When the three disagree, the
-field contract wins on shape, this file wins on "which technique", the engine file wins on "which
-word".
+it — the shot size, the camera height, the frame space (what is where, which way it faces), the
+move (on generated video), the cut length, and what the shot sounds like. This file is the source
+of truth for that mapping: feel → size · angle · space · move · length · sound.
+`../../produce/references/video-model-selection.md` §Camera stays the source of truth for
+**engine vocabulary and routing** (which word each vendor understands, moves per cut per model);
+`scenes-schema.md` owns the field contract. When the three disagree, the field contract wins on
+shape, this file wins on "which technique", the engine file wins on "which word".
 
 **Why feel comes first.** A camera choice made after the picture is a label, not a decision. The
 lesson the sources repeat in different words: the size is the audience's distance from the
 person, the angle is the seat you put the audience in, and the audience never notices either —
 they just feel "lonely", "he's dangerous", "I'm in the room". Written down first, the feel tells
-you which of the three dials to turn; written down after, it only explains what you already did.
+you which of the four dials to turn; written down after, it only explains what you already did.
 
 **And in short-form the dials serve the drop-off curve, not the look of the panels.** The
 variable the storyboard manages is stop · hold · satisfy · act (scenes-schema §playback order)
@@ -37,18 +37,21 @@ above (the `[study]` rows).
 
 ---
 
-## 1. Three dials, three fields — never merged
+## 1. Four dials, four fields — never merged
 
 | Dial | The question it answers | Field | Applies to |
 |---|---|---|---|
 | Size | Where does the frame cut the person — how far is the audience | `shot.size` | every shot |
 | Angle | Where does the camera sit against the subject's eyes — which seat the audience gets | `shot.angle` | every shot |
+| Space | What is where in the frame, and which way each thing faces | `shot.space` | every generated still; filmed shots when two people, or a person and what they look at, share the scene |
 | Move | What the camera does while the shot runs, and where it stops | `visual.camera` (four slots) | generated video only; on a still it only steers the Ken Burns drift |
 
-The three are separate axes `[course]` — a move can change while the picture stays the same if the
-height never moves, and the height can say everything while the camera stands still. Write them in
-their own fields so each can be judged, reused and regenerated alone. `shot.feel` sits above all
-three: it is the reason the three were set the way they were.
+Size, angle and space are separate axes — size and angle `[course]`, space `[study]` (§3.5).
+Keep the medium close-up and the eye level and move the person from the left third to the
+right: only the space changed. Keep the person on the left at eye level and cut from a wide to
+a close-up: only the size changed. Move is a fourth axis that only runs while the shot runs. Write them in their own fields so each can be judged, reused and
+regenerated alone. `shot.feel` sits above all four: it is the reason they were set the way they
+were.
 
 `shot.info` and `shot.feel` are different lines — **`info` is what the viewer newly learns,
 `feel` is what the viewer should feel.** "That the install is one command" is info; "relief — it
@@ -153,6 +156,93 @@ Rules `[course]` unless marked:
   highest point in a flooded room). Don't pick "low angle here" as decoration.
 - Put the angle's words into the picture prompt too (`bgPrompt`: "eye level", "seen from
   above", "low angle, looking up") — the still is where the height actually gets drawn.
+  `assemble-bg-prompt.js` writes those words for you; don't type a competing height into the
+  scene sentence.
+
+---
+
+## 3.5 Frame space — what is where, and which way it faces
+
+Size is how far the audience stands. Angle is the seat. **Space is the floor plan of the
+frame** — who sits on which side, which way they look. The still is where all three get drawn.
+Leave space unwritten and the image model invents a layout from mention order (the first noun
+lands on the left) and from an egocentric prior (everything faces the camera, so "its right"
+comes out as the camera's left). `[study]` GenSpace (NeurIPS 2025 Datasets and Benchmarks
+track, arXiv:2505.24870): GPT-4o image generation scores 59.4% on simple front/back/left/right
+views, 21.2% on object-centric left/right, and metric distances ("1.5 m apart") do not move
+the picture.
+
+The field is `shot.space`. `scenes-schema.md` §frame space owns the shape; this section owns
+the words that go into the still.
+
+```js
+space: {
+  frame:  "camera",                                          // the only allowed value
+  layout: "person on the left third, kitchen door on the right",
+  facing: "person faces camera-right, three-quarter view",
+  line:   "A left, B right",                                 // 180° lock — two people, or a person and what they look at
+  light:  "key from camera-left"                             // optional
+}
+```
+
+**The reference frame is the camera, always.** "Left" means left of the picture. Models handle
+egocentric relations almost perfectly and invert allocentric ones (the object's own left/right)
+because they default to drawing the subject facing the viewer. Do not ask the model to sit in
+the object's shoes.
+
+Write the **visible result**, not the camera's inferred seat:
+
+| Don't write (the model has to infer) | Write (what the picture should show) |
+|---|---|
+| `left view of a car` / `right view of X` | `the car faces left of frame` / `X facing the camera` |
+| `from the car's right door` | `from the camera, the right-hand door is on the right of frame` — or pick a different shot |
+| `1.5 m apart` / `from 3 meters` | the size dial (`ls`, `fs`) — distance is how much of the person fills the height |
+| `a boy and a girl chasing` with no layout | `from the camera: the boy on the left, the girl on the right, he faces her` |
+
+Mention order is not a layout. Without `layout`, "a boy is chasing a girl" locks the picture to
+the mention order — the first name tends to land on the left. The paper's order-locking index
+is 86.4 for GPT-Image and 81.0 for Nano Banana on a 0–100 scale (|2p−100|, p = the share placed
+left), so roughly nine valid outputs in ten put the first-mentioned entity on the left
+(Order-to-Space Bias, arXiv:2603.03714, 2026). Name the sides.
+
+**Two people, or a person and what they look at, lock a line.** The 180° sentence from §7
+(`A left, B right`) belongs in `space.line` **and** in the still, so the generated picture
+agrees with the shooting script. Keep that sentence true on every shot of the scene. Crossing
+it is the same four legal cases as §7.
+
+**Image→video does not rewrite space.** The still already drew the floor plan; a motion prompt
+that re-describes people, sides, or lighting makes the engine redesign the scene (produce
+absolute rule 8 · content-reviewer plan P0-7). The clip inherits `space` from the PNG. A
+quote speech clip has no still, so its prompt carries the `From the camera: …` sentence
+(`assemble-bg-prompt.js --space-only`) — the size and framing come from the produce quote
+contract, not from here.
+
+**Assemble, don't prose.** `assemble-bg-prompt.js` writes the prompt in this order
+— size words, angle words, `From the camera: layout. facing. line. light.`, then the scene,
+the mood, the exclusions (`--exclude` — the image tools have no exclusion argument, so the
+noun list rides in the body) and the lower-third tail. On a still with nobody in it,
+`--no-person` swaps the size ladder's body words ("full body", "chest up") for the subject's.
+storyboard §5 runs it before the generation call and stores the full stdout as `bgPrompt`.
+Hand-written prefixes that fight the fields are a camera-mode finding.
+
+Rules:
+
+- **`frame` is `camera`.** Any other value is unset.
+- **`layout` names sides from the camera.** `left third` · `right of frame` · `centred` ·
+  `behind her, receding`. Empty on an `insert`/`ecu` that fills the frame with one object is
+  fine; empty on a cover or a two-shot is a gap.
+- **`facing` is what you would see.** `faces the camera` · `faces camera-right, three-quarter` ·
+  `seen from behind, face turned away` (the cover's person-contract wording). `left view of`
+  and `front view of` are camera-inference and fail the assembler.
+- **`line` is the 180° sentence.** Required when two people (or a person and what they look at)
+  share the scene; omitted on a single-subject shot.
+- **`light` is optional** and uses the same camera frame (`key from camera-left`, shadow
+  falling right). Directional light is one of the few spatial cues the still actually keeps.
+- **No metres, no allocentric, no camera-view phrasing** — the assembler exits 1 on those
+  three anywhere in the assembled prompt (the scene and mood text included): `left view of` ·
+  `from the car's right door`, `from X's left`, `to her right` · `1.5 m`, `three meters away`.
+  `from the camera's right` is the camera frame and passes. Distance lives in `shot.size`;
+  object-centric left/right is redrawn as a camera-frame result, or the shot is recut.
 
 ---
 
@@ -263,7 +353,10 @@ what the audience is supposed to get.
 9. **Sound follows size** (§2).
 10. **The feel is written before the dials.** A feel written after the camera was chosen is a
     caption for the camera; the review reads it as unset.
-11. **A story arc moves the size with the tension** (scenes-schema §playback order — cover →
+11. **A scene keeps its `space.line`.** Two people (or a person and what they look at) lock
+    "A left, B right" on the first shot of the scene; later shots of the same `scene` number
+    keep that sentence unless a legal 180° crossing is written on the shot (§7 · §3.5).
+12. **A story arc moves the size with the tension** (scenes-schema §playback order — cover →
     hooking → body → turn → result). Close on the moment for the cover; wide for the setup,
     which also pays the close-up's debt (rule 2); tightening through the build; the tightest
     frame of the episode at the turn; wide or full at the payoff so the whole thing is seen;
@@ -311,15 +404,23 @@ below are what the script's standing notes carry `[course]`.
 | `shot.feel` | every shot | storyboard.html (the feel line · missing-feel warning), script.md (the `느낌` line), reviewer camera mode (does the technique serve it), image mode (does the picture show it) |
 | `shot.size` | every shot | storyboard.html badge · script.md (the `사이즈·앵글` line — size with its distance — and the `소리` line that follows the size) · `bgPrompt` (the size words) · `visual.camera.framing` on generated shots · reviewer camera mode (rationing, establish-then-close) |
 | `shot.angle` | every shot (default `eye`) | storyboard.html badge · script.md (the same `사이즈·앵글` line — angle with the eye-height baseline) · `bgPrompt` ("eye level" / "seen from above" / "low angle") · reviewer camera mode (angle as change, dutch fee, hook at eye level) |
+| `shot.space` | generated stills (filmed shots when two people, or a person and what they look at, share the scene) | `assemble-bg-prompt.js` (the spatial prefix of `bgPrompt`) · storyboard.html (the space line · missing-layout warning) · script.md (the `자리` line) · reviewer camera mode (banned language, missing layout/facing) · image mode (does the PNG match layout and facing) |
 | `visual.camera` | generated shots | produce (assembles the prompt, adds nothing) · reviewer camera mode (slots, vendor words, one move, `end`) |
 | `duration` | generated clips · filmed shots | generated clips: the cut-length table (scenes-schema §cut length) + wide ≥ 1.5× close · filmed shots: the ratio only (no cap) |
 | `visual.audio` | generated shots | produce · reviewer sound mode (sound follows size) |
 
 The check strip in `storyboard.html` warns on: a shot with no `shot.feel`, a `shot.size` or
 `shot.angle` outside the vocabulary, more than one `cu`/`choker`/`ecu` in one scene, more than
-two `choker`/`ecu` in the episode, more than one `dutch` in the episode, and a close-up opening
-(`cu`/`choker`/`ecu`) followed by another close size instead of a wider shot. Warnings, not
-blocks — the reviewer and the person at the approval step weigh them.
+two `choker`/`ecu` in the episode, more than one `dutch` in the episode, a close-up opening
+(`cu`/`choker`/`ecu`) followed by another close size instead of a wider shot, a generated still
+with no `shot.space.layout` (an `insert`/`ecu` that fills the frame with one object is exempt),
+a space block written with no `frame` or with a `frame` that is not `camera`, a person on
+screen with no `shot.space.facing` (a `pov` is exempt — hands, no face), two people in a scene
+with no `shot.space.line` (on a generated still, a filmed shot, or any shot that wrote a space
+block), and a space slot or `bgPrompt` that uses camera-inference, allocentric, or metric
+language. The language check reads every shot's space slots and `bgPrompt`; the frame check
+runs wherever a space block is written; the layout and facing checks run on generated stills.
+Warnings, not blocks — the reviewer and the person at the approval step weigh them.
 
 ---
 
@@ -343,3 +444,11 @@ blocks — the reviewer and the person at the approval step weigh them.
   (2026-08-15): vendor vocabulary (Veo 12 moves, no `push`/`orbit`); move → valence/arousal not
   supported (p=.84 / p=.21), immersion yes (p=.006) on unset cuts; angle → bigger/stronger
   (p<.001), eye level most trusted in talking heads (p=.007); close-up frequency inverted U.
+- GenSpace (Wang et al., NeurIPS 2025 Datasets and Benchmarks track, arXiv:2505.24870):
+  GPT-4o 59.4% on basic front/back/left/right views, 21.2% on allocentric (object-centric)
+  left/right, metric distances unused; stating the orientation in the final image ("facing
+  right/left") cuts the confusion that camera-view wording ("left view of") causes. Order Is
+  Not Layout: Order-to-Space Bias in Image Generation (Zhang et al., arXiv:2603.03714, 2026):
+  mention order locks the layout — T2I homogenisation index 86.4 GPT-Image · 81.0 Nano Banana ·
+  91.6 Qwen-Image on a 0–100 scale (|2p−100|), the first-mentioned entity tending left.
+  `assemble-bg-prompt.js` is the machine form of those two findings.

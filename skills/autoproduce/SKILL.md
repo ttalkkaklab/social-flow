@@ -314,13 +314,16 @@ breaks most often:
   method; on a story arc a payoff shown early closes the loop and is the
   early-exit trap (scenes-schema §playback order).
 - One entry is one shot. Write `scene`·`sceneSlug`·`shot.feel`·`shot.size`·
-  `shot.angle`·`shot.info` and `visual.picture`·`visual.overlay` (source of
+  `shot.angle`·`shot.info`·`shot.space` and `visual.picture`·`visual.overlay` (source of
   truth: scenes-schema §grammar units and production layers). **Feel first** —
   say what the audience should feel on the shot, then take the size and the angle
   (and the move and length on a generated shot) from the feel → technique table
-  (`../storyboard/references/directing-grammar.md` §5); put the size and angle
-  words into `bgPrompt`. Hook cut and speech clips at `eye`, one close-up (`cu`·`choker`·`ecu`) per scene.
-  Never merge AI video and HTML staging into one slot.
+  (`../storyboard/references/directing-grammar.md` §5). Write `shot.space` (`frame:
+  "camera"`, `layout` from the camera, `facing` as the visible result, `line` when two
+  people, or a person and what they look at, share the scene) and assemble `bgPrompt` with
+  `../storyboard/references/assemble-bg-prompt.js` — do not write `left view of`,
+  object-centric left/right, or metres. Hook cut and speech clips at `eye`, one close-up
+  (`cu`·`choker`·`ecu`) per scene. Never merge AI video and HTML staging into one slot.
 
 ### 4. Style gate — video surfaces (gate 2)
 
@@ -403,8 +406,9 @@ read the tail `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=N`. Here too
 
 ### 4.8 Camera review gate (gate 6d — storyboard-reviewer camera mode)
 
-Every shot carries a feel and the size and angle that serve it, and every shot
-that becomes a generated video carries four camera slots on top. Unattended this
+Every shot carries a feel and the dials that serve it — size, angle, and on a
+generated still the frame space — and every shot that becomes a generated video
+carries four camera slots on top. Unattended this
 gate matters more than anywhere else: a size that flips the feel is drawn into
 the still nobody looks at, and an empty `end` slot buys a clip whose last second
 drifts, and on this path nobody watches it before it publishes.
@@ -416,7 +420,7 @@ and `scenes-schema.md` paths. **One round.**
 
 - **Apply the findings, starting at `worst`**, then on to §4.9.
 - **This gate runs on every episode** — an episode with no generated shots is
-  scored on the shot grammar (feel · size · angle) alone, and the slot axes come
+  scored on the shot grammar (feel · size · angle · space) alone, and the slot axes come
   back `n/a` per shot. A number always comes back.
 - **A P0 you could not resolve stops the run** (handled as in §4.5). An engine
   misassignment or a length that fights the purpose is money about to be spent
@@ -477,8 +481,11 @@ money without knowing the price.
     the star (absolute rule 14), so reusing one image turns the whole body into
     a single frozen frame. Change the shot when the content axis changes, but
     keep continuity: same person and space, different angle. Prompts follow
-    storyboard §5's conventions (profile §3 mood + the required negative
-    directives + "lower third fading into darkness").
+    storyboard §5's conventions — one `assemble-bg-prompt.js --from scenes.js
+    --shot <n>` call (`<n>` from 1, the same number as `scene-<n>.png`) with
+    `--scene`, `--mood` (profile §3) and `--exclude` (the
+    required negative directives — the image tools have no exclusion argument,
+    so the noun list rides in the body), stdout stored as `visual.bgPrompt`.
     `storyboard/images/scene-<n>.png`. Each image takes minutes — no problem on
     the unattended path, but avoid running alongside the video render. On a
     machine without mflux, the tool fails with install guidance — fall back to

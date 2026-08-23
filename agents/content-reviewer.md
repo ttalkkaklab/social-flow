@@ -136,12 +136,23 @@ In this mode skip the style check and per-axis scores — judge only the plan P0
    panels pasted together into one sheet are. The rule's source of truth is
    produce `references/video-model-selection.md` §6
 
+13. **Spatial language the model cannot follow** — the cover `bgPrompt` or a still's
+    `shot.space` uses camera-inference (`left view of`, `right view of`, `front view of`),
+    allocentric phrasing (`from the car's right door`, `from X's left`, `to her right`), or a
+    metric distance (`1.5 m`, `3 meters`, `three meters away`). Image models invert object-centric left/right and
+    ignore metres (directing-grammar §3.5). The fix is the visible result (`faces left of
+    frame`) and `shot.size` for distance. Run
+    `skills/storyboard/references/assemble-bg-prompt.js --check` on the string. A motion
+    prompt that re-describes sides, facing, or lighting already visible in the source is
+    P0-7, not this item.
+
 **A fix suggestion, not a P0** — a cover-background or b-roll source prompt whose distance or
 camera height contradicts the shot's declared `shot.size`·`shot.angle` (a "scale" shot prompted
-as a close-up, a hook cut prompted from below when the storyboard wrote `eye`). The still is
-where the size and the angle get drawn, so name the words the prompt should carry
-(storyboard `references/directing-grammar.md` §2–§3); the storyboard-reviewer's camera mode
-owns the verdict on whether those values serve the feel, so don't re-score that here.
+as a close-up, a hook cut prompted from below when the storyboard wrote `eye`), or whose
+`layout`/`facing` is missing on a generated still that has a person in it. The still is
+where the size, the angle and the space get drawn, so name the words the prompt should carry
+(storyboard `references/directing-grammar.md` §2–§3 · §3.5); the storyboard-reviewer's camera
+mode owns the verdict on whether those values serve the feel, so don't re-score that here.
 
 Output carries only the P0 list + fix suggestions, and the last line is fixed as
 a machine-parseable tail:
