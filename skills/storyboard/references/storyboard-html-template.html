@@ -298,6 +298,7 @@
   .scene-beat { font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em; color: var(--accent-ink); }
   .scene-beat.beat-result { color: var(--ok); }
   .scene-beat.beat-body { color: var(--faint); }
+  .scene-beat.beat-turn { color: var(--accent-ink); text-decoration: underline; }
   .scene-beat.beat-hooktype { color: var(--accent-ink); opacity: .8; }
   .scene-checks { margin-left: auto; display: flex; gap: var(--s1); flex-wrap: wrap; }
   /* Three or more badges bunched together drop to the line below the title, so the badges
@@ -352,11 +353,15 @@
     background: color-mix(in srgb, var(--accent) 8%, transparent);
     border-color: color-mix(in srgb, var(--accent) 24%, transparent);
   }
-  .shot-size {
+  .shot-size, .shot-angle {
     font-size: var(--t-micro); font-weight: 700; letter-spacing: .06em;
     color: var(--muted); border: 1px solid var(--hair); border-radius: 4px;
     padding: 2px 7px;
   }
+  .shot-angle.angle-dutch, .shot-angle.angle-low, .shot-angle.angle-high, .shot-angle.angle-overhead { color: var(--accent-ink); }
+  .shot-size.unknown { color: var(--warn-ink, var(--accent-ink)); border-style: dashed; }
+  .shot-meta .shot-feel { margin: 0; flex-basis: 100%; }
+  .shot-feel.miss b { color: var(--warn-ink, var(--accent-ink)); }
   .shot-info {
     margin: var(--s2) 0 0; font-size: var(--t-aux); color: var(--text);
     word-break: keep-all;
@@ -929,7 +934,15 @@ window.SB_DOC = {
   /* Grammar units · production layers — scenes-schema §grammar units and production layers is
      the source of truth. An empty field is inferred from the structure. An older scenes.js
      still draws as it is. */
-  var SIZE_KO = { ws: "wide", two: "two-shot", ms: "medium", cu: "close-up" };
+  /* Shot size vocabulary — directing-grammar §2 (ws is the legacy key for ls). Compositions that
+     say more than the distance (two · ots · pov · back …) ride in the same field. */
+  var SIZE_KO = { els: "extreme long", ls: "long / wide", ws: "wide", fs: "full", mfs: "medium full", ms: "medium",
+                  mcu: "medium close-up", cu: "close-up", choker: "choker", ecu: "extreme close-up", insert: "insert",
+                  two: "two-shot", three: "three-shot", ots: "over the shoulder", pov: "POV", back: "from behind",
+                  cutaway: "cutaway", reaction: "reaction" };
+  /* Camera height against the subject's eyes — directing-grammar §3. eye is the default. */
+  var ANGLE_KO = { eye: "eye level", high: "high angle", low: "low angle", overhead: "overhead", dutch: "dutch" };
+  var CLOSE_SIZES = { cu: 1, choker: 1, ecu: 1 };
   var PIC_KO = { still: "still photo", "ai-video": "AI video", recording: "recording", asset: "shared asset", slide: "HTML slide" };
   function inferredPicture(s) {
     if (s.visual && s.visual.source === "recording") return "recording";
@@ -961,16 +974,26 @@ window.SB_DOC = {
       slug: s.sceneSlug || "",
       sequence: s.sequence || "",
       size: (s.shot && s.shot.size) || "",
+      angle: (s.shot && s.shot.angle) || "",
+      feel: (s.shot && s.shot.feel) || "",
       info: (s.shot && s.shot.info) || ""
     };
   }
   // Playback role — orthogonal to type. scenes-schema §playback order is the source of truth.
-  // cover → hooking → result → body. Left unwritten, it is read off type and the sequence heading.
-  var BEAT_KO = { hook: "cover", hooking: "hooking", result: "result", body: "body", cta: "CTA" };
+  // answer-first: cover → hooking → result → body; story: cover → hooking → body → turn → result.
+  // Left unwritten, it is read off type and the sequence heading.
+  var BEAT_KO = { hook: "cover", hooking: "hooking", result: "result", body: "body", turn: "turn", cta: "CTA" };
+  // Arc — which playback order the episode walks (scenes-schema §playback order). answer-first is the
+  // default and what a file with no arc is read as; story puts the payoff after the turn.
+  var ARC_KO = { "answer-first": "answer first", story: "story" };
   // Opening strategy — the cover shot's hookType. Every episode uses one of the four
   // (scenes-schema §the four opening strategies). Missing, or a value outside the four, and the
   // check strip warns — that is a request for a name tag; docking points is the reviewer's job.
   var HOOK_KO = { fear: "fear", empathy: "empathy", curiosity: "curiosity", spoiler: "ending first" };
+  // Hook form — how the first line is built (scenes-schema §the six hook forms). hookType says why
+  // the viewer stops; hookForm says the shape the title and segment ① take. Missing is a warning.
+  var HOOK_FORM_KO = { paradox: "paradox", gap: "curiosity gap", payoff: "result first", identify: "self-identification",
+                       number: "number / framework", secret: "secret reveal" };
   function beatOf(s) {
     if (s.beat) return s.beat;
     if (s.type === "cover") return "hook";
@@ -980,6 +1003,7 @@ window.SB_DOC = {
     if (/^결과/.test(seq)) return "result";
     if (/^(기획|방법|단계|내용)/.test(seq)) return "body";
     if (/^(문제|후킹)/.test(seq)) return "hooking";
+    if (/^(전환|반전)/.test(seq)) return "turn";
     return "";
   }
   function playbackOrder(list) {
@@ -996,7 +1020,7 @@ window.SB_DOC = {
 
   /* Whether a scene is a shooting scene is decided **one scene at a time**. In long-form,
      shooting scenes and generated scenes mixing within one episode is the normal path
-     (scenes-schema §shooting scenes), so flipping the whole episode into a single mode would
+     (scenes-schema §filmed scenes), so flipping the whole episode into a single mode would
      let one shooting scene drag the generated scenes into the shooting contract too
      (40 characters, 5~6 characters per second). */
   function recOf(s) { return !!(s && s.visual && s.visual.source === "recording"); }
@@ -1239,7 +1263,7 @@ window.SB_DOC = {
       }
       if (maxSent > 40) { chips.push(badge("warn", "sentence " + maxSent + " chars")); flag("warn", "Shot " + no, "longest sentence " + maxSent + " chars — the shooting script recommends 40"); }
 
-      /* Shooting-scene contract (scenes-schema §shooting scenes) — all three fields have to be
+      /* Shooting-scene contract (scenes-schema §filmed scenes) — all three fields have to be
          there for the user to know what to film and for produce to find the file. Discovering
          one is empty after approval means starting the shoot over. */
       var vz = s.visual || {};
@@ -1462,10 +1486,11 @@ window.SB_DOC = {
                " carry the same new information — one of them is enough");
         else seenInfo[info] = row.i;
       });
+      // Establish, then close (directing-grammar §6) — a close-up opening (cu · choker · ecu) pays
+      // its debt with any non-close size on the next shot: ls/ws, fs, mfs, ms, mcu, two, ots …
       var first = rows[0];
-      if (first && first.g.size === "cu" && rows[1] &&
-          rows[1].g.size && rows[1].g.size !== "ws" && rows[1].g.size !== "ms" && rows[1].g.size !== "two")
-        flag("warn", "S#" + sc, "opening on a close-up owes the viewer a wider next shot that says where this is");
+      if (first && CLOSE_SIZES[first.g.size] && rows[1] && rows[1].g.size && CLOSE_SIZES[rows[1].g.size])
+        flag("warn", "S#" + sc, "opening on a close-up owes the viewer a wider next shot that says where this is (directing-grammar §6)");
     });
   }
   // b-roll slots — two slots in the same position leave the insert order undecided (scenes-schema §broll)
@@ -1476,43 +1501,87 @@ window.SB_DOC = {
     seenAfter[af] = 1;
   });
 
-  /* Playback order — cover → hooking → result → body (scenes-schema §playback order)
-     The last main shot is not stamped PAYOFF. Drop-off falls when the how comes after the result. */
+  /* Playback order — the cover's arc picks which (scenes-schema §playback order):
+     answer-first: cover → hooking → result → body — drop-off falls when the how comes after the result;
+     story:        cover → hooking → body → turn → result — the answer waits for the payoff after the turn.
+     The last main shot is not stamped PAYOFF. */
   var firstBeat = {};
   order.forEach(function (o, pos) {
     if (o.s.type === "broll") return;
     var b = beatOf(o.s);
-    if (b && firstBeat[b] == null) firstBeat[b] = { pos: pos, i: o.i };
+    if (b && firstBeat[b] == null) firstBeat[b] = { pos: pos, i: o.i, s: o.s };
   });
+  var mainOrder = order.filter(function (o) { return o.s.type !== "broll"; });
+  var arc = cover && cover.arc ? String(cover.arc) : "answer-first";
+  var storyArc = arc === "story";
+  var ORDER_TXT = storyArc ? "cover → hooking → body → turn → result" : "cover → hooking → result → body";
   var processy = !!(firstBeat.result || firstBeat.body || hasRec);
-  var orderOk = true;
+  var orderOk = true, orderBad = false;
+  if (cover && cover.arc && !ARC_KO[arc]) {
+    flag("warn", "Playback order", "arc \"" + cover.arc + "\" is outside the two — write answer-first or story on the cover (scenes-schema §playback order); read as answer-first below");
+    orderOk = false;
+  }
   if (order.length && order[0].s.type !== "cover") {
-    flag("warn", "Playback order", "the first shot is not the cover — the result at a glance and the hook come first");
+    flag("warn", "Playback order", "the first shot is not the cover — " + (storyArc ? "the moment and the hook come first" : "the result at a glance and the hook come first"));
     orderOk = false;
   }
-  if (processy && firstBeat.body && !firstBeat.result) {
-    flag("warn", "Playback order", "there is body but no result scene — put a shot after the hooking that lays out the finished thing");
-    orderOk = false;
-  }
-  if (firstBeat.result && firstBeat.body && firstBeat.body.pos < firstBeat.result.pos) {
-    flag("bad", "Playback order", "body comes before result — move shot " +
-         (firstBeat.body.i + 1) + " after shot " + (firstBeat.result.i + 1));
-    orderOk = false;
+  if (!storyArc) {
+    if (processy && firstBeat.body && !firstBeat.result) {
+      flag("warn", "Playback order", "there is body but no result scene — put a shot after the hooking that lays out the finished thing (an informational piece has no result scene: give its first content shot beat:\"result\")");
+      orderOk = false;
+    }
+    if (firstBeat.result && firstBeat.body && firstBeat.body.pos < firstBeat.result.pos) {
+      flag("bad", "Playback order", "body comes before result — move shot " +
+           (firstBeat.body.i + 1) + " after shot " + (firstBeat.result.i + 1) + " (or set arc:\"story\" on the cover if the answer is meant to wait)");
+      orderOk = false; orderBad = true;
+    }
+    if (firstBeat.turn) {
+      flag("warn", "Playback order", firstBeat.turn.s.beat
+           ? "shot " + (firstBeat.turn.i + 1) + " carries beat:\"turn\" — the turning point belongs to the story arc; drop the beat or write arc:\"story\" on the cover"
+           : "shot " + (firstBeat.turn.i + 1) + "'s sequence heading reads as a turn (전환/반전) — the turning point belongs to the story arc; write arc:\"story\" on the cover or rename the heading");
+      orderOk = false;
+    }
+  } else {
+    if (!firstBeat.result) {
+      flag("warn", "Playback order", "story arc with no result (payoff) shot — the loop the cover opened never closes; add the shot where the answer appears for the first time (beat:\"result\"), after the turn");
+      orderOk = false;
+    }
+    if (!firstBeat.turn) {
+      flag("warn", "Playback order", "story arc with no turn shot — add the moment someone saw it differently (beat:\"turn\") right before the payoff");
+      orderOk = false;
+    }
+    if (firstBeat.result && firstBeat.body && firstBeat.result.pos < firstBeat.body.pos) {
+      flag("bad", "Playback order", "result comes before body on a story arc — the payoff closes the loop before the build; move shot " +
+           (firstBeat.result.i + 1) + " after the turn, or set arc:\"answer-first\" on the cover");
+      orderOk = false; orderBad = true;
+    }
+    if (firstBeat.result && firstBeat.turn && firstBeat.result.pos < firstBeat.turn.pos) {
+      flag("bad", "Playback order", "result comes before the turn — the answer is out before the turning point; move shot " +
+           (firstBeat.result.i + 1) + " after shot " + (firstBeat.turn.i + 1));
+      orderOk = false; orderBad = true;
+    }
+    if (firstBeat.result && firstBeat.turn && !orderBad) {   // the two bads above already name this defect
+      var ri = -1;
+      mainOrder.forEach(function (o, k) { if (ri < 0 && beatOf(o.s) === "result") ri = k; });
+      if (ri > 0 && beatOf(mainOrder[ri - 1].s) !== "turn") {
+        flag("warn", "Playback order", "the shot right before the payoff (shot " + (mainOrder[ri - 1].i + 1) + ") is not the turn — the turning point is the last beat before the answer");
+        orderOk = false;
+      }
+    }
   }
   /* Every episode has a hooking shot — informational ones too (scenes-schema §hooking). It has
-     to be the shot right after the cover. An opening b-roll (after:0) is skipped: it is not a
-     playback role, just 4 seconds of the cover picture moving. An older file with no beat gets
-     a warning here — not a deduction, a request for a name tag. */
-  var mainOrder = order.filter(function (o) { return o.s.type !== "broll"; });
+     to be the shot right after the cover (on a story arc it is the setup). An opening b-roll
+     (after:0) is skipped: it is not a playback role, just 4 seconds of the cover picture moving.
+     An older file with no beat gets a warning here — not a deduction, a request for a name tag. */
   var afterCover = mainOrder.length > 1 && mainOrder[0].s.type === "cover" ? mainOrder[1] : null;
   if (mainOrder.length > 1 && !firstBeat.hooking) {
-    flag("warn", "Playback order", "there is no hooking shot — after the cover, add the shot that hooks why to stay (beat:\"hooking\"). Informational episodes are no exception");
+    flag("warn", "Playback order", "there is no hooking shot — after the cover, add the shot that hooks why to stay (beat:\"hooking\"" + (storyArc ? ", the setup on a story arc" : "") + "). Informational episodes are no exception");
     orderOk = false;
   } else if (afterCover && beatOf(afterCover.s) !== "hooking") {
     var ab = beatOf(afterCover.s);
     flag("warn", "Playback order", "the shot after the cover is not the hooking — shot " + (afterCover.i + 1) +
          (ab ? "(" + (BEAT_KO[ab] || ab) + ")" : "(no beat)") + " comes before the hooking (shot " +
-         (firstBeat.hooking.i + 1) + "). Reorder to cover → hooking → result → body");
+         (firstBeat.hooking.i + 1) + "). Reorder to " + ORDER_TXT);
     orderOk = false;
   }
 
@@ -1524,6 +1593,14 @@ window.SB_DOC = {
     flag("warn", "Opening strategy", "the cover has no hookType — write fear|empathy|curiosity|spoiler to say whether this episode opens (title, segment ①, hooking) on fear, empathy, curiosity, or showing the ending first");
   } else if (cover && !hookKo) {
     flag("warn", "Opening strategy", "hookType \"" + cover.hookType + "\" is outside the four — change it to one of fear|empathy|curiosity|spoiler");
+  }
+  /* Hook form — the shape of the first line (scenes-schema §the six hook forms). A name tag, like
+     hookType: the check asks for it, the reviewer's copy mode judges whether the title and
+     segment ① actually take that shape and whether the result pays it. */
+  if (cover && !cover.hookForm) {
+    flag("warn", "Hook form", "the cover has no hookForm — write paradox|gap|payoff|identify|number|secret to say how the title and segment ① are shaped (scenes-schema §the six hook forms)");
+  } else if (cover && !HOOK_FORM_KO[cover.hookForm]) {
+    flag("warn", "Hook form", "hookForm \"" + cover.hookForm + "\" is outside the six — change it to one of paradox|gap|payoff|identify|number|secret");
   }
 
   /* Camera slots — every shot that becomes generated video leaves the storyboard with all four
@@ -1546,6 +1623,43 @@ window.SB_DOC = {
       camGaps++;
       flag("warn", "Shot " + (i + 1), "visual.camera is missing " + missing.join(", ") +
            (missing.indexOf("end") >= 0 ? " — with no end the model is not told where to stop, and the last second drifts" : ""));
+    }
+  });
+
+  /* Shot grammar — feel first, then the dials (directing-grammar §5–§6). A shot with no
+     shot.feel was framed before anyone said what the audience should feel there; the
+     rationing rules catch the close-up spent twice and the dutch used twice. Warnings — the
+     reviewer's camera mode and the person at the approval step weigh them. */
+  var feelGaps = 0, sizeUnknown = 0, chokerEcu = 0, dutchCount = 0, cuPerScene = {};
+  SCENES.forEach(function (s, i) {
+    if (s.type === "outro") return;
+    var g = grammarOf(s, i);
+    if (!g.feel) {
+      feelGaps++;
+      flag("warn", "Shot " + (i + 1), "shot.feel not written — say what the audience should feel here before choosing the size, the angle and the camera (directing-grammar §5)");
+    }
+    if (g.size && !SIZE_KO[g.size]) {
+      sizeUnknown++;
+      flag("warn", "Shot " + (i + 1), 'shot.size "' + g.size + '" is outside the vocabulary — els · ls · fs · mfs · ms · mcu · cu · choker · ecu · insert, or a composition two · three · ots · pov · back · cutaway · reaction (directing-grammar §2)');
+    }
+    if (g.angle && !ANGLE_KO[g.angle]) {
+      flag("warn", "Shot " + (i + 1), 'shot.angle "' + g.angle + '" is outside the vocabulary — eye · high · low · overhead · dutch (directing-grammar §3)');
+    }
+    if (CLOSE_SIZES[g.size]) {
+      var key = String(g.scene);
+      cuPerScene[key] = (cuPerScene[key] || 0) + 1;
+      if (cuPerScene[key] === 2)
+        flag("warn", "Scene S#" + key, "a second close-up in the same scene — the close-up is a command, and a command repeated stops being heard. One cu per scene, on the line that matters (directing-grammar §6)");
+    }
+    if (g.size === "choker" || g.size === "ecu") {
+      chokerEcu++;
+      if (chokerEcu === 3)
+        flag("warn", "Shot " + (i + 1), "a third choker / extreme close-up in the episode — once or twice is the ration (directing-grammar §6)");
+    }
+    if (g.angle === "dutch") {
+      dutchCount++;
+      if (dutchCount === 2)
+        flag("warn", "Shot " + (i + 1), "a second dutch angle — the tilt lands once and then reads as the new horizon; one per episode, with its reason written on the shot (directing-grammar §3)");
     }
   });
 
@@ -1587,6 +1701,8 @@ window.SB_DOC = {
   h += '<div class="badges">' +
        (CAST.length ? badge("", "cast " + CAST.length) : "") +
        (camGaps ? badge("warn", "camera · " + camGaps + " shot" + (camGaps > 1 ? "s" : "") + " incomplete") : "") +
+       (feelGaps ? badge("warn", "feel · " + feelGaps + " shot" + (feelGaps > 1 ? "s" : "") + " unwritten") : badge("ok", "feel · every shot")) +
+       (sizeUnknown ? badge("warn", "size · " + sizeUnknown + " outside vocabulary") : "") +
        (MUSIC || cueCount || dropCount
           ? badge("", "music · " + (MUSIC ? Object.keys(MUSIC).length + " cue" + (Object.keys(MUSIC).length > 1 ? "s" : "") : "one bed")
                   + (dropCount ? " · " + dropCount + " drop" + (dropCount > 1 ? "s" : "") : ""))
@@ -1604,8 +1720,7 @@ window.SB_DOC = {
          SCENES.forEach(function (s, i) { seen[grammarOf(s, i).scene] = 1; });
          return Object.keys(seen).length + " scenes";
        })()) : "") +
-       badge(orderOk ? "ok" : (firstBeat.result && firstBeat.body && firstBeat.body.pos < firstBeat.result.pos ? "bad" : "warn"),
-             "cover → hooking → result → body") + "</div>";
+       badge(orderOk ? "ok" : (orderBad ? "bad" : "warn"), ORDER_TXT) + "</div>";
 
   h += '<dl class="meta-grid">';
   if (DOC.keyMessage) h += "<dt>Key message</dt><dd>" + mark(DOC.keyMessage) + "</dd>";
@@ -1721,7 +1836,8 @@ window.SB_DOC = {
     var pic = pictureOf(s), ov = overlayOf(s);
     h += '<article class="scene"><div class="scene-head">';
     h += '<span class="scene-no">Shot ' + no + " · " + esc(s.type).toUpperCase() + "</span>";
-    if (g.size && SIZE_KO[g.size]) h += '<span class="shot-size">' + SIZE_KO[g.size] + "</span>";
+    if (g.size) h += '<span class="shot-size' + (SIZE_KO[g.size] ? "" : " unknown") + '">' + esc(SIZE_KO[g.size] || (g.size + " ?")) + "</span>";
+    if (g.angle && ANGLE_KO[g.angle]) h += '<span class="shot-angle angle-' + esc(g.angle) + '">' + ANGLE_KO[g.angle] + "</span>";
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
     var headTitle = s.title || (s.type === "quote" ? s.text : "");
     if (headTitle) h += '<span class="scene-title">' + mark(headTitle) + "</span>";
@@ -1729,14 +1845,20 @@ window.SB_DOC = {
     if (beat && BEAT_KO[beat])
       h += '<span class="scene-beat beat-' + beat + '">' + BEAT_KO[beat] + "</span>";
     // The cover shot also carries the opening-strategy name tag — the title and segment ① have to carry that pull
-    if (s.type === "cover")
+    if (s.type === "cover") {
       h += '<span class="scene-beat beat-hooktype">' + esc(HOOK_KO[s.hookType] || (s.hookType ? s.hookType + " (outside the four)" : "strategy not written")) + "</span>";
+      h += '<span class="scene-beat beat-hooktype">form · ' + esc(HOOK_FORM_KO[s.hookForm] || (s.hookForm ? s.hookForm + " (outside the six)" : "not written")) + "</span>";
+      h += '<span class="scene-beat beat-hooktype">arc · ' + esc(ARC_KO[s.arc] || (s.arc ? s.arc + " (outside the two)" : "answer first (default)")) + "</span>";
+    }
     h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
     h += '<div class="shot-meta"><span class="craft">' +
          '<span class="vtag' + (pic === "ai-video" ? " gen" : "") + '">' + esc(PIC_KO[pic] || pic) + "</span>" +
          '<span class="vtag' + (ov === "html" ? " html" : "") + '">' + esc(overlayLabel(s)) + "</span>" +
          charsOf(s).map(function (id) {
            return '<span class="char-tag">' + esc(castName(id)) + "</span>"; }).join("") + "</span>" +
+         (s.type === "outro" ? "" :
+           (g.feel ? '<span class="shot-info shot-feel"><b>What the audience feels</b>' + esc(g.feel) + "</span>"
+                   : '<span class="shot-info shot-feel miss"><b>What the audience feels</b>not written — write shot.feel before the size, angle and camera (directing-grammar §5)</span>')) +
          (g.info ? '<span class="shot-info"><b>What this shot adds</b>' + esc(g.info) + "</span>" : "") +
          "</div>";
 
@@ -1973,10 +2095,21 @@ window.SB_DOC = {
        FMT.sceneCountMin + "~" + FMT.sceneCountMax + "</td></tr>";
   if (cover) {
     h += "<tr><th>Cover title</th><td>" + mark(cover.title) + " — displays " + dispLen(cover.title) + "/16 chars</td></tr>";
+    h += "<tr><th>Arc</th><td>" + (ARC_KO[arc]
+         ? esc(ARC_KO[arc]) + " (<code>" + esc(arc) + "</code>" + (cover.arc ? "" : ", default") + ") — " + ORDER_TXT +
+           (storyArc ? "; the answer appears for the first time in the result, after the turn" : "; the finished thing before the how")
+         : "<code>" + esc(arc) + "</code> is outside the two — answer-first or story (scenes-schema §playback order)") + "</td></tr>";
     h += "<tr><th>Opening strategy</th><td>" + (HOOK_KO[cover.hookType]
          ? esc(HOOK_KO[cover.hookType]) + " (<code>" + esc(cover.hookType) + "</code>) — the title, segment ① and the hooking ride this pull"
          : (cover.hookType ? "<code>" + esc(cover.hookType) + "</code> is outside the four — " : "not written — ") +
            "one of fear|empathy|curiosity|spoiler (scenes-schema §the four opening strategies)") + "</td></tr>";
+    h += "<tr><th>Hook form</th><td>" + (HOOK_FORM_KO[cover.hookForm]
+         ? esc(HOOK_FORM_KO[cover.hookForm]) + " (<code>" + esc(cover.hookForm) + "</code>) — the title and segment ① take this shape, and the result pays it"
+         : (cover.hookForm ? "<code>" + esc(cover.hookForm) + "</code> is outside the six — " : "not written — ") +
+           "one of paradox|gap|payoff|identify|number|secret (scenes-schema §the six hook forms)") + "</td></tr>";
+    h += "<tr><th>Shot grammar</th><td>" + (feelGaps ? feelGaps + " shot" + (feelGaps > 1 ? "s" : "") + " with no shot.feel" : "every shot says what the audience should feel") +
+         (sizeUnknown ? " · " + sizeUnknown + " size value" + (sizeUnknown > 1 ? "s" : "") + " outside the vocabulary" : "") +
+         " — feel first, then size · angle · camera (directing-grammar §5)</td></tr>";
     if (cover.statLabel) h += "<tr><th>statLabel</th><td>" + esc(cover.statLabel) + " — displays " + dispLen(cover.statLabel) + "/18 chars</td></tr>";
   }
   h += "<tr><th>Speech rate</th><td>" +
@@ -2043,7 +2176,7 @@ window.SB_DOC = {
       ? "<ul>" + audit.map(function (a) {
           return '<li class="' + a.level + '"><span class="where">' + esc(a.where) + "</span>" +
                  '<span class="what">' + esc(a.what) + "</span></li>"; }).join("") + "</ul>"
-      : '<div class="clean">Character counts, speech rate, shot length, frame overflow, total length, cover title, playback order, opening strategy — every contract item passes.</div>');
+      : '<div class="clean">Character counts, speech rate, shot length, frame overflow, total length, cover title, playback order (arc), opening strategy, hook form, shot grammar (feel · size · angle) — every contract item passes.</div>');
 
   var safe = document.getElementById("tg-safe"), subs = document.getElementById("tg-subs");
   if (safe) safe.addEventListener("change", function () { document.body.classList.toggle("safe", safe.checked); });

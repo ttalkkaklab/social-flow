@@ -91,7 +91,51 @@ m += `
 - 터미널·편집기 폰트를 키운다. 화면이 축소돼서 기본 크기는 안 보인다.
 - 방해 금지 모드를 켠다 — 알림 배너까지 찍힌다.
 - 회사명·거래처명·계정명이 보이는 탭과 파일을 미리 닫거나 가짜 값으로 바꾼다.
+
+## 카메라를 들기 전에 — 샷마다 느낌 · 사이즈 · 앵글이 적혀 있다
+
+- **느낌이 먼저다.** 샷마다 "관객이 여기서 무엇을 느껴야 하나"가 적혀 있고 사이즈와 앵글은
+  그것을 위해 고른 값이다. 화면이 예뻐도 그 느낌이 안 나오면 다시 찍는다.
+- **사이즈는 발로 바꾼다, 줌으로 바꾸지 않는다.** 서 있는 사람 기준 와이드 5~6 m · 풀숏 약 3 m ·
+  익스트림 롱 20 m 이상. 클로즈업은 1.5~2 m 물러나 2배 망원으로 당긴다 — 얼굴 앞에 들이대면
+  코와 이마가 튀어나온다.
+- **프레임 아래 끝을 관절에 두지 않는다** — 목·손목·팔꿈치·허리·무릎·발목 말고 가슴 중간·허벅지
+  중간·정강이 중간에서 자른다.
+- **아이레벨의 기준은 상대의 눈이다.** 앉은 사람을 서서 찍으면 30~50 cm 위에서 내려다보는
+  하이 앵글이 되고 인터뷰이가 이유 없이 위축돼 보인다. 카메라를 놓기 전에 상대 눈이 몇 cm 에
+  있는지 소리 내어 말하고 같이 앉는다.
+- **두 사람(또는 사람과 그가 보는 것)이 나오면 선이 생긴다.** 첫 샷 전에 한쪽을 정하고 "A 왼쪽,
+  B 오른쪽"을 소리 내어 말한 뒤 그 씬이 끝날 때까지 그 문장이 뒤집히지 않게 찍는다. 반대편
+  조명이 좋아도 자리를 옮기지 말고 같은 편에서 더 가까이 가거나 각도만 돌린다.
+- **같은 피사체를 다시 찍을 땐 각도를 30도 이상 벌리거나 크기를 두 단계 바꾸거나 동작 중간에
+  끊는다.** 반 걸음만 옮기면 컷이 튄다 — 확실히 바꾸거나 아예 안 바꾼다.
+- **소리는 사이즈를 따라간다.** 와이드는 공간음이 살아도 되고 클로즈업은 목소리가 깨끗해야
+  한다. 한 번 앉은 자리와 마이크를 바꾸지 않는다 — 바꾸면 붙는 자리가 들린다.
 `;
+
+const SIZE_KR = { els: "익스트림 롱(완전 풀)", ls: "롱·와이드", ws: "와이드", fs: "풀숏", mfs: "니숏(미디엄 풀)", ms: "미디엄",
+                  mcu: "바스트(미디엄 클로즈업)", cu: "클로즈업", choker: "초커", ecu: "익스트림 클로즈업", insert: "인서트",
+                  two: "투샷", three: "쓰리샷", ots: "어깨 너머", pov: "1인칭 시점", back: "뒷모습", cutaway: "컷어웨이", reaction: "리액션" };
+const DIST_KR = { els: "20 m 이상 물러난다", ls: "5~6 m 뒤에서", ws: "5~6 m 뒤에서", fs: "약 3 m 뒤에서",
+                  cu: "1.5~2 m 물러나 2배 망원으로", choker: "1.5~2 m 물러나 망원으로", ecu: "망원으로 눈·입·손끝만" };
+const ANGLE_KR = { eye: "아이레벨 — 카메라를 상대 눈높이에", high: "하이 앵글(부감) — 상대 눈보다 위에서 내려다본다",
+                   low: "로우 앵글(앙각) — 상대 눈보다 아래에서 올려다본다", overhead: "탑샷 — 바로 위에서 수직으로",
+                   dutch: "더치 — 수평을 기울인다(이유를 샷에 적었을 때만, 회차에 한 번)" };
+const SOUND_KR = { els: "공간음이 앞, 말소리는 멀어도 된다", ls: "공간음 앞, 말소리는 멀어도 된다", ws: "공간음 앞, 말소리는 멀어도 된다",
+                   fs: "공간음과 말소리 균형", mfs: "균형", ms: "말소리 또렷, 공간음은 뒤", mcu: "목소리 깨끗하게, 공간음은 뒤로",
+                   cu: "목소리와 숨소리가 앞", choker: "숨소리가 앞", ecu: "그 디테일의 소리", insert: "그 물체의 소리" };
+const shotLine = s => {
+  const sh = s.shot || {};   // no shot block at all (older files) — still print the prompt, the template flags the same shot
+  const sz = sh.size ? (SIZE_KR[sh.size] || `${sh.size} (어휘 밖)`) : "";
+  const dist = sh.size && DIST_KR[sh.size] ? ` — ${DIST_KR[sh.size]}` : "";
+  const an = sh.angle ? (ANGLE_KR[sh.angle] || `${sh.angle} (어휘 밖)`) : "아이레벨(기본)";
+  const sd = sh.size && SOUND_KR[sh.size] ? `\n**소리**: ${SOUND_KR[sh.size]}` : "";
+  let out = "";
+  if (sh.feel) out += `**느낌**: ${sh.feel}\n`;
+  else out += `**느낌**: (적히지 않음 — 스토리보드에서 shot.feel 을 먼저 적는다)\n`;
+  if (sz || sh.angle) out += `**사이즈·앵글**: ${[sz + dist, an].filter(Boolean).join(" · ")}${sd}\n`;
+  return out;
+};
 
 if (VOICE) m += `
 ## 소리만 녹음하는 샷
@@ -118,7 +162,7 @@ list.forEach(({ s, no, at }) => {
     curScene = s.scene;
     m += `\n### S#${s.scene}. ${s.sceneSlug}\n`;
   }
-  const beat = { hook: "커버", hooking: "후킹", result: "결과물", body: "내용", cta: "마무리" }[s.beat] || s.beat || s.type;
+  const beat = { hook: "커버", hooking: "후킹", result: "결과물", body: "내용", turn: "전환", cta: "마무리" }[s.beat] || s.beat || s.type;
   m += `\n#### 샷 ${no} — ${plain(s.title) || s.type} · ${beat} · ${s.duration}초\n\n`;
   if (rec(s)) {
     m += `**저장할 파일**: \`${s.visual.clip}\`\n`;
@@ -131,6 +175,7 @@ list.forEach(({ s, no, at }) => {
     m += `**저장할 파일**: \`voice/s${no}.wav\` — 소리만 녹음한다\n`;
     m += `**화면**: 만들어 둘 배경 그림 \`${s.visual.bg}\` — 찍을 것 없다\n`;
   }
+  m += shotLine(s);
   if (s.shot && s.shot.info) m += `**이 샷이 전하는 것**: ${s.shot.info}\n`;
   const caps = (s.bullets || []).filter(b => b && (b.t || b.d));
   if (caps.length)
