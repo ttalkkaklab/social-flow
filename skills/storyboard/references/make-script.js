@@ -135,7 +135,7 @@ const shotLine = s => {
   else out += `**느낌**: (적히지 않음 — 스토리보드에서 shot.feel 을 먼저 적는다)\n`;
   if (sz || sh.angle) out += `**사이즈·앵글**: ${[sz + dist, an].filter(Boolean).join(" · ")}\n`;
   const sp = sh.space || {};
-  if (sp.layout || sp.facing || sp.line) {
+  if (sp.layout || sp.facing || sp.line || sp.light) {
     const bits = [];
     if (sp.layout) bits.push(sp.layout);
     if (sp.facing) bits.push(sp.facing);
