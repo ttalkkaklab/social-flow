@@ -100,13 +100,13 @@ const ANGLE_WORDS = {
 // Camera-inference ("left view of X"), allocentric ("from the car's right", "to her
 // left"), and metric distances (digits or number words + m/metres). "from the camera",
 // "from the camera's right", "facing left of frame", "camera-left", "seen from
-// behind/above" are fine.
+// behind/above" are fine; so is a pronoun + back/front as a body part ("on his back").
 // storyboard-html-template.html carries the same three regexes in bannedSpaceHits —
 // keep them identical (the selftest checks).
 const BANNED = [
   { re: /\b(?:left|right|front|back|rear) view of\b/i,
     why: "camera-inference — write the visible result (\"facing left of frame\"), not the camera's seat" },
-  { re: /\b(?:from|to|on|at) (?:the |a |an )?(?:(?!(?:camera|viewer|frame|picture)(?:'s|’s))[\w-]+(?:'s|’s)|his|her|its|their) (?:own )?(?:left|right|front|back|rear)\b/i,
+  { re: /\b(?:from|to|on|at) (?:the |a |an )?(?:(?!(?:camera|viewer|frame|picture)(?:'s|’s))[\w-]+(?:'s|’s) (?:own )?(?:left|right|front|back|rear)|(?:his|her|its|their) (?:own )?(?:left|right))\b/i,
     why: "allocentric — models default to the camera's left/right and invert the object's" },
   { re: /\b(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|half a|a few|several)\s*(?:m|meters?|metres?)\b/i,
     why: "metric distance — models ignore the number; put distance in shot.size, not metres" }
@@ -143,7 +143,7 @@ function spaceSentence(opts) {
   const line = (opts.line || "").trim();
   const light = (opts.light || "").trim();
   const bits = [];
-  if (layout) bits.push(layout.replace(/^from the camera:\s*/i, ""));
+  if (layout) bits.push(layout.replace(/^from the camera[,:]\s*/i, ""));
   if (facing) bits.push(facing);
   if (line) bits.push("keep " + line + " true in this frame");
   if (light) bits.push(light);
@@ -161,29 +161,32 @@ function assemble(opts) {
   const ladder = opts.noPerson ? SIZE_WORDS_OBJECT : SIZE_WORDS;
   const sizeWords = ladder[size] || SIZE_WORDS[size] || (size ? size : "");
   const angleWords = ANGLE_WORDS[angle] || angle || ANGLE_WORDS.eye;
+  const unknown = [];
+  if (size && !SIZE_WORDS[size]) unknown.push("size \"" + size + "\"");
+  if (angle && !ANGLE_WORDS[angle]) unknown.push("angle \"" + angle + "\"");
 
   const space = spaceSentence(opts);
   const parts = [];
   if (sizeWords) parts.push(sizeWords + ", " + angleWords + ".");
   else parts.push(angleWords + ".");
   if (space) parts.push(space);
-  if (scene) parts.push(scene.replace(/\.*$/, "") + ".");
-  if (mood) parts.push(mood.replace(/\.*$/, "") + ".");
-  if (exclude) parts.push(exclude.replace(/\.*$/, "") + ".");
-  if (tail) parts.push(tail.replace(/\.*$/, "") + ".");
+  if (scene) parts.push(scene.replace(/[.!?\s]*$/, "") + ".");
+  if (mood) parts.push(mood.replace(/[.!?\s]*$/, "") + ".");
+  if (exclude) parts.push(exclude.replace(/[.!?\s]*$/, "") + ".");
+  if (tail) parts.push(tail.replace(/[.!?\s]*$/, "") + ".");
 
   const prompt = parts.join(" ").replace(/\s+/g, " ").replace(/\s+\./g, ".").trim();
 
   // The whole prompt is checked — a "left view of" in --scene ships to the model just the same.
   const hits = bannedHits(prompt);
-  return { prompt, space, hits, size, angle, layout: opts.layout, facing: opts.facing };
+  return { prompt, space, hits, unknown, size, angle, layout: opts.layout, facing: opts.facing };
 }
 
 function loadShot(file, index) {
   const src = fs.readFileSync(file, "utf8");
   const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
   sandbox.globalThis = sandbox;
-  vm.runInNewContext(src, sandbox);
+  vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
   const scenes = (sandbox.window && sandbox.window.SCENES) || [];
   const i = Number(index);
   if (!Number.isInteger(i) || i < 0 || i >= scenes.length) {
@@ -252,6 +255,13 @@ function selftest() {
   ok("--no-person drops the body words",
     assemble({ size: "ls", noPerson: true, scene: "a vent box" }).prompt.startsWith("wide shot, the whole subject with room around it, at eye level."));
 
+  eq("layout's own 'from the camera,' prefix is not doubled",
+    spaceSentence({ layout: "from the camera, the right-hand door is on the right of frame" }),
+    "From the camera: the right-hand door is on the right of frame.");
+  eq("sentence ends are normalised",
+    assemble({ size: "ms", scene: "is this it?", tail: "" }).prompt, "medium shot, frame bottom at mid-thigh, at eye level. is this it.");
+  ok("out-of-vocabulary size is reported", assemble({ size: "xyz", scene: "x" }).unknown.length === 1);
+
   // No space written (an older scenes.js) — no dangling "From the camera." sentence.
   const bare = assemble({ size: "ls", angle: "eye", scene: "a street vent" });
   eq("no space → no From-the-camera sentence", bare.space, "");
@@ -297,7 +307,9 @@ function selftest() {
     "runs for 10 min",                    // not metres
     "on the left third, door on the right",
     "from the camera's right, the door",  // camera possessive is the camera frame
-    "on the viewer's left"
+    "on the viewer's left",
+    "a backpack on his back",             // a body part, not a direction
+    "lying on her back, face up"
   ];
   allowed.forEach(text => eq("allows: " + text, bannedHits(text).length, 0));
 
@@ -350,6 +362,13 @@ function main(argv) {
     return;
   }
 
+  // A mistyped flag (--scen, --layoutt) would silently drop that value from the prompt.
+  const KNOWN = new Set([...VALUE_FLAGS, "selftest", "help", "space-only", "no-person", "check", "_"]);
+  const unknownFlags = Object.keys(args).filter(k => !KNOWN.has(k));
+  if (unknownFlags.length) {
+    console.error("assemble-bg-prompt: unknown flag --" + unknownFlags.join(", --") + " — see --help");
+    process.exit(2);
+  }
   // A value flag with no value, or a value left unquoted (its tail lands in args._), is a
   // mistake that would otherwise ship "true" or half a sentence to the model.
   const bare = VALUE_FLAGS.filter(k => args[k] === true);
@@ -371,7 +390,8 @@ function main(argv) {
     let loaded;
     try {
       if (args.shot !== undefined && args.index !== undefined) throw new Error("give --shot (from 1) or --index (from 0), not both");
-      const index = args.shot !== undefined ? Number(args.shot) - 1 : (args.index !== undefined ? args.index : 0);
+      if (args.shot === undefined && args.index === undefined) throw new Error("--from needs --shot <n> (from 1) or --index <i> (from 0) — no silent default to shot 1");
+      const index = args.shot !== undefined ? Number(args.shot) - 1 : args.index;
       if (args.shot !== undefined && !(Number.isInteger(Number(args.shot)) && Number(args.shot) >= 1))
         throw new Error("--shot needs a whole number from 1 (the strip's \"Shot n\", scene-<n>.png)");
       loaded = loadShot(path.resolve(args.from), index);
@@ -388,7 +408,10 @@ function main(argv) {
   }
   opts.noPerson = !!args["no-person"];
 
-  const { prompt, space, hits } = assemble(opts);
+  const { prompt, space, hits, unknown } = assemble(opts);
+  if (unknown.length) {
+    console.error("warning: " + unknown.join(", ") + " outside the vocabulary (scenes-schema §shot) — sent to the model as written");
+  }
   if (hits.length) {
     hits.forEach(h => console.error("banned: \"" + h.match + "\" — " + h.why));
     process.exit(1);

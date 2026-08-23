@@ -1010,7 +1010,7 @@ window.SB_DOC = {
     if (!text) return [];
     var hits = [];
     if (/\b(?:left|right|front|back|rear) view of\b/i.test(text)) hits.push("camera-inference (\"left view of\")");
-    if (/\b(?:from|to|on|at) (?:the |a |an )?(?:(?!(?:camera|viewer|frame|picture)(?:'s|’s))[\w-]+(?:'s|’s)|his|her|its|their) (?:own )?(?:left|right|front|back|rear)\b/i.test(text)) hits.push("allocentric (\"from X's right\", \"to her left\")");
+    if (/\b(?:from|to|on|at) (?:the |a |an )?(?:(?!(?:camera|viewer|frame|picture)(?:'s|’s))[\w-]+(?:'s|’s) (?:own )?(?:left|right|front|back|rear)|(?:his|her|its|their) (?:own )?(?:left|right))\b/i.test(text)) hits.push("allocentric (\"from X's right\", \"to her left\")");
     if (/\b(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|half a|a few|several)\s*(?:m|meters?|metres?)\b/i.test(text)) hits.push("metric distance");
     return hits;
   }
