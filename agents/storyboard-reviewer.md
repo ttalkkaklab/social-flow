@@ -11,7 +11,7 @@ description: >
   whether it fits its context; **vocabulary mode** looks only at whether the words in each
   scene's narration and titles are words a person uses; **camera mode** reads the shot
   grammar of every shot — what the audience should feel there (`shot.feel`) and whether the
-  size and the angle serve it — and, on every shot that becomes a generated video, the four
+  size, the angle and the frame space serve it — and, on every shot that becomes a generated video, the four
   camera slots (movement·speed·framing·end), the cut length, and the engine fit on top;
   **sound mode** reads the sound the episode will make
   — clip audio, voice casting, tts spellings, and where the sound should get out of the way;
@@ -51,7 +51,7 @@ description: >
 
   <example>
   Context: the storyboard skill delegates to verify the camera plan before any generation call.
-  user: "Camera mode — read the shot grammar (feel · size · angle) of every shot in scenes.js and the four camera slots of every generated shot. The profile.md·directing-grammar.md·video-model-selection.md·scenes-schema.md paths are …"
+  user: "Camera mode — read the shot grammar (feel · size · angle · space) of every shot in scenes.js and the four camera slots of every generated shot. The profile.md·directing-grammar.md·video-model-selection.md·scenes-schema.md paths are …"
   assistant: "I'll run storyboard-reviewer in camera mode to collect the per-shot scores, the feel that isn't served, and the empty slots."
   <commentary>Judging the camera plan before it costs money, so use camera mode.</commentary>
   </example>
@@ -105,7 +105,7 @@ mode runs only once, so a flag aimed at the wrong layer is a finding nobody acts
 | copy | the sentences of the **whole** storyboard — machine style verdict, structural AI tells, hook, facts | total |
 | scene | **each single scene**'s role and the context around it (not the phrasing) | lowest scene |
 | vocabulary | **words** — the words used in narration and titles (not structure or flow) | lowest scene |
-| camera | the **shot grammar** of every shot — `shot.feel` and whether `size`·`angle` serve it — plus the **four camera slots**, cut length and engine fit of each generated-video shot | lowest shot |
+| camera | the **shot grammar** of every shot — `shot.feel` and whether `size`·`angle`·`space` serve it — plus the **four camera slots**, cut length and engine fit of each generated-video shot | lowest shot |
 | sound | what the episode will **sound** like — clip audio, voice casting, tts spellings, silence | total |
 | image | how the generated **PNG** lines up with the scene content | total |
 
@@ -594,22 +594,23 @@ directive to that one sentence.
 # Camera mode
 
 **The shot grammar and the camera plan, read before the first call that costs money.** Every
-shot carries a feel and the two dials that serve it — `shot.feel`, `shot.size`, `shot.angle` —
-and every shot that becomes a generated video carries four slots on top — `movement`, `speed`,
-`framing`, `end`. A dial fixed here costs nothing; the same dial fixed after generation costs
-the clip, and on a filmed shot it costs a refilm.
+shot carries a feel and the dials that serve it — `shot.feel`, `shot.size`, `shot.angle`,
+`shot.space` on a generated still — and every shot that becomes a generated video carries four
+slots on top — `movement`, `speed`, `framing`, `end`. A dial fixed here costs nothing; the same
+dial fixed after generation costs the clip, and on a filmed shot it costs a refilm.
 
 ## Scope
 
 In scope, **on every shot**: the shot grammar — is `shot.feel` written, is it a feeling rather
 than a restated `info` or a request for a move ("cinematic", "dynamic"), and do `shot.size` and
-`shot.angle` serve it against the directing-grammar §5 row; the rationing and sequencing across
-shots (one close-up — `cu`·`choker`·`ecu` — per scene, `choker`/`ecu` once or twice per episode, one `dutch` per episode with
+`shot.angle` serve it against the directing-grammar §5 row; on a generated still, is `shot.space`
+written in the camera frame with a visible-result `facing` and a `layout` that names sides
+(directing-grammar §3.5); the rationing and sequencing across shots (one close-up — `cu`·`choker`·`ecu` — per scene, `choker`/`ecu` once or twice per episode, one `dutch` per episode with
 its reason written, a close-up opening paid back in the next shot, the hook cut and speech clips
-at `eye`, a wide held ≥1.5× a close). A filmed shot is in — the user holds the camera, but the
+at `eye`, a wide held ≥1.5× a close, a scene that keeps its `space.line`). A filmed shot is in — the user holds the camera, but the
 feel, the size with its distance, the angle with its eye-height baseline, and the 180°/30° notes
-are what the shooting script will print, and they are judged here. A still is in — its size and
-angle are what `bgPrompt` draws.
+are what the shooting script will print, and they are judged here. A still is in — its size,
+angle and space are what `bgPrompt` draws.
 
 In scope, **on generated shots on top**: `broll` shots, motion-background scenes (`visual.video`),
 and `quote` speech clips (`visual.clip`) — anything produce will hand to `veo_*` or `seedance_*`
@@ -665,13 +666,19 @@ finding; a silent departure is.
 - **P0-9 the camera direction is buried in the description** — written inside `bgPrompt` or the
   clip prompt instead of the slots. Then the block can't be carried to the next scene and
   produce has nothing to assemble.
+- **P0-10 camera-inference, allocentric, or metric language** in `shot.space` or `bgPrompt` —
+  `left view of`, `right view of`, `from the X's right`, `to her left`, `1.5 m apart`, `three
+  meters away`. Models invert
+  object-centric left/right and ignore metres (directing-grammar §3.5). The fix is the
+  visible result (`faces left of frame`) and `shot.size` for distance. Run
+  `assemble-bg-prompt.js --check` on the string if unsure.
 
 ## Per-shot axes (additive out of 100 — scored separately for each shot)
 
 | Axis | Points | What earns them | Applies to |
 |---|---|---|---|
-| Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the hook cut and speech clips sit at `eye` | every shot |
-| Rationing and sequencing | 10 | this shot doesn't break the across-shot rules — a second close-up (`cu`·`choker`·`ecu`) in the scene, a third `choker`/`ecu` in the episode, a second `dutch` or one without its reason, a close-up opening not paid back by the next shot, a wide under 1.5× the close beside it | every shot |
+| Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the hook cut and speech clips sit at `eye`; on a generated still, `shot.space` is in the camera frame with `layout` and (when a person is on screen) `facing` as the visible result, no banned language | every shot |
+| Rationing and sequencing | 10 | this shot doesn't break the across-shot rules — a second close-up (`cu`·`choker`·`ecu`) in the scene, a third `choker`/`ecu` in the episode, a second `dutch` or one without its reason, a close-up opening not paid back by the next shot, a wide under 1.5× the close beside it, a later shot of the scene that flips `space.line` without a legal 180° crossing written (directing-grammar §6 rule 11) | every shot |
 | Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it) | generated shots |
 | Length fits the purpose | 15 | matches the §cut length table and the feel row, and it is the length that will be used | generated shots |
 | Engine and reference fit | 10 | the right lane for what's on screen, references inside the cap, cast ids real | generated shots |
@@ -869,7 +876,12 @@ generated image but an HTML slide that storyboard §8 builds after approval, so 
    thumbnail as-is. **A frame drawn at a different distance or height from the shot's
    `shot.size`·`shot.angle` is the same defect** when it flips the feel — a "scale" shot that
    came out as a close-up, an "alone" shot with the person filling the frame, a hook cut drawn
-   from below; write the size and angle you see beside the ones the storyboard declared
+   from below; write the size and angle you see beside the ones the storyboard declared.
+   **A frame that contradicts `shot.space` is the same defect** — the person on the right
+   when `layout` said left, facing the camera when `facing` said camera-right, the 180°
+   `line` flipped. Judge the picture against the fields, not against a VLM's own left/right
+   guess. A missing `space` on an older file is not this P0; score the fit against size and
+   angle only.
 2. **Generated text and text-like marks** — letters stamped on the screen, or patterns that
    look like letters. The moment they're misread as a sign, a document, or a screen UI, they
    become a fake source. Broken Hangul jamo belongs here too (field-tested:
@@ -948,7 +960,7 @@ Render integrity: NN/30 (evidence: …)
 Screen design: NN/30 (evidence: …)
 
 ## Correction directives (in priority order — concrete enough to move into a regeneration prompt)
-1. <file> — <what's wrong> → <what to do> (split negated nouns out into --negative-prompt)
+1. <file> — <what's wrong> → <what to do> (for `veo_*` move negated nouns into `negativePrompt`; the image tools have no such argument — design the element out of the scene sentence)
 
 ## Previous findings resolved? (only when a user-requested change came back)
 - <finding> → resolved | unresolved

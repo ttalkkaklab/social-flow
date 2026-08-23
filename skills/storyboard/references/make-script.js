@@ -129,11 +129,21 @@ const shotLine = s => {
   const sz = sh.size ? (SIZE_KR[sh.size] || `${sh.size} (어휘 밖)`) : "";
   const dist = sh.size && DIST_KR[sh.size] ? ` — ${DIST_KR[sh.size]}` : "";
   const an = sh.angle ? (ANGLE_KR[sh.angle] || `${sh.angle} (어휘 밖)`) : "아이레벨(기본)";
-  const sd = sh.size && SOUND_KR[sh.size] ? `\n**소리**: ${SOUND_KR[sh.size]}` : "";
+  const sd = sh.size && SOUND_KR[sh.size] ? `**소리**: ${SOUND_KR[sh.size]}` : "";
   let out = "";
   if (sh.feel) out += `**느낌**: ${sh.feel}\n`;
   else out += `**느낌**: (적히지 않음 — 스토리보드에서 shot.feel 을 먼저 적는다)\n`;
-  if (sz || sh.angle) out += `**사이즈·앵글**: ${[sz + dist, an].filter(Boolean).join(" · ")}${sd}\n`;
+  if (sz || sh.angle) out += `**사이즈·앵글**: ${[sz + dist, an].filter(Boolean).join(" · ")}\n`;
+  const sp = sh.space || {};
+  if (sp.layout || sp.facing || sp.line) {
+    const bits = [];
+    if (sp.layout) bits.push(sp.layout);
+    if (sp.facing) bits.push(sp.facing);
+    if (sp.line) bits.push(`선: ${sp.line}`);
+    if (sp.light) bits.push(sp.light);
+    out += `**자리**: 카메라 기준 — ${bits.join(" · ")}\n`;
+  }
+  if (sd) out += `${sd}\n`;   // 소리는 자리 다음 — shot-script-template.md 의 블록 순서
   return out;
 };
 

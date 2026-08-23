@@ -256,7 +256,7 @@ adversarial reviewer `storyboard-reviewer` **six times, once each**, before appr
 | Copy mode (§4.5) | the storyboard's prose as a whole | total |
 | Scene mode (§4.6) | each scene's role and context | **lowest scene** |
 | Vocabulary mode (§4.7) | word choice in narration and titles | **lowest scene** |
-| Camera mode (§4.8) | the shot grammar of every shot — what the audience should feel there and whether the size and angle serve it — plus the four camera slots, cut length and engine fit of every generated shot | **lowest shot** |
+| Camera mode (§4.8) | the shot grammar of every shot — what the audience should feel there and whether the size, angle and frame space serve it — plus the four camera slots, cut length and engine fit of every generated shot | **lowest shot** |
 | Sound mode (§4.9) | clip audio, voice casting, and where the sound gets out of the way | total |
 | Image mode (§5.5) | generated PNGs against scene content | total |
 
@@ -338,7 +338,7 @@ social-flow/
 │   ├── brand-reviewer.md        # adversarial review of profile images & intro videos (95/90-point convergence gates)
 │   ├── content-reviewer.md      # adversarial pre-publish verification (P0 gate)
 │   ├── growth-post-reviewer.md  # adversarial review of growth-loop copy (AI tells · context — 95-point gate)
-│   └── storyboard-reviewer.md   # adversarial storyboard review, 6 modes read once each (copy AI tells / per-scene role·context / vocabulary / camera — feel·size·angle of every shot + the slots of generated shots / sound plan / image fit)
+│   └── storyboard-reviewer.md   # adversarial storyboard review, 6 modes read once each (copy AI tells / per-scene role·context / vocabulary / camera — feel·size·angle·space of every shot + the slots of generated shots / sound plan / image fit)
 ├── apps/
 │   └── shoot-console/           # macOS SwiftUI recording console for the shooting-script flow (built locally via build-app.sh)
 └── data/                        # content data root (see data/README.md)

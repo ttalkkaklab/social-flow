@@ -969,6 +969,7 @@ window.SB_DOC = {
     return "HTML staging";
   }
   function grammarOf(s, i) {
+    var sp = (s.shot && s.shot.space) || {};
     return {
       scene: (s.scene != null) ? s.scene : (i + 1),
       slug: s.sceneSlug || "",
@@ -976,8 +977,42 @@ window.SB_DOC = {
       size: (s.shot && s.shot.size) || "",
       angle: (s.shot && s.shot.angle) || "",
       feel: (s.shot && s.shot.feel) || "",
-      info: (s.shot && s.shot.info) || ""
+      info: (s.shot && s.shot.info) || "",
+      space: sp
     };
+  }
+  /* Generated still — a picture this document will send to an image model (directing-grammar §3.5). */
+  var FILL_FRAME = { insert: 1, ecu: 1 };   // one object fills the frame — layout may stay empty
+  function genStill(s) {
+    if (s.type === "outro" || s.type === "broll") return false;
+    if (recOf(s)) return false;
+    if (s.visual && s.visual.slide) return false;
+    if (s.type === "quote" && !(s.visual && (s.visual.bg || s.visual.bgPrompt))) return false;
+    // A pre-made clip with no still behind it (a filmed or imported video cover) is not drawn here.
+    if (s.visual && s.visual.video && s.visual.video.clip && !(s.visual.bg || s.visual.bgPrompt)) return false;
+    return !!(s.visual && (s.visual.bg || s.visual.bgPrompt || s.type === "cover" || s.type === "points"));
+  }
+  /* Does the still put a person on screen — a cast id, the cover (its contract is a person
+     scene, storyboard §5), or a person word in the space block / bgPrompt. A heuristic for a
+     warning, not a verdict. */
+  function personOnScreen(s, spaceText) {
+    if (charsOf(s).length || s.type === "cover") return true;
+    var t = (spaceText || "") + " " + ((s.visual && s.visual.bgPrompt) || "");
+    // "face" is not in the list — "face not visible" / "face turned away" are the exclusion wordings.
+    return /\b(?:person|people|woman|women|man|men|girl|boy|child|children|kid|adult|worker|student|customer|speaker|figure|hands?)\b/i.test(t);
+  }
+  function spaceTextOf(sp) {
+    if (!sp) return "";
+    return [sp.layout, sp.facing, sp.line, sp.light].filter(Boolean).join(" · ");
+  }
+  /* Same three patterns as assemble-bg-prompt.js BANNED — its --selftest fails if these drift. */
+  function bannedSpaceHits(text) {
+    if (!text) return [];
+    var hits = [];
+    if (/\b(?:left|right|front|back|rear) view of\b/i.test(text)) hits.push("camera-inference (\"left view of\")");
+    if (/\b(?:from|to|on|at) (?:the |a |an )?(?:(?!(?:camera|viewer|frame|picture)(?:'s|’s))[\w-]+(?:'s|’s)|his|her|its|their) (?:own )?(?:left|right|front|back|rear)\b/i.test(text)) hits.push("allocentric (\"from X's right\", \"to her left\")");
+    if (/\b(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|half a|a few|several)\s*(?:m|meters?|metres?)\b/i.test(text)) hits.push("metric distance");
+    return hits;
   }
   // Playback role — orthogonal to type. scenes-schema §playback order is the source of truth.
   // answer-first: cover → hooking → result → body; story: cover → hooking → body → turn → result.
@@ -1663,6 +1698,32 @@ window.SB_DOC = {
     }
   });
 
+  /* Frame space — the floor plan of a generated still (directing-grammar §3.5). Older files
+     without shot.space still render; the strip warns so the reviewer weighs the gap. */
+  SCENES.forEach(function (s, i) {
+    var sp = (s.shot && s.shot.space) || {};
+    var size = (s.shot && s.shot.size) || "";
+    var still = genStill(s);
+    var written = !!(sp.layout || sp.facing || sp.line || sp.light);
+    // The 180° line is owed on a filmed two-shot as well — it is the sentence the shooting script prints.
+    if ((still || recOf(s) || written) && (charsOf(s).length >= 2 || size === "two" || size === "three" || size === "ots") && !sp.line)
+      flag("warn", "Shot " + (i + 1), "two people (or a person and what they look at) with no shot.space.line — lock \"A left, B right\" so the still agrees with the 180° sentence");
+    // Wherever a space block is written — still, quote clip, filmed shot — its frame and its words are checked.
+    if (written && !sp.frame)
+      flag("warn", "Shot " + (i + 1), 'shot.space is written with no frame — add frame: "camera" (left means left of the picture)');
+    if (sp.frame && sp.frame !== "camera")
+      flag("warn", "Shot " + (i + 1), 'shot.space.frame is "' + sp.frame + '" — the only allowed value is camera (left means left of the picture)');
+    var hits = bannedSpaceHits(spaceTextOf(sp) + " " + ((s.visual && s.visual.bgPrompt) || ""));
+    if (hits.length)
+      flag("warn", "Shot " + (i + 1), "spatial language the model cannot follow — " + hits.join(", ") + " (directing-grammar §3.5 · assemble-bg-prompt.js --check)");
+    if (!still) return;
+    if (!FILL_FRAME[size] && !sp.layout)
+      flag("warn", "Shot " + (i + 1), "generated still with no shot.space.layout — name sides from the camera before the call (directing-grammar §3.5)");
+    var personOn = personOnScreen(s, spaceTextOf(sp));
+    if (personOn && size !== "pov" && !sp.facing)   // a pov shows hands, not a face to turn
+      flag("warn", "Shot " + (i + 1), "a person is on screen with no shot.space.facing — write the visible result (\"faces camera-right\"), not \"left view of\"");
+  });
+
   /* Cast — an id used in a shot but absent from SB_DOC.characters draws no panels, so the
      reviewer cannot see what reference set the call will get. */
   var castIds = {};
@@ -1860,6 +1921,8 @@ window.SB_DOC = {
            (g.feel ? '<span class="shot-info shot-feel"><b>What the audience feels</b>' + esc(g.feel) + "</span>"
                    : '<span class="shot-info shot-feel miss"><b>What the audience feels</b>not written — write shot.feel before the size, angle and camera (directing-grammar §5)</span>')) +
          (g.info ? '<span class="shot-info"><b>What this shot adds</b>' + esc(g.info) + "</span>" : "") +
+         (spaceTextOf(g.space) ? '<span class="shot-info"><b>From the camera</b>' + esc(spaceTextOf(g.space)) + "</span>"
+            : (genStill(s) && !FILL_FRAME[g.size] ? '<span class="shot-info shot-feel miss"><b>From the camera</b>not written — fill shot.space before generating the still (directing-grammar §3.5)</span>' : "")) +
          "</div>";
 
     if (s.type === "broll") {
@@ -2176,7 +2239,7 @@ window.SB_DOC = {
       ? "<ul>" + audit.map(function (a) {
           return '<li class="' + a.level + '"><span class="where">' + esc(a.where) + "</span>" +
                  '<span class="what">' + esc(a.what) + "</span></li>"; }).join("") + "</ul>"
-      : '<div class="clean">Character counts, speech rate, shot length, frame overflow, total length, cover title, playback order (arc), opening strategy, hook form, shot grammar (feel · size · angle) — every contract item passes.</div>');
+      : '<div class="clean">Character counts, speech rate, shot length, frame overflow, total length, cover title, playback order (arc), opening strategy, hook form, shot grammar (feel · size · angle · space) — every contract item passes.</div>');
 
   var safe = document.getElementById("tg-safe"), subs = document.getElementById("tg-subs");
   if (safe) safe.addEventListener("change", function () { document.body.classList.toggle("safe", safe.checked); });
