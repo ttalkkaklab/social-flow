@@ -82,33 +82,89 @@ informational piece the floor is 2 shots at different sizes per scene (wide + cl
 `type` (cover/points/quote/broll/outro) is the kind of screen. The **playback role** is `beat`.
 It's orthogonal to the grammar axis.
 
-## Playback order — cover → hooking → result → body
+## Playback order — one skeleton, two arcs (`arc`)
 
-This is the skeleton that reduces drop-off. The cover shows the result at a glance, hooking
-hooks why it's needed, and the body unspools only after **the finished thing has been shown
-ahead of the method**. Method before result means listening to an explanation without knowing
-the destination.
+The skeleton that reduces drop-off is stop · hold · satisfy · act (the job table below). There
+are two ways to walk it, and the cover shot says which with `arc`:
+
+- **`answer-first`** (the default — a file with no `arc` is read as this) — **cover → hooking →
+  result → body → cta**. The cover shows the result at a glance, hooking hooks why it's needed,
+  the result unfolds it properly, and the body unspools only after **the finished thing has been
+  shown ahead of the method**. Method before result means listening to an explanation without
+  knowing the destination. Builds, tutorials, before/after comparisons, most informational pieces.
+- **`story`** — **cover → hooking → body → turn → result → cta**. The cover opens a loop on the
+  moment something went wrong or strange and **does not say how it ended**; hooking is the
+  setup — who, when, what they were trying to do (the original goal has to be clear, or the
+  reversal has nothing to land on); the body builds the conflict — why it was judged useless,
+  why it nearly got buried; the turn is the moment someone or something saw it differently, the
+  highest tension in the episode; the result is the payoff, **the first place the answer
+  appears**, wide enough to see what it became; the cta is the afterglow — a frame that connects
+  back to the cover, one question or the next episode. Material that is an unfinished sentence
+  on its own ("he tried to make a super-glue and failed completely") is story material — the
+  loop is already in it, and a payoff shown early closes the loop and takes away the reason to
+  watch. As proportions of the main body: the setup stays under a fifth, the turn lands around
+  the two-thirds mark, the payoff takes the last quarter before the cta (the six-beat table the
+  user relayed for a 60 s piece, read as proportions — the format band is still 35–75 s).
+
+Why the story arc is its own order: a piece with a clear narrative structure completes 2–3×
+more often than a non-narrative one, and a curiosity loop — a question or claim thrown, the
+answer delayed — is the strongest hold short-form has. The rationale usually given is the
+Zeigarnik effect: the mind holds an unfinished story open and asks for closure. Grade:
+practitioner blogs —
+[GhostShorts](https://ghostshorts.com/blog/how-to-make-storytelling-videos-that-keep-viewers-hooked-2026)
+(the 2–3× figure and hook → build → tension → payoff) and
+[House Sparrow Films](https://housesparrowfilms.com/blogs/how-to-hook-viewers-in-the-first-3-seconds-tips-for-reels-and-shorts)
+(curiosity loops); no method published, and Zeigarnik is the name for the mechanism, not a
+measurement of it (user-relayed, 2026-08-23).
 
 | `beat` | Name | What it does | Where |
 |---|---|---|---|
-| `hook` | cover | Puts the finished thing in the first frame; the first line gives a reason to stay | `type:"cover"` — it's the cover even unwritten |
-| `hooking` | hooking | Problem, harm, loss, resolve. Why that result is needed — catches what the cover threw (the chosen opening strategy) and doesn't unpack the answer | **right after the cover, in every episode** (§hooking) |
-| `result` | result | Shows the finished thing properly. Scrolling, demo, before/after | **right after hooking, before the body** |
-| `body` | body | The method, evidence, and steps that made that result | After the result has been seen |
-| `cta` | next | What gets finished in the next episode | At the very end. `type:"outro"` lands here even unwritten |
+| `hook` | cover | answer-first: puts the finished thing in the first frame. story: the moment it went wrong, close, the ending withheld. Either way the first line gives a reason to stay | `type:"cover"` — it's the cover even unwritten |
+| `hooking` | hooking / setup | answer-first: problem, harm, loss, resolve — why that result is needed; catches what the cover threw (the chosen opening strategy) and doesn't unpack the answer. story: the setup — era, person, the original goal — the ending still withheld | **right after the cover, in every episode** (§hooking) |
+| `result` | result / payoff | answer-first: shows the finished thing properly — scrolling, demo, before/after. story: the payoff — what it became, the loop closed, shown wide enough to see the whole thing | answer-first: **right after hooking, before the body**. story: **after the turn, before the cta** |
+| `body` | body / build | answer-first: the method, evidence, and steps that made that result. story: the build — the conflict, the rejection, the reason it almost got lost, tension rising | answer-first: after the result has been seen. story: after the setup |
+| `turn` | turning point | **story only** — the moment someone or something saw it differently; the peak of tension, the last beat before the answer | right before the result |
+| `cta` | next / afterglow | answer-first: what gets finished in the next episode. story: a frame that loops back to the cover — one question or the next episode | At the very end. `type:"outro"` lands here even unwritten |
 
-The cover's first frame and the result scene point at the same artifact. The cover is the
-glance; the result unfolds it so the built parts show. Don't unfold the same finished thing
-again at the end of the body.
+**What each beat does to the drop-off curve — stop · hold · satisfy · act.** In short-form the
+variable the storyboard manages is early drop-off, not the look of the panels: half or more of
+the viewers who leave a Short leave inside the first 3 seconds, completion rate is the first
+distribution signal under 60 s, and the first 1.5 s of hook weighs more than anything after it
+(user-relayed, 2026-08-23 — field-practice grade, unsourced). The four beats are the four jobs:
+
+| Job | answer-first | story | What it has to do | What kills it |
+|---|---|---|---|---|
+| **stop** | `hook` | `hook` | 0–3 s: big title, a strong first frame, movement already in it — no logo, no intro sting, no greeting. story: the moment of failure, close, no hint of how it ended | a first frame the thumb slides past; a story cover that names the ending |
+| **hold** | `hooking` | `hooking` · `body` · `turn` | keep the promise visible and the answer withheld — answer-first through the first 20 s, story through the turn (setup lean, tension climbing setup → build → peak), something changing on screen every 2–4 s | unpacking the answer; drifting from what the cover threw; a setup that dawdles |
+| **satisfy** | `result` · `body` | `result` | pay the promise the cover made — answer-first: the result, then how; story: the payoff, the first time the answer is on screen | a hook the body can't keep: the platform now reads "stopped, then left inside 3 s" as a negative signal, so a bait hook that isn't kept is punished, not rewarded |
+| **act** | `cta` | `cta` | the next concrete thing (the next episode's result, the link); story: a frame that loops back to the cover | a vague subscribe ask |
+
+And in between, **every visual change resets attention for a few more seconds** — high-performing
+Shorts change something on screen every 2–4 s (user-relayed, 2026-08-23 — field-practice grade,
+unsourced). One narration sentence = one reveal gives that
+cadence on its own (§narration segments); a stretch longer than ~4 s with nothing changing is a
+stretch to cut or to give a caption swap, an image change or a move.
+
+On answer-first the cover's first frame and the result scene point at the same artifact. The
+cover is the glance; the result unfolds it so the built parts show. Don't unfold the same
+finished thing again at the end of the body. On a story arc they are different on purpose — the
+cover is the moment, the result is what it became — and it is the cta's frame that points back
+at the cover.
 
 Left unwritten, the renderer reads it this way. `type:"cover"` → hook, `type:"outro"` → cta,
 `sequence` opening with `결과` → result, `기획`·`방법`·`단계`·`내용` → body, opening with
-`문제`·`후킹` → hooking. `storyboard.html` warns when there's no hooking shot or the shot after
-the cover isn't hooking, and when the piece is a build, tutorial, or before/after comparison
-whose result sits behind the body.
+`문제`·`후킹` → hooking, opening with `전환`·`반전` → turn. `storyboard.html` warns when the
+first shot isn't the cover, when there's no hooking shot or the shot after the cover isn't
+hooking; on answer-first it flags body before result as a violation, and warns on a `turn` beat
+(it belongs to the story arc) and on body with no result shot (an informational piece has no
+result scene — there the first content shot takes `beat:"result"`, §hooking); on a story arc it
+flags result before body or before the turn as a violation, and warns when there is no turn, no
+result, or the shot right before the result isn't the turn. An `arc` outside the two is a
+warning.
 
 ```js
-beat: "result"                    // hook | hooking | result | body | cta
+arc: "answer-first"               // cover only — answer-first (default) | story. Which order the episode walks
+beat: "result"                    // hook | hooking | result | body | turn (story only) | cta
 sequence: "결과"                  // sequence head. Used with beat, the document groups them into one block
 ```
 
@@ -123,20 +179,38 @@ sequence: "결과"                  // sequence head. Used with beat, the docume
 | `scene` | recommended | Grammar scene number. Same value for the same place and time. Without it the renderer assumes one scene per entry |
 | `sceneSlug` | recommended when `scene` is set | `"place / time"` — e.g. `"salon chair / day"` |
 | `sequence` | optional | Sequence name. Only when one episode has two purposes |
-| `beat` | optional | `hook` \| `hooking` \| `result` \| `body` \| `cta` — the playback role. See §playback order above |
-| `shot` | recommended | `{ size, info }` — below |
+| `beat` | optional | `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` — the playback role (`turn` on the story arc only). See §playback order above |
+| `arc` | cover only | `answer-first` (default) \| `story` — which playback order the episode walks. See §playback order above |
+| `shot` | recommended | `{ feel, size, angle, info }` — below. `feel` is written **before** `size`·`angle`·`camera` are chosen (directing-grammar §5) |
 | `sound` | optional | `{ cue, drop, sfx }` — what the audience hears under this shot (§music cues). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
 
 ```js
 shot: {
-  size: "ws",                              // ws wide · two two-shot · ms medium · cu close-up
-  info: "that the recommendations split two ways"   // one line on what this shot newly tells the audience
+  feel: "relief — it really is that short",  // what the audience should FEEL here — written first, the dials follow
+  size: "mcu",                             // els · ls · fs · mfs · ms · mcu · cu · choker · ecu · insert
+                                           // + compositions two · three · ots · pov · back · cutaway · reaction (ws = legacy ls)
+  angle: "eye",                            // eye (default) · high · low · overhead · dutch — against the SUBJECT's eyes
+  info: "that the install is one command"  // one line on what this shot newly TELLS the audience
 }
 ```
 
+- **`info` is what the viewer newly learns; `feel` is what the viewer should feel.** Two
+  different lines — scene mode keys coverage on `info`, camera mode keys the technique on
+  `feel`. A `feel` that restates `info` ("that it's one command") is unset.
+- **Feel first, dials second.** Write `feel`, then pick `size`·`angle` (and `camera` on a
+  generated shot, `duration` on a clip) from the directing-grammar §5 table — the row is a
+  default, and leaving it means writing why on the shot. The size words and the angle words go
+  into `bgPrompt` too, since the still is where they get drawn. The vocabulary, the
+  cut lines (never at a joint), the distances and the sound that matches each size are
+  `directing-grammar.md` §2–§3.
 - If `info` matches another shot in the same scene, that shot can be dropped. That's what
   coverage design is.
 - When you open on a close-up, pay back "where are we" with a wide or medium in the next shot.
+- **The close-up is rationed** — one close-up (`cu`·`choker`·`ecu`) per scene, `choker`/`ecu` once or twice per episode,
+  one `dutch` per episode with its reason written on the shot. The check strip warns past those
+  counts (directing-grammar §6).
+- **Hook cuts and speech clips sit at `eye`** unless a reason is written — the one angle rule with
+  a measurement behind it.
 - produce runs fine on an old `scenes.js` without these fields. Only the human document and the
   checks look empty.
 
@@ -169,6 +243,19 @@ narration: [
 - Character caps (spaces and punctuation excluded): cover ≤40 total, points/quote ≤50 total.
   8–25 per sentence — under 8 narrows the reveal window below 0.9s.
 - Make the last sentence especially short (the beat before the transition).
+- **Every sentence does one of three jobs, or it goes** — it opens or deepens curiosity, it
+  moves the information forward, or it puts evidence on the table. A segment that does none
+  of the three (a greeting, a restatement, a "so as you can see", a transition that carries
+  nothing) is cut, not polished — in the body every second has to do one of the three (user
+  directive, 2026-08-23). Copy mode reads for it (P0-11).
+- **Subtitles are read with the sound off** — most short-form is watched muted. One segment is
+  one subtitle: 4–7 words, which is the 8–25-character band above; high contrast on the
+  builder's band (y 1380–1560, inside the bottom safe zone — platform-playbook §7); nothing the
+  viewer has to hear to follow. If a line only works with the voice, the subtitle isn't doing
+  its job.
+- **One sentence = one reveal = one visual change**, and that is the 2–4 s cadence that keeps
+  attention — don't merge two sentences into one reveal to save a caption, and don't let a
+  stretch run past ~4 s with nothing changing on screen (§playback order, the cadence note).
 
 ### title is a spoken hook · narration explains in polite register (user directive, 2026-08-13)
 
@@ -245,15 +332,17 @@ the human-readable production layer, and the two have to agree.
 
 ## Contracts by type
 
-### cover — the result in the first second, the promise in the first three
+### cover — the result (answer-first) or the moment (story) in the first second, the promise in the first three
 
 ```js
 {
   type: "cover",
   scene: 1,
   sceneSlug: "reporting desk / day",
-  shot: { size: "cu", info: "that not filing means a fine" },
+  shot: { feel: "alarm — that might be me, unfiled", size: "mcu", angle: "eye", info: "that not filing means a fine" },
+  arc: "answer-first",                      // playback order — answer-first (default) | story (§playback order)
   hookType: "fear",                         // opening strategy — fear | empathy | curiosity | spoiler (§the four opening strategies)
+  hookForm: "gap",                          // how the first line is built — paradox | gap | payoff | identify | number | secret (§the six hook forms)
   kicker: "베트남 생활 · 행정",              // top series label (rg0)
   title: "임시거주 신고, 안 하면 **과태료**",  // within 16 chars + topic word required (rg1) — the title rides that strategy too
   stat: "500만₫",                           // hero stat (rg2)
@@ -276,15 +365,28 @@ the human-readable production layer, and the two have to agree.
   `curiosity` · `spoiler` (showing the ending). Written on the cover shot only.
   Without it `storyboard.html` warns, and if none of the four is in the opening, it's a
   reviewer P0.
+- hookForm: **how** the first line is built — one of the six forms in §the six hook forms
+  (`paradox` · `gap` · `payoff` · `identify` · `number` · `secret`). `hookType` is why the viewer
+  stops (the stimulus); `hookForm` is the shape the title and segment ① take to deliver it.
+  Written on the cover shot. Without it `storyboard.html` warns; a form that doesn't serve
+  the stimulus is a reviewer correction directive.
+- **The first frame has no logo, no intro sting, no greeting.** The stop is decided in 0–3 s:
+  a big title (≤16 chars, the gradient chip), a strong first frame (the result, the person, the
+  figure), and movement already in it — the builder's Ken Burns and the cover's kicker → title → hero-stat staging
+  are the floor, an opening b-roll or a real recorded clip is the ceiling. Branding lives in
+  the outro (produce absolute rule 6), and the channel intro never sits in front of a short.
 - reveal mapping: rg1=title ← segment ①, rg2=stat ← segment ②.
 
-#### The first frame is the result, segment ① is a promise to the viewer
+#### The first frame is the result (answer-first) or the moment (story); segment ① is a promise to the viewer
 
-Build, tutorial, and before/after content shows **the finished result from the very first
-frame** of `visual.bg` or `visual.shot`. It doesn't open on process screens, on an app being
-launched, or on the speaker's face saying hello. The viewer sees the result in the first
-second and hears why to keep watching in segment ①. Only informational topics that can't show
-a result on screen use the problem situation or the key figure as the first frame.
+On answer-first, build, tutorial, and before/after content shows **the finished result from
+the very first frame** of `visual.bg` or `visual.shot`. It doesn't open on process screens, on
+an app being launched, or on the speaker's face saying hello. The viewer sees the result in
+the first second and hears why to keep watching in segment ①. Informational topics that can't
+show a result on screen use the problem situation or the key figure as the first frame. A
+story arc opens on the moment instead — the failure or the strange thing, close, with no hint
+of how it ended (§playback order); on either arc the first frame carries no logo, intro sting
+or greeting.
 
 The cover's first line (segment ①) is a hook surface separate from the on-screen title. There's
 one contract — **the first sentence gives the listener a reason to stay.** That reason hangs on
@@ -326,6 +428,11 @@ the sound (segment ①) rides. **An opening with none of the four is a reviewer 
   promise) is the hard rule; matching strategies isn't required — a cover opening on fear and
   hooking catching that loss with an empathy scene is natural. A title on fear with segment ①
   talking about something else counts as a catch violation.
+- **The arc narrows the natural pair.** A `story` arc rides `curiosity` (or `empathy`·`fear` on
+  the moment of failure) — `spoiler` is the ending in the first frame, which closes the loop at
+  0 s. Choosing it on a story arc takes a written reason on the cover, and the reviewer reads it
+  as a strategy that doesn't serve the arc (a correction directive — the strategy P0 stays
+  "none of the four").
 - **Fear gets three guardrails.** ① The threat either has evidence in research.md or is hedged
   to a possibility, as in the example above ("~일 수도") — an unhedged assertion is an
   unverified assertion (P0). ② The body answers that threat — hooking catches it and the result
@@ -346,13 +453,54 @@ have performed best so far; every video uses one of them." The source video coul
 of the four works on our channel is read from episode performance — change one variable at a
 time on baseline episodes (see §motion background, the format-overhaul item).
 
+#### The six hook forms — how the first line is built (`hookForm`)
+
+The four strategies say **why** the viewer stops. The six forms below say **how** the title and
+segment ① are shaped to deliver that stimulus — the top patterns measured on short-form in
+2026 (user-relayed, 2026-08-23 — field-practice grade, unsourced). Pick one, write it on the
+cover as `hookForm`, and make the title and segment ① actually take that shape. A form serves a
+stimulus; the pairs below are the natural ones, and a form on a stimulus it doesn't serve is a
+reviewer correction directive (the strategy P0 stays the four).
+
+| `hookForm` | Form | What it does | Serves | Segment ① / title shape |
+|---|---|---|---|---|
+| `paradox` | paradox · provocation | a claim that contradicts what the viewer believes — "most people have this backwards", "if you want Y, stop doing X" | `curiosity`, `fear` | a flat contrarian sentence, the topic word inside it |
+| `gap` | curiosity gap · open loop | throw a question or a claim and **withhold** the answer — "there's one food quietly slowing your progress" | `curiosity` | name the thing exists, not what it is |
+| `payoff` | result first | show or hint the punchline in the first 1–3 s, then promise how | `spoiler` | the first frame is the finished thing; segment ① says what it gets you |
+| `identify` | self-identification question | a question the viewer answers "that's me" — "editing on your phone and hitting the wall?" | `empathy` | the viewer is the subject, in the second person or the shared situation |
+| `number` | number · framework | a precise figure or a counted structure — "the exact 3 steps we made [figure] with" | `curiosity`, `spoiler` | the number is the hero stat, the structure is the body's spine |
+| `secret` | hidden · secret reveal | "hidden/secret" wording — a curiosity gap plus a trust loop (you'll be told) | `curiosity` | promise the reveal, keep it for the result |
+
+- **The form has to be kept, not just thrown.** The platform now tracks "stopped, then left
+  inside 3 s" as a negative signal (user-relayed, 2026-08-23 — field-practice grade, unsourced)
+  — a `gap` that the result never closes, a `secret` the body
+  never reveals, a `number` the body doesn't count out, a `paradox` the evidence doesn't back,
+  is a hook that costs distribution instead of buying it. That is the §playback order
+  **satisfy** job, and copy mode docks the hooking axis when the promise isn't paid.
+- **Fear keeps its guardrails** whatever the form — a `paradox` or `number` on `fear` still
+  needs the threat in research.md or hedged to a possibility.
+- **The arc picks the form's lane.** On `answer-first` every form is open. On `story`, `gap` ·
+  `secret` · `paradox` · `identify` keep the loop open; `payoff` and `number` close it at 0 s
+  (the payoff is the answer, a counted framework tells the end). Use those two on a story arc
+  only with the reason written on the cover — the reviewer treats them as a form that doesn't
+  serve the stimulus (correction directive, not a P0). "He tried to make a super-glue and failed
+  completely" is a `gap` on its own: it names that the thing exists, not what it became.
+- **The mapping to our fields** — `payoff` is what the cover contract already demands on build
+  types on answer-first (the result in the first frame), `identify` is the hooking "problem·harm" form with
+  the viewer as subject, `gap` is the §hooking "don't unpack" rule seen from the first line.
+  The six don't replace the four or the hooking contract; they name the shape of the first
+  sentence so it can be chosen on purpose and read back against performance.
+
 ### hooking — the shot after the cover. It hooks why they should stay
 
 If the cover stopped the thumb, hooking carries the stopped person to the result. The two
 stretches differ even in the metric the platform measures — the cover is the 3-second skip
-rate, hooking is the drop-off curve over the first 30 seconds and first minute. **It exists in
+rate, hooking is the drop-off curve over the first 30 seconds and first minute. On a story arc
+hooking is the **setup** — same slot, same hold job, but its subject is the protagonist and the
+goal they had, and the ending stays out of it (§playback order). **It exists in
 every episode** — informational pieces too, not just builds. An informational piece may have no
-result scene, but it still needs a "why stay". `type` is usually `points`, and it may be written
+result scene (its first content shot then carries `beat:"result"` — §playback order), but it
+still needs a "why stay". `type` is usually `points`, and it may be written
 as `quote` when it's a character asking a question. Either way, write `beat: "hooking"`.
 
 ```js
@@ -361,7 +509,7 @@ as `quote` when it's a character asking a question. Either way, write `beat: "ho
   beat: "hooking",
   scene: 1,                                  // same scene number when the place and time match the cover
   sceneSlug: "workroom / late at night",
-  shot: { size: "ms", info: "that a night spent fearing no response is their own story" },
+  shot: { feel: "that's me — the night spent dreading no response", size: "ms", angle: "eye", info: "that a night spent fearing no response is their own story" },
   title: "",                                 // usually left empty — the sound hooks, the screen shows the problem scene
   narration: [ {tts,sub}, {tts,sub} ],       // 1–3 segments. The viewer as the subject
   visual: { picture: "still", overlay: "html", bg: "images/scene-2.png", bgPrompt: "…" }
@@ -372,8 +520,9 @@ as `quote` when it's a character asking a question. Either way, write `beat: "ho
   role but 4 seconds of the cover picture moving, so it can sit between — as long as the first
   shot after it is hooking. It comes before the result (in builds) and the first body scene.
 - **Length** — short-form **1–3 shots · 4–15s**. Counting from the cover, the result (the first
-  body scene for informational pieces) starts **within 20s**. Long-form is 1–3 shots · 20–60s,
-  with the result inside the first 60s. These are provisional — the value sits between TikTok's
+  body scene for informational pieces, the build on a story arc — there the result is the payoff
+  and waits for the turn) starts **within 20s**. Long-form is 1–3 shots · 20–60s,
+  with the result (or the build) inside the first 60s. These are provisional — the value sits between TikTok's
   6-second hook and YouTube's 30-second Intro, and of the two measured episodes buzz-agents
   (1 shot, 10s) is inside while neighborhood-change-radar (4 shots, 17.2s, result starting at
   20.6s) is outside. Revisit with average watch time and retention across 3 baseline episodes.
@@ -384,7 +533,8 @@ as `quote` when it's a character asking a question. Either way, write `beat: "ho
      first 30 seconds match the thumbnail and title's promise.
   2. **Hook** — say the viewer's problem, loss, or gain **with the viewer as the subject**. This
      is where the opening strategy the cover picked (§the four opening strategies) continues.
-     The form is one of four:
+     On a story arc the subject is the protagonist — era, person, the original goal — and the
+     viewer's stake is the loop the cover left open. The form is one of four:
 
      | Form | Strategy | Example |
      |---|---|---|
@@ -398,7 +548,10 @@ as `quote` when it's a character asking a question. Either way, write `beat: "ho
      hooking keeps the finished thing on screen and hooks the why with one of the other three —
      showing the ending a second time isn't hooking.
   3. **Don't unpack** — the answer, the method, and the finished thing belong to the result and
-     the body. If hooking says the answer, what follows is a rerun. TikTok measurements put
+     the body. If hooking says the answer, what follows is a rerun. On a story arc the rule runs
+     through the build and the turn as well — the answer belongs to the payoff, and a body or
+     turn beat that names it closes the loop early (scene mode reads it as hooking that unpacked
+     the answer). TikTok measurements put
      watch time +16% when suspense sits at the front of the story, and curiosity only arises in
      the state where "something you want to know is visible but not yet filled in".
   4. **Be short** — inside the length above. A long hooking opens a gap between the cover's
@@ -424,7 +577,7 @@ as `quote` when it's a character asking a question. Either way, write `beat: "ho
   type: "points",
   scene: 1,
   sceneSlug: "reporting desk / day",
-  shot: { size: "ws", info: "that the deadline moved to the day of arrival" },
+  shot: { feel: "relief — I can still make it in time", size: "ls", angle: "eye", info: "that the deadline moved to the day of arrival" },
   title: "7월 24일부터 **이렇게** 바뀝니다",   // fixed at 60px, top (rg1) — "" when absent (see §on-screen text only when needed below)
   bullets: [                                  // one at a time on screen (caption swap). 0 is normal too
     { t: "도착 즉시 신고", d: "종전 24시간 → 도착 당일로" },
@@ -540,13 +693,19 @@ The rules that applied to the old one-string camera line now apply per slot:
 - **No seconds in any slot** — length is `duration` (§cut length).
 - **No exclusions in any slot** — that is Veo's `negativePrompt` argument, and for Seedance it
   means re-describing the scene so the thing doesn't appear (§motion background).
-- **Don't pick a move to carry an emotion.** Moves changing emotion has no empirical support
-  (p=.84, camera research §07) — tone comes from `bgPrompt` and the props. For most body shots
-  `movement: "static"` is the honest answer, and the camera research says the same thing: spend
-  moves on openings and transitions, where the character isn't set yet.
+- **The move is chosen from `shot.feel`, and it supports the feel rather than carrying it.**
+  Pick it from the directing-grammar §4–§5 rows (realisation → `dolly in`, pressure → slow
+  `zoom in`, travel → `truck`, presence → `handheld`, closing → `pedestal up` …). The measured
+  part is narrow — a move on its own didn't change what viewers felt (p=.84, camera research
+  §07); what it raised was immersion, on cuts whose character wasn't set yet. So size, angle,
+  the picture and the sound carry the feel, the move makes the audience move with it, and for
+  most body shots `movement: "static"` is the honest answer. The finding is a move that
+  **contradicts** the declared feel, or a feel left to ride on the move alone.
 
-`shot.size` is a different axis and stays where it is — `size` is where the frame cuts the
-person, `camera` is what the camera does and where it stops.
+`shot.size` and `shot.angle` are different axes and stay where they are — `size` is where the
+frame cuts the person, `angle` is where the camera sits against their eyes, `camera` is what
+the camera does and where it stops. `framing` restates size and angle in the engine's words so
+the clip is drawn at the distance the storyboard decided.
 
 ### Character reference (`visual.character`)
 
@@ -653,12 +812,17 @@ the subject drifts, the middle goes dead. Pick the length from what the cut is f
 | A shot establishing the space | 5–8s |
 | A deliberate long take | 10s+ — and `camera.movement` stays one move |
 
+The purpose row is the first pick; `shot.feel` refines it (directing-grammar §5 carries a length
+per feel), and across shots **a wide holds at least 1.5× a close** — a wide frame takes longer to
+read, a close-up carries one thing and can be short (directing-grammar §6).
+
 **Ask for the length you will use.** Seedance makes only the seconds you request and bills them,
 so `durationSeconds` is the used length. Veo is the exception — its reference lane is pinned to 8s,
 so there the extra seconds get made and produce trims them (§broll).
 
-The existing caps stand: a motion background stays ≤8s (one playthrough covers the scene), and a
-b-roll's used length is 4s by default.
+The existing caps stand: a motion background stays inside one clip's length (Veo 8s fixed,
+Seedance up to 15s — the check strip warns past 15s; the real risk is a clip shorter than its
+scene, which shows the loop's seam), and a b-roll's used length is 4s by default.
 
 ### Motion background (`visual.video`) — a scene background from image to video
 
@@ -666,7 +830,7 @@ b-roll's used length is 4s by default.
 {
   type: "points",
   bullets: [ … ], footnote: "",
-  duration: 8,                        // keep it ≤8s — one playthrough of the clip covers the scene
+  duration: 8,                        // one playthrough of the clip covers the scene — Veo 8s, Seedance up to 15s
   narration: [ {tts, sub}, … ],       // kept — unlike b-roll, only the background moves while you talk
   visual: {
     picture: "ai-video", overlay: "html",
@@ -705,9 +869,10 @@ Chinese (`推`), so neither is confirmed in English, and `dolly in` satisfies bo
 isn't a format the vendor requires** — in the Seedance top-level formula the camera slot itself
 is `非必须`, and the "move amplitude" once written as a required slot failed re-verification
 against the original (2026-08-15 camera research). The reason for writing it as a stretch is our
-own: **it's a motion-background cut whose composition has to be reproduced.** Moves per cut go
-up to 2 on the default model 1.5 Pro — the one-move-per-cut recommendation is Seedance 2.0 only,
-so carrying it over here would be wrong. Two things to avoid — **don't write seconds** (length is
+own: **it's a motion-background cut whose composition has to be reproduced.** The storyboard
+writes **one move**; a second goes in only on the default model 1.5 Pro (the vendor teaches
+combinations there — the one-move-per-cut recommendation is Seedance 2.0's) and only with the
+reason written on the shot (§camera · directing-grammar §4). Two things to avoid — **don't write seconds** (length is
 set by the scene's `duration` and the edit trims it) and **don't write what to exclude into the
 sentence** (Seedance has no exclusion-only argument — re-describe the scene so it doesn't appear.
 That slot is the `negativePrompt` argument only when going to Veo). Write the sentence in English
@@ -717,15 +882,16 @@ That slot is the `negativePrompt` argument only when going to Veo). Write the se
   with nothing said is `broll` (spliced between scenes); **when the background has to move while
   you talk, that's a motion background**. Still is the default for scenes where still is enough —
   video buys cost and seam risk.
-- **Don't write a plan that says "this scene is heavy, so push the camera in"** — the notion that
-  moves change emotion has no empirical support (p=.84, camera research §07). A scene's tone comes
-  from the background picture and the props, and the one thing moves actually raised was
-  immersion. So use moves **where the character isn't set yet — openings and transitions** — and
-  fix `bgPrompt` when you want to change the emotion.
+- **Start from the shot's `feel`, not from "this scene is heavy, so push the camera in"** — read
+  the directing-grammar §5 row for that feel and take its move; the picture (`bgPrompt`), the
+  size and the angle carry the tone, the move supports it (a move on its own didn't change
+  what viewers felt — p=.84, camera research §07 — what it raised was immersion, on cuts whose
+  character wasn't set yet). So spend moves **where the character isn't set yet — openings and
+  transitions** — and when the tone is wrong, fix `bgPrompt`, size or angle before the move.
 - **Mixing movement into the middle scenes is favorable in itself** — a run of still cuts is a
   scroll-past signal (skip-rate measurement, 2026-08-15). But veo isn't the only source of
   movement: Ken Burns (the builder applies it per cut) and code-rendered animation (the cover's
-  4→1 staging, typing cards — clips captured from HTML in a browser, cost 0 and safe for Korean)
+  kicker → title → hero-stat staging, typing cards — clips captured from HTML in a browser, cost 0 and safe for Korean)
   come first. A veo motion background is bought only when those fall short and **the movement
   itself is the content**. Count how long the fully-still stretches in the episode are first,
   confirm the slot can't be filled by a code render, and only then plan veo.
@@ -764,9 +930,10 @@ That slot is the `negativePrompt` argument only when going to Veo). Write the se
   video across the whole scene, so per-segment background swapping can't hold (the alpha capture
   has only text). To turn an illustration-mode scene into video, use the single representative
   illustration (`visual.bg`) as the source.
-- Keep `duration` at 8 seconds or under — made with Veo it's fixed at 8s, so anything inside that
-  is covered by one clip, and Seedance makes only as many seconds as you ask and bills that much.
-  Go over and the loop shows its seam.
+- Keep `duration` inside one clip — made with Veo it's fixed at 8s, so anything inside that is
+  covered by one clip; Seedance makes only as many seconds as you ask (up to 15s) and bills that
+  much, and the check strip warns past 15s. A clip shorter than its scene loops, and the loop
+  shows its seam.
 - The content-reviewer **plan mode** gate is the same as b-roll's (absolute rule 13) — don't call
   veo without `PLAN_REVIEW: PASS`.
 
@@ -777,6 +944,7 @@ That slot is the `negativePrompt` argument only when going to Veo). Write the se
   type: "broll",
   after: 0,                          // spliced in after this scene index (the opening b-roll goes after the cover = 0)
   narration: [],                     // has to be empty — produce absolute rule 9
+  shot: { feel: "attention closing in on the one thing the cover showed", size: "mcu", angle: "eye" },   // b-roll is a shot too — feel first (directing-grammar §5); the strip warns when it is missing
   duration: 4,                       // ★used length★ — from what the cut is for (§cut length); write the reason in the comment
                                      // Veo: generation is pinned to 8s, so produce trims the front. Seedance: this is what gets requested
                                      // don't stretch it with a palindrome (the audio plays backwards)
@@ -798,7 +966,7 @@ motion-background scenes count together. One b-roll is usually the opening after
 (`after: 0`); the other can sit after any body scene — where the story's axis turns, or where a
 run of still cuts is dragging.
 
-- **Don't put it in the main manifest** — after the build, `../produce/references/splice-clip.sh`
+- **Don't put it in the main manifest** — after the build, `../../produce/references/splice-clip.sh`
   splices it at the `after` scene's end time and pushes the following subtitles by the measured
   insert length. If you used both slots, pass **both clips in one call** (the script sorts and
   processes them by time). Splitting it into two calls makes the second call re-read `reel.mp4`
@@ -901,6 +1069,7 @@ in one episode.
   type: "points",
   scene: 4, sceneSlug: "terminal / day",
   beat: "result",
+  shot: { feel: "relief — it really runs", size: "ms", angle: "eye", info: "that one command really runs the whole thing" },
   title: "이게 진짜 도는 화면이야",          // the spoken hook that appears in the lower third
   bullets: [{ t: "명령 한 줄", d: "나머지는 알아서 돈다" }],
   duration: 24,                               // filmed scenes have no cap
@@ -926,6 +1095,13 @@ in one episode.
 **People don't pick the filename.** The storyboard sets `footage/s<scene number>-<English slug of
 sceneSlug>.mp4`, writes it into `clip`, and prints it as-is into `script.md`. The user only has to
 save the filmed file under that name, and produce doesn't have to hunt for files.
+
+**A filmed shot carries `shot.feel`·`size`·`angle` like any other** — they are what `script.md`
+prints as 느낌 · 사이즈(거리) · 앵글(기준 높이) · 소리 per shot, so the person holding the camera
+knows how far to stand, where the camera sits against the subject's eyes, and whether the room or
+the voice leads the sound. `visual.shot` says what is on screen; `shot.size`·`angle` say how it is
+framed. The distances, the joint rule, the 180° line and the 30° rule for re-filming are
+directing-grammar §7.
 
 #### Where the sound comes from — two lanes
 
@@ -1077,19 +1253,27 @@ strip says no violations.
 - [ ] **On an all-live-voice episode** `window.VOICE = "user"` is present and every scene that
       has narration filled it (§all-live-voice episodes) — the filmed-scene "live voice = `[]`"
       rule is for TTS episodes only
-- [ ] Every shot has `scene`, `sceneSlug`, `shot.size`, `shot.info` — `info` doesn't overlap within
-      the same scene
+- [ ] Every shot has `scene`, `sceneSlug`, `shot.feel`, `shot.size`, `shot.angle`, `shot.info` —
+      `info` doesn't overlap within the same scene, `feel` doesn't restate `info`, and `size`·`angle`
+      (and `camera`·`duration` on a generated shot) follow the directing-grammar §5 row for that
+      feel or say why not. One close-up (`cu`·`choker`·`ecu`) per scene, `choker`/`ecu` ≤2 and `dutch` ≤1 per episode (with
+      its reason written), hook cut and speech clips at `eye`, a close-up opening paid back by a
+      wide or medium in the next shot (`directing-grammar.md` §6)
 - [ ] `visual.picture` and `visual.overlay` match the structure. AI video and HTML staging aren't
       merged into one badge
-- [ ] Builds, tutorials, and before/after comparisons show the finished result in the first frame,
-      and the first line promises the viewer that result's benefit or change
-- [ ] The playback order is **cover → hooking → result → body**. The finished thing
-      (`beat:"result"`) comes before the method and steps (`beat:"body"`). The cover's glance and
-      the result's unfolding point at the same artifact
+- [ ] On answer-first, builds, tutorials, and before/after comparisons show the finished result
+      in the first frame, and the first line promises the viewer that result's benefit or change;
+      on a story arc the first frame is the moment it went wrong and the ending stays out of it
+- [ ] The playback order matches the cover's `arc` — **answer-first: cover → hooking → result →
+      body**, the finished thing (`beat:"result"`) before the method and steps (`beat:"body"`), the
+      cover's glance and the result's unfolding pointing at the same artifact; **story: cover →
+      hooking → body → turn → result**, the answer appearing for the first time in the result, a
+      `turn` shot right before it, the cover's moment and the result's payoff different on purpose
 - [ ] **The shot after the cover is hooking** (`beat:"hooking"`) — informational pieces included.
-      It catches what the cover threw, hooks with the viewer as the subject, and doesn't unpack the
-      answer. In short-form the result (the first body scene for informational pieces) starts within
-      20s of the cover (§hooking)
+      It catches what the cover threw, hooks with the viewer as the subject (the protagonist and
+      their goal on a story arc), and doesn't unpack the answer. In short-form the result (the
+      first body scene for informational pieces, the build on a story arc) starts within 20s of
+      the cover (§hooking)
 - [ ] One episode solves one problem and produces one result
 - [ ] A serial's CTA promises the next episode's concrete result rather than making a vague
       subscribe request
@@ -1097,7 +1281,16 @@ strip says no violations.
       period
 - [ ] tts/sub notation split done (numbers, loanwords)
 - [ ] No distortion of numeric ranges (a range stays a range)
-- [ ] Every factual claim matches a verification-passed entry in research.md
+- [ ] Every factual claim matches a verification-passed entry in research.md, research.md was
+      finished **before** the first scene was written (storyboard SKILL §2 — question map ·
+      two-direction searches · counter-evidence and freshness · sufficiency: floor 3 verified
+      claims, 5+ on a short, 12+ on a long-form, every question answered or written off), and
+      no claim sits on a written-off question
+- [ ] **The cover has `hookForm`** (`paradox`·`gap`·`payoff`·`identify`·`number`·`secret`) and the
+      title and segment ① take that shape, and the result pays it (a gap closed, a secret
+      revealed, a number counted out — §the six hook forms). The first frame has no logo, no intro,
+      no greeting; every narration segment opens curiosity, moves the information forward, or puts
+      evidence down; one sentence = one subtitle = one reveal (§narration segments)
 - [ ] Plain-language principle — no unexplained jargon, no over-compression
 - [ ] No AI tells — exit 0 on all three surfaces (0 S1 findings left):
       ```bash
@@ -1129,7 +1322,7 @@ strip says no violations.
       · `src` is the same real PNG as `SCENES[after].visual.bg` (that image made with gpt_image
       high as a photorealistic person scene) · `duration` (used length) is 8 or under with a
       comment giving the reason (not stretched with a palindrome)
-- [ ] If you placed a `visual.video` scene — points type · `duration` ≤ 8 · `narration[].img`
+- [ ] If you placed a `visual.video` scene — points type · `duration` inside one clip (Veo 8 · Seedance ≤15) · `narration[].img`
       unused · `prompt` is English motion only · the source `bg` is a real PNG (gpt_image high)
 - [ ] **Every generated-video shot has all four `visual.camera` slots filled** (§camera) — b-roll,
       motion background, and quote speech clips. An empty `end` is the defect this checks for;
