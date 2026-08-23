@@ -9,9 +9,11 @@ description: >
   of that scores structural AI tells, the hook, and factual fidelity additively out of 100;
   **scene mode** scores each scene separately for whether it does its job (quality) and
   whether it fits its context; **vocabulary mode** looks only at whether the words in each
-  scene's narration and titles are words a person uses; **camera mode** reads the four
-  camera slots (movement·speed·framing·end), the cut length, and the engine fit of every
-  shot that becomes a generated video; **sound mode** reads the sound the episode will make
+  scene's narration and titles are words a person uses; **camera mode** reads the shot
+  grammar of every shot — what the audience should feel there (`shot.feel`) and whether the
+  size and the angle serve it — and, on every shot that becomes a generated video, the four
+  camera slots (movement·speed·framing·end), the cut length, and the engine fit on top;
+  **sound mode** reads the sound the episode will make
   — clip audio, voice casting, tts spellings, and where the sound should get out of the way;
   **image mode** opens the generated scene-N.png directly and judges whether the picture
   matches what the scene says (contextual fit). In scene, vocabulary, and camera mode the
@@ -49,8 +51,8 @@ description: >
 
   <example>
   Context: the storyboard skill delegates to verify the camera plan before any generation call.
-  user: "Camera mode — read the four camera slots of every generated shot in scenes.js. The profile.md·video-model-selection.md paths are …"
-  assistant: "I'll run storyboard-reviewer in camera mode to collect the per-shot scores and the empty slots."
+  user: "Camera mode — read the shot grammar (feel · size · angle) of every shot in scenes.js and the four camera slots of every generated shot. The profile.md·directing-grammar.md·video-model-selection.md·scenes-schema.md paths are …"
+  assistant: "I'll run storyboard-reviewer in camera mode to collect the per-shot scores, the feel that isn't served, and the empty slots."
   <commentary>Judging the camera plan before it costs money, so use camera mode.</commentary>
   </example>
 
@@ -89,7 +91,8 @@ costs the author a second of thought; a defect you swallowed costs the episode.
 
 ## Picking the mode
 
-The delegation prompt names one of `copy mode`·`scene mode`·`vocabulary mode`·`camera mode`·
+The delegation prompt names one of `copy mode`·`scene mode`·`vocabulary mode` (the storyboard
+skill also calls it `lexicon mode` — same mode, same `mode=lexicon` tail)·`camera mode`·
 `sound mode`·`image mode`. If it names none, decide from the attached inputs (image paths mean
 image mode) and write which mode you read it in on the first line of the verdict.
 
@@ -102,7 +105,7 @@ mode runs only once, so a flag aimed at the wrong layer is a finding nobody acts
 | copy | the sentences of the **whole** storyboard — machine style verdict, structural AI tells, hook, facts | total |
 | scene | **each single scene**'s role and the context around it (not the phrasing) | lowest scene |
 | vocabulary | **words** — the words used in narration and titles (not structure or flow) | lowest scene |
-| camera | the **four camera slots**, cut length and engine fit of each generated-video shot | lowest shot |
+| camera | the **shot grammar** of every shot — `shot.feel` and whether `size`·`angle` serve it — plus the **four camera slots**, cut length and engine fit of each generated-video shot | lowest shot |
 | sound | what the episode will **sound** like — clip audio, voice casting, tts spellings, silence | total |
 | image | how the generated **PNG** lines up with the scene content | total |
 
@@ -279,7 +282,17 @@ reviewer quotes its output as the evidence.
     finished result. The first second has to show the result and the first line has to
     promise what that result gets you. The cover's at-a-glance shot and the body's result
     scene point at the same artifact. An arrangement where the method comes before the
-    result is a scene-mode P0, not a copy-mode one (scenes-schema §Playback order)
+    result is a scene-mode P0, not a copy-mode one (scenes-schema §Playback order). An episode
+    with `arc:"story"` on the cover is outside this P0 — its first frame is the moment it went
+    wrong, not the result, and the payoff waits for the turn; judge it on the hooking axis
+11. **Dead sentence** — a narration segment that does none of the three jobs: it doesn't open
+    or deepen curiosity, it doesn't move the information forward, and it doesn't put evidence
+    on the table (scenes-schema §narration segments — user directive, 2026-08-23). Greetings,
+    restatements of the previous line, "자, 보셨죠" connectives, a sentence that only announces
+    the next one. The test is the cut: take the segment out — if the neighbours still link and
+    nothing is lost, it's a P0 and the directive is "cut", not "reword". A sentence that carries
+    the sound's rhythm but nothing else belongs here too; a short sentence that lands the
+    evidence ("0원이었습니다") does not
 
 ## Axis scores (additive out of 100, no points without evidence)
 
@@ -288,20 +301,30 @@ reviewer quotes its output as the evidence.
   preachy closers) 10 / no assistant-speak or stock phrases 5
 - **Hook and delivery (30)**: the cover hook has tension and the topic word is visible —
   **look at the first frame, the title, and the first line seg ① separately** (build type:
-  result shown up front 5 + title 3 + seg ① 2; non-build: title 5 + seg ① 5). Award the
+  result shown up front 5 + title 3 + seg ① 2; non-build, and every `arc:"story"` episode: title
+  5 + seg ① 5 — on a story arc the first frame is the moment, and a result or ending in the first
+  frame or in seg ① closes the loop at 0 s: seg ① scores 2 or less unless the cover wrote why). Award the
   title points only when it opens on a problem a stranger already feels, not on a method or
   a tool name (platform-playbook §1 ②). A method-style title scores 0 in the title slot even
   with a topic word. Award the seg ① points when that sentence actually runs the opening
   strategy written in the cover's `hookType` (fear, empathy, curiosity, showing the ending
-  first) — if the title's provocation and seg ①'s provocation point at different things,
+  first) **and takes the shape written in `hookForm`** (paradox · gap · payoff · identify ·
+  number · secret — scenes-schema §the six hook forms; a missing `hookForm` is a directive
+  to label it, a form that doesn't serve the stimulus is a directive to change one of the
+  two, and a form the result never pays — a gap never closed, a secret never revealed, a
+  number never counted out — docks the hooking axis as the early-exit trap) — if the title's
+  provocation and seg ①'s provocation point at different things,
   dock the title slot too (the catch is broken) / plain language — a first-time listener
   keeps up 10 / **hooking 5** — the shot after the cover is `beat:"hooking"`, it hooks the
-  same thing the cover threw with the viewer as the subject, and it doesn't unpack the
+  same thing the cover threw with the viewer as the subject (on a story arc: the setup, with the
+  protagonist and the original goal as the subject), and it doesn't unpack the
   answer or the method (scenes-schema §hooking. 0 if there's no hooking shot; 2 or less if
-  it hooks material other than the cover's or gives the answer away up front. 2 or less if
+  it hooks material other than the cover's or gives the answer away up front — on a story arc
+  a body or turn beat that names the payoff is the same 2 or less. 2 or less if
   an episode that opened on fear never answers that threat) / the scenes run through to one
-  result for the episode, and on a build type the result comes before the content so there's
-  no mid-episode exit point 5
+  result for the episode, and on answer-first (build type) the result comes before the
+  content so there's no mid-episode exit point; on a story arc the answer first appears in
+  the result, the turn sits right before it, and the cta's frame points back at the cover 5
 - **Facts and tone (30)**: faithful against research.md (ranges and as-of dates preserved)
   15 / matches profile §2 tone and §3 target 10 / screen text agrees with the narration 5
 
@@ -366,16 +389,16 @@ Skip this section when an older file doesn't have them — a missing field is no
   means there's no video to make (P0). Just check that HTML treatment and AI video weren't
   lumped into one line.
 - **Coverage** — dock quality when `shot.info` repeats across shots carrying the same
-  `scene` number. One of them is a spare. A first shot of `cu` not followed by a wide,
-  medium, or two-shot is a close-up that never "paid back" the location.
+  `scene` number. One of them is a spare. (Whether a close-up opening gets paid back by a
+  wider next shot is camera mode's rationing axis, not yours — don't score it here.)
 
 ## What each type has to do (the quality axis yardstick)
 
 | Type | What that scene has to do |
 |---|---|
-| cover | On a build type, show the finished result at a glance in the first second and say **what the story is about and why to watch** within three. Hook the why with whichever of the four opening strategies (fear · empathy · curiosity · showing the ending first) the `hookType` names — it only does its job when the title and seg ① actually carry that provocation (scenes-schema §The four opening strategies). No method explanation here |
-| hooking (`beat:"hooking"`, type is points or quote) | The shot right after the cover — it catches what the cover threw (the chosen opening strategy) unchanged (same subject, same promise) and hooks the viewer's problem, loss, or gain with the viewer as the subject (problem/harm = empathy / loss/risk = fear / unresolved tension = curiosity / resolve/criterion = declaration), without unpacking the answer, the method, or the finished result. In short-form the result (for an info type, the first content scene) starts within 20 seconds of the cover. Don't fill it with greetings, introductions, or teasers (scenes-schema §hooking) |
-| points | One message per screen. `beat:"result"` unfolds the finished thing; `beat:"body"` says only how that result was made. The caption doesn't repeat the title |
+| cover | On answer-first (build type), show the finished result at a glance in the first second and say **what the story is about and why to watch** within three. On a story arc (`arc:"story"`), show the moment it went wrong and keep the ending out of the frame and out of seg ①. Hook the why with whichever of the four opening strategies (fear · empathy · curiosity · showing the ending first) the `hookType` names — it only does its job when the title and seg ① actually carry that provocation (scenes-schema §The four opening strategies). No method explanation here |
+| hooking (`beat:"hooking"`, type is points or quote) | The shot right after the cover — it catches what the cover threw (the chosen opening strategy) unchanged (same subject, same promise) and hooks the viewer's problem, loss, or gain with the viewer as the subject (problem/harm = empathy / loss/risk = fear / unresolved tension = curiosity / resolve/criterion = declaration), without unpacking the answer, the method, or the finished result. On a story arc it is the setup — the protagonist and the original goal as subject, the ending still withheld. In short-form the result (for an info type, the first content scene; on a story arc, the build — the payoff waits for the turn) starts within 20 seconds of the cover. Don't fill it with greetings, introductions, or teasers (scenes-schema §hooking) |
+| points | One message per screen. `beat:"result"` unfolds the finished thing; `beat:"body"` says only how that result was made. On a story arc `beat:"body"` builds the conflict without naming the payoff, `beat:"turn"` is the single highest-tension screen and sits right before the payoff, and `beat:"result"` is the first place the answer is on screen. The caption doesn't repeat the title |
 | quote | Something that would actually come out of that person's mouth. The role label is honest (no hiding that it's AI) |
 | broll | 4–8 wordless seconds that give the story a comma or switch scenes |
 
@@ -402,12 +425,15 @@ Skip this section when an older file doesn't have them — a missing field is no
 10. **Empty AI-video field** — `visual.picture` is `ai-video` but `visual.video`·
     `visual.clip`·`type:"broll"` are all absent. It's a plan with no video to generate
     (only for shots that filled this field in)
-11. **The method comes before the result** — a build or tutorial whose content shots sit
-    ahead of the result shot. Put the missing result scene after the
-    hooking shot, or move the existing result scene forward (scenes-schema §Playback order)
+11. **The method comes before the result, on answer-first** — a build or tutorial whose
+    content shots sit ahead of the result shot. Put the missing result scene after the
+    hooking shot, or move the existing result scene forward (scenes-schema §Playback order).
+    A story arc (`arc:"story"` on the cover) puts the build before the payoff by design — there
+    the defect is the reverse: a result shot sitting ahead of the body or the turn
 12. **No hooking shot** — the shot after the cover (excluding an opening b-roll) isn't
-    `beat:"hooking"`, or there's no hooking shot at all. Info types are no exception — the
-    result scene is required only on build types, but "why stay" belongs in every episode.
+    `beat:"hooking"`, or there's no hooking shot at all. Info types are no exception — on
+    answer-first the result scene is required only on build types, a story arc always has one
+    (the payoff), but "why stay" belongs in every episode.
     Even with a hooking shot, hooking material other than the cover's or giving away the
     answer the result and content owe counts as no role (P0 1)
     (scenes-schema §hooking)
@@ -567,31 +593,52 @@ directive to that one sentence.
 
 # Camera mode
 
-**The camera plan, read before the first call that costs money.** Every shot that becomes a
-generated video carries four slots — `movement`, `speed`, `framing`, `end`. A slot fixed here
-costs nothing; the same slot fixed after generation costs the clip.
+**The shot grammar and the camera plan, read before the first call that costs money.** Every
+shot carries a feel and the two dials that serve it — `shot.feel`, `shot.size`, `shot.angle` —
+and every shot that becomes a generated video carries four slots on top — `movement`, `speed`,
+`framing`, `end`. A dial fixed here costs nothing; the same dial fixed after generation costs
+the clip, and on a filmed shot it costs a refilm.
 
 ## Scope
 
-In scope: `broll` shots, motion-background scenes (`visual.video`), and `quote` speech clips
-(`visual.clip`) — anything produce will hand to `veo_*` or `seedance_*`. On a still, `camera`
-only tells the builder which way to drift the Ken Burns, so score a still only if it wrote one.
+In scope, **on every shot**: the shot grammar — is `shot.feel` written, is it a feeling rather
+than a restated `info` or a request for a move ("cinematic", "dynamic"), and do `shot.size` and
+`shot.angle` serve it against the directing-grammar §5 row; the rationing and sequencing across
+shots (one close-up — `cu`·`choker`·`ecu` — per scene, `choker`/`ecu` once or twice per episode, one `dutch` per episode with
+its reason written, a close-up opening paid back in the next shot, the hook cut and speech clips
+at `eye`, a wide held ≥1.5× a close). A filmed shot is in — the user holds the camera, but the
+feel, the size with its distance, the angle with its eye-height baseline, and the 180°/30° notes
+are what the shooting script will print, and they are judged here. A still is in — its size and
+angle are what `bgPrompt` draws.
 
-Out of scope: filmed shots (the user holds the camera — that's script.md's job), what the
-picture contains (image mode), and whether the scene earns its place (scene mode). If the
-episode has no generated video at all, write `no generated shots` and return `score=n/a p0=0`.
+In scope, **on generated shots on top**: `broll` shots, motion-background scenes (`visual.video`),
+and `quote` speech clips (`visual.clip`) — anything produce will hand to `veo_*` or `seedance_*`
+— the four slots, the vendor words, one move chosen from the feel, the cut length, the engine
+fit. On a still, `camera` only tells the builder which way to drift the Ken Burns — **don't score
+the slot axes on a still**, with or without a block; if it wrote one, read it and carry anything
+wrong (a vendor word, seconds in a slot) as a correction directive.
+
+Out of scope: what the picture contains (image mode), whether the scene earns its place (scene
+mode), and the wording of the lines (copy and vocabulary modes). **This mode runs on every
+episode** — an episode with no generated shots still has a feel, a size and an angle on every
+shot; only the slot axes go `n/a` on the shots that don't become video.
 
 ## Inputs (supplied by the delegation prompt)
 
 - path to `storyboard/scenes.js`
 - `data/<channel>/profile.md` — §2 tone, §3 target, banned material
+- `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/directing-grammar.md` — **the feel →
+  technique table (§5), the size ladder (§2), the angle rules (§3), the move table (§4), the
+  rationing rules (§6), the filmed-shot notes (§7)** — the yardstick for the shot-grammar axis
 - `${CLAUDE_PLUGIN_ROOT}/skills/produce/references/video-model-selection.md` — engine routing
   and the vendor vocabulary table
 - `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenes-schema.md` — §camera (the slot
   contract) and §cut length (the purpose-to-length table)
 
-**Open both reference files instead of working from memory.** Those two tables are the
-yardstick, and misquoting one sends the author off to fix something that was already right.
+**Open the reference files instead of working from memory.** Those tables are the yardstick,
+and misquoting one sends the author off to fix something that was already right. The §5 row is
+a default the author may leave with a reason written on the shot — a written reason is not a
+finding; a silent departure is.
 
 ## P0 defects (any one of them is a must-fix, not a maybe)
 
@@ -619,39 +666,57 @@ yardstick, and misquoting one sends the author off to fix something that was alr
   clip prompt instead of the slots. Then the block can't be carried to the next scene and
   produce has nothing to assemble.
 
-## Per-shot axes (additive out of 100 — scored separately for each generated shot)
+## Per-shot axes (additive out of 100 — scored separately for each shot)
 
-| Axis | Points | What earns them |
-|---|---|---|
-| Slots complete, in the engine's own words | 40 | four slots filled, vendor vocabulary, one move |
-| Length fits the purpose | 25 | matches the §cut length table, and it is the length that will be used |
-| Engine and reference fit | 20 | the right lane for what's on screen, references inside the cap, cast ids real |
-| An `end` worth stopping on | 15 | names a composition the frame can actually land on, not a mood |
+| Axis | Points | What earns them | Applies to |
+|---|---|---|---|
+| Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the hook cut and speech clips sit at `eye` | every shot |
+| Rationing and sequencing | 10 | this shot doesn't break the across-shot rules — a second close-up (`cu`·`choker`·`ecu`) in the scene, a third `choker`/`ecu` in the episode, a second `dutch` or one without its reason, a close-up opening not paid back by the next shot, a wide under 1.5× the close beside it | every shot |
+| Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it) | generated shots |
+| Length fits the purpose | 15 | matches the §cut length table and the feel row, and it is the length that will be used | generated shots |
+| Engine and reference fit | 10 | the right lane for what's on screen, references inside the cap, cast ids real | generated shots |
+| An `end` worth stopping on | 5 | names a composition the frame can actually land on, not a mood | generated shots |
 
-**Don't hand out points for a move that "feels cinematic".** Moves changing how a viewer feels
-has no empirical support (p=.84), so a static shot with a well-chosen framing scores the same as
-a dolly. What gets docked is a move with no reason behind it, never a shot that stayed still.
+**A shot that doesn't become generated video — a still with or without a camera block, a
+filmed shot, a slide — is scored on the first two axes only** — out of 40, then **scaled to
+100** (`earned × 100 ÷ 40`, rounded) before it goes in the table, the way scene mode scales a
+research-free channel. Write `n/a` in the slot columns for that shot.
 
-Start from 0 and add points only with evidence you read that shot's slots and its `duration`.
+**Don't hand out points for a move that "feels cinematic", and don't dock a shot for staying
+still.** A move supports the declared feel; it doesn't carry it (a move on its own didn't change
+what viewers felt, p=.84 — what it raised was immersion, on cuts whose character wasn't set).
+So a `static` shot whose size, angle and framing serve the feel scores full on the slot axis,
+and what gets docked is a move that contradicts the feel, a move with no feel behind it, or a
+feel left to ride on the move while size and angle stayed at their defaults.
+
+**A missing `shot.feel` on an older file is not a P0** — score the first axis 0 on that shot,
+write the directive, and move on; a missing field is a gap the author fills, not a reason to
+halt. The same goes for a `shot.size` value outside the vocabulary (legacy `ws` reads as `ls`).
+
+Start from 0 and add points only with evidence you read that shot's `shot` block, and on a
+generated shot its slots and its `duration`.
 
 ## Output format (fixed, machine-parseable)
 
 ```
 ## Per-shot camera scores
-| Shot | Type | Slots | Length | Engine | End | Total | One-line evidence |
-|---|---|---|---|---|---|---|---|
-| 2 | broll | 40/40 | 25/25 | 20/20 | 15/15 | 100 | four slots, dolly in, 4s insert, ends on the hands |
-| 5 | quote | 20/40 | 25/25 | 20/20 | 0/15 | 65 | end empty, framing empty — last second undecided |
+| Shot | Type | Feel | Ration | Slots | Length | Engine | End | Total | One-line evidence |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | cover | 30/30 | 10/10 | n/a | n/a | n/a | n/a | 100 | "relief — it really is that short", mcu at eye, the hook cut at eye level |
+| 2 | broll | 30/30 | 10/10 | 30/30 | 15/15 | 10/10 | 5/5 | 100 | "closing in on the one thing", four slots, dolly in, 4s insert, ends on the hands |
+| 4 | points | 12/30 | 10/10 | n/a | n/a | n/a | n/a | 55 | feel restates info ("that the fee is 3만원"); size `cu` on an explaining shot — §5 says ms |
+| 5 | quote | 30/30 | 10/10 | 10/30 | 15/15 | 10/10 | 0/5 | 75 | end empty, framing empty — last second undecided |
 
 ## P0 list
 - [P0-1] shot 5 — `camera.end` empty, so the clip's last second has nowhere to land
   (if none, "No P0")
 
 ## Lowest shot
-shot 5 (65) — fill `end` and `framing` before this one is generated
+shot 4 (55) — write a feel ("relief that it's this cheap" or whatever the line is for), then ms at eye
 
 ## Correction directives (per shot, in priority order)
-1. shot 5 — `end` empty → `end: "the two hands meeting at frame centre"`
+1. shot 4 — `feel` restates `info` → write what the viewer should feel on this line, then pick size/angle from the §5 row
+2. shot 5 — `end` empty → `end: "the two hands meeting at frame centre"`
 
 ## Previous findings resolved? (only when the delegator says a change came back)
 - <finding> → resolved | unresolved
@@ -660,7 +725,8 @@ STORYBOARD_REVIEW: mode=camera score=NN p0=N worst=N
 ```
 
 Put the **lowest shot's score** in `score` and that shot's number (1-based, its position in the
-SCENES array) in `worst`. On an episode with no generated shots, `score=n/a p0=0 worst=n/a`.
+SCENES array) in `worst`. This mode always returns a number — an episode with no generated shots
+is scored on the shot-grammar axes alone.
 
 ---
 
@@ -725,7 +791,7 @@ weight for a judgement call.
 
 | Axis | Points | What earns them |
 |---|---|---|
-| Clip audio written, and consistent with the lane | 30 | every generated shot says what it sounds like, and that matches whether its audio survives |
+| Clip audio written, and consistent with the lane | 30 | every generated shot says what it sounds like, that matches whether its audio survives, and the balance follows the shot size — a wide with the space forward and the lines distant, a close-up with the voice and breath forward (directing-grammar §2: a wide with studio-clean speech reads as fake, a close-up with distant sound reads as off) |
 | Voice casting | 20 | every speaking character matches profile §2, speaker count per scene is buildable |
 | `tts` spellings | 20 | figures, units, and swallowed endings spelled the way the engine reads them |
 | The music plan | 20 | cues change where the episode turns rather than on a timer, drops are spent on the line the episode is about, and the count is what the format can carry (one drop in a short). An episode whose reveal or result lands at full music level earns little of this axis |
@@ -800,7 +866,10 @@ generated image but an HTML slide that storyboard §8 builds after approval, so 
 1. **Context mismatch** — what the scene's narration says and what the picture shows differ.
    If seeing the scene with no explanation reads as a different topic, it belongs here. The
    cover (scene-1) is where there's no compromise — that frame becomes the `cover.jpg`
-   thumbnail as-is
+   thumbnail as-is. **A frame drawn at a different distance or height from the shot's
+   `shot.size`·`shot.angle` is the same defect** when it flips the feel — a "scale" shot that
+   came out as a close-up, an "alone" shot with the person filling the frame, a hook cut drawn
+   from below; write the size and angle you see beside the ones the storyboard declared
 2. **Generated text and text-like marks** — letters stamped on the screen, or patterns that
    look like letters. The moment they're misread as a sign, a document, or a screen UI, they
    become a fake source. Broken Hangul jamo belongs here too (field-tested:

@@ -59,7 +59,7 @@ to ignore a P0 either.
 | Is the storyboard copy approvable | storyboard-reviewer copy mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.5) |
 | Does every single scene do its job | storyboard-reviewer scene mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.6) |
 | Is the wording what a person would say | storyboard-reviewer vocabulary mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.7) |
-| Is the camera plan buildable | storyboard-reviewer camera mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.8) |
+| Does the shot grammar serve the feel, and is the camera plan buildable | storyboard-reviewer camera mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.8) |
 | Does the episode's sound hold up | storyboard-reviewer sound mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.9) |
 | Do the images match the scene content | storyboard-reviewer image mode, one round → **P0 = 0 after the fixes** | `queue_*: hold` (§6.5) |
 | Does the video hold together | `build-report.txt` drift 0 · 0 missing reveals · voice-to-bed separation ≥ 4 LU | Abort (§8) |
@@ -246,9 +246,18 @@ Research per profile §5 policy. Tool order and quota thrift:
 `references/cost-tiers.md` §non-money budgets — **`serp_*` at most twice per
 episode**.
 
-In `research.md`, record [source link · date checked · verification status] per
-claim. Time-sensitive values (prices, tax rates, deadlines, effective dates)
-need 2 or more independent sources.
+Research is the step before any scene is written, and it follows the storyboard
+skill's §2 shape inside the quota: **write the question map first** (the 5–8
+questions the episode has to answer — the hook's promise, the result, every figure
+that will be on screen), search **per question from two directions** (two tools or
+types — `kin`·`news`·`blog` on naver_search, WebSearch, `datago` for
+government-origin figures; the two `serp_*` calls go to the freshness check on the
+most time-sensitive value), run **one counter-evidence search** on each key claim,
+and in `research.md` record [question map · claim · source link · date checked ·
+verification status · counter-evidence result] in the storyboard-template.md
+structure. Time-sensitive values (prices, tax rates, deadlines, effective dates)
+need 2 or more independent sources, and a question that ends unanswered is written
+off — it never becomes a claim or a caption.
 
 **Fewer than 3 verified facts: drop the topic and move to the next candidate.**
 This is where a human would stop and say "there's no video in this." Push on
@@ -270,7 +279,7 @@ breaks most often:
 - `tts` holds the Korean phonetic spelling ("4,700만"→"사천칠백만"), `sub` the
   original notation.
 - THEME copies profile §3's values verbatim.
-- Structure: 1 cover + 3–5 points/quote; main body 35–75 seconds.
+- Structure: 1 cover + 3–6 points/quote (4–7 shots); main body 35–75 seconds.
 - The opening leads with one of **fear, empathy, curiosity, or showing the
   ending first** — exactly one per episode, always. Pick it before authoring
   and record it on the cover shot as `hookType`
@@ -279,17 +288,39 @@ breaks most often:
   threat backed in research.md or cushioned with possibility phrasing, and the
   body must answer it — in the unattended loop, unbacked fear is blocked by
   copy-gate P0-4 (scenes-schema §the four opening strategies).
-- Playback order is **cover → hooking → result → body**. Write a `beat` on
-  every shot (`hook`·`hooking`·`result`·`body`·`cta`). **The shot after the
-  cover is the hooking beat — informational episodes too** (it picks up what
-  the cover threw, hangs it on the viewer as the subject, and doesn't give the
-  answer; the result or first body scene lands within 20 seconds of the cover —
-  scenes-schema §hooking). In maker/tutorial episodes the finished piece comes
-  before the method (scenes-schema §playback order).
-- One entry is one shot. Write `scene`·`sceneSlug`·`shot.size`·`shot.info` and
-  `visual.picture`·`visual.overlay` (source of truth: scenes-schema §grammar
-  units and production layers). Never merge AI video and HTML staging into one
-  slot.
+- Next to `hookType` write **`hookForm`** — the shape of the first line, one of
+  `paradox`·`gap`·`payoff`·`identify`·`number`·`secret` (scenes-schema §the six
+  hook forms) — and keep it: a gap the result never closes or a secret the body
+  never reveals is the early-exit trap the platform now punishes (user-relayed,
+  2026-08-23 — field-practice grade). The arc picks the form's lane — on a story
+  arc `payoff` and `number` close the loop at 0 s, so they take a written reason
+  on the cover or the reviewer hands back a correction directive. **The first
+  frame has no logo, no intro, no greeting** (big title, strong frame, movement
+  in it), and **every narration sentence opens curiosity, moves the information
+  forward, or puts evidence down — or it's cut** (copy-gate P0-11). Subtitles are
+  written for muted viewing — one sentence, one subtitle, 4–7 words.
+- Playback order follows the cover's `arc` — **`answer-first`** (default):
+  cover → hooking → result → body; **`story`**: cover → hooking → body → turn →
+  result, the answer appearing for the first time in the result after the turn.
+  Material that is an unfinished sentence on its own (tried → failed → someone
+  saw it differently) is story material; anything else stays answer-first.
+  Write a `beat` on every shot (`hook`·`hooking`·`result`·`body`·`turn` (story
+  only)·`cta`). **The shot after the cover is the hooking beat — informational
+  episodes too** (it picks up what the cover threw, hangs it on the viewer as
+  the subject — the protagonist and their goal on a story arc — and doesn't
+  give the answer; the result or first body scene, the build on a story arc,
+  lands within 20 seconds of the cover — scenes-schema §hooking). On
+  answer-first (maker/tutorial episodes) the finished piece comes before the
+  method; on a story arc a payoff shown early closes the loop and is the
+  early-exit trap (scenes-schema §playback order).
+- One entry is one shot. Write `scene`·`sceneSlug`·`shot.feel`·`shot.size`·
+  `shot.angle`·`shot.info` and `visual.picture`·`visual.overlay` (source of
+  truth: scenes-schema §grammar units and production layers). **Feel first** —
+  say what the audience should feel on the shot, then take the size and the angle
+  (and the move and length on a generated shot) from the feel → technique table
+  (`../storyboard/references/directing-grammar.md` §5); put the size and angle
+  words into `bgPrompt`. Hook cut and speech clips at `eye`, one close-up (`cu`·`choker`·`ecu`) per scene.
+  Never merge AI video and HTML staging into one slot.
 
 ### 4. Style gate — video surfaces (gate 2)
 
@@ -346,8 +377,10 @@ lowest-scene score**, so it points at the thinnest scene. **One round.**
 - **Apply the findings, starting at `worst`**, then on to §4.7. Role-gap and
   duplication findings can't be fixed by polishing sentences — merge or drop
   that scene and rebalance total length across the remaining scenes. If the
-  method sits ahead of the result, don't touch the sentences — move the result
-  scene forward. Adding or dropping a scene changes sentences §4.5 already read;
+  method sits ahead of the result on answer-first, don't touch the sentences —
+  move the result scene forward; on a story arc it is the reverse — a payoff
+  sitting ahead of the turn moves back behind it. Adding or dropping a scene
+  changes sentences §4.5 already read;
   apply its rule (only subtract) as you rewrite instead of rerunning it.
 - **A P0 you could not resolve stops the run, as in §4.5** — this is still
   before money goes to images and TTS.
@@ -370,18 +403,21 @@ read the tail `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=N`. Here too
 
 ### 4.8 Camera review gate (gate 6d — storyboard-reviewer camera mode)
 
-Every shot that becomes a generated video carries four camera slots. Unattended
-this gate matters more than anywhere else: an empty `end` slot buys a clip whose
-last second drifts, and on this path nobody watches it before it publishes.
+Every shot carries a feel and the size and angle that serve it, and every shot
+that becomes a generated video carries four camera slots on top. Unattended this
+gate matters more than anywhere else: a size that flips the feel is drawn into
+the still nobody looks at, and an empty `end` slot buys a clip whose last second
+drifts, and on this path nobody watches it before it publishes.
 
 **Delegate to the storyboard-reviewer agent (Agent) in "camera mode"** and read
 the tail `STORYBOARD_REVIEW: mode=camera score=NN p0=N worst=N`. Pass
-`scenes.js`·`profile.md` plus the `video-model-selection.md` and `scenes-schema.md`
-paths. **One round.**
+`scenes.js`·`profile.md` plus the `directing-grammar.md`, `video-model-selection.md`
+and `scenes-schema.md` paths. **One round.**
 
 - **Apply the findings, starting at `worst`**, then on to §4.9.
-- **An episode with no generated shots skips this gate** — the tail comes back
-  `score=n/a`, which is not a failure.
+- **This gate runs on every episode** — an episode with no generated shots is
+  scored on the shot grammar (feel · size · angle) alone, and the slot axes come
+  back `n/a` per shot. A number always comes back.
 - **A P0 you could not resolve stops the run** (handled as in §4.5). An engine
   misassignment or a length that fights the purpose is money about to be spent
   wrong, so stopping here is the cheap outcome.

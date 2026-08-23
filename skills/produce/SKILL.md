@@ -242,6 +242,14 @@ means generating something nobody approved.
   defect, not something to fill in here** — send it back. Older episodes carry a single
   `visual.motion` string instead; use that as-is.
 
+- **`shot.feel`·`shot.size`·`shot.angle` — the shot grammar.** The storyboard wrote what the
+  audience should feel on each shot and chose the size and the angle for it
+  (`../storyboard/references/directing-grammar.md`). On a generated shot the `framing` slot
+  already restates them in the engine's words; keep that distance and height, and when a clip
+  comes back drawn closer, farther, or from a different height than the slot says, rerun it off
+  the same PNG rather than accepting a frame that flips the feel. On a still the size and the
+  angle live in `bgPrompt` and were drawn at the storyboard stage — nothing to re-decide here.
+
 - **`visual.character` — who is on screen.** Resolve the id to its panel directory and attach the
   panels as reference images:
 
@@ -344,17 +352,25 @@ only the summary is here.
   not `orbit`, and `dolly in`, not `push in` (`orbit` and `push` appear 0 times across the
   full source documents). `zoom in` narrows the angle of view without moving the camera, so
   don't use it for a shot that moves closer.
-- **Don't use a move for emotional effect** — the empirical work never showed that moving
-  closer changes emotion (p=.84). Set tone with the background and the art direction, and
-  use moves for immersion at an opening or a transition. **Angles, on the other hand, have
-  empirical support** — eye level is the default camera height for hook shots and speaking
-  clips.
+- **The move comes from the shot's declared feel, and it supports the feel rather than
+  carrying it** — the storyboard picked it from the feel → technique table
+  (`../storyboard/references/directing-grammar.md` §4–§5), so don't swap it here for one that
+  "feels more cinematic". The empirical work never showed that moving closer changes what a
+  viewer feels on its own (p=.84); what a move raised was immersion, at an opening or a
+  transition. Tone is set by the background, the art direction, the size and the angle.
+  **Angles have empirical support** — eye level is the default camera height for hook shots
+  and speaking clips, and the `framing` slot carries the storyboard's size and angle into
+  the call.
 - **Seedance cameras read better written as a span** — `opening composition + move + closing
   composition`. The vendor doesn't require the form (the camera field itself is `非必须`,
   optional) — it's **the form we use on motion-background shots that have to reproduce a
   composition**. The prompt body takes only Chinese and English, so write the instructions
-  in English. Up to 2 moves per shot on the default model 1.5 Pro — the one-move-per-shot
-  advice is 2.0-only.
+  in English. One move per shot is the storyboard's default; a second move only on the default
+  model 1.5 Pro and only when the storyboard wrote the reason beside it (the one-move-per-shot
+  advice is 2.0-only — the reason is our contract, scenes-schema §camera). The storyboard
+  doesn't know the engine, so this is where that condition is enforced: when §3 routes a
+  two-move shot off 1.5 Pro (Veo, Seedance 2.x), keep the first move only and write the drop
+  in `build-report.md`.
 - **Don't put seconds in a Seedance prompt** — the scene's `duration` sets the length and the
   edit does the cutting. The vendor notice covers 2.0 (2.5 responds to whole seconds) and
   nothing is confirmed for the default model 1.5 Pro — this rule rests on our pipeline, not

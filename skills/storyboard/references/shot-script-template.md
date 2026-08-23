@@ -52,8 +52,10 @@ This document is the source of truth for the structure that render has to produc
   **only kicker + title** in the top block (the cover adds stat/statLabel); long-form filmed
   scenes get the title, one caption, and the source in the **lower third at the bottom left**.
   Either way, one caption at a time.
-- Build and tutorial shoots start **with the finished screen already up in the first frame**. The
-  cover's first sentence says, within 3 seconds, what benefit or change that result brings.
+- On answer-first, build and tutorial shoots start **with the finished screen already up in the
+  first frame**; the cover's first sentence says, within 3 seconds, what benefit or change that
+  result brings. On a story arc the first frame is the moment it went wrong, and the ending is
+  not on camera until the payoff.
 - **The first sentence opens on one of the four opening strategies** — fear, empathy, curiosity,
   or showing the ending (scenes-schema §the four opening strategies). Which one is written in the
   scenes.js cover `hookType`, and since the shooting script is the surface where the user says
@@ -63,12 +65,15 @@ This document is the source of truth for the structure that render has to produc
 - **Slide scenes** (`visual.slide`, scenes-schema §slide scenes) have nothing to film — they
   go into the script as voice-only recordings, and the screen entry shows the slide's `plan`.
   The slide file itself is built by storyboard §8 after approval.
-- The recording order is **cover → hooking → result → body**. Show the finished thing at a
-  glance, hook the problem, unfold the result, and only then film the method. Don't record the
-  method screens before the result. Hooking exists in informational pieces too — the shot after
-  the cover hooks why to stay, with the viewer as the subject, and defers the answer
+- The recording order follows the cover's `arc` — **answer-first: cover → hooking → result →
+  body**: show the finished thing at a glance, hook the problem, unfold the result, and only
+  then film the method; don't record the method screens before the result. **Story: cover →
+  hooking → body → turn → result**: film the moment it went wrong, the setup, the build, the
+  turning point, and only then the payoff — the answer is not on camera before it. Hooking
+  exists in informational pieces too — the shot after the cover hooks why to stay, with the
+  viewer as the subject (the protagonist and their goal on a story arc), and defers the answer
   (scenes-schema §hooking). Match each shot to its scenes.js `beat`
-  (`hook`·`hooking`·`result`·`body`·`cta`).
+  (`hook`·`hooking`·`result`·`body`·`turn` (story only)·`cta`).
 
 ## The script.md structure
 
@@ -117,9 +122,12 @@ generated: <YYYY-MM-DD>
 ### 샷 4 — does the install really work (result · 목표 ~40초)
 
 **저장할 파일**: `footage/s2-install.mp4`
-**이 샷의 정보**: that one command line finishes the install
 **화면**: an empty terminal window — close any tab showing account names or tokens beforehand
 **행동**: type the install command slowly and wait until the whole result is out
+**느낌**: relief — it really is that short          ← `shot.feel`, written before the dials
+**사이즈·앵글**: 바스트(미디엄 클로즈업) · 아이레벨 — 카메라를 상대 눈높이에   ← `shot.size` + distance · `shot.angle` + baseline
+**소리**: 목소리 깨끗하게, 공간음은 뒤로            ← follows the size (directing-grammar §2)
+**이 샷이 전하는 것**: that one command line finishes the install
 **대사**:
 1. <the sentence to say — in the order of the scenes.js narration segments>
 2. <...>
@@ -129,6 +137,13 @@ generated: <YYYY-MM-DD>
 ### 샷 5 — ...
 ```
 
+- **Every shot block carries 느낌 · 사이즈·앵글 · 소리** rendered from `shot.feel`, `shot.size`
+  and `shot.angle` — the feel first, then the size with its phone distance, the angle with its
+  eye-height baseline, and the sound balance that follows the size. The standing notes at the top
+  ("카메라를 들기 전에") carry the rules the person filming has to hold: walk to change size, don't
+  cut at a joint, eye level means the subject's eyes, the 180° line when two people are on
+  screen, 30°/two sizes/cut on action when re-filming the same subject, one mic position per
+  sitting. The source of truth is `directing-grammar.md` §2–§3 and §7; the renderer prints them.
 - Match the shot heading's title and target length to scenes.js (they're the alignment
   reference).
 - **Line number = narration segment order** — don't write new sentences, carry them over from
