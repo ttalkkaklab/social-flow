@@ -181,7 +181,7 @@ sequence: "결과"                  // sequence head. Used with beat, the docume
 | `sequence` | optional | Sequence name. Only when one episode has two purposes |
 | `beat` | optional | `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` — the playback role (`turn` on the story arc only). See §playback order above |
 | `arc` | cover only | `answer-first` (default) \| `story` — which playback order the episode walks. See §playback order above |
-| `shot` | recommended | `{ feel, size, angle, info }` — below. `feel` is written **before** `size`·`angle`·`camera` are chosen (directing-grammar §5) |
+| `shot` | recommended | `{ feel, size, angle, info, space }` — below. `feel` is written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
 | `sound` | optional | `{ cue, drop, sfx }` — what the audience hears under this shot (§music cues). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
 
 ```js
@@ -190,19 +190,27 @@ shot: {
   size: "mcu",                             // els · ls · fs · mfs · ms · mcu · cu · choker · ecu · insert
                                            // + compositions two · three · ots · pov · back · cutaway · reaction (ws = legacy ls)
   angle: "eye",                            // eye (default) · high · low · overhead · dutch — against the SUBJECT's eyes
-  info: "that the install is one command"  // one line on what this shot newly TELLS the audience
+  info: "that the install is one command", // one line on what this shot newly TELLS the audience
+  space: {                                 // the floor plan of the frame (§frame space) — required on a generated still
+    frame:  "camera",                      // the only allowed value — left means left of the picture
+    layout: "person on the left third, kitchen door on the right",
+    facing: "person faces camera-right, three-quarter view",
+    line:   "A left, B right",             // 180° lock — two people, or a person and what they look at
+    light:  "key from camera-left"         // optional
+  }
 }
 ```
 
 - **`info` is what the viewer newly learns; `feel` is what the viewer should feel.** Two
   different lines — scene mode keys coverage on `info`, camera mode keys the technique on
   `feel`. A `feel` that restates `info` ("that it's one command") is unset.
-- **Feel first, dials second.** Write `feel`, then pick `size`·`angle` (and `camera` on a
-  generated shot, `duration` on a clip) from the directing-grammar §5 table — the row is a
-  default, and leaving it means writing why on the shot. The size words and the angle words go
-  into `bgPrompt` too, since the still is where they get drawn. The vocabulary, the
-  cut lines (never at a joint), the distances and the sound that matches each size are
-  `directing-grammar.md` §2–§3.
+- **Feel first, dials second.** Write `feel`, then pick `size`·`angle` (and `space` on a
+  generated still, `camera` on a generated shot, `duration` on a clip) from the
+  directing-grammar §5 table — the row is a default, and leaving it means writing why on the
+  shot. The size words, the angle words and the space block go into `bgPrompt` too, since the
+  still is where they get drawn — `assemble-bg-prompt.js` writes that prefix (directing-grammar
+  §3.5). The vocabulary, the cut lines (never at a joint), the distances and the sound that
+  matches each size are `directing-grammar.md` §2–§3.
 - If `info` matches another shot in the same scene, that shot can be dropped. That's what
   coverage design is.
 - When you open on a close-up, pay back "where are we" with a wide or medium in the next shot.
@@ -339,7 +347,9 @@ the human-readable production layer, and the two have to agree.
   type: "cover",
   scene: 1,
   sceneSlug: "reporting desk / day",
-  shot: { feel: "alarm — that might be me, unfiled", size: "mcu", angle: "eye", info: "that not filing means a fine" },
+  shot: { feel: "alarm — that might be me, unfiled", size: "mcu", angle: "eye", info: "that not filing means a fine",
+          space: { frame: "camera", layout: "person on the left third, papers on the desk in the lower right",
+                   facing: "person faces camera-right, three-quarter view", light: "key from camera-left" } },
   arc: "answer-first",                      // playback order — answer-first (default) | story (§playback order)
   hookType: "fear",                         // opening strategy — fear | empathy | curiosity | spoiler (§the four opening strategies)
   hookForm: "gap",                          // how the first line is built — paradox | gap | payoff | identify | number | secret (§the six hook forms)
@@ -705,7 +715,55 @@ The rules that applied to the old one-string camera line now apply per slot:
 `shot.size` and `shot.angle` are different axes and stay where they are — `size` is where the
 frame cuts the person, `angle` is where the camera sits against their eyes, `camera` is what
 the camera does and where it stops. `framing` restates size and angle in the engine's words so
-the clip is drawn at the distance the storyboard decided.
+the clip is drawn at the distance the storyboard decided. **`shot.space` is a fourth axis** —
+what is where in the frame, which way it faces — and the still already drew it. A motion
+prompt that re-describes sides, facing, or lighting makes the engine redesign the scene; the
+clip inherits space from the PNG (§frame space).
+
+### Frame space (`shot.space`)
+
+```js
+space: {
+  frame:  "camera",
+  layout: "person on the left third, kitchen door on the right",
+  facing: "person faces camera-right, three-quarter view",
+  line:   "A left, B right",
+  light:  "key from camera-left"
+}
+```
+
+**Required on every shot that becomes a generated still** — cover and points backgrounds, and
+in illustration mode the representative illustration (`visual.bg`, row 1); the per-line
+`narration[].imgPrompt`s draw their own pictures and are not covered by the shot's block. A
+quote speech clip has no still, so its clip prompt carries the shot's `From the camera: …`
+sentence (`assemble-bg-prompt.js --space-only`). Optional on a filmed shot, required there
+when two people (or a person and what they look at) share the scene — that is the 180°
+sentence the shooting script prints. Slide scenes have no still, so they skip this block.
+
+The words, the banned forms, and the assembly order live in `directing-grammar.md` §3.5.
+`assemble-bg-prompt.js` is the machine form: storyboard §5 runs it with
+`--scene`·`--mood`·`--exclude` and stores the full stdout as `bgPrompt`; produce reruns it only
+when a `shot` field changed on a still it regenerates (a plain regeneration resends the stored
+string). produce assembles a video prompt from the camera slots and adds nothing from `space` —
+the PNG already holds the floor plan.
+
+| Slot | Required when | What it names |
+|---|---|---|
+| `frame` | space is present | `"camera"` only — left means left of the picture |
+| `layout` | generated still, unless `insert`/`ecu` fills the frame with one object | sides from the camera (`left third`, `right of frame`, `centred`) |
+| `facing` | a person is on screen (an oriented object — a car, a desk — may take one too) | the visible result (`faces camera-right`, `seen from behind`, `the car faces left of frame`). Never `left view of` |
+| `line` | two people, or a person and what they look at, share the `scene` number | the 180° sentence, kept true on every shot of that scene |
+| `light` | optional | key direction in the same camera frame (`key from camera-left`) |
+
+produce runs fine on an old `scenes.js` without `space`. The check strip warns; camera mode
+scores the gap; image mode compares the PNG to `layout` and `facing` when they are written.
+
+Banned in `layout` · `facing` · `line` · `light` and in `bgPrompt` — the assembler exits 1 on
+them anywhere in the assembled prompt, the `--scene`·`--mood`·`--exclude` text included:
+
+- camera-inference — `left view of`, `right view of`, `front view of`, `back view of`
+- allocentric — `from the car's right door`, `from X's left`, `to her right`, `on its left`
+- metric distance — `1.5 m`, `3 meters`, `three meters away` (distance is `shot.size`)
 
 ### Character reference (`visual.character`)
 
@@ -1259,6 +1317,13 @@ strip says no violations.
       feel or say why not. One close-up (`cu`·`choker`·`ecu`) per scene, `choker`/`ecu` ≤2 and `dutch` ≤1 per episode (with
       its reason written), hook cut and speech clips at `eye`, a close-up opening paid back by a
       wide or medium in the next shot (`directing-grammar.md` §6)
+- [ ] **Every generated still has `shot.space`** (`frame: "camera"` · `layout` — it may stay
+      empty only on an `insert`/`ecu` that fills the frame with one object · `facing` when a
+      person is on screen · `line` when two people, or a person and what they look at, share
+      the scene) — assembled into `bgPrompt`
+      by `assemble-bg-prompt.js` (directing-grammar §3.5 · §frame space). No `left view of`, no
+      allocentric "from X's right", no metres in the space slots. Image→video motion prompts
+      do not re-describe sides, facing, or lighting
 - [ ] `visual.picture` and `visual.overlay` match the structure. AI video and HTML staging aren't
       merged into one badge
 - [ ] On answer-first, builds, tutorials, and before/after comparisons show the finished result
