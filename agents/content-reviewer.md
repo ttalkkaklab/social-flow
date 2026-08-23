@@ -136,6 +136,13 @@ In this mode skip the style check and per-axis scores — judge only the plan P0
    panels pasted together into one sheet are. The rule's source of truth is
    produce `references/video-model-selection.md` §6
 
+**A fix suggestion, not a P0** — a cover-background or b-roll source prompt whose distance or
+camera height contradicts the shot's declared `shot.size`·`shot.angle` (a "scale" shot prompted
+as a close-up, a hook cut prompted from below when the storyboard wrote `eye`). The still is
+where the size and the angle get drawn, so name the words the prompt should carry
+(storyboard `references/directing-grammar.md` §2–§3); the storyboard-reviewer's camera mode
+owns the verdict on whether those values serve the feel, so don't re-score that here.
+
 Output carries only the P0 list + fix suggestions, and the last line is fixed as
 a machine-parseable tail:
 

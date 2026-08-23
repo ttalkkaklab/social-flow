@@ -19,21 +19,24 @@ created: <YYYY-MM-DD>
 - **Channel**: <display name> (`data/<slug>/profile.md`)
 - **Expected total length**: <NN>s (main <N> shots + outro)
 - **Core message**: <the one sentence this video delivers>
-- **Playback order**: cover → hooking → result → body
+- **Arc**: <answer-first / story> (`arc: <answer-first|story>`) — answer-first: cover → hooking → result → body; story: cover → hooking → body → turn → result, the answer appearing for the first time in the result
 - **Opening strategy**: <fear / empathy / curiosity / spoiler (show the ending first)> (`hookType: <fear|empathy|curiosity|spoiler>`) — <one line on how the title, segment ①, and the hooking shot carry that stimulus>
+- **Hook form**: <paradox / gap / payoff / identify / number / secret> (`hookForm: <…>`) — <one line on how the title and segment ① take that shape, and where the result pays it>
 - **Cover hook**: "<cover title>" — hero stat <stat>
 
 ## Sequence — <purpose>          # only when one episode has two purposes
 
 ## S#1. <location> / <time>
 
-### Shot 1 — cover · wide
+### Shot 1 — cover · medium close-up · eye level
 
 ![scene-1](images/scene-1.png)
 
 | Item | Content |
 |---|---|
-| beat | cover / hooking / result / body / CTA |
+| beat | cover / hooking / result / body / turn (story only) / CTA |
+| feel of this shot | <what the viewer should feel here — written before size and angle> |
+| size · angle | <els … ecu / composition> · <eye / high / low / overhead / dutch> — <why, if it leaves the directing-grammar §5 row> |
 | info of this shot | <one line the viewer newly learns> |
 | picture | still photo / AI video / recording / shared asset |
 | overlay | HTML reveal · captions · typing / none |
@@ -84,29 +87,40 @@ storyboard.md and script.md suffer is structurally impossible here.
 
 What the document shows:
 
-- **Shot card** — one `SCENES[]` entry. The header carries the role (`COVER`), size, the
-  opening-strategy name tag (cover only), the **beat** (cover, hooking, result, body, CTA),
-  and the two production-layer badges (picture / overlay). Entries sharing `scene` are grouped
+- **Shot card** — one `SCENES[]` entry. The header carries the role (`COVER`), size and angle,
+  the opening-strategy, hook-form and arc name tags (cover only), the **beat** (cover, hooking,
+  result, body, turn, CTA), and the two production-layer badges (picture / overlay). Entries sharing `scene` are grouped
   under a scene band (`S#1. location / time`). The last main shot is not stamped PAYOFF.
 - **Scene-frame rows** — one reveal = one row. A 9:16 frame on the left; on the right, the
   text and dialogue at that moment. A reveal is not a shot. A channel-color badge means AI
   video; an outline-only badge means HTML staging.
 - **Contract check** — at the top of the document. Beyond character counts, speech rate, shot
   length, and frame overflow: whether the recorded `picture`/`overlay` match the structure,
-  whether `shot.info` within the same scene overlaps, and whether the playback order is
-  **cover → hooking → result → body**. Body before result is a violation; a missing hooking
+  whether `shot.info` within the same scene overlaps, and whether the playback order matches
+  the cover's arc — **answer-first: cover → hooking → result → body** (body before result is a
+  violation, a `turn` beat a warning), **story: cover → hooking → body → turn → result** (result
+  before body or before the turn is a violation; no turn, no result, or the shot before the
+  payoff not being the turn is a warning). A first shot that isn't the cover, an answer-first
+  body with no result shot (an informational piece gives its first content shot
+  `beat:"result"`), a missing hooking
   shot, or the shot after the cover not being the hooking shot, is a warning (scenes-schema
   §hooking — informational episodes have a hooking shot too). A missing cover `hookType`, or
   a value outside the four, is an opening-strategy warning (§the four opening strategies —
   this is a name-tag check; whether one of the four is actually present in the opening is
-  what the reviewer's copy mode looks at).
+  what the reviewer's copy mode looks at). The same name-tag check runs on `hookForm` (one of
+  the six, §the six hook forms). And the **shot grammar** (directing-grammar §8): a shot with no
+  `shot.feel`, a `shot.size` or `shot.angle` outside the vocabulary, a second `cu`/`choker`/`ecu`
+  in one scene, a third `choker`/`ecu` in the episode, a second `dutch`, and a close-up opening
+  not paid back by a non-close next shot — all warnings, weighed by the reviewer's camera mode
+  and the person at the approval step.
 
 The mode (shooting/generated) is auto-detected from `visual.source`, the illustration mode
 from `narration[].img`. Shooting mode has one overlay per shot, so a single reveal row. The
 timeline slots are shots, and b-roll plugs in at the playback position `after` sets.
 
 **Check items** — character counts, speech rate, scene length, total length, cover title 16
-chars, statLabel 18 chars, playback order (cover → hooking → result → body), plus:
+chars, statLabel 18 chars, playback order (answer-first cover → hooking → result → body ·
+story cover → hooking → body → turn → result, by the cover's `arc`), plus:
 
 - **Frame overflow** — draws each reveal on a 1080px canvas and measures whether text
   escapes the zone; on overflow it applies the same 3-step shrink as produce. Not fitting
@@ -123,6 +137,15 @@ chars, statLabel 18 chars, playback order (cover → hooking → result → body
   normal and excluded).
 - **Missing outro length** — an outro scene exists but `SB_DOC.outro` is empty.
 - **Unfilled placeholders** — blocks approval while `{{…}}` remains in SB_DOC.
+- **Hook form** — the cover has no `hookForm`, or a value outside the six.
+- **Arc** — the cover's `arc` is outside the two (read as answer-first); on a story arc, no
+  `turn` or no `result` shot, or the shot right before the payoff isn't the turn; on
+  answer-first, a `turn` beat, or body with no result shot; either arc, a first shot that
+  isn't the cover.
+- **Shot grammar** — a shot with no `shot.feel`; a `shot.size`/`shot.angle` outside the
+  vocabulary; a second `cu`/`choker`/`ecu` in one scene; a third `choker`/`ecu` in the
+  episode; a second `dutch`; a close-up opening not paid back by the next shot
+  (directing-grammar §6 · §8).
 
 This is where text clipping and contract violations get caught before production — if it
 flags here, fix and reopen.
@@ -135,17 +158,35 @@ must map 1:1 to an entry here.
 ```markdown
 # <topic> — research & verification log (<YYYY-MM-DD>)
 
+## Questions this episode has to answer          # written BEFORE the first search (SKILL §2 step 1)
+
+| # | Question | Why it's needed (hook · result · figure on screen · line) | Status |
+|---|---|---|---|
+| Q1 | <what the viewer asks / what the hook promises> | hook | answered by claim 1 |
+| Q2 | <the figure that will be the hero stat> | stat | answered by claim 2 |
+| Q3 | <…> | line | written off — no two sources; not used |
+
 ## Verified
 
-| # | Claim | Source 1 | Source 2 | Tool | Notes |
-|---|---|---|---|---|---|
-| 1 | <figure·deadline·effective date> | <URL> | <URL> | naver_search | source excerpt: "…" |
+| # | Claim | Source 1 | Source 2 | Tool | Checked | Notes |
+|---|---|---|---|---|---|---|
+| 1 | <figure·deadline·effective date> | <URL> | <URL> | naver_search | <YYYY-MM-DD> | source excerpt: "…" |
+
+## Counter-evidence & freshness                   # one row per key claim (SKILL §2 step 2)
+
+| Claim # | Counter-evidence search | What came back | Freshness search (≤1y) | Still current? |
+|---|---|---|---|---|
+| 1 | "<X> 아니다 / 논란 / 바뀜" | <nothing contradicting / a correction — and what was done> | period:1y news | yes · <as-of date> |
 
 ## Failed verification → excluded
 
 | Claim | Reason |
 |---|---|
 | <claim> | sources conflict — excluded from the body |
+
+## Sufficiency                                    # the exit of SKILL §2 — checked before §4 opens
+
+verified claims: <N> (floor 3 — aim 5+ short / 12+ long) · questions answered: <n>/<total> · written off: <list>
 
 ## Search history
 

@@ -388,9 +388,13 @@ consistency on reference images and first/last frames.
 
 ---
 
-## Camera — this section is the source of truth
+## Camera — this section is the source of truth for engine vocabulary and routing
 
-The evidence is the
+This section owns **which word each engine understands and how many moves a model takes per
+cut**. Which technique a shot should use — the size, the angle, the move, the length and the
+sound that serve what the audience should feel there — is owned by
+`../../storyboard/references/directing-grammar.md` (feel → technique); the field contract is
+`../../storyboard/references/scenes-schema.md`. The evidence behind this section is the
 [camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html).
 
 **Each engine understands different words.** Carrying directives from one engine to the other
@@ -409,6 +413,12 @@ means instructing in vocabulary that vendor never exemplified. The full Veo sour
 | Body moves up/down | `pedestal` | `升` / `降` |
 | Follow | (`tracking` in examples only) | `跟` |
 | Locked off | `static` / `fixed` | (unconfirmed) |
+| Lens only | `zoom in` / `zoom out` (the lens changes focal length — the body stays) | `变焦` |
+| Whip across | `whip pan` | `甩` |
+| Shake | `handheld` / `shaky cam` | (unconfirmed) |
+| Rise or fall on an arm | `crane` | (unconfirmed) |
+| From the air | `aerial` / `drone` | (unconfirmed) |
+| Vertigo | `dolly zoom` (dolly one way, zoom the other — the one two-action move) | `推拉+变焦` |
 
 `(unconfirmed)` doesn't mean "not understood" — it means **not confirmed in that vendor's
 docs**. Vendor lists mostly end in `等`/"and more", i.e. open lists, so an absent word isn't a
@@ -423,18 +433,25 @@ twice, and it's attached to the **angle section and the lens section** — `clos
 `medium shot`, `wide shot` live there. The 12-move section has no such warning. But "so moves
 work better" is an inference from silence.
 
-**Set moves-per-cut per model.** Our default model **Seedance 1.5 Pro has the vendor teaching
-combinations** (Hitchcock shot = `推拉`+`变焦`), so up to 2 can be tried. The one-move-per-cut
-advice is **2.0-only**, and even there hedged as `尽量` (where possible). Carrying a rule read
-in one version to a sibling version collides head-on with the vendor docs.
+**Set moves-per-cut per model — what the engine allows.** Our default model **Seedance 1.5 Pro
+has the vendor teaching combinations** (Hitchcock shot = `推拉`+`变焦`), so a second move can be
+tried there. The one-move-per-cut advice is **2.0-only**, and even there hedged as `尽量` (where
+possible). Carrying a rule read in one version to a sibling version collides head-on with the
+vendor docs. **What the storyboard writes is a separate contract** — one move per cut by default,
+a second only on 1.5 Pro and only with the reason written on the shot (scenes-schema §camera ·
+directing-grammar §4): the engine allows two, the pipeline asks why.
 
-**Don't use moves as emotional staging.** The folk belief that an approaching move changes the
-viewer's valence or arousal has no empirical support (p=.84 / p=.21, Front Neurosci 2023). The
-one significant effect was immersion, and even that was only consistent in neutral scenes
-whose character wasn't yet established. The authors credit tone mainly to **set dressing**,
-not the camera — set a cut's emotional tone with background, art, and props, and use moves for
-immersion at openings and transitions. (45s silent landscape clips, n=44 — that's
-non-detection, not proof of absence.)
+**A move supports the shot's feel; it doesn't carry it.** The storyboard picks the move from
+the feel it declared (directing-grammar §4–§5 — realisation → `dolly in`, pressure → slow
+`zoom in`, travel → `truck`, closing → `pedestal up` …). The measured part is narrow: an
+approaching move on its own didn't change the viewer's valence or arousal (p=.84 / p=.21,
+Front Neurosci 2023); the one significant effect was immersion, and even that was only
+consistent in neutral scenes whose character wasn't yet established. The authors credit tone
+mainly to **set dressing**, not the camera — so background, art, props, the size and the angle
+carry the feel, and the move is what makes the audience move with the cut, spent mostly at
+openings and transitions. A move that contradicts the declared feel is the defect; a static shot
+whose framing serves the feel is not. (45s silent landscape clips, n=44 — that's non-detection,
+not proof of absence.)
 
 **Angles, by contrast, have empirical support.** From high to eye-level to low, the subject
 looks bigger and stronger (all 5 scales p<.001) but **likability doesn't move** (p>.05). In
