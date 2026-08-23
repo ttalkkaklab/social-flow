@@ -242,13 +242,24 @@ means generating something nobody approved.
   defect, not something to fill in here** — send it back. Older episodes carry a single
   `visual.motion` string instead; use that as-is.
 
-- **`shot.feel`·`shot.size`·`shot.angle` — the shot grammar.** The storyboard wrote what the
-  audience should feel on each shot and chose the size and the angle for it
-  (`../storyboard/references/directing-grammar.md`). On a generated shot the `framing` slot
-  already restates them in the engine's words; keep that distance and height, and when a clip
-  comes back drawn closer, farther, or from a different height than the slot says, rerun it off
-  the same PNG rather than accepting a frame that flips the feel. On a still the size and the
-  angle live in `bgPrompt` and were drawn at the storyboard stage — nothing to re-decide here.
+- **`shot.feel`·`shot.size`·`shot.angle`·`shot.space` — the shot grammar.** The storyboard wrote
+  what the audience should feel on each shot and chose the size, the angle and the frame space
+  for it (`../storyboard/references/directing-grammar.md`). On a generated shot the `framing`
+  slot already restates size and angle in the engine's words; keep that distance and height, and
+  when a clip comes back drawn closer, farther, or from a different height than the slot says,
+  rerun it off the same PNG rather than accepting a frame that flips the feel. **Do not
+  re-describe `shot.space` in a motion prompt** — the still already drew who sits where and
+  which way they face, and rewriting sides, facing, or lighting makes the engine redesign the
+  scene (plan P0-7). A quote speech clip has no still, so its prompt carries the shot's
+  `From the camera: …` sentence — `assemble-bg-prompt.js --from scenes.js --shot N
+  --space-only` (N from 1, the strip's "Shot N") — after the character description; the size and framing phrases stay what the
+  quote contract below says, since that clip is framed wide on purpose for the palindrome
+  reframe. On a still the size, the angle and the space live in `bgPrompt` and were drawn at
+  the storyboard stage — nothing to re-decide here. To regenerate a still, resend the stored
+  `bgPrompt` as-is; when a `shot` field changed, rerun the assembler from the fields with the
+  scene and mood sentences lifted from the stored string (they sit between the `From the
+  camera:` sentence and the exclusions — and `--no-person` again when the stored string reads
+  "the subject" instead of a body) rather than editing the string by hand.
 
 - **`visual.character` — who is on screen.** Resolve the id to its panel directory and attach the
   panels as reference images:
@@ -441,11 +452,13 @@ only the summary is here.
   then `body.png`, 3 images max; 9:16, 720p,
   `veo-3.1-fast-generate-preview` — lite doesn't support reference images, so fast is the
   lowest tier. The standard tier ties with fast in the arena, so there's no reason to pay 4×) —
-  repeat the character description in the prompt + "static camera" + "wide chest-up framing …
-  subject appears small in the frame" + a background unified to THEME dark. **Those two camera
-  phrases are the default `visual.camera` for a quote clip, not a competing instruction** — when
-  the scene carries its own `visual.camera`, assemble from that instead (§what the storyboard
-  already settled). **Exclusions go
+  repeat the character description in the prompt + the shot's `From the camera: …` sentence
+  (`assemble-bg-prompt.js --from scenes.js --shot N --space-only` — who sits where, which way
+  they face; nothing when the shot wrote no `space`) + "static camera" + "wide chest-up
+  framing … subject appears small in the frame" + a background unified to THEME dark. **Those
+  two camera phrases are the default `visual.camera` for a quote clip, not a competing
+  instruction** — when the scene carries its own `visual.camera`, assemble from that instead
+  (§what the storyboard already settled). **Exclusions go
   in the `negativePrompt` argument, not the body** — `text, subtitles, black bars,
   letterboxing`. Run `frame-persona-clip.py <input> .work/broll/<speaker>-palin.mp4` to unify
   the framing and make the palindrome. With several clips, hstack them side by side and

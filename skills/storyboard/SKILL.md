@@ -15,7 +15,7 @@ description: >
   **once each** before approval — the storyboard-reviewer agent reads the copy as a whole
   (AI-sounding phrasing, hook, factual fidelity), then every single scene for quality and
   contextual fit, the word choice of every narration and title, the camera plan (what each
-  shot should make the audience feel, and whether its size, angle and move serve that feel),
+  shot should make the audience feel, and whether its size, angle, frame space and move serve that feel),
   the episode's sound design, and finally the generated images (do they match what each scene
   actually says). There is no score to clear and nothing is delegated
   twice: each review's findings get applied once, and whatever is left over goes onto the
@@ -41,7 +41,7 @@ delegated twice. Each one hands back findings, the findings get applied, and the
 | §4.5 copy | The sentences of the whole storyboard — AI-sounding phrasing, hook, factual fidelity | one total score |
 | §4.6 per-scene | The role and contextual fit of **each individual scene** | a score per scene + the lowest |
 | §4.7 vocabulary | Whether the **words** in narration and titles are words people use | a score per scene + the lowest |
-| §4.8 camera | The shot grammar — what each shot should make the audience feel (`shot.feel`) and whether its size and angle serve it — plus the four camera slots, the cut length, and the engine fit of every generated shot | a score per shot + the lowest |
+| §4.8 camera | The shot grammar — what each shot should make the audience feel (`shot.feel`) and whether its size, angle and frame space serve it — plus the four camera slots, the cut length, and the engine fit of every generated shot | a score per shot + the lowest |
 | §4.9 sound | The episode's sound design — the music cue plan, clip audio, voice casting | one total score |
 | §5.5 images | Whether the picture shows what the scene is saying | one total score |
 
@@ -268,7 +268,7 @@ rule. Topics don't live at the channel root — they go under `episodes/`, the s
 Write it to the contract in `references/scenes-schema.md`. Keep the array name (`SCENES`);
 one entry is a **shot**. Group the same place and time with `scene`+`sceneSlug`, and write
 `sequence` only when purposes diverge. Per shot, write `shot.feel`, `shot.size`, `shot.angle`,
-`shot.info`, and `visual.picture` (still photo / AI video / recording / shared asset) plus `visual.overlay`
+`shot.info`, `shot.space` on a generated still, and `visual.picture` (still photo / AI video / recording / shared asset) plus `visual.overlay`
 (HTML staging / none) — one shot can have both. A cover laying an HTML reveal over a still
 photo is the default. The source of truth for field definitions is the schema's §grammar
 units and production layers.
@@ -279,14 +279,18 @@ Core rules:
   `shot.feel` in your own words ("relief — it really is that short", "alone in a big room",
   "something's wrong"), then pick the technique that serves it from
   `references/directing-grammar.md` §5: the size (`shot.size` — how far the audience stands),
-  the angle (`shot.angle` — the seat you give them; `eye` by default), on a generated shot the
+  the angle (`shot.angle` — the seat you give them; `eye` by default), on a generated still the
+  frame space (`shot.space` — who sits where, which way they face), on a generated shot the
   move (`visual.camera`) and the cut length, and what the shot sounds like. The row is a default,
   not a cage — leave it and write why on the shot. `feel` and `info` are different lines: info is
   what the viewer newly learns, feel is what they should feel; a feel that restates the info is
   unset. A feel written after the camera was chosen is a caption for the camera, and the review
-  reads it as unset. The size words and the angle words go into `bgPrompt` too — the still is
-  where they get drawn ("medium close-up at eye level, chest up", "wide shot seen from above").
-  Across shots: establish then go close (a close-up opening pays its debt in the next shot), one
+  reads it as unset. The size words, the angle words and the space block go into `bgPrompt` too
+  — the still is where they get drawn. Write `shot.space` (`frame: "camera"`, `layout`, `facing`,
+  `line` when two people, or a person and what they look at, share the scene) and let
+  `assemble-bg-prompt.js` put them at the front
+  of the prompt (directing-grammar §3.5). Don't write `left view of`, object-centric left/right,
+  or metres — the assembler exits 1 on those. Across shots: establish then go close (a close-up opening pays its debt in the next shot), one
   `cu` per scene and `choker`/`ecu` once or twice per episode, one `dutch` per episode with its
   reason written, hook cut and speech clips at `eye`, a wide held ≥1.5× a close on generated and
   filmed shots (directing-grammar §6). The same fields steer the shooting script on filmed shots
@@ -447,6 +451,15 @@ Core rules:
   no seconds, no exclusions) are `references/scenes-schema.md` §camera, and the move itself
   comes from the shot's `feel` (directing-grammar §4–§5) — it supports the feel, it doesn't
   carry it alone, and `framing` restates the shot's size and angle in the engine's words.
+- **Every generated still leaves here with its floor plan decided** — `shot.space` filled
+  (`frame: "camera"` · `layout` — empty only on an `insert`/`ecu` that fills the frame with one
+  object · `facing` when a person is on screen · `line` when two people, or a person and what
+  they look at, share the scene). Image
+  models do not infer camera position or object-centric left/right
+  (directing-grammar §3.5). The assembler writes the prefix; the scene and mood follow. A
+  motion prompt for image→video does **not** rewrite sides, facing, or lighting — the PNG
+  already locked them. A quote speech clip has no still, so its prompt carries the shot's
+  `From the camera: …` sentence (`assemble-bg-prompt.js --space-only`).
 - **Name whoever from the channel cast is on screen** in `visual.character` — one id, or an array
   with the shot's subject first (order is reference weight). It is what lets produce attach the
   character panels without re-reading the scene, and what resolves a character's veo ban per cut
@@ -586,11 +599,12 @@ will read — and §5 and §5.5 are the only ones skipped.
 
 ### 4.8 Camera review (storyboard-reviewer camera mode — one round)
 
-Every shot carries a feel and the two dials that serve it — `shot.feel`, `shot.size`,
-`shot.angle` — and every shot that becomes a generated video carries four camera slots on top
-— `movement`, `speed`, `framing`, `end` (scenes-schema §camera). This review reads both layers
-**before the first call that costs money**, because a dial fixed here costs nothing and the same
-dial fixed after generation costs the clip, and on a filmed shot it costs a refilm.
+Every shot carries a feel and the dials that serve it — `shot.feel`, `shot.size`,
+`shot.angle`, `shot.space` on a generated still — and every shot that becomes a generated
+video carries four camera slots on top — `movement`, `speed`, `framing`, `end` (scenes-schema
+§camera). This review reads both layers **before the first call that costs money**, because a
+dial fixed here costs nothing and the same dial fixed after generation costs the clip, and on a
+filmed shot it costs a refilm.
 
 What it looks at, per shot:
 
@@ -598,10 +612,15 @@ What it looks at, per shot:
   directing-grammar §5 row for that feel (a "trust" talking head at `low`, a "scale" shot at
   `cu`, an "alone" shot at `mcu` are findings), a feel that restates `info`, a feel written as
   "cinematic" or "dynamic" (a request for a move, not a feeling).
+- **Is the frame space written for a generated still** — `shot.space.frame` is `camera`,
+  `layout` names sides from the camera, `facing` is the visible result (not `left view of`),
+  `line` is set when two people, or a person and what they look at, share the scene, and none
+  of layout/facing/line/light uses
+  camera-inference, allocentric, or metric language (directing-grammar §3.5).
 - **The rationing and the sequencing** — one close-up (`cu`·`choker`·`ecu`) per scene, `choker`/`ecu` once or twice per
   episode, one `dutch` per episode with its reason written, a close-up opening paid back in the
-  next shot, the hook cut and speech clips at `eye`, a wide held ≥1.5× a close (directing-grammar
-  §6).
+  next shot, the hook cut and speech clips at `eye`, a wide held ≥1.5× a close, a scene that
+  keeps its `space.line` (directing-grammar §6).
 
 And per generated shot, on top:
 
@@ -632,8 +651,9 @@ And per generated shot, on top:
 3. **Write down whatever you didn't apply**, for §7.
 
 **This review runs on every episode** — a filmed shot has a feel, a size, an angle and a distance
-to judge even though the user holds the camera, and a still has the size and angle its `bgPrompt`
-will draw. Only the slot axes go `n/a` per shot, on shots that don't become generated video.
+to judge even though the user holds the camera, and a still has the size, angle and space its
+`bgPrompt` will draw. Only the slot axes go `n/a` per shot, on shots that don't become generated
+video.
 
 ### 4.9 Sound review (storyboard-reviewer sound mode — one round)
 
@@ -742,14 +762,30 @@ passing them (`../produce/references/video-model-selection.md` §6).
   that cost money (high images, veo).
 - **points backgrounds are the star of the screen too** (produce absolute rule 14 — captions
   use only the top band, so the photo shows through). Make them **photorealistic topic shots**
-  rather than metaphorical still lifes, **framed at the shot's `shot.size`·`shot.angle`** — the
-  size words and the angle words go into the prompt ("medium close-up at eye level, chest up",
-  "wide shot seen from above, the person small in the room" — directing-grammar §2–§3), since
-  the still is where the distance and the height actually get drawn — and attach the profile
-  §3 mood description + the **mandatory negative directions** ("no text, no logos, no signage, no readable characters,
-  face not visible, no flags, no national emblems, no maps, no government buildings") +
-  "lower third fading into darkness" (a bright bottom makes subtitles unreadable). The cover
-  background inherits the same mood, negative directions, and lower third.
+  rather than metaphorical still lifes. **Assemble `bgPrompt` from the shot's fields**, don't
+  prose a competing layout:
+
+  ```bash
+  SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+  node $SB/assemble-bg-prompt.js --from storyboard/scenes.js --shot <n> \
+    --scene "<the scene content — who, where, what they are doing>" \
+    --mood "<profile §3 mood>" \
+    --exclude "no text, no logos, no signage, no readable characters, face not visible, no flags, no national emblems, no maps, no government buildings"
+  # <n> counts from 1 — the strip's "Shot n", the same n as scene-<n>.png (--index is the raw
+  # array position from 0). stdout is the whole bgPrompt. Exits 1 on left-view-of / allocentric
+  # / metres anywhere in it (space slots, --scene, --mood, --exclude). Add --no-person on a still
+  # with nobody in it, so the size words describe the subject instead of a body.
+  ```
+
+  The assembler writes size, angle, `From the camera: layout. facing. line. light.`, then the
+  scene, the mood, the exclusions, then `lower third fading into darkness` (directing-grammar
+  §3.5). The **mandatory negative directions** go in through `--exclude` — neither
+  `gpt_image_text2img` nor `image_local_generate` has an exclusion argument, so the short noun
+  list stays in the body as before; `veo_*` is the one call that takes `negativePrompt`. The
+  cover background inherits the same assembly and the same exclusions, and swaps `face not
+  visible` for `seen from behind, face turned away` in `facing`. Store the assembler's stdout
+  as `visual.bgPrompt` — the whole string; a plain regeneration resends it as-is, and only a
+  changed `shot` field makes produce rerun the assembler.
 - Count is **1 cover (gpt high) + 3–6 points (local)** — reusing one image across every scene
   makes the body tens of seconds of the same still frame. Change the shot wherever the content
   axis turns, but keep continuity with a different angle on the same person and the same space.
@@ -808,12 +844,14 @@ right, not pretty.
    - Engines follow the §5 split. Add only the correction directions on top of the original
      prompt and **don't re-describe it wholesale** — tearing it all up loses the elements that
      had passed.
-   - **Don't put negative directions in the prompt body** — putting "no maps" in the body
-     draws a map instead (measured: 4 out of 4 failed). Split negative nouns into the
-     exclusion-only argument — `--negative-prompt` for local images, `negativePrompt` for
-     `veo_*`. The Veo prompt guide also marks the instruction form in the body as not
-     recommended and advises listing noun phrases. Seedance has no such argument, so avoid it
-     by changing the scene description itself.
+   - **Don't put negative directions in the prompt body where an exclusion argument exists**
+     — putting "no maps" in the body draws a map instead (measured: 4 out of 4 failed). Split
+     negative nouns into `negativePrompt` for `veo_*` (the Veo prompt guide also marks the
+     instruction form in the body as not recommended and advises listing noun phrases).
+     `gpt_image_text2img` and `image_local_generate` have no such argument, so their list stays
+     the short noun phrases `--exclude` writes (§5), and an element that keeps coming back is
+     designed out of the scene sentence — the same move as for Seedance, which has no argument
+     either.
    - **Props with text engraved on them can't be blocked with negative directions** (keyboards,
      calculators, signboards). Taking the object out of the composition is the answer.
    - **A regenerated image is not read again.** One round means one read — if the remake looks
@@ -894,7 +932,8 @@ The document shows four things.
   `hookForm`, or one outside the six), and the **shot grammar** (a shot with no `shot.feel`, a
   `shot.size`/`shot.angle` outside the vocabulary, a second `cu`/`choker`/`ecu` in one scene, a
   third `choker`/`ecu` in the episode, a second `dutch`, a close-up opening not paid back by the
-  next shot — directing-grammar §6 · §8). This is where text
+  next shot, a generated still with no `shot.space.layout`, camera-inference or metres in the
+  prompt — directing-grammar §3.5 · §6 · §8). This is where text
   clipping and contract violations get filtered out before production — though it shares
   produce's blind spot, so text pushed **upward** isn't caught (only downward overflow is
   measured).
@@ -1006,8 +1045,12 @@ uses the slide state captures as the segment visuals (produce §3.6).
   field-practice grade; §4's short-form principles carry the same tag).
 - **Don't write the feel after the camera** — a `shot.feel` fitted to a move already chosen is a
   caption, not a decision, and the camera review reads it as unset. Feel, then size and angle,
-  then (on a generated shot) the move and the length. "Cinematic" and "dynamic" aren't feelings
+  then space, then (on a generated shot) the move and the length. "Cinematic" and "dynamic" aren't feelings
   — they're a request for a move with the reason left out.
+- **Don't ask the image model to infer a camera seat.** `left view of X`, `from the car's right
+  door`, and `1.5 m apart` are the three forms that fail (directing-grammar §3.5). Write the
+  visible result in `shot.space` and run the assembler. A motion prompt that re-describes the
+  sides the still already drew redesigns the scene.
 - **scenes.js isn't a living file** — after approval it's the settled version produce consumes.
   To change it during production, start from a storyboard revision and re-approval.
 - **A range stays a range** — don't shrink a numeric range to its upper bound alone (this has
@@ -1022,7 +1065,8 @@ uses the slide state captures as the segment visuals (produce §3.6).
 ### Reference Files
 
 - **`references/scenes-schema.md`** — the full scenes.js data contract (fields by type, narration segments, verification checklist)
-- **`references/directing-grammar.md`** — feel → technique (SoT): what the audience should feel on each shot, and the size, angle, move, cut length and sound that serve it · the size ladder with cut lines, phone distances and matching sound · angle rules (the subject's eyes as baseline, angle as change, the dutch fee) · the move table with the feel each serves · rationing across shots · the 180° and 30° rules for filmed shots. Engine vocabulary stays in `../produce/references/video-model-selection.md` §Camera
+- **`references/directing-grammar.md`** — feel → technique (SoT): what the audience should feel on each shot, and the size, angle, frame space, move, cut length and sound that serve it · the size ladder with cut lines, phone distances and matching sound · angle rules (the subject's eyes as baseline, angle as change, the dutch fee) · frame space (§3.5 — camera frame, visible result, no metres) · the move table with the feel each serves · rationing across shots · the 180° and 30° rules for filmed shots. Engine vocabulary stays in `../produce/references/video-model-selection.md` §Camera
+- **`references/assemble-bg-prompt.js`** — writes `bgPrompt` from `shot.size` · `shot.angle` · `shot.space` (`--from scenes.js --shot <n>`, n from 1) plus `--scene`·`--mood`·`--exclude`; `--space-only` gives a quote clip its `From the camera: …` sentence; `--no-person` swaps the size ladder for a still with nobody in it; `--check` exits 1 on camera-inference / allocentric / metric language. storyboard §5 runs it before the generation call. `--selftest` pins the banned-language checks and fails if the HTML template's copy of the three regexes drifts
 - **`references/storyboard-template.md`** — the standard storyboard.md structure + the research.md table format
 - **`references/storyboard-html-template.html`** — the storyboard.html render template — loads scenes.js dynamically and shows contract checks automatically; fill in only the `✎ SB_DOC` block
 - **`references/shot-script-template.md`** — shooting mode only: the script.md (shooting script) structure + filming rules + the scenes.js variant contract
@@ -1035,7 +1079,7 @@ uses the slide state captures as the segment visuals (produce §3.6).
 
 - **`storyboard-reviewer`** — six modes, one round each. §4.5 copy mode (AI tells, hook, factual
   fidelity) · §4.6 scene mode (per-scene role and contextual fit) · §4.7 lexicon mode (are the
-  words words people use) · §4.8 camera mode (the shot grammar — feel · size · angle of every
+  words words people use) · §4.8 camera mode (the shot grammar — feel · size · angle · space of every
   shot, plus the four slots, cut length, engine fit of generated shots) · §4.9
   sound mode (clip audio, voice casting, where the sound gets out of the way) · §5.5 image mode
   (scene content against the picture's contextual fit). None of them is a pass/fail gate — each
