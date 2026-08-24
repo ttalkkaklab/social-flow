@@ -920,15 +920,7 @@ stage avoids redrawing the picture.
 of it is not written by hand here: it is assembled from the four `visual.camera` slots (§camera),
 which is exactly Seedance's `opening frame composition + move + closing frame composition`. What
 the `prompt` adds on top is the subject motion — what moves in the picture while the camera does
-its one thing. **A change of state inside the clip carries its own duration** — armour snapping
-on, a light coming up, a door closing. Write it as "in under half a second" or "over two
-seconds"; left open, the engine spreads the change across the whole clip and it stops reading as
-an event. That is the one place seconds belong in the prompt body — the clip's length is still
-`duration`. And **if a prop has to be readable, spell the words out** — the exact three lines on
-the notepad, the exact label on the box — and hold the shot long enough to read them (about 2 s
-for a short line). Anything vaguer and the model fills the surface with squiggles that pass at
-speed and read as slop the moment anyone pauses. Screen text for the viewer is a code-rendered
-overlay either way (absolute rule 10); this is about words that live inside the picture. The reason an approaching move is written as `dolly in` is that **this sentence may also
+its one thing. The reason an approaching move is written as `dolly in` is that **this sentence may also
 go to Veo** — without `ARK_API_KEY` the motion background falls back to `veo_img2video`, and the
 word `push` appears 0 times in the canonical Veo text. Seedance's own vendor vocabulary is
 Chinese (`推`), so neither is confirmed in English, and `dolly in` satisfies both paths. **This
@@ -943,6 +935,17 @@ set by the scene's `duration` and the edit trims it) and **don't write what to e
 sentence** (Seedance has no exclusion-only argument — re-describe the scene so it doesn't appear.
 That slot is the `negativePrompt` argument only when going to Veo). Write the sentence in English
 — the prompt body takes only Chinese or English.
+
+**A change of state inside the clip carries its own duration** — armour snapping on, a light
+coming up, a door closing. Write it as "in under half a second" or "over two seconds"; left
+open, the engine spreads the change across the whole clip and it stops reading as an event. The
+ban just above is on the clip's *length* — that stays `duration`; how long a change inside the
+clip takes is the one number that does belong in the prompt body. And
+**if a prop has to be readable, spell the words out** — the exact three lines on the notepad,
+the exact label on the box — and hold the shot long enough to read them (about 2 s for a short
+line). Anything vaguer and the model fills the surface with squiggles that pass at speed and
+read as slop the moment anyone pauses. Screen text for the viewer is a code-rendered overlay
+either way (absolute rule 10); this is about words that live inside the picture.
 
 - **When to use it**: when the movement itself is the content. A place to show only the picture
   with nothing said is `broll` (spliced between scenes); **when the background has to move while
