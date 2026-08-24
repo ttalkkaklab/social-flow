@@ -275,6 +275,11 @@ means generating something nobody approved.
   photoreal person → `veo_reference` (**3 images max**, validated in code). The full rule is
   [video-model-selection.md](references/video-model-selection.md) §6.
 
+  An entry written as `{ id, scope }` carries its **jurisdiction** — copy that clause into the
+  prompt's reference list verbatim (`@mouse — controls the helmet and body only`). Don't
+  paraphrase it and don't drop it: it is what keeps one reference from painting the rest of the
+  frame, and the storyboard settled the wording where it could be reviewed (§positive locks).
+
 - **`duration` — the used length.** On a generated clip this is what the cut needs
   (scenes-schema §cut length), not a default: an insert is 3–4s, a face carrying emotion is
   7–10s. **Ask for exactly that** — Seedance makes and bills the seconds you request, so
@@ -354,7 +359,10 @@ only the summary is here.
   (`text, subtitles, black bars`). Write "no ~" in the body and the model draws that noun
   instead (local images, measured: 0 for 4, and Veo's own prompt guide marks the form not
   recommended). Seedance has no such argument, so rewrite the scene description until the
-  thing you want gone simply isn't in it.
+  thing you want gone simply isn't in it, and close the prompt with a **positive-locks**
+  paragraph — what holds in every frame, said positively, each reference given its scope
+  (§positive locks). A phrase that only refuses a category ("not a game", "no CGI") gives the
+  model no picture to draw and survives every reroll.
 - **There's no rule about slot order** — the five-part formula that puts the camera in the
   first word appears in exactly one Google Cloud blog post; three reference documents specify
   no word order, and the Gemini API marks the camera `[Optional]`. Just worry about filling
