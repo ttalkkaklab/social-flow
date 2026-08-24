@@ -663,6 +663,7 @@ finding; a silent departure is.
 - **P0-8 engine misassignment** — a drawn character routed to `veo_reference`, a real face
   routed to Seedance 2.x (it refuses them), more than 3 references on Veo, or a
   `visual.character` id that isn't in the channel cast (profile §2 · `assets/characters/<id>/`).
+  An entry may be a bare id or `{ id, scope }` — read the id out of either form.
 - **P0-9 the camera direction is buried in the description** — written inside `bgPrompt` or the
   clip prompt instead of the slots. Then the block can't be carried to the next scene and
   produce has nothing to assemble.

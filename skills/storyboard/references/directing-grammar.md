@@ -32,7 +32,8 @@ tells you what most crews do, and it is the right default until a `[study]` row 
 Sources: the film-directing daily course, lessons L01–L06 (shot units · shot sizes ① ② · camera
 angles · the 180° rule · the 30° rule, sent 2026-08-16 ~ 2026-08-21); "AI 영화 제작 가이드 —
 AI 영상 퀄리티 3배 높여주는 8가지 비법" (AI Astra, YouTube `sHs0_iZJxHk`, 2026-08-21 — chapters
-카메라 개요 · 무브먼트 · 앵글 · 특수기법 · 프레이밍 · 듀레이션); the camera technique research
+카메라 개요 · 무브먼트 · 앵글 · 특수기법 · 프레이밍 · 듀레이션); Higgsfield Academy's
+movie-making track, 7 courses / 75 lessons (read 2026-08-24 — §9); the camera technique research
 above (the `[study]` rows).
 
 ---
@@ -238,6 +239,19 @@ Rules:
   share the scene; omitted on a single-subject shot.
 - **`light` is optional** and uses the same camera frame (`key from camera-left`, shadow
   falling right). Directional light is one of the few spatial cues the still actually keeps.
+- **A room is drawn from three-quarters** `[course]`. Ask for a place head-on and the model has
+  no reference for what sits where — the walls flatten into a backdrop and the furniture loses
+  its distances. Turn the camera so two walls show at once and it reads the real gaps between
+  chair, table and window. Put `shot.space.layout` on a three-quarter footing whenever the
+  subject of the still is the place itself (`ls` establishing shots, `points` backgrounds with
+  no person): *"three-quarter view of the room, two walls visible"*. It is the cheapest depth
+  in the pipeline. A person in frame doesn't need it — the size dial already does that work.
+- **Name the palette in the prompt, not in the grade** `[course]`. "Moody" and "cinematic"
+  give the model nothing; three named colours do — *cool floodlight white, muted grass green
+  (never neon), deep blue-black night sky*. Do it when a scene changes place or time (a
+  flashback, a cut to night), and write the reason from the episode rather than from taste: the
+  night stadium is dark because the story is a drama and the action happens at night. Belongs in
+  `bgPrompt`'s mood text, alongside the theme colours the profile already fixes.
 - **No metres, no allocentric, no camera-view phrasing** — the assembler exits 1 on those
   three anywhere in the assembled prompt (the scene and mood text included): `left view of` ·
   `from the car's right door`, `from X's left`, `to her right` · `1.5 m`, `three meters away`.
@@ -267,7 +281,7 @@ move while the other dials stayed at their defaults.
 | rotate · travel | `tracking` (follow, from behind, shoulder height) | immersion — the audience stands behind the character; moving, chasing | the most immersive of the set |
 | rotate · travel | `tracking` (reverse — ahead of the subject, retreating) | walk-and-talk | keep the face framed in `framing` |
 | rotate · travel | `truck` (side tracking, parallel) | the rhythm of travel — profile held, fore and background at different speeds | |
-| rotate · travel | `whip pan` | a transition by camera · impact | a smear; pairs with a hard sound |
+| rotate · travel | `whip pan` | a transition by camera · impact | a smear; pairs with a hard sound. Same size at both ends — see below |
 | height | `pedestal up` / crane up | closing a scene — the person shrinks as the frame rises | endings |
 | height | `dolly out` + rising (drone pull-back) | scale — the person stays centred, the space keeps widening | two moves; write the reason beside it, or pick one |
 | height | `static` at `low` / `high` / `overhead` | see §3 — the angle does the work and the camera stays still | `static` is a decision, not an empty slot |
@@ -284,6 +298,11 @@ move while the other dials stayed at their defaults.
   engine file carries the per-model nuance (the default model teaches combinations; 2.0 asks
   for one) — the storyboard writes one unless a reason sits beside the second.
 - **A long take (10 s+) holds one move, no exception.**
+- **A whip pan starts and ends on the same size** `[course]`. It is one continuous move, so
+  opening on `ms` and landing on `cu` makes it a cut wearing a smear — it reads as an error, not
+  a transition. And give the swing a budget in `speed`/`framing`: hold, then the blurred swing,
+  then settle on the new subject. Left unspecified, the engine guesses the pacing and cuts away
+  before the second face has arrived.
 - **Write the camera apart from the scene description.** Camera slots on one side, the picture
   on the other (`bgPrompt` / the motion prompt). Fused into one paragraph, the block has to be
   rewritten for every scene; kept apart, the same camera block travels to the next scene.
@@ -334,7 +353,10 @@ what the audience is supposed to get.
 
 1. **One shot, one new piece of information** (`shot.info`). Two shots in a scene saying the
    same thing — one can go. 4–6 shots in a dialogue scene; a 35–75 s informational short has a
-   floor of two sizes per scene (wide + close).
+   floor of two sizes per scene (wide + close). The check that catches a fake: cover the `info`
+   lines and read only the sizes, angles and moves down the scene. If every setup shows the
+   same thing from the same distance, the scene is one viewpoint chopped into decorative cuts,
+   and no wording in `info` will fix it.
 2. **Establish, then close.** Long shot first, then in. A close-up opening pays its debt in the
    next shot. A run of close shots with no wide keeps the audience tense and lost at once.
 3. **The close-up is rationed** — one close-up (`cu`·`choker`·`ecu`) per scene, `choker`/`ecu` once or twice per
@@ -364,6 +386,15 @@ what the audience is supposed to get.
     (2026-08-23) fixes only the close on the moment and the full shot at the payoff; the
     tightening between them is rules 2 and 3 laid over a rising curve, and the close-up ration
     (rule 3) still holds across the arc.
+13. **Give the beat after a jump its own shot.** After a hard cut into a new place, a flashback,
+    or a `turn` the viewer has to catch up on, the next line lands rushed no matter how good
+    the shot is — the character speaks before the audience has taken in what they just saw.
+    Hold one or two seconds first, and hold them in a shot of their own: a reused frame, a
+    reaction, an insert. Packing the pause and the line into one cut removes the pause; the
+    generated clip plays them as one breath. On our timeline that shot is often free — a frame
+    already generated for another scene, re-cut. The same split applies inside a scene whose
+    dialogue is dense: separate prompts per beat, then pick the best delivery of each line
+    across the batches rather than hunting for one take that nails all three.
 
 ---
 
@@ -440,6 +471,16 @@ Warnings, not blocks — the reviewer and the person at the approval step weigh 
   (approach · rotate/travel · height · viewpoint · distortion/focus); one move per clip; nine
   frame sizes, far = observer and close = participant; the cut-length-by-purpose table
   (scenes-schema §cut length).
+- Higgsfield Academy, movie-making track — 7 courses, 75 lessons, read as lesson notes on
+  2026-08-24 (`higgsfield.ai/ko/academy/courses?category=movie-making`; the lesson videos
+  themselves were not transcribed): Blockbuster 4K · Santiago cinematic · AI VFX on real
+  footage · AI animated short · Seedance 4K cinematic realism · evaluating AI filmmaking demos ·
+  directing AI fight scenes. The rows this file took from it, all `[course]`: a room is drawn
+  from three-quarters; name the palette in the prompt; a whip pan starts and ends on the same
+  size and needs a timing budget; give the beat after a jump its own shot; read the camera plan
+  with the `info` lines covered. The prompt-side findings (positive locks, reference scoping,
+  the batch-failure ladder, sheet lighting, mid-episode state sheets) live in
+  `../../produce/references/video-model-selection.md`.
 - [AI video camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html)
   (2026-08-15): vendor vocabulary (Veo 12 moves, no `push`/`orbit`); move → valence/arousal not
   supported (p=.84 / p=.21), immersion yes (p=.006) on unset cuts; angle → bigger/stronger
