@@ -920,7 +920,15 @@ stage avoids redrawing the picture.
 of it is not written by hand here: it is assembled from the four `visual.camera` slots (§camera),
 which is exactly Seedance's `opening frame composition + move + closing frame composition`. What
 the `prompt` adds on top is the subject motion — what moves in the picture while the camera does
-its one thing. The reason an approaching move is written as `dolly in` is that **this sentence may also
+its one thing. **A change of state inside the clip carries its own duration** — armour snapping
+on, a light coming up, a door closing. Write it as "in under half a second" or "over two
+seconds"; left open, the engine spreads the change across the whole clip and it stops reading as
+an event. That is the one place seconds belong in the prompt body — the clip's length is still
+`duration`. And **if a prop has to be readable, spell the words out** — the exact three lines on
+the notepad, the exact label on the box — and hold the shot long enough to read them (about 2 s
+for a short line). Anything vaguer and the model fills the surface with squiggles that pass at
+speed and read as slop the moment anyone pauses. Screen text for the viewer is a code-rendered
+overlay either way (absolute rule 10); this is about words that live inside the picture. The reason an approaching move is written as `dolly in` is that **this sentence may also
 go to Veo** — without `ARK_API_KEY` the motion background falls back to `veo_img2video`, and the
 word `push` appears 0 times in the canonical Veo text. Seedance's own vendor vocabulary is
 Chinese (`推`), so neither is confirmed in English, and `dolly in` satisfies both paths. **This
@@ -1324,6 +1332,15 @@ strip says no violations.
       by `assemble-bg-prompt.js` (directing-grammar §3.5 · §frame space). No `left view of`, no
       allocentric "from X's right", no metres in the space slots. Image→video motion prompts
       do not re-describe sides, facing, or lighting
+- [ ] **A still whose subject is the place is framed three-quarter** (two walls visible), and a
+      scene that moves to a new place or time names its palette in three colours rather than a
+      mood word (directing-grammar §3.5). A shot that follows a hard cut, a flashback, or the
+      `turn` gets its own beat to land in before the next line (§6 rule 13)
+- [ ] **Every generated clip's prompt closes with positive locks** — what has to hold in every
+      frame, written as positive sentences, with each reference given its scope ("controls the
+      water and sky only", "appears only in the final cut"). No "no ~" phrasing on the Seedance
+      lane, no bare category refusals ("not a game", "no CGI"); a state change inside the clip
+      carries its duration (`video-model-selection.md` §positive locks · §motion background)
 - [ ] `visual.picture` and `visual.overlay` match the structure. AI video and HTML staging aren't
       merged into one badge
 - [ ] On answer-first, builds, tutorials, and before/after comparisons show the finished result

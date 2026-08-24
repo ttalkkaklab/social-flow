@@ -306,6 +306,30 @@ two-image set but says nothing about removing the head from the full body. Treat
 working default and settle it with an A/B (same shot, headless body vs `front.png`, ID drift
 compared over a few 8-second cuts) — the open question is already logged in the camera research.
 
+An outside practitioner reaches the same failure mode from the other direction `[course]`.
+Higgsfield's course keeps the three-panel sheet as one image, but the step it insists on is
+erasing the face from the full-body panel — "more than one face and Seedance wobbles; by the
+fifth scene your lead is a stranger." So the two sources disagree on the container (one sheet
+vs separate files) and agree on the rule underneath: **one face per reference set.** Their
+container isn't ours to copy — their platform saves the sheet as a named Element and matches it
+by tag, which is not what a raw `referenceImages` array does, and ByteDance's own warning
+against multi-angle assets is `[vendor]`. Keep the panels split; take the confirmation.
+
+**Light the sheet flat** `[course]`. A reference sheet gets rejected on lighting far more often
+than on likeness, and every shot generated from it inherits the fault. What passes: soft
+diffused light with almost no shadow, no glare on the hair, a visible catchlight in the eyes,
+mid-grey seamless background (never white), the same light across all panels. What fails: half
+the face in shadow, a hot rim on the hair, the whole panel underexposed. Ask for the grey
+background by name — a background with nothing in it raises the hit rate on its own.
+
+**A wardrobe or body change mid-episode needs its own sheet** `[course]`. When something about
+the character changes inside the story — torn trousers after a claw swipe, a uniform put on, an
+age jump — the model has no picture of the new state and quietly restores the old one (the
+trousers sew themselves back up a beat later). Generate a second sheet for the changed state
+(`<id>-torn`, `<id>-kid`) and hand it over from the cut where the change happens. The same goes
+the other way for a flashback: age the character, the location and the props together, or the
+flashback reads as a costume instead of a memory.
+
 **A live-action character keeps its single image.** The panel convention is for drawn characters.
 Where the canonical asset is a photograph (Ttalkkak Lab's `mouse/real.png` — the mouse-helmet
 figure), that one file stays the reference and goes to `veo_reference`, because that is the path
@@ -359,11 +383,20 @@ version.
 |---|---|---|
 | Sentence skeleton | Enumerate slots but **no order rule** — whichever of subject·action·context·camera·lens·style you need. Zero required/must across the three reference docs, and the Gemini API marks camera `[Optional]` | `subject + action + environment + camera move + aesthetics + sound` — the camera slot itself is `非必须` |
 | Camera vocabulary | 12 vendor-named, defined moves. `zoom` doesn't move the camera; only `dolly` does | 11 moves (`推·拉·摇·移·跟·升·降·甩·环绕·旋转·变焦`) + 5 shot-size levels (景别). **Zero lens specs or camera-body vocabulary in the entire doc** |
-| Exclusion directives | **The `negativePrompt` argument** — noun phrases, comma-separated (`wall, frame`) | No argument — re-describe the scene to avoid it |
+| Exclusion directives | **The `negativePrompt` argument** — noun phrases, comma-separated (`wall, frame`) | No argument — re-describe the scene to avoid it, and put what must hold into a positive-locks tail (§positive locks) |
 | Dialogue | Wrap in quotes | Quotes + emotion/pace as plain sentences (no parameter) |
 | Prompt language | English | Chinese/English only (Korean on 2.5 only) — Korean only in dialogue lines |
 | Cutting shots | One cut per call | `Shot 1: … Shot 2: …` transitions within one call (1.5/2.0) |
 | Timecodes | **Usable** — the 3.1 blog presents `[00:00-00:02]` interval splitting as an official workflow (blog grade) | **Don't** — 2.0 self-reports unstable precision timing (2.5 responds to whole seconds) |
+
+**A multi-cut call opens wide.** Seedance keeps no memory of where anyone sat in the last
+generation — it knows what the current frame tells it. Inside one call, though, the later cuts
+inherit the layout the first cut established, so a `Shot 1: … Shot 2: …` call that opens on a
+wide gives the model one floor plan to hold and the close-ups that follow land in the same room.
+Open on the close-up instead and the model re-invents the space at every cut. `[course]` — the
+same establishing rule as directing-grammar §6.2, here as a mechanism inside a single call. Our
+pipeline writes one cut per call, so this bites only where a scene is deliberately generated as
+a sequence.
 
 **The "camera goes first" rule is retired.** The `[cinematography]+[subject]+[action]+
 [context]+[style]` five-part formula exists in **one Google Cloud blog only**; the three
@@ -385,6 +418,69 @@ are allowed. A portrait start image doesn't carry it over. Developer-forum repor
 **Don't pin cross-cut consistency on seed** — Veo's determinism claim failed source
 verification, and Dreamina 2.x, which handles references, has no seed at all. Build
 consistency on reference images and first/last frames.
+
+### Positive locks — what an exclusion turns into on Seedance
+
+`[course]`. Seedance has no exclusion argument, so the table's exclusion row says "re-describe
+the scene". The working shape of that re-description is a **positive-locks tail**: a last
+paragraph naming, in plain positive sentences, what has to hold in every frame. What it ends up
+reading like is a continuity supervisor's note.
+
+> POSITIVE LOCKS — the drawing on the map stays identical in every frame: red X on the island,
+> dashed line from the ship. The lantern stays lit in every cut. The door stays closed until
+> CUT 4. Only two people ever appear. Every object on the desk keeps a stable shape and moves
+> only when his hands move it.
+
+Four rules come with it:
+
+- **A phrase that only refuses a category tells the camera nothing.** "NO CGI", "not a game",
+  "not cheap-looking" keep pointing at the thing you don't want; the model has no picture to
+  draw instead. Rewrite each one as light, texture, movement, contact or composition that can
+  appear in the frame — "not a game" becomes "where is the camera, and what does this cut
+  reveal that the last one didn't"; "no weightlessness" becomes "what bends, stops, rebounds
+  or flies after the hit". A repeated ban that survives two batches is a rewrite signal, not a
+  reroll signal.
+- **Give every reference its scope in one clause.** `@ocean_location — controls water and sky
+  atmosphere only`, `@main_ship_sheet — controls hull, deck, masts and rigging only`,
+  `@button — appears ONLY inside the spyglass view`. Left unscoped, a reference leaks: the
+  studio-sheet background comes along with the character, or the only face in the reference set
+  gets lent to a different person. Where a one-shot extra shares a frame with a referenced
+  character, the scope clause has to say the face does not transfer.
+- **Say who cuts.** A multi-cut Seedance call takes a line like *"Sequence of cuts, no
+  timecodes — cuts only at the specified points, the camera does not cut on its own."* This is
+  the same finding as the timecode row above, in the form the prompt actually uses: name the
+  cuts, refuse the clock, and forbid cuts you didn't ask for.
+- **Cover the reverse angle.** The preflight question is literal: *if the camera turned 180°
+  right now, which approved reference explains that frame?* No answer means the space isn't
+  locked, and the background will shift between shots that are supposed to sit in the same room
+  — the failure that makes a shot/reverse pair impossible to cut together. Where a scene plays
+  across the 180° line (`shot.space.line`), generate the opposite view of the location as its
+  own reference and hand both over. It is the same move as the oasis case: when one location
+  image can't hold everything the scene needs, split the place into two named references rather
+  than asking one prompt to build it all.
+
+### The batch-failure ladder — which level to change
+
+`[course]`. A batch of four comes back wrong. Before rewriting anything, read the batch as
+evidence rather than as four verdicts:
+
+| What you see | What it means | What to change |
+|---|---|---|
+| all four fail the same way | the brief or a reference is missing something | that level only — add the missing reference, or name the action the prompt left out |
+| three land, one breaks (a limb clips, a body resets) | one bad roll | nothing — generate again |
+| the shot is "almost right" | not a diagnosis | split it: pose continuity · time continuity · material behaviour · image polish, then fix the one that broke |
+
+The levels to name are **asset · action · camera · roll**. Change one. Rewriting the whole
+prompt after a partial success throws away the directions that were already working, and the
+next batch fails somewhere new. Repeating a ban is not a change at that level — when a
+reference keeps coming back wrong (a bone blade rendered as a hand holding a sword), the fix
+that lands is positive and visible: raise the arm so the structure faces the camera.
+
+And judge takes by **what each one got right**, not on a good/bad axis. Across a batch, one
+clip usually holds the opening, another the middle action, another the ending; the finished cut
+is assembled from those parts. Where our pipeline can only take one clip per slot, the same
+reading still picks the winner — the take whose *performance* lands, since polish stopped being
+the differentiator.
 
 ---
 

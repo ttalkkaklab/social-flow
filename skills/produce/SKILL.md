@@ -354,7 +354,10 @@ only the summary is here.
   (`text, subtitles, black bars`). Write "no ~" in the body and the model draws that noun
   instead (local images, measured: 0 for 4, and Veo's own prompt guide marks the form not
   recommended). Seedance has no such argument, so rewrite the scene description until the
-  thing you want gone simply isn't in it.
+  thing you want gone simply isn't in it, and close the prompt with a **positive-locks**
+  paragraph — what holds in every frame, said positively, each reference given its scope
+  (§positive locks). A phrase that only refuses a category ("not a game", "no CGI") gives the
+  model no picture to draw and survives every reroll.
 - **There's no rule about slot order** — the five-part formula that puts the camera in the
   first word appears in exactly one Google Cloud blog post; three reference documents specify
   no word order, and the Gemini API marks the camera `[Optional]`. Just worry about filling
