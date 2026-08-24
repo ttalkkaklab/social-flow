@@ -445,7 +445,10 @@ Four rules come with it:
   `@button — appears ONLY inside the spyglass view`. Left unscoped, a reference leaks: the
   studio-sheet background comes along with the character, or the only face in the reference set
   gets lent to a different person. Where a one-shot extra shares a frame with a referenced
-  character, the scope clause has to say the face does not transfer.
+  character, the scope clause has to say the face does not transfer. The storyboard writes the
+  clause, not produce — `visual.character` takes `{ id, scope }` entries
+  (`scenes-schema.md` §character reference), and the check strip warns when a generated clip
+  hands over two or more references with no scope on any of them.
 - **Say who cuts.** A multi-cut Seedance call takes a line like *"Sequence of cuts, no
   timecodes — cuts only at the specified points, the camera does not cut on its own."* This is
   the same finding as the timecode row above, in the form the prompt actually uses: name the

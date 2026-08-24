@@ -912,10 +912,19 @@ window.SB_DOC = {
     var v = s.visual || {};
     return s.type === "broll" || !!v.video || !!(v.clip && v.clip.prompt);
   }
-  function charsOf(s) {
+  /* visual.character takes an id string or a { id, scope } object — scope is the reference's
+     jurisdiction, the clause that keeps one reference from painting the rest of the frame
+     (video-model-selection §positive locks). charsOf returns ids, charEntries keeps the scope. */
+  function charEntries(s) {
     var c = s.visual && s.visual.character;
     if (!c) return [];
-    return (Array.isArray(c) ? c : [c]).filter(Boolean);
+    return (Array.isArray(c) ? c : [c]).map(function (x) {
+      if (typeof x === "string") return x ? { id: x, scope: "" } : null;
+      return x && x.id ? { id: x.id, scope: x.scope || "" } : null;
+    }).filter(Boolean);
+  }
+  function charsOf(s) {
+    return charEntries(s).map(function (e) { return e.id; });
   }
   var CAST = (DOC.characters || []).filter(function (c) { return c && c.id; });
   function castName(id) {
@@ -1661,6 +1670,55 @@ window.SB_DOC = {
     }
   });
 
+  /* Negative directives in a generated clip's prompt (video-model-selection §positive locks).
+     Write "no ~" in the body and the model tends to draw that noun — Veo takes exclusions in the
+     negativePrompt argument, Seedance has no such argument and wants the scene re-described plus
+     a positive-locks tail. Scanned: visual.video.prompt, visual.clip.prompt, the four camera
+     slots. NOT scanned — bgPrompt (the image tools have no exclusion argument, so
+     assemble-bg-prompt.js --exclude ships the noun list in the body by design) and visual.audio
+     (a sound absence is a description: "no music, no speech"). Edit directives about cutting are
+     allowed, since that is how the format line is written. */
+  var NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits)$/;
+  var NEG_RE = /\b(no|not|avoid|avoids|never|don't|dont|doesn't|won't)\b[ \t]*([a-z' \t-]{0,24})/gi;
+  function negHits(text) {
+    var out = [], m;
+    NEG_RE.lastIndex = 0;
+    while ((m = NEG_RE.exec(text)) !== null) {
+      var word = m[1].toLowerCase(), tail = (m[2] || "").trim().toLowerCase();
+      if (word === "no" && NEG_OK.test(tail.replace(/[^a-z ].*$/, "").trim())) continue;
+      out.push((m[1] + " " + tail).trim());
+      if (out.length >= 3) break;
+    }
+    return out;
+  }
+  SCENES.forEach(function (s, i) {
+    if (!genVideo(s)) return;
+    var v = s.visual || {}, cam = camOf(s) || {}, fields = [];
+    if (v.video && v.video.prompt) fields.push(["visual.video.prompt", v.video.prompt]);
+    if (v.clip && v.clip.prompt) fields.push(["visual.clip.prompt", v.clip.prompt]);
+    CAM_SLOTS.forEach(function (pr) {
+      if (typeof cam[pr[0]] === "string" && cam[pr[0]]) fields.push(["visual.camera." + pr[0], cam[pr[0]]]);
+    });
+    fields.forEach(function (f) {
+      var hits = negHits(f[1]);
+      if (!hits.length) return;
+      flag("warn", "Shot " + (i + 1), f[0] + ' carries a negative directive ("' + hits.join('", "') +
+           '") — on Veo exclusions belong in the negativePrompt argument, on Seedance re-describe the scene and close with positive locks (video-model-selection §positive locks)');
+    });
+  });
+
+  /* Reference jurisdiction — a generated clip that hands over two or more references and scopes
+     none of them is the leak case: the character brings the studio backdrop along, or the only
+     face in the set gets lent to another figure. One scope clause per reference is the fix
+     (video-model-selection §positive locks). One reference alone has nothing to leak into. */
+  SCENES.forEach(function (s, i) {
+    if (!genVideo(s)) return;
+    var ents = charEntries(s);
+    if (ents.length < 2) return;
+    if (ents.some(function (e) { return e.scope; })) return;
+    flag("warn", "Shot " + (i + 1), ents.length + " references on one generated clip and no scope on any of them — give each a jurisdiction clause in visual.character ({ id, scope }) so one reference does not paint the rest of the frame");
+  });
+
   /* Shot grammar — feel first, then the dials (directing-grammar §5–§6). A shot with no
      shot.feel was framed before anyone said what the audience should feel there; the
      rationing rules catch the close-up spent twice and the dutch used twice. Warnings — the
@@ -2119,8 +2177,14 @@ window.SB_DOC = {
                         ["front", "FRONT · legacy"], ["real", "LIVE ACTION"]];
     CAST.forEach(function (c) {
       var panels = c.panels || {};
-      var shots = [];
-      SCENES.forEach(function (s, i) { if (charsOf(s).indexOf(c.id) >= 0) shots.push("#" + (i + 1)); });
+      var shots = [], scopes = [];
+      SCENES.forEach(function (s, i) {
+        charEntries(s).forEach(function (e) {
+          if (e.id !== c.id) return;
+          shots.push("#" + (i + 1));
+          if (e.scope) scopes.push("#" + (i + 1) + " " + e.scope);
+        });
+      });
       h += '<div class="cast-card"><div class="cast-panels">';
       var drawn = 0;
       PANEL_LABELS.forEach(function (pr) {
@@ -2139,6 +2203,8 @@ window.SB_DOC = {
       h += '<div class="cast-shots"><b>SHOTS</b>' +
            (shots.length ? shots.join(" · ")
                          : "appears in no shot — check visual.character") + "</div>";
+      if (scopes.length)
+        h += '<div class="cast-shots"><b>SCOPE</b>' + esc(scopes.join(" · ")) + "</div>";
       h += "</div></div>";
     });
     h += "</div>";

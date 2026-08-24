@@ -464,7 +464,12 @@ Core rules:
   with the shot's subject first (order is reference weight). It is what lets produce attach the
   character panels without re-reading the scene, and what resolves a character's veo ban per cut
   instead of per episode. Ids come from the channel's `assets/catalog.md`
-  (`resolve-asset.py --list <channel dir>`).
+  (`resolve-asset.py --list <channel dir>`). **Where a generated clip hands over more than one
+  reference, write each entry as `{ id, scope }`** — one clause per reference saying what it
+  governs and where it may appear ("controls the helmet and body only", "appears only in the last
+  second, and its face never transfers"). Unscoped references leak into each other, and the check
+  strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character
+  reference).
 - **A generated clip's `duration` comes from what the cut is for**, not from a default — insert
   3–4s, action 5–7s, a face carrying emotion 7–10s, an establishing shot 5–8s, a deliberate long
   take 10s+ with one move; the directing-grammar §5 row for the shot's feel refines it, and a

@@ -771,7 +771,23 @@ them anywhere in the assembled prompt, the `--scene`·`--mood`·`--exclude` text
 character: "claude"                  // one character on screen
 character: ["mouse", "claude"]       // two — array order is reference weight, so the shot's subject goes first
 character: null                      // nobody from the channel cast is on screen
+
+character: [                         // an entry may carry its jurisdiction instead of being a bare id
+  { id: "mouse",  scope: "controls the helmet and body only" },
+  { id: "claude", scope: "appears only in the last second, and its face never transfers to anyone else" }
+]
 ```
+
+**`scope` is the reference's jurisdiction** — one clause saying what that reference governs, and
+where it may appear. It exists because a reference leaks: hand over a character sheet and the
+studio backdrop can come along with it, or the one face in the reference set gets lent to a
+second figure in the frame (`video-model-selection.md` §positive locks). produce copies the
+clause into the call's reference list, so it is written here rather than invented at generation
+time. A bare id is still valid and stays the normal case — write `scope` when the shot hands
+over more than one reference, when a one-shot extra shares the frame with a referenced
+character, or when a location reference should control only the sky, the water, the walls.
+**The check strip warns when a generated clip carries two or more references and none of them
+is scoped** — one reference alone has nothing to leak into.
 
 The id is the channel's shared character. `resolve-asset.py <channel dir> character <id>` turns it
 into `assets/characters/<id>/`, and the panels inside that directory are the reference set
@@ -781,7 +797,7 @@ the call is produce's decision, because that depends on the framing.
 Writing it buys three things — produce attaches the reference images without re-reading the scene
 text, a veo ban attached to a character (a mouthless face: the model invents a mouth, measured 5
 times) resolves per cut instead of per episode, and storyboard.html can show the cast with the
-shots each one appears in.
+shots each one appears in, and each shot's `scope` under them.
 
 ### Clip audio (`visual.audio`)
 
@@ -1288,7 +1304,8 @@ is authoring time rather than money.
 ## Authoring verification checklist (the storyboard skill's self-check before requesting approval)
 
 The machine-measurable items below (character counts, speech rate, scene length, total length,
-cover title, frame overflow, hero stat width, the b-roll contract) **show up in the check strip at
+cover title, frame overflow, hero stat width, the b-roll contract, negative directives in a clip
+prompt or camera slot, a multi-reference clip with no scope) **show up in the check strip at
 the top when you open `storyboard.html` in a browser** — don't count by hand, just confirm the
 strip says no violations.
 
@@ -1340,10 +1357,12 @@ strip says no violations.
       mood word (directing-grammar §3.5). A shot that follows a hard cut, a flashback, or the
       `turn` gets its own beat to land in before the next line (§6 rule 13)
 - [ ] **Every generated clip's prompt closes with positive locks** — what has to hold in every
-      frame, written as positive sentences, with each reference given its scope ("controls the
-      water and sky only", "appears only in the final cut"). No "no ~" phrasing on the Seedance
-      lane, no bare category refusals ("not a game", "no CGI"); a state change inside the clip
-      carries its duration (`video-model-selection.md` §positive locks · §motion background)
+      frame, written as positive sentences, with each reference given its scope in
+      `visual.character` (`{ id, scope }` — "controls the helmet and body only", "appears only in
+      the last second"). No "no ~" phrasing in the clip prompt or the camera slots, no bare
+      category refusals ("not a game", "no CGI"); a state change inside the clip carries its
+      duration (`video-model-selection.md` §positive locks · §motion background). The check strip
+      catches the negative directives and a multi-reference clip with no scope anywhere
 - [ ] `visual.picture` and `visual.overlay` match the structure. AI video and HTML staging aren't
       merged into one badge
 - [ ] On answer-first, builds, tutorials, and before/after comparisons show the finished result
