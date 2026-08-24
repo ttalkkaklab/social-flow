@@ -1677,15 +1677,16 @@ window.SB_DOC = {
      slots. NOT scanned — bgPrompt (the image tools have no exclusion argument, so
      assemble-bg-prompt.js --exclude ships the noun list in the body by design) and visual.audio
      (a sound absence is a description: "no music, no speech"). Edit directives about cutting are
-     allowed, since that is how the format line is written. */
-  var NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits)$/;
+     allowed whichever negation word carries them — the cut line §positive locks prescribes reads
+     "Sequence of cuts, no timecodes — … the camera does not cut on its own." */
+  var NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits)\b/;
   var NEG_RE = /\b(no|not|avoid|avoids|never|don't|dont|doesn't|won't)\b[ \t]*([a-z' \t-]{0,24})/gi;
   function negHits(text) {
     var out = [], m;
     NEG_RE.lastIndex = 0;
     while ((m = NEG_RE.exec(text)) !== null) {
-      var word = m[1].toLowerCase(), tail = (m[2] || "").trim().toLowerCase();
-      if (word === "no" && NEG_OK.test(tail.replace(/[^a-z ].*$/, "").trim())) continue;
+      var tail = (m[2] || "").trim().toLowerCase();
+      if (NEG_OK.test(tail.replace(/[^a-z ].*$/, "").trim())) continue;
       out.push((m[1] + " " + tail).trim());
       if (out.length >= 3) break;
     }
