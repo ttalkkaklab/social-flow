@@ -5,8 +5,14 @@
 #   → ASS subtitles → b-roll windows.
 #
 # Usage: build-reel.sh <workdir>
-#   <workdir>/cards.tsv : idx <TAB> narration-audio-path <TAB> target-rate(chars/sec) <TAB> zoom(in|out|auto|none) [<TAB> opts]
+#   <workdir>/cards.tsv : idx <TAB> narration-audio-path <TAB> target-rate(chars/sec) <TAB> zoom(in|out|auto|none|punch|hold) [<TAB> opts]
 #                         zoom=none skips Ken Burns — for footage that already moves, like filmed clips.
+#                         zoom=punch is a fast eased zoom-in over the first PUNCH_D seconds, then a hold —
+#                         the cover-card move (the hook contract wants movement inside 0–3s). Same
+#                         ZOOM_SPAN as in/out, so the safe-zone math is unchanged; only the timing differs.
+#                         zoom=hold keeps a fixed scale with no zoom motion — the base for drift=1
+#                         (pure handheld) or a deliberate static crop.
+#                         All zoom/pan motion is eased (smoothstep) — KB_EASE=linear restores the old ramp.
 #                         Column 5 opts is "k=v,k=v" (optional — 4-column files run unchanged today):
 #                           sync=1        a card whose audio is one body with the picture (live voice
 #                                         of a user-filmed clip). Pre-roll, post-roll and minimum
@@ -18,9 +24,22 @@
 #                                         times in seconds from card start. For subtitles that skip
 #                                         speech-boundary detection (transcripts). Combined with the
 #                                         subtitle-display column of segs.tsv, both appear
-#                           pan=<dir>[:z] Ken Burns on a still photo as a pan instead of a zoom — l2r|r2l|u2d|d2u,
-#                                         z is the scale (default 1.12, clamped to KB_ZOOM_MIN~KB_ZOOM_MAX).
-#                                         For landscape canvases — portrait has no pan width, don't use it
+#                           pan=<dir>[:z] Ken Burns as a travel instead of a centre zoom — l2r|r2l|u2d|d2u
+#                                         plus diagonals tl2br|br2tl|tr2bl|bl2tr. z is the scale (default
+#                                         1.12, clamped to KB_ZOOM_MIN~KB_ZOOM_MAX). Travel = W(z-1)
+#                                         horizontal / H(z-1) vertical — ~130px at z=1.12 on either
+#                                         canvas, so portrait works too. Column 4 in/out adds a ZOOM_SPAN
+#                                         zoom drift on top of the travel (the classic Ken Burns pan+zoom);
+#                                         auto keeps the scale fixed while travelling.
+#                           focus=fx:fy   zoom towards this point instead of the centre — normalized 0..1
+#                                         canvas coordinates (0.5,0.5 = centre = today's behavior). The far
+#                                         side of the frame shifts up to 2x the centre-zoom case, so use it
+#                                         on cards whose text is centred or absent (safe-zone note in
+#                                         pipeline.md). Ignored while pan= is set — the pan owns the path.
+#                           drift=1       handheld drift — two non-integer-ratio sines per axis wobble the
+#                                         window a few output pixels. Composes with in/out/punch (adds a
+#                                         DRIFT_Z base scale for travel margin) or hold (pure handheld).
+#                                         The micro-shake register: presence, unease, cutting the AI look
 #   <workdir>/segs.tsv  : idx <TAB> seg(0..) <TAB> visual-path <TAB> TTS-script-sentence <TAB> subtitle-display-sentence
 #                         visual = reveal-state PNG (reel-template ?reveal=k capture) or .mp4 (fullscreen b-roll)
 #                         Listing several with '|' splits the sentence's speech window evenly and they
@@ -118,6 +137,12 @@ SUB_SHA=${SUB_SHA:-1.7}            # shadow
 KB_ZOOM_MIN=${KB_ZOOM_MIN:-1.06}   # pan base scale floor (cards.tsv pan= option)
 KB_ZOOM_MAX=${KB_ZOOM_MAX:-1.35}   # pan base scale ceiling — travel = W(z-1)
 PAN_Z=${PAN_Z:-1.12}               # when pan= gives no scale
+KB_EASE=${KB_EASE:-smooth}         # smooth=smoothstep easing on zoom/pan | linear=the pre-easing ramp
+PUNCH_D=${PUNCH_D:-0.4}            # zoom=punch rise time (s) — the zoom lands, then holds
+DRIFT_Z=${DRIFT_Z:-1.04}           # drift=1 base scale — the travel margin the wobble moves inside
+DRIFT_AMP=${DRIFT_AMP:-8}          # drift amplitude in ZOOM_BASE source px (~5.5 output px at 1.5x)
+DRIFT_F1=${DRIFT_F1:-0.4}          # drift sine frequencies (Hz) — non-integer ratio so the path
+DRIFT_F2=${DRIFT_F2:-1.1}          #   never visibly repeats inside a 13s card
 
 rm -rf work && mkdir -p work
 # Delete the old build's subtitles and burned-in copy first — rebuilding with SUB=0 while the
@@ -251,9 +276,13 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   [ -z "${IDX:-}" ] && continue
   N=$((N+1))
 
-  # ── Card options (column 5) — sync / subs / pan. An unknown key is a failure (silently ignored
-  #    typos ship a filmed card missing sync 0.4s out of step, and only eyes would catch it).
-  SYNC=0; SUBSF=""; PAN=""; PZ="$PAN_Z"
+  # ── Card options (column 5) — sync / subs / pan / focus / drift. An unknown key is a failure
+  #    (silently ignored typos ship a filmed card missing sync 0.4s out of step, and only eyes
+  #    would catch it). Two-value options use ":" inside the value (pan=l2r:1.12, focus=0.6:0.4) —
+  #    "," is the k=v separator and stays out of values.
+  SYNC=0; SUBSF=""; PAN=""; PZ="$PAN_Z"; FX=0.5; FY=0.5; DRIFT=0
+  case "${ZDIR:-auto}" in in|out|auto|none|punch|hold) : ;;
+    *) say "✗ card $IDX: unknown zoom (column 4) — $ZDIR (in|out|auto|none|punch|hold)"; exit 1 ;; esac
   if [ -n "${OPTS:-}" ]; then
     IFS=',' read -ra OARR <<< "$OPTS"
     for KV in "${OARR[@]}"; do
@@ -263,8 +292,15 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         sync=0) SYNC=0 ;;
         subs=*) SUBSF="${KV#subs=}"; [ -f "$SUBSF" ] || { say "✗ card $IDX: subs file missing — $SUBSF"; exit 1; } ;;
         pan=*)  PAN="${KV#pan=}"; case "$PAN" in *:*) PZ="${PAN#*:}"; PAN="${PAN%%:*}";; esac
-                case "$PAN" in l2r|r2l|u2d|d2u) : ;; *) say "✗ card $IDX: unknown pan direction — $PAN (l2r|r2l|u2d|d2u)"; exit 1;; esac
+                case "$PAN" in l2r|r2l|u2d|d2u|tl2br|br2tl|tr2bl|bl2tr) : ;; *) say "✗ card $IDX: unknown pan direction — $PAN (l2r|r2l|u2d|d2u|tl2br|br2tl|tr2bl|bl2tr)"; exit 1;; esac
                 PZ=$(awk -v z="$PZ" -v lo="$KB_ZOOM_MIN" -v hi="$KB_ZOOM_MAX" 'BEGIN{if(z<lo)z=lo; if(z>hi)z=hi; printf "%.3f", z}') ;;
+        focus=*:*) FPT="${KV#focus=}"
+                FX=$(awk -v v="${FPT%%:*}" 'BEGIN{if(v==""||v!=v+0){print "bad"; exit} if(v<0)v=0; if(v>1)v=1; printf "%.3f", v}')
+                FY=$(awk -v v="${FPT#*:}"  'BEGIN{if(v==""||v!=v+0){print "bad"; exit} if(v<0)v=0; if(v>1)v=1; printf "%.3f", v}')
+                { [ "$FX" = "bad" ] || [ "$FY" = "bad" ]; } && { say "✗ card $IDX: focus wants numbers 0..1 — $KV"; exit 1; } ;;
+        focus=*) say "✗ card $IDX: focus needs fx:fy — $KV"; exit 1 ;;
+        drift=1) DRIFT=1 ;;
+        drift=0) DRIFT=0 ;;
         *) say "✗ card $IDX: unknown cards.tsv column-5 option — $KV"; exit 1 ;;
       esac
     done
@@ -508,26 +544,58 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   resetting zoom to its initial value, so step never accumulates
   #   (measured on ffmpeg 7.1.1: an element is 360px wide in both the first and last frame of a 3s
   #   clip = zero zoom).
+  #   Every motion runs on the eased progress E (smoothstep) — a constant-speed ramp starts and stops
+  #   like a machine, and the ease is what reads as an operated camera. KB_EASE=linear restores the ramp.
+  #   The window position comes from the focus point (default 0.5:0.5 = centre — identical to the old
+  #   centre expressions); drift adds a two-sine wobble on top and a DRIFT_Z base scale for margin.
   ZLAST=$(( FRAMES > 1 ? FRAMES - 1 : 1 ))
   ZD="${ZDIR:-auto}"
   if [ "$ZD" = "auto" ]; then if [ $((N % 2)) -eq 1 ]; then ZD=in; else ZD=out; fi; fi
+  PEXPR="(on/$ZLAST)"
+  case "$KB_EASE" in linear) E="$PEXPR" ;; *) E="($PEXPR*$PEXPR*(3-2*$PEXPR))" ;; esac
+  if [ "$DRIFT" -eq 1 ]; then
+    DXE="+$DRIFT_AMP*(0.6*sin(2*PI*$DRIFT_F1*on/$FPS)+0.4*sin(2*PI*$DRIFT_F2*on/$FPS+1.7))"
+    DYE="+0.7*$DRIFT_AMP*(0.6*sin(2*PI*$DRIFT_F1*on/$FPS+0.9)+0.4*sin(2*PI*$DRIFT_F2*on/$FPS+2.6))"
+    ZBASE="$DRIFT_Z"; DTAG="+drift"
+  else DXE=""; DYE=""; ZBASE=1; DTAG=""; fi
+  FTAG=""; case "$FX:$FY" in 0.5:0.5|0.500:0.500) : ;; *) FTAG="@$FX:$FY";; esac
   if [ "$ZD" = "none" ]; then
     # No Ken Burns — a card whose picture already moves, like filmed footage. It doesn't scale the source (scale=ZB) either.
     FILT+="${CUR}format=yuv420p[vout]"
   elif [ -n "$PAN" ]; then
-    # Pan — z stays fixed and the window travels one direction. Travel = W(z-1) (horizontal) / H(z-1) (vertical).
+    # Pan — the window travels; the cross axis stays centred (the pan owns the path, focus= is ignored).
+    # Travel = W(z-1) (horizontal) / H(z-1) (vertical) — ~130px at z=1.12 on either canvas orientation.
     case "$PAN" in
-      l2r) PX="(iw-iw/zoom)*on/$ZLAST";     PY="ih/2-(ih/zoom/2)" ;;
-      r2l) PX="(iw-iw/zoom)*(1-on/$ZLAST)"; PY="ih/2-(ih/zoom/2)" ;;
-      u2d) PX="iw/2-(iw/zoom/2)";           PY="(ih-ih/zoom)*on/$ZLAST" ;;
-      d2u) PX="iw/2-(iw/zoom/2)";           PY="(ih-ih/zoom)*(1-on/$ZLAST)" ;;
+      l2r)   PX="(iw-iw/zoom)*$E";     PY="ih/2-(ih/zoom/2)" ;;
+      r2l)   PX="(iw-iw/zoom)*(1-$E)"; PY="ih/2-(ih/zoom/2)" ;;
+      u2d)   PX="iw/2-(iw/zoom/2)";    PY="(ih-ih/zoom)*$E" ;;
+      d2u)   PX="iw/2-(iw/zoom/2)";    PY="(ih-ih/zoom)*(1-$E)" ;;
+      tl2br) PX="(iw-iw/zoom)*$E";     PY="(ih-ih/zoom)*$E" ;;
+      br2tl) PX="(iw-iw/zoom)*(1-$E)"; PY="(ih-ih/zoom)*(1-$E)" ;;
+      tr2bl) PX="(iw-iw/zoom)*(1-$E)"; PY="(ih-ih/zoom)*$E" ;;
+      bl2tr) PX="(iw-iw/zoom)*$E";     PY="(ih-ih/zoom)*(1-$E)" ;;
     esac
-    ZD="pan:$PAN@$PZ"
-    FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$PZ':x='$PX':y='$PY':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
+    # Column 4 in/out layers a ZOOM_SPAN zoom drift over the travel (Ken Burns proper); auto = fixed scale
+    case "$ZDIR" in
+      in)  PZE="($PZ+$ZOOM_SPAN*$E)";     ZD="pan:$PAN@$PZ+in" ;;
+      out) PZE="($PZ+$ZOOM_SPAN*(1-$E))"; ZD="pan:$PAN@$PZ+out" ;;
+      *)   PZE="$PZ";                     ZD="pan:$PAN@$PZ" ;;
+    esac
+    ZD="$ZD$DTAG"
+    FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$PZE':x='$PX$DXE':y='$PY$DYE':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
   else
-    if [ "$ZD" = "out" ]; then ZEXPR="1+$ZOOM_SPAN*(1-on/$ZLAST)"
-    else ZEXPR="1+$ZOOM_SPAN*on/$ZLAST"; fi
-    FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$ZEXPR':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
+    case "$ZD" in
+      punch) # the whole ZOOM_SPAN lands in the first PUNCH_D seconds (ease-out), then holds — same
+             # final scale as a slow zoom in, so the safe-zone margins are identical; only the timing punches
+             PF=$(awk -v d="$PUNCH_D" -v fps="$FPS" 'BEGIN{f=int(d*fps+0.5); if(f<1)f=1; print f}')
+             PP="(min(on/$PF,1))"
+             ZEXPR="($ZBASE+$ZOOM_SPAN*(1-(1-$PP)*(1-$PP)))" ;;
+      hold)  ZEXPR="$ZBASE" ;;
+      out)   ZEXPR="($ZBASE+$ZOOM_SPAN*(1-$E))" ;;
+      *)     ZEXPR="($ZBASE+$ZOOM_SPAN*$E)" ;;
+    esac
+    ZD="$ZD$FTAG$DTAG"
+    FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$ZEXPR':x='(iw-iw/zoom)*$FX$DXE':y='(ih-ih/zoom)*$FY$DYE':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
   fi
   ffmpeg -y -v error "${INS[@]}" -filter_complex "$FILT" -map "[vout]" \
     -frames:v "$FRAMES" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p "work/v$IDX.mp4"

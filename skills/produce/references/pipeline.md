@@ -17,6 +17,13 @@ bottom 570px     burned-in subtitle band (y 1380–1560) + IG caption / YT chann
   coordinate x≈890. `reel-qa.html?fit=crop` reproduces this crop.
 - Ken Burns margin: the build zooms 3.5%, so an element at x=904 grows to 917 in the
   final frame. The template auto-shrinks the hero stat to a 640px width.
+  **Every column-4 move keeps this margin** — easing changes the timing, not the span;
+  `punch` lands the same 3.5% early and holds; `drift` moves ±6px inside a 1.04 base
+  scale that the crop absorbs. The one option that eats into it is `focus=` off centre:
+  at `focus=1:y` the window shifts wholly one way, and an element at x=176 lands at
+  x≈144 — inside the 96px phone crop but out of the symmetric text zone. So `focus=`
+  belongs on cards whose text is centred or absent (cover b-roll sources, full-bleed
+  photos), not on text-heavy cards.
 
 ## What build-reel.sh does (in order)
 

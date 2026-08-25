@@ -615,9 +615,11 @@ angle and space are what `bgPrompt` draws.
 In scope, **on generated shots on top**: `broll` shots, motion-background scenes (`visual.video`),
 and `quote` speech clips (`visual.clip`) — anything produce will hand to `veo_*` or `seedance_*`
 — the four slots, the vendor words, one move chosen from the feel, the cut length, the engine
-fit. On a still, `camera` only tells the builder which way to drift the Ken Burns — **don't score
-the slot axes on a still**, with or without a block; if it wrote one, read it and carry anything
-wrong (a vendor word, seconds in a slot) as a correction directive.
+fit. On a still, `camera.movement` picks the builder's Ken Burns move (the still lane — eased
+zoom towards a focus point, pan, cover punch, handheld drift; directing-grammar §5 Still
+column) — **don't score the slot axes on a still**, with or without a block; if it wrote one,
+read it and carry anything wrong (a vendor word, seconds in a slot, a move that contradicts
+the declared feel) as a correction directive.
 
 Out of scope: what the picture contains (image mode), whether the scene earns its place (scene
 mode), and the wording of the lines (copy and vocabulary modes). **This mode runs on every
