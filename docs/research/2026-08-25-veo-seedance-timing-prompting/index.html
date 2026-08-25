@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veo·Seedance 시간 설정과 프롬프트 — 델타 재검증 (2026-08-25)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --purple: #8250df;
+    --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --bg-soft: #161b22;
+      --bg-card: #161b22;
+      --text: #e6edf3;
+      --text-soft: #9198a1;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-soft: #0c2d6b40;
+      --green: #3fb950;
+      --green-soft: #2ea04326;
+      --amber: #d29922;
+      --amber-soft: #bb800926;
+      --red: #f85149;
+      --red-soft: #f8514926;
+      --purple: #ab7df8;
+      --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: 34px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  .hero .meta span strong { color: var(--text); font-weight: 600; }
+  nav.toc {
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px 26px; margin-bottom: 56px;
+  }
+  nav.toc .t { font-size: 13px; font-weight: 800; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 12px; }
+  nav.toc ol { list-style: none; margin: 0; columns: 2; column-gap: 32px; }
+  nav.toc li { margin-bottom: 7px; font-size: 14.5px; break-inside: avoid; }
+  nav.toc a { text-decoration: none; color: var(--text); }
+  nav.toc .no { color: var(--accent); font-weight: 700; font-size: 12.5px; margin-right: 10px; font-variant-numeric: tabular-nums; }
+  nav.toc a:hover { color: var(--accent); }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+  section { margin-bottom: 72px; }
+  h2.sec {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+    padding-bottom: 12px; margin-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2.sec .no { color: var(--accent); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 19px; font-weight: 700; margin: 36px 0 14px; }
+  h4 { font-size: 16px; font-weight: 700; margin: 24px 0 10px; }
+  p { margin-bottom: 14px; }
+  p.lead { font-size: 17.5px; }
+  ul, ol { margin: 0 0 16px 22px; }
+  li { margin-bottom: 8px; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+  .muted { color: var(--text-soft); font-size: 14px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--bg-soft);
+    border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px;
+  }
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    padding: 2px 10px; border-radius: 999px; vertical-align: 2px; white-space: nowrap;
+  }
+  .b-green  { background: var(--green-soft);  color: var(--green); }
+  .b-amber  { background: var(--amber-soft);  color: var(--amber); }
+  .b-red    { background: var(--red-soft);    color: var(--red); }
+  .b-blue   { background: var(--accent-soft); color: var(--accent); }
+  .b-purple { background: var(--purple-soft); color: var(--purple); }
+  .callout {
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    background: var(--bg-soft); border-radius: 0 10px 10px 0;
+    padding: 18px 22px; margin: 20px 0;
+  }
+  .callout.green  { border-left-color: var(--green); }
+  .callout.amber  { border-left-color: var(--amber); }
+  .callout.red    { border-left-color: var(--red); }
+  .callout .co-title { font-weight: 800; font-size: 14px; letter-spacing: .04em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .callout p:last-child { margin-bottom: 0; }
+  .verdict {
+    background: linear-gradient(135deg, var(--accent-soft), transparent 70%);
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 32px 36px; box-shadow: var(--shadow); margin-bottom: 32px;
+  }
+  .verdict .v-label { font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--accent); margin-bottom: 10px; }
+  .verdict .v-main { font-size: 21px; font-weight: 800; line-height: 1.55; margin-bottom: 14px; }
+  .verdict p { color: var(--text-soft); margin-bottom: 0; font-size: 15.5px; }
+  .tbl-wrap { overflow-x: auto; margin: 18px 0 24px; border: 1px solid var(--border); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 560px; }
+  th {
+    background: var(--bg-soft); text-align: left; font-weight: 700;
+    padding: 11px 16px; border-bottom: 2px solid var(--border); white-space: nowrap;
+  }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--border); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; margin: 22px 0 24px;
+  }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--bg-card); padding: 18px 20px; }
+  .stat .s-k { font-size: 12.5px; color: var(--text-soft); font-weight: 600; letter-spacing: .03em; }
+  .stat .s-v { font-size: 26px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.3; margin-top: 2px; }
+  .stat .s-v small { font-size: 14px; font-weight: 600; color: var(--text-soft); letter-spacing: 0; }
+  .stat .s-n { font-size: 12.5px; color: var(--text-soft); line-height: 1.55; margin-top: 4px; }
+  .src-group { margin-bottom: 26px; }
+  .src-group h4 { margin-top: 0; }
+  .src-group ul { list-style: none; margin-left: 0; }
+  .src-group li { font-size: 13.5px; margin-bottom: 6px; padding-left: 18px; position: relative; color: var(--text-soft); }
+  .src-group li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .src-group a { word-break: break-all; }
+  footer { border-top: 1px solid var(--border); padding-top: 28px; font-size: 13.5px; color: var(--text-soft); }
+  footer p { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">RESEARCH · 2026-08-25</span>
+  <h1>Veo·Seedance 시간 설정과 프롬프트 — 델타 재검증</h1>
+  <p class="sub">2026-08-15 조사가 정본으로 삼던 공식 문서들이 그 사이 주소를 옮기고 내용을 고쳤다.
+  옮겨간 원문을 다시 받아 문자열 대조로 재검증한 결과 — 승격 1건, 반전 2건, 3분법 1건, 그리고
+  "한 클립 = 한 순간"이라는 새 공식 규범.</p>
+  <div class="meta">
+    <span><strong>방법</strong> curl 원문 수집 + 문자열 대조 (요약 모델 경유 없음)</span>
+    <span><strong>기준선</strong> 2026-08-15 프롬프트·카메라 조사</span>
+    <span><strong>반영</strong> scenes-schema §clip prompt · video-model-selection · assemble-bg-prompt.js --clip (0.34.0)</span>
+  </div>
+</header>
+
+<div class="verdict">
+  <div class="v-label">VERDICT</div>
+  <div class="v-main">두 엔진 모두 "한 호출에는 한 순간"을 자기 문서로 못박았고, 클립 안의 시간을
+  적는 법은 엔진·세대별로 셋으로 다르다. i2v 프롬프트 작법은 두 벤더가 정반대 방향을 공식화했다.</div>
+  <p>① Veo Best practices(2026-08-24) — 한 프롬프트에 사건 여럿을 이으면 "muddled or incomplete".
+  ② 클립 안의 시간: Veo는 [mm:ss] 구간(블로그 등급 유지), Seedance 1.5 pro는 침묵(전 예문이 Shot N·비트 방식),
+  2.5는 정수 초 공식 지원. ③ i2v: Veo는 "모션만, 인물은 일반명사" 명문화, Seedance는 정체성 낱말 재사용 +
+  일치 잠금이 벤더 예문. ④ Veo 대사는 따옴표 대신 콜론 — 따옴표가 자막 번인을 부른다.</p>
+</div>
+
+<nav class="toc">
+  <div class="t">차례</div>
+  <ol>
+    <li><span class="no">01</span><a href="#sources">원문 목록과 수집 방법</a></li>
+    <li><span class="no">02</span><a href="#duration">길이 선택 — 한 클립에 몇 초를 주나</a></li>
+    <li><span class="no">03</span><a href="#timing">클립 안의 시간 — 엔진·세대별 3분법</a></li>
+    <li><span class="no">04</span><a href="#i2v">i2v 작법 — 두 벤더가 정반대</a></li>
+    <li><span class="no">05</span><a href="#dialogue">대사·오디오 문법 — 콜론 반전</a></li>
+    <li><span class="no">06</span><a href="#negative">부정 지시 — 아티팩트류 카브아웃</a></li>
+    <li><span class="no">07</span><a href="#multicut">멀티컷 — 1.5 pro 공식 예문</a></li>
+    <li><span class="no">08</span><a href="#misc">그 외 델타</a></li>
+    <li><span class="no">09</span><a href="#applied">플러그인 반영 (0.34.0)</a></li>
+  </ol>
+</nav>
+
+<section id="sources">
+  <h2 class="sec"><span class="no">01</span>원문 목록과 수집 방법</h2>
+  <p>구글 쪽은 Vertex Veo 문서 전체가 <code>docs.cloud.google.com/gemini-enterprise-agent-platform/</code>으로
+  이사했고(옛 주소 301), <code>ai.google.dev/gemini-api/docs/video</code>는 인덱스가 돼 본문은 <code>/docs/veo</code>다.
+  새 도메인은 WebFetch에 내비게이션 껍데기만 주므로 curl 직수집으로 원문을 받았다. 바이트댄스 쪽은
+  docs.byteplus.com·volcengine.com이 JS 렌더 페이지지만 본문이 <code>window._ROUTER_DATA</code> JSON에 통째로
+  실려 와서, 그 JSON을 파싱해 표 셀까지 전문을 복원했다 — 아래의 "없다" 판정은 전부 이 복원 전문에 대한 검색 결과다.</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>문서</th><th>갱신일</th><th>비고</th></tr>
+    <tr><td><a href="https://ai.google.dev/gemini-api/docs/veo">Gemini API Veo 3.1 (본문+프롬프트 가이드+모델 카드)</a></td><td>2026-07-30</td><td>negativePrompt 서술이 사라졌다 (§08)</td></tr>
+    <tr><td><a href="https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/video-gen-prompt-guide">Agent Platform 프롬프트 가이드</a></td><td>2026-08-24</td><td>옛 Vertex 가이드의 새 주소</td></tr>
+    <tr><td><a href="https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/best-practice">Agent Platform Best practices</a></td><td>2026-08-24</td><td>이번 조사 최대 소스 — 한 순간 원칙·i2v 모션 전용·콜론 대사·seed</td></tr>
+    <tr><td><a href="https://cloud.google.com/blog/products/ai-machine-learning/ultimate-prompting-guide-for-veo-3-1">Cloud 블로그 Veo 3.1 프롬프트 가이드</a></td><td>2025-10-16</td><td>타임스탬프 워크플로는 여전히 여기에만</td></tr>
+    <tr><td><a href="https://docs.byteplus.com/en/docs/ModelArk/2168087">Seedance 1.5 pro prompt guide (EN)</a></td><td>2026-07-06</td><td>ZH판(08-13)에만 컷 3원칙·보이스 공식이 있다</td></tr>
+    <tr><td><a href="https://www.volcengine.com/docs/82379/2168087">같은 가이드 ZH판</a></td><td>2026-08-13</td><td><strong>이 벤더는 ZH를 먼저 갱신한다</strong> — 다음 조사는 ZH 먼저</td></tr>
+    <tr><td><a href="https://docs.byteplus.com/en/docs/modelark/2222480">Seedance 2.0 series prompt guide</a></td><td>2026-08-11</td><td>타임스탬프 무반응·아티팩트 부정 템플릿</td></tr>
+    <tr><td><a href="https://docs.byteplus.com/en/docs/ModelArk/2607689">Dreamina Seedance 2.5 prompt guide</a></td><td>2026-08-13</td><td>08-07 초판 — 타임스탬프 3형·자산 매핑·멀티뷰 완화</td></tr>
+    <tr><td><a href="https://www.volcengine.com/docs/82379/1951250">Seedream 4.0 → Seedance 모범사례 (ZH)</a></td><td>2026-08-13</td><td>i2v 작법의 정본 — 재서술+동작+잠금</td></tr>
+    <tr><td><a href="https://docs.byteplus.com/en/docs/ModelArk/1520757">Create a video generation task API</a></td><td>2026-08-24</td><td>duration -1 · draft 모드 · output_format</td></tr>
+  </table></div>
+  <p class="muted">등급 표기: [vendor] 공식 문서 · [blog] 벤더 블로그·실무자 · 그리고 "없다"도 판정이다 — 부재 확인은 복원 전문 검색 0건 기준.</p>
+</section>
+
+<section id="duration">
+  <h2 class="sec"><span class="no">02</span>길이 선택 — 한 클립에 몇 초를 주나</h2>
+  <p class="lead">4 vs 6 vs 8을 직접 비교하는 벤더 가이드는 없다(부재 확인). 대신 더 좋은 것이 생겼다 —
+  <strong>"숏클립 하나 = 한 장면·한 순간"이 Veo 공식 규범이 됐다.</strong></p>
+  <div class="callout green"><div class="co-title">한 순간 원칙 [vendor]</div>
+  <p>"For short videos, dedicate each prompt to a single, focused moment. Trying to chain multiple distinct
+  events (A then B then C) in one prompt for a short video often leads to <strong>muddled or incomplete</strong> videos."
+  — Veo Best practices, 2026-08-24. Seedance 2.5도 같은 실패를 자기 말로 적는다: 시간에 비해 플롯이 적으면
+  "the model may improvise more freely", 많으면 과잉 컷·플롯 누락. 스토리보드의 1씬 = 1호출 계약의 벤더 측 근거다.</p></div>
+  <ul>
+    <li><strong>실무 합성 규칙</strong> [blog 합성 — 명문 없음]: 비트 하나(동작 하나+무브 하나)면 4초,
+    대사 한 호흡이나 전개-반응 2비트면 6~8초, 8초 멀티비트는 타임스탬프 워크플로(2초×4비트)로만.</li>
+    <li><strong>서버 허용표가 구속 계약이다</strong> — Veo 4/6/8초(1080p·4K·참조 레인은 8초 전용),
+    기본 엔진 Seedance 1.5 pro는 <strong>4~12초</strong>. 문서 곳곳의 "Seedance 15초"는 2.0 수치였고,
+    나레이션 상한 13초와 충돌해 이번에 12초로 바로잡았다.</li>
+    <li><strong>duration: -1</strong> [vendor, API 08-24] — 모델이 유효 범위 안에서 정수 초 길이를 스스로 고르는
+    레인이 공식으로 생겼다(1.5 pro·2.0, 2.5는 기본값; 1.0 계열 제외). 우리 파이프라인은 나레이션이 길이를
+    결정하므로 확정 경로가 기본이고, -1은 길이가 정말 무관한 컷용.</li>
+  </ul>
+</section>
+
+<section id="timing">
+  <h2 class="sec"><span class="no">03</span>클립 안의 시간 — 엔진·세대별 3분법</h2>
+  <p class="lead">"클립 안에서 언제 무엇이 일어나는가"를 적는 법이 셋으로 다르다. 하나의 규칙을 전 엔진에
+  이월하면 틀린다.</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>레인</th><th>클립 안의 시간 표기</th><th>근거 등급</th></tr>
+    <tr><td><strong>Veo 3.1</strong></td><td><code>[00:00-00:02]</code> 구간 분할 — 공식 예제는 8초를 2초×4비트로.
+    구간마다 샷 사이즈+행동+<code>SFX:</code>/<code>Emotion:</code> 라벨</td><td><span class="badge b-amber">blog</span> 레퍼런스 docs 3곳 모두 진입 없음 (00:0·timestamp 검색 0건)</td></tr>
+    <tr><td><strong>Seedance 1.5 pro</strong></td><td>침묵 — 금지도 지원도 없다. 전 예문이 시점을
+    <strong>대사·동작 비트</strong>로 적는다 ("손바닥을 펴면, 컷") · 동작 속도 서술("within two seconds")은 벤더 예문에 있는 허용 용법</td><td><span class="badge b-blue">vendor 침묵</span> 우리 "타임코드 금지"는 계약이지 벤더 금지가 아니다</td></tr>
+    <tr><td><strong>Seedance 2.0</strong></td><td>"does not respond to timestamps and only responds to shot numbers" —
+    08-15에 본 "불안정"보다 세게 적었다</td><td><span class="badge b-green">vendor</span></td></tr>
+    <tr><td><strong>Seedance 2.5</strong></td><td>정수 초 3형 공식 지원 — 구간("0-3 seconds"·"[1s-4s]") ·
+    시점("At the 2-second mark") · 상대("After 3 seconds"). 타임라인에 갭 금지, 고빈도 동작 통제엔 불가</td><td><span class="badge b-green">vendor</span></td></tr>
+  </table></div>
+  <p>조립기 <code>--clip</code> 모드가 이 3분법을 기계로 지킨다 — seedance 경로는 시계 타임코드·숫자 초 차단,
+  veo 경로는 [mm:ss] 허용·숫자 초 차단, <code>--engine seedance-2.5</code>는 정수 초 개방. 상태 변화 길이는
+  어느 경로든 말로 적는다("in under half a second").</p>
+</section>
+
+<section id="i2v">
+  <h2 class="sec"><span class="no">04</span>i2v 작법 — 두 벤더가 정반대</h2>
+  <p class="lead">우리 주력 레인(승인된 PNG를 영상으로)의 프롬프트 작법이 양쪽 다 공식화됐는데, 방향이 서로 다르다.</p>
+  <div class="tbl-wrap"><table>
+    <tr><th></th><th>Veo 3.1 [vendor]</th><th>Seedance [vendor]</th></tr>
+    <tr><td>규범</td><td>"Your source image already provides the subject, scene, and style.
+    <strong>Focus your prompt on the motion</strong>" — 재서술은 Not recommended 명문</td>
+    <td>1.5 pro 가이드에 i2v 절이 없다(EN 전문에 "image" 0건). 정본은 Seedream→Seedance 모범사례 —
+    이미지 프롬프트의 <strong>정체성 낱말 재사용</strong>(정적 구도어는 삭제) + 동작 + 짧은 운镜</td></tr>
+    <tr><td>인물 지칭</td><td>일반명사 — "the subject", "the woman", "he", "she"</td><td>정체성 서술 유지 ("白衣古风女子…")</td></tr>
+    <tr><td>모션 어휘</td><td>3분류 — camera motion · subject animation · environmental animation</td><td>동작 + 衔接 표현(원지 회전·화면 출입·360도 환요)</td></tr>
+    <tr><td>꼬리</td><td>—</td><td>일치 잠금 문장 — "생성 주체는 참조 프레임과 완전히 일치" + 무관 요소 금지 (립스틱 예문)</td></tr>
+    <tr><td>구도 드리프트</td><td>—</td><td>1.x는 <code>camera_fixed: true</code> 노출</td></tr>
+  </table></div>
+  <p><strong>공통 불변식은 살아 있다</strong> — 레이아웃·facing·조명 재서술 금지는 양쪽 일치. 갈라지는 건 주체
+  지칭뿐이다. 저장 프롬프트 계약(§09)이 이 분기를 경로별로 적는다.</p>
+</section>
+
+<section id="dialogue">
+  <h2 class="sec"><span class="no">05</span>대사·오디오 문법 — 콜론 반전</h2>
+  <div class="callout red"><div class="co-title">공식 입장 반전 [vendor, 2026-08-24]</div>
+  <p>Best practices §"Avoid quotation marks" — "To prevent the model from rendering text in the video,
+  use a colon (:) after the speaker's action to denote speech and <strong>avoid using quotation marks</strong>."
+  권장형: <code>A woman says: My name is Clara.</code> 따옴표가 자막 번인을 부른다는 이유까지 명문이다.
+  Gemini API 문서의 옛 "따옴표 사용" 규칙과 문서끼리 충돌하는데, 더 새 문서가 이유까지 적었으므로 콜론이 정본.
+  Seedance는 따옴표 유지.</p></div>
+  <ul>
+    <li>보이스 캐스팅은 앞에 얹는다: "In a crisp, analytical voice, Clara says: It has to be here" [vendor]</li>
+    <li><code>SFX:</code>·<code>Ambient noise:</code> 접두 라벨 — 08-15 조사가 기각했던 문법이 벤더 블로그에
+    실재함을 확인, [blog] 등급으로 복권. 음악 전용 문법은 여전히 없다(부재 확인).</li>
+    <li>오디오는 별도 문장으로 — "use separate sentences to describe the audio" [vendor]. 우리
+    <code>Audio: …</code> 꼬리 계약과 정합.</li>
+    <li>Seedance 1.5 pro ZH판의 보이스 공식(08-13 신설): 성별+연령대+음성 속성+발화 속도+정서 기조 —
+    모델 음성을 쓰는 컷의 캐스팅 서술 교본.</li>
+  </ul>
+</section>
+
+<section id="negative">
+  <h2 class="sec"><span class="no">06</span>부정 지시 — 아티팩트류 카브아웃</h2>
+  <p class="lead">"부정 지시는 본문에 쓰지 않는다"는 큰 규칙은 양쪽 다 유지된다. 다만 Seedance 쪽에
+  벤더가 직접 판 예외가 있다.</p>
+  <p>2.0 가이드가 <strong>아티팩트 3종(자막·로고·워터마크)에 한해</strong> 지시형 부정 문구를 공식 템플릿으로
+  준다 — "keep it subtitle-free", "avoid generating any text or subtitles", "do not generate a logo",
+  "do not generate a watermark". 2.5는 오디오를 더한다("No BGM", "No audio"). 장면 내용이 아니라 출력
+  아티팩트라서 모델이 "대신 그릴" 것이 없는 부류다. 같은 벤더가 세로 자막을 제약어로 100% 못 막는다고
+  자인하므로, 카브아웃은 허가이지 보장이 아니다. Veo는 전부 <code>negativePrompt</code> 인자 — 변화 없음.
+  참고로 negativePrompt 서술이 Gemini API 문서에서 사라졌는데 SDK 타입·Vertex REST 예제에는 그대로 있다 —
+  파라미터 사망이 아니라 문서 델타로 판정, 다음 유료 호출에서 실효 1회 확인 권고.</p>
+</section>
+
+<section id="multicut">
+  <h2 class="sec"><span class="no">07</span>멀티컷 — 1.5 pro 공식 예문</h2>
+  <p><code>Shot 1: …</code> 번호형과 "The shot cuts to …" 산문형 둘 다 <strong>1.5 pro 가이드에 공식 예문</strong>으로
+  있다(예문 2~5컷). 규칙 셋이 따라온다 — ① 컷 시점은 시계가 아니라 대사·동작 비트로 ② 컷 사이 景别·내용을
+  뚜렷이 구분 ③ <strong>구간별 길이를 제약하지 말 것</strong> — 2.0 가이드 원문: "Do not impose strict limits on
+  the duration of each segment; prioritize allowing the model to naturally generate the pacing based on the plot."
+  컷 수 상한·권장치는 벤더 문서에 없다(부재 확인) — 예문 관찰이 2~5컷이다.</p>
+</section>
+
+<section id="misc">
+  <h2 class="sec"><span class="no">08</span>그 외 델타</h2>
+  <ul>
+    <li><strong>seed 반전</strong> [vendor] — 08-15의 "seed로 일관성 잡기 기각"을 Best practices가 부분 반전:
+    씬 간 시각·스타일·목소리 일관성에 같은 seed + 캐릭터 서술 전문 복붙을 명시 권장. 단 Gemini 문서는 여전히
+    "결정성 보장 아님" — 레퍼런스 위의 보조 수단. 우리 veo_* 툴은 seed 미노출(서버 검토 안건).</li>
+    <li><strong>프롬프트 리라이터</strong> [vendor] — Veo 3/3.1은 비활성화 불가, 30단어 미만이면 LLM이 늘려 쓰고
+    그 리라이트본을 응답으로 돌려준다. 프롬프트 상한 1,024토큰. "짧고 모호하게 쓰면 남의 프롬프트가 된다."</li>
+    <li><strong>draft 모드</strong> [vendor] — 1.5 pro 전용 480p 저가 프리뷰로 장면 구조·샷 스케줄·주체 동작을
+    본편 단가 전에 검증하는 공식 레인. 서버 미노출(검토 안건).</li>
+    <li><strong>멀티뷰 완화</strong> [vendor] — 2.5는 멀티뷰 주체 참조를 지원하되 "각도별 별도 파일"만.
+    한 장짜리 삼면도 시트 금지는 전 세대 유지 — 우리 패널 분리 관례가 정확히 그 허용형이다.</li>
+    <li><strong>2.5 전용 API</strong> [vendor] — <code>output_format: mov</code>(YUV 4:4:4, 편집·확장 체인 색 보존) ·
+    <code>omni_reference_task_type</code>(제출 시점 제약 검증). 자산 한도 요청당 50개(이미지 30·영상 10·오디오 10).</li>
+    <li><strong>문서 운영</strong> — 구글 문서 대이동(위 §01), 바이트댄스는 ZH 먼저 갱신. 둘 다 다음 조사의
+    수집 절차를 바꾼다.</li>
+  </ul>
+</section>
+
+<section id="applied">
+  <h2 class="sec"><span class="no">09</span>플러그인 반영 (0.34.0)</h2>
+  <ul>
+    <li><strong>1씬 = 1호출 + 저장 프롬프트 계약</strong> — scenes-schema §clip prompt 신설. 생성 영상 샷마다
+    계획 경로(visual.engine 또는 유형 기본값)와 최종 프롬프트를 스토리보드에 저장(<code>visual.prompt</code> ·
+    <code>visual.video.prompt</code> · <code>visual.clip.prompt</code>), produce는 그대로 전송. 배제 명사는
+    이웃 <code>negative</code> 필드로.</li>
+    <li><strong>조립기 clip 모드</strong> — assemble-bg-prompt.js <code>--clip</code>: 카메라 4슬롯 스팬 + 모션 +
+    잠금 + Audio 꼬리를 기계 조립, 경로별 타이밍·부정 지시·공간어를 exit 1로 차단. 스트립·리뷰어 camera 모드가
+    같은 검사를 거울로 든다.</li>
+    <li><strong>길이 상한 수정</strong> — "Seedance 15초"(2.0 수치)를 기본 엔진 1.5 pro의 서버 검증 범위
+    4~12초로 정정. 나레이션 13초 상한과의 충돌을 스토리보드 결함으로 명명.</li>
+    <li><strong>문법 갱신</strong> — 콜론 대사(Veo)·i2v 경로별 작법·아티팩트류 카브아웃·멀티컷 비트 규칙을
+    video-model-selection·produce·storyboard 스킬에 반영.</li>
+  </ul>
+</section>
+
+<footer style="border-top:1px solid var(--border); padding-top:24px; color:var(--text-soft); font-size:13.5px;">
+  social-flow research · 2026-08-25 · 반영 정본: skills/produce/references/video-model-selection.md ·
+  skills/storyboard/references/scenes-schema.md §clip prompt
+</footer>
+
+</div>
+</body>
+</html>

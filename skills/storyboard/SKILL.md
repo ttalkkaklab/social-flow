@@ -444,8 +444,8 @@ Core rules:
 - THEME is copied verbatim from the profile §3 values.
 - **Every generated-video shot leaves here with its camera decided** — `visual.camera`'s four
   slots (`movement` · `speed` · `framing` · `end`) filled on b-roll, motion-background scenes,
-  and quote speech clips. produce assembles the prompt out of them and adds nothing; leave `end`
-  empty and produce has to invent an ending nobody reviewed, which is exactly the last second
+  and quote speech clips. The clip prompt is assembled out of them here and stored; leave `end`
+  empty and the ending nobody reviewed is exactly the last second
   that drifts. `movement: "static"` is a decision, not a blank. On stills the block is optional —
   write it when the still should move with intent: `movement` picks the builder's Ken Burns
   move (eased zoom towards a focus point, pan, cover punch, handheld drift — the feel each
@@ -472,12 +472,28 @@ Core rules:
   second, and its face never transfers"). Unscoped references leak into each other, and the check
   strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character
   reference).
+- **Every generated-video shot leaves here as one API call with its final prompt stored**
+  (scenes-schema §clip prompt). The scene is the call: pick the planned route (`visual.engine`
+  or the type default — b-roll → veo, motion background → seedance, speech clip →
+  veo_reference), fit `duration` to that route's server-validated grid, and assemble the
+  prompt with `references/assemble-bg-prompt.js --clip --from scenes.js --shot N --engine
+  <route>` — the four camera slots become the span, `--motion` carries what moves in the
+  picture, `--locks` the positive-locks tail on a multi-reference call, and the `visual.audio`
+  sentence closes it. Store the stdout whole (`visual.prompt` · `visual.video.prompt` ·
+  `visual.clip.prompt` per type); produce sends it verbatim and the check strip warns on a
+  generated shot without one. Exclusion nouns go in the sibling `negative` field, never the
+  body. The assembler blocks what each route can't take — timecodes and digit seconds on
+  seedance, digit seconds on veo (in-clip state changes are written in words; on a Veo route
+  `[mm:ss]` spans may pin beats instead).
 - **A generated clip's `duration` comes from what the cut is for**, not from a default — insert
   3–4s, action 5–7s, a face carrying emotion 7–10s, an establishing shot 5–8s, a deliberate long
   take 10s+ with one move; the directing-grammar §5 row for the shot's feel refines it, and a
   wide holds ≥1.5× a close. The model fills whatever time it is handed, so asking 8 seconds for a
   4-second idea buys 4 seconds of invention (§cut length). Narration-carrying scenes keep the
-  speech math — characters / 4.5.
+  speech math — characters / 4.5 — **and on a motion background that math has to land inside
+  the route's one-call cap** (seedance 12s on the default 1.5 pro, veo 8s): a 13-second
+  narration over a 12-second clip is a loop seam nobody planned, so trim the narration or
+  split the scene.
 - **Write what the episode sounds like, not only what it looks like.** Every shot that becomes a
   generated video gets `visual.audio` — one sentence on what that clip sounds like, ending in
   `no music, no speech` unless speech is the point. Leave it out and the engine invents a
@@ -648,6 +664,12 @@ And per generated shot, on top:
 - **Slots that swallowed something else** — seconds written into a slot, an exclusion written
   into a slot instead of `negativePrompt`, or the camera direction and the scene description
   mashed into one blob so the camera block can't be reused on the next scene.
+- **The stored clip prompt against its route** (scenes-schema §clip prompt) — every generated
+  shot has one, it says what the slots say (a prompt panning where the slot dollies is two
+  instructions fighting), the timing grammar fits the planned route (no timecodes or digit
+  seconds on a seedance route; digit seconds on veo — `[mm:ss]` spans are the veo form), the
+  `duration` sits inside that route's server grid (veo 4/6/8 · 1.5 pro 4–12s), and exclusions
+  live in the `negative` field rather than the body.
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "camera mode"** — pass `scenes.js`,
    `profile.md`, `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/directing-grammar.md`,
@@ -756,8 +778,8 @@ passing them (`../produce/references/video-model-selection.md` §6).
     for that scene becomes a parameter for a veo video laid under the background, and
     **narration, captions, and subtitles stay**. Use it on scenes where the background has to
     move while you talk — where the movement itself is the content.
-    `duration` inside one clip (Veo 8s · Seedance up to 15s) · points only · not combined with
-    per-line illustrations.
+    `duration` inside one clip (veo 8s · the default seedance 1.5 pro 4–12s,
+    server-validated) · points only · not combined with per-line illustrations.
   Still is the default when still is enough — video buys cost and seam risk. **Backgrounds
   that become veo sources (scenes with b-roll attached, motion-background scenes) have to be
   photorealistic people made with `gpt_image_text2img` (high)**, not the local engine — blurry
@@ -807,13 +829,16 @@ passing them (`../produce/references/video-model-selection.md` §6).
   or signboard it becomes factual distortion.
 - When planning a b-roll scene, write per slot — as the scenes-schema `broll` contract requires
   — the **used length `duration` (4s by default) and the reason for it**, `after`, `src`,
-  motion (in English), and audio directions. Generation is fixed at 1080p and 8s (an API
+  the camera slots and audio, and store the assembled final prompt in `visual.prompt`
+  (§clip prompt — `--clip --engine veo`). Generation is fixed at 1080p and 8s (an API
   constraint), and produce trims it to the used length.
   Two slots using the same PNG means the same shot appears twice — specify a different source
   per slot.
-- When planning a motion-background scene, write **English motion only** into
-  `visual.video.prompt` (re-describing the scene makes the model redesign it — same rule as
-  produce §3). The clip's audio isn't used in the build, so audio directions are optional.
+- When planning a motion-background scene, store the assembled final prompt in
+  `visual.video.prompt` (§clip prompt — `--clip --engine seedance`; English, and it never
+  re-describes the layout the PNG drew — re-describing makes the model redesign it, same rule
+  as produce §3). Write `visual.audio` anyway — the build discards the clip's sound, but the
+  model composes a calmer clip when it isn't left to invent a soundtrack.
 
 **Write one line into the cost ledger per call.** This episode's money starts going out here —
 one cover costs $0.22, and produce may run days later in a different session. For it to add up
