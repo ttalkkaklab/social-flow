@@ -347,6 +347,16 @@ Core rules:
   answer appears**; a payoff shown early closes the loop and removes the reason to watch.
   Write a `beat` on each shot — `hook` · `hooking` · `result` · `body` · `turn` (story only) ·
   `cta`. The source of truth is scenes-schema §playback order.
+- **Underneath the beats, run the six craft rules** (`references/scenario-craft.md`). After
+  drafting, walk the scenes top to bottom and speak the connective at every seam — each one
+  reads "그래서" or "그런데", never "그리고" (an and-then seam is a scene to merge, cut, or
+  reorder); check each scene turns a charge (what's at stake reads differently at close than
+  at open — `shot.feel` should swing or deepen, never repeat three shots straight). Then the
+  technique the episode rides: a story `turn` planted early and fair-play, fear put on the
+  table with its clock plus a doable answer (suspense over surprise, Witte's efficacy rule),
+  every curiosity loop opened mid-episode paired at open time with the scene that pays it
+  (loops beyond the main `hookForm`: short-form one sub-loop at most, long-form 2–4 — note
+  the pairs in the §7 hand-off note), and jokes built as pattern breaks that land last.
 - **The opening runs on one of four — fear · empathy · curiosity · showing the ending.**
   Every episode uses one of them (user-relayed creator lecture, 2026-08-18). Decide in one
   line, before authoring, which stimulus the opening (cover title + segment ① + hooking —
@@ -570,7 +580,9 @@ lowest scene** next to the list. There are two axes.
   research.md does that claim hang on.
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "scene mode"** — pass the paths to
-   `scenes.js`, `research.md` (if present), and `profile.md`. Read the tail
+   `scenes.js`, `research.md` (if present), `profile.md`, and
+   `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenario-craft.md` (the yardstick
+   behind the flow and role checks). Read the tail
    `STORYBOARD_REVIEW: mode=scene score=NN p0=N worst=<scene number>`. **`score` is the
    lowest scene's score**, so it tells you where the storyboard is thinnest.
 2. **Apply the findings, starting at the `worst` scene**, then go to §4.7. Touch only the

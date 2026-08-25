@@ -374,6 +374,9 @@ vocabulary mode).
 - `storyboard/scenes.js` — what gets scored
 - `storyboard/research.md` (if present) — the reference for evidence links
 - `data/<channel>/profile.md` — §2 tone, §3 target and mood, the channel's topic range
+- `skills/storyboard/references/scenario-craft.md` (if passed) — the craft yardstick behind
+  P0 1 and P0 2: the connective test and the value turn, plus the plant/payoff rule the
+  story `turn` is judged by
 - a change the user asked for at the approval step, when the delegator sends one back
 
 Score **every entry in the body `SCENES[]`** (cover·points·quote·broll). One entry is one
@@ -398,16 +401,22 @@ Skip this section when an older file doesn't have them — a missing field is no
 |---|---|
 | cover | On answer-first (build type), show the finished result at a glance in the first second and say **what the story is about and why to watch** within three. On a story arc (`arc:"story"`), show the moment it went wrong and keep the ending out of the frame and out of seg ①. Hook the why with whichever of the four opening strategies (fear · empathy · curiosity · showing the ending first) the `hookType` names — it only does its job when the title and seg ① actually carry that provocation (scenes-schema §The four opening strategies). No method explanation here |
 | hooking (`beat:"hooking"`, type is points or quote) | The shot right after the cover — it catches what the cover threw (the chosen opening strategy) unchanged (same subject, same promise) and hooks the viewer's problem, loss, or gain with the viewer as the subject (problem/harm = empathy / loss/risk = fear / unresolved tension = curiosity / resolve/criterion = declaration), without unpacking the answer, the method, or the finished result. On a story arc it is the setup — the protagonist and the original goal as subject, the ending still withheld. In short-form the result (for an info type, the first content scene; on a story arc, the build — the payoff waits for the turn) starts within 20 seconds of the cover. Don't fill it with greetings, introductions, or teasers (scenes-schema §hooking) |
-| points | One message per screen. `beat:"result"` unfolds the finished thing; `beat:"body"` says only how that result was made. On a story arc `beat:"body"` builds the conflict without naming the payoff, `beat:"turn"` is the single highest-tension screen and sits right before the payoff, and `beat:"result"` is the first place the answer is on screen. The caption doesn't repeat the title |
+| points | One message per screen. `beat:"result"` unfolds the finished thing; `beat:"body"` says only how that result was made. On a story arc `beat:"body"` builds the conflict without naming the payoff, `beat:"turn"` is the single highest-tension screen, sits right before the payoff, **and is planted** — its clue sits in the setup or an early build shot as true information read wrong (misdirection); a turn resting on hidden or false information is a cheat, and a deliberate plant no later scene pays is an unpaid promise (scenario-craft §3). `beat:"result"` is the first place the answer is on screen. The caption doesn't repeat the title |
 | quote | Something that would actually come out of that person's mouth. The role label is honest (no hiding that it's AI) |
 | broll | 4–8 wordless seconds that give the story a comma or switch scenes |
 
 ## P0 defects (one in any single scene is a must-fix for that scene)
 
 1. **No role** — take the scene out and the video still works. A scene that may as well not
-   be there
+   be there. The concrete test is the value turn (scenario-craft §2): if what's at stake
+   reads the same at the scene's close as at its open — no new information, no charge
+   swing, `shot.feel` restating the previous shot's — nothing turned, and a scene that
+   turns nothing has no role
 2. **Broken flow** — it doesn't follow from the previous scene, so the viewer thinks "why
-   this, all of a sudden?"
+   this, all of a sudden?" The concrete test is the connective (scenario-craft §1): speak
+   the seam from the previous scene — if it only reads as "그리고(and then)", never
+   "그래서(therefore)" or "그런데(but)", the flow is broken (run the test across a b-roll,
+   which is a comma, not a beat)
 3. **Duplication** — it says again what another scene already said (including a repeat with
    only the wording changed)
 4. **Surface conflict** — the screen text (title·bullets·stat) and that scene's narration
