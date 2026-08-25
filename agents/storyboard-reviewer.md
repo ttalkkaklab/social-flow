@@ -374,9 +374,9 @@ vocabulary mode).
 - `storyboard/scenes.js` — what gets scored
 - `storyboard/research.md` (if present) — the reference for evidence links
 - `data/<channel>/profile.md` — §2 tone, §3 target and mood, the channel's topic range
-- `skills/storyboard/references/scenario-craft.md` (if passed) — the craft yardstick behind
-  P0 1 and P0 2: the connective test and the value turn, plus the plant/payoff rule the
-  story `turn` is judged by
+- `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenario-craft.md` (if passed) — the
+  craft yardstick behind P0 1 and P0 2: the connective test and the value turn, plus the
+  plant/payoff rule the story `turn` is judged by
 - a change the user asked for at the approval step, when the delegator sends one back
 
 Score **every entry in the body `SCENES[]`** (cover·points·quote·broll). One entry is one
