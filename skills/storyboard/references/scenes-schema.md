@@ -145,6 +145,17 @@ unsourced). One narration sentence = one reveal gives that
 cadence on its own (§narration segments); a stretch longer than ~4 s with nothing changing is a
 stretch to cut or to give a caption swap, an image change or a move.
 
+**Underneath the beats run six craft rules** — the source of truth is
+[`scenario-craft.md`](scenario-craft.md). The two that bind every episode: adjacent scenes
+join with a "but" or a "therefore", never an "and then" (the connective test — an
+"and-then" seam is scene-mode P0-2 material), and every scene turns a charge — what's at
+stake reads differently at the scene's close than at its open, with `shot.feel` as the
+place the turn shows (a scene that turns nothing is scene-mode P0-1 material). The other
+four are per-technique: the story `turn` is planted in advance and fair-play
+(misdirection, never deception), fear runs on suspense plus a doable answer, every
+curiosity loop opened names the scene that pays it, and comedy breaks a pattern with the
+break landing last.
+
 On answer-first the cover's first frame and the result scene point at the same artifact. The
 cover is the glance; the result unfolds it so the built parts show. Don't unfold the same
 finished thing again at the end of the body. On a story arc they are different on purpose — the
@@ -447,7 +458,12 @@ the sound (segment ①) rides. **An opening with none of the four is a reviewer 
 - **Fear gets three guardrails.** ① The threat either has evidence in research.md or is hedged
   to a possibility, as in the example above ("~일 수도") — an unhedged assertion is an
   unverified assertion (P0). ② The body answers that threat — hooking catches it and the result
-  and body unpack it. An opening that throws a threat and never unpacks it drags down the
+  and body unpack it, **and the answer is a step the viewer can actually take**: the Witte &
+  Allen meta-analysis (2000, measured) has strong fear beating weak fear only when paired with
+  a doable action whose result is visible, and strong fear with no door producing defensive
+  avoidance — here, the swipe (scenario-craft §4, which also carries the suspense-over-surprise
+  rule: put the threat and its clock on the table early rather than saving it for a jump).
+  An opening that throws a threat and never unpacks it drags down the
   YouTube Intro metric (did the first 30 seconds match the title and thumbnail's promise).
   ③ The register is one of telling someone about a loss — not a scaring tone, and the polite
   register and spoken-surface rules (§title is a spoken hook, korean-style D9) hold.
@@ -1245,6 +1261,12 @@ hand-written seconds are guaranteed to be off.
 - **Don't copy `title`.** `title` is the spoken hook that appears on screen ("이거 왜 이래?"),
   while the chapter is the search phrase stamped into the description ("환율 확인하는 세 가지
   방법"). Different registers.
+- **Each chapter opens with its own one-line mini-hook** — a narration sentence on why this
+  chapter matters, before its content starts; and around the 50–70% mark of the episode one
+  deliberate re-hook resets the room (a question to the viewer, a tease of the part people
+  argue about). Attention decays over 60–90s stretches in long-form, so a chapter that opens
+  straight into its content spends its first seconds on viewers already drifting
+  (scenario-craft §5 — field-practice grade).
 
 The reason for adding chapters isn't ads — midroll slots are placed in Studio independently of
 chapters (`chapter` never appears in the primary source, YouTube's midroll help page). The reason
