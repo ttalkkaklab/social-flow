@@ -447,7 +447,9 @@ Core rules:
   and quote speech clips. produce assembles the prompt out of them and adds nothing; leave `end`
   empty and produce has to invent an ending nobody reviewed, which is exactly the last second
   that drifts. `movement: "static"` is a decision, not a blank. On stills the block is optional —
-  write it when the Ken Burns drift matters. The vocabulary rules (vendor words, one move,
+  write it when the still should move with intent: `movement` picks the builder's Ken Burns
+  move (eased zoom towards a focus point, pan, cover punch, handheld drift — the feel each
+  serves is directing-grammar §5's Still column). The vocabulary rules (vendor words, one move,
   no seconds, no exclusions) are `references/scenes-schema.md` §camera, and the move itself
   comes from the shot's `feel` (directing-grammar §4–§5) — it supports the feel, it doesn't
   carry it alone, and `framing` restates the shot's size and angle in the engine's words.
@@ -798,8 +800,8 @@ passing them (`../produce/references/video-model-selection.md` §6).
   **The long-form generated lane does this math differently** — making all 28–70 shots fresh
   takes hours even on the local engine, and gpt costs more than it's worth. Make **2–3
   backgrounds per chapter**, reuse them within that chapter through angle and crop, and change
-  the setting when the chapter changes (the Ken Burns pan is enabled in landscape, so you can
-  pull two compositions out of one image). Even so, past 30 images, look again at whether this
+  the setting when the chapter changes (the Ken Burns pan pulls two compositions out of one
+  image). Even so, past 30 images, look again at whether this
   material belongs in the filmed lane.
 - Regenerate if generated characters get stamped in — the moment it reads as a fake document
   or signboard it becomes factual distortion.

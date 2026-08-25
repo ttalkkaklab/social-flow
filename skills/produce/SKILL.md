@@ -808,24 +808,34 @@ another engine.
 Convert `.work/cards.tsv` and `segs.tsv` from scenes.js (tab-separated, outro excluded):
 
 ```
-cards.tsv : idx <TAB> absolute audio path <TAB> target chars/sec <TAB> zoom(in|out|auto|none) [<TAB> options]
+cards.tsv : idx <TAB> absolute audio path <TAB> target chars/sec <TAB> zoom(in|out|auto|none|punch|hold) [<TAB> options]
 segs.tsv  : idx <TAB> seg (0-based) <TAB> visual <TAB> tts sentence <TAB> sub sentence
 sfx.tsv   : idx <TAB> seg <TAB> audio file <TAB> bgm(on|off)          (optional)
 bgm.tsv   : idx <TAB> audio file — the music cue changes at that card (optional)
 chapters.tsv : idx of the chapter's first card <TAB> chapter title    (long-form)
 ```
 
+**Column 4 is the still-image camera move.** All motion is eased (smoothstep) — a
+constant-speed ramp starts and stops like a machine; the ease is what reads as an operated
+camera (`KB_EASE=linear` restores the old ramp). `auto` alternates in/out card to card.
+
+| zoom | What | When |
+|---|---|---|
+| `in` / `out` / `auto` | eased 3.5% zoom over the whole card | the default drift — `auto` unless the scene says otherwise |
+| `punch` | the whole 3.5% lands in the first 0.4s (ease-out), then holds | the cover card — the hook contract wants movement inside 0–3s |
+| `hold` | fixed scale, no zoom motion | the base for `drift=1` (pure handheld), or a deliberate static frame |
+| `none` | no Ken Burns at all, source untouched | **a filmed clip already moves** — a zoom on top shakes the frame. Filmed cards are usually `none` + `sync=1` |
+
 **The 5th cards.tsv column (options) is `k=v,k=v`.** It's optional, and existing 4-column
-files keep working.
+files keep working. Two-value options use `:` inside the value — `,` stays the k=v separator.
 
 | Option | What | When |
 |---|---|---|
 | `sync=1` | turns off preroll, silence trim, and speed correction entirely. Normalization only | **live voice on a filmed scene** — any one of the three throws mouth and sound out of step |
 | `subs=<tsv>` | supplies that card's subtitles as a file (`start<TAB>end<TAB>sentence`, seconds from the card's start) | subtitles built from a transcript — scenes that skip speech-boundary detection |
-| `pan=<direction>[:scale]` | Ken Burns as a pan instead of a zoom (`l2r`·`r2l`·`u2d`·`d2u`) | landscape still backgrounds. Travel = width × (scale−1) |
-
-`zoom=none` turns Ken Burns off entirely — **a filmed clip already moves**, so a zoom on top
-of it shakes the frame. Filmed-scene cards are usually `none` + `sync=1`.
+| `pan=<direction>[:scale]` | Ken Burns as a travel instead of a centre zoom (`l2r`·`r2l`·`u2d`·`d2u` + diagonals `tl2br`·`br2tl`·`tr2bl`·`bl2tr`). Column 4 `in`/`out` layers a zoom drift over the travel (the classic pan+zoom); `auto` keeps the scale fixed | scenery and wide sources. Travel = width × (scale−1) ≈ 130px at the default 1.12 — measured on portrait too, so the old landscape-only advice is dead |
+| `focus=fx:fy` | zoom towards this normalized point instead of the centre (0.5:0.5 = centre). The far side of the frame shifts up to 2× the centre case — pipeline.md has the numbers | the scene has one subject and it isn't centred — the zoom should arrive at the subject, not at the frame's middle |
+| `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
 
 ```
 # one line for a filmed scene (live voice)
@@ -833,6 +843,14 @@ of it shakes the frame. Filmed-scene cards are usually `none` + `sync=1`.
 # 슬라이드·생성 씬(사용자 녹음 나레이션 — window.VOICE) 한 줄 예: 일반 레인, sync 없음
 11	pcm/s12.wav	0	none
 ```
+
+**The still move comes from the storyboard, not from taste.** A still's
+`visual.camera.movement` (when the storyboard wrote one — directing-grammar §5's Still
+column is where it picks) maps onto column 4/5 like this: `dolly in`/`zoom in` → `in` (add
+`focus=` at the subject when it isn't centred), `dolly out` → `out`, `handheld` → `hold` +
+`drift=1`, `truck`/pan wording → `pan=<dir>`, and the cover card takes `punch`. A still with
+no camera written stays `auto` — most cards should. The same restraint as generated video:
+the move supports the scene's feel, it doesn't decorate it.
 
 **A slide scene's segment visuals** are written exactly like a generated scene's, using the
 state PNGs captured in §3.6 (`cards/a<idx>r<k>.png`) — the state transition (xfade) *is* the

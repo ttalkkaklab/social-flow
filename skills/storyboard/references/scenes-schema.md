@@ -49,7 +49,7 @@ disagree, the preset is right.
 | Subtitles | burned in (BURN=1) | **clean master + `subs.srt`** — not burned |
 | Generated video, combined | 16s (8s × 2 slots) | 40s (8s × 5 slots) |
 | Chapters | none | 5–10 (authored) · 3 or more in the filmed lane (derived) |
-| Ken Burns pan | not used | used (scale 1.06–1.35) |
+| Ken Burns pan | available — travel = W(z−1) ≈ 130px at 1.12, measured on portrait | used (scale 1.06–1.35) |
 | Outro asset | `outro.mp4` | `outro-16x9.mp4` |
 | Filmed scenes | the episode is either all filmed or all generated | **mixed within one episode** (§filmed scenes) |
 
@@ -382,7 +382,8 @@ the human-readable production layer, and the two have to agree.
   the stimulus is a reviewer correction directive.
 - **The first frame has no logo, no intro sting, no greeting.** The stop is decided in 0–3 s:
   a big title (≤16 chars, the gradient chip), a strong first frame (the result, the person, the
-  figure), and movement already in it — the builder's Ken Burns and the cover's kicker → title → hero-stat staging
+  figure), and movement already in it — the builder's Ken Burns (`punch` lands the cover's zoom
+  inside the first half-second) and the cover's kicker → title → hero-stat staging
   are the floor, an opening b-roll or a real recorded clip is the ceiling. Branding lives in
   the outro (produce absolute rule 6), and the channel intro never sits in front of a short.
 - reveal mapping: rg1=title ← segment ①, rg2=stat ← segment ②.
@@ -678,10 +679,15 @@ camera: {
 ```
 
 **Required on every shot that becomes a generated video** — `broll`, a motion-background scene
-(`visual.video`), and a `quote` speech clip (`visual.clip`). Optional on a still, where it says
-which way the builder's Ken Burns should drift. The reason it is written here and not at
-generation time: **the four values are settled before the first call that costs money.** produce
-assembles the prompt out of these slots, it doesn't invent them.
+(`visual.video`), and a `quote` speech clip (`visual.clip`). Optional on a still, where
+`movement` picks the builder's Ken Burns move — the still lane fakes the camera by driving a
+crop window (eased zoom towards the subject, pan with an optional zoom drift, a punch on the
+cover, handheld drift), and the same vocabulary applies: `dolly in`/`zoom in` reads as a slow
+push towards the subject, `dolly out` as a pull-out, `handheld` as drift, `truck` as a pan
+(the feel each serves: directing-grammar §5 Still column; the option names: produce SKILL §6).
+A still with no camera keeps the alternating default drift — most should. The reason it is
+written here and not at generation time: **the four values are settled before the first call
+that costs money.** produce assembles the prompt out of these slots, it doesn't invent them.
 
 `end` is the slot that gets dropped. Leave it empty and nothing tells the model where to stop, so
 the last second drifts. It is also the slot our own vendor reading asks for — Seedance's camera
@@ -975,7 +981,8 @@ either way (absolute rule 10); this is about words that live inside the picture.
   transitions** — and when the tone is wrong, fix `bgPrompt`, size or angle before the move.
 - **Mixing movement into the middle scenes is favorable in itself** — a run of still cuts is a
   scroll-past signal (skip-rate measurement, 2026-08-15). But veo isn't the only source of
-  movement: Ken Burns (the builder applies it per cut) and code-rendered animation (the cover's
+  movement: the Ken Burns still lane (the builder applies a move per cut — eased zoom towards a
+  focus point, pan, punch, handheld drift) and code-rendered animation (the cover's
   kicker → title → hero-stat staging, typing cards — clips captured from HTML in a browser, cost 0 and safe for Korean)
   come first. A veo motion background is bought only when those fall short and **the movement
   itself is the content**. Count how long the fully-still stretches in the episode are first,
