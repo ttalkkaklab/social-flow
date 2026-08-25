@@ -374,6 +374,9 @@ vocabulary mode).
 - `storyboard/scenes.js` — what gets scored
 - `storyboard/research.md` (if present) — the reference for evidence links
 - `data/<channel>/profile.md` — §2 tone, §3 target and mood, the channel's topic range
+- `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenario-craft.md` (if passed) — the
+  craft yardstick behind P0 1 and P0 2: the connective test and the value turn, plus the
+  plant/payoff rule the story `turn` is judged by
 - a change the user asked for at the approval step, when the delegator sends one back
 
 Score **every entry in the body `SCENES[]`** (cover·points·quote·broll). One entry is one
@@ -398,16 +401,22 @@ Skip this section when an older file doesn't have them — a missing field is no
 |---|---|
 | cover | On answer-first (build type), show the finished result at a glance in the first second and say **what the story is about and why to watch** within three. On a story arc (`arc:"story"`), show the moment it went wrong and keep the ending out of the frame and out of seg ①. Hook the why with whichever of the four opening strategies (fear · empathy · curiosity · showing the ending first) the `hookType` names — it only does its job when the title and seg ① actually carry that provocation (scenes-schema §The four opening strategies). No method explanation here |
 | hooking (`beat:"hooking"`, type is points or quote) | The shot right after the cover — it catches what the cover threw (the chosen opening strategy) unchanged (same subject, same promise) and hooks the viewer's problem, loss, or gain with the viewer as the subject (problem/harm = empathy / loss/risk = fear / unresolved tension = curiosity / resolve/criterion = declaration), without unpacking the answer, the method, or the finished result. On a story arc it is the setup — the protagonist and the original goal as subject, the ending still withheld. In short-form the result (for an info type, the first content scene; on a story arc, the build — the payoff waits for the turn) starts within 20 seconds of the cover. Don't fill it with greetings, introductions, or teasers (scenes-schema §hooking) |
-| points | One message per screen. `beat:"result"` unfolds the finished thing; `beat:"body"` says only how that result was made. On a story arc `beat:"body"` builds the conflict without naming the payoff, `beat:"turn"` is the single highest-tension screen and sits right before the payoff, and `beat:"result"` is the first place the answer is on screen. The caption doesn't repeat the title |
+| points | One message per screen. `beat:"result"` unfolds the finished thing; `beat:"body"` says only how that result was made. On a story arc `beat:"body"` builds the conflict without naming the payoff, `beat:"turn"` is the single highest-tension screen, sits right before the payoff, **and is planted** — its clue sits in the setup or an early build shot as true information read wrong (misdirection); a turn resting on hidden or false information is a cheat, and a deliberate plant no later scene pays is an unpaid promise (scenario-craft §3). `beat:"result"` is the first place the answer is on screen. The caption doesn't repeat the title |
 | quote | Something that would actually come out of that person's mouth. The role label is honest (no hiding that it's AI) |
 | broll | 4–8 wordless seconds that give the story a comma or switch scenes |
 
 ## P0 defects (one in any single scene is a must-fix for that scene)
 
 1. **No role** — take the scene out and the video still works. A scene that may as well not
-   be there
+   be there. The concrete test is the value turn (scenario-craft §2): if what's at stake
+   reads the same at the scene's close as at its open — no new information, no charge
+   swing, `shot.feel` restating the previous shot's — nothing turned, and a scene that
+   turns nothing has no role
 2. **Broken flow** — it doesn't follow from the previous scene, so the viewer thinks "why
-   this, all of a sudden?"
+   this, all of a sudden?" The concrete test is the connective (scenario-craft §1): speak
+   the seam from the previous scene — if it only reads as "그리고(and then)", never
+   "그래서(therefore)" or "그런데(but)", the flow is broken (run the test across a b-roll,
+   which is a comma, not a beat)
 3. **Duplication** — it says again what another scene already said (including a repeat with
    only the wording changed)
 4. **Surface conflict** — the screen text (title·bullets·stat) and that scene's narration
@@ -615,9 +624,15 @@ angle and space are what `bgPrompt` draws.
 In scope, **on generated shots on top**: `broll` shots, motion-background scenes (`visual.video`),
 and `quote` speech clips (`visual.clip`) — anything produce will hand to `veo_*` or `seedance_*`
 — the four slots, the vendor words, one move chosen from the feel, the cut length, the engine
-fit. On a still, `camera` only tells the builder which way to drift the Ken Burns — **don't score
-the slot axes on a still**, with or without a block; if it wrote one, read it and carry anything
-wrong (a vendor word, seconds in a slot) as a correction directive.
+fit, and **the stored clip prompt** (scenes-schema §clip prompt): each generated shot is one
+API call whose final prompt is stored on the shot (`visual.prompt` · `visual.video.prompt` ·
+`visual.clip.prompt`) in the planned route's grammar (`visual.engine` or the type default —
+b-roll → veo, motion background → seedance, speech clip → veo_reference); produce sends it
+verbatim, so what you read here is what the model gets. On a still, `camera.movement` picks the builder's Ken Burns move (the still lane — eased
+zoom towards a focus point, pan, cover punch, handheld drift; directing-grammar §5 Still
+column) — **don't score the slot axes on a still**, with or without a block; if it wrote one,
+read it and carry anything wrong (a vendor word, seconds in a slot, a move that contradicts
+the declared feel) as a correction directive.
 
 Out of scope: what the picture contains (image mode), whether the scene earns its place (scene
 mode), and the wording of the lines (copy and vocabulary modes). **This mode runs on every
@@ -673,6 +688,17 @@ finding; a silent departure is.
   object-centric left/right and ignore metres (directing-grammar §3.5). The fix is the
   visible result (`faces left of frame`) and `shot.size` for distance. Run
   `assemble-bg-prompt.js --check` on the string if unsure.
+- **P0-11 the stored clip prompt is missing, or fights the slots** — a generated shot with no
+  stored prompt hands produce a call nobody reviewed; a prompt that pans where the slot
+  dollies, frames closer than `framing` says, or re-describes the space the PNG already drew
+  is two instructions fighting. The prompt is assembled from the slots
+  (`assemble-bg-prompt.js --clip`) — when they disagree, one of them was edited by hand.
+- **P0-12 timing grammar wrong for the route** — a timecode (`[00:04]`) or digit seconds in a
+  seedance-routed prompt (2.0 self-reports unstable precision timing), digit seconds on a veo
+  route (spans are written `[00:00-00:02]` there), or a `duration` outside the routed engine's
+  server grid — veo takes 4/6/8s (1080p/4K and the reference lane 8s only), the default
+  seedance 1.5 pro takes 4–12s. In-clip state changes are written in words ("in under half a
+  second") on either route.
 
 ## Per-shot axes (additive out of 100 — scored separately for each shot)
 
@@ -680,8 +706,8 @@ finding; a silent departure is.
 |---|---|---|---|
 | Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the hook cut and speech clips sit at `eye`; on a generated still, `shot.space` is in the camera frame with `layout` and (when a person is on screen) `facing` as the visible result, no banned language | every shot |
 | Rationing and sequencing | 10 | this shot doesn't break the across-shot rules — a second close-up (`cu`·`choker`·`ecu`) in the scene, a third `choker`/`ecu` in the episode, a second `dutch` or one without its reason, a close-up opening not paid back by the next shot, a wide under 1.5× the close beside it, a later shot of the scene that flips `space.line` without a legal 180° crossing written (directing-grammar §6 rule 11) | every shot |
-| Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it) | generated shots |
-| Length fits the purpose | 15 | matches the §cut length table and the feel row, and it is the length that will be used | generated shots |
+| Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it); the stored clip prompt exists, says what the slots say, and keeps the route's timing grammar | generated shots |
+| Length fits the purpose | 15 | matches the §cut length table and the feel row, it is the length that will be used, and it sits inside the routed engine's server grid (veo 4/6/8 · 1.5 pro 4–12s) | generated shots |
 | Engine and reference fit | 10 | the right lane for what's on screen, references inside the cap, cast ids real | generated shots |
 | An `end` worth stopping on | 5 | names a composition the frame can actually land on, not a mood | generated shots |
 

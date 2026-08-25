@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시나리오 크래프트 — 비트 아래에서 도는 여섯 규칙 (2026-08-25)</title>
+<style>
+  :root {
+    --bg: #ffffff; --bg-soft: #f6f8fa; --bg-card: #ffffff;
+    --text: #1f2328; --text-soft: #59636e; --border: #d1d9e0;
+    --accent: #0969da; --accent-soft: #ddf4ff;
+    --green: #1a7f37; --green-soft: #dafbe1;
+    --amber: #9a6700; --amber-soft: #fff8c5;
+    --red: #cf222e; --red-soft: #ffebe9;
+    --purple: #8250df; --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --bg-soft: #161b22; --bg-card: #161b22;
+      --text: #e6edf3; --text-soft: #9198a1; --border: #30363d;
+      --accent: #4493f8; --accent-soft: #0c2d6b40;
+      --green: #3fb950; --green-soft: #2ea04326;
+      --amber: #d29922; --amber-soft: #bb800926;
+      --red: #f85149; --red-soft: #f8514926;
+      --purple: #ab7df8; --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.75; font-size: 16px; word-break: keep-all;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px 120px; }
+  header.hero { padding: 72px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .hero .kicker { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    color: var(--accent); background: var(--accent-soft); padding: 4px 12px; border-radius: 999px; margin-bottom: 20px; }
+  .hero h1 { font-size: 32px; line-height: 1.35; font-weight: 800; letter-spacing: -.02em; }
+  .hero .sub { margin-top: 16px; font-size: 17px; color: var(--text-soft); max-width: 720px; }
+  .hero .meta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13.5px; color: var(--text-soft); }
+  nav.toc { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 56px; }
+  nav.toc h2 { font-size: 14px; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 14px; text-transform: uppercase; }
+  nav.toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  nav.toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a { color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500; }
+  nav.toc a::before { content: counter(toc) ". "; color: var(--accent); font-weight: 700; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 64px; }
+  section h2 { font-size: 24px; font-weight: 800; letter-spacing: -.01em; margin-bottom: 8px;
+    padding-top: 16px; border-top: 2px solid var(--border); }
+  section h2 .no { color: var(--accent); margin-right: 8px; }
+  section h3 { font-size: 18px; font-weight: 700; margin: 28px 0 10px; }
+  section p { margin-bottom: 14px; }
+  section ul, section ol { margin: 0 0 14px 22px; }
+  section li { margin-bottom: 8px; }
+  .lede { font-size: 17px; color: var(--text-soft); margin-bottom: 20px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: 2px; }
+  .badge.canon { color: var(--purple); background: var(--purple-soft); }
+  .badge.measured { color: var(--green); background: var(--green-soft); }
+  .badge.field { color: var(--amber); background: var(--amber-soft); }
+  .badge.blog { color: var(--text-soft); background: var(--bg-soft); border: 1px solid var(--border); }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin: 20px 0; box-shadow: var(--shadow); }
+  .card.rule { border-left: 4px solid var(--accent); }
+  .card.warn { border-left: 4px solid var(--red); }
+  .card h4 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 700; font-size: 13.5px; }
+  .table-scroll { overflow-x: auto; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em;
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; }
+  blockquote { border-left: 3px solid var(--accent); padding: 4px 18px; margin: 16px 0; color: var(--text-soft); }
+  a { color: var(--accent); }
+  .grade-note { font-size: 13.5px; color: var(--text-soft); margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">RESEARCH · 2026-08-25</span>
+  <h1>시나리오 크래프트 — 비트 아래에서 도는 여섯 규칙</h1>
+  <p class="sub">훅 계약과 arc 골격은 이미 있다. 이번 조사는 그 아래층 — 장면과 장면이 서로를
+  미는 힘, 그리고 반전·공포·호기심·시선 뺏기·코믹이 각각 어떤 기계로 도는지를 고전
+  시나리오 작법에서 가져와 플러그인 규칙으로 바꿨다.</p>
+  <div class="meta">
+    <span><strong>반영</strong> skills/storyboard/references/scenario-craft.md (정본)</span>
+    <span><strong>배선</strong> scenes-schema §playback order · §개막 전략 · §chapter → SKILL §4 → 리뷰어 scene mode</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#q">조사 질문 지도</a></li>
+    <li><a href="#connective">인과의 사슬 — but/therefore</a></li>
+    <li><a href="#turn">장면은 돈다 — 가치 전환</a></li>
+    <li><a href="#plant">심고 거둔다 — 반전의 페어플레이</a></li>
+    <li><a href="#fear">공포 — 폭탄을 먼저 보여주고, 문을 연다</a></li>
+    <li><a href="#curiosity">호기심 — 열린 루프는 장부다</a></li>
+    <li><a href="#attention">시선 뺏기 — 주의는 60~90초마다 리셋</a></li>
+    <li><a href="#comedy">코믹 — 패턴을 깨되, 깨는 말이 맨 뒤</a></li>
+    <li><a href="#applied">반영 내역 — 무엇이 어디로 들어갔나</a></li>
+    <li><a href="#sources">출처와 등급</a></li>
+  </ol>
+</nav>
+
+<section id="q">
+  <h2><span class="no">1</span>조사 질문 지도</h2>
+  <p class="lede">0~20초 문제(hookType·hookForm·후킹 계약·stop/hold/satisfy/act)는 기존
+  체계가 이미 깊게 다룬다. 그래서 질문을 <strong>훅 이후</strong>에 걸었고, 사용자 추가
+  주문(반전·공포·호기심·시선 뺏기·코믹)을 축으로 더했다.</p>
+  <div class="table-scroll"><table>
+    <tr><th>#</th><th>질문</th><th>답</th></tr>
+    <tr><td>Q1</td><td>장면과 장면을 잇는 인과는 어떻게 검사하나</td><td>§2 — but/therefore 접속사 테스트</td></tr>
+    <tr><td>Q2</td><td>한 장면이 "제 몫을 한다"의 판정 기준은</td><td>§3 — McKee 가치 전환</td></tr>
+    <tr><td>Q3</td><td>반전은 어떻게 설계해야 속임수가 아닌가</td><td>§4 — plant/payoff + 페어플레이</td></tr>
+    <tr><td>Q4</td><td>공포는 어디에 놓고 어떻게 끌고 가나</td><td>§5 — 히치콕 서스펜스 + Witte 효능</td></tr>
+    <tr><td>Q5</td><td>호기심 루프는 몇 개까지, 어떻게 닫나</td><td>§6 — 뢰벤슈타인 정보 격차 + 루프 장부</td></tr>
+    <tr><td>Q6</td><td>훅 이후 시선은 무엇으로 다시 뺏나</td><td>§7 — 패턴 인터럽트 · 챕터 미니훅 · 루프 엔딩</td></tr>
+    <tr><td>Q7</td><td>코믹 대본의 기계는 무엇인가</td><td>§8 — 셋업/펀치라인 · 3의 법칙</td></tr>
+  </table></div>
+  <p class="grade-note">등급 표기 —
+    <span class="badge canon">정본</span> 이름 있는 작가·이론가의 표준 교본(측정 없음) ·
+    <span class="badge measured">실측</span> 출판된 측정 ·
+    <span class="badge field">실무</span> 실무자 보고(출처 불명 측정) ·
+    <span class="badge blog">블로그</span> 통상 관행 수준.</p>
+</section>
+
+<section id="connective">
+  <h2><span class="no">2</span>인과의 사슬 — but/therefore <span class="badge canon">정본</span></h2>
+  <p class="lede">사우스파크의 Trey Parker · Matt Stone 이 NYU 강의(2011)에서 공개한
+  작가실 규칙. 비트와 비트 사이에 "and then(그리고)"이 들어가면 그 이야기는 지루하고,
+  모든 이음매는 "therefore(그래서)" 아니면 "but(그런데)"이어야 한다.</p>
+  <div class="card rule">
+    <h4>규칙</h4>
+    <p>인접한 두 장면 사이를 소리 내어 읽는다. <strong>그래서</strong> — 앞 장면이 이
+    장면을 강제한다. <strong>그런데</strong> — 이 장면이 앞 장면이 쌓은 걸 막거나
+    뒤집는다. <strong>그리고</strong> — 목록이지 이야기가 아니다. 순서를 섞어도 아무것도
+    안 깨지면 애초에 아무것도 붙들고 있지 않았다는 뜻이다.</p>
+  </div>
+  <p>비트 이음매에는 자연스러운 접속사가 있다 — hooking → result 는 "그래서"(이 문제가
+  있다, 그래서 완성본이 여기 있다), body → turn 은 "그런데"(모두가 포기했다, 그런데 한
+  사람이 다시 봤다). 자연 접속사가 안 나오는 이음매는 대개 문장 문제가 아니라 장면이
+  틀린 일을 하고 있는 것이다. b-roll 은 쉼표지 비트가 아니므로 테스트는 b-roll 을
+  건너뛰고 앞뒤 장면끼리 건다.</p>
+  <p>기존 체계와의 관계: scene mode P0-2(흐름 단절)가 이미 "앞 장면에서 이어지지
+  않는다"를 잡고 있었지만 판정법이 인상 수준이었다. 접속사 테스트가 그 P0 의 구체
+  판정법으로 들어갔다.</p>
+</section>
+
+<section id="turn">
+  <h2><span class="no">3</span>장면은 돈다 — 가치 전환 <span class="badge canon">정본</span></h2>
+  <p class="lede">Robert McKee(<em>Story</em>)의 장면 단위 판정법. 장면이 열릴 때와 닫힐 때
+  인물에게 걸린 가치의 극성(+/−)을 적고, 둘이 같으면 그 장면은 "활동은 있으나 사건이
+  없는 nonevent" — 버리고 그 정보는 다른 장면에 녹인다.</p>
+  <blockquote>"No scene that doesn't turn. … turning a value at stake in a character's
+  life from the positive to the negative or the negative to the positive."
+  — <a href="https://mckeestory.com/do-your-scenes-turn/">mckeestory.com</a></blockquote>
+  <ul>
+    <li>전환의 방향은 + → −, − → +, 같은 극으로 더 깊이(나쁨 → 더 나쁨)도 전환이다.</li>
+    <li>우리 필드에서는 <code>shot.feel</code> 이 극성이 읽히는 자리다. 에피소드 전체의
+      feel 나열을 차트로 그리면 흔들리거나 깊어져야 하고, 같은 음이 세 샷 연속이면 평평한
+      구간 — hold 가 죽는 자리다.</li>
+    <li>정보형 points 장면은 정보로 돈다(모름 → 앎 이 − → + 전환). 그래서 points 가 이
+      테스트에 걸리는 경우는 메시지가 앞 장면의 반복일 때뿐이고, 이는 P0-3(중복)과 같은
+      결함을 정보 층에서 본 것이다.</li>
+  </ul>
+  <p>기존 체계와의 관계: P0-1(역할 없음)의 "빼도 영상이 성립한다"는 판정이 사실상 "그
+  안에서 아무것도 돌지 않았다"와 같은 말이라, 가치 전환이 P0-1 의 구체 판정법으로
+  들어갔다.</p>
+</section>
+
+<section id="plant">
+  <h2><span class="no">4</span>심고 거둔다 — 반전의 페어플레이 <span class="badge canon">정본</span></h2>
+  <p class="lede">체호프의 총, 양방향으로: 일찍 보여준 것은 나중에 쏘고, 나중에 쏜 것은
+  일찍 심었어야 한다. story arc 의 <code>turn</code> 비트가 이 규칙의 직접 적용
+  대상이다.</p>
+  <div class="card rule">
+    <h4>페어플레이 — misdirection 과 deception 은 다르다</h4>
+    <p><strong>misdirection</strong> 은 참인 정보를 보여주고 시청자가 틀린 결론을 내리게
+    두는 것 — 정당한 반전의 재료다. <strong>deception</strong> 은 시청자에게 필요한
+    정보를 숨기거나 거짓을 보여주는 것 — 반전이 아니라 속임수다. 반전이 터진 뒤 커버로
+    되감았을 때 "단서가 처음부터 있었네"가 되어야 하고, 공개는 앞 장면들을
+    재해석시키되 부정하면 안 된다.</p>
+  </div>
+  <ul>
+    <li><strong>심는 자리</strong>: 다른 일을 하는 장면 안 — 분위기로 읽히는 캡션, 후킹
+      장면 그림 속 디테일. 시청자가 심은 걸 심은 줄 알면 스포일러고, 다시 볼 때만 보이면
+      트릭이 작동한 것이다.</li>
+    <li><strong>red herring</strong> 은 하나면 정당한 긴장(틀린 읽기에 몰입시킨다), 여러
+      개를 쌓으면 신뢰를 태운다.</li>
+    <li><strong>장부</strong>: 심기 → 거두기 쌍을 §7 인계 노트에 적는다. 심고 안 거두면
+      깨진 약속이고, 안 심고 거두면 속임수다 — hookForm 을 지키는 규칙(§six hook forms)과
+      같은 부채 회계를 모든 의도적 심기로 확장한 것.</li>
+  </ul>
+</section>
+
+<section id="fear">
+  <h2><span class="no">5</span>공포 — 폭탄을 먼저 보여주고, 문을 연다</h2>
+  <h3>서스펜스는 서프라이즈보다 길다 <span class="badge canon">정본</span></h3>
+  <p>히치콕의 탁자 밑 폭탄(트뤼포 인터뷰): 아무 예고 없이 터지는 폭탄은 15초의
+  놀람이고, 관객에게 폭탄과 시계를 먼저 보여주면 같은 평범한 대화가 15분의 서스펜스가
+  된다. 관객이 화면 속 인물보다 많이 알 때 관객은 구경꾼이 아니라 참여자가 된다.</p>
+  <p>공포형 에피소드(<code>hookType:"fear"</code>)에 옮기면: 위협과 시한을 후킹에서
+  탁자 위에 올리고, 그 아래에서 평범한 장면을 돌린다. 위협을 끝의 점프로 아껴두지
+  않는다 — 놀람은 약한 도구다.</p>
+  <h3>공포는 문이 있어야 움직인다 <span class="badge measured">실측</span></h3>
+  <p>Witte &amp; Allen 메타분석(<a href="https://journals.sagepub.com/doi/10.1177/109019810002700506">Health
+  Education &amp; Behavior, 2000</a>): 강한 공포는 약한 공포보다 설득력이 크지만, 조건이
+  있다 — <strong>높은 효능(efficacy)</strong>, 즉 시청자가 실제로 할 수 있는 행동과 그
+  행동의 보이는 결과가 함께 제시될 때다. 강한 공포에 문이 없으면 방어적 회피가 나온다.
+  숏폼에서 방어적 회피는 스와이프다.</p>
+  <p>기존 체계와의 관계: 개막 전략의 공포 가드레일 ②("본문이 그 위협에 답한다")가 이미
+  있었고, 이번에 "답은 안심이 아니라 실행 가능한 한 걸음"이라는 조건과 실측 등급 근거가
+  붙었다.</p>
+</section>
+
+<section id="curiosity">
+  <h2><span class="no">6</span>호기심 — 열린 루프는 장부다</h2>
+  <h3>정보 격차 이론 <span class="badge canon">정본</span> <span class="badge measured">일부 실측</span></h3>
+  <p>Loewenstein(1994)의 정보 격차 이론: 호기심은 아는 것과 알고 싶은 것 사이에
+  <strong>구체적이고 닫을 수 있어 보이는</strong> 격차가 열릴 때 발화한다. 격차를 여는
+  방아쇠는 넷 — 질문, 결말을 모르는 사건, 깨진 기대, 남은 아는데 나는 모르는 정보.
+  시청자가 이미 아는 것에서 너무 먼 격차는 호기심이 아니라 좌절로 떨어진다(격차
+  구체성은 랩 실측이 있다).</p>
+  <div class="card rule">
+    <h4>루프 장부</h4>
+    <p>숏폼은 메인 루프 1개(<code>hookForm</code>) + 서브 루프 최대 1개. 롱폼은 2~4개.
+    <strong>루프를 여는 시점에 갚는 장면의 이름을 같이 적는다</strong>(§7 인계 노트).
+    안 닫힌 루프는 "멈췄다가 3초 안에 떠남" 페널티에 다음 화 신뢰 손상까지 얹는다 —
+    §six hook forms 가 메인 훅에 걸어둔 규칙을 에피소드 중간에 여는 모든 루프로 확장한
+    것이다.</p>
+  </div>
+</section>
+
+<section id="attention">
+  <h2><span class="no">7</span>시선 뺏기 — 주의는 60~90초마다 리셋 <span class="badge field">실무</span></h2>
+  <p class="lede">숏폼의 2~4초 화면 변화 규칙은 기존 체계에 있다. 이번 조사에서 채운
+  것은 <strong>롱폼</strong> 쪽 — 주의는 60~90초 구간 단위로 감쇠하고, 실무자 가이드는
+  리텐션 곡선의 중반 계곡을 세 가지로 막는다.</p>
+  <ul>
+    <li><strong>챕터 미니훅</strong> — 챕터마다 첫 문장이 "이 챕터가 왜 중요한가" 한 줄.
+      챕터 제목은 검색구지 훅이 아니므로, 미니훅은 나레이션 문장으로 따로 선다. 챕터
+      자체의 catch 다.</li>
+    <li><strong>중반 re-hook</strong> — 에피소드 50~70% 지점에 의도된 재훅 하나: 시청자에게
+      던지는 질문, "다음이 제일 논쟁적인 부분" 류의 예고. 실무 보고 사례는 이 지점 재훅으로
+      평균 리텐션 72%.</li>
+    <li><strong>패턴 인터럽트</strong> — 60~90초마다 시각·청각·내용 중 하나가 리듬을 깬다.
+      b-roll 컷, 그래픽, 음악 템포 전환, 목소리 속도 변화. 숏폼의 2~4초 규칙과 같은
+      원리를 롱폼 척도로 늘린 것.</li>
+    <li><strong>루프 엔딩</strong>(숏폼) — 마지막 문장이 첫 프레임으로 흘러 들어가게 쓰면
+      재생이 반복되어 AVD 가 클립 길이를 넘는 사례 보고가 있다. story arc 의 "cta 프레임이
+      커버를 가리킨다"가 이 트릭의 시각 절반이고, cta 마지막 나레이션을 커버 첫 문장에
+      되물리는 게 소리 절반이다. 상시 쓰면 수법이 티나니 가끔만.</li>
+  </ul>
+</section>
+
+<section id="comedy">
+  <h2><span class="no">8</span>코믹 — 패턴을 깨되, 깨는 말이 맨 뒤 <span class="badge canon">정본</span></h2>
+  <p class="lede">농담은 호기심 기계를 문장 길이로 돌린 것이다. 셋업이 기대를 쌓고,
+  펀치라인이 재해석을 강제한다(incongruity 의 늦은 해소).</p>
+  <ul>
+    <li><strong>3의 법칙</strong> — 둘이 패턴을 세우고 셋째가 깬다. 패턴을 만들 수 있는
+      최소 개수가 3이라서 코미디의 기본 리듬이 됐다.</li>
+    <li><strong>깨는 말이 맨 뒤</strong> — 웃긴 단어는 문장 끝에, 웃긴 공개는 장면 끝에.
+      그 뒤에 뭐가 더 오면 희석된다. 펀치라인 뒤에 화면이 한 박자 멈추는 게 타이밍이다.</li>
+    <li><strong>우리 필드에서의 자리</strong> — 농담은 <code>quote</code> 대사와 구어 훅
+      제목이 나른다. 셋짜리 points 목록은 3의 법칙 자리다(둘은 정공, 하나는 반칙). 코믹
+      오프닝은 misdirection 이므로 코믹 에피소드는 대개 <code>curiosity</code> 나
+      <code>empathy</code> 를 탄다 — 새 hookType 은 필요 없다.</li>
+    <li><strong>레지스터가 농담을 이긴다</strong> — 펀치라인도 profile §2 존댓말과 D9
+      구어 표면 규칙을 통과해야 한다. 신문기사 어미로 친 펀치라인은 펀치라인이 아니다.
+      캡션으로 농담을 해설하지 않는다.</li>
+  </ul>
+</section>
+
+<section id="applied">
+  <h2><span class="no">9</span>반영 내역 — 무엇이 어디로 들어갔나</h2>
+  <div class="table-scroll"><table>
+    <tr><th>파일</th><th>변경</th></tr>
+    <tr><td><code>skills/storyboard/references/scenario-craft.md</code></td>
+      <td><strong>신설 — 여섯 규칙의 정본.</strong> 접속사 테스트 · 가치 전환 · plant/payoff ·
+      공포(서스펜스+효능) · 호기심 장부 · 코믹 패턴 브레이크. scenes.js 새 필드는 없음 —
+      전부 기존 필드(beat·shot.feel·narration·hookForm·chapter) 위의 규칙.</td></tr>
+    <tr><td><code>scenes-schema.md</code></td>
+      <td>§playback order 에 여섯 규칙 포인터, §개막 전략 공포 가드레일 ②에 Witte 효능
+      조건(실측 등급), §chapter 에 미니훅·중반 re-hook.</td></tr>
+    <tr><td><code>skills/storyboard/SKILL.md</code></td>
+      <td>§4 에 크래프트 규칙 불릿(작성 후 접속사 워크스루 + 가치 전환 검사 + 기법별
+      적용), §4.6 위임 입력에 scenario-craft.md 추가.</td></tr>
+    <tr><td><code>agents/storyboard-reviewer.md</code></td>
+      <td>scene mode 입력에 scenario-craft.md, P0-1(역할 없음)에 가치 전환 판정법,
+      P0-2(흐름 단절)에 접속사 판정법, points 척도의 turn 비트에 plant/fair-play 조건.
+      일곱 번째 리뷰 모드는 만들지 않음 — 기존 축을 날카롭게 하는 방향.</td></tr>
+  </table></div>
+  <div class="card warn">
+    <h4>들어가지 않은 것</h4>
+    <p>enter late, leave early(장면 경제)는 기존 "모든 문장은 호기심을 열거나 정보를
+    전진시키거나 증거를 올린다 — 아니면 뺀다" 규칙(③)과 사실상 겹쳐 별도 규칙으로 안
+    올렸다. 서브텍스트(대사가 뜻을 에둘러 말한다)는 quote 장면 분량이 짧아 지금은
+    "그 사람 입에서 나올 법한 말" 기준으로 충분하다고 판단 — quote 비중이 큰 채널이
+    생기면 재검토.</p>
+  </div>
+</section>
+
+<section id="sources">
+  <h2><span class="no">10</span>출처와 등급</h2>
+  <div class="table-scroll"><table>
+    <tr><th>출처</th><th>내용</th><th>등급</th></tr>
+    <tr><td><a href="https://gointothestory.blcklst.com/writing-advice-from-matt-stone-and-trey-parker-30941b2cd98c">Parker &amp; Stone, NYU (2011)</a></td>
+      <td>but/therefore 규칙 — "and then 이면 지루하다"</td><td><span class="badge canon">정본</span></td></tr>
+    <tr><td><a href="https://mckeestory.com/do-your-scenes-turn/">McKee, <em>Story</em> · mckeestory.com</a></td>
+      <td>가치 전환 — 돌지 않는 장면은 nonevent</td><td><span class="badge canon">정본</span></td></tr>
+    <tr><td><a href="https://www.studiobinder.com/blog/chekhovs-gun/">StudioBinder</a> · <a href="https://proseengine.app/blog/how-to-write-a-plot-twist">ProseEngine</a></td>
+      <td>plant/payoff · misdirection 대 deception · 재해석은 부정이 아니다</td><td><span class="badge canon">정본</span></td></tr>
+    <tr><td><a href="https://nofilmschool.com/alfred-hitchcock-and-francois-truffaut-explain-surprise-vs-suspense">히치콕/트뤼포 인터뷰</a></td>
+      <td>탁자 밑 폭탄 — 15초 대 15분</td><td><span class="badge canon">정본</span></td></tr>
+    <tr><td><a href="https://journals.sagepub.com/doi/10.1177/109019810002700506">Witte &amp; Allen (2000)</a></td>
+      <td>공포 소구 메타분석 — 강한 공포 × 높은 효능이 최대 행동 변화, 효능 없으면 방어적 회피</td><td><span class="badge measured">실측</span></td></tr>
+    <tr><td><a href="https://www.cmu.edu/dietrich/sds/docs/golman/golman_loewenstein_curiosity.pdf">Loewenstein (1994) · Golman &amp; Loewenstein (2015)</a></td>
+      <td>정보 격차 이론 — 구체적이고 닫을 수 있는 격차, 네 방아쇠</td><td><span class="badge canon">정본</span></td></tr>
+    <tr><td><a href="https://air.io/en/youtube-hacks/advanced-retention-editing-cutting-patterns-that-keep-viewers-past-minute-8">AIR Media-Tech</a> · <a href="https://rivereditor.com/guides/how-to-script-youtube-videos-2026">River</a> · <a href="https://www.overseeros.com/blog/youtube-retention-loops">OverseerOS</a></td>
+      <td>패턴 인터럽트 60~90초 · 챕터 미니훅 · 중반 re-hook(리텐션 72% 사례)</td><td><span class="badge field">실무</span></td></tr>
+    <tr><td><a href="https://virvid.ai/blog/looping-structure-shorts-retention-2026">Virvid</a> · <a href="https://edisonforest.tistory.com/655">Alex 연구소(네이버)</a></td>
+      <td>루프 엔딩 — 끝 문장이 첫 문장으로, AVD &gt; 길이</td><td><span class="badge field">실무</span></td></tr>
+    <tr><td><a href="https://comedipedia.com/learn/joke-writing/7-joke-structures">Comedipedia</a> · <a href="https://buddyonstage.com/blogs/rule-of-3-in-comedy">Buddy On Stage</a> · <a href="https://stand.app/en/guides/joke-structure-101">Stand-Up Writer</a></td>
+      <td>셋업/펀치라인 · 3의 법칙 · 깨는 말이 맨 뒤</td><td><span class="badge canon">정본</span></td></tr>
+    <tr><td><a href="https://blog.naver.com/vanamid/224290725082">매일 1% 성장(네이버)</a> 외</td>
+      <td>한국 쇼츠 실무 — 충격형("이 사실 알고 있었나요?" → 상황 → 반전) 등 대본 패턴</td><td><span class="badge blog">블로그</span></td></tr>
+  </table></div>
+  <p class="grade-note">craft canon 재료를 "research shows"로 세탁하지 않는다 — 측정이
+  있는 항목은 Witte &amp; Allen 메타분석과 정보 격차의 랩 실측뿐이고, 나머지는 이름 있는
+  실무 교본이다. 우리 채널에서 어느 규칙이 실제로 리텐션을 움직이는지는 에피소드 성과로
+  읽는다(§개막 전략의 기존 원칙과 동일).</p>
+</section>
+
+</div>
+</body>
+</html>

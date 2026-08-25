@@ -276,7 +276,12 @@ multi-angle assets and the model **reads each angle as a different person**, wor
 drift and putting the same character on screen twice. The recommendation is two images:
 **a headshot (face only, neutral, minimal shoulders/background) + a full body**. And **asset
 order is weight** — the more precisely something must be referenced, the earlier it goes in
-the `referenceImages` array.
+the `referenceImages` array. The 2.5 guide loosens one half of this (2026-08-25 delta check):
+*"Seedance 2.0 does not recommend using multi-view images as subject references, while
+Seedance 2.5 supports them"* — but only as **separate files, one view each**; the same
+sentence keeps the ban on one image containing several viewpoints. So the single-sheet ban
+survives every generation, and what 2.5 opens is exactly the separate-panels convention this
+repo already uses.
 
 ### The character panels — how a channel cast is stored
 
@@ -367,27 +372,50 @@ table. Until then it's rejected before the call.
 with an account balance over $30 or a purchased resource pack. The 1.5 pro and 1.0 family
 have no such gate.
 
+**API deltas the tool surface doesn't carry yet** (2026-08-25 delta check — candidates for
+`seedance-client.ts`, not exposed today):
+
+- **`duration: -1`** — the model picks a whole-second length inside its valid range (1.5 pro
+  and 2.0; the 2.5 *default*; the 1.0 family doesn't take it). Our pipeline computes each
+  scene's length from the narration, so the deterministic path stays the rule — `-1` is for a
+  cut whose length genuinely doesn't matter.
+- **Draft mode, 1.5 pro only** — a cheap 480p preview to check scene structure, shot
+  scheduling and subject motion before paying the full price; confirm with the returned
+  `draft_task.id` and the original inputs are reused verbatim. The official cheap lane for
+  validating a multi-cut plan.
+- **2.5 only**: `output_format: "mov"` (H.264 + YUV 4:4:4 + PCM — color-safe for edit/extend
+  chains) and `omni_reference_task_type` (declares reference/edit/extend up front so bad
+  combinations fail at submission instead of as async errors).
+- **Reading order**: this vendor updates the **Chinese docs first** (the 1.5 pro ZH guide
+  gained a cut-timing section and a voice-casting formula on 2026-08-13 that the EN page,
+  frozen at 07-06, still lacks). Open the volcengine ZH page first, use BytePlus EN to
+  cross-check.
+
 ---
 
 ## Prompt grammar — the two engines differ
 
 This is what comes after engine selection. The evidence is both vendors' official docs, with
 write-ups in the
-[prompt grammar research](../../../docs/research/2026-08-15-veo-seedance-prompting/index.html)
+[prompt grammar research](../../../docs/research/2026-08-15-veo-seedance-prompting/index.html),
+the
+[camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html),
 and the
-[camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html).
-The latter corrected the former's sentence-skeleton entry — the table below is the corrected
-version.
+[timing and prompting delta check](../../../docs/research/2026-08-25-veo-seedance-timing-prompting/index.html)
+(2026-08-25 — re-verified against the moved official docs; Google's Veo pages now live under
+`docs.cloud.google.com/gemini-enterprise-agent-platform/`, and the old Vertex URLs 301 there).
+The camera research corrected the prompt research's sentence-skeleton entry — the table below
+carries both corrections.
 
 | | Veo 3.1 | Seedance |
 |---|---|---|
 | Sentence skeleton | Enumerate slots but **no order rule** — whichever of subject·action·context·camera·lens·style you need. Zero required/must across the three reference docs, and the Gemini API marks camera `[Optional]` | `subject + action + environment + camera move + aesthetics + sound` — the camera slot itself is `非必须` |
 | Camera vocabulary | 12 vendor-named, defined moves. `zoom` doesn't move the camera; only `dolly` does | 11 moves (`推·拉·摇·移·跟·升·降·甩·环绕·旋转·变焦`) + 5 shot-size levels (景别). **Zero lens specs or camera-body vocabulary in the entire doc** |
 | Exclusion directives | **The `negativePrompt` argument** — noun phrases, comma-separated (`wall, frame`) | No argument — re-describe the scene to avoid it, and put what must hold into a positive-locks tail (§positive locks) |
-| Dialogue | Wrap in quotes | Quotes + emotion/pace as plain sentences (no parameter) |
+| Dialogue | **`speaker says: line` — colon, no quotation marks.** Quotes make the model render the line as on-screen text (Best practices, 2026-08-24 — this overturns the older Gemini-API "use quotes" rule; the delta check has both texts). Voice casting rides in front: `In a crisp, analytical voice, Clara says: It has to be here` | Quotes + emotion/pace as plain sentences (no parameter) |
 | Prompt language | English | Chinese/English only (Korean on 2.5 only) — Korean only in dialogue lines |
 | Cutting shots | One cut per call | `Shot 1: … Shot 2: …` transitions within one call (1.5/2.0) |
-| Timecodes | **Usable** — the 3.1 blog presents `[00:00-00:02]` interval splitting as an official workflow (blog grade) | **Don't** — 2.0 self-reports unstable precision timing (2.5 responds to whole seconds) |
+| Timecodes | **Usable** — the 3.1 blog presents `[00:00-00:02]` interval splitting as a workflow (blog grade — still absent from every reference doc, checked 2026-08-25) | **Split by generation** — 2.0 *"does not respond to timestamps and only responds to shot numbers"*; 1.5 pro's guide is silent and every example times cuts by dialogue/action beats, so our "don't" there is contract, not vendor ban; **2.5 officially takes integer-second forms** ("0-3 seconds", "[1s-4s]", "at the 2-second mark" — leave no gaps in the timeline, and don't use it for high-frequency action) |
 
 **A multi-cut call opens wide.** Seedance keeps no memory of where anyone sat in the last
 generation — it knows what the current frame tells it. Inside one call, though, the later cuts
@@ -397,6 +425,57 @@ Open on the close-up instead and the model re-invents the space at every cut. `[
 same establishing rule as directing-grammar §6.2, here as a mechanism inside a single call. Our
 pipeline writes one cut per call, so this bites only where a scene is deliberately generated as
 a sequence.
+
+The multi-cut form itself is vendor-exemplified **on 1.5 pro too** (2026-08-25 delta check):
+both `Shot 1: …` numbering and prose transitions ("The shot cuts to …"), examples running 2–5
+cuts. Three rules ride with it — time the cut by a **dialogue or action beat**, not a clock
+("as she opens her palm, cut to a close-up of the hand"); give each cut its own shot size and
+distinct content (the ZH guide's three cut principles, 2026-08-13 — this vendor updates the
+Chinese docs first, so open the volcengine ZH page before the BytePlus EN one); and **don't
+constrain per-segment durations** — the 2.0 guide says outright to let the model pace the
+segments from the plot. What packs too much into the time comes back as extra cuts you didn't
+ask for or dropped plot (2.5's wording) — the same "muddled or incomplete" failure Veo names.
+
+**One clip is one moment — now vendor text.** Veo's Best practices (2026-08-24): *"dedicate
+each prompt to a single, focused moment. Trying to chain multiple distinct events (A then B
+then C) in one prompt for a short video often leads to muddled or incomplete videos."* That is
+the vendor naming the failure our §cut-length table predicts (handed too many seconds or too
+many beats, the model fills by inventing), and it is the engine-side half of the pipeline's
+**one scene = one call** contract (scenes-schema §clip prompt). The one sanctioned way to put
+several beats in one Veo call is the timestamp workflow — `[00:00-00:02] …` spans, the
+official example cutting 8s into four 2-second beats, each span carrying a shot size, the
+action, and an `SFX:`/`Emotion:` label. That workflow is still blog-grade (checked 2026-08-25:
+zero occurrences in the Gemini API, Agent Platform, or DeepMind reference docs), so use it
+where the payoff is real — pinning the beat you will keep inside the head of a trimmed 8s
+clip — and don't build a contract on it.
+
+**On the image lane, prompt motion only — now vendor text.** Best practices: *"Your source
+image already provides the subject, scene, and style. Focus your prompt on the motion you want
+to see"*, with re-describing the character, background or lighting marked Not recommended —
+the official form of the rule this pipeline already had (the PNG locked the space). The
+sanctioned motion vocabulary is three kinds, alone or combined: **camera motion** ("Slow dolly
+in on the subject."), **subject animation** ("Her hair and clothes flutter gently in the
+wind."), **environmental animation** ("Fog rolls in slowly across the landscape."). And call
+the person in the source image by a general noun — *"the subject", "the woman", "he", "she"* —
+not by a re-description.
+
+**Seedance's image lane reads differently — identity words stay, layout words go.** The 1.5
+pro prompt guide has no i2v section at all (the EN text never says "image"); the official
+pattern lives in the Seedream→Seedance best-practice doc, and it is not motion-only: reuse the
+source image prompt's **identity words** (who and what the subject is), drop the **static
+composition words** (where things sit — the frame already holds that), add the motion and a
+brief camera line, and close with a **consistency lock**: "the subject stays exactly
+consistent with the input frame; keep appearance, proportions and materials; add no unrelated
+elements" (the vendor's own lipstick example is this shape). The two engines agree on the
+invariant — never re-describe layout, facing or lighting — and split on the subject: Veo wants
+a general noun, Seedance keeps the identity description. If the composition still drifts on a
+1.x model, `cameraFixed: true` is exposed and holds the frame.
+
+**Detail up, and know the rewriter is always on.** The prompt cap is 1,024 tokens; DeepMind's
+line is "the more detail, the more control", and Veo 3/3.1's prompt rewriter **cannot be
+disabled** — a prompt under 30 words gets LLM-expanded (and the rewritten text returned in the
+response). A short vague prompt is therefore someone else's prompt. The practical floor: fill
+the slots you need with concrete detail and stay comfortably under the cap.
 
 **The "camera goes first" rule is retired.** The `[cinematography]+[subject]+[action]+
 [context]+[style]` five-part formula exists in **one Google Cloud blog only**; the three
@@ -415,9 +494,19 @@ there.
 are allowed. A portrait start image doesn't carry it over. Developer-forum reports exist of
 9:16 requests coming back landscape, so check the output mp4's resolution.
 
-**Don't pin cross-cut consistency on seed** — Veo's determinism claim failed source
-verification, and Dreamina 2.x, which handles references, has no seed at all. Build
-consistency on reference images and first/last frames.
+**Consistency rides on references and first/last frames; seed is now a sanctioned assist on
+Veo.** The 2026-08-15 verdict was "don't pin consistency on seed" — the 2026-08-24 Best
+practices partially overturns it, explicitly recommending the **same seed across scenes**
+(visual, style and voice consistency) plus pasting the character description verbatim into
+every scene. The Gemini API docs still say seed *"doesn't guarantee determinism, but slightly
+improves it"*, so it stays an assist layered on references, never a replacement — and Dreamina
+2.x still has no seed at all. Our `veo_*` tools don't expose seed yet; that's a server change
+to weigh, not a prompt trick to fake. One more doc delta to know: `negativePrompt` vanished
+from the Gemini API doc page (2026-08-25 check) while the SDK types and Vertex REST examples
+still carry it — treat it as alive on the text/img lanes, and verify once on the next paid
+call that the nouns actually stay out. **The reference lane is different**: it rejects the
+argument outright (400 "Negative prompt is not supported in your use case", measured
+2026-08-15), so exclusions there are positive re-description in the prompt body.
 
 ### Positive locks — what an exclusion turns into on Seedance
 
@@ -461,6 +550,17 @@ Four rules come with it:
   own reference and hand both over. It is the same move as the oasis case: when one location
   image can't hold everything the scene needs, split the place into two named references rather
   than asking one prompt to build it all.
+
+**One carve-out, from the vendor itself (2026-08-25 delta check): the artifact classes may
+stay negative.** The 2.0 guide templates directive negatives for exactly three artifact
+classes — *"keep it subtitle-free"*, *"avoid generating any text or subtitles"*, *"do not
+generate a logo"*, *"do not generate a watermark"* — and 2.5 adds audio control (*"No BGM"*,
+*"No audio"*). Those aren't scene content the model could draw instead; they're output
+artifacts, and the vendor's own template speaks of them in the negative. So on a Seedance
+route the machine checks let a negative through when it names subtitles, text, logos,
+watermarks or BGM — everything else still gets re-described positively. (The same vendor
+admits constraint words can't block portrait captions 100% — the carve-out is permission, not
+a guarantee.) On Veo all of it stays in the `negativePrompt` argument.
 
 ### The batch-failure ladder — which level to change
 

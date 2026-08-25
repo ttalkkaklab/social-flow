@@ -49,7 +49,7 @@ disagree, the preset is right.
 | Subtitles | burned in (BURN=1) | **clean master + `subs.srt`** — not burned |
 | Generated video, combined | 16s (8s × 2 slots) | 40s (8s × 5 slots) |
 | Chapters | none | 5–10 (authored) · 3 or more in the filmed lane (derived) |
-| Ken Burns pan | not used | used (scale 1.06–1.35) |
+| Ken Burns pan | available — travel = W(z−1) ≈ 130px at 1.12, measured on portrait | used (scale 1.06–1.35) |
 | Outro asset | `outro.mp4` | `outro-16x9.mp4` |
 | Filmed scenes | the episode is either all filmed or all generated | **mixed within one episode** (§filmed scenes) |
 
@@ -144,6 +144,17 @@ Shorts change something on screen every 2–4 s (user-relayed, 2026-08-23 — fi
 unsourced). One narration sentence = one reveal gives that
 cadence on its own (§narration segments); a stretch longer than ~4 s with nothing changing is a
 stretch to cut or to give a caption swap, an image change or a move.
+
+**Underneath the beats run six craft rules** — the source of truth is
+[`scenario-craft.md`](scenario-craft.md). The two that bind every episode: adjacent scenes
+join with a "but" or a "therefore", never an "and then" (the connective test — an
+"and-then" seam is scene-mode P0-2 material), and every scene turns a charge — what's at
+stake reads differently at the scene's close than at its open, with `shot.feel` as the
+place the turn shows (a scene that turns nothing is scene-mode P0-1 material). The other
+four are per-technique: the story `turn` is planted in advance and fair-play
+(misdirection, never deception), fear runs on suspense plus a doable answer, every
+curiosity loop opened names the scene that pays it, and comedy breaks a pattern with the
+break landing last.
 
 On answer-first the cover's first frame and the result scene point at the same artifact. The
 cover is the glance; the result unfolds it so the built parts show. Don't unfold the same
@@ -382,7 +393,8 @@ the human-readable production layer, and the two have to agree.
   the stimulus is a reviewer correction directive.
 - **The first frame has no logo, no intro sting, no greeting.** The stop is decided in 0–3 s:
   a big title (≤16 chars, the gradient chip), a strong first frame (the result, the person, the
-  figure), and movement already in it — the builder's Ken Burns and the cover's kicker → title → hero-stat staging
+  figure), and movement already in it — the builder's Ken Burns (`punch` lands the cover's zoom
+  inside the first half-second) and the cover's kicker → title → hero-stat staging
   are the floor, an opening b-roll or a real recorded clip is the ceiling. Branding lives in
   the outro (produce absolute rule 6), and the channel intro never sits in front of a short.
 - reveal mapping: rg1=title ← segment ①, rg2=stat ← segment ②.
@@ -446,7 +458,12 @@ the sound (segment ①) rides. **An opening with none of the four is a reviewer 
 - **Fear gets three guardrails.** ① The threat either has evidence in research.md or is hedged
   to a possibility, as in the example above ("~일 수도") — an unhedged assertion is an
   unverified assertion (P0). ② The body answers that threat — hooking catches it and the result
-  and body unpack it. An opening that throws a threat and never unpacks it drags down the
+  and body unpack it, **and the answer is a step the viewer can actually take**: the Witte &
+  Allen meta-analysis (2000, measured) has strong fear beating weak fear only when paired with
+  a doable action whose result is visible, and strong fear with no door producing defensive
+  avoidance — here, the swipe (scenario-craft §4, which also carries the suspense-over-surprise
+  rule: put the threat and its clock on the table early rather than saving it for a jump).
+  An opening that throws a threat and never unpacks it drags down the
   YouTube Intro metric (did the first 30 seconds match the title and thumbnail's promise).
   ③ The register is one of telling someone about a loss — not a scaring tone, and the polite
   register and spoken-surface rules (§title is a spoken hook, korean-style D9) hold.
@@ -655,7 +672,9 @@ subtitles already do that.
     bg: null,
     clip: {                               // the speech clip plan (produce generates it) — without it, a still quotation card
       avatar: "…path to the avatar image, or null",
-      prompt: "…draft veo_reference prompt (background unified to THEME dark)"
+      prompt: "…the stored final veo_reference prompt (§clip prompt — assembled with --clip --with-space; background unified to THEME dark)"
+      // no negative field here — the reference lane rejects negativePrompt (400, measured
+      // 2026-08-15); exclusions are written into the prompt as positive description
     }
   }
 }
@@ -678,19 +697,29 @@ camera: {
 ```
 
 **Required on every shot that becomes a generated video** — `broll`, a motion-background scene
-(`visual.video`), and a `quote` speech clip (`visual.clip`). Optional on a still, where it says
-which way the builder's Ken Burns should drift. The reason it is written here and not at
-generation time: **the four values are settled before the first call that costs money.** produce
-assembles the prompt out of these slots, it doesn't invent them.
+(`visual.video`), and a `quote` speech clip (`visual.clip`). Optional on a still, where
+`movement` picks the builder's Ken Burns move — the still lane fakes the camera by driving a
+crop window (eased zoom towards the subject, pan with an optional zoom drift, a punch on the
+cover, handheld drift), and the same vocabulary applies: `dolly in`/`zoom in` reads as a slow
+push towards the subject, `dolly out` as a pull-out, `handheld` as drift, `truck` as a pan
+(the feel each serves: directing-grammar §5 Still column; the option names: produce SKILL §6).
+A still with no camera keeps the alternating default drift — most should. The reason it is
+written here and not at generation time: **the four values are settled before the first call
+that costs money.** The clip prompt is assembled out of these slots here and stored (§clip
+prompt); produce sends it verbatim, it doesn't invent one.
 
 `end` is the slot that gets dropped. Leave it empty and nothing tells the model where to stop, so
 the last second drifts. It is also the slot our own vendor reading asks for — Seedance's camera
 sub-formula is `opening frame composition + move + closing frame composition`, and `end` is that
 closing composition.
 
-**produce assembles them in this order** — `framing`, then `speed movement`, then `ending on end`:
+**The slots become the camera span of the stored clip prompt** (§clip prompt) — assembled at
+the storyboard by `assemble-bg-prompt.js --clip` in this order: `framing`, then
+`speed movement`, then `ending on end`:
 
-> `chest-up on the subject, very slow dolly in, ending with the subject centred at mid-frame`
+> `chest-up on the subject, very slow dolly in, ending on subject centred at mid-frame`
+
+produce keeps the same recipe as its fallback for an older scenes.js with no stored prompt.
 
 The rules that applied to the old one-string camera line now apply per slot:
 
@@ -823,6 +852,83 @@ What to write depends on whether the clip's own sound survives the build:
 | motion background (`visual.video`) | discarded — TTS, subtitles and BGM carry on over it | write it anyway; the model composes a calmer clip when it isn't left to invent a soundtrack |
 | `quote` speech clip | the character speaking is the point | what is heard besides the voice — the room, and nothing else |
 
+### Clip prompt — one scene, one call, the prompt stored here
+
+```js
+engine: "seedance",                  // the planned route — written only when it departs the type default
+                                     // (broll → veo, motion background → seedance, quote → veo_reference)
+prompt: "chest-up on the subject, very slow dolly in, ending on subject centred at mid-frame. steam curling off the cup. Audio: quiet room tone, no music, no speech.",
+negative: "text, subtitles, black bars"   // veo text/img lanes only — nouns for the negativePrompt argument, never the body
+                                     // (the reference lane rejects the argument — 400, measured; there exclusions become positive description)
+```
+
+**Every shot that becomes a generated video is exactly one API call, and the storyboard stores
+the call's final prompt** (user directive, 2026-08-25). The prompt's home follows the shot's
+shape — `visual.prompt` on `broll`, `visual.video.prompt` on a motion background,
+`visual.clip.prompt` on a `quote` speech clip — with the `negative` noun list beside it. The
+reason it is written here and not at generation time is the same as `bgPrompt`'s: **the
+sentence the model gets is the sentence the review read.** produce sends it verbatim, adds the
+API arguments (`negativePrompt`, references, `durationSeconds`), and re-runs the assembler only
+when a slot changed.
+
+**Assemble it, don't prose it** — `assemble-bg-prompt.js --clip` builds the prompt from parts
+that are each already reviewed, in this order:
+
+1. *(quote only)* the `From the camera: …` space sentence (`--with-space`) and the subject
+   description (`--scene`) — a quote clip has no still behind it, so its prompt carries the
+   floor plan. A motion background and a b-roll **never re-describe the layout, facing or
+   lighting**: the source PNG already drew them, and re-describing makes the engine redesign
+   the scene. Who the subject *is* splits by route (video-model-selection §prompt grammar):
+   a veo route calls the person by a **general noun** ("the subject", "the woman" — vendor
+   text), a seedance route may reuse the bgPrompt's **identity words** (who and what, never
+   where) with a consistency lock in `--locks` ("the subject stays exactly consistent with
+   the input frame; add no unrelated elements" — the vendor's own i2v pattern).
+2. the camera span from the four `visual.camera` slots — `framing`, then `speed movement`,
+   then `ending on end` (§camera).
+3. `--motion` — the subject motion: what moves in the picture while the camera does its one
+   thing. Veo's own i2v vocabulary is three kinds, alone or combined — camera motion, subject
+   animation, environmental animation ("fog rolls in slowly") — and the person in the source
+   PNG is called by a **general noun** ("the subject", "the woman"), never re-described. An
+   in-clip state change carries its own length **in words** ("the visor snaps shut
+   in under half a second"); left open, the engine spreads the change across the whole clip.
+4. `--locks` — the positive-locks tail on a multi-reference call: what holds in every frame,
+   said positively, each reference given its scope (video-model-selection §positive locks).
+5. the `visual.audio` sentence, closing the prompt as `Audio: …` (§clip audio).
+
+The assembler exits 1 on what the route can't take, so a stored prompt is a checked prompt:
+banned space language (§frame space), negative directives in the body (two exemptions — the
+`Audio:` sentence, where "no music, no speech" is a state description, and on a seedance
+route the vendor-templated **artifact classes**: subtitles, on-frame text, logos, watermarks,
+BGM), timecodes and digit seconds on a seedance route, digit seconds on a veo route
+(`--engine seedance-2.5` opens integer-second forms — that model officially takes them).
+
+**Time inside the clip differs by route.** A Seedance-routed prompt names no clock — the 2.0
+vendor docs self-report unstable precision timing, so beats are ordered by description
+("then", "as the door closes") and cut in the edit. A Veo-routed prompt may pin beats to
+`[mm:ss]` spans (`[00:00-00:02] she looks up. [00:02-00:06] the door closes.`) — a blog-grade
+workflow the reference docs never took up (checked 2026-08-25), so it's a tool, not a
+contract. Where it pays: the used length is shorter than the 8s the lane generates, and the
+span pins the beat you will keep inside the head you will keep.
+
+**One scene stays inside one clip — and one clip holds one moment.** Veo's Best practices
+names the failure directly: chaining several distinct events into one short prompt comes back
+*"muddled or incomplete"*. The scene was cut to one beat at design time; the call keeps that
+cut. `duration` fits the routed engine's server-validated
+range — veo 4/6/8s (1080p/4K and the reference lane 8s only), the default seedance 1.5 pro
+4–12s (`server/src/seedance-client.ts` is the binding table). A scene that needs more is a
+storyboard defect: trim the narration, split the scene, or route to a model that takes it —
+never plan a looping clip. A Seedance scene with **internal cuts** may write them as
+`Shot 1: … Shot 2: …` inside the one call — the form is vendor-exemplified on 1.5 pro
+(examples run 2–5 cuts), the later cuts inherit the floor plan the first cut establishes, so
+open on the widest frame, and the prompt carries the cut line: *"Sequence of cuts, no
+timecodes — cuts only at the specified points, the camera does not cut on its own."* Time
+each cut by a **dialogue or action beat**, not a clock ("as she opens her palm, cut to a
+close-up of the hand"), give each cut its own shot size and distinct content, and don't
+constrain per-segment durations — the vendor says to let the model pace the segments from the
+plot, and packing too much into the time comes back as extra cuts or dropped plot. The camera
+slots describe the opening cut; each further cut names its own framing in its `Shot n:`
+sentence, with the reason the scene needs a sequence written on the shot.
+
 ### Music cues (`window.MUSIC` · `sound`)
 
 One bed under the whole episode is the default and a perfectly good design. This is for when the
@@ -876,7 +982,11 @@ A shot carrying narration takes its length from the speech — narration charact
 
 **A generated video clip is a different question.** Its length is a design choice, and the model
 fills whatever time it is handed: ask 8 seconds for a 4-second idea and it invents the other 4 —
-the subject drifts, the middle goes dead. Pick the length from what the cut is for:
+the subject drifts, the middle goes dead. Both vendors now name this failure themselves
+(2026-08-25 delta check): Veo — chaining several events into one short prompt comes back
+*"muddled or incomplete"*; Seedance 2.5 — too little plot for the time and *"the model may
+improvise more freely"*, too much and it adds cuts or drops plot. Pick the length from what
+the cut is for:
 
 | What the cut is for | Length |
 |---|---|
@@ -894,9 +1004,13 @@ read, a close-up carries one thing and can be short (directing-grammar §6).
 so `durationSeconds` is the used length. Veo is the exception — its reference lane is pinned to 8s,
 so there the extra seconds get made and produce trims them (§broll).
 
-The existing caps stand: a motion background stays inside one clip's length (Veo 8s fixed,
-Seedance up to 15s — the check strip warns past 15s; the real risk is a clip shorter than its
-scene, which shows the loop's seam), and a b-roll's used length is 4s by default.
+The existing caps stand: a motion background stays inside one clip's length — the routed
+engine's **server-validated** range, veo 8s fixed, the default seedance 1.5 pro **4–12s**
+(the old 15s figure was Seedance 2.0's; `server/src/seedance-client.ts` holds the per-model
+table, and the check strip warns past the route's cap. The real risk is a clip shorter than
+its scene, which shows the loop's seam) — and a b-roll's used length is 4s by default. The
+1.5 pro floor cuts the other way too: a scene under 4s still requests 4 and the build cuts
+the tail at the scene boundary.
 
 ### Motion background (`visual.video`) — a scene background from image to video
 
@@ -904,15 +1018,16 @@ scene, which shows the loop's seam), and a b-roll's used length is 4s by default
 {
   type: "points",
   bullets: [ … ], footnote: "",
-  duration: 8,                        // one playthrough of the clip covers the scene — Veo 8s, Seedance up to 15s
+  duration: 8,                        // one playthrough of the clip covers the scene — veo 8s, seedance 1.5 pro 4–12s
   narration: [ {tts, sub}, … ],       // kept — unlike b-roll, only the background moves while you talk
   visual: {
     picture: "ai-video", overlay: "html",
     bg: "images/scene-3.png",         // the veo parameter — gpt_image high · the §broll source clause (photorealistic people) applies as-is
     bgPrompt: "…",
     video: {
-      prompt: "chest-up framing, very slow dolly in, ending centred; hair swaying gently",
-                                           // English motion only — assembled from visual.camera (§camera)
+      prompt: "chest-up, very slow dolly in, ending on subject centred. hair swaying gently. Audio: quiet room tone, no music, no speech.",
+                                           // the stored final clip prompt (§clip prompt) — camera span from visual.camera + subject motion + the audio sentence
+      negative: "",                        // used only when the call lands on veo (fallback) — nouns for negativePrompt
       clip: ".work/motion/motion-i2.mp4"   // produce output record — motion-i<scene index>.mp4
     },
     camera: { movement: "dolly in", speed: "very slow", framing: "chest-up", end: "subject centred" }
@@ -924,33 +1039,39 @@ This takes the image the storyboard already showed, **makes a video from it as a
 lays it under the scene background**. The caption and subtitle overlays go on top via the alpha
 capture (produce §4, §6).
 
-**The storyboard doesn't pick the engine** — produce §3 decides in the order face → sound → grid
-(the decision table's source of truth is produce `references/video-model-selection.md`), and
-since this slot throws the clip's audio away the default is a silent Seedance. The storyboard's
-one job is to write into the plan the facts that decision needs — **whether there's a face in
-the source and, if so, whether it's an adult**. Faces that read as minors are blocked on the Veo
-image lane, and Seedance 2.x refuses photorealistic faces outright, so filtering at the planning
-stage avoids redrawing the picture.
+**The storyboard picks the planned route, and produce validates it** — the route is
+deterministic from facts the storyboard already writes (who is in the source, whether the slot
+uses its sound, the duration), so this slot's default is a silent Seedance (`visual.engine`
+overrides — the decision table's source of truth is produce
+`references/video-model-selection.md`, order face → sound → grid). Write into the plan the
+facts the validation needs — **whether there's a face in the source and, if so, whether it's
+an adult**. Faces that read as minors are blocked on the Veo image lane, and Seedance 2.x
+refuses photorealistic faces outright, so filtering at the planning stage avoids redrawing
+the picture.
 
-**Write the `prompt` sentence in Seedance grammar** — that's the default engine. The camera part
-of it is not written by hand here: it is assembled from the four `visual.camera` slots (§camera),
-which is exactly Seedance's `opening frame composition + move + closing frame composition`. What
-the `prompt` adds on top is the subject motion — what moves in the picture while the camera does
-its one thing. The reason an approaching move is written as `dolly in` is that **this sentence may also
-go to Veo** — without `ARK_API_KEY` the motion background falls back to `veo_img2video`, and the
-word `push` appears 0 times in the canonical Veo text. Seedance's own vendor vocabulary is
-Chinese (`推`), so neither is confirmed in English, and `dolly in` satisfies both paths. **This
-isn't a format the vendor requires** — in the Seedance top-level formula the camera slot itself
-is `非必须`, and the "move amplitude" once written as a required slot failed re-verification
-against the original (2026-08-15 camera research). The reason for writing it as a stretch is our
-own: **it's a motion-background cut whose composition has to be reproduced.** The storyboard
-writes **one move**; a second goes in only on the default model 1.5 Pro (the vendor teaches
-combinations there — the one-move-per-cut recommendation is Seedance 2.0's) and only with the
-reason written on the shot (§camera · directing-grammar §4). Two things to avoid — **don't write seconds** (length is
-set by the scene's `duration` and the edit trims it) and **don't write what to exclude into the
-sentence** (Seedance has no exclusion-only argument — re-describe the scene so it doesn't appear.
-That slot is the `negativePrompt` argument only when going to Veo). Write the sentence in English
-— the prompt body takes only Chinese or English.
+**`prompt` is the stored final clip prompt, written in the route's grammar** (§clip prompt) —
+for this slot that means Seedance grammar. The camera part is not written by hand: the
+assembler builds it from the four `visual.camera` slots (§camera), which is exactly Seedance's
+`opening frame composition + move + closing frame composition`. What `--motion` adds on top is
+the subject motion — what moves in the picture while the camera does its one thing — and the
+`visual.audio` sentence closes it. The reason an approaching move is written as `dolly in` is
+that **this prompt may also go to Veo** — without `ARK_API_KEY` the motion background falls
+back to `veo_img2video`, and the word `push` appears 0 times in the canonical Veo text.
+Seedance's own vendor vocabulary is Chinese (`推`), so neither is confirmed in English, and
+`dolly in` satisfies both paths; a Seedance-shaped prompt survives the fallback as written
+(no timecodes by rule, and the stored `negative` list moves into the `negativePrompt`
+argument). **The span isn't a format the vendor requires** — in the Seedance top-level formula
+the camera slot itself is `非必须`, and the "move amplitude" once written as a required slot
+failed re-verification against the original (2026-08-15 camera research). The reason for
+writing it as a stretch is our own: **it's a motion-background cut whose composition has to be
+reproduced.** The storyboard writes **one move**; a second goes in only on the default model
+1.5 Pro (the vendor teaches combinations there — the one-move-per-cut recommendation is
+Seedance 2.0's) and only with the reason written on the shot (§camera · directing-grammar §4).
+Two things the assembler blocks — **seconds in the body** (length is set by the scene's
+`duration`; an in-clip state change is written in words) and **exclusions in the body**
+(Seedance has no exclusion-only argument — re-describe the scene so it doesn't appear; the
+`negative` field is read only on a Veo call). Write the prompt in English — the body takes
+only Chinese or English.
 
 **A change of state inside the clip carries its own duration** — armour snapping on, a light
 coming up, a door closing. Write it as "in under half a second" or "over two seconds"; left
@@ -975,7 +1096,8 @@ either way (absolute rule 10); this is about words that live inside the picture.
   transitions** — and when the tone is wrong, fix `bgPrompt`, size or angle before the move.
 - **Mixing movement into the middle scenes is favorable in itself** — a run of still cuts is a
   scroll-past signal (skip-rate measurement, 2026-08-15). But veo isn't the only source of
-  movement: Ken Burns (the builder applies it per cut) and code-rendered animation (the cover's
+  movement: the Ken Burns still lane (the builder applies a move per cut — eased zoom towards a
+  focus point, pan, punch, handheld drift) and code-rendered animation (the cover's
   kicker → title → hero-stat staging, typing cards — clips captured from HTML in a browser, cost 0 and safe for Korean)
   come first. A veo motion background is bought only when those fall short and **the movement
   itself is the content**. Count how long the fully-still stretches in the episode are first,
@@ -1016,9 +1138,11 @@ either way (absolute rule 10); this is about words that live inside the picture.
   has only text). To turn an illustration-mode scene into video, use the single representative
   illustration (`visual.bg`) as the source.
 - Keep `duration` inside one clip — made with Veo it's fixed at 8s, so anything inside that is
-  covered by one clip; Seedance makes only as many seconds as you ask (up to 15s) and bills that
-  much, and the check strip warns past 15s. A clip shorter than its scene loops, and the loop
-  shows its seam.
+  covered by one clip; Seedance makes only as many seconds as you ask and bills that much, but
+  the default 1.5 pro takes **4–12s** (server-validated), and the check strip warns past the
+  route's cap. The narration math (characters / 4.5, capped 13s) can outrun that cap — a
+  13-second narration on a motion background is a storyboard defect: trim the narration or
+  split the scene. A clip shorter than its scene loops, and the loop shows its seam.
 - The content-reviewer **plan mode** gate is the same as b-roll's (absolute rule 13) — don't call
   veo without `PLAN_REVIEW: PASS`.
 
@@ -1037,11 +1161,13 @@ either way (absolute rule 10); this is about words that live inside the picture.
     picture: "ai-video", overlay: "none",
     src: "images/scene-1.png",       // the same file as `SCENES[after]`'s visual.bg — absolute rules 8 and 12
     clip: ".work/broll/broll-a0-mixed.mp4",   // the trim + loudnorm + BGM mix (the 8s original is broll-a0.mp4)
-    camera: {                                 // §camera — produce assembles the call sentence from these four
+    camera: {                                 // §camera — the span of the stored prompt is assembled from these four
       movement: "dolly in", speed: "very slow",
       framing: "chest-up on the subject", end: "subject centred at mid-frame"
     },
-    audio: "quiet studio room tone with a faint fabric rustle, no music, no speech"
+    audio: "quiet studio room tone with a faint fabric rustle, no music, no speech",
+    prompt: "…the stored final clip prompt (§clip prompt — assemble-bg-prompt.js --clip --engine veo)",
+    negative: "text, subtitles, black bars, letterboxing"   // veo negativePrompt argument — nouns only
   }
 }
 ```
@@ -1135,6 +1261,12 @@ hand-written seconds are guaranteed to be off.
 - **Don't copy `title`.** `title` is the spoken hook that appears on screen ("이거 왜 이래?"),
   while the chapter is the search phrase stamped into the description ("환율 확인하는 세 가지
   방법"). Different registers.
+- **Each chapter opens with its own one-line mini-hook** — a narration sentence on why this
+  chapter matters, before its content starts; and around the 50–70% mark of the episode one
+  deliberate re-hook resets the room (a question to the viewer, a tease of the part people
+  argue about). Attention decays over 60–90s stretches in long-form, so a chapter that opens
+  straight into its content spends its first seconds on viewers already drifting
+  (scenario-craft §5 — field-practice grade).
 
 The reason for adding chapters isn't ads — midroll slots are placed in Studio independently of
 chapters (`chapter` never appears in the primary source, YouTube's midroll help page). The reason
@@ -1426,8 +1558,13 @@ strip says no violations.
       · `src` is the same real PNG as `SCENES[after].visual.bg` (that image made with gpt_image
       high as a photorealistic person scene) · `duration` (used length) is 8 or under with a
       comment giving the reason (not stretched with a palindrome)
-- [ ] If you placed a `visual.video` scene — points type · `duration` inside one clip (Veo 8 · Seedance ≤15) · `narration[].img`
-      unused · `prompt` is English motion only · the source `bg` is a real PNG (gpt_image high)
+- [ ] If you placed a `visual.video` scene — points type · `duration` inside the route's one-call
+      cap (veo 8 · 1.5 pro 4–12, server-validated) · `narration[].img`
+      unused · the source `bg` is a real PNG (gpt_image high)
+- [ ] **Every generated-video shot stores its final prompt and route** (§clip prompt) —
+      `visual.prompt` / `visual.video.prompt` / `visual.clip.prompt` assembled with
+      `assemble-bg-prompt.js --clip --engine <route>` and stored whole, exclusion nouns in the
+      sibling `negative` field, no timecodes or digit seconds on a seedance route
 - [ ] **Every generated-video shot has all four `visual.camera` slots filled** (§camera) — b-roll,
       motion background, and quote speech clips. An empty `end` is the defect this checks for;
       `movement: "static"` is a filled slot, not an empty one

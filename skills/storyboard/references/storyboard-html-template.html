@@ -895,8 +895,9 @@ window.SB_DOC = {
   function badge(cls, text) { return '<span class="badge ' + cls + '">' + esc(text) + "</span>"; }
 
   /* ══ Camera and cast ══
-     The four camera slots are settled in scenes.js (scenes-schema §camera) — produce assembles
-     the prompt out of them and adds nothing, so a slot left empty is a defect here, not there. */
+     The four camera slots are settled in scenes.js (scenes-schema §camera) — the clip prompt
+     is assembled out of them here and stored (§clip prompt), and produce sends it verbatim,
+     so a slot left empty is a defect here, not there. */
   var CAM_SLOTS = [["movement", "MOVE"], ["speed", "SPEED"], ["framing", "FRAME"], ["end", "END"]];
   function camOf(s) { return (s.visual && s.visual.camera) || null; }
   function camHtml(cam) {
@@ -911,6 +912,24 @@ window.SB_DOC = {
   function genVideo(s) {
     var v = s.visual || {};
     return s.type === "broll" || !!v.video || !!(v.clip && v.clip.prompt);
+  }
+  /* The planned route (scenes-schema §clip prompt) — visual.engine overrides the type default:
+     b-roll keeps its sound so it defaults to veo, a motion background discards it so seedance,
+     a speech clip defaults to veo_reference (a drawn speaker writes engine: "seedance"). The
+     stored prompt is written in this route's grammar, and the timing checks follow it. */
+  function engineOf(s) {
+    var v = s.visual || {};
+    if (v.engine === "veo" || v.engine === "seedance") return v.engine;
+    if (s.type === "broll" || s.type === "quote") return "veo";
+    return "seedance";
+  }
+  /* The stored final clip prompt — one home per type (scenes-schema §clip prompt). */
+  function clipPromptOf(s) {
+    var v = s.visual || {};
+    if (s.type === "broll") return v.prompt || "";
+    if (v.video) return v.video.prompt || "";
+    if (v.clip) return v.clip.prompt || "";
+    return "";
   }
   /* visual.character takes an id string or a { id, scope } object — scope is the reference's
      jurisdiction, the clause that keeps one reference from painting the rest of the frame
@@ -1380,11 +1399,14 @@ window.SB_DOC = {
         // this also watches for text handed off to the generated video.
         if (s.type !== "points" && s.type !== "cover")
           flag("bad", "Shot " + no, "a motion background (visual.video) is points-only — it cannot be used on " + s.type);
-        // The engine sets the cap — veo is fixed at 8s and loops beyond that, while Seedance
-        // makes as many seconds as asked, up to 15. The real danger is not the second count but
-        // a clip shorter than its scene.
-        if (s.duration > 15)
-          flag("warn", "Shot " + no, "motion background " + s.duration + "s — past the generation cap (Seedance 15s), so the clip loops and the seam shows");
+        // One scene = one call, so the routed engine's server-validated range caps the scene
+        // (scenes-schema §clip prompt). The default route 1.5 pro takes 4–12s — the old 15s
+        // figure was Seedance 2.0's. Veo is fixed at 8. The real danger is a clip shorter
+        // than its scene: it loops, and the loop shows its seam.
+        var mbCap = engineOf(s) === "veo" ? 8 : 12;
+        if (s.duration > mbCap)
+          flag("warn", "Shot " + no, "motion background " + s.duration + "s — past the " + engineOf(s) +
+               " route's one-call cap (" + mbCap + "s; server-validated), so the clip loops and the seam shows. Trim the narration, split the scene, or route to a model that takes it");
         if (narr.some(function (n) { return n.img; }))
           flag("bad", "Shot " + no, "motion background together with per-line illustrations — swapping the background per segment cannot work (scenes-schema)");
       }
@@ -1681,12 +1703,17 @@ window.SB_DOC = {
      "Sequence of cuts, no timecodes — … the camera does not cut on its own." */
   var NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits)\b/;
   var NEG_RE = /\b(no|not|avoid|avoids|never|don't|dont|doesn't|won't)\b[ \t]*([a-z' \t-]{0,24})/gi;
-  function negHits(text) {
+  /* On a seedance route the vendor's 2.0 guide templates directive negatives for the artifact
+     classes only (subtitles·text·logo·watermark, 2.5 adds bgm) — those pass there. Same
+     pattern as assemble-bg-prompt.js ARTIFACT_OK (its --selftest checks the copies). */
+  var ARTIFACT_OK = /(subtitle|caption|text|logo|watermark|bgm)/;
+  function negHits(text, eng) {
     var out = [], m;
     NEG_RE.lastIndex = 0;
     while ((m = NEG_RE.exec(text)) !== null) {
       var tail = (m[2] || "").trim().toLowerCase();
       if (NEG_OK.test(tail.replace(/[^a-z ].*$/, "").trim())) continue;
+      if (eng && eng.indexOf("seedance") === 0 && ARTIFACT_OK.test(tail)) continue;
       out.push((m[1] + " " + tail).trim());
       if (out.length >= 3) break;
     }
@@ -1695,17 +1722,46 @@ window.SB_DOC = {
   SCENES.forEach(function (s, i) {
     if (!genVideo(s)) return;
     var v = s.visual || {}, cam = camOf(s) || {}, fields = [];
+    if (s.type === "broll" && v.prompt) fields.push(["visual.prompt", v.prompt]);
     if (v.video && v.video.prompt) fields.push(["visual.video.prompt", v.video.prompt]);
     if (v.clip && v.clip.prompt) fields.push(["visual.clip.prompt", v.clip.prompt]);
     CAM_SLOTS.forEach(function (pr) {
       if (typeof cam[pr[0]] === "string" && cam[pr[0]]) fields.push(["visual.camera." + pr[0], cam[pr[0]]]);
     });
     fields.forEach(function (f) {
-      var hits = negHits(f[1]);
+      // The Audio: sentence is exempt — "no music, no speech" is a state description.
+      var audioAt = f[1].search(/Audio\s*:/i);
+      var hits = negHits(audioAt >= 0 ? f[1].slice(0, audioAt) : f[1], engineOf(s));
       if (!hits.length) return;
       flag("warn", "Shot " + (i + 1), f[0] + ' carries a negative directive ("' + hits.join('", "') +
-           '") — on Veo exclusions belong in the negativePrompt argument, on Seedance re-describe the scene and close with positive locks (video-model-selection §positive locks)');
+           '") — on Veo exclusions belong in the negativePrompt argument, on Seedance re-describe the scene and close with positive locks; only the artifact classes (subtitles·text·logo·watermark·bgm) may stay negative there (video-model-selection §positive locks)');
     });
+  });
+
+  /* The stored clip prompt — one scene, one call, the prompt written here (scenes-schema
+     §clip prompt). A generated shot that leaves the storyboard without its final prompt makes
+     produce invent one at call time, which is exactly the sentence nobody reviewed. The timing
+     regexes mirror assemble-bg-prompt.js (TIMESTAMP_RE · DIGIT_SECONDS_RE — its --selftest
+     fails if the copies drift): a Seedance-routed prompt takes no timecodes (2.0 self-reports
+     unstable precision timing), and digit seconds belong in `duration` on either route. */
+  var TIME_RE = /\[\d{1,2}:\d{2}(?:\s*[-–~]\s*\d{1,2}:\d{2})?\]|\b0\d?:\d{2}\b/;
+  var SECS_RE = /\b(\d{1,3})(?:\.\d+)?\s*(s|secs?|seconds?)\b/gi;
+  SCENES.forEach(function (s, i) {
+    if (!genVideo(s)) return;
+    var p = clipPromptOf(s), eng = engineOf(s);
+    if (!p) {
+      flag("warn", "Shot " + (i + 1), "generated video with no stored clip prompt — assemble it (assemble-bg-prompt.js --clip --engine " + eng +
+           ") and store it before approval; produce sends it verbatim (scenes-schema §clip prompt)");
+      return;
+    }
+    if (eng === "seedance" && TIME_RE.test(p))
+      flag("warn", "Shot " + (i + 1), "the stored clip prompt carries a timecode on a seedance route — 2.0 self-reports unstable precision timing; cut in the edit, or write visual.engine: \"veo\" where [mm:ss] is a workflow");
+    var m; SECS_RE.lastIndex = 0;
+    while ((m = SECS_RE.exec(p)) !== null) {
+      if (m[2].toLowerCase() === "s" && Number(m[1]) > 19) continue;   // "80s film look" is a decade
+      flag("warn", "Shot " + (i + 1), 'the stored clip prompt carries digit seconds ("' + m[0] + '") — length lives in duration; write an in-clip state change in words ("in under half a second")');
+      break;
+    }
   });
 
   /* Reference jurisdiction — a generated clip that hands over two or more references and scopes

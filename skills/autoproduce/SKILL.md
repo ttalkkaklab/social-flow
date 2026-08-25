@@ -515,8 +515,11 @@ money without knowing the price.
   `duration` (default 4s)** — per produce §6's trim+mix conventions, cut from
   the head of the original and keep the original. No upscaling (the body is
   1080×1920 — user decision 2026-08-11 not to go down to 720p).
-  **Prompt in English, motion only** + one line of audio directives at the end.
-  Re-describing what's already visible in the source image makes the model
+  **Send the scene's stored `visual.prompt` verbatim**, with `visual.negative`
+  in the `negativePrompt` argument (scenes-schema §clip prompt); an older
+  scenes.js with no stored prompt gets the fallback assembly — English, motion
+  only, one line of audio directives at the end. Re-describing what's already
+  visible in the source image makes the model
   redesign the scene. `.work/broll/broll-a<after>.mp4`
   (`broll-a0.mp4` for the opening slot).
   - **The unattended loop escalates at most 1 slot on its own** (cost-tiers
