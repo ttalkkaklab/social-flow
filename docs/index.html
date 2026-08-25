@@ -17,10 +17,10 @@
   <h1>social-flow 문서</h1>
   <p class="sub">채널 기반 쇼트폼·롱폼 콘텐츠 파이프라인 Claude Code 플러그인의 문서 모음. 스킬 사용 가이드, 리서치 기록, 그리고 내부 MCP 서버가 호출하는 전체 외부 API 레퍼런스.</p>
   <div class="meta">
-    <span>플러그인 <strong>v0.29.0</strong></span>
+    <span>플러그인 <strong>v0.34.0</strong></span>
     <span>스킬 <strong>18종</strong></span>
     <span>MCP 툴 <strong>54종</strong></span>
-    <span>갱신 <strong>2026-08-23</strong></span>
+    <span>갱신 <strong>2026-08-25</strong></span>
   </div>
   <div class="meta">
     <span>정본 README: <a href="../README.md">README.md</a></span>
@@ -183,6 +183,10 @@
     <a class="card" href="research/2026-08-22-elevenlabs-tts-api/index.html">
       <h3>일레븐랩스 TTS API 조사 →</h3>
       <p>2026-08-22 기록. 모델 라인업·요금·오디오 태그·보이스 10종 대화·글자 단위 타임스탬프를 API 단위로 읽고, 이튿날 실호출로 확인한 것(쿼리 파라미터 output_format·RIFF wav_24000·한국어 로마자 정렬)을 부록으로 붙였다. 세 번째 음성 레인 <code>tts_elevenlabs_*</code> 의 근거.</p>
+    </a>
+    <a class="card" href="research/2026-08-25-veo-seedance-timing-prompting/index.html">
+      <h3>Veo·Seedance 시간 설정과 프롬프트 — 델타 재검증 →</h3>
+      <p>2026-08-25 기록. 옮겨간 공식 문서를 원문으로 다시 대조했다. "한 클립 = 한 순간"이 공식 규범이 됐고, 클립 안의 시간 표기는 엔진·세대별 3분법이며, i2v 작법은 두 벤더가 정반대다. 대사는 따옴표 대신 콜론 — 1씬 = 1호출·저장 프롬프트 계약(§clip prompt)의 근거.</p>
     </a>
   </div>
 </section>

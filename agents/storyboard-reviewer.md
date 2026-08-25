@@ -615,7 +615,11 @@ angle and space are what `bgPrompt` draws.
 In scope, **on generated shots on top**: `broll` shots, motion-background scenes (`visual.video`),
 and `quote` speech clips (`visual.clip`) — anything produce will hand to `veo_*` or `seedance_*`
 — the four slots, the vendor words, one move chosen from the feel, the cut length, the engine
-fit. On a still, `camera.movement` picks the builder's Ken Burns move (the still lane — eased
+fit, and **the stored clip prompt** (scenes-schema §clip prompt): each generated shot is one
+API call whose final prompt is stored on the shot (`visual.prompt` · `visual.video.prompt` ·
+`visual.clip.prompt`) in the planned route's grammar (`visual.engine` or the type default —
+b-roll → veo, motion background → seedance, speech clip → veo_reference); produce sends it
+verbatim, so what you read here is what the model gets. On a still, `camera.movement` picks the builder's Ken Burns move (the still lane — eased
 zoom towards a focus point, pan, cover punch, handheld drift; directing-grammar §5 Still
 column) — **don't score the slot axes on a still**, with or without a block; if it wrote one,
 read it and carry anything wrong (a vendor word, seconds in a slot, a move that contradicts
@@ -675,6 +679,17 @@ finding; a silent departure is.
   object-centric left/right and ignore metres (directing-grammar §3.5). The fix is the
   visible result (`faces left of frame`) and `shot.size` for distance. Run
   `assemble-bg-prompt.js --check` on the string if unsure.
+- **P0-11 the stored clip prompt is missing, or fights the slots** — a generated shot with no
+  stored prompt hands produce a call nobody reviewed; a prompt that pans where the slot
+  dollies, frames closer than `framing` says, or re-describes the space the PNG already drew
+  is two instructions fighting. The prompt is assembled from the slots
+  (`assemble-bg-prompt.js --clip`) — when they disagree, one of them was edited by hand.
+- **P0-12 timing grammar wrong for the route** — a timecode (`[00:04]`) or digit seconds in a
+  seedance-routed prompt (2.0 self-reports unstable precision timing), digit seconds on a veo
+  route (spans are written `[00:00-00:02]` there), or a `duration` outside the routed engine's
+  server grid — veo takes 4/6/8s (1080p/4K and the reference lane 8s only), the default
+  seedance 1.5 pro takes 4–12s. In-clip state changes are written in words ("in under half a
+  second") on either route.
 
 ## Per-shot axes (additive out of 100 — scored separately for each shot)
 
@@ -682,8 +697,8 @@ finding; a silent departure is.
 |---|---|---|---|
 | Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the hook cut and speech clips sit at `eye`; on a generated still, `shot.space` is in the camera frame with `layout` and (when a person is on screen) `facing` as the visible result, no banned language | every shot |
 | Rationing and sequencing | 10 | this shot doesn't break the across-shot rules — a second close-up (`cu`·`choker`·`ecu`) in the scene, a third `choker`/`ecu` in the episode, a second `dutch` or one without its reason, a close-up opening not paid back by the next shot, a wide under 1.5× the close beside it, a later shot of the scene that flips `space.line` without a legal 180° crossing written (directing-grammar §6 rule 11) | every shot |
-| Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it) | generated shots |
-| Length fits the purpose | 15 | matches the §cut length table and the feel row, and it is the length that will be used | generated shots |
+| Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it); the stored clip prompt exists, says what the slots say, and keeps the route's timing grammar | generated shots |
+| Length fits the purpose | 15 | matches the §cut length table and the feel row, it is the length that will be used, and it sits inside the routed engine's server grid (veo 4/6/8 · 1.5 pro 4–12s) | generated shots |
 | Engine and reference fit | 10 | the right lane for what's on screen, references inside the cap, cast ids real | generated shots |
 | An `end` worth stopping on | 5 | names a composition the frame can actually land on, not a mood | generated shots |
 

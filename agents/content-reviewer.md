@@ -82,19 +82,28 @@ In this mode skip the style check and per-axis scores — judge only the plan P0
    prompt, or the cover-shared image's "lower third fading into darkness", is
    absent from the prompt. **Present but in the wrong place is the same P0** —
    for `veo_*` calls the exclusions go into the `negativePrompt` argument as
-   noun/adjective phrases (`text, subtitles, wall`), not into the prompt body.
-   Writing "no ~" in the body makes the model draw that very noun (measured: 4
-   out of 4 failed), and Veo's own prompt guide marks that form not
+   noun/adjective phrases (`text, subtitles, wall`), not into the prompt body
+   (on the new schema that's the stored `negative` field beside the clip
+   prompt). Writing "no ~" in the body makes the model draw that very noun
+   (measured: 4 out of 4 failed), and Veo's own prompt guide marks that form not
    recommended. Seedance has no such argument, so check whether the scene
-   description was rewritten so the unwanted element never comes up
+   description was rewritten so the unwanted element never comes up — with one
+   vendor carve-out: a directive negative naming only the **artifact classes**
+   (subtitles, on-frame text, logos, watermarks, BGM) is templated by the 2.0
+   guide itself and is not a finding on a Seedance route
 6. **Duration-contract violation** — the b-roll `duration` (usage length) has no
    justification or exceeds 8 seconds / `narration` is not empty (produce hard rule 9)
-7. **Motion-prompt contamination** — not in English, or re-describes
-   people/background/lighting already visible in the source image (the model
-   redesigns the scene) / no audio-directive line / **seconds written into the
-   prompt** (length is set by the scene's `duration` and the edit cuts it —
-   that's our pipeline contract. Don't apply this item to Veo calls; Veo 3.1
-   presents segment timecodes as an official workflow) / **a shot that must
+7. **Motion-prompt contamination** — not in English, or re-describes the
+   **layout, facing or lighting** already visible in the source image (the
+   model redesigns the scene — who the subject *is* splits by route: a veo call
+   names the person with a general noun, a seedance call may reuse the
+   bgPrompt's identity words with a consistency lock, both per
+   video-model-selection §prompt grammar) / no audio-directive line / **digit
+   seconds written into the prompt** (length is set by the scene's `duration`
+   and the edit cuts it — that's our pipeline contract; an in-clip state change
+   in words — "in under half a second" — is a vendor-exemplified usage, not
+   this P0. `[mm:ss]` spans pass only on a Veo route, and integer-second forms
+   only on a 2.5 route) / **a shot that must
    reproduce its framing** but the camera is written as a single verb with no
    start/end framing (a motion background must preserve that scene's
    `visual.bg`, so we use segment descriptions — that's not a vendor
