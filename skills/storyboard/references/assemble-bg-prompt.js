@@ -27,6 +27,26 @@
  *       # only the "From the camera: …" sentence — for a quote speech clip, whose
  *       # size and framing come from the produce quote contract, not from here
  *
+ *   node assemble-bg-prompt.js --clip --from ./scenes.js --shot 3 --engine seedance \
+ *     --motion "steam curling off the cup, hair swaying gently" \
+ *     --locks "the three lines on the notepad stay identical in every frame"
+ *       # clip mode — the full generated-video prompt, assembled from the shot's
+ *       # visual.camera four slots (framing, then speed movement, then ending on end —
+ *       # the produce §3 recipe) + subject motion + positive locks + the visual.audio
+ *       # sentence. storyboard §4 stores the stdout whole (scenes-schema §clip prompt);
+ *       # produce sends it verbatim. --engine picks the machine checks: seedance blocks
+ *       # timecodes (2.0 responds to shot numbers only; 1.5 pro shows none in any
+ *       # example) and digit seconds; veo allows [mm:ss] timestamps and blocks digit
+ *       # seconds; seedance-2.5 takes integer-second forms ("0-3 seconds", "[1s-4s]").
+ *       # State changes are written in words on every route: "in under half a second".
+ *       # Negative directives are blocked except the Audio: sentence ("no music, no
+ *       # speech" is the established wording) and, on seedance routes, the vendor's
+ *       # artifact classes (subtitles·text·logo·watermark·bgm — 2.0 guide templates
+ *       # them). --with-space prepends the From-the-camera sentence
+ *       # (quote clips, which have no still behind them); --scene carries the subject
+ *       # description (quote clips only — a motion background must not re-describe the
+ *       # scene its PNG already drew). Slot overrides: --movement --speed --framing --end.
+ *
  *   node assemble-bg-prompt.js --from ./scenes.js --shot 3 --no-person --scene "…"
  *       # a still with nobody in it — the size words describe the subject, not a body
  *
@@ -112,11 +132,103 @@ const BANNED = [
     why: "metric distance — models ignore the number; put distance in shot.size, not metres" }
 ];
 
+// ── Clip mode — the generated-video prompt checks ──
+// Negative directives in the body draw the noun instead (measured 4 of 4 on images; Veo's
+// own guide marks the form not recommended) — exclusions are Veo's negativePrompt argument,
+// and on Seedance a re-description plus positive locks. The Audio: sentence is exempt:
+// "no music, no speech" is a state description, the established wording (scenes-schema
+// §clip audio). Edit directives about cutting keep whichever negation word carries them.
+// storyboard-html-template.html carries NEG_RE/NEG_OK verbatim (negHits) — the selftest
+// checks the two copies match.
+const NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits)\b/;
+const NEG_RE = /\b(no|not|avoid|avoids|never|don't|dont|doesn't|won't)\b[ \t]*([a-z' \t-]{0,24})/gi;
+// On a seedance route the vendor's own 2.0 guide templates directive negatives for the
+// artifact classes only — subtitles, on-frame text, logos, watermarks (2.5 adds audio/BGM).
+// Everything else stays positive re-description. On veo every exclusion is the
+// negativePrompt argument, so no body negative is exempt there.
+const ARTIFACT_OK = /(subtitle|caption|text|logo|watermark|bgm)/;
+function negDirectiveHits(text, engine) {
+  if (!text) return [];
+  const out = [];
+  const seedance = typeof engine === "string" && engine.indexOf("seedance") === 0;
+  let m;
+  NEG_RE.lastIndex = 0;
+  while ((m = NEG_RE.exec(text)) !== null) {
+    const tail = (m[2] || "").trim().toLowerCase();
+    if (NEG_OK.test(tail.replace(/[^a-z ].*$/, "").trim())) continue;
+    if (seedance && ARTIFACT_OK.test(tail)) continue;
+    out.push((m[1] + " " + tail).trim());
+    if (out.length >= 3) break;
+  }
+  return out;
+}
+// Timecodes and digit seconds. Seedance 2.0 self-reports unstable precision timing, so a
+// Seedance-routed prompt takes neither; Veo 3.1 presents [mm:ss] interval prompting as a
+// workflow, so on veo the timestamp form passes and only bare digit seconds are blocked
+// (in-clip state changes are written in words on both engines: "in under half a second").
+// Bracketed spans and zero-led clock times only — "9:16" is a ratio, not a timecode.
+const TIMESTAMP_RE = /\[\d{1,2}:\d{2}(?:\s*[-–~]\s*\d{1,2}:\d{2})?\]|\b0\d?:\d{2}\b/;
+const DIGIT_SECONDS_RE = /\b(\d{1,3})(?:\.\d+)?\s*(s|secs?|seconds?)\b/gi;
+function timingHits(text, engine) {
+  const hits = [];
+  if (!text) return hits;
+  if (TIMESTAMP_RE.test(text) && engine !== "veo")
+    hits.push("clock timecode — 2.0 responds to shot numbers, not timestamps, and 1.5 pro shows none in any example; order beats by description and cut in the edit (on seedance-2.5 write integer-second forms, on veo [mm:ss] is the workflow)");
+  if (engine === "seedance-2.5") return hits;   // 2.5 officially takes integer-second timestamps ("0-3 seconds", "[1s-4s]", "at the 2-second mark")
+  let m;
+  DIGIT_SECONDS_RE.lastIndex = 0;
+  while ((m = DIGIT_SECONDS_RE.exec(text)) !== null) {
+    // A bare "s" on a number over 19 is a decade ("80s film look"), not a length.
+    if (m[2].toLowerCase() === "s" && Number(m[1]) > 19) continue;
+    hits.push("digit seconds (\"" + m[0] + "\") — length lives in `duration`; an in-clip state change is written in words (\"in under half a second\")" + (engine === "veo" ? ", or as a [mm:ss] span on Veo" : ""));
+    break;
+  }
+  return hits;
+}
+
+function clipAssemble(opts) {
+  const cam = opts.camera || {};
+  const missing = ["movement", "speed", "framing", "end"].filter(k => !(cam[k] && String(cam[k]).trim()));
+  const scene = (opts.scene || "").trim();
+  const motion = (opts.motion || "").trim();
+  const locks = (opts.locks || "").trim();
+  const audio = (opts.audio || "").trim();
+  const dot = s => s.replace(/[.!?\s]*$/, "") + ".";
+
+  const parts = [];
+  const space = opts.withSpace ? spaceSentence(opts) : "";
+  if (space) parts.push(space);
+  if (scene) parts.push(dot(scene));
+  // The produce §3 recipe: framing, then speed movement, then ending on end. A static
+  // camera has no speed to state — "static camera" is the whole move.
+  const isStatic = /^(static|fixed|locked)/i.test((cam.movement || "").trim());
+  const move = isStatic ? "static camera" : ((cam.speed || "").trim() + " " + (cam.movement || "").trim()).trim();
+  const span = [(cam.framing || "").trim(), move, cam.end ? "ending on " + String(cam.end).trim() : ""]
+    .filter(Boolean).join(", ");
+  if (span) parts.push(dot(span));
+  if (motion) parts.push(dot(motion));
+  if (locks) parts.push(dot(locks));
+  if (audio) parts.push(dot(/^audio\s*:/i.test(audio) ? audio : "Audio: " + audio));
+
+  const prompt = parts.join(" ").replace(/\s+/g, " ").replace(/\s+\./g, ".").trim();
+  // The Audio: sentence is exempt from the negative-directive check — split it off.
+  const audioAt = prompt.search(/Audio\s*:/i);
+  const body = audioAt >= 0 ? prompt.slice(0, audioAt) : prompt;
+  return {
+    prompt,
+    hits: bannedHits(prompt),
+    negHits: negDirectiveHits(body, opts.engine),
+    timeHits: timingHits(body, opts.engine),
+    missing
+  };
+}
+
 function parseArgs(argv) {
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--selftest" || a === "--help" || a === "--space-only" || a === "--no-person") { out[a.slice(2)] = true; continue; }
+    if (a === "--selftest" || a === "--help" || a === "--space-only" || a === "--no-person" ||
+        a === "--clip" || a === "--with-space") { out[a.slice(2)] = true; continue; }
     if (a.startsWith("--") && i + 1 < argv.length && !argv[i + 1].startsWith("--")) {
       out[a.slice(2)] = argv[++i];
       continue;
@@ -195,6 +307,7 @@ function loadShot(file, index) {
   const s = scenes[i] || {};
   const sh = s.shot || {};
   const sp = sh.space || {};
+  const v = s.visual || {};
   return {
     size: sh.size,
     angle: sh.angle,
@@ -202,11 +315,14 @@ function loadShot(file, index) {
     facing: sp.facing,
     line: sp.line,
     light: sp.light,
+    camera: v.camera || null,
+    audio: typeof v.audio === "string" ? v.audio : "",
     position: "SCENES[" + i + "] = shot " + (i + 1) + " of " + scenes.length + (s.type ? " (" + s.type + ")" : "")
   };
 }
 
-const VALUE_FLAGS = ["size", "angle", "layout", "facing", "line", "light", "scene", "mood", "exclude", "tail", "from", "index", "shot"];
+const VALUE_FLAGS = ["size", "angle", "layout", "facing", "line", "light", "scene", "mood", "exclude", "tail", "from", "index", "shot",
+  "motion", "locks", "engine", "audio", "movement", "speed", "framing", "end"];
 
 function selftest() {
   let fail = 0;
@@ -321,12 +437,68 @@ function selftest() {
   });
   ok("180 line is locked in the prefix", line.prompt.includes("keep A left, B right true in this frame"));
 
+  // ── Clip mode ──
+  const camA = { movement: "dolly in", speed: "very slow", framing: "chest-up on the subject", end: "subject centred at mid-frame" };
+  const c1 = clipAssemble({ camera: camA, engine: "seedance",
+    motion: "steam curling off the cup", locks: "the notepad's three lines stay identical in every frame",
+    audio: "quiet room tone, no music, no speech" });
+  eq("clip: the produce §3 recipe — framing, speed movement, ending on end",
+    c1.prompt,
+    "chest-up on the subject, very slow dolly in, ending on subject centred at mid-frame. steam curling off the cup. the notepad's three lines stay identical in every frame. Audio: quiet room tone, no music, no speech.");
+  eq("clip: 'no music, no speech' in the Audio sentence is exempt", c1.negHits.length, 0);
+  eq("clip: clean prompt has no timing hits", c1.timeHits.length, 0);
+  eq("clip: all four slots present", c1.missing.length, 0);
+
+  ok("clip: static camera drops the speed word",
+    clipAssemble({ camera: { movement: "static", speed: "n/a", framing: "wide on the desk", end: "unchanged" }, engine: "veo" })
+      .prompt.startsWith("wide on the desk, static camera, ending on unchanged."));
+  ok("clip: missing end is reported",
+    clipAssemble({ camera: { movement: "pan", speed: "slow", framing: "wide" }, engine: "veo" }).missing.indexOf("end") >= 0);
+  ok("clip: negative directive in the body is caught",
+    clipAssemble({ camera: camA, engine: "veo", motion: "no sudden moves, hands resting" }).negHits.length > 0);
+  ok("clip: the cut line's negation is allowed",
+    clipAssemble({ camera: camA, engine: "seedance", locks: "Sequence of cuts, no timecodes — cuts only at the specified points, the camera does not cut on its own" }).negHits.length === 0);
+  ok("clip: timecode blocked on seedance",
+    clipAssemble({ camera: camA, engine: "seedance", motion: "at [00:04] the door closes" }).timeHits.length > 0);
+  eq("clip: timestamp allowed on veo",
+    clipAssemble({ camera: camA, engine: "veo", motion: "[00:00-00:02] she looks up, [00:02-00:06] the door closes" }).timeHits.length, 0);
+  ok("clip: digit seconds blocked on both",
+    clipAssemble({ camera: camA, engine: "veo", motion: "the light comes up over 2 seconds" }).timeHits.length > 0);
+  eq("clip: a state change in words passes",
+    clipAssemble({ camera: camA, engine: "seedance", motion: "the visor snaps shut in under half a second" }).timeHits.length, 0);
+  eq("clip: 9:16 is a ratio, not a timecode",
+    clipAssemble({ camera: camA, engine: "seedance", motion: "holds the vertical 9:16 composition" }).timeHits.length, 0);
+  eq("clip: a decade is not a length",
+    clipAssemble({ camera: camA, engine: "seedance", motion: "soft 80s film look on the highlights" }).timeHits.length, 0);
+  ok("clip: --with-space prepends the From-the-camera sentence",
+    clipAssemble({ camera: camA, engine: "veo", withSpace: true, layout: "speaker centred", facing: "faces the camera" })
+      .prompt.startsWith("From the camera: speaker centred. faces the camera."));
+  ok("clip: banned space language still caught",
+    clipAssemble({ camera: camA, engine: "veo", motion: "left view of the desk" }).hits.length > 0);
+  // Artifact-class negatives — vendor-templated on seedance (2.0 guide), negativePrompt-only on veo.
+  eq("clip: 'avoid generating any text or subtitles' passes on seedance",
+    clipAssemble({ camera: camA, engine: "seedance", locks: "avoid generating any text or subtitles, do not generate a watermark" }).negHits.length, 0);
+  ok("clip: the same line is caught on veo (belongs in negativePrompt)",
+    clipAssemble({ camera: camA, engine: "veo", locks: "avoid generating any text or subtitles" }).negHits.length > 0);
+  ok("clip: a non-artifact negative is still caught on seedance",
+    clipAssemble({ camera: camA, engine: "seedance", motion: "no sudden moves" }).negHits.length > 0);
+  // seedance-2.5 takes integer-second timestamp forms; the clock form stays blocked.
+  eq("clip: integer-second forms pass on seedance-2.5",
+    clipAssemble({ camera: camA, engine: "seedance-2.5", motion: "0-3 seconds the door opens, at the 4-second mark the lights die" }).timeHits.length, 0);
+  ok("clip: clock timecode still blocked on seedance-2.5",
+    clipAssemble({ camera: camA, engine: "seedance-2.5", motion: "at [00:04] the door closes" }).timeHits.length > 0);
+
   // Drift guard — storyboard-html-template.html carries the same three regexes.
   const tpl = path.join(__dirname, "storyboard-html-template.html");
   if (fs.existsSync(tpl)) {
     const html = fs.readFileSync(tpl, "utf8");
     BANNED.forEach((b, i) => ok("template carries BANNED[" + i + "] verbatim (source and flags)",
       html.includes("/" + b.re.source + "/" + b.re.flags)));
+    ok("template carries NEG_RE verbatim", html.includes("/" + NEG_RE.source + "/" + NEG_RE.flags));
+    ok("template carries NEG_OK verbatim", html.includes("/" + NEG_OK.source + "/"));
+    ok("template carries ARTIFACT_OK verbatim", html.includes("/" + ARTIFACT_OK.source + "/"));
+    ok("template carries TIMESTAMP_RE verbatim", html.includes("/" + TIMESTAMP_RE.source + "/"));
+    ok("template carries DIGIT_SECONDS_RE verbatim", html.includes("/" + DIGIT_SECONDS_RE.source + "/" + DIGIT_SECONDS_RE.flags));
   } else {
     console.error("WARN storyboard-html-template.html not found beside this file — drift guard skipped");
   }
@@ -363,7 +535,7 @@ function main(argv) {
   }
 
   // A mistyped flag (--scen, --layoutt) would silently drop that value from the prompt.
-  const KNOWN = new Set([...VALUE_FLAGS, "selftest", "help", "space-only", "no-person", "check", "_"]);
+  const KNOWN = new Set([...VALUE_FLAGS, "selftest", "help", "space-only", "no-person", "check", "clip", "with-space", "_"]);
   const unknownFlags = Object.keys(args).filter(k => !KNOWN.has(k));
   if (unknownFlags.length) {
     console.error("assemble-bg-prompt: unknown flag --" + unknownFlags.join(", --") + " — see --help");
@@ -408,6 +580,34 @@ function main(argv) {
   }
   opts.noPerson = !!args["no-person"];
 
+  if (args.clip) {
+    if (args.engine !== "seedance" && args.engine !== "veo" && args.engine !== "seedance-2.5") {
+      console.error("assemble-bg-prompt: --clip needs --engine seedance|veo|seedance-2.5 — the timing checks differ per route");
+      process.exit(2);
+    }
+    // Slot overrides beat the file — the same precedence as the space flags above.
+    const cam = { ...(opts.camera || {}) };
+    ["movement", "speed", "framing", "end"].forEach(k => { if (args[k] !== undefined) cam[k] = args[k]; });
+    const r = clipAssemble({
+      camera: cam, engine: args.engine,
+      scene: opts.scene, motion: args.motion, locks: args.locks,
+      audio: args.audio !== undefined ? args.audio : opts.audio,
+      withSpace: !!args["with-space"],
+      layout: opts.layout, facing: opts.facing, line: opts.line, light: opts.light
+    });
+    if (r.missing.length)
+      console.error("warning: visual.camera is missing " + r.missing.join(", ") +
+        " — four filled slots is the contract (scenes-schema §camera); the prompt goes out without them");
+    if (!r.prompt) { console.error("assemble-bg-prompt: nothing to assemble — no slots, motion, locks or audio"); process.exit(2); }
+    let bad = 0;
+    r.hits.forEach(h => { console.error("banned: \"" + h.match + "\" — " + h.why); bad++; });
+    r.negHits.forEach(h => { console.error("banned: \"" + h + "\" — negative directive in the body; Veo takes exclusions in negativePrompt, Seedance wants the scene re-described plus positive locks"); bad++; });
+    r.timeHits.forEach(h => { console.error("banned: " + h); bad++; });
+    if (bad) process.exit(1);
+    process.stdout.write(r.prompt + "\n");
+    return;
+  }
+
   const { prompt, space, hits, unknown } = assemble(opts);
   if (unknown.length) {
     console.error("warning: " + unknown.join(", ") + " outside the vocabulary (scenes-schema §shot) — sent to the model as written");
@@ -425,4 +625,4 @@ function main(argv) {
 
 if (require.main === module) main(process.argv.slice(2));
 
-module.exports = { assemble, bannedHits, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED };
+module.exports = { assemble, clipAssemble, bannedHits, negDirectiveHits, timingHits, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED, NEG_RE, NEG_OK };

@@ -226,12 +226,24 @@ generated them under this rule). The cover background = b-roll source stays on
 veo's input, and any image that needs lettering always goes to gpt_image (local Hangul,
 measured: "딸깍연구소" came out as "달닥연구소").
 
-**What the storyboard already settled — pass it through, don't re-decide it.** Three values
+**What the storyboard already settled — pass it through, don't re-decide it.** These values
 arrive from scenes.js already chosen and already reviewed. Inventing a replacement at call time
 means generating something nobody approved.
 
-- **`visual.camera` — the four camera slots.** Assemble the camera part of the prompt in this
-  order — `framing`, then `speed movement`, then `ending on end`:
+- **The stored clip prompt — send it verbatim.** Every generated-video shot leaves the
+  storyboard with its final prompt stored (scenes-schema §clip prompt: `visual.prompt` on
+  b-roll, `visual.video.prompt` on a motion background, `visual.clip.prompt` on a speech
+  clip), assembled by `assemble-bg-prompt.js --clip` in the planned route's grammar and
+  machine-checked there. One scene is one call, and the prompt is the reviewed artifact — the
+  call adds only the arguments the API takes separately: `negativePrompt` from the stored
+  `negative` noun list (Veo lanes only), the reference images from `visual.character`,
+  `durationSeconds` from `duration`. **To regenerate a clip, resend the stored prompt as-is**;
+  when a camera slot or the motion changed, rerun the assembler from the fields rather than
+  editing the string by hand — the same discipline as `bgPrompt`.
+
+- **`visual.camera` — the four camera slots — is the fallback assembly recipe.** On an older
+  scenes.js with no stored prompt, assemble the camera part in this order — `framing`, then
+  `speed movement`, then `ending on end`:
 
   ```
   { movement:"dolly in", speed:"very slow", framing:"chest-up on the subject", end:"subject centred at mid-frame" }
@@ -283,14 +295,26 @@ means generating something nobody approved.
 - **`duration` — the used length.** On a generated clip this is what the cut needs
   (scenes-schema §cut length), not a default: an insert is 3–4s, a face carrying emotion is
   7–10s. **Ask for exactly that** — Seedance makes and bills the seconds you request, so
-  `durationSeconds` is the used length. Veo's reference lane is the exception, pinned at 8s, so
+  `durationSeconds` is the used length, **clamped to the routed model's server floor**: 1.5
+  pro takes 4–12s, so a 3-second scene requests 4 and the build cuts at the scene boundary.
+  Veo's reference lane is the exception the other way, pinned at 8s, so
   there you generate 8 and trim. Handing a model more seconds than the idea holds is how the
   middle of a clip goes dead — it fills the time it is given.
 
 **Video engines, split by job** — there are two (`veo_*` · `seedance_*`) and they're good at
 different things. The decision table's source of truth is
-[video-model-selection.md](references/video-model-selection.md), and this skill follows that
-document's order exactly — **face → sound → grid**.
+[video-model-selection.md](references/video-model-selection.md), and the order is
+**face → sound → grid**. Since the route is deterministic from facts the storyboard already
+wrote (who is in the source, whether the slot uses its sound, the duration), **the storyboard
+records the planned route** — `visual.engine`, or the type default (b-roll → veo, motion
+background → seedance, speech clip → veo_reference) — and writes the stored prompt in that
+route's grammar. This section is how you **validate** the route against those facts, not
+re-decide it. The one live deviation is a missing `ARK_API_KEY` sending a Seedance-routed
+motion background to Veo — the stored prompt survives that as written (no timecodes on a
+Seedance route, and the positive-locks tail is harmless prose to Veo; the stored `negative`
+list moves into the `negativePrompt` argument) — and the deviation goes in `build-report.md`.
+A route that fails validation (a real face on a 2.x model, a 13-second Veo scene) is a
+storyboard defect: send it back.
 
 **① Who's in the shot** — price and quality come after this. The face rules engines out first.
 
@@ -393,8 +417,16 @@ only the summary is here.
 - **Don't put seconds in a Seedance prompt** — the scene's `duration` sets the length and the
   edit does the cutting. The vendor notice covers 2.0 (2.5 responds to whole seconds) and
   nothing is confirmed for the default model 1.5 Pro — this rule rests on our pipeline, not
-  on vendor documentation. **Veo is the opposite** — 3.1 presents `[00:00-00:02]`-style span
-  splitting as an official workflow.
+  on vendor documentation. **Veo is the opposite** — the 3.1 blog presents `[00:00-00:02]`-style
+  span splitting as a workflow (blog grade — the reference docs never took it up, checked
+  2026-08-25).
+- **Dialogue on a Veo call is `speaker says: line` — colon, no quotation marks.** Quotes make
+  the model burn the line into the frame as on-screen text (Best practices, 2026-08-24); our
+  overlays already carry the subtitles, so a burned-in line is a double. Seedance keeps its
+  quotes.
+- **One clip is one moment** — chaining A-then-B-then-C into one short prompt is the vendor's
+  own named failure ("muddled or incomplete"). The storyboard already cut the scene to one
+  beat (scenes-schema §clip prompt); don't merge scenes at call time to save calls.
 
 - **Cover background = b-roll source (one image, `storyboard/images/scene-1.png`)**:
   `gpt_image_text2img`, `size: "1088x1920"`, **`quality: "high"`**. **Photoreal style with a
@@ -428,9 +460,11 @@ only the summary is here.
     (**`.work/broll/broll-a<after>.mp4`**) — it's the reference point for a retrim.
     There's one reason `after` is in the filename — two slots with the same name overwrite
     each other.
-  Assemble the camera sentence from that scene's `visual.camera` four slots (above), keep it
-  **motion only, in English**, and add the audio instruction at the end — this slot is a Veo
-  call, so it's `dolly in`, not `push in` (the vocabulary rule above). For example:
+  Send the scene's stored `visual.prompt` verbatim, with the stored `visual.negative` noun
+  list in the `negativePrompt` argument (this slot is a Veo call). On an older scenes.js with
+  no stored prompt, assemble from the `visual.camera` four slots (above), keep it **motion
+  only, in English**, and add the audio instruction at the end — `dolly in`, not `push in`
+  (the vocabulary rule above). For example:
   `Audio: quiet studio room tone with a faint fabric rustle, no music, no speech.`
   Re-describe the person, background, or lighting already visible in the image and the model
   redesigns the scene.
@@ -450,8 +484,10 @@ only the summary is here.
   (`resolution: "1080p"` · `durationSeconds` = the length that scene uses ·
   `seedance-1-5-pro-251215` · `generateAudio: false`). Without `ARK_API_KEY`, make it with
   `veo_img2video` (`aspectRatio: "9:16"` · `resolution: "1080p"` · `durationSeconds: 8` ·
-  `veo-3.1-lite-generate-preview`). Use `visual.video.prompt` (English motion only —
-  re-describing the scene makes the model redesign it) verbatim as the prompt. The clip's
+  `veo-3.1-lite-generate-preview`). Use `visual.video.prompt` verbatim as the prompt — the
+  stored final clip prompt (camera span, subject motion, locks, the audio sentence; on an
+  older file it holds the motion only, and the camera span is assembled from the slots). It
+  never re-describes the scene — the PNG already drew it. The clip's
   sound goes unused in the build (§6's assembly lays down the video track only), so the audio
   instruction is optional. The plan gate (absolute rule 13) comes back in the same delegation
   as the b-roll. **Make exactly what the storyboard has** — 2 combined with the b-roll is the
@@ -460,15 +496,18 @@ only the summary is here.
   then `body.png`, 3 images max; 9:16, 720p,
   `veo-3.1-fast-generate-preview` — lite doesn't support reference images, so fast is the
   lowest tier. The standard tier ties with fast in the arena, so there's no reason to pay 4×) —
-  repeat the character description in the prompt + the shot's `From the camera: …` sentence
-  (`assemble-bg-prompt.js --from scenes.js --shot N --space-only` — who sits where, which way
-  they face; nothing when the shot wrote no `space`) + "static camera" + "wide chest-up
-  framing … subject appears small in the frame" + a background unified to THEME dark. **Those
-  two camera phrases are the default `visual.camera` for a quote clip, not a competing
-  instruction** — when the scene carries its own `visual.camera`, assemble from that instead
-  (§what the storyboard already settled). **Exclusions go
-  in the `negativePrompt` argument, not the body** — `text, subtitles, black bars,
-  letterboxing`. Run `frame-persona-clip.py <input> .work/broll/<speaker>-palin.mp4` to unify
+  send the stored `visual.clip.prompt` verbatim (assembled at the storyboard with
+  `--clip --with-space`, so it already carries the character description, the
+  `From the camera: …` sentence, and the camera span). On an older draft prompt, assemble it
+  here: the character description + the shot's space sentence (`assemble-bg-prompt.js --from
+  scenes.js --shot N --space-only` — nothing when the shot wrote no `space`) + "static camera"
+  + "wide chest-up framing … subject appears small in the frame" + a background unified to
+  THEME dark. **Those two camera phrases are the default `visual.camera` for a quote clip, not
+  a competing instruction** — a scene carrying its own `visual.camera` overrides them.
+  **The reference lane rejects `negativePrompt`** (400 "Negative prompt is not supported in
+  your use case", measured 2026-08-15 — the same argument works on `veo_text2video` and
+  `veo_img2video`), so exclusions on this lane are written into the prompt as **positive
+  description**: not "no mouth" but "below the eyes, one seamless matte white curve". Run `frame-persona-clip.py <input> .work/broll/<speaker>-palin.mp4` to unify
   the framing and make the palindrome. With several clips, hstack them side by side and
   compare the scale by eye. With no speaking clip, fall back to a static quote card (opaque
   capture).
@@ -808,24 +847,34 @@ another engine.
 Convert `.work/cards.tsv` and `segs.tsv` from scenes.js (tab-separated, outro excluded):
 
 ```
-cards.tsv : idx <TAB> absolute audio path <TAB> target chars/sec <TAB> zoom(in|out|auto|none) [<TAB> options]
+cards.tsv : idx <TAB> absolute audio path <TAB> target chars/sec <TAB> zoom(in|out|auto|none|punch|hold) [<TAB> options]
 segs.tsv  : idx <TAB> seg (0-based) <TAB> visual <TAB> tts sentence <TAB> sub sentence
 sfx.tsv   : idx <TAB> seg <TAB> audio file <TAB> bgm(on|off)          (optional)
 bgm.tsv   : idx <TAB> audio file — the music cue changes at that card (optional)
 chapters.tsv : idx of the chapter's first card <TAB> chapter title    (long-form)
 ```
 
+**Column 4 is the still-image camera move.** All motion is eased (smoothstep) — a
+constant-speed ramp starts and stops like a machine; the ease is what reads as an operated
+camera (`KB_EASE=linear` restores the old ramp). `auto` alternates in/out card to card.
+
+| zoom | What | When |
+|---|---|---|
+| `in` / `out` / `auto` | eased 3.5% zoom over the whole card | the default drift — `auto` unless the scene says otherwise |
+| `punch` | the whole 3.5% lands in the first 0.4s (ease-out), then holds | the cover card — the hook contract wants movement inside 0–3s |
+| `hold` | fixed scale, no zoom motion | the base for `drift=1` (pure handheld), or a deliberate static frame |
+| `none` | no Ken Burns at all, source untouched | **a filmed clip already moves** — a zoom on top shakes the frame. Filmed cards are usually `none` + `sync=1` |
+
 **The 5th cards.tsv column (options) is `k=v,k=v`.** It's optional, and existing 4-column
-files keep working.
+files keep working. Two-value options use `:` inside the value — `,` stays the k=v separator.
 
 | Option | What | When |
 |---|---|---|
 | `sync=1` | turns off preroll, silence trim, and speed correction entirely. Normalization only | **live voice on a filmed scene** — any one of the three throws mouth and sound out of step |
 | `subs=<tsv>` | supplies that card's subtitles as a file (`start<TAB>end<TAB>sentence`, seconds from the card's start) | subtitles built from a transcript — scenes that skip speech-boundary detection |
-| `pan=<direction>[:scale]` | Ken Burns as a pan instead of a zoom (`l2r`·`r2l`·`u2d`·`d2u`) | landscape still backgrounds. Travel = width × (scale−1) |
-
-`zoom=none` turns Ken Burns off entirely — **a filmed clip already moves**, so a zoom on top
-of it shakes the frame. Filmed-scene cards are usually `none` + `sync=1`.
+| `pan=<direction>[:scale]` | Ken Burns as a travel instead of a centre zoom (`l2r`·`r2l`·`u2d`·`d2u` + diagonals `tl2br`·`br2tl`·`tr2bl`·`bl2tr`). Column 4 `in`/`out` layers a zoom drift over the travel (the classic pan+zoom); `auto` keeps the scale fixed | scenery and wide sources. Travel = width × (scale−1) ≈ 130px at the default 1.12 — measured on portrait too, so the old landscape-only advice is dead |
+| `focus=fx:fy` | zoom towards this normalized point instead of the centre (0.5:0.5 = centre). The far side of the frame shifts up to 2× the centre case — pipeline.md has the numbers | the scene has one subject and it isn't centred — the zoom should arrive at the subject, not at the frame's middle |
+| `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
 
 ```
 # one line for a filmed scene (live voice)
@@ -833,6 +882,14 @@ of it shakes the frame. Filmed-scene cards are usually `none` + `sync=1`.
 # 슬라이드·생성 씬(사용자 녹음 나레이션 — window.VOICE) 한 줄 예: 일반 레인, sync 없음
 11	pcm/s12.wav	0	none
 ```
+
+**The still move comes from the storyboard, not from taste.** A still's
+`visual.camera.movement` (when the storyboard wrote one — directing-grammar §5's Still
+column is where it picks) maps onto column 4/5 like this: `dolly in`/`zoom in` → `in` (add
+`focus=` at the subject when it isn't centred), `dolly out` → `out`, `handheld` → `hold` +
+`drift=1`, `truck`/pan wording → `pan=<dir>`, and the cover card takes `punch`. A still with
+no camera written stays `auto` — most cards should. The same restraint as generated video:
+the move supports the scene's feel, it doesn't decorate it.
 
 **A slide scene's segment visuals** are written exactly like a generated scene's, using the
 state PNGs captured in §3.6 (`cards/a<idx>r<k>.png`) — the state transition (xfade) *is* the

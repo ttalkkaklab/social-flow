@@ -45,7 +45,7 @@ above (the `[study]` rows).
 | Size | Where does the frame cut the person — how far is the audience | `shot.size` | every shot |
 | Angle | Where does the camera sit against the subject's eyes — which seat the audience gets | `shot.angle` | every shot |
 | Space | What is where in the frame, and which way each thing faces | `shot.space` | every generated still; filmed shots when two people, or a person and what they look at, share the scene |
-| Move | What the camera does while the shot runs, and where it stops | `visual.camera` (four slots) | generated video only; on a still it only steers the Ken Burns drift |
+| Move | What the camera does while the shot runs, and where it stops | `visual.camera` (four slots) | generated video, and the still lane — a still's movement word picks its Ken Burns move (§4 still lane, §5 Still column) |
 
 Size, angle and space are separate axes — size and angle `[course]`, space `[study]` (§3.5).
 Keep the medium close-up and the eye level and move the person from the left third to the
@@ -307,6 +307,26 @@ move while the other dials stayed at their defaults.
   on the other (`bgPrompt` / the motion prompt). Fused into one paragraph, the block has to be
   rewritten for every scene; kept apart, the same camera block travels to the next scene.
 
+### The still lane — the camera the edit fakes `[blog]`
+
+A still costs nothing to move: the builder crops a window out of the picture and drives the
+window, and to the audience that IS a camera. The lane has six moves — an eased slow zoom
+(in/out, the documentary default: 3.5% over the card, easing on both ends so it starts and
+stops like an operated head), a **punch** (the same span landed in 0.4s, then held — the
+cover's first-frame movement), a **pan** (the window travels, straight or diagonal, with an
+optional zoom drift on top — the classic Ken Burns), a **focus zoom** (the zoom arrives at the
+subject instead of the frame's middle — motion that directs attention is the whole point of
+the practice), a **handheld drift** (a few pixels of never-repeating wobble — the still
+counterpart of the `handheld` row above), and **hold** (no move; a decision, same as
+`static`). The storyboard writes the same `visual.camera.movement` words it already knows —
+`dolly in`, `dolly out`, `handheld`, `truck` — and produce translates them into this lane
+(produce SKILL §6 has the mapping and the knob names).
+
+Two disciplines carry over unchanged. The move supports the declared feel — it never carries
+it (the evidence base for stills is practitioner practice, not measurement, so claim even
+less). And rationing: most cards keep the alternating default drift; a punch is the cover's
+move; drift is spent where presence or unease is the feel, not sprinkled for "energy".
+
 ---
 
 ## 5. Feel → technique — the lookup the storyboard reads first
@@ -315,31 +335,33 @@ Write `shot.feel` in the author's own words, then find the closest row. The row 
 not a cage — when you leave it, write why on the shot. Length is for generated clips; a filmed
 shot takes only the wide ≥ 1.5× close ratio (§2) and has no cap; a narrated still keeps the
 speech math. Sound is what goes into `visual.audio` on a
-generated shot and into the mix note on a filmed one.
+generated shot and into the mix note on a filmed one. The Still column is the same feel
+inside the Ken Burns lane (§4 still lane) — produce translates it into build options, and a
+scene that doesn't need a move written stays on the alternating default.
 
-| Feel (what the audience should get) | Size | Angle | Move (generated only) | Length | Sound | Watch out |
-|---|---|---|---|---|---|---|
-| observe · understand the situation (관찰·설명) | `ls` → `ms` | `eye` | `static`, or one slow `truck` | 5–8 s | space forward, lines clear enough | the body's default register — don't decorate it |
-| scale · how big this is (규모) | `els`/`ls` with many subjects | `high` or `overhead` | `static`, or `dolly out` rising | 5–8 s | space loud | the same tiny person alone means loneliness, not scale — the head count flips the meaning |
-| alone · powerless · the world is big (고독·무력) | `els` | `eye` or slight `high` | `static` or slow `dolly out` | 5–8 s | wind, room, distant machine — **no human voice** | Mad Max's cliff: the smallness says the sentence; don't narrate it on top |
-| intimate · I'm in it (친밀·당사자) | `mcu` → `cu` | `eye` | `static` or very slow `dolly in` | 7–10 s | voice and breath forward, space gone | one close-up (`cu`·`choker`·`ecu`) per scene — spend it on the line that matters |
-| quiet tension · pressure (조용한 긴장·압박) | `ms` → `mcu` | `eye` | slow `zoom in` or `static` | 7–10 s | room tone, no music swell | a `dolly in` opens the space instead — the wrong approach for pressure |
-| realisation · awakening (각성·깨달음) | `mcu`/`cu` | `eye` | `dolly in` | 5–7 s | the bed drops (`sound.drop`), then the line | |
-| loss · letting go (상실) | `ms`/`ls` | `eye` | `dolly out` | 5–8 s | space rising, no speech | |
-| unease · something is wrong (불안·불길) | `ms`/`mcu` | `dutch` (once, reason written) or `eye` | `handheld` | 5–7 s | room tone, an off sound | the dutch fee — once per episode |
-| imposing · hero · dangerous (위압·영웅) | `fs`/`ms` | `low` (+ wide lens) | `static` or slow `dolly in` | 5–7 s | low end forward | `[study]`: bigger and stronger, **not** better liked |
-| powerless · isolated · watched (무력·고립·감시) | `ls`/`ms` | `high` | `static` or slow `dolly out` | 5–8 s | the surroundings' sound | a subject filling a high-angle frame alone doesn't read weak |
-| fate · the whole picture in one frame (운명·요약) | `ls`/`els` | `overhead` | `static` | 5–8 s | space | |
-| shock · the floor drops (충격) | `mcu` | `eye` | `dolly zoom` | 3–5 s | one hit, then nothing | once per episode |
-| hidden information revealed (숨은 정보 공개) | two planes, or `insert` | `eye` | `rack focus` / `static` | 3–4 s | the object's sound | an insert replaces three lines |
-| the rhythm of travel (이동의 리듬) | `fs`/`ms` | `eye` | `truck` | 5–7 s | footsteps, passing space | |
-| inside the character · immersion (몰입·1인칭) | `pov` or `tracking` from behind | `eye` | `tracking` | 5–7 s | breathing, footsteps | |
-| presence · this is real (현장감·실재) | `mcu`/`ms` | `eye` | `handheld` | 5–7 s | room tone | cuts the AI look |
-| trust · a person telling me (신뢰 — talking head, speech clip) | `mcu` | **`eye`** | `static` | 7–10 s | voice clean | `[study]` the default for hook cuts and quote clips |
-| withhold · let them imagine (감추기·상상) | `back` | `eye` | `static` | 5–7 s | no face — the sound does the face's job | |
-| transition · impact (전환·타격) | any | `eye` | `whip pan` / push past | 3–4 s | whoosh or a hard cut | |
-| closing · the end (닫힘·엔딩) | `els` | `eye` → rising | `pedestal up` / `dolly out` rising | 5–8 s | space | the person shrinks as the frame rises |
-| detail · the peak of tension (디테일·긴장의 정점) | `ecu` | — | `static` | 3–4 s | the detail's sound | once or twice per episode |
+| Feel (what the audience should get) | Size | Angle | Move (generated only) | Still (Ken Burns lane) | Length | Sound | Watch out |
+|---|---|---|---|---|---|---|---|
+| observe · understand the situation (관찰·설명) | `ls` → `ms` | `eye` | `static`, or one slow `truck` | `auto` drift, or a slow `pan` across the scene | 5–8 s | space forward, lines clear enough | the body's default register — don't decorate it |
+| scale · how big this is (규모) | `els`/`ls` with many subjects | `high` or `overhead` | `static`, or `dolly out` rising | `out`, or `pan` across the expanse | 5–8 s | space loud | the same tiny person alone means loneliness, not scale — the head count flips the meaning |
+| alone · powerless · the world is big (고독·무력) | `els` | `eye` or slight `high` | `static` or slow `dolly out` | slow `out` | 5–8 s | wind, room, distant machine — **no human voice** | Mad Max's cliff: the smallness says the sentence; don't narrate it on top |
+| intimate · I'm in it (친밀·당사자) | `mcu` → `cu` | `eye` | `static` or very slow `dolly in` | slow `in`, `focus` on the person | 7–10 s | voice and breath forward, space gone | one close-up (`cu`·`choker`·`ecu`) per scene — spend it on the line that matters |
+| quiet tension · pressure (조용한 긴장·압박) | `ms` → `mcu` | `eye` | slow `zoom in` or `static` | slow `in`, `focus` on the person | 7–10 s | room tone, no music swell | a `dolly in` opens the space instead — the wrong approach for pressure |
+| realisation · awakening (각성·깨달음) | `mcu`/`cu` | `eye` | `dolly in` | `in` + `focus` at the subject | 5–7 s | the bed drops (`sound.drop`), then the line | |
+| loss · letting go (상실) | `ms`/`ls` | `eye` | `dolly out` | `out` | 5–8 s | space rising, no speech | |
+| unease · something is wrong (불안·불길) | `ms`/`mcu` | `dutch` (once, reason written) or `eye` | `handheld` | `hold` + `drift` | 5–7 s | room tone, an off sound | the dutch fee — once per episode |
+| imposing · hero · dangerous (위압·영웅) | `fs`/`ms` | `low` (+ wide lens) | `static` or slow `dolly in` | slow `in` — the low angle is drawn in the still | 5–7 s | low end forward | `[study]`: bigger and stronger, **not** better liked |
+| powerless · isolated · watched (무력·고립·감시) | `ls`/`ms` | `high` | `static` or slow `dolly out` | `out` | 5–8 s | the surroundings' sound | a subject filling a high-angle frame alone doesn't read weak |
+| fate · the whole picture in one frame (운명·요약) | `ls`/`els` | `overhead` | `static` | `hold`, or slow `out` | 5–8 s | space | |
+| shock · the floor drops (충격) | `mcu` | `eye` | `dolly zoom` | `punch` | 3–5 s | one hit, then nothing | once per episode |
+| hidden information revealed (숨은 정보 공개) | two planes, or `insert` | `eye` | `rack focus` / `static` | `in` + `focus` at the detail | 3–4 s | the object's sound | an insert replaces three lines |
+| the rhythm of travel (이동의 리듬) | `fs`/`ms` | `eye` | `truck` | `pan` in the travel's direction | 5–7 s | footsteps, passing space | |
+| inside the character · immersion (몰입·1인칭) | `pov` or `tracking` from behind | `eye` | `tracking` | `in` + `drift` | 5–7 s | breathing, footsteps | |
+| presence · this is real (현장감·실재) | `mcu`/`ms` | `eye` | `handheld` | `hold` + `drift` | 5–7 s | room tone | cuts the AI look |
+| trust · a person telling me (신뢰 — talking head, speech clip) | `mcu` | **`eye`** | `static` | `hold` | 7–10 s | voice clean | `[study]` the default for hook cuts and quote clips |
+| withhold · let them imagine (감추기·상상) | `back` | `eye` | `static` | `hold` | 5–7 s | no face — the sound does the face's job | |
+| transition · impact (전환·타격) | any | `eye` | `whip pan` / push past | `punch`, or a plain cut | 3–4 s | whoosh or a hard cut | |
+| closing · the end (닫힘·엔딩) | `els` | `eye` → rising | `pedestal up` / `dolly out` rising | `out` | 5–8 s | space | the person shrinks as the frame rises |
+| detail · the peak of tension (디테일·긴장의 정점) | `ecu` | — | `static` | `in` + `focus` | 3–4 s | the detail's sound | once or twice per episode |
 
 Two feelings the table doesn't hold on purpose: "cinematic" and "dynamic" are not feelings —
 they are the author asking for a move without saying why. Send those back to the shot and ask
@@ -485,7 +507,17 @@ Warnings, not blocks — the reviewer and the person at the approval step weigh 
   (2026-08-15): vendor vocabulary (Veo 12 moves, no `push`/`orbit`); move → valence/arousal not
   supported (p=.84 / p=.21), immersion yes (p=.006) on unset cuts; angle → bigger/stronger
   (p<.001), eye level most trusted in talking heads (p=.007); close-up frequency inverted U.
-- GenSpace (Wang et al., NeurIPS 2025 Datasets and Benchmarks track, arXiv:2505.24870):
+- Still-lane survey (2026-08-25, all `[blog]` practitioner grade — no perceptual measurements
+  exist for these, so the still lane claims support-the-feel only): Ken Burns practice
+  (Cloudinary · Backstage · Epidemic Sound — 5–15% zoom bands, smooth easing and restraint,
+  motion that directs attention rather than decorates); punch-in as the short-form
+  attention move (Premiumbeat); handheld shake on stills reading as an operated camera
+  (Effect.app); 2.5D parallax as the layered extension of the same idea (Pond5 · Motion
+  Array — needs foreground/background separation, deferred to the layer-split lane);
+  ffmpeg zoompan integer-truncation jitter and the upscale-first fix (community consensus,
+  already in the builder as the 1.5× ZOOM_BASE). The six moves were verified by frame
+  measurement on ffmpeg 7.1.1 (easing curve, focus anchoring, punch land-and-hold, diagonal
+  travel = W(z−1), drift wobble) before shipping.
   GPT-4o 59.4% on basic front/back/left/right views, 21.2% on allocentric (object-centric)
   left/right, metric distances unused; stating the orientation in the final image ("facing
   right/left") cuts the confusion that camera-view wording ("left view of") causes. Order Is
