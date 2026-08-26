@@ -457,8 +457,11 @@ Skip this section when an older file doesn't have them — a missing field is no
   production layer and coverage 7 (if the `picture`·`shot.info` fields are there, score
   whether body and treatment match and whether info repeats. With no fields these 7 are
   full marks — don't dock older files)
-- **Contextual fit (50)**: connection to the scenes before and after 20 / fits the topic and
-  the target 15 / links to evidence 15
+- **Contextual fit (50)**: connection to the scenes before and after 20 — read the seam both
+  ways: does the scene follow from the one before (scenario-craft §1), and does it leave the
+  viewer a question the next scene pays (scenario-craft §5)? A body scene that only finishes
+  an explanation, with nothing pulling forward, takes at most half of these 20 / fits the
+  topic and the target 15 / links to evidence 15
 
 **broll scenes** (no text, so different axes): justified position 40 / connection front and
 back 40 / contract compliance 20 (`narration: []` · used length ≤8s · `src` is
@@ -630,7 +633,9 @@ API call whose final prompt is stored on the shot (`visual.prompt` · `visual.vi
 b-roll → veo, motion background → seedance, speech clip → veo_reference); produce sends it
 verbatim, so what you read here is what the model gets. On a still, `camera.movement` picks the builder's Ken Burns move (the still lane — eased
 zoom towards a focus point, pan, cover punch, handheld drift; directing-grammar §5 Still
-column) — **don't score the slot axes on a still**, with or without a block; if it wrote one,
+column) and `speed` sets how hard the window moves (the §4 still-lane beat ladder — the two
+fast rows are rationed like the close-up, so read a `fast`/`very fast` still against its
+beat) — **don't score the slot axes on a still**, with or without a block; if it wrote one,
 read it and carry anything wrong (a vendor word, seconds in a slot, a move that contradicts
 the declared feel) as a correction directive.
 
@@ -953,11 +958,12 @@ sips -z $((H*6)) $((W*6)) "$IMG" --out /tmp/sb-zoom.png
 `sips --cropOffset` can't do a positioned crop — the option exists and gets ignored
 (field-tested: the full 1920 height came back). Use ffmpeg for positioned crops.
 
-**YAVG (mean luminance 0–255) is evidence, not a verdict.** A bottom brighter than the top
-signals the "lower third fading into darkness" instruction didn't take, so write the number
-down, open the crop with Read, confirm that white subtitles actually get buried, and only
-then call a P0. Open every crop and zoom before judging — a number with no image opened
-isn't grounds for a score.
+**YAVG (mean luminance 0–255) is evidence, not a verdict.** A bottom much darker than the
+middle of the frame, with a smooth fade and no scene light to explain it, is the banned
+letterbox / lower-third gradient (owner 2026-08-25). Write the number down, open the crop
+with Read, confirm the fade is a bar and not just the room going dark, and only then call
+a P0. Open every crop and zoom before judging — a number with no image opened isn't
+grounds for a score.
 
 ## Axis scores (additive out of 100, no points without evidence)
 
@@ -965,8 +971,9 @@ isn't grounds for a score.
   cover shows the topic at a glance 15 / subject continuity across scenes 5
 - **Render integrity (30)**: no generated text or text-like marks 10 / no broken forms or
   artifacts 10 / no watermarks or signatures 10
-- **Screen design (30)**: dark at the bottom (subtitles readable) 10 / the top has an empty
-  place for the caption band to sit 10 / matches profile §3 mood and THEME 10
+- **Screen design (30)**: frame filled edge to edge, no letterbox or top/bottom gradient
+  bars 10 / the top has an empty place for the caption band to sit 10 / matches profile
+  §3 mood and THEME 10
 
 Start from 0 and add points **only with evidence that you actually opened the image**.
 

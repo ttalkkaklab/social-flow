@@ -73,9 +73,10 @@ export interface SeedanceModelSpec {
 }
 
 export const SEEDANCE_MODEL_SPECS = {
-  // 1080p opens on 2026-08-17 (UTC+8) — add '1080p' to resolutions after that date.
+  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
+  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
   'dreamina-seedance-2-5-260628': {
-    resolutions: ['480p', '720p'],
+    resolutions: ['480p', '720p', '1080p'],
     duration: [4, 30],
     lastFrame: true,
     referenceImages: [1, 30],

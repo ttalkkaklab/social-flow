@@ -1159,9 +1159,14 @@ describe('video engine separation (Veo · Seedance)', () => {
       seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'seedance-1-0-pro-250528', generateAudio: true }).success,
       false,
     );
-    // 2.5 cannot do 1080p today (launched 2026-08-17)
+    // 2.5 got 1080p on 2026-08-17 — the tier the discount campaign covers, so it must pass
     assert.equal(
       seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'dreamina-seedance-2-5-260628', resolution: '1080p' }).success,
+      true,
+    );
+    // but 4K is 2.0-only — 2.5 never got it
+    assert.equal(
+      seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'dreamina-seedance-2-5-260628', resolution: '4k' }).success,
       false,
     );
     // 2.x has no seed

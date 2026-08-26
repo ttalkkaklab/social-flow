@@ -63,7 +63,10 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
 
 - **Background mood prompt direction**: <the mood description always appended to
   image-generation prompts — e.g. "deep indigo and electric blue color grade,
-  cinematic, moody, lower third fading into darkness">
+  cinematic, moody">
+- **No letterbox / top-bottom gradient** (owner 2026-08-25): never ask for a
+  cinematic letterbox, a lower-third fade, or a darkened bar at the top or bottom.
+  The picture fills the frame edge to edge.
 - **Required background negatives**: "no text, no logos, no signage, no readable characters,
   face not visible, no flags, no national emblems, no maps, no government buildings"
 - **Banned subjects**: <per-channel additions — real people, specific places, etc.>

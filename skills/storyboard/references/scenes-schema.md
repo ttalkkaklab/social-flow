@@ -137,7 +137,7 @@ distribution signal under 60 s, and the first 1.5 s of hook weighs more than any
 | **stop** | `hook` | `hook` | 0–3 s: big title, a strong first frame, movement already in it — no logo, no intro sting, no greeting. story: the moment of failure, close, no hint of how it ended | a first frame the thumb slides past; a story cover that names the ending |
 | **hold** | `hooking` | `hooking` · `body` · `turn` | keep the promise visible and the answer withheld — answer-first through the first 20 s, story through the turn (setup lean, tension climbing setup → build → peak), something changing on screen every 2–4 s | unpacking the answer; drifting from what the cover threw; a setup that dawdles |
 | **satisfy** | `result` · `body` | `result` | pay the promise the cover made — answer-first: the result, then how; story: the payoff, the first time the answer is on screen | a hook the body can't keep: the platform now reads "stopped, then left inside 3 s" as a negative signal, so a bait hook that isn't kept is punished, not rewarded |
-| **act** | `cta` | `cta` | the next concrete thing (the next episode's result, the link); story: a frame that loops back to the cover | a vague subscribe ask |
+| **act** | `cta` | `cta` | after the answer, open one loop outward — in priority order: a judgment call the comments will argue over (tied to the channel concept), a rewatch pointer ("0:14에 힌트가 있었어요"), a share-worthy single fact — plus the next concrete thing (the next episode's result, the link); story: the frame that loops back to the cover is the visual half of the same device (scenario-craft §5 loop ending) | a vague subscribe ask; the same judgment question verbatim every episode — viewers learn the pattern and stop answering |
 
 And in between, **every visual change resets attention for a few more seconds** — high-performing
 Shorts change something on screen every 2–4 s (user-relayed, 2026-08-23 — field-practice grade,
@@ -145,16 +145,17 @@ unsourced). One narration sentence = one reveal gives that
 cadence on its own (§narration segments); a stretch longer than ~4 s with nothing changing is a
 stretch to cut or to give a caption swap, an image change or a move.
 
-**Underneath the beats run six craft rules** — the source of truth is
+**Underneath the beats run seven craft rules** — the source of truth is
 [`scenario-craft.md`](scenario-craft.md). The two that bind every episode: adjacent scenes
 join with a "but" or a "therefore", never an "and then" (the connective test — an
 "and-then" seam is scene-mode P0-2 material), and every scene turns a charge — what's at
 stake reads differently at the scene's close than at its open, with `shot.feel` as the
 place the turn shows (a scene that turns nothing is scene-mode P0-1 material). The other
-four are per-technique: the story `turn` is planted in advance and fair-play
+five are per-technique: the story `turn` is planted in advance and fair-play
 (misdirection, never deception), fear runs on suspense plus a doable answer, every
-curiosity loop opened names the scene that pays it, and comedy breaks a pattern with the
-break landing last.
+curiosity loop opened names the scene that pays it, comedy breaks a pattern with the
+break landing last, and the peak and the end get designed as the two moments the episode
+is judged by (scenario-craft §7).
 
 On answer-first the cover's first frame and the result scene point at the same artifact. The
 cover is the glance; the result unfolds it so the built parts show. Don't unfold the same
@@ -703,7 +704,11 @@ crop window (eased zoom towards the subject, pan with an optional zoom drift, a 
 cover, handheld drift), and the same vocabulary applies: `dolly in`/`zoom in` reads as a slow
 push towards the subject, `dolly out` as a pull-out, `handheld` as drift, `truck` as a pan
 (the feel each serves: directing-grammar §5 Still column; the option names: produce SKILL §6).
-A still with no camera keeps the alternating default drift — most should. The reason it is
+`speed` reads on a still too — it sets how hard the window moves, on the beat ladder in
+directing-grammar §4 (still lane): `very slow` for explain, `slow` for the payoff, `fast` /
+`very fast` for action and CTA cards, which also accelerate to the cut point. produce §6
+converts the word into the card's `span=`/`ease=` knobs. A still with no camera keeps the
+alternating default drift — most should. The reason it is
 written here and not at generation time: **the four values are settled before the first call
 that costs money.** The clip prompt is assembled out of these slots here and stored (§clip
 prompt); produce sends it verbatim, it doesn't invent one.
@@ -1123,13 +1128,13 @@ either way (absolute rule 10); this is about words that live inside the picture.
   **The one exception is an explicit per-episode user directive** (2026-08-15, the Ttalkkak Lab
   Seedance episode — "impact at the start"). Even then the body of absolute rule 10 stands —
   **the text is still a code-rendered overlay** and generated video isn't trusted with text.
-  Three contracts come attached when using a video cover: **anchor the text at the top** (there's
-  no guarantee the center stays empty when the subject moves), **switch to a top-heavy scrim**
-  (the default cover scrim is bottom-heavy and can't protect text up top — measured, contrast
-  collapsed to 4.35:1 the moment a white subject crossed the text line), and if you leave the
-  narration empty, that stretch **uses the clip's own audio** (the same behavior as absolute rule
-  9, so no subtitles either). The template applies the first two automatically when it sees a
-  cover with `visual.video`.
+  Two contracts come attached when using a video cover: **anchor the text at the top** (there's
+  no guarantee the center stays empty when the subject moves — the template does this
+  automatically when it sees a cover with `visual.video`), and if you leave the narration
+  empty, that stretch **uses the clip's own audio** (the same behavior as absolute rule 9, so
+  no subtitles either). No scrim backs the text up any more — gradient scrims are off (owner
+  2026-08-25) — so check the clip's top stays dark or plain enough for white type before
+  committing to a video cover.
 - **Narration and subtitles are kept** — absolute rule 9 (use the video's audio, no narration) is
   about b-roll **splice stretches**. For a motion background the builder uses only the video
   track, so the clip's audio is discarded and TTS, subtitles, and BGM carry on.
@@ -1365,8 +1370,9 @@ the filenames and prints them in script.md — the same rule as the filmed clips
 
 A filmed scene's `title`, `bullets`, and `footnote` sit in a **band at the bottom left**. They
 don't fill the zones like a generated scene does, because the part the user is demoing is the
-upper screen — covering it with text hides what the cut is showing. The scrim also rises only
-from the bottom, and the top 60% of the screen stays clear throughout.
+upper screen — covering it with text hides what the cut is showing. The top 60% of the
+screen stays clear throughout, and no scrim backs the band (gradient scrims are off — owner
+2026-08-25), so the footage itself keeps the lower third readable.
 
 - Captions are still **one at a time** (a swap). Being a filmed scene doesn't mean lining several
   up.

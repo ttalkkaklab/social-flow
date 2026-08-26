@@ -54,8 +54,10 @@
  *   node assemble-bg-prompt.js --selftest
  *
  * Order of the output: size words · angle words · "From the camera: layout. facing.
- * line. light." · scene · mood · exclusions · tail ("lower third fading into darkness"
- * unless --tail "" ). The image tools (gpt_image_text2img, image_local_generate) have
+ * line. light." · scene · mood · exclusions · tail ("the picture fills the frame from
+ * the top edge to the bottom edge, even brightness top to bottom" unless --tail "").
+ * Owner 2026-08-25: never ask for a letterbox / lower-third fade / top-bottom gradient.
+ * The image tools (gpt_image_text2img, image_local_generate) have
  * no exclusion argument, so --exclude goes into the body as the short noun list the
  * profile requires; only veo_* takes a separate negativePrompt.
  *
@@ -268,7 +270,7 @@ function assemble(opts) {
   const scene = (opts.scene || "").trim();
   const mood = (opts.mood || "").trim();
   const exclude = (opts.exclude || "").trim();
-  const tail = (opts.tail === undefined ? "lower third fading into darkness" : opts.tail).trim();
+  const tail = (opts.tail === undefined ? "the picture fills the frame from the top edge to the bottom edge, even brightness top to bottom" : opts.tail).trim();
 
   const ladder = opts.noPerson ? SIZE_WORDS_OBJECT : SIZE_WORDS;
   const sizeWords = ladder[size] || SIZE_WORDS[size] || (size ? size : "");
@@ -354,7 +356,7 @@ function selftest() {
   ok("facing is the visible result", a.prompt.includes("faces camera-right"));
   ok("scene follows space", /From the camera:.*a Korean woman/.test(a.prompt));
   ok("exclusions sit after the mood, before the tail",
-    a.prompt.endsWith("warm tungsten. no text, no logos. lower third fading into darkness."));
+    a.prompt.endsWith("warm tungsten. no text, no logos. the picture fills the frame from the top edge to the bottom edge, even brightness top to bottom."));
   eq("no banned hits on a good prompt", a.hits.length, 0);
 
   // Banned language in --scene / --mood / --exclude is caught too — it ships to the model.

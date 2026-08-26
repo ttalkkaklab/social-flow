@@ -75971,9 +75971,10 @@ import * as path3 from "node:path";
 var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
 var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
 var SEEDANCE_MODEL_SPECS = {
-  // 1080p opens on 2026-08-17 (UTC+8) — add '1080p' to resolutions after that date.
+  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
+  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
   "dreamina-seedance-2-5-260628": {
-    resolutions: ["480p", "720p"],
+    resolutions: ["480p", "720p", "1080p"],
     duration: [4, 30],
     lastFrame: true,
     referenceImages: [1, 30],
@@ -77849,7 +77850,7 @@ var SEEDANCE_MODEL_PROPERTY = {
 };
 var SEEDANCE_RESOLUTION_PROPERTY = {
   type: "string",
-  description: `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model \u2014 1080p needs 2.0, 1.5 pro, or 1.0 pro/fast; 4k is 2.0 only; 2.5 and the 2.0 fast/mini models top out at 720p.`,
+  description: `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model \u2014 1080p needs 2.5, 2.0, 1.5 pro, or 1.0 pro/fast; 4k is 2.0 only; the 2.0 fast/mini models top out at 720p.`,
   enum: [...VALID_SEEDANCE_RESOLUTIONS],
   default: DEFAULT_SEEDANCE_RESOLUTION
 };

@@ -163,6 +163,38 @@ counts as a view, so "views went up" alone doesn't mean the video was good.
 This makes it even clearer why engagedViews and averageViewPercentage are the
 judgment axes among the four.
 
+**A view ceiling is a promotion verdict, not the size of the demand.** Shorts
+expose in steps — every upload goes to a small seed pool first, and its response
+signals (retention, swipe-through) decide promotion to the next, larger pool.
+Two videos parked at nearly the same count (own channel 2026-08: two at ~1,300)
+read as "seed pool consumed, promotion failed". On those same four episodes the
+Studio retention order (52 → 38 → 26 → 19% continued watching) matched the view
+order exactly across a 3× view spread — measured, n=4, own channel, with one of
+the four under 14 hours old at measurement (retention unconfirmed; the report's
+own §6 asks for re-verification on the next episodes). So when views stall,
+rank the recent episodes by `averageViewPercentage` (the proxy in
+`youtube_insights` — it doesn't expose the curve, so read the curve itself in
+Studio) before touching anything: the
+episodes that rank low there owe the next storyboard a **body fix** (storyboard
+SKILL §core rules, the hold job — installments per scenario-craft §5), while
+low views over healthy retention stays the title/angle problem described above.
+Creator-observed promotion cutlines (2025.12–2026.08 public analyses — vidIQ,
+SocialBee, quso.ai and others; direction solid, exact numbers vary by niche,
+none official): 3-second retention 80%+, final average view percentage 70%+,
+2-second swipe rate under 40%.
+
+**Promotion reads two layers, and holding is only the first.** The next-pool
+verdict combines watching (averageViewPercentage) with response — `likes` ·
+`comments` · `shares`, all in the same `youtube_insights` per-video output.
+Own-channel case (2026-08): the episode that ranked first on retention of the
+four still parked at 1,367 views with 14 likes · 0 comments — the first layer
+cleared and the second stayed empty. The lagging-indicator rule above still
+stands (likes don't pick the next topic); what an engagement floor under
+healthy retention diagnoses is the **act beat** — an ending that answers and
+stops gives the viewer nothing to do. Design the outward loop there (storyboard
+scenes-schema §playback order, act row) and leave the body the curve says is
+holding alone.
+
 Analytics lags 2–3 days. An empty yesterday is not an outage; compare 7-day
 windows against each other.
 
