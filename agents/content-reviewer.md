@@ -246,9 +246,9 @@ you still can't find it, report every surface as "unverified" (never as all-S1
 9. **Slide look** — in frames, a box/slab/full-screen dim covers the center of
    the screen so the background photo is invisible / points captions stack up as
    a list instead of appearing one at a time (produce hard rule 14 — points puts
-   title + one caption in the top block, cover uses the bottom block. **The
-   quote freeze-frame card is the exception** — the quotation sits centered in
-   that scene, so a full wash is normal)
+   title + one caption in the top block, cover uses the bottom block; the quote
+   freeze-frame card centers its quotation, and a gradient wash behind it is
+   banned like everywhere else — owner 2026-08-25)
 
 ## Per-axis scores (additive out of 100; no points without evidence)
 

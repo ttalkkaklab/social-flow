@@ -71,7 +71,8 @@
   .scrim{position:absolute;inset:0;display:none}
   /* 소유자 지시 2026-08-25: 상·하단 그라데이션 스크림 금지. scrim=1 이어도 깔지 않는다. */
   body.scrim-on .scrim{display:none}
-  /* Band scrim — darkens the text band only, not a full-screen dim (absolute rule 14).
+  /* (inert — the toggle above never turns this layer on; kept for revert reference)
+     Band scrim — darkens the text band only, not a full-screen dim (absolute rule 14).
      The default form (bottom-block scenes such as cover): the top stays clear and it darkens
      toward the bottom third. */
   .scrim.d0{background:linear-gradient(180deg,rgba(5,8,20,.10) 0%,rgba(5,8,20,0) 34%,rgba(5,8,20,.30) 62%,rgba(5,8,20,.86) 100%)}
@@ -378,8 +379,8 @@ function __boot() {
     // **A landscape cover is top-anchored as well** — the zone is a shallow 699px, so a bottom
     // anchor sticks the block onto the subtitle band.
     if (light || wide || isFootage || (scene.visual && scene.visual.video)) zone.classList.add('top');
-    // Only the dark video cover switches to the top-heavy scrim (light already has its white wash
-    // up top). A shot-clip cover is the same — a bright screen passes behind the type for 8 seconds.
+    // cover-video still moves the text to the top anchor; the top-heavy scrim it used to
+    // switch on is inert now (owner 2026-08-25 — the scrim layer draws nothing).
     if (!light && scene.visual && (scene.visual.video || isFootage)) document.body.classList.add('cover-video');
     zone.innerHTML =
       (scene.kicker ? R(0, '<div class="kicker">' + esc(scene.kicker).replace(/·/g, '<span class="dot">·</span>') + '</div>') : '') +

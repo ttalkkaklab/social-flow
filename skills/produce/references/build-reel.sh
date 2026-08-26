@@ -43,8 +43,8 @@
 #                           span=<0..1.5> this card's zoom span, replacing the global ZOOM_SPAN — 0.4 means
 #                                         the window grows (or shrinks) 40% over the card. Applies to in/out,
 #                                         punch and the pan zoom drift; unused on hold/none (same as focus=).
-#                                         Past 1+span > ZOOM_BASE/canvas the source upscales — the build warns
-#                                         and the card wants a higher-res source (raise ZOOM_BASE to match).
+#                                         Past base+span > ZOOM_BASE/canvas (base: pan z / drift 1.04 / else 1)
+#                                         the source upscales — the build warns; raise ZOOM_BASE to match.
 #                           ease=<mode>   this card's easing, replacing the global KB_EASE — smooth (default,
 #                                         eased both ends) | linear | in (accelerating: starts unnoticed,
 #                                         fastest at the cut point — action/CTA cards, cut away at the peak).
@@ -127,6 +127,7 @@ REVEAL_LEAD=${REVEAL_LEAD:-0.30}   # fallback lead — used only when no pause w
 SIL_DB=${SIL_DB:--37}              # sentence-boundary silence threshold (dB)
 SIL_MIN=${SIL_MIN:-0.16}           # sentence-boundary minimum silence length (s)
 ZOOM_SPAN=${ZOOM_SPAN:-0.035}      # total Ken Burns zoom span per card (3.5%)
+ZOOM_SPAN=$(awk -v v="$ZOOM_SPAN" 'BEGIN{printf "%.3f", v}')   # %.3f normalized so span= report-tag compares stay exact
 W=${W:-1080}                       # canvas width — the format decides
 H=${H:-1920}                       # canvas height
 ZOOM_BASE=${ZOOM_BASE:-1620x2880}  # Ken Burns source resolution (1.5x the canvas)
@@ -322,9 +323,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # Past the ZOOM_BASE headroom the zoompan window upscales the source — visible blur. Checked
   # after the option loop so pan=/drift= anywhere in the k=v list counts into the real base zoom
   # (pan base PZ, drift base DRIFT_Z, else 1 — the same bases the Ken Burns section uses below).
-  # hold/none never zoom, and pan under column-4 auto keeps a fixed scale — span is unused there.
+  # hold/none never zoom, and a pan card zooms only under column-4 in/out (auto and punch
+  # keep a fixed scale on a pan) — span is unused there.
   if [ "$SPANSET" -eq 1 ] && [ "${ZDIR:-auto}" != "hold" ] && [ "${ZDIR:-auto}" != "none" ] \
-     && ! { [ -n "$PAN" ] && [ "${ZDIR:-auto}" = "auto" ]; }; then
+     && ! { [ -n "$PAN" ] && [ "${ZDIR:-auto}" != "in" ] && [ "${ZDIR:-auto}" != "out" ]; }; then
     if [ -n "$PAN" ]; then BASEZ="$PZ"; elif [ "$DRIFT" -eq 1 ]; then BASEZ="$DRIFT_Z"; else BASEZ=1; fi
     awk -v s="$SPAN" -v b="$BASEZ" -v zw="${ZOOM_BASE%x*}" -v w="$W" 'BEGIN{exit !(b+s > zw/w)}' \
       && { say "⚠ card $IDX: base $BASEZ + span=$SPAN zooms past ZOOM_BASE/canvas (${ZOOM_BASE%x*}/$W) — raise ZOOM_BASE and feed a higher-res source"; WARN=1; }
@@ -581,7 +583,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # register measured in docs/research/2026-08-26-still-photo-camera-motion).
   case "$EASE" in linear) E="$PEXPR" ;; in) E="($PEXPR*$PEXPR)" ;; *) E="($PEXPR*$PEXPR*(3-2*$PEXPR))" ;; esac
   KTAG=""
-  [ "$SPAN" != "$(awk -v v="$ZOOM_SPAN" 'BEGIN{printf "%.3f", v}')" ] && KTAG="+span=$SPAN"
+  [ "$SPAN" != "$ZOOM_SPAN" ] && KTAG="+span=$SPAN"
   [ "$EASE" != "$KB_EASE" ] && KTAG="$KTAG+ease-$EASE"
   if [ "$DRIFT" -eq 1 ]; then
     DXE="+$DRIFT_AMP*(0.6*sin(2*PI*$DRIFT_F1*on/$FPS)+0.4*sin(2*PI*$DRIFT_F2*on/$FPS+1.7))"

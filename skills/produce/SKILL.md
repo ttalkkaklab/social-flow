@@ -132,10 +132,8 @@ data/<channel>/episodes/<topic>/
    source), cover uses the bottom block, and the bottom subtitles say what the narration
    says. Don't build boxes, slabs, or full-screen dims across the middle of the frame — the
    background photo showing through is what makes it a video; cover it and it's a slide
-   (user's note 2026-08-12, "too PPT-ish"). Scrims are band-shaped only
-   (video-template handles it per scene type — cover = bottom band, points = top band).
-   **The static quote card is the one exception** — the quote sits in the middle of the
-   frame, so it keeps the full wash (it isn't judged for the slide look).
+   (user's note 2026-08-12, "too PPT-ish"). Gradient scrims are off altogether
+   (owner 2026-08-25 — no top/bottom bars; the template's `scrim=` parameter draws nothing).
    Since the photo has become the screen itself, make points backgrounds **photoreal shots
    of the subject** rather than metaphorical still lifes, and change the shot wherever the
    content axis changes (reusing one image leaves 40-odd seconds of body on the same still).
@@ -727,8 +725,8 @@ active caption shows (absolute rule 14).
 
 **Illustration (light) mode — line art on white, one illustration per line** (the
 `img`/`imgPrompt` in scenes-schema §narration; first case 2026-08-12, dropshipping):
-- Add **`&light=1`** to every capture URL. A dark scrim kills a white picture into grey
-  (measured) — this mode flips the text to ink and draws the band as a white wash.
+- Add **`&light=1`** to every capture URL — it flips the text to ink for line art on
+  white. (The white band wash it used to draw went with the scrim layer — owner 2026-08-25.)
   The cover text moves to a top anchor — **generate the cover illustration with the
   character and props small in the bottom third and the top two thirds empty** (a
   middle-anchored composition puts the stat over the face).
@@ -741,8 +739,8 @@ active caption shows (absolute rule 14).
   episode). The mapping: on cover, r1←seg ①, r2←seg ②.
   On points, r1 (title)←seg ①, and caption r k is the illustration of the segment that reads
   that caption.
-- Keep everything at `dim=1` (the white wash default). Brightness isn't a question in this
-  mode, so dim=2 goes unused.
+- `dim=` stays inert here too (the scrim layer is off) — and brightness isn't a question
+  over a white background anyway.
 
 Overflow check: a headless one-shot capture can't read `document.title`, so if
 chrome-devtools is available, `navigate_page` (same URL) then `evaluate_script` to confirm
@@ -872,7 +870,7 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 | `pan=<direction>[:scale]` | Ken Burns as a travel instead of a centre zoom (`l2r`·`r2l`·`u2d`·`d2u` + diagonals `tl2br`·`br2tl`·`tr2bl`·`bl2tr`). Column 4 `in`/`out` layers a zoom drift over the travel (the classic pan+zoom); `auto` keeps the scale fixed | scenery and wide sources. Travel = width × (scale−1) ≈ 130px at the default 1.12 — measured on portrait too, so the old landscape-only advice is dead |
 | `focus=fx:fy` | zoom towards this normalized point instead of the centre (0.5:0.5 = centre). The far side of the frame shifts up to 2× the centre case — pipeline.md has the numbers | the scene has one subject and it isn't centred — the zoom should arrive at the subject, not at the frame's middle |
 | `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
-| `span=<0..1.5>` | this card's total zoom span, replacing the global `ZOOM_SPAN` (0.4 = the window grows 40% over the card). Applies to `in`/`out`/`punch` and the pan zoom drift; unused on `hold`/`none` | a still whose beat wants a visible move — computed from the storyboard's `speed` word (below). Past `1+span` > `ZOOM_BASE`/canvas (0.5 at the defaults) the source upscales and the build warns: raise `ZOOM_BASE` and generate the scene image at that resolution |
+| `span=<0..1.5>` | this card's total zoom span, replacing the global `ZOOM_SPAN` (0.4 = the window grows 40% over the card). Applies to `in`/`out`/`punch` and the pan zoom drift; unused on `hold`/`none` | a still whose beat wants a visible move — computed from the storyboard's `speed` word (below). Past base+`span` > `ZOOM_BASE`/canvas (base: pan scale · drift 1.04 · else 1; headroom 0.5 at the defaults) the source upscales and the build warns: raise `ZOOM_BASE` and generate the scene image at that resolution |
 | `ease=smooth\|linear\|in` | this card's easing, replacing the global `KB_EASE`. `in` accelerates — an unnoticed start, fastest exactly at the cut | the ladder's accelerating rows (action/tension, CTA) — pairs with cutting away at the peak. `punch` keeps its own ease-out ramp and ignores `ease=` |
 
 ```

@@ -1370,8 +1370,9 @@ the filenames and prints them in script.md — the same rule as the filmed clips
 
 A filmed scene's `title`, `bullets`, and `footnote` sit in a **band at the bottom left**. They
 don't fill the zones like a generated scene does, because the part the user is demoing is the
-upper screen — covering it with text hides what the cut is showing. The scrim also rises only
-from the bottom, and the top 60% of the screen stays clear throughout.
+upper screen — covering it with text hides what the cut is showing. The top 60% of the
+screen stays clear throughout, and no scrim backs the band (gradient scrims are off — owner
+2026-08-25), so the footage itself keeps the lower third readable.
 
 - Captions are still **one at a time** (a swap). Being a filmed scene doesn't mean lining several
   up.
