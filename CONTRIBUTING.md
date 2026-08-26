@@ -73,7 +73,8 @@ than a surprise later.
 
 ## Reporting bugs
 
-Include the plugin version (`.claude-plugin/plugin.json`), what you ran, what
+Include the plugin version (`.claude-plugin/plugin.json` — keep
+`.grok-plugin` / `.codex-plugin` / `.plugin` in lockstep), what you ran, what
 happened, and which keys/credentials were configured — a surprising number of
 issues turn out to be a tool that wasn't listed because its credential file was
 missing. `sns_account_check` reports token status without printing token values;

@@ -69,7 +69,8 @@
   /* Careful: the body toggle class is scrim-on — put .scrim straight on the body and
      display:none lands on the body itself, wiping out the whole page (a measured incident) */
   .scrim{position:absolute;inset:0;display:none}
-  body.scrim-on .scrim{display:block}
+  /* 소유자 지시 2026-08-25: 상·하단 그라데이션 스크림 금지. scrim=1 이어도 깔지 않는다. */
+  body.scrim-on .scrim{display:none}
   /* Band scrim — darkens the text band only, not a full-screen dim (absolute rule 14).
      The default form (bottom-block scenes such as cover): the top stays clear and it darkens
      toward the bottom third. */

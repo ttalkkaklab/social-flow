@@ -875,6 +875,8 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 | `pan=<direction>[:scale]` | Ken Burns as a travel instead of a centre zoom (`l2r`·`r2l`·`u2d`·`d2u` + diagonals `tl2br`·`br2tl`·`tr2bl`·`bl2tr`). Column 4 `in`/`out` layers a zoom drift over the travel (the classic pan+zoom); `auto` keeps the scale fixed | scenery and wide sources. Travel = width × (scale−1) ≈ 130px at the default 1.12 — measured on portrait too, so the old landscape-only advice is dead |
 | `focus=fx:fy` | zoom towards this normalized point instead of the centre (0.5:0.5 = centre). The far side of the frame shifts up to 2× the centre case — pipeline.md has the numbers | the scene has one subject and it isn't centred — the zoom should arrive at the subject, not at the frame's middle |
 | `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
+| `span=<0..1.5>` | this card's total zoom span, replacing the global `ZOOM_SPAN` (0.4 = the window grows 40% over the card). Applies to `in`/`out`/`punch` and the pan zoom drift; unused on `hold`/`none` | a still whose beat wants a visible move — computed from the storyboard's `speed` word (below). Past `1+span` > `ZOOM_BASE`/canvas (0.5 at the defaults) the source upscales and the build warns: raise `ZOOM_BASE` and generate the scene image at that resolution |
+| `ease=smooth\|linear\|in` | this card's easing, replacing the global `KB_EASE`. `in` accelerates — an unnoticed start, fastest exactly at the cut | the ladder's accelerating rows (action/tension, CTA) — pairs with cutting away at the peak. `punch` keeps its own ease-out ramp and ignores `ease=` |
 
 ```
 # one line for a filmed scene (live voice)
@@ -890,6 +892,15 @@ column is where it picks) maps onto column 4/5 like this: `dolly in`/`zoom in` �
 `drift=1`, `truck`/pan wording → `pan=<dir>`, and the cover card takes `punch`. A still with
 no camera written stays `auto` — most cards should. The same restraint as generated video:
 the move supports the scene's feel, it doesn't decorate it.
+
+**The still's `speed` word sets the size of the move.** The beat→rate ladder is
+directing-grammar §4 (still lane) — `very slow`/`slow`/`fast`/`very fast` rows, with the two
+fast rows adding `ease=in` and the CTA row aiming `focus=` at the face. Convert the row to
+the card knob as **`span` = rate × card seconds**, reading the seconds from the finished
+narration wav (`ffprobe`), not the character estimate; PRE/POST margins make the rate
+approximate and the ladder's wide spacing absorbs that. Example: a 9s payoff card on the
+`slow` row → `span=0.54`. A still whose camera has no `speed` (or no camera at all) keeps
+the plain column-4 move at the 3.5% default.
 
 **A slide scene's segment visuals** are written exactly like a generated scene's, using the
 state PNGs captured in §3.6 (`cards/a<idx>r<k>.png`) — the state transition (xfade) *is* the

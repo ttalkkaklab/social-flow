@@ -163,7 +163,7 @@ Load the plugin by pointing at your clone:
 claude --plugin-dir /path/to/social-flow
 ```
 
-### Codex CLI and Grok CLI
+### Codex CLI, Grok CLI, and Buzz
 
 The plugin layout is Claude-compatible across CLIs, so the same repo installs there too:
 
@@ -174,6 +174,13 @@ grok plugin install https://github.com/ttalkkaklab/social-flow.git --trust
 # Codex CLI — the 18 skills load; MCP tools don't wire up yet (measured on codex 0.147.0)
 codex plugin marketplace add ttalkkaklab/social-flow
 codex plugin add social-flow@social-flow
+
+# Buzz — persona pack at `.plugin/plugin.json` (skills + MCP). Validate, then
+# point the nest at this checkout so agents pick up the working tree, not a
+# stale marketplace snapshot:
+buzz pack validate /path/to/social-flow
+mkdir -p ~/.buzz/packs
+ln -sfn /path/to/social-flow ~/.buzz/packs/com.ttalkkaklab.social-flow
 ```
 
 API keys travel the same way as under Claude — shell environment variables.
@@ -284,7 +291,11 @@ fixes halts authoring.
 
 ```
 social-flow/
-├── .claude-plugin/plugin.json   # plugin manifest
+├── .claude-plugin/plugin.json   # Claude Code plugin manifest
+├── .grok-plugin/plugin.json     # Grok CLI plugin manifest
+├── .codex-plugin/plugin.json    # Codex CLI plugin manifest
+├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
+├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
 ├── server/                      # internal MCP server (TypeScript, stdio) — 54 tools
 │   └── src/

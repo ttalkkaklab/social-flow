@@ -17,10 +17,10 @@
   <h1>social-flow 문서</h1>
   <p class="sub">채널 기반 쇼트폼·롱폼 콘텐츠 파이프라인 Claude Code 플러그인의 문서 모음. 스킬 사용 가이드, 리서치 기록, 그리고 내부 MCP 서버가 호출하는 전체 외부 API 레퍼런스.</p>
   <div class="meta">
-    <span>플러그인 <strong>v0.34.0</strong></span>
+    <span>플러그인 <strong>v0.36.0</strong></span>
     <span>스킬 <strong>18종</strong></span>
     <span>MCP 툴 <strong>54종</strong></span>
-    <span>갱신 <strong>2026-08-25</strong></span>
+    <span>갱신 <strong>2026-08-26</strong></span>
   </div>
   <div class="meta">
     <span>정본 README: <a href="../README.md">README.md</a></span>
@@ -37,7 +37,7 @@
     </a>
     <a class="card" href="guides/costs-and-keys/index.html">
       <h3>비용과 키 설정 — 무엇에 돈이 드나 →</h3>
-      <p>이미지·목소리·받아쓰기는 기기 안에서 공짜로 돌릴 수 있고, 영상과 음악은 아니다. 무료 경로가 못 하는 일과 유료 경로 단가, 두 경로의 설치·키 발급을 하나씩 다룬다.</p>
+      <p>이미지·목소리·받아쓰기는 기기 안에서 공짜로 돌릴 수 있고, 영상과 음악은 아니다. 무료 경로가 못 하는 일과 유료 경로 단가, 두 경로 설치와 키 발급을 하나씩 다룬다.</p>
     </a>
     <a class="card" href="guides/marketing-basics/index.html">
       <h3>마케팅 초보가 먼저 잡는 말 →</h3>
@@ -69,8 +69,8 @@
       <tr><td rowspan="3">소재</td><td><code>topic-scout</code></td><td>지금 시장에서 검증된 유튜브 주제 — 채널 최근 업로드 중앙값 대비 5배. 사람이 보는 화면은 퍼널·배수 막대 HTML, 루프는 md를 읽는다. 여기에 SNS 이슈 절을 덧붙인다(<code>sns_issue_scout</code> — 스레드·X·인스타를 <code>site:</code> 검색으로 훑은 언급 목록이다. 참여량 수치가 없으므로 유튜브 배수 표와 같은 표에 섞지 않는다)</td></tr>
       <tr><td><code>ingest</code></td><td>화면 녹화(+음성)를 타임라인으로 — 웹 조사를 대신하는 소스</td></tr>
       <tr><td><code>datago</code></td><td>공공데이터 조사·수집·시드 기록</td></tr>
-      <tr><td rowspan="3">제작</td><td><code>storyboard</code></td><td>조사 → 씬 설계 → <strong>적대적 검증 여섯, 각 1회</strong> → 승인. 문안(§4.5)·씬별(§4.6)·어휘(§4.7)·카메라(§4.8)·사운드(§4.9)를 읽고 나서 이미지를 만들고, 만든 이미지를 이미지 검증(§5.5)이 본다. 통과 점수는 없다 — 지적을 한 번 반영하고 넘어가며, 못 고친 지적은 그대로 승인 화면에 올라간다. 막는 건 사람이다. 씬·어휘·카메라는 평균이 아니라 <strong>최저 점수</strong>를 보고한다 — 평균은 무너진 하나를 잘 나온 것들 뒤에 숨겨 준다</td></tr>
-      <tr><td><code>produce</code></td><td>영상 합성과 플랫폼별 텍스트. 포맷은 두 가지다 — 쇼트폼 9:16(1080×1920/30fps·35~75초, 기본값)과 유튜브 롱폼 16:9(1920×1080·8~15분·챕터). 어느 쪽인지는 스토리보드를 쓸 때 정하고, <code>scenes.js</code> 의 <code>window.FORMAT</code> 한 줄이 이후 빌드 상수를 전부 결정한다. 롱폼은 사용자가 직접 찍은 클립과 생성 씬을 한 편에 섞으며, 촬영 씬은 스토리보드가 내주는 촬영 대본(<code>script.md</code>)을 보고 그대로 찍는다</td></tr>
+      <tr><td rowspan="3">제작</td><td><code>storyboard</code></td><td>조사 → 씬 설계 → <strong>적대적 검증 여섯, 각 1회</strong> → 승인. 문안(§4.5)·씬별(§4.6)·어휘(§4.7)·카메라(§4.8)·사운드(§4.9)를 읽고 나서 이미지를 만들고, 만든 이미지를 이미지 검증(§5.5)이 본다. 통과 점수는 없다 — 지적을 한 번 반영하고 넘어가며, 못 고친 지적은 그대로 승인 화면에 올라간다. 막는 건 사람이다. 씬·어휘·카메라는 <strong>최저 점수</strong>를 보고한다 — 평균값은 무너진 하나를 잘 나온 것들 뒤에 숨겨 준다</td></tr>
+      <tr><td><code>produce</code></td><td>영상 합성과 플랫폼별 텍스트. 포맷은 두 가지다 — 쇼트폼 9:16(1080×1920/30fps·35~75초, 기본값)과 유튜브 롱폼 16:9(1920×1080·8~15분·챕터). 어느 쪽인지는 스토리보드를 쓸 때 정하고, <code>scenes.js</code> 의 <code>window.FORMAT</code> 한 줄이 이후 빌드 상수를 전부 결정한다. 롱폼은 사용자가 직접 찍은 클립과 생성 씬을 한 편에 섞으며 촬영 씬은 스토리보드가 내주는 촬영 대본(<code>script.md</code>)을 보고 그대로 찍는다</td></tr>
       <tr><td><code>autoproduce</code></td><td>주제 문자열 하나로 조사부터 빌드까지 무인 관통 — 사람 승인 자리에 기계 게이트 열하나를 세운다</td></tr>
       <tr><td>게시</td><td><code>publish</code></td><td>계정 점검 → 미디어 호스팅 → <strong>HITL 승인</strong> → 게시 → permalink 기록</td></tr>
       <tr><td>운영</td><td><code>grow-threads</code><br><code>grow-youtube</code><br><code>grow-instagram</code><br><code>review-recent</code></td><td>플랜(상시 승인서)을 한 번 승인해 두고 <code>/loop</code> 로 반복하는 자율 성장 루프 1틱 — 댓글 응대·지표 관찰·대화 참여·게시. <code>review-recent</code> 는 최근 5편을 유튜브·인스타로 나눠 퍼널·비교 막대 HTML 로 채점한다</td></tr>
@@ -111,7 +111,7 @@
     </a>
     <a class="card" href="guides/ai-video-production/index.html">
       <h3>AI로 쇼트폼 영상 만들기 →</h3>
-      <p>Veo 와 Seedance 를 가르는 축은 길이가 아니라 그 구간의 소리다. 프롬프트 공식 규칙, 자막을 영상에 태울지, 그리고 아직 답이 없는 영역 셋.</p>
+      <p>Veo 와 Seedance 는 그 구간의 소리로 가른다. 프롬프트 공식 규칙, 자막을 영상에 태울지, 그리고 아직 답이 없는 영역 셋.</p>
     </a>
     <a class="card" href="guides/threads-growth/index.html">
       <h3>스레드 성장 베스트 프랙티스 →</h3>
@@ -134,7 +134,7 @@
 
 <section>
   <h2>리서치 <span class="badge free">한국어만</span></h2>
-  <p>궁금한 것을 그때그때 1차 자료로 확인하고 날짜와 함께 적어 둔 조사 기록이다. 매뉴얼이 아니라 그 시점의 대조 결과이므로 뒤에 바뀐 사실이 있을 수 있고, 그래서 영어판을 따로 만들지 않았다.</p>
+  <p>궁금한 것을 그때그때 1차 자료로 확인하고 날짜와 함께 적어 둔 조사 기록이다. 그 시점의 대조 결과여서 뒤에 바뀐 사실이 있을 수 있고, 그래서 영어판을 따로 만들지 않았다.</p>
   <div class="cards">
     <a class="card" href="research/2026-07-29-us-format-korea-localization/index.html">
       <h3>미국 포맷의 한국 현지화 →</h3>
@@ -158,7 +158,7 @@
     </a>
     <a class="card" href="research/2026-08-15-first-scene-live-action-vs-animation/index.html">
       <h3>첫 장면이 실사면 조회수가 더 나오나 →</h3>
-      <p>2026-08-15 기록. 릴스·쇼츠 오프닝의 실사 대 애니메이션 직감을 1차 자료로 확인했다. 오른 건 매체가 아니라 사람·목소리·움직임이었다.</p>
+      <p>2026-08-15 기록. 릴스·쇼츠 오프닝의 실사 대 애니메이션 직감을 1차 자료로 확인했다. 조회수는 사람·목소리·움직임이 끌어올렸다.</p>
     </a>
     <a class="card" href="research/2026-08-15-ugc-concept/index.html">
       <h3>UGC란 무엇인가 →</h3>
@@ -174,7 +174,7 @@
     </a>
     <a class="card" href="research/2026-08-17-video-cover-design/index.html">
       <h3>영상 커버 잘 만드는 법 →</h3>
-      <p>2026-08-17 기록. 커버는 한 장이 아니라 표면이 셋이다 — 피드의 첫 1~3초, 검색·채널의 정지 썸네일, 프로필 그리드. 인터넷 조언 대부분이 두 번째 얘기다.</p>
+      <p>2026-08-17 기록. 커버가 놓이는 표면은 셋이다 — 피드의 첫 1~3초, 검색·채널의 정지 썸네일, 프로필 그리드. 인터넷 조언 대부분이 두 번째 얘기다.</p>
     </a>
     <a class="card" href="research/2026-08-18-hooking-beat/index.html">
       <h3>커버 다음 후킹 →</h3>
@@ -187,6 +187,10 @@
     <a class="card" href="research/2026-08-25-veo-seedance-timing-prompting/index.html">
       <h3>Veo·Seedance 시간 설정과 프롬프트 — 델타 재검증 →</h3>
       <p>2026-08-25 기록. 옮겨간 공식 문서를 원문으로 다시 대조했다. "한 클립 = 한 순간"이 공식 규범이 됐고, 클립 안의 시간 표기는 엔진·세대별 3분법이며, i2v 작법은 두 벤더가 정반대다. 대사는 따옴표 대신 콜론 — 1씬 = 1호출·저장 프롬프트 계약(§clip prompt)의 근거.</p>
+    </a>
+    <a class="card" href="research/2026-08-26-still-photo-camera-motion/index.html">
+      <h3>사진 한 장을 6초짜리 카메라로 쓰는 법 →</h3>
+      <p>2026-08-26 기록. 참고 숏폼 46초를 프레임 단위로 뜯어 정지 사진 4컷의 줌 폭·속도·이징을 실측했다. 설명 컷은 초당 4%, 결론 컷은 6%, 행동과 CTA는 14~21% — 우리 빌더 기본값 3.5%와 열 배 차이다. 컷 역할별 줌 사다리, ease-in, 암전 전환, 움직이는 오버레이의 근거.</p>
     </a>
   </div>
 </section>

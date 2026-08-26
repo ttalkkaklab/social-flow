@@ -79,8 +79,9 @@ In this mode skip the style check and per-axis scores — judge only the plan P0
    (especially Korean). Veo can't write Korean, and lettering in images produces
    fake documents and misread signs
 5. **Missing/misplaced negative prompt** — profile §3's required negative
-   prompt, or the cover-shared image's "lower third fading into darkness", is
-   absent from the prompt. **Present but in the wrong place is the same P0** —
+   prompt is absent from the prompt. **A letterbox / lower-third fade / top-bottom
+   gradient instruction in the prompt is itself a P0** (owner 2026-08-25 — never
+   bake a cinematic bar into the picture). **Present but in the wrong place is the same P0** —
    for `veo_*` calls the exclusions go into the `negativePrompt` argument as
    noun/adjective phrases (`text, subtitles, wall`), not into the prompt body
    (on the new schema that's the stored `negative` field beside the clip

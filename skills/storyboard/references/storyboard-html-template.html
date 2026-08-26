@@ -391,16 +391,15 @@
     color: #fff; text-align: center; line-height: 1.2;
   }
   .fr .fbg { position: absolute; inset: 0; background-size: cover; background-position: center; }
-  .fr .fscrim { position: absolute; inset: 0; }
-  /* Scrim — the d1 strength from video-template.html */
-  .fr.t-cover  .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.16) 0%, rgba(5,8,20,0) 34%, rgba(5,8,20,.42) 62%, rgba(5,8,20,.90) 100%); }
-  .fr.t-points .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.64) 0%, rgba(5,8,20,.48) 28%, rgba(5,8,20,0) 48%, rgba(5,8,20,0) 68%, rgba(5,8,20,.52) 100%); }
-  .fr.t-quote  .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.55) 0%, rgba(5,8,20,.38) 35%, rgba(5,8,20,.52) 62%, rgba(5,8,20,.92) 100%); }
+  .fr .fscrim { display: none; } /* 소유자 지시 2026-08-25: 상·하단 그라데이션 금지 */
+  .fr.t-cover  .fscrim,
+  .fr.t-points .fscrim,
+  .fr.t-quote  .fscrim { background: none; }
   /* Over a speech clip (alpha) there is no full wash like the still card — only top and
      bottom scrims for the signature and the subtitles */
-  .fr.t-quote.fclip .fscrim { background: linear-gradient(180deg, rgba(5,8,20,.78) 0%, rgba(5,8,20,0) 22.4%, rgba(5,8,20,0) 66.7%, rgba(5,8,20,.85) 100%); }
-  /* Light (illustration) mode — ink text over white-background line art + a white wash */
-  .fr.light .fscrim { background: linear-gradient(180deg, rgba(255,255,255,.66) 0%, rgba(255,255,255,0) 34%, rgba(255,255,255,0) 64%, rgba(255,255,255,.66) 100%); }
+  .fr.t-quote.fclip .fscrim,
+  .fr.light .fscrim,
+  .fr.wide.rec .fscrim { background: none; }
   .fr.light { color: var(--ink); }
 
   /* Text zone — left/right 176/1080, top 190/1920, bottom 570/1920 */
@@ -594,7 +593,6 @@
   .fr.wide .fzone.l3 .f-ptitle { border-left: calc(var(--fw) * .003) solid var(--accent);
     padding-left: calc(var(--fw) * .010); }
   .fr.wide .fzone.l3 .f-foot { text-align: left; }
-  .fr.wide.rec .fscrim { background: linear-gradient(0deg, rgba(5,8,20,.82) 0%, rgba(5,8,20,.46) 28%, rgba(5,8,20,0) 48%); }
 
   /* Measurement harness — measures on a 1080px canvas (off-screen).
      The border is dropped — the produce canvas has none, and it would narrow the text zone by 2px.
@@ -1196,7 +1194,14 @@ window.SB_DOC = {
               (hasClip ? " fclip" : "") + (tier ? " tight" + tier : "");
     var h = '<div class="' + cls + '">';
     if (bg) h += '<div class="fbg" style="background-image:url(\'' + esc(bg) + '\')"></div>';
-    h += '<div class="fscrim"></div>';
+    // 소유자 지시 2026-08-25: 상·하단 그라데이션 스크림은 어떤 컷에도 넣지 않는다.
+    // overlay none 은 그림만 — 빈 글자 칸을 올려도 미리보기에 막이 생긴다.
+
+    if (overlayOf(s) === "none") {
+      if (seg && seg.sub) h += '<div class="f-sub">' + esc(seg.sub) + "</div>";
+      h += '<div class="fsafe"></div></div>';
+      return h;
+    }
 
     if (recTall(s)) {
       h += '<div class="f-band">recorded screen</div><div class="f-top">';
