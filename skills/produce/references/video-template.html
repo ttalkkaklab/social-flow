@@ -37,9 +37,9 @@
                     but opacity:0, and the captions are stacked in one grid cell so the
                     layout never moves — no display:none, which would pollute the xfade
       &alpha=1      drop the background and the glow + transparent body (for the overlay PNG that goes over video)
-      &scrim=1      show the band scrim layer (kept in alpha mode too — it's baked into the PNG)
-      &dim=0|1|2    scrim strength (0 favors the picture / 1 default / 2 for bright backgrounds only).
-                    The shape comes from the scene type — cover=bottom band, points=top band
+      &scrim=1      inert — gradient scrims are banned (owner 2026-08-25); kept for URL
+                    compatibility, draws nothing
+      &dim=0|1|2    inert — was the scrim strength; same ban as scrim=1
       &bg=<url>     still background image (for opaque captures)
   ■ Safe zone (measured on a tall phone — don't shrink it):
       text zone x 176~904 (728 wide) · y 190~1350. The bottom 570px is the subtitle band + platform UI.
@@ -198,12 +198,12 @@
   .quote-sign .name{font-size:52px;font-weight:800;text-shadow:0 4px 24px rgba(0,0,0,.6)}
   .quote-sign .role{font-size:32px;font-weight:600;color:rgba(255,255,255,.85);margin-top:12px}
   .quote-sign .role .ai{color:var(--accent);font-weight:800}
-  /* Top/bottom scrims for the speaking overlay only — baked into the PNG (signature contrast + subtitle contrast) */
+  /* 소유자 지시 2026-08-25: 상·하단 그라데이션 금지 — 스피킹 오버레이 PNG 에도 깔지 않는다 (storyboard-html-template 과 동일) */
   .quote-scrim-top{position:absolute;left:0;right:0;top:0;height:430px;display:none;
     background:linear-gradient(180deg,rgba(5,8,20,.78),rgba(5,8,20,0))}
   .quote-scrim-bot{position:absolute;left:0;right:0;bottom:0;height:640px;display:none;
     background:linear-gradient(0deg,rgba(5,8,20,.85),rgba(5,8,20,0))}
-  body.alpha.scene-quote .quote-scrim-top, body.alpha.scene-quote .quote-scrim-bot{display:block}
+  body.alpha.scene-quote .quote-scrim-top, body.alpha.scene-quote .quote-scrim-bot{display:none}
   .quote-card{font-size:56px;line-height:1.45;font-weight:650;word-break:keep-all}
   .quote-card::before{content:"“";display:block;font-size:150px;line-height:.6;
     color:var(--accent);margin-bottom:30px}

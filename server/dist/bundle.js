@@ -77850,7 +77850,7 @@ var SEEDANCE_MODEL_PROPERTY = {
 };
 var SEEDANCE_RESOLUTION_PROPERTY = {
   type: "string",
-  description: `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model \u2014 1080p needs 2.0, 1.5 pro, or 1.0 pro/fast; 4k is 2.0 only; 2.5 and the 2.0 fast/mini models top out at 720p.`,
+  description: `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model \u2014 1080p needs 2.5, 2.0, 1.5 pro, or 1.0 pro/fast; 4k is 2.0 only; the 2.0 fast/mini models top out at 720p.`,
   enum: [...VALID_SEEDANCE_RESOLUTIONS],
   default: DEFAULT_SEEDANCE_RESOLUTION
 };

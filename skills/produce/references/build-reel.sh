@@ -289,7 +289,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #    is a failure (silently ignored typos ship a filmed card missing sync 0.4s out of step, and
   #    only eyes would catch it). Two-value options use ":" inside the value (pan=l2r:1.12,
   #    focus=0.6:0.4) — "," is the k=v separator and stays out of values.
-  SYNC=0; SUBSF=""; PAN=""; PZ="$PAN_Z"; FX=0.5; FY=0.5; DRIFT=0; SPAN="$ZOOM_SPAN"; EASE="$KB_EASE"
+  SYNC=0; SUBSF=""; PAN=""; PZ="$PAN_Z"; FX=0.5; FY=0.5; DRIFT=0; SPAN="$ZOOM_SPAN"; EASE="$KB_EASE"; SPANSET=0
   case "${ZDIR:-auto}" in in|out|auto|none|punch|hold) : ;;
     *) say "✗ card $IDX: unknown zoom (column 4) — $ZDIR (in|out|auto|none|punch|hold)"; exit 1 ;; esac
   if [ -n "${OPTS:-}" ]; then
@@ -312,14 +312,22 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         drift=0) DRIFT=0 ;;
         span=*) SPAN=$(awk -v v="${KV#span=}" 'BEGIN{if(v==""||v!=v+0){print "bad"; exit} if(v<0)v=0; if(v>1.5)v=1.5; printf "%.3f", v}')
                 [ "$SPAN" = "bad" ] && { say "✗ card $IDX: span wants a number 0..1.5 — $KV"; exit 1; }
-                # Past the ZOOM_BASE headroom the zoompan window upscales the source — visible blur.
-                awk -v s="$SPAN" -v zw="${ZOOM_BASE%x*}" -v w="$W" 'BEGIN{exit !(1+s > zw/w)}' \
-                  && say "⚠ card $IDX: span=$SPAN zooms past ZOOM_BASE/canvas (${ZOOM_BASE%x*}/$W) — raise ZOOM_BASE and feed a higher-res source" ;;
+                SPANSET=1 ;;
         ease=*) EASE="${KV#ease=}"
                 case "$EASE" in smooth|linear|in) : ;; *) say "✗ card $IDX: unknown ease — $EASE (smooth|linear|in)"; exit 1;; esac ;;
         *) say "✗ card $IDX: unknown cards.tsv column-5 option — $KV"; exit 1 ;;
       esac
     done
+  fi
+  # Past the ZOOM_BASE headroom the zoompan window upscales the source — visible blur. Checked
+  # after the option loop so pan=/drift= anywhere in the k=v list counts into the real base zoom
+  # (pan base PZ, drift base DRIFT_Z, else 1 — the same bases the Ken Burns section uses below).
+  # hold/none never zoom, and pan under column-4 auto keeps a fixed scale — span is unused there.
+  if [ "$SPANSET" -eq 1 ] && [ "${ZDIR:-auto}" != "hold" ] && [ "${ZDIR:-auto}" != "none" ] \
+     && ! { [ -n "$PAN" ] && [ "${ZDIR:-auto}" = "auto" ]; }; then
+    if [ -n "$PAN" ]; then BASEZ="$PZ"; elif [ "$DRIFT" -eq 1 ]; then BASEZ="$DRIFT_Z"; else BASEZ=1; fi
+    awk -v s="$SPAN" -v b="$BASEZ" -v zw="${ZOOM_BASE%x*}" -v w="$W" 'BEGIN{exit !(b+s > zw/w)}' \
+      && { say "⚠ card $IDX: base $BASEZ + span=$SPAN zooms past ZOOM_BASE/canvas (${ZOOM_BASE%x*}/$W) — raise ZOOM_BASE and feed a higher-res source"; WARN=1; }
   fi
   # A filmed card (sync) gets no margins — with pre-roll the picture runs from 0s while the sound alone lags 0.4s.
   if [ "$SYNC" -eq 1 ]; then CPRE=0; CPOST=0; CMIN=0; else CPRE=$PRE; CPOST=$POST; CMIN=$MIN_DUR; fi
@@ -573,7 +581,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # register measured in docs/research/2026-08-26-still-photo-camera-motion).
   case "$EASE" in linear) E="$PEXPR" ;; in) E="($PEXPR*$PEXPR)" ;; *) E="($PEXPR*$PEXPR*(3-2*$PEXPR))" ;; esac
   KTAG=""
-  [ "$SPAN" != "$ZOOM_SPAN" ] && KTAG="+span=$SPAN"
+  [ "$SPAN" != "$(awk -v v="$ZOOM_SPAN" 'BEGIN{printf "%.3f", v}')" ] && KTAG="+span=$SPAN"
   [ "$EASE" != "$KB_EASE" ] && KTAG="$KTAG+ease-$EASE"
   if [ "$DRIFT" -eq 1 ]; then
     DXE="+$DRIFT_AMP*(0.6*sin(2*PI*$DRIFT_F1*on/$FPS)+0.4*sin(2*PI*$DRIFT_F2*on/$FPS+1.7))"

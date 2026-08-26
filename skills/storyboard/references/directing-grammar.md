@@ -221,7 +221,8 @@ contract, not from here.
 **Assemble, don't prose.** `assemble-bg-prompt.js` writes the prompt in this order
 — size words, angle words, `From the camera: layout. facing. line. light.`, then the scene,
 the mood, the exclusions (`--exclude` — the image tools have no exclusion argument, so the
-noun list rides in the body) and the lower-third tail. On a still with nobody in it,
+noun list rides in the body) and the fill-the-frame tail (owner 2026-08-25 — no
+letterbox or lower-third fade). On a still with nobody in it,
 `--no-person` swaps the size ladder's body words ("full body", "chest up") for the subject's.
 storyboard §5 runs it before the generation call and stores the full stdout as `bgPrompt`.
 Hand-written prefixes that fight the fields are a camera-mode finding.

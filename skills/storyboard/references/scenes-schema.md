@@ -1128,13 +1128,13 @@ either way (absolute rule 10); this is about words that live inside the picture.
   **The one exception is an explicit per-episode user directive** (2026-08-15, the Ttalkkak Lab
   Seedance episode — "impact at the start"). Even then the body of absolute rule 10 stands —
   **the text is still a code-rendered overlay** and generated video isn't trusted with text.
-  Three contracts come attached when using a video cover: **anchor the text at the top** (there's
-  no guarantee the center stays empty when the subject moves), **switch to a top-heavy scrim**
-  (the default cover scrim is bottom-heavy and can't protect text up top — measured, contrast
-  collapsed to 4.35:1 the moment a white subject crossed the text line), and if you leave the
-  narration empty, that stretch **uses the clip's own audio** (the same behavior as absolute rule
-  9, so no subtitles either). The template applies the first two automatically when it sees a
-  cover with `visual.video`.
+  Two contracts come attached when using a video cover: **anchor the text at the top** (there's
+  no guarantee the center stays empty when the subject moves — the template does this
+  automatically when it sees a cover with `visual.video`), and if you leave the narration
+  empty, that stretch **uses the clip's own audio** (the same behavior as absolute rule 9, so
+  no subtitles either). No scrim backs the text up any more — gradient scrims are off (owner
+  2026-08-25) — so check the clip's top stays dark or plain enough for white type before
+  committing to a video cover.
 - **Narration and subtitles are kept** — absolute rule 9 (use the video's audio, no narration) is
   about b-roll **splice stretches**. For a motion background the builder uses only the video
   track, so the clip's audio is discarded and TTS, subtitles, and BGM carry on.

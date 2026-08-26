@@ -432,8 +432,9 @@ only the summary is here.
   `gpt_image_text2img`, `size: "1088x1920"`, **`quality: "high"`**. **Photoreal style with a
   person in it** (absolute rules 11·12) — generated people only (a Korean woman by default),
   an angle that puts the channel's subject at the center, a scene that shows the topic at a
-  glance. Inherit profile §3's mood, its required negative instructions, and "lower third
-  fading into darkness", but swap `face not visible` for
+  glance. Inherit profile §3's mood, its required negative instructions, and the
+  fill-the-frame tail (owner 2026-08-25 — never a letterbox or a lower-third fade), but
+  swap `face not visible` for
   **`seen from behind, face turned away`** so the person is clearly visible.
   The cover capture (`bg=./scene-1.png`) and veo's input use the same file, so when the cover
   ends that photo starts moving.
@@ -713,16 +714,12 @@ row** — the alpha capture carries only the text and §6's assembly lays the vi
 On an illustration-mode episode, keep `&light=1` on this scene too (ink text over a
 white-keyed video — the light wash comes along in the alpha capture).
 
-**The scrim is a band, not a full-screen dim** (absolute rule 14) — the template reads the
-scene type and draws a bottom band for cover and a top band for points (plus a shallow bottom
-one as subtitle insurance). The middle of the frame is clear at any dim — **the static quote
-card is the one exception** and keeps the old full wash (the quote sits in the middle of the
-frame). **Pick `dim` from the background brightness where the text band sits** — if it's
-bright, `dim=1` buries the white title and sinks the accent chip (the accent gradient) into
-the background. Go up to `dim=2` then. Don't vary the value scene to scene; keep **every
-points scene in the episode on the same value** (otherwise the look changes).
-Measured: bright studio and pale linen backgrounds needed `dim=2`, dark backgrounds were fine
-at `dim=1` (2026-08-12 band-scrim remeasurement came out the same).
+**The scrim layer is off** (owner 2026-08-25 — no top/bottom gradient bars): the template
+keeps the `scrim=`/`dim=` URL parameters so existing capture commands still run, but draws
+nothing for them, on any scene type (the static quote card's full wash included). Text
+contrast now rides on the background itself — the fill-the-frame prompt tail plus profile
+§3's mood — so when a title reads dim against its band, fix the background image, not a
+scrim value.
 
 A points reveal transition is a **caption swap** — the state count is 1 (background) +
 1 (title and source) + the number of captions. Bullets don't stack into a list; only the
