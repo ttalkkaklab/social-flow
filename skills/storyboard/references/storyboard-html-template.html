@@ -846,7 +846,7 @@ window.SB_DOC = {
      (the entry point that has kept regressions at zero). */
   var FMT_MIRROR = {
     "shorts-9x16": {
-      label: "Short-form 9:16",
+      label: "세로 쇼트폼 9:16",
       totalMin: 35, totalMax: 75, totalHard: 90,
       sceneCountMin: 4, sceneCountMax: 7,
       sceneMax: 13, recSceneMax: 20,
@@ -874,7 +874,7 @@ window.SB_DOC = {
   /* Long-form produces hard-to-read numbers like 900s — anything past 2 minutes is written in minutes. */
   function durTxt(t) {
     t = Math.round(t || 0);
-    return t >= 120 ? (t / 60).toFixed(1) + "min" : t + "s";
+    return t >= 120 ? (t / 60).toFixed(1) + "분" : t + "초";
   }
   var root = document.documentElement.style;
   // A missing value would go straight in as --accent: undefined and void every color-mix
@@ -898,7 +898,7 @@ window.SB_DOC = {
      The four camera slots are settled in scenes.js (scenes-schema §camera) — the clip prompt
      is assembled out of them here and stored (§clip prompt), and produce sends it verbatim,
      so a slot left empty is a defect here, not there. */
-  var CAM_SLOTS = [["movement", "MOVE"], ["speed", "SPEED"], ["framing", "FRAME"], ["end", "END"]];
+  var CAM_SLOTS = [["movement", "움직임"], ["speed", "속도"], ["framing", "프레임"], ["end", "끝 프레임"]];
   function camOf(s) { return (s.visual && s.visual.camera) || null; }
   function camHtml(cam) {
     if (!cam) return "";
@@ -964,14 +964,16 @@ window.SB_DOC = {
      still draws as it is. */
   /* Shot size vocabulary — directing-grammar §2 (ws is the legacy key for ls). Compositions that
      say more than the distance (two · ots · pov · back …) ride in the same field. */
-  var SIZE_KO = { els: "extreme long", ls: "long / wide", ws: "wide", fs: "full", mfs: "medium full", ms: "medium",
-                  mcu: "medium close-up", cu: "close-up", choker: "choker", ecu: "extreme close-up", insert: "insert",
-                  two: "two-shot", three: "three-shot", ots: "over the shoulder", pov: "POV", back: "from behind",
-                  cutaway: "cutaway", reaction: "reaction" };
+  var SIZE_KO = { els: "아주 먼", ls: "먼 / 넓은", ws: "넓은", fs: "전신", mfs: "무릎 위", ms: "허리 위",
+                  mcu: "가슴 위", cu: "얼굴", choker: "턱 위", ecu: "눈만", insert: "물건만",
+                  two: "둘이 함께", three: "셋이 함께", ots: "어깨 너머", pov: "그 사람 눈", back: "뒤에서",
+                  cutaway: "딴 데 보기", reaction: "반응" };
   /* Camera height against the subject's eyes — directing-grammar §3. eye is the default. */
-  var ANGLE_KO = { eye: "eye level", high: "high angle", low: "low angle", overhead: "overhead", dutch: "dutch" };
+  var ANGLE_KO = { eye: "눈높이", high: "내려다봄", low: "올려다봄", overhead: "머리 위", dutch: "기울임" };
   var CLOSE_SIZES = { cu: 1, choker: 1, ecu: 1 };
-  var PIC_KO = { still: "still photo", "ai-video": "AI video", recording: "recording", asset: "shared asset", slide: "HTML slide" };
+  /* 샷 타입 표시 이름 — 로직은 원래 키로만 판단한다 */
+  var TYPE_KO = { cover: "커버", points: "본문", quote: "인용", broll: "삽입 영상", outro: "아웃트로" };
+  var PIC_KO = { still: "정지 그림", "ai-video": "AI 영상", recording: "녹화분", asset: "공용 소재", slide: "HTML 슬라이드" };
   function inferredPicture(s) {
     if (s.visual && s.visual.source === "recording") return "recording";
     if (s.visual && s.visual.slide) return "slide";
@@ -988,13 +990,13 @@ window.SB_DOC = {
   function pictureOf(s) { return (s.visual && s.visual.picture) || inferredPicture(s); }
   function overlayOf(s) { return (s.visual && s.visual.overlay) || inferredOverlay(s); }
   function overlayLabel(s) {
-    if (overlayOf(s) === "none") return "no overlay";
+    if (overlayOf(s) === "none") return "글자 없음";
     var narr = s.narration || [];
-    if (narr.some(function (n) { return /^card:/.test(n.imgPrompt || ""); })) return "HTML typing";
-    if (s.type === "points" && (s.bullets || []).length) return "HTML caption";
-    if (s.type === "cover") return "HTML reveal";
-    if (s.type === "quote") return "HTML signature";
-    return "HTML staging";
+    if (narr.some(function (n) { return /^card:/.test(n.imgPrompt || ""); })) return "HTML 타이핑";
+    if (s.type === "points" && (s.bullets || []).length) return "HTML 자막";
+    if (s.type === "cover") return "HTML 공개";
+    if (s.type === "quote") return "HTML 서명";
+    return "HTML 연출";
   }
   function grammarOf(s, i) {
     var sp = (s.shot && s.shot.space) || {};
@@ -1045,18 +1047,18 @@ window.SB_DOC = {
   // Playback role — orthogonal to type. scenes-schema §playback order is the source of truth.
   // answer-first: cover → hooking → result → body; story: cover → hooking → body → turn → result.
   // Left unwritten, it is read off type and the sequence heading.
-  var BEAT_KO = { hook: "cover", hooking: "hooking", result: "result", body: "body", turn: "turn", cta: "CTA" };
+  var BEAT_KO = { hook: "커버", hooking: "후킹", result: "결과", body: "본문", turn: "전환", cta: "다음 안내" };
   // Arc — which playback order the episode walks (scenes-schema §playback order). answer-first is the
   // default and what a file with no arc is read as; story puts the payoff after the turn.
-  var ARC_KO = { "answer-first": "answer first", story: "story" };
+  var ARC_KO = { "answer-first": "결론 먼저", story: "이야기" };
   // Opening strategy — the cover shot's hookType. Every episode uses one of the four
   // (scenes-schema §the four opening strategies). Missing, or a value outside the four, and the
   // check strip warns — that is a request for a name tag; docking points is the reviewer's job.
-  var HOOK_KO = { fear: "fear", empathy: "empathy", curiosity: "curiosity", spoiler: "ending first" };
+  var HOOK_KO = { fear: "불안", empathy: "공감", curiosity: "궁금증", spoiler: "결말 먼저" };
   // Hook form — how the first line is built (scenes-schema §the six hook forms). hookType says why
   // the viewer stops; hookForm says the shape the title and segment ① take. Missing is a warning.
-  var HOOK_FORM_KO = { paradox: "paradox", gap: "curiosity gap", payoff: "result first", identify: "self-identification",
-                       number: "number / framework", secret: "secret reveal" };
+  var HOOK_FORM_KO = { paradox: "역설", gap: "빈칸 남기기", payoff: "결과 먼저", identify: "내 얘기네",
+                       number: "숫자·틀", secret: "비밀 공개" };
   function beatOf(s) {
     if (s.beat) return s.beat;
     if (s.type === "cover") return "hook";
@@ -1131,7 +1133,7 @@ window.SB_DOC = {
       return [{ label: "overlay + first subtitle", seg: narr.length ? 0 : -1, cap: -1 }];
     }
     if (s.type === "cover") {
-      out.push({ label: "title", seg: 0, cap: -1 });
+      out.push({ label: "제목", seg: 0, cap: -1 });
       if (s.stat) out.push({ label: "hero stat", seg: 1, cap: -1 });
     } else if (s.type === "points") {
       // What divides cuts is "the moment the screen changes". On the caption edition (bullets)
@@ -1149,16 +1151,16 @@ window.SB_DOC = {
         narr.forEach(function (n, k) {
           var im = n.img || prevImg;
           if (k === 0 || im !== prevImg) {
-            out.push({ label: /^card:/.test(n.imgPrompt || "") ? "prompt card"
-                            : k === 0 ? "title · source" : "illustration swap",
+            out.push({ label: /^card:/.test(n.imgPrompt || "") ? "프롬프트 카드"
+                            : k === 0 ? "제목 · 출처" : "삽화 교체",
                        seg: k, cap: -1 });
           }
           prevImg = im;
         });
       } else {
-        out.push({ label: "title · source", seg: 0, cap: -1 });
+        out.push({ label: "제목 · 출처", seg: 0, cap: -1 });
         (s.bullets || []).forEach(function (b, k) {
-          out.push({ label: "caption " + (k + 1), seg: k + 1, cap: k }); });
+          out.push({ label: "자막 " + (k + 1), seg: k + 1, cap: k }); });
       }
     } else if (s.type === "quote") {
       // Over a speech clip (alpha) only the signature is laid on, so the screen never changes —
@@ -1171,7 +1173,7 @@ window.SB_DOC = {
         out.push({ label: "quote", seg: 1, cap: -1 });
       }
     } else {
-      out.push({ label: "whole frame", seg: 0, cap: -1 });
+      out.push({ label: "화면 전체", seg: 0, cap: -1 });
     }
     // When one sentence covers two captions the subtitle stays put for the duration — the last
     // line carries over. Which sentence gets split is decided by produce, via sub-reveals (A|B).
@@ -1306,91 +1308,91 @@ window.SB_DOC = {
     var syl = narr.reduce(function (a, n) { return a + netLen(n.tts); }, 0);
     var rate = s.duration ? syl / s.duration : 0;
     var maxSent = narr.reduce(function (a, n) { return Math.max(a, netLen(n.tts)); }, 0);
-    var chips = [badge("", (s.duration || "?") + "s")];
+    var chips = [badge("", (s.duration || "?") + "초")];
     if (recOf(s)) {
       if (syl) {
-        chips.push(badge("", syl + " chars"));
+        chips.push(badge("", syl + "자"));
         var rOk = rate >= 4.5 && rate <= 6.5;
-        chips.push(badge(rOk ? "ok" : "warn", rate.toFixed(2) + " chars/s"));
-        if (!rOk) flag("warn", "Shot " + no, "speech rate " + rate.toFixed(2) + " chars/s — the shooting standard is 5~6 chars/s (4.5~6.5 allowed)");
+        chips.push(badge(rOk ? "ok" : "warn", rate.toFixed(2) + "자/초"));
+        if (!rOk) flag("warn", "샷 " + no, "speech rate " + rate.toFixed(2) + " chars/s — the shooting standard is 5~6 chars/s (4.5~6.5 allowed)");
       }
       // The long-form shooting lane has no scene cap (recSceneMax: null) — one continuous
       // recording arriving as one scene is the normal path, and a cap would force the user to
       // chop up a natural take.
       if (FMT.recSceneMax !== null && s.duration > FMT.recSceneMax) {
-        chips.push(badge("bad", "over " + FMT.recSceneMax + "s"));
-        flag("bad", "Shot " + no, "length " + s.duration + "s — the shooting-mode scene cap is " + FMT.recSceneMax + "s");
+        chips.push(badge("bad", FMT.recSceneMax + "초 넘김"));
+        flag("bad", "샷 " + no, "length " + s.duration + "s — the shooting-mode scene cap is " + FMT.recSceneMax + "s");
       } else if (s.duration && s.duration < 8) {
-        chips.push(badge("warn", "under 8s"));
-        flag("warn", "Shot " + no, "length " + s.duration + "s — shooting-mode scenes target 8s or more");
+        chips.push(badge("warn", "8초 미만"));
+        flag("warn", "샷 " + no, "length " + s.duration + "s — shooting-mode scenes target 8s or more");
       }
-      if (maxSent > 40) { chips.push(badge("warn", "sentence " + maxSent + " chars")); flag("warn", "Shot " + no, "longest sentence " + maxSent + " chars — the shooting script recommends 40"); }
+      if (maxSent > 40) { chips.push(badge("warn", "한 문장 " + maxSent + "자")); flag("warn", "샷 " + no, "제일 긴 문장이 " + maxSent + "자 — 촬영 대본 권장은 40자"); }
 
       /* Shooting-scene contract (scenes-schema §filmed scenes) — all three fields have to be
          there for the user to know what to film and for produce to find the file. Discovering
          one is empty after approval means starting the shoot over. */
       var vz = s.visual || {};
       if (!vz.clip) {
-        chips.push(badge("bad", "no clip"));
-        flag("bad", "Shot " + no, "a shooting scene with no visual.clip (filename) — the user has nowhere to save it");
+        chips.push(badge("bad", "클립 없음"));
+        flag("bad", "샷 " + no, "a shooting scene with no visual.clip (filename) — the user has nowhere to save it");
       } else if (!/^footage\/s\d+-[a-z0-9-]+\.(mp4|mov|m4v)$/.test(vz.clip)) {
-        chips.push(badge("warn", "clip naming"));
-        flag("warn", "Shot " + no, "clip \"" + vz.clip + "\" — the convention is footage/s<scene number>-<slug>.mp4");
+        chips.push(badge("warn", "클립 이름 규칙"));
+        flag("warn", "샷 " + no, "clip \"" + vz.clip + "\" — the convention is footage/s<scene number>-<slug>.mp4");
       }
-      if (!vz.shot) flag("bad", "Shot " + no, "a shooting scene with no visual.shot (what is on screen)");
-      if (!vz.action) flag("bad", "Shot " + no, "a shooting scene with no visual.action (what the user does)");
+      if (!vz.shot) flag("bad", "샷 " + no, "a shooting scene with no visual.shot (what is on screen)");
+      if (!vz.action) flag("bad", "샷 " + no, "a shooting scene with no visual.action (what the user does)");
       // On an all-live-voice episode (window.VOICE === "user") a filmed scene fills narration too —
       // those segments are lines to speak, not a TTS script (scenes-schema §all-live-voice episodes).
-      chips.push(badge("", narr.length ? (window.VOICE === "user" ? "live-voice script" : "narration over it") : "live voice"));
+      chips.push(badge("", narr.length ? (window.VOICE === "user" ? "직접 말할 대본" : "나레이션 얹음") : "직접 말함"));
     } else if (s.type !== "broll" && s.type !== "outro") {
       /* Slide-scene contract (scenes-schema §slide scenes) — the filename and the plan are what
          gets approved; the file itself arrives after approval. Coexisting with bg is a
          contradiction (there is only one screen). */
       var sl = s.visual && s.visual.slide;
       if (sl) {
-        chips.push(badge("", "slide"));
+        chips.push(badge("", "슬라이드"));
         if (!sl.plan) {
-          chips.push(badge("bad", "no plan"));
-          flag("bad", "Shot " + no, "a slide scene with no slide.plan (what to draw) — approval reads this plan");
+          chips.push(badge("bad", "구성 없음"));
+          flag("bad", "샷 " + no, "a slide scene with no slide.plan (what to draw) — approval reads this plan");
         }
         if (!sl.file) {
-          chips.push(badge("bad", "no file"));
-          flag("bad", "Shot " + no, "a slide scene with no slide.file");
+          chips.push(badge("bad", "파일 없음"));
+          flag("bad", "샷 " + no, "a slide scene with no slide.file");
         } else if (!new RegExp("^slides/s" + no + "-[a-z0-9-]+\\.html$").test(sl.file)) {
-          chips.push(badge("warn", "file naming"));
-          flag("warn", "Shot " + no, 'slide.file "' + sl.file + '" — the convention is slides/s' + no + "-<slug>.html (shot number = array position)");
+          chips.push(badge("warn", "파일 이름 규칙"));
+          flag("warn", "샷 " + no, 'slide.file "' + sl.file + '" — the convention is slides/s' + no + "-<slug>.html (shot number = array position)");
         }
         if (s.visual.bg)
-          flag("warn", "Shot " + no, "a slide scene also carrying bg — the screen is the slide alone");
+          flag("warn", "샷 " + no, "a slide scene also carrying bg — the screen is the slide alone");
       }
       var cap = s.type === "cover" ? FMT.capCover : FMT.capBody;
       if (narr.length) {
-        chips.push(badge(syl <= cap ? "ok" : "bad", "chars " + syl + "/" + cap));
-        if (syl > cap) flag("bad", "Shot " + no, "narration " + syl + " chars — cap " + cap + " (" + s.type + ")");
+        chips.push(badge(syl <= cap ? "ok" : "bad", "글자 " + syl + "/" + cap));
+        if (syl > cap) flag("bad", "샷 " + no, "narration " + syl + " chars — cap " + cap + " (" + s.type + ")");
       } else if (s.type === "quote" && s.visual && s.visual.clip) {
         // Only a speech-clip quote is exempt — the actor speaks, so having no TTS narration is
         // normal. A still quote card with no clip has no sound at all, so it drops to the
         // violation branch below.
-        chips.push(badge("", "speech clip"));
+        chips.push(badge("", "말하는 클립"));
       } else if (s.type === "cover" && s.visual && s.visual.video) {
         // A video cover is exempt too — that stretch uses the audio the clip carries (the same
         // behavior as absolute rule 9). A still-background cover with empty narration drops to
         // the violation branch below.
-        chips.push(badge("", "clip audio"));
+        chips.push(badge("", "클립 소리"));
       } else {
-        chips.push(badge("bad", "no narration"));
-        flag("bad", "Shot " + no, "narration is empty — it holds " + (s.duration || "?") + " seconds with no sound");
+        chips.push(badge("bad", "나레이션 없음"));
+        flag("bad", "샷 " + no, "narration is empty — it holds " + (s.duration || "?") + " seconds with no sound");
       }
-      var sentBand = FMT.sentMin + "~" + FMT.sentMax + " chars";
+      var sentBand = FMT.sentMin + "~" + FMT.sentMax + "자";
       var shortSent = narr.some(function (n) { return netLen(n.tts) < FMT.sentMin; });
       if (maxSent > FMT.sentMax || shortSent) {
-        chips.push(badge("warn", "sentence " + sentBand));
-        flag("warn", "Shot " + no, (maxSent > FMT.sentMax ? "longest sentence " + maxSent + " chars"
-             : "a sentence under " + FMT.sentMin + " chars") + " — per sentence " + sentBand);
+        chips.push(badge("warn", "문장 " + sentBand));
+        flag("warn", "샷 " + no, (maxSent > FMT.sentMax ? "제일 긴 문장이 " + maxSent + "자"
+             : "한 문장이 " + FMT.sentMin + "자 미만") + " — 문장 하나는 " + sentBand);
       }
       if (s.duration > FMT.sceneMax) {
-        chips.push(badge("warn", "over " + FMT.sceneMax + "s"));
-        flag("warn", "Shot " + no, "length " + s.duration + "s — the generated-mode scene cap is " + FMT.sceneMax + "s");
+        chips.push(badge("warn", FMT.sceneMax + "초 넘김"));
+        flag("warn", "샷 " + no, "length " + s.duration + "s — the generated-mode scene cap is " + FMT.sceneMax + "s");
       }
       // Motion-background scene contract (scenes-schema §motion background) — the cut badge (vtag) carries the type
       if (s.visual && s.visual.video) {
@@ -1398,36 +1400,36 @@ window.SB_DOC = {
         // (scenes-schema §motion background). Text still has to be a code-rendered overlay, so
         // this also watches for text handed off to the generated video.
         if (s.type !== "points" && s.type !== "cover")
-          flag("bad", "Shot " + no, "a motion background (visual.video) is points-only — it cannot be used on " + s.type);
+          flag("bad", "샷 " + no, "a motion background (visual.video) is points-only — it cannot be used on " + s.type);
         // One scene = one call, so the routed engine's server-validated range caps the scene
         // (scenes-schema §clip prompt). The default route 1.5 pro takes 4–12s — the old 15s
         // figure was Seedance 2.0's. Veo is fixed at 8. The real danger is a clip shorter
         // than its scene: it loops, and the loop shows its seam.
         var mbCap = engineOf(s) === "veo" ? 8 : 12;
         if (s.duration > mbCap)
-          flag("warn", "Shot " + no, "motion background " + s.duration + "s — past the " + engineOf(s) +
+          flag("warn", "샷 " + no, "motion background " + s.duration + "s — past the " + engineOf(s) +
                " route's one-call cap (" + mbCap + "s; server-validated), so the clip loops and the seam shows. Trim the narration, split the scene, or route to a model that takes it");
         if (narr.some(function (n) { return n.img; }))
-          flag("bad", "Shot " + no, "motion background together with per-line illustrations — swapping the background per segment cannot work (scenes-schema)");
+          flag("bad", "샷 " + no, "motion background together with per-line illustrations — swapping the background per segment cannot work (scenes-schema)");
       }
     }
     if (!(s.duration > 0) && s.type !== "outro")
-      flag("bad", "Shot " + no, "duration is " + (s.duration === undefined ? "missing" : s.duration + "s") + " — write it as a positive number of seconds");
+      flag("bad", "샷 " + no, "duration is " + (s.duration === undefined ? "missing" : s.duration + "s") + " — write it as a positive number of seconds");
     narr.forEach(function (n, j) {
-      if (!n.tts) flag("bad", "Shot " + no, "line " + (j + 1) + " has no tts — the sentence to read out is empty");
+      if (!n.tts) flag("bad", "샷 " + no, "line " + (j + 1) + " has no tts — the sentence to read out is empty");
     });
     if (s.type === "broll") {
       // b-roll uses the audio the video carries — laying TTS on top makes two sounds fight
-      if (narr.length) flag("bad", "Shot " + no, "b-roll carries narration (" + narr.length + ") — it has to be empty");
-      if (s.duration > 8) flag("bad", "Shot " + no, "b-roll used for " + s.duration + "s — generation is fixed at 8s, so anything past that is unusable");
+      if (narr.length) flag("bad", "샷 " + no, "b-roll carries narration (" + narr.length + ") — it has to be empty");
+      if (s.duration > 8) flag("bad", "샷 " + no, "b-roll used for " + s.duration + "s — generation is fixed at 8s, so anything past that is unusable");
       var af = s.after || 0;
       if (!SCENES[af] || SCENES[af].type === "broll")
-        flag("bad", "Shot " + no, "after: " + af + " points at no scene — the insert position cannot be resolved");
+        flag("bad", "샷 " + no, "after: " + af + " points at no scene — the insert position cannot be resolved");
       // The source is the photo the previous scene showed as a still — that still is what starts moving
       var src = (s.visual || {}).src;
       var base = SCENES[af] && SCENES[af].visual ? SCENES[af].visual.bg : null;
       if (src && base && src !== base)
-        flag("warn", "Shot " + no, "the b-roll src differs from scene " + (af + 1) + "'s background (" + base + ")");
+        flag("warn", "샷 " + no, "the b-roll src differs from scene " + (af + 1) + "'s background (" + base + ")");
     } else {
       var worst = 0, ovf = 0;
       revealsOf(s).forEach(function (st, k) {
@@ -1442,8 +1444,8 @@ window.SB_DOC = {
         if (f && f.statOvf > swide) swide = f.statOvf;
       });
       if (swide > 0) {
-        chips.push(badge("bad", "stat too wide"));
-        flag("bad", "Shot " + no, "even at minimum size the hero stat exceeds the safe zone by " + swide + "px — switch to a shorter notation");
+        chips.push(badge("bad", "숫자가 너무 넓다"));
+        flag("bad", "샷 " + no, "even at minimum size the hero stat exceeds the safe zone by " + swide + "px — switch to a shorter notation");
       }
       // Whether the screen text overlaps the sound (scenes-schema §screen text only when needed,
       // 2026-08-14). Caption k appears together with segment k+1 — if that line contains the
@@ -1467,17 +1469,17 @@ window.SB_DOC = {
           });
         });
         if (dup.length) {
-          chips.push(badge("warn", "overlaps the audio " + dup.length));
-          flag("warn", "Shot " + no, "the caption sits in the line verbatim — " + dup.join(" · ") +
+          chips.push(badge("warn", "소리와 겹침 " + dup.length + "곳"));
+          flag("warn", "샷 " + no, "the caption sits in the line verbatim — " + dup.join(" · ") +
                ". The screen does not rewrite what the audio just said (empty the caption if it is not needed)");
         }
       })();
       if (ovf > 0) {
-        chips.push(badge("bad", "frame overflow"));
-        flag("bad", "Shot " + no, "screen text still overflows by " + ovf + "px after the 3-step shrink — cut the title or the captions");
+        chips.push(badge("bad", "화면 밖으로 넘침"));
+        flag("bad", "샷 " + no, "screen text still overflows by " + ovf + "px after the 3-step shrink — cut the title or the captions");
       } else if (worst) {
-        chips.push(badge("warn", "auto-shrunk " + worst + " step(s)"));
-        flag("warn", "Shot " + no, "screen text escapes the zone, so the renderer shrinks it by " + worst + " step(s)");
+        chips.push(badge("warn", "자동 축소 " + worst + "단계"));
+        flag("warn", "샷 " + no, "screen text escapes the zone, so the renderer shrinks it by " + worst + " step(s)");
       }
     }
     return chips.join("");
@@ -1494,15 +1496,15 @@ window.SB_DOC = {
              : total <= FMT.totalHard ? "warn" : "bad";
   var lenBand = durTxt(FMT.totalMin) + "~" + durTxt(FMT.totalMax);
   if (lenCls === "bad")
-    flag("bad", "Total length", "main body " + durTxt(total) + " — past the cap of " + durTxt(FMT.totalHard));
+    flag("bad", "전체 길이", "main body " + durTxt(total) + " — past the cap of " + durTxt(FMT.totalHard));
   else if (lenCls === "warn")
-    flag("warn", "Total length", "main body " + durTxt(total) + " — outside the default " + lenBand +
+    flag("warn", "전체 길이", "main body " + durTxt(total) + " — outside the default " + lenBand +
          " (going over needs a design reason; cap " + durTxt(FMT.totalHard) + ")");
 
   // Shot count has a format band too — a long-form built on short-form shot counts stretches
   // single scenes out to minutes.
   if (main.length < FMT.sceneCountMin || main.length > FMT.sceneCountMax)
-    flag("warn", "Shot count", "main body " + main.length + " shots — the " + FMT.label + " band is " +
+    flag("warn", "샷 수", "main body " + main.length + " shots — the " + FMT.label + " band is " +
          FMT.sceneCountMin + "~" + FMT.sceneCountMax + " shots");
 
   // Combined cap on generated video — b-roll slots + motion-background scenes
@@ -1510,30 +1512,30 @@ window.SB_DOC = {
   var genVid = SCENES.filter(function (s) {
     return s.type === "broll" || (s.visual && s.visual.video); }).length;
   if (genVid > FMT.videoMax)
-    flag("bad", "Generated video", "b-roll and motion backgrounds together " + genVid + " shots — cap " +
+    flag("bad", "생성 영상", "b-roll and motion backgrounds together " + genVid + " shots — cap " +
          FMT.videoMax + " (scenes-schema §motion background)");
 
   // Long-form chapter requirement (scenes-schema §chapter) — short-form has no notion of chapters
   if (FMT.chapterMin) {
     var chaps = SCENES.filter(function (s) { return s.chapter; });
     if (chaps.length < FMT.chapterMin)
-      flag("bad", "Chapters", chaps.length + " — YouTube requires at least " + FMT.chapterMin +
+      flag("bad", "챕터", chaps.length + " — YouTube requires at least " + FMT.chapterMin +
            ". Write a chapter string on the scene (§chapter)");
     else if (chaps.length > FMT.chapterMax)
-      flag("warn", "Chapters", chaps.length + " — the authoring target is " + FMT.chapterMin + "~" +
+      flag("warn", "챕터", chaps.length + " — the authoring target is " + FMT.chapterMin + "~" +
            FMT.chapterMax);
     if (chaps.length && SCENES.indexOf(chaps[0]) !== 0)
-      flag("bad", "Chapters", "the first chapter is not at 0:00 — put a chapter on the cover shot (YouTube requirement)");
+      flag("bad", "챕터", "the first chapter is not at 0:00 — put a chapter on the cover shot (YouTube requirement)");
   }
 
   /* Production-layer mismatch · coverage — only shots that filled the fields are checked. Older files pass quietly. */
   SCENES.forEach(function (s, i) {
     var no = i + 1, vis = s.visual || {};
     if (vis.picture && vis.picture !== inferredPicture(s))
-      flag("warn", "Shot " + no, "picture:\"" + vis.picture + "\" but the structure says " + inferredPicture(s) +
+      flag("warn", "샷 " + no, "picture:\"" + vis.picture + "\" but the structure says " + inferredPicture(s) +
            " — for AI video there has to be a video, clip or broll");
     if (vis.overlay && vis.overlay !== inferredOverlay(s))
-      flag("warn", "Shot " + no, "overlay:\"" + vis.overlay + "\" but the default for this type is " + inferredOverlay(s));
+      flag("warn", "샷 " + no, "overlay:\"" + vis.overlay + "\" but the default for this type is " + inferredOverlay(s));
   });
   if (hasSceneField) {
     var byScene = {};
@@ -1580,49 +1582,49 @@ window.SB_DOC = {
   var mainOrder = order.filter(function (o) { return o.s.type !== "broll"; });
   var arc = cover && cover.arc ? String(cover.arc) : "answer-first";
   var storyArc = arc === "story";
-  var ORDER_TXT = storyArc ? "cover → hooking → body → turn → result" : "cover → hooking → result → body";
+  var ORDER_TXT = storyArc ? "커버 → 후킹 → 본문 → 전환 → 결과" : "커버 → 후킹 → 결과 → 본문";
   var processy = !!(firstBeat.result || firstBeat.body || hasRec);
   var orderOk = true, orderBad = false;
   if (cover && cover.arc && !ARC_KO[arc]) {
-    flag("warn", "Playback order", "arc \"" + cover.arc + "\" is outside the two — write answer-first or story on the cover (scenes-schema §playback order); read as answer-first below");
+    flag("warn", "재생 순서", "arc \"" + cover.arc + "\" is outside the two — write answer-first or story on the cover (scenes-schema §playback order); read as answer-first below");
     orderOk = false;
   }
   if (order.length && order[0].s.type !== "cover") {
-    flag("warn", "Playback order", "the first shot is not the cover — " + (storyArc ? "the moment and the hook come first" : "the result at a glance and the hook come first"));
+    flag("warn", "재생 순서", "the first shot is not the cover — " + (storyArc ? "the moment and the hook come first" : "the result at a glance and the hook come first"));
     orderOk = false;
   }
   if (!storyArc) {
     if (processy && firstBeat.body && !firstBeat.result) {
-      flag("warn", "Playback order", "there is body but no result scene — put a shot after the hooking that lays out the finished thing (an informational piece has no result scene: give its first content shot beat:\"result\")");
+      flag("warn", "재생 순서", "there is body but no result scene — put a shot after the hooking that lays out the finished thing (an informational piece has no result scene: give its first content shot beat:\"result\")");
       orderOk = false;
     }
     if (firstBeat.result && firstBeat.body && firstBeat.body.pos < firstBeat.result.pos) {
-      flag("bad", "Playback order", "body comes before result — move shot " +
+      flag("bad", "재생 순서", "body comes before result — move shot " +
            (firstBeat.body.i + 1) + " after shot " + (firstBeat.result.i + 1) + " (or set arc:\"story\" on the cover if the answer is meant to wait)");
       orderOk = false; orderBad = true;
     }
     if (firstBeat.turn) {
-      flag("warn", "Playback order", firstBeat.turn.s.beat
+      flag("warn", "재생 순서", firstBeat.turn.s.beat
            ? "shot " + (firstBeat.turn.i + 1) + " carries beat:\"turn\" — the turning point belongs to the story arc; drop the beat or write arc:\"story\" on the cover"
            : "shot " + (firstBeat.turn.i + 1) + "'s sequence heading reads as a turn (전환/반전) — the turning point belongs to the story arc; write arc:\"story\" on the cover or rename the heading");
       orderOk = false;
     }
   } else {
     if (!firstBeat.result) {
-      flag("warn", "Playback order", "story arc with no result (payoff) shot — the loop the cover opened never closes; add the shot where the answer appears for the first time (beat:\"result\"), after the turn");
+      flag("warn", "재생 순서", "story arc with no result (payoff) shot — the loop the cover opened never closes; add the shot where the answer appears for the first time (beat:\"result\"), after the turn");
       orderOk = false;
     }
     if (!firstBeat.turn) {
-      flag("warn", "Playback order", "story arc with no turn shot — add the moment someone saw it differently (beat:\"turn\") right before the payoff");
+      flag("warn", "재생 순서", "story arc with no turn shot — add the moment someone saw it differently (beat:\"turn\") right before the payoff");
       orderOk = false;
     }
     if (firstBeat.result && firstBeat.body && firstBeat.result.pos < firstBeat.body.pos) {
-      flag("bad", "Playback order", "result comes before body on a story arc — the payoff closes the loop before the build; move shot " +
+      flag("bad", "재생 순서", "result comes before body on a story arc — the payoff closes the loop before the build; move shot " +
            (firstBeat.result.i + 1) + " after the turn, or set arc:\"answer-first\" on the cover");
       orderOk = false; orderBad = true;
     }
     if (firstBeat.result && firstBeat.turn && firstBeat.result.pos < firstBeat.turn.pos) {
-      flag("bad", "Playback order", "result comes before the turn — the answer is out before the turning point; move shot " +
+      flag("bad", "재생 순서", "result comes before the turn — the answer is out before the turning point; move shot " +
            (firstBeat.result.i + 1) + " after shot " + (firstBeat.turn.i + 1));
       orderOk = false; orderBad = true;
     }
@@ -1630,7 +1632,7 @@ window.SB_DOC = {
       var ri = -1;
       mainOrder.forEach(function (o, k) { if (ri < 0 && beatOf(o.s) === "result") ri = k; });
       if (ri > 0 && beatOf(mainOrder[ri - 1].s) !== "turn") {
-        flag("warn", "Playback order", "the shot right before the payoff (shot " + (mainOrder[ri - 1].i + 1) + ") is not the turn — the turning point is the last beat before the answer");
+        flag("warn", "재생 순서", "the shot right before the payoff (shot " + (mainOrder[ri - 1].i + 1) + ") is not the turn — the turning point is the last beat before the answer");
         orderOk = false;
       }
     }
@@ -1641,11 +1643,11 @@ window.SB_DOC = {
      An older file with no beat gets a warning here — not a deduction, a request for a name tag. */
   var afterCover = mainOrder.length > 1 && mainOrder[0].s.type === "cover" ? mainOrder[1] : null;
   if (mainOrder.length > 1 && !firstBeat.hooking) {
-    flag("warn", "Playback order", "there is no hooking shot — after the cover, add the shot that hooks why to stay (beat:\"hooking\"" + (storyArc ? ", the setup on a story arc" : "") + "). Informational episodes are no exception");
+    flag("warn", "재생 순서", "there is no hooking shot — after the cover, add the shot that hooks why to stay (beat:\"hooking\"" + (storyArc ? ", the setup on a story arc" : "") + "). Informational episodes are no exception");
     orderOk = false;
   } else if (afterCover && beatOf(afterCover.s) !== "hooking") {
     var ab = beatOf(afterCover.s);
-    flag("warn", "Playback order", "the shot after the cover is not the hooking — shot " + (afterCover.i + 1) +
+    flag("warn", "재생 순서", "the shot after the cover is not the hooking — shot " + (afterCover.i + 1) +
          (ab ? "(" + (BEAT_KO[ab] || ab) + ")" : "(no beat)") + " comes before the hooking (shot " +
          (firstBeat.hooking.i + 1) + "). Reorder to " + ORDER_TXT);
     orderOk = false;
@@ -1656,17 +1658,17 @@ window.SB_DOC = {
      reviewer's copy mode looks at — this only checks the name tag. */
   var hookKo = cover && cover.hookType ? HOOK_KO[cover.hookType] : "";
   if (cover && !cover.hookType) {
-    flag("warn", "Opening strategy", "the cover has no hookType — write fear|empathy|curiosity|spoiler to say whether this episode opens (title, segment ①, hooking) on fear, empathy, curiosity, or showing the ending first");
+    flag("warn", "오프닝 전략", "the cover has no hookType — write fear|empathy|curiosity|spoiler to say whether this episode opens (title, segment ①, hooking) on fear, empathy, curiosity, or showing the ending first");
   } else if (cover && !hookKo) {
-    flag("warn", "Opening strategy", "hookType \"" + cover.hookType + "\" is outside the four — change it to one of fear|empathy|curiosity|spoiler");
+    flag("warn", "오프닝 전략", "hookType \"" + cover.hookType + "\" is outside the four — change it to one of fear|empathy|curiosity|spoiler");
   }
   /* Hook form — the shape of the first line (scenes-schema §the six hook forms). A name tag, like
      hookType: the check asks for it, the reviewer's copy mode judges whether the title and
      segment ① actually take that shape and whether the result pays it. */
   if (cover && !cover.hookForm) {
-    flag("warn", "Hook form", "the cover has no hookForm — write paradox|gap|payoff|identify|number|secret to say how the title and segment ① are shaped (scenes-schema §the six hook forms)");
+    flag("warn", "훅 형태", "the cover has no hookForm — write paradox|gap|payoff|identify|number|secret to say how the title and segment ① are shaped (scenes-schema §the six hook forms)");
   } else if (cover && !HOOK_FORM_KO[cover.hookForm]) {
-    flag("warn", "Hook form", "hookForm \"" + cover.hookForm + "\" is outside the six — change it to one of paradox|gap|payoff|identify|number|secret");
+    flag("warn", "훅 형태", "hookForm \"" + cover.hookForm + "\" is outside the six — change it to one of paradox|gap|payoff|identify|number|secret");
   }
 
   /* Camera slots — every shot that becomes generated video leaves the storyboard with all four
@@ -1871,52 +1873,52 @@ window.SB_DOC = {
     }
   });
   if (dropCount > 1 && FMT_KEY === "shorts-9x16") {
-    flag("warn", "Sound", dropCount + " music drops in a short — spend one on the line the episode is about; past that neither reads");
+    flag("warn", "소리", dropCount + " music drops in a short — spend one on the line the episode is about; past that neither reads");
   }
 
   h += '<div class="badges">' +
-       (CAST.length ? badge("", "cast " + CAST.length) : "") +
-       (camGaps ? badge("warn", "camera · " + camGaps + " shot" + (camGaps > 1 ? "s" : "") + " incomplete") : "") +
-       (feelGaps ? badge("warn", "feel · " + feelGaps + " shot" + (feelGaps > 1 ? "s" : "") + " unwritten") : badge("ok", "feel · every shot")) +
-       (sizeUnknown ? badge("warn", "size · " + sizeUnknown + " outside vocabulary") : "") +
+       (CAST.length ? badge("", "등장 " + CAST.length + "명") : "") +
+       (camGaps ? badge("warn", "카메라 · " + camGaps + "샷 미완") : "") +
+       (feelGaps ? badge("warn", "느낌 · " + feelGaps + "샷 안 적힘") : badge("ok", "느낌 · 전 샷 적힘")) +
+       (sizeUnknown ? badge("warn", "크기 · " + sizeUnknown + "개가 목록 밖") : "") +
        (MUSIC || cueCount || dropCount
-          ? badge("", "music · " + (MUSIC ? Object.keys(MUSIC).length + " cue" + (Object.keys(MUSIC).length > 1 ? "s" : "") : "one bed")
-                  + (dropCount ? " · " + dropCount + " drop" + (dropCount > 1 ? "s" : "") : ""))
+          ? badge("", "음악 · " + (MUSIC ? Object.keys(MUSIC).length + "곡" : "한 곡 깔기")
+                  + (dropCount ? " · " + dropCount + "번 비움" : ""))
           : "") +
-       badge("mode", allRec ? "shooting mode" : hasRec ? "mixed lanes · " + recCount + " filmed scenes"
-             : isLine ? "generated mode · per-line illustrations" : "generated mode") +
-       (cover ? badge(hookKo ? "ok" : "warn", "opening · " + (hookKo || (cover.hookType ? cover.hookType + " (outside the four)" : "strategy not written"))) : "") +
-       badge((DOC.status || "draft") === "draft" ? "" : "ok", DOC.status || "draft") +
+       badge("mode", allRec ? "촬영 모드" : hasRec ? "혼합 · 찍는 씬 " + recCount + "개"
+             : isLine ? "생성 모드 · 줄마다 그림" : "생성 모드") +
+       (cover ? badge(hookKo ? "ok" : "warn", "오프닝 · " + (hookKo || (cover.hookType ? cover.hookType + " (넷 밖)" : "전략 안 적힘"))) : "") +
+       badge((DOC.status || "draft") === "draft" ? "" : "ok", (DOC.status || "draft") === "draft" ? "초안" : DOC.status) +
        (DOC.created ? badge("", DOC.created) : "") +
-       badge(lenCls, "main body " + total + "s") +
-       (outroSec ? badge("", "with outro ≈" + (total + outroSec) + "s") : "") +
-       badge("", main.length + " shots") +
+       badge(lenCls, "본편 " + total + "초") +
+       (outroSec ? badge("", "아웃트로 포함 ≈" + (total + outroSec) + "초") : "") +
+       badge("", main.length + "샷") +
        (hasSceneField ? badge("", (function () {
          var seen = {};
          SCENES.forEach(function (s, i) { seen[grammarOf(s, i).scene] = 1; });
-         return Object.keys(seen).length + " scenes";
+         return Object.keys(seen).length + "씬";
        })()) : "") +
        badge(orderOk ? "ok" : (orderBad ? "bad" : "warn"), ORDER_TXT) + "</div>";
 
   h += '<dl class="meta-grid">';
-  if (DOC.keyMessage) h += "<dt>Key message</dt><dd>" + mark(DOC.keyMessage) + "</dd>";
-  if (DOC.hook) h += "<dt>Cover hook</dt><dd>" + mark(DOC.hook) + "</dd>";
-  if (DOC.seriesNote) h += "<dt>Series</dt><dd>" + mark(DOC.seriesNote) + "</dd>";
-  h += "<dt>Source</dt><dd><code>scenes.js</code> — this document reads it and draws from it, so the two cannot diverge</dd>";
+  if (DOC.keyMessage) h += "<dt>핵심 메시지</dt><dd>" + mark(DOC.keyMessage) + "</dd>";
+  if (DOC.hook) h += "<dt>커버 훅</dt><dd>" + mark(DOC.hook) + "</dd>";
+  if (DOC.seriesNote) h += "<dt>시리즈</dt><dd>" + mark(DOC.seriesNote) + "</dd>";
+  h += "<dt>원본</dt><dd><code>scenes.js</code> — 이 문서가 그 파일을 읽어서 그린다. 둘이 어긋날 수 없다</dd>";
   h += "</dl>";
 
   /* Cover contract — as a check item, not a badge */
   if (cover) {
-    if (dispLen(cover.title) > 16) flag("bad", "Cover", "title displays " + dispLen(cover.title) + " chars — cap 16");
+    if (dispLen(cover.title) > 16) flag("bad", "커버", "title displays " + dispLen(cover.title) + " chars — cap 16");
     // statLabel plays two roles — under a hero stat it is a short tag qualifying that number, so
     // 18 characters; used alone with no stat it is the cover subtext and has to hold a sentence,
     // so 28. One 40px line fits 28 characters across 1080 (measured: 23 chars = 728px).
     var labCap = cover.stat ? 18 : 28;
     if (cover.statLabel && dispLen(cover.statLabel) > labCap)
-      flag("warn", "Cover", "statLabel displays " + dispLen(cover.statLabel) + " chars — cap " + labCap + (cover.stat ? "" : " (subtext)"));
+      flag("warn", "커버", "statLabel displays " + dispLen(cover.statLabel) + " chars — cap " + labCap + (cover.stat ? "" : " (subtext)"));
   }
   if (DOC.transitions && DOC.transitions.length && DOC.transitions.length !== SCENES.length)
-    flag("warn", "Transitions", "SB_DOC.transitions: " + DOC.transitions.length + " — the shot count is " + SCENES.length);
+    flag("warn", "전환", "SB_DOC.transitions: " + DOC.transitions.length + " — the shot count is " + SCENES.length);
 
   // Stops an unfilled template placeholder from reaching the approval gate
   var blanks = (JSON.stringify(DOC).match(/\{\{/g) || []).length;
@@ -1939,24 +1941,24 @@ window.SB_DOC = {
   h += '<section class="audit" id="audit"></section>';
 
   if (DOC.docNotes && DOC.docNotes.length)
-    h += '<details class="docnotes"><summary>Design rationale · ' + DOC.docNotes.length + "</summary>" +
+    h += '<details class="docnotes"><summary>설계 근거 · ' + DOC.docNotes.length + "</summary>" +
       DOC.docNotes.map(function (n) { return '<div class="note">' + mark(n) + "</div>"; }).join("") + "</details>";
   h += "</header>";
 
   /* ══ Section menu ══ — only the sections this document actually draws */
-  var navItems = [["timeline", "Timeline"], ["shots", "Shots"]];
-  if (CAST.length) navItems.push(["cast", "Cast"]);
-  navItems.push(["contract", "Contract"]);
-  if (DOC.prep && DOC.prep.length) navItems.push(["prep", "Shoot prep"]);
-  if (DOC.sources && DOC.sources.length) navItems.push(["sources", "Sources"]);
-  if (DOC.platforms && DOC.platforms.length) navItems.push(["platforms", "Platforms"]);
-  if (DOC.recheck && DOC.recheck.length) navItems.push(["recheck", "Recheck"]);
-  h += '<nav class="docnav"><a href="#audit">Checks</a>' +
+  var navItems = [["timeline", "시간표"], ["shots", "샷 구성"]];
+  if (CAST.length) navItems.push(["cast", "등장인물"]);
+  navItems.push(["contract", "계약"]);
+  if (DOC.prep && DOC.prep.length) navItems.push(["prep", "촬영 준비"]);
+  if (DOC.sources && DOC.sources.length) navItems.push(["sources", "출처"]);
+  if (DOC.platforms && DOC.platforms.length) navItems.push(["platforms", "플랫폼"]);
+  if (DOC.recheck && DOC.recheck.length) navItems.push(["recheck", "재확인"]);
+  h += '<nav class="docnav"><a href="#audit">점검</a>' +
        navItems.map(function (it) { return '<a href="#' + it[0] + '">' + it[1] + "</a>"; }).join("") +
        "</nav>";
 
   /* ══ Timeline ══ */
-  h += '<h2 class="sec" id="timeline">Timeline<span class="aside">one slot = one shot · width proportional to length</span></h2>';
+  h += '<h2 class="sec" id="timeline">시간표<span class="aside">칸 하나 = 샷 하나 · 너비는 길이에 비례</span></h2>';
   h += '<div class="timeline">';
   // Drawn in playback order — b-roll sits at the end of the array but actually cuts in after
   // its `after` scene (scenes-schema §broll: putting it mid-array throws off every capture index)
@@ -1967,27 +1969,27 @@ window.SB_DOC = {
     marks.push({ at: acc, d: d });
     acc += d;
     h += '<div class="tl-seg ' + esc(o.s.type) + '" style="flex:' + d + '" title="' +
-         esc(strip(o.s.title || o.s.type)) + '">#' + (o.i + 1) + "<small>" + (o.s.duration || "?") + "s</small></div>";
+         esc(strip(o.s.title || o.s.type)) + '">#' + (o.i + 1) + "<small>" + (o.s.duration || "?") + "초</small></div>";
   });
   if (outroSec || outroUnknown)
     h += '<div class="tl-seg outro" style="flex:' + (outroSec || 9) + '" title="' +
-         esc((DOC.outro && DOC.outro.note) || "shared outro") + '">outro<small>' +
-         (outroSec ? outroSec + "s" : "length not written") + "</small></div>";
+         esc((DOC.outro && DOC.outro.note) || "공용 아웃트로") + '">아웃트로<small>' +
+         (outroSec ? outroSec + "초" : "길이 안 적힘") + "</small></div>";
   h += "</div>";
   h += '<div class="tl-ruler">' + marks.map(function (m) {
-    return '<span style="flex:' + m.d + '">' + m.at + "s</span>"; }).join("") +
-    (outroSec ? '<span style="flex:' + outroSec + '">' + acc + "s</span>" +
-      '<span style="flex:0 0 auto">' + (acc + outroSec) + "s</span>"
+    return '<span style="flex:' + m.d + '">' + m.at + "초</span>"; }).join("") +
+    (outroSec ? '<span style="flex:' + outroSec + '">' + acc + "초</span>" +
+      '<span style="flex:0 0 auto">' + (acc + outroSec) + "초</span>"
       : '<span style="flex:0 0 auto">' + acc + "s</span>") + "</div>";
-  if (outroUnknown) flag("warn", "Outro", "there is an outro scene but no SB_DOC.outro length — it does not count toward the total");
+  if (outroUnknown) flag("warn", "아웃트로", "there is an outro scene but no SB_DOC.outro length — it does not count toward the total");
 
   /* ══ Shot cards ══ */
-  h += '<h2 class="sec" id="shots">Shot composition<span class="aside">one entry = one shot · a reveal is a screen state within that shot</span></h2>';
+  h += '<h2 class="sec" id="shots">샷 구성<span class="aside">항목 하나 = 샷 하나 · 공개는 그 샷 안에서 화면이 바뀌는 것</span></h2>';
   h += '<div class="toolbar">' +
-       '<label><input type="checkbox" id="tg-safe"> Show text area</label>' +
-       '<label><input type="checkbox" id="tg-subs" checked> Subtitles</label>' +
-       '<span class="legend">dashed = where the text goes · hatched = the bottom covered by subtitles and app buttons · channel color = AI video · outline only = HTML staging</span>' +
-       '<span style="margin-left:auto">a preview drawn at reduced scale from the real screen</span></div>';
+       '<label><input type="checkbox" id="tg-safe"> 글자 영역 보기</label>' +
+       '<label><input type="checkbox" id="tg-subs" checked> 자막</label>' +
+       '<span class="legend">점선 = 글자가 놓이는 자리 · 빗금 = 자막과 앱 버튼이 덮는 아래쪽 · 채널색 = AI 영상 · 테두리만 = HTML 연출</span>' +
+       '<span style="margin-left:auto">실제 화면을 줄여서 그린 미리보기</span></div>';
 
   var shotGroups = [];
   SCENES.forEach(function (s, i) {
@@ -2000,18 +2002,21 @@ window.SB_DOC = {
   var carryNoted = false, prevSeq = "";
   shotGroups.forEach(function (grp) {
     if (grp.sequence && grp.sequence !== prevSeq) {
-      h += '<div class="seq-head">Sequence · ' + esc(grp.sequence) + "</div>";
+      h += '<div class="seq-head">시퀀스 · ' + esc(grp.sequence) + "</div>";
       prevSeq = grp.sequence;
     }
     if (hasSceneField)
       h += '<section class="scene-band"><div class="scene-band-head"><span class="sn">S#' +
-           esc(String(grp.scene)) + "</span><span>" + esc(grp.slug || ("Scene " + grp.scene)) + "</span></div>";
+           esc(String(grp.scene)) + "</span><span>" + esc(grp.slug || (grp.scene + "번 씬")) + "</span></div>";
     grp.items.forEach(function (item) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;
+    // sceneNotes · audioNotes · privacy 는 씬 번호가 키다(샷 번호가 아니다).
+    // 한 씬이 여러 샷이면 그 씬의 첫 샷에만 붙인다.
+    var sceneKey = g.scene, firstOfScene = item === grp.items[0];
     var narr = s.narration || [];
     var pic = pictureOf(s), ov = overlayOf(s);
     h += '<article class="scene"><div class="scene-head">';
-    h += '<span class="scene-no">Shot ' + no + " · " + esc(s.type).toUpperCase() + "</span>";
+    h += '<span class="scene-no">샷 ' + no + " · " + esc(TYPE_KO[s.type] || s.type) + "</span>";
     if (g.size) h += '<span class="shot-size' + (SIZE_KO[g.size] ? "" : " unknown") + '">' + esc(SIZE_KO[g.size] || (g.size + " ?")) + "</span>";
     if (g.angle && ANGLE_KO[g.angle]) h += '<span class="shot-angle angle-' + esc(g.angle) + '">' + ANGLE_KO[g.angle] + "</span>";
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
@@ -2023,8 +2028,8 @@ window.SB_DOC = {
     // The cover shot also carries the opening-strategy name tag — the title and segment ① have to carry that pull
     if (s.type === "cover") {
       h += '<span class="scene-beat beat-hooktype">' + esc(HOOK_KO[s.hookType] || (s.hookType ? s.hookType + " (outside the four)" : "strategy not written")) + "</span>";
-      h += '<span class="scene-beat beat-hooktype">form · ' + esc(HOOK_FORM_KO[s.hookForm] || (s.hookForm ? s.hookForm + " (outside the six)" : "not written")) + "</span>";
-      h += '<span class="scene-beat beat-hooktype">arc · ' + esc(ARC_KO[s.arc] || (s.arc ? s.arc + " (outside the two)" : "answer first (default)")) + "</span>";
+      h += '<span class="scene-beat beat-hooktype">형태 · ' + esc(HOOK_FORM_KO[s.hookForm] || (s.hookForm ? s.hookForm + " (여섯 밖)" : "안 적힘")) + "</span>";
+      h += '<span class="scene-beat beat-hooktype">전개 · ' + esc(ARC_KO[s.arc] || (s.arc ? s.arc + " (둘 밖)" : "결론 먼저 (기본)")) + "</span>";
     }
     h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
     h += '<div class="shot-meta"><span class="craft">' +
@@ -2033,11 +2038,11 @@ window.SB_DOC = {
          charsOf(s).map(function (id) {
            return '<span class="char-tag">' + esc(castName(id)) + "</span>"; }).join("") + "</span>" +
          (s.type === "outro" ? "" :
-           (g.feel ? '<span class="shot-info shot-feel"><b>What the audience feels</b>' + esc(g.feel) + "</span>"
-                   : '<span class="shot-info shot-feel miss"><b>What the audience feels</b>not written — write shot.feel before the size, angle and camera (directing-grammar §5)</span>')) +
-         (g.info ? '<span class="shot-info"><b>What this shot adds</b>' + esc(g.info) + "</span>" : "") +
-         (spaceTextOf(g.space) ? '<span class="shot-info"><b>From the camera</b>' + esc(spaceTextOf(g.space)) + "</span>"
-            : (genStill(s) && !FILL_FRAME[g.size] ? '<span class="shot-info shot-feel miss"><b>From the camera</b>not written — fill shot.space before generating the still (directing-grammar §3.5)</span>' : "")) +
+           (g.feel ? '<span class="shot-info shot-feel"><b>보는 사람이 느낄 것</b>' + esc(g.feel) + "</span>"
+                   : '<span class="shot-info shot-feel miss"><b>보는 사람이 느낄 것</b>not written — write shot.feel before the size, angle and camera (directing-grammar §5)</span>')) +
+         (g.info ? '<span class="shot-info"><b>이 샷이 더하는 것</b>' + esc(g.info) + "</span>" : "") +
+         (spaceTextOf(g.space) ? '<span class="shot-info"><b>카메라에서 본 배치</b>' + esc(spaceTextOf(g.space)) + "</span>"
+            : (genStill(s) && !FILL_FRAME[g.size] ? '<span class="shot-info shot-feel miss"><b>카메라에서 본 배치</b>not written — fill shot.space before generating the still (directing-grammar §3.5)</span>' : "")) +
          "</div>";
 
     if (s.type === "broll") {
@@ -2045,15 +2050,15 @@ window.SB_DOC = {
       h += '<div class="clip">' +
         (v.src ? '<img src="' + esc(v.src) + '" alt="b-roll source" onerror="this.remove()">' : "") +
         '<div class="meta">' +
-        "<div><b>Picture</b>AI video — generated with the source photo as the parameter</div>" +
-        "<div><b>Staging</b>no overlay — the audio the video carries</div>" +
-        "<div><b>Insert</b>right after shot " + ((s.after || 0) + 1) + " ends · using " + (s.duration || "?") + "s (Veo: the front of the 8s original · Seedance: generated at this length)</div>" +
-        (v.src ? "<div><b>Source</b><code>" + esc(v.src) + "</code> — the same file as the background of shot " + ((s.after || 0) + 1) + "</div>" : "") +
-        (camOf(s) ? "<div><b>Camera</b>" + camHtml(camOf(s)) + "</div>"
-                  : v.motion ? "<div><b>Motion</b>" + esc(v.motion) + "</div>" : "") +
-        (v.audio ? "<div><b>Audio</b>" + esc(v.audio) + "</div>" : "") +
-        (v.clip ? "<div><b>Output</b><code>" + esc(v.clip) + "</code></div>" : "") +
-        "<div><b>Narration</b>" + (narr.length ? "present — b-roll has to be empty" : "none (the audio the video carries)") + "</div>" +
+        "<div><b>그림</b>AI video — generated with the source photo as the parameter</div>" +
+        "<div><b>화면 연출</b>no overlay — the audio the video carries</div>" +
+        "<div><b>끼우는 자리</b>right after shot " + ((s.after || 0) + 1) + " ends · using " + (s.duration || "?") + "s (Veo: the front of the 8s original · Seedance: generated at this length)</div>" +
+        (v.src ? "<div><b>원본 파일</b><code>" + esc(v.src) + "</code> — the same file as the background of shot " + ((s.after || 0) + 1) + "</div>" : "") +
+        (camOf(s) ? "<div><b>카메라</b>" + camHtml(camOf(s)) + "</div>"
+                  : v.motion ? "<div><b>움직임</b>" + esc(v.motion) + "</div>" : "") +
+        (v.audio ? "<div><b>소리</b>" + esc(v.audio) + "</div>" : "") +
+        (v.clip ? "<div><b>산출물</b><code>" + esc(v.clip) + "</code></div>" : "") +
+        "<div><b>나레이션</b>" + (narr.length ? "present — b-roll has to be empty" : "none (the audio the video carries)") + "</div>" +
         "</div></div>";
     } else {
       var vis = s.visual || {};
@@ -2075,14 +2080,14 @@ window.SB_DOC = {
         // structure decides.
         var seg = st.seg >= 0 && narr[st.seg] ? narr[st.seg] : null;
         var vt =
-          recOf(s) ? ["recorded screen", ""] :
-          s.type === "outro" ? ["shared outro mp4", "gen"] :
-          (s.type === "quote" && vis.clip) ? ["speech clip video · veo", "gen"] :
-          vis.video ? ["image→video · veo", "gen"] :
-          (seg && /^card:/.test(seg.imgPrompt || "")) ? ["typing video · code render", "gen"] :
-          (seg && seg.img) ? ["still illustration", ""] :
-          ["still background", ""];
-        var cell = '<div class="cut-head"><span class="no">reveal ' + (k + 1) + "</span>" + esc(st.label) +
+          recOf(s) ? ["녹화 화면", ""] :
+          s.type === "outro" ? ["공용 아웃트로 mp4", "gen"] :
+          (s.type === "quote" && vis.clip) ? ["말하는 클립 · " + engineOf(s), "gen"] :
+          vis.video ? ["그림→영상 · " + ((vis.video && vis.video.engine) || engineOf(s)), "gen"] :
+          (seg && /^card:/.test(seg.imgPrompt || "")) ? ["타이핑 영상 · 코드 렌더", "gen"] :
+          (seg && seg.img) ? ["삽화", ""] :
+          ["정지 배경", ""];
+        var cell = '<div class="cut-head"><span class="no">공개 ' + (k + 1) + "</span>" + esc(st.label) +
           '<span class="vtag' + (vt[1] ? " " + vt[1] : "") + '">' + vt[0] + "</span></div>";
 
         // Screen — the text that appears on this cut. Letters inside the frame are tiny, so they are read here.
@@ -2110,7 +2115,7 @@ window.SB_DOC = {
           if (k === 0) {
             if (s.title) sc += capline(esc(strip(s.title)));
             if (s.footnote) sc += capline(null, null, esc(s.footnote));
-            if (!s.title && !s.footnote) sc += capline(null, null, "no screen text — picture only");
+            if (!s.title && !s.footnote) sc += capline(null, null, "화면 글자 없음 — 그림만");
           } else {
             var b = (s.bullets || [])[st.cap];
             if (b) sc += capline(esc(b.t), b.d ? esc(b.d) : null, null, st.cap + 1);
@@ -2127,7 +2132,7 @@ window.SB_DOC = {
           if (THEME.brand) sc += capline(esc(THEME.brand));
           if (s.title) sc += capline(esc(strip(s.title)), s.sub ? esc(s.sub) : null);
         }
-        if (sc) cell += '<div class="cut-sec">SCREEN</div>' + sc;
+        if (sc) cell += '<div class="cut-sec">화면 글자</div>' + sc;
 
         // Audio — the lines that go out during this cut
         var lines = "";
@@ -2136,13 +2141,13 @@ window.SB_DOC = {
         segRows[k].forEach(function (j) {
           var n = narr[j], same = strip(n.tts) === strip(n.sub);
           lines += '<div class="cut-line"><span class="k">' + (j + 1) + '</span><div class="b">' + esc(n.tts) +
-            '<span class="len"> · ' + netLen(n.tts) + " chars</span>" +
-            (same ? "" : '<div class="sub-diff"><b>Subtitle</b> ' + esc(n.sub) + "</div>") +
+            '<span class="len"> · ' + netLen(n.tts) + "자</span>" +
+            (same ? "" : '<div class="sub-diff"><b>자막</b> ' + esc(n.sub) + "</div>") +
             "</div></div>";
         });
         if (!lines && s.type === "quote" && vis.clip)
           lines = '<div class="cut-carry">speech clip — the actor speaks, so there is no TTS narration</div>';
-        if (lines) cell += '<div class="cut-sec">AUDIO</div>' + lines;
+        if (lines) cell += '<div class="cut-sec">소리</div>' + lines;
 
         return '<div class="conti-row"><figure class="panel">' +
           frame(s, st, k, f.tier || 0, f.statScale || 0) + "</figure>" +
@@ -2152,8 +2157,8 @@ window.SB_DOC = {
       // The same note is not repeated on every scene — only the first time.
       if (!recOf(s) && s.type === "points" && narr.length && narr.length !== states.length && !carryNoted) {
         carryNoted = true;
-        h += '<div class="note">The screen changes ' + states.length + " times but there are " + narr.length +
-             " sentences — one sentence ends up holding two captions, and which one is decided at production.</div>";
+        h += '<div class="note">화면은 ' + states.length + "번 바뀌는데 문장은 " + narr.length +
+             "개예요 — 한 문장이 자막 두 개를 물게 되고, 어느 쪽인지는 제작 때 정해집니다.</div>";
       }
 
       /* Outside the cut — background, motion, prompts, audio directions */
@@ -2162,64 +2167,64 @@ window.SB_DOC = {
         // The user films a shooting scene from this document — what is visible (shot), what to
         // do (action) and which file to save it as (clip) all have to be here for the shoot to work.
         meta += '<div class="shot">' + mark(vis.shot || "—") + "</div>";
-        if (vis.action) meta += '<div class="row"><b>Action</b><div class="v">' + mark(vis.action) + "</div></div>";
-        meta += '<div class="row"><b>Save as</b><div class="v"><code>' + esc(vis.clip || "— filename undecided") +
+        if (vis.action) meta += '<div class="row"><b>동작</b><div class="v">' + mark(vis.action) + "</div></div>";
+        meta += '<div class="row"><b>저장 이름</b><div class="v"><code>' + esc(vis.clip || "— filename undecided") +
                 "</code>" + (narr.length ? " · narration over it (TTS)" : " · live voice (uses the clip audio)") + "</div></div>";
       } else {
         var lineImgs = narr.filter(function (n) { return n.img; });
         if (lineImgs.length) {
-          meta += '<div class="row"><b>Art</b><div class="v">one per line · ' + lineImgs.length +
+          meta += '<div class="row"><b>그림</b><div class="v">one per line · ' + lineImgs.length +
                " total <span style='color:var(--faint)'>(light mode · white-background line art)</span></div></div>";
-          meta += '<div class="row"><b>Key art</b><div class="v"><code>' + esc(vis.bg || "—") + "</code> — the source for the cover still and the thumbnail</div></div>";
+          meta += '<div class="row"><b>대표 그림</b><div class="v"><code>' + esc(vis.bg || "—") + "</code> — the source for the cover still and the thumbnail</div></div>";
           meta += lineImgs.map(function (n, j) {
             return n.imgPrompt ? '<details class="prompt"><summary>illustration ' + (j + 1) + " prompt</summary><p>" +
               esc(n.imgPrompt) + "</p></details>" : ""; }).join("");
         } else if (vis.bg || s.type === "quote") {
-          meta += '<div class="row"><b>Background</b><div class="v">' +
+          meta += '<div class="row"><b>배경</b><div class="v">' +
                (vis.bg ? "<code>" + esc(vis.bg) + "</code>" : "none — speech clip or quote card") + "</div></div>";
         }
         if (camOf(s))
-          meta += '<div class="row"><b>Camera</b><div class="v">' + camHtml(camOf(s)) + "</div></div>";
+          meta += '<div class="row"><b>카메라</b><div class="v">' + camHtml(camOf(s)) + "</div></div>";
         else if (vis.motion)
-          meta += '<div class="row"><b>Motion</b><div class="v">' + esc(vis.motion) + "</div></div>";
+          meta += '<div class="row"><b>움직임</b><div class="v">' + esc(vis.motion) + "</div></div>";
         if (vis.video) {
           // Motion-background scene — this image becomes the parameter for veo img2video (scenes-schema §motion background)
-          meta += '<div class="row"><b>Video</b><div class="v">image→video generation — veo img2video with <code>' + esc(vis.bg || "?") +
-               "</code> as the parameter" +
+          meta += '<div class="row"><b>영상</b><div class="v">그림에서 영상 생성 — <code>' + esc(((vis.video && vis.video.engine) || engineOf(s))) + "</code> 로 <code>" + esc(vis.bg || "?") +
+               "</code> 를 움직인다" +
                (vis.video.clip ? " → <code>" + esc(vis.video.clip) + "</code>" : "") + "</div></div>";
           if (vis.video.prompt)
-            meta += '<details class="prompt"><summary>motion prompt</summary><p>' + esc(vis.video.prompt) + "</p></details>";
+            meta += '<details class="prompt"><summary>움직임 프롬프트</summary><p>' + esc(vis.video.prompt) + "</p></details>";
         }
         if (vis.clip && vis.clip.prompt)
-          meta += '<details class="prompt"><summary>speech clip prompt</summary><p>' + esc(vis.clip.prompt) + "</p></details>";
+          meta += '<details class="prompt"><summary>말하는 클립 프롬프트</summary><p>' + esc(vis.clip.prompt) + "</p></details>";
         if (vis.bgPrompt)
-          meta += '<details class="prompt"><summary>background prompt</summary><p>' + esc(vis.bgPrompt) + "</p></details>";
+          meta += '<details class="prompt"><summary>배경 프롬프트</summary><p>' + esc(vis.bgPrompt) + "</p></details>";
         if (vis.slide) {
-          meta += '<div class="row"><b>slide</b><div class="v"><code>' + esc(vis.slide.file || "?") +
+          meta += '<div class="row"><b>슬라이드</b><div class="v"><code>' + esc(vis.slide.file || "?") +
                "</code> — authored in §8 after approval</div></div>";
           if (vis.slide.plan)
-            meta += '<details class="prompt"><summary>slide plan</summary><p>' + esc(vis.slide.plan) +
+            meta += '<details class="prompt"><summary>슬라이드 구성</summary><p>' + esc(vis.slide.plan) +
                  (vis.slide.labels && vis.slide.labels.length ? " · labels: " + esc(vis.slide.labels.join(", ")) : "") +
                  "</p></details>";
         }
       }
-      if (DOC.privacy && DOC.privacy[no])
-        meta += '<div class="note pv">Privacy avoidance — ' + mark(DOC.privacy[no]) + "</div>";
-      if (DOC.audioNotes && DOC.audioNotes[no])
-        meta += '<div class="note">' + mark(DOC.audioNotes[no]) + "</div>";
+      if (firstOfScene && DOC.privacy && DOC.privacy[sceneKey])
+        meta += '<div class="note pv">사생활 피하기 — ' + mark(DOC.privacy[sceneKey]) + "</div>";
+      if (firstOfScene && DOC.audioNotes && DOC.audioNotes[sceneKey])
+        meta += '<div class="note">' + mark(DOC.audioNotes[sceneKey]) + "</div>";
       if (meta) h += '<div class="cmeta">' + meta + "</div>";
     }
 
     // Three or more scene notes fold away — what feeds the decision directly is privacy avoidance and the transition
-    var sn = (DOC.sceneNotes && DOC.sceneNotes[no]) || [];
+    var sn = (firstOfScene && DOC.sceneNotes && DOC.sceneNotes[sceneKey]) || [];
     if (sn.length) {
       var body = sn.map(function (n) { return '<div class="note">' + mark(n) + "</div>"; }).join("");
       h += sn.length > 2
-        ? '<details class="scenenotes"><summary>Design rationale · ' + sn.length + "</summary>" + body + "</details>"
+        ? '<details class="scenenotes"><summary>설계 근거 · ' + sn.length + "</summary>" + body + "</details>"
         : '<div class="scene-notes">' + body + "</div>";
     }
     if (DOC.transitions && DOC.transitions[i])
-      h += '<div class="transition"><b>TRANSITION</b>' + mark(DOC.transitions[i]) + "</div>";
+      h += '<div class="transition"><b>전환</b>' + mark(DOC.transitions[i]) + "</div>";
     h += "</article>";
     });
     if (hasSceneField) h += "</section>";
@@ -2228,9 +2233,9 @@ window.SB_DOC = {
   /* ══ Cast ══ — the channel characters this episode uses, with the panels that will be
      handed to the generation call. Absent SB_DOC.characters, nothing is drawn. */
   if (CAST.length) {
-    h += '<h2 class="sec" id="cast">Cast<span class="aside">reference set — face first, then body (array order is weight)</span></h2>';
+    h += '<h2 class="sec" id="cast">등장인물<span class="aside">참고 그림 묶음 — 얼굴 먼저, 그다음 몸 (배열 순서가 비중)</span></h2>';
     h += '<div class="cast">';
-    var PANEL_LABELS = [["face", "FACE"], ["body", "BODY · no head"], ["back", "BACK"],
+    var PANEL_LABELS = [["face", "얼굴"], ["body", "몸 · 머리 없음"], ["back", "뒷모습"],
                         ["front", "FRONT · legacy"], ["real", "LIVE ACTION"]];
     CAST.forEach(function (c) {
       var panels = c.panels || {};
@@ -2257,63 +2262,63 @@ window.SB_DOC = {
            (c.veo === "banned" ? " " + badge("bad", "veo banned") : "") + "</div>";
       if (c.role) h += '<div class="cast-role">' + mark(c.role) + "</div>";
       if (c.note) h += '<div class="cast-note">' + mark(c.note) + "</div>";
-      h += '<div class="cast-shots"><b>SHOTS</b>' +
+      h += '<div class="cast-shots"><b>샷</b>' +
            (shots.length ? shots.join(" · ")
                          : "appears in no shot — check visual.character") + "</div>";
       if (scopes.length)
-        h += '<div class="cast-shots"><b>SCOPE</b>' + esc(scopes.join(" · ")) + "</div>";
+        h += '<div class="cast-shots"><b>범위</b>' + esc(scopes.join(" · ")) + "</div>";
       h += "</div></div>";
     });
     h += "</div>";
   }
 
   /* ══ Contract · sources · platforms ══ */
-  h += '<h2 class="sec" id="contract">Contract limits<span class="aside">computed at render time</span></h2><table class="grid"><tbody>';
-  h += "<tr><th>Format</th><td>" + esc(FMT.label) + " <code>" + esc(FMT_KEY) + "</code>" +
-       (window.FORMAT ? "" : " <span class=\"aside\">no window.FORMAT — default</span>") +
+  h += '<h2 class="sec" id="contract">계약 상한<span class="aside">화면을 그릴 때 계산한 값</span></h2><table class="grid"><tbody>';
+  h += "<tr><th>형식</th><td>" + esc(FMT.label) + " <code>" + esc(FMT_KEY) + "</code>" +
+       (window.FORMAT ? "" : " <span class=\"aside\">window.FORMAT 없음 — 기본값</span>") +
        (FMT_KEY === "youtube-long-16x9"
-         ? " <span class=\"aside\">safe-zone values provisional (mobile web landscape and the top title bar are unmeasured)</span>" : "") +
+         ? " <span class=\"aside\">안전 영역 값은 잠정치 (모바일 웹 가로와 상단 제목줄은 안 재봤다)</span>" : "") +
        "</td></tr>";
-  h += "<tr><th>Main-body length</th><td>" + durTxt(total) + " — default " +
-       durTxt(FMT.totalMin) + "~" + durTxt(FMT.totalMax) + " · cap " + durTxt(FMT.totalHard) +
-       (outroSec ? " · with outro ≈" + durTxt(total + outroSec) : "") + "</td></tr>";
-  h += "<tr><th>Shot count</th><td>" + main.length + " shots — band " +
-       FMT.sceneCountMin + "~" + FMT.sceneCountMax + "</td></tr>";
+  h += "<tr><th>본편 길이</th><td>" + durTxt(total) + " — 권장 " +
+       durTxt(FMT.totalMin) + "~" + durTxt(FMT.totalMax) + " · 상한 " + durTxt(FMT.totalHard) +
+       (outroSec ? " · 아웃트로 포함 ≈" + durTxt(total + outroSec) : "") + "</td></tr>";
+  h += "<tr><th>샷 수</th><td>" + main.length + "샷 — 권장 " +
+       FMT.sceneCountMin + "~" + FMT.sceneCountMax + "샷</td></tr>";
   if (cover) {
-    h += "<tr><th>Cover title</th><td>" + mark(cover.title) + " — displays " + dispLen(cover.title) + "/16 chars</td></tr>";
-    h += "<tr><th>Arc</th><td>" + (ARC_KO[arc]
-         ? esc(ARC_KO[arc]) + " (<code>" + esc(arc) + "</code>" + (cover.arc ? "" : ", default") + ") — " + ORDER_TXT +
-           (storyArc ? "; the answer appears for the first time in the result, after the turn" : "; the finished thing before the how")
-         : "<code>" + esc(arc) + "</code> is outside the two — answer-first or story (scenes-schema §playback order)") + "</td></tr>";
-    h += "<tr><th>Opening strategy</th><td>" + (HOOK_KO[cover.hookType]
-         ? esc(HOOK_KO[cover.hookType]) + " (<code>" + esc(cover.hookType) + "</code>) — the title, segment ① and the hooking ride this pull"
-         : (cover.hookType ? "<code>" + esc(cover.hookType) + "</code> is outside the four — " : "not written — ") +
-           "one of fear|empathy|curiosity|spoiler (scenes-schema §the four opening strategies)") + "</td></tr>";
-    h += "<tr><th>Hook form</th><td>" + (HOOK_FORM_KO[cover.hookForm]
-         ? esc(HOOK_FORM_KO[cover.hookForm]) + " (<code>" + esc(cover.hookForm) + "</code>) — the title and segment ① take this shape, and the result pays it"
-         : (cover.hookForm ? "<code>" + esc(cover.hookForm) + "</code> is outside the six — " : "not written — ") +
-           "one of paradox|gap|payoff|identify|number|secret (scenes-schema §the six hook forms)") + "</td></tr>";
-    h += "<tr><th>Shot grammar</th><td>" + (feelGaps ? feelGaps + " shot" + (feelGaps > 1 ? "s" : "") + " with no shot.feel" : "every shot says what the audience should feel") +
-         (sizeUnknown ? " · " + sizeUnknown + " size value" + (sizeUnknown > 1 ? "s" : "") + " outside the vocabulary" : "") +
-         " — feel first, then size · angle · camera (directing-grammar §5)</td></tr>";
-    if (cover.statLabel) h += "<tr><th>statLabel</th><td>" + esc(cover.statLabel) + " — displays " + dispLen(cover.statLabel) + "/18 chars</td></tr>";
+    h += "<tr><th>커버 제목</th><td>" + mark(cover.title) + " — 화면에 " + dispLen(cover.title) + "/16자</td></tr>";
+    h += "<tr><th>전개 순서</th><td>" + (ARC_KO[arc]
+         ? esc(ARC_KO[arc]) + " (<code>" + esc(arc) + "</code>" + (cover.arc ? "" : ", 기본값") + ") — " + ORDER_TXT +
+           (storyArc ? " — 답은 전환 뒤 결과에서 처음 나온다" : " — 완성된 것을 먼저 보이고 방법은 뒤에")
+         : "<code>" + esc(arc) + "</code> 는 둘 밖 — answer-first 또는 story (scenes-schema §playback order)") + "</td></tr>";
+    h += "<tr><th>오프닝 전략</th><td>" + (HOOK_KO[cover.hookType]
+         ? esc(HOOK_KO[cover.hookType]) + " (<code>" + esc(cover.hookType) + "</code>) — 제목과 첫 문장, 후킹이 이 끌림을 탄다"
+         : (cover.hookType ? "<code>" + esc(cover.hookType) + "</code> 는 넷 밖 — " : "안 적힘 — ") +
+           "fear|empathy|curiosity|spoiler 중 하나 (scenes-schema §the four opening strategies)") + "</td></tr>";
+    h += "<tr><th>훅 형태</th><td>" + (HOOK_FORM_KO[cover.hookForm]
+         ? esc(HOOK_FORM_KO[cover.hookForm]) + " (<code>" + esc(cover.hookForm) + "</code>) — 제목과 첫 문장이 이 모양을 하고, 결과가 그걸 갚는다"
+         : (cover.hookForm ? "<code>" + esc(cover.hookForm) + "</code> 는 여섯 밖 — " : "안 적힘 — ") +
+           "paradox|gap|payoff|identify|number|secret 중 하나 (scenes-schema §the six hook forms)") + "</td></tr>";
+    h += "<tr><th>샷 문법</th><td>" + (feelGaps ? feelGaps + "샷에 shot.feel 이 없다" : "모든 샷이 보는 사람이 느낄 것을 적었다") +
+         (sizeUnknown ? " · 크기 값 " + sizeUnknown + "개가 목록 밖" : "") +
+         " — 느낌이 먼저, 그다음 크기 · 각도 · 카메라 (directing-grammar §5)</td></tr>";
+    if (cover.statLabel) h += "<tr><th>숫자 설명</th><td>" + esc(cover.statLabel) + " — 화면에 " + dispLen(cover.statLabel) + "/18자</td></tr>";
   }
-  h += "<tr><th>Speech rate</th><td>" +
-     (allRec ? "shooting 5~6 chars/s (4.5~6.5 allowed) · scenes 8~20s"
-      : hasRec ? "shooting scenes 5~6 chars/s · generated scenes derived from TTS at 4.5 chars/s (measured scene by scene)"
-      : "derived from TTS at 4.5 chars/s · scene cap " + FMT.sceneMax + "s") + "</td></tr>";
-  h += "<tr><th>THEME</th><td>" + ["accent", "accent2", "ink"].map(function (k) {
+  h += "<tr><th>발화 속도</th><td>" +
+     (allRec ? "직접 말하는 씬 5~6자/초 (4.5~6.5 허용) · 씬 8~20초"
+      : hasRec ? "직접 말하는 씬 5~6자/초 · 생성 씬은 TTS 4.5자/초 기준 (씬마다 따로 잰다)"
+      : "TTS 4.5자/초 기준 · 씬 상한 " + FMT.sceneMax + "초") + "</td></tr>";
+  h += "<tr><th>테마</th><td>" + ["accent", "accent2", "ink"].map(function (k) {
     return '<span class="swatch" style="background:' + esc(THEME[k]) + '"></span><code>' + esc(THEME[k]) + "</code>"; }).join(" &nbsp; ") +
-    " &nbsp; brand <code>" + esc(THEME.brand) + "</code></td></tr>";
+    " &nbsp; 채널 <code>" + esc(THEME.brand) + "</code></td></tr>";
   h += "</tbody></table>";
 
   if (DOC.prep && DOC.prep.length)
-    h += '<h2 class="sec" id="prep">Before the shoot</h2><ul class="checklist">' +
+    h += '<h2 class="sec" id="prep">촬영 전에</h2><ul class="checklist">' +
       DOC.prep.map(function (p) { return "<li>" + mark(p) + "</li>"; }).join("") + "</ul>";
 
   if (DOC.sources && DOC.sources.length) {
-    h += '<h2 class="sec" id="sources">Sources<span class="aside">ledger: research.md</span></h2>' +
-      '<table class="grid"><thead><tr><th>Claim</th><th>Source</th><th>Checked</th><th>Status</th></tr></thead><tbody>';
+    h += '<h2 class="sec" id="sources">출처<span class="aside">원장부: research.md</span></h2>' +
+      '<table class="grid"><thead><tr><th>사실</th><th>출처</th><th>확인일</th><th>상태</th></tr></thead><tbody>';
     DOC.sources.forEach(function (r) {
       // A leading emoji jumps out in saturation — the content stays, only the render moves to the badge color language (review round 2)
       var st = r.status || "", stHtml = mark(st);
@@ -2330,14 +2335,14 @@ window.SB_DOC = {
     h += "</tbody></table>";
   }
   if (DOC.platforms && DOC.platforms.length) {
-    h += '<h2 class="sec" id="platforms">Platform plan</h2><table class="grid"><thead><tr><th>Platform</th><th>Form</th><th>Notes</th></tr></thead><tbody>';
+    h += '<h2 class="sec" id="platforms">플랫폼 계획</h2><table class="grid"><thead><tr><th>플랫폼</th><th>형태</th><th>메모</th></tr></thead><tbody>';
     DOC.platforms.forEach(function (p) {
       h += "<tr><td><b>" + esc(p.name) + "</b></td><td>" + esc(p.form) + "</td><td>" + mark(p.note || "") + "</td></tr>";
     });
     h += "</tbody></table>";
   }
   if (DOC.recheck && DOC.recheck.length)
-    h += '<h2 class="sec" id="recheck">Recheck before publishing<span class="aside">time-sensitive</span></h2><ul class="checklist">' +
+    h += '<h2 class="sec" id="recheck">내보내기 전 재확인<span class="aside">시간이 지나면 달라지는 것</span></h2><ul class="checklist">' +
       DOC.recheck.map(function (r) { return "<li>" + mark(r) + "</li>"; }).join("") + "</ul>";
 
   h += '<footer class="doc-foot"><b>scenes.js is the original</b> — this document only draws it, so when a shot looks wrong, fix scenes.js. ' +
@@ -2356,13 +2361,13 @@ window.SB_DOC = {
   var nWarn = audit.length - nBad;
   var box = document.getElementById("audit");
   box.className = "audit" + (nBad ? " has-bad" : nWarn ? " has-warn" : "");
-  box.innerHTML = '<div class="audit-head"><span class="dot"></span>Contract check' +
-    '<span class="count">' + (audit.length ? "violations " + nBad + " · to check " + nWarn : "no violations") + "</span></div>" +
+  box.innerHTML = '<div class="audit-head"><span class="dot"></span>계약 점검' +
+    '<span class="count">' + (audit.length ? "위반 " + nBad + "건 · 확인 " + nWarn + "건" : "위반 없음") + "</span></div>" +
     (audit.length
       ? "<ul>" + audit.map(function (a) {
           return '<li class="' + a.level + '"><span class="where">' + esc(a.where) + "</span>" +
                  '<span class="what">' + esc(a.what) + "</span></li>"; }).join("") + "</ul>"
-      : '<div class="clean">Character counts, speech rate, shot length, frame overflow, total length, cover title, playback order (arc), opening strategy, hook form, shot grammar (feel · size · angle · space) — every contract item passes.</div>');
+      : '<div class="clean">글자 수, 발화 속도, 샷 길이, 화면 넘침, 전체 길이, 커버 제목, 재생 순서, 오프닝 전략, 훅 형태, 샷 문법(느낌 · 크기 · 각도 · 배치) — 계약 항목이 전부 통과했어요.</div>');
 
   var safe = document.getElementById("tg-safe"), subs = document.getElementById("tg-subs");
   if (safe) safe.addEventListener("change", function () { document.body.classList.toggle("safe", safe.checked); });
