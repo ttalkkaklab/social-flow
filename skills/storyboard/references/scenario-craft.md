@@ -1,4 +1,4 @@
-# Scenario craft — six rules that run underneath the beats
+# Scenario craft — seven rules that run underneath the beats
 
 The beat skeleton (`scenes-schema.md` §playback order) says **where** scenes go. This file
 says **how scenes push each other** — the craft layer classic screenwriting settled long
@@ -48,6 +48,12 @@ charge is the same at both ends, the scene has activity but no event — McKee's
 - points scenes turn on information (didn't know → know is a − → + turn), so a points scene
   fails this only when its message repeats a previous scene's — which is why P0-3
   (duplication) reads as the same defect at the information layer.
+- **Screen time follows the turn.** Weight seconds by how much turns in a scene, not by how
+  much there is to say. On the 2026-08 worst-retention episode the central event — the wrong
+  part going into the circuit — got 5 seconds, the shortest of eight shots, while scenes that
+  only confirmed what the viewer already knew ran 7–8 each. When the timeline's shortest slot
+  holds the episode's biggest turn, redistribute before cutting anything. Field practice, own
+  channel, one episode.
 
 ## 3. Plant and payoff — the turn is paid for in advance
 
@@ -64,8 +70,8 @@ recontextualize earlier scenes without contradicting them. Craft canon.
 - **On `arc:"story"`**: the turn's clue sits in the setup or an early build shot. A turn
   with no plant reads as a cheat; a plant with no payoff is an unpaid promise — the same
   debt the §six hook forms rule tracks for the main hook, extended to every deliberate
-  plant. Note the plant → payoff pair in the §7 hand-off note so the reviewer and the user
-  can check it.
+  plant. Note the plant → payoff pair in the storyboard SKILL §7 hand-off note so the
+  reviewer and the user can check it.
 - One red herring is legitimate tension (it makes the viewer commit to a wrong read);
   stacked red herrings burn trust.
 
@@ -96,9 +102,34 @@ curiosity — the hook has to sit close enough that the answer feels reachable. 
 
 - **Bookkeeping**: short-form carries **one main loop** (the `hookForm`) plus at most one
   sub-loop; long-form carries 2–4. Every loop names, at open time, the scene that pays it —
-  put the pairs in the §7 hand-off note. An unclosed loop is the "stopped, then left"
-  penalty plus trust damage on the next episode (§six hook forms holds this for the main
+  put the pairs in the storyboard SKILL §7 hand-off note. An unclosed loop is the
+  "stopped, then left" penalty plus trust damage on the next episode (§six hook forms holds this for the main
   hook; this extends it to every loop opened mid-episode).
+- **The body pays the answer in installments** (measured on our own channel, n=4 —
+  retention report, 2026-08-26). Four episodes ranked by retention came out in exactly the
+  order their view counts did (52% → 38% → 26% → 19%, a 3× spread in views), and the curve
+  that won held flat across 90 seconds while the curve that lost slid from the third second
+  onward. Both openings worked, so what separated them was the body: the winner handed over
+  no answer whole — each scene closed one gap and opened the next in the same breath, so the
+  viewer was never done wondering — while the loser explained something the viewer already
+  accepted ("hearts beat in a rhythm"), and a question answered with nothing behind it is
+  where the curve bends. §1 reads a seam backward ("does this follow from the last scene?");
+  read it forward too — "what does this scene make me want to know next?" A body scene that
+  only closes gets rewritten: split the answer over two scenes, hold back the figure that
+  makes it surprising, or put the consequence ahead of the mechanism. **Seam gaps stay off
+  the ledger** — the next scene pays them by construction, so the bookkeeping above still
+  counts only loops left hanging, one named payer per open loop and not one per sentence.
+  Grade: measured, but on four episodes with the body-drop pattern confirmed from a single
+  curve; the report's own §6 asks for re-verification on the next episodes.
+- **The hand-over happens inside the sentence** (own-channel production guide, 2026-08 —
+  field practice). The narration line that pays a gap opens the next one in the same
+  sentence, not in the next scene's first line: "케블라는 강철보다 5배 강했어요. 근데 정작
+  만든 본인은 쓸모없다고 생각했죠." pays *how strong* and opens *why worthless* in one
+  breath. The joints are the spoken connectives — 근데 · 문제는 · 그런데 여기서 · 정작 ·
+  알고 보니 · 이유는 — one at the end of a scene's last segment, where §1 reads the seam:
+  the "but/therefore" between scenes lands hardest said out loud by the narration itself.
+  A last segment that merely states an answer is a closed door, and the swipe happens in
+  the silence after it.
 - **Long-form re-hooks** (field practice): attention decays over 60–90s stretches, so each
   `chapter` opens with its own one-line mini-hook — why this chapter matters — and around
   the 50–70% mark one deliberate re-hook resets the room (a question to the viewer, a "the
@@ -128,6 +159,28 @@ the funny reveal at the end of the scene; anything after the break dilutes it. C
   explain the joke in the caption; the screen holding still one beat after the punchline
   is the timing.
 
+## 7. The peak and the end are what get remembered
+
+Peak-end rule: people judge an experience by its most intense moment and its last moment,
+not by the average of every second (Redelmeier & Kahneman 1996; Fredrickson & Kahneman
+1993 — **measured**, but in clinical and lab affect studies, not on short-form video; the
+transfer is our working bet). For an episode: the peak decides "was that worth watching",
+the end decides "what do I do about it" — and the engagement acts the promotion gate reads
+(like · comment · share, growth-playbook §observed metrics) all happen after the last
+frame, so the end is where they are won or thrown away.
+
+- **One deliberate peak, mid-episode.** On `arc:"story"` the `turn` beat is it — the
+  tightest frame of the episode (directing-grammar §6 rule 12) and the `sound.drop` both
+  already point there. Answer-first episodes carry it at the result's before/after moment.
+  If the `shot.feel` chart (§2) has no clear maximum, the episode is flat and nothing
+  marks it in memory.
+- **The end is a designed beat, not a fade.** The act job's outward loop (scenes-schema
+  §playback order, act row) is what "strongest last beat" means in practice — a question
+  the comments will argue over beats a summary of what was just said. Closing softly
+  costs both handles at once: nothing to remember the episode by, nothing to do about it.
+- The two don't substitute: an episode with a great peak and a trailing end gets
+  remembered but not acted on; a strong CTA after a flat body has nothing to convert.
+
 ## Sources
 
 - Parker & Stone, NYU writers-room session (2011) — but/therefore. Craft canon.
@@ -136,6 +189,9 @@ the funny reveal at the end of the scene; anything after the break dilutes it. C
 - Hitchcock/Truffaut interviews — the bomb under the table. Craft canon.
 - Witte & Allen, ["A Meta-Analysis of Fear Appeals"](https://journals.sagepub.com/doi/10.1177/109019810002700506) (Health Educ Behav, 2000) — fear × efficacy. Measured.
 - Loewenstein, ["The Psychology of Curiosity"](https://www.cmu.edu/dietrich/sds/docs/golman/golman_loewenstein_curiosity.pdf) (1994, and Golman & Loewenstein 2015) — information gap. Craft canon / measured.
+- Redelmeier & Kahneman, ["Patients' memories of painful medical treatments"](https://doi.org/10.1016/0304-3959(96)02994-6) (Pain, 1996) + Fredrickson & Kahneman (1993) — peak-end rule. Measured (clinical/lab, not short-form).
+- Own-channel analytics, 4 Shorts (2026-08) — retention rank vs. view rank, watch-time
+  curves of the best and worst episodes. Measured (n=4, body-drop pattern from one curve).
 - Long-form re-hook cadence, pattern interrupts, loop endings — practitioner guides
   (retention-editing blogs, 2025–2026). Field practice, unsourced measurements.
 - Stand-up structure guides (setup/punchline, rule of three) — practitioner playbooks. Craft canon.

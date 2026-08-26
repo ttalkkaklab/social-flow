@@ -98,8 +98,14 @@ Our working defaults, all of them ours to overturn:
   the hook into the body, the turn into the close. On a 45-second short that is usually one
   change, sometimes none. Three cues in a short is scoring for its own sake.
 - **A drop is louder than a hit.** `sound.drop` mutes the bed for a shot (a 0.30s ramp, not a
-  cut). Spend it on the one line the episode is actually about; two drops in one short and
-  neither reads.
+  cut). Spend it on the one line the episode is actually about — the peak the episode gets
+  remembered by (storyboard scenario-craft §7), the `turn` on a story arc; two drops in one
+  short and neither reads.
+- **The bed starts out of the way and ends with air.** Under the hook, near-silence or a
+  low drone — a bed that arrives loud with the first line competes with the one sentence
+  that decides whether anyone stays. And don't hard-stop the music at the last word: let
+  the tail ring under the closing question, which needs room to hang, not a cut to black.
+  Own-channel production guide (2026-08), field practice.
 - **The crossfade lands on the card start**, so the incoming cue arrives with the picture rather
   than after it.
 - **Don't score against the narration's own rhythm.** The one BPM finding that survived

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사진 한 장을 6초짜리 카메라로 쓰는 법 (2026-08)</title>
+<style>
+  :root {
+    --paper:#fcfcfb; --paper-2:#f4f3ef; --card:#ffffff;
+    --ink:#1a1d21; --ink-2:#565c64; --ink-3:#8a9099;
+    --line:#e3e0d9; --line-strong:#c9c5bb;
+    --c-calm:#0f62a8; --c-act:#d2691e; --c-pay:#0e9f6e; --c-cta:#8b5cf6; --c-base:#9aa0a8;
+    --still-wash:#e5eef7; --clip-wash:#fbeee2;
+    --ok:#0e9f6e; --warn:#c67b18; --no:#b3261e;
+    --shadow:0 1px 2px rgba(26,29,33,.05), 0 8px 24px rgba(26,29,33,.05);
+    --mono:ui-monospace,"SF Mono",Menlo,"Roboto Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#14161a; --paper-2:#1a1d22; --card:#1c1f24;
+      --ink:#e8eaed; --ink-2:#a2a9b3; --ink-3:#757c86;
+      --line:#2c3037; --line-strong:#3e434b;
+      --c-calm:#2e90e0; --c-act:#e08a3c; --c-pay:#15a06b; --c-cta:#ae72e0; --c-base:#6b727b;
+      --still-wash:#12212e; --clip-wash:#2a1d12;
+      --ok:#15a06b; --warn:#dda23f; --no:#e8837c;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#14161a; --paper-2:#1a1d22; --card:#1c1f24;
+    --ink:#e8eaed; --ink-2:#a2a9b3; --ink-3:#757c86;
+    --line:#2c3037; --line-strong:#3e434b;
+    --c-calm:#2e90e0; --c-act:#e08a3c; --c-pay:#15a06b; --c-cta:#ae72e0; --c-base:#6b727b;
+    --still-wash:#12212e; --clip-wash:#2a1d12;
+    --ok:#15a06b; --warn:#dda23f; --no:#e8837c;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+  }
+  *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--paper); color:var(--ink);
+    line-height:1.72; font-size:16px; word-break:keep-all;
+    -webkit-font-smoothing:antialiased;
+    max-width:1000px; margin:0 auto; padding:0 24px 120px;
+  }
+  header.hero { padding:60px 0 36px; }
+  .kicker { display:inline-block; font-size:12px; font-weight:700; letter-spacing:.1em;
+    color:var(--ink-2); border:1px solid var(--line-strong); padding:4px 12px; border-radius:999px; margin-bottom:20px; }
+  h1 { font-size:clamp(28px,4.2vw,44px); line-height:1.24; font-weight:800; letter-spacing:-.025em; text-wrap:balance; }
+  .hero .sub { margin-top:18px; font-size:17.5px; color:var(--ink-2); max-width:60ch; }
+  .headline-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin:36px 0 0; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px 22px; box-shadow:var(--shadow); }
+  .stat-k { font-size:24px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .stat-v { font-size:14.5px; font-weight:600; color:var(--ink); margin-top:4px; }
+  .stat-n { font-size:13px; color:var(--ink-3); margin-top:6px; line-height:1.5; }
+  section { padding-top:52px; }
+  h2 { font-size:clamp(21px,2.6vw,27px); font-weight:750; letter-spacing:-.02em; line-height:1.34;
+       padding-bottom:12px; border-bottom:2px solid var(--line-strong); margin-bottom:22px; }
+  h3 { font-size:17.5px; font-weight:700; margin:34px 0 10px; letter-spacing:-.01em; }
+  p { margin:14px 0; max-width:74ch; }
+  p.method { font-size:14.5px; color:var(--ink-2); background:var(--paper-2); border-left:3px solid var(--line-strong);
+             padding:14px 18px; border-radius:0 8px 8px 0; max-width:none; }
+  b { font-weight:700; }
+  code { font-family:var(--mono); font-size:.88em; background:var(--paper-2); padding:1px 5px; border-radius:4px; }
+  a { color:var(--c-calm); text-decoration:underline; text-underline-offset:2px; }
+  ul.ladder { list-style:none; margin:18px 0; display:grid; gap:10px; }
+  ul.ladder li { background:var(--card); border:1px solid var(--line); border-left:3px solid var(--c-calm);
+                 border-radius:0 10px 10px 0; padding:13px 18px; font-size:15.5px; }
+  ul.ladder li:nth-child(2) { border-left-color:var(--c-pay); }
+  ul.ladder li:nth-child(3) { border-left-color:var(--c-act); }
+  ul.ladder li:nth-child(4) { border-left-color:var(--c-cta); }
+  ol.apply { margin:18px 0 0 22px; display:grid; gap:12px; }
+  ol.apply li { padding-left:6px; }
+  .tablewrap { overflow-x:auto; margin:22px 0; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  table { width:100%; border-collapse:collapse; font-size:14px; min-width:720px; }
+  th,td { padding:11px 14px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line); }
+  th { background:var(--paper-2); font-weight:700; font-size:13px; color:var(--ink-2); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:none; }
+  td .len { display:block; font-size:12px; color:var(--ink-3); }
+  td.still { background:var(--still-wash); font-weight:600; white-space:nowrap; }
+  td.clip { background:var(--clip-wash); font-weight:600; white-space:nowrap; }
+  table.cmp td:first-child { font-weight:600; }
+  td.ok { color:var(--ok); } td.warn { color:var(--warn); } td.no { color:var(--no); font-weight:600; }
+  figure { margin:26px 0; }
+  figure img { width:100%; height:auto; border-radius:10px; border:1px solid var(--line); display:block; }
+  figcaption { font-size:13.5px; color:var(--ink-2); margin-top:10px; line-height:1.62; }
+  .ev { display:grid; grid-template-columns:1fr 1fr; gap:22px; margin:24px 0; }
+  .evwide { display:grid; gap:26px; margin:24px 0; }
+  @media (max-width:760px) { .ev { grid-template-columns:1fr; } }
+  .chartfig { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 18px 16px; }
+  svg.chart { width:100%; height:auto; display:block; overflow:visible; }
+  svg.chart .grid { stroke:var(--line); stroke-width:1; }
+  svg.chart .ax { font-size:11px; fill:var(--ink-3); font-family:var(--mono); }
+  svg.chart .lbl { font-size:12px; font-weight:700; }
+  footer { margin-top:64px; padding-top:24px; border-top:1px solid var(--line); font-size:13.5px; color:var(--ink-3); }
+  footer p { margin:8px 0; max-width:none; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <span class="kicker">연출 조사 · 2026-08-26</span>
+  <h1>사진 한 장을 6초짜리 카메라로 쓰는 법</h1>
+  <p class="sub">참고 영상(케블라 발명 이야기, 46초 세로)을 프레임 단위로 뜯어 봤다. 정지 사진이 영상처럼 보이는 이유는 줌을 걸어서가 아니라, 컷마다 줌의 크기와 속도가 다르고 그 차이가 이야기의 온도를 따라가기 때문이다.</p>
+  <div class="headline-grid">
+    <div class="stat"><div class="stat-k">7컷 중 4컷</div><div class="stat-v">정지 사진 + 줌</div><div class="stat-n">나머지 3컷은 실제 영상 클립</div></div>
+    <div class="stat"><div class="stat-k">1.3배 ~ 2.1배</div><div class="stat-v">컷별 줌 폭</div><div class="stat-n">같은 영상 안에서 벌어지는 범위</div></div>
+    <div class="stat"><div class="stat-k">10배</div><div class="stat-v">우리 기본값과의 차이</div><div class="stat-n">빌더 기본 3.5%/카드 대 실측 34%</div></div>
+  </div>
+</header>
+
+<section id="conclusion">
+  <h2>1. 결론 — 줌을 거는 게 아니라 컷마다 다르게 건다</h2>
+  <p>정지 사진 4컷의 줌 폭이 1.3배에서 2.1배까지 벌어진다. 무작위가 아니라 그 컷이 하는 일에 붙어 있다.</p>
+  <ul class="ladder">
+    <li><b>사실을 설명하는 컷</b> — 7.6초 동안 1.3배. 초당 4%. 화면이 움직이는 줄 모를 만큼 느리다.</li>
+    <li><b>결론을 보여주는 컷</b> — 9.4초 동안 1.65배. 초당 6%. 가장 길고 가장 완만하다.</li>
+    <li><b>인물이 행동하는 컷</b> — 5.8초에 2.1배. 초당 14%. 뒤로 갈수록 빨라진다.</li>
+    <li><b>질문을 던지는 마지막 컷</b> — 4.3초에 2.0배. 초당 21%. 그리고 화면 중앙이 아니라 얼굴로 수렴한다.</li>
+  </ul>
+  <p>우리 빌더의 기본 줌 폭은 카드 전체에 걸쳐 3.5%다. 같은 7초 카드에서 이 영상은 34%를 쓴다. 열 배 차이다. 지금 우리 영상이 "사진을 붙여 놓은 것" 같다면 원인은 켄 번스가 없어서가 아니라 <b>있어도 안 보이게 걸려 있어서</b>다.</p>
+  <p>남은 3컷은 진짜 영상 클립인데, 셋 다 <b>움직임 자체가 정보인 자리</b>다. 연기가 흐르고, 화학자가 표정을 바꾸고, 섬유 다발이 쏟아진다. 사진으로는 그 장면이 성립하지 않는다.</p>
+</section>
+
+<section id="decode">
+  <h2>2. 이 영상이 실제로 한 것</h2>
+  <p class="method">측정법 — 컷의 첫 프레임을 배율과 위치를 바꿔 가며 뒤 프레임에 겹쳐 보고, 가장 잘 맞는 값을 그 시점의 카메라 창으로 삼았다. 정지 사진에 줌만 건 컷은 어느 시점이든 잘 맞고, 그림이 실제로 움직이는 컷은 어떤 값에서도 안 맞는다. 소스가 406×720으로 재압축된 카톡 전송본이라 숫자는 반올림해 읽는다.</p>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>컷</th><th>시간</th><th>소스</th><th>줌</th><th>속도</th><th>줌이 향하는 곳</th><th>그 자리에서 하는 말</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>0.0–6.6s<span class="len">6.6초</span></td><td class="clip">영상 클립</td><td>2.4배 동반</td><td>—</td><td>중앙</td><td>훅 — "실패작인 줄 알았던 이 물질이, 총알을 막았습니다"</td></tr>
+      <tr><td>2</td><td>6.6–14.2s<span class="len">7.6초</span></td><td class="still">정지 + 줌</td><td>1.0 → 1.34</td><td>초당 4%</td><td>중앙</td><td>셋업 — "1965년, 한 화학자가 실험을 하고 있었어요"</td></tr>
+      <tr><td>3</td><td>14.2–20.8s<span class="len">6.6초</span></td><td class="clip">영상 클립</td><td>2.2배 동반</td><td>—</td><td>얼굴</td><td>문제 → 전환 — "보통이라면 그냥 버릴 실패작. 그런데 여기서—"</td></tr>
+      <tr><td>4</td><td>20.8–26.6s<span class="len">5.8초</span></td><td class="still">정지 + 줌</td><td>1.0 → 2.06</td><td>초당 14%</td><td>중앙</td><td>행동 — "그녀는 버리지 않고 실을 뽑아봤어요"</td></tr>
+      <tr><td>5</td><td>26.6–32.5s<span class="len">5.9초</span></td><td class="clip">영상 클립</td><td>—</td><td>—</td><td>—</td><td>물성 — "얼마나 강했냐면, 본인도 안 믿을 정도"</td></tr>
+      <tr><td>6</td><td>32.5–41.9s<span class="len">9.4초</span></td><td class="still">정지 + 줌 + 빛</td><td>1.0 → 1.65</td><td>초당 6%</td><td>중앙</td><td>결론 — "강철보다 다섯 배 강한 섬유입니다"</td></tr>
+      <tr><td>7</td><td>42.0–46.3s<span class="len">4.3초</span></td><td class="still">정지 + 줌</td><td>1.0 → 2.04</td><td>초당 21%</td><td>얼굴 (가로 0.58 · 세로 0.26)</td><td>CTA — "이게 실수였을까요, 발견이었을까요?"</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure class="chartfig">
+    <svg viewBox="0 0 760 340" class="chart" role="img" aria-label="컷별 줌 배율 궤적">
+<line x1="54" y1="306.0" x2="592" y2="306.0" class="grid"/>
+<text x="44" y="310.0" class="ax" text-anchor="end">1.00배</text>
+<line x1="54" y1="243.4" x2="592" y2="243.4" class="grid"/>
+<text x="44" y="247.4" class="ax" text-anchor="end">1.25배</text>
+<line x1="54" y1="180.8" x2="592" y2="180.8" class="grid"/>
+<text x="44" y="184.8" class="ax" text-anchor="end">1.50배</text>
+<line x1="54" y1="118.2" x2="592" y2="118.2" class="grid"/>
+<text x="44" y="122.2" class="ax" text-anchor="end">1.75배</text>
+<line x1="54" y1="55.6" x2="592" y2="55.6" class="grid"/>
+<text x="44" y="59.6" class="ax" text-anchor="end">2.00배</text>
+<text x="54.0" y="326" class="ax" text-anchor="middle">0초</text>
+<text x="173.6" y="326" class="ax" text-anchor="middle">2초</text>
+<text x="293.1" y="326" class="ax" text-anchor="middle">4초</text>
+<text x="412.7" y="326" class="ax" text-anchor="middle">6초</text>
+<text x="532.2" y="326" class="ax" text-anchor="middle">8초</text>
+<path d="M 54.0 306.0 L 83.9 301.0 L 113.8 301.0 L 143.7 296.0 L 173.6 291.0 L 203.4 283.5 L 233.3 275.9 L 263.2 273.4 L 293.1 270.9 L 323.0 263.4 L 352.9 250.9 L 382.8 243.4 L 412.7 235.9 L 442.6 228.4 L 472.4 220.9" fill="none" stroke="var(--c-calm)" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="472.4" cy="220.9" r="3.4" fill="var(--c-calm)"/>
+<text x="481.4" y="224.9" class="lbl" fill="var(--c-calm)">컷2 · 설명</text>
+<path d="M 54.0 306.0 L 83.9 301.0 L 113.8 291.0 L 143.7 273.4 L 173.6 255.9 L 203.4 233.4 L 233.3 200.8 L 263.2 163.3 L 293.1 115.7 L 323.0 63.1 L 352.9 40.5" fill="none" stroke="var(--c-act)" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="352.9" cy="40.5" r="3.4" fill="var(--c-act)"/>
+<text x="361.9" y="44.5" class="lbl" fill="var(--c-act)">컷4 · 행동</text>
+<path d="M 54.0 306.0 L 83.9 296.0 L 113.8 291.0 L 143.7 278.5 L 173.6 270.9 L 203.4 263.4 L 233.3 250.9 L 263.2 238.4 L 293.1 230.9 L 323.0 223.4 L 352.9 210.8 L 382.8 203.3 L 412.7 190.8 L 442.6 183.3 L 472.4 175.8 L 502.3 168.3 L 532.2 150.7 L 562.1 143.2" fill="none" stroke="var(--c-pay)" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="562.1" cy="143.2" r="3.4" fill="var(--c-pay)"/>
+<text x="571.1" y="147.2" class="lbl" fill="var(--c-pay)">컷6 · 결론</text>
+<path d="M 54.0 306.0 L 83.9 291.0 L 113.8 268.4 L 143.7 235.9 L 173.6 193.3 L 203.4 145.7 L 233.3 113.2 L 263.2 45.5" fill="none" stroke="var(--c-cta)" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="263.2" cy="45.5" r="3.4" fill="var(--c-cta)"/>
+<text x="272.2" y="49.5" class="lbl" fill="var(--c-cta)">컷7 · 질문</text>
+<path d="M 54.0 306.0 L 472.4 297.2" fill="none" stroke="var(--c-base)" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="5 4"/>
+<circle cx="472.4" cy="297.2" r="3.4" fill="var(--c-base)"/>
+<text x="481.4" y="301.2" class="lbl" fill="var(--c-base)">우리 기본값 3.5%</text>
+</svg>
+    <figcaption>정지 사진 4컷의 배율 궤적. 설명(컷2)과 결론(컷6)은 거의 직선으로 오르고, 행동(컷4)과 질문(컷7)은 뒤로 갈수록 기울기가 선다. 점선이 우리 빌더의 기본값이다.</figcaption>
+  </figure>
+
+  <h3>이징 — 두 종류를 섞어 쓴다</h3>
+  <p>설명과 결론 컷은 처음부터 끝까지 같은 속도로 오른다. 행동과 질문 컷은 <b>끝까지 가속한다</b> — 컷4는 0.5초 구간마다 2%·4%·7%·9%·13%·15%·19%·21%로 붙는다. 시작을 눈치채지 못하게 들어가서 컷이 끝나는 순간 가장 빠르고, 그 지점에서 바로 다음 컷으로 끊는다. 우리 빌더의 기본 이징(smoothstep)은 양 끝을 감속하니 반대다.</p>
+
+  <h3>전환 — 여섯 번 모두 암전을 지난다</h3>
+  <p>컷 사이가 크로스디졸브가 아니다. 화면 밝기가 0.2초에 걸쳐 떨어지고, 검정 프레임이 1–3장(0.04–0.12초) 지나간 뒤, 다시 0.2초에 걸쳐 올라온다. 컷5→6 전환에서만 검정이 0.12초로 조금 길다 — 결론 직전에 숨을 한 번 더 쉰다.</p>
+
+  <h3>자막이 화면 변화를 대신 채운다</h3>
+  <p>이미지 하나가 5–9초를 버티는 동안 자막은 2–3초마다 바뀐다. 컷6은 9.4초를 한 장으로 가면서 자막을 세 번 갈아 끼운다. 스토리보드 규칙의 "2–4초마다 화면에서 뭔가 바뀐다"를 컷 수가 아니라 자막과 줌으로 채운 사례다.</p>
+</section>
+
+<section id="split">
+  <h2>3. 어디에 사진을 쓰고 어디에 클립을 썼나</h2>
+  <p>기준이 하나로 읽힌다. 그 순간의 정보가 <b>"무엇이 어떻게 움직이는가"</b>면 클립, <b>"무엇이 있는가 · 무슨 일이 있었는가"</b>면 사진에 줌을 건다.</p>
+
+  <div class="evwide">
+    <figure><img src="clip-cut3.jpg" alt="컷3의 0.5초 간격 프레임 12장 — 화학자의 얼굴 방향과 표정이 프레임마다 바뀐다"><figcaption>컷3 (0.5초 간격). 카메라가 들어가는 동안 <b>인물이 연기한다</b> — 시선이 비커에서 정면으로 옮겨 가고 표정이 굳는다. "그런데 여기서—" 직전의 얼굴이라 사진으로는 대체가 안 된다.</figcaption></figure>
+    <figure><img src="clip-cut5.jpg" alt="컷5의 0.5초 간격 프레임 12장 — 빛나는 섬유 다발이 쏟아지다 아래로 휘어 감긴다"><figcaption>컷5. 섬유 다발이 쏟아지다 아래로 휘어 겹친다. 5.9초 내내 형태가 바뀌므로 이 컷은 처음부터 영상으로 만들어야 성립한다.</figcaption></figure>
+  </div>
+
+  <p>반대로 셋업·행동 서술·결론·CTA는 전부 사진이다. 결론 컷(9.4초)이 가장 긴 컷인데도 사진 한 장으로 간다. 여기서 필요한 정보는 "케블라 방탄복을 입은 군인이 있다"이고, 그건 움직일 필요가 없다.</p>
+
+  <div class="ev">
+    <figure><img src="still-cut2.jpg" alt="컷2 잔차 분석 — 워핑한 첫 프레임, 실제 후속 프레임, 두 장의 차이"><figcaption><b>대조군.</b> 정지 사진에 줌만 건 컷2의 차이 맵. 밝은 곳이 <b>윤곽선에만</b> 얇게 붙어 있다 — 확대하며 생기는 리샘플 오차라 이 무늬가 "그림은 안 움직였다"는 뜻이다.</figcaption></figure>
+    <figure><img src="lightsweep-cut6.jpg" alt="컷6 잔차 분석 — 왼쪽부터 워핑한 첫 프레임, 실제 후속 프레임, 두 장의 차이"><figcaption>컷6은 사진인데 한 겹 더 얹었다. 세 번째 칸이 두 프레임의 차이인데, 윤곽선 말고 <b>등판과 배경에 넓은 덩어리</b>가 밝다 — 빛이 어깨를 훑고 지나간다. 사진 위에 빛 스윕을 얹은 것이고, 이 한 겹이 9.4초를 버티게 한다.</figcaption></figure>
+  </div>
+
+  <h3>우리 연출 문법이 이미 말한 것</h3>
+  <p><code>directing-grammar.md</code> §4 still lane과 §5 feel 표에 이 영상의 선택이 대부분 들어 있다. 관찰·설명은 느린 드리프트, 결론은 길고 완만하게, 클로즈업은 한 번만 쓰기, 마지막 컷은 얼굴로 향하는 focus 줌 — 실측이 그대로 확인해 준다. 컷7의 유일한 얼굴 클로즈업이 클로즈업 배급 규칙과 맞고, 결론 컷이 9.4초로 가장 긴 것이 "wide ≥ 1.5× close" 비율과 맞는다.</p>
+  <p>문법이 아직 말하지 않은 것은 <b>강도</b>다. 어떤 무브를 쓸지는 적혀 있는데 얼마나 크게·얼마나 빠르게는 빌더 기본값 하나로 고정되어 있다.</p>
+</section>
+
+<section id="builder">
+  <h2>4. 우리 빌더로 얼마나 되나</h2>
+  <p><code>build-reel.sh</code>는 이미 in·out·hold·punch·8방향 pan·focus 좌표·drift·이징을 갖췄다. 막히는 곳은 문법이 아니라 값과 두 가지 기능이다.</p>
+  <div class="tablewrap"><table class="cmp">
+    <thead><tr><th>이 영상이 한 것</th><th>우리 빌더</th><th>판정</th></tr></thead>
+    <tbody>
+      <tr><td>컷마다 줌 폭 34–106%</td><td><code>ZOOM_SPAN</code> 기본 3.5%</td><td class="ok">값만 바꾸면 됨 — 컷 역할별 사다리가 없을 뿐</td></tr>
+      <tr><td>2배 확대</td><td><code>ZOOM_BASE</code> 1620×2880 = 캔버스의 1.5배</td><td class="warn">1.5배가 무손실 상한. 2배 컷은 소스를 2–3배 해상도로 생성해야 함 (빌더 아니라 생성 쪽)</td></tr>
+      <tr><td>끝까지 가속하는 줌</td><td><code>KB_EASE</code> smooth(양끝 감속) · linear</td><td class="warn">ease-in 모드가 없음</td></tr>
+      <tr><td>얼굴로 수렴하는 줌</td><td><code>FX</code>:<code>FY</code> focus 좌표</td><td class="ok">그대로 됨</td></tr>
+      <tr><td>암전 통과 전환</td><td><code>xfade transition=fade</code> (크로스디졸브)</td><td class="warn"><code>fadeblack</code>으로 한 단어 차이</td></tr>
+      <tr><td>사진 위 빛 스윕</td><td><code>::overlay.png</code> — 정지 PNG만</td><td class="no">움직이는 오버레이 경로가 없음</td></tr>
+      <tr><td>사진 · 클립 3:4 혼용</td><td>클립은 <code>visual.video</code>로 이미 합산 2컷 상한</td><td class="ok">이 영상은 3컷 — 상한을 어디에 쓸지의 문제</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="apply">
+  <h2>5. 적용 후보</h2>
+  <p>여기서는 제안만 적는다. 실제 수정은 안 했다.</p>
+  <ol class="apply">
+    <li><b>컷 역할별 줌 속도 사다리</b> — 설명 초당 4%대, 결론 6%대, 행동·긴장 14%대, CTA 20%대. <code>ZOOM_SPAN</code>을 컷 길이 × 역할별 초당 속도로 계산하면 지금 구조 그대로 들어간다. 이게 이 조사에서 가장 값이 큰 한 줄이다.</li>
+    <li><b>ease-in 이징 추가</b> — 끝에서 가장 빠른 줌. 컷이 끝나는 순간 다음 컷으로 끊는 편집과 짝이다.</li>
+    <li><b>암전 전환 옵션</b> — <code>fadeblack</code>. 결론 직전 한 번만 검정을 길게 주는 것도 같이.</li>
+    <li><b>2배 줌을 쓸 컷의 소스 해상도</b> — 이미지 생성 단계에서 캔버스의 2–3배로 뽑아 둬야 한다. 지금 1.5배 상한은 1.5배 줌까지만 안전하다.</li>
+    <li><b>움직이는 오버레이</b> — 사진 한 장으로 8초 이상 가야 하는 컷에 빛 스윕 한 겹. 지금은 정지 PNG만 얹힌다.</li>
+    <li><b>정지·클립 배분 규칙을 문법에 적기</b> — "움직임이 정보인 자리에만 클립". 훅, 인물의 감정이 바뀌는 자리, 물성을 보여 주는 자리. 나머지는 사진에 줌.</li>
+  </ol>
+</section>
+
+<footer>
+  <p>참고 영상: KakaoTalk_Video_2026-08-26-16-32-59.mp4 (46.5초 · 406×720 · 24fps). 측정은 ffmpeg 7.1.1과 numpy/PIL로 했고, 프레임 정합·잔차 맵·밝기 곡선이 근거다.</p>
+  <p>읽은 자료: <a href="https://www.masterclass.com/articles/how-to-use-the-ken-burns-effect-in-a-documentary">MasterClass — Ken Burns Effect in a Documentary</a> · <a href="https://www.soundstripe.com/blogs/what-is-the-ken-burns-effect-and-how-do-you-use-it">Soundstripe — What is the Ken Burns Effect</a> · <a href="https://morphic.com/ai-glossary/Parallax-Effect">Morphic — Parallax Effect</a> · <a href="https://waxy.org/2019/11/turning-photos-into-2-5d-parallax-animations-with-machine-learning/">Waxy — 2.5D Parallax Animations</a></p>
+  <p>저장소 안 관련 문서: <code>skills/storyboard/references/directing-grammar.md</code> §4 still lane · §5 feel 표 · <code>skills/produce/references/build-reel.sh</code> §7</p>
+</footer>
+
+</body>
+</html>

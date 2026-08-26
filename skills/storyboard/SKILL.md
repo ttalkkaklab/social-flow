@@ -204,6 +204,18 @@ difference on our own episodes, user note 2026-08-23). The step has four parts, 
    the map is answered or written off**. Short of the floor, change the angle or the topic —
    don't pad the body. Only then §3 (the directory) and §4 (the scenes).
 
+**The subject itself gets checked here — does its question survive to the last frame?**
+Retention is set more by what the episode is about than by how it is cut (own-channel retention
+report (2026-08-26) — measured, n=4): the mystery subject held a flat curve for 90 seconds and
+came first in both retention and views, while the episode explaining something the viewer
+already accepts ("hearts beat in a rhythm") slid from the third second on and finished at a
+third of the views. Before writing scenes, say the episode's question out loud and name where
+it gets answered. If that answer is "in one sentence, halfway through", the material is an
+explanation and not a mystery — reframe it around whatever stays unresolved (what nobody
+could explain about it, the figure that shouldn't be possible, why it was built this way and
+not the obvious way), or change the topic. Editing can't rescue a subject the viewer already
+agrees with.
+
 The hook material comes out of this step too — the questions people actually ask (`kin`) are
 the `identify` and `gap` forms, the verified figure is the `number` form and the hero stat, the
 result that's actually been shown is the `payoff` form (scenes-schema §the six hook forms). A
@@ -347,7 +359,7 @@ Core rules:
   answer appears**; a payoff shown early closes the loop and removes the reason to watch.
   Write a `beat` on each shot — `hook` · `hooking` · `result` · `body` · `turn` (story only) ·
   `cta`. The source of truth is scenes-schema §playback order.
-- **Underneath the beats, run the six craft rules** (`references/scenario-craft.md`). After
+- **Underneath the beats, run the seven craft rules** (`references/scenario-craft.md`). After
   drafting, walk the scenes top to bottom and speak the connective at every seam — each one
   reads "그래서" or "그런데", never "그리고" (an and-then seam is a scene to merge, cut, or
   reorder); check each scene turns a charge (what's at stake reads differently at close than
@@ -356,7 +368,9 @@ Core rules:
   table with its clock plus a doable answer (suspense over surprise, Witte's efficacy rule),
   every curiosity loop opened mid-episode paired at open time with the scene that pays it
   (loops beyond the main `hookForm`: short-form one sub-loop at most, long-form 2–4 — note
-  the pairs in the §7 hand-off note), and jokes built as pattern breaks that land last.
+  the pairs in the §7 hand-off note), the body paying its answer in installments so each
+  body scene opens the next question as it closes one (seam gaps stay off that ledger),
+  and jokes built as pattern breaks that land last.
 - **The opening runs on one of four — fear · empathy · curiosity · showing the ending.**
   Every episode uses one of them (user-relayed creator lecture, 2026-08-18). Decide in one
   line, before authoring, which stimulus the opening (cover title + segment ① + hooking —
@@ -393,6 +407,17 @@ Core rules:
   `gap` the body never closes is the early-exit trap). storyboard.html is tables, frames and
   badges, not drawn panels — the form of the storyboard is irrelevant, its function is to force
   these four jobs.
+- **The hold job is won in the body, not at the entrance** (measured on our own channel,
+  n=4 — retention report, 2026-08-26). Retention ranked our four Shorts in exactly
+  the order views ranked them (52% → 38% → 26% → 19%, 1,367 views down to 453), and the
+  longest episode (90s) came first on both — the slope was the variable, not the length.
+  Winner and loser both cleared the first 3 seconds; the loser then leaked a few percent a
+  second through the body and sat under 50% by the 17-second mark. So when an episode
+  underperforms, **rework the body before touching the opening** — every body scene closes
+  one gap and opens the next in the same breath (`references/scenario-craft.md` §5), and a
+  scene that only finishes an explanation is where the curve bends. Cutting shorter isn't
+  the fix either: what wins is a flat curve, so trim the stretches that sag and let a held
+  90 seconds run.
 - **The shot after the cover is hooking — informational episodes included.** If the cover
   stopped the thumb, hooking carries the stopped person to the result. The contract has four
   parts — **catch** what the cover threw (same subject, same promise; don't drift to new
@@ -527,13 +552,23 @@ and `SB_DOC.seriesNote`.
    line. Don't substitute a harder CTA for it.
 2. **An interest problem** — if engaged views are low against raw views, cut explanation and
    pull the moment of reaching the result earlier.
-3. **Conversion clues** — use the topic, result, and form of the video that produced
+3. **A holding problem** — if `averageViewPercentage` trails the channel median, or the
+   Studio curve slides through the body while the first seconds hold, the body is closing
+   loops without opening new ones. Rework the body into installments
+   (`references/scenario-craft.md` §5) and leave the opening the curve says is working alone.
+4. **An engagement problem** — if retention sits at or above the channel median while
+   `likes`·`comments` (`youtube_insights` per-video) sit at the floor, the video held
+   people who then did nothing — the second promotion layer is failing, not the body
+   (growth-playbook §observed metrics). Redesign the act beat's outward loop
+   (`references/scenes-schema.md` §playback order, act row) and rotate its form so it
+   isn't the same question every episode.
+5. **Conversion clues** — use the topic, result, and form of the video that produced
    subscribers as the common axis of the next 3–5 episodes. Don't clone a format that had
    high views and no subscribers.
    Conversely, when the early pass-through and retention are good but views alone are low,
    the problem is the title angle, not the form — reopen on a felt problem rather than a
    method or tool (platform-playbook §1 ②).
-4. **The next promise** — write this episode's result and the next episode's result as one
+6. **The next promise** — write this episode's result and the next episode's result as one
    sentence each. If the two don't connect, it isn't a series, just one-offs on similar
    topics.
 
@@ -819,8 +854,9 @@ passing them (`../produce/references/video-model-selection.md` §6).
   ```
 
   The assembler writes size, angle, `From the camera: layout. facing. line. light.`, then the
-  scene, the mood, the exclusions, then `lower third fading into darkness` (directing-grammar
-  §3.5). The **mandatory negative directions** go in through `--exclude` — neither
+  scene, the mood, the exclusions, then a fill-the-frame tail (directing-grammar §3.5).
+  **Never** append `lower third fading into darkness` or any top/bottom letterbox instruction
+  (owner 2026-08-25). The **mandatory negative directions** go in through `--exclude` — neither
   `gpt_image_text2img` nor `image_local_generate` has an exclusion argument, so the short noun
   list stays in the body as before; `veo_*` is the one call that takes `negativePrompt`. The
   cover background inherits the same assembly and the same exclusions, and swaps `face not
@@ -999,7 +1035,10 @@ what's being approved is that plan, and the files get built in §8 afterwards.
 vocabulary, camera, sound, and images, with **which scene or shot was lowest and at what score**
 for the three per-item ones, and **every finding you didn't apply, in the reviewer's own words**.
 That last list is the point of the screen: the reviews no longer block, so this is where a
-defect gets its only human look. The options:
+defect gets its only human look. **The loop ledger comes up here too** — every curiosity
+loop and deliberate plant opened in the episode, each named with the scene that pays it
+(scenario-craft §3·§5 direct the pairs to this note). A pair with no payer on this screen
+is the last cheap place to catch an unkept promise. The options:
 [Approve — proceed to production / Request changes / Hold the topic]. **Don't move to produce
 without approval.**
 For a change request, apply it and present again. **A user-requested change may be re-read by

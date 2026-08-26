@@ -353,7 +353,7 @@ Seedance 2.x rejects real faces outright. On the image lane, the same panels go 
 
 | Model ID | Resolution | Length | Reference images | Audio | seed | Live-action face input |
 |---|---|---|---|---|---|---|
-| `dreamina-seedance-2-5-260628` | 480p·720p | 4–30s | 1–30 | ○ | ✗ | **rejected** |
+| `dreamina-seedance-2-5-260628` | 480p–1080p | 4–30s | 1–30 | ○ | ✗ | **rejected** |
 | `dreamina-seedance-2-0-260128` | 480p–4K | 4–15s | 1–9 | ○ | ✗ | **rejected** |
 | `dreamina-seedance-2-0-fast-260128` | 480p·720p | 4–15s | 1–9 | ○ | ✗ | **rejected** |
 | `dreamina-seedance-2-0-mini-260615` | 480p·720p | 4–15s | 1–9 | ○ | ✗ | **rejected** |
@@ -364,9 +364,10 @@ Seedance 2.x rejects real faces outright. On the image lane, the same panels go 
 All models are fixed 24fps and accept every ratio: 16:9, 9:16, 4:3, 3:4, 1:1, 21:9, adaptive.
 Only `seedance-1-0-pro-fast` is first-frame-only — it can't interpolate first+last frames.
 
-2.5's 1080p opens on **2026-08-17 (UTC+8)** — after that date, add `'1080p'` to
-`dreamina-seedance-2-5-260628.resolutions` in the `server/src/seedance-client.ts` capability
-table. Until then it's rejected before the call.
+2.5's 1080p opened on **2026-08-17 (UTC+8)** and sits in the
+`dreamina-seedance-2-5-260628.resolutions` capability table (`server/src/seedance-client.ts`)
+— 10-bit color, and the one tier the 28%-off list campaign covers through 2026-09-17.
+4K stayed 2.0-only.
 
 **The Dreamina Seedance 2.5/2.0 family doesn't unlock on a key alone** — it activates only
 with an account balance over $30 or a purchased resource pack. The 1.5 pro and 1.0 family

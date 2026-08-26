@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>조회수 1회의 값 — 쇼츠와 롱폼 수익 해부 (2026-08)</title>
+<style>
+  :root {
+    --paper:#fcfcfb; --paper-2:#f4f3ef; --card:#ffffff;
+    --ink:#1a1d21; --ink-2:#565c64; --ink-3:#8a9099;
+    --line:#e3e0d9; --line-strong:#c9c5bb;
+    --shorts:#d2691e; --longform:#0f62a8; --korea:#0e9f6e; --other:#8b5cf6;
+    --shorts-wash:#fbeee2; --longform-wash:#e5eef7; --korea-wash:#e2f4ec; --other-wash:#efe9fd;
+    --flag:#b3261e; --flag-wash:#fdeceb;
+    --shadow:0 1px 2px rgba(26,29,33,.05), 0 8px 24px rgba(26,29,33,.05);
+    --mono:ui-monospace,"SF Mono",Menlo,"Roboto Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#14161a; --paper-2:#1a1d22; --card:#1c1f24;
+      --ink:#e8eaed; --ink-2:#a2a9b3; --ink-3:#757c86;
+      --line:#2c3037; --line-strong:#3e434b;
+      --shorts:#d9762a; --longform:#2e90e0; --korea:#15a06b; --other:#ae72e0;
+      --shorts-wash:#2a1d12; --longform-wash:#12212e; --korea-wash:#0f2620; --other-wash:#211a30;
+      --flag:#e8837c; --flag-wash:#2d1a19;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#14161a; --paper-2:#1a1d22; --card:#1c1f24;
+    --ink:#e8eaed; --ink-2:#a2a9b3; --ink-3:#757c86;
+    --line:#2c3037; --line-strong:#3e434b;
+    --shorts:#d9762a; --longform:#2e90e0; --korea:#15a06b; --other:#ae72e0;
+    --shorts-wash:#2a1d12; --longform-wash:#12212e; --korea-wash:#0f2620; --other-wash:#211a30;
+    --flag:#e8837c; --flag-wash:#2d1a19;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+  }
+
+  *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; scroll-padding-top:20px; }
+  body {
+    font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--paper); color:var(--ink);
+    line-height:1.72; font-size:16px; word-break:keep-all;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 28px 120px; }
+  .num { font-variant-numeric:tabular-nums; }
+
+  /* ---------- 히어로 ---------- */
+  header.hero { padding:64px 0 40px; }
+  .kicker { display:inline-block; font-size:12px; font-weight:700; letter-spacing:.1em;
+    color:var(--ink-2); border:1px solid var(--line-strong); padding:4px 12px; border-radius:999px; margin-bottom:22px; }
+  h1 { font-size:clamp(30px,4.4vw,46px); line-height:1.22; font-weight:800; letter-spacing:-.025em; text-wrap:balance; }
+  .hero .sub { margin-top:18px; font-size:17.5px; color:var(--ink-2); max-width:64ch; }
+
+  .headline-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; margin:40px 0 8px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px 24px 20px; box-shadow:var(--shadow); position:relative; overflow:hidden; }
+  .stat::before { content:""; position:absolute; inset:0 auto 0 0; width:4px; background:var(--tone,var(--line-strong)); }
+  .stat .label { font-size:13px; font-weight:700; color:var(--ink-2); letter-spacing:.02em; }
+  .stat .big { font-size:33px; font-weight:800; letter-spacing:-.03em; line-height:1.15; margin:8px 0 2px; color:var(--tone,var(--ink)); }
+  .stat .unit { font-size:16px; font-weight:700; color:var(--ink-2); margin-left:2px; }
+  .stat .foot { font-size:13px; color:var(--ink-3); line-height:1.5; }
+  .stat.s-shorts { --tone:var(--shorts); }
+  .stat.s-long { --tone:var(--longform); }
+  .stat.s-gap { --tone:var(--other); }
+
+  .basis { margin-top:22px; font-size:13.5px; color:var(--ink-3); display:flex; flex-wrap:wrap; gap:6px 20px; }
+  .basis strong { color:var(--ink-2); font-weight:700; }
+
+  /* ---------- 목차 ---------- */
+  nav.toc { background:var(--paper-2); border:1px solid var(--line); border-radius:14px; padding:20px 24px; margin:44px 0 60px; }
+  nav.toc h2 { font-size:12px; letter-spacing:.1em; color:var(--ink-3); margin-bottom:12px; font-weight:700; }
+  nav.toc ol { list-style:none; display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:6px 28px; counter-reset:toc; }
+  nav.toc li { counter-increment:toc; }
+  nav.toc a { color:var(--ink); text-decoration:none; font-size:14.5px; font-weight:500; display:block; padding:3px 0; }
+  nav.toc a::before { content:counter(toc,decimal-leading-zero); color:var(--ink-3); font-weight:700; margin-right:8px; font-size:12.5px; font-family:var(--mono); }
+  nav.toc a:hover { color:var(--shorts); }
+
+  /* ---------- 섹션 ---------- */
+  section { margin-bottom:76px; scroll-margin-top:20px; }
+  section > h2 { font-size:26px; font-weight:800; letter-spacing:-.02em; padding-top:20px; border-top:2px solid var(--ink); margin-bottom:6px; text-wrap:balance; }
+  section > .lede { font-size:16.5px; color:var(--ink-2); margin-bottom:26px; max-width:70ch; }
+  h3 { font-size:18px; font-weight:700; margin:36px 0 12px; letter-spacing:-.01em; }
+  p { margin-bottom:14px; max-width:70ch; }
+  a { color:var(--longform); }
+
+  /* ---------- 배지 ---------- */
+  .badge { display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:6px; white-space:nowrap; letter-spacing:.01em; }
+  .b-official { color:var(--longform); background:var(--longform-wash); }
+  .b-api     { color:var(--korea);    background:var(--korea-wash); }
+  .b-field   { color:var(--shorts);   background:var(--shorts-wash); }
+  .b-est     { color:var(--ink-2);    background:var(--paper-2); border:1px solid var(--line); }
+  .b-killed  { color:var(--flag);     background:var(--flag-wash); }
+
+  /* ---------- 카드 / 차트 프레임 ---------- */
+  .figure { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:26px 28px 22px; margin:24px 0 12px; box-shadow:var(--shadow); }
+  .figure > figcaption { font-size:15px; font-weight:700; margin-bottom:4px; }
+  .figure .cap-sub { font-size:13.5px; color:var(--ink-3); margin-bottom:22px; line-height:1.55; }
+  .figure .cap-foot { font-size:12.5px; color:var(--ink-3); margin-top:18px; padding-top:14px; border-top:1px solid var(--line); line-height:1.6; }
+
+  .legend { display:flex; flex-wrap:wrap; gap:8px 20px; margin-bottom:18px; font-size:13px; color:var(--ink-2); }
+  .legend span { display:inline-flex; align-items:center; gap:7px; }
+  .swatch { width:11px; height:11px; border-radius:3px; flex:none; }
+
+  /* ---------- 가로 범위 막대 차트 ---------- */
+  .rangechart { display:grid; grid-template-columns:minmax(120px,190px) 1fr minmax(88px,auto); gap:5px 14px; align-items:center; }
+  .rc-name { font-size:13.5px; font-weight:600; text-align:right; line-height:1.35; }
+  .rc-name small { display:block; font-size:11.5px; color:var(--ink-3); font-weight:500; }
+  .rc-track { position:relative; height:26px; background:var(--paper-2); border-radius:6px; overflow:hidden; }
+  .rc-bar { position:absolute; top:5px; height:16px; border-radius:4px; background:var(--tone); min-width:3px;
+    box-shadow:0 0 0 2px var(--card); }
+  .rc-dot { position:absolute; top:6px; width:14px; height:14px; border-radius:50%; background:var(--tone); box-shadow:0 0 0 2px var(--card); }
+  .rc-val { font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--ink-2); }
+  .rc-axis { grid-column:2; display:flex; justify-content:space-between; font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; margin-top:6px; border-top:1px solid var(--line); padding-top:5px; }
+  .rc-head { grid-column:1/-1; font-size:11.5px; font-weight:700; letter-spacing:.08em; color:var(--ink-3); margin:14px 0 2px; }
+  .rc-head:first-child { margin-top:0; }
+  .t-shorts { --tone:var(--shorts); } .t-long { --tone:var(--longform); }
+  .t-korea { --tone:var(--korea); }  .t-other { --tone:var(--other); }
+
+  /* ---------- 세로 막대 ---------- */
+  .colchart { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:10px; align-items:end; min-height:238px; padding-top:10px; }
+  .col { display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:6px; }
+  .col .colval { font-size:12.5px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--ink-2); text-align:center; line-height:1.25; }
+  .col .colbar { width:100%; max-width:64px; background:var(--tone); border-radius:5px 5px 0 0; min-height:3px; }
+  .col .colbar.range { background:var(--paper-2); border:1px solid var(--line); position:relative; overflow:hidden; }
+  .col .colbar.range i { position:absolute; left:0; right:0; bottom:0; background:var(--tone); display:block; }
+  .collabels { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:10px; margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
+  .collabels div { font-size:12.5px; font-weight:600; text-align:center; line-height:1.35; }
+  .collabels div small { display:block; font-size:11px; color:var(--ink-3); font-weight:500; }
+
+  /* ---------- 표 ---------- */
+  .table-scroll { overflow-x:auto; margin:20px 0; -webkit-overflow-scrolling:touch; }
+  table { width:100%; border-collapse:collapse; font-size:14px; min-width:520px; }
+  th,td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-size:12.5px; font-weight:700; color:var(--ink-2); background:var(--paper-2); white-space:nowrap; }
+  td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  tbody tr:hover { background:var(--paper-2); }
+  tr.hi td { background:var(--korea-wash); }
+  tr.hi td:first-child { font-weight:700; }
+
+  /* ---------- 계산기 ---------- */
+  .calc { background:var(--card); border:2px solid var(--ink); border-radius:16px; padding:28px; margin:26px 0; }
+  .calc h3 { margin:0 0 6px; font-size:19px; }
+  .calc .hint { font-size:13.5px; color:var(--ink-3); margin-bottom:22px; }
+  .calc-controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:18px 20px; margin-bottom:26px; }
+  .field label { display:block; font-size:12.5px; font-weight:700; color:var(--ink-2); margin-bottom:6px; }
+  .field input, .field select {
+    width:100%; padding:10px 12px; font-size:15px; font-family:inherit; font-variant-numeric:tabular-nums;
+    background:var(--paper); color:var(--ink); border:1px solid var(--line-strong); border-radius:9px;
+  }
+  .field input:focus, .field select:focus { outline:2px solid var(--longform); outline-offset:1px; border-color:transparent; }
+  .seg { display:flex; gap:0; border:1px solid var(--line-strong); border-radius:9px; overflow:hidden; }
+  .seg button { flex:1; padding:10px 6px; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer;
+    background:var(--paper); color:var(--ink-2); border:none; border-right:1px solid var(--line-strong); }
+  .seg button:last-child { border-right:none; }
+  .seg button[aria-pressed="true"] { background:var(--ink); color:var(--paper); }
+  .seg button:focus-visible { outline:2px solid var(--longform); outline-offset:-3px; }
+  .calc-out { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; }
+  .out-cell { background:var(--paper-2); border-radius:12px; padding:16px 18px; }
+  .out-cell .k { font-size:12.5px; font-weight:700; color:var(--ink-2); }
+  .out-cell .v { font-size:26px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; margin-top:3px; }
+  .out-cell .s { font-size:12.5px; color:var(--ink-3); }
+  .calc-foot { font-size:12.5px; color:var(--ink-3); margin-top:18px; line-height:1.6; }
+
+  /* ---------- 흐름도 ---------- */
+  .flow { width:100%; height:auto; display:block; }
+  .flow text { font-family:inherit; }
+
+  /* ---------- 대비 카드 ---------- */
+  .versus { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:22px 0; }
+  .vs-card { border:1px solid var(--line); border-radius:14px; padding:20px 22px; background:var(--card); }
+  .vs-card.a { border-top:4px solid var(--shorts); }
+  .vs-card.b { border-top:4px solid var(--longform); }
+  .vs-card h4 { font-size:15.5px; font-weight:800; margin-bottom:12px; }
+  .vs-card.a h4 { color:var(--shorts); }
+  .vs-card.b h4 { color:var(--longform); }
+  .vs-card dl { display:grid; grid-template-columns:auto 1fr; gap:8px 14px; font-size:14px; }
+  .vs-card dt { font-weight:700; color:var(--ink-2); font-size:13px; white-space:nowrap; }
+  .vs-card dd { color:var(--ink); }
+
+  /* ---------- 경고 / 노트 ---------- */
+  .note { border-left:3px solid var(--tone,var(--line-strong)); background:var(--paper-2); border-radius:0 10px 10px 0;
+    padding:16px 20px; margin:20px 0; font-size:14.5px; }
+  .note.warn { --tone:var(--flag); }
+  .note.key  { --tone:var(--korea); }
+  .note h4 { font-size:14.5px; font-weight:800; margin-bottom:5px; }
+  .note p:last-child { margin-bottom:0; }
+
+  @media (max-width:720px) {
+    .wrap { padding:0 18px 90px; }
+    .versus { grid-template-columns:1fr; }
+    .rangechart { grid-template-columns:minmax(96px,120px) 1fr; }
+    .rc-val { grid-column:2; font-size:12px; margin:-4px 0 6px; }
+    .colchart { height:180px; }
+  }
+  @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">RESEARCH · 2026-08-25</span>
+  <h1>조회수 1회의 값 — 쇼츠와 롱폼 수익 해부</h1>
+  <p class="sub">수익화를 켠 다음이 궁금해서 시작한 조사다. 조회수가 돈이 되는 경로는
+  쇼츠와 롱폼이 아예 다르고, 그 차이가 같은 100만 회에서 수십 배로 벌어진다.
+  22개 출처에서 뽑은 106개 주장을 3표 교차 검증에 걸어 살아남은 수치만 그렸다.</p>
+
+  <div class="headline-grid">
+    <div class="stat s-shorts">
+      <div class="label">쇼츠 100만 회</div>
+      <div class="big num">5만~24만<span class="unit">원</span></div>
+      <div class="foot">한국 실측 인증 23.5만 원이 상단, 국내 업계 추정치 5만~10만 원이 하단</div>
+    </div>
+    <div class="stat s-long">
+      <div class="label">롱폼 100만 회 · 한국 시청자</div>
+      <div class="big num">320만~450만<span class="unit">원</span></div>
+      <div class="foot">RPM $2.30~3.20 기준. 금융·교육 니치는 이보다 3~5배 위</div>
+    </div>
+    <div class="stat s-gap">
+      <div class="label">같은 조회수 수익 차이</div>
+      <div class="big num">11~34<span class="unit">배</span></div>
+      <div class="foot">274개 채널 API 실측. 롱폼 1,000회를 따라잡으려면 쇼츠 1만 1천~3만 4천 회</div>
+    </div>
+  </div>
+
+  <div class="basis">
+    <span><strong>적용 환율</strong> 1 USD = 1,400원</span>
+    <span><strong>수집</strong> 출처 22 · 주장 106 · 검증 25 · 확정 18 · 반박 4</span>
+    <span><strong>세금</strong> 전부 세전 금액</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#gate">수익화 관문은 두 칸이다</a></li>
+    <li><a href="#path">돈이 만들어지는 두 경로</a></li>
+    <li><a href="#watchtime">시청시간은 어디서 돈이 되나</a></li>
+    <li><a href="#shorts-rpm">쇼츠 조회 1회의 값</a></li>
+    <li><a href="#long-rpm">롱폼 RPM은 니치가 정한다</a></li>
+    <li><a href="#country">그다음은 시청자 국적이 정한다</a></li>
+    <li><a href="#table">조회수 구간별 수익표</a></li>
+    <li><a href="#calc">내 채널 계산기</a></li>
+    <li><a href="#gap">같은 조회수, 다른 수익</a></li>
+    <li><a href="#traps">숫자를 깎아먹는 것들</a></li>
+    <li><a href="#killed">반박된 주장과 검증 실패</a></li>
+    <li><a href="#sources">출처와 등급</a></li>
+  </ol>
+</nav>
+
+<!-- ================= 1. 관문 ================= -->
+<section id="gate">
+  <h2>수익화 관문은 두 칸이다</h2>
+  <p class="lede">구독자 500명에서 한 번, 1,000명에서 또 한 번 열린다. 흔히 "500명이면 수익화"라고
+  말하지만 첫 칸에서 열리는 건 팬 후원뿐이고, <strong>조회수로 버는 광고 수익은 1,000명부터</strong> 시작한다.</p>
+
+  <figure class="figure">
+    <figcaption>YouTube 파트너 프로그램 진입 계단</figcaption>
+    <p class="cap-sub">두 칸 모두 <strong>구독자 수 + 활동량</strong>을 함께 요구하고, 활동량은 롱폼 시청시간과
+    쇼츠 조회수 중 하나만 채우면 된다. 한국은 확장 YPP 대상국이라 500명 칸을 쓸 수 있다.</p>
+
+    <svg class="flow" viewBox="0 0 900 372" role="img" aria-labelledby="gate-title gate-desc">
+      <title id="gate-title">YPP 2단계 진입 조건 다이어그램</title>
+      <desc id="gate-desc">1단계는 구독자 500명과 90일 내 공개 영상 3개에 더해 롱폼 시청 3,000시간 또는 쇼츠 조회 300만 회를 요구하며 팬 후원 기능만 열린다. 2단계는 구독자 1,000명에 롱폼 시청 4,000시간 또는 쇼츠 조회 1,000만 회를 요구하며 광고 수익과 프리미엄 수익이 열린다.</desc>
+
+      <!-- 1단계 -->
+      <rect x="8" y="150" width="410" height="200" rx="14" fill="var(--paper-2)" stroke="var(--line)"/>
+      <text x="30" y="180" font-size="12.5" font-weight="700" fill="var(--ink-3)" letter-spacing="1.4">STEP 1</text>
+      <text x="30" y="208" font-size="21" font-weight="800" fill="var(--ink)">구독자 500명</text>
+      <text x="30" y="234" font-size="13.5" fill="var(--ink-2)">＋ 최근 90일 공개 영상 3개</text>
+      <text x="30" y="256" font-size="13.5" fill="var(--ink-2)">＋ 아래 둘 중 하나</text>
+
+      <rect x="30" y="270" width="180" height="30" rx="7" fill="var(--longform-wash)"/>
+      <text x="42" y="290" font-size="13.5" font-weight="700" fill="var(--longform)">롱폼 시청 3,000시간</text>
+      <rect x="222" y="270" width="170" height="30" rx="7" fill="var(--shorts-wash)"/>
+      <text x="234" y="290" font-size="13.5" font-weight="700" fill="var(--shorts)">쇼츠 조회 300만 회</text>
+
+      <text x="30" y="326" font-size="13" fill="var(--ink-2)">열리는 것 — 멤버십 · 슈퍼챗 · 슈퍼땡스 · 쇼핑</text>
+      <text x="30" y="344" font-size="13" font-weight="700" fill="var(--flag)">광고 수익은 아직 0원</text>
+
+      <!-- 화살표 -->
+      <path d="M430 250 L470 250" stroke="var(--line-strong)" stroke-width="2" fill="none" marker-end="url(#arrowGate)"/>
+      <defs>
+        <marker id="arrowGate" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+          <path d="M0,0 L9,4.5 L0,9 z" fill="var(--line-strong)"/>
+        </marker>
+      </defs>
+
+      <!-- 2단계 -->
+      <rect x="482" y="30" width="410" height="320" rx="14" fill="var(--card)" stroke="var(--ink)" stroke-width="2"/>
+      <text x="504" y="62" font-size="12.5" font-weight="700" fill="var(--ink-3)" letter-spacing="1.4">STEP 2</text>
+      <text x="504" y="90" font-size="21" font-weight="800" fill="var(--ink)">구독자 1,000명</text>
+      <text x="504" y="116" font-size="13.5" fill="var(--ink-2)">＋ 아래 둘 중 하나</text>
+
+      <rect x="504" y="130" width="180" height="30" rx="7" fill="var(--longform-wash)"/>
+      <text x="516" y="150" font-size="13.5" font-weight="700" fill="var(--longform)">롱폼 시청 4,000시간</text>
+      <rect x="696" y="130" width="176" height="30" rx="7" fill="var(--shorts-wash)"/>
+      <text x="708" y="150" font-size="13.5" font-weight="700" fill="var(--shorts)">쇼츠 조회 1,000만 회</text>
+
+      <line x1="504" y1="182" x2="872" y2="182" stroke="var(--line)"/>
+      <text x="504" y="208" font-size="14" font-weight="800" fill="var(--korea)">여기서부터 광고 수익</text>
+      <text x="504" y="232" font-size="13" fill="var(--ink-2)">본영상 광고 · 쇼츠 피드 광고 · YouTube Premium 수익</text>
+      <text x="504" y="254" font-size="13" fill="var(--ink-2)">＋ 1단계의 팬 후원 기능 전부</text>
+
+      <rect x="504" y="272" width="368" height="60" rx="9" fill="var(--paper-2)"/>
+      <text x="520" y="296" font-size="12.5" font-weight="700" fill="var(--ink-2)">조건을 채운 뒤에도 심사에 약 1개월</text>
+      <text x="520" y="317" font-size="12.5" fill="var(--ink-3)">쇼츠 광고 수익은 쇼츠 수익 모듈을 따로 수락해야 들어온다</text>
+    </svg>
+
+    <p class="cap-foot"><span class="badge b-official">공식</span>
+    조건·기능 목록은 YouTube 고객센터 <a href="https://support.google.com/youtube/answer/72851">answer/72851</a>,
+    <a href="https://support.google.com/youtube/answer/13429240">answer/13429240</a>,
+    <a href="https://www.youtube.com/creators/earn/youtube-partner-program/">YouTube 크리에이터 공식 페이지</a>.
+    세 출처 모두 3표 만장일치로 확인했다.</p>
+  </figure>
+
+  <div class="note warn">
+    <h4>쇼츠 시청시간은 4,000시간에 안 들어간다</h4>
+    <p>쇼츠 피드에서 발생한 시청시간은 롱폼 4,000시간 기준에 합산되지 않는다. 두 트랙은 서로 다른
+    지표를 센다. 쇼츠만 올리는 채널이 4,000시간을 기다리는 건 영영 오지 않을 숫자를 기다리는 셈이고,
+    그 채널의 관문은 1,000만 회다. <span class="badge b-official">공식</span></p>
+  </div>
+</section>
+
+<!-- ================= 2. 두 경로 ================= -->
+<section id="path">
+  <h2>돈이 만들어지는 두 경로</h2>
+  <p class="lede">롱폼은 내 영상에 붙은 광고비를 내가 55% 가져간다. 쇼츠는 내 영상에 광고가 붙지 않는다 —
+  전체 쇼츠 피드 광고비를 한 통에 모았다가 조회수 비율로 나눠 주고, 그중 45%가 내 몫이다.</p>
+
+  <figure class="figure">
+    <figcaption>광고비가 내 통장까지 오는 길</figcaption>
+    <p class="cap-sub">쇼츠 쪽 경로가 두 칸 더 길다. 음악을 쓰면 저작권료가 먼저 빠지고, 남은 것의 45%만 크리에이터에게 온다.</p>
+
+    <svg class="flow" viewBox="0 0 900 400" role="img" aria-labelledby="path-title path-desc">
+      <title id="path-title">쇼츠와 롱폼의 수익 배분 경로 비교</title>
+      <desc id="path-desc">롱폼은 광고주 광고비에서 크리에이터가 55퍼센트를 직접 받는다. 쇼츠는 월별 광고 수익을 하나의 풀로 모은 뒤 음악 사용 곡 수에 따라 100·50·33퍼센트만 크리에이터 풀로 넘기고, 그 배분액의 45퍼센트를 크리에이터가 받는다.</desc>
+
+      <!-- 롱폼 라인 -->
+      <text x="8" y="34" font-size="14" font-weight="800" fill="var(--longform)">롱폼 — 내 영상에 붙은 광고</text>
+      <rect x="8" y="48" width="180" height="56" rx="10" fill="var(--longform-wash)" stroke="var(--longform)" stroke-opacity=".3"/>
+      <text x="98" y="72" font-size="13" font-weight="700" fill="var(--ink)" text-anchor="middle">광고주가 낸 돈</text>
+      <text x="98" y="92" font-size="12" fill="var(--ink-2)" text-anchor="middle">이 영상에 직접 귀속</text>
+
+      <path d="M196 76 L246 76" stroke="var(--longform)" stroke-width="2" marker-end="url(#arrL)"/>
+
+      <rect x="254" y="48" width="150" height="56" rx="10" fill="var(--paper-2)"/>
+      <text x="329" y="72" font-size="13" font-weight="700" fill="var(--ink)" text-anchor="middle">YouTube 45%</text>
+      <text x="329" y="92" font-size="12" fill="var(--ink-3)" text-anchor="middle">플랫폼 몫</text>
+
+      <path d="M412 76 L462 76" stroke="var(--longform)" stroke-width="2" marker-end="url(#arrL)"/>
+
+      <rect x="470" y="40" width="200" height="72" rx="10" fill="var(--longform)"/>
+      <text x="570" y="70" font-size="15" font-weight="800" fill="#fff" text-anchor="middle">크리에이터 55%</text>
+      <text x="570" y="92" font-size="12.5" fill="#fff" fill-opacity=".85" text-anchor="middle">2단계, 배분 끝</text>
+
+      <line x1="8" y1="146" x2="892" y2="146" stroke="var(--line)"/>
+
+      <!-- 쇼츠 라인 -->
+      <text x="8" y="182" font-size="14" font-weight="800" fill="var(--shorts)">쇼츠 — 피드 광고를 모아 나눈다</text>
+
+      <rect x="8" y="196" width="150" height="60" rx="10" fill="var(--shorts-wash)" stroke="var(--shorts)" stroke-opacity=".3"/>
+      <text x="83" y="220" font-size="13" font-weight="700" fill="var(--ink)" text-anchor="middle">쇼츠 피드 광고</text>
+      <text x="83" y="240" font-size="12" fill="var(--ink-2)" text-anchor="middle">한 달치를 한 통에</text>
+
+      <path d="M166 226 L206 226" stroke="var(--shorts)" stroke-width="2" marker-end="url(#arrS)"/>
+
+      <rect x="214" y="184" width="196" height="84" rx="10" fill="var(--paper-2)"/>
+      <text x="312" y="206" font-size="12.5" font-weight="700" fill="var(--ink)" text-anchor="middle">음악 저작권료 선공제</text>
+      <text x="312" y="228" font-size="12" fill="var(--ink-2)" text-anchor="middle">음악 없음 → 100% 통과</text>
+      <text x="312" y="246" font-size="12" fill="var(--ink-2)" text-anchor="middle">1곡 → 50% · 2곡 → 33%</text>
+
+      <path d="M418 226 L458 226" stroke="var(--shorts)" stroke-width="2" marker-end="url(#arrS)"/>
+
+      <rect x="466" y="184" width="186" height="84" rx="10" fill="var(--paper-2)"/>
+      <text x="559" y="206" font-size="12.5" font-weight="700" fill="var(--ink)" text-anchor="middle">크리에이터 풀</text>
+      <text x="559" y="228" font-size="12" fill="var(--ink-2)" text-anchor="middle">내 참여 조회수 비율로</text>
+      <text x="559" y="246" font-size="12" fill="var(--ink-2)" text-anchor="middle">내 몫이 정해진다</text>
+
+      <path d="M660 226 L700 226" stroke="var(--shorts)" stroke-width="2" marker-end="url(#arrS)"/>
+
+      <rect x="708" y="188" width="184" height="76" rx="10" fill="var(--shorts)"/>
+      <text x="800" y="218" font-size="15" font-weight="800" fill="#fff" text-anchor="middle">크리에이터 45%</text>
+      <text x="800" y="240" font-size="12.5" fill="#fff" fill-opacity=".85" text-anchor="middle">4단계, 배분 끝</text>
+
+      <rect x="8" y="296" width="884" height="88" rx="12" fill="var(--paper-2)"/>
+      <text x="30" y="322" font-size="13.5" font-weight="800" fill="var(--ink)">배분율이 뒤집혀 있다</text>
+      <text x="30" y="346" font-size="13" fill="var(--ink-2)">롱폼은 크리에이터가 55%를 가져가고 YouTube가 45%를 가져간다. 쇼츠는 정확히 반대로 크리에이터 45% · YouTube 55%다.</text>
+      <text x="30" y="368" font-size="13" fill="var(--ink-2)">여기에 음악 공제와 풀 배분이 더 붙으니, 같은 광고비 1원이 쇼츠 크리에이터에게 닿을 확률이 구조적으로 낮다.</text>
+
+      <defs>
+        <marker id="arrL" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--longform)"/></marker>
+        <marker id="arrS" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--shorts)"/></marker>
+      </defs>
+    </svg>
+
+    <p class="cap-foot"><span class="badge b-official">공식</span>
+    풀 구조·45%·음악 공제 비율은 YouTube 고객센터
+    <a href="https://support.google.com/youtube/answer/12504220">쇼츠 수익 창출 정책</a> 원문에서 확인했다(3표 만장일치).
+    롱폼 55% 배분은 여러 2차 출처가 일관되게 같은 값을 제시한다.</p>
+  </figure>
+</section>
+
+<!-- ================= 3. 시청시간 ================= -->
+<section id="watchtime">
+  <h2>시청시간은 어디서 돈이 되나</h2>
+  <p class="lede">"시청시간이 곧 수익"이라는 말은 롱폼에서만 절반쯤 맞다. 시청시간은 두 군데에서
+  돈으로 바뀐다 — 하나는 수익화 관문이고, 다른 하나는 8분이라는 분기점이다.</p>
+
+  <div class="versus">
+    <div class="vs-card a">
+      <h4>쇼츠 — 시청시간을 세지 않는다</h4>
+      <dl>
+        <dt>관문</dt><dd>조회수 1,000만 회(90일). 시청시간은 기준에 없다</dd>
+        <dt>정산 단위</dt><dd>참여 조회수(engaged views). 몇 초를 봤는지가 아니라 몇 번 봤는지</dd>
+        <dt>광고 슬롯</dt><dd>영상에 광고가 붙지 않는다. 피드 사이 광고를 모아서 나눈다</dd>
+        <dt>길이 효과</dt><dd>길게 만들어도 광고 슬롯이 늘지 않는다</dd>
+      </dl>
+    </div>
+    <div class="vs-card b">
+      <h4>롱폼 — 시청시간이 두 번 일한다</h4>
+      <dl>
+        <dt>관문</dt><dd>시청 4,000시간(12개월). 여기서 첫 번째로 일한다</dd>
+        <dt>정산 단위</dt><dd>광고가 실제로 노출된 조회. 오래 볼수록 노출 기회가 는다</dd>
+        <dt>광고 슬롯</dt><dd><strong>8분 이상이면 미드롤</strong>을 켤 수 있다. 한 조회에서 광고를 여러 번 판다</dd>
+        <dt>길이 효과</dt><dd>8분이 분기점. 넘기면 조회 1회의 값 자체가 올라간다</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="note key">
+    <h4>8분은 공식 기준이다</h4>
+    <p>YouTube 고객센터 원문: <em>"On monetized videos that are 8 minutes or longer, you can turn on ads
+    during the middle of the video (known as 'mid-rolls')."</em> 8분 미만 영상에는 앞뒤 광고만 붙고,
+    8분을 넘겨야 중간 광고가 열린다. 다만 <strong>슬롯이 몇 개까지 늘어나는지는 YouTube가 공개하지 않는다</strong> —
+    "8분 넘기면 RPM이 몇 배" 같은 계산은 근거 없는 추정이다.
+    <span class="badge b-official">공식</span> <a href="https://support.google.com/youtube/answer/6175006">answer/6175006</a></p>
+  </div>
+
+  <p>쇼츠에서 시청시간은 알고리즘이 다음 영상을 밀어 줄지 판단하는 재료이지 정산의 재료가 아니다.
+  롱폼은 다르다. 한 출처는 "모든 조회가 광고를 띄우지는 않아서 RPM이 CPM보다 30~50% 아래로 떨어진다"고 적었는데,
+  미드롤은 영상 중간에 있으니 중간까지 보지 않은 조회에서는 그 광고가 노출될 수 없다. 여기까지가 확인된 사실이고,
+  <strong>평균 시청 지속시간이 얼마나 늘면 RPM이 얼마나 오르는지를 측정한 자료는 찾지 못했다</strong> —
+  방향은 분명하지만 크기는 모른다.</p>
+</section>
+
+<!-- ================= 4. 쇼츠 RPM ================= -->
+<section id="shorts-rpm">
+  <h2>쇼츠 조회 1회의 값</h2>
+  <p class="lede">출처마다 20배씩 차이 난다. 그래서 하나의 평균값으로 접지 않고 전부 늘어놓았다.
+  흥미로운 건 <strong>실제 정산 내역을 공개한 출처일수록 값이 높고, 블로그 추정치일수록 낮다</strong>는 점이다.</p>
+
+  <figure class="figure">
+    <figcaption>쇼츠 RPM — 조회 1,000회당 원화 수익</figcaption>
+    <p class="cap-sub">1 USD = 1,400원 환산. 막대는 출처가 제시한 범위, 동그라미는 단일 값이다.
+    위쪽 세 묶음은 실제 정산 화면이나 크리에이터 인터뷰에서 나온 값이고, 아래는 업계 추정치다.</p>
+
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--korea)"></i>한국 실측 인증</span>
+      <span><i class="swatch" style="background:var(--shorts)"></i>해외 크리에이터 실측</span>
+      <span><i class="swatch" style="background:var(--other)"></i>개별 영상 사례</span>
+      <span><i class="swatch" style="background:var(--longform);opacity:.45"></i>업계 추정치</span>
+    </div>
+
+    <div class="rangechart">
+      <div class="rc-head">실측 정산 — 스튜디오 화면과 인터뷰</div>
+
+      <div class="rc-name">@shortsmoney<small>한국 · 2025-05</small></div>
+      <div class="rc-track t-korea"><span class="rc-dot" style="left:calc(55.9% - 7px)"></span></div>
+      <div class="rc-val">235원</div>
+
+      <div class="rc-name">brunch 실무 기록<small>한국 · 2024-06 최고점</small></div>
+      <div class="rc-track t-korea"><span class="rc-bar" style="left:30.2%;width:38.8%"></span></div>
+      <div class="rc-val">127~290원</div>
+
+      <div class="rc-name">Digiday 인터뷰<small>롱폼 채널 6인 · 2025-02</small></div>
+      <div class="rc-track t-shorts"><span class="rc-bar" style="left:60%;width:6.7%"></span></div>
+      <div class="rc-val">252~280원</div>
+
+      <div class="rc-name">Santora 네트워크<small>숏폼 전문 채널군</small></div>
+      <div class="rc-track t-shorts"><span class="rc-bar" style="left:50%;width:50%"></span></div>
+      <div class="rc-val">210~420원</div>
+
+      <div class="rc-head">개별 영상 사례 — 한 편의 정산액을 조회수로 나눈 값</div>
+
+      <div class="rc-name">Jenny Hoyos<small>쇼츠 2,200만 회</small></div>
+      <div class="rc-track t-other"><span class="rc-dot" style="left:calc(18.1% - 7px)"></span></div>
+      <div class="rc-val">76원</div>
+
+      <div class="rc-name">TubeBuddy 자체 채널<small>쇼츠 310만 회</small></div>
+      <div class="rc-track t-other"><span class="rc-dot" style="left:calc(10.6% - 7px)"></span></div>
+      <div class="rc-val">45원</div>
+
+      <div class="rc-name">Zach King<small>쇼츠 1,000만 회</small></div>
+      <div class="rc-track t-other"><span class="rc-dot" style="left:calc(3.0% - 7px)"></span></div>
+      <div class="rc-val">13원</div>
+
+      <div class="rc-head">업계 추정치 — 측정 근거가 밝혀지지 않은 값</div>
+
+      <div class="rc-name">Is This Channel Monetized<small>집계 서비스</small></div>
+      <div class="rc-track t-long" style="opacity:.55"><span class="rc-bar" style="left:16.7%;width:13.3%"></span></div>
+      <div class="rc-val">70~126원</div>
+
+      <div class="rc-name">shopify.com/kr<small>한국 · 2026-07</small></div>
+      <div class="rc-track t-long" style="opacity:.55"><span class="rc-bar" style="left:10.5%;width:14.3%"></span></div>
+      <div class="rc-val">44~104원</div>
+
+      <div class="rc-name">carat.im<small>한국 · 2026-04</small></div>
+      <div class="rc-track t-long" style="opacity:.55"><span class="rc-bar" style="left:11.9%;width:9.5%"></span></div>
+      <div class="rc-val">50~90원</div>
+
+      <div class="rc-name">fluxnote<small>글로벌 · 2026-06</small></div>
+      <div class="rc-track t-long" style="opacity:.55"><span class="rc-bar" style="left:3.3%;width:20%"></span></div>
+      <div class="rc-val">14~98원</div>
+
+      <div class="rc-name">startbucks<small>한국 · 2026-07</small></div>
+      <div class="rc-track t-long" style="opacity:.55"><span class="rc-bar" style="left:3.6%;width:10.7%"></span></div>
+      <div class="rc-val">15~60원</div>
+
+      <div class="rc-axis"><span>0원</span><span>105원</span><span>210원</span><span>315원</span><span>420원</span></div>
+    </div>
+
+    <p class="cap-foot">
+    한국 실측 인증(@shortsmoney)은 유효 조회 594.1만 회에 총수익 1,398,761원 —
+    조회 1회당 0.235원이다. 같은 글에서 "현실적으로 1조회 = 0.2원"이라고 결론지었다.
+    <span class="badge b-field">실측</span>
+    brunch 기록은 2023년 2월 쇼츠 광고 배분 시작 시점 0.1274원에서 2024년 6월 0.29원까지 오른 추이를 적었다.<br>
+    Digiday 막대는 실명이 확인된 두 크리에이터의 값이다 — Maldhound $0.18(252원), LordDraconical $0.20(280원).
+    기사 본문은 인터뷰한 6명 전원이 "$0.20 아래"였다고만 적어 하한을 밝히지 않았으므로, 이 막대는 범위가 아니라
+    확인된 두 점의 간격이다.</p>
+  </figure>
+
+  <div class="note key">
+    <h4>이 문서가 100만 회에 5만~24만 원이라고 적은 이유</h4>
+    <p>업계 추정치는 조회 1회당 0.05~0.10원, 실측 인증은 0.2~0.24원에 모인다. 낮은 쪽을 버리지 않은 건
+    니치와 시청자 국적에 따라 실제로 그만큼 낮게 나오는 채널이 있어서다. 내 채널 값은 스튜디오에
+    이미 찍혀 있으니, 아래 <a href="#calc">계산기</a>에는 추정치 대신 그 숫자를 넣는 쪽이 정확하다.</p>
+  </div>
+</section>
+
+<!-- ================= 5. 롱폼 니치 ================= -->
+<section id="long-rpm">
+  <h2>롱폼 RPM은 니치가 정한다</h2>
+  <p class="lede">같은 플랫폼, 같은 시청시간인데 주제만 바뀌어도 조회 1회의 값이 10배 넘게 벌어진다.
+  광고주가 그 시청자에게 얼마를 쓸 의향이 있느냐가 그대로 반영된다.</p>
+
+  <figure class="figure">
+    <figcaption>니치별 롱폼 RPM — 조회 1,000회당 달러</figcaption>
+    <p class="cap-sub">막대 높이는 각 출처가 제시한 범위의 상한, 진한 부분은 하한이다.
+    축 최대 $25. 초록 막대만 274개 채널의 Analytics API를 직접 집계한 값이고 나머지는 업계 추정치다.</p>
+
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--korea)"></i>API 실측</span>
+      <span><i class="swatch" style="background:var(--longform)"></i>고단가 니치 추정</span>
+      <span><i class="swatch" style="background:var(--shorts)"></i>저단가 니치 추정</span>
+      <span><i class="swatch" style="background:var(--paper-2);border:1px solid var(--line)"></i>하한과 상한 사이</span>
+    </div>
+
+    <div class="colchart">
+      <div class="col"><span class="colval">$10<br>~25</span><span class="colbar range" style="height:180px;--tone:var(--longform)"><i style="height:40%"></i></span></div>
+      <div class="col"><span class="colval">$5<br>~20</span><span class="colbar range" style="height:144px;--tone:var(--longform)"><i style="height:25%"></i></span></div>
+      <div class="col"><span class="colval">$14.97<br>~18.23</span><span class="colbar range" style="height:131px;--tone:var(--korea)"><i style="height:82.1%"></i></span></div>
+      <div class="col"><span class="colval">$8+</span><span class="colbar" style="height:58px;--tone:var(--longform)"></span></div>
+      <div class="col"><span class="colval">$2<br>~6</span><span class="colbar range" style="height:43px;--tone:var(--shorts)"><i style="height:33.3%"></i></span></div>
+      <div class="col"><span class="colval">$0.5<br>~4</span><span class="colbar range" style="height:29px;--tone:var(--shorts)"><i style="height:12.5%"></i></span></div>
+      <div class="col"><span class="colval">$0.5<br>~3</span><span class="colbar range" style="height:22px;--tone:var(--shorts)"><i style="height:16.7%"></i></span></div>
+    </div>
+    <div class="collabels">
+      <div>금융<small>outlierkit</small></div>
+      <div>개인재무<small>milx</small></div>
+      <div>교육<small>air.io API</small></div>
+      <div>테크·교육<small>fluxnote</small></div>
+      <div>게임·엔터<small>outlierkit</small></div>
+      <div>게임<small>milx</small></div>
+      <div>엔터·브이로그<small>milx</small></div>
+    </div>
+
+    <p class="cap-foot">테크·교육 막대만 통짜인 건 출처가 "평균 RPM이 $8을 넘는 경우가 많다"고
+    하한만 적어서다. 나머지 막대와 달리 상한이 없다.<br>
+    금융 안에서도 주제마다 값이 또 달라진다 —
+    신용카드 $20~30, 투자 $15~25, 가계부 $8~15(outlierkit).
+    한 출처는 금융 영상이 음악 영상보다 조회 1회당 30배를 번다고 적었다.
+    <span class="badge b-est">업계 추정</span></p>
+  </figure>
+
+  <h3>한국 채널 안에서도 같은 일이 일어난다</h3>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>니치</th><th class="n">한국 CPM</th><th class="n">한국 RPM</th><th class="n">100만 회 환산</th><th>추세</th></tr></thead>
+      <tbody>
+        <tr><td>테크</td><td class="n">$6.20</td><td class="n">$3.20</td><td class="n">448만 원</td><td>상승</td></tr>
+        <tr><td>한국 평균</td><td class="n">$4.50</td><td class="n">$2.30~3.20</td><td class="n">322만~448만 원</td><td>—</td></tr>
+        <tr><td>게임</td><td class="n">$2.40</td><td class="n">$1.20</td><td class="n">168만 원</td><td>하락</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:13.5px;color:var(--ink-3)">
+  <span class="badge b-est">업계 추정</span> tubeanalytics.net(2026-06) 자료. 이 페이지는 스스로
+  "측정된 정산 데이터가 아니라 방향을 잡기 위한 편집 벤치마크"라고 밝히고 있다.
+  같은 한국 롱폼 RPM을 fluxnote는 $3.00~5.00, 국내 블로그는 1,000~5,000원으로 적어 서로 겹치는 구간이 넓다.</p>
+</section>
+
+<!-- ================= 6. 국가 ================= -->
+<section id="country">
+  <h2>그다음은 시청자 국적이 정한다</h2>
+  <p class="lede">내가 어디 사는지가 아니라 <strong>내 영상을 누가 보는지</strong>가 단가를 정한다.
+  한국 채널이라도 시청자가 미국에 몰려 있으면 미국 단가에 가깝게 받는다.</p>
+
+  <figure class="figure">
+    <figcaption>국가별 롱폼 RPM — 조회 1,000회당 달러</figcaption>
+    <p class="cap-sub">시청자가 어느 나라에 있느냐 기준이다. 한국은 2군에 속해 최상위권의 절반 이하다.</p>
+
+    <div class="rangechart">
+      <div class="rc-name">호주</div>
+      <div class="rc-track t-long"><span class="rc-bar" style="left:59.3%;width:40.7%"></span></div>
+      <div class="rc-val">$8.00~13.50</div>
+
+      <div class="rc-name">미국</div>
+      <div class="rc-track t-long"><span class="rc-bar" style="left:55.6%;width:33.3%"></span></div>
+      <div class="rc-val">$7.50~12.00</div>
+
+      <div class="rc-name">스위스</div>
+      <div class="rc-track t-long"><span class="rc-bar" style="left:51.9%;width:33.3%"></span></div>
+      <div class="rc-val">$7.00~11.50</div>
+
+      <div class="rc-name">한국</div>
+      <div class="rc-track t-korea"><span class="rc-bar" style="left:22.2%;width:14.8%"></span></div>
+      <div class="rc-val">$3.00~5.00</div>
+
+      <div class="rc-name">인도</div>
+      <div class="rc-track t-long" style="opacity:.5"><span class="rc-dot" style="left:calc(3.4% - 7px)"></span></div>
+      <div class="rc-val">$0.46</div>
+
+      <div class="rc-axis"><span>$0</span><span>$3.4</span><span>$6.8</span><span>$10.2</span><span>$13.5</span></div>
+    </div>
+
+    <p class="cap-foot">호주·미국·스위스·한국은 fluxnote(2026-06), 인도는 lenostube(2026-04) 값이다.
+    <span class="badge b-est">업계 추정</span>
+    한 출처는 같은 영상이라도 미국 시청자가 3군 국가 시청자보다 3~5배를 번다고 적었고,
+    다른 출처는 조회 10만 회 기준 미국 $800 대 인도 $100 미만이라는 예시를 들었다.
+    두 값이 서로 어긋나지 않는다.</p>
+  </figure>
+
+  <div class="note warn">
+    <h4>연말이 1년치 단가를 바꾼다</h4>
+    <p>10~12월이 연중 최고점이다. 11~12월에 CPM이 평소의 2~3배로 뛴다는 보고가 있고, 1월 첫 2~3주에
+    12월 최고점 대비 50% 이상 떨어진다. 같은 영상을 같은 조회수로 돌려도 올린 달에 따라 정산액이 달라지므로,
+    월 단위 수익 비교는 계절을 맞춰서 봐야 한다. <span class="badge b-est">업계 추정</span></p>
+  </div>
+</section>
+
+<!-- ================= 7. 구간별 표 ================= -->
+<section id="table">
+  <h2>조회수 구간별 수익표</h2>
+  <p class="lede">여기까지의 수치를 한국 채널 기준으로 묶었다. 세 시나리오는
+  보수(업계 추정 하단) · 중간 · 낙관(실측 인증 상단)이다. 전부 세전, 광고 수익만 계산했다.</p>
+
+  <h3>쇼츠</h3>
+  <div class="table-scroll">
+    <table>
+      <thead><tr>
+        <th>조회수</th>
+        <th class="n">보수 50원 / 1,000회</th>
+        <th class="n">중간 100원 / 1,000회</th>
+        <th class="n">낙관 235원 / 1,000회</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>10만 회</td><td class="n">5,000원</td><td class="n">1만 원</td><td class="n">2.4만 원</td></tr>
+        <tr><td>50만 회</td><td class="n">2.5만 원</td><td class="n">5만 원</td><td class="n">11.8만 원</td></tr>
+        <tr class="hi"><td>100만 회</td><td class="n">5만 원</td><td class="n">10만 원</td><td class="n">23.5만 원</td></tr>
+        <tr><td>500만 회</td><td class="n">25만 원</td><td class="n">50만 원</td><td class="n">117.5만 원</td></tr>
+        <tr><td>1,000만 회</td><td class="n">50만 원</td><td class="n">100만 원</td><td class="n">235만 원</td></tr>
+        <tr><td>5,000만 회</td><td class="n">250만 원</td><td class="n">500만 원</td><td class="n">1,175만 원</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:13.5px;color:var(--ink-3)">1,000만 회 줄이 곧 쇼츠 트랙의 수익화 관문이다 —
+  90일 안에 이 숫자를 채워야 광고 수익이 시작되고, 채우고 나면 그 조회수가 벌어 주는 돈은 위 표의 크기다.</p>
+
+  <h3>롱폼 — 한국 시청자 기준</h3>
+  <div class="table-scroll">
+    <table>
+      <thead><tr>
+        <th>조회수</th>
+        <th class="n">보수 1,500원 / 1,000회</th>
+        <th class="n">중간 3,200원 / 1,000회</th>
+        <th class="n">낙관 5,000원 / 1,000회</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>1만 회</td><td class="n">1.5만 원</td><td class="n">3.2만 원</td><td class="n">5만 원</td></tr>
+        <tr><td>5만 회</td><td class="n">7.5만 원</td><td class="n">16만 원</td><td class="n">25만 원</td></tr>
+        <tr class="hi"><td>10만 회</td><td class="n">15만 원</td><td class="n">32만 원</td><td class="n">50만 원</td></tr>
+        <tr><td>50만 회</td><td class="n">75만 원</td><td class="n">160만 원</td><td class="n">250만 원</td></tr>
+        <tr><td>100만 회</td><td class="n">150만 원</td><td class="n">320만 원</td><td class="n">500만 원</td></tr>
+        <tr><td>500만 회</td><td class="n">750만 원</td><td class="n">1,600만 원</td><td class="n">2,500만 원</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:13.5px;color:var(--ink-3)">금융·교육 니치이거나 시청자가 미국·호주에 몰려 있으면
+  낙관 열보다 2~4배 위로 올라간다. 게임·엔터 니치이거나 시청자가 3군 국가면 보수 열 아래로 내려간다.</p>
+</section>
+
+<!-- ================= 8. 계산기 ================= -->
+<section id="calc">
+  <h2>내 채널 계산기</h2>
+  <p class="lede">스튜디오에 이미 찍혀 있는 RPM을 넣으면 가장 정확하다. 모르면 시나리오 버튼으로 시작하고,
+  정산이 한 번 들어온 다음 실제 값으로 바꾸면 된다.</p>
+
+  <div class="calc">
+    <h3>월 광고 수익 추정</h3>
+    <p class="hint">RPM은 조회 1,000회당 크리에이터가 받는 금액이다. 세전 기준.</p>
+
+    <div class="calc-controls">
+      <div class="field">
+        <label for="c-format">포맷</label>
+        <div class="seg" id="c-format" role="group" aria-label="포맷 선택">
+          <button type="button" data-fmt="shorts" aria-pressed="true">쇼츠</button>
+          <button type="button" data-fmt="long" aria-pressed="false">롱폼</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="c-views">월 조회수</label>
+        <input type="number" id="c-views" value="1000000" min="0" step="10000" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="c-scenario">시나리오</label>
+        <select id="c-scenario">
+          <option value="low">보수 — 업계 추정 하단</option>
+          <option value="mid" selected>중간</option>
+          <option value="high">낙관 — 실측 인증 상단</option>
+          <option value="custom">직접 입력</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="c-rpm">RPM (원 / 1,000회)</label>
+        <input type="number" id="c-rpm" value="100" min="0" step="1" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="c-fx">환율 (원 / USD)</label>
+        <input type="number" id="c-fx" value="1400" min="1" step="10" inputmode="numeric">
+      </div>
+    </div>
+
+    <div class="calc-out">
+      <div class="out-cell">
+        <div class="k">월 수익</div>
+        <div class="v num" id="o-month">100,000원</div>
+        <div class="s num" id="o-month-usd">$71</div>
+      </div>
+      <div class="out-cell">
+        <div class="k">연 환산</div>
+        <div class="v num" id="o-year">1,200,000원</div>
+        <div class="s">같은 조회수가 12개월 유지될 때</div>
+      </div>
+      <div class="out-cell">
+        <div class="k">조회 1회의 값</div>
+        <div class="v num" id="o-per">0.100원</div>
+        <div class="s" id="o-per-note">조회 1만 회당 1,000원</div>
+      </div>
+      <div class="out-cell">
+        <div class="k">반대 포맷이었다면</div>
+        <div class="v num" id="o-flip">3,200,000원</div>
+        <div class="s" id="o-flip-note">롱폼 중간 시나리오 기준</div>
+      </div>
+    </div>
+
+    <p class="calc-foot">기본 RPM 값 — 쇼츠 보수 50 · 중간 100 · 낙관 235원,
+    롱폼 보수 1,500 · 중간 3,200 · 낙관 5,000원. 전부 이 문서 §4·§5의 출처에서 가져왔다.
+    광고 수익만 계산하므로 멤버십·슈퍼챗·쇼핑·브랜드 협찬은 빠져 있다.</p>
+  </div>
+
+  <div class="note warn">
+    <h4>쇼츠 크리에이터에게 광고 수익은 수입의 일부일 뿐이다</h4>
+    <p>Jenny Hoyos는 쇼츠 2,200만 회로 광고 수익 $1,200을 받았는데, 그 금액이 숏폼으로 버는 돈의
+    10%도 되지 않았다. 한 업계 자료는 숏폼 수입의 60~80%가 브랜드 협찬이라고 적었다.
+    쇼츠 광고 RPM이 낮다는 사실과 쇼츠가 돈이 안 된다는 주장은 다른 얘기다.
+    <span class="badge b-est">업계 추정</span></p>
+  </div>
+</section>
+
+<!-- ================= 9. 격차 ================= -->
+<section id="gap">
+  <h2>같은 조회수, 다른 수익</h2>
+  <p class="lede">가장 단단한 근거는 274개 채널의 API 집계다 — 쇼츠 RPM은 거의 모든 니치에서
+  롱폼 RPM의 3~14%였다. 뒤집으면 <strong>롱폼 1,000회를 따라잡는 데 쇼츠 1만 1천~3만 4천 회</strong>가 필요하다.</p>
+
+  <figure class="figure">
+    <figcaption>롱폼 1,000회와 같은 돈을 벌려면 쇼츠 몇 회가 필요한가</figcaption>
+    <p class="cap-sub">274개 채널을 YouTube Analytics API로 직접 집계한 값이다. 격차가 가장 큰 니치는 공예(34,000회),
+    유일한 예외는 음악(1,100회) — Content ID 수익이 붙어 롱폼과 거의 대등하다.</p>
+
+    <div class="rangechart">
+      <div class="rc-name">대부분의 니치<small>아래쪽은 격차가 작은 니치, 위쪽 끝이 공예</small></div>
+      <div class="rc-track t-shorts"><span class="rc-bar" style="left:32.4%;width:67.6%"></span></div>
+      <div class="rc-val">11,000~34,000회</div>
+
+      <div class="rc-name">음악<small>Content ID 수익이 붙는 예외</small></div>
+      <div class="rc-track t-korea"><span class="rc-dot" style="left:calc(3.2% - 7px)"></span></div>
+      <div class="rc-val">1,100회</div>
+
+      <div class="rc-name">롱폼 자기 자신<small>비교 기준선</small></div>
+      <div class="rc-track t-long"><span class="rc-dot" style="left:calc(2.9% - 7px)"></span></div>
+      <div class="rc-val">1,000회</div>
+
+      <div class="rc-axis"><span>0</span><span>8,500</span><span>17,000</span><span>25,500</span><span>34,000</span></div>
+    </div>
+
+    <p class="cap-foot"><span class="badge b-api">API 실측</span>
+    air.io가 쇼츠를 섞어 올리는 274개 채널의 YouTube Analytics API 데이터를 직접 집계했다(2026-06).
+    3표 만장일치로 확인된 주장이다.<br>
+    다만 같은 문장 안의 두 수치가 서로 맞지 않는다 — "쇼츠 RPM은 롱폼의 3~14%"를 뒤집으면 7~33배인데,
+    이어서 "11,000~34,000회가 필요하다"고 적었다. 34,000회는 3%와 맞지만 11,000회는 9%여서 14%와 어긋난다.
+    이 차트는 출처가 직접 쓴 조회수 값을 그대로 그렸고, 어느 쪽을 택하든 결론(수십 배 차이)은 같다.</p>
+  </figure>
+
+  <h3>조회수는 쇼츠가 가져가고 수익은 롱폼이 가져간다</h3>
+  <figure class="figure">
+    <p class="cap-sub" style="margin-bottom:20px">같은 데이터셋의 엔터테인먼트 니치에서, 쇼츠를 가끔 올리는 채널의
+    쇼츠가 전체 조회수의 26%를 차지하면서 수익은 1.5%만 만들었다.</p>
+
+    <div class="rangechart">
+      <div class="rc-name">전체 조회수 중 쇼츠 비중</div>
+      <div class="rc-track t-shorts"><span class="rc-bar" style="left:0;width:26%"></span></div>
+      <div class="rc-val">26%</div>
+
+      <div class="rc-name">전체 수익 중 쇼츠 비중</div>
+      <div class="rc-track t-shorts"><span class="rc-bar" style="left:0;width:1.5%"></span></div>
+      <div class="rc-val">1.5%</div>
+
+      <div class="rc-axis"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+    </div>
+
+    <p class="cap-foot"><span class="badge b-api">API 실측</span>
+    같은 조사에서 엔터테인먼트 니치의 순수 롱폼 채널은 월 $2,979, 쇼츠를 섞는 채널은 월 $559를 벌었다.
+    다만 이건 상관관계이지 인과가 아니다 — 쇼츠를 올려서 수익이 줄었다고 단정할 수 없고,
+    애초에 규모가 다른 채널들일 수 있다.</p>
+  </figure>
+
+  <div class="note warn">
+    <h4>가장 극단적인 사례는 429배였다</h4>
+    <p>금융 크리에이터 Erika Kullberg의 48초 쇼츠는 400만 회에 약 15만 9천 원을 벌었고,
+    같은 채널 12분 롱폼은 390만 회에 약 6,822만 5천 원을 벌었다. 조회수는 거의 같은데 정산액이 429배 차이다.
+    금융은 롱폼 RPM이 가장 높은 니치라 격차가 가장 크게 나타나는 자리이고, 모든 채널이 이렇지는 않다.
+    <span class="badge b-est">업계 추정</span></p>
+  </div>
+</section>
+
+<!-- ================= 10. 함정 ================= -->
+<section id="traps">
+  <h2>숫자를 깎아먹는 것들</h2>
+  <p class="lede">위 표의 조회수는 전부 <strong>유효 조회수</strong>다. 스튜디오에 찍힌 조회수를 그대로 넣으면
+  실제보다 높게 나온다.</p>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>함정</th><th>무슨 일이 일어나나</th><th>등급</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>유효 조회수만 센다</strong></td>
+          <td>남의 영화·방송을 편집 없이 올린 비독창 콘텐츠, 봇이 만든 조회, 광고주 친화 가이드라인 위반 조회는 참여 조회수 집계에서 빠진다. 화면의 조회수와 정산 기준 조회수가 다르다.</td>
+          <td><span class="badge b-official">공식</span></td>
+        </tr>
+        <tr>
+          <td><strong>쇼츠 수익 모듈은 따로 수락</strong></td>
+          <td>YPP에 들어갔어도 쇼츠 수익 창출 모듈을 수락하지 않으면 쇼츠 광고 수익이 들어오지 않는다.</td>
+          <td><span class="badge b-official">공식</span></td>
+        </tr>
+        <tr>
+          <td><strong>음악 한 곡에 절반</strong></td>
+          <td>쇼츠에 음악 1곡을 쓰면 그 영상 몫의 50%가, 2곡이면 약 67%가 저작권료로 먼저 빠진다. 남은 것의 45%가 내 몫이다.</td>
+          <td><span class="badge b-official">공식</span></td>
+        </tr>
+        <tr>
+          <td><strong>심사에 한 달</strong></td>
+          <td>조건을 채운 날부터 버는 게 아니다. 신청 후 심사 결과가 나오기까지 통상 1개월이 걸리고, 그 사이 조회수는 수익이 되지 않는다.</td>
+          <td><span class="badge b-official">공식</span></td>
+        </tr>
+        <tr>
+          <td><strong>1월에 반토막</strong></td>
+          <td>10~12월이 연중 최고점이고 1월 첫 2~3주에 50% 이상 떨어진다. 12월 정산액을 평상시 수익으로 착각하기 쉽다.</td>
+          <td><span class="badge b-est">업계 추정</span></td>
+        </tr>
+        <tr>
+          <td><strong>롱폼 8분 미만</strong></td>
+          <td>8분을 넘겨야 미드롤을 켤 수 있다. 7분 50초짜리는 앞뒤 광고만 붙는다.</td>
+          <td><span class="badge b-official">공식</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note key">
+    <h4>쇼츠 트랙으로 들어온 채널의 80%는 다른 수익도 켠다</h4>
+    <p>YouTube 관계자에 따르면 YPP 채널의 25% 이상이 쇼츠 수익 배분으로 돈을 벌고 있고,
+    쇼츠 조건으로 YPP에 들어온 크리에이터의 80% 이상이 YouTube Premium 수익과 BrandConnect를 함께 쓴다.
+    쇼츠는 관문을 여는 열쇠로 쓰고 정산은 다른 창구에서 받는 구조가 이미 일반적이라는 뜻이다.
+    <span class="badge b-field">실측</span></p>
+  </div>
+</section>
+
+<!-- ================= 11. 반박 ================= -->
+<section id="killed">
+  <h2>반박된 주장과 검증 실패</h2>
+  <p class="lede">검색으로 쉽게 만나지만 3표 교차 검증에서 살아남지 못한 수치들이다.
+  다른 곳에서 이 숫자를 보더라도 그대로 믿지 않는 편이 낫다.</p>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>주장</th><th class="n">표결</th><th>왜 걸렸나</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>쇼츠 RPM이 국가별로 미국 $0.328, 호주 $0.193, 영국 $0.166 — 100만 회에 미국 시청자면 $300</td>
+          <td class="n">1–2</td>
+          <td>같은 글의 다른 수치와 어긋나고 산출 근거가 제시되지 않았다</td>
+        </tr>
+        <tr>
+          <td>쇼츠 RPM은 대부분 $0.07~0.20에 몰리고, 게임 채널이면 롱폼 1회 = 쇼츠 18회</td>
+          <td class="n">0–3</td>
+          <td>같은 글이 제시한 3~14% 실측치와 계산이 맞지 않는다</td>
+        </tr>
+        <tr>
+          <td>쇼츠가 롱폼보다 시청시간당 수익이 높다 (Alphabet 2025 Q3 실적발표, 피차이)</td>
+          <td class="n">0–3</td>
+          <td>플랫폼 매출 효율 발언이지 크리에이터 RPM이 아니다. 이 문서의 질문에 답하지 않는다</td>
+        </tr>
+        <tr>
+          <td>쇼츠 RPM 글로벌 평균 $0.01~0.05</td>
+          <td class="n">1–2</td>
+          <td>실측 인증·크리에이터 인터뷰 값보다 한 자릿수 낮다</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>검증을 끝내지 못한 것</h3>
+  <p>세션 한도로 검증 에이전트가 중단돼 표결이 0–0으로 끝난 주장이 세 건 있다.
+  본문에서 인용할 때는 근거 등급을 낮춰 적었다.</p>
+  <ul style="margin-left:20px;font-size:14.5px;color:var(--ink-2)">
+    <li style="margin-bottom:6px">TubeBuddy 자체 채널 쇼츠 310만 회 = $99.87 (100만 회당 $31.90)</li>
+    <li style="margin-bottom:6px">쇼츠 롱폼 비교표 — 쇼츠 100만 회 $30~100 대 롱폼 100만 회 $3,000~5,000</li>
+    <li>쇼츠 1만 회 $0.10~3.00 · 10만 회 $1~30</li>
+  </ul>
+</section>
+
+<!-- ================= 12. 출처 ================= -->
+<section id="sources">
+  <h2>출처와 등급</h2>
+  <p class="lede">각 주장을 원문 인용문과 함께 뽑은 뒤 3명의 검증 에이전트에게 반박을 시켰다.
+  2표 이상 반박당한 주장은 본문에서 뺐다.</p>
+
+  <p style="font-size:14px;color:var(--ink-2)">
+    <span class="badge b-official">공식</span> YouTube 공식 문서 ·
+    <span class="badge b-api">API 실측</span> Analytics API 직접 집계 ·
+    <span class="badge b-field">실측</span> 정산 화면·크리에이터 인터뷰 ·
+    <span class="badge b-est">업계 추정</span> 산출 근거가 밝혀지지 않은 블로그 수치 ·
+    <span class="badge b-killed">반박</span> 교차 검증 탈락
+  </p>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>출처</th><th>등급</th><th class="n">발행</th><th>이 문서에서 쓴 곳</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://support.google.com/youtube/answer/72851">YouTube 고객센터 · YPP 개요</a></td><td><span class="badge b-official">공식</span></td><td class="n">상시</td><td>§1 진입 조건</td></tr>
+        <tr><td><a href="https://support.google.com/youtube/answer/13429240">YouTube 고객센터 · 확장 YPP</a></td><td><span class="badge b-official">공식</span></td><td class="n">상시</td><td>§1 500명 트랙, 한국 대상국</td></tr>
+        <tr><td><a href="https://support.google.com/youtube/answer/12504220">YouTube 고객센터 · 쇼츠 수익 정책</a></td><td><span class="badge b-official">공식</span></td><td class="n">상시</td><td>§2 풀 구조·45%·음악 공제, §10 유효 조회수</td></tr>
+        <tr><td><a href="https://support.google.com/youtube/answer/6175006">YouTube 고객센터 · 광고 형식</a></td><td><span class="badge b-official">공식</span></td><td class="n">상시</td><td>§3 미드롤 8분</td></tr>
+        <tr><td><a href="https://www.youtube.com/creators/earn/youtube-partner-program/">YouTube 크리에이터 · YPP</a></td><td><span class="badge b-official">공식</span></td><td class="n">상시</td><td>§1 단계별 기능</td></tr>
+        <tr><td><a href="https://air.io/en/air-data-findings/youtube-shorts-rpm-vs-long-form-how-much-do-shorts-earn-in-2026">air.io · 274채널 API 집계</a></td><td><span class="badge b-api">API 실측</span></td><td class="n">2026-06-23</td><td>§9 11,000~34,000회, 조회 26% 대 수익 1.5%, §5 교육 RPM</td></tr>
+        <tr><td><a href="https://digiday.com/media/how-youtube-shorts-revenue-compares-to-long-form-video-revenue-for-creators/">Digiday · 크리에이터 6인 인터뷰</a></td><td><span class="badge b-field">실측</span></td><td class="n">2025-02-25</td><td>§4 RPM $0.18~0.20, §10 YouTube 관계자 발언</td></tr>
+        <tr><td><a href="https://www.threads.com/@shortsmoney/post/DJc4jrKB6Gt/">@shortsmoney · 한국 수익 인증</a></td><td><span class="badge b-field">실측</span></td><td class="n">2025-05-09</td><td>§4 조회 1회 0.235원</td></tr>
+        <tr><td><a href="https://brunch.co.kr/@shortsman/21">brunch @shortsman · 한국 단가 추이</a></td><td><span class="badge b-field">실측</span></td><td class="n">2024-11-18</td><td>§4 0.1274원 → 0.29원</td></tr>
+        <tr><td><a href="https://influencermarketinghub.com/youtube-shorts-rpm/">Influencer Marketing Hub</a></td><td><span class="badge b-est">업계 추정</span></td><td class="n">2025-10-30</td><td>§4 $0.05~0.09, §2 음악 공제</td></tr>
+        <tr><td><a href="https://www.tubeanalytics.net/benchmarks/south-korea">tubeanalytics · 한국 벤치마크</a></td><td><span class="badge b-est">업계 추정</span></td><td class="n">2026-06-27</td><td>§5 한국 CPM $4.50 · RPM $2.30~3.20</td></tr>
+        <tr><td><a href="https://fluxnote.io/guides/youtube-rpm-by-country">fluxnote · 국가별 RPM</a></td><td><span class="badge b-est">업계 추정</span></td><td class="n">2026-06-26</td><td>§6 국가별 막대</td></tr>
+        <tr><td><a href="https://outlierkit.com/blog/youtube-rpm-finance-niche">outlierkit · 금융 니치 RPM</a></td><td><span class="badge b-est">업계 추정</span></td><td class="n">2026-06</td><td>§5 금융 $10~25</td></tr>
+        <tr><td><a href="https://milx.app/en/trends/youtube-cpm-rpm-rates-2026-average-niches-countries-more">milx · 니치·국가별 CPM/RPM</a></td><td><span class="badge b-est">업계 추정</span></td><td class="n">2026-03-16</td><td>§5 니치별 막대</td></tr>
+        <tr><td><a href="https://www.lenostube.com/en/youtube-cpm-rpm-rates/">lenostube · CPM/RPM 요율</a></td><td><span class="badge b-est">업계 추정</span></td><td class="n">2026-04-02</td><td>§4 $0.01~0.06, §6 인도 $0.46</td></tr>
+        <tr><td><a href="https://www.shopify.com/kr/blog/youtube-shorts-monetization">Shopify 한국 블로그</a></td><td><span class="badge b-est">업계 추정</span></td><td class="n">2026-07-16</td><td>§4 44~104원, §9 Erika Kullberg 429배</td></tr>
+        <tr><td><a href="https://carat.im/blog/youtube-shorts-revenue-conditions-methods">carat.im · 쇼츠 수익 조건</a></td><td><span class="badge b-est">업계 추정</span></td><td class="n">2026-04-27</td><td>§4 50~90원</td></tr>
+        <tr><td><a href="https://www.startbucks.co.kr/post.html?slug=youtube-rpm-real-earnings">startbucks · 한국 RPM</a></td><td><span class="badge b-est">업계 추정</span></td><td class="n">2026-07-13</td><td>§4 15~60원, §5 롱폼 1,000~5,000원</td></tr>
+        <tr><td><a href="https://www.tubebuddy.com/blog/youtube-shorts-pay-1000000-views/">TubeBuddy · 100만 회 정산</a></td><td><span class="badge b-killed">미검증</span></td><td class="n">2026-06-22</td><td>§4 45원 (검증 실패, 참고용)</td></tr>
+        <tr><td><a href="https://mediacube.io/en-US/blog/youtube-shorts-rpm">mediacube · 쇼츠 RPM</a></td><td><span class="badge b-killed">반박</span></td><td class="n">2026-01-30</td><td>§11 반박 목록</td></tr>
+        <tr><td><a href="https://www.tubefilter.com/2025/10/29/shorts-now-make-more-money-for-youtube-than-long-form/">Tubefilter · 피차이 발언</a></td><td><span class="badge b-killed">반박</span></td><td class="n">2025-10-29</td><td>§11 반박 목록</td></tr>
+        <tr><td><a href="https://saturaai.com/blog/youtube-shorts-rpm-explained-niche-earnings">saturaai · 쇼츠 RPM 시나리오</a></td><td><span class="badge b-est">업계 추정</span></td><td class="n">2026-06-29</td><td>미인용 (자체 가정치라고 밝힘)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <h4>이 문서를 읽을 때 주의할 것</h4>
+    <p>공식 문서에서 온 것은 조건·구조·배분율뿐이다. RPM 숫자는 YouTube가 공표하지 않으므로
+    전부 3자 집계이거나 크리에이터 자기 보고다. 니치·시청자 국적·계절·영상 길이가 전부 값을 흔들기
+    때문에, 이 문서의 숫자는 <strong>내 스튜디오 값이 상식적인 범위 안에 있는지 대조하는 자</strong>로 쓰는 게 맞다.
+    내 채널의 정답은 이미 내 스튜디오에 찍혀 있다.</p>
+  </div>
+</section>
+
+</div>
+
+<script>
+(function () {
+  var PRESET = {
+    shorts: { low: 50,   mid: 100,  high: 235  },
+    long:   { low: 1500, mid: 3200, high: 5000 }
+  };
+  var LABEL = { shorts: "쇼츠", long: "롱폼" };
+  var fmt = "shorts", scen = "mid";
+
+  var $views = document.getElementById("c-views");
+  var $rpm   = document.getElementById("c-rpm");
+  var $fx    = document.getElementById("c-fx");
+  var $scen  = document.getElementById("c-scenario");
+  var $seg   = document.getElementById("c-format");
+
+  function won(n) { return Math.round(n).toLocaleString("ko-KR") + "원"; }
+  function usd(n) { return "$" + Math.round(n).toLocaleString("en-US"); }
+
+  function render() {
+    var views = Math.max(0, Number($views.value) || 0);
+    var rpm   = Math.max(0, Number($rpm.value) || 0);
+    var fx    = Math.max(1, Number($fx.value) || 1400);
+
+    var month = views / 1000 * rpm;
+    var per   = views > 0 ? month / views : 0;
+
+    document.getElementById("o-month").textContent = won(month);
+    document.getElementById("o-month-usd").textContent = usd(month / fx);
+    document.getElementById("o-year").textContent = won(month * 12);
+    document.getElementById("o-per").textContent = per.toFixed(3) + "원";
+    document.getElementById("o-per-note").textContent = "조회 1만 회당 " + won(per * 10000);
+
+    var other = fmt === "shorts" ? "long" : "shorts";
+    var otherRpm = PRESET[other][scen === "custom" ? "mid" : scen];
+    var flip = views / 1000 * otherRpm;
+    document.getElementById("o-flip").textContent = won(flip);
+    document.getElementById("o-flip-note").textContent =
+      LABEL[other] + " " + (scen === "custom" ? "중간" : $scen.options[$scen.selectedIndex].text.split(" —")[0]) +
+      " 시나리오 · RPM " + otherRpm.toLocaleString("ko-KR") + "원";
+  }
+
+  function applyPreset() {
+    if (scen !== "custom") { $rpm.value = PRESET[fmt][scen]; }
+    render();
+  }
+
+  $seg.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-fmt]");
+    if (!btn) return;
+    fmt = btn.dataset.fmt;
+    Array.prototype.forEach.call($seg.querySelectorAll("button"), function (b) {
+      b.setAttribute("aria-pressed", String(b === btn));
+    });
+    applyPreset();
+  });
+
+  $scen.addEventListener("change", function () { scen = $scen.value; applyPreset(); });
+  $rpm.addEventListener("input", function () { scen = "custom"; $scen.value = "custom"; render(); });
+  $views.addEventListener("input", render);
+  $fx.addEventListener("input", render);
+
+  render();
+})();
+</script>
+</body>
+</html>

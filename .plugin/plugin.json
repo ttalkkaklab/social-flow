@@ -1,0 +1,30 @@
+{
+  "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
+  "id": "com.ttalkkaklab.social-flow",
+  "name": "social-flow",
+  "version": "0.36.0",
+  "description": "Channel-based short-form and long-form content pipeline — storyboard, produce, review, and publish for Threads, Instagram, Facebook, and YouTube. Built-in MCP server included.",
+  "author": "Zeans",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/ttalkkaklab/social-flow",
+  "keywords": [
+    "social",
+    "shortform",
+    "longform",
+    "reels",
+    "shorts",
+    "threads",
+    "instagram",
+    "facebook",
+    "youtube",
+    "storyboard",
+    "video",
+    "tts",
+    "publishing",
+    "mcp"
+  ],
+  "personas": [
+    "personas/pipeline.persona.md"
+  ],
+  "mcp_config": ".mcp.json"
+}
