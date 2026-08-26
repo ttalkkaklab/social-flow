@@ -40,6 +40,15 @@
 #                                         window a few output pixels. Composes with in/out/punch (adds a
 #                                         DRIFT_Z base scale for travel margin) or hold (pure handheld).
 #                                         The micro-shake register: presence, unease, cutting the AI look
+#                           span=<0..1.5> this card's zoom span, replacing the global ZOOM_SPAN — 0.4 means
+#                                         the window grows (or shrinks) 40% over the card. Applies to in/out,
+#                                         punch and the pan zoom drift; unused on hold/none (same as focus=).
+#                                         Past base+span > ZOOM_BASE/canvas (base: pan z / drift 1.04 / else 1)
+#                                         the source upscales — the build warns; raise ZOOM_BASE to match.
+#                           ease=<mode>   this card's easing, replacing the global KB_EASE — smooth (default,
+#                                         eased both ends) | linear | in (accelerating: starts unnoticed,
+#                                         fastest at the cut point — action/CTA cards, cut away at the peak).
+#                                         punch keeps its own ease-out ramp and ignores ease=.
 #   <workdir>/segs.tsv  : idx <TAB> seg(0..) <TAB> visual-path <TAB> TTS-script-sentence <TAB> subtitle-display-sentence
 #                         visual = reveal-state PNG (reel-template ?reveal=k capture) or .mp4 (fullscreen b-roll)
 #                         Listing several with '|' splits the sentence's speech window evenly and they
@@ -118,6 +127,7 @@ REVEAL_LEAD=${REVEAL_LEAD:-0.30}   # fallback lead — used only when no pause w
 SIL_DB=${SIL_DB:--37}              # sentence-boundary silence threshold (dB)
 SIL_MIN=${SIL_MIN:-0.16}           # sentence-boundary minimum silence length (s)
 ZOOM_SPAN=${ZOOM_SPAN:-0.035}      # total Ken Burns zoom span per card (3.5%)
+ZOOM_SPAN=$(awk -v v="$ZOOM_SPAN" 'BEGIN{printf "%.3f", v}')   # %.3f normalized so span= report-tag compares stay exact
 W=${W:-1080}                       # canvas width — the format decides
 H=${H:-1920}                       # canvas height
 ZOOM_BASE=${ZOOM_BASE:-1620x2880}  # Ken Burns source resolution (1.5x the canvas)
@@ -276,11 +286,11 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   [ -z "${IDX:-}" ] && continue
   N=$((N+1))
 
-  # ── Card options (column 5) — sync / subs / pan / focus / drift. An unknown key is a failure
-  #    (silently ignored typos ship a filmed card missing sync 0.4s out of step, and only eyes
-  #    would catch it). Two-value options use ":" inside the value (pan=l2r:1.12, focus=0.6:0.4) —
-  #    "," is the k=v separator and stays out of values.
-  SYNC=0; SUBSF=""; PAN=""; PZ="$PAN_Z"; FX=0.5; FY=0.5; DRIFT=0
+  # ── Card options (column 5) — sync / subs / pan / focus / drift / span / ease. An unknown key
+  #    is a failure (silently ignored typos ship a filmed card missing sync 0.4s out of step, and
+  #    only eyes would catch it). Two-value options use ":" inside the value (pan=l2r:1.12,
+  #    focus=0.6:0.4) — "," is the k=v separator and stays out of values.
+  SYNC=0; SUBSF=""; PAN=""; PZ="$PAN_Z"; FX=0.5; FY=0.5; DRIFT=0; SPAN="$ZOOM_SPAN"; EASE="$KB_EASE"; SPANSET=0
   case "${ZDIR:-auto}" in in|out|auto|none|punch|hold) : ;;
     *) say "✗ card $IDX: unknown zoom (column 4) — $ZDIR (in|out|auto|none|punch|hold)"; exit 1 ;; esac
   if [ -n "${OPTS:-}" ]; then
@@ -301,9 +311,25 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         focus=*) say "✗ card $IDX: focus needs fx:fy — $KV"; exit 1 ;;
         drift=1) DRIFT=1 ;;
         drift=0) DRIFT=0 ;;
+        span=*) SPAN=$(awk -v v="${KV#span=}" 'BEGIN{if(v==""||v!=v+0){print "bad"; exit} if(v<0)v=0; if(v>1.5)v=1.5; printf "%.3f", v}')
+                [ "$SPAN" = "bad" ] && { say "✗ card $IDX: span wants a number 0..1.5 — $KV"; exit 1; }
+                SPANSET=1 ;;
+        ease=*) EASE="${KV#ease=}"
+                case "$EASE" in smooth|linear|in) : ;; *) say "✗ card $IDX: unknown ease — $EASE (smooth|linear|in)"; exit 1;; esac ;;
         *) say "✗ card $IDX: unknown cards.tsv column-5 option — $KV"; exit 1 ;;
       esac
     done
+  fi
+  # Past the ZOOM_BASE headroom the zoompan window upscales the source — visible blur. Checked
+  # after the option loop so pan=/drift= anywhere in the k=v list counts into the real base zoom
+  # (pan base PZ, drift base DRIFT_Z, else 1 — the same bases the Ken Burns section uses below).
+  # hold/none never zoom, and a pan card zooms only under column-4 in/out (auto and punch
+  # keep a fixed scale on a pan) — span is unused there.
+  if [ "$SPANSET" -eq 1 ] && [ "${ZDIR:-auto}" != "hold" ] && [ "${ZDIR:-auto}" != "none" ] \
+     && ! { [ -n "$PAN" ] && [ "${ZDIR:-auto}" != "in" ] && [ "${ZDIR:-auto}" != "out" ]; }; then
+    if [ -n "$PAN" ]; then BASEZ="$PZ"; elif [ "$DRIFT" -eq 1 ]; then BASEZ="$DRIFT_Z"; else BASEZ=1; fi
+    awk -v s="$SPAN" -v b="$BASEZ" -v zw="${ZOOM_BASE%x*}" -v w="$W" 'BEGIN{exit !(b+s > zw/w)}' \
+      && { say "⚠ card $IDX: base $BASEZ + span=$SPAN zooms past ZOOM_BASE/canvas (${ZOOM_BASE%x*}/$W) — raise ZOOM_BASE and feed a higher-res source"; WARN=1; }
   fi
   # A filmed card (sync) gets no margins — with pre-roll the picture runs from 0s while the sound alone lags 0.4s.
   if [ "$SYNC" -eq 1 ]; then CPRE=0; CPOST=0; CMIN=0; else CPRE=$PRE; CPOST=$POST; CMIN=$MIN_DUR; fi
@@ -552,7 +578,13 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   ZD="${ZDIR:-auto}"
   if [ "$ZD" = "auto" ]; then if [ $((N % 2)) -eq 1 ]; then ZD=in; else ZD=out; fi; fi
   PEXPR="(on/$ZLAST)"
-  case "$KB_EASE" in linear) E="$PEXPR" ;; *) E="($PEXPR*$PEXPR*(3-2*$PEXPR))" ;; esac
+  # Per-card EASE (ease= option, default KB_EASE). "in" accelerates to the cut point — quadratic
+  # progress, so the rate climbs linearly and peaks exactly where the cut lands (the action/CTA
+  # register measured in docs/research/2026-08-26-still-photo-camera-motion).
+  case "$EASE" in linear) E="$PEXPR" ;; in) E="($PEXPR*$PEXPR)" ;; *) E="($PEXPR*$PEXPR*(3-2*$PEXPR))" ;; esac
+  KTAG=""
+  [ "$SPAN" != "$ZOOM_SPAN" ] && KTAG="+span=$SPAN"
+  [ "$EASE" != "$KB_EASE" ] && KTAG="$KTAG+ease-$EASE"
   if [ "$DRIFT" -eq 1 ]; then
     DXE="+$DRIFT_AMP*(0.6*sin(2*PI*$DRIFT_F1*on/$FPS)+0.4*sin(2*PI*$DRIFT_F2*on/$FPS+1.7))"
     DYE="+0.7*$DRIFT_AMP*(0.6*sin(2*PI*$DRIFT_F1*on/$FPS+0.9)+0.4*sin(2*PI*$DRIFT_F2*on/$FPS+2.6))"
@@ -577,11 +609,11 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     esac
     # Column 4 in/out layers a ZOOM_SPAN zoom drift over the travel (Ken Burns proper); auto = fixed scale
     case "$ZDIR" in
-      in)  PZE="($PZ+$ZOOM_SPAN*$E)";     ZD="pan:$PAN@$PZ+in" ;;
-      out) PZE="($PZ+$ZOOM_SPAN*(1-$E))"; ZD="pan:$PAN@$PZ+out" ;;
+      in)  PZE="($PZ+$SPAN*$E)";     ZD="pan:$PAN@$PZ+in" ;;
+      out) PZE="($PZ+$SPAN*(1-$E))"; ZD="pan:$PAN@$PZ+out" ;;
       *)   PZE="$PZ";                     ZD="pan:$PAN@$PZ" ;;
     esac
-    ZD="$ZD$DTAG"
+    ZD="$ZD$DTAG$KTAG"
     FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$PZE':x='$PX$DXE':y='$PY$DYE':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
   else
     case "$ZD" in
@@ -589,12 +621,12 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
              # final scale as a slow zoom in, so the safe-zone margins are identical; only the timing punches
              PF=$(awk -v d="$PUNCH_D" -v fps="$FPS" 'BEGIN{f=int(d*fps+0.5); if(f<1)f=1; print f}')
              PP="(min(on/$PF,1))"
-             ZEXPR="($ZBASE+$ZOOM_SPAN*(1-(1-$PP)*(1-$PP)))" ;;
+             ZEXPR="($ZBASE+$SPAN*(1-(1-$PP)*(1-$PP)))" ;;
       hold)  ZEXPR="$ZBASE" ;;
-      out)   ZEXPR="($ZBASE+$ZOOM_SPAN*(1-$E))" ;;
-      *)     ZEXPR="($ZBASE+$ZOOM_SPAN*$E)" ;;
+      out)   ZEXPR="($ZBASE+$SPAN*(1-$E))" ;;
+      *)     ZEXPR="($ZBASE+$SPAN*$E)" ;;
     esac
-    ZD="$ZD$FTAG$DTAG"
+    ZD="$ZD$FTAG$DTAG$KTAG"
     FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$ZEXPR':x='(iw-iw/zoom)*$FX$DXE':y='(ih-ih/zoom)*$FY$DYE':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
   fi
   ffmpeg -y -v error "${INS[@]}" -filter_complex "$FILT" -map "[vout]" \

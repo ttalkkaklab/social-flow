@@ -376,7 +376,7 @@ test('build-reel Ken Burns — off for filmed clips, pan for landscape', () => {
   const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');
   assert.match(reel, /if \[ "\$ZD" = "none" \]; then/, 'zoom=none');
   assert.match(reel, /\$\{CUR\}format=yuv420p\[vout\]/, 'none does not upscale the source either');
-  assert.match(reel, /l2r\) PX="\(iw-iw\/zoom\)\*on\/\$ZLAST"/, 'pan direction formula');
+  assert.match(reel, /l2r\)\s+PX="\(iw-iw\/zoom\)\*\$E"/, 'pan direction formula');
   // The pan zoom cannot exceed the preset clamp — past it the field of view gets cut hard
   assert.match(reel, /-v lo="\$KB_ZOOM_MIN" -v hi="\$KB_ZOOM_MAX"/, 'pan zoom clamp');
   assert.match(reel, /KB_ZOOM_MIN=\$\{KB_ZOOM_MIN:-1\.06\}/, 'clamp inline default');

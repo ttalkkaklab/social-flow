@@ -79,8 +79,9 @@ In this mode skip the style check and per-axis scores — judge only the plan P0
    (especially Korean). Veo can't write Korean, and lettering in images produces
    fake documents and misread signs
 5. **Missing/misplaced negative prompt** — profile §3's required negative
-   prompt, or the cover-shared image's "lower third fading into darkness", is
-   absent from the prompt. **Present but in the wrong place is the same P0** —
+   prompt is absent from the prompt. **A letterbox / lower-third fade / top-bottom
+   gradient instruction in the prompt is itself a P0** (owner 2026-08-25 — never
+   bake a cinematic bar into the picture). **Present but in the wrong place is the same P0** —
    for `veo_*` calls the exclusions go into the `negativePrompt` argument as
    noun/adjective phrases (`text, subtitles, wall`), not into the prompt body
    (on the new schema that's the stored `negative` field beside the clip
@@ -245,9 +246,9 @@ you still can't find it, report every surface as "unverified" (never as all-S1
 9. **Slide look** — in frames, a box/slab/full-screen dim covers the center of
    the screen so the background photo is invisible / points captions stack up as
    a list instead of appearing one at a time (produce hard rule 14 — points puts
-   title + one caption in the top block, cover uses the bottom block. **The
-   quote freeze-frame card is the exception** — the quotation sits centered in
-   that scene, so a full wash is normal)
+   title + one caption in the top block, cover uses the bottom block; the quote
+   freeze-frame card centers its quotation, and a gradient wash behind it is
+   banned like everywhere else — owner 2026-08-25)
 
 ## Per-axis scores (additive out of 100; no points without evidence)
 

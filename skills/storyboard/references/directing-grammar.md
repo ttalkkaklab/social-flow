@@ -221,7 +221,8 @@ contract, not from here.
 **Assemble, don't prose.** `assemble-bg-prompt.js` writes the prompt in this order
 — size words, angle words, `From the camera: layout. facing. line. light.`, then the scene,
 the mood, the exclusions (`--exclude` — the image tools have no exclusion argument, so the
-noun list rides in the body) and the lower-third tail. On a still with nobody in it,
+noun list rides in the body) and the fill-the-frame tail (owner 2026-08-25 — no
+letterbox or lower-third fade). On a still with nobody in it,
 `--no-person` swaps the size ladder's body words ("full body", "chest up") for the subject's.
 storyboard §5 runs it before the generation call and stores the full stdout as `bgPrompt`.
 Hand-written prefixes that fight the fields are a camera-mode finding.
@@ -326,6 +327,24 @@ Two disciplines carry over unchanged. The move supports the declared feel — it
 it (the evidence base for stills is practitioner practice, not measurement, so claim even
 less). And rationing: most cards keep the alternating default drift; a punch is the cover's
 move; drift is spent where presence or unease is the feel, not sprinkled for "energy".
+
+**How hard the window moves follows the beat** `[blog]`. A 46s reference short measured frame
+by frame (docs/research/2026-08-26-still-photo-camera-motion) ran every still on one ladder —
+the zoom rate tracks the beat's temperature, and the ten-fold spread between rows is what
+makes a still read as footage. The storyboard manages it per scene through the still's
+`visual.camera`: no camera written = the quiet 3.5%-per-card default; a camera with a `speed`
+word puts the card on its ladder row (produce SKILL §6 converts the row to the builder knobs).
+
+| Beat the card carries | `speed` word | Rate | On top |
+|---|---|---|---|
+| observe · explain (관찰·설명) | `very slow` | ~4%/s | — |
+| payoff · conclusion (결론) — usually the longest cut | `slow` | ~6%/s | — |
+| action · rising tension (행동·긴장) | `fast` | ~14%/s | accelerates to the cut point (`ease=in`) |
+| closing question · shock (CTA·충격) | `very fast` | ~20%/s | accelerates, and the zoom converges on the face (`focus=`) |
+
+A rate past ~6%/s outgrows the builder's default source headroom before the cut ends — the
+scene image has to be generated larger (the §6 note). The ration discipline above still
+holds: the two accelerating rows are spent once or twice per episode, like the close-up.
 
 ---
 
