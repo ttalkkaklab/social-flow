@@ -80,6 +80,11 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
 | facebook | ✅/❌ | ordinary video post (not a reel) |
 | youtube | ✅/❌ | shorts — local upload, 100 uploads/day quota |
 
+- **Subtitle languages**: <`ko` for a single-language channel. For multi-language
+  subtitles write `ko (default) · en · vi` — produce translates `subs.srt` into each
+  extra language (`subs.en.srt` …, BCP-47 codes) and publish uploads every one as its
+  own toggleable track on YouTube (`captionTracks`) and Facebook (`captionFiles`).
+  The burned-in copy for IG/Threads stays in the default language>
 - **Per-platform signature**: <hashtag set, CTA wording — within the platform's grammar>
 - **Public media hosting**: <how to upload publicly over HTTPS for IG/FB — if there
   isn't one, write "undecided" and settle it at publish time. Threads attaches no
