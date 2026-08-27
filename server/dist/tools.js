@@ -291,10 +291,15 @@ const YOUTUBE_PUBLISH_OUTPUT = {
             type: 'string',
             description: 'Reason when only the thumbnail step failed. The video upload succeeded, so do not re-upload — set the thumbnail in YouTube Studio instead of calling this tool again',
         },
-        captionSet: { type: 'boolean', description: 'Only when captionFilePath was given — whether the caption track upload succeeded' },
+        captionSet: { type: 'boolean', description: 'Only when caption input was given — whether every caption track upload succeeded' },
+        captionLanguages: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Languages of the caption tracks this call tried to upload (upload order)',
+        },
         captionWarning: {
             type: 'string',
-            description: 'Reason when only the caption upload failed (a missing scope is the most common — captions.insert needs youtube.force-ssl). The video upload succeeded, so do not re-upload — reissue the token or upload just the captions in YouTube Studio',
+            description: 'Reason when only the caption upload failed, prefixed per language ("en: …; vi: …" — a missing scope is the most common: captions.insert needs youtube.force-ssl). The video upload succeeded, so do not re-upload — reissue the token or upload just the failed languages in YouTube Studio',
         },
     },
     required: ['platform', 'videoId', 'permalink'],
@@ -308,10 +313,15 @@ const FACEBOOK_PUBLISH_OUTPUT = {
             description: 'Facebook post id — pass it straight to facebook_comment as postId. For video posts this value is also the video_id',
         },
         permalink: PERMALINK_PROPERTY,
-        captionSet: { type: 'boolean', description: 'Only when captionFilePath was given — whether the caption file upload succeeded' },
+        captionSet: { type: 'boolean', description: 'Only when caption input was given — whether every caption file upload succeeded' },
+        captionLocales: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Locales of the caption files this call tried to upload (upload order, first = default track)',
+        },
         captionWarning: {
             type: 'string',
-            description: 'Reason when only the caption upload failed. The post itself succeeded, so do not re-publish — the video may still have been processing, so retry just the captions shortly',
+            description: 'Reason when only the caption upload failed, prefixed per locale ("en_US: …"). The post itself succeeded, so do not re-publish — the video may still have been processing, so retry just the failed locales shortly',
         },
     },
     required: ['platform', 'postId'],
@@ -2171,11 +2181,23 @@ Returns: integer credit balance.`,
                 videoUrl: { type: 'string', format: 'uri', description: 'One public video URL (.mp4/.mov) — cannot be used together with imageUrls. Give the **clean master**, not a burned-in copy (subtitles go separately via captionFilePath)' },
                 captionFilePath: {
                     type: 'string',
-                    description: '**Local** absolute path to the subtitle file (.srt, ≤200K) — valid only on videoUrl posts. Unlike the video URL it needs no hosting (direct file upload). It uploads automatically right after a successful publish; if only the subtitles fail, captionWarning is returned (the post stands — do not re-publish)',
+                    description: '**Local** absolute path to the subtitle file (.srt, ≤200K) — valid only on videoUrl posts. Unlike the video URL it needs no hosting (direct file upload). It uploads automatically right after a successful publish; if only the subtitles fail, captionWarning is returned (the post stands — do not re-publish). Single-locale shorthand — for two or more languages use captionFiles instead (mutually exclusive)',
                 },
                 captionLocale: {
                     type: 'string',
                     description: 'Subtitle locale (default ko_KR). Must be of the `ko_KR`/`en_US`/`vi_VN` form — FB derives the locale from whether the uploaded file name is `<name>.<locale>.srt`, and rejects a malformed one with error 386',
+                },
+                captionFiles: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            filePath: { type: 'string', description: 'Local absolute path of the .srt for this locale (≤200K)' },
+                            locale: { type: 'string', description: 'Locale of this file — `ko_KR`/`en_US`/`vi_VN` form, one entry per locale' },
+                        },
+                        required: ['filePath', 'locale'],
+                    },
+                    description: 'Multi-language subtitles — one caption upload per entry, valid only on videoUrl posts and mutually exclusive with captionFilePath. **Put the default-language track first** — only the first entry declares default_locale (per-call default_locale on every track is undocumented behavior, so this tool declares the default exactly once). A failed locale comes back in captionWarning with the post intact — retry just that locale',
                 },
                 linkUrl: { type: 'string', format: 'uri', description: '(Exception only) link attachment — text posts (no media) only. The default rule is to put the link in the first comment via facebook_comment' },
                 channel: SNS_CHANNEL_PROPERTY,
@@ -2217,11 +2239,23 @@ Returns: integer credit balance.`,
                 },
                 captionFilePath: {
                     type: 'string',
-                    description: 'Absolute path of the subtitle file (.srt) — **pass it by default**. Uploading subtitles separately instead of burning them in means they can be swapped after publishing, viewers can toggle them, and they seed YouTube auto-translation. Give videoFilePath the clean subtitle-free master, not a burned-in copy. The upload needs the **youtube.force-ssl scope** (rejected on the publish-only youtube.upload) and costs a **quota of 400 units** — heavy next to the 1-unit video upload, so once per episode. If only the subtitles fail, captionWarning is returned and the publish stands (do not re-upload)',
+                    description: 'Absolute path of the subtitle file (.srt) — **pass it by default**. Uploading subtitles separately instead of burning them in means they can be swapped after publishing, viewers can toggle them, and they seed YouTube auto-translation. Give videoFilePath the clean subtitle-free master, not a burned-in copy. The upload needs the **youtube.force-ssl scope** (rejected on the publish-only youtube.upload) and costs a **quota of 400 units** per track — heavy next to the 1-unit video upload, so once per language per episode. If only the subtitles fail, captionWarning is returned and the publish stands (do not re-upload). Single-track shorthand — for two or more languages use captionTracks instead (mutually exclusive)',
                 },
                 captionLanguage: {
                     type: 'string',
                     description: 'Subtitle language, BCP-47 (default ko) — e.g. ko, en, vi. Becomes the source language for auto-translation',
+                },
+                captionTracks: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            filePath: { type: 'string', description: 'Absolute path of the .srt for this language' },
+                            language: { type: 'string', description: 'BCP-47 hyphen form (ko, en, vi, pt-BR) — the underscore form ko_KR is the Facebook contract and is rejected here' },
+                        },
+                        required: ['filePath', 'language'],
+                    },
+                    description: 'Multi-language subtitle tracks — one captions.insert per entry, so viewers pick their language in the player and each track seeds auto-translation. Mutually exclusive with captionFilePath. Every file is validated before the video upload starts; each track costs 400 quota units, and a failed language comes back in captionWarning with the publish intact (upload just that language in YouTube Studio instead of re-publishing)',
                 },
                 privacyStatus: {
                     type: 'string',

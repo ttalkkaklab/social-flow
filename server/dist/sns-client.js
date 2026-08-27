@@ -590,21 +590,35 @@ export async function instagramInsights(input) {
     });
 }
 export async function publishFacebook(input) {
+    // Normalize captions to one list — the legacy single pair becomes a one-entry list
+    if (input.captionFiles?.length && input.captionFilePath) {
+        return fail(400, 'Pass captionFiles or captionFilePath, not both (ambiguous which one wins)');
+    }
+    const captionInputs = input.captionFiles?.length
+        ? input.captionFiles
+        : input.captionFilePath
+            ? [{ filePath: input.captionFilePath, locale: input.captionLocale ?? 'ko_KR' }]
+            : [];
     // Captions only make sense on video posts — on image/text posts they'd be silently dropped, so block it
-    if (input.captionFilePath && !input.videoUrl) {
-        return fail(400, 'captionFilePath requires videoUrl (captions attach to a video, not to photos or text posts)');
+    if (captionInputs.length > 0 && !input.videoUrl) {
+        return fail(400, 'caption files require videoUrl (captions attach to a video, not to photos or text posts)');
     }
-    const captionLocale = input.captionLocale ?? 'ko_KR';
-    if (input.captionFilePath && !/^[a-z]{2}_[A-Z]{2}$/.test(captionLocale)) {
-        return fail(400, `captionLocale must look like ko_KR / en_US / vi_VN: ${captionLocale}`);
+    for (const captionInput of captionInputs) {
+        if (!/^[a-z]{2}_[A-Z]{2}$/.test(captionInput.locale)) {
+            return fail(400, `caption locale must look like ko_KR / en_US / vi_VN: ${captionInput.locale}`);
+        }
     }
-    let captionBytes;
-    if (input.captionFilePath) {
-        // Validate before publishing — finding a 200K overrun or a path typo after the post is irreversible
-        const caption = await readCaptionFile(input.captionFilePath, CAPTION_MAX_BYTES_FB);
+    const localeList = captionInputs.map((c) => c.locale);
+    if (new Set(localeList).size !== localeList.length) {
+        return fail(400, `Duplicate caption locales: ${localeList.join(', ')}`);
+    }
+    // Validate every file before publishing — finding a 200K overrun or a path typo after the post is irreversible
+    const captionFiles = [];
+    for (const captionInput of captionInputs) {
+        const caption = await readCaptionFile(captionInput.filePath, CAPTION_MAX_BYTES_FB);
         if (!caption.bytes)
             return caption.error;
-        captionBytes = caption.bytes;
+        captionFiles.push({ bytes: caption.bytes, locale: captionInput.locale });
     }
     const { token, error } = await loadTokenFile('FACEBOOK', input.channel);
     if (!token)
@@ -661,10 +675,15 @@ export async function publishFacebook(input) {
         return fail(502, 'Facebook publish returned no id');
     // A video post's postId doubles as the video_id, so it goes straight to the
     // captions edge. A failure still leaves a valid post, so report it as a
-    // warning only (no republish — the publish API is non-idempotent).
-    const captionWarning = captionBytes
-        ? await uploadFacebookCaption(token, postId, { bytes: captionBytes, locale: captionLocale })
-        : undefined;
+    // warning only (no republish — the publish API is non-idempotent). Tracks
+    // upload one per locale; only the first (default) sends default_locale.
+    const captionWarnings = [];
+    for (const [index, file] of captionFiles.entries()) {
+        const warning = await uploadFacebookCaption(token, postId, { ...file, isDefault: index === 0 });
+        if (warning)
+            captionWarnings.push(`${file.locale}: ${warning}`);
+    }
+    const captionWarning = captionWarnings.length > 0 ? captionWarnings.join('; ') : undefined;
     const permalink = await graphRequest('get', `${FB_BASE}/${postId}`, {
         fields: 'permalink_url',
         access_token: token,
@@ -673,7 +692,9 @@ export async function publishFacebook(input) {
         platform: 'FACEBOOK',
         postId,
         permalink: permalink.ok ? (parseJson(permalink.body)?.permalink_url ?? null) : null,
-        ...(captionBytes ? { captionSet: !captionWarning } : {}),
+        ...(captionFiles.length > 0
+            ? { captionSet: !captionWarning, captionLocales: captionFiles.map((f) => f.locale) }
+            : {}),
         ...(captionWarning ? { captionWarning } : {}),
     });
 }
@@ -841,7 +862,11 @@ async function uploadYoutubeCaption(token, videoId, caption) {
 async function uploadFacebookCaption(token, videoId, caption) {
     const form = new FormData();
     form.set('access_token', token);
-    form.set('default_locale', caption.locale);
+    // default_locale rides only on the default track — sending it per call could
+    // move the default to whichever locale uploaded last (multi-call semantics are
+    // undocumented, so the cautious form: declare the default exactly once)
+    if (caption.isDefault)
+        form.set('default_locale', caption.locale);
     form.set('captions_file', new Blob([new Uint8Array(caption.bytes.buffer, caption.bytes.byteOffset, caption.bytes.byteLength)], {
         type: 'application/octet-stream',
     }), `caption.${caption.locale}.srt`);
@@ -1094,13 +1119,33 @@ export async function publishYoutube(input) {
         }
         thumb = { bytes: thumbBytes, mimeType: thumbMime };
     }
-    // Read and validate the captions **before** uploading too — a path typo found after publishing can't be undone
-    let captionBytes;
-    if (input.captionFilePath) {
-        const caption = await readCaptionFile(input.captionFilePath, CAPTION_MAX_BYTES_YT);
+    // Normalize captions to a track list — the legacy single pair becomes one track
+    if (input.captionTracks?.length && input.captionFilePath) {
+        return fail(400, 'Pass captionTracks or captionFilePath, not both (ambiguous which one wins)');
+    }
+    const trackInputs = input.captionTracks?.length
+        ? input.captionTracks
+        : input.captionFilePath
+            ? [{ filePath: input.captionFilePath, language: input.captionLanguage ?? 'ko' }]
+            : [];
+    for (const trackInput of trackInputs) {
+        // BCP-47 hyphen form (ko, en, pt-BR) — an underscore locale (ko_KR) is the
+        // Facebook contract, and passing it here dies at the API after the video is up
+        if (!/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(trackInput.language)) {
+            return fail(400, `caption language must be BCP-47 like ko / en / pt-BR (not ko_KR): ${trackInput.language}`);
+        }
+    }
+    const languageList = trackInputs.map((t) => t.language);
+    if (new Set(languageList).size !== languageList.length) {
+        return fail(400, `Duplicate caption languages: ${languageList.join(', ')}`);
+    }
+    // Read and validate every caption file **before** uploading too — a path typo found after publishing can't be undone
+    const captionTracks = [];
+    for (const trackInput of trackInputs) {
+        const caption = await readCaptionFile(trackInput.filePath, CAPTION_MAX_BYTES_YT);
         if (!caption.bytes)
             return caption.error;
-        captionBytes = caption.bytes;
+        captionTracks.push({ bytes: caption.bytes, language: trackInput.language });
     }
     const { client, error: clientError } = await loadYoutubeClient(input.channel);
     if (!client)
@@ -1208,13 +1253,15 @@ export async function publishYoutube(input) {
         writeState(input.videoFilePath, null);
         // A thumbnail failure is a warning only — the upload already succeeded, and re-publishing is non-idempotent and burns quota, so don't fail the whole call
         const thumbnailWarning = thumb ? await setYoutubeThumbnail(token, videoId, thumb) : undefined;
-        // Same rule for captions — a failure still leaves the publish successful (report a warning and re-upload just the captions)
-        const captionWarning = captionBytes
-            ? await uploadYoutubeCaption(token, videoId, {
-                bytes: captionBytes,
-                language: input.captionLanguage ?? 'ko',
-            })
-            : undefined;
+        // Same rule for captions — a failure still leaves the publish successful (report a warning and re-upload just the captions).
+        // One captions.insert per language track; a failed language doesn't stop the rest
+        const captionWarnings = [];
+        for (const track of captionTracks) {
+            const warning = await uploadYoutubeCaption(token, videoId, track);
+            if (warning)
+                captionWarnings.push(`${track.language}: ${warning}`);
+        }
+        const captionWarning = captionWarnings.length > 0 ? captionWarnings.join('; ') : undefined;
         return okJson({
             platform: 'YOUTUBE',
             videoId,
@@ -1222,7 +1269,9 @@ export async function publishYoutube(input) {
             fileName: basename(input.videoFilePath),
             ...(thumb ? { thumbnailSet: !thumbnailWarning } : {}),
             ...(thumbnailWarning ? { thumbnailWarning } : {}),
-            ...(captionBytes ? { captionSet: !captionWarning } : {}),
+            ...(captionTracks.length > 0
+                ? { captionSet: !captionWarning, captionLanguages: captionTracks.map((t) => t.language) }
+                : {}),
             ...(captionWarning ? { captionWarning } : {}),
         });
     }

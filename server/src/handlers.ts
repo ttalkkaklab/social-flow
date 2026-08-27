@@ -389,6 +389,15 @@ const facebookPublishSchema = z
       .string()
       .regex(/^[a-z]{2}_[A-Z]{2}$/, 'captionLocale must look like ko_KR / en_US / vi_VN')
       .optional(),
+    captionFiles: z
+      .array(
+        z.object({
+          filePath: z.string().min(1),
+          locale: z.string().regex(/^[a-z]{2}_[A-Z]{2}$/, 'locale must look like ko_KR / en_US / vi_VN'),
+        }),
+      )
+      .min(1)
+      .optional(),
     linkUrl: z.string().url().optional(),
     channel: channelSlugSchema,
   })
@@ -401,6 +410,10 @@ const facebookPublishSchema = z
     // Captions attach to video only — sent with an image or text post they're silently dropped, so block them here
     if (v.captionFilePath && !v.videoUrl) issue('captionFilePath', 'captionFilePath requires videoUrl');
     if (v.captionLocale && !v.captionFilePath) issue('captionLocale', 'captionLocale requires captionFilePath');
+    if (v.captionFiles && !v.videoUrl) issue('captionFiles', 'captionFiles requires videoUrl');
+    if (v.captionFiles && v.captionFilePath) {
+      issue('captionFiles', 'captionFiles and captionFilePath are mutually exclusive');
+    }
   });
 
 const facebookCommentSchema = z.object({
@@ -442,6 +455,17 @@ const youtubePublishSchema = z.object({
   captionLanguage: z
     .string()
     .regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, 'captionLanguage is a BCP-47 tag, e.g. ko / en / vi / zh-Hant')
+    .optional(),
+  captionTracks: z
+    .array(
+      z.object({
+        filePath: z.string().min(1),
+        language: z
+          .string()
+          .regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, 'language is a BCP-47 tag, e.g. ko / en / vi / zh-Hant'),
+      }),
+    )
+    .min(1)
     .optional(),
   categoryId: z
     .string()
@@ -1029,6 +1053,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
               videoUrl: input.videoUrl,
               captionFilePath: input.captionFilePath,
               captionLocale: input.captionLocale,
+              captionFiles: input.captionFiles,
               channel: input.channel,
             }
           : { caption: input.caption, imageUrls: input.imageUrls, linkUrl: input.linkUrl, channel: input.channel },
@@ -1051,6 +1076,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         thumbnailFilePath: input.thumbnailFilePath,
         captionFilePath: input.captionFilePath,
         captionLanguage: input.captionLanguage,
+        captionTracks: input.captionTracks,
         categoryId: input.categoryId,
         madeForKids: input.madeForKids,
         containsSyntheticMedia: input.containsSyntheticMedia,

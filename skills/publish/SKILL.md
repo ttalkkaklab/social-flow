@@ -60,7 +60,9 @@ into promoting that prompt to "always allow".
    burned-in cut (`video-sub.mp4`) is what **Instagram and Threads** use — neither has a
    path that accepts a subtitle file, so burning them into the picture is the only way.
    The §2 table is canonical for which file goes where; mix them up and YouTube ends up
-   with subtitles twice over, or IG loses them entirely.
+   with subtitles twice over, or IG loses them entirely. When `output/video/` holds
+   per-language files (`subs.en.srt` …), every one goes up as its own track —
+   `captionTracks` on YouTube, `captionFiles` on Facebook (default language first).
 9. **Every YouTube upload starts private — no exceptions** (user directive 2026-08-19).
    Call `youtube_publish` with **`privacyStatus: "private"`**, attach everything the
    cover needs, and only then flip to public with `youtube_update`. Publishing straight
@@ -124,7 +126,9 @@ into promoting that prompt to "always allow".
 - Confirm the `output/` artifacts exist and that `storyboard.md` says
   `status: produced` — otherwise point them at `/social-flow:produce` first.
   **Short-form** needs all three files — `output/video/video.mp4` (clean) ·
-  `video-sub.mp4` (burned-in) · `subs.srt`. A missing burned-in copy or subtitle file
+  `video-sub.mp4` (burned-in) · `subs.srt`. Per-language `subs.<lang>.srt` files exist
+  only when profile.md §4 lists subtitle languages beyond the default — take every one
+  that's there. A missing burned-in copy or subtitle file
   means it's an old build. Check whether it was built with `SUB`/`BURN` off, and if
   not, send it back to `/social-flow:produce` for a rebuild (never publish without
   subtitles).
@@ -192,8 +196,8 @@ Which file goes up differs per platform. This table is the source of truth.
 
 | Platform | Video | Subtitles | Why |
 | --- | --- | --- | --- |
-| YouTube | `video.mp4` (local path) | `captionFilePath: subs.srt` | uploaded as a separate track via `captions.insert` — replaceable after publishing, and the source for auto-translation |
-| Facebook | `video.mp4` (public URL) | `captionFilePath: subs.srt` | the `/{video_id}/captions` edge |
+| YouTube | `video.mp4` (local path) | `captionFilePath: subs.srt` — with extra languages, `captionTracks` listing every `subs.<lang>.srt` | uploaded as separate tracks via `captions.insert` — replaceable after publishing, viewer-selectable per language, and the source for auto-translation |
+| Facebook | `video.mp4` (public URL) | `captionFilePath: subs.srt` — with extra languages, `captionFiles` (default locale first) | the `/{video_id}/captions` edge, one upload per locale |
 | Instagram | **`video-sub.mp4`** (public URL) | none — burned into the picture | the container has no subtitle parameter |
 | Threads | **`video-sub.mp4`** (public URL) | none — burned into the picture | the video rides on the post (`videoUrl`). The container takes no subtitle parameter, so it uses the same burn-in as IG. The video never goes in a reply |
 
@@ -227,14 +231,21 @@ permalink, say).
 1. **YouTube**: `youtube_publish` — title/description from `output/youtube/meta.md`,
    `videoFilePath`=output/video/**video.mp4** (the clean copy),
    **`thumbnailFilePath`=cover.jpg required** (leave it out and a random frame becomes
-   the thumbnail), **`captionFilePath`=output/video/subs.srt required**.
+   the thumbnail), **`captionFilePath`=output/video/subs.srt required** — and when
+   per-language files exist, pass **`captionTracks`** instead, listing every
+   `subs.<lang>.srt` with its BCP-47 code (`[{filePath: …/subs.srt, language: "ko"},
+   {filePath: …/subs.en.srt, language: "en"}, …]`; the two arguments are mutually
+   exclusive).
    A `thumbnailWarning` or `captionWarning` means the publish succeeded — report what
    the warning says. Subtitle upload needs the **`youtube.force-ssl` scope** (the
    publish-only `youtube.upload` gets rejected). With a publish-only token, a scope
    error on the first call is normal, and at that point the video is already up, so
    **don't republish** — reissue the token and upload just the subtitles separately
    (`references/token-setup.md`). The quota differs too — the upload is 1 unit but the
-   subtitles are 400, so call it only once per episode.
+   subtitles are 400 **per track** (three languages = 1,200), so upload each language
+   once per episode. `captionLanguages` in the response says which tracks went up, and
+   a per-language `captionWarning` ("en: …") means only that language failed — upload
+   just it in YouTube Studio.
    **Don't set `containsSyntheticMedia`** (it defaults to true). This pipeline uses Veo
    video and Lyria music, so it falls under AI disclosure, and YouTube states that
    disclosure doesn't affect reach or monetization eligibility while warning that
@@ -287,7 +298,10 @@ permalink, say).
    (one line like "full video here →" plus the link). In that case, and only that case,
    Threads isn't published until the reply is up.
 4. **Facebook**: `facebook_publish` — `videoUrl` is the public URL of the **clean copy
-   (video.mp4)**, `captionFilePath`=output/video/subs.srt (a local path), plus the
+   (video.mp4)**, `captionFilePath`=output/video/subs.srt (a local path — with extra
+   languages pass `captionFiles` instead, **default locale first**: `[{filePath:
+   …/subs.srt, locale: "ko_KR"}, {filePath: …/subs.en.srt, locale: "en_US"}, …]`;
+   FB locales are the underscore form, not BCP-47), plus the
    body → then **publish the first comment (source/related link) immediately** with
    `facebook_comment` using the postId from the response. A `captionWarning` doesn't
    invalidate the publish — FB processes video asynchronously, so it may have caught
@@ -301,7 +315,8 @@ aren't touched at all (preset `platforms: ["youtube"]`).
 
 1. Call `youtube_publish` with **`privacyStatus: "private"`**.
    `videoFilePath`=`video.mp4` (clean) · `thumbnailFilePath`=`cover.jpg` ·
-   `captionFilePath`=`subs.srt`. `caption` (the description) carries the **chapter
+   `captionFilePath`=`subs.srt` (or `captionTracks` when per-language files exist —
+   same rule as the short-form step). `caption` (the description) carries the **chapter
    timestamps** — `output/video/chapters.txt` is that list, built from the builder's
    measured times, with `00:00` as the first line and three or more entries. Add
    hashtags if you like, but **never `#Shorts`.**
@@ -322,6 +337,22 @@ more · at least 10 seconds apart) and our list is ignored in favor of auto chap
 the builder checks those three first, so a `chapters.txt` that exists has passed them;
 if they still don't show, check whether the lines broke when they were copied into the
 description.
+
+#### 3-3. Multi-language audio (dubbing) — what the API can and cannot do
+
+The Data API has no endpoint for extra audio tracks — `captions.insert` covers
+subtitles only, so this pipeline cannot upload dubs. Two real paths:
+
+- **YouTube auto-dubbing** — on channels where YouTube has enabled the multi-language
+  feature (https://support.google.com/youtube/answer/13338784) YouTube generates
+  dubbed audio itself. The subtitle tracks this skill uploads are what seed the
+  translation quality, so publishing with captions is the lever this pipeline controls.
+- **Custom dub tracks** go up by hand in YouTube Studio (up to 30 languages; an
+  audio-only file about the length of the video). The long-form private stage (§3-2)
+  is the moment — attach the tracks while the video is private, then flip public.
+
+Neither blocks a publish. When the user asks about multi-language reach, report these
+two paths along with the multi-language subtitle tracks that did go up.
 
 Handling failures: report the error as it came and **don't blindly retry the same call**
 (the publish APIs aren't idempotent — after a timeout, check for a duplicate first via
@@ -348,8 +379,9 @@ the most frequent failure in this skill.
       `oardefault.jpg`).
 - [ ] **YouTube — private actually became public.** Read `privacyStatus` back from the
       `youtube_update` response. Don't flip it while anything above is still open.
-- [ ] **YouTube — the subtitle track attached.** No `captionWarning`, and CC shows on the
-      watch page.
+- [ ] **YouTube — every subtitle track attached.** No `captionWarning`,
+      `captionLanguages` in the response lists every language you passed, and CC shows
+      on the watch page.
 - [ ] **Threads — the video is on the post** (rule 6). Open the permalink and confirm it
       plays. A body-only post is incomplete.
 - [ ] **Facebook — the first comment is up** (rule 6).
