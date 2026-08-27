@@ -78016,10 +78016,15 @@ var YOUTUBE_PUBLISH_OUTPUT = {
       type: "string",
       description: "Reason when only the thumbnail step failed. The video upload succeeded, so do not re-upload \u2014 set the thumbnail in YouTube Studio instead of calling this tool again"
     },
-    captionSet: { type: "boolean", description: "Only when captionFilePath was given \u2014 whether the caption track upload succeeded" },
+    captionSet: { type: "boolean", description: "Only when caption input was given \u2014 whether every caption track upload succeeded" },
+    captionLanguages: {
+      type: "array",
+      items: { type: "string" },
+      description: "Languages of the caption tracks this call tried to upload (upload order)"
+    },
     captionWarning: {
       type: "string",
-      description: "Reason when only the caption upload failed (a missing scope is the most common \u2014 captions.insert needs youtube.force-ssl). The video upload succeeded, so do not re-upload \u2014 reissue the token or upload just the captions in YouTube Studio"
+      description: 'Reason when only the caption upload failed, prefixed per language ("en: \u2026; vi: \u2026" \u2014 a missing scope is the most common: captions.insert needs youtube.force-ssl). The video upload succeeded, so do not re-upload \u2014 reissue the token or upload just the failed languages in YouTube Studio'
     }
   },
   required: ["platform", "videoId", "permalink"]
@@ -78033,10 +78038,15 @@ var FACEBOOK_PUBLISH_OUTPUT = {
       description: "Facebook post id \u2014 pass it straight to facebook_comment as postId. For video posts this value is also the video_id"
     },
     permalink: PERMALINK_PROPERTY,
-    captionSet: { type: "boolean", description: "Only when captionFilePath was given \u2014 whether the caption file upload succeeded" },
+    captionSet: { type: "boolean", description: "Only when caption input was given \u2014 whether every caption file upload succeeded" },
+    captionLocales: {
+      type: "array",
+      items: { type: "string" },
+      description: "Locales of the caption files this call tried to upload (upload order, first = default track)"
+    },
     captionWarning: {
       type: "string",
-      description: "Reason when only the caption upload failed. The post itself succeeded, so do not re-publish \u2014 the video may still have been processing, so retry just the captions shortly"
+      description: 'Reason when only the caption upload failed, prefixed per locale ("en_US: \u2026"). The post itself succeeded, so do not re-publish \u2014 the video may still have been processing, so retry just the failed locales shortly'
     }
   },
   required: ["platform", "postId"]
@@ -79894,11 +79904,23 @@ Returns: integer credit balance.`,
         videoUrl: { type: "string", format: "uri", description: "One public video URL (.mp4/.mov) \u2014 cannot be used together with imageUrls. Give the **clean master**, not a burned-in copy (subtitles go separately via captionFilePath)" },
         captionFilePath: {
           type: "string",
-          description: "**Local** absolute path to the subtitle file (.srt, \u2264200K) \u2014 valid only on videoUrl posts. Unlike the video URL it needs no hosting (direct file upload). It uploads automatically right after a successful publish; if only the subtitles fail, captionWarning is returned (the post stands \u2014 do not re-publish)"
+          description: "**Local** absolute path to the subtitle file (.srt, \u2264200K) \u2014 valid only on videoUrl posts. Unlike the video URL it needs no hosting (direct file upload). It uploads automatically right after a successful publish; if only the subtitles fail, captionWarning is returned (the post stands \u2014 do not re-publish). Single-locale shorthand \u2014 for two or more languages use captionFiles instead (mutually exclusive)"
         },
         captionLocale: {
           type: "string",
           description: "Subtitle locale (default ko_KR). Must be of the `ko_KR`/`en_US`/`vi_VN` form \u2014 FB derives the locale from whether the uploaded file name is `<name>.<locale>.srt`, and rejects a malformed one with error 386"
+        },
+        captionFiles: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              filePath: { type: "string", description: "Local absolute path of the .srt for this locale (\u2264200K)" },
+              locale: { type: "string", description: "Locale of this file \u2014 `ko_KR`/`en_US`/`vi_VN` form, one entry per locale" }
+            },
+            required: ["filePath", "locale"]
+          },
+          description: "Multi-language subtitles \u2014 one caption upload per entry, valid only on videoUrl posts and mutually exclusive with captionFilePath. **Put the default-language track first** \u2014 only the first entry declares default_locale (per-call default_locale on every track is undocumented behavior, so this tool declares the default exactly once). A failed locale comes back in captionWarning with the post intact \u2014 retry just that locale"
         },
         linkUrl: { type: "string", format: "uri", description: "(Exception only) link attachment \u2014 text posts (no media) only. The default rule is to put the link in the first comment via facebook_comment" },
         channel: SNS_CHANNEL_PROPERTY
@@ -79940,11 +79962,23 @@ Returns: integer credit balance.`,
         },
         captionFilePath: {
           type: "string",
-          description: "Absolute path of the subtitle file (.srt) \u2014 **pass it by default**. Uploading subtitles separately instead of burning them in means they can be swapped after publishing, viewers can toggle them, and they seed YouTube auto-translation. Give videoFilePath the clean subtitle-free master, not a burned-in copy. The upload needs the **youtube.force-ssl scope** (rejected on the publish-only youtube.upload) and costs a **quota of 400 units** \u2014 heavy next to the 1-unit video upload, so once per episode. If only the subtitles fail, captionWarning is returned and the publish stands (do not re-upload)"
+          description: "Absolute path of the subtitle file (.srt) \u2014 **pass it by default**. Uploading subtitles separately instead of burning them in means they can be swapped after publishing, viewers can toggle them, and they seed YouTube auto-translation. Give videoFilePath the clean subtitle-free master, not a burned-in copy. The upload needs the **youtube.force-ssl scope** (rejected on the publish-only youtube.upload) and costs a **quota of 400 units** per track \u2014 heavy next to the 1-unit video upload, so once per language per episode. If only the subtitles fail, captionWarning is returned and the publish stands (do not re-upload). Single-track shorthand \u2014 for two or more languages use captionTracks instead (mutually exclusive)"
         },
         captionLanguage: {
           type: "string",
           description: "Subtitle language, BCP-47 (default ko) \u2014 e.g. ko, en, vi. Becomes the source language for auto-translation"
+        },
+        captionTracks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              filePath: { type: "string", description: "Absolute path of the .srt for this language" },
+              language: { type: "string", description: "BCP-47 hyphen form (ko, en, vi, pt-BR) \u2014 the underscore form ko_KR is the Facebook contract and is rejected here" }
+            },
+            required: ["filePath", "language"]
+          },
+          description: "Multi-language subtitle tracks \u2014 one captions.insert per entry, so viewers pick their language in the player and each track seeds auto-translation. Mutually exclusive with captionFilePath. Every file is validated before the video upload starts; each track costs 400 quota units, and a failed language comes back in captionWarning with the publish intact (upload just that language in YouTube Studio instead of re-publishing)"
         },
         privacyStatus: {
           type: "string",
@@ -82034,18 +82068,27 @@ async function instagramInsights(input) {
   });
 }
 async function publishFacebook(input) {
-  if (input.captionFilePath && !input.videoUrl) {
-    return fail2(400, "captionFilePath requires videoUrl (captions attach to a video, not to photos or text posts)");
+  if (input.captionFiles?.length && input.captionFilePath) {
+    return fail2(400, "Pass captionFiles or captionFilePath, not both (ambiguous which one wins)");
   }
-  const captionLocale = input.captionLocale ?? "ko_KR";
-  if (input.captionFilePath && !/^[a-z]{2}_[A-Z]{2}$/.test(captionLocale)) {
-    return fail2(400, `captionLocale must look like ko_KR / en_US / vi_VN: ${captionLocale}`);
+  const captionInputs = input.captionFiles?.length ? input.captionFiles : input.captionFilePath ? [{ filePath: input.captionFilePath, locale: input.captionLocale ?? "ko_KR" }] : [];
+  if (captionInputs.length > 0 && !input.videoUrl) {
+    return fail2(400, "caption files require videoUrl (captions attach to a video, not to photos or text posts)");
   }
-  let captionBytes;
-  if (input.captionFilePath) {
-    const caption = await readCaptionFile(input.captionFilePath, CAPTION_MAX_BYTES_FB);
+  for (const captionInput of captionInputs) {
+    if (!/^[a-z]{2}_[A-Z]{2}$/.test(captionInput.locale)) {
+      return fail2(400, `caption locale must look like ko_KR / en_US / vi_VN: ${captionInput.locale}`);
+    }
+  }
+  const localeList = captionInputs.map((c) => c.locale);
+  if (new Set(localeList).size !== localeList.length) {
+    return fail2(400, `Duplicate caption locales: ${localeList.join(", ")}`);
+  }
+  const captionFiles = [];
+  for (const captionInput of captionInputs) {
+    const caption = await readCaptionFile(captionInput.filePath, CAPTION_MAX_BYTES_FB);
     if (!caption.bytes) return caption.error;
-    captionBytes = caption.bytes;
+    captionFiles.push({ bytes: caption.bytes, locale: captionInput.locale });
   }
   const { token, error: error2 } = await loadTokenFile("FACEBOOK", input.channel);
   if (!token) return error2;
@@ -82093,7 +82136,12 @@ async function publishFacebook(input) {
     postId = String(parseJson(feed.body)?.id ?? "");
   }
   if (!postId) return fail2(502, "Facebook publish returned no id");
-  const captionWarning = captionBytes ? await uploadFacebookCaption(token, postId, { bytes: captionBytes, locale: captionLocale }) : void 0;
+  const captionWarnings = [];
+  for (const [index, file] of captionFiles.entries()) {
+    const warning = await uploadFacebookCaption(token, postId, { ...file, isDefault: index === 0 });
+    if (warning) captionWarnings.push(`${file.locale}: ${warning}`);
+  }
+  const captionWarning = captionWarnings.length > 0 ? captionWarnings.join("; ") : void 0;
   const permalink = await graphRequest("get", `${FB_BASE}/${postId}`, {
     fields: "permalink_url",
     access_token: token
@@ -82102,7 +82150,7 @@ async function publishFacebook(input) {
     platform: "FACEBOOK",
     postId,
     permalink: permalink.ok ? parseJson(permalink.body)?.permalink_url ?? null : null,
-    ...captionBytes ? { captionSet: !captionWarning } : {},
+    ...captionFiles.length > 0 ? { captionSet: !captionWarning, captionLocales: captionFiles.map((f3) => f3.locale) } : {},
     ...captionWarning ? { captionWarning } : {}
   });
 }
@@ -82238,7 +82286,7 @@ Content-Type: application/octet-stream\r
 async function uploadFacebookCaption(token, videoId, caption) {
   const form = new FormData();
   form.set("access_token", token);
-  form.set("default_locale", caption.locale);
+  if (caption.isDefault) form.set("default_locale", caption.locale);
   form.set(
     "captions_file",
     new Blob([new Uint8Array(caption.bytes.buffer, caption.bytes.byteOffset, caption.bytes.byteLength)], {
@@ -82420,11 +82468,24 @@ async function publishYoutube(input) {
     }
     thumb = { bytes: thumbBytes, mimeType: thumbMime };
   }
-  let captionBytes;
-  if (input.captionFilePath) {
-    const caption = await readCaptionFile(input.captionFilePath, CAPTION_MAX_BYTES_YT);
+  if (input.captionTracks?.length && input.captionFilePath) {
+    return fail2(400, "Pass captionTracks or captionFilePath, not both (ambiguous which one wins)");
+  }
+  const trackInputs = input.captionTracks?.length ? input.captionTracks : input.captionFilePath ? [{ filePath: input.captionFilePath, language: input.captionLanguage ?? "ko" }] : [];
+  for (const trackInput of trackInputs) {
+    if (!/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(trackInput.language)) {
+      return fail2(400, `caption language must be BCP-47 like ko / en / pt-BR (not ko_KR): ${trackInput.language}`);
+    }
+  }
+  const languageList = trackInputs.map((t2) => t2.language);
+  if (new Set(languageList).size !== languageList.length) {
+    return fail2(400, `Duplicate caption languages: ${languageList.join(", ")}`);
+  }
+  const captionTracks = [];
+  for (const trackInput of trackInputs) {
+    const caption = await readCaptionFile(trackInput.filePath, CAPTION_MAX_BYTES_YT);
     if (!caption.bytes) return caption.error;
-    captionBytes = caption.bytes;
+    captionTracks.push({ bytes: caption.bytes, language: trackInput.language });
   }
   const { client, error: clientError } = await loadYoutubeClient(input.channel);
   if (!client) return clientError;
@@ -82515,10 +82576,12 @@ async function publishYoutube(input) {
     if (!videoId) return fail2(502, `YouTube upload returned no video id: ${text2}`);
     writeState(input.videoFilePath, null);
     const thumbnailWarning = thumb ? await setYoutubeThumbnail(token, videoId, thumb) : void 0;
-    const captionWarning = captionBytes ? await uploadYoutubeCaption(token, videoId, {
-      bytes: captionBytes,
-      language: input.captionLanguage ?? "ko"
-    }) : void 0;
+    const captionWarnings = [];
+    for (const track of captionTracks) {
+      const warning = await uploadYoutubeCaption(token, videoId, track);
+      if (warning) captionWarnings.push(`${track.language}: ${warning}`);
+    }
+    const captionWarning = captionWarnings.length > 0 ? captionWarnings.join("; ") : void 0;
     return okJson({
       platform: "YOUTUBE",
       videoId,
@@ -82526,7 +82589,7 @@ async function publishYoutube(input) {
       fileName: basename6(input.videoFilePath),
       ...thumb ? { thumbnailSet: !thumbnailWarning } : {},
       ...thumbnailWarning ? { thumbnailWarning } : {},
-      ...captionBytes ? { captionSet: !captionWarning } : {},
+      ...captionTracks.length > 0 ? { captionSet: !captionWarning, captionLanguages: captionTracks.map((t2) => t2.language) } : {},
       ...captionWarning ? { captionWarning } : {}
     });
   } catch (error2) {
@@ -85642,6 +85705,12 @@ var facebookPublishSchema = external_exports.object({
   videoUrl: external_exports.string().url().optional(),
   captionFilePath: external_exports.string().min(1).optional(),
   captionLocale: external_exports.string().regex(/^[a-z]{2}_[A-Z]{2}$/, "captionLocale must look like ko_KR / en_US / vi_VN").optional(),
+  captionFiles: external_exports.array(
+    external_exports.object({
+      filePath: external_exports.string().min(1),
+      locale: external_exports.string().regex(/^[a-z]{2}_[A-Z]{2}$/, "locale must look like ko_KR / en_US / vi_VN")
+    })
+  ).min(1).optional(),
   linkUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
@@ -85651,6 +85720,10 @@ var facebookPublishSchema = external_exports.object({
   if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue2("linkUrl", "linkUrl is for text-only posts (no media)");
   if (v.captionFilePath && !v.videoUrl) issue2("captionFilePath", "captionFilePath requires videoUrl");
   if (v.captionLocale && !v.captionFilePath) issue2("captionLocale", "captionLocale requires captionFilePath");
+  if (v.captionFiles && !v.videoUrl) issue2("captionFiles", "captionFiles requires videoUrl");
+  if (v.captionFiles && v.captionFilePath) {
+    issue2("captionFiles", "captionFiles and captionFilePath are mutually exclusive");
+  }
 });
 var facebookCommentSchema = external_exports.object({
   postId: external_exports.string().min(1),
@@ -85677,6 +85750,12 @@ var youtubePublishSchema = external_exports.object({
   thumbnailFilePath: external_exports.string().min(1),
   captionFilePath: external_exports.string().min(1).optional(),
   captionLanguage: external_exports.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, "captionLanguage is a BCP-47 tag, e.g. ko / en / vi / zh-Hant").optional(),
+  captionTracks: external_exports.array(
+    external_exports.object({
+      filePath: external_exports.string().min(1),
+      language: external_exports.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/, "language is a BCP-47 tag, e.g. ko / en / vi / zh-Hant")
+    })
+  ).min(1).optional(),
   categoryId: external_exports.string().regex(/^\d{1,3}$/, "categoryId is a numeric YouTube category id, e.g. 22 (People & Blogs)").optional(),
   madeForKids: external_exports.boolean().optional(),
   containsSyntheticMedia: external_exports.boolean().optional(),
@@ -86358,6 +86437,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
           videoUrl: input.videoUrl,
           captionFilePath: input.captionFilePath,
           captionLocale: input.captionLocale,
+          captionFiles: input.captionFiles,
           channel: input.channel
         } : { caption: input.caption, imageUrls: input.imageUrls, linkUrl: input.linkUrl, channel: input.channel }
       ),
@@ -86379,6 +86459,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
         thumbnailFilePath: input.thumbnailFilePath,
         captionFilePath: input.captionFilePath,
         captionLanguage: input.captionLanguage,
+        captionTracks: input.captionTracks,
         categoryId: input.categoryId,
         madeForKids: input.madeForKids,
         containsSyntheticMedia: input.containsSyntheticMedia,

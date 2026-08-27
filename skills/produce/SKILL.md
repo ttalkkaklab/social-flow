@@ -1135,6 +1135,27 @@ the real URL. Save each under `output/<platform>/`, and finalize the video and c
 go to YouTube and Facebook, the burned-in version to Instagram. Miss one and the subtitles
 disappear on that platform.
 
+#### Multi-language subtitles (only when the profile lists them)
+
+When profile.md §4 has a **Subtitle languages** line naming languages beyond the
+default (e.g. `ko (default) · en · vi`), translate `subs.srt` into each extra language
+yourself and save `output/video/subs.<lang>.srt` (BCP-47 code — `subs.en.srt`,
+`subs.vi.srt`). Rules:
+
+- **Cue numbers and timestamps stay byte-identical** — translate the text lines only.
+  The timing came from the TTS boundaries and holds for every language.
+- Translate what the subtitle-display column says (numbers and units as written on
+  screen), not the TTS reading. Proper nouns, brand names, and on-screen figures stay
+  as-is.
+- Keep each cue about as long as the original — a cue that doubles in length overflows
+  the two-line subtitle band on the phone surface.
+- These files ride only on the platforms that take a subtitle file (YouTube ·
+  Facebook). The burned-in copy stays in the default language — IG and Threads viewers
+  see that one, so there is no re-render per language.
+
+Run the D2/D9 surface check on each translated file the same way as `subs.srt` when the
+language is Korean; other languages skip the Korean style gate.
+
 Right after saving, run the style checker per surface — one Bash call, not an LLM call.
 
 ```bash

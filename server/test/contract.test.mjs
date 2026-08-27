@@ -563,6 +563,38 @@ describe('separate subtitle upload contract', () => {
     assert.match(fb().inputSchema.properties.captionLocale.description, /ko_KR/);
   });
 
+  it('YouTube takes multi-language caption tracks (filePath + BCP-47 language per entry)', () => {
+    const tracks = yt()?.inputSchema.properties.captionTracks;
+    assert.ok(tracks, 'no captionTracks');
+    assert.equal(tracks.type, 'array');
+    assert.ok(tracks.items?.properties?.filePath, 'no items.filePath');
+    assert.ok(tracks.items?.properties?.language, 'no items.language');
+    assert.deepEqual(tracks.items?.required, ['filePath', 'language']);
+    // one list only — passing both the single pair and the list is ambiguous
+    assert.match(tracks.description, /[Mm]utually exclusive/, 'no mutual-exclusion note');
+  });
+
+  it('Facebook takes multi-language caption files (filePath + locale per entry, first = default)', () => {
+    const files = fb()?.inputSchema.properties.captionFiles;
+    assert.ok(files, 'no captionFiles');
+    assert.equal(files.type, 'array');
+    assert.ok(files.items?.properties?.filePath, 'no items.filePath');
+    assert.ok(files.items?.properties?.locale, 'no items.locale');
+    assert.deepEqual(files.items?.required, ['filePath', 'locale']);
+    // default_locale rides on the first entry only — callers must know the order matters
+    assert.match(files.description, /first/i, 'no first-entry-default note');
+  });
+
+  it('Instagram has no multi-language caption argument either', () => {
+    assert.equal(ig()?.inputSchema.properties.captionTracks, undefined);
+    assert.equal(ig()?.inputSchema.properties.captionFiles, undefined);
+  });
+
+  it('both tool outputs list the uploaded caption languages', () => {
+    assert.ok(yt()?.outputSchema?.properties?.captionLanguages, 'youtube_publish: no captionLanguages');
+    assert.ok(fb()?.outputSchema?.properties?.captionLocales, 'facebook_publish: no captionLocales');
+  });
+
   it('both tool outputs expose captionSet and captionWarning', () => {
     for (const [name, tool] of [['youtube_publish', yt()], ['facebook_publish', fb()]]) {
       assert.ok(tool.outputSchema?.properties?.captionSet, `${name}: no captionSet`);
