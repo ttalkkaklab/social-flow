@@ -592,6 +592,27 @@ and `SB_DOC.seriesNote`.
    sentence each. If the two don't connect, it isn't a series, just one-offs on similar
    topics.
 
+#### Run the contract checker before delegating anything
+
+```bash
+SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+node $SB/check-scenes.js storyboard/          # exit 1 = a violation
+```
+
+It reads the structural half of the contract — fields that have to exist, values that have to
+come from a fixed vocabulary (`shot.size`, `shot.angle`, `beat`, `hookType`, `hookForm`), the
+four camera slots on every generated shot, b-roll's `after` resolving to a real scene, a
+`sound.cue` naming a cue that exists. Every band comes from the format preset, so there is no
+copy of those numbers to drift.
+
+**Fix what it finds before a reviewer reads the file.** A delegation spent on a storyboard with
+an empty camera slot buys a finding the checker gives away, and a reviewer that trips over a
+structural fault reads the rest of the file worse.
+
+It is the structural half only. Frame overflow, hero-stat width and speech rate are measured
+against a rendered canvas — those stay in `storyboard.html`'s check strip, and duplicating them
+here would create the mirror drift `format-lint.js` exists to police.
+
 ### 4.5 Copy review (storyboard-reviewer copy mode — one round)
 
 **Get the sentences read before making any images** — when the copy changes, so does the
@@ -1220,6 +1241,7 @@ uses the slide state captures as the segment visuals (produce §3.6).
 - **`references/shot-script-template.md`** — shooting mode only: the script.md (shooting script) structure + filming rules + the scenes.js variant contract
 - **`references/make-script.js`** — the long-form script.md renderer — builds the shooting script from scenes.js (never maintain two copies). All shots on an all-live-voice episode, filmed scenes only on a TTS episode
 - **`references/slide-template.html`** — the §8 slide-scene render template — the `?reveal=k` reveal contract + the determinism contract; change only `SLIDE_SHOT` and `renderSlide()`
+- **`references/check-scenes.js`** — the scenes.js structural contract with an exit code: required fields, the size/angle/beat/hookType/hookForm vocabularies, the four camera slots on generated shots, b-roll `after` resolution, cue references. Bands come from the format preset, never a copy. `--selftest` pins the rules
 - **`references/check-slide.js`** — the §8 slide machine check — filename↔scenes.js match, Korean literals outside the SoT, determinism violations
 - **`../autoproduce/references/cost-tally.md`** — the episode cost-ledger convention (where §5 and §5.5 write, the line format, the units). The source of truth for unit prices is `prices.tsv` in the same directory
 - **`../autoproduce/references/episode-state.js`** — derives where an episode stands (drafted · approved · produced · published), what to run next, and what the directory promised and hasn't delivered. No state file — it reads what the skills already write. `--all` sweeps a channel, `--json` for tooling

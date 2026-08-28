@@ -205,7 +205,9 @@ data/<channel>/episodes/<topic>/
   ```
 
   It reports the stage and what is missing — filmed scenes with no footage, slide files never
-  authored, images the scenes name that aren't on disk. Fix a blocker before the build rather
+  authored, images the scenes name that aren't on disk. Run the structural contract too —
+  `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenes.js storyboard/` — since
+  a missing camera slot or an unresolvable b-roll `after` fails the build rather than the eye. Fix a blocker before the build rather
   than discovering it 12 minutes into capture. `.work/` survives between sessions on purpose,
   so a resumed run reuses the captures and TSV manifests already there.
 
