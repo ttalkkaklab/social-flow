@@ -897,6 +897,7 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 | `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
 | `span=<0..1.5>` | this card's total zoom span, replacing the global `ZOOM_SPAN` (0.4 = the window grows 40% over the card). Applies to `in`/`out`/`punch` and the pan zoom drift; unused on `hold`/`none` | a still whose beat wants a visible move — computed from the storyboard's `speed` word (below). Past base+`span` > `ZOOM_BASE`/canvas (base: pan scale · drift 1.04 · else 1; headroom 0.5 at the defaults) the source upscales and the build warns: raise `ZOOM_BASE` and generate the scene image at that resolution |
 | `ease=smooth\|linear\|in` | this card's easing, replacing the global `KB_EASE`. `in` accelerates — an unnoticed start, fastest exactly at the cut | the ladder's accelerating rows (action/tension, CTA) — pairs with cutting away at the peak. `punch` keeps its own ease-out ramp and ignores `ease=` |
+| `enter=1` / `exit=1` | fade this card up from black / down to black (`SCENE_FADE`, 0.12s) | **the storyboard's `transition: "dissolve"`** — put `exit=1` on the card before it and `enter=1` on the card that carries the field. Nothing else turns these on |
 
 ```
 # one line for a filmed scene (live voice)
@@ -904,6 +905,18 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 # 슬라이드·생성 씬(사용자 녹음 나레이션 — window.VOICE) 한 줄 예: 일반 레인, sync 없음
 11	pcm/s12.wav	0	none
 ```
+
+**A scene dissolve is two options, not one.** A shot carrying `transition: "dissolve"`
+(scenes-schema §scene transition) becomes `enter=1` on that card **and** `exit=1` on the card
+before it — the fade has two halves and each lives in its own card's encode. Write neither and
+the boundary is a hard cut, which is the default and where most boundaries belong.
+
+The builder does it this way because a boundary xfade would break the pipeline's spine: the
+total would shrink by the fade length at every seam and trip §9's 2ms drift assertion, and
+xfade renumbers the tail's PTS from 0 (the measurement is written out at the outro seam in
+build-reel.sh). Fading each side separately changes no frame count, so the concat stays
+stream-copy exact and no subtitle cue moves — verified A/B on a three-card build: identical
+`subs.srt`, 12.000000s both ways, drift 0.
 
 **The still move comes from the storyboard, not from taste.** A still's
 `visual.camera.movement` (when the storyboard wrote one — directing-grammar §5's Still

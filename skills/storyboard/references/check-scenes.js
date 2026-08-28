@@ -166,6 +166,37 @@ function check(win, fmt) {
     }
   }
 
+  /* ── Scene transitions — a dissolve is spent, not applied ──
+     The default is a cut and most boundaries should stay one. A dissolve at every boundary is
+     the slideshow look: it reads as an episode with no cuts rather than one with transitions,
+     and it takes away the cut rhythm the builder leans on (Ken Burns alternates direction card
+     to card for exactly that reason). scenes-schema §scene transition is the contract. */
+  const dissolves = scenes.map((s, i) => ({ i: i + 1, t: s.transition }))
+    .filter((s) => s.t === 'dissolve');
+  scenes.forEach((s, i) => {
+    if (s.transition && s.transition !== 'dissolve')
+      bad('shot ' + (i + 1), `transition "${s.transition}" — the only value is "dissolve" (absent = cut)`);
+  });
+  if (dissolves.length) {
+    const longForm = fmt.format === 'youtube-long-16x9';
+    const budget = longForm ? Math.max(2, Math.round(main.length / 8)) : 2;
+    if (dissolves.length > budget)
+      bad('episode', `${dissolves.length} scene dissolves — a ${longForm ? 'long-form' : 'short'} ` +
+                     `spends at most ${budget}. Every boundary softened is the slideshow look`);
+    else if (!longForm && dissolves.length === 2)
+      warn('episode', 'two scene dissolves in a short — one is usually the whole budget');
+    if (dissolves[0].i <= 2)
+      bad('shot ' + dissolves[0].i, 'a dissolve on the hook or the shot after it — the first ' +
+                                    'three seconds have no time to spend');
+    // Inside one scene the time and place are continuous, so the cut is the honest join.
+    dissolves.forEach((d) => {
+      const prev = scenes[d.i - 2], cur = scenes[d.i - 1];
+      if (prev && cur && prev.scene !== undefined && prev.scene === cur.scene)
+        warn('shot ' + d.i, `a dissolve inside scene ${cur.scene} — same place and time, ` +
+                            'where the cut is the honest join');
+    });
+  }
+
   // The generated-video cap is a user directive, and the number lives in the preset.
   const videoSlots = scenes.filter((s) => {
     const v = s.visual || {};
@@ -323,6 +354,23 @@ function selftest() {
        visual: { video: {}, audio: 'a',
                  camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } } })])),
        /no stored clip prompt/));
+
+  // ── scene transitions ──
+  const dz = (over) => Object.assign({}, goodShot, over);
+  ok('no transition anywhere is clean (the default is a cut)',
+     bads(run([cover, goodShot, goodShot, goodShot])).length === 0);
+  ok('one dissolve is within budget',
+     bads(run([cover, goodShot, dz({ transition: 'dissolve' }), goodShot])).length === 0);
+  ok('a value other than dissolve is a violation',
+     has(bads(run([cover, goodShot, dz({ transition: 'fade' })])), /the only value is/));
+  ok('three dissolves in a short is a violation',
+     has(bads(run([cover, goodShot, dz({ transition: 'dissolve' }), dz({ transition: 'dissolve' }),
+                   dz({ transition: 'dissolve' })])), /spends at most 2/));
+  ok('a dissolve on the shot after the hook is a violation',
+     has(bads(run([cover, dz({ transition: 'dissolve' }), goodShot])), /no time to spend/));
+  ok('a dissolve inside one scene is flagged',
+     has(run([cover, Object.assign({}, goodShot, { scene: 2 }),
+              dz({ transition: 'dissolve', scene: 2 })]), /same place and time/));
 
   // ── playback order ──
   const beat = (b, over) => Object.assign({}, goodShot, { beat: b }, over || {});
