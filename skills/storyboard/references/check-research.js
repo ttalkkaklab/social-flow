@@ -114,7 +114,65 @@ function formatOf(storyboardDir) {
   }
 }
 
-function analyse(src, fmt) {
+/** Reads scenes.js when it sits beside research.md, for the claim cross-check. */
+function readScenes(storyboardDir) {
+  const file = path.join(storyboardDir, 'scenes.js');
+  if (!fs.existsSync(file)) return null;
+  const vm = require('vm');
+  const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
+  sandbox.globalThis = sandbox;
+  try {
+    vm.runInNewContext(fs.readFileSync(file, 'utf8'), sandbox, { filename: file, timeout: 5000 });
+  } catch (e) {
+    return null;
+  }
+  return Array.isArray(sandbox.window.SCENES) ? sandbox.window.SCENES : null;
+}
+
+/** A sentence that states a figure, a date or a quantity is one a reader can check. */
+const CHECKABLE = /[0-9]|퍼센트|배\b|억|만\s*원|천\s*원|년|월|일\b/;
+
+/**
+ * Cross-checks the sentences against the table: a cited claim that no row has, research that
+ * never reached the video, and figure-carrying sentences that cite nothing.
+ *
+ * Runs only when at least one sentence carries `claim` — an episode that never adopted the
+ * field is not reported as if every sentence were missing it.
+ */
+function crossCheck(scenes, claims, out) {
+  if (!scenes) return null;
+  const cited = new Map();          // claim number → how many sentences use it
+  let carrying = 0, uncited = 0;
+  scenes.forEach((s, i) => {
+    (s.narration || []).forEach((seg) => {
+      if (!seg || typeof seg !== 'object') return;
+      const ref = seg.claim;
+      const nums = Array.isArray(ref) ? ref : (ref === undefined || ref === null ? [] : [ref]);
+      if (nums.length) {
+        carrying++;
+        nums.forEach((n) => cited.set(n, (cited.get(n) || 0) + 1));
+      } else if (CHECKABLE.test(String(seg.sub || seg.tts || ''))) {
+        uncited++;
+      }
+      nums.forEach((n) => {
+        if (!claims.some((c) => c.n === Number(n)))
+          out.push({ level: 'bad', what: `shot ${i + 1} cites claim ${n}, which no Verified row has — ` +
+                                         'the table was renumbered, or the number was invented' });
+      });
+    });
+  });
+  if (!carrying) return null;       // the field is not in use on this episode
+  const unused = claims.filter((c) => !cited.has(c.n)).map((c) => c.n);
+  if (unused.length)
+    out.push({ level: 'warn', what: `${unused.length} verified claim(s) no sentence uses (${unused.slice(0, 6).join(', ')}` +
+                                    `${unused.length > 6 ? ' …' : ''}) — research that never reached the video` });
+  if (uncited)
+    out.push({ level: 'warn', what: `${uncited} sentence(s) carry a figure but cite no claim — ` +
+                                    'those are the ones a factual pass has to start from' });
+  return { carrying, uncited, unused: unused.length };
+}
+
+function analyse(src, fmt, scenes) {
   const out = [];
   const bad = (what) => out.push({ level: 'bad', what });
   const warn = (what) => out.push({ level: 'warn', what });
@@ -200,9 +258,11 @@ function analyse(src, fmt) {
     warn('no "Failed verification → excluded" rows — everything searched for held up, ' +
          'which happens, but it is worth a second look');
 
+  const trace = crossCheck(scenes, claims, out);
+
   return {
     claims: claimCount, questions: qRows.length, counterRows: cRows.length,
-    excluded: fRows.length, floor: FLOOR_ABSOLUTE, aim,
+    excluded: fRows.length, floor: FLOOR_ABSOLUTE, aim, traceability: trace,
     format: fmt ? fmt.format : null, findings: out
   };
 }
@@ -286,6 +346,32 @@ function selftest() {
      !has(analyse(good.replace('| 1 | x | [a](https://a.example) | [b](https://b.example) |', '| 1 | x | --help 로컬 실행 실측 | 같은 공식 문서 원문 |'), null),
           /claim 1 names no basis/));
 
+  // ── claim traceability ──
+  const sc = (narr) => [{ type: 'points', narration: narr }];
+  const withClaims = (narr) => analyse(good, null, sc(narr));
+
+  ok('an episode that never adopted the field is not reported as missing it',
+     bads(withClaims([{ tts: '삼십 개', sub: '30개' }])).length === 0 &&
+     !has(withClaims([{ tts: '삼십 개', sub: '30개' }]), /cite no claim/));
+
+  const cited9 = withClaims([{ tts: 'x', sub: 'x', claim: 9 }]);
+  ok('a cited claim that no row has is a violation',
+     has(cited9, /cites claim 9/) && bads(cited9).some((f) => /cites claim 9/.test(f.what)));
+
+  ok('an array of claim numbers is read',
+     bads(withClaims([{ tts: 'x', sub: 'x', claim: [1, 2] }])).length === 0);
+
+  ok('research no sentence uses is reported',
+     has(withClaims([{ tts: 'x', sub: 'x', claim: 1 }]), /2 verified claim\(s\) no sentence uses/));
+
+  ok('a figure-carrying sentence citing nothing is reported',
+     has(withClaims([{ tts: 'a', sub: 'a', claim: 1 }, { tts: '팔십이 조각', sub: '82조각' }]),
+         /1 sentence\(s\) carry a figure but cite no claim/));
+
+  ok('a sentence with no figure needs no claim',
+     !has(withClaims([{ tts: 'a', sub: 'a', claim: 1 }, { tts: '왜 그럴까요', sub: '왜 그럴까요' }]),
+          /carry a figure but cite no claim/));
+
   // Drift guard — the floors live in the skill, and this file has to agree with it.
   const skill = path.resolve(SELF_DIR, '..', 'SKILL.md');
   if (fs.existsSync(skill)) {
@@ -316,7 +402,8 @@ function main() {
         ' — a channel whose profile skips research has none, and that is not a defect');
 
   const fmt = formatOf(isDir ? target : path.dirname(file));
-  const result = analyse(fs.readFileSync(file, 'utf8'), fmt);
+  const result = analyse(fs.readFileSync(file, 'utf8'), fmt,
+                         readScenes(isDir ? target : path.dirname(file)));
   const bad = result.findings.filter((f) => f.level === 'bad');
   const warn = result.findings.filter((f) => f.level === 'warn');
 

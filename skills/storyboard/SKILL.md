@@ -201,7 +201,11 @@ difference on our own episodes, user note 2026-08-23). The step has four parts, 
    (`serp_naver_search period`, a news date filter) — an outdated figure that was true last year
    is a factual mismatch this year.
 3. **Put every claim in the evidence table** — claim · source 1 · source 2 · date checked · status
-   (`research.md` §Verified) — and everything that failed in §Failed (with why). Two independent
+   (`research.md` §Verified) — and everything that failed in §Failed (with why). **Number the
+   rows and keep the numbers** — §4's narration sentences point back at them with `claim`
+   (scenes-schema §claim traceability), which is what turns "does this sentence match the
+   research" from a job somebody redoes every review into a number that either exists or
+   doesn't. Two independent
    sources for anything time-sensitive, one official origin (data.go.kr, the vendor's own doc)
    counts as both. Don't round a range, don't shrink it to its upper bound.
 4. **Check sufficiency before leaving the step.** Three verified claims is the floor below

@@ -687,6 +687,34 @@ subtitles already do that.
 - No synthesizing a real person's face or voice. Characters only in styles that can't be
   mistaken for live action.
 
+### Claim traceability (`claim`) — which research entry a sentence rests on
+
+```js
+narration: [
+  { tts: "삼십 개만 남았어요", sub: "30개만 남았어요", claim: 2 },
+  { tts: "여든두 조각으로 갈라졌고요", sub: "82조각으로 갈라졌고", claim: [3, 7] },
+  { tts: "이게 왜 놀라운 거냐면요", sub: "이게 왜 놀라운 거냐면" }   // no figure, no claim
+]
+```
+
+**A sentence carrying a figure, a date, a name or a quantity names the research entry it came
+from** — the `#` column of research.md's Verified table. One number, or an array when the
+sentence leans on more than one. A sentence that asserts nothing checkable carries none, and
+that is the normal case: connective lines, questions, and reactions have nothing to cite.
+
+Why the number and not the prose: without it, "does this sentence match the research" is a
+job somebody redoes from scratch every review, matching sentences to rows by reading. With
+it, the claim either exists in the table or it doesn't, and the reviewer's factual pass starts
+from the sentences that cite nothing rather than from all of them.
+
+`check-research.js` reads both files and reports three things — a `claim` number no Verified
+row has (the row was renumbered, or the number was invented), how many verified claims no
+sentence ever used (research that never reached the video), and how many figure-carrying
+sentences cite nothing at all.
+
+**Channels whose profile skips research have no `claim` anywhere**, and nothing checks it —
+the field appears only where there is a table to point at.
+
 ### Scene transition (`transition`) — the boundary before this shot
 
 ```js
