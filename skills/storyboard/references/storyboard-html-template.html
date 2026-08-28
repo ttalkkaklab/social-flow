@@ -151,6 +151,39 @@
   .audit li.warn .where { font-weight: 600; color: var(--muted); }
   .audit .clean { padding: var(--s3) var(--s4); font-size: var(--t-aux); color: var(--muted); }
 
+  /* Cost panel — what has been billed already, and what approving commits.
+     Same frame as the check strip: this is a number the approver reads before deciding,
+     not a report they go looking for. */
+  .cost {
+    margin: var(--s5) 0 0; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--card); overflow: hidden;
+  }
+  .cost-head {
+    display: flex; align-items: baseline; gap: var(--s2); padding: var(--s3) var(--s4);
+    font-size: var(--t-aux); font-weight: 700; border-bottom: 1px solid var(--hair);
+  }
+  .cost-head .sum { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .cost-head .sum b { font-size: var(--t-body); }
+  .cost-split {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--hair);
+  }
+  .cost-split > div { background: var(--card); padding: var(--s3) var(--s4); }
+  .cost-split dt { color: var(--faint); font-size: var(--t-aux); font-weight: 600; }
+  .cost-split .amt {
+    font-size: var(--t-body); font-weight: 700; font-variant-numeric: tabular-nums;
+    margin: 2px 0 var(--s2);
+  }
+  .cost-rows { margin: 0; padding: 0 0 var(--s3); list-style: none; }
+  .cost-rows li {
+    display: grid; grid-template-columns: 62px 1fr auto; gap: var(--s3); align-items: baseline;
+    padding: var(--s1) var(--s4); font-size: var(--t-aux); color: var(--muted);
+  }
+  .cost-rows li .who { color: var(--text); font-weight: 700; }
+  .cost-rows li .amt2 { font-variant-numeric: tabular-nums; color: var(--text); }
+  .cost-stale { padding: var(--s2) var(--s4) var(--s3); font-size: var(--t-aux); color: var(--bad); }
+  .cost-none { padding: var(--s3) var(--s4); font-size: var(--t-aux); color: var(--muted); }
+  @media (max-width: 640px) { .cost-split { grid-template-columns: 1fr; } }
+
   .note {
     background: var(--sunk); border-radius: 8px; padding: var(--s3) var(--s4);
     margin: var(--s2) 0; font-size: var(--t-aux); line-height: 1.6; color: var(--text);
@@ -772,6 +805,15 @@ window.SB_DOC = {
   status: "draft",                       // draft | approved | produced | published — kept in sync with the storyboard.md frontmatter
   created: "{{YYYY-MM-DD}}",
   outro: { seconds: 9, note: "shared outro — assets/outro/default.mp4" },   // null if there is none
+
+  // Cost snapshot — what this episode has already billed, and what approving it commits.
+  // Never typed by hand. Generate the block and paste it here:
+  //   node ${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references/cost-preview.js . --sbdoc
+  // Numbers are a snapshot, so the check strip recomputes `fingerprint` from the live
+  // SCENES and flags the panel as stale when a video slot has moved since. Leave it out
+  // (or null) and the document simply has no cost panel.
+  cost: null,
+
   keyMessage: "{{the one sentence this video delivers}}",
   hook: "{{cover hook summary — e.g. \"title\" — hero stat X (statLabel)}}",
   seriesNote: "{{position in the series, standalone-viewing design, etc. — empty string if none}}",
@@ -1117,6 +1159,24 @@ window.SB_DOC = {
     if (auditSealed && window.console)
       console.warn("[storyboard] flag raised after the check strip was rendered:", where, what);
     audit.push({ level: level, where: where, what: what });
+  }
+
+  /* ── Cost fingerprint ──
+     SB_DOC.cost is a snapshot taken by cost-preview.js, so it goes stale the moment a video
+     slot is added, retimed, rerouted or moved. Recomputing the same fingerprint from the live
+     SCENES is what tells a fresh number from a stale one. The copy below is carried verbatim
+     by cost-preview.js; `cost-preview.js --selftest` fails when the two drift. */
+  function costFingerprint(scenes) {
+    var parts = [];
+    for (var i = 0; i < scenes.length; i++) {
+      var s = scenes[i] || {}, v = s.visual || {};
+      var slot = null;
+      if (s.type === "broll") slot = ["broll", v.engine === "seedance" ? "seedance" : "veo", Number(s.duration) || 0];
+      else if (v.video) slot = ["motion", (v.video.engine || v.engine) === "veo" ? "veo" : "seedance", Number(s.duration) || 0];
+      else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", "veo", 8];
+      if (slot) parts.push((i + 1) + ":" + slot.join("/"));
+    }
+    return parts.length ? parts.join(",") : "none";
   }
 
   /* ── Reveal states — one panel = one moment the screen changes ──
@@ -1945,6 +2005,54 @@ window.SB_DOC = {
   // Reserve the slot only — the content goes in after the render (see the flag comment above)
   h += '<section class="audit" id="audit"></section>';
 
+  /* ══ Cost — what has been billed, and what approving commits ══
+     Approval is the last free moment: after it every generated-video slot becomes a call that
+     bills. So the two numbers sit at the top of the document rather than in a report someone
+     has to go and open. The source is SB_DOC.cost, written by cost-preview.js. */
+  var COST = DOC.cost || null;
+  if (COST) {
+    var liveFp = costFingerprint(SCENES);
+    var stale = COST.fingerprint && COST.fingerprint !== liveFp;
+    var money = function (n) { return "$" + (Number(n) || 0).toFixed(2); };
+    var slotRows = SCENES.map(function (s, i) {
+      var v = s.visual || {};
+      if (s.type === "broll") return { n: i + 1, what: "b-roll", eng: v.engine === "seedance" ? "seedance" : "veo" };
+      if (v.video) return { n: i + 1, what: "모션 배경", eng: (v.video.engine || v.engine) === "veo" ? "veo" : "seedance" };
+      if (s.type === "quote" && v.clip && typeof v.clip === "object")
+        return { n: i + 1, what: "대사 클립" + (s.speaker ? " · " + s.speaker : ""), eng: "veo" };
+      return null;
+    }).filter(Boolean);
+
+    h += '<section class="cost" id="cost"><div class="cost-head">생성 비용' +
+         '<span class="aside">' + (COST.asOf ? "기준 " + esc(COST.asOf) : "") + "</span>" +
+         '<span class="sum">승인하면 <b>' + money((Number(COST.spentUsd) || 0) + (Number(COST.forecastUsd) || 0)) +
+         "</b></span></div>";
+    h += '<div class="cost-split">' +
+         "<div><dt>이미 나간 돈</dt><div class='amt'>" + money(COST.spentUsd) + "</div>" +
+         "<dt>그중 이미지</dt><div>" + money(COST.imagesUsd) + "</div></div>" +
+         "<div><dt>승인하면 나갈 돈</dt><div class='amt'>" + money(COST.forecastUsd) + "</div>" +
+         "<dt>생성 영상 슬롯</dt><div>" + (Number(COST.slots) || 0) + "개</div></div></div>";
+    if (slotRows.length) {
+      h += '<ul class="cost-rows">' + slotRows.map(function (r) {
+        return "<li><span class='who'>샷 " + r.n + "</span><span>" + esc(r.what) +
+               "</span><span class='amt2'>" + esc(r.eng) + "</span></li>";
+      }).join("") + "</ul>";
+    } else {
+      h += '<div class="cost-none">생성 영상 슬롯이 없어요 — 영상 생성에 더 나갈 돈은 없습니다.</div>';
+    }
+    if (stale) {
+      h += '<div class="cost-stale">이 숫자는 지금 scenes.js와 맞지 않아요 — 스냅숏 이후 영상 슬롯이 바뀌었습니다. ' +
+           "cost-preview.js를 다시 돌려 SB_DOC.cost를 갱신하세요.</div>";
+      flag("bad", "비용", "SB_DOC.cost is stale — the video slots changed since the snapshot (" +
+                  esc(COST.fingerprint) + " → " + esc(liveFp) + "). Rerun cost-preview.js");
+    }
+    h += "</section>";
+  } else if (SCENES.some(function (s, i) { return costFingerprint([s]) !== "none"; })) {
+    // Video slots exist but nobody priced them — the approval screen would show no number
+    // for the only part of the episode that spends real money.
+    flag("warn", "비용", "there are generated-video slots but no SB_DOC.cost — run cost-preview.js so the approval screen carries the number");
+  }
+
   if (DOC.docNotes && DOC.docNotes.length)
     h += '<details class="docnotes"><summary>설계 근거 · ' + DOC.docNotes.length + "</summary>" +
       DOC.docNotes.map(function (n) { return '<div class="note">' + mark(n) + "</div>"; }).join("") + "</details>";
@@ -1952,6 +2060,7 @@ window.SB_DOC = {
 
   /* ══ Section menu ══ — only the sections this document actually draws */
   var navItems = [["timeline", "시간표"], ["shots", "샷 구성"]];
+  if (COST) navItems.unshift(["cost", "비용"]);
   if (CAST.length) navItems.push(["cast", "등장인물"]);
   navItems.push(["contract", "계약"]);
   if (DOC.prep && DOC.prep.length) navItems.push(["prep", "촬영 준비"]);

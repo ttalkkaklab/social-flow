@@ -1,0 +1,484 @@
+#!/usr/bin/env node
+/**
+ * check-scenes.js — the scenes.js contract, checked from the command line.
+ *
+ *   check-scenes.js <storyboard dir | scenes.js>          the findings
+ *   check-scenes.js <...> --json                          machine-readable
+ *   check-scenes.js --selftest                            pins the rules
+ *
+ * ## Why a CLI checker when storyboard.html already has a check strip
+ *
+ * The check strip is excellent and it is the wrong shape for two jobs. It runs in a browser,
+ * so a person has to open the document to see it — which means an unattended run can't consult
+ * it, and neither can a reviewer agent, and neither can a build that is about to spend twelve
+ * minutes on capture. This runs the structural half of the same contract with an exit code.
+ *
+ * **It does not duplicate the strip's measurements.** Frame overflow, hero-stat width and
+ * speech rate are computed against a rendered canvas, and re-implementing them here would
+ * create exactly the mirror drift `format-lint.js` exists to police. What it checks is the
+ * structure — fields that must exist, values that must come from a fixed vocabulary, and
+ * references that must resolve. Those are the ones that break a build rather than look wrong.
+ *
+ * ## Every format constant comes from the preset
+ *
+ * No band or count is written here. `format-resolve.js --json` is asked, and its `pacing`
+ * block is the source. A fifth copy of those numbers is the last thing this repository needs.
+ * The one exception is the generated-video cap of 2 — a user directive the preset has no
+ * field for; it sits at the check that uses it, marked as such.
+ *
+ * Exit codes:
+ *   0  no violations (warnings may still be printed)
+ *   1  at least one violation
+ *   3  input error, or scenes.js does not evaluate
+ */
+
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+const { execFileSync } = require('child_process');
+
+const SELF_DIR = __dirname;
+const FORMAT_RESOLVE = path.resolve(SELF_DIR, '..', '..', 'platform-guide', 'references', 'format-resolve.js');
+
+function die(msg) {
+  process.stderr.write('check-scenes: ' + msg + '\n');
+  process.exit(3);
+}
+
+/* ── Vocabularies ──
+   The source of truth for these words is directing-grammar.md (§size, §angle) and
+   scenes-schema.md (§camera, §playback order, §the four opening strategies, §the six hook
+   forms). They are vocabularies, not measurements — a value outside them is a typo or an
+   invented word, and produce or the assembler will reject it later at a worse moment. */
+const SIZES = ['els', 'ls', 'ws', 'fs', 'mfs', 'ms', 'mcu', 'cu', 'choker', 'ecu', 'insert',
+               'two', 'three', 'ots', 'pov', 'back', 'cutaway', 'reaction'];
+const ANGLES = ['eye', 'low', 'high', 'dutch', 'overhead', 'ground', 'over'];
+const BEATS = ['hook', 'hooking', 'result', 'body', 'turn', 'cta'];
+const ARCS = ['answer-first', 'story'];
+const HOOK_TYPES = ['fear', 'empathy', 'curiosity', 'spoiler'];
+const HOOK_FORMS = ['paradox', 'gap', 'payoff', 'identify', 'number', 'secret'];
+const TYPES = ['cover', 'hooking', 'points', 'quote', 'broll', 'outro'];
+
+function readScenes(file) {
+  const src = fs.readFileSync(file, 'utf8');
+  const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
+  sandbox.globalThis = sandbox;
+  try {
+    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
+  } catch (e) {
+    die('scenes.js does not evaluate: ' + (e && e.message));
+  }
+  if (!Array.isArray(sandbox.window.SCENES)) die('scenes.js has no window.SCENES array');
+  return sandbox.window;
+}
+
+/** The format contract, straight from the preset — never a copy kept here. */
+function formatOf(scenesPath) {
+  try {
+    const out = execFileSync('node', [FORMAT_RESOLVE, scenesPath, '--json'], { encoding: 'utf8' });
+    return JSON.parse(out);
+  } catch (e) {
+    die('format-resolve.js could not read the format: ' + (e && e.message));
+  }
+}
+
+/**
+ * Runs the structural contract. `fmt` is the resolved preset; every band comes from it.
+ * Returns findings — `bad` is a violation, `warn` is worth a look.
+ */
+function check(win, fmt) {
+  const scenes = win.SCENES;
+  const out = [];
+  const bad = (where, what) => out.push({ level: 'bad', where, what });
+  const warn = (where, what) => out.push({ level: 'warn', where, what });
+
+  const pacing = fmt.pacing || {};
+  const main = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
+  const cover = scenes.find((s) => s.type === 'cover');
+
+  // ── Episode level ──
+  if (!cover) bad('episode', 'no cover shot — every episode opens on one');
+  if (pacing.shotMin && main.length < pacing.shotMin)
+    warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.shotMin}~${pacing.shotMax}`);
+  if (pacing.shotMax && main.length > pacing.shotMax)
+    warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.shotMin}~${pacing.shotMax}`);
+
+  if (cover) {
+    if (cover.arc && ARCS.indexOf(cover.arc) === -1)
+      bad('cover', `arc "${cover.arc}" is outside ${ARCS.join(' · ')}`);
+    if (cover.hookType && HOOK_TYPES.indexOf(cover.hookType) === -1)
+      bad('cover', `hookType "${cover.hookType}" is outside ${HOOK_TYPES.join(' · ')}`);
+    if (cover.hookForm && HOOK_FORMS.indexOf(cover.hookForm) === -1)
+      bad('cover', `hookForm "${cover.hookForm}" is outside ${HOOK_FORMS.join(' · ')}`);
+    if (!cover.hookType) warn('cover', 'no hookType — an opening with none of the four strategies');
+    if (!cover.hookForm) warn('cover', 'no hookForm — the shape of the first line was never picked');
+  }
+
+  /* ── Playback order — hook first, cta last, and the arc decides what comes between ──
+     The contract is scenes-schema §playback order. Two arcs walk one skeleton:
+       answer-first  cover → hooking → result → body → cta
+       story         cover → hooking → body → turn → result → cta
+     The `beat` field is optional, so an episode that writes none is not checked here — but an
+     episode that writes some gets the order read. storyboard.html's check strip carries the
+     same rule for whoever opens the document; this is the copy an unattended run and a
+     reviewer agent can call. */
+  const beated = scenes.map((s, i) => ({ i: i + 1, beat: s.beat, type: s.type }))
+    .filter((s) => s.beat || s.type === 'cover' || s.type === 'outro')
+    .map((s) => ({ ...s, beat: s.beat || (s.type === 'cover' ? 'hook' : 'cta') }));
+
+  if (beated.length) {
+    const arc = (cover && cover.arc) || 'answer-first';
+    const at = (b) => beated.findIndex((s) => s.beat === b);
+    const first = { hook: at('hook'), hooking: at('hooking'), result: at('result'),
+                    body: at('body'), turn: at('turn'), cta: at('cta') };
+
+    if (first.hook > 0)
+      bad('episode', 'the hook beat is not the first shot — the cover opens the episode');
+    if (first.hooking === -1)
+      warn('episode', 'no hooking beat — the shot after the cover carries the stopped viewer to the result');
+    else if (first.hook !== -1 && first.hooking !== first.hook + 1)
+      warn('episode', 'hooking is not the shot right after the cover (scenes-schema §hooking)');
+
+    if (first.cta === -1)
+      warn('episode', 'no cta beat and no outro — the episode ends without the next value');
+    else if (first.cta !== beated.length - 1 && beated.slice(first.cta + 1).some((s) => s.beat !== 'cta'))
+      bad('episode', 'a beat comes after the cta — the cta is the very end');
+
+    if (arc === 'story') {
+      if (first.turn === -1)
+        bad('episode', 'arc "story" with no turn beat — the turn is the moment someone saw it differently, ' +
+                       'and the payoff has nothing to land after');
+      if (first.result !== -1 && first.turn !== -1 && first.result < first.turn)
+        bad('episode', 'the result comes before the turn on a story arc — a payoff shown early closes ' +
+                       'the loop and takes away the reason to watch');
+      if (first.result !== -1 && first.body !== -1 && first.result < first.body)
+        bad('episode', 'the result comes before the body on a story arc — the build has to raise the ' +
+                       'tension the payoff answers');
+    } else {
+      if (first.turn !== -1)
+        bad('shot ' + beated[first.turn].i, 'beat "turn" on an answer-first arc — turn is story only');
+      if (first.result !== -1 && first.body !== -1 && first.body < first.result)
+        bad('episode', 'the body comes before the result on an answer-first arc — method before result ' +
+                       'means listening to an explanation without knowing the destination');
+      if (first.result === -1)
+        warn('episode', 'no result beat on an answer-first arc — the finished thing is never shown properly');
+    }
+  }
+
+  /* ── Scene transitions — a dissolve is spent, not applied ──
+     The default is a cut and most boundaries should stay one. A dissolve at every boundary is
+     the slideshow look: it reads as an episode with no cuts rather than one with transitions,
+     and it takes away the cut rhythm the builder leans on (Ken Burns alternates direction card
+     to card for exactly that reason). scenes-schema §scene transition is the contract. */
+  const dissolves = scenes.map((s, i) => ({ i: i + 1, t: s.transition }))
+    .filter((s) => s.t === 'dissolve');
+  scenes.forEach((s, i) => {
+    if (s.transition && s.transition !== 'dissolve')
+      bad('shot ' + (i + 1), `transition "${s.transition}" — the only value is "dissolve" (absent = cut)`);
+  });
+  if (dissolves.length) {
+    const longForm = fmt.format === 'youtube-long-16x9';
+    const budget = longForm ? Math.max(2, Math.round(main.length / 8)) : 2;
+    if (dissolves.length > budget)
+      bad('episode', `${dissolves.length} scene dissolves — a ${longForm ? 'long-form' : 'short'} ` +
+                     `spends at most ${budget}. Every boundary softened is the slideshow look`);
+    else if (!longForm && dissolves.length === 2)
+      warn('episode', 'two scene dissolves in a short — one is usually the whole budget');
+    if (dissolves[0].i <= 2)
+      bad('shot ' + dissolves[0].i, 'a dissolve on the hook or the shot after it — the first ' +
+                                    'three seconds have no time to spend');
+    // Inside one scene the time and place are continuous, so the cut is the honest join.
+    dissolves.forEach((d) => {
+      const prev = scenes[d.i - 2], cur = scenes[d.i - 1];
+      if (prev && cur && prev.scene !== undefined && prev.scene === cur.scene)
+        warn('shot ' + d.i, `a dissolve inside scene ${cur.scene} — same place and time, ` +
+                            'where the cut is the honest join');
+    });
+  }
+
+  // The generated-video cap is a user directive fixed at 2 (scenes-schema §motion background).
+  // It is written here rather than read from the preset because the preset has no field for
+  // it — format-resolve's pacing carries bands and counts, not this cap. If one is ever added,
+  // this is the line that moves.
+  const videoSlots = scenes.filter((s) => {
+    const v = s.visual || {};
+    return s.type === 'broll' || !!v.video;
+  });
+  if (videoSlots.length > 2)
+    bad('episode', `${videoSlots.length} generated-video slots — b-roll and motion backgrounds ` +
+                   'count together and cap at 2 (scenes-schema §motion background)');
+
+  // ── Shot level ──
+  const brollAfters = [];
+  scenes.forEach((s, i) => {
+    const n = i + 1;
+    const where = 'shot ' + n;
+    const v = s.visual || {};
+    const shot = s.shot || {};
+
+    if (!s.type) { bad(where, 'no type'); return; }
+    if (TYPES.indexOf(s.type) === -1) bad(where, `type "${s.type}" is outside ${TYPES.join(' · ')}`);
+
+    if (s.beat && BEATS.indexOf(s.beat) === -1)
+      bad(where, `beat "${s.beat}" is outside ${BEATS.join(' · ')}`);
+    if (shot.size && SIZES.indexOf(shot.size) === -1)
+      bad(where, `shot.size "${shot.size}" is not a size word (directing-grammar §size)`);
+    if (shot.angle && ANGLES.indexOf(shot.angle) === -1)
+      bad(where, `shot.angle "${shot.angle}" is not an angle word (directing-grammar §angle)`);
+    if (s.type !== 'outro' && !shot.feel)
+      warn(where, 'no shot.feel — the camera was chosen without saying what it should make anyone feel');
+
+    // Scene length against the preset band.
+    const dur = Number(s.duration);
+    if (s.type !== 'outro') {
+      if (!Number.isFinite(dur) || dur <= 0) {
+        if (s.type !== 'broll') warn(where, 'no duration');
+      } else if (pacing.sceneMin && (dur < pacing.sceneMin || dur > pacing.sceneMax)) {
+        warn(where, `duration ${dur}s — the ${fmt.label} band is ${pacing.sceneMin}~${pacing.sceneMax}s`);
+      }
+    }
+
+    // Narration segments — the tts spelling is what the engine actually reads.
+    (s.narration || []).forEach((seg, j) => {
+      if (!seg || typeof seg !== 'object') { bad(where, `narration[${j}] is not an object`); return; }
+      if (!seg.tts) bad(where, `narration[${j}] has no tts — the engine reads that field`);
+      if (!seg.sub) warn(where, `narration[${j}] has no sub — the subtitle falls back to tts spelling`);
+    });
+
+    // b-roll's own contract — the parts that break the splice rather than look wrong.
+    if (s.type === 'broll') {
+      if ((s.narration || []).length)
+        bad(where, 'b-roll carries narration — the splice uses the clip\'s own audio (absolute rule 9)');
+      if (s.after === undefined || s.after === null) bad(where, 'b-roll has no `after` — nothing says where it cuts in');
+      else {
+        if (brollAfters.indexOf(s.after) !== -1)
+          bad(where, `two b-roll slots share after: ${s.after} — the insert order is undefined`);
+        brollAfters.push(s.after);
+        const target = scenes[s.after];
+        if (!target) bad(where, `after: ${s.after} points at no scene`);
+        else if (target.type === 'quote')
+          bad(where, `after: ${s.after} is a quote scene — it has no background photo to use as the source`);
+      }
+      if (!v.src) warn(where, 'b-roll has no src — the source still is what the previous scene showed');
+    }
+
+    // Every shot that becomes a generated video leaves the storyboard with its prompt stored
+    // and its four camera slots filled — the storyboard is where that is still free to fix.
+    const isGenerated = s.type === 'broll' || !!v.video ||
+                        (s.type === 'quote' && v.clip && typeof v.clip === 'object');
+    if (isGenerated) {
+      const cam = v.camera || {};
+      ['movement', 'speed', 'framing', 'end'].forEach((slot) => {
+        if (!cam[slot]) bad(where, `visual.camera.${slot} is empty — a generated shot leaves here with all four filled`);
+      });
+      const prompt = v.prompt || (v.video && v.video.prompt) ||
+                     (v.clip && typeof v.clip === 'object' && v.clip.prompt);
+      if (!prompt) bad(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');
+      if (!v.audio && s.type !== 'quote')
+        warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
+    }
+
+    // A slide names its file and everything it will draw.
+    if (v.slide) {
+      if (!v.slide.file) bad(where, 'visual.slide has no file');
+      if (!v.slide.plan) warn(where, 'visual.slide has no plan — the approval screen approves that line');
+    }
+
+    // A music cue that names nothing leaves the bed where it was, silently.
+    if (s.sound && s.sound.cue) {
+      const cues = win.MUSIC && typeof win.MUSIC === 'object' ? Object.keys(win.MUSIC) : [];
+      if (cues.indexOf(s.sound.cue) === -1)
+        bad(where, `sound.cue "${s.sound.cue}" is not in window.MUSIC — the bed stays where it was`);
+    }
+  });
+
+  return out;
+}
+
+function selftest() {
+  let failed = 0;
+  const ok = (name, cond) => {
+    process.stdout.write((cond ? 'ok   ' : 'FAIL ') + name + '\n');
+    if (!cond) failed++;
+  };
+  const fmt = { label: 'test', pacing: { sceneMin: 4, sceneMax: 13, shotMin: 4, shotMax: 7 } };
+  const run = (scenes, extra) => check(Object.assign({ SCENES: scenes }, extra || {}), fmt);
+  const has = (findings, re) => findings.some((f) => re.test(f.what));
+  const bads = (findings) => findings.filter((f) => f.level === 'bad');
+
+  const goodShot = {
+    type: 'points', duration: 6, beat: 'body',
+    shot: { feel: 'relief', size: 'mcu', angle: 'eye' },
+    narration: [{ tts: '가', sub: '가' }], visual: {}
+  };
+  const cover = { type: 'cover', duration: 5, beat: 'hook', arc: 'answer-first',
+                  hookType: 'curiosity', hookForm: 'gap',
+                  shot: { feel: 'x', size: 'mcu', angle: 'eye' },
+                  narration: [{ tts: '가', sub: '가' }], visual: {} };
+
+  ok('a clean episode has no violations',
+     bads(run([cover, goodShot, goodShot, goodShot])).length === 0);
+  ok('a missing cover is a violation', has(bads(run([goodShot])), /no cover/));
+  ok('an invented size word is caught',
+     has(bads(run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', size: 'closeup' } })])), /size "closeup"/));
+  ok('an invented angle word is caught',
+     has(bads(run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', angle: 'tilted' } })])), /angle "tilted"/));
+  ok('an invented beat is caught',
+     has(bads(run([cover, Object.assign({}, goodShot, { beat: 'middle' })])), /beat "middle"/));
+  ok('a hookForm outside the six is caught',
+     has(bads(run([Object.assign({}, cover, { hookForm: 'shock' })])), /hookForm "shock"/));
+
+  // narration
+  ok('a narration segment with no tts is a violation',
+     has(bads(run([cover, Object.assign({}, goodShot, { narration: [{ sub: '가' }] })])), /no tts/));
+
+  // b-roll
+  const broll = { type: 'broll', after: 0, duration: 4, narration: [],
+                  shot: { feel: 'x', size: 'mcu', angle: 'eye' },
+                  visual: { src: 'images/scene-1.png', prompt: 'p', audio: 'a',
+                            camera: { movement: 'dolly in', speed: 'slow', framing: 'chest-up', end: 'centred' } } };
+  ok('a well-formed b-roll passes', bads(run([cover, goodShot, broll])).length === 0);
+  ok('b-roll carrying narration is a violation',
+     has(bads(run([cover, goodShot, Object.assign({}, broll, { narration: [{ tts: 'x', sub: 'x' }] })])),
+         /uses the clip's own audio/));
+  ok('two b-roll slots on the same after is a violation',
+     has(bads(run([cover, goodShot, broll, Object.assign({}, broll)])), /share after/));
+  ok('b-roll after a quote scene is a violation',
+     has(bads(run([Object.assign({}, cover, { type: 'quote' }), cover,
+                   Object.assign({}, broll, { after: 0 })])), /quote scene/));
+
+  // generated video
+  const noSlots = Object.assign({}, goodShot, { visual: { video: { prompt: 'p' }, audio: 'a' } });
+  ok('a generated shot with empty camera slots is a violation',
+     bads(run([cover, noSlots])).filter((f) => /visual\.camera\./.test(f.what)).length === 4);
+  ok('a generated shot with no stored prompt is a violation',
+     has(bads(run([cover, Object.assign({}, goodShot, {
+       visual: { video: {}, audio: 'a',
+                 camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } } })])),
+       /no stored clip prompt/));
+
+  // ── scene transitions ──
+  const dz = (over) => Object.assign({}, goodShot, over);
+  ok('no transition anywhere is clean (the default is a cut)',
+     bads(run([cover, goodShot, goodShot, goodShot])).length === 0);
+  ok('one dissolve is within budget',
+     bads(run([cover, goodShot, dz({ transition: 'dissolve' }), goodShot])).length === 0);
+  ok('a value other than dissolve is a violation',
+     has(bads(run([cover, goodShot, dz({ transition: 'fade' })])), /the only value is/));
+  ok('three dissolves in a short is a violation',
+     has(bads(run([cover, goodShot, dz({ transition: 'dissolve' }), dz({ transition: 'dissolve' }),
+                   dz({ transition: 'dissolve' })])), /spends at most 2/));
+  ok('a dissolve on the shot after the hook is a violation',
+     has(bads(run([cover, dz({ transition: 'dissolve' }), goodShot])), /no time to spend/));
+  ok('a dissolve inside one scene is flagged',
+     has(run([cover, Object.assign({}, goodShot, { scene: 2 }),
+              dz({ transition: 'dissolve', scene: 2 })]), /same place and time/));
+
+  // ── playback order ──
+  const beat = (b, over) => Object.assign({}, goodShot, { beat: b }, over || {});
+  const afOK = [Object.assign({}, cover), beat('hooking'), beat('result'), beat('body'), beat('cta')];
+  ok('a well-ordered answer-first episode passes', bads(run(afOK)).length === 0);
+  ok('body before result on answer-first is a violation',
+     has(bads(run([Object.assign({}, cover), beat('hooking'), beat('body'), beat('result'), beat('cta')])),
+         /body comes before the result/));
+  ok('a turn on an answer-first arc is a violation',
+     has(bads(run([Object.assign({}, cover), beat('hooking'), beat('turn'), beat('result'), beat('cta')])),
+         /turn is story only/));
+
+  const st = Object.assign({}, cover, { arc: 'story' });
+  const storyOK = [st, beat('hooking'), beat('body'), beat('turn'), beat('result'), beat('cta')];
+  ok('a well-ordered story episode passes', bads(run(storyOK)).length === 0);
+  ok('a story arc with no turn is a violation',
+     has(bads(run([st, beat('hooking'), beat('body'), beat('result'), beat('cta')])), /no turn beat/));
+  ok('the payoff before the turn is a violation',
+     has(bads(run([st, beat('hooking'), beat('body'), beat('result'), beat('turn'), beat('cta')])),
+         /result comes before the turn/));
+  ok('a beat after the cta is a violation',
+     has(bads(run([Object.assign({}, cover), beat('hooking'), beat('result'), beat('cta'), beat('body')])),
+         /after the cta/));
+  ok('an episode with no cta is flagged',
+     has(run([Object.assign({}, cover), beat('hooking'), beat('result'), beat('body')]), /no cta beat/));
+  ok('an outro scene counts as the cta',
+     !has(run([Object.assign({}, cover), beat('hooking'), beat('result'), beat('body'),
+               { type: 'outro', visual: {} }]), /no cta beat/));
+
+  // the combined cap
+  const three = [cover, noSlots, noSlots, noSlots];
+  ok('more than two generated-video slots is a violation',
+     has(bads(run(three)), /cap at 2/));
+
+  // music cues
+  ok('a cue naming nothing in window.MUSIC is a violation',
+     has(bads(run([cover, Object.assign({}, goodShot, { sound: { cue: 'tense' } })], { MUSIC: { base: {} } })),
+         /not in window\.MUSIC/));
+  ok('a cue that exists passes',
+     !has(bads(run([cover, Object.assign({}, goodShot, { sound: { cue: 'base' } })], { MUSIC: { base: {} } })),
+          /not in window\.MUSIC/));
+
+  // Bands come from the preset, never from this file.
+  const src = fs.readFileSync(__filename, 'utf8');
+  ok('no length band is hardcoded here',
+     !/sceneMin\s*[:=]\s*\d/.test(src.replace(/pacing:\s*\{[^}]*\}/g, '')));
+
+  if (failed) { process.stderr.write(failed + ' check(s) failed\n'); process.exit(1); }
+  process.stdout.write('check-scenes selftest OK\n');
+}
+
+function main() {
+  const argv = process.argv.slice(2);
+  if (argv.indexOf('--selftest') !== -1) return selftest();
+  const target = argv.filter((a) => !a.startsWith('--'))[0];
+  if (!target) die('usage: check-scenes.js <storyboard dir | scenes.js> [--json]');
+  if (!fs.existsSync(target)) die('path not found: ' + target);
+  const scenesPath = fs.statSync(target).isDirectory() ? path.join(target, 'scenes.js') : target;
+  if (!fs.existsSync(scenesPath)) die('scenes.js not found: ' + scenesPath);
+
+  const win = readScenes(scenesPath);
+  const fmt = formatOf(scenesPath);
+  const findings = check(win, fmt);
+  const bad = findings.filter((f) => f.level === 'bad');
+  const warn = findings.filter((f) => f.level === 'warn');
+
+  if (argv.indexOf('--json') !== -1) {
+    process.stdout.write(JSON.stringify({
+      format: fmt.format, shots: win.SCENES.length,
+      violations: bad.length, warnings: warn.length, findings
+    }, null, 2) + '\n');
+    process.exit(bad.length ? 1 : 0);
+  }
+
+  const lines = ['scenes.js contract — ' + fmt.label + ' · ' + win.SCENES.length + ' shots', ''];
+  if (!findings.length) {
+    lines.push('  Structure, vocabularies and references all check out.');
+    lines.push('  Frame overflow, hero-stat width and speech rate are measured against the');
+    lines.push('  rendered canvas — open storyboard.html for those.');
+  } else {
+    // One episode-wide mistake shows up once per shot, and printing it 25 times buries
+    // everything else. Same finding, same level → one line naming the shots it hit.
+    const groups = new Map();
+    bad.concat(warn).forEach((f) => {
+      const key = f.level + ' ' + f.what;
+      const g = groups.get(key) || { level: f.level, what: f.what, wheres: [] };
+      g.wheres.push(f.where);
+      groups.set(key, g);
+    });
+    groups.forEach((g) => {
+      const mark = g.level === 'bad' ? '!' : '·';
+      if (g.wheres.length === 1) {
+        lines.push('  ' + mark + ' ' + g.wheres[0].padEnd(10) + ' ' + g.what);
+      } else {
+        const shown = g.wheres.slice(0, 6).join(', ') + (g.wheres.length > 6 ? ` … +${g.wheres.length - 6}` : '');
+        lines.push('  ' + mark + ' ×' + String(g.wheres.length).padEnd(8) + ' ' + g.what);
+        lines.push('  ' + ' '.repeat(11) + shown);
+      }
+    });
+    lines.push('');
+    lines.push('  ' + bad.length + ' violation(s), ' + warn.length + ' to look at.');
+  }
+  process.stdout.write(lines.join('\n') + '\n');
+  process.exit(bad.length ? 1 : 0);
+}
+
+main();

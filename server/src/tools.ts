@@ -2090,6 +2090,22 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
     },
   },
   {
+    name: 'capability_status',
+    title: 'What this machine can do right now',
+    annotations: HINT.local,
+    description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest.
+
+Use it BEFORE planning anything that spends money or depends on a provider — the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
+Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability — a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves. Read-only; makes no API call, so one call per session is enough.
+
+Returns: a capability menu — video_generation, image_generation, tts, music_generation, speech_to_text, research — each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
     name: 'music_list_options',
     title: 'Music option list',
     annotations: HINT.local,
