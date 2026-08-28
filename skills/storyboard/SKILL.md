@@ -904,6 +904,20 @@ Log local images too — the unit price is 0 so the total doesn't move, but the 
 how many went where is what separates "image cost 0" as a tallied result from a tallying gap.
 The `quality` of `gpt_image_text2img` decides the key (`high`·`medium`·`low`).
 
+**Write down the choices that could have gone another way**, in
+`.work/decisions.tsv` — which engine a generated shot goes to and what you rejected, why the
+points backgrounds went local, a route you took because the planned one was unreachable. The
+ledger says what it cost; this says why. The convention is
+[decision-log.md](../autoproduce/references/decision-log.md).
+
+```bash
+printf 'storyboard\tengine_selection\tmotion background shot 3\tseedance-1-5-pro-silent\tsilent slot, builder discards audio; rejected veo.lite (pays 8s for a 4s cut)\n' >> .work/decisions.tsv
+printf 'storyboard\timage_engine\tpoints backgrounds\timage_local_generate\tno text in frame, $0; rejected gpt high (cost, not needed here)\n' >> .work/decisions.tsv
+```
+
+One line per decision, not per action. If the only honest reason is "the default, and nothing
+argued against it", there was no decision to record.
+
 ### 5.5 Image context review (storyboard-reviewer image mode — one round)
 
 content-reviewer plan mode looked at the plan before generation; here **the picture that came
@@ -1064,7 +1078,9 @@ defect gets its only human look. **Say the money out loud too** — regenerate `
 and put both numbers on the screen: what this episode has already billed, and what approving it
 commits in generated video, per slot. Approval is the last point where deleting a b-roll is free;
 after it the slot is an API call. If the preview came back exit 1, say the verdict is incomplete
-and show the `!!` lines rather than a total that looks whole. **The loop ledger comes up here too** — every curiosity
+and show the `!!` lines rather than a total that looks whole. **Show the decisions behind those
+numbers too** — `decisions.sh .work/decisions.tsv` — so the engine and tier choices are approved
+with everything else rather than discovered in the bill. **The loop ledger comes up here too** — every curiosity
 loop and deliberate plant opened in the episode, each named with the scene that pays it
 (scenario-craft §3·§5 direct the pairs to this note). A pair with no payer on this screen
 is the last cheap place to catch an unkept promise. The options:
@@ -1186,6 +1202,7 @@ uses the slide state captures as the segment visuals (produce §3.6).
 - **`references/slide-template.html`** — the §8 slide-scene render template — the `?reveal=k` reveal contract + the determinism contract; change only `SLIDE_SHOT` and `renderSlide()`
 - **`references/check-slide.js`** — the §8 slide machine check — filename↔scenes.js match, Korean literals outside the SoT, determinism violations
 - **`../autoproduce/references/cost-tally.md`** — the episode cost-ledger convention (where §5 and §5.5 write, the line format, the units). The source of truth for unit prices is `prices.tsv` in the same directory
+- **`../autoproduce/references/decision-log.md`** — the episode decision log convention (`.work/decisions.tsv`): what was chosen, what was rejected, and how a change of mind is appended rather than overwritten. Read it back with `decisions.sh`
 - **`../autoproduce/references/cost-preview.js`** — the §6·§7 approval-screen preview: totals the ledger, prices the generated-video slots out of scenes.js, writes `.work/cost-forecast.tsv`, and emits the `SB_DOC.cost` block (`--sbdoc`) or JSON (`--json`). `--selftest` pins the routing table and the fingerprint copy the HTML template carries
 
 ### Delegated agents

@@ -595,6 +595,17 @@ it into the ledger anyway — write 0 or leave the line out and that episode's c
 shrinks. The report exiting 1 is the correct behavior, and §10 reports it as "1 item excluded
 from the total".
 
+**Carry on the decision log too** (`.work/decisions.tsv`, started by storyboard —
+[decision-log.md](../autoproduce/references/decision-log.md)). Produce is where most of the
+substitutions actually happen: the music source, the voice, and every route that had to change
+because a key was missing. A fallback that reaches the deliverable without a line here becomes
+an unexplained difference between the storyboard's plan and the video.
+
+```bash
+printf 'produce\tmusic_source\tepisode BGM\tmusic_generate_clip\t30s Lyria clip, builder extends; rejected suno (sung vocals fight the voiceover)\n' >> .work/decisions.tsv
+printf 'produce\tfallback\tmotion background i3\tveo_img2video\tARK_API_KEY absent — seedance route unreachable; recorded in build-report.md as the allowed deviation\n' >> .work/decisions.tsv
+```
+
 ### 3.5 Take in the filmed clips (mixed-shooting episodes only)
 
 **Normalize once** and move the files the user saved in `footage/` into `.work/footage/`.
@@ -1268,6 +1279,18 @@ for free — someone skipped writing them into the ledger. An episode that used 
 images and local TTS really can be 0, and then the report shows those lines — check whether
 the 0 comes from lines that are there or lines that are missing, then report it.
 
+**Read the decision log back beside the cost.** The two answer one question together — what it
+cost, and why it cost that.
+
+```bash
+$REF/decisions.sh .work/decisions.tsv        # exit 1 means a bad line, not "no decisions"
+```
+
+Put the lines whose choice differs from the storyboard's plan into the report — every
+`fallback`, and any `engine_selection` or `voice_selection` marked `revised`. Those are the
+places the finished video isn't what was approved, and the user should read that here rather
+than notice it in the video.
+
 On a pass, update storyboard.md to `status: produced`, present the artifact table (paths,
 length, platforms) together with the cost summary, and point the user at
 `/social-flow:publish`.
@@ -1290,5 +1313,6 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)
+- **`../autoproduce/references/decision-log.md`** — the episode decision log (`.work/decisions.tsv`) storyboard starts and produce carries on: engine, voice, music and every fallback, with what each one replaced. `decisions.sh` reads it back for the §10 report
 - **`../autoproduce/references/cost-tally.md`** — the episode cost ledger convention (the file §3 and §5 write and §10 totals). The price source of truth `prices.tsv` and the calculator `cost-report.sh` sit in the same directory
 - **`../channel/references/resolve-asset.py`** — looks up the shared outro, BGM, sound effects, and character sheet (catalog + default path + the old `assets/outro.mp4`)
