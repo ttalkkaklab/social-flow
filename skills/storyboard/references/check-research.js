@@ -241,12 +241,14 @@ function analyse(src, fmt, scenes) {
     // use one of a handful of English status words. Real logs put the answer itself in that
     // cell ("**유력 이하.** 상품화 중심"), and an allow-list read every one of them as open:
     // ep06-budae-jjigae had all ten questions answered and got nine violations for it.
+    // The template is English and half the library is Korean, so both vocabularies of
+    // "not yet" have to be here — an English log saying `searching` must still be caught.
     const open = qRows.filter((r) => {
       const status = (r[r.length - 1] || '').replace(/\*/g, '').trim();
       return !status
         || /^[-—–?.]*$/.test(status)
-        || /^(tbd|open|pending|n\/?a|미정|미확인|보류)$/i.test(status)
-        || /조사\s*중|진행\s*중|확인\s*중|답\s*없음|미답/.test(status);
+        || /^(tbd|todo|open|pending|n\/?a|unknown|unanswered|미정|미확인|보류)$/i.test(status)
+        || /\bsearching\b|\bin progress\b|\bnot yet\b|조사\s*중|진행\s*중|확인\s*중|확인\s*안|답\s*없음|미답|아직|다음\s*회차/i.test(status);
     });
     if (open.length)
       bad(`${open.length} question(s) end neither answered nor written off — ` +
@@ -338,9 +340,15 @@ function selftest() {
 
   const q2 = (status) => good.replace('| Q2 | b | stat | written off |', `| Q2 | b | stat | ${status} |`);
   ok('a question left open is a violation',
-     has(analyse(q2('조사 중'), null), /neither answered nor written off/));
+     has(analyse(q2('searching'), null), /neither answered nor written off/));
+  ok('the Korean half of "not yet" is caught too', has(analyse(q2('조사 중'), null), /neither answered/));
   ok('an empty status is a violation', has(analyse(q2(''), null), /neither answered/));
   ok('a placeholder dash is a violation', has(analyse(q2('—'), null), /neither answered/));
+  ok('TODO and unanswered are violations',
+     has(analyse(q2('TODO'), null), /neither answered/) && has(analyse(q2('unanswered'), null), /neither answered/));
+  // "researching" contains "searching" — the guard is anchored so a real answer survives.
+  ok('an answer that merely contains a stop word passes',
+     !has(analyse(q2('answered — researching turned up the 1963 launch'), null), /neither answered/));
   // Half the library answers in Korean, in the cell itself. Reading only English status words
   // reported a fully answered map as nine open questions (ep06-budae-jjigae, measured).
   ok('a Korean answer in the status cell counts as answered',

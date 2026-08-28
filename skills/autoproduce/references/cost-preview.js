@@ -311,11 +311,10 @@ function main() {
   // is the read-only lane. board.js calls it for every episode in a channel, and a page that
   // only observes must not leave a new file in a published episode's .work/ to do it. The
   // report cost-report.sh produces still needs a file, so --json gets a temp one.
-  const readOnly = argv.indexOf('--json') !== -1;
-  const forecastPath = readOnly
+  const forecastPath = wantJson
     ? path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'cost-preview-')), 'cost-forecast.tsv')
     : path.join(workDir, 'cost-forecast.tsv');
-  if (!readOnly) fs.mkdirSync(workDir, { recursive: true });
+  if (!wantJson) fs.mkdirSync(workDir, { recursive: true });
   const header = [
     '# Projected generated-video spend for this episode — written by cost-preview.js.',
     '# Not the ledger. What was actually spent lives in cost-tally.tsv; this file is what',
@@ -361,7 +360,7 @@ function main() {
     forecastFile: path.join('.work', 'cost-forecast.tsv')
   };
 
-  if (readOnly) fs.rmSync(path.dirname(forecastPath), { recursive: true, force: true });
+  if (wantJson) fs.rmSync(path.dirname(forecastPath), { recursive: true, force: true });
 
   const worstExit = Math.max(spent.exit === 3 ? 0 : spent.exit, forecast.exit === 3 ? 0 : forecast.exit);
 

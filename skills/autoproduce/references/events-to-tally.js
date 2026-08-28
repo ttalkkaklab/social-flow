@@ -151,9 +151,20 @@ function main() {
   } else {
     out.push('  The two agree.');
   }
-  if (unpriced.length)
-    out.push('  ' + unpriced.length + ' call(s) the server could not price (ElevenLabs metering, ' +
-             'Lyria RealTime) — those stay hand-written.');
+  if (unpriced.length) {
+    // Not all of these are the metered lanes. A model and resolution prices.tsv has no row for
+    // also lands here, and that one is a video call that really cost money — naming only
+    // ElevenLabs and Lyria let a reader skip past it. The event's own note says which.
+    out.push('  ' + unpriced.length + ' call(s) the server could not price — those stay hand-written:');
+    const why = {};
+    unpriced.forEach((e) => {
+      const reason = e.note || (e.key ? 'no quantity recorded' : 'no price key for this tool');
+      why[reason] = (why[reason] || 0) + 1;
+    });
+    Object.keys(why).sort().forEach((reason) => {
+      out.push('    ' + String(why[reason]).padStart(3) + ' × ' + reason);
+    });
+  }
   if (failed.length)
     out.push('  ' + failed.length + ' failed call(s) recorded but not counted — check whether any was billed.');
 

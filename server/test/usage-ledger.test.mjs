@@ -159,6 +159,13 @@ test('a model and resolution nobody priced comes back null, not as an invented k
     if (!known.has(key)) invented.push(`${JSON.stringify(args)} → ${key}`);
   }
   assert.deepEqual(invented, [], 'keys composed that prices.tsv does not carry');
+  // And the other direction, or the guard rots silently: a price row added for a combination
+  // the mapping does not know about would keep being recorded as an unpriced call forever.
+  const reachable = new Set(combos.map(([tool, args]) => priceOf(tool, args).key).filter(Boolean));
+  const unreachable = [...known]
+    .filter((k) => /^(veo|seedance)\./.test(k))
+    .filter((k) => !reachable.has(k));
+  assert.deepEqual(unreachable, [], 'priced rows no call can reach — add them to PRICED_VIDEO_KEYS');
   // The guard must not swallow the whole matrix — the routes the skills actually use still price.
   assert.equal(priceOf('seedance_img2video',
     { model: 'seedance-1-5-pro-251215', resolution: '1080p', durationSeconds: 6 }).key,
