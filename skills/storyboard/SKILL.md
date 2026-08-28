@@ -210,6 +210,20 @@ difference on our own episodes, user note 2026-08-23). The step has four parts, 
    the map is answered or written off**. Short of the floor, change the angle or the topic —
    don't pad the body. Only then §3 (the directory) and §4 (the scenes).
 
+   **Have the check run against the page, not against your memory of it.** This is the one
+   gate in the skill with nobody on the other side — the agent that did the searching also
+   writes the line saying the searching was enough.
+
+   ```bash
+   SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+   node $SB/check-research.js storyboard/        # exit 1 = the research does not close
+   ```
+
+   It counts the Verified rows itself and compares them against what the Sufficiency line
+   claims, reads every question's status, and reports the claims nobody searched against.
+   On the first library-wide run it found an episode whose Sufficiency said 10 claims over a
+   table of 18 — the later additions never updated the summary.
+
 **The subject itself gets checked here — does its question survive to the last frame?**
 Retention is set more by what the episode is about than by how it is cut (own-channel retention
 report (2026-08-26) — measured, n=4): the mystery subject held a flat curve for 90 seconds and
@@ -1241,6 +1255,7 @@ uses the slide state captures as the segment visuals (produce §3.6).
 - **`references/shot-script-template.md`** — shooting mode only: the script.md (shooting script) structure + filming rules + the scenes.js variant contract
 - **`references/make-script.js`** — the long-form script.md renderer — builds the shooting script from scenes.js (never maintain two copies). All shots on an all-live-voice episode, filmed scenes only on a TTS episode
 - **`references/slide-template.html`** — the §8 slide-scene render template — the `?reveal=k` reveal contract + the determinism contract; change only `SLIDE_SHOT` and `renderSlide()`
+- **`references/check-research.js`** — the §2 exit, checked: counts the Verified rows against the Sufficiency line, reads every question's status, and names the claims with no counter-evidence row. Reads both the template's English headings and the Korean ones half the library uses
 - **`references/check-scenes.js`** — the scenes.js structural contract with an exit code: required fields, the size/angle/beat/hookType/hookForm vocabularies, the four camera slots on generated shots, b-roll `after` resolution, cue references. Bands come from the format preset, never a copy. `--selftest` pins the rules
 - **`references/check-slide.js`** — the §8 slide machine check — filename↔scenes.js match, Korean literals outside the SoT, determinism violations
 - **`../autoproduce/references/cost-tally.md`** — the episode cost-ledger convention (where §5 and §5.5 write, the line format, the units). The source of truth for unit prices is `prices.tsv` in the same directory

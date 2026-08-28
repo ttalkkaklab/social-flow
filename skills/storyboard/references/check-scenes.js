@@ -115,6 +115,57 @@ function check(win, fmt) {
     if (!cover.hookForm) warn('cover', 'no hookForm — the shape of the first line was never picked');
   }
 
+  /* ── Playback order — hook first, cta last, and the arc decides what comes between ──
+     The contract is scenes-schema §playback order. Two arcs walk one skeleton:
+       answer-first  cover → hooking → result → body → cta
+       story         cover → hooking → body → turn → result → cta
+     The `beat` field is optional, so an episode that writes none is not checked here — but an
+     episode that writes some gets the order read. storyboard.html's check strip carries the
+     same rule for whoever opens the document; this is the copy an unattended run and a
+     reviewer agent can call. */
+  const beated = scenes.map((s, i) => ({ i: i + 1, beat: s.beat, type: s.type }))
+    .filter((s) => s.beat || s.type === 'cover' || s.type === 'outro')
+    .map((s) => ({ ...s, beat: s.beat || (s.type === 'cover' ? 'hook' : 'cta') }));
+
+  if (beated.length) {
+    const arc = (cover && cover.arc) || 'answer-first';
+    const at = (b) => beated.findIndex((s) => s.beat === b);
+    const first = { hook: at('hook'), hooking: at('hooking'), result: at('result'),
+                    body: at('body'), turn: at('turn'), cta: at('cta') };
+
+    if (first.hook > 0)
+      bad('episode', 'the hook beat is not the first shot — the cover opens the episode');
+    if (first.hooking === -1)
+      warn('episode', 'no hooking beat — the shot after the cover carries the stopped viewer to the result');
+    else if (first.hook !== -1 && first.hooking !== first.hook + 1)
+      warn('episode', 'hooking is not the shot right after the cover (scenes-schema §hooking)');
+
+    if (first.cta === -1)
+      warn('episode', 'no cta beat and no outro — the episode ends without the next value');
+    else if (first.cta !== beated.length - 1 && beated.slice(first.cta + 1).some((s) => s.beat !== 'cta'))
+      bad('episode', 'a beat comes after the cta — the cta is the very end');
+
+    if (arc === 'story') {
+      if (first.turn === -1)
+        bad('episode', 'arc "story" with no turn beat — the turn is the moment someone saw it differently, ' +
+                       'and the payoff has nothing to land after');
+      if (first.result !== -1 && first.turn !== -1 && first.result < first.turn)
+        bad('episode', 'the result comes before the turn on a story arc — a payoff shown early closes ' +
+                       'the loop and takes away the reason to watch');
+      if (first.result !== -1 && first.body !== -1 && first.result < first.body)
+        bad('episode', 'the result comes before the body on a story arc — the build has to raise the ' +
+                       'tension the payoff answers');
+    } else {
+      if (first.turn !== -1)
+        bad('shot ' + beated[first.turn].i, 'beat "turn" on an answer-first arc — turn is story only');
+      if (first.result !== -1 && first.body !== -1 && first.body < first.result)
+        bad('episode', 'the body comes before the result on an answer-first arc — method before result ' +
+                       'means listening to an explanation without knowing the destination');
+      if (first.result === -1)
+        warn('episode', 'no result beat on an answer-first arc — the finished thing is never shown properly');
+    }
+  }
+
   // The generated-video cap is a user directive, and the number lives in the preset.
   const videoSlots = scenes.filter((s) => {
     const v = s.visual || {};
@@ -272,6 +323,34 @@ function selftest() {
        visual: { video: {}, audio: 'a',
                  camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } } })])),
        /no stored clip prompt/));
+
+  // ── playback order ──
+  const beat = (b, over) => Object.assign({}, goodShot, { beat: b }, over || {});
+  const afOK = [Object.assign({}, cover), beat('hooking'), beat('result'), beat('body'), beat('cta')];
+  ok('a well-ordered answer-first episode passes', bads(run(afOK)).length === 0);
+  ok('body before result on answer-first is a violation',
+     has(bads(run([Object.assign({}, cover), beat('hooking'), beat('body'), beat('result'), beat('cta')])),
+         /body comes before the result/));
+  ok('a turn on an answer-first arc is a violation',
+     has(bads(run([Object.assign({}, cover), beat('hooking'), beat('turn'), beat('result'), beat('cta')])),
+         /turn is story only/));
+
+  const st = Object.assign({}, cover, { arc: 'story' });
+  const storyOK = [st, beat('hooking'), beat('body'), beat('turn'), beat('result'), beat('cta')];
+  ok('a well-ordered story episode passes', bads(run(storyOK)).length === 0);
+  ok('a story arc with no turn is a violation',
+     has(bads(run([st, beat('hooking'), beat('body'), beat('result'), beat('cta')])), /no turn beat/));
+  ok('the payoff before the turn is a violation',
+     has(bads(run([st, beat('hooking'), beat('body'), beat('result'), beat('turn'), beat('cta')])),
+         /result comes before the turn/));
+  ok('a beat after the cta is a violation',
+     has(bads(run([Object.assign({}, cover), beat('hooking'), beat('result'), beat('cta'), beat('body')])),
+         /after the cta/));
+  ok('an episode with no cta is flagged',
+     has(run([Object.assign({}, cover), beat('hooking'), beat('result'), beat('body')]), /no cta beat/));
+  ok('an outro scene counts as the cta',
+     !has(run([Object.assign({}, cover), beat('hooking'), beat('result'), beat('body'),
+               { type: 'outro', visual: {} }]), /no cta beat/));
 
   // the combined cap
   const three = [cover, noSlots, noSlots, noSlots];
