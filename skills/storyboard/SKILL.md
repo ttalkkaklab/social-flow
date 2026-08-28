@@ -972,6 +972,28 @@ document automatically and copy drift is structurally impossible. SB_DOC holds o
 metadata that isn't in scenes.js (core message, per-scene notes, transitions, audio directions,
 privacy avoidance, source summary, platform plan, shooting prep, recheck list, **the cast**).
 
+**Fill `SB_DOC.cost` by generating it, never by typing it.** The approval screen has to say
+what has already been billed and what saying yes commits — by §7 the images are spent and every
+generated-video slot is still free to delete, so that is the last moment the number can change
+a decision.
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+node $REF/cost-preview.js storyboard/ --sbdoc     # paste the block into SB_DOC
+node $REF/cost-preview.js storyboard/             # the same numbers, human-readable
+```
+
+It reads the video slots out of scenes.js, writes the projection to `.work/cost-forecast.tsv`,
+and totals both that and the `.work/cost-tally.tsv` ledger through `cost-report.sh` — one
+calculator, one price table, so the estimate and the later bill can be compared. **Exit 1 means
+the verdict is incomplete** (an unknown key or an unconfirmed price): fix the key or carry the
+`!!` lines onto the approval screen as they are. Never present the totals as though they were
+whole.
+
+The block carries a fingerprint of the video slots, and the check strip recomputes it from the
+live scenes — so a snapshot that no longer matches shows up as a violation instead of a stale
+number. Regenerate it after any §7 change that adds, retimes, reroutes or moves a video slot.
+
 **Fill `SB_DOC.characters` with the characters this episode actually uses** — the ids that appear
 in any scene's `visual.character`, no more. One entry each: `id`, `name`, `role` (one line from
 `identity.md`), `panels` (the panel paths relative to the storyboard directory —
@@ -998,6 +1020,9 @@ The document shows four things.
   body, back), the line that governs it, and the shots it appears in (read off `visual.character`).
   It's reachable from the menu at the top, and it's where a reviewer checks that the reference
   set going into generation is the right one before any money is spent.
+- **The cost panel** — what the episode has already billed (images, from the ledger) beside what
+  approving it commits (the generated-video slots, priced per shot). It draws only when
+  `SB_DOC.cost` is filled, and it flags itself when the snapshot no longer matches the scenes.
 - **The contract check strip** — violations collected in one place at the top of the document.
   On top of character counts, speech rate, scene length, total length, and cover title, it
   measures **frame overflow** and **hero stat width** the same way produce does (1080px canvas
@@ -1035,7 +1060,11 @@ what's being approved is that plan, and the files get built in §8 afterwards.
 vocabulary, camera, sound, and images, with **which scene or shot was lowest and at what score**
 for the three per-item ones, and **every finding you didn't apply, in the reviewer's own words**.
 That last list is the point of the screen: the reviews no longer block, so this is where a
-defect gets its only human look. **The loop ledger comes up here too** — every curiosity
+defect gets its only human look. **Say the money out loud too** — regenerate `SB_DOC.cost` (§6)
+and put both numbers on the screen: what this episode has already billed, and what approving it
+commits in generated video, per slot. Approval is the last point where deleting a b-roll is free;
+after it the slot is an API call. If the preview came back exit 1, say the verdict is incomplete
+and show the `!!` lines rather than a total that looks whole. **The loop ledger comes up here too** — every curiosity
 loop and deliberate plant opened in the episode, each named with the scene that pays it
 (scenario-craft §3·§5 direct the pairs to this note). A pair with no payer on this screen
 is the last cheap place to catch an unkept promise. The options:
@@ -1157,6 +1186,7 @@ uses the slide state captures as the segment visuals (produce §3.6).
 - **`references/slide-template.html`** — the §8 slide-scene render template — the `?reveal=k` reveal contract + the determinism contract; change only `SLIDE_SHOT` and `renderSlide()`
 - **`references/check-slide.js`** — the §8 slide machine check — filename↔scenes.js match, Korean literals outside the SoT, determinism violations
 - **`../autoproduce/references/cost-tally.md`** — the episode cost-ledger convention (where §5 and §5.5 write, the line format, the units). The source of truth for unit prices is `prices.tsv` in the same directory
+- **`../autoproduce/references/cost-preview.js`** — the §6·§7 approval-screen preview: totals the ledger, prices the generated-video slots out of scenes.js, writes `.work/cost-forecast.tsv`, and emits the `SB_DOC.cost` block (`--sbdoc`) or JSON (`--json`). `--selftest` pins the routing table and the fingerprint copy the HTML template carries
 
 ### Delegated agents
 
