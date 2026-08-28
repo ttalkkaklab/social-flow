@@ -123,6 +123,17 @@ into promoting that prompt to "always allow".
 
   Long-form having no burned-in copy (`video-sub.mp4`) isn't a defect — `BURN=0` is
   that format's contract, and YouTube takes `subs.srt` and toggles it on and off.
+- **Confirm the episode is actually finished**, not just marked finished.
+
+  ```bash
+  REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+  node $REF/episode-state.js .        # from the episode directory · exit 1 = blocked
+  ```
+
+  Exit 1 here means the directory promised something it never delivered — a video with no
+  per-platform text, a `queue_*: ready` marker with no video behind it. Publishing is the
+  irreversible step, so a blocker gets resolved or explained to the user before §1, never
+  worked around.
 - Confirm the `output/` artifacts exist and that `storyboard.md` says
   `status: produced` — otherwise point them at `/social-flow:produce` first.
   **Short-form** needs all three files — `output/video/video.mp4` (clean) ·

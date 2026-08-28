@@ -196,6 +196,18 @@ data/<channel>/episodes/<topic>/
   the file isn't there, start a new one from this episode, but if `storyboard/images/*.png`
   exist with no ledger, the image costs are missing from the total — §10 writes that fact
   into the report.
+- **Read the episode's state before starting, and again when picking up a stopped run.**
+  Produce is the long stage, so it is the one most likely to be resumed in a later session.
+
+  ```bash
+  REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+  node $REF/episode-state.js .        # from the episode directory · exit 1 = blocked
+  ```
+
+  It reports the stage and what is missing — filmed scenes with no footage, slide files never
+  authored, images the scenes name that aren't on disk. Fix a blocker before the build rather
+  than discovering it 12 minutes into capture. `.work/` survives between sessions on purpose,
+  so a resumed run reuses the captures and TSV manifests already there.
 
 ### 2. Prepare the frame render
 
@@ -1313,6 +1325,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)
+- **`../autoproduce/references/episode-state.js`** — the resume check: stage, next command, and the blockers that stall an episode silently (missing footage, unauthored slides, images the scenes name that aren't on disk)
 - **`../autoproduce/references/decision-log.md`** — the episode decision log (`.work/decisions.tsv`) storyboard starts and produce carries on: engine, voice, music and every fallback, with what each one replaced. `decisions.sh` reads it back for the §10 report
 - **`../autoproduce/references/cost-tally.md`** — the episode cost ledger convention (the file §3 and §5 write and §10 totals). The price source of truth `prices.tsv` and the calculator `cost-report.sh` sit in the same directory
 - **`../channel/references/resolve-asset.py`** — looks up the shared outro, BGM, sound effects, and character sheet (catalog + default path + the old `assets/outro.mp4`)

@@ -272,8 +272,22 @@ keep the payoff for the result after the turn, and pick a form that leaves the l
 
 Make `data/<channel>/episodes/<topic slug>/storyboard/images/` using the profile §7 slug
 rule. Topics don't live at the channel root — they go under `episodes/`, the same level as
-`assets/` and `growth/`. If it already exists, ask the user whether to continue from it
-(revising the existing storyboard).
+`assets/` and `growth/`.
+
+**If the directory already exists, read where it got to before touching anything.** An episode
+runs across sessions, and the thing that stalls one is a half-finished state nobody can see.
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+node $REF/episode-state.js data/<channel>/episodes/<topic>      # exit 1 = blocked
+node $REF/episode-state.js data/<channel> --all                 # the whole channel, one line each
+```
+
+It derives the stage from what the skills already wrote — no state file to go stale — and lists
+what the directory promised and didn't deliver (filmed scenes with no footage, images the scenes
+name that aren't on disk, a `queue_*: ready` marker pointing at no video). Show the user that
+before asking whether to continue from the existing storyboard, so the choice is made against
+the real state rather than a guess.
 
 ### 4. Scene design — writing scenes.js
 
@@ -1202,6 +1216,7 @@ uses the slide state captures as the segment visuals (produce §3.6).
 - **`references/slide-template.html`** — the §8 slide-scene render template — the `?reveal=k` reveal contract + the determinism contract; change only `SLIDE_SHOT` and `renderSlide()`
 - **`references/check-slide.js`** — the §8 slide machine check — filename↔scenes.js match, Korean literals outside the SoT, determinism violations
 - **`../autoproduce/references/cost-tally.md`** — the episode cost-ledger convention (where §5 and §5.5 write, the line format, the units). The source of truth for unit prices is `prices.tsv` in the same directory
+- **`../autoproduce/references/episode-state.js`** — derives where an episode stands (drafted · approved · produced · published), what to run next, and what the directory promised and hasn't delivered. No state file — it reads what the skills already write. `--all` sweeps a channel, `--json` for tooling
 - **`../autoproduce/references/decision-log.md`** — the episode decision log convention (`.work/decisions.tsv`): what was chosen, what was rejected, and how a change of mind is appended rather than overwritten. Read it back with `decisions.sh`
 - **`../autoproduce/references/cost-preview.js`** — the §6·§7 approval-screen preview: totals the ledger, prices the generated-video slots out of scenes.js, writes `.work/cost-forecast.tsv`, and emits the `SB_DOC.cost` block (`--sbdoc`) or JSON (`--json`). `--selftest` pins the routing table and the fingerprint copy the HTML template carries
 
