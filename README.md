@@ -297,7 +297,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 54 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 55 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -355,7 +355,7 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (54 tools)
+## MCP tool surface (55 tools)
 
 **`tools/list` does not show all 50.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
@@ -390,6 +390,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
+| Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
 | Growth insights | `youtube_insights` | Channel stats + Analytics period metrics (views · engagedViews · average view ratio · subscriber delta) + per-video metrics — for grow-youtube (`youtube.readonly` · `yt-analytics.readonly` scopes; data lags 2–3 days) |
