@@ -7,6 +7,7 @@ import { describeToolGate, resolveToolGate, warnUnknownPatterns } from './tool-g
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
 import { enabledPlatforms } from './sns-client.js';
+import { isBillableTool, priceOf, recordUsage } from './usage-ledger.js';
 // The server version carried in the initialize response — same value as package.json's version.
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
@@ -52,6 +53,41 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 ],
                 isError: true,
             };
+        }
+        // Generation calls write themselves into the episode's ledger. The record is taken here,
+        // at the one point every call passes through, so it does not depend on a skill remembering
+        // to append a line after the fact (usage-ledger.ts explains where it lands and why).
+        // A failed call is recorded too — a retry after a failure can still have been billed.
+        if (isBillableTool(name)) {
+            const callArgs = (args ?? {});
+            const startedAt = Date.now();
+            let ok = false;
+            try {
+                const result = await handler(callArgs);
+                ok = !result?.isError;
+                return result;
+            }
+            finally {
+                const { key, quantity, note } = priceOf(name, callArgs);
+                recordUsage(typeof callArgs.outputPath === 'string' ? callArgs.outputPath : undefined, {
+                    ts: new Date().toISOString(),
+                    tool: name,
+                    ok,
+                    ms: Date.now() - startedAt,
+                    key,
+                    quantity,
+                    ...(note ? { note } : {}),
+                    detail: {
+                        ...(typeof callArgs.model === 'string' ? { model: callArgs.model } : {}),
+                        ...(typeof callArgs.resolution === 'string' ? { resolution: callArgs.resolution } : {}),
+                        ...(typeof callArgs.durationSeconds === 'number'
+                            ? { durationSeconds: callArgs.durationSeconds }
+                            : {}),
+                        ...(typeof callArgs.quality === 'string' ? { quality: callArgs.quality } : {}),
+                        ...(typeof callArgs.filename === 'string' ? { filename: callArgs.filename } : {}),
+                    },
+                });
+            }
         }
         return await handler(args ?? {});
     }

@@ -17,6 +17,7 @@ import { contentFeedback } from './content-feedback.js';
 import { youtubeTopicScout } from './youtube-topic-scout.js';
 import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
+import { renderCapabilityStatus } from './capability-status.js';
 function text(message, isError = false) {
     return { content: [{ type: 'text', text: message }], isError };
 }
@@ -840,6 +841,7 @@ export const ROUTES = {
             : '';
         return text(`Advanced music generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\nDuration: ${result.durationSeconds} seconds\n\nWeighted Prompts:\n${promptInfo}${configInfo}\n\n48kHz stereo 16-bit WAV.`);
     },
+    capability_status: async () => text(renderCapabilityStatus()),
     music_list_options: async () => {
         const bullets = (items) => items.map((item) => `  - ${item}`).join('\n');
         return text(`Suggested Music Generation Options (non-exhaustive — free text is accepted everywhere):\n\n` +

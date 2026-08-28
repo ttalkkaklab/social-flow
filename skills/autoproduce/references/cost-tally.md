@@ -110,6 +110,27 @@ verdict — autoproduce §5).
 ledger is empty, they weren't made for free — the logging was skipped. Count
 the files, backfill the ledger, and note the backfill in your report.
 
+## The second record — `.work/events.jsonl`
+
+The tally above is written by hand, which means it depends on somebody remembering. The MCP
+server writes its own record at the moment of each generation call, in
+`.work/events.jsonl` — one JSON line per call, appended, including failed calls (a retry after
+a failure can still have been billed). It lands in whichever episode directory the call's
+`outputPath` sits inside; a branding or intro call, having no episode above it, writes nothing.
+
+The two are compared with `events-to-tally.js`:
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+node $REF/events-to-tally.js .            # per key: server vs tally vs delta · exit 1 = short
+node $REF/events-to-tally.js . --tsv >> .work/cost-tally.tsv
+```
+
+**The events don't replace the tally.** The server can't see the metered character count
+ElevenLabs returns in a header, has no price for Lyria RealTime, and doesn't know that a
+generated clip was trimmed or thrown away — all facts a person writes into a memo. So the
+tally stays the record and the events are the check on it.
+
 ## Before the money goes out — the approval-screen preview
 
 The ledger answers "what did this cost". The person at storyboard §7 is asking a different

@@ -1260,6 +1260,18 @@ $REF/cost-report.sh .work/cost-tally.tsv > output/video/cost-report.txt; echo "c
 cat output/video/cost-report.txt
 ```
 
+**Check the hand-written tally against what the server recorded first.** The MCP server writes
+`.work/events.jsonl` on every generation call by itself, so it catches the lines a session
+ending mid-run never got to write.
+
+```bash
+node $REF/events-to-tally.js .        # exit 1 = the tally is short
+node $REF/events-to-tally.js . --tsv >> .work/cost-tally.tsv   # append what was missing
+```
+
+ElevenLabs and Lyria RealTime come back unpriced there on purpose — the server can't see the
+metered character count or an unpublished unit price, so those stay hand-written.
+
 Read `cost_exit` as it is (the verdict's source of truth is
 [cost-tally.md](../autoproduce/references/cost-tally.md) §Reading exit codes).
 
@@ -1325,6 +1337,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)
+- **`../autoproduce/references/events-to-tally.js`** — compares `.work/cost-tally.tsv` against `.work/events.jsonl` (the record the MCP server writes on every generation call) and prints the missing lines with `--tsv`
 - **`../autoproduce/references/episode-state.js`** — the resume check: stage, next command, and the blockers that stall an episode silently (missing footage, unauthored slides, images the scenes name that aren't on disk)
 - **`../autoproduce/references/decision-log.md`** — the episode decision log (`.work/decisions.tsv`) storyboard starts and produce carries on: engine, voice, music and every fallback, with what each one replaced. `decisions.sh` reads it back for the §10 report
 - **`../autoproduce/references/cost-tally.md`** — the episode cost ledger convention (the file §3 and §5 write and §10 totals). The price source of truth `prices.tsv` and the calculator `cost-report.sh` sit in the same directory
