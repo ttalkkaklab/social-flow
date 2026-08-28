@@ -165,4 +165,5 @@ slot — the number on the approval screen has to be the number the user is appr
 - `prices.tsv` — price source of truth. The numbers live only there
 - `cost-report.sh` — the calculator
 - `cost-preview.js` — the approval-screen preview (spent + projected), writes `.work/cost-forecast.tsv`
+- `board.js` — one page per channel: every episode's stage, blockers, cost and decisions (`data/<channel>/growth/board.html`)
 - `cost-tiers.md` — model ladder, escalation conditions, per-episode cap (unattended authoring)
