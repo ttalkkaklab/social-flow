@@ -60,6 +60,22 @@ const EPISODE_MARKER = path.join('storyboard', 'scenes.js');
 /** How far up from outputPath to look. `.work/broll/` is two levels; six is slack, not a limit. */
 const MAX_WALK_UP = 6;
 
+/**
+ * The argument that says where a generation call's output landed.
+ *
+ * Every generation tool takes a directory in `outputPath` — except gpt_image_text2img and
+ * gpt_image_img2img, which take a full file path in `savePath`. Reading only `outputPath` left
+ * the free local images in the ledger and dropped every paid gpt-image call, so the two names
+ * are resolved here rather than at the call site.
+ */
+export function episodePathArg(args: Record<string, unknown>): string | undefined {
+  for (const name of ['outputPath', 'savePath']) {
+    const value = args[name];
+    if (typeof value === 'string' && value) return value;
+  }
+  return undefined;
+}
+
 export function findEpisodeDir(outputPath: string | undefined): string | null {
   if (!outputPath || typeof outputPath !== 'string') return null;
   let dir: string;
@@ -128,6 +144,27 @@ const SEEDANCE_FAMILY: Record<string, string> = {
   'seedance-1-0-pro-fast-251015': '1-0-pro-fast',
 };
 
+/**
+ * The video keys prices.tsv actually carries. The key is composed from the call's arguments —
+ * tier/family and resolution — and the two vocabularies do not line up: every Seedance model
+ * accepts 480p and no 480p row exists, `1-5-pro-audio` is priced at 1080p only, and Veo lite
+ * has no 4k row. A composed key nobody priced used to go into the ledger anyway, where
+ * cost-report.sh answers it with `!! unknown key` and exit 1 — one unpriced call and the whole
+ * episode loses its cost verdict. Membership is checked here instead, and an unpriced
+ * combination comes back with a null key and a note saying which one, like an unmapped model.
+ */
+const PRICED_VIDEO_KEYS = new Set([
+  'veo.lite.720p', 'veo.fast.720p', 'veo.standard.720p',
+  'veo.lite.1080p', 'veo.fast.1080p', 'veo.standard.1080p',
+  'veo.fast.4k', 'veo.standard.4k',
+  'seedance.1-0-pro-fast.1080p', 'seedance.1-0-pro-fast.720p',
+  'seedance.1-5-pro-silent.1080p', 'seedance.1-5-pro-silent.720p',
+  'seedance.1-5-pro-audio.1080p',
+  'seedance.1-0-pro.1080p',
+  'seedance.2-0-mini.720p', 'seedance.2-0-fast.720p',
+  'seedance.2-0.1080p', 'seedance.2-5.720p',
+]);
+
 const ELEVENLABS_KEY: Record<string, string> = {
   eleven_multilingual_v2: 'tts.elevenlabs',
   eleven_v3: 'tts.elevenlabs',
@@ -157,23 +194,32 @@ export function priceOf(
     const resolution = str(args.resolution, '720p');
     if (!tier) return { key: null, quantity: null, note: `unmapped veo model: ${String(args.model)}` };
     // 1080p and 4k generate 8 seconds whatever was asked for, and veo_reference is pinned to 8.
+    // An extension call adds 7 seconds of new content per call and has no durationSeconds at all.
     const forcedEight = resolution !== '720p' || tool === 'veo_reference';
-    const seconds = forcedEight ? 8 : num(args.durationSeconds, 8);
-    return { key: `veo.${tier}.${resolution}`, quantity: seconds };
+    const seconds = tool === 'veo_extension' ? 7 : forcedEight ? 8 : num(args.durationSeconds, 8);
+    const key = `veo.${tier}.${resolution}`;
+    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
+    return {
+      key,
+      quantity: seconds,
+      ...(tool === 'veo_extension'
+        ? { note: 'extension adds 7s of new content per call — whether the vendor bills 7 or the 8s cut length is unconfirmed' }
+        : {}),
+    };
   }
 
   if (tool.startsWith('seedance_')) {
     const model = str(args.model, 'seedance-1-5-pro-251215');
     const resolution = str(args.resolution, '720p');
     const seconds = num(args.durationSeconds, 5);
-    if (model === 'seedance-1-5-pro-251215') {
-      // The only model whose price splits on audio — silent is exactly half.
-      const audio = args.generateAudio === true;
-      return { key: `seedance.1-5-pro-${audio ? 'audio' : 'silent'}.${resolution}`, quantity: seconds };
-    }
-    const family = SEEDANCE_FAMILY[model];
+    // 1.5 pro is the only model whose price splits on audio — silent is exactly half.
+    const family = model === 'seedance-1-5-pro-251215'
+      ? `1-5-pro-${args.generateAudio === true ? 'audio' : 'silent'}`
+      : SEEDANCE_FAMILY[model];
     if (!family) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
-    return { key: `seedance.${family}.${resolution}`, quantity: seconds };
+    const key = `seedance.${family}.${resolution}`;
+    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
+    return { key, quantity: seconds };
   }
 
   if (tool.startsWith('gpt_image_')) {
@@ -221,11 +267,19 @@ export function priceOf(
   return { key: null, quantity: null };
 }
 
-/** The raw character count of whatever text a speech call was given. */
+/**
+ * The raw character count of whatever text a speech call was given.
+ *
+ * The parameter name differs per tool and there is no shared shape: `text` on the single-voice
+ * lanes, `script` on tts_multi_speaker, and an `inputs` array of `{text}` on the ElevenLabs
+ * dialogue lane. Reading only `text` filed every multi-speaker call as 0 characters — a number
+ * in the ledger that looks measured and says the call was free.
+ */
 function rawChars(args: Record<string, unknown>): number {
   if (typeof args.text === 'string') return args.text.length;
-  if (Array.isArray(args.turns)) {
-    return args.turns.reduce(
+  if (typeof args.script === 'string') return args.script.length;
+  if (Array.isArray(args.inputs)) {
+    return args.inputs.reduce(
       (sum: number, t: unknown) =>
         sum + (t && typeof t === 'object' && typeof (t as { text?: unknown }).text === 'string'
           ? ((t as { text: string }).text).length

@@ -21,9 +21,10 @@
  *
  * ## Every format constant comes from the preset
  *
- * Not one band, cap or count is written here. `format-resolve.js --json` is asked, and its
- * `pacing` block is the source. A fifth copy of those numbers is the last thing this
- * repository needs.
+ * No band or count is written here. `format-resolve.js --json` is asked, and its `pacing`
+ * block is the source. A fifth copy of those numbers is the last thing this repository needs.
+ * The one exception is the generated-video cap of 2 — a user directive the preset has no
+ * field for; it sits at the check that uses it, marked as such.
  *
  * Exit codes:
  *   0  no violations (warnings may still be printed)
@@ -197,7 +198,10 @@ function check(win, fmt) {
     });
   }
 
-  // The generated-video cap is a user directive, and the number lives in the preset.
+  // The generated-video cap is a user directive fixed at 2 (scenes-schema §motion background).
+  // It is written here rather than read from the preset because the preset has no field for
+  // it — format-resolve's pacing carries bands and counts, not this cap. If one is ever added,
+  // this is the line that moves.
   const videoSlots = scenes.filter((s) => {
     const v = s.visual || {};
     return s.type === 'broll' || !!v.video;

@@ -22,15 +22,26 @@
  * filesystem check goes.
  */
 import { existsSync } from 'node:fs';
-import { config, mfluxZImageBin, qwen3AsrBin, snsTokenDir } from './config.js';
+import path from 'node:path';
+import { config, mfluxZImageBin, qwen3AsrBin, snsTokenDir, supertonicPython } from './config.js';
 import { enabledPlatforms } from './sns-client.js';
 const has = (v) => Boolean(v && v.length > 0);
-const binOk = (p) => { try {
-    return existsSync(p);
-}
-catch {
-    return false;
-} };
+/**
+ * True when the binary resolves. A path with a separator is checked where it points; a bare
+ * name is looked up on PATH, because that is how it will be spawned — `supertonicPython()`
+ * returns a plain `python3` unless SUPERTONIC_PYTHON says otherwise.
+ */
+const binOk = (p) => {
+    try {
+        if (p.includes(path.sep))
+            return existsSync(p);
+        return (process.env.PATH || '').split(path.delimiter)
+            .some((dir) => dir && existsSync(path.join(dir, p)));
+    }
+    catch {
+        return false;
+    }
+};
 export function capabilityStatus() {
     const gemini = has(config.geminiApiKey);
     const capabilities = [
@@ -55,7 +66,8 @@ export function capabilityStatus() {
         {
             capability: 'tts',
             providers: [
-                { provider: 'supertonic (local)', configured: true, needs: 'python3 on this machine',
+                { provider: 'supertonic (local)', configured: binOk(supertonicPython()),
+                    needs: 'python3 on this machine (or SUPERTONIC_PYTHON pointing at a virtualenv)',
                     note: 'tts_local_generate — free, offline, the default narration voice' },
                 { provider: 'gemini', configured: gemini, needs: 'GEMINI_API_KEY',
                     note: 'tts_generate · tts_multi_speaker' },

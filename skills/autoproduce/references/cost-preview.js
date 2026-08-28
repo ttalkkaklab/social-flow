@@ -20,6 +20,9 @@
  *   .work/cost-tally.tsv     the actual ledger — what was really spent (cost-tally.md)
  *   .work/cost-forecast.tsv  written here — the projection for this episode's video slots
  *
+ * `--json` is the read-only lane and writes neither: board.js calls it once per episode to
+ * draw a page, and observing a channel must not change every episode in it.
+ *
  * `.work/cost-estimate.tsv` is a third file and belongs to autoproduce §5: a whole-episode
  * projection used only for the cap verdict. This script never reads or writes it, so an
  * unattended run's cap check and a storyboard's approval screen can't clobber each other.
@@ -48,6 +51,7 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const vm = require('vm');
 const { spawnSync } = require('child_process');
@@ -303,9 +307,15 @@ function main() {
   const rows = forecastRows(slots);
   const fingerprint = costFingerprint(scenes);
 
-  // Write the projection where the ledger lives, in ledger format.
-  fs.mkdirSync(workDir, { recursive: true });
-  const forecastPath = path.join(workDir, 'cost-forecast.tsv');
+  // Write the projection where the ledger lives, in ledger format — except under --json, which
+  // is the read-only lane. board.js calls it for every episode in a channel, and a page that
+  // only observes must not leave a new file in a published episode's .work/ to do it. The
+  // report cost-report.sh produces still needs a file, so --json gets a temp one.
+  const readOnly = argv.indexOf('--json') !== -1;
+  const forecastPath = readOnly
+    ? path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'cost-preview-')), 'cost-forecast.tsv')
+    : path.join(workDir, 'cost-forecast.tsv');
+  if (!readOnly) fs.mkdirSync(workDir, { recursive: true });
   const header = [
     '# Projected generated-video spend for this episode — written by cost-preview.js.',
     '# Not the ledger. What was actually spent lives in cost-tally.tsv; this file is what',
@@ -346,8 +356,12 @@ function main() {
     },
     committed: spent.total + forecast.total,
     tally: path.relative(episodeDir, tallyPath),
-    forecastFile: path.relative(episodeDir, forecastPath)
+    // Where the projection belongs, not where this run put it — under --json it went to a
+    // temp file that is deleted below.
+    forecastFile: path.join('.work', 'cost-forecast.tsv')
   };
+
+  if (readOnly) fs.rmSync(path.dirname(forecastPath), { recursive: true, force: true });
 
   const worstExit = Math.max(spent.exit === 3 ? 0 : spent.exit, forecast.exit === 3 ? 0 : forecast.exit);
 

@@ -3244,8 +3244,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path8) {
-      let input = path8;
+    function removeDotSegments(path9) {
+      let input = path9;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3497,8 +3497,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path8, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path8 && path8 !== "/" ? path8 : void 0;
+        const [path9, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path9 && path9 !== "/" ? path9 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -13731,22 +13731,22 @@ var init_from = __esm({
     init_file();
     init_fetch_blob();
     ({ stat } = fs2);
-    blobFromSync = (path8, type) => fromBlob(statSync(path8), path8, type);
-    blobFrom = (path8, type) => stat(path8).then((stat4) => fromBlob(stat4, path8, type));
-    fileFrom = (path8, type) => stat(path8).then((stat4) => fromFile(stat4, path8, type));
-    fileFromSync = (path8, type) => fromFile(statSync(path8), path8, type);
-    fromBlob = (stat4, path8, type = "") => new fetch_blob_default([new BlobDataItem({
-      path: path8,
+    blobFromSync = (path9, type) => fromBlob(statSync(path9), path9, type);
+    blobFrom = (path9, type) => stat(path9).then((stat4) => fromBlob(stat4, path9, type));
+    fileFrom = (path9, type) => stat(path9).then((stat4) => fromFile(stat4, path9, type));
+    fileFromSync = (path9, type) => fromFile(statSync(path9), path9, type);
+    fromBlob = (stat4, path9, type = "") => new fetch_blob_default([new BlobDataItem({
+      path: path9,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
     })], { type });
-    fromFile = (stat4, path8, type = "") => new file_default([new BlobDataItem({
-      path: path8,
+    fromFile = (stat4, path9, type = "") => new file_default([new BlobDataItem({
+      path: path9,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
-    })], basename(path8), { type, lastModified: stat4.mtimeMs });
+    })], basename(path9), { type, lastModified: stat4.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -18927,7 +18927,7 @@ var require_util3 = __commonJS({
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
     var fs7 = __require("fs");
     var os = __require("os");
-    var path8 = __require("path");
+    var path9 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
     function snakeToCamel(str7) {
@@ -19020,8 +19020,8 @@ var require_util3 = __commonJS({
       }
     }
     function getWellKnownCertificateConfigFileLocation() {
-      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path8.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path8.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
-      return path8.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
+      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path9.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path9.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
+      return path9.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
       return os.platform().startsWith("win");
@@ -20967,7 +20967,7 @@ var require_getCredentials = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
-    var path8 = __require("path");
+    var path9 = __require("path");
     var fs7 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
@@ -21039,7 +21039,7 @@ var require_getCredentials = __commonJS({
        * @returns An instance of a class that implements ICredentialsProvider.
        */
       static create(keyFilePath) {
-        const keyFileExtension = path8.extname(keyFilePath);
+        const keyFileExtension = path9.extname(keyFilePath);
         switch (keyFileExtension) {
           case ExtensionFiles.JSON:
             return new JsonCredentialsProvider(keyFilePath);
@@ -24408,7 +24408,7 @@ var require_googleauth = __commonJS({
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os = __require("os");
-    var path8 = __require("path");
+    var path9 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
     var idtokenclient_1 = require_idtokenclient();
@@ -24693,19 +24693,19 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           if (this._isWindows()) {
             if (process.env["APPDATA"]) {
-              configDir = path8.join(process.env["APPDATA"], "gcloud");
+              configDir = path9.join(process.env["APPDATA"], "gcloud");
             }
           } else {
             const home = process.env["HOME"];
             if (home) {
-              configDir = path8.join(home, ".config", "gcloud");
+              configDir = path9.join(home, ".config", "gcloud");
             }
           }
         }
         if (!configDir) {
           return null;
         }
-        const location = path8.join(configDir, "application_default_credentials.json");
+        const location = path9.join(configDir, "application_default_credentials.json");
         if (!fs7.existsSync(location)) {
           return null;
         }
@@ -25060,7 +25060,7 @@ var require_googleauth = __commonJS({
         if (this.jsonContent) {
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
-          const filePath = path8.resolve(this.keyFilename);
+          const filePath = path9.resolve(this.keyFilename);
           const stream = fs7.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
@@ -40445,7 +40445,7 @@ async function $do$l(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path8 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path9 = pathToFunc("/{api_version}/agents")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40476,7 +40476,7 @@ async function $do$l(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40520,7 +40520,7 @@ async function $do$k(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path9 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40550,7 +40550,7 @@ async function $do$k(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40594,7 +40594,7 @@ async function $do$j(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path9 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40624,7 +40624,7 @@ async function $do$j(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40666,7 +40666,7 @@ async function $do$i(client, api_version, page_size, page_token, parent, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path8 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path9 = pathToFunc("/{api_version}/agents")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token,
@@ -40701,7 +40701,7 @@ async function $do$i(client, api_version, page_size, page_token, parent, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     query,
     body,
@@ -40746,7 +40746,7 @@ async function $do$h(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
+  const path9 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40776,7 +40776,7 @@ async function $do$h(client, id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40819,7 +40819,7 @@ async function $do$g(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path8 = pathToFunc("/{api_version}/interactions")(pathParams);
+  const path9 = pathToFunc("/{api_version}/interactions")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: ((_b = input === null || input === void 0 ? void 0 : input.body) === null || _b === void 0 ? void 0 : _b.stream) ? "text/event-stream" : "application/json"
@@ -40850,7 +40850,7 @@ async function $do$g(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40900,7 +40900,7 @@ async function $do$f(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path9 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40930,7 +40930,7 @@ async function $do$f(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40980,7 +40980,7 @@ async function $do$e(client, id, stream, last_event_id, include_input, api_versi
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path9 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const query = encodeFormQuery({
     "include_input": payload.include_input,
     "last_event_id": payload.last_event_id,
@@ -41015,7 +41015,7 @@ async function $do$e(client, id, stream, last_event_id, include_input, api_versi
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     query,
     body,
@@ -41062,7 +41062,7 @@ async function $do$d(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path8 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path9 = pathToFunc("/{api_version}/triggers")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41093,7 +41093,7 @@ async function $do$d(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41137,7 +41137,7 @@ async function $do$c(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path9 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41167,7 +41167,7 @@ async function $do$c(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41211,7 +41211,7 @@ async function $do$b(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path9 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41241,7 +41241,7 @@ async function $do$b(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41287,7 +41287,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path9 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload.page_size,
     "page_token": payload.page_token
@@ -41321,7 +41321,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     query,
     body,
@@ -41364,7 +41364,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path8 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path9 = pathToFunc("/{api_version}/triggers")(pathParams);
   const query = encodeFormQuery({
     "filter": payload === null || payload === void 0 ? void 0 : payload.filter,
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
@@ -41399,7 +41399,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     query,
     body,
@@ -41444,7 +41444,7 @@ async function $do$8(client, trigger_id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path9 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41474,7 +41474,7 @@ async function $do$8(client, trigger_id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41519,7 +41519,7 @@ async function $do$7(client, id, body, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path9 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41550,7 +41550,7 @@ async function $do$7(client, id, body, api_version, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41590,7 +41590,7 @@ async function $do$6(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path8 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path9 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41621,7 +41621,7 @@ async function $do$6(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41665,7 +41665,7 @@ async function $do$5(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path9 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41695,7 +41695,7 @@ async function $do$5(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41739,7 +41739,7 @@ async function $do$4(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path9 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41769,7 +41769,7 @@ async function $do$4(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41810,7 +41810,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path8 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path9 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -41844,7 +41844,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     query,
     body,
@@ -41890,7 +41890,7 @@ async function $do$2(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
+  const path9 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41921,7 +41921,7 @@ async function $do$2(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41966,7 +41966,7 @@ async function $do$1(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
+  const path9 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41997,7 +41997,7 @@ async function $do$1(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42043,7 +42043,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
       charEncoding: "percent"
     })
   };
-  const path8 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path9 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const query = encodeFormQuery({
     "update_mask": payload.update_mask
   });
@@ -42077,7 +42077,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path8,
+    path: path9,
     headers,
     query,
     body: body$,
@@ -45191,7 +45191,7 @@ var init_node = __esm({
           params
         );
         const urlParams = body["_url"];
-        const path8 = formatMap("{model}:batchGenerateContent", urlParams);
+        const path9 = formatMap("{model}:batchGenerateContent", urlParams);
         const batch = body["batch"];
         const inputConfig = batch["inputConfig"];
         const requestsWrapper = inputConfig["requests"];
@@ -45212,7 +45212,7 @@ var init_node = __esm({
         delete body["config"];
         delete body["_url"];
         delete body["_query"];
-        return { path: path8, body };
+        return { path: path9, body };
       }
       // Helper function to get the first GCS URI
       getGcsUri(src) {
@@ -45268,16 +45268,16 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createBatchJobParametersToVertex(this.apiClient, params);
-          path8 = formatMap("batchPredictionJobs", body["_url"]);
+          path9 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45292,12 +45292,12 @@ var init_node = __esm({
           });
         } else {
           const body = createBatchJobParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{model}:batchGenerateContent", body["_url"]);
+          path9 = formatMap("{model}:batchGenerateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45322,18 +45322,18 @@ var init_node = __esm({
       async createEmbeddingsInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createEmbeddingsBatchJobParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
+          path9 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45362,16 +45362,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getBatchJobParametersToVertex(this.apiClient, params);
-          path8 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path9 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45386,12 +45386,12 @@ var init_node = __esm({
           });
         } else {
           const body = getBatchJobParametersToMldev(this.apiClient, params);
-          path8 = formatMap("batches/{name}", body["_url"]);
+          path9 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45419,16 +45419,16 @@ var init_node = __esm({
        */
       async cancel(params) {
         var _a4, _b, _c, _d;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelBatchJobParametersToVertex(this.apiClient, params);
-          path8 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
+          path9 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45437,12 +45437,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelBatchJobParametersToMldev(this.apiClient, params);
-          path8 = formatMap("batches/{name}:cancel", body["_url"]);
+          path9 = formatMap("batches/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45454,16 +45454,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listBatchJobsParametersToVertex(params);
-          path8 = formatMap("batchPredictionJobs", body["_url"]);
+          path9 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45486,12 +45486,12 @@ var init_node = __esm({
           });
         } else {
           const body = listBatchJobsParametersToMldev(params);
-          path8 = formatMap("batches", body["_url"]);
+          path9 = formatMap("batches", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45528,16 +45528,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteBatchJobParametersToVertex(this.apiClient, params);
-          path8 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path9 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45558,12 +45558,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteBatchJobParametersToMldev(this.apiClient, params);
-          path8 = formatMap("batches/{name}", body["_url"]);
+          path9 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45622,16 +45622,16 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createCachedContentParametersToVertex(this.apiClient, params);
-          path8 = formatMap("cachedContents", body["_url"]);
+          path9 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45645,12 +45645,12 @@ var init_node = __esm({
           });
         } else {
           const body = createCachedContentParametersToMldev(this.apiClient, params);
-          path8 = formatMap("cachedContents", body["_url"]);
+          path9 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45678,16 +45678,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getCachedContentParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45701,12 +45701,12 @@ var init_node = __esm({
           });
         } else {
           const body = getCachedContentParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45734,16 +45734,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteCachedContentParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45766,12 +45766,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteCachedContentParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45811,16 +45811,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateCachedContentParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -45834,12 +45834,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateCachedContentParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -45856,16 +45856,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listCachedContentsParametersToVertex(params);
-          path8 = formatMap("cachedContents", body["_url"]);
+          path9 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45888,12 +45888,12 @@ var init_node = __esm({
           });
         } else {
           const body = listCachedContentsParametersToMldev(params);
-          path8 = formatMap("cachedContents", body["_url"]);
+          path9 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46224,18 +46224,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFilesParametersToMldev(params);
-          path8 = formatMap("files", body["_url"]);
+          path9 = formatMap("files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46261,18 +46261,18 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileParametersToMldev(params);
-          path8 = formatMap("upload/v1beta/files", body["_url"]);
+          path9 = formatMap("upload/v1beta/files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46307,18 +46307,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileParametersToMldev(params);
-          path8 = formatMap("files/{file}", body["_url"]);
+          path9 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46348,18 +46348,18 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileParametersToMldev(params);
-          path8 = formatMap("files/{file}", body["_url"]);
+          path9 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46385,18 +46385,18 @@ var init_node = __esm({
       async registerFilesInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = internalRegisterFilesParametersToMldev(params);
-          path8 = formatMap("files:register", body["_url"]);
+          path9 = formatMap("files:register", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46556,13 +46556,13 @@ var init_node = __esm({
           throw new Error("HTTP options are not correctly set.");
         }
       }
-      constructUrl(path8, httpOptions, prependProjectLocation) {
+      constructUrl(path9, httpOptions, prependProjectLocation) {
         const urlElement = [this.getRequestUrlInternal(httpOptions)];
         if (prependProjectLocation) {
           urlElement.push(this.getBaseResourcePath());
         }
-        if (path8 !== "") {
-          urlElement.push(path8);
+        if (path9 !== "") {
+          urlElement.push(path9);
         }
         const url = new URL(`${urlElement.join("/")}`);
         return url;
@@ -46861,8 +46861,8 @@ var init_node = __esm({
           file: fileToUpload
         };
         const fileName = this.getFileName(file);
-        const path8 = formatMap("upload/v1beta/files", body["_url"]);
-        const uploadUrl = await this.fetchUploadUrl(path8, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const path9 = formatMap("upload/v1beta/files", body["_url"]);
+        const uploadUrl = await this.fetchUploadUrl(path9, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.upload(file, uploadUrl, this);
       }
       /**
@@ -46886,13 +46886,13 @@ var init_node = __esm({
         if (mimeType === void 0 || mimeType === "") {
           throw new Error("Can not determine mimeType. Please provide mimeType in the config.");
         }
-        const path8 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
+        const path9 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
         const fileName = this.getFileName(file);
         const body = {};
         if (config3 != null) {
           uploadToFileSearchStoreConfigToMldev(config3, body);
         }
-        const uploadUrl = await this.fetchUploadUrl(path8, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const uploadUrl = await this.fetchUploadUrl(path9, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.uploadToFileSearchStore(file, uploadUrl, this);
       }
       /**
@@ -46905,7 +46905,7 @@ var init_node = __esm({
         const downloader = this.clientOptions.downloader;
         await downloader.download(params, this);
       }
-      async fetchUploadUrl(path8, sizeBytes, mimeType, fileName, body, configHttpOptions) {
+      async fetchUploadUrl(path9, sizeBytes, mimeType, fileName, body, configHttpOptions) {
         var _a4;
         let httpOptions = {};
         if (configHttpOptions) {
@@ -46918,7 +46918,7 @@ var init_node = __esm({
           };
         }
         const httpResponse = await this.request({
-          path: path8,
+          path: path9,
           body: JSON.stringify(body),
           httpMethod: "POST",
           httpOptions
@@ -47918,16 +47918,16 @@ var init_node = __esm({
       async generateContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{model}:generateContent", body["_url"]);
+          path9 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -47950,12 +47950,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{model}:generateContent", body["_url"]);
+          path9 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -47981,17 +47981,17 @@ var init_node = __esm({
       async generateContentStreamInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path9 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48027,13 +48027,13 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path9 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48093,17 +48093,17 @@ var init_node = __esm({
       async embedContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = embedContentParametersPrivateToVertex(this.apiClient, params, params);
           const endpointUrl = tIsVertexEmbedContentModel(params.model) ? "{model}:embedContent" : "{model}:predict";
-          path8 = formatMap(endpointUrl, body["_url"]);
+          path9 = formatMap(endpointUrl, body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48126,12 +48126,12 @@ var init_node = __esm({
           });
         } else {
           const body = embedContentParametersPrivateToMldev(this.apiClient, params);
-          path8 = formatMap("{model}:batchEmbedContents", body["_url"]);
+          path9 = formatMap("{model}:batchEmbedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48160,16 +48160,16 @@ var init_node = __esm({
       async generateImagesInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateImagesParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{model}:predict", body["_url"]);
+          path9 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48192,12 +48192,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateImagesParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{model}:predict", body["_url"]);
+          path9 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48226,16 +48226,16 @@ var init_node = __esm({
       async editImageInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = editImageParametersInternalToVertex(this.apiClient, params);
-          path8 = formatMap("{model}:predict", body["_url"]);
+          path9 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48266,16 +48266,16 @@ var init_node = __esm({
       async upscaleImageInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = upscaleImageAPIParametersInternalToVertex(this.apiClient, params);
-          path8 = formatMap("{model}:predict", body["_url"]);
+          path9 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48327,16 +48327,16 @@ var init_node = __esm({
       async recontextImage(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = recontextImageParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{model}:predict", body["_url"]);
+          path9 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48378,16 +48378,16 @@ var init_node = __esm({
       async segmentImage(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = segmentImageParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{model}:predict", body["_url"]);
+          path9 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48417,16 +48417,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getModelParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48441,12 +48441,12 @@ var init_node = __esm({
           });
         } else {
           const body = getModelParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48464,16 +48464,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listModelsParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{models_url}", body["_url"]);
+          path9 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48496,12 +48496,12 @@ var init_node = __esm({
           });
         } else {
           const body = listModelsParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{models_url}", body["_url"]);
+          path9 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48544,16 +48544,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateModelParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{model}", body["_url"]);
+          path9 = formatMap("{model}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48568,12 +48568,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateModelParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48602,16 +48602,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteModelParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48634,12 +48634,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteModelParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48681,16 +48681,16 @@ var init_node = __esm({
       async countTokens(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = countTokensParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{model}:countTokens", body["_url"]);
+          path9 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48713,12 +48713,12 @@ var init_node = __esm({
           });
         } else {
           const body = countTokensParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{model}:countTokens", body["_url"]);
+          path9 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48762,16 +48762,16 @@ var init_node = __esm({
       async computeTokens(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = computeTokensParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{model}:computeTokens", body["_url"]);
+          path9 = formatMap("{model}:computeTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48802,16 +48802,16 @@ var init_node = __esm({
       async generateVideosInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateVideosParametersToVertex(this.apiClient, params);
-          path8 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path9 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48828,12 +48828,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateVideosParametersToMldev(this.apiClient, params);
-          path8 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path9 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48935,16 +48935,16 @@ var init_node = __esm({
       async getVideosOperationInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getOperationParametersToVertex(params);
-          path8 = formatMap("{operationName}", body["_url"]);
+          path9 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48956,12 +48956,12 @@ var init_node = __esm({
           return response;
         } else {
           const body = getOperationParametersToMldev(params);
-          path8 = formatMap("{operationName}", body["_url"]);
+          path9 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48976,16 +48976,16 @@ var init_node = __esm({
       async fetchPredictVideosOperationInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = fetchPredictOperationParametersToVertex(params);
-          path8 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
+          path9 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49091,20 +49091,20 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("The client.tokens.create method is only supported by the Gemini Developer API.");
         } else {
           const body = createAuthTokenParametersToMldev(this.apiClient, params);
-          path8 = formatMap("auth_tokens", body["_url"]);
+          path9 = formatMap("auth_tokens", body["_url"]);
           queryParams = body["_query"];
           delete body["config"];
           delete body["_url"];
           delete body["_query"];
           const transformedBody = convertBidiSetupToTokenSetup(body, params.config);
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(transformedBody),
             httpMethod: "POST",
@@ -49136,18 +49136,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getDocumentParametersToMldev(params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49168,18 +49168,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteDocumentParametersToMldev(params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49191,18 +49191,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listDocumentsParametersToMldev(params);
-          path8 = formatMap("{parent}/documents", body["_url"]);
+          path9 = formatMap("{parent}/documents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49319,18 +49319,18 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileSearchStoreParametersToMldev(this.apiClient, params);
-          path8 = formatMap("fileSearchStores", body["_url"]);
+          path9 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49353,18 +49353,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileSearchStoreParametersToMldev(params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49385,18 +49385,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileSearchStoreParametersToMldev(params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49408,18 +49408,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFileSearchStoresParametersToMldev(params);
-          path8 = formatMap("fileSearchStores", body["_url"]);
+          path9 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49439,18 +49439,18 @@ var init_node = __esm({
       async uploadToFileSearchStoreInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = uploadToFileSearchStoreParametersToMldev(params);
-          path8 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
+          path9 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49478,18 +49478,18 @@ var init_node = __esm({
       async importFile(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = importFileParametersToMldev(params);
-          path8 = formatMap("{file_search_store_name}:importFile", body["_url"]);
+          path9 = formatMap("{file_search_store_name}:importFile", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49933,16 +49933,16 @@ var init_node = __esm({
       }
       _createRequest(context, conf, options) {
         var _a4, _b, _c, _d, _e;
-        const { method, path: path8, query, headers: opHeaders, security } = conf;
+        const { method, path: path9, query, headers: opHeaders, security } = conf;
         const base = (_a4 = conf.baseURL) !== null && _a4 !== void 0 ? _a4 : this._baseURL;
         if (!base) {
           return ERR(new InvalidRequestError("No base URL provided for operation"));
         }
         const baseURL = new URL(base);
         let reqURL;
-        if (path8) {
+        if (path9) {
           baseURL.pathname = baseURL.pathname.replace(/\/+$/, "") + "/";
-          reqURL = new URL(path8, baseURL);
+          reqURL = new URL(path9, baseURL);
           if (!reqURL.search && baseURL.search) {
             reqURL.search = baseURL.search;
           }
@@ -50858,16 +50858,16 @@ var init_node = __esm({
       async getInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getTuningJobParametersToVertex(params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -50888,12 +50888,12 @@ var init_node = __esm({
           });
         } else {
           const body = getTuningJobParametersToMldev(params);
-          path8 = formatMap("{name}", body["_url"]);
+          path9 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -50917,16 +50917,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listTuningJobsParametersToVertex(params);
-          path8 = formatMap("tuningJobs", body["_url"]);
+          path9 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -50965,16 +50965,16 @@ var init_node = __esm({
       async cancel(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelTuningJobParametersToVertex(params);
-          path8 = formatMap("{name}:cancel", body["_url"]);
+          path9 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -50997,12 +50997,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelTuningJobParametersToMldev(params);
-          path8 = formatMap("{name}:cancel", body["_url"]);
+          path9 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51028,16 +51028,16 @@ var init_node = __esm({
       async tuneInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createTuningJobParametersPrivateToVertex(params, params);
-          path8 = formatMap("tuningJobs", body["_url"]);
+          path9 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51063,18 +51063,18 @@ var init_node = __esm({
       async tuneMldevInternal(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createTuningJobParametersPrivateToMldev(params);
-          path8 = formatMap("tunedModels", body["_url"]);
+          path9 = formatMap("tunedModels", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51098,16 +51098,16 @@ var init_node = __esm({
       async validateReward(params) {
         var _a4, _b;
         let response;
-        let path8 = "";
+        let path9 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = validateRewardParametersToVertex(params);
-          path8 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
+          path9 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path8,
+            path: path9,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -53683,12 +53683,12 @@ var init_path = __esm({
   "node_modules/openai/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path8(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path9(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path9 = statics.reduce((previousValue, currentValue, index) => {
+      const path10 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -53705,7 +53705,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path9.split(/[?#]/, 1)[0];
+      const pathOnly = path10.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match2;
       while ((match2 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -53726,10 +53726,10 @@ var init_path = __esm({
         }, "");
         throw new OpenAIError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e2) => e2.error).join("\n")}
-${path9}
+${path10}
 ${underline}`);
       }
-      return path9;
+      return path10;
     };
     path6 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
@@ -63281,9 +63281,9 @@ var init_client = __esm({
         this.apiKey = token;
         return true;
       }
-      buildURL(path8, query, defaultBaseURL) {
+      buildURL(path9, query, defaultBaseURL) {
         const baseURL = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-        const url = isAbsoluteURL(path8) ? new URL(path8) : new URL(baseURL + (baseURL.endsWith("/") && path8.startsWith("/") ? path8.slice(1) : path8));
+        const url = isAbsoluteURL(path9) ? new URL(path9) : new URL(baseURL + (baseURL.endsWith("/") && path9.startsWith("/") ? path9.slice(1) : path9));
         const defaultQuery = this.defaultQuery();
         const pathQuery = Object.fromEntries(url.searchParams);
         if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -63313,24 +63313,24 @@ var init_client = __esm({
        */
       async prepareRequest(request, { url, options }) {
       }
-      get(path8, opts) {
-        return this.methodRequest("get", path8, opts);
+      get(path9, opts) {
+        return this.methodRequest("get", path9, opts);
       }
-      post(path8, opts) {
-        return this.methodRequest("post", path8, opts);
+      post(path9, opts) {
+        return this.methodRequest("post", path9, opts);
       }
-      patch(path8, opts) {
-        return this.methodRequest("patch", path8, opts);
+      patch(path9, opts) {
+        return this.methodRequest("patch", path9, opts);
       }
-      put(path8, opts) {
-        return this.methodRequest("put", path8, opts);
+      put(path9, opts) {
+        return this.methodRequest("put", path9, opts);
       }
-      delete(path8, opts) {
-        return this.methodRequest("delete", path8, opts);
+      delete(path9, opts) {
+        return this.methodRequest("delete", path9, opts);
       }
-      methodRequest(method, path8, opts) {
+      methodRequest(method, path9, opts) {
         return this.request(Promise.resolve(opts).then((opts2) => {
-          return { method, path: path8, ...opts2 };
+          return { method, path: path9, ...opts2 };
         }));
       }
       request(options, remainingRetries = null) {
@@ -63455,8 +63455,8 @@ var init_client = __esm({
         }));
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
       }
-      getAPIList(path8, Page2, opts) {
-        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path8, ...opts2 })) : { method: "get", path: path8, ...opts });
+      getAPIList(path9, Page2, opts) {
+        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path9, ...opts2 })) : { method: "get", path: path9, ...opts });
       }
       requestAPIList(Page2, options) {
         const request = this.makeRequest(options, null, void 0);
@@ -63550,8 +63550,8 @@ var init_client = __esm({
       }
       async buildRequest(inputOptions, { retryCount = 0 } = {}) {
         const options = { ...inputOptions };
-        const { method, path: path8, query, defaultBaseURL } = options;
-        const url = this.buildURL(path8, query, defaultBaseURL);
+        const { method, path: path9, query, defaultBaseURL } = options;
+        const url = this.buildURL(path9, query, defaultBaseURL);
         if ("timeout" in options)
           validatePositiveInteger("timeout", options.timeout);
         options.timeout = options.timeout ?? this.timeout;
@@ -64411,8 +64411,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path8, errorMaps, issueData } = params;
-  const fullPath = [...path8, ...issueData.path || []];
+  const { data, path: path9, errorMaps, issueData } = params;
+  const fullPath = [...path9, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -64528,11 +64528,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path8, key) {
+  constructor(parent, value, path9, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path8;
+    this._path = path9;
     this._key = key;
   }
   get path() {
@@ -68169,10 +68169,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path8) {
-  if (!path8)
+function getElementAtPath(obj, path9) {
+  if (!path9)
     return obj;
-  return path8.reduce((acc, key) => acc?.[key], obj);
+  return path9.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -68492,11 +68492,11 @@ function aborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path8, issues) {
+function prefixIssues(path9, issues) {
   return issues.map((iss) => {
     var _a4;
     (_a4 = iss).path ?? (_a4.path = []);
-    iss.path.unshift(path8);
+    iss.path.unshift(path9);
     return iss;
   });
 }
@@ -80725,9 +80725,9 @@ var OPENAPI_CODE_HELP = {
 };
 async function callOpenApi(input) {
   const key = requireDataGoKrKey();
-  const path8 = input.path.replace(/^\/+/, "");
-  if (path8.includes("..") || path8.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
-  const url = `${OPENAPI_BASE}/${path8}${buildQuery({ ...input.params, serviceKey: key })}`;
+  const path9 = input.path.replace(/^\/+/, "");
+  if (path9.includes("..") || path9.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
+  const url = `${OPENAPI_BASE}/${path9}${buildQuery({ ...input.params, serviceKey: key })}`;
   const res = await requestRaw("get", url, { "User-Agent": BROWSER_UA });
   const body = res.body;
   if (/^\s*Unauthorized\s*$/i.test(body)) return err(`apis.data.go.kr: ${OPENAPI_AUTH_HELP}`);
@@ -82240,19 +82240,19 @@ var YT_THUMB_MIME_BY_EXT = {
 var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
-async function readCaptionFile(path8, maxBytes) {
-  if (extname5(path8).toLowerCase() !== ".srt") {
-    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path8}`) };
+async function readCaptionFile(path9, maxBytes) {
+  if (extname5(path9).toLowerCase() !== ".srt") {
+    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path9}`) };
   }
   let bytes;
   try {
-    bytes = await readFile(path8);
+    bytes = await readFile(path9);
   } catch (error2) {
     return { error: fail2(400, `Cannot read caption file: ${error2 instanceof Error ? error2.message : String(error2)}`) };
   }
-  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path8}`) };
+  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path9}`) };
   if (bytes.byteLength > maxBytes) {
-    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path8} (${bytes.byteLength} bytes)`) };
+    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path9} (${bytes.byteLength} bytes)`) };
   }
   return { bytes };
 }
@@ -84691,9 +84691,9 @@ function isShortEnough(seconds, duration3) {
   if (seconds == null) return true;
   return seconds <= 180;
 }
-async function youtubeGet(path8, params, auth) {
+async function youtubeGet(path9, params, auth) {
   const query = auth.kind === "key" ? { ...params, key: auth.key } : params;
-  const url = `${YT_DATA_BASE2}/${path8}${buildQuery(query)}`;
+  const url = `${YT_DATA_BASE2}/${path9}${buildQuery(query)}`;
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -84705,7 +84705,7 @@ async function youtubeGet(path8, params, auth) {
     return { ok: false, status: res.status, body: maskKey3(text2) };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return fail3(502, `YouTube Data API call failed (${path8}): ${maskKey3(message)}`);
+    return fail3(502, `YouTube Data API call failed (${path9}): ${maskKey3(message)}`);
   }
 }
 function chunk(items, size) {
@@ -85504,10 +85504,12 @@ ${errors.join("\n")}`);
 
 // src/capability-status.ts
 import { existsSync as existsSync8 } from "node:fs";
+import path7 from "node:path";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    return existsSync8(p);
+    if (p.includes(path7.sep)) return existsSync8(p);
+    return (process.env.PATH || "").split(path7.delimiter).some((dir) => dir && existsSync8(path7.join(dir, p)));
   } catch {
     return false;
   }
@@ -85554,8 +85556,8 @@ function capabilityStatus() {
       providers: [
         {
           provider: "supertonic (local)",
-          configured: true,
-          needs: "python3 on this machine",
+          configured: binOk(supertonicPython()),
+          needs: "python3 on this machine (or SUPERTONIC_PYTHON pointing at a virtualenv)",
           note: "tts_local_generate \u2014 free, offline, the default narration voice"
         },
         {
@@ -85877,7 +85879,7 @@ var instagramPublishSchema = external_exports.object({
   videoUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path8, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path8], message });
+  const issue2 = (path9, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path9], message });
   if (!v.imageUrls && !v.videoUrl) issue2("imageUrls", "INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)");
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
@@ -85897,7 +85899,7 @@ var facebookPublishSchema = external_exports.object({
   linkUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path8, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path8], message });
+  const issue2 = (path9, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path9], message });
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
   if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue2("linkUrl", "linkUrl is for text-only posts (no media)");
@@ -86707,24 +86709,31 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 
 // src/usage-ledger.ts
 import { appendFileSync, existsSync as existsSync9, mkdirSync as mkdirSync4 } from "node:fs";
-import path7 from "node:path";
-var EPISODE_MARKER = path7.join("storyboard", "scenes.js");
+import path8 from "node:path";
+var EPISODE_MARKER = path8.join("storyboard", "scenes.js");
 var MAX_WALK_UP = 6;
+function episodePathArg(args) {
+  for (const name of ["outputPath", "savePath"]) {
+    const value = args[name];
+    if (typeof value === "string" && value) return value;
+  }
+  return void 0;
+}
 function findEpisodeDir(outputPath) {
   if (!outputPath || typeof outputPath !== "string") return null;
   let dir;
   try {
-    dir = path7.resolve(outputPath);
+    dir = path8.resolve(outputPath);
   } catch {
     return null;
   }
   for (let i2 = 0; i2 <= MAX_WALK_UP; i2++) {
     try {
-      if (existsSync9(path7.join(dir, EPISODE_MARKER))) return dir;
+      if (existsSync9(path8.join(dir, EPISODE_MARKER))) return dir;
     } catch {
       return null;
     }
-    const parent = path7.dirname(dir);
+    const parent = path8.dirname(dir);
     if (parent === dir) return null;
     dir = parent;
   }
@@ -86733,8 +86742,8 @@ function findEpisodeDir(outputPath) {
 function recordUsage(outputPath, event) {
   const episodeDir = findEpisodeDir(outputPath);
   if (!episodeDir) return null;
-  const workDir = path7.join(episodeDir, ".work");
-  const file = path7.join(workDir, "events.jsonl");
+  const workDir = path8.join(episodeDir, ".work");
+  const file = path8.join(workDir, "events.jsonl");
   try {
     mkdirSync4(workDir, { recursive: true });
     appendFileSync(file, JSON.stringify(event) + "\n", { encoding: "utf8", flag: "a" });
@@ -86759,6 +86768,26 @@ var SEEDANCE_FAMILY = {
   "seedance-1-0-pro-250528": "1-0-pro",
   "seedance-1-0-pro-fast-251015": "1-0-pro-fast"
 };
+var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
+  "veo.lite.720p",
+  "veo.fast.720p",
+  "veo.standard.720p",
+  "veo.lite.1080p",
+  "veo.fast.1080p",
+  "veo.standard.1080p",
+  "veo.fast.4k",
+  "veo.standard.4k",
+  "seedance.1-0-pro-fast.1080p",
+  "seedance.1-0-pro-fast.720p",
+  "seedance.1-5-pro-silent.1080p",
+  "seedance.1-5-pro-silent.720p",
+  "seedance.1-5-pro-audio.1080p",
+  "seedance.1-0-pro.1080p",
+  "seedance.2-0-mini.720p",
+  "seedance.2-0-fast.720p",
+  "seedance.2-0.1080p",
+  "seedance.2-5.720p"
+]);
 var ELEVENLABS_KEY = {
   eleven_multilingual_v2: "tts.elevenlabs",
   eleven_v3: "tts.elevenlabs",
@@ -86774,20 +86803,24 @@ function priceOf(tool, args) {
     const resolution = str6(args.resolution, "720p");
     if (!tier) return { key: null, quantity: null, note: `unmapped veo model: ${String(args.model)}` };
     const forcedEight = resolution !== "720p" || tool === "veo_reference";
-    const seconds = forcedEight ? 8 : num3(args.durationSeconds, 8);
-    return { key: `veo.${tier}.${resolution}`, quantity: seconds };
+    const seconds = tool === "veo_extension" ? 7 : forcedEight ? 8 : num3(args.durationSeconds, 8);
+    const key = `veo.${tier}.${resolution}`;
+    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
+    return {
+      key,
+      quantity: seconds,
+      ...tool === "veo_extension" ? { note: "extension adds 7s of new content per call \u2014 whether the vendor bills 7 or the 8s cut length is unconfirmed" } : {}
+    };
   }
   if (tool.startsWith("seedance_")) {
     const model = str6(args.model, "seedance-1-5-pro-251215");
     const resolution = str6(args.resolution, "720p");
     const seconds = num3(args.durationSeconds, 5);
-    if (model === "seedance-1-5-pro-251215") {
-      const audio = args.generateAudio === true;
-      return { key: `seedance.1-5-pro-${audio ? "audio" : "silent"}.${resolution}`, quantity: seconds };
-    }
-    const family = SEEDANCE_FAMILY[model];
+    const family = model === "seedance-1-5-pro-251215" ? `1-5-pro-${args.generateAudio === true ? "audio" : "silent"}` : SEEDANCE_FAMILY[model];
     if (!family) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
-    return { key: `seedance.${family}.${resolution}`, quantity: seconds };
+    const key = `seedance.${family}.${resolution}`;
+    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
+    return { key, quantity: seconds };
   }
   if (tool.startsWith("gpt_image_")) {
     const quality = str6(args.quality, "medium");
@@ -86827,8 +86860,9 @@ function priceOf(tool, args) {
 }
 function rawChars(args) {
   if (typeof args.text === "string") return args.text.length;
-  if (Array.isArray(args.turns)) {
-    return args.turns.reduce(
+  if (typeof args.script === "string") return args.script.length;
+  if (Array.isArray(args.inputs)) {
+    return args.inputs.reduce(
       (sum, t2) => sum + (t2 && typeof t2 === "object" && typeof t2.text === "string" ? t2.text.length : 0),
       0
     );
@@ -86885,7 +86919,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return result;
       } finally {
         const { key, quantity, note } = priceOf(name, callArgs);
-        recordUsage(typeof callArgs.outputPath === "string" ? callArgs.outputPath : void 0, {
+        recordUsage(episodePathArg(callArgs), {
           ts: (/* @__PURE__ */ new Date()).toISOString(),
           tool: name,
           ok,

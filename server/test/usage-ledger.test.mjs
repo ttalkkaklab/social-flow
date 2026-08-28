@@ -19,7 +19,9 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { findEpisodeDir, isBillableTool, priceOf, recordUsage } from '../dist/usage-ledger.js';
+import {
+  episodePathArg, findEpisodeDir, isBillableTool, priceOf, recordUsage,
+} from '../dist/usage-ledger.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PRICES = path.resolve(HERE, '../../skills/autoproduce/references/prices.tsv');
@@ -119,9 +121,59 @@ test('Seedance bills exactly the seconds requested, and 1.5 pro splits on audio'
 test('speech is recorded per 1,000 characters, not per character', () => {
   const text = 'x'.repeat(412);
   assert.equal(priceOf('tts_local_generate', { text }).quantity, 0.412);
-  // A multi-speaker call adds its turns up.
-  const turns = [{ text: 'a'.repeat(600) }, { text: 'b'.repeat(400) }];
-  assert.equal(priceOf('tts_multi_speaker', { turns }).quantity, 1);
+  // tts_multi_speaker takes `script`, not `text` — reading only `text` filed it as 0 characters.
+  assert.equal(priceOf('tts_multi_speaker', { script: 'x'.repeat(1000) }).quantity, 1);
+  // The ElevenLabs dialogue lane takes an `inputs` array; its quantity stays null (metered),
+  // but the note carries the raw count, so the count still has to be right.
+  const dialogue = priceOf('tts_elevenlabs_dialogue', {
+    inputs: [{ text: 'a'.repeat(600) }, { text: 'b'.repeat(400) }],
+  });
+  assert.equal(dialogue.quantity, null);
+  assert.match(dialogue.note, /raw 1000 chars/);
+});
+
+test('a model and resolution nobody priced comes back null, not as an invented key', () => {
+  // The composed key has to exist in prices.tsv or the ledger is unusable: cost-report.sh
+  // answers an unknown key with exit 1, which costs the episode its whole cost verdict. Every
+  // combination the clients accept is walked here — the vocabularies genuinely do not line up
+  // (480p everywhere with no 480p row, 1-5-pro-audio priced at 1080p only, no veo.lite.4k).
+  const known = priceKeys();
+  const combos = [
+    ...['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate-preview', 'veo-3.1-generate-preview']
+      .flatMap((model) => ['720p', '1080p', '4k'].map((resolution) =>
+        ['veo_text2video', { model, resolution }])),
+    ...['seedance-1-5-pro-251215', 'seedance-1-0-pro-250528', 'seedance-1-0-pro-fast-251015',
+        'dreamina-seedance-2-5-260628', 'dreamina-seedance-2-0-260128',
+        'dreamina-seedance-2-0-fast-260128', 'dreamina-seedance-2-0-mini-260615']
+      .flatMap((model) => ['480p', '720p', '1080p', '4k'].flatMap((resolution) =>
+        [false, true].map((generateAudio) =>
+          ['seedance_text2video', { model, resolution, generateAudio, durationSeconds: 5 }]))),
+  ];
+  const invented = [];
+  for (const [tool, args] of combos) {
+    const { key, note } = priceOf(tool, args);
+    if (key === null) {
+      assert.match(note, /no price row for/, `${JSON.stringify(args)} left no note saying why`);
+      continue;
+    }
+    if (!known.has(key)) invented.push(`${JSON.stringify(args)} → ${key}`);
+  }
+  assert.deepEqual(invented, [], 'keys composed that prices.tsv does not carry');
+  // The guard must not swallow the whole matrix — the routes the skills actually use still price.
+  assert.equal(priceOf('seedance_img2video',
+    { model: 'seedance-1-5-pro-251215', resolution: '1080p', durationSeconds: 6 }).key,
+    'seedance.1-5-pro-silent.1080p');
+  assert.equal(priceOf('veo_img2video',
+    { model: 'veo-3.1-lite-generate-preview', resolution: '1080p' }).key, 'veo.lite.1080p');
+});
+
+test('an extension is billed for the 7 seconds it adds', () => {
+  // veo_extension has no durationSeconds in its schema, so the 8s default used to apply —
+  // 14% over on every extension call.
+  const ext = priceOf('veo_extension', { model: 'veo-3.1-fast-generate-preview' });
+  assert.equal(ext.key, 'veo.fast.720p');
+  assert.equal(ext.quantity, 7);
+  assert.match(ext.note, /unconfirmed/);
 });
 
 test('an unmeasurable quantity is left null rather than guessed', () => {
@@ -141,6 +193,18 @@ test('the episode is found by walking up from outputPath', () => {
   assert.equal(findEpisodeDir(path.join(ep, '.work', 'broll')), ep);
   assert.equal(findEpisodeDir(path.join(ep, 'storyboard', 'images')), ep);
   assert.equal(findEpisodeDir(ep), ep);
+});
+
+test('the two gpt-image tools name their path savePath, and it is read', () => {
+  // The paid image lane takes a full file path in savePath; everything else takes a directory
+  // in outputPath. Reading only outputPath dropped every gpt-image call from the ledger while
+  // the free local engine kept recording, so the episode looked like it spent nothing on images.
+  const { ep } = makeEpisode();
+  const saved = path.join(ep, 'storyboard', 'images', 'scene-1.png');
+  assert.equal(episodePathArg({ savePath: saved, quality: 'high' }), saved);
+  assert.equal(findEpisodeDir(episodePathArg({ savePath: saved })), ep);
+  assert.equal(episodePathArg({ outputPath: path.join(ep, '.work') }), path.join(ep, '.work'));
+  assert.equal(episodePathArg({ prompt: 'no path at all' }), undefined);
 });
 
 test('a path outside any episode records nothing', () => {

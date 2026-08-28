@@ -1266,7 +1266,7 @@ uses the slide state captures as the segment visuals (produce §3.6).
 - **`../autoproduce/references/board.js`** — the channel board: every episode's stage, blockers, cost and decisions on one static page under `data/<channel>/growth/board.html`. Regenerated on demand — no server, no watcher
 - **`../autoproduce/references/episode-state.js`** — derives where an episode stands (drafted · approved · produced · published), what to run next, and what the directory promised and hasn't delivered. No state file — it reads what the skills already write. `--all` sweeps a channel, `--json` for tooling
 - **`../autoproduce/references/decision-log.md`** — the episode decision log convention (`.work/decisions.tsv`): what was chosen, what was rejected, and how a change of mind is appended rather than overwritten. Read it back with `decisions.sh`
-- **`../autoproduce/references/cost-preview.js`** — the §6·§7 approval-screen preview: totals the ledger, prices the generated-video slots out of scenes.js, writes `.work/cost-forecast.tsv`, and emits the `SB_DOC.cost` block (`--sbdoc`) or JSON (`--json`). `--selftest` pins the routing table and the fingerprint copy the HTML template carries
+- **`../autoproduce/references/cost-preview.js`** — the §6·§7 approval-screen preview: totals the ledger, prices the generated-video slots out of scenes.js, writes `.work/cost-forecast.tsv`, and emits the `SB_DOC.cost` block (`--sbdoc`) or JSON (`--json`, the read-only lane — it writes nothing). `--selftest` pins the routing table and the fingerprint copy the HTML template carries
 
 ### Delegated agents
 

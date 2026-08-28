@@ -129,8 +129,13 @@ function readScenes(storyboardDir) {
   return Array.isArray(sandbox.window.SCENES) ? sandbox.window.SCENES : null;
 }
 
-/** A sentence that states a figure, a date or a quantity is one a reader can check. */
-const CHECKABLE = /[0-9]|퍼센트|배\b|억|만\s*원|천\s*원|년|월|일\b/;
+/**
+ * A sentence that states a figure, a date or a quantity is one a reader can check.
+ *
+ * The word-end guard is a negative lookahead, not `\b` — JS word boundaries are ASCII, so
+ * `/배\b/` is false on "두 배" and `/일\b/` is false on "3일", which left both branches dead.
+ */
+const CHECKABLE = /[0-9]|퍼센트|배(?![가-힣])|억|만\s*원|천\s*원|년|월|일(?![가-힣])/;
 
 /**
  * Cross-checks the sentences against the table: a cited claim that no row has, research that
@@ -181,7 +186,10 @@ function analyse(src, fmt, scenes) {
   // library authored the document in Korean instead — "검증 표" and "검증 통과" for Verified,
   // "검색 이력" for the search history. Matching only the template's wording reported every
   // Korean log as having no research at all (measured on the whole library, first run).
-  const qRows = rows(section(src, /Question|질문/i));
+  // The question heading is anchored to the start of the heading text. Matching `질문` anywhere
+  // pulled in `## 보조 근거 — 지식iN (질문 그대로가 훅의 재료)` and reported the 지식iN 상담
+  // sentences under it as unanswered questions.
+  const qRows = rows(section(src, /^##\s+(Questions?\b|질문(\s|$))/i));
   const vRows = rows(section(src, /^##\s+(Verified|검증\s*(표|통과))/i));
   const cRows = rows(section(src, /Counter-evidence|반증|역검증/i));
   const fRows = rows(section(src, /Failed\s*(verification)?|검증\s*실패|본문\s*금지|제외/i));
@@ -229,9 +237,16 @@ function analyse(src, fmt, scenes) {
     bad('no question map — §2 step 1 writes it before the first search, and every row has to ' +
         'end answered or written off');
   } else {
+    // A row is open when its last cell is empty or still says "not yet" — not when it fails to
+    // use one of a handful of English status words. Real logs put the answer itself in that
+    // cell ("**유력 이하.** 상품화 중심"), and an allow-list read every one of them as open:
+    // ep06-budae-jjigae had all ten questions answered and got nine violations for it.
     const open = qRows.filter((r) => {
-      const status = (r[r.length - 1] || '').toLowerCase();
-      return !/answer|claim|written off|writeoff|written-off|제외|답/.test(status);
+      const status = (r[r.length - 1] || '').replace(/\*/g, '').trim();
+      return !status
+        || /^[-—–?.]*$/.test(status)
+        || /^(tbd|open|pending|n\/?a|미정|미확인|보류)$/i.test(status)
+        || /조사\s*중|진행\s*중|확인\s*중|답\s*없음|미답/.test(status);
     });
     if (open.length)
       bad(`${open.length} question(s) end neither answered nor written off — ` +
@@ -321,9 +336,18 @@ function selftest() {
      has(analyse(good.replace('verified claims: **3**', 'verified claims: **7**'), null),
          /Sufficiency says 7/));
 
+  const q2 = (status) => good.replace('| Q2 | b | stat | written off |', `| Q2 | b | stat | ${status} |`);
   ok('a question left open is a violation',
-     has(analyse(good.replace('| Q2 | b | stat | written off |', '| Q2 | b | stat | searching |'), null),
-         /neither answered nor written off/));
+     has(analyse(q2('조사 중'), null), /neither answered nor written off/));
+  ok('an empty status is a violation', has(analyse(q2(''), null), /neither answered/));
+  ok('a placeholder dash is a violation', has(analyse(q2('—'), null), /neither answered/));
+  // Half the library answers in Korean, in the cell itself. Reading only English status words
+  // reported a fully answered map as nine open questions (ep06-budae-jjigae, measured).
+  ok('a Korean answer in the status cell counts as answered',
+     !has(analyse(q2('**유력 이하.** 상품화 중심. 단독 최초 1차 없음'), null), /neither answered/));
+  ok('a heading that merely mentions 질문 is not the question map',
+     analyse(good.replace('## Questions this episode has to answer',
+                          '## 보조 근거 — 지식iN (질문 그대로가 훅의 재료)'), null).questions === 0);
 
   ok('a missing question map is a violation',
      has(analyse(good.replace('## Questions this episode has to answer', '## Notes'), null),
