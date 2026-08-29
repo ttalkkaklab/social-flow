@@ -48,6 +48,12 @@ function die(msg) {
 }
 
 const exists = (p) => { try { return fs.existsSync(p); } catch (e) { return false; } };
+// The speed pass (produce §7.5) writes its own line into build-report.txt. An episode whose
+// report has no such line shipped the un-sped build to output/ — subtitles included, on a
+// timeline that no longer matches the picture. null = no report to read, so no verdict.
+const hasSpeedMarker = (p) => {
+  try { return /── speedup x/.test(fs.readFileSync(p, 'utf8')); } catch (e) { return null; }
+};
 const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch (e) { return false; } };
 
 function lsCount(dir, re) {
@@ -193,6 +199,11 @@ function blockers(ep, stage) {
   if (ep.has.tally && ep.has.video && !ep.has.costReport)
     out.push('the episode built without a cost report (produce §10)');
 
+  // Not on a published episode — that video is already out, and a blocker there is noise.
+  if (stage !== 'published' && ep.has.video && ep.has.spedUp === false)
+    out.push('output/ holds the un-sped build — the required speed pass never ran ' +
+             '(produce §7.5: speedup.sh, then copy the -fast set)');
+
   return out;
 }
 
@@ -220,6 +231,7 @@ function inspect(episodeDir) {
       subs: exists(path.join(outDir, 'video', 'subs.srt')),
       cover: exists(path.join(outDir, 'video', 'cover.jpg')),
       costReport: exists(path.join(outDir, 'video', 'cost-report.txt')),
+      spedUp: hasSpeedMarker(path.join(outDir, 'video', 'build-report.txt')),
       publishLog: exists(path.join(outDir, 'publish-log.md')),
       tally: exists(path.join(work, 'cost-tally.tsv')),
       forecast: exists(path.join(work, 'cost-forecast.tsv')),
@@ -343,6 +355,18 @@ function selftest() {
   }), 'produced');
   ok('a ready queue marker with no video is a blocker',
      b.some((x) => /queue_threads/.test(x)));
+
+  const sped = (v) => blockers(Object.assign({}, base, {
+    has: Object.assign({}, base.has, { video: true, spedUp: v })
+  }), 'produced');
+  ok('a built video with no speed-pass marker is a blocker',
+     sped(false).some((x) => /un-sped/.test(x)));
+  ok('the marker present clears it', !sped(true).some((x) => /un-sped/.test(x)));
+  ok('no build report to read makes no claim', !sped(null).some((x) => /un-sped/.test(x)));
+  ok('a published episode is past the point of blocking on it',
+     !blockers(Object.assign({}, base, {
+       has: Object.assign({}, base.has, { video: true, spedUp: false })
+     }), 'published').some((x) => /un-sped/.test(x)));
 
   if (failed) { process.stderr.write(failed + ' check(s) failed\n'); process.exit(1); }
   process.stdout.write('episode-state selftest OK\n');

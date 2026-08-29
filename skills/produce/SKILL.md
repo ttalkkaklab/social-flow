@@ -137,6 +137,13 @@ data/<channel>/episodes/<topic>/
    Since the photo has become the screen itself, make points backgrounds **photoreal shots
    of the subject** rather than metaphorical still lifes, and change the shot wherever the
    content axis changes (reusing one image leaves 40-odd seconds of body on the same still).
+15. **Every episode ships sped up — the speed pass is not optional** (user directive
+   2026-08-29). After the build (and after any clip splice) `references/speedup.sh` speeds the
+   feature up by **1.4x by default**, leaving the outro at 1.0x. What goes to `output/` is that
+   pass's `reel-fast.mp4` · `reel-sub-fast.mp4` · `subs-fast.srt`, never the un-sped build
+   output. A channel that wants a different rate says so in profile.md §2; `1.0` there is the
+   only way to ship at the recorded pace, and even then the pass still runs (it copies the set
+   through under the `-fast` names, so the finalize paths never change).
 
 ## Procedure
 
@@ -157,8 +164,10 @@ data/<channel>/episodes/<topic>/
   **The shooting-edit path** follows `references/screencast-pipeline.md` §Edit procedure
   instead of §2–7 (overlay capture → edit.json → build-screencast.sh — no TTS, no generated
   backgrounds, no reveals; the voice is the user's own). The artifact names (reel.mp4 ·
-  reel-sub.mp4 · subs.srt · cover.jpg · build-report.txt) are the same, so §8–10 (phone QA,
-  platform text, quality gate) run unchanged. Use screencast-pipeline.md's gate table.
+  reel-sub.mp4 · subs.srt · cover.jpg · build-report.txt) are the same, so §7.5–10 (the speed
+  pass, phone QA, platform text, quality gate) run unchanged — **a shooting edit ships sped up
+  too**, and `speedup.sh` reads the xfade join that builder makes on its own. Use
+  screencast-pipeline.md's gate table.
 
   **`alignment.json` + landscape doesn't work.** `build-screencast.sh`'s band constants
   (BAND_MAX_H 900 · BAND_CY 880 · BAND_MIN_Y 460) and its background compositing are
@@ -1128,16 +1137,51 @@ re-encoded), and the builder verifies that the lengths match.
 Read `build-report.txt` and rule on it — **drift has to be 0.0000s**, and
 `missing reveal state` / `last reveal state unused` mean don't proceed. The full verdict table
 is in `references/pipeline.md` §Build report gate table. Total length 35–75s recommended, 90s
-cap. Confirm that `cover.jpg` is a frame where the hero number has already appeared, and if it
-isn't, set `COVER_TS` past the report's cover-transition-complete time and rebuild (or just
-re-extract the still at that time with ffmpeg).
+cap — **measured after the §7.5 speed pass**, which is the file that ships. Confirm that
+`cover.jpg` is a frame where the hero number has already appeared, and if it isn't, set
+`COVER_TS` past the report's cover-transition-complete time and rebuild (or just re-extract
+the still at that time with ffmpeg).
+
+### 7.5 Speed pass (required — every episode)
+
+The build ships at the pace the TTS recorded, which reads as slow: the narration drags and every
+generated clip plays at the rate its engine happened to produce (measured twice on ttalkkak-lab,
+2026-08-22 — "still looks like slow motion" both times). So the finished video gets sped up as a
+pass of its own, after the build and after any splice.
+
+```bash
+$REF/speedup.sh .work        # → .work/reel-fast.mp4 · reel-sub-fast.mp4 · subs-fast.srt · chapters-fast.txt
+$REF/speedup.sh .work 1.6    # a channel-specific rate — profile.md §2 decides, not the moment
+```
+
+- **The default is 1.4x and it applies to the whole picture** — narration, cards, filmed clips,
+  b-roll, BGM. Speeding up only the TTS is what leaves the clips slow, which is the defect this
+  pass exists to fix.
+- **The outro stays at 1.0x.** It's a brand asset with its own cut and sonic logo, so the pass
+  finds the boundary from the outro file's own duration and rejoins the tail untouched.
+- **Subtitles and chapters are retimed by the pass** (`subs-fast.srt`, `chapters-fast.txt`) —
+  don't hand the build's `subs.srt` to publish; those cues belong to the un-sped timeline.
+- **It reads the un-sped files and writes new names**, so running it again with another factor
+  recomputes from the original instead of stacking 1.4 on 1.4.
+- **`profile.md` §2 owns the rate.** Read the channel's speed line before running the pass; with
+  no line, 1.4. Note that a profile TTS `speed` multiplies into this — pundago synthesizes at
+  1.20, so 1.4 here lands near 1.68 effective. Set the channel's factor accordingly.
+- The pass appends its own line to `build-report.txt`
+  (`── speedup x1.40 (reel.mp4): 84.0s → 60.0s …`) and exits 1 when the measured length doesn't
+  match feature/factor + tail. **No marker line in the report means the episode is not ready to
+  publish** (pipeline.md gate table).
+- **Length contracts are read after the pass.** The 35–75s recommendation and the per-channel
+  length rules describe the shipped file, so a 90s build at 1.4x is a 64s episode.
+- With chapters, watch for the `⚠ … under 10s` warning — a boundary that was 10s apart is 7.1s
+  at 1.4x and YouTube drops the whole chapter list. Merge those chapters and rebuild.
 
 ### 8. Phone-mode QA (required before publishing)
 
 Copy `reel-qa.html` into `.work/` and check it with chrome-devtools **on a phone viewport with
 the platform UI overlay** — `emulate` (390x844x3, mobile, touch) →
-`reel-qa.html?v=./reel-sub.mp4&ui=ig&fit=crop&zone=1` → screenshots at the reveal-complete
-moment of each scene. **Do the subtitle QA on the burned-in version (`reel-sub.mp4`)** — the
+`reel-qa.html?v=./reel-sub-fast.mp4&ui=ig&fit=crop&zone=1` → screenshots at the reveal-complete
+moment of each scene. **QA runs on the sped-up burn-in (`reel-sub-fast.mp4`)** — that's the file
+that ships, and a subtitle that's readable at 1.0x can be gone before it's read at 1.4x. The
 clean one has no subtitles, so you can't see clipping or intrusion, and the burned-in one is
 what actually goes to IG. Check: action bar (x≈890) intrusion / subtitle centering / hero
 number clipping / can you tell the topic from the first frame alone / **whether the background
@@ -1166,9 +1210,15 @@ a cover image attached** — the link preview card takes that spot, so `post.md`
 and the link URL only. The link slot is the IG reels permalink, whose value isn't known until
 publish time — leave a placeholder like `<IG_REELS_URL>` in `post.md` and let publish fill in
 the real URL. Save each under `output/<platform>/`, and finalize the video and cover with
-`cp .work/reel.mp4 output/video/video.mp4` · `cp .work/reel-sub.mp4 output/video/video-sub.mp4` ·
-`cp .work/subs.srt output/video/` · `cp .work/cover.jpg output/video/cover.jpg` ·
+`cp .work/reel-fast.mp4 output/video/video.mp4` ·
+`cp .work/reel-sub-fast.mp4 output/video/video-sub.mp4` ·
+`cp .work/subs-fast.srt output/video/subs.srt` · `cp .work/cover.jpg output/video/cover.jpg` ·
 `cp .work/build-report.txt output/video/` (from here on, publish looks at `output/` only).
+**The `-fast` files are the deliverables** (§7.5) — copy `reel.mp4` or `subs.srt` here and the
+episode ships un-sped with subtitles on the wrong timeline. On a long-form episode the chapter
+file goes over under its published name too: `cp .work/chapters-fast.txt output/video/chapters.txt`
+(publish reads `output/video/chapters.txt`, so leaving the build's original there ships the
+pre-speed timestamps).
 **Publishing is complete only with all three files** — the clean version and the subtitle file
 go to YouTube and Facebook, the burned-in version to Instagram. Miss one and the subtitles
 disappear on that platform.
@@ -1176,12 +1226,14 @@ disappear on that platform.
 #### Multi-language subtitles (only when the profile lists them)
 
 When profile.md §4 has a **Subtitle languages** line naming languages beyond the
-default (e.g. `ko (default) · en · vi`), translate `subs.srt` into each extra language
-yourself and save `output/video/subs.<lang>.srt` (BCP-47 code — `subs.en.srt`,
-`subs.vi.srt`). Rules:
+default (e.g. `ko (default) · en · vi`), translate **`output/video/subs.srt`** — the retimed
+file the speed pass produced, never `.work/subs.srt` — into each extra language yourself and
+save `output/video/subs.<lang>.srt` (BCP-47 code — `subs.en.srt`, `subs.vi.srt`). Rules:
 
 - **Cue numbers and timestamps stay byte-identical** — translate the text lines only.
-  The timing came from the TTS boundaries and holds for every language.
+  The timing came from the TTS boundaries, went through the §7.5 speed pass, and holds for
+  every language. Translate the un-sped `.work/subs.srt` by mistake and every extra language
+  ships on the pre-speed timeline while Korean is on the right one.
 - Translate what the subtitle-display column says (numbers and units as written on
   screen), not the TTS reading. Proper nouns, brand names, and on-screen figures stay
   as-is.
@@ -1242,7 +1294,7 @@ whether the source is real. If it's a genuine quotation, leave it and note the c
 ### 10. Quality gate + completion report
 
 Delegate artifact verification to the content-reviewer agent (Agent) — hand over video frame
-screenshots (**taken from the burned-in `reel-sub.mp4`** — the clean one has no subtitles, so
+screenshots (**taken from the sped-up burn-in `reel-sub-fast.mp4`** — the clean one has no subtitles, so
 typos and clipping aren't visible), the per-platform copy, and scenes.js, and get back P0
 detections (typos, clipping, factual mismatch, platform taboos, copy-pasted sentences,
 unexplained jargon, AI tells) and axis scores. Pass the `check-style.py` path along with the
@@ -1347,6 +1399,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/bgm-bed.sh`** — renders the music bed the mix lays under the voice: every cue measured and gained to one distance under the narration, a short cue crossfaded onto itself instead of butt-joined, cue changes crossfaded. Called by both builders and by the b-roll premix
 - **`references/bgm-scoring.md`** — where the bed's numbers come from, which of them are published listening tests and which are our own practice, and the widely-quoted figures that failed verification
 - **`references/build-outro.sh`** — generates the channel's shared outro
+- **`references/speedup.sh`** — the required speed pass (§7.5). Speeds the feature up by the channel's factor (1.4 default) while leaving the outro at 1.0x, retimes `subs.srt` and `chapters.txt` onto the new timeline, and verifies the measured length against feature/factor + tail. Reads the un-sped set and writes `-fast` names, so it never stacks
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
