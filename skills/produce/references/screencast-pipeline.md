@@ -85,6 +85,11 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · reel-sub
   (`resolve-asset.py data/<channel> outro <platform|default>` —
   default `assets/outro/default.mp4`; the legacy `assets/outro.mp4` is also found),
   copied to `.work/outro.mp4`.
+- Then the **speed pass, which a shooting edit gets too** — `$REF/speedup.sh .work` (produce
+  §7.5). This builder joins the outro with an xfade, and the pass reads that from the report
+  line, so the outro tail still comes out at 1.0x. Note that the voice here is the user's own
+  recording, so 1.4x speeds up their actual speaking voice: if it comes out sounding rushed,
+  the channel's factor is what to lower, in profile.md §2.
 - From here on, phone-mode review, platform text, and the quality gates follow produce
   SKILL.md §8–10 unchanged.
 
@@ -98,7 +103,8 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · reel-sub
 | `⚠ scene N duration > 20s` | split the scene (two cuts in alignment) or reshoot with tighter speech |
 | `⚠ overlay file missing` | capture missed — redo ② |
 | `⚠ main part > 90s` | tighten cuts or drop scenes |
-| Total length | 35–75s recommended, 90s cap (main + outro − 0.6s) |
+| Total length | 35–75s recommended, 90s cap (main + outro − 0.6s) — **measured on the speed pass's output** |
+| No `── speedup x…` line | **Do not proceed** — the required speed pass never ran (produce §7.5) |
 
 ## Pitfalls
 

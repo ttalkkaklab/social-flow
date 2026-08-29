@@ -330,7 +330,7 @@ social-flow/
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
 │   ├── storyboard/              # /social-flow:storyboard — research → scene design → six one-round reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval
 │   ├── produce/                 # /social-flow:produce — video build + per-platform text
-│   │   └── references/          #   build-reel.sh · bgm-bed.sh · bgm-scoring.md · video-template.html · QA harness
+│   │   └── references/          #   build-reel.sh · speedup.sh (required 1.4x speed pass) · bgm-bed.sh · bgm-scoring.md · video-template.html · QA harness
 │   ├── autoproduce/             # /social-flow:autoproduce — one topic through research→authoring→video unattended (human gates replaced by eleven machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
