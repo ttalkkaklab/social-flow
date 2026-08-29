@@ -375,11 +375,40 @@ test('build-reel filming lane — sync cards steer around the audio machine', ()
 test('build-reel Ken Burns — off for filmed clips, pan for landscape', () => {
   const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');
   assert.match(reel, /if \[ "\$ZD" = "none" \]; then/, 'zoom=none');
-  assert.match(reel, /\$\{CUR\}format=yuv420p\[vout\]/, 'none does not upscale the source either');
+  // What this pins is that the none branch carries no scale= — the source goes through at its
+  // own resolution. The label it hands on is [vkb], the shared hand-off every zoom branch uses
+  // so §7.4 can hang the scene-boundary fade off one place instead of three.
+  assert.match(reel, /\$\{CUR\}format=yuv420p\[vkb\];/, 'none does not upscale the source either');
+  assert.doesNotMatch(reel, /if \[ "\$ZD" = "none" \]; then[\s\S]{0,200}?scale=\$ZB/,
+                      'the none branch never scales');
   assert.match(reel, /l2r\)\s+PX="\(iw-iw\/zoom\)\*\$E"/, 'pan direction formula');
   // The pan zoom cannot exceed the preset clamp — past it the field of view gets cut hard
   assert.match(reel, /-v lo="\$KB_ZOOM_MIN" -v hi="\$KB_ZOOM_MAX"/, 'pan zoom clamp');
   assert.match(reel, /KB_ZOOM_MIN=\$\{KB_ZOOM_MIN:-1\.06\}/, 'clamp inline default');
+});
+
+test('build-reel scene transition — a dissolve that costs no time', () => {
+  const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');
+  assert.match(reel, /SCENE_FADE=\$\{SCENE_FADE:-0\.12\}/, 'the half-length constant');
+  assert.match(reel, /enter=1\) FADE_IN=1/, 'enter= turns the head fade on');
+  assert.match(reel, /exit=1\)  FADE_OUT=1/, 'exit= turns the tail fade on');
+
+  // The whole point: both fades live inside one card's own encode, so §9 still stream-copies
+  // and the 2ms drift assertion still holds. An xfade between cards would shrink the total by
+  // the fade length at every seam — the failure mode the outro seam already measured.
+  assert.match(reel, /FILT\+="\[vkb\]null\$\{VF_FADE\}\[vout\]"/, 'the fade hangs off the shared hand-off');
+  assert.match(reel, /fade=t=in:st=0:d=\$SF_D/, 'head fade starts at 0');
+  assert.match(reel, /fade=t=out:st=/, 'tail fade');
+  assert.doesNotMatch(reel, /xfade=transition=[a-z]+:duration=\$SCENE_FADE/,
+                      'a scene boundary never uses xfade — it renumbers the tail PTS');
+
+  // The fade can never outgrow the card it sits in: a quarter of the card is the ceiling, so a
+  // one-second insert dips rather than blinking all the way through black.
+  assert.match(reel, /m=dur\/4; if\(d>m\)d=m/, 'the fade is clamped to a quarter of the card');
+
+  // §9 has to stay a stream copy — that is what keeps drift at 0 and subtitle cues in place.
+  assert.match(reel, /-f concat -safe 0 -i work\/list\.txt -c copy work\/video\.mp4/,
+               'cards are still joined by stream copy');
 });
 
 test('build-reel file subtitles — transcript times move onto absolute card times', () => {
