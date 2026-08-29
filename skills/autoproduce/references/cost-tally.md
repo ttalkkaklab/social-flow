@@ -12,8 +12,16 @@ turn.** storyboard writes the first lines, produce continues them, and produce
 
 ```
 data/<channel>/episodes/<topic>/.work/cost-tally.tsv     ← the ledger (shared by storyboard·produce)
+data/<channel>/episodes/<topic>/.work/cost-forecast.tsv  ← the video-slot projection (storyboard §6, written by cost-preview.js)
+data/<channel>/episodes/<topic>/.work/cost-estimate.tsv  ← the whole-episode projection for the cap verdict (autoproduce §5)
 data/<channel>/episodes/<topic>/output/video/cost-report.txt  ← the tally result (made by produce §10)
 ```
+
+**Three files, three jobs — they never overwrite each other.** `cost-tally.tsv` is the only
+record of money actually spent. `cost-forecast.tsv` is what approving the storyboard would
+commit, and it holds generated-video slots alone. `cost-estimate.tsv` belongs to the unattended
+loop's cap check and covers the whole episode. cost-preview.js reads the first and writes the
+second; it never touches the third.
 
 `.work/` is gitignored, but no skill has a step that deletes the directory.
 storyboard creates it with `mkdir -p .work` and writes from the first line.
@@ -102,8 +110,60 @@ verdict — autoproduce §5).
 ledger is empty, they weren't made for free — the logging was skipped. Count
 the files, backfill the ledger, and note the backfill in your report.
 
+## The second record — `.work/events.jsonl`
+
+The tally above is written by hand, which means it depends on somebody remembering. The MCP
+server writes its own record at the moment of each generation call, in
+`.work/events.jsonl` — one JSON line per call, appended, including failed calls (a retry after
+a failure can still have been billed). It lands in whichever episode directory the call's
+`outputPath` sits inside; a branding or intro call, having no episode above it, writes nothing.
+
+The two are compared with `events-to-tally.js`:
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+node $REF/events-to-tally.js .            # per key: server vs tally vs delta · exit 1 = short
+node $REF/events-to-tally.js . --tsv >> .work/cost-tally.tsv
+```
+
+**The events don't replace the tally.** The server can't see the metered character count
+ElevenLabs returns in a header, has no price for Lyria RealTime, and doesn't know that a
+generated clip was trimmed or thrown away — all facts a person writes into a memo. So the
+tally stays the record and the events are the check on it.
+
+## Before the money goes out — the approval-screen preview
+
+The ledger answers "what did this cost". The person at storyboard §7 is asking a different
+question: **"what does saying yes cost me?"** By then the images are already billed, and every
+generated-video slot in scenes.js is still free to delete. So one script puts both numbers on
+the approval screen.
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+node $REF/cost-preview.js storyboard/            # human-readable
+node $REF/cost-preview.js storyboard/ --sbdoc    # the SB_DOC.cost block to paste
+```
+
+It reads `scenes.js` for the video slots, writes the projection to `.work/cost-forecast.tsv` in
+this same line format, and runs `cost-report.sh` over both files — so the estimate and the bill
+come out of one calculator reading one price table.
+
+**What it projects, and why only that.** B-roll bills `veo.lite.1080p` at 8 seconds however
+short the cut is (1080p generates 8s), a motion background bills the seconds it asks Seedance
+for, and a quote speech clip bills `veo.fast.1080p` at 8 (veo_reference refuses the lite model
+and is pinned to 8s). `visual.engine` / `visual.video.engine` override the route. TTS and music
+stay out: `music.lyria-realtime` has no published price, so including it would make every
+forecast return exit 1 and show nothing.
+
+**The snapshot goes stale, and the document says so.** `SB_DOC.cost` carries a fingerprint of
+the video slots; the storyboard.html check strip recomputes it from the live `SCENES` and raises
+a violation when they differ. Regenerate the block after any §7 change that touches a video
+slot — the number on the approval screen has to be the number the user is approving.
+
 ## Related documents
 
 - `prices.tsv` — price source of truth. The numbers live only there
 - `cost-report.sh` — the calculator
+- `cost-preview.js` — the approval-screen preview (spent + projected), writes `.work/cost-forecast.tsv`
+- `board.js` — one page per channel: every episode's stage, blockers, cost and decisions (`data/<channel>/growth/board.html`)
 - `cost-tiers.md` — model ladder, escalation conditions, per-episode cap (unattended authoring)

@@ -49,6 +49,16 @@
 #                                         eased both ends) | linear | in (accelerating: starts unnoticed,
 #                                         fastest at the cut point — action/CTA cards, cut away at the peak).
 #                                         punch keeps its own ease-out ramp and ignores ease=.
+#                           enter=1       fade this card up from black (SCENE_FADE, default 0.12s)
+#                           exit=1        fade this card down to black
+#                                         A scene-boundary dissolve is the two together: exit=1 on the card
+#                                         that ends the scene, enter=1 on the one that starts the next.
+#                                         Both fades live inside their own card's encode, so the frame count
+#                                         and the duration never change — §9 still stream-copies, drift stays
+#                                         0, and not one subtitle cue moves (measured A/B: identical subs.srt,
+#                                         12.000000s both ways, seam YAVG 69→16→90 against a hard cut's 69→90).
+#                                         The default is a hard cut everywhere, which is what every existing
+#                                         4-column cards.tsv keeps doing.
 #   <workdir>/segs.tsv  : idx <TAB> seg(0..) <TAB> visual-path <TAB> TTS-script-sentence <TAB> subtitle-display-sentence
 #                         visual = reveal-state PNG (reel-template ?reveal=k capture) or .mp4 (fullscreen b-roll)
 #                         Listing several with '|' splits the sentence's speech window evenly and they
@@ -121,6 +131,7 @@ DUCK_RELEASE=${DUCK_RELEASE:-250}
 SFX_VOL=${SFX_VOL:-0.85}           # per-segment sfx volume (sfx.tsv)
 BGM_GATE_R=${BGM_GATE_R:-0.30}     # ramp around BGM-gated spans — a hard cut sounds chopped
 XFADE=${XFADE:-0.6}                # feature↔outro transition length
+SCENE_FADE=${SCENE_FADE:-0.12}     # scene-boundary dissolve half-length (cards.tsv enter=/exit=)
 REVEAL_D=${REVEAL_D:-0.35}         # max reveal fade length (shrinks to fit a shorter pause)
 REVEAL_GAP=${REVEAL_GAP:-0.05}     # finish appearing this long before the next sentence starts
 REVEAL_LEAD=${REVEAL_LEAD:-0.30}   # fallback lead — used only when no pause was found (char-count proportion)
@@ -286,11 +297,12 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   [ -z "${IDX:-}" ] && continue
   N=$((N+1))
 
-  # ── Card options (column 5) — sync / subs / pan / focus / drift / span / ease. An unknown key
-  #    is a failure (silently ignored typos ship a filmed card missing sync 0.4s out of step, and
-  #    only eyes would catch it). Two-value options use ":" inside the value (pan=l2r:1.12,
-  #    focus=0.6:0.4) — "," is the k=v separator and stays out of values.
+  # ── Card options (column 5) — sync / subs / pan / focus / drift / span / ease / enter / exit.
+  #    An unknown key is a failure (silently ignored typos ship a filmed card missing sync 0.4s
+  #    out of step, and only eyes would catch it). Two-value options use ":" inside the value
+  #    (pan=l2r:1.12, focus=0.6:0.4) — "," is the k=v separator and stays out of values.
   SYNC=0; SUBSF=""; PAN=""; PZ="$PAN_Z"; FX=0.5; FY=0.5; DRIFT=0; SPAN="$ZOOM_SPAN"; EASE="$KB_EASE"; SPANSET=0
+  FADE_IN=0; FADE_OUT=0
   case "${ZDIR:-auto}" in in|out|auto|none|punch|hold) : ;;
     *) say "✗ card $IDX: unknown zoom (column 4) — $ZDIR (in|out|auto|none|punch|hold)"; exit 1 ;; esac
   if [ -n "${OPTS:-}" ]; then
@@ -316,6 +328,13 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
                 SPANSET=1 ;;
         ease=*) EASE="${KV#ease=}"
                 case "$EASE" in smooth|linear|in) : ;; *) say "✗ card $IDX: unknown ease — $EASE (smooth|linear|in)"; exit 1;; esac ;;
+        # Scene-boundary dissolve. `enter=1` fades this card up from black, `exit=1` fades it
+        # down to black — inside this card's own encode, so the frame count never changes and
+        # the concat stays stream-copy exact (see the SCENE_FADE note at the top).
+        enter=1) FADE_IN=1 ;;
+        enter=0) FADE_IN=0 ;;
+        exit=1)  FADE_OUT=1 ;;
+        exit=0)  FADE_OUT=0 ;;
         *) say "✗ card $IDX: unknown cards.tsv column-5 option — $KV"; exit 1 ;;
       esac
     done
@@ -593,7 +612,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   FTAG=""; case "$FX:$FY" in 0.5:0.5|0.500:0.500) : ;; *) FTAG="@$FX:$FY";; esac
   if [ "$ZD" = "none" ]; then
     # No Ken Burns — a card whose picture already moves, like filmed footage. It doesn't scale the source (scale=ZB) either.
-    FILT+="${CUR}format=yuv420p[vout]"
+    FILT+="${CUR}format=yuv420p[vkb];"
   elif [ -n "$PAN" ]; then
     # Pan — the window travels; the cross axis stays centred (the pan owns the path, focus= is ignored).
     # Travel = W(z-1) (horizontal) / H(z-1) (vertical) — ~130px at z=1.12 on either canvas orientation.
@@ -614,7 +633,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       *)   PZE="$PZ";                     ZD="pan:$PAN@$PZ" ;;
     esac
     ZD="$ZD$DTAG$KTAG"
-    FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$PZE':x='$PX$DXE':y='$PY$DYE':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
+    FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$PZE':x='$PX$DXE':y='$PY$DYE':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vkb];"
   else
     case "$ZD" in
       punch) # the whole ZOOM_SPAN lands in the first PUNCH_D seconds (ease-out), then holds — same
@@ -627,8 +646,36 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       *)     ZEXPR="($ZBASE+$SPAN*$E)" ;;
     esac
     ZD="$ZD$FTAG$DTAG$KTAG"
-    FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$ZEXPR':x='(iw-iw/zoom)*$FX$DXE':y='(ih-ih/zoom)*$FY$DYE':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vout]"
+    FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$ZEXPR':x='(iw-iw/zoom)*$FX$DXE':y='(ih-ih/zoom)*$FY$DYE':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vkb];"
   fi
+  # ── 7.4) Scene-boundary dissolve (cards.tsv enter= / exit=) ──
+  #   The seam between two cards is a hard cut: §9 joins them with the concat demuxer and
+  #   -c copy, and the whole zero-drift contract rests on that being stream-exact. An xfade
+  #   between cards would break it twice over — the total would shrink by SCENE_FADE per seam
+  #   and trip the 2ms assertion, and xfade renumbers the tail's PTS from 0 anyway (the
+  #   measurement is written out at the outro seam below).
+  #
+  #   So the dissolve is built the way the outro seam is: **no overlap.** The outgoing card
+  #   fades its own tail down to black, the incoming card fades its own head up from black,
+  #   and both fades live inside that card's own encode. fade is a per-pixel filter — it
+  #   changes no frame count and no duration, so §9 still stream-copies and drift stays 0
+  #   (measured: 180 frames / 6.000000s with and without, seam YAVG 123 → 16 → 126 against a
+  #   hard cut's 123 → 126).
+  #
+  #   Audio runs straight through. The narration already meets silence at a card boundary
+  #   (PRE/POST padding), and the BGM bed is rendered across the whole feature — fading either
+  #   one at a scene change would cut a word or punch a hole in the music.
+  VF_FADE=""
+  if [ "$FADE_IN" = "1" ] || [ "$FADE_OUT" = "1" ]; then
+    # Half the seam belongs to each side, and it has to fit the shorter card: never more than
+    # a quarter of this card, so a 1-second insert dips rather than blinking through black.
+    SF_D=$(awk -v d="$SCENE_FADE" -v dur="$D1" 'BEGIN{m=dur/4; if(d>m)d=m; if(d<0.02)d=0.02; printf "%.3f", d}')
+    [ "$FADE_IN" = "1" ]  && VF_FADE=",fade=t=in:st=0:d=$SF_D"
+    [ "$FADE_OUT" = "1" ] && VF_FADE="$VF_FADE,fade=t=out:st=$(awk -v t="$D1" -v d="$SF_D" 'BEGIN{printf "%.3f", t-d}'):d=$SF_D"
+    ZD="$ZD fade:${FADE_IN}${FADE_OUT}@$SF_D"
+  fi
+  FILT+="[vkb]null${VF_FADE}[vout]"
+
   ffmpeg -y -v error "${INS[@]}" -filter_complex "$FILT" -map "[vout]" \
     -frames:v "$FRAMES" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p "work/v$IDX.mp4"
 

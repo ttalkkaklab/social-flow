@@ -191,6 +191,7 @@ sequence: "결과"                  // sequence head. Used with beat, the docume
 | `scene` | recommended | Grammar scene number. Same value for the same place and time. Without it the renderer assumes one scene per entry |
 | `sceneSlug` | recommended when `scene` is set | `"place / time"` — e.g. `"salon chair / day"` |
 | `sequence` | optional | Sequence name. Only when one episode has two purposes |
+| `transition` | optional | `"dissolve"` — the boundary **before this shot** fades through black. Absent means a cut, which is the default and where most boundaries belong. See §scene transition |
 | `beat` | optional | `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` — the playback role (`turn` on the story arc only). See §playback order above |
 | `arc` | cover only | `answer-first` (default) \| `story` — which playback order the episode walks. See §playback order above |
 | `shot` | recommended | `{ feel, size, angle, info, space }` — below. `feel` is written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
@@ -685,6 +686,81 @@ subtitles already do that.
   said by the narration and subtitles.
 - No synthesizing a real person's face or voice. Characters only in styles that can't be
   mistaken for live action.
+
+### Claim traceability (`claim`) — which research entry a sentence rests on
+
+```js
+narration: [
+  { tts: "삼십 개만 남았어요", sub: "30개만 남았어요", claim: 2 },
+  { tts: "여든두 조각으로 갈라졌고요", sub: "82조각으로 갈라졌고", claim: [3, 7] },
+  { tts: "이게 왜 놀라운 거냐면요", sub: "이게 왜 놀라운 거냐면" }   // no figure, no claim
+]
+```
+
+**A sentence carrying a figure, a date, a name or a quantity names the research entry it came
+from** — the `#` column of research.md's Verified table. One number, or an array when the
+sentence leans on more than one. A sentence that asserts nothing checkable carries none, and
+that is the normal case: connective lines, questions, and reactions have nothing to cite.
+
+Why the number and not the prose: without it, "does this sentence match the research" is a
+job somebody redoes from scratch every review, matching sentences to rows by reading. With
+it, the claim either exists in the table or it doesn't, and the reviewer's factual pass starts
+from the sentences that cite nothing rather than from all of them.
+
+`check-research.js` reads both files and reports three things — a `claim` number no Verified
+row has (the row was renumbered, or the number was invented), how many verified claims no
+sentence ever used (research that never reached the video), and how many figure-carrying
+sentences cite nothing at all.
+
+**Channels whose profile skips research have no `claim` anywhere**, and nothing checks it —
+the field appears only where there is a table to point at.
+
+### Scene transition (`transition`) — the boundary before this shot
+
+```js
+{
+  type: "points",
+  transition: "dissolve",     // omit for a cut · "dissolve" fades through black into this shot
+  …
+}
+```
+
+**The default is a cut, and most boundaries should stay one.** A cut is the invisible join —
+it says the story continued. A dissolve says something moved that the picture alone cannot
+show: time passed, or the place changed. Spend it where that is true and nowhere else.
+
+**A short gets one, or none.** Two is already a lot; a dissolve at every boundary is the
+slideshow look, and it reads as an episode with no cuts in it rather than an episode with
+transitions. Long-form can carry one per chapter boundary. The reason is not taste: the cut
+rhythm is what this pipeline uses to hold attention (the builder alternates the Ken Burns
+direction card to card for exactly that reason), and softening every join takes that away.
+
+Where it earns its place:
+
+- **A time jump inside one place** — the same room, later. The cut would read as continuous.
+- **A move the story treats as a distance** — leaving the scene the episode opened in.
+- **The turn on a story arc** — the beat before the payoff, where the episode changes its mind.
+- **Into the cta** — the afterglow frame, when the body ended on tension.
+
+Where it does not:
+
+- Between two shots of the same `scene` — that is continuous time and place, and the cut is
+  the honest join.
+- To paper over a jarring image change. Fix the image; a dissolve makes it slow *and* jarring.
+- On the hook or the shot right after it. The first three seconds have no time to spend.
+
+**Don't derive it from `scene` or `sceneSlug`.** Both are real fields with real meanings, but
+the library uses them inconsistently — measured across every episode with the field, several
+give every single shot its own `scene` number, so a rule of "new scene → dissolve" would put
+one at every cut in half the channel. The transition is written where it is wanted, one at a
+time.
+
+**What produce does with it.** The builder fades the outgoing card's tail down to black and
+the incoming card's head up from it, each inside that card's own encode — no overlap. So the
+episode does not get shorter, no subtitle cue moves, and the seam stays stream-copy exact
+(`../produce/references/build-reel.sh` §7.4, `cards.tsv` `enter=` / `exit=`). Audio runs
+straight through: the narration already meets silence at a card boundary and the music bed is
+continuous, so fading either one would cut a word or punch a hole in the bed.
 
 ### Camera — the four slots (`visual.camera`)
 

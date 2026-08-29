@@ -21,7 +21,7 @@ description: >
   twice: each review's findings get applied once, and whatever is left over goes onto the
   HITL approval screen for the user to decide.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__suno_generate_lyrics"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__suno_generate_lyrics"]
 ---
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
@@ -67,6 +67,12 @@ data/<channel>/episodes/<topic slug>/storyboard/
 ## Procedure
 
 ### 1. Load the profile
+
+**Call `capability_status` first.** It says which engines this machine actually has, grouped by
+capability with an "N of M configured" count. Planning two Veo b-roll slots on a machine with no
+`GEMINI_API_KEY` spends five review rounds before anything reveals the problem, and the tool
+answers it in one call before any of that. If a capability the episode needs is missing, say so
+now — with what one env var would turn on — rather than routing around it silently.
 
 Read `data/<channel slug>/profile.md`. If it's missing, stop and point the user at
 `/social-flow:channel add` first. Tone, voice, theme, verification policy, and the topic
@@ -195,7 +201,11 @@ difference on our own episodes, user note 2026-08-23). The step has four parts, 
    (`serp_naver_search period`, a news date filter) — an outdated figure that was true last year
    is a factual mismatch this year.
 3. **Put every claim in the evidence table** — claim · source 1 · source 2 · date checked · status
-   (`research.md` §Verified) — and everything that failed in §Failed (with why). Two independent
+   (`research.md` §Verified) — and everything that failed in §Failed (with why). **Number the
+   rows and keep the numbers** — §4's narration sentences point back at them with `claim`
+   (scenes-schema §claim traceability), which is what turns "does this sentence match the
+   research" from a job somebody redoes every review into a number that either exists or
+   doesn't. Two independent
    sources for anything time-sensitive, one official origin (data.go.kr, the vendor's own doc)
    counts as both. Don't round a range, don't shrink it to its upper bound.
 4. **Check sufficiency before leaving the step.** Three verified claims is the floor below
@@ -203,6 +213,20 @@ difference on our own episodes, user note 2026-08-23). The step has four parts, 
    leaves with **five or more**, a long-form with **twelve or more**, and **every question in
    the map is answered or written off**. Short of the floor, change the angle or the topic —
    don't pad the body. Only then §3 (the directory) and §4 (the scenes).
+
+   **Have the check run against the page, not against your memory of it.** This is the one
+   gate in the skill with nobody on the other side — the agent that did the searching also
+   writes the line saying the searching was enough.
+
+   ```bash
+   SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+   node $SB/check-research.js storyboard/        # exit 1 = the research does not close
+   ```
+
+   It counts the Verified rows itself and compares them against what the Sufficiency line
+   claims, reads every question's status, and reports the claims nobody searched against.
+   On the first library-wide run it found an episode whose Sufficiency said 10 claims over a
+   table of 18 — the later additions never updated the summary.
 
 **The subject itself gets checked here — does its question survive to the last frame?**
 Retention is set more by what the episode is about than by how it is cut (own-channel retention
@@ -272,8 +296,22 @@ keep the payoff for the result after the turn, and pick a form that leaves the l
 
 Make `data/<channel>/episodes/<topic slug>/storyboard/images/` using the profile §7 slug
 rule. Topics don't live at the channel root — they go under `episodes/`, the same level as
-`assets/` and `growth/`. If it already exists, ask the user whether to continue from it
-(revising the existing storyboard).
+`assets/` and `growth/`.
+
+**If the directory already exists, read where it got to before touching anything.** An episode
+runs across sessions, and the thing that stalls one is a half-finished state nobody can see.
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+node $REF/episode-state.js data/<channel>/episodes/<topic>      # exit 1 = blocked
+node $REF/episode-state.js data/<channel> --all                 # the whole channel, one line each
+```
+
+It derives the stage from what the skills already wrote — no state file to go stale — and lists
+what the directory promised and didn't deliver (filmed scenes with no footage, images the scenes
+name that aren't on disk, a `queue_*: ready` marker pointing at no video). Show the user that
+before asking whether to continue from the existing storyboard, so the choice is made against
+the real state rather than a guess.
 
 ### 4. Scene design — writing scenes.js
 
@@ -571,6 +609,27 @@ and `SB_DOC.seriesNote`.
 6. **The next promise** — write this episode's result and the next episode's result as one
    sentence each. If the two don't connect, it isn't a series, just one-offs on similar
    topics.
+
+#### Run the contract checker before delegating anything
+
+```bash
+SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+node $SB/check-scenes.js storyboard/          # exit 1 = a violation
+```
+
+It reads the structural half of the contract — fields that have to exist, values that have to
+come from a fixed vocabulary (`shot.size`, `shot.angle`, `beat`, `hookType`, `hookForm`), the
+four camera slots on every generated shot, b-roll's `after` resolving to a real scene, a
+`sound.cue` naming a cue that exists. Every band comes from the format preset, so there is no
+copy of those numbers to drift.
+
+**Fix what it finds before a reviewer reads the file.** A delegation spent on a storyboard with
+an empty camera slot buys a finding the checker gives away, and a reviewer that trips over a
+structural fault reads the rest of the file worse.
+
+It is the structural half only. Frame overflow, hero-stat width and speech rate are measured
+against a rendered canvas — those stay in `storyboard.html`'s check strip, and duplicating them
+here would create the mirror drift `format-lint.js` exists to police.
 
 ### 4.5 Copy review (storyboard-reviewer copy mode — one round)
 
@@ -904,6 +963,20 @@ Log local images too — the unit price is 0 so the total doesn't move, but the 
 how many went where is what separates "image cost 0" as a tallied result from a tallying gap.
 The `quality` of `gpt_image_text2img` decides the key (`high`·`medium`·`low`).
 
+**Write down the choices that could have gone another way**, in
+`.work/decisions.tsv` — which engine a generated shot goes to and what you rejected, why the
+points backgrounds went local, a route you took because the planned one was unreachable. The
+ledger says what it cost; this says why. The convention is
+[decision-log.md](../autoproduce/references/decision-log.md).
+
+```bash
+printf 'storyboard\tengine_selection\tmotion background shot 3\tseedance-1-5-pro-silent\tsilent slot, builder discards audio; rejected veo.lite (pays 8s for a 4s cut)\n' >> .work/decisions.tsv
+printf 'storyboard\timage_engine\tpoints backgrounds\timage_local_generate\tno text in frame, $0; rejected gpt high (cost, not needed here)\n' >> .work/decisions.tsv
+```
+
+One line per decision, not per action. If the only honest reason is "the default, and nothing
+argued against it", there was no decision to record.
+
 ### 5.5 Image context review (storyboard-reviewer image mode — one round)
 
 content-reviewer plan mode looked at the plan before generation; here **the picture that came
@@ -972,6 +1045,28 @@ document automatically and copy drift is structurally impossible. SB_DOC holds o
 metadata that isn't in scenes.js (core message, per-scene notes, transitions, audio directions,
 privacy avoidance, source summary, platform plan, shooting prep, recheck list, **the cast**).
 
+**Fill `SB_DOC.cost` by generating it, never by typing it.** The approval screen has to say
+what has already been billed and what saying yes commits — by §7 the images are spent and every
+generated-video slot is still free to delete, so that is the last moment the number can change
+a decision.
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+node $REF/cost-preview.js storyboard/ --sbdoc     # paste the block into SB_DOC
+node $REF/cost-preview.js storyboard/             # the same numbers, human-readable
+```
+
+It reads the video slots out of scenes.js, writes the projection to `.work/cost-forecast.tsv`,
+and totals both that and the `.work/cost-tally.tsv` ledger through `cost-report.sh` — one
+calculator, one price table, so the estimate and the later bill can be compared. **Exit 1 means
+the verdict is incomplete** (an unknown key or an unconfirmed price): fix the key or carry the
+`!!` lines onto the approval screen as they are. Never present the totals as though they were
+whole.
+
+The block carries a fingerprint of the video slots, and the check strip recomputes it from the
+live scenes — so a snapshot that no longer matches shows up as a violation instead of a stale
+number. Regenerate it after any §7 change that adds, retimes, reroutes or moves a video slot.
+
 **Fill `SB_DOC.characters` with the characters this episode actually uses** — the ids that appear
 in any scene's `visual.character`, no more. One entry each: `id`, `name`, `role` (one line from
 `identity.md`), `panels` (the panel paths relative to the storyboard directory —
@@ -998,6 +1093,9 @@ The document shows four things.
   body, back), the line that governs it, and the shots it appears in (read off `visual.character`).
   It's reachable from the menu at the top, and it's where a reviewer checks that the reference
   set going into generation is the right one before any money is spent.
+- **The cost panel** — what the episode has already billed (images, from the ledger) beside what
+  approving it commits (the generated-video slots, priced per shot). It draws only when
+  `SB_DOC.cost` is filled, and it flags itself when the snapshot no longer matches the scenes.
 - **The contract check strip** — violations collected in one place at the top of the document.
   On top of character counts, speech rate, scene length, total length, and cover title, it
   measures **frame overflow** and **hero stat width** the same way produce does (1080px canvas
@@ -1035,7 +1133,13 @@ what's being approved is that plan, and the files get built in §8 afterwards.
 vocabulary, camera, sound, and images, with **which scene or shot was lowest and at what score**
 for the three per-item ones, and **every finding you didn't apply, in the reviewer's own words**.
 That last list is the point of the screen: the reviews no longer block, so this is where a
-defect gets its only human look. **The loop ledger comes up here too** — every curiosity
+defect gets its only human look. **Say the money out loud too** — regenerate `SB_DOC.cost` (§6)
+and put both numbers on the screen: what this episode has already billed, and what approving it
+commits in generated video, per slot. Approval is the last point where deleting a b-roll is free;
+after it the slot is an API call. If the preview came back exit 1, say the verdict is incomplete
+and show the `!!` lines rather than a total that looks whole. **Show the decisions behind those
+numbers too** — `decisions.sh .work/decisions.tsv` — so the engine and tier choices are approved
+with everything else rather than discovered in the bill. **The loop ledger comes up here too** — every curiosity
 loop and deliberate plant opened in the episode, each named with the scene that pays it
 (scenario-craft §3·§5 direct the pairs to this note). A pair with no payer on this screen
 is the last cheap place to catch an unkept promise. The options:
@@ -1155,8 +1259,14 @@ uses the slide state captures as the segment visuals (produce §3.6).
 - **`references/shot-script-template.md`** — shooting mode only: the script.md (shooting script) structure + filming rules + the scenes.js variant contract
 - **`references/make-script.js`** — the long-form script.md renderer — builds the shooting script from scenes.js (never maintain two copies). All shots on an all-live-voice episode, filmed scenes only on a TTS episode
 - **`references/slide-template.html`** — the §8 slide-scene render template — the `?reveal=k` reveal contract + the determinism contract; change only `SLIDE_SHOT` and `renderSlide()`
+- **`references/check-research.js`** — the §2 exit, checked: counts the Verified rows against the Sufficiency line, reads every question's status, and names the claims with no counter-evidence row. Reads both the template's English headings and the Korean ones half the library uses
+- **`references/check-scenes.js`** — the scenes.js structural contract with an exit code: required fields, the size/angle/beat/hookType/hookForm vocabularies, the four camera slots on generated shots, b-roll `after` resolution, cue references. Bands come from the format preset, never a copy. `--selftest` pins the rules
 - **`references/check-slide.js`** — the §8 slide machine check — filename↔scenes.js match, Korean literals outside the SoT, determinism violations
 - **`../autoproduce/references/cost-tally.md`** — the episode cost-ledger convention (where §5 and §5.5 write, the line format, the units). The source of truth for unit prices is `prices.tsv` in the same directory
+- **`../autoproduce/references/board.js`** — the channel board: every episode's stage, blockers, cost and decisions on one static page under `data/<channel>/growth/board.html`. Regenerated on demand — no server, no watcher
+- **`../autoproduce/references/episode-state.js`** — derives where an episode stands (drafted · approved · produced · published), what to run next, and what the directory promised and hasn't delivered. No state file — it reads what the skills already write. `--all` sweeps a channel, `--json` for tooling
+- **`../autoproduce/references/decision-log.md`** — the episode decision log convention (`.work/decisions.tsv`): what was chosen, what was rejected, and how a change of mind is appended rather than overwritten. Read it back with `decisions.sh`
+- **`../autoproduce/references/cost-preview.js`** — the §6·§7 approval-screen preview: totals the ledger, prices the generated-video slots out of scenes.js, writes `.work/cost-forecast.tsv`, and emits the `SB_DOC.cost` block (`--sbdoc`) or JSON (`--json`, the read-only lane — it writes nothing). `--selftest` pins the routing table and the fingerprint copy the HTML template carries
 
 ### Delegated agents
 

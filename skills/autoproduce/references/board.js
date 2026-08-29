@@ -1,0 +1,219 @@
+#!/usr/bin/env node
+/**
+ * board.js — one page showing every episode in a channel: stage, blockers, cost, decisions.
+ *
+ *   board.js <channel dir>                writes data/<channel>/growth/board.html
+ *   board.js <channel dir> --open         …and opens it
+ *   board.js <channel dir> --out <path>   somewhere else
+ *
+ * ## Why observation rather than enforcement
+ *
+ * Nothing in this pipeline can stop an agent mid-run. The gates are skill instructions, and an
+ * instruction that gets skipped leaves no trace — which is how an episode sits half-finished
+ * for a week, or a queue marker points at a video nobody built. The answer is not a stronger
+ * gate, it is making the skip **visible**: what got skipped stays on disk, and this page is
+ * where a person sees it without opening thirty directories.
+ *
+ * ## Static, and regenerated on demand
+ *
+ * No server, no watcher, no port. It reads the three derivers that already exist and inlines
+ * the answer into one HTML file, the same shape as `review-recent.html` and
+ * `market-keywords.html`. A page that is a file can be opened, mailed, and kept; a page that
+ * is a server is one more thing to be running.
+ *
+ * Exit codes:
+ *   0  written, nothing blocked
+ *   1  written, at least one episode is blocked
+ *   3  input error
+ */
+
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const { execFileSync, spawn } = require('child_process');
+
+const SELF_DIR = __dirname;
+const EPISODE_STATE = path.join(SELF_DIR, 'episode-state.js');
+const COST_PREVIEW = path.join(SELF_DIR, 'cost-preview.js');
+const DECISIONS = path.join(SELF_DIR, 'decisions.sh');
+
+function die(msg) {
+  process.stderr.write('board: ' + msg + '\n');
+  process.exit(3);
+}
+
+const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch (e) { return false; } };
+
+/** Runs a helper and parses its JSON. A non-zero exit is normal here (blocked, short tally). */
+function readJson(cmd, args) {
+  try {
+    return JSON.parse(execFileSync(cmd, args, { encoding: 'utf8', maxBuffer: 8 << 20 }));
+  } catch (e) {
+    if (e && e.stdout) { try { return JSON.parse(e.stdout); } catch (e2) { /* fall through */ } }
+    return null;
+  }
+}
+
+/** The current decision per (category, subject), read straight out of decisions.tsv. */
+function readDecisions(episodeDir) {
+  const file = path.join(episodeDir, '.work', 'decisions.tsv');
+  if (!fs.existsSync(file)) return [];
+  const rows = fs.readFileSync(file, 'utf8').split('\n')
+    .filter((l) => l.trim() && !l.trimStart().startsWith('#'))
+    .map((l) => l.split('\t').map((c) => c.trim()))
+    .filter((c) => c.length >= 5)
+    .map((c) => ({ stage: c[0], category: c[1], subject: c[2], selected: c[3], reason: c[4] }));
+  // Last line per (category, subject) is current — same rule decisions.sh applies.
+  const latest = new Map();
+  const seen = new Map();
+  rows.forEach((r) => {
+    // A NUL as the separator, written as an escape — a literal one in the source makes git
+    // call the file binary, and every future change to it stops showing up in a diff.
+    const key = r.category + '\u0000' + r.subject;
+    seen.set(key, (seen.get(key) || 0) + 1);
+    latest.set(key, r);
+  });
+  return Array.from(latest, ([key, r]) => ({ ...r, revised: (seen.get(key) || 1) - 1 }));
+}
+
+const esc = (s) => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const STAGES = ['drafted', 'approved', 'produced', 'published'];
+
+function collect(channelDir) {
+  const epRoot = path.join(channelDir, 'episodes');
+  if (!isDir(epRoot)) die('no episodes/ under ' + channelDir);
+  return fs.readdirSync(epRoot).map((d) => path.join(epRoot, d)).filter(isDir).sort().reverse()
+    .map((dir) => {
+      const state = readJson('node', [EPISODE_STATE, dir, '--json']) || {};
+      const sb = path.join(dir, 'storyboard');
+      const cost = fs.existsSync(path.join(sb, 'scenes.js'))
+        ? readJson('node', [COST_PREVIEW, sb, '--json'])
+        : null;
+      return { dir, topic: path.basename(dir), state, cost, decisions: readDecisions(dir) };
+    });
+}
+
+function render(channel, episodes) {
+  const blockedCount = episodes.filter((e) => (e.state.blocked || []).length).length;
+  const totalSpent = episodes.reduce((s, e) => s + (e.cost ? e.cost.spent.total : 0), 0);
+  const totalForecast = episodes.reduce((s, e) => s + (e.cost ? e.cost.forecast.total : 0), 0);
+  const usd = (n) => '$' + (Number(n) || 0).toFixed(2);
+
+  const cards = episodes.map((e) => {
+    const st = e.state.stage || 'empty';
+    const rail = STAGES.map((s) => {
+      const idx = STAGES.indexOf(st);
+      const cls = s === st ? 'now' : (STAGES.indexOf(s) < idx ? 'done' : 'todo');
+      return `<span class="rung ${cls}">${esc(s)}</span>`;
+    }).join('');
+    const blocked = (e.state.blocked || []).map((b) => `<li>${esc(b)}</li>`).join('');
+    const dec = e.decisions.map((d) =>
+      `<li><b>${esc(d.subject)}</b> → ${esc(d.selected)}` +
+      (d.revised ? ` <em class="rev">revised</em>` : '') +
+      `<div class="why">${esc(d.reason)}</div></li>`).join('');
+    const cost = e.cost
+      ? `<div class="cost"><span>billed <b>${usd(e.cost.spent.total)}</b></span>` +
+        `<span>if approved <b>${usd(e.cost.forecast.total)}</b></span>` +
+        `<span class="dim">${e.cost.forecast.slots} video slot(s)</span></div>`
+      : '';
+    return `<article class="ep ${blocked ? 'has-blocked' : ''} ${st === 'broken' ? 'broken' : ''}">
+  <h2>${esc(e.topic)}</h2>
+  <div class="rail">${st === 'broken' ? '<span class="rung now">broken</span>' : rail}</div>
+  ${cost}
+  <div class="next">next · ${esc(e.state.next || '')}</div>
+  ${blocked ? `<div class="blocked"><h3>blocked</h3><ul>${blocked}</ul></div>` : ''}
+  ${dec ? `<details class="dec"><summary>decisions · ${e.decisions.length}</summary><ul>${dec}</ul></details>` : ''}
+</article>`;
+  }).join('\n');
+
+  return `<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(channel)} — episode board</title>
+<style>
+:root {
+  --bg:#0f1115; --card:#171a21; --line:#252a34; --text:#e6e9ef; --dim:#98a2b3;
+  --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --accent:#60a5fa;
+}
+@media (prefers-color-scheme: light) {
+  :root { --bg:#f7f8fa; --card:#fff; --line:#e3e6ec; --text:#1a1d23; --dim:#667085; }
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 64px; }
+header h1 { margin:0 0 4px; font-size:22px; }
+.sum { color:var(--dim); font-size:14px; margin-bottom:24px; }
+.sum b { color:var(--text); }
+.sum .flag { color:var(--bad); font-weight:700; }
+article.ep { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:0 0 14px; }
+article.ep.has-blocked { border-color:var(--bad); }
+article.ep.broken { border-color:var(--warn); }
+.ep h2 { margin:0 0 10px; font-size:16px; font-weight:700; word-break:break-all; }
+.rail { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.rung { font-size:12px; padding:2px 9px; border-radius:999px; border:1px solid var(--line); color:var(--dim); }
+.rung.done { color:var(--text); }
+.rung.now { background:var(--accent); border-color:var(--accent); color:#0b1220; font-weight:700; }
+.cost { display:flex; flex-wrap:wrap; gap:16px; font-size:13px; color:var(--dim); margin-bottom:8px; font-variant-numeric:tabular-nums; }
+.cost b { color:var(--text); }
+.next { font-size:13px; color:var(--dim); }
+.blocked { margin-top:12px; border-top:1px solid var(--line); padding-top:10px; }
+.blocked h3 { margin:0 0 4px; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--bad); }
+.blocked ul { margin:0; padding-left:18px; font-size:13px; }
+.dec { margin-top:12px; }
+.dec summary { cursor:pointer; font-size:13px; color:var(--dim); }
+.dec ul { margin:8px 0 0; padding-left:18px; font-size:13px; }
+.dec .why { color:var(--dim); font-size:12px; }
+.dec .rev { color:var(--warn); font-style:normal; font-size:11px; }
+footer { margin-top:28px; color:var(--dim); font-size:12px; line-height:1.7; }
+</style></head><body><div class="wrap">
+<header>
+  <h1>${esc(channel)} — episode board</h1>
+  <div class="sum">${episodes.length} episodes · billed <b>${usd(totalSpent)}</b> ·
+    open commitments <b>${usd(totalForecast)}</b>
+    ${blockedCount ? `· <span class="flag">${blockedCount} blocked</span>` : '· nothing blocked'}</div>
+</header>
+${cards}
+<footer>
+  Derived from disk, not from a state file — episode-state.js reads what the skills already
+  write, cost-preview.js prices the ledger and the video slots, decisions.tsv carries the
+  choices. Regenerate with <code>board.js data/${esc(channel)}</code>.<br>
+  Costs where the verdict was incomplete (an unknown key, or a price the vendor never
+  published) show the total of the items that could be priced. Open the episode for the rest.
+</footer>
+</div></body></html>`;
+}
+
+function main() {
+  const argv = process.argv.slice(2);
+  // --out takes a value, so the positional argument is whatever is left after that value is
+  // taken out. Filtering on the leading `--` alone read `board.js --out /tmp/x.html data/ch`
+  // as a request to draw the board for /tmp/x.html.
+  const outIdx = argv.indexOf('--out');
+  const outValueIdx = outIdx === -1 ? -1 : outIdx + 1;
+  const outArg = outValueIdx === -1 ? undefined : argv[outValueIdx];
+  const target = argv.filter((a, i) => !a.startsWith('--') && i !== outValueIdx)[0];
+  if (!target) die('usage: board.js <channel dir> [--open] [--out <path>]');
+  if (!isDir(target)) die('not a directory: ' + target);
+
+  const channel = path.basename(path.resolve(target));
+  const out = outArg || path.join(target, 'growth', 'board.html');
+
+  const episodes = collect(target);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, render(channel, episodes), 'utf8');
+
+  const blocked = episodes.filter((e) => (e.state.blocked || []).length);
+  process.stdout.write(`${out}\n${episodes.length} episode(s)` +
+    (blocked.length ? `, ${blocked.length} blocked` : ', nothing blocked') + '\n');
+
+  if (argv.indexOf('--open') !== -1) {
+    const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
+    try { spawn(opener, [out], { detached: true, stdio: 'ignore' }).unref(); } catch (e) { /* the path is printed above */ }
+  }
+  process.exit(blocked.length ? 1 : 0);
+}
+
+main();

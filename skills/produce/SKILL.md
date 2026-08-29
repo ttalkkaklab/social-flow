@@ -196,6 +196,20 @@ data/<channel>/episodes/<topic>/
   the file isn't there, start a new one from this episode, but if `storyboard/images/*.png`
   exist with no ledger, the image costs are missing from the total — §10 writes that fact
   into the report.
+- **Read the episode's state before starting, and again when picking up a stopped run.**
+  Produce is the long stage, so it is the one most likely to be resumed in a later session.
+
+  ```bash
+  REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
+  node $REF/episode-state.js .        # from the episode directory · exit 1 = blocked
+  ```
+
+  It reports the stage and what is missing — filmed scenes with no footage, slide files never
+  authored, images the scenes name that aren't on disk. Run the structural contract too —
+  `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenes.js storyboard/` — since
+  a missing camera slot or an unresolvable b-roll `after` fails the build rather than the eye. Fix a blocker before the build rather
+  than discovering it 12 minutes into capture. `.work/` survives between sessions on purpose,
+  so a resumed run reuses the captures and TSV manifests already there.
 
 ### 2. Prepare the frame render
 
@@ -595,6 +609,17 @@ it into the ledger anyway — write 0 or leave the line out and that episode's c
 shrinks. The report exiting 1 is the correct behavior, and §10 reports it as "1 item excluded
 from the total".
 
+**Carry on the decision log too** (`.work/decisions.tsv`, started by storyboard —
+[decision-log.md](../autoproduce/references/decision-log.md)). Produce is where most of the
+substitutions actually happen: the music source, the voice, and every route that had to change
+because a key was missing. A fallback that reaches the deliverable without a line here becomes
+an unexplained difference between the storyboard's plan and the video.
+
+```bash
+printf 'produce\tmusic_source\tepisode BGM\tmusic_generate_clip\t30s Lyria clip, builder extends; rejected suno (sung vocals fight the voiceover)\n' >> .work/decisions.tsv
+printf 'produce\tfallback\tmotion background i3\tveo_img2video\tARK_API_KEY absent — seedance route unreachable; recorded in build-report.md as the allowed deviation\n' >> .work/decisions.tsv
+```
+
 ### 3.5 Take in the filmed clips (mixed-shooting episodes only)
 
 **Normalize once** and move the files the user saved in `footage/` into `.work/footage/`.
@@ -872,6 +897,7 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 | `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
 | `span=<0..1.5>` | this card's total zoom span, replacing the global `ZOOM_SPAN` (0.4 = the window grows 40% over the card). Applies to `in`/`out`/`punch` and the pan zoom drift; unused on `hold`/`none` | a still whose beat wants a visible move — computed from the storyboard's `speed` word (below). Past base+`span` > `ZOOM_BASE`/canvas (base: pan scale · drift 1.04 · else 1; headroom 0.5 at the defaults) the source upscales and the build warns: raise `ZOOM_BASE` and generate the scene image at that resolution |
 | `ease=smooth\|linear\|in` | this card's easing, replacing the global `KB_EASE`. `in` accelerates — an unnoticed start, fastest exactly at the cut | the ladder's accelerating rows (action/tension, CTA) — pairs with cutting away at the peak. `punch` keeps its own ease-out ramp and ignores `ease=` |
+| `enter=1` / `exit=1` | fade this card up from black / down to black (`SCENE_FADE`, 0.12s) | **the storyboard's `transition: "dissolve"`** — put `exit=1` on the card before it and `enter=1` on the card that carries the field. Nothing else turns these on |
 
 ```
 # one line for a filmed scene (live voice)
@@ -879,6 +905,18 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 # 슬라이드·생성 씬(사용자 녹음 나레이션 — window.VOICE) 한 줄 예: 일반 레인, sync 없음
 11	pcm/s12.wav	0	none
 ```
+
+**A scene dissolve is two options, not one.** A shot carrying `transition: "dissolve"`
+(scenes-schema §scene transition) becomes `enter=1` on that card **and** `exit=1` on the card
+before it — the fade has two halves and each lives in its own card's encode. Write neither and
+the boundary is a hard cut, which is the default and where most boundaries belong.
+
+The builder does it this way because a boundary xfade would break the pipeline's spine: the
+total would shrink by the fade length at every seam and trip §9's 2ms drift assertion, and
+xfade renumbers the tail's PTS from 0 (the measurement is written out at the outro seam in
+build-reel.sh). Fading each side separately changes no frame count, so the concat stays
+stream-copy exact and no subtitle cue moves — verified A/B on a three-card build: identical
+`subs.srt`, 12.000000s both ways, drift 0.
 
 **The still move comes from the storyboard, not from taste.** A still's
 `visual.camera.movement` (when the storyboard wrote one — directing-grammar §5's Still
@@ -1237,6 +1275,18 @@ $REF/cost-report.sh .work/cost-tally.tsv > output/video/cost-report.txt; echo "c
 cat output/video/cost-report.txt
 ```
 
+**Check the hand-written tally against what the server recorded first.** The MCP server writes
+`.work/events.jsonl` on every generation call by itself, so it catches the lines a session
+ending mid-run never got to write.
+
+```bash
+node $REF/events-to-tally.js .        # exit 1 = the tally is short
+node $REF/events-to-tally.js . --tsv >> .work/cost-tally.tsv   # append what was missing
+```
+
+ElevenLabs and Lyria RealTime come back unpriced there on purpose — the server can't see the
+metered character count or an unpublished unit price, so those stay hand-written.
+
 Read `cost_exit` as it is (the verdict's source of truth is
 [cost-tally.md](../autoproduce/references/cost-tally.md) §Reading exit codes).
 
@@ -1268,6 +1318,18 @@ for free — someone skipped writing them into the ledger. An episode that used 
 images and local TTS really can be 0, and then the report shows those lines — check whether
 the 0 comes from lines that are there or lines that are missing, then report it.
 
+**Read the decision log back beside the cost.** The two answer one question together — what it
+cost, and why it cost that.
+
+```bash
+$REF/decisions.sh .work/decisions.tsv        # exit 1 means a bad line, not "no decisions"
+```
+
+Put the lines whose choice differs from the storyboard's plan into the report — every
+`fallback`, and any `engine_selection` or `voice_selection` marked `revised`. Those are the
+places the finished video isn't what was approved, and the user should read that here rather
+than notice it in the video.
+
 On a pass, update storyboard.md to `status: produced`, present the artifact table (paths,
 length, platforms) together with the cost summary, and point the user at
 `/social-flow:publish`.
@@ -1290,5 +1352,8 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)
+- **`../autoproduce/references/events-to-tally.js`** — compares `.work/cost-tally.tsv` against `.work/events.jsonl` (the record the MCP server writes on every generation call) and prints the missing lines with `--tsv`
+- **`../autoproduce/references/episode-state.js`** — the resume check: stage, next command, and the blockers that stall an episode silently (missing footage, unauthored slides, images the scenes name that aren't on disk)
+- **`../autoproduce/references/decision-log.md`** — the episode decision log (`.work/decisions.tsv`) storyboard starts and produce carries on: engine, voice, music and every fallback, with what each one replaced. `decisions.sh` reads it back for the §10 report
 - **`../autoproduce/references/cost-tally.md`** — the episode cost ledger convention (the file §3 and §5 write and §10 totals). The price source of truth `prices.tsv` and the calculator `cost-report.sh` sit in the same directory
 - **`../channel/references/resolve-asset.py`** — looks up the shared outro, BGM, sound effects, and character sheet (catalog + default path + the old `assets/outro.mp4`)
