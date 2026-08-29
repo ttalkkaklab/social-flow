@@ -60,7 +60,7 @@ data/<channel>/episodes/<topic slug>/storyboard/
 ├── storyboard.html  # review render — loads scenes.js directly and draws it (template-based, §6)
 ├── scenes.js        # the machine-readable SoT — THEME + SCENES (+ narration segments)
 ├── images/          # per-scene 9:16 generated images (scene-<n>.png) — omitted in shooting mode
-├── slides/          # long-form slide-scene HTML — authored in §8, after §7 approval
+├── slides/          # slide-scene HTML, static or motion — authored in §8, after §7 approval
 └── script.md        # shooting mode only — the shooting script the user records against
 ```
 
@@ -375,6 +375,13 @@ Core rules:
   the shot number is the array position, decided by the storyboard), `plan` (one line on
   what to draw), and `labels` (every piece of text that goes into the shapes) — the file
   itself is built in §8 after approval. Full text: scenes-schema §slide scenes.
+  **When the slide states a value** — a count, a share, a comparison, steps that arrive one
+  per sentence — make it a **motion slide** (`slide.motion: true`, scenes-schema §motion
+  slides): the number counts up and the bar grows the moment its sentence starts, and the
+  `plan` says what moves on which sentence ("① 27 counts up · ② the bar grows"). This is
+  the one free way to put movement on a body scene — the generated-video cap doesn't apply
+  to it. Beats only: a scene that needs continuous motion (gears turning under the whole
+  narration) is footage, not a slide.
   Filmed scenes get `visual.clip` (filename), `shot` (what's visible), and `action` (what
   you do), and the filename follows the **`footage/s<scene number>-<slug>.mp4`** convention
   set by the storyboard — the user doesn't pick names. Whether the live voice carries the
@@ -1127,7 +1134,7 @@ badges too), shot count and expected total length, the cover title, key figures 
 For long-form, also say **the chapter list and that the safe area is provisional** (§1.5).
 If there are filmed scenes, show **the `script.md` path and how many files have to be filmed** —
 approval is the start of filming, so the user needs to know what and how many from this screen.
-If there are slide scenes, show **how many scenes are slides and each one's `plan` line** —
+If there are slide scenes, show **how many scenes are slides, which of them are motion slides, and each one's `plan` line** —
 what's being approved is that plan, and the files get built in §8 afterwards.
 **Carry the results of the six reviews here too** — one score each for copy, per-scene,
 vocabulary, camera, sound, and images, with **which scene or shot was lowest and at what score**
@@ -1178,6 +1185,10 @@ gate has already passed, so no new text gets written here — **every character 
 from scenes.js** (`title`, `bullets`, `slide.labels`). Plant a new Korean string here and text
 that never passed the style gate goes on screen.
 
+Two kinds of slide, two paths. A **static slide** (no `motion`) follows steps 1–5; a
+**motion slide** (`slide.motion: true`) follows §8.1 instead of steps 1 and 4. Both share
+the text rule above, `check-slide.js`, and the §7 approval that came before.
+
 1. **Per scene**, copy `references/slide-template.html` to `slides/<the visual.slide.file name>`,
    change `SLIDE_SHOT` to that shot's number (its array position), and rewrite only
    `renderSlide()` into that scene's diagram. Keep the determinism contract at the head of the
@@ -1203,8 +1214,59 @@ that never passed the style gate goes on screen.
 5. Slides are captured locally, so they cost nothing — there's nothing to write in the ledger
    (`.work/cost-tally.tsv`), and the absence of a generation call is itself the record.
 
+#### 8.1 Motion slides — author, render, and pass the design gate
+
+A motion slide is built from **`references/motion-slide-template.html`** and judged by
+**`references/slide-design.md`** — read both before writing a line. The template's head
+carries the contract (the state rule, what may move, what is forbidden); the design doc
+carries the look (ink · paper · one accent, hairlines not boxes, one hero per slide) and the
+rubric the reviewer applies.
+
+1. **Author.** Copy the motion template to `slides/<the visual.slide.file name>`, set
+   `SLIDE_SHOT`, and rewrite only `renderSlide()` using the helpers — `h.count(rg, value,
+   {unit})` for the hero number, `h.bar(rg, pct, label, value)` for a comparison,
+   `h.step(rg, t, d)` for a sequence, `h.callout(rg, label)` and `h.rv(rg, html, {fx:"rise"})`
+   for everything else. Group numbers follow the approved `plan` — segment 1 is group 1.
+   Group 0 is the kicker and title. One kind of movement per group.
+2. **Machine check** — `node references/check-slide.js <storyboard directory>` (the motion
+   branch: `__seek` present, no `transition`, no clocks or timers, no web fonts, every Korean
+   string in scenes.js). Don't move on unless it exits 0.
+3. **Render the sheet** (free, ~10s a slide). Run from the storyboard directory, like
+   step 4 of the static path — `slides/` and `.work/slide-check/` are relative to it:
+
+   ```bash
+   REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
+   node $REF/render-motion-slide.mjs slides/s<shot number>-<slug>.html \
+     --out .work/slide-check/s<shot number> --sheet --png-only --keep-frames
+   ```
+
+   The renderer stops (exit 1) on a contract breach and says which: a page script that
+   threw (the exception is printed), an animation outside any reveal group, an infinite
+   animation, a group with no motion, fewer groups than segments.
+
+   Read the summary line: the group count must equal the segment count (or the segment
+   count plus the `A|B` sub-reveals you wrote), and no group may pass the 2.9s cap. Open
+   `sheet/g<k>-end.png` for the last group and confirm by eye that everything the scene
+   claims is on it, inside the zone.
+4. **The design gate — delegate to `slide-reviewer`** with the slide file, the sheet
+   directory, `manifest.tsv`, scenes.js, research.md, profile.md and
+   `references/slide-design.md`. It returns findings and a `SLIDE_REVIEW: score=NN p0=N
+   verdict=PASS|FAIL` tail. **Apply every fix directive, re-run steps 2–3, and delegate
+   again with the previous findings attached, until the tail says PASS (score ≥ 95 and
+   p0 = 0).** Hard cap 3 rounds (user directive 2026-08-29) — a slide that hasn't converged
+   by then goes back to the user with the last findings and the sheet, not into the build. Log each round's score
+   in storyboard.md under the slide table (`s5 · round 1 → 78 · round 2 → 96 PASS`), so the
+   convergence is a record and not a claim.
+5. Nothing goes in the ledger — the render is local. The `.work/slide-check/` frames stay
+   for produce to compare against (§3.6 re-renders the clips from the same file).
+
+`autoproduce` does not run this gate yet — an unattended episode with motion slides gets
+the machine check and the render, not the reviewer round. That is a known gap, written
+down here so it isn't mistaken for coverage.
+
 When that's done you're waiting — once the user's `footage/` and `voice/` files arrive, produce
-uses the slide state captures as the segment visuals (produce §3.6).
+uses the slide state captures (static) or the per-group clips (motion) as the segment visuals
+(produce §3.6).
 
 ## Traps
 
@@ -1259,6 +1321,9 @@ uses the slide state captures as the segment visuals (produce §3.6).
 - **`references/shot-script-template.md`** — shooting mode only: the script.md (shooting script) structure + filming rules + the scenes.js variant contract
 - **`references/make-script.js`** — the long-form script.md renderer — builds the shooting script from scenes.js (never maintain two copies). All shots on an all-live-voice episode, filmed scenes only on a TTS episode
 - **`references/slide-template.html`** — the §8 slide-scene render template — the `?reveal=k` reveal contract + the determinism contract; change only `SLIDE_SHOT` and `renderSlide()`
+- **`references/motion-slide-template.html`** — the §8.1 motion-slide template — the state rule, `window.__seek(t, g)` · `__groups()` · `__size()` · `__meta()` for the renderer, `rise` · `grow` · `draw` keyframes and `data-count` count-ups, both formats' zones inline; change only `SLIDE_SHOT` and `renderSlide()`
+- **`references/slide-design.md`** — how a slide looks and moves (ink · paper · one accent, hairlines, one hero, the motion tokens and the 2.6s cap) and, in §5, the rubric `slide-reviewer` scores the rendered frames against
+- **`../produce/references/render-motion-slide.mjs`** — renders a motion slide into one clip per reveal group with headless Chrome over the DevTools pipe (no npm dependency), deterministic frame-by-frame; `--sheet` writes the frames the design gate reads
 - **`references/check-research.js`** — the §2 exit, checked: counts the Verified rows against the Sufficiency line, reads every question's status, and names the claims with no counter-evidence row. Reads both the template's English headings and the Korean ones half the library uses
 - **`references/check-scenes.js`** — the scenes.js structural contract with an exit code: required fields, the size/angle/beat/hookType/hookForm vocabularies, the four camera slots on generated shots, b-roll `after` resolution, cue references. Bands come from the format preset, never a copy. `--selftest` pins the rules
 - **`references/check-slide.js`** — the §8 slide machine check — filename↔scenes.js match, Korean literals outside the SoT, determinism violations
