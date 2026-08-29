@@ -308,6 +308,21 @@ means generating something nobody approved.
   photoreal person → `veo_reference` (**3 images max**, validated in code). The full rule is
   [video-model-selection.md](references/video-model-selection.md) §6.
 
+  **The character's voice travels the same way.** `$CH/voice.wav` is the fixed voice sample
+  (`resolve-asset.py "$CHANNEL_DIR" voice claude`; §6). When the model voices the cut —
+  `generateAudio: true` on `seedance_reference`, which is a b-roll slot routed to Seedance or a
+  lip-synced speaking cut — pass it as `referenceAudioPaths` and bind it in the prompt right
+  after the reference list: `@Image 1-2 are Claude and speak with the voice of @Audio 1`. Two
+  speakers, two clips, one sentence each; `@Audio N` is the Nth entry of `referenceAudioPaths`.
+  The route is `dreamina-seedance-2-5-260628` — the only model whose guide documents the
+  per-character mapping, and the 2.0 series takes no audio-only input. Veo has no audio
+  reference, so a speaking cut that must keep the character's voice is Seedance's. A cut voiced
+  by TTS in the build needs no voice reference at all — the sample exists so the model-voiced
+  lane and the TTS lane sound like the same person, which is why it is cut from the voice
+  `identity.md` pins (profile §2). Imitation, not cloning: also describe the voice in words
+  (gender, age, texture, pace, mood) and keep the lines in the sample's tone — the vendor's own
+  FAQ says the result drifts otherwise.
+
   An entry written as `{ id, scope }` carries its **jurisdiction** — copy that clause into the
   prompt's reference list verbatim (`@mouse — controls the helmet and body only`). Don't
   paraphrase it and don't drop it: it is what keeps one reference from painting the rest of the

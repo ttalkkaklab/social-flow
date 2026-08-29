@@ -14,7 +14,7 @@ data/
     │   ├── branding/                #   profile logo (master + platform resizes)
     │   ├── intro/                   #   intro master·stinger·lockup·sonic logo
     │   ├── outro/                   #   default.mp4 · per-platform youtube.mp4 / instagram.mp4
-    │   ├── characters/<id>/         #   sheets for keeping the same face across episodes (front/side/back/full)
+    │   ├── characters/<id>/         #   identity.md + panels (face/body/back) + voice.wav — the same face and the same voice across episodes
     │   ├── audio/bgm/ · audio/sfx/  #   channel default BGM · recurring SFX
     │   ├── stills/                  #   stills you pull back out (swatches·products·card props)
     │   ├── fonts/                   #   subtitle ttf — produce copies them into .work/fonts/

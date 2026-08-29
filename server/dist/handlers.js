@@ -681,8 +681,13 @@ export const ROUTES = {
         const result = await seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, args));
         if (!result.success)
             return text(`Seedance video generation with references failed: ${result.error}`, true);
-        const refImagesInfo = result.referenceImages?.join('\n  - ') || '';
-        return text(`Video generated with reference images successfully!\n\nOutput: ${result.videoPath}\nReference Images (${result.referenceImages?.length || 0}):\n  - ${refImagesInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
+        const refImagesInfo = result.referenceImages?.length
+            ? `\nReference Images (${result.referenceImages.length}):\n  - ${result.referenceImages.join('\n  - ')}`
+            : '';
+        const refAudioInfo = result.referenceAudios?.length
+            ? `\nReference Audio (${result.referenceAudios.length}):\n  - ${result.referenceAudios.join('\n  - ')}`
+            : '';
+        return text(`Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
     },
     // ── speech synthesis (Gemini TTS) — saves the wav locally, returns path + meta text ──
     // Returns the script length, not the full text — echoing a 16k-char script back
