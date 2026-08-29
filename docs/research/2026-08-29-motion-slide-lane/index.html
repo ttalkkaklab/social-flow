@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>숫자·사실 장면을 HTML 애니메이션으로 — 조사 보고서 (2026-08-29)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@800;900&family=IBM+Plex+Sans+KR:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#f5f6fa; --ink:#10131f; --muted:#5a6280; --rule:#d8dce8; --card:#ffffff;
+    --accent:#2f5fe0; --accent2:#7c4dff; --good:#1f8a5b; --bad:#b8433d; --code:#eef0f7;
+    --frame:#0b1020; --frame-text:#ffffff; --frame-muted:rgba(255,255,255,.62);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+      --accent:#7ea2ff; --accent2:#b48cff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+    --accent:#7ea2ff; --accent2:#b48cff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Pretendard",sans-serif;
+    font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+  a:hover,a:focus-visible{border-bottom-color:var(--accent);outline:none}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .wrap{max-width:1040px;margin:0 auto;padding:56px 24px 96px}
+  .eyebrow{font-family:"IBM Plex Mono",Menlo,monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1,h2,h3{font-family:"Gothic A1","Apple SD Gothic Neo","Pretendard",sans-serif;font-weight:800;letter-spacing:-.02em;text-wrap:balance;margin:0}
+  h1{font-size:clamp(34px,5vw,50px);line-height:1.15;margin-top:10px}
+  h2{font-size:24px;line-height:1.3;margin-top:64px;padding-top:20px;border-top:1px solid var(--rule)}
+  h3{font-size:17px;margin-top:28px}
+  p{margin:14px 0;max-width:68ch}
+  ul{padding-left:20px;max-width:70ch}
+  li{margin:8px 0}
+  strong{font-weight:600}
+  code{font-family:"IBM Plex Mono",Menlo,monospace;font-size:.88em;background:var(--code);padding:1px 6px;border-radius:5px;overflow-wrap:anywhere}
+  .hero>*,.cols>*,.rule>*,.tiers>*,.stats>*{min-width:0}
+  pre{background:var(--code);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;overflow-x:auto;font-size:13.5px;line-height:1.6;max-width:100%}
+  pre code{background:none;padding:0;font-size:inherit}
+  .lede{font-size:18px;color:var(--ink);max-width:66ch}
+  .lede b{font-weight:600;color:var(--accent)}
+
+  /* hero: text + live 9:16 demo */
+  .hero{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:40px;align-items:start;margin-top:28px}
+  @media (max-width:760px){.hero{grid-template-columns:1fr}}
+  .demo{position:sticky;top:20px}
+  .frame{aspect-ratio:9/16;background:var(--frame);color:var(--frame-text);border-radius:22px;overflow:hidden;position:relative;
+    border:1px solid color-mix(in srgb,#fff 18%,var(--frame));box-shadow:0 20px 50px -20px rgba(11,16,32,.45)}
+  .frame .st{position:absolute;left:9%;right:9%;top:16%;bottom:22%;display:flex;flex-direction:column;gap:14px}
+  .frame .k{font-size:13px;color:var(--frame-muted)}
+  .frame .n{font-family:"Gothic A1",sans-serif;font-weight:900;font-size:78px;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+  .frame .n small{font-family:"IBM Plex Sans KR",sans-serif;font-weight:600;font-size:22px;color:#7ea2ff;margin-left:6px;letter-spacing:0}
+  .frame .bar{height:26px;border-radius:7px;background:#5b8cff;transform-origin:left center;transform:scaleX(0);animation:grow 1000ms cubic-bezier(.16,1,.3,1) both paused}
+  .frame .bar.b2{background:#a05bff;animation-delay:1200ms}
+  .frame .bar.b3{background:#ffb74d;animation-delay:2400ms}
+  .frame .lb{font-size:12px;opacity:0;animation:fadein 300ms ease-out both paused;margin-top:-6px}
+  .frame .lb.l2{animation-delay:1200ms}.frame .lb.l3{animation-delay:2400ms}
+  .frame .sub{position:absolute;left:9%;right:9%;bottom:9%;font-size:12px;line-height:1.5;color:#fff;
+    background:rgba(5,8,20,.55);padding:8px 10px;border-radius:8px;text-align:center}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .ctl{display:flex;align-items:center;gap:10px;margin-top:12px}
+  .ctl input[type=range]{flex:1;accent-color:var(--accent)}
+  .ctl button{font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid var(--rule);background:var(--card);color:var(--ink);cursor:pointer}
+  .ctl button:hover{border-color:var(--accent)}
+  .ctl .t{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);min-width:54px;text-align:right;font-variant-numeric:tabular-nums}
+  .cap{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+
+  /* stat strip */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:36px}
+  @media (max-width:640px){.stats{grid-template-columns:1fr}}
+  .stat{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:18px 20px}
+  .stat .v{font-family:"Gothic A1",sans-serif;font-weight:900;font-size:38px;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums}
+  .stat .v span{font-size:18px;font-weight:800;color:var(--muted);margin-left:4px;letter-spacing:0}
+  .stat .l{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.5}
+
+  /* evidence columns */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:16px}
+  @media (max-width:760px){.cols{grid-template-columns:1fr}}
+  .col h3{display:flex;align-items:center;gap:8px;margin-top:0}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .col ul{padding-left:18px;font-size:15px}
+  .meet{margin-top:28px;padding:18px 22px;border-left:3px solid var(--accent);background:var(--card);border-radius:0 12px 12px 0;max-width:70ch}
+  .meet p{margin:6px 0}
+
+  /* rules list */
+  .rules{display:grid;gap:10px;margin-top:16px;max-width:76ch}
+  .rule{display:grid;grid-template-columns:150px 1fr;gap:16px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:15px}
+  @media (max-width:560px){.rule{grid-template-columns:1fr;gap:4px}}
+  .rule .h{font-weight:600}
+  .rule .num{font-family:"IBM Plex Mono",monospace;color:var(--accent);font-variant-numeric:tabular-nums}
+  .src{font-size:13px;color:var(--muted)}
+
+  /* table */
+  .tbl{overflow-x:auto;margin-top:16px;border:1px solid var(--rule);border-radius:12px}
+  table{border-collapse:collapse;width:100%;min-width:640px;font-size:14.5px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--card)}
+  tr:last-child td{border-bottom:none}
+  .v-ok{color:var(--good);font-weight:600}.v-alt{color:var(--accent);font-weight:600}.v-no{color:var(--bad);font-weight:600}.v-meh{color:var(--muted);font-weight:600}
+
+  /* tiers */
+  .tiers{display:grid;gap:14px;margin-top:16px}
+  .tier{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:18px 22px;max-width:78ch}
+  .tier.rec{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
+  .tier .tg{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.1em;padding:2px 8px;border-radius:999px;border:1px solid var(--rule);color:var(--muted);margin-bottom:6px}
+  .tier.rec .tg{border-color:var(--accent);color:var(--accent)}
+  .tier h3{margin-top:0}
+  .tier p,.tier ul{font-size:15px}
+  .foot{margin-top:56px;padding-top:18px;border-top:1px solid var(--rule);font-size:13px;color:var(--muted);max-width:70ch}
+  @media (prefers-reduced-motion: reduce){ .frame *{animation-duration:.001ms !important} }
+  .fig{margin:18px 0 6px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .fig img{width:270px;height:auto;border-radius:14px;border:1px solid var(--rule)}
+  .fig figcaption{font-size:13px;color:var(--muted);max-width:40ch;line-height:1.6;padding-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">social-flow · 조사 보고 · 2026-08-29</div>
+  <h1>숫자·사실 장면을 HTML 애니메이션으로 옮기면 뭐가 달라지나</h1>
+
+  <div class="hero">
+    <div>
+      <p class="lede">바꿀 만하다. 다만 "애니메이션이라서" 좋아지는 게 아니라 <b>움직임이 뜻을 담을 때만</b> 좋아진다. 데이터 클립에 애니메이션을 넣으면 참여와 주의는 유의하게 오르고 이해도는 해가 없다는 게 1차 연구 여러 편의 공통 결과다. 반대로 뜻 없는 장식 모션은 참여도 못 올리면서 이해를 깎는다.</p>
+      <p>기술적으로는 지금 막혀 있는 이유가 본질적 제약이 아니다. 슬라이드 레인이 CSS 애니메이션을 금지하는 건 캡처 스크립트가 "정지 화면을 연속으로 찍어 바이트가 같아지는 지점"으로 상태 수를 세기 때문이다. 크롬을 한 번 띄워 놓고 프레임마다 애니메이션을 원하는 시각으로 끌어다 놓고 찍는 방식으로 바꾸면 그 이유가 사라진다. 함께 실은 데모의 슬라이더가 정확히 그 방식이다 — 시계가 아니라 <code>currentTime</code> 대입으로 프레임을 고른다.</p>
+      <p>이 레인은 이미 한 번 계약 밖에서 만들어졌다. ep05(안티키테라)에서 「원리 5·6·7컷을 톱니가 실제로 도는 애니메이션으로」 지시가 나왔고 이전 세션은 HTML 슬라이드를 빌드 경로에서 빼고 Python/PIL 로 330프레임씩 직접 그려 mp4 로 구웠다(700줄). 수요는 확인됐고 남은 건 그걸 일회성 스크립트가 아니라 레인으로 만드는 일이다.</p>
+    </div>
+    <div class="demo">
+      <div class="frame" id="frame">
+        <div class="st">
+          <div class="k">톱니바퀴 개수</div>
+          <div class="n"><span id="num">0</span><small>개</small></div>
+          <div class="bar b1" style="width:100%"></div><div class="lb l1">큰 조각 하나 27개</div>
+          <div class="bar b2" style="width:62%"></div><div class="lb l2">남은 조각 전부</div>
+          <div class="bar b3" style="width:38%"></div><div class="lb l3">사라진 것으로 추정</div>
+        </div>
+        <div class="sub">큰 조각 하나에만 톱니바퀴가 27개고요.</div>
+      </div>
+      <div class="ctl">
+        <button id="play" type="button" aria-label="재생">재생</button>
+        <input id="seek" type="range" min="0" max="3400" step="33" value="0" aria-label="시각">
+        <span class="t" id="tm">0.000s</span>
+      </div>
+      <div class="cap">벤치에 쓴 카드와 같은 구성 — 카운트업(JS) + 막대 3개(CSS <code>@keyframes</code>, delay 1.2s·2.4s) + 라벨 페이드. 슬라이더가 <code>document.getAnimations()</code> 전부를 <code>pause()</code> 하고 <code>currentTime</code> 을 대입한다.</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="v">22<span>fps</span></div><div class="l">이 맥에서 1080×1920 프레임 캡처 처리량(상주 페이지, 두 번 측정 22.7·22.0)</div></div>
+    <div class="stat"><div class="v">90 = 90</div><div class="l">두 번 렌더한 90프레임이 바이트 단위로 전부 동일 — 결정성 확인</div></div>
+    <div class="stat"><div class="v">16분 → 20초</div><div class="l">15초 씬(450프레임) 소요. 지금 방식은 프레임마다 크롬을 띄워 프레임당 2.12초</div></div>
+  </div>
+
+  <h2>왜 정지 씬이 많아지나</h2>
+  <p>구조상 그렇게 된다. <code>points</code> 씬의 기본 화면 몸체가 <code>still</code>(생성 이미지 + Ken Burns + 캡션 리빌)이고 생성 영상은 회차당 2컷 상한이라 나머지는 전부 정지다. HTML 슬라이드 레인은 있지만 롱폼 16:9 전용이고 움직임은 리빌 상태 사이 xfade 뿐이다.</p>
+  <p>최근 회차 실측이 그대로 보여 준다 — pundago ep07(김치) 11컷 중 <strong>10컷 정지</strong>, ep01 7/7, 딸깍랩 iphone-fold 편 14컷 중 13컷. 채널 첫 네 편의 유지율(52→38→26→19%)이 조회수 순서와 일치했고 이긴 곡선은 90초 내내 수평, 진 곡선은 3초부터 흘러내렸다. 둘 다 오프닝은 통했다. 승부가 난 자리는 본론이고 본론이 바로 정지 씬이 몰리는 구간이다.</p>
+
+  <h2>근거 — 찬성과 반대를 다 읽으면</h2>
+  <div class="cols">
+    <div class="col">
+      <h3><span class="dot" style="background:var(--good)"></span>참여·주의는 오른다</h3>
+      <ul>
+        <li><a href="https://hci.cs.umanitoba.ca/assets/publication_files/a21-amini.pdf">Amini 외, <em>Hooked on Data Videos</em>(AVI 2018)</a> — 120명, 10초 데이터 클립. 애니메이션이 참여(p=.005)와 주의 이탈 감소(p=.03)를 올렸고 <strong>정답률 주효과는 없었다</strong>. 애니메이션+픽토그램 조합이 최고.</li>
+        <li><a href="https://idl.cs.washington.edu/files/2007-AnimatedTransitions-InfoVis.pdf">Heer & Robertson(InfoVis 2007)</a> — 차트 전환 1.25초 애니메이션으로 추적·추정 오차가 유의하게 줄고 축과 값을 따로 움직이는 단계 분리가 가장 선호됐다. 한 번에 여러 변화는 오차를 늘렸다.</li>
+        <li><a href="https://arxiv.org/abs/2008.07227">Shu 외, <em>Data-GIF</em>(IEEE VIS 2020)</a> — 108개 GIF·118명. 평균 11.87초, 78.7%가 15초 미만. 시간 흐름을 부호화한 애니메이션이 가장 잘 이해됐고 <strong>뜻 없는 셋업 모션은 최하</strong>. 끝 프레임에 결론이 남아 있길 기대한다.</li>
+        <li>Berney & Bétrancourt 메타분석(2016, 61편) g=0.226. Höffler & Leutner(2007): <strong>장식성 애니메이션 효과 0</strong>, 내용을 담은 애니메이션 d=0.40.</li>
+        <li>피드 실측 — Meta 자막 광고 시청 시간 +12%(방법 비공개), TikTok/Kantar 4,000편 자막 존재 recall +58%(상관).</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3><span class="dot" style="background:var(--bad)"></span>이해는 조건부다</h3>
+      <ul>
+        <li><a href="https://hci.stanford.edu/courses/cs448b/papers/Tversky_AnimationFacilitate_IJHCS02.pdf">Tversky·Morrison·Bétrancourt(2002)</a> — 애니메이션이 이긴 연구는 정보량이 달랐다. 사람은 연속 동작도 이산 단계로 이해하니 <strong>단계별 정지 프레임이 더 낫고 다시 볼 수도 있다</strong>.</li>
+        <li>Mayer 중복 원칙 — 나레이션+화면 텍스트 전문은 나레이션 단독보다 못하다(d=0.72). 단 <strong>핵심 단어 몇 개를 그래픽 옆에</strong> 두면 효과가 준다는 경계 조건이 원문에 있다. 재료가 2.5분 강의라 1분 미만 피드엔 방향만 빌린다.</li>
+        <li>Sundararajan & Adesope(2020, 50편) — 재밌지만 무관한 요소(유혹적 세부)가 이해 g=−0.19.</li>
+        <li>Coskun & Cagiltay 아이트래킹 리뷰(2022, 57편) — 눈은 움직임에 끌리지만 시선이 갔다고 학습이 되진 않는다. 화살표·색·동기화 강조 같은 <strong>큐</strong>가 점수를 올린다.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="meet">
+    <p><strong>양쪽이 만나는 지점.</strong> ① 움직임은 값이 자라거나 항목이 늘어나는 것처럼 뜻이 있을 때만. ② 한 단계에 한 변화, 단계 사이에 멈춤. ③ 화면 글자는 나레이션 받아쓰기가 아니라 핵심 숫자·단어 몇 개를 그래픽 옆에. ④ 클립 하나에 인사이트 하나, 15초 안, 끝 프레임에 결론 고정.</p>
+    <p class="src">이 넷은 지금 스키마의 「화면 텍스트는 소리를 복제하지 않는다」·「한 문장 = 한 자막 = 한 리빌」과 같은 방향이다. 주의 — 위 연구는 전부 나레이션 없는 재료다. 나레이션 위에 빌드를 얹는 조합이나 정지+Ken Burns 대 HTML 빌드를 직접 비교한 연구는 없다.</p>
+  </div>
+
+  <h2>연출 규칙 — 숫자로</h2>
+  <p>TTS 경계 시각을 이미 가진 파이프라인에 그대로 옮겨지는 규칙부터.</p>
+  <div class="rules">
+    <div class="rule"><div class="h">동기 리빌이 골격</div><div>요소의 진입 시각 = 그 요소를 말하는 세그먼트 시작, 지속 = 세그먼트 길이. 축·제목 같은 배경은 첫머리에 정적으로, 같은 종류엔 같은 효과, 애니메이션은 데이터 사실에만. <span class="src"><a href="https://arxiv.org/pdf/2308.04703">Data Player, IEEE VIS 2023</a> 제작자 인터뷰 설계 제약 — <code>reveal-timing.py</code> 가 내는 문장 경계가 이 타임라인의 입력</span></div></div>
+    <div class="rule"><div class="h">카운트업</div><div><span class="num">2~4초</span>, ease-out 착지. 숫자가 화면에서 가장 큰 요소, 단위·라벨은 작게, 비교치는 착지 뒤에 스탬프. <span class="src">1차 근거는 없고 도구 문서·라이브러리 기본값(countUp.js 1~2초)뿐</span></div></div>
+    <div class="rule"><div class="h">막대 성장</div><div><span class="num">0.5~1초</span> — Highcharts 기본 500ms, Chart.js 기본 1000ms·easeOutQuart, Heer & Robertson 실험 1.25초. 스테이지당 약 1초, slow-in/slow-out, 회전보다 이동·확대</div></div>
+    <div class="rule"><div class="h">여러 항목 스태거</div><div>항목당 지연 수십 ms, 진입 <span class="num">225ms</span>·퇴장 195ms(Material), Carbon 150/240ms. 400ms 넘으면 느리다</div></div>
+    <div class="rule"><div class="h">읽을 시간</div><div>정착 뒤 최소 <span class="num">0.5초</span>. 자막은 넷플릭스 한국어 기준 줄당 16자·최대 2줄·초당 12자·이벤트 5/6~7초. 국내 관행 1줄 1.5초·2줄 2.5초. 숫자 한 줄이면 최소 1.2초</div></div>
+    <div class="rule"><div class="h">픽토그램</div><div>큰 수라고 아이콘을 키우지 않고 같은 크기로 반복(ISOTYPE)</div></div>
+    <div class="rule"><div class="h">바 차트 레이스</div><div>순위가 실제로 바뀔 때만 — 애니메이션 시청자가 값을 덜 정확히 읽는다(Robertson 2008)</div></div>
+    <div class="rule"><div class="h">Vox 문법</div><div>"전환은 아무 정보도 주지 않는다." 요소는 내레이션이 방금 던진 질문에 답할 때만 움직인다(Estelle Caswell). 통계는 퍼센트 글자 대신 출처 자료·데이터 자체를 화면에</div></div>
+  </div>
+  <p><strong>안티패턴</strong> — 한 화면에 움직이는 것 여럿, 파티클·색종이, 거리·크기 무시한 균일 지속시간, 30초 넘게 한 가지 모션 아이디어, 자막이 오디오보다 먼저·늦게 뜸, 심미성이 기능을 앞섬.</p>
+  <p><strong>한국 자료에서 확인된 것</strong> — 쇼츠 편집자 @mooyoung_tube: 한 번에 보이는 글자를 줄이고 4줄 이상 금지, 훅은 두꺼운 폰트·본문은 얇게, "오디오가 시작될 때 자막이 나오는 게 이상적". 14F 제작진: "내용 이해를 돕는 모션그래픽을 많이 활용"(수치 없음). 뉴스 CG 논문: 그래프·도표형이 최빈, 원칙은 "간단명료". 슈카월드·삼프로 편집 분석이나 예능 강조 자막의 펀치줌 지속시간 같은 수치 자료는 못 찾았다.</p>
+  <p class="src"><strong>통설에 그친 것</strong> — "N초마다 화면 변화"(2초·5~7초·10~15초 전부 데이터셋 없음), "애니메이션 자막 시청시간 +25~40%"(출처 없는 A/B), 키네틱 타이포 "(글자수÷12)+0.5초" 공식(원문 없음).</p>
+
+  <h2>기술 — 어떻게 붙이나</h2>
+  <p><strong>지금 막힌 자리.</strong> <code>capture-reveals.sh</code> 가 <code>?reveal=k</code> 를 올려 가며 정지 화면을 찍고 직전 캡처와 바이트가 같아지는 k 를 상태 수로 삼는다. 움직이는 요소가 하나라도 있으면 이 판정이 끝나지 않으니 <code>check-slide.js</code> 가 CSS animation/transition·웹폰트·Date·Math.random 을 통째로 막는다. 금지는 "결정성"이 아니라 "상태 세기"를 지키려는 것이다.</p>
+  <p><strong>결정성의 모양을 바꾸면 된다</strong> — "정지 상태가 바이트 동일"에서 "시각 t 의 프레임이 재현 가능"으로. 프레임 수는 TTS 경계와 씬 길이에서 나오니 세어 볼 필요가 없다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>경로</th><th>판정</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td><strong>WAAPI seek 루프</strong>(직접 구현)</td><td class="v-ok">채택</td><td><code>document.getAnimations()</code> 가 CSS Animations·Transitions·WAAPI 를 다 돌려주고 <code>pause()</code> 뒤 <code>currentTime = t</code> 로 임의 시각에 세운다. 브라우저 표준, 라이선스 없음, 기존 스크립트에 루프 하나</td></tr>
+      <tr><td>HyperFrames(HeyGen, Apache-2.0, 0.8.17)</td><td class="v-alt">2안</td><td>같은 seek 모델을 패키징. Node 22+·자체 CLI·<code>data-*</code> 계약 이식 필요. 맥에선 어차피 screenshot 모드 폴백</td></tr>
+      <tr><td>Remotion</td><td class="v-no">비추</td><td>카드 전부 React 재작성, <code>useCurrentFrame()</code> 밖 애니메이션은 깨짐. 관여 인원 4명부터 유료</td></tr>
+      <tr><td>Motion Canvas</td><td class="v-no">불가</td><td>헤드리스 렌더 없음(#415 open), 2025-02 이후 배포 없음</td></tr>
+      <tr><td>timecut / timesnap / timeweb</td><td class="v-no">불가</td><td>CSS 애니메이션 "will likely not render as intended", 2022~23 이후 방치</td></tr>
+      <tr><td>Playwright <code>page.clock</code></td><td class="v-meh">부족</td><td>JS 타이머만 가상화, <code>document.timeline</code> 은 못 움직임(#38951)</td></tr>
+      <tr><td>CDP virtual time / BeginFrameControl</td><td class="v-no">맥 불가</td><td><code>enableBeginFrameControl</code> 문서 "not supported on MacOS yet"</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>실측 — 이 맥, Chrome 152, puppeteer-core 25.9</h3>
+  <p>카운트업(JS) + 막대 3개(CSS <code>@keyframes</code>, <code>animation-delay</code> 1.2s·2.4s) + 라벨 페이드 3개를 담은 1080×1920 카드를 30fps 로 90프레임 캡처했다.</p>
+  <ul>
+    <li>처리량 <strong>22.7 fps / 22.0 fps</strong>(두 번), 90프레임에 4초</li>
+    <li>결정성 — 두 실행의 90프레임 전부 바이트 동일(<code>diff -rq</code> 무차이)</li>
+    <li>프레임 45(1.5초)를 열면 카운트 28, 첫 막대 완성, 둘째 막대 자라는 중, 셋째 미시작 — <code>animation-delay</code> 까지 seek 로 정확히 잡힌다</li>
+    <li><code>ffmpeg -framerate 30 -i f%04d.png</code> → 1080×1920·30fps·90프레임·3.000초 mp4. 빌더 xfade 체인 규격(같은 해상도·fps·CFR)에 그대로 맞는다</li>
+    <li>비교 — 지금 <code>capture-frames.sh</code> 방식(프레임마다 크롬 기동) 프레임당 <strong>2.12초</strong>. 15초 씬 450프레임이면 16분 대 20초</li>
+  </ul>
+  <figure class="fig"><img src="bench-frame-45.jpg" alt="벤치 카드 프레임 45(1.5초) — 카운트 28, 첫 막대 완성, 둘째 막대 자라는 중" width="270" height="480"><figcaption>프레임 45(1.5초). seek 로 잡은 중간 상태 — 카운트업 28, 첫 막대 완성, 둘째 막대 자라는 중, 셋째 미시작.</figcaption></figure>
+  <p><strong>핵심 코드는 이게 전부다.</strong></p>
+<pre><code>// card.html 이 노출하는 seek — 모든 움직임은 이 한 함수로 시각 t 에 선다
+window.__seek = tMs =&gt; {
+  for (const a of document.getAnimations()) { a.pause(); a.currentTime = tMs; }
+  // JS 구동 요소(카운트업)는 t 로 값을 계산해 그린다 — Date·rAF 를 읽지 않는다
+};
+
+// render-slide.mjs — 크롬 한 번, 프레임마다 seek + screenshot
+const page = await browser.newPage();
+await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
+await page.goto(url); await page.evaluate(() =&gt; document.fonts.ready);
+for (let i = 0; i &lt; frames; i++) {
+  await page.evaluate(t =&gt; window.__seek(t), i * 1000 / 30);
+  await page.screenshot({ path: `f${String(i).padStart(4, '0')}.png` });
+}</code></pre>
+  <p class="src"><strong>문서로 확인한 함정</strong> — <code>document.fonts.ready</code> 는 아직 글자에 안 쓰인 폰트를 안 기다리니 DOM 을 다 올린 뒤 기다리고 폰트는 로컬 파일로 · CSS transition 은 속성이 바뀐 뒤에만 <code>CSSTransition</code> 객체가 생기니 <code>@keyframes</code> 를 쓴다 · <code>Animation.pause()</code> 는 pending 을 거칠 수 있어 <code>await Promise.all(anims.map(a =&gt; a.ready))</code> 를 한 번 끼운다 · Playwright 라면 screenshot <code>animations:'disabled'</code> 가 seek 상태를 부수니 기본값 <code>'allow'</code> 로 · image2 기본이 25fps 라 <code>-framerate 30</code> 을 <code>-i</code> 앞에 · GSAP 는 3.13(2025-04)부터 플러그인 포함 무료라 타임라인 <code>seek()</code> 로 같은 루프에 들어간다.</p>
+
+  <h2>제안 — 세 단계</h2>
+  <div class="tiers">
+    <div class="tier">
+      <div class="tg">0단계 · 지금 계약 안에서</div>
+      <h3>슬라이드 레인을 숏폼에도 연다 — 비용 0</h3>
+      <p>존 좌표만 <code>formats.js</code> portrait 값(x 176·top 190·bottom 570)으로 바꾸면 된다. 리빌 상태를 <code>A|B</code> 로 잘게 나눠 xfade 만으로 "한 단계 한 변화"를 만들고 히어로 숫자는 제목보다 크게. 한계는 분명하다 — 카운트업·막대 성장·도는 톱니는 못 한다. ep05 가 우회한 게 정확히 이 한계다.</p>
+    </div>
+    <div class="tier rec">
+      <div class="tg">1단계 · 권장</div>
+      <h3>모션 슬라이드 레인</h3>
+      <ul>
+        <li><code>visual.slide</code> 에 <code>motion: true</code> 같은 표지를 두고 그 씬만 새 경로를 탄다.</li>
+        <li>계약은 "모든 움직임은 <code>window.__seek(t)</code> 로 재현된다" 하나. <code>Date</code>·<code>Math.random</code>·<code>requestAnimationFrame</code> 읽기 금지는 유지하고 CSS <code>@keyframes</code> 와 로컬 <code>@font-face</code> 는 허용. <code>check-slide.js</code> 의 결정성 규칙을 이 모양으로 바꾼다.</li>
+        <li>글자는 지금처럼 전부 scenes.js(<code>title</code>·<code>bullets</code>·<code>slide.labels</code>)에서 온다 — 문체 게이트(screen 표면) 우회 금지는 그대로.</li>
+        <li>타임라인 입력은 <code>reveal-timing.py</code> 가 내는 문장 경계. 렌더러가 <code>window.__keyframes</code> 로 주입하고 슬라이드는 그 시각에 요소를 발화시킨다. 나레이션 동기가 그대로 산다.</li>
+        <li>산출물은 씬 길이만큼의 mp4. 빌더엔 촬영 클립과 같은 "이미 움직이는 footage"(<code>zoom=none</code> 레인)로 들어가니 오디오 무드리프트 계약은 건드리지 않는다.</li>
+        <li>어디에 쓰나 — 수치·비교·단계·타임라인·구조 씬. 사람·장소·분위기는 지금처럼 이미지·영상. 연속 슬라이드는 2~3컷까지.</li>
+        <li>비용 0원. 생성 영상 2컷 상한과 별개로 움직이는 화면을 늘리는 유일한 공짜 경로다.</li>
+      </ul>
+    </div>
+    <div class="tier">
+      <div class="tg">2단계 · 필요해지면</div>
+      <h3>HyperFrames 로 갈아탄다</h3>
+      <p>씬 유형이 늘어 렌더러 유지가 부담되면 같은 seek 모델을 패키징한 HyperFrames(Apache-2.0)로 옮긴다. Remotion 은 React 재작성과 인원 기준 유료 라이선스 때문에 이 파이프라인엔 맞지 않는다.</p>
+    </div>
+  </div>
+
+  <h2>남은 불확실</h2>
+  <ul>
+    <li>나레이션 위에 얹은 빌드의 효과를 직접 잰 연구는 없다 — 채널 유지율 곡선으로 회차별 확인이 유일한 검증이다.</li>
+    <li>카운트업 길이 2~4초는 도구 문서 수준 근거다.</li>
+    <li>22fps 는 단색 막대 카드에서 잰 값이다. 스크린샷 PNG 인코딩이 비용의 대부분이라 ep05 처럼 사진 바탕을 깔면 10~15fps 로 떨어질 수 있다. 그래도 15초 씬이 30~45초라 결론은 같다.</li>
+    <li>"N초마다 화면 변화" 류 수치는 전부 출처 없는 통설이라 규칙으로 못 쓴다.</li>
+  </ul>
+  <div class="foot">벤치 코드는 이 폴더의 <code>bench/card.html</code>·<code>bench/bench.mjs</code> — <code>npm i puppeteer-core</code> 뒤 <code>node bench.mjs 90 frames</code> 로 같은 실측을 다시 낼 수 있다(시스템 크롬 경로는 파일 안에). 조사는 근거·기술·실무 세 갈래를 각각 따로 검색해 합쳤고 출처는 본문 링크가 전부다.</div>
+</div>
+
+<script>
+(function(){
+  const frame=document.getElementById('frame');
+  const num=document.getElementById('num');
+  const seek=document.getElementById('seek');
+  const tm=document.getElementById('tm');
+  const play=document.getElementById('play');
+  const TARGET=30, COUNT_MS=2500, END=3400;
+  const easeOut=x=>1-Math.pow(1-x,3);
+  let anims=[];
+  function collect(){ anims=frame.getAnimations({subtree:true}); }
+  function setT(tMs){
+    if(!anims.length) collect();
+    for(const a of anims){ a.pause(); a.currentTime=tMs; }
+    const p=Math.min(1,Math.max(0,tMs/COUNT_MS));
+    num.textContent=Math.round(TARGET*easeOut(p));
+    tm.textContent=(tMs/1000).toFixed(3)+'s';
+  }
+  let raf=null, t0=null, from=0;
+  function stop(){ if(raf){cancelAnimationFrame(raf);raf=null;} play.textContent='재생'; }
+  function tick(now){
+    if(t0===null) t0=now;
+    let t=from+(now-t0);
+    if(t>=END){ t=END; setT(t); seek.value=t; stop(); return; }
+    setT(t); seek.value=t; raf=requestAnimationFrame(tick);
+  }
+  play.addEventListener('click',()=>{
+    if(raf){ stop(); return; }
+    from=parseFloat(seek.value); if(from>=END) from=0;
+    t0=null; play.textContent='멈춤'; raf=requestAnimationFrame(tick);
+  });
+  seek.addEventListener('input',()=>{ stop(); setT(parseFloat(seek.value)); });
+  collect(); setT(0);
+})();
+</script>
+</body>
+</html>
