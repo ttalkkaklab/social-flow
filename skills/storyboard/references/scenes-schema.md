@@ -318,7 +318,7 @@ visual: {
                                      // written in veo vocabulary — push and orbit appear 0 times in the canonical docs
   video: null,                       // points only: the motion-background shot marker (§motion background) — omitted for stills
   clip: null,                        // quote only: the speech clip plan (below)
-  slide: null,                       // long-form slide scene (§slide scenes) — { file, plan, labels }
+  slide: null,                       // slide scene (§slide scenes · §motion slides) — { file, plan, labels, motion }
   character: null,                   // who is on screen (§character reference) — "<id>" | ["<id>", …] | null
   camera: null                       // the four camera slots (§camera) — required on every generated-video shot
 }
@@ -333,7 +333,7 @@ title and figure in HTML over a still photo is the default. Don't merge the two 
 | `ai-video` | Generated video — motion background, b-roll, speech clip | `type==="broll"`, or `visual.video`, or `visual.clip` |
 | `recording` | **A clip the user filmed themselves** (§filmed scenes) | `visual.source==="recording"` |
 | `asset` | A pre-made shared mp4 | `type==="outro"` |
-| `slide` | **An HTML slide** — a text-and-shape diagram filling the frame (§slide scenes, long-form only) | `visual.slide` present |
+| `slide` | **An HTML slide** — a text-and-shape diagram filling the frame. Static (§slide scenes): long-form only. Motion (`slide.motion`, §motion slides): both formats | `visual.slide` present |
 
 **The verdict is per scene.** Generated and filmed scenes mixing within one episode is the
 normal long-form path, so don't flip the whole episode into one mode — that makes a single
@@ -1462,7 +1462,7 @@ stops with `STRICT_DIM=1` **before the first ffmpeg** (the landscape preset's de
 is written at the top of `script.md`'s filming rules — learning it after filming everything means
 filming again.
 
-### Slide scenes — a screen where text and shapes are the subject (`visual.slide`, long-form only)
+### Slide scenes — a screen where text and shapes are the subject (`visual.slide`)
 
 For a passage where **the explanation has to be the screen** — structure, comparison, steps, a
 flow of numbers — a slide beats a caption over a photo background. The criterion joins the one
@@ -1496,6 +1496,7 @@ slide.**
 | `slide.file` | ✅ | `slides/s<shot number>-<slug>.html` — **shot number = the SCENES array position (from 1)**, the same number as script.md's shot and `voice/s<n>.wav` |
 | `slide.plan` | ✅ | One line on what to draw. The §7 approval reads this plan — the file is built afterwards |
 | `slide.labels` | ✅ when the shapes carry text | Every piece of text to draw on the slide beyond `title` and `bullets`. The style gate's screen surface checks this array — plant Korean text in the slide file that isn't here and characters that never passed the check go on screen |
+| `slide.motion` | optional | `true` makes it a **motion slide** (§motion slides) — numbers count up, bars grow, steps enter on their sentence. Omitted or `false` is the static slide whose only movement is the builder's xfade between reveal states |
 
 **The file is not built at the storyboard stage.** The storyboard carries only `plan` and
 `labels`; once §7 approval is done, storyboard §8 authors it against the
@@ -1514,6 +1515,91 @@ is authoring time rather than money.
   condition) never finishes. A slide has to render deterministically for a given `?reveal=k`.
 - Keep text inside the zone (x 96 · top 96 · bottom 285) — even with no Ken Burns
   (`zoom=none`), the bottom 285px is the subtitle band.
+- **A static slide is long-form only** — `slide-template.html` is fixed at 1920×1080 and
+  §8's capture runs at `CAP_W=1920 CAP_H=1080`. A short-form episode that wants a slide
+  makes it a motion slide (`slide.motion: true`, below), whose template carries both
+  formats' zones.
+
+### Motion slides — a slide whose numbers move (`visual.slide.motion: true`)
+
+For a passage that **states a value** — a count, a comparison, a share, steps that arrive
+one per sentence — a static slide leaves the number sitting there while the voice says it.
+A motion slide makes the number count up, the bar reach its mark, the step enter, **at the
+moment the sentence about it starts**. The research behind the lane
+(`docs/research/2026-08-29-motion-slide-lane/`): animation raises attention and engagement
+and leaves comprehension unharmed only when the movement carries the value; decorative
+motion costs comprehension. So the lane is deliberately narrow — beats, not ambience.
+
+```js
+{
+  type: "points",
+  scene: 5, sceneSlug: "the gear count", beat: "body",
+  title: "톱니가 몇 개나 됐을까",
+  duration: 11,
+  narration: [ /* 3 segments — 1:1 with the slide's reveal groups */ ],
+  bullets: [{ t: "큰 조각 하나", d: "27개" }, { t: "남은 조각 전부", d: "30개" }],
+  visual: {
+    picture: "slide", overlay: "none",
+    slide: {
+      file: "slides/s5-gear-count.html",
+      motion: true,
+      // what moves on which sentence — §7 approval reads this line
+      plan: "① 27 counts up as the hero number · ② the 30 bar grows to 81% · ③ the 37 bar grows to full and the source line enters",
+      labels: ["톱니바퀴 개수", "큰 조각 하나", "Freeth et al., Nature 2006"]
+    }
+  }
+}
+```
+
+**The state rule** — one sentence the template, the renderer and the reviewer all cite:
+*clip k opens on groups 0..k-1 at rest, group k animates from t=0, and its last frame is
+group k at rest.* Group 0 is the base (kicker, title, axes) and never animates on its
+own — it is clip 1's first frame. Groups are 1:1 with narration segments (segment 1 →
+group 1); sub-reveals (`A|B`) make more groups than segments, as on any card.
+
+What that buys: **no narration timing is needed at render time.** `render-motion-slide.mjs`
+(produce references) renders one clip per group, and produce lays clip k under segment k
+as a play-once visual (`@motion/slide-s<n>/r<k>.mp4` in segs.tsv, whose paths are relative
+to `.work/` — produce §3.6). The builder freezes
+each clip on its last frame for the rest of the segment, and the reveal xfade at the
+sentence boundary crosses two identical pictures (the previous rest state), so the seam
+is invisible — measured 44 dB PSNR across the seam on the 2026-08-29 fixture. The motion
+begins inside the pause before the sentence, which is where the caption contract already
+puts the reveal.
+
+| Field | Required | What |
+|---|---|---|
+| `slide.motion` | ✅ `true` | the marker. Without it the file is checked as a static slide (animations forbidden) |
+| `slide.plan` | ✅ | **what moves on which sentence**, numbered by segment — "① 27 counts up · ② the bar grows". A plan that only says what is drawn is a static plan |
+| `slide.labels` | ✅ | as on a static slide. Figures may be typed in the slide, but every figure on screen must match `labels` / `bullets` / research.md — slide-reviewer reads them off the frames |
+
+Contract (the template's head comment carries the same list; `check-slide.js` machine-checks it):
+
+- Built from `references/motion-slide-template.html`, never from `slide-template.html` —
+  it exposes `window.__seek(tMs, g)` · `__groups()` · `__size()` · `__meta()`, which the
+  renderer calls (`__meta` reports stray and infinite animations; the renderer stops on either).
+- **Every movement is reproducible by seek**: CSS `@keyframes` (the template's `rise` ·
+  `grow` · `draw`) and `data-count` count-ups only. `transition` is forbidden (its object
+  exists only after a property change, so it can't be seeked). `Date` · `Math.random` ·
+  `performance.now` · `requestAnimationFrame` · `setTimeout` are forbidden — the frame is
+  whatever `__seek(t, g)` says, and the same `(g, t)` yields the same pixels (two renders
+  of the fixture: 144/144 frames byte-identical).
+- Local fonts only, as on every slide.
+- **One movement per group, ≤ 2.6s of motion** (clip ≤ 2.9s with the hold). A segment
+  shorter than its clip cuts to the next rest frame mid-motion; the renderer warns.
+- **Continuous motion is outside this lane** — gears turning for the whole scene, a
+  line tracing under the narration. That would freeze on every hold. Render it as
+  footage and place it with `visual.video` / `visual.clip` (ep05's gear scenes went that
+  way). Beats only: count-ups, bar growth, step and callout entries.
+- Both formats. The zone comes from `window.FORMAT` (portrait x 176 · top 190 · bottom
+  570, wide x 96 · top 96 · bottom 285 — `formats.js` mirrored inline in the template).
+- The look is `references/slide-design.md` — ink · paper · one accent, hairlines not
+  boxes, one hero per slide. Its §5 is the rubric **`slide-reviewer`** scores the rendered
+  frames against in storyboard §8, and a motion slide enters the build only at **score ≥
+  95 with p0 = 0**.
+- A motion slide has no `bg`/`bgPrompt` and skips §5 image generation and the image
+  review, like a static slide; the storyboard's check strip and `episode-state.js` treat
+  the file the same way (same naming, same "not authored yet" blocker).
 
 ## Authoring verification checklist (the storyboard skill's self-check before requesting approval)
 
@@ -1550,6 +1636,11 @@ strip says no violations.
       and file follows the `slides/s<shot number>-<slug>.html` convention (shot number = array
       position). Every piece of text to draw on the shapes is in `slide.labels` — the file itself
       is built in §8 after approval
+- [ ] **If there are motion slides** (`slide.motion: true`, §motion slides) the `plan` says what
+      moves on which sentence (numbered by segment), the movement is a value being spoken (a
+      count, a bar, a step) and not ambience, and no scene relies on continuous motion — that
+      is footage, not a slide. Groups are 1:1 with narration segments unless `A|B` sub-reveals
+      are written
 - [ ] **On an all-live-voice episode** `window.VOICE = "user"` is present and every scene that
       has narration filled it (§all-live-voice episodes) — the filmed-scene "live voice = `[]`"
       rule is for TTS episodes only

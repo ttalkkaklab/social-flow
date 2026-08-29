@@ -19,7 +19,11 @@ build constant downstream. Long-form episodes **mix clips you film yourself with
 generated scenes** — where the evidence lives on screen you film it, where the point is
 a mood or a place the pipeline generates an image, and scenes that need words or
 diagrams on screen become **HTML slides**: planned in the storyboard, authored only
-after you approve the plan. Narration defaults to **your own voice on every scene**, so
+after you approve the plan. A slide that states a value becomes a **motion slide** —
+the number counts up and the bar grows the moment its sentence starts, rendered locally
+frame by frame at no cost and admitted to the build only after an adversarial design
+review (`slide-reviewer`, 95-point gate) — the one free way to put movement on a body
+scene on either format. Narration defaults to **your own voice on every scene**, so
 the shooting script (`script.md`) carries the lines for every shot — filmed shots get
 what to show, what to say, and the filename to save it as; the rest are voice-only
 recordings.
@@ -269,6 +273,10 @@ adversarial reviewer `storyboard-reviewer` **six times, once each**, before appr
 
 None of the six is a pass/fail gate — each returns findings once, they get applied, and
 anything left over goes onto the human approval screen, which is the one thing that blocks.
+The exception is a **motion slide**: after approval, storyboard §8.1 renders its frames and
+delegates them to `slide-reviewer`, and the slide enters the build only when that review
+scores ≥ 95 with no P0 — a convergence loop (cap 3 rounds), because a slide is cheap to
+re-render and a generated-looking one is not worth shipping.
 The per-item reviews report the **lowest-scoring** scene or shot rather than the average,
 because an average lets one broken scene hide behind the good ones. The order has a
 reason too — images come last because a changed sentence changes what its scene
@@ -328,9 +336,10 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap · Chrome lane map)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
-│   ├── storyboard/              # /social-flow:storyboard — research → scene design → six one-round reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval
+│   ├── storyboard/              # /social-flow:storyboard — research → scene design → six one-round reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval → slides (motion slides through the slide-reviewer gate)
+│   │   └── references/          #   scenes-schema.md · directing-grammar.md · slide-template.html · motion-slide-template.html · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js
 │   ├── produce/                 # /social-flow:produce — video build + per-platform text
-│   │   └── references/          #   build-reel.sh · speedup.sh (required 1.4x speed pass) · bgm-bed.sh · bgm-scoring.md · video-template.html · QA harness
+│   │   └── references/          #   build-reel.sh · speedup.sh (required 1.4x speed pass) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
 │   ├── autoproduce/             # /social-flow:autoproduce — one topic through research→authoring→video unattended (human gates replaced by eleven machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
@@ -349,6 +358,7 @@ social-flow/
 │   ├── brand-reviewer.md        # adversarial review of profile images & intro videos (95/90-point convergence gates)
 │   ├── content-reviewer.md      # adversarial pre-publish verification (P0 gate)
 │   ├── growth-post-reviewer.md  # adversarial review of growth-loop copy (AI tells · context — 95-point gate)
+│   ├── slide-reviewer.md        # adversarial review of a rendered motion slide (design craft · no generated look · motion meaning · legibility — 95-point convergence gate)
 │   └── storyboard-reviewer.md   # adversarial storyboard review, 6 modes read once each (copy AI tells / per-scene role·context / vocabulary / camera — feel·size·angle·space of every shot + the slots of generated shots / sound plan / image fit)
 ├── apps/
 │   └── shoot-console/           # macOS SwiftUI recording console for the shooting-script flow (built locally via build-app.sh)

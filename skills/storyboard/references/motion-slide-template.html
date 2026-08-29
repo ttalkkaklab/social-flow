@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>모션 슬라이드 씬</title>
+<!--
+  social-flow 모션 슬라이드 렌더러 — 숏폼 1080×1920 · 롱폼 1920×1080 (window.FORMAT 이 고른다).
+  scenes-schema §모션 슬라이드 · storyboard SKILL §8 · slide-design.md 가 이 파일의 사용 계약이다.
+
+  ■ 사용법 (storyboard §8 — 승인 뒤에만):
+      1. 이 파일을 storyboard/slides/s<샷번호>-<slug>.html 로 복사한다
+         (샷번호 = SCENES 배열 순번 1부터 — visual.slide.file 과 같은 이름).
+      2. 아래 SLIDE_SHOT 을 그 샷번호로 바꾼다.
+      3. renderSlide() 하나만 그 씬의 도해로 다시 쓴다 — 다른 부분은 건드리지 않는다.
+      4. 글자는 전부 scenes.js 에서 온다(S.title·S.bullets·S.visual.slide.labels).
+         여기 새 한국어 문자열 리터럴을 쓰지 않는다 — 문체 게이트(screen 표면)를
+         통과한 적 없는 글자가 화면에 나가는 길이고 check-slide.js 가 기계로 잡는다.
+         숫자는 리터럴로 써도 되지만 labels·research.md 의 값과 같아야 한다(slide-reviewer 가 대조).
+
+  ■ 상태 규칙 (scenes-schema §모션 슬라이드 — 템플릿·렌더러·리뷰어가 전부 이 한 줄을 따른다):
+      리빌 그룹 k 의 클립 = 그룹 0..k-1 은 쉬는 상태(끝 프레임), 그룹 k 가 t=0 부터 움직이고
+      끝나면 그룹 k 의 쉬는 상태에서 얼어붙는다. 그룹 0 은 바탕(제목·축)이라 따로 움직이지 않고
+      클립 1 의 첫 프레임이다. 그룹은 나레이션 세그먼트와 1:1 이 기본(세그 1 = 그룹 1).
+
+  ■ 페이지가 노출하는 계약 (render-motion-slide.mjs 가 부른다):
+      window.__seek(tMs, g)   그룹 g 의 로컬 시각 tMs 로 화면을 세운다 (위 상태 규칙). 모든
+                              애니메이션의 ready 가 풀린 뒤 resolve 하는 프라미스를 돌려준다.
+      window.__groups()       [{rg, dur}] — 그룹별 움직임 길이(ms, 홀드 포함). dur 은 애니메이션
+                              타이밍에서 계산되므로 손으로 적지 않는다.
+      window.__size()         {w, h}
+      window.__meta()         {hold, stray, infinite} — 렌더러의 계약 검사용. 그룹 밖 애니메이션
+                              (stray)이나 무한 반복이 하나라도 있으면 렌더러가 멈춘다.
+      URL: ?reveal=k  정지 상태 k (그룹 ≤k 쉬는 상태) — 검사 띠·capture-reveals 호환
+           ?g=k&t=ms  그룹 k 의 t ms 프레임 하나
+           없음        전부 쉬는 상태(마지막 프레임)
+
+  ■ 결정성 계약 (같은 (g, t) 는 언제 찍어도 같은 픽셀이어야 한다):
+      - 움직임은 CSS @keyframes (animation) 과 data-count 카운트업만. transition 금지 — 속성이
+        바뀐 뒤에만 객체가 생겨 seek 가 안 된다.
+      - Date·Math.random·performance.now·requestAnimationFrame·setTimeout 읽기 금지.
+      - 웹폰트 URL 로드 금지 — 로컬 폰트 스택만.
+      - 한 그룹의 움직임은 2.6초 안에 끝난다(slide-design.md §모션) — 세그먼트가 그보다 짧으면
+        다음 클립의 쉬는 프레임으로 잘려 튄다. 렌더러가 넘으면 경고한다.
+
+  ■ 디자인 계약은 slide-design.md 가 정본이다. 요지: 잉크 바탕 + 종이색 글자 + 액센트 하나,
+      그라데이션 글자·둥근 카드 격자·그림자 겹치기·이모지·파티클 금지, 헤어라인(1.5px)과
+      코너 브래킷, 한 화면에 큰 숫자 하나, 한 그룹에 움직이는 것 하나.
+
+  ■ 존: 글자는 존 안에 앉힌다 — 숏폼 x 176 · top 190 · bottom 570, 롱폼 x 96 · top 96 · bottom 285
+      (formats.js zone 의 인라인 미러). 하단 밴드는 자막 자리라 배경 채색만 풀블리드.
+-->
+<style>
+  :root{
+    --accent:#5b8cff; --ink:#0b1020;
+    --paper:#ECEAE2;                                  /* 글자색 — 찬 잉크 위에 살짝 따뜻한 종이색 */
+    --muted:color-mix(in srgb,var(--paper) 62%,transparent);
+    --line:color-mix(in srgb,var(--paper) 24%,transparent);
+    --w:1080px; --h:1920px; --zone-x:176px; --zone-top:190px; --zone-bottom:570px;
+    /* 글자 크기 — formats.js fonts 비율의 인라인 미러 (숏폼 기준 px) */
+    --fs-kicker:34px; --fs-title:60px; --fs-hero:205px; --fs-label:50px; --fs-desc:35px; --fs-foot:26px;
+    /* 모션 토큰 — slide-design.md §모션 */
+    --ease:cubic-bezier(.16,1,.3,1);
+    --rise:360ms; --grow:800ms; --draw:500ms; --count:2400ms; --stagger:90ms; --hold:240ms;
+    --hair:1.5px;
+  }
+  html.wide{
+    --w:1920px; --h:1080px; --zone-x:96px; --zone-top:96px; --zone-bottom:285px;
+    --fs-kicker:24px; --fs-title:43px; --fs-hero:148px; --fs-label:36px; --fs-desc:25px; --fs-foot:24px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:var(--w);height:var(--h);overflow:hidden}
+  body{
+    font-family:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    background:var(--ink); color:var(--paper); position:relative;
+    -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums lining-nums;
+  }
+  /* 바탕 — 단색 잉크 위에 아주 옅은 비네트 하나. 그라데이션 띠·격자·파티클은 두지 않는다. */
+  body::before{content:""; position:absolute; inset:0;
+    background:radial-gradient(120% 90% at 50% 38%, transparent 55%, rgba(0,0,0,.28) 100%)}
+
+  .stage{
+    position:absolute; left:var(--zone-x); right:var(--zone-x);
+    top:var(--zone-top); bottom:var(--zone-bottom);
+    display:flex; flex-direction:column; gap:40px;
+    justify-content:center;                         /* 존 안에서 세로 중앙 — 숏폼의 긴 빈 바탕을 위아래로 나눈다 */
+  }
+  html.wide .stage{gap:28px}
+  .stage.top{justify-content:flex-start}            /* 위 붙임이 맞는 도해(긴 단계 목록)만 */
+
+  /* ── 리빌 그룹 — data-rg 를 가진 요소만 움직인다. 다른 그룹을 안에 넣지 않는다(같은 그룹의
+        중첩은 된다 — bar() 의 채움이 그 예). */
+  .rv{animation:appear 1ms linear both paused;
+      animation-delay:calc(var(--i,0) * var(--stagger))}
+  .rv.fx-rise{animation-name:rise; animation-duration:var(--rise); animation-timing-function:var(--ease)}
+  .rv.fx-grow{animation-name:grow; animation-duration:var(--grow); animation-timing-function:var(--ease); transform-origin:left center}
+  .rv.fx-draw{animation-name:grow; animation-duration:var(--draw); animation-timing-function:var(--ease); transform-origin:left center}
+  @keyframes appear{from{opacity:0}to{opacity:1}}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+  /* ── 부품 — renderSlide 가 조합한다. 필요한 것만 쓰고 새 부품은 아래에 더한다. */
+  .kicker{font-size:var(--fs-kicker); font-weight:500; color:var(--muted); letter-spacing:.02em;
+          display:flex; align-items:center; gap:14px}
+  .kicker::before{content:""; width:28px; height:var(--hair); background:var(--accent)}
+  .slide-title{font-size:var(--fs-title); font-weight:700; letter-spacing:-.02em; line-height:1.25; text-wrap:balance}
+  strong{font-weight:800; color:var(--accent)}
+
+  .hero{display:flex; align-items:baseline; gap:.12em; line-height:1}
+  .hero .num{font-size:var(--fs-hero); font-weight:800; letter-spacing:-.035em}
+  /* 자릿수 고정폭 셀 — 폴백 서체(Apple SD Gothic Neo 등)엔 tnum 이 없어 카운트업 중 단위가
+     좌우로 흔들린다(1라운드 실측 43px). 숫자를 셀에 한 자씩 앉히고 최종 자릿수만큼 빈 셀로
+     왼쪽을 채워 상자 크기를 첫 프레임부터 고정한다. */
+  .hero .num i{display:inline-block; width:.6em; text-align:center; font-style:normal}
+  .hero .num i.s{width:.28em}
+  .hero .num{margin-left:-.1em}                     /* 셀 가운데 정렬이 남기는 왼쪽 여백을 광학 보정 — 잉크 좌단이 정렬선(존 x)에 앉는다 */
+  .bar .val i{display:inline-block; width:.6em; text-align:center; font-style:normal}   /* 막대 값도 셀 — 두 줄의 자릿수가 세로로 맞는다 */
+  .bar .val i.s{width:.28em}
+  .hero .unit{font-size:calc(var(--fs-hero) * .3); font-weight:600; color:var(--accent); margin-left:.08em}   /* 단위 앞 공기 — 자릿수 간격의 절반 이상 */
+  .hero-label{font-size:var(--fs-desc); color:var(--muted); margin-top:-6px}
+
+  .bars{display:flex; flex-direction:column; gap:26px; padding-right:24px}   /* 우측 값이 존 경계에 붙지 않게 */
+  .bar{display:grid; grid-template-columns:1fr auto; gap:10px 18px; align-items:end}
+  .bar .lbl{font-size:var(--fs-desc); color:var(--paper)}
+  .bar .val{font-size:var(--fs-desc); color:var(--muted); text-align:right}
+  .bar .track{grid-column:1 / -1; height:14px; background:var(--line); position:relative}
+  .bar .fill{position:absolute; left:0; top:0; bottom:0; background:var(--accent)}
+  .bar.hot .fill{background:var(--paper)}
+  .bar.hot .val{color:var(--paper)}
+
+  .callout{display:flex; align-items:center; gap:14px; font-size:var(--fs-desc)}
+  .callout .dot{width:10px; height:10px; border-radius:50%; background:var(--accent); flex:none}
+  .callout .lead{height:var(--hair); background:var(--line); width:56px; flex:none}
+
+  .steps{display:flex; flex-direction:column; gap:22px}
+  .step{display:grid; grid-template-columns:44px 1fr; gap:0 16px; font-size:var(--fs-label); font-weight:600}
+  .step::before{content:""; height:var(--hair); background:var(--line); align-self:center}
+  .step .d{grid-column:2; font-size:var(--fs-desc); font-weight:400; color:var(--muted); margin-top:6px}
+
+  .brackets{position:relative; padding:26px 30px}
+  .brackets::before,.brackets::after,.brackets>i::before,.brackets>i::after{
+    content:""; position:absolute; width:28px; height:28px; border:0 solid var(--line)}
+  .brackets::before{left:0; top:0; border-left-width:var(--hair); border-top-width:var(--hair)}
+  .brackets::after{right:0; top:0; border-right-width:var(--hair); border-top-width:var(--hair)}
+  .brackets>i::before{left:0; bottom:0; border-left-width:var(--hair); border-bottom-width:var(--hair)}
+  .brackets>i::after{right:0; bottom:0; border-right-width:var(--hair); border-bottom-width:var(--hair)}
+
+  .rule{height:var(--hair); background:var(--line)}
+  .foot{margin-top:auto; font-size:var(--fs-foot); color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="stage" id="stage"></div>
+<script src="../scenes.js"></script>
+<script>
+// ✎ 이 슬라이드의 샷 번호 — SCENES 배열 순번(1부터). 파일명 s<번호> 와 같다.
+const SLIDE_SHOT = 0;
+
+(function () {
+  const FORMAT = window.FORMAT || "shorts-9x16";
+  const root = document.documentElement;
+  if (FORMAT === "youtube-long-16x9") root.classList.add("wide");
+  const THEME = window.THEME || {};
+  if (THEME.accent) root.style.setProperty("--accent", THEME.accent);
+  if (THEME.ink)    root.style.setProperty("--ink",    THEME.ink);
+
+  const S = (window.SCENES || [])[SLIDE_SHOT - 1];
+  const stage = document.getElementById("stage");
+  if (!S) { stage.textContent = "check scenes.js / SLIDE_SHOT: " + SLIDE_SHOT; return; }
+
+  const esc = s => String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  /* **강조** → <strong> (액센트 색·굵기만 — 그라데이션 글자는 쓰지 않는다) */
+  const em = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  const labels = (S.visual && S.visual.slide && S.visual.slide.labels) || [];
+  /* 리빌 래퍼 — rg 그룹, fx = rise|grow|draw|none, i = 그룹 안 스태거 순번 */
+  const rv = (rg, html, o = {}) =>
+    '<div class="rv' + (o.fx && o.fx !== "none" ? " fx-" + o.fx : "") + '" data-rg="' + rg +
+    '"' + (o.i ? ' style="--i:' + o.i + '"' : "") + (o.cls ? ' data-cls="' + o.cls + '"' : "") + ">" + html + "</div>";
+  /* 카운트업 숫자 — 그룹 rg 에서 from→value, dur ms (기본 --count). 단위는 액센트 작은 글자 */
+  const count = (rg, value, o = {}) =>
+    '<div class="rv hero" data-rg="' + rg + '"><span class="num" data-count="' + value +
+    '" data-from="' + (o.from || 0) + '" data-dec="' + (o.dec || 0) + '" data-dur="' + (o.dur || "") +
+    '">' + (o.from || 0) + "</span>" + (o.unit ? '<span class="unit">' + esc(o.unit) + "</span>" : "") + "</div>";
+  /* 막대 — 막대 전체(라벨·값·트랙)가 그룹의 rise 로 들어오고 채움만 그 안에서 grow 한다
+     (트랙이 그룹 밖에 있으면 첫 프레임부터 빈 레일이 보인다 — 1라운드 지적). 채움은 같은
+     그룹의 중첩 rv 다 — 같은 그룹 안에서만 중첩한다. */
+  /* 값의 숫자 부분을 고정폭 셀로 — "30개" → <i>3</i><i>0</i>개 */
+  const digits = s => esc(s).replace(/[0-9,.]+/g, m => [...m].map(ch => /[0-9]/.test(ch) ? "<i>" + ch + "</i>" : '<i class="s">' + ch + "</i>").join(""));
+  const bar = (rg, pct, label, value, o = {}) =>
+    rv(rg, '<div class="bar' + (o.hot ? " hot" : "") + '">' +
+      '<span class="lbl">' + em(label) + '</span><span class="val">' + digits(value == null ? "" : String(value)) + "</span>" +
+      '<div class="track"><div class="fill rv fx-grow" data-rg="' + rg + '" style="width:' + pct + '%;--i:1"></div></div>' +
+    "</div>", { fx: "rise" });
+  const callout = (rg, label, o = {}) =>
+    rv(rg, '<div class="callout"><span class="dot"></span><span class="lead"></span><span>' + em(label) + "</span></div>", { fx: "rise", i: o.i || 0 });
+  const step = (rg, t, d, o = {}) =>
+    rv(rg, '<div class="step"><span>' + em(t) + "</span>" + (d ? '<span class="d">' + em(d) + "</span>" : "") + "</div>", { fx: "rise", i: o.i || 0 });
+  const h = { esc, em, rv, count, bar, callout, step, labels, L: i => esc(labels[i] || "") };
+
+  /* ✎ 이 함수만 씬의 도해로 다시 쓴다 ──────────────────────────────
+     아래 기본형: 그룹 0 = 키커 + 제목, 그룹 k = k번째 불릿이 막대로 자란다 — 저작 전 셀프테스트용.
+     글자 소스는 S(title·bullets)와 h.labels 만 쓴다. */
+  function renderSlide(S, h) {
+    let out = h.rv(0, '<div class="kicker">' + h.L(0) + "</div>") +
+              h.rv(0, '<div class="slide-title">' + h.em(S.title || "") + "</div>");
+    const items = S.bullets || [];
+    out += '<div class="bars">' + items.map((b, i) =>
+      h.bar(i + 1, Math.round(100 - i * 100 / Math.max(items.length, 2)), b.t || "", b.d || "", { hot: i === 0 })
+    ).join("") + "</div>";
+    /* 출처 줄은 바탕(그룹 0)에 둔다 — 숫자가 뜨는 모든 클립에 출처가 같이 있어야 한다 */
+    if (h.labels.length > 1) out += h.rv(0, '<div class="foot">' + h.L(h.labels.length - 1) + "</div>");
+    return out;
+  }
+
+  stage.innerHTML = renderSlide(S, h);
+
+  /* ── seek 계약 구현 — 아래는 건드리지 않는다 ─────────────────────── */
+  const easeOut = x => 1 - Math.pow(1 - x, 3);
+  const cssMs = name => parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0;
+  const HOLD = cssMs("--hold"), COUNT = cssMs("--count");
+  const fmt = (v, dec) => (dec > 0 ? v.toFixed(dec) : Math.round(v).toString()).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const owner = a => a.effect && a.effect.target && a.effect.target.closest("[data-rg]");
+  /* 애니메이션의 끝 시각 — iteration-count·delay 를 다 넣은 계산값 (무한이면 Infinity) */
+  const endOf = a => a.effect.getComputedTiming().endTime;
+  const counters = [...document.querySelectorAll("[data-count]")].map(el => {
+    const c = { el, rg: +el.closest("[data-rg]").dataset.rg, to: +el.dataset.count, from: +el.dataset.from || 0,
+      dec: +el.dataset.dec || 0, dur: +el.dataset.dur || COUNT };
+    /* 상자의 본은 더 긴 쪽의 최종 문자열이다 — 쉼표 자리까지 그대로 본떠야 999 → 1,000 을 넘는
+       순간에도 상자 폭이 안 변한다(정폭 셀 .6em 과 쉼표 셀 .28em 이 다르기 때문) */
+    const a = fmt(c.to, c.dec), b = fmt(c.from, c.dec);
+    c.tpl = a.length >= b.length ? a : b;
+    return c;
+  });
+  /* 숫자 → 고정폭 셀. 본(tpl)의 앞자리를 빈 셀로 따라 그려 상자가 첫 프레임부터 같은 크기다 */
+  const cellOf = ch => /[0-9]/.test(ch) ? "<i>" + ch + "</i>" : '<i class="s">' + ch + "</i>";
+  const cells = (s, tpl) => {
+    const pad = Math.max(0, tpl.length - s.length);
+    let out = "";
+    for (let i = 0; i < pad; i++) out += /[0-9]/.test(tpl[i]) ? "<i></i>" : '<i class="s"></i>';
+    for (const ch of s) out += cellOf(ch);
+    return out;
+  };
+
+  window.__seek = function (tMs, g) {
+    const anims = document.getAnimations();
+    for (const a of anims) {
+      const o = owner(a); if (!o) continue;
+      const r = +o.dataset.rg, end = endOf(a);
+      a.pause();
+      a.currentTime = r < g ? end : r === g ? Math.min(Math.max(tMs, 0), end) : 0;
+    }
+    for (const c of counters) {
+      const p = c.rg < g ? 1 : c.rg === g ? easeOut(Math.min(Math.max(tMs / c.dur, 0), 1)) : 0;
+      c.el.innerHTML = cells(fmt(c.from + (c.to - c.from) * p, c.dec), c.tpl);
+    }
+    /* transform·opacity 애니메이션은 컴포지터 스레드에서 돌아 pause()·currentTime 이 비동기로
+       반영된다 — ready 를 기다리지 않고 찍으면 같은 (g, t) 가 서브픽셀만큼 다른 프레임을 낸다
+       (실측 PSNR 79dB 차이). 렌더러는 이 프라미스를 기다린 뒤 캡처한다. */
+    return Promise.all(anims.map(a => a.ready)).then(() => true);
+  };
+  window.__groups = function () {
+    const dur = {};
+    for (const a of document.getAnimations()) { const o = owner(a); if (!o) continue;
+      const r = +o.dataset.rg; dur[r] = Math.max(dur[r] || 0, endOf(a)); }
+    for (const c of counters) dur[c.rg] = Math.max(dur[c.rg] || 0, c.dur);
+    const n = Math.max(0, ...Object.keys(dur).map(Number));
+    const out = [];
+    for (let r = 0; r <= n; r++) out.push({ rg: r, dur: r === 0 ? 0 : Math.round((dur[r] || 0) + HOLD) });
+    return out;
+  };
+  /* 렌더러가 계약을 검사하는 데 쓴다 — 그룹 밖 애니메이션(stray)은 벽시계로 돌아 결정성을 깨고
+     무한 반복(infinite)은 클립이 끝나지 않는다. 둘 다 렌더러가 exit 1 로 막는다. */
+  window.__meta = function () {
+    const all = document.getAnimations();
+    return { hold: HOLD,
+             stray: all.filter(a => !owner(a)).length,
+             infinite: all.filter(a => owner(a) && !isFinite(endOf(a))).length };
+  };
+  window.__size = () => ({ w: parseInt(getComputedStyle(root).getPropertyValue("--w"), 10),
+                           h: parseInt(getComputedStyle(root).getPropertyValue("--h"), 10) });
+
+  const qs = new URLSearchParams(location.search);
+  const N = window.__groups().length - 1;
+  if (qs.has("g"))           window.__seek(parseFloat(qs.get("t") || "0"), parseInt(qs.get("g"), 10));
+  else if (qs.has("reveal")) window.__seek(0, parseInt(qs.get("reveal"), 10) + 1);
+  else                       window.__seek(1e9, N + 1);
+})();
+</script>
+</body>
+</html>

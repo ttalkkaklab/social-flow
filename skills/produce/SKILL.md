@@ -711,6 +711,26 @@ FORMAT_ENV="$PWD/.work/format.env" \
   reveal state". Fix the slide's rg assignment and capture again (the storyboard §8
   contract).
 
+A **motion slide** (`visual.slide.motion === true`, scenes-schema §motion slides) is not
+captured as states — it is rendered as **one clip per reveal group** and each clip goes
+under its segment as a play-once visual. The slide already passed the design gate in
+storyboard §8.1; here you only render and wire.
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
+node $REF/render-motion-slide.mjs storyboard/slides/s<shot number>-<slug>.html \
+  --out .work/motion/slide-s<shot number>
+# → .work/motion/slide-s<shot number>/r1.mp4 … rN.mp4 (30fps CFR, canvas size, no audio) + manifest.tsv
+```
+
+- The summary line's `groups` must equal the card's segment count (or segments + `A|B`
+  sub-reveals). A mismatch is a storyboard §8.1 defect — don't paper over it here.
+- The renderer reads `../scenes.js` relative to the slide, so render it **in place under
+  storyboard/slides/**, exactly like the static capture above.
+- The clips cost nothing and are deterministic (same file → same bytes), so a re-render
+  after a scenes.js fix is safe; the sheet frames from storyboard §8.1 stay in
+  `storyboard/.work/slide-check/` (§8.1 runs from the storyboard directory) for comparison.
+
 An **all-live-voice episode** (`window.VOICE === "user"`) generates no TTS (§5 is skipped
 entirely). Filmed scenes pull their audio from the clip per §3.5; every other scene uses
 the user's recording at `voice/s<shot number>.wav` (shot number = array position from 1 =
@@ -964,6 +984,26 @@ state PNGs captured in §3.6 (`cards/a<idx>r<k>.png`) — the state transition (
 slide animation. Ken Burns doesn't suit a screen full of text, so `zoom` is `none`. For a
 user-recorded card, leave the target chars/sec (column 3) at 0 and run the build with
 `ATEMPO_MIN=1 ATEMPO_MAX=1` (§3.6 — speed correction off).
+
+**A motion slide's segment visuals** are the per-group clips from §3.6, one per segment,
+each with the play-once prefix: segment k → `@motion/slide-s<shot number>/r<k>.mp4`
+(segs.tsv paths are relative to `.work/`, the builder's working directory — the same way
+the state PNGs are written `cards/a<idx>r<k>.png`), `zoom` `none`, no overlay (the slide
+draws its own text). `@` is right here even though
+the scene has several segments, because every segment has **its own** clip — clip k opens
+on the previous rest state and freezes on its own, so the reveal xfade at the sentence
+boundary crosses two identical pictures (measured 44 dB PSNR across the seam) and the
+motion starts inside the pause before the sentence, where the caption contract already
+puts the reveal. A sub-reveal (`A|B`) takes two clips in one segment the same way
+(`@motion/slide-s5/r2.mp4|@motion/slide-s5/r3.mp4`).
+
+```
+# a motion-slide card (idx 4, three segments) — cards.tsv and segs.tsv
+4	pcm/s5.wav	5.2	none
+4	0	@motion/slide-s5/r1.mp4	큰 조각 하나에만 톱니바퀴가 27개예요.	큰 조각 하나에만 톱니바퀴가 27개예요.
+4	1	@motion/slide-s5/r2.mp4	전체로는 30개가 남았고요.	전체로는 30개가 남았고요.
+4	2	@motion/slide-s5/r3.mp4	원래는 37개였을 거라고 봐요.	원래는 37개였을 거라고 봐요.
+```
 
 A `sync` card's audio is **the wav pulled from that clip** (§3.5). The card's length is that
 audio's length, so if one came from the original mov and the other from the normalized file,
@@ -1417,6 +1457,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/speedup.sh`** — the required speed pass (§7.5). Speeds the feature up by the channel's factor (1.4 default) while leaving the outro at 1.0x, retimes `subs.srt` and `chapters.txt` onto the new timeline, and verifies the measured length against feature/factor + tail. Reads the un-sped set and writes `-fast` names, so it never stacks
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
+- **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames storyboard §8.1's design gate reads
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)
