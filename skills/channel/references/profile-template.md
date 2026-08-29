@@ -42,6 +42,11 @@ created: <YYYY-MM-DD>
     stability: `<0–1; on eleven_v3 one of 0.0 / 0.5 / 1.0>` · seed: `<optional integer — once set, never changes>` ·
     outputFormat stays `wav_24000` (the builder needs RIFF; mp3 is not narration input)
   - Target speaking rate: <characters/sec, default 4.5>
+- **Playback speed (the post-build speed pass)**: `<0.5~3.0, default 1.4>` — produce §7.5 speeds
+  the finished feature up by this factor (the outro stays at 1.0x). It **multiplies with the TTS
+  `speed` above**: synthesize at 1.20 and ship at 1.4 and the viewer hears roughly 1.68. Raise the
+  factor when the episode still drags, lower it when words start getting swallowed; `1.0` ships at
+  the recorded pace
 - **Plain-language principle**: no unexplained jargon, no literal translationese, no
   over-compressed subjectless sentences. When a term is genuinely needed, lead with
   the plain word and put the term in parentheses on first appearance only. (Screen

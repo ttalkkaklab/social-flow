@@ -264,6 +264,14 @@ This is where a human would stop and say "there's no video in this." Push on
 short of facts and what you end up with is an empty video that only looks the
 part. Two dropped candidates and the run gives up and reports.
 
+Before the first scene, run the exit check the storyboard skill runs — the agent that did the
+searching is the one writing the line that says the searching was enough:
+
+```bash
+SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+node $SB/check-research.js storyboard/        # exit 1 = the research does not close → drop the topic
+```
+
 ### 3. Authoring scenes.js
 
 `../storyboard/references/scenes-schema.md` is the contract's source of truth;
@@ -627,16 +635,31 @@ while the BGM cuts out for just that stretch.
 If the storyboard has 2 b-roll slots, pass **both clips in a single
 invocation** (call it twice and the second run wipes the first splice).
 In the splice output confirm **`0 straddled cues`** and **matching clean/burned
-lengths**. If they diverge, don't queue it. §9 then moves
-`reel-spliced.mp4`·`reel-sub-spliced.mp4`·`subs-spliced.srt` to output.
+lengths**. If they diverge, don't queue it.
+
+**Then run the speed pass — every episode, no exception** (produce §7.5). It
+picks the spliced set on its own when a splice ran:
+
+```bash
+$REF_P/speedup.sh .work        # 1.4x default; profile.md §2 overrides with its own factor
+```
+
+Unattended, the marker is the check: `build-report.txt` has to gain a
+`── speedup x…` line, and a non-zero exit aborts the episode — nothing enters
+the queue. §9 moves that pass's `-fast` set to output.
 
 ### 9. Finalize output + platform text
 
 ```bash
-cp .work/reel.mp4 output/video/video.mp4
-cp .work/reel-sub.mp4 output/video/video-sub.mp4
-cp .work/subs.srt .work/cover.jpg .work/build-report.txt output/video/
+cp .work/reel-fast.mp4 output/video/video.mp4
+cp .work/reel-sub-fast.mp4 output/video/video-sub.mp4
+cp .work/subs-fast.srt output/video/subs.srt
+cp .work/cover.jpg .work/build-report.txt output/video/
+[ -f .work/chapters-fast.txt ] && cp .work/chapters-fast.txt output/video/chapters.txt
 ```
+
+**The `-fast` files are the deliverables.** Copy `reel.mp4` or `subs.srt` here
+and the episode publishes un-sped with subtitles on the wrong timeline.
 
 **Publishing is complete only with all three files** — the clean master and
 `subs.srt` go to YouTube and Facebook, the burned-in copy to Instagram
@@ -716,6 +739,7 @@ authorization.
 - `../storyboard/references/scenes-schema.md` — the scenes.js data contract
 - `../storyboard/references/storyboard-template.md` · `storyboard-html-template.html`
 - `../produce/references/pipeline.md` — build contract, report-gate verdict table, palindromes
+- `../produce/references/speedup.sh` — the required speed pass (produce §7.5)
 - `../produce/references/build-reel.sh` — the compositing pipeline
 - `../platform-guide/references/platform-playbook.md` · `korean-style.md` · `check-style.py`
 - `../../docs/guides/ai-video-production/index.html` — why hybrid is the default, Veo hard specs, prompt rules
