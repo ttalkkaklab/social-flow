@@ -215,31 +215,14 @@ comment, pass the inbox response's `parentCommentId` as the commentId. Dedup
 is guaranteed by the inbox's `answeredByUs` filter (if a top-level comment's
 children include ours, it counts as handled).
 
-**Copy passes the style gate before sending** — replies are person-to-person
-conversation, where AI tells get caught fastest.
+**Both gates run before the reply goes out** — the machine style check
+(`check-style.py --surface reply`) and then the growth-post-reviewer agent, batched once
+per tick. Only copy with score ≥95 and p0=0 gets sent, fixes are by deletion only, and a
+reply that hasn't cleared in 3 rounds is skipped and logged. The contract, the exact
+command, and what to attach per platform: [reply-gate.md](../platform-guide/references/reply-gate.md).
 
-```bash
-CS=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py
-printf '%s\n' "$reply_copy" | python3 $CS --surface reply -; echo "gate_exit=$?"
-```
-
-exit 2 (S1) means fix, then send. Rules: platform-guide
-`references/korean-style.md`.
-
-**Read the detection list even on exit 0** — S2 only deducts points and
-passes, so "green means send" kills the gate. **If C7 (no long sentence)
-fires, don't send as-is**: the copy is all short sentences, so lengthen one or
-re-pick the subject and hook.
-
-**Copy that passed the machine gate goes to the growth-post-reviewer agent for
-adversarial verification** — delegate the tick's reply copy as one batch
-(`inbox_reply` surface), and attach, per copy, the original comment and the
-caption of our post it was left on (without these the context axis scores 0).
-Include the `growth-plan.md` and `profile.md` paths and the self-check exit
-codes. **Only copy with score ≥95 and p0=0 gets sent.** Fix a FAIL by deletion
-only, per the correction directives — planting a simile or stock phrase that
-wasn't there is a fresh AI tell. Max 3 rounds; if it never clears, don't send
-that reply and log it in growth-log as `skipped (gate NN)`.
+Instagram's row in that table: attach the original comment and **the caption of our post**
+it was left on.
 
 Spam and hate comments get no reply, only a mention in the next tick summary
 (hiding is outside autonomous scope).

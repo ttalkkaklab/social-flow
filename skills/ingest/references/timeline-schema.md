@@ -17,6 +17,15 @@ recording/
 └── keyframes/seg-N.jpg  # scene keyframe (960px, read directly with the Read tool)
 ```
 
+## Contents
+
+- [timeline.json](#timelinejson)
+- [timeline.md](#timelinemd)
+- [alignment.json — script alignment (storyboard-first mode only)](#alignmentjson-script-alignment-storyboard-first-mode-only)
+- [How boundaries are derived](#how-boundaries-are-derived)
+- [Tuning knobs (transcribe.sh environment variables · build-timeline.py arguments)](#tuning-knobs-transcribesh-environment-variables-build-timelinepy-arguments)
+- [Traps](#traps)
+
 ## timeline.json
 
 ```json

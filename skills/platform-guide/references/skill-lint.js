@@ -42,6 +42,31 @@ const DESCRIPTION_MAX = 1024;
 const BANNED_TOOLING = ['claude-in-chrome', 'chrome-devtools'];
 /** The only MCP server a skill may name. */
 const OWN_MCP_PREFIX = 'mcp__social-flow__';
+/**
+ * A ceiling on SKILL.md, not a target. produce and storyboard sit near it because
+ * most of what they carry runs on every episode — moving that to a reference costs an
+ * extra read and saves nothing. What did move out is the conditional work: the video
+ * engines and per-slot recipes, the filmed/slide/screencast lanes, the extra subtitle
+ * languages. An episode that stays on the common path never opens those files.
+ * Ratchet this down when a real conditional block comes out; never raise it to fit
+ * new prose.
+ */
+const SKILL_MAX_LINES = 1350;
+
+/**
+ * References whose numbers come from outside and go stale: vendor prices, platform limits,
+ * measured player chrome. Each states when it was verified, where the numbers came from, and
+ * how often to reopen the sources. Age is reported, not enforced — CI must not go red because
+ * a date passed while nobody touched the repo.
+ */
+const VOLATILE = [
+  'skills/grow-threads/references/api-limits.md',
+  'skills/autoproduce/references/cost-tiers.md',
+  'skills/autoproduce/references/prices.tsv',
+  'skills/produce/references/video-model-selection.md',
+  'skills/platform-guide/references/platform-playbook.md',
+  'skills/platform-guide/references/safezone-landscape.md',
+];
 
 const MANIFESTS = [
   '.claude-plugin/plugin.json',
@@ -285,6 +310,65 @@ const RULES = [
     },
   },
   {
+    name: 'every Contents link lands on a heading',
+    run() {
+      const anchor = (text) =>
+        text
+          .trim()
+          .toLowerCase()
+          .replace(/[`*[\]()（），,.:;/—·"'?!§<>&+|=%$#@~]/g, '')
+          .replace(/ /g, '-')
+          .replace(/-{2,}/g, '-')
+          .replace(/^-|-$/g, '');
+      const bad = [];
+      for (const rel of referenceIndex().all) {
+        if (!rel.endsWith('.md')) continue;
+        const body = read(path.join(ROOT, rel));
+        const toc = /^## Contents\n\n((?:.*\n)*?)\n/m.exec(body);
+        if (!toc) continue;
+        const heads = new Set(
+          Array.from(body.matchAll(/^#{2,4} (.+)$/gm), (m) => anchor(m[1])),
+        );
+        for (const m of toc[1].matchAll(/\]\(#([^)]+)\)/g)) {
+          if (!heads.has(m[1])) bad.push(`${rel}: #${m[1]} has no heading`);
+        }
+      }
+      return { ok: bad.length === 0, detail: bad };
+    },
+  },
+  {
+    name: 'a long reference carries a Contents list',
+    run() {
+      const bad = [];
+      for (const rel of referenceIndex().all) {
+        if (!rel.endsWith('.md') || rel.endsWith('-template.md')) continue;
+        const body = read(path.join(ROOT, rel));
+        if (body.split('\n').length <= 100) continue;
+        const heads = body.match(/^#{2,3} .+$/gm) || [];
+        // Under four headings there is nothing to navigate.
+        if (heads.length >= 4 && !/^## Contents\s*$/m.test(body)) bad.push(`${rel}: no Contents`);
+      }
+      return { ok: bad.length === 0, detail: bad };
+    },
+  },
+  {
+    name: 'volatile references carry a freshness line',
+    run() {
+      const bad = [];
+      const stale = [];
+      const today = new Date();
+      for (const rel of VOLATILE) {
+        const body = read(path.join(ROOT, rel));
+        const m = /Freshness[^\n]*?verified (\d{4}-\d{2}-\d{2})[\s\S]{0,400}?recheck every (\d+) days/.exec(body);
+        if (!m) { bad.push(`${rel}: no parseable freshness line`); continue; }
+        const age = Math.round((today - new Date(m[1])) / 86400000);
+        if (age > Number(m[2])) stale.push(`${rel}: verified ${m[1]}, ${age} days ago, recheck every ${m[2]}`);
+      }
+      // Age is reported, never failed on — a calendar must not break a build. `--list` shows it.
+      return { ok: bad.length === 0, detail: bad.concat(stale.map((s) => 'due for recheck — ' + s)) };
+    },
+  },
+  {
     name: 'no orphan reference file',
     run() {
       const { all } = referenceIndex();
@@ -297,6 +381,17 @@ const RULES = [
           (abs) => path.basename(abs) !== base && read(abs).includes(base),
         );
         if (!cited) bad.push(`${rel}: nothing points at it`);
+      }
+      return { ok: bad.length === 0, detail: bad };
+    },
+  },
+  {
+    name: `SKILL.md within ${SKILL_MAX_LINES} lines`,
+    run() {
+      const bad = [];
+      for (const s of loadSkills()) {
+        const n = s.body.split('\n').length;
+        if (n > SKILL_MAX_LINES) bad.push(`${s.rel}: ${n} lines`);
       }
       return { ok: bad.length === 0, detail: bad };
     },

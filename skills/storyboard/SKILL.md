@@ -123,68 +123,20 @@ chapters) and the §5 image size; the six reviews (§4.5–§5.5) run the same w
 
 If it's a topic **the user will record themselves, demoing and narrating on screen**
 ("make a shooting script", "I'll record it", app demos and tutorials), it's **shooting
-mode**. Confirm with AskUserQuestion when unsure. What differs in shooting mode (the
-`references/shot-script-template.md` contract):
+mode**. Confirm with AskUserQuestion when unsure.
 
-- Scene `visual` is `{ source: "recording", clip, shot, action }` — §5 image generation is
-  skipped entirely (the on-screen footage comes from the user's actual recording).
-- narration isn't a TTS script but **the sentences to speak** — the character cap relaxes
-  (40 chars per sentence recommended, derived backwards from an 8–20s scene target).
-- §6 authors **script.md (the shooting script)** alongside storyboard.md.
-- After approval the hand-off is **recording**, not produce (§7 branch).
+**One recorded screen is not shooting mode.** A generated, TTS-narrated episode can splice a
+single window of a screen recording into one card (`visual.source: "screencast"`), and
+nothing else about the episode changes. Shooting mode is the other thing — the user narrates
+while recording and their voice carries the episode.
 
-#### One recorded screen is not shooting mode
+**Long-form is a third case**: one episode mixes filmed and generated scenes, so the mode is
+per scene rather than per episode, and narration defaults to the user's live voice throughout.
 
-"The user will record one screen for one scene" is **not** this mode. A generated,
-TTS-narrated episode can splice a single window of a screen recording into one card —
-`visual.source: "screencast"` (scenes-schema §screencast splice), per scene, in both formats.
-Nothing else about the episode changes: the voice stays TTS, the character counts and speech
-rate stay where they are, and only that card's picture comes from a file. Reach for it when
-one moment has to be the real screen — the command running, the setting flipping, the result
-appearing — and for nothing longer than that moment.
-
-Shooting mode is the other thing: the user narrates while recording, their voice carries the
-episode, and in short-form the whole episode goes that way.
-
-#### Long-form is a third case — one episode mixes both
-
-A short-form episode is either all generated or all filmed, but **for long-form, mixing
-filmed and generated scenes in one episode is the normal path.** Install screens, running
-results, and hands-on moments are better actually filmed; background explanation and
-concept pictures are cheap and fast to generate. There's no reason to fill 12 minutes with
-one kind.
-
-So in long-form the mode isn't per-episode but **per-scene**. Decide it one scene at a time
-while designing them (§4) — is this shot filmed, or made?
-
-```
-[Landscape long-form · mixed]      ← the long-form default. The user films each filmed scene into a file
-[Landscape long-form · all generated]  ← topics with nothing to film (explainers, roundups)
-[Landscape long-form · all filmed]     ← a demo start to finish. Treated as a special case of mixed
-```
-
-**"All filmed" is also built as the mixed lane** — one file per scene, with zero generated
-scenes. Short-form's `build-screencast.sh` path (shoot straight through once, then align)
-is portrait-only and can't go landscape. If the user says "I want to shoot it in one go",
-let them, but ask them to split the file at scene boundaries when saving.
-
-**Narration in a mixed shoot defaults to live voice on every scene** — the user records
-every scene's lines in their own voice (`window.VOICE = "user"`, scenes-schema
-§all-live-voice episodes). Alternating the user's voice with TTS inside one episode
-changes the speaker partway through. In that setup script.md carries the lines for every
-shot, and shots that aren't filmed scenes are voice-only recordings
-(`voice/s<shot number>.wav`). An episode covered by TTS happens only when the user asks
-for it.
-
-Generated scenes then split two ways in §4 — mood, place, and people become a **generated
-image**, while a diagram that only reads once text and shapes are laid out becomes a
-**slide** (scenes-schema §slide scenes). A slide scene carries only its plan in the
-storyboard; the file is built in §8 after approval.
-
-If even one filmed scene exists, §6 authors **`script.md` (the shooting script)** and the
-hand-off after approval is filming (§7). The contract is `references/scenes-schema.md`
-§filmed scenes; `references/shot-script-template.md` is the source of truth for the
-document structure.
+What changes once any scene is filmed — the `visual` contract, the relaxed character cap,
+script.md, the hand-off to filming, and the long-form mixing rules — is in
+[shooting-mode.md](references/shooting-mode.md). **A fully generated short-form episode, the
+default, skips it.**
 
 ### 2. Research and fact-checking (follows profile §5 policy)
 
@@ -1287,134 +1239,14 @@ since it reads the feel, size and angle of stills and filmed shots too).
 
 ### 8. Slide authoring (after approval · only on episodes with slide scenes)
 
-Build the per-scene HTML slides from the approved storyboard's `plan` and `labels`. Every copy
-gate has already passed, so no new text gets written here — **every character on a slide comes
-from scenes.js** (`title`, `bullets`, `slide.labels`). Plant a new Korean string here and text
-that never passed the style gate goes on screen.
+Build the per-scene HTML slides from the approved storyboard's `plan` and `labels`. Every
+copy gate has already passed, so **no new text gets written here** — every character on a
+slide comes from scenes.js (`title`, `bullets`, `slide.labels`).
 
-Two paths. A **static slide** (no `motion`) follows steps 1–5; **anything that moves**
-(`slide.motion: true`) follows §8.1 instead of steps 1 and 4 — and within that, the
-`slide.kind` says which template it starts from and which design section judges it:
-`"diagram"` (the default) §8.1 · `"kinetic"` §8.2 · `"character"` §8.3. The procedure is one
-procedure; only the template and the design rules differ. All of them share the text rule
-above, `check-slide.js`, and the §7 approval that came before.
-
-1. **Per scene**, copy `references/slide-template.html` to `slides/<the visual.slide.file name>`,
-   change `SLIDE_SHOT` to that shot's number (its array position), and rewrite only
-   `renderSlide()` into that scene's diagram. Keep the determinism contract at the head of the
-   template — no CSS animations or transitions, no web fonts, no `Math.random` / `Date`. All the
-   motion there is comes from the builder's xfade.
-2. **Assign reveal groups 1:1 with the narration segments** (group 0 = the base skeleton). Only
-   scenes using sub-reveals (`A|B`) have more groups than segments.
-3. **Machine check** — `node references/check-slide.js <storyboard directory>` verifies the
-   three-way match between filename, `SLIDE_SHOT`, and scenes.js, catches Korean literals absent
-   from scenes.js, and catches determinism violations. Don't move on unless it exits 0.
-4. **Self-verify the state capture** — enumerate the states for each scene.
-
-   ```bash
-   REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
-   CAP_W=1920 CAP_H=1080 $REF/capture-reveals.sh <shot number - 1> \
-     "file://$PWD/slides/s<shot number>-<slug>.html" .work/slide-check/a<shot number - 1>r 0
-   ```
-
-   If the state count differs from **segment count + sub-reveal count + 1** (group 0 included),
-   the rg assignment is wrong — produce's "missing reveal state" gate checks the same thing again
-   at build time. Open the last state PNG and confirm by eye that every `labels` entry is
-   visible and that the text sits inside the zone (clear of the 285px subtitle band at the bottom).
-5. Slides are captured locally, so they cost nothing — there's nothing to write in the ledger
-   (`.work/cost-tally.tsv`), and the absence of a generation call is itself the record.
-
-#### 8.1 Motion slides — author, render, and pass the design gate
-
-A motion slide is built from **`references/motion-slide-template.html`** and judged by
-**`references/slide-design.md`** — read both before writing a line. The template's head
-carries the contract (the state rule, what may move, what is forbidden); the design doc
-carries the look (ink · paper · one accent, hairlines not boxes, one hero per slide) and the
-rubric the reviewer applies.
-
-1. **Author.** Copy the motion template to `slides/<the visual.slide.file name>`, set
-   `SLIDE_SHOT`, and rewrite only `renderSlide()` using the helpers — `h.count(rg, value,
-   {unit})` for the hero number, `h.bar(rg, pct, label, value)` for a comparison,
-   `h.step(rg, t, d)` for a sequence, `h.callout(rg, label)` and `h.rv(rg, html, {fx:"rise"})`
-   for everything else. Group numbers follow the approved `plan` — segment 1 is group 1.
-   Group 0 is the kicker and title. One kind of movement per group.
-2. **Machine check** — `node references/check-slide.js <storyboard directory>` (the motion
-   branch: `__seek` present, no `transition`, no clocks or timers, no web fonts, every Korean
-   string in scenes.js). Don't move on unless it exits 0.
-3. **Render the sheet** (free, ~10s a slide). Run from the storyboard directory, like
-   step 4 of the static path — `slides/` and `.work/slide-check/` are relative to it:
-
-   ```bash
-   REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
-   node $REF/render-motion-slide.mjs slides/s<shot number>-<slug>.html \
-     --out .work/slide-check/s<shot number> --sheet --png-only --keep-frames
-   ```
-
-   The renderer stops (exit 1) on a contract breach and says which: a page script that
-   threw (the exception is printed), an animation outside any reveal group, an infinite
-   animation, a group with no motion, fewer groups than segments.
-
-   Read the summary line: the group count must equal the segment count (or the segment
-   count plus the `A|B` sub-reveals you wrote), and no group may pass the 2.9s cap. Open
-   `sheet/g<k>-end.png` for the last group and confirm by eye that everything the scene
-   claims is on it, inside the zone.
-4. **The design gate — delegate to `slide-reviewer`** with the slide file, the sheet
-   directory, `manifest.tsv`, scenes.js, research.md, profile.md and
-   `references/slide-design.md`. It returns findings and a `SLIDE_REVIEW: score=NN p0=N
-   verdict=PASS|FAIL` tail. **Apply every fix directive, re-run steps 2–3, and delegate
-   again with the previous findings attached, until the tail says PASS (score ≥ 95 and
-   p0 = 0).** Hard cap 3 rounds (user directive 2026-08-29) — a slide that hasn't converged
-   by then goes back to the user with the last findings and the sheet, not into the build. Log each round's score
-   in storyboard.md under the slide table (`s5 · round 1 → 78 · round 2 → 96 PASS`), so the
-   convergence is a record and not a claim.
-5. Nothing goes in the ledger — the render is local. The `.work/slide-check/` frames stay
-   for produce to compare against (§3.6 re-renders the clips from the same file).
-
-`autoproduce` does not run this gate yet — an unattended episode with motion slides gets
-the machine check and the render, not the reviewer round. That is a known gap, written
-down here so it isn't mistaken for coverage. **The two kinds below inherit that same gap** —
-adding them widens what an unattended run can put on screen without a reviewer, and that is
-stated here rather than left to be discovered.
-
-#### 8.2 Kinetic type — the same procedure, a different template
-
-`kind: "kinetic"` (scenes-schema §kinetic type) is §8.1 with three substitutions:
-
-1. Start from **`references/kinetic-type-template.html`** and rewrite `renderKinetic()`.
-   Helpers: `h.word` (the one big phrase) · `h.line` · `h.sub` · `h.cross` (a phrase with a
-   rule struck through it) · `h.rule`.
-2. The design section is **`slide-design.md` §6**, and slide-reviewer applies its three extra
-   P0s — a screen phrase that repeats the subtitle sentence, a second hero-sized phrase or a
-   line past five words, two effect kinds on one screen.
-3. Steps 2–5 (machine check, sheet render, the design gate at ≥ 95 / p0 = 0, three-round cap,
-   scores logged in storyboard.md) are unchanged, including the same `render-motion-slide.mjs`
-   command — the renderer only asks for the seek contract and does not care what is drawn.
-
-The one thing to check by eye before delegating: open `sheet/g<k>-end.png` beside the scene's
-`narration[k].sub` and confirm the screen is not reading the sentence back. That is the defect
-this kind produces, and it is invisible while authoring because both texts came from the same
-storyboard.
-
-#### 8.3 Character act — the actions come from scenes.js
-
-`kind: "character"` (scenes-schema §character act) is §8.1 with the same three substitutions —
-**`references/character-act-template.html`**, `renderCharacter()`, `slide-design.md` §7 — plus
-one rule that has no equivalent in the other kinds:
-
-**Don't write motion here.** The figure's movement is `visual.slide.acts` in scenes.js, one name
-per reveal group from the seven the template defines (`enter` · `point` · `nod` · `shrug` ·
-`think` · `wave` · `cheer`). `renderCharacter()` lays out the words; it never touches a keyframe.
-`check-slide.js` fails on a name outside the seven and on fewer acts than narration segments, and
-a keyframe added by hand is a §7 P0 in the review.
-
-If the beat genuinely needs an action that isn't in the seven, that is a change to the template,
-`check-slide.js`, and `slide-design.md` §7 together — bring it to the user rather than solving it
-inside one slide. A slide that invents its own motion renders differently on the next re-render,
-which is the whole reason the vocabulary is closed.
-
-When that's done you're waiting — once the user's `footage/` and `voice/` files arrive, produce
-uses the slide state captures (static) or the per-group clips (motion) as the segment visuals
-(produce §3.6).
+The whole lane — the two slide kinds, the closed motion vocabulary, the 95-point design
+review, and what produce takes from it — is in
+[slide-authoring.md](references/slide-authoring.md). **An episode with no slide scene skips
+this step**, and so does one that never reached approval.
 
 ## Traps
 

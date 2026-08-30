@@ -5,6 +5,19 @@ cross-checks). Single-source numbers were dropped. Platform-wide style and
 posting rules live in `skills/platform-guide/references/platform-playbook.md`
 §3; this document carries **growth-loop tactics only**.
 
+## Contents
+
+- [Principles — what creates reach](#principles-what-creates-reach)
+- [Rhythm](#rhythm)
+- [§New-post style](#new-post-style)
+- [§Replies (inbox handling)](#replies-inbox-handling)
+- [§Search engagement (other people's conversations)](#search-engagement-other-peoples-conversations)
+- [Seuhari culture (Korea-local)](#seuhari-culture-korea-local)
+- [§Form — what creates response (measured on a cold-start channel)](#form-what-creates-response-measured-on-a-cold-start-channel)
+- [§Engagement targets — ability to contribute comes before reach](#engagement-targets-ability-to-contribute-comes-before-reach)
+- [§Reply reach — engagement is not a side activity (measured 2026-08-12)](#reply-reach-engagement-is-not-a-side-activity-measured-2026-08-12)
+- [Observed metrics (4 weekly)](#observed-metrics-4-weekly)
+
 ## Principles — what creates reach
 
 Threads judges **each post on its own**, not your follower count. The ranking

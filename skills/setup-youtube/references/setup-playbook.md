@@ -5,6 +5,15 @@ hang the helpers as badly as Meta, but **grabbing the wrong active channel
 contaminates someone else's brand channel**, so the channel check at every step
 comes first.
 
+## Contents
+
+- [Browser lane and driving principles](#browser-lane-and-driving-principles)
+- [Step 1 · Advanced-features identity verification](#step-1-advanced-features-identity-verification)
+- [Step 2 · Brand channel creation + branding (after approval)](#step-2-brand-channel-creation-branding-after-approval)
+- [Step 3 · OAuth authorize + loopback listener (code recovery)](#step-3-oauth-authorize-loopback-listener-code-recovery)
+- [Step 4 · code → refresh_token exchange (browser-independent — curl)](#step-4-code-→-refresh_token-exchange-browser-independent-curl)
+- [Verification & trap roundup](#verification-trap-roundup)
+
 ## Browser lane and driving principles
 
 There is one lane — ego lite (SKILL.md §Browser lane). Every per-step recipe

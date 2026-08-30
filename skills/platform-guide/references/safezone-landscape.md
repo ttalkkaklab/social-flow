@@ -1,7 +1,8 @@
 # 16:9 long-form safe zone — measured source of truth
 
-**Measured** 2026-08-17 · **Surface** YouTube desktop web (ego lite / chromium 150) ·
-**Method** DOM `getBoundingClientRect()` normalized to 1920×1080 canvas units.
+> **Freshness** — verified 2026-08-17 · source: measured on YouTube desktop web (ego lite /
+> chromium 150), DOM `getBoundingClientRect()` normalized to 1920×1080 canvas units ·
+> recheck every 180 days, and when YouTube changes the player chrome.
 
 All coordinates are **canvas units**. Multiply screen px by `S = 1920 /
 player-width` to get them. Normalization was cross-checked every time with
@@ -10,6 +11,13 @@ player-width` to get them. Normalization was cross-checked every time with
 Nothing here was eyeballed — capturing the screen and measuring by hand mixes
 in scaling and crop, so it can't be reproduced. Converting DOM rects to canvas
 units is this repository's measurement contract.
+
+## Contents
+
+- [Confirmed values](#confirmed-values)
+- [Measurements](#measurements)
+- [What couldn't be measured](#what-couldnt-be-measured)
+- [One-line summary](#one-line-summary)
 
 ## Confirmed values
 

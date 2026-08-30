@@ -11,6 +11,14 @@ the source for title overlays and platform text.
 storyboard (script) → user shoots (ingest record) → transcribe/align (ingest) → edit (this doc)
 ```
 
+## Contents
+
+- [Composite geometry (1080×1920)](#composite-geometry-1080×1920)
+- [edit.json contract (build-screencast.sh input)](#editjson-contract-build-screencastsh-input)
+- [Edit procedure (performed by the produce skill)](#edit-procedure-performed-by-the-produce-skill)
+- [Build report gate (build-report.txt)](#build-report-gate-build-reporttxt)
+- [Pitfalls](#pitfalls)
+
 ## Composite geometry (1080×1920)
 
 ```

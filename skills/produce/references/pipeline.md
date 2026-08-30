@@ -3,6 +3,16 @@
 The composition contract around build-reel.sh, plus pitfalls verified in real builds.
 Inherited from the fect-persona make-reels pipeline (same script, same contract).
 
+## Contents
+
+- [Safe zone (measured on tall phones — do not shrink these numbers)](#safe-zone-measured-on-tall-phones-do-not-shrink-these-numbers)
+- [What build-reel.sh does (in order)](#what-build-reelsh-does-in-order)
+- [Reveal timing contract (reveal-timing.py)](#reveal-timing-contract-reveal-timingpy)
+- [Build report gate table (build-report.txt)](#build-report-gate-table-build-reporttxt)
+- [Three TTS failure modes and responses (Gemini TTS, field-tested)](#three-tts-failure-modes-and-responses-gemini-tts-field-tested)
+- [Palindrome loop (8s clip → 16s)](#palindrome-loop-8s-clip-→-16s)
+- [Field-tested pitfalls](#field-tested-pitfalls)
+
 ## Safe zone (measured on tall phones — do not shrink these numbers)
 
 ```

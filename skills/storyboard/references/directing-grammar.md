@@ -38,6 +38,20 @@ above (the `[study]` rows).
 
 ---
 
+## Contents
+
+- [1. Four dials, four fields — never merged](#1-four-dials-four-fields-never-merged)
+- [2. Size — the audience's distance](#2-size-the-audiences-distance)
+- [3. Angle — the seat you give the audience](#3-angle-the-seat-you-give-the-audience)
+- [3.5 Frame space — what is where, and which way it faces](#35-frame-space-what-is-where-and-which-way-it-faces)
+- [4. Move — what the camera does while the shot runs (generated video)](#4-move-what-the-camera-does-while-the-shot-runs-generated-video)
+  - [The still lane — the camera the edit fakes `[blog]`](#the-still-lane-the-camera-the-edit-fakes-blog)
+- [5. Feel → technique — the lookup the storyboard reads first](#5-feel-→-technique-the-lookup-the-storyboard-reads-first)
+- [6. Sequencing and rationing — the rules across shots](#6-sequencing-and-rationing-the-rules-across-shots)
+- [7. Filmed shots — what the shooting script has to say](#7-filmed-shots-what-the-shooting-script-has-to-say)
+- [8. Where each value goes](#8-where-each-value-goes)
+- [9. Sources](#9-sources)
+
 ## 1. Four dials, four fields — never merged
 
 | Dial | The question it answers | Field | Applies to |

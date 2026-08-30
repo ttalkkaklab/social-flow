@@ -337,132 +337,11 @@ means generating something nobody approved.
   there you generate 8 and trim. Handing a model more seconds than the idea holds is how the
   middle of a clip goes dead — it fills the time it is given.
 
-**Video engines, split by job** — there are two (`veo_*` · `seedance_*`) and they're good at
-different things. The decision table's source of truth is
-[video-model-selection.md](references/video-model-selection.md), and the order is
-**face → sound → grid**. Since the route is deterministic from facts the storyboard already
-wrote (who is in the source, whether the slot uses its sound, the duration), **the storyboard
-records the planned route** — `visual.engine`, or the type default (b-roll → veo, motion
-background → seedance, speech clip → veo_reference) — and writes the stored prompt in that
-route's grammar. This section is how you **validate** the route against those facts, not
-re-decide it. The one live deviation is a missing `ARK_API_KEY` sending a Seedance-routed
-motion background to Veo — the stored prompt survives that as written (no timecodes on a
-Seedance route, and the positive-locks tail is harmless prose to Veo; the stored `negative`
-list moves into the `negativePrompt` argument) — and the deviation goes in `build-report.md`.
-A route that fails validation (a real face on a 2.x model, a 13-second Veo scene) is a
-storyboard defect: send it back.
-
-**① Who's in the shot** — price and quality come after this. The face rules engines out first.
-
-- **A photoreal adult face**: Veo takes it (`veo_img2video`, measured 2026-08-15 — the face
-  held through 4 seconds at 720p). Seedance takes it on 1.5 pro and 1.0 pro only; **2.x
-  rejects it at task creation** (`InputImageSensitiveContentDetected.PrivacyInformation` — a
-  rejection isn't billed, so probing the boundary is free). `veo_reference` has the same
-  policy on paper but we haven't measured it.
-- **A face that reads as a minor**: photo or illustration, **the Veo image lane blocks it**
-  (Support code 17301594). Seedance 1.x hasn't been checked. Don't hunt for a workaround —
-  redraw the shot: take the face out, or make the person an adult.
-- **A shot with no visible face** (from behind, a silhouette, just hands and a screen):
-  every model takes it. This is where `dreamina-seedance-2-0-260128`, the public arena's #1
-  for image→video, opens up.
-- **A mouthless character** (the ttalkkak-lab mouse-head type): **the one axis where the two
-  engines land in opposite places.** Veo draws in a mouth that wasn't there within 0.2
-  seconds (0 for 5 in practice, and not the kind of thing a negative instruction stops),
-  while **Seedance 2.0 never made a mouth across a 15-second 1080p clip** (measured
-  2026-08-15 — even the emotional-acting shots kept the mouse head with its two slanted
-  eyes). When that face is on screen, skip Veo and go to Seedance. Leave the veo ban in
-  channel profile §3 as it is, but read it as a ban on Veo rather than on the whole engine
-  category.
-
-**② Does that stretch use its sound**
-
-- **A b-roll slot goes to Veo** — by absolute rule 9 that stretch uses the sound the clip
-  came with. Veo's native audio is better, and dropping in a silent clip makes those 4
-  seconds go quiet.
-- **A motion background (`visual.video`) can go to Seedance** — the builder lays down the
-  video track only and **throws the clip's sound away**. There's no reason to pay Veo prices
-  for sound you'll discard, and Veo only makes 1080p at 8 seconds while Seedance makes
-  exactly the seconds you ask for and charges for exactly that.
-  `seedance_img2video` (`resolution: "1080p"` · `durationSeconds` = the length that scene
-  actually uses · model `seedance-1-5-pro-251215` · `generateAudio: false`).
-  Don't pass an aspect-ratio argument — the default `adaptive` follows the 1088×1920 source
-  as-is, and while spelling out `9:16` gives the same result, any other value crops the
-  source from the center.
-
-**③ Do the length and resolution fit Veo's grid** — Veo makes 4, 6, or 8 seconds only, 1080p
-and 4K are 8-second-only, and its audio can't be turned off. Need a length or ratio outside
-that grid and it's Seedance.
-
-Two lines that hold whichever engine you pick belong here too.
-
-- **To reproduce a composition, use the first and last frames, not a reference image.**
-  A reference carries appearance (Veo `asset`) or art style (Seedance), not composition.
-  Shots that have to follow the drawing — something appearing, disappearing, changing
-  pose — belong in `sourceImagePath` + `lastImagePath`, and the two PNGs are made on the
-  same background with only the subject different.
-- **Only Seedance transplants an art style.** Veo 3.1 has no `referenceType: "style"` at all
-  (the official docs point you at the experimental 2.0 model, which can't even produce
-  audio). To hand a sketch or a toon scene frame over as a style, use `seedance_reference`.
-
-Without `ARK_API_KEY` the Seedance calls fail. Then make it with Veo as before, keeping ①'s
-face clauses intact — the two engines don't block each other.
-
-**Video prompt grammar — it differs by engine.** Once the engine is picked, this is how to
-write the sentences. The basis is the two vendors' official docs, written up in
-[the prompt grammar research](../../docs/research/2026-08-15-veo-seedance-prompting/index.html)
-and [the camera technique research](../../docs/research/2026-08-15-ai-video-camera-technique/index.html).
-**The source of truth for the camera items is `references/video-model-selection.md` §Camera**;
-only the summary is here.
-
-- **Exclusions don't go in the prompt body** — Veo takes them in the `negativePrompt`
-  argument, and the grammar is a comma-separated list of noun and adjective phrases
-  (`text, subtitles, black bars`). Write "no ~" in the body and the model draws that noun
-  instead (local images, measured: 0 for 4, and Veo's own prompt guide marks the form not
-  recommended). Seedance has no such argument, so rewrite the scene description until the
-  thing you want gone simply isn't in it, and close the prompt with a **positive-locks**
-  paragraph — what holds in every frame, said positively, each reference given its scope
-  (§positive locks). A phrase that only refuses a category ("not a game", "no CGI") gives the
-  model no picture to draw and survives every reroll.
-- **There's no rule about slot order** — the five-part formula that puts the camera in the
-  first word appears in exactly one Google Cloud blog post; three reference documents specify
-  no word order, and the Gemini API marks the camera `[Optional]`. Just worry about filling
-  the slots you need.
-- **Write camera vocabulary in the words that vendor uses** — on a Veo call it's `arc shot`,
-  not `orbit`, and `dolly in`, not `push in` (`orbit` and `push` appear 0 times across the
-  full source documents). `zoom in` narrows the angle of view without moving the camera, so
-  don't use it for a shot that moves closer.
-- **The move comes from the shot's declared feel, and it supports the feel rather than
-  carrying it** — the storyboard picked it from the feel → technique table
-  (`../storyboard/references/directing-grammar.md` §4–§5), so don't swap it here for one that
-  "feels more cinematic". The empirical work never showed that moving closer changes what a
-  viewer feels on its own (p=.84); what a move raised was immersion, at an opening or a
-  transition. Tone is set by the background, the art direction, the size and the angle.
-  **Angles have empirical support** — eye level is the default camera height for hook shots
-  and speaking clips, and the `framing` slot carries the storyboard's size and angle into
-  the call.
-- **Seedance cameras read better written as a span** — `opening composition + move + closing
-  composition`. The vendor doesn't require the form (the camera field itself is `非必须`,
-  optional) — it's **the form we use on motion-background shots that have to reproduce a
-  composition**. The prompt body takes only Chinese and English, so write the instructions
-  in English. One move per shot is the storyboard's default; a second move only on the default
-  model 1.5 Pro and only when the storyboard wrote the reason beside it (the one-move-per-shot
-  advice is 2.0-only — the reason is our contract, scenes-schema §camera). The storyboard
-  doesn't know the engine, so this is where that condition is enforced: when §3 routes a
-  two-move shot off 1.5 Pro (Veo, Seedance 2.x), keep the first move only and write the drop
-  in `build-report.md`.
-- **Don't put seconds in a Seedance prompt** — the scene's `duration` sets the length and the
-  edit does the cutting. The vendor notice covers 2.0 (2.5 responds to whole seconds) and
-  nothing is confirmed for the default model 1.5 Pro — this rule rests on our pipeline, not
-  on vendor documentation. **Veo is the opposite** — the 3.1 blog presents `[00:00-00:02]`-style
-  span splitting as a workflow (blog grade — the reference docs never took it up, checked
-  2026-08-25).
-- **Dialogue on a Veo call is `speaker says: line` — colon, no quotation marks.** Quotes make
-  the model burn the line into the frame as on-screen text (Best practices, 2026-08-24); our
-  overlays already carry the subtitles, so a burned-in line is a double. Seedance keeps its
-  quotes.
-- **One clip is one moment** — chaining A-then-B-then-C into one short prompt is the vendor's
-  own named failure ("muddled or incomplete"). The storyboard already cut the scene to one
-  beat (scenes-schema §clip prompt); don't merge scenes at call time to save calls.
+**Which engine, how to word the prompt, and the recipe for each generated slot** —
+[video-generation.md](references/video-generation.md). It carries the face → sound → grid
+route between `veo_*` and `seedance_*`, each engine's prompt shape, and the per-slot recipes
+for b-roll, motion backgrounds and quote speaking clips. **Read it before the first
+generated-video call**; an episode of still backgrounds skips it whole.
 
 - **Cover background = b-roll source (one image, `storyboard/images/scene-1.png`)**:
   `gpt_image_text2img`, `size: "1088x1920"`, **`quality: "high"`**. **Photoreal style with a
@@ -474,84 +353,6 @@ only the summary is here.
   **`seen from behind, face turned away`** so the person is clearly visible.
   The cover capture (`bg=./scene-1.png`) and veo's input use the same file, so when the cover
   ends that photo starts moving.
-- **b-roll (the `broll` scenes in scenes.js — max 2 slots per episode)**: animate each slot's
-  `visual.src` PNG with `veo_img2video` (`aspectRatio: "9:16"` · `resolution: "1080p"` ·
-  `durationSeconds: 8` · **`veo-3.1-lite-generate-preview`**). The case for lite: in the blind
-  arena the Elo gap across Veo's three tiers is under 20 with overlapping confidence intervals
-  (video-model-selection §Quality) — for the same image, fast costs $0.96 per 8 seconds and
-  lite $0.64. **One caveat**: the arena scored video and sound together, so audio quality was
-  never measured on its own. This slot is where the clip's sound gets used (absolute rule 9),
-  so if a review flags the b-roll **audio** as a P0, remake that episode's clip on fast.
-  Absolute rules 8·10 — the source has to be **an image you already made**, and **the cover
-  itself is code-rendered** (Veo can't write Hangul).
-  **Make exactly what the storyboard has** — skip a planned slot and an approved scene
-  quietly disappears; add a slot that isn't there and you've broken the contract and wasted
-  money.
-  - **Generate 8 seconds, use what you need** — on Veo the API only allows 8 seconds at 1080p.
-    The body is 1080×1920, so don't generate at 720p and upscale (user decision 2026-08-11 — if
-    you need an upscale, just use 1080p). The length actually used is the storyboard broll
-    scene's `duration`, and you trim the head of the original right before the splice in §6.
-    **On Seedance ask for the used length directly** (`durationSeconds` = that scene's
-    `duration`) — it makes only those seconds, so there is nothing to trim and nothing to pay
-    for twice. Keep the 8-second original
-    (**`.work/broll/broll-a<after>.mp4`**) — it's the reference point for a retrim.
-    There's one reason `after` is in the filename — two slots with the same name overwrite
-    each other.
-  Send the scene's stored `visual.prompt` verbatim, with the stored `visual.negative` noun
-  list in the `negativePrompt` argument (this slot is a Veo call). On an older scenes.js with
-  no stored prompt, assemble from the `visual.camera` four slots (above), keep it **motion
-  only, in English**, and add the audio instruction at the end — `dolly in`, not `push in`
-  (the vocabulary rule above). For example:
-  `Audio: quiet studio room tone with a faint fabric rustle, no music, no speech.`
-  Re-describe the person, background, or lighting already visible in the image and the model
-  redesigns the scene.
-  - **Make the two slots from their own sources** — run the same PNG twice with only the
-    motion changed and the same scene shows up twice, leaving the video circling in place.
-    The second slot's source is the background of the scene it attaches to, and that image
-    has to be a photoreal person made with gpt_image high (absolute rules 11·12).
-  - **Don't use a palindrome loop** — forward plus reverse plays the sound backwards
-    (absolute rule 9 makes this stretch use the video's audio).
-  - This stretch doesn't go in the manifest; it gets **spliced in after the build** (end of
-    §6). The builder's contract is one audio per card, so wedging in speechless audio breaks
-    the speech-rate and sentence-boundary math.
-- **Motion background (scenes.js's `visual.video` — inside the combined generated-video
-  ceiling)**: animate that scene's `visual.bg` PNG and save it as
-  **`.work/motion/motion-i<scene index>.mp4`**.
-  **This is Seedance's slot** (the video engine split above) — `seedance_img2video`
-  (`resolution: "1080p"` · `durationSeconds` = the length that scene uses ·
-  `seedance-1-5-pro-251215` · `generateAudio: false`). Without `ARK_API_KEY`, make it with
-  `veo_img2video` (`aspectRatio: "9:16"` · `resolution: "1080p"` · `durationSeconds: 8` ·
-  `veo-3.1-lite-generate-preview`). Use `visual.video.prompt` verbatim as the prompt — the
-  stored final clip prompt (camera span, subject motion, locks, the audio sentence; on an
-  older file it holds the motion only, and the camera span is assembled from the slots). It
-  never re-describes the scene — the PNG already drew it. The clip's
-  sound goes unused in the build (§6's assembly lays down the video track only), so the audio
-  instruction is optional. The plan gate (absolute rule 13) comes back in the same delegation
-  as the b-roll. **Make exactly what the storyboard has** — 2 combined with the b-roll is the
-  ceiling (scenes-schema §Motion background is the source of truth).
-- **quote speaking clip** (when planned): `veo_reference` (the speaker's panel set — `face.png`
-  then `body.png`, 3 images max; 9:16, 720p,
-  `veo-3.1-fast-generate-preview` — lite doesn't support reference images, so fast is the
-  lowest tier. The standard tier ties with fast in the arena, so there's no reason to pay 4×) —
-  send the stored `visual.clip.prompt` verbatim (assembled at the storyboard with
-  `--clip --with-space`, so it already carries the character description, the
-  `From the camera: …` sentence, and the camera span). On an older draft prompt, assemble it
-  here: the character description + the shot's space sentence (`assemble-bg-prompt.js --from
-  scenes.js --shot N --space-only` — nothing when the shot wrote no `space`) + "static camera"
-  + "wide chest-up framing … subject appears small in the frame" + a background unified to
-  THEME dark. **Those two camera phrases are the default `visual.camera` for a quote clip, not
-  a competing instruction** — a scene carrying its own `visual.camera` overrides them.
-  **The reference lane rejects `negativePrompt`** (400 "Negative prompt is not supported in
-  your use case", measured 2026-08-15 — the same argument works on `veo_text2video` and
-  `veo_img2video`), so exclusions on this lane are written into the prompt as **positive
-  description**: not "no mouth" but "below the eyes, one seamless matte white curve". Run `frame-persona-clip.py <input> .work/broll/<speaker>-palin.mp4` to unify
-  the framing and make the palindrome. With several clips, hstack them side by side and
-  compare the scale by eye. With no speaking clip, fall back to a static quote card (opaque
-  capture).
-  ①'s face clauses apply to the avatar too — with a mouthless character, don't call Veo; go
-  to the static quote card. A reference carries appearance only, so **when the avatar's
-  composition has to be preserved exactly, it's `veo_img2video` first/last frames, not a
-  reference**.
 - **BGM**: the storyboard already decided this. Read `window.MUSIC` and each shot's `sound`
   (scenes-schema §music cues) and turn them into files the builder can find.
 
@@ -646,162 +447,21 @@ printf 'produce\tfallback\tmotion background i3\tveo_img2video\tARK_API_KEY abse
 
 ### 3.5 Take in the filmed clips (mixed-shooting episodes only)
 
-**Normalize once** and move the files the user saved in `footage/` into `.work/footage/`.
-Don't feed the originals straight to the builder — phone and screen recordings are often
-variable frame rate (VFR), and splicing them as-is pushes mouth and sound further apart as
-the video goes on.
-
-```bash
-mkdir -p .work/footage .work/pcm
-for SRC in footage/*.mp4 footage/*.mov footage/*.m4v; do
-  [ -f "$SRC" ] || continue
-  B=$(basename "${SRC%.*}")
-  # the intermediate is .mov — it has to hold lossless PCM so the live voice doesn't take a
-  # second generation of loss, and putting PCM in mp4 only became possible in ffmpeg 7
-  # (earlier versions refuse the mux). mov is standard on every version and the builder
-  # takes .mov directly.
-  ffmpeg -y -v error -i "$SRC" \
-    -r 30 -vsync cfr -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p \
-    -c:a pcm_s16le -ar 48000 -ac 1 ".work/footage/$B.mov"
-  # pull the audio **from the normalized file** — that way the card audio and the video
-  # track the builder uses come from the same file
-  ffmpeg -y -v error -i ".work/footage/$B.mov" -vn -ar 48000 -ac 1 ".work/pcm/$B.wav"
-done
-```
-
-- **Check first** — does every `visual.clip` on the filmed scenes in scenes.js exist. If even
-  one is missing, **stop there** and tell the user which file is empty. Go on without it and
-  you get a video with that scene missing, and you find out later.
-- **Orientation check**: a portrait clip in a landscape episode makes the builder stop at
-  `STRICT_DIM=1` before the first ffmpeg. That's a reshoot, so tell the user right away.
-- **Length check**: on a scene that covers narration, the clip has to be longer than
-  `narration + PRE + POST`. Too short and the screen freezes at the end — cut that scene's
-  script down or get the clip reshot.
-- The overlay is **one alpha capture per scene** (a lower third). Reveal enumeration isn't
-  used on live-voice scenes — what changes on screen is the recording, not our lettering.
-
-  ```bash
-  FORMAT_ENV="$PWD/.work/format.env" \
-    $REF/capture-frames.sh "file://$PWD/.work/frame.html?i=<idx>&alpha=1&scrim=1&dim=1" .work/cards/a<idx>.png 1
-  ```
-- **Subtitles come from the transcript.** Transcribe the clip audio with `ingest`'s
-  `transcribe.sh`, correct it, then write `.work/cards/s<idx>subs.tsv`
-  (`start<TAB>end<TAB>sentence`) in seconds relative to the card's start. Pass this file as
-  the 5th `cards.tsv` column `subs=` in §6 — live-voice scenes skip speech-boundary
-  detection, so the subtitle times can only come from the transcript.
-
+Normalize the user's `footage/` files once, then hand them to the builder as cards.
+The full lane — the VFR trap, the normalize command, the naming the builder expects —
+is in [optional-lanes.md](references/optional-lanes.md) §3.5. **No `footage/` directory
+means skip this step.**
 ### 3.6 Slide scenes and live-voice audio (only on episodes that have them)
 
-A **slide scene**'s segment visuals (`visual.slide`, scenes-schema §slide scenes) are
-captured from **the storyboard's slide files**, not from `frame.html`. Authoring and
-self-verification finished back in storyboard §8; here you only enumerate the states and
-turn them into card material.
-
-```bash
-REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
-# Opaque capture (alpha 0) — a slide fills the frame, so there is no background to composite
-FORMAT_ENV="$PWD/.work/format.env" \
-  $REF/capture-reveals.sh <idx> "file://$PWD/storyboard/slides/s<shot number>-<slug>.html" \
-  .work/cards/a<idx>r 0
-```
-
-- A slide reads `../scenes.js` over a relative path, so capture it **in place under
-  storyboard/slides/** — copy it into .work and it can't find the source of truth.
-- If the state count doesn't match the segment count, §7's report catches it as "missing
-  reveal state". Fix the slide's rg assignment and capture again (the storyboard §8
-  contract).
-
-A **motion slide** (`visual.slide.motion === true`, scenes-schema §motion slides) is not
-captured as states — it is rendered as **one clip per reveal group** and each clip goes
-under its segment as a play-once visual. The slide already passed the design gate in
-storyboard §8.1; here you only render and wire.
-
-```bash
-REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
-node $REF/render-motion-slide.mjs storyboard/slides/s<shot number>-<slug>.html \
-  --out .work/motion/slide-s<shot number>
-# → .work/motion/slide-s<shot number>/r1.mp4 … rN.mp4 (30fps CFR, canvas size, no audio) + manifest.tsv
-```
-
-- The summary line's `groups` must equal the card's segment count (or segments + `A|B`
-  sub-reveals). A mismatch is a storyboard §8.1 defect — don't paper over it here.
-- The renderer reads `../scenes.js` relative to the slide, so render it **in place under
-  storyboard/slides/**, exactly like the static capture above.
-- The clips cost nothing and are deterministic (same file → same bytes), so a re-render
-  after a scenes.js fix is safe; the sheet frames from storyboard §8.1 stay in
-  `storyboard/.work/slide-check/` (§8.1 runs from the storyboard directory) for comparison.
-- **`slide.kind` changes nothing here.** A kinetic-type screen (`kind: "kinetic"`) and a
-  character-act screen (`kind: "character"`) are the same render, the same command, the same
-  `@motion/slide-s<n>/r<k>.mp4` wiring — the renderer asks a page for the seek contract and
-  doesn't care what the page draws. What the kind decides is which template the storyboard
-  authored from and which design section judged it (§8.1 · §8.2 · §8.3). The one thing to
-  read is `motion === true`, which is what sends the file down this path instead of the state
-  capture above.
-
-An **all-live-voice episode** (`window.VOICE === "user"`) generates no TTS (§5 is skipped
-entirely). Filmed scenes pull their audio from the clip per §3.5; every other scene uses
-the user's recording at `voice/s<shot number>.wav` (shot number = array position from 1 =
-card idx + 1).
-
-```bash
-mkdir -p .work/pcm
-for SRC in voice/s*.wav; do
-  [ -f "$SRC" ] || continue
-  # The builder handles trimming and normalization — here we only conform to 48k mono
-  ffmpeg -y -v error -i "$SRC" -ar 48000 -ac 1 ".work/pcm/$(basename "$SRC")"
-done
-```
-
-- **Check first** — does a voice file actually exist for every non-filmed scene that has
-  narration? If even one is missing, stop and tell the user which shot is empty.
-- Card contract (§6): audio = that wav, on the **normal lane** — do not set `sync=1`.
-  Trimming, loudnorm, and sentence-boundary detection are all wanted here (the boundaries
-  drive the reveal transitions), and with no mouth on screen there's no sync constraint.
-- **Run the build with `ATEMPO_MIN=1 ATEMPO_MAX=1`** — don't apply machine speed
-  correction to a human voice (provisional, 2026-08-18, measured on the first live-voice
-  build). A speaking-rate REGEN recommendation is not a regeneration target here — that
-  shot needs a re-record or a script change.
-- If noise at the head of a recording slips under the trim threshold (-50dB) and comes out
-  as dead air, trim that one card by hand — also measured on the first episode.
-
+Authored HTML screens get captured like any other card, and an all-live-voice episode
+takes its audio from `voice/` instead of the TTS in §5. Both lanes are in
+[optional-lanes.md](references/optional-lanes.md) §3.6. **No slide scene and no `voice/`
+directory means skip this step.**
 ### 3.7 Screencast splices (only on episodes that have them)
 
-A scene with `visual.source === "screencast"` (scenes-schema §screencast splice) is one window
-of a screen recording inside an ordinary card. The recording is landscape and the card is the
-episode canvas, so the cut, the crop and the fit happen here — `references/cut-screencast.sh`
-does all three and hands back a canvas-sized clip the builder plays as an `@` visual. Nothing
-in `build-reel.sh` changes.
-
-```bash
-REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
-mkdir -p .work/screencast
-# one call per screencast scene — <at> and <focus> come from scenes.js, <card> from the
-# duration you computed for that card
-$REF/cut-screencast.sh footage/s3-cli-run.mp4 .work/screencast/s3.mp4 \
-  --at 12.5-19.0 --focus 160:220:1400:900 --card 7 --bg "$INK"
-```
-
-- **Check first**, before any cutting — does every `visual.clip` a screencast scene names exist,
-  and does every `at` window end inside that file? The script exits 1 on both, but finding out
-  scene by scene is slower than telling the user once.
-- `--bg` is `THEME.ink` — the pad around a clip that doesn't fill the canvas is the episode's
-  own background, not black.
-- **Pass `--card`**. Without it the two length warnings don't run, and a clip longer than its
-  card silently loses its ending — the part the scene exists for is usually at the end.
-- Read the warnings. A shrink past 3× or a blow-up past 1.5× means the card will be unreadable
-  on a phone; the fix is a different `focus` in scenes.js, not a louder title over it.
-- Card contract (§6): visual `@screencast/s<n>.mp4::cards/a<idx>r<k>.png` (paths in segs.tsv are
-  relative to `.work/`) — the clip with that reveal state's alpha capture over it, the same
-  shape a motion-background scene uses. `zoom=none`, and the audio is the scene's ordinary TTS
-  on the normal lane. A scene with `sync: true` instead takes `--keep-audio`, feeds
-  `.work/screencast/s<n>.wav` as the card audio with `sync=1`, and gets its subtitles from the
-  transcript like any live-voice card (§3.5).
-- **Several segments on one screencast card: drop the `@`** and repeat the same clip path per
-  segment, changing only the overlay. `@` restarts the clip at its first frame, so on a second
-  segment it would replay the cut from the top; without it the builder carries the playback
-  across the reveal with `-ss`. `@` is right when the card is one segment — which is the shape
-  this lane usually wants, one moment on screen.
-
+A recorded screen spliced into a generated reel — cut, focus crop, and the splice order.
+[optional-lanes.md](references/optional-lanes.md) §3.7. **No screencast in scenes.js
+means skip this step.**
 ### 4. Capture the reveal states
 
 Per scene, let `capture-reveals.sh` **derive the state count itself** (a person choosing how
@@ -861,9 +521,10 @@ and a headless `--dump-dom` run reads that title back after the page script has 
 [measured 2026-08-30]. Same Chrome the captures already use, no browser tooling on top.
 
 ```bash
-. .work/format.env
+. .work/format.env                       # URL_FMT is empty on the portrait preset
+FMT=${URL_FMT:+&format=$URL_FMT}
 "${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}" --headless=new \
-  --disable-gpu --dump-dom "file://$PWD/.work/frame.html?i=<idx>&reveal=<last>&format=$URL_FMT" \
+  --disable-gpu --dump-dom "file://$PWD/.work/frame.html?i=<idx>&reveal=<last>$FMT" \
   2>/dev/null | grep -o 'ovf=[0-9]*'
 ```
 
@@ -1325,8 +986,9 @@ mockup, and a 470×920 window holds the whole phone including the right action r
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
-# no FORMAT_ENV here — the QA harness is a phone mockup, not a 1080×1920 frame
-CAP_W=470 CAP_H=920 $REF/capture-frames.sh \
+# FORMAT_ENV is cleared on purpose — the script sources it and would put CAP_W back
+# to 1080. The QA harness is a phone mockup, not a 1080×1920 frame.
+FORMAT_ENV= CAP_W=470 CAP_H=920 $REF/capture-frames.sh \
   "file://$PWD/.work/reel-qa.html?v=./reel-sub-fast.mp4&ui=ig&fit=crop&zone=1&frame=1&t=<sec>" \
   .work/qa/s<n>.png
 ```
@@ -1376,72 +1038,9 @@ disappear on that platform.
 
 #### Multi-language subtitles (only when the profile lists them)
 
-When profile.md §4 has a **Subtitle languages** line naming languages beyond the
-default (e.g. `ko (default) · en · vi`), translate **`output/video/subs.srt`** — the retimed
-file the speed pass produced, never `.work/subs.srt` — into each extra language yourself and
-save `output/video/subs.<lang>.srt` (BCP-47 code — `subs.en.srt`, `subs.vi.srt`). Rules:
-
-- **Cue numbers and timestamps stay byte-identical** — translate the text lines only.
-  The timing came from the TTS boundaries, went through the §7.5 speed pass, and holds for
-  every language. Translate the un-sped `.work/subs.srt` by mistake and every extra language
-  ships on the pre-speed timeline while Korean is on the right one.
-- Translate what the subtitle-display column says (numbers and units as written on
-  screen), not the TTS reading. Proper nouns, brand names, and on-screen figures stay
-  as-is.
-- Keep each cue about as long as the original — a cue that doubles in length overflows
-  the two-line subtitle band on the phone surface.
-- These files ride only on the platforms that take a subtitle file (YouTube ·
-  Facebook). The burned-in copy stays in the default language — IG and Threads viewers
-  see that one, so there is no re-render per language.
-
-Run the D2/D9 surface check on each translated file the same way as `subs.srt` when the
-language is Korean; other languages skip the Korean style gate.
-
-Right after saving, run the style checker per surface — one Bash call, not an LLM call.
-
-```bash
-CS=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py
-python3 "$CS" --selftest >/dev/null 2>&1 \
-  || echo "gate_exit=3 (checker missing/broken/rules red — everything below is unverified)"
-for P in threads:output/threads/post.md ig:output/instagram/caption.md \
-         fb:output/facebook/post.md yt:output/youtube/meta.md; do
-  python3 $CS --surface ${P%%:*} ${P#*:}; echo "[${P%%:*}] gate_exit=$?"
-done
-```
-
-**Once a channel has three or more episodes stacked up, measure the batch too.** The checker
-above looks at one episode's copy at a time, so it **can't in principle see** the whole
-channel getting stamped from one mold — individual quality and batch diversity move in
-opposite directions (measured on the sibling plugin: two manuscripts differing only in subject
-each scored 100/100 while overlapping at 0.77). The more episodes pile up, the more real this
-axis becomes.
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-batch.py \
-  --split ../*/output/threads/post.md
-```
-
-Nothing gets rejected — you only get a ranking. `post.md` holds the body and the operational
-notes in one file, so `--split` is required (without the split, the top overlaps fill up with
-operational phrasing like "replyToId right after a successful reply post" — measured). Look
-only at **pairs of body sections**, and rewrite any phrase in this episode that's been reused.
-Don't go back and fix past episodes.
-
-If the checker file is missing, python exits 2 — indistinguishable from a verdict of 2, so put
-the existence check first. Never read a broken install as "S1 on every surface" and go rewrite
-perfectly good copy.
-
-On exit 2 (S1), fix that file and rerun. When fixing, **only take things away** — plant a
-metaphor or stock phrase that wasn't there and that's a new AI tell. Leave numbers, proper
-nouns, and hashtags alone (the checker already masks those spans before judging). exit 3 means
-the gate never ran, so don't count it as a pass.
-
-exit 1 splits two ways. Accumulated S2 gets fixed; `quote-exempt N` in the header line means
-confirming the source — the checker excluded that violation from the score without knowing
-whether the source is real. If it's a genuine quotation, leave it and note the count in the
-§10 delegation prompt. Otherwise drop the quotation marks and rewrite it in our own words
-(quotation marks are a place to earn an exemption, not a place to hide a sentence).
-
+Extra `.srt` tracks beyond the channel language, and how the platforms take them:
+[optional-lanes.md](references/optional-lanes.md) §From §9. **A profile with one language
+skips this.**
 ### 10. Quality gate + completion report
 
 Delegate artifact verification to the content-reviewer agent (Agent) — hand over video frame

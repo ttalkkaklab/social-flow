@@ -6,6 +6,16 @@ helpers get stuck in internal waits and hang forever in many places, so things
 only move reliably **with low-level CDP calls**. Below are the field-tested
 recipes.
 
+## Contents
+
+- [Browser lane and driving principles](#browser-lane-and-driving-principles)
+- [Step 1 · Account signup](#step-1-account-signup)
+- [Step 2 · Profile branding](#step-2-profile-branding)
+- [Step 3 · Meta app prep (tester + use-case permissions)](#step-3-meta-app-prep-tester-use-case-permissions)
+- [Step 4 · OAuth authorize (code recovery)](#step-4-oauth-authorize-code-recovery)
+- [Step 5 · Token exchange (browser-independent — curl)](#step-5-token-exchange-browser-independent-curl)
+- [60-day refresh (not reissuance)](#60-day-refresh-not-reissuance)
+
 ## Browser lane and driving principles
 
 There is one lane — ego lite (SKILL.md §Browser lane). Every per-step recipe

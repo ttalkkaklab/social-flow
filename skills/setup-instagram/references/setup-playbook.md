@@ -4,6 +4,16 @@ Holds how each step in SKILL.md is actually driven. On Meta-family sites
 (instagram.com · developers.facebook.com), ego's convenience helpers hang forever
 in many places, so things only move reliably **with low-level CDP calls**.
 
+## Contents
+
+- [Browser lane and driving principles](#browser-lane-and-driving-principles)
+- [Step 1 · Account signup](#step-1-account-signup)
+- [Step 2 · Professional conversion + branding](#step-2-professional-conversion-branding)
+- [Step 3 · App tester (Instagram Login) + invite acceptance](#step-3-app-tester-instagram-login-invite-acceptance)
+- [Step 4 · OAuth authorize (code recovery)](#step-4-oauth-authorize-code-recovery)
+- [Step 5 · Token exchange (browser-independent — curl)](#step-5-token-exchange-browser-independent-curl)
+- [60-day refresh (not reissuance)](#60-day-refresh-not-reissuance)
+
 ## Browser lane and driving principles
 
 There is one lane — ego lite (SKILL.md §Browser lane). Every per-step recipe
