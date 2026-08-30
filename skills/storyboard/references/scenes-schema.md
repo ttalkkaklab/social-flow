@@ -1746,7 +1746,9 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   hold; WebGL runs on SwiftShader, so it reproduces on the same machine rather than across
   machines), and
   a **`<video data-rg data-vfrom data-vdur>`** whose `currentTime` is set to the group's local
-  time. `transition` is forbidden (its object exists only after a property change, so it can't
+  time (`vfrom` and `vdur` are both milliseconds). A painter that attaches DOM keeps those nodes
+  inside its own `[data-rg]` — outside it a CSS animation runs on the wall clock, and `__seek`
+  pins it to t=0 and counts it so the renderer stops. `transition` is forbidden (its object exists only after a property change, so it can't
   be seeked). `Date` · `Math.random` · `performance.now` · `requestAnimationFrame` ·
   `setTimeout` are forbidden, inside a painter too — the frame is whatever `__seek(t, g)`
   says, and the same `(g, t)` yields the same pixels (two renders of the fixture: 144/144

@@ -45,8 +45,9 @@ const MSG = {
   motionClock: "모션 슬라이드에 시계·난수·타이머 금지 (Date·Math.random·performance.now·requestAnimationFrame·setTimeout) — 프레임은 __seek(t, g) 가 정한다. 키프레임으로 못 그리는 움직임은 __paint(rg, durMs, fn) 로 그린다",
   remoteMedia: u => `원격 URL 금지 — "${u}". 이미지·영상은 슬라이드 옆 로컬 파일만 쓴다. 네트워크가 프레임을 정하면 같은 (g, t) 가 같은 픽셀을 내지 못한다`,
   videoPlayback: "슬라이드의 <video> 에 autoplay·loop 금지 — 재생은 벽시계를 타고, 프레임은 __seek(t, g) 가 정한다",
+  videoDur: "모션 슬라이드의 <video> 에 data-vdur 이 없다 — 그룹 안에서 재생할 길이(ms)가 0 이 되어 영상이 클립 내내 첫 프레임에 멈춘다",
   videoGroup: "모션 슬라이드의 <video> 에 data-rg 가 없다 — 그룹에 매이지 않은 영상은 seek 대상 밖이라 첫 프레임에 멈춘다 (data-rg · data-vdur 을 적는다)",
-  animatedImage: u => `스스로 도는 이미지 금지 — "${u}". gif·apng·애니메이션 webp 는 벽시계로 돌고 __seek 이 못 세운다(document.getAnimations 에 안 잡혀 stray 로도 안 걸린다). 정지 그림은 png·jpg 로 넣고, 움직여야 하면 __paint 페인터나 <video> 로 쓴다`,
+  animatedImage: u => `스스로 도는 이미지 금지 — "${u}". gif·apng·애니메이션 webp 는 벽시계로 돌고 __seek 이 못 세운다(document.getAnimations 에 안 잡혀 stray 로도 안 걸린다). .svg 파일은 그 안의 SMIL 을 이 검사가 못 봐서 같이 막는다 — 인라인 data:image/svg+xml 은 쓸 수 있다. 정지 그림은 png·jpg 로 넣고, 움직여야 하면 __paint 페인터나 <video> 로 쓴다`,
   smil: "SVG SMIL 애니메이션 금지 (<animate·<animateTransform·<animateMotion·<set) — 벽시계로 돌고 __seek 이 못 세운다. CSS @keyframes 나 __paint 로 옮긴다",
   staticVideo: "정지 슬라이드에 <video> 금지 — 상태 캡처는 정지 화면끼리의 xfade 다. 영상이 필요하면 scenes.js 에 slide.motion:true",
   kindVocab: k => `slide.kind "${k}" 는 ${KINDS.join(" · ")} 밖이다`,
@@ -133,32 +134,54 @@ function checkDir(dir, only) {
     // 4) 결정성 — 갈래별
     if (/@import|fonts\.googleapis|<link[^>]*font|@font-face[^}]*url\(\s*['"]?https?:/i.test(code))
       fail(base, MSG.webfont);
+    /* 소재 URL 을 한 번에 모은다. 렌더에 실제로 그림을 앉히는 자리만 본다 — <a href> 의 출처
+       링크는 프레임을 정하지 않으므로 뺀다(리뷰 medium 6). 값이 코드로 조립되는 자리
+       (`${…}` · 문자열 연결)는 정적으로 알 수 없으니 건너뛴다 — 슬라이드는 innerHTML 로 마크업을
+       짜는 것이 관례라 여기서 막으면 정상 저작이 걸린다(리뷰 high 3). */
+    const dynamic = u => /\$\{|\+|`/.test(u);
+    // 그림이 앉는 자리 — 확장자를 보는 것은 이것뿐이다. 영상 소스는 여기 넣지 않는다.
+    const imgUrls = [];
+    for (const m of code.matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1]);
+    for (const m of code.matchAll(/<video\b[^>]*\bposter\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1]);
+    for (const m of code.matchAll(/url\(\s*["']?([^"')]+)/gi)) imgUrls.push(m[1]);
+    // 네트워크를 타는 자리 — 영상과 스타일시트까지 본다.
+    const picks = imgUrls.slice();
+    for (const m of code.matchAll(/<(?:video|source)\b[^>]*\bsrc\s*=\s*["']([^"']*)["']/gi)) picks.push(m[1]);
+    for (const m of code.matchAll(/<link\b[^>]*\brel\s*=\s*["']?stylesheet["']?[^>]*\bhref\s*=\s*["']([^"']+)["']/gi)) picks.push(m[1]);
+
     // 원격 소재는 갈래를 안 가린다 — 정지든 모션이든 네트워크가 프레임을 정하면 재현이 끝난다.
-    const remote = code.match(/(?:src|href)\s*=\s*["']?(https?:\/\/[^"'\s>]+)|url\(\s*["']?(https?:\/\/[^"')]+)/i);
-    if (remote && !/fonts\.googleapis|\.woff2?|\.ttf|\.otf/i.test(remote[0]))
-      fail(base, MSG.remoteMedia(remote[1] || remote[2]));
-    // 스스로 도는 그림 — 확장자를 허용목록으로 좁힌다. gif·apng·애니메이션 webp 는 Animation
-    // 객체를 안 만들어서 __seek·__meta 어느 쪽에도 안 걸리고 조용히 벽시계로 돈다.
-    const IMG_OK = /\.(png|jpe?g)$/i;
-    const picks = [];
-    for (const m of code.matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi)) picks.push(m[1]);
-    for (const m of code.matchAll(/<video\b[^>]*\bposter\s*=\s*["']([^"']+)["']/gi)) picks.push(m[1]);
-    for (const m of code.matchAll(/url\(\s*["']?([^"')]+)/gi)) picks.push(m[1]);
     for (const u of picks) {
-      if (/^https?:/i.test(u)) continue;                       // 원격은 remoteMedia 가 이미 잡았다
-      if (/^data:image\/(png|jpe?g)[;,]/i.test(u)) continue;
-      if (/\.(woff2?|ttf|otf)$/i.test(u)) continue;             // 로컬 폰트 파일
-      if (!IMG_OK.test(u.split("?")[0])) { fail(base, MSG.animatedImage(u)); break; }
+      if (dynamic(u) || !/^https?:/i.test(u)) continue;
+      if (/fonts\.googleapis|\.(woff2?|ttf|otf)(\?|$)/i.test(u)) continue;   // 폰트는 webfont 규칙이 본다
+      fail(base, MSG.remoteMedia(u));
+    }
+    /* 스스로 도는 그림 — 확장자를 허용목록으로 좁힌다. gif·apng·애니메이션 webp 는 Animation
+       객체를 안 만들어서 __seek·__meta 어느 쪽에도 안 걸리고 조용히 벽시계로 돈다. .svg 파일도
+       뺀다 — 그 안의 SMIL 은 이 소스 스캔이 못 본다(인라인 data:image/svg+xml 은 소스에 그대로
+       있으므로 아래 SMIL 규칙이 본다). */
+    const IMG_OK = /\.(png|jpe?g)$/i;
+    for (const u of imgUrls) {
+      if (dynamic(u)) continue;
+      if (/^https?:/i.test(u)) continue;                        // 원격은 위에서 잡았다
+      if (u.startsWith("#")) continue;                          // url(#id) — SVG 의 fill·clip-path·marker (리뷰 high 2)
+      if (/^data:image\/(png|jpe?g|svg\+xml)[;,]/i.test(u)) continue;
+      if (/\.(woff2?|ttf|otf)(\?|$)/i.test(u)) continue;        // 로컬 폰트 파일 (쿼리 포함)
+      if (!IMG_OK.test(u.split("?")[0])) fail(base, MSG.animatedImage(u));
     }
     if (/<animate\b|<animateTransform\b|<animateMotion\b|<set\b/i.test(code)) fail(base, MSG.smil);
+    // 속성 자리에서만 본다 — class="loop-diagram" 같은 이름을 잡지 않게 (리뷰 medium 7)
     const videoTags = code.match(/<video\b[^>]*>/gi) || [];
-    for (const tag of videoTags) if (/\b(?:autoplay|loop)\b/i.test(tag)) { fail(base, MSG.videoPlayback); break; }
+    for (const tag of videoTags)
+      if (/(?:^|\s)(?:autoplay|loop)(?=[\s>=/])/i.test(tag)) { fail(base, MSG.videoPlayback); break; }
     if (motion) {
       if (!/window\.__seek\s*=/.test(code)) fail(base, MSG.motionSeek);
       if (/transition\s*:/.test(code)) fail(base, MSG.motionTransition);
       if (/Math\.random|new Date|Date\.now|performance\.now|requestAnimationFrame|setTimeout|setInterval/.test(code))
         fail(base, MSG.motionClock);
-      for (const tag of videoTags) if (!/\bdata-rg\s*=/.test(tag)) { fail(base, MSG.videoGroup); break; }
+      for (const tag of videoTags) {
+        if (!/\bdata-rg\s*=/.test(tag)) { fail(base, MSG.videoGroup); break; }
+        if (!/\bdata-vdur\s*=/.test(tag)) { fail(base, MSG.videoDur); break; }
+      }
     } else {
       if (/animation\s*:|@keyframes|transition\s*:/.test(code)) fail(base, MSG.staticAnim);
       if (/Math\.random|new Date|Date\.now/.test(code)) fail(base, MSG.clock);
@@ -209,6 +232,19 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <link rel="stylesheet" href="https://fonts.googleapis.com/css2">`, [MSG.webfont]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; window.__paint(2, 2400, function (t) {});`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.png"><video data-rg="2" data-vdur="2000" src="assets/b.mp4"></video>`, []],
+    // 리뷰가 잡은 오탐들 — 정상 저작이 막히면 안 된다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <svg><path fill="url(#g)" marker-end="url(#arrow)"/></svg>`, []],
+    ["s2-motion.html", "const SLIDE_SHOT = 2; window.__seek = 1; out += `<img src=\"${S.photo}\">`;", []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; el.style.backgroundImage = "url(" + S.photo + ")";`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <video class="loop-diagram" data-rg="2" data-vdur="1200" src="assets/a.mp4"></video>`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <a href="https://www.bok.or.kr/report">source</a>`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{background:url("data:image/svg+xml;utf8,<svg/>")}</style>`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>@font-face{src:url(fonts/x.woff2?v=2)}</style>`, []],
+    // 그리고 놓치면 안 되는 것들
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <video data-rg="2" src="assets/a.mp4"></video>`, [MSG.videoDur]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.svg">`, [MSG.animatedImage("assets/a.svg")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>@font-face{src:url(fonts/a.woff2)}</style><img src="https://cdn.example.com/z.png">`,
+      [MSG.remoteMedia("https://cdn.example.com/z.png")]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.gif">`,
       [MSG.animatedImage("assets/a.gif")]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.webp">`,
