@@ -1464,8 +1464,9 @@ Use when a character, product, or garment must stay the same across the shot and
 Do NOT pass reference images containing real human faces — the 2.x models reject them; use veo_reference for real people. The seedance-1-5-pro and 1.0 models do not accept reference images at all and are rejected before the call. These models also need account balance > $30 to activate.
 References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred — this is the only style-transfer lane in the plugin, since Veo 3.1 dropped style references — and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
 Do NOT feed a three-view or multi-view character sheet. ByteDance's own docs advise against it twice: the model reads the separate angles as separate people, which worsens identity drift and produces duplicate characters in one frame. Send a headshot (face only, neutral expression, minimal shoulders and background) plus one full-body shot instead — the docs call those two sufficient. Order is weight: put the asset that must be matched most precisely first in the array.
+Reference AUDIO gives a character a fixed voice. Pass the clip in referenceAudioPaths with generateAudio: true and bind it in the prompt the way the 2.5 guide does — "Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2" (@Image N and @Audio N are each list's own order). Route this to dreamina-seedance-2-5-260628: only its guide documents the per-character mapping and only it takes audio-only input; the 2.0 series takes at most 3 clips and needs an image alongside. A channel character's fixed voice sample lives at data/<channel>/assets/characters/<id>/voice.wav. Veo has no audio reference at all.
 
-Returns: a text block with the saved .mp4 file path, reference image list, model, ratio, resolution, duration, and the billed completion token count.`,
+Returns: a text block with the saved .mp4 file path, reference image and audio lists, model, ratio, resolution, duration, and the billed completion token count.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -1476,9 +1477,14 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
         referenceImagePaths: {
           type: 'array',
           items: { type: 'string' },
-          minItems: 1,
           maxItems: 30,
-          description: 'Absolute paths to reference images guiding subject appearance — up to 30 for dreamina-seedance-2-5-260628, up to 9 for the 2.0 series. Must not contain real human faces.',
+          description: 'Absolute paths to reference images guiding subject appearance — up to 30 for dreamina-seedance-2-5-260628, up to 9 for the 2.0 series. Must not contain real human faces. May be left out only on dreamina-seedance-2-5-260628 when referenceAudioPaths carries the reference; the 2.0 series needs at least one image.',
+        },
+        referenceAudioPaths: {
+          type: 'array',
+          items: { type: 'string' },
+          maxItems: 10,
+          description: 'Absolute paths to reference audio clips — wav or mp3, 15MB each at most (prefer wav: the mp3 data-URI label is unverified against a live call). What the clip carries is what the model imitates: a voice (its timbre — the character then speaks in that voice), or dialogue and music content it lip-syncs to and follows. Limits: dreamina-seedance-2-5-260628 takes up to 10 clips of 2-30s (30s total) and may be audio-only; the 2.0 series takes up to 3 clips of 2-15s (15s total) and needs a reference image alongside. The vendor recommends 5-10s per voice. Requires generateAudio: true. Numbering: @Audio N in the prompt is the Nth entry here and @Image N the Nth of referenceImagePaths — bind them in the prompt ("Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2"). This is imitation, not cloning: the vendor\'s own FAQ says the result can drift from the reference, and its fix is to also describe the voice in words (gender, age, texture, pace, mood) and keep the lines in the reference\'s tone.',
         },
         model: {
           type: 'string',
@@ -1494,7 +1500,10 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
         },
         resolution: SEEDANCE_RESOLUTION_PROPERTY,
         durationSeconds: SEEDANCE_DURATION_PROPERTY,
-        generateAudio: SEEDANCE_AUDIO_PROPERTY,
+        generateAudio: {
+          ...SEEDANCE_AUDIO_PROPERTY,
+          description: `${SEEDANCE_AUDIO_PROPERTY.description} Must be true when referenceAudioPaths is set — a voice reference into a silent clip is rejected before the call.`,
+        },
         watermark: SEEDANCE_WATERMARK_PROPERTY,
         outputPath: {
           type: 'string',
@@ -1505,7 +1514,7 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
           description: 'Filename for the generated video (default: video_ref_<timestamp>.mp4)',
         },
       },
-      required: ['prompt', 'referenceImagePaths'],
+      required: ['prompt'],
     },
   },
 

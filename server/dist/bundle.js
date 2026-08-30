@@ -75966,6 +75966,7 @@ ${stdout.slice(0, 500)}` };
 }
 
 // src/seedance-client.ts
+import { execFile as execFile2 } from "node:child_process";
 import * as fs4 from "node:fs";
 import * as path3 from "node:path";
 var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
@@ -75978,6 +75979,7 @@ var SEEDANCE_MODEL_SPECS = {
     duration: [4, 30],
     lastFrame: true,
     referenceImages: [1, 30],
+    referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
     audio: true,
     seed: false,
     realFaceInput: false,
@@ -75988,6 +75990,7 @@ var SEEDANCE_MODEL_SPECS = {
     duration: [4, 15],
     lastFrame: true,
     referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
     audio: true,
     seed: false,
     realFaceInput: false,
@@ -75998,6 +76001,7 @@ var SEEDANCE_MODEL_SPECS = {
     duration: [4, 15],
     lastFrame: true,
     referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
     audio: true,
     seed: false,
     realFaceInput: false,
@@ -76008,6 +76012,7 @@ var SEEDANCE_MODEL_SPECS = {
     duration: [4, 15],
     lastFrame: true,
     referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
     audio: true,
     seed: false,
     realFaceInput: false,
@@ -76018,6 +76023,7 @@ var SEEDANCE_MODEL_SPECS = {
     duration: [4, 12],
     lastFrame: true,
     referenceImages: false,
+    referenceAudio: false,
     audio: true,
     seed: true,
     realFaceInput: true,
@@ -76028,6 +76034,7 @@ var SEEDANCE_MODEL_SPECS = {
     duration: [2, 12],
     lastFrame: true,
     referenceImages: false,
+    referenceAudio: false,
     audio: false,
     seed: true,
     realFaceInput: true,
@@ -76038,6 +76045,7 @@ var SEEDANCE_MODEL_SPECS = {
     duration: [2, 12],
     lastFrame: false,
     referenceImages: false,
+    referenceAudio: false,
     audio: false,
     seed: true,
     realFaceInput: true,
@@ -76060,6 +76068,8 @@ var POLL_INTERVAL_MS = 1e4;
 var MAX_POLLS = 90;
 var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
 var MAX_REQUEST_BYTES = 64 * 1024 * 1024;
+var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
+var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
 var commonFields = {
   prompt: external_exports.string().min(1, "Prompt is required"),
   model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
@@ -76138,12 +76148,13 @@ var seedanceImg2VideoSchema = external_exports.object({
 var seedanceReferenceSchema = external_exports.object({
   ...commonFields,
   model: external_exports.enum(SEEDANCE_REFERENCE_MODELS).optional().default(DEFAULT_SEEDANCE_REFERENCE_MODEL),
-  referenceImagePaths: external_exports.array(external_exports.string()).min(1, "At least one reference image is required"),
+  referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
   ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
 }).superRefine((data, ctx) => {
   validateCommon(data, ctx);
-  const range = SEEDANCE_MODEL_SPECS[data.model].referenceImages;
-  if (range === false) {
+  const spec = SEEDANCE_MODEL_SPECS[data.model];
+  if (spec.referenceImages === false) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["model"],
@@ -76151,12 +76162,61 @@ var seedanceReferenceSchema = external_exports.object({
     });
     return;
   }
-  const [, maxImages] = range;
+  const [, maxImages] = spec.referenceImages;
   if (data.referenceImagePaths.length > maxImages) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["referenceImagePaths"],
       message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
+    });
+  }
+  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, or both."
+    });
+    return;
+  }
+  if (data.referenceAudioPaths.length === 0) return;
+  const audio = spec.referenceAudio;
+  if (audio === false) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceAudioPaths"],
+      message: `${data.model} does not take reference audio.`
+    });
+    return;
+  }
+  if (data.referenceAudioPaths.length > audio.maxClips) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceAudioPaths"],
+      message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
+    });
+  }
+  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
+    });
+  }
+  for (const filePath of data.referenceAudioPaths) {
+    const ext = path3.extname(filePath).toLowerCase();
+    if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceAudioPaths"],
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path3.basename(filePath)}).`
+      });
+    }
+  }
+  if (!data.generateAudio) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generateAudio"],
+      message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
     });
   }
 });
@@ -76235,19 +76295,75 @@ function loadImages(filePaths) {
     if (!fs4.existsSync(filePath)) throw new Error(`Image not found: ${filePath}`);
     uris.push(readImageDataUri(filePath));
   }
+  assertRequestBudget(uris);
+  return uris;
+}
+function assertRequestBudget(uris) {
   const total = uris.reduce((sum, uri) => sum + uri.length, 0);
   if (total > MAX_REQUEST_BYTES) {
     throw new Error(
-      `Request body too large: base64 total ${(total / 1024 / 1024).toFixed(1)}MB (limit 64MB). Use fewer images or lower their resolution.`
+      `Request body too large: base64 total ${(total / 1024 / 1024).toFixed(1)}MB (limit 64MB). Use fewer reference files or smaller ones.`
     );
   }
-  return uris;
 }
-function buildBody(request, images) {
+function audioMimeFromExtension(filePath) {
+  return path3.extname(filePath).toLowerCase() === ".mp3" ? "audio/mp3" : "audio/wav";
+}
+function loadReferenceAudio(filePaths) {
+  return filePaths.map((filePath) => {
+    validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_AUDIO_EXTENSIONS });
+    if (!fs4.existsSync(filePath)) throw new Error(`Reference audio not found: ${filePath}`);
+    const stats = fs4.statSync(filePath);
+    if (stats.size > MAX_INPUT_AUDIO_BYTES) {
+      throw new Error(
+        `Reference audio too large: ${path3.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 15MB)`
+      );
+    }
+    return `data:${audioMimeFromExtension(filePath)};base64,${fs4.readFileSync(filePath).toString("base64")}`;
+  });
+}
+function probeAudioSeconds(filePath) {
+  return new Promise((resolve3) => {
+    execFile2(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
+      { timeout: 15e3 },
+      (error2, out) => {
+        const seconds = Number.parseFloat(String(out ?? "").trim());
+        resolve3(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
+      }
+    );
+  });
+}
+async function checkReferenceAudioDurations(filePaths, spec, model) {
+  const [minSeconds, maxSeconds] = spec.clipSeconds;
+  let total = 0;
+  for (const filePath of filePaths) {
+    const seconds = await probeAudioSeconds(filePath);
+    if (seconds === null) {
+      console.error(
+        `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path3.basename(filePath)} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
+      );
+      continue;
+    }
+    if (seconds < minSeconds || seconds > maxSeconds) {
+      throw new Error(
+        `Reference audio ${path3.basename(filePath)} is ${seconds.toFixed(1)}s \u2014 ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`
+      );
+    }
+    total += seconds;
+  }
+  if (total > spec.totalSeconds) {
+    throw new Error(
+      `Reference audio totals ${total.toFixed(1)}s \u2014 ${model} allows ${spec.totalSeconds}s across all clips.`
+    );
+  }
+}
+function buildBody(request, parts) {
   const spec = SEEDANCE_MODEL_SPECS[request.model];
   const body = {
     model: request.model,
-    content: [{ type: "text", text: request.prompt }, ...images],
+    content: [{ type: "text", text: request.prompt }, ...parts],
     ratio: request.ratio,
     resolution: request.resolution,
     duration: request.durationSeconds,
@@ -76328,14 +76444,21 @@ async function generateFromImage(request) {
 async function generateWithReferences(request) {
   const apiKey = requireArkKey();
   try {
-    const images = loadImages(request.referenceImagePaths).map((url) => ({
-      type: "image_url",
-      image_url: { url },
-      role: "reference_image"
-    }));
+    const spec = SEEDANCE_MODEL_SPECS[request.model];
+    const imageUris = loadImages(request.referenceImagePaths);
+    const audioUris = loadReferenceAudio(request.referenceAudioPaths);
+    assertRequestBudget([...imageUris, ...audioUris]);
+    if (audioUris.length > 0 && spec.referenceAudio !== false) {
+      await checkReferenceAudioDurations(request.referenceAudioPaths, spec.referenceAudio, request.model);
+    }
+    const parts = [
+      ...imageUris.map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" })),
+      ...audioUris.map((url) => ({ type: "audio_url", audio_url: { url }, role: "reference_audio" }))
+    ];
     console.error(`[Seedance] Starting reference-to-video generation... (model: ${request.model})`);
-    console.error(`[Seedance] Reference images: ${request.referenceImagePaths.join(", ")}`);
-    const taskId = await createTask(apiKey, buildBody(request, images));
+    if (imageUris.length > 0) console.error(`[Seedance] Reference images: ${request.referenceImagePaths.join(", ")}`);
+    if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(", ")}`);
+    const taskId = await createTask(apiKey, buildBody(request, parts));
     const saved = await awaitVideoAndSave(
       apiKey,
       taskId,
@@ -76345,7 +76468,8 @@ async function generateWithReferences(request) {
     if ("error" in saved) return { success: false, error: saved.error, taskId };
     return {
       ...toResponse(request, saved.videoPath, saved.task, taskId),
-      referenceImages: request.referenceImagePaths
+      referenceImages: request.referenceImagePaths,
+      referenceAudios: request.referenceAudioPaths
     };
   } catch (error2) {
     return toFailure(error2);
@@ -77009,7 +77133,7 @@ async function listElevenLabsVoices(request) {
 }
 
 // src/zimage-client.ts
-import { execFile as execFile2 } from "node:child_process";
+import { execFile as execFile3 } from "node:child_process";
 import { existsSync as existsSync3 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { join as join3 } from "node:path";
@@ -77085,7 +77209,7 @@ async function generateLocalImage(request) {
   const startedAt = Date.now();
   try {
     await new Promise((resolve3, reject) => {
-      execFile2(
+      execFile3(
         bin,
         cliArgs,
         {
@@ -77136,10 +77260,10 @@ ${tail}` : ""}`));
 }
 
 // src/qwen3-asr-client.ts
-import { execFile as execFile3 } from "node:child_process";
+import { execFile as execFile4 } from "node:child_process";
 import { existsSync as existsSync4, mkdirSync as mkdirSync2, mkdtempSync, readFileSync as readFileSync3, renameSync, rmSync } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { basename as basename5, extname as extname3, join as join4 } from "node:path";
+import { basename as basename5, extname as extname4, join as join4 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
 var DEFAULT_QWEN3_ASR_MODEL = "Qwen/Qwen3-ASR-1.7B";
 var QWEN3_ASR_LANGUAGES = [
@@ -77255,7 +77379,7 @@ If installed elsewhere, point QWEN3_ASR_BIN at the executable (e.g. QWEN3_ASR_BI
 The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus the ForcedAligner) to ~/.cache/huggingface. Until it is installed, ingest uses the whisper.cpp fallback.`;
 }
 var qwen3AsrTranscribeSchema = external_exports.object({
-  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname3(p).toLowerCase()), {
+  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname4(p).toLowerCase()), {
     message: `audioPath extension must be one of: ${AUDIO_INPUT_EXTENSIONS.join(", ")}`
   }),
   language: external_exports.string().optional().default(DEFAULT_QWEN3_ASR_LANGUAGE).transform((value) => canonicalizeLanguage(value)),
@@ -77267,7 +77391,7 @@ var qwen3AsrTranscribeSchema = external_exports.object({
 });
 function probeDurationSeconds(audioPath) {
   return new Promise((resolve3) => {
-    execFile3(
+    execFile4(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
       { timeout: 15e3 },
@@ -77335,7 +77459,7 @@ async function transcribeLocal(request) {
   const startedAt = Date.now();
   try {
     await new Promise((resolve3, reject) => {
-      execFile3(
+      execFile4(
         bin,
         cliArgs,
         {
@@ -77364,7 +77488,7 @@ ${tail}` : ""}`));
     console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  const cliJsonPath = join4(scratchDir, `${basename5(request.audioPath, extname3(request.audioPath))}.json`);
+  const cliJsonPath = join4(scratchDir, `${basename5(request.audioPath, extname4(request.audioPath))}.json`);
   if (!existsSync4(cliJsonPath)) {
     rmSync(scratchDir, { recursive: true, force: true });
     return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
@@ -79018,8 +79142,9 @@ Use when a character, product, or garment must stay the same across the shot and
 Do NOT pass reference images containing real human faces \u2014 the 2.x models reject them; use veo_reference for real people. The seedance-1-5-pro and 1.0 models do not accept reference images at all and are rejected before the call. These models also need account balance > $30 to activate.
 References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred \u2014 this is the only style-transfer lane in the plugin, since Veo 3.1 dropped style references \u2014 and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
 Do NOT feed a three-view or multi-view character sheet. ByteDance's own docs advise against it twice: the model reads the separate angles as separate people, which worsens identity drift and produces duplicate characters in one frame. Send a headshot (face only, neutral expression, minimal shoulders and background) plus one full-body shot instead \u2014 the docs call those two sufficient. Order is weight: put the asset that must be matched most precisely first in the array.
+Reference AUDIO gives a character a fixed voice. Pass the clip in referenceAudioPaths with generateAudio: true and bind it in the prompt the way the 2.5 guide does \u2014 "Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2" (@Image N and @Audio N are each list's own order). Route this to dreamina-seedance-2-5-260628: only its guide documents the per-character mapping and only it takes audio-only input; the 2.0 series takes at most 3 clips and needs an image alongside. A channel character's fixed voice sample lives at data/<channel>/assets/characters/<id>/voice.wav. Veo has no audio reference at all.
 
-Returns: a text block with the saved .mp4 file path, reference image list, model, ratio, resolution, duration, and the billed completion token count.`,
+Returns: a text block with the saved .mp4 file path, reference image and audio lists, model, ratio, resolution, duration, and the billed completion token count.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -79030,9 +79155,14 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
         referenceImagePaths: {
           type: "array",
           items: { type: "string" },
-          minItems: 1,
           maxItems: 30,
-          description: "Absolute paths to reference images guiding subject appearance \u2014 up to 30 for dreamina-seedance-2-5-260628, up to 9 for the 2.0 series. Must not contain real human faces."
+          description: "Absolute paths to reference images guiding subject appearance \u2014 up to 30 for dreamina-seedance-2-5-260628, up to 9 for the 2.0 series. Must not contain real human faces. May be left out only on dreamina-seedance-2-5-260628 when referenceAudioPaths carries the reference; the 2.0 series needs at least one image."
+        },
+        referenceAudioPaths: {
+          type: "array",
+          items: { type: "string" },
+          maxItems: 10,
+          description: `Absolute paths to reference audio clips \u2014 wav or mp3, 15MB each at most (prefer wav: the mp3 data-URI label is unverified against a live call). What the clip carries is what the model imitates: a voice (its timbre \u2014 the character then speaks in that voice), or dialogue and music content it lip-syncs to and follows. Limits: dreamina-seedance-2-5-260628 takes up to 10 clips of 2-30s (30s total) and may be audio-only; the 2.0 series takes up to 3 clips of 2-15s (15s total) and needs a reference image alongside. The vendor recommends 5-10s per voice. Requires generateAudio: true. Numbering: @Audio N in the prompt is the Nth entry here and @Image N the Nth of referenceImagePaths \u2014 bind them in the prompt ("Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2"). This is imitation, not cloning: the vendor's own FAQ says the result can drift from the reference, and its fix is to also describe the voice in words (gender, age, texture, pace, mood) and keep the lines in the reference's tone.`
         },
         model: {
           type: "string",
@@ -79048,7 +79178,10 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
         },
         resolution: SEEDANCE_RESOLUTION_PROPERTY,
         durationSeconds: SEEDANCE_DURATION_PROPERTY,
-        generateAudio: SEEDANCE_AUDIO_PROPERTY,
+        generateAudio: {
+          ...SEEDANCE_AUDIO_PROPERTY,
+          description: `${SEEDANCE_AUDIO_PROPERTY.description} Must be true when referenceAudioPaths is set \u2014 a voice reference into a silent clip is rejected before the call.`
+        },
         watermark: SEEDANCE_WATERMARK_PROPERTY,
         outputPath: {
           type: "string",
@@ -79059,7 +79192,7 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
           description: "Filename for the generated video (default: video_ref_<timestamp>.mp4)"
         }
       },
-      required: ["prompt", "referenceImagePaths"]
+      required: ["prompt"]
     }
   },
   // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
@@ -81662,7 +81795,7 @@ import {
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename6, dirname as dirname3, extname as extname5, join as join7 } from "node:path";
+import { basename as basename6, dirname as dirname3, extname as extname6, join as join7 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
@@ -82241,7 +82374,7 @@ var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
 async function readCaptionFile(path9, maxBytes) {
-  if (extname5(path9).toLowerCase() !== ".srt") {
+  if (extname6(path9).toLowerCase() !== ".srt") {
     return { error: fail2(400, `Caption file must be .srt (SubRip): ${path9}`) };
   }
   let bytes;
@@ -82454,7 +82587,7 @@ async function queryResumeOffset(sessionUrl, total, mimeType) {
   }
 }
 async function publishYoutube(input) {
-  const mimeType = YT_VIDEO_MIME_BY_EXT[extname5(input.videoFilePath).toLowerCase()];
+  const mimeType = YT_VIDEO_MIME_BY_EXT[extname6(input.videoFilePath).toLowerCase()];
   if (!mimeType) return fail2(400, `Unsupported video extension: ${input.videoFilePath} (.mp4/.mov)`);
   let videoSize;
   let videoMtimeMs;
@@ -82469,7 +82602,7 @@ async function publishYoutube(input) {
   }
   let thumb;
   if (input.thumbnailFilePath) {
-    const thumbMime = YT_THUMB_MIME_BY_EXT[extname5(input.thumbnailFilePath).toLowerCase()];
+    const thumbMime = YT_THUMB_MIME_BY_EXT[extname6(input.thumbnailFilePath).toLowerCase()];
     if (!thumbMime) {
       return fail2(400, `Unsupported thumbnail extension: ${input.thumbnailFilePath} (.jpg/.jpeg/.png)`);
     }
@@ -86271,13 +86404,16 @@ Prompt: ${result.prompt}`
   seedance_reference: async (args) => {
     const result = await generateWithReferences(parseArgs(seedanceReferenceSchema, args));
     if (!result.success) return text(`Seedance video generation with references failed: ${result.error}`, true);
-    const refImagesInfo = result.referenceImages?.join("\n  - ") || "";
+    const refImagesInfo = result.referenceImages?.length ? `
+Reference Images (${result.referenceImages.length}):
+  - ${result.referenceImages.join("\n  - ")}` : "";
+    const refAudioInfo = result.referenceAudios?.length ? `
+Reference Audio (${result.referenceAudios.length}):
+  - ${result.referenceAudios.join("\n  - ")}` : "";
     return text(
-      `Video generated with reference images successfully!
+      `Video generated with references successfully!
 
-Output: ${result.videoPath}
-Reference Images (${result.referenceImages?.length || 0}):
-  - ${refImagesInfo}
+Output: ${result.videoPath}${refImagesInfo}${refAudioInfo}
 ${seedanceMeta(result)}
 Prompt: ${result.prompt}`
     );

@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>토큰 절감 플러그인을 직접 재봤다 (2026-08)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+:root {
+  --bg:        #F5F6F3;
+  --surface:   #FCFCFB;
+  --surface-2: #EFF1ED;
+  --ink:       #141A20;
+  --ink-2:     #3D4751;
+  --muted:     #5A6470;
+  --rule:      #DDE1DC;
+  --rule-soft: #E8EAE6;
+  --cool:      #1668B8;   /* 줄었다 */
+  --warm:      #B3452A;   /* 늘었다 */
+  --mid:       #C8CDC7;   /* 다이버징 중점 */
+  --cool-wash: #E7F0F9;
+  --warm-wash: #F7EAE5;
+  --shadow:    0 1px 2px rgba(20,26,32,.05), 0 8px 24px -18px rgba(20,26,32,.35);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:        #111519;
+    --surface:   #161A1F;
+    --surface-2: #1C2127;
+    --ink:       #E9EDF2;
+    --ink-2:     #C2CAD3;
+    --muted:     #98A3AE;
+    --rule:      #262C33;
+    --rule-soft: #1F252B;
+    --cool:      #3E90E0;
+    --warm:      #DC6E4C;
+    --mid:       #39414A;
+    --cool-wash: #172634;
+    --warm-wash: #2C1E19;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px -18px rgba(0,0,0,.8);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:        #111519;
+  --surface:   #161A1F;
+  --surface-2: #1C2127;
+  --ink:       #E9EDF2;
+  --ink-2:     #C2CAD3;
+  --muted:     #98A3AE;
+  --rule:      #262C33;
+  --rule-soft: #1F252B;
+  --cool:      #3E90E0;
+  --warm:      #DC6E4C;
+  --mid:       #39414A;
+  --cool-wash: #172634;
+  --warm-wash: #2C1E19;
+  --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px -18px rgba(0,0,0,.8);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 6vw, 4.5rem) clamp(1.1rem, 4vw, 2.5rem) 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2.5rem, 5vw, 3.75rem);
+}
+
+h1, h2, h3, .label, .chip, .num, table, .bar-row { font-family: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif; }
+.num, code, .mono, td.n, th.n { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+/* ── masthead ─────────────────────────────────────────── */
+.mast { display: flex; flex-direction: column; gap: 1.15rem; }
+.kicker {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted);
+  display: flex; flex-wrap: wrap; gap: .55rem 1.1rem; align-items: baseline;
+}
+h1 {
+  font-size: clamp(2.1rem, 6vw, 3.4rem);
+  font-weight: 800; line-height: 1.04; letter-spacing: -.022em;
+  margin: 0; text-wrap: balance;
+}
+.standfirst {
+  font-size: clamp(1.05rem, 2.4vw, 1.24rem);
+  color: var(--ink-2); margin: 0; max-width: 52ch; text-wrap: pretty;
+}
+.standfirst strong { color: var(--ink); font-weight: 600; }
+
+/* ── verdict strip ────────────────────────────────────── */
+.verdicts { display: grid; gap: .85rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.verdict {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+  padding: 1.1rem 1.15rem 1.2rem; display: flex; flex-direction: column; gap: .5rem;
+  box-shadow: var(--shadow);
+}
+.verdict .tool {
+  font-family: "JetBrains Mono", monospace; font-weight: 700;
+  font-size: .95rem; letter-spacing: -.01em; color: var(--ink);
+}
+.verdict p { margin: 0; font-size: .93rem; color: var(--ink-2); line-height: 1.5; }
+.chip {
+  align-self: flex-start;
+  font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600;
+  padding: .22rem .5rem; border-radius: 2px; border: 1px solid;
+}
+.chip.no  { color: var(--warm); border-color: var(--warm); background: var(--warm-wash); }
+.chip.part{ color: var(--muted); border-color: var(--rule); background: var(--surface-2); }
+.chip.yes { color: var(--cool); border-color: var(--cool); background: var(--cool-wash); }
+
+/* ── sections ─────────────────────────────────────────── */
+section { display: flex; flex-direction: column; gap: 1.35rem; }
+.sec-head { display: flex; flex-direction: column; gap: .4rem; border-top: 2px solid var(--ink); padding-top: .85rem; }
+h2 { font-size: clamp(1.35rem, 3vw, 1.7rem); font-weight: 700; letter-spacing: -.018em; margin: 0; }
+h2 .what { color: var(--muted); font-weight: 600; font-size: .82em; letter-spacing: -.01em; }
+.sec-head .desc { margin: 0; color: var(--ink-2); font-size: .97rem; max-width: 62ch; }
+
+/* ── claim ladder ─────────────────────────────────────── */
+.ladder { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.rung {
+  border: 1px solid var(--rule); border-radius: 3px; background: var(--surface);
+  padding: .95rem 1rem 1.05rem; display: flex; flex-direction: column; gap: .45rem;
+}
+.rung.measured { border-color: var(--ink); border-width: 1.5px; }
+.label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .67rem; letter-spacing: .13em; text-transform: uppercase; color: var(--muted);
+}
+.rung .said { font-size: .95rem; color: var(--ink); margin: 0; line-height: 1.5; }
+.rung .said em { font-style: normal; color: var(--muted); }
+
+/* ── diverging delta bars ─────────────────────────────── */
+.bars { display: flex; flex-direction: column; gap: .1rem; margin-top: .2rem; }
+.bar-row { display: grid; grid-template-columns: 8.5rem 1fr 4.5rem; align-items: center; gap: .6rem; padding: .3rem 0; }
+.bar-row .metric { font-size: .8rem; color: var(--ink-2); font-weight: 600; }
+.track {
+  position: relative; height: 15px; background: var(--surface-2);
+  border-radius: 2px; overflow: hidden;
+}
+.track::before {
+  content: ""; position: absolute; left: 50%; top: 0; bottom: 0;
+  width: 1px; background: var(--mid); z-index: 2;
+}
+.fill { position: absolute; top: 2px; bottom: 2px; }
+.fill.neg { background: var(--cool); right: 50%; border-radius: 3px 0 0 3px; }
+.fill.pos { background: var(--warm); left: 50%; border-radius: 0 3px 3px 0; }
+.bar-row .val { font-size: .82rem; font-weight: 700; text-align: right; }
+.val.neg { color: var(--cool); }
+.val.pos { color: var(--warm); }
+.axis-note {
+  display: flex; justify-content: space-between; font-family: "JetBrains Mono", monospace;
+  font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  border-top: 1px solid var(--rule-soft); padding-top: .4rem; margin-top: .35rem;
+}
+
+/* ── tables ───────────────────────────────────────────── */
+.scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .84rem; min-width: 34rem; }
+th, td { padding: .55rem .8rem; text-align: left; border-bottom: 1px solid var(--rule-soft); }
+thead th {
+  font-size: .67rem; letter-spacing: .11em; text-transform: uppercase; color: var(--muted);
+  font-weight: 600; background: var(--surface-2); border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+td.n, th.n { text-align: right; }
+tbody tr:last-child td { border-bottom: none; }
+td .win { color: var(--cool); font-weight: 700; }
+td .lose { color: var(--warm); font-weight: 700; }
+caption {
+  caption-side: bottom; text-align: left; padding: .6rem .8rem;
+  font-size: .78rem; color: var(--muted); border-top: 1px solid var(--rule-soft);
+}
+
+/* ── callout ──────────────────────────────────────────── */
+.note {
+  border-left: 2px solid var(--cool); background: var(--cool-wash);
+  padding: .85rem 1.05rem; border-radius: 0 3px 3px 0;
+  font-size: .93rem; color: var(--ink-2);
+}
+.note.warn { border-left-color: var(--warm); background: var(--warm-wash); }
+.note strong { color: var(--ink); font-weight: 600; }
+
+/* ── footer blocks ────────────────────────────────────── */
+.cols { display: grid; gap: 1.4rem 2rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+.block h3 {
+  font-size: .78rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; margin: 0 0 .55rem;
+  font-family: "JetBrains Mono", monospace;
+}
+.block ul { margin: 0; padding-left: 1.05rem; display: flex; flex-direction: column; gap: .4rem; }
+.block li { font-size: .9rem; color: var(--ink-2); }
+.block li strong { color: var(--ink); font-weight: 600; }
+code {
+  font-size: .84em; background: var(--surface-2); border: 1px solid var(--rule-soft);
+  padding: .08em .32em; border-radius: 2px; color: var(--ink);
+  overflow-wrap: anywhere;
+}
+footer {
+  border-top: 1px solid var(--rule); padding-top: 1.1rem;
+  font-size: .82rem; color: var(--muted);
+  display: flex; flex-wrap: wrap; gap: .4rem 1.4rem;
+  font-family: "JetBrains Mono", monospace;
+}
+a { color: var(--cool); text-underline-offset: 2px; }
+a:focus-visible, :focus-visible { outline: 2px solid var(--cool); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .fill { transition: width .5s cubic-bezier(.2,.7,.3,1); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <div class="kicker">
+      <span>실측 2026-08-29</span><span>맥북 M4 · claude haiku 4.5</span><span>테스트 비용 $1.79</span>
+    </div>
+    <h1>토큰 절감 플러그인, 진짜 재봤다</h1>
+    <p class="standfirst">
+      쇼츠 하나가 클로드 플러그인 3개를 깔면 사용량이 절반으로 준다고 했다.
+      셋 다 실제로 존재하는 도구다. 그런데 <strong>영상이 말한 절감은 우리 실측에서
+      재현되지 않았다</strong> — 줄어든 건 토큰이 아니라 코드 줄 수였다.
+    </p>
+  </header>
+
+  <div class="verdicts">
+    <article class="verdict">
+      <span class="chip no">주장과 반대</span>
+      <span class="tool">ponytail</span>
+      <p>코드는 확실히 줄인다 — 우리 CLAUDE.md 규칙 위에서도 <strong>−85%</strong>. 하지만 입력 토큰과 비용은 10~13% 늘어난다.</p>
+    </article>
+    <article class="verdict">
+      <span class="chip part">기준이 문제</span>
+      <span class="tool">graphify</span>
+      <p>파일을 통째로 읽는 것보다 60~106배 싸다. 그런데 실무 기준인 grep과 비교하면 이점이 사라진다.</p>
+    </article>
+    <article class="verdict">
+      <span class="chip part">토큰은 준다, 돈은 아니다</span>
+      <span class="tool">headroom</span>
+      <p>입력 토큰 −13%는 진짜다. 하지만 청구 비용은 거의 그대로였다 — 줄인 토큰이 싼 구간에 있었다.</p>
+    </article>
+  </div>
+
+  <!-- ── PONYTAIL ─────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <h2>ponytail <span class="what">— 에이전트가 코드를 덜 쓰게 만드는 스킬</span></h2>
+      <p class="desc">과제 3개를 각각 3번씩, 플러그인을 켠 채와 끈 채로 돌렸다(총 18회). 두 조건 모두 다른 플러그인과 MCP를 끄고 저장소 밖에서 실행해, 차이가 ponytail 하나에서만 나오게 했다.</p>
+    </div>
+
+    <div class="ladder">
+      <div class="rung">
+        <span class="label">영상이 한 말</span>
+        <p class="said">"클로드 코드의 출력을 최적화해서 <strong>사용량을 50% 넘게</strong> 줄여줍니다"</p>
+      </div>
+      <div class="rung">
+        <span class="label">저장소가 한 말</span>
+        <p class="said">코드 −54% · 토큰 −22% · 비용 −20% <em>(Haiku, 12과제, n=4)</em></p>
+      </div>
+      <div class="rung measured">
+        <span class="label">우리가 잰 값</span>
+        <p class="said">코드 −60.5% · 토큰 −4.9% · <strong>비용 +13.3%</strong></p>
+      </div>
+    </div>
+
+    <div class="bars" role="img" aria-label="ponytail 지표별 변화율: 코드 줄 수 -60.5%, 출력 토큰 -4.9%, 입력 토큰 +8.5%, 지연 +8.3%, 비용 +13.3%">
+      <div class="bar-row"><span class="metric">코드 줄 수</span><span class="track"><span class="fill neg" style="width:43.2%"></span></span><span class="val neg num">−60.5%</span></div>
+      <div class="bar-row"><span class="metric">출력 토큰</span><span class="track"><span class="fill neg" style="width:3.5%"></span></span><span class="val neg num">−4.9%</span></div>
+      <div class="bar-row"><span class="metric">입력 토큰</span><span class="track"><span class="fill pos" style="width:6.1%"></span></span><span class="val pos num">+8.5%</span></div>
+      <div class="bar-row"><span class="metric">지연</span><span class="track"><span class="fill pos" style="width:5.9%"></span></span><span class="val pos num">+8.3%</span></div>
+      <div class="bar-row"><span class="metric">비용</span><span class="track"><span class="fill pos" style="width:9.5%"></span></span><span class="val pos num">+13.3%</span></div>
+      <div class="axis-note"><span>← 줄었다</span><span>중앙값 · 스케일 ±70%</span><span>늘었다 →</span></div>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <caption>과제별 중앙값. 과제가 클수록 ponytail이 유리해진다 — 가장 큰 과제에서만 비용이 내려갔다.</caption>
+        <thead><tr><th>과제</th><th class="n">코드 줄 수</th><th class="n">출력 토큰</th><th class="n">비용</th></tr></thead>
+        <tbody>
+          <tr><td>이메일 검증기</td><td class="n">109 → <span class="win">22</span></td><td class="n">2188 → <span class="win">1408</span></td><td class="n">$0.0338 → <span class="win">$0.0311</span></td></tr>
+          <tr><td>CSV 합계</td><td class="n">43 → <span class="win">17</span></td><td class="n">1234 → 1174</td><td class="n">$0.0259 → <span class="lose">$0.0293</span></td></tr>
+          <tr><td>디바운스</td><td class="n">10 → 8</td><td class="n">930 → <span class="lose">1063</span></td><td class="n">$0.0237 → <span class="lose">$0.0286</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note"><strong>코드 품질은 떨어지지 않았다.</strong> 양쪽이 만든 이메일 검증기를 같은 테스트 9개에 돌렸더니 둘 다 9/9 통과했다. ponytail 버전은 5분의 1 길이로 같은 일을 했다. 줄인다는 약속은 지킨다 — 줄이는 대상이 토큰이 아닐 뿐이다.</p>
+
+    <p class="note"><strong>우리 지침과 겹치는 도구는 아니다.</strong> 첫 A/B의 OFF arm은 <code>--setting-sources ""</code> 때문에 사용자 CLAUDE.md까지 빠진 맨바닥이었다. 그래서 두 arm 모두에 "필요한 만큼만 만든다" 절을 넣고 다시 쟀더니, 규칙만으로 58줄이던 결과가 ponytail을 얹자 8줄이 됐다(−85.2%). 같은 테스트 11개에서 5줄짜리가 11/11을 통과했다 — 짧아진다고 무너지지는 않는다. 대신 입력 토큰 +10.1%, 비용 +12.2%는 그대로다.</p>
+
+    <p class="note warn"><strong>영상이 바꿔 말한 지점이 여기다.</strong> 저장소가 내건 −54%는 <em>코드 줄 수</em>고, 같은 표에서 토큰은 −22%다. 영상은 코드 줄 수 감소를 "사용량 절감"으로 옮겨 말했다. 우리 실측에서 코드는 −60.5%로 저장소 값과 맞았고, 토큰은 −4.9%였다.</p>
+  </section>
+
+  <!-- ── GRAPHIFY ─────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <h2>graphify <span class="what">— 코드베이스를 지식 그래프로 만들어 질의</span></h2>
+      <p class="desc">우리 저장소를 실제로 인덱싱했다. 87개 파일이 2.3초에 950개 노드로 들어갔고 API 비용은 0원이다. 그다음 답을 이미 아는 질문 3개를 세 갈래로 물었다.</p>
+    </div>
+
+    <div class="ladder">
+      <div class="rung">
+        <span class="label">영상이 한 말</span>
+        <p class="said">"전체 코드 파일을 그래프로 연결해서 <strong>토큰을 70% 덜</strong> 쓰게 돼요"</p>
+      </div>
+      <div class="rung">
+        <span class="label">저장소가 한 말</span>
+        <p class="said">질의당 <strong>71.5배</strong> 적은 토큰 <em>(원본 파일 읽기 대비)</em></p>
+      </div>
+      <div class="rung measured">
+        <span class="label">우리가 잰 값</span>
+        <p class="said">통파일 대비 <strong>60~106배</strong> · grep 대비 <strong>0.55~2.07배</strong></p>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <caption>질문 하나에 답하는 데 드는 토큰. 배수는 graphify 기준 — 1보다 작으면 grep이 더 쌌다.</caption>
+        <thead><tr><th>질문</th><th class="n">graphify</th><th class="n">grep</th><th class="n">통파일</th><th class="n">grep 대비</th></tr></thead>
+        <tbody>
+          <tr><td>check-style.py의 함수 목록</td><td class="n">445</td><td class="n">243</td><td class="n">26,656</td><td class="n"><span class="lose">0.55×</span></td></tr>
+          <tr><td>build-reel.sh의 함수 목록</td><td class="n">393</td><td class="n">303</td><td class="n">25,633</td><td class="n"><span class="lose">0.77×</span></td></tr>
+          <tr><td>scenes-schema.md의 절 구성</td><td class="n">312</td><td class="n">645</td><td class="n">33,049</td><td class="n"><span class="win">2.07×</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note"><strong>71.5배는 사실이지만 비교 대상이 이상하다.</strong> 파일을 통째로 문맥에 넣는 사람은 없다. 실제로는 grep을 먼저 친다. 그 기준으로 재면 세 질문 중 둘은 grep이 더 쌌다.</p>
+
+    <p class="note warn"><strong>정확성 구멍도 하나 잡혔다.</strong> <code>handlers.ts:1102</code>의 <code>sns.youtubeInsights()</code> 호출을 graphify는 놓쳤다 — 네임스페이스를 거쳐 부르는 형태라 추출기가 연결을 못 만들었다. grep은 잡았다. "누가 이걸 부르나"를 graphify 답만 믿고 판단하면 호출부를 빠뜨린다.</p>
+
+    <p class="note"><strong>문서 트리에서는 목차 수준, 타입스크립트에서는 의존성 지도다.</strong> 파일을 건너뛰는 연결이 문서 위주인 <code>skills/</code>에서는 1141개 중 26개뿐이었다. 반면 <code>server/src</code>에서는 1609개 중 318개였다. 코드다운 코드베이스에서만 의존성 지도가 실제로 그려진다.</p>
+  </section>
+
+  <!-- ── HEADROOM ─────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <h2>headroom <span class="what">— 모델에 닿기 전에 도구 출력을 압축하는 프록시</span></h2>
+      <p class="desc">두 가지로 쟀다. 실제 페이로드 6종을 라이브러리로 직접 압축했고, 프록시를 띄워 같은 작업을 프록시 경유와 미경유로 3번씩 교대로 돌렸다.</p>
+    </div>
+
+    <div class="ladder">
+      <div class="rung">
+        <span class="label">영상이 한 말</span>
+        <p class="said">"불필요한 줄을 전부 압축하고 제거해서 <strong>훨씬 적은 토큰으로</strong> 같은 결과"</p>
+      </div>
+      <div class="rung">
+        <span class="label">저장소가 한 말</span>
+        <p class="said">코딩 <strong>15~20%</strong> · JSON <strong>60~95%</strong> 절감</p>
+      </div>
+      <div class="rung measured">
+        <span class="label">우리가 잰 값</span>
+        <p class="said">입력 토큰 <strong>−13.0%</strong> · 비용 <strong>−3.9%</strong> <em>(부호 불안정)</em></p>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <caption>실제 페이로드를 라이브러리로 직접 압축한 결과. 사실 보존 검사(특정 함수명·키가 살아남는지)는 전부 통과했다.</caption>
+        <thead><tr><th>페이로드</th><th class="n">압축 전</th><th class="n">압축 후</th><th class="n">절감</th><th>라우터 판정</th></tr></thead>
+        <tbody>
+          <tr><td>MCP 도구 JSON 응답</td><td class="n">9,506</td><td class="n">5,590</td><td class="n"><span class="win">41.2%</span></td><td><code>tool_result:mixed</code></td></tr>
+          <tr><td>grep 검색 결과</td><td class="n">9,025</td><td class="n">6,855</td><td class="n"><span class="win">24.0%</span></td><td><code>lossless_search</code></td></tr>
+          <tr><td>타입스크립트 진단 JSON</td><td class="n">89,960</td><td class="n">83,816</td><td class="n">6.8%</td><td><code>lossless_json</code></td></tr>
+          <tr><td>성장 루프 state.json</td><td class="n">21,029</td><td class="n">20,199</td><td class="n">3.9%</td><td><code>lossless_json</code></td></tr>
+          <tr><td>SKILL.md 읽기</td><td class="n">24,993</td><td class="n">24,993</td><td class="n">0%</td><td><code>excluded:tool</code></td></tr>
+          <tr><td>소스 파일 읽기</td><td class="n">8,822</td><td class="n">8,822</td><td class="n">0%</td><td><code>excluded:tool</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note"><strong>MCP 도구가 뱉는 JSON에서 가장 잘 듣는다.</strong> 41%는 실제 절감이고 필요한 키도 살아남았다. 반대로 <code>Read</code>로 읽은 파일은 라우터가 아예 손대지 않는다 — 사람이 콕 집어 요청한 내용이라 손실 압축을 피하는 설계로 보인다. 우리 작업은 파일 읽기 비중이 커서 6종 합계는 8%에 그쳤다.</p>
+
+    <p class="note warn"><strong>자체 대시보드와 청구서가 어긋난다.</strong> <code>headroom savings</code>는 29.5% 절감했다고 표시했지만, 같은 기간 실제 비용은 3.9% 움직였을 뿐이다. 지운 토큰 대부분이 캐시 읽기 구간에 있었기 때문이다 — 그 구간은 원래 요금이 10분의 1이라, 토큰을 지워도 돈이 그만큼 빠지지 않는다. 캐시가 차갑던 단발 실행에서는 오히려 비용이 12.6% 늘기도 했다.</p>
+  </section>
+
+  <!-- ── OUR WORKLOAD ─────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <h2>그런데 우리 작업은 어떻게 생겼나</h2>
+      <p class="desc">절감률은 워크로드에 달렸다. headroom의 자체 감사 도구로 이 저장소의 클로드 코드 기록 1,677세션을 훑어, 도구가 뱉은 바이트가 어디서 나오는지 셌다.</p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <caption>도구 출력 바이트 비중. MCP 도구는 전부 합쳐도 1.5%다 — headroom이 가장 잘 압축하는 층이 우리에겐 가장 작다.</caption>
+        <thead><tr><th>도구</th><th class="n">바이트</th><th class="n">비중</th><th>headroom이 손대나</th></tr></thead>
+        <tbody>
+          <tr><td>Bash</td><td class="n">58.9MB</td><td class="n">51.9%</td><td>검색·경로만 (grep 24% · find 29%, git·ls·빌드 로그는 0%)</td></tr>
+          <tr><td>Read</td><td class="n">40.1MB</td><td class="n">35.3%</td><td><span class="lose">아니오</span> — 라우터가 통째로 건너뛴다</td></tr>
+          <tr><td>WebSearch · WebFetch</td><td class="n">8.9MB</td><td class="n">7.8%</td><td>부분</td></tr>
+          <tr><td>MCP 도구 전부</td><td class="n">~1.7MB</td><td class="n">~1.5%</td><td><span class="win">41%</span> — 잘 듣지만 양이 작다</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note"><strong>정작 큰 낭비는 압축이 아니라 중복이었다.</strong> Read 바이트의 <strong>19.1%</strong>(7.7MB·847콜)가 "읽고 나서 편집한 파일"이다 — 이미 바뀐 내용을 문맥에 그대로 들고 있다. 줄 번호 접두사가 5.3%를 더 먹고, 한 번 읽은 파일은 중앙값 <strong>72턴</strong>(상위 10%는 650턴) 동안 따라다닌다. 플러그인을 깔기 전에 여기부터 손대는 게 값이 크다.</p>
+  </section>
+
+  <!-- ── RECOMMENDATION ───────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <h2>그래서 뭘 켤까</h2>
+      <p class="desc">세 도구를 다 켜는 건 답이 아니다. 우리 워크로드 분포와 실측 델타를 겹쳐 보면 각자 자리가 다르다.</p>
+    </div>
+
+    <div class="ladder">
+      <div class="rung measured">
+        <span class="label">켠다 — headroom</span>
+        <p class="said">입력 −13%·지연 −11%가 실측이고, 겨냥하는 낭비(stale read·줄번호)가 우리에게 실제로 있다. 대신 <strong>비용은 거의 안 준다</strong>. 정액 구독이면 얻는 건 돈이 아니라 문맥 여유다.</p>
+      </div>
+      <div class="rung">
+        <span class="label">골라 켠다 — ponytail</span>
+        <p class="said">코드를 쓰는 세션에서는 값어치가 확실하다(우리 규칙 위에서도 −85%). 그런데 우리 작업은 <strong>Read의 58%가 문서·텍스트</strong>다. 상시로 두면 안 쓰는 세션까지 입력 +10%를 낸다.</p>
+      </div>
+      <div class="rung">
+        <span class="label">CLI 로만 쓴다 — graphify</span>
+        <p class="said">grep을 못 이기고 호출부를 놓친다. 다만 인덱싱이 2초에 공짜라, <code>server/src</code>를 크게 손볼 때 한 번 돌려 지도로 쓰는 값은 있다. 상시 스킬 등록은 뺀다.</p>
+      </div>
+    </div>
+
+    <p class="note warn"><strong>영상이 말한 "같은 구독으로 훨씬 오래 버틴다"에 가장 가까운 건 headroom 하나다.</strong> 그마저 −13%지 절반이 아니고, ponytail을 같이 켜면 그 −13%를 +10%가 도로 까먹는다. 셋을 한 번에 설치하라는 게 이 영상의 결론인데, 우리 숫자로는 셋을 한 번에 켜는 게 가장 나쁜 조합이다.</p>
+  </section>
+
+  <!-- ── METHOD & STATE ───────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <h2>어떻게 쟀고, 무엇을 믿으면 안 되나</h2>
+    </div>
+    <div class="cols">
+      <div class="block">
+        <h3>측정 조건</h3>
+        <ul>
+          <li><strong>모델</strong> claude haiku 4.5 — ponytail 자체 벤치와 같은 급</li>
+          <li><strong>표본</strong> 과제 3개 × 3반복 × 2조건 = 18회. 프록시는 6회 교대</li>
+          <li><strong>격리</strong> 두 조건 모두 다른 플러그인·MCP를 끄고 저장소 밖에서 실행</li>
+          <li><strong>지표</strong> Claude Code가 돌려주는 usage·cost 원값, 코드는 빈 줄 뺀 실제 줄 수</li>
+        </ul>
+      </div>
+      <div class="block">
+        <h3>한계</h3>
+        <ul>
+          <li>표본 3은 <strong>방향 신호지 판결이 아니다</strong>. 특히 비용 부호는 캐시 상태에 흔들린다</li>
+          <li>과제가 작다. 큰 과제일수록 ponytail이 유리해지는 기울기가 실제로 보였다</li>
+          <li>모델을 sonnet·opus로 올리면 출력 단가 비중이 커져 결과가 달라질 수 있다</li>
+          <li>측정 중 두 실행이 파일을 상위 디렉토리에 써서, 그 줄 수를 되찾아 귀속했다</li>
+        </ul>
+      </div>
+      <div class="block">
+        <h3>측정 뒤 정리한 상태</h3>
+        <ul>
+          <li><strong>ponytail·graphify는 지웠다</strong> — 플러그인·마켓플레이스·CLI 패키지와 <code>~/.claude/CLAUDE.md</code>에 심겼던 3줄까지. user scope는 이 머신의 모든 클로드 세션(buzz 봇 포함)에 들어가기 때문이다</li>
+          <li><strong>headroom만 남겼다.</strong> 설치만 된 상태고 아무 트래픽도 거치지 않는다. 켜려면 <code>headroom wrap claude</code></li>
+          <li>맥미니 두 대(taskube·astrabot)와 codex·grok 설정에는 애초에 흔적이 없었다 — 확인만 하고 손대지 않았다</li>
+          <li>저장소에 남은 파일도 없다 — graphify 인덱싱 산출물은 밖으로 옮겼다</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>발단이 된 영상: <a href="https://youtube.com/shorts/Ha-An1nsvX8">게으른빌더 — 클로드 토큰 아끼는 최고의 방법</a> (2026-07-30 · 34초 · 조회 15.9천 · 댓글 344).
+    본문에 "댓글에 토큰이라고 남기면 자료를 보내준다"는 게이트가 걸려 있고, 그 게이트 뒤의 일괄 설치 번들은 확인하지 못했다.</p>
+    <p>도구 원본: <a href="https://github.com/DietrichGebert/ponytail">DietrichGebert/ponytail</a> 115,912★ ·
+    <a href="https://github.com/Graphify-Labs/graphify">Graphify-Labs/graphify</a> 112,149★ ·
+    <a href="https://github.com/headroomlabs-ai/headroom">headroomlabs-ai/headroom</a> 67,968★ — 별 수는 실측 당일 GitHub API 값이다.</p>
+    <p>측정 도구: Claude Code 2.1.251 헤드리스(<code>claude -p --output-format json</code>)의 usage·cost 원값,
+    headroom 0.37.0 라이브러리의 <code>compress()</code>, graphify CLI의 <code>update</code>·<code>explain</code>.
+    원본 수치와 실행 로그는 이 문서를 만든 세션의 스크래치에 있다.</p>
+  </footer>
+
+</div>
+</body>
+</html>

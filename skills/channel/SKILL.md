@@ -7,7 +7,7 @@ description: >
   Creates data/<slug>/profile.md defining target audience, tone, TTS voice, visual
   theme, target platforms, and fact-check policy — the SoT every storyboard/produce/publish
   run reads first.
-argument-hint: "[add|list|update] [channel-name]"
+argument-hint: "[add|list|update|serve] [channel-name]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate"]
 ---
 
@@ -35,11 +35,12 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
 
 ## Argument parsing
 
-`[add|list|update] [channel-name]`
+`[add|list|update|serve] [channel-name]`
 
 - `add <name>` — create a new channel (procedure below)
 - `list` — Glob for `data/*/profile.md` and report channel, description, and publish platforms as a table
 - `update <name>` — read the existing profile.md and edit only the fields the user specifies
+- `serve` — open the channel browser in the browser (procedure below)
 - With no argument, show the current state via `list`, then ask what to do next
 
 ## add procedure
@@ -128,6 +129,44 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    step 5 again (check-style + growth-post-reviewer `standalone` ≥95·p0=0).
 3. Report before/after as a table.
 
+## serve procedure
+
+`references/serve.js` serves `data/` over HTTP on this machine — a channel picker at the
+top, **스토리보드 · 캐릭터** in the left nav. The storyboard list is a card per episode —
+cover (the first scene's image as scenes.js names it), title, frontmatter status, the stage
+`episode-state.js` derives, format, image count and blockers — grouped by playlist tabs:
+전체 · one tab per distinct `series:` frontmatter line (the same line pundago's site reads;
+a ` (n/m)` tail becomes the card's episode marker) · 재생목록없음 for episodes without
+one. A card opens the episode's own `storyboard.html` in place (it only references
+`./scenes.js`, `images/` and `../../../assets/characters/…`, so it renders the same as
+from file://). The character list shows every panel image in
+`assets/characters/<id>/` and the catalog note; the detail page renders `identity.md`,
+swaps the main panel from thumbnails, and plays `voice.wav`.
+
+**Panels come back face → front → back** — the order the reference set goes into a
+generation call (`../produce/references/video-model-selection.md` §6), so the card
+thumbnail and the detail page's opening panel are both the face. Naming isn't uniform
+across channels, so the rank is read off the filename: `face`/`head` is the face,
+`back`/`rear` is the rear, everything else (`body`, `front`, `real`, `three-quarter`)
+is a front view. Within one rank the shorter name wins — a variant earns its length from
+a suffix, so `head-closeup.png` leads `head-closeup-pre-led.png` and a card shows the
+canonical panel rather than an old take.
+
+```bash
+node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/serve.js" data --open     # http://127.0.0.1:8390/
+node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/serve.js" data --port 8400
+```
+
+1. Run it **in the background** (`run_in_background`) so the session stays free, then
+   hand the URL to the user. If the port is taken, pass `--port`.
+2. It reads the disk on every request — nothing to regenerate after a skill edits a
+   storyboard; reload the page.
+3. It binds `127.0.0.1` on purpose. `data/` holds research notes, growth state and
+   `.work/` intermediates, so `--host 0.0.0.0` (other machines, a cloudflared tunnel) is
+   the user's call, never a default. Path segments starting with `.` are never served.
+4. Stop it when the user is done (`pkill -f references/serve.js`) — a listener left
+   behind is one more process the next session has to notice.
+
 ## Rules
 
 - **profile.md is the only SoT** — don't keep tone·voice·theme in session memory
@@ -146,3 +185,4 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
 - **`references/profile-template.md`** — standard profile.md template (section structure, THEME contract, voice examples)
 - **`references/assets-catalog-template.md`** — `assets/catalog.md` starter (kind+id table)
 - **`references/resolve-asset.py`** — resolve shared assets via catalog + well-known paths (`--ensure` adds a row, `--selftest`)
+- **`references/serve.js`** — the channel browser over HTTP: `/api/channels`, `/api/channels/<slug>/storyboards`, `/api/channels/<slug>/characters[/<id>]`, and `/files/<slug>/…` static from `data/` (dot segments refused, Range for audio/video). Zero dependencies, `--selftest`

@@ -217,6 +217,10 @@ done
   empty output means the checker died, not a style warning** (field-tested) — report that
   surface as "unverified".
 - **exit 3** (empty input, extraction failure) isn't a pass. Say "style unverified" explicitly.
+- **exit 4** = the copy isn't Korean, so the checker declined to judge it (every rule in it
+  is Korean-specific). Not a pass either — say "style unchecked (not Korean)" and read the
+  copy yourself. For English the tells are README's list: delve · leverage · robust ·
+  seamless · comprehensive · crucial · foster · testament · landscape, "It's not X, it's Y".
 - **If the checker file itself is missing, python exits 2** — indistinguishable from a
   verdict of 2, so read the existence-check line above first. If the path doesn't resolve,
   find the real location with Glob, run again, then judge; if you still can't find it,
@@ -376,7 +380,9 @@ vocabulary mode).
 - `data/<channel>/profile.md` — §2 tone, §3 target and mood, the channel's topic range
 - `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenario-craft.md` (if passed) — the
   craft yardstick behind P0 1 and P0 2: the connective test and the value turn, plus the
-  plant/payoff rule the story `turn` is judged by
+  plant/payoff rule the story `turn` is judged by, and the three story-arc rules read as
+  correction directives — restraint before the burst (§8), the double-hit turn (§9), the
+  premise verified rather than explained (§10)
 - a change the user asked for at the approval step, when the delegator sends one back
 
 Score **every entry in the body `SCENES[]`** (cover·points·quote·broll). One entry is one
@@ -401,7 +407,7 @@ Skip this section when an older file doesn't have them — a missing field is no
 |---|---|
 | cover | On answer-first (build type), show the finished result at a glance in the first second and say **what the story is about and why to watch** within three. On a story arc (`arc:"story"`), show the moment it went wrong and keep the ending out of the frame and out of seg ①. Hook the why with whichever of the four opening strategies (fear · empathy · curiosity · showing the ending first) the `hookType` names — it only does its job when the title and seg ① actually carry that provocation (scenes-schema §The four opening strategies). No method explanation here |
 | hooking (`beat:"hooking"`, type is points or quote) | The shot right after the cover — it catches what the cover threw (the chosen opening strategy) unchanged (same subject, same promise) and hooks the viewer's problem, loss, or gain with the viewer as the subject (problem/harm = empathy / loss/risk = fear / unresolved tension = curiosity / resolve/criterion = declaration), without unpacking the answer, the method, or the finished result. On a story arc it is the setup — the protagonist and the original goal as subject, the ending still withheld. In short-form the result (for an info type, the first content scene; on a story arc, the build — the payoff waits for the turn) starts within 20 seconds of the cover. Don't fill it with greetings, introductions, or teasers (scenes-schema §hooking) |
-| points | One message per screen. `beat:"result"` unfolds the finished thing; `beat:"body"` says only how that result was made. On a story arc `beat:"body"` builds the conflict without naming the payoff, `beat:"turn"` is the single highest-tension screen, sits right before the payoff, **and is planted** — its clue sits in the setup or an early build shot as true information read wrong (misdirection); a turn resting on hidden or false information is a cheat, and a deliberate plant no later scene pays is an unpaid promise (scenario-craft §3). `beat:"result"` is the first place the answer is on screen. The caption doesn't repeat the title |
+| points | One message per screen. `beat:"result"` unfolds the finished thing; `beat:"body"` says only how that result was made. On a story arc `beat:"body"` builds the conflict without naming the payoff, `beat:"turn"` is the single highest-tension screen, sits right before the payoff, **and is planted** — its clue sits in the setup or an early build shot as true information read wrong (misdirection); a turn resting on hidden or false information is a cheat, and a deliberate plant no later scene pays is an unpaid promise (scenario-craft §3). On the same arc the body holds before it bursts — a rising series of holds in `shot.feel`, the release an action rather than the emotion (scenario-craft §8) — the turn is a double hit — the situation flips and the plant re-reads in that shot, the outcome still withheld for the result (§9) — and the premise is shown working once rather than told: a hooking segment or `quote` whose only job is explaining how the world works is the explainer tell (§10). All three are correction directives on a story arc, not P0s, and none applies on answer-first. `beat:"result"` is the first place the answer is on screen. The caption doesn't repeat the title |
 | quote | Something that would actually come out of that person's mouth. The role label is honest (no hiding that it's AI) |
 | broll | 4–8 wordless seconds that give the story a comma or switch scenes |
 

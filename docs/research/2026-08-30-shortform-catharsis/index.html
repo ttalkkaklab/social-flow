@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>내려갔다 올라오는 60초 — 숏폼 카타르시스 조사 (2026-08)</title>
+<style>
+  :root {
+    --paper:#fcfcfb; --paper-2:#f4f3ef; --card:#ffffff;
+    --ink:#1a1d21; --ink-2:#565c64; --ink-3:#8a9099;
+    --line:#e3e0d9; --line-strong:#c9c5bb;
+    --c-calm:#0f62a8; --c-act:#d2691e; --c-pay:#0e9f6e; --c-low:#b23a3a;
+    --shadow:0 1px 2px rgba(26,29,33,.05), 0 8px 24px rgba(26,29,33,.05);
+    --mono:ui-monospace,"SF Mono",Menlo,"Roboto Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#14161a; --paper-2:#1a1d22; --card:#1c1f24;
+      --ink:#e8eaed; --ink-2:#a2a9b3; --ink-3:#757c86;
+      --line:#2c3037; --line-strong:#3e434b;
+      --c-calm:#2e90e0; --c-act:#e08a3c; --c-pay:#15a06b; --c-low:#e06666;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#14161a; --paper-2:#1a1d22; --card:#1c1f24;
+    --ink:#e8eaed; --ink-2:#a2a9b3; --ink-3:#757c86;
+    --line:#2c3037; --line-strong:#3e434b;
+    --c-calm:#2e90e0; --c-act:#e08a3c; --c-pay:#15a06b; --c-low:#e06666;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+  }
+  *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",-apple-system,sans-serif;
+    background:var(--paper); color:var(--ink); line-height:1.72; font-size:16px; word-break:keep-all;
+    max-width:1000px; margin:0 auto; padding:0 24px 120px; }
+  header.hero { padding:60px 0 36px; }
+  .kicker { display:inline-block; font-size:12px; font-weight:700; letter-spacing:.1em; color:var(--ink-2);
+    border:1px solid var(--line-strong); padding:4px 12px; border-radius:999px; margin-bottom:20px; }
+  h1 { font-size:clamp(28px,4.2vw,44px); line-height:1.24; font-weight:800; letter-spacing:-.025em; }
+  .hero .sub { margin-top:18px; font-size:17.5px; color:var(--ink-2); max-width:60ch; }
+  .headline-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin:36px 0 0; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px 22px; box-shadow:var(--shadow); }
+  .stat-k { font-size:24px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .stat-v { font-size:14.5px; font-weight:600; margin-top:4px; }
+  .stat-n { font-size:13px; color:var(--ink-3); margin-top:6px; line-height:1.5; }
+  section { padding-top:52px; }
+  h2 { font-size:clamp(21px,2.6vw,27px); font-weight:750; letter-spacing:-.02em; line-height:1.34;
+       padding-bottom:12px; border-bottom:2px solid var(--line-strong); margin-bottom:22px; }
+  h3 { font-size:17.5px; font-weight:700; margin:34px 0 10px; }
+  p { margin:14px 0; max-width:74ch; }
+  p.method { font-size:14.5px; color:var(--ink-2); background:var(--paper-2); border-left:3px solid var(--line-strong);
+             padding:14px 18px; border-radius:0 8px 8px 0; max-width:none; }
+  code { font-family:var(--mono); font-size:.88em; background:var(--paper-2); padding:1px 5px; border-radius:4px; }
+  a { color:var(--c-calm); text-decoration:underline; text-underline-offset:2px; }
+  table { border-collapse:collapse; width:100%; margin:18px 0; font-size:14.5px; }
+  th, td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-size:12.5px; color:var(--ink-2); font-weight:700; letter-spacing:.04em; }
+  td.num { font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .wrap { overflow-x:auto; }
+  ul { margin:12px 0 12px 22px; } li { margin:6px 0; max-width:74ch; }
+  .quote { border-left:3px solid var(--c-act); padding:6px 16px; color:var(--ink-2); font-size:15px; margin:14px 0; }
+  .arc { display:grid; grid-template-columns:repeat(9,1fr); gap:6px; margin:18px 0; align-items:end; height:150px; }
+  .arc div { border-radius:6px 6px 0 0; font-size:11.5px; line-height:1.3; padding:6px 4px; color:#fff; text-align:center; display:flex; align-items:flex-end; justify-content:center; }
+  .arc .n { background:var(--c-low); } .arc .p { background:var(--c-pay); }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:14px 0; }
+  .pair div { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; font-size:14.5px; }
+  .pair .k { font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--ink-3); margin-bottom:6px; }
+  @media (max-width:640px) { .pair { grid-template-columns:1fr; } .arc { height:120px; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <span class="kicker">RESEARCH · 2026-08-30</span>
+  <h1>내려갔다 올라오는 60초 — 숏폼이 시청자에게 카타르시스를 주는 법</h1>
+  <p class="sub">푼다고 ep07 김치 스토리보드 2차가 「너무 재미없고 밋밋하다, 훅부터 밋밋하고 CTA 가 부족하다」는 판정을 받았다. 카타르시스가 어디서 오는지 문헌과 현장 글을 모아 등급을 매기고, scenario-craft §12 로 옮긴 뒤 3차 스토리보드를 그 규칙으로 다시 썼다. 한국 쇼츠에서 직접 잰 수치는 이 페이지에 없다.</p>
+  <div class="headline-grid">
+    <div class="stat"><div class="stat-k">6가지</div><div class="stat-v">소설 1,327편의 감정 곡선 모양</div><div class="stat-n">Reagan 2016. 가장 많이 내려받은 모양(이카로스·오이디푸스·「구덩이에 빠진 사람」 둘)은 전부 한 번 내려갔다 올라온다</div></div>
+    <div class="stat"><div class="stat-k">≈2배</div><div class="stat-v">손실이 이득보다 무거운 정도</div><div class="stat-n">Kahneman &amp; Tversky 1979. 「썩으면 봄까지 채소가 없다」가 「맛있으라고 만든 게 아니다」보다 엄지를 세게 멈춘다</div></div>
+    <div class="stat"><div class="stat-k">각성도</div><div class="stat-v">공유를 가르는 축</div><div class="stat-n">Berger &amp; Milkman 2012. 경외·분노·불안은 퍼지고 슬픔은 안 퍼진다 — 긍정·부정보다 각성도</div></div>
+    <div class="stat"><div class="stat-k">0건</div><div class="stat-v">끝에서 요구하는 것</div><div class="stat-n">되돌림 한 줄 + 기억 질문. 풀어 준 직후의 구독 요청은 선물 뒤에 오는 청구서다</div></div>
+  </div>
+</header>
+
+<section>
+  <h2>1. 왜 조사했나 — 2차 초안의 세 가지 증상</h2>
+  <p class="method">2차 초안(2026-08-30 아침)은 검사기를 다 통과했다 — 문체 100점 셋, 연결 검사 「그리고」 0, 호기심 장부 미지급 0, 사실 검증 39건. 그런데 사용자는 밋밋하다고 했다. 검사기는 규칙 위반을 잡지 감정 곡선의 높낮이를 재지 않는다. 그래서 「무엇이 카타르시스를 만드나」를 따로 조사했다.</p>
+  <ul>
+    <li><b>훅이 묻기만 했다.</b> 「김치는 맛있으라고 만든 게 아니에요」— 역설(paradox)이라 호기심은 열리지만 걸린 게 없다. 뚜껑 밑이 어떻게 됐든 시청자가 잃을 것이 없다.</li>
+    <li><b>본문이 한 높이에 머물렀다.</b> 「텅 비었다 → 그럴듯한데 → 아깝지만 붓는다 → 불안」— 전부 낮은 각성도의 −. 바닥이 없으니 6컷 「안 상했다」가 올라설 자리가 없다.</li>
+    <li><b>끝이 요약하고 의견을 물었다.</b> 「겨울을 나려고 만든 거였어요 / 지금도 김장을 하는 이유, 뭘까요?」— 의견 질문은 토론이나 침묵을 부른다. 시청자 자기 삶에 놓인 게 없다.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2. 카타르시스는 눌렀다 놓는 것이다</h2>
+  <p>아리스토텔레스의 정화(katharsis)는 강한 감정이 아니라 <b>억눌렀다 풀어 주는</b> 감정이다. StudioBinder 의 영화 설명도 같은 골격이다 — 억압(repression) → 임계점(breaking point) → 여파(aftermath). Paul Zak 의 실험실 읽기는 그것을 화학으로 말한다: 긴장이 살아 있는 동안 코르티솔이 주의를 붙잡고 풀리는 순간 옥시토신이 공감과 행동을 만든다. 그리고 <b>평평한 이야기는 둘 다 만들지 않는다</b> — 보고도 아무것도 안 한다.</p>
+  <p>설계로 번역하면 전제가 하나 생긴다. 무언가를 먼저 눌러야 한다. 2차 초안은 아무것도 누르지 않았다 — 훅이 질문이었고 본문이 설명이었다. 3차는 첫 문장에서 걸린 것을 말하고(항아리가 썩으면 봄까지 채소가 없다), 4컷에서 귀한 소금을 다 부어 돌이킬 수 없게 만들고, 5컷에서 「해마다 열기 전엔 모른다」로 바닥을 찍은 다음 6컷에서 놓는다.</p>
+</section>
+
+<section>
+  <h2>3. 곡선은 내려갔다 올라온다</h2>
+  <p>Reagan 등(2016, EPJ Data Science)은 구텐베르크 소설 1,327편의 문장별 감정값을 곡선으로 그려 여섯 모양을 뽑았다 — 상승(rags to riches), 하강(tragedy), 하강→상승(man in a hole), 상승→하강(Icarus), 상승→하강→상승(Cinderella), 하강→상승→하강(Oedipus). 내려받기 수로 보면 <b>가장 인기 있는 모양은 이카로스·오이디푸스·「구덩이에 빠진 사람」 둘을 이어 붙인 것</b>이었고 그냥 올라가기만 하는 모양이 가장 덜 읽혔다. 소설 데이터라 60초 숏폼으로 옮기는 건 우리 베팅이지만 방향은 분명하다 — 올라가려면 먼저 내려가야 한다.</p>
+  <p>플러그인에는 이미 컷마다 <code>shot.feel</code> 이 있고 「같은 느낌 3연속 금지」(scenario-craft §2)가 있다. 빠진 건 <b>부호</b>다. §12 는 storyboard.md 의 판 차트에 컷마다 −/+ 를 적게 하고 최저점이 <code>craft.burst</code> 앞에, 최고점이 turn 이나 result 에 오게 한다. story arc 의 기본 모양은 man in a hole 이다.</p>
+  <div class="arc">
+    <div class="n" style="height:45%">1 썩었으면<br>−</div>
+    <div class="n" style="height:65%">2 양식의 절반<br>−−</div>
+    <div class="n" style="height:45%">3 왜 안 됐지<br>−</div>
+    <div class="n" style="height:65%">4 돌이킬 수 없다<br>−−</div>
+    <div class="n" style="height:90%">5 해마다 무섭다<br>−−− 바닥</div>
+    <div class="p" style="height:90%">6 안 상했다<br>++ 터짐</div>
+    <div class="p" style="height:55%">7 소금이 이렇게<br>+</div>
+    <div class="p" style="height:80%">8 살았다<br>++</div>
+    <div class="p" style="height:55%">9 우리 집 냉장고<br>+ 인계</div>
+  </div>
+  <p>ep07 3차의 판. 막대 높이는 각성도의 크기, 색은 부호다. 3컷 오답 비트(「말리면 되잖아」)가 잠깐 덜 나쁜 자리라 계단이 한 번 흔들리고, 5컷이 바닥, 6컷이 부호를 뒤집는다.</p>
+</section>
+
+<section>
+  <h2>4. 훅 — 질문보다 손실을 먼저</h2>
+  <p>히치콕의 폭탄은 이미 scenario-craft §4 에 있다 — 폭발은 15초짜리 놀람이고, <b>관객에게 먼저 보여 준 폭탄</b>은 15분짜리 서스펜스다. 여기에 두 가지가 더 붙는다. 하나는 무게다: Kahneman &amp; Tversky(1979)의 전망 이론에서 손실은 같은 크기의 이득보다 약 두 배 무겁다. 알파컷의 쇼츠 후킹 다섯 가지(숫자·반전·고통·비밀·권위)도 「고통」 항목에서 같은 2배를 말한다(현장 글, 출처 없음). 다른 하나는 순서다: 피카클립이 정리한 숏드라마 공식은 첫 1~3초에 갈등, 그다음 억울·분노·긴장, 그다음 반전의 암시, 가장 궁금한 순간에 끊기다 — 질문이 아니라 <b>갈등</b>이 먼저다.</p>
+  <div class="pair">
+    <div><div class="k">2차 · curiosity · paradox</div>「김치는 맛있으라고 만든 게 아니에요.」<br><span style="color:var(--ink-3)">호기심은 열리는데 걸린 게 없다. 뚜껑 밑이 어떻게 되든 시청자는 잃을 게 없다.</span></div>
+    <div><div class="k">3차 · fear · gap</div>「이 항아리가 썩었으면, 이 집은 봄까지 채소를 한 입도 못 먹어요.」<br><span style="color:var(--ink-3)">뚜껑이 열리기 전에 시청자가 걸린 것을 안다. 2차 문장은 이 문장 안에 여전히 참으로 들어 있다.</span></div>
+  </div>
+  <p>fear 훅에는 가드레일이 셋 있고 그중 ②(본문이 그 위협에 시청자가 실행할 수 있는 답을 준다 — Witte &amp; Allen 2000)가 이 훅과 부딪힌다. 이 손실은 시청자가 아니라 이야기 속 집의 것이다. §12 는 두 레인으로 푼다 — answer-first 에선 손실이 시청자 것이라 가드레일이 그대로, <b>story arc 에선 손실이 인물의 것이라 §4 의 「시청자가 먼저 안다」 레인을 타고 문(답)은 이야기 안(turn·result)에서 갚는다.</b> 커버 <code>shot.info</code> 에 그 이유를 적어 카피 리뷰가 「답 없는 위협」으로 읽지 않게 한다.</p>
+</section>
+
+<section>
+  <h2>5. 감정의 각성도 — 슬픔은 안 퍼진다</h2>
+  <p>Berger &amp; Milkman(2012, J. Marketing Research)은 뉴욕타임스 기사 석 달치의 「가장 많이 이메일로 보낸 글」을 감정별로 갈랐다. 긍정 글이 부정 글보다 조금 더 퍼지지만 진짜 축은 <b>각성도(arousal)</b>였다 — 경외·분노·불안처럼 몸을 깨우는 감정은 퍼지고 슬픔처럼 가라앉히는 감정은 안 퍼진다. 영상이 아니라 기사 데이터지만 판 차트를 쓸 때 낱말을 고르는 기준이 된다: 바닥은 우울이 아니라 <b>공포·분노</b>(「해마다 이 순간이 무섭다」), 정점은 「괜찮네」가 아니라 <b>경외·안도</b>(「어? 안 상했다 — 오히려 익었다」). 2차의 「텅 비었다」는 부호는 맞았지만 각성도가 낮았다 — 3차는 「양식의 절반이 저 안에 있다」로 바꿨다.</p>
+</section>
+
+<section>
+  <h2>6. 끝 — 감정을 넘기고 아무것도 요구하지 않는다</h2>
+  <p>숏폼 CTA 현장 글들의 합의는 셋이다: 요청은 하나만, 영상의 메시지에 붙어 있어야 하고, 「좋아요·구독·공유·링크」를 쌓으면 아무것도 안 한다. 쇼츠는 마지막 5초가 루프로 여러 번 보이므로 그 자리가 곧 다시 들어오는 첫 문장이다. 윤수영(1세대 숏폼 작가, 레이디경향 2024-10)은 대본을 「훅과 엔딩 두세 줄」부터 쓰고 그 사이를 채운다고 했고 장면을 살리는 건 묘사가 아니라 <b>의외성</b>이라고 했다.</p>
+  <p>카타르시스 쪽에서 읽으면 이유가 붙는다 — 풀어 준 직후에 무언가를 요구하는 건 선물 뒤에 오는 청구서다. §12 의 끝은 두 줄이다: 커버의 낱말을 뒤집힌 뜻으로 되읽으며 <b>시청자 자기 삶에 놓는 되돌림 한 줄</b>(you-line), 그다음 <b>의견이 아니라 기억을 묻는 질문</b>.</p>
+  <div class="pair">
+    <div><div class="k">2차</div>「겨울을 나려고 만든 거였어요. / 냉장고가 있는 지금도 김장을 하는 이유, 뭘까요?」<br><span style="color:var(--ink-3)">요약 + 의견 질문. 댓글엔 토론이나 침묵.</span></div>
+    <div><div class="k">3차</div>「겨울을 나려고 만든 그 맛이, 지금 냉장고 속 그 맛이에요. / 여러분 집 김치는 누가 담가요?」<br><span style="color:var(--ink-3)">커버의 「겨울」이 되읽히고 그 맛이 시청자 냉장고에 놓인다. 기억 질문은 자기 이야기를 적게 한다.</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>7. 플러그인에 옮긴 것</h2>
+  <ul>
+    <li><b>scenario-craft §12 「내려갔다 올라온다」</b> — 판 차트의 부호, 질문보다 손실 먼저(두 레인), 양 극의 각성도, 끝은 인계(되돌림 + 기억 질문, 요구 없음), 훅과 마지막 줄을 먼저 쓰기. 검사 넷(최저점 &lt; burst · 최고점 = turn/result · 첫 문장에 손실 · 구독 동사 0).</li>
+    <li><b>storyboard SKILL §4</b> — 열두 규칙으로 갱신, §12 요약 한 문장.</li>
+    <li><b>scenes-schema</b> — act 행에 되돌림 + 기억 질문, fear 가드레일에 「story arc 에선 인물의 손실」 레인.</li>
+    <li><b>새 필드 없음.</b> <code>shot.feel</code>·<code>craft.holds/burst</code>·cta 행으로 전부 검증된다. 렌더러(storyboard.html 템플릿)는 손대지 않았다.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>8. ep07 에 적용 — 2차 → 3차</h2>
+  <div class="wrap"><table>
+    <tr><th>컷</th><th>2차 판</th><th>3차 판(부호)</th><th>바뀐 대사</th></tr>
+    <tr><td class="num">1 hook</td><td>상했을까</td><td>썩었으면 어쩌지 (−)</td><td>「이 항아리가 썩었으면, 이 집은 봄까지 채소를 한 입도 못 먹어요.」</td></tr>
+    <tr><td class="num">2</td><td>텅 비었다</td><td>양식의 절반이 저 안에 (−−)</td><td>「겨울엔 채소가 안 나거든요. 김장이 겨울 양식의 절반이었어요.」</td></tr>
+    <tr><td class="num">3</td><td>그럴듯한데 왜 안 됐지</td><td>같음 (−)</td><td>—</td></tr>
+    <tr><td class="num">4</td><td>아깝지만 어쩔 수 없다</td><td>다 부었다, 돌이킬 수 없다 (−−)</td><td>「…순무에 다 부었죠, 썩지만 말라고요.」</td></tr>
+    <tr><td class="num">5</td><td>불안</td><td>해마다 이 순간이 무섭다 (−−− 바닥)</td><td>「열기 전까진 아무도 몰라요, 해마다요.」</td></tr>
+    <tr><td class="num">6 turn</td><td>어? 안 상했다</td><td>같음 (++ 터짐)</td><td>—</td></tr>
+    <tr><td class="num">7·8</td><td>소금이 이렇게 · 살았다</td><td>같음 (+ · ++)</td><td>—</td></tr>
+    <tr><td class="num">9 cta</td><td>그런데 지금은 왜 하지</td><td>그 맛이 우리 집 냉장고에 (+ 인계)</td><td>「겨울을 나려고 만든 그 맛이, 지금 냉장고 속 그 맛이에요. 여러분 집 김치는 누가 담가요?」</td></tr>
+  </table></div>
+  <p>훅 문장은 TTS 받아쓰기 게이트를 한 번 더 거쳤다 — 「채소 한 잎」이 두 번 다 「최소한님」으로 들려 후보 다섯을 합성해 대조했고 「채소를 한 입도」만 정확히 들렸다. 컷 길이는 훅과 끝 질문에 숨 쉴 자리를 주려고 1·2컷 5초, 9컷 7초로 잡아 계획 59초, 발화 실측 44.9초.</p>
+</section>
+
+<section>
+  <h2>9. 출처와 등급</h2>
+  <div class="wrap"><table>
+    <tr><th>출처</th><th>무엇을 말하나</th><th>등급</th></tr>
+    <tr><td>아리스토텔레스 『시학』 · <a href="https://www.studiobinder.com/blog/what-is-catharsis-definition/">StudioBinder, What is Catharsis</a></td><td>정화, 억압 → 임계점 → 여파</td><td>craft canon</td></tr>
+    <tr><td><a href="https://hbr.org/2014/10/why-your-brain-loves-good-storytelling">Zak, Why Your Brain Loves Good Storytelling</a> (HBR 2014)</td><td>긴장의 코르티솔 → 해소의 옥시토신, 평평한 이야기는 둘 다 없음</td><td>실험을 요약한 에세이</td></tr>
+    <tr><td><a href="https://link.springer.com/article/10.1140/epjds/s13688-016-0093-1">Reagan 등, 2016</a> (EPJ Data Science 5:31)</td><td>여섯 곡선, 인기작은 내려갔다 올라온다</td><td>measured — 소설, 숏폼 전이는 베팅</td></tr>
+    <tr><td><a href="https://journals.sagepub.com/doi/10.1509/jmr.10.0353">Berger &amp; Milkman, 2012</a> (J. Marketing Research)</td><td>각성도가 공유를 가른다</td><td>measured — 뉴스 기사</td></tr>
+    <tr><td>Kahneman &amp; Tversky, Prospect Theory (Econometrica 1979)</td><td>손실 회피 ≈2배</td><td>measured</td></tr>
+    <tr><td>Hitchcock/Truffaut · Witte &amp; Allen 2000</td><td>폭탄은 먼저 보여 준다 · 공포엔 문이 필요하다 (§4 에 이미 있음)</td><td>craft canon · measured</td></tr>
+    <tr><td><a href="https://alphacut.video/blog/shorts-hooking-strategy">알파컷, 쇼츠 후킹 전략 5가지</a> · <a href="https://fikad.boo/blog/183059">피카클립, 숏드라마가 터지는 이유</a></td><td>손실 먼저, 숏드라마 비트 공식</td><td>field practice, 출처 없음</td></tr>
+    <tr><td><a href="https://lady.khan.co.kr/culture/article/202410310700011">레이디경향, 스토리피아 랩 인터뷰 ③ 윤수영</a> (2024-10)</td><td>훅과 엔딩 먼저, 의외성</td><td>field practice</td></tr>
+    <tr><td><a href="https://www.zebracat.ai/post/best-youtube-shorts-call-to-actions">Zebracat</a> · <a href="https://www.theindiepractice.com/blog/short-form-video-call-to-actions-cta-ideas">The Indie Practice</a></td><td>CTA 는 하나 · 메시지에 붙어서 · 쌓지 않는다 · 마지막 5초는 루프</td><td>field practice</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>10. 한계</h2>
+  <ul>
+    <li>한국 쇼츠에서 직접 잰 수치가 하나도 없다. measured 등급은 소설·뉴스 기사·실험실이고 숏폼으로의 전이는 전부 우리 베팅이다. 확인은 ep07 3차의 유지율 곡선으로 한다 — 5초(훅)와 6컷 앞뒤.</li>
+    <li>「밋밋하다」는 사용자 한 사람의 판정이고 2차 초안은 게시하지 않았으므로 2차와 3차를 시청자 지표로 비교할 수 없다.</li>
+    <li>판의 부호와 크기는 작성자가 적는 값이다. 검사기는 부호가 있는지·순서가 맞는지만 본다.</li>
+    <li>손실 회피 2배는 금전 선택 실험의 값이다. 문장 하나의 「멈춤」에 같은 배율이 적용된다는 근거는 현장 글뿐이다.</li>
+  </ul>
+</section>
+</body>
+</html>

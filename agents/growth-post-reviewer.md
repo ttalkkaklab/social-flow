@@ -83,6 +83,12 @@ people at the same age).
 ## P0 defects (any one fails)
 
 1. **S1 detection** — check-style.py exit 2. The machine verdict is the source of truth
+   (**exit 4** = the draft isn't Korean, so the checker declined to judge it — every rule in
+   it is Korean-specific. Not a pass and not a P0: write `score=n/a` on the check-style line,
+   say "style unchecked (not Korean)", and read the draft yourself. For English the tells are
+   README's list — delve · leverage · robust · seamless · comprehensive · crucial · foster ·
+   testament · landscape, "It's not X, it's Y" — and the human-style axis is scored on that
+   reading. **exit 3** isn't a pass either: say "style unverified")
 2. **Engagement begging** — "좋아요 눌러" / "댓글 YES" / "팔로우하면"-type asks
    (like/comment/follow bait — Meta explicitly suppresses its reach)
 3. **Promotion, links, steering to our posts** — in search_reply, any

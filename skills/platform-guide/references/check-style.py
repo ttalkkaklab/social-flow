@@ -9,7 +9,8 @@ don't override it with their own judgment).
     cat post.md | python3 check-style.py --surface threads -
     python3 check-style.py --surface ig --json caption.md
 
-exit 0 pass / 1 warn (S2 accumulation) / 2 fail (S1 found) / 3 execution error.
+exit 0 pass / 1 warn (S2 accumulation) / 2 fail (S1 found) / 3 execution error /
+4 skip (the text is not Korean, so these rules have nothing to say about it).
 
 No dependencies (stdlib only). Runs as-is in the plugin distribution.
 """
@@ -23,6 +24,107 @@ import sys
 import unicodedata
 
 SURFACES = ("narration", "subtitle", "screen", "threads", "ig", "fb", "yt", "reply")
+
+# ---------------------------------------------------------------------------
+# Scope — every rule in this file is Korean. Text that isn't Korean is reported
+# as out of scope, never as a pass.
+# ---------------------------------------------------------------------------
+
+# Why this guard exists: MASKS blanks Latin runs (proper nouns, abbreviations), so an
+# English paragraph arrives at the rules as an empty string and every one of them finds
+# nothing. That produced a silent PASS on copy stuffed with the exact tells the English
+# style rules name — delve, leverage, robust, seamless, crucial, testament, "not X, it is
+# Y" — 0 findings, because there was nothing left to look at. A checker that answers
+# "clean" about text it cannot read is worse than no checker, so the answer is a distinct
+# verdict of its own instead: SKIP, exit 4.
+#
+# **Why 4 and not 3.** The calling skills already spend 3 on "the gate never ran" — a
+# failed extraction, a bad path, a checker whose own selftest is red (produce §gate,
+# publish §1). Those mean *try again after fixing the plumbing*; SKIP means the plumbing
+# worked and the checker read the text and has nothing to say about it. Reusing 3 would
+# merge a fixable mistake with a permanent property of the copy.
+#
+# **Skipping is the damaging direction, so two conditions have to agree.** Under-reporting
+# on foreign copy only loses findings the rules were never going to make; skipping Korean
+# copy silently disarms the gate on the language it exists for.
+#
+#   1. Hangul share below HANGUL_MIN_SHARE, counted on the RAW text (masking erases the
+#      Latin side, so measuring after it would compare Hangul against nothing and call
+#      every language Korean), AND
+#   2. fewer than HANGUL_MIN_CHARS Hangul syllables in absolute terms.
+#
+# The second condition is what keeps jargon-dense Korean in scope. Measured across the
+# library's 28 Korean episodes: per episode the share never drops below 0.941, and the
+# gate always runs on a whole surface, not a line — extract-text.js hands it every
+# narration line of an episode at once. Per STRING the share does dip: two strings in the
+# library fall under 0.5, the lower being "claude --plugin-dir로 이번 실행에서만
+# 불러오세요." at 0.464 with 13 Hangul syllables. The absolute-count condition keeps that
+# one in scope.
+#
+# **The count sits at 3, not at the median.** A high number reads as "keep Korean in
+# scope", but it is the same number that decides how much Korean a foreign text may carry
+# before it is judged by Korean rules — and *that* direction is the damaging one. At 12,
+# an English paragraph carrying the tells README names passed clean with one Korean
+# hashtag on it. Three syllables is below the shortest real Korean surface measured
+# (a 5-syllable reply, "…하면 돼요") and above the incidental Hangul a foreign text
+# carries — a hashtag, a product name, a quoted word.
+#
+# CJK that is NOT Korean has no Latin to dilute, so a share test alone reads it as 0/0 and
+# lets it through. Japanese kana and Han characters are therefore counted on the foreign
+# side of the ratio, which puts a Japanese sentence at share 0.0 where it belongs.
+HANGUL_RE = re.compile(r"[가-힣]")
+# Latin letters plus non-Korean CJK: kana, and Han (shared with Korean hanja, which is
+# rare enough in this copy that the absolute-count condition covers the overlap).
+FOREIGN_RE = re.compile(r"[A-Za-z\u3040-\u30ff\u4e00-\u9fff]")
+
+# Thresholds from the library, all three far from the populations they separate:
+#   share  — Korean episodes run 0.941~1.000; English paragraphs run 0.0.
+#   chars  — three syllables: under the shortest real Korean surface (5), over a stray word.
+#   floor  — under this share the Hangul is incidental however many syllables it runs to.
+#            The measured gap: a Korean product name dropped into English sits at 0.025 and
+#            five Korean hashtags on an English post at 0.115, while the thinnest real
+#            Korean surface in the library is at 0.147.
+HANGUL_MIN_SHARE = 0.5
+HANGUL_MIN_CHARS = 3
+HANGUL_FLOOR_SHARE = 0.13
+
+# Below this many letters the ratio is noise — "OK!" is 0.0 and "네" is 1.0, and neither
+# says what language the copy is in. Short strings are let through to the rules, which is
+# the safe direction: the rules under-report on non-Korean, they never invent a finding.
+SCOPE_MIN_LETTERS = 20
+
+
+# Hashtags are counted asymmetrically, and the asymmetry is the whole point. Korean
+# syllables inside a tag still count toward the Korean side: a Korean writer tags in
+# Korean, so `#딸깍연구소` says something about the language of the post. Latin inside a
+# tag counts toward nothing — `#OpenSource` sits on Korean posts as readily as English
+# ones, and five of them were enough to drag a Korean post under the floor. Taking both
+# sides away instead (the first attempt) skipped Latin-dense Korean posts that carried
+# Korean tags. Either way the copy reaches the rules whole; only the ratio changes.
+HASHTAG_RE = re.compile(r"#\S+")
+
+
+def hangul_share(text: str) -> tuple[float | None, int, int]:
+    """(Hangul share of Hangul+foreign letters, that letter count, Hangul count).
+
+    Measured on raw text. Hangul inside hashtags counts; foreign letters inside them do
+    not (see HASHTAG_RE). Share is None when there are too few letters to judge.
+    """
+    h = len(HANGUL_RE.findall(text))
+    f = len(FOREIGN_RE.findall(HASHTAG_RE.sub(" ", text)))
+    total = h + f
+    if total < SCOPE_MIN_LETTERS:
+        return None, total, h
+    return h / total, total, h
+
+
+def out_of_scope(text: str) -> tuple[bool, float | None, int, int]:
+    """The share has to be low, and then either reading of "barely any Korean" settles it —
+    too few syllables to be a sentence, or too thin a share to be anything but incidental."""
+    share, letters, hangul = hangul_share(text)
+    skip = (share is not None and share < HANGUL_MIN_SHARE
+            and (hangul < HANGUL_MIN_CHARS or share < HANGUL_FLOOR_SHARE))
+    return skip, share, letters, hangul
 
 # ---------------------------------------------------------------------------
 # Do-NOT — excluded from both detection and fixing. Masked with same-length
@@ -602,6 +704,26 @@ def has_final_consonant(ch: str) -> bool:
 
 def analyze(text: str, surface: str, doc: bool = False) -> dict:
     cfg = SURFACE_CFG[surface]
+
+    # Language scope, before any rule runs. Non-Korean copy gets SKIP (exit 4), not PASS —
+    # see the HANGUL_MIN_SHARE block at the top for why a pass here would be a lie.
+    skip, share, letters, hangul = out_of_scope(text)
+    if skip:
+        return {
+            "surface": surface,
+            "chars": len(text),
+            "sentences": 0,
+            "findings": [],
+            "quoted_findings": 0,
+            "metrics": [],
+            "score": None,
+            "s1": 0, "s2": 0, "s3": 0,
+            "verdict": "SKIP",
+            "exit_code": 4,
+            "scope": {"hangul_share": round(share, 3), "letters": letters,
+                      "hangul": hangul},
+        }
+
     masked = mask(text, doc)
     wl = whitelist_spans(text)
     qs = quote_spans(text)
@@ -766,6 +888,8 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
     return {
         "surface": surface,
         "chars": len(text),
+        "scope": {"hangul_share": None if share is None else round(share, 3),
+                  "letters": letters, "hangul": hangul},
         "sentences": len(sents),
         "findings": findings,
         "quoted_findings": len(quoted),
@@ -780,6 +904,24 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
 
 
 def render(r: dict) -> str:
+    # SKIP says what it could not do, and says the copy is unchecked in as many words.
+    # Anyone reading this line has to come away knowing no judgement was made.
+    if r["verdict"] == "SKIP":
+        sc = r.get("scope") or {}
+        return "\n".join([
+            f"check-style — surface {r['surface']} / {r['chars']} chars",
+            f"verdict SKIP · not Korean (hangul {sc.get('hangul_share')} of "
+            f"{sc.get('letters')} letters and {sc.get('hangul')} syllables; "
+            f"in scope needs share ≥ {HANGUL_MIN_SHARE}, or ≥ {HANGUL_MIN_CHARS} syllables "
+            f"at share ≥ {HANGUL_FLOOR_SHARE}; hashtag Latin is not counted)",
+            "",
+            "  This copy was NOT checked. Every rule in check-style.py is Korean —",
+            "  Korean translationese, Korean AI stock phrases, Korean sentence endings.",
+            "  Nothing here says the copy reads well; it says the checker cannot read it.",
+            "  A human has to judge this text, and for English the tells to hunt are the",
+            "  ones README lists: delve · leverage · robust · seamless · comprehensive ·",
+            "  crucial · foster · testament · landscape, and \"It's not X, it's Y\".",
+        ])
     head = (f"verdict {r['verdict']} · score {r['score']}/100 · "
             f"S1 {r['s1']} S2 {r['s2']} S3 {r['s3']}")
     if r["quoted_findings"]:
@@ -821,6 +963,55 @@ def render(r: dict) -> str:
 # ---------------------------------------------------------------------------
 
 SELFTEST = [
+    # --- language scope (exit 4 = SKIP) -------------------------------------------
+    # English carrying the tells README bans. Before the scope guard these came back
+    # PASS with 0 findings, because MASKS had blanked every Latin run.
+    ("english is skipped, never passed", "narration", 4,
+     "It is not merely a tool, it is a partner. In today's rapidly evolving landscape, "
+     "leveraging robust and seamless solutions is crucial. Delve into the comprehensive "
+     "framework that fosters innovation. It's a testament to what teams can achieve.\n"),
+    # CJK that isn't Korean has no Latin to dilute the ratio — FOREIGN_RE is what stops
+    # it reading as 0/0 and slipping through as Korean.
+    ("japanese is skipped", "narration", 4,
+     "これは日本語のナレーションです。韓国語ではありません。チェッカーは読めません。\n"),
+    ("chinese is skipped", "narration", 4,
+     "这是一段中文旁白，不是韩语，检查器无法阅读它。这句话应该被跳过。\n"),
+    # A foreign text may carry a little Hangul — a hashtag, a product name — and that must
+    # not buy it a pass. Both fixtures sit ABOVE HANGUL_MIN_CHARS on purpose: a fixture one
+    # syllable under the boundary passes without ever testing the boundary, which is how the
+    # hole came back once already. Five hashtags, because one is easy and a handful is not.
+    ("english with korean hashtags is still skipped", "threads", 4,
+     "It is not merely a tool, it is a partner. In today's rapidly evolving landscape, "
+     "leveraging robust and seamless solutions is crucial. Delve into the comprehensive "
+     "framework that fosters innovation. It's a testament to what teams can achieve. "
+     "#한국어 #딸깍 #연구소 #버즈 #클로드\n"),
+    # The same paragraph with a bare Korean product name in the prose — no hashtag to strip,
+    # 5 syllables, and it still has to skip. This is what the share floor is for.
+    ("english with a korean product name is still skipped", "threads", 4,
+     "It is not merely a tool, it is a partner. In today's rapidly evolving landscape, "
+     "leveraging robust and seamless solutions is crucial. Delve into the comprehensive "
+     "framework that fosters innovation. We use 딸깍연구소 daily.\n"),
+    # The thinnest real Korean surface in the library — 5 syllables at share 0.147, just
+    # over the floor. The pair above and this one are what separate the two populations.
+    ("short latin-dense korean stays in scope", "reply", 0,
+     "ffmpeg concat demuxer로 stream copy 하면 돼요.\n"),
+    # The growth surface this is actually invoked on: a Korean post about Latin-named
+    # software, tagged in Korean. Counting tag Hangul on the Korean side is what keeps it
+    # in scope — take both sides away and it lands at 0.114, under the floor.
+    ("latin-dense korean with korean hashtags stays in scope", "threads", 0,
+     "Claude Code plugin marketplace install guide 정리했어요 "
+     "#딸깍연구소 #클로드코드 #플러그인 #자동화\n"),
+    # The other direction, and the one that matters more: Korean thick with Latin product
+    # names stays in scope. Share 0.464 — below the ratio threshold — but 13 Hangul
+    # syllables, so the absolute-count condition keeps it. This is a real library string.
+    ("jargon-dense korean stays in scope", "narration", 2,
+     "claude --plugin-dir로 이번 실행에서만 불러오세요.\n"
+     "GitHub Pages와 Vercel입니다.\n"
+     "이 제도는 개정되어졌습니다.\n"),
+    # Too few letters to judge a language — let it through to the rules rather than
+    # declining, since the rules under-report on foreign text but never invent findings.
+    ("short strings are judged, not skipped", "screen", 0, "네, 맞아요.\n"),
+
     ("slop detected", "narration", 2,
      "오늘은 임시거주 제도에 대해 함께 알아볼까요.\n"
      "이 제도는 개정되어졌습니다.\n"

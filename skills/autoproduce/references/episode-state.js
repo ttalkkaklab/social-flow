@@ -41,6 +41,9 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+// The stage ladder lives in the pipeline manifest, not here. docs/pipeline-manifest.md
+const { STAGE_IDS, BROKEN_STAGE, resolveStage, nextFor } =
+  require('../../platform-guide/references/pipeline.js');
 
 function die(msg) {
   process.stderr.write('episode-state: ' + msg + '\n');
@@ -70,7 +73,8 @@ function frontmatter(file) {
   const out = {};
   m[1].split(/\r?\n/).forEach((line) => {
     const kv = line.match(/^([A-Za-z_][\w-]*)\s*:\s*(.*)$/);
-    if (kv) out[kv[1]] = kv[2].trim().replace(/^["']|["']$/g, '');
+    // `status: produced   # v7.1 · pass` — the comment is not part of the value
+    if (kv) out[kv[1]] = kv[2].replace(/\s+#.*$/, '').trim().replace(/^["']|["']$/g, '');
   });
   return out;
 }
@@ -113,7 +117,9 @@ function requirements(scenes) {
   };
   scenes.forEach((s) => {
     const v = s.visual || {};
-    if (v.source === 'recording' || v.picture === 'recording') {
+    // 'screencast' is a scene the user records too (scenes-schema §screencast splice), and it
+    // may leave `picture` to be inferred — matching on picture alone loses it silently.
+    if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') {
       req.filmed++;
       if (v.clip && typeof v.clip === 'string') req.footageFiles.push(v.clip);
     }
@@ -128,36 +134,26 @@ function requirements(scenes) {
 }
 
 /**
- * The stage ladder. Each rung is finished when its `done` holds; the episode's stage is the
- * last finished rung, and `next` belongs to the first unfinished one.
+ * The episode's stage. The rungs and their conditions are declared in the pipeline manifest
+ * (pipeline.js STAGES); what stays here is the two states that sit off the ladder — a
+ * directory with no storyboard at all, and a scenes.js that will not evaluate.
  */
 function stageOf(ep) {
-  const fm = ep.frontmatter || {};
   const sc = ep.scenesData;
-  const status = (fm.status || '').toLowerCase();
 
-  if (!ep.has.storyboardDir || !sc) return 'empty';
-  if (sc.broken) return 'broken';
-  if (status === 'published' || ep.has.publishLog) return 'published';
-  if (status === 'produced' || ep.has.video) return 'produced';
-  if (status === 'approved' || sc.approved) return 'approved';
-  if (ep.has.scenes) return 'drafted';
-  return 'empty';
+  if (!ep.has.storyboardDir || !sc) return STAGE_IDS[0];
+  if (sc.broken) return BROKEN_STAGE.id;
+  return resolveStage({
+    has: ep.has,
+    status: (ep.frontmatter || {}).status,
+    approved: sc.approved
+  });
 }
 
 function nextStep(ep, stage) {
-  const ch = ep.channel, tp = ep.topic;
-  switch (stage) {
-    case 'empty':     return '/social-flow:storyboard ' + ch + ' ' + tp;
-    case 'broken':    return 'scenes.js does not evaluate — fix it before anything reads it';
-    case 'drafted':   return 'finish the storyboard and take it to the §7 approval gate';
-    case 'approved':  return ep.req && ep.req.filmed
-                             ? 'film what script.md lists, then /social-flow:produce ' + ch + ' ' + tp
-                             : '/social-flow:produce ' + ch + ' ' + tp;
-    case 'produced':  return '/social-flow:publish ' + ch + ' ' + tp;
-    case 'published': return 'done — /social-flow:review-recent ' + ch + ' reads how it did';
-    default:          return '';
-  }
+  if (stage === BROKEN_STAGE.id) return BROKEN_STAGE.next;
+  return nextFor(stage, { channel: ep.channel, topic: ep.topic },
+                 Boolean(ep.req && ep.req.filmed));
 }
 
 /** Promises the directory has made and not kept. These are what stall an episode silently. */
@@ -253,14 +249,12 @@ function inspect(episodeDir) {
   return ep;
 }
 
-const STAGES = ['empty', 'drafted', 'approved', 'produced', 'published'];
-
 function render(ep) {
   const L = [];
   L.push(ep.channel + ' / ' + ep.topic);
   L.push('');
-  const idx = STAGES.indexOf(ep.stage);
-  L.push('  stage   ' + (ep.stage === 'broken' ? 'broken' : STAGES.map(
+  const idx = STAGE_IDS.indexOf(ep.stage);
+  L.push('  stage   ' + (ep.stage === BROKEN_STAGE.id ? BROKEN_STAGE.id : STAGE_IDS.map(
     (s, i) => (i === idx ? '[' + s + ']' : i < idx ? s : '·' + s)).join('  ')));
   L.push('  next    ' + ep.next);
   if (ep.scenesData && ep.scenesData.broken) L.push('  error   scenes.js: ' + ep.scenesData.broken);
@@ -328,18 +322,34 @@ function selftest() {
   // and the blocker list is what says the artifacts are missing.
   ok('status published with no artifacts still reads published',
      at({ frontmatter: { status: 'published' } }) === 'published');
+  {
+    const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'episode-state-'));
+    const md = path.join(tmp, 'storyboard.md');
+    fs.writeFileSync(md, '---\nstatus: produced   # v7.1 · pass\ncreated: "2026-01-01"\n---\n# t\n');
+    const fm = frontmatter(md);
+    ok('frontmatter drops a trailing comment and quotes',
+       fm.status === 'produced' && fm.created === '2026-01-01');
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 
   // requirements(): which shots need what
   const req = requirements([
     { type: 'cover', visual: { bg: 'images/scene-1-1.png' } },
     { type: 'points', visual: { source: 'recording', clip: 'footage/s2-demo.mp4' } },
     { type: 'points', visual: { slide: { file: 'slides/s3-flow.html' } } },
+    { type: 'points', visual: { source: 'screencast', clip: 'footage/s7-cli.mp4', at: '3-9' } },
     { type: 'points', visual: { bg: 'images/s4-odd.png', video: { prompt: 'x' } } },
     { type: 'broll', visual: { src: 'images/b5-src.png' } },
     { type: 'quote', visual: { clip: { prompt: 'x' } } }
   ]);
   ok('the filmed scene is counted and its file named',
-     req.filmed === 1 && req.footageFiles[0] === 'footage/s2-demo.mp4');
+     req.filmed === 2 && req.footageFiles[0] === 'footage/s2-demo.mp4');
+  // A screencast splice (scenes-schema §screencast splice) is recorded by the user too, so it
+  // blocks on its file and sends the episode to recording — the same lane as a filmed scene.
+  // The fixture omits `picture` on purpose: that is the shape that used to fall through both
+  // this collector and make-script.js's take table, with no blocker and no line in script.md.
+  ok('a screencast splice blocks on its own recording',
+     req.footageFiles.indexOf('footage/s7-cli.mp4') !== -1);
   ok('the slide file is collected', req.slideFiles[0] === 'slides/s3-flow.html');
   ok('three paid video slots are counted', req.videoSlots === 3);
   // Images are collected by the path the scene names — episodes really do use

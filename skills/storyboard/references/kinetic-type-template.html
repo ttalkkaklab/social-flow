@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>키네틱 타이포 씬</title>
+<!--
+  social-flow 키네틱 타이포 렌더러 — 숏폼 1080×1920 · 롱폼 1920×1080 (window.FORMAT 이 고른다).
+  scenes-schema §키네틱 타이포 · storyboard SKILL §8.2 · slide-design.md 가 이 파일의 사용 계약이다.
+
+  ■ 이 레인이 맡는 자리
+      말 자체가 화면인 컷 — 한 마디가 문장에 맞춰 들어오고, 다음 마디가 그 위에 얹힌다.
+      숫자와 구조가 움직이는 자리는 모션 슬라이드다(§모션 슬라이드). 여기는 낱말이 주인공이다.
+      **자막을 그대로 옮겨 적지 않는다** — 자막 띠가 이미 그 문장을 읽고 있다. 화면에 앉는 것은
+      그 문장에서 남는 한 마디(title·bullets·labels)다.
+
+  ■ 사용법 (storyboard §8.2 — 승인 뒤에만): 모션 슬라이드와 같다.
+      1. storyboard/slides/s<샷번호>-<slug>.html 로 복사하고 SLIDE_SHOT 을 그 샷번호로 바꾼다.
+      2. renderKinetic() 하나만 그 씬의 말로 다시 쓴다.
+      3. 글자는 전부 scenes.js 에서 온다(S.title·S.bullets·S.visual.slide.labels).
+         여기 새 한국어 문자열 리터럴을 쓰지 않는다 — check-slide.js 가 기계로 잡는다.
+
+  ■ 상태 규칙·결정성 계약·존은 모션 슬라이드와 한 글자도 다르지 않다
+      (그룹 k 의 클립 = 0..k-1 은 쉬는 상태, k 가 t=0 부터 움직이고 끝나면 쉬는 상태에서 얼어붙는다.
+       CSS @keyframes 만, transition·시계·난수·타이머·웹폰트 금지, 한 그룹 2.6초 안.)
+      세 템플릿이 같은 seek 런타임 블록을 갖고 format-lint.js 가 세 벌을 대조한다.
+
+  ■ 이 레인만의 제약 (slide-design.md §6)
+      - 한 화면에 큰 마디는 하나. 나머지는 그보다 작게, 최대 네 줄까지.
+      - 한 줄은 다섯 낱말 안. 넘으면 그건 자막이지 화면이 아니다.
+      - 효과는 한 컷에 한 종류. drop 과 wipe 를 같은 슬라이드에서 섞지 않는다.
+      - 낱말이 회전하거나 튀지 않는다. 들어오고 멈춘다.
+-->
+<style>
+  :root{
+    --accent:#5b8cff; --ink:#0b1020;
+    --paper:#ECEAE2;
+    --muted:color-mix(in srgb,var(--paper) 62%,transparent);
+    --line:color-mix(in srgb,var(--paper) 24%,transparent);
+    --w:1080px; --h:1920px; --zone-x:176px; --zone-top:190px; --zone-bottom:570px;
+    --fs-kicker:34px; --fs-title:60px; --fs-hero:205px; --fs-label:50px; --fs-desc:35px; --fs-foot:26px;
+    /* 낱말 크기 — 이 레인의 주인공. hero 는 한 화면에 하나 */
+    --fs-word:118px; --fs-word2:64px;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --rise:360ms; --grow:800ms; --draw:500ms; --count:2400ms; --stagger:90ms; --hold:240ms;
+    --drop:520ms; --wipe:620ms;
+    --hair:1.5px;
+  }
+  html.wide{
+    --w:1920px; --h:1080px; --zone-x:96px; --zone-top:96px; --zone-bottom:285px;
+    --fs-kicker:24px; --fs-title:43px; --fs-hero:148px; --fs-label:36px; --fs-desc:25px; --fs-foot:24px;
+    --fs-word:86px; --fs-word2:48px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:var(--w);height:var(--h);overflow:hidden}
+  body{
+    font-family:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    background:var(--ink); color:var(--paper); position:relative;
+    -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums lining-nums;
+  }
+  body::before{content:""; position:absolute; inset:0;
+    background:radial-gradient(120% 90% at 50% 38%, transparent 55%, rgba(0,0,0,.28) 100%)}
+
+  .stage{
+    position:absolute; left:var(--zone-x); right:var(--zone-x);
+    top:var(--zone-top); bottom:var(--zone-bottom);
+    display:flex; flex-direction:column; gap:34px; justify-content:center;
+  }
+  html.wide .stage{gap:24px}
+  .stage.top{justify-content:flex-start}
+
+  .rv{animation:appear 1ms linear both paused;
+      animation-delay:calc(var(--i,0) * var(--stagger))}
+  .rv.fx-rise{animation-name:rise; animation-duration:var(--rise); animation-timing-function:var(--ease)}
+  .rv.fx-grow{animation-name:grow; animation-duration:var(--grow); animation-timing-function:var(--ease); transform-origin:left center}
+  .rv.fx-draw{animation-name:grow; animation-duration:var(--draw); animation-timing-function:var(--ease); transform-origin:left center}
+  /* 낱말이 위에서 내려앉는다 — 이 레인의 기본 등장 */
+  .rv.fx-drop{animation-name:drop; animation-duration:var(--drop); animation-timing-function:var(--ease)}
+  /* 왼쪽에서 오른쪽으로 드러난다 — 읽는 방향과 같아서 긴 마디에 쓴다 */
+  .rv.fx-wipe{animation-name:wipe; animation-duration:var(--wipe); animation-timing-function:var(--ease)}
+  @keyframes appear{from{opacity:0}to{opacity:1}}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  @keyframes drop{from{opacity:0;transform:translateY(-22px)}to{opacity:1;transform:none}}
+  @keyframes wipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+
+  .kicker{font-size:var(--fs-kicker); font-weight:500; color:var(--muted); letter-spacing:.02em;
+          display:flex; align-items:center; gap:14px}
+  .kicker::before{content:""; width:28px; height:var(--hair); background:var(--accent)}
+  strong{font-weight:800; color:var(--accent)}
+
+  /* 큰 마디 — 한 화면에 하나. 줄바꿈은 낱말 단위로만 끊긴다 */
+  .word{font-size:var(--fs-word); font-weight:800; letter-spacing:-.035em; line-height:1.06;
+        text-wrap:balance; word-break:keep-all}
+  .word2{font-size:var(--fs-word2); font-weight:700; letter-spacing:-.025em; line-height:1.2;
+         word-break:keep-all}
+  .sub{font-size:var(--fs-desc); color:var(--muted); margin-top:-10px}
+  /* 지워지는 말 — 취소선은 그려지는 규칙선이라 seek 로 세울 수 있다 */
+  .cross{position:relative; display:inline-block; color:var(--muted)}
+  .cross .bar{position:absolute; left:-.04em; right:-.04em; top:52%; height:5px; background:var(--accent)}
+  .rule{height:var(--hair); background:var(--line)}
+  .foot{margin-top:auto; font-size:var(--fs-foot); color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="stage" id="stage"></div>
+<script src="../scenes.js"></script>
+<script>
+// ✎ 이 슬라이드의 샷 번호 — SCENES 배열 순번(1부터). 파일명 s<번호> 와 같다.
+const SLIDE_SHOT = 0;
+
+(function () {
+  const FORMAT = window.FORMAT || "shorts-9x16";
+  const root = document.documentElement;
+  if (FORMAT === "youtube-long-16x9") root.classList.add("wide");
+  const THEME = window.THEME || {};
+  if (THEME.accent) root.style.setProperty("--accent", THEME.accent);
+  if (THEME.ink)    root.style.setProperty("--ink",    THEME.ink);
+
+  const S = (window.SCENES || [])[SLIDE_SHOT - 1];
+  const stage = document.getElementById("stage");
+  if (!S) { stage.textContent = "check scenes.js / SLIDE_SHOT: " + SLIDE_SHOT; return; }
+
+  const esc = s => String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const em = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  const labels = (S.visual && S.visual.slide && S.visual.slide.labels) || [];
+  const rv = (rg, html, o = {}) =>
+    '<div class="rv' + (o.fx && o.fx !== "none" ? " fx-" + o.fx : "") + '" data-rg="' + rg +
+    '"' + (o.i ? ' style="--i:' + o.i + '"' : "") + ">" + html + "</div>";
+  /* 큰 마디 — 그룹 rg 에서 들어온다. fx 는 drop(기본) 또는 wipe, 한 슬라이드에 한 종류만 */
+  const word = (rg, text, o = {}) =>
+    rv(rg, '<div class="word">' + em(text) + "</div>", { fx: o.fx || "drop", i: o.i || 0 });
+  /* 작은 마디 — 큰 마디를 받는 줄 */
+  const line = (rg, text, o = {}) =>
+    rv(rg, '<div class="word2">' + em(text) + "</div>", { fx: o.fx || "rise", i: o.i || 0 });
+  const sub = (rg, text, o = {}) =>
+    rv(rg, '<div class="sub">' + em(text) + "</div>", { fx: "rise", i: o.i || 1 });
+  /* 지워지는 말 — 말이 먼저 있고 그 위로 선이 그어진다(선만 같은 그룹 안에서 자란다) */
+  const cross = (rg, text, o = {}) =>
+    rv(rg, '<div class="word2"><span class="cross">' + em(text) +
+        '<span class="bar rv fx-grow" data-rg="' + rg + '" style="--i:1"></span></span></div>',
+       { fx: o.fx || "rise", i: o.i || 0 });
+  const rule = (rg) => rv(rg, '<div class="rule"></div>', { fx: "draw" });
+  const h = { esc, em, rv, word, line, sub, cross, rule, labels, L: i => esc(labels[i] || "") };
+
+  /* ✎ 이 함수만 씬의 말로 다시 쓴다 ──────────────────────────────
+     기본형: 그룹 0 = 키커, 그룹 1 = 제목이 큰 마디로 내려앉고, 그 뒤 불릿이 한 줄씩 얹힌다.
+     글자 소스는 S(title·bullets)와 h.labels 뿐이다. */
+  function renderKinetic(S, h) {
+    let out = "";
+    if (h.labels.length) out += h.rv(0, '<div class="kicker">' + h.L(0) + "</div>");
+    out += h.word(1, S.title || "");
+    (S.bullets || []).forEach((b, i) => {
+      out += h.line(i + 2, b.t || "");
+      if (b.d) out += h.sub(i + 2, b.d);
+    });
+    return out;
+  }
+
+  stage.innerHTML = renderKinetic(S, h);
+
+  /* SEEK-RUNTIME-BEGIN — 아래는 건드리지 않는다. 저작 화면 템플릿 세 벌(모션 슬라이드·
+     키네틱 타이포·캐릭터 연기)이 같은 블록을 갖고, format-lint.js 가 세 벌을 대조한다.
+     한 벌만 고치면 린트가 잡는다 — 고칠 일이 있으면 세 벌을 같이 고친다. */
+  const easeOut = x => 1 - Math.pow(1 - x, 3);
+  const cssMs = name => parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0;
+  const HOLD = cssMs("--hold"), COUNT = cssMs("--count");
+  const fmt = (v, dec) => (dec > 0 ? v.toFixed(dec) : Math.round(v).toString()).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const owner = a => a.effect && a.effect.target && a.effect.target.closest("[data-rg]");
+  /* 애니메이션의 끝 시각 — iteration-count·delay 를 다 넣은 계산값 (무한이면 Infinity) */
+  const endOf = a => a.effect.getComputedTiming().endTime;
+  const counters = [...document.querySelectorAll("[data-count]")].map(el => {
+    const c = { el, rg: +el.closest("[data-rg]").dataset.rg, to: +el.dataset.count, from: +el.dataset.from || 0,
+      dec: +el.dataset.dec || 0, dur: +el.dataset.dur || COUNT };
+    /* 상자의 본은 더 긴 쪽의 최종 문자열이다 — 쉼표 자리까지 그대로 본떠야 999 → 1,000 을 넘는
+       순간에도 상자 폭이 안 변한다(정폭 셀 .6em 과 쉼표 셀 .28em 이 다르기 때문) */
+    const a = fmt(c.to, c.dec), b = fmt(c.from, c.dec);
+    c.tpl = a.length >= b.length ? a : b;
+    return c;
+  });
+  /* 숫자 → 고정폭 셀. 본(tpl)의 앞자리를 빈 셀로 따라 그려 상자가 첫 프레임부터 같은 크기다 */
+  const cellOf = ch => /[0-9]/.test(ch) ? "<i>" + ch + "</i>" : '<i class="s">' + ch + "</i>";
+  const cells = (s, tpl) => {
+    const pad = Math.max(0, tpl.length - s.length);
+    let out = "";
+    for (let i = 0; i < pad; i++) out += /[0-9]/.test(tpl[i]) ? "<i></i>" : '<i class="s"></i>';
+    for (const ch of s) out += cellOf(ch);
+    return out;
+  };
+
+  window.__seek = function (tMs, g) {
+    const anims = document.getAnimations();
+    for (const a of anims) {
+      const o = owner(a); if (!o) continue;
+      const r = +o.dataset.rg, end = endOf(a);
+      a.pause();
+      a.currentTime = r < g ? end : r === g ? Math.min(Math.max(tMs, 0), end) : 0;
+    }
+    for (const c of counters) {
+      const p = c.rg < g ? 1 : c.rg === g ? easeOut(Math.min(Math.max(tMs / c.dur, 0), 1)) : 0;
+      c.el.innerHTML = cells(fmt(c.from + (c.to - c.from) * p, c.dec), c.tpl);
+    }
+    /* transform·opacity 애니메이션은 컴포지터 스레드에서 돌아 pause()·currentTime 이 비동기로
+       반영된다 — ready 를 기다리지 않고 찍으면 같은 (g, t) 가 서브픽셀만큼 다른 프레임을 낸다
+       (실측 PSNR 79dB 차이). 렌더러는 이 프라미스를 기다린 뒤 캡처한다. */
+    return Promise.all(anims.map(a => a.ready)).then(() => true);
+  };
+  window.__groups = function () {
+    const dur = {};
+    for (const a of document.getAnimations()) { const o = owner(a); if (!o) continue;
+      const r = +o.dataset.rg; dur[r] = Math.max(dur[r] || 0, endOf(a)); }
+    for (const c of counters) dur[c.rg] = Math.max(dur[c.rg] || 0, c.dur);
+    const n = Math.max(0, ...Object.keys(dur).map(Number));
+    const out = [];
+    for (let r = 0; r <= n; r++) out.push({ rg: r, dur: r === 0 ? 0 : Math.round((dur[r] || 0) + HOLD) });
+    return out;
+  };
+  /* 렌더러가 계약을 검사하는 데 쓴다 — 그룹 밖 애니메이션(stray)은 벽시계로 돌아 결정성을 깨고
+     무한 반복(infinite)은 클립이 끝나지 않는다. 둘 다 렌더러가 exit 1 로 막는다. */
+  window.__meta = function () {
+    const all = document.getAnimations();
+    return { hold: HOLD,
+             stray: all.filter(a => !owner(a)).length,
+             infinite: all.filter(a => owner(a) && !isFinite(endOf(a))).length };
+  };
+  window.__size = () => ({ w: parseInt(getComputedStyle(root).getPropertyValue("--w"), 10),
+                           h: parseInt(getComputedStyle(root).getPropertyValue("--h"), 10) });
+
+  const qs = new URLSearchParams(location.search);
+  const N = window.__groups().length - 1;
+  if (qs.has("g"))           window.__seek(parseFloat(qs.get("t") || "0"), parseInt(qs.get("g"), 10));
+  else if (qs.has("reveal")) window.__seek(0, parseInt(qs.get("reveal"), 10) + 1);
+  else                       window.__seek(1e9, N + 1);
+  /* SEEK-RUNTIME-END */
+})();
+</script>
+</body>
+</html>

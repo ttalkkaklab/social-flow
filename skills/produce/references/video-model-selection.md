@@ -63,6 +63,7 @@ cheap or feature-rich, run the same prompt on both once that episode and decide.
 | Consistent person video from a **real person's photo** | `veo_reference` — Seedance 2.x rejects live-action faces *(untested)* |
 | **Character/product** consistency from several photos | `seedance_reference` · 2.5 (up to 30 images) — Veo is 3 images, fixed 8s |
 | Transfer a **sketch/toon style** by reference | `seedance_reference` — Veo 3.1 doesn't support `referenceType: "style"` |
+| A character must **speak in its fixed voice** inside a generated clip | `seedance_reference` · `dreamina-seedance-2-5-260628` · `referenceAudioPaths: [characters/<id>/voice.wav]` · `generateAudio: true` — Veo takes no audio reference. Imitation, not cloning: describe the voice in words too (§6) |
 | The source image contains a **child** | The Veo image→video lane is blocked (underage block) — the Seedance 1.x side is unverified |
 | A length **other than 4/6/8s** | `seedance_*` — takes 2–30s in 1s steps |
 | **21:9 / 4:3 / 1:1 / 3:4** frame | `seedance_*` — Veo only has 16:9 and 9:16 |
@@ -254,7 +255,9 @@ pass the argument.
 **3. `generateAudio`'s vendor default is `true`; ours is `false`.**
 Narration is added separately via `tts_*`, so a model-generated voice makes two layers. On
 top of that, 1.5 pro with audio on costs **exactly 2×** ($1.2 → $2.4/1M tokens). The tool
-default is flipped to `false` — leave it.
+default is flipped to `false` — leave it. The one exception is a reference-audio call: a voice
+reference into a silent clip has nothing to shape, so `seedance_reference` rejects
+`referenceAudioPaths` with `generateAudio: false` before the call.
 
 **4. Result URLs live for 24 hours.**
 The server saves a local mp4 the moment polling completes and returns only the path, so
@@ -296,6 +299,7 @@ data/<channel>/assets/characters/<id>/
   body.png      # full body, front, HEADLESS — body, clothes, shoes. No face
   back.png      # full body, back (optional — add it when back-facing shots happen)
   front.png     # legacy: full body with the head on. Fallback when the panels don't exist yet
+  voice.wav     # the fixed voice sample — 5–10 s of speech in the character's register, no music or effects. Reference audio for cuts the model voices
 ```
 
 **The reference set is `[face.png, body.png]`, in that order.** That is the vendor's headshot +

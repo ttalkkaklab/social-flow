@@ -171,6 +171,10 @@ done
 # Don't append | head to shorten the output — $? becomes that command's and a FAIL reads as 0
 ```
 
+On exit 4 the copy isn't Korean and the checker declined to judge it — that surface is
+**unchecked, not clean**. Say so in the approval prompt by name, so the person approving
+knows they are the only reader it got.
+
 On exit 2 (S1) don't take it to the gate; send it back to `/social-flow:produce` to be
 fixed — editing the sentence on the spot here breaks rule 4. Put exit 1 (warning) into
 the gate prompt as is and let the user judge. **If the header line has `quote-exempt N`,

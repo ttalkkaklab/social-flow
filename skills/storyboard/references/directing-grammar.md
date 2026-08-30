@@ -436,6 +436,29 @@ what the audience is supposed to get.
     already generated for another scene, re-cut. The same split applies inside a scene whose
     dialogue is dense: separate prompts per beat, then pick the best delivery of each line
     across the batches rather than hunting for one take that nails all three.
+14. **The payoff copies the plant's frame.** A plant-and-payoff pair (scenario-craft §3)
+    shares `size`, `angle` and `space` — the viewer recognizes the object because they stand
+    where they stood when it was planted, and no line has to say "remember this". Breaking
+    Bad names its poisoner with one slow move over a flowerpot seen once before, same angle,
+    no dialogue. And an odd angle on an object — looking up at the shovel from inside the
+    drum — is the promise that the object will matter: spend it on the plant, not the payoff,
+    and a `dutch` spent here still counts against rule 6. `[course]` — the AInspire screenwriting lecture
+    (2026-07), §9.
+15. **One world, and it never stops moving.** `[blog]` — an 85 s reference short measured
+    frame by frame (docs/research/2026-08-29-one-world-word-cue): every shot is the same
+    industrial hall (bare concrete, amber work lights, one figure in a white suit), six hard
+    cuts in the whole piece, and only 6 of its 86 seconds come near a still frame (mean
+    frame-to-frame difference under 1.0 on a 0–255 scale; the piece averages 5.0). Each
+    abstract idea gets one physical object staged **in that hall** — a beam stopped by a
+    paper board, a beam through foil, a concrete block — never a diagram, never a new
+    location. The cuts land exactly where a new question opens (13 s · 33 s · 48 s · 63 s),
+    so a picture change is a beat change and nothing else. On our timeline: a one-world
+    episode writes the same `space.layout` base and the same `light` sentence on every shot
+    and changes only the subject in front of them; every card carries a move — a motion
+    background, or the still lane on a `speed` row above the default, since a hold past one
+    second is what the reference never does; and a `transition` is spent only where a loop
+    opens. Motion on every card costs `visual.video` slots — the storyboard says which cards
+    want one and the user decides how many.
 
 ---
 
@@ -522,6 +545,15 @@ Warnings, not blocks — the reviewer and the person at the approval step weigh 
   with the `info` lines covered. The prompt-side findings (positive locks, reference scoping,
   the batch-failure ladder, sheet lighting, mid-episode state sheets) live in
   `../../produce/references/video-model-selection.md`.
+- AInspire, "망하는 시나리오 vs 터지는 시나리오" (YouTube `L89Z8oOiZuk`, 2026-07-10, read via a
+  local ASR run on 2026-08-29): the payoff shot copies the plant's frame, and an odd angle on
+  an object as the promise it will matter (rule 14). The rest of the lecture is scenario craft,
+  not camera — it lives in `scenario-craft.md` §3 · §8–§10.
+- 아니이게무슨, "원전 방호복이 방사선을 못 막는 이유" (YouTube Shorts `b6AygLAYuvY`, 2026-08-26;
+  measured 2026-08-29 — [one world · word cue research](../../../docs/research/2026-08-29-one-world-word-cue/index.html)):
+  one space for 85 s, six hard cuts, motion in every second, one 어절 per subtitle cue at a
+  0.47 s median, a re-hook every 15 s on the cut. Rule 15 here, the word-cue subtitle mode in
+  produce, and the scene-transition note in scenes-schema.
 - [AI video camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html)
   (2026-08-15): vendor vocabulary (Veo 12 moves, no `push`/`orbit`); move → valence/arousal not
   supported (p=.84 / p=.21), immersion yes (p=.006) on unset cuts; angle → bigger/stronger
