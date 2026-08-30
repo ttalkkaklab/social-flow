@@ -94,21 +94,24 @@ HANGUL_FLOOR_SHARE = 0.13
 SCOPE_MIN_LETTERS = 20
 
 
-# A hashtag is a label, not a sentence — none of the rules can fire inside one, and a
-# handful of Korean tags on an English post was enough to buy it a judgement by Korean
-# rules. Dropped before the ratio is taken; the copy itself still reaches the rules whole.
+# Hashtags are counted asymmetrically, and the asymmetry is the whole point. Korean
+# syllables inside a tag still count toward the Korean side: a Korean writer tags in
+# Korean, so `#딸깍연구소` says something about the language of the post. Latin inside a
+# tag counts toward nothing — `#OpenSource` sits on Korean posts as readily as English
+# ones, and five of them were enough to drag a Korean post under the floor. Taking both
+# sides away instead (the first attempt) skipped Latin-dense Korean posts that carried
+# Korean tags. Either way the copy reaches the rules whole; only the ratio changes.
 HASHTAG_RE = re.compile(r"#\S+")
 
 
 def hangul_share(text: str) -> tuple[float | None, int, int]:
     """(Hangul share of Hangul+foreign letters, that letter count, Hangul count).
 
-    Measured on raw text with hashtags removed. Share is None when there are too few
-    letters to judge.
+    Measured on raw text. Hangul inside hashtags counts; foreign letters inside them do
+    not (see HASHTAG_RE). Share is None when there are too few letters to judge.
     """
-    text = HASHTAG_RE.sub(" ", text)
     h = len(HANGUL_RE.findall(text))
-    f = len(FOREIGN_RE.findall(text))
+    f = len(FOREIGN_RE.findall(HASHTAG_RE.sub(" ", text)))
     total = h + f
     if total < SCOPE_MIN_LETTERS:
         return None, total, h
@@ -909,7 +912,8 @@ def render(r: dict) -> str:
             f"check-style — surface {r['surface']} / {r['chars']} chars",
             f"verdict SKIP · not Korean (hangul {sc.get('hangul_share')} of "
             f"{sc.get('letters')} letters and {sc.get('hangul')} syllables; "
-            f"in scope needs share ≥ {HANGUL_MIN_SHARE} or ≥ {HANGUL_MIN_CHARS} syllables)",
+            f"in scope needs share ≥ {HANGUL_MIN_SHARE}, or ≥ {HANGUL_MIN_CHARS} syllables "
+            f"at share ≥ {HANGUL_FLOOR_SHARE}; hashtag Latin is not counted)",
             "",
             "  This copy was NOT checked. Every rule in check-style.py is Korean —",
             "  Korean translationese, Korean AI stock phrases, Korean sentence endings.",
@@ -991,6 +995,12 @@ SELFTEST = [
     # over the floor. The pair above and this one are what separate the two populations.
     ("short latin-dense korean stays in scope", "reply", 0,
      "ffmpeg concat demuxer로 stream copy 하면 돼요.\n"),
+    # The growth surface this is actually invoked on: a Korean post about Latin-named
+    # software, tagged in Korean. Counting tag Hangul on the Korean side is what keeps it
+    # in scope — take both sides away and it lands at 0.114, under the floor.
+    ("latin-dense korean with korean hashtags stays in scope", "threads", 0,
+     "Claude Code plugin marketplace install guide 정리했어요 "
+     "#딸깍연구소 #클로드코드 #플러그인 #자동화\n"),
     # The other direction, and the one that matters more: Korean thick with Latin product
     # names stays in scope. Share 0.464 — below the ratio threshold — but 13 Hangul
     # syllables, so the absolute-count condition keeps it. This is a real library string.

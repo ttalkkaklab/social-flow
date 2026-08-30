@@ -2,7 +2,7 @@
   "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
   "id": "com.ttalkkaklab.social-flow",
   "name": "social-flow",
-  "version": "0.37.0",
+  "version": "0.41.0",
   "description": "Channel-based short-form and long-form content pipeline — storyboard, produce, review, and publish for Threads, Instagram, Facebook, and YouTube. Built-in MCP server included.",
   "author": "Zeans",
   "license": "Apache-2.0",

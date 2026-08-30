@@ -174,19 +174,23 @@ function listChannels(root) {
       const dir = channelDir(root, slug);
       const hasProfile = isFile(path.join(dir, 'profile.md'));
       if (!hasProfile && !isDir(path.join(dir, 'episodes')) && !isDir(path.join(dir, 'assets'))) return null;
-      const fm = frontmatter(readInside(dir, path.join(dir, 'profile.md')));
+      const profileText = readInside(dir, path.join(dir, 'profile.md'));
+      const fm = frontmatter(profileText);
       return {
         slug,
         name: fm.name || slug,
         status: fm.status || null,
-        profile: hasProfile,
+        // `hasProfile` decides whether the channel is listed at all; what the badge reports
+        // is whether the profile could actually be read (a symlink out is refused).
+        profile: profileText !== null,
         // The same predicate the two list routes apply — otherwise the badge counts an
         // episode the page will not show.
         storyboards: listDirs(path.join(dir, 'episodes'))
           .filter((t) => isDir(path.join(dir, 'episodes', t, 'storyboard'))
                       && insideReal(dir, path.join(dir, 'episodes', t, 'storyboard'))).length,
-        characters: listDirs(path.join(dir, 'assets', 'characters'))
-          .filter((id) => insideReal(dir, path.join(dir, 'assets', 'characters', id))).length,
+        // Through the lister, not a directory count — it also drops a character dir with
+        // neither an identity sheet nor an image, and the badge has to match the page.
+        characters: listCharacters(root, slug).length,
       };
     })
     .filter(Boolean);
@@ -1068,7 +1072,9 @@ function main() {
   if (Number.isNaN(port)) die('--port needs a number');
 
   listen(root, host, port).then((server) => {
-    const url = 'http://' + (host === '0.0.0.0' ? '127.0.0.1' : host) + ':' + server.address().port + '/';
+    // An IPv6 literal needs brackets in a URL — `http://::1:8390/` is not an address.
+    const shown = host === '0.0.0.0' ? '127.0.0.1' : (host.includes(':') ? '[' + host + ']' : host);
+    const url = 'http://' + shown + ':' + server.address().port + '/';
     const channels = listChannels(root);
     process.stdout.write(url + '\n' + channels.length + ' channel(s): ' + channels.map((c) => c.slug).join(' ') + '\n');
     if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') process.stderr.write('serve: listening on ' + host + ' — data/ is readable by anyone who can reach this port\n');
