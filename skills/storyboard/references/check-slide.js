@@ -14,12 +14,16 @@
  *      kinetic·character 는 motion:true 를 명시해야 한다(빠지면 정지 캡처 경로로 새서 움직임이
  *      통째로 사라진다). character 는 visual.slide.acts 가 그룹마다 동작 하나를 들고 있어야 한다.
  *   4. 결정성 — 두 갈래다. scenes.js 의 visual.slide.motion 이 그 갈래를 정한다.
- *      정지 슬라이드(기본): CSS animation/transition·웹폰트·Math.random/Date 금지
+ *      정지 슬라이드(기본): CSS animation/transition·웹폰트·Math.random/Date·<video> 금지
  *        (capture-reveals.sh 의 바이트 동일성 판정이 끝나지 않는다)
  *      모션 슬라이드(motion:true): 움직임은 seek 로 재현돼야 한다 — window.__seek 정의 필수,
  *        transition 금지(속성이 바뀐 뒤에만 객체가 생겨 seek 가 안 된다), Date·Math.random·
- *        performance.now·requestAnimationFrame·setTimeout/setInterval 금지, 웹폰트 URL 금지.
- *        @keyframes 는 허용이다 — render-motion-slide.mjs 가 프레임마다 currentTime 을 세운다.
+ *        performance.now·requestAnimationFrame·setTimeout/setInterval 금지.
+ *        @keyframes·data-count·__paint 페인터·data-rg 를 든 <video> 는 허용이다 — 넷 다
+ *        render-motion-slide.mjs 가 프레임마다 (g, t) 로 세운다.
+ *      양쪽 공통: 원격 URL 금지(웹폰트·이미지·영상) — 네트워크가 프레임을 정하면 재현이 끝난다.
+ *        스스로 도는 그림도 금지 — gif·apng·애니메이션 webp 와 SVG SMIL 은 Animation 객체를
+ *        안 만들어서 __seek 이 못 세우고 __meta().stray 로도 안 잡힌다. 그림은 png·jpg 만.
  *
  * exit 0 전부 통과 / 1 위반 있음 / 2 인자·파일 오류.
  */
@@ -38,7 +42,14 @@ const MSG = {
   clock: "렌더마다 달라지는 값 금지 (Math.random·Date)",
   motionSeek: "모션 슬라이드에 window.__seek 가 없다 — motion-slide-template.html 에서 시작한다",
   motionTransition: "모션 슬라이드에 transition 금지 — 속성이 바뀐 뒤에만 객체가 생겨 seek 로 세울 수 없다. @keyframes 로 쓴다",
-  motionClock: "모션 슬라이드에 시계·난수·타이머 금지 (Date·Math.random·performance.now·requestAnimationFrame·setTimeout) — 프레임은 __seek(t, g) 가 정한다",
+  motionClock: "모션 슬라이드에 시계·난수·타이머 금지 (Date·Math.random·performance.now·requestAnimationFrame·setTimeout) — 프레임은 __seek(t, g) 가 정한다. 키프레임으로 못 그리는 움직임은 __paint(rg, durMs, fn) 로 그린다",
+  remoteMedia: u => `원격 URL 금지 — "${u}". 이미지·영상은 슬라이드 옆 로컬 파일만 쓴다. 네트워크가 프레임을 정하면 같은 (g, t) 가 같은 픽셀을 내지 못한다`,
+  videoPlayback: "슬라이드의 <video> 에 autoplay·loop 금지 — 재생은 벽시계를 타고, 프레임은 __seek(t, g) 가 정한다",
+  videoDur: "모션 슬라이드의 <video> 에 data-vdur 이 없다 — 그룹 안에서 재생할 길이(ms)가 0 이 되어 영상이 클립 내내 첫 프레임에 멈춘다",
+  videoGroup: "모션 슬라이드의 <video> 에 data-rg 가 없다 — 그룹에 매이지 않은 영상은 seek 대상 밖이라 첫 프레임에 멈춘다 (data-rg · data-vdur 을 적는다)",
+  animatedImage: u => `스스로 도는 이미지 금지 — "${u}". gif·apng·애니메이션 webp 는 벽시계로 돌고 __seek 이 못 세운다(document.getAnimations 에 안 잡혀 stray 로도 안 걸린다). .svg 파일은 그 안의 SMIL 을 이 검사가 못 봐서 같이 막는다 — 인라인 data:image/svg+xml 은 쓸 수 있다. 정지 그림은 png·jpg 로 넣고, 움직여야 하면 __paint 페인터나 <video> 로 쓴다`,
+  smil: "SVG SMIL 애니메이션 금지 (<animate·<animateTransform·<animateMotion·<set) — 벽시계로 돌고 __seek 이 못 세운다. CSS @keyframes 나 __paint 로 옮긴다",
+  staticVideo: "정지 슬라이드에 <video> 금지 — 상태 캡처는 정지 화면끼리의 xfade 다. 영상이 필요하면 scenes.js 에 slide.motion:true",
   kindVocab: k => `slide.kind "${k}" 는 ${KINDS.join(" · ")} 밖이다`,
   kindMotion: k => `kind:"${k}" 에는 motion:true 가 필요하다 — 없으면 정지 슬라이드로 캡처돼 움직임이 통째로 사라진다`,
   kindTemplate: (k, fn, tpl) => `kind:"${k}" 인데 ${fn}() 이 없다 — ${tpl} 에서 시작한다`,
@@ -123,14 +134,68 @@ function checkDir(dir, only) {
     // 4) 결정성 — 갈래별
     if (/@import|fonts\.googleapis|<link[^>]*font|@font-face[^}]*url\(\s*['"]?https?:/i.test(code))
       fail(base, MSG.webfont);
+    /* 소재 URL 을 한 번에 모은다. 렌더에 실제로 그림을 앉히는 자리만 본다 — <a href> 의 출처
+       링크는 프레임을 정하지 않으므로 뺀다(리뷰 medium 6). 값이 코드로 조립되는 자리
+       (`${…}` · 문자열 연결)는 정적으로 알 수 없으니 건너뛴다 — 슬라이드는 innerHTML 로 마크업을
+       짜는 것이 관례라 여기서 막으면 정상 저작이 걸린다(리뷰 high 3). */
+    /* 값이 코드로 조립되는 자리는 정적으로 알 수 없으니 건너뛴다 — 슬라이드는 innerHTML 로
+       마크업을 짜는 것이 관례다. `${…}` 와 백틱이 그 표시이고, 따옴표 연결
+       ('<img src="' + S.photo + '"')은 캡처가 빈 문자열로, url("url(" + S.photo + ")") 꼴은
+       공백을 낀 조각으로 떨어지는 것이 그 표시다. `+` 자체는 파일 이름에 흔한 글자라 조립의
+       표시로 쓰지 않는다 — 값의 끝에 걸리거나 공백에 둘러싸인 `+` 만 조립으로 본다
+       (`"url(" + S.photo + ")"` 의 캡처는 trim 뒤 `+ S.photo +` 다). 값은 trim 한 뒤에 보는데,
+       CSS 가 허용하는 `url( a.gif )` 의 패딩 공백이 캡처에 딸려 오기 때문이다. 파일 이름 안의
+       공백(`my chart.gif`)과 가운데 `+`(`chart+2024.png`)는 경로이지 조립이 아니다. */
+    const dynamic = u => u === "" || /\$\{|`|^\+|\+$|\s\+\s/.test(u);
+    // 그림이 앉는 자리 — 확장자를 보는 것은 이것뿐이다. 영상 소스는 여기 넣지 않는다.
+    const imgUrls = [];
+    for (const m of code.matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1].trim());
+    for (const m of code.matchAll(/<video\b[^>]*\bposter\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1].trim());
+    for (const m of code.matchAll(/url\(\s*["']?([^"')]+)/gi)) imgUrls.push(m[1].trim());
+
+    /* 원격 소재는 갈래를 안 가린다 — 정지든 모션이든 네트워크가 프레임을 정하면 재현이 끝난다.
+       무엇을 보느냐가 아니라 무엇을 빼느냐로 짠다 — 자리를 열거하면 <script>·<iframe>·<use>
+       처럼 안 적은 자리가 통째로 무검사가 된다. 빼는 것은 출처 링크(<a href>) 하나다. */
+    const anchors = [...code.matchAll(/<a\b[^<>]*>/gi)].map(m => [m.index, m.index + m[0].length]);
+    for (const m of code.matchAll(/(?<![-\w])(?:src|href)\s*=\s*["'](https?:\/\/[^"']+)["']|url\(\s*["']?(https?:\/\/[^"')]+)/gi)) {
+      const u = (m[1] || m[2]).trim();
+      // 출처 링크는 프레임을 정하지 않는다 — <a …> 태그 안의 href 만 건너뛴다. <a> 안에 든
+      // <img src> 는 태그 밖이라 그대로 잡힌다.
+      if (anchors.some(([a, b]) => m.index >= a && m.index < b)) continue;
+      if (/fonts\.googleapis|\.(woff2?|ttf|otf)(\?|$)/i.test(u)) continue;   // 폰트는 webfont 규칙이 본다
+      fail(base, MSG.remoteMedia(u));
+    }
+    /* 스스로 도는 그림 — 확장자를 허용목록으로 좁힌다. gif·apng·애니메이션 webp 는 Animation
+       객체를 안 만들어서 __seek·__meta 어느 쪽에도 안 걸리고 조용히 벽시계로 돈다. .svg 파일도
+       뺀다 — 그 안의 SMIL 은 이 소스 스캔이 못 본다(인라인 data:image/svg+xml 은 소스에 그대로
+       있으므로 아래 SMIL 규칙이 본다). */
+    const IMG_OK = /\.(png|jpe?g)$/i;
+    for (const u of imgUrls) {
+      if (dynamic(u)) continue;
+      if (/^https?:/i.test(u)) continue;                        // 원격은 위에서 잡았다
+      if (u.startsWith("#")) continue;                          // url(#id) — SVG 의 fill·clip-path·marker (리뷰 high 2)
+      if (/^data:image\/(png|jpe?g|svg\+xml)[;,]/i.test(u)) continue;
+      if (/\.(woff2?|ttf|otf)(\?|$)/i.test(u)) continue;        // 로컬 폰트 파일 (쿼리 포함)
+      if (!IMG_OK.test(u.split("?")[0])) fail(base, MSG.animatedImage(u));
+    }
+    if (/<animate\b|<animateTransform\b|<animateMotion\b|<set\b/i.test(code)) fail(base, MSG.smil);
+    // 속성 자리에서만 본다 — class="loop-diagram" 같은 이름을 잡지 않게 (리뷰 medium 7)
+    const videoTags = code.match(/<video\b[^>]*>/gi) || [];
+    for (const tag of videoTags)
+      if (/(?:^|\s)(?:autoplay|loop)(?=[\s>=/])/i.test(tag)) { fail(base, MSG.videoPlayback); break; }
     if (motion) {
       if (!/window\.__seek\s*=/.test(code)) fail(base, MSG.motionSeek);
       if (/transition\s*:/.test(code)) fail(base, MSG.motionTransition);
       if (/Math\.random|new Date|Date\.now|performance\.now|requestAnimationFrame|setTimeout|setInterval/.test(code))
         fail(base, MSG.motionClock);
+      for (const tag of videoTags) {
+        if (!/\bdata-rg\s*=/.test(tag)) { fail(base, MSG.videoGroup); break; }
+        if (!/\bdata-vdur\s*=/.test(tag)) { fail(base, MSG.videoDur); break; }
+      }
     } else {
       if (/animation\s*:|@keyframes|transition\s*:/.test(code)) fail(base, MSG.staticAnim);
       if (/Math\.random|new Date|Date\.now/.test(code)) fail(base, MSG.clock);
+      if (videoTags.length) fail(base, MSG.staticVideo);
     }
 
     if (!bad) console.log(`✓ ${base}${motion ? " (motion · " + kind + ")" : ""}`);
@@ -175,6 +240,63 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; requestAnimationFrame(step);`, [MSG.motionClock]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; @font-face{src:url("https://x/y.woff2")}`, [MSG.webfont]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <link rel="stylesheet" href="https://fonts.googleapis.com/css2">`, [MSG.webfont]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; window.__paint(2, 2400, function (t) {});`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.png"><video data-rg="2" data-vdur="2000" src="assets/b.mp4"></video>`, []],
+    // 리뷰가 잡은 오탐들 — 정상 저작이 막히면 안 된다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <svg><path fill="url(#g)" marker-end="url(#arrow)"/></svg>`, []],
+    ["s2-motion.html", "const SLIDE_SHOT = 2; window.__seek = 1; out += `<img src=\"${S.photo}\">`;", []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; el.style.backgroundImage = "url(" + S.photo + ")";`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <video class="loop-diagram" data-rg="2" data-vdur="1200" src="assets/a.mp4"></video>`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <a href="https://www.bok.or.kr/report">source</a>`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{background:url("data:image/svg+xml;utf8,<svg/>")}</style>`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>@font-face{src:url(fonts/x.woff2?v=2)}</style>`, []],
+    // 재리뷰가 잡은 회귀 — 2923b7b 에서 통과하던 것이 iteration 1 에서 막혔다 (high A)
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; out += '<img src="' + S.photo + '" alt="">';`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/chart+2024.png">`, []],
+    // 3차 리뷰가 잡은 미탐 — 공백이 낀 표기가 확장자 검사를 건너뛰었다 (medium 2)
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{background:url( assets/spin.gif )}</style>`,
+      [MSG.animatedImage("assets/spin.gif")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/my chart.gif">`,
+      [MSG.animatedImage("assets/my chart.gif")]],
+    // <a> 로 시작하는 문자열 리터럴을 열린 태그로 오인했다 (low 1)
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; const OPEN = "<a class='src'"; <img src="https://cdn.example.com/x.png">`,
+      [MSG.remoteMedia("https://cdn.example.com/x.png")]],
+    // 진짜 출처 링크는 그대로 통과한다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <a href="https://www.bok.or.kr/x"><img src="assets/a.png"></a>`, []],
+    // 아무것도 안 가져오는 속성은 원격으로 보지 않는다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <div data-src="https://cdn.example.com/x.png"></div>`, []],
+    // 재리뷰가 잡은 미탐 — 원격 검사가 자리를 열거하다 놓친 것들 (high B)
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <script src="https://cdn.example.com/chart.js"></script>`,
+      [MSG.remoteMedia("https://cdn.example.com/chart.js")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <iframe src="https://example.com/widget"></iframe>`,
+      [MSG.remoteMedia("https://example.com/widget")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <svg><use href="https://cdn.example.com/icons.svg#star"/></svg>`,
+      [MSG.remoteMedia("https://cdn.example.com/icons.svg#star")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <link href="https://cdn.example.com/a.css" rel="stylesheet">`,
+      [MSG.remoteMedia("https://cdn.example.com/a.css")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="https://cdn.example.com/a+b.png">`,
+      [MSG.remoteMedia("https://cdn.example.com/a+b.png")]],
+    // 그리고 놓치면 안 되는 것들
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <video data-rg="2" src="assets/a.mp4"></video>`, [MSG.videoDur]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.svg">`, [MSG.animatedImage("assets/a.svg")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>@font-face{src:url(fonts/a.woff2)}</style><img src="https://cdn.example.com/z.png">`,
+      [MSG.remoteMedia("https://cdn.example.com/z.png")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.gif">`,
+      [MSG.animatedImage("assets/a.gif")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.webp">`,
+      [MSG.animatedImage("assets/a.webp")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <svg><animateTransform attributeName="transform"/></svg>`,
+      [MSG.smil]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="../images/scene-3.png"><style>.b{background:url(assets/b.jpg)}</style>`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="https://cdn.example.com/a.png">`,
+      [MSG.remoteMedia("https://cdn.example.com/a.png")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{background:url(https://cdn.example.com/b.jpg)}</style>`,
+      [MSG.remoteMedia("https://cdn.example.com/b.jpg")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <video autoplay data-rg="2" data-vdur="500" src="assets/b.mp4"></video>`,
+      [MSG.videoPlayback]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <video src="assets/b.mp4"></video>`, [MSG.videoGroup]],
+    ["s1-static.html", `const SLIDE_SHOT = 1; <video src="assets/b.mp4"></video>`, [MSG.staticVideo]],
+    ["s1-static.html", `const SLIDE_SHOT = 1; <img src="assets/a.png">`, []],
     ["s3-kinetic.html", `const SLIDE_SHOT = 3; window.__seek = 1; function renderKinetic(S, h) {}`, []],
     ["s3-kinetic.html", `const SLIDE_SHOT = 3; window.__seek = 1; function renderSlide(S, h) {}`,
       [MSG.kindTemplate("kinetic", "renderKinetic", "kinetic-type-template.html")]],
