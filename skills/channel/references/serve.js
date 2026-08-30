@@ -84,9 +84,22 @@ function die(msg) {
 const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch (e) { return false; } };
 const isFile = (p) => { try { return fs.statSync(p).isFile(); } catch (e) { return false; } };
 const readText = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch (e) { return null; } };
+// A directory can be unreadable (mode 0111) or vanish between the stat and the read — a
+// produce run rewriting images/ while the page is open does exactly that. Read it as empty.
+const readdir = (p) => { try { return fs.readdirSync(p); } catch (e) { return []; } };
 // Dot entries (.work/, images/.v1-discarded/, .DS_Store) are neither listed nor served.
-const listDirs = (p) => (isDir(p) ? fs.readdirSync(p).filter((d) => !d.startsWith('.') && isDir(path.join(p, d))).sort() : []);
-const listFiles = (p) => (isDir(p) ? fs.readdirSync(p).filter((f) => !f.startsWith('.') && isFile(path.join(p, f))).sort() : []);
+const listDirs = (p) => (isDir(p) ? readdir(p).filter((d) => !d.startsWith('.') && isDir(path.join(p, d))).sort() : []);
+const listFiles = (p) => (isDir(p) ? readdir(p).filter((f) => !f.startsWith('.') && isFile(path.join(p, f))).sort() : []);
+
+/** True when target still sits inside base once both are resolved. The lexical prefix test
+ *  reads a path as text, and a symlink is not text — the JSON readers walk the same tree
+ *  /files/ serves, so they owe the same question. */
+function insideReal(base, target) {
+  try {
+    const rb = fs.realpathSync(base), rt = fs.realpathSync(target);
+    return rt === rb || rt.startsWith(rb + path.sep);
+  } catch (e) { return false; }
+}
 
 /* ── readers ─────────────────────────────────────────────────────────────── */
 
@@ -212,7 +225,8 @@ function listStoryboards(root, slug) {
   const epRoot = path.join(dir, 'episodes');
   const states = new Map(episodeStates(dir).map((s) => [s.topic, s]));
   return listDirs(epRoot)
-    .filter((topic) => isDir(path.join(epRoot, topic, 'storyboard')))
+    .filter((topic) => isDir(path.join(epRoot, topic, 'storyboard'))
+                    && insideReal(dir, path.join(epRoot, topic, 'storyboard')))
     .sort().reverse()
     .map((topic) => {
       const sb = path.join(epRoot, topic, 'storyboard');
@@ -282,7 +296,7 @@ const byPanel = (a, b) =>
 
 function characterEntry(root, slug, id, notes) {
   const dir = path.join(channelDir(root, slug), 'assets', 'characters', id);
-  if (!isDir(dir)) return null;
+  if (!isDir(dir) || !insideReal(channelDir(root, slug), dir)) return null;
   const identity = readText(path.join(dir, 'identity.md'));
   // Real panel sets are not uniform — face/body/back per the contract, front.png before it,
   // real.png for the live-action one, head-closeup-*.png for a series — so every image
@@ -369,12 +383,20 @@ function sendFile(req, res, file) {
     headers['Content-Range'] = 'bytes ' + start + '-' + end + '/' + st.size;
     headers['Content-Length'] = end - start + 1;
     res.writeHead(206, headers);
-    return fs.createReadStream(file, { start, end }).pipe(res);
+    return pipeFile(res, fs.createReadStream(file, { start, end }));
   }
   headers['Content-Length'] = st.size;
   res.writeHead(200, headers);
   if (req.method === 'HEAD') return res.end();
-  fs.createReadStream(file).pipe(res);
+  pipeFile(res, fs.createReadStream(file));
+}
+
+/** The headers are already out by the time a read can fail, so there is no status left to
+ *  send — drop the connection instead. Without the listener the 'error' event is unhandled
+ *  and takes the whole server down with it. */
+function pipeFile(res, stream) {
+  stream.on('error', () => res.destroy());
+  stream.pipe(res);
 }
 
 function sendText(res, status, text) {
@@ -816,6 +838,15 @@ const SHELL = String.raw`<!DOCTYPE html>
 
 function createApp(root) {
   return function handle(req, res) {
+    try { return route(root, req, res); } catch (e) {
+      // One unreadable file must cost one request, not the server.
+      if (res.headersSent) return res.destroy();
+      return sendText(res, 500, 'error');
+    }
+  };
+}
+
+function route(root, req, res) {
     if (req.method !== 'GET' && req.method !== 'HEAD') return sendText(res, 405, 'method not allowed');
     let urlPath;
     try { urlPath = new URL(req.url, 'http://localhost').pathname; } catch (e) { return sendText(res, 400, 'bad url'); }
@@ -848,7 +879,6 @@ function createApp(root) {
       return sendFile(req, res, file);
     }
     return sendText(res, 404, 'not found');
-  };
 }
 
 function listen(root, host, port) {
@@ -1020,7 +1050,9 @@ function main() {
   const root = path.resolve(target);
   if (!isDir(root)) die('not a directory: ' + root);
   if (!isFile(EPISODE_STATE)) die('episode-state.js not found at ' + EPISODE_STATE);
-  const host = flag('--host', '127.0.0.1');
+  // `--host` last on the line, or an unset shell variable, hands back undefined/'' — and
+  // listen() reads either as every interface, with the warning below never firing.
+  const host = flag('--host', '127.0.0.1') || die('--host needs a value');
   const port = parseInt(flag('--port', String(DEFAULT_PORT)), 10);
   if (Number.isNaN(port)) die('--port needs a number');
 
@@ -1028,10 +1060,12 @@ function main() {
     const url = 'http://' + (host === '0.0.0.0' ? '127.0.0.1' : host) + ':' + server.address().port + '/';
     const channels = listChannels(root);
     process.stdout.write(url + '\n' + channels.length + ' channel(s): ' + channels.map((c) => c.slug).join(' ') + '\n');
-    if (host === '0.0.0.0') process.stderr.write('serve: listening on every interface — data/ is readable by anyone who can reach this port\n');
+    if (host !== '127.0.0.1' && host !== 'localhost') process.stderr.write('serve: listening on ' + host + ' — data/ is readable by anyone who can reach this port\n');
     if (argv.indexOf('--open') !== -1) {
       const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
-      spawn(opener, [url], { stdio: 'ignore', detached: true }).unref();
+      const p = spawn(opener, [url], { stdio: 'ignore', detached: true });
+      p.on('error', () => {});   // no opener on this host — the URL is already printed
+      p.unref();
     }
   }).catch((e) => die(e && e.code === 'EADDRINUSE' ? 'port ' + port + ' is taken — pass --port' : (e && e.message) || String(e)));
 }

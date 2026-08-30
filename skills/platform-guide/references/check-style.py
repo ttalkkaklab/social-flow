@@ -59,8 +59,15 @@ SURFACES = ("narration", "subtitle", "screen", "threads", "ig", "fb", "yt", "rep
 # narration line of an episode at once. Per STRING the share does dip: two strings in the
 # library fall under 0.5, the lower being "claude --plugin-dir로 이번 실행에서만
 # 불러오세요." at 0.464 with 13 Hangul syllables. The absolute-count condition keeps that
-# one in scope. The median Korean string carries 16 syllables, so 12 sits just under
-# ordinary copy while staying far above the incidental Hangul a foreign text might carry.
+# one in scope.
+#
+# **The count sits at 3, not at the median.** A high number reads as "keep Korean in
+# scope", but it is the same number that decides how much Korean a foreign text may carry
+# before it is judged by Korean rules — and *that* direction is the damaging one. At 12,
+# an English paragraph carrying the tells README names passed clean with one Korean
+# hashtag on it. Three syllables is below the shortest real Korean surface measured
+# (a 5-syllable reply, "…하면 돼요") and above the incidental Hangul a foreign text
+# carries — a hashtag, a product name, a quoted word.
 #
 # CJK that is NOT Korean has no Latin to dilute, so a share test alone reads it as 0/0 and
 # lets it through. Japanese kana and Han characters are therefore counted on the foreign
@@ -72,9 +79,9 @@ FOREIGN_RE = re.compile(r"[A-Za-z\u3040-\u30ff\u4e00-\u9fff]")
 
 # Thresholds from the library, both far from the populations they separate:
 #   share  — Korean episodes run 0.941~1.000; English paragraphs run 0.0.
-#   chars  — the median Korean string carries 16 Hangul syllables.
+#   chars  — three syllables: under the shortest real Korean surface, over a hashtag.
 HANGUL_MIN_SHARE = 0.5
-HANGUL_MIN_CHARS = 12
+HANGUL_MIN_CHARS = 3
 
 # Below this many letters the ratio is noise — "OK!" is 0.0 and "네" is 1.0, and neither
 # says what language the copy is in. Short strings are let through to the rules, which is
@@ -98,7 +105,7 @@ def hangul_share(text: str) -> tuple[float | None, int, int]:
 def out_of_scope(text: str) -> tuple[bool, float | None, int, int]:
     """Both conditions must hold before the checker declines to judge."""
     share, letters, hangul = hangul_share(text)
-    skip = share is not None and share < HANGUL_MIN_SHARE and hangul == 0
+    skip = share is not None and share < HANGUL_MIN_SHARE and hangul < HANGUL_MIN_CHARS
     return skip, share, letters, hangul
 
 # ---------------------------------------------------------------------------
@@ -937,7 +944,7 @@ def render(r: dict) -> str:
 # ---------------------------------------------------------------------------
 
 SELFTEST = [
-    # --- language scope (exit 3 = SKIP) -------------------------------------------
+    # --- language scope (exit 4 = SKIP) -------------------------------------------
     # English carrying the tells README bans. Before the scope guard these came back
     # PASS with 0 findings, because MASKS had blanked every Latin run.
     ("english is skipped, never passed", "narration", 4,
@@ -950,6 +957,15 @@ SELFTEST = [
      "これは日本語のナレーションです。韓国語ではありません。チェッカーは読めません。\n"),
     ("chinese is skipped", "narration", 4,
      "这是一段中文旁白，不是韩语，检查器无法阅读它。这句话应该被跳过。\n"),
+    # A foreign text may carry a little Hangul — a hashtag, a product name — and that must
+    # not buy it a pass. This is the exact paragraph above with one Korean hashtag added.
+    ("english with a korean hashtag is still skipped", "threads", 4,
+     "It is not merely a tool, it is a partner. In today's rapidly evolving landscape, "
+     "leveraging robust and seamless solutions is crucial. Delve into the comprehensive "
+     "framework that fosters innovation. It's a testament to what teams can achieve. #한국\n"),
+    # The short Latin-dense Korean the count exists to protect: 5 syllables, share 0.147.
+    ("short latin-dense korean stays in scope", "reply", 0,
+     "ffmpeg concat demuxer로 stream copy 하면 돼요.\n"),
     # The other direction, and the one that matters more: Korean thick with Latin product
     # names stays in scope. Share 0.464 — below the ratio threshold — but 13 Hangul
     # syllables, so the absolute-count condition keeps it. This is a real library string.

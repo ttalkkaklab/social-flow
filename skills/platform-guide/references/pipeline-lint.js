@@ -126,10 +126,15 @@ const RULES = [
       // Both directions. A mirror check earns its keep on deletions, so every reviewer the
       // manifest gives a copy surface has to still be named here — dropping a row is the edit
       // that would otherwise pass unseen.
-      const copyIds = REVIEWERS.filter((r) => r.surfaces.some((s) => /copy/.test(s))).map((r) => r.id);
-      const absent = copyIds.filter((id) => body.indexOf(id) === -1);
+      const copyReviewers = REVIEWERS.filter((r) => r.surfaces.some((s) => /copy/.test(s)));
+      const absent = copyReviewers.map((r) => r.id).filter((id) => body.indexOf(id) === -1);
+      // The name alone is not the mirror — the tail is what a delegator parses, so strip the
+      // tails and the table still says nothing about what to expect back.
+      const absentTails = copyReviewers.reduce((a, r) => a.concat(r.tails), [])
+                                       .filter((t) => tails.indexOf(t) === -1 && t !== 'PLAN_REVIEW');
       const bad = unknown.map((t) => 'not in the manifest: ' + t)
-                         .concat(absent.map((id) => 'missing from the table: ' + id));
+                         .concat(absent.map((id) => 'missing from the table: ' + id))
+                         .concat(absentTails.map((t) => 'tail missing from the table: ' + t));
       return { ok: bad.length === 0, got: bad.length ? bad.join(' · ') : tails.join(' '),
                want: 'every tail in the table is declared, and every copy reviewer is in the table' };
     },

@@ -39,7 +39,7 @@ export LC_ALL=en_US.UTF-8
 usage() { echo "usage: cut-screencast.sh <source> <out.mp4> [--at <start>-<end>] [--focus x:y:w:h] [--card s] [--canvas WxH] [--fps n] [--bg 0xRRGGBB] [--keep-audio] [--shrink-warn f]" >&2; exit 2; }
 die()   { echo "✗ $1" >&2; exit 1; }
 
-SRC=""; OUT=""; AT=""; FOCUS=""; CARD=""; CANVAS=""; FPS_ARG=""; BG_ARG=""; KEEP=0; SHRINK_WARN=3.0
+SRC=""; OUT=""; AT=""; FOCUS=""; CARD=""; CANVAS=""; FPS_ARG=""; BG_ARG=""; KEEP=0; SW_ARG=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --at)          AT="${2:-}"; shift 2 ;;
@@ -49,7 +49,7 @@ while [ $# -gt 0 ]; do
     --fps)         FPS_ARG="${2:-}"; shift 2 ;;
     --bg)          BG_ARG="${2:-}"; shift 2 ;;
     --keep-audio)  KEEP=1; shift ;;
-    --shrink-warn) SHRINK_WARN="${2:-}"; shift 2 ;;
+    --shrink-warn) SW_ARG="${2:-}"; shift 2 ;;
     -*)            usage ;;
     *)             if [ -z "$SRC" ]; then SRC="$1"; elif [ -z "$OUT" ]; then OUT="$1"; else usage; fi; shift ;;
   esac
@@ -64,6 +64,10 @@ if [ -f format.env ]; then . ./format.env; fi
 W=${W:-1080}; H=${H:-1920}; FPS=${FPS:-30}
 [ -n "$CANVAS" ] && { W=${CANVAS%x*}; H=${CANVAS#*x}; }
 [ -n "$FPS_ARG" ] && FPS="$FPS_ARG"
+# Same precedence for the legibility thresholds: flag → format.env → inline default. Assigned
+# before the source, an inline default would win and the preset could never move them.
+SHRINK_WARN=${SW_ARG:-${SHRINK_WARN:-3.0}}
+BLOWUP_WARN=${BLOWUP_WARN:-1.5}
 case "${W}x${H}" in *[!0-9x]*|x*|*x) die "--canvas wants WxH, got \"$CANVAS\"" ;; esac
 BG=${BG_ARG:-${BG:-0x0b1020}}
 BG="${BG#\#}"; BG="${BG#0x}"; BG="0x${BG}"          # '#rrggbb' and '0xrrggbb' both land here
@@ -118,7 +122,7 @@ SHRINK=$(awk -v s="$SCALE" 'BEGIN{printf "%.2f", (s<1 ? 1/s : 1)}')
 WARN=0
 awk -v s="$SHRINK" -v t="$SHRINK_WARN" 'BEGIN{exit !(s > t)}' && {
   echo "⚠ the picture shrinks ${SHRINK}x on the way into the canvas — screen text this small is unreadable on a phone. Crop to the panel that matters with --focus" >&2; WARN=1; }
-awk -v s="$SCALE" 'BEGIN{exit !(s > 1.5)}' && {
+awk -v s="$SCALE" -v t="$BLOWUP_WARN" 'BEGIN{exit !(s > t)}' && {
   echo "⚠ the crop is blown up ${SCALE}x to fill the canvas — screen text goes soft past about 1.5x. Record at a higher resolution, or take a wider --focus region" >&2; WARN=1; }
 
 VF="${CROP_F}scale=${W}:${H}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:${BG},setsar=1,fps=${FPS},format=yuv420p"

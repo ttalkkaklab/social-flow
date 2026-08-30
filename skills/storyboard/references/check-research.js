@@ -243,9 +243,10 @@ function analyse(src, fmt, scenes) {
   else if (claimCount < aim)
     warn(`${claimCount} verified claim(s) — a ${isLong ? 'long-form' : 'short'} normally leaves §2 with ${aim} or more`);
 
-  // Every claim carries a basis somewhere in its row. The column layout varies between logs
-  // (the template has Source 1 / Source 2; several channels use a single 출처 column), so the
-  // whole row is searched rather than fixed positions.
+  // Every claim carries a basis in one of its source columns. The layout varies between logs
+  // (the template has Source 1 / Source 2; several channels use a single 출처 column), so every
+  // column from the third on is searched — the # and claim columns are excluded, or a claim
+  // that happens to contain "뉴스" or an acronym would stand as its own basis.
   //
   // A URL is not the only valid basis. A figure measured here (`claude mcp add --help` run
   // locally), a quotation from the document the row above already cited, a source named by
@@ -298,14 +299,18 @@ function analyse(src, fmt, scenes) {
   }
 
   // ── Which claims are key ──
-  // ★ in the # column first; failing that, the rows the sentences cite; failing both, every
-  // row — and the finding says which reading it used, so a log that marks nothing is told how
+  // Two readings, and both count: ★ in the # column, and the rows the sentences cite. A claim
+  // the finished script says out loud is key whether or not someone starred it, so when both
+  // signals exist they union rather than one shadowing the other. With neither, every row is
+  // key — and the finding says which reading it used, so a log that marks nothing is told how
   // to stop being read that way.
   const starred = claims.filter((c) => c.key).map((c) => c.n);
   const cited = citedNumbers(scenes);
-  const keyBasis = starred.length ? 'starred' : (cited.size ? 'cited' : 'all');
-  const keys = keyBasis === 'starred' ? starred
-    : keyBasis === 'cited' ? claims.map((c) => c.n).filter((n) => cited.has(n))
+  const citedClaims = claims.map((c) => c.n).filter((n) => cited.has(n));
+  const keyBasis = starred.length && citedClaims.length ? 'starred + cited'
+    : starred.length ? 'starred' : (citedClaims.length ? 'cited' : 'all');
+  const keys = starred.length || citedClaims.length
+    ? Array.from(new Set(starred.concat(citedClaims))).sort((a, b) => a - b)
     : claims.map((c) => c.n);
 
   // ── Counter-evidence coverage ──
@@ -329,7 +334,9 @@ function analyse(src, fmt, scenes) {
     if (missing.length)
       warn(`key claim(s) ${missing.join(', ')} have no counter-evidence row` +
            (keyBasis === 'all' ? ' (no ★ and no claim citations, so every row is read as key)'
-             : keyBasis === 'starred' ? ' (★ rows)' : ' (rows the sentences cite)') +
+             : keyBasis === 'starred' ? ' (★ rows)'
+             : keyBasis === 'cited' ? ' (rows the sentences cite)'
+             : ' (★ rows and the rows the sentences cite)') +
            ' — a claim nobody searched against is a claim nobody checked');
   }
 
@@ -339,11 +346,14 @@ function analyse(src, fmt, scenes) {
 
   // ── Search history against the question map ──
   // §2 step 2 asks two searches per question from different directions. Table rows first; a
-  // log that keeps the history as a bullet list is counted by its bullets.
+  // log that keeps the history as a bullet list is counted by its bullets — but only the
+  // bullets that name a tool or carry a query. Counting every bullet let a history that says
+  // in so many words that nothing was searched clear the rule on four sentences of prose.
+  const SEARCH_LINE = /naver_search|WebSearch|WebFetch|serp_|youtube_|datago_|「|"|"/;
   let searches = null;
   if (searchBody !== null) {
     searches = rows(searchBody).length
-      || searchBody.split('\n').filter((l) => /^\s*[-*]\s+\S/.test(l)).length;
+      || searchBody.split('\n').filter((l) => /^\s*[-*]\s+\S/.test(l) && SEARCH_LINE.test(l)).length;
     if (qRows.length && searches < 2 * qRows.length)
       warn(`${searches} search(es) logged for ${qRows.length} question(s) — ` +
            '§2 step 2 asks two directions per question');

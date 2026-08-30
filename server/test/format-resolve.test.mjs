@@ -399,7 +399,11 @@ test('build-reel scene transition — a dissolve that costs no time', () => {
   assert.match(reel, /FILT\+="\$\{SRCL\}null\$\{VF_FADE\}\[vout\]"/, 'the fade hangs off the shared hand-off');
   assert.match(reel, /fade=t=in:st=0:d=\$SF_D/, 'head fade starts at 0');
   assert.match(reel, /fade=t=out:st=/, 'tail fade');
-  assert.doesNotMatch(reel, /xfade=transition=[a-z]+:duration=\$(SCENE_FADE|SCENE_XF|SCENE_PUSH)/,
+  // The carry is an overlay inside this card's encode. Naming the constants is not enough —
+  // the carry computes its own $TD, so pin the shape of the carry itself. (A blanket "no
+  // xfade" is wrong: the within-card reveal chain uses xfade legitimately.)
+  assert.match(reel, /\[vkb\]\[tcar\]overlay=/, 'the carry is an overlay, not a cross-card xfade');
+  assert.doesNotMatch(reel, /\[tcar\][^"]*xfade/,
                       'a scene boundary never uses xfade — it renumbers the tail PTS');
 
   // The fade can never outgrow the card it sits in: a quarter of the card is the ceiling, so a
