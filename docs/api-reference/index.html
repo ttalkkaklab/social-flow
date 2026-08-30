@@ -18,8 +18,8 @@
   <h1>social-flow가 호출하는 전체 API</h1>
   <p class="sub">내부 MCP 서버(<code>server/src</code>)가 실제로 호출하는 외부 API 13종의 공식 계약을 정리한 레퍼런스다. 각 문서는 <strong>공식 문서가 말하는 것</strong>과 <strong>이 저장소의 구현이 실제로 하는 것</strong>을 나란히 적어, 둘이 어긋나는 지점을 바로 볼 수 있게 했다. 이미지·음성·받아쓰기는 네트워크를 타지 않는 온디바이스 엔진 3종이 기본 경로이며 그쪽은 호출할 외부 계약이 없다.</p>
   <div class="meta">
-    <span>기준일 <strong>2026-08-18</strong></span>
-    <span>툴 <strong>54종</strong></span>
+    <span>기준일 <strong>2026-08-30</strong></span>
+    <span>툴 <strong>55종</strong></span>
     <span>외부 API <strong>13종</strong> + 로컬 <strong>3종</strong></span>
     <span>MCP SDK <strong>1.30.0</strong></span>
   </div>
@@ -120,7 +120,7 @@
     </a>
     <a class="card" href="tool-audit.html">
       <h3>툴 품질 감사 리포트</h3>
-      <p>2026-07-29 시점의 툴 31개를 위 계약과 베스트 프랙티스로 채점한 결과, 발견한 결함 전체와 수정 내역. 그 뒤 23종이 추가돼 지금은 54종이고, 그 23종은 아직 감사 대상이 아니다.</p>
+      <p>2026-07-29 시점의 툴 31개를 위 계약과 베스트 프랙티스로 채점한 결과, 발견한 결함 전체와 수정 내역. 그 뒤 24종이 추가돼 지금은 55종이고, 그 24종은 아직 감사 대상이 아니다.</p>
       <div class="tools">감사 · 점수 · 수정 이력</div>
     </a>
   </div>
@@ -161,7 +161,7 @@
 <section id="map">
   <h2>툴 ↔ API 매핑</h2>
   <p>배지: <span class="badge ro">읽기</span> 부작용 없음 · <span class="badge wr">쓰기</span> 로컬 파일 생성 · <span class="badge de">공개</span> 호출 즉시 외부 공개 · <span class="badge key">키</span> 자격증명 필요 · <span class="badge free">무인증</span></p>
-  <p><strong>54종이 항상 다 보이지는 않는다.</strong> 플랫폼에 묶인 9종(<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>)은 자격증명 파일이 있는 플랫폼만 <code>tools/list</code> 에 나온다. 목록을 요청한 시점에 평가하므로 토큰을 넣으면 서버를 다시 띄우지 않아도 나타나고, 토큰이 하나도 없으면 41종이 보인다. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> 는 게이트 밖이라 토큰이 없어도 목록에 있다 — 유튜브 스카우트는 호출 시점에 <code>YOUTUBE_API_KEY</code> 또는 채널 OAuth 가, SNS 스카우트는 <code>SERPAPI_API_KEY</code> 가 필요하고, 피드백은 토큰이 없는 플랫폼의 절만 건너뛴다. <code>youtube_update</code> 도 마찬가지로 항상 목록에 있고 토큰이 없으면 에러를 낸다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가 온다.</p>
+  <p><strong>55종이 항상 다 보이지는 않는다.</strong> 플랫폼에 묶인 9종(<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>)은 자격증명 파일이 있는 플랫폼만 <code>tools/list</code> 에 나온다. 목록을 요청한 시점에 평가하므로 토큰을 넣으면 서버를 다시 띄우지 않아도 나타나고, 토큰이 하나도 없으면 46종이 보인다. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> 는 게이트 밖이라 토큰이 없어도 목록에 있다 — 유튜브 스카우트는 호출 시점에 <code>YOUTUBE_API_KEY</code> 또는 채널 OAuth 가, SNS 스카우트는 <code>SERPAPI_API_KEY</code> 가 필요하고, 피드백은 토큰이 없는 플랫폼의 절만 건너뛴다. <code>youtube_update</code> 도 마찬가지로 항상 목록에 있고 토큰이 없으면 에러를 낸다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가 온다.</p>
   <div class="table-scroll">
   <table>
     <thead><tr><th>툴</th><th>성격</th><th>호출 대상</th><th>레퍼런스</th></tr></thead>
@@ -199,6 +199,7 @@
       <tr><td><code>music_generate_clip</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>interactions.create</code> (<code>lyria-3-clip-preview</code>)</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
       <tr><td><code>music_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
       <tr><td><code>music_generate_advanced</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
+      <tr><td><code>capability_status</code></td><td><span class="badge ro">읽기</span> <span class="badge free">무인증</span></td><td>없음 — 이 기계의 키·실행 파일 점검</td><td>—</td></tr>
       <tr><td><code>music_list_options</code></td><td><span class="badge ro">읽기</span></td><td>없음 — 서버 내장 상수</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
       <tr><td><code>suno_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>POST /api/v1/generate</code> + 폴링</td><td><a href="suno.html">Suno</a></td></tr>
       <tr><td><code>suno_generate_sound</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>POST /api/v1/generate/sounds</code> + 폴링</td><td><a href="suno.html">Suno</a></td></tr>

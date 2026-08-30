@@ -18,8 +18,8 @@
   <h1>Every API social-flow calls</h1>
   <p class="sub">A reference for the official contracts of the 13 external APIs the internal MCP server (<code>server/src</code>) actually calls. Each page puts <strong>what the official docs say</strong> next to <strong>what this repo's implementation actually does</strong>, so you can see where the two diverge. For images, voice, and transcription the default path is three on-device engines that never touch the network, and those have no external contract to call.</p>
   <div class="meta">
-    <span>As of <strong>2026-08-20</strong></span>
-    <span>Tools <strong>54</strong></span>
+    <span>As of <strong>2026-08-30</strong></span>
+    <span>Tools <strong>55</strong></span>
     <span>External APIs <strong>13</strong> + local <strong>3</strong></span>
     <span>MCP SDK <strong>1.30.0</strong></span>
   </div>
@@ -120,7 +120,7 @@
     </a>
     <a class="card" href="tool-audit.en.html">
       <h3>Tool quality audit report</h3>
-      <p>Scoring the 31 tools as they stood on 2026-07-29 against the contracts above and the best practices, with every defect found and how it was fixed. 23 tools have been added since, bringing the count to 54, and those 23 have not been audited.</p>
+      <p>Scoring the 31 tools as they stood on 2026-07-29 against the contracts above and the best practices, with every defect found and how it was fixed. 24 tools have been added since, bringing the count to 55, and those 24 have not been audited.</p>
       <div class="tools">audit · scores · fix log</div>
     </a>
   </div>
@@ -161,7 +161,7 @@
 <section id="map">
   <h2>Tool ↔ API map</h2>
   <p>Badges: <span class="badge ro">read</span> no side effects · <span class="badge wr">write</span> creates a local file · <span class="badge de">public</span> takes effect publicly the moment it's called · <span class="badge key">key</span> needs a credential · <span class="badge free">no auth</span></p>
-  <p><strong>You won't always see all 54.</strong> The nine platform-bound tools (<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>) appear in <code>tools/list</code> only for platforms that have a credential file. That's evaluated when the list is requested, so adding a token makes them appear without restarting the server; with no tokens at all you see 41. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> sit outside the gate and stay listed without tokens — the YouTube scout needs <code>YOUTUBE_API_KEY</code> or channel OAuth at call time, the SNS scout needs <code>SERPAPI_API_KEY</code>, and feedback simply skips the sections it has no token for. <code>youtube_update</code> is likewise always listed and errors without a token. Hidden tools still have live handlers — call one directly and you get a missing-token error.</p>
+  <p><strong>You won't always see all 55.</strong> The nine platform-bound tools (<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>) appear in <code>tools/list</code> only for platforms that have a credential file. That's evaluated when the list is requested, so adding a token makes them appear without restarting the server; with no tokens at all you see 46. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> sit outside the gate and stay listed without tokens — the YouTube scout needs <code>YOUTUBE_API_KEY</code> or channel OAuth at call time, the SNS scout needs <code>SERPAPI_API_KEY</code>, and feedback simply skips the sections it has no token for. <code>youtube_update</code> is likewise always listed and errors without a token. Hidden tools still have live handlers — call one directly and you get a missing-token error.</p>
   <div class="table-scroll">
   <table>
     <thead><tr><th>Tool</th><th>Character</th><th>What it calls</th><th>Reference</th></tr></thead>
@@ -199,6 +199,7 @@
       <tr><td><code>music_generate_clip</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>interactions.create</code> (<code>lyria-3-clip-preview</code>)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
       <tr><td><code>music_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
       <tr><td><code>music_generate_advanced</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
+      <tr><td><code>capability_status</code></td><td><span class="badge ro">read</span> <span class="badge free">no auth</span></td><td>none — checks this machine's keys and executables</td><td>—</td></tr>
       <tr><td><code>music_list_options</code></td><td><span class="badge ro">read</span></td><td>none — a constant built into the server</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
       <tr><td><code>suno_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /api/v1/generate</code> + poll</td><td><a href="suno.en.html">Suno</a></td></tr>
       <tr><td><code>suno_generate_sound</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /api/v1/generate/sounds</code> + poll</td><td><a href="suno.en.html">Suno</a></td></tr>

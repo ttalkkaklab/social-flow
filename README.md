@@ -115,7 +115,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the nine publish/insight tools
-  aren't even listed (`tools/list` shows 42 instead of 51), and the growth skills have
+  aren't even listed (`tools/list` shows 46 instead of 55), and the growth skills have
   nothing to drive.
 
 Credentials are per platform, so this is not all-or-nothing — a YouTube-only setup
@@ -393,12 +393,12 @@ social-flow/
 
 ## MCP tool surface (55 tools)
 
-**`tools/list` does not show all 50.** The nine publish/insights tools
+**`tools/list` does not show all 55.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 41. Hidden tools still have live handlers:
+server. With no tokens at all you'll count 46. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs

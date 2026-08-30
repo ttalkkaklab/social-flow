@@ -17,10 +17,10 @@
   <h1>social-flow docs</h1>
   <p class="sub">Documentation for the Claude Code plugin that runs a channel-based short-form/long-form content pipeline. Skill guides, research notes, and a reference for every external API the internal MCP server calls.</p>
   <div class="meta">
-    <span>Plugin <strong>v0.29.0</strong></span>
+    <span>Plugin <strong>v0.42.0</strong></span>
     <span>Skills <strong>18</strong></span>
-    <span>MCP tools <strong>54</strong></span>
-    <span>Updated <strong>2026-08-23</strong></span>
+    <span>MCP tools <strong>55</strong></span>
+    <span>Updated <strong>2026-08-30</strong></span>
   </div>
   <div class="meta">
     <span>Source of truth: <a href="../README.md">README.md</a></span>
@@ -50,7 +50,7 @@
   <h2>API keys — how far to go before stopping</h2>
   <p>The keys come in two independent groups. <strong>Stop after either one and the pipeline still runs.</strong></p>
   <p><strong>Production keys.</strong> <code>OPENAI_API_KEY</code> draws the cover and any frame with text on it; <code>GEMINI_API_KEY</code> covers generated video clips, acted narration, and BGM. Strictly speaking both are optional — scene backgrounds default to on-device <code>image_local_generate</code> (Z-Image Turbo, Apple Silicon) and narration to on-device <code>tts_local_generate</code> (Supertonic 3), so a run with no keys still produces a video. What you give up without <code>OPENAI_API_KEY</code> is text-bearing frames (local image generation garbles Korean glyphs); without <code>GEMINI_API_KEY</code> you lose generated motion and music. Research keys (<code>SERPAPI_API_KEY</code> and the Naver pair) are optional too, and the storyboard skill falls back to WebSearch.</p>
-  <p><strong>Platform credentials (Threads · Instagram · YouTube · Facebook) — optional.</strong> Configure them and <code>publish</code> posts straight to your accounts. <code>grow-threads</code>, <code>grow-youtube</code>, and <code>grow-instagram</code> then take over day-to-day operation on <code>/loop</code> — comment replies, insight watching, keyword conversations, queue refills, and posting, all inside the standing authorization you approved once at <code>init</code>. Skip them and everything through production works as before: <code>produce</code> writes the finished video plus per-platform text into <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload those files by hand. In that case the nine publish/insight tools aren't listed at all, so <code>tools/list</code> shows 45 tools instead of 54. Credentials are per platform, so this is not all-or-nothing, and adding a token later needs no server restart.</p>
+  <p><strong>Platform credentials (Threads · Instagram · YouTube · Facebook) — optional.</strong> Configure them and <code>publish</code> posts straight to your accounts. <code>grow-threads</code>, <code>grow-youtube</code>, and <code>grow-instagram</code> then take over day-to-day operation on <code>/loop</code> — comment replies, insight watching, keyword conversations, queue refills, and posting, all inside the standing authorization you approved once at <code>init</code>. Skip them and everything through production works as before: <code>produce</code> writes the finished video plus per-platform text into <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload those files by hand. In that case the nine publish/insight tools aren't listed at all, so <code>tools/list</code> shows 46 tools instead of 55. Credentials are per platform, so this is not all-or-nothing, and adding a token later needs no server restart.</p>
   <div class="note">
     <a href="../README.md">README.md</a> is the source of truth for variable names, defaults, and the credential-file convention. For the order to actually do it in, see <a href="guides/getting-started/index.en.html">Getting started — install to first video</a>.
   </div>
@@ -89,11 +89,11 @@
   <div class="cards">
     <a class="card" href="api-reference/index.en.html">
       <h3>API reference hub →</h3>
-      <p>Inventory of the 13 external APIs and the 3 on-device engines, the credential matrix, and the 54-tool ↔ API map.</p>
+      <p>Inventory of the 13 external APIs and the 3 on-device engines, the credential matrix, and the 55-tool ↔ API map.</p>
     </a>
     <a class="card" href="api-reference/tool-audit.en.html">
       <h3>Tool quality audit →</h3>
-      <p>Scores and fixes for the 31 tools as of 2026-07-29, judged against the official API contracts, the MCP spec, and tool-authoring practice. The 15 tools added since aren't in this audit yet.</p>
+      <p>Scores and fixes for the 31 tools as of 2026-07-29, judged against the official API contracts, the MCP spec, and tool-authoring practice. The 24 tools added since aren't in this audit yet.</p>
     </a>
   </div>
 </section>
