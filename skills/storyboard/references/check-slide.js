@@ -138,20 +138,26 @@ function checkDir(dir, only) {
        링크는 프레임을 정하지 않으므로 뺀다(리뷰 medium 6). 값이 코드로 조립되는 자리
        (`${…}` · 문자열 연결)는 정적으로 알 수 없으니 건너뛴다 — 슬라이드는 innerHTML 로 마크업을
        짜는 것이 관례라 여기서 막으면 정상 저작이 걸린다(리뷰 high 3). */
-    const dynamic = u => /\$\{|\+|`/.test(u);
+    /* 값이 코드로 조립되는 자리는 정적으로 알 수 없으니 건너뛴다 — 슬라이드는 innerHTML 로
+       마크업을 짜는 것이 관례다. `${…}` 와 백틱이 그 표시이고, 따옴표 연결
+       ('<img src="' + S.photo + '"')은 캡처가 빈 문자열로, url("url(" + S.photo + ")") 꼴은
+       공백을 낀 조각으로 떨어지는 것이 그 표시다. `+` 자체는 파일 이름에 흔한 글자라 조립의
+       표시로 쓰지 않는다 — 경로에 공백은 안 쓰고(CSS url() 은 따옴표 없이 공백을 못 받는다)
+       URL 은 %20 으로 인코딩한다. */
+    const dynamic = u => u === "" || /\$\{|`|\s/.test(u);
     // 그림이 앉는 자리 — 확장자를 보는 것은 이것뿐이다. 영상 소스는 여기 넣지 않는다.
     const imgUrls = [];
     for (const m of code.matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1]);
     for (const m of code.matchAll(/<video\b[^>]*\bposter\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1]);
     for (const m of code.matchAll(/url\(\s*["']?([^"')]+)/gi)) imgUrls.push(m[1]);
-    // 네트워크를 타는 자리 — 영상과 스타일시트까지 본다.
-    const picks = imgUrls.slice();
-    for (const m of code.matchAll(/<(?:video|source)\b[^>]*\bsrc\s*=\s*["']([^"']*)["']/gi)) picks.push(m[1]);
-    for (const m of code.matchAll(/<link\b[^>]*\brel\s*=\s*["']?stylesheet["']?[^>]*\bhref\s*=\s*["']([^"']+)["']/gi)) picks.push(m[1]);
 
-    // 원격 소재는 갈래를 안 가린다 — 정지든 모션이든 네트워크가 프레임을 정하면 재현이 끝난다.
-    for (const u of picks) {
-      if (dynamic(u) || !/^https?:/i.test(u)) continue;
+    /* 원격 소재는 갈래를 안 가린다 — 정지든 모션이든 네트워크가 프레임을 정하면 재현이 끝난다.
+       무엇을 보느냐가 아니라 무엇을 빼느냐로 짠다 — 자리를 열거하면 <script>·<iframe>·<use>
+       처럼 안 적은 자리가 통째로 무검사가 된다. 빼는 것은 출처 링크(<a href>) 하나다. */
+    for (const m of code.matchAll(/(?:src|href)\s*=\s*["'](https?:\/\/[^"']+)["']|url\(\s*["']?(https?:\/\/[^"')]+)/gi)) {
+      const u = m[1] || m[2];
+      const before = code.slice(Math.max(0, m.index - 200), m.index);
+      if (/<a\b[^>]*$/i.test(before)) continue;                              // 출처 링크는 프레임을 정하지 않는다
       if (/fonts\.googleapis|\.(woff2?|ttf|otf)(\?|$)/i.test(u)) continue;   // 폰트는 webfont 규칙이 본다
       fail(base, MSG.remoteMedia(u));
     }
@@ -240,6 +246,20 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <a href="https://www.bok.or.kr/report">source</a>`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{background:url("data:image/svg+xml;utf8,<svg/>")}</style>`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>@font-face{src:url(fonts/x.woff2?v=2)}</style>`, []],
+    // 재리뷰가 잡은 회귀 — 2923b7b 에서 통과하던 것이 iteration 1 에서 막혔다 (high A)
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; out += '<img src="' + S.photo + '" alt="">';`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/chart+2024.png">`, []],
+    // 재리뷰가 잡은 미탐 — 원격 검사가 자리를 열거하다 놓친 것들 (high B)
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <script src="https://cdn.example.com/chart.js"></script>`,
+      [MSG.remoteMedia("https://cdn.example.com/chart.js")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <iframe src="https://example.com/widget"></iframe>`,
+      [MSG.remoteMedia("https://example.com/widget")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <svg><use href="https://cdn.example.com/icons.svg#star"/></svg>`,
+      [MSG.remoteMedia("https://cdn.example.com/icons.svg#star")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <link href="https://cdn.example.com/a.css" rel="stylesheet">`,
+      [MSG.remoteMedia("https://cdn.example.com/a.css")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="https://cdn.example.com/a+b.png">`,
+      [MSG.remoteMedia("https://cdn.example.com/a+b.png")]],
     // 그리고 놓치면 안 되는 것들
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <video data-rg="2" src="assets/a.mp4"></video>`, [MSG.videoDur]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.svg">`, [MSG.animatedImage("assets/a.svg")]],

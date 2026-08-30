@@ -238,11 +238,12 @@ const SLIDE_SHOT = 0;
   const bgBroken = [];
   const bgUrls = () => {
     const out = new Set();
-    for (const el of document.querySelectorAll("*")) {
-      const bg = getComputedStyle(el).backgroundImage;
-      if (!bg || bg === "none") continue;
-      for (const m of bg.matchAll(/url\(\s*["']?([^"')]+)/g)) out.add(m[1]);
-    }
+    for (const el of document.querySelectorAll("*"))
+      for (const pseudo of [null, "::before", "::after"]) {
+        const bg = getComputedStyle(el, pseudo).backgroundImage;
+        if (!bg || bg === "none") continue;
+        for (const m of bg.matchAll(/url\(\s*["']?([^"')]+)/g)) out.add(m[1]);
+      }
     return [...out];
   };
 

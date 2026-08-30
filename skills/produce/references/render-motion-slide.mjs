@@ -343,11 +343,18 @@ const openPage = async () => {
   // that only exists at some mid-group t — a painter that attaches a node outside [data-rg] and
   // removes it again by the rest frame. __seek pins such an animation and counts it, so the
   // count here is the whole render, not one instant.
-  const metaAfter = await evalJS("window.__meta()");
+  // Every worker keeps its own counter, so ask them all — the tab that captured the offending
+  // group may not be the one this loop started from.
+  const metasAfter = await Promise.all(workers.map(w => w.evalJS("window.__meta()")));
+  const metaAfter = {
+    stray: metasAfter.reduce((n, m) => n + m.stray, 0) - meta.stray * (workers.length - 1),
+    broken: metasAfter.flatMap(m => m.broken || []),
+  };
   if (metaAfter.stray > meta.stray)
-    return die(`${metaAfter.stray - meta.stray} animation(s) ran outside a [data-rg] group during capture ` +
-               `— a painter attaching nodes outside its group, or a video playing itself. They were pinned to t=0 ` +
-               `so the frames are still reproducible, but nothing moved where the author expected. ` +
+    return die(`${metaAfter.stray - meta.stray} frame(s) were captured with an animation running outside a ` +
+               `[data-rg] group ` +
+               `— a painter attaching nodes outside its group, or a video playing itself. Each was pinned to ` +
+               `t=0 so the frames are still reproducible, but nothing moved where the author expected. ` +
                `Put every animated element the painter creates inside its own [data-rg] group.`);
   if (metaAfter.broken && metaAfter.broken.length > (meta.broken || []).length)
     return die(`could not load during capture: ${metaAfter.broken.join(", ")}`);
