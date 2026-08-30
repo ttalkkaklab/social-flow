@@ -349,7 +349,7 @@ function analyse(src, fmt, scenes) {
   // log that keeps the history as a bullet list is counted by its bullets — but only the
   // bullets that name a tool or carry a query. Counting every bullet let a history that says
   // in so many words that nothing was searched clear the rule on four sentences of prose.
-  const SEARCH_LINE = /naver_search|WebSearch|WebFetch|serp_|youtube_|datago_|「|"|"/;
+  const SEARCH_LINE = /naver_search|WebSearch|WebFetch|serp_|youtube_|datago_|API|「|`|"|\u201c|\u201d/;
   let searches = null;
   if (searchBody !== null) {
     searches = rows(searchBody).length

@@ -101,6 +101,11 @@ function insideReal(base, target) {
   } catch (e) { return false; }
 }
 
+/** readText, but only for a file that still sits inside base once symlinks are resolved.
+ *  Guarding the directory is not enough — one storyboard.md pointing out is one arbitrary
+ *  read, and the JSON routes hand the whole file back. */
+const readInside = (base, file) => (insideReal(base, file) ? readText(file) : null);
+
 /* ── readers ─────────────────────────────────────────────────────────────── */
 
 /** Frontmatter as key → value. A trailing "# comment" on a value is dropped — real
@@ -169,15 +174,19 @@ function listChannels(root) {
       const dir = channelDir(root, slug);
       const hasProfile = isFile(path.join(dir, 'profile.md'));
       if (!hasProfile && !isDir(path.join(dir, 'episodes')) && !isDir(path.join(dir, 'assets'))) return null;
-      const fm = frontmatter(readText(path.join(dir, 'profile.md')));
+      const fm = frontmatter(readInside(dir, path.join(dir, 'profile.md')));
       return {
         slug,
         name: fm.name || slug,
         status: fm.status || null,
         profile: hasProfile,
+        // The same predicate the two list routes apply — otherwise the badge counts an
+        // episode the page will not show.
         storyboards: listDirs(path.join(dir, 'episodes'))
-          .filter((t) => isDir(path.join(dir, 'episodes', t, 'storyboard'))).length,
-        characters: listDirs(path.join(dir, 'assets', 'characters')).length,
+          .filter((t) => isDir(path.join(dir, 'episodes', t, 'storyboard'))
+                      && insideReal(dir, path.join(dir, 'episodes', t, 'storyboard'))).length,
+        characters: listDirs(path.join(dir, 'assets', 'characters'))
+          .filter((id) => insideReal(dir, path.join(dir, 'assets', 'characters', id))).length,
       };
     })
     .filter(Boolean);
@@ -230,9 +239,9 @@ function listStoryboards(root, slug) {
     .sort().reverse()
     .map((topic) => {
       const sb = path.join(epRoot, topic, 'storyboard');
-      const md = readText(path.join(sb, 'storyboard.md'));
+      const md = readInside(dir, path.join(sb, 'storyboard.md'));
       const fm = frontmatter(md);
-      const scenes = readText(path.join(sb, 'scenes.js'));
+      const scenes = readInside(dir, path.join(sb, 'scenes.js'));
       const fmt = scenes ? (scenes.match(/window\.FORMAT\s*=\s*["']([^"']+)["']/) || [])[1] : null;
       const heading = firstHeading(md);
       const st = states.get(topic) || {};
@@ -266,7 +275,7 @@ function listStoryboards(root, slug) {
 /** catalog.md rows of kind "character": id → note. */
 function catalogNotes(dir) {
   const notes = new Map();
-  const src = readText(path.join(dir, 'assets', 'catalog.md'));
+  const src = readInside(dir, path.join(dir, 'assets', 'catalog.md'));
   if (!src) return notes;
   src.split(/\r?\n/).forEach((line) => {
     if (!line.trim().startsWith('|')) return;
@@ -297,7 +306,7 @@ const byPanel = (a, b) =>
 function characterEntry(root, slug, id, notes) {
   const dir = path.join(channelDir(root, slug), 'assets', 'characters', id);
   if (!isDir(dir) || !insideReal(channelDir(root, slug), dir)) return null;
-  const identity = readText(path.join(dir, 'identity.md'));
+  const identity = readInside(channelDir(root, slug), path.join(dir, 'identity.md'));
   // Real panel sets are not uniform — face/body/back per the contract, front.png before it,
   // real.png for the live-action one, head-closeup-*.png for a series — so every image
   // file in the directory is listed, and subdirectories (voice-audition/) are left alone.
@@ -329,7 +338,7 @@ function listCharacters(root, slug) {
 function characterDetail(root, slug, id) {
   const entry = characterEntry(root, slug, id, catalogNotes(channelDir(root, slug)));
   if (!entry) return null;
-  const identity = readText(path.join(channelDir(root, slug), 'assets', 'characters', id, 'identity.md'));
+  const identity = readInside(channelDir(root, slug), path.join(channelDir(root, slug), 'assets', 'characters', id, 'identity.md'));
   return Object.assign({}, entry, { identityText: identity });
 }
 
@@ -839,7 +848,9 @@ const SHELL = String.raw`<!DOCTYPE html>
 function createApp(root) {
   return function handle(req, res) {
     try { return route(root, req, res); } catch (e) {
-      // One unreadable file must cost one request, not the server.
+      // One unreadable file costs one request; the server stays up. Surviving quietly is
+      // the wrong half of that — a real bug in a reader would look like a missing file.
+      process.stderr.write('serve: ' + req.url + ' — ' + ((e && e.stack) || e) + '\n');
       if (res.headersSent) return res.destroy();
       return sendText(res, 500, 'error');
     }
@@ -1060,7 +1071,7 @@ function main() {
     const url = 'http://' + (host === '0.0.0.0' ? '127.0.0.1' : host) + ':' + server.address().port + '/';
     const channels = listChannels(root);
     process.stdout.write(url + '\n' + channels.length + ' channel(s): ' + channels.map((c) => c.slug).join(' ') + '\n');
-    if (host !== '127.0.0.1' && host !== 'localhost') process.stderr.write('serve: listening on ' + host + ' — data/ is readable by anyone who can reach this port\n');
+    if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') process.stderr.write('serve: listening on ' + host + ' — data/ is readable by anyone who can reach this port\n');
     if (argv.indexOf('--open') !== -1) {
       const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
       const p = spawn(opener, [url], { stdio: 'ignore', detached: true });

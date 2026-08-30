@@ -123,7 +123,7 @@ WARN=0
 awk -v s="$SHRINK" -v t="$SHRINK_WARN" 'BEGIN{exit !(s > t)}' && {
   echo "⚠ the picture shrinks ${SHRINK}x on the way into the canvas — screen text this small is unreadable on a phone. Crop to the panel that matters with --focus" >&2; WARN=1; }
 awk -v s="$SCALE" -v t="$BLOWUP_WARN" 'BEGIN{exit !(s > t)}' && {
-  echo "⚠ the crop is blown up ${SCALE}x to fill the canvas — screen text goes soft past about 1.5x. Record at a higher resolution, or take a wider --focus region" >&2; WARN=1; }
+  echo "⚠ the crop is blown up ${SCALE}x to fill the canvas — screen text goes soft past about ${BLOWUP_WARN}x. Record at a higher resolution, or take a wider --focus region" >&2; WARN=1; }
 
 VF="${CROP_F}scale=${W}:${H}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:${BG},setsar=1,fps=${FPS},format=yuv420p"
 

@@ -77,11 +77,16 @@ HANGUL_RE = re.compile(r"[가-힣]")
 # rare enough in this copy that the absolute-count condition covers the overlap).
 FOREIGN_RE = re.compile(r"[A-Za-z\u3040-\u30ff\u4e00-\u9fff]")
 
-# Thresholds from the library, both far from the populations they separate:
+# Thresholds from the library, all three far from the populations they separate:
 #   share  — Korean episodes run 0.941~1.000; English paragraphs run 0.0.
-#   chars  — three syllables: under the shortest real Korean surface, over a hashtag.
+#   chars  — three syllables: under the shortest real Korean surface (5), over a stray word.
+#   floor  — under this share the Hangul is incidental however many syllables it runs to.
+#            The measured gap: a Korean product name dropped into English sits at 0.025 and
+#            five Korean hashtags on an English post at 0.115, while the thinnest real
+#            Korean surface in the library is at 0.147.
 HANGUL_MIN_SHARE = 0.5
 HANGUL_MIN_CHARS = 3
+HANGUL_FLOOR_SHARE = 0.13
 
 # Below this many letters the ratio is noise — "OK!" is 0.0 and "네" is 1.0, and neither
 # says what language the copy is in. Short strings are let through to the rules, which is
@@ -89,11 +94,19 @@ HANGUL_MIN_CHARS = 3
 SCOPE_MIN_LETTERS = 20
 
 
+# A hashtag is a label, not a sentence — none of the rules can fire inside one, and a
+# handful of Korean tags on an English post was enough to buy it a judgement by Korean
+# rules. Dropped before the ratio is taken; the copy itself still reaches the rules whole.
+HASHTAG_RE = re.compile(r"#\S+")
+
+
 def hangul_share(text: str) -> tuple[float | None, int, int]:
     """(Hangul share of Hangul+foreign letters, that letter count, Hangul count).
 
-    Measured on raw text. Share is None when there are too few letters to judge.
+    Measured on raw text with hashtags removed. Share is None when there are too few
+    letters to judge.
     """
+    text = HASHTAG_RE.sub(" ", text)
     h = len(HANGUL_RE.findall(text))
     f = len(FOREIGN_RE.findall(text))
     total = h + f
@@ -103,9 +116,11 @@ def hangul_share(text: str) -> tuple[float | None, int, int]:
 
 
 def out_of_scope(text: str) -> tuple[bool, float | None, int, int]:
-    """Both conditions must hold before the checker declines to judge."""
+    """The share has to be low, and then either reading of "barely any Korean" settles it —
+    too few syllables to be a sentence, or too thin a share to be anything but incidental."""
     share, letters, hangul = hangul_share(text)
-    skip = share is not None and share < HANGUL_MIN_SHARE and hangul < HANGUL_MIN_CHARS
+    skip = (share is not None and share < HANGUL_MIN_SHARE
+            and (hangul < HANGUL_MIN_CHARS or share < HANGUL_FLOOR_SHARE))
     return skip, share, letters, hangul
 
 # ---------------------------------------------------------------------------
@@ -958,12 +973,22 @@ SELFTEST = [
     ("chinese is skipped", "narration", 4,
      "这是一段中文旁白，不是韩语，检查器无法阅读它。这句话应该被跳过。\n"),
     # A foreign text may carry a little Hangul — a hashtag, a product name — and that must
-    # not buy it a pass. This is the exact paragraph above with one Korean hashtag added.
-    ("english with a korean hashtag is still skipped", "threads", 4,
+    # not buy it a pass. Both fixtures sit ABOVE HANGUL_MIN_CHARS on purpose: a fixture one
+    # syllable under the boundary passes without ever testing the boundary, which is how the
+    # hole came back once already. Five hashtags, because one is easy and a handful is not.
+    ("english with korean hashtags is still skipped", "threads", 4,
      "It is not merely a tool, it is a partner. In today's rapidly evolving landscape, "
      "leveraging robust and seamless solutions is crucial. Delve into the comprehensive "
-     "framework that fosters innovation. It's a testament to what teams can achieve. #한국\n"),
-    # The short Latin-dense Korean the count exists to protect: 5 syllables, share 0.147.
+     "framework that fosters innovation. It's a testament to what teams can achieve. "
+     "#한국어 #딸깍 #연구소 #버즈 #클로드\n"),
+    # The same paragraph with a bare Korean product name in the prose — no hashtag to strip,
+    # 5 syllables, and it still has to skip. This is what the share floor is for.
+    ("english with a korean product name is still skipped", "threads", 4,
+     "It is not merely a tool, it is a partner. In today's rapidly evolving landscape, "
+     "leveraging robust and seamless solutions is crucial. Delve into the comprehensive "
+     "framework that fosters innovation. We use 딸깍연구소 daily.\n"),
+    # The thinnest real Korean surface in the library — 5 syllables at share 0.147, just
+    # over the floor. The pair above and this one are what separate the two populations.
     ("short latin-dense korean stays in scope", "reply", 0,
      "ffmpeg concat demuxer로 stream copy 하면 돼요.\n"),
     # The other direction, and the one that matters more: Korean thick with Latin product
