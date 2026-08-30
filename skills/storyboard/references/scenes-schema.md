@@ -52,6 +52,7 @@ disagree, the preset is right.
 | Ken Burns pan | available — travel = W(z−1) ≈ 130px at 1.12, measured on portrait | used (scale 1.06–1.35) |
 | Outro asset | `outro.mp4` | `outro-16x9.mp4` |
 | Filmed scenes | the episode is either all filmed or all generated | **mixed within one episode** (§filmed scenes) |
+| Screencast splice | **per scene** — one recorded screen inside a generated episode (§screencast splice) | per scene, same contract |
 
 **Long-form is `provisional`.** The safe area was measured only on desktop web; mobile web
 landscape and the top title bar haven't been measured yet (`safezone-landscape.md`). Those two
@@ -123,7 +124,7 @@ measurement of it (user-relayed, 2026-08-23).
 | `hooking` | hooking / setup | answer-first: problem, harm, loss, resolve — why that result is needed; catches what the cover threw (the chosen opening strategy) and doesn't unpack the answer. story: the setup — era, person, the original goal — the ending still withheld | **right after the cover, in every episode** (§hooking) |
 | `result` | result / payoff | answer-first: shows the finished thing properly — scrolling, demo, before/after. story: the payoff — what it became, the loop closed, shown wide enough to see the whole thing | answer-first: **right after hooking, before the body**. story: **after the turn, before the cta** |
 | `body` | body / build | answer-first: the method, evidence, and steps that made that result. story: the build — the conflict, the rejection, the reason it almost got lost, tension rising | answer-first: after the result has been seen. story: after the setup |
-| `turn` | turning point | **story only** — the moment someone or something saw it differently; the peak of tension, the last beat before the answer | right before the result |
+| `turn` | turning point | **story only** — the moment someone or something saw it differently; the peak of tension, the last beat before the answer. A double hit: the situation flips and the plant re-reads in the same shot, the outcome itself still withheld (scenario-craft §9) | right before the result |
 | `cta` | next / afterglow | answer-first: what gets finished in the next episode. story: a frame that loops back to the cover — one question or the next episode | At the very end. `type:"outro"` lands here even unwritten |
 
 **What each beat does to the drop-off curve — stop · hold · satisfy · act.** In short-form the
@@ -137,7 +138,7 @@ distribution signal under 60 s, and the first 1.5 s of hook weighs more than any
 | **stop** | `hook` | `hook` | 0–3 s: big title, a strong first frame, movement already in it — no logo, no intro sting, no greeting. story: the moment of failure, close, no hint of how it ended | a first frame the thumb slides past; a story cover that names the ending |
 | **hold** | `hooking` | `hooking` · `body` · `turn` | keep the promise visible and the answer withheld — answer-first through the first 20 s, story through the turn (setup lean, tension climbing setup → build → peak), something changing on screen every 2–4 s | unpacking the answer; drifting from what the cover threw; a setup that dawdles |
 | **satisfy** | `result` · `body` | `result` | pay the promise the cover made — answer-first: the result, then how; story: the payoff, the first time the answer is on screen | a hook the body can't keep: the platform now reads "stopped, then left inside 3 s" as a negative signal, so a bait hook that isn't kept is punished, not rewarded |
-| **act** | `cta` | `cta` | after the answer, open one loop outward — in priority order: a judgment call the comments will argue over (tied to the channel concept), a rewatch pointer ("0:14에 힌트가 있었어요"), a share-worthy single fact — plus the next concrete thing (the next episode's result, the link); story: the frame that loops back to the cover is the visual half of the same device (scenario-craft §5 loop ending) | a vague subscribe ask; the same judgment question verbatim every episode — viewers learn the pattern and stop answering |
+| **act** | `cta` | `cta` | after the answer, open one loop outward — in priority order: a judgment call the comments will argue over (tied to the channel concept), a rewatch pointer ("0:14에 힌트가 있었어요"), a share-worthy single fact — plus the next concrete thing (the next episode's result, the link); story: the frame that loops back to the cover is the visual half of the same device (scenario-craft §5 loop ending); the spoken half is a callback line that re-reads the cover's words in the viewer's own life plus a question about memory rather than opinion (scenario-craft §12) | a vague subscribe ask; the same judgment question verbatim every episode — viewers learn the pattern and stop answering |
 
 And in between, **every visual change resets attention for a few more seconds** — high-performing
 Shorts change something on screen every 2–4 s (user-relayed, 2026-08-23 — field-practice grade,
@@ -145,7 +146,7 @@ unsourced). One narration sentence = one reveal gives that
 cadence on its own (§narration segments); a stretch longer than ~4 s with nothing changing is a
 stretch to cut or to give a caption swap, an image change or a move.
 
-**Underneath the beats run seven craft rules** — the source of truth is
+**Underneath the beats run ten craft rules** — the source of truth is
 [`scenario-craft.md`](scenario-craft.md). The two that bind every episode: adjacent scenes
 join with a "but" or a "therefore", never an "and then" (the connective test — an
 "and-then" seam is scene-mode P0-2 material), and every scene turns a charge — what's at
@@ -155,7 +156,12 @@ five are per-technique: the story `turn` is planted in advance and fair-play
 (misdirection, never deception), fear runs on suspense plus a doable answer, every
 curiosity loop opened names the scene that pays it, comedy breaks a pattern with the
 break landing last, and the peak and the end get designed as the two moments the episode
-is judged by (scenario-craft §7).
+is judged by (scenario-craft §7). Three more bind the story arc: the body holds before it
+bursts — a rising series of holds, the release an action rather than the emotion (§8); the
+`turn` is a double hit — the situation flips and the plant re-reads in the same shot, the
+outcome itself still kept for the result (§9); and the premise is shown working once (claim ·
+act · result) rather than explained (§10). On every arc the payoff shot copies its plant's
+frame (§3) and the signature line lands once (§7).
 
 On answer-first the cover's first frame and the result scene point at the same artifact. The
 cover is the glance; the result unfolds it so the built parts show. Don't unfold the same
@@ -172,7 +178,9 @@ hooking; on answer-first it flags body before result as a violation, and warns o
 result scene — there the first content shot takes `beat:"result"`, §hooking); on a story arc it
 flags result before body or before the turn as a violation, and warns when there is no turn, no
 result, or the shot right before the result isn't the turn. An `arc` outside the two is a
-warning.
+warning. The promise ledger (`SB_DOC.craft`, storyboard SKILL §6) is checked in the same strip
+— a loop with no payer, a cover promise paid off the result, a plant paid in a different frame
+than it was planted in.
 
 ```js
 arc: "answer-first"               // cover only — answer-first (default) | story. Which order the episode walks
@@ -318,7 +326,8 @@ visual: {
                                      // written in veo vocabulary — push and orbit appear 0 times in the canonical docs
   video: null,                       // points only: the motion-background shot marker (§motion background) — omitted for stills
   clip: null,                        // quote only: the speech clip plan (below)
-  slide: null,                       // slide scene (§slide scenes · §motion slides) — { file, plan, labels, motion }
+  source: null,                      // "recording" (§filmed scenes) | "screencast" (§screencast splice) — where the picture was recorded
+  slide: null,                       // authored screen (§the authored-screen lane) — { file, kind, plan, labels, motion, acts }
   character: null,                   // who is on screen (§character reference) — "<id>" | ["<id>", …] | null
   camera: null                       // the four camera slots (§camera) — required on every generated-video shot
 }
@@ -331,9 +340,9 @@ title and figure in HTML over a still photo is the default. Don't merge the two 
 |---|---|---|
 | `still` | Still photo or illustration. Ken Burns is added by the builder | `visual.bg` present, no `video` or `clip` |
 | `ai-video` | Generated video — motion background, b-roll, speech clip | `type==="broll"`, or `visual.video`, or `visual.clip` |
-| `recording` | **A clip the user filmed themselves** (§filmed scenes) | `visual.source==="recording"` |
+| `recording` | **A clip the user filmed themselves** (§filmed scenes), or one window of a screen recording spliced into an otherwise generated episode (§screencast splice) | `visual.source==="recording"` \| `"screencast"` |
 | `asset` | A pre-made shared mp4 | `type==="outro"` |
-| `slide` | **An HTML slide** — a text-and-shape diagram filling the frame. Static (§slide scenes): long-form only. Motion (`slide.motion`, §motion slides): both formats | `visual.slide` present |
+| `slide` | **An HTML screen we authored** — a text-and-shape diagram, words landing one per sentence, or a figure reacting (`slide.kind`, §the authored-screen lane). Static (§slide scenes): long-form only. Motion (`slide.motion`): both formats | `visual.slide` present |
 
 **The verdict is per scene.** Generated and filmed scenes mixing within one episode is the
 normal long-form path, so don't flip the whole episode into one mode — that makes a single
@@ -409,8 +418,10 @@ an app being launched, or on the speaker's face saying hello. The viewer sees th
 the first second and hears why to keep watching in segment ①. Informational topics that can't
 show a result on screen use the problem situation or the key figure as the first frame. A
 story arc opens on the moment instead — the failure or the strange thing, close, with no hint
-of how it ended (§playback order); on either arc the first frame carries no logo, intro sting
-or greeting.
+of how it ended (§playback order) — at its strongest, things that don't belong together in one
+frame with no line under them, so the picture asks the one question before the narration does
+(scenario-craft §5, the gap as a picture); on either arc the first frame carries no logo, intro
+sting or greeting.
 
 The cover's first line (segment ①) is a hook surface separate from the on-screen title. There's
 one contract — **the first sentence gives the listener a reason to stay.** That reason hangs on
@@ -469,6 +480,10 @@ the sound (segment ①) rides. **An opening with none of the four is a reviewer 
   YouTube Intro metric (did the first 30 seconds match the title and thumbnail's promise).
   ③ The register is one of telling someone about a loss — not a scaring tone, and the polite
   register and spoken-surface rules (§title is a spoken hook, korean-style D9) hold.
+  **On a story arc the loss can be the character's** — "이 항아리가 썩었으면, 이 집은 봄까지 채소를
+  한 입도 못 먹어요" — riding §4's "the viewer knows first" lane: guardrail ② is then paid inside
+  the story (turn and result), not as a step for the viewer, and the cover's `shot.info` says so
+  (scenario-craft §12, stakes before the question).
 - **Mapping from the old names** — the previous contract's three segment-① forms (promise,
   problem statement, twist/figure) and three hooking forms (problem/harm, unresolved tension,
   resolve/criteria) are subsets of these four: promise = showing the ending, problem statement,
@@ -720,14 +735,29 @@ the field appears only where there is a table to point at.
 ```js
 {
   type: "points",
-  transition: "dissolve",     // omit for a cut · "dissolve" fades through black into this shot
+  transition: "dissolve",     // omit for a cut · dissolve | dip | dip:white | push:<l2r|r2l|u2d|d2u>
   …
 }
 ```
 
+Four words, and each one is a different picture:
+
+| `transition` | What the audience sees at the join | When |
+|---|---|---|
+| *(absent)* | a cut — one frame the old shot, the next frame the new one | the default. The story continued |
+| `dissolve` | the new shot melts up **through** the old one — two pictures on screen at once for 0.45 s | time passed, or the place changed, and the two pictures belong to one world |
+| `dip` · `dip:white` | the old shot fades to black (or white), a beat of nothing, the new one fades up | a chapter break, a jump the story treats as a distance. White is a flash — a memory, a blast |
+| `push:l2r` … | the old shot slides off in that direction and uncovers the new one (0.32 s) | a list, a comparison, "meanwhile" — the two shots are siblings, not a before and after |
+
 **The default is a cut, and most boundaries should stay one.** A cut is the invisible join —
-it says the story continued. A dissolve says something moved that the picture alone cannot
+it says the story continued. A transition says something moved that the picture alone cannot
 show: time passed, or the place changed. Spend it where that is true and nowhere else.
+Measured on a reference short that holds attention for 85 s (docs/research/2026-08-29-one-world-word-cue):
+six hard cuts in the whole piece and no dissolve at all — the joins feel soft because every
+shot is **moving** and every shot is in the **same place**, not because the edit blurred them.
+When a cut feels abrupt, look at the two pictures first: a still landing on a still, or a
+hall landing on a kitchen, is what the audience felt. A dissolve on top of that is slow *and*
+abrupt.
 
 **A short gets one, or none.** Two is already a lot; a dissolve at every boundary is the
 slideshow look, and it reads as an episode with no cuts in it rather than an episode with
@@ -755,12 +785,15 @@ give every single shot its own `scene` number, so a rule of "new scene → disso
 one at every cut in half the channel. The transition is written where it is wanted, one at a
 time.
 
-**What produce does with it.** The builder fades the outgoing card's tail down to black and
-the incoming card's head up from it, each inside that card's own encode — no overlap. So the
-episode does not get shorter, no subtitle cue moves, and the seam stays stream-copy exact
-(`../produce/references/build-reel.sh` §7.4, `cards.tsv` `enter=` / `exit=`). Audio runs
-straight through: the narration already meets silence at a card boundary and the music bed is
-continuous, so fading either one would cut a word or punch a hole in the bed.
+**What produce does with it.** Every transition is drawn inside one card's own encode — no
+overlap, so the episode does not get shorter, no subtitle cue moves, and the seam stays
+stream-copy exact (`../produce/references/build-reel.sh` §7.4). `dissolve` and `push` are
+written on the incoming card alone (`cards.tsv` `enter=dissolve` / `enter=push:<dir>`): the
+builder keeps the previous card's last frame and the incoming card opens on it and gets out
+of it. `dip` is two halves — `exit=black` on the card before, `enter=black` on this one
+(`white` likewise). Audio runs straight through: the narration already meets silence at a
+card boundary and the music bed is continuous, so fading either one would cut a word or
+punch a hole in the bed.
 
 ### Camera — the four slots (`visual.camera`)
 
@@ -1050,6 +1083,9 @@ sound: {
   45-second short and neither reads.
 - **Change the cue where the episode turns**, not on a timer — out of the hook into the body, into
   the close. Usually once in a short, often not at all.
+- **On a story arc the drop goes on the turn.** The music goes out at the peak, and the turn is
+  the peak; the result is where it comes back (scenario-craft §7). storyboard.html warns when a
+  story arc's drop sits anywhere else.
 
 Where the numbers under all this come from, and which of them are evidence and which are our own
 practice: [bgm-scoring.md](../../produce/references/bgm-scoring.md). The short version — the bed
@@ -1462,6 +1498,94 @@ stops with `STRICT_DIM=1` **before the first ffmpeg** (the landscape preset's de
 is written at the top of `script.md`'s filming rules — learning it after filming everything means
 filming again.
 
+### Screencast splice — one recorded screen inside an ordinary episode (`visual.source: "screencast"`)
+
+A filmed scene is a whole production mode: live voice, a filming contract, script.md, and in
+short-form the whole episode goes that way. But a lot of episodes need **one cut of a real
+screen** and nothing more — the command actually running, the setting actually being switched,
+the result actually appearing — inside an episode that is otherwise generated and narrated by
+TTS. Rebuilding that one moment as a generated image is the wrong trade: the whole point is
+that it is the real screen.
+
+That is this lane. **It is per scene in both formats** — the one place a short mixes a recorded
+picture with generated ones. What stays all-or-nothing in short-form is the camera-filmed lane
+(`source: "recording"`), because that one changes the speaker, the character counts and the
+speech rate for the whole episode. A screencast splice changes none of those: the voice is
+still TTS, the card is still an ordinary card, and only the picture comes from a file.
+
+```js
+{
+  type: "points",
+  scene: 3, sceneSlug: "the terminal / day",
+  beat: "result",
+  shot: { feel: "relief — it really runs", size: "insert", angle: "eye", info: "that one command runs the whole thing" },
+  title: "명령 한 줄이면 끝이야",
+  duration: 7,
+  narration: [ /* ordinary TTS segments — the recording is muted under them */ ],
+  visual: {
+    picture: "recording",
+    source: "screencast",
+    clip: "footage/s3-cli-run.mp4",   // the recording the user saves — one file, or a long one many scenes cut from
+    at: "12.5-19.0",                  // the window on THAT file's clock, seconds
+    focus: "160:220:1400:900",        // x:y:w:h on the source frame — the panel that carries the point
+    shot: "the terminal with the command being typed and the result appearing",
+    action: "type the command slowly and wait until the whole result is out"
+  }
+}
+```
+
+| Field | Required | What |
+|---|---|---|
+| `source` | ✅ | `"screencast"` — this one value is what makes it a splice rather than a filmed scene |
+| `clip` | ✅ | `footage/s<shot number>-<slug>.mp4`. Several scenes may name the **same** file with different `at` windows — that is the normal shape when the user recorded one long pass |
+| `at` | optional | `"<start>-<end>"` in seconds **on the source file's clock**, for when one long recording covers several scenes. Left out, the whole file is the cut — which is what one-file-per-shot recording gives, and what script.md asks the user for |
+| `focus` | recommended | `"x:y:w:h"` in source pixels. Without it the whole frame is fitted, and a 1920-wide screen in a 1080-wide canvas is a 1.78× shrink sitting in a band a third of the height — legible for one beat, not for a card anyone has to read |
+| `sync` | optional | `true` puts the card on the live-voice lane (the recording's own sound, `sync=1` in cards.tsv, subtitles from the transcript). Omitted, the recording is muted and TTS narration covers the card |
+| `shot` (inside `visual`) | ✅ | one line on what is visible on screen — the **화면** item in script.md |
+| `action` | ✅ | what the user does while recording — the **행동** item in script.md |
+
+- **The clip plays once and freezes on its last frame** (`@` visual, §motion slides has the same
+  contract). So the `at` window should be about the card's length: longer and the tail never
+  plays, much shorter and the picture sits still while the voice runs on. `cut-screencast.sh`
+  warns in both directions when produce passes it the card duration.
+- **A screencast scene has no `bg` or `bgPrompt`** — it drops out of §5 image generation and the
+  §5.5 image review, exactly like a slide scene. What is on screen is the recording.
+- `zoom` is `none`. Ken Burns on a screen recording shakes text that is already small.
+- **Not for a talking head.** A face and a voice is `source: "recording"` — the filmed lane, with
+  its own sound and framing contract. This lane is for a screen.
+- **Not for ambience.** A window scrolling under the whole narration is a background, not a
+  point; that is `visual.video`. Cut to the moment where something changes and cut away.
+- Until the user's file lands in `footage/`, the episode is blocked the same way a filmed scene
+  blocks it — the storyboard sets the filename, `script.md` prints it, and `episode-state.js`
+  reports it as missing.
+
+### The authored-screen lane — three kinds under one key (`visual.slide.kind`)
+
+`visual.slide` is not only diagrams. It is **the screen we author ourselves**: one HTML file per
+shot, baked into clips by seek-rendering, checked by `check-slide.js`, and judged by
+`slide-reviewer`. What that file draws is `kind`, and there are three:
+
+| `kind` | What is on screen | Section |
+|---|---|---|
+| `"diagram"` (the default when absent) | text and shapes — structure, comparison, steps, a flow of numbers | §slide scenes · §motion slides |
+| `"kinetic"` | the words themselves — one phrase landing per sentence | §kinetic type |
+| `"character"` | someone reacting — a drawn figure that points, nods, thinks | §character act |
+
+Everything else is shared and does not change per kind: the file naming
+(`slides/s<shot number>-<slug>.html`), reveal groups 1:1 with narration segments, the state rule,
+the determinism contract, the zone, no `bg`/`bgPrompt`, no §5 image generation, the design gate
+at score ≥ 95 with p0 = 0. **A new kind is a new template and new design rules — not a new
+pipeline.**
+
+Two rules bind the two new kinds:
+
+- **`kind` never implies `motion`.** `kind: "kinetic"` and `kind: "character"` both require
+  `motion: true` written out. produce §3.6, the storyboard check strip, and the static capture
+  path all branch on `motion === true` and know nothing about `kind`; leave it out and a moving
+  screen quietly renders down the still path with its motion gone. `check-slide.js` fails on it.
+- **An absent `kind` is `"diagram"`.** Every episode written before this lane existed keeps
+  behaving exactly as it did.
+
 ### Slide scenes — a screen where text and shapes are the subject (`visual.slide`)
 
 For a passage where **the explanation has to be the screen** — structure, comparison, steps, a
@@ -1600,6 +1724,104 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
 - A motion slide has no `bg`/`bgPrompt` and skips §5 image generation and the image
   review, like a static slide; the storyboard's check strip and `episode-state.js` treat
   the file the same way (same naming, same "not authored yet" blocker).
+
+### Kinetic type — the words are the picture (`visual.slide.kind: "kinetic"`)
+
+Some lines don't need a picture behind them. A promise, a reversal, a name, a verdict — the
+sentence itself is the thing, and a photo under it is decoration competing with the words. Then
+the screen becomes the words: **one phrase lands per sentence** and stays while the next lands
+on it.
+
+```js
+{
+  type: "points",
+  scene: 4, sceneSlug: "the verdict", beat: "turn",
+  title: "**한 줄**이면 끝이야",
+  duration: 10,
+  narration: [ /* 3 segments — 1:1 with the phrases */ ],
+  bullets: [{ t: "설정 파일 없음", d: "기본값이 정답이라" }, { t: "지우기도 한 줄", d: "" }],
+  visual: {
+    picture: "slide", overlay: "none",
+    slide: {
+      file: "slides/s4-one-line.html",
+      kind: "kinetic", motion: true,
+      plan: "① 제목이 큰 마디로 내려앉고 ② 설정 파일 없음 ③ 지우기도 한 줄이 얹힌다",
+      labels: ["설치"]
+    }
+  }
+}
+```
+
+- Built from **`references/kinetic-type-template.html`**. Helpers: `h.word` (the big phrase),
+  `h.line` · `h.sub` (the ones receiving it), `h.cross` (a phrase with a rule struck through it —
+  for the thing that turned out wrong), `h.rule`.
+- **Don't put the subtitle on screen.** The subtitle band is already reading that sentence; a
+  screen that repeats it word for word says everything twice and gives the eye nothing to do.
+  What lands on screen is what survives the trim — `title`, `bullets`, `labels`. slide-reviewer
+  reads a screen phrase identical to its segment's `sub` as a P0.
+- **One big phrase per slide**, four lines at the very most, five words to a line. Past that it
+  is a paragraph, and a paragraph belongs to the narration.
+- **One effect kind per slide** — `drop` (from above, the default) or `wipe` (left to right, for
+  a longer phrase). Mixing them inside one screen reads as a template showing off.
+- Words don't spin, bounce, or fly in on an arc. They arrive and stop. Same argument as the
+  motion-slide lane: movement that carries meaning helps, decorative movement costs
+  comprehension.
+- **Not a motion slide.** A value that counts up, a bar that grows, steps that arrive — that is
+  §motion slides, and it stays there. This kind is for when the words are the whole point.
+
+### Character act — someone reacting on screen (`visual.slide.kind: "character"`)
+
+An explanation with nobody in it is flat in a way a viewer feels before they can name. This kind
+puts a drawn figure on screen that **reacts to each sentence** — comes in, points at the thing,
+nods, thinks, cheers when it works.
+
+```js
+{
+  type: "points",
+  scene: 6, sceneSlug: "why it got stuck", beat: "body",
+  title: "여기서 한 번 막혀요",
+  duration: 12,
+  narration: [ /* 3 segments — 1:1 with acts */ ],
+  bullets: [{ t: "이유는 따로 있었다", d: "설정이 아니라 순서였다" }],
+  visual: {
+    picture: "slide", overlay: "none",
+    slide: {
+      file: "slides/s6-stuck.html",
+      kind: "character", motion: true,
+      acts: ["enter", "think", "cheer"],     // one per segment — the vocabulary is fixed
+      plan: "① 들어와 서고 ② 턱에 손을 대고 생각하고 ③ 두 팔을 들어 뛴다",
+      labels: ["막히는 자리"]
+    }
+  }
+}
+```
+
+| Field | Required | What |
+|---|---|---|
+| `acts` | ✅ | one action name per reveal group, in order. **The vocabulary is closed**: `enter` · `point` · `nod` · `shrug` · `think` · `wave` · `cheer`. `check-slide.js` fails on a name outside it and on fewer acts than narration segments |
+| `plan` | ✅ | what the figure does on which sentence, numbered by segment — the same shape as a motion slide's plan |
+| `labels` | ✅ | as on every slide |
+
+- Built from **`references/character-act-template.html`**. The figure is an ink line-drawing in
+  the slide design's own language — paper stroke on ink, one accent, no fill, no face. It
+  inherits the look instead of arriving as a mascot from somewhere else.
+- **Actions are chosen, never authored.** Adding a keyframe of your own to a slide breaks the
+  thing that makes the lane work: every action is defined once in the template, so it renders the
+  same way in every episode, and hand-tuned motion doesn't survive a re-render. If an action the
+  episode needs isn't in the seven, that is a change to the template, `check-slide.js` and
+  `slide-design.md` together — not something to solve inside one slide.
+- **Every action returns to rest** except `enter`. That is what lets clip k end where clip k+1
+  begins, and it is why poses don't accumulate across cuts.
+- **The character never carries the fact alone.** The value, the claim, the name are written on
+  screen and checked like any other screen text; the figure reacts to them. A slide where the
+  only thing conveying the point is a gesture has nothing for the style gate or the reviewer to
+  read.
+- **One figure, no locomotion, no lip sync.** Walk cycles, a second character, a mouth moving to
+  the narration — all outside this lane. A speaker who has to be a person belongs in the filmed
+  lane or a generated video shot.
+- **Not the channel's mascot.** Using it on every scene turns an explainer into a cartoon and
+  buries the evidence. It earns its place on beats about a person's experience — being stuck,
+  deciding, being surprised.
 
 ## Authoring verification checklist (the storyboard skill's self-check before requesting approval)
 

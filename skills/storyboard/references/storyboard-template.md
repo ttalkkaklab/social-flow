@@ -22,6 +22,7 @@ created: <YYYY-MM-DD>
 - **Arc**: <answer-first / story> (`arc: <answer-first|story>`) — answer-first: cover → hooking → result → body; story: cover → hooking → body → turn → result, the answer appearing for the first time in the result
 - **Opening strategy**: <fear / empathy / curiosity / spoiler (show the ending first)> (`hookType: <fear|empathy|curiosity|spoiler>`) — <one line on how the title, segment ①, and the hooking shot carry that stimulus>
 - **Hook form**: <paradox / gap / payoff / identify / number / secret> (`hookForm: <…>`) — <one line on how the title and segment ① take that shape, and where the result pays it>
+- **Promises**: <the cover's hook → the result shot; each sub-loop and plant → the shot that pays it> (`SB_DOC.craft.loops` in storyboard.html — the document draws the ledger and marks the unpaid ones)
 - **Cover hook**: "<cover title>" — hero stat <stat>
 
 ## Sequence — <purpose>          # only when one episode has two purposes
@@ -166,11 +167,12 @@ must map 1:1 to an entry here.
 | Q2 | <the figure that will be the hero stat> | stat | answered by claim 2 |
 | Q3 | <…> | line | written off — no two sources; not used |
 
-## Verified
+## Verified                                      # ★ = a key claim (hook · hero stat · result) — counter-evidence is owed to these
 
 | # | Claim | Source 1 | Source 2 | Tool | Checked | Notes |
 |---|---|---|---|---|---|---|
-| 1 | <figure·deadline·effective date> | <URL> | <URL> | naver_search | <YYYY-MM-DD> | source excerpt: "…" |
+| ★1 | <figure·deadline·effective date> | <URL> | <URL> | naver_search | <YYYY-MM-DD> | source excerpt: "…" |
+| 2 | <context the lines lean on> | <URL> | <named source> | WebSearch | <YYYY-MM-DD> | |
 
 ## Counter-evidence & freshness                   # one row per key claim (SKILL §2 step 2)
 
@@ -188,7 +190,7 @@ must map 1:1 to an entry here.
 
 verified claims: <N> (floor 3 — aim 5+ short / 12+ long) · questions answered: <n>/<total> · written off: <list>
 
-## Search history
+## Search history                                # one row per search — the checker counts them against 2 × questions
 
 | Tool | Query | Result summary |
 |---|---|---|

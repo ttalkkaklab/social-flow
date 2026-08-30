@@ -26,7 +26,11 @@ const channel = path.basename(path.dirname(path.dirname(path.dirname(dir))));
 
 const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 const plain = t => (t || "").replace(/\*\*/g, "");
-const rec = s => s.visual && (s.visual.source === "recording" || s.visual.picture === "recording");
+const rec = s => s.visual && (s.visual.source === "recording" || s.visual.source === "screencast" ||
+                             s.visual.picture === "recording");
+/* 화면 녹화 삽입(scenes-schema §screencast splice) — 찍는 것은 같지만 목소리는 TTS 라
+   촬영 샷과 대사 안내가 다르다. sync:true 면 그 샷만 자기 소리를 쓴다. */
+const scast = s => !!(s.visual && s.visual.source === "screencast");
 const slide = s => !!(s.visual && s.visual.slide);
 
 const shots = [];
@@ -69,7 +73,8 @@ m += `
 |---|---|---|---|
 `;
 takes.forEach(x => {
-  m += `| \`${x.s.visual.clip}\` | 샷 ${x.no} | ${x.s.visual.shot} | ~${x.s.visual.takeSec || x.s.duration}초 |\n`;
+  const kind = scast(x.s) ? "화면 녹화" : "촬영";
+  m += `| \`${x.s.visual.clip}\` | 샷 ${x.no} | ${kind} — ${x.s.visual.shot} | ~${x.s.visual.takeSec || x.s.duration}초 |\n`;
 });
 if (VOICE) voiceShots.forEach(x => {
   const what = slide(x.s) ? "소리만 — 슬라이드 씬" : "소리만 — 생성 배경 씬";
@@ -176,8 +181,11 @@ list.forEach(({ s, no, at }) => {
   m += `\n#### 샷 ${no} — ${plain(s.title) || s.type} · ${beat} · ${s.duration}초\n\n`;
   if (rec(s)) {
     m += `**저장할 파일**: \`${s.visual.clip}\`\n`;
+    if (scast(s) && s.visual.at) m += `**쓸 구간**: ${s.visual.at}초 — 이 구간만 영상에 들어간다\n`;
     m += `**화면**: ${s.visual.shot}\n`;
     m += `**행동**: ${s.visual.action}\n`;
+    if (scast(s) && !s.visual.sync)
+      m += `**말**: 녹화하면서 말하지 않아도 된다 — 이 샷의 목소리는 TTS 가 얹는다\n`;
   } else if (slide(s)) {
     m += `**저장할 파일**: \`voice/s${no}.wav\` — 소리만 녹음한다\n`;
     m += `**화면**: 슬라이드 \`${s.visual.slide.file}\` (승인 뒤 제작) — ${s.visual.slide.plan}\n`;
@@ -195,7 +203,7 @@ list.forEach(({ s, no, at }) => {
   const narr = s.narration || [];
   if (!narr.length) { m += `\n**대사**: (말하지 않는다)\n`; }
   else {
-    m += `\n**대사**\n\n`;
+    m += scast(s) && !s.visual.sync ? `\n**이 샷에 얹힐 대사** (TTS — 읽지 않아도 된다)\n\n` : `\n**대사**\n\n`;
     narr.forEach((n, k) => {
       const line = n.sub || n.tts;
       m += `${k + 1}. ${line}\n`;

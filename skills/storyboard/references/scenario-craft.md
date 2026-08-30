@@ -1,4 +1,4 @@
-# Scenario craft — seven rules that run underneath the beats
+# Scenario craft — twelve rules that run underneath the beats
 
 The beat skeleton (`scenes-schema.md` §playback order) says **where** scenes go. This file
 says **how scenes push each other** — the craft layer classic screenwriting settled long
@@ -6,12 +6,22 @@ before short-form existed, cut down to what a 4–70-shot storyboard can actuall
 storyboard skill applies these while designing scenes (§4); the reviewer's scene mode reads
 them as the yardstick behind its flow and role checks. None of them adds a `scenes.js`
 field — every rule lands on fields that already exist (`beat` · `shot.feel` · `narration`
-· `hookForm` · `chapter`).
+· `hookForm` · `chapter` · `duration` · `shot.size`/`angle`/`space` · `sound.drop`).
 
 Survey with sources: [docs/research/2026-08-25-scenario-craft](../../../docs/research/2026-08-25-scenario-craft/).
 Grades follow the repo convention — **craft canon** (the standard playbook of a named
 practitioner or theorist, no measurement), **measured** (published measurement), **field
 practice** (practitioner reports, unsourced).
+
+Rules 8–10 and the additions inside §3 · §4 · §5 · §7 come from a screenwriting lecture the
+user pointed at (AInspire, "망하는 시나리오 vs 터지는 시나리오", 2026-07-10 — Breaking Bad ·
+나의 아저씨 · Signal read as one grammar; transcript from a local Qwen3-ASR run, 2026-08-29).
+Their grade: craft canon where the lecture cites Aristotle and Hitchcock, field practice for
+its readings of the three dramas. One thing holds the whole list up: **the frame stays fixed
+and only the content moves.** Breaking Bad ran the same cold-open format for 62 episodes, and
+that constancy is what made a small variation read as an event. It's why the rationing rules
+count once per episode — one `dutch`, one `drop`, one dissolve — a device only reads as a
+device against a frame that doesn't change.
 
 ## 1. The connective test — every cut is a "but" or a "therefore"
 
@@ -70,10 +80,37 @@ recontextualize earlier scenes without contradicting them. Craft canon.
 - **On `arc:"story"`**: the turn's clue sits in the setup or an early build shot. A turn
   with no plant reads as a cheat; a plant with no payoff is an unpaid promise — the same
   debt the §six hook forms rule tracks for the main hook, extended to every deliberate
-  plant. Note the plant → payoff pair in the storyboard SKILL §7 hand-off note so the
-  reviewer and the user can check it.
+  plant. Write the plant → payoff pair into `SB_DOC.craft.loops` (`kind: "plant"`, storyboard
+  SKILL §6) — storyboard.html draws the ledger and tags both shots, so the reviewer and the
+  user can check it at §7.
 - One red herring is legitimate tension (it makes the viewer commit to a wrong read);
   stacked red herrings burn trust.
+- **The plant is two seconds and looks like nothing.** An insert so short the viewer files it
+  as texture — the lily-of-the-valley pot at the edge of a slow pan, the shovel, the drum.
+  Breaking Bad's plants hold for a beat and move on; the reveal is one camera move over the
+  same pot with no line under it. On our timeline that is a short-`duration` shot whose
+  `shot.info` names the object, or a caption that reads as atmosphere. Lecture reading, field
+  practice.
+- **The payoff copies the plant's frame.** Same `shot.size`, same `shot.angle`, same
+  `shot.space` — the viewer recognizes the object because they stand where they stood when
+  it was planted, and no narration has to say "remember this". A payoff in a fresh frame has
+  to explain itself, and the explaining is the tell (directing-grammar §6 rule 14). Write the
+  pair into `SB_DOC.craft.loops` as `{ open: n, pay: m, kind: "plant" }` (storyboard SKILL §6)
+  — storyboard.html compares the two frames and warns when the size, angle or layout differs.
+- **An odd angle on an object is the promise that it matters.** Looking up at the shovel from
+  inside the drum says "this drum is not set dressing" before anything happens. Spend it on
+  the plant, not the payoff — it's the one legitimate reason for an object-level `low` or
+  `dutch` outside a person shot — and a `dutch` spent here still counts against the one-dutch ration.
+- **Names and rules can be plants.** 나의 아저씨 hid the drama's question in the protagonist's
+  name (지안 = 至安, reaching peace); Signal locked the detective's death into the device's
+  rule (the radio opens at 23:23, the minute he died). A plant carried by a name, a time or a
+  constraint pays off without a shot — the viewer re-reads it the moment the fact lands.
+- **Serialized: scatter the fragments, answer once.** Breaking Bad's season-2 cold opens showed
+  a pink teddy bear in a pool, then the bear fished out, then a body bag — four fragments
+  across four episodes, answered by the plane crash in the finale. The long-form or serialized
+  version of plant-and-payoff: each episode's opening carries one fragment and one episode
+  pays them all. The ledger (§5) then runs across episodes — a fragment nobody pays by the
+  series' end is the same unpaid promise at series scale.
 
 ## 4. Fear runs on suspense, and it needs a door
 
@@ -91,6 +128,13 @@ avoidance — here, the swipe. This is the measured base under the §opening str
 guardrail ② ("the body answers that threat"): the answer has to be a doable step, not
 reassurance that it'll be fine.
 
+**The device isn't fear-only — it's the viewer knowing first.** Signal tells the audience early
+that the 1989 detective is already dead, so every scene where he laughs plays as tragedy while
+nothing tragic is on screen: Hitchcock's bomb with the clock replaced by a fact. On a story arc
+the strongest `hooking` hands the viewer a piece of the ending-state the characters don't have
+— not the payoff (the result still shows that first), but the condition the body will be read
+under. Lecture reading of Signal, field practice.
+
 ## 5. Curiosity is a ledger — every loop opened gets a payer's name
 
 Loewenstein's information-gap theory (1994): curiosity fires when a **specific, closable**
@@ -100,9 +144,16 @@ something. A gap too far from what the viewer already knows lands as frustration
 curiosity — the hook has to sit close enough that the answer feels reachable. Craft canon
 (the theory) with the gap-specificity point measured in lab work.
 
+- **The gap can be a picture.** Breaking Bad's cold open — a man in underpants and a gas mask
+  driving an RV with bodies in the back, not a word — is a `gap` hook with no sentence: three
+  things that don't belong together in one frame, and the viewer's head asks the one question
+  (어쩌다 여기까지 왔지?). On a story arc, when the cover's first frame can carry the
+  incongruity, let the picture open the loop and keep segment ① for the promise; a narration
+  line that explains what's odd about the frame spends the gap. Lecture reading, field practice.
 - **Bookkeeping**: short-form carries **one main loop** (the `hookForm`) plus at most one
   sub-loop; long-form carries 2–4. Every loop names, at open time, the scene that pays it —
-  put the pairs in the storyboard SKILL §7 hand-off note. An unclosed loop is the
+  put the pairs into `SB_DOC.craft.loops` (storyboard SKILL §6 — the document draws them and
+  the §7 screen reads them). An unclosed loop is the
   "stopped, then left" penalty plus trust damage on the next episode (§six hook forms holds this for the main
   hook; this extends it to every loop opened mid-episode).
 - **The body pays the answer in installments** (measured on our own channel, n=4 —
@@ -135,6 +186,15 @@ curiosity — the hook has to sit close enough that the answer feels reachable. 
   the 50–70% mark one deliberate re-hook resets the room (a question to the viewer, a "the
   next one is the part people argue about"). A chapter title is a search phrase; the
   mini-hook is a narration sentence, and it's the chapter's own catch job.
+- **Short-form re-hooks ride the cut** (measured on one reference short, 85 s, 2026-08-29 —
+  docs/research/2026-08-29-one-world-word-cue). The piece opens a new question every 13–15 s,
+  and those are the only places its picture cuts: 「그럼 대체 왜 저걸 입고 들어가는 걸까요?」
+  at 13 s, 「근데 진짜 재앙은 따로 있습니다」 at 33 s, 「그럼 납으로 만들면 되지 않을까요?」
+  at 48 s (the viewer's own objection, asked for them), 「결국 인류는 막는 걸 포기합니다」 at
+  63 s (the turn). Each re-hook is one sentence and the next sentence starts paying it;
+  between them the body runs on §1 seams with no cut. This fits the bookkeeping above — the
+  sub-loop is re-opened three times, but each is paid before the next opens, so at no point
+  is more than one hanging. What the ledger caps is open loops, not questions asked.
 - **Loop ending** (field practice): a Short whose last sentence flows into its first frame
   replays — measured AVD above clip length on looping Shorts. The story arc's "cta frame
   points back at the cover" is the visual half of this; writing the cta's final narration
@@ -180,6 +240,244 @@ frame, so the end is where they are won or thrown away.
   costs both handles at once: nothing to remember the episode by, nothing to do about it.
 - The two don't substitute: an episode with a great peak and a trailing end gets
   remembered but not acted on; a strong CTA after a flat body has nothing to convert.
+- **The music goes out at the peak, not up.** Breaking Bad's crawl-space scene — the scream
+  turning into laughter — runs in silence; the instinct to swell the bed at the climax is the
+  thing to resist. `sound.drop: true` on the turn shot is that rule already (scenes-schema
+  §music cues — a drop is louder than a hit, spend it on the one line the episode is about),
+  and it's why the drop lands on the turn and not on the result — storyboard.html warns when a
+  story arc's drop sits anywhere else. Lecture reading, field practice.
+- **The signature line lands once.** "I am the one who knocks" is said once in a season;
+  나의 아저씨's "아무것도 아니야" is said early as one man's self-defense and at the end as the
+  sentence that saves the other person — the same words, the meaning turned over. Power comes
+  from spacing, not frequency: one quotable line per episode, at the turn or the last beat,
+  and the other scenes' titles don't rephrase it (scene mode reads the rephrasing as
+  duplication, P0-3). The one echo allowed is the §5 loop ending — the cta's last sentence
+  handing back to the cover's first line is a designed return, not a repeat.
+  `SB_DOC.craft.signature` names the shot; the document warns when it's neither the turn nor
+  the last beat.
+- **A serialized end cuts at the bill, not at the solution.** Signal's cliffhangers: the case
+  is solved and the price arrives in the same minute — someone else is dead now — cut. The cta
+  of a serialized episode opens its outward loop on what this episode's answer costs, not on
+  "next time"; the tease that connects (the opposite of scene-mode P0-9) is the consequence.
+  And the last frame is the protagonist's face, close — what the viewer carries out is a face,
+  not a summary card.
+
+## 8. Restraint sets the price of the burst
+
+나의 아저씨 has almost no crying in it. The camera holds the protagonist's blank face for three
+seconds at a time; she endures once, twice, three times; then the one release isn't tears — she
+runs, half a city, and the held-back charge comes out as motion. The amount held back is what
+the release is worth: three holds make one burst land, and a burst after no hold is just
+loudness. Field practice (lecture reading) — and the same mechanism the rule of three runs on
+(§6): two beats set the pattern, the third breaks it.
+
+- **Fields: `shot.feel` across the body, plus `duration`.** On a story arc the body is where the
+  antagonist provokes and the protagonist holds — write the holds as a rising series in `feel`
+  ("held — first time", "held — harder, the jaw", "held — it's about to go"), never the same
+  note three times. §2 reads three identical feels as a flat stretch; a hold is **deepening in
+  the same pole**, which §2 already counts as a turn, and the feel text is what tells the
+  reviewer which of the two it's reading. A held face gets held time too — 3 s on a face doing
+  nothing is the point, not a stretch to cut (the 2–4 s cadence still wants something on
+  screen to change, so hold the face and move the caption). List the holds in
+  `SB_DOC.craft.holds` and the release in `craft.burst` (storyboard SKILL §6) — the document
+  tags them and warns when two holds share a `feel` or the burst comes before the last hold.
+- **The burst is an action, not the emotion.** Write the release as something the character
+  does — runs, throws, laughs at the wrong moment — and let `feel` name the emotion underneath.
+  A release that is the emotion itself (crying, shouting) is the one the viewer has already
+  priced.
+- **On informational episodes the same shape is the withheld figure** (§5): a body that holds
+  back the number that makes the answer surprising is holding, and the reveal is the burst.
+  Hold once there, not three times — a short has no room for more.
+
+## 9. The turn is a double hit — the fortune flips and the plant re-reads in the same shot
+
+Aristotle's pair: *peripeteia* (the reversal — the protagonist's situation flips) and
+*anagnorisis* (the recognition — something true comes into view). Put them in the same moment
+and the catharsis is at its largest; put them in separate scenes and each is half the size. The
+lecture's point is that the AI shorts drama already runs on this 2,300-year-old rule whether its
+author knows it or not. Craft canon (*Poetics*).
+
+- **Field: the story arc's `beat:"turn"` shot.** The turn already has to be the tightest frame
+  (directing-grammar §6 rule 12) and the peak (§7); this rule says what happens inside it — the
+  situation reverses **and** the plant (§3) re-reads. Recognition here means the misdirection
+  resolving — the viewer sees the clue was there and reads the earlier scenes again — **not the
+  outcome**: the result beat is still the first place the answer is on screen (scenes-schema
+  §playback order), and a turn that names the payoff has closed the loop a scene early. A turn
+  that only flips fortune is a plot event with no click; one that only recognizes is exposition
+  with no stakes.
+- **Turns are plural.** The lecture's 25 · 50 · 75 % rule: a piece changes direction at each
+  quarter, not once. On a 60 s story short those are the seam from setup into build (the goal
+  meets its first obstacle), the double-hit turn, and the payoff's own reversal (what it became
+  isn't what anyone was making). §1's connective at those three seams should read "그런데" — a
+  quarter mark that reads "그래서" is a turn that didn't turn.
+- **The lecture's fold of the three-act into five minutes**, kept here as a reading aid — the
+  proportions the schema sets for our 35–75 s story arc (setup under a fifth, turn around
+  two-thirds, payoff the last quarter) stay the source of truth. 0–5 %: the unjust situation,
+  no line. 5–15 %: who the protagonist is and what they want, no explaining line. 15–30 %:
+  the clue objects as two-second inserts. 30–55 %: the antagonist provokes, the protagonist
+  holds (§8). ~55 %: the double hit. ~75 %: the catharsis. The last 5–7 %: don't resolve
+  everything — cut on a bigger hook, and the last frame is the protagonist's face, close (§7).
+- **After the hit, hold a shot** (directing-grammar §6 rule 13) — the re-reading needs a second
+  of screen with nothing new on it.
+
+## 10. Rules are verified, not explained
+
+Signal is a fantasy with exactly one impossible thing — an old radio — and three constraints on
+it: it can't be opened at will, the information comes in fragments, and changing the past
+rewrites the present. Everything else is autopsy, profiling and office politics, and that
+realism is what the one device buys. None of the three rules is ever explained: the first call
+says "dig there and you'll find a body", the profiler digs that night, bones come up —
+prophecy, act, confirmation, and the audience has accepted the rule without a line of
+exposition. The lecture's verdict: **the moment you write an explainer character (설명충),
+you've proven you couldn't write the script.** Craft canon (show, don't tell, in its sharpest
+form); the readings are field practice.
+
+- **Fields: the story arc's `hooking` narration and any `quote`.** The setup names the one
+  device and its constraint and then shows it working once — a claim, an act, a result, three
+  shots at most — before the body leans on it. A `quote` whose only job is to tell the viewer
+  how the world works, or a hooking segment that explains the premise instead of showing it,
+  is the explainer character (scene mode reads it as a correction directive on a story arc,
+  not a P0). Write the device into `SB_DOC.craft.device` — `{ what, rule, shown: [claim, act,
+  result] }` — so the three verifying shots are tagged on the document.
+- **One device, its constraint written.** A story premise carries one impossible or unusual
+  thing, and the tension comes from what it can't do. Two devices dilute each other; a device
+  with no constraint has no bill.
+- **Every solution has a bill.** Signal's third rule is the engine of every cliffhanger: solve
+  the case and the present is rewritten — not for the better. On a story arc the cost of the
+  answer is what the cta cuts on (§7); on a serialized channel it is the connective into the
+  next episode.
+- **On informational episodes the same rule is "evidence before the statement"** — put the
+  result on the table and let the viewer see it work before the narration says what it proves
+  (the three-jobs rule, scenes-schema §narration segments). Don't carry the explainer verdict
+  over: explaining is the informational body's job, and the tell is only a premise told
+  instead of shown.
+
+## 11. The storyline is an investigation, not a diary
+
+Informational material arrives as a timeline — first we installed, then we hired, then it
+broke. Telling it in that order is the named anti-pattern of informational long-form (the
+**chronological trap**): the strongest moment sits minutes deep behind context nobody asked
+for yet, and the seams read "and then", which §1 already bans one cut at a time. This rule
+bans it at the storyline level: lay the episode out as an **investigation of one question**,
+and let the storyboard skill's §2.5 HITL settle which investigation shape before any scene
+exists. Survey with graded sources:
+[docs/research/2026-08-29-longform-storyline](../../../docs/research/2026-08-29-longform-storyline/).
+Our own retention report (2026-08-26, n=4) points the same way — the mystery-shaped subject
+held a flat curve and finished first.
+
+Four rules hold whatever shape gets picked:
+
+- **Cold open.** The first scene is the strongest moment or the strongest piece of evidence
+  — the failure on screen, the number that shouldn't be possible — never the start of the
+  timeline. Every tier of the sourcing agrees: the leaked MrBeast handbook calls the first
+  minute the biggest exit and puts the wow element inside it (field practice), YouTube's own
+  playbook tells how-to content to open on the finished result (platform official), and
+  Harris front-loads the visual anchors (field practice).
+- **The promise sentence.** Inside the opening the viewer hears, in one sentence, what they
+  will know or be able to do by the end. Curiosity alone underdelivers for informational
+  content — the promise is the title and thumbnail's claim said out loud, and the episode is
+  then judged on keeping it.
+- **The false-answer beat.** When the material has an answer most viewers would guess first,
+  the body's first beat sets that answer up and takes it apart with evidence. Presenting only
+  the correct explanation leaves viewers **more confident in what they already believed**
+  (Muller 2008 — measured, the strongest-backed beat in this file). "요금 폭탄인가? →
+  아니었다, 98%는 캐시 재사용" is the shape.
+- **Context is a bridge, not a block.** Installs, definitions, backstory — deliver them in
+  short bridges at the moment the investigation needs them, and push the heaviest ones past
+  the midpoint (attention past the middle tolerates longer explanation; the front does not —
+  the MrBeast handbook's segment ladder says the same from the other side). A "setup chapter"
+  standing in front of the first tension is the trap wearing a chapter title.
+
+Six named body shapes — the §2.5 menu (field practice; beat lists from the structure survey):
+
+| Structure | Beats | Fits |
+|---|---|---|
+| Curiosity loop | mystery → false answer → complication → turn → resolution → takeaway | deep dives, retrospectives, "why did X happen" — the informational default |
+| Problem stack | symptom → surface fix (fails) → deeper cause → … → root cause → real fix → synthesis | troubleshooting, technical deep dives |
+| Transformation arc | before → stakes → catalyst → process → setback → after → lesson | challenges, "I tried X" |
+| Expert contrast | common approach → expert approach → results side by side → bridge for the viewer | comparisons, craft content |
+| Ticking clock | constraint → strategy → progress → obstacle → adaptation → outcome | deadline and limited-resource builds |
+| Reveal ladder | criteria → ascending items → top pick → bonus | rankings, listicles |
+
+The structure names the body's beat pattern; the playback contract stays `arc`
+(scenes-schema §playback order). A curiosity loop, a transformation arc and a ticking clock
+ride `story`; an expert contrast and a reveal ladder usually ride `answer-first`; a problem
+stack goes either way — on `story` the root cause is the turn.
+
+Checks the pass runs (§10's spirit — verified, not explained):
+
+- Read the body's scene order against event time. Matching one for one is not a defect by
+  itself, but it is the trap's fingerprint — ask what the cold open is and whether the first
+  tension lands inside the opening window (short-form ~20s, long-form ~60s).
+- Find the promise sentence in the opening. A hook that only teases has not made one.
+- If research holds a plausible wrong answer that no scene takes apart, the false-answer
+  beat was skipped.
+- Find the heaviest context stretch. If it stands in front of the first tension, it is a
+  block, not a bridge.
+
+## 12. The arc goes down before it comes up — catharsis is release that was paid for
+
+Catharsis is not a strong feeling; it is a feeling let go after being held. Aristotle's
+purgation, StudioBinder's repression → breaking point → aftermath, Zak's lab reading of the
+same shape (cortisol while the stakes are live, oxytocin when they resolve, and a flat story
+producing neither — no attention, no action afterwards): three descriptions of one mechanism,
+and the mechanism has a prerequisite. Something has to be pressed down first. Reagan et al.
+(2016, **measured** on 1,327 Gutenberg novels — the transfer to a 60 s short is our bet) found
+six arc shapes and that the most-downloaded ones all dip before they lift: Icarus, Oedipus,
+and two "man in a hole" arcs back to back. A straight climb was the least popular shape. The
+user's own reading of the v4 draft — "밋밋하다" — was this: a hook that only asked, a body that
+stayed at one level, an end that summarized.
+
+- **Read `shot.feel` as a curve with a sign.** §2 already refuses three identical feels; this
+  adds the direction. Give every shot's feel a polarity when you chart it in storyboard.md
+  (− / + and how far), and the chart has to reach its minimum before `craft.burst` and its
+  maximum at the turn or the result. On a story arc the default shape is man in a hole: cover
+  and hooking already below zero (something is at stake), the body deepening the low — §8's
+  holds are the descent, written as a worsening series, not a repeated one — the turn flipping
+  the sign (§9), result and cta holding the high. A chart that never goes below zero has
+  nothing for the §7 peak to rise from; one that never comes back above leaves the viewer with
+  the cortisol and none of the release, which is the episode that gets watched and not acted on.
+- **Stakes before the question — the first line names what is lost.** A curiosity hook asks;
+  a stakes hook puts the loss on the table and lets the viewer hold it while the ordinary
+  scene runs (§4's bomb). Losses weigh about twice what gains do (Kahneman & Tversky 1979,
+  **measured**; the same 2× in the Korean Shorts hook guides is field practice) — "이 항아리가
+  썩었으면, 이 집은 봄까지 채소를 한 입도 못 먹어요" stops a thumb harder than "김치는
+  맛있으라고 만든 게 아니에요", and the second sentence is still true inside the first.
+  Two lanes: on **answer-first** the loss is the viewer's own (`hookType:"fear"`, guardrails
+  ①–③ unchanged — the door is a step they can take). On a **story arc** the loss belongs to
+  the character, and it rides §4's "the viewer knows first" lane: the door is paid inside the
+  story (turn and result), not as advice to the viewer. Write that reason on the cover's
+  `shot.info` so copy mode reads a narrative stake, not an unanswered threat.
+- **Pick high-arousal feelings for both poles.** Berger & Milkman (2012, **measured** on
+  NYT sharing, not video): awe, anger and anxiety travel; sadness — deactivating — does not.
+  So the low is dread or anger ("열기 전까진 아무도 몰라요, 해마다요"), not melancholy, and the
+  high is awe or relief ("안 상했어요 — 익었더라고요"), not "nice". The Korean short-drama
+  recipe is the same list from the practice side — conflict inside 1–3 s, then 억울·분노·
+  긴장, then the hint of a turn, then cut at the most curious moment (field practice). A body
+  resting on a low-arousal feeling is where the swipe lives, whatever its sign.
+- **The end hands the feeling over; it asks for nothing.** The act row (scenes-schema
+  §playback order) already forbids the vague subscribe ask; the catharsis reading says why —
+  a request right after a release is a bill after a gift. The last beat is two lines: a
+  callback that re-reads the cover's words with the turned meaning and puts the thing in the
+  viewer's own life (the §5 loop ending, made a you-line — "겨울을 나려고 만든 그 맛이, 지금
+  냉장고 속 그 맛이에요"), then a question about **memory, not opinion** — "여러분 집 김치는
+  누가 담가요?" gets a story in the comments; "지금도 김장을 하는 이유, 뭘까요?" gets a debate
+  or silence. Shorts loop, so the callback is also the line the cover is re-entered on.
+- **Write the hook and the last line first.** 윤수영 (first-generation short-form writer):
+  two or three lines of hook and ending, then everything in between — and what makes a scene
+  land is 의외성, not description (field practice). The v4→v5 rewrite was exactly this: the
+  loss line and the callback line were written before any body scene was touched, and the
+  body then only had to descend between them.
+
+Checks the pass runs (§10's spirit):
+
+- The feel chart in storyboard.md carries a sign per shot; the minimum precedes `craft.burst`,
+  the maximum sits on the turn or the result.
+- The cover's first spoken sentence names a loss or a stake before it names a question.
+- The cta's last two lines are a callback and a memory question, and no line in the episode
+  contains a subscribe or like verb.
+- Every feel on the chart is a high-arousal word; a shot whose feel is sad, calm or "nice"
+  with nothing at stake is the flat stretch §2 was looking for.
 
 ## Sources
 
@@ -188,6 +486,10 @@ frame, so the end is where they are won or thrown away.
 - Chekhov's gun / plant-and-payoff + fair-play twist rules — [StudioBinder](https://www.studiobinder.com/blog/chekhovs-gun/), [ProseEngine](https://proseengine.app/blog/how-to-write-a-plot-twist). Craft canon.
 - Hitchcock/Truffaut interviews — the bomb under the table. Craft canon.
 - Witte & Allen, ["A Meta-Analysis of Fear Appeals"](https://journals.sagepub.com/doi/10.1177/109019810002700506) (Health Educ Behav, 2000) — fear × efficacy. Measured.
+- Muller, "Saying the wrong thing: improving learning with multimedia by including misconceptions" (J. Computer Assisted Learning, 2008) — the false-answer beat (§11). Measured.
+- ["How to succeed in MrBeast production"](https://simonwillison.net/2024/Sep/15/how-to-succeed-in-mrbeast-production/) (leaked handbook, 2024) — first-minute exit, expectation match, segment ladder (§11). Field practice.
+- [YouTube Creator Playbook — the first 15 seconds](https://blog.youtube/creator-and-artist-stories/youtube-creator-playbook-tips-first-15/) — open on the finished result (§11). Platform official.
+- Structure survey (chronological-trap naming, the six body shapes, layered loops) — blog grade, collected and graded in [docs/research/2026-08-29-longform-storyline](../../../docs/research/2026-08-29-longform-storyline/). Field practice.
 - Loewenstein, ["The Psychology of Curiosity"](https://www.cmu.edu/dietrich/sds/docs/golman/golman_loewenstein_curiosity.pdf) (1994, and Golman & Loewenstein 2015) — information gap. Craft canon / measured.
 - Redelmeier & Kahneman, ["Patients' memories of painful medical treatments"](https://doi.org/10.1016/0304-3959(96)02994-6) (Pain, 1996) + Fredrickson & Kahneman (1993) — peak-end rule. Measured (clinical/lab, not short-form).
 - Own-channel analytics, 4 Shorts (2026-08) — retention rank vs. view rank, watch-time
@@ -195,3 +497,20 @@ frame, so the end is where they are won or thrown away.
 - Long-form re-hook cadence, pattern interrupts, loop endings — practitioner guides
   (retention-editing blogs, 2025–2026). Field practice, unsourced measurements.
 - Stand-up structure guides (setup/punchline, rule of three) — practitioner playbooks. Craft canon.
+- AInspire, ["망하는 시나리오 vs 터지는 시나리오, 딱 '이것'이 다릅니다"](https://youtu.be/L89Z8oOiZuk)
+  (YouTube, 2026-07-10, 16 min; transcript from a local Qwen3-ASR run on 2026-08-29) — the
+  three dramas read as six shared moves (result first · the viewer knows first · plant
+  trivially and pay off from the same angle · ration the line · music out at the peak · fixed
+  format, moving content), the three-act folded into a 300 s seven-beat drama, and the readings
+  behind §8–§10 and the §3 · §4 · §5 · §7 additions. Craft canon where it cites Aristotle and
+  Hitchcock, field practice for the readings.
+- Aristotle, *Poetics* — peripeteia and anagnorisis, the double hit (§9). Craft canon.
+- Aristotle, *Poetics* — katharsis; [StudioBinder, "What is Catharsis"](https://www.studiobinder.com/blog/what-is-catharsis-definition/) — repression → breaking point → aftermath (§12). Craft canon.
+- Paul J. Zak, ["Why Your Brain Loves Good Storytelling"](https://hbr.org/2014/10/why-your-brain-loves-good-storytelling) (HBR, 2014) — cortisol under tension, oxytocin at resolution, flat arcs producing neither (§12). Measured in the lab, relayed as an essay.
+- Reagan, Mitchell, Kiley, Danforth & Dodds, ["The emotional arcs of stories are dominated by six basic shapes"](https://link.springer.com/article/10.1140/epjds/s13688-016-0093-1) (EPJ Data Science 5:31, 2016) — six arcs on 1,327 Gutenberg novels; the most-downloaded dip before they lift (§12). Measured on novels, not short-form.
+- Berger & Milkman, ["What Makes Online Content Viral?"](https://journals.sagepub.com/doi/10.1509/jmr.10.0353) (J. Marketing Research, 2012) — high-arousal emotions (awe, anger, anxiety) share more, sadness less (§12). Measured on NYT articles.
+- Kahneman & Tversky, "Prospect Theory: An Analysis of Decision under Risk" (Econometrica, 1979) — loss aversion, the ~2× (§12). Measured.
+- [Alphacut, "유튜브 쇼츠 조회수 안 나오는 진짜 이유 — 후킹 전략 5가지"](https://alphacut.video/blog/shorts-hooking-strategy) · [피카클립, "숏드라마가 터지는 이유"](https://fikad.boo/blog/183059) — loss-first hooks, the short-drama beat recipe (§12). Field practice, unsourced.
+- [레이디경향, 스토리피아 랩 인터뷰 ③ — 윤수영](https://lady.khan.co.kr/culture/article/202410310700011) (2024-10) — hook and ending first, 의외성 (§12). Field practice.
+- Short-form CTA practitioner guides ([Zebracat](https://www.zebracat.ai/post/best-youtube-shorts-call-to-actions), [The Indie Practice](https://www.theindiepractice.com/blog/short-form-video-call-to-actions-cta-ideas)) — one CTA, tied to the message, no stacked asks (§12). Field practice.
+- Collected and graded in [docs/research/2026-08-30-shortform-catharsis](../../../docs/research/2026-08-30-shortform-catharsis/).

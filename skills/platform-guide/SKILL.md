@@ -112,4 +112,6 @@ appears, add a row to this table and extend an existing reviewer.
 - **`references/platform-playbook.md`** — per-platform grammar in detail, copy formulas, video specs, anti-pattern checklist (SoT)
 - **`references/korean-style.md`** — Korean style SoT: AI-tell pattern tables (T·D·C·A), severities, per-surface application, delete-only principle
 - **`references/check-style.py`** — deterministic style checker (stdlib only; `--surface` · `--json` · `--doc` · `--selftest`)
+- **`references/pipeline.js`** — pipeline SoT: the stage ladder, every gate (attended and unattended), the reviewer verdict-tail contract, and produce's three build lanes. `episode-state.js` derives an episode's stage from it; `docs/pipeline-manifest.md` explains the design
+- **`references/pipeline-lint.js`** — checks the SKILL.md gate prose against `pipeline.js` (9 rules, read-only; `--list` · `--selftest`)
 - **`references/extract-text.js`** — scenes.js → per-surface text extraction (narration · subtitle · screen; handles the `window.SCENES` global contract)

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>정보형 롱폼의 스토리라인 — 연대기가 아니라 수사 구조 (2026-08-29)</title>
+<style>
+  :root {
+    --bg: #ffffff; --bg-soft: #f6f8fa; --bg-card: #ffffff;
+    --text: #1f2328; --text-soft: #59636e; --border: #d1d9e0;
+    --accent: #0969da; --accent-soft: #ddf4ff;
+    --green: #1a7f37; --green-soft: #dafbe1;
+    --amber: #9a6700; --amber-soft: #fff8c5;
+    --red: #cf222e; --red-soft: #ffebe9;
+    --purple: #8250df; --purple-soft: #fbefff;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 8px 24px rgba(31,35,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --bg-soft: #161b22; --bg-card: #161b22;
+      --text: #e6edf3; --text-soft: #9198a1; --border: #30363d;
+      --accent: #4493f8; --accent-soft: #0c2d6b40;
+      --green: #3fb950; --green-soft: #2ea04326;
+      --amber: #d29922; --amber-soft: #bb800926;
+      --red: #f85149; --red-soft: #f8514926;
+      --purple: #ab7df8; --purple-soft: #8250df26;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard", "Noto Sans KR", sans-serif; line-height: 1.7; font-size: 15px; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  h1 { font-size: 26px; line-height: 1.35; margin-bottom: 8px; }
+  .meta { color: var(--text-soft); font-size: 13px; margin-bottom: 32px; }
+  h2 { font-size: 20px; margin: 44px 0 12px; padding-top: 20px; border-top: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 24px 0 8px; }
+  p { margin: 10px 0; }
+  ul, ol { margin: 10px 0 10px 24px; }
+  li { margin: 5px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); }
+  code { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 13px; }
+  .callout { border: 1px solid var(--border); border-left: 4px solid var(--accent); background: var(--bg-soft); border-radius: 6px; padding: 12px 16px; margin: 16px 0; }
+  .callout.warn { border-left-color: var(--amber); }
+  .callout.bad { border-left-color: var(--red); }
+  .callout.good { border-left-color: var(--green); }
+  .grade { display: inline-block; font-size: 11px; font-weight: 600; border-radius: 10px; padding: 1px 8px; vertical-align: 1px; }
+  .g1 { background: var(--green-soft); color: var(--green); }
+  .g2 { background: var(--accent-soft); color: var(--accent); }
+  .g3 { background: var(--amber-soft); color: var(--amber); }
+  .g4 { background: var(--purple-soft); color: var(--purple); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .muted { color: var(--text-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>정보형 롱폼의 스토리라인 — 연대기가 아니라 수사 구조</h1>
+<div class="meta">2026-08-29 · 외부 조사 + 자체 실측 대조 · 발단: 20260829-buzz-29-to-3 롱폼 초안이 시간 순 기록으로 짜였다는 사용자 반려</div>
+
+<div class="callout good">
+<b>결론.</b> 정보형 롱폼의 베스트 프랙티스는 겹치는 곳이 뚜렷하다 — <b>질문 하나를 좇는 수사(調査) 구조</b>로 짜고,
+<b>가장 강한 순간을 맨 앞에</b> 두고, <b>그럴듯한 오답을 먼저 세웠다가 무너뜨리고</b>, 답은 <b>분할 지급</b>하며,
+비트 사이는 전부 <b>그래서/그런데</b>로 잇는다. 일이 벌어진 순서(연대기)로 푸는 구성은 여러 출처가
+이름 붙여 금지하는 안티패턴이고("Chronological Trap") 우리 채널 자체 실측(주제·미스터리가 유지율을 갈랐다, n=4)과도 방향이 같다.
+</div>
+
+<h2>0. 근거 등급</h2>
+<table>
+<tr><th>등급</th><th>출처</th><th>비고</th></tr>
+<tr><td><span class="grade g1">동료평가</span></td><td>Muller, <i>Saying the wrong thing</i> (J. Computer Assisted Learning 2008) — Veritasium 창립자의 박사 연구</td><td>오답 선행 비트의 근거. 사실만 제시하면 학습자는 기존 오개념에 더 확신을 갖고, 오개념을 먼저 세워 무너뜨려야 배운다</td></tr>
+<tr><td><span class="grade g2">1차 자료</span></td><td>MrBeast 제작 핸드북(2024 유출 PDF, Simon Willison 보존본)</td><td>첫 1분 최다 이탈 · 썸네일 기대 일치 · 분 단위 구간 책임. 채널 하나의 내부 문서라는 한계</td></tr>
+<tr><td><span class="grade g2">공식</span></td><td>YouTube Creator Playbook·Creator Insider</td><td>초반 유지율이 추천의 최상위 신호 · 첫 15초 · 하우투는 완성본 스니크픽</td></tr>
+<tr><td><span class="grade g3">블로그·강의</span></td><td>PrePublish(6구조·안티패턴) · Isaacson(Hook-Problem-Solution-Payoff) · overseeros(재훅) · South Park But/Therefore(원 강연은 1차, 적용론은 블로그) · Johnny Harris 강의 요약 · 한국어 가이드 다수</td><td>합의 확인용. 이 등급이 주장하는 배율 수치("유지율 40~60%↑", "공유 4.1배")는 검증 불가라 <b>본 문서는 채택하지 않는다</b></td></tr>
+<tr><td><span class="grade g4">자체 실측</span></td><td>딸깍랩 유지율 리포트(2026-08-26, n=4) · 훅 비트 조사(2026-08-18) · scenario-craft 조사(2026-08-25)</td><td>주제(미스터리성)가 편집보다 유지율을 갈랐고 완주 곡선은 평평했다 — 외부 결론과 같은 방향</td></tr>
+</table>
+
+<h2>1. 안티패턴 셋 — 정보형이 빠지는 자리</h2>
+<p>구조 가이드(PrePublish)가 이름 붙인 셋인데, 다른 출처들의 경고와 정확히 겹친다.</p>
+<table>
+<tr><th>안티패턴</th><th>실체</th><th>다른 출처의 같은 경고</th></tr>
+<tr><td><b>강의(Lecture)</b></td><td>긴장 없이 요점을 순서대로 나열</td><td>"정보만 있는 구조는 강의로 읽힌다"(Isaacson) · 자체 실측의 "시청자가 이미 동의하는 설명은 3초부터 미끄러진다"</td></tr>
+<tr><td><b>면책 나선</b></td><td>서두의 조건·단서 달기가 출구가 된다</td><td>인사·배경·자기소개 금지(전 출처 공통, 스킬의 화자 보고형 P0와 동일)</td></tr>
+<tr><td><b>연대기 함정</b></td><td>일이 벌어진 순서로 풀어 가장 강한 순간을 뒤에 묻는다</td><td>"가장 강한 시각 증거를 앞에"(Harris) · "wow 요소를 30초에"(MrBeast) · 하우투의 완성본 선공개(YouTube 공식)</td></tr>
+</table>
+<div class="callout bad">
+<b>우리 초안 진단.</b> 20260829-buzz-29-to-3 v1은 세팅→채용→증원→사고→진단→재편의 <b>시간 순 기록</b>이다.
+커버가 역설("29명인데 왜 조용해?")을 던지고도 첫 긴장(샷 16, 답이 안 온다)이 <b>약 4분</b>에 온다 —
+모든 출처가 말하는 창(60~90초 안에 판돈)을 크게 벗어난다. 세팅·채용 챕터 약 3분이 긴장 앞에 서 있는 구조가 연대기 함정 그 자체다.
+</div>
+
+<h2>2. 합의된 원칙 — 출처가 겹치는 것만</h2>
+
+<h3>① 오프닝 0~60초: 약속과 판돈</h3>
+<ul>
+<li>0~5초 시선 잡기 → 5~15초 <b>이 영상이 뭘 주는지(약속)</b> → 15~30초 판돈·맥락 (YouTube 공식 계열의 공통 골격).</li>
+<li>첫 1분이 최다 이탈 구간이고 썸네일·제목의 기대와 첫 1분이 어긋나면 나간다 (MrBeast 핸드북 — 6천만 클릭에서 첫 1분에 2,100만이 나가는 게 "괜찮은 성적"이라는 원문).</li>
+<li>가장 강한 시각 증거(visual anchor)를 앞에 몰아 배치한다 (Harris).</li>
+<li>롱폼 오프닝 창은 첫 60초 — 스킬의 기존 계약과 일치. 새로 확인된 건 <b>"약속"의 명시성</b>이다: 정보형은 궁금증만으로는 부족하고 "끝까지 보면 무엇을 알게 되는지"가 초반에 문장으로 서야 한다.</li>
+</ul>
+
+<h3>② 오답 먼저 — 정보형에서 근거가 가장 강한 비트 <span class="grade g1">동료평가</span></h3>
+<p>시청자가 이미 믿는 그럴듯한 답(오개념)을 먼저 화면에 세우고 증거로 무너뜨린 뒤 진짜 답을 준다.
+사실만 깔끔하게 설명한 영상은 "배웠다는 느낌"만 주고 오개념을 오히려 굳힌다(Muller 2008).
+구조 가이드의 Curiosity Loop 2번 비트(false answer)가 이것의 대중화 판이다.
+정보형 스토리라인에서 <b>몸통의 첫 수사 비트는 오답 검증</b>이어야 한다는 뜻이다 — "요금 폭탄인가? → 아니었다" 같은.</p>
+
+<h3>③ 비트 연결은 그래서/그런데 — 연대기 판별기</h3>
+<p>비트 사이에 "그리고 그다음(and then)"이 들어가면 죽은 이음매다(South Park But/Therefore).
+<b>scenario-craft §2가 이미 같은 규칙을 이음매 낭독 검사로 갖고 있다</b> — 새로 배울 건 없고,
+이 규칙이 연대기 함정의 판별기라는 점이 새 발견이다: 시간 순 구성은 이음매가 전부 "그다음"으로 읽힌다.</p>
+
+<h3>④ 분할 지급 + 재훅 리듬</h3>
+<ul>
+<li>루프는 겹으로 — 대문 루프(오프닝에서 열고 마지막 20%에서 닫는다) + 구간 루프(섹션 사이) + 잔 루프("단 하나 예외가 있는데") (overseeros 계열).</li>
+<li>재훅은 2~3분 간격, 형태는 질문형·예고형·패턴 파괴형 셋. 예고형은 아껴 쓴다 — 남용하면 시청자가 학습해 무시한다.</li>
+<li>MrBeast 핸드북의 분 단위 구간 책임(1~3분 전개 가속 · 3~6분 장면 전환 밀도 · 6분 이후 긴 설명 허용 + 강한 엔딩)도 같은 리듬 이야기다.</li>
+<li><b>scenario-craft §5(분할 지급)와 스킬의 챕터 미니 훅·50~70% 재훅 계약이 이미 이 원칙이다.</b> 새로 확인된 건 잔 루프 층과 "6분 이후에는 긴 설명이 허용된다"는 배치론이다 — 무거운 맥락(설치법·개념 설명)은 뒤로 보낼수록 안전하다.</li>
+</ul>
+
+<h3>⑤ 구조는 콘텐츠 유형에 맞춘다 — 정보형의 두 구조</h3>
+<table>
+<tr><th>구조</th><th>비트</th><th>맞는 자리</th></tr>
+<tr><td><b>Curiosity Loop</b> (수사 구조)</td><td>미스터리 제시 → <b>오답</b> → 복잡화 → 전환(재해석) → 완전 해소 → 함의</td><td>탐사·딥다이브·"왜 X인가" — <b>실험기·사용기 회고도 여기</b>. 유지 곡선이 평평하게 유지되는 프로파일로 알려짐(블로그 등급)</td></tr>
+<tr><td><b>Problem Stack</b> (문제 계단)</td><td>표면 문제 → 표면 해법 → 더 깊은 문제 → 더 깊은 해법 → 뿌리 원인 → 진짜 해법 → 종합</td><td>기술 딥다이브·트러블슈팅 — 표면 답이 부족함을 드러내며 내려간다</td></tr>
+</table>
+<p class="muted">나머지 넷(Transformation Arc·Expert Contrast·Ticking Clock·Reveal Ladder)은 챌린지·비교·랭킹용. 혼합도 가능하다 — 전체는 Curiosity Loop, 한 구간만 Problem Stack 식 계단.</p>
+
+<h3>⑥ 엔딩</h3>
+<ul>
+<li>마지막 15%에서 열린 루프를 전부 닫고 다음 영상으로 이어지는 한 손잡이만 연다 (Isaacson·MrBeast의 "강한 엔딩 아껴 두기").</li>
+<li>정보형의 만족은 "답을 들었다"가 아니라 <b>"내 상황에 가져갈 수 있다"</b> — 교훈·행동 비트가 해소 뒤에 선다 (Curiosity Loop의 함의 비트, 한국어 가이드들의 해결→CTA).</li>
+</ul>
+
+<h2>3. 합성 — 정보형 롱폼 표준 뼈대</h2>
+<p>위 원칙을 한 줄로 포개면 이렇다. 괄호는 기존 스킬 어휘와의 대응.</p>
+<table>
+<tr><th>#</th><th>비트</th><th>일</th><th>시간 감각</th></tr>
+<tr><td>1</td><td><b>콜드 오픈</b> (cover+hook)</td><td>사건의 가장 강한 순간·증거를 먼저. 썸네일과 같은 약속</td><td>0~30초</td></tr>
+<tr><td>2</td><td><b>약속+판돈</b> (hooking)</td><td>이 영상이 끝나면 무엇을 알게 되는지 한 문장 + 왜 시청자 일인지</td><td>~60초 안</td></tr>
+<tr><td>3</td><td><b>오답 검증</b> (body 첫 수사)</td><td>누구나 떠올릴 답을 세우고 증거로 기각</td><td>몸통 첫 비트</td></tr>
+<tr><td>4</td><td><b>수사 + 맥락 다리</b> (body)</td><td>단서를 분할 지급. 배경 설명(설치·개념)은 수사가 필요로 하는 순간에 다리로 끼운다 — 덩어리로 앞에 두지 않는다</td><td>재훅 2~3분 간격</td></tr>
+<tr><td>5</td><td><b>전환</b> (turn)</td><td>재해석 — 질문 자체가 바뀌는 순간</td><td>50~70%</td></tr>
+<tr><td>6</td><td><b>해소</b> (result)</td><td>수치로 닫는다. 무거운 부가 설명은 이 뒤가 안전(6분 이후 허용)</td><td>—</td></tr>
+<tr><td>7</td><td><b>함의</b> (cta)</td><td>가져갈 교훈·행동 + 다음 루프 하나</td><td>마지막 15%</td></tr>
+</table>
+
+<h2>4. 기존 자산 대조 — 이미 있는 것과 새로 채울 것</h2>
+<table>
+<tr><th>원칙</th><th>스킬·scenario-craft 현황</th><th>판정</th></tr>
+<tr><td>그래서/그런데 이음매</td><td>scenario-craft §2 그대로</td><td>있음</td></tr>
+<tr><td>분할 지급·챕터 미니 훅·재훅</td><td>scenario-craft §5 + 스킬 챕터 계약</td><td>있음</td></tr>
+<tr><td>인사·배경 선행 금지</td><td>화자 보고형 P0 · 훅 계약</td><td>있음</td></tr>
+<tr><td><b>연대기 금지 / 콜드 오픈</b></td><td>story 아크가 "사건의 순간을 커버에"라고는 하나, <b>몸통을 시간 순으로 푸는 것 자체를 막는 조항이 없다</b> — 이번 초안이 그 틈으로 나갔다</td><td class="muted">틈</td></tr>
+<tr><td><b>오답 선행 비트</b></td><td>없음 — 훅 6형(paradox·gap…)은 첫 문장 모양이지 몸통 첫 비트가 아니다</td><td class="muted">틈</td></tr>
+<tr><td><b>약속의 명시성(정보형)</b></td><td>hooking 계약은 "풀지 마라"까지만 — "끝나면 무엇을 알게 되는지" 문장을 요구하지 않는다</td><td class="muted">틈</td></tr>
+<tr><td><b>맥락은 다리로(설명 덩어리 금지)</b></td><td>없음 — 챕터 단위 구성이 오히려 "설치 챕터" 같은 덩어리를 유도한다</td><td class="muted">틈</td></tr>
+</table>
+<p class="muted">스킬 문서 반영은 이 조사와 별도 작업으로 한다 — 지금 skills/ 아래는 다른 세션의 미커밋 편집이 동거 중이라 손대지 않는다.</p>
+
+<h2>5. 출처</h2>
+<ul>
+<li><span class="grade g1">동료평가</span> Muller (2008), <a href="https://www.bobvanvliet.com/notes/designing-effective-multimedia-for-physics-education/">Designing Effective Multimedia for Physics Education 요약</a> · <a href="https://en.wikipedia.org/wiki/Derek_Muller">Derek Muller</a></li>
+<li><span class="grade g2">1차</span> <a href="https://simonwillison.net/2024/Sep/15/how-to-succeed-in-mrbeast-production/">How to succeed in MrBeast production (유출 PDF 보존)</a></li>
+<li><span class="grade g2">공식</span> <a href="https://blog.youtube/creator-and-artist-stories/youtube-creator-playbook-tips-first-15/">YouTube Creator Playbook — the first 15 seconds</a></li>
+<li><span class="grade g3">블로그</span> <a href="https://prepublish.ai/guides/youtube-storytelling-narrative-structures">PrePublish — 6 Narrative Structures</a> · <a href="https://johnisaacson.co.uk/youtube-storytelling-framework/">Isaacson — YouTube Storytelling Framework</a> · <a href="https://www.overseeros.com/blog/youtube-retention-loops">overseeros — Retention Loops</a> · <a href="https://perell.com/note/but-therefore-rule/">Perell — But &amp; Therefore Rule</a> · <a href="https://medium.com/@LMK_writing/how-johnny-harris-mastered-visual-storytelling-on-youtube-343ddf9160ec">Harris 방법론 요약</a> · <a href="https://easytube.kr/guide/longform">EasyTube 롱폼 가이드</a> 외 한국어 다수</li>
+<li><span class="grade g4">자체</span> 딸깍랩 유지율 리포트(2026-08-26, n=4) · <code>docs/research/2026-08-18-hooking-beat/</code> · <code>docs/research/2026-08-25-scenario-craft/</code></li>
+</ul>
+
+</div>
+</body>
+</html>

@@ -10,7 +10,10 @@
  *   1. 파일명 s<샷번호>-<slug>.html ↔ SLIDE_SHOT ↔ scenes.js visual.slide.file 삼자 일치
  *   2. 한글 문자열 리터럴이 전부 scenes.js 에 있다 — 문체 게이트(screen 표면)를
  *      통과한 적 없는 글자가 화면에 나가는 길을 막는다 (주석 속 한글은 허용)
- *   3. 결정성 — 두 갈래다. scenes.js 의 visual.slide.motion 이 그 갈래를 정한다.
+ *   3. 갈래(kind) — diagram(기본) · kinetic · character. 갈래마다 시작하는 템플릿이 다르고,
+ *      kinetic·character 는 motion:true 를 명시해야 한다(빠지면 정지 캡처 경로로 새서 움직임이
+ *      통째로 사라진다). character 는 visual.slide.acts 가 그룹마다 동작 하나를 들고 있어야 한다.
+ *   4. 결정성 — 두 갈래다. scenes.js 의 visual.slide.motion 이 그 갈래를 정한다.
  *      정지 슬라이드(기본): CSS animation/transition·웹폰트·Math.random/Date 금지
  *        (capture-reveals.sh 의 바이트 동일성 판정이 끝나지 않는다)
  *      모션 슬라이드(motion:true): 움직임은 seek 로 재현돼야 한다 — window.__seek 정의 필수,
@@ -36,7 +39,21 @@ const MSG = {
   motionSeek: "모션 슬라이드에 window.__seek 가 없다 — motion-slide-template.html 에서 시작한다",
   motionTransition: "모션 슬라이드에 transition 금지 — 속성이 바뀐 뒤에만 객체가 생겨 seek 로 세울 수 없다. @keyframes 로 쓴다",
   motionClock: "모션 슬라이드에 시계·난수·타이머 금지 (Date·Math.random·performance.now·requestAnimationFrame·setTimeout) — 프레임은 __seek(t, g) 가 정한다",
+  kindVocab: k => `slide.kind "${k}" 는 ${KINDS.join(" · ")} 밖이다`,
+  kindMotion: k => `kind:"${k}" 에는 motion:true 가 필요하다 — 없으면 정지 슬라이드로 캡처돼 움직임이 통째로 사라진다`,
+  kindTemplate: (k, fn, tpl) => `kind:"${k}" 인데 ${fn}() 이 없다 — ${tpl} 에서 시작한다`,
+  actsMissing: "kind:\"character\" 인데 visual.slide.acts 가 없다 — 그룹마다 동작 하나를 적는다",
+  actsVocab: a => `동작 "${a}" 는 ${ACTS.join(" · ")} 밖이다 — 손으로 짠 움직임은 다음 렌더에서 재현되지 않는다`,
+  actsShort: (n, m) => `동작 ${n}개인데 나레이션 세그먼트는 ${m}개 — 세그먼트마다 동작 하나가 있어야 클립이 채워진다`,
 };
+
+/* 저작 화면의 세 갈래와, 캐릭터 연기가 고를 수 있는 동작. 정본은 scenes-schema §저작 화면 레인과
+   character-act-template.html 머리말이다 — 여기 이름을 늘리려면 템플릿의 키프레임도 같이 는다. */
+const KINDS = ["diagram", "kinetic", "character"];
+const ACTS = ["enter", "point", "nod", "shrug", "think", "wave", "cheer"];
+const KIND_FN = { diagram: "renderSlide", kinetic: "renderKinetic", character: "renderCharacter" };
+const KIND_TPL = { diagram: "motion-slide-template.html", kinetic: "kinetic-type-template.html",
+                   character: "character-act-template.html" };
 
 function checkDir(dir, only) {
   global.window = {};
@@ -71,6 +88,7 @@ function checkDir(dir, only) {
     const reg = slide && slide.file;
     if (reg !== `slides/${base}`) fail(base, MSG.notRegistered(no, reg));
     const motion = !!(slide && slide.motion === true);
+    const kind = (slide && slide.kind) || "diagram";
 
     // 2) 한글 리터럴 — 주석을 걷어낸 소스의 문자열 리터럴만 본다
     const code = src
@@ -83,7 +101,26 @@ function checkDir(dir, only) {
     for (const t of lits)
       if (!sot.includes(t)) fail(base, MSG.literal(t));
 
-    // 3) 결정성 — 갈래별
+    // 3) 갈래 — 어휘, motion 명시, 시작 템플릿
+    if (KINDS.indexOf(kind) === -1) fail(base, MSG.kindVocab(kind));
+    else if (kind !== "diagram") {
+      // motion 을 유추하지 않는다 — produce §3.6·검사 띠·정지 캡처가 전부 motion===true 로만
+      // 갈라지고 kind 를 모른다. 적히지 않으면 조용히 정지 경로로 샌다.
+      if (!motion) fail(base, MSG.kindMotion(kind));
+      if (!new RegExp("function\\s+" + KIND_FN[kind] + "\\s*\\(").test(code))
+        fail(base, MSG.kindTemplate(kind, KIND_FN[kind], KIND_TPL[kind]));
+    }
+    if (kind === "character") {
+      const acts = (slide && slide.acts) || null;
+      if (!Array.isArray(acts) || !acts.length) fail(base, MSG.actsMissing);
+      else {
+        acts.filter(a => ACTS.indexOf(a) === -1).forEach(a => fail(base, MSG.actsVocab(a)));
+        const segs = (scene.narration || []).length;
+        if (segs && acts.length < segs) fail(base, MSG.actsShort(acts.length, segs));
+      }
+    }
+
+    // 4) 결정성 — 갈래별
     if (/@import|fonts\.googleapis|<link[^>]*font|@font-face[^}]*url\(\s*['"]?https?:/i.test(code))
       fail(base, MSG.webfont);
     if (motion) {
@@ -96,7 +133,7 @@ function checkDir(dir, only) {
       if (/Math\.random|new Date|Date\.now/.test(code)) fail(base, MSG.clock);
     }
 
-    if (!bad) console.log(`✓ ${base}${motion ? " (motion)" : ""}`);
+    if (!bad) console.log(`✓ ${base}${motion ? " (motion · " + kind + ")" : ""}`);
   }
 
   // scenes.js 쪽 역방향 — 슬라이드 씬인데 파일이 아직 없는 샷 (승인 직후엔 정상)
@@ -116,6 +153,15 @@ function selftest() {
     window.SCENES = [
       { type: "points", title: "정지 제목", visual: { slide: { file: "slides/s1-static.html", labels: ["정지 라벨"] } } },
       { type: "points", title: "모션 제목", visual: { slide: { file: "slides/s2-motion.html", motion: true, labels: ["모션 라벨"] } } },
+      { type: "points", title: "키네틱 제목", visual: { slide: { file: "slides/s3-kinetic.html", kind: "kinetic", motion: true, labels: ["키네틱 라벨"] } } },
+      { type: "points", title: "캐릭터 제목", narration: [{ tts: "하나" }, { tts: "둘" }],
+        visual: { slide: { file: "slides/s4-char.html", kind: "character", motion: true, acts: ["enter", "nod"], labels: ["캐릭터 라벨"] } } },
+      { type: "points", title: "모션 없는 키네틱", visual: { slide: { file: "slides/s5-nomotion.html", kind: "kinetic", labels: ["라벨5"] } } },
+      { type: "points", title: "없는 갈래", visual: { slide: { file: "slides/s6-badkind.html", kind: "collage", motion: true, labels: ["라벨6"] } } },
+      { type: "points", title: "없는 동작", narration: [{ tts: "하나" }],
+        visual: { slide: { file: "slides/s7-badact.html", kind: "character", motion: true, acts: ["moonwalk"], labels: ["라벨7"] } } },
+      { type: "points", title: "동작이 모자란다", narration: [{ tts: "하나" }, { tts: "둘" }, { tts: "셋" }],
+        visual: { slide: { file: "slides/s8-fewacts.html", kind: "character", motion: true, acts: ["enter"], labels: ["라벨8"] } } },
     ];`);
   const cases = [
     ["s1-static.html", `const SLIDE_SHOT = 1; const a = "정지 라벨";`, []],
@@ -129,6 +175,14 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; requestAnimationFrame(step);`, [MSG.motionClock]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; @font-face{src:url("https://x/y.woff2")}`, [MSG.webfont]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <link rel="stylesheet" href="https://fonts.googleapis.com/css2">`, [MSG.webfont]],
+    ["s3-kinetic.html", `const SLIDE_SHOT = 3; window.__seek = 1; function renderKinetic(S, h) {}`, []],
+    ["s3-kinetic.html", `const SLIDE_SHOT = 3; window.__seek = 1; function renderSlide(S, h) {}`,
+      [MSG.kindTemplate("kinetic", "renderKinetic", "kinetic-type-template.html")]],
+    ["s4-char.html", `const SLIDE_SHOT = 4; window.__seek = 1; function renderCharacter(S, h) {}`, []],
+    ["s5-nomotion.html", `const SLIDE_SHOT = 5; function renderKinetic(S, h) {}`, [MSG.kindMotion("kinetic")]],
+    ["s6-badkind.html", `const SLIDE_SHOT = 6; window.__seek = 1;`, [MSG.kindVocab("collage")]],
+    ["s7-badact.html", `const SLIDE_SHOT = 7; window.__seek = 1; function renderCharacter(S, h) {}`, [MSG.actsVocab("moonwalk")]],
+    ["s8-fewacts.html", `const SLIDE_SHOT = 8; window.__seek = 1; function renderCharacter(S, h) {}`, [MSG.actsShort(1, 3)]],
   ];
   let failed = 0;
   const realErr = console.error, realLog = console.log;

@@ -31,3 +31,16 @@ jobs:
 
       # the Korean copy gate verifies its own rules against built-in fixtures
       - run: python3 skills/platform-guide/references/check-style.py --selftest
+
+      # the pipeline manifest: parsers pinned, then the SKILL.md mirrors checked against it
+      - run: node skills/platform-guide/references/pipeline-lint.js --selftest
+      - run: node skills/autoproduce/references/episode-state.js --selftest
+
+      # the slide contract: kind vocabulary, motion, acts, determinism — rules pinned by message
+      - run: node skills/storyboard/references/check-slide.js --selftest
+
+      # the research parser's table rules, and the channel browser's API shape and path guard
+      - run: node skills/storyboard/references/check-research.js --selftest
+      - run: node skills/channel/references/serve.js --selftest
+      # inline format mirrors, and the seek runtime the three authored-screen templates share
+      - run: node skills/platform-guide/references/format-lint.js
