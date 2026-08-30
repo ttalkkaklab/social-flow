@@ -234,7 +234,22 @@ const SLIDE_SHOT = 0;
   /* SEEK-RUNTIME-BEGIN — 아래는 건드리지 않는다. 저작 화면 템플릿 세 벌(모션 슬라이드·
      키네틱 타이포·캐릭터 연기)이 같은 블록을 갖고, format-lint.js 가 세 벌을 대조한다.
      한 벌만 고치면 린트가 잡는다 — 고칠 일이 있으면 세 벌을 같이 고친다. */
-  const easeOut = x => 1 - Math.pow(1 - x, 3);
+  /* 이징 — CSS 의 --ease(cubic-bezier(.16,1,.3,1))와 같은 성질의 곡선들. out 이 기본이고
+     카운트업이 예부터 쓰던 그 곡선이다. 페인터 저자가 곡선을 손으로 짜지 않도록 공개한다. */
+  const EASES = {
+    linear: x => x,
+    out:    x => 1 - Math.pow(1 - x, 3),
+    in:     x => x * x * x,
+    inOut:  x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
+  };
+  const clamp01 = x => Math.min(Math.max(x, 0), 1);
+  const easeOut = EASES.out;
+  window.__ease = (name, x) => (EASES[name] || EASES.out)(clamp01(x));
+  /* __interp(x, [in0,in1], [out0,out1], ease) — 구간을 구간으로 옮긴다. 범위 밖은 끝값으로 잘린다. */
+  window.__interp = function (x, inR, outR, ease) {
+    const p = inR[1] === inR[0] ? 0 : (x - inR[0]) / (inR[1] - inR[0]);
+    return outR[0] + (outR[1] - outR[0]) * window.__ease(ease || "out", p);
+  };
   const cssMs = name => parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0;
   const HOLD = cssMs("--hold"), COUNT = cssMs("--count");
   const fmt = (v, dec) => (dec > 0 ? v.toFixed(dec) : Math.round(v).toString()).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -260,7 +275,57 @@ const SLIDE_SHOT = 0;
     return out;
   };
 
+  /* ── 페인터 — 캔버스·SVG 처럼 CSS 키프레임으로 그릴 수 없는 그림을 시각 t 의 함수로 그린다.
+     카운트업이 이미 이 모양이고(counters 는 t 를 받아 숫자를 다시 쓴다) 페인터는 그 일반형이다.
+     등록  __paint(rg, durMs, fn) — fn(tMs) 는 그룹 rg 의 로컬 시각을 받아 그 시각의 그림을 그린다.
+     계약  fn 은 t 말고 아무것도 읽지 않는다. 시계·난수·이전 호출의 상태를 읽으면 같은 (g, t) 가
+           다른 픽셀을 내고 결정성이 깨진다. 렌더러는 프레임을 순서대로 찍지 않는다(--sheet 는
+           중간과 끝만 찍는다) — fn(500) 이 fn(0) 뒤에 온다고 가정하면 안 된다.
+     쓰는 자리  회전·궤적·입자처럼 키프레임으로 못 세우는 도해. 글자·막대·카운트업은 CSS 로 둔다. */
+  const painters = [];
+  window.__paint = function (rg, durMs, fn) {
+    painters.push({ rg: +rg, dur: Math.max(0, +durMs || 0), fn: fn });
+  };
+
+  /* ── 비디오 — 그룹의 로컬 시각으로 currentTime 을 세우고 seeked 를 기다린다. data-rg 는 요소가
+     직접 들고(조상 상속이 아니다), data-vfrom(초, 기본 0)이 클립 안 시작점, data-vdur(ms)이 그룹
+     안에서 재생할 길이다. autoplay·loop 는 벽시계로 도는 길이라 __meta 가 stray 로 잡는다. */
+  const videos = () => [...document.querySelectorAll("video")];
+  const seekVideo = (v, tMs) => new Promise(res => {
+    const want = (+v.dataset.vfrom || 0) + tMs / 1000;
+    if (v.readyState >= 2 && Math.abs(v.currentTime - want) < 1e-4) return res(true);
+    const done = () => { v.removeEventListener("seeked", done); res(true); };
+    v.addEventListener("seeked", done);
+    v.currentTime = want;
+  });
+
+  /* 첫 프레임을 찍기 전에 렌더러가 한 번 부른다 — 폰트·이미지 디코드·비디오 첫 프레임이 다 서야
+     같은 (g, t) 가 같은 픽셀이다. 이미지는 로드만으로는 부족하고 decode() 까지 끝나야 한다.
+     못 읽는 소재는 여기서 기다리지 않고 통과시킨다 — 오타 난 src 하나가 렌더러를 30초 매달아
+     놓는 대신, __meta().broken 이 그 파일을 이름과 함께 렌더러에 넘겨 exit 1 로 세운다. */
+  window.__ready = function () {
+    const imgs = [...document.images].map(i => (i.decode ? i.decode().catch(() => {}) : Promise.resolve()));
+    const vids = videos().map(v => {
+      if (v.readyState >= 2 || v.error) return Promise.resolve();
+      if (!v.getAttribute("src") && !v.currentSrc) return Promise.resolve();
+      return new Promise(res => {
+        v.addEventListener("loadeddata", res, { once: true });
+        v.addEventListener("error", res, { once: true });
+      });
+    });
+    return Promise.all([document.fonts.ready, ...imgs, ...vids]).then(() => true);
+  };
+
   window.__seek = function (tMs, g) {
+    /* 카운터와 페인터가 먼저다 — 둘 다 innerHTML 로 DOM 을 다시 만들고, 새로 붙은 노드에 CSS
+       애니메이션이 걸려 있으면 그 순간 벽시계로 돌기 시작한다. 애니메이션 스냅샷을 이 뒤로
+       미뤄야 그것까지 pause 된다. 순서를 되돌리면 짧은 애니메이션에서 재렌더가 갈라진다
+       (실측: 90ms 슬라이드인에서 81프레임 중 13프레임이 두 렌더 사이에 달랐다). */
+    for (const c of counters) {
+      const p = c.rg < g ? 1 : c.rg === g ? easeOut(clamp01(tMs / c.dur)) : 0;
+      c.el.innerHTML = cells(fmt(c.from + (c.to - c.from) * p, c.dec), c.tpl);
+    }
+    for (const p of painters) p.fn(p.rg < g ? p.dur : p.rg === g ? Math.min(Math.max(tMs, 0), p.dur) : 0);
     const anims = document.getAnimations();
     for (const a of anims) {
       const o = owner(a); if (!o) continue;
@@ -268,41 +333,58 @@ const SLIDE_SHOT = 0;
       a.pause();
       a.currentTime = r < g ? end : r === g ? Math.min(Math.max(tMs, 0), end) : 0;
     }
-    for (const c of counters) {
-      const p = c.rg < g ? 1 : c.rg === g ? easeOut(Math.min(Math.max(tMs / c.dur, 0), 1)) : 0;
-      c.el.innerHTML = cells(fmt(c.from + (c.to - c.from) * p, c.dec), c.tpl);
-    }
+    const media = videos().filter(v => v.dataset.rg !== undefined).map(v => {
+      const r = +v.dataset.rg, d = +v.dataset.vdur || 0;
+      return seekVideo(v, r < g ? d : r === g ? Math.min(Math.max(tMs, 0), d) : 0);
+    });
     /* transform·opacity 애니메이션은 컴포지터 스레드에서 돌아 pause()·currentTime 이 비동기로
        반영된다 — ready 를 기다리지 않고 찍으면 같은 (g, t) 가 서브픽셀만큼 다른 프레임을 낸다
        (실측 PSNR 79dB 차이). 렌더러는 이 프라미스를 기다린 뒤 캡처한다. */
-    return Promise.all(anims.map(a => a.ready)).then(() => true);
+    return Promise.all([...anims.map(a => a.ready), ...media]).then(() => true);
   };
   window.__groups = function () {
     const dur = {};
     for (const a of document.getAnimations()) { const o = owner(a); if (!o) continue;
       const r = +o.dataset.rg; dur[r] = Math.max(dur[r] || 0, endOf(a)); }
     for (const c of counters) dur[c.rg] = Math.max(dur[c.rg] || 0, c.dur);
+    for (const p of painters) dur[p.rg] = Math.max(dur[p.rg] || 0, p.dur);
+    for (const v of videos()) { if (v.dataset.rg === undefined) continue;
+      const r = +v.dataset.rg; dur[r] = Math.max(dur[r] || 0, +v.dataset.vdur || 0); }
     const n = Math.max(0, ...Object.keys(dur).map(Number));
     const out = [];
     for (let r = 0; r <= n; r++) out.push({ rg: r, dur: r === 0 ? 0 : Math.round((dur[r] || 0) + HOLD) });
     return out;
   };
-  /* 렌더러가 계약을 검사하는 데 쓴다 — 그룹 밖 애니메이션(stray)은 벽시계로 돌아 결정성을 깨고
-     무한 반복(infinite)은 클립이 끝나지 않는다. 둘 다 렌더러가 exit 1 로 막는다. */
+  /* 렌더러가 계약을 검사하는 데 쓴다 — 그룹 밖에서 도는 것(stray)은 벽시계를 타고 결정성을 깨고
+     무한 반복(infinite)은 클립이 끝나지 않는다. 둘 다 렌더러가 exit 1 로 막는다. 비디오는 data-rg
+     가 없거나 autoplay·loop 가 붙어 있으면 stray 다 — seek 가 아니라 재생으로 움직인다는 뜻이다. */
   window.__meta = function () {
     const all = document.getAnimations();
-    return { hold: HOLD,
-             stray: all.filter(a => !owner(a)).length,
-             infinite: all.filter(a => owner(a) && !isFinite(endOf(a))).length };
+    const strayVideo = videos().filter(v => v.dataset.rg === undefined || v.autoplay || v.loop).length;
+    /* 못 읽은 소재 — 오타 난 경로, 디코더가 없는 코덱(HEVC), 빈 파일. __ready() 뒤에 읽어야
+       뜻이 있다. 이름을 그대로 넘겨 렌더러가 어느 파일인지 말할 수 있게 한다. */
+    const broken = videos().filter(v => v.error || (v.dataset.rg !== undefined && !v.getAttribute("src") && !v.currentSrc))
+      .map(v => v.getAttribute("src") || "(video[data-rg] with no src)")
+      .concat([...document.images].filter(i => !i.naturalWidth).map(i => i.getAttribute("src") || "(no src)"));
+    return { hold: HOLD, broken: broken,
+             stray: all.filter(a => !owner(a)).length + strayVideo,
+             infinite: all.filter(a => owner(a) && !isFinite(endOf(a))).length
+                     + painters.filter(p => !isFinite(p.dur)).length };
   };
   window.__size = () => ({ w: parseInt(getComputedStyle(root).getPropertyValue("--w"), 10),
                            h: parseInt(getComputedStyle(root).getPropertyValue("--h"), 10) });
 
-  const qs = new URLSearchParams(location.search);
-  const N = window.__groups().length - 1;
-  if (qs.has("g"))           window.__seek(parseFloat(qs.get("t") || "0"), parseInt(qs.get("g"), 10));
-  else if (qs.has("reveal")) window.__seek(0, parseInt(qs.get("reveal"), 10) + 1);
-  else                       window.__seek(1e9, N + 1);
+  /* URL 이 가리키는 상태로 세운다. 렌더러는 이걸 거치지 않고 __seek 을 직접 부르지만, 사람이
+     브라우저로 슬라이드를 열어 볼 때는 이 한 줄이 첫 화면을 정한다. 페인터를 뒤에서 등록한
+     저작 코드는 등록을 마치고 __boot() 을 한 번 더 불러 첫 화면을 다시 세운다. */
+  window.__boot = function () {
+    const qs = new URLSearchParams(location.search);
+    const N = window.__groups().length - 1;
+    if (qs.has("g"))           return window.__seek(parseFloat(qs.get("t") || "0"), parseInt(qs.get("g"), 10));
+    if (qs.has("reveal"))      return window.__seek(0, parseInt(qs.get("reveal"), 10) + 1);
+    return window.__seek(1e9, N + 1);
+  };
+  window.__boot();
   /* SEEK-RUNTIME-END */
 })();
 </script>

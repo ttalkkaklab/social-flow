@@ -121,7 +121,10 @@ Rules:
   use `rise` for it, at 360ms, and nothing more. No loops, no idle motion, no ambient
   drift. Continuous motion (gears turning, a line tracing for the whole scene) is
   **outside this lane** — it would freeze on every hold. Render it as footage and place
-  it with `visual.video.clip` instead.
+  it with `visual.video.clip` instead. That footage can come from a slide: a one-group
+  slide whose `__paint(1, durMs, fn)` runs the length of the shot renders to an `r1.mp4`
+  you wire as a clip (scenes-schema §motion slides). What stays outside the lane is
+  putting continuous motion *under a multi-segment slide*, where the seams would freeze it.
 - **The end frame is the conclusion.** Every clip freezes on a complete state, and the
   last group's rest frame shows everything the scene claims, readable, with the source.
 - Text rests for at least 0.5s before the next change — with 1:1 groups the narration

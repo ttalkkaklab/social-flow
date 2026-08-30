@@ -14,12 +14,16 @@
  *      kinetic·character 는 motion:true 를 명시해야 한다(빠지면 정지 캡처 경로로 새서 움직임이
  *      통째로 사라진다). character 는 visual.slide.acts 가 그룹마다 동작 하나를 들고 있어야 한다.
  *   4. 결정성 — 두 갈래다. scenes.js 의 visual.slide.motion 이 그 갈래를 정한다.
- *      정지 슬라이드(기본): CSS animation/transition·웹폰트·Math.random/Date 금지
+ *      정지 슬라이드(기본): CSS animation/transition·웹폰트·Math.random/Date·<video> 금지
  *        (capture-reveals.sh 의 바이트 동일성 판정이 끝나지 않는다)
  *      모션 슬라이드(motion:true): 움직임은 seek 로 재현돼야 한다 — window.__seek 정의 필수,
  *        transition 금지(속성이 바뀐 뒤에만 객체가 생겨 seek 가 안 된다), Date·Math.random·
- *        performance.now·requestAnimationFrame·setTimeout/setInterval 금지, 웹폰트 URL 금지.
- *        @keyframes 는 허용이다 — render-motion-slide.mjs 가 프레임마다 currentTime 을 세운다.
+ *        performance.now·requestAnimationFrame·setTimeout/setInterval 금지.
+ *        @keyframes·data-count·__paint 페인터·data-rg 를 든 <video> 는 허용이다 — 넷 다
+ *        render-motion-slide.mjs 가 프레임마다 (g, t) 로 세운다.
+ *      양쪽 공통: 원격 URL 금지(웹폰트·이미지·영상) — 네트워크가 프레임을 정하면 재현이 끝난다.
+ *        스스로 도는 그림도 금지 — gif·apng·애니메이션 webp 와 SVG SMIL 은 Animation 객체를
+ *        안 만들어서 __seek 이 못 세우고 __meta().stray 로도 안 잡힌다. 그림은 png·jpg 만.
  *
  * exit 0 전부 통과 / 1 위반 있음 / 2 인자·파일 오류.
  */
@@ -38,7 +42,13 @@ const MSG = {
   clock: "렌더마다 달라지는 값 금지 (Math.random·Date)",
   motionSeek: "모션 슬라이드에 window.__seek 가 없다 — motion-slide-template.html 에서 시작한다",
   motionTransition: "모션 슬라이드에 transition 금지 — 속성이 바뀐 뒤에만 객체가 생겨 seek 로 세울 수 없다. @keyframes 로 쓴다",
-  motionClock: "모션 슬라이드에 시계·난수·타이머 금지 (Date·Math.random·performance.now·requestAnimationFrame·setTimeout) — 프레임은 __seek(t, g) 가 정한다",
+  motionClock: "모션 슬라이드에 시계·난수·타이머 금지 (Date·Math.random·performance.now·requestAnimationFrame·setTimeout) — 프레임은 __seek(t, g) 가 정한다. 키프레임으로 못 그리는 움직임은 __paint(rg, durMs, fn) 로 그린다",
+  remoteMedia: u => `원격 URL 금지 — "${u}". 이미지·영상은 슬라이드 옆 로컬 파일만 쓴다. 네트워크가 프레임을 정하면 같은 (g, t) 가 같은 픽셀을 내지 못한다`,
+  videoPlayback: "슬라이드의 <video> 에 autoplay·loop 금지 — 재생은 벽시계를 타고, 프레임은 __seek(t, g) 가 정한다",
+  videoGroup: "모션 슬라이드의 <video> 에 data-rg 가 없다 — 그룹에 매이지 않은 영상은 seek 대상 밖이라 첫 프레임에 멈춘다 (data-rg · data-vdur 을 적는다)",
+  animatedImage: u => `스스로 도는 이미지 금지 — "${u}". gif·apng·애니메이션 webp 는 벽시계로 돌고 __seek 이 못 세운다(document.getAnimations 에 안 잡혀 stray 로도 안 걸린다). 정지 그림은 png·jpg 로 넣고, 움직여야 하면 __paint 페인터나 <video> 로 쓴다`,
+  smil: "SVG SMIL 애니메이션 금지 (<animate·<animateTransform·<animateMotion·<set) — 벽시계로 돌고 __seek 이 못 세운다. CSS @keyframes 나 __paint 로 옮긴다",
+  staticVideo: "정지 슬라이드에 <video> 금지 — 상태 캡처는 정지 화면끼리의 xfade 다. 영상이 필요하면 scenes.js 에 slide.motion:true",
   kindVocab: k => `slide.kind "${k}" 는 ${KINDS.join(" · ")} 밖이다`,
   kindMotion: k => `kind:"${k}" 에는 motion:true 가 필요하다 — 없으면 정지 슬라이드로 캡처돼 움직임이 통째로 사라진다`,
   kindTemplate: (k, fn, tpl) => `kind:"${k}" 인데 ${fn}() 이 없다 — ${tpl} 에서 시작한다`,
@@ -123,14 +133,36 @@ function checkDir(dir, only) {
     // 4) 결정성 — 갈래별
     if (/@import|fonts\.googleapis|<link[^>]*font|@font-face[^}]*url\(\s*['"]?https?:/i.test(code))
       fail(base, MSG.webfont);
+    // 원격 소재는 갈래를 안 가린다 — 정지든 모션이든 네트워크가 프레임을 정하면 재현이 끝난다.
+    const remote = code.match(/(?:src|href)\s*=\s*["']?(https?:\/\/[^"'\s>]+)|url\(\s*["']?(https?:\/\/[^"')]+)/i);
+    if (remote && !/fonts\.googleapis|\.woff2?|\.ttf|\.otf/i.test(remote[0]))
+      fail(base, MSG.remoteMedia(remote[1] || remote[2]));
+    // 스스로 도는 그림 — 확장자를 허용목록으로 좁힌다. gif·apng·애니메이션 webp 는 Animation
+    // 객체를 안 만들어서 __seek·__meta 어느 쪽에도 안 걸리고 조용히 벽시계로 돈다.
+    const IMG_OK = /\.(png|jpe?g)$/i;
+    const picks = [];
+    for (const m of code.matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi)) picks.push(m[1]);
+    for (const m of code.matchAll(/<video\b[^>]*\bposter\s*=\s*["']([^"']+)["']/gi)) picks.push(m[1]);
+    for (const m of code.matchAll(/url\(\s*["']?([^"')]+)/gi)) picks.push(m[1]);
+    for (const u of picks) {
+      if (/^https?:/i.test(u)) continue;                       // 원격은 remoteMedia 가 이미 잡았다
+      if (/^data:image\/(png|jpe?g)[;,]/i.test(u)) continue;
+      if (/\.(woff2?|ttf|otf)$/i.test(u)) continue;             // 로컬 폰트 파일
+      if (!IMG_OK.test(u.split("?")[0])) { fail(base, MSG.animatedImage(u)); break; }
+    }
+    if (/<animate\b|<animateTransform\b|<animateMotion\b|<set\b/i.test(code)) fail(base, MSG.smil);
+    const videoTags = code.match(/<video\b[^>]*>/gi) || [];
+    for (const tag of videoTags) if (/\b(?:autoplay|loop)\b/i.test(tag)) { fail(base, MSG.videoPlayback); break; }
     if (motion) {
       if (!/window\.__seek\s*=/.test(code)) fail(base, MSG.motionSeek);
       if (/transition\s*:/.test(code)) fail(base, MSG.motionTransition);
       if (/Math\.random|new Date|Date\.now|performance\.now|requestAnimationFrame|setTimeout|setInterval/.test(code))
         fail(base, MSG.motionClock);
+      for (const tag of videoTags) if (!/\bdata-rg\s*=/.test(tag)) { fail(base, MSG.videoGroup); break; }
     } else {
       if (/animation\s*:|@keyframes|transition\s*:/.test(code)) fail(base, MSG.staticAnim);
       if (/Math\.random|new Date|Date\.now/.test(code)) fail(base, MSG.clock);
+      if (videoTags.length) fail(base, MSG.staticVideo);
     }
 
     if (!bad) console.log(`✓ ${base}${motion ? " (motion · " + kind + ")" : ""}`);
@@ -175,6 +207,24 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; requestAnimationFrame(step);`, [MSG.motionClock]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; @font-face{src:url("https://x/y.woff2")}`, [MSG.webfont]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <link rel="stylesheet" href="https://fonts.googleapis.com/css2">`, [MSG.webfont]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; window.__paint(2, 2400, function (t) {});`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.png"><video data-rg="2" data-vdur="2000" src="assets/b.mp4"></video>`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.gif">`,
+      [MSG.animatedImage("assets/a.gif")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/a.webp">`,
+      [MSG.animatedImage("assets/a.webp")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <svg><animateTransform attributeName="transform"/></svg>`,
+      [MSG.smil]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="../images/scene-3.png"><style>.b{background:url(assets/b.jpg)}</style>`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="https://cdn.example.com/a.png">`,
+      [MSG.remoteMedia("https://cdn.example.com/a.png")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{background:url(https://cdn.example.com/b.jpg)}</style>`,
+      [MSG.remoteMedia("https://cdn.example.com/b.jpg")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <video autoplay data-rg="2" data-vdur="500" src="assets/b.mp4"></video>`,
+      [MSG.videoPlayback]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <video src="assets/b.mp4"></video>`, [MSG.videoGroup]],
+    ["s1-static.html", `const SLIDE_SHOT = 1; <video src="assets/b.mp4"></video>`, [MSG.staticVideo]],
+    ["s1-static.html", `const SLIDE_SHOT = 1; <img src="assets/a.png">`, []],
     ["s3-kinetic.html", `const SLIDE_SHOT = 3; window.__seek = 1; function renderKinetic(S, h) {}`, []],
     ["s3-kinetic.html", `const SLIDE_SHOT = 3; window.__seek = 1; function renderSlide(S, h) {}`,
       [MSG.kindTemplate("kinetic", "renderKinetic", "kinetic-type-template.html")]],

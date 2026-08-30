@@ -1739,19 +1739,39 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
 - Built from `references/motion-slide-template.html`, never from `slide-template.html` —
   it exposes `window.__seek(tMs, g)` · `__groups()` · `__size()` · `__meta()`, which the
   renderer calls (`__meta` reports stray and infinite animations; the renderer stops on either).
-- **Every movement is reproducible by seek**: CSS `@keyframes` (the template's `rise` ·
-  `grow` · `draw`) and `data-count` count-ups only. `transition` is forbidden (its object
-  exists only after a property change, so it can't be seeked). `Date` · `Math.random` ·
-  `performance.now` · `requestAnimationFrame` · `setTimeout` are forbidden — the frame is
-  whatever `__seek(t, g)` says, and the same `(g, t)` yields the same pixels (two renders
-  of the fixture: 144/144 frames byte-identical).
-- Local fonts only, as on every slide.
+- **Every movement is reproducible by seek**, and there are four ways to make one:
+  CSS `@keyframes` (the template's `rise` · `grow` · `draw`), `data-count` count-ups,
+  a **painter** registered with `__paint(rg, durMs, fn)` whose `fn(tMs)` draws the frame at
+  `t` (canvas 2D, WebGL, or SVG — the path for a rotation, a trace, anything keyframes can't
+  hold; WebGL runs on SwiftShader, so it reproduces on the same machine rather than across
+  machines), and
+  a **`<video data-rg data-vfrom data-vdur>`** whose `currentTime` is set to the group's local
+  time. `transition` is forbidden (its object exists only after a property change, so it can't
+  be seeked). `Date` · `Math.random` · `performance.now` · `requestAnimationFrame` ·
+  `setTimeout` are forbidden, inside a painter too — the frame is whatever `__seek(t, g)`
+  says, and the same `(g, t)` yields the same pixels (two renders of the fixture: 144/144
+  frames byte-identical; 168/168 with an image, a painter and a video on one slide).
+- Local fonts only, as on every slide — and local images and video, for the same reason.
+  A remote URL makes the network decide the frame; `check-slide.js` fails on one. Stills are
+  png or jpg — a gif, an apng, an animated webp or an SVG SMIL animation runs on the wall clock
+  and creates no Animation object, so neither `__seek` nor `__meta` can see it; the checker
+  fails on those too, and the painter is where that motion belongs. Video has to be H.264 or
+  VP9 (HEVC won't decode under `--disable-gpu`), and a slide with `<video>` needs real Chrome —
+  bare Chromium ships without the H.264 decoder.
+  Painters get `__interp(x, [in0,in1], [out0,out1], ease)` and `__ease(name, x)` from the
+  runtime (`linear` · `out` · `in` · `inOut`) so a curve isn't hand-rolled per slide.
 - **One movement per group, ≤ 2.6s of motion** (clip ≤ 2.9s with the hold). A segment
   shorter than its clip cuts to the next rest frame mid-motion; the renderer warns.
 - **Continuous motion is outside this lane** — gears turning for the whole scene, a
   line tracing under the narration. That would freeze on every hold. Render it as
   footage and place it with `visual.video` / `visual.clip` (ep05's gear scenes went that
   way). Beats only: count-ups, bar growth, step and callout entries.
+  The footage itself can now come from a slide instead of a separate drawing program:
+  author a one-group slide whose painter runs the length of the shot, render it, and wire
+  the resulting `r1.mp4` as `visual.clip`. ep05 drew its gears frame by frame in Python
+  because there was no painter; the same 11 seconds is a `__paint(1, 11000, fn)` today.
+  What stays outside the lane is the *placement* — continuous motion under a multi-segment
+  slide, where the state rule would freeze it at every seam.
 - Both formats. The zone comes from `window.FORMAT` (portrait x 176 · top 190 · bottom
   570, wide x 96 · top 96 · bottom 285 — `formats.js` mirrored inline in the template).
 - The look is `references/slide-design.md` — ink · paper · one accent, hairlines not
