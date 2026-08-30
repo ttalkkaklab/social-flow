@@ -9,7 +9,8 @@ don't override it with their own judgment).
     cat post.md | python3 check-style.py --surface threads -
     python3 check-style.py --surface ig --json caption.md
 
-exit 0 pass / 1 warn (S2 accumulation) / 2 fail (S1 found) / 3 execution error.
+exit 0 pass / 1 warn (S2 accumulation) / 2 fail (S1 found) / 3 execution error /
+4 skip (the text is not Korean, so these rules have nothing to say about it).
 
 No dependencies (stdlib only). Runs as-is in the plugin distribution.
 """
@@ -97,7 +98,7 @@ def hangul_share(text: str) -> tuple[float | None, int, int]:
 def out_of_scope(text: str) -> tuple[bool, float | None, int, int]:
     """Both conditions must hold before the checker declines to judge."""
     share, letters, hangul = hangul_share(text)
-    skip = share is not None and share < HANGUL_MIN_SHARE and hangul < HANGUL_MIN_CHARS
+    skip = share is not None and share < HANGUL_MIN_SHARE and hangul == 0
     return skip, share, letters, hangul
 
 # ---------------------------------------------------------------------------
@@ -679,7 +680,7 @@ def has_final_consonant(ch: str) -> bool:
 def analyze(text: str, surface: str, doc: bool = False) -> dict:
     cfg = SURFACE_CFG[surface]
 
-    # Language scope, before any rule runs. Non-Korean copy gets SKIP (exit 3), not PASS —
+    # Language scope, before any rule runs. Non-Korean copy gets SKIP (exit 4), not PASS —
     # see the HANGUL_MIN_SHARE block at the top for why a pass here would be a lie.
     skip, share, letters, hangul = out_of_scope(text)
     if skip:

@@ -336,6 +336,12 @@ function safeResolve(root, urlPath) {
   const base = path.resolve(root, slug);
   const target = path.resolve(base, ...rest);
   if (target !== base && !target.startsWith(base + path.sep)) return null;
+  // The lexical test above reads the path as text, so a symlink inside the channel directory
+  // still points wherever it points. Resolve both sides and ask again.
+  let realBase, realTarget;
+  try { realBase = fs.realpathSync(base); realTarget = fs.realpathSync(target); }
+  catch (e) { return e.code === 'ENOENT' ? target : null; }
+  if (realTarget !== realBase && !realTarget.startsWith(realBase + path.sep)) return null;
   return target;
 }
 

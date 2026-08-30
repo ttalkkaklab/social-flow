@@ -816,7 +816,8 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
           # voice span: a detected boundary is the END of the pause (the next sentence's first
           # sound), so the window closes at that pause's START — the silin line whose end is
           # the boundary. A proportional-fallback boundary has no pause and stays as it is.
-          SPS=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$((j-1))]:-0}" -v j="$j" 'BEGIN{printf "%.3f", cs+p+(j>0?b:0)}')
+          if [ "$j" -eq 0 ]; then PB=0; else PB="${BARR[$((j-1))]}"; fi
+          SPS=$(awk -v cs="$CS" -v p="$CPRE" -v b="$PB" 'BEGIN{printf "%.3f", cs+p+b}')
           if [ "$j" -lt $((M-1)) ]; then
             SPE=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{e=b} FILENAME!="" && ($2-b)<0.002 && ($2-b)>-0.002 {e=$1} END{printf "%.3f", cs+p+e}' "work/silin$IDX.txt" 2>/dev/null \
                   || awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b}')

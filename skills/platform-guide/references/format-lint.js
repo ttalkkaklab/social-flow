@@ -376,12 +376,12 @@ function crossCheckSeek(issues) {
   const blocks = [];
   for (const file of SCREEN_TPL) {
     const src = read(file);
-    if (src === null) { issues.push({ name: 'seek runtime', got: '(file missing)', want: file }); return; }
+    if (src === null) { issues.push({ name: 'seek runtime', got: '(file missing)', want: file }); continue; }
     const i = src.indexOf(BEGIN), j = src.indexOf(END);
     if (i < 0 || j < 0) {
       issues.push({ name: `seek runtime in ${path.basename(file)}`, got: '(markers not found)',
                     want: 'SEEK-RUNTIME-BEGIN … SEEK-RUNTIME-END' });
-      return;
+      continue;
     }
     // The header comment names its own template, so compare from the code that
     // follows it — the runtime itself, not the sentence describing it.

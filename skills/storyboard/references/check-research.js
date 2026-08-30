@@ -255,7 +255,7 @@ function analyse(src, fmt, scenes) {
   const BASIS = /https?:\/\/|원문|실측|측정|공식|같은\s*문서|자체\s*실험|1차|백과|사전|카탈로그|위키|wiki|박물관|기록원|논문|저널|보고서|고시|법령|시행령|일보|뉴스|신문|경제|타임스|times|연합|브리핑|진흥원|연구소|재단|협회|학회|nobel/i;
   const ACRONYM = /\b[A-Z]{3,}\b/;
   claims.forEach((c) => {
-    const row = c.cells.slice(1).join(' ');
+    const row = c.cells.slice(2).join(' ');
     if (!BASIS.test(row) && !ACRONYM.test(row))
       warn(`claim ${c.n} names no basis — no link, no measurement, no named source`);
   });

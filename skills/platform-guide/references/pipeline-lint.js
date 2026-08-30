@@ -118,11 +118,20 @@ const RULES = [
       const src = read(SKILL('platform-guide'));
       const rows = src && tableRows(src, /^\|\s*Outgoing copy\s*\|/);
       if (!rows) return { ok: false, got: '(table not found)', want: 'the adversarial review table' };
-      const tails = uniq(Array.from(rows.join('\n').matchAll(/`([A-Z_]+_REVIEW)`/g), (m) => m[1]));
+      if (!rows.length) return { ok: false, got: '(the table has no rows)', want: 'the adversarial review table' };
+      const body = rows.join('\n');
+      const tails = uniq(Array.from(body.matchAll(/`([A-Z_]+_REVIEW)`/g), (m) => m[1]));
       const known = REVIEWERS.reduce((a, r) => a.concat(r.tails), []);
       const unknown = tails.filter((t) => known.indexOf(t) === -1);
-      return { ok: unknown.length === 0, got: unknown.length ? 'not in the manifest: ' + unknown.join(' ') : tails.join(' '),
-               want: 'every tail in the table is a declared reviewer tail' };
+      // Both directions. A mirror check earns its keep on deletions, so every reviewer the
+      // manifest gives a copy surface has to still be named here — dropping a row is the edit
+      // that would otherwise pass unseen.
+      const copyIds = REVIEWERS.filter((r) => r.surfaces.some((s) => /copy/.test(s))).map((r) => r.id);
+      const absent = copyIds.filter((id) => body.indexOf(id) === -1);
+      const bad = unknown.map((t) => 'not in the manifest: ' + t)
+                         .concat(absent.map((id) => 'missing from the table: ' + id));
+      return { ok: bad.length === 0, got: bad.length ? bad.join(' · ') : tails.join(' '),
+               want: 'every tail in the table is declared, and every copy reviewer is in the table' };
     },
   },
   {

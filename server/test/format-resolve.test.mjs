@@ -399,7 +399,7 @@ test('build-reel scene transition — a dissolve that costs no time', () => {
   assert.match(reel, /FILT\+="\$\{SRCL\}null\$\{VF_FADE\}\[vout\]"/, 'the fade hangs off the shared hand-off');
   assert.match(reel, /fade=t=in:st=0:d=\$SF_D/, 'head fade starts at 0');
   assert.match(reel, /fade=t=out:st=/, 'tail fade');
-  assert.doesNotMatch(reel, /xfade=transition=[a-z]+:duration=\$SCENE_FADE/,
+  assert.doesNotMatch(reel, /xfade=transition=[a-z]+:duration=\$(SCENE_FADE|SCENE_XF|SCENE_PUSH)/,
                       'a scene boundary never uses xfade — it renumbers the tail PTS');
 
   // The fade can never outgrow the card it sits in: a quarter of the card is the ceiling, so a

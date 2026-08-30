@@ -38,5 +38,9 @@ jobs:
 
       # the slide contract: kind vocabulary, motion, acts, determinism — rules pinned by message
       - run: node skills/storyboard/references/check-slide.js --selftest
+
+      # the research parser's table rules, and the channel browser's API shape and path guard
+      - run: node skills/storyboard/references/check-research.js --selftest
+      - run: node skills/channel/references/serve.js --selftest
       # inline format mirrors, and the seek runtime the three authored-screen templates share
       - run: node skills/platform-guide/references/format-lint.js

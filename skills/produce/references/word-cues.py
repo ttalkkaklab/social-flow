@@ -159,7 +159,8 @@ def main() -> None:
 
     # The outer edges first: the last word holds to the cue end, so it is judged at its real
     # length and not glued backward just because the speech window closed on it.
-    cues[0][0] = min(cue_s, cues[0][0])
+    cues[0][0] = cue_s
+    cues[0][1] = max(cues[0][1], cues[0][0])
     cues[-1][1] = max(cue_e, cues[-1][1])
     merged = []
     for c in cues:
