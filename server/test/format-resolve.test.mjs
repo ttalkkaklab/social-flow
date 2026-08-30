@@ -390,16 +390,20 @@ test('build-reel Ken Burns — off for filmed clips, pan for landscape', () => {
 test('build-reel scene transition — a dissolve that costs no time', () => {
   const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');
   assert.match(reel, /SCENE_FADE=\$\{SCENE_FADE:-0\.12\}/, 'the half-length constant');
-  assert.match(reel, /enter=1\) FADE_IN=1/, 'enter= turns the head fade on');
-  assert.match(reel, /exit=1\)  FADE_OUT=1/, 'exit= turns the tail fade on');
+  assert.match(reel, /enter=1\|enter=black\)\s+ENTER=black/, 'enter= turns the head transition on');
+  assert.match(reel, /exit=1\|exit=black\)\s+EXITM=black/, 'exit= turns the tail fade on');
 
   // The whole point: both fades live inside one card's own encode, so §9 still stream-copies
   // and the 2ms drift assertion still holds. An xfade between cards would shrink the total by
   // the fade length at every seam — the failure mode the outro seam already measured.
-  assert.match(reel, /FILT\+="\[vkb\]null\$\{VF_FADE\}\[vout\]"/, 'the fade hangs off the shared hand-off');
+  assert.match(reel, /FILT\+="\$\{SRCL\}null\$\{VF_FADE\}\[vout\]"/, 'the fade hangs off the shared hand-off');
   assert.match(reel, /fade=t=in:st=0:d=\$SF_D/, 'head fade starts at 0');
   assert.match(reel, /fade=t=out:st=/, 'tail fade');
-  assert.doesNotMatch(reel, /xfade=transition=[a-z]+:duration=\$SCENE_FADE/,
+  // The carry is an overlay inside this card's encode. Naming the constants is not enough —
+  // the carry computes its own $TD, so pin the shape of the carry itself. (A blanket "no
+  // xfade" is wrong: the within-card reveal chain uses xfade legitimately.)
+  assert.match(reel, /\[vkb\]\[tcar\]overlay=/, 'the carry is an overlay, not a cross-card xfade');
+  assert.doesNotMatch(reel, /\[tcar\][^"]*xfade/,
                       'a scene boundary never uses xfade — it renumbers the tail PTS');
 
   // The fade can never outgrow the card it sits in: a quarter of the card is the ceiling, so a

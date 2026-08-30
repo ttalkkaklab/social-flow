@@ -122,6 +122,12 @@ Rules:
 `slide-reviewer` scores a rendered slide (the `--sheet` frames) additively out of 100,
 points only with frame-file evidence. PASS at **score ≥ 95 and p0 = 0**.
 
+**One rubric, three kinds.** The P0 list and the four axes below apply to every authored
+screen — diagram, kinetic type, and character act alike (scenes-schema §the authored-screen
+lane). §6 and §7 add the P0s that only their kind can commit and say what the axes look at
+there. Nothing is subtracted for a kind: a kinetic screen is still judged on palette
+restraint, and a character screen still has to put its number on screen legibly.
+
 **P0 — any one fails the review**
 
 1. Text outside the zone or under the subtitle band; a hero number clipped by the frame edge
@@ -154,3 +160,63 @@ points only with frame-file evidence. PASS at **score ≥ 95 and p0 = 0**.
 
 Findings that are a matter of taste go to fix directives, not P0. A P0 is something a
 viewer would notice as wrong, not something a designer would do differently.
+
+## 6. Kinetic type — when the words are the picture
+
+The lane is `kind: "kinetic"` (scenes-schema §kinetic type). Everything in §1–§4 holds; what
+changes is that type carries the whole frame, so the type decisions become the composition
+decisions.
+
+- **One big phrase, and it is the only big thing.** `--fs-word` is the hero size and there is
+  one hero per screen, exactly as there is one hero number on a diagram slide. Everything else
+  is `--fs-word2` or smaller.
+- **Five words to a line, four lines to a screen.** Korean breaks by word
+  (`word-break:keep-all`), so a phrase that needs a sixth word is a phrase to cut, not to shrink.
+- **One effect kind per screen.** `drop` is the default — the phrase arrives from just above and
+  settles. `wipe` reveals left to right, which is the reading direction, and suits a longer
+  phrase. Two effects on one screen reads as a template being demonstrated.
+- **The struck-out phrase is the one device with a second meaning.** `h.cross` draws a rule
+  through a phrase in the same group it appears — the thing that turned out to be wrong. Once
+  per screen at most.
+- **What is on screen is not the subtitle.** The subtitle band is already carrying the sentence.
+  The screen carries what is left when the sentence is cut to its point.
+
+**P0, added for this kind**
+
+8. A screen phrase identical to its segment's `sub` — the same sentence twice, once burned in and once as the picture
+9. More than one hero-sized phrase, or a line past five words
+10. Two effect kinds on one screen, or a word that rotates, bounces, or arcs in
+
+**What the axes look at here** — design craft reads type hierarchy and line breaking instead of
+diagram composition; motion-carries-meaning asks whether each phrase lands on the sentence that
+says it; legibility is mostly line length and the gap between lines.
+
+## 7. Character act — when someone is reacting
+
+The lane is `kind: "character"` (scenes-schema §character act). The figure is an ink line-drawing
+in this same design language, and the rules exist to keep it from becoming a mascot.
+
+- **The figure is drawn in the palette, not on top of it** — paper stroke on ink, no fill, no
+  face, no colour of its own. The accent stays where it always is: on the words.
+- **One action per group, from the seven** (`enter` · `point` · `nod` · `shrug` · `think` ·
+  `wave` · `cheer`), declared in `scenes.js` as `visual.slide.acts`. The action set is closed on
+  purpose — a movement authored for one slide renders differently on the next re-render, and a
+  figure whose motion is hand-tuned is exactly the "generated look" this document is against.
+- **Every action returns to rest** but `enter`. Poses don't accumulate across cuts, which is what
+  makes the clips joinable at all.
+- **The words say it, the figure reacts.** A gesture is never the only thing conveying a value or
+  a claim — the style gate and the reviewer read text, and a point that exists only as a raised
+  arm is a point nothing has checked.
+- **It earns its place on human beats** — being stuck, deciding, being surprised, the moment it
+  works. On a screen that exists to show a number, the figure is in the way.
+
+**P0, added for this kind**
+
+11. A CSS keyframe or an action name outside the seven — motion authored inside the slide instead of chosen
+12. A pose that persists into the next clip (an action that does not return to rest), visible as the figure starting group k+1 mid-gesture
+13. The scene's claim or value exists only as a gesture, with no text on screen carrying it
+14. The figure overlapping the text block or crossing the zone edge in any sheet frame
+
+**What the axes look at here** — nothing-reads-as-generated adds the mascot markers (a face, a
+fill colour, a second figure, an idle bob); motion-carries-meaning asks whether the chosen action
+is the one the sentence calls for, not merely that something moved.

@@ -771,9 +771,14 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   seedance_reference: async (args) => {
     const result = await seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, args));
     if (!result.success) return text(`Seedance video generation with references failed: ${result.error}`, true);
-    const refImagesInfo = result.referenceImages?.join('\n  - ') || '';
+    const refImagesInfo = result.referenceImages?.length
+      ? `\nReference Images (${result.referenceImages.length}):\n  - ${result.referenceImages.join('\n  - ')}`
+      : '';
+    const refAudioInfo = result.referenceAudios?.length
+      ? `\nReference Audio (${result.referenceAudios.length}):\n  - ${result.referenceAudios.join('\n  - ')}`
+      : '';
     return text(
-      `Video generated with reference images successfully!\n\nOutput: ${result.videoPath}\nReference Images (${result.referenceImages?.length || 0}):\n  - ${refImagesInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`,
+      `Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`,
     );
   },
 

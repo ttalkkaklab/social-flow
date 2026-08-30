@@ -204,6 +204,11 @@ but **exit 1 with empty output means the checker died, not a style warning**
 (measured). Report that surface as "unverified".
 On exit 3 (empty input / extraction failure), state "style unverified". Never
 count it as a pass.
+On exit 4 the copy isn't Korean, so the checker declined to judge it — every rule
+in it is Korean-specific. Report that surface as "style unchecked (not Korean)",
+never as a pass, and read the copy yourself: for English the tells are the ones
+README names (delve · leverage · robust · seamless · comprehensive · crucial ·
+foster · testament · landscape, and "It's not X, it's Y").
 
 `quote-exempt N` in the output header line is **violations the
 checker excluded from the verdict without knowing whether the quotes are

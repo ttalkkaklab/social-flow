@@ -1106,6 +1106,61 @@ describe('video engine separation (Veo · Seedance)', () => {
   });
 
   /**
+   * Reference audio (2026-08-29) — the only way to hand a character a fixed voice
+   * inside a generated clip. The vendor's limits live in the capability table, and
+   * the schema must reject before the call the combinations the API would fail
+   * minutes later: audio-only on 2.0, too many clips, a non wav/mp3 file, and a
+   * voice reference into a silent clip (our generateAudio default is false).
+   */
+  describe('reference audio', () => {
+    const MODEL_25 = 'dreamina-seedance-2-5-260628';
+    const MODEL_20 = 'dreamina-seedance-2-0-260128';
+
+    it('every reference-capable model has an audio spec, and the tool surface mirrors it', () => {
+      for (const model of SEEDANCE_REFERENCE_MODELS) {
+        const audio = SEEDANCE_MODEL_SPECS[model].referenceAudio;
+        assert.notEqual(audio, false, `${model} has no reference-audio spec`);
+        assert.ok(audio.clipSeconds[0] >= 2 && audio.totalSeconds >= audio.clipSeconds[1], `${model} audio limits are inconsistent`);
+      }
+      const prop = ref.inputSchema.properties.referenceAudioPaths;
+      assert.ok(prop, 'seedance_reference has no referenceAudioPaths');
+      const maxClips = Math.max(...SEEDANCE_REFERENCE_MODELS.map((m) => SEEDANCE_MODEL_SPECS[m].referenceAudio.maxClips));
+      assert.equal(prop.maxItems, maxClips);
+      assert.match(prop.description, /@Audio/, 'the @Audio N binding grammar is missing');
+      assert.match(prop.description, /generateAudio: true/);
+      assert.match(ref.description, /voice/i);
+      assert.match(ref.inputSchema.properties.generateAudio.description, /referenceAudioPaths/);
+      assert.deepEqual(ref.inputSchema.required, ['prompt'], 'images are no longer the only reference kind');
+      assert.equal(ref.inputSchema.properties.referenceImagePaths.minItems, undefined);
+    });
+
+    it('2.5 accepts an audio-only call; 2.0 needs an image alongside', () => {
+      const audioOnly = { prompt: 'x', referenceAudioPaths: ['/tmp/v.wav'], generateAudio: true };
+      assert.ok(seedanceReferenceSchema.safeParse({ ...audioOnly, model: MODEL_25 }).success);
+      const rejected = seedanceReferenceSchema.safeParse({ ...audioOnly, model: MODEL_20 });
+      assert.equal(rejected.success, false);
+      assert.match(rejected.error.issues[0].message, /audio-only/);
+      assert.ok(seedanceReferenceSchema.safeParse({ ...audioOnly, model: MODEL_20, referenceImagePaths: ['/tmp/a.png'] }).success);
+    });
+
+    it('clip count, file format, silent output, and no reference at all are rejected before the call', () => {
+      const base = { prompt: 'x', model: MODEL_20, referenceImagePaths: ['/tmp/a.png'], generateAudio: true };
+      const tooMany = seedanceReferenceSchema.safeParse({ ...base, referenceAudioPaths: ['/1.wav', '/2.wav', '/3.wav', '/4.wav'] });
+      assert.equal(tooMany.success, false);
+      assert.match(tooMany.error.issues[0].message, /at most 3 reference audio/);
+      const badFormat = seedanceReferenceSchema.safeParse({ ...base, referenceAudioPaths: ['/tmp/v.ogg'] });
+      assert.equal(badFormat.success, false);
+      assert.match(badFormat.error.issues[0].message, /wav or mp3/);
+      const silent = seedanceReferenceSchema.safeParse({ ...base, generateAudio: false, referenceAudioPaths: ['/tmp/v.wav'] });
+      assert.equal(silent.success, false);
+      assert.deepEqual(silent.error.issues[0].path, ['generateAudio']);
+      const nothing = seedanceReferenceSchema.safeParse({ prompt: 'x' });
+      assert.equal(nothing.success, false);
+      assert.match(nothing.error.issues[0].message, /At least one reference/);
+    });
+  });
+
+  /**
    * The default must be a **model with quality evidence**.
    *
    * Default to a model absent from the arena (2.5, 2.0 fast, 2.0 mini,

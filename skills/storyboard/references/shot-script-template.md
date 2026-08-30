@@ -37,6 +37,11 @@ This document is the source of truth for the structure that render has to produc
 - A filmed scene's `visual` is **filming directions** instead of a generated image —
   `{ source: "recording", clip, shot, action }`. `scenes-schema.md` §filmed scenes is the source
   of truth for what each field means, and `bg`/`bgPrompt`/image generation all drop out.
+- **A screencast splice** (`source: "screencast"`, scenes-schema §screencast splice) is recorded
+  the same way and printed into the same block, with two differences the render adds: a
+  **쓸 구간** line when the scene names an `at` window, and a **말** line saying the shot's voice
+  is TTS — the user records the screen and doesn't have to speak. A screencast scene with
+  `sync: true` drops that line and behaves like a filmed scene.
 - The `narration` segments aren't a TTS script but **the sentences to speak** — `tts` = the
   sentence to say, `sub` = the subtitle's original notation (numbers and proper nouns as
   written). The real subtitles come from the corrected transcript of the recording, so the

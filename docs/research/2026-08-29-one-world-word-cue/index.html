@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한 공간, 한 어절 — 85초를 붙잡는 쇼츠 한 편 실측 (2026-08)</title>
+<style>
+  :root {
+    --paper:#fcfcfb; --paper-2:#f4f3ef; --card:#ffffff;
+    --ink:#1a1d21; --ink-2:#565c64; --ink-3:#8a9099;
+    --line:#e3e0d9; --line-strong:#c9c5bb;
+    --c-calm:#0f62a8; --c-act:#d2691e; --c-pay:#0e9f6e;
+    --shadow:0 1px 2px rgba(26,29,33,.05), 0 8px 24px rgba(26,29,33,.05);
+    --mono:ui-monospace,"SF Mono",Menlo,"Roboto Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#14161a; --paper-2:#1a1d22; --card:#1c1f24;
+      --ink:#e8eaed; --ink-2:#a2a9b3; --ink-3:#757c86;
+      --line:#2c3037; --line-strong:#3e434b;
+      --c-calm:#2e90e0; --c-act:#e08a3c; --c-pay:#15a06b;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#14161a; --paper-2:#1a1d22; --card:#1c1f24;
+    --ink:#e8eaed; --ink-2:#a2a9b3; --ink-3:#757c86;
+    --line:#2c3037; --line-strong:#3e434b;
+    --c-calm:#2e90e0; --c-act:#e08a3c; --c-pay:#15a06b;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+  }
+  *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",-apple-system,sans-serif;
+    background:var(--paper); color:var(--ink); line-height:1.72; font-size:16px; word-break:keep-all;
+    max-width:1000px; margin:0 auto; padding:0 24px 120px; }
+  header.hero { padding:60px 0 36px; }
+  .kicker { display:inline-block; font-size:12px; font-weight:700; letter-spacing:.1em; color:var(--ink-2);
+    border:1px solid var(--line-strong); padding:4px 12px; border-radius:999px; margin-bottom:20px; }
+  h1 { font-size:clamp(28px,4.2vw,44px); line-height:1.24; font-weight:800; letter-spacing:-.025em; }
+  .hero .sub { margin-top:18px; font-size:17.5px; color:var(--ink-2); max-width:60ch; }
+  .headline-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin:36px 0 0; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px 22px; box-shadow:var(--shadow); }
+  .stat-k { font-size:24px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .stat-v { font-size:14.5px; font-weight:600; margin-top:4px; }
+  .stat-n { font-size:13px; color:var(--ink-3); margin-top:6px; line-height:1.5; }
+  section { padding-top:52px; }
+  h2 { font-size:clamp(21px,2.6vw,27px); font-weight:750; letter-spacing:-.02em; line-height:1.34;
+       padding-bottom:12px; border-bottom:2px solid var(--line-strong); margin-bottom:22px; }
+  h3 { font-size:17.5px; font-weight:700; margin:34px 0 10px; }
+  p { margin:14px 0; max-width:74ch; }
+  p.method { font-size:14.5px; color:var(--ink-2); background:var(--paper-2); border-left:3px solid var(--line-strong);
+             padding:14px 18px; border-radius:0 8px 8px 0; max-width:none; }
+  code { font-family:var(--mono); font-size:.88em; background:var(--paper-2); padding:1px 5px; border-radius:4px; }
+  a { color:var(--c-calm); text-decoration:underline; text-underline-offset:2px; }
+  figure { margin:22px 0; }
+  figure img { width:100%; border-radius:10px; border:1px solid var(--line); display:block; }
+  figcaption { font-size:13.5px; color:var(--ink-2); margin-top:8px; line-height:1.55; }
+  table { border-collapse:collapse; width:100%; margin:18px 0; font-size:14.5px; }
+  th, td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-size:12.5px; color:var(--ink-2); font-weight:700; letter-spacing:.04em; }
+  td.num { font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .wrap { overflow-x:auto; }
+  ul { margin:12px 0 12px 22px; } li { margin:6px 0; max-width:74ch; }
+  .quote { border-left:3px solid var(--c-act); padding:6px 16px; color:var(--ink-2); font-size:15px; margin:14px 0; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <span class="kicker">RESEARCH · 2026-08-29</span>
+  <h1>한 공간, 한 어절 — 85초를 붙잡는 쇼츠 한 편을 프레임 단위로 쟀다</h1>
+  <p class="sub">아니이게무슨 「원전 방호복이 방사선을 못 막는 이유」(YouTube Shorts <code>b6AygLAYuvY</code>, 2026-08-26, 3일 만에 2만 회). 이탈을 어디서 어떻게 막는지 보려고 컷·움직임·자막·대사 리듬을 전부 숫자로 뽑았고, 그 결과를 플러그인의 전환·자막·연출 문법에 옮겼다.</p>
+  <div class="headline-grid">
+    <div class="stat"><div class="stat-k">6컷 / 85초</div><div class="stat-v">하드 컷은 여섯 번뿐</div><div class="stat-n">디졸브 0. 컷은 새 질문이 열리는 자리(13·33·48·63초)에만 온다</div></div>
+    <div class="stat"><div class="stat-k">6초 / 86초</div><div class="stat-v">화면이 멈춘 시간</div><div class="stat-n">프레임 간 차이 평균 1.0 미만인 초. 나머지 80초는 카메라가 계속 움직인다</div></div>
+    <div class="stat"><div class="stat-k">0.47초</div><div class="stat-v">자막 한 큐의 중앙값</div><div class="stat-n">164번 교체, 큐당 1.23 어절. 화면이 느려도 눈은 반초마다 새 자극을 받는다</div></div>
+    <div class="stat"><div class="stat-k">0건</div><div class="stat-v">0.3초 넘는 무음</div><div class="stat-n">−45 dB 기준. 85초 동안 소리가 비는 순간이 없다</div></div>
+  </div>
+</header>
+
+<section>
+  <h2>1. 어떻게 쟀나</h2>
+  <p class="method">yt-dlp로 원본(1080×1920, 30fps, 85.33초)을 받아 ffmpeg <code>select=gt(scene,0.3)</code>로 하드 컷을, <code>tblend=difference</code>+<code>signalstats</code>로 초당 프레임 차이를, 자막 띠(y 1200~1300)만 잘라 같은 방법으로 자막 교체 순간을 셌다. 대사는 Qwen3-ASR로 받아썼고(579자·202어절·26문장), 자막 위치·크기는 흰 픽셀 행을 PIL로 읽었다. 재생 수·좋아요는 yt-dlp 메타데이터.</p>
+</section>
+
+<section>
+  <h2>2. 화면 — 공간 하나를 끝까지 쓴다</h2>
+  <figure><img src="ref-0-28s.jpg" alt="참고 영상 0~28초 프레임 10장"><figcaption>0~28초. 콘크리트 홀, 호박색 작업등, 흰 방호복 인물. 알파선은 종이판에 막히는 주황 빔, 베타선은 호일을 뚫는 파란 빔 — 추상 개념마다 <b>같은 홀에 놓인 물건 하나</b>가 배정된다.</figcaption></figure>
+  <figure><img src="ref-34-80s.jpg" alt="참고 영상 34~80초 프레임 10장"><figcaption>34~80초. 방사성 먼지는 주황 구체, 납은 콘크리트 블록, 결말은 가슴의 선량계. 85초 내내 장소가 바뀌지 않고, 도표·글자·타이틀 카드는 한 장도 없다.</figcaption></figure>
+  <p>여섯 번의 하드 컷은 전부 대사가 새 질문을 여는 자리와 겹친다. 17.1초 「그럼 대체 왜 저걸 입고 들어가는 걸까요?」, 27.7초 「베타선은」, 33.2초 「여기까지는 옷 한 겹으로 충분합니다. 근데 진짜 재앙은 따로 있습니다」, 48.4초 「그럼 감마선까지 막게 납으로 만들면 되지 않을까요?」, 63.7초 「결국 인류는 막는 걸 포기합니다」, 76.0초 「멀리 서고 짧게 일하고」. 그림이 바뀌는 순간은 곧 이야기가 방향을 트는 순간이라, 컷이 거칠어도 끊긴다는 느낌이 없다.</p>
+  <p>그 사이 80초는 카메라가 계속 움직인다. 돌리·트래킹·천천히 들어가는 줌이 이어지고, 인물은 가만히 서 있어도 프레임이 흐른다. 우리 빌더가 스틸에 켄번즈를 거는 것과 같은 원리인데 세기가 다르다 — 참고 영상의 초당 프레임 차이 평균 5.0은 우리 스틸 기본값(카드당 3.5% 줌)보다 한참 크다.</p>
+</section>
+
+<section>
+  <h2>3. 자막 — 어절 하나, 반초, 65% 선</h2>
+  <div class="wrap"><table>
+    <tr><th>항목</th><th>참고 영상</th><th>플러그인 (SUB_MODE=word, ep07 실측)</th></tr>
+    <tr><td>큐 교체 수</td><td class="num">164회 / 85.3초</td><td class="num">92회 / 64.8초</td></tr>
+    <tr><td>큐 길이 중앙값 · 최소 · 최대</td><td class="num">0.47 · 0.27 · 1.23초</td><td class="num">0.48 · 0.28 · 1.57초</td></tr>
+    <tr><td>큐당 어절</td><td class="num">1.23</td><td class="num">1.28</td></tr>
+    <tr><td>글자 세로 위치(중심)</td><td class="num">65.0%</td><td class="num">64.2%</td></tr>
+    <tr><td>글리프 높이</td><td class="num">61px</td><td class="num">60px (Fontsize 84)</td></tr>
+    <tr><td>전환</td><td>하드 스왑, 페이드 없음</td><td>하드 스왑, 페이드 없음</td></tr>
+  </table></div>
+  <figure><img src="ours-word-cue.jpg" alt="플러그인 어절 자막 프레임 5장"><figcaption>ep07 카드 3, 16.0~18.8초. 「이 → 표준은 → 김치에는 → 적용되지 않는다. → 다른 사실을」. 짧은 어절은 뒤 어절에 붙는다(0.28초 미만).</figcaption></figure>
+  <p>어절 시각은 추정이 아니라 정렬이다. 빌더가 카드마다 Qwen3 ForcedAligner를 돌리고(7초 카드에 3초), <code>word-cues.py</code>가 화면 글자를 TTS 발음 대본을 거쳐 정렬기가 들은 글자열에 difflib로 대응시킨다. 처음엔 어절 수를 맞춰 대응시켰는데 27개 중 14개가 실패했다 — 한국어 띄어쓰기가 ASR과 대본에서 다르기 때문이다(「입맛 당기시죠」를 ASR은 한 덩어리로 듣는다). 글자 단위로 바꾸자 27개 전부 붙었다(23개는 100% 일치, 최저 79%).</p>
+  <p>정확도는 정렬기와 다른 신호로 확인했다. 문장 첫 어절의 큐 시작을 빌더의 에너지 기반 무음 끝과 대조하니 18건 평균 0.02초, 최대 0.07초 차이였다. 정렬기 없이 글자 수 비례로 흩뿌리는 폴백은 같은 카드에서 평균 0.42초·최대 1.18초 어긋났고, 경고를 찍으며 뒤로 물러난다.</p>
+</section>
+
+<section>
+  <h2>4. 대사 — 3.3초짜리 문장, 15초마다 다시 거는 갈고리</h2>
+  <p>26문장에 85초, 문장당 3.3초·22자, 발화 6.8자/초. 문장 길이는 10자에서 46자까지 널뛰는데, 짧은 문장이 대개 갈고리다.</p>
+  <div class="quote">뉴스에서 원전 사고가 터지면 온 몸을 하얗게 뒤덮은 방호복을 입고 들어가는 사람들이 나옵니다. <b>그런데 저 옷은 가장 위험한 방사선을 막지 못합니다.</b> 감마선은 그냥 비처럼 뚫고 지나가거든요. <b>그럼 대체 왜 저걸 입고 들어가는 걸까요?</b></div>
+  <p>익숙한 그림(4초) → 뒤집기(5초) → 근거 그림 → 질문(13초). 질문을 던진 뒤 바로 「세 종류」라는 구조로 답을 세기 시작하고, 각 종류에 물건 하나(종이판·호일·통과)가 붙는다. 33초에 「근데 진짜 재앙은 따로 있습니다」로 두 번째 갈고리, 48초에 시청자가 떠올릴 반론(「그럼 납으로?」)을 대신 물어 세 번째, 63초에 「결국 인류는 막는 걸 포기합니다」로 방향을 튼다. 마지막 문장은 첫 문장의 방호복을 되짚는다 — 「사람을 지킨 건 하얀 방호복이 아니라 째깍거리는 시계」. 결말 프레임은 그 시계다.</p>
+  <figure><img src="ref-hook-0-3s.jpg" alt="참고 영상 0~3.5초 프레임 8장"><figcaption>0~3.5초. 문 틈의 빛에서 시작해 방호복 인물들이 걸어 나온다. 첫 프레임부터 움직임이 있고, 자막은 0.63초에 첫 교체.</figcaption></figure>
+</section>
+
+<section>
+  <h2>5. 플러그인에 옮긴 것</h2>
+  <ul>
+    <li><b>전환 어휘</b> — <code>transition: dissolve | dip | dip:white | push:&lt;dir&gt;</code>. 디졸브는 앞 카드의 마지막 프레임을 들어오는 카드가 받아 자기 인코드 안에서 녹여 낸다(겹침 0, 길이·프레임 수·자막 큐 불변 — ep07 A/B 64.766667초·1943프레임 동일). 참고 영상이 보여준 건 디졸브가 아니라 「움직임과 같은 공간이 컷을 부드럽게 만든다」는 것이라 scenes-schema에는 그렇게 적었다.</li>
+    <li><b>어절 자막 모드</b> — <code>SUB_MODE=word</code>, 정렬기 기반, SRT는 문장 단위 유지. produce SKILL §6.</li>
+    <li><b>연출 문법 규칙 15 「한 공간, 멈추지 않는 카메라」</b> — directing-grammar §6. 한 편을 한 장소에서 찍고, 추상 개념마다 그 장소의 물건 하나를 배정하고, 컷은 질문이 열리는 자리에만.</li>
+    <li><b>쇼츠 재후킹은 컷을 탄다</b> — scenario-craft §5. 13~15초마다 새 질문 하나, 다음 문장이 갚기 시작.</li>
+    <li><b>채널 프로파일 「One world」 항목</b> — profile-template §3. 한 편의 무대를 <code>space.layout</code> 기본 문장 + <code>light</code> 한 문장으로.</li>
+  </ul>
+  <figure><img src="ours-dissolve-seam-final.jpg" alt="하드컷 대 디졸브 이음매 비교"><figcaption>ep07 카드 4→5 이음매(30.80초), 30.70·30.83·30.93·31.05·31.25초. 위가 하드 컷, 아래가 새 디졸브 — 항아리와 배추가 0.45초 동안 한 화면에 겹친다. 두 빌드 모두 64.766667초·1943프레임. 같은 빌드에서 dip(검정·흰색)과 push 도 한 번씩 넣어 돌렸고, 이음매 밝기가 검정은 40→28→56→65, 흰색은 109→210→163→147 로 지나갔다.</figcaption></figure>
+</section>
+
+<section>
+  <h2>6. 한계</h2>
+  <ul>
+    <li>표본이 한 편이다. 이 편이 잘 붙잡는 건 조회수(3일 2만)로만 짐작했고, 유지율 곡선은 남의 채널이라 볼 수 없다.</li>
+    <li>움직임 수치(프레임 차이)는 카메라 움직임과 화면 안 피사체 움직임을 구분하지 못한다.</li>
+    <li>어절 시각의 독립 대조는 문장 첫 어절 18건뿐이다. 문장 안쪽 어절은 정렬기 값을 그대로 믿는다 — whisper.cpp 단어 시각을 두 번째 잣대로 쓰려 했지만 한국어에서 전부 한 시각으로 뭉개져 버렸다.</li>
+    <li>매 카드에 움직임을 주려면 <code>visual.video</code> 슬롯이 든다. 상한은 그대로 두었고, 어느 카드가 원하는지는 스토리보드가, 몇 개를 살지는 사용자가 정한다.</li>
+  </ul>
+</section>
+</body>
+</html>

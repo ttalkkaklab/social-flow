@@ -109,6 +109,8 @@ def well_known(channel_dir: Path, kind: str, ident: str) -> list[Path]:
         add(assets / "audio" / "sfx" / f"{ident}.mp4")
     elif kind == "character":
         add(assets / "characters" / ident)
+    elif kind == "voice":
+        add(assets / "characters" / ident / "voice.wav")
     elif kind == "still":
         add(assets / "stills" / ident)
     elif kind == "font" and ident in {"dir", "default"}:
@@ -224,6 +226,10 @@ def selftest() -> None:
         assert got.name == "hero" and got.is_dir(), got
         got = resolve(ch, "character", "hero/face.png")
         assert got.name == "face.png", got
+        # the character's fixed voice sample — Seedance reference audio (produce §visual.character)
+        (assets / "characters" / "hero" / "voice.wav").write_bytes(b"v")
+        got = resolve(ch, "voice", "hero")
+        assert got.name == "voice.wav" and got.parent.name == "hero", got
         # missing asset
         try:
             resolve(ch, "sfx", "whoosh")

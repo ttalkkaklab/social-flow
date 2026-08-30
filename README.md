@@ -32,10 +32,35 @@ The video pipeline (safe zones, reveal sync, subtitle contracts) and the SNS pub
 client carry over from an earlier in-house plugin where they were verified in
 production, generalized here to per-channel operation.
 
-> **Content language.** The pipeline was built and field-tested on Korean-market
-> content, so it ships with Korean-specific parts: a Korean copy style gate
-> (`check-style.py`), Naver search, and Korea's open-data portal (data.go.kr). All of
-> them are optional — the rest of the pipeline is language-agnostic.
+> **Content language.** Your channel's language is set in its `profile.md` — tone, TTS
+> voice and its `lang` code, subtitle languages — and the skills write in whatever that
+> says. What the pipeline is *not* yet is fully language-neutral, so here is the honest
+> state of it:
+>
+> - **The copy style gate is Korean-only.** `check-style.py` implements Korean rules —
+>   translationese, Korean AI stock phrases, Korean sentence endings. Hand it text in
+>   another language and it exits **4 (SKIP)**, saying in as many words that the copy is
+>   *unchecked*, never that it passed. A person has to read that copy. (It used to return
+>   a clean PASS on English, which is why the SKIP verdict exists.)
+> - **Korean-market research tools are optional.** Naver search and Korea's open-data
+>   portal (data.go.kr) are extra sources; `serp_*` and `WebSearch` cover the rest.
+> - **On-device generation has Korean-specific limits**, noted where they apply: local
+>   image generation breaks Korean glyphs (text-bearing frames go to the paid path), and
+>   the local STT default is tuned for Korean.
+> - **The channel browser UI speaks English and Korean.** `serve.js` picks up `?lang=`,
+>   then the browser's language, and falls back to English; the header carries a picker.
+>   Adding a language is one entry in its `STRINGS` dictionary — the self-test fails if
+>   any language is missing a key English defines.
+> - **The storyboard review render speaks English and Korean too.** The template picks the
+>   language the same way and puts the picker at the end of its section menu; the episode's
+>   own copy stays in whatever language `scenes.js` is written in. Two things there don't
+>   follow the picker: the check-strip *sentences*, which are hardcoded English (moving them
+>   into the dictionary is the unfinished half of that pass), and the heuristics that read a
+>   Korean sequence heading to guess a shot's playback beat — an explicit `beat:` overrides
+>   those anyway.
+> - **Still Korean-only: the shooting script and the research parser.** `make-script.js`
+>   writes `script.md` — the page you read while filming — with Korean headings, and
+>   `check-research.js` finds a research.md's verification table by Korean heading words.
 
 ## Requirements
 
@@ -326,6 +351,7 @@ social-flow/
 │       └── media-utils.ts       # path validation · base64 saves · PCM→WAV utils
 ├── skills/
 │   ├── channel/                 # /social-flow:channel — channel & profile management
+│   │   └── references/          #   resolve-asset.py (catalog lookup) · serve.js (channel browser over HTTP — pick a channel, then storyboards or characters; serves data/ so storyboard.html opens in place)
 │   ├── branding/                # /social-flow:branding — channel profile image (4 candidates → HITL pick → adversarial convergence at 95)
 │   ├── intro/                   # /social-flow:intro — channel intro video (4 concepts HITL → veo character acting → name reveal + sonic logo → 90-point convergence)
 │   ├── setup-threads/           # /social-flow:setup-threads — Threads account setup + API hookup (browser HITL — signup·branding·Meta app·60-day token, state detection & resume)
@@ -391,7 +417,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux/MLX (**no API key, no network, no billing — the default path**. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **the text-and-quality path**: text rendering, arbitrary WIDTHxHEIGHT, up to 16 reference images, mask inpainting) |
 | Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
-| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x). Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |
 | Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |
 | Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (ELEVENLABS_API_KEY — the paid third lane: inline audio-tag acting on eleven_v3, text-to-dialogue with **up to 10 voices in one request**, per-character timestamps for subtitle sync, any cloned or Voice Library voice. Saves mono 24kHz wav by default, so the builder reads it like the Gemini lane. API rate $0.10 per 1,000 characters on v2·v3, $0.05 on flash and v3 conversational, the same on every plan; the Free tier is non-commercial) |

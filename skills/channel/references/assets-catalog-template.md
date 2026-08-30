@@ -18,7 +18,13 @@ Well-known files are found even without a row in the table below.
   — inside it: `identity.md` (the canonical description), `face.png` (face close-up),
   `body.png` (full body, front, no head), `back.png` (full body, back — optional),
   `front.png` (legacy full body with the head). The reference set handed to generation is
-  face → body; never paste the panels into one sheet (`video-model-selection.md` §6)
+  face → body; never paste the panels into one sheet (`video-model-selection.md` §6).
+  `voice.wav` is the character's fixed voice sample — 5–10 s of speech in the character's
+  register, cut from the voice `identity.md` pins, no music or effects. produce hands it to
+  `seedance_reference` as reference audio on cuts the model voices, so the model-voiced lane
+  and the TTS lane sound like the same person. Auditions stay in `voice-audition/`; only the
+  confirmed take becomes `voice.wav`
+- voice / `<id>` → `characters/<id>/voice.wav`
 - still / `<id>` → `stills/<id>`
 
 A row goes up only after the file exists. `resolve-asset.py --ensure` does that job.
