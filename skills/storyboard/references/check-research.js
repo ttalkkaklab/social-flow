@@ -22,10 +22,21 @@
  * The `references/storyboard-template.md` §research.md structure:
  *
  *   ## Questions …            one row per question · Status says answered / written off
- *   ## Verified               one row per claim, numbered, with source links
+ *   ## Verified               one row per claim, numbered, with source links · ★ marks a key claim
  *   ## Counter-evidence …     one row per key claim, `Claim #` naming which (ranges allowed)
  *   ## Failed verification …  what was excluded and why
  *   ## Sufficiency            the self-reported counts
+ *   ## Search history         one row per search — counted against two per question
+ *
+ * Headings may carry a number or a word in front (`## 2. 검증 통과`, `## 사실 검증표`) — half
+ * the library writes them that way, and reading only the bare template wording reported those
+ * logs as having no claims at all (measured 2026-08-29: two logs went from 0 to 5 and 6 claims
+ * on the heading alone).
+ *
+ * Which claims are key: the hook, the hero stat and the result rest on a few rows, and those
+ * are the ones a counter-evidence search is owed. A log names them with ★ in the # column, or —
+ * once the sentences carry `claim` — by citing them. A log that does neither is read as "every
+ * row is key", and the finding says so.
  *
  * A channel whose profile skips research has no research.md at all, and that is not a defect —
  * the caller decides whether the file was supposed to exist.
@@ -89,19 +100,35 @@ function rows(body) {
     });
 }
 
-/** Expands "1~6", "1-6", "1, 3" into claim numbers. */
+/**
+ * Expands "1~6", "1-6", "1, 3" into claim numbers. A number followed by a label ("2 우연") is
+ * read as that number — real logs write the row that way. A cell that names no number at all
+ * comes back empty, and the caller counts it as unmapped rather than as covering nothing.
+ */
 function claimNumbers(cell) {
   const out = new Set();
-  String(cell || '').split(/[,·]/).forEach((part) => {
+  String(cell || '').replace(/[★*]/g, '').split(/[,·]/).forEach((part) => {
     const range = part.trim().match(/^(\d+)\s*[~\-–]\s*(\d+)$/);
     if (range) {
       for (let n = Number(range[1]); n <= Number(range[2]); n++) out.add(n);
       return;
     }
-    const one = part.trim().match(/^(\d+)$/);
+    const one = part.trim().match(/^(\d+)(?:\s+\S.*)?$/);
     if (one) out.add(Number(one[1]));
   });
   return out;
+}
+
+/** The claim numbers the sentences cite — the second way a log names its key claims. */
+function citedNumbers(scenes) {
+  const cited = new Set();
+  (scenes || []).forEach((s) => (s.narration || []).forEach((seg) => {
+    if (!seg || typeof seg !== 'object') return;
+    const ref = seg.claim;
+    (Array.isArray(ref) ? ref : (ref === undefined || ref === null ? [] : [ref]))
+      .forEach((n) => cited.add(Number(n)));
+  }));
+  return cited;
 }
 
 function formatOf(storyboardDir) {
@@ -189,15 +216,21 @@ function analyse(src, fmt, scenes) {
   // The question heading is anchored to the start of the heading text. Matching `질문` anywhere
   // pulled in `## 보조 근거 — 지식iN (질문 그대로가 훅의 재료)` and reported the 지식iN 상담
   // sentences under it as unanswered questions.
-  const qRows = rows(section(src, /^##\s+(Questions?\b|질문(\s|$))/i));
-  const vRows = rows(section(src, /^##\s+(Verified|검증\s*(표|통과))/i));
+  // A heading may start with a number (`## 2. 검증 통과`) or a word (`## 사실 검증표`) — both
+  // are optional prefixes here. `검증에서 뺀 것` still does not match: the word after 검증 has to
+  // be 표 or 통과.
+  const NUM = '(?:\\d+[.)]\\s*)?';
+  const qRows = rows(section(src, new RegExp('^##\\s+' + NUM + '(Questions?\\b|질문(\\s|$))', 'i')));
+  const vRows = rows(section(src, new RegExp('^##\\s+' + NUM + '(?:[\\w가-힣]{1,8}\\s)?(Verified|검증\\s*(표|통과))', 'i')));
   const cRows = rows(section(src, /Counter-evidence|반증|역검증/i));
   const fRows = rows(section(src, /Failed\s*(verification)?|검증\s*실패|본문\s*금지|제외/i));
   const suffBody = section(src, /Sufficiency|충분성|충족/i) || '';
+  const searchBody = section(src, /Search\s*history|검색\s*(이력|기록|로그)/i);
 
   // ── Claims ──
-  const claims = vRows.filter((r) => /^\**\d+\**$/.test(r[0] || ''))
-    .map((r) => ({ n: Number((r[0] || '').replace(/\*/g, '')), cells: r }));
+  // The # cell is a number, optionally bold, optionally carrying ★ (a key claim).
+  const claims = vRows.filter((r) => /^\**\s*★?\s*\d+\s*★?\s*\**$/.test(r[0] || ''))
+    .map((r) => ({ n: Number((r[0] || '').replace(/[^\d]/g, '')), key: /★/.test(r[0] || ''), cells: r }));
   const claimCount = claims.length;
 
   const isLong = fmt && fmt.format === 'youtube-long-16x9';
@@ -215,16 +248,22 @@ function analyse(src, fmt, scenes) {
   // whole row is searched rather than fixed positions.
   //
   // A URL is not the only valid basis. A figure measured here (`claude mcp add --help` run
-  // locally), a quotation from the document the row above already cited, or an official
-  // dataset named by name are all bases — this only fires when the row names nothing at all.
-  const BASIS = /https?:\/\/|원문|실측|측정|공식|같은\s*문서|자체\s*실험|1차/;
+  // locally), a quotation from the document the row above already cited, a source named by
+  // name (Britannica · ORAU, AKS, 한식진흥원) or an official dataset are all bases — this only
+  // fires when the row names nothing at all. The acronym test is case-sensitive on purpose:
+  // AKS and BBC are sources, `naver_search` in the tool column is not.
+  const BASIS = /https?:\/\/|원문|실측|측정|공식|같은\s*문서|자체\s*실험|1차|백과|사전|카탈로그|위키|wiki|박물관|기록원|논문|저널|보고서|고시|법령|시행령|일보|뉴스|신문|경제|타임스|times|연합|브리핑|진흥원|연구소|재단|협회|학회|nobel/i;
+  const ACRONYM = /\b[A-Z]{3,}\b/;
   claims.forEach((c) => {
-    if (!BASIS.test(c.cells.join(' ')))
+    const row = c.cells.slice(1).join(' ');
+    if (!BASIS.test(row) && !ACRONYM.test(row))
       warn(`claim ${c.n} names no basis — no link, no measurement, no named source`);
   });
 
   // ── The self-reported line against the table ──
-  const claimed = suffBody.match(/verified claims:\s*\**\s*(\d+)/i);
+  // Both languages: `verified claims: **18**` and `검증 주장 18건`.
+  const claimed = suffBody.match(/verified claims:\s*\**\s*(\d+)/i)
+    || suffBody.match(/검증(?:된|\s*통과)?\s*(?:주장|클레임)\s*:?\s*\**\s*(\d+)\s*건/);
   if (!claimed) {
     warn('the Sufficiency section does not state a verified-claim count');
   } else if (Number(claimed[1]) !== claimCount) {
@@ -258,28 +297,66 @@ function analyse(src, fmt, scenes) {
       warn(`Sufficiency counts ${answeredLine[2]} questions, the table has ${qRows.length}`);
   }
 
+  // ── Which claims are key ──
+  // ★ in the # column first; failing that, the rows the sentences cite; failing both, every
+  // row — and the finding says which reading it used, so a log that marks nothing is told how
+  // to stop being read that way.
+  const starred = claims.filter((c) => c.key).map((c) => c.n);
+  const cited = citedNumbers(scenes);
+  const keyBasis = starred.length ? 'starred' : (cited.size ? 'cited' : 'all');
+  const keys = keyBasis === 'starred' ? starred
+    : keyBasis === 'cited' ? claims.map((c) => c.n).filter((n) => cited.has(n))
+    : claims.map((c) => c.n);
+
   // ── Counter-evidence coverage ──
-  // Every key claim gets one counter-evidence search (§2 step 2). Ranges count.
+  // Every key claim gets one counter-evidence search (§2 step 2). Ranges count. A row that
+  // names its claim by text instead of number cannot be mapped, and while any such row exists
+  // the coverage of the rest is unknown — so that is reported instead of a per-claim list.
   const covered = new Set();
-  cRows.forEach((r) => claimNumbers(r[0]).forEach((n) => covered.add(n)));
+  let unmapped = 0;
+  cRows.forEach((r) => {
+    const nums = claimNumbers(r[0]);
+    if (!nums.size) unmapped++;
+    nums.forEach((n) => covered.add(n));
+  });
   if (!cRows.length) {
     bad('no counter-evidence section — every key claim gets one search against itself');
+  } else if (unmapped) {
+    warn(`${unmapped} counter-evidence row(s) name no claim number in the first cell — ` +
+         'number them (the # of the Verified row) so coverage can be counted');
   } else {
-    const missing = claims.map((c) => c.n).filter((n) => !covered.has(n));
+    const missing = keys.filter((n) => !covered.has(n));
     if (missing.length)
-      warn(`claim(s) ${missing.join(', ')} have no counter-evidence row — ` +
-           'a claim nobody searched against is a claim nobody checked');
+      warn(`key claim(s) ${missing.join(', ')} have no counter-evidence row` +
+           (keyBasis === 'all' ? ' (no ★ and no claim citations, so every row is read as key)'
+             : keyBasis === 'starred' ? ' (★ rows)' : ' (rows the sentences cite)') +
+           ' — a claim nobody searched against is a claim nobody checked');
   }
 
   if (!fRows.length)
     warn('no "Failed verification → excluded" rows — everything searched for held up, ' +
          'which happens, but it is worth a second look');
 
+  // ── Search history against the question map ──
+  // §2 step 2 asks two searches per question from different directions. Table rows first; a
+  // log that keeps the history as a bullet list is counted by its bullets.
+  let searches = null;
+  if (searchBody !== null) {
+    searches = rows(searchBody).length
+      || searchBody.split('\n').filter((l) => /^\s*[-*]\s+\S/.test(l)).length;
+    if (qRows.length && searches < 2 * qRows.length)
+      warn(`${searches} search(es) logged for ${qRows.length} question(s) — ` +
+           '§2 step 2 asks two directions per question');
+  } else {
+    warn('no search history section — the checker cannot count searches against questions');
+  }
+
   const trace = crossCheck(scenes, claims, out);
 
   return {
-    claims: claimCount, questions: qRows.length, counterRows: cRows.length,
-    excluded: fRows.length, floor: FLOOR_ABSOLUTE, aim, traceability: trace,
+    claims: claimCount, keyClaims: keys.length, keyBasis, questions: qRows.length,
+    counterRows: cRows.length, counterUnmapped: unmapped, excluded: fRows.length,
+    searches, floor: FLOOR_ABSOLUTE, aim, traceability: trace,
     format: fmt ? fmt.format : null, findings: out
   };
 }
@@ -320,7 +397,15 @@ function selftest() {
     '',
     '## Sufficiency',
     '',
-    'verified claims: **3** (floor 3) · questions answered: 1/2 · written off: Q2.'
+    'verified claims: **3** (floor 3) · questions answered: 1/2 · written off: Q2.',
+    '',
+    '## Search history',
+    '| Tool | Query | Result |',
+    '|---|---|---|',
+    '| naver_search(kin) | a | … |',
+    '| WebSearch | a 아니다 | … |',
+    '| naver_search(news) | b | … |',
+    '| WebSearch | b site:go.kr | … |'
   ]);
 
   const bads = (r) => r.findings.filter((f) => f.level === 'bad');
@@ -330,6 +415,46 @@ function selftest() {
   ok('a well-formed log has no violations', bads(g).length === 0);
   ok('it counts the claims', g.claims === 3);
   ok('three claims still warns against the short aim of 5', has(g, /normally leaves/));
+
+  // ── Headings the library actually writes ──
+  // Measured 2026-08-29: `## 2. 검증 통과` and `## 사실 검증표` both read as 0 claims before this.
+  ok('a numbered Korean heading is the Verified table',
+     analyse(good.replace('## Verified', '## 2. 검증 통과'), null).claims === 3);
+  ok('a heading with a word in front is the Verified table',
+     analyse(good.replace('## Verified', '## 사실 검증표'), null).claims === 3);
+  ok('검증에서 뺀 것 is not the Verified table',
+     analyse(good.replace('## Verified', '## 검증에서 뺀 것'), null).claims === 0);
+  ok('a numbered question heading is the question map',
+     analyse(good.replace('## Questions this episode has to answer', '## 1. 질문'), null).questions === 2);
+
+  // ── Key claims and counter-evidence ──
+  ok('a number followed by a label is read as that number', claimNumbers('2 우연').has(2));
+  const textRows = good.replace('| 1~3 | "x 아니다" |', '| 의정부 단독 최초 | "x 아니다" |');
+  ok('a counter row naming no number is reported as unmapped, not as covering nothing',
+     has(analyse(textRows, null), /name no claim number/) && !has(analyse(textRows, null), /have no counter-evidence/));
+  ok('with nothing marked, every row is read as key and the finding says so',
+     has(analyse(good.replace('| 1~3 |', '| 1 |'), null), /key claim\(s\) 2, 3 have no counter-evidence row \(no ★/));
+  const starred = good.replace('| 1 | x |', '| ★1 | x |').replace('| 1~3 |', '| 1 |');
+  ok('★ narrows the counter-evidence check to the starred rows',
+     !has(analyse(starred, null), /have no counter-evidence/) && analyse(starred, null).keyBasis === 'starred');
+  ok('a starred row with no counter row is reported',
+     has(analyse(starred.replace('| 2 | y |', '| ★2 | y |'), null), /key claim\(s\) 2 have no counter-evidence row \(★ rows\)/));
+  const citedOnly = analyse(good.replace('| 1~3 |', '| 1 |'), null,
+                            [{ type: 'points', narration: [{ tts: 'x', sub: 'x', claim: 1 }] }]);
+  ok('claim citations narrow the check when nothing is starred',
+     citedOnly.keyBasis === 'cited' && !has(citedOnly, /have no counter-evidence/));
+
+  // ── Self-report in Korean ──
+  ok('검증 주장 N건 is read as the verified-claim count',
+     !has(analyse(good.replace('verified claims: **3** (floor 3)', '검증 주장 3건 (바닥 3)'), null), /does not state/));
+
+  // ── Search history ──
+  ok('four searches for two questions is enough', !has(g, /search\(es\) logged/));
+  ok('one search for two questions is reported',
+     has(analyse(good.replace(/\| WebSearch \| a 아니다.*\n\| naver_search\(news\).*\n\| WebSearch \| b site.*\n?/, ''), null),
+         /1 search\(es\) logged for 2 question\(s\)/));
+  ok('a missing search history is reported',
+     has(analyse(good.replace('## Search history', '## Notes'), null), /no search history section/));
 
   ok('below the floor is a violation',
      has(analyse(good.replace(/\| 3 \| z \|.*\n/, '').replace('**3**', '**2**'), null), /below the floor/));
@@ -363,6 +488,13 @@ function selftest() {
 
   ok('a claim with no counter-evidence row is flagged',
      has(analyse(good.replace('| 1~3 |', '| 1 |'), null), /claim\(s\) 2, 3 have no counter-evidence/));
+  // A source named by name is a basis — ep03 wrote `카탈로그 | Britannica · ORAU` and got flagged.
+  ok('a source named by name counts as a basis',
+     !has(analyse(good.replace('| 1 | x | [a](https://a.example) | [b](https://b.example) |', '| 1 | x | 카탈로그 | Britannica · ORAU |'), null),
+          /claim 1 names no basis/));
+  ok('an uppercase acronym counts, a lowercase tool name does not',
+     !has(analyse(good.replace('| 1 | x | [a](https://a.example) | [b](https://b.example) |', '| 1 | x | AKS | - |'), null), /claim 1 names no basis/) &&
+     has(analyse(good.replace('| 1 | x | [a](https://a.example) | [b](https://b.example) | WebSearch |', '| 1 | x | - | - | naver_search |'), null), /claim 1 names no basis/));
 
   ok('a range in the Claim # column covers every claim in it',
      [...claimNumbers('1~6')].length === 6 && claimNumbers('1~6').has(4));

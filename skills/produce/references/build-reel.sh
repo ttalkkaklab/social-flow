@@ -49,14 +49,22 @@
 #                                         eased both ends) | linear | in (accelerating: starts unnoticed,
 #                                         fastest at the cut point — action/CTA cards, cut away at the peak).
 #                                         punch keeps its own ease-out ramp and ignores ease=.
-#                           enter=1       fade this card up from black (SCENE_FADE, default 0.12s)
-#                           exit=1        fade this card down to black
-#                                         A scene-boundary dissolve is the two together: exit=1 on the card
-#                                         that ends the scene, enter=1 on the one that starts the next.
-#                                         Both fades live inside their own card's encode, so the frame count
-#                                         and the duration never change — §9 still stream-copies, drift stays
-#                                         0, and not one subtitle cue moves (measured A/B: identical subs.srt,
-#                                         12.000000s both ways, seam YAVG 69→16→90 against a hard cut's 69→90).
+#                           enter=<mode>  the join in front of this card. cut (default) | black | white |
+#                                         dissolve | push:<l2r|r2l|u2d|d2u>. enter=1 still means black.
+#                           exit=<mode>   the join behind it: cut (default) | black | white. exit=1 = black.
+#                                         **Dip** (black/white) is two halves: exit= on the card that ends the
+#                                         scene, enter= on the one that starts the next, SCENE_FADE (0.12s)
+#                                         each. It passes through a solid frame — a beat of nothing.
+#                                         **Carry** (dissolve, push) is written on the incoming card alone.
+#                                         That card opens on the previous card's last frame and gets out of
+#                                         it — dissolve melts through it over SCENE_XF (0.45s), push slides it
+#                                         off over SCENE_PUSH (0.32s). The audience sees two pictures at once,
+#                                         which is the real cross-dissolve a dip cannot give.
+#                                         Every mode is drawn **inside one card's own encode**, so the frame
+#                                         count and the duration never change — §9 still stream-copies, drift
+#                                         stays 0, and not one subtitle cue moves (measured A/B: identical
+#                                         subs.srt, 12.000000s both ways, seam YAVG 69→16→90 against a hard
+#                                         cut's 69→90).
 #                                         The default is a hard cut everywhere, which is what every existing
 #                                         4-column cards.tsv keeps doing.
 #   <workdir>/segs.tsv  : idx <TAB> seg(0..) <TAB> visual-path <TAB> TTS-script-sentence <TAB> subtitle-display-sentence
@@ -131,7 +139,9 @@ DUCK_RELEASE=${DUCK_RELEASE:-250}
 SFX_VOL=${SFX_VOL:-0.85}           # per-segment sfx volume (sfx.tsv)
 BGM_GATE_R=${BGM_GATE_R:-0.30}     # ramp around BGM-gated spans — a hard cut sounds chopped
 XFADE=${XFADE:-0.6}                # feature↔outro transition length
-SCENE_FADE=${SCENE_FADE:-0.12}     # scene-boundary dissolve half-length (cards.tsv enter=/exit=)
+SCENE_FADE=${SCENE_FADE:-0.12}     # dip half-length — the black/white a card fades through (cards.tsv enter=/exit=)
+SCENE_XF=${SCENE_XF:-0.45}         # cross-dissolve length (enter=dissolve) — the incoming card melts out of the previous card's last frame
+SCENE_PUSH=${SCENE_PUSH:-0.32}     # push length (enter=push:<dir>) — the previous card's last frame slides off the incoming one
 REVEAL_D=${REVEAL_D:-0.35}         # max reveal fade length (shrinks to fit a shorter pause)
 REVEAL_GAP=${REVEAL_GAP:-0.05}     # finish appearing this long before the next sentence starts
 REVEAL_LEAD=${REVEAL_LEAD:-0.30}   # fallback lead — used only when no pause was found (char-count proportion)
@@ -155,6 +165,11 @@ SUB_MR=${SUB_MR:-250}              # subtitle right margin
 SUB_MV=${SUB_MV:-380}              # subtitle bottom margin (band y≈1380)
 SUB_OUT=${SUB_OUT:-5}              # outline thickness
 SUB_SHA=${SUB_SHA:-1.7}            # shadow
+SUB_MODE=${SUB_MODE:-sentence}     # sentence | word — word burns one 어절 at a time (the SRT keeps whole sentences)
+SUB_WORD_SIZE=${SUB_WORD_SIZE:-84} # word-mode Fontsize — Pretendard draws a Hangul glyph at ~0.71× this, so 84 ≈ the 61px word the reference short runs
+SUB_WORD_MV=${SUB_WORD_MV:-640}    # word-mode bottom margin — the word sits on the 65% line (y≈1248), not the 72% band
+SUB_WORD_MIN=${SUB_WORD_MIN:-0.28} # a word cue shorter than this is glued to the next word
+QWEN3_ASR_BIN=${QWEN3_ASR_BIN:-$HOME/.local/bin/mlx-qwen3-asr}   # word mode: forced aligner for real word times (falls back to proportion when absent)
 KB_ZOOM_MIN=${KB_ZOOM_MIN:-1.06}   # pan base scale floor (cards.tsv pan= option)
 KB_ZOOM_MAX=${KB_ZOOM_MAX:-1.35}   # pan base scale ceiling — travel = W(z-1)
 PAN_Z=${PAN_Z:-1.12}               # when pan= gives no scale
@@ -293,6 +308,17 @@ SRTN=0                              # SRT cue number (from 1, file-wide running 
 
 # Read via fd 3 — keeps ffmpeg inside the loop from eating stdin (trap inherited from v2)
 # Column 5 (opts) is optional — read fills leftover variables with empty, so 4-column files run unchanged.
+# A carry transition (enter=dissolve / enter=push) opens on the previous card's last frame, so
+# that card has to leave one behind. Scan first and dump a tail PNG only where one is asked for —
+# on a 20-card episode this is the difference between 20 extra encodes and one or two.
+CARRY_PREV=""; _PV=""
+while IFS=$'\t' read -r _CI _ _ _ _CO; do
+  [ -z "${_CI:-}" ] && continue
+  case "${_CO:-}" in *enter=dissolve*|*enter=push*) [ -n "$_PV" ] && CARRY_PREV="$CARRY_PREV $_PV " ;; esac
+  _PV="$_CI"
+done < cards.tsv
+PREVIDX=""; PREVEXIT=""
+
 while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   [ -z "${IDX:-}" ] && continue
   N=$((N+1))
@@ -302,7 +328,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #    out of step, and only eyes would catch it). Two-value options use ":" inside the value
   #    (pan=l2r:1.12, focus=0.6:0.4) — "," is the k=v separator and stays out of values.
   SYNC=0; SUBSF=""; PAN=""; PZ="$PAN_Z"; FX=0.5; FY=0.5; DRIFT=0; SPAN="$ZOOM_SPAN"; EASE="$KB_EASE"; SPANSET=0
-  FADE_IN=0; FADE_OUT=0
+  ENTER=""; EXITM=""; PUSH_DIR=""
   case "${ZDIR:-auto}" in in|out|auto|none|punch|hold) : ;;
     *) say "✗ card $IDX: unknown zoom (column 4) — $ZDIR (in|out|auto|none|punch|hold)"; exit 1 ;; esac
   if [ -n "${OPTS:-}" ]; then
@@ -328,13 +354,22 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
                 SPANSET=1 ;;
         ease=*) EASE="${KV#ease=}"
                 case "$EASE" in smooth|linear|in) : ;; *) say "✗ card $IDX: unknown ease — $EASE (smooth|linear|in)"; exit 1;; esac ;;
-        # Scene-boundary dissolve. `enter=1` fades this card up from black, `exit=1` fades it
-        # down to black — inside this card's own encode, so the frame count never changes and
-        # the concat stays stream-copy exact (see the SCENE_FADE note at the top).
-        enter=1) FADE_IN=1 ;;
-        enter=0) FADE_IN=0 ;;
-        exit=1)  FADE_OUT=1 ;;
-        exit=0)  FADE_OUT=0 ;;
+        # Scene-boundary transition — every mode is drawn **inside this card's own encode**, so the
+        # frame count never changes and the concat stays stream-copy exact (see the §7.4 note).
+        # `enter=` is the join in front of this card, `exit=` the one behind it. A dip needs both
+        # halves written (exit on the card before, enter on this one); dissolve and push need only
+        # `enter=` — they take the previous card's last frame as their material.
+        enter=1|enter=black)     ENTER=black ;;
+        enter=white)             ENTER=white ;;
+        enter=dissolve)          ENTER=dissolve ;;
+        enter=push:*)            ENTER=push; PUSH_DIR="${KV#enter=push:}"
+                case "$PUSH_DIR" in l2r|r2l|u2d|d2u) : ;; *) say "✗ card $IDX: unknown push direction — $PUSH_DIR (l2r|r2l|u2d|d2u)"; exit 1;; esac ;;
+        enter=push)              say "✗ card $IDX: push needs a direction — enter=push:l2r|r2l|u2d|d2u"; exit 1 ;;
+        enter=0|enter=cut)       ENTER="" ;;
+        exit=1|exit=black)       EXITM=black ;;
+        exit=white)              EXITM=white ;;
+        exit=0|exit=cut)         EXITM="" ;;
+        enter=*|exit=*) say "✗ card $IDX: unknown transition — $KV (enter: black|white|dissolve|push:<dir>|cut · exit: black|white|cut)"; exit 1 ;;
         *) say "✗ card $IDX: unknown cards.tsv column-5 option — $KV"; exit 1 ;;
       esac
     done
@@ -648,36 +683,81 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     ZD="$ZD$FTAG$DTAG$KTAG"
     FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$ZEXPR':x='(iw-iw/zoom)*$FX$DXE':y='(ih-ih/zoom)*$FY$DYE':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vkb];"
   fi
-  # ── 7.4) Scene-boundary dissolve (cards.tsv enter= / exit=) ──
+  # ── 7.4) Scene-boundary transition (cards.tsv enter= / exit=) ──
   #   The seam between two cards is a hard cut: §9 joins them with the concat demuxer and
   #   -c copy, and the whole zero-drift contract rests on that being stream-exact. An xfade
-  #   between cards would break it twice over — the total would shrink by SCENE_FADE per seam
-  #   and trip the 2ms assertion, and xfade renumbers the tail's PTS from 0 anyway (the
+  #   between cards would break it twice over — the total would shrink by the transition length
+  #   per seam and trip the 2ms assertion, and xfade renumbers the tail's PTS from 0 anyway (the
   #   measurement is written out at the outro seam below).
   #
-  #   So the dissolve is built the way the outro seam is: **no overlap.** The outgoing card
-  #   fades its own tail down to black, the incoming card fades its own head up from black,
-  #   and both fades live inside that card's own encode. fade is a per-pixel filter — it
-  #   changes no frame count and no duration, so §9 still stream-copies and drift stays 0
-  #   (measured: 180 frames / 6.000000s with and without, seam YAVG 123 → 16 → 126 against a
-  #   hard cut's 123 → 126).
+  #   So **every transition is drawn inside the incoming card's own encode.** Nothing overlaps,
+  #   no frame count changes, no duration changes — §9 still stream-copies and drift stays 0.
+  #   Two ways to draw one:
+  #
+  #   ① dip (`enter=black|white` + `exit=black|white`) — the outgoing card fades its own tail
+  #     into the colour, the incoming card fades its own head out of it. Two halves, one per
+  #     card. It passes through a solid frame, which is what a dip is for: a beat of nothing.
+  #   ② carry (`enter=dissolve`, `enter=push:<dir>`) — the incoming card opens on **the previous
+  #     card's last frame** (work/tail<prev>.png, dumped after every encode) and gets out of it:
+  #     dissolve melts through it, push slides it off. Only the incoming card writes anything,
+  #     and the audience sees a true cross-dissolve — two pictures on screen at once — without a
+  #     single overlapping frame in the concat.
   #
   #   Audio runs straight through. The narration already meets silence at a card boundary
   #   (PRE/POST padding), and the BGM bed is rendered across the whole feature — fading either
   #   one at a scene change would cut a word or punch a hole in the music.
-  VF_FADE=""
-  if [ "$FADE_IN" = "1" ] || [ "$FADE_OUT" = "1" ]; then
+  VF_FADE=""; SRCL="[vkb]"
+  if [ -n "$EXITM" ]; then
     # Half the seam belongs to each side, and it has to fit the shorter card: never more than
     # a quarter of this card, so a 1-second insert dips rather than blinking through black.
     SF_D=$(awk -v d="$SCENE_FADE" -v dur="$D1" 'BEGIN{m=dur/4; if(d>m)d=m; if(d<0.02)d=0.02; printf "%.3f", d}')
-    [ "$FADE_IN" = "1" ]  && VF_FADE=",fade=t=in:st=0:d=$SF_D"
-    [ "$FADE_OUT" = "1" ] && VF_FADE="$VF_FADE,fade=t=out:st=$(awk -v t="$D1" -v d="$SF_D" 'BEGIN{printf "%.3f", t-d}'):d=$SF_D"
-    ZD="$ZD fade:${FADE_IN}${FADE_OUT}@$SF_D"
+    VF_FADE=",fade=t=out:st=$(awk -v t="$D1" -v d="$SF_D" 'BEGIN{printf "%.3f", t-d}'):d=$SF_D:c=$EXITM"
+    ZD="$ZD exit:$EXITM@$SF_D"
   fi
-  FILT+="[vkb]null${VF_FADE}[vout]"
+  case "$ENTER" in
+    black|white)
+      SF_D=$(awk -v d="$SCENE_FADE" -v dur="$D1" 'BEGIN{m=dur/4; if(d>m)d=m; if(d<0.02)d=0.02; printf "%.3f", d}')
+      VF_FADE=",fade=t=in:st=0:d=$SF_D:c=$ENTER$VF_FADE"
+      ZD="$ZD enter:$ENTER@$SF_D" ;;
+    dissolve|push)
+      [ -n "$PREVIDX" ] || { say "✗ card $IDX: enter=$ENTER has no card in front of it to carry — the first card can only dip"; exit 1; }
+      TAILPNG="work/tail$PREVIDX.png"
+      [ -f "$TAILPNG" ] || { say "✗ card $IDX: enter=$ENTER needs card $PREVIDX's last frame — $TAILPNG is missing"; exit 1; }
+      [ -n "$PREVEXIT" ] && { say "⚠ card $IDX: enter=$ENTER carries card $PREVIDX's last frame, but that card has exit=$PREVEXIT — it is carrying a frame of solid $PREVEXIT. Drop one of the two."; WARN=1; }
+      # A carry lives entirely in this card's head, so it can take a third of it and no more.
+      TBASE=$([ "$ENTER" = "dissolve" ] && echo "$SCENE_XF" || echo "$SCENE_PUSH")
+      TD=$(awk -v d="$TBASE" -v dur="$D1" 'BEGIN{m=dur/3; if(d>m)d=m; if(d<0.04)d=0.04; printf "%.3f", d}')
+      INS+=(-loop 1 -framerate "$FPS" -t "$TD" -i "$TAILPNG")
+      TI=$NIN; NIN=$((NIN+1))
+      FILT+="[$TI:v]scale=$W:$H:force_original_aspect_ratio=increase:flags=lanczos,crop=$W:$H,fps=$FPS,settb=AVTB,setsar=1"
+      if [ "$ENTER" = "dissolve" ]; then
+        FILT+=",format=yuva420p,fade=t=out:st=0:d=$TD:alpha=1[tcar];"
+        FILT+="[vkb][tcar]overlay=0:0:eof_action=pass,format=yuv420p[vtr];"
+      else
+        # The carried frame slides off in the named direction, uncovering this card underneath.
+        case "$PUSH_DIR" in
+          l2r) OXY="x='W*t/$TD':y=0" ;;
+          r2l) OXY="x='-W*t/$TD':y=0" ;;
+          u2d) OXY="x=0:y='H*t/$TD'" ;;
+          d2u) OXY="x=0:y='-H*t/$TD'" ;;
+        esac
+        FILT+=",format=yuv420p[tcar];"
+        FILT+="[vkb][tcar]overlay=$OXY:eof_action=pass,format=yuv420p[vtr];"
+      fi
+      SRCL="[vtr]"
+      ZD="$ZD enter:$ENTER${PUSH_DIR:+:$PUSH_DIR}@$TD" ;;
+  esac
+  FILT+="${SRCL}null${VF_FADE}[vout]"
 
   ffmpeg -y -v error "${INS[@]}" -filter_complex "$FILT" -map "[vout]" \
     -frames:v "$FRAMES" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p "work/v$IDX.mp4"
+
+  # The last frame, for the next card to carry. -update overwrites the same file frame by frame,
+  # so what survives the last half-second of the clip is exactly the final frame — no reverse pass.
+  case "$CARRY_PREV" in *" $IDX "*)
+    ffmpeg -y -v error -sseof -0.5 -i "work/v$IDX.mp4" -update 1 "work/tail$IDX.png" ;;
+  esac
+  PREVIDX="$IDX"; PREVEXIT="$EXITM"
 
   # ── 7.5) Segment sound effects + BGM mute windows (only when sfx.tsv exists)
   #   This is the slot for "a sound that only plays in that stretch" — the typing card's keyboard
@@ -710,6 +790,20 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # ── 8) ASS subtitle lines (the subtitle-text column) — times are card absolute offsets (cumulative frames/FPS)
   if [ "$SUB" = "1" ]; then
     CS=$(awk -v f="$TOTF" -v fps="$FPS" 'BEGIN{printf "%.4f", f/fps}')
+    # Word mode wants real word times. The forced aligner runs once per card on the trimmed
+    # narration (about 3 s for a 7 s card); its token times are card-relative, so the offset
+    # handed to word-cues.py is this card's absolute speech start (CS + pre-roll).
+    ALIGNJ=""
+    if [ "$SUB_MODE" = "word" ] && [ "$MUTE" -eq 0 ]; then
+      if [ -x "$QWEN3_ASR_BIN" ]; then
+        mkdir -p work/align
+        "$QWEN3_ASR_BIN" --timestamps -f json --language Korean -o work/align "work/s$IDX.wav" > "work/align/s$IDX.log" 2>&1 \
+          && [ -s "work/align/s$IDX.json" ] && ALIGNJ="work/align/s$IDX.json" \
+          || { say "⚠ card $IDX: forced aligner failed (work/align/s$IDX.log) — word cues fall back to char-count proportion"; WARN=1; }
+      else
+        say "⚠ card $IDX: no forced aligner at $QWEN3_ASR_BIN — word cues fall back to char-count proportion (uv tool install --python 3.12 \"mlx-qwen3-asr[aligner]\")"; WARN=1
+      fi
+    fi
     for ((j=0; j<M; j++)); do
       if [ "$j" -eq 0 ]; then ST=$(awk -v cs="$CS" -v p="$CPRE" 'BEGIN{s=p-0.15; if(s<0)s=0; printf "%.3f", cs+s}')
       else ST=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$((j-1))]}" 'BEGIN{printf "%.3f", cs+p+b}'); fi
@@ -717,7 +811,25 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       else EN=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" -v d="$D" 'BEGIN{e=p+l+0.45; if(e>d)e=d; printf "%.3f", cs+e}'); fi
       TXT=$(printf '%s' "${SARR[$j]}" | sed 's/[{}\\]//g')
       if [ -n "$TXT" ]; then
-        printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$(asstime "$ST")" "$(asstime "$EN")" "$TXT" >> work/subs.body
+        if [ "$SUB_MODE" = "word" ]; then
+          # One 어절 per cue, hard swaps, no fade. The speech window is the sentence's real
+          # voice span: a detected boundary is the END of the pause (the next sentence's first
+          # sound), so the window closes at that pause's START — the silin line whose end is
+          # the boundary. A proportional-fallback boundary has no pause and stays as it is.
+          SPS=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$((j-1))]:-0}" -v j="$j" 'BEGIN{printf "%.3f", cs+p+(j>0?b:0)}')
+          if [ "$j" -lt $((M-1)) ]; then
+            SPE=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{e=b} FILENAME!="" && ($2-b)<0.002 && ($2-b)>-0.002 {e=$1} END{printf "%.3f", cs+p+e}' "work/silin$IDX.txt" 2>/dev/null \
+                  || awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b}')
+          else SPE=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" 'BEGIN{printf "%.3f", cs+p+l}'); fi
+          AOFF=$(awk -v cs="$CS" -v p="$CPRE" 'BEGIN{printf "%.3f", cs+p}')
+          python3 "$HERE/word-cues.py" "$ST" "$EN" "$SPS" "$SPE" "$SUB_WORD_MIN" "$TXT" ${ALIGNJ:+--align "$ALIGNJ" --offset "$AOFF" --tts "${TARR[$j]}"} |
+            while IFS=$'\t' read -r WS WE WT; do
+              case "$WS" in \#*) say "· card $IDX seg $j words: ${WS#\# }"; continue;; esac
+              printf 'Dialogue: 0,%s,%s,Word,,0,0,0,,%s\n' "$(asstime "$WS")" "$(asstime "$WE")" "$WT" >> work/subs.body
+            done
+        else
+          printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$(asstime "$ST")" "$(asstime "$EN")" "$TXT" >> work/subs.body
+        fi
         # Print the SRT from the same ST/EN/TXT — burn-in and subtitle file share one source, so they can't drift apart.
         # The fade tag ({\fad}) is ASS-only, so it's dropped (SRT doesn't know formatting tags).
         SRTN=$((SRTN+1))
@@ -737,7 +849,15 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         ST=$(awk -v cs="$CS" -v s="$FS" 'BEGIN{if(s<0)s=0; printf "%.3f", cs+s}')
         EN=$(awk -v cs="$CS" -v e="$FE" -v d="$D" 'BEGIN{if(e>d)e=d; printf "%.3f", cs+e}')
         awk -v s="$ST" -v e="$EN" 'BEGIN{exit !(e>s)}' || continue
-        printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$(asstime "$ST")" "$(asstime "$EN")" "$FT" >> work/subs.body
+        if [ "$SUB_MODE" = "word" ]; then
+          python3 "$HERE/word-cues.py" "$ST" "$EN" "$ST" "$EN" "$SUB_WORD_MIN" "$FT" |
+            while IFS=$'\t' read -r WS WE WT; do
+              case "$WS" in \#*) continue;; esac
+              printf 'Dialogue: 0,%s,%s,Word,,0,0,0,,%s\n' "$(asstime "$WS")" "$(asstime "$WE")" "$WT" >> work/subs.body
+            done
+        else
+          printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$(asstime "$ST")" "$(asstime "$EN")" "$FT" >> work/subs.body
+        fi
         SRTN=$((SRTN+1)); NSF=$((NSF+1))
         printf '%d\n%s --> %s\n%s\n\n' "$SRTN" "$(srttime "$ST")" "$(srttime "$EN")" "$FT" >> work/subs.srtbody
       done < "$SUBSF"
@@ -911,6 +1031,7 @@ if [ "$SUB" = "1" ] && [ -s work/subs.body ]; then
   {
     printf "[Script Info]\nScriptType: v4.00+\nPlayResX: ${W}\nPlayResY: ${H}\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n"
     printf '[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n'
+    printf "Style: Word,%s,${SUB_WORD_SIZE},&H00FFFFFF,&H00FFFFFF,&H00281810,&H78000000,-1,0,0,0,100,100,0,0,1,${SUB_OUT},${SUB_SHA},2,${SUB_ML},${SUB_MR},${SUB_WORD_MV},1\n" "$SUB_FONT"
     printf "Style: Sub,%s,${SUB_SIZE},&H00FFFFFF,&H00FFFFFF,&H00281810,&H78000000,-1,0,0,0,100,100,0,0,1,${SUB_OUT},${SUB_SHA},2,${SUB_ML},${SUB_MR},${SUB_MV},1\n\n" "$SUB_FONT"
     printf '[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n'
     cat work/subs.body
@@ -921,7 +1042,8 @@ if [ "$SUB" = "1" ] && [ -s work/subs.body ]; then
   # parsers accept LF, so this follows the spec. The one blank line at the end of the file marks the
   # last cue's end, so it stays.
   awk '{printf "%s\r\n", $0}' work/subs.srtbody > subs.srt
-  say "── subtitles: ${SRTN} lines (burn-in subs.ass / publish subs.srt) / font $SUB_FONT"
+  ASSN=$(grep -c '^Dialogue:' work/subs.body || true)
+  say "── subtitles: ${SRTN} lines in subs.srt · ${ASSN} burn-in cues (${SUB_MODE} mode) / font $SUB_FONT"
 fi
 
 # ── 12) Render + outro splice (no subtitles over the outro) — never -shortest (same as v2)

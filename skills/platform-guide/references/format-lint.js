@@ -208,6 +208,39 @@ for (const [key, f] of Object.entries(FORMATS)) {
   rule('chapterMax', rec ? rec.targetMax : 'null');
 }
 
+// ── authored-screen templates: :root and html.wide mirrors ────────────
+//
+// The three templates a slide scene can start from (scenes-schema §authored
+// screen lane) each carry the canvas and zone inline, because a slide sitting
+// in data/<channel>/episodes/<topic>/storyboard/slides/ has no <script src>
+// path back to formats.js. Three copies of the same five numbers is exactly
+// what this linter exists for — one of them drifting would put text outside
+// the safe zone on that lane alone, which no other lane's frames would show.
+const SCREEN_TPL = [
+  'skills/storyboard/references/motion-slide-template.html',
+  'skills/storyboard/references/kinetic-type-template.html',
+  'skills/storyboard/references/character-act-template.html',
+];
+const SCREEN_TOKENS = [['--w', 'canvas', 'w'], ['--h', 'canvas', 'h'],
+                       ['--zone-x', 'zone', 'x'], ['--zone-top', 'zone', 'top'],
+                       ['--zone-bottom', 'zone', 'bottom']];
+for (const file of SCREEN_TPL) {
+  const short = path.basename(file, '.html');
+  for (const [token, group, key] of SCREEN_TOKENS) {
+    // :root — everything up to the html.wide block, so the landscape override
+    // can't stand in for the portrait value.
+    RULES.push({ name: `${short} ${token}`, file,
+      re: new RegExp(':root\\{[\\s\\S]*?' + token + ':(\\d+)px'),
+      want: String(S[group][key]) });
+    const wide = FORMATS['youtube-long-16x9'];
+    if (wide) {
+      RULES.push({ name: `${short} wide ${token}`, file,
+        re: new RegExp('html\\.wide\\{[\\s\\S]*?' + token + ':(\\d+)px'),
+        want: String(wide[group][key]) });
+    }
+  }
+}
+
 // ── video-template landscape layout mirror (&format=wide) ──────────────
 //
 // Portrait has its `:root` tokens checked against the preset (RULES above),
@@ -329,6 +362,39 @@ function crossCheckAss(issues) {
   }
 }
 
+/**
+ * The seek runtime the three authored-screen templates share. It is copied into
+ * each file rather than linked, for the same reason the zone tokens are — a
+ * slide has no path back to the plugin. Copies drift silently: a fix applied to
+ * one template leaves the other two rendering the old way, and the symptom is a
+ * frame that is a sub-pixel off, which nobody sees until a re-render differs.
+ * So the three blocks are compared against each other, byte for byte.
+ */
+function crossCheckSeek(issues) {
+  const BEGIN = '/* SEEK-RUNTIME-BEGIN';
+  const END = '/* SEEK-RUNTIME-END */';
+  const blocks = [];
+  for (const file of SCREEN_TPL) {
+    const src = read(file);
+    if (src === null) { issues.push({ name: 'seek runtime', got: '(file missing)', want: file }); return; }
+    const i = src.indexOf(BEGIN), j = src.indexOf(END);
+    if (i < 0 || j < 0) {
+      issues.push({ name: `seek runtime in ${path.basename(file)}`, got: '(markers not found)',
+                    want: 'SEEK-RUNTIME-BEGIN … SEEK-RUNTIME-END' });
+      return;
+    }
+    // The header comment names its own template, so compare from the code that
+    // follows it — the runtime itself, not the sentence describing it.
+    blocks.push({ file, body: src.slice(src.indexOf('*/', i) + 2, j) });
+  }
+  const first = blocks[0];
+  for (const b of blocks.slice(1)) {
+    if (b.body !== first.body)
+      issues.push({ name: `seek runtime cross-check`, got: path.basename(b.file),
+                    want: `byte-identical to ${path.basename(first.file)}` });
+  }
+}
+
 function main() {
   const listOnly = process.argv.includes('--list');
   const issues = [];
@@ -354,6 +420,7 @@ function main() {
   }
 
   crossCheckAss(issues);
+  crossCheckSeek(issues);
 
   if (listOnly) {
     for (const row of rows) {

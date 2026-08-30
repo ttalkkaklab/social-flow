@@ -214,7 +214,9 @@ const SLIDE_SHOT = 0;
 
   stage.innerHTML = renderSlide(S, h);
 
-  /* ── seek 계약 구현 — 아래는 건드리지 않는다 ─────────────────────── */
+  /* SEEK-RUNTIME-BEGIN — 아래는 건드리지 않는다. 저작 화면 템플릿 세 벌(모션 슬라이드·
+     키네틱 타이포·캐릭터 연기)이 같은 블록을 갖고, format-lint.js 가 세 벌을 대조한다.
+     한 벌만 고치면 린트가 잡는다 — 고칠 일이 있으면 세 벌을 같이 고친다. */
   const easeOut = x => 1 - Math.pow(1 - x, 3);
   const cssMs = name => parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0;
   const HOLD = cssMs("--hold"), COUNT = cssMs("--count");
@@ -284,6 +286,7 @@ const SLIDE_SHOT = 0;
   if (qs.has("g"))           window.__seek(parseFloat(qs.get("t") || "0"), parseInt(qs.get("g"), 10));
   else if (qs.has("reveal")) window.__seek(0, parseInt(qs.get("reveal"), 10) + 1);
   else                       window.__seek(1e9, N + 1);
+  /* SEEK-RUNTIME-END */
 })();
 </script>
 </body>

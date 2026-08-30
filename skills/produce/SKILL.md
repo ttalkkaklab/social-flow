@@ -730,6 +730,13 @@ node $REF/render-motion-slide.mjs storyboard/slides/s<shot number>-<slug>.html \
 - The clips cost nothing and are deterministic (same file → same bytes), so a re-render
   after a scenes.js fix is safe; the sheet frames from storyboard §8.1 stay in
   `storyboard/.work/slide-check/` (§8.1 runs from the storyboard directory) for comparison.
+- **`slide.kind` changes nothing here.** A kinetic-type screen (`kind: "kinetic"`) and a
+  character-act screen (`kind: "character"`) are the same render, the same command, the same
+  `@motion/slide-s<n>/r<k>.mp4` wiring — the renderer asks a page for the seek contract and
+  doesn't care what the page draws. What the kind decides is which template the storyboard
+  authored from and which design section judged it (§8.1 · §8.2 · §8.3). The one thing to
+  read is `motion === true`, which is what sends the file down this path instead of the state
+  capture above.
 
 An **all-live-voice episode** (`window.VOICE === "user"`) generates no TTS (§5 is skipped
 entirely). Filmed scenes pull their audio from the clip per §3.5; every other scene uses
@@ -756,6 +763,44 @@ done
   shot needs a re-record or a script change.
 - If noise at the head of a recording slips under the trim threshold (-50dB) and comes out
   as dead air, trim that one card by hand — also measured on the first episode.
+
+### 3.7 Screencast splices (only on episodes that have them)
+
+A scene with `visual.source === "screencast"` (scenes-schema §screencast splice) is one window
+of a screen recording inside an ordinary card. The recording is landscape and the card is the
+episode canvas, so the cut, the crop and the fit happen here — `references/cut-screencast.sh`
+does all three and hands back a canvas-sized clip the builder plays as an `@` visual. Nothing
+in `build-reel.sh` changes.
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
+mkdir -p .work/screencast
+# one call per screencast scene — <at> and <focus> come from scenes.js, <card> from the
+# duration you computed for that card
+$REF/cut-screencast.sh footage/s3-cli-run.mp4 .work/screencast/s3.mp4 \
+  --at 12.5-19.0 --focus 160:220:1400:900 --card 7 --bg "$INK"
+```
+
+- **Check first**, before any cutting — does every `visual.clip` a screencast scene names exist,
+  and does every `at` window end inside that file? The script exits 1 on both, but finding out
+  scene by scene is slower than telling the user once.
+- `--bg` is `THEME.ink` — the pad around a clip that doesn't fill the canvas is the episode's
+  own background, not black.
+- **Pass `--card`**. Without it the two length warnings don't run, and a clip longer than its
+  card silently loses its ending — the part the scene exists for is usually at the end.
+- Read the warnings. A shrink past 3× or a blow-up past 1.5× means the card will be unreadable
+  on a phone; the fix is a different `focus` in scenes.js, not a louder title over it.
+- Card contract (§6): visual `@screencast/s<n>.mp4::cards/a<idx>r<k>.png` (paths in segs.tsv are
+  relative to `.work/`) — the clip with that reveal state's alpha capture over it, the same
+  shape a motion-background scene uses. `zoom=none`, and the audio is the scene's ordinary TTS
+  on the normal lane. A scene with `sync: true` instead takes `--keep-audio`, feeds
+  `.work/screencast/s<n>.wav` as the card audio with `sync=1`, and gets its subtitles from the
+  transcript like any live-voice card (§3.5).
+- **Several segments on one screencast card: drop the `@`** and repeat the same clip path per
+  segment, changing only the overlay. `@` restarts the clip at its first frame, so on a second
+  segment it would replay the cut from the top; without it the builder carries the playback
+  across the reveal with `-ss`. `@` is right when the card is one segment — which is the shape
+  this lane usually wants, one moment on screen.
 
 ### 4. Capture the reveal states
 
@@ -836,7 +881,13 @@ done
 ```
 
 Read `gate_exit` as it is — 0 pass / 1 warning / 2 S1 detected / 3 gate never ran
-(extraction failure, bad path). **3 isn't a pass.** Fix the path and run again.
+(extraction failure, bad path) / 4 not Korean, so the gate declined to judge.
+**Neither 3 nor 4 is a pass.** On 3, fix the path and run again. On 4 the checker read the
+text and found it isn't Korean — every rule in it is Korean-specific — so that surface is
+**unchecked** and a person has to read it. For English, hunt the tells README lists
+(delve · leverage · robust · seamless · comprehensive · crucial · foster · testament ·
+landscape, and "It's not X, it's Y"); say plainly in the approval prompt which surfaces
+went unchecked.
 On a 1 with `quote-exempt N` in the header line, confirm that quote against research.md — a
 video freezes the subtitles and cards in place, so an unconfirmed quote loses its quotation
 marks and gets rewritten in our own words.
@@ -941,7 +992,9 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 | `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
 | `span=<0..1.5>` | this card's total zoom span, replacing the global `ZOOM_SPAN` (0.4 = the window grows 40% over the card). Applies to `in`/`out`/`punch` and the pan zoom drift; unused on `hold`/`none` | a still whose beat wants a visible move — computed from the storyboard's `speed` word (below). Past base+`span` > `ZOOM_BASE`/canvas (base: pan scale · drift 1.04 · else 1; headroom 0.5 at the defaults) the source upscales and the build warns: raise `ZOOM_BASE` and generate the scene image at that resolution |
 | `ease=smooth\|linear\|in` | this card's easing, replacing the global `KB_EASE`. `in` accelerates — an unnoticed start, fastest exactly at the cut | the ladder's accelerating rows (action/tension, CTA) — pairs with cutting away at the peak. `punch` keeps its own ease-out ramp and ignores `ease=` |
-| `enter=1` / `exit=1` | fade this card up from black / down to black (`SCENE_FADE`, 0.12s) | **the storyboard's `transition: "dissolve"`** — put `exit=1` on the card before it and `enter=1` on the card that carries the field. Nothing else turns these on |
+| `enter=dissolve` | this card opens on the previous card's last frame and melts up through it (`SCENE_XF`, 0.45s) — two pictures on screen at once | **the storyboard's `transition: "dissolve"`** — written on the card that carries the field, nothing on the card before |
+| `enter=push:<l2r\|r2l\|u2d\|d2u>` | the previous card's last frame slides off in that direction and uncovers this card (`SCENE_PUSH`, 0.32s) | `transition: "push:<dir>"` — same rule, the incoming card alone |
+| `exit=black` + `enter=black` (or `white`) | the card before fades its tail into the colour, this card fades its head out of it (`SCENE_FADE`, 0.12s each) | `transition: "dip"` / `"dip:white"` — two halves, one per card. `enter=1`/`exit=1` still mean black |
 
 ```
 # one line for a filmed scene (live voice)
@@ -950,17 +1003,40 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 11	pcm/s12.wav	0	none
 ```
 
-**A scene dissolve is two options, not one.** A shot carrying `transition: "dissolve"`
-(scenes-schema §scene transition) becomes `enter=1` on that card **and** `exit=1` on the card
-before it — the fade has two halves and each lives in its own card's encode. Write neither and
-the boundary is a hard cut, which is the default and where most boundaries belong.
+**A transition is drawn inside one card, never across two.** A shot carrying
+`transition: "dissolve"` or `"push:<dir>"` (scenes-schema §scene transition) becomes one
+`enter=` option on that card — the builder dumps the previous card's last frame after its
+encode and the incoming card opens on it. A `dip` is the one that takes two halves (`exit=`
+on the card before, `enter=` on this one), because each half is a fade inside its own card.
+Write nothing and the boundary is a hard cut, which is the default and where most
+boundaries belong.
 
 The builder does it this way because a boundary xfade would break the pipeline's spine: the
-total would shrink by the fade length at every seam and trip §9's 2ms drift assertion, and
-xfade renumbers the tail's PTS from 0 (the measurement is written out at the outro seam in
-build-reel.sh). Fading each side separately changes no frame count, so the concat stays
-stream-copy exact and no subtitle cue moves — verified A/B on a three-card build: identical
-`subs.srt`, 12.000000s both ways, drift 0.
+total would shrink by the transition length at every seam and trip §9's 2ms drift assertion,
+and xfade renumbers the tail's PTS from 0 (the measurement is written out at the outro seam
+in build-reel.sh). Drawing the transition inside the incoming card changes no frame count,
+so the concat stays stream-copy exact and no subtitle cue moves — verified A/B on ep07
+(10 cards, two dissolves): 64.766667s and 1943 frames both ways, identical `subs.srt` on the
+cards that carry a transition, drift 0.
+
+**Word cues — `SUB_MODE=word`.** The burn-in shows **one 어절 at a time**, a hard swap every
+half second, sitting on the 65% line in a 60px glyph with no fade — the subtitle grammar of
+the reference short measured in docs/research/2026-08-29-one-world-word-cue (164 swaps in
+85 s, 1.23 words per cue, 0.47 s median). The words get real times: the builder runs the
+forced aligner once per card on the trimmed narration (`QWEN3_ASR_BIN`, about 3 s for a 7 s
+card), `references/word-cues.py` maps each display word onto the heard characters through
+the TTS spelling (so "2020년" lands where "이천이십 년" was said, whatever the spacing), and a
+word that would flash by under `SUB_WORD_MIN` (0.28 s) is glued to the next. **Measured on
+ep07**: all 27 segments aligned (23 at 100% character match, the lowest 79%), and the cue
+start of every sentence-opening word sat within 0.07 s of the energy-based speech onset
+(mean 0.02 s, 18 sentences — a different signal from the aligner, so this is an independent
+check). Without the aligner the words spread by character count over the speech window,
+and that path measured 0.42 s off on average, 1.18 s at worst — it prints a warning and is
+not the lane. `subs.srt` keeps whole sentences either way (the publish tracks stay
+readable); only the burn-in changes. The Word style is `SUB_WORD_SIZE` (84 — Pretendard
+draws a Hangul glyph at ~0.71× the size) and `SUB_WORD_MV` (640, the 65% line); the `Sub`
+style and its format-lint mirrors are untouched. Default stays `sentence` — a channel
+switches with `SUB_MODE=word` on the build line, same as `ATEMPO_MIN=1`.
 
 **The still move comes from the storyboard, not from taste.** A still's
 `visual.camera.movement` (when the storyboard wrote one — directing-grammar §5's Still
@@ -1448,6 +1524,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/pipeline.md`** — build contract · report gate verdict table · the three TTS failure modes · palindrome loop · collected field-tested pitfalls
 - **`references/screencast-pipeline.md`** — the shooting-edit path: edit.json contract · edit procedure · gates · pitfalls (replaces §2–7 when alignment.json exists)
 - **`references/build-screencast.sh`** — the shooting-edit builder (scene cut → crop → 9:16 composite → subtitle burn-in → BGM ducking → outro, drift 0)
+- **`references/cut-screencast.sh`** — the screencast-splice cutter (§3.7): one window of a screen recording → focus crop → fit onto the canvas over `THEME.ink`, warning when the picture shrinks past legibility or the clip outruns its card. One card inside an ordinary episode, not a whole-episode mode
 - **`references/screencast-overlay.html`** — scene title alpha overlay renderer (top block y 190–460, scenes.js injected)
 - **`references/video-template.html`** — 1080×1920 scene renderer (THEME injection · reveal · alpha · safe zone · overflow guard)
 - **`references/build-reel.sh`** — the compositing pipeline SoT (silence trim → loudnorm → boundary detection → reveal xfade → Ken Burns → subtitles → outro splice)
@@ -1457,7 +1534,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/speedup.sh`** — the required speed pass (§7.5). Speeds the feature up by the channel's factor (1.4 default) while leaving the outro at 1.0x, retimes `subs.srt` and `chapters.txt` onto the new timeline, and verifies the measured length against feature/factor + tail. Reads the un-sped set and writes `-fast` names, so it never stacks
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
-- **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames storyboard §8.1's design gate reads
+- **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames storyboard §8.1's design gate reads. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)

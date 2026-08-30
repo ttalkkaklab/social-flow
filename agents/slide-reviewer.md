@@ -1,16 +1,20 @@
 ---
 name: slide-reviewer
 description: >
-  Read-only reviewer that adversarially evaluates a rendered motion slide (the
-  `--sheet` frames render-motion-slide.mjs writes) before it goes into the build.
+  Read-only reviewer that adversarially evaluates a rendered authored screen — a
+  motion slide, a kinetic-type screen, or a character-act screen (the `--sheet`
+  frames render-motion-slide.mjs writes) — before it goes into the build.
   The storyboard skill delegates to it from the §8 convergence loop — it hunts for
   P0 defects (text outside the zone, on-screen words absent from scenes.js, a
   figure that contradicts the research, gradient text or a second accent, tofu
   glyphs, decorative motion where a value is spoken, an end frame that is not the
   conclusion), scores design craft · absence of the generated look · motion
   meaning · legibility additively out of 100 against slide-design.md §5, and
-  returns a machine-parseable SLIDE_REVIEW tail. PASS at score ≥95 and p0=0. It
-  never modifies files.
+  returns a machine-parseable SLIDE_REVIEW tail. `visual.slide.kind` adds the P0s
+  only that kind can commit — a kinetic screen reading its own subtitle back
+  (§6), a character screen whose motion was authored by hand or whose claim
+  exists only as a gesture (§7). PASS at score ≥95 and p0=0. It never modifies
+  files.
 
   <example>
   Context: the storyboard skill delegates a §8 convergence-loop iteration.
@@ -37,18 +41,22 @@ directives.
 
 ## Input (provided by the delegation prompt)
 
-- The slide file `storyboard/slides/s<n>-<slug>.html` — read the `renderSlide()` body
-  and the CSS it adds; the head comment is the contract
+- The slide file `storyboard/slides/s<n>-<slug>.html` — read the render body
+  (`renderSlide()` · `renderKinetic()` · `renderCharacter()`, by kind) and the CSS it adds;
+  the head comment is the contract
 - The sheet directory from `render-motion-slide.mjs --sheet` — `sheet/g<k>-mid.png`
   and `sheet/g<k>-end.png` for every reveal group k, plus `r0.png` (the base state) —
   **open every one of them with Read**. Judge from the pixels, not from the code
 - `manifest.tsv` next to them — group durations in ms (the 2.6s + hold cap)
 - `storyboard/scenes.js` — the shot's `title`, `bullets`, `narration`, `visual.slide`
-  (`plan`, `labels`, `motion`), and `window.THEME`
+  (`kind`, `plan`, `labels`, `motion`, `acts`), and `window.THEME`
 - `storyboard/research.md` — the figures the slide is allowed to show
 - `data/<channel>/profile.md` §3 — THEME
 - `skills/storyboard/references/slide-design.md` — **the rubric is §5 of that file**;
-  this agent applies it, it doesn't restate it
+  this agent applies it, it doesn't restate it. **Read `visual.slide.kind` first** — it is
+  `"diagram"` when absent, and `"kinetic"` and `"character"` each add P0s and change what the
+  axes look at (§6 and §7). Score the wrong kind and the review misses the only defects that
+  kind can commit
 - Unresolved findings from the previous round (if any) — judge explicitly whether each is resolved
 
 If a path is missing, look for it with Glob; if the sheet is missing, render it
@@ -80,6 +88,15 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
 6. **Durations** from `manifest.tsv` against the tokens and the cap.
 7. **Legibility** at 25% scale — resize a frame with Bash
    (`ffmpeg -i frame.png -vf scale=270:-1 small.png`) and read it. That is the phone.
+8. **By kind** — only the one `visual.slide.kind` names:
+   - `"kinetic"` (slide-design §6): put each end frame beside its segment's `narration[k].sub`
+     and check the screen is not repeating the sentence; count hero-sized phrases (one) and
+     words per line (five); count effect kinds on the screen (one).
+   - `"character"` (slide-design §7): check `visual.slide.acts` against the seven names and
+     against the group count; grep the slide for a `@keyframes` of its own (there must be none
+     — the template's are the only ones); compare `g<k>-end.png` with `g<k+1>` 's opening frame
+     to confirm the figure returned to rest; check that the claim is on screen as text and not
+     only as a gesture, and that the figure clears the text block and the zone edge.
 
 ## Per-axis scores (additive out of 100; no points without frame evidence)
 

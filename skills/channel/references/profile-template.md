@@ -69,6 +69,12 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
 - **Background mood prompt direction**: <the mood description always appended to
   image-generation prompts — e.g. "deep indigo and electric blue color grade,
   cinematic, moody">
+- **One world (optional)**: <one place the whole episode is staged in, written as the
+  `space.layout` base every shot starts from plus one `light` sentence — e.g. "a vast
+  industrial hall in bare concrete, rows of amber work lights high on both walls, one figure
+  in a white suit". Leave it blank for a channel whose episodes travel. directing-grammar §6
+  rule 15 has the measurement: the reference short that holds attention for 85 s never
+  leaves its hall, and every idea in it is a physical object staged there>
 - **No letterbox / top-bottom gradient** (owner 2026-08-25): never ask for a
   cinematic letterbox, a lower-third fade, or a darkened bar at the top or bottom.
   The picture fills the frame edge to edge.
