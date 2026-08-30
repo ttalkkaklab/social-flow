@@ -1,18 +1,16 @@
 ---
 name: grow-threads
 description: >
-  This skill should be used when the user asks to "스레드 키워", "스레드 성장 루프",
-  "성장 틱 돌려", "grow the Threads account", or wants the autonomous Threads growth
-  loop. Runs ONE growth tick for a channel — replies to inbox comments (golden hour
-  first), snapshots insights, joins keyword conversations whenever it judges a real
-  contribution exists (no daily cap), and authors/publishes new posts whenever there
-  is something worth saying (slots are a rhythm guide, not a gate), attaching a
-  generated image via the media uploader when one would help — every outgoing
-  text must pass the adversarial growth-post-reviewer gate (score ≥ 95, P0 = 0)
-  before publishing. Fully autonomous within the standing authorization of
-  data/<channel>/growth/threads/growth-plan.md. Recur with /loop <interval>
-  /social-flow:grow-threads <channel>. First run: /social-flow:grow-threads
-  <channel> init.
+  Runs one autonomous Threads growth tick — reply, join conversations, post. Use when the
+  user asks to "스레드 키워", "스레드 성장 루프", "성장 틱 돌려", "grow the Threads account", or wants the
+  growth loop running. One tick replies to inbox comments (golden hour first), snapshots
+  insights, joins keyword conversations whenever it judges it has a real contribution (no
+  daily cap), and writes and publishes new posts whenever there is something worth saying
+  — slots are a rhythm, not a gate — attaching a generated image when one helps. Every
+  outgoing text clears the growth-post-reviewer gate (95 or above, zero P0) before it goes
+  out, inside the standing authorization in data/[channel]/growth/threads/growth-plan.md.
+  Recur with /loop [interval] /social-flow:grow-threads [channel]. First run needs the
+  init argument.
 argument-hint: "<channel> [init|tick|status]"
 # ⚠️ Deliberate pre-approval — this skill is an **explicit exception** to the
 # plugin's "no pre-approved publish tools" contract. The user chose fully

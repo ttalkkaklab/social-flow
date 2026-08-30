@@ -14,7 +14,7 @@ recording/
 │   └── duration.txt     # source length (seconds)
 ├── timeline.json        # machine-readable — schema below
 ├── timeline.md          # human-readable — scene table + per-sentence timestamps + keyframes + screen descriptions
-└── keyframes/seg-N.jpg  # scene keyframe (960px, the vision_analyze input)
+└── keyframes/seg-N.jpg  # scene keyframe (960px, read directly with the Read tool)
 ```
 
 ## timeline.json
@@ -44,7 +44,7 @@ descriptions and transcript corrections).
 Body: the scene summary table (`| # | Range | Length | Speech | Screen |`) plus
 per-scene detail (embedded keyframe, per-sentence `[mm:ss.s]` timestamps, screen
 description). **build-timeline leaves the Screen column as a placeholder and the
-ingest skill fills it from the vision_analyze results.**
+ingest skill fills it from what it reads off the keyframes.**
 
 Transcript correction contract: write an STT misrecognition in the body as
 `original(→corrected)` (never delete the original), and log it in the

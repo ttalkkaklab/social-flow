@@ -1,18 +1,18 @@
 ---
 name: produce
 description: >
-  This skill should be used when the user asks to "영상 만들어", "콘텐츠 제작",
-  "produce the video", "플랫폼별 콘텐츠 만들어", or after a storyboard is approved.
-  Converts the approved scenes.js under data/<channel>/episodes/<topic>/storyboard/ into a
-  narrated 9:16 video (1080x1920/30fps — generated backgrounds, TTS narration, BGM
-  with ducking, kinetic subtitles, brand outro) plus per-platform text (Threads,
-  Instagram, Facebook, YouTube) under data/<channel>/episodes/<topic>/output/, verified on a
-  phone viewport before the publish step. When recording/alignment.json exists
-  (storyboard-first shooting flow), it instead edits the user's screen recording
-  into the 9:16 video (cut per scene, focus crop, title overlays, burned subtitles,
-  BGM ducking) via build-screencast.sh.
+  Builds the video and the per-platform text from an already-approved storyboard. Use when
+  the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after
+  a storyboard is approved. Turns the approved scenes.js under
+  data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at
+  1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic
+  subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under
+  the episode's output/, checked on a phone viewport before publishing. Where
+  recording/alignment.json exists it cuts the user's own screen recording instead of
+  generating scenes. Boundary — storyboard plans and stops for approval, produce starts
+  after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_astra-methodology_chrome-devtools__new_page", "mcp__plugin_astra-methodology_chrome-devtools__navigate_page", "mcp__plugin_astra-methodology_chrome-devtools__emulate", "mcp__plugin_astra-methodology_chrome-devtools__take_screenshot", "mcp__plugin_astra-methodology_chrome-devtools__evaluate_script", "mcp__plugin_astra-methodology_chrome-devtools__close_page"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference"]
 ---
 
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
@@ -856,10 +856,20 @@ active caption shows (absolute rule 14).
 - `dim=` stays inert here too (the scrim layer is off) — and brightness isn't a question
   over a white background anyway.
 
-Overflow check: a headless one-shot capture can't read `document.title`, so if
-chrome-devtools is available, `navigate_page` (same URL) then `evaluate_script` to confirm
-`window.__overflow === 0`; otherwise check the state PNGs by eye (clipping, overlap — the
-template auto-shrinks through tight1–3 and only exposes what's left).
+Overflow check: the template writes what's left over into `document.title` as `ovf=<px>`,
+and a headless `--dump-dom` run reads that title back after the page script has run
+[measured 2026-08-30]. Same Chrome the captures already use, no browser tooling on top.
+
+```bash
+. .work/format.env
+"${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}" --headless=new \
+  --disable-gpu --dump-dom "file://$PWD/.work/frame.html?i=<idx>&reveal=<last>&format=$URL_FMT" \
+  2>/dev/null | grep -o 'ovf=[0-9]*'
+```
+
+Run it on each scene's **last** reveal state — that one carries the most text. Anything but
+`ovf=0` means the zone still spills after the template's own tight1–3 shrink, so cut the copy
+or push a line into the next state.
 
 ### 5. Generate the TTS (one call per scene)
 
@@ -1308,10 +1318,20 @@ $REF/speedup.sh .work 1.6    # a channel-specific rate — profile.md §2 decide
 
 ### 8. Phone-mode QA (required before publishing)
 
-Copy `reel-qa.html` into `.work/` and check it with chrome-devtools **on a phone viewport with
-the platform UI overlay** — `emulate` (390x844x3, mobile, touch) →
-`reel-qa.html?v=./reel-sub-fast.mp4&ui=ig&fit=crop&zone=1` → screenshots at the reveal-complete
-moment of each scene. **QA runs on the sped-up burn-in (`reel-sub-fast.mp4`)** — that's the file
+Copy `reel-qa.html` into `.work/` and shoot it **on a phone viewport with the platform UI
+overlay**, again with the headless Chrome the captures use. `?frame=1` draws the 390×844
+mockup, and a 470×920 window holds the whole phone including the right action rail
+[measured 2026-08-30]; `?t=` seeks, and the header line reports the time it landed on.
+
+```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
+# no FORMAT_ENV here — the QA harness is a phone mockup, not a 1080×1920 frame
+CAP_W=470 CAP_H=920 $REF/capture-frames.sh \
+  "file://$PWD/.work/reel-qa.html?v=./reel-sub-fast.mp4&ui=ig&fit=crop&zone=1&frame=1&t=<sec>" \
+  .work/qa/s<n>.png
+```
+
+One shot per scene at the reveal-complete moment, then read the PNGs. **QA runs on the sped-up burn-in (`reel-sub-fast.mp4`)** — that's the file
 that ships, and a subtitle that's readable at 1.0x can be gone before it's read at 1.4x. The
 clean one has no subtitles, so you can't see clipping or intrusion, and the burned-in one is
 what actually goes to IG. Check: action bar (x≈890) intrusion / subtitle centering / hero

@@ -1,12 +1,11 @@
 ---
 name: platform-guide
 description: >
-  This skill should be used when the user asks about "플랫폼 문법", "플랫폼별 작성 규칙",
-  "인스타 캡션 어떻게", "쇼츠 제목 규칙", "platform grammar", "how to write for
-  Threads/Instagram/Facebook/YouTube", or when any social-flow skill needs the
-  per-platform writing rules, video specs, safe zones, or posting-limit reference.
-  Knowledge-only skill — the SoT for platform grammar lives in
-  references/platform-playbook.md.
+  The per-platform writing rules, video specs and safe zones. Knowledge only, nothing
+  runs. Use when the user asks about "플랫폼 문법", "플랫폼별 작성 규칙", "인스타 캡션 어떻게", "쇼츠 제목 규칙",
+  "platform grammar", "how to write for Threads/Instagram/Facebook/YouTube", or when
+  another social-flow skill needs the posting limits, caption rules, video specs or
+  safe-zone numbers. The source of truth is references/platform-playbook.md.
 ---
 
 # Platform guide — the SoT for grammar and specs

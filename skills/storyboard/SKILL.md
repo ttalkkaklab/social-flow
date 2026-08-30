@@ -1,25 +1,19 @@
 ---
 name: storyboard
 description: >
-  This skill should be used when the user asks to "스토리보드 만들어", "스토리보드 작성",
-  "이 주제로 영상 기획", "촬영 대본 만들어", "내가 녹화할 대본", "make a storyboard",
-  "plan a video for topic X", or starts a new post topic in a channel. Researches the
-  topic (naver_search/WebSearch/serp_*), then authors an image-included storyboard under
-  data/<channel>/episodes/<topic>/storyboard/ — human-readable storyboard.md + machine-readable
-  scenes.js (the SoT that produce consumes) + generated scene images, or in
-  screencast mode a shooting script (script.md) the user records against. Picks the format
-  with the user first (9:16 shorts by default, or 16:9 YouTube long-form with chapters);
-  long-form episodes mix scenes the user films with generated ones, and for every filmed
-  scene the shooting script spells out what is on screen, what to do, what to say, and the
-  exact filename to save it as, so the user can just follow it. Six adversarial reviews run
-  **once each** before approval — the storyboard-reviewer agent reads the copy as a whole
-  (AI-sounding phrasing, hook, factual fidelity), then every single scene for quality and
-  contextual fit, the word choice of every narration and title, the camera plan (what each
-  shot should make the audience feel, and whether its size, angle, frame space and move serve that feel),
-  the episode's sound design, and finally the generated images (do they match what each scene
-  actually says). There is no score to clear and nothing is delegated
-  twice: each review's findings get applied once, and whatever is left over goes onto the
-  HITL approval screen for the user to decide.
+  Plans one episode before anything costs money — scenes, copy, camera, sound. Use when
+  the user asks to "스토리보드 만들어", "스토리보드 작성", "이 주제로 영상 기획", "촬영 대본 만들어", "내가 녹화할 대본", "make
+  a storyboard", "plan a video for topic X", or starts a new topic in a channel.
+  Researches the topic, then writes the storyboard under
+  data/[channel]/episodes/[topic]/storyboard/ — readable storyboard.md, scenes.js (what
+  produce consumes), and the generated scene images; in screencast mode it
+  writes a shooting script instead. Picks the format with the user first: 9:16 shorts by
+  default, or 16:9 long-form with chapters, where filmed and generated scenes mix and the
+  shooting script spells out each filmed scene down to its filename. Six adversarial
+  reads run once each before approval — copy, every
+  scene, word choice, camera plan, sound design, generated images — with no score to
+  clear: findings get applied once and the rest goes on the approval screen. Boundary —
+  this stops at approval; produce builds from it, autoproduce skips the stop.
 argument-hint: "<channel> <topic or topic hint>"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__suno_generate_lyrics"]
 ---

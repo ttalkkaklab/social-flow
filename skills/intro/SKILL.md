@@ -1,14 +1,15 @@
 ---
 name: intro
 description: >
-  This skill should be used when the user asks to "인트로 영상 만들어", "채널 인트로",
-  "오프닝 영상", "로고 애니메이션 영상", "make a channel intro video", "create a logo
-  sting", or right after /social-flow:branding installs the channel profile image.
-  Designs 4 intro concepts (character action × mood × sonic logo) for a HITL pick,
-  then generates the character-acting intro with veo (mandatory video-generation path),
-  reveals the channel name via a deterministic text plate, aligns a Lyria sonic logo
-  to the landing frame, gates through brand-reviewer's intro mode (score ≥90, p0=0),
-  and installs master/stinger/lockup/sonic assets under data/<slug>/assets/intro/.
+  Makes the channel's opening video — character action, name plate, sonic logo. Use when
+  the user asks to "인트로 영상 만들어", "채널 인트로", "오프닝 영상", "로고 애니메이션 영상", "make a channel intro
+  video", "create a logo sting", or right after /social-flow:branding installs the profile
+  image. Designs 4 concepts (character action × mood × sonic logo) for a human pick,
+  generates the character acting with veo, reveals the channel name on a deterministic
+  text plate, aligns a Lyria sonic logo to the landing frame, clears brand-reviewer's
+  intro mode (90 or above, zero P0), and installs master, stinger, lockup and sonic assets
+  under data/[slug]/assets/intro/. Boundary — branding makes the still profile image, this
+  makes the moving opening.
 argument-hint: "<channel> [extra instructions]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__music_generate_clip", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue"]
 ---

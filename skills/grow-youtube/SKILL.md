@@ -1,15 +1,14 @@
 ---
 name: grow-youtube
 description: >
-  This skill should be used when the user asks to "유튜브 키워", "쇼츠 성장 루프",
-  "유튜브 성장 틱", "grow the YouTube channel", or wants the autonomous YouTube
-  growth loop. Runs ONE growth tick for a channel — replies to inbox comments
-  (golden hour first), snapshots channel/video analytics, refills the publish
-  queue by authoring a new short end-to-end when it runs dry (autoproduce), and
-  publishes queue-marked videos in plan-defined slots — fully autonomously within
-  the standing authorization of data/<channel>/growth/youtube/growth-plan.md.
-  Recur with /loop <interval> /social-flow:grow-youtube <channel>. First run:
-  /social-flow:grow-youtube <channel> init.
+  Runs one autonomous YouTube Shorts growth tick — reply, measure, refill, publish. Use
+  when the user asks to "유튜브 키워", "쇼츠 성장 루프", "유튜브 성장 틱", "grow the YouTube channel", or
+  wants the growth loop running. One tick replies to inbox comments (golden hour first),
+  snapshots channel and video analytics, refills the publish queue by authoring a new
+  short end to end through autoproduce when it runs dry, and publishes queue-marked videos
+  in the plan's slots — all inside the standing authorization in
+  data/[channel]/growth/youtube/growth-plan.md. Recur with /loop [interval]
+  /social-flow:grow-youtube [channel]. First run needs the init argument.
 argument-hint: "<channel> [init|tick|status]"
 # ⚠️ Deliberate pre-authorization — this skill is an **explicit exception** to the
 # plugin's "no pre-authorized publish tools" contract (same rationale as

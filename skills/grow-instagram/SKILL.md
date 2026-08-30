@@ -1,16 +1,14 @@
 ---
 name: grow-instagram
 description: >
-  This skill should be used when the user asks to "인스타 키워", "릴스 성장 루프",
-  "인스타그램 성장 틱", "grow the Instagram account", or wants the autonomous
-  Instagram growth loop. Runs ONE growth tick for a channel — replies to inbox
-  comments (golden hour first), snapshots account/reel insights (skip rate and
-  average watch time), refills the publish queue by authoring a new reel
-  end-to-end when it runs dry (autoproduce), and publishes queue-marked reels in
-  plan-defined slots — fully autonomously within the standing authorization of
-  data/<channel>/growth/instagram/growth-plan.md. Recur with /loop <interval>
-  /social-flow:grow-instagram <channel>. First run:
-  /social-flow:grow-instagram <channel> init.
+  Runs one autonomous Instagram growth tick — reply, measure, refill, publish. Use when
+  the user asks to "인스타 키워", "릴스 성장 루프", "인스타그램 성장 틱", "grow the Instagram account", or
+  wants the growth loop running. One tick replies to inbox comments (golden hour first),
+  snapshots account and reel insights (skip rate, average watch time), refills the publish
+  queue by authoring a new reel end to end through autoproduce when it runs dry, and
+  publishes queue-marked reels in the plan's slots — all inside the standing authorization
+  in data/[channel]/growth/instagram/growth-plan.md. Recur with /loop [interval]
+  /social-flow:grow-instagram [channel]. First run needs the init argument.
 argument-hint: "<channel> [init|tick|status]"
 # ⚠️ Deliberate pre-authorization — this skill is an **explicit exception** to the
 # plugin's "no pre-authorized publish tools" contract (same rationale as
