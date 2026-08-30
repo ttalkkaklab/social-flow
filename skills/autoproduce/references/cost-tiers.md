@@ -1,5 +1,9 @@
 # The model ladder — start cheap, move up only when the metrics say so
 
+> **Freshness** — verified 2026-08-15 · source: vendor pricing pages plus our own measured
+> runs; the numbers themselves live in [prices.tsv](prices.tsv), which this file never copies ·
+> recheck every 90 days.
+
 The default for an automated episode is **a build that never calls a video
 generation tool**. Three or four still images with Ken Burns on top, plus
 narration, subtitles, and BGM. About **$0.27–0.29** per episode (the cover
@@ -11,6 +15,16 @@ This document sets the ladder and the escalation conditions. **No price
 numbers live here** — `prices.tsv` is the source of truth and `cost-report.sh`
 reads only that. Write a number in two places and one of them always goes
 stale.
+
+## Contents
+
+- [Why Ken Burns is the default](#why-ken-burns-is-the-default)
+- [Economy baseline (the automated-authoring default)](#economy-baseline-the-automated-authoring-default)
+- [Escalation — one opening b-roll slot](#escalation-one-opening-b-roll-slot)
+- [What autonomous authoring doesn't use](#what-autonomous-authoring-doesnt-use)
+- [The cap — over it, drop the escalation and go economy baseline](#the-cap-over-it-drop-the-escalation-and-go-economy-baseline)
+- [Non-money budgets — search quotas](#non-money-budgets-search-quotas)
+- [When updating a price](#when-updating-a-price)
 
 ## Why Ken Burns is the default
 

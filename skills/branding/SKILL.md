@@ -1,14 +1,15 @@
 ---
 name: branding
 description: >
-  This skill should be used when the user asks to "프로필 이미지 만들어", "채널 로고
-  만들어", "브랜딩 이미지 생성", "make a channel profile image", "generate a channel
-  logo", or right after /social-flow:channel add when the channel has no logo asset.
-  Collects an image brief via AskUserQuestion, generates 4 candidate profile images
-  in distinct style directions with gpt_image, opens a browser contact sheet for a
-  HITL direction pick, then refines the chosen image through an adversarial review
-  loop (brand-reviewer agent) until score ≥95 with zero P0 defects, and installs the
-  master + platform resizes under data/<slug>/assets/branding/ with profile.md updated.
+  Generates and refines a channel profile image until an adversarial reviewer passes it.
+  Use when the user asks to "프로필 이미지 만들어", "채널 로고 만들어", "브랜딩 이미지 생성", "make a channel
+  profile image", "generate a channel logo", or right after /social-flow:channel add on a
+  channel with no logo. Collects an image brief through AskUserQuestion, generates 4
+  candidates in distinct style directions with gpt_image, opens a contact sheet for the
+  human to pick a direction, then refines the pick through the brand-reviewer loop until
+  it scores 95 or above with zero P0 defects, and installs the master plus platform
+  resizes under data/[slug]/assets/branding/ with profile.md updated. Boundary — this
+  makes the still profile image; the intro skill makes the moving opening.
 argument-hint: "<channel> [extra instructions]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img"]
 ---

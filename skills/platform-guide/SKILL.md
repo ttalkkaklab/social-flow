@@ -1,12 +1,11 @@
 ---
 name: platform-guide
 description: >
-  This skill should be used when the user asks about "플랫폼 문법", "플랫폼별 작성 규칙",
-  "인스타 캡션 어떻게", "쇼츠 제목 규칙", "platform grammar", "how to write for
-  Threads/Instagram/Facebook/YouTube", or when any social-flow skill needs the
-  per-platform writing rules, video specs, safe zones, or posting-limit reference.
-  Knowledge-only skill — the SoT for platform grammar lives in
-  references/platform-playbook.md.
+  The per-platform writing rules, video specs and safe zones. Knowledge only, nothing
+  runs. Use when the user asks about "플랫폼 문법", "플랫폼별 작성 규칙", "인스타 캡션 어떻게", "쇼츠 제목 규칙",
+  "platform grammar", "how to write for Threads/Instagram/Facebook/YouTube", or when
+  another social-flow skill needs the posting limits, caption rules, video specs or
+  safe-zone numbers. The source of truth is references/platform-playbook.md.
 ---
 
 # Platform guide — the SoT for grammar and specs
@@ -115,3 +114,7 @@ appears, add a row to this table and extend an existing reviewer.
 - **`references/pipeline.js`** — pipeline SoT: the stage ladder, every gate (attended and unattended), the reviewer verdict-tail contract, and produce's three build lanes. `episode-state.js` derives an episode's stage from it; `docs/pipeline-manifest.md` explains the design
 - **`references/pipeline-lint.js`** — checks the SKILL.md gate prose against `pipeline.js` (9 rules, read-only; `--list` · `--selftest`)
 - **`references/extract-text.js`** — scenes.js → per-surface text extraction (narration · subtitle · screen; handles the `window.SCENES` global contract)
+- **`references/safezone-landscape.md`** — the 16:9 safe-zone measurements (2026-08-17): x 96/1920 · top 96/1080 · bottom 285/1080, and which surfaces stay provisional. `formats.js`, the video template and the storyboard template all cite it
+- **`references/reply-gate.md`** — the two gates every growth-loop reply passes: `check-style.py --surface reply`, then the growth-post-reviewer agent at ≥95 with p0=0, plus what to attach per platform
+- **`references/formats.js`** / **`references/format-resolve.js`** / **`references/format-lint.js`** — the format presets, the resolver the builders call, and the linter that holds the inline mirrors to them
+- **`references/skill-lint.js`** — the skill-surface check: routing descriptions, tool lanes, reference links and orphans, manifest parity, the tool count in prose (12 rules; `--list` · `--selftest`)

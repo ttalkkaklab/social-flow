@@ -26,6 +26,16 @@ second; it never touches the third.
 `.work/` is gitignored, but no skill has a step that deletes the directory.
 storyboard creates it with `mkdir -p .work` and writes from the first line.
 
+## Contents
+
+- [Line format](#line-format)
+- [Quantity — an amount in the unit, not a count](#quantity-an-amount-in-the-unit-not-a-count)
+- [The report](#the-report)
+- [Reading exit codes — never read 1 as a pass](#reading-exit-codes-never-read-1-as-a-pass)
+- [The second record — `.work/events.jsonl`](#the-second-record-workeventsjsonl)
+- [Before the money goes out — the approval-screen preview](#before-the-money-goes-out-the-approval-screen-preview)
+- [Related documents](#related-documents)
+
 ## Line format
 
 Three tab-separated columns. The calculator skips comments (`#`) and blank

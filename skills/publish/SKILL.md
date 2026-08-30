@@ -1,12 +1,12 @@
 ---
 name: publish
 description: >
-  This skill should be used when the user asks to "게시해", "올려줘", "SNS 게시",
-  "publish to social", "스레드/인스타/페북/유튜브에 올려", or after production is
-  complete. Takes the finished per-platform content under data/<channel>/episodes/<topic>/output/
-  through account checks, public media hosting, a mandatory HITL approval gate, and
-  publishes via the social-flow MCP platform tools (threads/instagram/facebook/
-  youtube_publish — immediate public post), then records permalinks in publish-log.md.
+  Posts finished episode files to Threads, Instagram, Facebook and YouTube. Use when the
+  user asks to "게시해", "올려줘", "SNS 게시", "publish to social", "스레드/인스타/페북/유튜브에 올려", or once
+  production is done. Takes the per-platform content under
+  data/[channel]/episodes/[topic]/output/ through account checks and public media hosting,
+  stops at a mandatory human approval gate, publishes through the social-flow platform
+  tools as an immediate public post, and records the permalinks in publish-log.md.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
 # *_publish/facebook_comment are deliberately left un-pre-approved — the native
 # permission prompt on every irreversible publish call has to act as a second line of

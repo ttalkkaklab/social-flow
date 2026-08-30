@@ -1,18 +1,15 @@
 ---
 name: topic-scout
 description: >
-  This skill should be used when the user asks to "키워드 찾아", "시장 키워드",
-  "잘 되는 주제", "우리 채널 키워드", "아웃라이어 주제", "지금 뭐가 핫해",
-  "find keywords for my channel", "scout topics", "스레드/X/인스타에서 뭐가
-  이슈야", or wants validated YouTube topics for a channel from what is already
-  working in that niche plus what is being talked about on Threads/X/Instagram
-  right now. Reads profile.md, calls youtube_topic_scout (channel-median ×
-  multiplier, not raw views; default markets US+CN) and sns_issue_scout (SerpApi
-  site: search over threads.com/x.com/instagram.com + Google Trends rising
-  queries — mention counts, not engagement), writes
-  data/<channel>/growth/keywords/market-keywords.md + chart-first HTML with a
-  separate SNS section, and lets the user pick phrases for the storyboard /
-  autoproduce / grow-youtube topic pool.
+  Finds topics that already work in the channel's niche, with the numbers behind them. Use
+  when the user asks to "키워드 찾아", "시장 키워드", "잘 되는 주제", "우리 채널 키워드", "아웃라이어 주제", "지금 뭐가
+  핫해", "find keywords for my channel", "scout topics", "스레드/X/인스타에서 뭐가 이슈야". Reads
+  profile.md, calls youtube_topic_scout (channel-median times a multiplier, never raw
+  views; US and CN markets by default) and sns_issue_scout (site search over threads.com,
+  x.com and instagram.com plus Google Trends rising queries — mention counts, not
+  engagement), writes market-keywords.md and a chart-first HTML page under
+  data/[channel]/growth/keywords/, and lets the user pick phrases for the storyboard,
+  autoproduce and grow-youtube topic pool.
 argument-hint: "<channel> [seed query]"
 allowed-tools: ["Read", "Write", "Glob", "Bash", "AskUserQuestion",
   "mcp__social-flow__youtube_topic_scout", "mcp__social-flow__sns_issue_scout",

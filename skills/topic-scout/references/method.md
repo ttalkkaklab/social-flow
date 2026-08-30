@@ -3,6 +3,16 @@
 The source of truth for what `youtube_topic_scout` does and how the agent should
 split the seeds.
 
+## Contents
+
+- [Why not absolute views](#why-not-absolute-views)
+- [Markets — US and China by default](#markets-us-and-china-by-default)
+- [How to split the seeds](#how-to-split-the-seeds)
+- [Do one thing better](#do-one-thing-better)
+- [Quota](#quota)
+- [SNS issues — Threads, X, and Instagram use a different yardstick](#sns-issues-threads-x-and-instagram-use-a-different-yardstick)
+- [What this skill does not do](#what-this-skill-does-not-do)
+
 ## Why not absolute views
 
 The same 100k views means something different on every channel. Treat a big

@@ -1,12 +1,12 @@
 ---
 name: channel
 description: >
-  This skill should be used when the user asks to "채널 만들어", "채널 추가",
-  "채널 목록", "프로파일 수정", "add a channel", "set up a content channel",
-  or wants to create/update the per-channel directory and profile under data/.
-  Creates data/<slug>/profile.md defining target audience, tone, TTS voice, visual
-  theme, target platforms, and fact-check policy — the SoT every storyboard/produce/publish
-  run reads first.
+  Creates and edits the per-channel profile.md that every other skill reads first. Use
+  when the user asks to "채널 만들어", "채널 추가", "채널 목록", "프로파일 수정", "add a channel", "set up a
+  content channel", or wants to create or update the channel directory under data/. Writes
+  data/[slug]/profile.md — target audience, tone, TTS voice, visual theme, target
+  platforms, fact-check policy — the source of truth every storyboard, produce and publish
+  run opens before anything else.
 argument-hint: "[add|list|update|serve] [channel-name]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate"]
 ---

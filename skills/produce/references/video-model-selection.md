@@ -1,5 +1,9 @@
 # Video engine selection — Veo and Seedance
 
+> **Freshness** — verified 2026-08-25 · source: vendor documentation plus our own generation
+> runs (each claim carries its own measurement date inline) · recheck every 90 days, and when
+> either vendor ships a model tier.
+
 This plugin has two video generation engines. They're not substitutes — they're good at
 different things.
 
@@ -17,6 +21,26 @@ are unverified grade, so cross-engine cost comparisons are trustworthy to the or
 magnitude, not to the multiplier.
 
 ---
+
+## Contents
+
+- [The four selection rules — decide in this order](#the-four-selection-rules-decide-in-this-order)
+- [One-line decisions](#one-line-decisions)
+- [The one axis that splits them — does the segment use its sound?](#the-one-axis-that-splits-them-does-the-segment-use-its-sound)
+- [Price comparison](#price-comparison)
+- [Quality — blind arena rankings](#quality-blind-arena-rankings)
+  - [Three things to read from it](#three-things-to-read-from-it)
+  - [The four models with no evaluation yet](#the-four-models-with-no-evaluation-yet)
+  - [Where not to take the ranking at face value](#where-not-to-take-the-ranking-at-face-value)
+- [The traps this pipeline hits](#the-traps-this-pipeline-hits)
+  - [The character panels — how a channel cast is stored](#the-character-panels-how-a-channel-cast-is-stored)
+- [The seven models — what differs](#the-seven-models-what-differs)
+- [Prompt grammar — the two engines differ](#prompt-grammar-the-two-engines-differ)
+  - [Positive locks — what an exclusion turns into on Seedance](#positive-locks-what-an-exclusion-turns-into-on-seedance)
+  - [The batch-failure ladder — which level to change](#the-batch-failure-ladder-which-level-to-change)
+- [Camera — this section is the source of truth for engine vocabulary and routing](#camera-this-section-is-the-source-of-truth-for-engine-vocabulary-and-routing)
+- [What Seedance can't do](#what-seedance-cant-do)
+- [Key setup](#key-setup)
 
 ## The four selection rules — decide in this order
 

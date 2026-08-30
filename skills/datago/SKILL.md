@@ -1,12 +1,12 @@
 ---
 name: datago
 description: >
-  This skill should be used when the user asks to "공공데이터 찾아줘", "공공데이터포털 검색",
-  "정부 데이터로", "data.go.kr 에서", "공공 API", "파일데이터 받아줘", "find public data",
-  or when storyboard research needs official government statistics/datasets as content
-  seeds. Searches data.go.kr datasets (OpenAPI + file data) with the datago_* tools,
-  collects file originals (no auth) or API rows (auth key + per-API approval), and
-  records them as sourced research seeds for content creation.
+  Searches data.go.kr for official Korean government datasets and files. Use when the user
+  asks to "공공데이터 찾아줘", "공공데이터포털 검색", "정부 데이터로", "data.go.kr 에서", "공공 API", "파일데이터 받아줘",
+  "find public data", or when storyboard research needs government statistics as content
+  seeds. Searches OpenAPI and file datasets with the datago tools, pulls file originals
+  (no auth) or API rows (auth key plus a per-API approval that takes time), and records
+  what it finds as sourced research seeds.
 argument-hint: "<search topic> [channel]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "WebFetch", "WebSearch", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__naver_search"]
 ---
