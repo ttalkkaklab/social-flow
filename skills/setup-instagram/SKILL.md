@@ -1,18 +1,16 @@
 ---
 name: setup-instagram
 description: >
-  This skill should be used when the user asks to "인스타 채널 개설", "인스타그램
-  계정 만들어", "인스타 API 연동해줘", "릴스 붙여줘", "set up an Instagram
-  channel/account", or wants to stand up a LIVE Instagram (professional) account for a
-  channel and wire it into social-flow. Drives account signup, professional conversion,
-  profile branding, Meta app tester setup (Instagram API with Instagram Login — NOT
-  Basic Display), and OAuth token issuance through a browser lane — ego lite first,
-  the claude-in-chrome tools as fallback — with HITL handoffs (login·verification
-  code·consent), then saves the 60-day token to
-  <SNS_TOKEN_DIR>/<slug>/instagram_token and verifies with sns_account_check.
-  Resumable — detects what is already done and continues from the first unfinished step.
+  Opens a live Instagram professional account and wires its token into social-flow. Use
+  when the user asks to "인스타 채널 개설", "인스타그램 계정 만들어", "인스타 API 연동해줘", "릴스 붙여줘", "set up an
+  Instagram channel/account". Drives signup, professional conversion, profile branding,
+  Meta app tester setup (Instagram API with Instagram Login, not Basic Display) and OAuth
+  token issuance in the browser through ego lite, handing the screen to the user for
+  login, verification codes and consent, then saves the 60-day token under
+  SNS_TOKEN_DIR/[slug]/instagram_token and verifies it with sns_account_check. Resumable —
+  it detects what is already done and continues from the first unfinished step.
 argument-hint: "<channel> [status|signup|brand|token]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__claude-in-chrome__tabs_context_mcp", "mcp__claude-in-chrome__tabs_create_mcp", "mcp__claude-in-chrome__tabs_close_mcp", "mcp__claude-in-chrome__navigate", "mcp__claude-in-chrome__javascript_tool", "mcp__claude-in-chrome__computer"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check"]
 ---
 
 # Instagram channel setup — browser HITL
@@ -41,47 +39,40 @@ user**:
 - **Verification codes · reCAPTCHA · birthdate** — human gates. A reCAPTCHA
   challenge appears when web login is automated.
 
-The handoff works differently per lane — ego lite: `handOffTaskSpace` → confirm
-the user is done → `takeOverTaskSpace`. In the Chrome lane the screen belongs to
-the user from the start, so there's no exposure step; just confirm completion.
+Hand the screen over with `handOffTaskSpace`, confirm the user is done, then
+reclaim it with `takeOverTaskSpace`. An agent task space is invisible in the GUI
+until that handoff, so skipping it leaves the user pressing nothing.
 
 ## Prerequisites
 
 - `data/<slug>/profile.md` must exist — if not, point to `/social-flow:channel add`
   and stop.
-- **One browser lane** — ego lite or claude-in-chrome. How to pick: §Browser
-  lanes below.
+- **ego lite** — the browser lane. Details: §Browser lane below.
 - A Meta developer app (Instagram product). Keep the App ID/Secret in the channel
   directory's app env file.
 - **Professional account required** — a personal account can't integrate with the
   Graph API at all. Convert to business/creator during setup. Account type can't
   be changed via API — it's app/web UI only.
 
-## Browser lanes — ego lite first, Chrome fallback
+## Browser lane — ego lite only
 
-Browser control has three paths; pick from the top.
+`ego lite` is the one browser lane. Check for it with `command -v ego-browser`.
+It reuses the user's login state inside an agent-only task space, so it never
+collides with the user's own tabs, and every field-tested recipe below is written
+against it (`references/setup-playbook.md`).
 
-1. **ego lite** — check with `command -v ego-browser`. It reuses the user's login
-   state while running in an agent-only task space, so it doesn't collide with
-   the user's tabs. The field-tested recipes are written against this lane
-   (`references/setup-playbook.md`).
-2. **claude-in-chrome** — when ego isn't there. Windows/Linux are the typical
-   case (ego lite is macOS-only). It attaches to the user's real Chrome session
-   and reuses login state as-is, but **there is no isolation** — it occupies the
-   user's browser while working, and per-site permission approval must be granted
-   first. For the mapping to the CDP recipes, see the table in the playbook's
-   §Browser lanes.
-3. **Manual fallback** — with neither, go to §Manual fallback below (helps with
-   token issuance only).
+**There is no second lane.** ego lite runs on macOS only. Where it is missing —
+Windows, Linux, a machine without it installed — say so and stop. Don't reach for
+another browser tool. What still works without a browser is §Manual fallback
+below (token issuance only).
 
-Whichever lane, **the human gates stay the same** — the login button,
-verification codes, and CAPTCHAs get pressed by the user in every lane. The
-soft-blocks fired even with ego's trusted clicks, so don't expect the Chrome lane
-to punch through either.
+**The human gates stay the same** — the login button, verification codes, and
+CAPTCHAs get pressed by the user. Meta's soft-blocks fired even on ego's trusted
+clicks, so plan for the handoff rather than around it.
 
-**Shared-account protection needs extra care on the Chrome lane** — it's the
-user's real browser, so another brand's IG session may be sitting there alive.
-For logout, follow absolute rule 3 as written: get the user's approval first.
+**Another brand's IG session may already be alive in the task space.** Before
+logging anyone out, follow absolute rule 3 as written: get the user's approval
+first.
 
 ## Absolute rules (stop immediately on violation)
 

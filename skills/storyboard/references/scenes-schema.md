@@ -4,6 +4,43 @@
 consumes after storyboard approval. `video-template.html` loads it with
 `<script src="./scenes.js">`.
 
+## Contents
+
+- [Overall structure](#overall-structure)
+- [Format — `window.FORMAT`](#format-windowformat)
+- [Grammar units and production layers](#grammar-units-and-production-layers)
+- [Playback order — one skeleton, two arcs (`arc`)](#playback-order-one-skeleton-two-arcs-arc)
+- [Fields common to every shot](#fields-common-to-every-shot)
+  - [narration segments](#narration-segments)
+  - [title is a spoken hook · narration explains in polite register (user directive, 2026-08-13)](#title-is-a-spoken-hook-narration-explains-in-polite-register-user-directive-2026-08-13)
+  - [visual plan](#visual-plan)
+- [Contracts by type](#contracts-by-type)
+  - [cover — the result (answer-first) or the moment (story) in the first second, the promise in the first three](#cover-the-result-answer-first-or-the-moment-story-in-the-first-second-the-promise-in-the-first-three)
+  - [hooking — the shot after the cover. It hooks why they should stay](#hooking-the-shot-after-the-cover-it-hooks-why-they-should-stay)
+  - [points — one message per screen](#points-one-message-per-screen)
+  - [quote — speech / quotation](#quote-speech-quotation)
+  - [Claim traceability (`claim`) — which research entry a sentence rests on](#claim-traceability-claim-which-research-entry-a-sentence-rests-on)
+  - [Scene transition (`transition`) — the boundary before this shot](#scene-transition-transition-the-boundary-before-this-shot)
+  - [Camera — the four slots (`visual.camera`)](#camera-the-four-slots-visualcamera)
+  - [Frame space (`shot.space`)](#frame-space-shotspace)
+  - [Character reference (`visual.character`)](#character-reference-visualcharacter)
+  - [Clip audio (`visual.audio`)](#clip-audio-visualaudio)
+  - [Clip prompt — one scene, one call, the prompt stored here](#clip-prompt-one-scene-one-call-the-prompt-stored-here)
+  - [Music cues (`window.MUSIC` · `sound`)](#music-cues-windowmusic-sound)
+  - [Cut length (`duration`) — decided by what the cut is for](#cut-length-duration-decided-by-what-the-cut-is-for)
+  - [Motion background (`visual.video`) — a scene background from image to video](#motion-background-visualvideo-a-scene-background-from-image-to-video)
+  - [broll — a generated-video stretch (reference only) · spliced between scenes](#broll-a-generated-video-stretch-reference-only-spliced-between-scenes)
+  - [outro — a brand close with a next value (reference only)](#outro-a-brand-close-with-a-next-value-reference-only)
+  - [chapter — long-form chapters (`youtube-long-16x9` only)](#chapter-long-form-chapters-youtube-long-16x9-only)
+  - [Filmed scenes — clips the user shot themselves (`visual.source: "recording"`)](#filmed-scenes-clips-the-user-shot-themselves-visualsource-recording)
+  - [Screencast splice — one recorded screen inside an ordinary episode (`visual.source: "screencast"`)](#screencast-splice-one-recorded-screen-inside-an-ordinary-episode-visualsource-screencast)
+  - [The authored-screen lane — three kinds under one key (`visual.slide.kind`)](#the-authored-screen-lane-three-kinds-under-one-key-visualslidekind)
+  - [Slide scenes — a screen where text and shapes are the subject (`visual.slide`)](#slide-scenes-a-screen-where-text-and-shapes-are-the-subject-visualslide)
+  - [Motion slides — a slide whose numbers move (`visual.slide.motion: true`)](#motion-slides-a-slide-whose-numbers-move-visualslidemotion-true)
+  - [Kinetic type — the words are the picture (`visual.slide.kind: "kinetic"`)](#kinetic-type-the-words-are-the-picture-visualslidekind-kinetic)
+  - [Character act — someone reacting on screen (`visual.slide.kind: "character"`)](#character-act-someone-reacting-on-screen-visualslidekind-character)
+- [Authoring verification checklist (the storyboard skill's self-check before requesting approval)](#authoring-verification-checklist-the-storyboard-skills-self-check-before-requesting-approval)
+
 ## Overall structure
 
 ```js

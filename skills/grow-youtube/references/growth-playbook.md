@@ -13,6 +13,18 @@ Platform-wide style and publishing rules live in
 **growth-loop tactics only**. The companion guide for human readers is
 `docs/guides/youtube-shorts-growth/index.html`.
 
+## Contents
+
+- [Principle — what creates reach](#principle-what-creates-reach)
+- [Hook and length](#hook-and-length)
+- [AI disclosure — this pipeline's core rule](#ai-disclosure-this-pipelines-core-rule)
+- [Mass repetitive production — this pipeline's second risk (researched 2026-08-15)](#mass-repetitive-production-this-pipelines-second-risk-researched-2026-08-15)
+- [Funnel — where to send Shorts viewers](#funnel-where-to-send-shorts-viewers)
+- [§Replies (inbox handling)](#replies-inbox-handling)
+- [Observed metrics (weekly 4)](#observed-metrics-weekly-4)
+- [Do not cite — folklore rejected in verification](#do-not-cite-folklore-rejected-in-verification)
+- [Verification failures — what we have to admit we don't know](#verification-failures-what-we-have-to-admit-we-dont-know)
+
 ## Principle — what creates reach
 
 **[official]** The primary Shorts performance metric is Studio's "How many

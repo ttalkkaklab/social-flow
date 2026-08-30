@@ -9,6 +9,14 @@ working practice, marked as such, and the way to settle them is an A/B in our ow
 
 ---
 
+## Contents
+
+- [1. Levels — the part with evidence](#1-levels-the-part-with-evidence)
+- [2. What the builder does with all that](#2-what-the-builder-does-with-all-that)
+- [3. Cues — this part is craft](#3-cues-this-part-is-craft)
+- [4. Generating a bed](#4-generating-a-bed)
+- [5. What did not survive](#5-what-did-not-survive)
+
 ## 1. Levels — the part with evidence
 
 **The bed sits 10 LU under the speech.** Two independent listening experiments from the same

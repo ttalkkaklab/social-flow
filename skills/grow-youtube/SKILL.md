@@ -1,15 +1,14 @@
 ---
 name: grow-youtube
 description: >
-  This skill should be used when the user asks to "유튜브 키워", "쇼츠 성장 루프",
-  "유튜브 성장 틱", "grow the YouTube channel", or wants the autonomous YouTube
-  growth loop. Runs ONE growth tick for a channel — replies to inbox comments
-  (golden hour first), snapshots channel/video analytics, refills the publish
-  queue by authoring a new short end-to-end when it runs dry (autoproduce), and
-  publishes queue-marked videos in plan-defined slots — fully autonomously within
-  the standing authorization of data/<channel>/growth/youtube/growth-plan.md.
-  Recur with /loop <interval> /social-flow:grow-youtube <channel>. First run:
-  /social-flow:grow-youtube <channel> init.
+  Runs one autonomous YouTube Shorts growth tick — reply, measure, refill, publish. Use
+  when the user asks to "유튜브 키워", "쇼츠 성장 루프", "유튜브 성장 틱", "grow the YouTube channel", or
+  wants the growth loop running. One tick replies to inbox comments (golden hour first),
+  snapshots channel and video analytics, refills the publish queue by authoring a new
+  short end to end through autoproduce when it runs dry, and publishes queue-marked videos
+  in the plan's slots — all inside the standing authorization in
+  data/[channel]/growth/youtube/growth-plan.md. Recur with /loop [interval]
+  /social-flow:grow-youtube [channel]. First run needs the init argument.
 argument-hint: "<channel> [init|tick|status]"
 # ⚠️ Deliberate pre-authorization — this skill is an **explicit exception** to the
 # plugin's "no pre-authorized publish tools" contract (same rationale as
@@ -196,31 +195,14 @@ judged by the time of our last reply within the thread, so a new comment that
 arrived **after** our reply stays unanswered and gets picked up correctly. Pass
 a nested-comment id and the tool re-targets the thread root.
 
-**Copy passes the style gate before sending** — replies are person-to-person
-conversation, where AI tells get caught fastest.
+**Both gates run before the reply goes out** — the machine style check
+(`check-style.py --surface reply`) and then the growth-post-reviewer agent, batched once
+per tick. Only copy with score ≥95 and p0=0 gets sent, fixes are by deletion only, and a
+reply that hasn't cleared in 3 rounds is skipped and logged. The contract, the exact
+command, and what to attach per platform: [reply-gate.md](../platform-guide/references/reply-gate.md).
 
-```bash
-CS=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py
-printf '%s\n' "$reply_copy" | python3 $CS --surface reply -; echo "gate_exit=$?"
-```
-
-exit 2 (S1) means fix, then send. Rules: platform-guide
-`references/korean-style.md`.
-
-**Read the detection list even on exit 0** — S2 only deducts points and passes,
-so "green means send" kills the gate. **If C7 (no long sentence) fires, don't
-send as-is**: the copy is all short sentences, so lengthen one or re-pick the
-subject and hook.
-
-**Copy that passed the machine gate goes to the growth-post-reviewer agent for
-adversarial verification** — delegate the tick's reply copy as one batch
-(`inbox_reply` surface), and attach, per copy, the original comment and the
-title and description of our video it was left on (without these the context
-axis scores 0). Include the `growth-plan.md` and `profile.md` paths and the
-self-check exit codes. **Only copy with score ≥95 and p0=0 gets sent.** Fix a
-FAIL by deletion only, per the correction directives — planting a simile or
-stock phrase that wasn't there is a fresh AI tell. Max 3 rounds; if it never
-clears, don't send that reply and log it in growth-log as `skipped (gate NN)`.
+YouTube's row in that table: attach the original comment and **the title and description
+of our video** it was left on.
 
 Spam and hate comments get no reply, only a mention in the next tick summary
 (hiding is outside autonomous scope — YouTube has no tool support anyway;

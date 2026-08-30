@@ -1,11 +1,10 @@
 ---
 name: review-recent
 description: >
-  This skill should be used when the user asks to "최근 영상 피드백", "유튜브 인스타
-  평가", "게시분 보고서", "지표 보고서 만들어", "review recent posts", "feedback on
-  the last videos", or wants a YouTube + Instagram report on the latest published
-  videos. Calls content_feedback for the last 5 posts per platform, writes a
-  chart-first HTML report under data/<channel>/growth/review-recent.html, and
+  Reports how the last few published videos did on YouTube and Instagram. Use when the
+  user asks to "최근 영상 피드백", "유튜브 인스타 평가", "게시분 보고서", "지표 보고서 만들어", "review recent posts",
+  "feedback on the last videos". Calls content_feedback for the last 5 posts per platform,
+  writes a chart-first HTML report under data/[channel]/growth/review-recent.html, and
   opens it.
 argument-hint: "<channel> [limit]"
 allowed-tools: ["Read", "Write", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__content_feedback"]
