@@ -31,14 +31,19 @@
  * an image or video that would not load (wrong path, or a codec this Chrome has no decoder for),
  * a capture whose size isn't the canvas, Chrome exiting mid-render, a CDP call over 30s.
  *
- * Determinism check: run twice into two dirs and `diff -rq` the frame PNGs (--keep-frames).
- * Measured on Chrome 152 / M4: ~20 fps capture at 1080×1920, 144/144 frames byte-identical.
+ * Determinism check: the same (g, t) draws the same picture, but byte-identity across renders is
+ *   NOT guaranteed — Chrome's compositor leaves sub-pixel antialiasing differences on some runs
+ *   even with Animation.ready awaited, and it predates this renderer. Four consecutive renders
+ *   coming out byte-identical and the fifth differing is a measured outcome, so a two-run
+ *   `diff -rq` gives false passes and false failures alike. Render six to eight times
+ *   (--png-only --keep-frames) and count how many classes the output falls into.
+ * Measured on Chrome 152 / M4: ~20 fps capture at 1080×1920.
  *
  * What a page can move (template head · scenes-schema §motion slides): CSS @keyframes,
  *   data-count count-ups, a painter registered with __paint(rg, durMs, fn) that draws the
  *   frame at t (canvas/SVG — the path for rotation, traces, anything keyframes can't express),
  *   and <video data-rg data-vfrom data-vdur> seeked by currentTime. All four are functions of
- *   (g, t) alone, which is what keeps a re-render byte-identical. WebGL works too — Chrome
+ *   (g, t) alone, which is what makes a re-render draw the same picture. WebGL works too — Chrome
  *   runs it on SwiftShader here, so those pixels are reproducible on the same machine rather
  *   than across machines. Video has to be H.264 or VP9; HEVC won't decode under --disable-gpu.
  *
@@ -346,12 +351,14 @@ const openPage = async () => {
   // Every worker keeps its own counter, so ask them all — the tab that captured the offending
   // group may not be the one this loop started from.
   const metasAfter = await Promise.all(workers.map(w => w.evalJS("window.__meta()")));
+  // meta.stray is necessarily 0 here — a non-zero one already died at the pre-capture check
+  // above — so the sum across workers IS the delta. Don't subtract a baseline that isn't there.
   const metaAfter = {
-    stray: metasAfter.reduce((n, m) => n + m.stray, 0) - meta.stray * (workers.length - 1),
+    stray: metasAfter.reduce((n, m) => n + m.stray, 0),
     broken: metasAfter.flatMap(m => m.broken || []),
   };
-  if (metaAfter.stray > meta.stray)
-    return die(`${metaAfter.stray - meta.stray} frame(s) were captured with an animation running outside a ` +
+  if (metaAfter.stray > 0)
+    return die(`${metaAfter.stray} frame(s) were captured with an animation running outside a ` +
                `[data-rg] group ` +
                `— a painter attaching nodes outside its group, or a video playing itself. Each was pinned to ` +
                `t=0 so the frames are still reproducible, but nothing moved where the author expected. ` +

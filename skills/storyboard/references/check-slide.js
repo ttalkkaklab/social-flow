@@ -142,22 +142,26 @@ function checkDir(dir, only) {
        마크업을 짜는 것이 관례다. `${…}` 와 백틱이 그 표시이고, 따옴표 연결
        ('<img src="' + S.photo + '"')은 캡처가 빈 문자열로, url("url(" + S.photo + ")") 꼴은
        공백을 낀 조각으로 떨어지는 것이 그 표시다. `+` 자체는 파일 이름에 흔한 글자라 조립의
-       표시로 쓰지 않는다 — 경로에 공백은 안 쓰고(CSS url() 은 따옴표 없이 공백을 못 받는다)
-       URL 은 %20 으로 인코딩한다. */
-    const dynamic = u => u === "" || /\$\{|`|\s/.test(u);
+       표시로 쓰지 않는다 — 값의 끝에 걸리거나 공백에 둘러싸인 `+` 만 조립으로 본다
+       (`"url(" + S.photo + ")"` 의 캡처는 trim 뒤 `+ S.photo +` 다). 값은 trim 한 뒤에 보는데,
+       CSS 가 허용하는 `url( a.gif )` 의 패딩 공백이 캡처에 딸려 오기 때문이다. 파일 이름 안의
+       공백(`my chart.gif`)과 가운데 `+`(`chart+2024.png`)는 경로이지 조립이 아니다. */
+    const dynamic = u => u === "" || /\$\{|`|^\+|\+$|\s\+\s/.test(u);
     // 그림이 앉는 자리 — 확장자를 보는 것은 이것뿐이다. 영상 소스는 여기 넣지 않는다.
     const imgUrls = [];
-    for (const m of code.matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1]);
-    for (const m of code.matchAll(/<video\b[^>]*\bposter\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1]);
-    for (const m of code.matchAll(/url\(\s*["']?([^"')]+)/gi)) imgUrls.push(m[1]);
+    for (const m of code.matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1].trim());
+    for (const m of code.matchAll(/<video\b[^>]*\bposter\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1].trim());
+    for (const m of code.matchAll(/url\(\s*["']?([^"')]+)/gi)) imgUrls.push(m[1].trim());
 
     /* 원격 소재는 갈래를 안 가린다 — 정지든 모션이든 네트워크가 프레임을 정하면 재현이 끝난다.
        무엇을 보느냐가 아니라 무엇을 빼느냐로 짠다 — 자리를 열거하면 <script>·<iframe>·<use>
        처럼 안 적은 자리가 통째로 무검사가 된다. 빼는 것은 출처 링크(<a href>) 하나다. */
-    for (const m of code.matchAll(/(?:src|href)\s*=\s*["'](https?:\/\/[^"']+)["']|url\(\s*["']?(https?:\/\/[^"')]+)/gi)) {
-      const u = m[1] || m[2];
-      const before = code.slice(Math.max(0, m.index - 200), m.index);
-      if (/<a\b[^>]*$/i.test(before)) continue;                              // 출처 링크는 프레임을 정하지 않는다
+    const anchors = [...code.matchAll(/<a\b[^<>]*>/gi)].map(m => [m.index, m.index + m[0].length]);
+    for (const m of code.matchAll(/(?<![-\w])(?:src|href)\s*=\s*["'](https?:\/\/[^"']+)["']|url\(\s*["']?(https?:\/\/[^"')]+)/gi)) {
+      const u = (m[1] || m[2]).trim();
+      // 출처 링크는 프레임을 정하지 않는다 — <a …> 태그 안의 href 만 건너뛴다. <a> 안에 든
+      // <img src> 는 태그 밖이라 그대로 잡힌다.
+      if (anchors.some(([a, b]) => m.index >= a && m.index < b)) continue;
       if (/fonts\.googleapis|\.(woff2?|ttf|otf)(\?|$)/i.test(u)) continue;   // 폰트는 webfont 규칙이 본다
       fail(base, MSG.remoteMedia(u));
     }
@@ -249,6 +253,18 @@ function selftest() {
     // 재리뷰가 잡은 회귀 — 2923b7b 에서 통과하던 것이 iteration 1 에서 막혔다 (high A)
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; out += '<img src="' + S.photo + '" alt="">';`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/chart+2024.png">`, []],
+    // 3차 리뷰가 잡은 미탐 — 공백이 낀 표기가 확장자 검사를 건너뛰었다 (medium 2)
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{background:url( assets/spin.gif )}</style>`,
+      [MSG.animatedImage("assets/spin.gif")]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="assets/my chart.gif">`,
+      [MSG.animatedImage("assets/my chart.gif")]],
+    // <a> 로 시작하는 문자열 리터럴을 열린 태그로 오인했다 (low 1)
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; const OPEN = "<a class='src'"; <img src="https://cdn.example.com/x.png">`,
+      [MSG.remoteMedia("https://cdn.example.com/x.png")]],
+    // 진짜 출처 링크는 그대로 통과한다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <a href="https://www.bok.or.kr/x"><img src="assets/a.png"></a>`, []],
+    // 아무것도 안 가져오는 속성은 원격으로 보지 않는다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <div data-src="https://cdn.example.com/x.png"></div>`, []],
     // 재리뷰가 잡은 미탐 — 원격 검사가 자리를 열거하다 놓친 것들 (high B)
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <script src="https://cdn.example.com/chart.js"></script>`,
       [MSG.remoteMedia("https://cdn.example.com/chart.js")]],

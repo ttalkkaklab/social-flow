@@ -1752,12 +1752,12 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   exists only after a property change, so it can't be seeked). `Date` · `Math.random` · `performance.now` · `requestAnimationFrame` ·
   `setTimeout` are forbidden, inside a painter too — the frame is whatever `__seek(t, g)`
   says, and the same `(g, t)` draws the same picture.
-  **Byte-identity across re-renders is not guaranteed**, and never was: Chrome's compositor
-  still leaves sub-pixel antialiasing differences on some renders even with `Animation.ready`
-  awaited (measured PSNR ~69 dB — invisible, and present before this lane existed). A slide
-  that renders identically twice can differ on the sixth run. When you need to check
-  determinism, render six to eight times and look at how many classes the output falls into,
-  not whether two runs match; a two-run diff gives false passes and false failures alike.
+  **Byte-identity across re-renders is not guaranteed**: Chrome's compositor still leaves
+  sub-pixel antialiasing differences on some renders even with `Animation.ready` awaited
+  (measured PSNR 55–72 dB — invisible at either end, and it predates this commit). Four
+  consecutive renders coming out identical and the fifth differing is a measured outcome, so a
+  two-run diff gives false passes and false failures alike. When you need to check determinism,
+  render six to eight times and count how many classes the output falls into.
 - Local fonts only, as on every slide — and local images and video, for the same reason.
   A remote URL makes the network decide the frame; `check-slide.js` fails on one. Stills are
   png or jpg — a gif, an apng, an animated webp or an SVG SMIL animation runs on the wall clock
