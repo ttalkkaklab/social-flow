@@ -5,14 +5,22 @@ hang the helpers as badly as Meta, but **grabbing the wrong active channel
 contaminates someone else's brand channel**, so the channel check at every step
 comes first.
 
-## Browser lanes and driving principles
+## Contents
 
-There are two lanes — ego lite first, claude-in-chrome when it's absent
-(SKILL.md §Browser lanes). The per-step recipes below are written against the
-ego lane, but the skeleton of the driving is standard CDP, so it carries over to
-the Chrome lane almost as-is.
+- [Browser lane and driving principles](#browser-lane-and-driving-principles)
+- [Step 1 · Advanced-features identity verification](#step-1-advanced-features-identity-verification)
+- [Step 2 · Brand channel creation + branding (after approval)](#step-2-brand-channel-creation-branding-after-approval)
+- [Step 3 · OAuth authorize + loopback listener (code recovery)](#step-3-oauth-authorize-loopback-listener-code-recovery)
+- [Step 4 · code → refresh_token exchange (browser-independent — curl)](#step-4-code-→-refresh_token-exchange-browser-independent-curl)
+- [Verification & trap roundup](#verification-trap-roundup)
 
-### ego lite lane (default)
+## Browser lane and driving principles
+
+There is one lane — ego lite (SKILL.md §Browser lane). Every per-step recipe
+below is written against it. Without ego lite, stop and tell the user; SKILL.md
+§Manual fallback covers what is left.
+
+### Driving ego lite
 
 First load `~/.claude/skills/ego-browser/SKILL.md` to check CLI usage.
 Invoke via an `ego-browser nodejs <<'EOF' ... EOF` heredoc.
@@ -28,33 +36,6 @@ Invoke via an `ego-browser nodejs <<'EOF' ... EOF` heredoc.
   this browser's Google session can see. If a brand other than the setup target
   is active, switch with the channel switcher and re-confirm via the URL's
   channel ID before proceeding.
-
-### Chrome lane (claude-in-chrome)
-
-Map the CDP calls above like this. Tool names may carry different prefixes
-depending on how they're loaded, so confirm the actual names with `/mcp` first.
-
-| ego lane | Chrome lane |
-|---|---|
-| `cdp('Page.navigate',{url})` | `navigate` |
-| `cdp('Runtime.evaluate',{expression,returnByValue:true})` | `javascript_tool` — both DOM reads and value entry |
-| `cdp('Input.dispatchMouseEvent', …)` trusted click | `computer` |
-| `cdp('Target.getTargets',{})` → `switchTab(targetId)` | tab tools — get the list with `tabs_context_mcp` and switch |
-| `useOrCreateTaskSpace` isolation | none — occupies the user's browser while working |
-| `handOffTaskSpace`/`takeOverTaskSpace` | not needed — the screen is already the user's, so just confirm completion |
-
-At session start, check the current tabs first with `tabs_context_mcp`, and work
-in a new tab. Don't take over tabs the user left open.
-
-**The active-channel check matters more on this lane** — it's the user's daily
-browser, so the odds that another brand's channel is active are higher than on
-the ego lane. Before every action, read the channel ID from the URL to confirm
-it's the setup target; if not, switch with the channel switcher and check again.
-
-**This lane is untested on the Google console.** On the first run, note where it
-gets stuck and write it into this document. In particular, how `computer`'s
-click behaves on the consent screen's scope checkboxes has never been tried —
-verify on screen that each check actually landed before proceeding.
 
 ## Step 1 · Advanced-features identity verification
 

@@ -44,3 +44,6 @@ jobs:
       - run: node skills/channel/references/serve.js --selftest
       # inline format mirrors, and the seek runtime the three authored-screen templates share
       - run: node skills/platform-guide/references/format-lint.js
+
+      # the skill surface: routing descriptions, tool lanes, reference links, manifest parity
+      - run: node skills/platform-guide/references/skill-lint.js --selftest

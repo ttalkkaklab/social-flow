@@ -5,6 +5,16 @@ credential file exists** in ListTools (evaluated at request time — adding a fi
 effect without a server restart. If either the default token or the channel directory
 has the file, that platform's tool shows up).
 
+## Contents
+
+- [File convention — per-channel directories](#file-convention-per-channel-directories-the-default-convention)
+- [Issuance procedures in brief](#issuance-procedures-in-brief)
+  - [Threads](#threads)
+  - [Instagram](#instagram)
+  - [Facebook page](#facebook-page)
+  - [YouTube](#youtube)
+- [On expiry or failure](#on-expiry-or-failure)
+
 ## File convention — per-channel directories (the default convention)
 
 **One channel (brand) = one directory** — use the same slug as `data/<slug>/`.

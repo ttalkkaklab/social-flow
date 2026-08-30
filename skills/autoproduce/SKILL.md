@@ -1,19 +1,19 @@
 ---
 name: autoproduce
 description: >
-  This skill should be used when the user asks to "이 주제로 영상 하나 만들어",
-  "주제만 주면 영상까지 만들어줘", "자동으로 쇼츠 만들어", "make a short about X
-  end to end", or when a growth loop needs to refill its publish queue by itself.
-  Takes a single topic and runs the whole chain unattended — research with the
-  search tools, author scenes.js, generate 9:16 backgrounds, synthesize narration,
-  build the 9:16 video (clean master + burned copy + subs.srt) and per-platform
-  text under data/<channel>/episodes/<topic>/output/ — on the cheapest model tier that
-  works, escalating only when measured metrics say the hook is failing. Machine
-  gates (fact verification, style checker, six one-round storyboard-reviewer reads —
-  copy, every single scene, the vocabulary of every narration and title, the camera plan,
-  the sound plan, and the generated images — build report, content-reviewer copy ≥95 with
-  zero P0, cost cap) stand in for the human approval gates of storyboard/produce. The six
-  reads don't score-gate; an unresolved P0 is what stops the run.
+  Runs one topic all the way to shipped files with no human gate — the unattended twin of
+  storyboard plus produce. Use when the user asks to "이 주제로 영상 하나 만들어", "주제만 주면 영상까지
+  만들어줘", "자동으로 쇼츠 만들어", "make a short about X end to end", or when a growth loop needs to
+  refill its publish queue by itself. Researches with the search tools, authors scenes.js,
+  generates 9:16 backgrounds, synthesizes narration, and builds the video (clean master,
+  burned copy, subs.srt) plus the per-platform text under
+  data/[channel]/episodes/[topic]/output/ — on the cheapest model tier that works,
+  escalating only when measured metrics say the hook is failing. Eleven machine gates
+  replace the human approval: fact verification, style checker, six one-round
+  storyboard-reviewer reads, build report, content-reviewer copy at 95 or above with zero
+  P0, and a cost cap. The reads don't score-gate; an unresolved P0 stops the run. Boundary
+  — storyboard plans and stops, produce builds an approved episode, autoproduce does both
+  without stopping.
 argument-hint: "<channel> \"<topic>\" [unattended]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
@@ -609,10 +609,10 @@ pipeline's worst possible accident.
 ### 8. Render & build (gate 3)
 
 Build with `build-reel.sh`, following produce skill §2 (frame.html
-regeneration) · §4 (reveal capture) · §6 (manifest) as-is. Unattended mode may
-not be able to do the chrome-devtools overflow check, so instead verify the
-captured state PNGs are non-zero-size and the per-scene state counts match the
-manifest.
+regeneration) · §4 (reveal capture) · §6 (manifest) as-is. The overflow check
+runs here too — produce §4's `--dump-dom` one-liner needs no browser tooling, so
+unattended mode gets the same `ovf=0` verdict. On top of it, verify the captured
+state PNGs are non-zero-size and the per-scene state counts match the manifest.
 
 The `build-report.txt` verdict follows `../produce/references/pipeline.md`
 §report gate table.

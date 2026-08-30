@@ -12,6 +12,22 @@ their own purpose. Checks run only on `output/` artifacts and `scenes.js` narrat
 
 `check-style.py` delivers the verdict. This document holds the why behind each fix.
 
+## Contents
+
+- [Why the tells show](#why-the-tells-show)
+- [Severity](#severity)
+- [Patterns](#patterns)
+  - [Translationese (T)](#translationese-t)
+  - [AI stock phrases (D)](#ai-stock-phrases-d)
+  - [D9 — written-register declarative endings (spoken surfaces only)](#d9-written-register-declarative-endings-spoken-surfaces-only)
+  - [Structure and rhythm (C)](#structure-and-rhythm-c)
+  - [Assistant voice (A)](#assistant-voice-a)
+- [Per-surface application](#per-surface-application)
+- [Out of scope (Do-NOT)](#out-of-scope-do-not)
+- [Principles when fixing](#principles-when-fixing)
+- [What this gate can't do (evidence grades)](#what-this-gate-cant-do-evidence-grades)
+- [Using the checker](#using-the-checker)
+
 ## Why the tells show
 
 An LLM doesn't think in Korean. It builds sentences in an internal representation

@@ -1,20 +1,18 @@
 ---
 name: ingest
 description: >
-  This skill should be used when the user asks to "녹화 분석해줘", "화면 녹화로
-  스토리보드", "녹화한 영상 가져와", "말하면서 녹화한 거 정리", "ingest this
-  recording", "녹화 시작해", "화면 녹화 해줘", or provides a screen recording
-  (with voice narration) to turn into content. Can start/stop the screen+mic
-  recording itself (record.sh, macOS screencapture), then extracts timestamped
-  speech (Qwen3-ASR STT, whisper.cpp fallback) + silence/scene-change signals from the recording,
-  merges them into a per-scene timeline (data/<channel>/episodes/<topic>/recording/
-  timeline.md with keyframes + vision descriptions), which then feeds the
-  storyboard skill as the primary source replacing web research. In the
-  storyboard-first shooting flow (storyboard/script.md exists), it additionally
-  aligns the recording to the storyboard scenes (recording/alignment.json) so
-  produce can edit the footage into the final video.
+  Turns a screen recording into a timestamped timeline that replaces web research. Use
+  when the user asks to "녹화 분석해줘", "화면 녹화로 스토리보드", "녹화한 영상 가져와", "말하면서 녹화한 거 정리", "ingest
+  this recording", "녹화 시작해", "화면 녹화 해줘", or hands over a screen recording with voice
+  narration. Can start and stop the screen-plus-mic recording itself, then pulls
+  timestamped speech (Qwen3-ASR, whisper.cpp fallback) and silence and scene-change
+  signals out of it, and merges them into a per-scene timeline under
+  data/[channel]/episodes/[topic]/recording/ with keyframes and screen descriptions. That
+  timeline becomes storyboard's primary source in place of web research. In the shooting
+  flow (storyboard/script.md already exists) it also aligns the recording to the
+  storyboard scenes so produce can cut the footage.
 argument-hint: "<channel> <recording path|record> [topic slug]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe", "mcp__fect-mcp__vision_analyze", "mcp__fect-mcp__vision_ocr"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe"]
 ---
 
 # Recording ingest — data/[channel]/episodes/[topic]/recording/
@@ -114,18 +112,22 @@ python3 $REF/build-timeline.py data/<channel>/episodes/<topic>/recording --src <
 
 ### 4. Fill in screen descriptions + correct the transcript + review for private data
 
-For each keyframe, ask `vision_analyze` (language "ko") two things at once:
-① what's on screen (a summary of the app, the view, the actions), and
-② whether any **personal or sensitive information** is visible (notification
-banners, email addresses, account names, tokens and keys, amounts of money).
-When there's a lot of text on screen and you need an exact read, use `vision_ocr`
-as a backup.
+Open each keyframe with `Read` — `keyframes/seg-N.jpg` comes in as a picture, so
+no vision API sits between you and the frame. Answer two things per frame:
+① what's on screen (the app, the view, the actions), and ② whether any
+**personal or sensitive information** shows (notification banners, email
+addresses, account names, tokens and keys, amounts of money).
+
+Read the frames in small batches and write each answer down before the next batch
+— a dozen images in one turn and the descriptions start blurring into each other.
+When the exact string matters (a transcript correction's evidence), quote what the
+frame shows character for character and say which keyframe it came from.
 
 - Write the screen descriptions into timeline.md's "Screen" column in the scene
   table and into the detailed "Screen description", and update the frontmatter to
   `status: annotated`.
 - **Transcript correction (evidence required)** — check each scene's transcript
-  against the on-screen text (vision_analyze and vision_ocr results) and the
+  against the on-screen text you read off the keyframes and the
   profile.md terms, and correct the misrecognitions:
   - Fix something **only when there's evidence** from screen OCR or the profile
     glossary. Smoothing it "to read more naturally" isn't correction, it's

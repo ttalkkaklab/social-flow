@@ -4,14 +4,23 @@ Holds how each step in SKILL.md is actually driven. On Meta-family sites
 (instagram.com · developers.facebook.com), ego's convenience helpers hang forever
 in many places, so things only move reliably **with low-level CDP calls**.
 
-## Browser lanes and driving principles
+## Contents
 
-There are two lanes — ego lite first, claude-in-chrome when it's absent
-(SKILL.md §Browser lanes). The per-step recipes below are written against the
-ego lane, but the skeleton of the driving is standard CDP, so it carries over to
-the Chrome lane almost as-is.
+- [Browser lane and driving principles](#browser-lane-and-driving-principles)
+- [Step 1 · Account signup](#step-1-account-signup)
+- [Step 2 · Professional conversion + branding](#step-2-professional-conversion-branding)
+- [Step 3 · App tester (Instagram Login) + invite acceptance](#step-3-app-tester-instagram-login-invite-acceptance)
+- [Step 4 · OAuth authorize (code recovery)](#step-4-oauth-authorize-code-recovery)
+- [Step 5 · Token exchange (browser-independent — curl)](#step-5-token-exchange-browser-independent-curl)
+- [60-day refresh (not reissuance)](#60-day-refresh-not-reissuance)
 
-### ego lite lane (default)
+## Browser lane and driving principles
+
+There is one lane — ego lite (SKILL.md §Browser lane). Every per-step recipe
+below is written against it. Without ego lite, stop and tell the user; SKILL.md
+§Manual fallback covers what is left.
+
+### Driving ego lite
 
 First load `~/.claude/skills/ego-browser/SKILL.md` to check CLI usage.
 Invoke via an `ego-browser nodejs <<'EOF' ... EOF` heredoc.
@@ -28,31 +37,6 @@ Invoke via an `ego-browser nodejs <<'EOF' ... EOF` heredoc.
 - Before clicking, check for covering elements with
   `document.elementFromPoint(x,y)`. Screen sharing is `handOffTaskSpace(id)`
   (agent tabs are invisible in the GUI).
-
-### Chrome lane (claude-in-chrome)
-
-Map the CDP calls above like this. Tool names may carry different prefixes
-depending on how they're loaded, so confirm the actual names with `/mcp` first.
-
-| ego lane | Chrome lane |
-|---|---|
-| `cdp('Page.navigate',{url})` | `navigate` |
-| `cdp('Runtime.evaluate',{expression,returnByValue:true})` | `javascript_tool` — both DOM reads and value entry |
-| `cdp('Input.dispatchMouseEvent', …)` trusted click | `computer` |
-| `cdp('Target.getTargets',{})` → `switchTab(targetId)` | tab tools — get the list with `tabs_context_mcp` and switch |
-| `useOrCreateTaskSpace` isolation | none — occupies the user's browser while working |
-| `handOffTaskSpace`/`takeOverTaskSpace` | not needed — the screen is already the user's, so just confirm completion |
-
-At session start, check the current tabs first with `tabs_context_mcp`, and work
-in a new tab. Don't take over tabs the user left open. Another brand's IG session
-may be alive, so the logout decision follows SKILL.md absolute rule 3.
-
-**This lane is untested on Meta sites.** Where things hang and which coordinates
-grab containers was learned by running into them on the ego lane. On the first
-run, re-verify those points and write them into this document. In particular,
-whether `computer`'s click passes React's trusted-event check (the tester-invite
-tab switch, the consent screen's "허용" (allow)) has never been tried — a point
-to watch on the first run.
 
 ## Step 1 · Account signup
 

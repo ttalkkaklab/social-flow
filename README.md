@@ -76,14 +76,14 @@ production, generalized here to per-channel operation.
   — the ingest STT fallback when mlx-qwen3-asr is missing. Recording mode needs
   **Screen Recording and Microphone** permission for your terminal app
   (System Settings → Privacy & Security)
-- chrome-devtools MCP (for produce §8 phone-viewport QA — optional; a capture script
-  covers it otherwise)
 - API keys and platform credentials — see the next section for what each one unlocks
 
-> **Load-path caveat**: the skills reference MCP tools as `mcp__social-flow__*`, which
-> assumes a `--plugin-dir` load. A marketplace install may use a different server
-> prefix — check the real tool names with `/mcp` after loading. `data/` is created
-> relative to the **session cwd**, not the plugin root.
+> **Load-path caveat**: the skills name MCP tools as `mcp__social-flow__*` — the server's
+> logical name. A marketplace install prefixes them per plugin, so the live names read
+> `mcp__plugin_social-flow_social-flow__*` (measured on Claude Code 2.1.251). Skill
+> `allowed-tools` is advisory, so both spellings work; check the real names with `/mcp`
+> when you call a tool by hand. `data/` is created relative to the **session cwd**, not
+> the plugin root.
 
 ## API keys — what each one unlocks
 
@@ -564,7 +564,7 @@ server calls, and how this implementation honors (or deliberately narrows) each 
 - **[MCP tool spec & best practices](docs/api-reference/mcp-tools.html)** — Tool
   fields, behavior-hint decision table, 7 authoring principles, quality rubric
 - **[Tool quality audit](docs/api-reference/tool-audit.html)** — scores and fixes for
-  the 31 tools as of 2026-07-29 (the 23 added since are unaudited)
+  the 31 tools as of 2026-07-29 (the 24 added since are unaudited)
 - Individual APIs — [Gemini TTS](docs/api-reference/gemini-tts.html) ·
   [ElevenLabs TTS](docs/api-reference/elevenlabs-tts.html) ·
   [Veo 3.1](docs/api-reference/gemini-veo.html) ·

@@ -23,6 +23,22 @@ that constancy is what made a small variation read as an event. It's why the rat
 count once per episode — one `dutch`, one `drop`, one dissolve — a device only reads as a
 device against a frame that doesn't change.
 
+## Contents
+
+- [1. The connective test — every cut is a "but" or a "therefore"](#1-the-connective-test-every-cut-is-a-but-or-a-therefore)
+- [2. Every scene turns — open on one charge, close on another](#2-every-scene-turns-open-on-one-charge-close-on-another)
+- [3. Plant and payoff — the turn is paid for in advance](#3-plant-and-payoff-the-turn-is-paid-for-in-advance)
+- [4. Fear runs on suspense, and it needs a door](#4-fear-runs-on-suspense-and-it-needs-a-door)
+- [5. Curiosity is a ledger — every loop opened gets a payer's name](#5-curiosity-is-a-ledger-every-loop-opened-gets-a-payers-name)
+- [6. The laugh is a broken pattern — comedy at sentence length](#6-the-laugh-is-a-broken-pattern-comedy-at-sentence-length)
+- [7. The peak and the end are what get remembered](#7-the-peak-and-the-end-are-what-get-remembered)
+- [8. Restraint sets the price of the burst](#8-restraint-sets-the-price-of-the-burst)
+- [9. The turn is a double hit — the fortune flips and the plant re-reads in the same shot](#9-the-turn-is-a-double-hit-the-fortune-flips-and-the-plant-re-reads-in-the-same-shot)
+- [10. Rules are verified, not explained](#10-rules-are-verified-not-explained)
+- [11. The storyline is an investigation, not a diary](#11-the-storyline-is-an-investigation-not-a-diary)
+- [12. The arc goes down before it comes up — catharsis is release that was paid for](#12-the-arc-goes-down-before-it-comes-up-catharsis-is-release-that-was-paid-for)
+- [Sources](#sources)
+
 ## 1. The connective test — every cut is a "but" or a "therefore"
 
 Between any two adjacent scenes, say the link out loud. **"그래서" (therefore)** — the

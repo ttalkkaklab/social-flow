@@ -1,18 +1,16 @@
 ---
 name: setup-youtube
 description: >
-  This skill should be used when the user asks to "유튜브 채널 개설", "유튜브 브랜드
-  채널 만들어", "유튜브 API 연동해줘", "쇼츠 붙여줘", "set up a YouTube channel",
-  or wants to stand up a LIVE YouTube brand channel for a channel and wire it into
-  social-flow. Drives advanced-feature identity verification, brand channel creation,
-  branding, and Google OAuth refresh_token issuance through a browser lane — ego lite
-  first, the claude-in-chrome tools as fallback — with HITL handoffs (phone·selfie
-  verification·consent), then saves
-  <SNS_TOKEN_DIR>/<slug>/youtube-oauth-client.json and verifies with sns_account_check.
-  Spans multiple days (verification approval is async) — resumable, detects state and
-  continues; a status mode reports what is pending.
+  Opens a live YouTube brand channel and wires its OAuth token into social-flow. Use when
+  the user asks to "유튜브 채널 개설", "유튜브 브랜드 채널 만들어", "유튜브 API 연동해줘", "쇼츠 붙여줘", "set up a
+  YouTube channel". Drives advanced-feature identity verification, brand channel creation,
+  branding, and Google OAuth refresh_token issuance in the browser through ego lite,
+  handing the screen to the user for phone and selfie verification and consent, then saves
+  SNS_TOKEN_DIR/[slug]/youtube-oauth-client.json and verifies it with sns_account_check.
+  Spans several days because verification approval is asynchronous — resumable, and a
+  status mode reports what is still pending.
 argument-hint: "<channel> [status|verify|create|token]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__claude-in-chrome__tabs_context_mcp", "mcp__claude-in-chrome__tabs_create_mcp", "mcp__claude-in-chrome__tabs_close_mcp", "mcp__claude-in-chrome__navigate", "mcp__claude-in-chrome__javascript_tool", "mcp__claude-in-chrome__computer"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check"]
 ---
 
 # YouTube channel setup — browser HITL
@@ -46,45 +44,37 @@ the browser. The following are human gates, so **hand them to the user**:
 - **Consent scope checkboxes** — the user checks each scope directly (§token
   trap).
 
-The handoff works differently per lane — ego lite: `handOffTaskSpace` → confirm
-the user is done → `takeOverTaskSpace`. In the Chrome lane the screen belongs to
-the user from the start, so there's no exposure step; just confirm completion.
+Hand the screen over with `handOffTaskSpace`, confirm the user is done, then
+reclaim it with `takeOverTaskSpace`. An agent task space is invisible in the GUI
+until that handoff, so skipping it leaves the user pressing nothing.
 
 ## Prerequisites
 
 - `data/<slug>/profile.md` must exist — if not, point to `/social-flow:channel add`
   and stop.
-- **One browser lane** — ego lite or claude-in-chrome. How to pick: §Browser
-  lanes below.
+- **ego lite** — the browser lane. Details: §Browser lane below.
 - **A Google Cloud OAuth client** (desktop) — `client_id`/`client_secret`.
   Reusing an existing channel's is fine (same Google project).
 - YouTube Data API v3 enabled. To use the growth loop (grow-youtube) as well,
   also enable the YouTube Analytics API.
 
-## Browser lanes — ego lite first, Chrome fallback
+## Browser lane — ego lite only
 
-Browser control has three paths; pick from the top.
+`ego lite` is the one browser lane. Check for it with `command -v ego-browser`.
+It reuses the user's login state inside an agent-only task space, so it never
+collides with the user's own tabs, and every field-tested recipe below is written
+against it (`references/setup-playbook.md`).
 
-1. **ego lite** — check with `command -v ego-browser`. It reuses the user's login
-   state while running in an agent-only task space, so it doesn't collide with
-   the user's tabs. The field-tested recipes are written against this lane
-   (`references/setup-playbook.md`).
-2. **claude-in-chrome** — when ego isn't there. Windows/Linux are the typical
-   case (ego lite is macOS-only). It attaches to the user's real Chrome session
-   and reuses login state as-is, but **there is no isolation** — it occupies the
-   user's browser while working, and per-site permission approval must be granted
-   first. For the mapping to the CDP recipes, see the table in the playbook's
-   §Browser lanes.
-3. **Manual fallback** — with neither, go to §Manual fallback below (helps with
-   token issuance only).
+**There is no second lane.** ego lite runs on macOS only. Where it is missing —
+Windows, Linux, a machine without it installed — say so and stop. Don't reach for
+another browser tool. What still works without a browser is §Manual fallback
+below (token issuance only).
 
-Whichever lane, **the human gates stay the same** — identity verification,
-login, and consent checks get done by the user in every lane.
+**The human gates stay the same** — identity verification, login, and consent
+checks get done by the user.
 
-**Active-channel checks need extra care on the Chrome lane** — it's the user's
-real browser, so the odds that another brand's channel is active are higher than
-on the ego lane. Per absolute rule 1, confirm via the URL's channel ID before
-every action.
+**Another brand's channel may be the active one.** Per absolute rule 1, confirm
+the channel ID in the URL before every action.
 
 ## Absolute rules (stop immediately on violation)
 

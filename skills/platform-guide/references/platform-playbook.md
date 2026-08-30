@@ -1,8 +1,23 @@
 # Platform playbook (SoT)
 
+> **Freshness** — verified 2026-08-19 · source: the platforms' own published limits plus what
+> our accounts actually accepted · recheck every 90 days, and immediately when a publish call
+> starts failing on a limit.
+
 Generalized from rules field-tested in fect-persona publish-social·make-reels
 operations. produce's per-platform text authoring, publish's approval review,
 and content-reviewer's rubric all take this document as their baseline.
+
+## Contents
+
+- [§1 Platform decision tree](#1-platform-decision-tree)
+- [§2 Three-way style split (inheritance)](#2-three-way-style-split-inheritance)
+- [§3 Threads](#3-threads)
+- [§4 Instagram](#4-instagram)
+- [§5 Facebook](#5-facebook)
+- [§6 YouTube Shorts](#6-youtube-shorts)
+- [§7 Video specs (same as the produce contract)](#7-video-specs-same-as-the-produce-contract)
+- [§8 Anti-pattern checklist (self-check before the approval gate)](#8-anti-pattern-checklist-self-check-before-the-approval-gate)
 
 ## §1 Platform decision tree
 

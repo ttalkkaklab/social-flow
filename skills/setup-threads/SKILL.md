@@ -1,17 +1,15 @@
 ---
 name: setup-threads
 description: >
-  This skill should be used when the user asks to "스레드 채널 개설", "스레드 계정
-  만들어", "스레드 API 연동해줘", "스레드 붙여줘", "set up a Threads channel/account",
-  or wants to stand up a LIVE Threads account for a channel and wire it into
-  social-flow. Drives account signup, profile branding, Meta app tester/permission
-  setup, and OAuth token issuance through a browser lane — ego lite first, the
-  claude-in-chrome tools as fallback — with HITL handoffs (login·verification
-  code·consent), then saves the 60-day token to
-  <SNS_TOKEN_DIR>/<slug>/threads_token and verifies with sns_account_check.
-  Resumable — detects what is already done and continues from the first unfinished step.
+  Opens a live Threads account and wires its API token into social-flow. Use when the user
+  asks to "스레드 채널 개설", "스레드 계정 만들어", "스레드 API 연동해줘", "스레드 붙여줘", "set up a Threads
+  channel/account". Drives signup, profile branding, Meta app tester and permission setup,
+  and OAuth token issuance in the browser through ego lite, handing the screen to the user
+  for login, verification codes and consent, then saves the 60-day token under
+  SNS_TOKEN_DIR/[slug]/threads_token and verifies it with sns_account_check. Resumable —
+  it detects what is already done and continues from the first unfinished step.
 argument-hint: "<channel> [status|signup|brand|token]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__claude-in-chrome__tabs_context_mcp", "mcp__claude-in-chrome__tabs_create_mcp", "mcp__claude-in-chrome__tabs_close_mcp", "mcp__claude-in-chrome__navigate", "mcp__claude-in-chrome__javascript_tool", "mcp__claude-in-chrome__computer"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check"]
 ---
 
 # Threads channel setup — browser HITL
@@ -43,43 +41,35 @@ soft-blocked** — don't try to punch through with automated clicks:
   submit.
 - **Birthdate · CAPTCHA · 2FA** — gates that need human judgment.
 
-The handoff works differently per lane — ego lite exposes the screen with
-`handOffTaskSpace`, confirms the user is done, then reclaims it with
-`takeOverTaskSpace`. In the Chrome lane the screen belongs to the user from the
-start, so there's no exposure step. Say what to press and just confirm completion.
+Hand the screen over with `handOffTaskSpace`, confirm the user is done, then
+reclaim it with `takeOverTaskSpace`. An agent task space is invisible in the GUI
+until that handoff, so skipping it leaves the user pressing nothing.
 
 ## Prerequisites
 
 - `data/<slug>/profile.md` must exist — if not, point to `/social-flow:channel add`
   first and stop. Handle and brand tone are inherited from there.
-- **One browser lane** — ego lite or claude-in-chrome. Neither ships with this
-  plugin; both are tools of the user's machine/session. How to pick: §Browser
-  lanes below.
+- **ego lite** — the browser lane. It doesn't ship with this plugin; it's a tool
+  of the user's machine. Details: §Browser lane below.
 - A Meta developer app (with Threads API enabled). One app can be shared by
   multiple channels. Keep the App ID/Secret in the channel directory's app env
   file and source it at token-exchange time.
 
-## Browser lanes — ego lite first, Chrome fallback
+## Browser lane — ego lite only
 
-Browser control has three paths; pick from the top.
+`ego lite` is the one browser lane. Check for it with `command -v ego-browser`.
+It reuses the user's login state inside an agent-only task space, so it never
+collides with the user's own tabs, and every field-tested recipe below is written
+against it (`references/setup-playbook.md`).
 
-1. **ego lite** — check with `command -v ego-browser`. It reuses the user's login
-   state while running in an agent-only task space, so it doesn't collide with
-   the user's tabs. The field-tested recipes are written against this lane
-   (`references/setup-playbook.md`).
-2. **claude-in-chrome** — when ego isn't there. Windows/Linux are the typical
-   case (ego lite is macOS-only). It attaches to the user's real Chrome session
-   and reuses login state as-is, but **there is no isolation** — it occupies the
-   user's browser while working, and per-site permission approval must be granted
-   first. For the mapping to the CDP recipes, see the table in the playbook's
-   §Browser lanes.
-3. **Manual fallback** — with neither, go to §Manual fallback below (helps with
-   token issuance only).
+**There is no second lane.** ego lite runs on macOS only. Where it is missing —
+Windows, Linux, a machine without it installed — say so and stop. Don't reach for
+another browser tool. What still works without a browser is §Manual fallback
+below (token issuance only).
 
-Whichever lane, **the human gates stay the same** — the login button,
-verification codes, and consent checks get pressed by the user in every lane.
-The soft-blocks fired even with ego's trusted clicks, so don't expect the Chrome
-lane to punch through either.
+**The human gates stay the same** — the login button, verification codes, and
+consent checks get pressed by the user. Meta's soft-blocks fired even on ego's
+trusted clicks, so plan for the handoff rather than around it.
 
 ## Absolute rules (stop immediately on violation)
 

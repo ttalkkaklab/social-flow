@@ -1,9 +1,20 @@
 # Threads tool limits and workarounds — field-tested source of truth (2026-08-11)
 
+> **Freshness** — verified 2026-08-12 · source: real calls on our own Threads account ·
+> recheck every 90 days, and immediately when a call's response shape changes.
+
 The API walls the growth loop runs into, and the verified ways around them.
 Everything written here was confirmed with real calls. The point of this
 document is that no session, even a fresh one, spends time on the same wall
 twice.
+
+## Contents
+
+- [1. You can't follow via the API](#1-you-cant-follow-via-the-api)
+- [2. Keyword search returns only your own posts until approval](#2-keyword-search-returns-only-your-own-posts-until-approval)
+- [3. Replies must be published after the container reaches FINISHED](#3-replies-must-be-published-after-the-container-reaches-finished)
+- [4. The inbox scans only our root posts](#4-the-inbox-scans-only-our-root-posts)
+- [5. Post-level metrics lag account-level ones](#5-post-level-metrics-lag-account-level-ones)
 
 ## 1. You can't follow via the API
 

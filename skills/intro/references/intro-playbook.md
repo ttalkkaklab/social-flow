@@ -4,6 +4,20 @@ The rationale document for intro (logo sting) design, prompting, and review
 criteria. The intro skill pulls concept design and veo prompts from here.
 Sources at the end.
 
+## Contents
+
+- [1. Placement — where it belongs, and where it must not go](#1-placement-where-it-belongs-and-where-it-must-not-go)
+- [2. Length & timing contract](#2-length-timing-contract)
+- [3. Designing the 4 concepts (for the HITL pick)](#3-designing-the-4-concepts-for-the-hitl-pick)
+- [4. Character acting — motion design](#4-character-acting-motion-design)
+- [5. The L.O.G.O. prompt formula (veo skeleton)](#5-the-logo-prompt-formula-veo-skeleton)
+- [6. Channel-name reveal — text is deterministic render only](#6-channel-name-reveal-text-is-deterministic-render-only)
+- [7. Sonic logo — a channel asset](#7-sonic-logo-a-channel-asset)
+- [8. The final-frame contract (the most important rule)](#8-the-final-frame-contract-the-most-important-rule)
+- [8.5 Field notes (2026-07-29 ttalkkak-lab E2E)](#85-field-notes-2026-07-29-ttalkkak-lab-e2e)
+- [9. Common failures and corrections](#9-common-failures-and-corrections)
+- [Sources](#sources)
+
 ## 1. Placement — where it belongs, and where it must not go
 
 **Never put a brand intro in front of short-form content.** 50–60% of viewer

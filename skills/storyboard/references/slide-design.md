@@ -15,6 +15,16 @@ carries meaning** (a number growing, a bar reaching a comparison, a step appeari
 is spoken). Decorative motion buys nothing and costs comprehension. Every rule below
 serves that one finding.
 
+## Contents
+
+- [1. Palette — ink, paper, one accent](#1-palette-ink-paper-one-accent)
+- [2. Type — one family, weight does the hierarchy](#2-type-one-family-weight-does-the-hierarchy)
+- [3. Composition — one fact, then the evidence](#3-composition-one-fact-then-the-evidence)
+- [4. Motion — every movement says something](#4-motion-every-movement-says-something)
+- [5. What reads as generated — and the rubric](#5-what-reads-as-generated-and-the-rubric)
+- [6. Kinetic type — when the words are the picture](#6-kinetic-type-when-the-words-are-the-picture)
+- [7. Character act — when someone is reacting](#7-character-act-when-someone-is-reacting)
+
 ## 1. Palette — ink, paper, one accent
 
 | Token | Value | Role |

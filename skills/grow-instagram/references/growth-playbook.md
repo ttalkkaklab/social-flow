@@ -19,6 +19,22 @@ Platform-wide style and publishing rules live in
 **growth-loop tactics only**. The companion guide for human readers is
 `docs/guides/instagram-growth/index.html`.
 
+## Contents
+
+- [Principle — reach passes two gates](#principle-reach-passes-two-gates)
+- [Ranking — what the model actually predicts **[primary]**](#ranking-what-the-model-actually-predicts-primary)
+- [Losing eligibility — what this loop guards hardest](#losing-eligibility-what-this-loop-guards-hardest)
+- [Account Status — there is no API](#account-status-there-is-no-api)
+- [Diagnosis order — when reach dies](#diagnosis-order-when-reach-dies)
+- [Rhythm and format **[measured]**](#rhythm-and-format-measured)
+- [§Captions (post copy)](#captions-post-copy)
+- [§Replies (inbox handling)](#replies-inbox-handling)
+- [Search — the text fields are the index **[primary]**](#search-the-text-fields-are-the-index-primary)
+- [Cold start — Collabs are the only official play **[primary]**](#cold-start-collabs-are-the-only-official-play-primary)
+- [Observed metrics (weekly 4)](#observed-metrics-weekly-4)
+- [Do not cite — folklore rejected in verification](#do-not-cite-folklore-rejected-in-verification)
+- [Verification failures — what we have to admit we don't know](#verification-failures-what-we-have-to-admit-we-dont-know)
+
 ## Principle — reach passes two gates
 
 For an account with zero followers there's practically one road to people:
