@@ -1945,11 +1945,18 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   hold; WebGL runs on SwiftShader, so it reproduces on the same machine rather than across
   machines), and
   a **`<video data-rg data-vfrom data-vdur>`** whose `currentTime` is set to the group's local
-  time. `transition` is forbidden (its object exists only after a property change, so it can't
-  be seeked). `Date` · `Math.random` · `performance.now` · `requestAnimationFrame` ·
+  time (`vfrom` and `vdur` are both milliseconds). A painter that attaches DOM keeps those nodes
+  inside its own `[data-rg]` — outside it a CSS animation runs on the wall clock, and `__seek`
+  pins it to t=0 and counts it so the renderer stops. `transition` is forbidden (its object
+  exists only after a property change, so it can't be seeked). `Date` · `Math.random` · `performance.now` · `requestAnimationFrame` ·
   `setTimeout` are forbidden, inside a painter too — the frame is whatever `__seek(t, g)`
-  says, and the same `(g, t)` yields the same pixels (two renders of the fixture: 144/144
-  frames byte-identical; 168/168 with an image, a painter and a video on one slide).
+  says, and the same `(g, t)` draws the same picture.
+  **Byte-identity across re-renders is not guaranteed**: Chrome's compositor still leaves
+  sub-pixel antialiasing differences on some renders even with `Animation.ready` awaited
+  (measured PSNR 55–72 dB — invisible at either end, and it predates this commit). Four
+  consecutive renders coming out identical and the fifth differing is a measured outcome, so a
+  two-run diff gives false passes and false failures alike. When you need to check determinism,
+  render six to eight times and count how many classes the output falls into.
 - Local fonts only, as on every slide — and local images and video, for the same reason.
   A remote URL makes the network decide the frame; `check-slide.js` fails on one. Stills are
   png or jpg — a gif, an apng, an animated webp or an SVG SMIL animation runs on the wall clock

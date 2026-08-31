@@ -346,21 +346,40 @@ const SLIDE_SHOT = 0;
            중간과 끝만 찍는다) — fn(500) 이 fn(0) 뒤에 온다고 가정하면 안 된다.
      쓰는 자리  회전·궤적·입자처럼 키프레임으로 못 세우는 도해. 글자·막대·카운트업은 CSS 로 둔다. */
   const painters = [];
+  /* __seek 이 캡처 중에 만난 '그룹 밖 애니메이션'의 누적 수. 페인터가 [data-rg] 바깥에 노드를
+     붙이거나 중간 t 에만 존재하는 노드를 만들면 __meta() 의 한 번짜리 표본에는 안 잡힌다 —
+     렌더러가 캡처를 마친 뒤 __meta().stray 를 다시 읽어 이 값으로 exit 1 한다. */
+  let strayHits = 0;
   window.__paint = function (rg, durMs, fn) {
     painters.push({ rg: +rg, dur: Math.max(0, +durMs || 0), fn: fn });
   };
 
   /* ── 비디오 — 그룹의 로컬 시각으로 currentTime 을 세우고 seeked 를 기다린다. data-rg 는 요소가
-     직접 들고(조상 상속이 아니다), data-vfrom(초, 기본 0)이 클립 안 시작점, data-vdur(ms)이 그룹
-     안에서 재생할 길이다. autoplay·loop 는 벽시계로 도는 길이라 __meta 가 stray 로 잡는다. */
+     직접 들고(조상 상속이 아니다), data-vfrom(ms, 기본 0)이 클립 안 시작점, data-vdur(ms)이 그룹
+     안에서 재생할 길이다. 둘 다 밀리초다. autoplay·loop·재생 중인 영상은 벽시계로 도는 길이라
+     __meta 가 stray 로 잡는다. */
   const videos = () => [...document.querySelectorAll("video")];
   const seekVideo = (v, tMs) => new Promise(res => {
-    const want = (+v.dataset.vfrom || 0) + tMs / 1000;
+    const want = ((+v.dataset.vfrom || 0) + tMs) / 1000;
     if (v.readyState >= 2 && Math.abs(v.currentTime - want) < 1e-4) return res(true);
     const done = () => { v.removeEventListener("seeked", done); res(true); };
     v.addEventListener("seeked", done);
     v.currentTime = want;
   });
+
+  /* CSS 배경 이미지 — document.images 에 안 잡히므로 따로 훑는다. 경로가 틀리면 그 자리만 빈 채로
+     렌더가 끝까지 돌던 구멍이다(리뷰 medium 8). */
+  const bgBroken = [];
+  const bgUrls = () => {
+    const out = new Set();
+    for (const el of document.querySelectorAll("*"))
+      for (const pseudo of [null, "::before", "::after"]) {
+        const bg = getComputedStyle(el, pseudo).backgroundImage;
+        if (!bg || bg === "none") continue;
+        for (const m of bg.matchAll(/url\(\s*["']?([^"')]+)/g)) out.add(m[1]);
+      }
+    return [...out];
+  };
 
   /* 첫 프레임을 찍기 전에 렌더러가 한 번 부른다 — 폰트·이미지 디코드·비디오 첫 프레임이 다 서야
      같은 (g, t) 가 같은 픽셀이다. 이미지는 로드만으로는 부족하고 decode() 까지 끝나야 한다.
@@ -376,7 +395,13 @@ const SLIDE_SHOT = 0;
         v.addEventListener("error", res, { once: true });
       });
     });
-    return Promise.all([document.fonts.ready, ...imgs, ...vids]).then(() => true);
+    const bgs = bgUrls().map(u => new Promise(res => {
+      const im = new Image();
+      im.onload = () => res();
+      im.onerror = () => { bgBroken.push(u); res(); };
+      im.src = u;
+    }));
+    return Promise.all([document.fonts.ready, ...imgs, ...vids, ...bgs]).then(() => true);
   };
 
   window.__seek = function (tMs, g) {
@@ -391,7 +416,10 @@ const SLIDE_SHOT = 0;
     for (const p of painters) p.fn(p.rg < g ? p.dur : p.rg === g ? Math.min(Math.max(tMs, 0), p.dur) : 0);
     const anims = document.getAnimations();
     for (const a of anims) {
-      const o = owner(a); if (!o) continue;
+      const o = owner(a);
+      /* 그룹 밖 애니메이션도 일단 세운다 — 벽시계로 두면 캡처 지연이 그대로 프레임에 새어
+         같은 (g, t) 가 다른 픽셀을 낸다(실측 PSNR 22.3dB). 세워 둔 뒤 세어서 렌더러가 알린다. */
+      if (!o) { strayHits++; a.pause(); a.currentTime = 0; continue; }
       const r = +o.dataset.rg, end = endOf(a);
       a.pause();
       a.currentTime = r < g ? end : r === g ? Math.min(Math.max(tMs, 0), end) : 0;
@@ -423,14 +451,15 @@ const SLIDE_SHOT = 0;
      가 없거나 autoplay·loop 가 붙어 있으면 stray 다 — seek 가 아니라 재생으로 움직인다는 뜻이다. */
   window.__meta = function () {
     const all = document.getAnimations();
-    const strayVideo = videos().filter(v => v.dataset.rg === undefined || v.autoplay || v.loop).length;
+    const strayVideo = videos().filter(v => v.dataset.rg === undefined || v.autoplay || v.loop || !v.paused).length;
     /* 못 읽은 소재 — 오타 난 경로, 디코더가 없는 코덱(HEVC), 빈 파일. __ready() 뒤에 읽어야
        뜻이 있다. 이름을 그대로 넘겨 렌더러가 어느 파일인지 말할 수 있게 한다. */
     const broken = videos().filter(v => v.error || (v.dataset.rg !== undefined && !v.getAttribute("src") && !v.currentSrc))
       .map(v => v.getAttribute("src") || "(video[data-rg] with no src)")
-      .concat([...document.images].filter(i => !i.naturalWidth).map(i => i.getAttribute("src") || "(no src)"));
+      .concat([...document.images].filter(i => !i.naturalWidth).map(i => i.getAttribute("src") || "(no src)"))
+      .concat(bgBroken);
     return { hold: HOLD, broken: broken,
-             stray: all.filter(a => !owner(a)).length + strayVideo,
+             stray: all.filter(a => !owner(a)).length + strayVideo + strayHits,
              infinite: all.filter(a => owner(a) && !isFinite(endOf(a))).length
                      + painters.filter(p => !isFinite(p.dur)).length };
   };

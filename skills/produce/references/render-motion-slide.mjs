@@ -31,14 +31,19 @@
  * an image or video that would not load (wrong path, or a codec this Chrome has no decoder for),
  * a capture whose size isn't the canvas, Chrome exiting mid-render, a CDP call over 30s.
  *
- * Determinism check: run twice into two dirs and `diff -rq` the frame PNGs (--keep-frames).
- * Measured on Chrome 152 / M4: ~20 fps capture at 1080×1920, 144/144 frames byte-identical.
+ * Determinism check: the same (g, t) draws the same picture, but byte-identity across renders is
+ *   NOT guaranteed — Chrome's compositor leaves sub-pixel antialiasing differences on some runs
+ *   even with Animation.ready awaited, and it predates this renderer. Four consecutive renders
+ *   coming out byte-identical and the fifth differing is a measured outcome, so a two-run
+ *   `diff -rq` gives false passes and false failures alike. Render six to eight times
+ *   (--png-only --keep-frames) and count how many classes the output falls into.
+ * Measured on Chrome 152 / M4: ~20 fps capture at 1080×1920.
  *
  * What a page can move (template head · scenes-schema §motion slides): CSS @keyframes,
  *   data-count count-ups, a painter registered with __paint(rg, durMs, fn) that draws the
  *   frame at t (canvas/SVG — the path for rotation, traces, anything keyframes can't express),
  *   and <video data-rg data-vfrom data-vdur> seeked by currentTime. All four are functions of
- *   (g, t) alone, which is what keeps a re-render byte-identical. WebGL works too — Chrome
+ *   (g, t) alone, which is what makes a re-render draw the same picture. WebGL works too — Chrome
  *   runs it on SwiftShader here, so those pixels are reproducible on the same machine rather
  *   than across machines. Video has to be H.264 or VP9; HEVC won't decode under --disable-gpu.
  *
@@ -65,8 +70,8 @@ const CDP_TIMEOUT_MS = 30000;
 
 // ── args ──────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
-// jobs = 동시에 찍는 탭 수. 캡처는 PNG 인코딩이 대부분이라 코어를 하나씩 먹는다 — 코어 수의
-// 절반에서 멈추고 4를 넘기지 않는다. 그 위로는 Chrome 메모리만 늘고 처리량은 안 는다.
+// jobs = tabs capturing at once. Capture is mostly PNG encoding, so each takes a core — stop at
+// half the cores and never above 4; past that only Chrome's memory grows, not throughput.
 const opt = { fps: 30, jobs: Math.max(1, Math.min(4, Math.floor((os.cpus().length || 4) / 2))),
   sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null };
 const pos = [];
@@ -115,8 +120,8 @@ const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArr
   : [];
 
 // ── CDP over --remote-debugging-pipe ──────────────────────────────────────
-// $CHROME 이 먼저다. 없으면 맥·리눅스의 흔한 자리를 순서대로 본다 — 앞쪽이 진짜 Chrome 이라야
-// 한다. 맨 Chromium 에는 H.264 디코더가 빠져 있어 <video> 를 쓰는 슬라이드가 검은 프레임을 낸다.
+// $CHROME wins. Otherwise walk the usual macOS/Linux spots in order — real Chrome first, because
+// bare Chromium ships without the H.264 decoder and a slide with <video> renders black frames.
 const CHROME_CANDIDATES = [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
@@ -135,9 +140,9 @@ if (!CHROME || !fs.existsSync(CHROME)) {
 }
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), "sf-motion-"));
 const chrome = spawn(CHROME, [
-  // --disable-gpu 는 캔버스 2D 픽셀을 기계 사이에서 고정하는 값이라 그대로 둔다. 그러면 WebGL
-  // 컨텍스트가 아예 안 잡히므로(getContext 가 null) SwiftShader 를 따로 켠다 — WebGL 슬라이드는
-  // 그 소프트웨어 백엔드 안에서 재현된다.
+  // --disable-gpu is what pins canvas-2D pixels across machines, so it stays. It also leaves WebGL
+  // without a context (getContext returns null), hence SwiftShader — a WebGL slide reproduces
+  // inside that software backend.
   "--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--hide-scrollbars", "--remote-debugging-pipe",
   "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--mute-audio",
   "--allow-file-access-from-files", "--window-size=" + W + "," + H,
@@ -213,8 +218,8 @@ process.on("unhandledRejection", e => die(e && e.message ? e.message : String(e)
 
 const pngSize = b => ({ w: b.readUInt32BE(16), h: b.readUInt32BE(20) });
 
-// 한 탭을 열어 슬라이드를 띄우고, 그 탭에 묶인 evalJS·seek·shot 을 돌려준다. 병렬 캡처는
-// 이 탭을 여러 개 여는 것이 전부다 — 프레임은 (g, t) 만의 함수라 어느 탭에서 찍든 같은 픽셀이다.
+// Open one tab on the slide and hand back the evalJS/seek/shot bound to it. Parallel capture is
+// just opening several — a frame is a function of (g, t), so which tab took it changes nothing.
 const openPage = async () => {
   const { targetId } = await send("Target.createTarget", { url: "about:blank" });
   const { sessionId: sid } = await send("Target.attachToTarget", { targetId, flatten: true });
@@ -250,8 +255,8 @@ const openPage = async () => {
   const { evalJS, seek, shot } = page;
   const api = await evalJS("typeof window.__seek === 'function' && typeof window.__groups === 'function' && typeof window.__size === 'function' && typeof window.__meta === 'function' && typeof window.__ready === 'function'");
   if (!api) return die("the page does not expose __seek/__groups/__size/__meta/__ready — built from motion-slide-template.html?" + (pageErrors.length ? " A page script threw before the API was defined:" : ""));
-  // 폰트·이미지 디코드·비디오 첫 프레임이 다 선 뒤에 첫 seek 을 한다. 이미지는 load 만으로는
-  // 부족하다 — 디코드가 끝나기 전에 찍으면 첫 프레임만 빈 자리로 나온다.
+  // First seek only after fonts, image decodes and video first frames are all settled. Load alone
+  // is not enough for an image — capture before decode finishes and the first frame comes out blank.
   await evalJS("window.__ready()", true);
   const size = await evalJS("window.__size()");
   if (size.w !== W || size.h !== H) return die(`page size ${size.w}x${size.h} ≠ format canvas ${W}x${H} (window.FORMAT=${FORMAT})`);
@@ -313,8 +318,8 @@ const openPage = async () => {
   await shot(path.join(OUT, "r0.png"));
 
   const todo = opt.group != null ? [opt.group] : Array.from({ length: N }, (_, i) => i + 1);
-  // 캡처는 그룹 단위로 나눠 여러 탭이 동시에 찍는다. 한 탭은 스크린샷 한 장을 찍는 동안 놀기만
-  // 하고(PNG 인코딩이 비용의 대부분이다), 그룹끼리는 서로의 상태를 건드리지 않는다.
+  // Capture is split per group across tabs. A tab mostly idles while one screenshot encodes (PNG
+  // encoding is where the time goes), and groups never touch each other's state.
   const jobs = Math.max(1, Math.min(opt.jobs, todo.length));
   const workers = [page];
   for (let i = 1; i < jobs; i++) workers.push(await openPage());
@@ -333,12 +338,13 @@ const openPage = async () => {
     framesTotal += nF;
     rows[idx] = { k, nF, dur, fdir };
   };
-  // 워커마다 자기 몫을 순서대로 집어 간다 — 그룹 길이가 제각각이라 미리 쪼개면 한쪽만 논다.
+  // Each worker takes the next group in order — splitting up front would leave one idle, since
+  // group lengths differ.
   let next = 0;
   await Promise.all(workers.map(async w => {
     for (let idx = next++; idx < todo.length; idx = next++) await captureGroup(w, idx);
   }));
-  // 인코딩은 캡처가 다 끝난 뒤 순서대로 — spawnSync 는 이벤트 루프를 막아서 캡처와 겹칠 수 없다.
+  // Encode after all capture, in order — spawnSync blocks the event loop, so it cannot overlap.
   for (const r of rows) {
     const mp4 = path.join(OUT, `r${r.k}.mp4`);
     if (!opt.pngOnly) {
@@ -357,6 +363,27 @@ const openPage = async () => {
       await seek(dur, k);                await shot(path.join(sdir, `g${k}-end.png`));
     }
   }
+  // Re-read the contract after capturing. __meta() sampled once up front cannot see an animation
+  // that only exists at some mid-group t — a painter that attaches a node outside [data-rg] and
+  // removes it again by the rest frame. __seek pins such an animation and counts it, so the
+  // count here is the whole render, not one instant.
+  // Every worker keeps its own counter, so ask them all — the tab that captured the offending
+  // group may not be the one this loop started from.
+  const metasAfter = await Promise.all(workers.map(w => w.evalJS("window.__meta()")));
+  // meta.stray is necessarily 0 here — a non-zero one already died at the pre-capture check
+  // above — so the sum across workers IS the delta. Don't subtract a baseline that isn't there.
+  const metaAfter = {
+    stray: metasAfter.reduce((n, m) => n + m.stray, 0),
+    broken: metasAfter.flatMap(m => m.broken || []),
+  };
+  if (metaAfter.stray > 0)
+    return die(`${metaAfter.stray} frame(s) were captured with an animation running outside a ` +
+               `[data-rg] group ` +
+               `— a painter attaching nodes outside its group, or a video playing itself. Each was pinned to ` +
+               `t=0 so the frames are still reproducible, but nothing moved where the author expected. ` +
+               `Put every animated element the painter creates inside its own [data-rg] group.`);
+  if (metaAfter.broken && metaAfter.broken.length > (meta.broken || []).length)
+    return die(`could not load during capture: ${metaAfter.broken.join(", ")}`);
   fs.writeFileSync(path.join(OUT, "manifest.tsv"), manifest.join("\n") + "\n");
   const sec = (Date.now() - t0) / 1000;
   console.log(JSON.stringify({ slide: path.basename(htmlAbs), format: FORMAT, canvas: `${W}x${H}`, groups: N, jobs,
