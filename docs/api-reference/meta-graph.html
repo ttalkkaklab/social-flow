@@ -212,7 +212,7 @@ captions_file=@caption.ko_KR.srt   ← 파일명이 계약이다</code></pre>
   <p>토큰 <strong>값</strong>은 환경변수로 받지 않는다. Meta의 60일 갱신 절차가 파일을 덮어쓰는 구조라 파일 기반이어야 갱신이 가능하고, 커밋 대상인 <code>.mcp.json</code>에 시크릿이 실리는 것도 막는다.</p>
   <p>ListTools 시점에 자격증명 파일이 존재하는 플랫폼의 게시 툴만 노출된다. 요청 시점 평가라 <strong>토큰 파일 추가가 서버 재시작 없이 반영</strong>된다. 핸들러는 전부 유지되므로 숨은 툴을 직접 호출하면 명시적 토큰 부재 에러가 돌아온다.</p>
   <div class="ok">
-    <strong>플랫폼 자격증명은 전부 선택이다.</strong> Meta 3종의 토큰이 여는 것은 <code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code> 일곱이고, 여기에 <code>youtube_publish</code>·<code>youtube_insights</code>를 더한 아홉이 게이트 대상이다(토큰이 하나도 없으면 <code>tools/list</code> 는 50 대신 41을 보여 준다). 토큰을 건너뛰면 제작까지는 그대로 돌아가고 — <code>produce</code> 가 완성 영상과 플랫폼별 문안을 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 쓰고 사람이 직접 올린다 — 게시·성장 절반만 못 쓴다. 플랫폼 단위라 YouTube 만 연결해 두는 구성도 된다.
+    <strong>플랫폼 자격증명은 전부 선택이다.</strong> Meta 3종의 토큰이 여는 것은 <code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code> 일곱이고, 여기에 <code>youtube_publish</code>·<code>youtube_insights</code>를 더한 아홉이 게이트 대상이다(토큰이 하나도 없으면 <code>tools/list</code> 는 55 대신 46을 보여 준다). 토큰을 건너뛰면 제작까지는 그대로 돌아가고 — <code>produce</code> 가 완성 영상과 플랫폼별 문안을 <code>data/&lt;채널&gt;/episodes/&lt;주제&gt;/output/</code> 에 쓰고 사람이 직접 올린다 — 게시·성장 절반만 못 쓴다. 플랫폼 단위라 YouTube 만 연결해 두는 구성도 된다.
   </div>
 </section>
 

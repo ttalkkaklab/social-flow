@@ -57,6 +57,9 @@ const exists = (p) => { try { return fs.existsSync(p); } catch (e) { return fals
 const hasSpeedMarker = (p) => {
   try { return /── speedup x/.test(fs.readFileSync(p, 'utf8')); } catch (e) { return null; }
 };
+const hasFinalRateMarker = (p) => {
+  try { return /PASS final speech rate/.test(fs.readFileSync(p, 'utf8')); } catch (e) { return null; }
+};
 const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch (e) { return false; } };
 
 function lsCount(dir, re) {
@@ -169,7 +172,7 @@ function blockers(ep, stage) {
                missingFootage.slice(0, 3).join(', ') + (missingFootage.length > 3 ? ' …' : ''));
     const missingSlides = req.slideFiles.filter((f) => !exists(path.join(ep.dir, 'storyboard', f)));
     if (missingSlides.length)
-      out.push(missingSlides.length + ' slide file(s) not authored yet (storyboard §8) — ' +
+      out.push(missingSlides.length + ' slide file(s) not authored yet (storyboard §5.6) — ' +
                missingSlides.slice(0, 3).join(', ') + (missingSlides.length > 3 ? ' …' : ''));
   }
 
@@ -199,6 +202,9 @@ function blockers(ep, stage) {
   if (stage !== 'published' && ep.has.video && ep.has.spedUp === false)
     out.push('output/ holds the un-sped build — the required speed pass never ran ' +
              '(produce §7.5: speedup.sh, then copy the -fast set)');
+  if (stage !== 'published' && ep.has.video && ep.has.speechRateChecked === false)
+    out.push('output/ has no final speech-rate PASS — rerun the final pace pass and keep the ' +
+             'shipped subtitle timeline at or below 6.2 characters/s');
 
   return out;
 }
@@ -217,6 +223,10 @@ function inspect(episodeDir) {
       storyboardDir: isDir(sbDir),
       scenes: exists(path.join(sbDir, 'scenes.js')),
       research: exists(path.join(sbDir, 'research.md')),
+      // Long-form's upstream prose input (storyboard §3.5). Collected, never a stage rung —
+      // it is consumed by §4 and no ladder step turns on it, exactly like research.md.
+      scenario: exists(path.join(sbDir, 'scenario.md')),
+      candidates: lsCount(path.join(sbDir, 'candidates'), /^d\d+\.md$/i),
       storyboardMd: exists(path.join(sbDir, 'storyboard.md')),
       storyboardHtml: exists(path.join(sbDir, 'storyboard.html')),
       script: exists(path.join(sbDir, 'script.md')),
@@ -228,6 +238,7 @@ function inspect(episodeDir) {
       cover: exists(path.join(outDir, 'video', 'cover.jpg')),
       costReport: exists(path.join(outDir, 'video', 'cost-report.txt')),
       spedUp: hasSpeedMarker(path.join(outDir, 'video', 'build-report.txt')),
+      speechRateChecked: hasFinalRateMarker(path.join(outDir, 'video', 'build-report.txt')),
       publishLog: exists(path.join(outDir, 'publish-log.md')),
       tally: exists(path.join(work, 'cost-tally.tsv')),
       forecast: exists(path.join(work, 'cost-forecast.tsv')),
@@ -270,6 +281,8 @@ function render(ep) {
 
   const made = [];
   if (ep.has.research) made.push('research');
+  if (ep.has.candidates) made.push(ep.has.candidates + ' candidate' + (ep.has.candidates > 1 ? 's' : ''));
+  if (ep.has.scenario) made.push('scenario');
   if (ep.has.images) made.push(ep.has.images + ' image' + (ep.has.images > 1 ? 's' : ''));
   if (ep.has.slides) made.push(ep.has.slides + ' slide' + (ep.has.slides > 1 ? 's' : ''));
   if (ep.has.footage) made.push(ep.has.footage + ' footage file' + (ep.has.footage > 1 ? 's' : ''));
@@ -373,6 +386,12 @@ function selftest() {
      sped(false).some((x) => /un-sped/.test(x)));
   ok('the marker present clears it', !sped(true).some((x) => /un-sped/.test(x)));
   ok('no build report to read makes no claim', !sped(null).some((x) => /un-sped/.test(x)));
+  const rated = (v) => blockers(Object.assign({}, base, {
+    has: Object.assign({}, base.has, { video: true, speechRateChecked: v })
+  }), 'produced');
+  ok('a built video with no final-rate marker is a blocker',
+     rated(false).some((x) => /speech-rate PASS/.test(x)));
+  ok('the final-rate marker clears it', !rated(true).some((x) => /speech-rate PASS/.test(x)));
   ok('a published episode is past the point of blocking on it',
      !blockers(Object.assign({}, base, {
        has: Object.assign({}, base.has, { video: true, spedUp: false })

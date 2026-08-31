@@ -11,6 +11,7 @@ import * as serp from './serp-client.js';
 import * as sns from './sns-client.js';
 import * as supertonic from './supertonic-client.js';
 import * as zimage from './zimage-client.js';
+import * as mlx from './mlx-serve-client.js';
 import * as tts from './tts-client.js';
 import * as video from './video-client.js';
 import { contentFeedback } from './content-feedback.js';
@@ -124,10 +125,20 @@ function parseArgs(schema, args) {
 }
 /** Set of the schema's top-level keys — undefined when not an object (check skipped) */
 function knownKeys(schema) {
-    const def = schema._def;
-    if (def?.typeName !== 'ZodObject' || typeof def.shape !== 'function')
-        return undefined;
-    return new Set(Object.keys(def.shape()));
+    // ZodEffects (superRefine / refine / transform) wrap the object; looking only
+    // at the outer typeName would skip the unknown-key check for mlx_music,
+    // mlx_video, and the seedance family.
+    let current = schema;
+    for (let i = 0; i < 4; i++) {
+        const def = current._def;
+        if (!def)
+            return undefined;
+        if (def.typeName === 'ZodObject' && typeof def.shape === 'function') {
+            return new Set(Object.keys(def.shape()));
+        }
+        current = def.schema ?? def.innerType;
+    }
+    return undefined;
 }
 // ── research schemas ─────────────────────────────────────────────
 /**
@@ -630,6 +641,63 @@ export const ROUTES = {
         return text(`Image generated locally!\n\nFile: ${result.imagePath}\nEngine: Z-Image Turbo via mflux (on-device)\n` +
             `Size: ${result.width}x${result.height}\nSteps: ${result.steps}\nSeed: ${result.seed ?? 'random'}\n` +
             `Quantization: ${result.quantize}-bit\nGeneration time: ${result.elapsedSeconds}s`);
+    },
+    mlx_image_generate: async (args) => {
+        const request = parseArgs(mlx.mlxImageGenerateSchema, args);
+        const result = await mlx.generateMlxImage(request);
+        if (!result.success)
+            return text(`MLX Core image generation failed:\n${result.error}`, true);
+        return text(`Image generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
+            `Size: ${result.width}x${result.height}\nSteps: ${result.steps ?? 'model default'}\n` +
+            `Seed: ${result.seed ?? 'random'}\nGeneration time: ${result.elapsedSeconds}s`);
+    },
+    mlx_image_edit: async (args) => {
+        const request = parseArgs(mlx.mlxImageEditSchema, args);
+        const result = await mlx.editMlxImage(request);
+        if (!result.success)
+            return text(`MLX Core image edit failed:\n${result.error}`, true);
+        return text(`Image edited via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
+            (result.width && result.height ? `Size: ${result.width}x${result.height}\n` : '') +
+            `Steps: ${result.steps ?? 'model default'}\nSeed: ${result.seed ?? 'random'}\n` +
+            `Generation time: ${result.elapsedSeconds}s`);
+    },
+    mlx_tts_generate: async (args) => {
+        const request = parseArgs(mlx.mlxTtsGenerateSchema, args);
+        const result = await mlx.generateMlxTts(request);
+        if (!result.success)
+            return text(`MLX Core TTS failed:\n${result.error}`, true);
+        return text(`Audio generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
+            `Synthesis time: ${result.elapsedSeconds}s\nText length: ${request.input.length} chars`);
+    },
+    mlx_music_generate: async (args) => {
+        const request = parseArgs(mlx.mlxMusicGenerateSchema, args);
+        const result = await mlx.generateMlxMusic(request);
+        if (!result.success)
+            return text(`MLX Core music generation failed:\n${result.error}`, true);
+        return text(`Music generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
+            `Duration: ${result.durationSeconds} seconds\nInstrumental: ${request.instrumental}\n` +
+            `Generation time: ${result.elapsedSeconds}s`);
+    },
+    mlx_video_generate: async (args) => {
+        const request = parseArgs(mlx.mlxVideoGenerateSchema, args);
+        const result = await mlx.generateMlxVideo(request);
+        if (!result.success)
+            return text(`MLX Core video generation failed:\n${result.error}`, true);
+        return text(`Video generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
+            `Size: ${result.width}x${result.height}\nFrames: ${result.frames} @ ${result.fps} fps\n` +
+            `Duration: ${result.durationSeconds?.toFixed(2)} seconds\n` +
+            `Audio: ${result.hasAudio ? 'muxed PCM' : 'none'}\n` +
+            `Generation time: ${result.elapsedSeconds}s\n\n` +
+            `Output is ${mlx.MLX_VIDEO_FPS} fps; produce's builder is 30 fps, so a splice re-encodes.`);
+    },
+    mlx_3d_generate: async (args) => {
+        const request = parseArgs(mlx.mlx3dGenerateSchema, args);
+        const result = await mlx.generateMlx3d(request);
+        if (!result.success)
+            return text(`MLX Core 3D generation failed:\n${result.error}`, true);
+        return text(`Mesh generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
+            `Generation time: ${result.elapsedSeconds}s\n\n` +
+            `GLB. This pipeline has no mesh consumer — produce/storyboard/autoproduce never read this file.`);
     },
     // ── video generation (Veo 3.1) — saves the mp4 locally, returns path + meta text ──
     veo_text2video: async (args) => {

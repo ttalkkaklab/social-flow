@@ -11,7 +11,7 @@ description: >
   under data/[slug]/assets/intro/. Boundary — branding makes the still profile image, this
   makes the moving opening.
 argument-hint: "<channel> [extra instructions]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__music_generate_clip", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue"]
 ---
 
 # Channel intro video — data/[channel]/assets/intro/
@@ -61,9 +61,10 @@ data/<slug>/assets/intro/
   brand tone out of step with existing posts. An existing
   `<slug>-sonic-logo.wav` is **reused by default** (replace only on explicit
   request).
-- Check whether `GEMINI_API_KEY` is set — without it `music_generate_clip`
-  fails, so announce in §2 up front that the run will proceed with veo native
-  sound only, no sonic logo.
+- Check whether `GEMINI_API_KEY` is set. Without it `music_generate_clip`
+  fails; if MLX Core is up, `mlx_music_generate` can still write the sonic
+  logo (2–3s instrumental). If both are down, announce in §2 that the run
+  will proceed with veo native sound only, no sonic logo.
 
 ### 2. Design 4 concepts → HITL pick
 
@@ -168,7 +169,8 @@ If `<slug>-sonic-logo.wav` exists, just copy it to `.work/sonic.wav` (sonic
 branding = repetition). Otherwise generate the concept's sonic-logo
 description (playbook §7 — rise→impact→tail, 2–3s, no vocals) with
 `music_generate_clip` (Lyria) and save as `.work/sonic.wav`. If
-`GEMINI_API_KEY` is unset, skip this step (veo native sound only).
+`GEMINI_API_KEY` is unset, try `mlx_music_generate` (instrumental, ~3s).
+If that fails too, skip this step (veo native sound only).
 
 **Voice tag (optional — when the user wants one)**: premix a TTS reading of
 the channel name, delivered with impact, into the sting. Generate with

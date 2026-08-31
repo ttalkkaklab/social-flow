@@ -351,6 +351,82 @@ describe('tool on/off (disabled-tools.json)', () => {
   });
 });
 
+describe('mlx_* tools', () => {
+  const MLX = [
+    'mlx_image_generate',
+    'mlx_image_edit',
+    'mlx_tts_generate',
+    'mlx_music_generate',
+    'mlx_video_generate',
+    'mlx_3d_generate',
+  ];
+
+  it('all six mlx tools are listed and routed as local generation', () => {
+    for (const name of MLX) {
+      const tool = byName.get(name);
+      assert.ok(tool, `missing tool ${name}`);
+      assert.equal(typeof ROUTES[name], 'function', `missing route ${name}`);
+      assert.equal(tool.annotations.openWorldHint, false, `${name} must be generateLocal`);
+      assert.equal(tool.annotations.readOnlyHint, false);
+      assert.equal(tool.annotations.destructiveHint, false);
+      assert.match(tool.description, /brew install --cask mlx-core/);
+      assert.match(tool.description, /never launches the app/);
+    }
+  });
+
+  it('the mlx family pattern hides exactly the six mlx tools', () => {
+    const hidden = TOOLS.filter((tool) => isToolDisabled(tool.name, ['mlx_*'])).map((t) => t.name).sort();
+    assert.deepEqual(hidden, [...MLX].sort());
+  });
+
+  it('image lane stays default-local and Hangul stays gpt_image', () => {
+    const gen = byName.get('mlx_image_generate');
+    const edit = byName.get('mlx_image_edit');
+    assert.match(gen.description, /image_local_generate/);
+    assert.match(gen.description, /gpt_image_text2img/);
+    assert.match(gen.description, /1088×1920/);
+    assert.match(gen.description, /default:true/);
+    assert.match(edit.description, /mode:"edit"/);
+    assert.match(edit.description, /gpt_image_img2img/);
+    assert.equal(gen.inputSchema.properties.width.default, 1024);
+  });
+
+  it('tts is not a silent fallback and names input, not text', () => {
+    const tts = byName.get('mlx_tts_generate');
+    assert.match(tts.description, /silent fallback/);
+    assert.match(tts.description, /profile §2/);
+    assert.ok('input' in tts.inputSchema.properties);
+    assert.ok(!('text' in tts.inputSchema.properties));
+    assert.ok((tts.inputSchema.required ?? []).includes('input'));
+  });
+
+  it('music defaults instrumental and names the lyrics 400', () => {
+    const music = byName.get('mlx_music_generate');
+    assert.equal(music.inputSchema.properties.instrumental.default, true);
+    assert.match(music.description, /instrumental:true cannot be sent beside lyrics/);
+    assert.match(music.description, /music_generate_clip/);
+  });
+
+  it('video names 24fps, the RAM cap, and is not the Veo/Seedance default', () => {
+    const video = byName.get('mlx_video_generate');
+    assert.match(video.description, /24 fps/);
+    assert.match(video.description, /800MB/);
+    assert.match(video.description, /video-model-selection/);
+    assert.match(video.description, /face-policy table/);
+    assert.match(video.description, /ffmpeg/);
+    assert.equal(video.inputSchema.properties.width.default, 768);
+    assert.equal(video.inputSchema.properties.height.default, 1280);
+    assert.equal(video.inputSchema.properties.numFrames.default, 49);
+  });
+
+  it('3d is GLB-only and says the pipeline has no consumer', () => {
+    const mesh = byName.get('mlx_3d_generate');
+    assert.match(mesh.description, /GLB/);
+    assert.match(mesh.description, /no GLB consumer/);
+    assert.ok((mesh.inputSchema.required ?? []).includes('imagePath'));
+  });
+});
+
 describe('suno_* tools', () => {
   const SUNO = ['suno_generate', 'suno_generate_sound', 'suno_generate_lyrics', 'suno_credits'];
 

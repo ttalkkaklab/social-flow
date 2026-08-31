@@ -92,7 +92,7 @@
 <section id="split">
   <h2>Where the money goes, and where it doesn't</h2>
 
-  <p class="lede">Video and music <strong>always bill</strong>. Images and speech can be generated on-device for free on Apple Silicon, and transcription has no paid path at all.</p>
+  <p class="lede">Video and music <strong>default to billed APIs</strong>. Images and speech can be generated on-device for free on Apple Silicon, and transcription has no paid path at all. When MLX Core is up, <code>mlx_video_generate</code> and <code>mlx_music_generate</code> are the $0 understudy — the defaults stay Veo/Seedance and Lyria.</p>
 
   <p>Each free lane has something it can't do, though. That list of limits is also the list of things worth paying for.</p>
 
@@ -108,8 +108,8 @@
       </tr>
       <tr>
         <td><strong>Video</strong></td>
-        <td><em>none</em></td>
-        <td>—</td>
+        <td><code>mlx_video_generate</code><br>MLX Core · optional · not the default</td>
+        <td>24fps, RAM-capped, ffmpeg mux. Not on the Veo/Seedance face-policy table</td>
         <td><code>veo_*</code> <span class="badge key">GEMINI_API_KEY</span><br><code>seedance_*</code> <span class="badge key">ARK_API_KEY</span></td>
       </tr>
       <tr>
@@ -126,8 +126,8 @@
       </tr>
       <tr>
         <td><strong>Music</strong></td>
-        <td><em>none</em></td>
-        <td>—</td>
+        <td><code>mlx_music_generate</code><br>MLX Core · optional · not the default</td>
+        <td>Default BGM stays Lyria. Unattended runs still take the Lyria clip</td>
         <td><code>music_generate_clip</code><br><span class="badge key">GEMINI_API_KEY</span></td>
       </tr>
     </tbody>
@@ -186,6 +186,7 @@
     <thead><tr><th>Key</th><th>Unit</th><th class="num">USD</th><th>Grade</th><th>Notes</th></tr></thead>
     <tbody>
       <tr><td><code>image.local</code></td><td>image</td><td class="num">0.000</td><td><span class="g off">official</span></td><td>On-device — electricity only</td></tr>
+      <tr><td><code>image.mlx</code></td><td>image</td><td class="num">0.000</td><td><span class="g off">official</span></td><td><code>mlx_image_*</code> — MLX Core, electricity only. Default stays Z-Image</td></tr>
       <tr><td><code>image.gpt-image-2.low</code></td><td>image</td><td class="num">0.007</td><td><span class="g der">derived</span></td><td>official 1024×1536 low $0.005 × 1.33</td></tr>
       <tr><td><code>image.gpt-image-2.medium</code></td><td>image</td><td class="num">0.055</td><td><span class="g der">derived</span></td><td>official 1024×1536 medium $0.041 × 1.33</td></tr>
       <tr><td><code>image.gpt-image-2.high</code></td><td>image</td><td class="num">0.220</td><td><span class="g der">derived</span></td><td>official 1024×1536 high $0.165 × 1.33 — the cover runs at this tier</td></tr>
@@ -386,13 +387,14 @@
 <section id="music">
   <h2>Music</h2>
 
-  <p class="lede">BGM has <strong>no free lane</strong> either. It's Lyria, on <span class="badge key">GEMINI_API_KEY</span>.</p>
+  <p class="lede">Default BGM is Lyria, on <span class="badge key">GEMINI_API_KEY</span>. When MLX Core is up, <code>mlx_music_generate</code> is the $0 understudy — the default stays Lyria.</p>
 
   <div class="table-scroll">
   <table>
     <thead><tr><th>Key</th><th>Unit</th><th class="num">USD</th><th>Grade</th><th>Notes</th></tr></thead>
     <tbody>
       <tr><td><code>music.lyria-clip</code></td><td>clip</td><td class="num">0.04</td><td><span class="g off">official</span></td><td><code>music_generate_clip</code> — fixed 30s</td></tr>
+      <tr><td><code>music.mlx</code></td><td>second</td><td class="num">0.000</td><td><span class="g off">official</span></td><td><code>mlx_music_generate</code> — on-device, electricity only</td></tr>
       <tr><td><code>music.lyria-realtime</code></td><td>second</td><td class="num">?</td><td><span class="g unk">unconfirmed</span></td><td><code>music_generate</code> — no row in the official price table</td></tr>
     </tbody>
   </table>

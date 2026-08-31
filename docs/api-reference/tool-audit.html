@@ -18,8 +18,8 @@
   <h1>툴 품질 감사 리포트</h1>
   <p class="sub">31개 툴을 각 API의 공식 문서 계약, MCP 2025-06-18 스펙, 그리고 툴 작성 베스트 프랙티스로 채점하고 결함을 수정한 기록. 루브릭은 <a href="mcp-tools.html#rubric">MCP 툴 스펙 §6</a>이 정본이다.</p>
   <div class="meta">
-    <span>대상 <strong>31개 툴 · 5,700줄</strong> (현재 51종 중)</span>
-    <span>검증 <strong>계약 테스트 239개</strong> (현재 573개)</span>
+    <span>대상 <strong>31개 툴 · 5,700줄</strong> (현재 61종 중)</span>
+    <span>검증 <strong>계약 테스트 239개</strong> (현재 722개)</span>
     <span>수정 <strong>P0 2건 · P1 11건 · P2 9건</strong></span>
   </div>
 </header>
@@ -324,7 +324,7 @@
 <section id="since">
   <h2>8. 감사 뒤에 늘어난 툴 (미감사)</h2>
   <div class="warn">
-    <strong>위 96점은 2026-07-29 시점의 31개 툴에 대한 점수다.</strong> 그 뒤 <strong>16종이 늘어 지금은 51종</strong>이고, 채점을 거친 것은 그중 31종뿐이다 — 아래 16종은 이 감사를 거치지 않았다. 숫자를 47로 고쳐 적으면 돌지 않은 감사를 돌았다고 말하는 셈이라 31 그대로 둔다.
+    <strong>위 96점은 2026-07-29 시점의 31개 툴에 대한 점수다.</strong> 그 뒤 <strong>30종이 늘어 지금은 61종</strong>이고, 채점을 거친 것은 그중 31종뿐이다 — 아래 표가 그 30종이다. 숫자를 61로 고쳐 적으면 돌지 않은 감사를 돌았다고 말하는 셈이라 31 그대로 둔다.
   </div>
   <div class="table-scroll">
   <table>
@@ -343,14 +343,15 @@
       <tr><td><code>youtube_topic_scout</code></td><td>분야 채널을 모아 중앙값 대비 5배 영상에서 주제어를 뽑는다</td><td>YouTube Data API search/channels/videos (<code>YOUTUBE_API_KEY</code> 또는 OAuth)</td></tr>
       <tr><td><code>serp_trending_now</code></td><td>나라별 구글 급상승 검색어 — 검색량·증가율 어림값, 창은 4·24·48·168시간</td><td>SerpApi <code>google_trends_trending_now</code></td></tr>
       <tr><td><code>sns_issue_scout</code></td><td>스레드·X·인스타 <code>site:</code> 검색으로 최근 게시물을 모아 여러 글·여러 플랫폼에 같이 나오는 주제어를 센다 — 참여량 없는 언급 목록</td><td>SerpApi <code>google</code> + 급상승 1회</td></tr>
+      <tr><td><code>mlx_image_generate</code> · <code>mlx_image_edit</code> · <code>mlx_tts_generate</code> · <code>mlx_music_generate</code> · <code>mlx_video_generate</code> · <code>mlx_3d_generate</code></td><td>MLX Core / mlx-serve 루프백 HTTP. 기본 경로가 아니고 :11234 가 꺼져 있으면 닫힌다. 이 플러그인은 앱을 띄우지 않는다</td><td>로컬 mlx-serve (http://127.0.0.1:11234)</td></tr>
     </tbody>
   </table>
   </div>
-  <p>감사를 다시 돌리지 않았을 뿐 이 목록도 같은 계약 테스트 그물에는 들어 있다 — <code>npm run check</code> 의 테스트가 239개에서 <strong>573개</strong>로 늘었다(2026-08-18 확인). 다음 감사 때 채점 대상은 51종이다.</p>
+  <p>감사를 다시 돌리지 않았을 뿐 이 목록도 같은 계약 테스트 그물에는 들어 있다 — <code>npm run check</code> 의 테스트가 239개에서 <strong>722개</strong>로 늘었다(2026-08-30 확인). 다음 감사 때 채점 대상은 61종이다.</p>
 </section>
 
 <footer>
-  감사일 2026-07-29 (1차 v0.4.0 · 2차 v0.4.1) · 툴 목록 확인 2026-08-18 (v0.23.0 기준 확인 · 현재 51종 중 31종 감사분) · 루브릭 <a href="mcp-tools.html#rubric">MCP 툴 스펙 §6</a> · 재현 <code>cd server &amp;&amp; npm run check</code>
+  감사일 2026-07-29 (1차 v0.4.0 · 2차 v0.4.1) · 툴 목록 확인 2026-08-31 (v0.42.0 기준 확인 · 현재 61종 중 31종 감사분) · 루브릭 <a href="mcp-tools.html#rubric">MCP 툴 스펙 §6</a> · 재현 <code>cd server &amp;&amp; npm run check</code>
 </footer>
 
 </div>

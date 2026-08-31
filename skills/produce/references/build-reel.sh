@@ -49,24 +49,30 @@
 #                                         eased both ends) | linear | in (accelerating: starts unnoticed,
 #                                         fastest at the cut point — action/CTA cards, cut away at the peak).
 #                                         punch keeps its own ease-out ramp and ignores ease=.
-#                           enter=<mode>  the join in front of this card. cut (default) | black | white |
-#                                         dissolve | push:<l2r|r2l|u2d|d2u>. enter=1 still means black.
+#                           enter=<mode>  the join in front of this card. jcut (the default when omitted,
+#                                         on every card that has a card in front of it) | cut | black |
+#                                         white | dissolve | push:<l2r|r2l|u2d|d2u>. enter=1 still means black.
 #                           exit=<mode>   the join behind it: cut (default) | black | white. exit=1 = black.
 #                                         **Dip** (black/white) is two halves: exit= on the card that ends the
 #                                         scene, enter= on the one that starts the next, SCENE_FADE (0.12s)
 #                                         each. It passes through a solid frame — a beat of nothing.
-#                                         **Carry** (dissolve, push) is written on the incoming card alone.
-#                                         That card opens on the previous card's last frame and gets out of
-#                                         it — dissolve melts through it over SCENE_XF (0.45s), push slides it
-#                                         off over SCENE_PUSH (0.32s). The audience sees two pictures at once,
-#                                         which is the real cross-dissolve a dip cannot give.
-#                                         Every mode is drawn **inside one card's own encode**, so the frame
-#                                         count and the duration never change — §9 still stream-copies, drift
-#                                         stays 0, and not one subtitle cue moves (measured A/B: identical
-#                                         subs.srt, 12.000000s both ways, seam YAVG 69→16→90 against a hard
-#                                         cut's 69→90).
-#                                         The default is a hard cut everywhere, which is what every existing
-#                                         4-column cards.tsv keeps doing.
+#                                         **Carry** (jcut, dissolve, push) is written on the incoming card
+#                                         alone. That card opens on the previous card's last frame and gets
+#                                         out of it — jcut holds it while the new line already plays
+#                                         (SCENE_JCUT, 0.32s) then snaps to the new picture; dissolve melts
+#                                         through it over SCENE_XF (0.45s); push slides it off over
+#                                         SCENE_PUSH (0.32s). A J-cut is the professional split edit: you
+#                                         hear the next sentence before you see the next shot, so the
+#                                         picture never changes in silence (Murch; measured 0 stretches of
+#                                         >0.3s silence on the 85s reference short).
+#                                         **cut** is the smash: picture and sound change together, the old
+#                                         silent pre-roll. Write enter=cut to opt out of the J-cut.
+#                                         Every mode is drawn **inside one card's own encode**, so §9 still
+#                                         stream-copies and drift stays 0. Dissolve/push/dip keep the card's
+#                                         frame count (measured A/B: identical subs.srt, 12.000000s both
+#                                         ways). A J-cut drops the silent pre-roll from that card's length
+#                                         (PRE seconds) because the next line occupies it — write enter=cut
+#                                         to keep the old silent join.
 #   <workdir>/segs.tsv  : idx <TAB> seg(0..) <TAB> visual-path <TAB> TTS-script-sentence <TAB> subtitle-display-sentence
 #                         visual = reveal-state PNG (reel-template ?reveal=k capture) or .mp4 (fullscreen b-roll)
 #                         Listing several with '|' splits the sentence's speech window evenly and they
@@ -123,8 +129,10 @@ cd "$WORKDIR"
 
 FPS=${FPS:-30}
 SPF=$((48000 / FPS))               # audio samples per frame
-PRE=${PRE:-0.40}                   # pre-roll (card entrance margin)
-POST=${POST:-0.70}                 # post-roll (sentence tail room)
+PRE=${PRE:-0.40}                   # pre-roll (card entrance margin) — first card, smash cuts, dips
+POST=${POST:-0.45}                 # post-roll (last-reveal hang + breath). Was 0.70; the J-cut
+                                   # moved the next line onto the previous last frame, so the tail
+                                   # only has to hold the last reveal (REVEAL_D 0.35) plus a blink
 MIN_DUR=${MIN_DUR:-4.0}            # minimum card display time
 MAX_DUR=${MAX_DUR:-13.0}           # warn when exceeded (signal to shorten the script)
 RATE_TOL=${RATE_TOL:-0.05}
@@ -142,6 +150,7 @@ XFADE=${XFADE:-0.6}                # feature↔outro transition length
 SCENE_FADE=${SCENE_FADE:-0.12}     # dip half-length — the black/white a card fades through (cards.tsv enter=/exit=)
 SCENE_XF=${SCENE_XF:-0.45}         # cross-dissolve length (enter=dissolve) — the incoming card melts out of the previous card's last frame
 SCENE_PUSH=${SCENE_PUSH:-0.32}     # push length (enter=push:<dir>) — the previous card's last frame slides off the incoming one
+SCENE_JCUT=${SCENE_JCUT:-0.32}     # J-cut hold — previous last frame stays on while the new line already plays, then the picture cuts. Under the 0.3s silence ceiling of the reference short once POST is the only remaining gap.
 REVEAL_D=${REVEAL_D:-0.35}         # max reveal fade length (shrinks to fit a shorter pause)
 REVEAL_GAP=${REVEAL_GAP:-0.05}     # finish appearing this long before the next sentence starts
 REVEAL_LEAD=${REVEAL_LEAD:-0.30}   # fallback lead — used only when no pause was found (char-count proportion)
@@ -308,13 +317,17 @@ SRTN=0                              # SRT cue number (from 1, file-wide running 
 
 # Read via fd 3 — keeps ffmpeg inside the loop from eating stdin (trap inherited from v2)
 # Column 5 (opts) is optional — read fills leftover variables with empty, so 4-column files run unchanged.
-# A carry transition (enter=dissolve / enter=push) opens on the previous card's last frame, so
-# that card has to leave one behind. Scan first and dump a tail PNG only where one is asked for —
-# on a 20-card episode this is the difference between 20 extra encodes and one or two.
+# A carry (jcut / dissolve / push) opens on the previous card's last frame, so that card has
+# to leave one behind. J-cut is the default on every incoming card, so almost every predecessor
+# dumps a tail — one extra half-second extract per card, not a re-encode. Skip the dump only
+# when the next card opts out (enter=cut) or dips (it fades from a solid, not from the tail).
 CARRY_PREV=""; _PV=""
 while IFS=$'\t' read -r _CI _ _ _ _CO; do
   [ -z "${_CI:-}" ] && continue
-  case "${_CO:-}" in *enter=dissolve*|*enter=push*) [ -n "$_PV" ] && CARRY_PREV="$CARRY_PREV $_PV " ;; esac
+  case "${_CO:-}" in
+    *enter=cut*|*enter=0*|*enter=black*|*enter=white*|*enter=1*) ;;
+    *) [ -n "$_PV" ] && CARRY_PREV="$CARRY_PREV $_PV " ;;
+  esac
   _PV="$_CI"
 done < cards.tsv
 PREVIDX=""; PREVEXIT=""
@@ -355,21 +368,23 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         ease=*) EASE="${KV#ease=}"
                 case "$EASE" in smooth|linear|in) : ;; *) say "✗ card $IDX: unknown ease — $EASE (smooth|linear|in)"; exit 1;; esac ;;
         # Scene-boundary transition — every mode is drawn **inside this card's own encode**, so the
-        # frame count never changes and the concat stays stream-copy exact (see the §7.4 note).
+        # concat stays stream-copy exact (see the §7.4 note). Dissolve/push/dip keep the card's
+        # frame count. A J-cut drops the silent pre-roll from this card's length.
         # `enter=` is the join in front of this card, `exit=` the one behind it. A dip needs both
-        # halves written (exit on the card before, enter on this one); dissolve and push need only
-        # `enter=` — they take the previous card's last frame as their material.
+        # halves written (exit on the card before, enter on this one); jcut, dissolve and push
+        # need only `enter=` — they take the previous card's last frame as their material.
         enter=1|enter=black)     ENTER=black ;;
         enter=white)             ENTER=white ;;
         enter=dissolve)          ENTER=dissolve ;;
+        enter=jcut)              ENTER=jcut ;;
         enter=push:*)            ENTER=push; PUSH_DIR="${KV#enter=push:}"
                 case "$PUSH_DIR" in l2r|r2l|u2d|d2u) : ;; *) say "✗ card $IDX: unknown push direction — $PUSH_DIR (l2r|r2l|u2d|d2u)"; exit 1;; esac ;;
         enter=push)              say "✗ card $IDX: push needs a direction — enter=push:l2r|r2l|u2d|d2u"; exit 1 ;;
-        enter=0|enter=cut)       ENTER="" ;;
+        enter=0|enter=cut)       ENTER=cut ;;
         exit=1|exit=black)       EXITM=black ;;
         exit=white)              EXITM=white ;;
         exit=0|exit=cut)         EXITM="" ;;
-        enter=*|exit=*) say "✗ card $IDX: unknown transition — $KV (enter: black|white|dissolve|push:<dir>|cut · exit: black|white|cut)"; exit 1 ;;
+        enter=*|exit=*) say "✗ card $IDX: unknown transition — $KV (enter: jcut|cut|black|white|dissolve|push:<dir> · exit: black|white|cut)"; exit 1 ;;
         *) say "✗ card $IDX: unknown cards.tsv column-5 option — $KV"; exit 1 ;;
       esac
     done
@@ -500,6 +515,21 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       && { say "⚠ card $IDX segment window under 0.9s — rebalance the sentences."; WARN=1; }
   fi
 
+  # ── 4.5) Default join — J-cut on every incoming spoken card
+  #   A 4-column cards.tsv (no enter=) used to hard-cut during the silent pre-roll, so the
+  #   picture changed in dead air. The professional join (split edit): the next line starts
+  #   on the previous last frame, then the picture cuts. First card, filmed sync, speechless
+  #   cards, dips, and an explicit enter=cut keep the old pre-roll. CPRE stays 0 on a J-cut
+  #   so the next line occupies what used to be silence; the hold is visual only (SCENE_JCUT).
+  if [ -z "$ENTER" ] && [ -n "$PREVIDX" ] && [ "$SYNC" -eq 0 ] && [ "$MUTE" -eq 0 ]; then
+    ENTER=jcut
+  fi
+  RPRE=$CPRE
+  if [ "$ENTER" = "jcut" ]; then
+    CPRE=0
+    RPRE=$SCENE_JCUT
+  fi
+
   # ── 5) Fix the card duration + assemble sample-accurate audio (same as v2 — the source of zero drift)
   D0=$(awk -v p="$CPRE" -v l="$L" -v q="$CPOST" 'BEGIN{printf "%.6f", p+l+q}')
   D1=$(awk -v d="$D0" -v m="$CMIN" 'BEGIN{printf "%.6f", (d>m)?d:m}')
@@ -530,7 +560,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   FOFF=(0); FDUR=("$REVEAL_D")      # [0] is the base state — no transition
   if [ "$MV" -gt 1 ]; then
     FB=""; case "$BMETHOD" in 'proportional fallback'*) FB="--fallback";; esac   # an empty array dies under set -u in bash 3.2
-    TIMING=$(python3 "$HERE/reveal-timing.py" --pre "$CPRE" --speech "$L" --dur "$D" \
+    TIMING=$(python3 "$HERE/reveal-timing.py" --pre "$RPRE" --speech "$L" --dur "$D" \
       --fade "$REVEAL_D" --gap "$REVEAL_GAP" --lead "$REVEAL_LEAD" \
       --silences "work/silin$IDX.txt" --bounds "$BLIST" --subs "$SUBS" \
       $FB --report 2>"work/rt$IDX.txt")
@@ -690,22 +720,25 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   per seam and trip the 2ms assertion, and xfade renumbers the tail's PTS from 0 anyway (the
   #   measurement is written out at the outro seam below).
   #
-  #   So **every transition is drawn inside the incoming card's own encode.** Nothing overlaps,
-  #   no frame count changes, no duration changes — §9 still stream-copies and drift stays 0.
-  #   Two ways to draw one:
+  #   So **every transition is drawn inside the incoming card's own encode.** Nothing overlaps
+  #   in the concat, so §9 still stream-copies and drift stays 0. Dissolve/push/dip keep this
+  #   card's frame count. A J-cut drops the silent pre-roll (PRE) from this card's length
+  #   because the next line occupies it.
+  #   Three ways to draw one:
   #
   #   ① dip (`enter=black|white` + `exit=black|white`) — the outgoing card fades its own tail
   #     into the colour, the incoming card fades its own head out of it. Two halves, one per
   #     card. It passes through a solid frame, which is what a dip is for: a beat of nothing.
-  #   ② carry (`enter=dissolve`, `enter=push:<dir>`) — the incoming card opens on **the previous
-  #     card's last frame** (work/tail<prev>.png, dumped after every encode) and gets out of it:
-  #     dissolve melts through it, push slides it off. Only the incoming card writes anything,
-  #     and the audience sees a true cross-dissolve — two pictures on screen at once — without a
-  #     single overlapping frame in the concat.
+  #   ② carry (`enter=jcut`, `enter=dissolve`, `enter=push:<dir>`) — the incoming card opens on
+  #     **the previous card's last frame** (work/tail<prev>.png) and gets out of it. jcut holds
+  #     it while the new line already plays, then snaps; dissolve melts through it; push slides
+  #     it off. Only the incoming card writes anything — no overlapping frame in the concat.
+  #   ③ smash (`enter=cut`) — picture and sound change together. The old silent pre-roll.
   #
-  #   Audio runs straight through. The narration already meets silence at a card boundary
-  #   (PRE/POST padding), and the BGM bed is rendered across the whole feature — fading either
-  #   one at a scene change would cut a word or punch a hole in the music.
+  #   Audio runs straight through. A J-cut puts the next line on the previous last frame so the
+  #   picture never changes in silence; dissolve/push/dip keep the card's own PRE/POST. The BGM
+  #   bed is rendered across the whole feature — fading it at a scene change would punch a hole
+  #   in the music.
   VF_FADE=""; SRCL="[vkb]"
   if [ -n "$EXITM" ]; then
     # Half the seam belongs to each side, and it has to fit the shorter card: never more than
@@ -719,13 +752,13 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       SF_D=$(awk -v d="$SCENE_FADE" -v dur="$D1" 'BEGIN{m=dur/4; if(d>m)d=m; if(d<0.02)d=0.02; printf "%.3f", d}')
       VF_FADE=",fade=t=in:st=0:d=$SF_D:c=$ENTER$VF_FADE"
       ZD="$ZD enter:$ENTER@$SF_D" ;;
-    dissolve|push)
+    dissolve|push|jcut)
       [ -n "$PREVIDX" ] || { say "✗ card $IDX: enter=$ENTER has no card in front of it to carry — the first card can only dip"; exit 1; }
       TAILPNG="work/tail$PREVIDX.png"
       [ -f "$TAILPNG" ] || { say "✗ card $IDX: enter=$ENTER needs card $PREVIDX's last frame — $TAILPNG is missing"; exit 1; }
       [ -n "$PREVEXIT" ] && { say "⚠ card $IDX: enter=$ENTER carries card $PREVIDX's last frame, but that card has exit=$PREVEXIT — it is carrying a frame of solid $PREVEXIT. Drop one of the two."; WARN=1; }
       # A carry lives entirely in this card's head, so it can take a third of it and no more.
-      TBASE=$([ "$ENTER" = "dissolve" ] && echo "$SCENE_XF" || echo "$SCENE_PUSH")
+      case "$ENTER" in dissolve) TBASE=$SCENE_XF ;; push) TBASE=$SCENE_PUSH ;; *) TBASE=$SCENE_JCUT ;; esac
       TD=$(awk -v d="$TBASE" -v dur="$D1" 'BEGIN{m=dur/3; if(d>m)d=m; if(d<0.04)d=0.04; printf "%.3f", d}')
       INS+=(-loop 1 -framerate "$FPS" -t "$TD" -i "$TAILPNG")
       TI=$NIN; NIN=$((NIN+1))
@@ -733,6 +766,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       if [ "$ENTER" = "dissolve" ]; then
         FILT+=",format=yuva420p,fade=t=out:st=0:d=$TD:alpha=1[tcar];"
         FILT+="[vkb][tcar]overlay=0:0:eof_action=pass,format=yuv420p[vtr];"
+      elif [ "$ENTER" = "jcut" ]; then
+        # Hold the previous last frame for TD, then snap. The new line is already playing (CPRE=0).
+        FILT+=",format=yuv420p[tcar];"
+        FILT+="[vkb][tcar]overlay=0:0:enable='lt(t,$TD)':eof_action=pass,format=yuv420p[vtr];"
       else
         # The carried frame slides off in the named direction, uncovering this card underneath.
         case "$PUSH_DIR" in

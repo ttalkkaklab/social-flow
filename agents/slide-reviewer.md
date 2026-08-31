@@ -4,7 +4,7 @@ description: >
   Read-only reviewer that adversarially evaluates a rendered authored screen — a
   motion slide, a kinetic-type screen, or a character-act screen (the `--sheet`
   frames render-motion-slide.mjs writes) — before it goes into the build.
-  The storyboard skill delegates to it from the §8 convergence loop — it hunts for
+  The storyboard skill delegates to it from the §5.6 convergence loop — it hunts for
   P0 defects (text outside the zone, on-screen words absent from scenes.js, a
   figure that contradicts the research, gradient text or a second accent, tofu
   glyphs, decorative motion where a value is spoken, an end frame that is not the
@@ -13,11 +13,14 @@ description: >
   returns a machine-parseable SLIDE_REVIEW tail. `visual.slide.kind` adds the P0s
   only that kind can commit — a kinetic screen reading its own subtitle back
   (§6), a character screen whose motion was authored by hand or whose claim
-  exists only as a gesture (§7). PASS at score ≥95 and p0=0. It never modifies
+  exists only as a gesture (§7). `visual.slide.treatment:"editorial"` adds the
+  full-frame composition test in §5.1: a photo with animated callouts, or text as
+  the only authored layer over a raster, is a P0, not an editorial frame. PASS at
+  score ≥95 and p0=0. It never modifies
   files.
 
   <example>
-  Context: the storyboard skill delegates a §8 convergence-loop iteration.
+  Context: the storyboard skill delegates a §5.6 convergence-loop iteration.
   user: "Evaluate the motion slide slides/s5-gear-ratio.html — sheet frames in .work/slide-check/s5/sheet/, scenes.js, profile.md and slide-design.md paths are …"
   assistant: "I'll run the slide-reviewer agent to collect P0 findings and the score."
   <commentary>A motion-slide convergence-loop evaluation request, so use slide-reviewer.</commentary>
@@ -49,14 +52,16 @@ directives.
   **open every one of them with Read**. Judge from the pixels, not from the code
 - `manifest.tsv` next to them — group durations in ms (the 2.6s + hold cap)
 - `storyboard/scenes.js` — the shot's `title`, `bullets`, `narration`, `visual.slide`
-  (`kind`, `plan`, `labels`, `motion`, `acts`), and `window.THEME`
+  (`kind`, `treatment`, `role`, `motif`, `plan`, `labels`, `motion`, `motionBeats`, `acts`), the shot's
+  `visual.action`, the other editorial slides in the episode, and `window.THEME`
 - `storyboard/research.md` — the figures the slide is allowed to show
 - `data/<channel>/profile.md` §3 — THEME
 - `skills/storyboard/references/slide-design.md` — **the rubric is §5 of that file**;
-  this agent applies it, it doesn't restate it. **Read `visual.slide.kind` first** — it is
+  this agent applies it, it doesn't restate it. **Read `visual.slide.kind` and
+  `visual.slide.treatment` first** — kind is
   `"diagram"` when absent, and `"kinetic"` and `"character"` each add P0s and change what the
-  axes look at (§6 and §7). Score the wrong kind and the review misses the only defects that
-  kind can commit
+  axes look at (§6 and §7). An editorial diagram adds §5.1. Score the wrong kind or treatment
+  and the review misses the only defects that frame can commit
 - Unresolved findings from the previous round (if any) — judge explicitly whether each is resolved
 
 If a path is missing, look for it with Glob; if the sheet is missing, render it
@@ -85,13 +90,30 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
    frames, each once.
 5. **Motion meaning** — for each group, what moved (mid frame vs end frame) and what
    the segment's narration says. One movement, and it is the value being spoken.
+   When `shot.infoType` is `timeline`, `statistic`, or `principle`, match the visible change to
+   that group's `motionBeats[].primitive`: dates enter or connect, a measured value counts or
+   grows, a mechanism sits an ink actor and draws a hairline (`shape-enter` · `shape-draw` ·
+   `shape-travel` — `h.fig` · `h.stem` · `h.bus` · `h.chamber`) or traces a named state. A
+   decorative rise with the right label is still a P0 because the declared meaning did not move.
+   On a photo-backed slide, compare the subject and evidence themselves. A whole-frame
+   pan/zoom, ambient drift, light pulse or overlay animation with an unchanged subject is a
+   P0 even when pixels moved. Match each change to `visual.action` and `slide.plan`.
 6. **Durations** from `manifest.tsv` against the tokens and the cap.
 7. **Legibility** at 25% scale — resize a frame with Bash
    (`ffmpeg -i frame.png -vf scale=270:-1 small.png`) and read it. That is the phone.
 8. **By kind** — only the one `visual.slide.kind` names:
+   - `"diagram"` + `treatment:"editorial"` (slide-design §5.1): hide the largest raster layer
+     mentally and test whether the hierarchy, relationship, and conclusion still exist; verify
+     the declared `role` (`statistic` needs a measured value and source); compare the episode's editorial frames and confirm the same `motif`
+     survives while the composition changes. An unchanged full-frame photo with moving boxes,
+     arrows, brackets, captions, glow, or a pan is P0-E1. A raster with text as its only
+     authored layer is P0-E4 even when there is no camera move. Ask which two or more visual
+     actors, document pieces, or relations construct the argument; if there are none, fail it.
    - `"kinetic"` (slide-design §6): put each end frame beside its segment's `narration[k].sub`
      and check the screen is not repeating the sentence; count hero-sized phrases (one) and
-     words per line (five); count effect kinds on the screen (one).
+     words per line (five); count effect kinds on the screen (one). An art that travels and a
+     word that enters with `in` on the same group is one event, not two. Mixing `drop` and
+     `wipe` is still two.
    - `"character"` (slide-design §7): check `visual.slide.acts` against the seven names and
      against the group count; grep the slide for a `@keyframes` of its own (there must be none
      — the template's are the only ones); compare `g<k>-end.png` with `g<k+1>` 's opening frame
@@ -103,6 +125,10 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
 The axes and their splits are slide-design.md §5: **Design craft 30 · Nothing reads as
 generated 25 · Motion carries meaning 25 · Legibility 20**. Scores start at 0 and points
 are added only with a frame file named as evidence.
+
+Every review is for **one slide only** and totals **100 points for that slide**. Do not average
+scores across shots, infer a score from an episode's other frames, or issue an episode-level pass.
+The only pass condition is this individual slide's `score ≥ 95` and `p0=0`.
 
 ## Output format (fixed for machine parsing)
 
