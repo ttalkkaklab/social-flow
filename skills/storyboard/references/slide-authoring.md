@@ -45,6 +45,16 @@ rubric the reviewer applies.
    `h.disk` · `h.ring` · `h.press` · `h.shift`. Those helpers stamp `data-primitive` into
    the frame, and the renderer matches it to the same narration group. Group 0 is the
    kicker and title. One kind of movement per group.
+   - **Pick an archetype before laying out freeform** (slide-design.md §3): `.stage.spread`
+     stat poster with `.hero.max`, `.split` compare, `.timeline` rail, or an editorial
+     evidence stack. The renderer measures zone fill and a freeform layout that clusters in
+     the top half gets flagged.
+   - **Mark the sustain layer and the focus shift while authoring** (slide-design.md §4):
+     `sv: true` on the one meaning-bearing movement of any group whose sentence runs past
+     its entrance (count-up, bar fill, dot fill, draws), `sv: "settle"` on an entered
+     element that should keep landing for its sentence, `dim: true` on evidence the
+     narration moves past. Without a `.sv`, a long sentence sits on a frozen frame and the
+     renderer says which group and for how long.
    - A **principle** frame is ink actors plus hairline relations, not a stack of labels.
      Sit the cast in `.cast`. `h.fig` arrives (`shape-enter`), `h.stem` / `h.bus` /
      `h.ring` draw (`shape-draw`), `h.chamber` boxes a terminal or room (`shape-enter`),
@@ -82,26 +92,31 @@ rubric the reviewer applies.
    ```bash
    REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
    node $REF/render-motion-slide.mjs slides/s<shot number>-<slug>.html \
-     --out .work/slide-check/s<shot number> --sheet --png-only --keep-frames
+     --out .work/slide-check/s<shot number> --sheet --png-only --keep-frames --segs auto
    ```
 
-   The renderer stops (exit 1) on a contract breach and says which: a page script that
+   `--segs auto` estimates each segment from its narration characters (schema rate,
+   4.5/s) so the sustain layer stretches to roughly what the finished sentence will be;
+   produce re-renders with measured lengths (optional-lanes.md §3.6). The renderer stops
+   (exit 1) on a contract breach and says which: a page script that
    threw (the exception is printed), an animation outside any reveal group, an infinite
    animation, a group with no motion, fewer groups than segments.
 
    Read the summary line: the group count must equal the segment count (or the segment
-   count plus the `A|B` sub-reveals you wrote), and no group may pass 2.6s of motion plus
-   the hold. Open
+   count plus the `A|B` sub-reveals you wrote); `zone_fill_pct` at 55%+ on both axes (a
+   lower number is a composition finding, not a note); and no coverage warning (a group
+   frozen past 40% of its segment wants a `.sv` sustain). Open
    `sheet/g<k>-end.png` for the last group and confirm by eye that everything the scene
    claims is on it, inside the zone.
 4. **The design gate — delegate to `slide-reviewer` for every authored cut** with the slide file, the sheet
-   directory, `manifest.tsv`, scenes.js, research.md, profile.md and
+   directory, `manifest.tsv`, `summary.json` (the renderer writes it next to the manifest —
+   `zone_fill_pct` and the coverage warnings live there), scenes.js, research.md, profile.md and
    `references/slide-design.md`. It returns findings and a `SLIDE_REVIEW: score=NN p0=N
    verdict=PASS|FAIL` tail. **Apply every fix directive, re-run steps 2–3, and delegate
    again with the previous findings attached, until the tail says PASS (score ≥ 95 and
    p0 = 0).** Score **each slide independently out of 100**. Never average scores across an
    episode or let a strong slide compensate for a weak one. Treat a score below 95 as a failed cut,
-   not a soft note. Hard cap 3 rounds (user directive 2026-08-29) — a slide that hasn't converged
+   not a soft note. Hard cap 5 rounds (user directive 2026-08-31) — a slide that hasn't converged
    by then goes back to the user with the last findings and the sheet, not into the build. Log each round's score
    in storyboard.md under the slide table (`s5 · round 1 → 78 · round 2 → 96 PASS`), so the
    convergence is a record and not a claim.
@@ -109,7 +124,7 @@ rubric the reviewer applies.
    for produce to compare against (§3.6 re-renders the clips from the same file).
 
 `autoproduce` runs this same gate before narration and build. It may fix and re-render up to
-three rounds; a slide that still fails is held and never enters the unattended build.
+five rounds; a slide that still fails is held and never enters the unattended build.
 
 #### Kinetic type — the same procedure, a different template
 

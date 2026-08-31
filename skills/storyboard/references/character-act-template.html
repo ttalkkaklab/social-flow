@@ -53,8 +53,8 @@
     --fs-kicker:34px; --fs-title:60px; --fs-hero:205px; --fs-label:50px; --fs-desc:35px; --fs-foot:26px;
     --ease:cubic-bezier(.16,1,.3,1);
     --ease-mask:cubic-bezier(.4,0,.2,1);
-    --fade:220ms; --travel:8px;
-    --rise:480ms; --grow:900ms; --draw:560ms; --count:1800ms; --stagger:80ms; --hold:360ms;
+    --fade:220ms; --travel:28px;
+    --rise:560ms; --grow:900ms; --draw:560ms; --count:1800ms; --stagger:80ms; --hold:360ms;
     --hair:1.5px;
     --stroke:11px;                                  /* 잉크 선 굵기 — 헤어라인보다 굵다. 이건 그림이지 괘선이 아니다 */
     --fig-h:640px;
@@ -62,7 +62,7 @@
   html.wide{
     --w:1920px; --h:1080px; --zone-x:96px; --zone-top:96px; --zone-bottom:285px;
     --fs-kicker:24px; --fs-title:43px; --fs-hero:148px; --fs-label:36px; --fs-desc:25px; --fs-foot:24px;
-    --rise:560ms; --travel:6px; --grow:1000ms; --count:2000ms; --hold:420ms;
+    --rise:640ms; --travel:20px; --grow:1000ms; --count:2000ms; --hold:420ms;
     --stroke:8px; --fig-h:440px;
   }
   *{margin:0;padding:0;box-sizing:border-box}
@@ -143,6 +143,16 @@
   @keyframes reveal{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
   @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
   @keyframes draw{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+  /* ── 지속 층 (slide-design.md §4) — 렌더러가 --seg-d(세그먼트 길이)를 넣으면 .sv 의
+        의미 운동이 문장 끝까지 늘어난다. 캐릭터의 동작은 늘리지 않는다 — 동작은 어휘가
+        정한 길이대로 하고, 지속은 글 쪽(said 의 sv:"settle")이 맡는다. */
+  .rv.sv.fx-grow{animation-duration:var(--seg-d,var(--grow))}
+  .rv.sv.fx-draw{animation-duration:var(--seg-d,var(--draw))}
+  .rv.sv.fx-in{animation-duration:var(--seg-d,var(--rise))}
+  .svw{display:block; transform-origin:center;
+       animation:svsettle var(--seg-d,4000ms) var(--ease) both paused}
+  @keyframes svsettle{from{transform:scale(1.045)}to{transform:scale(1)}}
+  .dw{display:block}                                /* 포커스 시프트 래퍼 — opacity 는 런타임이 적는다 */
 
   .kicker{font-size:var(--fs-kicker); font-weight:500; color:var(--muted); letter-spacing:.02em;
           display:flex; align-items:center; gap:14px}
@@ -235,12 +245,21 @@ const SLIDE_SHOT = 0;
       '<path class="ground" d="M40 620 L360 620"/>' +
     "</svg>";
 
-  const rv = (rg, html, o = {}) =>
-    '<div class="rv' + (o.fx && o.fx !== "none" ? " fx-" + o.fx : "") + '" data-rg="' + rg +
-    '"' + (o.i ? ' style="--i:' + o.i + '"' : "") + ">" + html + "</div>";
-  /* 캐릭터가 반응하는 대상 — 문장은 여기 있고 캐릭터는 옆에서 반응만 한다 */
-  const said = (rg, text, o = {}) => rv(rg, '<div class="said">' + em(text) + "</div>", { fx: "rise", i: o.i || 0 });
-  const note = (rg, text, o = {}) => rv(rg, '<div class="note">' + em(text) + "</div>", { fx: "rise", i: o.i || 1 });
+  /* 리빌 래퍼 — sv:"settle" 은 느린 정착 래퍼(.svw)를, dim:true 는 포커스 시프트 래퍼(.dw)를
+     씌운다. sv:true 는 이 요소의 의미 운동(grow·draw)을 세그먼트 길이로 늘린다. */
+  const rv = (rg, html, o = {}) => {
+    let inner = html;
+    if (o.sv === "settle") inner = '<div class="svw">' + inner + "</div>";
+    if (o.dim) inner = '<div class="dw">' + inner + "</div>";
+    return '<div class="rv' + (o.fx && o.fx !== "none" ? " fx-" + o.fx : "") +
+      (o.sv === true ? " sv" : "") + (o.dim ? " dim" : "") +
+      '" data-rg="' + rg +
+      '"' + (o.i ? ' style="--i:' + o.i + '"' : "") + ">" + inner + "</div>";
+  };
+  /* 캐릭터가 반응하는 대상 — 문장은 여기 있고 캐릭터는 옆에서 반응만 한다.
+     sv:"settle" 은 문장 내내 내려앉는 지속, dim:true 는 다음 문장이 오면 muted 로 내려앉는다 */
+  const said = (rg, text, o = {}) => rv(rg, '<div class="said">' + em(text) + "</div>", { fx: "rise", i: o.i || 0, sv: o.sv, dim: o.dim });
+  const note = (rg, text, o = {}) => rv(rg, '<div class="note">' + em(text) + "</div>", { fx: "rise", i: o.i || 1, dim: o.dim });
   const cast = Array.isArray(slide.cast) ? slide.cast : [];
   const tableau = () => {
     const appearedAt = id => {
@@ -338,6 +357,30 @@ const SLIDE_SHOT = 0;
     return out;
   };
 
+  /* ── 지속 층 — 렌더러가 __setSegs 로 나레이션 세그먼트 길이(ms)를 넘긴다. 그룹 요소의
+     --seg-d 에 들어가 CSS 의 animation-duration:var(--seg-d,…) 가 읽고, .sv 안의 카운트업은
+     dur 자체가 늘어난다. 값이 (g, t) 밖에서 오지만 렌더 시작 때 한 번 정해지는 상수라
+     같은 (g, t) 는 여전히 같은 그림이다. */
+  window.__setSegs = function (map) {
+    for (const el of document.querySelectorAll("[data-rg]")) {
+      const ms = map[+el.dataset.rg];
+      if (ms > 0) el.style.setProperty("--seg-d", Math.round(ms) + "ms");
+    }
+    for (const c of counters) {
+      const ms = map[c.rg];
+      if (ms > 0 && c.el.closest(".sv")) c.dur = Math.round(ms);
+    }
+  };
+
+  /* ── 포커스 시프트 — .dim 그룹은 다음 그룹이 들어오는 동안 muted 급으로 내려앉는다.
+     애니메이션이 아니라 __seek 이 (g, t) 만으로 계산해 인라인 opacity 로 적는다 — 대상이
+     .dw 래퍼(rv 헬퍼가 만든다)라 rv 자신의 fade 애니메이션과 부딪히지 않는다. 파라미터
+     없이 연 미리보기(전체 쉬는 상태)는 마지막 그룹까지 내려앉아 보이는데, 실제 영상의
+     끝 프레임(클립 N)에는 없는 상태다 — 버그가 아니다. */
+  const DIM_TO = 0.65, DIM_MS = 480;
+  const dimTargets = [...document.querySelectorAll(".rv.dim")].map(el => ({
+    el: el.querySelector(":scope > .dw") || el, rg: +el.dataset.rg }));
+
   /* ── 페인터 — 캔버스·SVG 처럼 CSS 키프레임으로 그릴 수 없는 그림을 시각 t 의 함수로 그린다.
      카운트업이 이미 이 모양이고(counters 는 t 를 받아 숫자를 다시 쓴다) 페인터는 그 일반형이다.
      등록  __paint(rg, durMs, fn) — fn(tMs) 는 그룹 rg 의 로컬 시각을 받아 그 시각의 그림을 그린다.
@@ -414,6 +457,10 @@ const SLIDE_SHOT = 0;
       c.el.innerHTML = cells(fmt(c.from + (c.to - c.from) * p, c.dec), c.tpl);
     }
     for (const p of painters) p.fn(p.rg < g ? p.dur : p.rg === g ? Math.min(Math.max(tMs, 0), p.dur) : 0);
+    for (const d of dimTargets) {
+      const v = d.rg >= g ? 1 : d.rg === g - 1 ? 1 - (1 - DIM_TO) * easeOut(clamp01(tMs / DIM_MS)) : DIM_TO;
+      d.el.style.opacity = v >= 1 ? "" : v.toFixed(4);
+    }
     const anims = document.getAnimations();
     for (const a of anims) {
       const o = owner(a);

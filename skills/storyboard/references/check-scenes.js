@@ -76,8 +76,13 @@ const INFO_PRIMITIVES = {
 };
 const ART_MOVES = ['travel', 'rise', 'in', 'drop', 'press', 'none'];
 const ART_FILE = /^slides\/assets\/s\d+-[a-z0-9-]+\.(png|jpe?g)$/i;
-const TRANSITIONS = ['cut', 'dissolve', 'dip', 'dip:white'];
+const TRANSITIONS = ['cut', 'dissolve', 'dip', 'dip:white', 'iris', 'blur', 'zoom'];
 const PUSH_RE = /^push:(l2r|r2l|u2d|d2u)$/;
+const WHIP_RE = /^whip:(l2r|r2l|u2d|d2u)$/;
+/* Joins that say "time or attention moved" — a cut is the honest join inside one scene, so
+   these draw the same-scene warning. push/whip/zoom say "the camera moved", which happens
+   inside a scene all the time. */
+const MOVED_KINDS = ['dissolve', 'dip', 'iris', 'blur'];
 const SIZE_RANK = {
   els: 0, ls: 1, ws: 1, fs: 2, mfs: 3, ms: 4, mcu: 5, cu: 6, choker: 7, ecu: 8, insert: 8,
 };
@@ -86,6 +91,7 @@ function parseTransition(t) {
   if (t == null || t === '') return { kind: 'cut' };
   if (TRANSITIONS.indexOf(t) !== -1) return { kind: t === 'dip:white' ? 'dip' : t, raw: t };
   if (PUSH_RE.test(t)) return { kind: 'push', raw: t };
+  if (WHIP_RE.test(t)) return { kind: 'whip', raw: t };
   return null;
 }
 
@@ -505,15 +511,18 @@ function check(win, fmt, opts) {
 
   /* ── Scene transitions — spent, not applied ──
      Absent or `"cut"` is a cut. The builder J-cuts a cut by default (split edit: next line
-     starts on the previous last frame). dissolve / dip / push are the visible joins, and a
-     short spends at most two of those. scenes-schema §scene transition is the contract. */
+     starts on the previous last frame). dissolve / dip / iris / blur / zoom / push / whip are
+     the visible joins, and a short spends at most two of those however many the vocabulary
+     holds — widening it does not widen the budget. scenes-schema §scene transition is the
+     contract. */
   const joins = [];
   scenes.forEach((s, i) => {
     if (s.type === 'broll' || s.type === 'outro') return;
     const parsed = parseTransition(s.transition);
     if (s.transition && !parsed)
       bad('shot ' + (i + 1), `transition "${s.transition}" — cut | dissolve | dip | dip:white | ` +
-                             'push:l2r|r2l|u2d|d2u (omit = J-cut, cut = smash)');
+                             'iris | blur | zoom | push:l2r|r2l|u2d|d2u | whip:l2r|r2l|u2d|d2u ' +
+                             '(omit = J-cut, cut = smash)');
     else if (parsed && parsed.kind !== 'cut')
       joins.push({ i: i + 1, kind: parsed.kind, raw: parsed.raw || s.transition, scene: s });
   });
@@ -531,7 +540,7 @@ function check(win, fmt, opts) {
     joins.forEach((d) => {
       const prev = scenes[d.i - 2], cur = scenes[d.i - 1];
       if (prev && cur && prev.scene !== undefined && prev.scene === cur.scene &&
-          (d.kind === 'dissolve' || d.kind === 'dip'))
+          MOVED_KINDS.indexOf(d.kind) !== -1)
         warn('shot ' + d.i, `a ${d.kind} inside scene ${cur.scene} — same place and time, ` +
                             'where the cut is the honest join');
     });
@@ -982,6 +991,19 @@ function selftest() {
   ok('dip and push are valid joins',
      bads(run([cover, goodShot, dz({ transition: 'dip' }), ctaShot])).length === 0 &&
      bads(run([cover, goodShot, dz({ transition: 'push:l2r' }), ctaShot])).length === 0);
+  ok('iris, blur, zoom and whip are valid joins',
+     ['iris', 'blur', 'zoom', 'whip:r2l'].every((t) =>
+       bads(run([cover, goodShot, dz({ transition: t }), ctaShot])).length === 0));
+  ok('whip without a direction is a violation',
+     has(bads(run([cover, goodShot, dz({ transition: 'whip' })])), /whip:l2r/));
+  ok('two of the new joins still blow the short budget at three',
+     has(bads(run([cover, goodShot, dz({ transition: 'iris' }), dz({ transition: 'blur' }),
+                   dz({ transition: 'zoom' })])), /spends at most 2/));
+  ok('an iris inside one scene is flagged, a whip is not',
+     has(run([cover, Object.assign({}, goodShot, { scene: 2 }),
+              dz({ transition: 'iris', scene: 2 })]), /same place and time/) &&
+     !has(run([cover, Object.assign({}, goodShot, { scene: 2 }),
+               dz({ transition: 'whip:r2l', scene: 2 })]), /same place and time/));
   ok('explicit cut is clean',
      bads(run([cover, goodShot, dz({ transition: 'cut' }), ctaShot])).length === 0);
   ok('a value outside the join vocabulary is a violation',

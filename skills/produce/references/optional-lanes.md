@@ -70,12 +70,37 @@ render and wire. Every slide is a motion slide (`motion: true`).
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
 node $REF/render-motion-slide.mjs storyboard/slides/s<shot number>-<slug>.html \
-  --out .work/motion/slide-s<shot number>
+  --out .work/motion/slide-s<shot number> --segs auto
 # → .work/motion/slide-s<shot number>/r1.mp4 … rN.mp4 (30fps CFR, canvas size, no audio) + manifest.tsv
 ```
 
+**Re-render with measured segment lengths once §5's TTS lands.** `--segs` feeds the
+sustain layer (slide-design.md §4): `.sv` elements stretch their meaning motion to the
+sentence, so the clip fills the segment instead of freezing after the entrance. `auto`
+estimates from characters; after the narration wav exists, measure the real boundaries
+and render again over the same `--out`:
+
+```bash
+# segment k's window = silence-midpoint k-1 → k on the card's trimmed narration
+# (the same silencedetect signal reveal-timing.py reads); last segment += POST (0.45s)
+ffmpeg -i .work/pcm/s<shot number>.wav -af silencedetect=n=-35dB:d=0.25 -f null - 2>&1 | grep silence_
+node $REF/render-motion-slide.mjs storyboard/slides/s<shot number>-<slug>.html \
+  --out .work/motion/slide-s<shot number> --segs 1:3160,2:2840,3:4210
+```
+
+`--segs` keys are **groups**, not segments. On an A|B sub-reveal slide (more groups than
+segments) `auto` steps aside with a warning — split the segment's measured window at the
+reveal point and pass per-group values. A slide from an older template (no `__setSegs`)
+renders with a warning and keeps its token durations — the wiring below is unchanged
+either way. One seam is by design: a stretched bar fill ends its Heer label delay
+(220ms) after the boundary, so the cut crosses a ~98% fill into the next clip's 100%
+rest frame — measured invisible at 30fps, don't chase it as a pop.
+
 - The summary line's `groups` must equal the card's segment count (or segments + `A|B`
   sub-reveals). A mismatch is a storyboard §5.6 defect — don't paper over it here.
+- Read the coverage warnings: a group frozen past 40% of its segment wants a `.sv`
+  sustain in the slide (a storyboard §5.6 fix), and `zone_fill_pct` under 55% is a
+  composition defect the design gate should have caught.
 - The renderer reads `../scenes.js` relative to the slide, so render it **in place under
   storyboard/slides/**.
 - For `shot.infoType` `timeline`, `statistic`, or `principle`, the renderer also compares every

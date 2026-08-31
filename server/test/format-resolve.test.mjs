@@ -410,8 +410,34 @@ test('build-reel scene transition — a dissolve that costs no time', () => {
   // the carry computes its own $TD, so pin the shape of the carry itself. (A blanket "no
   // xfade" is wrong: the within-card reveal chain uses xfade legitimately.)
   assert.match(reel, /\[vkb\]\[tcar\]overlay=/, 'the carry is an overlay, not a cross-card xfade');
-  assert.doesNotMatch(reel, /\[tcar\][^"]*xfade/,
-                      'a scene boundary never uses xfade — it renumbers the tail PTS');
+
+  // iris and blur reach for xfade too. This used to be pinned as "[tcar] never meets xfade",
+  // which was a proxy for the real contract and turned out to over-block: what breaks drift is
+  // an xfade **at the §9 seam**, where it eats one fade length out of the concat total. Inside
+  // one card's encode it cannot cost time — the carried frame is exactly $TD long and the xfade
+  // sits at offset 0, so the output runs TD + cardlen − TD = cardlen. Measured end to end on a
+  // 5-card fixture (iris · blur · whip · zoom): every card 120f / 4.000000s, drift 0.0000s. So
+  // pin the two properties that make it free instead of banning the filter.
+  assert.match(reel, /-loop 1 -framerate "\$FPS" -t "\$TD" -i "\$TAILPNG"/,
+               'the carried frame is exactly TD long — the half that makes an in-card xfade free');
+  // The trailing comma matters: without it `offset=0` also matches `offset=0.1`, and the
+  // negative form lets it through — the pair would read as a contract and enforce nothing.
+  assert.doesNotMatch(reel, /xfade=transition=\$XFT:duration=\$TD:offset=(?!0,)/,
+                      'an in-card xfade starts at offset 0 — any other offset changes the length');
+  assert.match(reel, /\[tcar\]\[vkbx\]xfade=transition=\$XFT:duration=\$TD:offset=0,/,
+               'iris/blur composite inside the card, at offset 0 exactly, for exactly TD');
+
+  // The join vocabulary the storyboard writes (scenes-schema §scene transition) has to keep
+  // reaching the builder — a mode parsed but never drawn is the failure this repo already had
+  // once in the other direction.
+  for (const [mode, shape] of [
+    ['iris',  /case "\$ENTER" in iris\) XFT=circleopen/],
+    ['blur',  /XFT=hblur/],
+    ['whip',  /avgblur=\$WB/],
+    ['zoom',  /zoompan=z='1\+\$ZOOM_THRU\*on\/\(\$FPS\*\$TD\)'/],
+  ]) assert.match(reel, shape, `enter=${mode} is drawn, not just parsed`);
+  assert.match(reel, /enter=whip:\*\)\s+ENTER=whip; PUSH_DIR=/, 'whip takes a direction like push');
+  assert.match(reel, /dissolve\|push\|jcut\|iris\|blur\|whip\|zoom\)/, 'every carry mode enters the carry branch');
 
   // The fade can never outgrow the card it sits in: a quarter of the card is the ceiling, so a
   // one-second insert dips rather than blinking all the way through black.
