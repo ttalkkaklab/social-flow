@@ -23,14 +23,19 @@
   ■ 상태 규칙·결정성 계약·존은 모션 슬라이드와 한 글자도 다르지 않다
       (그룹 k 의 클립 = 0..k-1 은 쉬는 상태, k 가 t=0 부터 움직이고 끝나면 쉬는 상태에서 얼어붙는다.
        움직임은 CSS @keyframes · data-count · __paint 페인터 · seek 하는 <video> 넷 중 하나,
-       transition·시계·난수·타이머·원격 URL 금지, 한 그룹 2.6초 안.)
+       transition·시계·난수·타이머·원격 URL 금지, 등장 운동은 2.6초 안 — 지속 층(.sv)만
+       렌더러가 --segs 로 넘긴 세그먼트 길이까지 늘어난다.)
       세 템플릿이 같은 seek 런타임 블록을 갖고 format-lint.js 가 세 벌을 대조한다.
 
   ■ 이 레인만의 제약 (slide-design.md §6)
       - 한 화면에 큰 마디는 하나. 나머지는 그보다 작게, 최대 네 줄까지.
       - 한 줄은 다섯 낱말 안. 넘으면 그건 자막이지 화면이 아니다.
       - 효과는 한 컷에 한 종류. drop 과 wipe 를 같은 슬라이드에서 섞지 않는다.
-      - 낱말이 회전하거나 튀지 않는다. 들어오고 멈춘다.
+      - 낱말이 회전하거나 튀지 않는다. 들어오고 멈춘다 — 다만 sv:"settle" 을 달면
+        문장 내내 조금씩 내려앉는다(지속 층, §4). 낱말 하나가 화면 전부인 컷은
+        cls:"max"(빅 쿼트)로 키우고, 이전 마디는 dim:true 로 내려앉힌다.
+      - 파라미터 없이 연 미리보기(전체 쉬는 상태)는 마지막 그룹까지 dim 이 적용돼
+        보인다 — 실제 영상의 끝 프레임에는 없는 상태다. 버그가 아니다.
 -->
 <style>
   :root{
@@ -40,20 +45,20 @@
     --line:color-mix(in srgb,var(--paper) 24%,transparent);
     --w:1080px; --h:1920px; --zone-x:176px; --zone-top:190px; --zone-bottom:570px;
     --fs-kicker:34px; --fs-title:60px; --fs-hero:205px; --fs-label:50px; --fs-desc:35px; --fs-foot:26px;
-    /* 낱말 크기 — 이 레인의 주인공. hero 는 한 화면에 하나 */
-    --fs-word:118px; --fs-word2:64px;
+    /* 낱말 크기 — 이 레인의 주인공. hero 는 한 화면에 하나. max 는 한 줄짜리 평결·훅에만 */
+    --fs-word:118px; --fs-word2:64px; --fs-word-max:170px;
     --ease:cubic-bezier(.16,1,.3,1);
     --ease-mask:cubic-bezier(.4,0,.2,1);
-    --fade:220ms; --travel:8px; --travel-x:48px; --press:56px;
-    --rise:480ms; --grow:900ms; --draw:560ms; --count:1800ms; --stagger:80ms; --hold:360ms;
+    --fade:220ms; --travel:28px; --travel-x:64px; --press:56px;
+    --rise:560ms; --grow:900ms; --draw:560ms; --count:1800ms; --stagger:80ms; --hold:360ms;
     --drop:520ms; --wipe:620ms;
     --hair:1.5px;
   }
   html.wide{
     --w:1920px; --h:1080px; --zone-x:96px; --zone-top:96px; --zone-bottom:285px;
     --fs-kicker:24px; --fs-title:43px; --fs-hero:148px; --fs-label:36px; --fs-desc:25px; --fs-foot:24px;
-    --fs-word:86px; --fs-word2:48px;
-    --rise:560ms; --travel:6px; --travel-x:36px; --press:40px; --grow:1000ms; --count:2000ms; --hold:420ms;
+    --fs-word:86px; --fs-word2:48px; --fs-word-max:120px;
+    --rise:640ms; --travel:20px; --travel-x:48px; --press:40px; --grow:1000ms; --count:2000ms; --hold:420ms;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{width:var(--w);height:var(--h);overflow:hidden}
@@ -93,13 +98,23 @@
   .rv.from-left{--ox:calc(var(--travel-x) * -1)}
   /* 말이 먼저 드러나고, 그 위로 취소선이 자란다. */
   .cross .bar.rv.fx-grow{animation-delay:var(--rise)}
+  /* ── 지속 층 (slide-design.md §4) — 렌더러가 --seg-d(세그먼트 길이)를 넣으면 .sv 의
+        의미 운동이 문장 끝까지 늘어난다. 이 레인의 기본 지속은 sv:"settle" — 들어온
+        낱말이 문장 내내 조금씩 내려앉는다. 글자 리빌 자체(.fx-in·wipe)는 늘리지 않는다. */
+  .rv.sv.fx-grow{animation-duration:var(--seg-d,var(--grow))}
+  .rv.sv.fx-draw{animation-duration:var(--seg-d,var(--draw))}
+  .rv.sv.fx-in{animation-duration:var(--seg-d,var(--rise))}
+  .svw{display:block; transform-origin:center;
+       animation:svsettle var(--seg-d,4000ms) var(--ease) both paused}
+  @keyframes svsettle{from{transform:scale(1.045)}to{transform:scale(1)}}
+  .dw{display:block}                                /* 포커스 시프트 래퍼 — opacity 는 런타임이 적는다 */
   @keyframes appear{from{opacity:0}to{opacity:1}}
   @keyframes fade{from{opacity:0}to{opacity:1}}
   @keyframes lift{from{transform:translateY(var(--travel))}to{transform:none}}
   @keyframes reveal{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
   @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
   @keyframes draw{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
-  @keyframes drop{from{transform:translateY(-10px)}to{transform:none}}
+  @keyframes drop{from{transform:translateY(-16px)}to{transform:none}}
   @keyframes travel{from{transform:translateX(var(--ox, var(--travel-x)))}to{transform:none}}
   @keyframes press{from{transform:translateY(calc(var(--press) * -1))}to{transform:none}}
 
@@ -111,6 +126,7 @@
   /* 큰 마디 — 한 화면에 하나. 줄바꿈은 낱말 단위로만 끊긴다 */
   .word{font-size:var(--fs-word); font-weight:800; letter-spacing:-.035em; line-height:1.06;
         text-wrap:balance; word-break:keep-all}
+  .word.max{font-size:var(--fs-word-max)}           /* 빅 쿼트 — 한 줄짜리 평결·훅이 화면 전부일 때 */
   .word2{font-size:var(--fs-word2); font-weight:700; letter-spacing:-.025em; line-height:1.2;
          word-break:keep-all}
   .sub{font-size:var(--fs-desc); color:var(--muted); margin-top:-10px}
@@ -150,20 +166,31 @@ const SLIDE_SHOT = 0;
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const em = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   const labels = (S.visual && S.visual.slide && S.visual.slide.labels) || [];
-  const rv = (rg, html, o = {}) =>
-    '<div class="rv' + (o.fx && o.fx !== "none" ? " fx-" + o.fx : "") +
-    (o.dir === "left" ? " from-left" : "") + (o.cls ? " " + o.cls : "") +
-    '" data-rg="' + rg + '"' +
-    (o.i ? ' style="--i:' + o.i + '"' : "") +
-    (o.primitive ? ' data-primitive="' + o.primitive + '"' : "") + ">" + html + "</div>";
-  /* 큰 마디 — 그룹 rg 에서 들어온다. fx 는 drop(기본) 또는 wipe, 한 슬라이드에 한 종류만 */
+  /* 리빌 래퍼 — sv:"settle" 은 느린 정착 래퍼(.svw)를, dim:true 는 포커스 시프트 래퍼(.dw)를
+     씌운다. sv:true 는 이 요소의 의미 운동(grow·draw)을 세그먼트 길이로 늘린다. */
+  const rv = (rg, html, o = {}) => {
+    let inner = html;
+    if (o.sv === "settle") inner = '<div class="svw">' + inner + "</div>";
+    if (o.dim) inner = '<div class="dw">' + inner + "</div>";
+    return '<div class="rv' + (o.fx && o.fx !== "none" ? " fx-" + o.fx : "") +
+      (o.dir === "left" ? " from-left" : "") +
+      (o.sv === true ? " sv" : "") + (o.dim ? " dim" : "") +
+      (o.cls ? " " + o.cls : "") +
+      '" data-rg="' + rg + '"' +
+      (o.i ? ' style="--i:' + o.i + '"' : "") +
+      (o.primitive ? ' data-primitive="' + o.primitive + '"' : "") + ">" + inner + "</div>";
+  };
+  /* 큰 마디 — 그룹 rg 에서 들어온다. fx 는 drop(기본) 또는 wipe, 한 슬라이드에 한 종류만.
+     cls:"max" 는 빅 쿼트 크기, sv:"settle" 은 문장 내내 내려앉는 지속, dim:true 는 다음
+     그룹이 들어올 때 muted 로 내려앉는다. */
   const word = (rg, text, o = {}) =>
-    rv(rg, '<div class="word">' + em(text) + "</div>", { fx: o.fx || "drop", i: o.i || 0 });
+    rv(rg, '<div class="word' + (o.cls === "max" ? " max" : "") + '">' + em(text) + "</div>",
+       { fx: o.fx || "drop", i: o.i || 0, sv: o.sv, dim: o.dim });
   /* 작은 마디 — 큰 마디를 받는 줄 */
   const line = (rg, text, o = {}) =>
-    rv(rg, '<div class="word2">' + em(text) + "</div>", { fx: o.fx || "in", i: o.i || 0 });
+    rv(rg, '<div class="word2">' + em(text) + "</div>", { fx: o.fx || "in", i: o.i || 0, sv: o.sv, dim: o.dim });
   const sub = (rg, text, o = {}) =>
-    rv(rg, '<div class="sub">' + em(text) + "</div>", { fx: "in", i: o.i || 1 });
+    rv(rg, '<div class="sub">' + em(text) + "</div>", { fx: "in", i: o.i || 1, dim: o.dim });
   /* 지워지는 말 — 말이 먼저 있고 그 위로 선이 그어진다(선만 같은 그룹 안에서 자란다) */
   const cross = (rg, text, o = {}) =>
     rv(rg, '<div class="word2"><span class="cross">' + em(text) +
@@ -267,6 +294,30 @@ const SLIDE_SHOT = 0;
     return out;
   };
 
+  /* ── 지속 층 — 렌더러가 __setSegs 로 나레이션 세그먼트 길이(ms)를 넘긴다. 그룹 요소의
+     --seg-d 에 들어가 CSS 의 animation-duration:var(--seg-d,…) 가 읽고, .sv 안의 카운트업은
+     dur 자체가 늘어난다. 값이 (g, t) 밖에서 오지만 렌더 시작 때 한 번 정해지는 상수라
+     같은 (g, t) 는 여전히 같은 그림이다. */
+  window.__setSegs = function (map) {
+    for (const el of document.querySelectorAll("[data-rg]")) {
+      const ms = map[+el.dataset.rg];
+      if (ms > 0) el.style.setProperty("--seg-d", Math.round(ms) + "ms");
+    }
+    for (const c of counters) {
+      const ms = map[c.rg];
+      if (ms > 0 && c.el.closest(".sv")) c.dur = Math.round(ms);
+    }
+  };
+
+  /* ── 포커스 시프트 — .dim 그룹은 다음 그룹이 들어오는 동안 muted 급으로 내려앉는다.
+     애니메이션이 아니라 __seek 이 (g, t) 만으로 계산해 인라인 opacity 로 적는다 — 대상이
+     .dw 래퍼(rv 헬퍼가 만든다)라 rv 자신의 fade 애니메이션과 부딪히지 않는다. 파라미터
+     없이 연 미리보기(전체 쉬는 상태)는 마지막 그룹까지 내려앉아 보이는데, 실제 영상의
+     끝 프레임(클립 N)에는 없는 상태다 — 버그가 아니다. */
+  const DIM_TO = 0.65, DIM_MS = 480;
+  const dimTargets = [...document.querySelectorAll(".rv.dim")].map(el => ({
+    el: el.querySelector(":scope > .dw") || el, rg: +el.dataset.rg }));
+
   /* ── 페인터 — 캔버스·SVG 처럼 CSS 키프레임으로 그릴 수 없는 그림을 시각 t 의 함수로 그린다.
      카운트업이 이미 이 모양이고(counters 는 t 를 받아 숫자를 다시 쓴다) 페인터는 그 일반형이다.
      등록  __paint(rg, durMs, fn) — fn(tMs) 는 그룹 rg 의 로컬 시각을 받아 그 시각의 그림을 그린다.
@@ -343,6 +394,10 @@ const SLIDE_SHOT = 0;
       c.el.innerHTML = cells(fmt(c.from + (c.to - c.from) * p, c.dec), c.tpl);
     }
     for (const p of painters) p.fn(p.rg < g ? p.dur : p.rg === g ? Math.min(Math.max(tMs, 0), p.dur) : 0);
+    for (const d of dimTargets) {
+      const v = d.rg >= g ? 1 : d.rg === g - 1 ? 1 - (1 - DIM_TO) * easeOut(clamp01(tMs / DIM_MS)) : DIM_TO;
+      d.el.style.opacity = v >= 1 ? "" : v.toFixed(4);
+    }
     const anims = document.getAnimations();
     for (const a of anims) {
       const o = owner(a);
