@@ -5,6 +5,17 @@
  *
  *   node render-motion-slide.mjs <storyboard/slides/sN-slug.html> --out <dir> [--fps 30]
  *        [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames]
+ *        [--segs auto|k:ms,...]
+ *
+ * --segs hands the page its narration segment lengths (the sustain layer, slide-design.md §4):
+ *   elements marked .sv stretch their meaning-bearing movement to the segment, so the clip
+ *   fills the spoken sentence instead of freezing after the entrance. "auto" estimates from
+ *   narration characters at the schema rate (chars / 4.5 per second) — for the storyboard
+ *   design gate, which runs before any TTS exists. produce re-renders with measured ms once
+ *   the narration wav is cut (optional-lanes.md §3.6). Without --segs, token durations hold
+ *   and each clip freezes on its rest frame as before. The summary also reports
+ *   zone_fill_pct — how much of the subtitle-free zone the painted content covers at the
+ *   final rest frame — and warns under 55%.
  *
  * How it works — the seek model (docs/research/2026-08-29-motion-slide-lane):
  *   Chrome is launched ONCE (headless, --remote-debugging-pipe — CDP over fd 3/4, no puppeteer)
@@ -64,7 +75,7 @@ const require = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const { FORMATS, DEFAULT_FORMAT } = require(path.join(HERE, "../../platform-guide/references/formats.js"));
 
-const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames]";
+const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...]";
 const usage = msg => { console.error("✗ " + msg + "\n" + USAGE); process.exit(2); };
 const CDP_TIMEOUT_MS = 30000;
 
@@ -73,7 +84,7 @@ const argv = process.argv.slice(2);
 // jobs = tabs capturing at once. Capture is mostly PNG encoding, so each takes a core — stop at
 // half the cores and never above 4; past that only Chrome's memory grows, not throughput.
 const opt = { fps: 30, jobs: Math.max(1, Math.min(4, Math.floor((os.cpus().length || 4) / 2))),
-  sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null };
+  sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null, segs: null };
 const pos = [];
 const intArg = (v, name, lo, hi) => {
   const n = Number(v);
@@ -89,6 +100,10 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === "--png-only") opt.pngOnly = true;
   else if (a === "--keep-frames") opt.keep = true;
   else if (a === "--group") opt.group = intArg(argv[++i], "group", 1, 999);
+  else if (a === "--segs") {
+    opt.segs = argv[++i];
+    if (!opt.segs) usage('--segs wants "auto" or k:ms[,k:ms...]');
+  }
   else if (a === "--frame") {
     const m = String(argv[++i] || "").match(/^(\d+):(\d+(?:\.\d+)?)$/);
     if (!m) usage(`--frame wants k:ms (e.g. 2:800), got "${argv[i]}"`);
@@ -118,6 +133,42 @@ const segCount = scene && Array.isArray(scene.narration) ? scene.narration.lengt
 const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArray(scene.visual.slide.motionBeats)
   ? scene.visual.slide.motionBeats.filter(b => b && Number.isInteger(Number(b.group)) && b.primitive)
   : [];
+
+// ── --segs: narration segment lengths → the page's sustain layer (__setSegs) ─
+// "auto" estimates each segment from its narration characters at the format's speaking
+// rate (formats.js pacing.rate, the same number scenes-schema §per-scene fields quotes) —
+// the storyboard design gate runs before any TTS exists. produce passes measured ms once
+// the wav is cut. The two paths treat the band differently on purpose: an estimate may be
+// clamped into it, a measurement may not. Silently raising a measured 900ms window to 1200
+// would let the motion run past the cut, and the coverage check below would compare against
+// the raised number and see nothing wrong — so the measured path keeps the value it was
+// given and says when it sits outside the band.
+const SEG_MIN_MS = 1200, SEG_MAX_MS = 9000;
+let segWarn = [];
+let segMap = null;
+if (opt.segs === "auto") {
+  if (!scene || !Array.isArray(scene.narration) || !scene.narration.length)
+    usage(`--segs auto needs narration segments in scenes.js shot ${shotNo}`);
+  segMap = {};
+  scene.narration.forEach((n, i) => {
+    const chars = String((n && (n.tts || n.sub)) || "").trim().length;
+    segMap[i + 1] = Math.min(SEG_MAX_MS, Math.max(SEG_MIN_MS, Math.round(chars / preset.pacing.rate * 1000)));
+  });
+} else if (opt.segs) {
+  segMap = {};
+  for (const part of opt.segs.split(",")) {
+    const m = part.match(/^(\d+):(\d+)$/);
+    if (!m) usage(`--segs wants "auto" or k:ms[,k:ms...], got "${opt.segs}"`);
+    const ms = +m[2];
+    // Past the ceiling is a typo, not a segment — no narration segment in this lane runs that
+    // long, and a clip built to it would render for minutes. Refuse loudly rather than clamp.
+    if (ms > SEG_MAX_MS)
+      usage(`--segs group ${m[1]} is ${ms}ms — over the ${SEG_MAX_MS}ms a narration segment runs. Seconds in the ms slot?`);
+    if (ms < SEG_MIN_MS)
+      segWarn.push(`--segs group ${m[1]} is ${ms}ms — under ${SEG_MIN_MS}ms a sustain reads as a flicker. Rendering it as given; check the boundary you measured`);
+    segMap[+m[1]] = ms;
+  }
+}
 
 // ── CDP over --remote-debugging-pipe ──────────────────────────────────────
 // $CHROME wins. Otherwise walk the usual macOS/Linux spots in order — real Chrome first, because
@@ -282,16 +333,63 @@ const openPage = async () => {
       return die(`rendered HTML adds undeclared group ${group} primitive "${primitive}" — motionBeats permits one meaning-bearing movement kind per narration group`);
     }
   }
+  const warn = segWarn.slice();
+  // Sustain layer — hand the page its segment lengths before reading group durations, so
+  // .sv elements stretch to them and __groups() reports the stretched clips. --segs keys
+  // are GROUPS: on an A|B sub-reveal slide (more groups than segments) group k is no
+  // longer segment k, so auto mode steps aside — produce splits the measured window at
+  // the reveal point and passes per-group values instead.
+  let segsApplied = false;
+  if (segMap) {
+    const nPre = (await evalJS("window.__groups()")).length - 1;
+    if (opt.segs === "auto" && segCount != null && nPre !== segCount) {
+      warn.push(`--segs auto skipped: ${nPre} reveal groups vs ${segCount} narration segments (A|B sub-reveals shift the group↔segment mapping) — pass per-group --segs k:ms, splitting the segment's measured window at the reveal point`);
+    } else {
+      segsApplied = await evalJS(`typeof window.__setSegs === "function" ? (window.__setSegs(${JSON.stringify(segMap)}), true) : false`);
+      if (!segsApplied) {
+        warn.push(`--segs given but the page has no __setSegs — a slide built from an older template; token durations stay and the tail of each segment freezes`);
+      } else {
+        // A key that names no group changes nothing, and the coverage check below reads an
+        // unfilled group through the entrance cap, which a 1.5s entrance never trips — so the
+        // mismatch has to be said here or it is said nowhere.
+        const stray = Object.keys(segMap).map(Number).filter(k => k < 1 || k > nPre);
+        if (stray.length)
+          warn.push(`--segs names group ${stray.join(", ")} but the slide has ${nPre} — ${stray.length > 1 ? "those keys change" : "that key changes"} nothing. --segs keys are groups, not narration segments`);
+        const unset = [];
+        for (let k = 1; k <= nPre; k++) if (segMap[k] == null) unset.push(k);
+        if (unset.length)
+          warn.push(`--segs leaves group ${unset.join(", ")} without a segment length — ${unset.length > 1 ? "they keep their" : "it keeps its"} token durations while the rest stretch`);
+      }
+    }
+  }
+  // A settle sustain without --segs holds its own fallback length, and downstream that shows up
+  // as a bare "over the cap" warning that names the symptom instead of the cause.
+  if (!segsApplied) {
+    const svw = await evalJS('document.querySelectorAll(".svw").length');
+    if (svw)
+      warn.push(`${svw} settle sustain element${svw > 1 ? "s" : ""} rendered with no segment length — each holds its fallback duration, so the group runs long and the sheet frames land mid-settle. Pass --segs (produce optional-lanes §3.6)`);
+  }
   const groups = await evalJS("window.__groups()");
   const N = groups.length - 1;
   if (N < 1) return die("no reveal groups — every moving element needs data-rg ≥ 1");
   for (let k = 1; k <= N; k++)
     if (groups[k].dur <= meta.hold) return die(`group ${k} has no motion (only the ${meta.hold}ms hold) — a spoken segment would get a still clip. Either move something in group ${k} or renumber the groups`);
   if (segCount != null && N < segCount) return die(`${N} reveal groups but ${segCount} narration segments in scenes.js shot ${shotNo} — segment ${N + 1} would have no clip. Add groups (segment k → group k)`);
-  const warn = [];
-  // cap = 2.6s of motion + the template's hold tail (slide-design.md §motion) — a narration segment
-  // shorter than the clip cuts to the next clip's rest frame mid-motion, and that jump is visible.
-  for (const g of groups) if (g.dur > 2600 + meta.hold) warn.push(`group ${g.rg} clip is ${g.dur}ms — over the cap (2.6s motion + ${meta.hold}ms hold, slide-design.md §motion); a shorter segment cuts it mid-motion`);
+  // Entrance cap = 2.6s of motion + the template's hold tail (slide-design.md §motion) — a narration
+  // segment shorter than the clip cuts to the next clip's rest frame mid-motion, and that jump is
+  // visible. With --segs the cap moves to the segment itself, and the opposite defect gets teeth:
+  // a clip much shorter than its segment leaves a frozen tail on screen (the sustain layer's job).
+  for (const g of groups.slice(1)) {
+    const seg = segMap && segsApplied ? segMap[g.rg] : null;
+    if (seg) {
+      if (g.dur > seg + meta.hold + 400)
+        warn.push(`group ${g.rg} clip is ${g.dur}ms — over its ${seg}ms segment; the cut to the next clip lands mid-motion`);
+      else if (seg - g.dur > seg * 0.4)
+        warn.push(`group ${g.rg} moves ${(g.dur / 1000).toFixed(1)}s of its ${(seg / 1000).toFixed(1)}s segment — the tail freezes ${((seg - g.dur) / 1000).toFixed(1)}s; mark a .sv sustain element (slide-design.md §4) or accept the freeze`);
+    } else if (g.dur > 2600 + meta.hold) {
+      warn.push(`group ${g.rg} clip is ${g.dur}ms — over the cap (2.6s motion + ${meta.hold}ms hold, slide-design.md §motion); a shorter segment cuts it mid-motion`);
+    }
+  }
   if (segCount != null && N > segCount) warn.push(`${N} reveal groups vs ${segCount} narration segments — fine only if produce §3.6 writes A|B sub-reveals for the extra clips`);
   if (opt.group != null && opt.group > N) return die(`--group ${opt.group} but the slide has ${N} groups`);
   if (opt.frame && opt.frame.g > N) return die(`--frame group ${opt.frame.g} but the slide has ${N} groups`);
@@ -363,6 +461,45 @@ const openPage = async () => {
       await seek(dur, k);                await shot(path.join(sdir, `g${k}-end.png`));
     }
   }
+  // Zone fill — measured at the final rest state (clip N's end frame, the frame the video
+  // freezes on), against the subtitle-free zone. Painted content only: text rects, replaced
+  // elements, and boxes with their own background or border — container divs span the zone
+  // by default and would report 100% regardless of what is drawn.
+  await seek(groups[N].dur, N);
+  const zoneFill = await evalJS(`(() => {
+    const cs = getComputedStyle(document.documentElement);
+    const px = v => parseFloat(cs.getPropertyValue(v)) || 0;
+    const W = px("--w"), H = px("--h"), zx = px("--zone-x"), zt = px("--zone-top"), zb = px("--zone-bottom");
+    const zw = W - 2 * zx, zh = H - zt - zb;
+    const stage = document.getElementById("stage") || document.body;
+    let x0 = 1 / 0, y0 = 1 / 0, x1 = -1 / 0, y1 = -1 / 0;
+    const add = r => { if (r.width < 2 || r.height < 2) return;
+      x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top);
+      x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); };
+    const range = document.createRange();
+    const walker = document.createTreeWalker(stage, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (!n.nodeValue.trim()) continue;
+      range.selectNodeContents(n);
+      for (const r of range.getClientRects()) add(r);
+    }
+    for (const el of stage.querySelectorAll("img,video,svg,canvas")) add(el.getBoundingClientRect());
+    for (const el of stage.querySelectorAll("*")) {
+      const s = getComputedStyle(el);
+      if (s.visibility === "hidden" || +s.opacity === 0) continue;
+      const painted = (s.backgroundColor !== "rgba(0, 0, 0, 0)" && s.backgroundColor !== "transparent")
+        || s.backgroundImage !== "none"
+        || ["Top", "Right", "Bottom", "Left"].some(d => parseFloat(s["border" + d + "Width"]) > 0);
+      if (painted) add(el.getBoundingClientRect());
+    }
+    if (x1 < x0) return { w_pct: 0, h_pct: 0 };
+    const ix0 = Math.max(x0, zx), iy0 = Math.max(y0, zt);
+    const ix1 = Math.min(x1, W - zx), iy1 = Math.min(y1, H - zb);
+    return { w_pct: Math.round(Math.max(0, ix1 - ix0) / zw * 100),
+             h_pct: Math.round(Math.max(0, iy1 - iy0) / zh * 100) };
+  })()`);
+  if (zoneFill.w_pct < 55 || zoneFill.h_pct < 55)
+    warn.push(`content fills ${zoneFill.w_pct}%×${zoneFill.h_pct}% of the zone (w×h) — under 55%; scale the composition up or pick an archetype (slide-design.md §3)`);
   // Re-read the contract after capturing. __meta() sampled once up front cannot see an animation
   // that only exists at some mid-group t — a painter that attaches a node outside [data-rg] and
   // removes it again by the rest frame. __seek pins such an animation and counts it, so the
@@ -386,9 +523,15 @@ const openPage = async () => {
     return die(`could not load during capture: ${metaAfter.broken.join(", ")}`);
   fs.writeFileSync(path.join(OUT, "manifest.tsv"), manifest.join("\n") + "\n");
   const sec = (Date.now() - t0) / 1000;
-  console.log(JSON.stringify({ slide: path.basename(htmlAbs), format: FORMAT, canvas: `${W}x${H}`, groups: N, jobs,
-    segments: segCount, durations_ms: groups.slice(1).map(g => g.dur), frames: framesTotal,
-    seconds: +sec.toFixed(2), fps_capture: +(framesTotal / sec).toFixed(1), out: OUT, warnings: warn }));
+  const summary = { slide: path.basename(htmlAbs), format: FORMAT, canvas: `${W}x${H}`, groups: N, jobs,
+    segments: segCount, durations_ms: groups.slice(1).map(g => g.dur),
+    segs_ms: segMap && segsApplied ? Array.from({ length: N }, (_, i) => segMap[i + 1] || null) : null,
+    zone_fill_pct: zoneFill, frames: framesTotal,
+    seconds: +sec.toFixed(2), fps_capture: +(framesTotal / sec).toFixed(1), out: OUT, warnings: warn };
+  // slide-reviewer reads zone_fill_pct and the coverage warnings from this file — stdout
+  // alone never reaches the delegation (slide-authoring step 4 hands the file over).
+  fs.writeFileSync(path.join(OUT, "summary.json"), JSON.stringify(summary, null, 1) + "\n");
+  console.log(JSON.stringify(summary));
   for (const w of warn) console.error("⚠ " + w);
   shutdown(0);
 })().catch(e => die(e.message));

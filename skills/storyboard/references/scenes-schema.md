@@ -902,7 +902,8 @@ the field appears only where there is a table to point at.
 ```js
 {
   type: "points",
-  transition: "dissolve",     // omit · cut | dissolve | dip | dip:white | push:<l2r|r2l|u2d|d2u>
+  transition: "dissolve",     // omit · cut | dissolve | dip | dip:white | iris | blur | zoom
+                              //        | push:<l2r|r2l|u2d|d2u> | whip:<l2r|r2l|u2d|d2u>
   …
 }
 ```
@@ -925,6 +926,16 @@ Pick from this table. One home; directing-grammar §6 rule 16 points here.
 | time passed, or the place changed, and the two pictures belong to one world | `"dissolve"` | the new shot melts up **through** the old one for 0.45 s |
 | a chapter / act break, a jump the story treats as a distance | `"dip"` / `"dip:white"` | through black (or white) — a beat of nothing. White is a flash |
 | a list, a comparison, "meanwhile" — siblings, not a before and after | `"push:<l2r\|r2l\|u2d\|d2u>"` | the old shot slides off and uncovers the new one (0.32 s) |
+| a find — the shot names the thing the episode has been circling | `"iris"` | a circle opens out of the old shot onto the new one (0.45 s) |
+| a memory, a hypothetical, someone losing the thread | `"blur"` | the old shot smears sideways and melts (0.45 s) |
+| the camera goes *in* — into the box, the building, the diagram | `"zoom"` | the old shot grows past the camera and thins out (0.32 s) |
+| a hard swerve — the answer is somewhere else, and the turn is the point | `"whip:<l2r\|r2l\|u2d\|d2u>"` | the old shot smears along the travel and is gone (0.24 s) |
+
+`dissolve` and `blur` are the same length and the same material, and they say different
+things: a dissolve means the two pictures belong to one world, a blur means someone's
+attention left. `push` and `whip` travel the same way; the smear is what makes the second
+one a swerve instead of a list. Pick by what the audience should feel, not by what looks
+different from the last one.
 
 **Most boundaries omit the field.** A cut says the story continued. A visible join says
 something moved that the picture alone cannot show. Spend it where that is true and nowhere
@@ -936,6 +947,11 @@ top of that is slow *and* abrupt.
 **A short gets one visible join, or none.** Two is already a lot; a dissolve at every
 boundary is the slideshow look. Long-form can carry one per chapter boundary. Softening
 every join takes away the cut rhythm this pipeline uses to hold attention.
+
+**Seven kinds, still one budget.** `check-scenes.js` caps a short at two visible joins
+whatever the vocabulary holds, and it counts an iris the same as a dissolve. A wider
+vocabulary is there so the one join you spend can be the right one — not so you can spend
+more of them. An episode that uses four different kinds once each has spent four.
 
 Where a visible join earns its place: a time jump inside one room (the cut would read as
 continuous); a move the story treats as a distance; the turn on a story arc; into the cta
@@ -961,10 +977,16 @@ cross-card xfade, so the concat stays stream-copy exact (`../produce/references/
 | `"cut"` | `enter=cut` — smash, old silent pre-roll |
 | `"dissolve"` | `enter=dissolve` |
 | `"push:<dir>"` | `enter=push:<dir>` |
+| `"iris"` | `enter=iris` |
+| `"blur"` | `enter=blur` |
+| `"zoom"` | `enter=zoom` |
+| `"whip:<dir>"` | `enter=whip:<dir>` |
 | `"dip"` / `"dip:white"` | `exit=black` (or `white`) on the card before **and** `enter=black` (or `white`) on this one |
 
-Dissolve, push, and dip keep the card's frame count (measured A/B: identical `subs.srt`,
-same duration both ways). A J-cut drops that card's silent pre-roll (`PRE`, 0.40 s) because
+Every carry and dip keeps the card's frame count (measured A/B: identical `subs.srt`,
+same duration both ways; the iris and blur joins are drawn with an xfade **inside** the
+incoming card's encode and come out frame-identical to the overlay carries — 90/90 frames
+at 3.000 s on the 2-card fixture). A J-cut drops that card's silent pre-roll (`PRE`, 0.40 s) because
 the next line occupies it. `POST` is 0.45 s — last-reveal hang plus a blink. The BGM bed
 runs across the whole feature; fading it at a scene change would punch a hole in the music.
 
@@ -1937,7 +1959,9 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
 - Built from `references/motion-slide-template.html` (or the kinetic / character template for
   those kinds). It exposes `window.__seek(tMs, g)` · `__groups()` · `__size()` · `__meta()`,
   which the renderer calls (`__meta` reports stray and infinite animations; the renderer
-  stops on either).
+  stops on either), plus `__setSegs({group: ms})` — the renderer's `--segs` hands over the
+  narration segment lengths and elements marked `.sv` stretch their meaning motion to them
+  (the sustain layer, slide-design.md §4).
 - **Every movement is reproducible by seek**, and there are four ways to make one:
   CSS `@keyframes` (the template's `rise` · `in` · `grow` · `draw` · `fade`), `data-count` count-ups,
   a **painter** registered with `__paint(rg, durMs, fn)` whose `fn(tMs)` draws the frame at
@@ -1966,12 +1990,16 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   bare Chromium ships without the H.264 decoder.
   Painters get `__interp(x, [in0,in1], [out0,out1], ease)` and `__ease(name, x)` from the
   runtime (`linear` · `out` · `in` · `inOut`) so a curve isn't hand-rolled per slide.
-- **One movement per group, ≤ 2.6s of motion** (clip = 2.6s + the hold). A segment
-  shorter than its clip cuts to the next rest frame mid-motion; the renderer warns.
-- **Continuous motion is outside this lane** — gears turning for the whole scene, a
-  line tracing under the narration. That would freeze on every hold. Render it as
-  footage and place it with `visual.video` / `visual.clip` (ep05's gear scenes went that
-  way). Beats only: count-ups, bar growth, step and callout entries.
+- **One movement per group, entrance ≤ 2.6s of motion** (clip = 2.6s + the hold). A segment
+  shorter than its clip cuts to the next rest frame mid-motion; the renderer warns. With
+  `--segs`, a group's `.sv` element stretches past the cap to its segment length by design,
+  and the renderer instead warns about the opposite defect — a clip frozen past 40% of its
+  segment with no sustain.
+- **Cyclic motion is outside this lane** — gears turning for the whole scene. That would
+  freeze on every hold. Render it as footage and place it with `visual.video` /
+  `visual.clip` (ep05's gear scenes went that way). Beats plus their sustain: count-ups,
+  bar growth, step and callout entries, each allowed to keep moving monotonically to its
+  own segment boundary.
   The footage itself can now come from a slide instead of a separate drawing program:
   author a one-group slide whose painter runs the length of the shot, render it, and wire
   the resulting `r1.mp4` as `visual.clip`. ep05 drew its gears frame by frame in Python

@@ -51,6 +51,7 @@ Sizes are the `formats.js` font ratios, mirrored inline in the template:
 | kicker | 34px | 24px | 500, muted, accent rule before it |
 | title | 60px | 43px | 700, `letter-spacing:-.02em` |
 | hero number | 205px | 148px | 800, `letter-spacing:-.035em`, `tabular-nums` |
+| hero number, stat poster (`.hero.max`) | 260px | 185px | same — up to 4 digits; more digits go back to the base size |
 | unit | 30% of hero | 30% of hero | 600, accent |
 | label | 50px | 36px | 600 |
 | description / bar label / value | 35px | 25px | 400 |
@@ -67,6 +68,14 @@ render machine anyway; the cells make the layout right either way.
 
 - **One hero per slide.** One big number, or one comparison, or one flow. A second hero
   is a second slide.
+- **Pick an archetype before laying out freeform.** Four compositions ship in the template
+  and fill the zone by construction: the **stat poster** (`.stage.spread` + `.hero.max` —
+  one oversized number, title above, source anchored below), the **split compare**
+  (`.split` — two columns against a center hairline), the **timeline rail** (`.timeline`),
+  and the **evidence stack** (editorial custom DOM, ep10 s7 shape). Freeform is allowed,
+  but the renderer measures how much of the zone the painted content covers
+  (`zone_fill_pct` in the summary) and warns under 55% — the top-clustered, half-empty
+  frame is the defect this measurement exists to catch.
 - Content sits in the zone (`formats.js zone` — portrait x 176 · top 190 · bottom 570;
   wide x 96 · top 96 · bottom 285), vertically centred. The bottom band belongs to the
   subtitles; only the ground colour reaches it.
@@ -101,10 +110,10 @@ Tokens (CSS variables in the template):
 | `--ease` | `cubic-bezier(.16,1,.3,1)` | same | spatial settle — a fast start that lands, no overshoot, no bounce. JS `EASES.out` samples the same curve. Rise, drop, grow, character enter |
 | `--ease-mask` | `cubic-bezier(.4,0,.2,1)` | same | clip-path travel — a wipe or a drawn hairline you can actually watch. `--ease` finishes in the first third, so a mask on that curve pops on instead of travelling |
 | `--fade` | 220ms linear | same | opacity only — fade is never eased, and never stacked on a mask |
-| `--travel` | 8px | 6px | how far a rise travels. Short so the eye reads arrival, not the trip |
-| `--travel-x` | 48px | 36px | how far a side move (`fx-travel` · `h.shift`) travels |
+| `--travel` | 28px | 20px | how far a rise travels. The eye still reads arrival, but on a phone the 8px it used to be sat under the perception floor — nothing appeared to move |
+| `--travel-x` | 64px | 48px | how far a side move (`fx-travel` · `h.shift`) travels |
 | `--press` | 56px | 40px | how far a press (`fx-press` · `h.press`) drops onto its bed |
-| `--rise` | 480ms | 560ms | spatial settle of `fx-rise` (paired with `--fade`), and duration of `fx-in` |
+| `--rise` | 560ms | 640ms | spatial settle of `fx-rise` (paired with `--fade`), and duration of `fx-in` — long enough for the 28px travel to read |
 | `--grow` | 900ms | 1000ms | a bar filling on `--ease-mask` — Highcharts ~1000 / Heer ~1s. `--ease` would finish the fill in the first third, so the grow would not read |
 | `--draw` | 560ms | same | a hairline drawing in by clip-path on `--ease-mask`, so stroke width stays constant and the line travels |
 | `--count` | 1800ms | 2000ms | a hero count-up, ease-out — lands before the sentence ends |
@@ -125,20 +134,40 @@ Rules:
   wipe before the letters were on, so the travel never read. A bar fill still grows with
   `scaleX` on `--ease-mask`; a hairline draws with clip-path on the same curve so its
   weight never thins and the line is watched, not popped.
-- **A group's motion ends inside 2.6s** (clip = 2.6s + the hold — 2960ms portrait, 3020ms
-  wide). A narration segment shorter than the clip cuts to the next clip's rest frame
-  mid-motion, and that jump is visible; the renderer warns past the cap.
+- **Entrance motion ends inside 2.6s**; the sustain layer then carries the group to its
+  segment boundary. Without `--segs` a clip is entrance + hold as before, and a narration
+  segment shorter than the clip cuts to the next clip's rest frame mid-motion — the
+  renderer warns past the cap either way.
+- **The sustain layer — the clip fills the sentence.** produce hands the renderer each
+  segment's measured length (`--segs k:ms,…`; the storyboard gate estimates with
+  `--segs auto` at the schema's 4.5 chars/s), and elements marked `sv` stretch their one
+  meaning-bearing movement to it: a count-up counts while the sentence says the number, a
+  bar keeps filling, a hairline keeps drawing, a dot grid keeps filling (`sv: true` on
+  `h.count` · `h.bar` · `h.dots` · `h.range` · `h.link` · `h.axis` · `h.stem` · `h.bus`),
+  and an entered element can settle for the length of its sentence (`sv: "settle"` — a
+  4.5% scale landing in a nested wrapper). Before this layer, a 1.3s entrance under a 5s
+  sentence froze the frame for 3.7s — measured on ep08 s4, and the single biggest reason
+  finished videos read as a slideshow. The renderer warns when a group's frozen tail
+  passes 40% of its segment. Type reveals and fades never stretch — a 4-second wipe over
+  a word is a crawl, not an entrance.
+- **Focus shift.** A group marked `dim: true` drops to muted (0.65) while the next group
+  enters, so the eye follows the narration and the end frame keeps its hierarchy — the
+  runtime computes it from (g, t), no animation to own, no seam to break. Use it on
+  evidence rows the narration has moved past; keep the base (group 0) and the conclusion
+  bright. A no-parameter browser preview shows even the last group dimmed — a state the
+  finished video never shows.
 - **Movement encodes the value.** A count-up says "this many"; a bar growing to 81% says
   "this much of that"; an actor sitting, a stem drawing, or a press landing says how
   the mechanism works.
   An element that merely slides in to look alive is decoration —
   use `rise` for it, at the `--rise` token, and nothing more. No loops, no idle motion, no ambient
-  drift. Continuous motion (gears turning, a line tracing for the whole scene) is
-  **outside this lane** — it would freeze on every hold. Render it as footage and place
-  it with `visual.video.clip` instead. That footage can come from a slide: a one-group
-  slide whose `__paint(1, durMs, fn)` runs the length of the shot renders to an `r1.mp4`
+  drift — the sustain layer is the one sanctioned continuous movement, and it is monotonic
+  and value-bearing. Cyclic motion (gears turning) is still **outside this lane** — it
+  would freeze on every hold. Render it as footage and place it with `visual.video.clip`
+  instead. That footage can come from a slide: a one-group slide whose
+  `__paint(1, durMs, fn)` runs the length of the shot renders to an `r1.mp4`
   you wire as a clip (scenes-schema §motion slides). What stays outside the lane is
-  putting continuous motion *under a multi-segment slide*, where the seams would freeze it.
+  putting cyclic motion *under a multi-segment slide*, where the seams would freeze it.
 - **A photo-backed motion slide moves the subject, not the camera.** The photo may fill the
   canvas, but every narration group changes the evidence inside it: a hand sorts the debris,
   a folder leaves the shelf, a reflector unfolds, a trace reaches its target. A scale or
@@ -177,12 +206,22 @@ screen still has to put its number on screen legibly.
    or a camera move. A raster may supply a document, face, or symbol, but it cannot supply the
    visual argument by itself.
 
+**P0-F — a near-empty frame.** The renderer's `zone_fill_pct` reports the painted content
+under 40% of the zone on either axis, on a slide with no full-bleed raster. The frame
+reads as unfinished, whatever the craft of what little is there — the renderer summary is
+the evidence, no eyeballing needed. Read the number knowing what it measures: the bounding
+box of everything painted, so one full-width element — a bar track, an axis, a bus line —
+sets `w_pct` to 100 by construction. On the diagram archetypes `h_pct` is the axis that
+carries the verdict, and horizontal spread stays a judgement made by eye.
+
 **Axes (additive)**
 
 - **Design craft (30)** — hierarchy: the hero is the first thing read, and read order
   follows the narration 10 / composition: negative space is used, nothing touches the
-  zone edge, hairlines not boxes 10 / palette restraint: ink · paper · one accent, muted
-  and line derived from paper, `.hot` used at most once 10
+  zone edge, hairlines not boxes, and the frame actually fills the zone — the renderer's
+  `zone_fill_pct` under 55% on either axis costs points here (on a diagram slide only
+  `h_pct` moves — P0-F says why) 10 / palette restraint:
+  ink · paper · one accent, muted and line derived from paper, `.hot` used at most once 10
 - **Nothing reads as generated (25)** — score 25 and subtract 5 per marker found, floor 0:
   gradient or glow on text · rounded cards / bordered panels / a 3-column card grid ·
   stacked drop shadows or glassmorphism · emoji, icon rows, decorative particles or blobs ·
@@ -190,7 +229,9 @@ screen still has to put its number on screen legibly.
   colours · decorative numbering on non-sequential content · centred-everything with no
   read order
 - **Motion carries meaning (25)** — each group moves one thing and that thing is what the
-  segment says 10 / durations inside the tokens and the 2.6s cap, ease-out, no bounce 10 /
+  segment says 10 / durations inside the tokens and the 2.6s entrance cap, ease-out, no
+  bounce, and no long frozen tail — a renderer coverage warning (a group frozen past 40%
+  of its segment with no `.sv` sustain) costs points here 10 /
   the state rule holds — clip k's first frame equals clip k-1's rest frame (compare
   `g<k-1>-end` with the renderer's `r<k>` first frame when in doubt) 5
 - **Legibility (20)** — every text ≥ the role's floor size, digits tabular 10 / contrast:
@@ -256,14 +297,21 @@ decisions.
 
 - **One big phrase, and it is the only big thing.** `--fs-word` is the hero size and there is
   one hero per screen, exactly as there is one hero number on a diagram slide. Everything else
-  is `--fs-word2` or smaller.
+  is `--fs-word2` or smaller. A one-line verdict or hook that is the whole screen takes
+  `cls:"max"` (170px portrait / 120px wide) — at the base size alone it floats in the zone
+  and the renderer's fill warning fires.
 - **Five words to a line, four lines to a screen.** Korean breaks by word
   (`word-break:keep-all`), so a phrase that needs a sixth word is a phrase to cut, not to shrink.
 - **One effect kind per screen.** `drop` is the default — the phrase fades in while it
-  settles from just above (−10px). `wipe` is a clip-path reveal on `--ease-mask`, left to
+  settles from just above (−16px). `wipe` is a clip-path reveal on `--ease-mask`, left to
   right, which is the reading direction, and suits a longer phrase. Supporting lines use
   `fx-in` (the same mask, shorter). Two effects on one screen reads as a template being
   demonstrated. An art that travels while the word enters with `in` is one event.
+- **The kinetic sustain is the settle, the kinetic focus shift is the dim.** `sv:"settle"`
+  keeps the entered phrase landing for the length of its sentence (the slow scale that is
+  this genre's idiom), and `dim: true` on earlier lines drops them to muted as the next
+  phrase enters — a resting stack of equally bright lines is how a kinetic screen dies.
+  Neither counts as a second effect kind.
 - **The struck-out phrase is the one device with a second meaning.** `h.cross` reveals the
   phrase, then draws a rule through it — the thing that turned out to be wrong. Once per
   screen at most.

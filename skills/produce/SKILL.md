@@ -689,6 +689,10 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 | `enter=cut` | smash — picture and sound change together, old silent pre-roll | `transition: "cut"` |
 | `enter=dissolve` | this card opens on the previous card's last frame and melts up through it (`SCENE_XF`, 0.45s) — two pictures on screen at once | **the storyboard's `transition: "dissolve"`** — written on the card that carries the field, nothing on the card before |
 | `enter=push:<l2r\|r2l\|u2d\|d2u>` | the previous card's last frame slides off in that direction and uncovers this card (`SCENE_PUSH`, 0.32s) | `transition: "push:<dir>"` — same rule, the incoming card alone |
+| `enter=iris` | a circle opens out of the previous card's last frame onto this one (`SCENE_IRIS`, 0.45s) | `transition: "iris"` — the find |
+| `enter=blur` | the previous last frame smears sideways and melts (`SCENE_BLUR`, 0.45s) | `transition: "blur"` — memory, hypothetical, attention leaving |
+| `enter=zoom` | the previous last frame grows past the camera and thins out (`SCENE_ZOOM`, 0.32s) | `transition: "zoom"` — the camera goes *in* |
+| `enter=whip:<l2r\|r2l\|u2d\|d2u>` | the previous last frame slides off smeared along that axis (`SCENE_WHIP`, 0.24s — the shortest join here) | `transition: "whip:<dir>"` — a hard swerve. Pairs with a whoosh in `sfx.tsv` |
 | `exit=black` + `enter=black` (or `white`) | the card before fades its tail into the colour, this card fades its head out of it (`SCENE_FADE`, 0.12s each) | `transition: "dip"` / `"dip:white"` — two halves, one per card. `enter=1`/`exit=1` still mean black |
 
 ```
@@ -708,10 +712,13 @@ old pre-roll.
 The builder does it this way because a boundary xfade would break the pipeline's spine: the
 total would shrink by the transition length at every seam and trip §9's 2ms drift assertion,
 and xfade renumbers the tail's PTS from 0 (the measurement is written out at the outro seam
-in build-reel.sh). Dissolve/push/dip keep the card's frame count, so the concat stays
+in build-reel.sh). Every carry and dip keeps the card's frame count, so the concat stays
 stream-copy exact and no subtitle cue moves — verified A/B on ep07 (10 cards, two
 dissolves): 64.766667s and 1943 frames both ways, identical `subs.srt` on the cards that
-carry a transition, drift 0. A J-cut is allowed to drop that card's silent `PRE` (0.40 s)
+carry a transition, drift 0. The ban is on the seam, not on the filter: iris and blur
+composite inside one card with an xfade at offset 0 over a tail exactly the join long, so
+that card's length is untouched (build-reel.sh §7.4 carries the measurement). A J-cut is
+allowed to drop that card's silent `PRE` (0.40 s)
 because the next line occupies it. `POST` is 0.45 s.
 
 **Word cues — `SUB_MODE=word`.** The burn-in shows **one 어절 at a time**, a hard swap every

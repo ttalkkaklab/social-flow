@@ -51,17 +51,22 @@
 #                                         punch keeps its own ease-out ramp and ignores ease=.
 #                           enter=<mode>  the join in front of this card. jcut (the default when omitted,
 #                                         on every card that has a card in front of it) | cut | black |
-#                                         white | dissolve | push:<l2r|r2l|u2d|d2u>. enter=1 still means black.
+#                                         white | dissolve | iris | blur | zoom | push:<l2r|r2l|u2d|d2u> |
+#                                         whip:<l2r|r2l|u2d|d2u>. enter=1 still means black.
 #                           exit=<mode>   the join behind it: cut (default) | black | white. exit=1 = black.
 #                                         **Dip** (black/white) is two halves: exit= on the card that ends the
 #                                         scene, enter= on the one that starts the next, SCENE_FADE (0.12s)
 #                                         each. It passes through a solid frame — a beat of nothing.
-#                                         **Carry** (jcut, dissolve, push) is written on the incoming card
-#                                         alone. That card opens on the previous card's last frame and gets
-#                                         out of it — jcut holds it while the new line already plays
-#                                         (SCENE_JCUT, 0.32s) then snaps to the new picture; dissolve melts
-#                                         through it over SCENE_XF (0.45s); push slides it off over
-#                                         SCENE_PUSH (0.32s). A J-cut is the professional split edit: you
+#                                         **Carry** (jcut, dissolve, iris, blur, zoom, push, whip) is written
+#                                         on the incoming card alone. That card opens on the previous card's
+#                                         last frame and gets out of it — jcut holds it while the new line
+#                                         already plays (SCENE_JCUT, 0.32s) then snaps to the new picture;
+#                                         dissolve melts through it over SCENE_XF (0.45s); iris opens a circle
+#                                         out of it (SCENE_IRIS, 0.45s); blur smears it sideways and melts
+#                                         (SCENE_BLUR, 0.45s); push slides it off over SCENE_PUSH (0.32s);
+#                                         whip slides it off smeared along the travel axis (SCENE_WHIP,
+#                                         0.24s); zoom grows it past the camera (SCENE_ZOOM, 0.32s).
+#                                         A J-cut is the professional split edit: you
 #                                         hear the next sentence before you see the next shot, so the
 #                                         picture never changes in silence (Murch; measured 0 stretches of
 #                                         >0.3s silence on the 85s reference short).
@@ -151,6 +156,12 @@ SCENE_FADE=${SCENE_FADE:-0.12}     # dip half-length — the black/white a card 
 SCENE_XF=${SCENE_XF:-0.45}         # cross-dissolve length (enter=dissolve) — the incoming card melts out of the previous card's last frame
 SCENE_PUSH=${SCENE_PUSH:-0.32}     # push length (enter=push:<dir>) — the previous card's last frame slides off the incoming one
 SCENE_JCUT=${SCENE_JCUT:-0.32}     # J-cut hold — previous last frame stays on while the new line already plays, then the picture cuts. Under the 0.3s silence ceiling of the reference short once POST is the only remaining gap.
+SCENE_IRIS=${SCENE_IRIS:-0.45}     # iris length (enter=iris) — a circle opens out of the previous last frame. Same length as a dissolve: the eye has to follow the opening
+SCENE_BLUR=${SCENE_BLUR:-0.45}     # blur-dissolve length (enter=blur) — the previous last frame smears sideways and melts. Dissolve's length because it reads as one
+SCENE_WHIP=${SCENE_WHIP:-0.24}     # whip length (enter=whip:<dir>) — the shortest join here. A whip that lingers is a push with a blur on it
+SCENE_ZOOM=${SCENE_ZOOM:-0.32}     # zoom-through length (enter=zoom) — the previous last frame grows past the camera. Push's length; the move itself carries the speed
+WHIP_BLUR=${WHIP_BLUR:-40}         # whip smear radius in px, along the travel axis only (avgblur)
+ZOOM_THRU=${ZOOM_THRU:-0.55}       # how far the carried frame grows on a zoom (1.0 → 1.55). Past ~0.8 the frame's own texture reads as a second picture
 REVEAL_D=${REVEAL_D:-0.35}         # max reveal fade length (shrinks to fit a shorter pause)
 REVEAL_GAP=${REVEAL_GAP:-0.05}     # finish appearing this long before the next sentence starts
 REVEAL_LEAD=${REVEAL_LEAD:-0.30}   # fallback lead — used only when no pause was found (char-count proportion)
@@ -377,14 +388,20 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         enter=white)             ENTER=white ;;
         enter=dissolve)          ENTER=dissolve ;;
         enter=jcut)              ENTER=jcut ;;
+        enter=iris)              ENTER=iris ;;
+        enter=blur)              ENTER=blur ;;
+        enter=zoom)              ENTER=zoom ;;
         enter=push:*)            ENTER=push; PUSH_DIR="${KV#enter=push:}"
                 case "$PUSH_DIR" in l2r|r2l|u2d|d2u) : ;; *) say "✗ card $IDX: unknown push direction — $PUSH_DIR (l2r|r2l|u2d|d2u)"; exit 1;; esac ;;
         enter=push)              say "✗ card $IDX: push needs a direction — enter=push:l2r|r2l|u2d|d2u"; exit 1 ;;
+        enter=whip:*)            ENTER=whip; PUSH_DIR="${KV#enter=whip:}"
+                case "$PUSH_DIR" in l2r|r2l|u2d|d2u) : ;; *) say "✗ card $IDX: unknown whip direction — $PUSH_DIR (l2r|r2l|u2d|d2u)"; exit 1;; esac ;;
+        enter=whip)              say "✗ card $IDX: whip needs a direction — enter=whip:l2r|r2l|u2d|d2u"; exit 1 ;;
         enter=0|enter=cut)       ENTER=cut ;;
         exit=1|exit=black)       EXITM=black ;;
         exit=white)              EXITM=white ;;
         exit=0|exit=cut)         EXITM="" ;;
-        enter=*|exit=*) say "✗ card $IDX: unknown transition — $KV (enter: jcut|cut|black|white|dissolve|push:<dir> · exit: black|white|cut)"; exit 1 ;;
+        enter=*|exit=*) say "✗ card $IDX: unknown transition — $KV (enter: jcut|cut|black|white|dissolve|iris|blur|zoom|push:<dir>|whip:<dir> · exit: black|white|cut)"; exit 1 ;;
         *) say "✗ card $IDX: unknown cards.tsv column-5 option — $KV"; exit 1 ;;
       esac
     done
@@ -721,7 +738,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   measurement is written out at the outro seam below).
   #
   #   So **every transition is drawn inside the incoming card's own encode.** Nothing overlaps
-  #   in the concat, so §9 still stream-copies and drift stays 0. Dissolve/push/dip keep this
+  #   in the concat, so §9 still stream-copies and drift stays 0. Every carry and dip keeps this
   #   card's frame count. A J-cut drops the silent pre-roll (PRE) from this card's length
   #   because the next line occupies it.
   #   Three ways to draw one:
@@ -729,11 +746,22 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   ① dip (`enter=black|white` + `exit=black|white`) — the outgoing card fades its own tail
   #     into the colour, the incoming card fades its own head out of it. Two halves, one per
   #     card. It passes through a solid frame, which is what a dip is for: a beat of nothing.
-  #   ② carry (`enter=jcut`, `enter=dissolve`, `enter=push:<dir>`) — the incoming card opens on
-  #     **the previous card's last frame** (work/tail<prev>.png) and gets out of it. jcut holds
-  #     it while the new line already plays, then snaps; dissolve melts through it; push slides
-  #     it off. Only the incoming card writes anything — no overlapping frame in the concat.
+  #   ② carry (`enter=jcut|dissolve|iris|blur|zoom`, `enter=push:<dir>`, `enter=whip:<dir>`) —
+  #     the incoming card opens on **the previous card's last frame** (work/tail<prev>.png) and
+  #     gets out of it. jcut holds it while the new line already plays, then snaps; dissolve
+  #     melts through it; iris opens a circle out of it; blur smears it sideways and melts;
+  #     push slides it off; whip slides it off with the smear a fast pan leaves; zoom grows it
+  #     past the camera. Only the incoming card writes anything — no overlapping frame in the
+  #     concat.
   #   ③ smash (`enter=cut`) — picture and sound change together. The old silent pre-roll.
+  #
+  #   **Why iris/blur may use xfade when the seam may not.** The ban above is on an xfade
+  #   *between cards*, where it eats one transition length out of the concat total and renumbers
+  #   the tail's PTS. Inside one card's encode neither applies: the inputs are the TD-long tail
+  #   loop and this card's own [vkb], so the output runs TD + cardlen − TD = cardlen (verified —
+  #   frame-identical to the overlay carries at 90/90 frames, 3.000s, on the 2-card fixture), and
+  #   the encode stamps fresh PTS regardless. It buys the whole xfade catalogue for one case line
+  #   per mode. Do not lift it to the seam in §9; that is still the thing that breaks drift.
   #
   #   Audio runs straight through. A J-cut puts the next line on the previous last frame so the
   #   picture never changes in silence; dissolve/push/dip keep the card's own PRE/POST. The BGM
@@ -752,13 +780,17 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       SF_D=$(awk -v d="$SCENE_FADE" -v dur="$D1" 'BEGIN{m=dur/4; if(d>m)d=m; if(d<0.02)d=0.02; printf "%.3f", d}')
       VF_FADE=",fade=t=in:st=0:d=$SF_D:c=$ENTER$VF_FADE"
       ZD="$ZD enter:$ENTER@$SF_D" ;;
-    dissolve|push|jcut)
+    dissolve|push|jcut|iris|blur|whip|zoom)
       [ -n "$PREVIDX" ] || { say "✗ card $IDX: enter=$ENTER has no card in front of it to carry — the first card can only dip"; exit 1; }
       TAILPNG="work/tail$PREVIDX.png"
       [ -f "$TAILPNG" ] || { say "✗ card $IDX: enter=$ENTER needs card $PREVIDX's last frame — $TAILPNG is missing"; exit 1; }
       [ -n "$PREVEXIT" ] && { say "⚠ card $IDX: enter=$ENTER carries card $PREVIDX's last frame, but that card has exit=$PREVEXIT — it is carrying a frame of solid $PREVEXIT. Drop one of the two."; WARN=1; }
       # A carry lives entirely in this card's head, so it can take a third of it and no more.
-      case "$ENTER" in dissolve) TBASE=$SCENE_XF ;; push) TBASE=$SCENE_PUSH ;; *) TBASE=$SCENE_JCUT ;; esac
+      case "$ENTER" in
+        dissolve) TBASE=$SCENE_XF ;;  push) TBASE=$SCENE_PUSH ;;  iris) TBASE=$SCENE_IRIS ;;
+        blur)     TBASE=$SCENE_BLUR ;; whip) TBASE=$SCENE_WHIP ;;  zoom) TBASE=$SCENE_ZOOM ;;
+        *)        TBASE=$SCENE_JCUT ;;
+      esac
       TD=$(awk -v d="$TBASE" -v dur="$D1" 'BEGIN{m=dur/3; if(d>m)d=m; if(d<0.04)d=0.04; printf "%.3f", d}')
       INS+=(-loop 1 -framerate "$FPS" -t "$TD" -i "$TAILPNG")
       TI=$NIN; NIN=$((NIN+1))
@@ -770,6 +802,33 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         # Hold the previous last frame for TD, then snap. The new line is already playing (CPRE=0).
         FILT+=",format=yuv420p[tcar];"
         FILT+="[vkb][tcar]overlay=0:0:enable='lt(t,$TD)':eof_action=pass,format=yuv420p[vtr];"
+      elif [ "$ENTER" = "iris" ] || [ "$ENTER" = "blur" ]; then
+        # xfade composites the two pictures itself, so the carried frame needs no alpha ramp.
+        # It also wants both inputs on one timebase — vkb comes out of zoompan without one, so
+        # stamp it here rather than in the three places vkb is built (§7.2 stays untouched).
+        case "$ENTER" in iris) XFT=circleopen ;; *) XFT=hblur ;; esac
+        FILT+=",format=yuv420p[tcar];[vkb]settb=AVTB,setsar=1[vkbx];"
+        FILT+="[tcar][vkbx]xfade=transition=$XFT:duration=$TD:offset=0,format=yuv420p[vtr];"
+      elif [ "$ENTER" = "whip" ]; then
+        # A push with the smear a fast pan leaves. The blur runs along the travel axis only —
+        # blurring both axes reads as out-of-focus, not as speed.
+        case "$PUSH_DIR" in
+          l2r) OXY="x='W*t/$TD':y=0";  WB="sizeX=$WHIP_BLUR:sizeY=1" ;;
+          r2l) OXY="x='-W*t/$TD':y=0"; WB="sizeX=$WHIP_BLUR:sizeY=1" ;;
+          u2d) OXY="x=0:y='H*t/$TD'";  WB="sizeX=1:sizeY=$WHIP_BLUR" ;;
+          d2u) OXY="x=0:y='-H*t/$TD'"; WB="sizeX=1:sizeY=$WHIP_BLUR" ;;
+        esac
+        FILT+=",avgblur=$WB,format=yuv420p[tcar];"
+        FILT+="[vkb][tcar]overlay=$OXY:eof_action=pass,format=yuv420p[vtr];"
+      elif [ "$ENTER" = "zoom" ]; then
+        # The carried frame grows past the camera and thins out as it goes. Doubling it first
+        # keeps the growing window off the upscaler; the alpha ramp finishes at 65% of the join
+        # so the last third is the new card alone — a frame still visible at full size reads as
+        # a second picture stuck on top.
+        ZAF=$(awk -v t="$TD" 'BEGIN{printf "%.3f", t*0.65}')
+        FILT+=",scale=$((W*2)):-1:flags=lanczos,zoompan=z='1+$ZOOM_THRU*on/($FPS*$TD)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':d=1:s=${W}x${H}:fps=$FPS,settb=AVTB,setsar=1"
+        FILT+=",format=yuva420p,fade=t=out:st=0:d=$ZAF:alpha=1[tcar];"
+        FILT+="[vkb][tcar]overlay=0:0:eof_action=pass,format=yuv420p[vtr];"
       else
         # The carried frame slides off in the named direction, uncovering this card underneath.
         case "$PUSH_DIR" in
