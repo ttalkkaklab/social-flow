@@ -18,8 +18,10 @@ you which of the four dials to turn; written down after, it only explains what y
 
 **And in short-form the dials serve the drop-off curve, not the look of the panels.** The
 variable the storyboard manages is stop · hold · satisfy · act (scenes-schema §playback order)
-— the first frame that stops the thumb, the hooking that holds it, the result that pays the
-promise (on a story arc, the payoff after the turn). A size or an angle is picked because it makes the viewer feel what that beat needs,
+— on a short: the hook that stops the thumb, the drips that hold by paying curiosity in
+stages, the last drip that satisfies, the spoken CTA. On long-form: the first frame that
+stops the thumb, the hooking that holds it, the result that pays the promise (on a story
+arc, the payoff after the turn). A size or an angle is picked because it makes the viewer feel what that beat needs,
 and a "cinematic" choice that doesn't serve the beat is a choice against the episode.
 
 **Evidence grades.** Every row carries one of three marks. `[study]` — a peer-reviewed
@@ -470,9 +472,16 @@ what the audience is supposed to get.
     episode writes the same `space.layout` base and the same `light` sentence on every shot
     and changes only the subject in front of them; every card carries a move — a motion
     background, or the still lane on a `speed` row above the default, since a hold past one
-    second is what the reference never does; and a `transition` is spent only where a loop
-    opens. Motion on every card costs `visual.video` slots — the storyboard says which cards
-    want one and the user decides how many.
+    second is what the reference never does; and a visible join is spent from the schema
+    table (scenes-schema §scene transition), not at every cut. Motion on every card costs
+    `visual.video` slots — the storyboard says which cards want one and the user decides
+    how many.
+16. **The picture join is a cut; the sound leads.** `[course]` The builder J-cuts spoken
+    cards so the next line starts on the previous last frame — that is the split edit, not
+    a dissolve on every seam. Write `"cut"` only for a smash; spend `dissolve` / `dip` /
+    `push` from scenes-schema §scene transition (one home — do not copy the table here).
+    Consecutive stills in one scene change size by two steps or the angle (the 30° rule in
+    §7); a dissolve on a bad picture match is slow *and* jarring. Never on the hook.
 
 ---
 
@@ -567,7 +576,7 @@ Warnings, not blocks — the reviewer and the person at the approval step weigh 
   measured 2026-08-29 — [one world · word cue research](../../../docs/research/2026-08-29-one-world-word-cue/index.html)):
   one space for 85 s, six hard cuts, motion in every second, one 어절 per subtitle cue at a
   0.47 s median, a re-hook every 15 s on the cut. Rule 15 here, the word-cue subtitle mode in
-  produce, and the scene-transition note in scenes-schema.
+  produce, the scene-transition table in scenes-schema, and rule 16 here.
 - [AI video camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html)
   (2026-08-15): vendor vocabulary (Veo 12 moves, no `push`/`orbit`); move → valence/arousal not
   supported (p=.84 / p=.21), immersion yes (p=.006) on unset cuts; angle → bigger/stronger

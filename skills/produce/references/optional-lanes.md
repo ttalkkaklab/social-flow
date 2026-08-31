@@ -63,28 +63,9 @@ done
 ### 3.6 Slide scenes and live-voice audio (only on episodes that have them)
 
 A **slide scene**'s segment visuals (`visual.slide`, scenes-schema §slide scenes) are
-captured from **the storyboard's slide files**, not from `frame.html`. Authoring and
-self-verification finished back in storyboard §8; here you only enumerate the states and
-turn them into card material.
-
-```bash
-REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
-# Opaque capture (alpha 0) — a slide fills the frame, so there is no background to composite
-FORMAT_ENV="$PWD/.work/format.env" \
-  $REF/capture-reveals.sh <idx> "file://$PWD/storyboard/slides/s<shot number>-<slug>.html" \
-  .work/cards/a<idx>r 0
-```
-
-- A slide reads `../scenes.js` over a relative path, so capture it **in place under
-  storyboard/slides/** — copy it into .work and it can't find the source of truth.
-- If the state count doesn't match the segment count, §7's report catches it as "missing
-  reveal state". Fix the slide's rg assignment and capture again (the storyboard §8
-  contract).
-
-A **motion slide** (`visual.slide.motion === true`, scenes-schema §motion slides) is not
-captured as states — it is rendered as **one clip per reveal group** and each clip goes
-under its segment as a play-once visual. The slide already passed the design gate in
-storyboard §8.1; here you only render and wire.
+rendered as **one clip per reveal group** from the storyboard's slide files, not from
+`frame.html`. Authoring and the design gate finished in storyboard §5.6; here you only
+render and wire. Every slide is a motion slide (`motion: true`).
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
@@ -94,19 +75,23 @@ node $REF/render-motion-slide.mjs storyboard/slides/s<shot number>-<slug>.html \
 ```
 
 - The summary line's `groups` must equal the card's segment count (or segments + `A|B`
-  sub-reveals). A mismatch is a storyboard §8.1 defect — don't paper over it here.
+  sub-reveals). A mismatch is a storyboard §5.6 defect — don't paper over it here.
 - The renderer reads `../scenes.js` relative to the slide, so render it **in place under
-  storyboard/slides/**, exactly like the static capture above.
+  storyboard/slides/**.
+- For `shot.infoType` `timeline`, `statistic`, or `principle`, the renderer also compares every
+  declared `motionBeats` entry with the rendered `data-primitive` in that group — including
+  `shape-enter` · `shape-draw` · `shape-travel` on a principle frame. A missing or undeclared
+  movement stops the build; changing a label or adding a decorative rise cannot pass as the
+  promised explanation. A principle frame sits ink actors (`h.fig`) and draws hairlines;
+  `slide.arts` files sit next to the HTML (`slides/assets/`) as local images the renderer loads.
 - The clips cost nothing and are deterministic (same file → same bytes), so a re-render
-  after a scenes.js fix is safe; the sheet frames from storyboard §8.1 stay in
-  `storyboard/.work/slide-check/` (§8.1 runs from the storyboard directory) for comparison.
+  after a scenes.js fix is safe; the sheet frames from storyboard §5.6 stay in
+  `storyboard/.work/slide-check/` (§5.6 runs from the storyboard directory) for comparison.
 - **`slide.kind` changes nothing here.** A kinetic-type screen (`kind: "kinetic"`) and a
   character-act screen (`kind: "character"`) are the same render, the same command, the same
   `@motion/slide-s<n>/r<k>.mp4` wiring — the renderer asks a page for the seek contract and
   doesn't care what the page draws. What the kind decides is which template the storyboard
-  authored from and which design section judged it (§8.1 · §8.2 · §8.3). The one thing to
-  read is `motion === true`, which is what sends the file down this path instead of the state
-  capture above.
+  authored from and which design section judged it. `motion === true` is required.
 
 An **all-live-voice episode** (`window.VOICE === "user"`) generates no TTS (§5 is skipped
 entirely). Filmed scenes pull their audio from the clip per §3.5; every other scene uses
@@ -243,4 +228,3 @@ confirming the source — the checker excluded that violation from the score wit
 whether the source is real. If it's a genuine quotation, leave it and note the count in the
 §10 delegation prompt. Otherwise drop the quotation marks and rewrite it in our own words
 (quotation marks are a place to earn an exemption, not a place to hide a sentence).
-

@@ -1,37 +1,37 @@
 ---
 name: storyboard
 description: >
-  Plans one episode before anything costs money — scenes, copy, camera, sound. Use when
+  Plans one episode before anything costs money — research, 3 scored scenarios, then scenes. Use when
   the user asks to "스토리보드 만들어", "스토리보드 작성", "이 주제로 영상 기획", "촬영 대본 만들어", "내가 녹화할 대본", "make
   a storyboard", "plan a video for topic X", or starts a new topic in a channel.
-  Researches the topic, then writes the storyboard under
-  data/[channel]/episodes/[topic]/storyboard/ — readable storyboard.md, scenes.js (what
-  produce consumes), and the generated scene images; in screencast mode it
-  writes a shooting script instead. Picks the format with the user first: 9:16 shorts by
-  default, or 16:9 long-form with chapters, where filmed and generated scenes mix and the
-  shooting script spells out each filmed scene down to its filename. Six adversarial
-  reads run once each before approval — copy, every
-  scene, word choice, camera plan, sound design, generated images — with no score to
-  clear: findings get applied once and the rest goes on the approval screen. Boundary —
-  this stops at approval; produce builds from it, autoproduce skips the stop.
+  Researches the topic, writes three scenario candidates, loops each through storyboard-reviewer
+  scenario mode until 95 with P0=0 on curiosity · fear · intrigue · comedy, then the user picks
+  one, researches that one further, and writes the storyboard under
+  data/[channel]/episodes/[topic]/storyboard/. Format with the user first: 9:16 shorts by default,
+  or 16:9 long-form with chapters. Six board reads run once each before approval. Scenario is
+  the 95-point exception; the six are not. Boundary — this stops at approval; produce builds from
+  it, autoproduce skips the stop.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__suno_generate_lyrics"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit"]
 ---
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
 
-Takes one topic through **research → scene design → six adversarial reviews (copy ·
-per-scene · vocabulary · camera · sound) → image generation → image review → storyboard
-approval**. The `scenes.js` settled here is the one data source (SoT) for
-production (produce) — video, captions, and per-platform text all derive from this file,
-so factual mismatch between platforms can't arise in the first place.
+Takes one topic through **research → three scenario candidates (looped to 95) → one pick →
+more research → scene design → six one-round board reviews (copy · per-scene · vocabulary ·
+camera · sound) → image generation → image review → storyboard approval**. The `scenes.js`
+settled here is the one data source (SoT) for production (produce) — video, captions, and
+per-platform text all derive from this file, so factual mismatch between platforms can't
+arise in the first place.
 
-Before approval the adversarial reviewer (`storyboard-reviewer`) reads the storyboard six
-times, **once each**. None of the six is a gate — there's no score to clear and nothing gets
-delegated twice. Each one hands back findings, the findings get applied, and the run moves on.
+Three candidate pages loop through `storyboard-reviewer` scenario mode until **≥95 and
+P0 = 0** — curiosity, fear, intrigue, comedy. Contract:
+[scenario-stage.md](references/scenario-stage.md). The six board reads after the pick still
+run **once each**, with no score to clear.
 
 | Review | What it looks at | What comes back |
 |---|---|---|
+| §2.2 scenario | Each of three candidates — whether curiosity · fear · intrigue · comedy actually work, plus the shape of the investigation | loop until ≥95 · P0=0 |
 | §4.5 copy | The sentences of the whole storyboard — AI-sounding phrasing, hook, factual fidelity | one total score |
 | §4.6 per-scene | The role and contextual fit of **each individual scene** | a score per scene + the lowest |
 | §4.7 vocabulary | Whether the **words** in narration and titles are words people use | a score per scene + the lowest |
@@ -39,10 +39,7 @@ delegated twice. Each one hands back findings, the findings get applied, and the
 | §4.9 sound | The episode's sound design — the music cue plan, clip audio, voice casting | one total score |
 | §5.5 images | Whether the picture shows what the scene is saying | one total score |
 
-**The scores are a record, not a bar.** They go into `scenes.js` at approval so you can read
-back later which storyboard produced which performance. The gate is the person: a finding the
-single round didn't resolve doesn't stop the run — it goes onto the §7 approval screen with
-the storyboard and the user decides.
+**Board-review scores are a record, not a bar.** They go into `scenes.js` at approval so you can read back later which storyboard produced which performance. **Scenario scores and authored-screen scores are the other thing:** each candidate loops to 95 with P0=0 (max 3 reads then one replacement), and each HTML cut goes through `slide-reviewer` the same way. A candidate that misses that bar is replaced or dropped; a slide that misses it stays out of the build.
 
 The three per-shot reviews report **the lowest** alongside the list, since an average lets a
 good scene hide the one that collapsed.
@@ -50,11 +47,13 @@ good scene hide the one that collapsed.
 ```
 data/<channel>/episodes/<topic slug>/storyboard/
 ├── research.md      # evidence, sources, cross-check log (skipped on channels that skip research)
+├── candidates/      # d1.md · d2.md · d3.md — the three scored scenarios (§2.2); kept after the pick
+├── scenario.md      # the winner, copied from candidates/ after the pick; consumed by §4
 ├── storyboard.md    # the human-readable storyboard — shot tables + embedded images
 ├── storyboard.html  # review render — loads scenes.js directly and draws it (template-based, §6)
 ├── scenes.js        # the machine-readable SoT — THEME + SCENES (+ narration segments)
 ├── images/          # per-scene 9:16 generated images (scene-<n>.png) — omitted in shooting mode
-├── slides/          # slide-scene HTML, static or motion — authored in §8, after §7 approval
+├── slides/          # every slide is a motion slide, reviewed at §5.6 before approval
 └── script.md        # shooting mode only — the shooting script the user records against
 ```
 
@@ -71,6 +70,16 @@ now — with what one env var would turn on — rather than routing around it si
 Read `data/<channel slug>/profile.md`. If it's missing, stop and point the user at
 `/social-flow:channel add` first. Tone, voice, theme, verification policy, and the topic
 slug rule are all inherited from that file.
+
+**The channel profile outranks the generic format defaults.** Before choosing shots read
+`motion_min_true`, `motion_allowed_kinds`, `motion_max_consecutive_stills`,
+`motion_max_still_seconds`, `motion_require_action`, and `generated_video_max`; copy their
+normalized values into `window.MOTION_POLICY` (scenes-schema §Channel true-motion policy).
+`check-scenes.js` compares the snapshot with the profile, so no episode can weaken it. A
+duration, shot-count or motion conflict stops here for the user to choose which contract changes.
+Produce checks it again: `minTrueMotion: 1`, zero still-run limits and `motion-slide` allowed
+means every photo is a motion slide whose subject or evidence changes with the narration. Ken
+Burns, caption swaps and still swaps do not count.
 
 **Check the topic axis** — compare the incoming topic against profile §1 topic areas and
 target viewers. Recommendation is matching that predicts "viewers who'd like this content"
@@ -140,123 +149,128 @@ default, skips it.**
 
 ### 2. Research and fact-checking (follows profile §5 policy)
 
-**Research comes first, and it is a step with an exit, not a background activity.** No scene is
-written until `research.md` is done — a storyboard authored while still searching bends the
-facts to the sentences already written, and a storyboard authored after the facts are on the
-table gets its hook, its hero stat and its result from what is actually true (the measured
-difference on our own episodes, user note 2026-08-23). The step has four parts, in order:
+**Research comes first, in two passes, with a pick in between.** No scene is written until
+the second pass closes (user note 2026-08-23). Create the topic directory now so the log has
+a path (`mkdir -p data/<channel>/episodes/<topic slug>/storyboard`); §3 still reads
+episode-state before scenes.
 
-1. **Write the question map before the first search.** In `research.md` §Questions, list the
-   5–8 questions this episode has to answer — what the viewer asks, what the hook promises, what
-   the result has to show, every figure, date, price and name that will appear on screen or in a
-   line. Each question gets a row; each row ends the step as *answered by claim #N* or
-   *written off* (and a written-off question never becomes a claim or a caption).
-2. **Search per question, not per topic, and from more than one direction.** Each question gets
-   **two or more searches from different tools or types** (the tool guidance below — `kin` for
-   what people actually ask, `news` for time-sensitive values, `blog`/`cafe` for how it plays out,
-   WebSearch/serp for overseas and precision, `datago` for government-origin figures). Every key
-   claim gets one **counter-evidence search** ("X 아니다", "X 논란", "X 바뀜", the opposing source)
-   and every time-sensitive value gets one **freshness search** inside the last year
-   (`serp_naver_search period`, a news date filter) — an outdated figure that was true last year
-   is a factual mismatch this year.
-   **A key claim is one the hook, the hero stat or the result rests on.** Mark it with `★` in the
-   `#` column of the Verified table (`| ★3 |`); once the sentences carry `claim`, every row a
-   sentence cites counts as key too. The counter-evidence search is owed to those rows — the rest
-   of the table is context. A log that marks nothing is read as "every row is key".
-3. **Put every claim in the evidence table** — claim · source 1 · source 2 · date checked · status
-   (`research.md` §Verified) — and everything that failed in §Failed (with why). **Number the
-   rows and keep the numbers** — §4's narration sentences point back at them with `claim`
-   (scenes-schema §claim traceability), which is what turns "does this sentence match the
-   research" from a job somebody redoes every review into a number that either exists or
-   doesn't. Two independent
-   sources for anything time-sensitive, one official origin (data.go.kr, the vendor's own doc)
-   counts as both. Don't round a range, don't shrink it to its upper bound.
-4. **Check sufficiency before leaving the step.** Three verified claims is the floor below
-   which there is no video (the same floor autoproduce drops a topic at); a short normally
-   leaves with **five or more**, a long-form with **twelve or more**, and **every question in
-   the map is answered or written off**. Short of the floor, change the angle or the topic —
-   don't pad the body. Only then §3 (the directory) and §4 (the scenes).
+**§2.1 first research** (enough to offer three honest directions) → **§2.2 three scored
+scenarios, then one pick** → **§2.3 additional research** on the chosen direction (the
+exit). Tool choice, ingest, and the skip-research exception sit under all three, at the
+end of this section.
 
-   **Have the check run against the page, not against your memory of it.** This is the one
-   gate in the skill with nobody on the other side — the agent that did the searching also
-   writes the line saying the searching was enough.
+#### 2.1 First research — enough to propose three directions
 
-   ```bash
-   SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
-   node $SB/check-research.js storyboard/        # exit 1 = the research does not close
-   ```
+Do not lock every figure. Do not write scenes. The question map here is **what we need to
+know to offer three honest directions** — what people ask, what's actually true, which
+explanations compete — **3–5 rows**, not the episode's full 5–8.
 
-   It counts the Verified rows itself and compares them against what the Sufficiency line
-   claims, reads every question's status, and reports the claims nobody searched against.
-   On the first library-wide run it found an episode whose Sufficiency said 10 claims over a
-   table of 18 — the later additions never updated the summary. It also counts the search
-   history against the question map (fewer than two logged searches per question is reported),
-   checks counter-evidence against the key claims, and reads headings written with a number or
-   a word in front (`## 2. 검증 통과`, `## 사실 검증표`).
+1. **Write that map before the first search** (`research.md` §Questions). Each row ends
+   answered by claim #N or written off.
+2. **Search per question, not per topic, from more than one direction** (the tool guidance
+   below). Two or more searches from different tools or types per question, **ten or more**
+   logged in all — not three wordings of two lookups. Counter-evidence belongs after the pick.
+3. **Put every claim in the evidence table** (`research.md` §Verified) — failed claims in
+   §Failed. **Number the rows and keep the numbers.** Two independent sources for anything
+   time-sensitive; one official origin counts as both. Don't shrink a range to its upper bound.
+4. **Write `research.md` §Directions — three rows, none marked chosen yet.** A direction is
+   **a different episode this topic could be**, not three wordings of the same one. Each row
+   names the question, the hook form (`gap`·`number`·`identify`·`paradox`·`secret` — no
+   `payoff` on a short), the **primary engine** (`curiosity`·`fear`·`intrigue`·`comedy` —
+   three different primaries), the hero or unresolved thing, which claims hold it up, and
+   what the second pass still owes.
 
-**The subject itself gets checked here — does its question survive to the last frame?**
-Retention is set more by what the episode is about than by how it is cut (own-channel retention
-report (2026-08-26) — measured, n=4): the mystery subject held a flat curve for 90 seconds and
-came first in both retention and views, while the episode explaining something the viewer
-already accepts ("hearts beat in a rhythm") slid from the third second on and finished at a
-third of the views. Before writing scenes, say the episode's question out loud and name where
-it gets answered. If that answer is "in one sentence, halfway through", the material is an
-explanation and not a mystery — reframe it around whatever stays unresolved (what nobody
-could explain about it, the figure that shouldn't be possible, why it was built this way and
-not the obvious way), or change the topic. Editing can't rescue a subject the viewer already
-agrees with.
+Three verified claims is the floor below which there is no video (the same floor autoproduce
+drops a topic at), and **ten or more** searches is the floor below which there are no directions. Short of either, change the topic rather than inventing a third direction.
 
-The hook material comes out of this step too — the questions people actually ask (`kin`) are
-the `identify` and `gap` forms, the verified figure is the `number` form and the hero stat, the
-result that's actually been shown is the `payoff` form (scenes-schema §the six hook forms). A
-hook written before the research is a promise made before knowing whether it can be kept.
-**The arc is decided here too** — if the material is an unfinished sentence on its own (tried →
-failed → someone saw it differently), it is story material: write `arc: "story"` on the cover,
-keep the payoff for the result after the turn, and pick a form that leaves the loop open
-(`gap`·`secret`·`paradox`·`identify`); otherwise `answer-first` (scenes-schema §playback order).
+```bash
+SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+node $SB/check-research.js storyboard/ --direction   # exit 1 = not enough to ask yet
+```
+
+**Does each direction's question survive to the last frame?** If the answer is "in one
+sentence, halfway through", it is an explanation — don't offer it. Reframe it around
+whatever stays unresolved, or drop that row (own-channel retention report, 2026-08-26).
+
+#### 2.2 Three candidates, scored, then one pick — HITL, before more searching
+
+Turn each direction row into `candidates/d<n>.md`, loop each through storyboard-reviewer
+scenario mode to **≥95 · P0 = 0**, then pick. Three different primaries (`curiosity` ·
+`fear` · `intrigue` · `comedy`). Caps, template, engines:
+[scenario-stage.md](references/scenario-stage.md). Both formats. Skip-research channels
+skip this with the three-direction pick.
+
+```
+[D1 · <question> — <engine> · score NN (Recommended)]
+[D2 · <question> — <engine> · score NN]
+[D3 · <question> — <engine> · score NN]
+```
+
+**Ask with AskUserQuestion.** Recommended is the highest at 95 with `p0 = 0`. Write
+`Chosen: D#`, copy the winner to `scenario.md`, then §2.3. Unattended autoproduce picks
+the recommended one; zero at 95 drops the topic.
+
+#### 2.3 Additional research — close the chosen direction
+
+Now the question map is the 5–8 questions **this** episode has to answer. Write off
+questions that belonged to unchosen directions. Search the remaining claims; every key
+claim gets one **counter-evidence search** ("X 아니다", "X 논란", "X 바뀜") and every
+time-sensitive value gets one **freshness search** inside the last year
+(`serp_naver_search period`). **A key claim is one the hook, the hero stat or the result
+rests on** — mark it with `★` in the Verified `#` column (`| ★3 |`). A log that marks
+nothing is read as "every row is key". §4's narration sentences point back at the numbered
+rows with `claim` (scenes-schema §claim traceability).
+
+**Check sufficiency before leaving the step.** Three verified claims is the floor below
+which there is no video; a short normally leaves with **five or more**, a long-form with
+**twelve or more**, and **every question in the map is answered or written off**. Short of
+the floor, change the angle or the topic — don't pad the body. Only then §2.5 and §4.
+
+**Have the check run against the page, not against your memory of it.** This is the one
+gate with nobody on the other side — the agent that searched also writes that it was enough.
+
+```bash
+SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+node $SB/check-research.js storyboard/        # exit 1 = the research does not close
+```
+
+It counts the Verified rows against the Sufficiency line, reads every question's status,
+counts searches against the question map, checks counter-evidence against the key claims,
+and reads the direction pick (three rows and one `Chosen:`). Headings may carry a number
+or a word in front (`## 2. 검증 통과`, `## 사실 검증표`).
+
+The hook material comes out of this pass — `kin` questions are the `identify` and `gap`
+forms, the verified figure is the `number` form and the hero stat. On long-form the shown
+result is the `payoff` form; **on a short `payoff` stays off the cover** (scenes-schema
+§the six hook forms). A hook written before the second pass is a promise you don't yet
+know you can keep. **On long-form the arc is decided here too** — unfinished-sentence
+material (tried → failed → someone saw it differently) is `arc: "story"` with a loop-open
+form (`gap`·`secret`·`paradox`·`identify`); otherwise `answer-first`. **A short does not
+pick an arc** — hook → drip → cta (scenes-schema §playback order).
 
 - **When `recording/timeline.md` exists (produced by the ingest skill)** use it as the
-  primary source — take the scene structure and key messages from the timeline, and use web
-  research only to cross-check time-sensitive figures inside the transcript. What was said
-  in a recording is a claim, not evidence — figures that fail verification don't go in. In
-  this case research.md records the gist per timeline scene plus a verification result
-  table.
+  primary source. The three directions are three cuts of the same recording; additional
+  research only checks figures inside the chosen cut. What was said is a claim, not evidence.
 - Search tool choice: **Korean material goes to `naver_search` first** → general and
-  overseas material to the built-in WebSearch → `serp_web_search`/`serp_news_search` when
-  you need precision search (operators, date filters). Use whatever combination fits, but
-  don't repeat the same search just by swapping tools. The search tools share argument
-  names — `query`, `limit` (result count), `page`.
-- `naver_search` has 8 `type` values and they're used differently. At the topic-discovery
-  stage **`kin` (지식iN, a Q&A site)** is particularly strong — what people actually don't
-  know sits there as their own questions, which is raw material for hook sentences. `cafe`
-  is sentiment and complaints, `blog` is hands-on reviews, `encyc` is term definitions (the
-  one-line explanation for a caption), `local` is addresses and coordinates of local
-  businesses, `news` is for verifying time-sensitive values.
-- `serp_naver_search` gives you two things the official API doesn't — **video search**
-  (`where: "video"` — how others covered the same topic, their lengths and view patterns)
-  and a **date filter** (`period: "1d"~"1y"` — narrowing time-sensitive values to a recent
-  window). For everything else use `naver_search`, which has the larger quota.
-- For **reference images** to put on screen, use `serp_image_search` (composition, seeing
-  the real thing) or `naver_search(type: "image")` (Korean material). To use a searched
-  image in the video as-is you have to specify `license` though — unspecified results are
-  images with no rights check. **Screens you make yourself get generated, not searched** —
-  engine split is in §5 (`image_local_generate` by default, `gpt_image_text2img` for the
-  cover and any screen containing text).
-- **Topics whose evidence is government-origin data — statistics, policy, regional status**
-  — get their source dataset from `datago_search` (data.go.kr). An official origin is
-  itself a primary source, so it outranks a news re-quote, and one origin satisfies the
-  cross-check requirement. For the collection procedure, source attribution, and the
-  data-as-of-date trap, see the **datago skill**.
-- Time-sensitive values (prices, tax rates, deadlines, effective dates) get cross-checked
-  against **two or more independent sources**. Claims that fail verification don't go in the
-  storyboard — don't invent figures and don't change their meaning by rounding (shrinking
-  "3–5 million" to "5 million" is distortion).
-- Record in `research.md` in the `references/storyboard-template.md` structure — the question
-  map, the verified-claims table (source link, check date, status per claim), the failed list,
-  the counter-evidence and freshness checks, and the search history. Channels that skip
-  research (creative, everyday life) skip this whole step — and then the copy review's
-  "no basis" P0 is switched off for that channel, which is the only way a claim gets in without
-  a row.
+  overseas material to WebSearch → `serp_web_search`/`serp_news_search` for operators and
+  date filters. Don't repeat the same search just by swapping tools. Shared arguments:
+  `query`, `limit`, `page`. `naver_search` types: **`kin` (지식iN)** for what people actually
+  ask (hook material), `cafe` sentiment, `blog` hands-on, `encyc` term definitions, `local`
+  addresses, `news` time-sensitive values. `serp_naver_search` adds **video search**
+  (`where: "video"`) and a **date filter** (`period: "1d"~"1y"`); everywhere else prefer
+  `naver_search` (the larger quota).
+- For **reference images**, `serp_image_search` or `naver_search(type: "image")`. A searched
+  image used as-is needs `license` — unspecified results have no rights check. **Screens you
+  make yourself get generated, not searched** (engine split in §5).
+- **Government-origin evidence** (statistics, policy, regional status) comes from
+  `datago_search` (data.go.kr). One official origin satisfies the cross-check. Collection,
+  attribution, and the data-as-of-date trap: the **datago skill**.
+- Time-sensitive values (prices, tax rates, deadlines, effective dates) need **two or more
+  independent sources**. Failed claims stay out — don't invent figures and don't shrink a
+  range to its upper bound.
+- Record in `research.md` in the `references/storyboard-template.md` structure. Channels
+  that skip research (creative, everyday life) skip this whole step — and then the copy
+  review's "no basis" P0 is switched off for that channel.
 
 ### 2.5 Pick the storyline structure — HITL, before any scene exists
 
@@ -266,13 +280,20 @@ is the **chronological trap** — telling it in the order it happened buries the
 moment minutes deep behind setup nobody asked for yet
 ([longform-storyline research](../../docs/research/2026-08-29-longform-storyline/); our own
 retention report (2026-08-26, n=4) ranked the mystery-shaped subject first on the same
-mechanism). The structure is settled **after research closes** (the hook material and hero
-stat are inputs) and **before §4 writes a scene** — changing it later rewrites the board, so
-this is the cheapest moment the question will ever have.
+mechanism). The structure is settled **after §2.3 closes** and **before §4 writes a scene**
+— changing it later rewrites the board, so this is the cheapest moment the question will ever have.
 
-**Ask with AskUserQuestion — don't decide by guessing.** Recommend one structure from the
-shape of the material and put it first, one line per option on what it changes. The menu,
-the beat patterns and the checks are `references/scenario-craft.md` §11:
+**Three lines are settled at this stop, before a shot exists** — ① the cover's first spoken
+sentence, naming the loss or the stake before it asks (on a short this is a gap, not the
+answer) · ② the cta's last two lines — on a short, one outward act (comment question,
+next-episode promise, or memory question); on long-form, callback plus a memory question ·
+③ the sign of the feel curve. Three and not a fourth; the why and the cap are
+`references/scenario-craft.md` §12, and they go where the structure goes.
+
+**On long-form, also pick the storyline with AskUserQuestion — don't decide by guessing.**
+Recommend one structure from the shape of the material and put it first, one line per option
+on what it changes. The menu, the beat patterns and the checks are
+`references/scenario-craft.md` §11:
 
 ```
 [Curiosity loop — mystery → false answer → investigation → turn → resolution → takeaway.
@@ -283,33 +304,38 @@ the beat patterns and the checks are `references/scenario-craft.md` §11:
 [Expert contrast / Ticking clock / Reveal ladder — comparisons · deadline builds · rankings]
 ```
 
-- **The structure names the body's beat pattern; `arc` stays the playback contract**
-  (scenes-schema §playback order). Curiosity loop, transformation arc and ticking clock ride
-  `story`; expert contrast and reveal ladder usually ride `answer-first`; a problem stack
-  goes either way. Write the chosen structure into the scenes.js header comment and the
+- **On a short the structure is the playback contract** — hook → drip (1–n) → cta. Skip the
+  six-structure menu. Still settle the three lines: the cover's first spoken sentence (a gap,
+  not the answer), the cta's last two lines (one outward act — a comment question, a
+  next-episode promise, or a memory question), and the sign of the feel curve. Write
+  `beat:"drip"` on every middle shot and `beat:"cta"` on the last narrated shot.
+- **On long-form the structure names the body's beat pattern; `arc` stays the playback
+  contract** (scenes-schema §playback order). Curiosity loop, transformation arc and ticking
+  clock ride `story`; expert contrast and reveal ladder usually ride `answer-first`; a problem
+  stack goes either way. Write the chosen structure into the scenes.js header comment and the
   storyboard.md design rationale — the scene review reads the board against the structure
   the user approved, and §7 shows it back alongside format and arc.
-- **Four rules hold whatever the pick** (scenario-craft §11): the **cold open** — the episode
-  opens on the strongest moment or evidence, never at the start of the timeline; a **promise
-  sentence** inside the opening — what the viewer will know or be able to do by the end;
-  when the material has a plausible wrong answer, the body's first beat is the
+- **Four rules hold whatever the long-form pick** (scenario-craft §11): the **cold open** —
+  the episode opens on the strongest moment or evidence, never at the start of the timeline; a
+  **promise sentence** inside the opening — what the viewer will know or be able to do by the
+  end; when the material has a plausible wrong answer, the body's first beat is the
   **false-answer check** (set it up, take it apart — Muller 2008, the one beat here with
   peer-reviewed backing); and heavy context (installs, definitions, backstory) is delivered
   as **bridges** at the moment the investigation needs it, never as a block in front of the
   first tension.
-- Short-form takes the same gate with a smaller menu — 4–7 shots hold one structure, so
-  offer the recommended shape and the nearest alternative, not all six.
-- Channels that skip research (§2) skip this gate the same way — their boards are carried by
-  the series bible, not by an investigation.
+- Channels that skip research (§2) skip this gate and the three-direction pick with it.
 
 ### 3. Create the topic directory
 
 Make `data/<channel>/episodes/<topic slug>/storyboard/images/` using the profile §7 slug
 rule. Topics don't live at the channel root — they go under `episodes/`, the same level as
-`assets/` and `growth/`.
+`assets/` and `growth/`. §2 already created the storyboard directory so `research.md` had a
+path; this step adds `images/` and reads state.
 
 **If the directory already exists, read where it got to before touching anything.** An episode
 runs across sessions, and the thing that stalls one is a half-finished state nobody can see.
+If `research.md` has three directions and no `Chosen:` line, the next step is the §2.2
+candidate loop — not scenes. If `candidates/` is missing, write those pages first.
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
@@ -323,44 +349,53 @@ name that aren't on disk, a `queue_*: ready` marker pointing at no video). Show 
 before asking whether to continue from the existing storyboard, so the choice is made against
 the real state rather than a guess.
 
+### 3.5 Scenario — freeze the winner
+
+`storyboard/scenario.md` is already the §2.2 winner. After §2.3 extra research and §2.5's
+three lines, patch that page if a new fact breaks a beat, a false answer or a promise —
+then loop **that one page** again to 95 (3-read cap, no replacement; skip if nothing
+changed). Stamp `frozen:` when §4 opens. Four devices:
+[scenario-stage.md](references/scenario-stage.md).
+
+### 3.6 Scenario review already ran at §2.2
+
+Don't start a fourth read here. The six board reviews (§4.5–§5.5) run once each from here.
+
 ### 4. Scene design — writing scenes.js
 
 Write it to the contract in `references/scenes-schema.md`. Keep the array name (`SCENES`);
 one entry is a **shot**. Group the same place and time with `scene`+`sceneSlug`, and write
 `sequence` only when purposes diverge. Per shot, write `shot.feel`, `shot.size`, `shot.angle`,
-`shot.info`, `shot.space` on a generated still, and `visual.picture` (still photo / AI video / recording / shared asset) plus `visual.overlay`
+`shot.info`, `shot.infoType`, `shot.space` on a generated still, and `visual.picture` (still photo / AI video / recording / shared asset) plus `visual.overlay`
 (HTML staging / none) — one shot can have both. A cover laying an HTML reveal over a still
 photo is the default. The source of truth for field definitions is the schema's §grammar
 units and production layers.
 
+**Write it in two passes.** **4a — story**: `window.COMPREHENSION` · `beat` · `shot.feel` ·
+`shot.info` · `shot.infoType` · `narration` · `arc` · `hookType`/`hookForm` · `title` and §2.5's three lines only,
+so shots stay cheap to cut. **4b — machine**, after §4.6: everything else. scenario-craft §12 measures it.
 Core rules:
-
+- **Compress the episode before polishing its sentences.** `window.COMPREHENSION` names one question,
+  answer, takeaway, cross-scene branches, and unfamiliar terms. A short informational episode has
+  no cross-scene branch. Every `shot.info` reaches the answer or takeaway; otherwise cut it. Explain
+  each term verbatim in its first shot and cut disposable proper names. See scenes-schema
+  §comprehension contract; `check-scenes.js --draft` enforces it before camera work.
 - **Feel first — every shot says what the audience should feel before any dial is set.** Write
-  `shot.feel` in your own words ("relief — it really is that short", "alone in a big room",
-  "something's wrong"), then pick the technique that serves it from
-  `references/directing-grammar.md` §5: the size (`shot.size` — how far the audience stands),
-  the angle (`shot.angle` — the seat you give them; `eye` by default), on a generated still the
-  frame space (`shot.space` — who sits where, which way they face), on a generated shot the
-  move (`visual.camera`) and the cut length, and what the shot sounds like. The row is a default,
-  not a cage — leave it and write why on the shot. `feel` and `info` are different lines: info is
-  what the viewer newly learns, feel is what they should feel; a feel that restates the info is
-  unset. A feel written after the camera was chosen is a caption for the camera, and the review
-  reads it as unset. The size words, the angle words and the space block go into `bgPrompt` too
-  — the still is where they get drawn. Write `shot.space` (`frame: "camera"`, `layout`, `facing`,
-  `line` when two people, or a person and what they look at, share the scene) and let
-  `assemble-bg-prompt.js` put them at the front
-  of the prompt (directing-grammar §3.5). Don't write `left view of`, object-centric left/right,
-  or metres — the assembler exits 1 on those. Across shots: establish then go close (a close-up opening pays its debt in the next shot), one
-  `cu` per scene and `choker`/`ecu` once or twice per episode, one `dutch` per episode with its
-  reason written, hook cut and speech clips at `eye`, a wide held ≥1.5× a close on generated and
-  filmed shots (directing-grammar §6). The same fields steer the shooting script on filmed shots
-  (distance, eye-height baseline, the 180° line — §7 of the same file).
-
+  `shot.feel`, then use directing-grammar §5 for size, angle, space, move, length and sound.
+  `shot.info` is what viewers learn; a `feel` that repeats it or merely captions a chosen camera
+  is unset. Put size, angle and `shot.space` (`frame`, `layout`, `facing`, and `line` for a pair)
+  into `bgPrompt` through `assemble-bg-prompt.js`; object-centric left/right and metres fail.
+  Across shots establish then go close, use one `cu` per scene, `choker`/`ecu` once or twice per
+  episode, and one reasoned `dutch`; keep hooks and speech at `eye`, and hold a wide ≥1.5× a close
+  (directing-grammar §6). The same fields steer filmed-shot distance, eye height and 180° line (§7).
+- **Decide each join after the scenes are settled (4b).** Omit `transition` (builder J-cuts
+  spoken cards); `"cut"` is a smash. Spend the rest from scenes-schema §scene transition.
 - **Composition — the format picked in §1.5 sets the band.** The source of truth for the
   constants is `formats.js`, and the `storyboard.html` check strip measures against those
   values for you.
-  - **Short-form 9:16**: cover 1 + points/quote 3–6 + outro reference = **4–7 shots ·
-    35–75s**. When going over 75s, write into the `storyboard.md` design rationale why
+  - **Short-form 9:16**: hook + drip (1–n) + spoken CTA = **4–7 shots · 35–75s**
+    (typically 2–5 drips). The shared outro asset sits after the CTA and is not a
+    spoken shot. When going over 75s, write into the `storyboard.md` design rationale why
     dropping the demo or evidence in question would make the result impossible to
     understand (90s is the absolute cap).
   - **YouTube long-form 16:9**: **28–70 shots · 8–15 min** (20 min absolute cap) +
@@ -368,27 +403,36 @@ Core rules:
     `references/scenes-schema.md` §chapter — write only the `chapter` string on the scene
     and the builder makes timestamps from measured times. The first chapter goes on the
     cover so it opens at 0:00.
-
   When channel Analytics measurements exist, they outrank generic benchmarks — go by
   **stayed to watch, engaged views, and subscribers gained per video**. Pick length and
   format from the episodes that produced engaged views and subscriptions, not raw views.
-
-- **In long-form, pick one of three per scene** (§1.6) — film it, generate an image, or
-  draw it as a slide. One line joins the criteria: **if the evidence is on screen, film
-  it; if it's mood, place, or people, generate an image; if it only reads once text and
-  shapes are laid out, make it a slide.** A generated picture can't stand in for an
-  install actually completing, a result running on screen, or the moment a hand touches
-  something. A beat like "why is this fast" has no screen to film in the first place, and
-  structure, comparisons, steps, and number flows read faster as a diagram than over a
-  photo background.
-  A slide scene gets `visual.slide` with `file` (`slides/s<shot number>-<slug>.html` —
-  the shot number is the array position, decided by the storyboard), `plan` (one line on
-  what to draw), and `labels` (every piece of text that goes into the shapes) — the file
-  itself is built in §8 after approval. Full text: scenes-schema §slide scenes.
+- **Meet the channel's true-motion floor before calling a still "enough."** Only
+  `window.MOTION_POLICY.allowedKinds` counts: `ai-video`, `recording`, or `motion-slide`.
+  Ken Burns, camera instructions, caption changes and still swaps do not. With `requireAction`,
+  each qualifying shot writes the visible subject change in `visual.action`; the full checker
+  blocks a weak ratio, an overlong still, or too many still shots in a row.
+- **Pick the screen body by the information job, not by the motion quota.** Film visible evidence;
+  generate mood, place or people; draw structure, comparisons, steps and number flows. A picture cannot
+  replace a running result or hand action. Short informational episodes reserve **1–3 full-frame
+  editorial HTML cuts** for a document comparison, causal relation, mechanism,
+  timeline, transition or verdict: set `treatment:"editorial"`, `role`, and one repeated `motif`.
+  Classify every narrated shot first: `shot.infoType:"timeline"` for ordered periods or dated
+  events, `"statistic"` for measured counts·rates·shares·comparisons, `"principle"` for
+  causes·mechanisms·state changes, and `"other"` for the rest. The first three are mandatory
+  full-frame seekable HTML animations with `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, and role `timeline` · `statistic` · `mechanism` respectively.
+  Declare one `{group, primitive}` in `slide.motionBeats` for every narration segment. A still,
+  footage, kinetic type, or a photo with animated annotations cannot replace these cuts. If a
+  shot needs two types, split it. On a **principle** frame sit ink actors (`slide.arts` ·
+  `h.fig`) and draw hairlines (`h.stem` · `h.bus` · `h.chamber` · `h.ring` · `h.press`). Named
+  states keep `flow-trace` · `node-enter` · `state-transform` and may skip arts. Shape
+  primitives require `slide.arts` (`slides/assets/s<shot>-<slug>.png`, sit with `h.fig`);
+  generated at §5.6; kinetic may carry an art or a disk, type-only is valid for a verdict or
+  a cross. A slide also carries `file` (`slides/s<shot number>-<slug>.html`), `plan`, and every
+  screen string in `labels`; build the moving files in §5.6. See scenes-schema §slide scenes.
   **When the slide states a value** — a count, a share, a comparison, steps that arrive one
-  per sentence — make it a **motion slide** (`slide.motion: true`, scenes-schema §motion
-  slides): the number counts up and the bar grows the moment its sentence starts, and the
-  `plan` says what moves on which sentence ("① 27 counts up · ② the bar grows"). This is
+  per sentence — it is a **motion slide** (`slide.motion: true` is required, scenes-schema
+  §motion slides): the number counts up and the bar grows the moment its sentence starts, and
+  the `plan` says what moves on which sentence ("① 27 counts up · ② the bar grows"). This is
   the one free way to put movement on a body scene — the generated-video cap doesn't apply
   to it. Beats only: a scene that needs continuous motion (gears turning under the whole
   narration) is footage, not a slide.
@@ -397,25 +441,32 @@ Core rules:
   set by the storyboard — the user doesn't pick names. Whether the live voice carries the
   sound or narration covers it is decided here too (live voice means `narration: []`). The
   full text is scenes-schema §filmed scenes.
+- **On a motion-required short, pick the moving body before the background.** Use video for
+  continuous action and a photo-backed HTML slide when a place, object or document is the
+  evidence. Every narration group changes a hand, debris, folder, trace or another subject.
+  Mirror it in `visual.action` and `visual.slide.plan`, set `motion:true` and
+  `treatment:"photo-action"`, and keep plan-to-narration 1:1. Whole-photo moves, drifting dust,
+  flashing accents and animated subtitles still fail the contract.
 - **Long-form spreads one result across chapters over one episode; it isn't several
   short-form episodes stitched together.** A different topic per chapter makes a playlist,
-  not an episode. The skeleton (cover → hooking → … with the arc picking the rest) is the
-  same regardless of format; long-form just has that "body" split into chapters and running
-  longer.
-- **Playback order follows the cover's `arc` — two orders, one skeleton.** Cover and hooking
-  exist in every episode. **`answer-first`** (the default): cover → hooking → result → body —
-  the cover shows the finished thing at a glance, hooking hooks why it's needed, and **the
-  result scene comes before the method and steps**; the body (how it was made) unspools only
-  after the finished thing has been seen, and the result scene isn't left out of builds,
-  tutorials, or before/after comparisons. **`story`**: cover → hooking → body → turn → result —
+  not an episode. Long-form walks cover → hooking → … with the arc picking the rest; the
+  "body" is split into chapters and runs longer.
+- **Playback order follows the format, then (on long-form) the cover's `arc`.** The source of
+  truth is scenes-schema §playback order. **A short is always hook → drip (1–n) → cta.** Write
+  `beat:"hook"` on the cover, `beat:"drip"` on every middle shot, `beat:"cta"` on the last
+  narrated shot. n ≥ 1. `hooking` · `result` · `body` · `turn` on a short are defects.
+  `hookType:"spoiler"` and `hookForm:"payoff"` are forbidden. The cover does not speak
+  `COMPREHENSION.answer`; the last drip is the first place that answer is complete; each
+  non-final drip pays one piece and opens the next gap. The CTA is a spoken shot, not the
+  shared outro. **Long-form still uses two arcs.** Cover and hooking exist in every long-form
+  episode. **`answer-first`** (the default): cover → hooking → result → body — the cover
+  shows the finished thing at a glance, hooking hooks why it's needed, and **the result scene
+  comes before the method and steps**. **`story`**: cover → hooking → body → turn → result —
   the cover opens a loop on the moment it went wrong and never says how it ended, hooking is
-  the setup (the protagonist, the original goal), the body builds the conflict, the turn is
-  the moment someone saw it differently, and the result is the payoff, **the first place the
-  answer appears**; a payoff shown early closes the loop and removes the reason to watch.
-  Write a `beat` on each shot — `hook` · `hooking` · `result` · `body` · `turn` (story only) ·
-  `cta`. The source of truth is scenes-schema §playback order. **Inside this skeleton, the
-  body's beats follow the structure the user picked in §2.5** (scenario-craft §11) — the
-  scene order is the investigation's order, not event time.
+  the setup, the body builds the conflict, the turn is the moment someone saw it differently,
+  and the result is the payoff, **the first place the answer appears**. Write a `beat` on each
+  shot. **Inside the long-form skeleton, the body's beats follow the structure the user picked
+  in §2.5** (scenario-craft §11).
 - **Underneath the beats, run the twelve craft rules** (`references/scenario-craft.md`). After
   drafting, walk the scenes top to bottom and speak the connective at every seam — each one
   reads "그래서" or "그런데", never "그리고" (an and-then seam is a scene to merge, cut, or
@@ -424,7 +475,8 @@ Core rules:
   technique the episode rides: a story `turn` planted early and fair-play, fear put on the
   table with its clock plus a doable answer (suspense over surprise, Witte's efficacy rule),
   every curiosity loop opened mid-episode paired at open time with the scene that pays it
-  (loops beyond the main `hookForm`: short-form one sub-loop at most, long-form 2–4 — the
+  (loops beyond the main `hookForm`: short informational 0, short narrative 1 at most,
+  long-form 2–4 — the
   pairs go into `SB_DOC.craft.loops` in §6, where storyboard.html draws the ledger and marks
   the unpaid ones), the body paying its answer in installments so each
   body scene opens the next question as it closes one (seam gaps stay off that ledger),
@@ -438,25 +490,24 @@ Core rules:
   signature line lands once (§7), and `sound.drop` on the turn is the music going out at the
   peak rather than up (§7). On every arc the feel chart carries a sign per shot and dips before
   it lifts — the minimum before `craft.burst`, the maximum on the turn or the result — the
-  cover's first sentence names a loss or a stake before it asks anything, and the cta is a
-  callback line plus a memory question with no subscribe verb (§12, catharsis). On
+  cover's first sentence names a loss or a stake before it asks anything, and the cta is one
+  outward act on a short (a comment question, a next-episode promise, or a memory question) or,
+  on long-form, a callback plus a memory question with no subscribe verb (§12, catharsis). On
   informational episodes, walk §11's four checks last — the body's
   order against event time (the chronological-trap fingerprint), the promise sentence in the
   opening, the plausible wrong answer some scene takes apart, and the heaviest context stretch
   sitting behind the first tension rather than in front of it.
 - **The opening runs on one of four — fear · empathy · curiosity · showing the ending.**
   Every episode uses one of them (user-relayed creator lecture, 2026-08-18). Decide in one
-  line, before authoring, which stimulus the opening (cover title + segment ① + hooking —
-  the first 20s of short-form, the first 60s of long-form) uses to stop the viewer, and
-  write it on the cover shot as `hookType` (`fear`·`empathy`·`curiosity`·`spoiler`).
-  Fear is a loss the viewer may already be carrying ("your videos may already have been
-  written off by the algorithm"), empathy is a problem scene that reads as "that's me",
-  curiosity is a twist, a figure, or unresolved tension, and showing the ending is putting
-  the finished thing on screen first and promising how it got there (the default for build
-  content). The cover title and the platform title carry the same stimulus. If you pick
-  fear, the threat needs evidence in research.md or a hedge to a possibility, and the body
-  has to answer that threat. An opening with none of the four is a copy-mode P0. The source
-  of truth is scenes-schema §the four opening strategies.
+  line, before authoring, which stimulus the opening uses to stop the viewer, and write it
+  on the cover shot as `hookType` (`fear`·`empathy`·`curiosity`·`spoiler`). **A short does not
+  use `spoiler`.** Fear is a loss the viewer may already be carrying, empathy is a problem
+  scene that reads as "that's me", curiosity is a twist, a figure, or unresolved tension, and
+  showing the ending is putting the finished thing on screen first (long-form answer-first
+  builds). The cover title and the platform title carry the same stimulus. If you pick fear,
+  the threat needs evidence in research.md or a hedge to a possibility, and the drips (short)
+  or the body (long-form) have to answer that threat. An opening with none of the four is a
+  copy-mode P0. The source of truth is scenes-schema §the four opening strategies.
 - **Short-form is run by early drop-off — stop · hold · satisfy · act, not the look of the
   panels.** Half or more of the viewers who leave a Short leave inside the first 3 seconds,
   completion decides distribution under 60 s, and the platform now reads "stopped, then left
@@ -476,42 +527,39 @@ Core rules:
   an image change, a move, or the cut. And **pick the hook's shape on purpose**: next to
   `hookType` (why they stop) write `hookForm` (how the first line is built) — `paradox` ·
   `gap` · `payoff` · `identify` · `number` · `secret` (scenes-schema §the six hook forms) — and
-  make the title and segment ① actually take that shape, then **keep it** in the result (a
-  `gap` the body never closes is the early-exit trap). storyboard.html is tables, frames and
-  badges, not drawn panels — the form of the storyboard is irrelevant, its function is to force
-  these four jobs.
-- **The hold job is won in the body, not at the entrance** (measured on our own channel,
+  make the title and segment ① actually take that shape, then **keep it** in the last drip
+  (short) or the result (long-form). **A short does not use `payoff`.** storyboard.html is
+  tables, frames and badges, not drawn panels — the form of the storyboard is irrelevant, its
+  function is to force these four jobs.
+- **The hold job is won in the drip shots, not at the entrance** (measured on our own channel,
   n=4 — retention report, 2026-08-26). Retention ranked our four Shorts in exactly
   the order views ranked them (52% → 38% → 26% → 19%, 1,367 views down to 453), and the
   longest episode (90s) came first on both — the slope was the variable, not the length.
   Winner and loser both cleared the first 3 seconds; the loser then leaked a few percent a
   second through the body and sat under 50% by the 17-second mark. So when an episode
-  underperforms, **rework the body before touching the opening** — every body scene closes
-  one gap and opens the next in the same breath (`references/scenario-craft.md` §5), and a
-  scene that only finishes an explanation is where the curve bends. Cutting shorter isn't
+  underperforms, **rework the drips before touching the opening** — every drip except the last
+  closes one gap and opens the next in the same breath (`references/scenario-craft.md` §5), and
+  a scene that only finishes an explanation is where the curve bends. Cutting shorter isn't
   the fix either: what wins is a flat curve, so trim the stretches that sag and let a held
   90 seconds run.
-- **The shot after the cover is hooking — informational episodes included.** If the cover
-  stopped the thumb, hooking carries the stopped person to the result. The contract has four
-  parts — **catch** what the cover threw (same subject, same promise; don't drift to new
-  material), **hook** the viewer's problem, loss, or gain **with the viewer as the subject**
-  (problem/harm = empathy / loss/risk = fear / unresolved tension = curiosity /
-  resolve/criteria = declaration — continue the strategy the cover picked; on a story arc
-  the hooking is the setup, with the protagonist and the original goal as the subject),
-  **don't unpack** the answer, the method, or the finished thing (it makes what follows a
-  rerun — on a story arc that holds through the build and the turn too), and be
-  **short** (short-form 1–3 shots · 4–15s, with the result or first body scene — the build,
-  on a story arc — inside 20s counting from the cover). Don't fill it with greetings, self-introduction, channel
-  introduction, or a "today we'll look at ~" trailer — the speaker-report-opening P0 applies
-  to the first hooking segment too. The source of truth is scenes-schema §hooking; the
-  evidence is [hooking research](../../docs/research/2026-08-18-hooking-beat/).
-- **Result revealed in the first second (answer-first)**: the cover's first frame is the
-  finished screen or the working result. The cover's first line says what benefit or change
-  that result gives the viewer (showing the ending, of the four). Greetings, background, tool
-  definitions, and "I tried it" get cut or moved behind hooking. The cover's glance and the
-  result scene's unfolding point at the same artifact. **On a story arc the opposite holds** —
-  the first frame is the moment it went wrong, close, and the ending stays out of the cover,
-  the setup, the build and the turn; the cta's frame is what points back at the cover.
+- **On a short the shots after the cover are drip, then CTA.** n ≥ 1 drip shots. Each
+  non-final drip pays one piece and opens the next gap; the last drip completes the answer;
+  the last narrated shot is `beat:"cta"` with one outward act. Do not write `beat:"hooking"`.
+  **On long-form the shot after the cover is hooking** — informational episodes included. If
+  the cover stopped the thumb, hooking carries the stopped person to the result. The contract
+  has four parts — **catch** what the cover threw, **hook** the viewer's problem with the
+  viewer as the subject, **don't unpack** the answer, and be **short** (1–3 shots · 20–60s,
+  with the result or the build inside the first 60s). Don't fill it with greetings,
+  self-introduction, or a "today we'll look at ~" trailer. The source of truth is
+  scenes-schema §hooking; the evidence is [hooking research](../../docs/research/2026-08-18-hooking-beat/).
+- **On a short the cover is a gap, not the result.** The first frame and segment ① open a
+  question; they do not speak `COMPREHENSION.answer`. Greetings, background, tool definitions,
+  and "I tried it" get cut. **On long-form answer-first the result is in the first second**:
+  the cover's first frame is the finished screen or the working result, and the cover's
+  glance and the result scene's unfolding point at the same artifact. **On a story arc the
+  opposite holds** — the first frame is the moment it went wrong, close, and the ending stays
+  out of the cover, the setup, the build and the turn; the cta's frame is what points back at
+  the cover.
 - **One result per episode**: one video solves one problem or produces one change. Install,
   setup, and demo don't all go in one episode. Push the leftover steps to the next episode
   and finish only this result.
@@ -553,8 +601,8 @@ Core rules:
 - **Every generated-video shot leaves here with its camera decided** — `visual.camera`'s four
   slots (`movement` · `speed` · `framing` · `end`) filled on b-roll, motion-background scenes,
   and quote speech clips. The clip prompt is assembled out of them here and stored; leave `end`
-  empty and the ending nobody reviewed is exactly the last second
-  that drifts. `movement: "static"` is a decision, not a blank. On stills the block is optional —
+  empty and the ending nobody reviewed is exactly the last second that drifts.
+  `movement: "static"` is a decision, not a blank. On stills the block is optional —
   write it when the still should move with intent: `movement` picks the builder's Ken Burns
   move (eased zoom towards a focus point, pan, cover punch, handheld drift — the feel each
   serves is directing-grammar §5's Still column). The vocabulary rules (vendor words, one move,
@@ -564,9 +612,8 @@ Core rules:
 - **Every generated still leaves here with its floor plan decided** — `shot.space` filled
   (`frame: "camera"` · `layout` — empty only on an `insert`/`ecu` that fills the frame with one
   object · `facing` when a person is on screen · `line` when two people, or a person and what
-  they look at, share the scene). Image
-  models do not infer camera position or object-centric left/right
-  (directing-grammar §3.5). The assembler writes the prefix; the scene and mood follow. A
+  they look at, share the scene). Image models do not infer camera position or object-centric
+  left/right (directing-grammar §3.5). The assembler writes the prefix; the scene and mood follow. A
   motion prompt for image→video does **not** rewrite sides, facing, or lighting — the PNG
   already locked them. A quote speech clip has no still, so its prompt carries the shot's
   `From the camera: …` sentence (`assemble-bg-prompt.js --space-only`).
@@ -617,46 +664,29 @@ Core rules:
 
 #### Turning channel measurements into story structure
 
-If you can read `grow-youtube` output or YouTube Analytics records, settle each of the
-following in one line before authoring and write it into the `storyboard.md` design rationale
-and `SB_DOC.seriesNote`.
-
-1. **A stopping problem** — if `stayed to watch` is low, change the first frame and the first
-   line. Don't substitute a harder CTA for it.
-2. **An interest problem** — if engaged views are low against raw views, cut explanation and
-   pull the moment of reaching the result earlier.
-3. **A holding problem** — if `averageViewPercentage` trails the channel median, or the
-   Studio curve slides through the body while the first seconds hold, the body is closing
-   loops without opening new ones. Rework the body into installments
-   (`references/scenario-craft.md` §5) and leave the opening the curve says is working alone.
-4. **An engagement problem** — if retention sits at or above the channel median while
-   `likes`·`comments` (`youtube_insights` per-video) sit at the floor, the video held
-   people who then did nothing — the second promotion layer is failing, not the body
-   (growth-playbook §observed metrics). Redesign the act beat's outward loop
-   (`references/scenes-schema.md` §playback order, act row) and rotate its form so it
-   isn't the same question every episode.
-5. **Conversion clues** — use the topic, result, and form of the video that produced
-   subscribers as the common axis of the next 3–5 episodes. Don't clone a format that had
-   high views and no subscribers.
-   Conversely, when the early pass-through and retention are good but views alone are low,
-   the problem is the title angle, not the form — reopen on a felt problem rather than a
-   method or tool (platform-playbook §1 ②).
-6. **The next promise** — write this episode's result and the next episode's result as one
-   sentence each. If the two don't connect, it isn't a series, just one-offs on similar
-   topics.
+When `grow-youtube` output or YouTube Analytics records exist for the channel, settle the six
+items in `references/measurements-to-structure.md` in one line each **before authoring** — a
+stopping problem, an interest problem, a holding problem, an engagement problem, the conversion
+clue, and the next promise — and write them into the `storyboard.md` design rationale and
+`SB_DOC.seriesNote`. Channel measurements outrank generic benchmarks wherever the two disagree.
 
 #### Run the contract checker before delegating anything
 
 ```bash
 SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
-node $SB/check-scenes.js storyboard/          # exit 1 = a violation
+node $SB/check-scenes.js storyboard/ --draft  # after 4a — machine-layer absences deferred
+node $SB/check-scenes.js storyboard/          # after 4b — exit 1 = a violation
 ```
 
+**`--draft` is the story pass** — machine-layer absences deferred and counted; vocabularies and
+beat order still fail.
+
 It reads the structural half of the contract — fields that have to exist, values that have to
-come from a fixed vocabulary (`shot.size`, `shot.angle`, `beat`, `hookType`, `hookForm`), the
+come from a fixed vocabulary (`shot.size`, `shot.angle`, `beat`, `hookType`, `hookForm`, `transition`), the
 four camera slots on every generated shot, b-roll's `after` resolving to a real scene, a
-`sound.cue` naming a cue that exists. Every band comes from the format preset, so there is no
-copy of those numbers to drift.
+`sound.cue` naming a cue that exists, and the profile's true-motion floor and still-run limits.
+Every format band comes from the format preset, while motion limits come from the profile, so
+there is no second policy copy to drift.
 
 **Fix what it finds before a reviewer reads the file.** A delegation spent on a storyboard with
 an empty camera slot buys a finding the checker gives away, and a reviewer that trips over a
@@ -668,6 +698,7 @@ here would create the mirror drift `format-lint.js` exists to police.
 
 ### 4.5 Copy review (storyboard-reviewer copy mode — one round)
 
+**This reads the story pass (4a)** — a scene it asks to drop costs nothing yet.
 **Get the sentences read before making any images** — when the copy changes, so does the
 picture that scene will show, so reversing the order means throwing away images you made.
 
@@ -696,17 +727,19 @@ lowest scene** next to the list. There are two axes.
 
 - **Quality** — does that scene do its job. The cover says what the story is about within 3
   seconds and **also gives a reason to stay** (segment ① carries whichever of fear, empathy,
-  curiosity, or showing the ending is written in `hookType` — scenes-schema §the four opening
-  strategies); hooking catches what the cover threw, hooks it with the viewer as the subject
-  (the protagonist and their goal on a story arc), and doesn't unpack the answer (§hooking);
-  the result scene unfolds the finished thing (on a story arc it is the first place the
-  answer appears); body scenes say only how that result was made (on a story arc they build
-  the conflict, and the turn is the peak right before the payoff). points gives one message per screen, and
+  or curiosity is written in `hookType` on a short; long-form may also show the ending —
+  scenes-schema §the four opening strategies). **On a short**, every middle shot is a drip:
+  each one except the last pays one piece and opens the next gap, and the last drip is the
+  first place the answer is complete; the last narrated shot is the CTA. **On long-form**,
+  hooking catches what the cover threw and doesn't unpack the answer (§hooking); the result
+  scene unfolds the finished thing (on a story arc it is the first place the answer appears);
+  body scenes say only how that result was made. points gives one message per screen, and
   quote says something that could plausibly come out of that person's mouth.
 - **Contextual fit** — is there a reason for that scene to be here. Does it catch what the
-  previous scene threw and open the next one, does the result come before the body on
-  answer-first (build content) and after the turn on a story arc, is the premise something the profile §3 target will follow, and which entry in
-  research.md does that claim hang on.
+  previous scene threw and open the next one, does a short walk hook → drip → cta, does the
+  result come before the body on long-form answer-first and after the turn on a story arc, is
+  the premise something the profile §3 target will follow, and which entry in research.md
+  does that claim hang on.
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "scene mode"** — pass the paths to
    `scenes.js`, `research.md` (if present), `profile.md`, and
@@ -720,14 +753,17 @@ lowest scene** next to the list. There are two axes.
      video still stands with that scene gone, merge or drop it. When the scene count drops,
      stretch the remaining scenes to keep the total length.
    - For a broken-flow finding, suspect **the order around it**, not the scene itself. An
-     arrangement that still makes sense when reordered had no flow to begin with. If, on
-     answer-first (build content), the method explanation sits before the finished thing, don't fix the
-     sentences — move the result scene forward; on a story arc it is the reverse — a payoff
-     that sits ahead of the turn moves back behind it.
+     arrangement that still makes sense when reordered had no flow to begin with. If a short
+     is not hook → drip → cta, reorder the beats rather than rewriting sentences. If, on
+     long-form answer-first, the method explanation sits before the finished thing, move the
+     result scene forward; on a story arc it is the reverse — a payoff that sits ahead of the
+     turn moves back behind it.
    - **Rewriting a scene or reordering changes the sentences §4.5 already read.** Don't rerun
      copy mode for it — apply the same rule you got there (only subtract) as you rewrite, and
      say in the §7 note which scenes moved after the copy review.
 3. **Write down whatever you didn't apply**, with the lowest scene and its score, for §7.
+
+**4b starts here** — fill the machine layer, then run the checker without `--draft` before §4.7.
 
 ### 4.7 Vocabulary review (storyboard-reviewer lexicon mode — one round)
 
@@ -784,7 +820,7 @@ What it looks at, per shot:
 - **The rationing and the sequencing** — one close-up (`cu`·`choker`·`ecu`) per scene, `choker`/`ecu` once or twice per
   episode, one `dutch` per episode with its reason written, a close-up opening paid back in the
   next shot, the hook cut and speech clips at `eye`, a wide held ≥1.5× a close, a scene that
-  keeps its `space.line` (directing-grammar §6).
+  keeps its `space.line` (directing-grammar §6). **The join** — scenes-schema §scene transition.
 
 And per generated shot, on top:
 
@@ -814,7 +850,7 @@ And per generated shot, on top:
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "camera mode"** — pass `scenes.js`,
    `profile.md`, `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/directing-grammar.md`,
-   `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenes-schema.md` (§camera · §cut length),
+   `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenes-schema.md` (§camera · §cut length · §scene transition),
    and `${CLAUDE_PLUGIN_ROOT}/skills/produce/references/video-model-selection.md`.
    Read the tail `STORYBOARD_REVIEW: mode=camera score=NN p0=N worst=<shot number>`.
 2. **Apply the findings to `scenes.js`**, starting at `worst`, then go to §4.9.
@@ -862,9 +898,9 @@ What it looks at:
 
 Generate the per-scene background image **at the size the format sets** and save it to
 `images/scene-<n>.png`. **Slide scenes (`visual.slide`) are excluded here too** — their
-screen is not an image but the slide §8 builds after approval. Both the image count and
-the cost ledger count image scenes only. Don't memorize the sizes — read them from the
-preset.
+screen is not an image but HTML: every slide is a motion slide, built at §5.6 before
+approval. Both the image count and the cost ledger count image scenes only.
+Don't memorize the sizes — read them from the preset.
 
 ```bash
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
@@ -894,6 +930,8 @@ passing them (`../produce/references/video-model-selection.md` §6).
   that much work.
   On a machine without mflux the tool fails with install instructions — fall back to
   `gpt_image_text2img` (quality "low") for that episode only.
+  `mlx_image_generate` / `mlx_image_edit` are optional when MLX Core is up; they are not
+  the default, and Hangul still goes to gpt_image.
 - **Cover background (scene-1) = `gpt_image_text2img` (quality "high").** It's the thumbnail
   and the veo source, so the quality clause applies.
 - **Any screen that has to contain text goes to `gpt_image_text2img`** whatever the scene —
@@ -909,9 +947,9 @@ passing them (`../produce/references/video-model-selection.md` §6).
   to `seen from behind, face turned away` (produce absolute rules 11 and 12).
   In episodes with an opening b-roll, this PNG doubles as the veo source — when the cover
   ends, that photo starts moving.
-- **Pick still or video per scene — video is capped at 2 combined per episode** (user
-  directive, 2026-08-14; the source of truth is scenes-schema §motion background). There are
-  two forms and they count together:
+- **Pick still or video per scene — the format's generated-video cap is the default, and the
+  channel profile may override it** (the source of truth is scenes-schema §motion background).
+  There are two generated forms and they count together:
   - **`broll`** — inserted between scenes. A stretch where only the picture moves and nothing
     is said (absolute rule 9 means that stretch uses the video's own audio, and using both
     slots cuts roughly 8 seconds out of the time spent delivering information).
@@ -921,8 +959,10 @@ passing them (`../produce/references/video-model-selection.md` §6).
     move while you talk — where the movement itself is the content.
     `duration` inside one clip (veo 8s · the default seedance 1.5 pro 4–12s,
     server-validated) · points only · not combined with per-line illustrations.
-  Still is the default when still is enough — video buys cost and seam risk. **Backgrounds
-  that become veo sources (scenes with b-roll attached, motion-background scenes) have to be
+  Still is the default only after the channel motion floor and still-run limits are met — video
+  buys cost and seam risk. A Ken Burns move, caption change, or still swap does not count toward
+  that floor. **Backgrounds that become veo sources (scenes with b-roll attached, motion-background
+  scenes) have to be
   photorealistic people made with `gpt_image_text2img` (high)**, not the local engine — blurry
   or peopleless, and those 8 seconds look like a still frame. The two b-roll slots need
   different `after` values.
@@ -965,8 +1005,7 @@ passing them (`../produce/references/video-model-selection.md` §6).
   takes hours even on the local engine, and gpt costs more than it's worth. Make **2–3
   backgrounds per chapter**, reuse them within that chapter through angle and crop, and change
   the setting when the chapter changes (the Ken Burns pan pulls two compositions out of one
-  image). Even so, past 30 images, look again at whether this
-  material belongs in the filmed lane.
+  image). Even so, past 30 images, look again at whether this material belongs in the filmed lane.
 - Regenerate if generated characters get stamped in — the moment it reads as a fake document
   or signboard it becomes factual distortion.
 - When planning a b-roll scene, write per slot — as the scenes-schema `broll` contract requires
@@ -1022,7 +1061,7 @@ right, not pretty.
 1. **Delegate to the storyboard-reviewer agent (Agent) in "image mode"** — pass every
    `images/scene-*.png` path plus `scenes.js` and `profile.md`, and the `narration[].img` paths
    in illustration mode. Say explicitly that slide scenes are out of scope — a missing
-   `scene-N.png` there is not a defect (their screen arrives in §8). Read the tail
+   `scene-N.png` there is not a defect (their screen arrives in §5.6). Read the tail
    `STORYBOARD_REVIEW: mode=image score=NN p0=N`.
 2. **Remake only the images that were flagged**, leave the rest alone, then go to §6 and write
    storyboard.md once.
@@ -1046,6 +1085,22 @@ right, not pretty.
      wrong to you, don't buy a third attempt; put it on the §7 screen and let the user look.
 3. **Write down whatever you didn't remake**, for §7. This axis spends money on every attempt,
    so the user's judgment is the cheaper one.
+
+### 5.6 Motion-frame authoring and review (before approval)
+
+If any scene has `visual.slide`, author it now with
+[slide-authoring.md](references/slide-authoring.md). **Generate `slide.arts` first** when
+the array is set — `slides/assets/s<shot>-<slug>.png`, ink actor illustration, no readable text
+(`image_local_generate`; gpt/mlx when needed). Log the call; sit a principle actor with `h.fig`.
+A principle frame is a `.cast` of actors plus hairlines (`h.stem` · `h.bus` · `h.chamber`); kinetic
+`renderKinetic` places the first art on group 1 then the title with `in`; type-only skips arts.
+
+Then run `node references/check-slide.js <storyboard directory> --require-all`, render its
+key-state sheet, and take it through `slide-reviewer` to score ≥95 with p0=0. This is part of
+the storyboard, not a post-approval detail: a plan line cannot reveal that an “HTML frame”
+is only a photo with an animated rectangle. Timeline, statistic, and principle frames must
+match every `motionBeats` primitive with the same group's `data-primitive`. Keep each sheet
+under `.work/slide-check/s<n>/sheet/` and embed its end states in storyboard.md.
 
 ### 6. Writing storyboard.md
 
@@ -1115,7 +1170,7 @@ cast section. `resolve-asset.py --list <channel dir>` prints the ids and paths.
 
 **Fill `SB_DOC.craft` with the promises the episode makes** — the loop ledger the §4 craft
 rules ask for, in the one place the approver reads. `loops[]` first: the cover's own hook as
-the first entry (`open: 1`, `pay:` the result shot), then every sub-loop opened mid-episode
+the first entry (`open: 1`, `pay:` the last drip on a short, the result shot on long-form), then every sub-loop opened mid-episode
 and every deliberate plant (`kind: "plant"`), each with the shot that pays it and a one-line
 `what`. On a story arc add what the arc actually uses: `holds[]` (the body shots where the
 protagonist endures, in playback order) with `burst` (the shot the held charge comes out in),
@@ -1123,7 +1178,7 @@ protagonist endures, in playback order) with `burst` (the shot the held charge c
 result] }`). Shot numbers are the document's, counting from 1. The renderer draws the ledger
 under the timeline, tags every shot it names on the card header (고리 엶 → 샷 6 · 떡밥 회수 ←
 샷 3 · 참음 2/3 · 터짐 · 명대사 · 장치 검증), and the check strip warns on an empty ledger, a
-loop with no payer or one paid before it opened, a cover promise paid anywhere but the result,
+loop with no payer or one paid before it opened, a cover promise paid anywhere but the last drip (short) or the result (long-form),
 a plant paid in a different size · angle · layout than it was planted in, holds out of order
 or on the same `shot.feel`, a burst before its last hold, and a device with no rule or no
 verifying shots. A field left empty draws nothing; the one warning an empty block raises is
@@ -1132,7 +1187,7 @@ the empty `loops[]`.
 The document shows six things.
 
 - **Shot cards** — one `SCENES[]` entry. The header carries the role, the size and the angle,
-  the **beat** (cover · hooking · result · body · turn · CTA — plus the opening-strategy,
+  the **beat** (short: cover · drip · CTA; long-form: cover · hooking · result · body · turn · CTA — plus the opening-strategy,
   hook-form and arc name tags on the cover card) and the **two production-layer badges** (screen body = still photo / AI video /
   recording / shared asset, on-screen = HTML reveal · captions · typing / none); under it the
   **feel line** (what the audience should feel) and the info line (what it newly tells). Entries
@@ -1162,10 +1217,11 @@ The document shows six things.
   · 3-step shrink · 640px guard), and it also catches the b-roll contract (no narration, 8s or
   under, same src as the cover background, `after` pointing at a real scene), missing scene
   length, missing `tts`, unrecorded outro length, unfilled `{{…}}` in SB_DOC, **playback order**
-  (the cover's arc — answer-first cover → hooking → result → body, story cover → hooking →
-  body → turn → result; a warning when there's no hooking shot or the shot after
-  the cover isn't hooking; on answer-first a violation when body comes before result, on
-  story when result comes before body or the turn), **opening strategy**
+  (short: hook → drip → cta, a violation when drip or a spoken CTA is missing or a long-form
+  beat appears; long-form: the cover's arc — answer-first cover → hooking → result → body,
+  story cover → hooking → body → turn → result; a warning when there's no hooking shot or the
+  shot after the cover isn't hooking; on answer-first a violation when body comes before
+  result, on story when result comes before body or the turn), **opening strategy**
   (a warning when the cover has no `hookType` or a value outside the four), **hook form** (no
   `hookForm`, or one outside the six), and the **shot grammar** (a shot with no `shot.feel`, a
   `shot.size`/`shot.angle` outside the vocabulary, a second `cu`/`choker`/`ecu` in one scene, a
@@ -1173,13 +1229,12 @@ The document shows six things.
   next shot, a generated still with no `shot.space.layout`, camera-inference or metres in the
   prompt — directing-grammar §3.5 · §6 · §8), **the promise ledger** (an empty
   `craft.loops`, a loop with no payer or paid before it opened, a cover promise paid off the
-  result, a plant paid in a different frame than it was planted in, holds out of order or on
+  last drip (short) or the result (long-form), a plant paid in a different frame than it was planted in, holds out of order or on
   one `shot.feel`, a burst before its last hold, a device without its rule or its verifying
-  shots), and on a story arc **a music drop that isn't on the turn** (scenario-craft §7). This
-  is where text
-  clipping and contract violations get filtered out before production — though it shares
-  produce's blind spot, so text pushed **upward** isn't caught (only downward overflow is
-  measured).
+  shots), and on a story arc **a music drop that isn't on the turn** (scenario-craft §7). This is
+  where text clipping and contract violations get filtered out before production — though it
+  shares produce's blind spot, so text pushed **upward** isn't caught (only downward overflow
+  is measured).
 
 Use this document as the default when presenting for approval. The text zones and the subtitle
 toggle are at the head of the shot composition section.
@@ -1187,15 +1242,22 @@ toggle are at the head of the shot composition section.
 ### 7. HITL approval gate
 
 Present the storyboard with AskUserQuestion — the **format** (short-form 9:16 / long-form 16:9),
+the direction picked at §2.2 (the question, the engine, the score),
 the storyboard.md and storyboard.html paths (opening the HTML in a browser shows the check
 badges too), shot count and expected total length, the cover title, key figures and sources.
 For long-form, also say **the chapter list and that the safe area is provisional** (§1.5).
 If there are filmed scenes, show **the `script.md` path and how many files have to be filmed** —
 approval is the start of filming, so the user needs to know what and how many from this screen.
-If there are slide scenes, show **how many scenes are slides, which of them are motion slides, and each one's `plan` line** —
-what's being approved is that plan, and the files get built in §8 afterwards.
-**Carry the results of the six reviews here too** — one score each for copy, per-scene,
-vocabulary, camera, sound, and images, with **which scene or shot was lowest and at what score**
+If there are slide scenes, show **how many scenes are slides and each one's `plan` line**.
+Every slide already has rendered sheet frames and a slide-reviewer score; show those actual
+frames and name every editorial frame's `role` and shared `motif`.
+**Show the motion contract too** — measured true-motion shots against the required count, the
+longest still run in shots and seconds, the allowed motion kinds, and the generated-video cap.
+The numbers come from the profile-backed `window.MOTION_POLICY`; a motion finding from
+`check-scenes.js` blocks this approval screen rather than becoming an unresolved reviewer note.
+**Carry the review results here too** — the winner's scenario score (and the other two
+candidates'), plus one score each for copy,
+per-scene, vocabulary, camera, sound and images, with **which scene or shot was lowest and at what score**
 for the three per-item ones, and **every finding you didn't apply, in the reviewer's own words**.
 That last list is the point of the screen: the reviews no longer block, so this is where a
 defect gets its only human look. **Say the money out loud too** — regenerate `SB_DOC.cost` (§6)
@@ -1216,11 +1278,12 @@ the one review that covers it** — §4.5 for sentence structure, §4.6 for scen
 §4.7 for word swaps, §4.8 for camera slots, §4.9 for sound, §5.5 for remade images. That is the
 one place a mode runs twice, and it runs because a person asked, not because a score fell short.
 Once approved, write two lines at the top of scenes.js — `// approved: <YYYY-MM-DD>` and
-`// review: text=NN scene=NN lexicon=NN camera=NN sound=NN image=NN unresolved=N` — and point
+`// review: scenario=NN text=NN scene=NN lexicon=NN camera=NN sound=NN image=NN unresolved=N` — and point
 the user at `/social-flow:produce <channel> <topic>`, so you can trace later which score of copy
 produced which performance. `unresolved` is how many findings went to the user unfixed; `n/a`
 goes in any slot whose review didn't run (image in shooting mode — camera runs on every episode,
-since it reads the feel, size and angle of stills and filmed shots too).
+since it reads the feel, size and angle of stills and filmed shots too; scenario now runs on
+both formats).
 
 **If there are filmed scenes**, the hand-off after approval is recording. It differs by lane.
 
@@ -1234,28 +1297,19 @@ since it reads the feel, size and angle of stills and filmed shots too).
   all the files are there, `/social-flow:produce <channel> <topic>` joins the filmed and
   generated scenes into one timeline. **Show the list of files to film on the approval screen
   as-is** — the user uses that list as a checklist.
-  **If there are slide scenes, go straight to §8 after approval** — authoring the slides while
-  the user records means both jobs run at once and neither waits on the other.
+  Motion slides already passed §5.6.
 
-### 8. Slide authoring (after approval · only on episodes with slide scenes)
-
-Build the per-scene HTML slides from the approved storyboard's `plan` and `labels`. Every
-copy gate has already passed, so **no new text gets written here** — every character on a
-slide comes from scenes.js (`title`, `bullets`, `slide.labels`).
-
-The whole lane — the two slide kinds, the closed motion vocabulary, the 95-point design
-review, and what produce takes from it — is in
-[slide-authoring.md](references/slide-authoring.md). **An episode with no slide scene skips
-this step**, and so does one that never reached approval.
+### 8. Every authored screen is a motion slide and was built at §5.6. This step is gone.
 
 ## Traps
 
 - **Don't skip a review because you think the copy is fine** — whoever is running the skill
   doesn't get to read their own sentences and call it good. The AI tells in your own writing are
-  the ones you see least, and the review costs one delegation. Six run, every episode.
-- **Don't delegate the same mode twice to chase a number.** One round is the contract. A second
-  round happens only when the user asks for a change at §7 and that change lands in that mode's
-  layer. Re-delegating on your own judgment brings back the loop this skill just dropped.
+  the ones you see least, and the review costs one delegation. Six board reads run, every episode.
+- **Don't delegate a board mode twice to chase a number.** Copy · scene · vocabulary · camera ·
+  sound · image run once. A second round happens only when the user asks for a change at §7
+  and that change lands in that mode's layer. **Scenario is the exception** — §2.2 loops each
+  candidate to 95, like a slide. Don't start that loop on the board reviews.
 - **Don't reorder the six** — copy (§4.5) → per-scene (§4.6) → vocabulary (§4.7) → camera (§4.8)
   → sound (§4.9) → images (§5.5). Images are last because changing a sentence changes the picture
   that scene will show; vocabulary comes after per-scene because polishing the words of a scene
@@ -1263,15 +1317,16 @@ this step**, and so does one that never reached approval.
   because a shot that gets merged away takes its camera block with it.
 - **The score at the per-scene, vocabulary, and camera reviews is the lowest one, not the
   average** — the tail's `score` is the lowest item's score. Don't read it as "average 96, fine".
-- **A score is a record, not permission.** Nothing in §4 or §5 stops on a number. The only stop
-  in this skill is the user at §7, so a finding you decided not to apply has to reach that
-  screen in writing — dropping it silently removes the last look anyone gives it.
-- **Don't open scenes.js while still searching** — research is a step with an exit (§2: the
-  question map, two-direction searches, counter-evidence and freshness, the sufficiency check),
-  and a scene written before it closes bends the facts to the sentence. The hook in particular
-  is a promise, and a promise made before the research is a promise you don't yet know you can
-  keep — which is the early-exit trap the platform punishes (user-relayed, 2026-08-23 —
-  field-practice grade; §4's short-form principles carry the same tag).
+- **A board-review score is a record, not permission.** Nothing in §4 or §5 stops on a number.
+  Scenario at §2.2 does — a candidate below 95 is improved or replaced, not filed. Findings
+  from the six board reads that you decided not to apply still have to reach the §7 screen
+  in writing.
+- **Don't open scenes.js while still searching** — research is two passes with a scored pick
+  in between (§2.1 first research → §2.2 three candidates looped to 95 → §2.3 additional
+  research, then the sufficiency check). Don't start the second pass before the pick. Don't
+  offer three wordings of the same question, or three pages with the same primary engine, as
+  three candidates. A hook written before the second pass is a promise you don't yet know
+  you can keep (user-relayed, 2026-08-23).
 - **Don't write the feel after the camera** — a `shot.feel` fitted to a move already chosen is a
   caption, not a decision, and the camera review reads it as unset. Feel, then size and angle,
   then space, then (on a generated shot) the move and the length. "Cinematic" and "dynamic" aren't feelings
@@ -1282,51 +1337,12 @@ this step**, and so does one that never reached approval.
   sides the still already drew redesigns the scene.
 - **scenes.js isn't a living file** — after approval it's the settled version produce consumes.
   To change it during production, start from a storyboard revision and re-approval.
+- **A profile rule is not episode folklore** — never call it legacy or replace it with a
+  convenient format default in `storyboard.md`. When the two contracts disagree, stop before
+  authoring and ask which one changes; record that choice in the revised profile or format.
 - **A range stays a range** — don't shrink a numeric range to its upper bound alone (this has
   actually happened).
 - **No national symbols in images** — flags, national emblems, maps, government buildings, and
   people in uniform don't get generated without prior approval.
 - SerpApi counts 1 search = 1 credit (250/month free) — prefer naver_search (25,000/day) and
   WebSearch, and spend serp only on precision searches.
-
-## Additional Resources
-
-### Reference Files
-
-- **`references/scenes-schema.md`** — the full scenes.js data contract (fields by type, narration segments, verification checklist)
-- **`references/directing-grammar.md`** — feel → technique (SoT): what the audience should feel on each shot, and the size, angle, frame space, move, cut length and sound that serve it · the size ladder with cut lines, phone distances and matching sound · angle rules (the subject's eyes as baseline, angle as change, the dutch fee) · frame space (§3.5 — camera frame, visible result, no metres) · the move table with the feel each serves · rationing across shots · the 180° and 30° rules for filmed shots. Engine vocabulary stays in `../produce/references/video-model-selection.md` §Camera
-- **`references/assemble-bg-prompt.js`** — writes `bgPrompt` from `shot.size` · `shot.angle` · `shot.space` (`--from scenes.js --shot <n>`, n from 1) plus `--scene`·`--mood`·`--exclude`; `--space-only` gives a quote clip its `From the camera: …` sentence; `--no-person` swaps the size ladder for a still with nobody in it; `--check` exits 1 on camera-inference / allocentric / metric language. storyboard §5 runs it before the generation call. `--selftest` pins the banned-language checks and fails if the HTML template's copy of the three regexes drifts
-- **`references/scenario-craft.md`** — the twelve craft rules under the beats (SoT): but/therefore seams · scene turns · plant-and-payoff · fear with a door · the curiosity ledger · pattern-break comedy · peak-and-end · restraint · the double-hit turn · verified rules · **§11 the investigation storyline** — the chronological-trap ban, cold open, promise sentence, false-answer beat, context bridges, and the six body shapes the §2.5 HITL menu offers · **§12 catharsis** — the feel chart with a sign that dips before it lifts, stakes named before the question, high-arousal poles, and an end that hands the feeling over (callback + memory question, no ask)
-- **`references/storyboard-template.md`** — the standard storyboard.md structure + the research.md table format
-- **`references/storyboard-html-template.html`** — the storyboard.html render template — loads scenes.js dynamically and shows contract checks automatically; fill in only the `✎ SB_DOC` block
-- **`references/shot-script-template.md`** — shooting mode only: the script.md (shooting script) structure + filming rules + the scenes.js variant contract
-- **`references/make-script.js`** — the long-form script.md renderer — builds the shooting script from scenes.js (never maintain two copies). All shots on an all-live-voice episode, filmed scenes only on a TTS episode
-- **`references/slide-template.html`** — the §8 slide-scene render template — the `?reveal=k` reveal contract + the determinism contract; change only `SLIDE_SHOT` and `renderSlide()`
-- **`references/motion-slide-template.html`** — the §8.1 motion-slide template — the state rule, `window.__seek(t, g)` · `__groups()` · `__size()` · `__meta()` for the renderer, `rise` · `grow` · `draw` keyframes and `data-count` count-ups, both formats' zones inline; change only `SLIDE_SHOT` and `renderSlide()`
-- **`references/kinetic-type-template.html`** — the §8.2 kinetic-type template — the words are the picture: `h.word` · `h.line` · `h.sub` · `h.cross`, `drop` · `wipe` keyframes, the same seek contract and both formats' zones inline; change only `SLIDE_SHOT` and `renderKinetic()`
-- **`references/character-act-template.html`** — the §8.3 character-act template — an ink line-figure that reacts, seven named actions read from `visual.slide.acts`, the same seek contract; change only `SLIDE_SHOT` and `renderCharacter()`, never a keyframe
-- **`references/slide-design.md`** — how a slide looks and moves (ink · paper · one accent, hairlines, one hero, the motion tokens and the 2.6s cap) and, in §5, the rubric `slide-reviewer` scores the rendered frames against. §6 and §7 add the kinetic-type and character-act rules and their extra P0s
-- **`../produce/references/render-motion-slide.mjs`** — renders a motion slide into one clip per reveal group with headless Chrome over the DevTools pipe (no npm dependency), deterministic frame-by-frame; `--sheet` writes the frames the design gate reads
-- **`references/check-research.js`** — the §2 exit, checked: counts the Verified rows against the Sufficiency line, reads every question's status, and names the claims with no counter-evidence row. Reads both the template's English headings and the Korean ones half the library uses
-- **`references/check-scenes.js`** — the scenes.js structural contract with an exit code: required fields, the size/angle/beat/hookType/hookForm vocabularies, the four camera slots on generated shots, b-roll `after` resolution, cue references. Bands come from the format preset, never a copy. `--selftest` pins the rules
-- **`references/check-slide.js`** — the §8 slide machine check — filename↔scenes.js match, Korean literals outside the SoT, determinism violations
-- **`../autoproduce/references/cost-tally.md`** — the episode cost-ledger convention (where §5 and §5.5 write, the line format, the units). The source of truth for unit prices is `prices.tsv` in the same directory
-- **`../autoproduce/references/board.js`** — the channel board: every episode's stage, blockers, cost and decisions on one static page under `data/<channel>/growth/board.html`. Regenerated on demand — no server, no watcher
-- **`../autoproduce/references/episode-state.js`** — derives where an episode stands (drafted · approved · produced · published), what to run next, and what the directory promised and hasn't delivered. No state file — it reads what the skills already write. `--all` sweeps a channel, `--json` for tooling
-- **`../autoproduce/references/decision-log.md`** — the episode decision log convention (`.work/decisions.tsv`): what was chosen, what was rejected, and how a change of mind is appended rather than overwritten. Read it back with `decisions.sh`
-- **`../autoproduce/references/cost-preview.js`** — the §6·§7 approval-screen preview: totals the ledger, prices the generated-video slots out of scenes.js, writes `.work/cost-forecast.tsv`, and emits the `SB_DOC.cost` block (`--sbdoc`) or JSON (`--json`, the read-only lane — it writes nothing). `--selftest` pins the routing table and the fingerprint copy the HTML template carries
-
-### Delegated agents
-
-- **`storyboard-reviewer`** — six modes, one round each. §4.5 copy mode (AI tells, hook, factual
-  fidelity) · §4.6 scene mode (per-scene role and contextual fit) · §4.7 lexicon mode (are the
-  words words people use) · §4.8 camera mode (the shot grammar — feel · size · angle · space of every
-  shot, plus the four slots, cut length, engine fit of generated shots) · §4.9
-  sound mode (clip audio, voice casting, where the sound gets out of the way) · §5.5 image mode
-  (scene content against the picture's contextual fit). None of them is a pass/fail gate — each
-  returns a score and its findings, and scene, lexicon, and camera mode report **the lowest
-  item**. `agents/storyboard-reviewer.md` is the source of truth for the rubric, the P0 list, and
-  the tail format
-- **`content-reviewer` plan mode** — prompt verification right before the §5 generation calls
-  (`PLAN_REVIEW`). It looks at something different from storyboard-reviewer image mode — this
-  one is the prompt, that one is the output

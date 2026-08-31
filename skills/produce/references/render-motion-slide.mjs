@@ -4,12 +4,14 @@
  * clip per reveal group, deterministically, with no npm dependency.
  *
  *   node render-motion-slide.mjs <storyboard/slides/sN-slug.html> --out <dir> [--fps 30]
- *        [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames]
+ *        [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames]
  *
  * How it works — the seek model (docs/research/2026-08-29-motion-slide-lane):
  *   Chrome is launched ONCE (headless, --remote-debugging-pipe — CDP over fd 3/4, no puppeteer)
  *   and the page is asked for every frame at an exact time: window.__seek(tMs, g) pauses every
- *   animation and sets its currentTime, so the same (g, t) always yields the same pixels. The
+ *   animation and sets its currentTime, so the same (g, t) always yields the same pixels. A
+ *   frame therefore depends on nothing but (g, t), which is why --jobs tabs can capture
+ *   different groups at the same time and still produce the same bytes. The
  *   state rule the page follows (template head): clip k opens on groups 0..k-1 at rest, group k
  *   animates from t=0, and the last frame is group k at rest — which is exactly what the
  *   builder's `@clip` visual needs (play once, freeze on the last frame). No narration timing
@@ -20,18 +22,30 @@
  *   r0.png            the base state (clip 1's first frame) — for the storyboard check strip
  *   sheet/g<k>-mid.png · g<k>-end.png   (--sheet) the frames slide-reviewer reads
  *   manifest.tsv      k <TAB> frames <TAB> dur_ms <TAB> file
- *   summary JSON on stdout.
+ *   summary JSON on stdout (jobs · fps_capture tell you whether more tabs would help).
  *
  * Contract failures the renderer stops on (exit 1): the page doesn't expose the seek API, a
  * page script threw (the exception is printed), an animation lives outside a reveal group (it
  * would keep running on the wall clock — non-deterministic), an infinite animation, an empty
  * group (a clip with no motion under a spoken sentence), fewer groups than narration segments,
+ * an image or video that would not load (wrong path, or a codec this Chrome has no decoder for),
  * a capture whose size isn't the canvas, Chrome exiting mid-render, a CDP call over 30s.
  *
  * Determinism check: run twice into two dirs and `diff -rq` the frame PNGs (--keep-frames).
  * Measured on Chrome 152 / M4: ~20 fps capture at 1080×1920, 144/144 frames byte-identical.
  *
- * Chrome: $CHROME or the macOS default path. Fonts: the page waits for document.fonts.ready.
+ * What a page can move (template head · scenes-schema §motion slides): CSS @keyframes,
+ *   data-count count-ups, a painter registered with __paint(rg, durMs, fn) that draws the
+ *   frame at t (canvas/SVG — the path for rotation, traces, anything keyframes can't express),
+ *   and <video data-rg data-vfrom data-vdur> seeked by currentTime. All four are functions of
+ *   (g, t) alone, which is what keeps a re-render byte-identical. WebGL works too — Chrome
+ *   runs it on SwiftShader here, so those pixels are reproducible on the same machine rather
+ *   than across machines. Video has to be H.264 or VP9; HEVC won't decode under --disable-gpu.
+ *
+ * Chrome: $CHROME, else the first of the macOS/Linux candidates that exists. Use real Chrome
+ *   when a slide has <video> — bare Chromium ships without the H.264 decoder. Readiness: the
+ *   page's __ready() awaits document.fonts.ready, every image's decode(), and each video's
+ *   first frame before the first seek.
  * Exit 0 ok · 1 render/contract failure · 2 usage.
  */
 import { spawn, spawnSync } from "node:child_process";
@@ -45,13 +59,16 @@ const require = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const { FORMATS, DEFAULT_FORMAT } = require(path.join(HERE, "../../platform-guide/references/formats.js"));
 
-const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames]";
+const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames]";
 const usage = msg => { console.error("✗ " + msg + "\n" + USAGE); process.exit(2); };
 const CDP_TIMEOUT_MS = 30000;
 
 // ── args ──────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
-const opt = { fps: 30, sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null };
+// jobs = 동시에 찍는 탭 수. 캡처는 PNG 인코딩이 대부분이라 코어를 하나씩 먹는다 — 코어 수의
+// 절반에서 멈추고 4를 넘기지 않는다. 그 위로는 Chrome 메모리만 늘고 처리량은 안 는다.
+const opt = { fps: 30, jobs: Math.max(1, Math.min(4, Math.floor((os.cpus().length || 4) / 2))),
+  sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null };
 const pos = [];
 const intArg = (v, name, lo, hi) => {
   const n = Number(v);
@@ -62,6 +79,7 @@ for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
   if (a === "--out") opt.out = argv[++i];
   else if (a === "--fps") opt.fps = intArg(argv[++i], "fps", 1, 120);
+  else if (a === "--jobs") opt.jobs = intArg(argv[++i], "jobs", 1, 16);
   else if (a === "--sheet") opt.sheet = true;
   else if (a === "--png-only") opt.pngOnly = true;
   else if (a === "--keep-frames") opt.keep = true;
@@ -92,13 +110,35 @@ const { w: W, h: H } = preset.canvas;
 const shotNo = parseInt((path.basename(htmlAbs).match(/^s(\d+)-/) || [])[1] || "0", 10);
 const scene = (global.window.SCENES || [])[shotNo - 1];
 const segCount = scene && Array.isArray(scene.narration) ? scene.narration.length : null;
+const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArray(scene.visual.slide.motionBeats)
+  ? scene.visual.slide.motionBeats.filter(b => b && Number.isInteger(Number(b.group)) && b.primitive)
+  : [];
 
 // ── CDP over --remote-debugging-pipe ──────────────────────────────────────
-const CHROME = process.env.CHROME || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-if (!fs.existsSync(CHROME)) { console.error("✗ Chrome not found at " + CHROME + " (set CHROME=)"); process.exit(1); }
+// $CHROME 이 먼저다. 없으면 맥·리눅스의 흔한 자리를 순서대로 본다 — 앞쪽이 진짜 Chrome 이라야
+// 한다. 맨 Chromium 에는 H.264 디코더가 빠져 있어 <video> 를 쓰는 슬라이드가 검은 프레임을 낸다.
+const CHROME_CANDIDATES = [
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
+  "/opt/google/chrome/chrome",
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/snap/bin/chromium",
+];
+const CHROME = process.env.CHROME || CHROME_CANDIDATES.find(p => fs.existsSync(p));
+if (!CHROME || !fs.existsSync(CHROME)) {
+  console.error("✗ Chrome not found" + (process.env.CHROME ? " at " + process.env.CHROME : "") +
+    " — set CHROME= to the binary. Looked at:\n  " + CHROME_CANDIDATES.join("\n  "));
+  process.exit(1);
+}
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), "sf-motion-"));
 const chrome = spawn(CHROME, [
-  "--headless=new", "--disable-gpu", "--hide-scrollbars", "--remote-debugging-pipe",
+  // --disable-gpu 는 캔버스 2D 픽셀을 기계 사이에서 고정하는 값이라 그대로 둔다. 그러면 WebGL
+  // 컨텍스트가 아예 안 잡히므로(getContext 가 null) SwiftShader 를 따로 켠다 — WebGL 슬라이드는
+  // 그 소프트웨어 백엔드 안에서 재현된다.
+  "--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", "--hide-scrollbars", "--remote-debugging-pipe",
   "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--mute-audio",
   "--allow-file-access-from-files", "--window-size=" + W + "," + H,
   "--user-data-dir=" + profile, "about:blank",
@@ -173,7 +213,9 @@ process.on("unhandledRejection", e => die(e && e.message ? e.message : String(e)
 
 const pngSize = b => ({ w: b.readUInt32BE(16), h: b.readUInt32BE(20) });
 
-(async () => {
+// 한 탭을 열어 슬라이드를 띄우고, 그 탭에 묶인 evalJS·seek·shot 을 돌려준다. 병렬 캡처는
+// 이 탭을 여러 개 여는 것이 전부다 — 프레임은 (g, t) 만의 함수라 어느 탭에서 찍든 같은 픽셀이다.
+const openPage = async () => {
   const { targetId } = await send("Target.createTarget", { url: "about:blank" });
   const { sessionId: sid } = await send("Target.attachToTarget", { targetId, flatten: true });
   await send("Page.enable", {}, sid);
@@ -188,13 +230,53 @@ const pngSize = b => ({ w: b.readUInt32BE(16), h: b.readUInt32BE(20) });
     return r.result.value;
   };
   await evalJS("document.fonts.ready.then(() => true)", true);
-  const api = await evalJS("typeof window.__seek === 'function' && typeof window.__groups === 'function' && typeof window.__size === 'function' && typeof window.__meta === 'function'");
-  if (!api) return die("the page does not expose __seek/__groups/__size/__meta — built from motion-slide-template.html?" + (pageErrors.length ? " A page script threw before the API was defined:" : ""));
+  // __seek resolves once every animation's pause/currentTime is applied (Animation.ready) and
+  // every seeking video has fired 'seeked' — compositor-thread animations otherwise drift a
+  // sub-pixel between identical seeks, and a video would still show the previous frame.
+  const seek = (t, g) => evalJS(`window.__seek(${t}, ${g})`, true);
+  const shot = async (file) => {
+    const { data } = await send("Page.captureScreenshot", { format: "png", fromSurface: true }, sid);
+    const b = Buffer.from(data, "base64");
+    const s = pngSize(b);
+    if (s.w !== W || s.h !== H) throw new Error(`capture ${s.w}x${s.h} ≠ ${W}x${H} — DPR or window clamp (see capture-frames.sh)`);
+    fs.writeFileSync(file, b);
+    return b;
+  };
+  return { sid, evalJS, seek, shot };
+};
+
+(async () => {
+  const page = await openPage();
+  const { evalJS, seek, shot } = page;
+  const api = await evalJS("typeof window.__seek === 'function' && typeof window.__groups === 'function' && typeof window.__size === 'function' && typeof window.__meta === 'function' && typeof window.__ready === 'function'");
+  if (!api) return die("the page does not expose __seek/__groups/__size/__meta/__ready — built from motion-slide-template.html?" + (pageErrors.length ? " A page script threw before the API was defined:" : ""));
+  // 폰트·이미지 디코드·비디오 첫 프레임이 다 선 뒤에 첫 seek 을 한다. 이미지는 load 만으로는
+  // 부족하다 — 디코드가 끝나기 전에 찍으면 첫 프레임만 빈 자리로 나온다.
+  await evalJS("window.__ready()", true);
   const size = await evalJS("window.__size()");
   if (size.w !== W || size.h !== H) return die(`page size ${size.w}x${size.h} ≠ format canvas ${W}x${H} (window.FORMAT=${FORMAT})`);
   const meta = await evalJS("window.__meta()");           // { hold, stray, infinite }
+  if (meta.broken && meta.broken.length)
+    return die(`could not load: ${meta.broken.join(", ")} — a slide's images and video are local files next to it. ` +
+               `Check the path, and use H.264 or VP9 for video (HEVC does not decode under --disable-gpu)`);
   if (meta.stray > 0) return die(`${meta.stray} animation(s) live outside any [data-rg] group — they would run on the wall clock and break determinism. Put every animated element in a reveal group`);
   if (meta.infinite > 0) return die(`${meta.infinite} animation(s) are infinite (iteration-count) — a clip has to end; give them a count`);
+  if (semanticBeats.length) {
+    const rendered = await evalJS(`Array.from(document.querySelectorAll("[data-primitive]")).map(el => {
+      const group = el.closest("[data-rg]");
+      return { group: group ? Number(group.dataset.rg) : null, primitive: el.dataset.primitive || "" };
+    })`);
+    const expected = new Set(semanticBeats.map(b => `${Number(b.group)}\t${b.primitive}`));
+    const actual = new Set(rendered.map(b => `${Number(b.group)}\t${b.primitive}`));
+    for (const key of expected) if (!actual.has(key)) {
+      const [group, primitive] = key.split("\t");
+      return die(`motionBeats declares group ${group} primitive "${primitive}", but the rendered HTML has no matching data-primitive — use the semantic helper named in motion-slide-template.html`);
+    }
+    for (const key of actual) if (!expected.has(key)) {
+      const [group, primitive] = key.split("\t");
+      return die(`rendered HTML adds undeclared group ${group} primitive "${primitive}" — motionBeats permits one meaning-bearing movement kind per narration group`);
+    }
+  }
   const groups = await evalJS("window.__groups()");
   const N = groups.length - 1;
   if (N < 1) return die("no reveal groups — every moving element needs data-rg ≥ 1");
@@ -209,17 +291,6 @@ const pngSize = b => ({ w: b.readUInt32BE(16), h: b.readUInt32BE(20) });
   if (opt.group != null && opt.group > N) return die(`--group ${opt.group} but the slide has ${N} groups`);
   if (opt.frame && opt.frame.g > N) return die(`--frame group ${opt.frame.g} but the slide has ${N} groups`);
 
-  const shot = async (file) => {
-    const { data } = await send("Page.captureScreenshot", { format: "png", fromSurface: true }, sid);
-    const b = Buffer.from(data, "base64");
-    const s = pngSize(b);
-    if (s.w !== W || s.h !== H) throw new Error(`capture ${s.w}x${s.h} ≠ ${W}x${H} — DPR or window clamp (see capture-frames.sh)`);
-    fs.writeFileSync(file, b);
-    return b;
-  };
-  // __seek resolves once every animation's pause/currentTime is applied (Animation.ready) —
-  // compositor-thread animations otherwise drift a sub-pixel between identical seeks.
-  const seek = (t, g) => evalJS(`window.__seek(${t}, ${g})`, true);
   const ffmpeg = (args) => {
     const r = spawnSync("ffmpeg", ["-y", "-v", "error", ...args], { encoding: "utf8" });
     if (r.status !== 0) throw new Error("ffmpeg failed: " + (r.stderr || r.error && r.error.message));
@@ -242,24 +313,41 @@ const pngSize = b => ({ w: b.readUInt32BE(16), h: b.readUInt32BE(20) });
   await shot(path.join(OUT, "r0.png"));
 
   const todo = opt.group != null ? [opt.group] : Array.from({ length: N }, (_, i) => i + 1);
-  for (const k of todo) {
+  // 캡처는 그룹 단위로 나눠 여러 탭이 동시에 찍는다. 한 탭은 스크린샷 한 장을 찍는 동안 놀기만
+  // 하고(PNG 인코딩이 비용의 대부분이다), 그룹끼리는 서로의 상태를 건드리지 않는다.
+  const jobs = Math.max(1, Math.min(opt.jobs, todo.length));
+  const workers = [page];
+  for (let i = 1; i < jobs; i++) workers.push(await openPage());
+  if (jobs > 1) for (const w of workers.slice(1)) await w.evalJS("window.__ready()", true);
+  const rows = new Array(todo.length);
+  const captureGroup = async (w, idx) => {
+    const k = todo[idx];
     const dur = groups[k].dur;
     const nF = Math.max(2, Math.round(dur / 1000 * opt.fps) + 1);
     const fdir = path.join(OUT, `frames-r${k}`);
     fs.rmSync(fdir, { recursive: true, force: true }); fs.mkdirSync(fdir, { recursive: true });
     for (let i = 0; i < nF; i++) {
-      await seek(Math.min(i * 1000 / opt.fps, dur), k);
-      await shot(path.join(fdir, `f${String(i).padStart(4, "0")}.png`));
+      await w.seek(Math.min(i * 1000 / opt.fps, dur), k);
+      await w.shot(path.join(fdir, `f${String(i).padStart(4, "0")}.png`));
     }
     framesTotal += nF;
-    const mp4 = path.join(OUT, `r${k}.mp4`);
+    rows[idx] = { k, nF, dur, fdir };
+  };
+  // 워커마다 자기 몫을 순서대로 집어 간다 — 그룹 길이가 제각각이라 미리 쪼개면 한쪽만 논다.
+  let next = 0;
+  await Promise.all(workers.map(async w => {
+    for (let idx = next++; idx < todo.length; idx = next++) await captureGroup(w, idx);
+  }));
+  // 인코딩은 캡처가 다 끝난 뒤 순서대로 — spawnSync 는 이벤트 루프를 막아서 캡처와 겹칠 수 없다.
+  for (const r of rows) {
+    const mp4 = path.join(OUT, `r${r.k}.mp4`);
     if (!opt.pngOnly) {
-      ffmpeg(["-framerate", String(opt.fps), "-i", path.join(fdir, "f%04d.png"),
+      ffmpeg(["-framerate", String(opt.fps), "-i", path.join(r.fdir, "f%04d.png"),
               "-vf", `scale=${W}:${H}:flags=lanczos,setsar=1,format=yuv420p`, "-r", String(opt.fps),
               "-c:v", "libx264", "-preset", "medium", "-crf", "14", "-x264-params", "aq-mode=3", "-an", mp4]);
-      if (!opt.keep) fs.rmSync(fdir, { recursive: true, force: true });
+      if (!opt.keep) fs.rmSync(r.fdir, { recursive: true, force: true });
     }
-    manifest.push([k, nF, dur, opt.pngOnly ? fdir : mp4].join("\t"));
+    manifest.push([r.k, r.nF, r.dur, opt.pngOnly ? r.fdir : mp4].join("\t"));
   }
   if (opt.sheet) {                       // review frames — the slide-reviewer reads these
     const sdir = path.join(OUT, "sheet"); fs.mkdirSync(sdir, { recursive: true });
@@ -271,7 +359,7 @@ const pngSize = b => ({ w: b.readUInt32BE(16), h: b.readUInt32BE(20) });
   }
   fs.writeFileSync(path.join(OUT, "manifest.tsv"), manifest.join("\n") + "\n");
   const sec = (Date.now() - t0) / 1000;
-  console.log(JSON.stringify({ slide: path.basename(htmlAbs), format: FORMAT, canvas: `${W}x${H}`, groups: N,
+  console.log(JSON.stringify({ slide: path.basename(htmlAbs), format: FORMAT, canvas: `${W}x${H}`, groups: N, jobs,
     segments: segCount, durations_ms: groups.slice(1).map(g => g.dur), frames: framesTotal,
     seconds: +sec.toFixed(2), fps_capture: +(framesTotal / sec).toFixed(1), out: OUT, warnings: warn }));
   for (const w of warn) console.error("⚠ " + w);

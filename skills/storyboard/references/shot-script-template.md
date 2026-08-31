@@ -57,25 +57,30 @@ This document is the source of truth for the structure that render has to produc
   **only kicker + title** in the top block (the cover adds stat/statLabel); long-form filmed
   scenes get the title, one caption, and the source in the **lower third at the bottom left**.
   Either way, one caption at a time.
-- On answer-first, build and tutorial shoots start **with the finished screen already up in the
+- **On a short the first frame is a gap, not the finished result.** Recording order is
+  **hook → drip (1–n) → cta**: open the question, pay it in stages, then one spoken
+  outward act. Do not start with the finished screen already up. Match each shot to its
+  scenes.js `beat` (`hook`·`drip`·`cta`).
+- On long-form answer-first, build and tutorial shoots start **with the finished screen already up in the
   first frame**; the cover's first sentence says, within 3 seconds, what benefit or change that
   result brings. On a story arc the first frame is the moment it went wrong, and the ending is
   not on camera until the payoff.
 - **The first sentence opens on one of the four opening strategies** — fear, empathy, curiosity,
-  or showing the ending (scenes-schema §the four opening strategies). Which one is written in the
+  or showing the ending (scenes-schema §the four opening strategies). **A short does not show
+  the ending.** Which one is written in the
   scenes.js cover `hookType`, and since the shooting script is the surface where the user says
   that sentence out loud, it carries the same stimulus verbatim. Sentences starting with
   "~해 봤습니다" or "오늘은 ~ 보여 드릴게요" don't go in the script — finding out after recording
   means refilming the first scene.
 - **Slide scenes** (`visual.slide`, scenes-schema §slide scenes) have nothing to film — they
   go into the script as voice-only recordings, and the screen entry shows the slide's `plan`.
-  The slide file itself is built by storyboard §8 after approval.
-- The recording order follows the cover's `arc` — **answer-first: cover → hooking → result →
+  The slide file itself is built by storyboard §5.6 before approval.
+- **Long-form recording order follows the cover's `arc`** — **answer-first: cover → hooking → result →
   body**: show the finished thing at a glance, hook the problem, unfold the result, and only
   then film the method; don't record the method screens before the result. **Story: cover →
   hooking → body → turn → result**: film the moment it went wrong, the setup, the build, the
   turning point, and only then the payoff — the answer is not on camera before it. Hooking
-  exists in informational pieces too — the shot after the cover hooks why to stay, with the
+  exists in informational long-form too — the shot after the cover hooks why to stay, with the
   viewer as the subject (the protagonist and their goal on a story arc), and defers the answer
   (scenes-schema §hooking). Match each shot to its scenes.js `beat`
   (`hook`·`hooking`·`result`·`body`·`turn` (story only)·`cta`).

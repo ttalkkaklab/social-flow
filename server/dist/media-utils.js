@@ -14,6 +14,7 @@ export const ALLOWED_EXTENSIONS = {
     video: ['.mp4', '.webm', '.mov', '.avi'],
     audio: ['.wav', '.mp3', '.ogg', '.webm', '.aac', '.flac'],
     json: ['.json'],
+    mesh: ['.glb'],
 };
 /**
  * Validates that a file path is safe.

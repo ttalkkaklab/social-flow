@@ -5,13 +5,15 @@
 <title>모션 슬라이드 씬</title>
 <!--
   social-flow 모션 슬라이드 렌더러 — 숏폼 1080×1920 · 롱폼 1920×1080 (window.FORMAT 이 고른다).
-  scenes-schema §모션 슬라이드 · storyboard SKILL §8 · slide-design.md 가 이 파일의 사용 계약이다.
+  scenes-schema §모션 슬라이드 · storyboard SKILL §5.6 · slide-design.md 가 이 파일의 사용 계약이다.
 
-  ■ 사용법 (storyboard §8 — 승인 뒤에만):
+  ■ 사용법 (storyboard §5.6 — 승인 전에):
       1. 이 파일을 storyboard/slides/s<샷번호>-<slug>.html 로 복사한다
          (샷번호 = SCENES 배열 순번 1부터 — visual.slide.file 과 같은 이름).
       2. 아래 SLIDE_SHOT 을 그 샷번호로 바꾼다.
       3. renderSlide() 하나만 그 씬의 도해로 다시 쓴다 — 다른 부분은 건드리지 않는다.
+         원리(mechanism)는 일러스트 배우(h.fig · slide.arts)와 헤어라인 관계
+         (h.stem · h.bus · h.chamber · h.ring · h.press)로 그린다. 글자 나열은 아니다.
       4. 글자는 전부 scenes.js 에서 온다(S.title·S.bullets·S.visual.slide.labels).
          여기 새 한국어 문자열 리터럴을 쓰지 않는다 — 문체 게이트(screen 표면)를
          통과한 적 없는 글자가 화면에 나가는 길이고 check-slide.js 가 기계로 잡는다.
@@ -23,28 +25,55 @@
       클립 1 의 첫 프레임이다. 그룹은 나레이션 세그먼트와 1:1 이 기본(세그 1 = 그룹 1).
 
   ■ 페이지가 노출하는 계약 (render-motion-slide.mjs 가 부른다):
+      window.__ready()        폰트·이미지 디코드·비디오 첫 프레임을 기다리는 프라미스. 렌더러가
+                              첫 seek 전에 한 번 부른다.
       window.__seek(tMs, g)   그룹 g 의 로컬 시각 tMs 로 화면을 세운다 (위 상태 규칙). 모든
-                              애니메이션의 ready 가 풀린 뒤 resolve 하는 프라미스를 돌려준다.
-      window.__groups()       [{rg, dur}] — 그룹별 움직임 길이(ms, 홀드 포함). dur 은 애니메이션
-                              타이밍에서 계산되므로 손으로 적지 않는다.
+                              애니메이션의 ready 와 비디오의 seeked 가 끝난 뒤 resolve 한다.
+      window.__groups()       [{rg, dur}] — 그룹별 움직임 길이(ms, 홀드 포함). dur 은 애니메이션·
+                              카운터·페인터·비디오 타이밍에서 계산되므로 손으로 적지 않는다.
       window.__size()         {w, h}
-      window.__meta()         {hold, stray, infinite} — 렌더러의 계약 검사용. 그룹 밖 애니메이션
-                              (stray)이나 무한 반복이 하나라도 있으면 렌더러가 멈춘다.
+      window.__meta()         {hold, stray, infinite, broken} — 렌더러의 계약 검사용. 그룹 밖
+                              애니메이션·비디오(stray), 무한 반복, 못 읽은 소재(broken) 가 하나라도
+                              있으면 렌더러가 멈춘다. broken 은 파일 이름의 배열이다.
+      저작 쪽이 부르는 것:
+      window.__paint(rg, durMs, fn)   페인터 등록 (아래 결정성 계약 ③)
+      window.__boot()                 URL 이 가리키는 첫 화면을 다시 세운다 — 페인터를 등록한 뒤
+                                      한 번 부른다.
+      window.__interp(x, [in0,in1], [out0,out1], ease)
+                              구간을 구간으로 옮긴다. 범위 밖은 끝값으로 잘린다.
+      window.__ease(name, x)  linear · out(기본) · in · inOut. CSS --ease 와 같은 성질의 곡선이다.
       URL: ?reveal=k  정지 상태 k (그룹 ≤k 쉬는 상태) — 검사 띠·capture-reveals 호환
            ?g=k&t=ms  그룹 k 의 t ms 프레임 하나
            없음        전부 쉬는 상태(마지막 프레임)
 
   ■ 결정성 계약 (같은 (g, t) 는 언제 찍어도 같은 픽셀이어야 한다):
-      - 움직임은 CSS @keyframes (animation) 과 data-count 카운트업만. transition 금지 — 속성이
-        바뀐 뒤에만 객체가 생겨 seek 가 안 된다.
-      - Date·Math.random·performance.now·requestAnimationFrame·setTimeout 읽기 금지.
-      - 웹폰트 URL 로드 금지 — 로컬 폰트 스택만.
+      - 움직임을 만드는 길은 네 가지다. 넷 다 (g, t) 만의 함수여야 한다.
+        ① CSS @keyframes (animation)  ② data-count 카운트업
+        ③ 페인터 __paint(rg, durMs, fn) — fn(tMs) 이 그 시각의 그림을 그린다. 캔버스·SVG 처럼
+          키프레임으로 못 세우는 회전·궤적이 이 길로 온다. 등록은 SEEK-RUNTIME 뒤에 하고
+          마치면 __boot() 을 한 번 더 부른다. 캔버스 2D 는 기계가 달라도 같은 픽셀이고,
+          WebGL 은 렌더러가 켜 두는 SwiftShader 안에서만 같다 — 같은 기계의 재렌더는 동일하다.
+        ④ <video data-rg data-vfrom data-vdur> — currentTime 을 그룹의 로컬 시각으로 세운다.
+          H.264 나 VP9 만 쓴다(HEVC 는 --disable-gpu 아래서 재생되지 않는다).
+          autoplay·loop 는 벽시계로 도는 길이라 __meta 가 stray 로 잡는다.
+      - transition 금지 — 속성이 바뀐 뒤에만 객체가 생겨 seek 가 안 된다.
+      - Date·Math.random·performance.now·requestAnimationFrame·setTimeout 읽기 금지. 페인터
+        안에서도 같다 — 프레임을 정하는 것은 인자 t 하나다.
+      - 웹폰트 URL 로드 금지 — 로컬 폰트 스택만. 이미지·영상도 슬라이드 옆 로컬 파일만 쓴다
+        (원격 URL 은 check-slide.js 가 막는다). 첫 프레임 전에 렌더러가 __ready() 로 폰트·
+        이미지 디코드·비디오 첫 프레임을 기다린다.
+      - 스스로 도는 그림 금지 — gif·apng·애니메이션 webp 와 SVG SMIL(<animate 류)은 Animation
+        객체를 안 만들어서 __seek 이 못 세우고 __meta 로도 안 잡힌다. 그림은 png·jpg 만 쓰고,
+        움직여야 하면 ③ 페인터나 ④ 비디오로 옮긴다.
       - 한 그룹의 움직임은 2.6초 안에 끝난다(slide-design.md §모션) — 세그먼트가 그보다 짧으면
         다음 클립의 쉬는 프레임으로 잘려 튄다. 렌더러가 넘으면 경고한다.
 
   ■ 디자인 계약은 slide-design.md 가 정본이다. 요지: 잉크 바탕 + 종이색 글자 + 액센트 하나,
       그라데이션 글자·둥근 카드 격자·그림자 겹치기·이모지·파티클 금지, 헤어라인(1.5px)과
       코너 브래킷, 한 화면에 큰 숫자 하나, 한 그룹에 움직이는 것 하나.
+      timeline · statistic · principle 장면은 scenes.js motionBeats의 프리미티브를 같은 그룹의
+      data-primitive로 내보낸다. check-slide.js와 render-motion-slide.mjs가 두 선언을 맞춰 본다.
+      principle 은 배우가 앉고(h.fig · h.disk · h.chamber) 관계가 그어진다(h.stem · h.bus · h.ring).
 
   ■ 존: 글자는 존 안에 앉힌다 — 숏폼 x 176 · top 190 · bottom 570, 롱폼 x 96 · top 96 · bottom 285
       (formats.js zone 의 인라인 미러). 하단 밴드는 자막 자리라 배경 채색만 풀블리드.
@@ -58,14 +87,19 @@
     --w:1080px; --h:1920px; --zone-x:176px; --zone-top:190px; --zone-bottom:570px;
     /* 글자 크기 — formats.js fonts 비율의 인라인 미러 (숏폼 기준 px) */
     --fs-kicker:34px; --fs-title:60px; --fs-hero:205px; --fs-label:50px; --fs-desc:35px; --fs-foot:26px;
-    /* 모션 토큰 — slide-design.md §모션 */
+    /* 모션 토큰 — slide-design.md §모션. opacity 는 선형, 이동은 정착(--ease),
+       드러냄·긋기는 마스크(--ease-mask). 정착용 곡선을 와이프에 쓰면 초반에 거의
+       열려서 선이 지나가는 게 안 보인다. */
     --ease:cubic-bezier(.16,1,.3,1);
-    --rise:360ms; --grow:800ms; --draw:500ms; --count:2400ms; --stagger:90ms; --hold:240ms;
+    --ease-mask:cubic-bezier(.4,0,.2,1);
+    --fade:220ms; --travel:8px; --travel-x:48px; --press:56px;
+    --rise:480ms; --grow:900ms; --draw:560ms; --count:1800ms; --stagger:80ms; --hold:360ms;
     --hair:1.5px;
   }
   html.wide{
     --w:1920px; --h:1080px; --zone-x:96px; --zone-top:96px; --zone-bottom:285px;
     --fs-kicker:24px; --fs-title:43px; --fs-hero:148px; --fs-label:36px; --fs-desc:25px; --fs-foot:24px;
+    --rise:560ms; --travel:6px; --travel-x:36px; --press:40px; --grow:1000ms; --count:2000ms; --hold:420ms;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{width:var(--w);height:var(--h);overflow:hidden}
@@ -91,12 +125,32 @@
         중첩은 된다 — bar() 의 채움이 그 예). */
   .rv{animation:appear 1ms linear both paused;
       animation-delay:calc(var(--i,0) * var(--stagger))}
-  .rv.fx-rise{animation-name:rise; animation-duration:var(--rise); animation-timing-function:var(--ease)}
-  .rv.fx-grow{animation-name:grow; animation-duration:var(--grow); animation-timing-function:var(--ease); transform-origin:left center}
-  .rv.fx-draw{animation-name:grow; animation-duration:var(--draw); animation-timing-function:var(--ease); transform-origin:left center}
+  .rv.fx-fade{animation-name:fade; animation-duration:var(--fade); animation-timing-function:linear}
+  .rv.fx-rise{animation-name:fade, lift; animation-duration:var(--fade), var(--rise);
+              animation-timing-function:linear, var(--ease)}
+  /* 글자·날짜·단계는 마스크만 — 가려진 상태가 곧 안 보임이라 페이드를 안 겹친다. */
+  .rv.fx-in{animation-name:reveal; animation-duration:var(--rise); animation-timing-function:var(--ease-mask)}
+  .rv.fx-grow{animation-name:grow; animation-duration:var(--grow); animation-timing-function:var(--ease-mask); transform-origin:left center}
+  .rv.fx-draw{animation-name:draw; animation-duration:var(--draw); animation-timing-function:var(--ease-mask)}
+  .rv.fx-draw.down{animation-name:draw-down}   /* 세로 줄기 — LTR draw 는 1.5px 폭에서 팝한다 */
+  /* 도형 이동 — 원리가 글자가 아니라 자리·접촉으로 읽히게. from-left 는 반대쪽. */
+  .rv.fx-travel{animation-name:fade, travel; animation-duration:var(--fade), var(--rise);
+                animation-timing-function:linear, var(--ease)}
+  .rv.fx-press{animation-name:fade, press; animation-duration:var(--fade), var(--rise);
+               animation-timing-function:linear, var(--ease)}
+  .rv.from-left{--ox:calc(var(--travel-x) * -1)}
+  /* Heer staging — 라벨이 먼저 뜨고, 채움은 그 다음에 자란다. 흐름은 노드가 앉은 뒤 선이 그어진다. */
+  .bar .fill.rv.fx-grow{animation-delay:var(--fade)}
+  .flow .flow-line.rv.fx-draw{animation-delay:var(--rise)}
   @keyframes appear{from{opacity:0}to{opacity:1}}
-  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes lift{from{transform:translateY(var(--travel))}to{transform:none}}
+  @keyframes reveal{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
   @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  @keyframes draw{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+  @keyframes draw-down{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}
+  @keyframes travel{from{transform:translateX(var(--ox, var(--travel-x)))}to{transform:none}}
+  @keyframes press{from{transform:translateY(calc(var(--press) * -1))}to{transform:none}}
 
   /* ── 부품 — renderSlide 가 조합한다. 필요한 것만 쓰고 새 부품은 아래에 더한다. */
   .kicker{font-size:var(--fs-kicker); font-weight:500; color:var(--muted); letter-spacing:.02em;
@@ -122,7 +176,7 @@
   .bar{display:grid; grid-template-columns:1fr auto; gap:10px 18px; align-items:end}
   .bar .lbl{font-size:var(--fs-desc); color:var(--paper)}
   .bar .val{font-size:var(--fs-desc); color:var(--muted); text-align:right}
-  .bar .track{grid-column:1 / -1; height:14px; background:var(--line); position:relative}
+  .bar .track{grid-column:1 / -1; height:14px; background:var(--line); position:relative; overflow:hidden}
   .bar .fill{position:absolute; left:0; top:0; bottom:0; background:var(--accent)}
   .bar.hot .fill{background:var(--paper)}
   .bar.hot .val{color:var(--paper)}
@@ -136,6 +190,29 @@
   .step::before{content:""; height:var(--hair); background:var(--line); align-self:center}
   .step .d{grid-column:2; font-size:var(--fs-desc); font-weight:400; color:var(--muted); margin-top:6px}
 
+  /* 의미 프리미티브 — timeline · statistic · principle 장면은 scenes.js motionBeats가
+     이 이름을 고르고, 렌더러가 실제 DOM의 data-primitive와 그룹을 맞춰 본다. */
+  .timeline{display:flex; flex-direction:column; gap:24px; position:relative; padding-left:36px}
+  .timeline::before{content:""; position:absolute; left:7px; top:6px; bottom:6px;
+    width:var(--hair); background:var(--line)}
+  .date{display:grid; grid-template-columns:minmax(150px,.38fr) 1fr; gap:24px; align-items:baseline; position:relative}
+  .date::before{content:""; position:absolute; left:-33px; top:.48em; width:10px; height:10px;
+    border-radius:50%; background:var(--accent); border:3px solid var(--ink)}
+  .date::after{content:""; position:absolute; left:-23px; top:.68em; width:12px; height:var(--hair); background:var(--line)}
+  .date .when{font-size:var(--fs-label); font-weight:700; color:var(--accent); font-variant-numeric:tabular-nums}
+  .date .what{font-size:var(--fs-desc); color:var(--paper)}
+  .range,.axis,.link,.flow-line{height:var(--hair); background:var(--accent)}
+  .link{background:var(--line)}
+  .dots{display:flex; flex-wrap:wrap; gap:12px; max-width:760px}
+  .dots b{display:block; width:16px; height:16px; border-radius:50%; background:var(--accent)}
+  .flow{display:grid; grid-template-columns:1fr 72px 1fr; gap:20px; align-items:center}
+  .flow .flow-line{position:relative}
+  .flow .flow-line::after{content:""; position:absolute; right:-1px; top:-6px; width:11px; height:11px;
+    border-right:var(--hair) solid var(--accent); border-top:var(--hair) solid var(--accent); transform:rotate(45deg)}
+  .node{font-size:var(--fs-label); font-weight:650; padding:18px 0; border-top:var(--hair) solid var(--line); border-bottom:var(--hair) solid var(--line)}
+  .state{display:grid; grid-template-columns:1fr auto 1fr; gap:22px; align-items:center; font-size:var(--fs-label); font-weight:650}
+  .state .arrow{color:var(--accent); font-weight:400}
+
   .brackets{position:relative; padding:26px 30px}
   .brackets::before,.brackets::after,.brackets>i::before,.brackets>i::after{
     content:""; position:absolute; width:28px; height:28px; border:0 solid var(--line)}
@@ -146,6 +223,43 @@
 
   .rule{height:var(--hair); background:var(--line)}
   .foot{margin-top:auto; font-size:var(--fs-foot); color:var(--muted)}
+
+  /* 원리 도형 — 헤어라인·원·면 하나. 카드·그림자·아이콘 줄은 쓰지 않는다. */
+  .shape-stage{position:relative; width:100%; height:420px; display:flex; flex-direction:column;
+               align-items:center; justify-content:center; gap:28px; flex:none}
+  html.wide .shape-stage{height:280px; gap:20px}
+  .shape-item{display:flex; flex-direction:column; align-items:center; gap:14px}
+  .shape-cap{font-size:var(--fs-desc); color:var(--muted); text-align:center; word-break:keep-all}
+  .shape-disk,.shape-ring{display:block; flex:none; box-sizing:border-box; width:var(--d,120px); height:var(--d,120px)}
+  .shape-disk{border-radius:50%; background:var(--accent)}
+  .shape-ring{border-radius:50%; border:2.5px solid var(--paper); background:transparent}
+  .shape-bed{width:var(--bed,200px); height:var(--hair); background:var(--line); flex:none}
+  .shape-press{display:flex; flex-direction:column; align-items:center; gap:22px}
+  .shape-layers{position:relative; width:min(100%,280px); height:140px}
+  .shape-layer{position:absolute; left:0; right:0; height:28px;
+               border-top:var(--hair) solid var(--paper); border-bottom:var(--hair) solid var(--paper);
+               background:color-mix(in srgb,var(--ink) 82%, var(--paper))}
+  .art{display:block; width:100%; max-height:42%; object-fit:contain; flex:none; pointer-events:none}
+  html.wide .art{max-height:48%}
+
+  /* 원리 배우+관계 — 일러스트가 배우, 헤어라인이 관계. 카드·그림자·아이콘 줄은 쓰지 않는다. */
+  .cast{display:grid; grid-template-columns:repeat(var(--cols, 3), minmax(0,1fr));
+        column-gap:20px; row-gap:0; width:100%; align-items:end; flex:none}
+  .cast > .rv{display:flex; flex-direction:column; align-items:center; min-width:0}
+  .cast > .rv.span{grid-column:1 / -1; width:100%}   /* h.bus 는 rv 안에 있어서 래퍼가 칸을 가로지른다 */
+  .fig{display:flex; flex-direction:column; align-items:center; gap:8px; width:100%}
+  .fig .art{width:auto; height:180px; max-height:180px; max-width:100%}
+  html.wide .fig .art{height:220px; max-height:220px}
+  .fig-lab{font-size:var(--fs-desc); letter-spacing:.08em; color:var(--accent); text-align:center; word-break:keep-all}
+  .stem{display:block; width:var(--hair); height:28px; background:var(--accent); flex:none}
+  .bus{display:block; width:100%; height:var(--hair); background:var(--accent); flex:none; align-self:center}
+  .chamber{position:relative; padding:18px 16px; width:100%}
+  .chamber::before,.chamber::after,.chamber>i::before,.chamber>i::after{
+    content:""; position:absolute; width:18px; height:18px; border:0 solid var(--line)}
+  .chamber::before{left:0; top:0; border-left-width:var(--hair); border-top-width:var(--hair)}
+  .chamber::after{right:0; top:0; border-right-width:var(--hair); border-top-width:var(--hair)}
+  .chamber>i::before{left:0; bottom:0; border-left-width:var(--hair); border-bottom-width:var(--hair)}
+  .chamber>i::after{right:0; bottom:0; border-right-width:var(--hair); border-bottom-width:var(--hair)}
 </style>
 </head>
 <body>
@@ -172,30 +286,99 @@ const SLIDE_SHOT = 0;
   /* **강조** → <strong> (액센트 색·굵기만 — 그라데이션 글자는 쓰지 않는다) */
   const em = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   const labels = (S.visual && S.visual.slide && S.visual.slide.labels) || [];
-  /* 리빌 래퍼 — rg 그룹, fx = rise|grow|draw|none, i = 그룹 안 스태거 순번 */
+  /* 리빌 래퍼 — rg 그룹, fx = rise|in|grow|draw|fade|none, i = 그룹 안 스태거 순번 */
   const rv = (rg, html, o = {}) =>
-    '<div class="rv' + (o.fx && o.fx !== "none" ? " fx-" + o.fx : "") + '" data-rg="' + rg +
-    '"' + (o.i ? ' style="--i:' + o.i + '"' : "") + (o.cls ? ' data-cls="' + o.cls + '"' : "") + ">" + html + "</div>";
+    '<div class="rv' + (o.fx && o.fx !== "none" ? " fx-" + o.fx : "") +
+    (o.dir === "left" ? " from-left" : "") + (o.dir === "down" ? " down" : "") +
+    (o.cls ? " " + o.cls : "") +
+    '" data-rg="' + rg + '"' +
+    (o.i ? ' style="--i:' + o.i + '"' : "") +
+    (o.primitive ? ' data-primitive="' + o.primitive + '"' : "") + ">" + html + "</div>";
   /* 카운트업 숫자 — 그룹 rg 에서 from→value, dur ms (기본 --count). 단위는 액센트 작은 글자 */
   const count = (rg, value, o = {}) =>
-    '<div class="rv hero" data-rg="' + rg + '"><span class="num" data-count="' + value +
+    '<div class="rv hero" data-rg="' + rg + '" data-primitive="count-up"><span class="num" data-count="' + value +
     '" data-from="' + (o.from || 0) + '" data-dec="' + (o.dec || 0) + '" data-dur="' + (o.dur || "") +
     '">' + (o.from || 0) + "</span>" + (o.unit ? '<span class="unit">' + esc(o.unit) + "</span>" : "") + "</div>";
-  /* 막대 — 막대 전체(라벨·값·트랙)가 그룹의 rise 로 들어오고 채움만 그 안에서 grow 한다
-     (트랙이 그룹 밖에 있으면 첫 프레임부터 빈 레일이 보인다 — 1라운드 지적). 채움은 같은
-     그룹의 중첩 rv 다 — 같은 그룹 안에서만 중첩한다. */
+  /* 막대 — 바깥은 한 이벤트, 안에서는 라벨이 먼저 fade 하고 채움이 grow 한다
+     (Heer staging). 채움은 같은 그룹의 중첩 rv 다. */
   /* 값의 숫자 부분을 고정폭 셀로 — "30개" → <i>3</i><i>0</i>개 */
   const digits = s => esc(s).replace(/[0-9,.]+/g, m => [...m].map(ch => /[0-9]/.test(ch) ? "<i>" + ch + "</i>" : '<i class="s">' + ch + "</i>").join(""));
   const bar = (rg, pct, label, value, o = {}) =>
     rv(rg, '<div class="bar' + (o.hot ? " hot" : "") + '">' +
-      '<span class="lbl">' + em(label) + '</span><span class="val">' + digits(value == null ? "" : String(value)) + "</span>" +
-      '<div class="track"><div class="fill rv fx-grow" data-rg="' + rg + '" style="width:' + pct + '%;--i:1"></div></div>' +
-    "</div>", { fx: "rise" });
+      '<span class="lbl rv fx-fade" data-rg="' + rg + '">' + em(label) + '</span>' +
+      '<span class="val rv fx-fade" data-rg="' + rg + '">' + digits(value == null ? "" : String(value)) + "</span>" +
+      '<div class="track"><div class="fill rv fx-grow" data-rg="' + rg + '" style="width:' + pct + '%"></div></div>' +
+    "</div>", { fx: "none", primitive: "bar-grow" });
   const callout = (rg, label, o = {}) =>
-    rv(rg, '<div class="callout"><span class="dot"></span><span class="lead"></span><span>' + em(label) + "</span></div>", { fx: "rise", i: o.i || 0 });
+    rv(rg, '<div class="callout"><span class="dot"></span><span class="lead"></span><span>' + em(label) + "</span></div>", { fx: "in", i: o.i || 0 });
   const step = (rg, t, d, o = {}) =>
-    rv(rg, '<div class="step"><span>' + em(t) + "</span>" + (d ? '<span class="d">' + em(d) + "</span>" : "") + "</div>", { fx: "rise", i: o.i || 0 });
-  const h = { esc, em, rv, count, bar, callout, step, labels, L: i => esc(labels[i] || "") };
+    rv(rg, '<div class="step"><span>' + em(t) + "</span>" + (d ? '<span class="d">' + em(d) + "</span>" : "") + "</div>", { fx: "in", i: o.i || 0 });
+  const date = (rg, when, what, o = {}) =>
+    rv(rg, '<div class="date"><span class="when">' + em(when) + '</span><span class="what">' + em(what || "") + "</span></div>",
+      { fx: "in", i: o.i || 0, primitive: "date-enter" });
+  const range = (rg, o = {}) => rv(rg, '<div class="range"></div>', { fx: "grow", i: o.i || 0, primitive: "range-grow" });
+  const link = (rg, o = {}) => rv(rg, '<div class="link"></div>', { fx: "draw", i: o.i || 0, primitive: "event-link" });
+  const dots = (rg, count, o = {}) => rv(rg, '<div class="dots">' + Array.from({length:Math.max(1, Math.min(100, count))}, () => "<b></b>").join("") + "</div>",
+    { fx: "in", i: o.i || 0, primitive: "dot-fill" });
+  const axis = (rg, o = {}) => rv(rg, '<div class="axis"></div>', { fx: "draw", i: o.i || 0, primitive: "axis-draw" });
+  const flow = (rg, from, to, o = {}) => rv(rg,
+    '<div class="flow"><span class="node rv fx-in" data-rg="' + rg + '">' + em(from) + '</span><span class="flow-line rv fx-draw" data-rg="' + rg + '"></span><span class="node rv fx-in" data-rg="' + rg + '" style="--i:1">' + em(to) + "</span></div>",
+    { fx: "none", i: o.i || 0, primitive: "flow-trace" });
+  const node = (rg, label, o = {}) => rv(rg, '<div class="node">' + em(label) + "</div>",
+    { fx: "in", i: o.i || 0, primitive: "node-enter" });
+  const state = (rg, from, to, o = {}) => rv(rg,
+    '<div class="state"><span>' + em(from) + '</span><span class="arrow">→</span><span>' + em(to) + "</span></div>",
+    { fx: "in", i: o.i || 0, primitive: "state-transform" });
+  const cap = t => t ? '<span class="shape-cap">' + em(t) + "</span>" : "";
+  /* 원리 도형 — 글자 없이 자리·접촉·경계가 문장을 설명한다. label 은 scenes.js 에서만. */
+  const disk = (rg, o = {}) => rv(rg,
+    '<span class="shape-item"><i class="shape-disk" style="--d:' + (o.d || 120) + 'px"></i>' + cap(o.label) + "</span>",
+    { fx: o.fx || "rise", i: o.i || 0, primitive: o.primitive || "shape-enter" });
+  const ring = (rg, o = {}) => rv(rg,
+    '<span class="shape-item"><i class="shape-ring" style="--d:' + (o.d || 180) + 'px"></i>' + cap(o.label) + "</span>",
+    { fx: o.fx || "draw", i: o.i || 0, primitive: o.primitive || "shape-draw" });
+  const press = (rg, o = {}) => rv(rg,
+    '<div class="shape-press"><i class="shape-disk" style="--d:' + (o.d || 88) + 'px"></i>' +
+      '<i class="shape-bed" style="--bed:' + (o.bed || 200) + 'px"></i>' + cap(o.label) + "</div>",
+    { fx: "press", i: o.i || 0, primitive: o.primitive || "shape-travel" });
+  const shift = (rg, html, o = {}) =>
+    rv(rg, html, { fx: "travel", i: o.i || 0, dir: o.dir || "right", primitive: o.primitive || "shape-travel" });
+  const arts = (S.visual && S.visual.slide && S.visual.slide.arts) || [];
+  const artSrc = i => {
+    const a = arts[i];
+    if (!a || !a.file) return "";
+    return String(a.file).replace(/^slides\//, "");
+  };
+  const art = (rg, i, o = {}) => {
+    const a = arts[i];
+    if (!a) return "";
+    const fx = o.fx || a.move || "travel";
+    return rv(rg, '<img class="art" src="' + esc(artSrc(i)) + '" alt="">', {
+      fx: fx === "none" ? "none" : fx, i: o.i || 0,
+      dir: o.dir || a.dir || "right", primitive: o.primitive || ""
+    });
+  };
+  /* 원리 배우 — 일러스트가 앉고 라벨이 이름을 붙인다. slide.arts[i] 를 쓴다. */
+  const fig = (rg, i, o = {}) => {
+    const a = arts[i];
+    if (!a) return "";
+    const fx = o.fx || a.move || "rise";
+    const lab = o.label != null ? o.label : "";
+    return rv(rg, '<div class="fig"><img class="art" src="' + esc(artSrc(i)) + '" alt="">' +
+      (lab ? '<span class="fig-lab">' + em(lab) + "</span>" : "") + "</div>", {
+      fx: fx === "none" ? "none" : fx, i: o.i || 0,
+      dir: o.dir || a.dir || "", primitive: o.primitive || "shape-enter"
+    });
+  };
+  const stem = (rg, o = {}) =>
+    rv(rg, '<i class="stem"></i>', { fx: "draw", i: o.i || 0, dir: "down", primitive: o.primitive || "shape-draw" });
+  const bus = (rg, o = {}) =>
+    rv(rg, '<i class="bus"></i>', { fx: "draw", i: o.i || 0, cls: "span", primitive: o.primitive || "shape-draw" });
+  const chamber = (rg, html, o = {}) =>
+    rv(rg, '<div class="chamber"><i></i>' + html + "</div>",
+      { fx: o.fx || "rise", i: o.i || 0, primitive: o.primitive || "shape-enter" });
+  const h = { esc, em, rv, count, bar, callout, step, date, range, link, dots, axis, flow, node, state,
+    disk, ring, press, shift, art, fig, stem, bus, chamber, arts, labels, L: i => esc(labels[i] || "") };
 
   /* ✎ 이 함수만 씬의 도해로 다시 쓴다 ──────────────────────────────
      아래 기본형: 그룹 0 = 키커 + 제목, 그룹 k = k번째 불릿이 막대로 자란다 — 저작 전 셀프테스트용.
@@ -203,10 +386,19 @@ const SLIDE_SHOT = 0;
   function renderSlide(S, h) {
     let out = h.rv(0, '<div class="kicker">' + h.L(0) + "</div>") +
               h.rv(0, '<div class="slide-title">' + h.em(S.title || "") + "</div>");
-    const items = S.bullets || [];
-    out += '<div class="bars">' + items.map((b, i) =>
-      h.bar(i + 1, Math.round(100 - i * 100 / Math.max(items.length, 2)), b.t || "", b.d || "", { hot: i === 0 })
-    ).join("") + "</div>";
+    if (S.shot && S.shot.infoType === "principle") {
+      const n = h.arts.length;
+      const cols = Math.max(1, Math.min(n || (S.bullets || []).length || 1, 3));
+      out += '<div class="cast" style="--cols:' + cols + '">';
+      if (n) out += h.arts.map((_, i) => h.fig(i + 1, i, { label: h.L(i + 1) })).join("");
+      else out += (S.bullets || []).map((b, i) => h.disk(i + 1, { label: b.t || "" })).join("");
+      out += "</div>";
+    } else {
+      const items = S.bullets || [];
+      out += '<div class="bars">' + items.map((b, i) =>
+        h.bar(i + 1, Math.round(100 - i * 100 / Math.max(items.length, 2)), b.t || "", b.d || "", { hot: i === 0 })
+      ).join("") + "</div>";
+    }
     /* 출처 줄은 바탕(그룹 0)에 둔다 — 숫자가 뜨는 모든 클립에 출처가 같이 있어야 한다 */
     if (h.labels.length > 1) out += h.rv(0, '<div class="foot">' + h.L(h.labels.length - 1) + "</div>");
     return out;
@@ -217,7 +409,39 @@ const SLIDE_SHOT = 0;
   /* SEEK-RUNTIME-BEGIN — 아래는 건드리지 않는다. 저작 화면 템플릿 세 벌(모션 슬라이드·
      키네틱 타이포·캐릭터 연기)이 같은 블록을 갖고, format-lint.js 가 세 벌을 대조한다.
      한 벌만 고치면 린트가 잡는다 — 고칠 일이 있으면 세 벌을 같이 고친다. */
-  const easeOut = x => 1 - Math.pow(1 - x, 3);
+  /* 이징 — CSS 의 --ease(cubic-bezier(.16,1,.3,1))와 같은 곡선. out 은 Newton–Raphson 으로
+     그 베지어를 샘플한다. 카운트업과 페인터가 CSS 와 같은 성질로 앉는다. */
+  const bezier = (x1, y1, x2, y2) => {
+    const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+    const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+    const sampleX = t => ((ax * t + bx) * t + cx) * t;
+    const sampleY = t => ((ay * t + by) * t + cy) * t;
+    const sampleDX = t => (3 * ax * t + 2 * bx) * t + cx;
+    return x => {
+      let t = x;
+      for (let i = 0; i < 8; i++) {
+        const d = sampleX(t) - x;
+        const dx = sampleDX(t);
+        if (Math.abs(d) < 1e-6 || Math.abs(dx) < 1e-6) break;
+        t = Math.min(1, Math.max(0, t - d / dx));
+      }
+      return sampleY(t);
+    };
+  };
+  const EASES = {
+    linear: x => x,
+    out: bezier(0.16, 1, 0.3, 1),
+    in: x => x * x * x,
+    inOut: x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
+  };
+  const clamp01 = x => Math.min(Math.max(x, 0), 1);
+  const easeOut = EASES.out;
+  window.__ease = (name, x) => (EASES[name] || EASES.out)(clamp01(x));
+  /* __interp(x, [in0,in1], [out0,out1], ease) — 구간을 구간으로 옮긴다. 범위 밖은 끝값으로 잘린다. */
+  window.__interp = function (x, inR, outR, ease) {
+    const p = inR[1] === inR[0] ? 0 : (x - inR[0]) / (inR[1] - inR[0]);
+    return outR[0] + (outR[1] - outR[0]) * window.__ease(ease || "out", p);
+  };
   const cssMs = name => parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0;
   const HOLD = cssMs("--hold"), COUNT = cssMs("--count");
   const fmt = (v, dec) => (dec > 0 ? v.toFixed(dec) : Math.round(v).toString()).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -243,7 +467,57 @@ const SLIDE_SHOT = 0;
     return out;
   };
 
+  /* ── 페인터 — 캔버스·SVG 처럼 CSS 키프레임으로 그릴 수 없는 그림을 시각 t 의 함수로 그린다.
+     카운트업이 이미 이 모양이고(counters 는 t 를 받아 숫자를 다시 쓴다) 페인터는 그 일반형이다.
+     등록  __paint(rg, durMs, fn) — fn(tMs) 는 그룹 rg 의 로컬 시각을 받아 그 시각의 그림을 그린다.
+     계약  fn 은 t 말고 아무것도 읽지 않는다. 시계·난수·이전 호출의 상태를 읽으면 같은 (g, t) 가
+           다른 픽셀을 내고 결정성이 깨진다. 렌더러는 프레임을 순서대로 찍지 않는다(--sheet 는
+           중간과 끝만 찍는다) — fn(500) 이 fn(0) 뒤에 온다고 가정하면 안 된다.
+     쓰는 자리  회전·궤적·입자처럼 키프레임으로 못 세우는 도해. 글자·막대·카운트업은 CSS 로 둔다. */
+  const painters = [];
+  window.__paint = function (rg, durMs, fn) {
+    painters.push({ rg: +rg, dur: Math.max(0, +durMs || 0), fn: fn });
+  };
+
+  /* ── 비디오 — 그룹의 로컬 시각으로 currentTime 을 세우고 seeked 를 기다린다. data-rg 는 요소가
+     직접 들고(조상 상속이 아니다), data-vfrom(초, 기본 0)이 클립 안 시작점, data-vdur(ms)이 그룹
+     안에서 재생할 길이다. autoplay·loop 는 벽시계로 도는 길이라 __meta 가 stray 로 잡는다. */
+  const videos = () => [...document.querySelectorAll("video")];
+  const seekVideo = (v, tMs) => new Promise(res => {
+    const want = (+v.dataset.vfrom || 0) + tMs / 1000;
+    if (v.readyState >= 2 && Math.abs(v.currentTime - want) < 1e-4) return res(true);
+    const done = () => { v.removeEventListener("seeked", done); res(true); };
+    v.addEventListener("seeked", done);
+    v.currentTime = want;
+  });
+
+  /* 첫 프레임을 찍기 전에 렌더러가 한 번 부른다 — 폰트·이미지 디코드·비디오 첫 프레임이 다 서야
+     같은 (g, t) 가 같은 픽셀이다. 이미지는 로드만으로는 부족하고 decode() 까지 끝나야 한다.
+     못 읽는 소재는 여기서 기다리지 않고 통과시킨다 — 오타 난 src 하나가 렌더러를 30초 매달아
+     놓는 대신, __meta().broken 이 그 파일을 이름과 함께 렌더러에 넘겨 exit 1 로 세운다. */
+  window.__ready = function () {
+    const imgs = [...document.images].map(i => (i.decode ? i.decode().catch(() => {}) : Promise.resolve()));
+    const vids = videos().map(v => {
+      if (v.readyState >= 2 || v.error) return Promise.resolve();
+      if (!v.getAttribute("src") && !v.currentSrc) return Promise.resolve();
+      return new Promise(res => {
+        v.addEventListener("loadeddata", res, { once: true });
+        v.addEventListener("error", res, { once: true });
+      });
+    });
+    return Promise.all([document.fonts.ready, ...imgs, ...vids]).then(() => true);
+  };
+
   window.__seek = function (tMs, g) {
+    /* 카운터와 페인터가 먼저다 — 둘 다 innerHTML 로 DOM 을 다시 만들고, 새로 붙은 노드에 CSS
+       애니메이션이 걸려 있으면 그 순간 벽시계로 돌기 시작한다. 애니메이션 스냅샷을 이 뒤로
+       미뤄야 그것까지 pause 된다. 순서를 되돌리면 짧은 애니메이션에서 재렌더가 갈라진다
+       (실측: 90ms 슬라이드인에서 81프레임 중 13프레임이 두 렌더 사이에 달랐다). */
+    for (const c of counters) {
+      const p = c.rg < g ? 1 : c.rg === g ? easeOut(clamp01(tMs / c.dur)) : 0;
+      c.el.innerHTML = cells(fmt(c.from + (c.to - c.from) * p, c.dec), c.tpl);
+    }
+    for (const p of painters) p.fn(p.rg < g ? p.dur : p.rg === g ? Math.min(Math.max(tMs, 0), p.dur) : 0);
     const anims = document.getAnimations();
     for (const a of anims) {
       const o = owner(a); if (!o) continue;
@@ -251,41 +525,58 @@ const SLIDE_SHOT = 0;
       a.pause();
       a.currentTime = r < g ? end : r === g ? Math.min(Math.max(tMs, 0), end) : 0;
     }
-    for (const c of counters) {
-      const p = c.rg < g ? 1 : c.rg === g ? easeOut(Math.min(Math.max(tMs / c.dur, 0), 1)) : 0;
-      c.el.innerHTML = cells(fmt(c.from + (c.to - c.from) * p, c.dec), c.tpl);
-    }
+    const media = videos().filter(v => v.dataset.rg !== undefined).map(v => {
+      const r = +v.dataset.rg, d = +v.dataset.vdur || 0;
+      return seekVideo(v, r < g ? d : r === g ? Math.min(Math.max(tMs, 0), d) : 0);
+    });
     /* transform·opacity 애니메이션은 컴포지터 스레드에서 돌아 pause()·currentTime 이 비동기로
        반영된다 — ready 를 기다리지 않고 찍으면 같은 (g, t) 가 서브픽셀만큼 다른 프레임을 낸다
        (실측 PSNR 79dB 차이). 렌더러는 이 프라미스를 기다린 뒤 캡처한다. */
-    return Promise.all(anims.map(a => a.ready)).then(() => true);
+    return Promise.all([...anims.map(a => a.ready), ...media]).then(() => true);
   };
   window.__groups = function () {
     const dur = {};
     for (const a of document.getAnimations()) { const o = owner(a); if (!o) continue;
       const r = +o.dataset.rg; dur[r] = Math.max(dur[r] || 0, endOf(a)); }
     for (const c of counters) dur[c.rg] = Math.max(dur[c.rg] || 0, c.dur);
+    for (const p of painters) dur[p.rg] = Math.max(dur[p.rg] || 0, p.dur);
+    for (const v of videos()) { if (v.dataset.rg === undefined) continue;
+      const r = +v.dataset.rg; dur[r] = Math.max(dur[r] || 0, +v.dataset.vdur || 0); }
     const n = Math.max(0, ...Object.keys(dur).map(Number));
     const out = [];
     for (let r = 0; r <= n; r++) out.push({ rg: r, dur: r === 0 ? 0 : Math.round((dur[r] || 0) + HOLD) });
     return out;
   };
-  /* 렌더러가 계약을 검사하는 데 쓴다 — 그룹 밖 애니메이션(stray)은 벽시계로 돌아 결정성을 깨고
-     무한 반복(infinite)은 클립이 끝나지 않는다. 둘 다 렌더러가 exit 1 로 막는다. */
+  /* 렌더러가 계약을 검사하는 데 쓴다 — 그룹 밖에서 도는 것(stray)은 벽시계를 타고 결정성을 깨고
+     무한 반복(infinite)은 클립이 끝나지 않는다. 둘 다 렌더러가 exit 1 로 막는다. 비디오는 data-rg
+     가 없거나 autoplay·loop 가 붙어 있으면 stray 다 — seek 가 아니라 재생으로 움직인다는 뜻이다. */
   window.__meta = function () {
     const all = document.getAnimations();
-    return { hold: HOLD,
-             stray: all.filter(a => !owner(a)).length,
-             infinite: all.filter(a => owner(a) && !isFinite(endOf(a))).length };
+    const strayVideo = videos().filter(v => v.dataset.rg === undefined || v.autoplay || v.loop).length;
+    /* 못 읽은 소재 — 오타 난 경로, 디코더가 없는 코덱(HEVC), 빈 파일. __ready() 뒤에 읽어야
+       뜻이 있다. 이름을 그대로 넘겨 렌더러가 어느 파일인지 말할 수 있게 한다. */
+    const broken = videos().filter(v => v.error || (v.dataset.rg !== undefined && !v.getAttribute("src") && !v.currentSrc))
+      .map(v => v.getAttribute("src") || "(video[data-rg] with no src)")
+      .concat([...document.images].filter(i => !i.naturalWidth).map(i => i.getAttribute("src") || "(no src)"));
+    return { hold: HOLD, broken: broken,
+             stray: all.filter(a => !owner(a)).length + strayVideo,
+             infinite: all.filter(a => owner(a) && !isFinite(endOf(a))).length
+                     + painters.filter(p => !isFinite(p.dur)).length };
   };
   window.__size = () => ({ w: parseInt(getComputedStyle(root).getPropertyValue("--w"), 10),
                            h: parseInt(getComputedStyle(root).getPropertyValue("--h"), 10) });
 
-  const qs = new URLSearchParams(location.search);
-  const N = window.__groups().length - 1;
-  if (qs.has("g"))           window.__seek(parseFloat(qs.get("t") || "0"), parseInt(qs.get("g"), 10));
-  else if (qs.has("reveal")) window.__seek(0, parseInt(qs.get("reveal"), 10) + 1);
-  else                       window.__seek(1e9, N + 1);
+  /* URL 이 가리키는 상태로 세운다. 렌더러는 이걸 거치지 않고 __seek 을 직접 부르지만, 사람이
+     브라우저로 슬라이드를 열어 볼 때는 이 한 줄이 첫 화면을 정한다. 페인터를 뒤에서 등록한
+     저작 코드는 등록을 마치고 __boot() 을 한 번 더 불러 첫 화면을 다시 세운다. */
+  window.__boot = function () {
+    const qs = new URLSearchParams(location.search);
+    const N = window.__groups().length - 1;
+    if (qs.has("g"))           return window.__seek(parseFloat(qs.get("t") || "0"), parseInt(qs.get("g"), 10));
+    if (qs.has("reveal"))      return window.__seek(0, parseInt(qs.get("reveal"), 10) + 1);
+    return window.__seek(1e9, N + 1);
+  };
+  window.__boot();
   /* SEEK-RUNTIME-END */
 })();
 </script>

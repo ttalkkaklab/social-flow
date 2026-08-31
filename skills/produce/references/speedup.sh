@@ -10,7 +10,7 @@
 #   splice-clip.sh's T values are on the original timeline, so a build that already sped up would
 #   put every insert in the wrong place.
 #
-#   Factor: the argument, else $SPEED, else format.env, else 1.4.
+#   Factor: the argument, else $SPEED, else format.env, else 1.0.
 #
 #   Input — the newest set in the workdir, the same rule output/ copies by:
 #     reel-spliced.mp4 / reel-sub-spliced.mp4 / subs-spliced.srt  when a splice ran
@@ -18,7 +18,7 @@
 #   Output: reel-fast.mp4 · reel-sub-fast.mp4 · subs-fast.srt · chapters-fast.txt
 #           (cover.jpg is a still — the same frame at any speed, so it carries over untouched)
 #   Reading the un-sped files and writing new names makes the pass idempotent — run it twice with
-#   a different factor and it recomputes from the original instead of stacking 1.4 on 1.4.
+#   a different factor and it recomputes from the original instead of stacking passes.
 #
 #   **The outro stays at 1.0x.** It's a brand asset with its own cut and its own sonic logo; a
 #   sped-up logo sting reads as a glitch. Only the feature speeds up, and the tail is re-joined
@@ -30,6 +30,7 @@
 set -euo pipefail
 export LC_ALL=en_US.UTF-8
 
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK="${1:?usage: speedup.sh <workdir> [factor]}"
 cd "$WORK"
 
@@ -37,11 +38,12 @@ cd "$WORK"
 # builders hold: caller env → format.env → inline.
 [ -f format.env ] && . ./format.env
 
-SPEED=${2:-${SPEED:-1.4}}
+SPEED=${2:-${SPEED:-1.0}}
 FPS=${FPS:-30}
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}
 XFADE=${XFADE:-0.6}
 SPEED_TOL=${SPEED_TOL:-0.15}        # measured-vs-expected duration tolerance (s)
+FINAL_SPEECH_RATE_MAX=${FINAL_SPEECH_RATE_MAX:-6.2}
 REPORT=build-report.txt
 
 awk -v f="$SPEED" 'BEGIN{exit !(f >= 0.5 && f <= 3.0)}' \
@@ -49,6 +51,16 @@ awk -v f="$SPEED" 'BEGIN{exit !(f >= 0.5 && f <= 3.0)}' \
 
 say() { printf '%s\n' "$1"; [ -f "$REPORT" ] && printf '%s\n' "$1" >> "$REPORT"; }
 dur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
+check_final_rate() {
+  [ -f subs-fast.srt ] || { say "✗ subs-fast.srt missing — final speech rate cannot be checked"; return 1; }
+  local RATE_OUT
+  if ! RATE_OUT=$(python3 "$HERE/check-final-speech-rate.py" subs-fast.srt --max "$FINAL_SPEECH_RATE_MAX" 2>&1); then
+    say "✗ final speech rate exceeds ${FINAL_SPEECH_RATE_MAX} chars/s after the speed pass"
+    printf '%s\n' "$RATE_OUT" | tee -a "$REPORT" >&2
+    return 1
+  fi
+  say "── $RATE_OUT"
+}
 
 # ── 1) Pick the input set — spliced when it exists, plain otherwise
 if [ -f reel-spliced.mp4 ]; then
@@ -65,6 +77,7 @@ if awk -v f="$SPEED" 'BEGIN{exit !(f == 1)}'; then
   [ -f "$SIN" ] && cp -f "$SIN" reel-sub-fast.mp4
   [ -f "$TIN" ] && cp -f "$TIN" subs-fast.srt
   [ -f chapters.txt ] && cp -f chapters.txt chapters-fast.txt
+  check_final_rate
   say "── speedup x1.00: passed through at the recorded pace ($VIN → reel-fast.mp4)"
   exit 0
 fi
@@ -181,5 +194,6 @@ if [ -f chapters.txt ]; then
   say "── chapters-fast.txt: $(wc -l < chapters-fast.txt | tr -d ' ') chapters retimed"
 fi
 
+check_final_rate
 TAIL=$(awk -v k="$KEEP" 'BEGIN{printf "%.2f", k}')
 say "── speedup x$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", f}') ($VIN): ${TOT}s → ${RV}s (feature ${B}s at speed, ${TAIL}s outro tail at 1.00x)"

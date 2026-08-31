@@ -141,6 +141,7 @@ async function main() {
       `local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : 'python3 (default — set SUPERTONIC_PYTHON for a virtualenv)'}, ` +
       `local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : '~/.local/bin/mflux-generate-z-image-turbo (default — set MFLUX_ZIMAGE_BIN if elsewhere)'}, ` +
       `local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : '~/.local/bin/mlx-qwen3-asr (default — set QWEN3_ASR_BIN if elsewhere)'}, ` +
+      `mlx-serve ${process.env.MLX_SERVE_URL ? process.env.MLX_SERVE_URL : 'http://127.0.0.1:11234 (default — MLX Core.app / mlx-serve; this plugin never launches the app)'}, ` +
       `youtube data key ${config.youtubeApiKey ? 'set' : 'MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)'}, ` +
       `sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(',') : 'none'} (credential files found — others hidden from ListTools), ` +
       `sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(',')}]`).join(' ') : 'none (flat/default tokens only)'}, ` +

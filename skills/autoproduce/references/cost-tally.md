@@ -70,11 +70,14 @@ silently.
 
 | Key | Unit | How to write it |
 |---|---|---|
-| `image.*` | image | number of images made |
+| `image.*` | image | number of images made (`image.local` and `image.mlx` are $0) |
 | `veo.*` | second | **generated length**. Generate 8s and use only 4s, still `8` (1080p is 8s-only) |
 | `seedance.*` | second | the requested `durationSeconds` as-is. Note the response's `completion_tokens` in the memo |
-| `tts.*` | 1000 chars | **characters ÷ 1000**. 412 chars is `0.412` |
+| `video.mlx` | second | `numFrames` ÷ 24 (LTX is 24 fps) |
+| `tts.*` | 1000 chars | **characters ÷ 1000**. 412 chars is `0.412`. `mlx_tts_generate` counts `input` |
 | `music.lyria-clip` | clip | number of clips |
+| `music.mlx` | second | `durationSeconds` |
+| `3d.mlx` | mesh | 1 per call |
 
 Writing TTS as `412` is the most common mistake. The local engine's price is 0
 so it doesn't show, but make the same mistake on a Gemini channel and that line

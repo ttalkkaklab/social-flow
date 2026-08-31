@@ -8016,8 +8016,8 @@ var require_common2 = __commonJS({
         }
         return debug;
       }
-      function extend2(namespace, delimiter) {
-        const newDebug = createDebug(this.namespace + (typeof delimiter === "undefined" ? ":" : delimiter) + namespace);
+      function extend2(namespace, delimiter2) {
+        const newDebug = createDebug(this.namespace + (typeof delimiter2 === "undefined" ? ":" : delimiter2) + namespace);
         newDebug.log = this.log;
         return newDebug;
       }
@@ -46743,11 +46743,11 @@ var init_node = __esm({
               while (true) {
                 delimiterIndex = -1;
                 delimiterLength = 0;
-                for (const delimiter of delimiters) {
-                  const index = buffer.indexOf(delimiter);
+                for (const delimiter2 of delimiters) {
+                  const index = buffer.indexOf(delimiter2);
                   if (index !== -1 && (delimiterIndex === -1 || index < delimiterIndex)) {
                     delimiterIndex = index;
-                    delimiterLength = delimiter.length;
+                    delimiterLength = delimiter2.length;
                   }
                 }
                 if (delimiterIndex === -1) {
@@ -50750,8 +50750,8 @@ var init_node = __esm({
         if (this.googleAuth === void 0) {
           throw new Error("Trying to set google-auth headers but googleAuth is unset");
         }
-        const authHeaders = await this.googleAuth.getRequestHeaders(url);
-        for (const [key, value] of authHeaders) {
+        const authHeaders2 = await this.googleAuth.getRequestHeaders(url);
+        for (const [key, value] of authHeaders2) {
           if (headers.get(key) !== null) {
             continue;
           }
@@ -51349,17 +51349,17 @@ var init_node = __esm({
           throw new Error("registerFiles is only supported in Node.js environments.");
         }
         const googleAuth = params.auth;
-        const authHeaders = await googleAuth.getRequestHeaders();
+        const authHeaders2 = await googleAuth.getRequestHeaders();
         const config3 = params.config || {};
         const httpOptions = config3.httpOptions || {};
         const headers = Object.assign({}, httpOptions.headers || {});
-        if (authHeaders) {
-          if (typeof authHeaders[Symbol.iterator] === "function") {
-            for (const [key, value] of authHeaders) {
+        if (authHeaders2) {
+          if (typeof authHeaders2[Symbol.iterator] === "function") {
+            for (const [key, value] of authHeaders2) {
               headers[key] = value;
             }
           } else {
-            for (const [key, value] of Object.entries(authHeaders)) {
+            for (const [key, value] of Object.entries(authHeaders2)) {
               headers[key] = value;
             }
           }
@@ -52630,10 +52630,10 @@ async function* iterSSEChunks(iterator) {
     yield data;
   }
 }
-function partition(str7, delimiter) {
-  const index = str7.indexOf(delimiter);
+function partition(str7, delimiter2) {
+  const index = str7.indexOf(delimiter2);
   if (index !== -1) {
-    return [str7.substring(0, index), delimiter, str7.substring(index + delimiter.length)];
+    return [str7.substring(0, index), delimiter2, str7.substring(index + delimiter2.length)];
   }
   return [str7, "", ""];
 }
@@ -75065,7 +75065,7 @@ var StdioServerTransport = class {
 // src/config.ts
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 var config2 = {
   /** SerpApi key (required by the serp_* research/fact-check tools) — https://serpapi.com/manage-api-key */
   serpApiKey: process.env.SERPAPI_API_KEY || "",
@@ -75115,6 +75115,21 @@ function mfluxZImageBin() {
 }
 function qwen3AsrBin() {
   return process.env.QWEN3_ASR_BIN || join(homedir(), ".local", "bin", "mlx-qwen3-asr");
+}
+var DEFAULT_MLX_SERVE_URL = "http://127.0.0.1:11234";
+function mlxServeUrl() {
+  return (process.env.MLX_SERVE_URL || DEFAULT_MLX_SERVE_URL).replace(/\/+$/, "");
+}
+function mlxServeApiKey() {
+  return process.env.MLX_SERVE_API_KEY || "";
+}
+function binOnPath(name) {
+  return (process.env.PATH || "").split(delimiter).some((dir) => dir && existsSync(join(dir, name)));
+}
+function mlxServeConfigured() {
+  if (mlxServeUrl() !== DEFAULT_MLX_SERVE_URL) return true;
+  if (existsSync("/Applications/MLX Core.app")) return true;
+  return binOnPath("mlx-serve");
 }
 var snsTokenDir = process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow");
 var SNS_PLATFORMS = ["THREADS", "INSTAGRAM", "FACEBOOK", "YOUTUBE"];
@@ -75400,7 +75415,8 @@ var ALLOWED_EXTENSIONS = {
   image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
   video: [".mp4", ".webm", ".mov", ".avi"],
   audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
-  json: [".json"]
+  json: [".json"],
+  mesh: [".glb"]
 };
 function validateFilePath(filePath, options) {
   const resolved = path.resolve(filePath);
@@ -77943,6 +77959,718 @@ async function getCredits() {
   }
 }
 
+// src/mlx-serve-client.ts
+import { execFile as execFile5 } from "node:child_process";
+import { existsSync as existsSync5, mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, rmSync as rmSync2, writeFileSync as writeFileSync4 } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join6 } from "node:path";
+
+// src/http.ts
+async function requestRaw(method, url, headers, body, timeoutMs) {
+  const effectiveTimeoutMs = timeoutMs ?? config2.requestTimeoutMs;
+  try {
+    const res = await fetch(url, {
+      method: method.toUpperCase(),
+      headers: {
+        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
+        ...headers
+      },
+      body: body !== void 0 ? JSON.stringify(body) : void 0,
+      signal: AbortSignal.timeout(effectiveTimeoutMs)
+    });
+    const text2 = await res.text();
+    return { ok: res.ok, status: res.status, body: text2 };
+  } catch (error2) {
+    if (error2 instanceof Error && error2.name === "TimeoutError") {
+      return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
+    }
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return { ok: false, status: 502, body: `Upstream unreachable (${url}): ${message}` };
+  }
+}
+async function requestBytes(method, url, headers, body, timeoutMs) {
+  const effectiveTimeoutMs = timeoutMs ?? config2.requestTimeoutMs;
+  try {
+    const res = await fetch(url, {
+      method: method.toUpperCase(),
+      headers: {
+        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
+        ...headers
+      },
+      body: body !== void 0 ? JSON.stringify(body) : void 0,
+      signal: AbortSignal.timeout(effectiveTimeoutMs)
+    });
+    const bytes = Buffer.from(await res.arrayBuffer());
+    return {
+      ok: res.ok,
+      status: res.status,
+      bytes,
+      contentType: res.headers.get("content-type") || ""
+    };
+  } catch (error2) {
+    if (error2 instanceof Error && error2.name === "TimeoutError") {
+      return {
+        ok: false,
+        status: 504,
+        bytes: Buffer.from(`Request timed out after ${effectiveTimeoutMs}ms: ${url}`),
+        contentType: "text/plain"
+      };
+    }
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return {
+      ok: false,
+      status: 502,
+      bytes: Buffer.from(`Upstream unreachable (${url}): ${message}`),
+      contentType: "text/plain"
+    };
+  }
+}
+function buildQuery(params) {
+  const sp = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== void 0 && value !== "") sp.set(key, String(value));
+  }
+  const qs = sp.toString();
+  return qs ? `?${qs}` : "";
+}
+
+// src/mlx-serve-client.ts
+var MLX_HEALTH_TIMEOUT_MS = 3e3;
+var MLX_MODELS_TIMEOUT_MS = 1e4;
+var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
+var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
+var MLX_TTS_TIMEOUT_MS = 5 * 6e4;
+var MLX_MUSIC_TIMEOUT_MS = 10 * 6e4;
+var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
+var MLX_MESH_TIMEOUT_MS = 15 * 6e4;
+var MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
+var MLX_IMAGE_DIMENSION_STEP = 16;
+var MIN_MLX_IMAGE_DIMENSION = 256;
+var MAX_MLX_IMAGE_DIMENSION = 2048;
+var DEFAULT_MLX_IMAGE_SIZE = 1024;
+var MLX_VIDEO_DIMENSION_STEP = 64;
+var MIN_MLX_VIDEO_DIMENSION = 256;
+var MAX_MLX_VIDEO_DIMENSION = 1920;
+var DEFAULT_MLX_VIDEO_WIDTH = 768;
+var DEFAULT_MLX_VIDEO_HEIGHT = 1280;
+var DEFAULT_MLX_VIDEO_FRAMES = 49;
+var MIN_MLX_VIDEO_FRAMES = 9;
+var MAX_MLX_VIDEO_FRAMES = 241;
+var MLX_VIDEO_FPS = 24;
+var MIN_MLX_MUSIC_SECONDS = 10;
+var MAX_MLX_MUSIC_SECONDS = 600;
+var DEFAULT_MLX_MUSIC_SECONDS = 30;
+var MAX_MLX_TTS_CHARS = 8e3;
+var MAX_MLX_IMAGE_REFS = 3;
+function authHeaders() {
+  const key = mlxServeApiKey();
+  return key ? { Authorization: `Bearer ${key}` } : {};
+}
+function isUnreachable(status, body) {
+  return status === 502 || status === 504 || /ECONNREFUSED|fetch failed|Upstream unreachable/i.test(body);
+}
+function mlxDownHint(detail) {
+  return `MLX Core is not reachable at ${mlxServeUrl()}. This plugin does not launch the app.
+Install the macOS menu-bar app (Apple Silicon, macOS 26.2+) and start it, or run mlx-serve --serve:
+  brew install --cask mlx-core
+If the server is on another host or port, set MLX_SERVE_URL.
+Loopback needs no API key; a non-loopback bind may need MLX_SERVE_API_KEY.
+` + (detail ? `
+${detail}` : "");
+}
+function translateUpstream(body) {
+  if (/out of memory|OOM|not enough.*RAM|insufficient memory/i.test(body)) {
+    return `${body}
+
+The loaded media model and the chat model share one GPU. Unload a large chat or video model in MLX Core, or stop a concurrent Z-Image (mflux) run \u2014 Z-Image peaks at 32\u201339GB and LTX wants 24GB+ on its own.`;
+  }
+  return body;
+}
+var imageDimension = external_exports.number().int().min(MIN_MLX_IMAGE_DIMENSION).max(MAX_MLX_IMAGE_DIMENSION).refine((v) => v % MLX_IMAGE_DIMENSION_STEP === 0, {
+  message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). FLUX.2-klein is fixed at 1024\xD71024 \u2014 pick a Krea/Mage-Flow model for other sizes.`
+});
+var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION).max(MAX_MLX_VIDEO_DIMENSION).refine((v) => v % MLX_VIDEO_DIMENSION_STEP === 0, {
+  message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP} (two-stage LTX grid). 1080 is not on that grid \u2014 use 1088\xD71920 or the default 768\xD71280.`
+});
+var mlxImageGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  model: external_exports.string().min(1).optional(),
+  width: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
+  height: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
+  steps: external_exports.number().int().min(1).max(50).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  strength: external_exports.number().min(0).max(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").optional()
+});
+var mlxImageEditSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  imagePath: external_exports.string().min(1, "imagePath is required"),
+  refImagePaths: external_exports.array(external_exports.string().min(1)).max(MAX_MLX_IMAGE_REFS).optional(),
+  model: external_exports.string().min(1).optional(),
+  width: imageDimension.optional(),
+  height: imageDimension.optional(),
+  steps: external_exports.number().int().min(1).max(50).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").optional()
+});
+var mlxTtsGenerateSchema = external_exports.object({
+  input: external_exports.string().min(1, "input is required").max(MAX_MLX_TTS_CHARS),
+  model: external_exports.string().min(1).optional(),
+  voice: external_exports.string().min(1).optional(),
+  refAudioPath: external_exports.string().min(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+});
+var mlxMusicGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(4e3),
+  model: external_exports.string().min(1).optional(),
+  lyrics: external_exports.string().max(8e3).optional(),
+  instrumental: external_exports.boolean().optional().default(true),
+  durationSeconds: external_exports.number().int().min(MIN_MLX_MUSIC_SECONDS).max(MAX_MLX_MUSIC_SECONDS).optional().default(DEFAULT_MLX_MUSIC_SECONDS),
+  seed: external_exports.number().int().min(0).optional(),
+  refAudioPath: external_exports.string().min(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+}).superRefine((value, ctx) => {
+  if (value.instrumental && value.lyrics && value.lyrics.trim().length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: "instrumental:true cannot be sent beside lyrics \u2014 mlx-serve returns 400. Set instrumental false to sing, or drop lyrics for a bed."
+    });
+  }
+});
+var mlxVideoGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  model: external_exports.string().min(1).optional(),
+  width: videoDimension.optional().default(DEFAULT_MLX_VIDEO_WIDTH),
+  height: videoDimension.optional().default(DEFAULT_MLX_VIDEO_HEIGHT),
+  numFrames: external_exports.number().int().min(MIN_MLX_VIDEO_FRAMES).max(MAX_MLX_VIDEO_FRAMES).optional().default(DEFAULT_MLX_VIDEO_FRAMES),
+  steps: external_exports.number().int().min(1).max(50).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  firstFrameImagePath: external_exports.string().min(1).optional(),
+  lastFrameImagePath: external_exports.string().min(1).optional(),
+  pipeline: external_exports.enum(["one_stage", "two_stage"]).optional(),
+  decoder: external_exports.enum(["conv", "diffusion"]).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((value, ctx) => {
+  if (videoExceedsMemory(value.width, value.height, value.numFrames)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: videoMemoryMessage(value.width, value.height, value.numFrames)
+    });
+  }
+});
+var mlx3dGenerateSchema = external_exports.object({
+  imagePath: external_exports.string().min(1, "imagePath is required"),
+  model: external_exports.string().min(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("mesh").optional()
+});
+function videoRgbBytes(width, height, frames) {
+  return width * height * frames * 3;
+}
+function videoExceedsMemory(width, height, frames) {
+  return videoRgbBytes(width, height, frames) > MAX_VIDEO_RGB_BYTES;
+}
+function videoMemoryMessage(width, height, frames) {
+  const mb = (videoRgbBytes(width, height, frames) / (1024 * 1024)).toFixed(0);
+  const cap = (MAX_VIDEO_RGB_BYTES / (1024 * 1024)).toFixed(0);
+  return `Decoded RGB would be ~${mb}MB (${width}\xD7${height}\xD7${frames}\xD73), over the ${cap}MB cap. Drop frames or canvas \u2014 1088\xD71920 at 8s/24fps is ~1.2GB and is refused. The default 768\xD71280\xD7${DEFAULT_MLX_VIDEO_FRAMES} stays under the cap.`;
+}
+function pickModel(models, capability) {
+  const has3 = (m2) => (m2.capabilities ?? []).includes(capability);
+  return models.find((m2) => m2.state === "ready" && has3(m2)) ?? models.find(has3);
+}
+function fileToBase64(filePath) {
+  if (!existsSync5(filePath)) return { ok: false, error: `File not found: ${filePath}` };
+  try {
+    return { ok: true, b64: readFileSync4(filePath).toString("base64") };
+  } catch (error2) {
+    return { ok: false, error: error2 instanceof Error ? error2.message : String(error2) };
+  }
+}
+function parseModelsBody(body) {
+  const parsed = JSON.parse(body);
+  const list = parsed && typeof parsed === "object" && "data" in parsed ? parsed.data : parsed;
+  if (!Array.isArray(list)) return [];
+  return list.filter((entry) => Boolean(entry) && typeof entry === "object").map((entry) => ({
+    id: String(entry.id ?? entry.name ?? ""),
+    state: typeof entry.state === "string" ? entry.state : void 0,
+    capabilities: Array.isArray(entry.capabilities) ? entry.capabilities.map(String) : void 0
+  })).filter((entry) => entry.id.length > 0);
+}
+async function mlxHealth() {
+  const res = await requestRaw("get", `${mlxServeUrl()}/health`, authHeaders(), void 0, MLX_HEALTH_TIMEOUT_MS);
+  if (res.ok) return { ok: true };
+  if (isUnreachable(res.status, res.body)) return { ok: false, error: mlxDownHint(res.body) };
+  return { ok: false, error: mlxDownHint(`HTTP ${res.status}: ${res.body}`) };
+}
+async function listMlxModels() {
+  const res = await requestRaw("get", `${mlxServeUrl()}/v1/models`, authHeaders(), void 0, MLX_MODELS_TIMEOUT_MS);
+  if (!res.ok) {
+    if (isUnreachable(res.status, res.body)) return { ok: false, error: mlxDownHint(res.body) };
+    return { ok: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
+  }
+  try {
+    return { ok: true, models: parseModelsBody(res.body) };
+  } catch (error2) {
+    return { ok: false, error: `Could not parse /v1/models: ${error2 instanceof Error ? error2.message : String(error2)}` };
+  }
+}
+async function loadModel(id) {
+  const res = await requestRaw(
+    "post",
+    `${mlxServeUrl()}/v1/load-model`,
+    authHeaders(),
+    { model: id },
+    MLX_LOAD_TIMEOUT_MS
+  );
+  if (!res.ok) {
+    if (isUnreachable(res.status, res.body)) return { ok: false, error: mlxDownHint(res.body) };
+    return { ok: false, error: translateUpstream(`load-model HTTP ${res.status}: ${res.body}`) };
+  }
+  const deadline = Date.now() + MLX_LOAD_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const listed = await listMlxModels();
+    if (!listed.ok) return listed;
+    const found = listed.models?.find((m2) => m2.id === id);
+    if (found?.state === "ready") return { ok: true };
+    await new Promise((resolve3) => setTimeout(resolve3, 2e3));
+  }
+  return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
+}
+async function resolveModel(capability, requested) {
+  const listed = await listMlxModels();
+  if (!listed.ok) return { ok: false, error: listed.error ?? mlxDownHint() };
+  const models = listed.models ?? [];
+  if (requested) {
+    const found = models.find((m2) => m2.id === requested);
+    if (!found) {
+      const loaded = await loadModel(requested);
+      if (!loaded.ok) {
+        return {
+          ok: false,
+          error: loaded.error ?? `Model "${requested}" is not in /v1/models. Download it in MLX Core and retry, or pass an id from GET /v1/models.`
+        };
+      }
+      return { ok: true, model: requested };
+    }
+    if (found.state !== "ready") {
+      const loaded = await loadModel(requested);
+      if (!loaded.ok) return { ok: false, error: loaded.error ?? `Failed to load "${requested}".` };
+    }
+    return { ok: true, model: requested };
+  }
+  const picked = pickModel(models, capability);
+  if (!picked) {
+    return {
+      ok: false,
+      error: `No mlx-serve model advertises capability "${capability}". Open MLX Core, download a model in the matching pane (Image / Audio / Video / 3D), and retry. This plugin does not download weights.`
+    };
+  }
+  if (picked.state !== "ready") {
+    const loaded = await loadModel(picked.id);
+    if (!loaded.ok) return { ok: false, error: loaded.error ?? `Failed to load "${picked.id}".` };
+  }
+  return { ok: true, model: picked.id };
+}
+function parseImageResponse(body) {
+  try {
+    const parsed = JSON.parse(body);
+    const data = parsed && typeof parsed === "object" && "data" in parsed ? parsed.data : void 0;
+    const first = Array.isArray(data) ? data[0] : void 0;
+    const b64 = first && typeof first === "object" && first !== null && "b64_json" in first ? first.b64_json : void 0;
+    if (typeof b64 !== "string" || b64.length === 0) return { error: `Image response missing data[0].b64_json: ${body.slice(0, 400)}` };
+    return { b64 };
+  } catch (error2) {
+    return { error: `Could not parse image JSON: ${error2 instanceof Error ? error2.message : String(error2)}` };
+  }
+}
+function parseVideoResponse(body) {
+  try {
+    const parsed = JSON.parse(body);
+    if (!parsed || typeof parsed !== "object") return { error: "Video response is not an object" };
+    const d = parsed;
+    if (d.format !== "rgb8") return { error: `Unexpected video format "${String(d.format)}" (want rgb8)` };
+    const frames = Number(d.frames);
+    const height = Number(d.height);
+    const width = Number(d.width);
+    const fps = Number(d.fps) || MLX_VIDEO_FPS;
+    if (![frames, height, width].every((n) => Number.isFinite(n) && n > 0)) {
+      return { error: `Video response missing frames/height/width: ${body.slice(0, 200)}` };
+    }
+    if (typeof d.data !== "string") return { error: "Video response missing data (base64 rgb8)" };
+    const rgb = Buffer.from(d.data, "base64");
+    const expect = frames * height * width * 3;
+    if (rgb.length !== expect) return { error: `RGB length ${rgb.length} != ${expect} (${frames}\xD7${height}\xD7${width}\xD73)` };
+    let audio;
+    if (typeof d.audio_data === "string" && d.audio_data.length > 0) {
+      audio = {
+        pcm: Buffer.from(d.audio_data, "base64"),
+        sampleRate: Number(d.audio_sample_rate) || 24e3,
+        channels: Number(d.audio_channels) || 2
+      };
+    }
+    return { format: "rgb8", frames, height, width, fps, rgb, audio };
+  } catch (error2) {
+    return { error: `Could not parse video JSON: ${error2 instanceof Error ? error2.message : String(error2)}` };
+  }
+}
+function parseGlbResponse(body) {
+  try {
+    const parsed = JSON.parse(body);
+    if (!parsed || typeof parsed !== "object") return { error: "3D response is not an object" };
+    const d = parsed;
+    if (typeof d.data !== "string" || d.data.length === 0) return { error: `3D response missing data: ${body.slice(0, 400)}` };
+    return { b64: d.data };
+  } catch (error2) {
+    return { error: `Could not parse 3D JSON: ${error2 instanceof Error ? error2.message : String(error2)}` };
+  }
+}
+async function muxRgbToMp4(opts) {
+  const dir = mkdtempSync2(join6(tmpdir(), "mlx-video-"));
+  const rgbPath = join6(dir, "frames.rgb");
+  const wavPath = join6(dir, "audio.wav");
+  try {
+    writeFileSync4(rgbPath, opts.rgb);
+    const args = [
+      "-y",
+      "-f",
+      "rawvideo",
+      "-pix_fmt",
+      "rgb24",
+      "-s",
+      `${opts.width}x${opts.height}`,
+      "-r",
+      String(opts.fps),
+      "-i",
+      rgbPath
+    ];
+    if (opts.audio) {
+      writeFileSync4(wavPath, pcmToWav(opts.audio.pcm, opts.audio.sampleRate, opts.audio.channels));
+      args.push("-i", wavPath);
+    }
+    args.push(
+      "-frames:v",
+      String(opts.frames),
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p"
+    );
+    if (opts.audio) args.push("-c:a", "aac", "-shortest");
+    args.push(opts.outFile);
+    await new Promise((resolve3, reject) => {
+      execFile5("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
+        if (error2) {
+          const code = error2.code;
+          if (code === "ENOENT") {
+            reject(new Error("ffmpeg is not on PATH \u2014 mlx_video_generate muxes rgb8 frames to mp4 and needs ffmpeg."));
+            return;
+          }
+          reject(new Error(`${error2.message}${errOut ? `
+${String(errOut).slice(-500)}` : ""}`));
+          return;
+        }
+        resolve3();
+      });
+    });
+    if (!existsSync5(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
+    return { ok: true };
+  } catch (error2) {
+    return { ok: false, error: error2 instanceof Error ? error2.message : String(error2) };
+  } finally {
+    rmSync2(dir, { recursive: true, force: true });
+  }
+}
+async function postImage(body, outFile) {
+  const startedAt = Date.now();
+  const res = await requestRaw("post", `${mlxServeUrl()}/v1/images/generations`, authHeaders(), body, MLX_IMAGE_TIMEOUT_MS);
+  if (!res.ok) {
+    if (isUnreachable(res.status, res.body)) return { success: false, error: mlxDownHint(res.body) };
+    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
+  }
+  const parsed = parseImageResponse(res.body);
+  if ("error" in parsed) return { success: false, error: parsed.error };
+  writeFileSync4(outFile, Buffer.from(parsed.b64, "base64"));
+  return {
+    success: true,
+    path: outFile,
+    model: typeof body.model === "string" ? body.model : void 0,
+    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
+  };
+}
+async function generateMlxImage(request) {
+  const health = await mlxHealth();
+  if (!health.ok) return { success: false, error: health.error };
+  const resolved = await resolveModel("image", request.model);
+  if (!resolved.ok) return { success: false, error: resolved.error };
+  const body = {
+    prompt: request.prompt,
+    model: resolved.model,
+    size: `${request.width}x${request.height}`
+  };
+  if (request.steps !== void 0) body.steps = request.steps;
+  if (request.seed !== void 0) body.seed = request.seed;
+  if (request.imagePath) {
+    const img = fileToBase64(request.imagePath);
+    if (!img.ok) return { success: false, error: img.error };
+    body.image = img.b64;
+    if (request.strength !== void 0) body.strength = request.strength;
+  }
+  const outFile = resolveOutputFile(
+    request.outputPath || process.cwd(),
+    request.filename || `mlx_image_${Date.now()}.png`,
+    "image"
+  );
+  const result = await postImage(body, outFile);
+  if (result.success) {
+    result.width = request.width;
+    result.height = request.height;
+    result.steps = request.steps;
+    result.seed = request.seed;
+    result.model = resolved.model;
+  }
+  return result;
+}
+async function editMlxImage(request) {
+  const health = await mlxHealth();
+  if (!health.ok) return { success: false, error: health.error };
+  const resolved = await resolveModel("image", request.model);
+  if (!resolved.ok) return { success: false, error: resolved.error };
+  const src = fileToBase64(request.imagePath);
+  if (!src.ok) return { success: false, error: src.error };
+  const refs = [];
+  for (const path9 of request.refImagePaths ?? []) {
+    const ref = fileToBase64(path9);
+    if (!ref.ok) return { success: false, error: ref.error };
+    refs.push(ref.b64);
+  }
+  const body = {
+    prompt: request.prompt,
+    model: resolved.model,
+    mode: "edit",
+    image: src.b64
+  };
+  if (request.width && request.height) body.size = `${request.width}x${request.height}`;
+  if (request.steps !== void 0) body.steps = request.steps;
+  if (request.seed !== void 0) body.seed = request.seed;
+  if (refs.length) body.ref_images = refs;
+  const outFile = resolveOutputFile(
+    request.outputPath || process.cwd(),
+    request.filename || `mlx_edit_${Date.now()}.png`,
+    "image"
+  );
+  const result = await postImage(body, outFile);
+  if (result.success) {
+    result.model = resolved.model;
+    result.width = request.width;
+    result.height = request.height;
+    result.steps = request.steps;
+    result.seed = request.seed;
+  }
+  return result;
+}
+function wavLooksValid(buf) {
+  return buf.length >= 12 && buf.subarray(0, 4).toString("ascii") === "RIFF" && buf.subarray(8, 12).toString("ascii") === "WAVE";
+}
+function jsonErrorFromBytes(bytes, contentType, status) {
+  const asText = bytes.toString("utf8");
+  if (contentType.includes("json") || asText.trimStart().startsWith("{")) {
+    return translateUpstream(`HTTP ${status}: ${asText.slice(0, 1e3)}`);
+  }
+  if (!bytes.length) return `HTTP ${status}: empty body`;
+  return void 0;
+}
+async function generateMlxTts(request) {
+  const health = await mlxHealth();
+  if (!health.ok) return { success: false, error: health.error };
+  const resolved = await resolveModel("audio", request.model);
+  if (!resolved.ok) return { success: false, error: resolved.error };
+  const body = { input: request.input, model: resolved.model };
+  if (request.voice) body.voice = request.voice;
+  if (request.refAudioPath) {
+    const clip2 = fileToBase64(request.refAudioPath);
+    if (!clip2.ok) return { success: false, error: clip2.error };
+    body.ref_audio = clip2.b64;
+  }
+  const startedAt = Date.now();
+  const res = await requestBytes("post", `${mlxServeUrl()}/v1/audio/speech`, authHeaders(), body, MLX_TTS_TIMEOUT_MS);
+  if (!res.ok) {
+    const text2 = res.bytes.toString("utf8");
+    if (isUnreachable(res.status, text2)) return { success: false, error: mlxDownHint(text2) };
+    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${text2.slice(0, 1e3)}`) };
+  }
+  const jsonErr2 = jsonErrorFromBytes(res.bytes, res.contentType, res.status);
+  if (jsonErr2) return { success: false, error: jsonErr2 };
+  if (!wavLooksValid(res.bytes)) {
+    return { success: false, error: `TTS response is not a WAV (got ${res.contentType || "unknown type"}, ${res.bytes.length} bytes)` };
+  }
+  const outFile = saveAudioFile(
+    request.outputPath || process.cwd(),
+    request.filename || `mlx_tts_${Date.now()}.wav`,
+    res.bytes
+  );
+  return {
+    success: true,
+    path: outFile,
+    model: resolved.model,
+    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
+  };
+}
+async function generateMlxMusic(request) {
+  const health = await mlxHealth();
+  if (!health.ok) return { success: false, error: health.error };
+  const resolved = await resolveModel("music", request.model);
+  if (!resolved.ok) return { success: false, error: resolved.error };
+  const body = {
+    prompt: request.prompt,
+    model: resolved.model,
+    instrumental: request.instrumental,
+    duration_seconds: request.durationSeconds
+  };
+  if (request.lyrics !== void 0) body.lyrics = request.lyrics;
+  if (request.seed !== void 0) body.seed = request.seed;
+  if (request.refAudioPath) {
+    const clip2 = fileToBase64(request.refAudioPath);
+    if (!clip2.ok) return { success: false, error: clip2.error };
+    body.ref_audio = clip2.b64;
+  }
+  const startedAt = Date.now();
+  const res = await requestBytes(
+    "post",
+    `${mlxServeUrl()}/v1/audio/music-generations`,
+    authHeaders(),
+    body,
+    MLX_MUSIC_TIMEOUT_MS
+  );
+  if (!res.ok) {
+    const text2 = res.bytes.toString("utf8");
+    if (isUnreachable(res.status, text2)) return { success: false, error: mlxDownHint(text2) };
+    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${text2.slice(0, 1e3)}`) };
+  }
+  const jsonErr2 = jsonErrorFromBytes(res.bytes, res.contentType, res.status);
+  if (jsonErr2) return { success: false, error: jsonErr2 };
+  if (!wavLooksValid(res.bytes)) {
+    return { success: false, error: `Music response is not a WAV (got ${res.contentType || "unknown type"}, ${res.bytes.length} bytes)` };
+  }
+  const outFile = saveAudioFile(
+    request.outputPath || process.cwd(),
+    request.filename || `mlx_music_${Date.now()}.wav`,
+    res.bytes
+  );
+  return {
+    success: true,
+    path: outFile,
+    model: resolved.model,
+    durationSeconds: request.durationSeconds,
+    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
+  };
+}
+async function generateMlxVideo(request) {
+  const health = await mlxHealth();
+  if (!health.ok) return { success: false, error: health.error };
+  if (videoExceedsMemory(request.width, request.height, request.numFrames)) {
+    return { success: false, error: videoMemoryMessage(request.width, request.height, request.numFrames) };
+  }
+  const resolved = await resolveModel("video", request.model);
+  if (!resolved.ok) return { success: false, error: resolved.error };
+  const body = {
+    prompt: request.prompt,
+    model: resolved.model,
+    width: request.width,
+    height: request.height,
+    num_frames: request.numFrames
+  };
+  if (request.steps !== void 0) body.steps = request.steps;
+  if (request.seed !== void 0) body.seed = request.seed;
+  if (request.pipeline) body.pipeline = request.pipeline;
+  if (request.decoder) body.decoder = request.decoder;
+  if (request.firstFrameImagePath) {
+    const img = fileToBase64(request.firstFrameImagePath);
+    if (!img.ok) return { success: false, error: img.error };
+    body.first_frame_image = img.b64;
+  }
+  if (request.lastFrameImagePath) {
+    const img = fileToBase64(request.lastFrameImagePath);
+    if (!img.ok) return { success: false, error: img.error };
+    body.last_frame_image = img.b64;
+  }
+  const startedAt = Date.now();
+  const res = await requestRaw("post", `${mlxServeUrl()}/v1/video/generations`, authHeaders(), body, MLX_VIDEO_TIMEOUT_MS);
+  if (!res.ok) {
+    if (isUnreachable(res.status, res.body)) return { success: false, error: mlxDownHint(res.body) };
+    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
+  }
+  const parsed = parseVideoResponse(res.body);
+  if ("error" in parsed) return { success: false, error: parsed.error };
+  const outFile = resolveOutputFile(
+    request.outputPath || process.cwd(),
+    request.filename || `mlx_video_${Date.now()}.mp4`,
+    "video"
+  );
+  const muxed = await muxRgbToMp4({
+    rgb: parsed.rgb,
+    width: parsed.width,
+    height: parsed.height,
+    frames: parsed.frames,
+    fps: parsed.fps,
+    audio: parsed.audio,
+    outFile
+  });
+  if (!muxed.ok) return { success: false, error: muxed.error };
+  return {
+    success: true,
+    path: outFile,
+    model: resolved.model,
+    width: parsed.width,
+    height: parsed.height,
+    frames: parsed.frames,
+    fps: parsed.fps,
+    hasAudio: Boolean(parsed.audio),
+    durationSeconds: parsed.frames / parsed.fps,
+    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
+  };
+}
+async function generateMlx3d(request) {
+  const health = await mlxHealth();
+  if (!health.ok) return { success: false, error: health.error };
+  const resolved = await resolveModel("3d", request.model);
+  if (!resolved.ok) return { success: false, error: resolved.error };
+  const img = fileToBase64(request.imagePath);
+  if (!img.ok) return { success: false, error: img.error };
+  const startedAt = Date.now();
+  const res = await requestRaw(
+    "post",
+    `${mlxServeUrl()}/v1/3d/generations`,
+    authHeaders(),
+    { image: img.b64, model: resolved.model },
+    MLX_MESH_TIMEOUT_MS
+  );
+  if (!res.ok) {
+    if (isUnreachable(res.status, res.body)) return { success: false, error: mlxDownHint(res.body) };
+    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
+  }
+  const parsed = parseGlbResponse(res.body);
+  if ("error" in parsed) return { success: false, error: parsed.error };
+  const outFile = saveMediaFile(
+    request.outputPath || process.cwd(),
+    request.filename || `mlx_3d_${Date.now()}.glb`,
+    Buffer.from(parsed.b64, "base64"),
+    "mesh"
+  );
+  return {
+    success: true,
+    path: outFile,
+    model: resolved.model,
+    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
+  };
+}
+
 // src/tools.ts
 var VEO_MODEL_PROPERTY = {
   type: "string",
@@ -78846,6 +79574,144 @@ Returns: a text block with the saved .png path, resolution, steps, seed, quantiz
       required: ["prompt"]
     }
   },
+  {
+    name: "mlx_image_generate",
+    title: "Image generation (local \xB7 MLX Core)",
+    annotations: HINT.generateLocal,
+    description: `Generate an image on this machine via MLX Core / mlx-serve (HTTP to 127.0.0.1:11234). No vendor bill. This plugin never launches the app \u2014 if :11234 is down the call fails closed with a brew install --cask mlx-core hint.
+
+Use as an optional local image lane when MLX Core is running and an image model is downloaded (FLUX.2-klein is fixed at 1024\xD71024; Krea/Mage-Flow accept any multiple of ${MLX_IMAGE_DIMENSION_STEP} in ${MIN_MLX_IMAGE_DIMENSION}\u2013${MAX_MLX_IMAGE_DIMENSION}, so 9:16 is 1088\xD71920 not 1080\xD71920). Optional imagePath is img2img (strength 0\u20131).
+Do NOT use as the default path \u2014 that stays image_local_generate (Z-Image). Do NOT use when the image must contain legible Korean text \u2014 Hangul still goes to gpt_image_text2img (measured: local engines break jamo). Do NOT POST /v1/load-model with default:true; this tool never does that, because it would steal the chat model the app is serving. Shares the GPU with Z-Image (32\u201339GB peak) and LTX video \u2014 don't run them together.
+Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve on PATH (or MLX_SERVE_URL). A non-loopback bind may need MLX_SERVE_API_KEY.
+
+Returns: a text block with the saved .png path, model, size, and generation time.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "Image generation prompt (max 32,000 characters). English recommended; do not ask for Korean text in the image.",
+          maxLength: 32e3
+        },
+        model: {
+          type: "string",
+          description: 'mlx-serve model id from GET /v1/models. Omit to pick the first ready model that advertises capability "image". This plugin does not download weights.'
+        },
+        width: {
+          type: "number",
+          description: `Width in pixels (default: ${DEFAULT_MLX_IMAGE_SIZE}). ${MIN_MLX_IMAGE_DIMENSION}\u2013${MAX_MLX_IMAGE_DIMENSION}, multiple of ${MLX_IMAGE_DIMENSION_STEP}. FLUX.2-klein is fixed at 1024\xD71024 \u2014 pick a Krea/Mage-Flow model for other sizes. For 9:16 use 1088\xD71920, not 1080\xD71920.`,
+          minimum: MIN_MLX_IMAGE_DIMENSION,
+          maximum: MAX_MLX_IMAGE_DIMENSION,
+          default: DEFAULT_MLX_IMAGE_SIZE
+        },
+        height: {
+          type: "number",
+          description: `Height in pixels (default: ${DEFAULT_MLX_IMAGE_SIZE}). Same constraints as width.`,
+          minimum: MIN_MLX_IMAGE_DIMENSION,
+          maximum: MAX_MLX_IMAGE_DIMENSION,
+          default: DEFAULT_MLX_IMAGE_SIZE
+        },
+        steps: {
+          type: "number",
+          description: "Diffusion steps 1\u201350. Omit to use the loaded model's default.",
+          minimum: 1,
+          maximum: 50
+        },
+        seed: {
+          type: "number",
+          description: "Random seed. Omit for a random seed.",
+          minimum: 0
+        },
+        imagePath: {
+          type: "string",
+          description: "Optional source image for img2img. Absolute path; sent as base64. Pair with strength."
+        },
+        strength: {
+          type: "number",
+          description: "img2img denoise strength 0\u20131. Only used when imagePath is set.",
+          minimum: 0,
+          maximum: 1
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the image (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the image (default: mlx_image_<timestamp>.png)"
+        }
+      },
+      required: ["prompt"]
+    }
+  },
+  {
+    name: "mlx_image_edit",
+    title: "Image edit (local \xB7 MLX Core)",
+    annotations: HINT.generateLocal,
+    description: `Edit an existing image on this machine via MLX Core / mlx-serve. Posts JSON to /v1/images/generations with mode:"edit" (not multipart /v1/images/edits). No vendor bill. This plugin never launches the app.
+
+Use when you have a source PNG to change and MLX Core is running with an image-edit model. Up to ${MAX_MLX_IMAGE_REFS} extra reference images (refImagePaths). image_local_generate (Z-Image) has no edit lane, so this is the local alternative to gpt_image_img2img.
+Do NOT use for text-to-image from scratch \u2014 use mlx_image_generate or image_local_generate. Do NOT use when the result must contain legible Korean text \u2014 that stays gpt_image_img2img / gpt_image_text2img. Do NOT treat this as the default image path.
+Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve on PATH (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
+
+Returns: a text block with the saved .png path, model, and generation time.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "Edit instruction (max 32,000 characters)",
+          maxLength: 32e3
+        },
+        imagePath: {
+          type: "string",
+          description: "Absolute path to the source image to edit. Required."
+        },
+        refImagePaths: {
+          type: "array",
+          items: { type: "string" },
+          description: `Optional extra reference images (max ${MAX_MLX_IMAGE_REFS}). Absolute paths.`,
+          maxItems: MAX_MLX_IMAGE_REFS
+        },
+        model: {
+          type: "string",
+          description: "mlx-serve model id. Omit to pick a ready image model."
+        },
+        width: {
+          type: "number",
+          description: `Output width. ${MIN_MLX_IMAGE_DIMENSION}\u2013${MAX_MLX_IMAGE_DIMENSION}, multiple of ${MLX_IMAGE_DIMENSION_STEP}. Omit to keep the source size.`,
+          minimum: MIN_MLX_IMAGE_DIMENSION,
+          maximum: MAX_MLX_IMAGE_DIMENSION
+        },
+        height: {
+          type: "number",
+          description: "Output height. Same constraints as width. Send both width and height, or neither.",
+          minimum: MIN_MLX_IMAGE_DIMENSION,
+          maximum: MAX_MLX_IMAGE_DIMENSION
+        },
+        steps: {
+          type: "number",
+          description: "Diffusion steps 1\u201350. Omit for the model default.",
+          minimum: 1,
+          maximum: 50
+        },
+        seed: {
+          type: "number",
+          description: "Random seed. Omit for a random seed.",
+          minimum: 0
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the image (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the image (default: mlx_edit_<timestamp>.png)"
+        }
+      },
+      required: ["prompt", "imagePath"]
+    }
+  },
   // ── Video generation (Google Veo 3.1 — ported from the fect-mcp video module) ──────────
   {
     name: "veo_text2video",
@@ -79195,6 +80061,124 @@ Returns: a text block with the saved .mp4 file path, reference image and audio l
       required: ["prompt"]
     }
   },
+  {
+    name: "mlx_video_generate",
+    title: "Video generation (local \xB7 MLX Core)",
+    annotations: HINT.generateLocal,
+    description: `Generate a video on this machine via MLX Core / mlx-serve. The server returns raw rgb8 frames (plus optional PCM), which this tool muxes to mp4 with ffmpeg (libx264 yuv420p). No vendor bill. This plugin never launches the app.
+
+Use as an optional local clip when MLX Core is running with a video model (LTX-2). Default canvas is ${DEFAULT_MLX_VIDEO_WIDTH}\xD7${DEFAULT_MLX_VIDEO_HEIGHT} at ${DEFAULT_MLX_VIDEO_FRAMES} frames / ${MLX_VIDEO_FPS} fps (~2s). Width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP} (two-stage LTX grid) \u2014 1080 is not on that grid; use 1088\xD71920 or the default. Decoded RGB is capped at ${Math.round(MAX_VIDEO_RGB_BYTES / (1024 * 1024))}MB \u2014 1088\xD71920 at 8s/24fps is ~1.2GB and is refused. lastFrameImagePath needs at least ${MIN_MLX_VIDEO_FRAMES} frames.
+Do NOT use this as the default generated-video path \u2014 that stays veo_* / seedance_* per video-model-selection.md. Do NOT put this tool on the Veo/Seedance face-policy table; it is a separate local engine. Output is ${MLX_VIDEO_FPS} fps; produce's builder is 30 fps, so a splice re-encodes. ffmpeg must be on PATH. Shares the GPU with Z-Image and the chat model \u2014 LTX wants 24GB+ on its own.
+Requires Apple Silicon, macOS 26.2+, MLX Core.app or mlx-serve (or MLX_SERVE_URL), and ffmpeg. brew install --cask mlx-core if :11234 is down.
+
+Returns: a text block with the saved .mp4 path, model, size, frame count, fps, and whether audio was muxed.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "Motion prompt (max 32,000 characters). English. Describe motion, not a still.",
+          maxLength: 32e3
+        },
+        model: {
+          type: "string",
+          description: 'mlx-serve model id. Omit to pick a ready model that advertises capability "video".'
+        },
+        width: {
+          type: "number",
+          description: `Width (default: ${DEFAULT_MLX_VIDEO_WIDTH}). ${MIN_MLX_VIDEO_DIMENSION}\u2013${MAX_MLX_VIDEO_DIMENSION}, multiple of ${MLX_VIDEO_DIMENSION_STEP}. 1080 is not on the grid.`,
+          minimum: MIN_MLX_VIDEO_DIMENSION,
+          maximum: MAX_MLX_VIDEO_DIMENSION,
+          default: DEFAULT_MLX_VIDEO_WIDTH
+        },
+        height: {
+          type: "number",
+          description: `Height (default: ${DEFAULT_MLX_VIDEO_HEIGHT}). Same constraints as width.`,
+          minimum: MIN_MLX_VIDEO_DIMENSION,
+          maximum: MAX_MLX_VIDEO_DIMENSION,
+          default: DEFAULT_MLX_VIDEO_HEIGHT
+        },
+        numFrames: {
+          type: "number",
+          description: `Frame count (default: ${DEFAULT_MLX_VIDEO_FRAMES}). ${MIN_MLX_VIDEO_FRAMES}\u2013${MAX_MLX_VIDEO_FRAMES} at ${MLX_VIDEO_FPS} fps. last_frame interpolation needs at least ${MIN_MLX_VIDEO_FRAMES}.`,
+          minimum: MIN_MLX_VIDEO_FRAMES,
+          maximum: MAX_MLX_VIDEO_FRAMES,
+          default: DEFAULT_MLX_VIDEO_FRAMES
+        },
+        steps: {
+          type: "number",
+          description: "Diffusion steps 1\u201350. Omit for the model default.",
+          minimum: 1,
+          maximum: 50
+        },
+        seed: {
+          type: "number",
+          description: "Random seed. Omit for a random seed.",
+          minimum: 0
+        },
+        firstFrameImagePath: {
+          type: "string",
+          description: "Optional first-frame still (absolute path, sent as base64)."
+        },
+        lastFrameImagePath: {
+          type: "string",
+          description: `Optional last-frame still. Requires numFrames \u2265 ${MIN_MLX_VIDEO_FRAMES}.`
+        },
+        pipeline: {
+          type: "string",
+          description: "LTX pipeline. two_stage is the usual quality setting.",
+          enum: ["one_stage", "two_stage"]
+        },
+        decoder: {
+          type: "string",
+          description: "LTX decoder.",
+          enum: ["conv", "diffusion"]
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the video (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the video (default: mlx_video_<timestamp>.mp4)"
+        }
+      },
+      required: ["prompt"]
+    }
+  },
+  {
+    name: "mlx_3d_generate",
+    title: "3D mesh generation (local \xB7 MLX Core)",
+    annotations: HINT.generateLocal,
+    description: `Generate a GLB mesh from an image on this machine via MLX Core / mlx-serve POST /v1/3d/generations. No vendor bill. This plugin never launches the app.
+
+Use only when the user explicitly wants a 3D mesh (GLB). The rest of this pipeline has no GLB consumer \u2014 produce, storyboard, and autoproduce never call this. Allowed extension is .glb only.
+Do NOT call this to make a video frame, a cover, or a motion slide. If :11234 is down the call fails closed with brew install --cask mlx-core.
+
+Returns: a text block with the saved .glb path and model.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        imagePath: {
+          type: "string",
+          description: "Absolute path to the source image. Required."
+        },
+        model: {
+          type: "string",
+          description: 'mlx-serve model id. Omit to pick a ready model that advertises capability "3d".'
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the mesh (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the mesh (default: mlx_3d_<timestamp>.glb). Extension must be .glb."
+        }
+      },
+      required: ["imagePath"]
+    }
+  },
   // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
   {
     name: "tts_generate",
@@ -79346,6 +80330,49 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
         }
       },
       required: ["text"]
+    }
+  },
+  {
+    name: "mlx_tts_generate",
+    title: "Speech synthesis (local \xB7 MLX Core)",
+    annotations: HINT.generateLocal,
+    description: `Convert text to speech on this machine via MLX Core / mlx-serve POST /v1/audio/speech. Returns raw WAV bytes (this tool does not decode the body as text). No vendor bill. This plugin never launches the app.
+
+Use as an optional local voice when MLX Core is running with an audio model. The OpenAI-compatible field is input (not text). Optional voice name or refAudioPath for a reference clip. Max ${MAX_MLX_TTS_CHARS} characters.
+Do NOT use this as a silent fallback for the channel profile \xA72 engine \u2014 if Supertonic, Gemini, or ElevenLabs is pinned, a missing runtime stops the run and asks the user. Mixing sample rates with tts_local_generate (44.1kHz) or tts_generate (24kHz) on one timeline needs a resample. Do NOT treat this as the default narration path.
+Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
+
+Returns: a text block with the saved .wav path, model, and generation time.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        input: {
+          type: "string",
+          description: `Text to speak (max ${MAX_MLX_TTS_CHARS} characters). OpenAI-compatible name: input, not text.`,
+          maxLength: MAX_MLX_TTS_CHARS
+        },
+        model: {
+          type: "string",
+          description: 'mlx-serve model id. Omit to pick a ready model that advertises capability "audio".'
+        },
+        voice: {
+          type: "string",
+          description: "Optional voice name the loaded model advertises. Omit for the model default."
+        },
+        refAudioPath: {
+          type: "string",
+          description: "Optional reference clip (absolute path, sent as base64) for voice cloning on models that support it."
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the audio (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the audio (default: mlx_tts_<timestamp>.wav)"
+        }
+      },
+      required: ["input"]
     }
   },
   {
@@ -79770,15 +80797,76 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
     }
   },
   {
+    name: "mlx_music_generate",
+    title: "Music generation (local \xB7 MLX Core)",
+    annotations: HINT.generateLocal,
+    description: `Generate music on this machine via MLX Core / mlx-serve POST /v1/audio/music-generations. Returns raw WAV. No vendor bill. This plugin never launches the app.
+
+Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (${MIN_MLX_MUSIC_SECONDS}\u2013${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics \u2014 mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
+Do NOT use as the default BGM path \u2014 that stays music_generate_clip (Lyria, GEMINI_API_KEY). Autoproduce unattended still takes the Lyria clip. Vocals fight voiceover; keep instrumental true under narration.
+Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
+
+Returns: a text block with the saved .wav path, model, duration, and generation time.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "Music prompt (max 4,000 characters). Describe genre, instruments, mood. For a bed under narration, ask for space in the vocal frequency range.",
+          maxLength: 4e3
+        },
+        model: {
+          type: "string",
+          description: 'mlx-serve model id. Omit to pick a ready model that advertises capability "music".'
+        },
+        lyrics: {
+          type: "string",
+          description: "Optional lyrics. Do not send these when instrumental is true \u2014 that is a 400.",
+          maxLength: 8e3
+        },
+        instrumental: {
+          type: "boolean",
+          description: "Instrumental bed (default: true). Set false to sing lyrics.",
+          default: true
+        },
+        durationSeconds: {
+          type: "number",
+          description: `Length in seconds (default: ${DEFAULT_MLX_MUSIC_SECONDS}, ${MIN_MLX_MUSIC_SECONDS}\u2013${MAX_MLX_MUSIC_SECONDS}).`,
+          minimum: MIN_MLX_MUSIC_SECONDS,
+          maximum: MAX_MLX_MUSIC_SECONDS,
+          default: DEFAULT_MLX_MUSIC_SECONDS
+        },
+        seed: {
+          type: "number",
+          description: "Random seed. Omit for a random seed.",
+          minimum: 0
+        },
+        refAudioPath: {
+          type: "string",
+          description: "Optional reference clip (absolute path, sent as base64)."
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the audio (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the audio (default: mlx_music_<timestamp>.wav)"
+        }
+      },
+      required: ["prompt"]
+    }
+  },
+  {
     name: "capability_status",
     title: "What this machine can do right now",
     annotations: HINT.local,
     description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest.
 
 Use it BEFORE planning anything that spends money or depends on a provider \u2014 the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
-Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability \u2014 a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves. Read-only; makes no API call, so one call per session is enough.
+Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability \u2014 a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves (mflux, python3, mlx-qwen3-asr) or whether MLX Core.app / mlx-serve is installed \u2014 not whether :11234 is up. Read-only; makes no API call, so one call per session is enough.
 
-Returns: a capability menu \u2014 video_generation, image_generation, tts, music_generation, speech_to_text, research \u2014 each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
+Returns: a capability menu \u2014 video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, research \u2014 each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
     inputSchema: {
       type: "object",
       properties: {},
@@ -80499,43 +81587,9 @@ var SNS_PLATFORM_BY_TOOL = {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync5 } from "node:fs";
-import { tmpdir } from "node:os";
-import { join as join6 } from "node:path";
-
-// src/http.ts
-async function requestRaw(method, url, headers, body, timeoutMs) {
-  const effectiveTimeoutMs = timeoutMs ?? config2.requestTimeoutMs;
-  try {
-    const res = await fetch(url, {
-      method: method.toUpperCase(),
-      headers: {
-        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
-        ...headers
-      },
-      body: body !== void 0 ? JSON.stringify(body) : void 0,
-      signal: AbortSignal.timeout(effectiveTimeoutMs)
-    });
-    const text2 = await res.text();
-    return { ok: res.ok, status: res.status, body: text2 };
-  } catch (error2) {
-    if (error2 instanceof Error && error2.name === "TimeoutError") {
-      return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
-    }
-    const message = error2 instanceof Error ? error2.message : String(error2);
-    return { ok: false, status: 502, body: `Upstream unreachable (${url}): ${message}` };
-  }
-}
-function buildQuery(params) {
-  const sp = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== void 0 && value !== "") sp.set(key, String(value));
-  }
-  const qs = sp.toString();
-  return qs ? `?${qs}` : "";
-}
-
-// src/datago-client.ts
+import { existsSync as existsSync6 } from "node:fs";
+import { tmpdir as tmpdir2 } from "node:os";
+import { join as join7 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
 var OPENAPI_BASE = "https://apis.data.go.kr";
@@ -80774,14 +81828,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join6(tmpdir(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join7(tmpdir2(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join6(saveDir, filename);
-  for (let i2 = 1; existsSync5(savedPath); i2++) {
+  let savedPath = join7(saveDir, filename);
+  for (let i2 = 1; existsSync6(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join6(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join7(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview = decodePreview(buf.subarray(0, 4096));
@@ -81788,22 +82842,22 @@ async function fetchGoogleOrganic(input) {
 // src/sns-client.ts
 import { createHash, randomUUID } from "node:crypto";
 import {
-  existsSync as existsSync6,
+  existsSync as existsSync7,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename6, dirname as dirname3, extname as extname6, join as join7 } from "node:path";
+import { basename as basename6, dirname as dirname3, extname as extname6, join as join8 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync6(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync7(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync6(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync7(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -82487,7 +83541,7 @@ function parseResumeOffset(range) {
 }
 function sessionStateFile(filePath) {
   const key = createHash("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join7(snsTokenDir, ".yt-upload", `${key}.json`);
+  return join8(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
   try {
@@ -83982,8 +85036,8 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync5 } from "node:fs";
-import { dirname as dirname4, isAbsolute, join as join8, resolve as resolve2 } from "node:path";
+import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync6 } from "node:fs";
+import { dirname as dirname4, isAbsolute, join as join9, resolve as resolve2 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -84547,7 +85601,7 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join8(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join9(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
@@ -84594,7 +85648,7 @@ async function contentFeedback(input) {
   };
   if (htmlPath) {
     mkdirSync3(dirname4(htmlPath), { recursive: true });
-    writeFileSync5(htmlPath, renderFeedbackHtml(report), "utf8");
+    writeFileSync6(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -85636,19 +86690,20 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync8 } from "node:fs";
+import { existsSync as existsSync9 } from "node:fs";
 import path7 from "node:path";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path7.sep)) return existsSync8(p);
-    return (process.env.PATH || "").split(path7.delimiter).some((dir) => dir && existsSync8(path7.join(dir, p)));
+    if (p.includes(path7.sep)) return existsSync9(p);
+    return (process.env.PATH || "").split(path7.delimiter).some((dir) => dir && existsSync9(path7.join(dir, p)));
   } catch {
     return false;
   }
 };
 function capabilityStatus() {
   const gemini = has2(config2.geminiApiKey);
+  const mlx = mlxServeConfigured();
   const capabilities = [
     {
       capability: "video_generation",
@@ -85664,6 +86719,12 @@ function capabilityStatus() {
           configured: has2(config2.arkApiKey),
           needs: "ARK_API_KEY",
           note: "seedance_text2video \xB7 seedance_img2video \xB7 seedance_reference"
+        },
+        {
+          provider: "mlx-serve (local, MLX Core)",
+          configured: mlx,
+          needs: "MLX Core.app or mlx-serve on PATH",
+          note: "mlx_video_generate \u2014 24fps rgb8 muxed to mp4, RAM-capped; not the default path"
         }
       ]
     },
@@ -85681,6 +86742,12 @@ function capabilityStatus() {
           configured: has2(config2.openaiApiKey),
           needs: "OPENAI_API_KEY",
           note: "gpt_image_text2img \xB7 gpt_image_img2img \u2014 the only lane that renders Korean text"
+        },
+        {
+          provider: "mlx-serve (local, MLX Core)",
+          configured: mlx,
+          needs: "MLX Core.app or mlx-serve on PATH",
+          note: "mlx_image_generate \xB7 mlx_image_edit \u2014 optional local lane, not the default"
         }
       ]
     },
@@ -85704,6 +86771,12 @@ function capabilityStatus() {
           configured: has2(config2.elevenLabsApiKey),
           needs: "ELEVENLABS_API_KEY",
           note: "tts_elevenlabs_generate \xB7 tts_elevenlabs_dialogue"
+        },
+        {
+          provider: "mlx-serve (local, MLX Core)",
+          configured: mlx,
+          needs: "MLX Core.app or mlx-serve on PATH",
+          note: "mlx_tts_generate \u2014 optional; never a silent fallback for profile \xA72"
         }
       ]
     },
@@ -85721,6 +86794,23 @@ function capabilityStatus() {
           configured: has2(config2.sunoApiKey),
           needs: "SUNO_API_KEY",
           note: "suno_generate \u2014 third-party wrapper, not an official Suno API"
+        },
+        {
+          provider: "mlx-serve (local, MLX Core)",
+          configured: mlx,
+          needs: "MLX Core.app or mlx-serve on PATH",
+          note: "mlx_music_generate \u2014 optional local bed; default BGM stays Lyria"
+        }
+      ]
+    },
+    {
+      capability: "3d_generation",
+      providers: [
+        {
+          provider: "mlx-serve (local, MLX Core)",
+          configured: mlx,
+          needs: "MLX Core.app or mlx-serve on PATH",
+          note: "mlx_3d_generate \u2014 writes GLB; this pipeline has no mesh consumer"
         }
       ]
     },
@@ -85874,9 +86964,16 @@ function parseArgs(schema, args) {
   return parsed.data;
 }
 function knownKeys(schema) {
-  const def = schema._def;
-  if (def?.typeName !== "ZodObject" || typeof def.shape !== "function") return void 0;
-  return new Set(Object.keys(def.shape()));
+  let current = schema;
+  for (let i2 = 0; i2 < 4; i2++) {
+    const def = current._def;
+    if (!def) return void 0;
+    if (def.typeName === "ZodObject" && typeof def.shape === "function") {
+      return new Set(Object.keys(def.shape()));
+    }
+    current = def.schema ?? def.innerType;
+  }
+  return void 0;
 }
 var searchQuery = external_exports.string().min(1).max(300);
 var searchPage = external_exports.number().int().min(1).max(5).optional();
@@ -86307,6 +87404,101 @@ Steps: ${result.steps}
 Seed: ${result.seed ?? "random"}
 Quantization: ${result.quantize}-bit
 Generation time: ${result.elapsedSeconds}s`
+    );
+  },
+  mlx_image_generate: async (args) => {
+    const request = parseArgs(mlxImageGenerateSchema, args);
+    const result = await generateMlxImage(request);
+    if (!result.success) return text(`MLX Core image generation failed:
+${result.error}`, true);
+    return text(
+      `Image generated via MLX Core.
+
+File: ${result.path}
+Model: ${result.model}
+Size: ${result.width}x${result.height}
+Steps: ${result.steps ?? "model default"}
+Seed: ${result.seed ?? "random"}
+Generation time: ${result.elapsedSeconds}s`
+    );
+  },
+  mlx_image_edit: async (args) => {
+    const request = parseArgs(mlxImageEditSchema, args);
+    const result = await editMlxImage(request);
+    if (!result.success) return text(`MLX Core image edit failed:
+${result.error}`, true);
+    return text(
+      `Image edited via MLX Core.
+
+File: ${result.path}
+Model: ${result.model}
+` + (result.width && result.height ? `Size: ${result.width}x${result.height}
+` : "") + `Steps: ${result.steps ?? "model default"}
+Seed: ${result.seed ?? "random"}
+Generation time: ${result.elapsedSeconds}s`
+    );
+  },
+  mlx_tts_generate: async (args) => {
+    const request = parseArgs(mlxTtsGenerateSchema, args);
+    const result = await generateMlxTts(request);
+    if (!result.success) return text(`MLX Core TTS failed:
+${result.error}`, true);
+    return text(
+      `Audio generated via MLX Core.
+
+File: ${result.path}
+Model: ${result.model}
+Synthesis time: ${result.elapsedSeconds}s
+Text length: ${request.input.length} chars`
+    );
+  },
+  mlx_music_generate: async (args) => {
+    const request = parseArgs(mlxMusicGenerateSchema, args);
+    const result = await generateMlxMusic(request);
+    if (!result.success) return text(`MLX Core music generation failed:
+${result.error}`, true);
+    return text(
+      `Music generated via MLX Core.
+
+File: ${result.path}
+Model: ${result.model}
+Duration: ${result.durationSeconds} seconds
+Instrumental: ${request.instrumental}
+Generation time: ${result.elapsedSeconds}s`
+    );
+  },
+  mlx_video_generate: async (args) => {
+    const request = parseArgs(mlxVideoGenerateSchema, args);
+    const result = await generateMlxVideo(request);
+    if (!result.success) return text(`MLX Core video generation failed:
+${result.error}`, true);
+    return text(
+      `Video generated via MLX Core.
+
+File: ${result.path}
+Model: ${result.model}
+Size: ${result.width}x${result.height}
+Frames: ${result.frames} @ ${result.fps} fps
+Duration: ${result.durationSeconds?.toFixed(2)} seconds
+Audio: ${result.hasAudio ? "muxed PCM" : "none"}
+Generation time: ${result.elapsedSeconds}s
+
+Output is ${MLX_VIDEO_FPS} fps; produce's builder is 30 fps, so a splice re-encodes.`
+    );
+  },
+  mlx_3d_generate: async (args) => {
+    const request = parseArgs(mlx3dGenerateSchema, args);
+    const result = await generateMlx3d(request);
+    if (!result.success) return text(`MLX Core 3D generation failed:
+${result.error}`, true);
+    return text(
+      `Mesh generated via MLX Core.
+
+File: ${result.path}
+Model: ${result.model}
+Generation time: ${result.elapsedSeconds}s
+
+GLB. This pipeline has no mesh consumer \u2014 produce/storyboard/autoproduce never read this file.`
     );
   },
   // ── video generation (Veo 3.1) — saves the mp4 locally, returns path + meta text ──
@@ -86844,7 +88036,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 };
 
 // src/usage-ledger.ts
-import { appendFileSync, existsSync as existsSync9, mkdirSync as mkdirSync4 } from "node:fs";
+import { appendFileSync, existsSync as existsSync10, mkdirSync as mkdirSync4 } from "node:fs";
 import path8 from "node:path";
 var EPISODE_MARKER = path8.join("storyboard", "scenes.js");
 var MAX_WALK_UP = 6;
@@ -86865,7 +88057,7 @@ function findEpisodeDir(outputPath) {
   }
   for (let i2 = 0; i2 <= MAX_WALK_UP; i2++) {
     try {
-      if (existsSync9(path8.join(dir, EPISODE_MARKER))) return dir;
+      if (existsSync10(path8.join(dir, EPISODE_MARKER))) return dir;
     } catch {
       return null;
     }
@@ -86965,8 +88157,14 @@ function priceOf(tool, args) {
   if (tool === "image_local_generate") {
     return { key: "image.local", quantity: num3(args.n, 1) };
   }
+  if (tool === "mlx_image_generate" || tool === "mlx_image_edit") {
+    return { key: "image.mlx", quantity: 1 };
+  }
   if (tool === "tts_local_generate") {
     return { key: "tts.local", quantity: charUnits(args) };
+  }
+  if (tool === "mlx_tts_generate") {
+    return { key: "tts.mlx", quantity: charUnits(args) };
   }
   if (tool === "tts_generate" || tool === "tts_multi_speaker") {
     const model = str6(args.model, "gemini-2.5-flash-preview-tts");
@@ -86992,10 +88190,21 @@ function priceOf(tool, args) {
   if (tool === "suno_generate") return { key: "music.suno-generate", quantity: 1 };
   if (tool === "suno_generate_sound") return { key: "music.suno-sound", quantity: 1 };
   if (tool === "suno_generate_lyrics") return { key: "music.suno-lyrics", quantity: 1 };
+  if (tool === "mlx_music_generate") {
+    return { key: "music.mlx", quantity: num3(args.durationSeconds, DEFAULT_MLX_MUSIC_SECONDS) };
+  }
+  if (tool === "mlx_video_generate") {
+    const frames = num3(args.numFrames, DEFAULT_MLX_VIDEO_FRAMES);
+    return { key: "video.mlx", quantity: Math.round(frames / MLX_VIDEO_FPS * 1e3) / 1e3 };
+  }
+  if (tool === "mlx_3d_generate") {
+    return { key: "3d.mlx", quantity: 1 };
+  }
   return { key: null, quantity: null };
 }
 function rawChars(args) {
   if (typeof args.text === "string") return args.text.length;
+  if (typeof args.input === "string") return args.input.length;
   if (typeof args.script === "string") return args.script.length;
   if (Array.isArray(args.inputs)) {
     return args.inputs.reduce(
@@ -87009,7 +88218,7 @@ function charUnits(args) {
   return Math.round(rawChars(args) / 1e3 * 1e3) / 1e3;
 }
 function isBillableTool(tool) {
-  return tool.startsWith("veo_") || tool.startsWith("seedance_") || tool.startsWith("gpt_image_") || tool.startsWith("tts_") || tool.startsWith("music_") || tool.startsWith("suno_generate") || tool === "image_local_generate";
+  return tool.startsWith("veo_") || tool.startsWith("seedance_") || tool.startsWith("gpt_image_") || tool.startsWith("tts_") || tool.startsWith("music_") || tool.startsWith("suno_generate") || tool.startsWith("mlx_") || tool === "image_local_generate";
 }
 
 // src/index.ts
@@ -87105,7 +88314,7 @@ async function main() {
     console.error(`[social-flow] ${warning}`);
   }
   console.error(
-    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, suno key ${config2.sunoApiKey ? "set" : "MISSING (suno_* will fail \u2014 music_*(Lyria) does not need it)"}, elevenlabs key ${config2.elevenLabsApiKey ? "set" : "MISSING (tts_elevenlabs_* will fail \u2014 tts_generate/tts_local_generate do not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : "~/.local/bin/mlx-qwen3-asr (default \u2014 set QWEN3_ASR_BIN if elsewhere)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, ` + describeToolGate(toolNames, process.env, jsonPatterns)
+    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, suno key ${config2.sunoApiKey ? "set" : "MISSING (suno_* will fail \u2014 music_*(Lyria) does not need it)"}, elevenlabs key ${config2.elevenLabsApiKey ? "set" : "MISSING (tts_elevenlabs_* will fail \u2014 tts_generate/tts_local_generate do not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : "~/.local/bin/mlx-qwen3-asr (default \u2014 set QWEN3_ASR_BIN if elsewhere)"}, mlx-serve ${process.env.MLX_SERVE_URL ? process.env.MLX_SERVE_URL : "http://127.0.0.1:11234 (default \u2014 MLX Core.app / mlx-serve; this plugin never launches the app)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, ` + describeToolGate(toolNames, process.env, jsonPatterns)
   );
 }
 main().catch((error2) => {

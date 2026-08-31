@@ -23,7 +23,7 @@
  */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { config, mfluxZImageBin, qwen3AsrBin, snsTokenDir, supertonicPython } from './config.js';
+import { config, mfluxZImageBin, mlxServeConfigured, qwen3AsrBin, snsTokenDir, supertonicPython } from './config.js';
 import { enabledPlatforms } from './sns-client.js';
 const has = (v) => Boolean(v && v.length > 0);
 /**
@@ -44,6 +44,7 @@ const binOk = (p) => {
 };
 export function capabilityStatus() {
     const gemini = has(config.geminiApiKey);
+    const mlx = mlxServeConfigured();
     const capabilities = [
         {
             capability: 'video_generation',
@@ -52,6 +53,8 @@ export function capabilityStatus() {
                     note: 'veo_text2video · veo_img2video · veo_reference · veo_extension' },
                 { provider: 'seedance (BytePlus ModelArk)', configured: has(config.arkApiKey), needs: 'ARK_API_KEY',
                     note: 'seedance_text2video · seedance_img2video · seedance_reference' },
+                { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
+                    note: 'mlx_video_generate — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
             ],
         },
         {
@@ -61,6 +64,8 @@ export function capabilityStatus() {
                     note: 'image_local_generate — free, and the default for backgrounds with no text' },
                 { provider: 'gpt-image (OpenAI)', configured: has(config.openaiApiKey), needs: 'OPENAI_API_KEY',
                     note: 'gpt_image_text2img · gpt_image_img2img — the only lane that renders Korean text' },
+                { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
+                    note: 'mlx_image_generate · mlx_image_edit — optional local lane, not the default' },
             ],
         },
         {
@@ -73,6 +78,8 @@ export function capabilityStatus() {
                     note: 'tts_generate · tts_multi_speaker' },
                 { provider: 'elevenlabs', configured: has(config.elevenLabsApiKey), needs: 'ELEVENLABS_API_KEY',
                     note: 'tts_elevenlabs_generate · tts_elevenlabs_dialogue' },
+                { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
+                    note: 'mlx_tts_generate — optional; never a silent fallback for profile §2' },
             ],
         },
         {
@@ -82,6 +89,15 @@ export function capabilityStatus() {
                     note: 'music_generate · music_generate_clip' },
                 { provider: 'suno (sunoapi.org)', configured: has(config.sunoApiKey), needs: 'SUNO_API_KEY',
                     note: 'suno_generate — third-party wrapper, not an official Suno API' },
+                { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
+                    note: 'mlx_music_generate — optional local bed; default BGM stays Lyria' },
+            ],
+        },
+        {
+            capability: '3d_generation',
+            providers: [
+                { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
+                    note: 'mlx_3d_generate — writes GLB; this pipeline has no mesh consumer' },
             ],
         },
         {
