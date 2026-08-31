@@ -18,9 +18,9 @@
   <h1>Every API social-flow calls</h1>
   <p class="sub">A reference for the official contracts of the 13 external APIs the internal MCP server (<code>server/src</code>) actually calls. Each page puts <strong>what the official docs say</strong> next to <strong>what this repo's implementation actually does</strong>, so you can see where the two diverge. For images, voice, and transcription the default path is three on-device engines that never touch the network, and those have no external contract to call.</p>
   <div class="meta">
-    <span>As of <strong>2026-08-20</strong></span>
-    <span>Tools <strong>54</strong></span>
-    <span>External APIs <strong>13</strong> + local <strong>3</strong></span>
+    <span>As of <strong>2026-08-30</strong></span>
+    <span>Tools <strong>61</strong></span>
+    <span>External APIs <strong>13</strong> + local <strong>3</strong> + MLX Core</span>
     <span>MCP SDK <strong>1.30.0</strong></span>
   </div>
 </header>
@@ -90,8 +90,8 @@
     </a>
     <a class="card" href="../research/2026-08-12-local-image-generation/index.html">
       <h3>On-device engines — Z-Image · Supertonic · Qwen3-ASR (Korean)</h3>
-      <p>The three tools with no external contract. Z-Image Turbo runs on mflux/MLX — 1024² takes 149–210s at 9 steps, 1088×1920 takes 462s (measured on an M4 Max). Supertonic uses CPU only and emits 44.1kHz wav. Qwen3-ASR is the default Korean STT path. None of the three needs a key, billing, or the network.</p>
-      <div class="tools">image_local_generate · tts_local_generate · stt_local_transcribe</div>
+      <p>The three tools with no external contract, plus the six mlx_* tools that talk HTTP to MLX Core on loopback. Z-Image Turbo runs on mflux/MLX — 1024² takes 149–210s at 9 steps, 1088×1920 takes 462s (measured on an M4 Max). Supertonic uses CPU only and emits 44.1kHz wav. Qwen3-ASR is the default Korean STT path. mlx_* fail closed if :11234 is down; this plugin never launches the app. Defaults stay Z-Image · Supertonic · Lyria · Veo/Seedance.</p>
+      <div class="tools">image_local_generate · tts_local_generate · stt_local_transcribe · mlx_*</div>
     </a>
     <a class="card" href="serpapi.en.html">
       <h3>SerpApi</h3>
@@ -120,7 +120,7 @@
     </a>
     <a class="card" href="tool-audit.en.html">
       <h3>Tool quality audit report</h3>
-      <p>Scoring the 31 tools as they stood on 2026-07-29 against the contracts above and the best practices, with every defect found and how it was fixed. 23 tools have been added since, bringing the count to 54, and those 23 have not been audited.</p>
+      <p>Scoring the 31 tools as they stood on 2026-07-29 against the contracts above and the best practices, with every defect found and how it was fixed. 30 tools have been added since, bringing the count to 61, and those 30 have not been audited.</p>
       <div class="tools">audit · scores · fix log</div>
     </a>
   </div>
@@ -149,6 +149,8 @@
       <tr><td><code>MFLUX_ZIMAGE_BIN</code><br>(default: <code>mflux-generate-z-image-turbo</code> on PATH)</td><td><code>image_local_generate</code></td><td>This is an <strong>executable path</strong>, not a key. Installed in the standard location it needs no setting; if it can't be found the error tells you how to install it</td><td><code>uv tool install --python 3.12 mflux</code></td></tr>
       <tr><td><code>SUPERTONIC_PYTHON</code><br>(default <code>python3</code>)</td><td><code>tts_local_generate</code></td><td>Point it at your interpreter if you installed into a virtualenv. There is no venv auto-discovery — quietly picking up a different environment per repo and changing the voice is exactly the accident this avoids</td><td><code>pip install supertonic</code></td></tr>
       <tr><td><code>QWEN3_ASR_BIN</code><br>(default <code>~/.local/bin/mlx-qwen3-asr</code>)</td><td><code>stt_local_transcribe</code></td><td>This is an <strong>executable path</strong>, not a key. Installed in the standard location it needs no setting; if it can't be found the error tells you how to install it</td><td><code>uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"</code></td></tr>
+      <tr><td><code>MLX_SERVE_URL</code><br>(default <code>http://127.0.0.1:11234</code>)</td><td><code>mlx_*</code></td><td>Loopback mlx-serve. This plugin never launches the app; a down server fails closed. <code>brew install --cask mlx-core</code></td><td>MLX Core.app / <code>mlx-serve --serve</code></td></tr>
+      <tr><td><code>MLX_SERVE_API_KEY</code></td><td><code>mlx_*</code> on a non-loopback bind</td><td>Loopback needs no key unless the server was started with <code>--api-key-strict</code></td><td>—</td></tr>
       <tr><td><code>HF_HOME</code><br>(default <code>~/.cache/huggingface</code>)</td><td><code>image_local_generate</code></td><td>Where Z-Image weights are cached. The first call downloads 31GB, so move it if the disk is tight</td><td>—</td></tr>
     </tbody>
   </table>
@@ -161,7 +163,7 @@
 <section id="map">
   <h2>Tool ↔ API map</h2>
   <p>Badges: <span class="badge ro">read</span> no side effects · <span class="badge wr">write</span> creates a local file · <span class="badge de">public</span> takes effect publicly the moment it's called · <span class="badge key">key</span> needs a credential · <span class="badge free">no auth</span></p>
-  <p><strong>You won't always see all 54.</strong> The nine platform-bound tools (<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>) appear in <code>tools/list</code> only for platforms that have a credential file. That's evaluated when the list is requested, so adding a token makes them appear without restarting the server; with no tokens at all you see 41. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> sit outside the gate and stay listed without tokens — the YouTube scout needs <code>YOUTUBE_API_KEY</code> or channel OAuth at call time, the SNS scout needs <code>SERPAPI_API_KEY</code>, and feedback simply skips the sections it has no token for. <code>youtube_update</code> is likewise always listed and errors without a token. Hidden tools still have live handlers — call one directly and you get a missing-token error.</p>
+  <p><strong>You won't always see all 61.</strong> The nine platform-bound tools (<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>) appear in <code>tools/list</code> only for platforms that have a credential file. That's evaluated when the list is requested, so adding a token makes them appear without restarting the server; with no tokens at all you see 52. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> sit outside the gate and stay listed without tokens — the YouTube scout needs <code>YOUTUBE_API_KEY</code> or channel OAuth at call time, the SNS scout needs <code>SERPAPI_API_KEY</code>, and feedback simply skips the sections it has no token for. <code>youtube_update</code> is likewise always listed and errors without a token. Hidden tools still have live handlers — call one directly and you get a missing-token error.</p>
   <div class="table-scroll">
   <table>
     <thead><tr><th>Tool</th><th>Character</th><th>What it calls</th><th>Reference</th></tr></thead>
@@ -181,6 +183,8 @@
       <tr><td><code>gpt_image_text2img</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /v1/images/generations</code></td><td><a href="openai-images.en.html">OpenAI</a></td></tr>
       <tr><td><code>gpt_image_img2img</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /v1/images/edits</code></td><td><a href="openai-images.en.html">OpenAI</a></td></tr>
       <tr><td><code>image_local_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>none — local <code>mflux-generate-z-image-turbo</code> process</td><td><a href="../research/2026-08-12-local-image-generation/index.html">Local image research (Korean)</a></td></tr>
+      <tr><td><code>mlx_image_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>loopback <code>POST /v1/images/generations</code></td><td>MLX Core / mlx-serve</td></tr>
+      <tr><td><code>mlx_image_edit</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>same endpoint (<code>mode:edit</code>)</td><td>MLX Core / mlx-serve</td></tr>
       <tr><td><code>veo_text2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateVideos</code> + operation polling</td><td><a href="gemini-veo.en.html">Veo</a></td></tr>
       <tr><td><code>veo_img2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateVideos</code> (<code>image</code>/<code>lastFrame</code>)</td><td><a href="gemini-veo.en.html">Veo</a></td></tr>
       <tr><td><code>veo_extension</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateVideos</code> (<code>video</code>)</td><td><a href="gemini-veo.en.html">Veo</a></td></tr>
@@ -188,9 +192,12 @@
       <tr><td><code>seedance_text2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /contents/generations/tasks</code> + polling</td><td><a href="seedance.en.html">Seedance</a></td></tr>
       <tr><td><code>seedance_img2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td>same endpoint (<code>role: first_frame/last_frame</code>)</td><td><a href="seedance.en.html">Seedance</a></td></tr>
       <tr><td><code>seedance_reference</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td>same endpoint (<code>role: reference_image</code>)</td><td><a href="seedance.en.html">Seedance</a></td></tr>
+      <tr><td><code>mlx_video_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>loopback <code>POST /v1/video/generations</code> → ffmpeg mux</td><td>MLX Core / mlx-serve</td></tr>
+      <tr><td><code>mlx_3d_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>loopback <code>POST /v1/3d/generations</code> → GLB</td><td>MLX Core / mlx-serve</td></tr>
       <tr><td><code>tts_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateContent</code> (<code>AUDIO</code>)</td><td><a href="gemini-tts.en.html">TTS</a></td></tr>
       <tr><td><code>tts_multi_speaker</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateContent</code> (multiSpeaker)</td><td><a href="gemini-tts.en.html">TTS</a></td></tr>
       <tr><td><code>tts_local_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>none — local Supertonic 3 (python)</td><td><a href="../research/2026-08-11-local-tts-and-commercial-api/index.html">Local TTS research (Korean)</a></td></tr>
+      <tr><td><code>mlx_tts_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>loopback <code>POST /v1/audio/speech</code> (raw WAV)</td><td>MLX Core / mlx-serve</td></tr>
       <tr><td><code>stt_local_transcribe</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>none — local Qwen3-ASR (mlx-qwen3-asr)</td><td>—</td></tr>
       <tr><td><code>tts_list_voices</code></td><td><span class="badge ro">read</span></td><td>none — a constant built into the server</td><td><a href="gemini-tts.en.html">TTS</a></td></tr>
       <tr><td><code>tts_elevenlabs_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /v1/text-to-speech/{voice_id}</code> (<code>/with-timestamps</code>)</td><td><a href="elevenlabs-tts.en.html">ElevenLabs</a></td></tr>
@@ -199,6 +206,8 @@
       <tr><td><code>music_generate_clip</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>interactions.create</code> (<code>lyria-3-clip-preview</code>)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
       <tr><td><code>music_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
       <tr><td><code>music_generate_advanced</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
+      <tr><td><code>mlx_music_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>loopback <code>POST /v1/audio/music-generations</code></td><td>MLX Core / mlx-serve</td></tr>
+      <tr><td><code>capability_status</code></td><td><span class="badge ro">read</span> <span class="badge free">no auth</span></td><td>none — checks this machine's keys and executables</td><td>—</td></tr>
       <tr><td><code>music_list_options</code></td><td><span class="badge ro">read</span></td><td>none — a constant built into the server</td><td><a href="gemini-lyria.en.html">Lyria</a></td></tr>
       <tr><td><code>suno_generate</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /api/v1/generate</code> + poll</td><td><a href="suno.en.html">Suno</a></td></tr>
       <tr><td><code>suno_generate_sound</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /api/v1/generate/sounds</code> + poll</td><td><a href="suno.en.html">Suno</a></td></tr>

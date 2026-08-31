@@ -9,6 +9,12 @@ name: <channel display name>
 slug: <kebab-slug>
 status: active            # active | archived
 created: <YYYY-MM-DD>
+motion_min_true: off      # off | majority | 0.00~1.00
+motion_allowed_kinds: ai-video,recording,motion-slide
+motion_max_consecutive_stills: off
+motion_max_still_seconds: off
+motion_require_action: false
+generated_video_max: 2
 ---
 
 # <channel display name>
@@ -42,11 +48,10 @@ created: <YYYY-MM-DD>
     stability: `<0–1; on eleven_v3 one of 0.0 / 0.5 / 1.0>` · seed: `<optional integer — once set, never changes>` ·
     outputFormat stays `wav_24000` (the builder needs RIFF; mp3 is not narration input)
   - Target speaking rate: <characters/sec, default 4.5>
-- **Playback speed (the post-build speed pass)**: `<0.5~3.0, default 1.4>` — produce §7.5 speeds
-  the finished feature up by this factor (the outro stays at 1.0x). It **multiplies with the TTS
-  `speed` above**: synthesize at 1.20 and ship at 1.4 and the viewer hears roughly 1.68. Raise the
-  factor when the episode still drags, lower it when words start getting swallowed; `1.0` ships at
-  the recorded pace
+- **Playback speed (the post-build pace pass)**: `<0.5~3.0, default 1.0>` — produce §7.5 applies
+  this factor to the finished feature while the outro stays at 1.0x. It **multiplies with the TTS
+  `speed` above**, so choose it against the final subtitle timeline, not by habit. The pass blocks
+  delivery above 6.2 spoken characters/s overall or on a substantive cue
 - **Plain-language principle**: no unexplained jargon, no literal translationese, no
   over-compressed subjectless sentences. When a term is genuinely needed, lead with
   the plain word and put the term in parentheses on first appearance only. (Screen
@@ -54,6 +59,20 @@ created: <YYYY-MM-DD>
 - **Banned**: <expressions and subjects this channel doesn't touch>
 
 ## 3. Visual theme
+
+The frontmatter motion fields are a machine-checked channel contract. Leave
+`motion_min_true: off` when still-led episodes are allowed. A channel that promises moving
+scenes sets it to `majority` or a ratio, then narrows `motion_allowed_kinds` as needed:
+
+- `ai-video` — b-roll, motion backgrounds, and video clips
+- `recording` — filmed shots and screencast splices
+- `motion-slide` — authored slides with `slide.motion: true`
+
+`motion_require_action: true` also requires `visual.action` on every qualifying shot. Camera
+movement, Ken Burns, caption swaps, and still-image changes never count as true motion.
+`generated_video_max` overrides the format default only for this channel; the storyboard still
+shows the projected cost before approval. `motion_max_consecutive_stills` and
+`motion_max_still_seconds` stop long static runs even when the episode clears the ratio.
 
 The THEME contract of video-template.html — it goes into scenes.js as-is:
 

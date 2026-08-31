@@ -4,26 +4,28 @@ description: >
   Runs one topic all the way to shipped files with no human gate — the unattended twin of
   storyboard plus produce. Use when the user asks to "이 주제로 영상 하나 만들어", "주제만 주면 영상까지
   만들어줘", "자동으로 쇼츠 만들어", "make a short about X end to end", or when a growth loop needs to
-  refill its publish queue by itself. Researches with the search tools, authors scenes.js,
-  generates 9:16 backgrounds, synthesizes narration, and builds the video (clean master,
-  burned copy, subs.srt) plus the per-platform text under
-  data/[channel]/episodes/[topic]/output/ — on the cheapest model tier that works,
-  escalating only when measured metrics say the hook is failing. Eleven machine gates
-  replace the human approval: fact verification, style checker, six one-round
-  storyboard-reviewer reads, build report, content-reviewer copy at 95 or above with zero
-  P0, and a cost cap. The reads don't score-gate; an unresolved P0 stops the run. Boundary
-  — storyboard plans and stops, produce builds an approved episode, autoproduce does both
-  without stopping.
+  refill its publish queue by itself. Researches, scores 3 scenario candidates to 95 on
+  curiosity · fear · intrigue · comedy, authors scenes.js, generates 9:16 backgrounds,
+  synthesizes narration, and builds the video plus per-platform text under
+  data/[channel]/episodes/[topic]/output/. Machine gates replace human approval: facts, three
+  candidates looped to 95 with P0=0, style checker, six one-round board reads, build report,
+  content-reviewer copy at 95 with zero P0, and a cost cap. Board reads don't score-gate; an
+  unresolved P0 stops the run. Boundary — storyboard plans and stops, produce builds an approved
+  episode, autoproduce does both without stopping.
 argument-hint: "<channel> \"<topic>\" [unattended]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
-  "mcp__social-flow__serp_news_search",
+  "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search",
+  "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail",
+  "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch",
+  "mcp__social-flow__datago_api_call",
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img",
+  "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit",
   "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue",
-  "mcp__social-flow__tts_list_voices",
+  "mcp__social-flow__tts_list_voices", "mcp__social-flow__mlx_tts_generate",
   "mcp__social-flow__veo_img2video",
-  "mcp__social-flow__music_generate_clip"]
+  "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
 
 # From one topic to a finished video — unattended authoring
@@ -43,19 +45,21 @@ judges when no human is present** and **which model to use**.
 ## What stands in for the human gates
 
 The pipeline's safety used to hang on the double HITL gate (storyboard
-approval, publish approval). Unattended mode puts **eleven machine verdicts** in
-their place. If even one fails, the video still gets made but **does not enter
-the queue** (`queue_*: hold`) — meaning it won't publish until a human looks at it.
+approval, publish approval). Unattended mode puts **the machine verdicts** in
+their place (the slide verdict applies only when the episode has slide scenes). If even
+one fails, the video still gets made but **does not enter the queue** (`queue_*: hold`)
+— meaning it won't publish until a human looks at it.
 
-The six storyboard-reviewer reads run **once each, with no score to clear** (storyboard
-§4.5–§5.5). What stops the run here is a **P0 still standing after that one round's fixes**
-— on the unattended path nobody is going to look at a merely low score, and nobody is going
-to ignore a P0 either.
+The six board reads (storyboard §4.5–§5.5) run **once each, with no score to clear**.
+**Scenario is the exception:** three candidate pages loop to **≥95 · P0 = 0** before the
+pick (storyboard §2.2). What stops the run on a board read is a **P0 still standing after
+that one round's fixes**; what stops it on scenario is a topic with **no candidate at 95**.
 
 | What a human used to check | Unattended replacement | On failure |
 |---|---|---|
 | Are the facts right | Time-sensitive values cross-checked against 2 independent sources + **3 or more** verified facts | Topic discarded (§2) |
 | Does the copy read like a human wrote it | `check-style.py` exit ≤ 1 per surface (4 = not Korean, so unchecked — it needs a human, and unattended runs stop at it) | Fix and retry; abort after 2 failures (§4·§9) |
+| Is the story worth telling (both formats) | three candidates scored on curiosity · fear · intrigue · comedy → **≥95 · P0 = 0** | Topic dropped (§2.2) |
 | Is the storyboard copy approvable | storyboard-reviewer copy mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.5) |
 | Does every single scene do its job | storyboard-reviewer scene mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.6) |
 | Is the wording what a person would say | storyboard-reviewer vocabulary mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.7) |
@@ -107,6 +111,8 @@ without evidence, and the publish, queue, and QA harnesses all read these files.
 data/<channel>/episodes/<topic-slug>/
 ├── storyboard/
 │   ├── research.md      # sources, check dates, verification status — for automated authoring this is the only audit trail
+│   ├── candidates/      # d1.md · d2.md · d3.md — three scored scenarios (gate 6a)
+│   ├── scenario.md      # the winner, copied after the pick
 │   ├── scenes.js        # SoT
 │   ├── storyboard.md    # status, auto_produced, queue markers in the frontmatter
 │   ├── storyboard.html
@@ -247,36 +253,97 @@ Research per profile §5 policy. Tool order and quota thrift:
 episode**.
 
 Research is the step before any scene is written, and it follows the storyboard
-skill's §2 shape inside the quota: **write the question map first** (the 5–8
-questions the episode has to answer — the hook's promise, the result, every figure
-that will be on screen), search **per question from two directions** (two tools or
-types — `kin`·`news`·`blog` on naver_search, WebSearch, `datago` for
-government-origin figures; the two `serp_*` calls go to the freshness check on the
-most time-sensitive value), run **one counter-evidence search** on each key claim,
-and in `research.md` record [question map · claim · source link · date checked ·
-verification status · counter-evidence result] in the storyboard-template.md
-structure. Time-sensitive values (prices, tax rates, deadlines, effective dates)
-need 2 or more independent sources, and a question that ends unanswered is written
-off — it never becomes a claim or a caption.
+skill's §2 shape inside the quota — **two passes, a pick in between**:
 
-**Fewer than 3 verified facts: drop the topic and move to the next candidate.**
-This is where a human would stop and say "there's no video in this." Push on
-short of facts and what you end up with is an empty video that only looks the
-part. Two dropped candidates and the run gives up and reports.
+1. **First research (§2.1)** — write the direction-finding question map (3–5 rows:
+   what people ask, what's true, which explanations compete), search per question
+   from two directions (`kin`·`news`·`blog` on naver_search, WebSearch, `datago`
+   for government-origin figures), log **ten or more** searches, and write **three
+   directions** in `research.md` §Directions. Each row is a different episode this
+   topic could be (question · hook form · primary engine · hero · what the second
+   pass still owes), not three wordings of the same two lookups. Three different
+   primaries from `curiosity` · `fear` · `intrigue` · `comedy`.
+2. **Three candidates, then pick one (gate 6a / §2.2 below)** — don't start the
+   second pass before `Chosen:` is on the page.
+3. **Additional research (§2.3)** — rewrite the question map to the chosen
+   episode's 5–8 questions, write off the unchosen directions' questions, search
+   the remaining claims. The two `serp_*` calls go to the freshness check on the
+   most time-sensitive value. One counter-evidence search on each key claim. Record
+   [question map · directions + pick · claim · source link · date checked ·
+   verification status · counter-evidence result] in the storyboard-template.md
+   structure. Time-sensitive values (prices, tax rates, deadlines, effective dates)
+   need 2 or more independent sources, and a question that ends unanswered is
+   written off — it never becomes a claim or a caption.
 
-Before the first scene, run the exit check the storyboard skill runs — the agent that did the
-searching is the one writing the line that says the searching was enough:
+**Fewer than 3 verified facts after the first pass: drop the topic and move to
+the next candidate.** This is where a human would stop and say "there's no video
+in this." Push on short of facts and what you end up with is an empty video that
+only looks the part. Two dropped candidates and the run gives up and reports.
+
+Before offering the three directions, then again before the first scene, run the
+exit checks the storyboard skill runs — the agent that did the searching is the
+one writing the line that says the searching was enough:
 
 ```bash
 SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
-node $SB/check-research.js storyboard/        # exit 1 = the research does not close → drop the topic
+node $SB/check-research.js storyboard/ --direction   # exit 1 = not enough to pick → drop the topic
+node $SB/check-research.js storyboard/               # exit 1 = the research does not close → drop the topic
 ```
+
+### 2.2 Scenario candidates (gate 6a — storyboard-reviewer scenario mode)
+
+Both formats. After the three direction rows and `check-research.js --direction` exit 0,
+write three candidate pages and loop each to **≥95 · P0 = 0** on **curiosity · fear ·
+intrigue · comedy** before the pick — storyboard §2.2 and
+`../storyboard/references/scenario-stage.md`. A page that only explains, a chronological
+body, or a feel curve that never dips costs nothing to fix here and costs the whole
+board later. Three different primaries. Naming an engine is not enough — the beats have
+to run it.
+
+**Delegate each `candidates/d<n>.md` to the storyboard-reviewer agent (Agent) in
+"scenario mode"** and read the tail
+`STORYBOARD_REVIEW: mode=scenario score=NN p0=N primary=<engine> secondary=<engine|none>`.
+Pass the candidate path, `research.md`, `profile.md`, `scenario-craft.md`,
+`scenario-stage.md`, and the claimed primary.
+
+- **Apply the findings, P0 first**, then re-delegate that page (max 3 reads). Still short:
+  replace the candidate with a different primary or question (one replacement, 2 more
+  reads). Cap 5 reads per candidate, 15 per episode.
+- **Pick the highest at ≥95 with `p0 = 0`.** Unattended does not ask. Copy it to
+  `scenario.md`, write `Chosen: D#`, then §2.3.
+- **Zero candidates at the bar: drop the topic** — same counter as a facts-floor drop.
+  Write `storyboard.md` with `status: draft` · `queue_*: hold` and the last tails in the
+  body, then report. Nothing has been generated yet.
 
 ### 3. Authoring scenes.js
 
 `../storyboard/references/scenes-schema.md` is the contract's source of truth;
-design rules follow storyboard skill §4 as-is. The ones automated authoring
-breaks most often:
+design rules follow storyboard skill §4 as-is, including its two passes — the story
+layer first (`beat`·`shot.feel`·`shot.info`·`shot.infoType`·`narration`·`arc`·`hookType`/`hookForm`·`title`, checked
+with `check-scenes.js --draft`), the machine layer after §4.6's findings land.
+**Write `storyboard/scenario.md` at §2.2** (the scored winner — storyboard
+`../storyboard/references/scenario-stage.md`) and freeze it before the board. Both
+formats. If §2.3 extra research breaks a beat, loop that one page to 95 again (3-read
+cap, no replacement) before §4.
+The rules automated authoring breaks most often:
+
+- Write `window.COMPREHENSION` before the scenes: one governing question, one answer, one
+  takeaway, no cross-scene branch in a short informational episode, and every unfamiliar term
+  paired with its exact same-shot plain wording. A scene whose `shot.info` reaches neither the
+  answer nor the takeaway is removed.
+- A short informational episode plans 1–3 moving diagram slides with
+  `treatment:"editorial"`. Each carries a `role` (`evidence` · `relationship` · `mechanism` ·
+  `timeline` · `statistic` · `transition` · `verdict`) and one repeated episode-wide `motif`. A photo-backed
+  moving diagram uses `treatment:"photo-action"` and changes the photographed subject or
+  evidence itself; moving a rectangle, caption, glow, or whole photo does not qualify.
+- Classify each narrated beat before picking the image: ordered periods or dated events are
+  `shot.infoType:"timeline"`, measured counts·rates·shares·comparisons are `"statistic"`,
+  causes·mechanisms·state changes are `"principle"`, and the rest is `"other"`. The first three
+  use the mandatory moving editorial diagram and mapped role, with one allowed
+  `slide.motionBeats` primitive per narration group. They never fall back to a still or footage.
+  A principle frame sits ink actors (`slide.arts` · `h.fig`) and draws hairline relations
+  (`h.stem` · `h.bus` · `h.chamber` · `h.ring` · `h.press`). Named states may skip arts.
+  Shape primitives require arts, generated at §6.6.
 
 - Cover title **within 16 characters + topic word required**. All stimulus and
   no subject gets swiped past. Open the title with **a problem a stranger
@@ -287,42 +354,41 @@ breaks most often:
 - `tts` holds the Korean phonetic spelling ("4,700만"→"사천칠백만"), `sub` the
   original notation.
 - THEME copies profile §3's values verbatim.
-- Structure: 1 cover + 3–6 points/quote (4–7 shots); main body 35–75 seconds.
-- The opening leads with one of **fear, empathy, curiosity, or showing the
-  ending first** — exactly one per episode, always. Pick it before authoring
-  and record it on the cover shot as `hookType`
-  (`fear`·`empathy`·`curiosity`·`spoiler`). The cover title, segment ①, the
-  hooking beat, and the platform titles all carry that stimulus. Fear needs the
-  threat backed in research.md or cushioned with possibility phrasing, and the
-  body must answer it — in the unattended loop, unbacked fear is blocked by
-  copy-gate P0-4 (scenes-schema §the four opening strategies).
+- Structure: hook + drip (1–n) + spoken CTA (4–7 shots, typically 2–5 drips);
+  main body 35–75 seconds. The shared outro is not the spoken close.
+- The opening leads with one of **fear, empathy, or curiosity** — exactly one
+  per episode, always. Pick it before authoring and record it on the cover shot
+  as `hookType` (`fear`·`empathy`·`curiosity`). **Do not use `spoiler` on a
+  short.** The cover title, segment ①, and the platform titles all carry that
+  stimulus. Fear needs the threat backed in research.md or cushioned with
+  possibility phrasing, and the drip shots must answer it — in the unattended
+  loop, unbacked fear is blocked by copy-gate P0-4 (scenes-schema §the four
+  opening strategies).
 - Next to `hookType` write **`hookForm`** — the shape of the first line, one of
-  `paradox`·`gap`·`payoff`·`identify`·`number`·`secret` (scenes-schema §the six
-  hook forms) — and keep it: a gap the result never closes or a secret the body
-  never reveals is the early-exit trap the platform now punishes (user-relayed,
-  2026-08-23 — field-practice grade). The arc picks the form's lane — on a story
-  arc `payoff` and `number` close the loop at 0 s, so they take a written reason
-  on the cover or the reviewer hands back a correction directive. **The first
+  `paradox`·`gap`·`identify`·`number`·`secret` (scenes-schema §the six hook
+  forms). **Do not use `payoff` on a short.** Keep it: a gap the last drip never
+  closes or a secret the drips never reveal is the early-exit trap the platform
+  now punishes (user-relayed, 2026-08-23 — field-practice grade). **The first
   frame has no logo, no intro, no greeting** (big title, strong frame, movement
   in it), and **every narration sentence opens curiosity, moves the information
   forward, or puts evidence down — or it's cut** (copy-gate P0-11). Subtitles are
   written for muted viewing — one sentence, one subtitle, 4–7 words.
-- Playback order follows the cover's `arc` — **`answer-first`** (default):
-  cover → hooking → result → body; **`story`**: cover → hooking → body → turn →
-  result, the answer appearing for the first time in the result after the turn.
-  Material that is an unfinished sentence on its own (tried → failed → someone
-  saw it differently) is story material; anything else stays answer-first.
-  Write a `beat` on every shot (`hook`·`hooking`·`result`·`body`·`turn` (story
-  only)·`cta`). **The shot after the cover is the hooking beat — informational
-  episodes too** (it picks up what the cover threw, hangs it on the viewer as
-  the subject — the protagonist and their goal on a story arc — and doesn't
-  give the answer; the result or first body scene, the build on a story arc,
-  lands within 20 seconds of the cover — scenes-schema §hooking). On
-  answer-first (maker/tutorial episodes) the finished piece comes before the
-  method; on a story arc a payoff shown early closes the loop and is the
-  early-exit trap (scenes-schema §playback order).
+- **A short is always hook → drip (1–n) → cta.** Do not default to
+  `answer-first`. Write `beat:"hook"` on the cover, `beat:"drip"` on every
+  middle shot, `beat:"cta"` on the last narrated shot. n ≥ 1. Do not write
+  `hooking` · `result` · `body` · `turn`. The cover opens a gap and does not
+  speak `COMPREHENSION.answer`; each non-final drip pays one piece and opens
+  the next gap; the last drip is the first place the answer is complete; the
+  CTA is a spoken shot with one outward act (a comment question, a next-episode
+  promise, or a memory question). An outro asset is not the spoken close.
+  Draft the three §2.5 lines into the `scenes.js` header comment: the cover's
+  first sentence, the cta's last two lines, the sign of the feel curve.
+  **Long-form still follows the cover's `arc`** — `answer-first` (default):
+  cover → hooking → result → body; `story`: cover → hooking → body → turn →
+  result. Material that is an unfinished sentence on its own is story material
+  on long-form only (scenes-schema §playback order).
 - One entry is one shot. Write `scene`·`sceneSlug`·`shot.feel`·`shot.size`·
-  `shot.angle`·`shot.info`·`shot.space` and `visual.picture`·`visual.overlay` (source of
+  `shot.angle`·`shot.info`·`shot.infoType`·`shot.space` and `visual.picture`·`visual.overlay` (source of
   truth: scenes-schema §grammar units and production layers). **Feel first** —
   say what the audience should feel on the shot, then take the size and the angle
   (and the move and length on a generated shot) from the feel → technique table
@@ -387,14 +453,27 @@ lowest-scene score**, so it points at the thinnest scene. **One round.**
 
 - **Apply the findings, starting at `worst`**, then on to §4.7. Role-gap and
   duplication findings can't be fixed by polishing sentences — merge or drop
-  that scene and rebalance total length across the remaining scenes. If the
-  method sits ahead of the result on answer-first, don't touch the sentences —
-  move the result scene forward; on a story arc it is the reverse — a payoff
-  sitting ahead of the turn moves back behind it. Adding or dropping a scene
-  changes sentences §4.5 already read;
+  that scene and rebalance total length across the remaining scenes. If a short
+  is not hook → drip → cta, reorder the beats rather than rewriting sentences.
+  If the method sits ahead of the result on long-form answer-first, don't touch
+  the sentences — move the result scene forward; on a story arc it is the
+  reverse — a payoff sitting ahead of the turn moves back behind it. Adding or
+  dropping a scene changes sentences §4.5 already read;
   apply its rule (only subtract) as you rewrite instead of rerunning it.
 - **A P0 you could not resolve stops the run, as in §4.5** — this is still
   before money goes to images and TTS.
+
+**Fill the machine layer now, including `window.MOTION_POLICY`, then run the full contract
+before §4.7:**
+
+```bash
+SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+node $SB/check-scenes.js storyboard/          # exit 1 = authoring stops before generation
+```
+
+The profile's true-motion floor and still-run limits are hard gates here. Ken Burns, caption
+changes and still swaps do not count. Do not lower the copied policy or the channel profile to
+make an unattended episode pass.
 
 ### 4.7 Vocabulary review gate (gate 6c — storyboard-reviewer vocabulary mode)
 
@@ -594,6 +673,28 @@ the tail `STORYBOARD_REVIEW: mode=image score=NN p0=N`. Pass the full
   unresolved findings. An off-context cover becomes the thumbnail as-is, so a
   human has to see it.
 
+### 6.6 Authored motion-frame gate
+
+For every `visual.slide` scene, follow storyboard
+`references/slide-authoring.md` before narration:
+
+1. If `slide.arts` is set, generate each plate into `slides/assets/` first — flat ink
+   illustration of the actor, paper fill on ink, no background, no readable text, no
+   photorealism, local png. Log the call. Sit a principle actor with `h.fig`. Then author
+   the HTML from the matching template. A principle frame is a `.cast` of actors plus
+   hairlines (`h.stem` · `h.bus` · `h.chamber`). Editorial diagrams use the declared `role`
+   and `motif`; they compose the whole frame rather than placing callouts over an unchanged photo.
+2. Run `node $SB/check-slide.js storyboard/ --require-all`, render the sheet with
+   `render-motion-slide.mjs --sheet --png-only --keep-frames`, and stop on either failure.
+   For timeline, statistic, and principle scenes the render also matches every declared
+   `motionBeats` primitive with the same group's `data-primitive`; a label reveal cannot stand
+   in for the promised explanation.
+3. Delegate the slide file and every sheet frame to `slide-reviewer`. Apply its directives and
+   repeat up to three rounds. Only `score >= 95`, `p0=0`, `verdict=PASS` continues.
+
+This gate is mandatory in unattended mode. A failed slide is not replaced with a still and the
+motion policy is not lowered to get around it; abort before TTS and build.
+
 ### 7. Narration
 
 Exactly produce skill §5 — **1 call per scene**, engine and voice pinned to
@@ -641,12 +742,13 @@ lengths**. If they diverge, don't queue it.
 picks the spliced set on its own when a splice ran:
 
 ```bash
-$REF_P/speedup.sh .work        # 1.4x default; profile.md §2 overrides with its own factor
+$REF_P/speedup.sh .work        # 1.0x default; profile.md §2 may set another factor
 ```
 
 Unattended, the marker is the check: `build-report.txt` has to gain a
-`── speedup x…` line, and a non-zero exit aborts the episode — nothing enters
-the queue. §9 moves that pass's `-fast` set to output.
+`── speedup x…` line and a `PASS final speech rate` line. The pass blocks more than 6.2
+spoken characters/s after every TTS and speed choice has taken effect. A non-zero exit aborts
+the episode — nothing enters the queue. §9 moves that pass's `-fast` set to output.
 
 ### 9. Finalize output + platform text
 
@@ -737,6 +839,7 @@ authorization.
 ### Contracts reused from other skills
 
 - `../storyboard/references/scenes-schema.md` — the scenes.js data contract
+- `../storyboard/references/scenario-stage.md` — three candidates, viewer engines, 95-point loop
 - `../storyboard/references/storyboard-template.md` · `storyboard-html-template.html`
 - `../produce/references/pipeline.md` — build contract, report-gate verdict table, palindromes
 - `../produce/references/speedup.sh` — the required speed pass (produce §7.5)

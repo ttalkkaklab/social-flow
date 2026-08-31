@@ -132,8 +132,9 @@ into promoting that prompt to "always allow".
 
   Exit 1 here means the directory promised something it never delivered — a video with no
   per-platform text, a `queue_*: ready` marker with no video behind it, **an `output/` still
-  holding the un-sped build** (the speed pass in produce §7.5 is required; the check reads the
-  `── speedup x…` line in `output/video/build-report.txt`). Publishing is the irreversible step,
+  holding the pre-pass build** (the final pace pass in produce §7.5 is required; the check reads
+  both the `── speedup x…` and `PASS final speech rate` lines in
+  `output/video/build-report.txt`). Publishing is the irreversible step,
   so a blocker gets resolved or explained to the user before §1, never worked around.
 - Confirm the `output/` artifacts exist and that `storyboard.md` says
   `status: produced` — otherwise point them at `/social-flow:produce` first.

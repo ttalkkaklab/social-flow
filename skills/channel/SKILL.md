@@ -76,6 +76,12 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    the collected values. Leave no section empty — for unknown values, ask the user
    or use a well-grounded default and mark it `(default)`.
 
+   **Settle the motion contract as part of the visual theme** — whether the channel permits
+   still-led episodes, which true-motion kinds count, the longest permitted still run, whether
+   each moving shot needs a visible `action`, and the paid generated-video cap. Keep the
+   template's `off` defaults only when the channel made no motion promise. Ken Burns, caption
+   changes and swapping still images never count as true motion.
+
    **Channel copy (description·bio) is outgoing copy** — the setup skills upload
    this text as the platform bio verbatim. After writing it, run the style gate
    (check-style `--surface screen`), then delegate to the growth-post-reviewer

@@ -18,8 +18,8 @@
   <h1>Tool quality audit report</h1>
   <p class="sub">A record of scoring 31 tools against each API's official contract, the MCP 2025-06-18 spec, and tool-authoring best practices, then fixing what the scoring found. The rubric's source of truth is <a href="mcp-tools.en.html#rubric">MCP tool spec §6</a>.</p>
   <div class="meta">
-    <span>Scope <strong>31 tools · 5,700 lines</strong> (of today's 51)</span>
-    <span>Verification <strong>239 contract tests</strong> (573 today)</span>
+    <span>Scope <strong>31 tools · 5,700 lines</strong> (of today's 61)</span>
+    <span>Verification <strong>239 contract tests</strong> (722 today)</span>
     <span>Fixed <strong>2 P0 · 11 P1 · 9 P2</strong></span>
   </div>
 </header>
@@ -324,7 +324,7 @@
 <section id="since">
   <h2>8. Tools added after the audit (unaudited)</h2>
   <div class="warn">
-    <strong>The 96 above is a score for the 31 tools as they stood on 2026-07-29.</strong> <strong>16 have been added since, bringing the count to 51</strong>, and only 31 of those were ever scored — the 20 below never went through this audit. Rewriting the number as 47 would amount to claiming an audit that never ran, so 31 stays.
+    <strong>The 96 above is a score for the 31 tools as they stood on 2026-07-29.</strong> <strong>30 have been added since, bringing the count to 61</strong>, and only 31 of those were ever scored — the table below is those 30. Rewriting the number as 61 would amount to claiming an audit that never ran, so 31 stays.
   </div>
   <div class="table-scroll">
   <table>
@@ -343,14 +343,15 @@
       <tr><td><code>youtube_topic_scout</code></td><td>Collects channels in a niche and pulls topic phrases from videos at 5× their median</td><td>YouTube Data API search/channels/videos (<code>YOUTUBE_API_KEY</code> or OAuth)</td></tr>
       <tr><td><code>serp_trending_now</code></td><td>Google trending searches per country — approximate volume and growth, windows of 4·24·48·168 hours</td><td>SerpApi <code>google_trends_trending_now</code></td></tr>
       <tr><td><code>sns_issue_scout</code></td><td>Collects recent posts by <code>site:</code> search across Threads, X, and Instagram and counts topic phrases recurring across posts and platforms — a mention list with no engagement counts</td><td>SerpApi <code>google</code> + one trending call</td></tr>
+      <tr><td><code>mlx_image_generate</code> · <code>mlx_image_edit</code> · <code>mlx_tts_generate</code> · <code>mlx_music_generate</code> · <code>mlx_video_generate</code> · <code>mlx_3d_generate</code></td><td>MLX Core / mlx-serve on loopback HTTP. Not the default path. Fail closed if :11234 is down; this plugin never launches the app</td><td>local mlx-serve (http://127.0.0.1:11234)</td></tr>
     </tbody>
   </table>
   </div>
-  <p>The audit simply hasn't been rerun; this list is inside the same contract-test net — <code>npm run check</code> has grown from 239 tests to <strong>573</strong> (checked 2026-08-18). The next audit scores 51 tools.</p>
+  <p>The audit simply hasn't been rerun; this list is inside the same contract-test net — <code>npm run check</code> has grown from 239 tests to <strong>722</strong> (checked 2026-08-30). The next audit scores 61 tools.</p>
 </section>
 
 <footer>
-  Audited 2026-07-29 (first pass v0.4.0 · second pass v0.4.1) · tool list checked 2026-08-18 (v0.23.0 check · 31 of the current 51 audited) · rubric <a href="mcp-tools.en.html#rubric">MCP tool spec §6</a> · reproduce with <code>cd server &amp;&amp; npm run check</code>
+  Audited 2026-07-29 (first pass v0.4.0 · second pass v0.4.1) · tool list checked 2026-08-31 (v0.42.0 check · 31 of the current 61 audited) · rubric <a href="mcp-tools.en.html#rubric">MCP tool spec §6</a> · reproduce with <code>cd server &amp;&amp; npm run check</code>
 </footer>
 
 </div>

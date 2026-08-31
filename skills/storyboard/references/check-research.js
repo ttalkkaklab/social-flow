@@ -2,7 +2,8 @@
 /**
  * check-research.js — did the research actually close before the scenes opened?
  *
- *   check-research.js <storyboard dir | research.md>       the findings
+ *   check-research.js <storyboard dir | research.md>       the findings (close)
+ *   check-research.js <...> --direction                     first pass — enough to offer 3 directions
  *   check-research.js <...> --json                          machine-readable
  *   check-research.js --selftest                            pins the rules and the floors
  *
@@ -23,6 +24,7 @@
  *
  *   ## Questions …            one row per question · Status says answered / written off
  *   ## Verified               one row per claim, numbered, with source links · ★ marks a key claim
+ *   ## Directions             three rows · `Chosen: D#` locks the pick (owed on close, not on --direction)
  *   ## Counter-evidence …     one row per key claim, `Claim #` naming which (ranges allowed)
  *   ## Failed verification …  what was excluded and why
  *   ## Sufficiency            the self-reported counts
@@ -41,9 +43,13 @@
  * A channel whose profile skips research has no research.md at all, and that is not a defect —
  * the caller decides whether the file was supposed to exist.
  *
+ * `--direction` is the first-pass gate: three verified claims, ten searches, and three
+ * direction rows, no pick and no counter-evidence yet. The default run is the close: the
+ * floor, every question answered or written off, and one `Chosen:` direction.
+ *
  * Exit codes:
- *   0  the research closes
- *   1  it does not (below the floor, a question left open, a self-report that does not match)
+ *   0  the research closes (or, with --direction, is enough to ask)
+ *   1  it does not (below the floor, a question left open, no pick, a self-report that does not match)
  *   3  input error
  */
 
@@ -64,6 +70,8 @@ const FORMAT_RESOLVE = path.resolve(SELF_DIR, '..', '..', 'platform-guide', 'ref
 const FLOOR_ABSOLUTE = 3;
 const FLOOR_SHORT = 5;
 const FLOOR_LONG = 12;
+const FLOOR_DIRECTIONS = 3;
+const FLOOR_DIRECTION_SEARCHES = 10;
 
 function die(msg) {
   process.stderr.write('check-research: ' + msg + '\n');
@@ -204,7 +212,9 @@ function crossCheck(scenes, claims, out) {
   return { carrying, uncited, unused: unused.length };
 }
 
-function analyse(src, fmt, scenes) {
+function analyse(src, fmt, scenes, opts) {
+  opts = opts || {};
+  const directionPhase = !!opts.directionPhase;
   const out = [];
   const bad = (what) => out.push({ level: 'bad', what });
   const warn = (what) => out.push({ level: 'warn', what });
@@ -222,6 +232,8 @@ function analyse(src, fmt, scenes) {
   const NUM = '(?:\\d+[.)]\\s*)?';
   const qRows = rows(section(src, new RegExp('^##\\s+' + NUM + '(Questions?\\b|질문(\\s|$))', 'i')));
   const vRows = rows(section(src, new RegExp('^##\\s+' + NUM + '(?:[\\w가-힣]{1,8}\\s)?(Verified|검증\\s*(표|통과))', 'i')));
+  const dirBody = section(src, /Directions?|시나리오\s*방향|방향성|방향\s*후보/i) || '';
+  const dRows = rows(dirBody);
   const cRows = rows(section(src, /Counter-evidence|반증|역검증/i));
   const fRows = rows(section(src, /Failed\s*(verification)?|검증\s*실패|본문\s*금지|제외/i));
   const suffBody = section(src, /Sufficiency|충분성|충족/i) || '';
@@ -240,7 +252,7 @@ function analyse(src, fmt, scenes) {
   if (claimCount < FLOOR_ABSOLUTE)
     bad(`${claimCount} verified claim(s) — below the floor of ${FLOOR_ABSOLUTE}. ` +
         'Change the angle or the topic rather than padding the body');
-  else if (claimCount < aim)
+  else if (!directionPhase && claimCount < aim)
     warn(`${claimCount} verified claim(s) — a ${isLong ? 'long-form' : 'short'} normally leaves §2 with ${aim} or more`);
 
   // Every claim carries a basis in one of its source columns. The layout varies between logs
@@ -298,6 +310,30 @@ function analyse(src, fmt, scenes) {
       warn(`Sufficiency counts ${answeredLine[2]} questions, the table has ${qRows.length}`);
   }
 
+  // ── Directions (three options, one pick) ──
+  // First pass (--direction) needs three rows and no pick. Close needs the same three rows
+  // plus one Chosen: line (or a Status cell that says chosen). Unchosen rows stay as not used.
+  const dirIds = dRows.filter((r) => /^\**\s*D?\s*\d+\s*\**$/i.test(r[0] || ''))
+    .map((r) => ({ n: Number(String(r[0] || '').replace(/[^\d]/g, '')), cells: r }));
+  const chosen = new Set();
+  const chosenLine = dirBody.match(/Chosen\s*:?\s*\**\s*D?\s*(\d+)/i)
+    || dirBody.match(/(?:선택|채택)\s*:?\s*\**\s*D?\s*(\d+)/i);
+  if (chosenLine) chosen.add(Number(chosenLine[1]));
+  dirIds.forEach((d) => {
+    const status = (d.cells[d.cells.length - 1] || '').replace(/\*/g, '').trim();
+    if (/미선택|안\s*씀|not\s*used|rejected|unused|제안|proposed/i.test(status)) return;
+    if (/^(chosen|selected|picked|선택|택함|채택)/i.test(status) || /\bchosen\b/i.test(status))
+      chosen.add(d.n);
+  });
+
+  if (dirIds.length < FLOOR_DIRECTIONS) {
+    bad(`${dirIds.length} direction(s) — §2.1 writes three, each a different episode this topic could be`);
+  } else if (!directionPhase && chosen.size === 0) {
+    bad('no direction pick — §2.2 records Chosen: D# (or a Status cell that says chosen) before the second search pass');
+  } else if (chosen.size > 1) {
+    warn(`directions ${[...chosen].join(', ')} are all marked chosen — pick one`);
+  }
+
   // ── Which claims are key ──
   // Two readings, and both count: ★ in the # column, and the rows the sentences cite. A claim
   // the finished script says out loud is key whether or not someone starred it, so when both
@@ -324,7 +360,9 @@ function analyse(src, fmt, scenes) {
     if (!nums.size) unmapped++;
     nums.forEach((n) => covered.add(n));
   });
-  if (!cRows.length) {
+  if (directionPhase) {
+    // Counter-evidence is the second pass. First pass only has to offer three directions.
+  } else if (!cRows.length) {
     bad('no counter-evidence section — every key claim gets one search against itself');
   } else if (unmapped) {
     warn(`${unmapped} counter-evidence row(s) name no claim number in the first cell — ` +
@@ -357,16 +395,24 @@ function analyse(src, fmt, scenes) {
     if (qRows.length && searches < 2 * qRows.length)
       warn(`${searches} search(es) logged for ${qRows.length} question(s) — ` +
            '§2 step 2 asks two directions per question');
-  } else {
+  } else if (!directionPhase) {
     warn('no search history section — the checker cannot count searches against questions');
+  }
+  if (directionPhase) {
+    const n = searches == null ? 0 : searches;
+    if (n < FLOOR_DIRECTION_SEARCHES)
+      bad(`${n} search(es) logged — first pass logs ten or more before offering directions. ` +
+          'Three honest directions need a wide enough map, not three wordings of the same two lookups');
   }
 
   const trace = crossCheck(scenes, claims, out);
 
   return {
     claims: claimCount, keyClaims: keys.length, keyBasis, questions: qRows.length,
+    directions: dirIds.length, chosen: [...chosen],
+    phase: directionPhase ? 'direction' : 'close',
     counterRows: cRows.length, counterUnmapped: unmapped, excluded: fRows.length,
-    searches, floor: FLOOR_ABSOLUTE, aim, traceability: trace,
+    searches, floor: FLOOR_ABSOLUTE, searchFloor: FLOOR_DIRECTION_SEARCHES, aim, traceability: trace,
     format: fmt ? fmt.format : null, findings: out
   };
 }
@@ -395,6 +441,15 @@ function selftest() {
     '| 2 | y | [a](https://a.example) | [b](https://b.example) | WebSearch | 2026-08-28 | |',
     '| 3 | z | [a](https://a.example) | [b](https://b.example) | WebSearch | 2026-08-28 | |',
     '',
+    '## Directions',
+    '| # | Question | Hook form | Hero / stake | Already verified | Still to research | Status |',
+    '|---|---|---|---|---|---|---|',
+    '| D1 | a | gap | x | 1 | — | chosen |',
+    '| D2 | b | number | y | 2 | — | not used |',
+    '| D3 | c | identify | z | 3 | — | not used |',
+    '',
+    'Chosen: D1 (2026-08-28)',
+    '',
     '## Counter-evidence & freshness',
     '| Claim # | Counter | What came back | Freshness | Still current? |',
     '|---|---|---|---|---|',
@@ -415,7 +470,13 @@ function selftest() {
     '| naver_search(kin) | a | … |',
     '| WebSearch | a 아니다 | … |',
     '| naver_search(news) | b | … |',
-    '| WebSearch | b site:go.kr | … |'
+    '| WebSearch | b site:go.kr | … |',
+    '| naver_search(blog) | a 후기 | … |',
+    '| naver_search(cafe) | a 불만 | … |',
+    '| naver_search(kin) | b 왜 | … |',
+    '| WebSearch | competing explanation | … |',
+    '| naver_search(encyc) | a 정의 | … |',
+    '| datago_search | a 통계 | … |'
   ]);
 
   const bads = (r) => r.findings.filter((f) => f.level === 'bad');
@@ -424,6 +485,7 @@ function selftest() {
   const g = analyse(good, { format: 'shorts-9x16' });
   ok('a well-formed log has no violations', bads(g).length === 0);
   ok('it counts the claims', g.claims === 3);
+  ok('it counts the directions', g.directions === 3 && g.chosen[0] === 1);
   ok('three claims still warns against the short aim of 5', has(g, /normally leaves/));
 
   // ── Headings the library actually writes ──
@@ -459,10 +521,13 @@ function selftest() {
      !has(analyse(good.replace('verified claims: **3** (floor 3)', '검증 주장 3건 (바닥 3)'), null), /does not state/));
 
   // ── Search history ──
-  ok('four searches for two questions is enough', !has(g, /search\(es\) logged/));
+  ok('ten searches for two questions is enough', !has(g, /search\(es\) logged/));
+  const oneSearch = good.replace(
+    /## Search history[\s\S]*$/,
+    '## Search history\n| Tool | Query | Result |\n|---|---|---|\n| naver_search(kin) | a | … |\n'
+  );
   ok('one search for two questions is reported',
-     has(analyse(good.replace(/\| WebSearch \| a 아니다.*\n\| naver_search\(news\).*\n\| WebSearch \| b site.*\n?/, ''), null),
-         /1 search\(es\) logged for 2 question\(s\)/));
+     has(analyse(oneSearch, null), /1 search\(es\) logged for 2 question\(s\)/));
   ok('a missing search history is reported',
      has(analyse(good.replace('## Search history', '## Notes'), null), /no search history section/));
 
@@ -546,6 +611,36 @@ function selftest() {
      !has(withClaims([{ tts: 'a', sub: 'a', claim: 1 }, { tts: '왜 그럴까요', sub: '왜 그럴까요' }]),
           /carry a figure but cite no claim/));
 
+  // ── Directions and --direction ──
+  const noDir = good.replace(/\n## Directions[\s\S]*?(?=\n## Counter-evidence)/, '');
+  ok('a missing Directions section is a violation on close',
+     has(analyse(noDir, null), /no direction pick|0 direction/));
+  ok('two direction rows is a violation',
+     has(analyse(good.replace('| D3 | c | identify | z | 3 | — | not used |\n', ''), null),
+         /2 direction/));
+  const unpicked = good.replace('| D1 | a | gap | x | 1 | — | chosen |',
+                               '| D1 | a | gap | x | 1 | — | proposed |')
+    .replace('Chosen: D1 (2026-08-28)', '');
+  ok('three rows with no pick is a violation on close',
+     has(analyse(unpicked, null), /no direction pick/));
+  const dirOnly = unpicked.replace(/## Counter-evidence & freshness[\s\S]*?(?=\n## Failed)/,
+                                   '## Counter-evidence & freshness\n');
+  ok('--direction accepts three rows and no pick, even without counter-evidence',
+     bads(analyse(dirOnly, { format: 'shorts-9x16' }, null, { directionPhase: true })).length === 0);
+  ok('--direction still wants three rows',
+     has(analyse(dirOnly.replace('| D3 | c | identify | z | 3 | — | not used |\n', ''),
+                 null, null, { directionPhase: true }), /2 direction/));
+  const nine = dirOnly.replace('| datago_search | a 통계 | … |', '');
+  ok('--direction wants ten searches',
+     has(analyse(nine, { format: 'shorts-9x16' }, null, { directionPhase: true }),
+         /ten or more/));
+  ok('--direction with no search history is a violation',
+     bads(analyse(dirOnly.replace('## Search history', '## Notes'),
+                  { format: 'shorts-9x16' }, null, { directionPhase: true }))
+       .some((f) => /ten or more/.test(f.what)));
+  ok('a Korean 시나리오 방향 heading is the Directions table',
+     analyse(good.replace('## Directions', '## 시나리오 방향'), null).directions === 3);
+
   // Drift guard — the floors live in the skill, and this file has to agree with it.
   const skill = path.resolve(SELF_DIR, '..', 'SKILL.md');
   if (fs.existsSync(skill)) {
@@ -554,6 +649,9 @@ function selftest() {
        /Three verified claims is the floor/i.test(s));
     ok('SKILL §2 still aims a short at five or more', /\*\*five or more\*\*/.test(s));
     ok('SKILL §2 still aims a long-form at twelve or more', /\*\*twelve or more\*\*/.test(s));
+    ok('SKILL §2.1 still writes three directions', /three honest directions/i.test(s));
+    ok('SKILL §2.1 still asks ten or more searches', /\*\*ten or more\*\*/.test(s));
+    ok('SKILL still names check-research.js --direction', /check-research\.js storyboard\/ --direction/.test(s));
   } else {
     process.stderr.write('WARN storyboard SKILL.md not found — floor drift guard skipped\n');
   }
@@ -566,7 +664,7 @@ function main() {
   const argv = process.argv.slice(2);
   if (argv.indexOf('--selftest') !== -1) return selftest();
   const target = argv.filter((a) => !a.startsWith('--'))[0];
-  if (!target) die('usage: check-research.js <storyboard dir | research.md> [--json]');
+  if (!target) die('usage: check-research.js <storyboard dir | research.md> [--direction] [--json]');
   if (!fs.existsSync(target)) die('path not found: ' + target);
 
   const isDir = fs.statSync(target).isDirectory();
@@ -576,8 +674,10 @@ function main() {
         ' — a channel whose profile skips research has none, and that is not a defect');
 
   const fmt = formatOf(isDir ? target : path.dirname(file));
+  const directionPhase = argv.indexOf('--direction') !== -1;
   const result = analyse(fs.readFileSync(file, 'utf8'), fmt,
-                         readScenes(isDir ? target : path.dirname(file)));
+                         readScenes(isDir ? target : path.dirname(file)),
+                         { directionPhase });
   const bad = result.findings.filter((f) => f.level === 'bad');
   const warn = result.findings.filter((f) => f.level === 'warn');
 
@@ -587,10 +687,17 @@ function main() {
   }
 
   const lines = ['research.md — ' + result.claims + ' verified claim(s) · ' +
-                 result.questions + ' question(s) · ' + result.excluded + ' excluded', ''];
+                 result.questions + ' question(s) · ' + result.directions + ' direction(s)' +
+                 (result.chosen.length ? ' · chosen D' + result.chosen.join(', D') : '') +
+                 ' · ' + result.excluded + ' excluded', ''];
   if (!result.findings.length) {
-    lines.push('  The research closes: the floor is met, every question ends answered or');
-    lines.push('  written off, and each claim was searched against itself.');
+    if (result.phase === 'direction') {
+      lines.push('  First pass closes: three directions are on the page, ten or more searches');
+      lines.push('  are logged, and there are enough verified claims to ask which one the episode is.');
+    } else {
+      lines.push('  The research closes: the floor is met, a direction is picked, every question');
+      lines.push('  ends answered or written off, and each claim was searched against itself.');
+    }
   } else {
     bad.concat(warn).forEach((f) => lines.push('  ' + (f.level === 'bad' ? '!' : '·') + ' ' + f.what));
     lines.push('');

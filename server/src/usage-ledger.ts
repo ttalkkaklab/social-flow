@@ -33,6 +33,7 @@
 
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, MLX_VIDEO_FPS } from './mlx-serve-client.js';
 
 /** One recorded call. `key`/`quantity` are the cost-ledger coordinates when they are knowable. */
 export interface UsageEvent {
@@ -231,8 +232,16 @@ export function priceOf(
     return { key: 'image.local', quantity: num(args.n, 1) };
   }
 
+  if (tool === 'mlx_image_generate' || tool === 'mlx_image_edit') {
+    return { key: 'image.mlx', quantity: 1 };
+  }
+
   if (tool === 'tts_local_generate') {
     return { key: 'tts.local', quantity: charUnits(args) };
+  }
+
+  if (tool === 'mlx_tts_generate') {
+    return { key: 'tts.mlx', quantity: charUnits(args) };
   }
 
   if (tool === 'tts_generate' || tool === 'tts_multi_speaker') {
@@ -264,6 +273,17 @@ export function priceOf(
   if (tool === 'suno_generate_sound') return { key: 'music.suno-sound', quantity: 1 };
   if (tool === 'suno_generate_lyrics') return { key: 'music.suno-lyrics', quantity: 1 };
 
+  if (tool === 'mlx_music_generate') {
+    return { key: 'music.mlx', quantity: num(args.durationSeconds, DEFAULT_MLX_MUSIC_SECONDS) };
+  }
+  if (tool === 'mlx_video_generate') {
+    const frames = num(args.numFrames, DEFAULT_MLX_VIDEO_FRAMES);
+    return { key: 'video.mlx', quantity: Math.round((frames / MLX_VIDEO_FPS) * 1000) / 1000 };
+  }
+  if (tool === 'mlx_3d_generate') {
+    return { key: '3d.mlx', quantity: 1 };
+  }
+
   return { key: null, quantity: null };
 }
 
@@ -277,6 +297,7 @@ export function priceOf(
  */
 function rawChars(args: Record<string, unknown>): number {
   if (typeof args.text === 'string') return args.text.length;
+  if (typeof args.input === 'string') return args.input.length;
   if (typeof args.script === 'string') return args.script.length;
   if (Array.isArray(args.inputs)) {
     return args.inputs.reduce(
@@ -304,6 +325,7 @@ export function isBillableTool(tool: string): boolean {
     tool.startsWith('tts_') ||
     tool.startsWith('music_') ||
     tool.startsWith('suno_generate') ||
+    tool.startsWith('mlx_') ||
     tool === 'image_local_generate'
   );
 }

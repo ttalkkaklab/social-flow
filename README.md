@@ -18,8 +18,8 @@ authoring the storyboard, and a single `window.FORMAT` line in `scenes.js` fixes
 build constant downstream. Long-form episodes **mix clips you film yourself with
 generated scenes** — where the evidence lives on screen you film it, where the point is
 a mood or a place the pipeline generates an image, and scenes that need words or
-diagrams on screen become **HTML slides**: planned in the storyboard, authored only
-after you approve the plan. A slide that states a value becomes a **motion slide** —
+diagrams on screen become **HTML motion slides**, authored and shown as rendered
+keyframes before approval. A slide that states a value —
 the number counts up and the bar grows the moment its sentence starts, rendered locally
 frame by frame at no cost and admitted to the build only after an adversarial design
 review (`slide-reviewer`, 95-point gate) — the one free way to put movement on a body
@@ -115,7 +115,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the nine publish/insight tools
-  aren't even listed (`tools/list` shows 42 instead of 51), and the growth skills have
+  aren't even listed (`tools/list` shows 52 instead of 61), and the growth skills have
   nothing to drive.
 
 Credentials are per platform, so this is not all-or-nothing — a YouTube-only setup
@@ -135,11 +135,11 @@ capabilities, four different answers:
 
 | Capability | Free / on-device | Paid | Costs money unless… |
 |---|---|---|---|
-| **Images** | `image_local_generate` — Z-Image Turbo via mflux/MLX, $0 | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame have to go to the paid path |
-| **Video** | none | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you generate no video at all. **The default build does exactly that** — stills plus ffmpeg Ken Burns, zero video calls |
-| **Speech (TTS)** | `tts_local_generate` — Supertonic 3, $0 | `tts_generate` / `tts_multi_speaker` — Gemini, per 1,000 chars | …you don't need acted delivery. The local engine has no style or emotion control |
+| **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame have to go to the paid path. Default stays Z-Image |
+| **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `mlx_video_generate` (24fps, RAM-capped) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
+| **Speech (TTS)** | `tts_local_generate` — Supertonic 3, $0. Optional: `mlx_tts_generate` | `tts_generate` / `tts_multi_speaker` — Gemini, per 1,000 chars | …you don't need acted delivery. The local engine has no style or emotion control. mlx_tts is never a silent fallback for profile §2 |
 | **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
-| **Music (BGM)** | none | Lyria clip via Gemini | …you ship without BGM |
+| **Music (BGM)** | `mlx_music_generate` when MLX Core is running | Lyria clip via Gemini (the default) | …you ship without BGM, or you have MLX Core up with a music model |
 
 So a zero-cost run is possible: local images, local narration, local
 transcription, no generated video, no BGM. What you give up is a proper cover
@@ -226,7 +226,7 @@ the plugin with the flag above.
 /social-flow:intro my-channel              # 1.3 (optional) channel intro — 4 concepts HITL → 4s veo render → 90-point convergence (spliced after the episode as a closer)
 /social-flow:setup-threads my-channel      # 1.4 (optional) SNS account setup + API tokens — browser HITL, ego lite first, Chrome fallback (per platform: setup-instagram · setup-youtube)
 /social-flow:ingest my-channel record      # 1.5 (optional) screen+voice recording → timeline — an alternative research source
-/social-flow:storyboard my-channel "July FX swings"   # 2. research (or timeline) → storyboard → [approval]
+/social-flow:storyboard my-channel "July FX swings"   # 2. research → 3 scenarios [scored to 95] → pick → more research → storyboard → [approval]
 /social-flow:produce my-channel 20260729-fx           # 3. video + per-platform text
 /social-flow:publish my-channel 20260729-fx           # 4. [approval] → publish → record permalinks
 /social-flow:grow-threads my-channel init             # 5. (optional) Threads growth plan [approval — standing authorization]
@@ -251,13 +251,14 @@ them the pipeline ends at `produce` with the finished video and per-platform tex
 **One topic string straight to a finished video** (steps 2–3 with no human approval):
 
 ```
-/social-flow:autoproduce my-channel "July FX swings"   # research → scenes.js → images → TTS → build → output
+/social-flow:autoproduce my-channel "July FX swings"   # research → 3 scenarios [scored to 95] → pick → more research → scenes.js → images → TTS → build → output
 ```
 
-Eleven machine gates stand where the approval gates were — fact verification (3+
-cross-verified claims), the copy style checker, six one-round storyboard-reviewer reads
-(copy · per-scene · vocabulary · camera · sound · images) where an unresolved P0 stops the
-run, build report (drift 0), content-reviewer P0=0, and a cost cap. The **economy tier is the
+The machine gates stand where the approval gates were — fact verification (3+
+cross-verified claims), three scenario candidates looped to 95 with P0=0 (curiosity ·
+fear · intrigue · comedy), the copy style checker, six one-round storyboard-reviewer board
+reads (copy · per-scene · vocabulary · camera · sound · images) where an unresolved P0
+stops the run, build report (drift 0), content-reviewer P0=0, and a cost cap. The **economy tier is the
 default**: no Veo calls at all (still backgrounds + Ken Burns), roughly $0.26–0.29
 per episode (capped at $0.30); only when hook metrics fall below threshold does the
 4-second cover get promoted to `veo-3.1-lite`. Authoring is capped at **2 episodes
@@ -298,7 +299,7 @@ adversarial reviewer `storyboard-reviewer` **six times, once each**, before appr
 
 None of the six is a pass/fail gate — each returns findings once, they get applied, and
 anything left over goes onto the human approval screen, which is the one thing that blocks.
-The exception is a **motion slide**: after approval, storyboard §8.1 renders its frames and
+The exception is a **motion slide**: storyboard renders its frames before approval and
 delegates them to `slide-reviewer`, and the slide enters the build only when that review
 scores ≥ 95 with no P0 — a convergence loop (cap 3 rounds), because a slide is cheap to
 re-render and a generated-looking one is not worth shipping.
@@ -330,7 +331,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 55 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 61 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -341,6 +342,7 @@ social-flow/
 │       ├── datago-client.ts     # data.go.kr (search·detail·download·odcloud·standard open API)
 │       ├── image-client.ts      # OpenAI GPT Image generation
 │       ├── zimage-client.ts     # Z-Image Turbo on-device generation (mflux/MLX)
+│       ├── mlx-serve-client.ts  # MLX Core / mlx-serve HTTP client (image·edit·tts·music·video·3d)
 │       ├── qwen3-asr-client.ts  # Qwen3-ASR on-device STT (mlx-qwen3-asr CLI)
 │       ├── video-client.ts      # Veo 3.1 — t2v·i2v·extension·reference
 │       ├── seedance-client.ts   # Seedance — t2v·i2v·reference (BytePlus ModelArk)
@@ -362,11 +364,11 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap · Chrome lane map)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
-│   ├── storyboard/              # /social-flow:storyboard — research → scene design → six one-round reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval → slides (motion slides through the slide-reviewer gate)
-│   │   └── references/          #   scenes-schema.md · directing-grammar.md · slide-template.html · motion-slide-template.html · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js
+│   ├── storyboard/              # /social-flow:storyboard — research → 3 scenarios looped to 95 → pick → more research → scene design → six one-round board reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval → slides (motion slides through the slide-reviewer gate)
+│   │   └── references/          #   scenes-schema.md · directing-grammar.md · motion-slide-template.html · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js
 │   ├── produce/                 # /social-flow:produce — video build + per-platform text
-│   │   └── references/          #   build-reel.sh · speedup.sh (required 1.4x speed pass) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
-│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research→authoring→video unattended (human gates replaced by eleven machine gates, economy tier default)
+│   │   └── references/          #   build-reel.sh · speedup.sh (required final pace pass, 1.0 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
+│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → 3 scenarios [scored to 95 on curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring → video (human gates replaced by the machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
 │   ├── publish/                 # /social-flow:publish — HITL approval, then platform publishing
@@ -391,14 +393,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (55 tools)
+## MCP tool surface (61 tools)
 
-**`tools/list` does not show all 50.** The nine publish/insights tools
+**`tools/list` does not show all 61.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 41. Hidden tools still have live handlers:
+server. With no tokens at all you'll count 52. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
@@ -414,16 +416,21 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Research | `serp_web_search` / `serp_news_search` / `serp_naver_search` / `serp_image_search` / `serp_trending_now` | SerpApi (250 free/month — precision + international). naver takes where=web·news·image·video + a period filter, image takes license/size/aspect filters, trending_now returns per-country Google trending searches (4/24/48/168-hour windows, approximate volume and growth) |
 | Open data | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (no auth — search·detail·raw file) |
 | Open data | `datago_file_fetch` / `datago_api_call` | odcloud · apis.data.go.kr (auth key + **per-API usage application** required) |
-| Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux/MLX (**no API key, no network, no billing — the default path**. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
+| Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — the default path**. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
+| Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional lane — default stays Z-Image. Hangul still goes to gpt_image. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **the text-and-quality path**: text rendering, arbitrary WIDTHxHEIGHT, up to 16 reference images, mask inpainting) |
 | Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x). Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table) |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |
 | Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |
+| Voice generation | `mlx_tts_generate` | MLX Core / mlx-serve (raw WAV. Optional; never a silent fallback for the engine in profile §2) |
 | Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (ELEVENLABS_API_KEY — the paid third lane: inline audio-tag acting on eleven_v3, text-to-dialogue with **up to 10 voices in one request**, per-character timestamps for subtitle sync, any cloned or Voice Library voice. Saves mono 24kHz wav by default, so the builder reads it like the Gemini lane. API rate $0.10 per 1,000 characters on v2·v3, $0.05 on flash and v3 conversational, the same on every plan; the Free tier is non-commercial) |
 | Speech recognition | `stt_local_transcribe` | Qwen3-ASR on-device via mlx-qwen3-asr/MLX (**no API key, no network, no billing — the default Korean STT**. Needs Apple Silicon + `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"`; the first call downloads ~3.4GB of weights. ingest runs the same engine and falls back to whisper.cpp without it) |
 | Music generation | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip (fixed 30s mp3 — the default BGM path) · Lyria RealTime (5–300s variable wav 48kHz, seed reproducibility). `GEMINI_API_KEY` |
 | Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
+| Music generation | `mlx_music_generate` | MLX Core / mlx-serve (WAV. Default instrumental. Optional bed; default BGM stays Lyria) |
+| 3D | `mlx_3d_generate` | MLX Core / mlx-serve (GLB from an image. This pipeline has no mesh consumer) |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
@@ -452,18 +459,19 @@ out, and the markers are per-platform (YouTube `queue: ready` · Instagram
 consume the marker and the other platform would never publish. Two things set
 markers: a human, or — when the plan enables `autoproduce` — the loop itself
 authoring one episode when the queue runs dry. Auto-authored episodes become `ready`
-only after passing all eleven machine gates (fact verification · style · the six
-storyboard-reviewer reads for copy/per-scene/vocabulary/camera/sound/images · build report ·
+only after passing the machine gates (fact verification · three scenarios looped to
+95 · style · the six storyboard-reviewer board reads for copy/per-scene/vocabulary/camera/sound/images · build report ·
 content-reviewer P0 · cost cap); failing any one leaves them `hold`, waiting for a
 human. grow-instagram publishes only with a public HTTPS URL, and with no hosting
 configured it disables both publishing and auto-authoring (the loop won't start
 tunnels, and it won't spend money making a video with no way out).
 
-All 21 generation tools run **inside this plugin — no external MCP server required**.
+All 27 generation tools run **inside this plugin — no external MCP server required**.
 Two keys cover the hosted ones: OPENAI_API_KEY for images, GEMINI_API_KEY for
-video/voice/music (Seedance adds ARK_API_KEY, ElevenLabs adds ELEVENLABS_API_KEY). Two of them —
-`image_local_generate` and `tts_local_generate` — run on-device and need no key at
-all.
+video/voice/music (Seedance adds ARK_API_KEY, ElevenLabs adds ELEVENLABS_API_KEY).
+`image_local_generate` and `tts_local_generate` run on-device and need no key at
+all. The six `mlx_*` tools talk to MLX Core on loopback through this same server —
+skills never curl :11234 themselves.
 
 Findings from porting the voice/music modules:
 
@@ -517,6 +525,8 @@ explicit error and everything else works.
 | `ARK_BASE_URL` | | `https://ark.ap-southeast.bytepluses.com/api/v3` | ModelArk region endpoint. The video models only exist in ap-southeast-1, so normally leave it alone |
 | `SUPERTONIC_PYTHON` | | `python3` | Python interpreter for local TTS. Point it at your virtualenv if you used one (e.g. `~/venvs/tts/bin/python`). No venv auto-discovery — quietly picking up a different environment per repo and changing the voice is exactly the accident this avoids |
 | `QWEN3_ASR_BIN` | | `~/.local/bin/mlx-qwen3-asr` | Local STT executable. With the default uv tool install location there is nothing to set |
+| `MLX_SERVE_URL` | mlx_* | `http://127.0.0.1:11234` | MLX Core / mlx-serve HTTP base. This plugin never launches the app; a down server fails closed |
+| `MLX_SERVE_API_KEY` | mlx_* on a non-loopback bind | — | Optional bearer. Loopback needs no key unless the server was started with `--api-key-strict` |
 | `SNS_TOKEN_DIR` | | `~/.config/social-flow` | Root directory for SNS credentials |
 | `MEDIA_UPLOAD_URL` / `MEDIA_UPLOAD_API_KEY` | grow-threads image posts | — | Media hosting endpoint + key. Threads only accepts images as **public URLs**, so local files need somewhere to live. Anything works that accepts `POST` with an `x-api-key` header + raw bytes, returns `201 {data:{url}}`, and serves that url as unauthenticated public GET (the header of `skills/grow-threads/references/upload-media.sh` is the contract SoT). Unset, only the image step turns off — text posts still go out |
 | `THREADS_TOKEN_FILE` and friends | | `<SNS_TOKEN_DIR>/conventional name` | Per-platform override of the default (flat) path — not applied to channel directories |
@@ -564,7 +574,7 @@ server calls, and how this implementation honors (or deliberately narrows) each 
 - **[MCP tool spec & best practices](docs/api-reference/mcp-tools.html)** — Tool
   fields, behavior-hint decision table, 7 authoring principles, quality rubric
 - **[Tool quality audit](docs/api-reference/tool-audit.html)** — scores and fixes for
-  the 31 tools as of 2026-07-29 (the 24 added since are unaudited)
+  the 31 tools as of 2026-07-29 (the 30 added since are unaudited)
 - Individual APIs — [Gemini TTS](docs/api-reference/gemini-tts.html) ·
   [ElevenLabs TTS](docs/api-reference/elevenlabs-tts.html) ·
   [Veo 3.1](docs/api-reference/gemini-veo.html) ·
@@ -580,9 +590,9 @@ server calls, and how this implementation honors (or deliberately narrows) each 
   [Meta Graph](docs/api-reference/meta-graph.html) ·
   [YouTube Data](docs/api-reference/youtube-data.html)
 
-The three local engines (`image_local_generate` · `tts_local_generate` ·
-`stt_local_transcribe`) have no
-external contract to document, so their evidence lives in research notes instead —
+The on-device engines (`image_local_generate` · `tts_local_generate` ·
+`stt_local_transcribe` · the six `mlx_*` tools) have no
+external vendor contract to document, so their evidence lives in research notes instead —
 [local image generation](docs/research/2026-08-12-local-image-generation/index.html) ·
 [local TTS vs commercial APIs](docs/research/2026-08-11-local-tts-and-commercial-api/index.html)
 (Korean).
