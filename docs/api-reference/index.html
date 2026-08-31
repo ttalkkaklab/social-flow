@@ -19,8 +19,8 @@
   <p class="sub">내부 MCP 서버(<code>server/src</code>)가 실제로 호출하는 외부 API 13종의 공식 계약을 정리한 레퍼런스다. 각 문서는 <strong>공식 문서가 말하는 것</strong>과 <strong>이 저장소의 구현이 실제로 하는 것</strong>을 나란히 적어, 둘이 어긋나는 지점을 바로 볼 수 있게 했다. 이미지·음성·받아쓰기는 네트워크를 타지 않는 온디바이스 엔진 3종이 기본 경로이며 그쪽은 호출할 외부 계약이 없다.</p>
   <div class="meta">
     <span>기준일 <strong>2026-08-30</strong></span>
-    <span>툴 <strong>55종</strong></span>
-    <span>외부 API <strong>13종</strong> + 로컬 <strong>3종</strong></span>
+    <span>툴 <strong>61종</strong></span>
+    <span>외부 API <strong>13종</strong> + 로컬 <strong>3종</strong> + MLX Core</span>
     <span>MCP SDK <strong>1.30.0</strong></span>
   </div>
 </header>
@@ -90,8 +90,8 @@
     </a>
     <a class="card" href="../research/2026-08-12-local-image-generation/index.html">
       <h3>온디바이스 엔진 (Z-Image · Supertonic · Qwen3-ASR)</h3>
-      <p>외부 계약이 없는 세 툴. Z-Image Turbo 는 mflux/MLX 로 돌아 1024²가 9스텝에 149~210초, 1088×1920 이 462초다(M4 Max 실측). Supertonic 은 CPU 만 쓰고 44.1kHz wav 를 낸다. Qwen3-ASR 은 한글 STT 기본 경로다. 셋 다 키·과금·네트워크가 없다.</p>
-      <div class="tools">image_local_generate · tts_local_generate · stt_local_transcribe</div>
+      <p>외부 계약이 없는 세 툴과, 루프백 HTTP 로 MLX Core 를 부르는 mlx_* 여섯. Z-Image Turbo 는 mflux/MLX 로 돌아 1024²가 9스텝에 149~210초, 1088×1920 이 462초다(M4 Max 실측). Supertonic 은 CPU 만 쓰고 44.1kHz wav 를 낸다. Qwen3-ASR 은 한글 STT 기본 경로다. mlx_* 는 :11234 가 꺼져 있으면 닫히고, 이 플러그인은 앱을 띄우지 않는다. 기본 경로는 그대로 Z-Image · Supertonic · Lyria · Veo/Seedance 다.</p>
+      <div class="tools">image_local_generate · tts_local_generate · stt_local_transcribe · mlx_*</div>
     </a>
     <a class="card" href="serpapi.html">
       <h3>SerpApi</h3>
@@ -120,7 +120,7 @@
     </a>
     <a class="card" href="tool-audit.html">
       <h3>툴 품질 감사 리포트</h3>
-      <p>2026-07-29 시점의 툴 31개를 위 계약과 베스트 프랙티스로 채점한 결과, 발견한 결함 전체와 수정 내역. 그 뒤 24종이 추가돼 지금은 55종이고, 그 24종은 아직 감사 대상이 아니다.</p>
+      <p>2026-07-29 시점의 툴 31개를 위 계약과 베스트 프랙티스로 채점한 결과, 발견한 결함 전체와 수정 내역. 그 뒤 30종이 추가돼 지금은 61종이고, 그 30종은 아직 감사 대상이 아니다.</p>
       <div class="tools">감사 · 점수 · 수정 이력</div>
     </a>
   </div>
@@ -149,6 +149,8 @@
       <tr><td><code>MFLUX_ZIMAGE_BIN</code><br>(기본: PATH 의 <code>mflux-generate-z-image-turbo</code>)</td><td><code>image_local_generate</code></td><td>키가 아니라 <strong>실행 파일 경로</strong>다. 표준 위치에 깔았으면 설정할 필요가 없고, 못 찾으면 설치 안내가 담긴 에러가 온다</td><td><code>uv tool install --python 3.12 mflux</code></td></tr>
       <tr><td><code>SUPERTONIC_PYTHON</code><br>(기본 <code>python3</code>)</td><td><code>tts_local_generate</code></td><td>가상환경에 깔았으면 그 인터프리터를 지정한다. venv 자동 탐색은 하지 않는다 — 저장소마다 다른 환경을 조용히 집어 목소리가 바뀌는 사고를 막는다</td><td><code>pip install supertonic</code></td></tr>
       <tr><td><code>QWEN3_ASR_BIN</code><br>(기본 <code>~/.local/bin/mlx-qwen3-asr</code>)</td><td><code>stt_local_transcribe</code></td><td>키가 아니라 <strong>실행 파일 경로</strong>다. <code>uv tool install</code> 기본 위치면 설정할 필요가 없고, 못 찾으면 설치 안내가 담긴 에러가 온다</td><td><code>uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"</code></td></tr>
+      <tr><td><code>MLX_SERVE_URL</code><br>(기본 <code>http://127.0.0.1:11234</code>)</td><td><code>mlx_*</code></td><td>루프백 mlx-serve. 이 플러그인은 앱을 띄우지 않고, 서버가 꺼져 있으면 닫힌다. <code>brew install --cask mlx-core</code></td><td>MLX Core.app / <code>mlx-serve --serve</code></td></tr>
+      <tr><td><code>MLX_SERVE_API_KEY</code></td><td><code>mlx_*</code> 비루프백 바인드</td><td>루프백은 키가 필요 없다. 서버를 <code>--api-key-strict</code> 로 띄운 경우만 예외</td><td>—</td></tr>
       <tr><td><code>HF_HOME</code><br>(기본 <code>~/.cache/huggingface</code>)</td><td><code>image_local_generate</code></td><td>Z-Image 가중치 캐시 위치. 최초 호출에서 31GB 를 내려받으므로 디스크가 빠듯하면 옮긴다</td><td>—</td></tr>
     </tbody>
   </table>
@@ -161,7 +163,7 @@
 <section id="map">
   <h2>툴 ↔ API 매핑</h2>
   <p>배지: <span class="badge ro">읽기</span> 부작용 없음 · <span class="badge wr">쓰기</span> 로컬 파일 생성 · <span class="badge de">공개</span> 호출 즉시 외부 공개 · <span class="badge key">키</span> 자격증명 필요 · <span class="badge free">무인증</span></p>
-  <p><strong>55종이 항상 다 보이지는 않는다.</strong> 플랫폼에 묶인 9종(<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>)은 자격증명 파일이 있는 플랫폼만 <code>tools/list</code> 에 나온다. 목록을 요청한 시점에 평가하므로 토큰을 넣으면 서버를 다시 띄우지 않아도 나타나고, 토큰이 하나도 없으면 46종이 보인다. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> 는 게이트 밖이라 토큰이 없어도 목록에 있다 — 유튜브 스카우트는 호출 시점에 <code>YOUTUBE_API_KEY</code> 또는 채널 OAuth 가, SNS 스카우트는 <code>SERPAPI_API_KEY</code> 가 필요하고, 피드백은 토큰이 없는 플랫폼의 절만 건너뛴다. <code>youtube_update</code> 도 마찬가지로 항상 목록에 있고 토큰이 없으면 에러를 낸다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가 온다.</p>
+  <p><strong>61종이 항상 다 보이지는 않는다.</strong> 플랫폼에 묶인 9종(<code>threads_publish</code>·<code>threads_insights</code>·<code>threads_search</code>·<code>instagram_publish</code>·<code>instagram_insights</code>·<code>facebook_publish</code>·<code>facebook_comment</code>·<code>youtube_publish</code>·<code>youtube_insights</code>)은 자격증명 파일이 있는 플랫폼만 <code>tools/list</code> 에 나온다. 목록을 요청한 시점에 평가하므로 토큰을 넣으면 서버를 다시 띄우지 않아도 나타나고, 토큰이 하나도 없으면 52종이 보인다. <code>content_feedback</code>·<code>youtube_topic_scout</code>·<code>sns_issue_scout</code> 는 게이트 밖이라 토큰이 없어도 목록에 있다 — 유튜브 스카우트는 호출 시점에 <code>YOUTUBE_API_KEY</code> 또는 채널 OAuth 가, SNS 스카우트는 <code>SERPAPI_API_KEY</code> 가 필요하고, 피드백은 토큰이 없는 플랫폼의 절만 건너뛴다. <code>youtube_update</code> 도 마찬가지로 항상 목록에 있고 토큰이 없으면 에러를 낸다. 숨은 툴도 핸들러는 살아 있어 직접 부르면 토큰 부재 에러가 온다.</p>
   <div class="table-scroll">
   <table>
     <thead><tr><th>툴</th><th>성격</th><th>호출 대상</th><th>레퍼런스</th></tr></thead>
@@ -181,6 +183,8 @@
       <tr><td><code>gpt_image_text2img</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>POST /v1/images/generations</code></td><td><a href="openai-images.html">OpenAI</a></td></tr>
       <tr><td><code>gpt_image_img2img</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>POST /v1/images/edits</code></td><td><a href="openai-images.html">OpenAI</a></td></tr>
       <tr><td><code>image_local_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>없음 — 로컬 <code>mflux-generate-z-image-turbo</code> 프로세스</td><td><a href="../research/2026-08-12-local-image-generation/index.html">로컬 이미지 조사</a></td></tr>
+      <tr><td><code>mlx_image_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>루프백 <code>POST /v1/images/generations</code></td><td>MLX Core / mlx-serve</td></tr>
+      <tr><td><code>mlx_image_edit</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>같은 엔드포인트 (<code>mode:edit</code>)</td><td>MLX Core / mlx-serve</td></tr>
       <tr><td><code>veo_text2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateVideos</code> + operation 폴링</td><td><a href="gemini-veo.html">Veo</a></td></tr>
       <tr><td><code>veo_img2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateVideos</code> (<code>image</code>/<code>lastFrame</code>)</td><td><a href="gemini-veo.html">Veo</a></td></tr>
       <tr><td><code>veo_extension</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateVideos</code> (<code>video</code>)</td><td><a href="gemini-veo.html">Veo</a></td></tr>
@@ -188,9 +192,12 @@
       <tr><td><code>seedance_text2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>POST /contents/generations/tasks</code> + 폴링</td><td><a href="seedance.html">Seedance</a></td></tr>
       <tr><td><code>seedance_img2video</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td>같은 엔드포인트 (<code>role: first_frame/last_frame</code>)</td><td><a href="seedance.html">Seedance</a></td></tr>
       <tr><td><code>seedance_reference</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td>같은 엔드포인트 (<code>role: reference_image</code>)</td><td><a href="seedance.html">Seedance</a></td></tr>
+      <tr><td><code>mlx_video_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>루프백 <code>POST /v1/video/generations</code> → ffmpeg mux</td><td>MLX Core / mlx-serve</td></tr>
+      <tr><td><code>mlx_3d_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>루프백 <code>POST /v1/3d/generations</code> → GLB</td><td>MLX Core / mlx-serve</td></tr>
       <tr><td><code>tts_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateContent</code> (<code>AUDIO</code>)</td><td><a href="gemini-tts.html">TTS</a></td></tr>
       <tr><td><code>tts_multi_speaker</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>models.generateContent</code> (multiSpeaker)</td><td><a href="gemini-tts.html">TTS</a></td></tr>
       <tr><td><code>tts_local_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>없음 — 로컬 Supertonic 3 (python)</td><td><a href="../research/2026-08-11-local-tts-and-commercial-api/index.html">로컬 TTS 조사</a></td></tr>
+      <tr><td><code>mlx_tts_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>루프백 <code>POST /v1/audio/speech</code> (raw WAV)</td><td>MLX Core / mlx-serve</td></tr>
       <tr><td><code>stt_local_transcribe</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>없음 — 로컬 Qwen3-ASR (mlx-qwen3-asr)</td><td>—</td></tr>
       <tr><td><code>tts_list_voices</code></td><td><span class="badge ro">읽기</span></td><td>없음 — 서버 내장 상수</td><td><a href="gemini-tts.html">TTS</a></td></tr>
       <tr><td><code>tts_elevenlabs_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>POST /v1/text-to-speech/{voice_id}</code> (<code>/with-timestamps</code>)</td><td><a href="elevenlabs-tts.html">ElevenLabs</a></td></tr>
@@ -199,6 +206,7 @@
       <tr><td><code>music_generate_clip</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>interactions.create</code> (<code>lyria-3-clip-preview</code>)</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
       <tr><td><code>music_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
       <tr><td><code>music_generate_advanced</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>live.music.connect</code> (WebSocket)</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
+      <tr><td><code>mlx_music_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge free">무인증</span></td><td>루프백 <code>POST /v1/audio/music-generations</code></td><td>MLX Core / mlx-serve</td></tr>
       <tr><td><code>capability_status</code></td><td><span class="badge ro">읽기</span> <span class="badge free">무인증</span></td><td>없음 — 이 기계의 키·실행 파일 점검</td><td>—</td></tr>
       <tr><td><code>music_list_options</code></td><td><span class="badge ro">읽기</span></td><td>없음 — 서버 내장 상수</td><td><a href="gemini-lyria.html">Lyria</a></td></tr>
       <tr><td><code>suno_generate</code></td><td><span class="badge wr">쓰기</span> <span class="badge key">키</span></td><td><code>POST /api/v1/generate</code> + 폴링</td><td><a href="suno.html">Suno</a></td></tr>

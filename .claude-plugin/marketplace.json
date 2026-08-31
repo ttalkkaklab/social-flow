@@ -30,7 +30,7 @@
         "publishing",
         "mcp"
       ],
-      "description": "Channel-based short-form and long-form content pipeline — authors an image-included storyboard under data/[channel]/episodes/[topic]/storyboard and takes it through six one-round adversarial reviews before approval, builds the 9:16 or 16:9 video plus per-platform text (Threads·Instagram·Facebook·YouTube) into output/, and publishes after HITL approval. Platform credentials are optional: with them the growth skills run the channel autonomously, without them the pipeline still delivers the finished video to upload by hand. Built-in MCP server (55 tools, 46 without credentials, no external MCP dependency): SNS publishing and insights, SerpApi/Naver search, data.go.kr collection, and image/video/voice/music generation with on-device engines that need no API key."
+      "description": "Channel-based short-form and long-form content pipeline — authors an image-included storyboard under data/[channel]/episodes/[topic]/storyboard and takes it through six one-round adversarial reviews before approval, builds the 9:16 or 16:9 video plus per-platform text (Threads·Instagram·Facebook·YouTube) into output/, and publishes after HITL approval. Platform credentials are optional: with them the growth skills run the channel autonomously, without them the pipeline still delivers the finished video to upload by hand. Built-in MCP server (61 tools, 52 without credentials, no external MCP dependency): SNS publishing and insights, SerpApi/Naver search, data.go.kr collection, and image/video/voice/music generation with on-device engines that need no API key."
     }
   ]
 }

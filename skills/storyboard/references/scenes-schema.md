@@ -7,16 +7,17 @@ consumes after storyboard approval. `video-template.html` loads it with
 ## Contents
 
 - [Overall structure](#overall-structure)
+- [Comprehension contract — `window.COMPREHENSION`](#comprehension-contract-windowcomprehension)
 - [Format — `window.FORMAT`](#format-windowformat)
 - [Grammar units and production layers](#grammar-units-and-production-layers)
-- [Playback order — one skeleton, two arcs (`arc`)](#playback-order-one-skeleton-two-arcs-arc)
+- [Playback order — format picks the skeleton](#playback-order-format-picks-the-skeleton)
 - [Fields common to every shot](#fields-common-to-every-shot)
   - [narration segments](#narration-segments)
   - [title is a spoken hook · narration explains in polite register (user directive, 2026-08-13)](#title-is-a-spoken-hook-narration-explains-in-polite-register-user-directive-2026-08-13)
   - [visual plan](#visual-plan)
 - [Contracts by type](#contracts-by-type)
-  - [cover — the result (answer-first) or the moment (story) in the first second, the promise in the first three](#cover-the-result-answer-first-or-the-moment-story-in-the-first-second-the-promise-in-the-first-three)
-  - [hooking — the shot after the cover. It hooks why they should stay](#hooking-the-shot-after-the-cover-it-hooks-why-they-should-stay)
+  - [cover — on a short, a gap; on long-form, the result or the moment](#cover-on-a-short-a-gap-on-long-form-the-result-or-the-moment)
+  - [hooking — long-form only. The shot after the cover](#hooking-long-form-only-the-shot-after-the-cover)
   - [points — one message per screen](#points-one-message-per-screen)
   - [quote — speech / quotation](#quote-speech-quotation)
   - [Claim traceability (`claim`) — which research entry a sentence rests on](#claim-traceability-claim-which-research-entry-a-sentence-rests-on)
@@ -36,9 +37,10 @@ consumes after storyboard approval. `video-template.html` loads it with
   - [Screencast splice — one recorded screen inside an ordinary episode (`visual.source: "screencast"`)](#screencast-splice-one-recorded-screen-inside-an-ordinary-episode-visualsource-screencast)
   - [The authored-screen lane — three kinds under one key (`visual.slide.kind`)](#the-authored-screen-lane-three-kinds-under-one-key-visualslidekind)
   - [Slide scenes — a screen where text and shapes are the subject (`visual.slide`)](#slide-scenes-a-screen-where-text-and-shapes-are-the-subject-visualslide)
+  - [Motion diagram treatments — editorial frame or photo action (`visual.slide.treatment`)](#motion-diagram-treatments-editorial-frame-or-photo-action-visualslidetreatment)
   - [Motion slides — a slide whose numbers move (`visual.slide.motion: true`)](#motion-slides-a-slide-whose-numbers-move-visualslidemotion-true)
   - [Kinetic type — the words are the picture (`visual.slide.kind: "kinetic"`)](#kinetic-type-the-words-are-the-picture-visualslidekind-kinetic)
-  - [Character act — someone reacting on screen (`visual.slide.kind: "character"`)](#character-act-someone-reacting-on-screen-visualslidekind-character)
+  - [Character act — a cast enacts the sentence on screen (`visual.slide.kind: "character"`)](#character-act-a-cast-enacts-the-sentence-on-screen-visualslidekind-character)
 - [Authoring verification checklist (the storyboard skill's self-check before requesting approval)](#authoring-verification-checklist-the-storyboard-skills-self-check-before-requesting-approval)
 
 ## Overall structure
@@ -53,6 +55,7 @@ window.THEME = {
   ink:     "#0b1020",          // base dark (background, subtitle outline)
   brand:   "channel name"      // brand wording on the outro
 };
+window.COMPREHENSION = { /* the one-question contract — see below */ };
 // window.MUSIC = { … };   // named music cues (§music cues) — leave the line out for one bed all the way through
 window.SCENES = [ /* the shot array — one entry = one shot. Keep the identifier names */ ];
 ```
@@ -60,6 +63,48 @@ window.SCENES = [ /* the shot array — one entry = one shot. Keep the identifie
 Don't change the array name (`SCENES`), the filenames (`scenes.js`, `images/scene-N.png`),
 or the capture index (`frame.html?i=n`). Those are the machine identifiers produce reads.
 Only the human-readable labels move to shot, scene, and sequence.
+
+## Comprehension contract — `window.COMPREHENSION`
+
+This block is written in the story pass before a shot gets a camera or a prompt. It makes the
+episode compressible to one question, one answer, and one thing the viewer should retain:
+
+```js
+window.COMPREHENSION = {
+  mode: "informational",                    // informational | narrative
+  question: "군은 왜 발표를 바꿨을까요?",
+  answer: "기밀 풍선 임무를 숨기려고 날씨 기구라고 설명했어요.",
+  takeaway: "설명 번복이 오래된 불신을 키웠어요.",
+  branches: [],                              // cross-scene supporting questions only
+  terms: [
+    {
+      term: "레이더 반사판",
+      plain: "레이더 신호를 되돌리는 금속 구조물", // exact wording spoken in firstShot
+      firstShot: 3
+    }
+  ]
+};
+```
+
+- `question` is the governing viewer question. `answer` closes it. `takeaway` is the synthesis,
+  not the answer repeated with different wording. In short-form their non-space character caps
+  are 35, 60, and 45.
+- `branches` lists only questions held across a cut. A question paid inside the same shot is a
+  seam and stays out of this array. A short informational episode gets no cross-scene branch;
+  it follows the governing question only. A short narrative may carry one. Long-form may carry
+  up to four.
+- `terms` lists every unfamiliar name or technical term that survives into narration. Short-form
+  gets at most three. `plain` is the exact easy wording spoken in the same `firstShot`, before or
+  beside the term. If a name changes neither the answer nor the takeaway, cut the name instead of
+  adding it here.
+- `check-scenes.js` treats a missing block, an over-budget branch or term list, a wrong first
+  shot, and a plain wording that is not actually spoken as violations. The reviewer handles the
+  semantic half: an undeclared branch, a disposable proper name, or a scene whose evidence never
+  reaches the answer.
+
+`SB_DOC.craft` still carries plants, the feel curve, and visual promises for the approval page.
+It does not replace this block: craft tracks how a story lands; comprehension tracks what a
+first-time viewer has to hold while it does.
 
 ## Format — `window.FORMAT`
 
@@ -120,10 +165,41 @@ informational piece the floor is 2 shots at different sizes per scene (wide + cl
 `type` (cover/points/quote/broll/outro) is the kind of screen. The **playback role** is `beat`.
 It's orthogonal to the grammar axis.
 
-## Playback order — one skeleton, two arcs (`arc`)
+## Playback order — format picks the skeleton
 
-The skeleton that reduces drop-off is stop · hold · satisfy · act (the job table below). There
-are two ways to walk it, and the cover shot says which with `arc`:
+**`window.FORMAT` picks the skeleton.** Short-form and long-form do not share a beat list.
+
+### Short-form (`shorts-9x16`, the default) — hook → drip (1–n) → cta
+
+A short is three acts, always. `arc` is ignored; `hooking` · `result` · `body` · `turn` on a
+short are defects, not aliases. `check-scenes.js` hard-fails them.
+
+| `beat` | Name | What it does | Where |
+|---|---|---|---|
+| `hook` | cover | Opens a gap — a reason to stay in the first 3 seconds. **Does not dump `COMPREHENSION.answer`.** `hookType` is `fear` · `empathy` · `curiosity` (`spoiler` is forbidden). `hookForm` is `paradox` · `gap` · `identify` · `number` · `secret` (`payoff` is forbidden). No logo, no intro sting, no greeting | `type:"cover"` — it's the cover even unwritten |
+| `drip` | curiosity stage | **1–n shots, n ≥ 1.** Each shot except the last pays one piece of the answer and opens the next gap in the same breath (scenario-craft §5). The last drip is the first place the answer is complete. Typically 2–5, so the 4–7 shot band still holds | usually `type:"points"` |
+| `cta` | next / act | The last **narrated** shot. One outward act: a comment question, a next-episode promise, or a memory question that produces comments. Subscribe/like is still banned. A shared `type:"outro"` asset is not this beat | last narrated shot — write `beat:"cta"` |
+
+The four drop-off jobs map onto those three beats:
+
+| Job | Short-form beat | What it has to do | What kills it |
+|---|---|---|---|
+| **stop** | `hook` | 0–3 s: big title, a strong first frame, movement already in it, a gap the viewer can feel | a first frame the thumb slides past; the cover speaking the answer; `spoiler` / `payoff` |
+| **hold** | `drip` (every shot except the last drip) | pay one piece, open the next — the viewer is never done wondering. Something changing on screen every 2–4 s | a drip that only explains; dumping the whole answer on drip 1 |
+| **satisfy** | last `drip` | the first place `COMPREHENSION.answer` is complete | a hook the drips can't keep; ending on explanation with no complete answer |
+| **act** | `cta` | after the answer, one outward loop — a comment question, the next episode's concrete result, or a memory question | a vague subscribe ask; no spoken CTA; ending on the shared outro alone |
+
+Why this order: half or more of the viewers who leave a Short leave inside the first 3 seconds,
+completion is the first distribution signal under 60 s, and a curiosity loop — a question thrown,
+the answer delayed and paid in stages — is the strongest hold short-form has (user-relayed,
+2026-08-23 — field-practice grade; own-channel retention, n=4, 2026-08-26 — the body that paid
+in installments held flat, the body that explained something already accepted slid from the
+third second). Zeigarnik is the name for the mechanism, not a measurement of it.
+
+### Long-form (`youtube-long-16x9`) — one skeleton, two arcs (`arc`)
+
+Long-form still walks stop · hold · satisfy · act. The cover shot says which path with `arc`.
+A `drip` beat on long-form is read as `body`.
 
 - **`answer-first`** (the default — a file with no `arc` is read as this) — **cover → hooking →
   result → body → cta**. The cover shows the result at a glance, hooking hooks why it's needed,
@@ -141,41 +217,32 @@ are two ways to walk it, and the cover shot says which with `arc`:
   on its own ("he tried to make a super-glue and failed completely") is story material — the
   loop is already in it, and a payoff shown early closes the loop and takes away the reason to
   watch. As proportions of the main body: the setup stays under a fifth, the turn lands around
-  the two-thirds mark, the payoff takes the last quarter before the cta (the six-beat table the
-  user relayed for a 60 s piece, read as proportions — the format band is still 35–75 s).
+  the two-thirds mark, the payoff takes the last quarter before the cta.
 
 Why the story arc is its own order: a piece with a clear narrative structure completes 2–3×
-more often than a non-narrative one, and a curiosity loop — a question or claim thrown, the
-answer delayed — is the strongest hold short-form has. The rationale usually given is the
-Zeigarnik effect: the mind holds an unfinished story open and asks for closure. Grade:
-practitioner blogs —
+more often than a non-narrative one. Grade: practitioner blogs —
 [GhostShorts](https://ghostshorts.com/blog/how-to-make-storytelling-videos-that-keep-viewers-hooked-2026)
 (the 2–3× figure and hook → build → tension → payoff) and
 [House Sparrow Films](https://housesparrowfilms.com/blogs/how-to-hook-viewers-in-the-first-3-seconds-tips-for-reels-and-shorts)
-(curiosity loops); no method published, and Zeigarnik is the name for the mechanism, not a
-measurement of it (user-relayed, 2026-08-23).
+(curiosity loops); no method published (user-relayed, 2026-08-23).
 
 | `beat` | Name | What it does | Where |
 |---|---|---|---|
 | `hook` | cover | answer-first: puts the finished thing in the first frame. story: the moment it went wrong, close, the ending withheld. Either way the first line gives a reason to stay | `type:"cover"` — it's the cover even unwritten |
-| `hooking` | hooking / setup | answer-first: problem, harm, loss, resolve — why that result is needed; catches what the cover threw (the chosen opening strategy) and doesn't unpack the answer. story: the setup — era, person, the original goal — the ending still withheld | **right after the cover, in every episode** (§hooking) |
+| `hooking` | hooking / setup | answer-first: problem, harm, loss, resolve — why that result is needed; catches what the cover threw (the chosen opening strategy) and doesn't unpack the answer. story: the setup — era, person, the original goal — the ending still withheld | **right after the cover** (§hooking) |
 | `result` | result / payoff | answer-first: shows the finished thing properly — scrolling, demo, before/after. story: the payoff — what it became, the loop closed, shown wide enough to see the whole thing | answer-first: **right after hooking, before the body**. story: **after the turn, before the cta** |
 | `body` | body / build | answer-first: the method, evidence, and steps that made that result. story: the build — the conflict, the rejection, the reason it almost got lost, tension rising | answer-first: after the result has been seen. story: after the setup |
 | `turn` | turning point | **story only** — the moment someone or something saw it differently; the peak of tension, the last beat before the answer. A double hit: the situation flips and the plant re-reads in the same shot, the outcome itself still withheld (scenario-craft §9) | right before the result |
 | `cta` | next / afterglow | answer-first: what gets finished in the next episode. story: a frame that loops back to the cover — one question or the next episode | At the very end. `type:"outro"` lands here even unwritten |
 
-**What each beat does to the drop-off curve — stop · hold · satisfy · act.** In short-form the
-variable the storyboard manages is early drop-off, not the look of the panels: half or more of
-the viewers who leave a Short leave inside the first 3 seconds, completion rate is the first
-distribution signal under 60 s, and the first 1.5 s of hook weighs more than anything after it
-(user-relayed, 2026-08-23 — field-practice grade, unsourced). The four beats are the four jobs:
+**What each long-form beat does to the drop-off curve — stop · hold · satisfy · act.**
 
 | Job | answer-first | story | What it has to do | What kills it |
 |---|---|---|---|---|
 | **stop** | `hook` | `hook` | 0–3 s: big title, a strong first frame, movement already in it — no logo, no intro sting, no greeting. story: the moment of failure, close, no hint of how it ended | a first frame the thumb slides past; a story cover that names the ending |
-| **hold** | `hooking` | `hooking` · `body` · `turn` | keep the promise visible and the answer withheld — answer-first through the first 20 s, story through the turn (setup lean, tension climbing setup → build → peak), something changing on screen every 2–4 s | unpacking the answer; drifting from what the cover threw; a setup that dawdles |
-| **satisfy** | `result` · `body` | `result` | pay the promise the cover made — answer-first: the result, then how; story: the payoff, the first time the answer is on screen | a hook the body can't keep: the platform now reads "stopped, then left inside 3 s" as a negative signal, so a bait hook that isn't kept is punished, not rewarded |
-| **act** | `cta` | `cta` | after the answer, open one loop outward — in priority order: a judgment call the comments will argue over (tied to the channel concept), a rewatch pointer ("0:14에 힌트가 있었어요"), a share-worthy single fact — plus the next concrete thing (the next episode's result, the link); story: the frame that loops back to the cover is the visual half of the same device (scenario-craft §5 loop ending); the spoken half is a callback line that re-reads the cover's words in the viewer's own life plus a question about memory rather than opinion (scenario-craft §12) | a vague subscribe ask; the same judgment question verbatim every episode — viewers learn the pattern and stop answering |
+| **hold** | `hooking` | `hooking` · `body` · `turn` | keep the promise visible and the answer withheld — through the first 60 s, story through the turn (setup lean, tension climbing setup → build → peak), something changing on screen every 2–4 s | unpacking the answer; drifting from what the cover threw; a setup that dawdles |
+| **satisfy** | `result` · `body` | `result` | pay the promise the cover made — answer-first: the result, then how; story: the payoff, the first time the answer is on screen | a hook the body can't keep |
+| **act** | `cta` | `cta` | after the answer, open one loop outward — a judgment call the comments will argue over, a rewatch pointer, a share-worthy single fact, plus the next concrete thing; story: the frame that loops back to the cover (scenario-craft §5 loop ending) plus a callback and a memory question (scenario-craft §12) | a vague subscribe ask; the same judgment question verbatim every episode |
 
 And in between, **every visual change resets attention for a few more seconds** — high-performing
 Shorts change something on screen every 2–4 s (user-relayed, 2026-08-23 — field-practice grade,
@@ -200,29 +267,30 @@ outcome itself still kept for the result (§9); and the premise is shown working
 act · result) rather than explained (§10). On every arc the payoff shot copies its plant's
 frame (§3) and the signature line lands once (§7).
 
-On answer-first the cover's first frame and the result scene point at the same artifact. The
-cover is the glance; the result unfolds it so the built parts show. Don't unfold the same
-finished thing again at the end of the body. On a story arc they are different on purpose — the
-cover is the moment, the result is what it became — and it is the cta's frame that points back
-at the cover.
+On a short the cover opens a gap and the last drip is the first place the answer is complete.
+Don't put the finished answer on the cover, and don't unfold it again in the CTA. On long-form
+answer-first the cover's first frame and the result scene point at the same artifact — the
+cover is the glance; the result unfolds it so the built parts show. On a story arc they are
+different on purpose — the cover is the moment, the result is what it became — and it is the
+cta's frame that points back at the cover.
 
-Left unwritten, the renderer reads it this way. `type:"cover"` → hook, `type:"outro"` → cta,
-`sequence` opening with `결과` → result, `기획`·`방법`·`단계`·`내용` → body, opening with
-`문제`·`후킹` → hooking, opening with `전환`·`반전` → turn. `storyboard.html` warns when the
-first shot isn't the cover, when there's no hooking shot or the shot after the cover isn't
-hooking; on answer-first it flags body before result as a violation, and warns on a `turn` beat
-(it belongs to the story arc) and on body with no result shot (an informational piece has no
-result scene — there the first content shot takes `beat:"result"`, §hooking); on a story arc it
-flags result before body or before the turn as a violation, and warns when there is no turn, no
-result, or the shot right before the result isn't the turn. An `arc` outside the two is a
-warning. The promise ledger (`SB_DOC.craft`, storyboard SKILL §6) is checked in the same strip
-— a loop with no payer, a cover promise paid off the result, a plant paid in a different frame
-than it was planted in.
+Left unwritten, the renderer reads it this way. `type:"cover"` → hook, `type:"outro"` → cta
+(long-form only — a short still needs a spoken `beat:"cta"`), `sequence` opening with `풀기`·
+`호기심`·`단계` → drip, `결과` → result, `기획`·`방법`·`내용` → body, `문제`·`후킹` → hooking,
+`전환`·`반전` → turn. `check-scenes.js` and `storyboard.html` hard-fail a short that is missing
+drip or a spoken CTA, that opens on hooking/result/body/turn, that dumps `COMPREHENSION.answer`
+on the cover, or that uses `hookType:"spoiler"` / `hookForm:"payoff"`. On long-form they keep
+the arc checks: first shot isn't the cover, no hooking or the shot after the cover isn't
+hooking (warning); on answer-first, body before result is a violation; on a story arc, result
+before body or before the turn is a violation. The promise ledger (`SB_DOC.craft`, storyboard
+SKILL §6) is checked in the same strip — a loop with no payer, a cover promise paid off the
+last drip (short) or the result (long-form), a plant paid in a different frame than it was
+planted in.
 
 ```js
-arc: "answer-first"               // cover only — answer-first (default) | story. Which order the episode walks
-beat: "result"                    // hook | hooking | result | body | turn (story only) | cta
-sequence: "결과"                  // sequence head. Used with beat, the document groups them into one block
+arc: "answer-first"               // long-form cover only — answer-first (default) | story. Ignored on a short
+beat: "drip"                      // short: hook | drip | cta. long-form: hook | hooking | result | body | turn (story only) | cta
+sequence: "풀기 1"                 // sequence head. Used with beat, the document groups them into one block
 ```
 
 ## Fields common to every shot
@@ -236,10 +304,10 @@ sequence: "결과"                  // sequence head. Used with beat, the docume
 | `scene` | recommended | Grammar scene number. Same value for the same place and time. Without it the renderer assumes one scene per entry |
 | `sceneSlug` | recommended when `scene` is set | `"place / time"` — e.g. `"salon chair / day"` |
 | `sequence` | optional | Sequence name. Only when one episode has two purposes |
-| `transition` | optional | `"dissolve"` — the boundary **before this shot** fades through black. Absent means a cut, which is the default and where most boundaries belong. See §scene transition |
-| `beat` | optional | `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` — the playback role (`turn` on the story arc only). See §playback order above |
-| `arc` | cover only | `answer-first` (default) \| `story` — which playback order the episode walks. See §playback order above |
-| `shot` | recommended | `{ feel, size, angle, info, space }` — below. `feel` is written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
+| `transition` | optional | the boundary **before this shot**. Omit for a cut (the builder J-cuts spoken cards). `"cut"` is a smash. `"dissolve"` · `"dip"` · `"dip:white"` · `"push:<dir>"` are spent joins. See §scene transition |
+| `beat` | optional on long-form, required on a short | short: `hook` \| `drip` \| `cta`. long-form: `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` (`turn` on the story arc only). See §playback order above |
+| `arc` | long-form cover only | `answer-first` (default) \| `story` — which playback order a long-form episode walks. Ignored on a short. See §playback order above |
+| `shot` | recommended | `{ feel, size, angle, info, infoType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
 | `sound` | optional | `{ cue, drop, sfx }` — what the audience hears under this shot (§music cues). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
 
 ```js
@@ -249,6 +317,7 @@ shot: {
                                            // + compositions two · three · ots · pov · back · cutaway · reaction (ws = legacy ls)
   angle: "eye",                            // eye (default) · high · low · overhead · dutch — against the SUBJECT's eyes
   info: "that the install is one command", // one line on what this shot newly TELLS the audience
+  infoType: "other",                       // other · timeline · statistic · principle
   space: {                                 // the floor plan of the frame (§frame space) — required on a generated still
     frame:  "camera",                      // the only allowed value — left means left of the picture
     layout: "person on the left third, kitchen door on the right",
@@ -262,6 +331,12 @@ shot: {
 - **`info` is what the viewer newly learns; `feel` is what the viewer should feel.** Two
   different lines — scene mode keys coverage on `info`, camera mode keys the technique on
   `feel`. A `feel` that restates `info` ("that it's one command") is unset.
+- **`infoType` routes the explanation before a visual is chosen.** Use `timeline` for ordered
+  periods or dated events, `statistic` for a measured count·rate·share·comparison, `principle`
+  for a cause, mechanism, or state change, and `other` for every remaining beat. The first three
+  are always full-frame seekable HTML motion diagrams. They cannot fall back to a still, footage,
+  kinetic type, or a photo with moving annotations. If one shot needs two types, split the shot;
+  one authored frame carries one visual argument.
 - **Feel first, dials second.** Write `feel`, then pick `size`·`angle` (and `space` on a
   generated still, `camera` on a generated shot, `duration` on a clip) from the
   directing-grammar §5 table — the row is a default, and leaving it means writing why on the
@@ -364,7 +439,8 @@ visual: {
   video: null,                       // points only: the motion-background shot marker (§motion background) — omitted for stills
   clip: null,                        // quote only: the speech clip plan (below)
   source: null,                      // "recording" (§filmed scenes) | "screencast" (§screencast splice) — where the picture was recorded
-  slide: null,                       // authored screen (§the authored-screen lane) — { file, kind, plan, labels, motion, acts }
+  slide: null,                       // authored screen — { file, kind, treatment, role, motif, plan, labels, motion, acts }
+  action: null,                      // visible subject action — required when the channel motion policy says so
   character: null,                   // who is on screen (§character reference) — "<id>" | ["<id>", …] | null
   camera: null                       // the four camera slots (§camera) — required on every generated-video shot
 }
@@ -379,7 +455,7 @@ title and figure in HTML over a still photo is the default. Don't merge the two 
 | `ai-video` | Generated video — motion background, b-roll, speech clip | `type==="broll"`, or `visual.video`, or `visual.clip` |
 | `recording` | **A clip the user filmed themselves** (§filmed scenes), or one window of a screen recording spliced into an otherwise generated episode (§screencast splice) | `visual.source==="recording"` \| `"screencast"` |
 | `asset` | A pre-made shared mp4 | `type==="outro"` |
-| `slide` | **An HTML screen we authored** — a text-and-shape diagram, words landing one per sentence, or a figure reacting (`slide.kind`, §the authored-screen lane). Static (§slide scenes): long-form only. Motion (`slide.motion`): both formats | `visual.slide` present |
+| `slide` | **An HTML screen we authored** — a text-and-shape diagram, words landing one per sentence, or a figure reacting (`slide.kind`, §the authored-screen lane). Every slide is a motion slide (`slide.motion: true`), both formats | `visual.slide` present |
 
 **The verdict is per scene.** Generated and filmed scenes mixing within one episode is the
 normal long-form path, so don't flip the whole episode into one mode — that makes a single
@@ -397,9 +473,46 @@ or broll can't produce a video.
 Whether `video` is present is the **still / image→video** marker produce reads. `picture` is
 the human-readable production layer, and the two have to agree.
 
+### Channel true-motion policy
+
+A channel that promises moving scenes writes the machine contract in `profile.md` frontmatter
+and copies it into `scenes.js` so the browser approval page can check it too:
+
+```js
+window.MOTION_POLICY = {
+  minTrueMotion: "majority",                 // majority | ratio from 0 to 1
+  allowedKinds: ["ai-video", "recording"],  // ai-video | recording | motion-slide
+  maxConsecutiveStills: 1,
+  maxStillSeconds: 4,
+  requireAction: true,
+  generatedVideoMax: 7
+};
+```
+
+The profile keys are `motion_min_true`, `motion_allowed_kinds`,
+`motion_max_consecutive_stills`, `motion_max_still_seconds`, `motion_require_action`, and
+`generated_video_max`. `check-scenes.js` blocks a missing or changed copy: the profile wins.
+
+True motion is a b-roll or video clip, a motion background, a recording or screencast, or a
+motion slide when its kind appears in `allowedKinds`. Ken Burns, a camera move over one image,
+caption swaps, and still-image changes do not count. With `requireAction: true`, each qualifying
+shot also needs `visual.action` to say what visibly changes in the subject. A camera instruction
+is not an action. The ratio counts playback cuts and excludes the shared outro; b-roll is placed
+at its `after` position before consecutive-still spans are measured.
+
+The format preset owns the generated-video cap when the profile has no override. Raising the cap
+does not approve the spend: the storyboard cost panel still lists every generated slot before
+production starts.
+
+To prohibit stills completely, set `minTrueMotion: 1`, `maxConsecutiveStills: 0` and
+`maxStillSeconds: 0`. Include `motion-slide` in `allowedKinds` when photo-backed HTML motion
+is the zero-cost route. In that lane the photo can fill the frame, but the subject or evidence
+must visibly change for each narration group and `visual.action` names that change. Panning or
+zooming the whole photo, ambient drift, subtitle animation and reveal swaps remain non-motion.
+
 ## Contracts by type
 
-### cover — the result (answer-first) or the moment (story) in the first second, the promise in the first three
+### cover — on a short, a gap; on long-form, the result or the moment
 
 ```js
 {
@@ -409,7 +522,7 @@ the human-readable production layer, and the two have to agree.
   shot: { feel: "alarm — that might be me, unfiled", size: "mcu", angle: "eye", info: "that not filing means a fine",
           space: { frame: "camera", layout: "person on the left third, papers on the desk in the lower right",
                    facing: "person faces camera-right, three-quarter view", light: "key from camera-left" } },
-  arc: "answer-first",                      // playback order — answer-first (default) | story (§playback order)
+  arc: "answer-first",                      // long-form only — answer-first (default) | story. Omit on a short (§playback order)
   hookType: "fear",                         // opening strategy — fear | empathy | curiosity | spoiler (§the four opening strategies)
   hookForm: "gap",                          // how the first line is built — paradox | gap | payoff | identify | number | secret (§the six hook forms)
   kicker: "베트남 생활 · 행정",              // top series label (rg0)
@@ -427,7 +540,8 @@ the human-readable production layer, and the two have to agree.
 - title: the stimulus + **what the story is about** (the topic noun) has to be in there.
   `**…**` is the gradient chip. The angle is platform-playbook §1 ② — **a problem a stranger
   already feels, not a method or a tool**. Not "here's how with Notion" but "why am I tired
-  every single day". Solutions and methods belong to the hooking and body scenes. The kind of
+  every single day". Solutions and methods belong to the drips (short) or the hooking and
+  body scenes (long-form). The kind of
   stimulus is whichever of §the four opening strategies is written in `hookType` — the
   "안 하면 과태료" in the example above is fear (`fear`).
 - hookType: the strategy this episode's opening rides — one of `fear` · `empathy` ·
@@ -440,25 +554,33 @@ the human-readable production layer, and the two have to agree.
   Written on the cover shot. Without it `storyboard.html` warns; a form that doesn't serve
   the stimulus is a reviewer correction directive.
 - **The first frame has no logo, no intro sting, no greeting.** The stop is decided in 0–3 s:
-  a big title (≤16 chars, the gradient chip), a strong first frame (the result, the person, the
-  figure), and movement already in it — the builder's Ken Burns (`punch` lands the cover's zoom
+  a big title (≤16 chars, the gradient chip), a strong first frame (on a short: the gap, the
+  person, the figure — not the finished answer; on long-form answer-first: the result), and
+  movement already in it — the builder's Ken Burns (`punch` lands the cover's zoom
   inside the first half-second) and the cover's kicker → title → hero-stat staging
   are the floor, an opening b-roll or a real recorded clip is the ceiling. Branding lives in
   the outro (produce absolute rule 6), and the channel intro never sits in front of a short.
 - reveal mapping: rg1=title ← segment ①, rg2=stat ← segment ②.
 
-#### The first frame is the result (answer-first) or the moment (story); segment ① is a promise to the viewer
+#### The first frame is a gap (short) or the result / the moment (long-form); segment ① is a promise to the viewer
 
-On answer-first, build, tutorial, and before/after content shows **the finished result from
-the very first frame** of `visual.bg` or `visual.shot`. It doesn't open on process screens, on
-an app being launched, or on the speaker's face saying hello. The viewer sees the result in
-the first second and hears why to keep watching in segment ①. Informational topics that can't
-show a result on screen use the problem situation or the key figure as the first frame. A
-story arc opens on the moment instead — the failure or the strange thing, close, with no hint
-of how it ended (§playback order) — at its strongest, things that don't belong together in one
-frame with no line under them, so the picture asks the one question before the narration does
-(scenario-craft §5, the gap as a picture); on either arc the first frame carries no logo, intro
-sting or greeting.
+**On a short the cover opens a gap and does not dump the answer.** The first frame and
+segment ① name a loss, a stake, or a question the viewer already feels. They do not speak
+`COMPREHENSION.answer`. `hookType:"spoiler"` and `hookForm:"payoff"` are forbidden — both dump
+the ending at 0 s, which is the long-form answer-first move. `check-scenes.js` hard-fails them,
+and it hard-fails a cover whose spoken text contains the compacted answer (8 letters or more).
+The last drip is the first place that answer is complete.
+
+On long-form answer-first, build, tutorial, and before/after content shows **the finished
+result from the very first frame** of `visual.bg` or `visual.shot`. It doesn't open on process
+screens, on an app being launched, or on the speaker's face saying hello. The viewer sees the
+result in the first second and hears why to keep watching in segment ①. Informational topics
+that can't show a result on screen use the problem situation or the key figure as the first
+frame. A story arc opens on the moment instead — the failure or the strange thing, close, with
+no hint of how it ended (§playback order) — at its strongest, things that don't belong together
+in one frame with no line under them, so the picture asks the one question before the narration
+does (scenario-craft §5, the gap as a picture). Either format, the first frame carries no logo,
+intro sting or greeting.
 
 The cover's first line (segment ①) is a hook surface separate from the on-screen title. There's
 one contract — **the first sentence gives the listener a reason to stay.** That reason hangs on
@@ -478,11 +600,11 @@ and empathy.
 
 #### The four opening strategies — fear · empathy · curiosity · showing the ending (one per episode, always)
 
-The opening (cover title + segment ① + hooking — the first 20s of short-form, the first 60s of
-long-form, the same window as the §hooking length) rides **one or more** of the four. Write
-which one it rode on the cover shot as `hookType`. Overlapping two is fine — the first frame
-showing the ending while segment ① opens on fear, say — and in that case `hookType` records what
-the sound (segment ①) rides. **An opening with none of the four is a reviewer copy-mode P0.**
+The opening rides **one or more** of the four: cover title + segment ①, then the first drip on
+a short, or hooking on long-form. Write which one it rode on the cover shot as `hookType`.
+Overlapping two is fine — the first frame showing the ending while segment ① opens on fear,
+say — and in that case `hookType` records what the sound (segment ①) rides. **An opening with
+none of the four is a reviewer copy-mode P0.** A short never shows the ending.
 
 | `hookType` | Strategy | What it hooks | Segment ① example |
 |---|---|---|---|
@@ -496,19 +618,22 @@ the sound (segment ①) rides. **An opening with none of the four is a reviewer 
   "임시거주 신고, 안 하면 과태료" (fear), "하루가 왜 늘 피곤하지" (empathy), "서버비가 0원이라고?"
   (curiosity), "순서 하나에 홈페이지가 달라졌어" (showing the ending). The platform title (the
   YouTube title, the IG first line) continues the strategy too (platform-playbook §1 ②, §6).
-- **Hooking continues the strategy the cover picked.** The catch contract (same subject, same
-  promise) is the hard rule; matching strategies isn't required — a cover opening on fear and
-  hooking catching that loss with an empathy scene is natural. A title on fear with segment ①
+- **The shot after the cover continues the strategy the cover picked.** On a short that shot is
+  the first drip; on long-form it is hooking. The catch contract (same subject, same promise)
+  is the hard rule; matching strategies isn't required — a cover opening on fear and the next
+  shot catching that loss with an empathy scene is natural. A title on fear with segment ①
   talking about something else counts as a catch violation.
-- **The arc narrows the natural pair.** A `story` arc rides `curiosity` (or `empathy`·`fear` on
-  the moment of failure) — `spoiler` is the ending in the first frame, which closes the loop at
-  0 s. Choosing it on a story arc takes a written reason on the cover, and the reviewer reads it
-  as a strategy that doesn't serve the arc (a correction directive — the strategy P0 stays
-  "none of the four").
+- **A short never uses `spoiler`.** Showing the ending at 0 s is the long-form answer-first
+  move; on a short it dumps the answer the drips are supposed to pay. `check-scenes.js`
+  hard-fails it. A long-form `story` arc rides `curiosity` (or `empathy`·`fear` on the moment of
+  failure) — `spoiler` is the ending in the first frame, which closes the loop at 0 s. Choosing
+  it on a story arc takes a written reason on the cover, and the reviewer reads it as a strategy
+  that doesn't serve the arc (a correction directive — the strategy P0 stays "none of the four").
 - **Fear gets three guardrails.** ① The threat either has evidence in research.md or is hedged
   to a possibility, as in the example above ("~일 수도") — an unhedged assertion is an
-  unverified assertion (P0). ② The body answers that threat — hooking catches it and the result
-  and body unpack it, **and the answer is a step the viewer can actually take**: the Witte &
+  unverified assertion (P0). ② The drips (short) or the body (long-form) answer that threat —
+  the first drip, or hooking on long-form, catches it and the later shots unpack it, **and
+  the answer is a step the viewer can actually take**: the Witte &
   Allen meta-analysis (2000, measured) has strong fear beating weak fear only when paired with
   a doable action whose result is visible, and strong fear with no door producing defensive
   avoidance — here, the swipe (scenario-craft §4, which also carries the suspense-over-surprise
@@ -550,31 +675,37 @@ reviewer correction directive (the strategy P0 stays the four).
 | `payoff` | result first | show or hint the punchline in the first 1–3 s, then promise how | `spoiler` | the first frame is the finished thing; segment ① says what it gets you |
 | `identify` | self-identification question | a question the viewer answers "that's me" — "editing on your phone and hitting the wall?" | `empathy` | the viewer is the subject, in the second person or the shared situation |
 | `number` | number · framework | a precise figure or a counted structure — "the exact 3 steps we made [figure] with" | `curiosity`, `spoiler` | the number is the hero stat, the structure is the body's spine |
-| `secret` | hidden · secret reveal | "hidden/secret" wording — a curiosity gap plus a trust loop (you'll be told) | `curiosity` | promise the reveal, keep it for the result |
+| `secret` | hidden · secret reveal | "hidden/secret" wording — a curiosity gap plus a trust loop (you'll be told) | `curiosity` | promise the reveal, keep it for the last drip (short) or the result (long-form) |
 
 - **The form has to be kept, not just thrown.** The platform now tracks "stopped, then left
   inside 3 s" as a negative signal (user-relayed, 2026-08-23 — field-practice grade, unsourced)
   — a `gap` that the result never closes, a `secret` the body
   never reveals, a `number` the body doesn't count out, a `paradox` the evidence doesn't back,
   is a hook that costs distribution instead of buying it. That is the §playback order
-  **satisfy** job, and copy mode docks the hooking axis when the promise isn't paid.
+  **satisfy** job, and copy mode docks the drip (short) or hooking (long-form) axis when the
+  promise isn't paid.
 - **Fear keeps its guardrails** whatever the form — a `paradox` or `number` on `fear` still
   needs the threat in research.md or hedged to a possibility.
-- **The arc picks the form's lane.** On `answer-first` every form is open. On `story`, `gap` ·
-  `secret` · `paradox` · `identify` keep the loop open; `payoff` and `number` close it at 0 s
-  (the payoff is the answer, a counted framework tells the end). Use those two on a story arc
-  only with the reason written on the cover — the reviewer treats them as a form that doesn't
-  serve the stimulus (correction directive, not a P0). "He tried to make a super-glue and failed
-  completely" is a `gap` on its own: it names that the thing exists, not what it became.
+- **A short never uses `payoff`.** It dumps the result at 0 s, which is the long-form
+  answer-first cover. `check-scenes.js` hard-fails it. On long-form `answer-first` every form is
+  open. On `story`, `gap` · `secret` · `paradox` · `identify` keep the loop open; `payoff` and
+  `number` close it at 0 s (the payoff is the answer, a counted framework tells the end). Use
+  those two on a story arc only with the reason written on the cover — the reviewer treats them
+  as a form that doesn't serve the stimulus (correction directive, not a P0). "He tried to make
+  a super-glue and failed completely" is a `gap` on its own: it names that the thing exists, not
+  what it became.
 - **The mapping to our fields** — `payoff` is what the cover contract already demands on build
   types on answer-first (the result in the first frame), `identify` is the hooking "problem·harm" form with
   the viewer as subject, `gap` is the §hooking "don't unpack" rule seen from the first line.
   The six don't replace the four or the hooking contract; they name the shape of the first
   sentence so it can be chosen on purpose and read back against performance.
 
-### hooking — the shot after the cover. It hooks why they should stay
+### hooking — long-form only. The shot after the cover
 
-If the cover stopped the thumb, hooking carries the stopped person to the result. The two
+**Short-form does not use this beat.** After the cover a short walks `drip` shots, then `cta`
+(§playback order). `beat:"hooking"` on a short is a violation.
+
+On long-form, if the cover stopped the thumb, hooking carries the stopped person to the result. The two
 stretches differ even in the metric the platform measures — the cover is the 3-second skip
 rate, hooking is the drop-off curve over the first 30 seconds and first minute. On a story arc
 hooking is the **setup** — same slot, same hold job, but its subject is the protagonist and the
@@ -600,13 +731,11 @@ as `quote` when it's a character asking a question. Either way, write `beat: "ho
 - **Where** — the shot right after the cover. An opening b-roll (`after: 0`) isn't a playback
   role but 4 seconds of the cover picture moving, so it can sit between — as long as the first
   shot after it is hooking. It comes before the result (in builds) and the first body scene.
-- **Length** — short-form **1–3 shots · 4–15s**. Counting from the cover, the result (the first
-  body scene for informational pieces, the build on a story arc — there the result is the payoff
-  and waits for the turn) starts **within 20s**. Long-form is 1–3 shots · 20–60s,
-  with the result (or the build) inside the first 60s. These are provisional — the value sits between TikTok's
-  6-second hook and YouTube's 30-second Intro, and of the two measured episodes buzz-agents
-  (1 shot, 10s) is inside while neighborhood-change-radar (4 shots, 17.2s, result starting at
-  20.6s) is outside. Revisit with average watch time and retention across 3 baseline episodes.
+- **Length** — **long-form only, 1–3 shots · 20–60s**, with the result (or the build) inside
+  the first 60s. Short-form does not use this beat — after the cover it walks drip shots
+  (§playback order). These numbers are provisional — the value sits between TikTok's
+  6-second hook and YouTube's 30-second Intro. Revisit with average watch time and retention
+  across 3 baseline long-form episodes.
 - **The four things it does** — this is where the sources overlap (evidence:
   [hooking research](../../../docs/research/2026-08-18-hooking-beat/)).
   1. **Catch** — continue the same subject and the same promise the cover threw. Don't drift to
@@ -648,8 +777,9 @@ as `quote` when it's a character asking a question. Either way, write `beat: "ho
   piece draws the problem situation. `title` is usually left empty — if you write one, it's a
   spoken hook (§title is a spoken hook).
 - **Renderer inference** — a `sequence` opening with `문제` or `후킹` reads as hooking. Write
-  `beat` anyway — inference is for old files. `storyboard.html` warns when there's no hooking
-  shot or the shot after the cover isn't hooking.
+  `beat` anyway — inference is for old files. On long-form `storyboard.html` warns when there's
+  no hooking shot or the shot after the cover isn't hooking. On a short those beats are
+  violations.
 
 ### points — one message per screen
 
@@ -772,65 +902,71 @@ the field appears only where there is a table to point at.
 ```js
 {
   type: "points",
-  transition: "dissolve",     // omit for a cut · dissolve | dip | dip:white | push:<l2r|r2l|u2d|d2u>
+  transition: "dissolve",     // omit · cut | dissolve | dip | dip:white | push:<l2r|r2l|u2d|d2u>
   …
 }
 ```
 
-Four words, and each one is a different picture:
+**Omit is a cut. `"cut"` is a smash.** They are not the same. The builder J-cuts every incoming
+spoken card whose `enter=` is empty — the next line starts on the previous last frame
+(`SCENE_JCUT`, 0.32 s), then the picture cuts. That is the professional split edit (Murch):
+you hear the next sentence before you see the next shot, so the picture never changes in
+silence. Measured on a reference short that holds attention for 85 s
+(docs/research/2026-08-29-one-world-word-cue): six hard cuts, no dissolve, and no silence
+longer than 0.3 s. Write `"cut"` only when picture and sound have to change together. Do not
+write `"jcut"` — it is not a field; the builder applies it.
 
-| `transition` | What the audience sees at the join | When |
+Pick from this table. One home; directing-grammar §6 rule 16 points here.
+
+| What is happening | Write | What the audience sees |
 |---|---|---|
-| *(absent)* | a cut — one frame the old shot, the next frame the new one | the default. The story continued |
-| `dissolve` | the new shot melts up **through** the old one — two pictures on screen at once for 0.45 s | time passed, or the place changed, and the two pictures belong to one world |
-| `dip` · `dip:white` | the old shot fades to black (or white), a beat of nothing, the new one fades up | a chapter break, a jump the story treats as a distance. White is a flash — a memory, a blast |
-| `push:l2r` … | the old shot slides off in that direction and uncovers the new one (0.32 s) | a list, a comparison, "meanwhile" — the two shots are siblings, not a before and after |
+| same place and time — two shots of one scene, size or angle changed | omit | a cut. The builder J-cuts spoken cards |
+| smash — a hit, a reveal that has to land on the new frame | `"cut"` | picture and sound change together, silent pre-roll |
+| time passed, or the place changed, and the two pictures belong to one world | `"dissolve"` | the new shot melts up **through** the old one for 0.45 s |
+| a chapter / act break, a jump the story treats as a distance | `"dip"` / `"dip:white"` | through black (or white) — a beat of nothing. White is a flash |
+| a list, a comparison, "meanwhile" — siblings, not a before and after | `"push:<l2r\|r2l\|u2d\|d2u>"` | the old shot slides off and uncovers the new one (0.32 s) |
 
-**The default is a cut, and most boundaries should stay one.** A cut is the invisible join —
-it says the story continued. A transition says something moved that the picture alone cannot
-show: time passed, or the place changed. Spend it where that is true and nowhere else.
-Measured on a reference short that holds attention for 85 s (docs/research/2026-08-29-one-world-word-cue):
-six hard cuts in the whole piece and no dissolve at all — the joins feel soft because every
-shot is **moving** and every shot is in the **same place**, not because the edit blurred them.
-When a cut feels abrupt, look at the two pictures first: a still landing on a still, or a
-hall landing on a kitchen, is what the audience felt. A dissolve on top of that is slow *and*
-abrupt.
+**Most boundaries omit the field.** A cut says the story continued. A visible join says
+something moved that the picture alone cannot show. Spend it where that is true and nowhere
+else. The 85 s reference feels soft because every shot is **moving** and every shot is in the
+**same place**, not because the edit blurred them. When a cut feels abrupt, look at the two
+pictures first: a still landing on a still, or a hall landing on a kitchen. A dissolve on
+top of that is slow *and* abrupt.
 
-**A short gets one, or none.** Two is already a lot; a dissolve at every boundary is the
-slideshow look, and it reads as an episode with no cuts in it rather than an episode with
-transitions. Long-form can carry one per chapter boundary. The reason is not taste: the cut
-rhythm is what this pipeline uses to hold attention (the builder alternates the Ken Burns
-direction card to card for exactly that reason), and softening every join takes that away.
+**A short gets one visible join, or none.** Two is already a lot; a dissolve at every
+boundary is the slideshow look. Long-form can carry one per chapter boundary. Softening
+every join takes away the cut rhythm this pipeline uses to hold attention.
 
-Where it earns its place:
+Where a visible join earns its place: a time jump inside one room (the cut would read as
+continuous); a move the story treats as a distance; the turn on a story arc; into the cta
+when the body ended on tension.
 
-- **A time jump inside one place** — the same room, later. The cut would read as continuous.
-- **A move the story treats as a distance** — leaving the scene the episode opened in.
-- **The turn on a story arc** — the beat before the payoff, where the episode changes its mind.
-- **Into the cta** — the afterglow frame, when the body ended on tension.
+Where it does not: between two shots of the same `scene`; to paper over a jarring image
+change; on the hook or the shot right after it. Consecutive stills in one scene change size
+by two steps or the angle (directing-grammar §6 rule 16 · §7's 30° rule) — that is the
+picture match, not a dissolve.
 
-Where it does not:
+**Don't derive it from `scene` or `sceneSlug`.** The library uses them inconsistently —
+measured across every episode with the field, several give every single shot its own
+`scene` number, so "new scene → dissolve" would put one at every cut in half the channel.
+The transition is written where it is wanted, one at a time.
 
-- Between two shots of the same `scene` — that is continuous time and place, and the cut is
-  the honest join.
-- To paper over a jarring image change. Fix the image; a dissolve makes it slow *and* jarring.
-- On the hook or the shot right after it. The first three seconds have no time to spend.
+**What produce does with it.** Every join is drawn inside one card's own encode — no
+cross-card xfade, so the concat stays stream-copy exact (`../produce/references/build-reel.sh`
+§7.4). Mapping, written on the incoming card unless noted:
 
-**Don't derive it from `scene` or `sceneSlug`.** Both are real fields with real meanings, but
-the library uses them inconsistently — measured across every episode with the field, several
-give every single shot its own `scene` number, so a rule of "new scene → dissolve" would put
-one at every cut in half the channel. The transition is written where it is wanted, one at a
-time.
+| `transition` | `cards.tsv` |
+|---|---|
+| omitted | nothing — the builder J-cuts (`enter=jcut` is the default, not something to type) |
+| `"cut"` | `enter=cut` — smash, old silent pre-roll |
+| `"dissolve"` | `enter=dissolve` |
+| `"push:<dir>"` | `enter=push:<dir>` |
+| `"dip"` / `"dip:white"` | `exit=black` (or `white`) on the card before **and** `enter=black` (or `white`) on this one |
 
-**What produce does with it.** Every transition is drawn inside one card's own encode — no
-overlap, so the episode does not get shorter, no subtitle cue moves, and the seam stays
-stream-copy exact (`../produce/references/build-reel.sh` §7.4). `dissolve` and `push` are
-written on the incoming card alone (`cards.tsv` `enter=dissolve` / `enter=push:<dir>`): the
-builder keeps the previous card's last frame and the incoming card opens on it and gets out
-of it. `dip` is two halves — `exit=black` on the card before, `enter=black` on this one
-(`white` likewise). Audio runs straight through: the narration already meets silence at a
-card boundary and the music bed is continuous, so fading either one would cut a word or
-punch a hole in the bed.
+Dissolve, push, and dip keep the card's frame count (measured A/B: identical `subs.srt`,
+same duration both ways). A J-cut drops that card's silent pre-roll (`PRE`, 0.40 s) because
+the next line occupies it. `POST` is 0.45 s — last-reveal hang plus a blink. The BGM bed
+runs across the whole feature; fading it at a scene change would punch a hole in the music.
 
 ### Camera — the four slots (`visual.camera`)
 
@@ -1240,8 +1376,8 @@ either way (absolute rule 10); this is about words that live inside the picture.
 
 - **When to use it**: when the movement itself is the content. A place to show only the picture
   with nothing said is `broll` (spliced between scenes); **when the background has to move while
-  you talk, that's a motion background**. Still is the default for scenes where still is enough —
-  video buys cost and seam risk.
+  you talk, that's a motion background**. Still is the default only after the channel's
+  true-motion floor and still-run limits are met — video buys cost and seam risk.
 - **Start from the shot's `feel`, not from "this scene is heavy, so push the camera in"** — read
   the directing-grammar §5 row for that feel and take its move; the picture (`bgPrompt`), the
   size and the angle carry the tone, the move supports it (a move on its own didn't change
@@ -1249,13 +1385,11 @@ either way (absolute rule 10); this is about words that live inside the picture.
   character wasn't set yet). So spend moves **where the character isn't set yet — openings and
   transitions** — and when the tone is wrong, fix `bgPrompt`, size or angle before the move.
 - **Mixing movement into the middle scenes is favorable in itself** — a run of still cuts is a
-  scroll-past signal (skip-rate measurement, 2026-08-15). But veo isn't the only source of
-  movement: the Ken Burns still lane (the builder applies a move per cut — eased zoom towards a
-  focus point, pan, punch, handheld drift) and code-rendered animation (the cover's
-  kicker → title → hero-stat staging, typing cards — clips captured from HTML in a browser, cost 0 and safe for Korean)
-  come first. A veo motion background is bought only when those fall short and **the movement
-  itself is the content**. Count how long the fully-still stretches in the episode are first,
-  confirm the slot can't be filled by a code render, and only then plan veo.
+  scroll-past signal (skip-rate measurement, 2026-08-15). The channel policy decides which
+  motion kinds satisfy its floor. A Ken Burns move, caption change, or still swap can improve a
+  still cut but never counts as true motion. Code-rendered animation counts only when
+  `motion-slide` appears in `allowedKinds`. A generated motion background is bought only when
+  the approved plan calls for one and **the movement itself is the content**.
 - **A character-level veo ban is resolved per cut** — even where the profile bans veo for a
   particular character (e.g. a mouthless face — the model invents a mouth, measured 5 times on
   Ttalkkak Lab), that ban applies only to **cuts where that character is on screen**. Cuts without
@@ -1268,10 +1402,10 @@ either way (absolute rule 10); this is about words that live inside the picture.
   makes the next set of metrics unable to separate what worked (the same logic as cost-tiers
   §promotion freeze — that one is the unattended loop, this one is human planning). Experiment
   one slot at a time once the baseline is set.
-- **The combined generated-video cap — this section is the source of truth**: **at most 2 per
-  episode, counting b-roll slots + motion-background scenes together** (user directive,
-  2026-08-14). veo calls cap at 2 as well. quote speech clips don't count toward this total.
-  Three or more gets a red badge from the `storyboard.html` check strip.
+- **The combined generated-video cap — this section is the source of truth**: the selected
+  format supplies the default, and `generated_video_max` in the channel profile may override
+  it. Count b-roll slots + motion-background scenes together; quote speech clips do not count.
+  Going over the effective cap gets a red badge from the `storyboard.html` check strip.
 - **points only** — the cover keeps its code-rendered still (produce absolute rule 10) and takes
   video as an opening b-roll. For quote, `clip` plays that role.
   **The one exception is an explicit per-episode user directive** (2026-08-15, the Ttalkkak Lab
@@ -1326,8 +1460,8 @@ either way (absolute rule 10); this is about words that live inside the picture.
 }
 ```
 
-The generated-video cap **is set by §motion background's combined cap of 2** — b-roll slots and
-motion-background scenes count together. One b-roll is usually the opening after the cover
+The generated-video cap **is set by §motion background's effective channel cap** — b-roll slots
+and motion-background scenes count together. One b-roll is usually the opening after the cover
 (`after: 0`); the other can sit after any body scene — where the story's axis turns, or where a
 run of still cuts is dragging.
 
@@ -1606,7 +1740,7 @@ shot, baked into clips by seek-rendering, checked by `check-slide.js`, and judge
 |---|---|---|
 | `"diagram"` (the default when absent) | text and shapes — structure, comparison, steps, a flow of numbers | §slide scenes · §motion slides |
 | `"kinetic"` | the words themselves — one phrase landing per sentence | §kinetic type |
-| `"character"` | someone reacting — a drawn figure that points, nods, thinks | §character act |
+| `"character"` | a cast enacts the sentence — a figure reacts, officers surround, documents reveal | §character act |
 
 Everything else is shared and does not change per kind: the file naming
 (`slides/s<shot number>-<slug>.html`), reveal groups 1:1 with narration segments, the state rule,
@@ -1614,14 +1748,13 @@ the determinism contract, the zone, no `bg`/`bgPrompt`, no §5 image generation,
 at score ≥ 95 with p0 = 0. **A new kind is a new template and new design rules — not a new
 pipeline.**
 
-Two rules bind the two new kinds:
+Two rules bind every kind:
 
-- **`kind` never implies `motion`.** `kind: "kinetic"` and `kind: "character"` both require
-  `motion: true` written out. produce §3.6, the storyboard check strip, and the static capture
-  path all branch on `motion === true` and know nothing about `kind`; leave it out and a moving
-  screen quietly renders down the still path with its motion gone. `check-slide.js` fails on it.
+- **`motion: true` is required whenever `visual.slide` exists.** A still slide is not allowed.
+  produce §3.6 and the storyboard check strip render the seek path only. Leave `motion` out and
+  `check-scenes.js` / `check-slide.js` fail.
 - **An absent `kind` is `"diagram"`.** Every episode written before this lane existed keeps
-  behaving exactly as it did.
+  behaving exactly as it did — except it now has to write `motion: true` too.
 
 ### Slide scenes — a screen where text and shapes are the subject (`visual.slide`)
 
@@ -1645,8 +1778,11 @@ slide.**
     slide: {
       // If this shot is 12th in the array it's s12 — the array position, not the scene number (8)
       file: "slides/s12-plugin-layout.html",
+      kind: "diagram", motion: true, treatment: "editorial",
+      role: "mechanism", motif: "folder rail",
       plan: "the plugin folder structure revealing itself top to bottom, one entry at a time",
       labels: ["skills/", "agents/", "server/"]
+      // arts: [{ file: "slides/assets/s12-plugin-layout.png", prompt: "…", group: 1, move: "travel" }]
     }
   }
 }
@@ -1655,37 +1791,93 @@ slide.**
 | Field | Required | What |
 |---|---|---|
 | `slide.file` | ✅ | `slides/s<shot number>-<slug>.html` — **shot number = the SCENES array position (from 1)**, the same number as script.md's shot and `voice/s<n>.wav` |
-| `slide.plan` | ✅ | One line on what to draw. The §7 approval reads this plan — the file is built afterwards |
+| `slide.plan` | ✅ | One line on what to draw. For motion, number what changes on each narration group |
 | `slide.labels` | ✅ when the shapes carry text | Every piece of text to draw on the slide beyond `title` and `bullets`. The style gate's screen surface checks this array — plant Korean text in the slide file that isn't here and characters that never passed the check go on screen |
-| `slide.motion` | optional | `true` makes it a **motion slide** (§motion slides) — numbers count up, bars grow, steps enter on their sentence. Omitted or `false` is the static slide whose only movement is the builder's xfade between reveal states |
+| `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **flat ink actor** (person, agent, room) sitting with `h.fig`; hairlines (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generate at storyboard §5.6 |
+| `slide.motion` | ✅ `true` | required. A still slide is not allowed. Numbers count up, bars grow, type reveals on its sentence (§motion slides) |
+| `slide.treatment` | ✅ on a moving `diagram` | `"editorial"` when HTML owns the whole frame; `"photo-action"` when a photo fills the frame and the photographed subject or evidence itself changes |
+| `slide.role` | ✅ on `treatment:"editorial"` | `evidence` · `relationship` · `mechanism` · `timeline` · `statistic` · `transition` · `verdict` |
+| `slide.motif` | ✅ on `treatment:"editorial"` | The episode-wide visual device repeated across authored frames: signal line, evidence stamp, paper tear, date rail, or another concrete device |
+| `slide.motionBeats` | ✅ when `shot.infoType` is `timeline` · `statistic` · `principle` | One `{group, primitive}` per narration group. The declared primitive has to exist in the rendered DOM for the same group |
 
-**The file is not built at the storyboard stage.** The storyboard carries only `plan` and
-`labels`; once §7 approval is done, storyboard §8 authors it against the
-`references/slide-template.html` contract. Copy changes change the slide, so flipping the order
-throws away slides you already made — the same reason as §5 images, except here what you spend
-is authoring time rather than money.
+The frame design is part of what the user approves, so storyboard renders and reviews key
+states before §7. Author only text already present in `title`, `bullets`, and `slide.labels`.
 
 - A slide scene has no `bg` or `bgPrompt` — it drops out of §5 image generation and the §5.5
   image review, and storyboard-reviewer's image mode doesn't treat its missing `scene-N.png` as
   a defect.
 - **Reveal groups are 1:1 with narration segments** by default, and using sub-reveals (`A|B`)
-  makes more groups than segments — the same contract as video-template, so produce's state
-  capture and xfade become the slide animation as they are.
-- **The builder's xfade is all the animation there is.** Add a CSS animation, a transition, or
-  a blinking cursor and the state capture's byte-identity check (capture-reveals.sh's exit
-  condition) never finishes. A slide has to render deterministically for a given `?reveal=k`.
-- Keep text inside the zone (x 96 · top 96 · bottom 285) — even with no Ken Burns
-  (`zoom=none`), the bottom 285px is the subtitle band.
-- **A static slide is long-form only** — `slide-template.html` is fixed at 1920×1080 and
-  §8's capture runs at `CAP_W=1920 CAP_H=1080`. A short-form episode that wants a slide
-  makes it a motion slide (`slide.motion: true`, below), whose template carries both
-  formats' zones.
+  makes more groups than segments. produce lays clip k under segment k as a play-once visual.
+- Keep text inside the zone (portrait x 176 · top 190 · bottom 570, wide x 96 · top 96 ·
+  bottom 285) — the bottom band is the subtitle band.
+- Both formats. The template carries both zones from `window.FORMAT`.
+
+### Motion diagram treatments — editorial frame or photo action (`visual.slide.treatment`)
+
+A moving diagram states which of two jobs HTML is doing. `check-scenes.js` and
+`check-slide.js` reject an omitted treatment so a still photo with a moving box cannot quietly
+stand in for a designed frame.
+
+`"editorial"` means **HTML is the frame**. It composes archival documents, dates, maps, source
+labels, type, lines, masks, and evidence into one screen. Use it when the viewer must compare two
+claims, follow cause and effect, understand a mechanism, read a timeline, cross a transition, or
+feel the verdict land. A short informational episode uses 1–3 editorial frames. Give them one
+shared `motif`; vary the composition and let the motif provide continuity. Two to four atomic
+moves may happen across the scene, but only one primary read changes at a time.
+
+An editorial frame is not a text treatment for a photo. When it uses a local scan, photo, or
+symbol, that raster is one plate inside a constructed visual argument. Put at least two authored
+actors or relations on screen — for example, two paper fragments converging on a source card, a
+date rail joining documents, or a signal line linking an eye gesture and a hand gesture to a
+clearly labelled online interpretation. `check-slide.js` blocks a raster-only editorial file;
+`slide-reviewer` grades the rendered result and requires 95 or more with P0=0.
+
+Three information types make this lane mandatory. `check-scenes.js` rejects another visual,
+`check-slide.js --require-all` rejects a missing HTML file, and `render-motion-slide.mjs` rejects
+a declared movement that is absent from the rendered frame:
+
+| `shot.infoType` | Required `slide.role` | Allowed `motionBeats[].primitive` |
+|---|---|---|
+| `timeline` | `timeline` | `date-enter` · `range-grow` · `event-link` |
+| `statistic` | `statistic` | `count-up` · `bar-grow` · `dot-fill` · `axis-draw` |
+| `principle` | `mechanism` | `flow-trace` · `node-enter` · `state-transform` · `shape-enter` · `shape-draw` · `shape-travel` |
+
+Groups start at 1 and map to narration segments in order. One group declares one primary
+primitive. `motion-slide-template.html` provides helpers with the matching names (`h.date`,
+`h.range`, `h.link`, `h.count`, `h.bar`, `h.dots`, `h.axis`, `h.flow`, `h.node`, `h.state`,
+`h.disk`, `h.ring`, `h.press`, `h.shift`, `h.fig`, `h.stem`, `h.bus`, `h.chamber`).
+The helper emits `data-primitive`, so the contract follows the pixels instead of trusting a plan.
+
+A **principle** frame is an illustrated cast plus hairline relations — the same grammar as a
+cast of actors with pipes drawing between them. `shape-enter` sits an actor or a chamber
+(`h.fig` · `h.chamber`; `h.disk` only when the actor is abstract). `shape-draw` draws the
+relation (`h.stem` down, `h.bus` across, `h.ring` around). `shape-travel` is a press or a
+side move (`h.press` · `h.shift`). Labels name the actors; they are not the picture.
+Shape primitives require `slide.arts` (ink actor, paper fill, no background, no readable
+text, no photorealism). `flow-trace` · `node-enter` · `state-transform` stay for named
+states and may skip arts. A principle shot that only reveals words is the same defect as a
+kinetic fallback.
+
+```js
+slide: {
+  file: "slides/s4-announcement-reversal.html",
+  kind: "diagram", motion: true, treatment: "editorial",
+  role: "relationship", motif: "radio signal line",
+  plan: "① the July 8 statement enters · ② a signal line crosses to the reversal · ③ both dates lock into one contrast",
+  labels: ["1947년 7월 8일", "비행 원반", "날씨 기구"]
+}
+```
+
+`"photo-action"` means a local photo can fill the frame, but every narration group changes the
+subject or evidence inside it: debris is sorted, a reflector unfolds, a folder leaves a shelf, a
+trace reaches its target. `visual.action` and `slide.plan` name those same changes. A whole-photo
+pan or zoom, drifting dust, a light pulse, a callout line, or a rectangle appearing over an
+unchanged photo is not subject action and fails the slide review.
 
 ### Motion slides — a slide whose numbers move (`visual.slide.motion: true`)
 
 For a passage that **states a value** — a count, a comparison, a share, steps that arrive
-one per sentence — a static slide leaves the number sitting there while the voice says it.
-A motion slide makes the number count up, the bar reach its mark, the step enter, **at the
+one per sentence — the number counts up, the bar reaches its mark, the step enters, **at the
 moment the sentence about it starts**. The research behind the lane
 (`docs/research/2026-08-29-motion-slide-lane/`): animation raises attention and engagement
 and leaves comprehension unharmed only when the movement carries the value; decorative
@@ -1703,9 +1895,15 @@ motion costs comprehension. So the lane is deliberately narrow — beats, not am
     picture: "slide", overlay: "none",
     slide: {
       file: "slides/s5-gear-count.html",
-      motion: true,
+      kind: "diagram", motion: true, treatment: "editorial",
+      role: "statistic", motif: "measurement rail",
       // what moves on which sentence — §7 approval reads this line
       plan: "① 27 counts up as the hero number · ② the 30 bar grows to 81% · ③ the 37 bar grows to full and the source line enters",
+      motionBeats: [
+        { group: 1, primitive: "count-up" },
+        { group: 2, primitive: "bar-grow" },
+        { group: 3, primitive: "bar-grow" }
+      ],
       labels: ["톱니바퀴 개수", "큰 조각 하나", "Freeth et al., Nature 2006"]
     }
   }
@@ -1730,17 +1928,18 @@ puts the reveal.
 
 | Field | Required | What |
 |---|---|---|
-| `slide.motion` | ✅ `true` | the marker. Without it the file is checked as a static slide (animations forbidden) |
-| `slide.plan` | ✅ | **what moves on which sentence**, numbered by segment — "① 27 counts up · ② the bar grows". A plan that only says what is drawn is a static plan |
-| `slide.labels` | ✅ | as on a static slide. Figures may be typed in the slide, but every figure on screen must match `labels` / `bullets` / research.md — slide-reviewer reads them off the frames |
+| `slide.motion` | ✅ `true` | the marker. Without it `check-scenes.js` and `check-slide.js` fail |
+| `slide.plan` | ✅ | **what moves on which sentence**, numbered by segment — "① 27 counts up · ② the bar grows". A plan that only says what is drawn is not a motion plan |
+| `slide.labels` | ✅ | Figures may be typed in the slide, but every figure on screen must match `labels` / `bullets` / research.md — slide-reviewer reads them off the frames |
 
 Contract (the template's head comment carries the same list; `check-slide.js` machine-checks it):
 
-- Built from `references/motion-slide-template.html`, never from `slide-template.html` —
-  it exposes `window.__seek(tMs, g)` · `__groups()` · `__size()` · `__meta()`, which the
-  renderer calls (`__meta` reports stray and infinite animations; the renderer stops on either).
+- Built from `references/motion-slide-template.html` (or the kinetic / character template for
+  those kinds). It exposes `window.__seek(tMs, g)` · `__groups()` · `__size()` · `__meta()`,
+  which the renderer calls (`__meta` reports stray and infinite animations; the renderer
+  stops on either).
 - **Every movement is reproducible by seek**, and there are four ways to make one:
-  CSS `@keyframes` (the template's `rise` · `grow` · `draw`), `data-count` count-ups,
+  CSS `@keyframes` (the template's `rise` · `in` · `grow` · `draw` · `fade`), `data-count` count-ups,
   a **painter** registered with `__paint(rg, durMs, fn)` whose `fn(tMs)` draws the frame at
   `t` (canvas 2D, WebGL, or SVG — the path for a rotation, a trace, anything keyframes can't
   hold; WebGL runs on SwiftShader, so it reproduces on the same machine rather than across
@@ -1767,7 +1966,7 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   bare Chromium ships without the H.264 decoder.
   Painters get `__interp(x, [in0,in1], [out0,out1], ease)` and `__ease(name, x)` from the
   runtime (`linear` · `out` · `in` · `inOut`) so a curve isn't hand-rolled per slide.
-- **One movement per group, ≤ 2.6s of motion** (clip ≤ 2.9s with the hold). A segment
+- **One movement per group, ≤ 2.6s of motion** (clip = 2.6s + the hold). A segment
   shorter than its clip cuts to the next rest frame mid-motion; the renderer warns.
 - **Continuous motion is outside this lane** — gears turning for the whole scene, a
   line tracing under the narration. That would freeze on every hold. Render it as
@@ -1783,11 +1982,11 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   570, wide x 96 · top 96 · bottom 285 — `formats.js` mirrored inline in the template).
 - The look is `references/slide-design.md` — ink · paper · one accent, hairlines not
   boxes, one hero per slide. Its §5 is the rubric **`slide-reviewer`** scores the rendered
-  frames against in storyboard §8, and a motion slide enters the build only at **score ≥
+  frames against in storyboard §5.6, and a motion slide enters the build only at **score ≥
   95 with p0 = 0**.
 - A motion slide has no `bg`/`bgPrompt` and skips §5 image generation and the image
-  review, like a static slide; the storyboard's check strip and `episode-state.js` treat
-  the file the same way (same naming, same "not authored yet" blocker).
+  review; the storyboard's check strip and `episode-state.js` treat the file the same way
+  (same naming, same "not authored yet" blocker).
 
 ### Kinetic type — the words are the picture (`visual.slide.kind: "kinetic"`)
 
@@ -1818,7 +2017,10 @@ on it.
 
 - Built from **`references/kinetic-type-template.html`**. Helpers: `h.word` (the big phrase),
   `h.line` · `h.sub` (the ones receiving it), `h.cross` (a phrase with a rule struck through it —
-  for the thing that turned out wrong), `h.rule`.
+  for the thing that turned out wrong), `h.rule`, `h.art` (a still from `slide.arts`), `h.disk`
+  (a supporting shape). When `slide.arts` is set, default `renderKinetic` places the first art
+  on group 1 then the title with `in` — that pair is one event. Type-only (a verdict, a cross)
+  skips arts.
 - **Don't put the subtitle on screen.** The subtitle band is already reading that sentence; a
   screen that repeats it word for word says everything twice and gives the eye nothing to do.
   What lands on screen is what survives the trim — `title`, `bullets`, `labels`. slide-reviewer
@@ -1826,18 +2028,21 @@ on it.
 - **One big phrase per slide**, four lines at the very most, five words to a line. Past that it
   is a paragraph, and a paragraph belongs to the narration.
 - **One effect kind per slide** — `drop` (from above, the default) or `wipe` (left to right, for
-  a longer phrase). Mixing them inside one screen reads as a template showing off.
+  a longer phrase). Mixing them inside one screen reads as a template showing off. An art that
+  travels while the word enters with `in` is one event, not two.
 - Words don't spin, bounce, or fly in on an arc. They arrive and stop. Same argument as the
   motion-slide lane: movement that carries meaning helps, decorative movement costs
   comprehension.
-- **Not a motion slide.** A value that counts up, a bar that grows, steps that arrive — that is
+- **Not a diagram.** A value that counts up, a bar that grows, steps that arrive — that is
   §motion slides, and it stays there. This kind is for when the words are the whole point.
 
-### Character act — someone reacting on screen (`visual.slide.kind: "character"`)
+### Character act — a cast enacts the sentence on screen (`visual.slide.kind: "character"`)
 
 An explanation with nobody in it is flat in a way a viewer feels before they can name. This kind
-puts a drawn figure on screen that **reacts to each sentence** — comes in, points at the thing,
-nods, thinks, cheers when it works.
+puts a drawn cast on screen that **enacts each sentence**. Use one figure for a reaction, or a
+small cast for a concrete event: a masked figure gathers around a document, officers arrive, then
+the restraint closes. The picture supplies cause and effect; verified text and sources still carry
+the claim.
 
 ```js
 {
@@ -1862,27 +2067,32 @@ nods, thinks, cheers when it works.
 
 | Field | Required | What |
 |---|---|---|
-| `acts` | ✅ | one action name per reveal group, in order. **The vocabulary is closed**: `enter` · `point` · `nod` · `shrug` · `think` · `wave` · `cheer`. `check-slide.js` fails on a name outside it and on fewer acts than narration segments |
+| `acts` | ✅ | one action name or `{ action, actor, target? }` per reveal group, in order. **The vocabulary is closed**: `enter` · `point` · `nod` · `shrug` · `think` · `wave` · `cheer` · `conceal` · `signal` · `inspect` · `gather` · `surround` · `bind` · `escort` · `release`. `check-slide.js` fails on an unknown action, an unknown cast id, or fewer acts than narration segments |
+| `cast` | required for a multi-actor event | `{ id, archetype, count?, label? }[]`. `archetype` is a visual role such as `masked`, `police`, `researcher`, `witness`, `document`, or `prop`; the plate stays text-free and its label stays in `labels` |
 | `plan` | ✅ | what the figure does on which sentence, numbered by segment — the same shape as a motion slide's plan |
 | `labels` | ✅ | as on every slide |
 
-- Built from **`references/character-act-template.html`**. The figure is an ink line-drawing in
-  the slide design's own language — paper stroke on ink, one accent, no fill, no face. It
-  inherits the look instead of arriving as a mascot from somewhere else.
+- Built from **`references/character-act-template.html`**. The figure is a polished large-head,
+  simplified editorial character, not a generic icon. With an image tool, produce a matched set
+  of transparent, text-free character and prop plates under `slides/assets/` and use HTML to
+  stage their actions. Without one, the template's code-native tableau is the fallback. Labelled
+  boxes are not a substitute when an illustration tool is available.
 - **Actions are chosen, never authored.** Adding a keyframe of your own to a slide breaks the
   thing that makes the lane work: every action is defined once in the template, so it renders the
-  same way in every episode, and hand-tuned motion doesn't survive a re-render. If an action the
-  episode needs isn't in the seven, that is a change to the template, `check-slide.js` and
-  `slide-design.md` together — not something to solve inside one slide.
+  same way in every episode, and hand-tuned motion doesn't survive a re-render. The vocabulary is
+  `enter` · `point` · `nod` · `shrug` · `think` · `wave` · `cheer` · `conceal` · `signal` ·
+  `inspect` · `gather` · `surround` · `bind` · `escort` · `release`. For a cast event, write
+  `{ action, actor, target? }`; both ids must exist in `cast`. If an action the episode needs is
+  absent, change the template, `check-slide.js` and `slide-design.md` together — not one slide.
 - **Every action returns to rest** except `enter`. That is what lets clip k end where clip k+1
   begins, and it is why poses don't accumulate across cuts.
 - **The character never carries the fact alone.** The value, the claim, the name are written on
   screen and checked like any other screen text; the figure reacts to them. A slide where the
   only thing conveying the point is a gesture has nothing for the style gate or the reviewer to
   read.
-- **One figure, no locomotion, no lip sync.** Walk cycles, a second character, a mouth moving to
-  the narration — all outside this lane. A speaker who has to be a person belongs in the filmed
-  lane or a generated video shot.
+- **A maximum of three actors, no lip sync.** Entering, surrounding, escorting and a reversible
+  restraint are allowed because they state the event. A walk cycle, a mouth moving to narration,
+  or an unbounded crowd belongs in filmed or generated-video work.
 - **Not the channel's mascot.** Using it on every scene turns an explainer into a cartoon and
   buries the evidence. It earns its place on beats about a person's experience — being stuck,
   deciding, being surprised.
@@ -1895,11 +2105,16 @@ prompt or camera slot, a multi-reference clip with no scope) **show up in the ch
 the top when you open `storyboard.html` in a browser** — don't count by hand, just confirm the
 strip says no violations.
 
+- [ ] **`window.COMPREHENSION` reduces the episode to one question, answer, and takeaway.** A
+      short informational episode has no cross-scene branch; a short narrative has at most one.
+      Every unfamiliar term carries its exact plain wording in the same first shot, and every
+      scene's `shot.info` reaches the answer or takeaway
 - [ ] cover title ≤16 chars + topic word included, statLabel ≤18 chars. The title opens on a felt
       problem rather than a method or tool (platform-playbook §1 ②)
 - [ ] **The cover `hookType` is one of the four** (`fear`·`empathy`·`curiosity`·`spoiler`), and the
-      title, segment ①, and hooking actually ride that strategy — writing it down while the opening
-      opens on a different stimulus is the same as not writing it (§the four opening strategies)
+      title and segment ① actually ride that strategy — writing it down while the opening
+      opens on a different stimulus is the same as not writing it (§the four opening strategies).
+      **A short does not use `spoiler`.** On long-form, hooking continues the same stimulus
 - [ ] **Every scene title is a spoken hook** — something a person blurts out (casual-register
       exclamation, question, hearsay), not an explanatory statement, a `-하기` nominalization, or
       newspaper-style `-ㄴ다` (§title is a spoken hook)
@@ -1908,7 +2123,7 @@ strip says no violations.
       checked against the portrait contract, and it passes
 - [ ] Shot count and total length are inside the format band (§format table · the source of truth
       is `formats.js`)
-      - Short-form: cover 1 + body 3–6 = **4–7 shots · 35–75s** (90s hard cap)
+      - Short-form: hook + drip (1–n) + spoken CTA = **4–7 shots · 35–75s** (90s hard cap)
       - Long-form: **28–70 shots · 8–15 min** (20 min hard cap) + chapters (§chapter).
         An episode with many filmed scenes normally has fewer shots than this band — one chunk of
         recording comes in as one scene. The badge only warns; it doesn't block
@@ -1921,16 +2136,24 @@ strip says no violations.
 - [ ] **If there are slide scenes** (§slide scenes) each one has `slide.file` and `slide.plan`,
       and file follows the `slides/s<shot number>-<slug>.html` convention (shot number = array
       position). Every piece of text to draw on the shapes is in `slide.labels` — the file itself
-      is built in §8 after approval
-- [ ] **If there are motion slides** (`slide.motion: true`, §motion slides) the `plan` says what
+      is built and reviewed at §5.6 before approval. `slide.motion: true` is required
+- [ ] **If there are slide scenes** (`slide.motion: true`, §motion slides) the `plan` says what
       moves on which sentence (numbered by segment), the movement is a value being spoken (a
       count, a bar, a step) and not ambience, and no scene relies on continuous motion — that
       is footage, not a slide. Groups are 1:1 with narration segments unless `A|B` sub-reveals
       are written
+- [ ] **Every moving diagram has `slide.treatment`.** Short informational episodes use 1–3
+      `editorial` frames with a valid `role` and one repeated `motif`; `photo-action` frames name
+      a real subject/evidence change in both `visual.action` and `slide.plan`. A photo with a
+      moving box or line does not count
+- [ ] **Every narrated shot declares `shot.infoType`.** `timeline`, `statistic`, and `principle`
+      use the required moving editorial diagram, mapped role, and one allowed `motionBeats`
+      primitive per narration group. `check-slide.js --require-all` sees every HTML file and the
+      renderer confirms those primitives in the DOM
 - [ ] **On an all-live-voice episode** `window.VOICE = "user"` is present and every scene that
       has narration filled it (§all-live-voice episodes) — the filmed-scene "live voice = `[]`"
       rule is for TTS episodes only
-- [ ] Every shot has `scene`, `sceneSlug`, `shot.feel`, `shot.size`, `shot.angle`, `shot.info` —
+- [ ] Every shot has `scene`, `sceneSlug`, `shot.feel`, `shot.size`, `shot.angle`, `shot.info`, `shot.infoType` —
       `info` doesn't overlap within the same scene, `feel` doesn't restate `info`, and `size`·`angle`
       (and `camera`·`duration` on a generated shot) follow the directing-grammar §5 row for that
       feel or say why not. One close-up (`cu`·`choker`·`ecu`) per scene, `choker`/`ecu` ≤2 and `dutch` ≤1 per episode (with
@@ -1947,6 +2170,11 @@ strip says no violations.
       scene that moves to a new place or time names its palette in three colours rather than a
       mood word (directing-grammar §3.5). A shot that follows a hard cut, a flashback, or the
       `turn` gets its own beat to land in before the next line (§6 rule 13)
+- [ ] **Each join is a decision** — omit `transition` for a cut (the builder J-cuts spoken
+      cards); write `"cut"` only for a smash; spend `dissolve` / `dip` / `push:<dir>` from
+      §scene transition, never from the `scene` number. A short spends at most one visible
+      join, never on the hook. Consecutive stills in one scene change size by two steps or
+      the angle (directing-grammar §6 rule 16)
 - [ ] **Every generated clip's prompt closes with positive locks** — what has to hold in every
       frame, written as positive sentences, with each reference given its scope in
       `visual.character` (`{ id, scope }` — "controls the helmet and body only", "appears only in
@@ -1956,19 +2184,22 @@ strip says no violations.
       catches the negative directives and a multi-reference clip with no scope anywhere
 - [ ] `visual.picture` and `visual.overlay` match the structure. AI video and HTML staging aren't
       merged into one badge
-- [ ] On answer-first, builds, tutorials, and before/after comparisons show the finished result
-      in the first frame, and the first line promises the viewer that result's benefit or change;
-      on a story arc the first frame is the moment it went wrong and the ending stays out of it
-- [ ] The playback order matches the cover's `arc` — **answer-first: cover → hooking → result →
-      body**, the finished thing (`beat:"result"`) before the method and steps (`beat:"body"`), the
-      cover's glance and the result's unfolding pointing at the same artifact; **story: cover →
-      hooking → body → turn → result**, the answer appearing for the first time in the result, a
-      `turn` shot right before it, the cover's moment and the result's payoff different on purpose
-- [ ] **The shot after the cover is hooking** (`beat:"hooking"`) — informational pieces included.
-      It catches what the cover threw, hooks with the viewer as the subject (the protagonist and
-      their goal on a story arc), and doesn't unpack the answer. In short-form the result (the
-      first body scene for informational pieces, the build on a story arc) starts within 20s of
-      the cover (§hooking)
+- [ ] **On a short the cover opens a gap and does not dump `COMPREHENSION.answer`** — no
+      `hookType:"spoiler"`, no `hookForm:"payoff"`, no compacted answer in the cover's spoken
+      text. On long-form answer-first, builds, tutorials, and before/after comparisons show the
+      finished result in the first frame; on a story arc the first frame is the moment it went
+      wrong and the ending stays out of it
+- [ ] **Playback order matches the format** — **short: hook → drip (1–n) → cta**, n ≥ 1, last
+      narrated shot is `beat:"cta"` (an outro asset is not the spoken close), no
+      hooking/result/body/turn; **long-form answer-first: cover → hooking → result → body**, the
+      finished thing before the method; **long-form story: cover → hooking → body → turn →
+      result**, the answer appearing for the first time in the result, a `turn` shot right before
+      it
+- [ ] **On a short every middle shot is `beat:"drip"`** — each shot except the last drip pays
+      one piece and opens the next gap (scenario-craft §5); the last drip is the first place the
+      answer is complete. **On long-form the shot after the cover is hooking** (`beat:"hooking"`)
+      — it catches what the cover threw, hooks with the viewer as the subject, and doesn't unpack
+      the answer, with the result or the build starting within 60s of the cover (§hooking)
 - [ ] One episode solves one problem and produces one result
 - [ ] A serial's CTA promises the next episode's concrete result rather than making a vague
       subscribe request
@@ -1977,15 +2208,17 @@ strip says no violations.
 - [ ] tts/sub notation split done (numbers, loanwords)
 - [ ] No distortion of numeric ranges (a range stays a range)
 - [ ] Every factual claim matches a verification-passed entry in research.md, research.md was
-      finished **before** the first scene was written (storyboard SKILL §2 — question map ·
-      two-direction searches · counter-evidence and freshness · sufficiency: floor 3 verified
-      claims, 5+ on a short, 12+ on a long-form, every question answered or written off), and
-      no claim sits on a written-off question
+      finished **before** the first scene was written (storyboard SKILL §2 — two passes with a
+      pick in between: first research → three directions → additional research · first pass
+      logs ten or more searches · sufficiency: floor 3 verified claims, 5+ on a short, 12+ on
+      a long-form, every question answered or written off, one `Chosen:` direction), and no
+      claim sits on a written-off question
 - [ ] **The cover has `hookForm`** (`paradox`·`gap`·`payoff`·`identify`·`number`·`secret`) and the
-      title and segment ① take that shape, and the result pays it (a gap closed, a secret
-      revealed, a number counted out — §the six hook forms). The first frame has no logo, no intro,
-      no greeting; every narration segment opens curiosity, moves the information forward, or puts
-      evidence down; one sentence = one subtitle = one reveal (§narration segments)
+      title and segment ① take that shape, and the last drip (short) or the result (long-form)
+      pays it (a gap closed, a secret revealed, a number counted out — §the six hook forms).
+      **A short does not use `payoff`.** The first frame has no logo, no intro, no greeting; every
+      narration segment opens curiosity, moves the information forward, or puts evidence down;
+      one sentence = one subtitle = one reveal (§narration segments)
 - [ ] Plain-language principle — no unexplained jargon, no over-compression
 - [ ] No AI tells — exit 0 on all three surfaces (0 S1 findings left):
       ```bash
@@ -2011,8 +2244,12 @@ strip says no violations.
       (one in a short). `window.MUSIC` missing entirely is a valid single-bed episode, not a gap.
       Every shot that becomes a generated video has `visual.audio` (§clip audio)
 - [ ] THEME matches profile.md §3
-- [ ] Generated video (`broll` + `visual.video` combined) is **at most 2** (§motion background is
-      the source of truth) · content-reviewer plan mode PASS recorded
+- [ ] **`window.MOTION_POLICY` matches the profile frontmatter** when the channel declares one.
+      The true-motion ratio, allowed kinds, longest still run, action requirement, and generated
+      video cap all pass `check-scenes.js`. Ken Burns and caption swaps do not count
+- [ ] Generated video (`broll` + `visual.video` combined) stays inside the format default or the
+      profile's explicit `generated_video_max` override (§motion background) · content-reviewer
+      plan mode PASS recorded
 - [ ] If you placed `broll` scenes — the two slots' `after` differ · each slot has `narration: []`
       · `src` is the same real PNG as `SCENES[after].visual.bg` (that image made with gpt_image
       high as a photorealistic person scene) · `duration` (used length) is 8 or under with a

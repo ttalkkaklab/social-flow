@@ -58,6 +58,13 @@ by frame rounding + sample-accurate padding. Reveals are pure video-side timing,
 boundary detection produces zero drift. Always composite through build-reel.sh (an -shortest mux
 was measured to accumulate 105ms).
 
+**Card joins default to a J-cut.** An incoming spoken card with no `enter=` opens on the
+previous last frame for `SCENE_JCUT` (0.32s) while the next line already plays, then the
+picture cuts. `POST` is 0.45s (last-reveal hang). Write `enter=cut` for a smash with the old
+silent pre-roll. Dissolve, push, and dip stay explicit spent effects drawn inside the
+incoming card, so concat `-c copy` and drift 0 still hold. A J-cut drops that card's silent
+`PRE` from its length because the next line occupies it.
+
 ## Reveal timing contract (reveal-timing.py)
 
 - **Segment-boundary transition** = fade **inside** the detected pause, completing 0.05s before
@@ -76,18 +83,19 @@ was measured to accumulate 105ms).
 | `drift` ≠ 0.0000s | **Do not proceed** — pipeline bug |
 | `missing reveal state: r<k>` | **Do not proceed** — capture the missing state and split that segment into `A\|B` sub-reveals, then rebuild |
 | `last reveal state unused` | **Do not proceed** — the last bullet/source never appears in the video. If `no reveals.tsv` shows, this check is off (capture-reveals.sh wasn't used) |
-| `⚠ REGEN recommended` (speech rate outside [3.2,6.2] · clipped ending) | Regenerate only that card once with the same registry → rebuild. If it repeats, shorten the script |
+| `REGEN recommended` (speech rate outside [3.2,6.2] · clipped ending) | Regenerate only that card once with the same registry → rebuild. If it repeats, shorten the script |
 | `boundary proportional fallback` | OK to continue — if it recurs, fix the script's sentence boundaries (periods) |
 | `segment window under 0.9s` | Merge the short sentence with a neighbor |
 | `min gap between reveals <0.40s` | Trim bullets or lengthen the sentence |
 | `duration > 13s` (card) | Shorten the script and regenerate that card's TTS. Hitting the atempo ceiling (1.18) is also a shorten signal |
-| `✗ separation <N> LU is under the <floor> LU floor` | **Do not proceed** — the build exits 1; the bed is competing with the voice. Lower the bed (`BGM_SEP`), swap in a quieter cue, or fix a narration track that came in hot, then rebuild |
-| `⚠ separation <N> LU is no wider than the <N> LU resting distance` | The ducking never fired — the voice key went silent or the bed reached the mix around it. Rebuild after fixing; continue only if the voice is audibly clear over the music |
+| `separation <N> LU is under the <floor> LU floor` | **Do not proceed** — the build exits 1; the bed is competing with the voice. Lower the bed (`BGM_SEP`), swap in a quieter cue, or fix a narration track that came in hot, then rebuild |
+| `separation <N> LU is no wider than the <N> LU resting distance` | The ducking never fired — the voice key went silent or the bed reached the mix around it. Rebuild after fixing; continue only if the voice is audibly clear over the music |
 | `── voice-to-bed separation <N> LU` (no mark) | OK — at or above the 4 LU floor and wider than the resting distance |
-| Total length | 35–75s recommended, 90s cap (main + outro − 0.6s) — **measured on the speed pass's output**, so a 90s build at 1.4x is a 64s episode |
+| Total length | 35–75s recommended, 90s cap (main + outro − 0.6s) — **measured on the final pace pass's output** |
 | No `── speedup x…` line | **Do not proceed** — the required speed pass (produce §7.5) never ran, and `output/` would get the un-sped build. Run `speedup.sh .work` and copy the `-fast` set |
-| `✗ reel-fast.mp4 is …s but …s was expected` | **Do not proceed** — the speed pass exits 1; the filter didn't take. Check that `outro.mp4` in the workdir is the same file the build spliced |
-| `⚠ … apart after the speed-up — YouTube drops chapters under 10s` | Long-form only. Merge the chapters that landed under 10s apart and rebuild — YouTube drops the entire list, not just that entry |
+| No `PASS final speech rate` line, or a `final speech rate` failure | **Do not proceed** — the shipped subtitle timeline was not checked or exceeds 6.2 characters/s. Lower the profile factor or shorten the dense line, rerun the pass, and use only the new `-fast` set |
+| `reel-fast.mp4 is …s but …s was expected` | **Do not proceed** — the speed pass exits 1; the filter didn't take. Check that `outro.mp4` in the workdir is the same file the build spliced |
+| `apart after the speed-up — YouTube drops chapters under 10s` | Long-form only. Merge the chapters that landed under 10s apart and rebuild — YouTube drops the entire list, not just that entry |
 
 ## Three TTS failure modes and responses (Gemini TTS, field-tested)
 

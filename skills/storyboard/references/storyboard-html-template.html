@@ -994,8 +994,9 @@ window.SB_DOC = {
       type: { cover: "cover", points: "body", quote: "quote", broll: "b-roll", outro: "outro" },
       pic: { still: "still picture", "ai-video": "AI video", recording: "recording",
              asset: "shared asset", slide: "HTML slide" },
-      beat: { hook: "cover", hooking: "hooking", result: "result", body: "body",
+      beat: { hook: "cover", hooking: "hooking", drip: "curiosity stage", result: "result", body: "body",
               turn: "turn", cta: "what next" },
+      joinIs: function (v) { return "join · " + v; },
       arc: { "answer-first": "answer first", story: "story" },
       hook: { fear: "fear", empathy: "empathy", curiosity: "curiosity", spoiler: "ending first" },
       hookForm: { paradox: "paradox", gap: "leave a blank", payoff: "result first",
@@ -1006,7 +1007,7 @@ window.SB_DOC = {
       deviceSteps: ["claim", "act", "result"],
 
       // ── check-strip categories (flag's second argument) ──
-      where: { length: "total length", shotCount: "shot count", genVideo: "generated video",
+      where: { length: "total length", shotCount: "shot count", genVideo: "generated video", motion: "true motion", comprehension: "comprehension",
                chapter: "chapter", order: "playback order", opening: "opening strategy",
                hookForm: "hook form", promise: "promise ledger", cover: "cover",
                transition: "transition", sound: "sound", cost: "cost", outro: "outro" },
@@ -1102,6 +1103,7 @@ window.SB_DOC = {
       feelLabel: "What the viewer should feel",
       feelMissing: "not written — write shot.feel before the size, angle and camera (directing-grammar §5)",
       infoLabel: "What this shot adds",
+      infoTypeLabel: "Information route",
       spaceLabel: "The layout from the camera",
       spaceMissing: "not written — fill shot.space before generating the still (directing-grammar §3.5)",
       brollPicture: "Picture", brollOverlay: "Staging", brollWhere: "Insert position",
@@ -1164,13 +1166,13 @@ window.SB_DOC = {
       arcAnswerNote: " — the finished thing comes first, the how comes after",
       cOutsideTwo: " is outside the two — answer-first or story (scenes-schema §playback order)",
       cOpening: "Opening strategy",
-      openingNote: " — the title, the first line and the hooking all ride this pull",
+      openingNote: " — the title and the first line ride this pull (the first drip on a short, hooking on long-form)",
       cOutsideFour: " is outside the four — ", cNotWritten: "not written — ",
-      oneOfFour: "one of fear|empathy|curiosity|spoiler (scenes-schema §the four opening strategies)",
+      oneOfFour: "one of fear|empathy|curiosity (a short never uses spoiler) · spoiler is long-form only",
       cHookForm: "Hook form",
-      hookFormNote: " — the title and the first line take this shape, and the result pays it",
+      hookFormNote: " — the title and the first line take this shape; the last drip (short) or the result (long-form) pays it",
       cOutsideSix: " is outside the six — ",
-      oneOfSix: "one of paradox|gap|payoff|identify|number|secret (scenes-schema §the six hook forms)",
+      oneOfSix: "one of paradox|gap|identify|number|secret (a short never uses payoff) · payoff is long-form only",
       cPromises: "Promise ledger",
       promiseSummary: function (loops, plants, unpaid) {
         return "loops " + loops + " · plants " + plants +
@@ -1231,7 +1233,8 @@ window.SB_DOC = {
       type: { cover: "커버", points: "본문", quote: "인용", broll: "삽입 영상", outro: "아웃트로" },
       pic: { still: "정지 그림", "ai-video": "AI 영상", recording: "녹화분",
              asset: "공용 소재", slide: "HTML 슬라이드" },
-      beat: { hook: "커버", hooking: "후킹", result: "결과", body: "본문", turn: "전환", cta: "다음 안내" },
+      beat: { hook: "커버", hooking: "후킹", drip: "호기심 풀기", result: "결과", body: "본문", turn: "전환", cta: "다음 안내" },
+      joinIs: function (v) { return "이음 · " + v; },
       arc: { "answer-first": "결론 먼저", story: "이야기" },
       hook: { fear: "불안", empathy: "공감", curiosity: "궁금증", spoiler: "결말 먼저" },
       hookForm: { paradox: "역설", gap: "빈칸 남기기", payoff: "결과 먼저", identify: "내 얘기네",
@@ -1242,7 +1245,7 @@ window.SB_DOC = {
       deviceSteps: ["주장", "행동", "결과"],
 
       // ── check-strip categories ──
-      where: { length: "전체 길이", shotCount: "샷 수", genVideo: "생성 영상", chapter: "챕터",
+      where: { length: "전체 길이", shotCount: "샷 수", genVideo: "생성 영상", motion: "실제 움직임", comprehension: "이해도", chapter: "챕터",
                order: "재생 순서", opening: "오프닝 전략", hookForm: "훅 형태",
                promise: "약속 장부", cover: "커버", transition: "전환", sound: "소리",
                cost: "비용", outro: "아웃트로" },
@@ -1337,6 +1340,7 @@ window.SB_DOC = {
       feelLabel: "보는 사람이 느낄 것",
       feelMissing: "안 적힘 — 크기·각도·카메라보다 shot.feel 을 먼저 적어 주세요 (directing-grammar §5)",
       infoLabel: "이 샷이 더하는 것",
+      infoTypeLabel: "정보 표현 방식",
       spaceLabel: "카메라에서 본 배치",
       spaceMissing: "안 적힘 — 정지 그림을 만들기 전에 shot.space 를 채워 주세요 (directing-grammar §3.5)",
       brollPicture: "그림", brollOverlay: "화면 연출", brollWhere: "끼우는 자리",
@@ -1399,13 +1403,13 @@ window.SB_DOC = {
       arcAnswerNote: " — 완성된 것을 먼저 보이고 방법은 뒤에",
       cOutsideTwo: " 는 둘 밖 — answer-first 또는 story (scenes-schema §playback order)",
       cOpening: "오프닝 전략",
-      openingNote: " — 제목과 첫 문장, 후킹이 이 끌림을 탄다",
+      openingNote: " — 제목과 첫 문장이 이 끌림을 탄다 (숏폼은 첫 drip, 롱폼은 후킹)",
       cOutsideFour: " 는 넷 밖 — ", cNotWritten: "안 적힘 — ",
-      oneOfFour: "fear|empathy|curiosity|spoiler 중 하나 (scenes-schema §the four opening strategies)",
+      oneOfFour: "fear|empathy|curiosity 중 하나 (숏폼은 spoiler 금지) · spoiler 는 롱폼만",
       cHookForm: "훅 형태",
-      hookFormNote: " — 제목과 첫 문장이 이 모양을 하고, 결과가 그걸 갚는다",
+      hookFormNote: " — 제목과 첫 문장이 이 모양을 하고, 숏폼은 마지막 drip · 롱폼은 결과가 그걸 갚는다",
       cOutsideSix: " 는 여섯 밖 — ",
-      oneOfSix: "paradox|gap|payoff|identify|number|secret 중 하나 (scenes-schema §the six hook forms)",
+      oneOfSix: "paradox|gap|identify|number|secret 중 하나 (숏폼은 payoff 금지) · payoff 는 롱폼만",
       cPromises: "약속 장부",
       promiseSummary: function (loops, plants, unpaid) {
         return "고리 " + loops + " · 떡밥 " + plants +
@@ -1470,8 +1474,8 @@ window.SB_DOC = {
      they never follow the language picker. An episode authored in another language falls
      through to the explicit beat: field, which is what scenes-schema asks for anyway. */
   /* AUTHOR-LANGUAGE BLOCK START — the language check cuts everything between the markers */
-  var SEQ_RE = { result: /^결과/, body: /^(기획|방법|단계|내용)/,
-                 hooking: /^(문제|후킹)/, turn: /^(전환|반전)/ };
+  var SEQ_RE = { result: /^결과/, body: /^(기획|방법|내용)/,
+                 drip: /^(풀기|호기심|단계)/, hooking: /^(문제|후킹)/, turn: /^(전환|반전)/ };
   var LETTERS_RE = /[^가-힣A-Za-z0-9]/g;   // caption ↔ line comparison: keep letters and digits
   /* AUTHOR-LANGUAGE BLOCK END */
 
@@ -1607,6 +1611,7 @@ window.SB_DOC = {
       angle: (s.shot && s.shot.angle) || "",
       feel: (s.shot && s.shot.feel) || "",
       info: (s.shot && s.shot.info) || "",
+      infoType: (s.shot && s.shot.infoType) || "",
       space: sp
     };
   }
@@ -1644,7 +1649,8 @@ window.SB_DOC = {
     return hits;
   }
   // Playback role — orthogonal to type. scenes-schema §playback order is the source of truth.
-  // answer-first: cover → hooking → result → body; story: cover → hooking → body → turn → result.
+  // short-form: hook → drip → cta. long-form answer-first: cover → hooking → result → body;
+  // story: cover → hooking → body → turn → result.
   // Left unwritten, it is read off type and the sequence heading.
   /* Display words: STRINGS.*.beat */
   // Arc — which playback order the episode walks (scenes-schema §playback order). answer-first is the
@@ -1663,6 +1669,7 @@ window.SB_DOC = {
     if (s.type === "outro") return "cta";
     if (s.type === "broll") return "";
     var seq = String(s.sequence || "");
+    if (SEQ_RE.drip && SEQ_RE.drip.test(seq)) return "drip";
     if (SEQ_RE.result.test(seq)) return "result";
     if (SEQ_RE.body.test(seq)) return "body";
     if (SEQ_RE.hooking.test(seq)) return "hooking";
@@ -1968,27 +1975,27 @@ window.SB_DOC = {
       // those segments are lines to speak, not a TTS script (scenes-schema §all-live-voice episodes).
       chips.push(badge("", narr.length ? (window.VOICE === "user" ? T.linesToSpeak : T.narrationOver) : T.speaksLive));
     } else if (s.type !== "broll" && s.type !== "outro") {
-      /* Slide-scene contract (scenes-schema §slide scenes) — the filename and the plan are what
-         gets approved; the file itself arrives after approval. Coexisting with bg is a
-         contradiction (there is only one screen). */
+      /* Slide-scene contract (scenes-schema §slide scenes) — the filename, the plan and the
+         motion:true marker are what get approved; the file is built at §5.6 before approval.
+         Coexisting with bg is a contradiction (there is only one screen). */
       var sl = s.visual && s.visual.slide;
       if (sl) {
         chips.push(badge("", T.slide));
         /* 저작 화면의 갈래 (scenes-schema §the authored-screen lane). 파일이 아직 없는
-           승인 전에도 볼 수 있는 것은 scenes.js 쪽 계약뿐이다 — check-slide.js 는 §8 뒤에
+           승인 전에도 볼 수 있는 것은 scenes.js 쪽 계약뿐이다 — check-slide.js 는 §5.6 에서
            파일을 보고 같은 것을 다시 본다. */
         var KINDS = ["diagram", "kinetic", "character"];
         var ACT_NAMES = ["enter", "point", "nod", "shrug", "think", "wave", "cheer"];
         var kind = sl.kind || "diagram";
+        if (sl.motion !== true) {
+          chips.push(badge("bad", T.kindMotion));
+          flag("bad", T.shotCap(no), "visual.slide has no motion:true — a still slide is not allowed");
+        }
         if (KINDS.indexOf(kind) === -1) {
           chips.push(badge("bad", T.kindBad));
           flag("bad", T.shotCap(no), 'slide.kind "' + kind + '" is outside ' + KINDS.join(" · "));
         } else if (kind !== "diagram") {
           chips.push(badge("", kind));
-          if (sl.motion !== true) {
-            chips.push(badge("bad", T.kindMotion));
-            flag("bad", T.shotCap(no), 'kind:"' + kind + '" needs motion:true — without it the screen is captured as a still and its motion is gone');
-          }
           if (kind === "character") {
             var acts = sl.acts;
             if (!Array.isArray(acts) || !acts.length) {
@@ -2167,13 +2174,154 @@ window.SB_DOC = {
     flag("warn", T.where.shotCount, "main body " + main.length + " shots — the " + (T.fmt[FMT_KEY] || FMT.label) + " band is " +
          FMT.sceneCountMin + "~" + FMT.sceneCountMax + " shots");
 
-  // Combined cap on generated video — b-roll slots + motion-background scenes
-  // (scenes-schema §motion background is the source of truth)
+  // The one-question contract and authored-frame budget. check-scenes.js is the hard gate;
+  // this copy gives the person opening the file the same verdict before approval.
+  var COMP = window.COMPREHENSION;
+  var isShortForm = FMT_KEY !== "youtube-long-16x9";
+  if (!COMP || typeof COMP !== "object") {
+    flag("bad", T.where.comprehension, "window.COMPREHENSION missing — write one question, answer, takeaway, branches, and term introductions");
+  } else {
+    ["question", "answer", "takeaway"].forEach(function (field) {
+      if (!String(COMP[field] || "").trim()) flag("bad", T.where.comprehension, field + " is empty");
+    });
+    var branchCap = isShortForm ? (COMP.mode === "narrative" ? 1 : 0) : 4;
+    if (!Array.isArray(COMP.branches)) flag("bad", T.where.comprehension, "branches must be an array");
+    else if (COMP.branches.length > branchCap)
+      flag("bad", T.where.comprehension, COMP.branches.length + " cross-scene branches — cap " + branchCap);
+    if (!Array.isArray(COMP.terms)) flag("bad", T.where.comprehension, "terms must be an array");
+    else if (isShortForm && COMP.terms.length > 3)
+      flag("bad", T.where.comprehension, COMP.terms.length + " unfamiliar terms — short-form cap 3");
+
+    var editorialSlides = SCENES.filter(function (s) {
+      var sl = s && s.visual && s.visual.slide;
+      return sl && sl.motion === true && (sl.kind || "diagram") === "diagram" &&
+             sl.treatment === "editorial";
+    });
+    if (isShortForm && COMP.mode === "informational" && editorialSlides.length < 1)
+      flag("bad", T.where.comprehension, "short informational episode has no full-frame editorial HTML cut — use 1–3");
+    if (isShortForm && COMP.mode === "informational" && editorialSlides.length > 3)
+      flag("bad", T.where.comprehension, editorialSlides.length + " editorial HTML cuts — short-form cap 3");
+  }
+
+  SCENES.forEach(function (s, i) {
+    var v = (s && s.visual) || {}, sl = v.slide;
+    var infoType = s && s.shot && s.shot.infoType;
+    var infoTypes = ["other", "timeline", "statistic", "principle"];
+    var infoRole = { timeline: "timeline", statistic: "statistic", principle: "mechanism" };
+    var infoPrimitives = {
+      timeline: ["date-enter", "range-grow", "event-link"],
+      statistic: ["count-up", "bar-grow", "dot-fill", "axis-draw"],
+      principle: ["flow-trace", "node-enter", "state-transform"]
+    };
+    if (s.type !== "broll" && s.type !== "outro") {
+      if (infoTypes.indexOf(infoType) < 0)
+        flag("bad", T.shotCap(i + 1), "shot.infoType must be other, timeline, statistic, or principle");
+      if (infoRole[infoType]) {
+        if (!sl || (sl.kind || "diagram") !== "diagram" || sl.motion !== true || sl.treatment !== "editorial")
+          flag("bad", T.shotCap(i + 1), infoType + " must be a full-frame moving editorial HTML diagram");
+        else if (sl.role !== infoRole[infoType])
+          flag("bad", T.shotCap(i + 1), infoType + " needs slide.role " + infoRole[infoType]);
+        var beats = (sl && sl.motionBeats) || [];
+        var segs = s.narration || [];
+        for (var group = 1; group <= segs.length; group++) {
+          var matches = beats.filter(function (b) { return b && Number(b.group) === group; });
+          if (matches.length !== 1 || infoPrimitives[infoType].indexOf(matches[0] && matches[0].primitive) < 0)
+            flag("bad", T.shotCap(i + 1), infoType + " needs one valid motionBeats primitive for narration group " + group);
+        }
+      }
+    }
+    if (!sl || sl.motion !== true || (sl.kind || "diagram") !== "diagram") return;
+    if (sl.treatment !== "editorial" && sl.treatment !== "photo-action")
+      flag("bad", T.shotCap(i + 1), "moving diagram needs slide.treatment editorial or photo-action");
+    if (sl.treatment === "editorial" && (!String(sl.role || "").trim() || !String(sl.motif || "").trim()))
+      flag("bad", T.shotCap(i + 1), "editorial frame needs role and episode-wide motif");
+    if (sl.treatment === "photo-action" && !String(v.action || "").trim())
+      flag("bad", T.shotCap(i + 1), "photo-action frame needs a subject/evidence change in visual.action");
+  });
+
+  // Generated-video cap and true-motion coverage. The profile is copied into scenes.js so
+  // this file:// review page can enforce the same contract as check-scenes.js.
+  var MP = window.MOTION_POLICY || {};
+  var policyVideoMax = MP.generatedVideoMax !== null && MP.generatedVideoMax !== undefined &&
+                       Number.isFinite(Number(MP.generatedVideoMax))
+    ? Number(MP.generatedVideoMax) : FMT.videoMax;
   var genVid = SCENES.filter(function (s) {
     return s.type === "broll" || (s.visual && s.visual.video); }).length;
-  if (genVid > FMT.videoMax)
+  if (genVid > policyVideoMax)
     flag("bad", T.where.genVideo, "b-roll and motion backgrounds together " + genVid + " shots — cap " +
-         FMT.videoMax + " (scenes-schema §motion background)");
+         policyVideoMax + " (channel motion policy; format default when no override is written)");
+
+  function trueMotionKind(s) {
+    var v = (s && s.visual) || {};
+    if (v.source === "recording" || v.source === "screencast" || v.picture === "recording") return "recording";
+    if (v.slide && v.slide.motion === true) return "motion-slide";
+    if (s && (s.type === "broll" || v.video || v.clip)) return "ai-video";
+    return null;
+  }
+  function motionPlayback() {
+    var out = [], broll = [];
+    SCENES.forEach(function (s, i) { if (s.type === "broll") broll.push({ s: s, i: i }); });
+    SCENES.forEach(function (s, i) {
+      if (s.type === "broll" || s.type === "outro") return;
+      out.push({ s: s, i: i });
+      broll.forEach(function (b) { if (Number(b.s.after) === i) out.push(b); });
+    });
+    return out;
+  }
+  function finiteMotionValue(v) {
+    return v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v));
+  }
+  var minMotion = MP.minTrueMotion;
+  var motionActive = minMotion === "majority" || (Number(minMotion) > 0 && Number(minMotion) <= 1) ||
+                     finiteMotionValue(MP.maxConsecutiveStills) ||
+                     finiteMotionValue(MP.maxStillSeconds) || MP.requireAction === true;
+  if (motionActive) {
+    var playedMotion = motionPlayback();
+    var allowedMotion = Array.isArray(MP.allowedKinds) && MP.allowedKinds.length
+      ? MP.allowedKinds : ["ai-video", "recording", "motion-slide"];
+    function motionQualifies(x) {
+      var kind = trueMotionKind(x.s), v = x.s.visual || {};
+      return !!kind && allowedMotion.indexOf(kind) !== -1 &&
+             (MP.requireAction !== true || !!String(v.action || "").trim());
+    }
+    if (MP.requireAction === true) {
+      playedMotion.forEach(function (x) {
+        var kind = trueMotionKind(x.s), v = x.s.visual || {};
+        if (kind && allowedMotion.indexOf(kind) !== -1 && !String(v.action || "").trim())
+          flag("bad", T.shotCap(x.i + 1), kind + " counts as true motion only with visual.action under this channel policy");
+      });
+    }
+    var movingCount = playedMotion.filter(motionQualifies).length;
+    if (minMotion === "majority" || (Number(minMotion) > 0 && Number(minMotion) <= 1)) {
+      var requiredMotion = minMotion === "majority" ? Math.floor(playedMotion.length / 2) + 1
+                         : Math.ceil(playedMotion.length * Number(minMotion));
+      if (movingCount < requiredMotion)
+        flag("bad", T.where.motion, movingCount + "/" + playedMotion.length +
+             " true-motion shots — this channel requires at least " + requiredMotion +
+             "; Ken Burns, caption swaps, and still-image changes do not count");
+    }
+    var stillRun = [], worstStillRun = [];
+    playedMotion.forEach(function (x) {
+      if (motionQualifies(x)) stillRun = [];
+      else {
+        stillRun.push(x);
+        if (stillRun.length > worstStillRun.length) worstStillRun = stillRun.slice();
+      }
+    });
+    var stillLabels = worstStillRun.map(function (x) { return x.i + 1; }).join("→");
+    if (finiteMotionValue(MP.maxConsecutiveStills) &&
+        worstStillRun.length > Number(MP.maxConsecutiveStills))
+      flag("bad", T.where.motion, worstStillRun.length + " consecutive non-motion shots (" + stillLabels +
+           ") — channel cap " + Number(MP.maxConsecutiveStills));
+    if (finiteMotionValue(MP.maxStillSeconds) && worstStillRun.length) {
+      var stillSeconds = worstStillRun.reduce(function (sum, x) {
+        var n = Number(x.s.duration); return sum + (Number.isFinite(n) && n > 0 ? n : 0);
+      }, 0);
+      if (stillSeconds > Number(MP.maxStillSeconds))
+        flag("bad", T.where.motion, stillSeconds.toFixed(2) + "s consecutive non-motion stretch (" +
+             stillLabels + ") — channel cap " + Number(MP.maxStillSeconds) + "s");
+    }
+  }
 
   // Long-form chapter requirement (scenes-schema §chapter) — short-form has no notion of chapters
   if (FMT.chapterMin) {
@@ -2229,9 +2377,10 @@ window.SB_DOC = {
     seenAfter[af] = 1;
   });
 
-  /* Playback order — the cover's arc picks which (scenes-schema §playback order):
-     answer-first: cover → hooking → result → body — drop-off falls when the how comes after the result;
-     story:        cover → hooking → body → turn → result — the answer waits for the payoff after the turn.
+  /* Playback order — format picks the skeleton (scenes-schema §playback order).
+     short-form: hook → drip (1–n) → cta.
+     long-form answer-first: cover → hooking → result → body;
+     long-form story:        cover → hooking → body → turn → result.
      The last main shot is not stamped PAYOFF. */
   var firstBeat = {};
   order.forEach(function (o, pos) {
@@ -2239,23 +2388,92 @@ window.SB_DOC = {
     var b = beatOf(o.s);
     if (b && firstBeat[b] == null) firstBeat[b] = { pos: pos, i: o.i, s: o.s };
   });
-  var mainOrder = order.filter(function (o) { return o.s.type !== "broll"; });
+  var mainOrder = order.filter(function (o) { return o.s.type !== "broll" && o.s.type !== "outro"; });
+  var lastDrip = null;
+  mainOrder.forEach(function (o) { if (beatOf(o.s) === "drip") lastDrip = o; });
   var arc = cover && cover.arc ? String(cover.arc) : "answer-first";
   var storyArc = arc === "story";
-  var ORDER_TXT = (storyArc ? ["hook", "hooking", "body", "turn", "result"]
-                            : ["hook", "hooking", "result", "body"]).map(function (b) {
+  var ORDER_TXT = (!WIDE
+    ? ["hook", "drip", "cta"]
+    : (storyArc ? ["hook", "hooking", "body", "turn", "result"]
+                : ["hook", "hooking", "result", "body"])).map(function (b) {
     return T.beat[b]; }).join(" → ");
   var processy = !!(firstBeat.result || firstBeat.body || hasRec);
   var orderOk = true, orderBad = false;
-  if (cover && cover.arc && !T.arc[arc]) {
+  if (WIDE && cover && cover.arc && !T.arc[arc]) {
     flag("warn", T.where.order, "arc \"" + cover.arc + "\" is outside the two — write answer-first or story on the cover (scenes-schema §playback order); read as answer-first below");
     orderOk = false;
   }
   if (order.length && order[0].s.type !== "cover") {
-    flag("warn", T.where.order, "the first shot is not the cover — " + (storyArc ? "the moment and the hook come first" : "the result at a glance and the hook come first"));
+    flag(!WIDE ? "bad" : "warn", T.where.order, "the first shot is not the cover — a short opens on the hook");
     orderOk = false;
+    if (!WIDE) orderBad = true;
   }
-  if (!storyArc) {
+  if (!WIDE) {
+    var LONG_BEATS = { hooking: 1, result: 1, body: 1, turn: 1 };
+    mainOrder.forEach(function (o) {
+      var b = beatOf(o.s);
+      if (LONG_BEATS[b]) {
+        flag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"" + b + "\" — a short walks hook → drip → cta (scenes-schema §playback order)");
+        orderOk = false; orderBad = true;
+      } else if (!o.s.beat && o.s.type !== "cover") {
+        flag("bad", T.where.order, "shot " + (o.i + 1) + " has no beat — a short labels every shot hook · drip · cta");
+        orderOk = false; orderBad = true;
+      }
+    });
+    if (!firstBeat.drip) {
+      flag("bad", T.where.order, "there is no drip shot — after the hook, 1–n shots pay curiosity in stages (beat:\"drip\") before the CTA");
+      orderOk = false; orderBad = true;
+    }
+    if (mainOrder.length) {
+      var firstB = beatOf(mainOrder[0].s);
+      if (firstB && firstB !== "hook") {
+        flag("bad", T.where.order, "the hook beat is not the first shot — a short opens on the cover");
+        orderOk = false; orderBad = true;
+      }
+    }
+    var lastMain = mainOrder.length ? mainOrder[mainOrder.length - 1] : null;
+    if (lastMain && beatOf(lastMain.s) !== "cta") {
+      flag("bad", T.where.order, "the last narrated shot is not the CTA — a short ends on beat:\"cta\" (an outro asset is not the spoken close)");
+      orderOk = false; orderBad = true;
+    } else if (lastMain) {
+      var ctaSpoken = (lastMain.s.narration || []).map(function (seg) {
+        return (seg && (seg.sub || seg.tts)) || "";
+      }).join("").replace(/\s/g, "");
+      if (!ctaSpoken) {
+        flag("bad", T.where.order, "the last narrated shot is the CTA but has no narration — a short ends on a spoken close");
+        orderOk = false; orderBad = true;
+      }
+    }
+    mainOrder.forEach(function (o, pos) {
+      var b = beatOf(o.s);
+      if (b === "hook" && pos !== 0) {
+        flag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"hook\" — the cover opens the episode");
+        orderOk = false; orderBad = true;
+      } else if (b === "cta" && pos !== mainOrder.length - 1) {
+        flag("bad", T.where.order, "a beat comes after the cta — the cta is the very end");
+        orderOk = false; orderBad = true;
+      }
+    });
+    if (cover && cover.hookType === "spoiler") {
+      flag("bad", T.where.opening, "hookType \"spoiler\" dumps the ending on a short — use fear · empathy · curiosity");
+    }
+    if (cover && cover.hookForm === "payoff") {
+      flag("bad", T.where.hookForm, "hookForm \"payoff\" dumps the result on a short — use paradox · gap · identify · number · secret");
+    }
+    var COMP = window.COMPREHENSION;
+    if (cover && COMP && COMP.answer) {
+      var compactLetters = function (s) { return String(s || "").replace(/[\s\p{P}\p{S}]/gu, ""); };
+      var ans = compactLetters(COMP.answer);
+      if (ans.length >= 8) {
+        var hookText = compactLetters([cover.title, cover.stat].concat(
+          (cover.narration || []).map(function (seg) { return (seg && (seg.sub || seg.tts)) || ""; })
+        ).join(" "));
+        if (hookText.indexOf(ans) !== -1)
+          flag("bad", T.where.cover, "the hook dumps COMPREHENSION.answer — on a short the cover opens a gap, and the last drip is the first place the answer is complete");
+      }
+    }
+  } else if (!storyArc) {
     if (processy && firstBeat.body && !firstBeat.result) {
       flag("warn", T.where.order, "there is body but no result scene — put a shot after the hooking that lays out the finished thing (an informational piece has no result scene: give its first content shot beat:\"result\")");
       orderOk = false;
@@ -2299,20 +2517,20 @@ window.SB_DOC = {
       }
     }
   }
-  /* Every episode has a hooking shot — informational ones too (scenes-schema §hooking). It has
-     to be the shot right after the cover (on a story arc it is the setup). An opening b-roll
-     (after:0) is skipped: it is not a playback role, just 4 seconds of the cover picture moving.
-     An older file with no beat gets a warning here — not a deduction, a request for a name tag. */
+  /* Long-form: every episode has a hooking shot. Shorts walk drip instead. An opening b-roll
+     (after:0) is skipped: it is not a playback role, just 4 seconds of the cover picture moving. */
   var afterCover = mainOrder.length > 1 && mainOrder[0].s.type === "cover" ? mainOrder[1] : null;
-  if (mainOrder.length > 1 && !firstBeat.hooking) {
-    flag("warn", T.where.order, "there is no hooking shot — after the cover, add the shot that hooks why to stay (beat:\"hooking\"" + (storyArc ? ", the setup on a story arc" : "") + "). Informational episodes are no exception");
-    orderOk = false;
-  } else if (afterCover && beatOf(afterCover.s) !== "hooking") {
-    var ab = beatOf(afterCover.s);
-    flag("warn", T.where.order, "the shot after the cover is not the hooking — shot " + (afterCover.i + 1) +
-         (ab ? "(" + (T.beat[ab] || ab) + ")" : "(no beat)") + " comes before the hooking (shot " +
-         (firstBeat.hooking.i + 1) + "). Reorder to " + ORDER_TXT);
-    orderOk = false;
+  if (WIDE) {
+    if (mainOrder.length > 1 && !firstBeat.hooking) {
+      flag("warn", T.where.order, "there is no hooking shot — after the cover, add the shot that hooks why to stay (beat:\"hooking\"" + (storyArc ? ", the setup on a story arc" : "") + "). Informational episodes are no exception");
+      orderOk = false;
+    } else if (afterCover && beatOf(afterCover.s) !== "hooking") {
+      var ab = beatOf(afterCover.s);
+      flag("warn", T.where.order, "the shot after the cover is not the hooking — shot " + (afterCover.i + 1) +
+           (ab ? "(" + (T.beat[ab] || ab) + ")" : "(no beat)") + " comes before the hooking (shot " +
+           (firstBeat.hooking.i + 1) + "). Reorder to " + ORDER_TXT);
+      orderOk = false;
+    }
   }
 
   /* Opening strategy — is the cover hookType one of the four (scenes-schema §the four opening
@@ -2320,17 +2538,25 @@ window.SB_DOC = {
      reviewer's copy mode looks at — this only checks the name tag. */
   var hookWord = cover && cover.hookType ? T.hook[cover.hookType] : "";
   if (cover && !cover.hookType) {
-    flag("warn", T.where.opening, "the cover has no hookType — write fear|empathy|curiosity|spoiler to say whether this episode opens (title, segment ①, hooking) on fear, empathy, curiosity, or showing the ending first");
+    flag("warn", T.where.opening, !WIDE
+      ? "the cover has no hookType — write fear|empathy|curiosity (a short never uses spoiler)"
+      : "the cover has no hookType — write fear|empathy|curiosity|spoiler to say whether this episode opens (title, segment ①, hooking) on fear, empathy, curiosity, or showing the ending first");
   } else if (cover && !hookWord) {
-    flag("warn", T.where.opening, "hookType \"" + cover.hookType + "\" is outside the four — change it to one of fear|empathy|curiosity|spoiler");
+    flag("warn", T.where.opening, !WIDE
+      ? "hookType \"" + cover.hookType + "\" is outside the three a short uses — change it to one of fear|empathy|curiosity"
+      : "hookType \"" + cover.hookType + "\" is outside the four — change it to one of fear|empathy|curiosity|spoiler");
   }
   /* Hook form — the shape of the first line (scenes-schema §the six hook forms). A name tag, like
      hookType: the check asks for it, the reviewer's copy mode judges whether the title and
      segment ① actually take that shape and whether the result pays it. */
   if (cover && !cover.hookForm) {
-    flag("warn", T.where.hookForm, "the cover has no hookForm — write paradox|gap|payoff|identify|number|secret to say how the title and segment ① are shaped (scenes-schema §the six hook forms)");
+    flag("warn", T.where.hookForm, !WIDE
+      ? "the cover has no hookForm — write paradox|gap|identify|number|secret (a short never uses payoff)"
+      : "the cover has no hookForm — write paradox|gap|payoff|identify|number|secret to say how the title and segment ① are shaped (scenes-schema §the six hook forms)");
   } else if (cover && !T.hookForm[cover.hookForm]) {
-    flag("warn", T.where.hookForm, "hookForm \"" + cover.hookForm + "\" is outside the six — change it to one of paradox|gap|payoff|identify|number|secret");
+    flag("warn", T.where.hookForm, !WIDE
+      ? "hookForm \"" + cover.hookForm + "\" is outside the five a short uses — change it to one of paradox|gap|identify|number|secret"
+      : "hookForm \"" + cover.hookForm + "\" is outside the six — change it to one of paradox|gap|payoff|identify|number|secret");
   }
 
   /* Camera slots — every shot that becomes generated video leaves the storyboard with all four
@@ -2579,7 +2805,8 @@ window.SB_DOC = {
       .filter(Boolean).join(" · ") || T.frameNotWritten;
   }
   if (!LOOPS.length)
-    flag("warn", T.where.promise, "SB_DOC.craft.loops is empty — write at least the cover's promise and the shot that pays it (open: 1, pay: <the result shot>), then every sub-loop and deliberate plant with its payer (scenario-craft §3 · §5). An unpaid promise shows here rather than at the approval screen");
+    flag("warn", T.where.promise, "SB_DOC.craft.loops is empty — write at least the cover's promise and the shot that pays it (open: 1, pay: " +
+         (!WIDE ? "<the last drip>" : "<the result shot>") + "), then every sub-loop and deliberate plant with its payer (scenario-craft §3 · §5). An unpaid promise shows here rather than at the approval screen");
   LOOPS.forEach(function (l, k) {
     var open = Number(l.open), pay = l.pay == null || l.pay === "" ? 0 : Number(l.pay);
     var plant = l.kind === "plant", label = plant ? "plant" : "loop";
@@ -2608,7 +2835,13 @@ window.SB_DOC = {
     var diff = [];
     if (!plant && cover && open === 1) {
       coverLoops++;
-      if (beatOf(SCENES[pay - 1]) !== "result")
+      var payBeat = beatOf(SCENES[pay - 1]);
+      if (!WIDE) {
+        var lastDripN = lastDrip ? lastDrip.i + 1 : 0;
+        if (pay !== lastDripN)
+          flag("warn", T.where.promise, "the cover's promise is paid at shot " + pay + (beatWord(pay) ? " (" + beatWord(pay) + ")" : "") +
+               " — the last drip is where the answer first completes (scenes-schema §playback order); pay: " + (lastDripN || "<the last drip>"));
+      } else if (payBeat !== "result")
         flag("warn", T.where.promise, "the cover's promise is paid at shot " + pay + (beatWord(pay) ? " (" + beatWord(pay) + ")" : "") +
              " — the result is where the answer first appears (scenes-schema §playback order); pay: " + (firstBeat.result ? firstBeat.result.i + 1 : "<the result shot>"));
     } else if (!plant) {
@@ -2628,7 +2861,8 @@ window.SB_DOC = {
     promiseTags[pay - 1].push({ cls: diff.length ? "warn" : "ok", text: T.tagPay(plant, open, !diff.length) });
   });
   if (LOOPS.length && cover && !coverLoops)
-    flag("warn", T.where.promise, "the cover's own promise is not in the ledger — add it first (open: 1, pay: <the result shot>); every other loop is measured against it");
+    flag("warn", T.where.promise, "the cover's own promise is not in the ledger — add it first (open: 1, pay: " +
+         (!WIDE ? "<the last drip>" : "<the result shot>") + "); every other loop is measured against it");
   var subCap = FMT_KEY === "youtube-long-16x9" ? 4 : 1;
   if (subLoops > subCap)
     flag("warn", T.where.promise, subLoops + " sub-loops beyond the cover's — " + (subCap === 1 ? "a short carries one at most" : "long-form carries two to four") +
@@ -2931,6 +3165,8 @@ window.SB_DOC = {
     var beat = beatOf(s);
     if (beat && T.beat[beat])
       h += '<span class="scene-beat beat-' + beat + '">' + esc(T.beat[beat]) + "</span>";
+    if (s.transition)
+      h += '<span class="scene-beat beat-hooktype">' + esc(T.joinIs(s.transition)) + "</span>";
     // The cover shot also carries the opening-strategy name tag — the title and segment ① have to carry that pull
     if (s.type === "cover") {
       h += '<span class="scene-beat beat-hooktype">' + esc(T.hook[s.hookType] ||
@@ -2954,6 +3190,7 @@ window.SB_DOC = {
            '<span class="shot-info shot-feel' + (g.feel ? "" : " miss") + '"><b>' + esc(T.feelLabel) + "</b>" +
            esc(g.feel || T.feelMissing) + "</span>") +
          (g.info ? '<span class="shot-info"><b>' + esc(T.infoLabel) + "</b>" + esc(g.info) + "</span>" : "") +
+         (g.infoType ? '<span class="shot-info"><b>' + esc(T.infoTypeLabel) + "</b>" + esc(g.infoType) + "</span>" : "") +
          (spaceTextOf(g.space) ? '<span class="shot-info"><b>' + esc(T.spaceLabel) + "</b>" + esc(spaceTextOf(g.space)) + "</span>"
             : (genStill(s) && !FILL_FRAME[g.size] ? '<span class="shot-info shot-feel miss"><b>' + esc(T.spaceLabel) + "</b>" + esc(T.spaceMissing) + "</span>" : "")) +
          "</div>";
@@ -3113,7 +3350,7 @@ window.SB_DOC = {
           meta += '<details class="prompt"><summary>' + esc(T.promptBg) + "</summary><p>" + esc(vis.bgPrompt) + "</p></details>";
         if (vis.slide) {
           meta += '<div class="row"><b>' + esc(T.metaSlide) + '</b><div class="v"><code>' + esc(vis.slide.file || "?") +
-               "</code> — authored in §8 after approval" +
+               "</code> — authored in §5.6 before approval" +
                (vis.slide.kind && vis.slide.kind !== "diagram" ? " · " + esc(vis.slide.kind) : "") +
                (vis.slide.acts && vis.slide.acts.length ? " · " + esc(vis.slide.acts.join(" → ")) : "") +
                "</div></div>";
@@ -3204,10 +3441,12 @@ window.SB_DOC = {
        esc(T.shotsN(FMT.sceneCountMin + "~" + FMT.sceneCountMax)) + "</td></tr>";
   if (cover) {
     h += "<tr><th>" + esc(T.cCoverTitle) + "</th><td>" + mark(cover.title) + esc(T.onScreenOf(dispLen(cover.title), 16)) + "</td></tr>";
-    h += "<tr><th>" + esc(T.cArc) + "</th><td>" + (T.arc[arc]
+    h += "<tr><th>" + esc(T.cArc) + "</th><td>" + (!WIDE
+         ? esc(ORDER_TXT)
+         : (T.arc[arc]
          ? withKey(T.arc[arc], arc) + (cover.arc ? "" : " (" + esc(T.arcDefault) + ")") + " — " + esc(ORDER_TXT) +
            esc(storyArc ? T.arcStoryNote : T.arcAnswerNote)
-         : "<code>" + esc(arc) + "</code>" + esc(T.cOutsideTwo)) + "</td></tr>";
+         : "<code>" + esc(arc) + "</code>" + esc(T.cOutsideTwo))) + "</td></tr>";
     h += "<tr><th>" + esc(T.cOpening) + "</th><td>" + (T.hook[cover.hookType]
          ? withKey(T.hook[cover.hookType], cover.hookType) + esc(T.openingNote)
          : (cover.hookType ? "<code>" + esc(cover.hookType) + "</code>" + esc(T.cOutsideFour) : esc(T.cNotWritten)) +

@@ -5,13 +5,15 @@
 <title>모션 슬라이드 씬</title>
 <!--
   social-flow 모션 슬라이드 렌더러 — 숏폼 1080×1920 · 롱폼 1920×1080 (window.FORMAT 이 고른다).
-  scenes-schema §모션 슬라이드 · storyboard SKILL §8 · slide-design.md 가 이 파일의 사용 계약이다.
+  scenes-schema §모션 슬라이드 · storyboard SKILL §5.6 · slide-design.md 가 이 파일의 사용 계약이다.
 
-  ■ 사용법 (storyboard §8 — 승인 뒤에만):
+  ■ 사용법 (storyboard §5.6 — 승인 전에):
       1. 이 파일을 storyboard/slides/s<샷번호>-<slug>.html 로 복사한다
          (샷번호 = SCENES 배열 순번 1부터 — visual.slide.file 과 같은 이름).
       2. 아래 SLIDE_SHOT 을 그 샷번호로 바꾼다.
       3. renderSlide() 하나만 그 씬의 도해로 다시 쓴다 — 다른 부분은 건드리지 않는다.
+         원리(mechanism)는 일러스트 배우(h.fig · slide.arts)와 헤어라인 관계
+         (h.stem · h.bus · h.chamber · h.ring · h.press)로 그린다. 글자 나열은 아니다.
       4. 글자는 전부 scenes.js 에서 온다(S.title·S.bullets·S.visual.slide.labels).
          여기 새 한국어 문자열 리터럴을 쓰지 않는다 — 문체 게이트(screen 표면)를
          통과한 적 없는 글자가 화면에 나가는 길이고 check-slide.js 가 기계로 잡는다.
@@ -76,6 +78,9 @@
   ■ 디자인 계약은 slide-design.md 가 정본이다. 요지: 잉크 바탕 + 종이색 글자 + 액센트 하나,
       그라데이션 글자·둥근 카드 격자·그림자 겹치기·이모지·파티클 금지, 헤어라인(1.5px)과
       코너 브래킷, 한 화면에 큰 숫자 하나, 한 그룹에 움직이는 것 하나.
+      timeline · statistic · principle 장면은 scenes.js motionBeats의 프리미티브를 같은 그룹의
+      data-primitive로 내보낸다. check-slide.js와 render-motion-slide.mjs가 두 선언을 맞춰 본다.
+      principle 은 배우가 앉고(h.fig · h.disk · h.chamber) 관계가 그어진다(h.stem · h.bus · h.ring).
 
   ■ 존: 글자는 존 안에 앉힌다 — 숏폼 x 176 · top 190 · bottom 570, 롱폼 x 96 · top 96 · bottom 285
       (formats.js zone 의 인라인 미러). 하단 밴드는 자막 자리라 배경 채색만 풀블리드.
@@ -89,14 +94,19 @@
     --w:1080px; --h:1920px; --zone-x:176px; --zone-top:190px; --zone-bottom:570px;
     /* 글자 크기 — formats.js fonts 비율의 인라인 미러 (숏폼 기준 px) */
     --fs-kicker:34px; --fs-title:60px; --fs-hero:205px; --fs-label:50px; --fs-desc:35px; --fs-foot:26px;
-    /* 모션 토큰 — slide-design.md §모션 */
+    /* 모션 토큰 — slide-design.md §모션. opacity 는 선형, 이동은 정착(--ease),
+       드러냄·긋기는 마스크(--ease-mask). 정착용 곡선을 와이프에 쓰면 초반에 거의
+       열려서 선이 지나가는 게 안 보인다. */
     --ease:cubic-bezier(.16,1,.3,1);
-    --rise:360ms; --grow:800ms; --draw:500ms; --count:2400ms; --stagger:90ms; --hold:240ms;
+    --ease-mask:cubic-bezier(.4,0,.2,1);
+    --fade:220ms; --travel:8px; --travel-x:48px; --press:56px;
+    --rise:480ms; --grow:900ms; --draw:560ms; --count:1800ms; --stagger:80ms; --hold:360ms;
     --hair:1.5px;
   }
   html.wide{
     --w:1920px; --h:1080px; --zone-x:96px; --zone-top:96px; --zone-bottom:285px;
     --fs-kicker:24px; --fs-title:43px; --fs-hero:148px; --fs-label:36px; --fs-desc:25px; --fs-foot:24px;
+    --rise:560ms; --travel:6px; --travel-x:36px; --press:40px; --grow:1000ms; --count:2000ms; --hold:420ms;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{width:var(--w);height:var(--h);overflow:hidden}
@@ -122,12 +132,32 @@
         중첩은 된다 — bar() 의 채움이 그 예). */
   .rv{animation:appear 1ms linear both paused;
       animation-delay:calc(var(--i,0) * var(--stagger))}
-  .rv.fx-rise{animation-name:rise; animation-duration:var(--rise); animation-timing-function:var(--ease)}
-  .rv.fx-grow{animation-name:grow; animation-duration:var(--grow); animation-timing-function:var(--ease); transform-origin:left center}
-  .rv.fx-draw{animation-name:grow; animation-duration:var(--draw); animation-timing-function:var(--ease); transform-origin:left center}
+  .rv.fx-fade{animation-name:fade; animation-duration:var(--fade); animation-timing-function:linear}
+  .rv.fx-rise{animation-name:fade, lift; animation-duration:var(--fade), var(--rise);
+              animation-timing-function:linear, var(--ease)}
+  /* 글자·날짜·단계는 마스크만 — 가려진 상태가 곧 안 보임이라 페이드를 안 겹친다. */
+  .rv.fx-in{animation-name:reveal; animation-duration:var(--rise); animation-timing-function:var(--ease-mask)}
+  .rv.fx-grow{animation-name:grow; animation-duration:var(--grow); animation-timing-function:var(--ease-mask); transform-origin:left center}
+  .rv.fx-draw{animation-name:draw; animation-duration:var(--draw); animation-timing-function:var(--ease-mask)}
+  .rv.fx-draw.down{animation-name:draw-down}   /* 세로 줄기 — LTR draw 는 1.5px 폭에서 팝한다 */
+  /* 도형 이동 — 원리가 글자가 아니라 자리·접촉으로 읽히게. from-left 는 반대쪽. */
+  .rv.fx-travel{animation-name:fade, travel; animation-duration:var(--fade), var(--rise);
+                animation-timing-function:linear, var(--ease)}
+  .rv.fx-press{animation-name:fade, press; animation-duration:var(--fade), var(--rise);
+               animation-timing-function:linear, var(--ease)}
+  .rv.from-left{--ox:calc(var(--travel-x) * -1)}
+  /* Heer staging — 라벨이 먼저 뜨고, 채움은 그 다음에 자란다. 흐름은 노드가 앉은 뒤 선이 그어진다. */
+  .bar .fill.rv.fx-grow{animation-delay:var(--fade)}
+  .flow .flow-line.rv.fx-draw{animation-delay:var(--rise)}
   @keyframes appear{from{opacity:0}to{opacity:1}}
-  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes lift{from{transform:translateY(var(--travel))}to{transform:none}}
+  @keyframes reveal{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
   @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  @keyframes draw{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+  @keyframes draw-down{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}
+  @keyframes travel{from{transform:translateX(var(--ox, var(--travel-x)))}to{transform:none}}
+  @keyframes press{from{transform:translateY(calc(var(--press) * -1))}to{transform:none}}
 
   /* ── 부품 — renderSlide 가 조합한다. 필요한 것만 쓰고 새 부품은 아래에 더한다. */
   .kicker{font-size:var(--fs-kicker); font-weight:500; color:var(--muted); letter-spacing:.02em;
@@ -153,7 +183,7 @@
   .bar{display:grid; grid-template-columns:1fr auto; gap:10px 18px; align-items:end}
   .bar .lbl{font-size:var(--fs-desc); color:var(--paper)}
   .bar .val{font-size:var(--fs-desc); color:var(--muted); text-align:right}
-  .bar .track{grid-column:1 / -1; height:14px; background:var(--line); position:relative}
+  .bar .track{grid-column:1 / -1; height:14px; background:var(--line); position:relative; overflow:hidden}
   .bar .fill{position:absolute; left:0; top:0; bottom:0; background:var(--accent)}
   .bar.hot .fill{background:var(--paper)}
   .bar.hot .val{color:var(--paper)}
@@ -167,6 +197,29 @@
   .step::before{content:""; height:var(--hair); background:var(--line); align-self:center}
   .step .d{grid-column:2; font-size:var(--fs-desc); font-weight:400; color:var(--muted); margin-top:6px}
 
+  /* 의미 프리미티브 — timeline · statistic · principle 장면은 scenes.js motionBeats가
+     이 이름을 고르고, 렌더러가 실제 DOM의 data-primitive와 그룹을 맞춰 본다. */
+  .timeline{display:flex; flex-direction:column; gap:24px; position:relative; padding-left:36px}
+  .timeline::before{content:""; position:absolute; left:7px; top:6px; bottom:6px;
+    width:var(--hair); background:var(--line)}
+  .date{display:grid; grid-template-columns:minmax(150px,.38fr) 1fr; gap:24px; align-items:baseline; position:relative}
+  .date::before{content:""; position:absolute; left:-33px; top:.48em; width:10px; height:10px;
+    border-radius:50%; background:var(--accent); border:3px solid var(--ink)}
+  .date::after{content:""; position:absolute; left:-23px; top:.68em; width:12px; height:var(--hair); background:var(--line)}
+  .date .when{font-size:var(--fs-label); font-weight:700; color:var(--accent); font-variant-numeric:tabular-nums}
+  .date .what{font-size:var(--fs-desc); color:var(--paper)}
+  .range,.axis,.link,.flow-line{height:var(--hair); background:var(--accent)}
+  .link{background:var(--line)}
+  .dots{display:flex; flex-wrap:wrap; gap:12px; max-width:760px}
+  .dots b{display:block; width:16px; height:16px; border-radius:50%; background:var(--accent)}
+  .flow{display:grid; grid-template-columns:1fr 72px 1fr; gap:20px; align-items:center}
+  .flow .flow-line{position:relative}
+  .flow .flow-line::after{content:""; position:absolute; right:-1px; top:-6px; width:11px; height:11px;
+    border-right:var(--hair) solid var(--accent); border-top:var(--hair) solid var(--accent); transform:rotate(45deg)}
+  .node{font-size:var(--fs-label); font-weight:650; padding:18px 0; border-top:var(--hair) solid var(--line); border-bottom:var(--hair) solid var(--line)}
+  .state{display:grid; grid-template-columns:1fr auto 1fr; gap:22px; align-items:center; font-size:var(--fs-label); font-weight:650}
+  .state .arrow{color:var(--accent); font-weight:400}
+
   .brackets{position:relative; padding:26px 30px}
   .brackets::before,.brackets::after,.brackets>i::before,.brackets>i::after{
     content:""; position:absolute; width:28px; height:28px; border:0 solid var(--line)}
@@ -177,6 +230,43 @@
 
   .rule{height:var(--hair); background:var(--line)}
   .foot{margin-top:auto; font-size:var(--fs-foot); color:var(--muted)}
+
+  /* 원리 도형 — 헤어라인·원·면 하나. 카드·그림자·아이콘 줄은 쓰지 않는다. */
+  .shape-stage{position:relative; width:100%; height:420px; display:flex; flex-direction:column;
+               align-items:center; justify-content:center; gap:28px; flex:none}
+  html.wide .shape-stage{height:280px; gap:20px}
+  .shape-item{display:flex; flex-direction:column; align-items:center; gap:14px}
+  .shape-cap{font-size:var(--fs-desc); color:var(--muted); text-align:center; word-break:keep-all}
+  .shape-disk,.shape-ring{display:block; flex:none; box-sizing:border-box; width:var(--d,120px); height:var(--d,120px)}
+  .shape-disk{border-radius:50%; background:var(--accent)}
+  .shape-ring{border-radius:50%; border:2.5px solid var(--paper); background:transparent}
+  .shape-bed{width:var(--bed,200px); height:var(--hair); background:var(--line); flex:none}
+  .shape-press{display:flex; flex-direction:column; align-items:center; gap:22px}
+  .shape-layers{position:relative; width:min(100%,280px); height:140px}
+  .shape-layer{position:absolute; left:0; right:0; height:28px;
+               border-top:var(--hair) solid var(--paper); border-bottom:var(--hair) solid var(--paper);
+               background:color-mix(in srgb,var(--ink) 82%, var(--paper))}
+  .art{display:block; width:100%; max-height:42%; object-fit:contain; flex:none; pointer-events:none}
+  html.wide .art{max-height:48%}
+
+  /* 원리 배우+관계 — 일러스트가 배우, 헤어라인이 관계. 카드·그림자·아이콘 줄은 쓰지 않는다. */
+  .cast{display:grid; grid-template-columns:repeat(var(--cols, 3), minmax(0,1fr));
+        column-gap:20px; row-gap:0; width:100%; align-items:end; flex:none}
+  .cast > .rv{display:flex; flex-direction:column; align-items:center; min-width:0}
+  .cast > .rv.span{grid-column:1 / -1; width:100%}   /* h.bus 는 rv 안에 있어서 래퍼가 칸을 가로지른다 */
+  .fig{display:flex; flex-direction:column; align-items:center; gap:8px; width:100%}
+  .fig .art{width:auto; height:180px; max-height:180px; max-width:100%}
+  html.wide .fig .art{height:220px; max-height:220px}
+  .fig-lab{font-size:var(--fs-desc); letter-spacing:.08em; color:var(--accent); text-align:center; word-break:keep-all}
+  .stem{display:block; width:var(--hair); height:28px; background:var(--accent); flex:none}
+  .bus{display:block; width:100%; height:var(--hair); background:var(--accent); flex:none; align-self:center}
+  .chamber{position:relative; padding:18px 16px; width:100%}
+  .chamber::before,.chamber::after,.chamber>i::before,.chamber>i::after{
+    content:""; position:absolute; width:18px; height:18px; border:0 solid var(--line)}
+  .chamber::before{left:0; top:0; border-left-width:var(--hair); border-top-width:var(--hair)}
+  .chamber::after{right:0; top:0; border-right-width:var(--hair); border-top-width:var(--hair)}
+  .chamber>i::before{left:0; bottom:0; border-left-width:var(--hair); border-bottom-width:var(--hair)}
+  .chamber>i::after{right:0; bottom:0; border-right-width:var(--hair); border-bottom-width:var(--hair)}
 </style>
 </head>
 <body>
@@ -203,30 +293,99 @@ const SLIDE_SHOT = 0;
   /* **강조** → <strong> (액센트 색·굵기만 — 그라데이션 글자는 쓰지 않는다) */
   const em = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   const labels = (S.visual && S.visual.slide && S.visual.slide.labels) || [];
-  /* 리빌 래퍼 — rg 그룹, fx = rise|grow|draw|none, i = 그룹 안 스태거 순번 */
+  /* 리빌 래퍼 — rg 그룹, fx = rise|in|grow|draw|fade|none, i = 그룹 안 스태거 순번 */
   const rv = (rg, html, o = {}) =>
-    '<div class="rv' + (o.fx && o.fx !== "none" ? " fx-" + o.fx : "") + '" data-rg="' + rg +
-    '"' + (o.i ? ' style="--i:' + o.i + '"' : "") + (o.cls ? ' data-cls="' + o.cls + '"' : "") + ">" + html + "</div>";
+    '<div class="rv' + (o.fx && o.fx !== "none" ? " fx-" + o.fx : "") +
+    (o.dir === "left" ? " from-left" : "") + (o.dir === "down" ? " down" : "") +
+    (o.cls ? " " + o.cls : "") +
+    '" data-rg="' + rg + '"' +
+    (o.i ? ' style="--i:' + o.i + '"' : "") +
+    (o.primitive ? ' data-primitive="' + o.primitive + '"' : "") + ">" + html + "</div>";
   /* 카운트업 숫자 — 그룹 rg 에서 from→value, dur ms (기본 --count). 단위는 액센트 작은 글자 */
   const count = (rg, value, o = {}) =>
-    '<div class="rv hero" data-rg="' + rg + '"><span class="num" data-count="' + value +
+    '<div class="rv hero" data-rg="' + rg + '" data-primitive="count-up"><span class="num" data-count="' + value +
     '" data-from="' + (o.from || 0) + '" data-dec="' + (o.dec || 0) + '" data-dur="' + (o.dur || "") +
     '">' + (o.from || 0) + "</span>" + (o.unit ? '<span class="unit">' + esc(o.unit) + "</span>" : "") + "</div>";
-  /* 막대 — 막대 전체(라벨·값·트랙)가 그룹의 rise 로 들어오고 채움만 그 안에서 grow 한다
-     (트랙이 그룹 밖에 있으면 첫 프레임부터 빈 레일이 보인다 — 1라운드 지적). 채움은 같은
-     그룹의 중첩 rv 다 — 같은 그룹 안에서만 중첩한다. */
+  /* 막대 — 바깥은 한 이벤트, 안에서는 라벨이 먼저 fade 하고 채움이 grow 한다
+     (Heer staging). 채움은 같은 그룹의 중첩 rv 다. */
   /* 값의 숫자 부분을 고정폭 셀로 — "30개" → <i>3</i><i>0</i>개 */
   const digits = s => esc(s).replace(/[0-9,.]+/g, m => [...m].map(ch => /[0-9]/.test(ch) ? "<i>" + ch + "</i>" : '<i class="s">' + ch + "</i>").join(""));
   const bar = (rg, pct, label, value, o = {}) =>
     rv(rg, '<div class="bar' + (o.hot ? " hot" : "") + '">' +
-      '<span class="lbl">' + em(label) + '</span><span class="val">' + digits(value == null ? "" : String(value)) + "</span>" +
-      '<div class="track"><div class="fill rv fx-grow" data-rg="' + rg + '" style="width:' + pct + '%;--i:1"></div></div>' +
-    "</div>", { fx: "rise" });
+      '<span class="lbl rv fx-fade" data-rg="' + rg + '">' + em(label) + '</span>' +
+      '<span class="val rv fx-fade" data-rg="' + rg + '">' + digits(value == null ? "" : String(value)) + "</span>" +
+      '<div class="track"><div class="fill rv fx-grow" data-rg="' + rg + '" style="width:' + pct + '%"></div></div>' +
+    "</div>", { fx: "none", primitive: "bar-grow" });
   const callout = (rg, label, o = {}) =>
-    rv(rg, '<div class="callout"><span class="dot"></span><span class="lead"></span><span>' + em(label) + "</span></div>", { fx: "rise", i: o.i || 0 });
+    rv(rg, '<div class="callout"><span class="dot"></span><span class="lead"></span><span>' + em(label) + "</span></div>", { fx: "in", i: o.i || 0 });
   const step = (rg, t, d, o = {}) =>
-    rv(rg, '<div class="step"><span>' + em(t) + "</span>" + (d ? '<span class="d">' + em(d) + "</span>" : "") + "</div>", { fx: "rise", i: o.i || 0 });
-  const h = { esc, em, rv, count, bar, callout, step, labels, L: i => esc(labels[i] || "") };
+    rv(rg, '<div class="step"><span>' + em(t) + "</span>" + (d ? '<span class="d">' + em(d) + "</span>" : "") + "</div>", { fx: "in", i: o.i || 0 });
+  const date = (rg, when, what, o = {}) =>
+    rv(rg, '<div class="date"><span class="when">' + em(when) + '</span><span class="what">' + em(what || "") + "</span></div>",
+      { fx: "in", i: o.i || 0, primitive: "date-enter" });
+  const range = (rg, o = {}) => rv(rg, '<div class="range"></div>', { fx: "grow", i: o.i || 0, primitive: "range-grow" });
+  const link = (rg, o = {}) => rv(rg, '<div class="link"></div>', { fx: "draw", i: o.i || 0, primitive: "event-link" });
+  const dots = (rg, count, o = {}) => rv(rg, '<div class="dots">' + Array.from({length:Math.max(1, Math.min(100, count))}, () => "<b></b>").join("") + "</div>",
+    { fx: "in", i: o.i || 0, primitive: "dot-fill" });
+  const axis = (rg, o = {}) => rv(rg, '<div class="axis"></div>', { fx: "draw", i: o.i || 0, primitive: "axis-draw" });
+  const flow = (rg, from, to, o = {}) => rv(rg,
+    '<div class="flow"><span class="node rv fx-in" data-rg="' + rg + '">' + em(from) + '</span><span class="flow-line rv fx-draw" data-rg="' + rg + '"></span><span class="node rv fx-in" data-rg="' + rg + '" style="--i:1">' + em(to) + "</span></div>",
+    { fx: "none", i: o.i || 0, primitive: "flow-trace" });
+  const node = (rg, label, o = {}) => rv(rg, '<div class="node">' + em(label) + "</div>",
+    { fx: "in", i: o.i || 0, primitive: "node-enter" });
+  const state = (rg, from, to, o = {}) => rv(rg,
+    '<div class="state"><span>' + em(from) + '</span><span class="arrow">→</span><span>' + em(to) + "</span></div>",
+    { fx: "in", i: o.i || 0, primitive: "state-transform" });
+  const cap = t => t ? '<span class="shape-cap">' + em(t) + "</span>" : "";
+  /* 원리 도형 — 글자 없이 자리·접촉·경계가 문장을 설명한다. label 은 scenes.js 에서만. */
+  const disk = (rg, o = {}) => rv(rg,
+    '<span class="shape-item"><i class="shape-disk" style="--d:' + (o.d || 120) + 'px"></i>' + cap(o.label) + "</span>",
+    { fx: o.fx || "rise", i: o.i || 0, primitive: o.primitive || "shape-enter" });
+  const ring = (rg, o = {}) => rv(rg,
+    '<span class="shape-item"><i class="shape-ring" style="--d:' + (o.d || 180) + 'px"></i>' + cap(o.label) + "</span>",
+    { fx: o.fx || "draw", i: o.i || 0, primitive: o.primitive || "shape-draw" });
+  const press = (rg, o = {}) => rv(rg,
+    '<div class="shape-press"><i class="shape-disk" style="--d:' + (o.d || 88) + 'px"></i>' +
+      '<i class="shape-bed" style="--bed:' + (o.bed || 200) + 'px"></i>' + cap(o.label) + "</div>",
+    { fx: "press", i: o.i || 0, primitive: o.primitive || "shape-travel" });
+  const shift = (rg, html, o = {}) =>
+    rv(rg, html, { fx: "travel", i: o.i || 0, dir: o.dir || "right", primitive: o.primitive || "shape-travel" });
+  const arts = (S.visual && S.visual.slide && S.visual.slide.arts) || [];
+  const artSrc = i => {
+    const a = arts[i];
+    if (!a || !a.file) return "";
+    return String(a.file).replace(/^slides\//, "");
+  };
+  const art = (rg, i, o = {}) => {
+    const a = arts[i];
+    if (!a) return "";
+    const fx = o.fx || a.move || "travel";
+    return rv(rg, '<img class="art" src="' + esc(artSrc(i)) + '" alt="">', {
+      fx: fx === "none" ? "none" : fx, i: o.i || 0,
+      dir: o.dir || a.dir || "right", primitive: o.primitive || ""
+    });
+  };
+  /* 원리 배우 — 일러스트가 앉고 라벨이 이름을 붙인다. slide.arts[i] 를 쓴다. */
+  const fig = (rg, i, o = {}) => {
+    const a = arts[i];
+    if (!a) return "";
+    const fx = o.fx || a.move || "rise";
+    const lab = o.label != null ? o.label : "";
+    return rv(rg, '<div class="fig"><img class="art" src="' + esc(artSrc(i)) + '" alt="">' +
+      (lab ? '<span class="fig-lab">' + em(lab) + "</span>" : "") + "</div>", {
+      fx: fx === "none" ? "none" : fx, i: o.i || 0,
+      dir: o.dir || a.dir || "", primitive: o.primitive || "shape-enter"
+    });
+  };
+  const stem = (rg, o = {}) =>
+    rv(rg, '<i class="stem"></i>', { fx: "draw", i: o.i || 0, dir: "down", primitive: o.primitive || "shape-draw" });
+  const bus = (rg, o = {}) =>
+    rv(rg, '<i class="bus"></i>', { fx: "draw", i: o.i || 0, cls: "span", primitive: o.primitive || "shape-draw" });
+  const chamber = (rg, html, o = {}) =>
+    rv(rg, '<div class="chamber"><i></i>' + html + "</div>",
+      { fx: o.fx || "rise", i: o.i || 0, primitive: o.primitive || "shape-enter" });
+  const h = { esc, em, rv, count, bar, callout, step, date, range, link, dots, axis, flow, node, state,
+    disk, ring, press, shift, art, fig, stem, bus, chamber, arts, labels, L: i => esc(labels[i] || "") };
 
   /* ✎ 이 함수만 씬의 도해로 다시 쓴다 ──────────────────────────────
      아래 기본형: 그룹 0 = 키커 + 제목, 그룹 k = k번째 불릿이 막대로 자란다 — 저작 전 셀프테스트용.
@@ -234,10 +393,19 @@ const SLIDE_SHOT = 0;
   function renderSlide(S, h) {
     let out = h.rv(0, '<div class="kicker">' + h.L(0) + "</div>") +
               h.rv(0, '<div class="slide-title">' + h.em(S.title || "") + "</div>");
-    const items = S.bullets || [];
-    out += '<div class="bars">' + items.map((b, i) =>
-      h.bar(i + 1, Math.round(100 - i * 100 / Math.max(items.length, 2)), b.t || "", b.d || "", { hot: i === 0 })
-    ).join("") + "</div>";
+    if (S.shot && S.shot.infoType === "principle") {
+      const n = h.arts.length;
+      const cols = Math.max(1, Math.min(n || (S.bullets || []).length || 1, 3));
+      out += '<div class="cast" style="--cols:' + cols + '">';
+      if (n) out += h.arts.map((_, i) => h.fig(i + 1, i, { label: h.L(i + 1) })).join("");
+      else out += (S.bullets || []).map((b, i) => h.disk(i + 1, { label: b.t || "" })).join("");
+      out += "</div>";
+    } else {
+      const items = S.bullets || [];
+      out += '<div class="bars">' + items.map((b, i) =>
+        h.bar(i + 1, Math.round(100 - i * 100 / Math.max(items.length, 2)), b.t || "", b.d || "", { hot: i === 0 })
+      ).join("") + "</div>";
+    }
     /* 출처 줄은 바탕(그룹 0)에 둔다 — 숫자가 뜨는 모든 클립에 출처가 같이 있어야 한다 */
     if (h.labels.length > 1) out += h.rv(0, '<div class="foot">' + h.L(h.labels.length - 1) + "</div>");
     return out;
@@ -248,17 +416,34 @@ const SLIDE_SHOT = 0;
   /* SEEK-RUNTIME-BEGIN — 아래는 건드리지 않는다. 저작 화면 템플릿 세 벌(모션 슬라이드·
      키네틱 타이포·캐릭터 연기)이 같은 블록을 갖고, format-lint.js 가 세 벌을 대조한다.
      한 벌만 고치면 린트가 잡는다 — 고칠 일이 있으면 세 벌을 같이 고친다. */
-  /* 이징 — CSS 의 --ease(cubic-bezier(.16,1,.3,1))와 같은 성질의 곡선들. out 이 기본이고
-     카운트업이 예부터 쓰던 그 곡선이다. 페인터 저자가 곡선을 손으로 짜지 않도록 공개한다. */
+  /* 이징 — CSS 의 --ease(cubic-bezier(.16,1,.3,1))와 같은 곡선. out 은 Newton–Raphson 으로
+     그 베지어를 샘플한다. 카운트업과 페인터가 CSS 와 같은 성질로 앉는다. */
+  const bezier = (x1, y1, x2, y2) => {
+    const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+    const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+    const sampleX = t => ((ax * t + bx) * t + cx) * t;
+    const sampleY = t => ((ay * t + by) * t + cy) * t;
+    const sampleDX = t => (3 * ax * t + 2 * bx) * t + cx;
+    return x => {
+      let t = x;
+      for (let i = 0; i < 8; i++) {
+        const d = sampleX(t) - x;
+        const dx = sampleDX(t);
+        if (Math.abs(d) < 1e-6 || Math.abs(dx) < 1e-6) break;
+        t = Math.min(1, Math.max(0, t - d / dx));
+      }
+      return sampleY(t);
+    };
+  };
   const EASES = {
     linear: x => x,
-    out:    x => 1 - Math.pow(1 - x, 3),
-    in:     x => x * x * x,
-    inOut:  x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
+    out: bezier(0.16, 1, 0.3, 1),
+    in: x => x * x * x,
+    inOut: x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
   };
   const clamp01 = x => Math.min(Math.max(x, 0), 1);
   const easeOut = EASES.out;
-  window.__ease = (name, x) => (Object.hasOwn(EASES, name) ? EASES[name] : EASES.out)(clamp01(x));
+  window.__ease = (name, x) => (EASES[name] || EASES.out)(clamp01(x));
   /* __interp(x, [in0,in1], [out0,out1], ease) — 구간을 구간으로 옮긴다. 범위 밖은 끝값으로 잘린다. */
   window.__interp = function (x, inR, outR, ease) {
     const p = inR[1] === inR[0] ? 0 : (x - inR[0]) / (inR[1] - inR[0]);

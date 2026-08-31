@@ -103,12 +103,12 @@ const BROKEN_STAGE = {
  *
  *   kind      hitl = a person decides · machine = a checker or a reviewer agent decides
  *   skill     the skill whose document runs it · section = the heading it lives under
- *   num       autoproduce's own gate number, for the eleven unattended ones (SKILL.md:43 table)
+ *   num       autoproduce's own gate number, for the unattended ones (SKILL.md replacement table)
  *   replaces  which attended gate this unattended one stands in for
  *
  * The attended gates are transcribed from storyboard/SKILL.md:1228, produce/SKILL.md:1221 and
- * :1380, publish/SKILL.md:158. The unattended eleven are transcribed from
- * autoproduce/SKILL.md:43's table and its `(gate N)` section headings.
+ * :1380, publish/SKILL.md:158. The unattended gates are transcribed from
+ * autoproduce/SKILL.md's replacement table and its `(gate N)` section headings.
  */
 const GATES = [
   // ── Attended path ────────────────────────────────────────────────────
@@ -154,7 +154,7 @@ const GATES = [
     onFail: 'nothing is hosted and nothing is posted',
   },
 
-  // ── Unattended path — the eleven that stand in for the two HITL gates ─
+  // ── Unattended path — the machine gates that stand in for the two HITL gates ─
   {
     id: 'facts',
     num: '1',
@@ -207,6 +207,18 @@ const GATES = [
     checker: 'cost-report.sh --cap',
     checks: 'cost-report.sh --cap exit 0',
     onFail: 'escalation cancelled, back to the economy baseline',
+  },
+  {
+    id: 'review-scenario',
+    num: '6a',
+    kind: 'machine',
+    skill: 'autoproduce',
+    section: '§2.2',
+    replaces: 'storyboard-approval',
+    reviewer: 'storyboard-reviewer',
+    mode: 'scenario',
+    checks: 'three candidates scored on curiosity · fear · intrigue · comedy, looped to ≥95 · P0 = 0 (max 3 rounds then one replacement each)',
+    onFail: 'topic dropped',
   },
   {
     id: 'review-copy',
@@ -295,7 +307,7 @@ const REVIEWERS = [
     tails: ['STORYBOARD_REVIEW'],
     bar: null,
     rounds: 1,
-    modes: ['copy', 'scene', 'vocabulary', 'camera', 'sound', 'image'],
+    modes: ['scenario', 'copy', 'scene', 'vocabulary', 'camera', 'sound', 'image'],
     surfaces: ['storyboard copy'],
   },
   {
@@ -326,7 +338,7 @@ const REVIEWERS = [
     id: 'slide-reviewer',
     tails: ['SLIDE_REVIEW'],
     bar: 95,
-    rounds: null, // convergence loop — storyboard §8
+    rounds: null, // convergence loop — storyboard §5.6
     modes: ['slide'],
     surfaces: ['motion slides'],
   },

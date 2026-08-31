@@ -12,7 +12,7 @@ description: >
   generating scenes. Boundary — storyboard plans and stops for approval, produce starts
   after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
 
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
@@ -45,10 +45,8 @@ data/<channel>/episodes/<topic>/
    (user directive 2026-08-14) — an empty `title` or `bullets` in scenes.js is not a
    defect. The render never fills an empty field on its own and never manufactures a
    caption out of the narration (scenes-schema §Screen text only when needed).
-4. **Korean with no AI tells** — no translationese ("~에 대해"·"되어진다"), no stock
-   phrases ("결론적으로"·"시사하는 바가 크다"), no assistant-speak ("함께 알아볼까요"·
-   "도움이 되셨길"). The rules live in platform-guide `references/korean-style.md` and
-   `check-style.py` makes the call — text with an S1 left in it doesn't go on to publishing.
+4. **Korean with no AI tells** — apply platform-guide `references/korean-style.md` to every
+   visible sentence. `check-style.py` makes the call, and an S1 blocks publishing.
 5. **Generated video is for mood shots and character speech only** — no reenactments, no
    real people, no national symbols, no staged news screens. Cards (static text) are
    code-rendered only.
@@ -118,10 +116,12 @@ data/<channel>/episodes/<topic>/
    `gpt_image_text2img` (high) rather than local Z-Image** — it's veo's input, so a blurry
    source makes a blurry video, and with no person in it the model finds nothing to move
    (rule 11).
-   **At most two scenes per episode become video** (user directive 2026-08-14) — count the
-   b-roll slots and the motion-background scenes (`visual.video`) **together**, and 2 veo
-   calls is the ceiling. The contract's source of truth is scenes-schema §Motion background
-   (combined ceiling).
+   **Generated-video slots follow the approved channel motion policy.** Count b-roll and
+   motion-background scenes (`visual.video`) together. The format default is 2 and a profile
+   may override it with `generated_video_max`; HTML motion slides never spend one of these
+   paid slots. Produce never lowers a profile motion floor to save a call; it stops when the
+   approved storyboard cannot meet both the floor and the cap. The contract's source of truth
+   is scenes-schema §Channel true-motion policy.
 13. **Generation that costs money runs only after the plan clears review** — the cover
    background and the b-roll need a plan in the storyboard first (source prompt, motion,
    used length + why), and only after delegating to content-reviewer **plan mode** and
@@ -137,13 +137,18 @@ data/<channel>/episodes/<topic>/
    Since the photo has become the screen itself, make points backgrounds **photoreal shots
    of the subject** rather than metaphorical still lifes, and change the shot wherever the
    content axis changes (reusing one image leaves 40-odd seconds of body on the same still).
-15. **Every episode ships sped up — the speed pass is not optional** (user directive
-   2026-08-29). After the build (and after any clip splice) `references/speedup.sh` speeds the
-   feature up by **1.4x by default**, leaving the outro at 1.0x. What goes to `output/` is that
-   pass's `reel-fast.mp4` · `reel-sub-fast.mp4` · `subs-fast.srt`, never the un-sped build
-   output. A channel that wants a different rate says so in profile.md §2; `1.0` there is the
-   only way to ship at the recorded pace, and even then the pass still runs (it copies the set
-   through under the `-fast` names, so the finalize paths never change).
+   On a channel whose motion policy forbids stills, the photo is source material rather than
+   the finished screen: place it full-frame in `visual.slide.motion:true` and animate the
+   subject or evidence named by `visual.action`. A whole-photo zoom or pan is still Ken Burns
+   and does not qualify. `check-scenes.js` blocks the build before capture when this contract
+   is not met.
+15. **Every episode runs the final pace pass — the pass is not optional.** After the build (and
+   after any clip splice) `references/speedup.sh` writes the one deliverable set and checks the
+   speech rate on its retimed subtitles. The default factor is **1.0x** because build-reel has
+   already normalized each card; a channel may set another factor in profile.md §2 only when the
+   shipped result stays at or below **6.2 spoken characters/s overall and per substantive cue**.
+   The outro stays at 1.0x. What goes to `output/` is `reel-fast.mp4` ·
+   `reel-sub-fast.mp4` · `subs-fast.srt`, never the pre-pass files.
 
 ## Procedure
 
@@ -179,8 +184,8 @@ data/<channel>/episodes/<topic>/
   **Mixed shooting** puts filmed and generated scenes on one timeline — the builder is the
   same `build-reel.sh` as a generated episode, and only the filmed scenes go through the
   extra prep in §3.5. Slide scenes (`visual.slide`) and all-live-voice episodes
-  (`window.VOICE === "user"`) additionally go through §3.6 — capturing slide states and
-  taking in the user's recordings (`voice/s<n>.wav`).
+  (`window.VOICE === "user"`) additionally go through §3.6 — rendering each motion-slide
+  group to a clip and taking in the user's recordings (`voice/s<n>.wav`).
 - Prepare the working directory: create `.work/{cards,broll,motion,pcm,fonts}` and settle
   the platform list (the CSV argument, or profile §4's publish platforms).
 - **Settle the format — write `.work/format.env`. Don't skip it.**
@@ -214,9 +219,18 @@ data/<channel>/episodes/<topic>/
   ```
 
   It reports the stage and what is missing — filmed scenes with no footage, slide files never
-  authored, images the scenes name that aren't on disk. Run the structural contract too —
-  `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenes.js storyboard/` — since
-  a missing camera slot or an unresolvable b-roll `after` fails the build rather than the eye. Fix a blocker before the build rather
+  authored, images the scenes name that aren't on disk. Run both structural contracts too:
+
+  ```bash
+  SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+  node $SB/check-scenes.js storyboard/
+  node $SB/check-slide.js storyboard/ --require-all
+  ```
+
+  The second command keeps a declared motion frame from reaching production as a missing HTML
+  file. Timeline, statistic, and principle slides are checked again while rendering: every
+  `motionBeats` primitive (actor + hairline on a principle) must exist in that group's DOM. A missing camera slot or an
+  unresolvable b-roll `after` fails the first command. Fix a blocker before the build rather
   than discovering it 12 minutes into capture. `.work/` survives between sessions on purpose,
   so a resumed run reuses the captures and TSV manifests already there.
 
@@ -245,7 +259,10 @@ cost per image — text-free images such as points still backgrounds; storyboard
 generated them under this rule). The cover background = b-roll source stays on
 `gpt_image_text2img` (high) under the quality clause, since it's both the thumbnail and
 veo's input, and any image that needs lettering always goes to gpt_image (local Hangul,
-measured: "딸깍연구소" came out as "달닥연구소").
+measured: "딸깍연구소" came out as "달닥연구소"). `mlx_image_generate` /
+`mlx_image_edit` are an optional extra local lane when MLX Core is up — they do not
+replace Z-Image as the default, and they do not take Hangul. The plugin never launches
+the app; a down :11234 fails closed.
 
 **What the storyboard already settled — pass it through, don't re-decide it.** These values
 arrive from scenes.js already chosen and already reviewed. Inventing a replacement at call time
@@ -342,6 +359,9 @@ means generating something nobody approved.
 route between `veo_*` and `seedance_*`, each engine's prompt shape, and the per-slot recipes
 for b-roll, motion backgrounds and quote speaking clips. **Read it before the first
 generated-video call**; an episode of still backgrounds skips it whole.
+`mlx_video_generate` is a separate local clip (24 fps, RAM-capped, ffmpeg mux) — it is
+not on that face-policy table and is not the default. `mlx_3d_generate` writes a GLB
+the builder never reads.
 
 - **Cover background = b-roll source (one image, `storyboard/images/scene-1.png`)**:
   `gpt_image_text2img`, `size: "1088x1920"`, **`quality: "high"`**. **Photoreal style with a
@@ -397,10 +417,13 @@ generated-video call**; an episode of still backgrounds skips it whole.
   |---|---|---|
   | A cue that has to fit a span, or a seed to reproduce | `music_generate` / `music_generate_advanced` (5–300s) | `GEMINI_API_KEY` |
   | A bed with no span to fit | `music_generate_clip` 30s, the builder extends it | `GEMINI_API_KEY` |
+  | A local instrumental bed (optional) | `mlx_music_generate` (`instrumental: true`) | MLX Core on :11234 |
   | Narration-under bed (Suno) | `suno_generate_sound` loop + BPM. `filename: "bgm.wav"` | `SUNO_API_KEY` |
   | The song IS the content | `suno_generate` (customMode; lyrics from `suno_generate_lyrics` or written) | `SUNO_API_KEY` |
 
-  Default BGM is Lyria. Sung vocals fight the voiceover, so `suno_generate` is
+  Default BGM is Lyria. `mlx_music_generate` is the $0 understudy when MLX Core is
+  running — it is not the default, and unattended still takes the Lyria clip.
+  Sung vocals fight the voiceover, so `suno_generate` is
   for episodes where the song itself is the piece. There is no official Suno
   API (2026-08); `suno_*` talks to sunoapi.org.
 
@@ -555,10 +578,8 @@ Read `gate_exit` as it is — 0 pass / 1 warning / 2 S1 detected / 3 gate never 
 (extraction failure, bad path) / 4 not Korean, so the gate declined to judge.
 **Neither 3 nor 4 is a pass.** On 3, fix the path and run again. On 4 the checker read the
 text and found it isn't Korean — every rule in it is Korean-specific — so that surface is
-**unchecked** and a person has to read it. For English, hunt the tells README lists
-(delve · leverage · robust · seamless · comprehensive · crucial · foster · testament ·
-landscape, and "It's not X, it's Y"); say plainly in the approval prompt which surfaces
-went unchecked.
+**unchecked** and a person has to read it. For English, run the tell checks listed in README and
+name every unchecked surface in the approval prompt.
 On a 1 with `quote-exempt N` in the header line, confirm that quote against research.md — a
 video freezes the subtitles and cards in place, so an unconfirmed quote loses its quotation
 marks and gets rewritten in our own words.
@@ -596,7 +617,8 @@ and names the engine.
 **Don't mix engines with different sample rates inside one video** — 44.1kHz (local) and
 24kHz (Gemini · ElevenLabs default) on one timeline break the concatenation. Gemini and
 ElevenLabs at `wav_24000` share a spec and can sit on one timeline; local can't join either
-without resampling one side before the build.
+without resampling one side before the build. `mlx_tts_generate` is an optional local
+voice when MLX Core is up — never a silent fallback for the engine pinned in profile §2.
 
 **Length check right after generation** — anything over twice chars/4.5 gets one regeneration
 at the same parameters. `tts_local_generate` and `tts_elevenlabs_generate` return the audio
@@ -663,6 +685,8 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 | `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
 | `span=<0..1.5>` | this card's total zoom span, replacing the global `ZOOM_SPAN` (0.4 = the window grows 40% over the card). Applies to `in`/`out`/`punch` and the pan zoom drift; unused on `hold`/`none` | a still whose beat wants a visible move — computed from the storyboard's `speed` word (below). Past base+`span` > `ZOOM_BASE`/canvas (base: pan scale · drift 1.04 · else 1; headroom 0.5 at the defaults) the source upscales and the build warns: raise `ZOOM_BASE` and generate the scene image at that resolution |
 | `ease=smooth\|linear\|in` | this card's easing, replacing the global `KB_EASE`. `in` accelerates — an unnoticed start, fastest exactly at the cut | the ladder's accelerating rows (action/tension, CTA) — pairs with cutting away at the peak. `punch` keeps its own ease-out ramp and ignores `ease=` |
+| *(omit `enter=`)* | **J-cut** — this card opens on the previous last frame for `SCENE_JCUT` (0.32s) while the next line already plays, then the picture cuts. Drops this card's silent pre-roll | omit `transition`. **Do not type `enter=jcut`** — that is the builder default on incoming spoken cards |
+| `enter=cut` | smash — picture and sound change together, old silent pre-roll | `transition: "cut"` |
 | `enter=dissolve` | this card opens on the previous card's last frame and melts up through it (`SCENE_XF`, 0.45s) — two pictures on screen at once | **the storyboard's `transition: "dissolve"`** — written on the card that carries the field, nothing on the card before |
 | `enter=push:<l2r\|r2l\|u2d\|d2u>` | the previous card's last frame slides off in that direction and uncovers this card (`SCENE_PUSH`, 0.32s) | `transition: "push:<dir>"` — same rule, the incoming card alone |
 | `exit=black` + `enter=black` (or `white`) | the card before fades its tail into the colour, this card fades its head out of it (`SCENE_FADE`, 0.12s each) | `transition: "dip"` / `"dip:white"` — two halves, one per card. `enter=1`/`exit=1` still mean black |
@@ -674,21 +698,21 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 11	pcm/s12.wav	0	none
 ```
 
-**A transition is drawn inside one card, never across two.** A shot carrying
-`transition: "dissolve"` or `"push:<dir>"` (scenes-schema §scene transition) becomes one
-`enter=` option on that card — the builder dumps the previous card's last frame after its
-encode and the incoming card opens on it. A `dip` is the one that takes two halves (`exit=`
-on the card before, `enter=` on this one), because each half is a fade inside its own card.
-Write nothing and the boundary is a hard cut, which is the default and where most
-boundaries belong.
+**A transition is drawn inside one card, never across two.** Map `transition` from
+scenes-schema §scene transition onto the table above. A `dip` is the one that takes two
+halves (`exit=` on the card before, `enter=` on this one). Write nothing and the builder
+J-cuts spoken cards — next line on the previous last frame, then the picture cuts. Write
+`enter=cut` for a smash. First card, filmed `sync`, speechless cards, and dips keep the
+old pre-roll.
 
 The builder does it this way because a boundary xfade would break the pipeline's spine: the
 total would shrink by the transition length at every seam and trip §9's 2ms drift assertion,
 and xfade renumbers the tail's PTS from 0 (the measurement is written out at the outro seam
-in build-reel.sh). Drawing the transition inside the incoming card changes no frame count,
-so the concat stays stream-copy exact and no subtitle cue moves — verified A/B on ep07
-(10 cards, two dissolves): 64.766667s and 1943 frames both ways, identical `subs.srt` on the
-cards that carry a transition, drift 0.
+in build-reel.sh). Dissolve/push/dip keep the card's frame count, so the concat stays
+stream-copy exact and no subtitle cue moves — verified A/B on ep07 (10 cards, two
+dissolves): 64.766667s and 1943 frames both ways, identical `subs.srt` on the cards that
+carry a transition, drift 0. A J-cut is allowed to drop that card's silent `PRE` (0.40 s)
+because the next line occupies it. `POST` is 0.45 s.
 
 **Word cues — `SUB_MODE=word`.** The burn-in shows **one 어절 at a time**, a hard swap every
 half second, sitting on the 65% line in a 60px glyph with no fade — the subtitle grammar of
@@ -726,13 +750,7 @@ approximate and the ladder's wide spacing absorbs that. Example: a 9s payoff car
 `slow` row → `span=0.54`. A still whose camera has no `speed` (or no camera at all) keeps
 the plain column-4 move at the 3.5% default.
 
-**A slide scene's segment visuals** are written exactly like a generated scene's, using the
-state PNGs captured in §3.6 (`cards/a<idx>r<k>.png`) — the state transition (xfade) *is* the
-slide animation. Ken Burns doesn't suit a screen full of text, so `zoom` is `none`. For a
-user-recorded card, leave the target chars/sec (column 3) at 0 and run the build with
-`ATEMPO_MIN=1 ATEMPO_MAX=1` (§3.6 — speed correction off).
-
-**A motion slide's segment visuals** are the per-group clips from §3.6, one per segment,
+**A slide scene's segment visuals** are the per-group clips from §3.6, one per segment,
 each with the play-once prefix: segment k → `@motion/slide-s<shot number>/r<k>.mp4`
 (segs.tsv paths are relative to `.work/`, the builder's working directory — the same way
 the state PNGs are written `cards/a<idx>r<k>.png`), `zoom` `none`, no overlay (the slide
@@ -851,7 +869,7 @@ can turn them off, and YouTube even auto-translates from that file. Burned-in su
 a single typo into a re-encode and a repost. So `reel.mp4` is the clean master with no
 subtitles, and `subs.srt` goes to the publish tools alongside it.
 
-#### Splicing in the b-roll (when §3 made one — max 2 slots)
+#### Splicing in the b-roll (when §3 made one — inside the approved channel cap)
 
 The generated-video stretches get inserted **after the build finishes**, at time T where each
 slot's `after` scene ends. `build-reel.sh` only splices the outro, so this is post-processing
@@ -946,36 +964,36 @@ the still at that time with ffmpeg).
 
 ### 7.5 Speed pass (required — every episode)
 
-The build ships at the pace the TTS recorded, which reads as slow: the narration drags and every
-generated clip plays at the rate its engine happened to produce (measured twice on ttalkkak-lab,
-2026-08-22 — "still looks like slow motion" both times). So the finished video gets sped up as a
-pass of its own, after the build and after any splice.
+The final pace pass exists so every source — narration, generated clips, filmed clips, subtitles,
+and chapters — follows one timeline after the build and any splice. It always runs even at 1.0x.
+The builder has already normalized card speech; this pass must not undo that work.
 
 ```bash
 $REF/speedup.sh .work        # → .work/reel-fast.mp4 · reel-sub-fast.mp4 · subs-fast.srt · chapters-fast.txt
 $REF/speedup.sh .work 1.6    # a channel-specific rate — profile.md §2 decides, not the moment
 ```
 
-- **The default is 1.4x and it applies to the whole picture** — narration, cards, filmed clips,
-  b-roll, BGM. Speeding up only the TTS is what leaves the clips slow, which is the defect this
-  pass exists to fix.
+- **The default is 1.0x.** A profile may choose another factor for the whole feature — narration,
+  cards, filmed clips, b-roll, and BGM — but the final subtitle-rate gate still decides whether
+  it can ship.
 - **The outro stays at 1.0x.** It's a brand asset with its own cut and sonic logo, so the pass
   finds the boundary from the outro file's own duration and rejoins the tail untouched.
 - **Subtitles and chapters are retimed by the pass** (`subs-fast.srt`, `chapters-fast.txt`) —
   don't hand the build's `subs.srt` to publish; those cues belong to the un-sped timeline.
 - **It reads the un-sped files and writes new names**, so running it again with another factor
-  recomputes from the original instead of stacking 1.4 on 1.4.
+  recomputes from the original instead of stacking passes.
 - **`profile.md` §2 owns the rate.** Read the channel's speed line before running the pass; with
-  no line, 1.4. Note that a profile TTS `speed` multiplies into this — pundago synthesizes at
-  1.20, so 1.4 here lands near 1.68 effective. Set the channel's factor accordingly.
+  no line, 1.0. A profile TTS `speed` multiplies into this, so the final SRT is checked after
+  both choices have taken effect.
 - The pass appends its own line to `build-report.txt`
-  (`── speedup x1.40 (reel.mp4): 84.0s → 60.0s …`) and exits 1 when the measured length doesn't
-  match feature/factor + tail. **No marker line in the report means the episode is not ready to
-  publish** (pipeline.md gate table).
+  (`── speedup x1.00: passed through …`) and exits 1 when the measured length doesn't match
+  feature/factor + tail or `check-final-speech-rate.py` finds more than 6.2 characters/s.
+  **No marker line or final-rate PASS line means the episode is not ready to publish**
+  (pipeline.md gate table).
 - **Length contracts are read after the pass.** The 35–75s recommendation and the per-channel
-  length rules describe the shipped file, so a 90s build at 1.4x is a 64s episode.
+  length rules describe the shipped file.
 - With chapters, watch for the `⚠ … under 10s` warning — a boundary that was 10s apart is 7.1s
-  at 1.4x and YouTube drops the whole chapter list. Merge those chapters and rebuild.
+  after an explicit speed-up and YouTube drops the whole chapter list. Merge those chapters and rebuild.
 
 ### 8. Phone-mode QA (required before publishing)
 
@@ -993,8 +1011,8 @@ FORMAT_ENV= CAP_W=470 CAP_H=920 $REF/capture-frames.sh \
   .work/qa/s<n>.png
 ```
 
-One shot per scene at the reveal-complete moment, then read the PNGs. **QA runs on the sped-up burn-in (`reel-sub-fast.mp4`)** — that's the file
-that ships, and a subtitle that's readable at 1.0x can be gone before it's read at 1.4x. The
+One shot per scene at the reveal-complete moment, then read the PNGs. **QA runs on the final burn-in (`reel-sub-fast.mp4`)** — that's the file
+that ships, and an explicit speed-up may make a previously readable subtitle disappear. The
 clean one has no subtitles, so you can't see clipping or intrusion, and the burned-in one is
 what actually goes to IG. Check: action bar (x≈890) intrusion / subtitle centering / hero
 number clipping / can you tell the topic from the first frame alone / **whether the background
@@ -1150,10 +1168,11 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/bgm-bed.sh`** — renders the music bed the mix lays under the voice: every cue measured and gained to one distance under the narration, a short cue crossfaded onto itself instead of butt-joined, cue changes crossfaded. Called by both builders and by the b-roll premix
 - **`references/bgm-scoring.md`** — where the bed's numbers come from, which of them are published listening tests and which are our own practice, and the widely-quoted figures that failed verification
 - **`references/build-outro.sh`** — generates the channel's shared outro
-- **`references/speedup.sh`** — the required speed pass (§7.5). Speeds the feature up by the channel's factor (1.4 default) while leaving the outro at 1.0x, retimes `subs.srt` and `chapters.txt` onto the new timeline, and verifies the measured length against feature/factor + tail. Reads the un-sped set and writes `-fast` names, so it never stacks
+- **`references/speedup.sh`** — the required final pace pass (§7.5). Uses the channel's factor (1.0 default) while leaving the outro at 1.0x, retimes `subs.srt` and `chapters.txt`, verifies the measured length, and blocks a final speech rate over 6.2 characters/s. Reads the pre-pass set and writes `-fast` names, so it never stacks
+- **`references/check-final-speech-rate.py`** — measures Unicode letters and numbers on `subs-fast.srt`; catches a whole-video speed factor that made otherwise valid cards too dense to follow
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
-- **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames storyboard §8.1's design gate reads. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
+- **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames storyboard §5.6's design gate reads. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)

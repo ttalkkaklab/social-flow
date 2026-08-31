@@ -19,7 +19,7 @@ in six places, all by hand:
 | `storyboard/SKILL.md` §7 | the HITL approval gate, in prose |
 | `produce/SKILL.md` §7 · §10 | the build-report gate and the content-reviewer gate, in prose |
 | `publish/SKILL.md` §1 | the publish approval gate, in prose |
-| `autoproduce/SKILL.md` §"What stands in for the human gates" | the eleven machine gates, as a table |
+| `autoproduce/SKILL.md` §"What stands in for the human gates" | the unattended machine gates, as a table |
 | `platform-guide/SKILL.md` §"Adversarial review gate" | the reviewer-to-verdict-tail contract, as a table |
 
 Six copies of one fact, and no checker over any of them. Renumber a section in produce and

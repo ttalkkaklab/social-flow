@@ -92,7 +92,7 @@
 <section id="split">
   <h2>돈이 드는 자리와 안 드는 자리</h2>
 
-  <p class="lede">영상과 음악은 만들 때마다 <strong>반드시 과금된다</strong>. 이미지와 목소리는 애플 실리콘 맥에서 기기 안 엔진으로 공짜로 만들 수 있고, 받아쓰기는 아예 무료 경로뿐이다.</p>
+  <p class="lede">영상과 음악의 <strong>기본 경로는 과금</strong>이다. 이미지와 목소리는 애플 실리콘 맥에서 기기 안 엔진으로 공짜로 만들 수 있고, 받아쓰기는 아예 무료 경로뿐이다. MLX Core 가 떠 있으면 <code>mlx_video_generate</code> · <code>mlx_music_generate</code> 가 $0 대타다 — 기본값은 그대로 Veo/Seedance 와 Lyria 다.</p>
 
   <p>다만 무료 경로에는 각각 못 하는 일이 있다. 그 한계가 곧 "이건 돈을 내야 한다"의 목록이다.</p>
 
@@ -108,8 +108,8 @@
       </tr>
       <tr>
         <td><strong>영상</strong></td>
-        <td><em>없다</em></td>
-        <td>—</td>
+        <td><code>mlx_video_generate</code><br>MLX Core · 선택 · 기본 아님</td>
+        <td>24fps, RAM 상한, ffmpeg mux. Veo/Seedance 얼굴 정책 표에 안 올린다</td>
         <td><code>veo_*</code> <span class="badge key">GEMINI_API_KEY</span><br><code>seedance_*</code> <span class="badge key">ARK_API_KEY</span></td>
       </tr>
       <tr>
@@ -126,8 +126,8 @@
       </tr>
       <tr>
         <td><strong>음악</strong></td>
-        <td><em>없다</em></td>
-        <td>—</td>
+        <td><code>mlx_music_generate</code><br>MLX Core · 선택 · 기본 아님</td>
+        <td>기본 BGM 은 그대로 Lyria. 무인 루프도 Lyria 클립을 쓴다</td>
         <td><code>music_generate_clip</code><br><span class="badge key">GEMINI_API_KEY</span></td>
       </tr>
     </tbody>
@@ -186,6 +186,7 @@
     <thead><tr><th>키</th><th>단위</th><th class="num">USD</th><th>등급</th><th>비고</th></tr></thead>
     <tbody>
       <tr><td><code>image.local</code></td><td>장</td><td class="num">0.000</td><td><span class="g off">official</span></td><td>기기 안 생성 — 전기만 든다</td></tr>
+      <tr><td><code>image.mlx</code></td><td>장</td><td class="num">0.000</td><td><span class="g off">official</span></td><td><code>mlx_image_*</code> — MLX Core, 전기만. 기본은 그대로 Z-Image</td></tr>
       <tr><td><code>image.gpt-image-2.low</code></td><td>장</td><td class="num">0.007</td><td><span class="g der">derived</span></td><td>공식 1024×1536 low $0.005 × 1.33</td></tr>
       <tr><td><code>image.gpt-image-2.medium</code></td><td>장</td><td class="num">0.055</td><td><span class="g der">derived</span></td><td>공식 1024×1536 medium $0.041 × 1.33</td></tr>
       <tr><td><code>image.gpt-image-2.high</code></td><td>장</td><td class="num">0.220</td><td><span class="g der">derived</span></td><td>공식 1024×1536 high $0.165 × 1.33 — 커버가 이 등급이다</td></tr>
@@ -386,13 +387,14 @@
 <section id="music">
   <h2>배경음악</h2>
 
-  <p class="lede">배경음악에도 <strong>무료 경로가 없다.</strong> Lyria 를 <span class="badge key">GEMINI_API_KEY</span> 로 부른다.</p>
+  <p class="lede">기본 배경음악은 Lyria 이고 <span class="badge key">GEMINI_API_KEY</span> 가 든다. MLX Core 가 떠 있으면 <code>mlx_music_generate</code> 가 $0 대타다 — 기본값은 그대로 Lyria 다.</p>
 
   <div class="table-scroll">
   <table>
     <thead><tr><th>키</th><th>단위</th><th class="num">USD</th><th>등급</th><th>비고</th></tr></thead>
     <tbody>
       <tr><td><code>music.lyria-clip</code></td><td>클립</td><td class="num">0.04</td><td><span class="g off">official</span></td><td><code>music_generate_clip</code> — 30초 고정</td></tr>
+      <tr><td><code>music.mlx</code></td><td>초</td><td class="num">0.000</td><td><span class="g off">official</span></td><td><code>mlx_music_generate</code> — 기기 안, 전기만</td></tr>
       <tr><td><code>music.lyria-realtime</code></td><td>초</td><td class="num">?</td><td><span class="g unk">unconfirmed</span></td><td><code>music_generate</code> — 공식 요금표에 줄이 없다</td></tr>
     </tbody>
   </table>

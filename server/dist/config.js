@@ -7,7 +7,7 @@
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, join } from 'node:path';
 export const config = {
     /** SerpApi key (required by the serp_* research/fact-check tools) — https://serpapi.com/manage-api-key */
     serpApiKey: process.env.SERPAPI_API_KEY || '',
@@ -92,6 +92,39 @@ export function mfluxZImageBin() {
  */
 export function qwen3AsrBin() {
     return process.env.QWEN3_ASR_BIN || join(homedir(), '.local', 'bin', 'mlx-qwen3-asr');
+}
+/** Default mlx-serve bind — MLX Core.app and `mlx-serve --serve` both use this. */
+export const DEFAULT_MLX_SERVE_URL = 'http://127.0.0.1:11234';
+/**
+ * mlx-serve HTTP base (MLX Core.app / the CLI). Trailing slashes are stripped so
+ * path joins stay valid. A non-default value is also the signal that a remote
+ * or other-port server is intended (see mlxServeConfigured).
+ */
+export function mlxServeUrl() {
+    return (process.env.MLX_SERVE_URL || DEFAULT_MLX_SERVE_URL).replace(/\/+$/, '');
+}
+/**
+ * Optional bearer for a non-loopback mlx-serve. Loopback is exempt from --api-key
+ * unless the server was started with --api-key-strict.
+ */
+export function mlxServeApiKey() {
+    return process.env.MLX_SERVE_API_KEY || '';
+}
+function binOnPath(name) {
+    return (process.env.PATH || '').split(delimiter).some((dir) => dir && existsSync(join(dir, name)));
+}
+/**
+ * Configuration only — does not probe /health. True when MLX Core.app is
+ * installed, mlx-serve is on PATH, or MLX_SERVE_URL is set away from the
+ * default (a server on another port or host). A present app that is not
+ * running still reads as configured here and fails at the call.
+ */
+export function mlxServeConfigured() {
+    if (mlxServeUrl() !== DEFAULT_MLX_SERVE_URL)
+        return true;
+    if (existsSync('/Applications/MLX Core.app'))
+        return true;
+    return binOnPath('mlx-serve');
 }
 /**
  * Credential paths for direct SNS publishing (per-platform publish tools).

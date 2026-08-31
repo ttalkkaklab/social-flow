@@ -6,15 +6,17 @@ import { DEFAULT_ELEVENLABS_MODEL, DEFAULT_ELEVENLABS_OUTPUT_FORMAT, ELEVENLABS_
 import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MIN_ZIMAGE_DIMENSION, ZIMAGE_DIMENSION_STEP, ZIMAGE_QUANTIZE_OPTIONS, } from './zimage-client.js';
 import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGES, QWEN3_ASR_MODELS, } from './qwen3-asr-client.js';
 import { DEFAULT_SUNO_MODEL, SUNO_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
+import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_TTS_CHARS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
 /**
- * Tool surface definitions (50 tools) — 6 research + 5 open-data +
- * 22 generation (3 image + 7 video + 4 speech + 8 music) +
+ * Tool surface definitions (61 tools) — 6 research + 5 open-data +
+ * 27 generation (5 image + 8 video + 6 speech + 7 music + 1 mesh) +
  * 5 per-platform publishing + 3 inbound comments + 1 account check +
  * 5 growth lookups (Threads insights/keyword search · YouTube insights ·
  * Instagram insights · recent-content feedback — the insights trio is for the
  * grow-* skills only; content_feedback covers both video platforms and writes
- * an HTML report). 46 of those were already on origin/dev; the four suno_*
- * tools are the sung-song / loop-bed path.
+ * an HTML report) + 1 capability_status + 1 STT + 1 music-options + 1 suno credits.
+ * The six mlx_* tools wrap MLX Core / mlx-serve on loopback; they are not a
+ * second MCP server. 52 of those list without SNS tokens.
  *
  * Publish tool descriptions embed the HITL contract — this server has no
  * review gate, so a call is an immediately public post, and the descriptions
@@ -999,6 +1001,144 @@ Returns: a text block with the saved .png path, resolution, steps, seed, quantiz
             required: ['prompt'],
         },
     },
+    {
+        name: 'mlx_image_generate',
+        title: 'Image generation (local · MLX Core)',
+        annotations: HINT.generateLocal,
+        description: `Generate an image on this machine via MLX Core / mlx-serve (HTTP to 127.0.0.1:11234). No vendor bill. This plugin never launches the app — if :11234 is down the call fails closed with a brew install --cask mlx-core hint.
+
+Use as an optional local image lane when MLX Core is running and an image model is downloaded (FLUX.2-klein is fixed at 1024×1024; Krea/Mage-Flow accept any multiple of ${MLX_IMAGE_DIMENSION_STEP} in ${MIN_MLX_IMAGE_DIMENSION}–${MAX_MLX_IMAGE_DIMENSION}, so 9:16 is 1088×1920 not 1080×1920). Optional imagePath is img2img (strength 0–1).
+Do NOT use as the default path — that stays image_local_generate (Z-Image). Do NOT use when the image must contain legible Korean text — Hangul still goes to gpt_image_text2img (measured: local engines break jamo). Do NOT POST /v1/load-model with default:true; this tool never does that, because it would steal the chat model the app is serving. Shares the GPU with Z-Image (32–39GB peak) and LTX video — don't run them together.
+Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve on PATH (or MLX_SERVE_URL). A non-loopback bind may need MLX_SERVE_API_KEY.
+
+Returns: a text block with the saved .png path, model, size, and generation time.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Image generation prompt (max 32,000 characters). English recommended; do not ask for Korean text in the image.',
+                    maxLength: 32000,
+                },
+                model: {
+                    type: 'string',
+                    description: 'mlx-serve model id from GET /v1/models. Omit to pick the first ready model that advertises capability "image". This plugin does not download weights.',
+                },
+                width: {
+                    type: 'number',
+                    description: `Width in pixels (default: ${DEFAULT_MLX_IMAGE_SIZE}). ${MIN_MLX_IMAGE_DIMENSION}–${MAX_MLX_IMAGE_DIMENSION}, multiple of ${MLX_IMAGE_DIMENSION_STEP}. FLUX.2-klein is fixed at 1024×1024 — pick a Krea/Mage-Flow model for other sizes. For 9:16 use 1088×1920, not 1080×1920.`,
+                    minimum: MIN_MLX_IMAGE_DIMENSION,
+                    maximum: MAX_MLX_IMAGE_DIMENSION,
+                    default: DEFAULT_MLX_IMAGE_SIZE,
+                },
+                height: {
+                    type: 'number',
+                    description: `Height in pixels (default: ${DEFAULT_MLX_IMAGE_SIZE}). Same constraints as width.`,
+                    minimum: MIN_MLX_IMAGE_DIMENSION,
+                    maximum: MAX_MLX_IMAGE_DIMENSION,
+                    default: DEFAULT_MLX_IMAGE_SIZE,
+                },
+                steps: {
+                    type: 'number',
+                    description: 'Diffusion steps 1–50. Omit to use the loaded model\'s default.',
+                    minimum: 1,
+                    maximum: 50,
+                },
+                seed: {
+                    type: 'number',
+                    description: 'Random seed. Omit for a random seed.',
+                    minimum: 0,
+                },
+                imagePath: {
+                    type: 'string',
+                    description: 'Optional source image for img2img. Absolute path; sent as base64. Pair with strength.',
+                },
+                strength: {
+                    type: 'number',
+                    description: 'img2img denoise strength 0–1. Only used when imagePath is set.',
+                    minimum: 0,
+                    maximum: 1,
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the image (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the image (default: mlx_image_<timestamp>.png)',
+                },
+            },
+            required: ['prompt'],
+        },
+    },
+    {
+        name: 'mlx_image_edit',
+        title: 'Image edit (local · MLX Core)',
+        annotations: HINT.generateLocal,
+        description: `Edit an existing image on this machine via MLX Core / mlx-serve. Posts JSON to /v1/images/generations with mode:"edit" (not multipart /v1/images/edits). No vendor bill. This plugin never launches the app.
+
+Use when you have a source PNG to change and MLX Core is running with an image-edit model. Up to ${MAX_MLX_IMAGE_REFS} extra reference images (refImagePaths). image_local_generate (Z-Image) has no edit lane, so this is the local alternative to gpt_image_img2img.
+Do NOT use for text-to-image from scratch — use mlx_image_generate or image_local_generate. Do NOT use when the result must contain legible Korean text — that stays gpt_image_img2img / gpt_image_text2img. Do NOT treat this as the default image path.
+Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve on PATH (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
+
+Returns: a text block with the saved .png path, model, and generation time.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Edit instruction (max 32,000 characters)',
+                    maxLength: 32000,
+                },
+                imagePath: {
+                    type: 'string',
+                    description: 'Absolute path to the source image to edit. Required.',
+                },
+                refImagePaths: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: `Optional extra reference images (max ${MAX_MLX_IMAGE_REFS}). Absolute paths.`,
+                    maxItems: MAX_MLX_IMAGE_REFS,
+                },
+                model: {
+                    type: 'string',
+                    description: 'mlx-serve model id. Omit to pick a ready image model.',
+                },
+                width: {
+                    type: 'number',
+                    description: `Output width. ${MIN_MLX_IMAGE_DIMENSION}–${MAX_MLX_IMAGE_DIMENSION}, multiple of ${MLX_IMAGE_DIMENSION_STEP}. Omit to keep the source size.`,
+                    minimum: MIN_MLX_IMAGE_DIMENSION,
+                    maximum: MAX_MLX_IMAGE_DIMENSION,
+                },
+                height: {
+                    type: 'number',
+                    description: 'Output height. Same constraints as width. Send both width and height, or neither.',
+                    minimum: MIN_MLX_IMAGE_DIMENSION,
+                    maximum: MAX_MLX_IMAGE_DIMENSION,
+                },
+                steps: {
+                    type: 'number',
+                    description: 'Diffusion steps 1–50. Omit for the model default.',
+                    minimum: 1,
+                    maximum: 50,
+                },
+                seed: {
+                    type: 'number',
+                    description: 'Random seed. Omit for a random seed.',
+                    minimum: 0,
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the image (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the image (default: mlx_edit_<timestamp>.png)',
+                },
+            },
+            required: ['prompt', 'imagePath'],
+        },
+    },
     // ── Video generation (Google Veo 3.1 — ported from the fect-mcp video module) ──────────
     {
         name: 'veo_text2video',
@@ -1348,6 +1488,124 @@ Returns: a text block with the saved .mp4 file path, reference image and audio l
             required: ['prompt'],
         },
     },
+    {
+        name: 'mlx_video_generate',
+        title: 'Video generation (local · MLX Core)',
+        annotations: HINT.generateLocal,
+        description: `Generate a video on this machine via MLX Core / mlx-serve. The server returns raw rgb8 frames (plus optional PCM), which this tool muxes to mp4 with ffmpeg (libx264 yuv420p). No vendor bill. This plugin never launches the app.
+
+Use as an optional local clip when MLX Core is running with a video model (LTX-2). Default canvas is ${DEFAULT_MLX_VIDEO_WIDTH}×${DEFAULT_MLX_VIDEO_HEIGHT} at ${DEFAULT_MLX_VIDEO_FRAMES} frames / ${MLX_VIDEO_FPS} fps (~2s). Width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP} (two-stage LTX grid) — 1080 is not on that grid; use 1088×1920 or the default. Decoded RGB is capped at ${Math.round(MAX_VIDEO_RGB_BYTES / (1024 * 1024))}MB — 1088×1920 at 8s/24fps is ~1.2GB and is refused. lastFrameImagePath needs at least ${MIN_MLX_VIDEO_FRAMES} frames.
+Do NOT use this as the default generated-video path — that stays veo_* / seedance_* per video-model-selection.md. Do NOT put this tool on the Veo/Seedance face-policy table; it is a separate local engine. Output is ${MLX_VIDEO_FPS} fps; produce's builder is 30 fps, so a splice re-encodes. ffmpeg must be on PATH. Shares the GPU with Z-Image and the chat model — LTX wants 24GB+ on its own.
+Requires Apple Silicon, macOS 26.2+, MLX Core.app or mlx-serve (or MLX_SERVE_URL), and ffmpeg. brew install --cask mlx-core if :11234 is down.
+
+Returns: a text block with the saved .mp4 path, model, size, frame count, fps, and whether audio was muxed.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Motion prompt (max 32,000 characters). English. Describe motion, not a still.',
+                    maxLength: 32000,
+                },
+                model: {
+                    type: 'string',
+                    description: 'mlx-serve model id. Omit to pick a ready model that advertises capability "video".',
+                },
+                width: {
+                    type: 'number',
+                    description: `Width (default: ${DEFAULT_MLX_VIDEO_WIDTH}). ${MIN_MLX_VIDEO_DIMENSION}–${MAX_MLX_VIDEO_DIMENSION}, multiple of ${MLX_VIDEO_DIMENSION_STEP}. 1080 is not on the grid.`,
+                    minimum: MIN_MLX_VIDEO_DIMENSION,
+                    maximum: MAX_MLX_VIDEO_DIMENSION,
+                    default: DEFAULT_MLX_VIDEO_WIDTH,
+                },
+                height: {
+                    type: 'number',
+                    description: `Height (default: ${DEFAULT_MLX_VIDEO_HEIGHT}). Same constraints as width.`,
+                    minimum: MIN_MLX_VIDEO_DIMENSION,
+                    maximum: MAX_MLX_VIDEO_DIMENSION,
+                    default: DEFAULT_MLX_VIDEO_HEIGHT,
+                },
+                numFrames: {
+                    type: 'number',
+                    description: `Frame count (default: ${DEFAULT_MLX_VIDEO_FRAMES}). ${MIN_MLX_VIDEO_FRAMES}–${MAX_MLX_VIDEO_FRAMES} at ${MLX_VIDEO_FPS} fps. last_frame interpolation needs at least ${MIN_MLX_VIDEO_FRAMES}.`,
+                    minimum: MIN_MLX_VIDEO_FRAMES,
+                    maximum: MAX_MLX_VIDEO_FRAMES,
+                    default: DEFAULT_MLX_VIDEO_FRAMES,
+                },
+                steps: {
+                    type: 'number',
+                    description: 'Diffusion steps 1–50. Omit for the model default.',
+                    minimum: 1,
+                    maximum: 50,
+                },
+                seed: {
+                    type: 'number',
+                    description: 'Random seed. Omit for a random seed.',
+                    minimum: 0,
+                },
+                firstFrameImagePath: {
+                    type: 'string',
+                    description: 'Optional first-frame still (absolute path, sent as base64).',
+                },
+                lastFrameImagePath: {
+                    type: 'string',
+                    description: `Optional last-frame still. Requires numFrames ≥ ${MIN_MLX_VIDEO_FRAMES}.`,
+                },
+                pipeline: {
+                    type: 'string',
+                    description: 'LTX pipeline. two_stage is the usual quality setting.',
+                    enum: ['one_stage', 'two_stage'],
+                },
+                decoder: {
+                    type: 'string',
+                    description: 'LTX decoder.',
+                    enum: ['conv', 'diffusion'],
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the video (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the video (default: mlx_video_<timestamp>.mp4)',
+                },
+            },
+            required: ['prompt'],
+        },
+    },
+    {
+        name: 'mlx_3d_generate',
+        title: '3D mesh generation (local · MLX Core)',
+        annotations: HINT.generateLocal,
+        description: `Generate a GLB mesh from an image on this machine via MLX Core / mlx-serve POST /v1/3d/generations. No vendor bill. This plugin never launches the app.
+
+Use only when the user explicitly wants a 3D mesh (GLB). The rest of this pipeline has no GLB consumer — produce, storyboard, and autoproduce never call this. Allowed extension is .glb only.
+Do NOT call this to make a video frame, a cover, or a motion slide. If :11234 is down the call fails closed with brew install --cask mlx-core.
+
+Returns: a text block with the saved .glb path and model.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                imagePath: {
+                    type: 'string',
+                    description: 'Absolute path to the source image. Required.',
+                },
+                model: {
+                    type: 'string',
+                    description: 'mlx-serve model id. Omit to pick a ready model that advertises capability "3d".',
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the mesh (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the mesh (default: mlx_3d_<timestamp>.glb). Extension must be .glb.',
+                },
+            },
+            required: ['imagePath'],
+        },
+    },
     // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
     {
         name: 'tts_generate',
@@ -1499,6 +1757,49 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
                 },
             },
             required: ['text'],
+        },
+    },
+    {
+        name: 'mlx_tts_generate',
+        title: 'Speech synthesis (local · MLX Core)',
+        annotations: HINT.generateLocal,
+        description: `Convert text to speech on this machine via MLX Core / mlx-serve POST /v1/audio/speech. Returns raw WAV bytes (this tool does not decode the body as text). No vendor bill. This plugin never launches the app.
+
+Use as an optional local voice when MLX Core is running with an audio model. The OpenAI-compatible field is input (not text). Optional voice name or refAudioPath for a reference clip. Max ${MAX_MLX_TTS_CHARS} characters.
+Do NOT use this as a silent fallback for the channel profile §2 engine — if Supertonic, Gemini, or ElevenLabs is pinned, a missing runtime stops the run and asks the user. Mixing sample rates with tts_local_generate (44.1kHz) or tts_generate (24kHz) on one timeline needs a resample. Do NOT treat this as the default narration path.
+Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
+
+Returns: a text block with the saved .wav path, model, and generation time.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                input: {
+                    type: 'string',
+                    description: `Text to speak (max ${MAX_MLX_TTS_CHARS} characters). OpenAI-compatible name: input, not text.`,
+                    maxLength: MAX_MLX_TTS_CHARS,
+                },
+                model: {
+                    type: 'string',
+                    description: 'mlx-serve model id. Omit to pick a ready model that advertises capability "audio".',
+                },
+                voice: {
+                    type: 'string',
+                    description: 'Optional voice name the loaded model advertises. Omit for the model default.',
+                },
+                refAudioPath: {
+                    type: 'string',
+                    description: 'Optional reference clip (absolute path, sent as base64) for voice cloning on models that support it.',
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the audio (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the audio (default: mlx_tts_<timestamp>.wav)',
+                },
+            },
+            required: ['input'],
         },
     },
     {
@@ -1923,15 +2224,76 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
         },
     },
     {
+        name: 'mlx_music_generate',
+        title: 'Music generation (local · MLX Core)',
+        annotations: HINT.generateLocal,
+        description: `Generate music on this machine via MLX Core / mlx-serve POST /v1/audio/music-generations. Returns raw WAV. No vendor bill. This plugin never launches the app.
+
+Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics — mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
+Do NOT use as the default BGM path — that stays music_generate_clip (Lyria, GEMINI_API_KEY). Autoproduce unattended still takes the Lyria clip. Vocals fight voiceover; keep instrumental true under narration.
+Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
+
+Returns: a text block with the saved .wav path, model, duration, and generation time.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'Music prompt (max 4,000 characters). Describe genre, instruments, mood. For a bed under narration, ask for space in the vocal frequency range.',
+                    maxLength: 4000,
+                },
+                model: {
+                    type: 'string',
+                    description: 'mlx-serve model id. Omit to pick a ready model that advertises capability "music".',
+                },
+                lyrics: {
+                    type: 'string',
+                    description: 'Optional lyrics. Do not send these when instrumental is true — that is a 400.',
+                    maxLength: 8000,
+                },
+                instrumental: {
+                    type: 'boolean',
+                    description: 'Instrumental bed (default: true). Set false to sing lyrics.',
+                    default: true,
+                },
+                durationSeconds: {
+                    type: 'number',
+                    description: `Length in seconds (default: ${DEFAULT_MLX_MUSIC_SECONDS}, ${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}).`,
+                    minimum: MIN_MLX_MUSIC_SECONDS,
+                    maximum: MAX_MLX_MUSIC_SECONDS,
+                    default: DEFAULT_MLX_MUSIC_SECONDS,
+                },
+                seed: {
+                    type: 'number',
+                    description: 'Random seed. Omit for a random seed.',
+                    minimum: 0,
+                },
+                refAudioPath: {
+                    type: 'string',
+                    description: 'Optional reference clip (absolute path, sent as base64).',
+                },
+                outputPath: {
+                    type: 'string',
+                    description: 'Directory path to save the audio (default: current working directory)',
+                },
+                filename: {
+                    type: 'string',
+                    description: 'Filename for the audio (default: mlx_music_<timestamp>.wav)',
+                },
+            },
+            required: ['prompt'],
+        },
+    },
+    {
         name: 'capability_status',
         title: 'What this machine can do right now',
         annotations: HINT.local,
         description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest.
 
 Use it BEFORE planning anything that spends money or depends on a provider — the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
-Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability — a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves. Read-only; makes no API call, so one call per session is enough.
+Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability — a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves (mflux, python3, mlx-qwen3-asr) or whether MLX Core.app / mlx-serve is installed — not whether :11234 is up. Read-only; makes no API call, so one call per session is enough.
 
-Returns: a capability menu — video_generation, image_generation, tts, music_generation, speech_to_text, research — each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
+Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, research — each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
         inputSchema: {
             type: 'object',
             properties: {},

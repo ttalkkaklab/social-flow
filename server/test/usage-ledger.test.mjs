@@ -74,8 +74,11 @@ test('every price key the mapping can emit exists in prices.tsv', () => {
     ['gpt_image_text2img', { quality: 'medium' }],
     ['gpt_image_img2img', { quality: 'high' }],
     ['image_local_generate', {}],
+    ['mlx_image_generate', {}],
+    ['mlx_image_edit', {}],
     // Speech
     ['tts_local_generate', { text: 'x' }],
+    ['mlx_tts_generate', { input: 'x' }],
     ['tts_generate', { text: 'x', model: 'gemini-2.5-flash-preview-tts' }],
     ['tts_generate', { text: 'x', model: 'gemini-2.5-pro-preview-tts' }],
     ['tts_elevenlabs_generate', { text: 'x', model: 'eleven_multilingual_v2' }],
@@ -87,6 +90,9 @@ test('every price key the mapping can emit exists in prices.tsv', () => {
     ['suno_generate', {}],
     ['suno_generate_sound', {}],
     ['suno_generate_lyrics', {}],
+    ['mlx_music_generate', { durationSeconds: 30 }],
+    ['mlx_video_generate', { numFrames: 49 }],
+    ['mlx_3d_generate', {}],
   ];
   const missing = [];
   for (const [tool, args] of calls) {
@@ -121,6 +127,8 @@ test('Seedance bills exactly the seconds requested, and 1.5 pro splits on audio'
 test('speech is recorded per 1,000 characters, not per character', () => {
   const text = 'x'.repeat(412);
   assert.equal(priceOf('tts_local_generate', { text }).quantity, 0.412);
+  // mlx_tts_generate takes `input`, not `text`.
+  assert.equal(priceOf('mlx_tts_generate', { input: 'x'.repeat(412) }).quantity, 0.412);
   // tts_multi_speaker takes `script`, not `text` — reading only `text` filed it as 0 characters.
   assert.equal(priceOf('tts_multi_speaker', { script: 'x'.repeat(1000) }).quantity, 1);
   // The ElevenLabs dialogue lane takes an `inputs` array; its quantity stays null (metered),
@@ -183,6 +191,14 @@ test('an extension is billed for the 7 seconds it adds', () => {
   assert.match(ext.note, /unconfirmed/);
 });
 
+test('mlx local calls log at $0 with the matching unit', () => {
+  assert.equal(priceOf('mlx_image_generate', {}).key, 'image.mlx');
+  assert.equal(priceOf('mlx_image_generate', {}).quantity, 1);
+  assert.equal(priceOf('mlx_music_generate', {}).quantity, 30);
+  assert.equal(priceOf('mlx_video_generate', { numFrames: 48 }).quantity, 2);
+  assert.equal(priceOf('mlx_3d_generate', {}).key, '3d.mlx');
+});
+
 test('an unmeasurable quantity is left null rather than guessed', () => {
   // ElevenLabs meters below the raw length and only reports it in a response header.
   const el = priceOf('tts_elevenlabs_generate', { text: 'x'.repeat(100), model: 'eleven_v3' });
@@ -241,7 +257,9 @@ test('events append as whole JSON lines', () => {
 test('only generation tools are recorded', () => {
   for (const t of ['veo_img2video', 'seedance_text2video', 'gpt_image_text2img',
                    'image_local_generate', 'tts_generate', 'tts_elevenlabs_generate',
-                   'music_generate_clip', 'suno_generate']) {
+                   'music_generate_clip', 'suno_generate',
+                   'mlx_image_generate', 'mlx_image_edit', 'mlx_tts_generate',
+                   'mlx_music_generate', 'mlx_video_generate', 'mlx_3d_generate']) {
     assert.ok(isBillableTool(t), `${t} should be billable`);
   }
   for (const t of ['naver_search', 'threads_publish', 'youtube_insights', 'datago_search',

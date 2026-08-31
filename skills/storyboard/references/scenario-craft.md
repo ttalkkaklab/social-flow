@@ -1,12 +1,19 @@
 # Scenario craft — twelve rules that run underneath the beats
 
-The beat skeleton (`scenes-schema.md` §playback order) says **where** scenes go. This file
+The beat skeleton (`scenes-schema.md` §playback order) says **where** scenes go. Short-form
+is three beats, always: hook → drip (1–n) → cta. Long-form still walks two arcs. This file
 says **how scenes push each other** — the craft layer classic screenwriting settled long
-before short-form existed, cut down to what a 4–70-shot storyboard can actually use. The
+before short-form existed, cut down to what a 4–70-shot storyboard can actually use. On a
+short the "body" in the rules below is the drip shots. The
 storyboard skill applies these while designing scenes (§4); the reviewer's scene mode reads
 them as the yardstick behind its flow and role checks. None of them adds a `scenes.js`
 field — every rule lands on fields that already exist (`beat` · `shot.feel` · `narration`
 · `hookForm` · `chapter` · `duration` · `shot.size`/`angle`/`space` · `sound.drop`).
+
+Before any of that, storyboard §2.2 scores three candidate pages on whether **curiosity,
+fear, intrigue or comedy** actually work for a viewer. The engine table and the 95-point
+loop live in the scenario-stage reference the skill loads. §4 · §5 · §6 here are what
+"working" means for those four; the candidate stage is where they are the bar.
 
 Survey with sources: [docs/research/2026-08-25-scenario-craft](../../../docs/research/2026-08-25-scenario-craft/).
 Grades follow the repo convention — **craft canon** (the standard playbook of a named
@@ -52,10 +59,12 @@ then" are "pretty boring"; replace every joint with "but" or "therefore". Craft 
 - **Apply after drafting §4**: walk `SCENES` top to bottom and speak the connective at each
   boundary. It's a scratch check, not a field. A boundary that only reads as "and then" is
   scene-mode P0-2 (broken flow) material — merge, cut, or reorder until the chain holds.
-- Beat seams have natural connectives — hooking → result is a "therefore" (you have this
-  problem, *therefore* here's the finished thing), body → turn is a "but" (everyone gave up,
-  *but* one person looked again). A seam whose natural connective doesn't come out is
-  usually a scene doing the wrong job, not a sentence problem.
+- Beat seams have natural connectives — on a short, hook → drip is a "therefore" (you want
+  this answer, *therefore* here is the first piece) and drip → drip is a "but" (that piece
+  landed, *but* it opens the next gap); on long-form, hooking → result is a "therefore"
+  (you have this problem, *therefore* here's the finished thing), body → turn is a "but"
+  (everyone gave up, *but* one person looked again). A seam whose natural connective
+  doesn't come out is usually a scene doing the wrong job, not a sentence problem.
 - b-roll is a comma, not a beat — run the test across it (the scene before the b-roll
   against the scene after).
 
@@ -134,8 +143,9 @@ Hitchcock's bomb: an explosion out of nowhere buys fifteen seconds of surprise; 
 bomb **shown to the audience first**, with a clock, buys fifteen minutes of suspense —
 the ordinary conversation above it becomes unbearable because the viewer knows more than
 the people on screen. For fear-type episodes (`hookType:"fear"`): put the threat and its
-clock on the table in hooking, then let the ordinary scene run under it. Don't save the
-threat for a jump at the end — surprise is the weaker tool. Craft canon (Hitchcock/Truffaut).
+clock on the table in the first drip (short) or in hooking (long-form), then let the ordinary
+scene run under it. Don't save the threat for a jump at the end — surprise is the weaker
+tool. Craft canon (Hitchcock/Truffaut).
 
 And the fear must open a door. Witte & Allen's meta-analysis (2000, **measured**): strong
 fear beats weak fear, but only when paired with high **efficacy** — an action the viewer
@@ -166,13 +176,16 @@ curiosity — the hook has to sit close enough that the answer feels reachable. 
   (어쩌다 여기까지 왔지?). On a story arc, when the cover's first frame can carry the
   incongruity, let the picture open the loop and keep segment ① for the promise; a narration
   line that explains what's odd about the frame spends the gap. Lecture reading, field practice.
-- **Bookkeeping**: short-form carries **one main loop** (the `hookForm`) plus at most one
-  sub-loop; long-form carries 2–4. Every loop names, at open time, the scene that pays it —
+- **Bookkeeping**: a short informational episode carries **one governing loop only** (the
+  `hookForm`). A question paid in the same shot or by the next seam is welcome, but it never
+  becomes another branch the viewer has to remember. A short narrative may carry one
+  cross-scene sub-loop because a person or event can hold that promise. Long-form carries
+  2–4. Every loop names, at open time, the scene that pays it —
   put the pairs into `SB_DOC.craft.loops` (storyboard SKILL §6 — the document draws them and
   the §7 screen reads them). An unclosed loop is the
   "stopped, then left" penalty plus trust damage on the next episode (§six hook forms holds this for the main
   hook; this extends it to every loop opened mid-episode).
-- **The body pays the answer in installments** (measured on our own channel, n=4 —
+- **The drips (short) / the body (long-form) pay the answer in installments** (measured on our own channel, n=4 —
   retention report, 2026-08-26). Four episodes ranked by retention came out in exactly the
   order their view counts did (52% → 38% → 26% → 19%, a 3× spread in views), and the curve
   that won held flat across 90 seconds while the curve that lost slid from the third second
@@ -387,8 +400,10 @@ Four rules hold whatever shape gets picked:
   — the failure on screen, the number that shouldn't be possible — never the start of the
   timeline. Every tier of the sourcing agrees: the leaked MrBeast handbook calls the first
   minute the biggest exit and puts the wow element inside it (field practice), YouTube's own
-  playbook tells how-to content to open on the finished result (platform official), and
-  Harris front-loads the visual anchors (field practice).
+  playbook tells how-to content to open on the finished result (platform official, **long-form
+  how-to only**), and Harris front-loads the visual anchors (field practice). **A short never
+  opens on the finished result** — the cover is a gap, and the last drip is the first place
+  the answer is complete (scenes-schema §playback order).
 - **The promise sentence.** Inside the opening the viewer hears, in one sentence, what they
   will know or be able to do by the end. Curiosity alone underdelivers for informational
   content — the promise is the title and thumbnail's claim said out loud, and the episode is
@@ -471,9 +486,11 @@ stayed at one level, an end that summarized.
   recipe is the same list from the practice side — conflict inside 1–3 s, then 억울·분노·
   긴장, then the hint of a turn, then cut at the most curious moment (field practice). A body
   resting on a low-arousal feeling is where the swipe lives, whatever its sign.
-- **The end hands the feeling over; it asks for nothing.** The act row (scenes-schema
-  §playback order) already forbids the vague subscribe ask; the catharsis reading says why —
-  a request right after a release is a bill after a gift. The last beat is two lines: a
+- **The end hands the feeling over.** The act row (scenes-schema §playback order) already
+  forbids the vague subscribe ask; the catharsis reading says why — a request right after a
+  release is a bill after a gift. **On a short the CTA may ask one outward act** — a comment
+  question, a next-episode promise, or a memory question that produces comments. Subscribe and
+  like stay banned. **On long-form the last beat still asks for nothing:** two lines, a
   callback that re-reads the cover's words with the turned meaning and puts the thing in the
   viewer's own life (the §5 loop ending, made a you-line — "겨울을 나려고 만든 그 맛이, 지금
   냉장고 속 그 맛이에요"), then a question about **memory, not opinion** — "여러분 집 김치는
@@ -483,15 +500,35 @@ stayed at one level, an end that summarized.
   two or three lines of hook and ending, then everything in between — and what makes a scene
   land is 의외성, not description (field practice). The v4→v5 rewrite was exactly this: the
   loss line and the callback line were written before any body scene was touched, and the
-  body then only had to descend between them.
+  body then only had to descend between them. **The place for those two lines is the
+  storyboard skill's §2.5**, on the same screen as the structure and before a shot exists —
+  §4 is where a sentence can first be written down, and §4 asks for forty-odd values a shot at
+  once (ep07's nine shots carry 449 between them), so a rule about writing order can't live
+  there. Three items go on that screen and not a fourth — the cover's first spoken sentence,
+  the cta's last two lines, and the sign of the feel curve. **Wording is not what gets approved
+  there**: §4's story pass rewrites all three into the board in its own words and §7 is where
+  the sentences are read. What the user agrees to at §2.5 is the shape — this stake, this
+  callback, this curve. Grow the screen past three and it becomes a second §7 held at the wrong
+  time, which costs the gate the one thing it has: it settles the shape while scenes are free.
+  Unattended runs draft the three themselves into the `scenes.js` header comment; there is no
+  gate to mirror.
+
+  **The two layers this splits are measured.** When ep07 was rewritten after the user called
+  the draft flat — a new hook, a new last line, a worsening feel series across five shots — 24
+  of the values that changed were `narration`, `title`, `shot.feel` and `shot.info`, while
+  `bgPrompt`, `shot.space`, the four camera slots and the engine route changed **zero**, and
+  not one of the nine images was remade. That is why storyboard §4 fills the board in a story
+  pass and then a machine pass: the story layer already comes apart from the layer that costs
+  money, and authoring them in one breath is what makes a story fix feel expensive.
 
 Checks the pass runs (§10's spirit):
 
 - The feel chart in storyboard.md carries a sign per shot; the minimum precedes `craft.burst`,
   the maximum sits on the turn or the result.
 - The cover's first spoken sentence names a loss or a stake before it names a question.
-- The cta's last two lines are a callback and a memory question, and no line in the episode
-  contains a subscribe or like verb.
+- The cta's last two lines are a callback and a memory question (long-form) or one outward
+  act — comment question, next-episode promise, or memory question (short). No line in the
+  episode contains a subscribe or like verb.
 - Every feel on the chart is a high-arousal word; a shot whose feel is sad, calm or "nice"
   with nothing at stake is the flat stretch §2 was looking for.
 

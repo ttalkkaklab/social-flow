@@ -115,6 +115,9 @@ const { w: W, h: H } = preset.canvas;
 const shotNo = parseInt((path.basename(htmlAbs).match(/^s(\d+)-/) || [])[1] || "0", 10);
 const scene = (global.window.SCENES || [])[shotNo - 1];
 const segCount = scene && Array.isArray(scene.narration) ? scene.narration.length : null;
+const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArray(scene.visual.slide.motionBeats)
+  ? scene.visual.slide.motionBeats.filter(b => b && Number.isInteger(Number(b.group)) && b.primitive)
+  : [];
 
 // ── CDP over --remote-debugging-pipe ──────────────────────────────────────
 // $CHROME wins. Otherwise walk the usual macOS/Linux spots in order — real Chrome first, because
@@ -263,6 +266,22 @@ const openPage = async () => {
                `Check the path, and use H.264 or VP9 for video (HEVC does not decode under --disable-gpu)`);
   if (meta.stray > 0) return die(`${meta.stray} animation(s) live outside any [data-rg] group — they would run on the wall clock and break determinism. Put every animated element in a reveal group`);
   if (meta.infinite > 0) return die(`${meta.infinite} animation(s) are infinite (iteration-count) — a clip has to end; give them a count`);
+  if (semanticBeats.length) {
+    const rendered = await evalJS(`Array.from(document.querySelectorAll("[data-primitive]")).map(el => {
+      const group = el.closest("[data-rg]");
+      return { group: group ? Number(group.dataset.rg) : null, primitive: el.dataset.primitive || "" };
+    })`);
+    const expected = new Set(semanticBeats.map(b => `${Number(b.group)}\t${b.primitive}`));
+    const actual = new Set(rendered.map(b => `${Number(b.group)}\t${b.primitive}`));
+    for (const key of expected) if (!actual.has(key)) {
+      const [group, primitive] = key.split("\t");
+      return die(`motionBeats declares group ${group} primitive "${primitive}", but the rendered HTML has no matching data-primitive — use the semantic helper named in motion-slide-template.html`);
+    }
+    for (const key of actual) if (!expected.has(key)) {
+      const [group, primitive] = key.split("\t");
+      return die(`rendered HTML adds undeclared group ${group} primitive "${primitive}" — motionBeats permits one meaning-bearing movement kind per narration group`);
+    }
+  }
   const groups = await evalJS("window.__groups()");
   const N = groups.length - 1;
   if (N < 1) return die("no reveal groups — every moving element needs data-rg ≥ 1");
