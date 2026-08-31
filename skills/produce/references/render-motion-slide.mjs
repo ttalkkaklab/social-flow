@@ -100,7 +100,10 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === "--png-only") opt.pngOnly = true;
   else if (a === "--keep-frames") opt.keep = true;
   else if (a === "--group") opt.group = intArg(argv[++i], "group", 1, 999);
-  else if (a === "--segs") opt.segs = argv[++i];
+  else if (a === "--segs") {
+    opt.segs = argv[++i];
+    if (!opt.segs) usage('--segs wants "auto" or k:ms[,k:ms...]');
+  }
   else if (a === "--frame") {
     const m = String(argv[++i] || "").match(/^(\d+):(\d+(?:\.\d+)?)$/);
     if (!m) usage(`--frame wants k:ms (e.g. 2:800), got "${argv[i]}"`);
@@ -132,9 +135,14 @@ const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArr
   : [];
 
 // ── --segs: narration segment lengths → the page's sustain layer (__setSegs) ─
-// "auto" estimates each segment from its narration characters at the schema's canonical
-// rate (scenes-schema §per-scene fields: characters / 4.5 per second) — the storyboard
-// design gate runs before any TTS exists. produce passes measured ms once the wav is cut.
+// "auto" estimates each segment from its narration characters at the format's speaking
+// rate (formats.js pacing.rate, the same number scenes-schema §per-scene fields quotes) —
+// the storyboard design gate runs before any TTS exists. produce passes measured ms once
+// the wav is cut. Both paths clamp to one band: under SEG_MIN_MS no motion reads as a
+// movement, and past SEG_MAX_MS the clip outlasts any single narration segment this lane
+// writes, so a typo (seconds where ms belong) becomes a warning instead of an hour of render.
+const SEG_MIN_MS = 1200, SEG_MAX_MS = 9000;
+const clampSeg = (ms) => Math.min(SEG_MAX_MS, Math.max(SEG_MIN_MS, ms));
 let segMap = null;
 if (opt.segs === "auto") {
   if (!scene || !Array.isArray(scene.narration) || !scene.narration.length)
@@ -142,14 +150,14 @@ if (opt.segs === "auto") {
   segMap = {};
   scene.narration.forEach((n, i) => {
     const chars = String((n && (n.tts || n.sub)) || "").trim().length;
-    segMap[i + 1] = Math.min(9000, Math.max(1200, Math.round(chars / 4.5 * 1000)));
+    segMap[i + 1] = clampSeg(Math.round(chars / preset.pacing.rate * 1000));
   });
 } else if (opt.segs) {
   segMap = {};
   for (const part of opt.segs.split(",")) {
     const m = part.match(/^(\d+):(\d+)$/);
     if (!m) usage(`--segs wants "auto" or k:ms[,k:ms...], got "${opt.segs}"`);
-    segMap[+m[1]] = +m[2];
+    segMap[+m[1]] = clampSeg(+m[2]);
   }
 }
 
@@ -329,9 +337,28 @@ const openPage = async () => {
       warn.push(`--segs auto skipped: ${nPre} reveal groups vs ${segCount} narration segments (A|B sub-reveals shift the group↔segment mapping) — pass per-group --segs k:ms, splitting the segment's measured window at the reveal point`);
     } else {
       segsApplied = await evalJS(`typeof window.__setSegs === "function" ? (window.__setSegs(${JSON.stringify(segMap)}), true) : false`);
-      if (!segsApplied)
+      if (!segsApplied) {
         warn.push(`--segs given but the page has no __setSegs — a slide built from an older template; token durations stay and the tail of each segment freezes`);
+      } else {
+        // A key that names no group changes nothing, and the coverage check below reads an
+        // unfilled group through the entrance cap, which a 1.5s entrance never trips — so the
+        // mismatch has to be said here or it is said nowhere.
+        const stray = Object.keys(segMap).map(Number).filter(k => k < 1 || k > nPre);
+        if (stray.length)
+          warn.push(`--segs names group ${stray.join(", ")} but the slide has ${nPre} — ${stray.length > 1 ? "those keys change" : "that key changes"} nothing. --segs keys are groups, not narration segments`);
+        const unset = [];
+        for (let k = 1; k <= nPre; k++) if (segMap[k] == null) unset.push(k);
+        if (unset.length)
+          warn.push(`--segs leaves group ${unset.join(", ")} without a segment length — ${unset.length > 1 ? "they keep their" : "it keeps its"} token durations while the rest stretch`);
+      }
     }
+  }
+  // A settle sustain without --segs holds its own fallback length, and downstream that shows up
+  // as a bare "over the cap" warning that names the symptom instead of the cause.
+  if (!segsApplied) {
+    const svw = await evalJS('document.querySelectorAll(".svw").length');
+    if (svw)
+      warn.push(`${svw} settle sustain element${svw > 1 ? "s" : ""} rendered with no segment length — each holds its fallback duration, so the group runs long and the sheet frames land mid-settle. Pass --segs (produce optional-lanes §3.6)`);
   }
   const groups = await evalJS("window.__groups()");
   const N = groups.length - 1;

@@ -422,7 +422,7 @@ test('build-reel scene transition — a dissolve that costs no time', () => {
                'the carried frame is exactly TD long — the half that makes an in-card xfade free');
   // The trailing comma matters: without it `offset=0` also matches `offset=0.1`, and the
   // negative form lets it through — the pair would read as a contract and enforce nothing.
-  assert.doesNotMatch(reel, /xfade=transition=\$XFT:duration=\$TD:offset=(?!0,)/,
+  assert.doesNotMatch(reel, /\[tcar\]\[vkbx\]xfade=[^"]*offset=(?!0,)/,
                       'an in-card xfade starts at offset 0 — any other offset changes the length');
   assert.match(reel, /\[tcar\]\[vkbx\]xfade=transition=\$XFT:duration=\$TD:offset=0,/,
                'iris/blur composite inside the card, at offset 0 exactly, for exactly TD');

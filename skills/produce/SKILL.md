@@ -712,10 +712,13 @@ old pre-roll.
 The builder does it this way because a boundary xfade would break the pipeline's spine: the
 total would shrink by the transition length at every seam and trip §9's 2ms drift assertion,
 and xfade renumbers the tail's PTS from 0 (the measurement is written out at the outro seam
-in build-reel.sh). Dissolve/push/dip keep the card's frame count, so the concat stays
+in build-reel.sh). Every carry and dip keeps the card's frame count, so the concat stays
 stream-copy exact and no subtitle cue moves — verified A/B on ep07 (10 cards, two
 dissolves): 64.766667s and 1943 frames both ways, identical `subs.srt` on the cards that
-carry a transition, drift 0. A J-cut is allowed to drop that card's silent `PRE` (0.40 s)
+carry a transition, drift 0. The ban is on the seam, not on the filter: iris and blur
+composite inside one card with an xfade at offset 0 over a tail exactly the join long, so
+that card's length is untouched (build-reel.sh §7.4 carries the measurement). A J-cut is
+allowed to drop that card's silent `PRE` (0.40 s)
 because the next line occupies it. `POST` is 0.45 s.
 
 **Word cues — `SUB_MODE=word`.** The burn-in shows **one 어절 at a time**, a hard swap every

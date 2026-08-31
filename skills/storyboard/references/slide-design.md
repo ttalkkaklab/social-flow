@@ -209,14 +209,18 @@ screen still has to put its number on screen legibly.
 **P0-F — a near-empty frame.** The renderer's `zone_fill_pct` reports the painted content
 under 40% of the zone on either axis, on a slide with no full-bleed raster. The frame
 reads as unfinished, whatever the craft of what little is there — the renderer summary is
-the evidence, no eyeballing needed.
+the evidence, no eyeballing needed. Read the number knowing what it measures: the bounding
+box of everything painted, so one full-width element — a bar track, an axis, a bus line —
+sets `w_pct` to 100 by construction. On the diagram archetypes `h_pct` is the axis that
+carries the verdict, and horizontal spread stays a judgement made by eye.
 
 **Axes (additive)**
 
 - **Design craft (30)** — hierarchy: the hero is the first thing read, and read order
   follows the narration 10 / composition: negative space is used, nothing touches the
   zone edge, hairlines not boxes, and the frame actually fills the zone — the renderer's
-  `zone_fill_pct` under 55% on either axis costs points here 10 / palette restraint:
+  `zone_fill_pct` under 55% on either axis costs points here (on a diagram slide only
+  `h_pct` moves — P0-F says why) 10 / palette restraint:
   ink · paper · one accent, muted and line derived from paper, `.hot` used at most once 10
 - **Nothing reads as generated (25)** — score 25 and subtract 5 per marker found, floor 0:
   gradient or glow on text · rounded cards / bordered panels / a 3-column card grid ·
