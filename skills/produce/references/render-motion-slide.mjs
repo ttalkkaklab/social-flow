@@ -138,11 +138,13 @@ const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArr
 // "auto" estimates each segment from its narration characters at the format's speaking
 // rate (formats.js pacing.rate, the same number scenes-schema §per-scene fields quotes) —
 // the storyboard design gate runs before any TTS exists. produce passes measured ms once
-// the wav is cut. Both paths clamp to one band: under SEG_MIN_MS no motion reads as a
-// movement, and past SEG_MAX_MS the clip outlasts any single narration segment this lane
-// writes, so a typo (seconds where ms belong) becomes a warning instead of an hour of render.
+// the wav is cut. The two paths treat the band differently on purpose: an estimate may be
+// clamped into it, a measurement may not. Silently raising a measured 900ms window to 1200
+// would let the motion run past the cut, and the coverage check below would compare against
+// the raised number and see nothing wrong — so the measured path keeps the value it was
+// given and says when it sits outside the band.
 const SEG_MIN_MS = 1200, SEG_MAX_MS = 9000;
-const clampSeg = (ms) => Math.min(SEG_MAX_MS, Math.max(SEG_MIN_MS, ms));
+let segWarn = [];
 let segMap = null;
 if (opt.segs === "auto") {
   if (!scene || !Array.isArray(scene.narration) || !scene.narration.length)
@@ -150,14 +152,21 @@ if (opt.segs === "auto") {
   segMap = {};
   scene.narration.forEach((n, i) => {
     const chars = String((n && (n.tts || n.sub)) || "").trim().length;
-    segMap[i + 1] = clampSeg(Math.round(chars / preset.pacing.rate * 1000));
+    segMap[i + 1] = Math.min(SEG_MAX_MS, Math.max(SEG_MIN_MS, Math.round(chars / preset.pacing.rate * 1000)));
   });
 } else if (opt.segs) {
   segMap = {};
   for (const part of opt.segs.split(",")) {
     const m = part.match(/^(\d+):(\d+)$/);
     if (!m) usage(`--segs wants "auto" or k:ms[,k:ms...], got "${opt.segs}"`);
-    segMap[+m[1]] = clampSeg(+m[2]);
+    const ms = +m[2];
+    // Past the ceiling is a typo, not a segment — no narration segment in this lane runs that
+    // long, and a clip built to it would render for minutes. Refuse loudly rather than clamp.
+    if (ms > SEG_MAX_MS)
+      usage(`--segs group ${m[1]} is ${ms}ms — over the ${SEG_MAX_MS}ms a narration segment runs. Seconds in the ms slot?`);
+    if (ms < SEG_MIN_MS)
+      segWarn.push(`--segs group ${m[1]} is ${ms}ms — under ${SEG_MIN_MS}ms a sustain reads as a flicker. Rendering it as given; check the boundary you measured`);
+    segMap[+m[1]] = ms;
   }
 }
 
@@ -324,7 +333,7 @@ const openPage = async () => {
       return die(`rendered HTML adds undeclared group ${group} primitive "${primitive}" — motionBeats permits one meaning-bearing movement kind per narration group`);
     }
   }
-  const warn = [];
+  const warn = segWarn.slice();
   // Sustain layer — hand the page its segment lengths before reading group durations, so
   // .sv elements stretch to them and __groups() reports the stretched clips. --segs keys
   // are GROUPS: on an A|B sub-reveal slide (more groups than segments) group k is no
