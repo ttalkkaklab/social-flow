@@ -61,8 +61,10 @@ was measured to accumulate 105ms).
 **Card joins default to a J-cut.** An incoming spoken card with no `enter=` opens on the
 previous last frame for `SCENE_JCUT` (0.32s) while the next line already plays, then the
 picture cuts. `POST` is 0.45s (last-reveal hang). Write `enter=cut` for a smash with the old
-silent pre-roll. Dissolve, push, and dip stay explicit spent effects drawn inside the
-incoming card, so concat `-c copy` and drift 0 still hold. A J-cut drops that card's silent
+silent pre-roll. Dissolve, iris, blur, zoom, push, whip and dip stay explicit spent effects
+drawn inside the incoming card, so concat `-c copy` and drift 0 still hold — iris and blur
+reach for an xfade there, which is safe inside one encode and still banned at the seam
+(build-reel.sh §7.4 says why). A J-cut drops that card's silent
 `PRE` from its length because the next line occupies it.
 
 ## Reveal timing contract (reveal-timing.py)

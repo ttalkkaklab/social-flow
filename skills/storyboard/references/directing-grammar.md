@@ -479,7 +479,8 @@ what the audience is supposed to get.
 16. **The picture join is a cut; the sound leads.** `[course]` The builder J-cuts spoken
     cards so the next line starts on the previous last frame — that is the split edit, not
     a dissolve on every seam. Write `"cut"` only for a smash; spend `dissolve` / `dip` /
-    `push` from scenes-schema §scene transition (one home — do not copy the table here).
+    `iris` / `blur` / `zoom` / `push` / `whip` from scenes-schema §scene transition (one
+    home — do not copy the table here). Seven kinds, and a short still spends at most two.
     Consecutive stills in one scene change size by two steps or the angle (the 30° rule in
     §7); a dissolve on a bad picture match is slow *and* jarring. Never on the hook.
 
