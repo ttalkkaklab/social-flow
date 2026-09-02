@@ -240,7 +240,7 @@ data/<channel>/episodes/<topic>/
 
   The second command keeps a declared motion frame from reaching production as a missing HTML
   file. Timeline, statistic, and principle slides are checked again while rendering: every
-  `motionBeats` primitive (actor + hairline on a principle) must exist in that group's DOM. A missing camera slot or an
+  `motionBeats` primitive (actor + rule on a principle) must exist in that group's DOM. A missing camera slot or an
   unresolvable b-roll `after` fails the first command. Fix a blocker before the build rather
   than discovering it 12 minutes into capture. `.work/` survives between sessions on purpose,
   so a resumed run reuses the captures and TSV manifests already there.
