@@ -12,7 +12,8 @@
  *   2. 한글 문자열 리터럴이 전부 scenes.js 에 있다 — 문체 게이트(screen 표면)를
  *      통과한 적 없는 글자가 화면에 나가는 길을 막는다 (주석 속 한글은 허용)
  *   3. 갈래(kind) — diagram(기본) · kinetic · character. 움직이는 diagram 은 treatment 로
- *      editorial(HTML 이 화면 전체를 설계)과 photo-action(사진 속 대상이 실제로 바뀜)을 가른다.
+ *      editorial(HTML 이 화면 전체를 설계) · photo-action(사진 속 대상이 실제로 바뀜) ·
+ *      footage(생성 클립이 그룹마다 바탕이 되고 그 위에 표식을 그린다 — shots 의 클립이 있어야 한다)를 가른다.
  *      갈래마다 시작하는 템플릿이 다르다. 모든 슬라이드는 motion:true 다 — 정지 슬라이드는
  *      없다. character 는 visual.slide.acts 가 그룹마다 동작 하나를 들고 있어야 한다.
  *      사건을 연기할 때는 cast와 대상이 있는 act 객체를 써서, 누가 무엇을 했는지도 고정한다.
@@ -50,7 +51,7 @@ const MSG = {
   smil: "SVG SMIL 애니메이션 금지 (<animate·<animateTransform·<animateMotion·<set) — 벽시계로 돌고 __seek 이 못 세운다. CSS @keyframes 나 __paint 로 옮긴다",
   kindVocab: k => `slide.kind "${k}" 는 ${KINDS.join(" · ")} 밖이다`,
   kindTemplate: (k, fn, tpl) => `kind:"${k}" 인데 ${fn}() 이 없다 — ${tpl} 에서 시작한다`,
-  treatmentMissing: "motion diagram 에 visual.slide.treatment 가 없다 — HTML 이 화면 전체를 설계하면 editorial, 사진 속 대상이 실제로 바뀌면 photo-action",
+  treatmentMissing: "motion diagram 에 visual.slide.treatment 가 없다 — HTML 이 화면 전체를 설계하면 editorial, 사진 속 대상이 실제로 바뀌면 photo-action, 생성 클립 위에 표식을 그리면 footage",
   treatmentVocab: t => `slide.treatment "${t}" 는 ${TREATMENTS.join(" · ")} 밖이다`,
   editorialRole: r => `editorial slide.role "${r}" 는 ${EDITORIAL_ROLES.join(" · ")} 밖이다`,
   editorialMotif: "editorial slide.motif 가 없다 — 에피소드 전체를 잇는 시각 장치를 적는다",
@@ -68,6 +69,13 @@ const MSG = {
   gradientAuthored: "저작 영역(renderSlide 등)에 그라데이션 금지 — 플레이트·스크림 그라데이션은 템플릿 머리 CSS 가 이미 들고 있다(.plate · .scrim). 글자·막대·도형은 단색이다",
   roundedCard: r => `둥근 카드 표식 금지 — border-radius:${r}px 대신 여백과 헤어라인으로 구조를 만든다`,
   photoAction: "photo-action slide 에 visual.action 이 없다 — 카메라나 선이 아니라 사진 속 대상·증거가 어떻게 바뀌는지 적는다",
+  footageAction: "footage slide 에 visual.action 이 없다 — 클립 안에서 인물·사물이 무엇을 하는지 적는다(표식이 아니라 피사체의 움직임)",
+  footageShots: "footage slide 에 visual.slide.shots 가 없다 — 그룹마다 클립 하나(문장 하나 = 클립 하나·둘)를 적는다",
+  footageShotsShort: (n, m) => `footage shots ${n}개인데 나레이션 세그먼트는 ${m}개 — 세그먼트마다 클립이 있어야 화면이 채워진다`,
+  footageClip: f => `footage 클립이 없다 — ${f} (storyboard §5 에서 먼저 생성한다)`,
+  footageClipExt: f => `footage 클립 "${f}" 는 mp4·webm 이 아니다 — 렌더러의 Chrome 은 H.264 와 VP9 만 읽는다`,
+  footageUnused: f => `shots 의 클립 "${f}" 를 render 가 앉히지 않는다 — h.footage(rg, clip) 로 그 그룹의 바탕에 둔다`,
+  footageNoGround: "footage slide 인데 renderSlide 가 h.footage 를 부르지 않는다 — 클립이 바탕이어야 표식이 앉을 자리가 있다",
   actsMissing: "kind:\"character\" 인데 visual.slide.acts 가 없다 — 그룹마다 동작 하나를 적는다",
   actsVocab: a => `동작 "${a}" 는 ${ACTS.join(" · ")} 밖이다 — 손으로 짠 움직임은 다음 렌더에서 재현되지 않는다`,
   actsShort: (n, m) => `동작 ${n}개인데 나레이션 세그먼트는 ${m}개 — 세그먼트마다 동작 하나가 있어야 클립이 채워진다`,
@@ -79,7 +87,7 @@ const MSG = {
 /* 저작 화면의 세 갈래와, 캐릭터 연기가 고를 수 있는 동작. 정본은 scenes-schema §저작 화면 레인과
    character-act-template.html 머리말이다 — 여기 이름을 늘리려면 템플릿의 키프레임도 같이 는다. */
 const KINDS = ["diagram", "kinetic", "character"];
-const TREATMENTS = ["editorial", "photo-action"];
+const TREATMENTS = ["editorial", "photo-action", "footage"];
 const EDITORIAL_ROLES = ["evidence", "relationship", "mechanism", "timeline", "statistic", "transition", "verdict"];
 const SEMANTIC_HELPERS = {
   "date-enter": "date", "range-grow": "range", "event-link": "link",
@@ -177,9 +185,35 @@ function checkDir(dir, only, opts) {
       else if (treatment === "editorial") {
         if (EDITORIAL_ROLES.indexOf(slide.role) === -1) fail(base, MSG.editorialRole(slide.role));
         if (!String(slide.motif || "").trim()) fail(base, MSG.editorialMotif);
+      } else if (treatment === "footage") {
+        if (!String(scene.visual.action || "").trim()) fail(base, MSG.footageAction);
       } else if (!String(scene.visual.action || "").trim()) {
         fail(base, MSG.photoAction);
       }
+    }
+
+    // footage — 클립이 그룹마다 있고, 파일이 있고, render 가 실제로 앉힌다(slide-design §6.2).
+    // 표식이 문장에 맞는지는 리뷰어가 프레임에서 본다. 클립은 storyboard §5 에서 이미 생성돼 있어야 한다.
+    if (motion && kind === "diagram" && slide && slide.treatment === "footage") {
+      const start = code.search(/function\s+renderSlide\s*\(|\brenderSlide\s*=\s*(?:async\s*)?\(?/);
+      const stop = code.indexOf("SEEK-RUNTIME-BEGIN", start >= 0 ? start : 0);
+      const drawn = start >= 0 ? code.slice(start, stop >= 0 ? stop : code.length) : code;
+      const shots = Array.isArray(slide.shots) ? slide.shots : null;
+      if (!shots || !shots.length) fail(base, MSG.footageShots);
+      else {
+        const segs = (scene.narration || []).length;
+        if (segs && shots.length < segs) fail(base, MSG.footageShotsShort(shots.length, segs));
+        shots.forEach((sh) => {
+          [sh && sh.clip, sh && sh.matte].filter(Boolean).forEach((f) => {
+            const file = String(f);
+            if (!/\.(mp4|webm)$/i.test(file.split("?")[0])) fail(base, MSG.footageClipExt(file));
+            if (!fs.existsSync(path.join(dir, file))) fail(base, MSG.footageClip(file));
+            // 경로를 리터럴로 적었거나 shots 배열을 코드로 읽는다(sh[0].clip) — 둘 중 하나면 앉힌 것이다
+            if (!drawn.includes(file.replace(/^slides\//, "")) && !/\.shots\b/.test(drawn)) fail(base, MSG.footageUnused(file));
+          });
+        });
+      }
+      if (!/\bh\.footage\s*\(/.test(drawn)) fail(base, MSG.footageNoGround);
     }
 
     // editorial은 사진 위에 글자만 올리는 자리가 아니다. 사진을 쓰더라도 HTML이 논리를
@@ -385,6 +419,14 @@ function selftest() {
         visual: { slide: { file: "slides/s19-story-act.html", kind: "character", motion: true,
           cast: [{ id: "masked", archetype: "masked" }, { id: "police", archetype: "police" }],
           acts: [{ action: "gather", actor: "masked" }, { action: "bind", actor: "police", target: "masked" }], labels: ["사건"] } } },
+      { type: "points", title: "실사 컷", narration: [{ tts: "하나" }, { tts: "둘" }],
+        visual: { action: "riders enter", slide: { file: "slides/s20-footage.html", motion: true, treatment: "footage", plan: "x", labels: [],
+          shots: [{ group: 1, clip: "slides/footage/s20-g1.mp4" }, { group: 2, clip: "slides/footage/s20-g2.mp4" }] } } },
+      { type: "points", title: "샷 없는 실사", narration: [{ tts: "하나" }],
+        visual: { action: "x", slide: { file: "slides/s21-noshots.html", motion: true, treatment: "footage", plan: "x", labels: [] } } },
+      { type: "points", title: "행동 없는 실사", narration: [{ tts: "하나" }],
+        visual: { slide: { file: "slides/s22-noaction.html", motion: true, treatment: "footage", plan: "x", labels: [],
+          shots: [{ group: 1, clip: "slides/footage/s22-g1.mp4" }] } } },
     ];`);
   const cases = [
     ["s1-static.html", `const SLIDE_SHOT = 1; const a = "정지 라벨";`, [MSG.mustMotion]],
@@ -511,6 +553,14 @@ function selftest() {
     ["s18-fig.html", `const SLIDE_SHOT = 18; window.__seek = 1; function renderSlide(S, h) { return h.disk(1); }`,
       [MSG.artUnused("slides/assets/s18-person.png")]],
     ["s19-story-act.html", `const SLIDE_SHOT = 19; window.__seek = 1; function renderCharacter(S, h) {}`, []],
+    // footage — 클립이 바탕이고(h.footage), shots 의 파일이 있고, 코드가 shots 를 읽으면 앉힌 것이다
+    ["s20-footage.html", `const SLIDE_SHOT = 20; window.__seek = 1; function renderSlide(S, h) { const sh = S.visual.slide.shots; return h.footage(1, sh[0].clip) + h.mark.route(1, [[0,0],[1,1]]) + h.footage(2, sh[1].clip); }`, []],
+    ["s20-footage.html", `const SLIDE_SHOT = 20; window.__seek = 1; function renderSlide(S, h) { return h.mark.x(1, 1, 1); }`,
+      [MSG.footageUnused("slides/footage/s20-g1.mp4"), MSG.footageUnused("slides/footage/s20-g2.mp4"), MSG.footageNoGround]],
+    ["s20-footage.html", `const SLIDE_SHOT = 20; window.__seek = 1; function renderSlide(S, h) { const sh = S.visual.slide.shots; return h.footage(1, sh[0].clip) + h.footage(2, sh[1].clip); }`,
+      [MSG.footageClip("slides/footage/s20-g1.mp4"), MSG.footageClip("slides/footage/s20-g2.mp4")], "missing-asset"],
+    ["s21-noshots.html", `const SLIDE_SHOT = 21; window.__seek = 1; function renderSlide(S, h) { return h.footage(1, "x.mp4"); }`, [MSG.footageShots]],
+    ["s22-noaction.html", `const SLIDE_SHOT = 22; window.__seek = 1; function renderSlide(S, h) { const sh = S.visual.slide.shots; return h.footage(1, sh[0].clip); }`, [MSG.footageAction]],
   ];
   let failed = 0;
   const realErr = console.error, realLog = console.log;
@@ -519,10 +569,11 @@ function selftest() {
   };
   for (const [name, body, expect, flag] of cases) {
     wipeSlides();
-    const artNeed = { "s15-arts.html": "s15-stamp.png", "s18-fig.html": "s18-person.png" }[name];
-    if (artNeed && flag !== "missing-asset") {
-      fs.mkdirSync(path.join(slides, "assets"), { recursive: true });
-      fs.writeFileSync(path.join(slides, "assets", artNeed), "x");
+    const need = { "s15-arts.html": ["assets/s15-stamp.png"], "s18-fig.html": ["assets/s18-person.png"],
+      "s20-footage.html": ["footage/s20-g1.mp4", "footage/s20-g2.mp4"], "s22-noaction.html": ["footage/s22-g1.mp4"] }[name] || [];
+    if (flag !== "missing-asset") for (const f of need) {
+      fs.mkdirSync(path.dirname(path.join(slides, f)), { recursive: true });
+      fs.writeFileSync(path.join(slides, f), "x");
     }
     fs.writeFileSync(path.join(slides, name), body);
     const got = [];

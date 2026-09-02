@@ -116,7 +116,7 @@ area was measured only on desktop web, and subtitles and titles may come in a bi
 later (`references/scenes-schema.md` §format).
 
 ```
-[Short-form 9:16 (default) — 35–75s · 4–7 shots, all four platforms]
+[Short-form 9:16 (default) — 35–75s, up to 120 · 4–12 shots, all four platforms]
 [YouTube long-form 16:9 — 8–15 min · 28–70 shots · chapters, YouTube only. Safe area provisional]
 ```
 
@@ -370,11 +370,11 @@ Core rules:
 - **Composition — the format picked in §1.5 sets the band.** The source of truth for the
   constants is `formats.js`, and the `storyboard.html` check strip measures against those
   values for you.
-  - **Short-form 9:16**: hook + drip (1–n) + spoken CTA = **4–7 shots · 35–75s**
+  - **Short-form 9:16**: hook + drip (1–n) + spoken CTA = **4–12 shots · 35–75s** (up to 120s when the story carries it)
     (typically 2–5 drips). The shared outro asset sits after the CTA and is not a
     spoken shot. When going over 75s, write into the `storyboard.md` design rationale why
     dropping the demo or evidence in question would make the result impossible to
-    understand (90s is the absolute cap).
+    understand (180s is the absolute cap).
   - **YouTube long-form 16:9**: **28–70 shots · 8–15 min** (20 min absolute cap) +
     **5–10 chapters** (3 or more in the filmed lane). The chapter contract is
     `references/scenes-schema.md` §chapter — write only the `chapter` string on the scene
@@ -418,12 +418,12 @@ Core rules:
   set by the storyboard — the user doesn't pick names. Whether the live voice carries the
   sound or narration covers it is decided here too (live voice means `narration: []`). The
   full text is scenes-schema §filmed scenes.
-- **On a motion-required short, pick the moving body before the background.** Use video for
-  continuous action and a photo-backed HTML slide when a place, object or document is the
-  evidence. Every narration group changes a hand, debris, folder, trace or another subject.
-  Mirror it in `visual.action` and `visual.slide.plan`, set `motion:true` and
-  `treatment:"photo-action"`, and keep plan-to-narration 1:1. Whole-photo moves, drifting dust,
-  flashing accents and animated subtitles still fail the contract.
+- **On a motion-required short, pick the moving body before the background.** An event, a
+  place or an action beat on an `ai-video` channel is a **footage slide** — `treatment:"footage"`,
+  one generated clip per sentence with wordless marks drawn over it (`references/footage-lane.md`).
+  A place, object or document that changes inside a photograph is `photo-action`: every group
+  changes a hand, debris, folder or trace, mirrored in `visual.action` and `slide.plan`. Whole-photo
+  moves, drifting dust, flashing accents and animated subtitles still fail either contract.
 - **Long-form spreads one result across chapters over one episode; it isn't several
   short-form episodes stitched together.** A different topic per chapter makes a playlist,
   not an episode. Long-form walks cover → hooking → … with the arc picking the rest; the
@@ -968,9 +968,9 @@ passing them (`../produce/references/video-model-selection.md` §6).
   or peopleless, and those 8 seconds look like a still frame. The two b-roll slots need
   different `after` values.
 - **Get the plan reviewed before any generation call** (produce absolute rule 13) — delegate
-  the cover bgPrompt and every b-roll and motion-background scene to content-reviewer
-  **plan mode** and generate only after `PLAN_REVIEW: PASS`. It's the last gate before calls
-  that cost money (high images, veo).
+  the cover bgPrompt, every b-roll and motion-background scene **and every footage shot** to
+  content-reviewer **plan mode** in one call and generate only after `PLAN_REVIEW: PASS`. Footage
+  stills and clips are generated here too, after the §5 cost gate (footage-lane.md §3).
 - **points backgrounds are the star of the screen too** (produce absolute rule 14 — captions
   use only the top band, so the photo shows through). Make them **photorealistic topic shots**
   rather than metaphorical still lifes. **Assemble `bgPrompt` from the shot's fields**, don't
@@ -1093,8 +1093,8 @@ If any scene has `visual.slide`, author it now with
 [slide-authoring.md](references/slide-authoring.md). **Generate `slide.arts` first** when
 the array is set — `slides/assets/s<shot>-<slug>.png`, ink actor illustration, no readable text
 (`image_local_generate`; gpt/mlx when needed). Log the call; sit a principle actor with `h.fig`.
-A principle frame is a `.cast` of actors plus rules (`h.stem` · `h.bus` · `h.chamber`); kinetic
-`renderKinetic` places the first art on group 1 then the title with `in`; type-only skips arts.
+A principle frame is a `.cast` of actors plus rules (`h.stem` · `h.bus` · `h.chamber`); kinetic `renderKinetic`
+puts the first art on group 1 then the title with `in`; type-only skips arts. A footage slide waits for its clips (footage-lane.md §4).
 
 Then run `node references/check-slide.js <storyboard directory> --require-all`, render its
 key-state sheet, and take it through `slide-reviewer` to score ≥95 with p0=0. This is part of

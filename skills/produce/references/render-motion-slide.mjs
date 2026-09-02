@@ -63,7 +63,12 @@
  *   data-count count-ups, a painter registered with __paint(rg, durMs, fn) that draws the
  *   frame at t (canvas/SVG — the path for rotation, traces, anything keyframes can't express),
  *   and <video data-rg data-vfrom data-vdur> seeked by currentTime. All four are functions of
- *   (g, t) alone, which is what makes a re-render draw the same picture. WebGL works too — Chrome
+ *   (g, t) alone, which is what makes a re-render draw the same picture.
+ *   A footage slide (scenes.js visual.slide.treatment:"footage", slide-design.md §6.2) is that
+ *   fourth path as the ground: one generated clip per group under drawn marks. The renderer
+ *   reads the treatment from scenes.js, sets each clip's data-vdur to its segment length (never
+ *   past what the file holds — a seek beyond the end shows the last frame), and drops the
+ *   zone-fill and 2.6s-entrance warnings, which describe a plate composition, not a shot. WebGL works too — Chrome
  *   runs it on SwiftShader here, so those pixels are reproducible on the same machine rather
  *   than across machines. Video has to be H.264 or VP9; HEVC won't decode under --disable-gpu.
  *
@@ -143,6 +148,39 @@ const segCount = scene && Array.isArray(scene.narration) ? scene.narration.lengt
 const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArray(scene.visual.slide.motionBeats)
   ? scene.visual.slide.motionBeats.filter(b => b && Number.isInteger(Number(b.group)) && b.primitive)
   : [];
+// treatment:"footage" — generated clips are the ground (slide-design.md §6.2). The renderer learns it
+// from scenes.js so the SEEK-RUNTIME block stays byte-identical across the three templates.
+const treatment = scene && scene.visual && scene.visual.slide ? String(scene.visual.slide.treatment || "") : "";
+const isFootage = treatment === "footage";
+// Footage clips play for their whole segment — the video ground's sustain layer. data-vdur becomes the
+// segment length (--segs) or stays as authored, and never exceeds what the file holds: __groups() would
+// otherwise report a clip length the pixels do not deliver. Returns the clips that came up short.
+const footageVdurJS = mapJson => `(() => {
+  const map = ${mapJson};
+  const out = [];
+  for (const v of document.querySelectorAll("video.footage[data-rg], video.matte[data-rg]")) {
+    const rg = +v.dataset.rg, from = +v.dataset.vfrom || 0;
+    const media = isFinite(v.duration) && v.duration > 0 ? Math.floor(v.duration * 1000) - from : Infinity;
+    const want = map[rg] > 0 ? map[rg] : (+v.dataset.vdur || 0);
+    const dur = Math.max(1, Math.min(want, media));
+    if (dur < want) out.push({ rg, want, media, cls: v.className, src: v.getAttribute("src") });
+    v.dataset.vdur = String(dur);
+  }
+  return out;
+})()`;
+// A seeked <video> has decoded its frame, but the compositor may present it one capture later —
+// measured on the footage fixture: the cut after a seam landed on f0002 instead of f0001 while the
+// matte on top was already there. requestVideoFrameCallback fires when the new frame is actually
+// presented; the 120ms ceiling covers a seek that lands on the same source frame (a 24fps clip
+// sampled at 30fps repeats one frame in five), where no new presentation ever comes.
+const SETTLE_VIDEOS_JS = `new Promise(r => {
+  const vs = [...document.querySelectorAll("video.footage[data-rg], video.matte[data-rg]")];
+  let n = vs.length, done = false;
+  const fin = () => { if (!done) { done = true; r(true); } };
+  if (!n) return fin();
+  vs.forEach(v => { if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => { if (--n <= 0) fin(); }); else if (--n <= 0) fin(); });
+  setTimeout(fin, 120);
+})`;
 
 // ── --segs: narration segment lengths → the page's sustain layer (__setSegs) ─
 // "auto" estimates each segment from its narration characters at the format's speaking
@@ -300,7 +338,11 @@ const openPage = async () => {
   // __seek resolves once every animation's pause/currentTime is applied (Animation.ready) and
   // every seeking video has fired 'seeked' — compositor-thread animations otherwise drift a
   // sub-pixel between identical seeks, and a video would still show the previous frame.
-  const seek = (t, g) => evalJS(`window.__seek(${t}, ${g})`, true);
+  const seek = async (t, g) => {
+    await evalJS(`window.__seek(${t}, ${g})`, true);
+    if (isFootage) await evalJS(SETTLE_VIDEOS_JS, true);
+    return true;
+  };
   const shot = async (file) => {
     const { data } = await send("Page.captureScreenshot", { format: "png", fromSurface: true }, sid);
     const b = Buffer.from(data, "base64");
@@ -397,6 +439,13 @@ const openPage = async () => {
     if (svw)
       warn.push(`${svw} settle sustain element${svw > 1 ? "s" : ""} rendered with no segment length — each holds its fallback duration, so the group runs long and the sheet frames land mid-settle. Pass --segs (produce optional-lanes §3.6)`);
   }
+  if (isFootage) {
+    const short = await evalJS(footageVdurJS(JSON.stringify(segMap && segsApplied ? segMap : {})));
+    for (const c of short)
+      warn.push(`group ${c.rg} ${c.cls} ${c.src} holds ${(c.media / 1000).toFixed(1)}s but its segment runs ` +
+                `${(c.want / 1000).toFixed(1)}s — the last ${((c.want - c.media) / 1000).toFixed(1)}s freeze on the clip's ` +
+                `final frame; generate the clip longer (footage-lane.md §shot length)`);
+  }
   const groups = await evalJS("window.__groups()");
   const N = groups.length - 1;
   if (N < 1) return die("no reveal groups — every moving element needs data-rg ≥ 1");
@@ -414,7 +463,7 @@ const openPage = async () => {
         warn.push(`group ${g.rg} clip is ${g.dur}ms — over its ${seg}ms segment; the cut to the next clip lands mid-motion`);
       else if (seg - g.dur > seg * 0.4)
         warn.push(`group ${g.rg} moves ${(g.dur / 1000).toFixed(1)}s of its ${(seg / 1000).toFixed(1)}s segment — the tail freezes ${((seg - g.dur) / 1000).toFixed(1)}s; mark a .sv sustain element (slide-design.md §5) or accept the freeze`);
-    } else if (g.dur > 2600 + meta.hold) {
+    } else if (!isFootage && g.dur > 2600 + meta.hold) {
       warn.push(`group ${g.rg} clip is ${g.dur}ms — over the cap (2.6s motion + ${meta.hold}ms hold, slide-design.md §motion); a shorter segment cuts it mid-motion`);
     }
   }
@@ -456,6 +505,7 @@ const openPage = async () => {
   for (const w of workers.slice(1)) {
     await w.evalJS("window.__ready()", true);
     if (segsApplied) await w.evalJS(`window.__setSegs(${JSON.stringify(segMap)})`);
+    if (isFootage) await w.evalJS(footageVdurJS(JSON.stringify(segMap && segsApplied ? segMap : {})));
   }
   const rows = new Array(todo.length);
   const captureGroup = async (w, idx) => {
@@ -506,7 +556,9 @@ const openPage = async () => {
   // elements, and boxes with their own background or border — container divs span the zone
   // by default and would report 100% regardless of what is drawn.
   await seek(groups[N].dur, N);
-  const zoneFill = await evalJS(`(() => {
+  // A footage slide has no zone composition to measure — the clip fills the frame and the marks sit
+  // where the picture puts them (slide-design.md §6.2), so the number is reported as null.
+  const zoneFill = isFootage ? null : await evalJS(`(() => {
     const cs = getComputedStyle(document.documentElement);
     const px = v => parseFloat(cs.getPropertyValue(v)) || 0;
     const W = px("--w"), H = px("--h"), zx = px("--zone-x"), zt = px("--zone-top"), zb = px("--zone-bottom");
@@ -543,7 +595,7 @@ const openPage = async () => {
     return { w_pct: Math.round(Math.max(0, ix1 - ix0) / zw * 100),
              h_pct: Math.round(Math.max(0, iy1 - iy0) / zh * 100) };
   })()`);
-  if (zoneFill.w_pct < 55 || zoneFill.h_pct < 55)
+  if (zoneFill && (zoneFill.w_pct < 55 || zoneFill.h_pct < 55))
     warn.push(`content fills ${zoneFill.w_pct}%×${zoneFill.h_pct}% of the zone (w×h) — under 55%; scale the composition up or pick an archetype (slide-design.md §4)`);
   // Re-read the contract after capturing. __meta() sampled once up front cannot see an animation
   // that only exists at some mid-group t — a painter that attaches a node outside [data-rg] and
@@ -573,6 +625,7 @@ const openPage = async () => {
   fs.writeFileSync(path.join(OUT, "manifest.tsv"), manifest.join("\n") + "\n");
   const sec = (Date.now() - t0) / 1000;
   const summary = { slide: path.basename(htmlAbs), format: FORMAT, canvas: `${W}x${H}`, groups: N, jobs,
+    treatment: treatment || null,
     segments: segCount, durations_ms: groups.slice(1).map(g => g.dur),
     segs_ms: segMap && segsApplied ? Array.from({ length: N }, (_, i) => segMap[i + 1] || null) : null,
     zone_fill_pct: zoneFill, grain: opt.pngOnly ? null : opt.grain, frames: framesTotal,

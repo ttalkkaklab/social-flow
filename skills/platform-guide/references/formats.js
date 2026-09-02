@@ -88,6 +88,11 @@ const FORMATS = {
 
     // §3.2 pacing table. sceneMax=MAX_DUR(build-reel.sh:49),
     // recSceneMax=MAX_SCENE(build-screencast.sh:37) — read by different builders.
+    // 2026-09-02: the ceiling moved for the footage lane (scenes-schema §footage treatment) —
+    // a reference-grade history short runs 56 shots in 114s, and a footage scene holds one
+    // clip per sentence, so 7 scenes stopped fitting. 35–75s stays the band for a
+    // single-question episode; 76–120s is allowed when the story carries it; 180s is the
+    // YouTube Shorts limit. build-screencast.sh's t>N literal mirrors totalHard.
     pacing: {
       sceneMin: 4,
       sceneMax: 13,
@@ -97,10 +102,10 @@ const FORMATS = {
       sentMax: 25,
       rate: 4.5,
       totalMin: 35,
-      totalMax: 75,
-      totalHard: 90, // the t>90 literal in build-screencast.sh:202
+      totalMax: 120,
+      totalHard: 180, // the t>180 literal in build-screencast.sh
       sceneCountMin: 4,
-      sceneCountMax: 7,
+      sceneCountMax: 12,
     },
 
     chapters: null, // short-form has no chapter concept

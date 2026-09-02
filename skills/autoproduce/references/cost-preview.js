@@ -100,6 +100,18 @@ const ROUTES = {
   'quote/veo': {
     key: 'veo.fast.1080p', fixedSeconds: 8,
     why: 'veo_reference · fast (lite has no reference images) · pinned to 8s'
+  },
+  /* A footage slide (scenes-schema §footage treatment) carries one generated clip per reveal
+     group. The builder keeps only the video track, so the silent Seedance route applies — and
+     it bills the seconds each shot asks for. These shots are outside generatedVideoMax; the
+     forecast is where their spend becomes visible, and storyboard §5's gate is where it is approved. */
+  'footage/seedance': {
+    key: 'seedance.1-5-pro-silent.1080p',
+    why: 'seedance_img2video · silent — a footage slide clip; the builder keeps only the video track'
+  },
+  'footage/veo': {
+    key: 'veo.lite.1080p', fixedSeconds: 8,
+    why: 'veo_img2video · lite — a footage slide clip on the no-ARK_API_KEY route · 1080p is 8s-only'
   }
 };
 
@@ -146,6 +158,15 @@ function videoSlots(scenes) {
       slots.push({ shot: shotNo, kind: 'quote', engine: 'veo', duration: 8,
                    label: 'speech clip' + (s.speaker ? ' · ' + s.speaker : '') });
     }
+    const sl = v.slide;
+    if (sl && sl.treatment === 'footage' && Array.isArray(sl.shots)) {
+      sl.shots.forEach((sh, j) => {
+        const shot = sh || {};
+        const engine = (shot.engine || v.engine) === 'veo' ? 'veo' : 'seedance';
+        slots.push({ shot: shotNo, kind: 'footage', engine, duration: Number(shot.duration) || 0,
+                     label: 'footage clip g' + (shot.group || j + 1) });
+      });
+    }
   });
   return slots;
 }
@@ -163,6 +184,13 @@ function costFingerprint(scenes) {
     else if (v.video) slot = ["motion", (v.video.engine || v.engine) === "veo" ? "veo" : "seedance", Number(s.duration) || 0];
     else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", "veo", 8];
     if (slot) parts.push((i + 1) + ":" + slot.join("/"));
+    var sl = v.slide;
+    if (sl && sl.treatment === "footage" && Array.isArray(sl.shots)) {
+      for (var j = 0; j < sl.shots.length; j++) {
+        var sh = sl.shots[j] || {};
+        parts.push((i + 1) + "g" + (sh.group || j + 1) + ":footage/" + ((sh.engine || v.engine) === "veo" ? "veo" : "seedance") + "/" + (Number(sh.duration) || 0));
+      }
+    }
   }
   return parts.length ? parts.join(",") : "none";
 }
@@ -227,7 +255,7 @@ function selftest() {
   };
 
   // Every route a slot can resolve to has a price key.
-  ['broll/veo', 'broll/seedance', 'motion/seedance', 'motion/veo', 'quote/veo']
+  ['broll/veo', 'broll/seedance', 'motion/seedance', 'motion/veo', 'quote/veo', 'footage/seedance', 'footage/veo']
     .forEach((r) => ok('route ' + r + ' has a price key', !!(ROUTES[r] && ROUTES[r].key)));
 
   // Every price key the routing table names exists in prices.tsv — an invented key
@@ -259,6 +287,13 @@ function selftest() {
   ok('the motion background is detected', slots[0].kind === 'motion' && slots[0].engine === 'seedance');
   ok('the quote speech clip is detected', slots[1].kind === 'quote');
   ok('the b-roll is detected', slots[2].kind === 'broll' && slots[2].engine === 'veo');
+  // A footage slide bills one clip per shot, on the silent Seedance route unless the shot says veo.
+  const footage = videoSlots([{ type: 'points', visual: { slide: { treatment: 'footage', motion: true,
+    shots: [{ group: 1, clip: 'slides/footage/s1-g1.mp4', duration: 5 }, { group: 2, clip: 'slides/footage/s1-g2.mp4', duration: 4, engine: 'veo' }] } } }]);
+  ok('footage shots are detected one per clip', footage.length === 2 && footage[0].kind === 'footage' && footage[0].engine === 'seedance' && footage[1].engine === 'veo');
+  ok('a 5s footage clip on Seedance is forecast at 5 seconds', forecastRows([footage[0]])[0].qty === 5);
+  ok('footage shots change the fingerprint',
+     costFingerprint([{ type: 'points', visual: { slide: { treatment: 'footage', shots: [{ group: 1, duration: 5 }] } } }]) !== 'none');
 
   // The fingerprint moves when a slot's engine, length or position changes, and only then.
   const fpA = costFingerprint(sample);

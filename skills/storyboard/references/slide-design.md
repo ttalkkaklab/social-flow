@@ -52,6 +52,10 @@ A photo-backed slide (`treatment:"photo-action"`) replaces the plate with the ph
 scrim (`h.photo` + `h.scrim`): ink rising from the bottom to 72% at a third of the height
 and a lighter ink from the top, so the tag and title read on any photograph.
 
+A footage slide (`treatment:"footage"`, §6.2) has neither plate nor scrim. The generated clip is
+the ground with its own light, and the template drops the plate layer once `h.footage` is on the
+page — a key light and a vignette over a photographed scene read as a filter, not as a graphic.
+
 ## 2. Palette — ink, paper, one accent
 
 | Token | Value | Role |
@@ -262,9 +266,10 @@ Rules:
 `slide-reviewer` scores a rendered slide (the `--sheet` frames) additively out of 100,
 points only with frame-file evidence. PASS at **score ≥ 95 and p0 = 0**.
 
-**One rubric, three kinds and two diagram treatments.** The P0 list and the four axes below
+**One rubric, three kinds and three diagram treatments.** The P0 list and the four axes below
 apply to every authored screen — diagram, kinetic type, and character act alike
-(scenes-schema §the authored-screen lane). §6.1 adds the editorial-frame test; §7 and §8 add
+(scenes-schema §the authored-screen lane). §6.1 adds the editorial-frame test, §6.2 the footage
+marks; §7 and §8 add
 the P0s that only their kind can commit and say what the axes look at there. Nothing is
 subtracted for a kind: a kinetic screen is still judged on palette restraint, and a character
 screen still has to put its number on screen legibly.
@@ -277,12 +282,13 @@ screen still has to put its number on screen legibly.
 4. A gradient on text, or more than one accent hue on the slide
 5. Tofu / fallback glyphs, a font that did not load (visible in the sheet as a different face from the rest)
 6. Movement with no meaning in a group whose narration states a value — the value appears without a count/grow or a shape moving while something decorative moves instead
-7. A photo-backed slide only pans or zooms the whole image, adds ambient drift, or animates
-   overlays while the subject and evidence stay unchanged
+7. A photo-backed slide (`photo-action`) only pans or zooms the whole image, adds ambient drift,
+   or animates overlays while the subject and evidence stay unchanged
 8. The end frame is not the conclusion (the last group's rest frame is missing an element the scene claims)
-9. An editorial screen uses a full-frame raster as its composition and only adds text, callouts,
-   or a camera move. A raster may supply a document, face, or symbol, but it cannot supply the
-   visual argument by itself.
+9. An editorial screen (`editorial`) uses a full-frame raster as its composition and only adds
+   text, callouts, or a camera move. A raster may supply a document, face, or symbol, but it
+   cannot supply the visual argument by itself. A footage slide is judged by §6.2 instead — there
+   the clip is the ground on purpose.
 10. Any text set below its role's size in the §3 table for the slide's format, or a
     structural line thinner than that format's `--hair` (dividers) or `--rule` (axes,
     connectors, rails) — the slide is unreadable on the phone it is made for
@@ -374,6 +380,79 @@ than one full-bleed background waiting for a box to move over it.
 On the axes, design craft includes evidence hierarchy and a composition distinct from the other
 editorial frames; motion meaning asks whether each move changes the visual argument; legibility
 includes source/date readability at phone scale.
+
+### 6.2 Footage treatment — marks over generated footage
+
+The lane is `kind:"diagram", treatment:"footage"` (scenes-schema §footage treatment). The ground
+is one generated clip per reveal group; HTML draws wordless marks over it. The look was measured
+on a reference history short on 2026-09-02 (the numbers are in the storyboard skill's
+`footage-lane.md`): a muted photoreal clip every 1.8 seconds, coral strokes about 14px wide drawn
+on in under a second, a ground mark behind the figures, a direction arrow over them, no label
+anywhere, one subtitle line.
+
+**The grammar — six marks, one meaning each**
+
+| Mark | Helper | Says | Draws as |
+|---|---|---|---|
+| route | `h.mark.route(rg, pts, {dash, arrow})` | movement — a march, a sea lane, a retreat | a smoothed line through the points, drawn from the start; a dashed route is revealed through a mask; the arrowhead is the next stroke |
+| X | `h.mark.x(rg, x, y)` | defeat, a stop, a block | two strokes, the second `--mark-lead` after the first |
+| ring | `h.mark.ring(rg, x, y, r)` | the target — the one thing to look at | one circle drawn from the top |
+| hatch | `h.mark.hatch(rg, poly, {gap, angle, wave})` | spread — an army across a plain, an area, a flood | parallel lines clipped to a polygon, one after another at `--mark-stagger` |
+| box | `h.mark.box(rg, x, y, w, h)` | a place — a settlement, a building, a thing | four corner brackets |
+| dot | `h.mark.dot(rg, x, y)` | a position | a pop — the one overshoot on this slide |
+
+`h.mark.path(rg, d)` draws any SVG path the same way (a shield, a flag) and `h.mark.label`
+sets a short label from `labels` when the sentence carries a number or a name the picture
+cannot show. `h.matte(rg, webm)` lays the subject back over the marks so a ground mark passes
+behind the people (`make-matte.py`); a direction arrow stays on top and needs none.
+
+Rules:
+
+- **One or two marks per shot, and each is the sentence.** The route is drawn while the
+  sentence says they moved; the X lands when it says they lost. A mark that decorates —
+  brackets around nothing, a ring on the prettiest part of the frame — is P0-G2.
+- **Marks are placed against the clip, not the still.** Read the coordinates off the mid frame
+  (`footage-frames.sh`), keep the mark on its subject through the whole cut, and keep the camera
+  `very slow` or `static` on a marked shot. A mark that slides off its subject is P0-G3.
+- **Wordless by default.** The frame carries the subtitle and nothing else. A label is an
+  exception with a reason, sits inside the zone, and is in `labels`.
+- **One colour, one stroke.** `THEME.accent`, `--mark-w`, round caps and joins, `.94` opacity.
+  No second colour, no fill but the dot, no glow, no shadow, no gradient — the generated-look
+  markers of every slide apply here too.
+- **Write-on, not fade.** Every mark is drawn (`stroke-dashoffset`) or pops; nothing fades in.
+  A stroke takes `--mark-draw` (700ms); the arrowhead and the second stroke of an X follow at
+  `--mark-lead`; hatching staggers at `--mark-stagger`. The whole mark is complete inside 1.5s so
+  it reads before the cut.
+- **The clip fills the segment.** The renderer stretches each clip to its segment length and
+  warns when the file is shorter — a frozen last frame is the slideshow this lane exists to
+  remove. Generate `duration` at the segment estimate plus one second.
+- **No face under a mark.** A ring around a head or an X across a face is P0-G4 — the mark
+  sits on the ground, the road, the ridge, the formation, beside the person.
+- **The plate is off and the ground is the clip.** No key light, no vignette, no scrim, no
+  title chain. The subtitle is the only type; the episode's subtitle mode is `phrase`.
+
+**P0, added for `treatment:"footage"`**
+
+- **P0-G1 still ground** — a clip that does not move (a Ken Burns over a still, a frame frozen
+  for most of the segment), or a group whose "clip" is the previous group's last frame
+- **P0-G2 decorative mark** — a mark whose meaning is not in the segment's sentence, more than
+  two marks on one shot, or a shot whose declared `mark` is missing from the frame
+- **P0-G3 mark off its subject** — the mark sits on empty ground while the thing it names is
+  elsewhere in the frame, or slides off the subject during the cut (compare `g<k>-mid` with
+  `g<k>-end`)
+- **P0-G4 mark over a face**, or a label outside the zone
+- **P0-G5 a second colour or a fade** — a mark in another hue, a gradient or glow on a stroke, a
+  mark that fades in instead of drawing
+- **P0-G6 the wrong layer** — a ground mark drawn over the figures when a matte is declared, or a
+  matte that cuts the subject (a missing limb, a hole in a body)
+
+**What the axes look at here** — design craft is stroke discipline and how the mark sits in the
+frame's composition (does it lead the eye to the subject, does it follow the road and the
+horizon), not zone fill (the renderer reports `null`); nothing-reads-as-generated adds the
+photoreal tells of the clip itself — a duplicated face, melting hands, text-like scribbles on
+banners — because the clip is now part of what was authored; motion meaning asks whether each
+mark is the sentence and whether the cut lands on the sentence start; legibility is the mark's
+stroke at 25% scale and the subtitle staying readable over a bright clip.
 
 ## 7. Kinetic type — when the words are the picture
 

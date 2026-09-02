@@ -175,8 +175,8 @@ parentheses on first appearance only.
 
 ## §7 Video specs (same as the produce contract)
 
-- 1080×1920 / 30fps / H.264 High 4.1 / faststart. Main body 35–75s recommended,
-  90s hard cap.
+- 1080×1920 / 30fps / H.264 High 4.1 / faststart. Main body 35–75s recommended, up to
+  120s when the story carries it, 180s hard cap (the Shorts limit).
 - Safe zones: text zone x 176–904 · y 190–1350. Subtitle band y 1380–1560.
   - **The platforms' ad specs ask for more clearance than this** — Meta reels
     top 14% · bottom 35% · sides 6%, YouTube portrait ads left 48 · right 192 ·
