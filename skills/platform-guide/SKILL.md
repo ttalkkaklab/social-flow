@@ -42,9 +42,9 @@ content-reviewer agent all take this skill's playbook as their baseline.
 |---|---|---|---|---|
 | Form | text (+link card)/1 image (no video) | reels · carousel ≤10 images | text/image/regular video | Shorts (9:16 ≤3 min) |
 | Body limit | 500 chars | caption 2,200 chars | 5,000 chars | title 100 · description 5,000 |
-| Register | casual spoken, 1–3 lines | hook + save CTA | structured expository | keyword-style |
+| Register | casual spoken, 1–3 lines | hook + save CTA | structured expository | one spoken sentence, result withheld |
 | Links | 1 in body (`linkUrl` card) | caption links not clickable → comment | banned in body → first comment | description OK |
-| Hashtags | ≤1 (ranking weight 0) | 3–5 | 0–2 | 3–5 (#Shorts required) |
+| Hashtags | ≤1 (ranking weight 0) | 3–5 | 0–2 | 3–5 (#Shorts by preset) |
 | Media | link card (video episodes) · public HTTPS URL | public HTTPS URL | public HTTPS URL | local file upload |
 | Limits | 250 posts/24h | 100 posts/24h | — | 100 uploads/day |
 
@@ -72,6 +72,13 @@ exit 0 pass / 1 warning (S2 accumulation) / 2 fail (S1) / 3 gate did not run
 the path and run again. Write paths against `${CLAUDE_PLUGIN_ROOT}`
 (produce·publish run from `data/<channel>/episodes/<topic>/`, so relative paths
 won't resolve).
+
+The YouTube meta file gets a second, structural check on top of the style one —
+`node $PG/check-meta.js output/youtube/meta.md` reads the playbook §6 layout,
+the title limits, the preset hashtags, the summary voice, and a verbatim copy of
+`COMPREHENSION.answer` (it finds scenes.js from the episode layout). Same exit
+codes. Its 0 is "layout and verbatim leak clean" — a paraphrased result is the
+reviewer's blind read.
 
 ## Adversarial review gate — the shared contract for outgoing copy
 
@@ -111,6 +118,7 @@ appears, add a row to this table and extend an existing reviewer.
 - **`references/platform-playbook.md`** — per-platform grammar in detail, copy formulas, video specs, anti-pattern checklist (SoT)
 - **`references/korean-style.md`** — Korean style SoT: AI-tell pattern tables (T·D·C·A), severities, per-surface application, delete-only principle
 - **`references/check-style.py`** — deterministic style checker (stdlib only; `--surface` · `--json` · `--doc` · `--selftest`)
+- **`references/check-meta.js`** — the YouTube meta.md gate: the §6 layout, title limits (100 chars · no `<>` · front-loading warning), the format preset's required hashtags, the summary voice, and a verbatim `COMPREHENSION.answer` in the title or description (`--print title|description|tags` · `--selftest`)
 - **`references/pipeline.js`** — pipeline SoT: the stage ladder, every gate (attended and unattended), the reviewer verdict-tail contract, and produce's three build lanes. `episode-state.js` derives an episode's stage from it; `docs/pipeline-manifest.md` explains the design
 - **`references/pipeline-lint.js`** — checks the SKILL.md gate prose against `pipeline.js` (9 rules, read-only; `--list` · `--selftest`)
 - **`references/extract-text.js`** — scenes.js → per-surface text extraction (narration · subtitle · screen; handles the `window.SCENES` global contract)
