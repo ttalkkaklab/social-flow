@@ -2,7 +2,8 @@
 
 > **Freshness** — verified 2026-08-19 · source: the platforms' own published limits plus what
 > our accounts actually accepted · recheck every 90 days, and immediately when a publish call
-> starts failing on a limit.
+> starts failing on a limit. The §6 title and description contract was researched 2026-09-03
+> (YouTube Help · Google's clickbait policy post · two peer-reviewed headline studies).
 
 Generalized from rules field-tested in fect-persona publish-social·make-reels
 operations. produce's per-platform text authoring, publish's approval review,
@@ -77,6 +78,23 @@ what I actually pay when buying dollars) · "달러로 받으면 유리하고" �
 If a term is unavoidable, lead with the plain word and gloss the term in
 parentheses on first appearance only.
 
+### The result stays inside the video (title · description · IG caption)
+
+The surfaces that send a viewer *to* the video — the YouTube title and
+description, the IG caption — name the subject and the people and withhold the
+outcome: the tally, the winner, the twist, the answer, the number that is the
+payoff. A reader who already knows how it ends has no reason to press play, and
+a description that walks the episode in order ("first we look at …, then …")
+is a plot summary, not a hook. Two exceptions: the **Threads body** is read as
+a post without the video (§3), so it tells the story and closes on a question;
+a **fact or safety notice** can't be cut, so it shrinks to one line above the
+sources. User directive 2026-08-19 (corrected twice on one episode — the title
+carried the tally, then the description carried the turning points). The rule
+lived only in session memory until 2026-09-03, and of the episodes published
+since, the description gave the ending away in its own words on two of the
+five read — so it now sits here, in `check-meta.js` (verbatim copies of
+`COMPREHENSION.answer`), and in the content-reviewer's blind read (paraphrases).
+
 ## §3 Threads
 
 - Body limit is 500 chars, but **1–3 lines is the right answer** — the timeline
@@ -138,17 +156,31 @@ parentheses on first appearance only.
   separate flag). Local upload, so no public hosting needed. Upload quota is the
   videos.insert-only Video Uploads bucket — 1 unit per call, default 100/day,
   so there's no reason to ration episode publishing.
-- **title required** — keyword-style ≤100 chars, angle brackets `<>` banned.
-  Put the core keywords (region · program name · year) in the title, but **the
-  angle is §1 ②** — not the method or tool, the problem a stranger already
-  feels. Example: not "스쿼트할 때 무릎 안 아프게" ("keep your knees from
-  hurting when you squat") but "무릎이 아픈 이유" ("why your knees hurt").
-  Searchable proper nouns (program names · regions) attach next to the problem:
-  "베트남 임시거주 신고 안 하면 과태료 — 2026년 7월부터" ("fines if you skip
-  Vietnam temporary-residence registration — from July 2026"). The stimulus is
-  the same strategy as the storyboard cover's `hookType` (the example above is
-  fear) — if the title switches to a different stimulus, first-30-second
-  retention (the Intro metric) drops.
+- **title required** — one sentence a person would say to a friend, ≤100 chars
+  (the upload limit; angle brackets `<>` are rejected). It does two jobs at
+  once: the stimulus and the topic noun. **The angle is §1 ②** — not the method
+  or tool, the problem a stranger already feels. Example: not "스쿼트할 때
+  무릎 안 아프게" ("keep your knees from hurting when you squat") but "무릎이
+  아픈 이유" ("why your knees hurt"). Searchable proper nouns (program names ·
+  regions) attach next to the problem: "베트남 임시거주 신고 안 하면 과태료 —
+  2026년 7월부터" ("fines if you skip Vietnam temporary-residence registration
+  — from July 2026"). The stimulus is the same strategy as the storyboard
+  cover's `hookType` (the example above is fear) — if the title switches to a
+  different stimulus, first-30-second retention (the Intro metric) drops.
+  **The topic noun sits in the first half** — the Shorts overlay and the feed
+  tile cut the title off early (third-party tool pages put it at 40–50 Latin
+  characters, so about half that in Korean; we haven't measured it ourselves,
+  and `check-meta.js` warns past 30). What a title is not: a keyword stack, a
+  news-desk headline (`軍, 발표 번복 논란`), the cover title copied over (the
+  cover holds ≤16 characters; the title has room for the noun a search would
+  type), or a suffix or closer that has already appeared on an earlier
+  episode (`AI 5턴 토론`, `— …의 선택은?`) — the second time it's a template
+  tell. Accurate: the title promises only what the video delivers. YouTube
+  removes "egregious clickbait" — a title or thumbnail promise the video never
+  addresses — without a strike, rolling out from India since 2024-12. Limit
+  caps and emoji (YouTube Help). And the §2 test: if the result, the tally or
+  the twist is in the title, it's a summary, not a title. The same contract
+  holds on the 16:9 long-form lane; only the overlay cut-off is Shorts-specific.
 - **thumbnailFilePath = the build's cover.jpg, required** — unset, a random
   frame becomes the thumbnail. Without phone verification (intermediate
   features) it's rejected and reported as thumbnailWarning (the publish still
@@ -168,10 +200,79 @@ parentheses on first appearance only.
   and `oar2.jpg` answers 200 with a cached older frame. Read the tile's `img` src
   from the channel Shorts tab DOM (`youtube.com/@<handle>/shorts`) and confirm by
   eye. This only works once the video is public.
-- The description's first line is the second hook — don't repeat the title;
-  reinforce it in different words.
-- Hashtags 3–5, **#Shorts required** (Shorts shelf classification). Going over
-  suppresses reach.
+- **description** — the second hook, then the reason to watch, then the ask.
+  Line 1 is the hook in different words from the title (`check-meta.js` fails a
+  repeat), and it is what search results and the watch page show before
+  "more". Every sentence names something concrete — a document, a date, a
+  person, a place, a number that is *not* the payoff — and withholds what
+  happened, why, or how much (§2). Concrete-and-withheld is what the data says
+  works: across 8,977 headline A/B tests, headlines that were too vague gained
+  clicks from more concreteness (+5.5%) and headlines that were too concrete
+  lost them (−9.9%), and half of all headlines sat on the too-concrete side.
+  The information gap is opened by a definite reference to a thing only the
+  video shows (a "그 + noun" — the document, that evening) — not by abstract payload nouns (실체 ·
+  정체 · 진실 · 비밀 · 의미 · 총정리), which promise a file with nothing in it,
+  and not by a summary verb as the main clause (살펴봅니다 · 구분해 봤어요 ·
+  확인해요 · 정리했습니다 · 풀었어요 · 담았습니다 — the narrator reporting what
+  the video does; `check-meta.js` warns on it). 2–4 lines, then a closing
+  question in a different shape each episode, then the one-line notice if the
+  episode needs one, then the sources, then the hashtags. Long-form: the
+  chapter list goes between the question and the sources, and chapter titles
+  obey §2 like everything else.
+- Hashtags 3–5 on the last line, `#Shorts` among them by preset (`formats.js`
+  `hashtags.required`). That is a convention of ours, not a classification
+  switch — YouTube Help classifies a Short by the file (vertical or square,
+  ≤3 minutes) and lists the tag as optional; up to three hashtags show by the
+  title, and past 60 every one is ignored.
+- **Blind read before saving** — read the title and the description alone,
+  with the video and scenes.js closed, and write one line: what do I now know
+  about how it ends? If that line names the result, rewrite. The
+  content-reviewer does the same read first, before it opens scenes.js, and a
+  match with `COMPREHENSION.answer` — verbatim or in other words — is a P0.
+- **`output/youtube/meta.md` layout** — this and nothing else. `check-meta.js`
+  parses these headings, and the five files read on 2026-09-03 came in five
+  different layouts:
+
+  ```
+  ## title
+  <one line>
+
+  ## description
+  <line 1 — the second hook, different words from the title>
+  <1–3 lines — concrete things, outcome withheld>
+
+  <closing question — a new shape each episode>
+
+  <one-line fact/safety notice — only when the episode needs one>
+  출처
+  · <source> — <where it was checked>
+
+  #Shorts #<topic> #<topic>
+
+  ## tags
+  <comma-separated, 5–10>
+
+  ## publish
+  - playlist: …
+  - containsSyntheticMedia: true|false
+  - <anything the publisher has to know>
+  ```
+
+  `node check-meta.js output/youtube/meta.md` — exit 0 clean / 1 warnings /
+  2 fix and rerun / 3 unreadable. It finds scenes.js from the episode layout
+  by itself. exit 0 means "layout and verbatim leak clean", never "no spoiler".
+
+- **Evidence, by grade.** Official: YouTube Help "Thumbnail & title tips"
+  (accurate · succinct with the important words first · limit caps and emoji ·
+  a searchable or an intriguing title depending on how viewers find the video
+  · CTR on Home and Suggested in the first 24 h), YouTube Help on hashtags
+  (three shown by the title, over 60 ignores all), Google India blog
+  2024-12 on egregious clickbait. Peer-reviewed, English corpus: Aubin Le Quéré
+  & Matias, *Scientific Reports* 2025 — 8,977 Upworthy headline tests, the
+  concreteness curve above; Scott, *Journal of Pragmatics* 2021 — definite
+  referring expressions and intensifiers are what open the information gap
+  (Loewenstein 1994). Unmeasured by us: the 40–50-character overlay cut-off
+  comes from tool pages, not a study. Korean corpus data on titles: none found.
 
 ## §7 Video specs (same as the produce contract)
 
@@ -212,11 +313,21 @@ parentheses on first appearance only.
 - [ ] **A Threads video episode with no video on the post** → `videoUrl` is missing.
       Attaching the video as a reply is the fallback, not the default
 - [ ] The IG caption hook sits past the 125-char fold
-- [ ] The YT title has no keyword or contains <>, or #Shorts is missing
+- [ ] The YT title has no topic noun in its first half, contains <>, or a
+      preset-required hashtag is missing (§6 · `check-meta.js`)
 - [ ] The title/cover opens on a method or tool only — a first-time viewer can't read it as their own problem (§1 ②)
 - [ ] The title/first line rides none of the four opening strategies (fear ·
       empathy · curiosity · showing the ending first), or opens on a different
       stimulus than the storyboard cover's `hookType` (§1 ②)
+- [ ] The title, description or IG caption names the result — the tally, the
+      winner, the twist, the answer, the payoff number (§2). `check-meta.js`
+      catches a verbatim copy of `COMPREHENSION.answer`; the paraphrase is the
+      blind read's
+- [ ] The description walks the episode in order, or its main clauses are
+      summary verbs (살펴봅니다 · 확인해요 · 정리했습니다 · 풀었어요) — report
+      voice, not a hook (§6)
+- [ ] A title suffix or closer that already appeared on an earlier episode (§6)
+- [ ] `output/youtube/meta.md` is not in the §6 layout
 - [ ] Unexplained jargon · over-compressed sentences (plain-language violation)
 - [ ] **The reader has no stake** — if the post only works with our tool or
       pipeline name in it, change the material. Channel field data (Threads):

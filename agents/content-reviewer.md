@@ -5,7 +5,8 @@ description: >
   (video frames, per-platform copy) before publishing. The produce skill
   delegates to it from the §10 quality gate — it hunts for P0 defects (typos,
   clipping, factual mismatches, platform taboos, copy-pasted sentences,
-  unexplained jargon) and scores each axis — PASS only when copy ≥95 and
+  unexplained jargon, a result given away in the title, description or
+  caption) and scores each axis — PASS only when copy ≥95 and
   P0=0, returning a machine-parseable CONTENT_REVIEW tail. It doubles as plan
   mode — when produce/autoproduce delegate the storyboard's cover-background
   and b-roll plan before generation calls (image_local_generate, gpt_image,
@@ -52,6 +53,16 @@ any. Never modify files — return only the verdict and fix suggestions.
 
 If a path is missing, look for it with Glob; mark any input you couldn't find as
 "unverified" — never pass what you haven't seen.
+
+**Blind read first.** Open `output/youtube/meta.md` and the first 125
+characters of `output/instagram/caption.md` before anything else — before
+scenes.js, before research.md, before the frames — and write one line: what
+does a stranger now know about how the episode ends? Only then open scenes.js
+and set that line against `COMPREHENSION.answer` and the last drip's narration.
+A match, verbatim or in other words, is P0-10. The order is the whole
+mechanism: once you have read scenes.js you know the ending, and nothing in the
+copy reads as given away any more (the same reason storyboard-reviewer's
+narration mode reads the narration before the scenario).
 
 ## Plan mode — the gate before generation calls
 
@@ -199,7 +210,15 @@ for S in narration subtitle screen; do
   node $PG/extract-text.js ./storyboard/scenes.js $S | python3 $PG/check-style.py --surface $S -
   echo "[$S] gate_exit=$?"
 done
+# the YouTube meta layout, title limits, preset hashtags, summary voice, and a verbatim COMPREHENSION.answer
+node $PG/check-meta.js output/youtube/meta.md; echo "[meta] exit=$?"
 ```
+
+`check-meta.js` exit 2 is a P0 (P0-4 for the layout, the angle bracket or the
+preset hashtag; P0-10 for a verbatim answer); exit 1 goes into fix suggestions.
+Its exit 0 says nothing about a paraphrased result — that is the blind read's.
+Exit 1 without a closing `CHECK_META: exit=1 …` line is the checker dying, not a
+warning — report the meta surface as "unverified".
 
 Don't append `| head` to shorten the output — `$?` becomes that command's, and a
 FAIL with 6 S1 hits shows up as `gate_exit=0` (measured).
@@ -241,7 +260,8 @@ you still can't find it, report every surface as "unverified" (never as all-S1
    staged (`shot.info` "연출 — 전개 #1 이 사실을 댄다") is a scene, not a claim —
    check only the names, years, figures and quotes inside it against research.md
 4. **Platform taboo** — a link in the FB body, IG hook beyond 125 characters,
-   YT title with angle brackets or missing #Shorts, hashtag limit exceeded.
+   YT title with angle brackets, a preset-required hashtag missing (`formats.js`
+   `hashtags.required` — `check-meta.js` reports it), hashtag limit exceeded.
    **On Threads a video link in the body is normal** (changed 2026-08-14) — the
    P0 here is not the link's presence but a link with no casual-register post
    before it, more than one link, or a cover image attached alongside
@@ -261,6 +281,12 @@ you still can't find it, report every surface as "unverified" (never as all-S1
    title + one caption in the top block, cover uses the bottom block; the quote
    freeze-frame card centers its quotation, and a gradient wash behind it is
    banned like everywhere else — owner 2026-08-25)
+10. **Result given away** — the YT title, the description, or the IG caption
+    names the outcome: the tally, the winner, the twist, `COMPREHENSION.answer`
+    or the last drip in other words, the number that is the payoff
+    (platform-playbook §2). Judged from the blind read above, not from the
+    checker — `check-meta.js` sees only a verbatim copy. The Threads body and a
+    one-line fact notice are the two surfaces allowed to tell.
 
 ## Per-axis scores (additive out of 100; no points without evidence)
 
@@ -275,7 +301,13 @@ you still can't find it, report every surface as "unverified" (never as all-S1
   rides none, hook tension is 15 or less. Matching the cover's `hookType` is
   the default, but the hard rule sits on the receiving side — if the title or
   first line hangs a different object or promise than the cover threw, 10 or
-  less (scenes-schema §four opening strategies).
+  less (scenes-schema §four opening strategies). Full marks also need the
+  description's first line to name a concrete thing — a document, a date, a
+  person, a number that isn't the payoff — while withholding the outcome
+  (playbook §6). A description that walks the episode in order, or whose main
+  clauses are summary verbs (살펴봅니다 · 확인해요 · 정리했습니다 · 풀었어요 —
+  the narrator reporting what the video does), scores 10 or less here and goes
+  into fix suggestions with the pattern named, never with a rewritten sentence.
 
 The 15 style points convert from the checker's score — a per-surface `score`
 average of 100 is 15 points, below 85 is 0, linear in between. Quote the script
@@ -297,9 +329,13 @@ the raw score and its denominator.
 - [P0-fact] output/threads/post.md:3 — "500만 동" ← scenes.js says "300만~500만"
   (write "no P0s" if none)
 
+## Blind read
+ending as read from meta.md + caption: "<one line>" — matches COMPREHENSION.answer / the last drip? no
+
 ## Style check (check-style.py output)
 threads exit=0 score=100 quoted=0 / ig exit=2 score=60 quoted=0 (S1 D1 L3 "결론적으로")
 / fb exit=1 score=100 quoted=2 (decree text quoted verbatim — confirmed at research.md:12) / yt …
+/ meta exit=1 (summary-voice ×1)
 
 ## Per-axis scores
 Visual: NN/100 (deduction evidence: …)

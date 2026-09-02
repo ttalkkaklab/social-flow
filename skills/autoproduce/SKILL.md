@@ -816,8 +816,9 @@ and the episode publishes un-sped with subtitles on the wrong timeline.
 
 Rewrite the platform text per platform following the platform-guide playbooks,
 and run the per-surface style check right after saving (produce §9's script
-as-is). exit 2: fix and rerun; two failures and that platform's queue marker
-doesn't get stamped. **Also run produce §9's batch check (check-batch)** — on
+as-is, `check-meta.js` on `output/youtube/meta.md` included — the title and
+description withhold the result, playbook §2). exit 2: fix and rerun; two
+failures and that platform's queue marker doesn't get stamped. **Also run produce §9's batch check (check-batch)** — on
 the unattended path nobody is around to notice "this reads just like the last
 one", and since the growth loops call this skill repeatedly, this is where
 channel homogenization piles up fastest. There's no verdict (rankings only) —
