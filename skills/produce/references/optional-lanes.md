@@ -112,7 +112,7 @@ rest frame — measured invisible at 30fps, don't chase it as a pop.
   declared `motionBeats` entry with the rendered `data-primitive` in that group — including
   `shape-enter` · `shape-draw` · `shape-travel` on a principle frame. A missing or undeclared
   movement stops the build; changing a label or adding a decorative rise cannot pass as the
-  promised explanation. A principle frame sits ink actors (`h.fig`) and draws hairlines;
+  promised explanation. A principle frame sits ink actors (`h.fig`) and draws rules;
   `slide.arts` files sit next to the HTML (`slides/assets/`) as local images the renderer loads.
 - The clips cost nothing and are deterministic (same file → same bytes), so a re-render
   after a scenes.js fix is safe; the sheet frames from storyboard §5.6 stay in

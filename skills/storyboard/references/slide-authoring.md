@@ -31,7 +31,7 @@ scenes using sub-reveals (`A|B`) have more groups than segments.
 A motion slide is built from **`references/motion-slide-template.html`** and judged by
 **`references/slide-design.md`** — read both before writing a line. The template's head
 carries the contract (the state rule, what may move, what is forbidden); the design doc
-carries the look (ink · paper · one accent, hairlines not boxes, one hero per slide) and the
+carries the look (ink · paper · one accent, rules not boxes, one hero per slide) and the
 rubric the reviewer applies.
 
 1. **Author.** Copy the motion template to `slides/<the visual.slide.file name>`, set
@@ -69,7 +69,7 @@ rubric the reviewer applies.
      the settle scales by 4.5% and a small shape moves less than a pixel — `dim: true` on
      evidence the narration moves past. Without a `.sv`, a long sentence sits on a frozen frame and the
      renderer says which group and for how long.
-   - A **principle** frame is ink actors plus hairline relations, not a stack of labels.
+   - A **principle** frame is ink actors plus drawn relations, not a stack of labels.
      Sit the cast in `.cast`. `h.fig` arrives (`shape-enter`), `h.stem` / `h.bus` /
      `h.ring` draw (`shape-draw`), `h.chamber` boxes a terminal or room (`shape-enter`),
      `h.press` / `h.shift` travel (`shape-travel`). Labels name the actors; they are not

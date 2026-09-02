@@ -1817,7 +1817,7 @@ slide.**
 | `slide.file` | ✅ | `slides/s<shot number>-<slug>.html` — **shot number = the SCENES array position (from 1)**, the same number as script.md's shot and `voice/s<n>.wav` |
 | `slide.plan` | ✅ | One line on what to draw. For motion, number what changes on each narration group |
 | `slide.labels` | ✅ when the shapes carry text | Every piece of text to draw on the slide beyond `title` and `bullets`. The style gate's screen surface checks this array — plant Korean text in the slide file that isn't here and characters that never passed the check go on screen |
-| `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **flat ink actor** (person, agent, room) sitting with `h.fig`; hairlines (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generate at storyboard §5.6 |
+| `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **flat ink actor** (person, agent, room) sitting with `h.fig`; rules (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generate at storyboard §5.6 |
 | `slide.motion` | ✅ `true` | required. A still slide is not allowed. Numbers count up, bars grow, type reveals on its sentence (§motion slides) |
 | `slide.treatment` | ✅ on a moving `diagram` | `"editorial"` when HTML owns the whole frame; `"photo-action"` when a photo fills the frame and the photographed subject or evidence itself changes |
 | `slide.role` | ✅ on `treatment:"editorial"` | `evidence` · `relationship` · `mechanism` · `timeline` · `statistic` · `transition` · `verdict` |
@@ -1873,7 +1873,7 @@ primitive. `motion-slide-template.html` provides helpers with the matching names
 plain `h.rv(rg, html, { primitive })` stamps the same marker on custom DOM.
 The helper emits `data-primitive`, so the contract follows the pixels instead of trusting a plan.
 
-A **principle** frame is an illustrated cast plus hairline relations — the same grammar as a
+A **principle** frame is an illustrated cast plus drawn relations — the same grammar as a
 cast of actors with pipes drawing between them. `shape-enter` sits an actor or a chamber
 (`h.fig` · `h.chamber`; `h.disk` only when the actor is abstract). `shape-draw` draws the
 relation (`h.stem` down, `h.bus` across, `h.ring` around). `shape-travel` is a press or a
