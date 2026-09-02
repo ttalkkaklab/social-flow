@@ -58,7 +58,12 @@ const hasSpeedMarker = (p) => {
   try { return /── speedup x/.test(fs.readFileSync(p, 'utf8')); } catch (e) { return null; }
 };
 const hasFinalRateMarker = (p) => {
-  try { return /PASS final speech rate/.test(fs.readFileSync(p, 'utf8')); } catch (e) { return null; }
+  // speedup.sh appends, so rerunning at another factor leaves both verdicts in the file. Only the
+  // last one describes the -fast set output/ carries — an earlier PASS must not clear a later FAIL.
+  try {
+    const m = fs.readFileSync(p, 'utf8').match(/(?:PASS|FAIL) final speech rate/g);
+    return m ? m[m.length - 1].startsWith('PASS') : false;
+  } catch (e) { return null; }
 };
 const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch (e) { return false; } };
 

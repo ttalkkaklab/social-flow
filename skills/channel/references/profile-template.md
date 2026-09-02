@@ -51,7 +51,9 @@ generated_video_max: 2
 - **Playback speed (the post-build pace pass)**: `<0.5~3.0, default 1.2>` — produce §7.5 applies
   this factor to the finished feature while the outro stays at 1.0x. It **multiplies with the TTS
   `speed` above**, so choose it against the final subtitle timeline, not by habit. The pass blocks
-  delivery above 6.2 spoken characters/s overall or on a substantive cue
+  delivery above 6.2 spoken characters/s overall or on a substantive cue, which means a card may
+  carry only `6.2 / factor` on the pre-pass timeline — 5.17 at the 1.2 default. A channel that
+  records its own voice, or already raised the TTS `speed`, writes `1.0` here
 - **Plain-language principle**: no unexplained jargon, no literal translationese, no
   over-compressed subjectless sentences. When a term is genuinely needed, lead with
   the plain word and put the term in parentheses on first appearance only. (Screen

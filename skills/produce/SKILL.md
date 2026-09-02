@@ -991,18 +991,27 @@ $REF/speedup.sh .work 1.6    # a channel-specific rate — profile.md §2 decide
   don't hand the build's `subs.srt` to publish; those cues belong to the un-sped timeline.
 - **It reads the un-sped files and writes new names**, so running it again with another factor
   recomputes from the original instead of stacking passes.
+- **The factor moves the writing-stage cap too.** The 6.2 characters/s gate measures the *sped-up*
+  subtitles, so what a card may carry on the pre-pass timeline is `6.2 / factor` — **5.17 at 1.2x**.
+  `build-reel.sh` derives its `RATE_HI` from the same `SPEED` and warns there, and its chapter
+  minimum becomes `10 × factor` so a boundary still clears 10s after the pass. The shooting lane has
+  no such normalization: a take recorded at the 5~6 characters/s standard lands at 6.0~7.2 and the
+  gate rejects it, so a screencast channel either writes shorter or sets `1.0`.
 - **`profile.md` §2 owns the rate.** Read the channel's speed line before running the pass; with
   no line, 1.2. A profile TTS `speed` multiplies into this, so the final SRT is checked after
   both choices have taken effect.
 - The pass appends its own line to `build-report.txt`
-  (`── speedup x1.00: passed through …`) and exits 1 when the measured length doesn't match
+  (`── speedup x1.20 (reel.mp4): 62.0s → 52.2s (feature …)`; an explicit 1.0 prints
+  `── speedup x1.00: passed through …` instead) and exits 1 when the measured length doesn't match
   feature/factor + tail or `check-final-speech-rate.py` finds more than 6.2 characters/s.
   **No marker line or final-rate PASS line means the episode is not ready to publish**
   (pipeline.md gate table).
 - **Length contracts are read after the pass.** The 35–75s recommendation and the per-channel
   length rules describe the shipped file.
-- With chapters, watch for the `⚠ … under 10s` warning — a boundary that was 10s apart is 7.1s
-  after an explicit speed-up and YouTube drops the whole chapter list. Merge those chapters and rebuild.
+- With chapters, watch for the `⚠ … under 10s` line in `build-report.txt` — at 1.2x a boundary
+  that was 10s apart comes out 8.3s and YouTube drops the whole chapter list. `build-reel.sh` now
+  demands `10 × factor` up front, so this only fires on a build made before that. Merge those
+  chapters and rebuild.
 
 ### 8. Phone-mode QA (required before publishing)
 
@@ -1021,7 +1030,8 @@ FORMAT_ENV= CAP_W=470 CAP_H=920 $REF/capture-frames.sh \
 ```
 
 One shot per scene at the reveal-complete moment, then read the PNGs. **QA runs on the final burn-in (`reel-sub-fast.mp4`)** — that's the file
-that ships, and an explicit speed-up may make a previously readable subtitle disappear. The
+that ships, and the speed pass — 1.2x by default — may make a previously readable subtitle
+disappear. The
 clean one has no subtitles, so you can't see clipping or intrusion, and the burned-in one is
 what actually goes to IG. Check: action bar (x≈890) intrusion / subtitle centering / hero
 number clipping / can you tell the topic from the first frame alone / **whether the background

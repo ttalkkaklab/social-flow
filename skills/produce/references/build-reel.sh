@@ -142,7 +142,13 @@ MIN_DUR=${MIN_DUR:-4.0}            # minimum card display time
 MAX_DUR=${MAX_DUR:-13.0}           # warn when exceeded (signal to shorten the script)
 RATE_TOL=${RATE_TOL:-0.05}
 ATEMPO_MIN=${ATEMPO_MIN:-0.88}; ATEMPO_MAX=${ATEMPO_MAX:-1.18}
-RATE_LO=${RATE_LO:-3.2}; RATE_HI=${RATE_HI:-6.2}
+# The playback factor speedup.sh will apply after this build (produce §7.5). Both scripts read the
+# same format.env, so the value is shared; the inline default matches speedup.sh's.
+SPEED=${SPEED:-1.2}
+# The ship gate measures 6.2 chars/s on the **sped-up** subtitles, so the cap this build may pass is
+# 6.2/SPEED. Leaving it at 6.2 lets a card clear every writing check and then hard-block in §7.5.
+RATE_LO=${RATE_LO:-3.2}
+RATE_HI=${RATE_HI:-$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", 6.2 / f}')}
 BGM_SEP=${BGM_SEP:-10}             # LU the bed sits under the measured speech loudness (see bgm-scoring.md)
 BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # below this the build stops — the music is competing with the voice
 BGM_LOOP_XF=${BGM_LOOP_XF:-2.0}    # crossfade when a cue is shorter than its span
@@ -983,7 +989,9 @@ done 3< cards.tsv
 #   splice rounds up instead, because it protects something different — keeping the marker out of the
 #   inserted clip's range, which only rounding up guarantees (shifted time ≥ clip end).
 if [ -n "$CHAPTSV" ] && [ -s work/chapstart.tsv ]; then
-  awk -F'\t' -v fps="$FPS" '
+  # The gap has to clear 10s **after** §7.5 divides it by SPEED, so on this timeline it needs 10*SPEED.
+  CHAP_GAP=$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", 10 * f}')
+  awk -F'\t' -v fps="$FPS" -v gap="$CHAP_GAP" -v f="$SPEED" '
     function ts(v,   h, m, s) { s = int(v); m = int(s/60); s -= m*60; h = int(m/60); m -= h*60;
       return h ? sprintf("%d:%02d:%02d", h, m, s) : sprintf("%02d:%02d", m, s) }
     { sec = int($1 / fps); printf "%s\t%s\n", ts(sec), $2; secs[NR] = sec; n = NR }
@@ -991,8 +999,9 @@ if [ -n "$CHAPTSV" ] && [ -s work/chapstart.tsv ]; then
       bad = 0
       if (secs[1] != 0) { printf "✗ the first chapter is %s — it has to be 00:00\n", ts(secs[1]) > "/dev/stderr"; bad = 1 }
       if (n < 3) { printf "✗ %d chapters — YouTube requires at least 3\n", n > "/dev/stderr"; bad = 1 }
-      for (i = 2; i <= n; i++) if (secs[i] - secs[i-1] < 10) {
-        printf "✗ %s → %s is %ds apart — under the 10 second minimum\n", ts(secs[i-1]), ts(secs[i]), secs[i]-secs[i-1] > "/dev/stderr"; bad = 1 }
+      for (i = 2; i <= n; i++) if (secs[i] - secs[i-1] < gap) {
+        printf "✗ %s → %s is %ds apart — under the %.0fs minimum (10s after the x%.2f speed pass)\n",
+               ts(secs[i-1]), ts(secs[i]), secs[i]-secs[i-1], gap, f > "/dev/stderr"; bad = 1 }
       exit bad
     }' work/chapstart.tsv > chapters.txt || {
       say "✗ chapters.tsv breaks YouTube's chapter requirements — fix the items above"
