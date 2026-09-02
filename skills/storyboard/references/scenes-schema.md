@@ -2022,7 +2022,10 @@ Rules only this treatment has:
 - **Outside `generatedVideoMax`.** Footage shots are not counted against the b-roll and
   motion-background cap; they are budgeted. `cost-preview.js` puts every shot on the approval
   screen (`footage/seedance` ≈ $0.06 a second, silent) and the §5 gate asks before generating.
-  The check strip's slot badge does not include them; the cost panel does.
+  The check strip's slot badge does not include them; the cost panel does. A shot with `reuse`
+  (a copied clip — the same wall returning, footage-lane.md §3) is neither a call nor a slot:
+  it leaves the forecast and the fingerprint, and the video budget counts only what will be
+  generated.
 - **True motion.** A footage slide counts as `ai-video` for the channel motion floor
   (`check-scenes.js motionKind`), with `visual.action` naming the subject motion.
 - **One sentence, one or two shots.** A sentence that turns — "they rode in, and the ridge stood

@@ -91,7 +91,9 @@ Footage clips are paid calls made before approval, so three things sit in front 
       time-stretch: a clip shorter than its window freezes on the last frame, so the window is
       a hard floor and anything above it is money for nothing.
    2. **Reprise before regenerate.** A beat that returns to a place already shown reuses that
-      shot's clip (`reprise`), the way a cut back to the same wall reads in a documentary.
+      shot's clip (`reuse` — the field check-scenes and cost-preview read), the way a cut back
+      to the same wall reads in a documentary; a `reuse` shot is a copied file, so
+      `cost-preview.js` drops it from the forecast and the fingerprint.
    3. **Drop the B of an `A|B` sub-reveal** whose sentence reads on one picture.
    4. **Resolution stays 1080p** and the shot count stays one per sentence — the budget is
       spent on the picture quality the viewer sees, not saved by holding a picture longer.
