@@ -297,7 +297,7 @@ Threads casual spoken register is the register the playbook demands, not an AI t
 | `threads` | ≤1 | unlimited | C5 | Casual spoken endings are normal. Question endings encouraged. **D9 bites hardest here** |
 | `ig` | ≤3 | unlimited | none | A D/A pattern in the first 125 chars kills the hook |
 | `fb` | ≤2 | unlimited | C3·C6 | Structured posts and the case-collecting closer are playbook prescriptions |
-| `yt` | ≤2 | unlimited | C1·C3·C5·C6·C7·T9·D9·D9b·D10~D10d | Titles are keyword-style — D/A only |
+| `yt` | ≤2 | unlimited | C1·C3·C5·C6·C7·T9·D9·D9b·D10~D10d | meta.md as one file: the title line is headline register, so rhythm rules stay off — lexical tells only. The result leak and the summary voice are `check-meta.js`'s |
 | `reply` | ≤1 | unlimited | C3·C5·C6·A4 | Comment replies. The opening greeting is golden-hour engagement, so A4 is off |
 
 This table must hold the same values as `SURFACE_CFG` in `check-style.py`. Never

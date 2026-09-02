@@ -1085,10 +1085,34 @@ Read the platform-guide playbook
 (`../platform-guide/references/platform-playbook.md`) and rewrite per platform — Threads 1–3
 lines of casual (반말) spoken register + the video link on the last line / an IG caption with
 a hook in the first 125 characters and a save CTA / an FB structured body plus the first-comment
-link copy / a YT keyword title, description, and #Shorts hashtag. **The provocation in the
+link copy / YouTube in the playbook §6 contract — one spoken sentence for the title with the
+topic noun in its first half, a description whose first line is a second hook in different
+words, and `meta.md` in the §6 layout (`## title` · `## description` · `## tags` · `## publish`;
+nothing else parses). **The provocation in the
 title and first line continues the cover `hookType` in scenes.js** (fear, empathy, curiosity,
 showing the ending first) — a video that opened on fear under a YT title explaining a method
-sets an expectation the first 30 seconds don't meet (playbook §1 ②·§6). **Threads doesn't get
+sets an expectation the first 30 seconds don't meet (playbook §1 ②·§6). **The result stays
+inside the video** (playbook §2) — the title, the description and the IG caption name the
+subject and withhold the tally, the winner, the twist and the payoff number; a description
+that walks the episode in order, or whose main clauses are summary verbs (살펴봅니다 ·
+확인해요 · 정리했습니다), is report voice, not a hook. Before saving, read the title and the
+description alone with scenes.js closed and write one line — what do I now know about the
+ending? If that line names it, rewrite. Then the two machine checks, right after saving:
+
+```bash
+PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
+for P in threads:output/threads/post.md ig:output/instagram/caption.md \
+         fb:output/facebook/post.md yt:output/youtube/meta.md; do
+  python3 $PG/check-style.py --surface ${P%%:*} ${P#*:}; echo "[${P%%:*}] gate_exit=$?"
+done
+node $PG/check-meta.js output/youtube/meta.md; echo "[meta] exit=$?"   # layout · title limits · preset hashtags · summary voice · verbatim COMPREHENSION.answer
+python3 $PG/check-batch.py ../*/output/threads/post.md   # ranking only across the channel's episodes — a recycled phrase gets rewritten
+```
+
+Exit codes read as in §5; `check-meta.js` exit 2 is fixed and rerun like an S1. Its 0 means
+"layout and verbatim leak clean" — a paraphrased result is what the blind read above and the
+§10 reviewer catch (the reviewer reads meta.md before it opens scenes.js for that reason).
+**Threads doesn't get
 a cover image attached** — the link preview card takes that spot, so `post.md` holds the body
 and the link URL only. The link slot is the IG reels permalink, whose value isn't known until
 publish time — leave a placeholder like `<IG_REELS_URL>` in `post.md` and let publish fill in
@@ -1117,8 +1141,10 @@ Delegate artifact verification to the content-reviewer agent (Agent) — hand ov
 screenshots (**taken from the sped-up burn-in `reel-sub-fast.mp4`** — the clean one has no subtitles, so
 typos and clipping aren't visible), the per-platform copy, and scenes.js, and get back P0
 detections (typos, clipping, factual mismatch, platform taboos, copy-pasted sentences,
-unexplained jargon, AI tells) and axis scores. Pass the `check-style.py` path along with the
-exit codes and quote-exemption counts from §5 and §9 in the delegation prompt — the reviewer
+unexplained jargon, AI tells, a result given away in the title or description) and axis scores.
+Pass the `check-style.py` path along with the
+exit codes and quote-exemption counts from §5 and §9 (the `check-meta.js` exit too) in the
+delegation prompt — the reviewer
 treats those numbers as the source of truth and doesn't override them with its own impression.
 If the channel skips research, state that in the delegation prompt too (the reviewer converts
 the facts axis to full marks).

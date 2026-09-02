@@ -394,7 +394,7 @@ social-flow/
 │   ├── review-recent/           # /social-flow:review-recent — feedback HTML for the last 5 episodes across YouTube/Instagram (funnel · bars · problem→hypothesis→next episode)
 │   ├── topic-scout/             # /social-flow:topic-scout — market-validated YouTube topics (5× channel median · chart HTML) + an SNS issues section (Threads/X/Instagram mentions · trending searches)
 │   └── platform-guide/          # knowledge skill — platform grammar · video specs · Korean style SoT
-│       └── references/          #   platform-playbook.md · korean-style.md · check-style.py (style gate)
+│       └── references/          #   platform-playbook.md · korean-style.md · check-style.py (style gate) · check-meta.js (YouTube meta gate)
 ├── agents/
 │   ├── brand-reviewer.md        # adversarial review of profile images & intro videos (95/90-point convergence gates)
 │   ├── content-reviewer.md      # adversarial pre-publish verification (P0 gate)
