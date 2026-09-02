@@ -242,7 +242,7 @@ more often than a non-narrative one. Grade: practitioner blogs —
 | **stop** | `hook` | `hook` | 0–3 s: big title, a strong first frame, movement already in it — no logo, no intro sting, no greeting. story: the moment of failure, close, no hint of how it ended | a first frame the thumb slides past; a story cover that names the ending |
 | **hold** | `hooking` | `hooking` · `body` · `turn` | keep the promise visible and the answer withheld — through the first 60 s, story through the turn (setup lean, tension climbing setup → build → peak), something changing on screen every 2–4 s | unpacking the answer; drifting from what the cover threw; a setup that dawdles |
 | **satisfy** | `result` · `body` | `result` | pay the promise the cover made — answer-first: the result, then how; story: the payoff, the first time the answer is on screen | a hook the body can't keep |
-| **act** | `cta` | `cta` | after the answer, open one loop outward — a judgment call the comments will argue over, a rewatch pointer, a share-worthy single fact, plus the next concrete thing; story: the frame that loops back to the cover (scenario-craft §5 loop ending) plus a callback and a memory question (scenario-craft §12) | a vague subscribe ask; the same judgment question verbatim every episode |
+| **act** | `cta` | `cta` | after the answer, open one loop outward — a judgment call the comments will argue over, a rewatch pointer, a share-worthy single fact, plus the next concrete thing; story: the frame that loops back to the cover (scenario-craft §5 loop ending) plus a callback and the 마무리 question (scenario-craft §12) | a vague subscribe ask; the same judgment question verbatim every episode |
 
 And in between, **every visual change resets attention for a few more seconds** — high-performing
 Shorts change something on screen every 2–4 s (user-relayed, 2026-08-23 — field-practice grade,
@@ -1566,7 +1566,9 @@ hand-written seconds are guaranteed to be off.
 - **Count**: 5–10 in the authored lane (45–120s per chapter); the filmed lane needs 3 or more and
   aims for 6–13. The reason no length band applies to the filmed lane is that scenes have no cap
   there — keeping a cap would just move the crowding from 20 seconds to 120.
-- **Boundaries under 10 seconds fold into the previous chapter** (YouTube won't take them). If
+- **Boundaries under `10 × playback speed` seconds fold into the previous chapter** — 12s at the
+  1.2 default, since §7.5 divides every timestamp by that factor and YouTube won't take a gap
+  under 10s on the shipped file. If
   fewer than 3 remain after folding, the builder skips making `chapters.txt`.
 - **Don't copy `title`.** `title` is the spoken hook that appears on screen ("이거 왜 이래?"),
   while the chapter is the search phrase stamped into the description ("환율 확인하는 세 가지
@@ -1815,7 +1817,7 @@ slide.**
 | `slide.file` | ✅ | `slides/s<shot number>-<slug>.html` — **shot number = the SCENES array position (from 1)**, the same number as script.md's shot and `voice/s<n>.wav` |
 | `slide.plan` | ✅ | One line on what to draw. For motion, number what changes on each narration group |
 | `slide.labels` | ✅ when the shapes carry text | Every piece of text to draw on the slide beyond `title` and `bullets`. The style gate's screen surface checks this array — plant Korean text in the slide file that isn't here and characters that never passed the check go on screen |
-| `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **flat ink actor** (person, agent, room) sitting with `h.fig`; hairlines (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generate at storyboard §5.6 |
+| `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **flat ink actor** (person, agent, room) sitting with `h.fig`; rules (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generate at storyboard §5.6 |
 | `slide.motion` | ✅ `true` | required. A still slide is not allowed. Numbers count up, bars grow, type reveals on its sentence (§motion slides) |
 | `slide.treatment` | ✅ on a moving `diagram` | `"editorial"` when HTML owns the whole frame; `"photo-action"` when a photo fills the frame and the photographed subject or evidence itself changes |
 | `slide.role` | ✅ on `treatment:"editorial"` | `evidence` · `relationship` · `mechanism` · `timeline` · `statistic` · `transition` · `verdict` |
@@ -1866,11 +1868,12 @@ a declared movement that is absent from the rendered frame:
 
 Groups start at 1 and map to narration segments in order. One group declares one primary
 primitive. `motion-slide-template.html` provides helpers with the matching names (`h.date`,
-`h.range`, `h.link`, `h.count`, `h.bar`, `h.dots`, `h.axis`, `h.flow`, `h.node`, `h.state`,
-`h.disk`, `h.ring`, `h.press`, `h.shift`, `h.fig`, `h.stem`, `h.bus`, `h.chamber`).
+`h.range`, `h.link`, `h.count` · `h.stat`, `h.bar`, `h.dots`, `h.axis`, `h.flow`, `h.node`, `h.state`,
+`h.disk`, `h.ring`, `h.press`, `h.shift`, `h.fig`, `h.stem`, `h.bus`, `h.chamber`), and a
+plain `h.rv(rg, html, { primitive })` stamps the same marker on custom DOM.
 The helper emits `data-primitive`, so the contract follows the pixels instead of trusting a plan.
 
-A **principle** frame is an illustrated cast plus hairline relations — the same grammar as a
+A **principle** frame is an illustrated cast plus drawn relations — the same grammar as a
 cast of actors with pipes drawing between them. `shape-enter` sits an actor or a chamber
 (`h.fig` · `h.chamber`; `h.disk` only when the actor is abstract). `shape-draw` draws the
 relation (`h.stem` down, `h.bus` across, `h.ring` around). `shape-travel` is a press or a
@@ -1934,8 +1937,9 @@ motion costs comprehension. So the lane is deliberately narrow — beats, not am
 
 **The state rule** — one sentence the template, the renderer and the reviewer all cite:
 *clip k opens on groups 0..k-1 at rest, group k animates from t=0, and its last frame is
-group k at rest.* Group 0 is the base (kicker, title, axes) and never animates on its
-own — it is clip 1's first frame. Groups are 1:1 with narration segments (segment 1 →
+group k at rest.* Group 0 is the base (source, scrim, axes) and never animates on its
+own — it is clip 1's first frame; the tag, the title and the first value open group 1 as
+a chain (slide-design.md §5). Groups are 1:1 with narration segments (segment 1 →
 group 1); sub-reveals (`A|B`) make more groups than segments, as on any card.
 
 What that buys: **no narration timing is needed at render time.** `render-motion-slide.mjs`
@@ -1961,7 +1965,7 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   which the renderer calls (`__meta` reports stray and infinite animations; the renderer
   stops on either), plus `__setSegs({group: ms})` — the renderer's `--segs` hands over the
   narration segment lengths and elements marked `.sv` stretch their meaning motion to them
-  (the sustain layer, slide-design.md §4).
+  (the sustain layer, slide-design.md §5).
 - **Every movement is reproducible by seek**, and there are four ways to make one:
   CSS `@keyframes` (the template's `rise` · `in` · `grow` · `draw` · `fade`), `data-count` count-ups,
   a **painter** registered with `__paint(rg, durMs, fn)` whose `fn(tMs)` draws the frame at
@@ -2008,10 +2012,12 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   slide, where the state rule would freeze it at every seam.
 - Both formats. The zone comes from `window.FORMAT` (portrait x 176 · top 190 · bottom
   570, wide x 96 · top 96 · bottom 285 — `formats.js` mirrored inline in the template).
-- The look is `references/slide-design.md` — ink · paper · one accent, hairlines not
-  boxes, one hero per slide. Its §5 is the rubric **`slide-reviewer`** scores the rendered
-  frames against in storyboard §5.6, and a motion slide enters the build only at **score ≥
-  95 with p0 = 0**.
+- The look is `references/slide-design.md` — a plate ground (key light, vignette, grain at
+  encode), ink · paper · one accent, square plates and 3/6/10px rules instead of cards and
+  hairlines, broadcast type sizes (44px floor), one hero per slide, and the opening chain
+  (tag → title → first value, `--lead` apart) in group 1. Its §6 is the rubric
+  **`slide-reviewer`** scores the rendered frames against in storyboard §5.6, and a motion
+  slide enters the build only at **score ≥ 95 with p0 = 0**.
 - A motion slide has no `bg`/`bgPrompt` and skips §5 image generation and the image
   review; the storyboard's check strip and `episode-state.js` treat the file the same way
   (same naming, same "not authored yet" blocker).

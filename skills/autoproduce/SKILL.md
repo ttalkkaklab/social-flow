@@ -4,11 +4,12 @@ description: >
   Runs one topic all the way to shipped files with no human gate — the unattended twin of
   storyboard plus produce. Use when the user asks to "이 주제로 영상 하나 만들어", "주제만 주면 영상까지
   만들어줘", "자동으로 쇼츠 만들어", "make a short about X end to end", or when a growth loop needs to
-  refill its publish queue by itself. Researches, scores 3 scenario candidates to 95 on
-  curiosity · fear · intrigue · comedy, authors scenes.js, generates 9:16 backgrounds,
-  synthesizes narration, and builds the video plus per-platform text under
-  data/[channel]/episodes/[topic]/output/. Machine gates replace human approval: facts, three
-  candidates looped to 95 with P0=0, style checker, six one-round board reads, build report,
+  refill its publish queue by itself. Researches, scores 3 seven-item scenario candidates to
+  95 on curiosity · fear · intrigue · comedy, authors scenes.js, loops the narration alone to
+  95, generates 9:16 backgrounds, synthesizes narration, and builds the video plus
+  per-platform text under data/[channel]/episodes/[topic]/output/. Machine gates replace
+  human approval: facts, three candidates looped to 95 with P0=0, the narration read-through
+  looped to 95, style checker, six one-round board reads, build report,
   content-reviewer copy at 95 with zero P0, and a cost cap. Board reads don't score-gate; an
   unresolved P0 stops the run. Boundary — storyboard plans and stops, produce builds an approved
   episode, autoproduce does both without stopping.
@@ -51,15 +52,18 @@ one fails, the video still gets made but **does not enter the queue** (`queue_*:
 — meaning it won't publish until a human looks at it.
 
 The six board reads (storyboard §4.5–§5.5) run **once each, with no score to clear**.
-**Scenario is the exception:** three candidate pages loop to **≥95 · P0 = 0** before the
-pick (storyboard §2.2). What stops the run on a board read is a **P0 still standing after
-that one round's fixes**; what stops it on scenario is a topic with **no candidate at 95**.
+**Scenario and narration are the exceptions:** three candidate pages loop to **≥95 · P0 = 0**
+before the pick (storyboard §2.2), and the narration alone loops to the same bar after the
+story pass (§3.5 here, storyboard §4.4). What stops the run on a board read is a **P0 still
+standing after that one round's fixes**; what stops it on scenario is a topic with **no
+candidate at 95**, and on narration a chain still short at the fifth read.
 
 | What a human used to check | Unattended replacement | On failure |
 |---|---|---|
 | Are the facts right | Time-sensitive values cross-checked against 2 independent sources + **3 or more** verified facts | Topic discarded (§2) |
 | Does the copy read like a human wrote it | `check-style.py` exit ≤ 1 per surface (4 = not Korean, so unchecked — it needs a human, and unattended runs stop at it) | Fix and retry; abort after 2 failures (§4·§9) |
-| Is the story worth telling (both formats) | three candidates scored on curiosity · fear · intrigue · comedy → **≥95 · P0 = 0** | Topic dropped (§2.2) |
+| Is the story worth telling (both formats) | three seven-item candidates scored on curiosity · fear · intrigue · comedy → **≥95 · P0 = 0** | Topic dropped (§2.2) |
+| Does the narration alone carry the episode | storyboard-reviewer narration mode, looped → **≥95 · P0 = 0** (cap 5 reads) | Authoring aborted (§3.5) |
 | Is the storyboard copy approvable | storyboard-reviewer copy mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.5) |
 | Does every single scene do its job | storyboard-reviewer scene mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.6) |
 | Is the wording what a person would say | storyboard-reviewer vocabulary mode, one round → **P0 = 0 after the fixes** | Authoring aborted (§4.7) |
@@ -293,12 +297,15 @@ node $SB/check-research.js storyboard/               # exit 1 = the research doe
 ### 2.2 Scenario candidates (gate 6a — storyboard-reviewer scenario mode)
 
 Both formats. After the three direction rows and `check-research.js --direction` exit 0,
-write three candidate pages and loop each to **≥95 · P0 = 0** on **curiosity · fear ·
+write three candidate pages — **the seven items, in order, on every one**: 주제 · 훅 (a
+dramatised scene that invents no fact) · 전개 #1 (what actually happened) · 전개 #2 (what it
+makes us think about now) · 전개 #3 (2–3 present-day cases, a search-log row each) · 마무리
+(what do you think?) · CTA — and loop each to **≥95 · P0 = 0** on **curiosity · fear ·
 intrigue · comedy** before the pick — storyboard §2.2 and
-`../storyboard/references/scenario-stage.md`. A page that only explains, a chronological
-body, or a feel curve that never dips costs nothing to fix here and costs the whole
-board later. Three different primaries. Naming an engine is not enough — the beats have
-to run it.
+`../storyboard/references/scenario-stage.md`. A page that only explains, a hook that is the
+start of the timeline, or a feel curve that never dips costs nothing to fix here and costs
+the whole board later. Three different primaries. Naming an engine is not enough — the
+items have to run it.
 
 **Delegate each `candidates/d<n>.md` to the storyboard-reviewer agent (Agent) in
 "scenario mode"** and read the tail
@@ -379,10 +386,13 @@ The rules automated authoring breaks most often:
   `hooking` · `result` · `body` · `turn`. The cover opens a gap and does not
   speak `COMPREHENSION.answer`; each non-final drip pays one piece and opens
   the next gap; the last drip is the first place the answer is complete; the
-  CTA is a spoken shot with one outward act (a comment question, a next-episode
-  promise, or a memory question). An outro asset is not the spoken close.
-  Draft the three §2.5 lines into the `scenes.js` header comment: the cover's
-  first sentence, the cta's last two lines, the sign of the feel curve.
+  CTA is a spoken shot with one outward act (a comment question or a next-episode
+  promise). An outro asset is not the spoken close.
+  Copy the approved scenario's three verbatim lines into the `scenes.js` header
+  comment — the 훅's first sentence, the 마무리 question, the CTA callback — and lay
+  the seven items onto beats with scenario-stage's item-to-beat map (a short:
+  hook · drip × 전개 · cta; long-form by the cover's arc — `story` puts 전개 #2 at the
+  turn, `answer-first` plays its present answer as the result first).
   **Long-form still follows the cover's `arc`** — `answer-first` (default):
   cover → hooking → result → body; `story`: cover → hooking → body → turn →
   result. Material that is an unfinished sentence on its own is story material
@@ -398,6 +408,29 @@ The rules automated authoring breaks most often:
   `../storyboard/references/assemble-bg-prompt.js` — do not write `left view of`,
   object-centric left/right, or metres. Hook cut and speech clips at `eye`, one close-up
   (`cu`·`choker`·`ecu`) per scene. Never merge AI video and HTML staging into one slot.
+
+### 3.5 Narration read-through gate (gate 6f — storyboard-reviewer narration mode)
+
+The story layer is done when the spoken sentences alone carry the episode (user
+directive, 2026-09-02) — unattended there is nobody to hear the gap a picture was
+going to fill, so this reads for it before any money goes out. Runs after
+`check-scenes.js --draft` exits 0 and before the style gate, because it rewrites
+narration.
+
+**Delegate to the storyboard-reviewer agent (Agent) in "narration mode"** and read
+the tail `STORYBOARD_REVIEW: mode=narration score=NN p0=N`. Pass
+`scenes.js`·`scenario.md` (if present — a skip-research channel has none)·`research.md`·`profile.md`. The reviewer extracts the
+sentences itself (`extract-text.js … subtitle`) and reads them before it opens
+anything else.
+
+- **Apply the directives as spoken sentences** — an antecedent, the present link,
+  what the case has to do with the topic, the term's plain wording — never as a
+  caption or a picture. Re-run `--draft`, re-delegate saying what you applied.
+- **Loop until ≥95 · P0 = 0. Cap 5 reads.** Still short at the cap: stop the run
+  as in §4.5 — `storyboard.md` with `status: draft` · `queue_*: hold`, the last
+  verdict in the body, and report. Nothing has been generated yet.
+- **If §4.5–§4.7 change any narration segment, one confirming read runs after
+  §4.7** inside the same cap; a drop below 95 is fixed and read again before §4.8.
 
 ### 4. Style gate — video surfaces (gate 2)
 
@@ -741,8 +774,16 @@ lengths**. If they diverge, don't queue it.
 **Then run the speed pass — every episode, no exception** (produce §7.5). It
 picks the spliced set on its own when a splice ran:
 
+The factor comes from `.work/format.env`, which `build-reel.sh` and `speedup.sh`
+both source. Write it when §6's build step writes the file (produce §1) — nothing
+else in this skill does, and without the line a channel that put `1.0` in
+profile.md §2 to ship at its recorded pace goes out at 1.2 with nobody watching.
+
 ```bash
-$REF_P/speedup.sh .work        # 1.0x default; profile.md §2 may set another factor
+grep -qF '${SPEED:=' .work/format.env \
+  || echo ": \"\${SPEED:=<the factor from profile.md §2>}\"" >> .work/format.env
+grep -F '${SPEED:=' .work/format.env   # echoes the line the pass will use
+$REF_P/speedup.sh .work
 ```
 
 Unattended, the marker is the check: `build-report.txt` has to gain a
@@ -804,8 +845,8 @@ queue_at: 2026-08-11
 ```
 
 4. Release the lock (`rm -rf "$LOCK"`)
-5. Report — topic, slug, total length, tier, cost, queues stamped, unresolved
-   findings
+5. Report — topic, slug, total length, tier, cost, queues stamped, the scenario
+   and narration scores (with the read count), unresolved findings
 
 **Human-invocation mode** presents the result here via AskUserQuestion and asks
 whether to stamp the queue markers (paths, total length, cost, cover title,

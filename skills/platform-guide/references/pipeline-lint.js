@@ -70,7 +70,7 @@ const RULES = [
       const src = read(SKILL('autoproduce'));
       if (src === null) return { ok: false, got: '(file missing)', want: SKILL('autoproduce') };
       // Section headings carry their own gate number: "### 4.5 Copy review gate (gate 6 — …)"
-      const found = uniq(Array.from(src.matchAll(/^###[^\n]*\(gate ([0-9]+[a-e]?)\b/gm), (m) => m[1])).sort();
+      const found = uniq(Array.from(src.matchAll(/^###[^\n]*\(gate ([0-9]+[a-f]?)\b/gm), (m) => m[1])).sort();
       const want = unattendedGates().map((g) => g.num).sort();
       return { ok: setEq(found, want), got: found.join(' '), want: want.join(' ') };
     },

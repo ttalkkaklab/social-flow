@@ -7,17 +7,17 @@ description: >
   The storyboard skill delegates to it from the §5.6 convergence loop — it hunts for
   P0 defects (text outside the zone, on-screen words absent from scenes.js, a
   figure that contradicts the research, gradient text or a second accent, tofu
-  glyphs, decorative motion where a value is spoken, an end frame that is not the
-  conclusion), scores design craft · absence of the generated look · motion
-  meaning · legibility additively out of 100 against slide-design.md §5, and
-  returns a machine-parseable SLIDE_REVIEW tail. `visual.slide.kind` adds the P0s
-  only that kind can commit — a kinetic screen reading its own subtitle back
-  (§6), a character screen whose motion was authored by hand or whose claim
-  exists only as a gesture (§7). `visual.slide.treatment:"editorial"` adds the
-  full-frame composition test in §5.1: a photo with animated callouts, or text as
-  the only authored layer over a raster, is a P0, not an editorial frame. PASS at
-  score ≥95 and p0=0. It never modifies
-  files.
+  glyphs, text under its role's size or a line thinner than the format's stroke tokens, decorative motion
+  where a value is spoken, an end frame that is not the conclusion), scores design
+  craft · absence of the generated look · motion meaning · legibility additively out
+  of 100 against slide-design.md §6, and returns a machine-parseable SLIDE_REVIEW
+  tail. `visual.slide.kind` adds the P0s only that kind can commit — a kinetic
+  screen reading its own subtitle back (§7), a character screen whose motion was
+  authored by hand or whose claim exists only as a gesture (§8).
+  `visual.slide.treatment:"editorial"` adds the full-frame composition test in
+  §6.1: a photo with animated callouts, or text as the only authored layer over a
+  raster, is a P0, not an editorial frame. PASS at score ≥95 and p0=0. It never
+  modifies files.
 
   <example>
   Context: the storyboard skill delegates a §5.6 convergence-loop iteration.
@@ -49,18 +49,21 @@ directives.
   the head comment is the contract
 - The sheet directory from `render-motion-slide.mjs --sheet` — `sheet/g<k>-mid.png`
   and `sheet/g<k>-end.png` for every reveal group k, plus `r0.png` (the base state) —
-  **open every one of them with Read**. Judge from the pixels, not from the code
+  **open every one of them with Read**. Judge from the pixels, not from the code. The
+  sheet frames carry the plate ground but not the encode-time grain (slide-design §1) —
+  don't report the missing grain as a flat ground
 - `manifest.tsv` next to them — group durations in ms (the 2.6s + hold cap)
+- `summary.json` next to them — `zone_fill_pct` and the coverage warnings
 - `storyboard/scenes.js` — the shot's `title`, `bullets`, `narration`, `visual.slide`
   (`kind`, `treatment`, `role`, `motif`, `plan`, `labels`, `motion`, `motionBeats`, `acts`), the shot's
   `visual.action`, the other editorial slides in the episode, and `window.THEME`
 - `storyboard/research.md` — the figures the slide is allowed to show
 - `data/<channel>/profile.md` §3 — THEME
-- `skills/storyboard/references/slide-design.md` — **the rubric is §5 of that file**;
+- `skills/storyboard/references/slide-design.md` — **the rubric is §6 of that file**;
   this agent applies it, it doesn't restate it. **Read `visual.slide.kind` and
   `visual.slide.treatment` first** — kind is
   `"diagram"` when absent, and `"kinetic"` and `"character"` each add P0s and change what the
-  axes look at (§6 and §7). An editorial diagram adds §5.1. Score the wrong kind or treatment
+  axes look at (§7 and §8). An editorial diagram adds §6.1. Score the wrong kind or treatment
   and the review misses the only defects that frame can commit
 - Unresolved findings from the previous round (if any) — judge explicitly whether each is resolved
 
@@ -69,14 +72,14 @@ yourself with Bash:
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/render-motion-slide.mjs \
-  storyboard/slides/s<n>-<slug>.html --out storyboard/.work/slide-check/s<n> --sheet --png-only
+  storyboard/slides/s<n>-<slug>.html --out storyboard/.work/slide-check/s<n> --sheet --png-only --segs auto
 ```
 
 Mark any input you couldn't open as "unverified" — never score what you haven't seen.
 
 ## What to check, in order
 
-1. **The state rule** (slide-design §4). Compare `g<k-1>-end.png` with the first
+1. **The state rule** (slide-design §5). Compare `g<k-1>-end.png` with the first
    frame of group k (`frames-r<k>/f0000.png` when `--keep-frames` was used, else
    `r0.png` for k=1). They must be the same picture. A clip that opens on something
    other than the previous rest state shows a jump in the video.
@@ -85,44 +88,60 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
    `bullets` or `research.md`. Read the numbers off the frame — don't trust the code.
 3. **The zone.** Portrait: nothing above y=190, below y=1350 (1920−570), left of
    x=176 or right of x=904. Wide: y 96–795, x 96–1824. Crop with Bash if you're not
-   sure (`ffmpeg -i frame.png -vf crop=…`). The subtitle band must be empty.
-4. **The generated-look markers** (slide-design §5 axis 2) — count them across all
-   frames, each once.
-5. **Motion meaning** — for each group, what moved (mid frame vs end frame) and what
-   the segment's narration says. One movement, and it is the value being spoken.
+   sure (`ffmpeg -i frame.png -vf crop=…`). The subtitle band must be empty. The spine
+   (`h.stage("spine")`) sits 48px left of the zone by design — it is not a zone breach.
+4. **The ground and the strokes** (slide-design §1 · §3). The sheet must show the plate —
+   a lighter top-left and a darker bottom — not a flat fill; a flat ground means the
+   slide was not built from the current template. Measure a structural line's thickness
+   on a full-size crop against the format's tokens (portrait `--hair` 3px / `--rule` 6px,
+   wide 2px / 4px): a divider under `--hair` or an axis, connector or rail under `--rule`
+   is P0-10. Read the smallest text against the §3 column for the slide's format the same
+   way — the tag (34px portrait) and the wide-format sizes are the table, not a breach.
+5. **The generated-look markers** (slide-design §6 axis 2) — count them across all
+   frames, each once. A square, single-colour plate flush on the grid (tag, band, panel
+   cell) is the broadcast device and not a marker; a rounded, bordered, shadowed or
+   translucent one is.
+6. **Motion meaning** — for each group, what moved (mid frame vs end frame) and what
+   the segment's narration says. One movement, and it is the value being spoken. The
+   opening chain in group 1 (tag → title → first value, each `--lead` apart) and a plate
+   followed by its text are one event each — don't count them as two.
    When `shot.infoType` is `timeline`, `statistic`, or `principle`, match the visible change to
    that group's `motionBeats[].primitive`: dates enter or connect, a measured value counts or
-   grows, a mechanism sits an ink actor and draws a hairline (`shape-enter` · `shape-draw` ·
+   grows, a mechanism sits an ink actor and draws a relation (`shape-enter` · `shape-draw` ·
    `shape-travel` — `h.fig` · `h.stem` · `h.bus` · `h.chamber`) or traces a named state. A
    decorative rise with the right label is still a P0 because the declared meaning did not move.
    On a photo-backed slide, compare the subject and evidence themselves. A whole-frame
    pan/zoom, ambient drift, light pulse or overlay animation with an unchanged subject is a
    P0 even when pixels moved. Match each change to `visual.action` and `slide.plan`.
-6. **Durations** from `manifest.tsv` against the tokens and the cap.
-7. **Legibility** at 25% scale — resize a frame with Bash
+7. **Durations** from `manifest.tsv` against the tokens and the cap, and the coverage
+   warnings from `summary.json` — a group frozen past 40% of its segment with no sustain
+   costs motion points.
+8. **Legibility** at 25% scale — resize a frame with Bash
    (`ffmpeg -i frame.png -vf scale=270:-1 small.png`) and read it. That is the phone.
-8. **By kind** — only the one `visual.slide.kind` names:
-   - `"diagram"` + `treatment:"editorial"` (slide-design §5.1): hide the largest raster layer
+   Count characters per line (16 Korean characters is the line) and lines per title (two).
+9. **By kind** — only the one `visual.slide.kind` names:
+   - `"diagram"` + `treatment:"editorial"` (slide-design §6.1): hide the largest raster layer
      mentally and test whether the hierarchy, relationship, and conclusion still exist; verify
      the declared `role` (`statistic` needs a measured value and source); compare the episode's editorial frames and confirm the same `motif`
      survives while the composition changes. An unchanged full-frame photo with moving boxes,
      arrows, brackets, captions, glow, or a pan is P0-E1. A raster with text as its only
      authored layer is P0-E4 even when there is no camera move. Ask which two or more visual
      actors, document pieces, or relations construct the argument; if there are none, fail it.
-   - `"kinetic"` (slide-design §6): put each end frame beside its segment's `narration[k].sub`
+   - `"kinetic"` (slide-design §7): put each end frame beside its segment's `narration[k].sub`
      and check the screen is not repeating the sentence; count hero-sized phrases (one) and
-     words per line (five); count effect kinds on the screen (one). An art that travels and a
-     word that enters with `in` on the same group is one event, not two. Mixing `drop` and
-     `wipe` is still two.
-   - `"character"` (slide-design §7): check `visual.slide.acts` against the seven names and
-     against the group count; grep the slide for a `@keyframes` of its own (there must be none
-     — the template's are the only ones); compare `g<k>-end.png` with `g<k+1>` 's opening frame
-     to confirm the figure returned to rest; check that the claim is on screen as text and not
-     only as a gesture, and that the figure clears the text block and the zone edge.
+     words per line (five); count effect kinds on the screen (one — `mask` with `words:true`
+     is one kind, `mask` next to `drop` or `wipe` is two). An art that travels and a word
+     that enters on the same group is one event, not two. A band, when present, is the last
+     thing to enter.
+   - `"character"` (slide-design §8): check `visual.slide.acts` against the closed vocabulary
+     and against the group count; grep the slide for a `@keyframes` of its own (there must be
+     none — the template's are the only ones); compare `g<k>-end.png` with `g<k+1>` 's opening
+     frame to confirm the figure returned to rest; check that the claim is on screen as text and
+     not only as a gesture, and that the figure clears the text block and the zone edge.
 
 ## Per-axis scores (additive out of 100; no points without frame evidence)
 
-The axes and their splits are slide-design.md §5: **Design craft 30 · Nothing reads as
+The axes and their splits are slide-design.md §6: **Design craft 30 · Nothing reads as
 generated 25 · Motion carries meaning 25 · Legibility 20**. Scores start at 0 and points
 are added only with a frame file named as evidence.
 

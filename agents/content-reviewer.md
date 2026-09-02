@@ -232,7 +232,9 @@ you still can't find it, report every surface as "unverified" (never as all-S1
 2. **Clipping / overlap** — in frames, text leaves the safe zone (x 176~904) or elements overlap
 3. **Factual mismatch** — figures, dates, or proper nouns in copy/subtitles
    differ from scenes.js/research.md. **Collapsing a range to its upper bound is
-   also distortion** ("300만~500만" → "500만")
+   also distortion** ("300만~500만" → "500만"). A cover the storyboard marked as
+   staged (`shot.info` "연출 — 전개 #1 이 사실을 댄다") is a scene, not a claim —
+   check only the names, years, figures and quotes inside it against research.md
 4. **Platform taboo** — a link in the FB body, IG hook beyond 125 characters,
    YT title with angle brackets or missing #Shorts, hashtag limit exceeded.
    **On Threads a video link in the body is normal** (changed 2026-08-14) — the
