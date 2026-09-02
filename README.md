@@ -226,7 +226,7 @@ the plugin with the flag above.
 /social-flow:intro my-channel              # 1.3 (optional) channel intro — 4 concepts HITL → 4s veo render → 90-point convergence (spliced after the episode as a closer)
 /social-flow:setup-threads my-channel      # 1.4 (optional) SNS account setup + API tokens — browser HITL, ego lite first, Chrome fallback (per platform: setup-instagram · setup-youtube)
 /social-flow:ingest my-channel record      # 1.5 (optional) screen+voice recording → timeline — an alternative research source
-/social-flow:storyboard my-channel "July FX swings"   # 2. research → 3 scenarios [scored to 95] → pick → more research → storyboard → [approval]
+/social-flow:storyboard my-channel "July FX swings"   # 2. research → 3 seven-item scenarios [scored to 95] → pick → more research → scenes [narration read alone, to 95] → storyboard → [approval]
 /social-flow:produce my-channel 20260729-fx           # 3. video + per-platform text
 /social-flow:publish my-channel 20260729-fx           # 4. [approval] → publish → record permalinks
 /social-flow:grow-threads my-channel init             # 5. (optional) Threads growth plan [approval — standing authorization]
@@ -251,12 +251,13 @@ them the pipeline ends at `produce` with the finished video and per-platform tex
 **One topic string straight to a finished video** (steps 2–3 with no human approval):
 
 ```
-/social-flow:autoproduce my-channel "July FX swings"   # research → 3 scenarios [scored to 95] → pick → more research → scenes.js → images → TTS → build → output
+/social-flow:autoproduce my-channel "July FX swings"   # research → 3 seven-item scenarios [scored to 95] → pick → more research → scenes.js [narration read alone, to 95] → images → TTS → build → output
 ```
 
 The machine gates stand where the approval gates were — fact verification (3+
-cross-verified claims), three scenario candidates looped to 95 with P0=0 (curiosity ·
-fear · intrigue · comedy), the copy style checker, six one-round storyboard-reviewer board
+cross-verified claims), three seven-item scenario candidates looped to 95 with P0=0
+(curiosity · fear · intrigue · comedy), the narration read on its own and looped to 95, the
+copy style checker, six one-round storyboard-reviewer board
 reads (copy · per-scene · vocabulary · camera · sound · images) where an unresolved P0
 stops the run, build report (drift 0), content-reviewer P0=0, and a cost cap. The **economy tier is the
 default**: no Veo calls at all (still backgrounds + Ken Burns), roughly $0.26–0.29
@@ -286,10 +287,13 @@ layer above it is what a person has to read to feel. Overused antithesis, triple
 lists, sermon-style closers, a rhythm where every sentence reads at the same length.
 Images are the same — a machine can check resolution, but "does this picture show
 what the scene is saying" takes a reader. So the storyboard skill calls the
-adversarial reviewer `storyboard-reviewer` **six times, once each**, before approval:
+adversarial reviewer `storyboard-reviewer` **six times, once each**, before approval —
+after a **narration read-through it loops to 95**, the reviewer reading the spoken
+sentences alone, in order, before it opens anything else:
 
 | Review | What it reads | Score is |
 |---|---|---|
+| Narration mode (§4.4) | the narration alone, without the picture — does the topic and the content come through | total, **looped to 95** |
 | Copy mode (§4.5) | the storyboard's prose as a whole | total |
 | Scene mode (§4.6) | each scene's role and context | **lowest scene** |
 | Vocabulary mode (§4.7) | word choice in narration and titles | **lowest scene** |
@@ -364,11 +368,11 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap · Chrome lane map)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
-│   ├── storyboard/              # /social-flow:storyboard — research → 3 scenarios looped to 95 → pick → more research → scene design → six one-round board reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval → slides (motion slides through the slide-reviewer gate)
+│   ├── storyboard/              # /social-flow:storyboard — research → 3 seven-item scenarios looped to 95 → pick → more research → scene design → narration read-through looped to 95 → six one-round board reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval → slides (motion slides through the slide-reviewer gate)
 │   │   └── references/          #   scenes-schema.md · directing-grammar.md · motion-slide-template.html · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js
 │   ├── produce/                 # /social-flow:produce — video build + per-platform text
 │   │   └── references/          #   build-reel.sh · speedup.sh (required final pace pass, 1.2 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
-│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → 3 scenarios [scored to 95 on curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring → video (human gates replaced by the machine gates, economy tier default)
+│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → 3 seven-item scenarios [scored to 95 on curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring [narration read alone, to 95] → video (human gates replaced by the machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
 │   ├── publish/                 # /social-flow:publish — HITL approval, then platform publishing
@@ -387,7 +391,7 @@ social-flow/
 │   ├── content-reviewer.md      # adversarial pre-publish verification (P0 gate)
 │   ├── growth-post-reviewer.md  # adversarial review of growth-loop copy (AI tells · context — 95-point gate)
 │   ├── slide-reviewer.md        # adversarial review of a rendered motion slide (design craft · no generated look · motion meaning · legibility — 95-point convergence gate)
-│   └── storyboard-reviewer.md   # adversarial storyboard review, 6 modes read once each (copy AI tells / per-scene role·context / vocabulary / camera — feel·size·angle·space of every shot + the slots of generated shots / sound plan / image fit)
+│   └── storyboard-reviewer.md   # adversarial storyboard review, 8 modes — scenario (seven-item candidates) and narration (the spoken sentences alone) looped to 95, six read once each (copy AI tells / per-scene role·context / vocabulary / camera — feel·size·angle·space of every shot + the slots of generated shots / sound plan / image fit)
 ├── apps/
 │   └── shoot-console/           # macOS SwiftUI recording console for the shooting-script flow (built locally via build-app.sh)
 └── data/                        # content data root (see data/README.md)
@@ -460,7 +464,7 @@ consume the marker and the other platform would never publish. Two things set
 markers: a human, or — when the plan enables `autoproduce` — the loop itself
 authoring one episode when the queue runs dry. Auto-authored episodes become `ready`
 only after passing the machine gates (fact verification · three scenarios looped to
-95 · style · the six storyboard-reviewer board reads for copy/per-scene/vocabulary/camera/sound/images · build report ·
+95 · the narration read alone to 95 · style · the six storyboard-reviewer board reads for copy/per-scene/vocabulary/camera/sound/images · build report ·
 content-reviewer P0 · cost cap); failing any one leaves them `hold`, waiting for a
 human. grow-instagram publishes only with a public HTTPS URL, and with no hosting
 configured it disables both publishing and auto-authoring (the loop won't start
