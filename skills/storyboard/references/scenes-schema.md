@@ -1566,7 +1566,9 @@ hand-written seconds are guaranteed to be off.
 - **Count**: 5–10 in the authored lane (45–120s per chapter); the filmed lane needs 3 or more and
   aims for 6–13. The reason no length band applies to the filmed lane is that scenes have no cap
   there — keeping a cap would just move the crowding from 20 seconds to 120.
-- **Boundaries under 10 seconds fold into the previous chapter** (YouTube won't take them). If
+- **Boundaries under `10 × playback speed` seconds fold into the previous chapter** — 12s at the
+  1.2 default, since §7.5 divides every timestamp by that factor and YouTube won't take a gap
+  under 10s on the shipped file. If
   fewer than 3 remain after folding, the builder skips making `chapters.txt`.
 - **Don't copy `title`.** `title` is the spoken hook that appears on screen ("이거 왜 이래?"),
   while the chapter is the search phrase stamped into the description ("환율 확인하는 세 가지

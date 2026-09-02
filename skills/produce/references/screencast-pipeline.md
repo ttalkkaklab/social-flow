@@ -95,9 +95,11 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · reel-sub
   copied to `.work/outro.mp4`.
 - Then the **speed pass, which a shooting edit gets too** — `$REF/speedup.sh .work` (produce
   §7.5). This builder joins the outro with an xfade, and the pass reads that from the report
-  line, so the outro tail still comes out at 1.0x. The default factor is 1.0; an explicit
-  channel factor also changes the user's own recorded voice and still has to pass the final
-  6.2 characters/s subtitle-rate gate.
+  line, so the outro tail still comes out at 1.0x. The default factor is 1.2, and it speeds up the
+  user's own recorded voice — this builder has no rate normalization of its own, so whatever was
+  said goes out 1.2x faster. A take at the 5~6 characters/s shooting standard lands at 6.0~7.2 and
+  the final 6.2 characters/s gate rejects it. A channel that records at speaking pace sets
+  `Playback speed: 1.0` in profile.md §2.
 - From here on, phone-mode review, platform text, and the quality gates follow produce
   SKILL.md §8–10 unchanged.
 

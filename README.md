@@ -367,7 +367,7 @@ social-flow/
 │   ├── storyboard/              # /social-flow:storyboard — research → 3 scenarios looped to 95 → pick → more research → scene design → six one-round board reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval → slides (motion slides through the slide-reviewer gate)
 │   │   └── references/          #   scenes-schema.md · directing-grammar.md · motion-slide-template.html · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js
 │   ├── produce/                 # /social-flow:produce — video build + per-platform text
-│   │   └── references/          #   build-reel.sh · speedup.sh (required final pace pass, 1.0 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
+│   │   └── references/          #   build-reel.sh · speedup.sh (required final pace pass, 1.2 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
 │   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → 3 scenarios [scored to 95 on curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring → video (human gates replaced by the machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)

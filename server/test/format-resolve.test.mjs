@@ -305,7 +305,9 @@ test('chapters.txt only comes out when chapters.tsv exists', () => {
   // The three requirements
   assert.match(reel, /it has to be 00:00/);
   assert.match(reel, /YouTube requires at least 3/);
-  assert.match(reel, /under the 10 second minimum/);
+  // The minimum is 10s on the shipped file, so on this timeline it is 10 * SPEED. This reads the
+  // source, so the printf specifiers sit where the numbers will be.
+  assert.match(reel, /under the .*minimum \(10s after the x.* speed pass\)/);
 });
 
 /* ───────────────────────────────────────────────────────────────────────────
