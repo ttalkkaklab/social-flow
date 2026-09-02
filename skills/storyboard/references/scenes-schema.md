@@ -486,13 +486,36 @@ window.MOTION_POLICY = {
   maxConsecutiveStills: 1,
   maxStillSeconds: 4,
   requireAction: true,
-  generatedVideoMax: 7
+  generatedVideoMax: 7,
+  maxStaticGroundSeconds: 4,                 // one picture may hold the screen this long (plugin default 4)
+  htmlPlateMax: 2,                           // authored plates per episode (plugin default 2)
+  videoBudgetUsd: 10                         // generated video per episode, billed + projected (plugin default 10)
 };
 ```
 
 The profile keys are `motion_min_true`, `motion_allowed_kinds`,
-`motion_max_consecutive_stills`, `motion_max_still_seconds`, `motion_require_action`, and
-`generated_video_max`. `check-scenes.js` blocks a missing or changed copy: the profile wins.
+`motion_max_consecutive_stills`, `motion_max_still_seconds`, `motion_require_action`,
+`generated_video_max`, `max_static_ground_seconds`, `html_plate_max`, and `video_budget_usd`.
+`check-scenes.js` blocks a missing or changed copy: the profile wins.
+
+**The last three have plugin-wide defaults** (owner directive 2026-09-03 — "the viewer has to
+feel a video: image changes, animation, camera moves") and apply even to a channel that
+declares no motion policy; a profile may raise, lower, or switch each off with `off`:
+
+- **`max_static_ground_seconds` (4)** — no picture stays the same on screen longer than this
+  while the narration runs. The clock resets only when the picture itself changes: a generated
+  clip (a footage shot, a motion background, a b-roll, a quote clip), a recording, or a new
+  still under the next sentence (`narration[].img`). Captions, a counting number, a Ken Burns
+  move, ambient drift and a callout do not reset it. An HTML plate is one picture for its whole
+  length, so a plate is a one-sentence card by construction; anything longer is a footage slide.
+- **`html_plate_max` (2)** — authored plates per episode (every `visual.slide` whose treatment is
+  not `footage`). Numbers and names go on footage as `labels`; the plates are for a verdict or
+  a single figure that has to stand alone for one sentence.
+- **`video_budget_usd` (10)** — what one episode may spend on generated video, billed and
+  projected together (`cost-preview.js` reads it and returns `!!` + exit 1 over the line;
+  storyboard §5 fits the board before asking — footage-lane.md §3). Stills, TTS and music sit
+  outside it. Within the budget the lane spends on quality — 1080p, a clip per sentence,
+  durations from the measured windows — never on a plate instead of a clip.
 
 True motion is a b-roll or video clip, a motion background, a recording or screencast, or a
 motion slide when its kind appears in `allowedKinds`. Ken Burns, a camera move over one image,
@@ -1399,8 +1422,12 @@ either way (absolute rule 10); this is about words that live inside the picture.
 
 - **When to use it**: when the movement itself is the content. A place to show only the picture
   with nothing said is `broll` (spliced between scenes); **when the background has to move while
-  you talk, that's a motion background**. Still is the default only after the channel's
-  true-motion floor and still-run limits are met — video buys cost and seam risk.
+  you talk, that's a motion background**. A still is never the default for a spoken beat: it
+  is allowed only under the static-ground limit (§Channel true-motion policy — one picture, at
+  most `maxStaticGroundSeconds`, so a still under two sentences needs `narration[].img` per line
+  or becomes a footage shot), and only after the channel's true-motion floor and still-run
+  limits are met. Video buys cost and seam risk; the per-episode `videoBudgetUsd` is the ceiling,
+  not a reason to hold one picture.
 - **Start from the shot's `feel`, not from "this scene is heavy, so push the camera in"** — read
   the directing-grammar §5 row for that feel and take its move; the picture (`bgPrompt`), the
   size and the angle carry the tone, the move supports it (a move on its own didn't change
@@ -1861,9 +1888,15 @@ date rail joining documents, or a signal line linking an eye gesture and a hand 
 clearly labelled online interpretation. `check-slide.js` blocks a raster-only editorial file;
 `slide-reviewer` grades the rendered result and requires 95 or more with P0=0.
 
-Three information types make this lane mandatory. `check-scenes.js` rejects another visual,
-`check-slide.js --require-all` rejects a missing HTML file, and `render-motion-slide.mjs` rejects
-a declared movement that is absent from the rendered frame:
+Three information types have to be drawn, on one of two routes. **The default route is a
+footage slide** (`treatment:"footage"`) whose `labels` put the stated value or name on screen
+over the moving clip, with the mark pointing at what it counts — it clears the static-ground
+limit by construction. **The editorial route** below is for the one-sentence verdict or the
+single figure that has to stand alone (a plate is one picture, so it runs at most
+`maxStaticGroundSeconds`, and the episode has `htmlPlateMax` of them). On the editorial route
+`check-scenes.js` rejects another visual, `check-slide.js --require-all` rejects a missing HTML
+file, and `render-motion-slide.mjs` rejects a declared movement that is absent from the
+rendered frame; on the footage route it rejects empty `labels`:
 
 | `shot.infoType` | Required `slide.role` | Allowed `motionBeats[].primitive` |
 |---|---|---|
@@ -1975,7 +2008,7 @@ are body shots.
 | `shots[].action` · `audio` · `prompt` · `negative` | ✅ | as on any generated shot (§clip prompt · §clip audio). `negative` is nouns only |
 | `shots[].mark` | ✅ | one phrase naming what the slide draws on this shot, or `"none"`. The reviewer reads the frame against it |
 | `slide.plan` | ✅ | one entry per group — the clip's content and the mark that lands on it |
-| `slide.labels` | usually `[]` | a footage slide carries no type. A short label is allowed when the sentence states a number or a name the picture cannot show; it comes from here |
+| `slide.labels` | `[]` unless a value is spoken | a footage slide carries no type. A short label is required when the sentence states a number or a name the picture cannot show (`shot.infoType` timeline · statistic · principle on the footage route), and it comes from here |
 | `visual.action` | ✅ | what the people or things in the clips do (the true-motion policy reads it) — not what the marks draw |
 
 Rules only this treatment has:

@@ -75,9 +75,9 @@ Read `data/<channel slug>/profile.md`. If it's missing, stop and point the user 
 slug rule are all inherited from that file.
 
 **The channel profile outranks the generic format defaults.** Before choosing shots read
-`motion_min_true`, `motion_allowed_kinds`, `motion_max_consecutive_stills`,
-`motion_max_still_seconds`, `motion_require_action`, and `generated_video_max`; copy their
-normalized values into `window.MOTION_POLICY` (scenes-schema §Channel true-motion policy).
+`motion_min_true`, `motion_allowed_kinds`, `motion_max_consecutive_stills`, `motion_max_still_seconds`,
+`motion_require_action`, `generated_video_max`, and the three with plugin defaults — `max_static_ground_seconds` (4), `html_plate_max` (2),
+`video_budget_usd` (10); copy their normalized values into `window.MOTION_POLICY` (scenes-schema §Channel true-motion policy).
 `check-scenes.js` compares the snapshot with the profile, so no episode can weaken it. A
 duration, shot-count or motion conflict stops here for the user to choose which contract changes.
 Produce checks it again: `minTrueMotion: 1`, zero still-run limits and `motion-slide` allowed
@@ -395,10 +395,10 @@ Core rules:
   timeline, transition or verdict: set `treatment:"editorial"`, `role`, and one repeated `motif`.
   Classify every narrated shot first: `shot.infoType:"timeline"` for ordered periods or dated
   events, `"statistic"` for measured counts·rates·shares·comparisons, `"principle"` for
-  causes·mechanisms·state changes, and `"other"` for the rest. The first three are mandatory
-  full-frame seekable HTML animations with `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, and role `timeline` · `statistic` · `mechanism` respectively.
-  Declare one `{group, primitive}` in `slide.motionBeats` for every narration segment. A still,
-  footage, kinetic type, or a photo with animated annotations cannot replace these cuts. If a
+  causes·mechanisms·state changes, and `"other"` for the rest. The first three are drawn — **by default on
+  footage** (a footage slide whose `labels` carry the value, scenes-schema §slide scenes) or, for a one-sentence verdict, on an editorial plate with `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, and role `timeline` · `statistic` · `mechanism` respectively.
+  On the plate route declare one `{group, primitive}` in `slide.motionBeats` for every narration segment. A still,
+  kinetic type, or a photo with animated annotations cannot replace these cuts, and no picture holds the screen past `maxStaticGroundSeconds` (4 s). If a
   shot needs two types, split it. On a **principle** frame sit ink actors (`slide.arts` ·
   `h.fig`) and draw hairlines (`h.stem` · `h.bus` · `h.chamber` · `h.ring` · `h.press`). Named
   states keep `flow-trace` · `node-enter` · `state-transform` and may skip arts. Shape
@@ -948,9 +948,9 @@ passing them (`../produce/references/video-model-selection.md` §6).
   to `seen from behind, face turned away` (produce absolute rules 11 and 12).
   In episodes with an opening b-roll, this PNG doubles as the veo source — when the cover
   ends, that photo starts moving.
-- **Pick still or video per scene — the format's generated-video cap is the default, and the
-  channel profile may override it** (the source of truth is scenes-schema §motion background).
-  There are two generated forms and they count together:
+- **Video is the default ground for every spoken beat — a still may hold the screen only under
+  `maxStaticGroundSeconds` (4 s), and the episode's generated video sits under `video_budget_usd` ($10; footage-lane.md §3 fits the board first)**
+  (scenes-schema §Channel true-motion policy). Two generated forms count against the slot cap together; footage shots are budgeted instead:
   - **`broll`** — inserted between scenes. A stretch where only the picture moves and nothing
     is said (absolute rule 9 means that stretch uses the video's own audio, and using both
     slots cuts roughly 8 seconds out of the time spent delivering information).
