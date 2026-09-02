@@ -198,7 +198,7 @@ if [ -f chapters.txt ]; then
   # chapter findings in the report. Filtered in the loop, not by `grep … |`: no match is the
   # healthy case, and under `set -o pipefail` grep's exit 1 would kill the pass right here,
   # before the marker line the publish gate reads.
-  while IFS= read -r W; do case "$W" in ⚠*) say "$W";; esac; done < work-fast/chap-warn.txt
+  while IFS= read -r W || [ -n "$W" ]; do case "$W" in ⚠*) say "$W";; esac; done < work-fast/chap-warn.txt
 fi
 
 check_final_rate
