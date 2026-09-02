@@ -162,6 +162,7 @@ function videoSlots(scenes) {
     if (sl && sl.treatment === 'footage' && Array.isArray(sl.shots)) {
       sl.shots.forEach((sh, j) => {
         const shot = sh || {};
+        if (shot.reuse) return;   // a reuse shot copies an existing clip (footage-lane.md §3) — no call, no slot
         const engine = (shot.engine || v.engine) === 'veo' ? 'veo' : 'seedance';
         slots.push({ shot: shotNo, kind: 'footage', engine, duration: Number(shot.duration) || 0,
                      label: 'footage clip g' + (shot.group || j + 1) });
@@ -188,6 +189,7 @@ function costFingerprint(scenes) {
     if (sl && sl.treatment === "footage" && Array.isArray(sl.shots)) {
       for (var j = 0; j < sl.shots.length; j++) {
         var sh = sl.shots[j] || {};
+        if (sh.reuse) continue;
         parts.push((i + 1) + "g" + (sh.group || j + 1) + ":footage/" + ((sh.engine || v.engine) === "veo" ? "veo" : "seedance") + "/" + (Number(sh.duration) || 0));
       }
     }
@@ -371,6 +373,12 @@ function selftest() {
   const swapped = JSON.parse(JSON.stringify(sample));
   swapped[1].duration = 8;
   ok('changing a slot duration changes the fingerprint', costFingerprint(swapped) !== fpA);
+  // a reuse footage shot is a copied file, not a call (2026-09-03)
+  const reuseScenes = [{ type: 'points', visual: { slide: { treatment: 'footage', shots: [
+    { group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 4, reuse: 'slides/footage/s1-g1.mp4 — same wall' },
+    { group: 2, clip: 'slides/footage/s2-g2.mp4', duration: 7 } ] } } }];
+  ok('a reuse footage shot is not forecast', videoSlots(reuseScenes).length === 1 && videoSlots(reuseScenes)[0].label === 'footage clip g2');
+  ok('a reuse footage shot is outside the fingerprint', costFingerprint(reuseScenes) === '1g2:footage/seedance/7');
 
   // Drift guard — the template carries the same fingerprint function. Leading indentation
   // differs (the template nests it inside the renderer IIFE), so the comparison strips it;

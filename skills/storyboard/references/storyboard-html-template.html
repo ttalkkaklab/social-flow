@@ -1744,6 +1744,7 @@ window.SB_DOC = {
       if (sl && sl.treatment === "footage" && Array.isArray(sl.shots)) {
         for (var j = 0; j < sl.shots.length; j++) {
           var sh = sl.shots[j] || {};
+          if (sh.reuse) continue;
           parts.push((i + 1) + "g" + (sh.group || j + 1) + ":footage/" + ((sh.engine || v.engine) === "veo" ? "veo" : "seedance") + "/" + (Number(sh.duration) || 0));
         }
       }
