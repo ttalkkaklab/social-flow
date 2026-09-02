@@ -119,9 +119,14 @@ data/<channel>/episodes/<topic>/
    **Generated-video slots follow the approved channel motion policy.** Count b-roll and
    motion-background scenes (`visual.video`) together. The format default is 2 and a profile
    may override it with `generated_video_max`; HTML motion slides never spend one of these
-   paid slots. Produce never lowers a profile motion floor to save a call; it stops when the
-   approved storyboard cannot meet both the floor and the cap. The contract's source of truth
-   is scenes-schema §Channel true-motion policy.
+   paid slots. **Footage shots are budgeted instead of counted** — the channel's
+   `video_budget_usd` (plugin default $10 per episode, billed and projected generated video
+   together) is the ceiling `cost-preview.js` enforces, and no picture may hold the screen
+   past `max_static_ground_seconds` (default 4 s) — a plate or a still under two sentences is
+   a storyboard defect, not something produce papers over with a Ken Burns move. Produce never
+   lowers a profile motion floor to save a call; it stops when the approved storyboard cannot
+   meet both the floor and the cap. The contract's source of truth is scenes-schema §Channel
+   true-motion policy.
 13. **Generation that costs money runs only after the plan clears review** — the cover
    background and the b-roll need a plan in the storyboard first (source prompt, motion,
    used length + why), and only after delegating to content-reviewer **plan mode** and

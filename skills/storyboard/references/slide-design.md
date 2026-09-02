@@ -292,6 +292,17 @@ screen still has to put its number on screen legibly.
 10. Any text set below its role's size in the §3 table for the slide's format, or a
     structural line thinner than that format's `--hair` (dividers) or `--rule` (axes,
     connectors, rails) — the slide is unreadable on the phone it is made for
+11. **One picture under the narration** — the slide's picture does not change for longer than
+    the channel's static-ground limit (`window.MOTION_POLICY.maxStaticGroundSeconds`, default
+    4 s). A plate, a kinetic screen or a photo that runs the whole scene while only the type,
+    a number, a callout or a camera move changes is a slideshow, not a video (owner directive
+    2026-09-03 — "the viewer has to feel a video: image changes, animation, camera moves").
+    The clock resets only when the picture itself changes: the next footage clip, a new
+    photograph under the next sentence, a recording. So an authored plate is a one-sentence
+    card (a verdict, a single number) and everything longer is a footage slide with `labels`;
+    `check-scenes.js` blocks the estimate before the slide is authored and this review reads
+    the sheet: `g<k>-mid` and `g<k>-end` showing the same picture across two or more groups is
+    this P0
 
 **P0-F — a near-empty frame.** The renderer's `zone_fill_pct` reports the painted content
 under 40% of the zone on either axis, on a slide with no full-bleed raster. The frame

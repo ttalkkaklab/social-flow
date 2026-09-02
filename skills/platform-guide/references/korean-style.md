@@ -20,6 +20,7 @@ their own purpose. Checks run only on `output/` artifacts and `scenes.js` narrat
   - [Translationese (T)](#translationese-t)
   - [AI stock phrases (D)](#ai-stock-phrases-d)
   - [D9 — written-register declarative endings (spoken surfaces only)](#d9-written-register-declarative-endings-spoken-surfaces-only)
+  - [D10 — essay rhetoric on spoken surfaces](#d10-essay-rhetoric-on-spoken-surfaces)
   - [Structure and rhythm (C)](#structure-and-rhythm-c)
   - [Assistant voice (A)](#assistant-voice-a)
 - [Per-surface application](#per-surface-application)
@@ -116,6 +117,10 @@ targets.
 | D8 | Report-register stative verb endings — 나뉩니다/나뉜다·갈립니다/갈린다/갈려요·남습니다/남는다·**남긴다/남깁니다** | Make the target the subject, concretely — "추천이 갈려요" → "미용실마다 다른 색을 권해요", "둘로 나뉩니다" → "두 갈래예요", "근거를 남긴다" → "근거를 적어 둔다" | S1 |
 | D9 | **Written-register declarative ending `-ㄴ다/-는다`** (spoken surfaces only) — "화면이 나온다"·"주소부터 준다"·"이렇게 친다" | Casual spoken form — "화면이 나와"·"주소부터 줘"·"이렇게 쳐" | S1 |
 | D9b | Diary-style past ending `-았다/었다/였다/했다` (spoken surfaces only) | "만들었다" → "만들었어". One is tolerated (from the second) | S2 |
+| D10 | **Sentence closed on a bare noun** — "~해냈을 리 없다는 것." · "~을 물은 것." (spoken surfaces only) | Finish the sentence with a verb — say who did what | S1 |
+| D10b | Stock reveal or drama line — 결과는 정반대였다·(근거/이유/답/설명/방법)은 하나였다·시간이 많지 않다·놀랍게도·여기서 반전 | State the fact itself — what was measured, what is left, what happens next | S2 |
+| D10c | A→B reframe or an abstract subject that changes things — "X에서 Y로 바꿔 놓았다"·"측정이 ~를 바꿔 놓았다"·"이 발견이 ~를 만들었다" | Name the person and the verb — who measured, what they found | S2 |
+| D10d | Essay wrap-up ending — "~한 셈입니다"·"~인 셈이죠" | Say the thing instead of summing it up | S2 |
 
 D8 is a user directive (2026-08-12 — "don't use AI-sounding phrasings like
 나뉩니다·갈려요·남습니다", expanded the same day with "never use 남긴다·갈린다·나뉜다
@@ -185,6 +190,45 @@ Sources: [문어체 — 나무위키](https://namu.wiki/w/%EB%AC%B8%EC%96%B4%EC%
 [국립국어원 온라인가나다 — '-ㄴ다' 는 무슨 체인가](https://m.korean.go.kr/front/onlineQna/onlineQnaView.do?mn_id=216&qna_seq=312324) ·
 [한국어 해라체 종결어미 '-다, -ㄴ다'의 구어 사용 양상 연구 (KCI)](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002093543)
 
+### D10 — essay rhetoric on spoken surfaces
+
+A user directive (2026-09-03): a 44-sentence narration had passed the narration read at 99,
+copy at 92 and lexicon at 96, and the owner still read it as machine prose — *"어휘 검증한
+거 맞나? AI 스러운 말투가 많이 보이는데"*. What the three reads let through was not a word.
+It was the **shape of the sentence**: a sentence that stops on a noun ("해냈을 리 없다는
+것."), a reveal announced instead of shown ("결과는 정반대였습니다"), an abstract subject
+that rewrites the world in one verb ("성분을 잰 것이 A 에서 B 로 바꿔 놓았습니다"), and the
+wrap-up that sums the story up for the listener ("돌에 적어 둔 셈입니다"). Twelve of the 44
+sentences carried one of these; the lexicon read had noted one of them as "the writer's
+flourish" and passed it.
+
+**Why they read as machine prose.** Each is an essay device: it organises the listener's
+understanding from above instead of telling them what happened. A person explaining the
+same thing at the next desk says who found what and lets the listener draw the line. The
+family stays narrow and enumerated (evidence grade: user directive plus one measured board,
+same grade as D8·D9), so each rule catches one shape and nothing adjacent:
+
+- **D10 (S1)** catches only a sentence-final `것` — `것이다`·`것입니다`·`것 같아요` end on
+  a different syllable and drop out; a `것` inside the sentence is never a target.
+- **D10b (S2)** is a short list. `하나뿐` on its own is everyday speech ("남은 건 하나뿐이야")
+  and stays clear; only the `(근거|이유|답|설명|방법)은 하나` frame fires.
+- **D10c (S2)** fires on `에서 … 로` followed by a change verb (바꿔 놓다·탈바꿈·다시 쓰다),
+  and on an abstract subject (것·측정·결과·연구·발견·사실·기술·데이터·숫자·분석·조사) followed
+  by 바꾸다·만들다·이끌다·가져오다·증명하다. A place-to-place move ("서울에서 부산으로
+  옮겼어요") is not a target. T13 keeps its narrower `말해 준다` branch at S3.
+- **D10d (S2)** is the polite spoken form of D4's `~인 셈이다`, and fires from the first hit.
+
+**What the machine cannot see, and the reviewer must.** The same directive named three
+more shapes that no regex can split from normal speech: a **figurative device used more
+than twice** in one episode ("돌한테 묻다" three times), the **antithesis reprised as the
+episode's spine** ("지었을 리 없다던 → 골라 가며 지은" four times), and the **essay frame**
+`X은 ~였는데요` ("더 어려운 물음은 ~였는데요"). These sit in storyboard-reviewer copy mode
+P0-2 as named patterns. The reviewer describes the shape it found; it never supplies a
+corrected sentence (the structure of an example sentence leaks into the rewrite).
+
+**Surfaces.** Spoken surfaces only — narration·threads·ig·fb·reply. Subtitles and screen
+text are fragments and yt titles are headline register, so the whole family is off there.
+
 ### Structure and rhythm (C)
 
 | ID | Pattern | How to fix | Severity |
@@ -248,12 +292,12 @@ Threads casual spoken register is the register the playbook demands, not an AI t
 | Surface | Emoji | Sentence length | Rules off | Notes |
 |---|---|---|---|---|
 | `narration` | 0 | 8~25 chars (schema) | C7·D9·D9b | Heard aloud — all rules at full priority. Schema binds length, so C7 is off |
-| `subtitle` | 0 | ≤30 chars | C3·C5·C6·C7·D9·D9b | Burned-in subtitles. `sub` differs from `tts` in spelling, so checked separately |
-| `screen` | 0 | unlimited | C1·C3·C5·C6·C7·T9·D9·D9b | Card text (title/label fragments) — lexical tells only |
+| `subtitle` | 0 | ≤30 chars | C3·C5·C6·C7·D9·D9b·D10~D10d | Burned-in subtitles. `sub` differs from `tts` in spelling, so checked separately |
+| `screen` | 0 | unlimited | C1·C3·C5·C6·C7·T9·D9·D9b·D10~D10d | Card text (title/label fragments) — lexical tells only |
 | `threads` | ≤1 | unlimited | C5 | Casual spoken endings are normal. Question endings encouraged. **D9 bites hardest here** |
 | `ig` | ≤3 | unlimited | none | A D/A pattern in the first 125 chars kills the hook |
 | `fb` | ≤2 | unlimited | C3·C6 | Structured posts and the case-collecting closer are playbook prescriptions |
-| `yt` | ≤2 | unlimited | C1·C3·C5·C6·C7·T9·D9·D9b | meta.md as one file: the title line is headline register, so rhythm rules stay off — lexical tells only. The result leak and the summary voice are `check-meta.js`'s |
+| `yt` | ≤2 | unlimited | C1·C3·C5·C6·C7·T9·D9·D9b·D10~D10d | meta.md as one file: the title line is headline register, so rhythm rules stay off — lexical tells only. The result leak and the summary voice are `check-meta.js`'s |
 | `reply` | ≤1 | unlimited | C3·C5·C6·A4 | Comment replies. The opening greeting is golden-hour engagement, so A4 is off |
 
 This table must hold the same values as `SURFACE_CFG` in `check-style.py`. Never
