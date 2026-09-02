@@ -1092,7 +1092,7 @@ If any scene has `visual.slide`, author it now with
 [slide-authoring.md](references/slide-authoring.md). **Generate `slide.arts` first** when
 the array is set — `slides/assets/s<shot>-<slug>.png`, ink actor illustration, no readable text
 (`image_local_generate`; gpt/mlx when needed). Log the call; sit a principle actor with `h.fig`.
-A principle frame is a `.cast` of actors plus hairlines (`h.stem` · `h.bus` · `h.chamber`); kinetic
+A principle frame is a `.cast` of actors plus rules (`h.stem` · `h.bus` · `h.chamber`); kinetic
 `renderKinetic` places the first art on group 1 then the title with `in`; type-only skips arts.
 
 Then run `node references/check-slide.js <storyboard directory> --require-all`, render its

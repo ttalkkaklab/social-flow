@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>슬라이드가 문서처럼 보이는 이유 — 방송 그래픽 조사와 템플릿 개편 (2026-09-02)</title>
+<style>
+  :root{
+    --paper:#f5f6fa; --ink:#10131f; --muted:#5a6280; --rule:#d8dce8; --card:#ffffff;
+    --accent:#2f5fe0; --good:#1f8a5b; --bad:#b8433d; --code:#eef0f7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+      --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+    --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+  .wrap{max-width:1040px;margin:0 auto;padding:56px 24px 96px}
+  .eyebrow{font-family:Menlo,monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1,h2,h3{font-weight:800;letter-spacing:-.02em;text-wrap:balance;margin:0}
+  h1{font-size:clamp(32px,5vw,46px);line-height:1.15;margin-top:10px}
+  h2{font-size:24px;line-height:1.3;margin-top:64px;padding-top:20px;border-top:1px solid var(--rule)}
+  h3{font-size:17px;margin-top:28px}
+  p{margin:14px 0;max-width:70ch}
+  ul{padding-left:20px;max-width:72ch} li{margin:8px 0}
+  code{font-family:Menlo,monospace;font-size:.88em;background:var(--code);padding:1px 6px;border-radius:5px}
+  .lede{font-size:18px;max-width:66ch} .lede b{font-weight:600;color:var(--accent)}
+  figure{margin:24px 0} figure img{width:100%;height:auto;display:block;border:1px solid var(--rule)}
+  figcaption{font-size:13px;color:var(--muted);margin-top:8px}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:18px 0}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-weight:600;color:var(--muted);font-size:12.5px;letter-spacing:.04em}
+  .tbl{overflow-x:auto}
+  .tag{display:inline-block;font-family:Menlo,monospace;font-size:11px;padding:1px 7px;border-radius:4px;background:var(--code);color:var(--muted);margin-left:6px}
+  .tag.s{color:var(--good)} .tag.i{color:var(--bad)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px} @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:18px 20px}
+  .card h3{margin-top:0}
+  .stat{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1} .stat small{font-size:13px;font-weight:500;color:var(--muted);display:block;margin-top:6px;letter-spacing:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">social-flow · 조사 보고 · 2026-09-02</div>
+  <h1>슬라이드가 문서처럼 보이는 이유 — 방송 그래픽 조사와 템플릿 개편</h1>
+  <p class="lede">모션 슬라이드가 "구리다"고 읽히는 원인은 곡선이나 타이밍이 아니라 <b>구조 네 가지</b>였다. 단색 바탕, UI 규모의 글자, 폰이 못 읽는 1.5px 헤어라인, 그리고 모든 요소가 같은 순간 같은 곡선으로 뜨는 안무. 방송 뉴스·프리미엄 설명 채널의 그래픽은 넷 다 반대로 한다. 이 조사로 템플릿 세 벌·검사기·리뷰어 루브릭을 같이 고쳤다.</p>
+
+  <h2>1. 전과 후</h2>
+  <figure><img src="before-ep11.jpg" alt="개편 전 ep11 슬라이드 끝 프레임 7장"><figcaption>개편 전 — pundago ep11 일곱 컷의 끝 프레임. 사진 컷을 빼면 단색 바탕 위에 작은 글자와 헤어라인뿐이라 위쪽 절반에 문서 한 장이 떠 있다.</figcaption></figure>
+  <figure><img src="before-ep10.jpg" alt="개편 전 ep10 슬라이드 끝 프레임 7장"><figcaption>개편 전 — ep10. 같은 결함이 더 뚜렷하다. 제목은 60px, 본문 35px, 선은 1.5px.</figcaption></figure>
+  <figure><img src="after-s2.jpg" alt="개편 후 ep11 s2 통계 포스터 — 그룹 1 중간·끝, 그룹 3 끝, 그룹 4 끝"><figcaption>개편 후 — 같은 ep11 s2 를 새 템플릿으로 다시 저작. 왼쪽부터 그룹 1 중간(카운트업 중)·그룹 1 끝·그룹 3 끝·그룹 4 끝. 플레이트 바탕(좌상 키 라이트·아래 비네트), 여는 사슬(제목→키커→값), 340px 히어로와 밑줄 띠, 44px 본문, 6px 선, 마지막 그룹은 도장이 베드에 내려앉는 프레스.</figcaption></figure>
+  <div class="grid">
+    <figure><img src="after-s6.jpg" alt="개편 후 ep11 s6 원리 표"><figcaption>s6 — 태그 플레이트, 패널 셀 격자, 액센트 셀이 그룹 1 에 열리고 그룹 2 에 상태 전환.</figcaption></figure>
+    <figure><img src="after-s7.jpg" alt="개편 후 ep11 s7 키네틱"><figcaption>s7 — 낱말 스태거 마스크 라이즈, 앞 마디 dim, 액센트 밴드 평결.</figcaption></figure>
+  </div>
+  <figure><img src="after-s8.jpg" alt="개편 후 캐릭터 연기 픽스처"><figcaption>캐릭터 연기(합성 픽스처) — 같은 바탕·태그·마스크 라이즈·포커스 시프트. 세 템플릿이 한 시스템으로 읽힌다.</figcaption></figure>
+
+  <h2>2. 조사 — 방송 그래픽이 하는 것</h2>
+  <p>세 갈래로 나눠 조사했다. 해외 방송·설명 채널의 디자인(BBC·Bloomberg·Vox·디자인 시스템 모션 규격), 한국 방송 CG·유튜브 정보 채널(방송심의규정·MBC 가이드라인·SBS/MBC/JTBC 그래픽·Netflix 한국어 자막 규격), 그리고 순수 CSS 로 옮길 수 있는 모션 기법. 표기는 <span class="tag s">sourced</span> 원문 확인, <span class="tag">consensus</span> 실무자 합의, <span class="tag i">inference</span> 추론.</p>
+
+  <h3>바탕은 층이다</h3>
+  <ul>
+    <li>BBC News 2019 개편은 영상 위에 "simplified gradient overlay", 로워서드는 검정 오버레이 + 브랜드 색 한 점. Bloomberg Quicktake 는 빛을 팔레트로 쓴다 — 단색 바탕은 실무에 거의 없다. <a href="https://www.newscaststudio.com/2019/07/17/bbc-news-rebrand-broadcast-design-2019/">newscaststudio</a> · <a href="https://www.designboom.com/design/bloomberg-quicktake-creative-director-disrupting-the-traditional-tv-news-model-04-27-2021/">designboom</a><span class="tag s">sourced</span></li>
+    <li>마감 장치 목록: 그라디언트·비네트·텍스처·라이트 스윕. "비네트는 어디에나". <a href="https://www.derek-lieu.com/blog/2014/04/26/25-simple-tricks-for-better-motion-graphics">Derek Lieu</a><span class="tag s">sourced</span> 그레인은 8-bit 밴딩을 가리는 검증된 수단이고 2~4% 는 은근, 5~8% 는 보인다. <a href="https://ultimatedesigntools.com/blog/css-noise-textures-guide/">노이즈 가이드</a><span class="tag s">sourced</span></li>
+  </ul>
+  <h3>글자는 방송 위계로</h3>
+  <ul>
+    <li>모바일 9:16 오버레이 최소 36px, 1차 48~72px 볼드, 2차 32~40px, 자막 본문 최소 약 44px. <a href="https://www.rocketshiphq.com/text-overlays-video-ads-mobile/">rocketship</a> · <a href="https://www.itnavideo.com/blog/caption-font-size-guide-reels/">itna</a><span class="tag s">sourced</span> 제목:본문 ≥ 2.5:1. <a href="https://pangrampangram.com/blogs/journal/typographic-hierarchy">pangram</a><span class="tag s">sourced</span></li>
+    <li>Netflix 한국어: 줄당 16자, 최대 2줄, 성인 12자/초. <a href="https://partnerhelp.netflixstudios.com/hc/en-us/articles/216001127-Korean-Timed-Text-Style-Guide">Netflix KR</a><span class="tag s">sourced</span> 728px 존에 16자면 글자당 44px — 본문 44px 이 두 근거에서 같이 나온다.</li>
+    <li>JTBC 보도용 서체는 ExtraBold 를 따로 만들고 숫자를 대문자보다 크게 그렸다. <a href="https://www.yoondesign-m.com/641">윤디자인</a><span class="tag s">sourced</span> 한글 자간은 -0.02em 기본·-0.03em 상한, 양수 자간은 피한다. <a href="https://adamwrightdesign.com/newsletter/a-typography-lesson-on-letter-spacing/">adamwright</a> · <a href="https://uxdev.org/blog/99-css-letter-spacing/">uxdev</a><span class="tag s">sourced</span></li>
+  </ul>
+  <h3>플레이트와 띠</h3>
+  <ul>
+    <li>SBS 8뉴스 헤드라인은 남색 바탕 + 흰 글씨 + 하늘색 하단선, 일반 자막은 흰 바탕 + 남색 글씨 — 색 두 벌. JTBC 는 2024년 속보 자막을 그라데이션에서 단색으로. <a href="https://namu.wiki/w/SBS%20NEWS/%ED%83%80%EC%9D%B4%ED%8B%80%20%EB%B0%8F%20%EA%B7%B8%EB%9E%98%ED%94%BD">SBS</a> · <a href="https://namu.wiki/w/JTBC%20%EB%B8%8C%EB%9E%9C%EB%93%9C%20%EB%94%94%EC%9E%90%EC%9D%B8">JTBC</a><span class="tag s">sourced</span></li>
+    <li>생성형 프런트엔드의 표식은 rounded-2xl·shadow-lg·1px 회색 테두리·중앙 정렬·보라→파랑 그라디언트. <a href="https://dev.to/alanwest/how-to-fix-the-ai-generated-look-in-your-frontend-1ahh">dev.to</a><span class="tag s">sourced</span> 방송 플레이트는 각진 단색 띠가 그리드에 물려 있고 글자와 시차를 둔다 — 카드와 플레이트의 경계는 정확히 그 네 속성이다.<span class="tag i">inference</span></li>
+    <li>플레이트 먼저, 글자 다음: 바 0→15f, 이름 10f 부터, 설명은 몇 프레임 더 뒤. <a href="https://blog.pond5.com/9451-text-boxing-how-to-create-lower-thirds-in-after-effects/">pond5</a> · Vox 로워서드도 "텍스트가 배경보다 몇 프레임 늦게". <a href="https://www.premiumbeat.com/blog/replicating-vox-motion-graphic/">premiumbeat</a><span class="tag s">sourced</span></li>
+  </ul>
+  <h3>선 굵기</h3>
+  <ul>
+    <li>1080px 폭이 65mm 폰에 실리면 1.5px ≈ 0.09mm — 팔 길이에서 시력 한계(1 arcmin ≈ 0.1mm) 아래고 코덱이 더 뭉갠다. 6px ≈ 0.36mm 면 여유.<span class="tag i">inference</span> "영상은 최소 2px" 문구는 검색 요약에만 있다.<span class="tag">consensus</span></li>
+  </ul>
+  <h3>안무</h3>
+  <ul>
+    <li>입장은 감속, 퇴장은 가속 곡선을 따로 — Material 3 emphasized-decelerate <code>(.05,.7,.1,1)</code>, Carbon expressive entrance <code>(0,0,.3,1)</code>. <a href="https://m3.material.io/styles/motion/easing-and-duration/tokens-specs">M3</a> · <a href="https://v10.carbondesignsystem.com/guidelines/motion/overview/">Carbon</a><span class="tag s">sourced</span> 지금까지 쓰던 easeOutExpo 는 방송에서도 쓰는 곡선이라 원인이 아니었다.</li>
+    <li>텍스트 등장 0.3~0.8s, 스태거 0.05~0.15s, 오버슈트는 5~10%·미세 팝 2~3%, 리니어는 "로봇". <a href="https://trydemotion.com/blog/text-animation-secrets">trydemotion</a><span class="tag s">sourced</span> 거리에 비례해 시간을 늘린다 — 28px 이동은 1920px 프레임에서 툴팁 규모다. <a href="https://v10.carbondesignsystem.com/guidelines/motion/overview/">Carbon</a><span class="tag s">sourced</span></li>
+    <li>줄 마스크 라이즈(<code>overflow:hidden</code> + <code>translateY(110%)→0</code>)가 프리미엄 타이틀의 기본 관용구. <a href="https://camoa.github.io/dev-guides/css/css-craft/text-reveal/">camoa</a><span class="tag">consensus</span> JTBC 는 2025년 헤드라인 등장을 좌→우에서 하→상으로 바꿨다.<span class="tag s">sourced</span></li>
+    <li>Heer &amp; Robertson: 축 변경과 값 변경을 분리, 스테이지 ~1초, 요소별 스태거. <a href="https://idl.cs.washington.edu/files/2007-AnimatedTransitions-InfoVis.pdf">InfoVis 2007</a><span class="tag s">sourced</span> ISOTYPE: 많은 양은 같은 크기 그림의 반복. <a href="http://lulupinney.co.uk/2016/02/icons-repeat-never-scale/">Pinney</a><span class="tag s">sourced</span></li>
+  </ul>
+  <h3>색과 데이터</h3>
+  <ul>
+    <li>강조 소수만 색, 나머지는 불투명도를 낮춘다. 브랜드 색은 가장 중요한 범주 하나. <a href="https://www.datawrapper.de/blog/colors-for-data-vis-style-guides">Datawrapper</a> · FT Burn-Murdoch "산만함 최소·대비 최대". <a href="https://gijn.org/stories/data-visualization-storytelling-tips-john-burn-murdoch/">GIJN</a><span class="tag s">sourced</span> 정보형 화면은 흰색 단독형 + 포인트 1색이고 2~5색 혼합은 예능 어휘. 김현기·방윤경 2013<span class="tag s">sourced</span></li>
+    <li>MBC 제작 가이드라인: 도표는 실제 수치에 비례, 자막의 과도한 크기는 왜곡. <a href="https://mbccb.co.kr/rb/?c=78%2F781&r=home">MBC</a> 방송심의규정 16조: 오차범위 안 값을 서열화해 그리지 않는다.<span class="tag s">sourced</span></li>
+  </ul>
+
+  <h2>3. 토큰 — 무엇이 얼마로 바뀌었나</h2>
+  <div class="tbl"><table>
+    <tr><th>항목</th><th>전</th><th>후</th><th>근거</th></tr>
+    <tr><td>바탕</td><td>단색 잉크 + 옅은 비네트 하나</td><td>키 라이트(종이색 10%) + 비네트(42%) 알파 PNG 플레이트, 그레인 6/255 는 인코딩 때</td><td>BBC·Bloomberg·Lieu <span class="tag s">s</span> 강도는 <span class="tag i">i</span></td></tr>
+    <tr><td>글자 크기 (숏폼)</td><td>제목 60 · 라벨 50 · 본문 35 · 출처 26 · 히어로 205/260</td><td>제목 76 · 라벨 54 · 본문 44 · 출처 28 · 히어로 260/340 · 낱말 124/176</td><td>rocketship·itna·Netflix KR <span class="tag s">s</span></td></tr>
+    <tr><td>굵기·자간</td><td>히어로 800 -.035em · 제목 700 -.02em</td><td>히어로 900 -.03em · 제목 800 -.03em · 태그 700 +.03em</td><td>JTBC·adamwright <span class="tag s">s</span></td></tr>
+    <tr><td>선</td><td>헤어라인 1.5px 하나</td><td><code>--hair</code> 3 · <code>--rule</code> 6 · <code>--band</code> 10 · 막대 44px</td><td>폰 해상도 계산 <span class="tag i">i</span></td></tr>
+    <tr><td>키커</td><td>액센트 선 + 흐린 글자</td><td>액센트 플레이트 위 잉크 글자(팝, 3% 오버슈트)</td><td>SBS/BBC 플레이트 <span class="tag s">s</span> 팝 2~3% <span class="tag s">s</span></td></tr>
+    <tr><td>글자 등장</td><td>clip-path 와이프 · 14px 낙하</td><td>마스크 라이즈(줄 상자 밑에서 112%), 낱말 스태거 80ms</td><td>camoa·SplitText·JTBC 2025 <span class="tag s">s</span></td></tr>
+    <tr><td>플레이트→글자</td><td>없음(동시)</td><td><code>--lead</code> 170ms(5f), 여는 사슬 태그→제목→첫 값</td><td>pond5 6~10f·Vox <span class="tag s">s</span></td></tr>
+    <tr><td>곡선</td><td>easeOutExpo (.16,1,.3,1)</td><td>M3 emphasized-decelerate (.05,.7,.1,1), 마스크 (.4,0,.2,1) 유지</td><td>M3 <span class="tag s">s</span></td></tr>
+    <tr><td>이동 거리</td><td>28px</td><td>48px, 옆 이동 96px, 프레스 72px</td><td>거리 비례 원칙 <span class="tag s">s</span> 값 <span class="tag i">i</span></td></tr>
+    <tr><td>포커스 시프트</td><td>0.65</td><td>0.55</td><td>Datawrapper 40~60% <span class="tag s">s</span></td></tr>
+    <tr><td>새 부품</td><td>—</td><td><code>h.tag</code> · <code>h.title</code> · <code>h.stat</code> · <code>h.band</code> · <code>h.plate</code> · <code>h.words</code> · <code>h.vdiv</code> · <code>h.foot</code> · <code>h.photo</code>/<code>h.scrim</code> · <code>h.stage("spread"|"spine")</code> · <code>==하이라이트==</code></td><td>로워서드 문법 <span class="tag s">s</span></td></tr>
+  </table></div>
+
+  <h2>4. 실측 — 왜 플레이트는 비트맵이고 그레인은 인코더인가</h2>
+  <div class="grid">
+    <div class="card"><div class="stat">21.6 → 3.2 fps<small>CSS radial-gradient 두 겹 + feTurbulence 그레인을 페이지에 그렸을 때의 캡처 속도 (ep11 s2 기준선 대비)</small></div></div>
+    <div class="card"><div class="stat">15.1 fps<small>키 라이트·비네트를 60×107 알파 PNG 한 장으로 구워 늘렸을 때 — 바탕 없음(15.5)과 같다</small></div></div>
+    <div class="card"><div class="stat">8.4 fps<small>96px 노이즈 타일을 페이지에 겹쳤을 때 — 노이즈가 든 프레임은 PNG 인코딩이 두 배 느리다</small></div></div>
+    <div class="card"><div class="stat">0.09 → 0.76 MB/s<small>그레인을 ffmpeg noise(정적, seed 고정, 강도 6)로 인코딩 때 얹은 클립 크기. 시간 축 그레인(t 플래그)은 12.6 MB/s 라 뺐다</small></div></div>
+  </div>
+  <figure><img src="grain-compare.jpg" alt="그레인 없음·정적 6·시간축 6 비교 크롭"><figcaption>왼쪽부터 그레인 없음 · 정적 6 · 시간축 6. 정적 6 이 방송 질감이 남는 최소치이고 크기는 16분의 1이다.</figcaption></figure>
+  <p>결정: 플레이트는 잉크 색과 무관한 알파 오버레이 PNG 로 템플릿에 인라인(2.2KB), 그레인은 <code>render-motion-slide.mjs --grain</code>(기본 6, 정적, seed 7). 리뷰어가 읽는 시트 PNG 에는 플레이트만 있고 그레인은 없다 — 문서에 적어 두었다.</p>
+
+  <h2>5. 같이 바뀐 것</h2>
+  <ul>
+    <li><code>motion-slide-template.html</code> · <code>kinetic-type-template.html</code> · <code>character-act-template.html</code> — 토큰·플레이트·부품·기본 렌더 함수. 런타임 블록은 세 벌 동일(카운터에 <code>--lead-in</code> 시차, 포커스 0.55, data URL 은 파일 검사에서 제외).</li>
+    <li><code>check-slide.js</code> — 그라데이션 금지를 저작 영역으로 좁힘(플레이트·스크림은 템플릿 머리에 산다), 인라인 SVG data URI 안의 <code>url()</code> 제외, <code>primitive:</code> 옵션도 프리미티브 표식으로 인정. 셀프테스트 83.</li>
+    <li><code>render-motion-slide.mjs --grain</code> 신설(기본 6). 새 탭의 첫 캡처가 래스터 완료 전에 찍히는 경합(리뷰어가 클립 3 첫 프레임에서 실측)은 연속 두 캡처가 같을 때까지 다시 찍는 <code>shotStable</code> 로 막았다. 같은 파일에서 지속 층 배선 결함도 하나 나왔다 — <code>__setSegs</code> 를 첫 탭에만 걸어서 <code>--jobs</code> 로 열린 둘째 탭 이후가 잡은 그룹은 세그먼트 길이를 못 받고 토큰 길이로 돌았다(카운트가 문장의 52% 에서 멈췄고 요약의 커버리지 경고는 첫 탭 값만 봐서 조용했다). 이제 워커마다 같이 건다.</li>
+    <li>리뷰어 루프 세 라운드(설치본 루브릭 80점 → 새 루브릭 94 → 94 → 최종)에서 잡힌 템플릿 결함 — 플레이트 PNG 상하 반전, <code>h.vdiv</code>·<code>.shape-bed</code> 의 인라인 <code>&lt;i&gt;</code> 폭 0, 히어로 단위가 44px 바닥 아래, 출처 대시가 액센트, <code>h.press</code> 가 베드째 떨어져 페이드인으로 보임 — 전부 템플릿에서 고쳤다.</li>
+    <li><code>slide-design.md</code> §1 바탕 층 신설, §3 활자·선, §4 플레이트와 스파인, §5 여는 사슬, §6 루브릭에 P0-10(44px·3px 바닥)과 "플레이트 없는 평면 바탕" 표식. <code>slide-reviewer.md</code>·<code>slide-authoring.md</code>·scenes-schema·optional-lanes 가 새 절 번호와 규칙을 따른다.</li>
+  </ul>
+
+  <h2>6. 남은 불확실</h2>
+  <ul>
+    <li>히어로 숫자가 프레임 높이의 몇 %여야 하는지는 어느 출처도 안 준다. 340px(캡하이트 약 12%) 은 존 폭 728px 에 세 자리가 들어가는 상한이다.</li>
+    <li>그레인 강도 6·플레이트 10%/42% 는 추론값이다. 채널 셋에서 한 회차씩 돌려 보고 조정한다.</li>
+    <li>정보형 쇼츠에서 좌측 정렬과 중앙 정렬 중 어느 쪽이 우세한지 조사한 자료는 없다. 방송 관용(좌상단 헤드라인)을 따랐다.</li>
+    <li>디자인 개편 자체는 템플릿에서 새로 저작하는 슬라이드에만 닿는다. 이미 저작된 회차의 슬라이드 파일은 옛 템플릿 사본이라 그대로 렌더된다. 다만 렌더러 쪽 변경 셋은 옛 슬라이드를 다시 렌더할 때도 걸린다 — 그레인 기본 6, 워커 탭까지 걸리는 <code>__setSegs</code>(<code>.sv</code> 를 쓴 옛 슬라이드는 이제 실제로 문장 끝까지 늘어나 클립 그림이 달라진다), 첫 프레임 재캡처.</li>
+  </ul>
+  <p>조사 원문은 세 에이전트 보고(해외 방송 디자인 · 한국 방송/유튜브 · 모션 기법)를 합친 것이고 출처는 본문 링크가 전부다. 픽스처는 pundago ep11 scenes.js 사본 위에 s2·s6·s7 을 새 템플릿으로 다시 저작하고 캐릭터 샷 하나를 합성해 <code>--sheet --segs auto</code> 로 렌더했다.</p>
+</div>
+</body>
+</html>
