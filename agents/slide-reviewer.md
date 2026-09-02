@@ -16,7 +16,10 @@ description: >
   authored by hand or whose claim exists only as a gesture (§8).
   `visual.slide.treatment:"editorial"` adds the full-frame composition test in
   §6.1: a photo with animated callouts, or text as the only authored layer over a
-  raster, is a P0, not an editorial frame. PASS at score ≥95 and p0=0. It never
+  raster, is a P0, not an editorial frame. `visual.slide.treatment:"footage"` adds
+  §6.2 instead — generated clips are the ground there by design, and the P0s are a
+  still ground, a decorative mark, a mark off its subject or over a face, a second
+  colour or a fade, the wrong layer. PASS at score ≥95 and p0=0. It never
   modifies files.
 
   <example>
@@ -55,7 +58,7 @@ directives.
 - `manifest.tsv` next to them — group durations in ms (the 2.6s + hold cap)
 - `summary.json` next to them — `zone_fill_pct` and the coverage warnings
 - `storyboard/scenes.js` — the shot's `title`, `bullets`, `narration`, `visual.slide`
-  (`kind`, `treatment`, `role`, `motif`, `plan`, `labels`, `motion`, `motionBeats`, `acts`), the shot's
+  (`kind`, `treatment`, `role`, `motif`, `plan`, `labels`, `motion`, `motionBeats`, `acts`, `shots`), the shot's
   `visual.action`, the other editorial slides in the episode, and `window.THEME`
 - `storyboard/research.md` — the figures the slide is allowed to show
 - `data/<channel>/profile.md` §3 — THEME
@@ -90,9 +93,12 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
    x=176 or right of x=904. Wide: y 96–795, x 96–1824. Crop with Bash if you're not
    sure (`ffmpeg -i frame.png -vf crop=…`). The subtitle band must be empty. The spine
    (`h.stage("spine")`) sits 48px left of the zone by design — it is not a zone breach.
+   On a footage slide the marks go where the picture puts them and may cross the band;
+   only a `mark-label` is held to the zone (slide-design §6.2).
 4. **The ground and the strokes** (slide-design §1 · §3). The sheet must show the plate —
    a lighter top-left and a darker bottom — not a flat fill; a flat ground means the
-   slide was not built from the current template. Measure a structural line's thickness
+   slide was not built from the current template. A footage slide has no plate by design
+   (§6.2) — its ground is the clip, and a photographic ground there is not a finding. Measure a structural line's thickness
    on a full-size crop against the format's tokens (portrait `--hair` 3px / `--rule` 6px,
    wide 2px / 4px): a divider under `--hair` or an axis, connector or rail under `--rule`
    is P0-10. Read the smallest text against the §3 column for the slide's format the same
@@ -127,6 +133,17 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
      arrows, brackets, captions, glow, or a pan is P0-E1. A raster with text as its only
      authored layer is P0-E4 even when there is no camera move. Ask which two or more visual
      actors, document pieces, or relations construct the argument; if there are none, fail it.
+   - `"diagram"` + `treatment:"footage"` (slide-design §6.2): open `g<k>-mid` and `g<k>-end` for
+     every group and ask four things. Does the ground move (mid vs end differ in the picture
+     itself, not only in the mark) — a still or a frame frozen for most of the segment is P0-G1.
+     Is the mark the sentence — read `shots[k-1].mark` and the segment's `sub`, then find the mark
+     on the frame; a mark that is missing, decorative, or a third mark on one shot is P0-G2. Is
+     the mark on its subject in both frames — off the subject or drifted between mid and end is
+     P0-G3; over a face is P0-G4. Is it one accent colour drawn on, never faded — anything else is
+     P0-G5; a ground mark over the figures when `shots[k-1].matte` is set, or a matte with a hole
+     in the subject, is P0-G6. Read the clip itself for the photoreal tells (a duplicated face,
+     melting hands, scribbled text) under the generated-look axis. `zone_fill_pct` is `null` here
+     and is not a finding.
    - `"kinetic"` (slide-design §7): put each end frame beside its segment's `narration[k].sub`
      and check the screen is not repeating the sentence; count hero-sized phrases (one) and
      words per line (five); count effect kinds on the screen (one — `mask` with `words:true`

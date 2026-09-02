@@ -348,6 +348,12 @@ The rules automated authoring breaks most often:
   causes·mechanisms·state changes are `"principle"`, and the rest is `"other"`. The first three
   use the mandatory moving editorial diagram and mapped role, with one allowed
   `slide.motionBeats` primitive per narration group. They never fall back to a still or footage.
+- `treatment:"footage"` (storyboard `references/footage-lane.md`) is not planned on this path —
+  it buys one clip per sentence and needs a human at the cost gate and at the marks. If the
+  `scenes.js` this run picks up already carries one, put one `seedance.1-5-pro-silent.1080p`
+  row per `slide.shots` entry (its `duration` in seconds) on `.work/cost-estimate.tsv` before
+  §5's cap verdict; exit 2 there stops the run instead of dropping to economy, because a
+  footage slide has no cheaper form.
   A principle frame sits ink actors (`slide.arts` · `h.fig`) and draws hairline relations
   (`h.stem` · `h.bus` · `h.chamber` · `h.ring` · `h.press`). Named states may skip arts.
   Shape primitives require arts, generated at §6.6.
@@ -361,8 +367,8 @@ The rules automated authoring breaks most often:
 - `tts` holds the Korean phonetic spelling ("4,700만"→"사천칠백만"), `sub` the
   original notation.
 - THEME copies profile §3's values verbatim.
-- Structure: hook + drip (1–n) + spoken CTA (4–7 shots, typically 2–5 drips);
-  main body 35–75 seconds. The shared outro is not the spoken close.
+- Structure: hook + drip (1–n) + spoken CTA (4–12 shots, typically 2–5 drips);
+  main body 35–75 seconds, up to 120 when the story carries it. The shared outro is not the spoken close.
 - The opening leads with one of **fear, empathy, or curiosity** — exactly one
   per episode, always. Pick it before authoring and record it on the cover shot
   as `hookType` (`fear`·`empathy`·`curiosity`). **Do not use `spoiler` on a

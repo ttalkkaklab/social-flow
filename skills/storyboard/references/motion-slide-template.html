@@ -103,6 +103,16 @@
       data-primitive로 내보낸다. check-slide.js와 render-motion-slide.mjs가 두 선언을 맞춰 본다.
       principle 은 배우가 앉고(h.fig · h.disk · h.chamber) 관계가 그어진다(h.stem · h.bus · h.ring).
 
+  ■ 실사 컷 (treatment:"footage" — slide-design.md §6.2 · scenes-schema §footage 처리):
+      생성 클립이 문장마다 바탕이 되고(h.footage(rg, clip)), 그 위에 글자 없는 표식을 write-on 으로
+      그린다(h.mark.route · x · ring · hatch · box · dot · path). 클립·표식·매트는 흐름 밖 고정층이라
+      스테이지 gap 을 만들지 않고 DOM 순서로 겹친다 — 그룹 k+1 클립의 첫 프레임은 그룹 k 의 끝
+      프레임이고 1프레임 뒤에 컷이 떨어진다(상태 규칙 그대로). 표식 선은 pathLength 1 로 정규화한
+      stroke-dashoffset 1→0 이라 CSS 애니메이션이고 seek 로 재현된다. 글자는 h.mark.label 만, labels
+      에서. 매트(h.matte(rg, webm))는 인물만 남긴 VP9 알파 webm 을 표식 위에 얹어 선이 인물 뒤로
+      간다. 클립 길이(data-vdur)는 저작 때 나레이션 글자 수/4.5 초로 추정하고 렌더러가 --segs 로
+      세그먼트 길이에 맞춘다(클립보다 길면 끝 프레임에 얼고 렌더러가 경고한다).
+
   ■ 존: 글자는 존 안에 앉힌다 — 숏폼 x 176 · top 190 · bottom 570, 롱폼 x 96 · top 96 · bottom 285
       (formats.js zone 의 인라인 미러). 하단 밴드는 자막 자리라 배경 채색만 풀블리드.
 -->
@@ -128,6 +138,8 @@
     --fade:200ms; --travel:48px; --travel-x:96px; --press:72px;
     --rise:560ms; --plate:400ms; --lead:170ms; --pop:360ms;
     --grow:1000ms; --draw:560ms; --count:1800ms; --stagger:100ms; --wstagger:80ms; --hold:360ms;
+    /* 실사 위 표식 — 선 14px(참고 채널 실측 12~16px), 한 획 700ms, 획 사이 170ms, 해칭 줄 사이 60ms */
+    --mark-w:14px; --mark-draw:700ms; --mark-lead:170ms; --mark-stagger:60ms; --mark-head:52px;
   }
   html.wide{
     --w:1920px; --h:1080px; --zone-x:96px; --zone-top:96px; --zone-bottom:285px;
@@ -135,6 +147,7 @@
     --fs-hero-max:230px;
     --hair:2px; --rule:4px; --band:8px; --bar-h:32px;
     --rise:600ms; --travel:36px; --travel-x:72px; --press:56px; --grow:1000ms; --count:2000ms; --hold:420ms;
+    --mark-w:10px; --mark-head:40px;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{width:var(--w);height:var(--h);overflow:hidden}
@@ -353,6 +366,33 @@
       linear-gradient(to top, var(--ink) 0%, color-mix(in srgb,var(--ink) 72%,transparent) 30%, transparent 62%),
       linear-gradient(to bottom, color-mix(in srgb,var(--ink) 55%,transparent) 0%, transparent 34%)}
 
+  /* 실사 컷(footage) — 클립·표식·매트 층. 전부 고정층이라 스테이지 flex 의 gap 을 만들지 않고
+     렌더러의 존 채움 측정에서 ground 로 빠진다. z-index 는 헬퍼가 그룹 번호로 적는다
+     (그룹 k: 클립 -300+3k · 표식 +1 · 매트 +2) — 뒤 그룹이 위라 컷이 DOM 순서로 떨어진다.
+     플레이트(키 라이트·비네트)는 실사 위에 안 얹는다 — 클립의 빛을 그대로 쓴다. */
+  html.footage body::before{display:none}
+  .rv.fz{position:fixed; inset:0; pointer-events:none}
+  .footage, .matte{position:fixed; inset:0; width:100%; height:100%; object-fit:cover}
+  .marks{position:fixed; inset:0; width:100%; height:100%; overflow:visible}
+  .marks path, .marks circle{fill:none; stroke:var(--accent); stroke-width:var(--mark-w);
+    stroke-linecap:round; stroke-linejoin:round; opacity:.94}
+  /* write-on — pathLength=1 로 정규화한 선이 dashoffset 1→0 으로 그려진다. --k 는 같은 그룹 안의
+     획 순번(--mark-lead 만큼 늦게: 선 → 화살촉, X 의 두 획). 마스크 안의 획은 종이색으로 뽑아 점선을 연다. */
+  .marks .draw{stroke-dasharray:1; stroke-dashoffset:1;
+    animation:mark-draw var(--mark-draw) var(--ease-mask) both paused;
+    animation-delay:calc(var(--k,0) * var(--mark-lead) + var(--lead-in,0ms))}
+  .marks mask .draw{stroke:#fff; stroke-width:calc(var(--mark-w) * 2); opacity:1}
+  .marks .dash{stroke-dasharray:26 20}
+  .marks.hatch .draw{animation-delay:calc(var(--k,0) * var(--mark-stagger) + var(--lead-in,0ms))}
+  .marks .pop{fill:var(--accent); stroke:none; opacity:.94; transform-box:fill-box; transform-origin:center;
+    animation:mark-pop var(--pop) var(--ease) both paused;
+    animation-delay:calc(var(--k,0) * var(--mark-lead) + var(--lead-in,0ms))}
+  .mark-label{display:inline-block; font-size:var(--fs-desc); font-weight:700; line-height:1.15; color:var(--paper);
+    word-break:keep-all; white-space:nowrap; padding-bottom:10px;
+    border-bottom:var(--hair) solid var(--accent)}
+  @keyframes mark-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+  @keyframes mark-pop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+
   /* 원리 도형 — 괘선·원·면 하나. 카드·그림자·아이콘 줄은 쓰지 않는다. */
   .shape-stage{position:relative; width:100%; height:440px; display:flex; flex-direction:column;
                align-items:center; justify-content:center; gap:28px; flex:none}
@@ -561,8 +601,140 @@ const SLIDE_SHOT = 0;
   /* 사진 컷 — 풀블리드 사진과 스크림. 둘 다 바탕(그룹 0)에 두고, 대상의 변화는 그룹별 요소가 맡는다. */
   const photo = (rg, src, o = {}) => rv(rg, '<img class="photo" src="' + esc(String(src).replace(/^slides\//, "")) + '" alt="">', { fx: "none" });
   const scrim = (rg) => rv(rg, '<div class="scrim"></div>', { fx: "none" });
+  /* ── 실사 컷(treatment:"footage") — slide-design.md §6.2. 클립 하나 = 그룹 하나(문장 하나 = 클립
+     하나·둘, 둘이면 A|B 서브리빌). 표식은 클립을 본 뒤 좌표를 잡는다(footage-frames.sh 의 중간
+     프레임). 좌표는 1080×1920(롱폼 1920×1080) 캔버스 픽셀이다. */
+  const CW = parseInt(getComputedStyle(root).getPropertyValue("--w"), 10);
+  const CH = parseInt(getComputedStyle(root).getPropertyValue("--h"), 10);
+  const FZ = rg => -300 + rg * 3;
+  /* 클립 길이 기본값 — 세그먼트 글자 수 / 4.5 초(스키마 속도). 렌더러가 --segs 로 덮는다. */
+  const segMs = rg => {
+    const n = (S.narration || [])[rg - 1];
+    const c = String((n && (n.tts || n.sub)) || "").trim().length;
+    return Math.max(1500, Math.round(c / 4.5 * 1000));
+  };
+  const vsrc = f => esc(String(f).replace(/^slides\//, ""));
+  const fz = (rg, z, inner) => '<div class="rv fz" data-rg="' + rg + '" style="z-index:' + z + '">' + inner + "</div>";
+  /* 바탕 클립. from·dur 은 ms. 여러 그룹이 각자 부르면 뒤 그룹이 위에 쌓여 그 그룹의 첫 프레임 뒤에 컷이 난다. */
+  const footage = (rg, clip, o = {}) => {
+    root.classList.add("footage");
+    const vid = (g, dur) => '<video class="footage" data-rg="' + g + '" data-vfrom="' + (o.from || 0) +
+      '" data-vdur="' + dur + '" src="' + vsrc(clip) + '" muted playsinline preload="auto"></video>';
+    /* 그룹 1 의 클립은 바탕(그룹 0)에도 첫 프레임으로 깔린다 — 그룹 요소는 t=0 에 opacity 0 이라 안 깔면
+       카드 첫 프레임과 r0.png 가 잉크 단색이다(리뷰 M1 실측). vdur 0 이라 언제나 첫 프레임에 서 있다. */
+    return (rg === 1 ? fz(0, FZ(0), vid(0, 0)) : "") + fz(rg, FZ(rg), vid(rg, o.dur || segMs(rg)));
+  };
+  /* 매트 — 인물만 남긴 VP9 알파 webm(make-matte.py). 표식 위에 얹혀 선이 인물 뒤로 간다. 같은 그룹의 클립과 같은 from·dur. */
+  const matte = (rg, webm, o = {}) =>
+    fz(rg, FZ(rg) + 2, '<video class="matte" data-rg="' + rg + '" data-vfrom="' + (o.from || 0) +
+      '" data-vdur="' + (o.dur || segMs(rg)) + '" src="' + vsrc(webm) + '" muted playsinline preload="auto"></video>');
+  const P = n => Math.round(n * 10) / 10;
+  const pt = p => P(p[0]) + " " + P(p[1]);
+  const polyPath = pts => "M" + pts.map(pt).join(" L");
+  /* Catmull-Rom → 3차 베지어. 손으로 그은 경로처럼 점 사이가 둥글게 이어진다. */
+  const smoothPath = pts => {
+    if (pts.length < 3) return polyPath(pts);
+    let d = "M" + pt(pts[0]);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += " C" + pt(c1) + " " + pt(c2) + " " + pt(p2);
+    }
+    return d;
+  };
+  const strokeEl = (d, o = {}) =>
+    '<path class="draw' + (o.cls ? " " + o.cls : "") + '" d="' + d + '" pathLength="1" style="--k:' +
+    (o.k || 0) + (o.w ? ";stroke-width:" + o.w + "px" : "") + (o.lead ? ";--lead-in:calc(" + o.lead + " * var(--lead))" : "") + '"/>';
+  /* 화살촉 — 마지막 두 점의 방향으로 V 자. 선 다음 획(k+1)으로 그려진다. */
+  const headPath = (a, b, len) => {
+    const ang = Math.atan2(b[1] - a[1], b[0] - a[0]), s = 0.5;
+    const l = [b[0] - len * Math.cos(ang - s), b[1] - len * Math.sin(ang - s)];
+    const r = [b[0] - len * Math.cos(ang + s), b[1] - len * Math.sin(ang + s)];
+    return "M" + pt(l) + " L" + pt(b) + " L" + pt(r);
+  };
+  const svgWrap = (rg, inner, o = {}) =>
+    fz(rg, FZ(rg) + 1, '<svg class="marks' + (o.cls ? " " + o.cls : "") + '" viewBox="0 0 ' + CW + " " + CH +
+      '" xmlns="http://www.w3.org/2000/svg">' + inner + "</svg>");
+  let maskSeq = 0;
+  const markHead = () => parseFloat(getComputedStyle(root).getPropertyValue("--mark-head")) || 52;
+  const mark = {
+    /* 경로 — 이동·행군·항로. pts=[[x,y],…]. arrow(기본 true)·dash(점선)·curve(기본 true)·w·k·lead */
+    route(rg, pts, o = {}) {
+      const d = o.curve === false ? polyPath(pts) : smoothPath(pts);
+      let inner;
+      if (o.dash) {
+        const id = "mk" + rg + "-" + (++maskSeq);
+        inner = '<mask id="' + id + '" maskUnits="userSpaceOnUse" x="0" y="0" width="' + CW + '" height="' + CH + '">' +
+          strokeEl(d, { k: o.k || 0, lead: o.lead }) + "</mask>" +
+          '<path class="dash" d="' + d + '" mask="url(#' + id + ')"' + (o.w ? ' style="stroke-width:' + o.w + 'px"' : "") + "/>";
+      } else inner = strokeEl(d, { k: o.k || 0, w: o.w, lead: o.lead });
+      if (o.arrow !== false && pts.length >= 2)
+        inner += strokeEl(headPath(pts[pts.length - 2], pts[pts.length - 1], o.head || markHead()), { k: (o.k || 0) + 1, w: o.w, lead: o.lead });
+      return svgWrap(rg, inner, o);
+    },
+    /* X — 패배·정지·차단. 두 획이 --mark-lead 시차로 그어진다. */
+    x(rg, cx, cy, o = {}) {
+      const s = o.size || 70, k = o.k || 0;
+      return svgWrap(rg,
+        strokeEl("M" + pt([cx - s, cy - s]) + " L" + pt([cx + s, cy + s]), { k, w: o.w, lead: o.lead }) +
+        strokeEl("M" + pt([cx + s, cy - s]) + " L" + pt([cx - s, cy + s]), { k: k + 1, w: o.w, lead: o.lead }), o);
+    },
+    /* 원 — 표적·주목. 위에서 시작해 한 바퀴. */
+    ring(rg, cx, cy, r, o = {}) {
+      const d = "M" + pt([cx, cy - r]) + " A" + P(r) + " " + P(r) + " 0 1 1 " + pt([cx, cy + r]) +
+        " A" + P(r) + " " + P(r) + " 0 1 1 " + pt([cx, cy - r]);
+      return svgWrap(rg, strokeEl(d, { k: o.k || 0, w: o.w, lead: o.lead }), o);
+    },
+    /* 해칭 — 병력이 펼쳐진 땅·범위·영역. poly 안을 평행선으로 채우고 한 줄씩 그어진다.
+       gap(줄 간격, 기본 34) · angle(도, 기본 0) · wave(줄을 살짝 굽힘). */
+    hatch(rg, poly, o = {}) {
+      const gap = o.gap || 34, ang = ((o.angle || 0) * Math.PI) / 180, id = "hc" + rg + "-" + (++maskSeq);
+      const xs = poly.map(p => p[0]), ys = poly.map(p => p[1]);
+      const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+      const R = Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) / 2 + gap;
+      const ux = Math.cos(ang), uy = Math.sin(ang), nx = -uy, ny = ux;
+      let lines = "", k = 0;
+      for (let off = -R; off <= R; off += gap, k++) {
+        const pts = [];
+        for (let t = -R; t <= R; t += R / 6) {
+          const w = o.wave ? Math.sin(t / R * Math.PI * 2 + k) * gap * 0.35 : 0;
+          pts.push([cx + nx * off + ux * t + nx * w, cy + ny * off + uy * t + ny * w]);
+        }
+        lines += strokeEl(o.wave ? smoothPath(pts) : polyPath([pts[0], pts[pts.length - 1]]), { k, w: o.w, lead: o.lead });
+      }
+      return svgWrap(rg, '<clipPath id="' + id + '"><polygon points="' + poly.map(p => P(p[0]) + "," + P(p[1])).join(" ") +
+        '"/></clipPath><g clip-path="url(#' + id + ')">' + lines + "</g>", Object.assign({}, o, { cls: "hatch" + (o.cls ? " " + o.cls : "") }));
+    },
+    /* 괄호 — 자리·건물·물건을 네 모서리로 감싼다. */
+    box(rg, x, y, w, h, o = {}) {
+      const c = o.corner || 48, k = o.k || 0;
+      const corners = [
+        "M" + pt([x, y + c]) + " L" + pt([x, y]) + " L" + pt([x + c, y]),
+        "M" + pt([x + w - c, y]) + " L" + pt([x + w, y]) + " L" + pt([x + w, y + c]),
+        "M" + pt([x + w, y + h - c]) + " L" + pt([x + w, y + h]) + " L" + pt([x + w - c, y + h]),
+        "M" + pt([x + c, y + h]) + " L" + pt([x, y + h]) + " L" + pt([x, y + h - c]),
+      ];
+      return svgWrap(rg, corners.map(d => strokeEl(d, { k, w: o.w, lead: o.lead })).join(""), o);
+    },
+    /* 점 — 위치 하나. 팝으로 앉는다. */
+    dot(rg, cx, cy, o = {}) {
+      return svgWrap(rg, '<circle class="pop" cx="' + P(cx) + '" cy="' + P(cy) + '" r="' + (o.r || 14) +
+        '" style="--k:' + (o.k || 0) + (o.lead ? ";--lead-in:calc(" + o.lead + " * var(--lead))" : "") + '"/>', o);
+    },
+    /* 임의 도형 — SVG path d 를 그대로 write-on 으로. 방패·깃발 같은 아이콘은 여기로. */
+    path(rg, d, o = {}) { return svgWrap(rg, strokeEl(d, { k: o.k || 0, w: o.w, lead: o.lead }), o); },
+    /* 짧은 라벨 — labels 에 있는 글자만. 액센트 밑줄 하나, 상자 없음. */
+    label(rg, x, y, text, o = {}) {
+      /* left·top 은 .rv 래퍼에 — 안쪽 상자가 absolute 면 마스크 클립 상자가 0 높이가 돼 라벨이 통째로 잘린다(리뷰 H1 실측). */
+      const style = "position:absolute;left:" + P(x) + "px;top:" + P(y) + "px" +
+        (o.i ? ";--i:" + o.i : "") + (o.lead ? ";--lead-in:calc(" + o.lead + " * var(--lead))" : "");
+      return fz(rg, FZ(rg) + 1, '<div class="rv fx-mask" data-rg="' + rg + '" style="' + style + '"><div class="mk"><div class="mark-label">' +
+        em(text) + "</div></div></div>");
+    },
+  };
   const h = { esc, em, rv, stage: stageCls, tag, title, words, count, stat, band, plate, bar, callout, step, date, range, link, dots, axis, flow, node, state,
-    disk, ring, press, shift, art, fig, stem, bus, chamber, vdiv, foot, photo, scrim, arts, labels, L: i => esc(labels[i] || "") };
+    disk, ring, press, shift, art, fig, stem, bus, chamber, vdiv, foot, photo, scrim, footage, matte, mark, arts, labels, L: i => esc(labels[i] || "") };
 
   /* ✎ 이 함수만 씬의 도해로 다시 쓴다 ──────────────────────────────
      기본형(저작 전 셀프테스트용): 바탕(그룹 0) = 출처. 여는 사슬(그룹 1) = 키커 → 제목 →
@@ -705,7 +877,10 @@ const SLIDE_SHOT = 0;
      __meta 가 stray 로 잡는다. */
   const videos = () => [...document.querySelectorAll("video")];
   const seekVideo = (v, tMs) => new Promise(res => {
-    const want = ((+v.dataset.vfrom || 0) + tMs) / 1000;
+    /* +20ms — a seek that lands exactly on a source frame boundary shows the previous frame (24fps
+       clips under 30fps capture: 4 of every 30 frames wrong, a 3-hold and a skip). 20ms is inside
+       one frame at 24·25·30fps, so every capture samples mid-frame. */
+    const want = ((+v.dataset.vfrom || 0) + tMs + 20) / 1000;
     if (v.readyState >= 2 && Math.abs(v.currentTime - want) < 1e-4) return res(true);
     const done = () => { v.removeEventListener("seeked", done); res(true); };
     v.addEventListener("seeked", done);

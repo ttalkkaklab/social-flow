@@ -38,6 +38,7 @@ consumes after storyboard approval. `video-template.html` loads it with
   - [The authored-screen lane — three kinds under one key (`visual.slide.kind`)](#the-authored-screen-lane-three-kinds-under-one-key-visualslidekind)
   - [Slide scenes — a screen where text and shapes are the subject (`visual.slide`)](#slide-scenes-a-screen-where-text-and-shapes-are-the-subject-visualslide)
   - [Motion diagram treatments — editorial frame or photo action (`visual.slide.treatment`)](#motion-diagram-treatments-editorial-frame-or-photo-action-visualslidetreatment)
+  - [Footage treatment — generated clips under drawn marks (`visual.slide.treatment: "footage"`)](#footage-treatment-generated-clips-under-drawn-marks-visualslidetreatment-footage)
   - [Motion slides — a slide whose numbers move (`visual.slide.motion: true`)](#motion-slides-a-slide-whose-numbers-move-visualslidemotion-true)
   - [Kinetic type — the words are the picture (`visual.slide.kind: "kinetic"`)](#kinetic-type-the-words-are-the-picture-visualslidekind-kinetic)
   - [Character act — a cast enacts the sentence on screen (`visual.slide.kind: "character"`)](#character-act-a-cast-enacts-the-sentence-on-screen-visualslidekind-character)
@@ -123,8 +124,8 @@ disagree, the preset is right.
 
 | Contract | Short-form 9:16 | Long-form 16:9 |
 |---|---|---|
-| Main total length | 35–75s (hard 90) | 8–15 min (hard 20 min) |
-| Shot count | 4–7 | 28–70 |
+| Main total length | 35–75s recommended · up to 120s when the story carries it (hard 180) | 8–15 min (hard 20 min) |
+| Shot count | 4–12 (4–7 for a single-question episode) | 28–70 |
 | Scene length | 4–13s | 6–20s · **no cap in the filmed lane** |
 | Narration characters | cover 40 · body 50 | cover 70 · body 90 |
 | Sentence length | 8–25 chars | 12–40 chars |
@@ -177,7 +178,7 @@ short are defects, not aliases. `check-scenes.js` hard-fails them.
 | `beat` | Name | What it does | Where |
 |---|---|---|---|
 | `hook` | cover | Opens a gap — a reason to stay in the first 3 seconds. **Does not dump `COMPREHENSION.answer`.** `hookType` is `fear` · `empathy` · `curiosity` (`spoiler` is forbidden). `hookForm` is `paradox` · `gap` · `identify` · `number` · `secret` (`payoff` is forbidden). No logo, no intro sting, no greeting | `type:"cover"` — it's the cover even unwritten |
-| `drip` | curiosity stage | **1–n shots, n ≥ 1.** Each shot except the last pays one piece of the answer and opens the next gap in the same breath (scenario-craft §5). The last drip is the first place the answer is complete. Typically 2–5, so the 4–7 shot band still holds | usually `type:"points"` |
+| `drip` | curiosity stage | **1–n shots, n ≥ 1.** Each shot except the last pays one piece of the answer and opens the next gap in the same breath (scenario-craft §5). The last drip is the first place the answer is complete. Typically 2–5, so the 4–12 shot band still holds | usually `type:"points"` |
 | `cta` | next / act | The last **narrated** shot. One outward act: a comment question, a next-episode promise, or a memory question that produces comments. Subscribe/like is still banned. A shared `type:"outro"` asset is not this beat | last narrated shot — write `beat:"cta"` |
 
 The four drop-off jobs map onto those three beats:
@@ -1428,6 +1429,9 @@ either way (absolute rule 10); this is about words that live inside the picture.
   format supplies the default, and `generated_video_max` in the channel profile may override
   it. Count b-roll slots + motion-background scenes together; quote speech clips do not count.
   Going over the effective cap gets a red badge from the `storyboard.html` check strip.
+  **Footage slide clips are outside this cap.** They are budgeted, not counted: `cost-preview.js`
+  lists every shot on the approval screen and storyboard §5's gate is where that spend is
+  approved (§footage treatment).
 - **points only** — the cover keeps its code-rendered still (produce absolute rule 10) and takes
   video as an opening b-roll. For quote, `clip` plays that role.
   **The one exception is an explicit per-episode user directive** (2026-08-15, the Ttalkkak Lab
@@ -1819,10 +1823,11 @@ slide.**
 | `slide.labels` | ✅ when the shapes carry text | Every piece of text to draw on the slide beyond `title` and `bullets`. The style gate's screen surface checks this array — plant Korean text in the slide file that isn't here and characters that never passed the check go on screen |
 | `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **flat ink actor** (person, agent, room) sitting with `h.fig`; rules (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generate at storyboard §5.6 |
 | `slide.motion` | ✅ `true` | required. A still slide is not allowed. Numbers count up, bars grow, type reveals on its sentence (§motion slides) |
-| `slide.treatment` | ✅ on a moving `diagram` | `"editorial"` when HTML owns the whole frame; `"photo-action"` when a photo fills the frame and the photographed subject or evidence itself changes |
+| `slide.treatment` | ✅ on a moving `diagram` | `"editorial"` when HTML owns the whole frame; `"photo-action"` when a photo fills the frame and the photographed subject or evidence itself changes; `"footage"` when generated clips carry the scene, one per reveal group, and HTML only draws marks over them (§footage treatment) |
 | `slide.role` | ✅ on `treatment:"editorial"` | `evidence` · `relationship` · `mechanism` · `timeline` · `statistic` · `transition` · `verdict` |
 | `slide.motif` | ✅ on `treatment:"editorial"` | The episode-wide visual device repeated across authored frames: signal line, evidence stamp, paper tear, date rail, or another concrete device |
 | `slide.motionBeats` | ✅ when `shot.infoType` is `timeline` · `statistic` · `principle` | One `{group, primitive}` per narration group. The declared primitive has to exist in the rendered DOM for the same group |
+| `slide.shots` | ✅ on `treatment:"footage"` | One entry per reveal group — `{ group, clip, still, matte?, duration, engine?, camera, action, audio, prompt, negative, mark }`. The clips are generated at storyboard §5, before the slide is authored (§footage treatment) |
 
 The frame design is part of what the user approves, so storyboard renders and reviews key
 states before §7. Author only text already present in `title`, `bullets`, and `slide.labels`.
@@ -1838,7 +1843,7 @@ states before §7. Author only text already present in `title`, `bullets`, and `
 
 ### Motion diagram treatments — editorial frame or photo action (`visual.slide.treatment`)
 
-A moving diagram states which of two jobs HTML is doing. `check-scenes.js` and
+A moving diagram states which of three jobs HTML is doing. `check-scenes.js` and
 `check-slide.js` reject an omitted treatment so a still photo with a moving box cannot quietly
 stand in for a designed frame.
 
@@ -1898,6 +1903,106 @@ subject or evidence inside it: debris is sorted, a reflector unfolds, a folder l
 trace reaches its target. `visual.action` and `slide.plan` name those same changes. A whole-photo
 pan or zoom, drifting dust, a light pulse, a callout line, or a rectangle appearing over an
 unchanged photo is not subject action and fails the slide review.
+
+### Footage treatment — generated clips under drawn marks (`visual.slide.treatment: "footage"`)
+
+`"footage"` means **generated video is the ground and HTML only marks it**. One clip per reveal
+group — a sentence gets its own shot, two when it turns (an `A|B` sub-reveal makes the second
+group) — and over each clip the slide draws wordless marks in the accent colour: a route, an
+arrow, an X, a ring, hatching over ground, corner brackets, a dot. The mark writes on as the
+sentence starts; the cut to the next clip lands one frame after the segment boundary, so the
+reveal seam the builder already handles is the cut. Nothing else is layered — no plate, no
+scrim, no title, no caption. The subtitle is the only type on screen.
+
+This is the lane for **an event, a place, an action** — people moving, terrain, a thing
+happening — on a channel whose motion policy allows `ai-video`. It is what a reference history
+short measured 2026-09-02 does for 114 seconds: 56 shots, a median cut of 1.8s, marks on 42 of 57
+sampled frames, no label anywhere, one subtitle line. Statistics, timelines and mechanisms stay
+in `editorial`; a document or object changing inside a photograph stays in `photo-action`; the
+cover keeps its own contract (§cover — a motion background is its moving form). Footage slides
+are body shots.
+
+```js
+{
+  type: "points", scene: 3, sceneSlug: "the valley / 696", beat: "drip",
+  title: "", duration: 11,
+  narration: [
+    { tts: "추격군이 계곡으로 들어옵니다.", sub: "추격군이 계곡으로 들어옵니다." },
+    { tts: "능선에는 매복이 기다리고 있었습니다.", sub: "능선에는 매복이 기다리고 있었습니다." },
+    { tts: "정면으로 돌아선 겁니다.", sub: "정면으로 돌아선 겁니다." }
+  ],
+  shot: { feel: "the hunters walk into the trap without knowing it", size: "ls", angle: "high", info: "…", infoType: "other" },
+  visual: {
+    picture: "slide", overlay: "none",
+    action: "riders enter the valley road, soldiers rise on the ridge, the two groups meet",
+    slide: {
+      file: "slides/s3-valley.html", kind: "diagram", motion: true, treatment: "footage",
+      plan: "① a dashed route is drawn up the valley road · ② hatching lands on the ridge behind the rising soldiers (matte) · ③ an X on the pursuers, a ring on their target",
+      labels: [],
+      shots: [
+        { group: 1, clip: "slides/footage/s3-g1.mp4", still: "slides/footage/s3-g1.png",
+          duration: 5, engine: "seedance",
+          camera: { movement: "dolly in", speed: "very slow", framing: "high wide down the valley road", end: "the road reaches mid-frame" },
+          action: "a column of riders enters the valley road", audio: "hooves on gravel, wind, no music, no speech",
+          prompt: "…the stored clip prompt (assemble-bg-prompt.js --clip --engine seedance)", negative: "text, logos",
+          mark: "dashed route up the road, arrow at the far end" },
+        { group: 2, clip: "slides/footage/s3-g2.mp4", still: "slides/footage/s3-g2.png", matte: "slides/footage/s3-g2-fg.webm",
+          duration: 5, engine: "seedance",
+          camera: { movement: "static", speed: "very slow", framing: "ridge line, soldiers rising", end: "soldiers standing" },
+          action: "soldiers rise from behind the ridge", audio: "wind, no music, no speech", prompt: "…", negative: "text",
+          mark: "hatching over the ridge ground, behind the figures" },
+        { group: 3, clip: "slides/footage/s3-g3.mp4", still: "slides/footage/s3-g3.png",
+          duration: 4, engine: "seedance",
+          camera: { movement: "dolly in", speed: "slow", framing: "the two front ranks", end: "the ranks meet" },
+          action: "the two groups collide", audio: "shouts, no music, no speech", prompt: "…", negative: "text",
+          mark: "X on the pursuers, ring on the target" }
+      ]
+    }
+  }
+}
+```
+
+| Field | Required | What |
+|---|---|---|
+| `slide.shots[]` | ✅ | one per reveal group, in group order — `shots[k-1]` is group k. Fewer shots than narration segments is a violation (`check-scenes.js`) |
+| `shots[].group` | ✅ | 1-based, unique |
+| `shots[].clip` | ✅ | `slides/footage/s<shot>-g<group>.mp4` — H.264 at the format canvas, generated at storyboard §5. `.webm` (VP9) is accepted; HEVC and AV1 do not decode in the renderer's Chrome |
+| `shots[].still` | recommended | the source still for `seedance_img2video` / `veo_img2video`, `slides/footage/s<shot>-g<group>.png`, made under the §5 image rules — a channel character on screen means the reference-panel call |
+| `shots[].matte` | optional | `slides/footage/s<shot>-g<group>-fg.webm` — the subject alone with alpha (`produce/references/make-matte.py`), laid above the marks so a ground mark passes behind the figures. Only on shots whose mark has to sit under people |
+| `shots[].duration` | ✅ | the seconds requested from the engine — seedance 4–12, veo 8. **The segment estimate plus one second** (characters / 4.5 + 1, floor 4): the renderer plays the clip for the whole segment and a shorter clip freezes on its last frame |
+| `shots[].engine` | optional | `seedance` (default — the builder keeps only the video track, so the silent route applies) · `veo` |
+| `shots[].camera` | ✅ | the four slots (§camera). Marks are fixed in screen space, so a marked shot's camera is `very slow` or `static` — a fast move drags the picture out from under its mark |
+| `shots[].action` · `audio` · `prompt` · `negative` | ✅ | as on any generated shot (§clip prompt · §clip audio). `negative` is nouns only |
+| `shots[].mark` | ✅ | one phrase naming what the slide draws on this shot, or `"none"`. The reviewer reads the frame against it |
+| `slide.plan` | ✅ | one entry per group — the clip's content and the mark that lands on it |
+| `slide.labels` | usually `[]` | a footage slide carries no type. A short label is allowed when the sentence states a number or a name the picture cannot show; it comes from here |
+| `visual.action` | ✅ | what the people or things in the clips do (the true-motion policy reads it) — not what the marks draw |
+
+Rules only this treatment has:
+
+- **The clips exist before the slide is authored.** Marks are placed in canvas pixels against
+  each clip's mid frame (`footage-frames.sh` writes first, mid and last frames and a per-shot
+  sheet), because the generated picture never lands exactly where the still had it. So the
+  order is: §4.4 narration loop passed → §5 stills and clips, after `PLAN_REVIEW: PASS` for
+  every shot in **one** content-reviewer delegation and the §5 cost gate → §5.6 marks, render,
+  `slide-reviewer`. The procedure is `references/footage-lane.md`.
+- **Outside `generatedVideoMax`.** Footage shots are not counted against the b-roll and
+  motion-background cap; they are budgeted. `cost-preview.js` puts every shot on the approval
+  screen (`footage/seedance` ≈ $0.06 a second, silent) and the §5 gate asks before generating.
+  The check strip's slot badge does not include them; the cost panel does.
+- **True motion.** A footage slide counts as `ai-video` for the channel motion floor
+  (`check-scenes.js motionKind`), with `visual.action` naming the subject motion.
+- **One sentence, one or two shots.** A sentence that turns — "they rode in, and the ridge stood
+  up" — takes an `A|B` sub-reveal and two shots; a sentence that describes one thing takes one.
+  Cuts land on sentence starts, where the viewer's attention resets anyway.
+- **Marks are wordless and one colour** — `THEME.accent`, the format's `--mark-w` stroke (14px
+  portrait · 10px wide), round caps, drawn on in `--mark-draw` (700ms) with the arrowhead or the
+  second stroke `--mark-lead` after. The grammar and the rubric are `slide-design.md` §6.2.
+- **The subtitle band is not a zone rule here.** Marks may cross it — the picture puts them where
+  the subject is — but a `mark.label` obeys the zone like any type, and no mark sits over a face.
+- **produce changes nothing.** The rendered per-group clips enter the build as any motion
+  slide's do (produce §3.6). Pair the episode with `SUB_MODE=phrase` (produce §5) so the
+  subtitle is one short line, the way the footage wants it.
 
 ### Motion slides — a slide whose numbers move (`visual.slide.motion: true`)
 
@@ -2157,7 +2262,8 @@ strip says no violations.
       checked against the portrait contract, and it passes
 - [ ] Shot count and total length are inside the format band (§format table · the source of truth
       is `formats.js`)
-      - Short-form: hook + drip (1–n) + spoken CTA = **4–7 shots · 35–75s** (90s hard cap)
+      - Short-form: hook + drip (1–n) + spoken CTA = **4–12 shots · 35–75s** as the default band,
+        up to 120s when the story carries it (180s hard cap — the YouTube Shorts limit)
       - Long-form: **28–70 shots · 8–15 min** (20 min hard cap) + chapters (§chapter).
         An episode with many filmed scenes normally has fewer shots than this band — one chunk of
         recording comes in as one scene. The badge only warns; it doesn't block
@@ -2180,6 +2286,13 @@ strip says no violations.
       `editorial` frames with a valid `role` and one repeated `motif`; `photo-action` frames name
       a real subject/evidence change in both `visual.action` and `slide.plan`. A photo with a
       moving box or line does not count
+- [ ] **If there are footage slides** (`treatment:"footage"`, §footage treatment) each has
+      `visual.action`, a `plan` naming the clip and the mark per group, and `slide.shots` with one
+      entry per reveal group — `clip` under `slides/footage/s<shot>-g<group>.mp4`, `duration`
+      inside the route's band and at the segment estimate plus one second, all four `camera`
+      slots, `prompt`, `audio`, `mark`. The clips exist before §5.6 (generated at §5 after
+      `PLAN_REVIEW: PASS` for every shot in one delegation and the §5 cost gate); the marks are
+      authored against `footage-frames.sh` frames and carry no text unless it is in `labels`
 - [ ] **Every narrated shot declares `shot.infoType`.** `timeline`, `statistic`, and `principle`
       use the required moving editorial diagram, mapped role, and one allowed `motionBeats`
       primitive per narration group. `check-slide.js --require-all` sees every HTML file and the
