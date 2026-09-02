@@ -221,6 +221,18 @@ const GATES = [
     onFail: 'topic dropped',
   },
   {
+    id: 'review-narration',
+    num: '6f',
+    kind: 'machine',
+    skill: 'autoproduce',
+    section: '§3.5',
+    replaces: 'storyboard-approval',
+    reviewer: 'storyboard-reviewer',
+    mode: 'narration',
+    checks: 'the narration alone, read in order without the picture — looped to ≥95 · P0 = 0 (cap 5 reads)',
+    onFail: 'authoring aborted',
+  },
+  {
     id: 'review-copy',
     num: '6',
     kind: 'machine',
@@ -305,9 +317,9 @@ const REVIEWERS = [
   {
     id: 'storyboard-reviewer',
     tails: ['STORYBOARD_REVIEW'],
-    bar: null,
+    bar: null, // scenario and narration loop to 95 in the delegator; the six board modes read once
     rounds: 1,
-    modes: ['scenario', 'copy', 'scene', 'vocabulary', 'camera', 'sound', 'image'],
+    modes: ['scenario', 'narration', 'copy', 'scene', 'vocabulary', 'camera', 'sound', 'image'],
     surfaces: ['storyboard copy'],
   },
   {

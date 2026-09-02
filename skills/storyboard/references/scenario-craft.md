@@ -388,8 +388,8 @@ broke. Telling it in that order is the named anti-pattern of informational long-
 **chronological trap**): the strongest moment sits minutes deep behind context nobody asked
 for yet, and the seams read "and then", which §1 already bans one cut at a time. This rule
 bans it at the storyline level: lay the episode out as an **investigation of one question**,
-and let the storyboard skill's §2.5 HITL settle which investigation shape before any scene
-exists. Survey with graded sources:
+and let the storyboard skill's §2.5 HITL settle which investigation shape 전개 #1 rides
+inside, before any scene exists (the seven-item skeleton around it is fixed at §2.2). Survey with graded sources:
 [docs/research/2026-08-29-longform-storyline](../../../docs/research/2026-08-29-longform-storyline/).
 Our own retention report (2026-08-26, n=4) points the same way — the mystery-shaped subject
 held a flat curve and finished first.
@@ -431,9 +431,9 @@ Six named body shapes — the §2.5 menu (field practice; beat lists from the st
 | Reveal ladder | criteria → ascending items → top pick → bonus | rankings, listicles |
 
 The structure names the body's beat pattern; the playback contract stays `arc`
-(scenes-schema §playback order). A curiosity loop, a transformation arc and a ticking clock
-ride `story`; an expert contrast and a reveal ladder usually ride `answer-first`; a problem
-stack goes either way — on `story` the root cause is the turn.
+(scenes-schema §playback order). The arc is storyboard §2.3's call — unfinished-sentence
+material is `story`, the rest `answer-first` — and the shape lays 전개 #1 out inside whichever
+arc; on `story` a problem stack's root cause is the turn.
 
 Checks the pass runs (§10's spirit — verified, not explained):
 
@@ -493,25 +493,29 @@ stayed at one level, an end that summarized.
   like stay banned. **On long-form the last beat still asks for nothing:** two lines, a
   callback that re-reads the cover's words with the turned meaning and puts the thing in the
   viewer's own life (the §5 loop ending, made a you-line — "겨울을 나려고 만든 그 맛이, 지금
-  냉장고 속 그 맛이에요"), then a question about **memory, not opinion** — "여러분 집 김치는
-  누가 담가요?" gets a story in the comments; "지금도 김장을 하는 이유, 뭘까요?" gets a debate
-  or silence. Shorts loop, so the callback is also the line the cover is re-entered on.
+  냉장고 속 그 맛이에요"), then a question. A memory-shaped one — "여러분 집 김치는 누가
+  담가요?" — gets a story in the comments where "지금도 김장을 하는 이유, 뭘까요?" gets a
+  debate or silence, so prefer it when the material allows. **Since 2026-09-02 the question
+  is the scenario's 마무리 item — what does the viewer think — on both formats** (user
+  directive; scenario-stage §the seven items), so an opinion question is no longer the
+  defect this bullet described, and the CTA item that follows it is the callback plus one
+  outward act (the comment invite, or the next episode) on long-form too. Subscribe and like
+  stay banned. Shorts loop, so the callback is also the line the cover is re-entered on.
 - **Write the hook and the last line first.** 윤수영 (first-generation short-form writer):
   two or three lines of hook and ending, then everything in between — and what makes a scene
   land is 의외성, not description (field practice). The v4→v5 rewrite was exactly this: the
   loss line and the callback line were written before any body scene was touched, and the
-  body then only had to descend between them. **The place for those two lines is the
-  storyboard skill's §2.5**, on the same screen as the structure and before a shot exists —
-  §4 is where a sentence can first be written down, and §4 asks for forty-odd values a shot at
-  once (ep07's nine shots carry 449 between them), so a rule about writing order can't live
-  there. Three items go on that screen and not a fourth — the cover's first spoken sentence,
-  the cta's last two lines, and the sign of the feel curve. **Wording is not what gets approved
-  there**: §4's story pass rewrites all three into the board in its own words and §7 is where
-  the sentences are read. What the user agrees to at §2.5 is the shape — this stake, this
-  callback, this curve. Grow the screen past three and it becomes a second §7 held at the wrong
-  time, which costs the gate the one thing it has: it settles the shape while scenes are free.
-  Unattended runs draft the three themselves into the `scenes.js` header comment; there is no
-  gate to mirror.
+  body then only had to descend between them. **The place for those lines is the scenario
+  page the user approves at the storyboard skill's §2.2** (since 2026-09-02; §2.5 only
+  confirms it) — before a shot exists, because §4 is where a sentence can first be written
+  down, and §4 asks for forty-odd values a shot at once (ep07's nine shots carry 449 between
+  them), so a rule about writing order can't live there. The 훅's first spoken sentence, the
+  마무리 question and the CTA's callback are items on that page, and the sign of the feel
+  curve sits on every item's header. Those three lines go across verbatim; everything else
+  §4's story pass rewrites into the board in its own words, and §7 is where the sentences
+  are read. What the user agrees to at §2.2 is the shape — this stake, this callback, this
+  curve — while scenes are free. Unattended runs copy the same three lines into the
+  `scenes.js` header comment; there is no gate to mirror.
 
   **The two layers this splits are measured.** When ep07 was rewritten after the user called
   the draft flat — a new hook, a new last line, a worsening feel series across five shots — 24
@@ -526,9 +530,9 @@ Checks the pass runs (§10's spirit):
 - The feel chart in storyboard.md carries a sign per shot; the minimum precedes `craft.burst`,
   the maximum sits on the turn or the result.
 - The cover's first spoken sentence names a loss or a stake before it names a question.
-- The cta's last two lines are a callback and a memory question (long-form) or one outward
-  act — comment question, next-episode promise, or memory question (short). No line in the
-  episode contains a subscribe or like verb.
+- The 마무리 is a question to the viewer they can answer from what they heard, and the CTA
+  a callback plus one outward act — the comment invite, or the next episode — on both
+  formats. No line in the episode contains a subscribe or like verb.
 - Every feel on the chart is a high-arousal word; a shot whose feel is sad, calm or "nice"
   with nothing at stake is the flat stretch §2 was looking for.
 
