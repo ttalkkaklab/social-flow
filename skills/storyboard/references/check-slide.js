@@ -64,7 +64,8 @@ const MSG = {
   artUnused: f => `slide.arts "${f}" 를 render 가 쓰지 않는다 — h.fig() · h.art() 또는 class="art" 로 앉힌다`,
   artExt: f => `slide.arts "${f}" 는 png·jpg 가 아니다`,
   missingFile: f => `등록된 슬라이드가 없다 — ${f}`,
-  generatedStyle: "생성형 디자인 표식 금지 — 그라데이션 글자·글로우·글래스·겹친 그림자 대신 잉크·종이색·액센트 하나와 헤어라인을 쓴다",
+  generatedStyle: "생성형 디자인 표식 금지 — 그라데이션 글자·글로우·글래스·겹친 그림자 대신 잉크·종이색·액센트 하나와 플레이트·괘선을 쓴다",
+  gradientAuthored: "저작 영역(renderSlide 등)에 그라데이션 금지 — 플레이트·스크림 그라데이션은 템플릿 머리 CSS 가 이미 들고 있다(.plate · .scrim). 글자·막대·도형은 단색이다",
   roundedCard: r => `둥근 카드 표식 금지 — border-radius:${r}px 대신 여백과 헤어라인으로 구조를 만든다`,
   photoAction: "photo-action slide 에 visual.action 이 없다 — 카메라나 선이 아니라 사진 속 대상·증거가 어떻게 바뀌는지 적는다",
   actsMissing: "kind:\"character\" 인데 visual.slide.acts 가 없다 — 그룹마다 동작 하나를 적는다",
@@ -204,7 +205,9 @@ function checkDir(dir, only, opts) {
         if (!helper) return; // check-scenes.js owns the closed vocabulary error.
         const names = Array.isArray(helper) ? helper : [helper];
         const helperCall = names.some(n => new RegExp("\\bh\\." + n + "\\s*\\(").test(authored));
-        const marker = new RegExp("data-primitive\\s*=\\s*['\"]" + primitive.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "['\"]");
+        const lit = primitive.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        // 표식은 속성 리터럴(data-primitive="…")이거나 rv 헬퍼의 옵션(primitive:"…")이다 — 둘 다 DOM 에 같은 data-primitive 를 찍는다
+        const marker = new RegExp("data-primitive\\s*=\\s*['\"]" + lit + "['\"]|\\bprimitive\\s*:\\s*['\"]" + lit + "['\"]");
         if (!helperCall && !marker.test(authored)) fail(base, MSG.semanticPrimitive(primitive, helper));
       });
     }
@@ -250,7 +253,10 @@ function checkDir(dir, only, opts) {
     const imgUrls = [];
     for (const m of code.matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1].trim());
     for (const m of code.matchAll(/<video\b[^>]*\bposter\s*=\s*["']([^"']*)["']/gi)) imgUrls.push(m[1].trim());
-    for (const m of code.matchAll(/url\(\s*["']?([^"')]+)/gi)) imgUrls.push(m[1].trim());
+    /* 인라인 SVG data URI 의 속은 걷어낸다 — 그레인 타일의 filter="url(%23g)" 처럼 안에 든
+       url() 은 문서 안 참조라 파일이 아니다. 따옴표로 닫힌 data:image/svg+xml 만 비운다. */
+    const codeNoData = code.replace(/url\(\s*(['"])data:image\/svg\+xml[\s\S]*?\1\s*\)/gi, "url($1data:image/svg+xml;utf8,$1)");
+    for (const m of codeNoData.matchAll(/url\(\s*["']?([^"')]+)/gi)) imgUrls.push(m[1].trim());
 
     /* 원격 소재는 갈래를 안 가린다 — 정지든 모션이든 네트워크가 프레임을 정하면 재현이 끝난다.
        무엇을 보느냐가 아니라 무엇을 빼느냐로 짠다 — 자리를 열거하면 <script>·<iframe>·<use>
@@ -292,8 +298,19 @@ function checkDir(dir, only, opts) {
         if (!/\bdata-rg\s*=/.test(tag)) { fail(base, MSG.videoGroup); break; }
         if (!/\bdata-vdur\s*=/.test(tag)) { fail(base, MSG.videoDur); break; }
       }
-      if (/background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text|\b(?:linear|conic)-gradient\s*\(|\bbox-shadow\s*:|\btext-shadow\s*:|\bbackdrop-filter\s*:|\bfilter\s*:\s*(?:drop-shadow|blur)\s*\(/i.test(code))
+      if (/background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text|\bbox-shadow\s*:|\btext-shadow\s*:|\bbackdrop-filter\s*:|\bfilter\s*:\s*(?:drop-shadow|blur)\s*\(/i.test(code))
         fail(base, MSG.generatedStyle);
+      /* 그라데이션은 자리를 가린다 — 템플릿 머리 CSS 의 플레이트(빛·스크림)는 방송 그래픽의
+         바탕층이라 허용하고, 저작 영역(render 함수 ~ SEEK-RUNTIME-BEGIN)에서는 막는다. 저작
+         코드가 그라데이션을 쓰는 자리는 글자·막대·도형뿐이고 그게 생성형 표식이다. */
+      {
+        const startFn = kind === "kinetic" ? /function\s+renderKinetic\s*\(/ :
+          kind === "character" ? /function\s+renderCharacter\s*\(/ : /function\s+renderSlide\s*\(/;
+        const start = code.search(startFn);
+        const stop = code.indexOf("SEEK-RUNTIME-BEGIN", start >= 0 ? start : 0);
+        const authored = start >= 0 ? code.slice(start, stop >= 0 ? stop : code.length) : "";
+        if (/\b(?:linear|conic|radial)-gradient\s*\(/i.test(authored)) fail(base, MSG.gradientAuthored);
+      }
       const radii = [...code.matchAll(/border-radius\s*:\s*(\d+(?:\.\d+)?)px/gi)].map(m => Number(m[1]));
       const cardRadius = radii.find(r => r >= 8);
       if (cardRadius !== undefined) fail(base, MSG.roundedCard(cardRadius));
@@ -372,6 +389,11 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{transition: opacity 1s}</style>`, [MSG.motionTransition]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{backdrop-filter:blur(8px);box-shadow:0 8px 20px #000}</style>`, [MSG.generatedStyle]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{border-radius:18px}</style>`, [MSG.roundedCard(18)]],
+    // 플레이트·스크림 그라데이션은 템플릿 머리 CSS 자리(저작 영역 밖)라 통과한다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.scrim{background:linear-gradient(to top,#000,transparent)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
+    // 저작 영역의 그라데이션은 글자·막대에 쓰인 것이라 막는다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.hero{background:linear-gradient(90deg,#f00,#00f)}</style>' + h.count(1, 3); }`, [MSG.gradientAuthored]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.x{background-clip:text}</style>'; }`, [MSG.generatedStyle]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; requestAnimationFrame(step);`, [MSG.motionClock]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; @font-face{src:url("https://x/y.woff2")}`, [MSG.webfont]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <link rel="stylesheet" href="https://fonts.googleapis.com/css2">`, [MSG.webfont]],
@@ -384,6 +406,8 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <video class="loop-diagram" data-rg="2" data-vdur="1200" src="assets/a.mp4"></video>`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <a href="https://www.bok.or.kr/report">source</a>`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{background:url("data:image/svg+xml;utf8,<svg/>")}</style>`, []],
+    // 그레인 타일 — data URI 안의 filter="url(%23g)" 는 문서 안 참조라 파일 검사 대상이 아니다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"><filter id="g"/><rect filter="url(%23g)"/></svg>')}</style>`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>@font-face{src:url(fonts/x.woff2?v=2)}</style>`, []],
     // 재리뷰가 잡은 회귀 — 2923b7b 에서 통과하던 것이 iteration 1 에서 막혔다 (high A)
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; out += '<img src="' + S.photo + '" alt="">';`, []],
@@ -448,6 +472,8 @@ function selftest() {
     ["s12-timeline.html", `const SLIDE_SHOT = 12; window.__seek = 1; function renderSlide(S, h) { return h.date(1, h.L(0)); }`, []],
     ["s12-timeline.html", `const SLIDE_SHOT = 12; window.__seek = 1; function renderSlide(S, h) { return h.rv(1, h.L(0)); }`,
       [MSG.semanticPrimitive("date-enter", "date")]],
+    // rv 헬퍼의 primitive 옵션도 표식이다 — 렌더러가 DOM 에서 같은 data-primitive 를 본다
+    ["s12-timeline.html", `const SLIDE_SHOT = 12; window.__seek = 1; function renderSlide(S, h) { return h.rv(1, h.L(0), { fx: "plate", primitive: "date-enter" }); }`, []],
     ["s13-principle.html", `const SLIDE_SHOT = 13; window.__seek = 1; function renderSlide(S, h) { return h.disk(1, {label:h.L(0)}); }`, []],
     ["s13-principle.html", `const SLIDE_SHOT = 13; window.__seek = 1; function renderSlide(S, h) { return h.fig(1, 0); }`, []],
     ["s13-principle.html", `const SLIDE_SHOT = 13; window.__seek = 1; function renderSlide(S, h) { return h.chamber(1, h.L(0)); }`, []],

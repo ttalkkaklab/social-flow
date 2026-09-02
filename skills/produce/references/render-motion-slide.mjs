@@ -5,9 +5,18 @@
  *
  *   node render-motion-slide.mjs <storyboard/slides/sN-slug.html> --out <dir> [--fps 30]
  *        [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames]
- *        [--segs auto|k:ms,...]
+ *        [--segs auto|k:ms,...] [--grain 0..30]
  *
- * --segs hands the page its narration segment lengths (the sustain layer, slide-design.md §4):
+ * --grain adds film grain at the mp4 encode (default 6 — luma-only static noise, ffmpeg's
+ *   noise filter with a fixed seed, so the same frames still encode to the same bytes). Grain
+ *   is what keeps a flat plate from banding in 8-bit and what makes a graphic read as broadcast
+ *   rather than web (slide-design.md §1). It is added here rather than drawn in the page because
+ *   a noisy frame halves the PNG capture rate (measured 15 → 8 fps). 0 turns it off. --png-only
+ *   frames and the --sheet PNGs never carry it. A full-frame photo (h.photo) captures at ~4 fps
+ *   with or without its scrim (measured 3.2–4.3) — the cost is encoding a photographic frame,
+ *   not the CSS, so there is nothing to optimise in the page.
+ *
+ * --segs hands the page its narration segment lengths (the sustain layer, slide-design.md §5):
  *   elements marked .sv stretch their meaning-bearing movement to the segment, so the clip
  *   fills the spoken sentence instead of freezing after the entrance. "auto" estimates from
  *   narration characters at the schema rate (chars / 4.5 per second) — for the storyboard
@@ -75,7 +84,7 @@ const require = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const { FORMATS, DEFAULT_FORMAT } = require(path.join(HERE, "../../platform-guide/references/formats.js"));
 
-const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...]";
+const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...] [--grain 0..30]";
 const usage = msg => { console.error("✗ " + msg + "\n" + USAGE); process.exit(2); };
 const CDP_TIMEOUT_MS = 30000;
 
@@ -84,7 +93,7 @@ const argv = process.argv.slice(2);
 // jobs = tabs capturing at once. Capture is mostly PNG encoding, so each takes a core — stop at
 // half the cores and never above 4; past that only Chrome's memory grows, not throughput.
 const opt = { fps: 30, jobs: Math.max(1, Math.min(4, Math.floor((os.cpus().length || 4) / 2))),
-  sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null, segs: null };
+  sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null, segs: null, grain: 6 };
 const pos = [];
 const intArg = (v, name, lo, hi) => {
   const n = Number(v);
@@ -99,6 +108,7 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === "--sheet") opt.sheet = true;
   else if (a === "--png-only") opt.pngOnly = true;
   else if (a === "--keep-frames") opt.keep = true;
+  else if (a === "--grain") opt.grain = intArg(argv[++i], "grain", 0, 30);
   else if (a === "--group") opt.group = intArg(argv[++i], "group", 1, 999);
   else if (a === "--segs") {
     opt.segs = argv[++i];
@@ -207,6 +217,7 @@ chrome.stderr.on("data", d => { stderrTail = (stderrTail + d).slice(-2000); });
 const pending = new Map();           // id → { res, rej, timer }
 const waiters = [];                  // one-shot event waiters
 const pageErrors = [];               // Runtime.exceptionThrown descriptions — printed on failure
+const captureWobble = [];            // frames whose repeated captures never agreed (shotStable)
 let nextId = 1, closing = false;
 let buf = Buffer.alloc(0);           // NUL-delimited JSON; decode only whole messages (UTF-8 safe)
 fromChrome.on("data", chunk => {
@@ -298,12 +309,29 @@ const openPage = async () => {
     fs.writeFileSync(file, b);
     return b;
   };
-  return { sid, evalJS, seek, shot };
+  // A fresh tab's first capture can land while the compositor is still rastering the first frame —
+  // seen once as a clip-3 f0000 with a flat ground, no spine and a single 256px tile painted
+  // (2026-09-02). A frame is a function of (g, t), so two consecutive captures that differ mean the
+  // raster was not finished; capture again until two agree.
+  const shotStable = async (file) => {
+    let prev = await shot(file);
+    for (let i = 0; i < 6; i++) {
+      const next = await shot(file);
+      if (next.equals(prev)) return next;
+      prev = next;
+    }
+    // A page whose sub-pixel antialiasing wobbles between identical seeks never gives two
+    // equal captures (the template head measures that wobble at 55–72 dB PSNR — invisible).
+    // Keep the last frame and say so rather than failing a render over it.
+    captureWobble.push(path.basename(file));
+    return prev;
+  };
+  return { sid, evalJS, seek, shot, shotStable };
 };
 
 (async () => {
   const page = await openPage();
-  const { evalJS, seek, shot } = page;
+  const { evalJS, seek, shot, shotStable } = page;
   const api = await evalJS("typeof window.__seek === 'function' && typeof window.__groups === 'function' && typeof window.__size === 'function' && typeof window.__meta === 'function' && typeof window.__ready === 'function'");
   if (!api) return die("the page does not expose __seek/__groups/__size/__meta/__ready — built from motion-slide-template.html?" + (pageErrors.length ? " A page script threw before the API was defined:" : ""));
   // First seek only after fonts, image decodes and video first frames are all settled. Load alone
@@ -385,7 +413,7 @@ const openPage = async () => {
       if (g.dur > seg + meta.hold + 400)
         warn.push(`group ${g.rg} clip is ${g.dur}ms — over its ${seg}ms segment; the cut to the next clip lands mid-motion`);
       else if (seg - g.dur > seg * 0.4)
-        warn.push(`group ${g.rg} moves ${(g.dur / 1000).toFixed(1)}s of its ${(seg / 1000).toFixed(1)}s segment — the tail freezes ${((seg - g.dur) / 1000).toFixed(1)}s; mark a .sv sustain element (slide-design.md §4) or accept the freeze`);
+        warn.push(`group ${g.rg} moves ${(g.dur / 1000).toFixed(1)}s of its ${(seg / 1000).toFixed(1)}s segment — the tail freezes ${((seg - g.dur) / 1000).toFixed(1)}s; mark a .sv sustain element (slide-design.md §5) or accept the freeze`);
     } else if (g.dur > 2600 + meta.hold) {
       warn.push(`group ${g.rg} clip is ${g.dur}ms — over the cap (2.6s motion + ${meta.hold}ms hold, slide-design.md §motion); a shorter segment cuts it mid-motion`);
     }
@@ -407,13 +435,13 @@ const openPage = async () => {
     const { g, t } = opt.frame;
     await seek(t, g);
     const f = path.join(OUT, `g${g}-t${t}.png`);
-    await shot(f);
+    await shotStable(f);
     console.log(JSON.stringify({ frame: `${g}:${t}`, file: f }));
     return shutdown(0);
   }
 
   await seek(0, 1);                      // base state = clip 1's first frame
-  await shot(path.join(OUT, "r0.png"));
+  await shotStable(path.join(OUT, "r0.png"));
 
   const todo = opt.group != null ? [opt.group] : Array.from({ length: N }, (_, i) => i + 1);
   // Capture is split per group across tabs. A tab mostly idles while one screenshot encodes (PNG
@@ -421,7 +449,14 @@ const openPage = async () => {
   const jobs = Math.max(1, Math.min(opt.jobs, todo.length));
   const workers = [page];
   for (let i = 1; i < jobs; i++) workers.push(await openPage());
-  if (jobs > 1) for (const w of workers.slice(1)) await w.evalJS("window.__ready()", true);
+  // Every worker needs the same page state the first tab got: fonts and decodes settled, and
+  // the segment lengths. Without the second call a group captured by tab 2..4 falls back to the
+  // token durations and its .sv sustain silently does not apply — measured 2026-09-02 as a
+  // count that landed at 52% of its sentence while group 1, captured by the first tab, was right.
+  for (const w of workers.slice(1)) {
+    await w.evalJS("window.__ready()", true);
+    if (segsApplied) await w.evalJS(`window.__setSegs(${JSON.stringify(segMap)})`);
+  }
   const rows = new Array(todo.length);
   const captureGroup = async (w, idx) => {
     const k = todo[idx];
@@ -431,7 +466,7 @@ const openPage = async () => {
     fs.rmSync(fdir, { recursive: true, force: true }); fs.mkdirSync(fdir, { recursive: true });
     for (let i = 0; i < nF; i++) {
       await w.seek(Math.min(i * 1000 / opt.fps, dur), k);
-      await w.shot(path.join(fdir, `f${String(i).padStart(4, "0")}.png`));
+      await (i === 0 ? w.shotStable : w.shot)(path.join(fdir, `f${String(i).padStart(4, "0")}.png`));
     }
     framesTotal += nF;
     rows[idx] = { k, nF, dur, fdir };
@@ -446,8 +481,13 @@ const openPage = async () => {
   for (const r of rows) {
     const mp4 = path.join(OUT, `r${r.k}.mp4`);
     if (!opt.pngOnly) {
+      // Grain after the yuv420p conversion so it lands on luma only (c0) — chroma stays clean, the
+      // way film grain does. Static (no temporal flag): temporal grain at crf 14 cost 12.6 MB for a
+      // one-second clip against 0.76 MB static and 0.09 MB clean (measured 2026-09-02). Fixed seed
+      // keeps the encode reproducible.
+      const grain = opt.grain > 0 ? `,noise=c0_seed=7:c0_strength=${opt.grain}:c0_flags=u` : "";
       ffmpeg(["-framerate", String(opt.fps), "-i", path.join(r.fdir, "f%04d.png"),
-              "-vf", `scale=${W}:${H}:flags=lanczos,setsar=1,format=yuv420p`, "-r", String(opt.fps),
+              "-vf", `scale=${W}:${H}:flags=lanczos,setsar=1,format=yuv420p${grain}`, "-r", String(opt.fps),
               "-c:v", "libx264", "-preset", "medium", "-crf", "14", "-x264-params", "aq-mode=3", "-an", mp4]);
       if (!opt.keep) fs.rmSync(r.fdir, { recursive: true, force: true });
     }
@@ -499,7 +539,7 @@ const openPage = async () => {
              h_pct: Math.round(Math.max(0, iy1 - iy0) / zh * 100) };
   })()`);
   if (zoneFill.w_pct < 55 || zoneFill.h_pct < 55)
-    warn.push(`content fills ${zoneFill.w_pct}%×${zoneFill.h_pct}% of the zone (w×h) — under 55%; scale the composition up or pick an archetype (slide-design.md §3)`);
+    warn.push(`content fills ${zoneFill.w_pct}%×${zoneFill.h_pct}% of the zone (w×h) — under 55%; scale the composition up or pick an archetype (slide-design.md §4)`);
   // Re-read the contract after capturing. __meta() sampled once up front cannot see an animation
   // that only exists at some mid-group t — a painter that attaches a node outside [data-rg] and
   // removes it again by the rest frame. __seek pins such an animation and counts it, so the
@@ -521,12 +561,16 @@ const openPage = async () => {
                `Put every animated element the painter creates inside its own [data-rg] group.`);
   if (metaAfter.broken && metaAfter.broken.length > (meta.broken || []).length)
     return die(`could not load during capture: ${metaAfter.broken.join(", ")}`);
+  if (captureWobble.length)
+    warn.push(`${captureWobble.length} frame(s) never gave two identical captures of the same (g, t) — ` +
+              `${captureWobble.slice(0, 3).join(", ")}${captureWobble.length > 3 ? ", …" : ""}. The last capture was kept. ` +
+              `Sub-pixel antialiasing wobble is invisible; a torn frame is not — open those files before trusting them`);
   fs.writeFileSync(path.join(OUT, "manifest.tsv"), manifest.join("\n") + "\n");
   const sec = (Date.now() - t0) / 1000;
   const summary = { slide: path.basename(htmlAbs), format: FORMAT, canvas: `${W}x${H}`, groups: N, jobs,
     segments: segCount, durations_ms: groups.slice(1).map(g => g.dur),
     segs_ms: segMap && segsApplied ? Array.from({ length: N }, (_, i) => segMap[i + 1] || null) : null,
-    zone_fill_pct: zoneFill, frames: framesTotal,
+    zone_fill_pct: zoneFill, grain: opt.pngOnly ? null : opt.grain, frames: framesTotal,
     seconds: +sec.toFixed(2), fps_capture: +(framesTotal / sec).toFixed(1), out: OUT, warnings: warn };
   // slide-reviewer reads zone_fill_pct and the coverage warnings from this file — stdout
   // alone never reaches the delegation (slide-authoring step 4 hands the file over).
