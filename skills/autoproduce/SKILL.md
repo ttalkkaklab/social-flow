@@ -742,7 +742,7 @@ lengths**. If they diverge, don't queue it.
 picks the spliced set on its own when a splice ran:
 
 ```bash
-$REF_P/speedup.sh .work        # 1.0x default; profile.md §2 may set another factor
+$REF_P/speedup.sh .work        # 1.2x default; profile.md §2 may set another factor
 ```
 
 Unattended, the marker is the check: `build-report.txt` has to gain a

@@ -48,7 +48,7 @@ generated_video_max: 2
     stability: `<0–1; on eleven_v3 one of 0.0 / 0.5 / 1.0>` · seed: `<optional integer — once set, never changes>` ·
     outputFormat stays `wav_24000` (the builder needs RIFF; mp3 is not narration input)
   - Target speaking rate: <characters/sec, default 4.5>
-- **Playback speed (the post-build pace pass)**: `<0.5~3.0, default 1.0>` — produce §7.5 applies
+- **Playback speed (the post-build pace pass)**: `<0.5~3.0, default 1.2>` — produce §7.5 applies
   this factor to the finished feature while the outro stays at 1.0x. It **multiplies with the TTS
   `speed` above**, so choose it against the final subtitle timeline, not by habit. The pass blocks
   delivery above 6.2 spoken characters/s overall or on a substantive cue

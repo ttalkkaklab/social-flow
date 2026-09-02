@@ -10,7 +10,7 @@
 #   splice-clip.sh's T values are on the original timeline, so a build that already sped up would
 #   put every insert in the wrong place.
 #
-#   Factor: the argument, else $SPEED, else format.env, else 1.0.
+#   Factor: the argument, else $SPEED, else format.env, else 1.2.
 #
 #   Input — the newest set in the workdir, the same rule output/ copies by:
 #     reel-spliced.mp4 / reel-sub-spliced.mp4 / subs-spliced.srt  when a splice ran
@@ -38,7 +38,7 @@ cd "$WORK"
 # builders hold: caller env → format.env → inline.
 [ -f format.env ] && . ./format.env
 
-SPEED=${2:-${SPEED:-1.0}}
+SPEED=${2:-${SPEED:-1.2}}
 FPS=${FPS:-30}
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}
 XFADE=${XFADE:-0.6}
