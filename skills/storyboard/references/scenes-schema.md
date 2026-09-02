@@ -1868,8 +1868,9 @@ a declared movement that is absent from the rendered frame:
 
 Groups start at 1 and map to narration segments in order. One group declares one primary
 primitive. `motion-slide-template.html` provides helpers with the matching names (`h.date`,
-`h.range`, `h.link`, `h.count`, `h.bar`, `h.dots`, `h.axis`, `h.flow`, `h.node`, `h.state`,
-`h.disk`, `h.ring`, `h.press`, `h.shift`, `h.fig`, `h.stem`, `h.bus`, `h.chamber`).
+`h.range`, `h.link`, `h.count` · `h.stat`, `h.bar`, `h.dots`, `h.axis`, `h.flow`, `h.node`, `h.state`,
+`h.disk`, `h.ring`, `h.press`, `h.shift`, `h.fig`, `h.stem`, `h.bus`, `h.chamber`), and a
+plain `h.rv(rg, html, { primitive })` stamps the same marker on custom DOM.
 The helper emits `data-primitive`, so the contract follows the pixels instead of trusting a plan.
 
 A **principle** frame is an illustrated cast plus hairline relations — the same grammar as a
@@ -1936,8 +1937,9 @@ motion costs comprehension. So the lane is deliberately narrow — beats, not am
 
 **The state rule** — one sentence the template, the renderer and the reviewer all cite:
 *clip k opens on groups 0..k-1 at rest, group k animates from t=0, and its last frame is
-group k at rest.* Group 0 is the base (kicker, title, axes) and never animates on its
-own — it is clip 1's first frame. Groups are 1:1 with narration segments (segment 1 →
+group k at rest.* Group 0 is the base (source, scrim, axes) and never animates on its
+own — it is clip 1's first frame; the tag, the title and the first value open group 1 as
+a chain (slide-design.md §5). Groups are 1:1 with narration segments (segment 1 →
 group 1); sub-reveals (`A|B`) make more groups than segments, as on any card.
 
 What that buys: **no narration timing is needed at render time.** `render-motion-slide.mjs`
@@ -1963,7 +1965,7 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   which the renderer calls (`__meta` reports stray and infinite animations; the renderer
   stops on either), plus `__setSegs({group: ms})` — the renderer's `--segs` hands over the
   narration segment lengths and elements marked `.sv` stretch their meaning motion to them
-  (the sustain layer, slide-design.md §4).
+  (the sustain layer, slide-design.md §5).
 - **Every movement is reproducible by seek**, and there are four ways to make one:
   CSS `@keyframes` (the template's `rise` · `in` · `grow` · `draw` · `fade`), `data-count` count-ups,
   a **painter** registered with `__paint(rg, durMs, fn)` whose `fn(tMs)` draws the frame at
@@ -2010,10 +2012,12 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   slide, where the state rule would freeze it at every seam.
 - Both formats. The zone comes from `window.FORMAT` (portrait x 176 · top 190 · bottom
   570, wide x 96 · top 96 · bottom 285 — `formats.js` mirrored inline in the template).
-- The look is `references/slide-design.md` — ink · paper · one accent, hairlines not
-  boxes, one hero per slide. Its §5 is the rubric **`slide-reviewer`** scores the rendered
-  frames against in storyboard §5.6, and a motion slide enters the build only at **score ≥
-  95 with p0 = 0**.
+- The look is `references/slide-design.md` — a plate ground (key light, vignette, grain at
+  encode), ink · paper · one accent, square plates and 3/6/10px rules instead of cards and
+  hairlines, broadcast type sizes (44px floor), one hero per slide, and the opening chain
+  (tag → title → first value, `--lead` apart) in group 1. Its §6 is the rubric
+  **`slide-reviewer`** scores the rendered frames against in storyboard §5.6, and a motion
+  slide enters the build only at **score ≥ 95 with p0 = 0**.
 - A motion slide has no `bg`/`bgPrompt` and skips §5 image generation and the image
   review; the storyboard's check strip and `episode-state.js` treat the file the same way
   (same naming, same "not authored yet" blocker).
