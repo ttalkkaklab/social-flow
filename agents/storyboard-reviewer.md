@@ -540,7 +540,16 @@ reviewer quotes its output as the evidence.
    the habit of listing three ("빠르고 안전하고 편하게"), endings that lecture the listener,
    a rhythm where every sentence reads out at the same length,
    every scene opening with the same sentence pattern. If reading it aloud doesn't sound
-   like the colleague at the next desk, it's a P0
+   like the colleague at the next desk, it's a P0. **Essay rhetoric is this P0 too**
+   (korean-style §D10 — an owner read a board that had passed three reads as machine prose,
+   2026-09-03). check-style.py now catches the enumerable shapes (a sentence closed on a bare
+   noun, the stock reveal line, the A→B reframe with an abstract subject, the ~셈입니다
+   wrap-up); read for the three it cannot split from speech: **a figurative device used more
+   than twice** in one episode (the same personification, the same image), **an antithesis
+   reprised as the spine** (the same "A 라던 → B 한" pair returning across scenes), and the
+   **essay frame** `X은 ~였는데요` / `X은 ~입니다` that announces a question or a problem
+   instead of asking it. Name the shape and the shots it sits in; never write the corrected
+   sentence — the structure of an example leaks into the rewrite
 3. **Factual mismatch** — a number, date, or proper noun differs from research.md.
    **Collapsing a range to its upper bound is distortion too** ("300만~500만" → "500만").
    The subtitle (`sub`) and the TTS (`tts`) carrying different values belongs here as well
@@ -603,7 +612,8 @@ reviewer quotes its output as the evidence.
 
 - **Human style (40)**: all three surfaces exit 0 with 0–2 S2 findings 15 / sentence lengths
   have rhythm and C7 doesn't fire 10 / no structural AI tells (antithesis, three-item lists,
-  preachy closers) 10 / no assistant-speak or stock phrases 5
+  preachy closers, the §D10 essay shapes — a device repeated, a reprised antithesis, an
+  announced question) 10 / no assistant-speak or stock phrases 5
 - **Hook and delivery (30)**: the cover hook has tension and the topic word is visible —
   **look at the first frame, the title, and the first line seg ① separately**. On a short:
   title 5 + seg ① 5 — the first frame opens a gap, and a result or ending there is P0-15, not
@@ -776,10 +786,21 @@ the reviewer still checks whether the declared type tells the truth.
     `COMPREHENSION.answer` nor `COMPREHENSION.takeaway`, or it opens an undeclared supporting
     question. This is a stricter form of “no role” for informational shorts: interesting evidence
     is still a branch when the viewer has to remember it beside the governing question
-14. **Required HTML explanation routed elsewhere** — a scene lists periods or dated events,
-    presents a measured statistic, or explains a principle but `shot.infoType` says `other` or
-    its visual is not the required seekable editorial diagram. A matching field with the wrong
-    role, missing `motionBeats`, or a narration group with no semantic primitive is the same defect
+14. **Required explanation routed elsewhere** — a scene lists periods or dated events,
+    presents a measured statistic, or explains a principle but `shot.infoType` says `other`, or
+    its visual is neither a seekable editorial diagram nor a footage slide whose `labels` put
+    the value on screen (scenes-schema §slide scenes — the footage route is the default under
+    the static-ground limit; the plate is for a one-sentence verdict). On the editorial route a
+    wrong role, missing `motionBeats`, or a narration group with no semantic primitive is the
+    same defect; on the footage route empty `labels` is
+16. **One picture under the narration** — the scene's picture does not change for longer than
+    the channel's static-ground limit (`window.MOTION_POLICY.maxStaticGroundSeconds`, default
+    4 s): a points still under two or more sentences, an HTML plate or kinetic screen that runs
+    the whole scene, a photo that only pans or zooms. Captions changing, a number counting up,
+    a Ken Burns move and ambient drift do not reset the clock; only a generated clip, a
+    recording, or a new still under the next sentence does (owner directive 2026-09-03 —
+    "the viewer has to feel a video: image changes, animation, camera moves"). `check-scenes.js`
+    blocks the estimate; here read the plan and say which sentences share one picture
 15. **Hook dumps the answer on a short** — the cover's title, hero stat, or spoken text
     contains `COMPREHENSION.answer`, or the cover uses `hookType:"spoiler"` / `hookForm:"payoff"`.
     The last drip is the first place the answer is complete
@@ -895,6 +916,10 @@ check never ran.
    episode while an alternative exists. The episode's topic word is exempt (it should repeat)
 7. **Off-target vocabulary** — words profile §3's target doesn't use. Industry jargon
    mistaken for viewer speech
+8. **Essay endings on a spoken surface** — a sentence closed on a bare noun ("~는 것."), the
+   `~셈입니다` wrap-up, the stock reveal line (korean-style §D10). check-style.py flags the
+   enumerable ones (P0-1 covers those); a "writer's flourish" reading of one of them is not a
+   pass — hand the sentence to copy mode, which owns sentence shape, and say so in the tail
 
 ## Per-scene axes (additive out of 100 — scored separately for each scene)
 

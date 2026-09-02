@@ -392,6 +392,37 @@ PATTERNS: list[Pattern] = [
     ("D9b", "S2", "diary-style past ending (-았다/었다/였다/했다)",
      re.compile(r"(았|었|였|했)다(?=[\"'”’」』)\]]*\s*(?:[.!?…]|\n|$))", re.M), 1,
      "Casual spoken form — '만들었다' → '만들었어'. One is tolerated (penalty from the second)"),
+    # --- D10 essay rhetoric on spoken surfaces (owner directive 2026-09-03) ---------------
+    # A 44-sentence board passed narration 99 · copy 92 · lexicon 96 and the owner still read
+    # it as machine prose. What the three reads let through was not vocabulary but sentence
+    # rhetoric: a sentence closed on a bare noun, a stock reveal line, an A-to-B reframe with an
+    # abstract subject, an essay wrap-up ending. Each of these is a shape a person does not
+    # produce when talking to the colleague at the next desk. The evidence grade is a user
+    # directive plus that one measured board, so the family stays narrow and enumerated.
+    # Sentence-final anchoring reuses D9's lookahead — closing quotes and brackets may sit
+    # between the word and the stop.
+    ("D10", "S1", "sentence closed on a bare noun (~는 것.)",
+     re.compile(r"[가-힣]\s?것(?=[\"'”’」』)\]]*\s*(?:[.!?…]|\n|$))", re.M), 0,
+     "Finish the sentence with a verb — say who did what"),
+    # The reveal and drama stock lines. '하나뿐' on its own is ordinary speech ('남은 건
+    # 하나뿐이야'); only the '(근거|이유|답|설명)은 하나' frame is the tell.
+    ("D10b", "S2", "stock reveal or drama line",
+     re.compile(r"(결과는\s*(정반대|달랐|의외|충격)|(근거|이유|답|설명|방법)[은는]\s*(딱\s*)?하나(였|입니다|뿐|예요|이었|다\b)"
+                r"|시간이\s*많지\s*않|놀랍게도|충격적이게도|흥미롭게도|여기서\s*반전|반전은\s)"), 0,
+     "State the fact itself — what was measured, what is left, what happens"),
+    # The A→B reframe ("X에서 Y로 바꿔 놓았다") and the abstract subject that does the
+    # changing ("측정이 … 바꿔 놓았다") are one habit: an inanimate noun rewrites the world in
+    # one verb. People say who found what. T13 keeps its narrow '말해 준다' branch at S3.
+    ("D10c", "S2", "A-to-B reframe or abstract subject that changes things",
+     re.compile(r"에서\s*[^.!?\n]{1,30}?[으]?로\s*(바꿔\s*놓|바꾸어\s*놓|바꿨|바꾸었|탈바꿈|다시\s*썼|다시\s*쓰)"
+                r"|(것|측정|결과|연구|발견|사실|기술|데이터|숫자|분석|조사)[이가]\s*[^.!?\n]{0,40}?"
+                r"(바꿔\s*놓|바꾸어\s*놓|바꿨|바꾸었|만들었|만듭니다|이끌|가져왔|증명(했|합니다))"), 0,
+     "Name the person and the verb — who measured, what they found"),
+    # The essay wrap-up. D4 already lists '~인 셈이다' (from the second hit); the polite spoken
+    # forms are the same move and fire from the first.
+    ("D10d", "S2", "essay wrap-up ending (~한 셈입니다)",
+     re.compile(r"[가-힣]\s?셈(입니다|이죠|이에요|이지요|이었|이네요)(?=[\"'”’」』)\]]*\s*(?:[.!?…]|\n|$))", re.M), 0,
+     "Say the thing itself instead of summing it up"),
 
     # --- Structure and rhythm C ----------------------------------------------
     # `데,` can't be caught by enumeration — it attaches to any stem (많은데·비싼데·
@@ -495,13 +526,13 @@ SURFACE_CFG = {
     # 나온다"·"전에는 사흘이었다"); subtitles and cards are fragments, not sentences.
     # yt titles are headline register, where '-ㄴ다' is normal phrasing.
     "narration": {"emoji": 0, "len": (8, 25), "off": ("C7", "D9", "D9b")},
-    "subtitle":  {"emoji": 0, "len": (0, 30), "off": ("C3", "C5", "C6", "C7", "D9", "D9b")},
+    "subtitle":  {"emoji": 0, "len": (0, 30), "off": ("C3", "C5", "C6", "C7", "D9", "D9b", "D10", "D10b", "D10c", "D10d")},
     # Card text is title/label fragments, so rhythm rules don't fit. Lexical tells only.
-    "screen":    {"emoji": 0, "len": None,    "off": ("C1", "C3", "C5", "C6", "C7", "T9", "D9", "D9b")},
+    "screen":    {"emoji": 0, "len": None,    "off": ("C1", "C3", "C5", "C6", "C7", "T9", "D9", "D9b", "D10", "D10b", "D10c", "D10d")},
     "threads":   {"emoji": 1, "len": None,    "off": ("C5",)},
     "ig":        {"emoji": 3, "len": None,    "off": ()},
     "fb":        {"emoji": 2, "len": None,    "off": ("C3", "C6")},
-    "yt":        {"emoji": 2, "len": None,    "off": ("C1", "C3", "C5", "C6", "C7", "T9", "D9", "D9b")},
+    "yt":        {"emoji": 2, "len": None,    "off": ("C1", "C3", "C5", "C6", "C7", "T9", "D9", "D9b", "D10", "D10b", "D10c", "D10d")},
     # A4 is off — "안녕하세요" in a comment reply is the standard golden-hour opener
     # (playbook principle 4).
     "reply":     {"emoji": 1, "len": None,    "off": ("C3", "C5", "C6", "A4")},
@@ -1371,6 +1402,26 @@ SELFTEST = [
      "자료가 말해 주는 것은 분명해요.\n이 수치는 물가가 올랐다는 뜻을 말해 준다고 해요.\n"
      "이 수치는 물가가 올랐다는 뜻을 말해 준다는 점에서 중요해요.\n",
      (), ("T13",)),
+    # D10 family — the essay rhetoric an owner read as machine prose on a board that had
+    # passed three reviews (2026-09-03). Narration is the surface it was caught on.
+    ("D10 bare-noun close detected", "narration", 2,
+     "저 섬사람들이 이런 걸 해냈을 리 없다는 것.\n", ("D10",)),
+    ("no D10 false positive on 것 inside the sentence or before a copula", "narration", 0,
+     "그건 어제 산 것이에요.\n좋은 것 같아요.\n이걸로 할 것입니다.\n", (), ("D10",)),
+    ("D10b stock reveal lines detected", "narration", 1,
+     "그런데 결과는 정반대였습니다.\n근거는 하나였습니다.\n그 답을 찾을 시간이 많지 않습니다.\n", ("D10b",)),
+    ("no D10b false positive on everyday 하나뿐 and 시간", "threads", 0,
+     "남은 건 하나뿐이야.\n시간이 많아서 천천히 했어.\n", (), ("D10b",)),
+    ("D10c reframe with an abstract subject detected", "threads", 0,
+     "성분을 잰 것이 이 도시를 지었을 리 없는 도시에서 골라 지은 도시로 바꿔 놓았습니다.\n", ("D10c",)),
+    ("no D10c false positive on a place-to-place move", "narration", 0,
+     "서울에서 부산으로 옮겼어요.\n이 결과가 마음에 들어요.\n", (), ("D10c",)),
+    ("D10d essay wrap-up detected", "narration", 0,
+     "자기들이 한 일을 돌에 적어 둔 셈입니다.\n", ("D10d",)),
+    ("no D10d false positive mid-sentence", "narration", 0,
+     "그런 셈이라고 치고 넘어가요.\n", (), ("D10d",)),
+    ("D10 stays off on fragment surfaces", "screen", 0,
+     "해냈을 리 없다는 것\n결과는 정반대\n", (), ("D10", "D10b")),
 ]
 
 
