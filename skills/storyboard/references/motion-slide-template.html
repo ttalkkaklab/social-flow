@@ -345,6 +345,8 @@
   .foot::before{content:""; width:36px; height:var(--hair); background:var(--line); flex:none}   /* 출처 줄은 액센트 자리가 아니다 — 값의 사슬(태그·단위·밑줄·스파인)에만 */
 
   /* 사진 컷(photo-action) — 사진이 풀블리드로 깔리고 스크림이 글자 자리를 어둡게 한다. */
+  /* 사진·스크림은 rv 래퍼까지 흐름에서 뺀다 — 스테이지가 flex 라 빈 래퍼도 gap 40px 을 만든다 */
+  .rv:has(> .photo), .rv:has(> .scrim){position:fixed; inset:0; z-index:-2; pointer-events:none}
   .photo{position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:-2}
   .scrim{position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:
@@ -490,11 +492,11 @@ const SLIDE_SHOT = 0;
   const date = (rg, when, what, o = {}) =>
     rv(rg, '<div class="date"><span class="when">' + em(when) + '</span><span class="what">' + em(what || "") + "</span></div>",
       { fx: "mask", i: o.i || 0, dim: o.dim, lead: o.lead, primitive: "date-enter" });
-  const range = (rg, o = {}) => rv(rg, '<div class="range"></div>', { fx: "grow", i: o.i || 0, sv: o.sv, primitive: "range-grow" });
-  const link = (rg, o = {}) => rv(rg, '<div class="link"></div>', { fx: "draw", i: o.i || 0, sv: o.sv, primitive: "event-link" });
+  const range = (rg, o = {}) => rv(rg, '<div class="range"></div>', { fx: "grow", i: o.i || 0, sv: o.sv, lead: o.lead, primitive: "range-grow" });
+  const link = (rg, o = {}) => rv(rg, '<div class="link"></div>', { fx: "draw", i: o.i || 0, sv: o.sv, lead: o.lead, primitive: "event-link" });
   const dots = (rg, count, o = {}) => rv(rg, '<div class="dots">' + Array.from({length:Math.max(1, Math.min(100, count))}, () => "<b></b>").join("") + "</div>",
     { fx: "in", i: o.i || 0, sv: o.sv, lead: o.lead, primitive: "dot-fill" });
-  const axis = (rg, o = {}) => rv(rg, '<div class="axis"></div>', { fx: "draw", i: o.i || 0, sv: o.sv, primitive: "axis-draw" });
+  const axis = (rg, o = {}) => rv(rg, '<div class="axis"></div>', { fx: "draw", i: o.i || 0, sv: o.sv, lead: o.lead, primitive: "axis-draw" });
   const flow = (rg, from, to, o = {}) => rv(rg,
     '<div class="flow"><span class="node rv fx-in" data-rg="' + rg + '">' + em(from) + '</span><span class="flow-line rv fx-draw" data-rg="' + rg + '"></span><span class="node rv fx-in" data-rg="' + rg + '" style="--i:1">' + em(to) + "</span></div>",
     { fx: "none", i: o.i || 0, dim: o.dim, lead: o.lead, primitive: "flow-trace" });
@@ -507,10 +509,10 @@ const SLIDE_SHOT = 0;
   /* 원리 도형 — 글자 없이 자리·접촉·경계가 문장을 설명한다. label 은 scenes.js 에서만. */
   const disk = (rg, o = {}) => rv(rg,
     '<span class="shape-item"><i class="shape-disk" style="--d:' + (o.d || 120) + 'px"></i>' + cap(o.label) + "</span>",
-    { fx: o.fx || "rise", i: o.i || 0, primitive: o.primitive || "shape-enter" });
+    { fx: o.fx || "rise", i: o.i || 0, lead: o.lead, primitive: o.primitive || "shape-enter" });
   const ring = (rg, o = {}) => rv(rg,
     '<span class="shape-item"><i class="shape-ring" style="--d:' + (o.d || 180) + 'px"></i>' + cap(o.label) + "</span>",
-    { fx: o.fx || "draw", i: o.i || 0, primitive: o.primitive || "shape-draw" });
+    { fx: o.fx || "draw", i: o.i || 0, lead: o.lead, primitive: o.primitive || "shape-draw" });
   /* 프레스 — 베드와 캡션이 먼저 서고 원반만 --press 만큼 떨어져 베드에 닿는다(한 이벤트, --lead 시차). */
   const press = (rg, o = {}) =>
     '<div class="shape-press">' +
@@ -518,7 +520,7 @@ const SLIDE_SHOT = 0;
       rv(rg, '<i class="shape-bed" style="--bed:' + (o.bed || 220) + 'px"></i>' + cap(o.label), { fx: "fade", i: o.i || 0, lead: o.lead }) +
     "</div>";
   const shift = (rg, html, o = {}) =>
-    rv(rg, html, { fx: "travel", i: o.i || 0, dir: o.dir || "right", primitive: o.primitive || "shape-travel" });
+    rv(rg, html, { fx: "travel", i: o.i || 0, dir: o.dir || "right", lead: o.lead, primitive: o.primitive || "shape-travel" });
   const arts = (S.visual && S.visual.slide && S.visual.slide.arts) || [];
   const artSrc = i => {
     const a = arts[i];
@@ -542,20 +544,20 @@ const SLIDE_SHOT = 0;
     const lab = o.label != null ? o.label : "";
     return rv(rg, '<div class="fig"><img class="art" src="' + esc(artSrc(i)) + '" alt="">' +
       (lab ? '<span class="fig-lab">' + em(lab) + "</span>" : "") + "</div>", {
-      fx: fx === "none" ? "none" : fx, i: o.i || 0,
+      fx: fx === "none" ? "none" : fx, i: o.i || 0, lead: o.lead,
       dir: o.dir || a.dir || "", primitive: o.primitive || "shape-enter"
     });
   };
   const stem = (rg, o = {}) =>
-    rv(rg, '<i class="stem"></i>', { fx: "draw", i: o.i || 0, dir: "down", sv: o.sv, primitive: o.primitive || "shape-draw" });
+    rv(rg, '<i class="stem"></i>', { fx: "draw", i: o.i || 0, dir: "down", sv: o.sv, lead: o.lead, primitive: o.primitive || "shape-draw" });
   const bus = (rg, o = {}) =>
-    rv(rg, '<i class="bus"></i>', { fx: "draw", i: o.i || 0, cls: "span", sv: o.sv, primitive: o.primitive || "shape-draw" });
+    rv(rg, '<i class="bus"></i>', { fx: "draw", i: o.i || 0, cls: "span", sv: o.sv, lead: o.lead, primitive: o.primitive || "shape-draw" });
   const chamber = (rg, html, o = {}) =>
     rv(rg, '<div class="chamber"><i></i>' + html + "</div>",
-      { fx: o.fx || "rise", i: o.i || 0, primitive: o.primitive || "shape-enter" });
+      { fx: o.fx || "rise", i: o.i || 0, lead: o.lead, primitive: o.primitive || "shape-enter" });
   /* 출처 줄 — 바탕(그룹 0)에 둔다. 숫자가 뜨는 모든 클립에 출처가 같이 있어야 한다. */
   const vdiv = (rg, o = {}) => rv(rg, '<i class="vdiv"></i>', { fx: "draw", dir: "down", i: o.i || 0, lead: o.lead });
-  const foot = (rg, text, o = {}) => rv(rg, '<div class="foot">' + em(text) + "</div>", { fx: "fade", i: o.i || 0 });
+  const foot = (rg, text, o = {}) => rv(rg, '<div class="foot">' + em(text) + "</div>", { fx: "fade", i: o.i || 0, lead: o.lead });
   /* 사진 컷 — 풀블리드 사진과 스크림. 둘 다 바탕(그룹 0)에 두고, 대상의 변화는 그룹별 요소가 맡는다. */
   const photo = (rg, src, o = {}) => rv(rg, '<img class="photo" src="' + esc(String(src).replace(/^slides\//, "")) + '" alt="">', { fx: "none" });
   const scrim = (rg) => rv(rg, '<div class="scrim"></div>', { fx: "none" });

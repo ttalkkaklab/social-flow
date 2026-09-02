@@ -523,10 +523,15 @@ const openPage = async () => {
       range.selectNodeContents(n);
       for (const r of range.getClientRects()) add(r);
     }
-    for (const el of stage.querySelectorAll("img,video,svg,canvas")) add(el.getBoundingClientRect());
+    // A fixed layer is a ground layer, not zone content — h.photo and h.scrim cover the whole
+    // canvas, and counting them reported 100%×100% for a frame carrying two captions, which is
+    // exactly the composition this measurement exists to catch (measured 2026-09-02).
+    const isGround = el => getComputedStyle(el).position === "fixed";
+    for (const el of stage.querySelectorAll("img,video,svg,canvas"))
+      if (!isGround(el)) add(el.getBoundingClientRect());
     for (const el of stage.querySelectorAll("*")) {
       const s = getComputedStyle(el);
-      if (s.visibility === "hidden" || +s.opacity === 0) continue;
+      if (s.visibility === "hidden" || +s.opacity === 0 || s.position === "fixed") continue;
       const painted = (s.backgroundColor !== "rgba(0, 0, 0, 0)" && s.backgroundColor !== "transparent")
         || s.backgroundImage !== "none"
         || ["Top", "Right", "Bottom", "Left"].some(d => parseFloat(s["border" + d + "Width"]) > 0);

@@ -301,7 +301,7 @@ const SLIDE_SHOT = 0;
   const band = (rg, text, o = {}) =>
     rv(rg, '<div class="band ' + (o.tone || "accent") + '"><span class="mk"><span>' + em(text) + "</span></span></div>",
        { fx: "plate", i: o.i || 0, lead: o.lead, dim: o.dim });
-  const foot = (rg, text, o = {}) => rv(rg, '<div class="foot">' + em(text) + "</div>", { fx: "fade", i: o.i || 0 });
+  const foot = (rg, text, o = {}) => rv(rg, '<div class="foot">' + em(text) + "</div>", { fx: "fade", i: o.i || 0, lead: o.lead });
   const cast = Array.isArray(slide.cast) ? slide.cast : [];
   const tableau = () => {
     const appearedAt = id => {

@@ -304,12 +304,20 @@ function checkDir(dir, only, opts) {
          바탕층이라 허용하고, 저작 영역(render 함수 ~ SEEK-RUNTIME-BEGIN)에서는 막는다. 저작
          코드가 그라데이션을 쓰는 자리는 글자·막대·도형뿐이고 그게 생성형 표식이다. */
       {
-        const startFn = kind === "kinetic" ? /function\s+renderKinetic\s*\(/ :
-          kind === "character" ? /function\s+renderCharacter\s*\(/ : /function\s+renderSlide\s*\(/;
-        const start = code.search(startFn);
-        const stop = code.indexOf("SEEK-RUNTIME-BEGIN", start >= 0 ? start : 0);
-        const authored = start >= 0 ? code.slice(start, stop >= 0 ? stop : code.length) : "";
-        if (/\b(?:linear|conic|radial)-gradient\s*\(/i.test(authored)) fail(base, MSG.gradientAuthored);
+        const fnName = kind === "kinetic" ? "renderKinetic" : kind === "character" ? "renderCharacter" : "renderSlide";
+        /* 화살표 대입형(const renderSlide = (S, h) => {)도 잡는다 — 선언형만 찾으면 저작 영역이
+           빈 문자열이 되어 검사가 조용히 통과한다. 못 찾으면 머리 <style> 뒤부터 본다. */
+        const start = code.search(new RegExp("function\\s+" + fnName + "\\s*\\(|\\b" + fnName + "\\s*=\\s*(?:async\\s*)?\\(?"));
+        const headEnd = code.indexOf("</style>");
+        const from = start >= 0 ? start : (headEnd >= 0 ? headEnd : 0);
+        const stop = code.indexOf("SEEK-RUNTIME-BEGIN", from);
+        const authored = code.slice(from, stop >= 0 ? stop : code.length);
+        /* 머리 CSS 도 본다 — 템플릿이 새 부품 CSS 를 머리에 더하라고 안내하니 저작자의 손이 닿는다.
+           템플릿 자신의 그라데이션은 사진 컷 스크림 하나뿐이라 그 규칙만 빼고 검사한다.
+           머리는 render 함수 앞 구간이다(저작 코드가 문자열로 뱉는 <style> 과 겹치지 않게). */
+        const headCss = start > 0 ? code.slice(0, start).replace(/\.scrim\s*\{[^}]*\}/g, "") : "";
+        if (/\b(?:linear|conic|radial)-gradient\s*\(/i.test(authored) ||
+            /\b(?:linear|conic|radial)-gradient\s*\(/i.test(headCss)) fail(base, MSG.gradientAuthored);
       }
       const radii = [...code.matchAll(/border-radius\s*:\s*(\d+(?:\.\d+)?)px/gi)].map(m => Number(m[1]));
       const cardRadius = radii.find(r => r >= 8);
@@ -393,6 +401,10 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.scrim{background:linear-gradient(to top,#000,transparent)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
     // 저작 영역의 그라데이션은 글자·막대에 쓰인 것이라 막는다
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.hero{background:linear-gradient(90deg,#f00,#00f)}</style>' + h.count(1, 3); }`, [MSG.gradientAuthored]],
+    /* 화살표 대입형에서도 저작 영역을 찾아야 한다 — 선언형만 찾으면 검사가 조용히 통과했다(리뷰 실측) */
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; const renderSlide = (S, h) => { return '<style>.hero{background:linear-gradient(90deg,#f00,#00f)}</style>' + h.count(1, 3); };`, [MSG.gradientAuthored]],
+    /* 머리 CSS 에 더한 그라데이션도 막는다 — 스크림 규칙 하나만 예외다 */
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.scrim{background:linear-gradient(to top,#000,transparent)} .rule{background:linear-gradient(90deg,#f00,#00f)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [MSG.gradientAuthored]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.x{background-clip:text}</style>'; }`, [MSG.generatedStyle]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; requestAnimationFrame(step);`, [MSG.motionClock]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; @font-face{src:url("https://x/y.woff2")}`, [MSG.webfont]],

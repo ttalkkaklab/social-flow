@@ -260,7 +260,7 @@ const SLIDE_SHOT = 0;
   const rule = (rg, o = {}) => rv(rg, '<div class="rule"></div>', { fx: "draw", lead: o.lead });
   const disk = (rg, o = {}) => rv(rg,
     '<span class="shape-item"><i class="shape-disk" style="--d:' + (o.d || 120) + 'px"></i></span>',
-    { fx: o.fx || "travel", i: o.i || 0, dir: o.dir || "right" });
+    { fx: o.fx || "travel", i: o.i || 0, dir: o.dir || "right", lead: o.lead });
   const arts = (S.visual && S.visual.slide && S.visual.slide.arts) || [];
   const artSrc = i => {
     const a = arts[i];
@@ -272,10 +272,10 @@ const SLIDE_SHOT = 0;
     if (!a) return "";
     const fx = o.fx || a.move || "travel";
     return rv(rg, '<img class="art" src="' + esc(artSrc(i)) + '" alt="">', {
-      fx: fx === "none" ? "none" : fx, i: o.i || 0, dir: o.dir || a.dir || "right"
+      fx: fx === "none" ? "none" : fx, i: o.i || 0, lead: o.lead, dir: o.dir || a.dir || "right"
     });
   };
-  const foot = (rg, text, o = {}) => rv(rg, '<div class="foot">' + em(text) + "</div>", { fx: "fade", i: o.i || 0 });
+  const foot = (rg, text, o = {}) => rv(rg, '<div class="foot">' + em(text) + "</div>", { fx: "fade", i: o.i || 0, lead: o.lead });
   const h = { esc, em, rv, stage: stageCls, tag, word, line, sub, cross, band, rule, disk, art, foot, arts, labels, L: i => esc(labels[i] || "") };
 
   /* ✎ 이 함수만 씬의 말로 다시 쓴다 ──────────────────────────────
