@@ -142,13 +142,15 @@ MIN_DUR=${MIN_DUR:-4.0}            # minimum card display time
 MAX_DUR=${MAX_DUR:-13.0}           # warn when exceeded (signal to shorten the script)
 RATE_TOL=${RATE_TOL:-0.05}
 ATEMPO_MIN=${ATEMPO_MIN:-0.88}; ATEMPO_MAX=${ATEMPO_MAX:-1.18}
-# The playback factor speedup.sh will apply after this build (produce §7.5). Both scripts read the
-# same format.env, so the value is shared; the inline default matches speedup.sh's.
+# The playback factor speedup.sh will apply after this build (produce §7.5). produce §2 appends the
+# channel's factor to .work/format.env, which both scripts source, so the build and the pass agree.
+# Sourced above; the inline default matches speedup.sh's for a hand-run build with no format.env.
 SPEED=${SPEED:-1.2}
 # The ship gate measures 6.2 chars/s on the **sped-up** subtitles, so the cap this build may pass is
 # 6.2/SPEED. Leaving it at 6.2 lets a card clear every writing check and then hard-block in §7.5.
 RATE_LO=${RATE_LO:-3.2}
-RATE_HI=${RATE_HI:-$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", 6.2 / f}')}
+RATE_HI=${RATE_HI:-$(awk -v f="$SPEED" 'BEGIN{if (f < 0.5 || f > 3.0) exit 1; printf "%.2f", 6.2 / f}')}
+[ -n "$RATE_HI" ] || { echo "✗ SPEED $SPEED is outside 0.5~3.0 — same range speedup.sh accepts" >&2; exit 1; }
 BGM_SEP=${BGM_SEP:-10}             # LU the bed sits under the measured speech loudness (see bgm-scoring.md)
 BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # below this the build stops — the music is competing with the voice
 BGM_LOOP_XF=${BGM_LOOP_XF:-2.0}    # crossfade when a cue is shorter than its span

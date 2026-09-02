@@ -402,6 +402,18 @@ function selftest() {
        has: Object.assign({}, base.has, { video: true, spedUp: false })
      }), 'published').some((x) => /un-sped/.test(x)));
 
+  // The report is appended to, so a rerun at another factor leaves both verdicts in it. These
+  // read real report text — the cases above hand speechRateChecked in already decided.
+  const tmp = path.join(require('os').tmpdir(), 'episode-state-selftest-' + process.pid + '.txt');
+  const withReport = (body) => { fs.writeFileSync(tmp, body); return hasFinalRateMarker(tmp); };
+  ok('an earlier PASS does not clear a later FAIL',
+     withReport('── PASS final speech rate: 5.0\n── speedup x1.20\n── FAIL final speech rate: 6.6\n') === false);
+  ok('a rerun that ends in PASS reads as PASS',
+     withReport('── FAIL final speech rate: 6.6\n── PASS final speech rate: 5.0\n') === true);
+  ok('a report with no verdict line reads as false', withReport('── speedup x1.20\n') === false);
+  fs.unlinkSync(tmp);
+  ok('a missing report has no verdict', hasFinalRateMarker(tmp) === null);
+
   if (failed) { process.stderr.write(failed + ' check(s) failed\n'); process.exit(1); }
   process.stdout.write('episode-state selftest OK\n');
 }

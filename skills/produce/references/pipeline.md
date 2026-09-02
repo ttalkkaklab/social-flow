@@ -85,7 +85,7 @@ reach for an xfade there, which is safe inside one encode and still banned at th
 | `drift` ≠ 0.0000s | **Do not proceed** — pipeline bug |
 | `missing reveal state: r<k>` | **Do not proceed** — capture the missing state and split that segment into `A\|B` sub-reveals, then rebuild |
 | `last reveal state unused` | **Do not proceed** — the last bullet/source never appears in the video. If `no reveals.tsv` shows, this check is off (capture-reveals.sh wasn't used) |
-| `REGEN recommended` (speech rate outside [3.2,6.2] · clipped ending) | Regenerate only that card once with the same registry → rebuild. If it repeats, shorten the script |
+| `REGEN recommended` (speech rate outside [3.2, 6.2/factor] — 5.17 at the 1.2 default · clipped ending) | Regenerate only that card once with the same registry → rebuild. If it repeats, shorten the script |
 | `boundary proportional fallback` | OK to continue — if it recurs, fix the script's sentence boundaries (periods) |
 | `segment window under 0.9s` | Merge the short sentence with a neighbor |
 | `min gap between reveals <0.40s` | Trim bullets or lengthen the sentence |

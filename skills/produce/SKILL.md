@@ -194,6 +194,10 @@ data/<channel>/episodes/<topic>/
   ```bash
   PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
   node $PG/format-resolve.js storyboard/scenes.js --sh > .work/format.env
+  # profile.md §2's Playback speed — no line there, 1.2. Written once here because both
+  # build-reel.sh and speedup.sh source this file, so the build's caps and the shipped
+  # factor can't drift apart.
+  echo ": \"\${SPEED:=<the factor from profile.md §2>}\"" >> .work/format.env
   ```
 
   Top-level `window.FORMAT` in `scenes.js` is the format axis, and **without it the format
@@ -205,7 +209,9 @@ data/<channel>/episodes/<topic>/
 
   The capture calls take this file as a **command-line prefix** (§4). `export` won't carry
   it — the Bash tool starts a fresh shell per call, so an exported variable dies with that
-  call.
+  call. That's why the playback factor goes in here too: `build-reel.sh` sizes its speech-rate
+  band and its chapter minimum from it, and §7.5's pass takes its factor from the same line, so
+  the build and the ship can't disagree about the speed.
 - **Don't delete `.work/cost-tally.tsv`** — it's the episode ledger where storyboard already
   wrote the image costs, and §10 totals storyboard through video out of that one file. If
   the file isn't there, start a new one from this episode, but if `storyboard/images/*.png`

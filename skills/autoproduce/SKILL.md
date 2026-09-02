@@ -741,12 +741,14 @@ lengths**. If they diverge, don't queue it.
 **Then run the speed pass — every episode, no exception** (produce §7.5). It
 picks the spliced set on its own when a splice ran:
 
-Read the channel's **Playback speed** line in `profile.md` §2 (§1 already loaded the
-file) and pass it — omitting the argument means 1.2, so a channel that wrote `1.0`
-to ship at its recorded pace would silently go out sped up.
+The factor comes from `.work/format.env` — produce §2 wrote the channel's
+**Playback speed** there, and the pass sources it. Confirm the line is in the file
+before running; without it a channel that wrote `1.0` to ship at its recorded pace
+goes out at 1.2.
 
 ```bash
-$REF_P/speedup.sh .work "$SPEED_FACTOR"   # profile.md §2; no line → 1.2
+grep SPEED .work/format.env     # : "${SPEED:=1.0}" — profile.md §2; no line → 1.2
+$REF_P/speedup.sh .work
 ```
 
 Unattended, the marker is the check: `build-report.txt` has to gain a
