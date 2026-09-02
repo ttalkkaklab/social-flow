@@ -28,7 +28,11 @@ action — is a **footage slide** (`treatment:"footage"`): one generated clip pe
 inside the same HTML lane, with wordless accent-colour marks (a route, an X, a ring,
 hatching, brackets) drawn on over the picture and, when a mark has to pass behind the
 people, a subject matte laid back on top. Cuts land on sentence starts; the clips are
-budgeted on the approval screen rather than counted against the generated-video cap. Narration defaults to **your own voice on every scene**, so
+budgeted on the approval screen rather than counted against the generated-video cap — the
+channel's `video_budget_usd` (default $10 an episode) is the ceiling, and it is the default
+ground for every spoken beat: no picture may hold the screen longer than one sentence
+(`max_static_ground_seconds`, default 4 s), an authored plate is a one-sentence card
+(`html_plate_max`, default 2), and numbers go on the footage as labels. Narration defaults to **your own voice on every scene**, so
 the shooting script (`script.md`) carries the lines for every shot — filmed shots get
 what to show, what to say, and the filename to save it as; the rest are voice-only
 recordings.

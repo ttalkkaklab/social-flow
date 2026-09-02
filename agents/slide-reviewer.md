@@ -119,6 +119,12 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
    On a photo-backed slide, compare the subject and evidence themselves. A whole-frame
    pan/zoom, ambient drift, light pulse or overlay animation with an unchanged subject is a
    P0 even when pixels moved. Match each change to `visual.action` and `slide.plan`.
+   **Then the picture itself across groups** (slide-design §6 P0-11): lay the `g<k>-mid`
+   frames side by side and ask whether the picture — not the type, not the mark, not the
+   number — changed from one group to the next. The same plate, screen or photograph under
+   two or more sentences past the channel's static-ground limit (default 4 s, from
+   `window.MOTION_POLICY.maxStaticGroundSeconds`) is P0-11 whatever moved on top; a footage
+   slide clears it by construction when every group opens a different clip.
 7. **Durations** from `manifest.tsv` against the tokens and the cap, and the coverage
    warnings from `summary.json` — a group frozen past 40% of its segment with no sustain
    costs motion points.

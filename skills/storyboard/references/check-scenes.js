@@ -144,7 +144,14 @@ const MOTION_KINDS = ['ai-video', 'recording', 'motion-slide'];
 const MOTION_PROFILE_KEYS = [
   'motion_min_true', 'motion_allowed_kinds', 'motion_max_consecutive_stills',
   'motion_max_still_seconds', 'motion_require_action', 'generated_video_max',
+  'max_static_ground_seconds', 'html_plate_max', 'video_budget_usd',
 ];
+// Plugin-wide defaults (owner directive 2026-09-03 — "the viewer has to feel a video"). They
+// apply whether or not a profile declares a motion policy; a profile may raise, lower, or
+// switch each one off with `off`.
+const STATIC_GROUND_DEFAULT_SECONDS = 4;   // one picture may hold the screen this long
+const HTML_PLATE_DEFAULT_MAX = 2;          // authored plates per episode; the rest is footage
+const VIDEO_BUDGET_DEFAULT_USD = 10;       // generated video per episode — read by cost-preview.js
 
 function scalar(v) {
   if (v === undefined || v === null) return undefined;
@@ -195,6 +202,12 @@ function optionalNumber(v, errors, field, integer) {
   return n;
 }
 
+/** Like optionalNumber, but an undeclared key takes the plugin default instead of switching off. */
+function numberOrDefault(v, dflt, errors, field, integer) {
+  if (v === undefined || v === '') return dflt;
+  return optionalNumber(v, errors, field, integer);
+}
+
 function normalizeMotionPolicy(raw, defaultVideoMax, source) {
   const errors = [];
   const profileShape = raw && MOTION_PROFILE_KEYS.some((k) => raw[k] !== undefined);
@@ -231,12 +244,22 @@ function normalizeMotionPolicy(raw, defaultVideoMax, source) {
   const videoOverride = optionalNumber(
     scalar(pick('generated_video_max', 'generatedVideoMax')),
     errors, 'generated_video_max/generatedVideoMax', true);
+  const maxStaticGroundSeconds = numberOrDefault(
+    scalar(pick('max_static_ground_seconds', 'maxStaticGroundSeconds')), STATIC_GROUND_DEFAULT_SECONDS,
+    errors, 'max_static_ground_seconds/maxStaticGroundSeconds', false);
+  const htmlPlateMax = numberOrDefault(
+    scalar(pick('html_plate_max', 'htmlPlateMax')), HTML_PLATE_DEFAULT_MAX,
+    errors, 'html_plate_max/htmlPlateMax', true);
+  const videoBudgetUsd = numberOrDefault(
+    scalar(pick('video_budget_usd', 'videoBudgetUsd')), VIDEO_BUDGET_DEFAULT_USD,
+    errors, 'video_budget_usd/videoBudgetUsd', false);
 
   return {
     declared: !!raw && (profileShape || sceneShape), source: source || '', errors,
     minTrueMotion, allowedKinds: [...new Set(allowedKinds)].sort(), maxConsecutiveStills,
     maxStillSeconds, requireAction,
     generatedVideoMax: videoOverride === null ? defaultVideoMax : videoOverride,
+    maxStaticGroundSeconds, htmlPlateMax, videoBudgetUsd,
   };
 }
 
@@ -248,6 +271,9 @@ function policyComparable(p) {
     maxStillSeconds: p.maxStillSeconds,
     requireAction: p.requireAction,
     generatedVideoMax: p.generatedVideoMax,
+    maxStaticGroundSeconds: p.maxStaticGroundSeconds,
+    htmlPlateMax: p.htmlPlateMax,
+    videoBudgetUsd: p.videoBudgetUsd,
   });
 }
 
@@ -383,17 +409,9 @@ function check(win, fmt, opts) {
       });
     }
 
-    if (!draft && isShort && comp.mode === 'informational') {
-      const editorial = scenes.filter((scene) => {
-        const slide = scene && scene.visual && scene.visual.slide;
-        return slide && slide.motion === true && (slide.kind || 'diagram') === 'diagram' &&
-               slide.treatment === 'editorial';
-      });
-      if (editorial.length < 1)
-        bad('episode', 'no editorial HTML frame — a short informational episode needs 1–3 full-frame evidence, relationship, mechanism, timeline, statistic, transition, or verdict scenes');
-      else if (editorial.length > 3)
-        bad('episode', `${editorial.length} editorial HTML frames — short informational cap 3; keep contrast and give the remaining beats to footage or stills`);
-    }
+    /* Authored plates are optional and capped by the channel policy (htmlPlateMax below) — an
+       informational short used to require 1–3 editorial frames; since 2026-09-03 the numbers
+       go on footage by default and a plate is a one-sentence verdict. */
   }
 
   if (cover) {
@@ -629,6 +647,42 @@ function check(win, fmt, opts) {
     }
   }
 
+  /* ── Static ground (owner directive 2026-09-03) ──
+     A picture that stays the same while the narration runs is a slideshow, whatever moves on
+     top of it — captions, a counting number, a camera drift over one still. The clock resets
+     only when the picture itself changes: a generated clip (footage shot, motion background,
+     b-roll, quote clip), a recording, or a new still under the next sentence. An HTML plate is
+     one picture for its whole length, so a plate is a one-sentence card by construction. */
+  if (!draft && motionPolicy.maxStaticGroundSeconds !== null) {
+    const rate = (pacing && Number(pacing.rate)) || 4.5;
+    const secondsOf = (scene) => {
+      const n = Number(scene.duration);
+      if (Number.isFinite(n) && n > 0) return n;
+      const chars = (scene.narration || []).reduce((sum, seg) =>
+        sum + String((seg && (seg.tts || seg.sub)) || '').replace(/\s/g, '').length, 0);
+      return chars ? chars / rate + 0.85 : 0;
+    };
+    playbackShots(scenes).forEach((x) => {
+      const scene = x.scene;
+      const kind = motionKind(scene);
+      if (kind === 'ai-video' || kind === 'recording') return;
+      const segs = Array.isArray(scene.narration) ? scene.narration.length : 0;
+      const stillPerLine = segs > 1 && scene.narration.every((seg) => seg && seg.img);
+      const longest = stillPerLine ? secondsOf(scene) / segs : secondsOf(scene);
+      if (longest > motionPolicy.maxStaticGroundSeconds + 0.01)
+        bad('shot ' + (x.index + 1),
+            `one picture stays on screen ${longest.toFixed(1)}s — channel limit ${motionPolicy.maxStaticGroundSeconds}s; ` +
+            'give the beat a generated clip, a still per sentence, or cut the plate to one sentence');
+    });
+  }
+  if (!draft && motionPolicy.htmlPlateMax !== null) {
+    const plates = scenes.filter((scene) => scene && scene.type !== 'outro' && scene.visual &&
+      scene.visual.slide && scene.visual.slide.treatment !== 'footage');
+    if (plates.length > motionPolicy.htmlPlateMax)
+      bad('episode', `${plates.length} HTML plates — channel cap ${motionPolicy.htmlPlateMax}; ` +
+                     'put the numbers on footage (labels on a footage shot) and keep the plates for one-sentence verdicts');
+  }
+
   // ── Shot level ──
   const brollAfters = [];
   scenes.forEach((s, i) => {
@@ -730,14 +784,19 @@ function check(win, fmt, opts) {
       const expectedRole = INFO_ROLE[shot.infoType];
       const allowed = INFO_PRIMITIVES[shot.infoType];
       if (!slide) {
-        machine(where, `${shot.infoType} beat has no visual.slide — it must be a full-frame seekable HTML animation`);
+        machine(where, `${shot.infoType} beat has no visual.slide — it must be a footage slide with labels or a seekable editorial diagram`);
+      } else if (slide.treatment === 'footage') {
+        /* The footage route (default since 2026-09-03): the value the sentence states goes on
+           screen as a label over the moving clip; the mark points at what it counts. */
+        if (!Array.isArray(slide.labels) || !slide.labels.filter((l) => String(l || '').trim()).length)
+          machine(where, `${shot.infoType} beat on footage has no slide.labels — the value the sentence states has to be on screen`);
       } else {
         if ((slide.kind || 'diagram') !== 'diagram')
           machine(where, `${shot.infoType} beat uses kind:"${slide.kind}" — it must use kind:"diagram"`);
         if (slide.motion !== true)
           machine(where, `${shot.infoType} beat has no slide.motion:true — a still frame is not allowed`);
         if (slide.treatment !== 'editorial')
-          machine(where, `${shot.infoType} beat uses treatment:"${slide.treatment}" — it must use treatment:"editorial"`);
+          machine(where, `${shot.infoType} beat uses treatment:"${slide.treatment}" — it must use treatment:"editorial" or "footage" with labels`);
         if (slide.role !== expectedRole)
           machine(where, `${shot.infoType} beat uses slide.role:"${slide.role}" — expected "${expectedRole}"`);
 
@@ -877,7 +936,9 @@ function selftest() {
   const fmtLong = { format: 'youtube-long-16x9', label: 'test long',
                     pacing: { sceneMin: 6, sceneMax: 20, shotMin: 28, shotMax: 70 },
                     video: { generatedSecondsMax: 40 } };
-  const defaultPolicy = normalizeMotionPolicy(null, 2, 'test default');
+  // Legacy fixtures predate the static-ground and plate rules (2026-09-03); they run with the
+  // two switched off and the dedicated tests further down pin them.
+  const defaultPolicy = normalizeMotionPolicy({ max_static_ground_seconds: 'off', html_plate_max: 'off' }, 2, 'test default');
   const comprehension = {
     mode: 'informational', question: '무엇이 달라졌나요?', answer: '한 가지가 달라졌어요.',
     takeaway: '한 가지만 기억하면 돼요.', branches: [], terms: []
@@ -935,8 +996,8 @@ function selftest() {
      has(bads(run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', size: 'mcu', angle: 'eye', infoType: 'other' } })])), /no shot\.info/));
   ok('a narrated shot without shot.infoType is a violation',
      has(bads(run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', size: 'mcu', angle: 'eye', info: '정보' } })])), /no shot\.infoType/));
-  ok('an informational short needs an editorial HTML frame',
-     has(bads(run([Object.assign({}, cover, { visual: {} }), goodShot, goodShot, goodShot])), /no editorial HTML frame/));
+  ok('an informational short no longer needs an editorial HTML frame (plates are optional since 2026-09-03)',
+     !has(bads(run([Object.assign({}, cover, { visual: {} }), goodShot, goodShot, goodShot])), /no editorial HTML frame/));
   ok('a motion diagram declares its treatment',
      has(bads(run([Object.assign({}, cover, { visual: { slide: { motion: true } } }), goodShot, goodShot, goodShot])), /no slide\.treatment/));
   ok('an editorial frame declares role and motif',
@@ -998,6 +1059,36 @@ function selftest() {
   ok('footage shots do not spend a generated-video slot',
      !has(bads(run([cover, footageScene(), footageScene(), footageScene()])), /generated-video slots/));
   ok('a footage slide counts as ai-video for the motion floor', motionKind(footageScene()) === 'ai-video');
+
+  // ── static ground · plate cap · budget key (owner directive 2026-09-03) ──
+  const groundPolicy = normalizeMotionPolicy({ motion_min_true: 'off' }, 2, 'fixture');
+  ok('the new policy keys default plugin-wide',
+     groundPolicy.maxStaticGroundSeconds === 4 && groundPolicy.htmlPlateMax === 2 && groundPolicy.videoBudgetUsd === 10);
+  ok('a profile may set or switch the new keys off',
+     normalizeMotionPolicy({ max_static_ground_seconds: 'off', html_plate_max: 1, video_budget_usd: 6.5 }, 2, 'fixture').maxStaticGroundSeconds === null &&
+     normalizeMotionPolicy({ html_plate_max: 1, video_budget_usd: 6.5 }, 2, 'fixture').htmlPlateMax === 1 &&
+     normalizeMotionPolicy({ video_budget_usd: 6.5 }, 2, 'fixture').videoBudgetUsd === 6.5);
+  ok('a still that holds one picture past the limit is rejected',
+     has(bads(run([footageScene(), goodShot, footageScene()], null, { policy: groundPolicy })), /one picture stays on screen 6\.0s/));
+  ok('a footage slide never holds one picture',
+     !has(bads(run([footageScene(), footageScene(), footageScene()], null, { policy: groundPolicy })), /one picture stays/));
+  ok('a still per sentence resets the static-ground clock',
+     !has(bads(run([footageScene(), Object.assign({}, goodShot, { narration: [{ tts: '가', sub: '가', img: 'a.png' }, { tts: '나', sub: '나', img: 'b.png' }] }), footageScene()],
+                   null, { policy: groundPolicy })), /one picture stays/));
+  ok('a motion background resets the static-ground clock',
+     !has(bads(run([footageScene(), Object.assign({}, goodShot, { visual: { video: { engine: 'seedance', prompt: 'x' }, action: 'waves' } }), footageScene()],
+                   null, { policy: groundPolicy })), /one picture stays/));
+  ok('an HTML plate longer than the limit is one picture',
+     has(bads(run([footageScene(), Object.assign({}, cover, { duration: 9 }), footageScene()], null, { policy: groundPolicy })), /one picture stays on screen 9\.0s/));
+  const plateScene = (d) => Object.assign({}, cover, { type: 'points', beat: 'drip', hookType: undefined, hookForm: undefined, duration: d });
+  ok('HTML plates over the channel cap are rejected',
+     has(bads(run([footageScene(), plateScene(3), plateScene(3), plateScene(3)], null, { policy: groundPolicy })), /3 HTML plates — channel cap 2/));
+  const statFootage = (labels) => Object.assign({}, footageScene({ slide: { labels } }), {
+    shot: Object.assign({}, goodShot.shot, { infoType: 'statistic' }) });
+  ok('a statistic beat may be drawn on footage with labels',
+     !has(bads(run([cover, statFootage(['34개'])])), /must use treatment|motionBeats|no slide\.labels/));
+  ok('a statistic beat on footage without labels is a violation',
+     has(bads(run([cover, statFootage([])])), /no slide\.labels/));
   ok('an invented arts move is caught',
      has(bads(run([cover, Object.assign({}, goodShot, {
        visual: { slide: { file: 'slides/s2-k.html', kind: 'kinetic', motion: true, plan: 'x',

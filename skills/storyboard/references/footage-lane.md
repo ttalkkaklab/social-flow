@@ -27,11 +27,17 @@ subtitle spec built for plates.
 
 - The channel motion policy allows `ai-video`, and the beat shows **something happening** —
   people moving, a place, an action, a confrontation, a journey. On a history or story
-  channel that is most drip beats.
-- Not for a statistic, a timeline or a mechanism (`editorial`), a document or object changing
-  inside a photograph (`photo-action`), a talking head (a `quote` clip), or the cover (§cover —
-  its moving form is a motion background). One episode mixes them: footage for the events,
-  one or two editorial frames for the numbers.
+  channel that is most drip beats. **It is the default ground for every spoken beat** since
+  2026-09-03 (owner directive — "the viewer has to feel a video: image changes, animation,
+  camera moves"): the plugin's static-ground limit (scenes-schema §Channel true-motion policy,
+  `maxStaticGroundSeconds` 4) lets no picture hold the screen longer than one sentence, and
+  a footage slide clears it by construction because every group opens a new clip.
+- A statistic, a timeline or a mechanism goes on footage too, with the value as a `label` and
+  the mark on what it counts; the editorial plate is for the one-sentence verdict or a figure
+  that has to stand alone (`htmlPlateMax` 2 per episode). Not for a document or object
+  changing inside a photograph (`photo-action`), a talking head (a `quote` clip), or the cover
+  (§cover — its moving form is a motion background). One episode mixes them: footage for the
+  events and the numbers, at most two plates for the verdicts.
 - **A storyboard lane, not an autoproduce one.** The lane spends per sentence and puts a human
   at two places autoproduce has none — the cost gate (§3) and the marks read against the real
   clip (§4). autoproduce never plans a footage slide; a `scenes.js` handed to it that already
@@ -73,10 +79,26 @@ Footage clips are paid calls made before approval, so three things sit in front 
    cover, every b-roll and motion-background scene, and **every footage shot** in one call
    (the still prompt, the clip prompt, the four camera slots, the mark) and generate nothing
    before `PLAN_REVIEW: PASS`. Twenty shots are one delegation, not twenty.
-3. **The cost gate.** Run `cost-preview.js <storyboard dir>` and show the footage total to the
-   user (`footage/seedance` ≈ $0.06 a second, silent — a 5 s shot is $0.29, thirty shots about
-   $9, a two-minute episode of 56 shots about $16, times 1.5 for regenerations). One yes covers
-   the episode's footage shots; a shot added later is asked again.
+3. **The cost gate, inside the budget.** Run `cost-preview.js <storyboard dir>`. It reads the
+   channel's `video_budget_usd` (plugin default $10 — every generated clip of the episode,
+   billed and projected together; stills, TTS and music are outside it) and answers `!!` with
+   exit 1 when the board is over it. **Fit first, then ask** — the user is shown a number that
+   fits, never one to trim on the spot. The fitting ladder, cheapest loss first:
+   1. **Durations from the measured windows.** Once the narration wav exists, `duration` is
+      `ceil(window + 0.5)` with the Seedance floor of 4, where the window is the sentence's
+      measured length plus its gap (the last sentence + 0.45 s POST) — not the
+      `ceil(chars / 4.5) + 1` estimate the board was written with. The renderer does not
+      time-stretch: a clip shorter than its window freezes on the last frame, so the window is
+      a hard floor and anything above it is money for nothing.
+   2. **Reprise before regenerate.** A beat that returns to a place already shown reuses that
+      shot's clip (`reprise`), the way a cut back to the same wall reads in a documentary.
+   3. **Drop the B of an `A|B` sub-reveal** whose sentence reads on one picture.
+   4. **Resolution stays 1080p** and the shot count stays one per sentence — the budget is
+      spent on the picture quality the viewer sees, not saved by holding a picture longer.
+   `footage/seedance` ≈ $0.06 a second silent — a 5 s shot is $0.29, thirty shots about $9,
+   so a 40-sentence episode sits near the default budget with durations from step 1. One yes
+   covers the episode's footage shots; a shot added later is asked again, against the headroom
+   the preview printed.
 
 Then, per shot, in group order:
 
@@ -127,9 +149,10 @@ Then, per shot, in group order:
 - `node references/check-slide.js <storyboard dir> --require-all` — it wants every clip file
   present, `h.footage` in the render, and `visual.action` on the scene.
 - Render the sheet: `render-motion-slide.mjs slides/s<n>-<slug>.html --out .work/slide-check/s<n>
-  --sheet --png-only --keep-frames --segs auto`. On a footage slide the renderer stretches each
-  clip to its segment, waits for each video frame to be presented before capturing, reports
-  `zone_fill_pct: null`, and warns when a clip is shorter than its sentence. On a shot split
+  --sheet --png-only --keep-frames --segs auto`. On a footage slide the renderer plays each
+  clip across its segment (a clip longer than the segment is cut, a shorter one freezes on its
+  last frame — nothing is time-stretched), waits for each video frame to be presented before
+  capturing, reports `zone_fill_pct: null`, and warns when a clip is shorter than its sentence. On a shot split
   with an `A|B` sub-reveal `auto` steps aside (groups outnumber segments) — pass per-group
   `--segs k:ms`, splitting that sentence's measured window at the reveal point, and give the
   two groups the same lengths with `h.footage(rg, clip, { dur })`. Expect about 2

@@ -247,6 +247,66 @@ function byFamily(items) {
 
 function usd(n) { return '$' + n.toFixed(2); }
 
+/* ── Per-episode video budget (owner directive 2026-09-03) ──────────────────
+   The channel profile's `video_budget_usd` (plugin default 10 — the same default
+   check-scenes.js carries in its motion policy) caps what one episode may spend on
+   generated video: b-roll, motion backgrounds, quote clips and footage shots, billed and
+   projected together. Stills, TTS and music are outside it. Over the budget the verdict
+   is `!!` and exit 1 — storyboard §5 fits the board first (footage-lane.md §3 has the
+   ladder) and asks the user only for a number that fits. */
+const VIDEO_BUDGET_DEFAULT_USD = 10;
+const VIDEO_FAMILIES = ['seedance', 'veo'];
+
+function findProfile(startDir) {
+  let dir = startDir;
+  for (let i = 0; i < 7; i++) {
+    const candidate = path.join(dir, 'profile.md');
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+/** Flat frontmatter — the same reader check-scenes.js uses for the motion policy. */
+function frontmatter(file) {
+  const src = fs.readFileSync(file, 'utf8');
+  const m = src.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!m) return {};
+  const out = {};
+  m[1].split(/\r?\n/).forEach((line) => {
+    const kv = line.match(/^([A-Za-z0-9_-]+):\s*(.*?)\s*$/);
+    if (kv) out[kv[1]] = kv[2].replace(/\s+#.*$/, '').trim().replace(/^(["'])(.*)\1$/, '$2');
+  });
+  return out;
+}
+
+/** null = the profile switched the budget off; otherwise a number (the plugin default when undeclared). */
+function videoBudgetOf(profilePath) {
+  const raw = profilePath ? frontmatter(profilePath).video_budget_usd : undefined;
+  if (raw === undefined || raw === '') return VIDEO_BUDGET_DEFAULT_USD;
+  if (raw === 'off' || raw === 'none') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : VIDEO_BUDGET_DEFAULT_USD;
+}
+
+function videoSpent(items) {
+  return items.filter((it) => VIDEO_FAMILIES.indexOf(String(it.key).split('.')[0]) !== -1)
+    .reduce((sum, it) => sum + it.subtotalUsd, 0);
+}
+
+function budgetVerdict(spentItems, forecastTotal, budgetUsd) {
+  const spent = videoSpent(spentItems);
+  const committed = spent + forecastTotal;
+  const over = budgetUsd !== null && committed > budgetUsd + 1e-9;
+  return { budgetUsd, spent, forecast: forecastTotal, committed, over,
+           line: budgetUsd === null ? null
+             : (over ? '!! ' : '   ') + 'video budget ' + usd(committed) + ' committed of ' + usd(budgetUsd) +
+               (over ? ' — over by ' + usd(committed - budgetUsd) + '; fit the board before generating (footage-lane.md §3)'
+                     : ' (' + usd(budgetUsd - committed) + ' headroom for regenerations)') };
+}
+
 function selftest() {
   let failed = 0;
   const ok = (name, cond) => {
@@ -292,6 +352,16 @@ function selftest() {
     shots: [{ group: 1, clip: 'slides/footage/s1-g1.mp4', duration: 5 }, { group: 2, clip: 'slides/footage/s1-g2.mp4', duration: 4, engine: 'veo' }] } } }]);
   ok('footage shots are detected one per clip', footage.length === 2 && footage[0].kind === 'footage' && footage[0].engine === 'seedance' && footage[1].engine === 'veo');
   ok('a 5s footage clip on Seedance is forecast at 5 seconds', forecastRows([footage[0]])[0].qty === 5);
+
+  // the per-episode video budget (2026-09-03)
+  const spentItems = [{ key: 'seedance.1-5-pro-silent.1080p', subtotalUsd: 2.09 }, { key: 'image.gpt-image-2.high', subtotalUsd: 0.44 },
+                      { key: 'tts.elevenlabs', subtotalUsd: 0.22 }];
+  ok('only seedance/veo rows count as video spend', Math.abs(videoSpent(spentItems) - 2.09) < 1e-9);
+  const overV = budgetVerdict(spentItems, 12.93, 10);
+  ok('spent video plus the forecast over the budget is a !! line', overV.over && /^!! video budget \$15\.02 committed of \$10\.00/.test(overV.line));
+  const underV = budgetVerdict(spentItems, 7.5, 10);
+  ok('under the budget the line shows the headroom', !underV.over && /headroom/.test(underV.line));
+  ok('a profile may switch the budget off', budgetVerdict(spentItems, 50, null).line === null && !budgetVerdict(spentItems, 50, null).over);
   ok('footage shots change the fingerprint',
      costFingerprint([{ type: 'points', visual: { slide: { treatment: 'footage', shots: [{ group: 1, duration: 5 }] } } }]) !== 'none');
 
@@ -369,6 +439,8 @@ function main() {
     : { exit: 0, items: [], total: 0, unresolved: [], raw: '' };
 
   const spentFamilies = byFamily(spent.items);
+  const channelProfile = findProfile(path.dirname(episodeDir));
+  const budget = budgetVerdict(spent.items, forecast.total, videoBudgetOf(channelProfile));
   const result = {
     generated: new Date().toISOString().slice(0, 10),
     fingerprint,
@@ -389,6 +461,9 @@ function main() {
       unresolved: forecast.unresolved
     },
     committed: spent.total + forecast.total,
+    videoBudget: { usd: budget.budgetUsd, spentUsd: budget.spent, forecastUsd: budget.forecast,
+                   committedUsd: budget.committed, over: budget.over,
+                   profile: channelProfile ? path.relative(process.cwd(), channelProfile) : null },
     tally: path.relative(episodeDir, tallyPath),
     // Where the projection belongs, not where this run put it — under --json it went to a
     // temp file that is deleted below.
@@ -397,7 +472,10 @@ function main() {
 
   if (wantJson) fs.rmSync(path.dirname(forecastPath), { recursive: true, force: true });
 
-  const worstExit = Math.max(spent.exit === 3 ? 0 : spent.exit, forecast.exit === 3 ? 0 : forecast.exit);
+  // Over the video budget is a warn-grade verdict (exit 1): the board is fittable, the money
+  // is not yet spent, and storyboard §5 owns the fitting.
+  const worstExit = Math.max(spent.exit === 3 ? 0 : spent.exit, forecast.exit === 3 ? 0 : forecast.exit,
+                             budget.over ? 1 : 0);
 
   if (wantJson) {
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');
@@ -414,6 +492,8 @@ function main() {
       '    imagesUsd: ' + (spentFamilies.image || 0).toFixed(4) + ',           // of that, image generation',
       '    forecastUsd: ' + forecast.total.toFixed(4) + ',         // the generated-video slots below, if approved',
       '    slots: ' + rows.length + ',',
+      '    videoBudgetUsd: ' + (budget.budgetUsd === null ? 'null' : budget.budgetUsd.toFixed(2)) + ',      // profile video_budget_usd (plugin default 10)',
+      '    videoUsd: ' + budget.committed.toFixed(4) + ',           // generated video billed + projected — the number the budget caps',
       '    fingerprint: "' + fingerprint + '",',
       '    asOf: "' + result.generated + '"',
       '  },'
@@ -450,6 +530,11 @@ function main() {
     out.push('  ' + 'total'.padEnd(12) + usd(forecast.total));
   }
   forecast.unresolved.forEach((u) => out.push('  ' + u));
+  if (budget.line) {
+    out.push('');
+    out.push('Video budget (' + (channelProfile ? path.relative(episodeDir, channelProfile) : 'plugin default') + ')');
+    out.push('  ' + budget.line.replace(/^   /, ''));
+  }
   out.push('');
   out.push('Committed by approval: ' + usd(result.committed) +
            '  (' + usd(spent.total) + ' spent + ' + usd(forecast.total) + ' projected)');
