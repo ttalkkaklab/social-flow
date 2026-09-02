@@ -199,8 +199,8 @@ data/<channel>/episodes/<topic>/
   # factor can't drift apart. `:=` takes the first assignment, so appending a second line
   # would silently keep the old value — the guard makes a rerun after a profile edit fail
   # loudly instead of quietly.
-  grep -q '\${SPEED:=' .work/format.env \
-    && { echo "format.env already carries SPEED — edit that line, don't append"; } \
+  grep -qF '${SPEED:=' .work/format.env \
+    && echo "format.env already carries SPEED — edit that line instead of appending" \
     || echo ": \"\${SPEED:=<the factor from profile.md §2>}\"" >> .work/format.env
   ```
 

@@ -195,8 +195,10 @@ if [ -f chapters.txt ]; then
   # The warning has to reach build-report.txt — produce §7's reader and episode-state.js both
   # judge from the report, and stderr alone never gets there (pipeline.md lists it as a gate row).
   # Only the ⚠ lines — awk's own runtime errors land on the same stream and must not read as
-  # chapter findings in the report.
-  grep '^⚠' work-fast/chap-warn.txt 2>/dev/null | while IFS= read -r W; do say "$W"; done
+  # chapter findings in the report. Filtered in the loop, not by `grep … |`: no match is the
+  # healthy case, and under `set -o pipefail` grep's exit 1 would kill the pass right here,
+  # before the marker line the publish gate reads.
+  while IFS= read -r W; do case "$W" in ⚠*) say "$W";; esac; done < work-fast/chap-warn.txt
 fi
 
 check_final_rate

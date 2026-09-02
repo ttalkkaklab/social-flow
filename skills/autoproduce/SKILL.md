@@ -747,9 +747,9 @@ else in this skill does, and without the line a channel that put `1.0` in
 profile.md §2 to ship at its recorded pace goes out at 1.2 with nobody watching.
 
 ```bash
-grep -q '${SPEED:=' .work/format.env \
+grep -qF '${SPEED:=' .work/format.env \
   || echo ": \"\${SPEED:=<the factor from profile.md §2>}\"" >> .work/format.env
-grep '${SPEED:=' .work/format.env    # echoes the line the pass will use
+grep -F '${SPEED:=' .work/format.env   # echoes the line the pass will use
 $REF_P/speedup.sh .work
 ```
 
