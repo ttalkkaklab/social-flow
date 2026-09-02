@@ -169,8 +169,16 @@ for P in threads:output/threads/post.md ig:output/instagram/caption.md \
          fb:output/facebook/post.md yt:output/youtube/meta.md; do
   python3 $CS --surface ${P%%:*} ${P#*:}; echo "[${P%%:*}] gate_exit=$?"
 done
+node ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-meta.js output/youtube/meta.md; echo "[meta] exit=$?"
 # Don't append | head to shorten the output — $? becomes that command's and a FAIL reads as 0
 ```
+
+`check-meta.js` exit 2 goes back to produce the same way an S1 does — a meta.md
+outside the playbook §6 layout, an angle bracket in the title, a preset hashtag
+missing, or `COMPREHENSION.answer` copied into the title or description. Its
+exit 1 goes into the gate prompt as is — but only when the output ends with a
+`CHECK_META: exit=1 …` line. A broken install exits 1 too, with a node stack and
+no tail, and that is **unchecked, not one warning**.
 
 On exit 4 the copy isn't Korean and the checker declined to judge it — that surface is
 **unchecked, not clean**. Say so in the approval prompt by name, so the person approving
