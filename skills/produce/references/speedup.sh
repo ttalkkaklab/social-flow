@@ -194,7 +194,9 @@ if [ -f chapters.txt ]; then
   say "── chapters-fast.txt: $(wc -l < chapters-fast.txt | tr -d ' ') chapters retimed"
   # The warning has to reach build-report.txt — produce §7's reader and episode-state.js both
   # judge from the report, and stderr alone never gets there (pipeline.md lists it as a gate row).
-  while IFS= read -r W; do [ -n "$W" ] && say "$W"; done < work-fast/chap-warn.txt
+  # Only the ⚠ lines — awk's own runtime errors land on the same stream and must not read as
+  # chapter findings in the report.
+  grep '^⚠' work-fast/chap-warn.txt 2>/dev/null | while IFS= read -r W; do say "$W"; done
 fi
 
 check_final_rate

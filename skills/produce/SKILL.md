@@ -196,8 +196,12 @@ data/<channel>/episodes/<topic>/
   node $PG/format-resolve.js storyboard/scenes.js --sh > .work/format.env
   # profile.md §2's Playback speed — no line there, 1.2. Written once here because both
   # build-reel.sh and speedup.sh source this file, so the build's caps and the shipped
-  # factor can't drift apart.
-  echo ": \"\${SPEED:=<the factor from profile.md §2>}\"" >> .work/format.env
+  # factor can't drift apart. `:=` takes the first assignment, so appending a second line
+  # would silently keep the old value — the guard makes a rerun after a profile edit fail
+  # loudly instead of quietly.
+  grep -q '\${SPEED:=' .work/format.env \
+    && { echo "format.env already carries SPEED — edit that line, don't append"; } \
+    || echo ": \"\${SPEED:=<the factor from profile.md §2>}\"" >> .work/format.env
   ```
 
   Top-level `window.FORMAT` in `scenes.js` is the format axis, and **without it the format
@@ -833,7 +837,8 @@ different levels don't step up and down.
 
 **Chapters (long-form)** — attach scenes.js's `chapter` string to that shot's card idx.
 Don't write timestamps. The builder makes them from the measured times and checks YouTube's
-three requirements (first chapter at 0:00 · 3 or more · at least 10 seconds apart), and
+three requirements (first chapter at 0:00 · 3 or more · at least `10 × SPEED` seconds apart —
+12s at the 1.2 default, because the boundary has to still clear 10s after §7.5), and
 **stops there** if any is broken.
 
 ```bash
@@ -997,11 +1002,16 @@ $REF/speedup.sh .work 1.6    # a channel-specific rate — profile.md §2 decide
   don't hand the build's `subs.srt` to publish; those cues belong to the un-sped timeline.
 - **It reads the un-sped files and writes new names**, so running it again with another factor
   recomputes from the original instead of stacking passes.
-- **The factor moves the writing-stage cap too.** The 6.2 characters/s gate measures the *sped-up*
-  subtitles, so what a card may carry on the pre-pass timeline is `6.2 / factor` — **5.17 at 1.2x**.
-  `build-reel.sh` derives its `RATE_HI` from the same `SPEED` and warns there, and its chapter
-  minimum becomes `10 × factor` so a boundary still clears 10s after the pass. The shooting lane has
-  no such normalization: a take recorded at the 5~6 characters/s standard lands at 6.0~7.2 and the
+- **The factor moves the writing-stage band too.** The 6.2 characters/s gate measures the *sped-up*
+  subtitles, so a card written at `r` ships at `r × factor`. `build-reel.sh` divides its whole
+  `[3.2, 6.2]` band by the same `SPEED` and warns outside it — **[2.67, 5.17] at 1.2x**. Read that
+  band as an early warning, not the gate itself: the builder counts the TTS script over the
+  un-normalized card audio, while the gate counts the subtitle text over cue time after the pass,
+  so the two numbers differ by design. Its chapter minimum becomes `10 × factor` so a boundary still
+  clears 10s on the shipped file. Two consequences worth knowing before picking a factor:
+  above about **1.38** the default 4.5 characters/s target can't reach the gate at all (4.5 × 1.38 =
+  6.2), so a faster channel has to lower its target speaking rate with it. And the shooting lane has
+  no normalization of any kind — a take at the 5~6 characters/s standard lands at 6.0~7.2 and the
   gate rejects it, so a screencast channel either writes shorter or sets `1.0`.
 - **`profile.md` §2 owns the rate.** Read the channel's speed line before running the pass; with
   no line, 1.2. A profile TTS `speed` multiplies into this, so the final SRT is checked after

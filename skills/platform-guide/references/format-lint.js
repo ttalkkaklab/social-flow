@@ -58,6 +58,13 @@ const RULES = [
     re: /BURN=\$\{BURN:-(\d)\}/, want: S.burn ? '1' : '0' },
   { name: 'build-reel ZOOM_SPAN', file: 'skills/produce/references/build-reel.sh',
     re: /ZOOM_SPAN=\$\{ZOOM_SPAN:-([\d.]+)\}/, want: String(S.kenburns.zoomSpan) },
+  // The builder sizes its speech-rate band and chapter minimum from the playback factor, and the
+  // pass ships at it. A hand-run build with no format.env falls back to each file's inline value,
+  // so the two have to agree. speedup.sh owns the number; this checks the builder mirrors it.
+  { name: 'build-reel SPEED (mirrors speedup.sh)', file: 'skills/produce/references/build-reel.sh',
+    re: /^SPEED=\$\{SPEED:-([\d.]+)\}/m,
+    want: (read('skills/produce/references/speedup.sh') || '')
+            .match(/^SPEED=\$\{2:-\$\{SPEED:-([\d.]+)\}\}/m)?.[1] ?? '(speedup.sh unreadable)' },
   { name: 'build-reel W', file: 'skills/produce/references/build-reel.sh',
     re: /^W=\$\{W:-(\d+)\}/m, want: String(S.canvas.w) },
   { name: 'build-reel H', file: 'skills/produce/references/build-reel.sh',
