@@ -720,7 +720,7 @@ function check(win, fmt, opts) {
             const usesShape = beats.some((b) => b && String(b.primitive || '').indexOf('shape-') === 0);
             const hasArts = Array.isArray(slide.arts) && slide.arts.length;
             if (usesShape && !hasArts)
-              machine(where, 'principle shape beat has no slide.arts — ink actors sit with h.fig; hairlines draw the relation');
+              machine(where, 'principle shape beat has no slide.arts — ink actors sit with h.fig; rules draw the relation');
           }
         }
       }

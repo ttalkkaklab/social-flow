@@ -10,7 +10,7 @@
 #   splice-clip.sh's T values are on the original timeline, so a build that already sped up would
 #   put every insert in the wrong place.
 #
-#   Factor: the argument, else $SPEED, else format.env, else 1.0.
+#   Factor: the argument, else $SPEED, else format.env, else 1.2.
 #
 #   Input — the newest set in the workdir, the same rule output/ copies by:
 #     reel-spliced.mp4 / reel-sub-spliced.mp4 / subs-spliced.srt  when a splice ran
@@ -38,7 +38,7 @@ cd "$WORK"
 # builders hold: caller env → format.env → inline.
 [ -f format.env ] && . ./format.env
 
-SPEED=${2:-${SPEED:-1.0}}
+SPEED=${2:-${SPEED:-1.2}}
 FPS=${FPS:-30}
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}
 XFADE=${XFADE:-0.6}
@@ -190,8 +190,15 @@ if [ -f chapters.txt ]; then
     END { for (i = 2; i <= n; i++) if (at[i] - at[i-1] < 10)
             printf "⚠ %s → %s is %ds apart after the speed-up — YouTube drops chapters under 10s\n",
                    ts(at[i-1]), ts(at[i]), at[i]-at[i-1] > "/dev/stderr" }
-  ' chapters.txt > chapters-fast.txt
+  ' chapters.txt > chapters-fast.txt 2> work-fast/chap-warn.txt
   say "── chapters-fast.txt: $(wc -l < chapters-fast.txt | tr -d ' ') chapters retimed"
+  # The warning has to reach build-report.txt — produce §7's reader and episode-state.js both
+  # judge from the report, and stderr alone never gets there (pipeline.md lists it as a gate row).
+  # Only the ⚠ lines — awk's own runtime errors land on the same stream and must not read as
+  # chapter findings in the report. Filtered in the loop, not by `grep … |`: no match is the
+  # healthy case, and under `set -o pipefail` grep's exit 1 would kill the pass right here,
+  # before the marker line the publish gate reads.
+  while IFS= read -r W || [ -n "$W" ]; do case "$W" in ⚠*) say "$W";; esac; done < work-fast/chap-warn.txt
 fi
 
 check_final_rate

@@ -1,6 +1,6 @@
 {
   "name": "@zeans/social-flow-mcp-server",
-  "version": "0.45.0",
+  "version": "0.46.0",
   "license": "Apache-2.0",
   "description": "Built-in MCP server for the social-flow plugin — direct SNS publishing (Threads·Instagram·Facebook·YouTube) + research search (5 SerpApi tools·SNS issue scout·8 Naver Open API types) + image·video·voice·music generation (OpenAI GPT Image·Veo 3.1·Seedance·Gemini TTS·ElevenLabs·Lyria·Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   "type": "module",

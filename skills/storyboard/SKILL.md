@@ -4,13 +4,14 @@ description: >
   Plans one episode before anything costs money — research, 3 scored scenarios, then scenes. Use when
   the user asks to "스토리보드 만들어", "스토리보드 작성", "이 주제로 영상 기획", "촬영 대본 만들어", "내가 녹화할 대본", "make
   a storyboard", "plan a video for topic X", or starts a new topic in a channel.
-  Researches the topic, writes three scenario candidates, loops each through storyboard-reviewer
-  scenario mode until 95 with P0=0 on curiosity · fear · intrigue · comedy, then the user picks
-  one, researches that one further, and writes the storyboard under
-  data/[channel]/episodes/[topic]/storyboard/. Format with the user first: 9:16 shorts by default,
-  or 16:9 long-form with chapters. Six board reads run once each before approval. Scenario is
-  the 95-point exception; the six are not. Boundary — this stops at approval; produce builds from
-  it, autoproduce skips the stop.
+  Researches the topic, writes three scenario candidates in one fixed shape (주제 · dramatised
+  훅 · what happened · what it means now · 2–3 present cases · 마무리 question · CTA), loops each
+  through storyboard-reviewer scenario mode until 95 with P0=0 on curiosity · fear · intrigue ·
+  comedy, shows all three in full for the pick, researches the winner further, and writes the
+  storyboard under data/[channel]/episodes/[topic]/storyboard/. Format with the user first:
+  9:16 shorts by default, or 16:9 long-form with chapters. The narration is then read on its own
+  and looped to 95 until the spoken sentences alone carry the episode; six board reads run once
+  each after that. Boundary — this stops at approval; produce builds from it, autoproduce skips the stop.
 argument-hint: "<channel> <topic or topic hint>"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit"]
 ---
@@ -18,20 +19,22 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuesti
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
 
 Takes one topic through **research → three scenario candidates (looped to 95) → one pick →
-more research → scene design → six one-round board reviews (copy · per-scene · vocabulary ·
-camera · sound) → image generation → image review → storyboard approval**. The `scenes.js`
+more research → scene design → narration read-through (looped to 95) → six one-round board
+reviews (copy · per-scene · vocabulary · camera · sound) → image generation → image review →
+storyboard approval**. The `scenes.js`
 settled here is the one data source (SoT) for production (produce) — video, captions, and
 per-platform text all derive from this file, so factual mismatch between platforms can't
 arise in the first place.
 
-Three candidate pages loop through `storyboard-reviewer` scenario mode until **≥95 and
-P0 = 0** — curiosity, fear, intrigue, comedy. Contract:
-[scenario-stage.md](references/scenario-stage.md). The six board reads after the pick still
-run **once each**, with no score to clear.
+Three candidate pages — seven items each: 주제 · 훅 · 전개 #1 · 전개 #2 · 전개 #3 · 마무리 · CTA —
+loop through `storyboard-reviewer` scenario mode until **≥95 and P0 = 0** on curiosity, fear,
+intrigue, comedy. Contract: [scenario-stage.md](references/scenario-stage.md). The narration
+read-through (§4.4) is the other loop. The six board reads after it still run **once each**, with no score to clear.
 
 | Review | What it looks at | What comes back |
 |---|---|---|
-| §2.2 scenario | Each of three candidates — whether curiosity · fear · intrigue · comedy actually work, plus the shape of the investigation | loop until ≥95 · P0=0 |
+| §2.2 scenario | Each of three candidates — whether curiosity · fear · intrigue · comedy actually work, and whether the seven items are there and do their job | loop until ≥95 · P0=0 |
+| §4.4 narration | The narration alone, read in order without the picture — does the topic and the content come through | loop until ≥95 · P0=0 |
 | §4.5 copy | The sentences of the whole storyboard — AI-sounding phrasing, hook, factual fidelity | one total score |
 | §4.6 per-scene | The role and contextual fit of **each individual scene** | a score per scene + the lowest |
 | §4.7 vocabulary | Whether the **words** in narration and titles are words people use | a score per scene + the lowest |
@@ -39,7 +42,7 @@ run **once each**, with no score to clear.
 | §4.9 sound | The episode's sound design — the music cue plan, clip audio, voice casting | one total score |
 | §5.5 images | Whether the picture shows what the scene is saying | one total score |
 
-**Board-review scores are a record, not a bar.** They go into `scenes.js` at approval so you can read back later which storyboard produced which performance. **Scenario scores and authored-screen scores are the other thing:** each candidate loops to 95 with P0=0 (max 3 reads then one replacement), and each HTML cut goes through `slide-reviewer` the same way. A candidate that misses that bar is replaced or dropped; a slide that misses it stays out of the build.
+**Board-review scores are a record, not a bar.** They go into `scenes.js` at approval so you can read back later which storyboard produced which performance. **Scenario, narration and authored-screen scores are the other thing:** each candidate loops to 95 with P0=0 (max 3 reads then one replacement), the spoken chain loops to 95 (cap 5 reads), and each HTML cut goes through `slide-reviewer` the same way. A candidate that misses that bar is replaced or dropped; a slide that misses it stays out of the build.
 
 The three per-shot reviews report **the lowest** alongside the list, since an average lets a
 good scene hide the one that collapsed.
@@ -177,8 +180,9 @@ explanations compete — **3–5 rows**, not the episode's full 5–8.
    **a different episode this topic could be**, not three wordings of the same one. Each row
    names the question, the hook form (`gap`·`number`·`identify`·`paradox`·`secret` — no
    `payoff` on a short), the **primary engine** (`curiosity`·`fear`·`intrigue`·`comedy` —
-   three different primaries), the hero or unresolved thing, which claims hold it up, and
-   what the second pass still owes.
+   three different primaries), the hero or unresolved thing, which claims hold it up, the
+   **2–3 present-day cases 전개 #3 would use** (a search-log row each — so the question map
+   has a row for them), and what the second pass still owes.
 
 Three verified claims is the floor below which there is no video (the same floor autoproduce
 drops a topic at), and **ten or more** searches is the floor below which there are no directions. Short of either, change the topic rather than inventing a third direction.
@@ -194,21 +198,29 @@ whatever stays unresolved, or drop that row (own-channel retention report, 2026-
 
 #### 2.2 Three candidates, scored, then one pick — HITL, before more searching
 
-Turn each direction row into `candidates/d<n>.md`, loop each through storyboard-reviewer
-scenario mode to **≥95 · P0 = 0**, then pick. Three different primaries (`curiosity` ·
-`fear` · `intrigue` · `comedy`). Caps, template, engines:
-[scenario-stage.md](references/scenario-stage.md). Both formats. Skip-research channels
-skip this with the three-direction pick.
+Turn each direction row into `candidates/d<n>.md` — **the seven items, in this order, on
+every candidate and both formats** (user directive, 2026-09-02): 주제 (what the viewer is
+made to think about) · 훅 (a dramatised scene) · 전개 #1 (what actually happened) · 전개 #2
+(what it makes us think about now) · 전개 #3 (2–3 present-day cases) · 마무리 (what do you
+think?) · CTA. Loop each page through storyboard-reviewer scenario mode to **≥95 · P0 = 0**,
+then pick. Three different primaries (`curiosity` · `fear` · `intrigue` · `comedy`). Items,
+caps, template, the 훅's fact rule and the item-to-beat map:
+[scenario-stage.md](references/scenario-stage.md). Skip-research channels skip this with
+the three-direction pick.
+
+**Show the three pages in full before asking** — for each candidate print the seven items as
+written (the 훅's first sentence, the three 전개 paragraphs, the 마무리 question, the CTA line)
+with its engine and score. A one-line option is not what the user approves; the seven items are. Then AskUserQuestion:
 
 ```
-[D1 · <question> — <engine> · score NN (Recommended)]
-[D2 · <question> — <engine> · score NN]
-[D3 · <question> — <engine> · score NN]
+[D1 · <주제> — <engine> · score NN (Recommended)]
+[D2 · <주제> — <engine> · score NN]
+[D3 · <주제> — <engine> · score NN]
 ```
 
-**Ask with AskUserQuestion.** Recommended is the highest at 95 with `p0 = 0`. Write
-`Chosen: D#`, copy the winner to `scenario.md`, then §2.3. Unattended autoproduce picks
-the recommended one; zero at 95 drops the topic.
+Recommended is the highest at 95 with `p0 = 0`. **Approval of the seven items is what starts
+the rest** — write `Chosen: D#`, copy the winner to `scenario.md`, then §2.3. Unattended
+autoproduce picks the recommended one; zero at 95 drops the topic.
 
 #### 2.3 Additional research — close the chosen direction
 
@@ -272,58 +284,26 @@ pick an arc** — hook → drip → cta (scenes-schema §playback order).
   that skip research (creative, everyday life) skip this whole step — and then the copy
   review's "no basis" P0 is switched off for that channel.
 
-### 2.5 Pick the storyline structure — HITL, before any scene exists
+### 2.5 Confirm the structure — settled by the §2.2 approval, before any scene exists
 
-The same verified material can be laid out as a diary or as an investigation, and that layout
-decides retention more than any sentence does. Informational long-form's named anti-pattern
-is the **chronological trap** — telling it in the order it happened buries the strongest
-moment minutes deep behind setup nobody asked for yet
-([longform-storyline research](../../docs/research/2026-08-29-longform-storyline/); our own
-retention report (2026-08-26, n=4) ranked the mystery-shaped subject first on the same
-mechanism). The structure is settled **after §2.3 closes** and **before §4 writes a scene**
-— changing it later rewrites the board, so this is the cheapest moment the question will ever have.
+The seven items the user approved are the storyline on both formats: 훅 → 전개 #1 (what
+happened) → 전개 #2 (what it means now) → 전개 #3 (2–3 present cases) → 마무리 → CTA. Lay them
+onto beats with scenario-stage's item-to-beat map — a short writes `beat:"drip"` on the 전개
+shots and `beat:"cta"` on the last narrated shot; long-form keeps the §2.3 arc (`story`: 전개 #2
+is the `turn` · `answer-first`: its present answer is the `result`, first). The lines scenario-craft §12 says to write first —
+the 훅's first spoken sentence, the 마무리 question, the CTA callback — are items on the
+approved page and go across verbatim as §4's first edit; the feel sign sits on each item's
+header. Nothing here is asked again.
 
-**Three lines are settled at this stop, before a shot exists** — ① the cover's first spoken
-sentence, naming the loss or the stake before it asks (on a short this is a gap, not the
-answer) · ② the cta's last two lines — on a short, one outward act (comment question,
-next-episode promise, or memory question); on long-form, callback plus a memory question ·
-③ the sign of the feel curve. Three and not a fourth; the why and the cap are
-`references/scenario-craft.md` §12, and they go where the structure goes.
-
-**On long-form, also pick the storyline with AskUserQuestion — don't decide by guessing.**
-Recommend one structure from the shape of the material and put it first, one line per option
-on what it changes. The menu, the beat patterns and the checks are
-`references/scenario-craft.md` §11:
-
-```
-[Curiosity loop — mystery → false answer → investigation → turn → resolution → takeaway.
- Deep dives, retrospectives, "why did X happen" — the informational default]
-[Problem stack — symptom → surface fix fails → deeper cause → root cause → real fix.
- Troubleshooting and technical deep dives]
-[Transformation arc — before → stakes → process → after. Challenges, "I tried X"]
-[Expert contrast / Ticking clock / Reveal ladder — comparisons · deadline builds · rankings]
-```
-
-- **On a short the structure is the playback contract** — hook → drip (1–n) → cta. Skip the
-  six-structure menu. Still settle the three lines: the cover's first spoken sentence (a gap,
-  not the answer), the cta's last two lines (one outward act — a comment question, a
-  next-episode promise, or a memory question), and the sign of the feel curve. Write
-  `beat:"drip"` on every middle shot and `beat:"cta"` on the last narrated shot.
-- **On long-form the structure names the body's beat pattern; `arc` stays the playback
-  contract** (scenes-schema §playback order). Curiosity loop, transformation arc and ticking
-  clock ride `story`; expert contrast and reveal ladder usually ride `answer-first`; a problem
-  stack goes either way. Write the chosen structure into the scenes.js header comment and the
-  storyboard.md design rationale — the scene review reads the board against the structure
-  the user approved, and §7 shows it back alongside format and arc.
-- **Four rules hold whatever the long-form pick** (scenario-craft §11): the **cold open** —
-  the episode opens on the strongest moment or evidence, never at the start of the timeline; a
-  **promise sentence** inside the opening — what the viewer will know or be able to do by the
-  end; when the material has a plausible wrong answer, the body's first beat is the
-  **false-answer check** (set it up, take it apart — Muller 2008, the one beat here with
-  peer-reviewed backing); and heavy context (installs, definitions, backstory) is delivered
-  as **bridges** at the moment the investigation needs it, never as a block in front of the
-  first tension.
-- Channels that skip research (§2) skip this gate and the three-direction pick with it.
+**On long-form one thing is still open — how 전개 #1's investigation is laid out inside.** When
+the material could go two ways, ask with AskUserQuestion, recommended first, one line per option
+on what it changes: curiosity loop (mystery → false answer → turn — the informational default) ·
+problem stack · transformation arc · expert contrast · ticking clock · reveal ladder
+(scenario-craft §11). Write the pick into the scenes.js header comment and the storyboard.md
+design rationale; §7 shows it back. The four §11 rules hold whatever the pick: the cold open (the
+훅 is a staged moment, never the start of the timeline), a promise sentence inside the opening,
+the false-answer beat at the top of 전개 #1 when the research holds one, and heavy context as
+bridges past the first tension. Skip-research channels skip this with §2.2.
 
 ### 3. Create the topic directory
 
@@ -351,15 +331,11 @@ the real state rather than a guess.
 
 ### 3.5 Scenario — freeze the winner
 
-`storyboard/scenario.md` is already the §2.2 winner. After §2.3 extra research and §2.5's
-three lines, patch that page if a new fact breaks a beat, a false answer or a promise —
-then loop **that one page** again to 95 (3-read cap, no replacement; skip if nothing
-changed). Stamp `frozen:` when §4 opens. Four devices:
-[scenario-stage.md](references/scenario-stage.md).
-
-### 3.6 Scenario review already ran at §2.2
-
-Don't start a fourth read here. The six board reviews (§4.5–§5.5) run once each from here.
+`storyboard/scenario.md` is already the §2.2 winner. After §2.3 extra research (and §2.5's
+long-form pick), patch that page if a new fact breaks an item, a false answer or a promise — then
+loop **that one page** again to 95 (3-read cap, no replacement; skip if nothing changed). Stamp
+`frozen:` when §4 opens. Four devices: [scenario-stage.md](references/scenario-stage.md). Don't
+start a fourth read here — from here §4.4 loops and the six board reviews (§4.5–§5.5) run once.
 
 ### 4. Scene design — writing scenes.js
 
@@ -372,8 +348,9 @@ photo is the default. The source of truth for field definitions is the schema's 
 units and production layers.
 
 **Write it in two passes.** **4a — story**: `window.COMPREHENSION` · `beat` · `shot.feel` ·
-`shot.info` · `shot.infoType` · `narration` · `arc` · `hookType`/`hookForm` · `title` and §2.5's three lines only,
-so shots stay cheap to cut. **4b — machine**, after §4.6: everything else. scenario-craft §12 measures it.
+`shot.info` · `shot.infoType` · `narration` · `arc` · `hookType`/`hookForm` · `title` and the approved scenario's
+three verbatim lines only, so shots stay cheap to cut; the cover's `shot.info` says the 훅 is staged
+("연출 — 전개 #1 이 사실을 댄다"). 4a is done when §4.4 clears. **4b — machine**, after §4.6: everything else. scenario-craft §12 measures it.
 Core rules:
 - **Compress the episode before polishing its sentences.** `window.COMPREHENSION` names one question,
   answer, takeaway, cross-scene branches, and unfamiliar terms. A short informational episode has
@@ -490,9 +467,9 @@ Core rules:
   signature line lands once (§7), and `sound.drop` on the turn is the music going out at the
   peak rather than up (§7). On every arc the feel chart carries a sign per shot and dips before
   it lifts — the minimum before `craft.burst`, the maximum on the turn or the result — the
-  cover's first sentence names a loss or a stake before it asks anything, and the cta is one
-  outward act on a short (a comment question, a next-episode promise, or a memory question) or,
-  on long-form, a callback plus a memory question with no subscribe verb (§12, catharsis). On
+  cover's first sentence names a loss or a stake before it asks anything, and on both formats
+  the cta is the 마무리 question plus the callback and one outward act (a comment invite or a
+  next-episode promise) with no subscribe verb (§12, catharsis). On
   informational episodes, walk §11's four checks last — the body's
   order against event time (the chronological-trap fingerprint), the promise sentence in the
   opening, the plausible wrong answer some scene takes apart, and the heaviest context stretch
@@ -695,6 +672,30 @@ structural fault reads the rest of the file worse.
 It is the structural half only. Frame overflow, hero-stat width and speech rate are measured
 against a rendered canvas — those stay in `storyboard.html`'s check strip, and duplicating them
 here would create the mirror drift `format-lint.js` exists to police.
+
+### 4.4 Narration read-through (storyboard-reviewer narration mode — loop to 95)
+
+**The story pass is done when the narration alone carries the episode** (user directive,
+2026-09-02). Before the six one-round reads and before a shot gets a camera, the spoken sentences
+are read in order with nothing else open — the phone in a pocket, or the subtitles with the sound off.
+
+1. With `check-scenes.js --draft` at exit 0, **delegate to the storyboard-reviewer agent
+   (Agent) in "narration mode"** — pass `scenes.js`, `scenario.md` (if present — a skip-research
+   channel has none; the reviewer reads `COMPREHENSION` instead), `research.md` (if present) and `profile.md`. The reviewer extracts the sentences itself (`extract-text.js … subtitle`)
+   and reads them before it opens anything else. Tail: `STORYBOARD_REVIEW: mode=narration score=NN p0=N`.
+2. **Apply the directives in `scenes.js` as spoken sentences** — add the antecedent, say what
+   the picture would have shown, speak the present link, name the case's connection, explain
+   the term where it first appears. Never answer a finding with a caption or a picture. Keep
+   `COMPREHENSION.terms` and the character caps in step (`--draft` again).
+3. Re-delegate, saying which findings you applied. **Loop until `score ≥ 95` and `p0 = 0`;
+   cap 5 reads.** Still short at the cap: go back to the approved scenario — a chain that
+   won't close in sentences is usually an item the board dropped — and carry the last verdict
+   to §7 in the reviewer's words. Unattended autoproduce stops instead (its §3.5).
+
+The score at §7 has to be the shipped narration's. §4.5–§4.7 only subtract, drop and swap; a cut
+that removes a link this read relied on (a term's plain wording, the sentence that names the next
+one's referent) is not applied. **If any narration segment changed at §4.5–§4.7, one confirming
+read runs after §4.7**, inside the same cap; a drop below 95 is fixed and read again before §4.8.
 
 ### 4.5 Copy review (storyboard-reviewer copy mode — one round)
 
@@ -1092,7 +1093,7 @@ If any scene has `visual.slide`, author it now with
 [slide-authoring.md](references/slide-authoring.md). **Generate `slide.arts` first** when
 the array is set — `slides/assets/s<shot>-<slug>.png`, ink actor illustration, no readable text
 (`image_local_generate`; gpt/mlx when needed). Log the call; sit a principle actor with `h.fig`.
-A principle frame is a `.cast` of actors plus hairlines (`h.stem` · `h.bus` · `h.chamber`); kinetic
+A principle frame is a `.cast` of actors plus rules (`h.stem` · `h.bus` · `h.chamber`); kinetic
 `renderKinetic` places the first art on group 1 then the title with `in`; type-only skips arts.
 
 Then run `node references/check-slide.js <storyboard directory> --require-all`, render its
@@ -1256,7 +1257,7 @@ longest still run in shots and seconds, the allowed motion kinds, and the genera
 The numbers come from the profile-backed `window.MOTION_POLICY`; a motion finding from
 `check-scenes.js` blocks this approval screen rather than becoming an unresolved reviewer note.
 **Carry the review results here too** — the winner's scenario score (and the other two
-candidates'), plus one score each for copy,
+candidates'), the narration read-through's final score and how many reads it took, plus one score each for copy,
 per-scene, vocabulary, camera, sound and images, with **which scene or shot was lowest and at what score**
 for the three per-item ones, and **every finding you didn't apply, in the reviewer's own words**.
 That last list is the point of the screen: the reviews no longer block, so this is where a
@@ -1278,7 +1279,7 @@ the one review that covers it** — §4.5 for sentence structure, §4.6 for scen
 §4.7 for word swaps, §4.8 for camera slots, §4.9 for sound, §5.5 for remade images. That is the
 one place a mode runs twice, and it runs because a person asked, not because a score fell short.
 Once approved, write two lines at the top of scenes.js — `// approved: <YYYY-MM-DD>` and
-`// review: scenario=NN text=NN scene=NN lexicon=NN camera=NN sound=NN image=NN unresolved=N` — and point
+`// review: scenario=NN narration=NN text=NN scene=NN lexicon=NN camera=NN sound=NN image=NN unresolved=N` — and point
 the user at `/social-flow:produce <channel> <topic>`, so you can trace later which score of copy
 produced which performance. `unresolved` is how many findings went to the user unfixed; `n/a`
 goes in any slot whose review didn't run (image in shooting mode — camera runs on every episode,
@@ -1299,8 +1300,6 @@ both formats).
   as-is** — the user uses that list as a checklist.
   Motion slides already passed §5.6.
 
-### 8. Every authored screen is a motion slide and was built at §5.6. This step is gone.
-
 ## Traps
 
 - **Don't skip a review because you think the copy is fine** — whoever is running the skill
@@ -1308,8 +1307,8 @@ both formats).
   the ones you see least, and the review costs one delegation. Six board reads run, every episode.
 - **Don't delegate a board mode twice to chase a number.** Copy · scene · vocabulary · camera ·
   sound · image run once. A second round happens only when the user asks for a change at §7
-  and that change lands in that mode's layer. **Scenario is the exception** — §2.2 loops each
-  candidate to 95, like a slide. Don't start that loop on the board reviews.
+  and that change lands in that mode's layer. **Scenario and narration are the exceptions** — §2.2
+  loops each candidate to 95 and §4.4 loops the spoken chain, like a slide. Not the other six.
 - **Don't reorder the six** — copy (§4.5) → per-scene (§4.6) → vocabulary (§4.7) → camera (§4.8)
   → sound (§4.9) → images (§5.5). Images are last because changing a sentence changes the picture
   that scene will show; vocabulary comes after per-scene because polishing the words of a scene
@@ -1318,9 +1317,11 @@ both formats).
 - **The score at the per-scene, vocabulary, and camera reviews is the lowest one, not the
   average** — the tail's `score` is the lowest item's score. Don't read it as "average 96, fine".
 - **A board-review score is a record, not permission.** Nothing in §4 or §5 stops on a number.
-  Scenario at §2.2 does — a candidate below 95 is improved or replaced, not filed. Findings
-  from the six board reads that you decided not to apply still have to reach the §7 screen
-  in writing.
+  Scenario at §2.2 and narration at §4.4 do — a candidate below 95 is improved or replaced,
+  a chain below 95 is rewritten in sentences, not filed. Findings from the six board reads
+  that you decided not to apply still have to reach the §7 screen in writing.
+- **Don't answer a read-through finding with the picture.** "It's on screen" is the failure §4.4
+  exists to catch; the fix is a spoken sentence. Self-check from the extract, not from scenes.js.
 - **Don't open scenes.js while still searching** — research is two passes with a scored pick
   in between (§2.1 first research → §2.2 three candidates looped to 95 → §2.3 additional
   research, then the sufficiency check). Don't start the second pass before the pick. Don't

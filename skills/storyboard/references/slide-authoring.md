@@ -31,31 +31,45 @@ scenes using sub-reveals (`A|B`) have more groups than segments.
 A motion slide is built from **`references/motion-slide-template.html`** and judged by
 **`references/slide-design.md`** — read both before writing a line. The template's head
 carries the contract (the state rule, what may move, what is forbidden); the design doc
-carries the look (ink · paper · one accent, hairlines not boxes, one hero per slide) and the
+carries the look (ink · paper · one accent, rules not boxes, one hero per slide) and the
 rubric the reviewer applies.
 
 1. **Author.** Copy the motion template to `slides/<the visual.slide.file name>`, set
-   `SLIDE_SHOT`, and rewrite only `renderSlide()` using the helpers — `h.count(rg, value,
-   {unit})` for the hero number, `h.bar(rg, pct, label, value)` for a comparison,
-   `h.step(rg, t, d)` for a sequence, `h.callout(rg, label)` and `h.rv(rg, html, {fx:"in"})`
-   for type. Group numbers follow the storyboard `plan` — segment 1 is group 1.
+   `SLIDE_SHOT`, and rewrite only `renderSlide()` using the helpers — `h.tag(rg, text)` for
+   the kicker plate, `h.title(rg, text)` for the title (a mask rise), `h.stat(rg, value,
+   {unit, label, underline, cls:"max"})` for the hero number, `h.bar(rg, pct, label, value)`
+   for a comparison, `h.step(rg, t, d)` for a sequence, `h.band(rg, text, {tone})` for a
+   verdict or name plate, `h.plate(rg, html, {tone, edge})` for an evidence cell or quote,
+   `h.callout(rg, label)` and `h.rv(rg, html, {fx:"mask"})` for type, `h.foot(0, source)`
+   for the source line. Group numbers follow the storyboard `plan` — segment 1 is group 1.
+   **Group 1 is the opening chain**: the tag, then the title (`lead:1`), then the first
+   value (`lead:2`), each `--lead` after the last — the base (group 0) holds only the
+   source, a scrim or an axis. Text may carry `**accent**` and `==highlight plate==`.
    Timeline, statistic, and principle frames use the helper named by each `motionBeats`
    primitive: `h.date` · `h.range` · `h.link`; `h.count` · `h.bar` · `h.dots` · `h.axis`;
    `h.flow` · `h.node` · `h.state`; `h.fig` · `h.stem` · `h.bus` · `h.chamber` ·
    `h.disk` · `h.ring` · `h.press` · `h.shift`. Those helpers stamp `data-primitive` into
    the frame, and the renderer matches it to the same narration group. Group 0 is the
    kicker and title. One kind of movement per group.
-   - **Pick an archetype before laying out freeform** (slide-design.md §3): `.stage.spread`
-     stat poster with `.hero.max`, `.split` compare, `.timeline` rail, or an editorial
-     evidence stack. The renderer measures zone fill and a freeform layout that clusters in
-     the top half gets flagged.
-   - **Mark the sustain layer and the focus shift while authoring** (slide-design.md §4):
+   - **Pick an archetype before laying out freeform** (slide-design.md §4): the stat poster
+     (`h.stage("spread")` + `h.stat` with `cls:"max"`), the `.split` compare (cells with
+     `h.vdiv(rg)` between them), the `.timeline` rail, the plate grid (`h.plate` cells), or
+     the band verdict. `h.stage("spine")` stands the accent edge bar on diagram and evidence
+     slides. The renderer measures zone fill and a freeform layout that clusters in the top
+     half gets flagged.
+   - **Structure is plates and rules, not cards** (slide-design.md §4): square,
+     single-colour, no radius, no border, no shadow. Lines are `--hair` 3px, `--rule` 6px
+     or `--band` 10px — nothing thinner goes on a phone. Never add a gradient inside
+     `renderSlide()` (the ground plate and the photo scrim already live in the template's
+     head CSS; `check-slide.js` blocks a gradient in the authored region).
+   - **Mark the sustain layer and the focus shift while authoring** (slide-design.md §5):
      `sv: true` on the one meaning-bearing movement of any group whose sentence runs past
      its entrance (count-up, bar fill, dot fill, draws), `sv: "settle"` on an entered
-     element that should keep landing for its sentence, `dim: true` on evidence the
-     narration moves past. Without a `.sv`, a long sentence sits on a frozen frame and the
+     element that should keep landing for its sentence — a text block or a large actor, since
+     the settle scales by 4.5% and a small shape moves less than a pixel — `dim: true` on
+     evidence the narration moves past. Without a `.sv`, a long sentence sits on a frozen frame and the
      renderer says which group and for how long.
-   - A **principle** frame is ink actors plus hairline relations, not a stack of labels.
+   - A **principle** frame is ink actors plus drawn relations, not a stack of labels.
      Sit the cast in `.cast`. `h.fig` arrives (`shape-enter`), `h.stem` / `h.bus` /
      `h.ring` draw (`shape-draw`), `h.chamber` boxes a terminal or room (`shape-enter`),
      `h.press` / `h.shift` travel (`shape-travel`). Labels name the actors; they are not
@@ -80,9 +94,10 @@ rubric the reviewer applies.
      on a sourced symbol, and keep the source label visible; that is an online interpretation,
      not proof that the gestures created the symbol. `check-slide.js` rejects a raster-only
      editorial render before the visual reviewer sees it.
-   - A diagram with `treatment:"photo-action"` may place a local photo full-frame, but the
-     subject or evidence itself must change as `visual.action` and `slide.plan` say. Animating
-     only brackets, callouts, captions, glow, or the whole image fails review.
+   - A diagram with `treatment:"photo-action"` places the photo with `h.photo(0, file)` and
+     darkens the text areas with `h.scrim(0)` (both in the base group), but the subject or
+     evidence itself must change as `visual.action` and `slide.plan` say. Animating only
+     brackets, callouts, captions, glow, or the whole image fails review.
 2. **Machine check** — `node references/check-slide.js <storyboard directory> --require-all`
    (`motion:true` written, `__seek` present, no `transition`, no clocks or timers, no web
    fonts, every Korean string in scenes.js). Don't move on unless it exits 0.
@@ -97,7 +112,9 @@ rubric the reviewer applies.
 
    `--segs auto` estimates each segment from its narration characters (schema rate,
    4.5/s) so the sustain layer stretches to roughly what the finished sentence will be;
-   produce re-renders with measured lengths (optional-lanes.md §3.6). The renderer stops
+   produce re-renders with measured lengths (optional-lanes.md §3.6). The sheet frames
+   carry the plate ground but not the film grain — grain is added at the mp4 encode
+   (`--grain`, default 6) and never shows in `--png-only` output. The renderer stops
    (exit 1) on a contract breach and says which: a page script that
    threw (the exception is printed), an animation outside any reveal group, an infinite
    animation, a group with no motion, fewer groups than segments.
@@ -131,14 +148,16 @@ five rounds; a slide that still fails is held and never enters the unattended bu
 `kind: "kinetic"` (scenes-schema §kinetic type) is the motion path with three substitutions:
 
 1. Start from **`references/kinetic-type-template.html`** and rewrite `renderKinetic()`.
-   Helpers: `h.word` (the one big phrase) · `h.line` · `h.sub` · `h.cross` (a phrase with a
-   rule struck through it) · `h.rule` · `h.art` (a still from `slide.arts`) · `h.disk` (a
-   supporting shape). When `slide.arts` is set, default `renderKinetic` places the first
+   Helpers: `h.tag` (the kicker plate) · `h.word` (the one big phrase) · `h.line` · `h.sub` ·
+   `h.cross` (a phrase with a rule struck through it) · `h.band` (the verdict plate) ·
+   `h.rule` · `h.art` (a still from `slide.arts`) · `h.disk` (a supporting shape). When `slide.arts` is set, default `renderKinetic` places the first
    art on group 1 then the title with `in` — that pair is one event. Type-only (a verdict,
    a cross) skips arts. Mixing `drop` and `wipe` on type is still two kinds.
-2. The design section is **`slide-design.md` §6**, and slide-reviewer applies its three extra
+2. The design section is **`slide-design.md` §7**, and slide-reviewer applies its three extra
    P0s — a screen phrase that repeats the subtitle sentence, a second hero-sized phrase or a
-   line past five words, two effect kinds on one screen.
+   line past five words, two effect kinds on one screen. The default entrance is `mask`
+   (`words:true` staggers it word by word and counts as the same kind); `h.band` is the
+   verdict plate and the last thing to enter.
 3. Steps 2–5 (machine check, sheet render, the design gate at ≥ 95 / p0 = 0, three-round cap,
    scores logged in storyboard.md) are unchanged, including the same `render-motion-slide.mjs`
    command — the renderer only asks for the seek contract and does not care what is drawn.
@@ -152,7 +171,7 @@ storyboard.
 
 `kind: "character"` (scenes-schema §character act) is the motion path with the same three
 substitutions — **`references/character-act-template.html`**, `renderCharacter()`,
-`slide-design.md` §7 — plus one rule that has no equivalent in the other kinds:
+`slide-design.md` §8 — plus one rule that has no equivalent in the other kinds:
 
 **Do not write motion here.** The movement belongs in `visual.slide.acts`, one action per reveal
 group. A simple reaction may use the named actions directly. A historical or explanatory event

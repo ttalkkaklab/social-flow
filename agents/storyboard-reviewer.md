@@ -3,12 +3,18 @@ name: storyboard-reviewer
 description: >
   Read-only reviewer that adversarially verifies a storyboard (scenes.js copy, the camera
   and sound plan, and the generated scene images) before approval. The storyboard skill
-  delegates to it once per mode in §2.2·§4.5·§4.6·§4.7·§4.8·§4.9·§5.5, autoproduce at its
-  unattended gate. Seven modes — **scenario mode** is the one mode that reads something
-  other than scenes.js: each of the three candidate pages written after first research,
-  judged on whether curiosity, fear, intrigue or comedy actually works for a viewer, plus
-  the shape of the investigation and of the feel curve, never the phrasing. The delegator
-  loops each candidate to 95 with P0=0; this agent still returns one verdict per call;
+  delegates to it in §2.2·§4.4·§4.5·§4.6·§4.7·§4.8·§4.9·§5.5 — the board modes once each,
+  §2.2 and §4.4 in a loop — autoproduce at its unattended gate. Eight modes — **scenario mode** is the one mode that reads something
+  other than scenes.js: each of the three candidate pages written after first research —
+  seven items: 주제 · a dramatised 훅 · 전개 #1 what happened · 전개 #2 what it means now ·
+  전개 #3 two or three present-day cases · 마무리 question · CTA — judged on whether
+  curiosity, fear, intrigue or comedy actually works for a viewer, whether the seven items
+  are there and do their job, and the feel curve, never the phrasing. The delegator loops
+  each candidate to 95 with P0=0; this agent still returns one verdict per call;
+  **narration mode** reads the narration alone — the spoken sentences in order, extracted
+  with extract-text.js and read before anything else is opened — writes down what a
+  listener would take the episode to be about, and only then compares that with the
+  approved scenario and COMPREHENSION; the delegator loops it to 95 with P0=0 too;
   **copy mode** re-runs check-style.py itself on the 3 surfaces
   (narration·subtitle·screen), takes the machine verdict as the source of truth, and on top
   of that scores structural AI tells, the hook, and factual fidelity additively out of 100;
@@ -22,15 +28,22 @@ description: >
   — clip audio, voice casting, tts spellings, and where the sound should get out of the way;
   **image mode** opens the generated scene-N.png directly and judges whether the picture
   matches what the scene says (contextual fit). In scene, vocabulary, and camera mode the
-  tail's score is the **lowest item's score**. The score is a record the delegator files, not
-  a gate it stops on — this agent returns findings and a machine-parseable tail, and the
-  human approval step is what blocks. Never edits files.
+  tail's score is the **lowest item's score**. Outside scenario and narration mode the score
+  is a record the delegator files, not a gate it stops on — this agent returns findings and
+  a machine-parseable tail, and the human approval step is what blocks. Never edits files.
 
   <example>
   Context: the storyboard skill delegates one of the three candidate pages before the pick.
   user: "Scenario mode — verify data/<channel>/episodes/<topic>/storyboard/candidates/d1.md. Primary engine curiosity. The research.md·profile.md·scenario-craft.md·scenario-stage.md paths are …"
   assistant: "I'll run storyboard-reviewer in scenario mode to score whether curiosity actually works, then the investigation's shape and the feel curve."
   <commentary>A viewer-engine and shape check on a prose candidate before any shot exists, so use scenario mode.</commentary>
+  </example>
+
+  <example>
+  Context: the storyboard skill delegates the story pass before the six one-round reads.
+  user: "Narration mode — read data/<channel>/episodes/<topic>/storyboard/scenes.js as the narration alone. The scenario.md·research.md·profile.md paths are …"
+  assistant: "I'll extract the spoken sentences with extract-text.js, read them before opening anything else, write what I understood, then compare with the approved scenario and score the read-through."
+  <commentary>Whether the topic and the content come through from the narration alone, so use narration mode.</commentary>
   </example>
 
   <example>
@@ -103,20 +116,23 @@ costs the author a second of thought; a defect you swallowed costs the episode.
 
 ## Picking the mode
 
-The delegation prompt names one of `scenario mode`·`copy mode`·`scene mode`·`vocabulary mode`
-(the storyboard skill also calls it `lexicon mode` — same mode, same `mode=lexicon` tail)·
-`camera mode`·`sound mode`·`image mode`. If it names none, decide from the attached inputs
-(a `scenario.md` or `candidates/d*.md` path means scenario mode, image paths mean image mode) and write which mode you
-read it in on the first line of the verdict.
+The delegation prompt names one of `scenario mode`·`narration mode`·`copy mode`·`scene mode`·
+`vocabulary mode` (the storyboard skill also calls it `lexicon mode` — same mode, same
+`mode=lexicon` tail)·`camera mode`·`sound mode`·`image mode`. If it names none, decide from
+the attached inputs (a `scenario.md` or `candidates/d*.md` path alone means scenario mode,
+`scenes.js` plus `scenario.md` means narration mode, image paths mean image mode) and write
+which mode you read it in on the first line of the verdict.
 
-**Six of the seven modes look at the same scenes.js at different layers** (scenario mode reads a
+**Seven of the eight modes look at the same scenes.js at different layers** (scenario mode reads a
 different file, before that one exists) — don't flag anything outside your layer. Overlapping flags make the delegator fix the same spot six times, and each
 mode runs only once on the board, so a flag aimed at the wrong layer is a finding nobody acts on.
-Scenario mode is the exception on the candidate pages: the delegator loops those to 95.
+Scenario mode on the candidate pages and narration mode on the board are the exceptions: the
+delegator loops those to 95.
 
 | Mode | Layer it looks at | Score is |
 |---|---|---|
-| scenario | both formats — a **candidate page** (or the winner `scenario.md`), viewer engines (curiosity · fear · intrigue · comedy) plus the shape of the investigation and of the feel curve, before a shot exists | total |
+| scenario | both formats — a **candidate page** (or the winner `scenario.md`) in the seven-item shape, viewer engines (curiosity · fear · intrigue · comedy) plus whether each item does its job and the feel curve, before a shot exists | total |
+| narration | the **narration alone**, read in order with no picture — does the topic and the content come through | total |
 | copy | the sentences of the **whole** storyboard — machine style verdict, structural AI tells, hook, facts | total |
 | scene | **each single scene**'s role and the context around it (not the phrasing) | lowest scene |
 | vocabulary | **words** — the words used in narration and titles (not structure or flow) | lowest scene |
@@ -186,23 +202,27 @@ Three things to look at in a filmed scene.
 
 The one mode that does not read `scenes.js` — there is no board yet. What you are handed is
 one candidate page (`storyboard/candidates/d<n>.md`, or the winner `storyboard/scenario.md`
-after the pick), written before a shot exists. Both formats run this mode. You judge
-**whether a viewer would want the next beat**, never the phrasing: §4 rewrites every
-sentence of this page into the board in its own words, so a wording note here is a note
-nobody can act on.
+after the pick), written before a shot exists, **in the seven-item shape** — 주제 · 훅 ·
+전개 #1 · 전개 #2 · 전개 #3 · 마무리 · CTA (scenario-stage §the seven items, user directive
+2026-09-02). Both formats run this mode. You judge **whether a viewer would want the next
+item** and whether each item does its job, never the phrasing: §4 rewrites every sentence
+of this page into the board in its own words, so a wording note here is a note nobody can
+act on.
 
 The 95 bar is the delegator's. You return one verdict per call. The yardstick is
-`scenario-stage.md` (the four engines and what the page may carry) plus scenario-craft
-§4 · §5 · §6 · §11 · §12.
+`scenario-stage.md` (the four engines, the seven items and what each carries) plus
+scenario-craft §4 · §5 · §6 · §11 · §12.
 
 ## Inputs (supplied by the delegation prompt)
 
 - path to the page under review — a `candidates/d<n>.md` or `scenario.md`
 - the claimed `engine_primary` (and `engine_secondary` if any) — curiosity · fear · intrigue · comedy
-- the structure that row rides (short: hook-drip-cta; long-form: curiosity loop · problem
-  stack · transformation arc · expert contrast · ticking clock · reveal ladder)
+- the structure that row rides (short: hook-drip-cta; long-form: the §2.3 arc, answer-first or
+  story, plus the shape 전개 #1 rides inside — curiosity loop · problem stack · transformation arc · expert contrast ·
+  ticking clock · reveal ladder)
 - `storyboard/research.md` — whether the material holds a plausible wrong answer that no
-  beat takes apart, and whether the claimed engine has anything in the evidence to stand on
+  item takes apart, whether the claimed engine has anything in the evidence to stand on,
+  and whether every fact on the page (the 훅's names and years included) has a row
 - `data/<channel>/profile.md` — §3 target, so you can say whether the promise is a promise
   to them
 - The rules: `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenario-craft.md` §4 · §5 ·
@@ -213,38 +233,53 @@ score the engines axis at 0 and raise P0-10.
 
 ## P0 defects (any one of them is a must-fix, not a maybe)
 
-1. **The body runs in event order with no cold open.** The beats retell the timeline from its
-   start. Matching event order is not a defect by itself — a cold open missing on top of it is,
-   because that is the chronological trap with nothing pulling against it (§11).
-2. **No promise sentence.** The opening teases and never says what the viewer will know or be
-   able to do by the end. A question is not a promise.
+1. **The 훅 is the start of the timeline, not a dramatised moment.** The page opens on "먼저
+   …이 있었고" and retells events from their start. Event order inside 전개 #1 is not a defect
+   by itself — a hook that is not a staged scene on top of it is, because that is the
+   chronological trap with nothing pulling against it (§11).
+2. **No promise sentence.** The 훅 teases and never says what the viewer will know or be able
+   to do by the end. A question is not a promise.
 3. **The false answer is skipped.** `research.md` holds an answer most viewers would guess first
-   and no beat sets it up and takes it apart (§11 — the one beat here with peer-reviewed backing).
+   and 전개 #1 never sets it up and takes it apart (§11 — the one beat here with peer-reviewed
+   backing).
 4. **Heavy context stands in front of the first tension.** Installs, definitions or backstory
    delivered as a block before anything is at stake, rather than as bridges at the moment the
    investigation needs them (§11).
-5. **The curve never dips, or never comes back.** No beat carries a negative sign before the
+5. **The curve never dips, or never comes back.** No item carries a negative sign before the
    burst, or the page ends below zero. A straight climb is the least-read shape and a page that
    ends in the low leaves the viewer with the tension and none of the release (§12).
-6. **The cover's first line asks before it names anything at stake.** Curiosity with no loss on
+6. **The 훅's first line asks before it names anything at stake.** Curiosity with no loss on
    the table (§12).
-7. **The ending is a summary or an ask.** The last beat has to be a callback that re-reads the
-   cover plus a question about memory. A subscribe or like verb anywhere on the page is this P0.
-8. **A loop or plant is opened with no beat named to pay it.** The ledger is the point of it
-   (§3 · §5).
+7. **The ending is a summary or a subscribe ask.** The 마무리 has to be a question the viewer
+   can answer from the episode — what do they think — and the CTA a callback that re-reads the
+   훅 plus one outward act. A 마무리 that summarises, a CTA with no callback, or a subscribe or
+   like verb anywhere on the page is this P0. An opinion question is the item, not a defect
+   (user directive, 2026-09-02).
+8. **The 훅 opens something no 전개 item pays.** A staged threat, secret or gap that 전개
+   #1–#3 never return to (§3 · §5). The seven items are the ledger.
 9. **The page carries shot-level material** — shot numbers, camera slots, prompts, character
    counts. It has become a second board, which is the drift `scenario-stage.md` exists to stop.
 10. **None of the four engines is enacted.** The page explains a topic. No closable curiosity
     gap, no threat with a door, no unresolved outcome, no pattern that breaks. Naming an
-    engine in the frontmatter does not count — the beats have to do the work. This is the
+    engine in the frontmatter does not count — the items have to do the work. This is the
     "밋밋하다" failure.
-11. **The claimed primary is named and not enacted.** Frontmatter says `fear` and no beat puts
-    a threat and its clock on the table; says `comedy` and no beat breaks a pattern; says
-    `intrigue` and the opening already pays the secret. A wrong label the beats would support
+11. **The claimed primary is named and not enacted.** Frontmatter says `fear` and no item puts
+    a threat and its clock on the table; says `comedy` and no item breaks a pattern; says
+    `intrigue` and the 훅 already pays the secret. A wrong label the items would support
     under another engine is a directive (relabel), not this P0.
+12. **The 훅 invents a fact.** A name, a year, a figure or a quote inside the 훅 with no
+    `research.md` row and no hypothetical marker in the sentence ("만약", "…라고 해 봅시다").
+    Staging a scene is the item's licence; adding a fact is not (scenario-stage §훅 may
+    invent a scene, not a fact).
+13. **An item is missing, out of order, or not doing its job.** Fewer than the seven items or
+    a different order; a 전개 #1 that is an allusion rather than an account (who · when ·
+    what); a 전개 #2 that only restates the past with no present in it; a 전개 #3 with fewer
+    than two cases, or a case with no line on what it has to do with the topic or no research
+    row; a 주제 that is a topic label rather than the thought the viewer leaves with.
 
-**A beat with no paragraph is not a P0.** A structure whose last beat is one line because the
-episode genuinely ends there costs points on the structure axis and earns a directive.
+**A thin item is not a P0 by itself.** A 전개 #3 with two cases where three would carry
+better, or a 전개 #2 of one sentence, costs points on the structure axis and earns a
+directive; it is P0-13 only when the item cannot do its job at all.
 
 **Kitchen-sink is not a P0.** All four engines named, none of them working, is P0-10. All
 four named and one working is an engines-axis penalty on the mix row.
@@ -258,9 +293,9 @@ for engines the beats actually run, with a file:line or a quoted beat as evidenc
 |---|---|---|
 | Viewer engines | 40 | primary enacted (25) — see the table in `scenario-stage.md`; secondary enacted without fighting the primary (10); the mix is one primary plus at most one spice, not four names (5) |
 | The opening | 20 | cold open on the strongest moment or evidence, a promise sentence the profile §3 target would want kept, a first line that names a loss before it asks, and the primary engine landing in that opening |
-| The structure is honoured | 15 | the beats are the ones the picked structure names, in the investigation's order rather than event order, and each one closes a question as it opens the next |
-| The feel curve | 15 | a sign per beat, the minimum before the burst and the maximum on the turn or the result, and both poles on high-arousal feelings (dread, anger, awe, relief — not sadness or "nice") |
-| Ledger and ending | 10 | every loop and plant opened has the beat that pays it (the count fits the format: short informational 0 sub-loops, short narrative 1, long-form 2–4); a callback that re-reads the cover with the turned meaning, then a memory question — and nothing asked for |
+| The structure is honoured | 15 | the seven items in order, each doing its job — 전개 #1 an account with its rows, 전개 #2 the turn to the present spoken as a thought, 전개 #3's cases each with their link — and each item closing a question as it opens the next; on long-form, 전개 #1 laid out in the shape the row rides |
+| The feel curve | 15 | a sign per item, the minimum before the burst and the maximum on the turn (전개 #2) or the cases (전개 #3), and both poles on high-arousal feelings (dread, anger, awe, relief — not sadness or "nice") |
+| Items and ending | 10 | what the 훅 opens is paid inside 전개 #1–#3; the 마무리 is a question the viewer can answer from the episode, worded to produce comments; the CTA is a callback that re-reads the 훅 with the turned meaning plus one outward act — and nothing subscribe-shaped |
 
 A page that honours structure, opening, curve and ending with **no working engine** tops out
 around 60. That is intentional — it cannot clear 95, and the directives should name which
@@ -276,24 +311,24 @@ engine the research could actually carry.
 | comedy | secondary | no | the "funny" beat explains the joke in the next sentence |
 
 ## Shape findings
-| Beat | Sign | Finding |
+| Item | Sign | Finding |
 |---|---|---|
-| 2 설치 | 0 | the whole install stands here, in front of anything at stake — a block, not a bridge |
-| 5 전환 | +2 | pays the loop opened at 1
+| 전개 #1 | 0 | the whole background stands here, in front of anything at stake — a block, not a bridge |
+| 전개 #2 | +2 | pays the gap the 훅 opened, and the present is spoken |
 
 ## P0 list
-- [P0-4] beat 2 — the install block sits before the first tension
+- [P0-4] 전개 #1 — the background block sits before the first tension
   (if none, "No P0")
 
 ## Axis scores
 | Axis | Earned | Evidence |
 |---|---|---|
 | Viewer engines | 25/40 | primary holds; secondary is a label; mix is clean |
-| The opening | 17/20 | cold open holds, but the promise sentence is a question
+| The opening | 17/20 | the 훅 is a staged moment, but the promise sentence is a question
 
 ## Correction directives (in priority order)
-1. beat 2 — split the install across beats 3 and 5, at the moment each step is needed
-2. drop the comedy label or actually break a pattern at the end of beat 4
+1. 전개 #1 — move the background to the sentence that first needs it; open on the false answer
+2. drop the comedy label or actually break a pattern at the end of 전개 #3
 
 ## Previous findings resolved? (only when the delegator says a change came back)
 - <finding> → resolved | unresolved
@@ -304,6 +339,122 @@ STORYBOARD_REVIEW: mode=scenario score=NN p0=N primary=<engine> secondary=<engin
 **No style check runs in this mode.** The page never ships — it is planning prose, and
 `check-style.py` reads publishing surfaces. Copy mode is where the sentences that do ship get
 their machine verdict, and that happens after §4 has rewritten them.
+
+---
+
+# Narration mode
+
+The one board read the delegator loops. What you judge is whether the episode comes through
+**from the spoken sentences alone** — the viewer with the phone in a pocket, or reading the
+subtitles with the sound off and the picture half-watched (user directive, 2026-09-02).
+Storyboard §4.4 runs it right after the story pass, before the six one-round reads, and
+re-runs it until `score ≥ 95` and `p0 = 0` (cap 5 reads); autoproduce gate 6f runs the same
+loop unattended.
+
+## Inputs (supplied by the delegation prompt)
+
+- `storyboard/scenes.js`
+- `storyboard/scenario.md` (if present) — the approved seven items (주제 · 훅 · 전개 #1–#3 · 마무리 · CTA);
+  a skip-research channel has none, and then `COMPREHENSION.question` · `takeaway` stand in for the 주제 and the 마무리 line
+- `storyboard/research.md` (if present) and `data/<channel>/profile.md` (§3 target — who the
+  listener is)
+- on a re-read, which findings the delegator applied
+
+## Reading procedure — the order is the test
+
+1. **Extract the sentences and read them before opening anything else.**
+
+   ```bash
+   PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
+   node "$PG/extract-text.js" ./storyboard/scenes.js subtitle
+   ```
+
+   That is every narrated sentence in playback order, written notation, one per line — no
+   title, no caption, no picture, no shot number. Read it top to bottom once, as a listener.
+2. **Write down what you understood** in the verdict's first section, before any comparison:
+   what the episode is about in one sentence, what happened, what it has to do with now,
+   which cases were named, what you were asked at the end. Where you could not tell, say so
+   there ("who 그 사람 is never comes up").
+3. **Only now open `scenario.md` (when there is one) and `window.COMPREHENSION`** and compare. Is your one
+   sentence the 주제? Did 전개 #1's event, 전개 #2's present link and 전개 #3's cases reach
+   you? Could you answer the 마무리 question from what you heard?
+4. Open `scenes.js` to point each finding at a shot and a segment.
+
+Read the extract first or the read is worthless — once the board is open you know what the
+picture was going to show, and you will fill the gap for the author without noticing.
+
+## P0 defects (any one of them is a must-fix, not a maybe)
+
+1. **A sentence needs the picture.** "여기 보이는", "이 화면처럼", "이 그래프가", an "이것" whose
+   referent exists only on screen. The narration has to say what the picture would have
+   shown.
+2. **A referent with no antecedent.** "그 사람", "그 검사", "이 사건" before anything spoken
+   names it; a name used as if the listener already knew it.
+3. **The 주제 does not come through.** After the whole read, the one sentence you wrote is not
+   what the approved scenario's 주제 says (`COMPREHENSION.question`, when there is no
+   scenario.md) — or you could not write one.
+4. **The event is told without who · when · what.** 전개 #1 reaches the listener as an
+   allusion — "그 일이 있고 나서" — rather than as an account.
+5. **The present link is implied, not spoken.** 전개 #2's "what this makes us think about now"
+   never gets a sentence; the cut from past to present is expected to say it.
+6. **A case with no link.** A 전개 #3 case is named and what it has to do with the topic is
+   never said.
+7. **A term used before or without its plain wording.** A name or technical term the listener
+   would not know arrives with no explanation in the same shot — including a term the
+   narration uses that `COMPREHENSION.terms` never declared. (The machine half — a declared
+   `plain` actually being spoken — is `check-scenes.js`'s; yours is the term nobody declared.)
+8. **The 마무리 question cannot be answered from what was heard**, or no question is asked.
+9. **A drop in the chain.** Two consecutive sentences where the second does not follow from
+   the first — a "but" or a "therefore" the listener cannot supply (scenario-craft §1), with
+   nothing spoken to bridge it.
+
+## Axis scores (additive out of 100, no points without evidence)
+
+| Axis | Points | What earns them |
+|---|---|---|
+| The topic lands | 25 | your one sentence matches the 주제, or `COMPREHENSION.question` when there is no scenario.md (15); the takeaway you would repeat matches `COMPREHENSION.takeaway` (10) |
+| The chain holds | 25 | every sentence follows from the one before with no picture needed; every referent has a spoken antecedent; no seam the listener has to bridge |
+| The content is complete | 20 | 전개 #1 as an account — who · when · what (8); 전개 #2 spoken as a thought (6); each 전개 #3 case named with its link (6) |
+| Terms and names | 15 | every unfamiliar term explained where it first appears; no proper name the listener carries for nothing |
+| The ending | 15 | the 마무리 question answerable from what was heard (8); the CTA callback re-reads the 훅 with the turned meaning (7) |
+
+## Output format (fixed, machine-parseable)
+
+```
+## What I understood (written before opening scenario.md or scenes.js)
+- About: <one sentence>
+- What happened: <…> · What it has to do with now: <…>
+- Cases named: <…> · Asked at the end: <…>
+- Could not tell: <…>
+
+## Chain findings
+| Shot·seg | Sentence | Finding |
+|---|---|---|
+| s3·2 | "그 결과지가 답을 하나 줬어요" | 결과지 never introduced — s2 speaks of 검사 only |
+
+## P0 list
+- [P0-2] s3·2 — "그 결과지" has no spoken antecedent
+  (if none, "No P0")
+
+## Axis scores
+| Axis | Earned | Evidence |
+|---|---|---|
+| The topic lands | 20/25 | the sentence matches; the takeaway I'd repeat is the answer, not the takeaway |
+
+## Correction directives (in priority order — a sentence to add, move, split or cut; never a picture)
+1. s2 — name the 결과지 in the sentence that introduces the 검사
+2. s5 — say in one spoken sentence what the case has to do with the topic
+
+## Previous findings resolved? (only on a re-read)
+- <finding> → resolved | unresolved
+
+STORYBOARD_REVIEW: mode=narration score=NN p0=N
+```
+
+**Don't fix the picture.** A directive here is always a spoken sentence — add, move, split,
+cut. "Show it on screen" is the answer this mode exists to refuse. AI tells, word choice and
+shot roles are the six one-round reads' layers: carry those as one "hand to another mode"
+line, never as a P0.
 
 ---
 
@@ -394,7 +545,12 @@ reviewer quotes its output as the evidence.
    **Collapsing a range to its upper bound is distortion too** ("300만~500만" → "500만").
    The subtitle (`sub`) and the TTS (`tts`) carrying different values belongs here as well
 4. **Unverified assertion** — stating a number, an effective date, or how a rule works with
-   no basis in research.md
+   no basis in research.md. **A cover whose `shot.info` marks it as staged** ("연출 — 전개 #1
+   이 사실을 댄다", scenario-stage §훅 may invent a scene, not a fact) is read differently:
+   the scene may be invented, so judge only whether every name, year, figure or quote inside
+   it has a research.md row or a hypothetical marker in the sentence ("만약", "…라고 해
+   봅시다"), and whether the first 전개 #1 shot is where the fact actually lands. A staged
+   cover with an unmarked invented fact is this P0; a staged cover with none is not
 5. **Unexplained jargon or over-compression** — a plain-language violation. Every unfamiliar
    term has to appear in `window.COMPREHENSION.terms` and carry the declared `plain` wording in
    the same first shot. An abbreviation cut so short the meaning changed is the same defect.
@@ -1204,16 +1360,18 @@ STORYBOARD_REVIEW: mode=image score=NN p0=N
 
 ---
 
-## Verdict rules common to all seven modes
+## Verdict rules common to all eight modes
 
 **There is no pass line.** Report the score and the P0 count and stop there — the delegator
-files them and acts on your findings; it doesn't branch on the number, and the person at the
-approval step is what blocks. Don't write a PASS or FAIL verdict, and don't soften a finding
-because you think the storyboard is otherwise good enough to approve.
+files them and acts on your findings (and on scenario and narration mode loops until 95, but
+that branch is the delegator's, not yours); the person at the approval step is what blocks.
+Don't write a PASS or FAIL verdict, and don't soften a finding because you think the
+storyboard is otherwise good enough to approve.
 
-The delegator machine-parses the tail line — don't change its format or spelling. In copy,
-sound and image mode `score` is the total; in **scene, vocabulary and camera mode `score` is
-the lowest item's score** (never the average — an average lets one collapsed scene through).
+The delegator machine-parses the tail line — don't change its format or spelling. In
+scenario, narration, copy, sound and image mode `score` is the total; in **scene, vocabulary
+and camera mode `score` is the lowest item's score** (never the average — an average lets one
+collapsed scene through).
 
 **You are read once.** There is no next round to catch what you skipped, so score only what
 you actually looked at and write every finding you have, including the ones you'd normally
