@@ -413,7 +413,10 @@ const SLIDE_SHOT = 0;
      __meta 가 stray 로 잡는다. */
   const videos = () => [...document.querySelectorAll("video")];
   const seekVideo = (v, tMs) => new Promise(res => {
-    const want = ((+v.dataset.vfrom || 0) + tMs) / 1000;
+    /* +20ms — a seek that lands exactly on a source frame boundary shows the previous frame (24fps
+       clips under 30fps capture: 4 of every 30 frames wrong, a 3-hold and a skip). 20ms is inside
+       one frame at 24·25·30fps, so every capture samples mid-frame. */
+    const want = ((+v.dataset.vfrom || 0) + tMs + 20) / 1000;
     if (v.readyState >= 2 && Math.abs(v.currentTime - want) < 1e-4) return res(true);
     const done = () => { v.removeEventListener("seeked", done); res(true); };
     v.addEventListener("seeked", done);

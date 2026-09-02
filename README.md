@@ -23,7 +23,12 @@ keyframes before approval. A slide that states a value —
 the number counts up and the bar grows the moment its sentence starts, rendered locally
 frame by frame at no cost and admitted to the build only after an adversarial design
 review (`slide-reviewer`, 95-point gate) — the one free way to put movement on a body
-scene on either format. Narration defaults to **your own voice on every scene**, so
+scene on either format. A scene where something **happens** — people move, a place, an
+action — is a **footage slide** (`treatment:"footage"`): one generated clip per sentence
+inside the same HTML lane, with wordless accent-colour marks (a route, an X, a ring,
+hatching, brackets) drawn on over the picture and, when a mark has to pass behind the
+people, a subject matte laid back on top. Cuts land on sentence starts; the clips are
+budgeted on the approval screen rather than counted against the generated-video cap. Narration defaults to **your own voice on every scene**, so
 the shooting script (`script.md`) carries the lines for every shot — filmed shots get
 what to show, what to say, and the filename to save it as; the rest are voice-only
 recordings.
@@ -369,9 +374,9 @@ social-flow/
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
 │   ├── storyboard/              # /social-flow:storyboard — research → 3 seven-item scenarios looped to 95 → pick → more research → scene design → narration read-through looped to 95 → six one-round board reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval → slides (motion slides through the slide-reviewer gate)
-│   │   └── references/          #   scenes-schema.md · directing-grammar.md · motion-slide-template.html · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js
+│   │   └── references/          #   scenes-schema.md · directing-grammar.md · motion-slide-template.html · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js · footage-lane.md (one clip per sentence, marks over it) · footage-frames.sh
 │   ├── produce/                 # /social-flow:produce — video build + per-platform text
-│   │   └── references/          #   build-reel.sh · speedup.sh (required final pace pass, 1.2 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
+│   │   └── references/          #   build-reel.sh (SUB_MODE sentence · word · phrase) · speedup.sh (required final pace pass, 1.2 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency; footage slides play a clip per group) · make-matte.py (subject matte → VP9-alpha webm, needs rembg) · QA harness
 │   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → 3 seven-item scenarios [scored to 95 on curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring [narration read alone, to 95] → video (human gates replaced by the machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)

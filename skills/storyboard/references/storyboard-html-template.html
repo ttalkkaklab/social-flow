@@ -925,8 +925,8 @@ window.SB_DOC = {
   var FMT_MIRROR = {
     "shorts-9x16": {
       label: "Short-form 9:16",
-      totalMin: 35, totalMax: 75, totalHard: 90,
-      sceneCountMin: 4, sceneCountMax: 7,
+      totalMin: 35, totalMax: 120, totalHard: 180,
+      sceneCountMin: 4, sceneCountMax: 12,
       sceneMax: 13, recSceneMax: 20,
       capCover: 40, capBody: 50, sentMin: 8, sentMax: 25,
       videoMax: 2,                              // 8s × 2 slots = 16s
@@ -1740,6 +1740,13 @@ window.SB_DOC = {
       else if (v.video) slot = ["motion", (v.video.engine || v.engine) === "veo" ? "veo" : "seedance", Number(s.duration) || 0];
       else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", "veo", 8];
       if (slot) parts.push((i + 1) + ":" + slot.join("/"));
+      var sl = v.slide;
+      if (sl && sl.treatment === "footage" && Array.isArray(sl.shots)) {
+        for (var j = 0; j < sl.shots.length; j++) {
+          var sh = sl.shots[j] || {};
+          parts.push((i + 1) + "g" + (sh.group || j + 1) + ":footage/" + ((sh.engine || v.engine) === "veo" ? "veo" : "seedance") + "/" + (Number(sh.duration) || 0));
+        }
+      }
     }
     return parts.length ? parts.join(",") : "none";
   }
@@ -2231,8 +2238,8 @@ window.SB_DOC = {
       }
     }
     if (!sl || sl.motion !== true || (sl.kind || "diagram") !== "diagram") return;
-    if (sl.treatment !== "editorial" && sl.treatment !== "photo-action")
-      flag("bad", T.shotCap(i + 1), "moving diagram needs slide.treatment editorial or photo-action");
+    if (sl.treatment !== "editorial" && sl.treatment !== "photo-action" && sl.treatment !== "footage")
+      flag("bad", T.shotCap(i + 1), "moving diagram needs slide.treatment editorial, photo-action or footage");
     if (sl.treatment === "editorial" && (!String(sl.role || "").trim() || !String(sl.motif || "").trim()))
       flag("bad", T.shotCap(i + 1), "editorial frame needs role and episode-wide motif");
     if (sl.treatment === "photo-action" && !String(v.action || "").trim())

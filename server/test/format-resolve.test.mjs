@@ -56,7 +56,7 @@ const SHORTS_TABLE = [
   ['ZOOM_BASE', '1620x2880', 'mirror', { file: 'build-reel.sh', re: /^ZOOM_BASE=\$\{ZOOM_BASE:-1620x2880\}/m }],
   ['MAX_DUR', '13.0', 'mirror', { file: 'build-reel.sh', re: /MAX_DUR=\$\{MAX_DUR:-13\.0\}/ }],
   ['MAX_SCENE', '20', 'mirror', { file: 'build-screencast.sh', re: /MAX_SCENE=\$\{MAX_SCENE:-20\}/ }],
-  ['TOTAL_HARD', '90', 'mirror', { file: 'build-screencast.sh', re: /BEGIN\{exit !\(t>90\)\}/ }],
+  ['TOTAL_HARD', '180', 'mirror', { file: 'build-screencast.sh', re: /BEGIN\{exit !\(t>180\)\}/ }],
   ['SUB', '1', 'mirror', { file: 'build-reel.sh', re: /SUB=\$\{SUB:-1\}/ }],
   ['BURN', '1', 'mirror', { file: 'build-reel.sh', re: /BURN=\$\{BURN:-1\}/ }],
   ['SHRINK_WARN', '3.0', 'mirror', { file: 'build-screencast.sh', re: /SHRINK_WARN=\$\{SHRINK_WARN:-3\.0\}/ }],

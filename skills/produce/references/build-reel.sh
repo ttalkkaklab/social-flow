@@ -197,10 +197,21 @@ SUB_MR=${SUB_MR:-250}              # subtitle right margin
 SUB_MV=${SUB_MV:-380}              # subtitle bottom margin (band y≈1380)
 SUB_OUT=${SUB_OUT:-5}              # outline thickness
 SUB_SHA=${SUB_SHA:-1.7}            # shadow
-SUB_MODE=${SUB_MODE:-sentence}     # sentence | word — word burns one 어절 at a time (the SRT keeps whole sentences)
+SUB_MODE=${SUB_MODE:-sentence}     # sentence | word | phrase — word burns one 어절 at a time, phrase one line of 3~6 어절 (the SRT keeps whole sentences)
 SUB_WORD_SIZE=${SUB_WORD_SIZE:-84} # word-mode Fontsize — Pretendard draws a Hangul glyph at ~0.71× this, so 84 ≈ the 61px word the reference short runs
 SUB_WORD_MV=${SUB_WORD_MV:-640}    # word-mode bottom margin — the word sits on the 65% line (y≈1248), not the 72% band
 SUB_WORD_MIN=${SUB_WORD_MIN:-0.28} # a word cue shorter than this is glued to the next word
+SUB_PHRASE_MAX=${SUB_PHRASE_MAX:-12}   # phrase-mode characters per line (spaces dropped) — the reference history short's 3~6 어절 line; 12 Hangul at 92px (~62px advance) plus spaces stays inside the 952px phrase width below
+SUB_PHRASE_SIZE=${SUB_PHRASE_SIZE:-92} # phrase-mode Fontsize — Pretendard draws Hangul at ~0.71×, so 92 ≈ the 66px glyph measured on the reference
+SUB_PHRASE_MV=${SUB_PHRASE_MV:-680}    # phrase-mode bottom margin — the line's centre sits on the 63% line (y≈1210), above the word-mode 65%
+SUB_PHRASE_OUT=${SUB_PHRASE_OUT:-4}    # phrase-mode outline — 5 reads heavy at 92; the reference's edge is thin
+SUB_PHRASE_ML=${SUB_PHRASE_ML:-64}     # phrase-mode side margins — the Sub style's 250/250 leaves 580px, which wraps a 12-character 92px line into two (measured with libass)
+SUB_PHRASE_MR=${SUB_PHRASE_MR:-64}
+case "$SUB_MODE" in
+  word)   WSTYLE=Word;   PHRASE_ARG="" ;;
+  phrase) WSTYLE=Phrase; PHRASE_ARG="--phrase $SUB_PHRASE_MAX" ;;
+  *)      WSTYLE=Sub;    PHRASE_ARG="" ;;
+esac
 QWEN3_ASR_BIN=${QWEN3_ASR_BIN:-$HOME/.local/bin/mlx-qwen3-asr}   # word mode: forced aligner for real word times (falls back to proportion when absent)
 KB_ZOOM_MIN=${KB_ZOOM_MIN:-1.06}   # pan base scale floor (cards.tsv pan= option)
 KB_ZOOM_MAX=${KB_ZOOM_MAX:-1.35}   # pan base scale ceiling — travel = W(z-1)
@@ -902,7 +913,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     # narration (about 3 s for a 7 s card); its token times are card-relative, so the offset
     # handed to word-cues.py is this card's absolute speech start (CS + pre-roll).
     ALIGNJ=""
-    if [ "$SUB_MODE" = "word" ] && [ "$MUTE" -eq 0 ]; then
+    if { [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; } && [ "$MUTE" -eq 0 ]; then
       if [ -x "$QWEN3_ASR_BIN" ]; then
         mkdir -p work/align
         "$QWEN3_ASR_BIN" --timestamps -f json --language Korean -o work/align "work/s$IDX.wav" > "work/align/s$IDX.log" 2>&1 \
@@ -919,8 +930,8 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       else EN=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" -v d="$D" 'BEGIN{e=p+l+0.45; if(e>d)e=d; printf "%.3f", cs+e}'); fi
       TXT=$(printf '%s' "${SARR[$j]}" | sed 's/[{}\\]//g')
       if [ -n "$TXT" ]; then
-        if [ "$SUB_MODE" = "word" ]; then
-          # One 어절 per cue, hard swaps, no fade. The speech window is the sentence's real
+        if [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; then
+          # One 어절 per cue (word) or one short line of a few 어절 (phrase), hard swaps, no fade. The speech window is the sentence's real
           # voice span: a detected boundary is the END of the pause (the next sentence's first
           # sound), so the window closes at that pause's START — the silin line whose end is
           # the boundary. A proportional-fallback boundary has no pause and stays as it is.
@@ -931,10 +942,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
                   || awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b}')
           else SPE=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" 'BEGIN{printf "%.3f", cs+p+l}'); fi
           AOFF=$(awk -v cs="$CS" -v p="$CPRE" 'BEGIN{printf "%.3f", cs+p}')
-          python3 "$HERE/word-cues.py" "$ST" "$EN" "$SPS" "$SPE" "$SUB_WORD_MIN" "$TXT" ${ALIGNJ:+--align "$ALIGNJ" --offset "$AOFF" --tts "${TARR[$j]}"} |
+          python3 "$HERE/word-cues.py" "$ST" "$EN" "$SPS" "$SPE" "$SUB_WORD_MIN" "$TXT" ${ALIGNJ:+--align "$ALIGNJ" --offset "$AOFF" --tts "${TARR[$j]}"} $PHRASE_ARG |
             while IFS=$'\t' read -r WS WE WT; do
               case "$WS" in \#*) say "· card $IDX seg $j words: ${WS#\# }"; continue;; esac
-              printf 'Dialogue: 0,%s,%s,Word,,0,0,0,,%s\n' "$(asstime "$WS")" "$(asstime "$WE")" "$WT" >> work/subs.body
+              printf 'Dialogue: 0,%s,%s,%s,,0,0,0,,%s\n' "$(asstime "$WS")" "$(asstime "$WE")" "$WSTYLE" "$WT" >> work/subs.body
             done
         else
           printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$(asstime "$ST")" "$(asstime "$EN")" "$TXT" >> work/subs.body
@@ -958,11 +969,11 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         ST=$(awk -v cs="$CS" -v s="$FS" 'BEGIN{if(s<0)s=0; printf "%.3f", cs+s}')
         EN=$(awk -v cs="$CS" -v e="$FE" -v d="$D" 'BEGIN{if(e>d)e=d; printf "%.3f", cs+e}')
         awk -v s="$ST" -v e="$EN" 'BEGIN{exit !(e>s)}' || continue
-        if [ "$SUB_MODE" = "word" ]; then
-          python3 "$HERE/word-cues.py" "$ST" "$EN" "$ST" "$EN" "$SUB_WORD_MIN" "$FT" |
+        if [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; then
+          python3 "$HERE/word-cues.py" "$ST" "$EN" "$ST" "$EN" "$SUB_WORD_MIN" "$FT" $PHRASE_ARG |
             while IFS=$'\t' read -r WS WE WT; do
               case "$WS" in \#*) continue;; esac
-              printf 'Dialogue: 0,%s,%s,Word,,0,0,0,,%s\n' "$(asstime "$WS")" "$(asstime "$WE")" "$WT" >> work/subs.body
+              printf 'Dialogue: 0,%s,%s,%s,,0,0,0,,%s\n' "$(asstime "$WS")" "$(asstime "$WE")" "$WSTYLE" "$WT" >> work/subs.body
             done
         else
           printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$(asstime "$ST")" "$(asstime "$EN")" "$FT" >> work/subs.body
@@ -1144,6 +1155,7 @@ if [ "$SUB" = "1" ] && [ -s work/subs.body ]; then
     printf "[Script Info]\nScriptType: v4.00+\nPlayResX: ${W}\nPlayResY: ${H}\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n"
     printf '[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n'
     printf "Style: Word,%s,${SUB_WORD_SIZE},&H00FFFFFF,&H00FFFFFF,&H00281810,&H78000000,-1,0,0,0,100,100,0,0,1,${SUB_OUT},${SUB_SHA},2,${SUB_ML},${SUB_MR},${SUB_WORD_MV},1\n" "$SUB_FONT"
+    printf "Style: Phrase,%s,${SUB_PHRASE_SIZE},&H00FFFFFF,&H00FFFFFF,&H00281810,&H78000000,-1,0,0,0,100,100,0,0,1,${SUB_PHRASE_OUT},${SUB_SHA},2,${SUB_PHRASE_ML},${SUB_PHRASE_MR},${SUB_PHRASE_MV},1\n" "$SUB_FONT"
     printf "Style: Sub,%s,${SUB_SIZE},&H00FFFFFF,&H00FFFFFF,&H00281810,&H78000000,-1,0,0,0,100,100,0,0,1,${SUB_OUT},${SUB_SHA},2,${SUB_ML},${SUB_MR},${SUB_MV},1\n\n" "$SUB_FONT"
     printf '[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n'
     cat work/subs.body

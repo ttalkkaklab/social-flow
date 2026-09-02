@@ -3,6 +3,7 @@
 
 usage: word-cues.py <cue-start> <cue-end> <speech-start> <speech-end> <min-cue> <sentence>
                     [--align <tokens.json> --offset <sec>] [--tts <spoken sentence>]
+                    [--phrase <maxchars>]
 prints: start<TAB>end<TAB>word   (seconds, absolute — the same base the caller passed in)
         and one trailing comment line — "# aligned 94%" or "# proportional (<why>)".
 
@@ -23,6 +24,12 @@ Two ways to place the words:
   letter 0.5, a comma or period a 0.4 pause). Measured against the aligner on ep07 card 3
   this path was off by 0.42 s on average and 1.18 s at worst, so it is the fallback, not
   the lane.
+
+`--phrase N` then joins consecutive words into one cue while the characters (spaces and
+punctuation dropped) stay within N — the one-line 3~6 어절 subtitle the reference history
+short runs (measured 2026-09-02: 65 cues in 114 s, 4.4 words per cue, 1.75 s cadence). The
+word times still come from ① or ②; only the grouping changes, so a phrase lands on its
+first word's onset.
 
 Either way the first cue is pulled back to the cue start and the last one held to the cue
 end, so the outer edges match the sentence cue the SRT keeps, and a cue that would run
@@ -113,7 +120,8 @@ def main() -> None:
     args = sys.argv[1:]
     align = offset = None
     tts = ""
-    for flag in ("--align", "--offset", "--tts"):
+    phrase_max = 0
+    for flag in ("--align", "--offset", "--tts", "--phrase"):
         if flag in args:
             i = args.index(flag)
             val = args[i + 1]
@@ -122,10 +130,12 @@ def main() -> None:
                 align = val
             elif flag == "--offset":
                 offset = float(val)
+            elif flag == "--phrase":
+                phrase_max = int(val)
             else:
                 tts = val
     if len(args) != 6:
-        sys.exit("usage: word-cues.py <cue-start> <cue-end> <speech-start> <speech-end> <min-cue> <sentence> [--align json --offset sec] [--tts spoken]")
+        sys.exit("usage: word-cues.py <cue-start> <cue-end> <speech-start> <speech-end> <min-cue> <sentence> [--align json --offset sec] [--tts spoken] [--phrase maxchars]")
     cue_s, cue_e, sp_s, sp_e, min_cue = (float(x) for x in args[:5])
     words = args[5].split()
     if not words:
@@ -173,6 +183,18 @@ def main() -> None:
         merged[-2][1] = merged[-1][1]
         merged[-2][2] += " " + merged[-1][2]
         merged.pop()
+    if phrase_max > 0:
+        # One line of a few words: keep adding the next word while the line stays within
+        # phrase_max characters. A single word longer than the cap still gets its own cue.
+        grouped = []
+        for s, e, w in merged:
+            if grouped and len(strip(grouped[-1][2] + w)) <= phrase_max:
+                grouped[-1][1] = e
+                grouped[-1][2] += " " + w
+            else:
+                grouped.append([s, e, w])
+        merged = grouped
+        note += f" · phrase ≤{phrase_max}"
     for s, e, w in merged:
         print(f"{s:.3f}\t{e:.3f}\t{w}")
     print(f"# {note}")
