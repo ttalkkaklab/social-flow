@@ -256,8 +256,8 @@ NT=$(ffprobe -v error -show_entries format=duration -of csv=p=0 work/narration.w
 DRIFT=$(awk -v a="$VT" -v b="$NT" 'BEGIN{d=a-b; if(d<0)d=-d; printf "%.4f", d}')
 say "── main part: video ${VT}s / voice ${NT}s / drift ${DRIFT}s (${N} scenes)"
 awk -v d="$DRIFT" 'BEGIN{exit !(d<=0.002)}' || { say "✗ drift over the 2ms tolerance — build stopped"; exit 1; }
-if awk -v t="$VT" 'BEGIN{exit !(t>90)}'; then
-  say "⚠ main part ${VT}s > the 90s cap — tighten the scene cuts or drop scenes."
+if awk -v t="$VT" 'BEGIN{exit !(t>180)}'; then
+  say "⚠ main part ${VT}s > the 180s cap — tighten the scene cuts or drop scenes."
   WARN=1
 fi
 

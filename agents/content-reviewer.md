@@ -57,8 +57,13 @@ If a path is missing, look for it with Glob; mark any input you couldn't find as
 
 When the delegation prompt says **"plan mode"**, verify the **plan**, not
 deliverables — the storyboard's cover background prompt (`scenes.js` cover
-`bgPrompt`) and **every b-roll scene** (max 2 slots per episode — each slot:
-source prompt, motion, usage duration, justification), against `profile.md` §3.
+`bgPrompt`), **every b-roll scene** (max 2 slots per episode — each slot:
+source prompt, motion, usage duration, justification), and **every footage shot**
+(`visual.slide.treatment:"footage"` — each `slide.shots[k]`: still prompt, clip
+prompt, four camera slots, `mark`; scenes-schema §Footage treatment), against
+`profile.md` §3. A footage shot is judged on P0 1·2·4·5·7·10·11·13 like a b-roll
+source; 6·8·9 are the b-roll slot contract and don't apply to it — its length is
+its sentence's and its narration is the slide's. Name the shot `s<n>-g<k>` in the P0.
 This is the last gate before calls that cost money and time
 (image_local_generate, gpt_image high, veo), so the goal is finding reasons NOT
 to generate as planned. With two slots, **judge each separately and name the

@@ -136,7 +136,7 @@ delegator loops those to 95.
 | copy | the sentences of the **whole** storyboard — machine style verdict, structural AI tells, hook, facts | total |
 | scene | **each single scene**'s role and the context around it (not the phrasing) | lowest scene |
 | vocabulary | **words** — the words used in narration and titles (not structure or flow) | lowest scene |
-| camera | the **shot grammar** of every shot — `shot.feel` and whether `size`·`angle`·`space` serve it — plus the **four camera slots**, cut length and engine fit of each generated-video shot | lowest shot |
+| camera | the **shot grammar** of every shot — `shot.feel` and whether `size`·`angle`·`space` serve it — plus the **four camera slots**, cut length and engine fit of each generated-video shot. On a footage slide (`treatment:"footage"`) every `slide.shots[]` entry is such a shot: its own four slots, a `very slow` or `static` move under a mark, and a `duration` at the sentence estimate plus one second | lowest shot |
 | sound | what the episode will **sound** like — clip audio, voice casting, tts spellings, silence | total |
 | image | how the generated **PNG** lines up with the scene content | total |
 

@@ -751,6 +751,18 @@ draws a Hangul glyph at ~0.71× the size) and `SUB_WORD_MV` (640, the 65% line);
 style and its format-lint mirrors are untouched. Default stays `sentence` — a channel
 switches with `SUB_MODE=word` on the build line, same as `ATEMPO_MIN=1`.
 
+**Phrase cues — `SUB_MODE=phrase`.** One line of **3~6 어절** at a time, no second line, on
+the same aligner as word mode: `word-cues.py --phrase 12` joins consecutive words while the
+line stays within `SUB_PHRASE_MAX` characters (spaces dropped), so each line lands on its
+first word's onset. The `Phrase` style has its own side margins (`SUB_PHRASE_ML`/`MR` 64 —
+952px; the sentence style's 250/250 wraps a 92px line in two). This is the subtitle grammar of the reference history short measured
+2026-09-02 (65 cues in 114 s, 4.4 words per cue, a new line every 1.75 s, one ~66px glyph
+line at 63% of the frame height, a thin outline, no box). The `Phrase` style is
+`SUB_PHRASE_SIZE` (92 — ≈66px Hangul), `SUB_PHRASE_MV` (680 — the 63% line) and
+`SUB_PHRASE_OUT` (4). It is the mode to pair with footage slides (storyboard
+`references/footage-lane.md`): a 2-line 50px sentence under a 2-second cut reads as a caption
+on a photo, a one-line phrase reads as part of the picture. The SRT keeps whole sentences.
+
 **The still move comes from the storyboard, not from taste.** A still's
 `visual.camera.movement` (when the storyboard wrote one — directing-grammar §5's Still
 column is where it picks) maps onto column 4/5 like this: `dolly in`/`zoom in` → `in` (add
@@ -975,7 +987,7 @@ re-encoded), and the builder verifies that the lengths match.
 
 Read `build-report.txt` and rule on it — **drift has to be 0.0000s**, and
 `missing reveal state` / `last reveal state unused` mean don't proceed. The full verdict table
-is in `references/pipeline.md` §Build report gate table. Total length 35–75s recommended, 90s
+is in `references/pipeline.md` §Build report gate table. Total length 35–75s recommended, up to 120s, 180s
 cap — **measured after the §7.5 speed pass**, which is the file that ships. Confirm that
 `cover.jpg` is a frame where the hero number has already appeared, and if it isn't, set
 `COVER_TS` past the report's cover-transition-complete time and rebuild (or just re-extract

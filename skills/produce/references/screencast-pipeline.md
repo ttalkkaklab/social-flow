@@ -112,8 +112,8 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · reel-sub
 | `⚠ screen scaled down N× (>3.0)` | check text legibility — narrow the crop (zoom the focus) or enlarge the demo app's font and reshoot |
 | `⚠ scene N duration > 20s` | split the scene (two cuts in alignment) or reshoot with tighter speech |
 | `⚠ overlay file missing` | capture missed — redo ② |
-| `⚠ main part > 90s` | tighten cuts or drop scenes |
-| Total length | 35–75s recommended, 90s cap (main + outro − 0.6s) — **measured on the speed pass's output** |
+| `⚠ main part > 180s` | tighten cuts or drop scenes |
+| Total length | 35–75s recommended, up to 120s, 180s cap (main + outro − 0.6s) — **measured on the speed pass's output** |
 | No `── speedup x…` line | **Do not proceed** — the required speed pass never ran (produce §7.5) |
 
 ## Pitfalls
