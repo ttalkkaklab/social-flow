@@ -66,19 +66,19 @@ subtitle spec built for plates.
   plain cuts warm dust, and the viewer reads the geography from that alone. Name the palette
   per place in the still prompts (directing-grammar §3.5) and keep it across the shots of
   that place.
-- Camera review (§4.8) reads every `shots[]` entry as a generated shot — feel served, four
+- Your own camera pass (storyboard §4.6) reads every `shots[]` entry as a generated shot — feel served, four
   slots, a cut length that matches the sentence.
 
 ## 3. Generating the clips (§5)
 
 Footage clips are paid calls made before approval, so three things sit in front of them:
 
-1. **The narration loop has passed** (§4.4 at 95, P0 = 0). A sentence rewritten after the clips
-   exist orphans a clip.
-2. **One plan-mode delegation for every paid shot.** Hand content-reviewer plan mode the
-   cover, every b-roll and motion-background scene, and **every footage shot** in one call
-   (the still prompt, the clip prompt, the four camera slots, the mark) and generate nothing
-   before `PLAN_REVIEW: PASS`. Twenty shots are one delegation, not twenty.
+1. **The narration loops have passed** (§4.4 and §4.5 at 95, P0 = 0). A sentence rewritten
+   after the clips exist orphans a clip.
+2. **The rule-13 plan check on every paid shot.** Go through the cover, every b-roll and
+   motion-background scene, and **every footage shot** yourself against produce absolute rule
+   13's list (the still prompt, the clip prompt, the four camera slots, the mark) and generate
+   nothing that fails a point. The plan-mode delegation of 0.49 is not called any more.
 3. **The cost gate, inside the budget.** Run `cost-preview.js <storyboard dir>`. It reads the
    channel's `video_budget_usd` (plugin default $10 — every generated clip of the episode,
    billed and projected together; stills, TTS and music are outside it) and answers `!!` with
@@ -161,10 +161,10 @@ Then, per shot, in group order:
   frames a second — a 4 s group is a minute, a 30-shot episode about half an hour. Check the
   seam yourself once: `frames-r<k>/f0000.png` equals `sheet/g<k-1>-end.png` byte for byte, and
   `f0001.png` is the new shot.
-- `slide-reviewer` to ≥ 95 with P0 = 0 inside the episode's five delegations — every authored
-  slide in the first, only the failed ones after (slide-authoring.md step 4). Its footage
-  P0s are slide-design §6.2 (a still ground, a decorative mark, a mark off its subject or over a
-  face, a second colour or a fade, the wrong layer).
+- Your own read of the sheet (slide-authoring.md step 4), against slide-design §6.2's footage
+  P0s — a still ground, a decorative mark, a mark off its subject or over a face, a second
+  colour or a fade, the wrong layer. `slide-reviewer` applies the same list when the user
+  asks for that read.
 
 ## 5. Build (produce)
 

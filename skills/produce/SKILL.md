@@ -127,11 +127,15 @@ data/<channel>/episodes/<topic>/
    lowers a profile motion floor to save a call; it stops when the approved storyboard cannot
    meet both the floor and the cap. The contract's source of truth is scenes-schema §Channel
    true-motion policy.
-13. **Generation that costs money runs only after the plan clears review** — the cover
+13. **Generation that costs money runs only after the plan is checked** — the cover
    background and the b-roll need a plan in the storyboard first (source prompt, motion,
-   used length + why), and only after delegating to content-reviewer **plan mode** and
-   getting `PLAN_REVIEW: PASS` do you call `gpt_image_text2img` (high) or `veo_img2video`.
-   On FAIL, fix the plan and delegate again — don't burn veo money on a bad source.
+   used length + why), and you check it yourself before calling `gpt_image_text2img` (high)
+   or `veo_img2video`: no still life as a source, no real person, the target person on a
+   target channel, no text expected from the engine, the exclusions written, a duration the
+   cut earns, no minor in frame, the engine the route names. The content-reviewer plan-mode
+   read of 0.49 is no longer part of the flow (six million tokens a call, measured); it
+   stays available when the user asks for it. A plan that fails a point gets fixed before
+   the call — don't burn veo money on a bad source.
 14. **The photo is the lead on screen — no slide (PPT) look.** Scene text lives inside the
    top and bottom bands only: points uses the top block (title + **one caption at a time** +
    source), cover uses the bottom block, and the bottom subtitles say what the narration
@@ -265,10 +269,9 @@ after `cd` fails silently).
 ### 3. Generate the visuals
 
 The §6 manifest references these file paths directly, so follow the naming below.
-**The cover background and the b-roll clear the plan gate first** (absolute rule 13) —
-delegate the cover `bgPrompt` and the broll scenes from scenes.js plus the profile.md §3
-path to content-reviewer in "plan mode", confirm `PLAN_REVIEW: PASS p0=0`, and only then
-start the generation calls.
+**The cover background and the b-roll clear the plan check first** (absolute rule 13) —
+go through the cover `bgPrompt` and the broll scenes from scenes.js against the rule's list,
+with profile.md §3 open for the target person, and only then start the generation calls.
 
 **Image engines, split by job** — the default is `image_local_generate` (local Z-Image, 0
 cost per image — text-free images such as points still backgrounds; storyboard §5 already
@@ -1148,8 +1151,12 @@ delegation prompt — the reviewer
 treats those numbers as the source of truth and doesn't override them with its own impression.
 If the channel skips research, state that in the delegation prompt too (the reviewer converts
 the facts axis to full marks).
-**Fix until the tail (`CONTENT_REVIEW:`) shows copy ≥95 and P0=0 (max 3 rounds)** — if it
-falls short, report the unresolved findings to the user as they are and let them decide.
+**One read, on an episode that is going to be published** — a test build, or a version the
+user has said is not going out, skips this delegation (the phone QA in §8 and the checkers in
+§5·§9 still run). Apply its directives; if the tail (`CONTENT_REVIEW:`) came back under copy
+95 or with P0 > 0, don't delegate again — report the unresolved findings to the user as they
+are and let them decide. (0.50.0: a read cost 8.6 million tokens and 14 minutes, measured, so
+the three-round loop of 0.49 became one read.)
 
 **First-3-seconds check** (2026-08-15 — forced by the measured skip rates. The author does this
 directly, separately from the reviewer delegation):
@@ -1202,7 +1209,7 @@ that split.
 ```
 Cost — what this episode ran to (storyboard → video)
   storyboard   6 images (gpt high 2 · local 4)              $0.44
-    · of which 1 regenerated (§5.5 review)                   $0.22
+    · of which 1 regenerated (§5.5 remake)                   $0.22
   produce      b-roll veo lite 1080p, 8s generated          $0.64
                narration 1,840 chars (local)                $0.00
                BGM 90s                                      excluded — unit price unconfirmed

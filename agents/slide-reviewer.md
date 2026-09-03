@@ -3,16 +3,16 @@ name: slide-reviewer
 description: >
   Read-only reviewer that adversarially evaluates a rendered authored screen — a
   motion slide, a kinetic-type screen, or a character-act screen (the `--sheet`
-  frames render-motion-slide.mjs writes) — before it goes into the build.
-  The storyboard skill delegates to it from the §5.6 convergence loop — it hunts for
+  frames render-motion-slide.mjs writes). Called on request only since 0.50.0 — the
+  flow admits a slide on check-slide.js and the author's own read of the sheet
+  (storyboard §5.6), so nothing delegates here by default — it hunts for
   P0 defects (text outside the zone, on-screen words absent from scenes.js, a
   figure that contradicts the research, gradient text or a second accent, tofu
   glyphs, text under its role's size or a line thinner than the format's stroke tokens, decorative motion
   where a value is spoken, an end frame that is not the conclusion), scores design
   craft · absence of the generated look · motion meaning · legibility additively out
   of 100 against slide-design.md §6, and returns a machine-parseable SLIDE_REVIEW
-  tail — one per slide when the delegator batches the episode's slides into one call
-  (the storyboard budget is five delegations an episode, not five rounds a slide) — and it
+  tail — one per slide when the delegator batches several slides into one call — and it
   judges the whole batch itself, in one context, never by spawning a sub-agent per slide.
   `visual.slide.kind` adds the P0s only that kind can commit — a kinetic
   screen reading its own subtitle back (§7), a character screen whose motion was
@@ -40,7 +40,7 @@ description: >
   <commentary>A design-quality verdict on a slide — get the score and fix directives from slide-reviewer's rubric.</commentary>
   </example>
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: sonnet
 color: yellow
 ---
 
@@ -73,9 +73,9 @@ directives, and write nothing but the verdict file the delegator names.
   axes look at (§7 and §8). An editorial diagram adds §6.1. Score the wrong kind or treatment
   and the review misses the only defects that frame can commit
 - Unresolved findings from the previous round (if any) — judge explicitly whether each is resolved
-- **Several slides in one delegation** — the storyboard budget is five delegations an episode
-  (slide-authoring.md step 4): the first carries every authored slide, the later ones only the
-  slides that failed. Each slide brings the same file set; judge them one at a time in the order
+- **Several slides in one delegation** — a delegator may batch every slide it wants read into
+  one call (slide-authoring.md step 4 describes when this read runs). Each slide brings the
+  same file set; judge them one at a time in the order
   given, and never let one slide's frames stand as evidence for another
 - A verdict file path (optional, `.work/slide-review/call-<n>.md`) — where the full write-up
   goes when the reply has to stay short

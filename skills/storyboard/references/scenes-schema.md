@@ -1484,8 +1484,8 @@ either way (absolute rule 10); this is about words that live inside the picture.
   route's cap. The narration math (characters / 4.5, capped 13s) can outrun that cap — a
   13-second narration on a motion background is a storyboard defect: trim the narration or
   split the scene. A clip shorter than its scene loops, and the loop shows its seam.
-- The content-reviewer **plan mode** gate is the same as b-roll's (absolute rule 13) — don't call
-  veo without `PLAN_REVIEW: PASS`.
+- The plan check is the same as b-roll's (absolute rule 13) — go through the rule's list
+  yourself before calling veo; the plan-mode delegation of 0.49 is not part of the flow.
 
 ### broll — a generated-video stretch (reference only) · spliced between scenes
 
@@ -1556,9 +1556,9 @@ run of still cuts is dragging.
   `.work/broll/broll-a<after>-mixed.mp4`. Putting `after` in the name keeps the two slots from
   overwriting each other. Older episodes' `cover-broll.mp4` and `cover-broll-mixed.mp4` remain
   valid.
-- **Get these scenes and the cover bgPrompt verified by content-reviewer plan mode before any
-  generation call** (absolute rule 13) — don't call image or video generation
-  (image_local_generate, gpt_image high, veo) without `PLAN_REVIEW: PASS`.
+- **Check these scenes and the cover bgPrompt against absolute rule 13's list before any
+  generation call** — don't call image or video generation (image_local_generate, gpt_image
+  high, veo) on a plan that fails a point. The plan-mode delegation of 0.49 is not called.
 
 ### outro — a brand close with a next value (reference only)
 
@@ -1775,7 +1775,7 @@ still TTS, the card is still an ordinary card, and only the picture comes from a
   plays, much shorter and the picture sits still while the voice runs on. `cut-screencast.sh`
   warns in both directions when produce passes it the card duration.
 - **A screencast scene has no `bg` or `bgPrompt`** — it drops out of §5 image generation and the
-  §5.5 image review, exactly like a slide scene. What is on screen is the recording.
+  §5.5 image check, exactly like a slide scene. What is on screen is the recording.
 - `zoom` is `none`. Ken Burns on a screen recording shakes text that is already small.
 - **Not for a talking head.** A face and a voice is `source: "recording"` — the filmed lane, with
   its own sound and framing contract. This lane is for a screen.
@@ -1860,8 +1860,7 @@ The frame design is part of what the user approves, so storyboard renders and re
 states before §7. Author only text already present in `title`, `bullets`, and `slide.labels`.
 
 - A slide scene has no `bg` or `bgPrompt` — it drops out of §5 image generation and the §5.5
-  image review, and storyboard-reviewer's image mode doesn't treat its missing `scene-N.png` as
-  a defect.
+  image check; a missing `scene-N.png` there is not a defect.
 - **Reveal groups are 1:1 with narration segments** by default, and using sub-reveals (`A|B`)
   makes more groups than segments. produce lays clip k under segment k as a play-once visual.
 - Keep text inside the zone (portrait x 176 · top 190 · bottom 570, wide x 96 · top 96 ·
@@ -1886,7 +1885,8 @@ symbol, that raster is one plate inside a constructed visual argument. Put at le
 actors or relations on screen — for example, two paper fragments converging on a source card, a
 date rail joining documents, or a signal line linking an eye gesture and a hand gesture to a
 clearly labelled online interpretation. `check-slide.js` blocks a raster-only editorial file;
-`slide-reviewer` grades the rendered result and requires 95 or more with P0=0.
+the author's read of the rendered sheet (storyboard §5.6) judges the result; `slide-reviewer`
+grades it to the same rubric when the user asks for that read.
 
 Three information types have to be drawn, on one of two routes. **The default route is a
 footage slide** (`treatment:"footage"`) whose `labels` put the stated value or name on screen
@@ -2016,9 +2016,9 @@ Rules only this treatment has:
 - **The clips exist before the slide is authored.** Marks are placed in canvas pixels against
   each clip's mid frame (`footage-frames.sh` writes first, mid and last frames and a per-shot
   sheet), because the generated picture never lands exactly where the still had it. So the
-  order is: §4.4 narration loop passed → §5 stills and clips, after `PLAN_REVIEW: PASS` for
-  every shot in **one** content-reviewer delegation and the §5 cost gate → §5.6 marks, render,
-  `slide-reviewer`. The procedure is `references/footage-lane.md`.
+  order is: §4.4 · §4.5 narration loops passed → §5 stills and clips, after the rule-13 plan
+  check on every shot and the §5 cost gate → §5.6 marks, render, the author's read of the
+  sheet. The procedure is `references/footage-lane.md`.
 - **Outside `generatedVideoMax`.** Footage shots are not counted against the b-roll and
   motion-background cap; they are budgeted. `cost-preview.js` puts every shot on the approval
   screen (`footage/seedance` ≈ $0.06 a second, silent) and the §5 gate asks before generating.
@@ -2097,7 +2097,7 @@ puts the reveal.
 |---|---|---|
 | `slide.motion` | ✅ `true` | the marker. Without it `check-scenes.js` and `check-slide.js` fail |
 | `slide.plan` | ✅ | **what moves on which sentence**, numbered by segment — "① 27 counts up · ② the bar grows". A plan that only says what is drawn is not a motion plan |
-| `slide.labels` | ✅ | Figures may be typed in the slide, but every figure on screen must match `labels` / `bullets` / research.md — slide-reviewer reads them off the frames |
+| `slide.labels` | ✅ | Figures may be typed in the slide, but every figure on screen must match `labels` / `bullets` / research.md — the sheet read checks them off the frames |
 
 Contract (the template's head comment carries the same list; `check-slide.js` machine-checks it):
 
@@ -2156,9 +2156,9 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
 - The look is `references/slide-design.md` — a plate ground (key light, vignette, grain at
   encode), ink · paper · one accent, square plates and 3/6/10px rules instead of cards and
   hairlines, broadcast type sizes (44px floor), one hero per slide, and the opening chain
-  (tag → title → first value, `--lead` apart) in group 1. Its §6 is the rubric
-  **`slide-reviewer`** scores the rendered frames against in storyboard §5.6, and a motion
-  slide enters the build only at **score ≥ 95 with p0 = 0**.
+  (tag → title → first value, `--lead` apart) in group 1. Its §6 is the rubric the
+  author's sheet read in storyboard §5.6 judges the rendered frames against (and the one
+  **`slide-reviewer`** scores against when the user asks for that read).
 - A motion slide has no `bg`/`bgPrompt` and skips §5 image generation and the image
   review; the storyboard's check strip and `episode-state.js` treat the file the same way
   (same naming, same "not authored yet" blocker).
@@ -2198,8 +2198,8 @@ on it.
   skips arts.
 - **Don't put the subtitle on screen.** The subtitle band is already reading that sentence; a
   screen that repeats it word for word says everything twice and gives the eye nothing to do.
-  What lands on screen is what survives the trim — `title`, `bullets`, `labels`. slide-reviewer
-  reads a screen phrase identical to its segment's `sub` as a P0.
+  What lands on screen is what survives the trim — `title`, `bullets`, `labels`. A screen
+  phrase identical to its segment's `sub` is a P0 on the sheet read.
 - **One big phrase per slide**, four lines at the very most, five words to a line. Past that it
   is a paragraph, and a paragraph belongs to the narration.
 - **One effect kind per slide** — `drop` (from above, the default) or `wipe` (left to right, for
@@ -2327,7 +2327,7 @@ strip says no violations.
       entry per reveal group — `clip` under `slides/footage/s<shot>-g<group>.mp4`, `duration`
       inside the route's band and at the segment estimate plus one second, all four `camera`
       slots, `prompt`, `audio`, `mark`. The clips exist before §5.6 (generated at §5 after
-      `PLAN_REVIEW: PASS` for every shot in one delegation and the §5 cost gate); the marks are
+      the rule-13 plan check on every shot and the §5 cost gate); the marks are
       authored against `footage-frames.sh` frames and carry no text unless it is in `labels`
 - [ ] **Every narrated shot declares `shot.infoType`.** `timeline`, `statistic`, and `principle`
       use the required moving editorial diagram, mapped role, and one allowed `motionBeats`
@@ -2431,8 +2431,8 @@ strip says no violations.
       The true-motion ratio, allowed kinds, longest still run, action requirement, and generated
       video cap all pass `check-scenes.js`. Ken Burns and caption swaps do not count
 - [ ] Generated video (`broll` + `visual.video` combined) stays inside the format default or the
-      profile's explicit `generated_video_max` override (§motion background) · content-reviewer
-      plan mode PASS recorded
+      profile's explicit `generated_video_max` override (§motion background) · the rule-13
+      plan check done
 - [ ] If you placed `broll` scenes — the two slots' `after` differ · each slot has `narration: []`
       · `src` is the same real PNG as `SCENES[after].visual.bg` (that image made with gpt_image
       high as a photorealistic person scene) · `duration` (used length) is 8 or under with a

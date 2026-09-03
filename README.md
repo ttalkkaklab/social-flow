@@ -21,8 +21,8 @@ a mood or a place the pipeline generates an image, and scenes that need words or
 diagrams on screen become **HTML motion slides**, authored and shown as rendered
 keyframes before approval. A slide that states a value —
 the number counts up and the bar grows the moment its sentence starts, rendered locally
-frame by frame at no cost and admitted to the build only after an adversarial design
-review (`slide-reviewer`, 95-point gate) — the one free way to put movement on a body
+frame by frame at no cost and admitted to the build after the contract checker and the
+author's own read of its key frames — the one free way to put movement on a body
 scene on either format. A scene where something **happens** — people move, a place, an
 action — is a **footage slide** (`treatment:"footage"`): one generated clip per sentence
 inside the same HTML lane, with wordless accent-colour marks (a route, an X, a ring,
@@ -260,15 +260,15 @@ them the pipeline ends at `produce` with the finished video and per-platform tex
 **One topic string straight to a finished video** (steps 2–3 with no human approval):
 
 ```
-/social-flow:autoproduce my-channel "July FX swings"   # research → 3 seven-item scenarios [scored to 95] → pick → more research → scenes.js [narration read alone, to 95] → images → TTS → build → output
+/social-flow:autoproduce my-channel "July FX swings"   # research → 3 seven-item scenarios [one batched read] → pick → more research → scenes.js [narration read alone to 95, then its words to 95] → images → TTS → build → output
 ```
 
 The machine gates stand where the approval gates were — fact verification (3+
-cross-verified claims), three seven-item scenario candidates looped to 95 with P0=0
-(curiosity · fear · intrigue · comedy), the narration read on its own and looped to 95, the
-copy style checker, six one-round storyboard-reviewer board
-reads (copy · per-scene · vocabulary · camera · sound · images) where an unresolved P0
-stops the run, build report (drift 0), content-reviewer P0=0, and a cost cap. The **economy tier is the
+cross-verified claims), three seven-item scenario candidates judged in one batched read
+(curiosity · fear · intrigue · comedy), the narration read on its own and looped to 95 twice
+(the chain, then the words — three reads each, the sentences handed inline), the copy style
+checker and the contract checkers, build report (drift 0), one content-reviewer read at 95
+with P0=0, and a cost cap. The **economy tier is the
 default**: no Veo calls at all (still backgrounds + Ken Burns), roughly $0.26–0.29
 per episode (capped at $0.30); only when hook metrics fall below threshold does the
 4-second cover get promoted to `veo-3.1-lite`. Authoring is capped at **2 episodes
@@ -294,37 +294,25 @@ the agent fixes the sentences.
 **Storyboard adversarial reviews** — the checker catches what rules can catch; the
 layer above it is what a person has to read to feel. Overused antithesis, triple
 lists, sermon-style closers, a rhythm where every sentence reads at the same length.
-Images are the same — a machine can check resolution, but "does this picture show
-what the scene is saying" takes a reader. So the storyboard skill calls the
-adversarial reviewer `storyboard-reviewer` **six times, once each**, before approval —
-after a **narration read-through it loops to 95**, the reviewer reading the spoken
-sentences alone, in order, before it opens anything else:
+So the storyboard skill calls the adversarial reviewer `storyboard-reviewer` on the
+narration alone, before any shot has a camera — the spoken sentences, numbered and handed
+to the reviewer inline so it opens no file — and loops each read to 95:
 
 | Review | What it reads | Score is |
 |---|---|---|
-| Narration mode (§4.4) | the narration alone, without the picture — does the topic and the content come through | total, **looped to 95** |
-| Copy mode (§4.5) | the storyboard's prose as a whole | total |
-| Scene mode (§4.6) | each scene's role and context | **lowest scene** |
-| Vocabulary mode (§4.7) | word choice in narration and titles | **lowest scene** |
-| Camera mode (§4.8) | the shot grammar of every shot — what the audience should feel there and whether the size, angle and frame space serve it — plus the four camera slots, cut length and engine fit of every generated shot | **lowest shot** |
-| Sound mode (§4.9) | clip audio, voice casting, and where the sound gets out of the way | total |
-| Image mode (§5.5) | generated PNGs against scene content | total |
+| Narration mode (§4.4) | the narration alone, without the picture — does the topic and the content come through | total, **looped to 95, cap 3 reads** |
+| Vocabulary mode (§4.5) | the same sentences — are the words what a person says | **lowest sentence**, **looped to 95, cap 3 reads** |
 
-None of the six is a pass/fail gate — each returns findings once, they get applied, and
-anything left over goes onto the human approval screen, which is the one thing that blocks.
-The exception is a **motion slide**: storyboard renders its frames before approval and
-delegates them to `slide-reviewer`, and the slide enters the build only when that review
-scores ≥ 95 with no P0 — a convergence loop (five reviewer delegations an episode, every
-slide batched in the first, failures only after), because a slide is cheap to
-re-render and a generated-looking one is not worth shipping.
-The per-item reviews report the **lowest-scoring** scene or shot rather than the average,
-because an average lets one broken scene hide behind the good ones. The order has a
-reason too — images come last because a changed sentence changes what its scene
-should show, and vocabulary comes after the scene review because polishing the words
-of a scene that's about to be cut is wasted work. Whatever the one round of fixes
-doesn't resolve rides to the approval screen with the finding attached, and the human
-decides. autoproduce has no human to decide, so there a P0 still standing after those
-fixes halts authoring.
+Those are the only reviewer calls in the flow (0.50.0). The six board reads, the plan
+review and the slide loop of 0.49 came out after measuring 358 reviewer runs: a call cost
+2–8 million input tokens and 8–14 minutes, an episode ran twenty to sixty of them, and on a
+full session the reviewers used more tokens than the session itself. What they looked at is
+now `check-scenes.js`, `check-slide.js`, `check-style.py` and the author's own read of the
+board, the images and the slide key frames — with anything left over going onto the human
+approval screen, which is the one thing that blocks. The other modes (copy · scene · camera ·
+sound · image), `slide-reviewer` and `content-reviewer` plan mode still exist for a read the
+user asks for by name. autoproduce has no human to decide, so there a chain still short at
+the third read halts authoring.
 
 **Storyboard-first shooting flow** (for polished demos and tutorials — the order flips):
 
@@ -378,7 +366,7 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap · Chrome lane map)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
-│   ├── storyboard/              # /social-flow:storyboard — research → 3 seven-item scenarios looped to 95 → pick → more research → scene design → narration read-through looped to 95 → six one-round board reviews (copy · per-scene · vocabulary · camera · sound) → images → image review → approval → slides (motion slides through the slide-reviewer gate)
+│   ├── storyboard/              # /social-flow:storyboard — research → 3 seven-item scenarios → pick → more research → narration → narration read-through looped to 95 → vocabulary looped to 95 (both inline, ≤3 reads) → the board (author's read + check-scenes.js) → images → approval → slides (check-slide.js + the author's sheet read)
 │   │   └── references/          #   scenes-schema.md · directing-grammar.md · motion-slide-template.html · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js · footage-lane.md (one clip per sentence, marks over it) · footage-frames.sh
 │   ├── produce/                 # /social-flow:produce — video build + per-platform text
 │   │   └── references/          #   build-reel.sh (SUB_MODE sentence · word · phrase) · speedup.sh (required final pace pass, 1.2 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency; footage slides play a clip per group) · make-matte.py (subject matte → VP9-alpha webm, needs rembg) · QA harness
@@ -398,10 +386,10 @@ social-flow/
 │       └── references/          #   platform-playbook.md · korean-style.md · check-style.py (style gate) · check-meta.js (YouTube meta gate)
 ├── agents/
 │   ├── brand-reviewer.md        # adversarial review of profile images & intro videos (95/90-point convergence gates)
-│   ├── content-reviewer.md      # adversarial pre-publish verification (P0 gate)
+│   ├── content-reviewer.md      # adversarial pre-publish verification (one read at produce §10 on publish-bound episodes; plan mode on request)
 │   ├── growth-post-reviewer.md  # adversarial review of growth-loop copy (AI tells · context — 95-point gate)
-│   ├── slide-reviewer.md        # adversarial review of a rendered motion slide (design craft · no generated look · motion meaning · legibility — 95-point convergence gate)
-│   └── storyboard-reviewer.md   # adversarial storyboard review, 8 modes — scenario (seven-item candidates) and narration (the spoken sentences alone) looped to 95, six read once each (copy AI tells / per-scene role·context / vocabulary / camera — feel·size·angle·space of every shot + the slots of generated shots / sound plan / image fit)
+│   ├── slide-reviewer.md        # adversarial review of a rendered motion slide (design craft · no generated look · motion meaning · legibility — on request since 0.50.0; the flow uses check-slide.js and the author's sheet read)
+│   └── storyboard-reviewer.md   # adversarial storyboard review, 8 modes — the flow calls narration and vocabulary (the spoken sentences alone, handed inline, looped to 95 in ≤3 reads) and, unattended, one batched scenario read; copy / scene / camera / sound / image stay for reads the user asks for by name
 ├── apps/
 │   └── shoot-console/           # macOS SwiftUI recording console for the shooting-script flow (built locally via build-app.sh)
 └── data/                        # content data root (see data/README.md)
@@ -473,9 +461,9 @@ out, and the markers are per-platform (YouTube `queue: ready` · Instagram
 consume the marker and the other platform would never publish. Two things set
 markers: a human, or — when the plan enables `autoproduce` — the loop itself
 authoring one episode when the queue runs dry. Auto-authored episodes become `ready`
-only after passing the machine gates (fact verification · three scenarios looped to
-95 · the narration read alone to 95 · style · the six storyboard-reviewer board reads for copy/per-scene/vocabulary/camera/sound/images · build report ·
-content-reviewer P0 · cost cap); failing any one leaves them `hold`, waiting for a
+only after passing the machine gates (fact verification · three scenarios in one batched
+read · the narration read alone to 95, then its words to 95 · style · the contract checkers ·
+build report · one content-reviewer read · cost cap); failing any one leaves them `hold`, waiting for a
 human. grow-instagram publishes only with a public HTTPS URL, and with no hosting
 configured it disables both publishing and auto-authoring (the loop won't start
 tunnels, and it won't spend money making a video with no way out).

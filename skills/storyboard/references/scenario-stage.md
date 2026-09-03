@@ -54,10 +54,10 @@ hold.
 
 ## Viewer engines — what the 95 bar actually scores
 
-The copy, per-scene, vocabulary, camera, sound and image reads still run once each, with
-no score to clear. **This stage is the exception**, on the same pattern as `slide-reviewer`:
-loop until `score ≥ 95` and `p0 = 0`. The thing it scores is not wording (the page never
-ships) and not shot grammar (there are no shots yet). It scores whether a viewer would
+On the attended path the user is the judge of this stage; the reviewer reads it only on the
+unattended path, once, all three pages in one call (0.50.0). The 95 bar below is what that
+read scores, and what you test each page against yourself before showing it. The thing it
+scores is not wording (the page never ships) and not shot grammar (there are no shots yet). It scores whether a viewer would
 **want the next beat** — and, since 2026-09-02, whether the seven items are all there and
 each does its job.
 
@@ -104,45 +104,47 @@ longer, they do not multiply.
 
 ### Score
 
-Delegate each page to `storyboard-reviewer` **scenario mode**. Pass the candidate path,
-`research.md`, `profile.md`, `scenario-craft.md`, this file, and the claimed primary.
-Read the tail:
+**Attended (storyboard):** no reviewer reads the candidates — the user picks from the three
+full pages, and the narration reads (storyboard §4.4 · §4.5) catch a story that does not
+carry. Before showing a page, test it yourself against the engine and shape rules below:
+does the 훅 stage a moment, does 전개 #1 open on the false answer when the research holds
+one, does the feel curve dip. Frontmatter `score` and `p0` stay empty on this path;
+`round: 0`.
+
+**Unattended (autoproduce):** delegate **all three pages in one call** to
+`storyboard-reviewer` scenario mode — the three candidate paths, `research.md`,
+`profile.md`, `scenario-craft.md`, this file, and each page's claimed primary. It judges
+the three in one context and returns one tail per page:
 
 ```
-STORYBOARD_REVIEW: mode=scenario score=NN p0=N primary=<engine> secondary=<engine|none>
+STORYBOARD_REVIEW: mode=scenario candidate=d<n> score=NN p0=N primary=<engine> secondary=<engine|none>
 ```
 
-Stamp `score`, `p0`, `round` on that file's frontmatter. Apply the findings, P0 first —
-improve the page, or replace it (below). **Do not start §4 from a candidate that has not
-been read.**
+Stamp `score`, `p0`, `round` on each file's frontmatter. **Do not start §4 from a page that
+has not been read on this path.**
 
-### Loop
+### Loop (unattended only)
 
-Per candidate, until `score ≥ 95` and `p0 = 0`, or the cap:
+There is one re-read, not a loop. If no page is at `score ≥ 95` with `p0 = 0`, apply the
+findings to the best page, P0 first, and delegate that one page again — the second and last
+call. Still short: drop the topic. Do not rephrase a failed page into a fourth candidate,
+and do not read the same page a third time. (0.50.0 — the per-candidate loop of 0.49 ran up
+to fifteen reads an episode at two million tokens each, measured, and the human pick on the
+attended path made most of them redundant.)
 
-1. Improve the same page against the directives and re-delegate. Max **3 reads** on one
-   page (write counts as round 0; the first read is round 1).
-2. Still short after 3: **replace** the candidate with a different episode this topic
-   could be — a different primary engine, or a different question the research already
-   holds. Do not rephrase the failed page. The replacement gets up to **2 more reads**.
-3. One replacement per slot. Cap **5 reads per candidate**, **15 per episode**.
-
-A read that comes back `p0 > 0` is not a pass even at 95. Fix the P0s and read again;
-that read counts.
+A read that comes back `p0 > 0` is not a pass even at 95.
 
 ### Pick
 
 **Show the three pages in full first** — for each candidate, the seven items as written
-(the 훅's first sentence, the three 전개 paragraphs, the 마무리 question, the CTA line),
-its engine and its score. A one-line option is not what gets approved; the seven items
-are. Then the choice. Recommended is the highest that cleared 95 with `p0 = 0`, first in
-the list.
+(the 훅's first sentence, the three 전개 paragraphs, the 마무리 question, the CTA line)
+and its engine. A one-line option is not what gets approved; the seven items are. Then
+the choice.
 
-- **Storyboard / human-invocation autoproduce:** AskUserQuestion. A sub-95 pick needs the
-  user to say so on that screen — don't recommend one.
-- **Unattended autoproduce:** take the recommended one. **Zero candidates at 95 with
-  `p0 = 0`: drop the topic** (same counter as a facts-floor drop). Do not author a board
-  from a page that failed the bar.
+- **Storyboard / human-invocation autoproduce:** AskUserQuestion. Recommended is the page
+  whose engine you can point at in its own sentences, first in the list.
+- **Unattended autoproduce:** take the highest at 95 with `p0 = 0`. **None: drop the topic**
+  (same counter as a facts-floor drop). Do not author a board from a page that failed the bar.
 
 Write `Chosen: D# (<YYYY-MM-DD>)` into `research.md` §Directions, copy the winner to
 `storyboard/scenario.md` (keep the candidate files — they are the audit of the other
@@ -152,12 +154,12 @@ become a claim or a caption.
 ### After extra research
 
 If §2.3 turns up a fact that breaks an item, a false answer, or a promise on the winner,
-edit `scenario.md`, run the loop on **that one page** (same 3-read cap, no replacement —
-the pick already happened), and only then freeze. A page that was already at 95 and did
-not change is not read again.
+edit `scenario.md` yourself and freeze. No reviewer reads the page again — storyboard §4.4
+reads the narration it becomes.
 
-Stamp `frozen:` when §4 opens. §4.5–§5.5 stay one round with no score to clear; §4.4's
-narration read-through is the other loop, and it reads the board this page became.
+Stamp `frozen:` when §4 opens. §4.4's narration read-through and §4.5's vocabulary read are
+the two reviewer loops, and they read the board this page became; the board reads of 0.49
+are not called any more.
 
 ## What the page carries — the seven items
 
