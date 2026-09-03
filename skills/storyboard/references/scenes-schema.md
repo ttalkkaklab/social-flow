@@ -452,7 +452,7 @@ title and figure in HTML over a still photo is the default. Don't merge the two 
 
 | `picture` | Screen body | The structural clue |
 |---|---|---|
-| `still` | Still photo or illustration. Ken Burns is added by the builder | `visual.bg` present, no `video` or `clip` |
+| `still` | Still photo or illustration. The builder always adds a Ken Burns move — a frozen still is refused at build | `visual.bg` present, no `video` or `clip` |
 | `ai-video` | Generated video — motion background, b-roll, speech clip | `type==="broll"`, or `visual.video`, or `visual.clip` |
 | `recording` | **A clip the user filmed themselves** (§filmed scenes), or one window of a screen recording spliced into an otherwise generated episode (§screencast splice) | `visual.source==="recording"` \| `"screencast"` |
 | `asset` | A pre-made shared mp4 | `type==="outro"` |
@@ -1036,7 +1036,10 @@ push towards the subject, `dolly out` as a pull-out, `handheld` as drift, `truck
 directing-grammar §4 (still lane): `very slow` for explain, `slow` for the payoff, `fast` /
 `very fast` for action and CTA cards, which also accelerate to the cut point. produce §6
 converts the word into the card's `span=`/`ease=` knobs. A still with no camera keeps the
-alternating default drift — most should. The reason it is
+alternating default drift — most should. `static` is not a still move: a still never sits
+frozen under the voice (owner directive 2026-09-03) — `check-scenes.js` refuses `static`/`hold`
+on a still, and `build-reel.sh` refuses a still card with `zoom=none` or a bare `hold`; the
+frozen frame is for footage that already moves. The reason it is
 written here and not at generation time: **the four values are settled before the first call
 that costs money.** The clip prompt is assembled out of these slots here and stored (§clip
 prompt); produce sends it verbatim, it doesn't invent one.

@@ -46,7 +46,7 @@
       Only the background visual uses the full 1080×1920.
   ■ Overflow guard: measure after rendering → apply tight1~3 automatically, expose what's
       left over as window.__overflow.
-      The hero stat shrinks automatically once it passes 640px wide (Ken Burns 3.5% + crop variance headroom).
+      The hero stat shrinks automatically once it passes 640px wide (Ken Burns up to a 1.075 scale + crop variance headroom).
 -->
 <style>
   :root{
@@ -452,7 +452,7 @@ function __boot() {
   window.__overflow = Math.max(0, zone.scrollHeight - zone.clientHeight);
 
   // Hero stat width guard — scrollWidth is no use (in a centered flex it equals clientWidth).
-  // Measure with getBoundingClientRect and shrink below the cap (Ken Burns 3.5% + headroom for
+  // Measure with getBoundingClientRect and shrink below the cap (Ken Burns up to a 1.075 scale + headroom for
   // device crop variance).
   // Portrait 640px is 0.593 of the frame width — landscape uses the same ratio at 1138px, and the
   // minimum size is ×0.72 as well.
