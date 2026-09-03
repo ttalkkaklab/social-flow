@@ -133,25 +133,26 @@ rubric the reviewer applies.
    frozen past 40% of its segment wants a `.sv` sustain). Open
    `sheet/g<k>-end.png` for the last group and confirm by eye that everything the scene
    claims is on it, inside the zone.
-4. **The design gate — delegate to `slide-reviewer`** with, for every authored cut, the slide file, the sheet
-   directory, `manifest.tsv`, `summary.json` (the renderer writes it next to the manifest —
-   `zone_fill_pct` and the coverage warnings live there), plus scenes.js, research.md, profile.md and
-   `references/slide-design.md`. It returns findings and a `SLIDE_REVIEW: slide=<file> score=NN p0=N
-   verdict=PASS|FAIL` tail **per slide**. **The episode gets five delegations, not five rounds a
-   slide** (user directive 2026-09-03 — thirteen slides at five rounds each is sixty-five reviewer
-   runs, and the reviewer is where the tokens go): the first delegation carries every authored slide
-   of the episode in one batch; each later one carries only the slides whose last tail said FAIL,
-   with their previous findings attached, after you have applied every fix directive and re-run
-   steps 2–3. Score **each slide independently out of 100** — never average across the episode or
-   let a strong slide compensate for a weak one; a score below 95 is a failed cut, not a soft note.
-   A slide still failing after the fifth delegation goes back to the user with its last findings
-   and the sheet, not into the build. Log each delegation's score in storyboard.md under the slide
-   table (`s5 · call 1 → 78 · call 2 → 96 PASS`), so the convergence is a record and not a claim.
+4. **The design gate — your own read of the sheet.** For every authored cut open
+   `sheet/g<k>-end.png` for its last group and the `g<k>-mid.png` of any group that moves, with
+   `summary.json` beside them (the renderer writes it next to the manifest — `zone_fill_pct` and
+   the coverage warnings live there), and judge the cut against `references/slide-design.md`
+   §6 — text inside the zone, every on-screen word in scenes.js, every figure matching `labels`
+   and research.md, one accent and no gradient text, a plate ground and not a flat fill, motion
+   that means the value spoken, an end frame that is the conclusion. A cut that fails a point is
+   re-authored once and re-rendered (steps 2–3). The `slide-reviewer` loop of 0.49 (five
+   delegations an episode) is no longer part of the flow — it was the largest reviewer sink
+   measured, 46 calls and 674 million tokens on one episode — and stays available for a read the
+   user asks for by name; when it runs it still returns a `SLIDE_REVIEW: slide=<file> score=NN
+   p0=N verdict=PASS|FAIL` tail per slide, judged in one context, and a slide under 95 is a
+   failed cut. Log what you changed in storyboard.md under the slide table
+   (`s5 · authored → re-authored: zone overflow`), so the check is a record and not a claim. A
+   cut still wrong after the re-author goes back to the user with the sheet, not into the build.
 5. Nothing goes in the ledger — the render is local. The `.work/slide-check/` frames stay
    for produce to compare against (§3.6 re-renders the clips from the same file).
 
-`autoproduce` runs this same gate before narration and build, on the same five-delegation
-budget; a slide that still fails is held and never enters the unattended build.
+`autoproduce` runs this same check before narration and build; a slide still wrong after the
+re-author aborts the unattended build.
 
 #### Kinetic type — the same procedure, a different template
 
@@ -163,13 +164,13 @@ budget; a slide that still fails is held and never enters the unattended build.
    `h.rule` · `h.art` (a still from `slide.arts`) · `h.disk` (a supporting shape). When `slide.arts` is set, default `renderKinetic` places the first
    art on group 1 then the title with `in` — that pair is one event. Type-only (a verdict,
    a cross) skips arts. Mixing `drop` and `wipe` on type is still two kinds.
-2. The design section is **`slide-design.md` §7**, and slide-reviewer applies its three extra
-   P0s — a screen phrase that repeats the subtitle sentence, a second hero-sized phrase or a
+2. The design section is **`slide-design.md` §7**, with three extra P0s to check on your own
+   read (slide-reviewer applies the same three when asked) — a screen phrase that repeats the subtitle sentence, a second hero-sized phrase or a
    line past five words, two effect kinds on one screen. The default entrance is `mask`
    (`words:true` staggers it word by word and counts as the same kind); `h.band` is the
    verdict plate and the last thing to enter.
-3. Steps 2–5 (machine check, sheet render, the design gate at ≥ 95 / p0 = 0 inside the episode's
-   five delegations, scores logged in storyboard.md) are unchanged, including the same `render-motion-slide.mjs`
+3. Steps 2–5 (machine check, sheet render, your own read of the sheet, the change log in
+   storyboard.md) are unchanged, including the same `render-motion-slide.mjs`
    command — the renderer only asks for the seek contract and does not care what is drawn.
 
 The one thing to check by eye before delegating: open `sheet/g<k>-end.png` beside the scene's

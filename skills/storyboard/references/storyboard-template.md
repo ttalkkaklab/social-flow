@@ -177,7 +177,7 @@ must map 1:1 to an entry here.
 | ★1 | <figure·deadline·effective date> | <URL> | <URL> | naver_search | <YYYY-MM-DD> | source excerpt: "…" |
 | 2 | <context the lines lean on> | <URL> | <named source> | WebSearch | <YYYY-MM-DD> | |
 
-## Directions                                   # three different episodes this topic could be (SKILL §2.1). None marked chosen until §2.2 scores them.
+## Directions                                   # three different episodes this topic could be (SKILL §2.1). None marked chosen until §2.2 picks one.
 
 | # | Question this episode would answer | Hook form | Engine | Hero / stake | Already verified | Still to research | Score | Status |
 |---|---|---|---|---|---|---|---|---|
@@ -185,7 +185,7 @@ must map 1:1 to an entry here.
 | D2 | <one sentence — a different episode, not a rephrase> | number | fear | <…> | 2 | <…> | 95 | not used |
 | D3 | <one sentence> | identify | comedy | <…> | 3 | <…> | 91 | not used |
 
-Chosen: D1 (<YYYY-MM-DD>) — <one line why, including the engine and the score>
+Chosen: D1 (<YYYY-MM-DD>) — <one line why, including the engine>
 
 ## Counter-evidence & freshness                   # one row per key claim (SKILL §2.3)
 

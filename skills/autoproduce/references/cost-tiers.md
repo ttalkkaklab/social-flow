@@ -90,7 +90,7 @@ cover background).
 model veo-3.1-lite-generate-preview · 1080p · 8s generation · 9:16
 Used length is the broll scene's duration (default 4s) — produce §6 cuts only the head of the original.
 The source must be the already-made cover-background PNG — veo_text2video is never used (absolute rule 8),
-and the plan gets content-reviewer plan-mode PASS first (absolute rule 13).
+and the plan passes the author's rule-13 check first.
 Prompt = the storyboard's stored visual.prompt, sent verbatim (scenes-schema §clip prompt);
 fallback on older files is English, motion only — re-describing the person, background, or lighting
 already visible in the source image degrades the result (Google's official image-to-video guidance).
