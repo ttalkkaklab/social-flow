@@ -123,7 +123,9 @@ data/<channel>/episodes/<topic>/
    `video_budget_usd` (plugin default $10 per episode, billed and projected generated video
    together) is the ceiling `cost-preview.js` enforces, and no picture may hold the screen
    past `max_static_ground_seconds` (default 4 s) — a plate or a still under two sentences is
-   a storyboard defect, not something produce papers over with a Ken Burns move. Produce never
+   a storyboard defect, not something produce papers over with a Ken Burns move. Inside that
+   window the still keeps moving too: every still card carries a Ken Burns move (§6), and the
+   build refuses a frozen one. Produce never
    lowers a profile motion floor to save a call; it stops when the approved storyboard cannot
    meet both the floor and the cap. The contract's source of truth is scenes-schema §Channel
    true-motion policy.
@@ -687,10 +689,10 @@ camera (`KB_EASE=linear` restores the old ramp). `auto` alternates in/out card t
 
 | zoom | What | When |
 |---|---|---|
-| `in` / `out` / `auto` | eased 3.5% zoom over the whole card | the default drift — `auto` unless the scene says otherwise |
-| `punch` | the whole 3.5% lands in the first 0.4s (ease-out), then holds | the cover card — the hook contract wants movement inside 0–3s |
-| `hold` | fixed scale, no zoom motion | the base for `drift=1` (pure handheld), or a deliberate static frame |
-| `none` | no Ken Burns at all, source untouched | **a filmed clip already moves** — a zoom on top shakes the frame. Filmed cards are usually `none` + `sync=1` |
+| `in` / `out` / `auto` | eased zoom over the whole card — `span=` when written, else, **on a still card**, `KB_RATE` 4%/s × card seconds capped at a 1.075 total scale (`KB_ZMAX`, where the card's baked text still stops above the subtitle band). A card holding a clip keeps the 3.5% floor — the clip already moves | the default — `auto` unless the scene says otherwise |
+| `punch` | 3.5% lands in the first 0.4s (ease-out), then keeps creeping to the card's span by the cut — never a frozen tail | the cover card — the hook contract wants movement inside 0–3s |
+| `hold` | fixed scale, no zoom motion | the base for `drift=1` (pure handheld) or a `pan=` travel — never alone on a still: the build refuses a frozen still card |
+| `none` | no Ken Burns at all, source untouched | **a filmed clip already moves** — a zoom on top shakes the frame. Filmed cards are usually `none` + `sync=1`. Never on a still card — the build refuses it |
 
 **The 5th cards.tsv column (options) is `k=v,k=v`.** It's optional, and existing 4-column
 files keep working. Two-value options use `:` inside the value — `,` stays the k=v separator.
@@ -776,7 +778,10 @@ on a photo, a one-line phrase reads as part of the picture. The SRT keeps whole 
 column is where it picks) maps onto column 4/5 like this: `dolly in`/`zoom in` → `in` (add
 `focus=` at the subject when it isn't centred), `dolly out` → `out`, `handheld` → `hold` +
 `drift=1`, `truck`/pan wording → `pan=<dir>`, and the cover card takes `punch`. A still with
-no camera written stays `auto` — most cards should. The same restraint as generated video:
+no camera written stays `auto` — most cards should. `static` or `hold` on a still is not a
+move — the least a still gets is `hold` + `drift=1`, and `build-reel.sh` refuses a still card
+written `none` or a bare `hold` (a still never sits frozen under the voice — owner directive
+2026-09-03). The same restraint as generated video:
 the move supports the scene's feel, it doesn't decorate it.
 
 **The still's `speed` word sets the size of the move.** The beat→rate ladder is
@@ -785,8 +790,9 @@ fast rows adding `ease=in` and the CTA row aiming `focus=` at the face. Convert 
 the card knob as **`span` = rate × card seconds**, reading the seconds from the finished
 narration wav (`ffprobe`), not the character estimate; PRE/POST margins make the rate
 approximate and the ladder's wide spacing absorbs that. Example: a 9s payoff card on the
-`slow` row → `span=0.54`. A still whose camera has no `speed` (or no camera at all) keeps
-the plain column-4 move at the 3.5% default.
+`slow` row → `span=0.54`. A still whose camera has no `speed` (or no camera at all) takes
+the builder default — the observe row (4%/s) over the card, capped at a 1.075 total scale; on
+a card of 2 seconds or more that is a 7.5% push, more than twice the old 3.5%.
 
 **A slide scene's segment visuals** are the per-group clips from §3.6, one per segment,
 each with the play-once prefix: segment k → `@motion/slide-s<shot number>/r<k>.mp4`

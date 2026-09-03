@@ -328,14 +328,16 @@ move while the other dials stayed at their defaults.
 
 A still costs nothing to move: the builder crops a window out of the picture and drives the
 window, and to the audience that IS a camera. The lane has six moves — an eased slow zoom
-(in/out, the documentary default: 3.5% over the card, easing on both ends so it starts and
-stops like an operated head), a **punch** (the same span landed in 0.4s, then held — the
-cover's first-frame movement), a **pan** (the window travels, straight or diagonal, with an
+(in/out, the default: the observe row's 4%/s over the card, capped at a 1.075 total scale
+because the card's text is baked in — a 7.5% push on most cards — easing on both
+ends so it starts and stops like an operated head), a **punch** (3.5% landed in 0.4s, then a
+creep on to the card's span — the cover's first-frame movement without a frozen tail), a **pan** (the window travels, straight or diagonal, with an
 optional zoom drift on top — the classic Ken Burns), a **focus zoom** (the zoom arrives at the
 subject instead of the frame's middle — motion that directs attention is the whole point of
 the practice), a **handheld drift** (a few pixels of never-repeating wobble — the still
-counterpart of the `handheld` row above), and **hold** (no move; a decision, same as
-`static`). The storyboard writes the same `visual.camera.movement` words it already knows —
+counterpart of the `handheld` row above), and **hold** (a fixed scale — only as the base
+under a `drift` or a `pan`: a still never sits frozen under the voice, and the build refuses
+a bare hold on a still). The storyboard writes the same `visual.camera.movement` words it already knows —
 `dolly in`, `dolly out`, `handheld`, `truck` — and produce translates them into this lane
 (produce SKILL §6 has the mapping and the knob names).
 
@@ -348,7 +350,7 @@ move; drift is spent where presence or unease is the feel, not sprinkled for "en
 by frame (docs/research/2026-08-26-still-photo-camera-motion) ran every still on one ladder —
 the zoom rate tracks the beat's temperature, and the ten-fold spread between rows is what
 makes a still read as footage. The storyboard manages it per scene through the still's
-`visual.camera`: no camera written = the quiet 3.5%-per-card default; a camera with a `speed`
+`visual.camera`: no camera written = the observe row (4%/s, capped at a 1.075 total scale); a camera with a `speed`
 word puts the card on its ladder row (produce SKILL §6 converts the row to the builder knobs).
 
 | Beat the card carries | `speed` word | Rate | On top |
@@ -386,14 +388,14 @@ scene that doesn't need a move written stays on the alternating default.
 | unease · something is wrong (불안·불길) | `ms`/`mcu` | `dutch` (once, reason written) or `eye` | `handheld` | `hold` + `drift` | 5–7 s | room tone, an off sound | the dutch fee — once per episode |
 | imposing · hero · dangerous (위압·영웅) | `fs`/`ms` | `low` (+ wide lens) | `static` or slow `dolly in` | slow `in` — the low angle is drawn in the still | 5–7 s | low end forward | `[study]`: bigger and stronger, **not** better liked |
 | powerless · isolated · watched (무력·고립·감시) | `ls`/`ms` | `high` | `static` or slow `dolly out` | `out` | 5–8 s | the surroundings' sound | a subject filling a high-angle frame alone doesn't read weak |
-| fate · the whole picture in one frame (운명·요약) | `ls`/`els` | `overhead` | `static` | `hold`, or slow `out` | 5–8 s | space | |
+| fate · the whole picture in one frame (운명·요약) | `ls`/`els` | `overhead` | `static` | slow `out`, or `hold` + `drift` | 5–8 s | space | |
 | shock · the floor drops (충격) | `mcu` | `eye` | `dolly zoom` | `punch` | 3–5 s | one hit, then nothing | once per episode |
 | hidden information revealed (숨은 정보 공개) | two planes, or `insert` | `eye` | `rack focus` / `static` | `in` + `focus` at the detail | 3–4 s | the object's sound | an insert replaces three lines |
 | the rhythm of travel (이동의 리듬) | `fs`/`ms` | `eye` | `truck` | `pan` in the travel's direction | 5–7 s | footsteps, passing space | |
 | inside the character · immersion (몰입·1인칭) | `pov` or `tracking` from behind | `eye` | `tracking` | `in` + `drift` | 5–7 s | breathing, footsteps | |
 | presence · this is real (현장감·실재) | `mcu`/`ms` | `eye` | `handheld` | `hold` + `drift` | 5–7 s | room tone | cuts the AI look |
-| trust · a person telling me (신뢰 — talking head, speech clip) | `mcu` | **`eye`** | `static` | `hold` | 7–10 s | voice clean | `[study]` the default for hook cuts and quote clips |
-| withhold · let them imagine (감추기·상상) | `back` | `eye` | `static` | `hold` | 5–7 s | no face — the sound does the face's job | |
+| trust · a person telling me (신뢰 — talking head, speech clip) | `mcu` | **`eye`** | `static` | `hold` + `drift` | 7–10 s | voice clean | `[study]` the default for hook cuts and quote clips |
+| withhold · let them imagine (감추기·상상) | `back` | `eye` | `static` | `hold` + `drift` | 5–7 s | no face — the sound does the face's job | |
 | transition · impact (전환·타격) | any | `eye` | `whip pan` / push past | `punch`, or a plain cut | 3–4 s | whoosh or a hard cut | |
 | closing · the end (닫힘·엔딩) | `els` | `eye` → rising | `pedestal up` / `dolly out` rising | `out` | 5–8 s | space | the person shrinks as the frame rises |
 | detail · the peak of tension (디테일·긴장의 정점) | `ecu` | — | `static` | `in` + `focus` | 3–4 s | the detail's sound | once or twice per episode |

@@ -25,11 +25,20 @@ bottom 570px     burned-in subtitle band (y 1380–1560) + IG caption / YT chann
 - Why 176px per side: on a 19.5:9 tall phone, IG aspect-fills the 9:16 video and crops
   96px off each side, and in that cropped view the action-bar icons start at video
   coordinate x≈890. `reel-qa.html?fit=crop` reproduces this crop.
-- Ken Burns margin: the build zooms 3.5%, so an element at x=904 grows to 917 in the
-  final frame. The template auto-shrinks the hero stat to a 640px width.
-  **Every column-4 move keeps this margin** — easing changes the timing, not the span;
-  `punch` lands the same 3.5% early and holds; `drift` moves ±6px inside a 1.04 base
-  scale that the crop absorbs. The one option that eats into it is `focus=` off centre:
+- Ken Burns margin: a still card with no `span=` zooms `KB_RATE` (4%/s) × card seconds,
+  capped at a total scale of `KB_ZMAX` 1.075. Text is baked into the card, so the cap is the
+  zone math on all three edges, and the tightest one binds. The bottom is the tightest: the
+  zone runs to y 1350 and the burned-in subtitle band starts at 1380, so `390·z + 960 ≤ 1380`
+  gives z ≤ 1.0769 — at 1.075 a zone-filling card's last line ends at 1379, just above the band.
+  The top ends at y≈132 (under the phone's status bar, not behind it) and the template's 640px
+  hero stat ends at x 884, inside the 890 where the action-bar icons start. Landscape is the
+  one place the cap does not decide the bottom — its zone bottom (y 795) sits on the worst-case
+  subtitle top, so any zoom past 1 crosses it, which was already true at the old 3.5%.
+  **Every column-4 move keeps this cap** — easing changes the timing,
+  not the span; `punch` lands 3.5% early and creeps to the same span; `drift` moves ±6px
+  inside a 1.04 base scale that the crop absorbs. A `span=` written from the storyboard
+  ladder is deliberate and passes the cap — the fast rows want a bigger source image and
+  centred or absent text. The one option that eats into it is `focus=` off centre:
   at `focus=1:y` the window shifts wholly one way, and an element at x=176 lands at
   x≈144 — inside the 96px phone crop but out of the symmetric text zone. So `focus=`
   belongs on cards whose text is centred or absent (cover b-roll sources, full-bleed
@@ -41,9 +50,10 @@ Silence trim → loudnorm -16 → measured speech rate + atempo normalization (o
 → sentence-boundary detection (silencedetect — character-count proportional fallback on failure) → card
 duration rounded up to whole frames + sample-accurate audio padding (**zero drift**) → reveal transition
 timing (reveal-timing.py) → visual chain (video + alpha overlay composite → reveal xfade) → Ken Burns
-zoompan (3.5%) → concat → BGM sidechain ducking → subtitle files (`subs.srt` for publishing ·
+zoompan (4%/s on stills, capped at 1.075) → concat → BGM sidechain ducking → subtitle files (`subs.srt` for publishing ·
 `subs.ass` for burn-in) → outro xfade 0.6s splice → loudnorm -14 final encode (H.264 High 4.1, faststart)
-→ cover still extraction (`COVER_TS`).
+→ cover still extraction (`COVER_TS`, and the frame it pulls now comes out of a moving still —
+a 5s punch cover sits at scale 1.062 at 3.2s, so the thumbnail is that bit tighter).
 
 **The build produces two videos** — `reel.mp4` (clean master, no subtitles) and `reel-sub.mp4`
 (bottom-band burn-in). The rule is to upload subtitles as a separate file instead of burning them
