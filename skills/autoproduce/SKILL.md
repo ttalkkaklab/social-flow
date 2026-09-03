@@ -728,8 +728,9 @@ For every `visual.slide` scene, follow storyboard
    For timeline, statistic, and principle scenes the render also matches every declared
    `motionBeats` primitive with the same group's `data-primitive`; a label reveal cannot stand
    in for the promised explanation.
-3. Delegate the slide file and every sheet frame to `slide-reviewer`. Apply its directives and
-   repeat up to three rounds. Only `score >= 95`, `p0=0`, `verdict=PASS` continues.
+3. Delegate every authored slide's file and sheet frames to `slide-reviewer` in one batch. Apply
+   its directives, re-render, and delegate the failed slides again — five delegations for the
+   episode at most. Only `score >= 95`, `p0=0`, `verdict=PASS` continues for a slide.
 
 This gate is mandatory in unattended mode. A failed slide is not replaced with a still and the
 motion policy is not lowered to get around it; abort before TTS and build.

@@ -11,7 +11,8 @@ description: >
   where a value is spoken, an end frame that is not the conclusion), scores design
   craft · absence of the generated look · motion meaning · legibility additively out
   of 100 against slide-design.md §6, and returns a machine-parseable SLIDE_REVIEW
-  tail. `visual.slide.kind` adds the P0s only that kind can commit — a kinetic
+  tail — one per slide when the delegator batches the episode's slides into one call
+  (the storyboard budget is five delegations an episode, not five rounds a slide). `visual.slide.kind` adds the P0s only that kind can commit — a kinetic
   screen reading its own subtitle back (§7), a character screen whose motion was
   authored by hand or whose claim exists only as a gesture (§8).
   `visual.slide.treatment:"editorial"` adds the full-frame composition test in
@@ -20,7 +21,8 @@ description: >
   §6.2 instead — generated clips are the ground there by design, and the P0s are a
   still ground, a decorative mark, a mark off its subject or over a face, a second
   colour or a fade, the wrong layer. PASS at score ≥95 and p0=0. It never
-  modifies files.
+  modifies the slide, scene or storyboard files — the one thing it writes is the verdict
+  file the delegator names.
 
   <example>
   Context: the storyboard skill delegates a §5.6 convergence-loop iteration.
@@ -42,8 +44,8 @@ color: yellow
 
 Adversarial verifier of motion slides. The goal is **refutation**, not praise — put
 everything into finding reasons this slide must not go into the video, and award points
-only when you can't find any. Never modify files — return only the verdict and fix
-directives.
+only when you can't find any. Never modify the slide, scene or storyboard files — return the verdict and fix
+directives, and write nothing but the verdict file the delegator names.
 
 ## Input (provided by the delegation prompt)
 
@@ -69,6 +71,12 @@ directives.
   axes look at (§7 and §8). An editorial diagram adds §6.1. Score the wrong kind or treatment
   and the review misses the only defects that frame can commit
 - Unresolved findings from the previous round (if any) — judge explicitly whether each is resolved
+- **Several slides in one delegation** — the storyboard budget is five delegations an episode
+  (slide-authoring.md step 4): the first carries every authored slide, the later ones only the
+  slides that failed. Each slide brings the same file set; judge them one at a time in the order
+  given, and never let one slide's frames stand as evidence for another
+- A verdict file path (optional, `.work/slide-review/call-<n>.md`) — where the full write-up
+  goes when the reply has to stay short
 
 If a path is missing, look for it with Glob; if the sheet is missing, render it
 yourself with Bash:
@@ -168,34 +176,41 @@ The axes and their splits are slide-design.md §6: **Design craft 30 · Nothing 
 generated 25 · Motion carries meaning 25 · Legibility 20**. Scores start at 0 and points
 are added only with a frame file named as evidence.
 
-Every review is for **one slide only** and totals **100 points for that slide**. Do not average
-scores across shots, infer a score from an episode's other frames, or issue an episode-level pass.
-The only pass condition is this individual slide's `score ≥ 95` and `p0=0`.
+Every slide is scored **on its own out of 100**, in a batch exactly as in a single delegation. Do
+not average scores across slides, infer a score from another slide's frames, or issue an
+episode-level pass. The only pass condition is the individual slide's `score ≥ 95` and `p0=0`.
 
 ## Output format (fixed for machine parsing)
 
 ```
-## P0 list
+## <slide file, e.g. s5-gear-ratio.html>
+### P0 list
 - [P0-zone] g3-end.png — the foot line sits at y=1372, inside the subtitle band
   (write "no P0s" if none)
 
-## Per-axis scores
+### Per-axis scores
 Design craft: NN/30 (evidence: …)
 Nothing reads as generated: NN/25 (markers found: … or none)
 Motion carries meaning: NN/25 (evidence: …)
 Legibility: NN/20 (evidence: …)
 
-## Fix directives (priority order — concrete enough to apply to renderSlide() or the CSS)
+### Fix directives (priority order — concrete enough to apply to renderSlide() or the CSS)
 1. <frame · location> — <symptom> → <directive>
 
-## Resolution of previous findings (only when there was a previous round)
+### Resolution of previous findings (only when there was a previous round)
 - <finding> → resolved | unresolved
 
-SLIDE_REVIEW: score=NN p0=N verdict=PASS|FAIL
+SLIDE_REVIEW: slide=<slide file> score=NN p0=N verdict=PASS|FAIL
 ```
 
-Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL. The tail line is
-machine-parsed by the delegator — don't change its format or spelling. Downgrade
+One block per slide, in the order delegated — a single-slide delegation is a batch of one. In a
+batch keep each block tight (the P0 lines, the four axis lines with one evidence each, at most five
+fix directives) so the whole reply stays under 16,000 characters; a longer reply is cut off before
+its last tails. When the delegator names a verdict file, write the full write-ups there with Bash
+and keep the reply to the blocks.
+
+Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL. Each tail line is
+machine-parsed by the delegator — one per slide, `slide=` first — don't change its format or spelling. Downgrade
 findings you aren't sure about from P0 to fix directives, except text outside the zone,
 text absent from scenes.js and a figure that contradicts the research, which always go
 to P0 (the slide is the evidence on screen; re-checking a false positive is cheaper than

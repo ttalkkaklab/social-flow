@@ -1097,7 +1097,7 @@ A principle frame is a `.cast` of actors plus rules (`h.stem` · `h.bus` · `h.c
 puts the first art on group 1 then the title with `in`; type-only skips arts. A footage slide waits for its clips (footage-lane.md §4).
 
 Then run `node references/check-slide.js <storyboard directory> --require-all`, render its
-key-state sheet, and take it through `slide-reviewer` to score ≥95 with p0=0. This is part of
+key-state sheet, and take it through `slide-reviewer` to ≥95 with p0=0 — five delegations an episode, every slide in the first, failed ones after (slide-authoring.md step 4). This is part of
 the storyboard, not a post-approval detail: a plan line cannot reveal that an “HTML frame”
 is only a photo with an animated rectangle. Timeline, statistic, and principle frames must
 match every `motionBeats` primitive with the same group's `data-primitive`. Keep each sheet

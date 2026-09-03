@@ -133,23 +133,25 @@ rubric the reviewer applies.
    frozen past 40% of its segment wants a `.sv` sustain). Open
    `sheet/g<k>-end.png` for the last group and confirm by eye that everything the scene
    claims is on it, inside the zone.
-4. **The design gate — delegate to `slide-reviewer` for every authored cut** with the slide file, the sheet
+4. **The design gate — delegate to `slide-reviewer`** with, for every authored cut, the slide file, the sheet
    directory, `manifest.tsv`, `summary.json` (the renderer writes it next to the manifest —
-   `zone_fill_pct` and the coverage warnings live there), scenes.js, research.md, profile.md and
-   `references/slide-design.md`. It returns findings and a `SLIDE_REVIEW: score=NN p0=N
-   verdict=PASS|FAIL` tail. **Apply every fix directive, re-run steps 2–3, and delegate
-   again with the previous findings attached, until the tail says PASS (score ≥ 95 and
-   p0 = 0).** Score **each slide independently out of 100**. Never average scores across an
-   episode or let a strong slide compensate for a weak one. Treat a score below 95 as a failed cut,
-   not a soft note. Hard cap 5 rounds (user directive 2026-08-31) — a slide that hasn't converged
-   by then goes back to the user with the last findings and the sheet, not into the build. Log each round's score
-   in storyboard.md under the slide table (`s5 · round 1 → 78 · round 2 → 96 PASS`), so the
-   convergence is a record and not a claim.
+   `zone_fill_pct` and the coverage warnings live there), plus scenes.js, research.md, profile.md and
+   `references/slide-design.md`. It returns findings and a `SLIDE_REVIEW: slide=<file> score=NN p0=N
+   verdict=PASS|FAIL` tail **per slide**. **The episode gets five delegations, not five rounds a
+   slide** (user directive 2026-09-03 — thirteen slides at five rounds each is sixty-five reviewer
+   runs, and the reviewer is where the tokens go): the first delegation carries every authored slide
+   of the episode in one batch; each later one carries only the slides whose last tail said FAIL,
+   with their previous findings attached, after you have applied every fix directive and re-run
+   steps 2–3. Score **each slide independently out of 100** — never average across the episode or
+   let a strong slide compensate for a weak one; a score below 95 is a failed cut, not a soft note.
+   A slide still failing after the fifth delegation goes back to the user with its last findings
+   and the sheet, not into the build. Log each delegation's score in storyboard.md under the slide
+   table (`s5 · call 1 → 78 · call 2 → 96 PASS`), so the convergence is a record and not a claim.
 5. Nothing goes in the ledger — the render is local. The `.work/slide-check/` frames stay
    for produce to compare against (§3.6 re-renders the clips from the same file).
 
-`autoproduce` runs this same gate before narration and build. It may fix and re-render up to
-five rounds; a slide that still fails is held and never enters the unattended build.
+`autoproduce` runs this same gate before narration and build, on the same five-delegation
+budget; a slide that still fails is held and never enters the unattended build.
 
 #### Kinetic type — the same procedure, a different template
 
@@ -166,8 +168,8 @@ five rounds; a slide that still fails is held and never enters the unattended bu
    line past five words, two effect kinds on one screen. The default entrance is `mask`
    (`words:true` staggers it word by word and counts as the same kind); `h.band` is the
    verdict plate and the last thing to enter.
-3. Steps 2–5 (machine check, sheet render, the design gate at ≥ 95 / p0 = 0, three-round cap,
-   scores logged in storyboard.md) are unchanged, including the same `render-motion-slide.mjs`
+3. Steps 2–5 (machine check, sheet render, the design gate at ≥ 95 / p0 = 0 inside the episode's
+   five delegations, scores logged in storyboard.md) are unchanged, including the same `render-motion-slide.mjs`
    command — the renderer only asks for the seek contract and does not care what is drawn.
 
 The one thing to check by eye before delegating: open `sheet/g<k>-end.png` beside the scene's
