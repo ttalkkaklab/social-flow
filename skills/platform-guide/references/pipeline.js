@@ -350,7 +350,7 @@ const REVIEWERS = [
     id: 'slide-reviewer',
     tails: ['SLIDE_REVIEW'],
     bar: 95,
-    rounds: null, // convergence loop — storyboard §5.6
+    rounds: null, // convergence loop — five delegations an episode, all slides batched (slide-authoring.md step 4)
     modes: ['slide'],
     surfaces: ['motion slides'],
   },
