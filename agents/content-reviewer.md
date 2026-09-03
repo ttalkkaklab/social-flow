@@ -3,13 +3,15 @@ name: content-reviewer
 description: >
   Read-only reviewer that adversarially verifies social-flow deliverables
   (video frames, per-platform copy) before publishing. The produce skill
-  delegates to it from the §10 quality gate — it hunts for P0 defects (typos,
+  delegates to it once from the §10 quality gate, on an episode that is going to be
+  published — it hunts for P0 defects (typos,
   clipping, factual mismatches, platform taboos, copy-pasted sentences,
   unexplained jargon, a result given away in the title, description or
   caption) and scores each axis — PASS only when copy ≥95 and
   P0=0, returning a machine-parseable CONTENT_REVIEW tail. It doubles as plan
-  mode — when produce/autoproduce delegate the storyboard's cover-background
-  and b-roll plan before generation calls (image_local_generate, gpt_image,
+  mode, on request only since 0.50.0 (the flow checks the plan itself against
+  produce absolute rule 13) — handed the storyboard's cover-background and
+  b-roll plan before generation calls (image_local_generate, gpt_image,
   veo), it hunts for P0s (still-life source, real person, target-person
   violation, text expectation, missing negative prompt, unjustified duration,
   minor in frame, engine misassignment) and returns a PLAN_REVIEW tail. It
@@ -29,7 +31,7 @@ description: >
   <commentary>Final pre-publish check — confirm P0 status with content-reviewer, then move on to publish.</commentary>
   </example>
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: sonnet
 color: red
 ---
 

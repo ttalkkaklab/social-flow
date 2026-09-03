@@ -33,7 +33,7 @@ description: >
   <commentary>An intro-video evaluation request — judge with intro mode's P0s, per-axis rubric, and the INTRO_REVIEW tail.</commentary>
   </example>
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: sonnet
 color: red
 ---
 

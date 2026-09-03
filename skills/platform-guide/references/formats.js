@@ -115,7 +115,9 @@ const FORMATS = {
 
     // Two distinct concepts — folding them into one field breaks center zoom
     // the moment panning turns on.
-    //   zoomSpan   = total center Ken Burns zoom span per card (build-reel.sh:64 ZOOM_SPAN)
+    //   zoomSpan   = floor of the still zoom span and the punch's landing size (build-reel.sh ZOOM_SPAN;
+    //                a still card's default is KB_RATE × seconds capped at KB_ZMAX — portrait zone math,
+    //                and the builder holds both knobs, not this preset)
     //   panZoom*   = pan base scale clamp range (§7.1, new for landscape — KB_ZOOM_MIN/MAX)
     // Portrait is panAllowed:false and cards.tsv column 5 is always empty, so it
     // never enters the pan chain.

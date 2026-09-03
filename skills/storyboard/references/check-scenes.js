@@ -884,6 +884,14 @@ function check(win, fmt, opts) {
         warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
     }
 
+    // A still never sits frozen under the voice (owner directive 2026-09-03). The builder's
+    // Ken Burns is the floor on every still card — build-reel.sh refuses zoom=none and a bare
+    // hold there — so a storyboard that asks a still to stand still is caught here first.
+    if (motionKind(s) === null && s.type !== 'outro' && v.camera &&
+        /^\s*(static|still|hold|none|no move(?:ment)?|fixed|lock(?:ed)?|lock-off|고정|정지)\s*$/i.test(String(v.camera.movement || '')))
+      machine(where, `a still with camera.movement "${v.camera.movement}" — a still never sits frozen under the voice; ` +
+                     'write dolly in / dolly out / truck / handheld, or leave camera empty for the default drift');
+
     // A slide names its file and everything it will draw. A still slide is not allowed.
     if (v.slide) {
       if (!v.slide.file) machine(where, 'visual.slide has no file');
@@ -1341,6 +1349,25 @@ function selftest() {
   const src = fs.readFileSync(__filename, 'utf8');
   ok('no length band is hardcoded here',
      !/sceneMin\s*[:=]\s*\d/.test(src.replace(/pacing:\s*\{[^}]*\}/g, '')));
+
+  // ── a still never sits frozen (2026-09-03) ──
+  const frozenStill = Object.assign({}, goodShot, {
+    visual: { camera: { movement: 'static', speed: 'very slow', framing: 'mcu', end: 'centred' } } });
+  ok('a still whose camera says static is a violation',
+     has(bads(run([cover, frozenStill, goodShot, ctaShot])), /never sits frozen/));
+  ok('a still with a real move passes',
+     !has(bads(run([cover, Object.assign({}, frozenStill, {
+       visual: { camera: { movement: 'dolly in', speed: 'very slow', framing: 'mcu', end: 'centred' } } }),
+       goodShot, ctaShot])), /never sits frozen/));
+  ok('the same rule reads 정지 and still, not just static',
+     has(bads(run([cover, Object.assign({}, frozenStill, {
+       visual: { camera: { movement: '정지', speed: 'very slow', framing: 'mcu', end: 'centred' } } }),
+       goodShot, ctaShot])), /never sits frozen/) &&
+     has(bads(run([cover, Object.assign({}, frozenStill, {
+       visual: { camera: { movement: 'still', speed: 'very slow', framing: 'mcu', end: 'centred' } } }),
+       goodShot, ctaShot])), /never sits frozen/));
+  ok('the frozen-still check waits for the camera pass (--draft)',
+     !has(bads(run([cover, frozenStill, goodShot, ctaShot], null, { draft: true })), /never sits frozen/));
 
   if (failed) { process.stderr.write(failed + ' check(s) failed\n'); process.exit(1); }
   process.stdout.write('check-scenes selftest OK\n');

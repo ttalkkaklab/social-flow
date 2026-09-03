@@ -25,7 +25,7 @@ description: >
   <commentary>Multiple drafts on the same surface go in one delegation, judged as a batch.</commentary>
   </example>
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: sonnet
 color: red
 ---
 

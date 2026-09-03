@@ -6,12 +6,16 @@
 #
 # Usage: build-reel.sh <workdir>
 #   <workdir>/cards.tsv : idx <TAB> narration-audio-path <TAB> target-rate(chars/sec) <TAB> zoom(in|out|auto|none|punch|hold) [<TAB> opts]
+#                         in/out/auto zoom over the whole card by the card's span: span= when written,
+#                         else KB_RATE × card seconds capped at KB_ZMAX (the baked text stays in the zone).
 #                         zoom=none skips Ken Burns — for footage that already moves, like filmed clips.
-#                         zoom=punch is a fast eased zoom-in over the first PUNCH_D seconds, then a hold —
-#                         the cover-card move (the hook contract wants movement inside 0–3s). Same
-#                         ZOOM_SPAN as in/out, so the safe-zone math is unchanged; only the timing differs.
+#                         Refused on a still card (every segment visual an image): a still never sits
+#                         frozen under the voice (owner directive 2026-09-03).
+#                         zoom=punch lands ZOOM_SPAN (3.5%) inside the first PUNCH_D seconds (ease-out), then
+#                         keeps creeping to the card's span — the cover-card move (the hook contract wants
+#                         movement inside 0–3s, and nothing sits frozen after the hit).
 #                         zoom=hold keeps a fixed scale with no zoom motion — the base for drift=1
-#                         (pure handheld) or a deliberate static crop.
+#                         (pure handheld) or a pan= travel. A bare hold is refused on a still card too.
 #                         All zoom/pan motion is eased (smoothstep) — KB_EASE=linear restores the old ramp.
 #                         Column 5 opts is "k=v,k=v" (optional — 4-column files run unchanged today):
 #                           sync=1        a card whose audio is one body with the picture (live voice
@@ -179,8 +183,22 @@ REVEAL_GAP=${REVEAL_GAP:-0.05}     # finish appearing this long before the next 
 REVEAL_LEAD=${REVEAL_LEAD:-0.30}   # fallback lead — used only when no pause was found (char-count proportion)
 SIL_DB=${SIL_DB:--37}              # sentence-boundary silence threshold (dB)
 SIL_MIN=${SIL_MIN:-0.16}           # sentence-boundary minimum silence length (s)
-ZOOM_SPAN=${ZOOM_SPAN:-0.035}      # total Ken Burns zoom span per card (3.5%)
+ZOOM_SPAN=${ZOOM_SPAN:-0.035}      # floor of the still zoom span, and the punch's landing size (3.5%)
 ZOOM_SPAN=$(awk -v v="$ZOOM_SPAN" 'BEGIN{printf "%.3f", v}')   # %.3f normalized so span= report-tag compares stay exact
+KB_RATE=${KB_RATE:-0.04}           # default still zoom per second when no span= is written — the observe row of
+                                   #   the ladder (docs/research/2026-08-26-still-photo-camera-motion: the explain
+                                   #   cut ran 4%/s; our old 3.5% per card was ten times slower, and read as a photo)
+KB_ZMAX=${KB_ZMAX:-1.075}          # cap on the default's total scale. Text is baked into a still card, so a centre
+                                   #   zoom pushes every edge of the text zone outward, and the cap is the tightest of
+                                   #   the three. Portrait, zone y 190~1350 · x 176~904, canvas centre 960:
+                                   #     bottom  390*z+960 <= 1380 (the burned-in subtitle band, line 1201) -> z <= 1.0769
+                                   #     top     -770*z+960 = 132 at 1.075, still under the phone's status bar
+                                   #     side    the 640px hero stat ends at x 884, inside the 890 action-bar icons
+                                   #   The bottom edge is what binds. Landscape has its zone bottom (y 795) sitting on
+                                   #   the worst-case subtitle top, so any z past 1 crosses it — that was already true
+                                   #   at the old 3.5% and this cap does not change the shape of it (formats.js has no
+                                   #   per-format zoom mirror). A span= written from the storyboard ladder is deliberate
+                                   #   and is not capped here.
 W=${W:-1080}                       # canvas width — the format decides
 H=${H:-1920}                       # canvas height
 ZOOM_BASE=${ZOOM_BASE:-1620x2880}  # Ken Burns source resolution (1.5x the canvas)
@@ -331,6 +349,36 @@ if [ "$DIMBAD" = 1 ]; then
   fi
   WARN=1
 fi
+# A still never sits frozen under the voice (owner directive 2026-09-03). A card whose every
+# segment visual is an image is a still card, and it needs a camera move: in/out/auto/punch,
+# a pan= travel, or hold+drift=1. zoom=none and a bare hold are for footage that already
+# moves. Checked here, before the first ffmpeg, with the loop's column-3 parsing. The same
+# pass writes stillcards.txt — the card list the KB_RATE default below applies to, so a
+# filmed card with no span= keeps the ZOOM_SPAN floor instead of the still ladder's push.
+: > stillcards.txt
+while IFS=$'\t' read -r _CI _ _ _CZ _CO; do
+  [ -z "${_CI:-}" ] && continue
+  STILLCARD=1; SEENVIS=0
+  while IFS=$'\t' read -r _ _ VIS _; do
+    [ -z "${VIS:-}" ] && continue
+    IFS='|' read -ra PARTS <<< "$VIS"
+    for PART in "${PARTS[@]}"; do
+      [ -z "$PART" ] && continue
+      PBASE="${PART%%::*}"; PBASE="${PBASE#@}"
+      SEENVIS=1
+      case "$PBASE" in *.mp4|*.mov|*.m4v|*.webm|*.MP4|*.MOV|*.M4V|*.WEBM) STILLCARD=0 ;; esac
+    done
+  done < <(awk -F'\t' -v i="$_CI" '$1==i' segs.tsv)
+  if [ "$SEENVIS" != 1 ] || [ "$STILLCARD" != 1 ]; then continue; fi
+  echo "$_CI" >> stillcards.txt
+  case "${_CZ:-auto}" in
+    none) ;;
+    hold) case ",${_CO:-}," in *,drift=1,*|*,pan=*) continue ;; esac ;;
+    *) continue ;;
+  esac
+  say "✗ card $_CI: a still card with zoom=${_CZ:-auto} — a still never sits frozen under the voice. Use in|out|auto|punch, pan=<dir>, or hold+drift=1 (none and a bare hold are for footage that already moves)"
+  exit 1
+done < cards.tsv
 
 # Per-segment sfx + BGM gating (optional) — sfx.tsv: idx <TAB> seg <TAB> audio-file <TAB> bgm(on|off)
 #   The audio file can be wav or mp4 (a video contributes its own sound). Left empty with just
@@ -655,7 +703,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     ONESHOT=0; case "$BASE" in @*) ONESHOT=1; BASE="${BASE#@}";; esac
     BI=$NIN; HOLD=""
     case "$BASE" in
-      *.mp4|*.mov|*.m4v|*.webm)
+      *.mp4|*.mov|*.m4v|*.webm|*.MP4|*.MOV|*.M4V|*.WEBM)
         if [ "$ONESHOT" = "1" ]; then
           # If the clip is shorter than the segment window, clone the last frame to fill — a freeze, not a loop
           INS+=(-i "$BASE")
@@ -701,13 +749,27 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   ZLAST=$(( FRAMES > 1 ? FRAMES - 1 : 1 ))
   ZD="${ZDIR:-auto}"
   if [ "$ZD" = "auto" ]; then if [ $((N % 2)) -eq 1 ]; then ZD=in; else ZD=out; fi; fi
+  # Default still move (no span= written): KB_RATE × card seconds, capped so the total scale
+  # stays under KB_ZMAX on top of this card's base (pan scale · drift 1.04 · else 1) — a pan
+  # card keeps the 3.5% floor on its zoom drift, the travel is its motion. A written span= is
+  # the storyboard ladder's decision and passes through untouched. Only still cards take this
+  # ladder (stillcards.txt, written by the pre-flight pass): a filmed clip already moves, and
+  # a 10% push on top of it — the overlay's baked title included — shakes the frame.
+  if [ "$SPANSET" -eq 0 ] && grep -qxF "$IDX" stillcards.txt; then
+    if [ -n "$PAN" ]; then KBB="$PZ"; elif [ "$DRIFT" -eq 1 ]; then KBB="$DRIFT_Z"; else KBB=1; fi
+    SPAN=$(awk -v r="$KB_RATE" -v d="$D" -v zmax="$KB_ZMAX" -v b="$KBB" -v floor="$ZOOM_SPAN" \
+      'BEGIN{s=r*d; c=zmax-b; if(s>c)s=c; if(s<floor)s=floor; printf "%.3f", s}')
+  fi
   PEXPR="(on/$ZLAST)"
   # Per-card EASE (ease= option, default KB_EASE). "in" accelerates to the cut point — quadratic
   # progress, so the rate climbs linearly and peaks exactly where the cut lands (the action/CTA
   # register measured in docs/research/2026-08-26-still-photo-camera-motion).
   case "$EASE" in linear) E="$PEXPR" ;; in) E="($PEXPR*$PEXPR)" ;; *) E="($PEXPR*$PEXPR*(3-2*$PEXPR))" ;; esac
   KTAG=""
-  [ "$SPAN" != "$ZOOM_SPAN" ] && KTAG="+span=$SPAN"
+  # A pan card reports its span only when the zoom drift actually uses it — pan + in/out runs
+  # PZE=($PZ+$SPAN*$E); pan + auto is a fixed scale and the number would be noise.
+  [ "$SPAN" != "$ZOOM_SPAN" ] && [ "$ZD" != hold ] && [ "$ZD" != none ] \
+    && { [ -z "$PAN" ] || [ "$ZDIR" = in ] || [ "$ZDIR" = out ]; } && KTAG="+span=$SPAN"
   [ "$EASE" != "$KB_EASE" ] && KTAG="$KTAG+ease-$EASE"
   if [ "$DRIFT" -eq 1 ]; then
     DXE="+$DRIFT_AMP*(0.6*sin(2*PI*$DRIFT_F1*on/$FPS)+0.4*sin(2*PI*$DRIFT_F2*on/$FPS+1.7))"
@@ -741,11 +803,18 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$PZE':x='$PX$DXE':y='$PY$DYE':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vkb];"
   else
     case "$ZD" in
-      punch) # the whole ZOOM_SPAN lands in the first PUNCH_D seconds (ease-out), then holds — same
-             # final scale as a slow zoom in, so the safe-zone margins are identical; only the timing punches
+      punch) # ZOOM_SPAN (3.5%) lands in the first PUNCH_D seconds (ease-out), then the window keeps
+             # creeping (smoothstep — velocity 0 at the join, 0 at the cut) up to the card's span by
+             # the last frame. The hit is the hook's first-frame movement; the creep is what keeps
+             # the cover from sitting frozen behind the title for the next four seconds. A span at
+             # or under the landing size is the old punch-and-hold.
              PF=$(awk -v d="$PUNCH_D" -v fps="$FPS" 'BEGIN{f=int(d*fps+0.5); if(f<1)f=1; print f}')
              PP="(min(on/$PF,1))"
-             ZEXPR="($ZBASE+$SPAN*(1-(1-$PP)*(1-$PP)))" ;;
+             PLAND=$(awk -v s="$SPAN" -v l="$ZOOM_SPAN" 'BEGIN{printf "%.3f", (s<l)?s:l}')
+             PCREEP=$(awk -v s="$SPAN" -v l="$PLAND" 'BEGIN{c=s-l; if(c<0)c=0; printf "%.3f", c}')
+             PT=$(( ZLAST > PF ? ZLAST - PF : 1 ))
+             PC="(max(0,(on-$PF)/$PT))"
+             ZEXPR="($ZBASE+$PLAND*(1-(1-$PP)*(1-$PP))+$PCREEP*$PC*$PC*(3-2*$PC))" ;;
       hold)  ZEXPR="$ZBASE" ;;
       out)   ZEXPR="($ZBASE+$SPAN*(1-$E))" ;;
       *)     ZEXPR="($ZBASE+$SPAN*$E)" ;;
@@ -1337,6 +1406,9 @@ fi
 # Cover = the moment everything up to the hero stat has appeared (an auto-picked frame fails to carry
 # the hook — per the cover-optimization research)
 # Pull it from the clean copy — a subtitle over the thumbnail collides with the cover copy
+# The frame this pulls is the YouTube thumbnail as-is (absolute rule 12), and it is now pulled
+# out of a moving still: a 5s punch cover sits at scale 1.062 at 3.2s (the zone top y190 lands at
+# 143 instead of the old 163). A card holding a clip is unchanged at 1.035.
 ffmpeg -y -v error -ss "${COVER_TS:-3.2}" -i reel.mp4 -frames:v 1 -q:v 2 cover.jpg
 [ "$WARN" -eq 1 ] && say "── warnings present: check the ⚠ items above (regeneration advisories don't block the build)"
 say "── done"

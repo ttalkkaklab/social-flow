@@ -51,7 +51,7 @@ escalation is needed, only **the one cover slot** goes up.
 |---|---|---|
 | Cover background | `gpt_image_text2img` quality **`high`**, 1088x1920, 1 image | Photorealistic human scene (default: a Korean woman) — the cover frame becomes the thumbnail as-is (absolute rule 12). On escalated episodes it doubles as the veo source |
 | Points backgrounds | `image_local_generate` (local Z-Image) 1088x1920, **2–4 images** — **$0** | The photo is the star (absolute rule 14) — captions use only the top band so the photo shows in full. Change the shot when the content axis changes. Only machines without mflux fall back to `gpt_image_text2img` quality `low` ($0.007/image) |
-| Motion | ffmpeg Ken Burns still lane (eased zoom · focus · pan · punch · drift, 3.5%) | The builder already does this. **Zero Veo calls** |
+| Motion | ffmpeg Ken Burns still lane (eased zoom · focus · pan · punch · drift, 4%/s capped at 1.075) | The builder already does this. **Zero Veo calls** |
 | Narration | whatever engine profile §2 says | `local` (Supertonic) costs 0; `gemini` bills per 1,000 characters |
 | BGM | one 30s `music_generate_clip` | The builder crossfades it onto itself to reach length. Variable-length generation has no confirmed price, so it isn't used — which also means the economy tier takes one bed, not cues |
 | Subtitles | the builder emits `subs.srt`·`subs.ass` together | free |
@@ -90,7 +90,7 @@ cover background).
 model veo-3.1-lite-generate-preview · 1080p · 8s generation · 9:16
 Used length is the broll scene's duration (default 4s) — produce §6 cuts only the head of the original.
 The source must be the already-made cover-background PNG — veo_text2video is never used (absolute rule 8),
-and the plan gets content-reviewer plan-mode PASS first (absolute rule 13).
+and the plan passes the author's rule-13 check first.
 Prompt = the storyboard's stored visual.prompt, sent verbatim (scenes-schema §clip prompt);
 fallback on older files is English, motion only — re-describing the person, background, or lighting
 already visible in the source image degrades the result (Google's official image-to-video guidance).
