@@ -161,7 +161,8 @@ Then, per shot, in group order:
   frames a second — a 4 s group is a minute, a 30-shot episode about half an hour. Check the
   seam yourself once: `frames-r<k>/f0000.png` equals `sheet/g<k-1>-end.png` byte for byte, and
   `f0001.png` is the new shot.
-- `slide-reviewer` to ≥ 95 with P0 = 0, five rounds at most, as on every slide. Its footage
+- `slide-reviewer` to ≥ 95 with P0 = 0 inside the episode's five delegations — every authored
+  slide in the first, only the failed ones after (slide-authoring.md step 4). Its footage
   P0s are slide-design §6.2 (a still ground, a decorative mark, a mark off its subject or over a
   face, a second colour or a fade, the wrong layer).
 
