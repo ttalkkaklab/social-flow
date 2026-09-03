@@ -12,7 +12,9 @@ description: >
   craft · absence of the generated look · motion meaning · legibility additively out
   of 100 against slide-design.md §6, and returns a machine-parseable SLIDE_REVIEW
   tail — one per slide when the delegator batches the episode's slides into one call
-  (the storyboard budget is five delegations an episode, not five rounds a slide). `visual.slide.kind` adds the P0s only that kind can commit — a kinetic
+  (the storyboard budget is five delegations an episode, not five rounds a slide) — and it
+  judges the whole batch itself, in one context, never by spawning a sub-agent per slide.
+  `visual.slide.kind` adds the P0s only that kind can commit — a kinetic
   screen reading its own subtitle back (§7), a character screen whose motion was
   authored by hand or whose claim exists only as a gesture (§8).
   `visual.slide.treatment:"editorial"` adds the full-frame composition test in
@@ -203,7 +205,11 @@ Legibility: NN/20 (evidence: …)
 SLIDE_REVIEW: slide=<slide file> score=NN p0=N verdict=PASS|FAIL
 ```
 
-One block per slide, in the order delegated — a single-slide delegation is a batch of one. In a
+One block per slide, in the order delegated — a single-slide delegation is a batch of one.
+**Judge every slide yourself, in this one context.** Do not spawn sub-agents, one per slide or
+otherwise: the delegation budget exists to bound reviewer calls, and a fan-out inside the reviewer
+multiplies them back (measured 2026-09-03 — a 12-slide batch spawned twelve children, two of which
+overwrote the verdict file and answered the delegator with a different set of scores). In a
 batch keep each block tight (the P0 lines, the four axis lines with one evidence each, at most five
 fix directives) so the whole reply stays under 16,000 characters; a longer reply is cut off before
 its last tails. When the delegator names a verdict file, write the full write-ups there with Bash
