@@ -314,7 +314,8 @@ None of the six is a pass/fail gate — each returns findings once, they get app
 anything left over goes onto the human approval screen, which is the one thing that blocks.
 The exception is a **motion slide**: storyboard renders its frames before approval and
 delegates them to `slide-reviewer`, and the slide enters the build only when that review
-scores ≥ 95 with no P0 — a convergence loop (cap 3 rounds), because a slide is cheap to
+scores ≥ 95 with no P0 — a convergence loop (five reviewer delegations an episode, every
+slide batched in the first, failures only after), because a slide is cheap to
 re-render and a generated-looking one is not worth shipping.
 The per-item reviews report the **lowest-scoring** scene or shot rather than the average,
 because an average lets one broken scene hide behind the good ones. The order has a
