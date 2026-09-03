@@ -48,7 +48,7 @@ key <TAB> quantity <TAB> memo
 ```tsv
 image.gpt-image-2.high	1	storyboard: cover background scene-1
 image.local	3	storyboard: points backgrounds scene-2~4
-image.gpt-image-2.high	1	storyboard: §5.5 regeneration scene-1 (round 2)
+image.gpt-image-2.high	1	storyboard: §5.5 remake scene-1
 veo.lite.1080p	8	produce: b-roll a1 — 8s generated, 4s used
 tts.local	0.412	produce: narration, 412 chars
 music.lyria-clip	1	produce: BGM 30s
@@ -59,7 +59,7 @@ music.lyria-clip	1	produce: BGM 30s
 - **Prefix the memo with `storyboard:` / `produce:`.** The report table then
   separates the stages without adding a column (add a column and the format
   diverges from what autoproduce writes).
-- **Log discards too.** Images regenerated after the §5.5 image review, clips
+- **Log discards too.** Images regenerated after the §5.5 image check, clips
   redrawn because you didn't like them, TTS rerun after failing the length
   check — they don't reach the deliverable, but they do get billed.
 

@@ -64,7 +64,7 @@ pipeline.js        SoT — STAGES · GATES · REVIEWERS · LANES
   the `next` command. Predicates are a three-form mini-grammar (`has:`, `status:`,
   `scenes:`) evaluated against the facts `episode-state.js` already collects.
 - `GATES` — every gate in the pipeline, attended and unattended, with the skill and section
-  it lives in, what it checks, and what happens on failure. The eleven unattended gates
+  it lives in, what it checks, and what happens on failure. The eight unattended gates
   carry autoproduce's own gate numbers so the table and the data can be compared row by row.
 - `REVIEWERS` — the five reviewer agents, their surfaces, score bars, and verdict tails.
 - `LANES` — produce §1's three routing paths (generated · screencast · mixed), the axis
