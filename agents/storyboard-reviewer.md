@@ -72,9 +72,10 @@ costs the author a second of thought; a defect you swallowed costs the episode.
 The delegation prompt names one of `scenario mode`·`narration mode`·`copy mode`·`scene mode`·
 `vocabulary mode` (the storyboard skill also calls it `lexicon mode` — same mode, same
 `mode=lexicon` tail)·`camera mode`·`sound mode`·`image mode`. If it names none, decide from
-the attached inputs (a `scenario.md` or `candidates/d*.md` path alone means scenario mode,
-`scenes.js` plus `scenario.md` means narration mode, image paths mean image mode) and write
-which mode you read it in on the first line of the verdict.
+the attached inputs (numbered sentences inline mean narration mode; the same plus pasted
+check-style output means vocabulary mode; `candidates/d*.md` or `scenario.md` paths with no
+sentences mean scenario mode; image paths mean image mode) and write which mode you read it
+in on the first line of the verdict.
 
 **The flow (0.50.0) calls two modes, in loops** — narration and vocabulary, both on the spoken
 sentences handed inline, capped at three reads each — and, on the unattended path, scenario
@@ -886,7 +887,8 @@ done
 8. **Essay endings on a spoken surface** — a sentence closed on a bare noun ("~는 것."), the
    `~셈입니다` wrap-up, the stock reveal line (korean-style §D10). check-style.py flags the
    enumerable ones (P0-1 covers those); a "writer's flourish" reading of one of them is not a
-   pass — hand the sentence to copy mode, which owns sentence shape, and say so in the tail
+   pass — sentence shape is the author's own board pass now, so put it under "hand to another
+   mode" and say so in the tail
 
 ## Per-sentence axes (additive out of 100 — scored separately for each sentence; per scene on a full-board read)
 

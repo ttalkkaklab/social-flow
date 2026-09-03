@@ -71,7 +71,7 @@
       <tr><td><code>datago</code></td><td>공공데이터 조사·수집·시드 기록</td></tr>
       <tr><td rowspan="3">제작</td><td><code>storyboard</code></td><td>조사 → 시나리오 후보 3개를 일곱 항목 그대로 보여 주고 택 1 → 추가 조사 → 나레이션부터 쓰기 → <strong>나레이션 통독(§4.4)·어휘(§4.5) 두 읽기</strong>, 문장만 리뷰어에게 인라인으로 넘겨 각각 최대 3회 안에 95점 → 보드(카메라·사운드·슬라이드)는 검사 스크립트와 작성자 자신의 읽기 → 이미지 → 승인. 0.49 의 보드 검증 여섯·플랜 리뷰·슬라이드 루프는 0.50.0 에서 뺐다 — 358회 실측에서 리뷰어 호출 하나가 200만~800만 토큰에 8~14분이었고 한 편이 그걸 스무 번 넘게 불렀다. 못 고친 지적은 그대로 승인 화면에 올라간다</td></tr>
       <tr><td><code>produce</code></td><td>영상 합성과 플랫폼별 텍스트. 포맷은 두 가지다 — 쇼트폼 9:16(1080×1920/30fps·35~75초, 기본값)과 유튜브 롱폼 16:9(1920×1080·8~15분·챕터). 어느 쪽인지는 스토리보드를 쓸 때 정하고, <code>scenes.js</code> 의 <code>window.FORMAT</code> 한 줄이 이후 빌드 상수를 전부 결정한다. 롱폼은 사용자가 직접 찍은 클립과 생성 씬을 한 편에 섞으며 촬영 씬은 스토리보드가 내주는 촬영 대본(<code>script.md</code>)을 보고 그대로 찍는다</td></tr>
-      <tr><td><code>autoproduce</code></td><td>주제 문자열 하나로 조사 → 시나리오 후보 3개를 호기심·공포·궁금증·코믹으로 95점까지 돌리고 택 1(무인은 최고점) → 추가 조사 → 빌드까지 무인 관통 — 사람 승인 자리에 기계 게이트를 세운다</td></tr>
+      <tr><td><code>autoproduce</code></td><td>주제 문자열 하나로 조사 → 시나리오 후보 3개를 한 번에 묶어 읽고 택 1(무인은 최고점) → 추가 조사 → 나레이션 통독·어휘 각 3회 안에 95점 → 빌드까지 무인 관통 — 사람 승인 자리에 기계 게이트를 세운다</td></tr>
       <tr><td>게시</td><td><code>publish</code></td><td>계정 점검 → 미디어 호스팅 → <strong>HITL 승인</strong> → 게시 → permalink 기록</td></tr>
       <tr><td>운영</td><td><code>grow-threads</code><br><code>grow-youtube</code><br><code>grow-instagram</code><br><code>review-recent</code></td><td>플랜(상시 승인서)을 한 번 승인해 두고 <code>/loop</code> 로 반복하는 자율 성장 루프 1틱 — 댓글 응대·지표 관찰·대화 참여·게시. <code>review-recent</code> 는 최근 5편을 유튜브·인스타로 나눠 퍼널·비교 막대 HTML 로 채점한다</td></tr>
       <tr><td>지식</td><td><code>platform-guide</code></td><td>플랫폼 문법·영상 규격·한국어 문체 규칙의 정본. 다른 스킬이 불러 읽는다</td></tr>
