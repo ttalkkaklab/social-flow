@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# footage-frames.sh — frames to author marks against (storyboard §5.6 · footage-lane.md §4).
+# footage-frames.sh — frames to author marks against (produce §3.6 · footage-lane.md §4).
 #
 #   footage-frames.sh <storyboard dir> [s<n>]
 #

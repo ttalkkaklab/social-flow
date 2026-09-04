@@ -53,13 +53,16 @@
 #                                         eased both ends) | linear | in (accelerating: starts unnoticed,
 #                                         fastest at the cut point — action/CTA cards, cut away at the peak).
 #                                         punch keeps its own ease-out ramp and ignores ease=.
-#                           enter=<mode>  the join in front of this card. jcut (the default when omitted,
-#                                         on every card that has a card in front of it) | cut | black |
-#                                         white | dissolve | iris | blur | zoom | push:<l2r|r2l|u2d|d2u> |
-#                                         whip:<l2r|r2l|u2d|d2u>. enter=1 still means black.
+#                           enter=<mode>  the join in front of this card — **written on every spoken card
+#                                         after the first**, copied from the board's `transition` (produce
+#                                         §6 has the mapping). jcut | cut | black | white | dissolve | iris |
+#                                         blur | zoom | push:<l2r|r2l|u2d|d2u> | whip:<l2r|r2l|u2d|d2u>.
+#                                         enter=1 still means black. An empty enter= is the legacy
+#                                         4-column form: it falls back to a J-cut and the build warns,
+#                                         because that is the one join nobody chose.
 #                           exit=<mode>   the join behind it: cut (default) | black | white. exit=1 = black.
 #                                         **Dip** (black/white) is two halves: exit= on the card that ends the
-#                                         scene, enter= on the one that starts the next, SCENE_FADE (0.12s)
+#                                         scene, enter= on the one that starts the next, SCENE_FADE (0.30s)
 #                                         each. It passes through a solid frame — a beat of nothing.
 #                                         **Carry** (jcut, dissolve, iris, blur, zoom, push, whip) is written
 #                                         on the incoming card alone. That card opens on the previous card's
@@ -70,18 +73,17 @@
 #                                         (SCENE_BLUR, 0.45s); push slides it off over SCENE_PUSH (0.32s);
 #                                         whip slides it off smeared along the travel axis (SCENE_WHIP,
 #                                         0.24s); zoom grows it past the camera (SCENE_ZOOM, 0.32s).
-#                                         A J-cut is the professional split edit: you
-#                                         hear the next sentence before you see the next shot, so the
-#                                         picture never changes in silence (Murch; measured 0 stretches of
-#                                         >0.3s silence on the 85s reference short).
+#                                         **Every carry is a split edit**: the next line starts at this
+#                                         card's first frame, under the carried frame, so you hear the next
+#                                         sentence before the picture has finished changing and the picture
+#                                         never changes in silence (Murch; measured 0 stretches of >0.3s
+#                                         silence on the 85s reference short). A carry therefore drops the
+#                                         silent pre-roll (PRE seconds) from that card's length.
 #                                         **cut** is the smash: picture and sound change together, the old
-#                                         silent pre-roll. Write enter=cut to opt out of the J-cut.
+#                                         silent pre-roll. A dip keeps it too — its silence is the beat.
 #                                         Every mode is drawn **inside one card's own encode**, so §9 still
-#                                         stream-copies and drift stays 0. Dissolve/push/dip keep the card's
-#                                         frame count (measured A/B: identical subs.srt, 12.000000s both
-#                                         ways). A J-cut drops the silent pre-roll from that card's length
-#                                         (PRE seconds) because the next line occupies it — write enter=cut
-#                                         to keep the old silent join.
+#                                         stream-copies and drift stays 0. A dip keeps the card's frame
+#                                         count (measured A/B: identical subs.srt, 12.000000s both ways).
 #   <workdir>/segs.tsv  : idx <TAB> seg(0..) <TAB> visual-path <TAB> TTS-script-sentence <TAB> subtitle-display-sentence
 #                         visual = reveal-state PNG (reel-template ?reveal=k capture) or .mp4 (fullscreen b-roll)
 #                         Listing several with '|' splits the sentence's speech window evenly and they
@@ -168,7 +170,9 @@ DUCK_RELEASE=${DUCK_RELEASE:-250}
 SFX_VOL=${SFX_VOL:-0.85}           # per-segment sfx volume (sfx.tsv)
 BGM_GATE_R=${BGM_GATE_R:-0.30}     # ramp around BGM-gated spans — a hard cut sounds chopped
 XFADE=${XFADE:-0.6}                # feature↔outro transition length
-SCENE_FADE=${SCENE_FADE:-0.12}     # dip half-length — the black/white a card fades through (cards.tsv enter=/exit=)
+SCENE_FADE=${SCENE_FADE:-0.30}     # dip half-length — the black/white a card fades through (cards.tsv enter=/exit=).
+                                   # 0.6s through the colour, the outro seam's length (XFADE). Was 0.12: four
+                                   # frames down, one black, four up — a blink nobody read as a fade (ep209 measured)
 SCENE_XF=${SCENE_XF:-0.45}         # cross-dissolve length (enter=dissolve) — the incoming card melts out of the previous card's last frame
 SCENE_PUSH=${SCENE_PUSH:-0.32}     # push length (enter=push:<dir>) — the previous card's last frame slides off the incoming one
 SCENE_JCUT=${SCENE_JCUT:-0.32}     # J-cut hold — previous last frame stays on while the new line already plays, then the picture cuts. Under the 0.3s silence ceiling of the reference short once POST is the only remaining gap.
@@ -248,6 +252,10 @@ rm -f subs.srt subs.ass reel-sub.mp4
 REPORT=build-report.txt
 : > "$REPORT"
 WARN=0
+# §3.5 runs the forced aligner in the background; if the build dies between §3.5 and §8 the
+# aligner would otherwise finish on its own and drop a stale json into the next build's work/.
+ALIGN_PID=""
+trap '[ -n "${ALIGN_PID:-}" ] && kill "$ALIGN_PID" 2>/dev/null' EXIT
 say() { echo "$1"; echo "$1" >> "$REPORT"; }
 f2() { awk -v v="$1" 'BEGIN{printf "%.2f", v}'; }
 asstime() { awk -v t="$1" 'BEGIN{if(t<0)t=0; h=int(t/3600); m=int((t-h*3600)/60); s=t-h*3600-m*60; printf "%d:%02d:%05.2f", h, m, s}'; }
@@ -450,8 +458,8 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         ease=*) EASE="${KV#ease=}"
                 case "$EASE" in smooth|linear|in) : ;; *) say "✗ card $IDX: unknown ease — $EASE (smooth|linear|in)"; exit 1;; esac ;;
         # Scene-boundary transition — every mode is drawn **inside this card's own encode**, so the
-        # concat stays stream-copy exact (see the §7.4 note). Dissolve/push/dip keep the card's
-        # frame count. A J-cut drops the silent pre-roll from this card's length.
+        # concat stays stream-copy exact (see the §7.4 note). A dip keeps the card's frame count;
+        # every carry drops the silent pre-roll from this card's length (§4.5).
         # `enter=` is the join in front of this card, `exit=` the one behind it. A dip needs both
         # halves written (exit on the card before, enter on this one); jcut, dissolve and push
         # need only `enter=` — they take the previous card's last frame as their material.
@@ -577,6 +585,20 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   L=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "work/s$IDX.wav")
   R=$(awk -v c="$C" -v l="$L" 'BEGIN{printf "%.2f", (c>0)? c/l : 0}')
 
+  # ── 3.5) Forced aligner, started early. Word and phrase cues (§8) want the aligner's token
+  #   times, and it loads its model on every call — about 3 s a card, 41 s across ep209's 14 cards
+  #   (measured 2026-09-04), the loop's largest phase after the video encodes. Nothing between
+  #   here and §8 reads its output, so it runs in the background under this card's encode (§7)
+  #   and §8 waits for it — the 14-card build went from 291–297 s to 267–276 s. fd 3 is the
+  #   cards.tsv reader — closed for the child so the loop's input never sits in a process that
+  #   outlives an iteration.
+  ALIGN_PID=""
+  if [ "$SUB" = "1" ] && { [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; } && [ "$MUTE" -eq 0 ] && [ -x "$QWEN3_ASR_BIN" ]; then
+    mkdir -p work/align
+    "$QWEN3_ASR_BIN" --timestamps -f json --language Korean -o work/align "work/s$IDX.wav" > "work/align/s$IDX.log" 2>&1 3<&- &
+    ALIGN_PID=$!
+  fi
+
   # ── 4) Sentence-boundary detection (when there are 2+ segments) — M-1 silences (longest first),
   #        falling back to a char-count proportional split when there aren't enough
   BLIST=""; BMETHOD="single"
@@ -603,20 +625,24 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       && { say "⚠ card $IDX segment window under 0.9s — rebalance the sentences."; WARN=1; }
   fi
 
-  # ── 4.5) Default join — J-cut on every incoming spoken card
-  #   A 4-column cards.tsv (no enter=) used to hard-cut during the silent pre-roll, so the
-  #   picture changed in dead air. The professional join (split edit): the next line starts
-  #   on the previous last frame, then the picture cuts. First card, filmed sync, speechless
-  #   cards, dips, and an explicit enter=cut keep the old pre-roll. CPRE stays 0 on a J-cut
-  #   so the next line occupies what used to be silence; the hold is visual only (SCENE_JCUT).
+  # ── 4.5) The join — every carry drops the silent pre-roll (sound leads picture)
+  #   Every spoken card after the first takes its enter= from the board's `transition`
+  #   (produce §6). An empty enter= is the legacy 4-column form: it falls back to a J-cut
+  #   and says so, because the fallback is the one join nobody chose.
+  #   A carry (jcut · dissolve · iris · blur · zoom · push · whip) opens on the previous last
+  #   frame, and the next line starts at this card's first frame **under** that frame — the
+  #   split edit on every carry, so the picture never changes in silence. CPRE is 0 there.
+  #   First card, filmed sync, speechless cards, dips and an explicit enter=cut (the smash)
+  #   keep the silent pre-roll: a dip's beat of nothing is the point.
+  #   Reveal timing (§6) takes the same CPRE the audio is padded with. It used to take the
+  #   J-cut hold (0.32s) instead, which put every reveal on a J-cut card 0.32s behind the
+  #   speech — measured on the 4-card fixture: the reveal at 1.60s for a sentence that starts
+  #   at 1.70s, where the dissolve card next to it landed 0.07s before its sentence.
   if [ -z "$ENTER" ] && [ -n "$PREVIDX" ] && [ "$SYNC" -eq 0 ] && [ "$MUTE" -eq 0 ]; then
     ENTER=jcut
+    say "⚠ card $IDX: no enter= — J-cut fallback. Every card after the first takes the board's transition (produce §6)."; WARN=1
   fi
-  RPRE=$CPRE
-  if [ "$ENTER" = "jcut" ]; then
-    CPRE=0
-    RPRE=$SCENE_JCUT
-  fi
+  case "$ENTER" in jcut|dissolve|iris|blur|zoom|push|whip) CPRE=0 ;; esac
 
   # ── 5) Fix the card duration + assemble sample-accurate audio (same as v2 — the source of zero drift)
   D0=$(awk -v p="$CPRE" -v l="$L" -v q="$CPOST" 'BEGIN{printf "%.6f", p+l+q}')
@@ -648,7 +674,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   FOFF=(0); FDUR=("$REVEAL_D")      # [0] is the base state — no transition
   if [ "$MV" -gt 1 ]; then
     FB=""; case "$BMETHOD" in 'proportional fallback'*) FB="--fallback";; esac   # an empty array dies under set -u in bash 3.2
-    TIMING=$(python3 "$HERE/reveal-timing.py" --pre "$RPRE" --speech "$L" --dur "$D" \
+    TIMING=$(python3 "$HERE/reveal-timing.py" --pre "$CPRE" --speech "$L" --dur "$D" \
       --fade "$REVEAL_D" --gap "$REVEAL_GAP" --lead "$REVEAL_LEAD" \
       --silences "work/silin$IDX.txt" --bounds "$BLIST" --subs "$SUBS" \
       $FB --report 2>"work/rt$IDX.txt")
@@ -830,9 +856,9 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   measurement is written out at the outro seam below).
   #
   #   So **every transition is drawn inside the incoming card's own encode.** Nothing overlaps
-  #   in the concat, so §9 still stream-copies and drift stays 0. Every carry and dip keeps this
-  #   card's frame count. A J-cut drops the silent pre-roll (PRE) from this card's length
-  #   because the next line occupies it.
+  #   in the concat, so §9 still stream-copies and drift stays 0. A dip keeps this card's
+  #   frame count; every carry drops the silent pre-roll (PRE) from this card's length
+  #   because the next line occupies it (§4.5).
   #   Three ways to draw one:
   #
   #   ① dip (`enter=black|white` + `exit=black|white`) — the outgoing card fades its own tail
@@ -855,10 +881,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   the encode stamps fresh PTS regardless. It buys the whole xfade catalogue for one case line
   #   per mode. Do not lift it to the seam in §9; that is still the thing that breaks drift.
   #
-  #   Audio runs straight through. A J-cut puts the next line on the previous last frame so the
-  #   picture never changes in silence; dissolve/push/dip keep the card's own PRE/POST. The BGM
-  #   bed is rendered across the whole feature — fading it at a scene change would punch a hole
-  #   in the music.
+  #   Audio runs straight through. Every carry puts the next line under the previous last frame
+  #   so the picture never changes in silence; a dip keeps the card's own PRE/POST — its silence
+  #   is the beat. The BGM bed is rendered across the whole feature — fading it at a scene
+  #   change would punch a hole in the music.
   VF_FADE=""; SRCL="[vkb]"
   if [ -n "$EXITM" ]; then
     # Half the seam belongs to each side, and it has to fit the shorter card: never more than
@@ -891,7 +917,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         FILT+=",format=yuva420p,fade=t=out:st=0:d=$TD:alpha=1[tcar];"
         FILT+="[vkb][tcar]overlay=0:0:eof_action=pass,format=yuv420p[vtr];"
       elif [ "$ENTER" = "jcut" ]; then
-        # Hold the previous last frame for TD, then snap. The new line is already playing (CPRE=0).
+        # Hold the previous last frame for TD, then snap. The new line is already playing (CPRE=0, §4.5).
         FILT+=",format=yuv420p[tcar];"
         FILT+="[vkb][tcar]overlay=0:0:enable='lt(t,$TD)':eof_action=pass,format=yuv420p[vtr];"
       elif [ "$ENTER" = "iris" ] || [ "$ENTER" = "blur" ]; then
@@ -978,16 +1004,16 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # ── 8) ASS subtitle lines (the subtitle-text column) — times are card absolute offsets (cumulative frames/FPS)
   if [ "$SUB" = "1" ]; then
     CS=$(awk -v f="$TOTF" -v fps="$FPS" 'BEGIN{printf "%.4f", f/fps}')
-    # Word mode wants real word times. The forced aligner runs once per card on the trimmed
-    # narration (about 3 s for a 7 s card); its token times are card-relative, so the offset
-    # handed to word-cues.py is this card's absolute speech start (CS + pre-roll).
+    # Word mode wants real word times. The forced aligner was started in §3.5 on the trimmed
+    # narration and has been running under the encode; its token times are card-relative, so the
+    # offset handed to word-cues.py is this card's absolute speech start (CS + pre-roll).
     ALIGNJ=""
     if { [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; } && [ "$MUTE" -eq 0 ]; then
-      if [ -x "$QWEN3_ASR_BIN" ]; then
-        mkdir -p work/align
-        "$QWEN3_ASR_BIN" --timestamps -f json --language Korean -o work/align "work/s$IDX.wav" > "work/align/s$IDX.log" 2>&1 \
+      if [ -n "$ALIGN_PID" ]; then
+        wait "$ALIGN_PID" \
           && [ -s "work/align/s$IDX.json" ] && ALIGNJ="work/align/s$IDX.json" \
           || { say "⚠ card $IDX: forced aligner failed (work/align/s$IDX.log) — word cues fall back to char-count proportion"; WARN=1; }
+        ALIGN_PID=""   # reaped — the EXIT trap must not signal a reused pid
       else
         say "⚠ card $IDX: no forced aligner at $QWEN3_ASR_BIN — word cues fall back to char-count proportion (uv tool install --python 3.12 \"mlx-qwen3-asr[aligner]\")"; WARN=1
       fi

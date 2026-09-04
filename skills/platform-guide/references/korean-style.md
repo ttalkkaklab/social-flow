@@ -23,6 +23,7 @@ their own purpose. Checks run only on `output/` artifacts and `scenes.js` narrat
   - [D10 — essay rhetoric on spoken surfaces](#d10-essay-rhetoric-on-spoken-surfaces)
   - [Structure and rhythm (C)](#structure-and-rhythm-c)
   - [Assistant voice (A)](#assistant-voice-a)
+  - [Eye level (E)](#eye-level-e)
 - [Per-surface application](#per-surface-application)
 - [Out of scope (Do-NOT)](#out-of-scope-do-not)
 - [Principles when fixing](#principles-when-fixing)
@@ -284,6 +285,70 @@ A2 catches only the pleasantry that closes content. A short thank-you in a reply
 ("알려주셔서 감사합니다") is the engagement playbook principle 4 requires, so it's
 not a target.
 
+### Eye level (E)
+
+**The floor is a 초3~4 listener — 만 9~10세.** The National Institute of Korean
+Language grades basic vocabulary by the age it is acquired: grade 1 is pre-school
+(만 4~6세, 5,000 words cumulative), grade 2 is 초1~2 (만 7~8세, 7,500), grade 3 is
+초3~4 (만 9~10세, 13,000), grade 4 is 초5~6, grade 5 carries it to 40,000 by 만 15세
+(『2022년 국어 기초 어휘 선정 및 어휘 등급화 연구』, 표 6). Everything this plugin
+writes for a viewer — scenario pages, narration, subtitles, card text, platform copy —
+is written to **grade 3**: the words a 10-year-old already has, before anyone teaches
+them.
+
+**This is about words, not register.** The 존댓말/반말 the channel speaks in is
+profile.md §2's, and E never touches it. Writing down to a child ("~했어요~ 그쵸?")
+is a different defect, and the reviewer treats it as one.
+
+**What the checker enforces is narrower than the floor, and the gap is on purpose.**
+E1~E3 reject **register** — document and news wording standing where everyday wording
+would do. They do not compute a grade, and plenty of words above grade 3 pass them
+untouched: 한도, 절차, 규정, 헌법, 협회 all run through the library and none is in E.
+Two different things are going on with those. Some are simply the words adults use for
+the thing (한도, 절차) and a ten-year-old picks them up from the sentence around them —
+the reviewer judges that, sentence by sentence, and the checker has no business guessing.
+The rest are what the episode is *about* (계엄, 역학조사, 파운드리), and those arrive with
+the plain wording spoken beside them on first use, declared in `window.COMPREHENSION.terms`
+(scenes-schema §Comprehension contract; short-form caps it at three).
+
+**So: the grade band is the author's and the reviewer's floor; E is the part of it a
+regex can hold.** A piece that passes E is not thereby at grade 3 — it is only free of the
+words that have an everyday twin in every context.
+
+| ID | Pattern | How to fix | Severity |
+|---|---|---|---|
+| E1 | Form-register noun — 여부·유무·잔여·익일·익월·금번·소정의·추후·필히·하기와 같이 | 여부 → ~인지 아닌지 · 익일 → 다음 날 · 잔여 → 남은 · 소정의 → 정해진 | S1 |
+| E2 | Form-register verb — 기입·기재·지참·구비·회신·송부·수령·이행·준수·경유·산정·감안·제고·강구·시정·누락·미비·위배·부과·징수·납부·환급·감면·반려·소요 | The everyday verb — 기입하다 → 적다 · 지참하다 → 가져오다 · 소요된다 → 걸린다 · 납부하다 → 내다 | S1 |
+| E3 | News-register Sino-Korean — 초래·야기·수반·저해·촉진·증진·확충·개시·직면·봉착·표명·언급·지칭·상회·하회·촉발·기인·전락·상존·도모·모색·용이·미미·지대·전무·현저·불가피·상당수·막대한 | The plain verb — 초래하다 → 불러오다 · 언급하다 → 말하다 · 용이하다 → 쉽다 · 직면하다 → 마주하다 | S2 |
+
+**Why lists and not a readability score.** The Korean readability indices (KReaD and
+the formulas behind it) score a text against a graded 28,000~40,000-word lexicon plus
+a syntax term. Both halves are out of reach for this gate: matching a graded lexicon
+needs a morphological analyzer, since Korean eojeol carry particles and inflection,
+and `check-style.py` is stdlib-only so it runs as-is in the plugin distribution. What
+survives that constraint is the direction every grading agrees on — the words that
+have an everyday replacement — so E is a curated list that says what to write instead,
+and the grade band above stays a target for the author and the reviewer, not a number
+the checker computes.
+
+**E1·E2 reject, E3 warns, and the split is measured.** Over the 44-episode library
+(132 narration/subtitle/screen surface checks) E fires **0 times** — outgoing narration
+is already at the floor, so these rules are a floor to hold, not a cleanup to run. Over
+86 platform-copy files it found one real one ("섞였는지 여부입니다" in a YouTube
+description — and there 여부 is doubling what "섞였는지" already said). **여부 stays S1 on
+every surface, yt included**, because the plugin's own copy never needs it: 0 occurrences
+across platform-playbook.md, check-meta.js's fixtures, and the produce/publish copy steps. Two words came out during that pass: **첨부** (everyday speech owns it —
+"자료를 첨부했습니다" is how people talk about mail) and **명일** (its only match in the
+library was the counter 명 plus a copula, "스물아홉 명일 땐"). E3 words are ones a news
+anchor says naturally, so context can carry them and the verdict stays a warning.
+
+**What E can't see.** Three things decide whether a 10-year-old follows an episode, and
+the checker reads only the first: hard words (E), a term used before it is explained
+(`COMPREHENSION.terms` and the reviewer), a number with nothing to compare it to
+("3천만 원" means nothing at that age until it is put beside something), and two ideas
+folded into one sentence. The last three belong to storyboard §4.4~§4.5 and the
+storyboard-reviewer, not here.
+
 ## Per-surface application
 
 Apply the same rules identically to every surface and they fight platform grammar.
@@ -302,6 +367,10 @@ Threads casual spoken register is the register the playbook demands, not an AI t
 
 This table must hold the same values as `SURFACE_CFG` in `check-style.py`. Never
 change one side alone.
+
+**E1~E3 are on everywhere** — no surface turns them off. A document-register word is
+as wrong in a caption as in narration, and the grade-3 floor is the plugin's, not a
+per-channel setting.
 
 ## Out of scope (Do-NOT)
 
@@ -425,6 +494,15 @@ different reason — it beats self-assessment (an agent grading its own prose on
 "does this sound human" passes itself almost every time). But when adding a new
 rule, write down what its evidence is. T10~T13 rest on NIKL norms, not corpus
 measurement, so their severity is set low.
+
+**E rests on a national norm plus a library pass, not on a reading experiment.** The
+grade band comes from NIKL's vocabulary grading (표 6 above), which is a norm for when
+words are acquired — not a measurement that a 10-year-old understands a video better
+when the words stay inside it. What was measured here is narrower and worth exactly
+what it says: the rules fire 0 times on 132 clean surfaces, so they cost nothing to
+keep, and 1 time on 86 copy files, so they are not decorative. That is why E1·E2 reject
+only words with an everyday replacement in every context, and why E3, whose words a
+news anchor says naturally, only warns.
 
 **Don't import floating "AI cliché word lists" as-is.** All 15 candidates failed
 3-vote verification in round 1. Not because the lists are wrong — because no one

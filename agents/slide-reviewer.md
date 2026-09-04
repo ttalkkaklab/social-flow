@@ -5,7 +5,7 @@ description: >
   motion slide, a kinetic-type screen, or a character-act screen (the `--sheet`
   frames render-motion-slide.mjs writes). Called on request only since 0.50.0 — the
   flow admits a slide on check-slide.js and the author's own read of the sheet
-  (storyboard §5.6), so nothing delegates here by default — it hunts for
+  (produce §3.6), so nothing delegates here by default — it hunts for
   P0 defects (text outside the zone, on-screen words absent from scenes.js, a
   figure that contradicts the research, gradient text or a second accent, tofu
   glyphs, text under its role's size or a line thinner than the format's stroke tokens, decorative motion
@@ -22,12 +22,14 @@ description: >
   raster, is a P0, not an editorial frame. `visual.slide.treatment:"footage"` adds
   §6.2 instead — generated clips are the ground there by design, and the P0s are a
   still ground, a decorative mark, a mark off its subject or over a face, a second
-  colour or a fade, the wrong layer. PASS at score ≥95 and p0=0. It never
+  colour or a fade, the wrong layer. `visual.slide.object` adds §9 — a rendered object that moves against
+  its sentence, a stamp count off the labels, a frozen object across groups, ink across
+  the zone. PASS at score ≥95 and p0=0. It never
   modifies the slide, scene or storyboard files — the one thing it writes is the verdict
   file the delegator names.
 
   <example>
-  Context: the storyboard skill delegates a §5.6 convergence-loop iteration.
+  Context: the produce skill delegates a §3.6 convergence-loop iteration.
   user: "Evaluate the motion slide slides/s5-gear-ratio.html — sheet frames in .work/slide-check/s5/sheet/, scenes.js, profile.md and slide-design.md paths are …"
   assistant: "I'll run the slide-reviewer agent to collect P0 findings and the score."
   <commentary>A motion-slide convergence-loop evaluation request, so use slide-reviewer.</commentary>
@@ -62,7 +64,7 @@ directives, and write nothing but the verdict file the delegator names.
 - `manifest.tsv` next to them — group durations in ms (the 2.6s + hold cap)
 - `summary.json` next to them — `zone_fill_pct` and the coverage warnings
 - `storyboard/scenes.js` — the shot's `title`, `bullets`, `narration`, `visual.slide`
-  (`kind`, `treatment`, `role`, `motif`, `plan`, `labels`, `motion`, `motionBeats`, `acts`, `shots`), the shot's
+  (`kind`, `treatment`, `role`, `motif`, `plan`, `labels`, `motion`, `motionBeats`, `acts`, `shots`, `object`), the shot's
   `visual.action`, the other editorial slides in the episode, and `window.THEME`
 - `storyboard/research.md` — the figures the slide is allowed to show
 - `data/<channel>/profile.md` §3 — THEME
@@ -107,7 +109,11 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
    only a `mark-label` is held to the zone (slide-design §6.2).
 4. **The ground and the strokes** (slide-design §1 · §3). The sheet must show the plate —
    a lighter top-left and a darker bottom — not a flat fill; a flat ground means the
-   slide was not built from the current template. A footage slide has no plate by design
+   slide was not built from the current template. An editorial diagram since 0.52.0 shows
+   the studio ground instead: a wall-and-floor seam below the zone, slab edges and contact
+   shadows on the tag, bands and plates, a cast shadow under the type. Those shadows are the
+   broadcast material (§1), not the generated-look marker — the marker is a wide soft spread
+   with no contact shadow, a card floating over the page. A footage slide has no plate by design
    (§6.2) — its ground is the clip, and a photographic ground there is not a finding. Measure a structural line's thickness
    on a full-size crop against the format's tokens (portrait `--hair` 3px / `--rule` 6px,
    wide 2px / 4px): a divider under `--hair` or an axis, connector or rail under `--rule`
@@ -160,6 +166,14 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
      in the subject, is P0-G6. Read the clip itself for the photoreal tells (a duplicated face,
      melting hands, scribbled text) under the generated-look axis. `zone_fill_pct` is `null` here
      and is not a finding.
+   - `"diagram"` with `slide.object` (slide-design §9): open `g<k>-mid` and `g<k>-end` and look at
+     the object itself — did its angle or its surface change between them, and is that change what
+     the sentence says (stamps landing while the count runs, the disc rising to face the camera on
+     the sentence that introduces it, receding on the question)? Count the stamps on the end frame
+     of a counted group against `labels`; the bake carries the figure. The same object frame across
+     two groups' mid frames is P0-12; so is ink (disc or shadow) past the zone edge. Read the
+     surface at full size for the two tells — flat fills with an outline (an illustration, not a
+     render) and a surface with no grain (plastic).
    - `"kinetic"` (slide-design §7): put each end frame beside its segment's `narration[k].sub`
      and check the screen is not repeating the sentence; count hero-sized phrases (one) and
      words per line (five); count effect kinds on the screen (one — `mask` with `words:true`

@@ -42,7 +42,12 @@
  *       # Negative directives are blocked except the Audio: sentence ("no music, no
  *       # speech" is the established wording) and, on seedance routes, the vendor's
  *       # artifact classes (subtitles·text·logo·watermark·bgm — 2.0 guide templates
- *       # them). --with-space prepends the From-the-camera sentence
+ *       # them). A seedance route takes two more rules the veo route doesn't:
+ *       # **the body carries no Korean** (Chinese or English only; Korean lives inside
+ *       # the quotes of a dialogue line, or the shot routes to seedance-2.5) and
+ *       # **--locks is required** — the image lane closes with a consistency lock, which
+ *       # is also the only place an exclusion can go on an engine with no negativePrompt
+ *       # argument. --with-space prepends the From-the-camera sentence
  *       # (quote clips, which have no still behind them); --scene carries the subject
  *       # description (quote clips only — a motion background must not re-describe the
  *       # scene its PNG already drew). Slot overrides: --movement --speed --framing --end.
@@ -188,6 +193,29 @@ function timingHits(text, engine) {
   return hits;
 }
 
+// ── The two rules only the Seedance lane has ──
+// Language: the prompt body reads Chinese or English. dreamina-seedance-2-5 is the one model
+// that takes Korean, and on 1.5 pro Korean belongs **inside the quotes of a dialogue line** —
+// the model lip-syncs that. So Hangul outside quotes fails a seedance route here, and
+// seedance-client.ts refuses the same call at the boundary.
+const QUOTED_RE = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+const HANGUL_RE = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
+function isSeedance(engine) { return typeof engine === "string" && engine.indexOf("seedance") === 0; }
+function hangulHits(text, engine) {
+  if (!text || !isSeedance(engine) || engine === "seedance-2.5") return [];
+  const m = String(text).replace(QUOTED_RE, " ").match(HANGUL_RE);
+  return m ? [m[0]] : [];
+}
+// Consistency lock: every seedance route in this pipeline is the image lane, and the vendor's
+// pattern there is identity words + motion + a brief camera line + **a consistency lock** —
+// the sentence that says what holds in every frame (video-model-selection §positive locks).
+// It is also where an exclusion goes on this engine, since Seedance has no negativePrompt
+// argument. The words are the holding verbs our own lock examples and the vendor's use.
+const LOCK_RE = /\b(stays?|remains?|keeps?|holds?|unchanged|identical|consistent)\b/i;
+function lockMissing(text, engine) {
+  return isSeedance(engine) && !LOCK_RE.test(String(text || ""));
+}
+
 function clipAssemble(opts) {
   const cam = opts.camera || {};
   const missing = ["movement", "speed", "framing", "end"].filter(k => !(cam[k] && String(cam[k]).trim()));
@@ -221,6 +249,8 @@ function clipAssemble(opts) {
     hits: bannedHits(prompt),
     negHits: negDirectiveHits(body, opts.engine),
     timeHits: timingHits(body, opts.engine),
+    hanHits: hangulHits(prompt, opts.engine),
+    lockMissing: lockMissing(prompt, opts.engine),
     missing
   };
 }
@@ -489,6 +519,23 @@ function selftest() {
     clipAssemble({ camera: camA, engine: "seedance-2.5", motion: "0-3 seconds the door opens, at the 4-second mark the lights die" }).timeHits.length, 0);
   ok("clip: clock timecode still blocked on seedance-2.5",
     clipAssemble({ camera: camA, engine: "seedance-2.5", motion: "at [00:04] the door closes" }).timeHits.length > 0);
+  // The seedance lane's own two rules — the body's language, and the consistency lock.
+  eq("clip: a clean seedance prompt carries its lock", c1.lockMissing, false);
+  eq("clip: Korean in the body is caught on seedance",
+    clipAssemble({ camera: camA, engine: "seedance", motion: "컵에서 김이 오른다",
+      locks: "the notepad stays identical" }).hanHits.length, 1);
+  eq("clip: Korean inside a dialogue quote passes",
+    clipAssemble({ camera: camA, engine: "seedance", motion: "the man says \"딸깍\" once",
+      locks: "the notepad stays identical" }).hanHits.length, 0);
+  eq("clip: seedance-2.5 reads Korean",
+    clipAssemble({ camera: camA, engine: "seedance-2.5", motion: "컵에서 김이 오른다",
+      locks: "the notepad stays identical" }).hanHits.length, 0);
+  eq("clip: Korean on a veo route is not this check's business",
+    clipAssemble({ camera: camA, engine: "veo", motion: "컵에서 김이 오른다" }).hanHits.length, 0);
+  eq("clip: a seedance clip with no lock is caught",
+    clipAssemble({ camera: camA, engine: "seedance", motion: "steam curling off the cup" }).lockMissing, true);
+  eq("clip: veo needs no lock (its exclusions ride in negativePrompt)",
+    clipAssemble({ camera: camA, engine: "veo", motion: "steam curling off the cup" }).lockMissing, false);
 
   // Drift guard — storyboard-html-template.html carries the same three regexes.
   const tpl = path.join(__dirname, "storyboard-html-template.html");
@@ -500,6 +547,9 @@ function selftest() {
     ok("template carries NEG_OK verbatim", html.includes("/" + NEG_OK.source + "/"));
     ok("template carries ARTIFACT_OK verbatim", html.includes("/" + ARTIFACT_OK.source + "/"));
     ok("template carries TIMESTAMP_RE verbatim", html.includes("/" + TIMESTAMP_RE.source + "/"));
+    ok("template carries QUOTED_RE verbatim", html.includes("/" + QUOTED_RE.source + "/" + QUOTED_RE.flags));
+    ok("template carries HANGUL_RE verbatim", html.includes("/" + HANGUL_RE.source + "/"));
+    ok("template carries LOCK_RE verbatim", html.includes("/" + LOCK_RE.source + "/" + LOCK_RE.flags));
     ok("template carries DIGIT_SECONDS_RE verbatim", html.includes("/" + DIGIT_SECONDS_RE.source + "/" + DIGIT_SECONDS_RE.flags));
   } else {
     console.error("WARN storyboard-html-template.html not found beside this file — drift guard skipped");
@@ -605,6 +655,13 @@ function main(argv) {
     r.hits.forEach(h => { console.error("banned: \"" + h.match + "\" — " + h.why); bad++; });
     r.negHits.forEach(h => { console.error("banned: \"" + h + "\" — negative directive in the body; Veo takes exclusions in negativePrompt, Seedance wants the scene re-described plus positive locks"); bad++; });
     r.timeHits.forEach(h => { console.error("banned: " + h); bad++; });
+    r.hanHits.forEach(h => { console.error("banned: Korean in the body (\"" + h + "\") — a seedance prompt reads Chinese or English; Korean goes inside the quotes of a dialogue line, or the shot routes to seedance-2.5"); bad++; });
+    if (r.lockMissing) {
+      console.error("no consistency lock — a seedance clip closes with the sentence that says what holds in every frame " +
+        "(\"the subject stays exactly consistent with the input frame; appearance, proportions and materials hold\"), " +
+        "which is also the only place an exclusion can go on this engine. Write it in --locks (video-model-selection §positive locks)");
+      bad++;
+    }
     if (bad) process.exit(1);
     process.stdout.write(r.prompt + "\n");
     return;
@@ -627,4 +684,4 @@ function main(argv) {
 
 if (require.main === module) main(process.argv.slice(2));
 
-module.exports = { assemble, clipAssemble, bannedHits, negDirectiveHits, timingHits, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED, NEG_RE, NEG_OK };
+module.exports = { assemble, clipAssemble, bannedHits, negDirectiveHits, timingHits, hangulHits, lockMissing, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED, NEG_RE, NEG_OK };

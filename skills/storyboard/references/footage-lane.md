@@ -18,8 +18,8 @@ subtitle spec built for plates.
 
 - [1. When a scene is a footage slide](#1-when-a-scene-is-a-footage-slide)
 - [2. Writing the scene (§4)](#2-writing-the-scene-4)
-- [3. Generating the clips (§5)](#3-generating-the-clips-5)
-- [4. Authoring the marks (§5.6)](#4-authoring-the-marks-56)
+- [3. Fitting the clips to the budget (storyboard §5)](#3-fitting-the-clips-to-the-budget-storyboard-5)
+- [4. Generating the clips and authoring the marks (produce §3 · §3.6)](#4-generating-the-clips-and-authoring-the-marks-produce-3--36)
 - [5. Build (produce)](#5-build-produce)
 - [6. Traps](#6-traps)
 
@@ -52,7 +52,10 @@ subtitle spec built for plates.
 - **Per shot**, in `slide.shots[]`: the four `camera` slots (`very slow` or `static` on a
   marked shot — a mark is fixed in screen space), a `mark` phrase (or `"none"`), `duration` =
   ceil(characters / 4.5) + 1 with a floor of 4 on Seedance, `action`, `audio`, and the prompt
-  assembled with `assemble-bg-prompt.js --clip --engine seedance` once the still exists.
+  assembled with `assemble-bg-prompt.js --clip --engine seedance --locks "…"` once the still
+  exists. `--locks` is not optional on this route — the clip closes on the sentence that says
+  what holds in every frame, and that is the only place an exclusion can go on an engine with
+  no `negativePrompt` argument (video-model-selection §positive locks).
 - `slide.plan` has one entry per group — the clip and the mark. `labels` is `[]` unless a
   sentence states a number or a name the picture cannot show. `visual.action` names what the
   subjects do across the clips, not what the marks draw.
@@ -66,19 +69,22 @@ subtitle spec built for plates.
   plain cuts warm dust, and the viewer reads the geography from that alone. Name the palette
   per place in the still prompts (directing-grammar §3.5) and keep it across the shots of
   that place.
-- Your own camera pass (storyboard §4.6) reads every `shots[]` entry as a generated shot — feel served, four
+- Your own camera pass (storyboard §4.7) reads every `shots[]` entry as a generated shot — feel served, four
   slots, a cut length that matches the sentence.
 
-## 3. Generating the clips (§5)
+## 3. Fitting the clips to the budget (storyboard §5)
 
-Footage clips are paid calls made before approval, so three things sit in front of them:
+Footage clips are paid calls made **after** approval, in produce §3 (owner directive
+2026-09-04). What happens at storyboard §5 is the fitting: the shots, their prompts and their
+durations are planned to a number the budget allows, and that number goes on the approval
+screen. Three things sit in front of the plan:
 
 1. **The narration loops have passed** (§4.4 and §4.5 at 95, P0 = 0). A sentence rewritten
    after the clips exist orphans a clip.
 2. **The rule-13 plan check on every paid shot.** Go through the cover, every b-roll and
    motion-background scene, and **every footage shot** yourself against produce absolute rule
-   13's list (the still prompt, the clip prompt, the four camera slots, the mark) and generate
-   nothing that fails a point. The plan-mode delegation of 0.49 is not called any more.
+   13's list (the still prompt, the clip prompt, the four camera slots, the mark) and plan
+   nothing that would fail a point — produce runs the same check again against the call. The plan-mode delegation of 0.49 is not called any more.
 3. **The cost gate, inside the budget.** Run `cost-preview.js <storyboard dir>`. It reads the
    channel's `video_budget_usd` (plugin default $10 — every generated clip of the episode,
    billed and projected together; stills, TTS and music are outside it) and answers `!!` with
@@ -119,7 +125,7 @@ Then, per shot, in group order:
   It needs `rembg` (the script says how to install it) and a few minutes of CPU per shot. A
   shot whose mark is an arrow, an X or a ring beside the subject needs no matte.
 
-## 4. Authoring the marks (§5.6)
+## 4. Generating the clips and authoring the marks (produce §3 · §3.6)
 
 - `references/footage-frames.sh <storyboard dir> s<n>` writes first, mid and last frames of
   every clip and a per-shot sheet of the mid frames. **Coordinates come from the mid frame**,
@@ -180,8 +186,11 @@ sentence under a 2-second cut reads as a caption on a photo.
 - **A fast camera under a fixed mark** drags the picture out from under it. `very slow` or
   `static` on marked shots; save the dolly for the unmarked ones.
 - **Marks authored on the still** land beside the subject in the clip. Always the mid frame.
-- **Do not add a `transition` to a footage scene.** The seam is already identical frames by the
-  state rule and the cut lands one frame later; a dissolve on top turns a cut into a slideshow.
+- **A footage scene takes the same per-boundary join as any other shot** (`transition`,
+  scenes-schema §scene transition). The seams that need nothing are the ones between groups
+  inside one slide — clip k opens on the previous rest state, so those are already identical
+  frames. Between two footage scenes ask what moved: `jcut` when the next clip is the same
+  place a moment later, `dissolve` when time or place moved, `dip` at a break.
 - **HEVC and AV1 do not decode** in the renderer's Chrome. Seedance and Veo return H.264; a
   clip converted elsewhere has to come back as H.264 mp4 or VP9 webm.
 - **Two paths for the clip's own sound.** The builder discards it on a slide; if a shot's sound

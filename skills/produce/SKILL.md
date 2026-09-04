@@ -12,7 +12,7 @@ description: >
   generating scenes. Boundary — storyboard plans and stops for approval, produce starts
   after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
 
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
@@ -227,11 +227,12 @@ data/<channel>/episodes/<topic>/
   call. That's why the playback factor goes in here too: `build-reel.sh` sizes its speech-rate
   band and its chapter minimum from it, and §7.5's pass takes its factor from the same line, so
   the build and the ship can't disagree about the speed.
-- **Don't delete `.work/cost-tally.tsv`** — it's the episode ledger where storyboard already
-  wrote the image costs, and §10 totals storyboard through video out of that one file. If
-  the file isn't there, start a new one from this episode, but if `storyboard/images/*.png`
-  exist with no ledger, the image costs are missing from the total — §10 writes that fact
-  into the report.
+- **Don't delete `.work/cost-tally.tsv` or `.work/cost-forecast.tsv`.** Since 2026-09-04 the
+  storyboard bills nothing (its §5 plans and stops), so the tally starts empty here and
+  **every line in it is written by this skill** — stills, slide arts, clips, TTS, music. The
+  forecast file is the storyboard's projection; §10 sets the two side by side, which is the
+  only way an estimate ever gets corrected. A missing forecast isn't a blocker — say so in
+  the report instead of comparing against nothing.
 - **Read the episode's state before starting, and again when picking up a stopped run.**
   Produce is the long stage, so it is the one most likely to be resumed in a later session.
 
@@ -240,21 +241,51 @@ data/<channel>/episodes/<topic>/
   node $REF/episode-state.js .        # from the episode directory · exit 1 = blocked
   ```
 
-  It reports the stage and what is missing — filmed scenes with no footage, slide files never
-  authored, images the scenes name that aren't on disk. Run both structural contracts too:
+  It reports the stage and what is missing — filmed scenes with no footage, a queue marker.
+  **Stills and slide files being absent is the normal state at this point**, not a blocker:
+  §1.5 and §3.6 are what create them. Run the structural contract now:
 
   ```bash
   SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
   node $SB/check-scenes.js storyboard/
-  node $SB/check-slide.js storyboard/ --require-all
   ```
 
-  The second command keeps a declared motion frame from reaching production as a missing HTML
-  file. Timeline, statistic, and principle slides are checked again while rendering: every
+  `check-slide.js storyboard/ --require-all` runs at the **end of §3.6**, once the slides have
+  been authored — running it here would fail on every episode. It keeps a declared motion frame
+  from reaching the build as a missing HTML file. Timeline, statistic, and principle slides are checked again while rendering: every
   `motionBeats` primitive (actor + rule on a principle) must exist in that group's DOM. A missing camera slot or an
   unresolvable b-roll `after` fails the first command. Fix a blocker before the build rather
   than discovering it 12 minutes into capture. `.work/` survives between sessions on purpose,
   so a resumed run reuses the captures and TSV manifests already there.
+
+### 1.5 Generate the stills
+
+**This is where the episode starts costing money.** The storyboard planned every still and
+generated none of it (its §5), so `storyboard/images/` is empty when this step begins and full
+when it ends. **Skip the whole section on the shooting-edit path** (the screen is the user's
+recording); a **mixed** episode still generates the stills its generated scenes name. Slide
+scenes have no still here either — their screen is HTML, authored at §3.6.
+
+**The plan clears rule 13 first.** Go through each `bgPrompt` and the footage stills against
+absolute rule 13's list with profile.md §3 open for the target person — no still life as a
+source, no real person, no text expected from an engine that can't write it, the exclusions
+written, no minor in frame. The storyboard checked this against a plan; you are checking it
+against the call that is about to go out.
+
+Then generate, **resending each stored `visual.bgPrompt` verbatim**, and **look at every
+picture that comes back** before moving on — a wrong still is the cheapest thing in this
+pipeline to catch and the most expensive to carry, since §3 turns it into a clip.
+
+The engine split, the size preset, the character-reference rule, what disqualifies an image,
+the one-remake rule and the ledger lines are all in
+[still-generation.md](references/still-generation.md).
+
+```bash
+printf 'image.gpt-image-2.high	1	produce: cover background scene-1
+' >> .work/cost-tally.tsv
+printf 'image.local	3	produce: points backgrounds scene-2~4
+'        >> .work/cost-tally.tsv
+```
 
 ### 2. Prepare the frame render
 
@@ -268,22 +299,14 @@ Rebuild frame.html every time you touch the template or scenes.js — skip it an
 the old render without knowing. Always run with absolute paths (a relative-path redirect
 after `cd` fails silently).
 
-### 3. Generate the visuals
+### 3. Generate the clips
 
 The §6 manifest references these file paths directly, so follow the naming below.
-**The cover background and the b-roll clear the plan check first** (absolute rule 13) —
-go through the cover `bgPrompt` and the broll scenes from scenes.js against the rule's list,
-with profile.md §3 open for the target person, and only then start the generation calls.
-
-**Image engines, split by job** — the default is `image_local_generate` (local Z-Image, 0
-cost per image — text-free images such as points still backgrounds; storyboard §5 already
-generated them under this rule). The cover background = b-roll source stays on
-`gpt_image_text2img` (high) under the quality clause, since it's both the thumbnail and
-veo's input, and any image that needs lettering always goes to gpt_image (local Hangul,
-measured: "딸깍연구소" came out as "달닥연구소"). `mlx_image_generate` /
-`mlx_image_edit` are an optional extra local lane when MLX Core is up — they do not
-replace Z-Image as the default, and they do not take Hangul. The plugin never launches
-the app; a down :11234 fails closed.
+**The b-roll clears the plan check first** (absolute rule 13) — go through the broll and
+motion-background scenes from scenes.js against the rule's list, with profile.md §3 open for
+the target person, and only then start the generation calls. The stills those clips are made
+from already exist and were already looked at (§1.5); an engine question about a still belongs
+there, in [still-generation.md](references/still-generation.md).
 
 **What the storyboard already settled — pass it through, don't re-decide it.** These values
 arrive from scenes.js already chosen and already reviewed. Inventing a replacement at call time
@@ -448,7 +471,7 @@ the builder never reads.
   for episodes where the song itself is the piece. There is no official Suno
   API (2026-08); `suno_*` talks to sunoapi.org.
 
-**Write one line to `.work/cost-tally.tsv` per call** — carry on the same ledger storyboard
+**Write one line to `.work/cost-tally.tsv` per call** — the same ledger §1.5 started
 was using. The convention's source of truth is
 [cost-tally.md](../autoproduce/references/cost-tally.md).
 
@@ -495,11 +518,47 @@ Normalize the user's `footage/` files once, then hand them to the builder as car
 The full lane — the VFR trap, the normalize command, the naming the builder expects —
 is in [optional-lanes.md](references/optional-lanes.md) §3.5. **No `footage/` directory
 means skip this step.**
-### 3.6 Slide scenes and live-voice audio (only on episodes that have them)
+### 3.6 Author the slides, then capture them (only on episodes that have them)
 
-Authored HTML screens get captured like any other card, and an all-live-voice episode
-takes its audio from `voice/` instead of the TTS in §5. Both lanes are in
-[optional-lanes.md](references/optional-lanes.md) §3.6. **No slide scene and no `voice/`
+**The slides are authored here, not in the storyboard** (owner directive 2026-09-04 — slide
+arts are generated images, and no image is made before approval). What arrived from the
+storyboard is the plan in `visual.slide`: the kind, the `labels`, the `motionBeats`, the
+`arts` list, and on a footage slide the `shots[]`. Follow
+[slide-authoring.md](../storyboard/references/slide-authoring.md) and build them in this
+order.
+
+1. **Generate `slide.arts` first** when the array is set — `slides/assets/s<shot>-<slug>.png`,
+   flat ink actor illustration, paper fill on ink, no background, no readable text, no
+   photorealism (`image_local_generate`; gpt or mlx where the plan says so). Log each call in
+   `.work/cost-tally.tsv`. Sit a principle actor with `h.fig`.
+2. **Author the HTML** from the matching template. A principle frame is a `.cast` of actors
+   plus rules (`h.stem` · `h.bus` · `h.chamber`); kinetic `renderKinetic` puts the first art on
+   group 1 then the title with `in`; type-only skips arts. **A footage slide waits for its
+   clips** — those came out of §3 (footage-lane.md §4 authors the marks against them).
+3. **Run the contract, then render the sheet.**
+
+   ```bash
+   SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+   node $SB/check-slide.js storyboard/ --require-all
+   ```
+
+   This is the `--require-all` run §1 deferred: every registered slide file now has to exist.
+   Render the key-state sheet with `render-motion-slide.mjs --sheet --png-only --keep-frames`
+   and stop on either failure. Timeline, statistic and principle frames must match every
+   `motionBeats` primitive with the same group's `data-primitive` — a label reveal cannot
+   stand in for the promised explanation.
+4. **Read the sheet yourself** — `sheet/g<k>-end.png` for the last group of every slide:
+   everything the scene claims is on it, inside the zone, the ground is a plate and not a flat
+   fill, and no photo with an animated rectangle stands in for a diagram (slide-design.md
+   §1·§6). Re-author once if it fails. The `slide-reviewer` loop of 0.49 is not part of the
+   flow — it was the largest reviewer sink measured (46 calls, 674 million tokens on one
+   episode) — and stays available for a read the user asks for by name. **Still wrong after
+   the re-author**: put the frame to the user with AskUserQuestion rather than shipping it or
+   silently swapping in a still.
+
+Then the capture: authored HTML screens get captured like any other card, and an
+all-live-voice episode takes its audio from `voice/` instead of the TTS in §5. Both lanes are
+in [optional-lanes.md](references/optional-lanes.md) §3.6. **No slide scene and no `voice/`
 directory means skip this step.**
 ### 3.7 Screencast splices (only on episodes that have them)
 
@@ -706,41 +765,44 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 | `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
 | `span=<0..1.5>` | this card's total zoom span, replacing the global `ZOOM_SPAN` (0.4 = the window grows 40% over the card). Applies to `in`/`out`/`punch` and the pan zoom drift; unused on `hold`/`none` | a still whose beat wants a visible move — computed from the storyboard's `speed` word (below). Past base+`span` > `ZOOM_BASE`/canvas (base: pan scale · drift 1.04 · else 1; headroom 0.5 at the defaults) the source upscales and the build warns: raise `ZOOM_BASE` and generate the scene image at that resolution |
 | `ease=smooth\|linear\|in` | this card's easing, replacing the global `KB_EASE`. `in` accelerates — an unnoticed start, fastest exactly at the cut | the ladder's accelerating rows (action/tension, CTA) — pairs with cutting away at the peak. `punch` keeps its own ease-out ramp and ignores `ease=` |
-| *(omit `enter=`)* | **J-cut** — this card opens on the previous last frame for `SCENE_JCUT` (0.32s) while the next line already plays, then the picture cuts. Drops this card's silent pre-roll | omit `transition`. **Do not type `enter=jcut`** — that is the builder default on incoming spoken cards |
+| `enter=jcut` | **J-cut** — this card opens on the previous last frame for `SCENE_JCUT` (0.32s) while the next line already plays, then the picture cuts | `transition: "jcut"` — the continuity cut. Leave `enter=` empty and the builder falls back to this **and warns**: an empty join is the one nobody chose |
 | `enter=cut` | smash — picture and sound change together, old silent pre-roll | `transition: "cut"` |
-| `enter=dissolve` | this card opens on the previous card's last frame and melts up through it (`SCENE_XF`, 0.45s) — two pictures on screen at once | **the storyboard's `transition: "dissolve"`** — written on the card that carries the field, nothing on the card before |
+| `enter=dissolve` | this card opens on the previous card's last frame and melts up through it (`SCENE_XF`, 0.45s) — two pictures on screen at once | `transition: "dissolve"` — written on the card that carries the field, nothing on the card before |
 | `enter=push:<l2r\|r2l\|u2d\|d2u>` | the previous card's last frame slides off in that direction and uncovers this card (`SCENE_PUSH`, 0.32s) | `transition: "push:<dir>"` — same rule, the incoming card alone |
 | `enter=iris` | a circle opens out of the previous card's last frame onto this one (`SCENE_IRIS`, 0.45s) | `transition: "iris"` — the find |
 | `enter=blur` | the previous last frame smears sideways and melts (`SCENE_BLUR`, 0.45s) | `transition: "blur"` — memory, hypothetical, attention leaving |
 | `enter=zoom` | the previous last frame grows past the camera and thins out (`SCENE_ZOOM`, 0.32s) | `transition: "zoom"` — the camera goes *in* |
 | `enter=whip:<l2r\|r2l\|u2d\|d2u>` | the previous last frame slides off smeared along that axis (`SCENE_WHIP`, 0.24s — the shortest join here) | `transition: "whip:<dir>"` — a hard swerve. Pairs with a whoosh in `sfx.tsv` |
-| `exit=black` + `enter=black` (or `white`) | the card before fades its tail into the colour, this card fades its head out of it (`SCENE_FADE`, 0.12s each) | `transition: "dip"` / `"dip:white"` — two halves, one per card. `enter=1`/`exit=1` still mean black |
+| `exit=black` + `enter=black` (or `white`) | the card before fades its tail into the colour, this card fades its head out of it (`SCENE_FADE`, 0.30s each) | `transition: "dip"` / `"dip:white"` — two halves, one per card. `enter=1`/`exit=1` still mean black |
 
 ```
-# one line for a filmed scene (live voice)
-3	pcm/s3-run-cli.wav	0	none	sync=1,subs=cards/s3subs.tsv
-# 슬라이드·생성 씬(사용자 녹음 나레이션 — window.VOICE) 한 줄 예: 일반 레인, sync 없음
-11	pcm/s12.wav	0	none
+# one line for a filmed scene (live voice) — its own sound starts with its picture, so the smash is the natural join
+3	pcm/s3-run-cli.wav	0	none	sync=1,subs=cards/s3subs.tsv,enter=cut
+# 슬라이드·생성 씬(사용자 녹음 나레이션 — window.VOICE) 한 줄 예: 일반 레인, sync 없음, 보드의 transition 을 enter= 로
+11	pcm/s12.wav	0	none	enter=dissolve
 ```
 
-**A transition is drawn inside one card, never across two.** Map `transition` from
-scenes-schema §scene transition onto the table above. A `dip` is the one that takes two
-halves (`exit=` on the card before, `enter=` on this one). Write nothing and the builder
-J-cuts spoken cards — next line on the previous last frame, then the picture cuts. Write
-`enter=cut` for a smash. First card, filmed `sync`, speechless cards, and dips keep the
-old pre-roll.
+**Every card after the first gets an `enter=`, and a transition is drawn inside one card,
+never across two.** Copy each shot's `transition` from scenes.js onto the table above — the
+name is the same on both sides, and a `dip` is the one that takes two halves (`exit=` on the
+card before, `enter=` on this one). A board that predates the field (no `transition` on a
+shot) gets its join chosen here, from the ordered table in scenes-schema §scene transition,
+and the choice goes into the build log. An empty `enter=` makes the builder fall back to a
+J-cut and warn. Every carry (jcut, dissolve, iris, blur, zoom, push, whip) drops the card's
+silent pre-roll — the next line starts under the carried frame; the smash (`enter=cut`),
+dips, the first card, filmed `sync` and speechless cards keep it.
 
 The builder does it this way because a boundary xfade would break the pipeline's spine: the
 total would shrink by the transition length at every seam and trip §9's 2ms drift assertion,
 and xfade renumbers the tail's PTS from 0 (the measurement is written out at the outro seam
-in build-reel.sh). Every carry and dip keeps the card's frame count, so the concat stays
-stream-copy exact and no subtitle cue moves — verified A/B on ep07 (10 cards, two
-dissolves): 64.766667s and 1943 frames both ways, identical `subs.srt` on the cards that
-carry a transition, drift 0. The ban is on the seam, not on the filter: iris and blur
-composite inside one card with an xfade at offset 0 over a tail exactly the join long, so
-that card's length is untouched (build-reel.sh §7.4 carries the measurement). A J-cut is
-allowed to drop that card's silent `PRE` (0.40 s)
-because the next line occupies it. `POST` is 0.45 s.
+in build-reel.sh). A dip keeps the card's frame count, so the concat stays stream-copy exact
+and no subtitle cue moves — verified A/B on ep07 (10 cards, two dissolves, before carries
+dropped the pre-roll): 64.766667s and 1943 frames both ways, identical `subs.srt`, drift 0.
+The ban is on the seam, not on the filter: iris and blur composite inside one card with an
+xfade at offset 0 over a tail exactly the join long, so that card's length is untouched
+(build-reel.sh §7.4 carries the measurement). Every carry drops that card's silent `PRE`
+(0.40 s) because the next line occupies it — measured on the 10-card fixture: 12 frames off
+each carry card, the subtitle cue moving with the audio, drift 0. `POST` is 0.45 s.
 
 **Word cues — `SUB_MODE=word`.** The burn-in shows **one 어절 at a time**, a hard swap every
 half second, sitting on the 65% line in a 60px glyph with no fade — the subtitle grammar of
@@ -808,7 +870,7 @@ puts the reveal. A sub-reveal (`A|B`) takes two clips in one segment the same wa
 
 ```
 # a motion-slide card (idx 4, three segments) — cards.tsv and segs.tsv
-4	pcm/s5.wav	5.2	none
+4	pcm/s5.wav	5.2	none	enter=jcut
 4	0	@motion/slide-s5/r1.mp4	큰 조각 하나에만 톱니바퀴가 27개예요.	큰 조각 하나에만 톱니바퀴가 27개예요.
 4	1	@motion/slide-s5/r2.mp4	전체로는 30개가 남았고요.	전체로는 30개가 남았고요.
 4	2	@motion/slide-s5/r3.mp4	원래는 37개였을 거라고 봐요.	원래는 37개였을 거라고 봐요.
@@ -1213,10 +1275,10 @@ the total but where it went. The `storyboard:` / `produce:` prefixes in the ledg
 that split.
 
 ```
-Cost — what this episode ran to (storyboard → video)
-  storyboard   6 images (gpt high 2 · local 4)              $0.44
-    · of which 1 regenerated (§5.5 remake)                   $0.22
-  produce      b-roll veo lite 1080p, 8s generated          $0.64
+Cost — what this episode ran to (stills → video)
+  produce      6 stills (gpt high 2 · local 4)              $0.44
+    · of which 1 regenerated (§1.5 remake)                   $0.22
+               b-roll veo lite 1080p, 8s generated          $0.64
                narration 1,840 chars (local)                $0.00
                BGM 90s                                      excluded — unit price unconfirmed
   ────────────────────────────────────────────────────────────
@@ -1263,7 +1325,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/check-final-speech-rate.py`** — measures Unicode letters and numbers on `subs-fast.srt`; catches a whole-video speed factor that made otherwise valid cards too dense to follow
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
-- **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames storyboard §5.6's design gate reads. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
+- **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames the §3.6 sheet read looks at. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)

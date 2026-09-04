@@ -44,8 +44,8 @@ judges when no human is present** and **which model to use**.
 
 ## What stands in for the human gates
 
-The pipeline's safety used to hang on the double HITL gate (storyboard
-approval, publish approval). Unattended mode puts **the machine verdicts** in
+The pipeline's safety used to hang on three HITL gates (the narration approval at storyboard
+§4.6, the storyboard approval at §7, the publish approval). Unattended mode puts **the machine verdicts** in
 their place (the slide verdict applies only when the episode has slide scenes). If even
 one fails, the video still gets made but **does not enter the queue** (`queue_*: hold`)
 — meaning it won't publish until a human looks at it.
@@ -303,6 +303,12 @@ start of the timeline, or a feel curve that never dips costs nothing to fix here
 the whole board later. Three different primaries. Naming an engine is not enough — the
 items have to run it.
 
+**Run the word check on each page before delegating** — the same one storyboard §2.2 runs:
+`check-style.py --surface narration --json candidates/d<n>.md`, reading **only the findings
+whose id starts with E**. These sentences become the narration, so the 초3~4 floor
+(korean-style §Eye level) binds the page too; a candidate written in adult prose hands §3.6 a
+rewrite instead of a swap. The rest of the verdict is noise on a page of headings and notes.
+
 **Delegate all three `candidates/d<n>.md` to the storyboard-reviewer agent (Agent) in
 "scenario mode" in one call** — the three candidate paths, `research.md`, `profile.md`,
 `scenario-craft.md`, `scenario-stage.md`, and each page's claimed primary. The reviewer
@@ -439,9 +445,11 @@ Read the tail `STORYBOARD_REVIEW: mode=narration score=NN p0=N`.
 
 ### 3.6 Vocabulary gate (gate 6c — storyboard-reviewer vocabulary mode)
 
-Same sentences, one layer down — **are the words what a person says**. The style checker
-catches only the forms written into its rules, so "기한이 도래합니다" passes with exit 0; this
-read covers that layer. It runs on the narration only, before a title or caption exists, so
+Same sentences, one layer down — **are the words what a person says, and would a ten-year-old
+know them** (korean-style §Eye level — the 초3~4 floor). The style checker catches only the
+forms written into its rules, so a hard word it has no entry for passes with exit 0; this read
+covers that layer. A word with an everyday twin is swapped here; a word the episode is *about*
+needs its plain wording spoken beside it, which is a sentence — that one goes back to §3.5. It runs on the narration only, before a title or caption exists, so
 a swap here changes nothing a picture depends on.
 
 ```bash
@@ -451,7 +459,8 @@ python3 $PG/check-style.py --surface narration .work/text-narration.txt; echo "g
 
 **Delegate to the storyboard-reviewer agent (Agent) in "vocabulary mode"** with the
 numbered sentence list (the `subtitle` extract, as in §3.5), the checker's output above
-pasted verbatim, and the `profile.md` path (§3 — who the listener is). Read the tail
+pasted verbatim, and the `profile.md` path (§1 target audience · §2 plain-language principle
+— who the listener is). Read the tail
 `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<sentence number>` — `score` is the
 lowest sentence's score.
 
@@ -534,7 +543,10 @@ money without knowing the price.
     --shot <n>` call (`<n>` from 1, the same number as `scene-<n>.png`) with
     `--scene`, `--mood` (profile §3) and `--exclude` (the
     required negative directives — the image tools have no exclusion argument,
-    so the noun list rides in the body), stdout stored as `visual.bgPrompt`.
+    so the noun list rides in the body), stdout stored as `visual.bgPrompt`. The
+    engine split and what disqualifies a picture are
+    `../produce/references/still-generation.md`; on this path the plan and the
+    call happen in one step, since no approval sits between them.
     `storyboard/images/scene-<n>.png`. Each image takes minutes — no problem on
     the unattended path, but avoid running alongside the video render. On a
     machine without mflux, the tool fails with install guidance — fall back to
@@ -641,6 +653,8 @@ For every `visual.slide` scene, follow storyboard
    the HTML from the matching template. A principle frame is a `.cast` of actors plus
    hairlines (`h.stem` · `h.bus` · `h.chamber`). Editorial diagrams use the declared `role`
    and `motif`; they compose the whole frame rather than placing callouts over an unchanged photo.
+   With `slide.object`, bake the sheet first (`bake-object.py` with the scene's keys · frames,
+   `rendered-object.md` §3) — `check-slide.js` refuses a slide whose sidecar is missing.
 2. Run `node $SB/check-slide.js storyboard/ --require-all`, render the sheet with
    `render-motion-slide.mjs --sheet --png-only --keep-frames`, and stop on either failure.
    For timeline, statistic, and principle scenes the render also matches every declared
