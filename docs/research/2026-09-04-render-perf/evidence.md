@@ -330,3 +330,11 @@ v-s5 r5 (vfrom 0ms): f0001→src1 · f0002→src2
 v-s5 decoded-mp4 ground truth: MISMATCH
 === phase6 done ===
 ```
+
+## lead 표식이 있는 s5 에서 seek(0,k) 캡처(--frame k:0) 대 복사된 f0000 (--png-only)
+```
+s5 g2: seek(0,2) capture vs seam-copied f0000: identical
+s5 g3: seek(0,3) capture vs seam-copied f0000: identical
+s5 g4: seek(0,4) capture vs seam-copied f0000: 39 px differ, max 21/255, PSNR 82.2 dB bbox x 620-683 y 446-487
+s5 g5: seek(0,5) capture vs seam-copied f0000: identical
+```
