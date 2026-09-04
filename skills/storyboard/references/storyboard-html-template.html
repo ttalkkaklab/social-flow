@@ -1527,7 +1527,10 @@ window.SB_DOC = {
      stored prompt is written in this route's grammar, and the timing checks follow it. */
   function engineOf(s) {
     var v = s.visual || {};
-    if (v.engine === "veo" || v.engine === "seedance") return v.engine;
+    /* A motion background may name its route on the video object itself — the same place the
+       cost panel reads it from. check-scenes.js engineOf resolves it in this order too. */
+    var named = (v.video && v.video.engine) || v.engine;
+    if (named === "veo" || named === "seedance") return named;
     if (s.type === "broll" || s.type === "quote") return "veo";
     return "seedance";
   }
@@ -2618,18 +2621,28 @@ window.SB_DOC = {
     return out;
   }
   SCENES.forEach(function (s, i) {
-    if (!genVideo(s)) return;
     var v = s.visual || {}, cam = camOf(s) || {}, fields = [];
-    if (s.type === "broll" && v.prompt) fields.push(["visual.prompt", v.prompt]);
-    if (v.video && v.video.prompt) fields.push(["visual.video.prompt", v.video.prompt]);
-    if (v.clip && v.clip.prompt) fields.push(["visual.clip.prompt", v.clip.prompt]);
-    CAM_SLOTS.forEach(function (slot) {
-      if (typeof cam[slot] === "string" && cam[slot]) fields.push(["visual.camera." + slot, cam[slot]]);
+    // Prompts from both sources — the scene's own and the footage lane's per-group shots
+    // (clipPrompts, below). This strip warns on a negative directive on either route, since a
+    // Veo exclusion belongs in the negativePrompt argument; check-scenes.js blocks only the
+    // seedance route, where there is no such argument to move it to.
+    clipPrompts(s, i).forEach(function (f) {
+      if (f.prompt) fields.push([f.where, f.prompt, f.eng]);
+    });
+    if (genVideo(s)) CAM_SLOTS.forEach(function (slot) {
+      if (typeof cam[slot] === "string" && cam[slot]) fields.push(["visual.camera." + slot, cam[slot], engineOf(s)]);
+    });
+    var shots = (v.slide && Array.isArray(v.slide.shots)) ? v.slide.shots : [];
+    shots.forEach(function (sh, j) {
+      var sc = sh.camera || {}, eng = (sh.engine || v.engine) === "veo" ? "veo" : "seedance";
+      CAM_SLOTS.forEach(function (slot) {
+        if (typeof sc[slot] === "string" && sc[slot]) fields.push(["shots[" + j + "]'s camera." + slot, sc[slot], eng]);
+      });
     });
     fields.forEach(function (f) {
       // The Audio: sentence is exempt — "no music, no speech" is a state description.
       var audioAt = f[1].search(/Audio\s*:/i);
-      var hits = negHits(audioAt >= 0 ? f[1].slice(0, audioAt) : f[1], engineOf(s));
+      var hits = negHits(audioAt >= 0 ? f[1].slice(0, audioAt) : f[1], f[2]);
       if (!hits.length) return;
       flag("warn", T.shotCap(i + 1), f[0] + ' carries a negative directive ("' + hits.join('", "') +
            '") — on Veo exclusions belong in the negativePrompt argument, on Seedance re-describe the scene and close with positive locks; only the artifact classes (subtitles·text·logo·watermark·bgm) may stay negative there (video-model-selection §positive locks)');
@@ -2644,22 +2657,51 @@ window.SB_DOC = {
      unstable precision timing), and digit seconds belong in `duration` on either route. */
   var TIME_RE = /\[\d{1,2}:\d{2}(?:\s*[-–~]\s*\d{1,2}:\d{2})?\]|\b0\d?:\d{2}\b/;
   var SECS_RE = /\b(\d{1,3})(?:\.\d+)?\s*(s|secs?|seconds?)\b/gi;
+  var QUOTED_RE = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+  var HANGUL_RE = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
+  var LOCK_RE = /\b(stays?|remains?|keeps?|holds?|unchanged|identical|consistent)\b/i;
+  /* Every prompt that becomes a paid call — the scene's own, plus the footage lane's per-group
+     shots, which are the bulk of a footage episode and were invisible to this strip until
+     2026-09-04. check-scenes.js walks the same two sources; a count that disagrees with the CLI
+     means one of the two grew a case the other didn't. */
+  function clipPrompts(s, i) {
+    var out = [], v = s.visual || {};
+    if (genVideo(s)) out.push({ cap: T.shotCap(i + 1), prompt: clipPromptOf(s), eng: engineOf(s), where: "the stored clip prompt" });
+    var shots = (v.slide && Array.isArray(v.slide.shots)) ? v.slide.shots : [];
+    shots.forEach(function (sh, j) {
+      out.push({ cap: T.shotCap(i + 1), prompt: String(sh.prompt || ""),
+                 eng: (sh.engine || v.engine) === "veo" ? "veo" : "seedance",
+                 where: "shots[" + j + "]'s prompt" });
+    });
+    return out;
+  }
   SCENES.forEach(function (s, i) {
-    if (!genVideo(s)) return;
-    var p = clipPromptOf(s), eng = engineOf(s);
-    if (!p) {
-      flag("warn", T.shotCap(i + 1), "generated video with no stored clip prompt — assemble it (assemble-bg-prompt.js --clip --engine " + eng +
-           ") and store it before approval; produce sends it verbatim (scenes-schema §clip prompt)");
-      return;
-    }
-    if (eng === "seedance" && TIME_RE.test(p))
-      flag("warn", T.shotCap(i + 1), "the stored clip prompt carries a timecode on a seedance route — 2.0 self-reports unstable precision timing; cut in the edit, or write visual.engine: \"veo\" where [mm:ss] is a workflow");
-    var m; SECS_RE.lastIndex = 0;
-    while ((m = SECS_RE.exec(p)) !== null) {
-      if (m[2].toLowerCase() === "s" && Number(m[1]) > 19) continue;   // "80s film look" is a decade
-      flag("warn", T.shotCap(i + 1), 'the stored clip prompt carries digit seconds ("' + m[0] + '") — length lives in duration; write an in-clip state change in words ("in under half a second")');
-      break;
-    }
+    clipPrompts(s, i).forEach(function (f) {
+      var p = f.prompt, eng = f.eng;
+      if (!p) {
+        flag("warn", f.cap, "generated video with no stored clip prompt — assemble it (assemble-bg-prompt.js --clip --engine " + eng +
+             ") and store it before approval; produce sends it verbatim (scenes-schema §clip prompt)");
+        return;
+      }
+      if (eng === "seedance" && TIME_RE.test(p))
+        flag("warn", f.cap, f.where + " carries a timecode on a seedance route — 2.0 self-reports unstable precision timing; cut in the edit, or write visual.engine: \"veo\" where [mm:ss] is a workflow");
+      var m; SECS_RE.lastIndex = 0;
+      while ((m = SECS_RE.exec(p)) !== null) {
+        if (m[2].toLowerCase() === "s" && Number(m[1]) > 19) continue;   // "80s film look" is a decade
+        flag("warn", f.cap, f.where + ' carries digit seconds ("' + m[0] + '") — length lives in duration; write an in-clip state change in words ("in under half a second")');
+        break;
+      }
+      if (eng !== "seedance") return;
+      /* The seedance lane's own two rules (assemble-bg-prompt.js hangulHits · lockMissing — its
+         --selftest fails if these copies drift). The body reads Chinese or English, with Korean
+         only inside the quotes of a dialogue line; and the image lane closes with a consistency
+         lock, which on this engine is also the only place an exclusion can go. */
+      var outside = p.replace(QUOTED_RE, " ").match(HANGUL_RE);
+      if (outside)
+        flag("warn", f.cap, f.where + ' carries Korean ("' + outside[0] + '") — a seedance body reads Chinese or English; Korean goes inside the quotes of a dialogue line');
+      if (!LOCK_RE.test(p))
+        flag("warn", f.cap, f.where + " has no consistency lock — a seedance clip closes with the sentence that says what holds in every frame (“the subject stays exactly consistent with the input frame”), and that is where an exclusion goes on an engine with no negativePrompt argument (video-model-selection §positive locks)");
+    });
   });
 
   /* Reference jurisdiction — a generated clip that hands over two or more references and scopes

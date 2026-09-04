@@ -58,7 +58,8 @@ rubric the reviewer applies.
      slides. The renderer measures zone fill and a freeform layout that clusters in the top
      half gets flagged.
    - **Structure is plates and rules, not cards** (slide-design.md §4): square,
-     single-colour, no radius, no border, no shadow. Lines are `--hair` 3px, `--rule` 6px
+     single-colour, no radius, no border, no floating shadow (the studio slab's lit edge and
+     contact shadow come from the template head, never from `renderSlide()`). Lines are `--hair` 3px, `--rule` 6px
      or `--band` 10px — nothing thinner goes on a phone. Never add a gradient inside
      `renderSlide()` (the ground plate and the photo scrim already live in the template's
      head CSS; `check-slide.js` blocks a gradient in the authored region).
@@ -94,6 +95,20 @@ rubric the reviewer applies.
      on a sourced symbol, and keep the source label visible; that is an online interpretation,
      not proof that the gestures created the symbol. `check-slide.js` rejects a raster-only
      editorial render before the visual reviewer sees it.
+   - A diagram with `treatment:"editorial"` sits on the **studio ground** by default
+     (slide-design.md §1): a cyclorama plate, slab material on every tag, band and plate, a cast
+     shadow under the type, the stage alone drifting 1% a group. Nothing to call — `h.stage("flat")`
+     is the way back to the plain plate. Marks drawn over a studio slide take `pen:true`. Call
+     `h.stage(…)` before any `h.mark.*` — the mark layer reads the studio class when it is made.
+   - A diagram with **`slide.object`** places a **rendered object** (`rendered-object.md`,
+     slide-design.md §9): bake the sheet first —
+     `python3 references/bake-object.py --shape disc --out slides/assets/s<n>-obj --keys … --frames …`
+     with the keys and frames from scenes.js — then read the sidecar it wrote
+     (`<script src="assets/s<n>-obj.js">` after scenes.js) and sit the object with
+     `h.object(rg, "s<n>-obj", { x, y, slot, out, html, aside })`. The entry and exit groups declare
+     `object-move` in `motionBeats`; a group where the object changes under a count declares the
+     count. The object's frames stretch to the segment on their own. The source line goes to the
+     corner (`h.foot(0, …, { corner: true })`) when the slot and a hero spend the zone.
    - A diagram with `treatment:"photo-action"` places the photo with `h.photo(0, file)` and
      darkens the text areas with `h.scrim(0)` (both in the base group), but the subject or
      evidence itself must change as `visual.action` and `slide.plan` say. Animating only
@@ -108,7 +123,9 @@ rubric the reviewer applies.
      renderer skips the entrance cap (the clip runs the whole segment by design).
 2. **Machine check** — `node references/check-slide.js <storyboard directory> --require-all`
    (`motion:true` written, `__seek` present, no `transition`, no clocks or timers, no web
-   fonts, every Korean string in scenes.js). Don't move on unless it exits 0.
+   fonts, every Korean string in scenes.js, no shadow or gradient outside the template's studio
+   rules, and — with `slide.object` — the sheet, its sidecar, the include, the `h.object` call
+   and the object's ink inside the zone). Don't move on unless it exits 0.
 3. **Render the sheet** (free, ~10s a slide). Run from the storyboard directory —
    `slides/` and `.work/slide-check/` are relative to it:
 

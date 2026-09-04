@@ -76098,8 +76098,24 @@ var commonFields = {
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").optional()
 };
+var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+var HANGUL_RUN = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
+function hangulOutsideQuotes(prompt) {
+  const match2 = prompt.replace(QUOTED_SEGMENT, " ").match(HANGUL_RUN);
+  return match2 ? match2[0] : null;
+}
 function validateCommon(data, ctx) {
   const spec = SEEDANCE_MODEL_SPECS[data.model];
+  if (data.model !== "dreamina-seedance-2-5-260628") {
+    const korean = hangulOutsideQuotes(data.prompt);
+    if (korean) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["prompt"],
+        message: `${data.model} reads Chinese or English prompts only \u2014 the Korean "${korean}" sits outside quotation marks and would be ignored rather than obeyed. Write the direction in English; Korean dialogue belongs inside quotes (1.5 pro lip-syncs it), or route the shot to dreamina-seedance-2-5-260628.`
+      });
+    }
+  }
   if (!spec.resolutions.includes(data.resolution)) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
@@ -79920,7 +79936,7 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
       properties: {
         prompt: {
           type: "string",
-          description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb \u2014 "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" \u2014 the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead. Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ...". Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628) \u2014 Korean dialogue still works inside quotes on 1.5-pro, which lip-syncs it.'
+          description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb \u2014 "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" \u2014 the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead, and write an in-clip state change in words ("in under half a second"). Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ..." \u2014 open on the wide so the later cuts inherit one floor plan, time each cut by a dialogue or action beat, and give each its own shot size. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence, never forbidden in it, and what must hold goes into a closing positive-locks paragraph ("the lantern stays lit in every cut; only two people ever appear") \u2014 the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628) \u2014 Korean dialogue still works inside quotes on 1.5-pro, which lip-syncs it.'
         },
         model: SEEDANCE_MODEL_PROPERTY,
         ratio: {
@@ -79963,7 +79979,7 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
       properties: {
         prompt: {
           type: "string",
-          description: 'Motion only \u2014 do not re-describe people, background, or lighting already visible in the source image, or the model redesigns the scene. Write camera as a span: "starting frame composition + movement + movement amplitude + ending frame composition". Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable). English or Chinese only. There is no negative-prompt parameter here \u2014 an unwanted element has to be designed out of the sentence, not forbidden in it.'
+          description: `Identity words stay, layout words go \u2014 the Seedance image lane is not motion-only (that is Veo's rule). Reuse the source image prompt's identity words (who and what the subject is), drop the composition words (where things sit \u2014 the frame already holds that), add the motion, write camera as a span ("starting frame composition + movement + ending frame composition"), and CLOSE WITH A CONSISTENCY LOCK: "the subject stays exactly consistent with the input frame; appearance, proportions and materials hold; no unrelated elements appear". Re-describe the layout, facing or lighting and the model redesigns the scene. Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable) \u2014 an in-clip state change goes in words ("in under half a second"), and the length lives in durationSeconds. English or Chinese only (Korean on dreamina-seedance-2-5 alone, and inside dialogue quotes on 1.5-pro). There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence and pinned by the lock, never forbidden in it \u2014 the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative.`
         },
         sourceImagePath: {
           type: "string",
@@ -80016,7 +80032,7 @@ Returns: a text block with the saved .mp4 file path, reference image and audio l
       properties: {
         prompt: {
           type: "string",
-          description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio. Do NOT put timecodes on the shots \u2014 the vendor states precise-timing support is unstable. English or Chinese only. Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.'
+          description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots \u2014 the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph \u2014 what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") \u2014 because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English or Chinese only (Korean on dreamina-seedance-2-5-260628 alone; on other models Korean belongs inside dialogue quotes). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.'
         },
         referenceImagePaths: {
           type: "array",
@@ -88223,7 +88239,7 @@ function isBillableTool(tool) {
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.51.0" },
+  { name: "social-flow", version: "0.52.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

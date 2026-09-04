@@ -125,7 +125,12 @@ only the summary is here.
   composition`. The vendor doesn't require the form (the camera field itself is `非必须`,
   optional) — it's **the form we use on motion-background shots that have to reproduce a
   composition**. The prompt body takes only Chinese and English, so write the instructions
-  in English. One move per shot is the storyboard's default; a second move only on the default
+  in English — Korean outside a dialogue quote is ignored rather than refused, which is why
+  the server rejects it before the call (`dreamina-seedance-2-5` is the one model that reads
+  it). **And a seedance prompt closes on a consistency lock** — "the subject stays exactly
+  consistent with the input frame; appearance, proportions and materials hold" — because that
+  is the only place an exclusion can go on an engine with no `negativePrompt` argument.
+  One move per shot is the storyboard's default; a second move only on the default
   model 1.5 Pro and only when the storyboard wrote the reason beside it (the one-move-per-shot
   advice is 2.0-only — the reason is our contract, scenes-schema §camera). The storyboard
   doesn't know the engine, so this is where that condition is enforced: when §3 routes a
@@ -198,9 +203,13 @@ are generated only when the episode has that kind of slot.
   `seedance-1-5-pro-251215` · `generateAudio: false`). Without `ARK_API_KEY`, make it with
   `veo_img2video` (`aspectRatio: "9:16"` · `resolution: "1080p"` · `durationSeconds: 8` ·
   `veo-3.1-lite-generate-preview`). Use `visual.video.prompt` verbatim as the prompt — the
-  stored final clip prompt (camera span, subject motion, locks, the audio sentence; on an
-  older file it holds the motion only, and the camera span is assembled from the slots). It
-  never re-describes the scene — the PNG already drew it. The clip's
+  stored final clip prompt (camera span, subject motion, the consistency lock, the audio
+  sentence; on an older file it holds the motion only, and the camera span is assembled from
+  the slots). It never re-describes **the layout, facing or lighting** — the PNG already drew
+  them — while the subject's identity words may stay, which is the seedance image lane's own
+  pattern (§Video prompt grammar). A stored prompt that reaches here without a consistency
+  lock, or with Korean outside a dialogue quote, is a storyboard defect: `check-scenes.js`
+  refuses it before capture and the server refuses the Korean one at the call. The clip's
   sound goes unused in the build (§6's assembly lays down the video track only), so the audio
   instruction is optional. The plan gate (absolute rule 13) comes back in the same delegation
   as the b-roll. **Make exactly what the storyboard has** — 2 combined with the b-roll is the

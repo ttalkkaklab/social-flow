@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>공간에 세울 물체 — 스튜디오 판과 구운 물체 (2026-09-04)</title>
+<style>
+  :root{
+    --paper:#f5f6fa; --ink:#10131f; --muted:#5a6280; --rule:#d8dce8; --card:#ffffff;
+    --accent:#2f5fe0; --good:#1f8a5b; --bad:#b8433d; --code:#eef0f7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+      --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+    --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+  .wrap{max-width:1040px;margin:0 auto;padding:56px 24px 96px}
+  .eyebrow{font-family:Menlo,monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1,h2,h3{font-weight:800;letter-spacing:-.02em;text-wrap:balance;margin:0}
+  h1{font-size:clamp(32px,5vw,46px);line-height:1.15;margin-top:10px}
+  h2{font-size:24px;line-height:1.3;margin-top:64px;padding-top:20px;border-top:1px solid var(--rule)}
+  h3{font-size:17px;margin-top:28px}
+  p{margin:14px 0;max-width:70ch}
+  ul{padding-left:20px;max-width:72ch} li{margin:8px 0}
+  code{font-family:Menlo,monospace;font-size:.88em;background:var(--code);padding:1px 6px;border-radius:5px}
+  .lede{font-size:18px;max-width:66ch} .lede b{font-weight:600;color:var(--accent)}
+  figure{margin:24px 0} figure img{width:100%;height:auto;display:block;border:1px solid var(--rule)}
+  figcaption{font-size:13px;color:var(--muted);margin-top:8px}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:18px 0}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-weight:600;color:var(--muted);font-size:12.5px;letter-spacing:.04em}
+  .tbl{overflow-x:auto}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px} @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px} @media (max-width:760px){.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">social-flow · 조사 보고 · 2026-09-04</div>
+  <h1>공간에 세울 물체 — 스튜디오 판과 구운 물체</h1>
+  <p class="lede">방송 그래픽 개편(09-02)으로 글자와 판은 맞았는데 화면에 <b>세울 것</b>이 없었다. 벡터 일러스트, 생성 이미지, 재질을 준 스튜디오 판을 차례로 만들어 재 보고, 넷째 판에서 답을 얻었다 — 판과 글자는 CSS 그대로 두고, <b>물체 하나만 그리지 않고 렌더한다</b>. numpy 로 쓴 SDF 레이마처가 점토 원반을 프레임 72 장으로 굽고, 슬라이드는 그 시트의 번호만 옮긴다. 이 판을 0.52.0 에서 플러그인의 기본 편집 도해로 옮겼다.</p>
+
+  <h2>1. 결과 — 플러그인 렌더러가 찍은 픽스처</h2>
+  <figure><img src="fixture-sheet.jpg" alt="픽스처 시트 프레임 일곱 장 — r0, g1 끝, g2 중간, g2 끝, g3 중간, g3 끝, g4 끝"><figcaption>render-motion-slide.mjs --sheet --segs auto 가 찍은 프레임. 왼쪽부터 바탕(r0), 그룹 1 끝(원반이 26° 누운 채 들어와 선다), 그룹 2 중간·끝(45 가 세는 동안 자국이 테두리부터 찍히고 펜 화살표가 그 자리를 가리킨다), 그룹 3 중간·끝(나선이 241 까지 찬다), 그룹 4 끝(원반이 물러나고 질문 띠). 경고 0, 존 채움 100×99%, 캡처 7.6fps(탭 넷).</figcaption></figure>
+  <div class="grid">
+    <figure><img src="fixture-g3-end.jpg" alt="그룹 3 끝 프레임 전체"><figcaption>그룹 3 끝 — 스튜디오 판(벽과 바닥이 존 아래 y1560 에서 만난다), 액센트 슬랩 키커, 곁 판 45, 구운 원반, 260px 히어로. 출처는 존 오른쪽 위 — 세로 예산이 물체 자리에 다 나가서다.</figcaption></figure>
+    <figure><img src="fixture-object-crop.jpg" alt="원반 셀 확대"><figcaption>물체 셀 760×600 원본 크기. 점광원 하나가 얼굴을 가로지르며 모델링을 만들고, 자국마다 자체 그늘이 생기고, 구운 점토의 결이 있고, 테두리는 완전한 원이 아니다. 그림자는 벽에 떨어져 알파로만 나온다.</figcaption></figure>
+  </div>
+
+  <h2>2. 세 번의 실패가 가른 것</h2>
+  <div class="tbl"><table>
+    <tr><th>판</th><th>물체</th><th>남은 것</th><th>못 넘은 것</th></tr>
+    <tr><td>① fineart-3d</td><td>CSS·SVG 로 그린 벡터 "3D"</td><td>공간 구성, 카메라 시차</td><td>물체가 일러스트로 읽힌다 — 재질이 없다</td></tr>
+    <tr><td>② diorama</td><td>그룹마다 생성 이미지</td><td>재질이 살았다, 실사 표식 획(굵기가 변하는 펜)</td><td>그룹당 $0.2, 좌표를 회차마다 다시 잰다, 생성마다 물체가 조금씩 다르다</td></tr>
+    <tr><td>③ studio</td><td>없음 — 판과 글자에 재질</td><td>키 라이트 하나에 맞춘 슬랩 재질(모서리·두께·닿은 그림자·퍼진 그늘), 사이클로라마 무대, 무대만 미는 시차</td><td>공간에 세울 물체가 없다</td></tr>
+    <tr><td>④ object</td><td>SDF 레이마처로 구운 시트</td><td>③ 그대로 + 재질이 있는 물체, 회차당 0원, 좌표는 사이드카가 잰다</td><td>형상이 하나(원반)다 — 새 형상은 sdf 함수 하나</td></tr>
+  </table></div>
+  <p>③에서 확인한 것 하나가 이 판 전체의 규칙이다 — <b>UI 카드와 방송 판의 차이는 그림자의 유무가 아니라 닿은 그림자의 유무</b>다. 넓고 옅은 그늘만 있으면 카드가 떠 있고, 짧고 진한 그림자가 먼저 있으면 물건이 서 있다. 그래서 §4 의 「플레이트에 드롭섀도 금지」를 「닿은 그림자 없는 드롭섀도 금지」로 좁혔고 재질은 템플릿 머리 CSS 의 <code>html.studio</code> 규칙에만 두어 검사기가 저작 영역의 그림자는 그대로 막는다.</p>
+
+  <h2>3. 물체를 렌더한다는 것</h2>
+  <div class="grid">
+    <figure><img src="object-preview.png" alt="bake-object.py 끝 프레임 미리보기"><figcaption><code>bake-object.py</code> 가 굽는 마지막 프레임. 둥근 기둥 SDF, 점광원(방향광이면 평평한 얼굴이 한 밝기라 납작해진다), IQ 소프트 섀도, 자국 높이 지도를 법선으로 바꾼 자체 그늘, 두 주파수의 결, 세 주파수의 테두리 흔들림.</figcaption></figure>
+    <figure><img src="stage-portrait-preview.jpg" alt="스튜디오 무대 판"><figcaption>스튜디오 무대 — 270×480 알파 PNG 한 장(bake-stage.py). 키 라이트 왼쪽 위, 벽은 아래로 어두워지고, 벽과 바닥의 이음은 40px 폭, 바닥 앞쪽은 빛 밖, 좌우는 조명의 낙하. 비네트도 여기 굽는다 — CSS 로 한 층 더 올리면 캡처가 4.6 → 2.9fps 였다.</figcaption></figure>
+  </div>
+  <ul>
+    <li><b>두 층을 가른다.</b> 글자·판은 CSS(벡터라 또렷하고 회차마다 공짜), 물체만 렌더. 둘은 빛의 방향 하나(왼쪽 위)를 공유해서 한 장면으로 읽힌다. 방송 세트가 3D 요소와 이름 판을 따로 만드는 이유와 같다.</li>
+    <li><b>움직임이 곧 문장이다.</b> 원반은 26° 누운 채 들어와 16° 로 일어서고, 그동안 자국이 테두리부터 안으로 45 개, 241 개 찍힌다 — 화면의 숫자가 세는 그 숫자다. 돌리려고 돌리는 회전은 여기서도 장식이다(§5).</li>
+    <li><b>재생은 번호 하나다.</b> 프레임 72 장을 시트 한 장에 굽고 <code>background-position</code> 만 옮긴다. (그룹, 시각)마다 번호가 하나로 정해지므로 seek 계약 그대로고, 번호를 매 프레임 옮기는 비용은 0 이다(7.40 대 7.41fps). 한 겹 더 그리는 값만 1.13배다.</li>
+    <li><b>그림자는 벽에.</b> 원반은 바닥이 아니라 벽에 걸린다. 그림자가 뒤 벽에 떨어져 알파로만 나오므로 무대 PNG 위에 그대로 얹히고 바닥 원근을 맞출 필요가 없다.</li>
+    <li><b>색이 셋이 된다.</b> 잉크·종이·액센트에 점토색이 붙는다. 그래픽이 아니라 대상의 재질이라 액센트 규칙 밖이고, 대신 채도를 액센트 아래로 둔다(R/B 1.84 대 5.2).</li>
+  </ul>
+
+  <h2>4. 실측</h2>
+  <div class="tbl"><table>
+    <tr><th>항목</th><th>값</th><th>어떻게</th></tr>
+    <tr><td>굽기</td><td>4.9초/프레임, 72장 6분, ₩0</td><td>M4 · 셀 760×600 · 2배 슈퍼샘플</td></tr>
+    <tr><td>시트</td><td>6840×4800 PNG 17.4MB (630 셀 때 webp 1.6MB)</td><td>검사기가 webp 를 확장자로 막아 png 로 둔다. 디코드 메모리 131MB × 탭 수</td></tr>
+    <tr><td>캡처</td><td>물체 켬 7.35 / 끔 8.32 fps = 1.13배</td><td>같은 회차 안에서 번갈아(부하가 몇 배로 흔들린다). 판 재질은 2.49배</td></tr>
+    <tr><td>번호 옮기기</td><td>0 (7.40 대 7.41 fps)</td><td>번호를 고정해 두고 재 봄</td></tr>
+    <tr><td>렌더러 통과</td><td>4그룹 594프레임 81초, 7.4fps, 경고 0, 존 100×99%</td><td>render-motion-slide.mjs --sheet --png-only --segs auto, 탭 넷</td></tr>
+    <tr><td>재굽기</td><td>시트 바이트 동일, 사이드카 file=assets/s5-obj.png</td><td>같은 명령을 한 번 더 돌려 cmp — slides/assets/ 는 scenes.js 에서 다시 만들 수 있다</td></tr>
+    <tr><td>존</td><td>잉크 x210..897 · y419..934 (존 176..904 · 190..1350)</td><td>벽 그림자가 테두리 밖 226px 까지 잉크. 630 셀에선 그림자가 셀 끝에서 직선으로 잘렸다(리뷰 지적) — 760 으로 넓히고 x 를 97 → −10</td></tr>
+    <tr><td>출처 줄</td><td>흐름에 두면 y1375..1408 — 존 아래 58px</td><td>flex gap 40 × 5 가 예산을 넘긴다 → 오른쪽 위 코너(202..236)</td></tr>
+    <tr><td>결정성</td><td>(2,1500)·(4,2000) 두 경로 모두 같은 번호</td><td>다른 seek 순서로 두 번 밟아 background-position 문자열 대조</td></tr>
+    <tr><td>계단</td><td>초당 3.5~6.7칸, 칸당 0.3°</td><td>문장이 12~28 프레임을 쓴다. 자국은 원래 하나씩 찍히는 것</td></tr>
+  </table></div>
+
+  <h2>5. 플러그인에 들어간 것 (0.52.0)</h2>
+  <ul>
+    <li><code>motion-slide-template.html</code> — editorial 도해의 기본 바탕이 스튜디오 판(<code>h.stage("flat")</code> 로 옛 판). 슬랩 재질은 기존 부품 셀렉터 위에 걸려 <code>h.tag · h.band · h.plate</code> 호출이 그대로다. <code>h.object(rg, id, {x, y, slot, out, html, aside})</code>, <code>h.mark.route(…, {pen:true})</code>, <code>h.foot(0, …, {corner:true})</code>. 표식의 dashoffset 유령(경로 첫 좌표의 점, 화살촉 아래 갈래 선행) 수정.</li>
+    <li>SEEK-RUNTIME(세 템플릿 동일) — 다섯째 길 <code>[data-sheet]</code>: 프레임 번호를 (g, t) 로 세우고 <code>--segs</code> 에 늘어난다. <code>data-ground</code> 는 무대 드리프트를 그룹의 운동으로 안 센다. 배경 이미지는 <code>decode()</code> 까지 기다린다 — 시트가 크면 폰트만 기다린 첫 캡처가 빈 무대였다.</li>
+    <li><code>bake-object.py</code> — <code>--shape disc --keys … --frames …</code> 로 시트 png + 사이드카 js(기하·잉크 상자) + 미리보기. 의존은 numpy·Pillow.</li>
+    <li><code>check-slide.js</code> — 재질(box-shadow·text-shadow·drop-shadow)은 머리의 <code>html.studio</code> 규칙만 허용하고 저작 영역은 막는다. <code>slide.object</code>: 시트·사이드카·include·<code>h.object</code>·잉크 상자 존 검사. selftest 90 → 100.</li>
+    <li><code>check-scenes.js</code> — <code>slide.object</code> 형태 검사, <code>object-move</code> 프리미티브.</li>
+    <li>문서 — slide-design §1·§2·§4·§5·§6·§6.2·§9, scenes-schema, slide-authoring, rendered-object.md(새), slide-reviewer.</li>
+  </ul>
+  <p>안 들어간 것도 적는다. 형상은 원반 하나다 — 항아리·상자·기둥은 <code>SHAPES</code> 에 sdf 함수를 더해야 한다. 실제 유물·사람은 이 레인이 아니라 실사 레인(②로 이미 증명)이다. 시트는 png 라 17MB 인데, 검사기의 webp 차단(움직이는 webp 와 못 가른다)을 뚫는 것보다 큰 파일을 두는 쪽이 싸다고 봤다.</p>
+</div>
+</body>
+</html>

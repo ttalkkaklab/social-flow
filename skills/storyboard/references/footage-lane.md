@@ -52,7 +52,10 @@ subtitle spec built for plates.
 - **Per shot**, in `slide.shots[]`: the four `camera` slots (`very slow` or `static` on a
   marked shot — a mark is fixed in screen space), a `mark` phrase (or `"none"`), `duration` =
   ceil(characters / 4.5) + 1 with a floor of 4 on Seedance, `action`, `audio`, and the prompt
-  assembled with `assemble-bg-prompt.js --clip --engine seedance` once the still exists.
+  assembled with `assemble-bg-prompt.js --clip --engine seedance --locks "…"` once the still
+  exists. `--locks` is not optional on this route — the clip closes on the sentence that says
+  what holds in every frame, and that is the only place an exclusion can go on an engine with
+  no `negativePrompt` argument (video-model-selection §positive locks).
 - `slide.plan` has one entry per group — the clip and the mark. `labels` is `[]` unless a
   sentence states a number or a name the picture cannot show. `visual.action` names what the
   subjects do across the clips, not what the marks draw.

@@ -903,9 +903,14 @@ passing them (`../produce/references/video-model-selection.md` §6).
   Two slots using the same PNG means the same shot appears twice — specify a different source
   per slot.
 - When planning a motion-background scene, store the assembled final prompt in
-  `visual.video.prompt` (§clip prompt — `--clip --engine seedance`; English, and it never
-  re-describes the layout the PNG drew — re-describing makes the model redesign it, same rule
-  as produce §3). Write `visual.audio` anyway — the build discards the clip's sound, but the
+  `visual.video.prompt` (§clip prompt — `--clip --engine seedance --locks "…"`). Three rules
+  hold on that route and the assembler exits 1 on each: the body is **English** (Korean only
+  inside a dialogue quote), it **never re-describes the layout, facing or lighting** the PNG
+  drew — re-describing makes the model redesign it, same rule as produce §3 — and it **closes
+  on a consistency lock**, which is the only place an exclusion can go on an engine with no
+  `negativePrompt` argument. Who the subject *is* may stay (identity words are the seedance
+  i2v pattern); where things sit may not.
+  Write `visual.audio` anyway — the build discards the clip's sound, but the
   model composes a calmer clip when it isn't left to invent a soundtrack.
 
 **Write one line into the cost ledger per call.** This episode's money starts going out here —

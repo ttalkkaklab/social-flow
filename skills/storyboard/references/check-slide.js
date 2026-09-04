@@ -25,12 +25,17 @@
  *      원격 URL 금지(웹폰트·이미지·영상) — 네트워크가 프레임을 정하면 재현이 끝난다.
  *      스스로 도는 그림도 금지 — gif·apng·애니메이션 webp 와 SVG SMIL 은 Animation 객체를
  *      안 만들어서 __seek 이 못 세우고 __meta().stray 로도 안 잡힌다. 그림은 png·jpg 만.
+ *   5. 재질 — box-shadow·text-shadow·drop-shadow 는 템플릿 머리의 스튜디오 판 규칙(html.studio …)
+ *      만 든다. 저작 영역과 머리의 다른 규칙에서는 생성형 표식이라 막는다(그라데이션과 같은 자리 규칙).
+ *   6. 구운 물체(slide.object · rendered-object.md) — 시트 png 와 사이드카 js 가 있고, 슬라이드가
+ *      사이드카를 <script src> 로 읽고, render 가 h.object(rg, id) 로 앉히고, 잉크 상자가 존 안이다.
  *
  * exit 0 전부 통과 / 1 위반 있음 / 2 인자·파일 오류.
  */
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const { FORMATS, DEFAULT_FORMAT } = require(path.join(__dirname, "../../platform-guide/references/formats.js"));   // 존 크기 — 물체의 잉크 상자 검사
 
 const MSG = {
   name: "파일명 규약 위반 — s<샷번호>-<slug>.html",
@@ -82,6 +87,15 @@ const MSG = {
   actObject: "캐릭터 연기 act 객체에는 action 문자열이 필요하다",
   castMissing: "여러 배우가 사건을 연기하는 act 객체에는 visual.slide.cast 가 필요하다",
   castId: id => `캐릭터 연기 act의 actor/target "${id}" 가 visual.slide.cast 에 없다`,
+  objectFile: "slide.object 에 file 이 없다 — slides/assets/s<샷>-<slug>.png (bake-object.py --out)",
+  objectExt: f => `slide.object 시트 "${f}" 는 png 가 아니다 — webp 는 움직이는 파일과 확장자로 못 가른다`,
+  objectMissing: f => `구운 시트가 없다 — ${f} (bake-object.py 로 먼저 굽는다, rendered-object.md)`,
+  objectSidecar: f => `사이드카가 없다 — ${f} (bake-object.py 가 시트 옆에 쓴다)`,
+  objectSidecarBad: (f, e) => `사이드카를 읽지 못했다 — ${f}: ${e}`,
+  objectInclude: f => `슬라이드가 사이드카를 안 읽는다 — scenes.js 다음에 <script src="${f}"></script>`,
+  objectUnused: "slide.object 가 있는데 render 가 h.object(rg, id) 를 부르지 않는다 — 물체가 화면에 없다",
+  objectId: (got, want) => `h.object 의 id "${got}" 가 시트 이름 "${want}" 와 다르다 — 사이드카의 키는 파일 이름이다`,
+  objectZone: (side, px) => `물체의 잉크가 존 ${side}쪽으로 ${px}px 나간다 — h.object 의 ${side === "위" || side === "아래" ? "y" : "x"} 를 옮긴다(그림자 반그늘까지 잉크다)`,
 };
 
 /* 저작 화면의 세 갈래와, 캐릭터 연기가 고를 수 있는 동작. 정본은 scenes-schema §저작 화면 레인과
@@ -95,6 +109,7 @@ const SEMANTIC_HELPERS = {
   "flow-trace": "flow", "node-enter": "node", "state-transform": "state",
   "shape-enter": ["disk", "fig", "chamber"], "shape-draw": ["ring", "stem", "bus"],
   "shape-travel": ["press", "shift"],
+  "object-move": "object",
 };
 const ART_MOVES = ["travel", "rise", "in", "drop", "press", "none"];
 const ACTS = ["enter", "point", "nod", "shrug", "think", "wave", "cheer",
@@ -267,6 +282,55 @@ function checkDir(dir, only, opts) {
       });
     }
 
+    // slide.object — 구운 물체(rendered-object.md). 시트·사이드카가 있고, 슬라이드가 사이드카를 읽고,
+    // render 가 앉히고, 잉크 상자(사이드카 ink — 그림자 반그늘까지)가 존 안이다. slot 을 쓰면 세로는
+    // 흐름이 정하므로 가로만 본다. x·y 가 리터럴이 아니면 존 검사는 건너뛴다.
+    if (slide && slide.object) {
+      const ob = slide.object;
+      const f = String(ob.file || "");
+      if (!f) fail(base, MSG.objectFile);
+      else {
+        const id = path.basename(f).replace(/\.png$/i, "");
+        if (!/\.png$/i.test(f)) fail(base, MSG.objectExt(f));
+        if (!fs.existsSync(path.join(dir, f))) fail(base, MSG.objectMissing(f));
+        const side = f.replace(/\.png$/i, ".js");
+        const sideAbs = path.resolve(dir, side);   // require 는 상대 경로를 모듈 이름으로 본다 — 절대 경로로
+        let meta = null;
+        if (!fs.existsSync(sideAbs)) fail(base, MSG.objectSidecar(side));
+        else {
+          const tail = side.replace(/^slides\//, "");
+          if (!new RegExp("<script[^>]*\\bsrc\\s*=\\s*[\"']" + tail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "[\"']").test(code))
+            fail(base, MSG.objectInclude(tail));
+          const keep = global.window; global.window = {};
+          try { delete require.cache[require.resolve(sideAbs)]; require(sideAbs); meta = (global.window.SLIDE_OBJECTS || {})[id] || null; }
+          catch (e) { fail(base, MSG.objectSidecarBad(side, e.message)); }
+          global.window = keep;
+          if (!meta) fail(base, MSG.objectSidecarBad(side, "window.SLIDE_OBJECTS[\"" + id + "\"] 가 없다"));
+        }
+        const start = code.search(/function\s+renderSlide\s*\(|\brenderSlide\s*=\s*(?:async\s*)?\(?/);
+        const stop = code.indexOf("SEEK-RUNTIME-BEGIN", start >= 0 ? start : 0);
+        const drawn = start >= 0 ? code.slice(start, stop >= 0 ? stop : code.length) : code;
+        const call = drawn.match(/\bh\.object\s*\(\s*\d+\s*,\s*["']([^"']+)["']\s*(?:,\s*\{([^}]*)\})?/);
+        if (!call) fail(base, MSG.objectUnused);
+        else if (call[1] !== id) fail(base, MSG.objectId(call[1], id));
+        else if (meta && Array.isArray(meta.ink) && meta.ink.length === 4) {
+          const opt = call[2] || "";
+          const num = k => { const m = opt.match(new RegExp("\\b" + k + "\\s*:\\s*(-?\\d+(?:\\.\\d+)?)")); return m ? Number(m[1]) : null; };
+          const x = num("x"), y = num("y"), slot = /\bslot\s*:(?!\s*false\b)/.test(opt);   // slot:false 는 절대 배치다(런타임과 같은 판정)
+          const fmt = FORMATS[global.window.FORMAT || DEFAULT_FORMAT] || FORMATS[DEFAULT_FORMAT];
+          const zw = fmt.canvas.w - 2 * fmt.zone.x, zh = fmt.canvas.h - fmt.zone.top - fmt.zone.bottom;
+          if (x != null) {
+            if (x + meta.ink[0] < 0) fail(base, MSG.objectZone("왼", -(x + meta.ink[0])));
+            if (x + meta.ink[2] > zw) fail(base, MSG.objectZone("오른", x + meta.ink[2] - zw));
+          }
+          if (y != null && !slot) {
+            if (y + meta.ink[1] < 0) fail(base, MSG.objectZone("위", -(y + meta.ink[1])));
+            if (y + meta.ink[3] > zh) fail(base, MSG.objectZone("아래", y + meta.ink[3] - zh));
+          }
+        }
+      }
+    }
+
     // 4) 결정성 — 갈래별
     if (/@import|fonts\.googleapis|<link[^>]*font|@font-face[^}]*url\(\s*['"]?https?:/i.test(code))
       fail(base, MSG.webfont);
@@ -332,11 +396,10 @@ function checkDir(dir, only, opts) {
         if (!/\bdata-rg\s*=/.test(tag)) { fail(base, MSG.videoGroup); break; }
         if (!/\bdata-vdur\s*=/.test(tag)) { fail(base, MSG.videoDur); break; }
       }
-      if (/background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text|\bbox-shadow\s*:|\btext-shadow\s*:|\bbackdrop-filter\s*:|\bfilter\s*:\s*(?:drop-shadow|blur)\s*\(/i.test(code))
-        fail(base, MSG.generatedStyle);
-      /* 그라데이션은 자리를 가린다 — 템플릿 머리 CSS 의 플레이트(빛·스크림)는 방송 그래픽의
-         바탕층이라 허용하고, 저작 영역(render 함수 ~ SEEK-RUNTIME-BEGIN)에서는 막는다. 저작
-         코드가 그라데이션을 쓰는 자리는 글자·막대·도형뿐이고 그게 생성형 표식이다. */
+      /* 그라데이션과 재질은 자리를 가린다 — 템플릿 머리 CSS 의 플레이트(빛·스크림)와 스튜디오 판의
+         재질(html.studio … 규칙의 box-shadow·text-shadow·drop-shadow)은 방송 그래픽의 바탕층이라
+         허용하고, 저작 영역(render 함수 ~ SEEK-RUNTIME-BEGIN)에서는 막는다. 저작 코드가 그라데이션·
+         그림자를 쓰는 자리는 글자·막대·도형·카드뿐이고 그게 생성형 표식이다. */
       {
         const fnName = kind === "kinetic" ? "renderKinetic" : kind === "character" ? "renderCharacter" : "renderSlide";
         /* 화살표 대입형(const renderSlide = (S, h) => {)도 잡는다 — 선언형만 찾으면 저작 영역이
@@ -352,6 +415,15 @@ function checkDir(dir, only, opts) {
         const headCss = start > 0 ? code.slice(0, start).replace(/\.scrim\s*\{[^}]*\}/g, "") : "";
         if (/\b(?:linear|conic|radial)-gradient\s*\(/i.test(authored) ||
             /\b(?:linear|conic|radial)-gradient\s*\(/i.test(headCss)) fail(base, MSG.gradientAuthored);
+        /* 재질 — 셀렉터가 전부 html.studio 로 시작하는 규칙 블록만 빼고 본다. 목록에 다른 셀렉터를
+           하나라도 끼우면 그 블록은 검사 대상이다(리뷰 실측 우회). render 함수가 없으면 파일 전체다. */
+        const GEN = /background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text|\bbox-shadow\s*:|\btext-shadow\s*:|\bbackdrop-filter\s*:|\bfilter\s*:\s*(?:drop-shadow|blur)\s*\(/i;
+        /* 규칙은 <style> 안에서만 센다 — 블록 밖의 doctype·head·JS 가 첫 규칙의 셀렉터에 붙지 않게(리뷰 실측). */
+        const noMat = t => t.replace(/<style[^>]*>([\s\S]*?)<\/style>/g, (m, css) => "<style>" +
+          css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/([^{}]+)\{[^{}]*\}/g, (r, sel) =>
+            sel.replace(/^[\s\S]*;/, "").split(",").every(s => /^\s*html(?:\.[\w-]+)*\.studio(?![\w-])/.test(s)) ? "" : r) + "</style>");
+        if (start >= 0 ? (GEN.test(authored) || GEN.test(noMat(headCss))) : GEN.test(noMat(code)))
+          fail(base, MSG.generatedStyle);
       }
       const radii = [...code.matchAll(/border-radius\s*:\s*(\d+(?:\.\d+)?)px/gi)].map(m => Number(m[1]));
       const cardRadius = radii.find(r => r >= 8);
@@ -427,7 +499,11 @@ function selftest() {
       { type: "points", title: "행동 없는 실사", narration: [{ tts: "하나" }],
         visual: { slide: { file: "slides/s22-noaction.html", motion: true, treatment: "footage", plan: "x", labels: [],
           shots: [{ group: 1, clip: "slides/footage/s22-g1.mp4" }] } } },
+      { type: "points", title: "구운 물체", narration: [{ tts: "하나" }, { tts: "둘" }],
+        visual: { slide: { file: "slides/s23-object.html", motion: true, treatment: "editorial", role: "statistic", motif: "disc", labels: ["물체"],
+          object: { file: "slides/assets/s23-obj.png", shape: "disc", keys: "0,16,0 0,16,45 0,16,241", frames: "1:5 2:5", plan: "x" } } } },
     ];`);
+  const SIDECAR = 'window.SLIDE_OBJECTS = Object.assign(window.SLIDE_OBJECTS || {}, {"s23-obj": {"file": "assets/s23-obj.png", "shape": "disc", "cell": [630, 600], "cols": 9, "n": 11, "ranges": {"1": [0, 5], "2": [5, 10]}, "ink": [49, 15, 629, 521]}});';
   const cases = [
     ["s1-static.html", `const SLIDE_SHOT = 1; const a = "정지 라벨";`, [MSG.mustMotion]],
     ["s1-static.html", `const SLIDE_SHOT = 1; <style>.x{animation:rise 1s}</style>`, [MSG.mustMotion]],
@@ -561,6 +637,35 @@ function selftest() {
       [MSG.footageClip("slides/footage/s20-g1.mp4"), MSG.footageClip("slides/footage/s20-g2.mp4")], "missing-asset"],
     ["s21-noshots.html", `const SLIDE_SHOT = 21; window.__seek = 1; function renderSlide(S, h) { return h.footage(1, "x.mp4"); }`, [MSG.footageShots]],
     ["s22-noaction.html", `const SLIDE_SHOT = 22; window.__seek = 1; function renderSlide(S, h) { const sh = S.visual.slide.shots; return h.footage(1, sh[0].clip); }`, [MSG.footageAction]],
+    // 구운 물체 — 시트·사이드카·include·h.object·존(잉크 상자 49..629 — x 97 이면 726 ≤ 728, x 100 이면 3px 초과)
+    ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; <script src="assets/s23-obj.js"></script> function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 97, y: 0, slot: true }); }`, []],
+    ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; <script src="assets/s23-obj.js"></script> function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 100, y: 0, slot: true }); }`,
+      [MSG.objectZone("오른", 1)]],
+    ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; <script src="assets/s23-obj.js"></script> function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 40, y: 700 }); }`,
+      [MSG.objectZone("아래", 61)]],
+    // slot:false 는 slot 없음과 같다 — 키가 있다고 세로 검사를 건너뛰면 안 된다(리뷰 실측)
+    ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; <script src="assets/s23-obj.js"></script> function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 40, y: 700, slot: false }); }`,
+      [MSG.objectZone("아래", 61)]],
+    ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 97, y: 0, slot: true }); }`,
+      [MSG.objectInclude("assets/s23-obj.js")]],
+    ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; <script src="assets/s23-obj.js"></script> function renderSlide(S, h) { return h.count(1, 3); }`,
+      [MSG.objectUnused]],
+    ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; <script src="assets/s23-obj.js"></script> function renderSlide(S, h) { return h.object(1, "disc", { x: 97, y: 0 }); }`,
+      [MSG.objectId("disc", "s23-obj")]],
+    ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 97, y: 0 }); }`,
+      [MSG.objectMissing("slides/assets/s23-obj.png"), MSG.objectSidecar("slides/assets/s23-obj.js")], "missing-asset"],
+    // 재질 — 템플릿 머리의 html.studio 규칙은 통과하고, 저작 영역과 머리의 다른 규칙은 막는다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.studio .band{box-shadow:0 2px 0 #000} html.studio .stage{text-shadow:0 1px 0 #000} html.studio .marks .mk{filter:drop-shadow(0 1px 1px #000)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.studio .band{box-shadow:0 2px 0 #000} .card{box-shadow:0 8px 20px #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [MSG.generatedStyle]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.n{text-shadow:0 4px 8px #000}</style>' + h.count(1, 3); }`, [MSG.generatedStyle]],
+    // 셀렉터 목록에 html.studio 를 하나 끼워도 다른 셀렉터는 검사 대상이다(리뷰 실측 우회)
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.card, html.studio .band{box-shadow:0 24px 60px rgba(0,0,0,.5)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [MSG.generatedStyle]],
+    // html.wide.studio 처럼 다른 클래스가 앞서도 스튜디오 규칙이다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.wide.studio .band{box-shadow:0 2px 0 #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
+    // 파일 첫 규칙이 스튜디오 규칙이어도 면제다 — 앞의 doctype·head 가 셀렉터에 붙지 않는다(리뷰 실측)
+    ["s2-motion.html", `<!doctype html><html><head><meta charset="utf-8"><style>html.studio .band{box-shadow:0 2px 0 #000}</style> const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return h.count(1, 3); }`, []],
+    // 규칙 앞의 CSS 주석은 셀렉터가 아니다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>/* 재질 */ html.studio .band{box-shadow:0 2px 0 #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
   ];
   let failed = 0;
   const realErr = console.error, realLog = console.log;
@@ -570,10 +675,11 @@ function selftest() {
   for (const [name, body, expect, flag] of cases) {
     wipeSlides();
     const need = { "s15-arts.html": ["assets/s15-stamp.png"], "s18-fig.html": ["assets/s18-person.png"],
-      "s20-footage.html": ["footage/s20-g1.mp4", "footage/s20-g2.mp4"], "s22-noaction.html": ["footage/s22-g1.mp4"] }[name] || [];
+      "s20-footage.html": ["footage/s20-g1.mp4", "footage/s20-g2.mp4"], "s22-noaction.html": ["footage/s22-g1.mp4"],
+      "s23-object.html": ["assets/s23-obj.png", "assets/s23-obj.js"] }[name] || [];
     if (flag !== "missing-asset") for (const f of need) {
       fs.mkdirSync(path.dirname(path.join(slides, f)), { recursive: true });
-      fs.writeFileSync(path.join(slides, f), "x");
+      fs.writeFileSync(path.join(slides, f), f.endsWith(".js") ? SIDECAR : "x");   // 사이드카는 진짜 JS 여야 읽힌다
     }
     fs.writeFileSync(path.join(slides, name), body);
     const got = [];

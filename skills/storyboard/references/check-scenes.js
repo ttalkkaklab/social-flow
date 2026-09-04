@@ -43,6 +43,9 @@ const { execFileSync } = require('child_process');
 
 const SELF_DIR = __dirname;
 const FORMAT_RESOLVE = path.resolve(SELF_DIR, '..', '..', 'platform-guide', 'references', 'format-resolve.js');
+/* The clip-prompt rules live where the prompts are written — required, not copied, so the
+   checker and the assembler can never disagree about what a seedance prompt may say. */
+const PROMPT = require(path.join(SELF_DIR, 'assemble-bg-prompt.js'));
 
 function die(msg) {
   process.stderr.write('check-scenes: ' + msg + '\n');
@@ -68,14 +71,17 @@ const SLIDE_TREATMENTS = ['editorial', 'photo-action', 'footage'];
 const EDITORIAL_ROLES = ['evidence', 'relationship', 'mechanism', 'timeline', 'statistic', 'transition', 'verdict'];
 const INFO_TYPES = ['other', 'timeline', 'statistic', 'principle'];
 const INFO_ROLE = { timeline: 'timeline', statistic: 'statistic', principle: 'mechanism' };
+// object-move — a baked object arrives, turns or recedes (rendered-object.md · h.object); the sentence's
+// value can be the object itself on any of the three types, so it is allowed on all of them.
 const INFO_PRIMITIVES = {
-  timeline: ['date-enter', 'range-grow', 'event-link'],
-  statistic: ['count-up', 'bar-grow', 'dot-fill', 'axis-draw'],
+  timeline: ['date-enter', 'range-grow', 'event-link', 'object-move'],
+  statistic: ['count-up', 'bar-grow', 'dot-fill', 'axis-draw', 'object-move'],
   principle: ['flow-trace', 'node-enter', 'state-transform',
-              'shape-enter', 'shape-draw', 'shape-travel'],
+              'shape-enter', 'shape-draw', 'shape-travel', 'object-move'],
 };
 const ART_MOVES = ['travel', 'rise', 'in', 'drop', 'press', 'none'];
 const ART_FILE = /^slides\/assets\/s\d+-[a-z0-9-]+\.(png|jpe?g)$/i;
+const OBJECT_FILE = /^slides\/assets\/s\d+-[a-z0-9-]+\.png$/;   // a baked sheet (rendered-object.md)
 const TRANSITIONS = ['cut', 'dissolve', 'dip', 'dip:white', 'iris', 'blur', 'zoom'];
 const PUSH_RE = /^push:(l2r|r2l|u2d|d2u)$/;
 const WHIP_RE = /^whip:(l2r|r2l|u2d|d2u)$/;
@@ -287,6 +293,42 @@ function motionKind(scene) {
   if (v.slide && v.slide.motion === true) return 'motion-slide';
   if (scene && (scene.type === 'broll' || v.video || v.clip)) return 'ai-video';
   return null;
+}
+
+/** The planned route (scenes-schema §clip prompt) — `engine` overrides the type default:
+    b-roll keeps its sound so it goes to veo, a motion background discards it so seedance,
+    a speech clip goes to veo_reference. The same routing as the check strip's engineOf. */
+function engineOf(scene) {
+  const v = (scene && scene.visual) || {};
+  const named = (v.video && v.video.engine) || v.engine;
+  if (named === 'veo' || named === 'seedance') return named;
+  if (scene && (scene.type === 'broll' || scene.type === 'quote')) return 'veo';
+  return 'seedance';
+}
+
+/* What a seedance prompt may say — the vendor's grammar, not taste (video-model-selection
+   §Prompt grammar · §positive locks). The body reads Chinese or English; it carries no
+   timecode or digit seconds (2.0 self-reports unstable precision timing); an exclusion is
+   never a directive, because this engine has no negativePrompt argument; and it closes with
+   a consistency lock. The checks are assemble-bg-prompt.js's own, so a prompt that clears
+   this checker is one the assembler would have written. */
+function seedancePromptFindings(prompt, engine) {
+  const text = String(prompt || '').trim();
+  if (engine !== 'seedance' || !text) return [];
+  const out = [];
+  // The Audio: sentence is exempt from the negative check — "no music, no speech" is a state.
+  const audioAt = text.search(/Audio\s*:/i);
+  const body = audioAt >= 0 ? text.slice(0, audioAt) : text;
+  PROMPT.hangulHits(text, 'seedance').forEach((h) => out.push(
+    `the stored clip prompt carries Korean ("${h}") — a seedance body reads Chinese or English; Korean goes inside the quotes of a dialogue line`));
+  PROMPT.negDirectiveHits(body, 'seedance').forEach((h) => out.push(
+    `the stored clip prompt gives a negative directive ("${h}") — Seedance has no negativePrompt argument: re-describe the scene and put what must hold into the consistency lock`));
+  PROMPT.timingHits(body, 'seedance').forEach((h) => out.push(`the stored clip prompt carries ${h}`));
+  if (PROMPT.lockMissing(text, 'seedance')) out.push(
+    'the stored clip prompt has no consistency lock — a seedance clip closes with the sentence that says what holds in every frame ' +
+    '("the subject stays exactly consistent with the input frame; appearance, proportions and materials hold"), ' +
+    'which is also the only place an exclusion can go on this engine');
+  return out;
 }
 
 /** Rebuilds playback order because b-roll entries live at the array tail and use `after`. */
@@ -768,6 +810,7 @@ function check(win, fmt, opts) {
               if (!cam[slot]) machine(at, `camera.${slot} is empty — a footage shot leaves the storyboard with all four slots filled`);
             });
             if (!String(sh.prompt || '').trim()) machine(at, 'no prompt — store the assembled clip prompt (assemble-bg-prompt.js --clip)');
+            else seedancePromptFindings(sh.prompt, engine).forEach((f) => machine(at, f));
             if (!String(sh.audio || '').trim()) machine(at, 'no audio — say what the clip sounds like even though the builder drops it');
             if (!String(sh.mark || '').trim()) machine(at, 'no mark — name the mark that lands on this shot, or "none"');
           });
@@ -880,6 +923,7 @@ function check(win, fmt, opts) {
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
       if (!prompt) machine(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');
+      else seedancePromptFindings(prompt, engineOf(s)).forEach((f) => machine(where, f));
       if (!v.audio && s.type !== 'quote')
         warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
     }
@@ -916,6 +960,34 @@ function check(win, fmt, opts) {
           if (!Number.isInteger(group) || group < 1)
             machine(at, `group ${JSON.stringify(a.group)} is not a positive integer`);
         });
+      }
+      // A rendered object (rendered-object.md) is baked, not drawn — the scene names the sheet, the shape
+      // and the bake keys so the sheet is reproducible and check-slide.js can find its sidecar.
+      if (v.slide.object != null) {
+        const ob = v.slide.object;
+        const at = `${where} slide.object`;
+        if (!ob || typeof ob !== 'object' || Array.isArray(ob)) machine(at, 'is not an object — { file, shape, keys, frames, plan }');
+        else {
+          if (!ob.file) machine(at, 'has no file');
+          else if (!OBJECT_FILE.test(ob.file)) machine(at, `file "${ob.file}" is not slides/assets/s<shot>-<slug>.png`);
+          if (!ob.shape) machine(at, 'has no shape — bake-object.py --shape (disc)');
+          if (!ob.keys || !ob.frames) machine(at, 'has no keys/frames — the bake-object.py arguments, so the sheet is reproducible');
+          if (!ob.plan) warn(at, 'has no plan — say what the object does on which sentence');
+          const segs = Array.isArray(s.narration) ? s.narration.length : 0;
+          const seen = new Set();
+          String(ob.frames || '').split(/\s+/).filter(Boolean).forEach(tok => {
+            const m = /^(\d+):(\d+)$/.exec(tok);
+            if (!m) { machine(at, `frames token "${tok}" is not g:n`); return; }
+            const g = Number(m[1]), n = Number(m[2]);
+            if (g < 1 || (segs && g > segs)) machine(at, `frames names group ${g} for ${segs} narration segments — the runtime counts the sidecar's groups`);
+            if (n < 1) machine(at, `frames gives group ${g} no frames`);
+            if (seen.has(g)) machine(at, `frames names group ${g} twice`);
+            seen.add(g);
+          });
+          const nk = String(ob.keys || '').split(/\s+/).filter(Boolean).length;
+          if (nk && seen.size && nk !== seen.size + 1)
+            machine(at, `keys has ${nk} entries for ${seen.size} frames groups — bake-object.py wants groups + 1 (a start state and one per group)`);
+        }
       }
       if ((v.slide.kind || 'diagram') === 'kinetic' &&
           !(Array.isArray(v.slide.arts) && v.slide.arts.length))
@@ -1008,6 +1080,18 @@ function selftest() {
      !has(bads(run([Object.assign({}, cover, { visual: {} }), goodShot, goodShot, goodShot])), /no editorial HTML frame/));
   ok('a motion diagram declares its treatment',
      has(bads(run([Object.assign({}, cover, { visual: { slide: { motion: true } } }), goodShot, goodShot, goodShot])), /no slide\.treatment/));
+  ok('a rendered object names its shape and bake keys',
+     has(bads(run([cover, Object.assign({}, goodShot, { visual: { slide: { file: 'slides/s2-disc.html', motion: true,
+       treatment: 'editorial', role: 'statistic', motif: 'clay disc', plan: 'x',
+       object: { file: 'slides/assets/s2-obj.png', plan: 'x' } } } })])), /has no shape/));
+  ok('a rendered object cannot name a frames group the narration has not got',
+     has(bads(run([cover, Object.assign({}, goodShot, { visual: { slide: { file: 'slides/s2-disc.html', motion: true,
+       treatment: 'editorial', role: 'statistic', motif: 'clay disc', plan: 'x',
+       object: { file: 'slides/assets/s2-obj.png', shape: 'disc', keys: '0,16,0 0,16,45 0,16,60', frames: '1:11 99:14', plan: 'x' } } } })])), /frames names group 99/));
+  ok('a rendered object carries one key more than it has frames groups',
+     has(bads(run([cover, Object.assign({}, goodShot, { visual: { slide: { file: 'slides/s2-disc.html', motion: true,
+       treatment: 'editorial', role: 'statistic', motif: 'clay disc', plan: 'x',
+       object: { file: 'slides/assets/s2-obj.png', shape: 'disc', keys: '0,16,0 0,16,45', frames: '1:5 2:5', plan: 'x' } } } })])), /keys has 2 entries/));
   ok('an editorial frame declares role and motif',
      has(bads(run([Object.assign({}, cover, { visual: { slide: { motion: true, treatment: 'editorial' } } }), goodShot, goodShot, goodShot])), /slide\.role|no motif/));
   const semantic = (infoType, role, motionBeats) => Object.assign({}, goodShot, {
@@ -1042,13 +1126,17 @@ function selftest() {
   ok('a named-state principle may skip arts',
      !has(bads(run([cover, semantic('principle', 'mechanism', [{ group: 1, primitive: 'flow-trace' }]), goodShot, goodShot])),
           /slide\.arts/));
+  /* What the assembler writes for a seedance route — English, no timecode, and closing on the
+     consistency lock. The fixtures carry it whole so they model a storyboard that passes. */
+  const SEEDANCE_PROMPT = 'high wide, very slow dolly in, ending on road mid-frame. ' +
+    'the riders cross the valley floor. the riders and the valley stay exactly consistent with the input frame.';
   const footageScene = (over) => Object.assign({}, goodShot, {
     visual: Object.assign({ action: 'riders enter the valley',
       slide: Object.assign({ file: 'slides/s2-valley.html', kind: 'diagram', motion: true, treatment: 'footage',
         plan: '① route into the valley', labels: [],
         shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5, engine: 'seedance', mark: 'dashed route',
                   camera: { movement: 'dolly in', speed: 'very slow', framing: 'high wide', end: 'road mid-frame' },
-                  prompt: 'x', audio: 'wind' }] }, (over && over.slide) || {}) }, (over && over.visual) || {})
+                  prompt: SEEDANCE_PROMPT, audio: 'wind' }] }, (over && over.slide) || {}) }, (over && over.visual) || {})
   });
   ok('a footage slide with one clip per segment passes',
      !has(bads(run([cover, footageScene(), goodShot, goodShot])), /footage slide|shots\[|slide\.treatment "footage"/));
@@ -1056,13 +1144,13 @@ function selftest() {
      has(bads(run([cover, Object.assign({}, footageScene(), { narration: [{ tts: '가', sub: '가' }, { tts: '나', sub: '나' }] }), goodShot, goodShot])),
          /1 shots for 2 narration segments/));
   ok('a footage clip outside the naming convention is caught',
-     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'clips/a.mp4', duration: 5, prompt: 'x', audio: 'y', mark: 'z',
+     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'clips/a.mp4', duration: 5, prompt: SEEDANCE_PROMPT, audio: 'y', mark: 'z',
        camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } }] } }), goodShot, goodShot])), /outside the slides\/footage/));
   ok('a footage shot with empty camera slots is a violation',
-     bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5, prompt: 'x', audio: 'y', mark: 'z' }] } }),
+     bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5, prompt: SEEDANCE_PROMPT, audio: 'y', mark: 'z' }] } }),
        goodShot, goodShot])).filter((f) => /camera\./.test(f.what)).length === 4);
   ok('a footage shot outside the seedance duration band is a violation',
-     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 2, prompt: 'x', audio: 'y', mark: 'z',
+     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 2, prompt: SEEDANCE_PROMPT, audio: 'y', mark: 'z',
        camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } }] } }), goodShot, goodShot])), /outside seedance/));
   ok('footage shots do not spend a generated-video slot',
      !has(bads(run([cover, footageScene(), footageScene(), footageScene()])), /generated-video slots/));
@@ -1084,7 +1172,7 @@ function selftest() {
      !has(bads(run([footageScene(), Object.assign({}, goodShot, { narration: [{ tts: '가', sub: '가', img: 'a.png' }, { tts: '나', sub: '나', img: 'b.png' }] }), footageScene()],
                    null, { policy: groundPolicy })), /one picture stays/));
   ok('a motion background resets the static-ground clock',
-     !has(bads(run([footageScene(), Object.assign({}, goodShot, { visual: { video: { engine: 'seedance', prompt: 'x' }, action: 'waves' } }), footageScene()],
+     !has(bads(run([footageScene(), Object.assign({}, goodShot, { visual: { video: { engine: 'seedance', prompt: SEEDANCE_PROMPT }, action: 'waves' } }), footageScene()],
                    null, { policy: groundPolicy })), /one picture stays/));
   ok('an HTML plate longer than the limit is one picture',
      has(bads(run([footageScene(), Object.assign({}, cover, { duration: 9 }), footageScene()], null, { policy: groundPolicy })), /one picture stays on screen 9\.0s/));
@@ -1146,7 +1234,7 @@ function selftest() {
                    Object.assign({}, broll, { after: 0 })])), /quote scene/));
 
   // generated video
-  const noSlots = Object.assign({}, goodShot, { visual: { video: { prompt: 'p' }, audio: 'a' } });
+  const noSlots = Object.assign({}, goodShot, { visual: { video: { prompt: SEEDANCE_PROMPT }, audio: 'a' } });
   ok('a generated shot with empty camera slots is a violation',
      bads(run([cover, noSlots])).filter((f) => /visual\.camera\./.test(f.what)).length === 4);
   ok('a generated shot with no stored prompt is a violation',
@@ -1154,6 +1242,39 @@ function selftest() {
        visual: { video: {}, audio: 'a',
                  camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } } })])),
        /no stored clip prompt/));
+
+  /* ── The seedance lane's own prompt rules (video-model-selection §Prompt grammar) ──
+     The engine reads Chinese or English, has no negativePrompt argument, self-reports unstable
+     precision timing, and wants the consistency lock. The checks are the assembler's own, so a
+     prompt this rejects is one assemble-bg-prompt.js would have refused to write. */
+  const motionScene = (prompt, over) => Object.assign({}, goodShot, {
+    visual: Object.assign({ video: { prompt }, audio: 'wind',
+      camera: { movement: 'dolly in', speed: 'very slow', framing: 'high wide', end: 'road mid-frame' } }, over || {}) });
+  ok('a motion background with the assembled prompt passes',
+     !has(bads(run([cover, motionScene(SEEDANCE_PROMPT), goodShot, goodShot])), /clip prompt/));
+  ok('Korean in a seedance prompt is a violation',
+     has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' 말들이 계곡을 건넌다.'), goodShot, goodShot])), /carries Korean/));
+  ok('Korean inside a dialogue quote passes',
+     !has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' the rider calls "이랴" once.'), goodShot, goodShot])), /carries Korean/));
+  ok('a seedance prompt with no consistency lock is a violation',
+     has(bads(run([cover, motionScene('high wide, very slow dolly in, ending on road mid-frame. the riders cross the valley floor.'),
+                   goodShot, goodShot])), /no consistency lock/));
+  ok('a negative directive in a seedance prompt is a violation',
+     has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' no dust, no birds.'), goodShot, goodShot])), /negative directive/));
+  ok('the artifact classes may stay negative on seedance',
+     !has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' avoid generating any text or subtitles.'), goodShot, goodShot])), /negative directive/));
+  ok('a timecode in a seedance prompt is a violation',
+     has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' at [00:04] the riders stop.'), goodShot, goodShot])), /clock timecode/));
+  ok('the same prompt on a veo route is not this check\'s business',
+     !has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' 말들이 계곡을 건넌다. at [00:04] they stop.', { engine: 'veo' }),
+                    goodShot, goodShot])), /carries Korean|clock timecode/));
+  ok('the seedance prompt rules wait for the camera pass (--draft)',
+     !has(bads(run([cover, motionScene('high wide, very slow dolly in. the riders cross.'), goodShot, goodShot], null, { draft: true })),
+          /no consistency lock/));
+  ok('a footage shot carries the same rules',
+     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5,
+       engine: 'seedance', mark: 'z', audio: 'y', prompt: 'high wide, very slow dolly in, ending on road mid-frame. the riders cross.',
+       camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } }] } }), goodShot, goodShot])), /no consistency lock/));
 
   // ── scene transitions ──
   const dz = (over) => Object.assign({}, goodShot, over);

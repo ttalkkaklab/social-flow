@@ -6,14 +6,18 @@ determinism half, and `slide-reviewer` scores a rendered slide against §5 — t
 lives here so the template, the author and the reviewer read one document. Every
 `visual.slide` is a motion slide. There is no still-slide path.
 
-Where the rules come from: two pieces of research. The 2026-08-29 motion-slide lane
+Where the rules come from: three pieces of research. The 2026-08-29 motion-slide lane
 (`docs/research/2026-08-29-motion-slide-lane/`) established that animation raises attention
 and engagement and leaves comprehension unharmed **only when the movement carries meaning**.
 The 2026-09-02 broadcast design pass (`docs/research/2026-09-02-broadcast-slide-design/`)
 looked at why the finished slides still read as a text document instead of a broadcast
 graphic, and found four structural causes: a flat single-colour ground, type set at UI
 scale, hairlines a phone cannot resolve, and every element entering at the same instant
-with the same curve. Every rule below serves one of those two findings.
+with the same curve. The 2026-09-04 object-slide pass
+(`docs/research/2026-09-04-rendered-object-slide/`) asked what stands in the space once the
+type and plates are right, compared a vector illustration, a generated image and a lit studio
+plate, and settled on a studio ground with slab materials plus an object that is rendered, not
+drawn (§1, §9). Every rule below serves one of those findings.
 
 ## Contents
 
@@ -25,6 +29,7 @@ with the same curve. Every rule below serves one of those two findings.
 - [6. What reads as generated — and the rubric](#6-what-reads-as-generated-and-the-rubric)
 - [7. Kinetic type — when the words are the picture](#7-kinetic-type-when-the-words-are-the-picture)
 - [8. Character act — when someone is reacting](#8-character-act-when-someone-is-reacting)
+- [9. Rendered object — a thing that is a render](#9-rendered-object-a-thing-that-is-a-render)
 
 ## 1. Ground — a plate, not a colour
 
@@ -47,6 +52,23 @@ Why the plate is a bitmap and the grain lives in the encoder: drawing them in CS
 The bitmap plate costs nothing measurable; grain at encode time costs only bitrate
 (0.09 → 0.76 MB per second of clip at crf 14). The sheet frames the reviewer reads carry
 the plate but not the grain.
+
+**The studio ground — the default for an editorial diagram since 0.52.0.** The plate above is
+a light on a wall. The studio is a room: a cyclorama cell whose wall and floor meet in a soft
+seam *below the zone* (y 1560 portrait, y 929 wide — the subtitle band), a key light top-left,
+the floor falling into darkness at the front, the light falling off at the sides. It is one
+270×480 alpha PNG (480×270 wide) in the template head (`.studio-plate`,
+`docs/research/2026-09-04-rendered-object-slide/bake-stage.py`), scaled to the frame, and the
+template turns it on for every `treatment:"editorial"` diagram; `h.stage("flat")` keeps the
+plate. The kinetic-type and character-act templates keep the plate above unchanged, so an
+episode that mixes a kinetic screen with a studio diagram mixes two grounds — the author's
+call, not the template's. Three things come with it and only with it:
+
+| Layer | What | Where |
+|---|---|---|
+| slab material | every `.kicker`, `.band` and `.plate` gets a lit top-left edge, a hard offset for thickness, a short dark contact shadow and a wide faint spread — one `box-shadow` list on the template's part selectors, so `h.tag` · `h.band` · `h.plate` are unchanged | `html.studio …` rules in the head |
+| lift | the stage type carries a cast shadow (no extrusion — extruded type is word art); small muted lines (`.foot`, `.hero-sub`, bar labels, captions) do not | same |
+| drift | the plate alone is pushed by up to 1% per group (`.studio-cam`, one wrapper per group, `data-ground`); plates and type stay pinned in the zone | injected after `renderSlide()` |
 
 A photo-backed slide (`treatment:"photo-action"`) replaces the plate with the photo and a
 scrim (`h.photo` + `h.scrim`): ink rising from the bottom to 72% at a third of the height
@@ -76,6 +98,12 @@ broadcast.
 Plates come in three tones — `accent` (ink text on accent), `paper` (ink text on paper),
 `panel` (paper text on panel) — and that is the whole colour system of a slide: SBS and
 MBC news run their headline and name plates on exactly two such pairs.
+
+A rendered object (§9) is the one thing on a slide with a colour of its own — fired clay,
+bronze, stone — because that colour is the material of a thing, not a graphic choice; a blue
+clay disc would be a lie. It stays outside the accent rule on one condition: its saturation
+sits below the accent's, so the two never read as one hue (the fixture's clay measures
+R/B 1.84 against the accent's 5.2).
 
 ## 3. Type — broadcast hierarchy
 
@@ -133,10 +161,17 @@ or the strike-through. Bar tracks are `--bar-h` 44px tall.
 - **Structure is plates and rules, not cards.** A plate is a square, single-colour band
   or panel that sits flush on the grid: the tag behind the kicker, the accent band under a
   verdict, the panel cells of an evidence grid. What it never has is a rounded corner, a
-  border, a drop shadow or a translucent glass fill — those four are what a slide deck and
-  an AI front end look like, and the line between a broadcast plate and a generated card
-  is exactly those four properties (`check-slide.js` blocks the shadow, the glass and a
-  radius past 8px).
+  border, a translucent glass fill or a **floating** shadow — a wide soft shadow with no
+  contact shadow under it, the card hovering over the page. Those are what a slide deck and
+  an AI front end look like. The studio slab (§1) is the opposite thing: a lit edge, a hard
+  thickness, a short dark shadow where it touches the wall, and only then a spread — a thing
+  standing on a set, not a card floating over one. That material lives in the template head
+  and nowhere else; `check-slide.js` blocks a shadow, a glass fill and a radius past 8px in
+  the authored region and in any head rule outside the template's `html.studio` set.
+- **A source line may take the corner.** When the vertical budget is spent — an object slot
+  and a hero on one slide — `h.foot(0, …, { corner: true })` sits the source at the zone's
+  top-right instead of the bottom of the flow. Still group 0, still small and muted; in the
+  flow it overflowed the zone by 58 px on the object fixture.
 - **The spine.** `h.stage("spine")` stands a 6px accent bar at the left of the zone for
   the height of the content — the edge bar every news graphic carries. Use it on diagram
   and evidence slides; a stat poster and a kinetic screen do without.
@@ -235,6 +270,16 @@ Rules:
   evidence rows the narration has moved past; keep the base (group 0) and the conclusion
   bright. A no-parameter browser preview shows even the last group dimmed — a state the
   finished video never shows.
+- **A rendered object is a sustain element** (§9). Its frames for a group spread over the
+  whole segment — a disc turns to face the camera while the sentence runs, stamps press in
+  while the number counts — and the frame at any (g, t) is one index. The step rate follows
+  from the frame count: 27 frames under a 5 s sentence is 5.4 steps a second at 0.3° a step.
+- **The stage may drift; nothing else may.** The studio's cyclorama is pushed by at most 1%
+  per group — for the length of that group's clip, so no movement crosses a cut — behind
+  pinned plates and type — the parallax that separates a set from a wall.
+  That is the one ambient movement on a slide, it is the ground's, and it never counts as a
+  group's motion (`data-ground`): a group where only the stage moves is still an empty group
+  to the renderer.
 - **Movement encodes the value.** A count-up says "this many"; a bar growing to 81% says
   "this much of that"; an actor sitting, a stem drawing, or a press landing says how
   the mechanism works.
@@ -304,6 +349,11 @@ screen still has to put its number on screen legibly.
     the sheet: `g<k>-mid` and `g<k>-end` showing the same picture across two or more groups is
     this P0
 
+12. **A rendered object that does not do what the sentence says** — the object turns or
+    recedes while the narration states a count, the stamp count on the frame disagrees with
+    `labels` (the bake is the copy), the object holds one frame across two groups' `g<k>-mid`
+    frames, or its ink (the sidecar's `ink` box — disc plus shadow penumbra) crosses the zone
+
 **P0-F — a near-empty frame.** The renderer's `zone_fill_pct` reports the painted content
 under 40% of the zone on either axis, on a slide with no full-bleed raster. The frame
 reads as unfinished, whatever the craft of what little is there — the renderer summary is
@@ -324,11 +374,14 @@ verdict, and horizontal spread stays a judgement made by eye.
   from them, `.hot` used at most once 10
 - **Nothing reads as generated (25)** — score 25 and subtract 5 per marker found, floor 0:
   gradient or glow on text · rounded cards, bordered or translucent panels, a 3-column
-  card grid · drop shadows or glassmorphism · emoji, icon rows, decorative particles or
+  card grid · a floating shadow (a spread with no contact shadow — the studio slab's lit
+  edge, thickness and contact shadow are the broadcast material, not this marker) or
+  glassmorphism · emoji, icon rows, decorative particles or
   blobs · every element entering at the same instant or with the same effect · a second
   accent or a rainbow of bar colours · decorative numbering on non-sequential content ·
   centred-everything with no read order · a flat ground with type floating in it (the
-  plate missing — a slide not built from the template)
+  plate missing — a slide not built from the template) · a rendered object that is a
+  vector illustration — flat fills with an outline, no material, no shadow on the wall
 - **Motion carries meaning (25)** — each group moves one thing and that thing is what the
   segment says; a plate-then-text or the opening chain counts as one 10 / durations
   inside the tokens and the 2.6s entrance cap, the decelerate curve, no overshoot on a
@@ -429,7 +482,10 @@ Rules:
   exception with a reason, sits inside the zone, and is in `labels`.
 - **One colour, one stroke.** `THEME.accent`, `--mark-w`, round caps and joins, `.94` opacity.
   No second colour, no fill but the dot, no glow, no shadow, no gradient — the generated-look
-  markers of every slide apply here too.
+  markers of every slide apply here too. The material is per treatment: on footage the stroke
+  is flat, because a shadow on a photographed ground reads as a sticker; on a studio slide
+  (§1) the same helpers draw a tapering pen stroke (`pen:true`) with a cast shadow from the
+  head CSS, because there the ground is a set and a flat stroke reads as a marker on glass.
 - **Write-on, not fade.** Every mark is drawn (`stroke-dashoffset`) or pops; nothing fades in.
   A stroke takes `--mark-draw` (700ms); the arrowhead and the second stroke of an X follow at
   `--mark-lead`; hatching staggers at `--mark-stagger`. The whole mark is complete inside 1.5s so
@@ -548,3 +604,43 @@ rules keep the scene from becoming a mascot show or a row of labelled boxes.
 **What the axes look at here** — nothing-reads-as-generated adds the mascot markers (a face, a
 fill colour, a second figure, an idle bob); motion-carries-meaning asks whether the chosen action
 is the one the sentence calls for, not merely that something moved.
+
+## 9. Rendered object — a thing that is a render
+
+The lane is `kind:"diagram", treatment:"editorial"` with `slide.object`
+(scenes-schema §slide scenes, procedure in `rendered-object.md`). Everything in §1–§6 holds;
+what changes is that one element on the slide is a raster that was **rendered, not drawn**:
+`bake-object.py` shoots rays at a signed-distance shape under one point light — soft shadows,
+self-shadowed surface detail, a fired-clay grain, a hand-made rim — and writes every frame of
+the object's movement into one PNG sheet. The slide plays it back by moving
+`background-position`, and the frame at any (group, time) is one number.
+
+- **The object is the sentence's value.** Its keys change state where the narration does — a
+  disc lying back rises to face the camera; 45 stamps press in from the rim while 45 counts;
+  the spiral fills to 241 while 241 counts; the disc recedes under the question. The count in
+  the bake is the count in `labels`. A turn that only shows the object off is the decoration
+  §5 forbids.
+- **One material, one light.** The object's colour is the material's (§2) and its light is
+  the studio's key light, top-left, the same one the slabs' edges and shadows answer to. That
+  shared direction is what makes a CSS plate and a rendered object read as one scene; the
+  wall shadow is baked as alpha only so it lies on the cyclorama without any floor perspective
+  to match.
+- **Two layers, split on purpose.** Type and plates stay CSS — crisp, re-authored per episode
+  for free. Only the object is a render. A broadcast set builds its 3D element and its name
+  plate separately for the same reason.
+- **Generic shapes only.** A disc, a tablet, a coin, a block. A specific artefact or a person
+  is the footage lane (§6.2). One shape ships (`disc`); a second is one SDF function.
+- **Placement is measured, not eyeballed.** The sidecar's `ink` box includes the shadow's
+  wall shadow, which reaches 226 px past the rim while the disc is reclined; `check-slide.js`
+  holds it inside the zone.
+
+**P0, added for this lane** — P0-12 above: the object moving against the sentence, a frame
+count that contradicts `labels`, a frozen object across groups, or ink across the zone.
+
+**What the axes look at here** — design craft reads whether the object sits in the composition
+(the value card in front of its rim, the hero below it, the read order still top-left first)
+and whether the studio ground's horizon stays below the zone; nothing-reads-as-generated adds
+the vector-illustration tell (flat fills, an outline, no wall shadow) and the plastic tell (a
+surface with no grain); motion-carries-meaning compares `g<k>-mid` with `g<k>-end` on the
+object itself — stamps landed, angle changed — against the sentence; legibility is unchanged,
+with the object's shadow never under text.
