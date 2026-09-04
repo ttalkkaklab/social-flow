@@ -418,8 +418,10 @@ function checkDir(dir, only, opts) {
         /* 재질 — 셀렉터가 전부 html.studio 로 시작하는 규칙 블록만 빼고 본다. 목록에 다른 셀렉터를
            하나라도 끼우면 그 블록은 검사 대상이다(리뷰 실측 우회). render 함수가 없으면 파일 전체다. */
         const GEN = /background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text|\bbox-shadow\s*:|\btext-shadow\s*:|\bbackdrop-filter\s*:|\bfilter\s*:\s*(?:drop-shadow|blur)\s*\(/i;
-        const noMat = t => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/<\/?style[^>]*>/g, "")
-          .replace(/([^{}]+)\{[^{}]*\}/g, (m, sel) => sel.replace(/^[\s\S]*;/, "").split(",").every(s => /^\s*html(?:\.[\w-]+)*\.studio(?![\w-])/.test(s)) ? "" : m);   // 셀렉터는 마지막 ; 뒤부터(앞의 JS·HTML 은 셀렉터가 아니다)
+        /* 규칙은 <style> 안에서만 센다 — 블록 밖의 doctype·head·JS 가 첫 규칙의 셀렉터에 붙지 않게(리뷰 실측). */
+        const noMat = t => t.replace(/<style[^>]*>([\s\S]*?)<\/style>/g, (m, css) => "<style>" +
+          css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/([^{}]+)\{[^{}]*\}/g, (r, sel) =>
+            sel.replace(/^[\s\S]*;/, "").split(",").every(s => /^\s*html(?:\.[\w-]+)*\.studio(?![\w-])/.test(s)) ? "" : r) + "</style>");
         if (start >= 0 ? (GEN.test(authored) || GEN.test(noMat(headCss))) : GEN.test(noMat(code)))
           fail(base, MSG.generatedStyle);
       }
@@ -660,6 +662,8 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.card, html.studio .band{box-shadow:0 24px 60px rgba(0,0,0,.5)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [MSG.generatedStyle]],
     // html.wide.studio 처럼 다른 클래스가 앞서도 스튜디오 규칙이다
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.wide.studio .band{box-shadow:0 2px 0 #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
+    // 파일 첫 규칙이 스튜디오 규칙이어도 면제다 — 앞의 doctype·head 가 셀렉터에 붙지 않는다(리뷰 실측)
+    ["s2-motion.html", `<!doctype html><html><head><meta charset="utf-8"><style>html.studio .band{box-shadow:0 2px 0 #000}</style> const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return h.count(1, 3); }`, []],
     // 규칙 앞의 CSS 주석은 셀렉터가 아니다
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>/* 재질 */ html.studio .band{box-shadow:0 2px 0 #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
   ];

@@ -330,14 +330,16 @@ def parse_frames(s):
     out = {}
     for tok in s.split():
         g, n = tok.split(":")
+        if int(g) in out:
+            sys.exit(f"--frames 에 그룹 {g} 가 두 번 있다")
         out[int(g)] = int(n)
     return out
 
 def timeline(keys, frames):
     """(각도, 기울기, 자국 수) 프레임 목록과 그룹별 구간. 각도·기울기는 smoothstep, 자국 수는 선형."""
     groups = sorted(frames)
-    if groups != list(range(1, len(groups) + 1)):
-        sys.exit(f"--frames 의 그룹 번호는 1부터 빈틈없이 이어져야 한다: {groups} — 런타임이 사이드카의 번호를 그룹 수로 센다")
+    if groups[0] < 1:
+        sys.exit(f"--frames 의 그룹 번호는 1 이상이다: {groups}")   # 상한은 check-scenes 가 나레이션 수로 본다 — 첫 구간 전·구간 사이 그룹은 런타임이 첫/직전 프레임으로 세운다
     if any(frames[g] < 1 for g in groups):
         sys.exit("--frames 의 프레임 수는 1 이상이다")
     if len(keys) != len(groups) + 1:
