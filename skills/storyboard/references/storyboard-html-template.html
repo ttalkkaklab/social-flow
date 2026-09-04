@@ -1076,7 +1076,7 @@ window.SB_DOC = {
 
       // ── cost ──
       costHead: "Generation cost", costAsOf: function (d) { return "as of " + d; },
-      costSum: "approving spends", costSpent: "Already spent", costImages: "of that, images",
+      costSum: "approving spends", costSpent: "Already spent", costStills: "of that, stills and slide arts",
       costForecast: "Approving spends", costSlots: "Generated-video slots",
       motionBg: "motion background", speechClipRow: "speech clip",
       costNone: "No generated-video slots — approving spends nothing more on video.",
@@ -1313,7 +1313,7 @@ window.SB_DOC = {
 
       // ── cost ──
       costHead: "생성 비용", costAsOf: function (d) { return "기준 " + d; },
-      costSum: "승인하면", costSpent: "이미 나간 돈", costImages: "그중 이미지",
+      costSum: "승인하면", costSpent: "이미 나간 돈", costStills: "그중 스틸·슬라이드 그림",
       costForecast: "승인하면 나갈 돈", costSlots: "생성 영상 슬롯",
       motionBg: "모션 배경", speechClipRow: "대사 클립",
       costNone: "생성 영상 슬롯이 없어요 — 영상 생성에 더 나갈 돈은 없습니다.",
@@ -1987,13 +1987,13 @@ window.SB_DOC = {
       chips.push(badge("", narr.length ? (window.VOICE === "user" ? T.linesToSpeak : T.narrationOver) : T.speaksLive));
     } else if (s.type !== "broll" && s.type !== "outro") {
       /* Slide-scene contract (scenes-schema §slide scenes) — the filename, the plan and the
-         motion:true marker are what get approved; the file is built at §5.6 before approval.
+         motion:true marker are what get approved; produce §3.6 builds the file after approval.
          Coexisting with bg is a contradiction (there is only one screen). */
       var sl = s.visual && s.visual.slide;
       if (sl) {
         chips.push(badge("", T.slide));
         /* 저작 화면의 갈래 (scenes-schema §the authored-screen lane). 파일이 아직 없는
-           승인 전에도 볼 수 있는 것은 scenes.js 쪽 계약뿐이다 — check-slide.js 는 §5.6 에서
+           승인 시점에 볼 수 있는 것은 scenes.js 쪽 계약뿐이다 — check-slide.js 는 produce §3.6 에서
            파일을 보고 같은 것을 다시 본다. */
         var KINDS = ["diagram", "kinetic", "character"];
         var ACT_NAMES = ["enter", "point", "nod", "shrug", "think", "wave", "cheer"];
@@ -3093,9 +3093,9 @@ window.SB_DOC = {
          '<span class="sum">' + esc(T.costSum) + " <b>" + money((Number(COST.spentUsd) || 0) + (Number(COST.forecastUsd) || 0)) +
          "</b></span></div>";
     h += '<div class="cost-split">' +
-         "<div><dt>" + esc(T.costSpent) + "</dt><div class='amt'>" + money(COST.spentUsd) + "</div>" +
-         "<dt>" + esc(T.costImages) + "</dt><div>" + money(COST.imagesUsd) + "</div></div>" +
+         "<div><dt>" + esc(T.costSpent) + "</dt><div class='amt'>" + money(COST.spentUsd) + "</div></div>" +
          "<div><dt>" + esc(T.costForecast) + "</dt><div class='amt'>" + money(COST.forecastUsd) + "</div>" +
+         "<dt>" + esc(T.costStills) + "</dt><div>" + money(COST.stillsUsd) + "</div>" +
          "<dt>" + esc(T.costSlots) + "</dt><div>" + esc(T.slotsN(Number(COST.slots) || 0)) + "</div></div></div>";
     if (slotRows.length) {
       h += '<ul class="cost-rows">' + slotRows.map(function (r) {
@@ -3400,7 +3400,7 @@ window.SB_DOC = {
           meta += '<details class="prompt"><summary>' + esc(T.promptBg) + "</summary><p>" + esc(vis.bgPrompt) + "</p></details>";
         if (vis.slide) {
           meta += '<div class="row"><b>' + esc(T.metaSlide) + '</b><div class="v"><code>' + esc(vis.slide.file || "?") +
-               "</code> — authored in §5.6 before approval" +
+               "</code> — authored in produce §3.6" +
                (vis.slide.kind && vis.slide.kind !== "diagram" ? " · " + esc(vis.slide.kind) : "") +
                (vis.slide.acts && vis.slide.acts.length ? " · " + esc(vis.slide.acts.join(" → ")) : "") +
                "</div></div>";

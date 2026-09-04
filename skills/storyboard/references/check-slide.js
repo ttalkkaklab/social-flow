@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 슬라이드 파일 기계 검사 — storyboard §5.6 자가 검증용.
+ * 슬라이드 파일 기계 검사 — produce §3.6 자가 검증용.
  *
  *   node check-slide.js <storyboard 디렉토리>            # slides/ 전부
  *   node check-slide.js <storyboard 디렉토리> s12-*.html # 한 장만
@@ -132,7 +132,7 @@ function checkDir(dir, only, opts) {
   let files = only.slice();
   if (!files.length && fs.existsSync(slidesDir))
     files = fs.readdirSync(slidesDir).filter(f => f.endsWith(".html"));
-  // slides/ 가 아직 없는 것은 오류가 아니다 — §5.6 전 호출이면 미저작 목록만 보고한다.
+  // slides/ 가 아직 없는 것은 오류가 아니다 — produce §3.6 전 호출이면 미저작 목록만 보고한다.
 
   let bad = 0;
   const fail = (f, msg) => { console.error(`✗ ${f}: ${msg}`); bad++; };
@@ -261,8 +261,8 @@ function checkDir(dir, only, opts) {
       });
     }
 
-    // slide.arts — generated stills that move on the slide. File must exist by the §5.6
-    // check (generation happens before this). Principle sits them with h.fig; kinetic with h.art.
+    // slide.arts — generated stills that move on the slide. File must exist by the produce
+    // §3.6 check (generation happens before this). Principle sits them with h.fig; kinetic with h.art.
     if (Array.isArray(slide && slide.arts)) {
       const startFn = kind === "kinetic" ? /function\s+renderKinetic\s*\(/ :
         kind === "character" ? /function\s+renderCharacter\s*\(/ : /function\s+renderSlide\s*\(/;

@@ -5,7 +5,7 @@ description: >
   motion slide, a kinetic-type screen, or a character-act screen (the `--sheet`
   frames render-motion-slide.mjs writes). Called on request only since 0.50.0 — the
   flow admits a slide on check-slide.js and the author's own read of the sheet
-  (storyboard §5.6), so nothing delegates here by default — it hunts for
+  (produce §3.6), so nothing delegates here by default — it hunts for
   P0 defects (text outside the zone, on-screen words absent from scenes.js, a
   figure that contradicts the research, gradient text or a second accent, tofu
   glyphs, text under its role's size or a line thinner than the format's stroke tokens, decorative motion
@@ -29,7 +29,7 @@ description: >
   file the delegator names.
 
   <example>
-  Context: the storyboard skill delegates a §5.6 convergence-loop iteration.
+  Context: the produce skill delegates a §3.6 convergence-loop iteration.
   user: "Evaluate the motion slide slides/s5-gear-ratio.html — sheet frames in .work/slide-check/s5/sheet/, scenes.js, profile.md and slide-design.md paths are …"
   assistant: "I'll run the slide-reviewer agent to collect P0 findings and the score."
   <commentary>A motion-slide convergence-loop evaluation request, so use slide-reviewer.</commentary>

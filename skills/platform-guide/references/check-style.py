@@ -481,6 +481,61 @@ PATTERNS: list[Pattern] = [
                 r"|구독과?\s*좋아요|좋아요\s*눌러|구독\s*눌러"
                 r"|알림\s*설정|많은\s*관심\s*부탁)"), 0,
      "Get to the point. The outro handles channel identity"),
+
+    # --- Eye level E ---------------------------------------------------------
+    # The floor these three rules hold is the National Institute of Korean Language's
+    # vocabulary grading (2022년 국어 기초 어휘 선정 및 어휘 등급화 연구, 표 6): grade 1
+    # is the pre-school vocabulary (age 4~6, 5,000 words cumulative), grade 2 is 초1~2
+    # (age 7~8, 7,500), grade 3 is 초3~4 (age 9~10, 13,000). **The target is grade 3** —
+    # what a 9~10-year-old already has without being taught. Above it a word isn't
+    # banned; it has to arrive with the plain wording beside it
+    # (`window.COMPREHENSION.terms`, scenes-schema).
+    #
+    # **Why these are lists and not a readability score.** KReaD and the other Korean
+    # readability indices score a text against a graded 28,000~40,000-word lexicon, and
+    # both halves are out of reach here: matching a graded lexicon needs a morphological
+    # analyzer (this checker is stdlib-only, and Korean eojeol carry particles and
+    # inflection), and the lists themselves are licensed. What survives that constraint
+    # is the direction the grading agrees on anyway — the words that have an everyday
+    # replacement. So E is curated, small, and says what to write instead.
+    #
+    # **E1·E2 reject, E3 warns.** E1 and E2 are document-register words with a plain
+    # equivalent in every context they appear in, and 0 false positives over the 44-episode
+    # narration library (measured 2026-09-04, 31,494 chars: zero hits — outgoing narration
+    # is already clean, so these are a floor, not a cleanup). E3 words are ones a news
+    # anchor says naturally, so context can carry them and the verdict is a warning.
+    #
+    # Every entry is anchored at an eojeol start `(?<![가-힣])` and most also pin the
+    # ending — without it "이야기" ate 야기, "내용이" ate 용이, "저해상도" ate 저해, and
+    # "이상이" ate 상이 (all four measured on the library before the guards went in).
+    # **첨부 is deliberately absent from E2.** "자료를 첨부했습니다" is how people talk about
+    # mail attachments, and it sits in the existing false-positive fixture for the T rules —
+    # adding it turned that fixture red. A word that everyday speech already owns is not a
+    # form-register word, whatever its origin.
+    # **명일 came out of E1 the same way** — the library's "스물아홉 명일 땐" (the counter 명
+    # plus the copula) was the only shape it matched in 132 surface checks, and a word
+    # nobody writes any more is not worth a false positive on a number.
+    ("E1", "S1", "form-register noun above the 3rd-grade floor",
+     re.compile(r"(?<![가-힣])(소정의|익일|익월|금번|잔여|유무|여부|추후|필히"
+                r"|하기(?=와\s*같))"), 0,
+     "Say it the way a 10-year-old would — 여부 → ~인지 아닌지 · 익일 → 다음 날 · "
+     "소정의 → 정해진 · 잔여 → 남은"),
+    # `TAIL` is the conjugation the Sino-Korean stem takes when it works as a verb or an
+    # adjective — 하/되 plus their inflections. Pinning it is what keeps the stems from
+    # eating ordinary nouns that merely start with the same two syllables.
+    ("E2", "S1", "form-register verb above the 3rd-grade floor",
+     re.compile(r"(?<![가-힣])(기입|기재|지참|구비|회신|송부|수령|이행|준수|경유|산정"
+                r"|감안|제고|강구|시정|누락|미비|위배|부과|징수|납부|환급|감면|반려"
+                r"|소요)(?=하|한|할|합|해|했|함|되|된|될|됩|돼|됐|시)"), 0,
+     "Use the everyday verb — 기입하다 → 적다 · 지참하다 → 가져오다 · 소요된다 → 걸린다 · "
+     "납부하다 → 내다"),
+    ("E3", "S2", "news-register Sino-Korean word above the 3rd-grade floor",
+     re.compile(r"(?<![가-힣])((초래|야기|수반|저해|촉진|증진|확충|개시|직면|봉착|표명"
+                r"|언급|지칭|상회|하회|촉발|기인|전락|상존|도모|모색|용이|미미|지대|전무"
+                r"|현저)(?=하|한|할|합|해|했|함|되|된|될|됩|돼|됐|시|히)"
+                r"|불가피|상당수|막대(?=한\s|하다|합))"), 0,
+     "Use the plain verb — 초래하다 → 불러오다 · 언급하다 → 말하다 · 용이하다 → 쉽다 · "
+     "직면하다 → 마주하다"),
 ]
 
 # A conjunctive adverb followed by a comma is fine ("하지만, ~"). "하지만" that the C1
@@ -1422,6 +1477,24 @@ SELFTEST = [
      "그런 셈이라고 치고 넘어가요.\n", (), ("D10d",)),
     ("D10 stays off on fragment surfaces", "screen", 0,
      "해냈을 리 없다는 것\n결과는 정반대\n", (), ("D10", "D10b")),
+
+    # --- eye level E --------------------------------------------------------
+    # Document register on a surface a child is listening to.
+    ("E1·E2 form register is rejected", "narration", 2,
+     "서류에 이름을 기입해 주세요.\n제출 여부를 먼저 봅니다.\n"
+     "요금은 익일 납부하면 됩니다.\n남은 잔여 좌석은 셋입니다.\n", ("E1", "E2")),
+    # E3 warns instead of rejecting — three of them is what it takes to drop under 85.
+    ("E3 news register warns", "narration", 1,
+     "이 조치가 혼란을 초래했어요.\n전문가도 위험을 언급했어요.\n"
+     "고치기가 용이하지 않아요.\n", ("E3",)),
+    # The eojeol-start guard and the pinned endings, as fixtures. Every one of these
+    # was a real false positive before the guards: 이야기→야기, 내용이→용이,
+    # 저해상도→저해, 막대기→막대, 수령(나무 나이)→수령, 경유(연료)→경유.
+    ("E rules don't fire inside ordinary words", "narration", 0,
+     "이야기를 하나 들려줄게요.\n내용이 조금 길어요.\n"
+     "저해상도 사진만 남았어요.\n막대기를 하나 주웠어요.\n"
+     "수령이 백 년 넘은 나무예요.\n경유를 가득 넣었어요.\n",
+     (), ("E1", "E2", "E3")),
 ]
 
 

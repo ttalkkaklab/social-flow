@@ -240,7 +240,8 @@ the mood, the exclusions (`--exclude` — the image tools have no exclusion argu
 noun list rides in the body) and the fill-the-frame tail (owner 2026-08-25 — no
 letterbox or lower-third fade). On a still with nobody in it,
 `--no-person` swaps the size ladder's body words ("full body", "chest up") for the subject's.
-storyboard §5 runs it before the generation call and stores the full stdout as `bgPrompt`.
+storyboard §5 runs it when the plan is written and stores the full stdout as `bgPrompt`;
+produce sends that string to the engine unchanged.
 Hand-written prefixes that fight the fields are a camera-mode finding.
 
 Rules:
@@ -474,17 +475,19 @@ what the audience is supposed to get.
     episode writes the same `space.layout` base and the same `light` sentence on every shot
     and changes only the subject in front of them; every card carries a move — a motion
     background, or the still lane on a `speed` row above the default, since a hold past one
-    second is what the reference never does; and a visible join is spent from the schema
-    table (scenes-schema §scene transition), not at every cut. Motion on every card costs
+    second is what the reference never does; and every boundary carries the join that says
+    what moved between the two shots (scenes-schema §scene transition). Motion on every card costs
     `visual.video` slots — the storyboard says which cards want one and the user decides
     how many.
-16. **The picture join is a cut; the sound leads.** `[course]` The builder J-cuts spoken
-    cards so the next line starts on the previous last frame — that is the split edit, not
-    a dissolve on every seam. Write `"cut"` only for a smash; spend `dissolve` / `dip` /
-    `iris` / `blur` / `zoom` / `push` / `whip` from scenes-schema §scene transition (one
-    home — do not copy the table here). Seven kinds, and a short still spends at most two.
-    Consecutive stills in one scene change size by two steps or the angle (the 30° rule in
-    §7); a dissolve on a bad picture match is slow *and* jarring. Never on the hook.
+16. **Every boundary is a join, chosen from what happened between the two shots.** `[course]`
+    Write `transition` on every shot after the first, from the ordered table in scenes-schema
+    §scene transition (one home — do not copy the table here): `jcut` when the two shots are
+    one continuous moment, `dissolve` when time or place moved inside one world, `dip` at a
+    distance the story treats as a break, `push` for siblings, `iris` for a find, `blur` for
+    a memory, `zoom` for going in, `whip` for a swerve, `cut` for a smash. Every carry is a
+    split edit — the sound leads and the picture never changes in silence. Consecutive stills
+    in one scene change size by two steps or the angle (the 30° rule in §7); a join never
+    stands in for a picture match.
 
 ---
 
