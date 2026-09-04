@@ -5,8 +5,8 @@
 &nbsp;·&nbsp; Docs: [English](docs/index.en.html) · [한국어](docs/index.html)
 
 A Claude Code plugin that runs a channel-based short-form/long-form content pipeline —
-**storyboard (with generated images) → per-platform video & text production → HITL-approved
-publishing** — over a `data/[channel]/episodes/[topic]/` directory tree.
+**storyboard (plan only — nothing is generated) → per-platform video & text production →
+HITL-approved publishing** — over a `data/[channel]/episodes/[topic]/` directory tree.
 
 A **channel** is one content brand you operate: one `data/` directory per channel, with
 tone, voice, theme, and publish targets pinned in `profile.md`. Publish targets:
@@ -140,7 +140,12 @@ Exact variable names, defaults, and file conventions:
 ### What costs money, and what doesn't
 
 Generation is metered by the vendor unless it runs on your own machine. Four
-capabilities, four different answers:
+capabilities, four different answers.
+
+**None of it happens before you approve the storyboard.** The storyboard skill plans every
+still, slide art and clip — prompt, engine, price — and generates nothing; `produce` makes the
+calls after approval. So a plan you send back or drop costs $0, and the approval screen shows
+the whole projection rather than a bill that has already partly arrived.
 
 | Capability | Free / on-device | Paid | Costs money unless… |
 |---|---|---|---|
@@ -235,7 +240,7 @@ the plugin with the flag above.
 /social-flow:intro my-channel              # 1.3 (optional) channel intro — 4 concepts HITL → 4s veo render → 90-point convergence (spliced after the episode as a closer)
 /social-flow:setup-threads my-channel      # 1.4 (optional) SNS account setup + API tokens — browser HITL, ego lite first, Chrome fallback (per platform: setup-instagram · setup-youtube)
 /social-flow:ingest my-channel record      # 1.5 (optional) screen+voice recording → timeline — an alternative research source
-/social-flow:storyboard my-channel "July FX swings"   # 2. research → 3 seven-item scenarios [scored to 95] → pick → more research → scenes [narration read alone, to 95] → storyboard → [approval]
+/social-flow:storyboard my-channel "July FX swings"   # 2. research → 3 seven-item scenarios [scored to 95] → pick → more research → scenes [narration read alone, to 95] → [narration approval] → storyboard → [approval] · nothing generated
 /social-flow:produce my-channel 20260729-fx           # 3. video + per-platform text
 /social-flow:publish my-channel 20260729-fx           # 4. [approval] → publish → record permalinks
 /social-flow:grow-threads my-channel init             # 5. (optional) Threads growth plan [approval — standing authorization]
@@ -366,9 +371,9 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap · Chrome lane map)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
-│   ├── storyboard/              # /social-flow:storyboard — research → 3 seven-item scenarios → pick → more research → narration → narration read-through looped to 95 → vocabulary looped to 95 (both inline, ≤3 reads) → the board (author's read + check-scenes.js) → images → approval → slides (check-slide.js + the author's sheet read)
+│   ├── storyboard/              # /social-flow:storyboard — research → 3 seven-item scenarios → pick → more research → narration → narration read-through looped to 95 → vocabulary looped to 95 (both inline, ≤3 reads) → [narration approval] → the board (author's read + check-scenes.js) → the image and clip plan → [approval]. No generation call — produce makes the stills, slides and clips
 │   │   └── references/          #   scenes-schema.md · directing-grammar.md · motion-slide-template.html (studio ground · slab material · rendered object) · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js · footage-lane.md (one clip per sentence, marks over it) · footage-frames.sh · rendered-object.md + bake-object.py (an SDF-raymarched object baked to a frame sheet, numpy + Pillow, ₩0 an episode)
-│   ├── produce/                 # /social-flow:produce — video build + per-platform text
+│   ├── produce/                 # /social-flow:produce — stills (§1.5) → clips → slides (§3.6) → video build + per-platform text
 │   │   └── references/          #   build-reel.sh (SUB_MODE sentence · word · phrase) · speedup.sh (required final pace pass, 1.2 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency; footage slides play a clip per group) · make-matte.py (subject matte → VP9-alpha webm, needs rembg) · QA harness
 │   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → 3 seven-item scenarios [scored to 95 on curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring [narration read alone, to 95] → video (human gates replaced by the machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>끊는 자리부터, 그다음 반 보 — 김은숙 작법 조사 (2026-09)</title>
+<style>
+  :root {
+    --paper:#fcfcfb; --paper-2:#f4f3ef; --card:#ffffff;
+    --ink:#1a1d21; --ink-2:#565c64; --ink-3:#8a9099;
+    --line:#e3e0d9; --line-strong:#c9c5bb;
+    --c-calm:#0f62a8; --c-act:#d2691e; --c-pay:#0e9f6e; --c-low:#b23a3a;
+    --shadow:0 1px 2px rgba(26,29,33,.05), 0 8px 24px rgba(26,29,33,.05);
+    --mono:ui-monospace,"SF Mono",Menlo,"Roboto Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#14161a; --paper-2:#1a1d22; --card:#1c1f24;
+      --ink:#e8eaed; --ink-2:#a2a9b3; --ink-3:#757c86;
+      --line:#2c3037; --line-strong:#3e434b;
+      --c-calm:#2e90e0; --c-act:#e08a3c; --c-pay:#15a06b; --c-low:#e06666;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#14161a; --paper-2:#1a1d22; --card:#1c1f24;
+    --ink:#e8eaed; --ink-2:#a2a9b3; --ink-3:#757c86;
+    --line:#2c3037; --line-strong:#3e434b;
+    --c-calm:#2e90e0; --c-act:#e08a3c; --c-pay:#15a06b; --c-low:#e06666;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+  }
+  *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",-apple-system,sans-serif;
+    background:var(--paper); color:var(--ink); line-height:1.72; font-size:16px; word-break:keep-all;
+    max-width:1000px; margin:0 auto; padding:0 24px 120px; }
+  header.hero { padding:60px 0 36px; }
+  .kicker { display:inline-block; font-size:12px; font-weight:700; letter-spacing:.1em; color:var(--ink-2);
+    border:1px solid var(--line-strong); padding:4px 12px; border-radius:999px; margin-bottom:20px; }
+  h1 { font-size:clamp(28px,4.2vw,44px); line-height:1.24; font-weight:800; letter-spacing:-.025em; }
+  .hero .sub { margin-top:18px; font-size:17.5px; color:var(--ink-2); max-width:60ch; }
+  .headline-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin:36px 0 0; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px 22px; box-shadow:var(--shadow); }
+  .stat-k { font-size:24px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .stat-v { font-size:14.5px; font-weight:600; margin-top:4px; }
+  .stat-n { font-size:13px; color:var(--ink-3); margin-top:6px; line-height:1.5; }
+  section { padding-top:52px; }
+  h2 { font-size:clamp(21px,2.6vw,27px); font-weight:750; letter-spacing:-.02em; line-height:1.34;
+       padding-bottom:12px; border-bottom:2px solid var(--line-strong); margin-bottom:22px; }
+  h3 { font-size:17.5px; font-weight:700; margin:34px 0 10px; }
+  p { margin:14px 0; max-width:74ch; }
+  p.method { font-size:14.5px; color:var(--ink-2); background:var(--paper-2); border-left:3px solid var(--line-strong);
+             padding:14px 18px; border-radius:0 8px 8px 0; max-width:none; }
+  code { font-family:var(--mono); font-size:.88em; background:var(--paper-2); padding:1px 5px; border-radius:4px; }
+  a { color:var(--c-calm); text-decoration:underline; text-underline-offset:2px; }
+  table { border-collapse:collapse; width:100%; margin:18px 0; font-size:14.5px; }
+  th, td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-size:12.5px; color:var(--ink-2); font-weight:700; letter-spacing:.04em; }
+  td.num { font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .wrap { overflow-x:auto; }
+  ul { margin:12px 0 12px 22px; } li { margin:6px 0; max-width:74ch; }
+  .quote { border-left:3px solid var(--c-act); padding:6px 16px; color:var(--ink-2); font-size:15px; margin:14px 0; }
+  .arc { display:grid; grid-template-columns:repeat(9,1fr); gap:6px; margin:18px 0; align-items:end; height:150px; }
+  .arc div { border-radius:6px 6px 0 0; font-size:11.5px; line-height:1.3; padding:6px 4px; color:#fff; text-align:center; display:flex; align-items:flex-end; justify-content:center; }
+  .arc .n { background:var(--c-low); } .arc .p { background:var(--c-pay); }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:14px 0; }
+  .pair div { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; font-size:14.5px; }
+  .pair .k { font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--ink-3); margin-bottom:6px; }
+  @media (max-width:640px) { .pair { grid-template-columns:1fr; } .arc { height:120px; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <span class="kicker">RESEARCH · 2026-09-04</span>
+  <h1>끊는 자리부터, 그다음 반 보 — 김은숙이 20년째 같은 말로 설명하는 작법</h1>
+  <p class="sub">시나리오가 「세련되고 재미있게」 나오게 하는 기준을 찾으려고 김은숙(파리의 연인·시크릿 가든·태양의 후예·도깨비·미스터 션샤인·더 글로리·다 이루어질지니)의 작법 발언을 모았다. 본인이 방법을 직접 말한 자리가 두 번 있고 12년 간격인데 같은 말을 한다. 그 겹치는 부분만 scenario-craft §13 으로 옮겼다. 한국 숏폼에서 이 규칙을 직접 잰 수치는 이 페이지에 없다.</p>
+  <div class="headline-grid">
+    <div class="stat"><div class="stat-k">20개</div><div class="stat-v">먼저 잡는 것은 엔딩 지점</div><div class="stat-n">2011. 「1회부터 20회까지 각 편당 엔딩지점만 잡고, 인상적인 장면 10개 정도만 미리 만들어 놓고 스토리를 만들어요」</div></div>
+    <div class="stat"><div class="stat-k">반 보</div><div class="stat-v">시청자보다 앞서는 거리</div><div class="stat-n">2011 「반 보 더 앞서서」 → 2023 「한보 말고 반보만 신선하게 써라」. 12년 간격, 같은 단위</div></div>
+    <div class="stat"><div class="stat-k">5개</div><div class="stat-v">한 사건에서 적어 보는 행동의 수</div><div class="stat-n">「저는 적어도 다섯 가지 경우의 수를 두고 고민을 하죠」 — 거품 키스는 네 번째 안이었다</div></div>
+    <div class="stat"><div class="stat-k">재미</div><div class="stat-v">의미와 하나만 골라야 할 때</div><div class="stat-n">2011 「한 시간짜리 엔터테인먼트」 → 2023 「단연 드라마는 재미가 먼저다」</div></div>
+  </div>
+</header>
+
+<section>
+  <h2>1. 왜 조사했나</h2>
+  <p>시나리오 단계(scenario-stage)와 크래프트 규칙(scenario-craft §1–§12)은 <b>무엇이 있어야 하는지</b>를 이미 말한다 — 훅에 손실이 있어야 하고, 곡선이 내려갔다 올라와야 하고, 심은 것이 회수돼야 한다. 그런데 그 조건을 다 지켜도 밋밋한 원고가 나온다. 조건을 채우는 것과 <b>재미있게 채우는 것</b>이 다른 일이기 때문이다.</p>
+  <p>김은숙은 그 간극을 두 번 설명했다. 2011년 한국방송작가협회 웹진 『방송작가』 커버 인터뷰(시크릿 가든 종영 직후)와 2023년 씨네21 올해의 작가 인터뷰(더 글로리)다. 두 자리 사이에 12년과 일곱 편이 있는데 핵심 문장이 거의 그대로 반복된다. 그 반복되는 부분만 규칙으로 옮겼고, 한 번만 나온 말은 이 페이지에 기록만 해 뒀다.</p>
+  <p class="method">등급은 저장소 관례를 따른다 — <b>craft canon</b>(이름 있는 실무자·이론가가 밝힌 방법, 측정 없음), <b>measured</b>(발표된 측정), <b>field practice</b>(실무자 보고, 출처 없는 수치). 김은숙 본인 발언은 craft canon, 평론가 읽기는 field practice, 학위·학술 논문은 실제로 무엇을 잰 경우에만 measured 로 뒀다.</p>
+</section>
+
+<section>
+  <h2>2. 끊는 자리를 먼저 잡는다</h2>
+  <p>가장 중요한 문장은 2011년에 나왔다.</p>
+  <div class="quote">저는 1회부터 20회까지 각 편당 엔딩지점만 잡고, 인상적인 장면 10개 정도만 미리 만들어 놓고 스토리를 만들어요.</div>
+  <p>보통은 이야기를 짜고 그 안에서 회차를 자른다. 김은숙은 순서가 반대다. <b>「여기서 끊는다」 20개를 먼저 박아 놓고 그 사이를 채운다.</b> 그래서 각 회의 도입은 이야기의 출발점이 아니라 그 회의 엔딩까지 사람을 끌고 갈 미끼로 설계된다. 2023년에 같은 말을 다르게 한다 — 「일단은 사람을 홀려놓고 나중에 돌이켜보면 어떤 이야기였는지 알아차릴 수 있게끔 써야 한다」.</p>
+  <p>여기에 딸린 것이 「인상적인 장면 10개」다. 20부작 하나에 미리 확정하는 명장면의 수가 10개이고, 나머지는 그 사이를 잇는 재료다. 이야기 전체를 균질하게 짜지 않고 <b>봉우리의 개수를 먼저 정한다</b>는 뜻이다.</p>
+  <p>실제 도입들이 그 방식으로 열린다. 더 글로리 1회의 폭력 수위는 계산된 선택이었다. 「피해자들의 고통을 시청자들이 대리로나마 느끼며 함께 분통해야 이후 이야기가 진행될 수 있었다」, 「폭력의 수위가 높을수록 진입 장벽이 높아진다는 것을 알았기에 감독님과 고민을 많이 했다. 그런데 방송에서 가능한 최대치의 수위로 보여주기로 결정했다」. 진입 장벽을 알면서도 감정 부채를 먼저 쌓는 쪽을 골랐다. 미스터 션샤인 1화는 주인공의 입장을 한 문장으로 못 박고 시작한다 — 「난 조선에서 태어난 건 맞지만, 내 조국은 미국이야. 조선은 단 한 번도 날 가져 본 적이 없거든」. 도깨비 시놉시스는 첫 줄이 대사처럼 쓰여 있다 — 「누구의 인생이건 신이 머물다 가는 순간이 있다」.</p>
+</section>
+
+<section>
+  <h2>3. 반 보 — 상투적인 재료를 한 칸만 옮긴다</h2>
+  <p>재료는 낡은 것을 그대로 쓴다. 시크릿 가든을 두고 본인이 이렇게 말했다.</p>
+  <div class="quote">재벌, 신데렐라, 복수, 기억상실, 사고 혼수상태, 삼각관계, 이복 자매간의 갈등 등. 상투적인 것이란 상투적인 것은 다 들어있어요. 그런데 그 상투적인 것들이 저에게는 다 비트는 재미가 있는 것들로 쓰이는 거죠. <b>상투적인 것에서 살짝만 더 가면 재미있는 지점들이 나와요.</b></div>
+  <p>재벌은 그대로 두고 「책 읽는 재벌」로 한 칸 옮긴 결과가 김주원이다. 옮기는 거리에 단위가 있다. 2011년에 「시청자들이 상상할 수 있는 것보다 <b>반 보</b> 더 앞서서 더 멋있고 더 짠하고 그런 인물들을 상상해요」라고 했고, 2023년에 후배 작가들에게 주는 조언으로 「한보 말고 <b>반보</b>만 신선하게 써라」라고 압축했다. 한 보 앞서면 낯설어서 못 따라오고 안 움직이면 뻔하다.</p>
+  <div class="pair">
+    <div><div class="k">한 보 — 못 따라온다</div>새 세계관, 처음 듣는 용어, 설명이 먼저 필요한 배치. 더 킹의 평행세계가 여기서 무너졌다(정덕현: 「같은 얼굴을 한 다른 세계의 존재들이 뒤섞여 있어 누가 누구인지 헷갈리는 상황」)</div>
+    <div><div class="k">반 보 — 낯익은데 처음 본다</div>재벌은 그대로 두고 책을 읽힌다. 학교폭력 복수극은 그대로 두고 바둑판 위에 올린다. 시청자가 아는 자리에서 한 칸만 옆으로</div>
+  </div>
+  <p>고르는 절차도 말했다. 캐릭터를 뭐라고 보느냐는 질문에 「사건에 부딪혔을 때, 사건을 해결해 나가는 방식」이라고 답했다. 성격도 배경도 아니고 반응 방식이다. 그래서 사건을 먼저 세우고 그 사건에서 인물이 할 수 있는 행동을 <b>최소 다섯 개</b> 적어 놓고 고른다. 시크릿 가든의 거품 키스가 그 예시로 나온다 — 사랑하는 여자 입술에 크림이 묻었을 때 김주원이라면 놀린다, 닦아준다, 모른 척한다, 키스한다. 네 번째를 골랐다.</p>
+  <p>같은 자리에서 나온 또 하나가 <b>「끔찍한 신일수록 깜찍하게 써라」</b>다. 무거운 재료에 무거운 톤을 얹으면 진입 장벽만 올라가니 톤을 반대로 걸라는 것인데, 이것도 반 보의 한 경우다 — 재료를 바꾸지 않고 다루는 태도만 한 칸 옮긴다.</p>
+</section>
+
+<section>
+  <h2>4. 카타르시스의 재료는 처음부터 끝까지 격차다</h2>
+  <p>서강대 학위논문(「김은숙 신데렐라 드라마의 도식적 내러티브 분석」)은 파리의 연인·시크릿 가든·상속자들·도깨비에서 같은 다섯 박자를 뽑아냈다 — <b>고난 → 환상의 사랑 → 희망찬 변모 → 신분의 위기 → 기사도 정신의 해결</b>. 김지혜의 2014년 논문(『문학과 영상』)은 쾌감의 정체를 한 줄로 짚는다. 환상성은 「여주인공의 열악한 환경과 욕망의 간극이 사라질 때」 발생한다.</p>
+  <p>본인은 그것을 신데렐라가 아니라 <b>쌍방 구원</b>이라고 부른다 — 「권력은 가졌지만 다른 것은 갖지 못한 남자주인공이, 가진 것은 없지만 자존심 세고 영리한 여자주인공을 만난다」. 양쪽 다 결핍이 있으니 서로를 구한다는 설계다.</p>
+  <p>더 글로리는 같은 공식에 부호만 뒤집었다. 로맨스가 격차를 사랑으로 지웠다면 여기서는 격차를 계산으로 뒤집는다. 정덕현의 읽기는 「직설적인 폭력보다는 언어의 타격감이 카타르시스를 제공」한다는 것이고, 복수 방식이 상대를 분석해 약점을 파고드는 바둑의 수 싸움을 닮았다고 봤다. 그런데 정작 작가는 이 작품을 판타지라고 부른다.</p>
+  <div class="quote">&lt;더 글로리&gt;야말로 내가 쓴 가장 판타지다. 현실에서 문동은의 위치에 있는 사람들은 절대 가해자들 가까이 갈 수 없기 때문이다.</div>
+  <p>로맨스든 복수든 파는 것은 <b>현실에서 메워지지 않는 격차가 메워지는 장면</b>이라는 뜻이다. 수단만 사랑에서 응징으로 바뀌었다.</p>
+</section>
+
+<section>
+  <h2>5. 결말이 제일 약하고 본인도 그것을 안다</h2>
+  <p>결말은 그의 이력에서 반복해서 문제가 된 지점이다. 세 편이 같은 「용두사미」 지적을 받았다.</p>
+  <div class="wrap"><table>
+    <thead><tr><th>작품</th><th>결말</th><th>무엇이 문제였나</th></tr></thead>
+    <tbody>
+      <tr><td>파리의 연인 (2004)</td><td>모든 이야기가 여주인공이 쓴 소설이었다</td><td>앞의 20회 동안 쌓은 감정을 마지막 회가 취소했다. 본인 회고 — 「그렇게 반발이 심할 줄 몰랐다」</td></tr>
+      <tr><td>시크릿 가든 (2010)</td><td>원래 비극 → 해피엔딩으로 변경</td><td>본인이 바꾼 것을 인정했고, 그 최종회를 2011년에 「20부가 재미없었어요」라고 자평했다. 15부 이후 쪽대본</td></tr>
+      <tr><td>태양의 후예 (2016)</td><td>총상·심정지를 넘기고 살아난다</td><td>개연성 비판 + PPL 논란. 위기를 만들어 놓고 대가 없이 되돌렸다</td></tr>
+      <tr><td>미스터 션샤인 (2018)</td><td>주인공 사망, 첫 새드엔딩</td><td>결말까지 완성도가 좋았다는 평을 처음 받았다. 주제가 마지막 대사 한 줄에 있다 — 「이건 나의 히스토리이자 나의 러브 스토리요」</td></tr>
+    </tbody>
+  </table></div>
+  <p>패턴이 하나 보인다. 실패한 결말은 전부 <b>앞에서 쌓은 것을 뒤에서 취소</b>했다. 소설이었다고 말했다. 죽을 위기를 대가 없이 되돌렸다. 비극으로 설계한 것을 해피로 갈아 끼웠다. 성공한 결말인 미스터 션샤인만 대가를 그대로 치렀다.</p>
+  <p>다른 하나는 본인이 인정한 함정이다. 도깨비 제작발표회에서 「'서사 없이 대사발만 있다'는 지적」을 받아들이며 「'태양의 후예' 12회 대본이 되면서 감독도 같은 지적을 했다. 명백한 제 잘못」이라고 했다. <b>홀리는 힘이 셀수록 서사가 얇아진다</b>는 뜻이고, 그것이 터지는 자리가 결말이다.</p>
+  <p>지금도 통하는지는 확실하지 않다. 2020년 더 킹: 영원의 군주는 11%대로 출발해 6%대까지 내려갔다가 최종회 8.1%로 끝났고, 2025년 다 이루어질지니는 결과가 둘로 쪼개졌다 — 세계일보는 「작품성에 대한 평가는 싸늘하다」고 썼고 한국경제는 리뷰 사이트 최상위 반응으로 「작가의 이름값으로 드라마를 선택하던 시대는 지났다는 걸 증명하는 드라마」를 인용했다. 그런데 같은 작품이 넷플릭스 글로벌 1~2위에 올랐고 네이버 오픈톡 방문자 100만 명을 넘겼다. 작가 본인도 「지금 시대에 맞는 기준이 무엇일까 매일 공부하고 있다」고 말한다.</p>
+</section>
+
+<section>
+  <h2>6. 옮기지 않은 것 — 문어체 대사</h2>
+  <p>김은숙의 지문(指紋)은 대사인데, 그 대사가 왜 일상어와 다른지도 본인이 밝혔다.</p>
+  <div class="quote">전 시, 소설을 쓰면서 오히려 드라마를 극단적으로 오해했기 때문에 대사가 좀 남다르지 않나 싶어요. 저는 드라마는 일반인들이 쓰지 않는 화법을 쓰는 것이라고 생각했거든요. 그래서 좀 문어체적인 그런 대사가 나와요.</div>
+  <p><b>이 부분은 옮기지 않는다. 그런데 기계가 막아 주지도 않는다.</b> 문어체 종결을 잡는 규칙은 korean-style D9 인데 <b>나레이션 표면에서는 꺼져 있다</b> — 스레드·캡션에만 걸리고, 나레이션은 이미 8~25자 스키마에 묶인 대사라는 이유다. 나레이션에서 전면 적용되는 것은 D10 계열(명사형 종결·리빌 상투구·무생물 주어 재정의·대구 재현)이고 그의 문장이 주로 그 모양이다. 나머지 문어체는 그대로 통과한다.</p>
+  <p>이병헌이 「'김은숙의 언어'라는 것이 따로 있구나」라고 느꼈던 낯섦은 16부에 걸쳐 배우 얼굴로 소화되는 조건에서 성립한다. 60초 TTS 나레이션에는 그 조건이 없다. 그래서 이 항목은 검사기가 아니라 <b>사람이 지키는 규칙</b>으로 적어 뒀다.</p>
+  <p>옮길 수 있는 부분은 <b>간격</b>이다. 한 편에 인용될 문장은 하나이고 나머지 문장이 그것을 다시 말하지 않는다는 규칙은 scenario-craft §7 에 이미 있다. 김은숙의 명대사가 힘을 갖는 이유도 문체가 아니라 그 자리를 혼자 쓴다는 데 있다.</p>
+</section>
+
+<section>
+  <h2>7. 플러그인에 옮긴 것</h2>
+  <div class="wrap"><table>
+    <thead><tr><th>옮긴 것</th><th>어디로</th><th>무엇에 붙는가</th></tr></thead>
+    <tbody>
+      <tr><td>끊는 자리를 먼저 잡는다 (20개 엔딩 그리드)</td><td>scenario-craft §13</td><td>드립마다 마지막 문장을 본문보다 먼저 쓴다 — <code>narration</code></td></tr>
+      <tr><td>인상적인 장면 10개</td><td>scenario-craft §13</td><td>4–12컷 숏폼이면 2–3개를 이름 붙여 먼저 정한다 — <code>shot.feel</code></td></tr>
+      <tr><td>경우의 수 다섯 개</td><td>scenario-craft §13</td><td>고르기 전에 적는 절차. 필드 없음</td></tr>
+      <tr><td>반 보</td><td>scenario-craft §13</td><td>다섯 개 중 무엇을 고르는지의 기준</td></tr>
+      <tr><td>끔찍한 신일수록 깜찍하게</td><td>scenario-craft §13</td><td>반 보의 톤 적용 — <code>shot.feel</code></td></tr>
+      <tr><td>대사발 함정</td><td>scenario-craft §13 검사</td><td>인상적인 자리마다 문장 밑에 사건이 있는지 — <code>shot.info</code></td></tr>
+      <tr><td>앞을 취소하는 결말 금지</td><td>storyboard-reviewer 시나리오 모드 P0-14</td><td>마무리·CTA</td></tr>
+      <tr><td>후보 단계 자기 검사 한 줄</td><td>scenario-stage §Score</td><td>전개마다 끊을 문장이 있는지, 연출이 한 칸 옮겨져 있는지</td></tr>
+      <tr><td>문어체 대사</td><td>—</td><td>옮기지 않음. 검사기가 아니라 사람이 지키는 경계로 scenario-craft §13 에 명시. §6 참조</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>8. 출처와 등급</h2>
+  <div class="wrap"><table>
+    <thead><tr><th>출처</th><th>무엇을 주는가</th><th>등급</th></tr></thead>
+    <tbody>
+      <tr><td>『방송작가』 2011년 2월호, 「신데렐라 이야기의 종결자 &lt;시크릿가든&gt; 김은숙 작가」(김주영 책임편집위원) — <code>ktrwawebzine.kr/common/pdf/2011/2011-02.pdf</code></td><td>엔딩 그리드, 인상적인 장면 10개, 경우의 수 다섯, 반 보, 캐릭터 정의, 문어체 대사의 유래, 최종회 자평</td><td>craft canon</td></tr>
+      <tr><td><a href="https://cine21.com/news/view/?mag_id=104078">씨네21 김은숙 인터뷰 ①</a> · <a href="https://cine21.com/news/view/?mag_id=104079">②</a> (2023)</td><td>반보·「끔찍한 신일수록 깜찍하게」·「사람을 홀려놓고」, 재미 우선, 더 글로리 1회 설계, 시크릿 가든 원래 엔딩, 쌍방 구원</td><td>craft canon</td></tr>
+      <tr><td><a href="https://www.joynews24.com/view/992623">조이뉴스24, 도깨비 제작발표회</a> (2016)</td><td>「대사발만 있다」는 지적을 본인이 인정</td><td>craft canon</td></tr>
+      <tr><td><a href="https://www.koreanfilm.or.kr/eng/news/news.jsp?blbdComCd=601006&amp;seq=6033&amp;mode=VIEW">KOFIC 영문 인터뷰</a> (2023)</td><td>시·산문 독서가 대사의 출처라는 진술</td><td>craft canon</td></tr>
+      <tr><td><a href="https://www.khan.co.kr/article/201701171141001">경향신문, 왜 결말에 관심이 쏠리나</a> (2017) — 윤석진·정덕현 인용</td><td>「밀고 당기기」, 「해피엔딩을 쉽게 만들지 않는다」</td><td>field practice</td></tr>
+      <tr><td><a href="https://www.imaeil.com/page/view/2023010409375196889">매일신문 정덕현, 더 글로리</a> (2023)</td><td>바둑 수 싸움, 언어의 타격감</td><td>field practice</td></tr>
+      <tr><td><a href="https://www.seoul.co.kr/news/entertainment/broadcastN/2016/04/18/20160418500298">서울신문, 황당 엔딩 BEST3</a> (2016)</td><td>파리의 연인·시크릿 가든·태양의 후예 결말 반응</td><td>field practice</td></tr>
+      <tr><td><a href="https://www.pdjournal.com/news/articleView.html?idxno=71429">PD저널</a> · <a href="https://www.kmib.co.kr/article/view.asp?arcid=0014688869">국민일보</a>, 더 킹 (2020)</td><td>평행세계 설득 실패. 시청률은 11%대 출발 · 6%대 저점(PD저널) · 최종회 8.1%(국민일보)</td><td>field practice</td></tr>
+      <tr><td>서강대 석사, 「김은숙 신데렐라 드라마의 도식적 내러티브 분석」</td><td>다섯 박자 도식 — 텍스트 읽기이지 측정이 아니다</td><td>craft canon</td></tr>
+      <tr><td>김지혜, 「김은숙 드라마의 스토리텔링이 갖는 환상성 연구」, 『문학과 영상』(2014)</td><td>환상성 = 환경과 욕망의 간극이 사라지는 지점</td><td>craft canon</td></tr>
+      <tr><td>경희대 석사, 「김은숙 드라마의 여성 캐릭터 특징 연구」(2024)</td><td>프로프 31기능으로 본 신데렐라 캐릭터 변용</td><td>craft canon</td></tr>
+      <tr><td><a href="https://www.segye.com/newsView/20251013513118">세계일보</a> · <a href="https://www.hankyung.com/article/202510100362g">한국경제</a> · <a href="https://biz.heraldcorp.com/article/10591643">헤럴드경제</a>, 다 이루어질지니 (2025)</td><td>혹평과 흥행이 같이 나온 최신 사례</td><td>field practice</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>9. 한계</h2>
+  <ul>
+    <li><b>표면이 다르다.</b> 이 방법은 16~24부작 TV 멜로드라마에서 잡힌 것이다. 회차가 20개 있어야 엔딩 그리드가 20개이고, 다음 주가 있어야 「홀려놓고 나중에 알아차리게」가 성립한다. 우리 숏폼은 60초에 컷이 4~12개이고 다음 편이 없으므로, 그리드는 드립 수만큼으로 줄고 「나중에」는 같은 영상 안이다.</li>
+    <li><b>반 보에 측정이 없다.</b> 12년 간격으로 같은 말을 했다는 사실이 근거의 전부다. A/B 도 없고 우리 채널 수치도 없다. 처음 적용하는 편의 유지율을 이후 편과 대조해 보는 것이 지금 할 수 있는 유일한 검증이다.</li>
+    <li><b>본인 발언은 회고다.</b> 성공한 다음에 돌아보며 정리한 방법이라 실제 집필 순서와 다를 수 있다. 다만 2011년 발언은 시크릿 가든이 「20부가 재미없었다」고 스스로 판단한 시점에 나온 것이라 자기 미화 쪽으로만 기울어 있지는 않다.</li>
+    <li><b>결말 규칙은 실패에서 뽑았다.</b> 「앞을 취소하지 않는다」는 성공작 하나(미스터 션샤인)와 실패작 셋의 대조에서 나온 것이고, 넷 다 같은 작가의 작품이다. 다른 작가에게도 성립하는지는 이 조사가 말하지 않는다.</li>
+    <li><b>다 이루어질지니의 결과가 아직 정리되지 않았다.</b> 혹평과 글로벌 1위가 같이 나왔고, 어느 쪽이 이 방법의 현재 상태인지는 이 페이지가 판단하지 않는다.</li>
+  </ul>
+</section>
+</body>
+</html>

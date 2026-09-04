@@ -112,6 +112,24 @@ const ROUTES = {
   'footage/veo': {
     key: 'veo.lite.1080p', fixedSeconds: 8,
     why: 'veo_img2video · lite — a footage slide clip on the no-ARK_API_KEY route · 1080p is 8s-only'
+  },
+  /* Stills moved behind the approval gate on 2026-09-04 (owner directive — a plan the user
+     rejects must cost nothing), so they are a projection now, not a ledger line. The engine
+     split is storyboard §5's: the cover carries the thumbnail and feeds the video engines, so
+     it is gpt high; every other still is local Z-Image at $0. A still that has to contain text
+     also goes to gpt — rare, and the forecast is under by $0.22 when it happens, which the
+     §7 screen says out loud rather than hiding. */
+  'still/gpt': {
+    key: 'image.gpt-image-2.high', fixedQty: 1,
+    why: 'gpt_image_text2img high — the cover is the thumbnail and the video engines\' source'
+  },
+  'still/local': {
+    key: 'image.local', fixedQty: 1,
+    why: 'image_local_generate — local Z-Image, $0'
+  },
+  'art/local': {
+    key: 'image.local', fixedQty: 1,
+    why: 'image_local_generate — a slide art plate, $0'
   }
 };
 
@@ -172,6 +190,37 @@ function videoSlots(scenes) {
   return slots;
 }
 
+/**
+ * The episode's still slots, in shot order — the images produce §1.5 and §3.6 will generate.
+ *
+ * A scene needs a still exactly when it carries a `bgPrompt` (a slide scene has none — its
+ * screen is HTML; a filmed scene has none — the screen is the recording). Slide art plates
+ * are counted separately off `slide.arts`. Deliberately kept out of costFingerprint: the
+ * fingerprint tracks the video slots the check strip warns about, and it is duplicated into
+ * storyboard-html-template.html, where a still count would go stale for $0.
+ */
+function stillSlots(scenes) {
+  const slots = [];
+  scenes.forEach((shot, i) => {
+    const s = shot || {};
+    const v = s.visual || {};
+    const shotNo = i + 1;
+    if (v.bgPrompt) {
+      const engine = s.type === 'cover' ? 'gpt' : 'local';
+      slots.push({ shot: shotNo, kind: 'still', engine, duration: 0,
+                   label: (s.type === 'cover' ? 'cover background' : 'scene still') });
+    }
+    const sl = v.slide;
+    if (sl && Array.isArray(sl.arts)) {
+      sl.arts.forEach((art, j) => {
+        slots.push({ shot: shotNo, kind: 'art', engine: 'local', duration: 0,
+                     label: 'slide art ' + ((art && art.file) || j + 1) });
+      });
+    }
+  });
+  return slots;
+}
+
 /* ── DRIFT GUARD ───────────────────────────────────────────────────────────
    storyboard-html-template.html carries costFingerprint verbatim so the check strip can
    recompute it from the live SCENES and compare it against the SB_DOC.cost snapshot.
@@ -202,7 +251,8 @@ function costFingerprint(scenes) {
 function forecastRows(slots) {
   return slots.map((slot) => {
     const route = ROUTES[slot.kind + '/' + slot.engine];
-    const qty = route.fixedSeconds !== undefined ? route.fixedSeconds : slot.duration;
+    const qty = route.fixedQty !== undefined ? route.fixedQty
+      : route.fixedSeconds !== undefined ? route.fixedSeconds : slot.duration;
     return {
       key: route.key,
       qty,
@@ -393,6 +443,26 @@ function selftest() {
     process.stderr.write('WARN storyboard-html-template.html not found — drift guard skipped\n');
   }
 
+  // Stills are a projection since 2026-09-04 — the storyboard generates nothing.
+  const stills = stillSlots([
+    { type: 'cover', visual: { bgPrompt: 'p' } },
+    { type: 'points', visual: { bgPrompt: 'p' } },
+    { type: 'points', visual: { slide: { kind: 'principle', arts: [{ file: 'a.png' }, { file: 'b.png' }] } } },
+    { type: 'points', visual: { source: 'recording' } }
+  ]);
+  ok('one still per bgPrompt scene, none for a slide or a filmed scene',
+     stills.filter((x) => x.kind === 'still').length === 2);
+  ok('the cover still is gpt high and the rest are local',
+     stills[0].engine === 'gpt' && stills[1].engine === 'local');
+  ok('slide art plates are counted one per art',
+     stills.filter((x) => x.kind === 'art').length === 2);
+  const stillRows = forecastRows(stills);
+  ok('a still is billed as one image, not as seconds',
+     stillRows[0].qty === 1 && stillRows[0].key === 'image.gpt-image-2.high' &&
+     stillRows[1].key === 'image.local');
+  ok('stills stay out of the fingerprint',
+     costFingerprint([{ type: 'cover', visual: { bgPrompt: 'p' } }]) === 'none');
+
   if (failed) { process.stderr.write(failed + ' check(s) failed\n'); process.exit(1); }
   process.stdout.write('cost-preview selftest OK\n');
 }
@@ -416,7 +486,8 @@ function main() {
   const win = readScenes(scenesPath);
   const scenes = win.SCENES;
 
-  const slots = videoSlots(scenes);
+  // Stills first, then the video slots — the order the money goes out in produce.
+  const slots = stillSlots(scenes).concat(videoSlots(scenes));
   const rows = forecastRows(slots);
   const fingerprint = costFingerprint(scenes);
 
@@ -429,7 +500,7 @@ function main() {
     : path.join(workDir, 'cost-forecast.tsv');
   if (!wantJson) fs.mkdirSync(workDir, { recursive: true });
   const header = [
-    '# Projected generated-video spend for this episode — written by cost-preview.js.',
+    '# Projected spend for this episode — stills, slide arts and generated video.',
     '# Not the ledger. What was actually spent lives in cost-tally.tsv; this file is what',
     '# approving the storyboard commits. Regenerate it after any change to the video slots.',
     '# fingerprint: ' + fingerprint,
@@ -497,8 +568,9 @@ function main() {
       '  // The check strip recomputes the fingerprint from SCENES and flags a stale snapshot.',
       '  cost: {',
       '    spentUsd: ' + spent.total.toFixed(4) + ',            // already billed — the .work/cost-tally.tsv ledger',
-      '    imagesUsd: ' + (spentFamilies.image || 0).toFixed(4) + ',           // of that, image generation',
-      '    forecastUsd: ' + forecast.total.toFixed(4) + ',         // the generated-video slots below, if approved',
+      '    imagesUsd: ' + (spentFamilies.image || 0).toFixed(4) + ',           // of that, images — 0 unless the episode predates 2026-09-04',
+      '    forecastUsd: ' + forecast.total.toFixed(4) + ',         // stills, slide arts and video slots, if approved',
+      '    stillsUsd: ' + (byFamily(forecast.items).image || 0).toFixed(4) + ',           // of that, the stills and slide arts',
       '    slots: ' + rows.length + ',',
       '    videoBudgetUsd: ' + (budget.budgetUsd === null ? 'null' : budget.budgetUsd.toFixed(2)) + ',      // profile video_budget_usd (plugin default 10)',
       '    videoUsd: ' + budget.committed.toFixed(4) + ',           // generated video billed + projected — the number the budget caps',

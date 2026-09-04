@@ -44,8 +44,8 @@ judges when no human is present** and **which model to use**.
 
 ## What stands in for the human gates
 
-The pipeline's safety used to hang on the double HITL gate (storyboard
-approval, publish approval). Unattended mode puts **the machine verdicts** in
+The pipeline's safety used to hang on three HITL gates (the narration approval at storyboard
+§4.6, the storyboard approval at §7, the publish approval). Unattended mode puts **the machine verdicts** in
 their place (the slide verdict applies only when the episode has slide scenes). If even
 one fails, the video still gets made but **does not enter the queue** (`queue_*: hold`)
 — meaning it won't publish until a human looks at it.
@@ -534,7 +534,10 @@ money without knowing the price.
     --shot <n>` call (`<n>` from 1, the same number as `scene-<n>.png`) with
     `--scene`, `--mood` (profile §3) and `--exclude` (the
     required negative directives — the image tools have no exclusion argument,
-    so the noun list rides in the body), stdout stored as `visual.bgPrompt`.
+    so the noun list rides in the body), stdout stored as `visual.bgPrompt`. The
+    engine split and what disqualifies a picture are
+    `../produce/references/still-generation.md`; on this path the plan and the
+    call happen in one step, since no approval sits between them.
     `storyboard/images/scene-<n>.png`. Each image takes minutes — no problem on
     the unattended path, but avoid running alongside the video render. On a
     machine without mflux, the tool fails with install guidance — fall back to

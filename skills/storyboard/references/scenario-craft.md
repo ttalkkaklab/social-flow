@@ -1,4 +1,4 @@
-# Scenario craft — twelve rules that run underneath the beats
+# Scenario craft — thirteen rules that run underneath the beats
 
 The beat skeleton (`scenes-schema.md` §playback order) says **where** scenes go. Short-form
 is three beats, always: hook → drip (1–n) → cta. Long-form still walks two arcs. This file
@@ -30,6 +30,13 @@ that constancy is what made a small variation read as an event. It's why the rat
 count once per episode — one `dutch`, one `drop`, one dissolve — a device only reads as a
 device against a frame that doesn't change.
 
+**§13 comes from a different kind of source** — a working screenwriter describing her own
+procedure rather than a critic reading finished work. 김은숙 said the same two things in 2011
+and in 2023, and the twelve years between the two statements are the only evidence behind
+them; there is no measurement, and none of her method was calibrated on a 60-second video. It
+sits last because it is the layer the other twelve leave open — they say what has to be in the
+episode, and it says in what order to write it and how far off the obvious to place it.
+
 ## Contents
 
 - [1. The connective test — every cut is a "but" or a "therefore"](#1-the-connective-test-every-cut-is-a-but-or-a-therefore)
@@ -44,6 +51,7 @@ device against a frame that doesn't change.
 - [10. Rules are verified, not explained](#10-rules-are-verified-not-explained)
 - [11. The storyline is an investigation, not a diary](#11-the-storyline-is-an-investigation-not-a-diary)
 - [12. The arc goes down before it comes up — catharsis is release that was paid for](#12-the-arc-goes-down-before-it-comes-up-catharsis-is-release-that-was-paid-for)
+- [13. Cut points first, then half a step](#13-cut-points-first-then-half-a-step)
 - [Sources](#sources)
 
 ## 1. The connective test — every cut is a "but" or a "therefore"
@@ -536,6 +544,102 @@ Checks the pass runs (§10's spirit):
 - Every feel on the chart is a high-arousal word; a shot whose feel is sad, calm or "nice"
   with nothing at stake is the flat stretch §2 was looking for.
 
+## 13. Cut points first, then half a step
+
+김은숙 (파리의 연인 2004 · 시크릿 가든 2010 · 태양의 후예 2016 · 도깨비 2016 · 미스터 션샤인
+2018 · 더 글로리 2022 · 다 이루어질지니 2025) stated her method twice, twelve years apart, and
+the two accounts agree almost word for word. Two moves. **The cut points are fixed before the
+content**, and the content that fills each gap is the cliché **moved exactly half a step**. The
+tie-breaker under both is stated as flatly in 2011 ("드라마는 예술이 아니라 한 시간짜리
+엔터테인먼트다") as in 2023 ("재미와 의미 중 하나를 택해야 한다면 단연 드라마는 재미가
+먼저다") — when a scene can be true or interesting and not both, the rules above already chose
+truth, and this one says the remaining freedom goes to interest. Craft canon (a named
+practitioner's stated method; no measurement behind any of it, and none of it was calibrated on
+short-form). Survey with sources:
+[docs/research/2026-09-04-kim-eunsook-craft](../../../docs/research/2026-09-04-kim-eunsook-craft/).
+
+> "저는 1회부터 20회까지 각 편당 엔딩지점만 잡고, 인상적인 장면 10개 정도만 미리 만들어 놓고
+> 스토리를 만들어요." — 『방송작가』 2011년 2월호
+
+- **Write each drip's out-line before its body.** §12 already puts the hook and the last line
+  first; this extends the same order to every segment. Before writing a drip's `narration`,
+  write the sentence it goes out on — the one that makes the next drip necessary — and only then
+  fill the middle. §1's connective is the test: an out-line that doesn't force a "그런데" or a
+  "그래서" into the next shot is a pause, not a cut point. On long-form the same move lands on
+  the chapter seam. This is what stops the middle of an episode from being written forward until
+  it runs out of things to say, which is the shape a "and then" chain arrives in.
+- **Name the set pieces before the joins.** Ten scenes fixed in advance carried a 20-episode
+  series; on a 4–12 shot short that scales to **two or three shots you can name as moments**
+  before anything else is designed. Write them as what the viewer feels there in `shot.feel`,
+  then let the rest of the board be what connects them. A board where every shot got equal
+  design attention has no peak, which §7 needs exactly one of — and the way that failure reads
+  from inside is that you cannot say which shot is the one.
+- **List at least five ways the moment could go, then pick.** Her definition of character is
+  procedural — "사건에 부딪혔을 때, 사건을 해결해 나가는 방식" — so the work at a named moment is
+  enumeration, not invention. Write down five things that could happen there before writing the
+  `shot.info`/`narration` pair. The first one to arrive is the one the viewer also thought of;
+  five exists to get past it. (Her own worked example: cream on the woman's lip — tease her, wipe
+  it off, pretend not to see, kiss her. The fourth became 시크릿 가든's most-parodied scene.)
+- **Half a step, not a whole one.** This is the pick criterion, and she words it the same way
+  across twelve years — "시청자들이 상상할 수 있는 것보다 반 보 더 앞서서" (2011), "한보 말고
+  반보만 신선하게 써라" (2023). Keep the familiar material and move one property of it: the
+  재벌 who reads books, the school-violence revenge staged as a game of 바둑. A whole step buys
+  nothing — a new world, an unexplained term, a premise that needs setup before it lands — and
+  her own filmography carries the counter-example (더 킹, 2020: opened at 11%, bottomed in the
+  6% range and closed at 8.1%, with critics naming "who is who" confusion in the parallel world
+  as the cause — 국민일보·PD저널). On our surface a
+  whole step is the shot whose picture the narration has to explain, and the fix is never more
+  narration — it is moving the staging back half a step toward what the viewer already knows.
+- **The heavier the material, the lighter the handling** — "끔찍한 신일수록 깜찍하게 써라". The
+  half step applied to register rather than content: the fact stays, the way it is handled moves
+  one notch off what the fact implies. This does not fight §12's high-arousal rule — the dread
+  stays dread in `shot.feel`, while the sentence carrying it doesn't also perform gravity. A
+  heavy fact narrated heavily raises the entry barrier twice, and 더 글로리's first episode is
+  her worked case of paying that barrier deliberately rather than by accident ("폭력의 수위가
+  높을수록 진입 장벽이 높아진다는 것을 알았기에 감독님과 고민을 많이 했다").
+
+**One thing here is not portable, and no checker will stop you.** Her signature lines are
+literary register by her own account — "저는 드라마는 일반인들이 쓰지 않는 화법을 쓰는 것이라고
+생각했거든요. 그래서 좀 문어체적인 그런 대사가 나와요". The rule that blocks that register,
+`korean-style` D9, is deliberately **off on the `narration` surface** — it scopes to threads and
+captions, because narration is dialogue already bound to the 8–25-character schema — so a
+literary line reaches the video with the machine silent. What does run on narration at full
+priority is the D10 family, and the shapes her lines take are mostly in it: the noun-stopped
+sentence, the announced reveal, the abstract subject that rewrites the world in one verb, the
+mirrored antithesis. The rest of the register passes.
+
+So this one is a hand rule. **Take the spacing, not the register** — §7 already carries the
+spacing (one quotable line an episode, unrepeated) and that is the whole of what transfers. A
+sentence written to sound like 김은숙 is either a D10 hit the vocabulary read (§4.5) reports or
+something only a person rereading the narration will catch, and there is no third outcome where
+the checker saves it.
+
+**Two failure modes she owns, because both are ours too.**
+
+- **A memorable sentence is not a memorable moment.** She conceded the charge herself at the
+  도깨비 press conference — "'서사 없이 대사발만 있다'는 지적 … 명백한 제 잘못" — and named the
+  episode it broke on. The check is mechanical: for each shot named as a set piece, say what
+  *happens* in it. A set piece whose entire content is a good sentence is §2's flat stretch in
+  better clothes, and it survives a narration read because the sentence itself is fine.
+- **An ending must not cancel what it charged for.** Three of her endings drew the same
+  complaint and each one took something back — 파리의 연인 revealed the story had been a
+  character's novel, 태양의 후예 undid a fatal wound at no cost, 시크릿 가든 swapped the tragedy
+  it had designed for a happy ending she herself then rated "20부가 재미없었어요". The one
+  ending critics called complete, 미스터 션샤인, paid its bill in full. On our surface the same
+  move is a 마무리 that tells the viewer the episode was less than it seemed: "사실 확실한 건
+  아닙니다", "결국 별거 아니었죠", a frame reveal. Uncertainty belongs in the body where the
+  viewer can still do something with it — §10 already says a rule is verified, not asserted — and
+  the last beat hands over what the episode earned. This is scenario-mode P0-14.
+
+Checks the pass runs (§10's spirit):
+
+- Every drip's last sentence was written before its body, and reads as a "그런데" or a "그래서"
+  into the next shot.
+- Two or three shots are nameable as the episode's moments, and each has an event under it, not
+  only a sentence.
+- No shot needs its narration to explain what its picture is.
+- The 마무리 takes nothing back from what the body charged the viewer for.
+
 ## Sources
 
 - Parker & Stone, NYU writers-room session (2011) — but/therefore. Craft canon.
@@ -571,3 +675,20 @@ Checks the pass runs (§10's spirit):
 - [레이디경향, 스토리피아 랩 인터뷰 ③ — 윤수영](https://lady.khan.co.kr/culture/article/202410310700011) (2024-10) — hook and ending first, 의외성 (§12). Field practice.
 - Short-form CTA practitioner guides ([Zebracat](https://www.zebracat.ai/post/best-youtube-shorts-call-to-actions), [The Indie Practice](https://www.theindiepractice.com/blog/short-form-video-call-to-actions-cta-ideas)) — one CTA, tied to the message, no stacked asks (§12). Field practice.
 - Collected and graded in [docs/research/2026-08-30-shortform-catharsis](../../../docs/research/2026-08-30-shortform-catharsis/).
+- 김은숙 interview, 『방송작가』 2011년 2월호 — "신데렐라 이야기의 종결자 <시크릿가든> 김은숙
+  작가" (김주영 책임편집위원, `ktrwawebzine.kr/common/pdf/2011/2011-02.pdf`) — the endings-first
+  grid, the ten set pieces, the five options, the half step, character as a way of solving,
+  the literary register, her own verdict on the 시크릿 가든 finale (§13). Craft canon.
+- [씨네21, 올해의 작가 김은숙 인터뷰 ①](https://cine21.com/news/view/?mag_id=104078) ·
+  [②](https://cine21.com/news/view/?mag_id=104079) (2023) — "한보 말고 반보만", "끔찍한 신일수록
+  깜찍하게", holding the viewer first and letting them see the story afterwards, 재미 before 의미,
+  the 더 글로리 opening, the 시크릿 가든 ending she changed (§13). Craft canon.
+- [조이뉴스24, 도깨비 제작발표회](https://www.joynews24.com/view/992623) (2016) — her own
+  concession that strong lines had been standing in for narrative (§13). Craft canon.
+- [경향신문, 김은숙 드라마는 왜 유독 결말에 관심이 쏠릴까](https://www.khan.co.kr/article/201701171141001)
+  (2017, 윤석진·정덕현) · [서울신문, 황당 엔딩 BEST3](https://www.seoul.co.kr/news/entertainment/broadcastN/2016/04/18/20160418500298)
+  (2016) · [PD저널](https://www.pdjournal.com/news/articleView.html?idxno=71429) ·
+  [국민일보](https://www.kmib.co.kr/article/view.asp?arcid=0014688869) (더 킹, 2020) — the
+  endings that took something back, and the whole-step premise that lost its audience (§13).
+  Field practice.
+- Collected and graded in [docs/research/2026-09-04-kim-eunsook-craft](../../../docs/research/2026-09-04-kim-eunsook-craft/).

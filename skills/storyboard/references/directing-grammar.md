@@ -240,7 +240,8 @@ the mood, the exclusions (`--exclude` — the image tools have no exclusion argu
 noun list rides in the body) and the fill-the-frame tail (owner 2026-08-25 — no
 letterbox or lower-third fade). On a still with nobody in it,
 `--no-person` swaps the size ladder's body words ("full body", "chest up") for the subject's.
-storyboard §5 runs it before the generation call and stores the full stdout as `bgPrompt`.
+storyboard §5 runs it when the plan is written and stores the full stdout as `bgPrompt`;
+produce sends that string to the engine unchanged.
 Hand-written prefixes that fight the fields are a camera-mode finding.
 
 Rules:

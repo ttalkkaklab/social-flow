@@ -175,18 +175,21 @@ function blockers(ep, stage) {
     if (missingFootage.length)
       out.push(missingFootage.length + ' filmed scene file(s) not saved yet — ' +
                missingFootage.slice(0, 3).join(', ') + (missingFootage.length > 3 ? ' …' : ''));
-    const missingSlides = req.slideFiles.filter((f) => !exists(path.join(ep.dir, 'storyboard', f)));
-    if (missingSlides.length)
-      out.push(missingSlides.length + ' slide file(s) not authored yet (storyboard §5.6) — ' +
-               missingSlides.slice(0, 3).join(', ') + (missingSlides.length > 3 ? ' …' : ''));
   }
 
-  if (stage !== 'empty' && stage !== 'broken' && stage !== 'drafted') {
+  // Stills and slide files are produce's output, not the storyboard's (owner directive
+  // 2026-09-04 — nothing is generated before approval), so their absence is only a blocker
+  // once the video claims to be built.
+  if (stage === 'produced' || stage === 'published') {
+    const missingSlides = req.slideFiles.filter((f) => !exists(path.join(ep.dir, 'storyboard', f)));
+    if (missingSlides.length)
+      out.push(missingSlides.length + ' slide file(s) not authored yet (produce §3.6) — ' +
+               missingSlides.slice(0, 3).join(', ') + (missingSlides.length > 3 ? ' …' : ''));
     const missingImages = req.imageFiles
       .filter((f) => !exists(path.join(ep.dir, 'storyboard', f)));
     if (missingImages.length)
       out.push(missingImages.length + ' of ' + req.imageFiles.length +
-               ' scene image(s) the scenes name are not on disk — ' +
+               ' scene image(s) the scenes name are not on disk (produce §1.5) — ' +
                missingImages.slice(0, 3).join(', ') + (missingImages.length > 3 ? ' …' : ''));
   }
 

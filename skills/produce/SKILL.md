@@ -12,7 +12,7 @@ description: >
   generating scenes. Boundary — storyboard plans and stops for approval, produce starts
   after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
 
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
@@ -227,11 +227,12 @@ data/<channel>/episodes/<topic>/
   call. That's why the playback factor goes in here too: `build-reel.sh` sizes its speech-rate
   band and its chapter minimum from it, and §7.5's pass takes its factor from the same line, so
   the build and the ship can't disagree about the speed.
-- **Don't delete `.work/cost-tally.tsv`** — it's the episode ledger where storyboard already
-  wrote the image costs, and §10 totals storyboard through video out of that one file. If
-  the file isn't there, start a new one from this episode, but if `storyboard/images/*.png`
-  exist with no ledger, the image costs are missing from the total — §10 writes that fact
-  into the report.
+- **Don't delete `.work/cost-tally.tsv` or `.work/cost-forecast.tsv`.** Since 2026-09-04 the
+  storyboard bills nothing (its §5 plans and stops), so the tally starts empty here and
+  **every line in it is written by this skill** — stills, slide arts, clips, TTS, music. The
+  forecast file is the storyboard's projection; §10 sets the two side by side, which is the
+  only way an estimate ever gets corrected. A missing forecast isn't a blocker — say so in
+  the report instead of comparing against nothing.
 - **Read the episode's state before starting, and again when picking up a stopped run.**
   Produce is the long stage, so it is the one most likely to be resumed in a later session.
 
@@ -240,21 +241,51 @@ data/<channel>/episodes/<topic>/
   node $REF/episode-state.js .        # from the episode directory · exit 1 = blocked
   ```
 
-  It reports the stage and what is missing — filmed scenes with no footage, slide files never
-  authored, images the scenes name that aren't on disk. Run both structural contracts too:
+  It reports the stage and what is missing — filmed scenes with no footage, a queue marker.
+  **Stills and slide files being absent is the normal state at this point**, not a blocker:
+  §1.5 and §3.6 are what create them. Run the structural contract now:
 
   ```bash
   SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
   node $SB/check-scenes.js storyboard/
-  node $SB/check-slide.js storyboard/ --require-all
   ```
 
-  The second command keeps a declared motion frame from reaching production as a missing HTML
-  file. Timeline, statistic, and principle slides are checked again while rendering: every
+  `check-slide.js storyboard/ --require-all` runs at the **end of §3.6**, once the slides have
+  been authored — running it here would fail on every episode. It keeps a declared motion frame
+  from reaching the build as a missing HTML file. Timeline, statistic, and principle slides are checked again while rendering: every
   `motionBeats` primitive (actor + rule on a principle) must exist in that group's DOM. A missing camera slot or an
   unresolvable b-roll `after` fails the first command. Fix a blocker before the build rather
   than discovering it 12 minutes into capture. `.work/` survives between sessions on purpose,
   so a resumed run reuses the captures and TSV manifests already there.
+
+### 1.5 Generate the stills
+
+**This is where the episode starts costing money.** The storyboard planned every still and
+generated none of it (its §5), so `storyboard/images/` is empty when this step begins and full
+when it ends. **Skip the whole section on the shooting-edit path** (the screen is the user's
+recording); a **mixed** episode still generates the stills its generated scenes name. Slide
+scenes have no still here either — their screen is HTML, authored at §3.6.
+
+**The plan clears rule 13 first.** Go through each `bgPrompt` and the footage stills against
+absolute rule 13's list with profile.md §3 open for the target person — no still life as a
+source, no real person, no text expected from an engine that can't write it, the exclusions
+written, no minor in frame. The storyboard checked this against a plan; you are checking it
+against the call that is about to go out.
+
+Then generate, **resending each stored `visual.bgPrompt` verbatim**, and **look at every
+picture that comes back** before moving on — a wrong still is the cheapest thing in this
+pipeline to catch and the most expensive to carry, since §3 turns it into a clip.
+
+The engine split, the size preset, the character-reference rule, what disqualifies an image,
+the one-remake rule and the ledger lines are all in
+[still-generation.md](references/still-generation.md).
+
+```bash
+printf 'image.gpt-image-2.high	1	produce: cover background scene-1
+' >> .work/cost-tally.tsv
+printf 'image.local	3	produce: points backgrounds scene-2~4
+'        >> .work/cost-tally.tsv
+```
 
 ### 2. Prepare the frame render
 
@@ -268,22 +299,14 @@ Rebuild frame.html every time you touch the template or scenes.js — skip it an
 the old render without knowing. Always run with absolute paths (a relative-path redirect
 after `cd` fails silently).
 
-### 3. Generate the visuals
+### 3. Generate the clips
 
 The §6 manifest references these file paths directly, so follow the naming below.
-**The cover background and the b-roll clear the plan check first** (absolute rule 13) —
-go through the cover `bgPrompt` and the broll scenes from scenes.js against the rule's list,
-with profile.md §3 open for the target person, and only then start the generation calls.
-
-**Image engines, split by job** — the default is `image_local_generate` (local Z-Image, 0
-cost per image — text-free images such as points still backgrounds; storyboard §5 already
-generated them under this rule). The cover background = b-roll source stays on
-`gpt_image_text2img` (high) under the quality clause, since it's both the thumbnail and
-veo's input, and any image that needs lettering always goes to gpt_image (local Hangul,
-measured: "딸깍연구소" came out as "달닥연구소"). `mlx_image_generate` /
-`mlx_image_edit` are an optional extra local lane when MLX Core is up — they do not
-replace Z-Image as the default, and they do not take Hangul. The plugin never launches
-the app; a down :11234 fails closed.
+**The b-roll clears the plan check first** (absolute rule 13) — go through the broll and
+motion-background scenes from scenes.js against the rule's list, with profile.md §3 open for
+the target person, and only then start the generation calls. The stills those clips are made
+from already exist and were already looked at (§1.5); an engine question about a still belongs
+there, in [still-generation.md](references/still-generation.md).
 
 **What the storyboard already settled — pass it through, don't re-decide it.** These values
 arrive from scenes.js already chosen and already reviewed. Inventing a replacement at call time
@@ -448,7 +471,7 @@ the builder never reads.
   for episodes where the song itself is the piece. There is no official Suno
   API (2026-08); `suno_*` talks to sunoapi.org.
 
-**Write one line to `.work/cost-tally.tsv` per call** — carry on the same ledger storyboard
+**Write one line to `.work/cost-tally.tsv` per call** — the same ledger §1.5 started
 was using. The convention's source of truth is
 [cost-tally.md](../autoproduce/references/cost-tally.md).
 
@@ -495,11 +518,47 @@ Normalize the user's `footage/` files once, then hand them to the builder as car
 The full lane — the VFR trap, the normalize command, the naming the builder expects —
 is in [optional-lanes.md](references/optional-lanes.md) §3.5. **No `footage/` directory
 means skip this step.**
-### 3.6 Slide scenes and live-voice audio (only on episodes that have them)
+### 3.6 Author the slides, then capture them (only on episodes that have them)
 
-Authored HTML screens get captured like any other card, and an all-live-voice episode
-takes its audio from `voice/` instead of the TTS in §5. Both lanes are in
-[optional-lanes.md](references/optional-lanes.md) §3.6. **No slide scene and no `voice/`
+**The slides are authored here, not in the storyboard** (owner directive 2026-09-04 — slide
+arts are generated images, and no image is made before approval). What arrived from the
+storyboard is the plan in `visual.slide`: the kind, the `labels`, the `motionBeats`, the
+`arts` list, and on a footage slide the `shots[]`. Follow
+[slide-authoring.md](../storyboard/references/slide-authoring.md) and build them in this
+order.
+
+1. **Generate `slide.arts` first** when the array is set — `slides/assets/s<shot>-<slug>.png`,
+   flat ink actor illustration, paper fill on ink, no background, no readable text, no
+   photorealism (`image_local_generate`; gpt or mlx where the plan says so). Log each call in
+   `.work/cost-tally.tsv`. Sit a principle actor with `h.fig`.
+2. **Author the HTML** from the matching template. A principle frame is a `.cast` of actors
+   plus rules (`h.stem` · `h.bus` · `h.chamber`); kinetic `renderKinetic` puts the first art on
+   group 1 then the title with `in`; type-only skips arts. **A footage slide waits for its
+   clips** — those came out of §3 (footage-lane.md §4 authors the marks against them).
+3. **Run the contract, then render the sheet.**
+
+   ```bash
+   SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
+   node $SB/check-slide.js storyboard/ --require-all
+   ```
+
+   This is the `--require-all` run §1 deferred: every registered slide file now has to exist.
+   Render the key-state sheet with `render-motion-slide.mjs --sheet --png-only --keep-frames`
+   and stop on either failure. Timeline, statistic and principle frames must match every
+   `motionBeats` primitive with the same group's `data-primitive` — a label reveal cannot
+   stand in for the promised explanation.
+4. **Read the sheet yourself** — `sheet/g<k>-end.png` for the last group of every slide:
+   everything the scene claims is on it, inside the zone, the ground is a plate and not a flat
+   fill, and no photo with an animated rectangle stands in for a diagram (slide-design.md
+   §1·§6). Re-author once if it fails. The `slide-reviewer` loop of 0.49 is not part of the
+   flow — it was the largest reviewer sink measured (46 calls, 674 million tokens on one
+   episode) — and stays available for a read the user asks for by name. **Still wrong after
+   the re-author**: put the frame to the user with AskUserQuestion rather than shipping it or
+   silently swapping in a still.
+
+Then the capture: authored HTML screens get captured like any other card, and an
+all-live-voice episode takes its audio from `voice/` instead of the TTS in §5. Both lanes are
+in [optional-lanes.md](references/optional-lanes.md) §3.6. **No slide scene and no `voice/`
 directory means skip this step.**
 ### 3.7 Screencast splices (only on episodes that have them)
 

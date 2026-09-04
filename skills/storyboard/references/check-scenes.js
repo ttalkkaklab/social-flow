@@ -771,8 +771,8 @@ function check(win, fmt, opts) {
           machine(where, 'photo-action slide has no plan — map the subject change to each narration group');
       } else if (slide.treatment === 'footage') {
         /* Footage: one generated clip per reveal group under drawn marks (scenes-schema §footage
-           treatment). The clips are paid calls made at storyboard §5, so the plan, the shots and each
-           shot's camera and prompt exist before approval. Footage clips do not spend a generatedVideoMax
+           treatment). The clips are paid calls made at produce §3, so the plan, the shots and each
+           shot's camera and prompt exist before approval — the spend does not. Footage clips do not spend a generatedVideoMax
            slot — the cost panel lists every one and the §5 gate is where the spend is approved. */
         if (!String(v.action || '').trim())
           machine(where, 'footage slide has no visual.action — say what the people or things in the clips do, not what the marks draw');
@@ -794,7 +794,7 @@ function check(win, fmt, opts) {
             else if (groups.has(group)) bad(at, `group ${group} appears twice — one clip per group`);
             else groups.add(group);
             const clip = String(sh.clip || '');
-            if (!clip) machine(at, 'no clip — slides/footage/s<shot>-g<group>.mp4, generated at storyboard §5');
+            if (!clip) machine(at, 'no clip — slides/footage/s<shot>-g<group>.mp4, generated at produce §3');
             else if (!/^slides\/footage\/s\d+-g\d+[a-z0-9-]*\.(mp4|webm)$/.test(clip))
               bad(at, `clip "${clip}" is outside the slides/footage/s<shot>-g<group>.mp4 convention`);
             if (sh.matte && !/^slides\/footage\/.+\.webm$/.test(String(sh.matte)))

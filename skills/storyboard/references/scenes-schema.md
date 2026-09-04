@@ -1786,7 +1786,7 @@ still TTS, the card is still an ordinary card, and only the picture comes from a
   plays, much shorter and the picture sits still while the voice runs on. `cut-screencast.sh`
   warns in both directions when produce passes it the card duration.
 - **A screencast scene has no `bg` or `bgPrompt`** — it drops out of §5 image generation and the
-  §5.5 image check, exactly like a slide scene. What is on screen is the recording.
+  produce §1.5 image check, exactly like a slide scene. What is on screen is the recording.
 - `zoom` is `none`. Ken Burns on a screen recording shakes text that is already small.
 - **Not for a talking head.** A face and a voice is `source: "recording"` — the filmed lane, with
   its own sound and framing contract. This lane is for a screen.
@@ -1859,19 +1859,19 @@ slide.**
 | `slide.file` | ✅ | `slides/s<shot number>-<slug>.html` — **shot number = the SCENES array position (from 1)**, the same number as script.md's shot and `voice/s<n>.wav` |
 | `slide.plan` | ✅ | One line on what to draw. For motion, number what changes on each narration group |
 | `slide.labels` | ✅ when the shapes carry text | Every piece of text to draw on the slide beyond `title` and `bullets`. The style gate's screen surface checks this array — plant Korean text in the slide file that isn't here and characters that never passed the check go on screen |
-| `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **flat ink actor** (person, agent, room) sitting with `h.fig`; rules (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generate at storyboard §5.6 |
+| `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **flat ink actor** (person, agent, room) sitting with `h.fig`; rules (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generated at produce §3.6 |
 | `slide.motion` | ✅ `true` | required. A still slide is not allowed. Numbers count up, bars grow, type reveals on its sentence (§motion slides) |
 | `slide.treatment` | ✅ on a moving `diagram` | `"editorial"` when HTML owns the whole frame; `"photo-action"` when a photo fills the frame and the photographed subject or evidence itself changes; `"footage"` when generated clips carry the scene, one per reveal group, and HTML only draws marks over them (§footage treatment) |
 | `slide.role` | ✅ on `treatment:"editorial"` | `evidence` · `relationship` · `mechanism` · `timeline` · `statistic` · `transition` · `verdict` |
 | `slide.motif` | ✅ on `treatment:"editorial"` | The episode-wide visual device repeated across authored frames: signal line, evidence stamp, paper tear, date rail, or another concrete device |
 | `slide.motionBeats` | ✅ when `shot.infoType` is `timeline` · `statistic` · `principle` | One `{group, primitive}` per narration group. The declared primitive has to exist in the rendered DOM for the same group |
 | `slide.object` | optional on `treatment:"editorial"` | A **rendered object** (`rendered-object.md`, slide-design.md §9) — `{ file, shape, keys, frames, plan }`. `file` is the baked sheet `slides/assets/s<shot>-<slug>.png`; `shape` a name in `bake-object.py` (`disc`); `keys` and `frames` the bake arguments, so the sheet is reproducible from this file; `plan` what the object does on which sentence. The groups where the object arrives or recedes declare `object-move` in `motionBeats`. Baked at the slide authoring step, before `check-slide.js` |
-| `slide.shots` | ✅ on `treatment:"footage"` | One entry per reveal group — `{ group, clip, still, matte?, duration, engine?, camera, action, audio, prompt, negative, mark }`. The clips are generated at storyboard §5, before the slide is authored (§footage treatment) |
+| `slide.shots` | ✅ on `treatment:"footage"` | One entry per reveal group — `{ group, clip, still, matte?, duration, engine?, camera, action, audio, prompt, negative, mark }`. The clips are generated at produce §3, before the slide is authored at §3.6 (§footage treatment) |
 
 The frame design is part of what the user approves, so storyboard renders and reviews key
 states before §7. Author only text already present in `title`, `bullets`, and `slide.labels`.
 
-- A slide scene has no `bg` or `bgPrompt` — it drops out of §5 image generation and the §5.5
+- A slide scene has no `bg` or `bgPrompt` — it drops out of produce §1.5's stills and their
   image check; a missing `scene-N.png` there is not a defect.
 - **Reveal groups are 1:1 with narration segments** by default, and using sub-reveals (`A|B`)
   makes more groups than segments. produce lays clip k under segment k as a play-once visual.
@@ -1897,7 +1897,7 @@ symbol, that raster is one plate inside a constructed visual argument. Put at le
 actors or relations on screen — for example, two paper fragments converging on a source card, a
 date rail joining documents, or a signal line linking an eye gesture and a hand gesture to a
 clearly labelled online interpretation. `check-slide.js` blocks a raster-only editorial file;
-the author's read of the rendered sheet (storyboard §5.6) judges the result; `slide-reviewer`
+the author's read of the rendered sheet (produce §3.6) judges the result; `slide-reviewer`
 grades it to the same rubric when the user asks for that read.
 
 Three information types have to be drawn, on one of two routes. **The default route is a
@@ -2014,7 +2014,7 @@ are body shots.
 |---|---|---|
 | `slide.shots[]` | ✅ | one per reveal group, in group order — `shots[k-1]` is group k. Fewer shots than narration segments is a violation (`check-scenes.js`) |
 | `shots[].group` | ✅ | 1-based, unique |
-| `shots[].clip` | ✅ | `slides/footage/s<shot>-g<group>.mp4` — H.264 at the format canvas, generated at storyboard §5. `.webm` (VP9) is accepted; HEVC and AV1 do not decode in the renderer's Chrome |
+| `shots[].clip` | ✅ | `slides/footage/s<shot>-g<group>.mp4` — H.264 at the format canvas, generated at produce §3. `.webm` (VP9) is accepted; HEVC and AV1 do not decode in the renderer's Chrome |
 | `shots[].still` | recommended | the source still for `seedance_img2video` / `veo_img2video`, `slides/footage/s<shot>-g<group>.png`, made under the §5 image rules — a channel character on screen means the reference-panel call |
 | `shots[].matte` | optional | `slides/footage/s<shot>-g<group>-fg.webm` — the subject alone with alpha (`produce/references/make-matte.py`), laid above the marks so a ground mark passes behind the figures. Only on shots whose mark has to sit under people |
 | `shots[].duration` | ✅ | the seconds requested from the engine — seedance 4–12, veo 8. **The segment estimate plus one second** (characters / 4.5 + 1, floor 4): the renderer plays the clip for the whole segment and a shorter clip freezes on its last frame |
@@ -2032,7 +2032,7 @@ Rules only this treatment has:
   each clip's mid frame (`footage-frames.sh` writes first, mid and last frames and a per-shot
   sheet), because the generated picture never lands exactly where the still had it. So the
   order is: §4.4 · §4.5 narration loops passed → §5 stills and clips, after the rule-13 plan
-  check on every shot and the §5 cost gate → §5.6 marks, render, the author's read of the
+  check on every shot and the §5 plan gate → produce §3 clips → §3.6 marks, render, the author's read of the
   sheet. The procedure is `references/footage-lane.md`.
 - **Outside `generatedVideoMax`.** Footage shots are not counted against the b-roll and
   motion-background cap; they are budgeted. `cost-preview.js` puts every shot on the approval
@@ -2174,7 +2174,7 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   encode), ink · paper · one accent, square plates and 3/6/10px rules instead of cards and
   hairlines, broadcast type sizes (44px floor), one hero per slide, and the opening chain
   (tag → title → first value, `--lead` apart) in group 1. Its §6 is the rubric the
-  author's sheet read in storyboard §5.6 judges the rendered frames against (and the one
+  author's sheet read in produce §3.6 judges the rendered frames against (and the one
   **`slide-reviewer`** scores against when the user asks for that read).
 - A motion slide has no `bg`/`bgPrompt` and skips §5 image generation and the image
   review; the storyboard's check strip and `episode-state.js` treat the file the same way
@@ -2329,7 +2329,7 @@ strip says no violations.
 - [ ] **If there are slide scenes** (§slide scenes) each one has `slide.file` and `slide.plan`,
       and file follows the `slides/s<shot number>-<slug>.html` convention (shot number = array
       position). Every piece of text to draw on the shapes is in `slide.labels` — the file itself
-      is built and reviewed at §5.6 before approval. `slide.motion: true` is required
+      is built and read at produce §3.6, after approval. `slide.motion: true` is required
 - [ ] **If there are slide scenes** (`slide.motion: true`, §motion slides) the `plan` says what
       moves on which sentence (numbered by segment), the movement is a value being spoken (a
       count, a bar, a step) and not ambience, and no scene relies on continuous motion — that
@@ -2343,8 +2343,8 @@ strip says no violations.
       `visual.action`, a `plan` naming the clip and the mark per group, and `slide.shots` with one
       entry per reveal group — `clip` under `slides/footage/s<shot>-g<group>.mp4`, `duration`
       inside the route's band and at the segment estimate plus one second, all four `camera`
-      slots, `prompt`, `audio`, `mark`. The clips exist before §5.6 (generated at §5 after
-      the rule-13 plan check on every shot and the §5 cost gate); the marks are
+      slots, `prompt`, `audio`, `mark`. The clips exist before the marks are authored
+      (generated at produce §3, after the rule-13 plan check on every shot); the marks are
       authored against `footage-frames.sh` frames and carry no text unless it is in `labels`
 - [ ] **Every narrated shot declares `shot.infoType`.** `timeline`, `statistic`, and `principle`
       use the required moving editorial diagram, mapped role, and one allowed `motionBeats`

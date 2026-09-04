@@ -18,8 +18,8 @@ subtitle spec built for plates.
 
 - [1. When a scene is a footage slide](#1-when-a-scene-is-a-footage-slide)
 - [2. Writing the scene (§4)](#2-writing-the-scene-4)
-- [3. Generating the clips (§5)](#3-generating-the-clips-5)
-- [4. Authoring the marks (§5.6)](#4-authoring-the-marks-56)
+- [3. Fitting the clips to the budget (storyboard §5)](#3-fitting-the-clips-to-the-budget-storyboard-5)
+- [4. Generating the clips and authoring the marks (produce §3 · §3.6)](#4-generating-the-clips-and-authoring-the-marks-produce-3--36)
 - [5. Build (produce)](#5-build-produce)
 - [6. Traps](#6-traps)
 
@@ -72,16 +72,19 @@ subtitle spec built for plates.
 - Your own camera pass (storyboard §4.6) reads every `shots[]` entry as a generated shot — feel served, four
   slots, a cut length that matches the sentence.
 
-## 3. Generating the clips (§5)
+## 3. Fitting the clips to the budget (storyboard §5)
 
-Footage clips are paid calls made before approval, so three things sit in front of them:
+Footage clips are paid calls made **after** approval, in produce §3 (owner directive
+2026-09-04). What happens at storyboard §5 is the fitting: the shots, their prompts and their
+durations are planned to a number the budget allows, and that number goes on the approval
+screen. Three things sit in front of the plan:
 
 1. **The narration loops have passed** (§4.4 and §4.5 at 95, P0 = 0). A sentence rewritten
    after the clips exist orphans a clip.
 2. **The rule-13 plan check on every paid shot.** Go through the cover, every b-roll and
    motion-background scene, and **every footage shot** yourself against produce absolute rule
-   13's list (the still prompt, the clip prompt, the four camera slots, the mark) and generate
-   nothing that fails a point. The plan-mode delegation of 0.49 is not called any more.
+   13's list (the still prompt, the clip prompt, the four camera slots, the mark) and plan
+   nothing that would fail a point — produce runs the same check again against the call. The plan-mode delegation of 0.49 is not called any more.
 3. **The cost gate, inside the budget.** Run `cost-preview.js <storyboard dir>`. It reads the
    channel's `video_budget_usd` (plugin default $10 — every generated clip of the episode,
    billed and projected together; stills, TTS and music are outside it) and answers `!!` with
@@ -122,7 +125,7 @@ Then, per shot, in group order:
   It needs `rembg` (the script says how to install it) and a few minutes of CPU per shot. A
   shot whose mark is an arrow, an X or a ring beside the subject needs no matte.
 
-## 4. Authoring the marks (§5.6)
+## 4. Generating the clips and authoring the marks (produce §3 · §3.6)
 
 - `references/footage-frames.sh <storyboard dir> s<n>` writes first, mid and last frames of
   every clip and a per-shot sheet of the mid frames. **Coordinates come from the mid frame**,

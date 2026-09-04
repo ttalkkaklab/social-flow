@@ -74,7 +74,7 @@ This document is the source of truth for the structure that render has to produc
   means refilming the first scene.
 - **Slide scenes** (`visual.slide`, scenes-schema §slide scenes) have nothing to film — they
   go into the script as voice-only recordings, and the screen entry shows the slide's `plan`.
-  The slide file itself is built by storyboard §5.6 before approval.
+  The slide file itself is built by produce §3.6 before approval.
 - **Long-form recording order follows the cover's `arc`** — **answer-first: cover → hooking → result →
   body**: show the finished thing at a glance, hook the problem, unfold the result, and only
   then film the method; don't record the method screens before the result. **Story: cover →

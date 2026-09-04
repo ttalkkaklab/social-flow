@@ -235,6 +235,14 @@ score the engines axis at 0 and raise P0-10.
     than two cases, or a case with no line on what it has to do with the topic or no research
     row; a 주제 that is a topic label rather than the thought the viewer leaves with.
 
+14. **The ending cancels what the page charged for.** The 마무리 or the CTA tells the viewer
+    the episode was less than it seemed — "사실 확실한 건 아닙니다", "결국 별거 아니었죠", or a
+    frame reveal that makes the account itself provisional. The page spent the viewer's
+    attention on a stake it named in the 훅; the last item hands over what was earned, and a
+    hedge belongs in 전개 where the viewer can still do something with it (§13). A 마무리 that
+    honestly names a limit *and* still gives the viewer the thing they came for is not this P0
+    — the defect is the take-back, not the caveat.
+
 **A thin item is not a P0 by itself.** A 전개 #3 with two cases where three would carry
 better, or a 전개 #2 of one sentence, costs points on the structure axis and earns a
 directive; it is P0-13 only when the item cannot do its job at all.
@@ -250,8 +258,8 @@ for engines the beats actually run, with a file:line or a quoted beat as evidenc
 | Axis | Points | What earns them |
 |---|---|---|
 | Viewer engines | 40 | primary enacted (25) — see the table in `scenario-stage.md`; secondary enacted without fighting the primary (10); the mix is one primary plus at most one spice, not four names (5) |
-| The opening | 20 | cold open on the strongest moment or evidence, a promise sentence the profile §3 target would want kept, a first line that names a loss before it asks, and the primary engine landing in that opening |
-| The structure is honoured | 15 | the seven items in order, each doing its job — 전개 #1 an account with its rows, 전개 #2 the turn to the present spoken as a thought, 전개 #3's cases each with their link — and each item closing a question as it opens the next; on long-form, 전개 #1 laid out in the shape the row rides |
+| The opening | 20 | cold open on the strongest moment or evidence, a promise sentence the profile §3 target would want kept, a first line that names a loss before it asks, the primary engine landing in that opening, and the staging placed half a step off what the viewer would have guessed — familiar material with one property moved, never a premise that has to be explained before it lands (§13) |
+| The structure is honoured | 15 | the seven items in order, each doing its job — 전개 #1 an account with its rows, 전개 #2 the turn to the present spoken as a thought, 전개 #3's cases each with their link — and each item closing a question as it opens the next, its last sentence one you could cut on because it forces a "그런데" or a "그래서" into the item after it (§13); on long-form, 전개 #1 laid out in the shape the row rides |
 | The feel curve | 15 | a sign per item, the minimum before the burst and the maximum on the turn (전개 #2) or the cases (전개 #3), and both poles on high-arousal feelings (dread, anger, awe, relief — not sadness or "nice") |
 | Items and ending | 10 | what the 훅 opens is paid inside 전개 #1–#3; the 마무리 is a question the viewer can answer from the episode, worded to produce comments; the CTA is a callback that re-reads the 훅 with the turned meaning plus one outward act — and nothing subscribe-shaped |
 
