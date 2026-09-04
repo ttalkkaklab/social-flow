@@ -14,7 +14,7 @@ import { episodePathArg, isBillableTool, priceOf, recordUsage } from './usage-le
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
 const server = new Server(
-  { name: 'social-flow', version: '0.52.0' },
+  { name: 'social-flow', version: '0.53.0' },
   { capabilities: { tools: {} } },
 );
 
