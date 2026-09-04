@@ -174,3 +174,24 @@ brnew3: span 276s · card loop 99s · aligner 66.0s (overlapping ffmpeg 64.8s) �
 brold4: span 291s · card loop 115s · aligner 40.6s (overlapping ffmpeg 0.7s) · mux 78s · burn-in 79s · ffmpeg sum 239s
 brnew4: span 267s · card loop 94s · aligner 61.7s (overlapping ffmpeg 60.7s) · mux 76s · burn-in 79s · ffmpeg sum 255s
 ```
+
+## 이전 렌더러를 새 판과 같은 옵션(기본 탭 수)으로 — old-s10-def
+```
+old-s10-def exit 0 wall 227s
+load samples during run:
+--- mp4 compare old-s10-def vs new-s10-def
+r1.mp4: frames 133/133 psnr_avg 48.567181 · frames_not_identical 124 · per_frame_min 47.45
+r2.mp4: frames 133/133 psnr_avg 51.726962 · frames_not_identical 110 · per_frame_min 48.12
+r3.mp4: frames 193/193 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+manifest k/frames/dur: same
+--- decoded ground truth
+m-old-s10-def r1 (vfrom 0ms): f0000→src0 · f0001→src1 · f0002→src2
+m-old-s10-def r2 (vfrom 0ms): f0001→src1 · f0002→src2
+m-old-s10-def r3 (vfrom 0ms): f0001→src1 · f0002→src2
+m-old-s10-def decoded-mp4 ground truth: OK
+```
+--- old-s10-def r1 이 새 판과 갈라지기 시작하는 프레임(f0009, 디코드 비교)
+old-def vs new-def r1 decoded f0009: pixels >4: 835 bbox x 0-1076 y 236-1919
+old-def vs new-def r1 decoded f0009: pixels >8: 33 bbox x 40-106 y 1208-1470
+old-def vs new-def r1 decoded f0009: pixels >16: 0
+max diff 16
