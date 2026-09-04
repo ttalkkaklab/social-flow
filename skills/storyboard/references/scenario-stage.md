@@ -102,6 +102,15 @@ every candidate. Frontmatter carries `direction`, `engine_primary`, `engine_seco
 paragraph (전개 #3 is a numbered list of its cases); on long-form the 전개 paragraphs run
 longer, they do not multiply.
 
+**Write the page in the words the narration will use.** These sentences are not a pitch to
+an adult reader — the 주제 line and the 훅 are what §4 turns into spoken narration, so a page
+written in essay Korean hands the vocabulary read a rewrite instead of a swap. The floor is
+korean-style §Eye level: a 만 9~10세 viewer follows the 주제 sentence with nothing else on
+screen. A term the episode is about (계엄, 파운드리) comes in with its plain wording beside it
+on the page too, because that is where `COMPREHENSION.terms` is decided later. Check the words on each page before showing it — storyboard §2.2's command, which reads only
+the E findings out of `check-style.py --surface narration --json candidates/d<n>.md`. The
+other rules belong to the spoken sentences at §4.5, not to a page of headings and notes.
+
 ### Score
 
 **Attended (storyboard):** no reviewer reads the candidates — the user picks from the three
@@ -182,7 +191,7 @@ fact already keeps is paid at 전개 #1, and 전개 #2·#3 then have nothing to 
 
 | # | Item | What goes in it |
 |---|---|---|
-| 1 | **주제** | What the episode makes the viewer think about — one sentence in the viewer's words. Not a topic label ("로즈웰 사건") but the thought they leave with ("설명이 바뀌면 사람들은 무엇을 믿게 되나"). `COMPREHENSION.question` and `takeaway` are cut from this line. |
+| 1 | **주제** | What the episode makes the viewer think about — one sentence in the viewer's words, at the 초3~4 floor (korean-style §Eye level). Not a topic label ("로즈웰 사건") but the thought they leave with ("설명이 바뀌면 사람들은 무엇을 믿게 되나"). `COMPREHENSION.question` and `takeaway` are cut from this line. |
 | 2 | **훅** | A dramatised scene that pulls the viewer in — a person at that moment, a "만약 그날 …" the viewer can picture. Its first spoken sentence names what is at stake before anything is asked; it ends on the promise — what the viewer will know by the end. It may invent a scene. It may not invent a fact (below). |
 | 3 | **전개 #1** | What actually happened — the real event behind the hook, told as an account (who · when · what), every fact on a `research.md` row. Where the research holds an answer most viewers would guess first, this item opens on it and takes it apart (scenario-craft §11). |
 | 4 | **전개 #2** | What that event makes us think about now — the bridge from then to today, spoken as a thought, never left to the cut. This is the episode's turn: the past re-reads as a present question. On `answer-first` it plays before 전개 #1, so it names the event itself instead of pointing back at it. |

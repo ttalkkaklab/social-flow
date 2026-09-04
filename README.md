@@ -281,13 +281,23 @@ growth loops call when they refill their own queues.
 **Style gate** — wherever Korean text is produced (storyboard authoring, produce
 right before TTS and per-platform copy, publish right before approval,
 content-reviewer verification), `check-style.py` deterministically flags AI-sounding
-prose. It catches translationese, stock phrases, assistant-register endings, and
-comma-after-connective habits, tiered S1/S2/S3; any remaining S1 blocks publishing
-(exit 2). Each of the 8 surfaces (narration, subtitles, card text, four platform
+prose. It catches translationese, stock phrases, assistant-register endings,
+comma-after-connective habits, and words above the reading floor, tiered S1/S2/S3; any
+remaining S1 blocks publishing (exit 2). Each of the 8 surfaces (narration, subtitles, card text, four platform
 copies, comments) has its own thresholds and disabled rules — the gate doesn't fight
 the register the playbook itself demands, like Threads banmal or Facebook's
 case-collecting closers. For video surfaces, `extract-text.js` pulls the text out of
-scenes.js. The rule source of truth is
+scenes.js.
+
+**The reading floor is a 초3~4 listener (만 9~10세)** — NIKL's 2022 vocabulary grading,
+grade 3. The E rules hold the part of it a regex can: document and news register (여부,
+기입하다, 초래하다) where an everyday word would do. The grade itself is nothing the checker
+computes — that read belongs to the storyboard reviewer. It binds words,
+never register: the 존댓말 or 반말 a channel speaks in is its profile's. A term the episode
+is actually about isn't banned by it — it arrives with the plain wording spoken beside it,
+declared in `window.COMPREHENSION.terms`, and a figure nobody can picture arrives with
+something to compare it to. Those two are the storyboard's narration reads, not the
+checker's. The rule source of truth is
 `skills/platform-guide/references/korean-style.md`; the code renders the verdict and
 the agent fixes the sentences.
 

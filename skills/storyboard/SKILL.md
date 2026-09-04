@@ -206,6 +206,27 @@ caps, template, the 훅's fact rule and the item-to-beat map:
 [scenario-stage.md](references/scenario-stage.md). Skip-research channels skip this with
 the three-direction pick.
 
+**The candidate pages are checked for words before they are shown.** The 주제 line and the
+훅 are the sentences the narration gets built from, so a page written in adult prose hands
+§4.5 a rewrite it was not meant to do. One command per page, no loop:
+
+```bash
+PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
+for n in 1 2 3; do
+  echo "--- d$n"
+  python3 $PG/check-style.py --surface narration --json candidates/d$n.md \
+    | python3 -c 'import json,sys; [print(" ", f["id"], f["excerpt"].strip()) for f in json.load(sys.stdin)["findings"] if f["id"][0] == "E"]'
+done
+```
+
+**Read only the E findings here**, and fix each one where you wrote it. The rest of the
+verdict is noise at this stage — a candidate page is a plan with item headings and notes, not
+spoken sentences, so running the whole narration gate over it raises D8·C1·C2 on prose that
+was never going to be narrated (measured on the library's 12 candidate pages). The words are
+what this check is for: E1~E3 is the grade-3 floor (korean-style §Eye level), and a
+ten-year-old has to follow the 주제 sentence with nothing else on the screen. The other rules
+get their turn at §4.5, on the sentences that actually get spoken.
+
 **No reviewer here** — the user is the judge of this stage, and the narration reads at §4.4
 and §4.5 catch a story that does not carry. Test each page against scenario-stage.md's
 engine test yourself before showing it: does the 훅 stage a moment, does 전개 #1 open on the
@@ -574,8 +595,23 @@ Core rules:
   player separately with a clean master, so the player handles line breaks. Either way, cut
   clearly on periods (the TTS silence-boundary detector needs them). Two notations: `tts`
   is Korean phonetic spelling ("4,700만"→"사천칠백만"), `sub` keeps the original notation.
-- **Plain-language principle (profile §2)** — for on-screen text and narration alike.
-  Unpacking the terms at the deck-authoring stage is what makes the narration plain too.
+- **Plain-language principle (profile §2), written for a 초3~4 listener** — on-screen text
+  and narration alike. The floor is korean-style §Eye level: the words a 만 9~10세 viewer
+  already has (NIKL vocabulary grading, grade 3). Unpacking the terms at the deck-authoring
+  stage is what makes the narration plain too. Four moves do the work, and the checker sees
+  only the first:
+  - **Swap the document-register word.** 여부·기입하다·소요된다·초래하다 all have an
+    everyday twin, and E1~E3 reject them. **Register is untouched** — profile §2's 존댓말
+    stays 존댓말, and talking down to a child ("~했어요~ 그쵸?") is its own defect.
+  - **A hard name arrives with its plain wording spoken beside it**, in the same shot, and it
+    is declared in `window.COMPREHENSION.terms` (short-form caps at three). If the name
+    changes neither the answer nor the takeaway, cut the name instead of explaining it.
+  - **A number arrives with something to compare it to.** 1조 원, 20제곱킬로미터, 0.3초 mean
+    nothing at ten. Put the comparison in the same sentence or the next one ("교실 마흔 개
+    넓이"). The figure itself never moves — the comparison is added beside it, and rounding
+    a range to make it land is distortion (korean-style §Principles when fixing).
+  - **One sentence, one idea.** Short-form's 8~25 chars already forces it; on long-form
+    (12~40) two clauses stitched with ~는데/그리고 usually want to be two sentences.
 - THEME is copied verbatim from the profile §3 values.
 - **Every generated-video shot leaves here with its camera decided** — `visual.camera`'s four
   slots (`movement` · `speed` · `framing` · `end`) filled on b-roll, motion-background scenes,
@@ -717,10 +753,18 @@ meaning, "제출 기한이 도래합니다" and "이날까지 안 내면 늦어�
 place a viewer smells AI is usually the words. This runs on the narration only, before a
 title or caption exists, so a swap here changes nothing a picture depends on.
 
-What it looks at: hard Sino-Korean words and unexplained jargon, translationese
+What it looks at: words above the 초3~4 floor (korean-style §Eye level — E1~E3, and the
+hard word the checker has no list for), unexplained jargon, translationese
 (`~를 통해`·`~에 있어서`·`수행합니다`), written-only vocabulary and report-style stative
 verbs (korean-style §D8, §D9), AI stock phrases, over-repetition of the same word, and words
-the profile §3 target doesn't use.
+the profile §1 target doesn't use.
+
+**Two kinds of hard word, and only one of them belongs to this read.** A word with an
+everyday twin (여부 → ~인지 아닌지) is a swap, and it is fixed here. A word the episode is
+*about* (계엄, 역학조사) needs a sentence — the plain wording spoken beside it, or a
+comparison for a figure nobody can picture — and adding a sentence changes the chain §4.4
+read. **That one goes back to §4.4**, inside its own cap, and comes out declared in
+`COMPREHENSION.terms`. Don't fix it here by stretching a swap into a rewrite.
 
 ```bash
 node $PG/extract-text.js storyboard/scenes.js narration > .work/text-narration.txt
@@ -729,7 +773,8 @@ python3 $PG/check-style.py --surface narration .work/text-narration.txt; echo "g
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "vocabulary mode"** with the
    numbered sentence list (the `subtitle` extract, as in §4.4), the checker's output above
-   pasted verbatim, and the `profile.md` path (§3 — who the listener is). Read the tail
+   pasted verbatim, and the `profile.md` path (§1 target audience · §2 plain-language
+   principle — who the listener is). Read the tail
    `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<sentence number>` — `score` is the
    lowest sentence's score.
 2. **Swap only the words that were flagged**, in `scenes.js`.

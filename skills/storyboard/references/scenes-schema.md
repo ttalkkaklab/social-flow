@@ -98,6 +98,14 @@ window.COMPREHENSION = {
   gets at most three. `plain` is the exact easy wording spoken in the same `firstShot`, before or
   beside the term. If a name changes neither the answer nor the takeaway, cut the name instead of
   adding it here.
+  - **`plain` is itself written at the 초3~4 floor** (korean-style §Eye level) — a gloss that
+    needs its own gloss explains nothing. "레이더 신호를 되돌리는 금속 구조물" trades one hard
+    word for two; "레이더 신호를 튕겨 내는 쇠판" is the same fact a ten-year-old already has.
+    The checker reads `plain` as narration like any other sentence, because it *is* spoken.
+  - **A figure nobody can picture gets the same treatment as a term** — 1조 원, 20제곱킬로미터,
+    0.3초. It is not declared here (this array holds words), but the comparison is spoken in the
+    same shot: put it beside the figure, and never round the figure to make the comparison
+    tidy.
 - `check-scenes.js` treats a missing block, an over-budget branch or term list, a wrong first
   shot, and a plain wording that is not actually spoken as violations. The reviewer handles the
   semantic half: an undeclared branch, a disposable proper name, or a scene whose evidence never
