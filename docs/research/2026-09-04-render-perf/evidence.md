@@ -195,3 +195,138 @@ old-def vs new-def r1 decoded f0009: pixels >4: 835 bbox x 0-1076 y 236-1919
 old-def vs new-def r1 decoded f0009: pixels >8: 33 bbox x 40-106 y 1208-1470
 old-def vs new-def r1 decoded f0009: pixels >16: 0
 max diff 16
+
+## phase5 — f0000 을 앞 그룹의 끝 프레임으로(최종 코드): jobs 3 두 번·jobs 1·이전 렌더러 대조·모션 슬라이드·모드·픽스처·완주 시간
+```
+=== s10 seam-copy: jobs3 x2 · jobs1 (sheet+keep) ===
+v-new1	s10-quarry-to-city.html	footage	3	3	459	48.18	9.5
+  exit 0
+v-new2	s10-quarry-to-city.html	footage	3	3	459	48.8	9.4
+  exit 0
+v-newj1	s10-quarry-to-city.html	footage	1	3	459	77.83	5.9
+  exit 0
+--- PNG
+v-new2 vs v-new1: 459 frames, identical 459, missing 0, min PSNR inf 
+v-newj1 vs v-new1: 459 frames, identical 459, missing 0, min PSNR inf 
+v-new1 vs q-old: 459 frames, identical 459, missing 0, min PSNR inf 
+v-new1 vs q-new1: 459 frames, identical 457, missing 0, min PSNR 80.1 frames-r3/f0000.png
+--- seam
+v-new1 seam g2 f0000 vs g1-end: identical
+v-new1 seam g3 f0000 vs g2-end: identical
+v-new2 seam g2 f0000 vs g1-end: identical
+v-new2 seam g3 f0000 vs g2-end: identical
+v-newj1 seam g2 f0000 vs g1-end: identical
+v-newj1 seam g3 f0000 vs g2-end: identical
+--- ground truth
+v-new1 r1: f0000→src0 · f0001→src1 · f0002→src2
+v-new1 r2: f0001→src1 · f0002→src2
+v-new1 r3: f0001→src1 · f0002→src2
+v-new1 ground truth: OK
+v-newj1 r1: f0000→src0 · f0001→src1 · f0002→src2
+v-newj1 r2: f0001→src1 · f0002→src2
+v-newj1 r3: f0001→src1 · f0002→src2
+v-newj1 ground truth: OK
+--- sheet pixels vs q-old
+v-new1 sheet vs q-old: g1-end.png:same g1-mid.png:same g2-end.png:44px/max20 g2-mid.png:same g3-end.png:same g3-mid.png:same
+v-newj1 sheet vs q-old: g1-end.png:same g1-mid.png:same g2-end.png:44px/max20 g2-mid.png:same g3-end.png:same g3-mid.png:same
+--- mp4
+[v-new1 vs v-newj1]
+r1.mp4: frames 133/133 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r2.mp4: frames 133/133 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r3.mp4: frames 193/193 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+manifest k/frames/dur: same
+[v-new1 vs v-new2]
+r1.mp4: frames 133/133 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r2.mp4: frames 133/133 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r3.mp4: frames 193/193 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+manifest k/frames/dur: same
+[v-new1 vs q-old]
+r1.mp4: frames 133/133 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r2.mp4: frames 133/133 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r3.mp4: frames 193/193 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+manifest k/frames/dur: same
+=== p2 seam-copy: jobs3 · jobs1 ===
+v-p2	s2-1776-origin.html	editorial	3	3	277	16	17.3
+  exit 0
+v-p2j1	s2-1776-origin.html	editorial	1	3	277	27.38	10.1
+  exit 0
+v-p2j1 vs v-p2: 277 frames, identical 277, missing 0, min PSNR inf 
+v-p2 vs p2seam: 277 frames, identical 277, missing 0, min PSNR inf 
+v-p2 seam g2 f0000 vs g1-end: identical
+v-p2 seam g3 f0000 vs g2-end: identical
+[v-p2 vs m-new-p2-def]
+r1.mp4: frames 114/114 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r2.mp4: frames 120/120 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r3.mp4: frames 43/43 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+manifest k/frames/dur: same
+[v-p2 vs m-old-p2-def]
+r1.mp4: frames 114/114 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r2.mp4: frames 120/120 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r3.mp4: frames 43/43 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+manifest k/frames/dur: same
+=== modes: --group 2 · --png-only ===
+v-g2	s10-quarry-to-city.html	footage	1	3	133	17.67	7.5
+  exit 0
+frames-r2
+manifest.tsv
+r0.png
+r2.mp4
+summary.json
+f0000.png
+f0001.png
+2	133	4401	/private/tmp/claude-501/-Volumes-data-repository-zeans-social-social-flow/010834bb-c820-483f-a4aa-e9775faf6d7f/scratchpad/v-g2/r2.mp4
+v-png	s10-quarry-to-city.html	footage	3	3	459	44.7	10.3
+  exit 0
+frames-r1
+frames-r2
+frames-r3
+manifest.tsv
+r0.png
+summary.json
+f0000.png
+f0001.png
+v-png vs v-new1: 459 frames, identical 459, missing 0, min PSNR inf 
+=== fixtures ===
+fixture fx/storyboard/slides/s10-noapi.html: exit 1 — ✗ the page does not expose __seek/__groups/__size/__meta/__ready — built from motion-slide-template.
+fixture fx/storyboard/slides/s10-stray.html: exit 1 — ✗ 1 animation(s) live outside any [data-rg] group — they would run on the wall clock and break deter
+fixture fxm/storyboard/slides/s10-quarry-to-city.html: exit 1 — ✗ could not load: footage/s10-g1-MISSING.mp4, footage/s10-g1-MISSING.mp4 — a slide's images and vide
+=== timing: s10 default mp4 (no keep) ===
+v-bench	s10-quarry-to-city.html	footage	3	3	459	46.44	9.9
+  exit 0
+v-bench2	s10-quarry-to-city.html	footage	3	3	459	46.41	9.9
+  exit 0
+=== phase5 done ===
+```
+
+## phase6 — 최종 코드로 s5·p2 완주(bench new2-*) 와 이전 렌더러 대조
+```
+=== final-code bench rows (s5 · p2) ===
+v-s5	s5-empty-city-rumours.html	footage	4	5	784	85.57	9.2
+v-p2b	s2-1776-origin.html	editorial	3	3	277	15.7	17.6
+[v-s5 vs m-old-s5-j1]
+r1.mp4: frames 133/133 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r2.mp4: frames 133/133 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r3.mp4: frames 163/163 psnr_avg 48.450057 · frames_not_identical 162 · per_frame_min 43.27
+r4.mp4: frames 192/192 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r5.mp4: frames 163/163 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+manifest k/frames/dur: same
+[v-s5 vs m-new-s5-def (previous new code)]
+r1.mp4: frames 133/133 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r2.mp4: frames 133/133 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r3.mp4: frames 163/163 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r4.mp4: frames 192/192 psnr_avg 51.837078 · frames_not_identical 191 · per_frame_min 48.22
+r5.mp4: frames 163/163 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+manifest k/frames/dur: same
+[v-p2b vs m-old-p2-def]
+r1.mp4: frames 114/114 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r2.mp4: frames 120/120 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+r3.mp4: frames 43/43 psnr_avg inf · frames_not_identical 0 · per_frame_min inf
+manifest k/frames/dur: same
+v-s5 r1 (vfrom 0ms): f0000→src0 · f0001→src1 · f0002→src2
+v-s5 r2 (vfrom 0ms): f0001→src1 · f0002→src2
+v-s5 r3 (vfrom 0ms): f0001→src1 · f0002→src2
+v-s5 r4 (vfrom 0ms): f0001→src4 ✗(expected 1) · f0002→src4 ✗(expected 2)
+v-s5 r5 (vfrom 0ms): f0001→src1 · f0002→src2
+v-s5 decoded-mp4 ground truth: MISMATCH
+=== phase6 done ===
+```

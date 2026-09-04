@@ -70,8 +70,11 @@
  *   (--png-only --keep-frames) and count how many classes the output falls into.
  * Measured on Chrome 152 / M4: ~20 fps capture at 1080×1920 on a plate slide. A footage slide
  *   captures at 6–7 fps per tab (photographic PNGs) and 10–11 fps on three tabs — ep209 s10's
- *   459 frames in 47 s against 197 s before (full mp4 render, bench.tsv in docs/research/2026-09-04-render-perf). The mp4 encode of a finished group runs while the
- *   next group is still being captured (one encode at a time), so it no longer adds to the wall clock.
+ *   459 frames in 46 s against 197 s before (full mp4 render, bench.tsv in docs/research/2026-09-04-render-perf).
+ *   The mp4 encode of a finished group runs while the next group is still being captured (one
+ *   encode at a time), so it no longer adds to the wall clock. Group k's f0000 is the frame group
+ *   k−1 captured at its end (the seam, see the capture loop), so --jobs 1 and --jobs 3 give
+ *   byte-identical output (459/459 on s10).
  *
  * What a page can move (template head · scenes-schema §motion slides): CSS @keyframes,
  *   data-count count-ups, a painter registered with __paint(rg, durMs, fn) that draws the
@@ -339,7 +342,7 @@ const openPage = async () => {
   // Each tab gets its own window. A second tab in the same window is a background tab, and a
   // background tab is throttled — with a requestAnimationFrame-based wait in the loop, --jobs 3
   // died on "Runtime.evaluate timed out after 30s" (ep209 s10, 2026-09-04). A window of its own
-  // is a visible tab; three of them captured 459 frames in 44 s with identical output.
+  // is a visible tab; three of them captured 459 frames in 46 s with identical output.
   const { targetId } = await send("Target.createTarget", { url: "about:blank", newWindow: true });
   const { sessionId: sid } = await send("Target.attachToTarget", { targetId, flatten: true });
   await send("Page.enable", {}, sid);
@@ -540,9 +543,28 @@ const openPage = async () => {
     if (isFootage) await w.evalJS(footageVdurJS(JSON.stringify(segMap && segsApplied ? segMap : {})));
   }
   const rows = new Array(todo.length);
+  // The seam. Group k's f0000 is by design the picture at the end of group k−1 (footage-lane.md:
+  // the cut lands on f0001), and seeking group k to 0 in a tab that never ran group k−1 paints that
+  // same picture with the mark edges off by a few pixels — measured on ep209 s10 as 3 px in one
+  // tab layout and 44 px (max 20/255) in another, the old renderer included, the video frame
+  // identical either way. So group k's f0000 is not captured; it is the end frame group k−1
+  // captured itself at t=dur, which is also the sheet's g<k−1>-end. Two runs with different --jobs
+  // then agree byte for byte (459/459 on s10, 2026-09-04), and the seam holds by construction.
+  // A group whose predecessor is not being rendered (--group k) captures its f0000 as before.
+  const endFrame = {};                                   // k → PNG buffer of group k at t=dur
+  const captured = {}, capturedDone = {};                // k → promise resolved when group k is captured
+  for (const k of todo) captured[k] = new Promise(res => { capturedDone[k] = res; });
+  const seamFrom = k => (k > 1 && todo.includes(k - 1)) ? k - 1 : null;
+  const seamFrame = async (r) => {
+    const j = seamFrom(r.k);
+    if (j == null) return;
+    await captured[j];
+    fs.writeFileSync(path.join(r.fdir, "f0000.png"), endFrame[j]);
+  };
   // Group k's frames become r<k>.mp4 as soon as its capture ends, while other tabs keep capturing.
   // A chain rather than Promise.all keeps it to one encode at a time.
   const encodeGroup = async (r) => {
+    await seamFrame(r);
     const mp4 = path.join(OUT, `r${r.k}.mp4`);
     // Grain after the yuv420p conversion so it lands on luma only (c0) — chroma stays clean, the
     // way film grain does. Static (no temporal flag): temporal grain at crf 14 cost 12.6 MB for a
@@ -562,12 +584,18 @@ const openPage = async () => {
     const nF = Math.max(2, Math.round(dur / 1000 * opt.fps) + 1);
     const fdir = path.join(OUT, `frames-r${k}`);
     fs.rmSync(fdir, { recursive: true, force: true }); fs.mkdirSync(fdir, { recursive: true });
-    for (let i = 0; i < nF; i++) {
+    for (let i = seamFrom(k) == null ? 0 : 1; i < nF; i++) {
       await w.seek(Math.min(i * 1000 / opt.fps, dur), k);
       await (i <= 1 ? w.shotStable : w.shot)(path.join(fdir, `f${String(i).padStart(4, "0")}.png`));
     }
+    // The end frame, t=dur exactly: the next group's f0000 and the sheet's end frame.
+    const endPng = path.join(fdir, "end.png");
+    await w.seek(dur, k);
+    endFrame[k] = await w.shotStable(endPng);
+    fs.rmSync(endPng, { force: true });
     framesTotal += nF;
     rows[idx] = { k, nF, dur, fdir };
+    capturedDone[k]();
     if (!opt.pngOnly) {
       encodes = encodes.then(() => encodeGroup(rows[idx]));
       // A failed encode is reported by the await below; this handler only keeps Node from treating
@@ -583,13 +611,15 @@ const openPage = async () => {
   }));
   // The last encode may still be running — the manifest is written in group order once it is done.
   await encodes;
+  if (opt.pngOnly) for (const r of rows) await seamFrame(r);
   for (const r of rows) manifest.push([r.k, r.nF, r.dur, opt.pngOnly ? r.fdir : r.mp4].join("\t"));
   if (opt.sheet) {                       // review frames — the slide-reviewer reads these
     const sdir = path.join(OUT, "sheet"); fs.mkdirSync(sdir, { recursive: true });
     for (let k = 1; k <= N; k++) {
       const dur = groups[k].dur;
       await seek(Math.round(dur / 2), k); await shot(path.join(sdir, `g${k}-mid.png`));
-      await seek(dur, k);                await shot(path.join(sdir, `g${k}-end.png`));
+      if (endFrame[k]) fs.writeFileSync(path.join(sdir, `g${k}-end.png`), endFrame[k]);   // the frame group k captured at t=dur
+      else { await seek(dur, k); await shot(path.join(sdir, `g${k}-end.png`)); }
     }
   }
   // Zone fill — measured at the final rest state (clip N's end frame, the frame the video
