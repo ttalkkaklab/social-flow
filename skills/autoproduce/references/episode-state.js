@@ -379,6 +379,19 @@ function selftest() {
      req.imageFiles.join(',') === 'images/scene-1-1.png,images/s4-odd.png,images/b5-src.png');
   ok('a shot that names no image contributes none', req.imageFiles.indexOf(undefined) === -1);
 
+  // blockers(): stills and slide files are produce's output since 2026-09-04, so their
+  // absence is normal at approved and a blocker only once the video claims to be built.
+  const staged = (stage) => blockers(Object.assign({}, base, {
+    req: { imageFiles: ['images/scene-1.png'], slideFiles: ['slides/s3-flow.html'],
+           footageFiles: [], videoSlots: 0, filmed: 0 }
+  }), stage);
+  ok('approved does not block on stills produce has not made yet',
+     !staged('approved').some((x) => /scene image|slide file/.test(x)));
+  ok('produced blocks on a still the scenes name and the disk lacks',
+     staged('produced').some((x) => /scene image/.test(x)));
+  ok('produced blocks on a slide file never authored',
+     staged('produced').some((x) => /slide file/.test(x)));
+
   // blockers(): a ready queue marker pointing at nothing
   const b = blockers(Object.assign({}, base, {
     frontmatter: { status: 'produced', queue_threads: 'ready' },

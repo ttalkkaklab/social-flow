@@ -1,25 +1,27 @@
-# Per-episode cost ledger — storyboard through video, one file
+# Per-episode cost ledger — one file per episode
 
-The money an episode costs doesn't all go out at production time. **One cover
-background is already $0.22** — and it's made at the storyboard stage, usually
-days before the video, in a different session. Two rounds of the image
-regeneration loop and half the episode's spend is committed before a video
-file even exists.
+**Nothing is billed before the storyboard is approved** (owner directive 2026-09-04).
+The storyboard plans every still, slide art and clip and calls nothing; produce
+makes the calls — the cover background at §1.5, the slide arts at §3.6, the clips
+at §3 — so the ledger opens empty and produce writes every line in it.
 
-So the ledger lives **in the topic directory and the two skills write it in
-turn.** storyboard writes the first lines, produce continues them, and produce
-§10 tallies the whole episode from that one file.
+The ledger still lives **in the topic directory** rather than in the session,
+because produce often runs days later in a different session than the storyboard,
+and produce §10 tallies the whole episode out of that one file. Episodes older
+than 2026-09-04 carry `storyboard:` lines from the days when the images were made
+before approval; the report reads them the same way.
 
 ```
-data/<channel>/episodes/<topic>/.work/cost-tally.tsv     ← the ledger (shared by storyboard·produce)
-data/<channel>/episodes/<topic>/.work/cost-forecast.tsv  ← the video-slot projection (storyboard §6, written by cost-preview.js)
+data/<channel>/episodes/<topic>/.work/cost-tally.tsv     ← the ledger (written by produce)
+data/<channel>/episodes/<topic>/.work/cost-forecast.tsv  ← the projection: stills, slide arts, video slots (storyboard §6, written by cost-preview.js)
 data/<channel>/episodes/<topic>/.work/cost-estimate.tsv  ← the whole-episode projection for the cap verdict (autoproduce §5)
 data/<channel>/episodes/<topic>/output/video/cost-report.txt  ← the tally result (made by produce §10)
 ```
 
 **Three files, three jobs — they never overwrite each other.** `cost-tally.tsv` is the only
 record of money actually spent. `cost-forecast.tsv` is what approving the storyboard would
-commit, and it holds generated-video slots alone. `cost-estimate.tsv` belongs to the unattended
+commit — stills, slide arts and generated-video slots, which since 2026-09-04 is the whole
+bill rather than the part of it that had not been paid yet. `cost-estimate.tsv` belongs to the unattended
 loop's cap check and covers the whole episode. cost-preview.js reads the first and writes the
 second; it never touches the third.
 
@@ -149,9 +151,10 @@ tally stays the record and the events are the check on it.
 ## Before the money goes out — the approval-screen preview
 
 The ledger answers "what did this cost". The person at storyboard §7 is asking a different
-question: **"what does saying yes cost me?"** By then the images are already billed, and every
-generated-video slot in scenes.js is still free to delete. So one script puts both numbers on
-the approval screen.
+question: **"what does saying yes cost me?"** Nothing has been billed by then and every line —
+the stills as much as the video slots — is still free to delete, so the answer is the whole
+projection. One script puts it on the approval screen next to whatever the ledger holds (which
+on a new episode is nothing).
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
@@ -159,11 +162,14 @@ node $REF/cost-preview.js storyboard/            # human-readable
 node $REF/cost-preview.js storyboard/ --sbdoc    # the SB_DOC.cost block to paste
 ```
 
-It reads `scenes.js` for the video slots, writes the projection to `.work/cost-forecast.tsv` in
+It reads `scenes.js` for the stills and the video slots, writes the projection to `.work/cost-forecast.tsv` in
 this same line format, and runs `cost-report.sh` over both files — so the estimate and the bill
 come out of one calculator reading one price table.
 
-**What it projects, and why only that.** B-roll bills `veo.lite.1080p` at 8 seconds however
+**What it projects, and why only that.** Every scene with a `bgPrompt` bills one image —
+`image.gpt-image-2.high` for the cover and for a still a video engine reads (a b-roll's source
+scene, a motion-background scene), `image.local` at $0 for the rest — and each `slide.arts`
+plate bills one local image. B-roll bills `veo.lite.1080p` at 8 seconds however
 short the cut is (1080p generates 8s), a motion background bills the seconds it asks Seedance
 for, and a quote speech clip bills `veo.fast.1080p` at 8 (veo_reference refuses the lite model
 and is pinned to 8s). `visual.engine` / `visual.video.engine` override the route. TTS and music

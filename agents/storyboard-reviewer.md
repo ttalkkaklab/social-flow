@@ -181,7 +181,7 @@ scenario-craft §4 · §5 · §6 · §11 · §12.
 - `storyboard/research.md` — whether the material holds a plausible wrong answer that no
   item takes apart, whether the claimed engine has anything in the evidence to stand on,
   and whether every fact on the page (the 훅's names and years included) has a row
-- `data/<channel>/profile.md` — §3 target, so you can say whether the promise is a promise
+- `data/<channel>/profile.md` — §1 target audience, so you can say whether the promise is a promise
   to them
 - The rules: `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenario-craft.md` §4 · §5 ·
   §6 · §11 · §12, and `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenario-stage.md`
@@ -451,7 +451,7 @@ pass: carry those as one "hand to another mode" line, never as a P0.
   `window.COMPREHENSION` first; it is the declared question → answer → takeaway path and the
   term list against which the spoken copy is judged
 - `storyboard/research.md` (if present) — the ledger of verified claims. The reference for the facts axis
-- `data/<channel>/profile.md` — §2 tone and voice, §3 target, banned material
+- `data/<channel>/profile.md` — §1 target audience, §2 tone and voice, banned material
 - Style rules: `${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/korean-style.md`
 - Style checker: `${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py`
   (text extraction from scenes.js is `extract-text.js` in the same folder)
@@ -631,7 +631,7 @@ reviewer quotes its output as the evidence.
   before the content; on a story arc the answer first appears in the result, the turn sits
   right before it, and the cta's frame points back at the cover 5
 - **Facts and tone (30)**: faithful against research.md (ranges and as-of dates preserved)
-  15 / matches profile §2 tone and §3 target 10 / screen text agrees with the narration 5
+  15 / matches profile §2 tone and §1 target audience 10 / screen text agrees with the narration 5
 
 Start from 0 and add points **only with evidence that you read both scenes.js and the
 reference documents**.
@@ -679,7 +679,7 @@ vocabulary mode).
 - `storyboard/scenes.js` — what gets scored. Read `window.COMPREHENSION` first and use its
   question → answer → takeaway path as the context test for every scene
 - `storyboard/research.md` (if present) — the reference for evidence links
-- `data/<channel>/profile.md` — §2 tone, §3 target and mood, the channel's topic range
+- `data/<channel>/profile.md` — §1 target audience, §2 tone, §3 mood, the channel's topic range
 - `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenario-craft.md` (if passed) — the
   craft yardstick behind P0 1 and P0 2: the connective test and the value turn, plus the
   plant/payoff rule the story `turn` is judged by, and the three story-arc rules read as
@@ -1017,7 +1017,7 @@ shot; only the slot axes go `n/a` on the shots that don't become video.
 ## Inputs (supplied by the delegation prompt)
 
 - path to `storyboard/scenes.js`
-- `data/<channel>/profile.md` — §2 tone, §3 target, banned material
+- `data/<channel>/profile.md` — §1 target audience, §2 tone, banned material
 - `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/directing-grammar.md` — **the feel →
   technique table (§5), the size ladder (§2), the angle rules (§3), the move table (§4), the
   rationing rules (§6), the filmed-shot notes (§7)** — the yardstick for the shot-grammar axis
@@ -1263,7 +1263,7 @@ scene is saying**. Judge fit, not looks.
   an image you didn't open
 - `storyboard/scenes.js` — per-scene narration, screen text, `bgPrompt`. The reference to
   compare against
-- `data/<channel>/profile.md` — §3 mood, THEME, target, banned subjects
+- `data/<channel>/profile.md` — §1 target audience, §3 mood, THEME, banned subjects
 - if the episode used illustration mode (`narration[].img`), those illustration paths are up
   for evaluation too
 - a change the user asked for at the approval step, when the delegator sends one back

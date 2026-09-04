@@ -115,13 +115,14 @@ const ROUTES = {
   },
   /* Stills moved behind the approval gate on 2026-09-04 (owner directive — a plan the user
      rejects must cost nothing), so they are a projection now, not a ledger line. The engine
-     split is storyboard §5's: the cover carries the thumbnail and feeds the video engines, so
-     it is gpt high; every other still is local Z-Image at $0. A still that has to contain text
-     also goes to gpt — rare, and the forecast is under by $0.22 when it happens, which the
-     §7 screen says out loud rather than hiding. */
+     split is storyboard §5's: gpt high for the cover and for every still a video engine reads
+     as its input (a b-roll's source scene, a motion-background scene — still-generation.md §1),
+     local Z-Image at $0 for the rest. A still that has to contain text also goes to gpt — rare,
+     and the forecast is under by $0.22 when it happens, which the §7 screen says out loud
+     rather than hiding. */
   'still/gpt': {
     key: 'image.gpt-image-2.high', fixedQty: 1,
-    why: 'gpt_image_text2img high — the cover is the thumbnail and the video engines\' source'
+    why: 'gpt_image_text2img high — the thumbnail, and every still a video engine reads'
   },
   'still/local': {
     key: 'image.local', fixedQty: 1,
@@ -200,15 +201,31 @@ function videoSlots(scenes) {
  * storyboard-html-template.html, where a still count would go stale for $0.
  */
 function stillSlots(scenes) {
+  /* Which scenes' stills a video engine reads as its input. Those are photorealistic people on
+     gpt high, never the local engine (still-generation.md §1 · storyboard §5): a b-roll takes
+     its source from the scene at its `after` index, and a motion-background scene feeds its
+     own still to the engine. Miss them and the approval screen under-reports $0.22 a shot. */
+  const videoSource = new Set();
+  scenes.forEach((shot, i) => {
+    const s = shot || {};
+    const v = s.visual || {};
+    if (s.type === 'broll') {
+      const after = Number(s.after);
+      if (Number.isInteger(after)) videoSource.add(after);
+    } else if (v.video) videoSource.add(i);
+  });
+
   const slots = [];
   scenes.forEach((shot, i) => {
     const s = shot || {};
     const v = s.visual || {};
     const shotNo = i + 1;
     if (v.bgPrompt) {
-      const engine = s.type === 'cover' ? 'gpt' : 'local';
+      const isCover = s.type === 'cover';
+      const engine = isCover || videoSource.has(i) ? 'gpt' : 'local';
       slots.push({ shot: shotNo, kind: 'still', engine, duration: 0,
-                   label: (s.type === 'cover' ? 'cover background' : 'scene still') });
+                   label: isCover ? 'cover background'
+                        : videoSource.has(i) ? 'scene still · video source' : 'scene still' });
     }
     const sl = v.slide;
     if (sl && Array.isArray(sl.arts)) {
@@ -452,8 +469,21 @@ function selftest() {
   ]);
   ok('one still per bgPrompt scene, none for a slide or a filmed scene',
      stills.filter((x) => x.kind === 'still').length === 2);
-  ok('the cover still is gpt high and the rest are local',
+  ok('the cover still is gpt high and a plain points still is local',
      stills[0].engine === 'gpt' && stills[1].engine === 'local');
+
+  // A still a video engine reads is gpt high wherever it sits — the b-roll's source scene and
+  // the motion-background scene itself. Getting this wrong under-reports the approval screen.
+  const sourced = stillSlots([
+    { type: 'cover', visual: { bgPrompt: 'p' } },
+    { type: 'points', visual: { bgPrompt: 'p' } },
+    { type: 'points', visual: { bgPrompt: 'p', video: { prompt: 'x' } } },
+    { type: 'broll', after: 1, visual: { src: 'images/scene-2.png' } }
+  ]);
+  ok('the scene a b-roll takes its source from is gpt high',
+     sourced[1].engine === 'gpt' && /video source/.test(sourced[1].label));
+  ok('a motion-background scene still is gpt high too', sourced[2].engine === 'gpt');
+  ok('a b-roll scene carries no still of its own', sourced.length === 3);
   ok('slide art plates are counted one per art',
      stills.filter((x) => x.kind === 'art').length === 2);
   const stillRows = forecastRows(stills);
