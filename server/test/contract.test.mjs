@@ -1351,6 +1351,35 @@ describe('video engine separation (Veo · Seedance)', () => {
     );
   });
 
+  it('a Korean direction outside quotes is rejected on every model but 2.5', () => {
+    // The prompt body reads Chinese or English. Korean is not refused by the vendor — it is
+    // ignored, so the shot comes back wrong after a paid wait. Reject it while it is free.
+    const korean = 'the column across the middle third, very slow dolly in. 손이 미끄러진다.';
+    assert.equal(seedanceText2VideoSchema.safeParse({ prompt: korean }).success, false);
+    assert.equal(
+      seedanceImg2VideoSchema.safeParse({ prompt: korean, sourceImagePath: '/tmp/a.png' }).success,
+      false,
+    );
+    assert.equal(
+      seedanceReferenceSchema.safeParse({ prompt: korean, referenceImagePaths: ['/tmp/a.png'] }).success,
+      false,
+    );
+    // 2.5 is the one model that reads Korean
+    assert.equal(
+      seedanceText2VideoSchema.safeParse({ prompt: korean, model: 'dreamina-seedance-2-5-260628' }).success,
+      true,
+    );
+    // dialogue inside quotes is what 1.5 pro lip-syncs — it stays
+    assert.equal(
+      seedanceText2VideoSchema.safeParse({ prompt: 'the man leans in and says "딸깍" once.' }).success,
+      true,
+    );
+    // and the message says what to do instead
+    const issue = seedanceText2VideoSchema.safeParse({ prompt: korean }).error.issues
+      .find((i) => i.path[0] === 'prompt');
+    assert.match(issue.message, /Chinese or English/);
+  });
+
   it('the model capability table does not contradict itself', () => {
     for (const [model, spec] of Object.entries(SEEDANCE_MODEL_SPECS)) {
       assert.ok(spec.resolutions.length > 0, `${model}: resolutions is empty`);

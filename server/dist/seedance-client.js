@@ -166,6 +166,20 @@ const commonFields = {
     filename: bareFilenameSchema('video').optional(),
 };
 /**
+ * Hangul outside quotation marks — the prompt language constraint.
+ *
+ * The prompt body reads Chinese or English on every model but
+ * dreamina-seedance-2-5-260628. Korean **dialogue** works on 1.5 pro, which lip-syncs
+ * it, so what a quote encloses is exempt; a Korean direction outside quotes is not
+ * understood and silently degrades the shot rather than failing the call.
+ */
+const QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+const HANGUL_RUN = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
+function hangulOutsideQuotes(prompt) {
+    const match = prompt.replace(QUOTED_SEGMENT, ' ').match(HANGUL_RUN);
+    return match ? match[0] : null;
+}
+/**
  * Model × resolution × duration × feature cross-constraint validation (per official docs).
  *
  * We reject before calling for the same reason Veo does — one generation takes
@@ -175,6 +189,16 @@ const commonFields = {
  */
 function validateCommon(data, ctx) {
     const spec = SEEDANCE_MODEL_SPECS[data.model];
+    if (data.model !== 'dreamina-seedance-2-5-260628') {
+        const korean = hangulOutsideQuotes(data.prompt);
+        if (korean) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['prompt'],
+                message: `${data.model} reads Chinese or English prompts only — the Korean "${korean}" sits outside quotation marks and would be ignored rather than obeyed. Write the direction in English; Korean dialogue belongs inside quotes (1.5 pro lip-syncs it), or route the shot to dreamina-seedance-2-5-260628.`,
+            });
+        }
+    }
     if (!spec.resolutions.includes(data.resolution)) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,

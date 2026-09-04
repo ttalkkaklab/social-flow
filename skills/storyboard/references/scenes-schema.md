@@ -1227,8 +1227,11 @@ that are each already reviewed, in this order:
    PNG is called by a **general noun** ("the subject", "the woman"), never re-described. An
    in-clip state change carries its own length **in words** ("the visor snaps shut
    in under half a second"); left open, the engine spreads the change across the whole clip.
-4. `--locks` — the positive-locks tail on a multi-reference call: what holds in every frame,
-   said positively, each reference given its scope (video-model-selection §positive locks).
+4. `--locks` — what holds in every frame, said positively, each reference given its scope
+   (video-model-selection §positive locks). **On a seedance route it is required**: that
+   engine has no `negativePrompt` argument, so the lock is the only place an exclusion can
+   go, and the vendor's own image-lane pattern closes on one. On a veo route it is optional —
+   exclusions ride in the `negativePrompt` argument there.
 5. the `visual.audio` sentence, closing the prompt as `Audio: …` (§clip audio).
 
 The assembler exits 1 on what the route can't take, so a stored prompt is a checked prompt:
@@ -1236,7 +1239,12 @@ banned space language (§frame space), negative directives in the body (two exem
 `Audio:` sentence, where "no music, no speech" is a state description, and on a seedance
 route the vendor-templated **artifact classes**: subtitles, on-frame text, logos, watermarks,
 BGM), timecodes and digit seconds on a seedance route, digit seconds on a veo route
-(`--engine seedance-2.5` opens integer-second forms — that model officially takes them).
+(`--engine seedance-2.5` opens integer-second forms — that model officially takes them),
+**Korean anywhere outside a dialogue quote on a seedance route** (that body reads Chinese or
+English; 2.5 is the one model that reads Korean, and 1.5 pro lip-syncs what a quote encloses),
+and **a seedance prompt with no consistency lock**. `check-scenes.js` re-runs those last two
+against every stored prompt, so a prompt written by hand meets the same bar as an assembled
+one, and `seedance-client.ts` refuses the Korean body one more time at the call itself.
 
 **Time inside the clip differs by route.** A Seedance-routed prompt names no clock — the 2.0
 vendor docs self-report unstable precision timing, so beats are ordered by description
