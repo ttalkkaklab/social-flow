@@ -1275,10 +1275,10 @@ the total but where it went. The `storyboard:` / `produce:` prefixes in the ledg
 that split.
 
 ```
-Cost — what this episode ran to (storyboard → video)
-  storyboard   6 images (gpt high 2 · local 4)              $0.44
-    · of which 1 regenerated (§5.5 remake)                   $0.22
-  produce      b-roll veo lite 1080p, 8s generated          $0.64
+Cost — what this episode ran to (stills → video)
+  produce      6 stills (gpt high 2 · local 4)              $0.44
+    · of which 1 regenerated (§1.5 remake)                   $0.22
+               b-roll veo lite 1080p, 8s generated          $0.64
                narration 1,840 chars (local)                $0.00
                BGM 90s                                      excluded — unit price unconfirmed
   ────────────────────────────────────────────────────────────
@@ -1325,7 +1325,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/check-final-speech-rate.py`** — measures Unicode letters and numbers on `subs-fast.srt`; catches a whole-video speed factor that made otherwise valid cards too dense to follow
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
-- **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames storyboard §5.6's design gate reads. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
+- **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames the §3.6 sheet read looks at. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)

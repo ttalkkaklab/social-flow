@@ -69,7 +69,7 @@ subtitle spec built for plates.
   plain cuts warm dust, and the viewer reads the geography from that alone. Name the palette
   per place in the still prompts (directing-grammar §3.5) and keep it across the shots of
   that place.
-- Your own camera pass (storyboard §4.6) reads every `shots[]` entry as a generated shot — feel served, four
+- Your own camera pass (storyboard §4.7) reads every `shots[]` entry as a generated shot — feel served, four
   slots, a cut length that matches the sentence.
 
 ## 3. Fitting the clips to the budget (storyboard §5)

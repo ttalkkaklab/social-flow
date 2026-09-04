@@ -150,7 +150,7 @@ Three things to look at in a filmed scene.
   step, an item — appears in neither labels nor title/bullets, the screen can't carry
   the sound.
 - A missing slide file (`slides/*.html`) is **not a defect** at this review — the files
-  are authored at §5.6, after the sentence reviews. What you're reading here is the plan.
+  are authored at produce §3.6, after approval. What you're reading here is the plan.
 
 ---
 
@@ -1272,7 +1272,7 @@ If any image file won't open, mark that one "unverified" and withhold its share 
 points.
 
 **Slide scenes (`visual.slide`) are out of scope for this mode** — their screen is not a
-generated image but an HTML slide that storyboard §5.6 builds, so having no
+generated image but an HTML slide that produce §3.6 builds, so having no
 `scene-N.png` is normal. Don't raise the absence as a defect.
 
 ## P0 defects (any one of them is a must-fix, not a maybe)

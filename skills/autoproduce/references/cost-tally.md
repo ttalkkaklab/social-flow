@@ -46,9 +46,9 @@ key <TAB> quantity <TAB> memo
 ```
 
 ```tsv
-image.gpt-image-2.high	1	storyboard: cover background scene-1
-image.local	3	storyboard: points backgrounds scene-2~4
-image.gpt-image-2.high	1	storyboard: §5.5 remake scene-1
+image.gpt-image-2.high	1	produce: cover background scene-1
+image.local	3	produce: points backgrounds scene-2~4
+image.gpt-image-2.high	1	produce: §1.5 remake scene-1
 veo.lite.1080p	8	produce: b-roll a1 — 8s generated, 4s used
 tts.local	0.412	produce: narration, 412 chars
 music.lyria-clip	1	produce: BGM 30s
@@ -56,10 +56,12 @@ music.lyria-clip	1	produce: BGM 30s
 
 - **key** is `prices.tsv`'s first column, verbatim. Invent a key that isn't
   there and the report stops.
-- **Prefix the memo with `storyboard:` / `produce:`.** The report table then
+- **Prefix the memo with the skill that made the call.** The report table then
   separates the stages without adding a column (add a column and the format
-  diverges from what autoproduce writes).
-- **Log discards too.** Images regenerated after the §5.5 image check, clips
+  diverges from what autoproduce writes). Since 2026-09-04 every line on the
+  attended path says `produce:` — the storyboard generates nothing — and
+  `storyboard:` lines survive only in episodes older than that.
+- **Log discards too.** Images regenerated after the produce §1.5 image check, clips
   redrawn because you didn't like them, TTS rerun after failing the length
   check — they don't reach the deliverable, but they do get billed.
 
