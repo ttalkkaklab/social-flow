@@ -400,8 +400,10 @@ Core rules:
   Across shots establish then go close, use one `cu` per scene, `choker`/`ecu` once or twice per
   episode, and one reasoned `dutch`; keep hooks and speech at `eye`, and hold a wide ≥1.5× a close
   (directing-grammar §6). The same fields steer filmed-shot distance, eye height and 180° line (§7).
-- **Decide each join after the scenes are settled (4b).** Omit `transition` (builder J-cuts
-  spoken cards); `"cut"` is a smash. Spend the rest from scenes-schema §scene transition.
+- **Decide each join after the scenes are settled (4b).** Every shot after the first gets a
+  `transition`, chosen from what happened between the two shots in the ordered table of
+  scenes-schema §scene transition — `jcut` only when nothing but the camera moved, `cut` only
+  for a smash. `check-scenes` fails a boundary with none.
 - **Composition — the format picked in §1.5 sets the band.** The source of truth for the
   constants is `formats.js`, and the `storyboard.html` check strip measures against those
   values for you.

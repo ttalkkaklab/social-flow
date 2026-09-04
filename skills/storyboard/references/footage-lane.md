@@ -186,8 +186,11 @@ sentence under a 2-second cut reads as a caption on a photo.
 - **A fast camera under a fixed mark** drags the picture out from under it. `very slow` or
   `static` on marked shots; save the dolly for the unmarked ones.
 - **Marks authored on the still** land beside the subject in the clip. Always the mid frame.
-- **Do not add a `transition` to a footage scene.** The seam is already identical frames by the
-  state rule and the cut lands one frame later; a dissolve on top turns a cut into a slideshow.
+- **A footage scene takes the same per-boundary join as any other shot** (`transition`,
+  scenes-schema §scene transition). The seams that need nothing are the ones between groups
+  inside one slide — clip k opens on the previous rest state, so those are already identical
+  frames. Between two footage scenes ask what moved: `jcut` when the next clip is the same
+  place a moment later, `dissolve` when time or place moved, `dip` at a break.
 - **HEVC and AV1 do not decode** in the renderer's Chrome. Seedance and Veo return H.264; a
   clip converted elsewhere has to come back as H.264 mp4 or VP9 webm.
 - **Two paths for the clip's own sound.** The builder discards it on a slide; if a shot's sound

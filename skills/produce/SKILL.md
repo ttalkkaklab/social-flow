@@ -765,41 +765,44 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 | `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
 | `span=<0..1.5>` | this card's total zoom span, replacing the global `ZOOM_SPAN` (0.4 = the window grows 40% over the card). Applies to `in`/`out`/`punch` and the pan zoom drift; unused on `hold`/`none` | a still whose beat wants a visible move — computed from the storyboard's `speed` word (below). Past base+`span` > `ZOOM_BASE`/canvas (base: pan scale · drift 1.04 · else 1; headroom 0.5 at the defaults) the source upscales and the build warns: raise `ZOOM_BASE` and generate the scene image at that resolution |
 | `ease=smooth\|linear\|in` | this card's easing, replacing the global `KB_EASE`. `in` accelerates — an unnoticed start, fastest exactly at the cut | the ladder's accelerating rows (action/tension, CTA) — pairs with cutting away at the peak. `punch` keeps its own ease-out ramp and ignores `ease=` |
-| *(omit `enter=`)* | **J-cut** — this card opens on the previous last frame for `SCENE_JCUT` (0.32s) while the next line already plays, then the picture cuts. Drops this card's silent pre-roll | omit `transition`. **Do not type `enter=jcut`** — that is the builder default on incoming spoken cards |
+| `enter=jcut` | **J-cut** — this card opens on the previous last frame for `SCENE_JCUT` (0.32s) while the next line already plays, then the picture cuts | `transition: "jcut"` — the continuity cut. Leave `enter=` empty and the builder falls back to this **and warns**: an empty join is the one nobody chose |
 | `enter=cut` | smash — picture and sound change together, old silent pre-roll | `transition: "cut"` |
-| `enter=dissolve` | this card opens on the previous card's last frame and melts up through it (`SCENE_XF`, 0.45s) — two pictures on screen at once | **the storyboard's `transition: "dissolve"`** — written on the card that carries the field, nothing on the card before |
+| `enter=dissolve` | this card opens on the previous card's last frame and melts up through it (`SCENE_XF`, 0.45s) — two pictures on screen at once | `transition: "dissolve"` — written on the card that carries the field, nothing on the card before |
 | `enter=push:<l2r\|r2l\|u2d\|d2u>` | the previous card's last frame slides off in that direction and uncovers this card (`SCENE_PUSH`, 0.32s) | `transition: "push:<dir>"` — same rule, the incoming card alone |
 | `enter=iris` | a circle opens out of the previous card's last frame onto this one (`SCENE_IRIS`, 0.45s) | `transition: "iris"` — the find |
 | `enter=blur` | the previous last frame smears sideways and melts (`SCENE_BLUR`, 0.45s) | `transition: "blur"` — memory, hypothetical, attention leaving |
 | `enter=zoom` | the previous last frame grows past the camera and thins out (`SCENE_ZOOM`, 0.32s) | `transition: "zoom"` — the camera goes *in* |
 | `enter=whip:<l2r\|r2l\|u2d\|d2u>` | the previous last frame slides off smeared along that axis (`SCENE_WHIP`, 0.24s — the shortest join here) | `transition: "whip:<dir>"` — a hard swerve. Pairs with a whoosh in `sfx.tsv` |
-| `exit=black` + `enter=black` (or `white`) | the card before fades its tail into the colour, this card fades its head out of it (`SCENE_FADE`, 0.12s each) | `transition: "dip"` / `"dip:white"` — two halves, one per card. `enter=1`/`exit=1` still mean black |
+| `exit=black` + `enter=black` (or `white`) | the card before fades its tail into the colour, this card fades its head out of it (`SCENE_FADE`, 0.30s each) | `transition: "dip"` / `"dip:white"` — two halves, one per card. `enter=1`/`exit=1` still mean black |
 
 ```
-# one line for a filmed scene (live voice)
-3	pcm/s3-run-cli.wav	0	none	sync=1,subs=cards/s3subs.tsv
-# 슬라이드·생성 씬(사용자 녹음 나레이션 — window.VOICE) 한 줄 예: 일반 레인, sync 없음
-11	pcm/s12.wav	0	none
+# one line for a filmed scene (live voice) — its own sound starts with its picture, so the smash is the natural join
+3	pcm/s3-run-cli.wav	0	none	sync=1,subs=cards/s3subs.tsv,enter=cut
+# 슬라이드·생성 씬(사용자 녹음 나레이션 — window.VOICE) 한 줄 예: 일반 레인, sync 없음, 보드의 transition 을 enter= 로
+11	pcm/s12.wav	0	none	enter=dissolve
 ```
 
-**A transition is drawn inside one card, never across two.** Map `transition` from
-scenes-schema §scene transition onto the table above. A `dip` is the one that takes two
-halves (`exit=` on the card before, `enter=` on this one). Write nothing and the builder
-J-cuts spoken cards — next line on the previous last frame, then the picture cuts. Write
-`enter=cut` for a smash. First card, filmed `sync`, speechless cards, and dips keep the
-old pre-roll.
+**Every card after the first gets an `enter=`, and a transition is drawn inside one card,
+never across two.** Copy each shot's `transition` from scenes.js onto the table above — the
+name is the same on both sides, and a `dip` is the one that takes two halves (`exit=` on the
+card before, `enter=` on this one). A board that predates the field (no `transition` on a
+shot) gets its join chosen here, from the ordered table in scenes-schema §scene transition,
+and the choice goes into the build log. An empty `enter=` makes the builder fall back to a
+J-cut and warn. Every carry (jcut, dissolve, iris, blur, zoom, push, whip) drops the card's
+silent pre-roll — the next line starts under the carried frame; the smash (`enter=cut`),
+dips, the first card, filmed `sync` and speechless cards keep it.
 
 The builder does it this way because a boundary xfade would break the pipeline's spine: the
 total would shrink by the transition length at every seam and trip §9's 2ms drift assertion,
 and xfade renumbers the tail's PTS from 0 (the measurement is written out at the outro seam
-in build-reel.sh). Every carry and dip keeps the card's frame count, so the concat stays
-stream-copy exact and no subtitle cue moves — verified A/B on ep07 (10 cards, two
-dissolves): 64.766667s and 1943 frames both ways, identical `subs.srt` on the cards that
-carry a transition, drift 0. The ban is on the seam, not on the filter: iris and blur
-composite inside one card with an xfade at offset 0 over a tail exactly the join long, so
-that card's length is untouched (build-reel.sh §7.4 carries the measurement). A J-cut is
-allowed to drop that card's silent `PRE` (0.40 s)
-because the next line occupies it. `POST` is 0.45 s.
+in build-reel.sh). A dip keeps the card's frame count, so the concat stays stream-copy exact
+and no subtitle cue moves — verified A/B on ep07 (10 cards, two dissolves, before carries
+dropped the pre-roll): 64.766667s and 1943 frames both ways, identical `subs.srt`, drift 0.
+The ban is on the seam, not on the filter: iris and blur composite inside one card with an
+xfade at offset 0 over a tail exactly the join long, so that card's length is untouched
+(build-reel.sh §7.4 carries the measurement). Every carry drops that card's silent `PRE`
+(0.40 s) because the next line occupies it — measured on the 10-card fixture: 12 frames off
+each carry card, the subtitle cue moving with the audio, drift 0. `POST` is 0.45 s.
 
 **Word cues — `SUB_MODE=word`.** The burn-in shows **one 어절 at a time**, a hard swap every
 half second, sitting on the 65% line in a 60px glyph with no fade — the subtitle grammar of
@@ -867,7 +870,7 @@ puts the reveal. A sub-reveal (`A|B`) takes two clips in one segment the same wa
 
 ```
 # a motion-slide card (idx 4, three segments) — cards.tsv and segs.tsv
-4	pcm/s5.wav	5.2	none
+4	pcm/s5.wav	5.2	none	enter=jcut
 4	0	@motion/slide-s5/r1.mp4	큰 조각 하나에만 톱니바퀴가 27개예요.	큰 조각 하나에만 톱니바퀴가 27개예요.
 4	1	@motion/slide-s5/r2.mp4	전체로는 30개가 남았고요.	전체로는 30개가 남았고요.
 4	2	@motion/slide-s5/r3.mp4	원래는 37개였을 거라고 봐요.	원래는 37개였을 거라고 봐요.

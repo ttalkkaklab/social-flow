@@ -82,19 +82,23 @@ const INFO_PRIMITIVES = {
 const ART_MOVES = ['travel', 'rise', 'in', 'drop', 'press', 'none'];
 const ART_FILE = /^slides\/assets\/s\d+-[a-z0-9-]+\.(png|jpe?g)$/i;
 const OBJECT_FILE = /^slides\/assets\/s\d+-[a-z0-9-]+\.png$/;   // a baked sheet (rendered-object.md)
-const TRANSITIONS = ['cut', 'dissolve', 'dip', 'dip:white', 'iris', 'blur', 'zoom'];
+const TRANSITIONS = ['jcut', 'cut', 'dissolve', 'dip', 'dip:white', 'iris', 'blur', 'zoom'];
 const PUSH_RE = /^push:(l2r|r2l|u2d|d2u)$/;
 const WHIP_RE = /^whip:(l2r|r2l|u2d|d2u)$/;
-/* Joins that say "time or attention moved" — a cut is the honest join inside one scene, so
+/* Joins that say "time or attention moved" — a jcut is the honest join inside one scene, so
    these draw the same-scene warning. push/whip/zoom say "the camera moved", which happens
    inside a scene all the time. */
 const MOVED_KINDS = ['dissolve', 'dip', 'iris', 'blur'];
+/* Joins that open on the previous shot's last frame — the first shot has nothing to carry. */
+const CARRY_KINDS = ['jcut', 'dissolve', 'iris', 'blur', 'zoom', 'push', 'whip'];
+const JOIN_VOCAB = 'jcut | cut | dissolve | dip | dip:white | iris | blur | zoom | ' +
+                   'push:l2r|r2l|u2d|d2u | whip:l2r|r2l|u2d|d2u';
 const SIZE_RANK = {
   els: 0, ls: 1, ws: 1, fs: 2, mfs: 3, ms: 4, mcu: 5, cu: 6, choker: 7, ecu: 8, insert: 8,
 };
 
 function parseTransition(t) {
-  if (t == null || t === '') return { kind: 'cut' };
+  if (t == null || t === '') return { kind: 'missing' };
   if (TRANSITIONS.indexOf(t) !== -1) return { kind: t === 'dip:white' ? 'dip' : t, raw: t };
   if (PUSH_RE.test(t)) return { kind: 'push', raw: t };
   if (WHIP_RE.test(t)) return { kind: 'whip', raw: t };
@@ -572,42 +576,38 @@ function check(win, fmt, opts) {
     }
   }
 
-  /* ── Scene transitions — spent, not applied ──
-     Absent or `"cut"` is a cut. The builder J-cuts a cut by default (split edit: next line
-     starts on the previous last frame). dissolve / dip / iris / blur / zoom / push / whip are
-     the visible joins, and a short spends at most two of those however many the vocabulary
-     holds — widening it does not widen the budget. scenes-schema §scene transition is the
-     contract. */
-  const joins = [];
+  /* ── Scene transitions — one decision per boundary ──
+     Every shot after the first carries a `transition`: the join is chosen from what happens
+     between the two shots (scenes-schema §scene transition — the table is an ordered decision),
+     and `jcut` is that choice when the two shots are one continuous moment. There is no count
+     budget: a join that fits its boundary is never one too many, and a join that does not fit
+     is wrong at any count. The field is written in 4b, so in --draft it is reported as later. */
+  const firstMain = scenes.findIndex((s) => s.type !== 'broll' && s.type !== 'outro');
   scenes.forEach((s, i) => {
     if (s.type === 'broll' || s.type === 'outro') return;
     const parsed = parseTransition(s.transition);
-    if (s.transition && !parsed)
-      bad('shot ' + (i + 1), `transition "${s.transition}" — cut | dissolve | dip | dip:white | ` +
-                             'iris | blur | zoom | push:l2r|r2l|u2d|d2u | whip:l2r|r2l|u2d|d2u ' +
-                             '(omit = J-cut, cut = smash)');
-    else if (parsed && parsed.kind !== 'cut')
-      joins.push({ i: i + 1, kind: parsed.kind, raw: parsed.raw || s.transition, scene: s });
+    const where = 'shot ' + (i + 1);
+    if (!parsed) {
+      bad(where, `transition "${s.transition}" — ${JOIN_VOCAB} (jcut = the continuity cut, sound leads; cut = smash)`);
+      return;
+    }
+    if (parsed.kind === 'missing') {
+      if (i !== firstMain)
+        machine(where, 'no transition — every boundary after the first shot is a decision: ' +
+                       JOIN_VOCAB + ' (scenes-schema §scene transition)');
+      return;
+    }
+    if (i === firstMain && CARRY_KINDS.indexOf(parsed.kind) !== -1) {
+      bad(where, `transition "${parsed.raw}" on the first shot — a carry opens on the previous ` +
+                 'shot\'s last frame and there is none. The first shot takes dip, cut, or nothing');
+      return;
+    }
+    const prev = scenes[i - 1];
+    if (prev && prev.scene !== undefined && prev.scene === s.scene &&
+        MOVED_KINDS.indexOf(parsed.kind) !== -1)
+      warn(where, `a ${parsed.kind} inside scene ${s.scene} — same place and time, ` +
+                  'where the jcut is the honest join');
   });
-  if (joins.length) {
-    const longForm = fmt.format === 'youtube-long-16x9';
-    const budget = longForm ? Math.max(2, Math.round(main.length / 8)) : 2;
-    if (joins.length > budget)
-      bad('episode', `${joins.length} scene transitions — a ${longForm ? 'long-form' : 'short'} ` +
-                     `spends at most ${budget}. Every boundary softened is the slideshow look`);
-    else if (!longForm && joins.length === 2)
-      warn('episode', 'two scene transitions in a short — one is usually the whole budget');
-    if (joins[0].i <= 2)
-      bad('shot ' + joins[0].i, 'a transition on the hook or the shot after it — the first ' +
-                                'three seconds have no time to spend');
-    joins.forEach((d) => {
-      const prev = scenes[d.i - 2], cur = scenes[d.i - 1];
-      if (prev && cur && prev.scene !== undefined && prev.scene === cur.scene &&
-          MOVED_KINDS.indexOf(d.kind) !== -1)
-        warn('shot ' + d.i, `a ${d.kind} inside scene ${cur.scene} — same place and time, ` +
-                            'where the cut is the honest join');
-    });
-  }
 
   /* Consecutive stills of the same size and angle in one scene read as a jump cut
      (30-degree / two-step-size rule). Filmed cards are the vlog exception. */
@@ -1033,7 +1033,7 @@ function selftest() {
   const bads = (findings) => findings.filter((f) => f.level === 'bad');
 
   const goodShot = {
-    type: 'points', duration: 6, beat: 'drip',
+    type: 'points', duration: 6, beat: 'drip', transition: 'jcut',
     shot: { feel: 'relief', size: 'mcu', angle: 'eye', info: '한 가지 정보', infoType: 'other' },
     narration: [{ tts: '가', sub: '가' }], visual: {}
   };
@@ -1176,7 +1176,7 @@ function selftest() {
                    null, { policy: groundPolicy })), /one picture stays/));
   ok('an HTML plate longer than the limit is one picture',
      has(bads(run([footageScene(), Object.assign({}, cover, { duration: 9 }), footageScene()], null, { policy: groundPolicy })), /one picture stays on screen 9\.0s/));
-  const plateScene = (d) => Object.assign({}, cover, { type: 'points', beat: 'drip', hookType: undefined, hookForm: undefined, duration: d });
+  const plateScene = (d) => Object.assign({}, cover, { type: 'points', beat: 'drip', transition: 'jcut', hookType: undefined, hookForm: undefined, duration: d });
   ok('HTML plates over the channel cap are rejected',
      has(bads(run([footageScene(), plateScene(3), plateScene(3), plateScene(3)], null, { policy: groundPolicy })), /3 HTML plates — channel cap 2/));
   const statFootage = (labels) => Object.assign({}, footageScene({ slide: { labels } }), {
@@ -1290,23 +1290,28 @@ function selftest() {
        bads(run([cover, goodShot, dz({ transition: t }), ctaShot])).length === 0));
   ok('whip without a direction is a violation',
      has(bads(run([cover, goodShot, dz({ transition: 'whip' })])), /whip:l2r/));
-  ok('two of the new joins still blow the short budget at three',
-     has(bads(run([cover, goodShot, dz({ transition: 'iris' }), dz({ transition: 'blur' }),
-                   dz({ transition: 'zoom' })])), /spends at most 2/));
+  ok('three visible joins in a short are clean — there is no count budget',
+     bads(run([cover, goodShot, dz({ transition: 'iris' }), dz({ transition: 'blur' }),
+               dz({ transition: 'zoom' }), ctaShot])).length === 0);
+  ok('a shot after the first with no transition is a violation',
+     has(bads(run([cover, goodShot, dz({ transition: undefined }), ctaShot])), /no transition/));
+  ok('a carry on the first shot is a violation, a dip is not',
+     has(bads(run([Object.assign({}, cover, { transition: 'dissolve' }), goodShot, ctaShot])), /first shot/) &&
+     !has(bads(run([Object.assign({}, cover, { transition: 'dip' }), goodShot, ctaShot])), /first shot/));
   ok('an iris inside one scene is flagged, a whip is not',
      has(run([cover, Object.assign({}, goodShot, { scene: 2 }),
               dz({ transition: 'iris', scene: 2 })]), /same place and time/) &&
      !has(run([cover, Object.assign({}, goodShot, { scene: 2 }),
                dz({ transition: 'whip:r2l', scene: 2 })]), /same place and time/));
-  ok('explicit cut is clean',
-     bads(run([cover, goodShot, dz({ transition: 'cut' }), ctaShot])).length === 0);
+  ok('explicit cut and jcut are clean',
+     bads(run([cover, goodShot, dz({ transition: 'cut' }), dz({ transition: 'jcut' }), ctaShot])).length === 0);
   ok('a value outside the join vocabulary is a violation',
-     has(bads(run([cover, goodShot, dz({ transition: 'fade' })])), /cut \| dissolve \| dip/));
-  ok('three dissolves in a short is a violation',
-     has(bads(run([cover, goodShot, dz({ transition: 'dissolve' }), dz({ transition: 'dissolve' }),
-                   dz({ transition: 'dissolve' })])), /spends at most 2/));
-  ok('a dissolve on the shot after the hook is a violation',
-     has(bads(run([cover, dz({ transition: 'dissolve' }), goodShot])), /no time to spend/));
+     has(bads(run([cover, goodShot, dz({ transition: 'fade' })])), /jcut \| cut \| dissolve \| dip/));
+  ok('three dissolves in a short are clean',
+     bads(run([cover, goodShot, dz({ transition: 'dissolve' }), dz({ transition: 'dissolve' }),
+               dz({ transition: 'dissolve' }), ctaShot])).length === 0);
+  ok('a dissolve on the shot after the hook is clean',
+     bads(run([cover, dz({ transition: 'dissolve' }), goodShot, ctaShot])).length === 0);
   ok('a dissolve inside one scene is flagged',
      has(run([cover, Object.assign({}, goodShot, { scene: 2 }),
               dz({ transition: 'dissolve', scene: 2 })]), /same place and time/));
@@ -1449,7 +1454,7 @@ function selftest() {
   // no camera slots, no stored prompt — the fields 4b writes.
   const skel = (b) => ({ type: b === 'hook' ? 'cover' : 'points', beat: b,
                          shot: { feel: 'x', size: 'mcu', angle: 'eye', info: '한 가지 정보', infoType: 'other' },
-                         narration: [{ sub: '가' }], visual: {} });
+                         narration: [{ sub: '가' }], visual: {} });   // no transition either — 4b writes it
   const skelCover = Object.assign(skel('hook'), { hookType: 'fear', hookForm: 'gap' });
   const skeleton = [skelCover, skel('drip'), skel('drip'), skel('cta')];
   ok('a story-pass skeleton passes with --draft',
@@ -1457,7 +1462,10 @@ function selftest() {
   ok('the same skeleton fails without --draft',
      has(bads(run(skeleton)), /no tts/));
   ok('a deferred check is reported as later, not dropped',
-     run(skeleton, null, { draft: true }).filter((f) => f.level === 'later').length === 4);
+     run(skeleton, null, { draft: true }).filter((f) => f.level === 'later').length === 7);
+  ok('a skeleton shot with no transition is later in --draft, a violation without it',
+     run(skeleton, null, { draft: true }).filter((f) => f.level === 'later' && /no transition/.test(f.what)).length === 3 &&
+     has(bads(run(skeleton)), /no transition/));
   ok('a story-layer violation still fails with --draft',
      has(bads(runLong([Object.assign({}, skelCover, { arc: 'story' }), skel('hooking'), skel('body'),
                        skel('result'), skel('turn'), skel('cta')], null, { draft: true })),
