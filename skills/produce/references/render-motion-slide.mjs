@@ -308,8 +308,12 @@ const waitEvent = (method, sessionId) => new Promise((res, rej) => {   // same t
   waiters.push(wt);
   setTimeout(() => { const i = waiters.indexOf(wt); if (i >= 0) { waiters.splice(i, 1); rej(new Error(`${method} did not arrive within ${CDP_TIMEOUT_MS / 1000}s — a slide resource that never loads?`)); } }, CDP_TIMEOUT_MS);
 });
+let encoder = null;                       // the ffmpeg child encoding a group, while one runs
 const shutdown = code => {
   if (closing) return; closing = true;
+  // The encode is asynchronous, so a failure mid-run would otherwise leave ffmpeg writing r<k>.mp4
+  // after this process is gone — and a retry into the same --out would race it for the file.
+  try { encoder && encoder.kill("SIGKILL"); } catch {}
   for (const { rej, timer } of pending.values()) { clearTimeout(timer); rej(new Error("shutting down")); }
   pending.clear();
   try { toChrome.write(JSON.stringify({ id: nextId++, method: "Browser.close" }) + "\0"); } catch {}
@@ -505,10 +509,16 @@ const openPage = async () => {
   // loop and every tab with it. One encode at a time: x264 already takes every core it is given.
   const ffmpeg = (args) => new Promise((res, rej) => {
     const r = spawn("ffmpeg", ["-y", "-v", "error", ...args], { stdio: ["ignore", "ignore", "pipe"] });
+    encoder = r;
     let err = "";
     r.stderr.on("data", d => { err += d; });
-    r.on("error", e => rej(new Error("ffmpeg failed: " + e.message)));
-    r.on("exit", code => code === 0 ? res() : rej(new Error("ffmpeg failed: " + err.trim())));
+    r.on("error", e => { encoder = null; rej(new Error("ffmpeg failed: " + e.message)); });
+    // 'close', not 'exit': stderr is fully drained by then, so the message is whole.
+    r.on("close", (code, signal) => {
+      encoder = null;
+      if (code === 0) res();
+      else rej(new Error("ffmpeg failed: " + (code == null ? `killed by ${signal}` : err.trim())));
+    });
   });
 
   const t0 = Date.now();

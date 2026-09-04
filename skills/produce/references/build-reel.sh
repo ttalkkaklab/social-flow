@@ -248,6 +248,10 @@ rm -f subs.srt subs.ass reel-sub.mp4
 REPORT=build-report.txt
 : > "$REPORT"
 WARN=0
+# §3.5 runs the forced aligner in the background; if the build dies between §3.5 and §8 the
+# aligner would otherwise finish on its own and drop a stale json into the next build's work/.
+ALIGN_PID=""
+trap '[ -n "${ALIGN_PID:-}" ] && kill "$ALIGN_PID" 2>/dev/null' EXIT
 say() { echo "$1"; echo "$1" >> "$REPORT"; }
 f2() { awk -v v="$1" 'BEGIN{printf "%.2f", v}'; }
 asstime() { awk -v t="$1" 'BEGIN{if(t<0)t=0; h=int(t/3600); m=int((t-h*3600)/60); s=t-h*3600-m*60; printf "%d:%02d:%05.2f", h, m, s}'; }
@@ -1001,6 +1005,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         wait "$ALIGN_PID" \
           && [ -s "work/align/s$IDX.json" ] && ALIGNJ="work/align/s$IDX.json" \
           || { say "⚠ card $IDX: forced aligner failed (work/align/s$IDX.log) — word cues fall back to char-count proportion"; WARN=1; }
+        ALIGN_PID=""   # reaped — the EXIT trap must not signal a reused pid
       else
         say "⚠ card $IDX: no forced aligner at $QWEN3_ASR_BIN — word cues fall back to char-count proportion (uv tool install --python 3.12 \"mlx-qwen3-asr[aligner]\")"; WARN=1
       fi
