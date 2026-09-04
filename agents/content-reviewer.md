@@ -269,7 +269,9 @@ you still can't find it, report every surface as "unverified" (never as all-S1
    before it, more than one link, or a cover image attached alongside
 5. **Copy-pasted sentences** — the same sentence on two platforms (compare mechanically with grep)
 6. **Unexplained jargon / over-compression** — plain-language violations (a term
-   with no parenthetical gloss at first mention)
+   with no parenthetical gloss at first mention). The floor is a 만 9~10세 reader
+   (korean-style §Eye level): a word above it either gets its plain wording in the
+   same breath or gets swapped for the everyday twin the checker names (E1~E3)
 7. **AI disguise** — staging character speech or generated footage to look like
    a real person or real news coverage
 8. **AI tell (S1 remaining)** — a surface where `check-style.py` exited 2.

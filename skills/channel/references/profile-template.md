@@ -58,6 +58,13 @@ generated_video_max: 2
   over-compressed subjectless sentences. When a term is genuinely needed, lead with
   the plain word and put the term in parentheses on first appearance only. (Screen
   text, narration, subtitles, and captions — all of it.)
+  **The floor is a 초3~4 listener — 만 9~10세** (korean-style §Eye level; NIKL vocabulary
+  grading, grade 3). It is a plugin-wide floor, not a per-channel setting, and it holds
+  whatever the channel's audience is: an adult never loses anything by hearing the plain
+  word. It binds vocabulary only — the register above stays exactly as written, and
+  talking down to a child is its own defect. The checker holds one part of it (E1~E3,
+  document and news register); the rest is the author's and the reviewer's read, sentence
+  by sentence.
 - **Banned**: <expressions and subjects this channel doesn't touch>
 
 ## 3. Visual theme
