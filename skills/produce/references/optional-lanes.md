@@ -64,7 +64,7 @@ done
 
 A **slide scene**'s segment visuals (`visual.slide`, scenes-schema §slide scenes) are
 rendered as **one clip per reveal group** from the storyboard's slide files, not from
-`frame.html`. Authoring and the design gate finished in storyboard §5.6; here you only
+`frame.html`. The slides are authored earlier in §3.6 (arts, HTML, the sheet read); here you only
 render and wire. Every slide is a motion slide (`motion: true`).
 
 ```bash
@@ -97,14 +97,14 @@ either way. One seam is by design: a stretched bar fill ends its Heer label dela
 rest frame — measured invisible at 30fps, don't chase it as a pop.
 
 - The summary line's `groups` must equal the card's segment count (or segments + `A|B`
-  sub-reveals). A mismatch is a storyboard §5.6 defect — don't paper over it here.
+  sub-reveals). A mismatch is a produce §3.6 defect — don't paper over it here.
 - The clips carry film grain (`--grain`, default 6 — static luma noise with a fixed seed,
   slide-design.md §1). It is added at the mp4 encode, so the storyboard sheet frames and
   `--png-only` output stay clean; pass `--grain 0` only when a channel's profile asks for a
   clean digital look. Expect the clips several times larger than clean ones (measured
   0.26 MB/s over a four-group stat poster, 0.76 MB/s on a dot-fill group, against 0.09).
 - Read the coverage warnings: a group frozen past 40% of its segment wants a `.sv`
-  sustain in the slide (a storyboard §5.6 fix), and `zone_fill_pct` under 55% is a
+  sustain in the slide (a produce §3.6 fix), and `zone_fill_pct` under 55% is a
   composition defect the design gate should have caught.
 - The renderer reads `../scenes.js` relative to the slide, so render it **in place under
   storyboard/slides/**.
@@ -115,8 +115,8 @@ rest frame — measured invisible at 30fps, don't chase it as a pop.
   promised explanation. A principle frame sits ink actors (`h.fig`) and draws rules;
   `slide.arts` files sit next to the HTML (`slides/assets/`) as local images the renderer loads.
 - The clips cost nothing and are deterministic (same file → same bytes), so a re-render
-  after a scenes.js fix is safe; the sheet frames from storyboard §5.6 stay in
-  `storyboard/.work/slide-check/` (§5.6 runs from the storyboard directory) for comparison.
+  after a scenes.js fix is safe; the sheet frames from produce §3.6 stay in
+  `storyboard/.work/slide-check/` (§3.6 runs from the storyboard directory) for comparison.
 - **`slide.kind` changes nothing here.** A kinetic-type screen (`kind: "kinetic"`) and a
   character-act screen (`kind: "character"`) are the same render, the same command, the same
   `@motion/slide-s<n>/r<k>.mp4` wiring — the renderer asks a page for the seek contract and

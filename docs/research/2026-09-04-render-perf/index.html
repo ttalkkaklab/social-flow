@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>플러그인 성능 실측 — 실사 슬라이드 렌더가 회차의 시간을 다 먹고 있었다 (2026-09-04)</title>
+<style>
+  :root{
+    --paper:#f5f6fa; --ink:#10131f; --muted:#5a6280; --rule:#d8dce8; --card:#ffffff;
+    --accent:#2f5fe0; --good:#1f8a5b; --bad:#b8433d; --code:#eef0f7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+      --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+    --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+  .wrap{max-width:1040px;margin:0 auto;padding:56px 24px 96px}
+  .eyebrow{font-family:Menlo,monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1,h2,h3{font-weight:800;letter-spacing:-.02em;text-wrap:balance;margin:0}
+  h1{font-size:clamp(32px,5vw,46px);line-height:1.15;margin-top:10px}
+  h2{font-size:24px;line-height:1.3;margin-top:64px;padding-top:20px;border-top:1px solid var(--rule)}
+  h3{font-size:17px;margin-top:28px}
+  p{margin:14px 0;max-width:70ch}
+  ul{padding-left:20px;max-width:72ch} li{margin:8px 0}
+  code{font-family:Menlo,monospace;font-size:.88em;background:var(--code);padding:1px 6px;border-radius:5px}
+  pre{background:var(--code);padding:14px 16px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.5}
+  .lede{font-size:18px;max-width:66ch} .lede b{font-weight:600;color:var(--accent)}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:18px 0}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-weight:600;color:var(--muted);font-size:12.5px;letter-spacing:.04em}
+  td.n{font-family:Menlo,monospace;font-size:13px;text-align:right;white-space:nowrap}
+  .tbl{overflow-x:auto}
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px} @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:18px 20px}
+  .stat{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1} .stat small{font-size:13px;font-weight:500;color:var(--muted);display:block;margin-top:8px}
+  .good{color:var(--good)} .bad{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">social-flow · 성능 실측 · 2026-09-04 · 워크트리 feat/render-intra · 적대적 평가 2회차 100/100 (rubric.md)</div>
+  <h1>실사 슬라이드 렌더가 회차의 시간을 다 먹고 있었다</h1>
+  <p class="lede">플러그인의 어느 부분이 느린지 하나씩 재 봤다. MCP 서버 기동과 검사기는 0.2초 아래라 손댈 것이 없었고 <b>실사(footage) 슬라이드 하나를 프레임 단위로 캡처하는 렌더가 장당 3~13분</b>, ep209 한 회차의 열세 장을 세 번 렌더하면 세 시간이었다. 원인은 비디오 디코드가 아니라 <b>프레임마다 붙던 120ms 고정 대기와 크롬의 느린 PNG 인코더</b>였다. 둘을 걷어내고 탭 병렬을 되살려 같은 슬라이드를 4배 넘게 빨리 뽑는다. 그 과정에서 이전 렌더러에도 있던 결함 하나를 잡았다. 클립이 처음 켜진 뒤 첫 seek 의 프레임이 실행마다 무작위로 이전 프레임에 머물던 것인데 지금은 세 번 돌려도, 탭 수를 바꿔도 바이트까지 같고 원본 클립의 프레임과 대조해도 맞는다. build-reel.sh 는 강제 정렬기를 카드 인코딩과 겹쳐 돌려 14카드 완주를 291~297초에서 267~276초로 줄였다.</p>
+
+  <div class="grid">
+    <div class="card"><div class="stat">1/4.3<small>ep209 s10 완주 렌더 · 이전 197.5초(탭 1) · 224.8초(탭 3, 같은 옵션) → 46.4초</small></div></div>
+    <div class="card"><div class="stat">1/4.5<small>ep209 s5 (다섯 그룹, 이전 실전 774초) · 386.8초 → 85.6초</small></div></div>
+    <div class="card"><div class="stat">54.2 → 15.7초<small>ep10 s2 플레이트 모션 슬라이드 · 느려지지 않았는지 확인용</small></div></div>
+  </div>
+
+  <h2>1. 무엇을 쟀나</h2>
+  <p>플러그인이 시간을 쓰는 자리를 넷으로 나눠 실제 값을 쟀다. 전부 이 맥북(M4)·Chrome 152·ffmpeg 7.1 이고 소재는 실제 회차 ep209(pundago, 실사 13장)와 ep10(플레이트 슬라이드)다.</p>
+  <div class="tbl"><table>
+    <tr><th>자리</th><th>실측</th><th>판정</th></tr>
+    <tr><td>MCP 서버 기동 + tools/list</td><td class="n">0.16초 · 59툴 · 응답 176KB</td><td>손댈 것 없음. 툴 설명 59KB·스키마 90KB 는 클라이언트가 지연 로드한다.</td></tr>
+    <tr><td>검사기 (check-scenes.js · check-style.py)</td><td class="n">0.11초 · 0.05초</td><td>손댈 것 없음.</td></tr>
+    <tr><td>실사 슬라이드 렌더 (render-motion-slide.mjs)</td><td class="n">장당 99~774초, 0.5~2.4fps</td><td class="bad">병목. 회차당 13장 × 3회 렌더 = 약 3시간.</td></tr>
+    <tr><td>build-reel.sh (14카드, phrase 자막)</td><td class="n">셸 밖 호출 131초 중 정렬기 43초·카드 인코딩 55초</td><td>정렬기가 카드마다 모델을 다시 올린다. 인코딩과 겹칠 수 있다.</td></tr>
+  </table></div>
+  <p>ep209 의 렌더 기록(<code>.work/motion/slide-s*/summary.json</code>)을 모으면 열세 장에 3,722초다. 스토리보드 게이트가 한 번, produce 가 <code>--segs auto</code> 로 한 번, 측정한 문장 길이로 다시 한 번 렌더하니 회차마다 세 번이다.</p>
+
+  <h2>2. 병목의 실체 — 프레임 하나가 어디에 420ms 를 쓰나</h2>
+  <p>렌더러 사본에 구간별 시계를 달고 s10 의 첫 그룹(133프레임)을 돌렸다. 처음 가설은 "H.264 클립에 키프레임이 하나뿐(97프레임에 1개)이라 seek 마다 처음부터 디코드한다"였는데 클립을 프레임마다 키프레임인 인트라 전용으로 다시 인코딩해도 시간이 그대로였다. seek 은 병목이 아니었다.</p>
+  <div class="tbl"><table>
+    <tr><th>실험 (s10 그룹 1, 133프레임, 탭 1개)</th><th>seek</th><th>settle</th><th>PNG 캡처</th><th>합계</th><th>fps</th></tr>
+    <tr><td>A 원본</td><td class="n">8.5초</td><td class="n">16.4초</td><td class="n">31.0초</td><td class="n">56.0초</td><td class="n">2.4</td></tr>
+    <tr><td>B 인트라 전용 클립</td><td class="n">6.5초</td><td class="n">16.4초</td><td class="n">33.5초</td><td class="n">56.5초</td><td class="n">2.4</td></tr>
+    <tr><td>C 원본 + PNG optimizeForSpeed</td><td class="n">8.8초</td><td class="n">16.4초</td><td class="n">9.6초</td><td class="n">35.0초</td><td class="n">3.8</td></tr>
+    <tr><td>E C + settle 40ms 상한</td><td class="n">8.5초</td><td class="n">5.6초</td><td class="n">10.2초</td><td class="n">24.5초</td><td class="n">5.4</td></tr>
+    <tr><td>F C + settle 을 rAF 두 틱으로</td><td class="n">8.5초</td><td class="n">3.5초</td><td class="n">12.1초</td><td class="n">24.3초</td><td class="n">5.5</td></tr>
+    <tr><td>G C + settle 없음</td><td class="n">8.5초</td><td class="n">0초</td><td class="n">11.0초</td><td class="n">19.7초</td><td class="n">6.8</td></tr>
+  </table></div>
+  <p>세 가지가 보인다.</p>
+  <ul>
+    <li><b>settle 이 프레임마다 정확히 123ms 다.</b> 원본은 비디오 seek 뒤 <code>requestVideoFrameCallback</code> 을 기다리되 120ms 상한을 두었는데 헤드리스 크롬에서는 캡처 사이에 프레임을 그리는 주체가 없어 콜백이 한 번도 안 온다. 새 창에서도 461회 전부 타임아웃이었다. 그러니 모든 프레임이 상한을 꽉 채워 기다렸다.</li>
+    <li><b>PNG 인코딩이 233ms 다.</b> 사진 같은 프레임을 크롬 기본 zlib 수준으로 압축하는 값이다. CDP 의 <code>optimizeForSpeed</code> 는 같은 픽셀을 덜 압축해서 72ms 에 준다. 133프레임 전부 바이트까지 같았다.</li>
+    <li><b>settle 을 빼도 그림이 같다.</b> 133/133 동일. 대기는 결정성을 사 주지 않았다. 아래 §3 이 그 이야기다.</li>
+  </ul>
+
+  <h2>3. 결정성 — 클립이 켜진 뒤 첫 seek 의 프레임이 이전 것에 머문다</h2>
+  <p>슬라이드 전체(459프레임)를 같은 조건으로 세 번 돌리면 그룹이 바뀐 직후 두 번째 프레임(<code>f0001</code>)만 실행마다 달랐다. 어느 쪽이 맞는지는 클립을 ffmpeg 로 풀어 원본 프레임과 대조해 정했다. t=33ms 는 24fps 클립의 1번 프레임인데 한쪽 변종은 0번, 곧 <b>직전 seek 의 그림이 그대로 남은 것</b>이었다. 'seeked' 는 울렸고 currentTime 도 맞는데 컴포지터가 이전 프레임을 계속 보여 주고 아무리 기다리거나 다시 찍어도 그대로였다. 이전 렌더러(dev 429dc4c)도 같은 자리에서 틀린다. 부분 실험 네 번 중 한 번, 완주 세 번 중 두 번(s10 r1 · s5 r3)이 한 그룹씩 0번 프레임에 멈춰 있었다.</p>
+  <div class="tbl"><table>
+    <tr><th>시도 (459프레임 · 3회 상호 비교)</th><th>결과</th><th>fps (탭 3)</th></tr>
+    <tr><td>대기 없음</td><td>458·458·459 — f0001 이 다름</td><td class="n">10.3~10.5</td></tr>
+    <tr><td>rAF 두 틱 (약 26ms)</td><td>457·458·458</td><td class="n">8.3~8.6</td></tr>
+    <tr><td>rAF 두 틱 + 첫 두 프레임 재캡처 일치</td><td>458·458·459 — 멈춘 프레임은 다시 찍어도 같다</td><td class="n">8.9~9.0</td></tr>
+    <tr><td>그룹 첫 두 seek 뒤 120ms 만</td><td>457~459 — 세 번 중 한 번 틀림</td><td class="n">8.8~10.4</td></tr>
+    <tr><td>클립을 인트라 전용으로 · 소프트웨어 디코드 고정 · 메인 스레드 애니메이션 플래그 · 프레임 격자 스냅</td><td>전부 그대로 (격자 스냅은 다른 170프레임을 바꿔서 폐기)</td><td class="n">—</td></tr>
+    <tr><td>rVFC 등록 + 60ms / 120ms (원본 방식)</td><td>459·459·459 로 보였으나 원본 대조에서 r2 f0001 이 0번 — 셋 다 같은 자리에서 멈춰 있었다</td><td class="n">8.4 / 7.1</td></tr>
+    <tr><td><b>채택: 대기 없음 + 그룹 첫 두 프레임은 rVFC 등록·60ms 를 사이에 두고 두 캡처가 같을 때까지 + 그룹의 f0000 은 앞 그룹이 t=dur 에서 찍은 끝 프레임(§6.1)</b></td><td><b>459·459·459, jobs 1 과 3 도 459/459, 원본 대조 세 그룹 전부 맞음</b></td><td class="n">9.5~10.5</td></tr>
+  </table></div>
+  <p>풀린 열쇠는 원본 렌더러가 기다리던 <code>requestVideoFrameCallback</code> 이다. 콜백은 헤드리스에서 한 번도 안 울리지만(461/461 타임아웃) <b>등록 자체가 멈춘 프레임을 컴포지터로 밀어 넣는다.</b> 멈춘 상태를 확실히 재현하는 흐름에서 등록 + 60ms 는 두 번 다 풀었고 60ms 만 기다리면 두 번 다 그대로였다. 그래서 프레임마다 기다리는 대신 그룹의 첫 두 프레임에서만 등록을 사이에 두고 두 캡처가 같을 때까지 찍는다. 그룹당 0.3초쯤이다. 검증은 두 겹이다. 세 번 렌더가 459/459 바이트 동일하고 각 그룹의 f0001·f0002 가 원본 클립의 1·2번 프레임과 가장 가깝다.</p>
+
+  <h2>4. 탭 병렬이 죽어 있던 이유</h2>
+  <p><code>--jobs 3</code> 으로 탭 셋을 열면 <code>Runtime.evaluate timed out after 30s</code> 로 죽었다. 같은 창의 두 번째 탭은 백그라운드 탭이고 백그라운드 탭에서는 <code>requestAnimationFrame</code> 이 돌지 않아 settle 이 영원히 기다린다. <code>Target.createTarget</code> 에 <code>newWindow: true</code> 를 주면 탭마다 창이라 전부 전경이고 세 탭이 459프레임을 51초에 찍었다(탭 하나 89초). 원본 렌더러도 실사 슬라이드에서는 <code>--jobs 1</code> 로만 돌리라는 운영 메모가 있었는데 그 원인이 이것이다. 원본 렌더러의 settle(rVFC + 120ms 타이머)은 rAF 와 달리 백그라운드 탭에서도 타이머로 풀리니 죽지는 않는다. 대신 빨라지지도 않는다. 기본 탭 수(3)로 완주하면 224.8초(2.0fps)로 탭 하나의 197.5초보다 느리다. 백그라운드 탭의 타이머가 조여지기 때문이다. 완성본 기준으로 새 렌더러는 jobs 1 이 77.8초(5.9fps), jobs 3 이 48.2초(9.5fps)이고 두 결과는 459/459 바이트 동일이다. 처음 고친 판에서는 그룹 첫 프레임 둘이 탭에 따라 몇 픽셀 흔들렸는데 §6.1 의 방식으로 없앴다.</p>
+
+  <h2>5. 고친 것</h2>
+  <h3>render-motion-slide.mjs</h3>
+  <ul>
+    <li><code>Page.captureScreenshot</code> 에 <code>optimizeForSpeed: true</code>. 픽셀 동일, 프레임당 233 → 72ms.</li>
+    <li>프레임마다 붙던 비디오 settle(rVFC + 120ms 상한)을 없앤다. 그룹의 첫 두 프레임만 rVFC 등록·60ms 를 사이에 두고 두 캡처가 같을 때까지 찍는다(§3).</li>
+    <li>워커 탭을 각자의 창으로 연다. 실사 슬라이드에서 탭 병렬이 다시 된다.</li>
+    <li>그룹 mp4 인코딩을 <code>spawnSync</code> 에서 비동기 <code>spawn</code> 으로. 다음 그룹을 찍는 동안 앞 그룹이 인코딩된다(한 번에 하나).</li>
+    <li>그룹 k 의 f0000 은 새로 찍지 않고 그룹 k−1 이 t=dur 에서 찍은 끝 프레임을 쓴다. 시트의 g&lt;k&gt;-end 도 그 캡처다. 이음매가 구조로 성립하고 탭 수와 무관해진다(§6.1). <code>--group k</code> 처럼 앞 그룹을 안 찍는 실행은 전처럼 직접 찍는다.</li>
+  </ul>
+  <h3>build-reel.sh</h3>
+  <ul>
+    <li>강제 정렬기(mlx-qwen3-asr)를 §3 에서 백그라운드로 먼저 띄우고 §8 자막 단계에서 <code>wait</code> 한다. 정렬기는 호출마다 모델을 올려 카드당 2.9초인데 그 사이에 카드 영상 인코딩(§7)이 돌아 겹친다. 겹치면 정렬기가 카드당 4.5초로 늘어서 순이익은 §6 의 15~20초다.</li>
+  </ul>
+
+  <h2>6. 개선 전/후 완주 비교</h2>
+  <p>같은 슬라이드를 같은 옵션(<code>--segs auto</code>, mp4 인코딩 포함)으로 이전 렌더러(dev 429dc4c)와 새 렌더러로 돌렸다. 실사 슬라이드는 이전 렌더러를 운영 메모대로 <code>--jobs 1</code> 로, 새 렌더러는 기본값(탭 4개, 그룹 수가 그보다 적으면 그룹 수)으로 돌렸고 옵션을 맞춘 비교로 이전 렌더러를 기본 탭 수로도 한 번 돌렸다(둘째 줄). 원본 수치는 <code>bench.tsv</code> 에 있다. 거기서 <code>new-*</code> 행은 처음 고친 판(§6.1 의 f0000 수정 전), <code>new2-*</code> 행이 커밋된 렌더러다. 표의 "새" 열은 new2 다. 비교는 그룹 mp4 의 프레임 수와 PSNR(inf = 동일)이다.</p>
+  <div class="tbl"><table>
+    <tr><th>슬라이드</th><th>그룹·프레임</th><th>이전</th><th>새</th><th>배율</th><th>mp4 비교</th></tr>
+    <tr><td>ep209 s10 (footage)</td><td>3 · 459</td><td>197.5초 · 2.3fps · jobs 1</td><td>46.4초 · 9.9fps · jobs 3<br>2회 46.4초</td><td>4.3배</td><td>세 그룹 다 동일(inf) — 이전 jobs 1 렌더와 프레임 459/459·mp4 바이트까지 같다. 첫 고친 판에서는 r1·r2 가 43~50dB 였고 그 원인과 수정이 §6.1</td></tr>
+    <tr><td>ep209 s10 · 이전 렌더러를 같은 옵션(기본 탭 수 3)으로</td><td>3 · 459</td><td>224.8초 · 2.0fps · jobs 3</td><td>46.4초 · 9.9fps · jobs 3</td><td>4.8배</td><td>이전 렌더러는 탭 3 이면 자기 탭 1 결과와도 r1 f0009·r2 f0023 부터 47~52dB 로 갈라진다(백그라운드 탭). 원본 클립 대조는 맞고 f0009 를 풀어 보면 x 40~106 · y 1208~1470 상자 안 33픽셀이 8/255 넘게(최대 16) 다르다. §6.1 의 표식 가장자리 흔들림과 같은 크기다</td></tr>
+    <tr><td>ep209 s5 (footage)</td><td>5 · 784</td><td>386.8초 · 2.0fps · jobs 1</td><td>85.6초 · 9.2fps · jobs 4</td><td>4.5배</td><td>r1·r2·r4·r5 동일(inf) · r3 만 162/163 프레임 43~48dB — 이전 렌더의 r3 f0001 이 멈춘 프레임(원본 0번)이었던 자리, §6.1</td></tr>
+    <tr><td>ep10 s2 (editorial 모션)</td><td>3 · 277</td><td>54.2초 · 5.1fps · jobs 3</td><td>15.7초 · 17.6fps · jobs 3</td><td>3.5배</td><td>세 그룹 다 동일(inf)</td></tr>
+  </table></div>
+  <h3>6.1 이음매 프레임 — mp4 가 다른 자리는 프레임이 아니라 인코더였다</h3>
+  <p>처음 고친 판(대기 제거·optimizeForSpeed·탭 병렬까지)을 같은 s10 에서 프레임을 지우지 않고(<code>--keep-frames --sheet</code>) 이전 렌더러(jobs 1)와 대조하면 459프레임 중 457 이 픽셀까지 같고 다른 둘은 모두 그룹의 첫 프레임 <code>f0000</code>, 곧 앞 그룹의 끝 그림을 이어받는 이음매 프레임이었다. r2 는 3픽셀이 1/255 차이(109dB), r3 는 x 811~876 · y 1084~1144 상자 안 44픽셀이 최대 20/255 차이(80.1dB). 둘 다 원본 클립 대조로는 같은 프레임(g2 클립 97장 중 96번)이고 표식 선 끝의 래스터 흔들림이다. 이 흔들림은 새 렌더러가 만든 것이 아니다. 이전 렌더러 자신의 이음매(<code>frames-r3/f0000</code> 대 <code>sheet/g2-end</code>)가 같은 44픽셀만큼 다르고 새 렌더러 jobs 1 은 그 무늬를 그대로 재현했다(g2 동일 · g3 44픽셀). jobs 3 은 반대였다(g2 3픽셀 · g3 동일). 어느 탭이 그 그룹을 찍었느냐에 따라 정해지는 값이라 같은 jobs 로 두 번 돌리면 459/459 였지만 jobs 를 바꾸면 그 두 장이 달랐다.</p>
+  <p>mp4 는 그 차이를 키운다. x264(crf 14 · aq-mode 3)가 3픽셀 다른 첫 프레임을 다르게 결정하고 그 차이가 GOP 를 타고 내려가 r2 가 132/133 프레임 45.7~50.3dB 로 벌어졌다. 치환 실험이 그것을 못박는다. 새 판의 r2 프레임을 렌더러와 같은 x264 줄로 다시 인코딩하면 새 판 r2.mp4 와 바이트까지 같고(inf) 그 프레임 묶음에서 <code>f0000</code> 한 장만 이전 판 것으로 바꿔 인코딩하면 이전 판 r2.mp4 와 바이트까지 같다(inf). 위 표의 s10 r1·s5 r3 처럼 43~48dB 로 벌어진 그룹은 이전 렌더의 f0001 이 멈춘 프레임(원본 0번)이었던 자리다. mp4 를 풀어 원본과 대조한 결과가 그렇다(<code>m-old-s10-j1 r1 f0001→src0 ✗</code> · <code>m-old-s5-j1 r3 f0001→src0 ✗</code>, 새 판은 전부 맞음).</p>
+  <p>그래서 f0000 을 찍지 않기로 했다. 그룹 k 의 f0000 은 설계상 그룹 k−1 의 끝 그림이니(footage-lane.md: 컷은 f0001 에 떨어진다) 그룹 k−1 을 찍은 탭이 t=dur 에서 한 장 더 찍어 두고 그것을 그룹 k 의 f0000 과 시트의 g&lt;k−1&gt;-end 로 쓴다. 그룹 k 의 인코딩은 그룹 k−1 의 캡처가 끝난 뒤에 시작한다(캡처 자체는 병렬 그대로). 결과는 jobs 3 두 번과 jobs 1 이 459/459 바이트 동일, 이음매는 구조로 동일, 원본 대조 맞음, 그리고 이전 렌더러의 jobs 1 렌더와도 프레임 459/459·mp4 세 그룹 inf 다. 모션 슬라이드(ep10 s2)는 원래부터 f0000 과 끝 프레임이 같아서(277/277) 이 변경으로 바뀌는 것이 없고 mp4 도 이전과 inf 다. 표식에 lead(지연)가 걸린 s5 에서도 seek(0,k) 로 찍은 그림(<code>--frame k:0</code>)과 복사된 f0000 이 g2·g3·g5 동일, g4 는 39픽셀 21/255 의 가장자리 흔들림뿐이라 t=0 에 그룹 k 의 내용이 미리 그려지는 일은 없다. 시트 PNG 여섯 장은 g2-end 한 장이 이전 렌더러의 시트와 44픽셀 다른데 그 한 장이 바로 이전 렌더러가 자기 f0000 과 어긋나던 그 프레임이다(파일 바이트는 전부 다르다 — <code>optimizeForSpeed</code> 가 덜 압축해서 장당 2.73MB 가 2.98MB 로 커진다. 시트만 남고 프레임은 인코딩 뒤 지워지니 감수했다). footage-lane.md 가 말하는 "f0000 이 앞 그룹의 sheet end 와 바이트까지 같다"는 성질은 이전 렌더러에서는 근사였고 지금은 구조로 참이다. 그 문서는 다른 세션이 편집 중이라 여기에만 적는다.</p>
+  <p>build-reel.sh 는 ep209 의 실제 .work 입력(14카드, phrase 자막)을 이전 판·새 판 번갈아 네 쌍 돌렸다. ffmpeg·ffprobe·정렬기를 PATH 로 가로채 호출마다 시작 시각과 길이를 적었고 그 기록으로 카드 루프(§3~§8)와 손대지 않은 뒤 단계(합치기·자막 번인)를 갈라 읽었다.</p>
+  <div class="tbl"><table>
+    <tr><th>쌍</th><th>이전 (전체 / 카드 루프)</th><th>새 (전체 / 카드 루프)</th><th>정렬기 (겹친 시간)</th><th>합치기 인코딩 이전 → 새</th></tr>
+    <tr><td>1</td><td>296.6초</td><td>1498.7초</td><td>—</td><td>80초 → 1308초 (오염, 아래)</td></tr>
+    <tr><td>2</td><td>256.8초</td><td>500.4초 / 81초</td><td>54초 (53초)</td><td>66초 → 334초 (오염, 아래)</td></tr>
+    <tr><td>3</td><td>296.8초 / 113초</td><td>276.4초 / 99초</td><td>이전 40.6초 (0.7초) · 새 66.0초 (64.8초)</td><td>82초 → 78초</td></tr>
+    <tr><td>4</td><td>290.9초 / 115초</td><td>267.3초 / 94초</td><td>이전 40.6초 (0.7초) · 새 61.7초 (60.7초)</td><td>78초 → 76초</td></tr>
+  </table></div>
+  <p>깨끗한 두 쌍(3·4)에서 전체는 291~297초 → 267~276초, 카드 루프는 113~115초 → 94~99초다. 정렬기 40초가 카드 인코딩 뒤로 거의 다 숨지만 겹치는 동안 정렬기 자신은 40초에서 62~66초로 늘고 카드 인코딩도 조금 느려져서 순이익은 카드 루프의 15~20초, 편당 7~8% 다. 처음 두 쌍에서 새 판이 훨씬 느렸던 것은 손대지 않은 합치기 인코딩(정렬기가 끝나고 한참 뒤에 도는 단계)이 80초 대신 1308초·334초 걸린 탓이고 그 5분 동안은 20초마다 도는 부하 샘플러조차 한 번도 돌지 못했다(load 65 · 스왑 23.5/24.5GB). CPU 시간은 이전/새 판이 2174초 대 2182초로 같았다. 3·4 쌍에서는 재현되지 않았고 첫 두 쌍의 오염이 새 판에만 겹친 것은 우연이라고 보지만 그 판정의 근거는 이 표뿐이다(§8).</p>
+
+  <h2>7. 재 봤지만 손대지 않은 것</h2>
+  <ul>
+    <li><b>클립을 인트라 전용으로 재인코딩</b> — 위 표 B. 시간 변화 없음. seek 은 프레임당 64ms 로 병목이 아니다.</li>
+    <li><b>requestVideoFrameCallback</b> — 새 창에서도 461/461 타임아웃. 헤드리스에서는 쓸 수 없는 신호다.</li>
+    <li><b>MCP 서버</b> — 기동 0.16초, 툴 목록은 요청마다 자격증명 파일 존재만 본다. 최적화 대상이 아니다.</li>
+    <li><b>검사기</b> — check-scenes.js 0.11초, check-style.py 0.05초(파이썬 임포트가 대부분).</li>
+    <li><b>SKILL.md 크기</b> — produce 95KB·storyboard 92KB·autoproduce 50KB 가 호출마다 컨텍스트에 실린다. 토큰 쪽 가장 큰 지렛대지만 두 파일 다 다른 세션이 편집 중(각각 121줄·434줄 미커밋)이라 이번엔 손대지 않았다.</li>
+    <li><b>에이전트 설명(frontmatter)</b> — 다섯 에이전트 합계 12.2KB 가 모든 세션의 시스템 프롬프트에 들어간다(storyboard-reviewer 3.7KB). 줄이면 세션당 3천 토큰쯤 아끼지만 위임 트리거 문장이라 별도 결정이 필요하다.</li>
+    <li><b>스토리보드 게이트의 <code>--png-only --keep-frames</code></b> — 시트(mid·end)와 f0000 만 읽는데 모든 프레임을 찍는다. 이번 수정으로 그 비용 자체가 줄었고 문서가 다른 세션의 편집 범위라 그대로 뒀다.</li>
+    <li><b>build-reel.sh 카드 인코딩 병렬화</b> — 카드 k 의 캐리 전환이 카드 k−1 의 마지막 프레임을 쓰는 진짜 의존 사슬이라 싸게 못 푼다. 카드 인코딩 55초는 그대로다.</li>
+  </ul>
+
+  <h2>8. 남은 불확실</h2>
+  <ul>
+    <li>멈춘 프레임을 rVFC 등록이 푸는 이유는 크롬 내부라 설명이 아니라 실측이다. 다른 크롬 버전에서 렌더가 실행마다 다르면 §3 의 원본 대조(<code>gt-check</code> 방식)부터 다시 한다.</li>
+    <li>탭 병렬 기본값(코어 절반, 최대 4)은 실사 슬라이드에서 탭 3 까지 쟀다. 탭 4 는 §6 의 기본값 완주(s5)로 확인했다.</li>
+    <li>그룹 첫 프레임(t=0)의 래스터가 탭에 따라 표식 가장자리 20/255 까지 흔들리던 원인은 크롬 래스터 내부라 못 밝혔다. f0000 을 앞 그룹의 끝 프레임으로 쓰는 것으로 결과에서 걷어냈고 t&gt;0 프레임은 탭을 바꿔도 전부 같았다(457/459 의 457).</li>
+    <li>build-reel.sh 의 처음 두 쌍에서 새 판만 합치기 단계가 4~16배 느렸던 원인은 잡지 못했다. 손대지 않은 단계이고 깨끗한 두 쌍에서 재현되지 않았지만 새 판에만 두 번 겹친 것이라 우연이라는 판정은 표 하나에 기대고 있다. 다음 실전 빌드에서 합치기 단계가 90초를 넘기면 여기부터 의심한다.</li>
+    <li>mp4 를 풀어 원본과 대조하는 검사(<code>mp4gt.py</code>)는 슬라이드 HTML 에 <code>data-vfrom</code> 이 정적으로 적힌 경우에만 기대 프레임을 안다. s5 는 페인터가 비디오 태그를 만들어서 r4 의 "expected" 가 틀리게 찍혔고 판정은 이전/새 판이 같은 프레임을 보여 주는지로 했다.</li>
+  </ul>
+</div>
+</body>
+</html>

@@ -71,7 +71,7 @@ for it.
 Generated scenes then split two ways in §4 — mood, place, and people become a **generated
 image**, while a diagram that only reads once text and shapes are laid out becomes a
 **slide** (scenes-schema §slide scenes). A slide scene carries its plan in the
-storyboard; the moving file is built at §5.6 before approval.
+storyboard; the moving file is built at produce §3.6, after approval.
 
 If even one filmed scene exists, §6 authors **`script.md` (the shooting script)** and the
 hand-off after approval is filming (§7). The contract is `references/scenes-schema.md`

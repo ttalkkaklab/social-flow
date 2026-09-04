@@ -98,6 +98,14 @@ window.COMPREHENSION = {
   gets at most three. `plain` is the exact easy wording spoken in the same `firstShot`, before or
   beside the term. If a name changes neither the answer nor the takeaway, cut the name instead of
   adding it here.
+  - **`plain` is itself written at the 초3~4 floor** (korean-style §Eye level) — a gloss that
+    needs its own gloss explains nothing. "레이더 신호를 되돌리는 금속 구조물" trades one hard
+    word for two; "레이더 신호를 튕겨 내는 쇠판" is the same fact a ten-year-old already has.
+    The checker reads `plain` as narration like any other sentence, because it *is* spoken.
+  - **A figure nobody can picture gets the same treatment as a term** — 1조 원, 20제곱킬로미터,
+    0.3초. It is not declared here (this array holds words), but the comparison is spoken in the
+    same shot: put it beside the figure, and never round the figure to make the comparison
+    tidy.
 - `check-scenes.js` treats a missing block, an over-budget branch or term list, a wrong first
   shot, and a plain wording that is not actually spoken as violations. The reviewer handles the
   semantic half: an undeclared branch, a disposable proper name, or a scene whose evidence never
@@ -305,7 +313,7 @@ sequence: "풀기 1"                 // sequence head. Used with beat, the docum
 | `scene` | recommended | Grammar scene number. Same value for the same place and time. Without it the renderer assumes one scene per entry |
 | `sceneSlug` | recommended when `scene` is set | `"place / time"` — e.g. `"salon chair / day"` |
 | `sequence` | optional | Sequence name. Only when one episode has two purposes |
-| `transition` | optional | the boundary **before this shot**. Omit for a cut (the builder J-cuts spoken cards). `"cut"` is a smash. `"dissolve"` · `"dip"` · `"dip:white"` · `"push:<dir>"` are spent joins. See §scene transition |
+| `transition` | required after the first shot | the boundary **before this shot**, chosen from what happened between the two shots. `"jcut"` is the continuity cut (the sound leads); `"cut"` is a smash; `"dissolve"` · `"dip"` · `"dip:white"` · `"iris"` · `"blur"` · `"zoom"` · `"push:<dir>"` · `"whip:<dir>"` each say what moved. See §scene transition |
 | `beat` | optional on long-form, required on a short | short: `hook` \| `drip` \| `cta`. long-form: `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` (`turn` on the story arc only). See §playback order above |
 | `arc` | long-form cover only | `answer-first` (default) \| `story` — which playback order a long-form episode walks. Ignored on a short. See §playback order above |
 | `shot` | recommended | `{ feel, size, angle, info, infoType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
@@ -926,78 +934,71 @@ the field appears only where there is a table to point at.
 ```js
 {
   type: "points",
-  transition: "dissolve",     // omit · cut | dissolve | dip | dip:white | iris | blur | zoom
-                              //        | push:<l2r|r2l|u2d|d2u> | whip:<l2r|r2l|u2d|d2u>
+  transition: "dissolve",     // jcut | cut | dissolve | dip | dip:white | iris | blur | zoom
+                              //      | push:<l2r|r2l|u2d|d2u> | whip:<l2r|r2l|u2d|d2u>
   …
 }
 ```
 
-**Omit is a cut. `"cut"` is a smash.** They are not the same. The builder J-cuts every incoming
-spoken card whose `enter=` is empty — the next line starts on the previous last frame
-(`SCENE_JCUT`, 0.32 s), then the picture cuts. That is the professional split edit (Murch):
-you hear the next sentence before you see the next shot, so the picture never changes in
-silence. Measured on a reference short that holds attention for 85 s
-(docs/research/2026-08-29-one-world-word-cue): six hard cuts, no dissolve, and no silence
-longer than 0.3 s. Write `"cut"` only when picture and sound have to change together. Do not
-write `"jcut"` — it is not a field; the builder applies it.
+**Every shot after the first carries one.** The join is chosen from what happened between
+the two shots, one boundary at a time, and `check-scenes.js` fails a shot that has none (the
+field is written in 4b, so `--draft` reports it as later). There is no count budget and no
+boundary where a visible join is forbidden: a join that fits its boundary is never one too
+many, and one that does not fit is wrong at any count. The first shot has nothing in front of
+it, so it takes `"dip"` (it opens out of black), `"cut"`, or nothing.
 
-Pick from this table. One home; directing-grammar §6 rule 16 points here.
+**Ask the questions in this order and write the first that is true.** One home;
+directing-grammar §6 rule 16 points here. What the audience sees is what the builder draws
+(`../produce/references/build-reel.sh` §7.4).
 
-| What is happening | Write | What the audience sees |
+| What happened between the two shots | Write | What the audience sees |
 |---|---|---|
-| same place and time — two shots of one scene, size or angle changed | omit | a cut. The builder J-cuts spoken cards |
-| smash — a hit, a reveal that has to land on the new frame | `"cut"` | picture and sound change together, silent pre-roll |
-| time passed, or the place changed, and the two pictures belong to one world | `"dissolve"` | the new shot melts up **through** the old one for 0.45 s |
-| a chapter / act break, a jump the story treats as a distance | `"dip"` / `"dip:white"` | through black (or white) — a beat of nothing. White is a flash |
-| a list, a comparison, "meanwhile" — siblings, not a before and after | `"push:<l2r\|r2l\|u2d\|d2u>"` | the old shot slides off and uncovers the new one (0.32 s) |
+| a hit, a reveal that has to land on the new frame | `"cut"` | a smash — picture and sound change together, silent pre-roll |
+| a hard swerve — the answer is somewhere else, and the turn is the point | `"whip:<l2r\|r2l\|u2d\|d2u>"` | the old shot smears along the travel and is gone (0.24 s) |
+| the camera goes *in* — into the box, the building, the diagram | `"zoom"` | the old shot grows past the camera and thins out (0.32 s) |
 | a find — the shot names the thing the episode has been circling | `"iris"` | a circle opens out of the old shot onto the new one (0.45 s) |
 | a memory, a hypothetical, someone losing the thread | `"blur"` | the old shot smears sideways and melts (0.45 s) |
-| the camera goes *in* — into the box, the building, the diagram | `"zoom"` | the old shot grows past the camera and thins out (0.32 s) |
-| a hard swerve — the answer is somewhere else, and the turn is the point | `"whip:<l2r\|r2l\|u2d\|d2u>"` | the old shot smears along the travel and is gone (0.24 s) |
+| a chapter / act break, a jump the story treats as a distance | `"dip"` / `"dip:white"` | through black (or white) — a beat of nothing, 0.3 s down and 0.3 s up. White is a flash |
+| a list, a comparison, "meanwhile" — siblings, not a before and after | `"push:<l2r\|r2l\|u2d\|d2u>"` | the old shot slides off and uncovers the new one (0.32 s) |
+| time passed, or the place changed, and the two pictures belong to one world | `"dissolve"` | the new shot melts up **through** the old one for 0.45 s |
+| the same place and the same moment — two shots of one scene, size or angle changed | `"jcut"` | a cut with the sound leading: the next line starts on the old frame (0.32 s), then the picture cuts |
+
+`jcut` is the last row on purpose. It is the right join only when nothing moved between the two
+shots except the camera; on every other boundary something did move — time, place, attention,
+the story's distance — and the join says which. Two shots of one room a moment apart are a
+`jcut`; the same room after lunch is a `dissolve`; the same room in a flashback is a `blur`.
 
 `dissolve` and `blur` are the same length and the same material, and they say different
 things: a dissolve means the two pictures belong to one world, a blur means someone's
 attention left. `push` and `whip` travel the same way; the smear is what makes the second
-one a swerve instead of a list. Pick by what the audience should feel, not by what looks
-different from the last one.
+one a swerve instead of a list. Pick by what happened between the shots, never by what looks
+different from the last join — the same join five times in a row is right when the same
+thing happened five times.
 
-**Most boundaries omit the field.** A cut says the story continued. A visible join says
-something moved that the picture alone cannot show. Spend it where that is true and nowhere
-else. The 85 s reference feels soft because every shot is **moving** and every shot is in the
-**same place**, not because the edit blurred them. When a cut feels abrupt, look at the two
-pictures first: a still landing on a still, or a hall landing on a kitchen. A dissolve on
-top of that is slow *and* abrupt.
-
-**A short gets one visible join, or none.** Two is already a lot; a dissolve at every
-boundary is the slideshow look. Long-form can carry one per chapter boundary. Softening
-every join takes away the cut rhythm this pipeline uses to hold attention.
-
-**Seven kinds, still one budget.** `check-scenes.js` caps a short at two visible joins
-whatever the vocabulary holds, and it counts an iris the same as a dissolve. A wider
-vocabulary is there so the one join you spend can be the right one — not so you can spend
-more of them. An episode that uses four different kinds once each has spent four.
-
-Where a visible join earns its place: a time jump inside one room (the cut would read as
-continuous); a move the story treats as a distance; the turn on a story arc; into the cta
-when the body ended on tension.
-
-Where it does not: between two shots of the same `scene`; to paper over a jarring image
-change; on the hook or the shot right after it. Consecutive stills in one scene change size
-by two steps or the angle (directing-grammar §6 rule 16 · §7's 30° rule) — that is the
-picture match, not a dissolve.
+**Every carry is a split edit.** `jcut`, `dissolve`, `iris`, `blur`, `zoom`, `push` and
+`whip` open on the previous shot's last frame, and the next line starts at the new card's
+first frame under it — you hear the next sentence before the picture has finished changing,
+so the picture never changes in silence (Murch). The builder drops those cards' silent
+pre-roll for that reason. `cut` and `dip` keep it: a smash needs the beat before the hit,
+and a dip's silence is the beat of nothing it exists for. The 85 s reference short in
+docs/research/2026-08-29-one-world-word-cue was six hard cuts and no dissolve; that was one
+channel's grammar, and this pipeline chooses per boundary instead (owner decision, 2026-09-03).
 
 **Don't derive it from `scene` or `sceneSlug`.** The library uses them inconsistently —
 measured across every episode with the field, several give every single shot its own
 `scene` number, so "new scene → dissolve" would put one at every cut in half the channel.
-The transition is written where it is wanted, one at a time.
+The transition is written where it is wanted, one at a time. `check-scenes.js` still warns
+on a `dissolve`, `dip`, `iris` or `blur` between two shots that share a `scene` number — the
+row for "same place and moment" is `jcut`, so either the join or the number is wrong there.
 
 **What produce does with it.** Every join is drawn inside one card's own encode — no
 cross-card xfade, so the concat stays stream-copy exact (`../produce/references/build-reel.sh`
-§7.4). Mapping, written on the incoming card unless noted:
+§7.4). Mapping, written on the incoming card unless noted — the name is the same on both
+sides except for the dip's two halves:
 
 | `transition` | `cards.tsv` |
 |---|---|
-| omitted | nothing — the builder J-cuts (`enter=jcut` is the default, not something to type) |
+| `"jcut"` | `enter=jcut` |
 | `"cut"` | `enter=cut` — smash, old silent pre-roll |
 | `"dissolve"` | `enter=dissolve` |
 | `"push:<dir>"` | `enter=push:<dir>` |
@@ -1007,12 +1008,16 @@ cross-card xfade, so the concat stays stream-copy exact (`../produce/references/
 | `"whip:<dir>"` | `enter=whip:<dir>` |
 | `"dip"` / `"dip:white"` | `exit=black` (or `white`) on the card before **and** `enter=black` (or `white`) on this one |
 
-Every carry and dip keeps the card's frame count (measured A/B: identical `subs.srt`,
-same duration both ways; the iris and blur joins are drawn with an xfade **inside** the
-incoming card's encode and come out frame-identical to the overlay carries — 90/90 frames
-at 3.000 s on the 2-card fixture). A J-cut drops that card's silent pre-roll (`PRE`, 0.40 s) because
-the next line occupies it. `POST` is 0.45 s — last-reveal hang plus a blink. The BGM bed
-runs across the whole feature; fading it at a scene change would punch a hole in the music.
+An empty `enter=` is the legacy 4-column form: the builder falls back to a J-cut and warns,
+because that is the one join nobody chose.
+
+A dip keeps the card's frame count (measured A/B: identical `subs.srt`, same duration both
+ways; the iris and blur joins are drawn with an xfade **inside** the incoming card's encode
+and come out frame-identical to the overlay carries — 90/90 frames at 3.000 s on the 2-card
+fixture). Every carry drops that card's silent pre-roll (`PRE`, 0.40 s) because the next line
+occupies it — measured on the 10-card fixture: 12 frames off each carry card, drift 0, the
+subtitle cue moving with the audio. `POST` is 0.45 s — last-reveal hang plus a blink. The BGM
+bed runs across the whole feature; fading it at a scene change would punch a hole in the music.
 
 ### Camera — the four slots (`visual.camera`)
 
@@ -1227,8 +1232,11 @@ that are each already reviewed, in this order:
    PNG is called by a **general noun** ("the subject", "the woman"), never re-described. An
    in-clip state change carries its own length **in words** ("the visor snaps shut
    in under half a second"); left open, the engine spreads the change across the whole clip.
-4. `--locks` — the positive-locks tail on a multi-reference call: what holds in every frame,
-   said positively, each reference given its scope (video-model-selection §positive locks).
+4. `--locks` — what holds in every frame, said positively, each reference given its scope
+   (video-model-selection §positive locks). **On a seedance route it is required**: that
+   engine has no `negativePrompt` argument, so the lock is the only place an exclusion can
+   go, and the vendor's own image-lane pattern closes on one. On a veo route it is optional —
+   exclusions ride in the `negativePrompt` argument there.
 5. the `visual.audio` sentence, closing the prompt as `Audio: …` (§clip audio).
 
 The assembler exits 1 on what the route can't take, so a stored prompt is a checked prompt:
@@ -1236,7 +1244,12 @@ banned space language (§frame space), negative directives in the body (two exem
 `Audio:` sentence, where "no music, no speech" is a state description, and on a seedance
 route the vendor-templated **artifact classes**: subtitles, on-frame text, logos, watermarks,
 BGM), timecodes and digit seconds on a seedance route, digit seconds on a veo route
-(`--engine seedance-2.5` opens integer-second forms — that model officially takes them).
+(`--engine seedance-2.5` opens integer-second forms — that model officially takes them),
+**Korean anywhere outside a dialogue quote on a seedance route** (that body reads Chinese or
+English; 2.5 is the one model that reads Korean, and 1.5 pro lip-syncs what a quote encloses),
+and **a seedance prompt with no consistency lock**. `check-scenes.js` re-runs those last two
+against every stored prompt, so a prompt written by hand meets the same bar as an assembled
+one, and `seedance-client.ts` refuses the Korean body one more time at the call itself.
 
 **Time inside the clip differs by route.** A Seedance-routed prompt names no clock — the 2.0
 vendor docs self-report unstable precision timing, so beats are ordered by description
@@ -1778,7 +1791,7 @@ still TTS, the card is still an ordinary card, and only the picture comes from a
   plays, much shorter and the picture sits still while the voice runs on. `cut-screencast.sh`
   warns in both directions when produce passes it the card duration.
 - **A screencast scene has no `bg` or `bgPrompt`** — it drops out of §5 image generation and the
-  §5.5 image check, exactly like a slide scene. What is on screen is the recording.
+  produce §1.5 image check, exactly like a slide scene. What is on screen is the recording.
 - `zoom` is `none`. Ken Burns on a screen recording shakes text that is already small.
 - **Not for a talking head.** A face and a voice is `source: "recording"` — the filmed lane, with
   its own sound and framing contract. This lane is for a screen.
@@ -1851,18 +1864,19 @@ slide.**
 | `slide.file` | ✅ | `slides/s<shot number>-<slug>.html` — **shot number = the SCENES array position (from 1)**, the same number as script.md's shot and `voice/s<n>.wav` |
 | `slide.plan` | ✅ | One line on what to draw. For motion, number what changes on each narration group |
 | `slide.labels` | ✅ when the shapes carry text | Every piece of text to draw on the slide beyond `title` and `bullets`. The style gate's screen surface checks this array — plant Korean text in the slide file that isn't here and characters that never passed the check go on screen |
-| `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **flat ink actor** (person, agent, room) sitting with `h.fig`; rules (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generate at storyboard §5.6 |
+| `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **flat ink actor** (person, agent, room) sitting with `h.fig`; rules (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generated at produce §3.6 |
 | `slide.motion` | ✅ `true` | required. A still slide is not allowed. Numbers count up, bars grow, type reveals on its sentence (§motion slides) |
 | `slide.treatment` | ✅ on a moving `diagram` | `"editorial"` when HTML owns the whole frame; `"photo-action"` when a photo fills the frame and the photographed subject or evidence itself changes; `"footage"` when generated clips carry the scene, one per reveal group, and HTML only draws marks over them (§footage treatment) |
 | `slide.role` | ✅ on `treatment:"editorial"` | `evidence` · `relationship` · `mechanism` · `timeline` · `statistic` · `transition` · `verdict` |
 | `slide.motif` | ✅ on `treatment:"editorial"` | The episode-wide visual device repeated across authored frames: signal line, evidence stamp, paper tear, date rail, or another concrete device |
 | `slide.motionBeats` | ✅ when `shot.infoType` is `timeline` · `statistic` · `principle` | One `{group, primitive}` per narration group. The declared primitive has to exist in the rendered DOM for the same group |
-| `slide.shots` | ✅ on `treatment:"footage"` | One entry per reveal group — `{ group, clip, still, matte?, duration, engine?, camera, action, audio, prompt, negative, mark }`. The clips are generated at storyboard §5, before the slide is authored (§footage treatment) |
+| `slide.object` | optional on `treatment:"editorial"` | A **rendered object** (`rendered-object.md`, slide-design.md §9) — `{ file, shape, keys, frames, plan }`. `file` is the baked sheet `slides/assets/s<shot>-<slug>.png`; `shape` a name in `bake-object.py` (`disc`); `keys` and `frames` the bake arguments, so the sheet is reproducible from this file; `plan` what the object does on which sentence. The groups where the object arrives or recedes declare `object-move` in `motionBeats`. Baked at the slide authoring step, before `check-slide.js` |
+| `slide.shots` | ✅ on `treatment:"footage"` | One entry per reveal group — `{ group, clip, still, matte?, duration, engine?, camera, action, audio, prompt, negative, mark }`. The clips are generated at produce §3, before the slide is authored at §3.6 (§footage treatment) |
 
 The frame design is part of what the user approves, so storyboard renders and reviews key
 states before §7. Author only text already present in `title`, `bullets`, and `slide.labels`.
 
-- A slide scene has no `bg` or `bgPrompt` — it drops out of §5 image generation and the §5.5
+- A slide scene has no `bg` or `bgPrompt` — it drops out of produce §1.5's stills and their
   image check; a missing `scene-N.png` there is not a defect.
 - **Reveal groups are 1:1 with narration segments** by default, and using sub-reveals (`A|B`)
   makes more groups than segments. produce lays clip k under segment k as a play-once visual.
@@ -1888,7 +1902,7 @@ symbol, that raster is one plate inside a constructed visual argument. Put at le
 actors or relations on screen — for example, two paper fragments converging on a source card, a
 date rail joining documents, or a signal line linking an eye gesture and a hand gesture to a
 clearly labelled online interpretation. `check-slide.js` blocks a raster-only editorial file;
-the author's read of the rendered sheet (storyboard §5.6) judges the result; `slide-reviewer`
+the author's read of the rendered sheet (produce §3.6) judges the result; `slide-reviewer`
 grades it to the same rubric when the user asks for that read.
 
 Three information types have to be drawn, on one of two routes. **The default route is a
@@ -1901,11 +1915,14 @@ single figure that has to stand alone (a plate is one picture, so it runs at mos
 file, and `render-motion-slide.mjs` rejects a declared movement that is absent from the
 rendered frame; on the footage route it rejects empty `labels`:
 
+`object-move` is the primitive of a rendered object (`slide.object`) arriving, turning or receding —
+allowed on all three types, because the sentence's value can be the thing itself.
+
 | `shot.infoType` | Required `slide.role` | Allowed `motionBeats[].primitive` |
 |---|---|---|
-| `timeline` | `timeline` | `date-enter` · `range-grow` · `event-link` |
-| `statistic` | `statistic` | `count-up` · `bar-grow` · `dot-fill` · `axis-draw` |
-| `principle` | `mechanism` | `flow-trace` · `node-enter` · `state-transform` · `shape-enter` · `shape-draw` · `shape-travel` |
+| `timeline` | `timeline` | `date-enter` · `range-grow` · `event-link` · `object-move` |
+| `statistic` | `statistic` | `count-up` · `bar-grow` · `dot-fill` · `axis-draw` · `object-move` |
+| `principle` | `mechanism` | `flow-trace` · `node-enter` · `state-transform` · `shape-enter` · `shape-draw` · `shape-travel` · `object-move` |
 
 Groups start at 1 and map to narration segments in order. One group declares one primary
 primitive. `motion-slide-template.html` provides helpers with the matching names (`h.date`,
@@ -2002,7 +2019,7 @@ are body shots.
 |---|---|---|
 | `slide.shots[]` | ✅ | one per reveal group, in group order — `shots[k-1]` is group k. Fewer shots than narration segments is a violation (`check-scenes.js`) |
 | `shots[].group` | ✅ | 1-based, unique |
-| `shots[].clip` | ✅ | `slides/footage/s<shot>-g<group>.mp4` — H.264 at the format canvas, generated at storyboard §5. `.webm` (VP9) is accepted; HEVC and AV1 do not decode in the renderer's Chrome |
+| `shots[].clip` | ✅ | `slides/footage/s<shot>-g<group>.mp4` — H.264 at the format canvas, generated at produce §3. `.webm` (VP9) is accepted; HEVC and AV1 do not decode in the renderer's Chrome |
 | `shots[].still` | recommended | the source still for `seedance_img2video` / `veo_img2video`, `slides/footage/s<shot>-g<group>.png`, made under the §5 image rules — a channel character on screen means the reference-panel call |
 | `shots[].matte` | optional | `slides/footage/s<shot>-g<group>-fg.webm` — the subject alone with alpha (`produce/references/make-matte.py`), laid above the marks so a ground mark passes behind the figures. Only on shots whose mark has to sit under people |
 | `shots[].duration` | ✅ | the seconds requested from the engine — seedance 4–12, veo 8. **The segment estimate plus one second** (characters / 4.5 + 1, floor 4): the renderer plays the clip for the whole segment and a shorter clip freezes on its last frame |
@@ -2020,7 +2037,7 @@ Rules only this treatment has:
   each clip's mid frame (`footage-frames.sh` writes first, mid and last frames and a per-shot
   sheet), because the generated picture never lands exactly where the still had it. So the
   order is: §4.4 · §4.5 narration loops passed → §5 stills and clips, after the rule-13 plan
-  check on every shot and the §5 cost gate → §5.6 marks, render, the author's read of the
+  check on every shot and the §5 plan gate → produce §3 clips → §3.6 marks, render, the author's read of the
   sheet. The procedure is `references/footage-lane.md`.
 - **Outside `generatedVideoMax`.** Footage shots are not counted against the b-roll and
   motion-background cap; they are budgeted. `cost-preview.js` puts every shot on the approval
@@ -2110,14 +2127,16 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   stops on either), plus `__setSegs({group: ms})` — the renderer's `--segs` hands over the
   narration segment lengths and elements marked `.sv` stretch their meaning motion to them
   (the sustain layer, slide-design.md §5).
-- **Every movement is reproducible by seek**, and there are four ways to make one:
+- **Every movement is reproducible by seek**, and there are five ways to make one:
   CSS `@keyframes` (the template's `rise` · `in` · `grow` · `draw` · `fade`), `data-count` count-ups,
   a **painter** registered with `__paint(rg, durMs, fn)` whose `fn(tMs)` draws the frame at
   `t` (canvas 2D, WebGL, or SVG — the path for a rotation, a trace, anything keyframes can't
   hold; WebGL runs on SwiftShader, so it reproduces on the same machine rather than across
   machines), and
   a **`<video data-rg data-vfrom data-vdur>`** whose `currentTime` is set to the group's local
-  time (`vfrom` and `vdur` are both milliseconds). A painter that attaches DOM keeps those nodes
+  time (`vfrom` and `vdur` are both milliseconds), and a **baked sheet** (`[data-sheet …]`, made
+  by `h.object` from `slide.object` — rendered-object.md) whose frame index the runtime sets from
+  (g, t), one frame range per group, stretched to the segment. A painter that attaches DOM keeps those nodes
   inside its own `[data-rg]` — outside it a CSS animation runs on the wall clock, and `__seek`
   pins it to t=0 and counts it so the renderer stops. `transition` is forbidden (its object
   exists only after a property change, so it can't be seeked). `Date` · `Math.random` · `performance.now` · `requestAnimationFrame` ·
@@ -2160,7 +2179,7 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   encode), ink · paper · one accent, square plates and 3/6/10px rules instead of cards and
   hairlines, broadcast type sizes (44px floor), one hero per slide, and the opening chain
   (tag → title → first value, `--lead` apart) in group 1. Its §6 is the rubric the
-  author's sheet read in storyboard §5.6 judges the rendered frames against (and the one
+  author's sheet read in produce §3.6 judges the rendered frames against (and the one
   **`slide-reviewer`** scores against when the user asks for that read).
 - A motion slide has no `bg`/`bgPrompt` and skips §5 image generation and the image
   review; the storyboard's check strip and `episode-state.js` treat the file the same way
@@ -2315,7 +2334,7 @@ strip says no violations.
 - [ ] **If there are slide scenes** (§slide scenes) each one has `slide.file` and `slide.plan`,
       and file follows the `slides/s<shot number>-<slug>.html` convention (shot number = array
       position). Every piece of text to draw on the shapes is in `slide.labels` — the file itself
-      is built and reviewed at §5.6 before approval. `slide.motion: true` is required
+      is built and read at produce §3.6, after approval. `slide.motion: true` is required
 - [ ] **If there are slide scenes** (`slide.motion: true`, §motion slides) the `plan` says what
       moves on which sentence (numbered by segment), the movement is a value being spoken (a
       count, a bar, a step) and not ambience, and no scene relies on continuous motion — that
@@ -2329,8 +2348,8 @@ strip says no violations.
       `visual.action`, a `plan` naming the clip and the mark per group, and `slide.shots` with one
       entry per reveal group — `clip` under `slides/footage/s<shot>-g<group>.mp4`, `duration`
       inside the route's band and at the segment estimate plus one second, all four `camera`
-      slots, `prompt`, `audio`, `mark`. The clips exist before §5.6 (generated at §5 after
-      the rule-13 plan check on every shot and the §5 cost gate); the marks are
+      slots, `prompt`, `audio`, `mark`. The clips exist before the marks are authored
+      (generated at produce §3, after the rule-13 plan check on every shot); the marks are
       authored against `footage-frames.sh` frames and carry no text unless it is in `labels`
 - [ ] **Every narrated shot declares `shot.infoType`.** `timeline`, `statistic`, and `principle`
       use the required moving editorial diagram, mapped role, and one allowed `motionBeats`
@@ -2356,11 +2375,10 @@ strip says no violations.
       scene that moves to a new place or time names its palette in three colours rather than a
       mood word (directing-grammar §3.5). A shot that follows a hard cut, a flashback, or the
       `turn` gets its own beat to land in before the next line (§6 rule 13)
-- [ ] **Each join is a decision** — omit `transition` for a cut (the builder J-cuts spoken
-      cards); write `"cut"` only for a smash; spend `dissolve` / `dip` / `push:<dir>` from
-      §scene transition, never from the `scene` number. A short spends at most one visible
-      join, never on the hook. Consecutive stills in one scene change size by two steps or
-      the angle (directing-grammar §6 rule 16)
+- [ ] **Each join is a decision** — every shot after the first carries `transition`, chosen
+      from the ordered table in §scene transition, never from the `scene` number: `jcut`
+      only when the two shots are one continuous moment, `cut` only for a smash. Consecutive
+      stills in one scene change size by two steps or the angle (directing-grammar §6 rule 16)
 - [ ] **Every generated clip's prompt closes with positive locks** — what has to hold in every
       frame, written as positive sentences, with each reference given its scope in
       `visual.character` (`{ id, scope }` — "controls the helmet and body only", "appears only in

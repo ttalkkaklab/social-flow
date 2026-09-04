@@ -175,18 +175,21 @@ function blockers(ep, stage) {
     if (missingFootage.length)
       out.push(missingFootage.length + ' filmed scene file(s) not saved yet — ' +
                missingFootage.slice(0, 3).join(', ') + (missingFootage.length > 3 ? ' …' : ''));
-    const missingSlides = req.slideFiles.filter((f) => !exists(path.join(ep.dir, 'storyboard', f)));
-    if (missingSlides.length)
-      out.push(missingSlides.length + ' slide file(s) not authored yet (storyboard §5.6) — ' +
-               missingSlides.slice(0, 3).join(', ') + (missingSlides.length > 3 ? ' …' : ''));
   }
 
-  if (stage !== 'empty' && stage !== 'broken' && stage !== 'drafted') {
+  // Stills and slide files are produce's output, not the storyboard's (owner directive
+  // 2026-09-04 — nothing is generated before approval), so their absence is only a blocker
+  // once the video claims to be built.
+  if (stage === 'produced' || stage === 'published') {
+    const missingSlides = req.slideFiles.filter((f) => !exists(path.join(ep.dir, 'storyboard', f)));
+    if (missingSlides.length)
+      out.push(missingSlides.length + ' slide file(s) not authored yet (produce §3.6) — ' +
+               missingSlides.slice(0, 3).join(', ') + (missingSlides.length > 3 ? ' …' : ''));
     const missingImages = req.imageFiles
       .filter((f) => !exists(path.join(ep.dir, 'storyboard', f)));
     if (missingImages.length)
       out.push(missingImages.length + ' of ' + req.imageFiles.length +
-               ' scene image(s) the scenes name are not on disk — ' +
+               ' scene image(s) the scenes name are not on disk (produce §1.5) — ' +
                missingImages.slice(0, 3).join(', ') + (missingImages.length > 3 ? ' …' : ''));
   }
 
@@ -375,6 +378,19 @@ function selftest() {
   ok('image paths are taken from the scenes, whatever they are named',
      req.imageFiles.join(',') === 'images/scene-1-1.png,images/s4-odd.png,images/b5-src.png');
   ok('a shot that names no image contributes none', req.imageFiles.indexOf(undefined) === -1);
+
+  // blockers(): stills and slide files are produce's output since 2026-09-04, so their
+  // absence is normal at approved and a blocker only once the video claims to be built.
+  const staged = (stage) => blockers(Object.assign({}, base, {
+    req: { imageFiles: ['images/scene-1.png'], slideFiles: ['slides/s3-flow.html'],
+           footageFiles: [], videoSlots: 0, filmed: 0 }
+  }), stage);
+  ok('approved does not block on stills produce has not made yet',
+     !staged('approved').some((x) => /scene image|slide file/.test(x)));
+  ok('produced blocks on a still the scenes name and the disk lacks',
+     staged('produced').some((x) => /scene image/.test(x)));
+  ok('produced blocks on a slide file never authored',
+     staged('produced').some((x) => /slide file/.test(x)));
 
   // blockers(): a ready queue marker pointing at nothing
   const b = blockers(Object.assign({}, base, {

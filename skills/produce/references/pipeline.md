@@ -68,14 +68,16 @@ by frame rounding + sample-accurate padding. Reveals are pure video-side timing,
 boundary detection produces zero drift. Always composite through build-reel.sh (an -shortest mux
 was measured to accumulate 105ms).
 
-**Card joins default to a J-cut.** An incoming spoken card with no `enter=` opens on the
-previous last frame for `SCENE_JCUT` (0.32s) while the next line already plays, then the
-picture cuts. `POST` is 0.45s (last-reveal hang). Write `enter=cut` for a smash with the old
-silent pre-roll. Dissolve, iris, blur, zoom, push, whip and dip stay explicit spent effects
-drawn inside the incoming card, so concat `-c copy` and drift 0 still hold — iris and blur
-reach for an xfade there, which is safe inside one encode and still banned at the seam
-(build-reel.sh §7.4 says why). A J-cut drops that card's silent
-`PRE` from its length because the next line occupies it.
+**Every card after the first carries its join.** `enter=` is copied from the board's
+`transition` (produce §6 has the mapping); an empty `enter=` is the legacy form, and the
+builder falls back to a J-cut and warns. Every carry (jcut, dissolve, iris, blur, zoom, push,
+whip) is a split edit: the next line starts at the card's first frame under the carried
+frame, so the card drops its silent `PRE` and the picture never changes in silence. `cut`
+(the smash) and a dip keep the pre-roll. `POST` is 0.45s (last-reveal hang); a dip half is
+0.30s. Every join is drawn inside the incoming card, so concat `-c copy` and drift 0 still
+hold — iris and blur reach for an xfade there, which is safe inside one encode and still
+banned at the seam (build-reel.sh §7.4 says why). Reveal timing takes the same `PRE` the
+audio was padded with.
 
 ## Reveal timing contract (reveal-timing.py)
 

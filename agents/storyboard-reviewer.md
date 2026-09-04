@@ -150,7 +150,7 @@ Three things to look at in a filmed scene.
   step, an item — appears in neither labels nor title/bullets, the screen can't carry
   the sound.
 - A missing slide file (`slides/*.html`) is **not a defect** at this review — the files
-  are authored at §5.6, after the sentence reviews. What you're reading here is the plan.
+  are authored at produce §3.6, after approval. What you're reading here is the plan.
 
 ---
 
@@ -181,7 +181,7 @@ scenario-craft §4 · §5 · §6 · §11 · §12.
 - `storyboard/research.md` — whether the material holds a plausible wrong answer that no
   item takes apart, whether the claimed engine has anything in the evidence to stand on,
   and whether every fact on the page (the 훅's names and years included) has a row
-- `data/<channel>/profile.md` — §3 target, so you can say whether the promise is a promise
+- `data/<channel>/profile.md` — §1 target audience, so you can say whether the promise is a promise
   to them
 - The rules: `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenario-craft.md` §4 · §5 ·
   §6 · §11 · §12, and `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenario-stage.md`
@@ -235,6 +235,14 @@ score the engines axis at 0 and raise P0-10.
     than two cases, or a case with no line on what it has to do with the topic or no research
     row; a 주제 that is a topic label rather than the thought the viewer leaves with.
 
+14. **The ending cancels what the page charged for.** The 마무리 or the CTA tells the viewer
+    the episode was less than it seemed — "사실 확실한 건 아닙니다", "결국 별거 아니었죠", or a
+    frame reveal that makes the account itself provisional. The page spent the viewer's
+    attention on a stake it named in the 훅; the last item hands over what was earned, and a
+    hedge belongs in 전개 where the viewer can still do something with it (§13). A 마무리 that
+    honestly names a limit *and* still gives the viewer the thing they came for is not this P0
+    — the defect is the take-back, not the caveat.
+
 **A thin item is not a P0 by itself.** A 전개 #3 with two cases where three would carry
 better, or a 전개 #2 of one sentence, costs points on the structure axis and earns a
 directive; it is P0-13 only when the item cannot do its job at all.
@@ -250,8 +258,8 @@ for engines the beats actually run, with a file:line or a quoted beat as evidenc
 | Axis | Points | What earns them |
 |---|---|---|
 | Viewer engines | 40 | primary enacted (25) — see the table in `scenario-stage.md`; secondary enacted without fighting the primary (10); the mix is one primary plus at most one spice, not four names (5) |
-| The opening | 20 | cold open on the strongest moment or evidence, a promise sentence the profile §3 target would want kept, a first line that names a loss before it asks, and the primary engine landing in that opening |
-| The structure is honoured | 15 | the seven items in order, each doing its job — 전개 #1 an account with its rows, 전개 #2 the turn to the present spoken as a thought, 전개 #3's cases each with their link — and each item closing a question as it opens the next; on long-form, 전개 #1 laid out in the shape the row rides |
+| The opening | 20 | cold open on the strongest moment or evidence, a promise sentence the profile §1 target audience would want kept, a first line that names a loss before it asks, the primary engine landing in that opening, and the staging placed half a step off what the viewer would have guessed — familiar material with one property moved, never a premise that has to be explained before it lands (§13) |
+| The structure is honoured | 15 | the seven items in order, each doing its job — 전개 #1 an account with its rows, 전개 #2 the turn to the present spoken as a thought, 전개 #3's cases each with their link — and each item closing a question as it opens the next, its last sentence one you could cut on because it forces a "그런데" or a "그래서" into the item after it (§13); on long-form, 전개 #1 laid out in the shape the row rides |
 | The feel curve | 15 | a sign per item, the minimum before the burst and the maximum on the turn (전개 #2) or the cases (전개 #3), and both poles on high-arousal feelings (dread, anger, awe, relief — not sadness or "nice") |
 | Items and ending | 10 | what the 훅 opens is paid inside 전개 #1–#3; the 마무리 is a question the viewer can answer from the episode, worded to produce comments; the CTA is a callback that re-reads the 훅 with the turned meaning plus one outward act — and nothing subscribe-shaped |
 
@@ -366,12 +374,22 @@ picture was going to show, and you will fill the gap for the author without noti
    never gets a sentence; the cut from past to present is expected to say it.
 6. **A case with no link.** A 전개 #3 case is named and what it has to do with the topic is
    never said.
-7. **A term used before or without its plain wording.** A name or technical term the listener
-   would not know arrives with no explanation in the same shot — including a term the
-   narration uses that `COMPREHENSION.terms` never declared. (The machine half — a declared
-   `plain` actually being spoken — is `check-scenes.js`'s; yours is the term nobody declared.)
-8. **The 마무리 question cannot be answered from what was heard**, or no question is asked.
-9. **A drop in the chain.** Two consecutive sentences where the second does not follow from
+7. **A term used before or without its plain wording.** A name or technical term a **만 9~10세
+   listener** would not know (korean-style §Eye level — the plugin writes to the 초3~4 floor)
+   arrives with no explanation in the same shot — including a term the narration uses that
+   `COMPREHENSION.terms` never declared. (The machine half — a declared `plain` actually being
+   spoken — is `check-scenes.js`'s; yours is the term nobody declared.) A gloss that needs its
+   own gloss ("금속 구조물") counts as no explanation.
+8. **A figure with nothing to put it beside.** A number whose *scale* sits outside everyday
+   experience — money in 조·억 (1조 원), area in 제곱킬로미터, time under a second (0.3초),
+   distance in 광년 — spoken with no comparison in the same shot or the next sentence. At ten
+   those are all just "big", and a comparison beside the figure is the fix; the figure itself
+   is never rounded to make one land. **Years, percentages and head counts are not this
+   defect** — 천구백구십 년대, 십오 퍼센트, 구만 명 land on their own, and pulling them in
+   would fail nearly every episode (the library runs 29 year mentions and 15 percentages
+   against 2 out-of-scale figures).
+9. **The 마무리 question cannot be answered from what was heard**, or no question is asked.
+10. **A drop in the chain.** Two consecutive sentences where the second does not follow from
    the first — a "but" or a "therefore" the listener cannot supply (scenario-craft §1), with
    nothing spoken to bridge it.
 
@@ -382,7 +400,7 @@ picture was going to show, and you will fill the gap for the author without noti
 | The topic lands | 25 | your one sentence matches the 주제, or `COMPREHENSION.question` when there is no scenario.md (15); the takeaway you would repeat matches `COMPREHENSION.takeaway` (10) |
 | The chain holds | 25 | every sentence follows from the one before with no picture needed; every referent has a spoken antecedent; no seam the listener has to bridge |
 | The content is complete | 20 | 전개 #1 as an account — who · when · what (8); 전개 #2 spoken as a thought (6); each 전개 #3 case named with its link (6) |
-| Terms and names | 15 | every unfamiliar term explained where it first appears; no proper name the listener carries for nothing |
+| Terms and names | 15 | every unfamiliar term explained where it first appears, at the 초3~4 floor (8); every out-of-scale figure — P0-8's four kinds, not years or percentages — spoken with something beside it (4); no proper name the listener carries for nothing (3) |
 | The ending | 15 | the 마무리 question answerable from what was heard (8); the CTA callback re-reads the 훅 with the turned meaning (7) |
 
 ## Output format (fixed, machine-parseable)
@@ -433,7 +451,7 @@ pass: carry those as one "hand to another mode" line, never as a P0.
   `window.COMPREHENSION` first; it is the declared question → answer → takeaway path and the
   term list against which the spoken copy is judged
 - `storyboard/research.md` (if present) — the ledger of verified claims. The reference for the facts axis
-- `data/<channel>/profile.md` — §2 tone and voice, §3 target, banned material
+- `data/<channel>/profile.md` — §1 target audience, §2 tone and voice, banned material
 - Style rules: `${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/korean-style.md`
 - Style checker: `${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py`
   (text extraction from scenes.js is `extract-text.js` in the same folder)
@@ -613,7 +631,7 @@ reviewer quotes its output as the evidence.
   before the content; on a story arc the answer first appears in the result, the turn sits
   right before it, and the cta's frame points back at the cover 5
 - **Facts and tone (30)**: faithful against research.md (ranges and as-of dates preserved)
-  15 / matches profile §2 tone and §3 target 10 / screen text agrees with the narration 5
+  15 / matches profile §2 tone and §1 target audience 10 / screen text agrees with the narration 5
 
 Start from 0 and add points **only with evidence that you read both scenes.js and the
 reference documents**.
@@ -661,7 +679,7 @@ vocabulary mode).
 - `storyboard/scenes.js` — what gets scored. Read `window.COMPREHENSION` first and use its
   question → answer → takeaway path as the context test for every scene
 - `storyboard/research.md` (if present) — the reference for evidence links
-- `data/<channel>/profile.md` — §2 tone, §3 target and mood, the channel's topic range
+- `data/<channel>/profile.md` — §1 target audience, §2 tone, §3 mood, the channel's topic range
 - `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/scenario-craft.md` (if passed) — the
   craft yardstick behind P0 1 and P0 2: the connective test and the value turn, plus the
   plant/payoff rule the story `turn` is judged by, and the three story-arc rules read as
@@ -725,7 +743,7 @@ the reviewer still checks whether the declared type tells the truth.
    point at different things
 5. **No basis** — the scene's claim doesn't attach to any item in research.md
    (doesn't apply to channels that skip research — only when the delegator says so)
-6. **Off target** — it assumes something profile §3's target doesn't know, with no explanation
+6. **Off target** — it assumes something profile §1's target audience doesn't know, with no explanation
 7. **b-roll in the wrong place** — nothing there justifies a wordless stretch. It sits in a
    dense stretch and cuts the explanation off, or a scene unrelated to the previous scene's
    background jumps out (broll scenes only)
@@ -874,15 +892,15 @@ done
 1. **S1 detected** — check-style.py exit 2. It's a P0 for the scene that sentence sits in
 2. **Translationese wording** — the indirect particles, nominalized verbs, and double passive
    listed in korean-style §B·§T instead of a direct spoken verb
-3. **Unexplained jargon** — a term with no parenthetical gloss on first use. If spelling it
-   out reads awkwardly, doubt whether the term is needed at all
+3. **Unexplained jargon** — a term above the 초3~4 floor with no plain wording on first use.
+   If spelling it out reads awkwardly, doubt whether the term is needed at all
 4. **AI stock phrases** — stock openings, inflated implications, and empty modifiers from
    korean-style §D instead of the concrete point
 5. **Written-only vocabulary on a spoken surface** — official-document words from
    korean-style §D9. Narration and titles are where a person speaks out loud
 6. **Word overuse** — the same noun or predicate shows up more than three times in an
    episode while an alternative exists. The episode's topic word is exempt (it should repeat)
-7. **Off-target vocabulary** — words profile §3's target doesn't use. Industry jargon
+7. **Off-target vocabulary** — words profile §1's target audience doesn't use. Industry jargon
    mistaken for viewer speech
 8. **Essay endings on a spoken surface** — a sentence closed on a bare noun ("~는 것."), the
    `~셈입니다` wrap-up, the stock reveal line (korean-style §D10). check-style.py flags the
@@ -892,8 +910,16 @@ done
 
 ## Per-sentence axes (additive out of 100 — scored separately for each sentence; per scene on a full-board read)
 
-- **Plain language (35)**: easy words instead of hard Sino-Korean 15 / jargon comes with an
-  explanation 10 / no over-compression that cut the meaning away 10
+- **Plain language (35)**: the words sit inside the 초3~4 floor — korean-style §Eye level,
+  NIKL grade 3, what a 만 9~10세 viewer has without being taught 15 / jargon comes with an
+  explanation a ten-year-old could repeat 10 / no over-compression that cut the meaning away 10
+
+  **The test for a word is one question: would a ten-year-old use it, or at least know it
+  without being told?** 여부·기입하다·초래하다 fail it and have an everyday twin, so they are
+  swaps (E1~E3 — the checker output already names those). A word the episode is about
+  (계엄, 파운드리) fails it too but has no twin; that one is not a swap, and saying so is the
+  finding — it belongs to the story pass, with the plain wording spoken beside it. Don't order
+  it swapped into something vaguer.
 - **Fits spoken speech (35)**: words that actually come out when you say it aloud 15 / no
   written-only vocabulary or report-style stative verbs 10 / the words are the ones a
   person mutters to themselves (the title too, on a full-board read) 10
@@ -991,7 +1017,7 @@ shot; only the slot axes go `n/a` on the shots that don't become video.
 ## Inputs (supplied by the delegation prompt)
 
 - path to `storyboard/scenes.js`
-- `data/<channel>/profile.md` — §2 tone, §3 target, banned material
+- `data/<channel>/profile.md` — §1 target audience, §2 tone, banned material
 - `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/directing-grammar.md` — **the feel →
   technique table (§5), the size ladder (§2), the angle rules (§3), the move table (§4), the
   rationing rules (§6), the filmed-shot notes (§7)** — the yardstick for the shot-grammar axis
@@ -1058,7 +1084,7 @@ finding; a silent departure is.
 | Axis | Points | What earns them | Applies to |
 |---|---|---|---|
 | Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the hook cut and speech clips sit at `eye`; on a generated still, `shot.space` is in the camera frame with `layout` and (when a person is on screen) `facing` as the visible result, no banned language | every shot |
-| Rationing and sequencing | 10 | this shot doesn't break the across-shot rules — a second close-up (`cu`·`choker`·`ecu`) in the scene, a third `choker`/`ecu` in the episode, a second `dutch` or one without its reason, a close-up opening not paid back by the next shot, a wide under 1.5× the close beside it, a later shot of the scene that flips `space.line` without a legal 180° crossing written (directing-grammar §6 rule 11), a dissolve or dip inside one scene, a visible join on the hook, consecutive stills of the same size and angle in one scene (scenes-schema §scene transition · directing-grammar §6 rule 16) | every shot |
+| Rationing and sequencing | 10 | this shot doesn't break the across-shot rules — a second close-up (`cu`·`choker`·`ecu`) in the scene, a third `choker`/`ecu` in the episode, a second `dutch` or one without its reason, a close-up opening not paid back by the next shot, a wide under 1.5× the close beside it, a later shot of the scene that flips `space.line` without a legal 180° crossing written (directing-grammar §6 rule 11), a shot after the first with no `transition`, a `jcut` where time, place or attention moved between the two shots, a join that says something other than what happened between them (the ordered table in scenes-schema §scene transition), consecutive stills of the same size and angle in one scene (directing-grammar §6 rule 16) | every shot |
 | Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it); the stored clip prompt exists, says what the slots say, and keeps the route's timing grammar | generated shots |
 | Length fits the purpose | 15 | matches the §cut length table and the feel row, it is the length that will be used, and it sits inside the routed engine's server grid (veo 4/6/8 · 1.5 pro 4–12s) | generated shots |
 | Engine and reference fit | 10 | the right lane for what's on screen, references inside the cap, cast ids real | generated shots |
@@ -1237,7 +1263,7 @@ scene is saying**. Judge fit, not looks.
   an image you didn't open
 - `storyboard/scenes.js` — per-scene narration, screen text, `bgPrompt`. The reference to
   compare against
-- `data/<channel>/profile.md` — §3 mood, THEME, target, banned subjects
+- `data/<channel>/profile.md` — §1 target audience, §3 mood, THEME, banned subjects
 - if the episode used illustration mode (`narration[].img`), those illustration paths are up
   for evaluation too
 - a change the user asked for at the approval step, when the delegator sends one back
@@ -1246,7 +1272,7 @@ If any image file won't open, mark that one "unverified" and withhold its share 
 points.
 
 **Slide scenes (`visual.slide`) are out of scope for this mode** — their screen is not a
-generated image but an HTML slide that storyboard §5.6 builds, so having no
+generated image but an HTML slide that produce §3.6 builds, so having no
 `scene-N.png` is normal. Don't raise the absence as a defect.
 
 ## P0 defects (any one of them is a must-fix, not a maybe)
@@ -1272,7 +1298,7 @@ generated image but an HTML slide that storyboard §5.6 builds, so having no
    specific celebrity / no person on the cover / **no person in an image serving as a b-roll
    source** (the PNG named by a `broll` scene's `visual.src` — veo needs something to move.
    Two images max per episode, and the opening slot is usually the cover background) / a
-   person who doesn't match profile §3's target
+   person who doesn't match profile §1's target audience
 4. **National symbols** — flags, national emblems, maps, government buildings, people in
    uniform (banned without prior approval)
 5. **Bright subtitle zone** — the bottom third is bright enough that white subtitles don't

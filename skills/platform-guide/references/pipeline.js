@@ -113,6 +113,16 @@ const BROKEN_STAGE = {
 const GATES = [
   // ── Attended path ────────────────────────────────────────────────────
   {
+    id: 'narration-approval',
+    kind: 'hitl',
+    skill: 'storyboard',
+    section: '§4.6',
+    heading: 'Narration approval',
+    stage: 'drafted',
+    checks: 'the human reads the whole narration joined into prose, with both review scores',
+    onFail: 'the changed sentences go back through §4.4 or §4.5 inside the same caps, then present again',
+  },
+  {
     id: 'storyboard-approval',
     kind: 'hitl',
     skill: 'storyboard',
