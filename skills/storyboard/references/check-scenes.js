@@ -974,8 +974,19 @@ function check(win, fmt, opts) {
           if (!ob.keys || !ob.frames) machine(at, 'has no keys/frames — the bake-object.py arguments, so the sheet is reproducible');
           if (!ob.plan) warn(at, 'has no plan — say what the object does on which sentence');
           const segs = Array.isArray(s.narration) ? s.narration.length : 0;
-          const groups = String(ob.frames || '').split(/\s+/).filter(Boolean).length;
-          if (segs && groups > segs) machine(at, `frames names ${groups} groups for ${segs} narration segments`);
+          const seen = new Set();
+          String(ob.frames || '').split(/\s+/).filter(Boolean).forEach(tok => {
+            const m = /^(\d+):(\d+)$/.exec(tok);
+            if (!m) { machine(at, `frames token "${tok}" is not g:n`); return; }
+            const g = Number(m[1]), n = Number(m[2]);
+            if (g < 1 || (segs && g > segs)) machine(at, `frames names group ${g} for ${segs} narration segments — the runtime counts the sidecar's groups`);
+            if (n < 1) machine(at, `frames gives group ${g} no frames`);
+            if (seen.has(g)) machine(at, `frames names group ${g} twice`);
+            seen.add(g);
+          });
+          const nk = String(ob.keys || '').split(/\s+/).filter(Boolean).length;
+          if (nk && seen.size && nk !== seen.size + 1)
+            machine(at, `keys has ${nk} entries for ${seen.size} frames groups — bake-object.py wants groups + 1 (a start state and one per group)`);
         }
       }
       if ((v.slide.kind || 'diagram') === 'kinetic' &&
@@ -1073,6 +1084,14 @@ function selftest() {
      has(bads(run([cover, Object.assign({}, goodShot, { visual: { slide: { file: 'slides/s2-disc.html', motion: true,
        treatment: 'editorial', role: 'statistic', motif: 'clay disc', plan: 'x',
        object: { file: 'slides/assets/s2-obj.png', plan: 'x' } } } })])), /has no shape/));
+  ok('a rendered object cannot name a frames group the narration has not got',
+     has(bads(run([cover, Object.assign({}, goodShot, { visual: { slide: { file: 'slides/s2-disc.html', motion: true,
+       treatment: 'editorial', role: 'statistic', motif: 'clay disc', plan: 'x',
+       object: { file: 'slides/assets/s2-obj.png', shape: 'disc', keys: '0,16,0 0,16,45 0,16,60', frames: '1:11 99:14', plan: 'x' } } } })])), /frames names group 99/));
+  ok('a rendered object carries one key more than it has frames groups',
+     has(bads(run([cover, Object.assign({}, goodShot, { visual: { slide: { file: 'slides/s2-disc.html', motion: true,
+       treatment: 'editorial', role: 'statistic', motif: 'clay disc', plan: 'x',
+       object: { file: 'slides/assets/s2-obj.png', shape: 'disc', keys: '0,16,0 0,16,45', frames: '1:5 2:5', plan: 'x' } } } })])), /keys has 2 entries/));
   ok('an editorial frame declares role and motif',
      has(bads(run([Object.assign({}, cover, { visual: { slide: { motion: true, treatment: 'editorial' } } }), goodShot, goodShot, goodShot])), /slide\.role|no motif/));
   const semantic = (infoType, role, motionBeats) => Object.assign({}, goodShot, {

@@ -275,7 +275,8 @@ Rules:
   while the number counts — and the frame at any (g, t) is one index. The step rate follows
   from the frame count: 27 frames under a 5 s sentence is 5.4 steps a second at 0.3° a step.
 - **The stage may drift; nothing else may.** The studio's cyclorama is pushed by at most 1%
-  per group behind pinned plates and type — the parallax that separates a set from a wall.
+  per group — for the length of that group's clip, so no movement crosses a cut — behind
+  pinned plates and type — the parallax that separates a set from a wall.
   That is the one ambient movement on a slide, it is the ground's, and it never counts as a
   group's motion (`data-ground`): a group where only the stage moves is still an empty group
   to the renderer.
@@ -630,7 +631,8 @@ the object's movement into one PNG sheet. The slide plays it back by moving
 - **Generic shapes only.** A disc, a tablet, a coin, a block. A specific artefact or a person
   is the footage lane (§6.2). One shape ships (`disc`); a second is one SDF function.
 - **Placement is measured, not eyeballed.** The sidecar's `ink` box includes the shadow's
-  penumbra, which reaches 53 px past the rim; `check-slide.js` holds it inside the zone.
+  wall shadow, which reaches 226 px past the rim while the disc is reclined; `check-slide.js`
+  holds it inside the zone.
 
 **P0, added for this lane** — P0-12 above: the object moving against the sentence, a frame
 count that contradicts `labels`, a frozen object across groups, or ink across the zone.

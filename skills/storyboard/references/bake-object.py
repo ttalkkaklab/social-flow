@@ -18,7 +18,7 @@
             시트는 png 다 — check-slide.js 가 webp 를 확장자로 막는다(움직이는 webp 와 못 가른다).
   --signs   나선 위 자국의 총수(기본 241). 키의 자국 수는 이 안이다.
 
-굽는 속도는 셀 630×600·2배 슈퍼샘플에서 프레임당 4~5초(M4). 72 프레임이면 5분, 회차당 0원.
+굽는 속도는 셀 760×600·2배 슈퍼샘플에서 프레임당 5~6초(M4). 72 프레임이면 7분, 회차당 0원.
 형상은 지금 disc 하나다(둥근 기둥). 새 형상은 SHAPES 에 sdf 함수 하나를 더한다 — 조명·카메라·
 그림자·시트·사이드카는 그대로 쓴다. 의존은 numpy·Pillow 뿐이다.
 """
@@ -27,7 +27,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 # ── 셀 배치 (슬라이드 캔버스 픽셀) ────────────────────────────────
-CELL_W, CELL_H = 630, 600
+CELL_W, CELL_H = 760, 600           # 폭은 가장 누운 키(기울기 26°)의 벽 그림자까지 — 실측 잉크 x 731, 630 이면 그림자가 직선으로 잘린다
 CX, CY = 275.0, 245.0            # 셀 안 물체 중심
 DISC_PX = 230.0                  # 원반 반지름(픽셀)
 CAM_D = 6.0
@@ -336,6 +336,10 @@ def parse_frames(s):
 def timeline(keys, frames):
     """(각도, 기울기, 자국 수) 프레임 목록과 그룹별 구간. 각도·기울기는 smoothstep, 자국 수는 선형."""
     groups = sorted(frames)
+    if groups != list(range(1, len(groups) + 1)):
+        sys.exit(f"--frames 의 그룹 번호는 1부터 빈틈없이 이어져야 한다: {groups} — 런타임이 사이드카의 번호를 그룹 수로 센다")
+    if any(frames[g] < 1 for g in groups):
+        sys.exit("--frames 의 프레임 수는 1 이상이다")
     if len(keys) != len(groups) + 1:
         sys.exit(f"--keys 는 {len(groups) + 1}개(시작 + 그룹마다 하나)여야 하는데 {len(keys)}개다")
     ranges, start = {}, 0
@@ -373,6 +377,7 @@ def main():
     ap.add_argument("--preview", type=float, nargs=2, metavar=("DEG", "K"), help="한 프레임만 굽는다(각도, 자국 수)")
     ap.add_argument("--tilt", type=float, default=16.0, help="--preview 의 기울기(도)")
     a = ap.parse_args()
+    os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)   # --preview 도 여기로 쓴다
 
     sdf = SHAPES[a.shape]
     HT, ORD, GR = build_face(a.signs)
@@ -403,7 +408,6 @@ def main():
         last = img
         print(f"{i + 1}/{n}  {time.time() - t0:.1f}s", flush=True)
 
-    os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     sheet.save(a.out + ".png", optimize=True)
     preview_png(last, a.out + "-preview.png")
     ident = os.path.basename(a.out)
@@ -420,7 +424,7 @@ def main():
     print("ink bbox (셀 안 픽셀)", ink)
     print("슬라이드에 넣을 두 줄:")
     print(f'  <script src="{os.path.join(os.path.basename(os.path.dirname(out_abs)), ident + ".js")}"></script>   (scenes.js 다음)')
-    print(f'  h.object(1, "{ident}", {{ x: 97, y: 206, slot: true }})')
+    print(f'  h.object(1, "{ident}", {{ x: {728 - ink[2]}, y: 0, slot: true }})   (x 는 세로 존 728px 기준 — x+{ink[0]} ≥ 0, x+{ink[2]} ≤ 존 폭)')
 
 if __name__ == "__main__":
     main()

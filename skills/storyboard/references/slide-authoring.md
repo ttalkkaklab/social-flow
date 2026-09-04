@@ -98,7 +98,8 @@ rubric the reviewer applies.
    - A diagram with `treatment:"editorial"` sits on the **studio ground** by default
      (slide-design.md §1): a cyclorama plate, slab material on every tag, band and plate, a cast
      shadow under the type, the stage alone drifting 1% a group. Nothing to call — `h.stage("flat")`
-     is the way back to the plain plate. Marks drawn over a studio slide take `pen:true`.
+     is the way back to the plain plate. Marks drawn over a studio slide take `pen:true`. Call
+     `h.stage(…)` before any `h.mark.*` — the mark layer reads the studio class when it is made.
    - A diagram with **`slide.object`** places a **rendered object** (`rendered-object.md`,
      slide-design.md §9): bake the sheet first —
      `python3 references/bake-object.py --shape disc --out slides/assets/s<n>-obj --keys … --frames …`

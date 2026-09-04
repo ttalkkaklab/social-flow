@@ -36,7 +36,7 @@ the fourth: the studio plate kept, plus an object that is a render.
   a new shape is one SDF function added to its `SHAPES` table, and the light rig, the camera,
   the wall-shadow compositing and the sheet contract are reused as they are.
 - Cost is zero per episode. The bake is CPU work — a 72-frame sheet takes about five minutes
-  on an M4 (4–5 s a frame at 630×600 with 2× supersampling).
+  on an M4 (5 s a frame at 760×600 with 2× supersampling).
 
 A scene that only needs a number, a comparison or a verdict does not get an object. A frame
 that turns a shape for the viewer to admire is decoration (slide-design.md §5) and fails the
@@ -94,7 +94,7 @@ fails, `pip install numpy pillow`. The bake writes three files next to each othe
 
 | File | What |
 |---|---|
-| `<out>.png` | the sheet — cells of 630×600 in 9 columns, one frame per cell, the wall shadow as alpha only. 72 frames is 5670×4800 and about 17 MB |
+| `<out>.png` | the sheet — cells of 760×600 in 9 columns, one frame per cell, the wall shadow as alpha only. 72 frames is 6840×4800 and about 17 MB |
 | `<out>.js` | the sidecar: `window.SLIDE_OBJECTS["s5-obj"] = { file, cell, cols, n, ranges, ink, … }`. The slide reads it with `<script src>`; `check-slide.js` reads it with `require`. Never edited by hand |
 | `<out>-preview.png` | the last frame on an ink ground — open it before authoring, it is the object you are placing |
 
@@ -114,7 +114,8 @@ a slideshow; more than 40 in a group buys nothing you can see and costs bake tim
 size.
 
 **The ink box.** The sidecar's `ink` is the bounding box, over every frame, of pixels with any
-alpha — the disc *and* its shadow's penumbra, which reaches 53 px past the rim. `check-slide.js`
+alpha — the disc *and* its wall shadow, which reaches 226 px past the rim while the disc is
+reclined (the first key). `check-slide.js`
 uses it to keep the object inside the zone, because the penumbra is invisible until it is
 measured: the first placement of the fixture put ink at x 932 with the zone ending at 904.
 
@@ -138,7 +139,7 @@ Authoring is the ordinary slide procedure (`slide-authoring.md`) with three line
    let out = h.tag(1, h.L(0)) + h.title(1, S.title, { lead: 1 });
    const card = h.plate(2, h.count(2, 45, { cls: "mid", sv: true }) +
      h.rv(2, '<div class="hero-sub">' + h.L(1) + "</div>", { fx: "mask", lead: 1 }));
-   out += h.object(1, "s5-obj", { x: 97, y: -14, slot: 486, out: 4, html: card, aside: "top:193px;width:240px" });
+   out += h.object(1, "s5-obj", { x: -10, y: -14, slot: 486, out: 4, html: card, aside: "top:193px;width:240px" });
    out += h.mark.route(2, [[400, 690], [438, 654], [490, 570]], { pen: true, lead: 9, head: 50, deg: 25 });
    out += h.count(3, 241, { unit: h.L(2), sv: true });
    out += h.band(4, h.L(3));
@@ -187,6 +188,8 @@ every `__seek(t, g)`:
   the segment length — the object is a sustain element by definition, so it never freezes
   under its sentence. `__groups()` reports the sheet's durations so a group that moves only
   the object still gets a clip.
+- the studio drift (`data-ground`) is not counted in `__groups()`; the runtime sets its duration
+  to that group's clip length (`--ground-d`) after `__setSegs`, so the push ends where the cut is.
 
 Why the runtime and not a painter: one background is shared by four groups, and a per-group
 `__paint` would let the last-registered painter overwrite the frame the active group set —
@@ -204,8 +207,10 @@ string — checked on (2, 1500 ms) and (4, 2000 ms).
   stop with "could not load".
 - **Bake the count in the sheet, not in the copy.** The keys' stamp counts have to be the
   figures the labels and research carry (45, 241); the reviewer reads the number off the frame.
-- **Do not put the object's cell on the zone edge.** Ink reaches the cell's right edge (the
-  shadow's penumbra), so `x` on a 728 px zone is at most 98 for a 630 px cell.
+- **The cell is nearly as wide as the zone.** Ink reaches x 731 of the 760 px cell (the wall
+  shadow of the reclined first key), so on a 728 px zone `x` sits between -44 and -3; the
+  fixture uses −10. A cell narrower than the shadow clips it to a straight edge — the first bake's
+  630 px cell did, and the reviewer saw the edge before anyone else did.
 - **Group durations without `--segs`** are the `--count` token; the browser preview
   (`?g=2&t=1500`) therefore runs the object faster than the finished clip. Judge timing on the
   rendered sheet with `--segs auto`, as for every sustain element.

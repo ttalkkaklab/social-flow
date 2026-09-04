@@ -54,7 +54,7 @@
   <figure><img src="fixture-sheet.jpg" alt="픽스처 시트 프레임 일곱 장 — r0, g1 끝, g2 중간, g2 끝, g3 중간, g3 끝, g4 끝"><figcaption>render-motion-slide.mjs --sheet --segs auto 가 찍은 프레임. 왼쪽부터 바탕(r0), 그룹 1 끝(원반이 26° 누운 채 들어와 선다), 그룹 2 중간·끝(45 가 세는 동안 자국이 테두리부터 찍히고 펜 화살표가 그 자리를 가리킨다), 그룹 3 중간·끝(나선이 241 까지 찬다), 그룹 4 끝(원반이 물러나고 질문 띠). 경고 0, 존 채움 100×99%, 캡처 7.6fps(탭 넷).</figcaption></figure>
   <div class="grid">
     <figure><img src="fixture-g3-end.jpg" alt="그룹 3 끝 프레임 전체"><figcaption>그룹 3 끝 — 스튜디오 판(벽과 바닥이 존 아래 y1560 에서 만난다), 액센트 슬랩 키커, 곁 판 45, 구운 원반, 260px 히어로. 출처는 존 오른쪽 위 — 세로 예산이 물체 자리에 다 나가서다.</figcaption></figure>
-    <figure><img src="fixture-object-crop.jpg" alt="원반 셀 확대"><figcaption>물체 셀 630×600 원본 크기. 점광원 하나가 얼굴을 가로지르며 모델링을 만들고, 자국마다 자체 그늘이 생기고, 구운 점토의 결이 있고, 테두리는 완전한 원이 아니다. 그림자는 벽에 떨어져 알파로만 나온다.</figcaption></figure>
+    <figure><img src="fixture-object-crop.jpg" alt="원반 셀 확대"><figcaption>물체 셀 760×600 원본 크기. 점광원 하나가 얼굴을 가로지르며 모델링을 만들고, 자국마다 자체 그늘이 생기고, 구운 점토의 결이 있고, 테두리는 완전한 원이 아니다. 그림자는 벽에 떨어져 알파로만 나온다.</figcaption></figure>
   </div>
 
   <h2>2. 세 번의 실패가 가른 것</h2>
@@ -83,13 +83,13 @@
   <h2>4. 실측</h2>
   <div class="tbl"><table>
     <tr><th>항목</th><th>값</th><th>어떻게</th></tr>
-    <tr><td>굽기</td><td>4.3~4.5초/프레임, 72장 ≈ 5분, ₩0</td><td>M4 · 셀 630×600 · 2배 슈퍼샘플</td></tr>
-    <tr><td>시트</td><td>5670×4800 PNG 16.9MB (webp 1.6MB)</td><td>검사기가 webp 를 확장자로 막아 png 로 둔다. 디코드 메모리 109MB × 탭 수</td></tr>
+    <tr><td>굽기</td><td>4.9초/프레임, 72장 6분, ₩0</td><td>M4 · 셀 760×600 · 2배 슈퍼샘플</td></tr>
+    <tr><td>시트</td><td>6840×4800 PNG 17.4MB (630 셀 때 webp 1.6MB)</td><td>검사기가 webp 를 확장자로 막아 png 로 둔다. 디코드 메모리 131MB × 탭 수</td></tr>
     <tr><td>캡처</td><td>물체 켬 7.35 / 끔 8.32 fps = 1.13배</td><td>같은 회차 안에서 번갈아(부하가 몇 배로 흔들린다). 판 재질은 2.49배</td></tr>
     <tr><td>번호 옮기기</td><td>0 (7.40 대 7.41 fps)</td><td>번호를 고정해 두고 재 봄</td></tr>
-    <tr><td>렌더러 통과</td><td>4그룹 594프레임 78초, 7.6fps, 경고 0, 존 100×99%</td><td>render-motion-slide.mjs --sheet --png-only --segs auto, 탭 넷</td></tr>
+    <tr><td>렌더러 통과</td><td>4그룹 594프레임 81초, 7.4fps, 경고 0, 존 100×99%</td><td>render-motion-slide.mjs --sheet --png-only --segs auto, 탭 넷</td></tr>
     <tr><td>재굽기</td><td>시트 바이트 동일, 사이드카 file=assets/s5-obj.png</td><td>같은 명령을 한 번 더 돌려 cmp — slides/assets/ 는 scenes.js 에서 다시 만들 수 있다</td></tr>
-    <tr><td>존</td><td>잉크 x317..903 · y419..934 (존 176..904 · 190..1350)</td><td>그림자 반그늘 53px 까지 잉크. 첫 배치는 x932 로 나가서 30px 옮겼다</td></tr>
+    <tr><td>존</td><td>잉크 x210..897 · y419..934 (존 176..904 · 190..1350)</td><td>벽 그림자가 테두리 밖 226px 까지 잉크. 630 셀에선 그림자가 셀 끝에서 직선으로 잘렸다(리뷰 지적) — 760 으로 넓히고 x 를 97 → −10</td></tr>
     <tr><td>출처 줄</td><td>흐름에 두면 y1375..1408 — 존 아래 58px</td><td>flex gap 40 × 5 가 예산을 넘긴다 → 오른쪽 위 코너(202..236)</td></tr>
     <tr><td>결정성</td><td>(2,1500)·(4,2000) 두 경로 모두 같은 번호</td><td>다른 seek 순서로 두 번 밟아 background-position 문자열 대조</td></tr>
     <tr><td>계단</td><td>초당 3.5~6.7칸, 칸당 0.3°</td><td>문장이 12~28 프레임을 쓴다. 자국은 원래 하나씩 찍히는 것</td></tr>

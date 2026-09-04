@@ -95,7 +95,7 @@ const MSG = {
   objectInclude: f => `슬라이드가 사이드카를 안 읽는다 — scenes.js 다음에 <script src="${f}"></script>`,
   objectUnused: "slide.object 가 있는데 render 가 h.object(rg, id) 를 부르지 않는다 — 물체가 화면에 없다",
   objectId: (got, want) => `h.object 의 id "${got}" 가 시트 이름 "${want}" 와 다르다 — 사이드카의 키는 파일 이름이다`,
-  objectZone: (side, px) => `물체의 잉크가 존 ${side}쪽으로 ${px}px 나간다 — h.object 의 x 를 옮긴다(그림자 반그늘까지 잉크다)`,
+  objectZone: (side, px) => `물체의 잉크가 존 ${side}쪽으로 ${px}px 나간다 — h.object 의 ${side === "위" || side === "아래" ? "y" : "x"} 를 옮긴다(그림자 반그늘까지 잉크다)`,
 };
 
 /* 저작 화면의 세 갈래와, 캐릭터 연기가 고를 수 있는 동작. 정본은 scenes-schema §저작 화면 레인과
@@ -316,7 +316,7 @@ function checkDir(dir, only, opts) {
         else if (meta && Array.isArray(meta.ink) && meta.ink.length === 4) {
           const opt = call[2] || "";
           const num = k => { const m = opt.match(new RegExp("\\b" + k + "\\s*:\\s*(-?\\d+(?:\\.\\d+)?)")); return m ? Number(m[1]) : null; };
-          const x = num("x"), y = num("y"), slot = /\bslot\s*:/.test(opt);
+          const x = num("x"), y = num("y"), slot = /\bslot\s*:(?!\s*false\b)/.test(opt);   // slot:false 는 절대 배치다(런타임과 같은 판정)
           const fmt = FORMATS[global.window.FORMAT || DEFAULT_FORMAT] || FORMATS[DEFAULT_FORMAT];
           const zw = fmt.canvas.w - 2 * fmt.zone.x, zh = fmt.canvas.h - fmt.zone.top - fmt.zone.bottom;
           if (x != null) {
@@ -415,9 +415,11 @@ function checkDir(dir, only, opts) {
         const headCss = start > 0 ? code.slice(0, start).replace(/\.scrim\s*\{[^}]*\}/g, "") : "";
         if (/\b(?:linear|conic|radial)-gradient\s*\(/i.test(authored) ||
             /\b(?:linear|conic|radial)-gradient\s*\(/i.test(headCss)) fail(base, MSG.gradientAuthored);
-        /* 재질 — html.studio 로 시작하는 규칙 블록만 빼고 본다. render 함수가 없으면 파일 전체다. */
+        /* 재질 — 셀렉터가 전부 html.studio 로 시작하는 규칙 블록만 빼고 본다. 목록에 다른 셀렉터를
+           하나라도 끼우면 그 블록은 검사 대상이다(리뷰 실측 우회). render 함수가 없으면 파일 전체다. */
         const GEN = /background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text|\bbox-shadow\s*:|\btext-shadow\s*:|\bbackdrop-filter\s*:|\bfilter\s*:\s*(?:drop-shadow|blur)\s*\(/i;
-        const noMat = t => t.replace(/html\.studio[^{}]*\{[^}]*\}/g, "");
+        const noMat = t => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/<\/?style[^>]*>/g, "")
+          .replace(/([^{}]+)\{[^{}]*\}/g, (m, sel) => sel.replace(/^[\s\S]*;/, "").split(",").every(s => /^\s*html(?:\.[\w-]+)*\.studio(?![\w-])/.test(s)) ? "" : m);   // 셀렉터는 마지막 ; 뒤부터(앞의 JS·HTML 은 셀렉터가 아니다)
         if (start >= 0 ? (GEN.test(authored) || GEN.test(noMat(headCss))) : GEN.test(noMat(code)))
           fail(base, MSG.generatedStyle);
       }
@@ -639,6 +641,9 @@ function selftest() {
       [MSG.objectZone("오른", 1)]],
     ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; <script src="assets/s23-obj.js"></script> function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 40, y: 700 }); }`,
       [MSG.objectZone("아래", 61)]],
+    // slot:false 는 slot 없음과 같다 — 키가 있다고 세로 검사를 건너뛰면 안 된다(리뷰 실측)
+    ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; <script src="assets/s23-obj.js"></script> function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 40, y: 700, slot: false }); }`,
+      [MSG.objectZone("아래", 61)]],
     ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 97, y: 0, slot: true }); }`,
       [MSG.objectInclude("assets/s23-obj.js")]],
     ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; <script src="assets/s23-obj.js"></script> function renderSlide(S, h) { return h.count(1, 3); }`,
@@ -651,6 +656,12 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.studio .band{box-shadow:0 2px 0 #000} html.studio .stage{text-shadow:0 1px 0 #000} html.studio .marks .mk{filter:drop-shadow(0 1px 1px #000)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.studio .band{box-shadow:0 2px 0 #000} .card{box-shadow:0 8px 20px #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [MSG.generatedStyle]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.n{text-shadow:0 4px 8px #000}</style>' + h.count(1, 3); }`, [MSG.generatedStyle]],
+    // 셀렉터 목록에 html.studio 를 하나 끼워도 다른 셀렉터는 검사 대상이다(리뷰 실측 우회)
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.card, html.studio .band{box-shadow:0 24px 60px rgba(0,0,0,.5)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [MSG.generatedStyle]],
+    // html.wide.studio 처럼 다른 클래스가 앞서도 스튜디오 규칙이다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.wide.studio .band{box-shadow:0 2px 0 #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
+    // 규칙 앞의 CSS 주석은 셀렉터가 아니다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>/* 재질 */ html.studio .band{box-shadow:0 2px 0 #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
   ];
   let failed = 0;
   const realErr = console.error, realLog = console.log;
