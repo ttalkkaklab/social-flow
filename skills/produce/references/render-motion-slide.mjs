@@ -12,9 +12,20 @@
  *   is what keeps a flat plate from banding in 8-bit and what makes a graphic read as broadcast
  *   rather than web (slide-design.md §1). It is added here rather than drawn in the page because
  *   a noisy frame halves the PNG capture rate (measured 15 → 8 fps). 0 turns it off. --png-only
- *   frames and the --sheet PNGs never carry it. A full-frame photo (h.photo) captures at ~4 fps
- *   with or without its scrim (measured 3.2–4.3) — the cost is encoding a photographic frame,
- *   not the CSS, so there is nothing to optimise in the page.
+ *   frames and the --sheet PNGs never carry it. A photographic frame (h.photo, a footage clip)
+ *   costs its PNG encode, not the CSS: Chrome's default PNG encoder took 233 ms per 1080×1920
+ *   footage frame, and captureScreenshot's optimizeForSpeed (a faster zlib level, same pixels)
+ *   takes 72 ms — the frames came out byte-identical on 133/133 (ep209 s10, 2026-09-04).
+ *
+ * Where the time goes on a footage slide (per frame, ep209 s10 group 1, 133 frames, M4):
+ *   before 2026-09-04 — seek 64 ms · settle 123 ms · PNG 233 ms → 2.4 fps
+ *   now               — seek 64 ms · settle   0 ms · PNG  72 ms → 6.8 fps on one tab, 10.4 on three
+ *   The old settle waited on requestVideoFrameCallback with a 120 ms ceiling after every seek,
+ *   and in headless the callback never fires (0 of 461), so every frame paid the ceiling. The
+ *   frames captured with no wait at all were identical to the waited ones on 457 of 459 — the
+ *   other two are the stuck-frame case shotStable handles below, and the old renderer got those
+ *   wrong at random too. Re-encoding the clips to all-intra (one keyframe per frame) changed
+ *   nothing — seek is not the cost, so the renderer does not do it.
  *
  * --segs hands the page its narration segment lengths (the sustain layer, slide-design.md §5):
  *   elements marked .sv stretch their meaning-bearing movement to the segment, so the clip
@@ -57,7 +68,13 @@
  *   coming out byte-identical and the fifth differing is a measured outcome, so a two-run
  *   `diff -rq` gives false passes and false failures alike. Render six to eight times
  *   (--png-only --keep-frames) and count how many classes the output falls into.
- * Measured on Chrome 152 / M4: ~20 fps capture at 1080×1920.
+ * Measured on Chrome 152 / M4: ~20 fps capture at 1080×1920 on a plate slide. A footage slide
+ *   captures at 6–7 fps per tab (photographic PNGs) and 10–11 fps on three tabs — ep209 s10's
+ *   459 frames in 46 s against 197 s before (full mp4 render, bench.tsv in docs/research/2026-09-04-render-perf).
+ *   The mp4 encode of a finished group runs while the next group is still being captured (one
+ *   encode at a time), so it no longer adds to the wall clock. Group k's f0000 is the frame group
+ *   k−1 captured at its end (the seam, see the capture loop), so --jobs 1 and --jobs 3 give
+ *   byte-identical output (459/459 on s10).
  *
  * What a page can move (template head · scenes-schema §motion slides): CSS @keyframes,
  *   data-count count-ups, a painter registered with __paint(rg, durMs, fn) that draws the
@@ -78,7 +95,7 @@
  *   first frame before the first seek.
  * Exit 0 ok · 1 render/contract failure · 2 usage.
  */
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import fs from "node:fs";
@@ -168,19 +185,20 @@ const footageVdurJS = mapJson => `(() => {
   }
   return out;
 })()`;
-// A seeked <video> has decoded its frame, but the compositor may present it one capture later —
-// measured on the footage fixture: the cut after a seam landed on f0002 instead of f0001 while the
-// matte on top was already there. requestVideoFrameCallback fires when the new frame is actually
-// presented; the 120ms ceiling covers a seek that lands on the same source frame (a 24fps clip
-// sampled at 30fps repeats one frame in five), where no new presentation ever comes.
-const SETTLE_VIDEOS_JS = `new Promise(r => {
-  const vs = [...document.querySelectorAll("video.footage[data-rg], video.matte[data-rg]")];
-  let n = vs.length, done = false;
-  const fin = () => { if (!done) { done = true; r(true); } };
-  if (!n) return fin();
-  vs.forEach(v => { if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => { if (--n <= 0) fin(); }); else if (--n <= 0) fin(); });
-  setTimeout(fin, 120);
-})`;
+// A seeked <video> has decoded its frame, but the compositor may keep showing the previous one.
+// Measured across some forty renders of ep209 s10 (2026-09-04): the first seek after a clip
+// becomes visible sometimes left frame 0 on screen while currentTime already said frame 1, and
+// the picture stayed that way through any wait (0 · 26 · 60 · 120 ms) and through repeated
+// captures — in the old renderer too, whose 120 ms ceiling was paid on every frame and still
+// left group 1's f0001 stuck one run in four. Every later seek of the same clip came out right
+// with no wait at all (457 of 459 frames identical across settles). So there is no per-frame
+// settle any more; the stuck case is handled where it happens, in shotStable on a group's first
+// two frames, with the kick below between the captures.
+// The kick. Registering requestVideoFrameCallback on the clips is what makes a seeked frame
+// reach the compositor here; the callback itself never fires in headless (0 of 461 measured),
+// but a frame that stayed stuck on the previous seek was replaced after the registration and
+// a short wait (2 of 2), and never by the wait alone (0 of 2, ep209 s10, 2026-09-04).
+const KICK_JS = (ms) => `new Promise(r => { for (const v of document.querySelectorAll("video[data-rg]")) if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => {}); setTimeout(() => r(true), ${ms}); })`;
 
 // ── --segs: narration segment lengths → the page's sustain layer (__setSegs) ─
 // "auto" estimates each segment from its narration characters at the format's speaking
@@ -290,8 +308,12 @@ const waitEvent = (method, sessionId) => new Promise((res, rej) => {   // same t
   waiters.push(wt);
   setTimeout(() => { const i = waiters.indexOf(wt); if (i >= 0) { waiters.splice(i, 1); rej(new Error(`${method} did not arrive within ${CDP_TIMEOUT_MS / 1000}s — a slide resource that never loads?`)); } }, CDP_TIMEOUT_MS);
 });
+let encoder = null;                       // the ffmpeg child encoding a group, while one runs
 const shutdown = code => {
   if (closing) return; closing = true;
+  // The encode is asynchronous, so a failure mid-run would otherwise leave ffmpeg writing r<k>.mp4
+  // after this process is gone — and a retry into the same --out would race it for the file.
+  try { encoder && encoder.kill("SIGKILL"); } catch {}
   for (const { rej, timer } of pending.values()) { clearTimeout(timer); rej(new Error("shutting down")); }
   pending.clear();
   try { toChrome.write(JSON.stringify({ id: nextId++, method: "Browser.close" }) + "\0"); } catch {}
@@ -321,7 +343,11 @@ const pngSize = b => ({ w: b.readUInt32BE(16), h: b.readUInt32BE(20) });
 // Open one tab on the slide and hand back the evalJS/seek/shot bound to it. Parallel capture is
 // just opening several — a frame is a function of (g, t), so which tab took it changes nothing.
 const openPage = async () => {
-  const { targetId } = await send("Target.createTarget", { url: "about:blank" });
+  // Each tab gets its own window. A second tab in the same window is a background tab, and a
+  // background tab is throttled — with a requestAnimationFrame-based wait in the loop, --jobs 3
+  // died on "Runtime.evaluate timed out after 30s" (ep209 s10, 2026-09-04). A window of its own
+  // is a visible tab; three of them captured 459 frames in 46 s with identical output.
+  const { targetId } = await send("Target.createTarget", { url: "about:blank", newWindow: true });
   const { sessionId: sid } = await send("Target.attachToTarget", { targetId, flatten: true });
   await send("Page.enable", {}, sid);
   await send("Runtime.enable", {}, sid);
@@ -340,11 +366,12 @@ const openPage = async () => {
   // sub-pixel between identical seeks, and a video would still show the previous frame.
   const seek = async (t, g) => {
     await evalJS(`window.__seek(${t}, ${g})`, true);
-    if (isFootage) await evalJS(SETTLE_VIDEOS_JS, true);
     return true;
   };
   const shot = async (file) => {
-    const { data } = await send("Page.captureScreenshot", { format: "png", fromSurface: true }, sid);
+    // optimizeForSpeed picks a faster zlib level — the same pixels in a larger PNG (233 → 72 ms per
+    // photographic frame). shotStable compares bytes within one run, so the level does not matter to it.
+    const { data } = await send("Page.captureScreenshot", { format: "png", fromSurface: true, optimizeForSpeed: true }, sid);
     const b = Buffer.from(data, "base64");
     const s = pngSize(b);
     if (s.w !== W || s.h !== H) throw new Error(`capture ${s.w}x${s.h} ≠ ${W}x${H} — DPR or window clamp (see capture-frames.sh)`);
@@ -355,9 +382,16 @@ const openPage = async () => {
   // seen once as a clip-3 f0000 with a flat ground, no spine and a single 256px tile painted
   // (2026-09-02). A frame is a function of (g, t), so two consecutive captures that differ mean the
   // raster was not finished; capture again until two agree.
+  // On a footage slide the first seek after a clip becomes visible can leave the previous frame on
+  // screen — 'seeked' has fired, currentTime is right, the compositor still shows the old picture,
+  // and it stays that way through any number of captures (measured across 40 renders of ep209
+  // s10: f0001 of a group came out as the group's frame 0 or frame 1 by chance, in the old renderer
+  // too). The kick between two captures replaces the stuck frame, so two captures agreeing after a
+  // kick means the picture is the settled one. Applied to the first two frames of every group.
   const shotStable = async (file) => {
     let prev = await shot(file);
     for (let i = 0; i < 6; i++) {
+      if (isFootage) await evalJS(KICK_JS(60), true);
       const next = await shot(file);
       if (next.equals(prev)) return next;
       prev = next;
@@ -471,10 +505,21 @@ const openPage = async () => {
   if (opt.group != null && opt.group > N) return die(`--group ${opt.group} but the slide has ${N} groups`);
   if (opt.frame && opt.frame.g > N) return die(`--frame group ${opt.frame.g} but the slide has ${N} groups`);
 
-  const ffmpeg = (args) => {
-    const r = spawnSync("ffmpeg", ["-y", "-v", "error", ...args], { encoding: "utf8" });
-    if (r.status !== 0) throw new Error("ffmpeg failed: " + (r.stderr || r.error && r.error.message));
-  };
+  // Async so an encode overlaps the capture of the next group — spawnSync would block the event
+  // loop and every tab with it. One encode at a time: x264 already takes every core it is given.
+  const ffmpeg = (args) => new Promise((res, rej) => {
+    const r = spawn("ffmpeg", ["-y", "-v", "error", ...args], { stdio: ["ignore", "ignore", "pipe"] });
+    encoder = r;
+    let err = "";
+    r.stderr.on("data", d => { err += d; });
+    r.on("error", e => { encoder = null; rej(new Error("ffmpeg failed: " + e.message)); });
+    // 'close', not 'exit': stderr is fully drained by then, so the message is whole.
+    r.on("close", (code, signal) => {
+      encoder = null;
+      if (code === 0) res();
+      else rej(new Error("ffmpeg failed: " + (code == null ? `killed by ${signal}` : err.trim())));
+    });
+  });
 
   const t0 = Date.now();
   let framesTotal = 0;
@@ -508,18 +553,65 @@ const openPage = async () => {
     if (isFootage) await w.evalJS(footageVdurJS(JSON.stringify(segMap && segsApplied ? segMap : {})));
   }
   const rows = new Array(todo.length);
+  // The seam. Group k's f0000 is by design the picture at the end of group k−1 (footage-lane.md:
+  // the cut lands on f0001), and seeking group k to 0 in a tab that never ran group k−1 paints that
+  // same picture with the mark edges off by a few pixels — measured on ep209 s10 as 3 px in one
+  // tab layout and 44 px (max 20/255) in another, the old renderer included, the video frame
+  // identical either way. So group k's f0000 is not captured; it is the end frame group k−1
+  // captured itself at t=dur, which is also the sheet's g<k−1>-end. Two runs with different --jobs
+  // then agree byte for byte (459/459 on s10, 2026-09-04), and the seam holds by construction.
+  // A group whose predecessor is not being rendered (--group k) captures its f0000 as before.
+  const endFrame = {};                                   // k → PNG buffer of group k at t=dur
+  const captured = {}, capturedDone = {};                // k → promise resolved when group k is captured
+  for (const k of todo) captured[k] = new Promise(res => { capturedDone[k] = res; });
+  const seamFrom = k => (k > 1 && todo.includes(k - 1)) ? k - 1 : null;
+  const seamFrame = async (r) => {
+    const j = seamFrom(r.k);
+    if (j == null) return;
+    await captured[j];
+    fs.writeFileSync(path.join(r.fdir, "f0000.png"), endFrame[j]);
+  };
+  // Group k's frames become r<k>.mp4 as soon as its capture ends, while other tabs keep capturing.
+  // A chain rather than Promise.all keeps it to one encode at a time.
+  const encodeGroup = async (r) => {
+    await seamFrame(r);
+    const mp4 = path.join(OUT, `r${r.k}.mp4`);
+    // Grain after the yuv420p conversion so it lands on luma only (c0) — chroma stays clean, the
+    // way film grain does. Static (no temporal flag): temporal grain at crf 14 cost 12.6 MB for a
+    // one-second clip against 0.76 MB static and 0.09 MB clean (measured 2026-09-02). Fixed seed
+    // keeps the encode reproducible.
+    const grain = opt.grain > 0 ? `,noise=c0_seed=7:c0_strength=${opt.grain}:c0_flags=u` : "";
+    await ffmpeg(["-framerate", String(opt.fps), "-i", path.join(r.fdir, "f%04d.png"),
+                  "-vf", `scale=${W}:${H}:flags=lanczos,setsar=1,format=yuv420p${grain}`, "-r", String(opt.fps),
+                  "-c:v", "libx264", "-preset", "medium", "-crf", "14", "-x264-params", "aq-mode=3", "-an", mp4]);
+    if (!opt.keep) fs.rmSync(r.fdir, { recursive: true, force: true });
+    r.mp4 = mp4;
+  };
+  let encodes = Promise.resolve();
   const captureGroup = async (w, idx) => {
     const k = todo[idx];
     const dur = groups[k].dur;
     const nF = Math.max(2, Math.round(dur / 1000 * opt.fps) + 1);
     const fdir = path.join(OUT, `frames-r${k}`);
     fs.rmSync(fdir, { recursive: true, force: true }); fs.mkdirSync(fdir, { recursive: true });
-    for (let i = 0; i < nF; i++) {
+    for (let i = seamFrom(k) == null ? 0 : 1; i < nF; i++) {
       await w.seek(Math.min(i * 1000 / opt.fps, dur), k);
-      await (i === 0 ? w.shotStable : w.shot)(path.join(fdir, `f${String(i).padStart(4, "0")}.png`));
+      await (i <= 1 ? w.shotStable : w.shot)(path.join(fdir, `f${String(i).padStart(4, "0")}.png`));
     }
+    // The end frame, t=dur exactly: the next group's f0000 and the sheet's end frame.
+    const endPng = path.join(fdir, "end.png");
+    await w.seek(dur, k);
+    endFrame[k] = await w.shotStable(endPng);
+    fs.rmSync(endPng, { force: true });
     framesTotal += nF;
     rows[idx] = { k, nF, dur, fdir };
+    capturedDone[k]();
+    if (!opt.pngOnly) {
+      encodes = encodes.then(() => encodeGroup(rows[idx]));
+      // A failed encode is reported by the await below; this handler only keeps Node from treating
+      // the chain's tail as an unhandled rejection in the meantime.
+      encodes.catch(() => {});
+    }
   };
   // Each worker takes the next group in order — splitting up front would leave one idle, since
   // group lengths differ.
@@ -527,28 +619,17 @@ const openPage = async () => {
   await Promise.all(workers.map(async w => {
     for (let idx = next++; idx < todo.length; idx = next++) await captureGroup(w, idx);
   }));
-  // Encode after all capture, in order — spawnSync blocks the event loop, so it cannot overlap.
-  for (const r of rows) {
-    const mp4 = path.join(OUT, `r${r.k}.mp4`);
-    if (!opt.pngOnly) {
-      // Grain after the yuv420p conversion so it lands on luma only (c0) — chroma stays clean, the
-      // way film grain does. Static (no temporal flag): temporal grain at crf 14 cost 12.6 MB for a
-      // one-second clip against 0.76 MB static and 0.09 MB clean (measured 2026-09-02). Fixed seed
-      // keeps the encode reproducible.
-      const grain = opt.grain > 0 ? `,noise=c0_seed=7:c0_strength=${opt.grain}:c0_flags=u` : "";
-      ffmpeg(["-framerate", String(opt.fps), "-i", path.join(r.fdir, "f%04d.png"),
-              "-vf", `scale=${W}:${H}:flags=lanczos,setsar=1,format=yuv420p${grain}`, "-r", String(opt.fps),
-              "-c:v", "libx264", "-preset", "medium", "-crf", "14", "-x264-params", "aq-mode=3", "-an", mp4]);
-      if (!opt.keep) fs.rmSync(r.fdir, { recursive: true, force: true });
-    }
-    manifest.push([r.k, r.nF, r.dur, opt.pngOnly ? r.fdir : mp4].join("\t"));
-  }
+  // The last encode may still be running — the manifest is written in group order once it is done.
+  await encodes;
+  if (opt.pngOnly) for (const r of rows) await seamFrame(r);
+  for (const r of rows) manifest.push([r.k, r.nF, r.dur, opt.pngOnly ? r.fdir : r.mp4].join("\t"));
   if (opt.sheet) {                       // review frames — the slide-reviewer reads these
     const sdir = path.join(OUT, "sheet"); fs.mkdirSync(sdir, { recursive: true });
     for (let k = 1; k <= N; k++) {
       const dur = groups[k].dur;
       await seek(Math.round(dur / 2), k); await shot(path.join(sdir, `g${k}-mid.png`));
-      await seek(dur, k);                await shot(path.join(sdir, `g${k}-end.png`));
+      if (endFrame[k]) fs.writeFileSync(path.join(sdir, `g${k}-end.png`), endFrame[k]);   // the frame group k captured at t=dur
+      else { await seek(dur, k); await shot(path.join(sdir, `g${k}-end.png`)); }
     }
   }
   // Zone fill — measured at the final rest state (clip N's end frame, the frame the video

@@ -248,6 +248,10 @@ rm -f subs.srt subs.ass reel-sub.mp4
 REPORT=build-report.txt
 : > "$REPORT"
 WARN=0
+# §3.5 runs the forced aligner in the background; if the build dies between §3.5 and §8 the
+# aligner would otherwise finish on its own and drop a stale json into the next build's work/.
+ALIGN_PID=""
+trap '[ -n "${ALIGN_PID:-}" ] && kill "$ALIGN_PID" 2>/dev/null' EXIT
 say() { echo "$1"; echo "$1" >> "$REPORT"; }
 f2() { awk -v v="$1" 'BEGIN{printf "%.2f", v}'; }
 asstime() { awk -v t="$1" 'BEGIN{if(t<0)t=0; h=int(t/3600); m=int((t-h*3600)/60); s=t-h*3600-m*60; printf "%d:%02d:%05.2f", h, m, s}'; }
@@ -576,6 +580,20 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   else ffmpeg -y -v error -i "work/t$IDX.wav" -af "atempo=$F" "work/s$IDX.wav"; fi
   L=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "work/s$IDX.wav")
   R=$(awk -v c="$C" -v l="$L" 'BEGIN{printf "%.2f", (c>0)? c/l : 0}')
+
+  # ── 3.5) Forced aligner, started early. Word and phrase cues (§8) want the aligner's token
+  #   times, and it loads its model on every call — about 3 s a card, 41 s across ep209's 14 cards
+  #   (measured 2026-09-04), the loop's largest phase after the video encodes. Nothing between
+  #   here and §8 reads its output, so it runs in the background under this card's encode (§7)
+  #   and §8 waits for it — the 14-card build went from 291–297 s to 267–276 s. fd 3 is the
+  #   cards.tsv reader — closed for the child so the loop's input never sits in a process that
+  #   outlives an iteration.
+  ALIGN_PID=""
+  if [ "$SUB" = "1" ] && { [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; } && [ "$MUTE" -eq 0 ] && [ -x "$QWEN3_ASR_BIN" ]; then
+    mkdir -p work/align
+    "$QWEN3_ASR_BIN" --timestamps -f json --language Korean -o work/align "work/s$IDX.wav" > "work/align/s$IDX.log" 2>&1 3<&- &
+    ALIGN_PID=$!
+  fi
 
   # ── 4) Sentence-boundary detection (when there are 2+ segments) — M-1 silences (longest first),
   #        falling back to a char-count proportional split when there aren't enough
@@ -978,16 +996,16 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # ── 8) ASS subtitle lines (the subtitle-text column) — times are card absolute offsets (cumulative frames/FPS)
   if [ "$SUB" = "1" ]; then
     CS=$(awk -v f="$TOTF" -v fps="$FPS" 'BEGIN{printf "%.4f", f/fps}')
-    # Word mode wants real word times. The forced aligner runs once per card on the trimmed
-    # narration (about 3 s for a 7 s card); its token times are card-relative, so the offset
-    # handed to word-cues.py is this card's absolute speech start (CS + pre-roll).
+    # Word mode wants real word times. The forced aligner was started in §3.5 on the trimmed
+    # narration and has been running under the encode; its token times are card-relative, so the
+    # offset handed to word-cues.py is this card's absolute speech start (CS + pre-roll).
     ALIGNJ=""
     if { [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; } && [ "$MUTE" -eq 0 ]; then
-      if [ -x "$QWEN3_ASR_BIN" ]; then
-        mkdir -p work/align
-        "$QWEN3_ASR_BIN" --timestamps -f json --language Korean -o work/align "work/s$IDX.wav" > "work/align/s$IDX.log" 2>&1 \
+      if [ -n "$ALIGN_PID" ]; then
+        wait "$ALIGN_PID" \
           && [ -s "work/align/s$IDX.json" ] && ALIGNJ="work/align/s$IDX.json" \
           || { say "⚠ card $IDX: forced aligner failed (work/align/s$IDX.log) — word cues fall back to char-count proportion"; WARN=1; }
+        ALIGN_PID=""   # reaped — the EXIT trap must not signal a reused pid
       else
         say "⚠ card $IDX: no forced aligner at $QWEN3_ASR_BIN — word cues fall back to char-count proportion (uv tool install --python 3.12 \"mlx-qwen3-asr[aligner]\")"; WARN=1
       fi
