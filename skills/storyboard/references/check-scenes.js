@@ -71,14 +71,17 @@ const SLIDE_TREATMENTS = ['editorial', 'photo-action', 'footage'];
 const EDITORIAL_ROLES = ['evidence', 'relationship', 'mechanism', 'timeline', 'statistic', 'transition', 'verdict'];
 const INFO_TYPES = ['other', 'timeline', 'statistic', 'principle'];
 const INFO_ROLE = { timeline: 'timeline', statistic: 'statistic', principle: 'mechanism' };
+// object-move — a baked object arrives, turns or recedes (rendered-object.md · h.object); the sentence's
+// value can be the object itself on any of the three types, so it is allowed on all of them.
 const INFO_PRIMITIVES = {
-  timeline: ['date-enter', 'range-grow', 'event-link'],
-  statistic: ['count-up', 'bar-grow', 'dot-fill', 'axis-draw'],
+  timeline: ['date-enter', 'range-grow', 'event-link', 'object-move'],
+  statistic: ['count-up', 'bar-grow', 'dot-fill', 'axis-draw', 'object-move'],
   principle: ['flow-trace', 'node-enter', 'state-transform',
-              'shape-enter', 'shape-draw', 'shape-travel'],
+              'shape-enter', 'shape-draw', 'shape-travel', 'object-move'],
 };
 const ART_MOVES = ['travel', 'rise', 'in', 'drop', 'press', 'none'];
 const ART_FILE = /^slides\/assets\/s\d+-[a-z0-9-]+\.(png|jpe?g)$/i;
+const OBJECT_FILE = /^slides\/assets\/s\d+-[a-z0-9-]+\.png$/;   // a baked sheet (rendered-object.md)
 const TRANSITIONS = ['cut', 'dissolve', 'dip', 'dip:white', 'iris', 'blur', 'zoom'];
 const PUSH_RE = /^push:(l2r|r2l|u2d|d2u)$/;
 const WHIP_RE = /^whip:(l2r|r2l|u2d|d2u)$/;
@@ -958,6 +961,23 @@ function check(win, fmt, opts) {
             machine(at, `group ${JSON.stringify(a.group)} is not a positive integer`);
         });
       }
+      // A rendered object (rendered-object.md) is baked, not drawn — the scene names the sheet, the shape
+      // and the bake keys so the sheet is reproducible and check-slide.js can find its sidecar.
+      if (v.slide.object != null) {
+        const ob = v.slide.object;
+        const at = `${where} slide.object`;
+        if (!ob || typeof ob !== 'object' || Array.isArray(ob)) machine(at, 'is not an object — { file, shape, keys, frames, plan }');
+        else {
+          if (!ob.file) machine(at, 'has no file');
+          else if (!OBJECT_FILE.test(ob.file)) machine(at, `file "${ob.file}" is not slides/assets/s<shot>-<slug>.png`);
+          if (!ob.shape) machine(at, 'has no shape — bake-object.py --shape (disc)');
+          if (!ob.keys || !ob.frames) machine(at, 'has no keys/frames — the bake-object.py arguments, so the sheet is reproducible');
+          if (!ob.plan) warn(at, 'has no plan — say what the object does on which sentence');
+          const segs = Array.isArray(s.narration) ? s.narration.length : 0;
+          const groups = String(ob.frames || '').split(/\s+/).filter(Boolean).length;
+          if (segs && groups > segs) machine(at, `frames names ${groups} groups for ${segs} narration segments`);
+        }
+      }
       if ((v.slide.kind || 'diagram') === 'kinetic' &&
           !(Array.isArray(v.slide.arts) && v.slide.arts.length))
         warn(where, 'kinetic has no slide.arts — type-only is valid for a verdict or a cross; a supporting picture uses arts or h.disk');
@@ -1049,6 +1069,10 @@ function selftest() {
      !has(bads(run([Object.assign({}, cover, { visual: {} }), goodShot, goodShot, goodShot])), /no editorial HTML frame/));
   ok('a motion diagram declares its treatment',
      has(bads(run([Object.assign({}, cover, { visual: { slide: { motion: true } } }), goodShot, goodShot, goodShot])), /no slide\.treatment/));
+  ok('a rendered object names its shape and bake keys',
+     has(bads(run([cover, Object.assign({}, goodShot, { visual: { slide: { file: 'slides/s2-disc.html', motion: true,
+       treatment: 'editorial', role: 'statistic', motif: 'clay disc', plan: 'x',
+       object: { file: 'slides/assets/s2-obj.png', plan: 'x' } } } })])), /has no shape/));
   ok('an editorial frame declares role and motif',
      has(bads(run([Object.assign({}, cover, { visual: { slide: { motion: true, treatment: 'editorial' } } }), goodShot, goodShot, goodShot])), /slide\.role|no motif/));
   const semantic = (infoType, role, motionBeats) => Object.assign({}, goodShot, {

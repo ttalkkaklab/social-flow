@@ -1865,6 +1865,7 @@ slide.**
 | `slide.role` | ✅ on `treatment:"editorial"` | `evidence` · `relationship` · `mechanism` · `timeline` · `statistic` · `transition` · `verdict` |
 | `slide.motif` | ✅ on `treatment:"editorial"` | The episode-wide visual device repeated across authored frames: signal line, evidence stamp, paper tear, date rail, or another concrete device |
 | `slide.motionBeats` | ✅ when `shot.infoType` is `timeline` · `statistic` · `principle` | One `{group, primitive}` per narration group. The declared primitive has to exist in the rendered DOM for the same group |
+| `slide.object` | optional on `treatment:"editorial"` | A **rendered object** (`rendered-object.md`, slide-design.md §9) — `{ file, shape, keys, frames, plan }`. `file` is the baked sheet `slides/assets/s<shot>-<slug>.png`; `shape` a name in `bake-object.py` (`disc`); `keys` and `frames` the bake arguments, so the sheet is reproducible from this file; `plan` what the object does on which sentence. The groups where the object arrives or recedes declare `object-move` in `motionBeats`. Baked at the slide authoring step, before `check-slide.js` |
 | `slide.shots` | ✅ on `treatment:"footage"` | One entry per reveal group — `{ group, clip, still, matte?, duration, engine?, camera, action, audio, prompt, negative, mark }`. The clips are generated at storyboard §5, before the slide is authored (§footage treatment) |
 
 The frame design is part of what the user approves, so storyboard renders and reviews key
@@ -1909,11 +1910,14 @@ single figure that has to stand alone (a plate is one picture, so it runs at mos
 file, and `render-motion-slide.mjs` rejects a declared movement that is absent from the
 rendered frame; on the footage route it rejects empty `labels`:
 
+`object-move` is the primitive of a rendered object (`slide.object`) arriving, turning or receding —
+allowed on all three types, because the sentence's value can be the thing itself.
+
 | `shot.infoType` | Required `slide.role` | Allowed `motionBeats[].primitive` |
 |---|---|---|
-| `timeline` | `timeline` | `date-enter` · `range-grow` · `event-link` |
-| `statistic` | `statistic` | `count-up` · `bar-grow` · `dot-fill` · `axis-draw` |
-| `principle` | `mechanism` | `flow-trace` · `node-enter` · `state-transform` · `shape-enter` · `shape-draw` · `shape-travel` |
+| `timeline` | `timeline` | `date-enter` · `range-grow` · `event-link` · `object-move` |
+| `statistic` | `statistic` | `count-up` · `bar-grow` · `dot-fill` · `axis-draw` · `object-move` |
+| `principle` | `mechanism` | `flow-trace` · `node-enter` · `state-transform` · `shape-enter` · `shape-draw` · `shape-travel` · `object-move` |
 
 Groups start at 1 and map to narration segments in order. One group declares one primary
 primitive. `motion-slide-template.html` provides helpers with the matching names (`h.date`,
@@ -2118,14 +2122,16 @@ Contract (the template's head comment carries the same list; `check-slide.js` ma
   stops on either), plus `__setSegs({group: ms})` — the renderer's `--segs` hands over the
   narration segment lengths and elements marked `.sv` stretch their meaning motion to them
   (the sustain layer, slide-design.md §5).
-- **Every movement is reproducible by seek**, and there are four ways to make one:
+- **Every movement is reproducible by seek**, and there are five ways to make one:
   CSS `@keyframes` (the template's `rise` · `in` · `grow` · `draw` · `fade`), `data-count` count-ups,
   a **painter** registered with `__paint(rg, durMs, fn)` whose `fn(tMs)` draws the frame at
   `t` (canvas 2D, WebGL, or SVG — the path for a rotation, a trace, anything keyframes can't
   hold; WebGL runs on SwiftShader, so it reproduces on the same machine rather than across
   machines), and
   a **`<video data-rg data-vfrom data-vdur>`** whose `currentTime` is set to the group's local
-  time (`vfrom` and `vdur` are both milliseconds). A painter that attaches DOM keeps those nodes
+  time (`vfrom` and `vdur` are both milliseconds), and a **baked sheet** (`[data-sheet …]`, made
+  by `h.object` from `slide.object` — rendered-object.md) whose frame index the runtime sets from
+  (g, t), one frame range per group, stretched to the segment. A painter that attaches DOM keeps those nodes
   inside its own `[data-rg]` — outside it a CSS animation runs on the wall clock, and `__seek`
   pins it to t=0 and counts it so the renderer stops. `transition` is forbidden (its object
   exists only after a property change, so it can't be seeked). `Date` · `Math.random` · `performance.now` · `requestAnimationFrame` ·

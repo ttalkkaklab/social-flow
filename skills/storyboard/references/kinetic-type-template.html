@@ -357,6 +357,31 @@ const SLIDE_SHOT = 0;
     c.tpl = a.length >= b.length ? a : b;
     return c;
   });
+  /* ── 시트 물체 — [data-sheet] 요소(h.object · rendered-object.md)의 프레임 번호를 (g, t) 로 세운다.
+     data-sheet-ranges="1:0-11 2:11-38" 는 그룹마다 도는 프레임 구간이고 경계 프레임을 이웃과 나눠
+     갖는다. 구간이 없는 그룹에서는 직전 구간의 끝 프레임에 선다. 길이는 카운터처럼 --count 가
+     기본이고 __setSegs 가 세그먼트 길이로 늘린다 — 물체의 변화는 정의상 문장이 말하는 값이라
+     지속 층이다. 페인터가 아니라 런타임이 모는 이유: 한 배경을 그룹 넷이 쓰므로 그룹별 페인터는
+     마지막에 도는 것이 앞 그룹의 번호를 덮어쓴다 — (g, t) 를 함께 받아야 한다. */
+  const sprites = [...document.querySelectorAll("[data-sheet]")].map(el => {
+    const cell = (el.dataset.sheetCell || "0 0").split(/\s+/).map(Number);
+    const ranges = {};
+    for (const m of (el.dataset.sheetRanges || "").matchAll(/(\d+):(\d+)-(\d+)/g)) ranges[+m[1]] = [+m[2], +m[3]];
+    const dur = {}; for (const k in ranges) dur[k] = COUNT;
+    return { el, cw: cell[0], ch: cell[1], cols: +el.dataset.sheetCols || 1, ranges, dur };
+  });
+  const spriteFrame = (s, g, tMs) => {
+    const keys = Object.keys(s.ranges).map(Number).sort((a, b) => a - b);
+    if (!keys.length) return 0;
+    let frame = s.ranges[keys[0]][0];
+    for (const k of keys) {
+      const [a, b] = s.ranges[k];
+      if (k < g) frame = b;
+      else if (k === g) frame = a + Math.round((b - a) * clamp01(tMs / s.dur[k]));
+      else break;
+    }
+    return frame;
+  };
   /* 숫자 → 고정폭 셀. 본(tpl)의 앞자리를 빈 셀로 따라 그려 상자가 첫 프레임부터 같은 크기다 */
   const cellOf = ch => /[0-9]/.test(ch) ? "<i>" + ch + "</i>" : '<i class="s">' + ch + "</i>";
   const cells = (s, tpl) => {
@@ -380,6 +405,7 @@ const SLIDE_SHOT = 0;
       const ms = map[c.rg];
       if (ms > 0 && c.el.closest(".sv")) c.dur = Math.max(400, Math.round(ms) - c.lead);
     }
+    for (const s of sprites) for (const k in s.dur) if (map[k] > 0) s.dur[k] = Math.round(map[k]);
   };
 
   /* ── 포커스 시프트 — .dim 그룹은 다음 그룹이 들어오는 동안 muted 급으로 내려앉는다.
@@ -453,11 +479,12 @@ const SLIDE_SHOT = 0;
         v.addEventListener("error", res, { once: true });
       });
     });
+    /* decode() 까지 기다린다 — 큰 시트(5670×4800)는 로드 뒤 디코드가 늦어 폰트만 기다리면 첫
+       캡처가 물체 없는 무대를 찍었다(2026-09-04 실측). decode 의 거절이 곧 못 읽은 파일이다. */
     const bgs = bgUrls().map(u => new Promise(res => {
       const im = new Image();
-      im.onload = () => res();
-      im.onerror = () => { bgBroken.push(u); res(); };
       im.src = u;
+      (im.decode ? im.decode() : Promise.resolve()).then(() => res(), () => { bgBroken.push(u); res(); });
     }));
     return Promise.all([document.fonts.ready, ...imgs, ...vids, ...bgs]).then(() => true);
   };
@@ -470,6 +497,10 @@ const SLIDE_SHOT = 0;
     for (const c of counters) {
       const p = c.rg < g ? 1 : c.rg === g ? easeCount(clamp01((tMs - c.lead) / c.dur)) : 0;
       c.el.innerHTML = cells(fmt(c.from + (c.to - c.from) * p, c.dec), c.tpl);
+    }
+    for (const s of sprites) {
+      const i = spriteFrame(s, g, tMs);
+      s.el.style.backgroundPosition = (-(i % s.cols) * s.cw) + "px " + (-Math.floor(i / s.cols) * s.ch) + "px";
     }
     for (const p of painters) p.fn(p.rg < g ? p.dur : p.rg === g ? Math.min(Math.max(tMs, 0), p.dur) : 0);
     for (const d of dimTargets) {
@@ -497,10 +528,13 @@ const SLIDE_SHOT = 0;
   };
   window.__groups = function () {
     const dur = {};
-    for (const a of document.getAnimations()) { const o = owner(a); if (!o) continue;
+    /* data-ground(스튜디오 무대의 드리프트)는 세지 않는다 — 바탕만 밀리는 그룹은 "아무것도 안
+       움직이는 그룹" 이라 렌더러가 잡아야 한다. __seek 은 그래도 세운다(owner 가 있다). */
+    for (const a of document.getAnimations()) { const o = owner(a); if (!o || o.dataset.ground !== undefined) continue;
       const r = +o.dataset.rg; dur[r] = Math.max(dur[r] || 0, endOf(a)); }
     for (const c of counters) dur[c.rg] = Math.max(dur[c.rg] || 0, c.dur + c.lead);
     for (const p of painters) dur[p.rg] = Math.max(dur[p.rg] || 0, p.dur);
+    for (const s of sprites) for (const k in s.dur) dur[k] = Math.max(dur[k] || 0, s.dur[k]);
     for (const v of videos()) { if (v.dataset.rg === undefined) continue;
       const r = +v.dataset.rg; dur[r] = Math.max(dur[r] || 0, +v.dataset.vdur || 0); }
     const n = Math.max(0, ...Object.keys(dur).map(Number));
