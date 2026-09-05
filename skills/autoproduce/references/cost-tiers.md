@@ -39,32 +39,35 @@ principled way to decide which scene gets generated video." This document
 fills that blank.
 
 The answer is **the first 3 seconds only**. A still-frame hook gets scrolled
-past — short-form operating common sense. In the body the photos show as-is
-(absolute rule 14 — captions use only the top band), but the shot changes per
-scene and Ken Burns, caption swaps, and subtitles carry the rhythm, so it
-reads less like stills even without generated video. That's why even when
-escalation is needed, only **the one cover slot** goes up.
+past — short-form operating common sense — so since 2026-09-05 (owner
+directive) **the hook is video on every short**: a silent Seedance motion
+background under the code-rendered cover title, made from the cover PNG. In
+the body the photos show as-is (absolute rule 14 — captions use only the top
+band), but the shot changes per scene and Ken Burns, caption swaps, subtitles
+and HTML motion slides carry the rhythm, so it reads as footage without more
+generated video. That's why even when escalation is needed, only **the one
+slot after the hook** goes up.
 
 ## Economy baseline (the automated-authoring default)
 
 | Layer | What's used | Notes |
 |---|---|---|
-| Cover background | `gpt_image_text2img` quality **`high`**, 1088x1920, 1 image | Photorealistic human scene (default: a Korean woman) — the cover frame becomes the thumbnail as-is (absolute rule 12). On escalated episodes it doubles as the veo source |
+| Cover background | `gpt_image_text2img` quality **`high`**, 1088x1920, 1 image | Photorealistic human scene (default: a Korean woman) — the cover frame becomes the thumbnail as-is (absolute rule 12) and is the source of the hook motion background; on escalated episodes it doubles as the b-roll source |
+| Hook motion background | `seedance_img2video` silent 1080p, the cover PNG as the source, the cover's `duration` (4–8 s) — **about $0.35 at 6 s** | The hook is video (owner directive 2026-09-05, `hook_video`). The builder keeps only the video track, so narration and the code-rendered title stay. Without `ARK_API_KEY` the slot falls back to `veo_img2video` lite 1080p, 8 s billed — $0.64 |
 | Points backgrounds | `image_local_generate` (local Z-Image) 1088x1920, **2–4 images** — **$0** | The photo is the star (absolute rule 14) — captions use only the top band so the photo shows in full. Change the shot when the content axis changes. Only machines without mflux fall back to `gpt_image_text2img` quality `low` ($0.007/image) |
-| Motion | ffmpeg Ken Burns still lane (eased zoom · focus · pan · punch · drift, 4%/s capped at 1.075) | The builder already does this. **Zero Veo calls** |
+| Motion (body) | ffmpeg Ken Burns still lane (eased zoom · focus · pan · punch · drift, 4%/s capped at 1.075) + HTML motion slides | The builder already does this — one still per cut, at most 8 s on one still. **No generated video in the body** at baseline |
 | Narration | whatever engine profile §2 says | `local` (Supertonic) costs 0; `gemini` bills per 1,000 characters |
 | BGM | one 30s `music_generate_clip` | The builder crossfades it onto itself to reach length. Variable-length generation has no confirmed price, so it isn't used — which also means the economy tier takes one bed, not cues |
 | Subtitles | the builder emits `subs.srt`·`subs.ass` together | free |
 
 With points backgrounds moved to local Z-Image (2026-08-12), that share
-($0.007 × 2–4 images) drops out — a local-TTS channel runs **about $0.26** per
-episode (1 high image + 1 BGM clip); a Gemini-engine channel adds **$0.015**
-for a 400-character narration, about $0.275. The image-count cap also stops
-being about cost (pick 2–4 purely on screen rhythm).
-The old arithmetic returns **only on the mflux-missing fallback (gpt low)** —
-recomputed from prices.tsv: local $0.274 (2 low images) to $0.288 (4), Gemini
-$0.289–$0.303, and **a Gemini channel using 4 low images busts the default
-$0.30 cap.** Use at most 3 ($0.296) in that case.
+($0.007 × 2–4 images) drops out — a local-TTS channel runs **about $0.61** per
+episode (1 high image + a 6 s Seedance hook + 1 BGM clip; **$0.90** on the
+veo-lite fallback); a Gemini-engine channel adds **$0.015** for a
+400-character narration. Before the hook became video (2026-09-05) the same
+baseline was about $0.26. The image-count cap stops being about cost (pick
+2–4 purely on screen rhythm); on the mflux-missing fallback (gpt low) add
+$0.007 per image.
 
 > **Never switch engines on your own.** "Narration costs 0" is true only when
 > the channel is already set to `local`. Move a `gemini` channel to local
@@ -104,9 +107,10 @@ Cutting it would mean dropping to 720p (4s and 6s generation allowed), which
 the 1080×1920 body would need upscaled, so it isn't used (user decision
 2026-08-11 — "if it needs upscaling, just use 1080").
 
-**The cover itself never escalates.** Veo can't write Korean, so the cover
-(hook title, hero figure) is code-rendered (produce absolute rule 10). The
-b-roll attaches **after** the cover.
+**The cover's text never escalates.** Veo can't write Korean, so the cover
+(hook title, hero figure) is code-rendered (produce absolute rule 10) over the
+baseline's silent motion background. The b-roll attaches **after** the cover
+and is the one generated cut the short has left (format cap 2).
 
 **No narration over that segment** — the video's own sound plays (absolute
 rule 9). That saves one scene's worth of TTS calls. In exchange there's one
@@ -190,17 +194,26 @@ judgment**.
 
 ## The cap — over it, drop the escalation and go economy baseline
 
-The plan's `max_cost_per_video` (default **$0.30**) is the per-episode cap.
-With the cover background at high (absolute rule 12), this value **passes only
-the economy baseline (~$0.27) and blocks every veo escalation** — a
-lite·1080p·8s escalation runs about $0.91 per episode (economy baseline +
-$0.64), so the cap has to rise to **$1.00 or more** to let it through (before
-2026-08-15 it was fast at $1.23 with a $1.30 cap — the three tiers' quality
-differences fell inside the confidence interval in blind-arena testing, so we
-dropped to the cheapest tier. `max_cost_per_video` itself is a user setting
-and wasn't touched). The unattended loop never decides a cap raise — until the
-user raises it in the plan, episodes are made at economy baseline even while
-the escalation condition is true (and the completion report says so).
+The plan's `max_cost_per_video` (template default **$1.00** since 2026-09-05;
+plans written earlier carry $0.30) is the per-episode cap. With the cover
+background at high (absolute rule 12) and the hook motion background in the
+baseline, $1.00 **passes the economy baseline (~$0.61 seedance · ~$0.90 veo
+lite) and blocks every veo escalation** — a lite·1080p·8s escalation adds
+$0.64, about $1.25–1.54 per episode, so the cap has to rise to **$1.60 or
+more** to let it through (before 2026-08-15 escalation was fast at $1.23 with
+a $1.30 cap — the three tiers' quality differences fell inside the confidence
+interval in blind-arena testing, so we dropped to the cheapest tier.
+`max_cost_per_video` itself is a user setting). The unattended loop never
+decides a cap raise — until the user raises it in the plan, episodes are made
+at economy baseline even while the escalation condition is true (and the
+completion report says so). **A plan still at $0.30 fails the baseline itself**:
+there is no tier under the baseline to drop to while the profile's `hook_video`
+is on — the storyboard declares `visual.video` on the cover and `check-scenes.js`
+rejects a still hook — so the tick stops before spending, keeps the lock
+release, and the report names the plan's cap as the reason. Two ways out, both
+user settings: raise `max_cost_per_video` to $1.00 or more, or set
+`hook_video: off` in the profile, which makes the still cover with the `punch`
+the legal hook again (~$0.27 baseline).
 
 **The cap verdict happens before spending.** At the moment escalation is
 decided, run `cost-report.sh --cap` on the projected tally; on exit 2, cancel

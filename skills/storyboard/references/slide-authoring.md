@@ -13,6 +13,10 @@ rendered slides enter the build.
 
 ### Slide authoring (produce §3.6 — after approval)
 
+For editorial diagrams, [object-state-quality.md](object-state-quality.md) is required.
+The storyboard's `quality` and `subject.changes` are the production contract. Do not treat
+an entrance, a camera drift or `sv:"settle"` as the physical subject's state change.
+
 Build the per-scene HTML slides from the copy/camera/sound-reviewed storyboard's `plan` and
 `labels`. Every copy
 gate has already passed, so no new text gets written here — **every character on a slide comes

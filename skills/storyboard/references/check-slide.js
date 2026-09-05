@@ -189,6 +189,10 @@ function checkDir(dir, only, opts) {
       }
     }
     if (motion && kind === "diagram") {
+      require('./slide-quality.js').checkQuality(slide, (scene.narration || []).length)
+        .forEach(message => fail(base, message));
+      if (slide.treatment === 'editorial' && /\bh\.stage\s*\([^)]*["']flat["']/.test(code))
+        fail(base, 'editorial slides require the studio ground; h.stage("flat") is not allowed');
       const treatment = slide && slide.treatment;
       if (!treatment) fail(base, MSG.treatmentMissing);
       else if (treatment === "footage") fail(base, MSG.treatmentRetired);
@@ -276,6 +280,28 @@ function checkDir(dir, only, opts) {
           catch (e) { fail(base, MSG.objectSidecarBad(side, e.message)); }
           global.window = keep;
           if (!meta) fail(base, MSG.objectSidecarBad(side, "window.SLIDE_OBJECTS[\"" + id + "\"] 가 없다"));
+          if (meta && slide.quality === 'object-state-v1') {
+            for (const key of ['shape', 'keys', 'frames']) {
+              if (meta[key] !== ob[key]) fail(base, `object sidecar ${key} differs from scenes.js; rebake the sheet`);
+            }
+            const expectedFile = f.replace(/^slides\//, '');
+            if (meta.file !== expectedFile) fail(base, 'object sidecar file differs from scenes.js');
+            let startFrame = 0;
+            const expectedRanges = {};
+            for (const token of String(ob.frames || '').split(/\s+/).filter(Boolean)) {
+              const match = /^(\d+):(\d+)$/.exec(token);
+              if (!match) continue;
+              const endFrame = startFrame + Number(match[2]);
+              expectedRanges[match[1]] = [startFrame, endFrame]; startFrame = endFrame;
+            }
+            if (JSON.stringify(meta.ranges) !== JSON.stringify(expectedRanges))
+              fail(base, 'object sidecar ranges differ from the planned frame groups');
+            try {
+              require('./object-sheet.js').checkObjectSheet(meta, path.join(dir, f));
+            } catch (error) {
+              fail(base, String(error.stderr || error.message).trim());
+            }
+          }
         }
         const start = code.search(/function\s+renderSlide\s*\(|\brenderSlide\s*=\s*(?:async\s*)?\(?/);
         const stop = code.indexOf("SEEK-RUNTIME-BEGIN", start >= 0 ? start : 0);
@@ -472,8 +498,17 @@ function selftest() {
       { type: "points", title: "구운 물체", narration: [{ tts: "하나" }, { tts: "둘" }],
         visual: { slide: { file: "slides/s23-object.html", motion: true, treatment: "editorial", role: "statistic", motif: "disc", labels: ["물체"],
           object: { file: "slides/assets/s23-obj.png", shape: "disc", keys: "0,16,0 0,16,45 0,16,241", frames: "1:5 2:5", plan: "x" } } } },
-    ];`);
-  const SIDECAR = 'window.SLIDE_OBJECTS = Object.assign(window.SLIDE_OBJECTS || {}, {"s23-obj": {"file": "assets/s23-obj.png", "shape": "disc", "cell": [630, 600], "cols": 9, "n": 11, "ranges": {"1": [0, 5], "2": [5, 10]}, "ink": [49, 15, 629, 521]}});';
+    ];
+    // Supply valid quality plans so each legacy fixture isolates its original rule.
+    window.SCENES.forEach(s => {
+      const sl = s.visual.slide;
+      if (sl.treatment !== 'editorial') return;
+      sl.quality = 'object-state-v1';
+      sl.subject = {kind: sl.object ? 'object' : 'data', changes: (s.narration || []).map((_, i) =>
+        ({group:i+1, before:'state '+i, after:'state '+(i+1), driver:sl.object?'surface':'relation'}))};
+    });`);
+  const SIDECAR = 'window.SLIDE_OBJECTS = Object.assign(window.SLIDE_OBJECTS || {}, {"s23-obj": {"file": "assets/s23-obj.png", "shape": "disc", "keys":"0,16,0 0,16,45 0,16,241", "frames":"1:5 2:5", "cell": [630, 600], "cols": 9, "n": 11, "ranges": {"1": [0, 5], "2": [5, 10]}, "ink": [49, 15, 629, 521]}});';
+  const objectPNG = require('./object-sheet-fixture.js').makeSheet([630, 600], 9, 11);
   const cases = [
     ["s1-static.html", `const SLIDE_SHOT = 1; const a = "정지 라벨";`, [MSG.mustMotion]],
     ["s1-static.html", `const SLIDE_SHOT = 1; <style>.x{animation:rise 1s}</style>`, [MSG.mustMotion]],
@@ -643,7 +678,7 @@ function selftest() {
       "s23-object.html": ["assets/s23-obj.png", "assets/s23-obj.js"] }[name] || [];
     if (flag !== "missing-asset") for (const f of need) {
       fs.mkdirSync(path.dirname(path.join(slides, f)), { recursive: true });
-      fs.writeFileSync(path.join(slides, f), f.endsWith(".js") ? SIDECAR : "x");   // 사이드카는 진짜 JS 여야 읽힌다
+      fs.writeFileSync(path.join(slides, f), f.endsWith(".js") ? SIDECAR : f === 'assets/s23-obj.png' ? objectPNG : "x");
     }
     fs.writeFileSync(path.join(slides, name), body);
     const got = [];

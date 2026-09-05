@@ -339,9 +339,10 @@ screen still has to put its number on screen legibly.
     connectors, rails) — the slide is unreadable on the phone it is made for
 11. **One picture under the narration** — the slide's picture does not change for longer than
     the channel's static-ground limit (`window.MOTION_POLICY.maxStaticGroundSeconds`, default
-    4 s). A plate, a kinetic screen or a photo that runs the whole scene while only the type,
-    a number, a callout or a camera move changes is a slideshow, not a video (owner directive
-    2026-09-03 — "the viewer has to feel a video: image changes, animation, camera moves").
+    8 s — one cut). A plate or a kinetic screen that runs a whole long scene while only the
+    type, a number or a callout changes is a slideshow, not a video (owner directive
+    2026-09-03 — "the viewer has to feel a video: image changes, animation, camera moves";
+    a still under its camera move holds one cut by the 2026-09-05 directive).
     The clock resets only when the picture itself changes: the next generated clip, a new
     photograph under the next sentence, a recording — and, on an explanation slide, the next
     reveal group (directive 2026-09-05: a movement per group, so the clock runs per group).
@@ -571,6 +572,10 @@ fill colour, a second figure, an idle bob); motion-carries-meaning asks whether 
 is the one the sentence calls for, not merely that something moved.
 
 ## 9. Rendered object — a thing that is a render
+
+The mandatory planning and production gates are in [object-state-quality.md](object-state-quality.md).
+Every editorial diagram declares its subject changes before approval. A still cutout that
+only translates or settles fails the physical-object lane, even when its lighting looks good.
 
 The lane is `kind:"diagram", treatment:"editorial"` with `slide.object`
 (scenes-schema §slide scenes, procedure in `rendered-object.md`). Everything in §1–§6 holds;

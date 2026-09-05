@@ -346,6 +346,13 @@ Two disciplines carry over unchanged. The move supports the declared feel — it
 it (the evidence base for stills is practitioner practice, not measurement, so claim even
 less). And rationing: most cards keep the alternating default drift; a punch is the cover's
 move; drift is spent where presence or unease is the feel, not sprinkled for "energy".
+Since 2026-09-05 this lane is the body of a short (the hook is video, one more generated
+cut at most, every other cut a still under its move or an HTML motion slide), so a still now
+carries a whole cut: the centre push caps at 7.5% because the text is baked in, and over a
+5–8 s cut that is under 1.5%/s — a `pan` travel (12% at the default scale), a `focus` zoom
+that arrives at the subject, or `hold` + `drift` reads as an operated camera where the
+centre push reads as a slow slideshow. One still holds one cut; a longer cut swaps the still
+per sentence (`narration[].img`).
 
 **How hard the window moves follows the beat** `[blog]`. A 46s reference short measured frame
 by frame (docs/research/2026-08-26-still-photo-camera-motion) ran every still on one ladder —

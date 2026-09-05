@@ -30,6 +30,8 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
 
 # From one topic to a finished video — unattended authoring
 
+Read [story-quality.md](../storyboard/references/story-quality.md) before candidate writing, including skip-research channels. It overrides mandatory closing questions and modern parallels. Write STORY with the story pass; use gate 6f's existing narration read for the four quoted findings. After vocabulary edits revalidate and run `check-story.js storyboard/` before any generation. Missing, failed or stale reviews stop production with queue hold, not merely publication. A closing beat may have `cta:"none"`.
+
 Runs `storyboard → produce` end to end without human approval. The input is a
 single topic string; the output is a publishable `output/` set.
 
@@ -296,8 +298,8 @@ node $SB/check-research.js storyboard/               # exit 1 = the research doe
 Both formats. After the three direction rows and `check-research.js --direction` exit 0,
 write three candidate pages — **the seven items, in order, on every one**: 주제 · 훅 (a
 dramatised scene that invents no fact) · 전개 #1 (what actually happened) · 전개 #2 (what it
-makes us think about now) · 전개 #3 (2–3 present-day cases, a search-log row each) · 마무리
-(what do you think?) · CTA — storyboard §2.2 and
+makes the next development necessary) · 전개 #3 (evidence, consequence or limit) · 마무리
+(earned resolution) · CTA (optional, otherwise 없음 with reason), per storyboard §2.2 and
 `../storyboard/references/scenario-stage.md`. A page that only explains, a hook that is the
 start of the timeline, or a feel curve that never dips costs nothing to fix here and costs
 the whole board later. Three different primaries. Naming an engine is not enough — the
@@ -333,6 +335,11 @@ with `check-scenes.js --draft`), the machine layer after §3.6 clears.
 formats. If §2.3 extra research breaks a beat, patch that page yourself before §4 — it is
 not read again.
 The rules automated authoring breaks most often:
+
+- Read `../storyboard/references/object-state-quality.md` when planning HTML slides.
+  Editorial diagrams require `quality:"object-state-v1"` and `subject.changes` from the
+  storyboard stage. Missing plans fail even `--draft`. Apply the same baked-object and visual
+  review gates as produce; unattended mode cannot substitute camera motion or skip the review.
 
 - Write `window.COMPREHENSION` before the scenes: one governing question, one answer, one
   takeaway, no cross-scene branch in a short informational episode, and every unfamiliar term
@@ -392,10 +399,9 @@ The rules automated authoring breaks most often:
   `hooking` · `result` · `body` · `turn`. The cover opens a gap and does not
   speak `COMPREHENSION.answer`; each non-final drip pays one piece and opens
   the next gap; the last drip is the first place the answer is complete; the
-  CTA is a spoken shot with one outward act (a comment question or a next-episode
-  promise). An outro asset is not the spoken close.
-  Copy the approved scenario's three verbatim lines into the `scenes.js` header
-  comment — the 훅's first sentence, the 마무리 question, the CTA callback — and lay
+  closing beat is spoken but may have no ask. An outro asset is not the spoken close.
+  Copy the approved anchor lines into the `scenes.js` header
+  comment: the opening, resolution and any chosen CTA. Lay
   the seven items onto beats with scenario-stage's item-to-beat map (a short:
   hook · drip × 전개 · cta; long-form by the cover's arc — `story` puts 전개 #2 at the
   turn, `answer-first` plays its present answer as the result first).
@@ -427,13 +433,14 @@ narration.
 
 ```bash
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
-node $PG/extract-text.js ./storyboard/scenes.js subtitle | nl -ba -w2 -s'. '   # numbered, one sentence a line
+node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js storyboard/ --text
 ```
 
 **Delegate to the storyboard-reviewer agent (Agent) in "narration mode"** with that
-numbered list, `window.COMPREHENSION` pasted as written, and the `scenario.md` path (if
-present — a skip-research channel has none). No `scenes.js`, `research.md` or `profile.md`
-path — the reviewer's findings cite sentence numbers, and you map them back to the shot.
+numbered list first, then COMPREHENSION, STORY and relevant research excerpts with row IDs,
+plus the scenario path if present. No scenes.js, research.md or profile.md file read is needed.
+Map findings with `check-story.js storyboard/ --map` and record the four quoted judgments in
+STORY.review. Revalidate after vocabulary edits before setting a fresh hash.
 Read the tail `STORYBOARD_REVIEW: mode=narration score=NN p0=N`.
 
 - **Apply the directives as spoken sentences** — an antecedent, the present link,
@@ -472,13 +479,22 @@ lowest sentence's score.
 **The machine layer goes in after this gate** — camera, space, clip prompts, sound,
 `window.MOTION_POLICY` — and the full contract runs before anything is generated:
 
+Apply `../storyboard/references/retention-direction.md` §2–§4 here. Write its scene/group
+table under storyboard.md's "hand to produce" note. Use the unattended one-bed sound
+design from the start, with supported drops and available SFX. Each middle beat must
+deliver evidence or change the viewer's expectation, and the main promise must have a
+specific payoff before the closing invite. Resolve missing essential assets before spending.
+
 ```bash
 SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
 node $SB/check-scenes.js storyboard/          # exit 1 = authoring stops before generation
 ```
 
 The profile's true-motion floor and still-run limits are hard gates here. Ken Burns, caption
-changes and still swaps do not count. Do not lower the copied policy or the channel profile
+changes and still swaps do not count toward that floor — but on a short the checker also
+holds the 2026-09-05 shape: the cover carries `visual.video` (the hook is video), a second
+generated cut needs `visual.why`, and every other cut is a still under its camera move or an
+HTML motion slide. Do not lower the copied policy or the channel profile
 to make an unattended episode pass. What the scene, camera and sound reads of 0.49 looked at
 is now your own pass against storyboard §4's rules — `directing-grammar.md` §5·§6 for the
 feel and the dials, scenes-schema §camera · §cut length · §sound for the slots, the cue names
@@ -521,8 +537,11 @@ $REF/cost-report.sh .work/cost-estimate.tsv --cap <plan max_cost_per_video>; ech
 ```
 
 exit 2 (over the cap): **cancel the escalation and come back down to economy
-baseline** — not an abort. exit 1 (verdict unavailable): abort. Never spend
-money without knowing the price.
+baseline** — not an abort. If the baseline itself is over the cap (a plan still
+at $0.30 with `hook_video` on), there is nothing lower to fall to: stop before
+spending, release the lock, and report the cap as the reason (cost-tiers §The
+cap). exit 1 (verdict unavailable): abort. Never spend money without knowing
+the price.
 
 ### 6. Visual generation
 
@@ -558,6 +577,23 @@ money without knowing the price.
     no text expected from the engine, the exclusions written, a duration the cut earns,
     no minor in frame, the engine the route names. The plan review of 0.49 is not
     called on this path.
+- **Per-cut Seedance escalation** — apply produce `references/video-model-selection.md`
+  §Seedance per-cut selection. The default hook stays on 1.5 Pro; essential complex action
+  may use 2.0, reference panels use 2.0 (2.5 above nine), and fixed voice uses 2.5 on a
+  speaking/b-roll slot. Record purpose, reason, face eligibility and reference paths before
+  generating. Read `cost-preview.js --json` and use the Seedance row's resolved `generation`
+  arguments. Replace the baseline video projection in `.work/cost-estimate.tsv` with those
+  model-specific rows and rerun the full episode cap check, including spent attempts.
+  Never add a paid comparison by default or exceed the standing budget for an upgrade.
+- **Hook motion background (economy baseline — every short)** — the cover is video
+  (produce absolute rule 10, `hook_video`): `seedance_img2video` silent, 1080p, the
+  cover-background PNG as the source, the cover's `duration` as the requested length
+  (4–8 s — Seedance bills the seconds asked for; use the resolved per-cut model above), the storyboard's stored
+  `visual.video.prompt` sent verbatim. The builder keeps only the video track, so the
+  narration, subtitles and the code-rendered title stay. Without `ARK_API_KEY` the slot
+  falls back to `veo_img2video` lite 1080p (8 s billed whatever the cover uses).
+  `.work/motion/motion-i0.mp4`. This is the one slot the baseline pays for
+  (cost-tiers §economy baseline — about $0.35 seedance · $0.64 veo lite).
 - **Opening b-roll (only when escalated)** — `veo_img2video`
   (`aspectRatio: "9:16"`, `resolution: "1080p"`, `durationSeconds: 8`, model
   `veo-3.1-lite-generate-preview` — in blind-arena testing the three tiers'
@@ -589,9 +625,10 @@ money without knowing the price.
     one more slot doubles the episode's spend. Still, **if the storyboard has 2
     slots written in, make both as written** — dropping an approved scene over
     cost makes the video diverge from the plan.
-  - **Never make the cover itself a generated video** — Veo can't write Korean
-    text (absolute rule 10). The cover stays code-rendered; the b-roll goes in
-    **the segment after the cover**.
+  - **The cover's text is never generated** — Veo can't write Korean (absolute
+    rule 10). The cover's title stays code-rendered over its motion background;
+    the b-roll goes in **the segment after the cover** and is the one generated
+    cut a short has left (the format cap is 2, and the hook took the first).
   - **No narration over that segment** (absolute rule 9) — the video's own
     sound plays. That scene is `narration: []` with no subtitles either, so
     after the §8 build `splice-clip.sh` shifts the later subtitles by the
@@ -763,6 +800,12 @@ channel homogenization piles up fastest. There's no verdict (rankings only) —
 if a recycled phrase shows up in this episode, fix that sentence and move on.
 
 ### 10. Quality gate (gate 4) + wrap-up
+
+First run `../storyboard/references/retention-direction.md` §5 on the final `-fast` video.
+Save `.work/experience-review.md` and pass it to the content reviewer with build-report.txt
+and the storyboard's handoff table. An unresolved promise, missing essential sound or
+unverified motion/listening check sets `queue_*: hold`; screenshots and numeric scores
+cannot stand in for those checks. Preserve that hold through wrap-up even if copy scores 95.
 
 Delegate to the content-reviewer agent — **frames pulled from the burned-in
 copy** (the clean master has no subtitles, so typos and clipping don't show),

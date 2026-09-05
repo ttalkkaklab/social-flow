@@ -90,3 +90,6 @@ music.mlx	second	0.000	official	mlx_music_generate — MLX Core / mlx-serve on-d
 # Same $0 ledger pattern as image.local — a missing key kills the report with exit 1.
 video.mlx	second	0.000	official	mlx_video_generate — MLX Core on-device. Quantity is numFrames / 24 (LTX is 24 fps)
 3d.mlx	mesh	0.000	official	mlx_3d_generate — MLX Core on-device. Pipeline has no GLB consumer; still logged so the tally is complete
+
+# Seedance escalation — conservative list price; no expiring promotions (verified 2026-09-05).
+seedance.2-5.1080p	second	0.569	derived	dreamina-seedance-2-5-260628 — reference/voice escalation; list price
