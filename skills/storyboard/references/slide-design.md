@@ -74,9 +74,9 @@ A photo-backed slide (`treatment:"photo-action"`) replaces the plate with the ph
 scrim (`h.photo` + `h.scrim`): ink rising from the bottom to 72% at a third of the height
 and a lighter ink from the top, so the tag and title read on any photograph.
 
-A footage slide (`treatment:"footage"`, §6.2) has neither plate nor scrim. The generated clip is
-the ground with its own light, and the template drops the plate layer once `h.footage` is on the
-page — a key light and a vignette over a photographed scene read as a filter, not as a graphic.
+The footage slide (`treatment:"footage"`), which dropped the plate for a generated clip, is
+retired (§6.2 — nothing is drawn over video); `h.footage` stays in the template as history and
+the flow never calls it.
 
 ## 2. Palette — ink, paper, one accent
 
@@ -332,8 +332,8 @@ screen still has to put its number on screen legibly.
 8. The end frame is not the conclusion (the last group's rest frame is missing an element the scene claims)
 9. An editorial screen (`editorial`) uses a full-frame raster as its composition and only adds
    text, callouts, or a camera move. A raster may supply a document, face, or symbol, but it
-   cannot supply the visual argument by itself. A footage slide is judged by §6.2 instead — there
-   the clip is the ground on purpose.
+   cannot supply the visual argument by itself. A generated clip under marks is not an
+   alternative — the footage slide is retired (§6.2).
 10. Any text set below its role's size in the §3 table for the slide's format, or a
     structural line thinner than that format's `--hair` (dividers) or `--rule` (axes,
     connectors, rails) — the slide is unreadable on the phone it is made for
@@ -342,9 +342,10 @@ screen still has to put its number on screen legibly.
     4 s). A plate, a kinetic screen or a photo that runs the whole scene while only the type,
     a number, a callout or a camera move changes is a slideshow, not a video (owner directive
     2026-09-03 — "the viewer has to feel a video: image changes, animation, camera moves").
-    The clock resets only when the picture itself changes: the next footage clip, a new
-    photograph under the next sentence, a recording. So an authored plate is a one-sentence
-    card (a verdict, a single number) and everything longer is a footage slide with `labels`;
+    The clock resets only when the picture itself changes: the next generated clip, a new
+    photograph under the next sentence, a recording — and, on an explanation slide, the next
+    reveal group (directive 2026-09-05: a movement per group, so the clock runs per group).
+    So an authored plate on an `other` beat is a one-sentence card (a verdict, a single number);
     `check-scenes.js` blocks the estimate before the slide is authored and this review reads
     the sheet: `g<k>-mid` and `g<k>-end` showing the same picture across two or more groups is
     this P0
@@ -445,81 +446,45 @@ On the axes, design craft includes evidence hierarchy and a composition distinct
 editorial frames; motion meaning asks whether each move changes the visual argument; legibility
 includes source/date readability at phone scale.
 
-### 6.2 Footage treatment — marks over generated footage
+### 6.2 Marks — pen strokes on the studio stage (the footage ground is retired)
 
-The lane is `kind:"diagram", treatment:"footage"` (scenes-schema §footage treatment). The ground
-is one generated clip per reveal group; HTML draws wordless marks over it. The look was measured
-on a reference history short on 2026-09-02 (the numbers are in the storyboard skill's
-`footage-lane.md`): a muted photoreal clip every 1.8 seconds, coral strokes about 14px wide drawn
-on in under a second, a ground mark behind the figures, a direction arrow over them, no label
-anywhere, one subtitle line.
+**Nothing is drawn over video** (user directive 2026-09-05, CLAUDE.md §Nothing is drawn over
+video — it outranks every rule in this file). The footage treatment this section used to
+describe — a generated clip per reveal group under coral marks and a matte — is retired, and
+`treatment:"footage"` is rejected by the checkers. What survives here is the mark grammar,
+because the same helpers draw the pen strokes on a studio slide (§1), where the ground is a
+set and a stroke is part of the authored picture rather than a sticker on a photograph.
 
 **The grammar — six marks, one meaning each**
 
 | Mark | Helper | Says | Draws as |
 |---|---|---|---|
-| route | `h.mark.route(rg, pts, {dash, arrow})` | movement — a march, a sea lane, a retreat | a smoothed line through the points, drawn from the start; a dashed route is revealed through a mask; the arrowhead is the next stroke |
+| route | `h.mark.route(rg, pts, {dash, arrow, pen})` | movement — a march, a sea lane, a retreat | a smoothed line through the points, drawn from the start; a dashed route is revealed through a mask; the arrowhead is the next stroke |
 | X | `h.mark.x(rg, x, y)` | defeat, a stop, a block | two strokes, the second `--mark-lead` after the first |
 | ring | `h.mark.ring(rg, x, y, r)` | the target — the one thing to look at | one circle drawn from the top |
 | hatch | `h.mark.hatch(rg, poly, {gap, angle, wave})` | spread — an army across a plain, an area, a flood | parallel lines clipped to a polygon, one after another at `--mark-stagger` |
 | box | `h.mark.box(rg, x, y, w, h)` | a place — a settlement, a building, a thing | four corner brackets |
 | dot | `h.mark.dot(rg, x, y)` | a position | a pop — the one overshoot on this slide |
 
-`h.mark.path(rg, d)` draws any SVG path the same way (a shield, a flag) and `h.mark.label`
-sets a short label from `labels` when the sentence carries a number or a name the picture
-cannot show. `h.matte(rg, webm)` lays the subject back over the marks so a ground mark passes
-behind the people (`make-matte.py`); a direction arrow stays on top and needs none.
+`h.mark.path(rg, d)` draws any SVG path the same way (a shield, a flag).
 
 Rules:
 
-- **One or two marks per shot, and each is the sentence.** The route is drawn while the
+- **A mark sits on an authored ground only** — the studio plate, a map drawn in HTML, a
+  rendered object (§9), an ink actor. Never on a generated clip, a motion background, a
+  b-roll or a photograph. A photo with a mark over it is P0-E1, whatever the treatment says.
+- **One or two marks per group, and each is the sentence.** The route is drawn while the
   sentence says they moved; the X lands when it says they lost. A mark that decorates —
-  brackets around nothing, a ring on the prettiest part of the frame — is P0-G2.
-- **Marks are placed against the clip, not the still.** Read the coordinates off the mid frame
-  (`footage-frames.sh`), keep the mark on its subject through the whole cut, and keep the camera
-  `very slow` or `static` on a marked shot. A mark that slides off its subject is P0-G3.
-- **Wordless by default.** The frame carries the subtitle and nothing else. A label is an
-  exception with a reason, sits inside the zone, and is in `labels`.
+  brackets around nothing, a ring on the prettiest part of the frame — fails the motion axis.
 - **One colour, one stroke.** `THEME.accent`, `--mark-w`, round caps and joins, `.94` opacity.
-  No second colour, no fill but the dot, no glow, no shadow, no gradient — the generated-look
-  markers of every slide apply here too. The material is per treatment: on footage the stroke
-  is flat, because a shadow on a photographed ground reads as a sticker; on a studio slide
-  (§1) the same helpers draw a tapering pen stroke (`pen:true`) with a cast shadow from the
-  head CSS, because there the ground is a set and a flat stroke reads as a marker on glass.
+  No second colour, no fill but the dot, no gradient. On the studio ground the stroke tapers
+  (`pen:true`) and casts the shadow the head CSS gives it under `html.studio` — the pen and
+  the slabs answer the same key light, which is what makes them one scene.
 - **Write-on, not fade.** Every mark is drawn (`stroke-dashoffset`) or pops; nothing fades in.
   A stroke takes `--mark-draw` (700ms); the arrowhead and the second stroke of an X follow at
-  `--mark-lead`; hatching staggers at `--mark-stagger`. The whole mark is complete inside 1.5s so
-  it reads before the cut.
-- **The clip fills the segment.** The renderer stretches each clip to its segment length and
-  warns when the file is shorter — a frozen last frame is the slideshow this lane exists to
-  remove. Generate `duration` at the segment estimate plus one second.
-- **No face under a mark.** A ring around a head or an X across a face is P0-G4 — the mark
-  sits on the ground, the road, the ridge, the formation, beside the person.
-- **The plate is off and the ground is the clip.** No key light, no vignette, no scrim, no
-  title chain. The subtitle is the only type; the episode's subtitle mode is `phrase`.
-
-**P0, added for `treatment:"footage"`**
-
-- **P0-G1 still ground** — a clip that does not move (a Ken Burns over a still, a frame frozen
-  for most of the segment), or a group whose "clip" is the previous group's last frame
-- **P0-G2 decorative mark** — a mark whose meaning is not in the segment's sentence, more than
-  two marks on one shot, or a shot whose declared `mark` is missing from the frame
-- **P0-G3 mark off its subject** — the mark sits on empty ground while the thing it names is
-  elsewhere in the frame, or slides off the subject during the cut (compare `g<k>-mid` with
-  `g<k>-end`)
-- **P0-G4 mark over a face**, or a label outside the zone
-- **P0-G5 a second colour or a fade** — a mark in another hue, a gradient or glow on a stroke, a
-  mark that fades in instead of drawing
-- **P0-G6 the wrong layer** — a ground mark drawn over the figures when a matte is declared, or a
-  matte that cuts the subject (a missing limb, a hole in a body)
-
-**What the axes look at here** — design craft is stroke discipline and how the mark sits in the
-frame's composition (does it lead the eye to the subject, does it follow the road and the
-horizon), not zone fill (the renderer reports `null`); nothing-reads-as-generated adds the
-photoreal tells of the clip itself — a duplicated face, melting hands, text-like scribbles on
-banners — because the clip is now part of what was authored; motion meaning asks whether each
-mark is the sentence and whether the cut lands on the sentence start; legibility is the mark's
-stroke at 25% scale and the subtitle staying readable over a bright clip.
+  `--mark-lead`; hatching staggers at `--mark-stagger`.
+- **The zone holds.** A mark is authored ink and stays inside the zone like the type; the
+  subtitle band is empty.
 
 ## 7. Kinetic type — when the words are the picture
 
@@ -629,7 +594,8 @@ the object's movement into one PNG sheet. The slide plays it back by moving
   for free. Only the object is a render. A broadcast set builds its 3D element and its name
   plate separately for the same reason.
 - **Generic shapes only.** A disc, a tablet, a coin, a block. A specific artefact or a person
-  is the footage lane (§6.2). One shape ships (`disc`); a second is one SDF function.
+  is a generated still or clip with nothing drawn on it, or a `photo-action` slide — never a
+  clip under marks (§6.2). One shape ships (`disc`); a second is one SDF function.
 - **Placement is measured, not eyeballed.** The sidecar's `ink` box includes the shadow's
   wall shadow, which reaches 226 px past the rim while the disc is reclined; `check-slide.js`
   holds it inside the zone.

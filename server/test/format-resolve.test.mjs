@@ -368,7 +368,7 @@ test('build-reel filming lane — sync cards steer around the audio machine', ()
     'sync cards have preroll, postroll and minimum length at 0');
   // If the card loop picks the global PRE back up, only sync cards slip by 0.4 s
   assert.doesNotMatch(reel, /-v p="\$PRE"/, 'the global PRE is still inside the loop');
-  assert.match(reel, /--pre "\$RPRE"/, 'reveal timing uses the card pre-roll (J-cut holds the picture)');
+  assert.match(reel, /--pre "\$CPRE"/, 'reveal timing uses the card pre-roll (the J-cut hold no longer shifts reveals — 0.53.0)');
   // Run trim or atempo over it and it drifts from the picture by that much
   assert.match(reel, /MUTE=1   # bypasses the audio machine below/, 'sync skips trim and speed correction');
   assert.match(reel, /SYNCNOTE="silent clip — normalization skipped"/, 'a silent clip does not get loudnorm either');
@@ -391,7 +391,7 @@ test('build-reel Ken Burns — off for filmed clips, pan for landscape', () => {
 
 test('build-reel scene transition — a dissolve that costs no time', () => {
   const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');
-  assert.match(reel, /SCENE_FADE=\$\{SCENE_FADE:-0\.12\}/, 'the half-length constant');
+  assert.match(reel, /SCENE_FADE=\$\{SCENE_FADE:-0\.30\}/, 'the half-length constant');
   assert.match(reel, /SCENE_JCUT=\$\{SCENE_JCUT:-0\.32\}/, 'J-cut hold under the 0.3s silence ceiling');
   assert.match(reel, /POST=\$\{POST:-0\.45\}/, 'post-roll is last-reveal hang, not a second of dead air');
   assert.match(reel, /enter=1\|enter=black\)\s+ENTER=black/, 'enter= turns the head transition on');
