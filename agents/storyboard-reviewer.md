@@ -92,7 +92,7 @@ is a finding nobody acts on.
 | copy | the sentences of the **whole** storyboard — machine style verdict, structural AI tells, hook, facts | total |
 | scene | **each single scene**'s role and the context around it (not the phrasing) | lowest scene |
 | vocabulary | **words** — the words used in narration and titles (not structure or flow) | lowest scene |
-| camera | the **shot grammar** of every shot — `shot.feel` and whether `size`·`angle`·`space` serve it — plus the **four camera slots**, cut length and engine fit of each generated-video shot. On a footage slide (`treatment:"footage"`) every `slide.shots[]` entry is such a shot: its own four slots, a `very slow` or `static` move under a mark, and a `duration` at the sentence estimate plus one second | lowest shot |
+| camera | the **shot grammar** of every shot — `shot.feel` and whether `size`·`angle`·`space` serve it — plus the **four camera slots**, cut length and engine fit of each generated-video shot. A `treatment:"footage"` slide is a P0 on sight (retired 2026-09-05 — nothing is drawn over video) | lowest shot |
 | sound | what the episode will **sound** like — clip audio, voice casting, tts spellings, silence | total |
 | image | how the generated **PNG** lines up with the scene content | total |
 
@@ -711,8 +711,10 @@ the reviewer still checks whether the declared type tells the truth.
   `mechanism` and one declared semantic primitive per narration group. A principle frame
   sits ink actors and draws hairline relations (`shape-enter` · `shape-draw` ·
   `shape-travel`, with `slide.arts`) or traces named states; a stack of labels is not the
-  picture. Marking one `other`, or replacing it with a still, footage, kinetic type, or
-  photo annotations, is a P0.
+  picture. Marking one `other`, or replacing it with a still, a clip with marks or labels
+  over it, kinetic type, or photo annotations, is a P0 (user directive 2026-09-05 — nothing
+  is drawn over video; the slide is held to
+  `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`).
 
 ## What each type has to do (the quality axis yardstick)
 
@@ -773,18 +775,19 @@ the reviewer still checks whether the declared type tells the truth.
     is still a branch when the viewer has to remember it beside the governing question
 14. **Required explanation routed elsewhere** — a scene lists periods or dated events,
     presents a measured statistic, or explains a principle but `shot.infoType` says `other`, or
-    its visual is neither a seekable editorial diagram nor a footage slide whose `labels` put
-    the value on screen (scenes-schema §slide scenes — the footage route is the default under
-    the static-ground limit; the plate is for a one-sentence verdict). On the editorial route a
-    wrong role, missing `motionBeats`, or a narration group with no semantic primitive is the
-    same defect; on the footage route empty `labels` is
+    its visual is not a seekable editorial diagram on the studio stage (scenes-schema §slide
+    scenes — the one route since 2026-09-05; a clip with marks or labels over it is retired and
+    a P0 wherever it appears). A wrong role, missing `motionBeats`, or a narration group with
+    no semantic primitive is the same defect
 16. **One picture under the narration** — the scene's picture does not change for longer than
     the channel's static-ground limit (`window.MOTION_POLICY.maxStaticGroundSeconds`, default
     4 s): a points still under two or more sentences, an HTML plate or kinetic screen that runs
     the whole scene, a photo that only pans or zooms. Captions changing, a number counting up,
     a Ken Burns move and ambient drift do not reset the clock; only a generated clip, a
     recording, or a new still under the next sentence does (owner directive 2026-09-03 —
-    "the viewer has to feel a video: image changes, animation, camera moves"). `check-scenes.js`
+    "the viewer has to feel a video: image changes, animation, camera moves"). An explanation
+    slide (timeline · statistic · principle) is the exception since 2026-09-05: it declares a
+    movement per group, so its clock runs per group. `check-scenes.js`
     blocks the estimate; here read the plan and say which sentences share one picture
 15. **Hook dumps the answer on a short** — the cover's title, hero stat, or spoken text
     contains `COMPREHENSION.answer`, or the cover uses `hookType:"spoiler"` / `hookForm:"payoff"`.

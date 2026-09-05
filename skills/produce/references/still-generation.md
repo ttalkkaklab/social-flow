@@ -27,7 +27,6 @@ Measured 2026-08-12 (`docs/research/2026-08-12-local-image-generation`).
 | cover background (scene-1) | `gpt_image_text2img` `quality:"high"` | $0.22 | it is the thumbnail *and* veo's input — the quality clause |
 | any screen with text in it | `gpt_image_text2img` | per quality | the local engine breaks Korean jamo ("딸깍연구소" → "달닥연구소") |
 | a scene with `visual.character` | `gpt_image_img2img` | per quality | the panels are the input, not a description |
-| footage stills (`slide.shots[].still`) | as the shot's plan says | per engine | they are the clips' sources — footage-lane.md §3 |
 
 The storyboard wrote the choice into `.work/decisions.tsv` and, where a scene departs from
 the default, into the scene. Follow it. **A departure invented at call time generates

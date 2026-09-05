@@ -19,10 +19,9 @@ description: >
   authored by hand or whose claim exists only as a gesture (§8).
   `visual.slide.treatment:"editorial"` adds the full-frame composition test in
   §6.1: a photo with animated callouts, or text as the only authored layer over a
-  raster, is a P0, not an editorial frame. `visual.slide.treatment:"footage"` adds
-  §6.2 instead — generated clips are the ground there by design, and the P0s are a
-  still ground, a decorative mark, a mark off its subject or over a face, a second
-  colour or a fade, the wrong layer. `visual.slide.object` adds §9 — a rendered object that moves against
+  raster, is a P0, not an editorial frame. `visual.slide.treatment:"footage"` is
+  retired (2026-09-05 — nothing is drawn over video) and is a P0 wherever it appears;
+  a mark over a clip or a photo is the same P0. `visual.slide.object` adds §9 — a rendered object that moves against
   its sentence, a stamp count off the labels, a frozen object across groups, ink across
   the zone. PASS at score ≥95 and p0=0. It never
   modifies the slide, scene or storyboard files — the one thing it writes is the verdict
@@ -105,16 +104,15 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
    x=176 or right of x=904. Wide: y 96–795, x 96–1824. Crop with Bash if you're not
    sure (`ffmpeg -i frame.png -vf crop=…`). The subtitle band must be empty. The spine
    (`h.stage("spine")`) sits 48px left of the zone by design — it is not a zone breach.
-   On a footage slide the marks go where the picture puts them and may cross the band;
-   only a `mark-label` is held to the zone (slide-design §6.2).
+   A pen mark is authored ink and is held to the zone like the type (slide-design §6.2).
 4. **The ground and the strokes** (slide-design §1 · §3). The sheet must show the plate —
    a lighter top-left and a darker bottom — not a flat fill; a flat ground means the
    slide was not built from the current template. An editorial diagram since 0.52.0 shows
    the studio ground instead: a wall-and-floor seam below the zone, slab edges and contact
    shadows on the tag, bands and plates, a cast shadow under the type. Those shadows are the
    broadcast material (§1), not the generated-look marker — the marker is a wide soft spread
-   with no contact shadow, a card floating over the page. A footage slide has no plate by design
-   (§6.2) — its ground is the clip, and a photographic ground there is not a finding. Measure a structural line's thickness
+   with no contact shadow, a card floating over the page. A clip or a photograph as the ground
+   of a diagram is a finding — the footage slide is retired (§6.2). Measure a structural line's thickness
    on a full-size crop against the format's tokens (portrait `--hair` 3px / `--rule` 6px,
    wide 2px / 4px): a divider under `--hair` or an axis, connector or rail under `--rule`
    is P0-10. Read the smallest text against the §3 column for the slide's format the same
@@ -139,8 +137,10 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
    frames side by side and ask whether the picture — not the type, not the mark, not the
    number — changed from one group to the next. The same plate, screen or photograph under
    two or more sentences past the channel's static-ground limit (default 4 s, from
-   `window.MOTION_POLICY.maxStaticGroundSeconds`) is P0-11 whatever moved on top; a footage
-   slide clears it by construction when every group opens a different clip.
+   `window.MOTION_POLICY.maxStaticGroundSeconds`) is P0-11 whatever moved on top; an
+   explanation slide runs that clock per group — each group has to change the picture (the
+   primitive lands, the object moves, the value counts), and a group longer than the limit
+   needs its sustain layer.
 7. **Durations** from `manifest.tsv` against the tokens and the cap, and the coverage
    warnings from `summary.json` — a group frozen past 40% of its segment with no sustain
    costs motion points.
@@ -155,17 +155,9 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
      arrows, brackets, captions, glow, or a pan is P0-E1. A raster with text as its only
      authored layer is P0-E4 even when there is no camera move. Ask which two or more visual
      actors, document pieces, or relations construct the argument; if there are none, fail it.
-   - `"diagram"` + `treatment:"footage"` (slide-design §6.2): open `g<k>-mid` and `g<k>-end` for
-     every group and ask four things. Does the ground move (mid vs end differ in the picture
-     itself, not only in the mark) — a still or a frame frozen for most of the segment is P0-G1.
-     Is the mark the sentence — read `shots[k-1].mark` and the segment's `sub`, then find the mark
-     on the frame; a mark that is missing, decorative, or a third mark on one shot is P0-G2. Is
-     the mark on its subject in both frames — off the subject or drifted between mid and end is
-     P0-G3; over a face is P0-G4. Is it one accent colour drawn on, never faded — anything else is
-     P0-G5; a ground mark over the figures when `shots[k-1].matte` is set, or a matte with a hole
-     in the subject, is P0-G6. Read the clip itself for the photoreal tells (a duplicated face,
-     melting hands, scribbled text) under the generated-look axis. `zone_fill_pct` is `null` here
-     and is not a finding.
+   - `"diagram"` + `treatment:"footage"`: retired (2026-09-05). Report it as a P0 and stop —
+     nothing is drawn over video, and the beat has to be re-authored as an editorial slide on
+     the studio stage or a motion background with nothing on it.
    - `"diagram"` with `slide.object` (slide-design §9): open `g<k>-mid` and `g<k>-end` and look at
      the object itself — did its angle or its surface change between them, and is that change what
      the sentence says (stamps landing while the count runs, the disc rising to face the camera on

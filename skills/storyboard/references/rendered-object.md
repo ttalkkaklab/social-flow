@@ -9,7 +9,10 @@ slide plays that sheet back by moving `background-position`, so the frame at any
 time) is one number and the seek contract holds unchanged.
 
 Where it comes from: the 2026-09-04 object-slide pass
-(`docs/research/2026-09-04-rendered-object-slide/`). Three earlier attempts were measured
+(`docs/research/2026-09-04-rendered-object-slide/`; the finished proposal slide is
+`reference-slide.html` there — since the 2026-09-05 directive that every explanation cut is an
+HTML slide and never video, it is the quality bar every timeline · statistic · principle slide
+is held to). Three earlier attempts were measured
 against each other — a vector "3D" illustration (no material), a generated image per group
 (material, but $0.20 a group and coordinates re-measured every episode), and a studio plate
 with lit slabs and type (right, but with nothing standing in the space). The rendered object is
@@ -31,8 +34,8 @@ the fourth: the studio plate kept, plus an object that is a render.
   *is* the value being spoken. The object's frames are the sustain layer for that sentence.
 - The thing is a generic shape, not a specific artefact. A clay disc, a tablet, a coin, a
   block are shapes; the actual Phaistos Disc, a named person, a real building are not — those
-  go to the footage lane (`footage-lane.md`), which was measured to carry material at $0.20 a
-  group. `bake-object.py` ships one shape (`disc`, a rounded cylinder with an irregular rim);
+  are a generated still or clip with nothing drawn on it (the footage lane under marks is
+  retired, 2026-09-05). `bake-object.py` ships one shape (`disc`, a rounded cylinder with an irregular rim);
   a new shape is one SDF function added to its `SHAPES` table, and the light rig, the camera,
   the wall-shadow compositing and the sheet contract are reused as they are.
 - Cost is zero per episode. The bake is CPU work — a 72-frame sheet takes about five minutes

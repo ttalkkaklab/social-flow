@@ -1,5 +1,12 @@
 # Footage lane — one generated clip per sentence, wordless marks drawn over it
 
+> **Retired 2026-09-05 — kept as history.** Nothing is drawn over video (user directive,
+> CLAUDE.md §Nothing is drawn over video — it outranks everything below). `check-scenes.js`
+> and `check-slide.js` reject `treatment:"footage"`. An explanation beat is an editorial HTML
+> slide on the studio stage (`rendered-object.md`, slide-design.md §1 · §9, bar:
+> `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`); an event or a place
+> is a motion background or a b-roll with nothing drawn on it. Do not follow this file.
+
 The procedure for `visual.slide.treatment:"footage"`. The contract is scenes-schema §footage
 treatment, the look and the rubric are slide-design.md §6.2, the machine checks are
 `check-scenes.js` and `check-slide.js`, and the renderer is `render-motion-slide.mjs`. This
@@ -19,7 +26,7 @@ subtitle spec built for plates.
 - [1. When a scene is a footage slide](#1-when-a-scene-is-a-footage-slide)
 - [2. Writing the scene (§4)](#2-writing-the-scene-4)
 - [3. Fitting the clips to the budget (storyboard §5)](#3-fitting-the-clips-to-the-budget-storyboard-5)
-- [4. Generating the clips and authoring the marks (produce §3 · §3.6)](#4-generating-the-clips-and-authoring-the-marks-produce-3--36)
+- [4. Generating the clips and authoring the marks (produce §3 · §3.6)](#4-generating-the-clips-and-authoring-the-marks-produce-3-36)
 - [5. Build (produce)](#5-build-produce)
 - [6. Traps](#6-traps)
 

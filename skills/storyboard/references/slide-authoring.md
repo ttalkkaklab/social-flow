@@ -114,14 +114,10 @@ rubric the reviewer applies.
      darkens the text areas with `h.scrim(0)` (both in the base group), but the subject or
      evidence itself must change as `visual.action` and `slide.plan` say. Animating only
      brackets, callouts, captions, glow, or the whole image fails review.
-   - A diagram with `treatment:"footage"` is authored **after its clips exist** (produce §3,
-     `footage-lane.md`). Run `footage-frames.sh <storyboard dir> s<n>` for the mid frames, then in
-     `renderSlide()` lay `h.footage(k, shots[k-1].clip)` for every group and draw the mark the plan
-     names — `h.mark.route` · `x` · `ring` · `hatch` · `box` · `dot` · `path`, coordinates in canvas
-     pixels read off the mid frame — and `h.matte(k, shots[k-1].matte)` on a shot that has one. No
-     `h.tag`, no `h.title`, no plate: the clip is the ground and the subtitle is the type.
-     slide-design.md §6.2 is the rubric; `zone_fill_pct` is `null` on this treatment and the
-     renderer skips the entrance cap (the clip runs the whole segment by design).
+   - `treatment:"footage"` is retired (2026-09-05 — nothing is drawn over video; CLAUDE.md
+     §Nothing is drawn over video). Never lay `h.footage` or `h.matte`, and never draw a
+     `h.mark.*` over a clip or a photo. The pen marks belong on the studio ground only
+     (slide-design.md §6.2, `pen:true`).
 2. **Machine check** — `node references/check-slide.js <storyboard directory> --require-all`
    (`motion:true` written, `__seek` present, no `transition`, no clocks or timers, no web
    fonts, every Korean string in scenes.js, no shadow or gradient outside the template's studio

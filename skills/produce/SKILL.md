@@ -119,11 +119,11 @@ data/<channel>/episodes/<topic>/
    **Generated-video slots follow the approved channel motion policy.** Count b-roll and
    motion-background scenes (`visual.video`) together. The format default is 2 and a profile
    may override it with `generated_video_max`; HTML motion slides never spend one of these
-   paid slots. **Footage shots are budgeted instead of counted** — the channel's
-   `video_budget_usd` (plugin default $10 per episode, billed and projected generated video
-   together) is the ceiling `cost-preview.js` enforces, and no picture may hold the screen
-   past `max_static_ground_seconds` (default 4 s) — a plate or a still under two sentences is
-   a storyboard defect, not something produce papers over with a Ken Burns move. Inside that
+   paid slots. The channel's `video_budget_usd` (plugin default $10 per episode, billed and
+   projected generated video together) is the ceiling `cost-preview.js` enforces, and no
+   picture may hold the screen past `max_static_ground_seconds` (default 4 s) — a plate on an
+   `other` beat or a still under two sentences is a storyboard defect, not something produce
+   papers over with a Ken Burns move (an explanation slide runs that clock per group). Inside that
    window the still keeps moving too: every still card carries a Ken Burns move (§6), and the
    build refuses a frozen one. Produce never
    lowers a profile motion floor to save a call; it stops when the approved storyboard cannot
@@ -161,6 +161,15 @@ data/<channel>/episodes/<topic>/
    **6.2 spoken characters/s overall and per substantive cue**.
    The outro stays at 1.0x. What goes to `output/` is `reel-fast.mp4` ·
    `reel-sub-fast.mp4` · `subs-fast.srt`, never the pre-pass files.
+16. **Nothing is drawn over video, and explanation is an HTML slide** (user directive
+   2026-09-05 — it outranks every other rule here and in every reference doc; CLAUDE.md
+   §Nothing is drawn over video). No arrow, route, X, ring, hatch, bracket, dot, label or
+   callout goes over a generated clip, a motion background, a b-roll, a quote clip or a
+   recording; the burned subtitle is the only type on a moving picture. A cut that needs an
+   arrow, a figure or a principle is `kind:"diagram", motion:true, treatment:"editorial"` on
+   the studio stage, with a rendered object when a thing is the subject, built to the quality
+   of `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. The footage slide
+   (`treatment:"footage"`) is retired and the checkers reject it.
 
 ## Procedure
 
@@ -523,7 +532,7 @@ means skip this step.**
 **The slides are authored here, not in the storyboard** (owner directive 2026-09-04 — slide
 arts are generated images, and no image is made before approval). What arrived from the
 storyboard is the plan in `visual.slide`: the kind, the `labels`, the `motionBeats`, the
-`arts` list, and on a footage slide the `shots[]`. Follow
+`arts` list, and the `object` when the slide carries a rendered thing. Follow
 [slide-authoring.md](../storyboard/references/slide-authoring.md) and build them in this
 order.
 
@@ -533,8 +542,10 @@ order.
    `.work/cost-tally.tsv`. Sit a principle actor with `h.fig`.
 2. **Author the HTML** from the matching template. A principle frame is a `.cast` of actors
    plus rules (`h.stem` · `h.bus` · `h.chamber`); kinetic `renderKinetic` puts the first art on
-   group 1 then the title with `in`; type-only skips arts. **A footage slide waits for its
-   clips** — those came out of §3 (footage-lane.md §4 authors the marks against them).
+   group 1 then the title with `in`; type-only skips arts. An explanation slide is built on
+   the studio stage to the bar of
+   `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`; a `slide.object` is
+   baked first (rendered-object.md §3). Nothing is laid over a clip (absolute rule 16).
 3. **Run the contract, then render the sheet.**
 
    ```bash
@@ -831,9 +842,9 @@ first word's onset. The `Phrase` style has its own side margins (`SUB_PHRASE_ML`
 2026-09-02 (65 cues in 114 s, 4.4 words per cue, a new line every 1.75 s, one ~66px glyph
 line at 63% of the frame height, a thin outline, no box). The `Phrase` style is
 `SUB_PHRASE_SIZE` (92 — ≈66px Hangul), `SUB_PHRASE_MV` (680 — the 63% line) and
-`SUB_PHRASE_OUT` (4). It is the mode to pair with footage slides (storyboard
-`references/footage-lane.md`): a 2-line 50px sentence under a 2-second cut reads as a caption
-on a photo, a one-line phrase reads as part of the picture. The SRT keeps whole sentences.
+`SUB_PHRASE_OUT` (4). It is the mode for an episode cut fast on generated clips: a 2-line 50px
+sentence under a 2-second cut reads as a caption on a photo, a one-line phrase reads as part
+of the picture. The SRT keeps whole sentences.
 
 **The still move comes from the storyboard, not from taste.** A still's
 `visual.camera.movement` (when the storyboard wrote one — directing-grammar §5's Still

@@ -67,7 +67,16 @@ const HOOK_TYPES = ['fear', 'empathy', 'curiosity', 'spoiler'];
 const HOOK_FORMS = ['paradox', 'gap', 'payoff', 'identify', 'number', 'secret'];
 const TYPES = ['cover', 'hooking', 'points', 'quote', 'broll', 'outro'];
 const COMPREHENSION_MODES = ['informational', 'narrative'];
-const SLIDE_TREATMENTS = ['editorial', 'photo-action', 'footage'];
+const SLIDE_TREATMENTS = ['editorial', 'photo-action'];
+/* User directive 2026-09-05 — it outranks every other rule in this file: nothing is drawn over
+   video. No mark, arrow, ring, hatch, bracket, label or callout goes over a generated clip, a
+   motion background, a b-roll or a recording. The footage treatment (one clip per sentence
+   under drawn marks, 0.47–0.53) is retired. A beat that would need an arrow, a figure or a
+   principle on screen is an HTML slide on the studio stage (slide-design.md §1 · §9), authored
+   to the quality of docs/research/2026-09-04-rendered-object-slide/reference-slide.html. */
+const FOOTAGE_RETIRED = 'treatment:"footage" is retired (user directive 2026-09-05) — nothing is drawn over video; ' +
+  'an explanation beat (timeline · statistic · principle) is an editorial HTML slide on the studio stage, ' +
+  'an event or a place is a motion background or a b-roll with nothing drawn on it';
 const EDITORIAL_ROLES = ['evidence', 'relationship', 'mechanism', 'timeline', 'statistic', 'transition', 'verdict'];
 const INFO_TYPES = ['other', 'timeline', 'statistic', 'principle'];
 const INFO_ROLE = { timeline: 'timeline', statistic: 'statistic', principle: 'mechanism' };
@@ -160,7 +169,7 @@ const MOTION_PROFILE_KEYS = [
 // apply whether or not a profile declares a motion policy; a profile may raise, lower, or
 // switch each one off with `off`.
 const STATIC_GROUND_DEFAULT_SECONDS = 4;   // one picture may hold the screen this long
-const HTML_PLATE_DEFAULT_MAX = 2;          // authored plates per episode; the rest is footage
+const HTML_PLATE_DEFAULT_MAX = 2;          // authored plates on `other` beats per episode — explanation beats are HTML by directive and sit outside the cap
 const VIDEO_BUDGET_DEFAULT_USD = 10;       // generated video per episode — read by cost-preview.js
 
 function scalar(v) {
@@ -291,9 +300,6 @@ function motionKind(scene) {
   const v = (scene && scene.visual) || {};
   if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording')
     return 'recording';
-  // A footage slide is generated video under drawn marks (scenes-schema §footage treatment) — it
-  // counts as ai-video for the true-motion floor, not as an authored plate.
-  if (v.slide && v.slide.motion === true && v.slide.treatment === 'footage') return 'ai-video';
   if (v.slide && v.slide.motion === true) return 'motion-slide';
   if (scene && (scene.type === 'broll' || v.video || v.clip)) return 'ai-video';
   return null;
@@ -455,9 +461,9 @@ function check(win, fmt, opts) {
       });
     }
 
-    /* Authored plates are optional and capped by the channel policy (htmlPlateMax below) — an
-       informational short used to require 1–3 editorial frames; since 2026-09-03 the numbers
-       go on footage by default and a plate is a one-sentence verdict. */
+    /* Authored plates on `other` beats are optional and capped by the channel policy
+       (htmlPlateMax below). Explanation beats — timeline · statistic · principle — are HTML
+       slides by directive (2026-09-05) and are checked at the shot level, outside the cap. */
   }
 
   if (cover) {
@@ -694,7 +700,9 @@ function check(win, fmt, opts) {
      top of it — captions, a counting number, a camera drift over one still. The clock resets
      only when the picture itself changes: a generated clip (footage shot, motion background,
      b-roll, quote clip), a recording, or a new still under the next sentence. An HTML plate is
-     one picture for its whole length, so a plate is a one-sentence card by construction. */
+     one picture for its whole length, so a plate is a one-sentence card by construction — except
+     an explanation slide that declares a movement per narration group (`slide.motionBeats`,
+     directive 2026-09-05): there every group changes the picture, so the clock runs per group. */
   if (!draft && motionPolicy.maxStaticGroundSeconds !== null) {
     const rate = (pacing && Number(pacing.rate)) || 4.5;
     const secondsOf = (scene) => {
@@ -710,7 +718,10 @@ function check(win, fmt, opts) {
       if (kind === 'ai-video' || kind === 'recording') return;
       const segs = Array.isArray(scene.narration) ? scene.narration.length : 0;
       const stillPerLine = segs > 1 && scene.narration.every((seg) => seg && seg.img);
-      const longest = stillPerLine ? secondsOf(scene) / segs : secondsOf(scene);
+      const sl = scene.visual && scene.visual.slide;
+      const beatPerGroup = segs > 1 && sl && sl.motion === true && Array.isArray(sl.motionBeats) &&
+        Array.from({ length: segs }, (_, g) => g + 1).every((g) => sl.motionBeats.some((b) => b && Number(b.group) === g));
+      const longest = (stillPerLine || beatPerGroup) ? secondsOf(scene) / segs : secondsOf(scene);
       if (longest > motionPolicy.maxStaticGroundSeconds + 0.01)
         bad('shot ' + (x.index + 1),
             `one picture stays on screen ${longest.toFixed(1)}s — channel limit ${motionPolicy.maxStaticGroundSeconds}s; ` +
@@ -719,10 +730,10 @@ function check(win, fmt, opts) {
   }
   if (!draft && motionPolicy.htmlPlateMax !== null) {
     const plates = scenes.filter((scene) => scene && scene.type !== 'outro' && scene.visual &&
-      scene.visual.slide && scene.visual.slide.treatment !== 'footage');
+      scene.visual.slide && !INFO_ROLE[scene.shot && scene.shot.infoType]);
     if (plates.length > motionPolicy.htmlPlateMax)
-      bad('episode', `${plates.length} HTML plates — channel cap ${motionPolicy.htmlPlateMax}; ` +
-                     'put the numbers on footage (labels on a footage shot) and keep the plates for one-sentence verdicts');
+      bad('episode', `${plates.length} HTML plates on other beats — channel cap ${motionPolicy.htmlPlateMax}; ` +
+                     'keep the plates for one-sentence verdicts (explanation beats — timeline · statistic · principle — are HTML slides outside the cap)');
   }
 
   // ── Shot level ──
@@ -756,7 +767,9 @@ function check(win, fmt, opts) {
     const slide = v.slide;
     if (slide && slide.motion === true && (slide.kind || 'diagram') === 'diagram') {
       if (!String(slide.treatment || '').trim()) {
-        machine(where, 'motion diagram has no slide.treatment — choose editorial when HTML owns the frame, photo-action when the photographed subject itself changes, or footage when generated clips carry the scene under drawn marks');
+        machine(where, 'motion diagram has no slide.treatment — choose editorial when HTML owns the frame, or photo-action when the photographed subject itself changes');
+      } else if (slide.treatment === 'footage') {
+        bad(where, FOOTAGE_RETIRED);
       } else if (SLIDE_TREATMENTS.indexOf(slide.treatment) === -1) {
         bad(where, `slide.treatment "${slide.treatment}" is outside ${SLIDE_TREATMENTS.join(' · ')}`);
       } else if (slide.treatment === 'editorial') {
@@ -769,77 +782,29 @@ function check(win, fmt, opts) {
           machine(where, 'photo-action slide has no visual.action — name the subject or evidence change, not a camera or overlay move');
         if (!String(slide.plan || '').trim())
           machine(where, 'photo-action slide has no plan — map the subject change to each narration group');
-      } else if (slide.treatment === 'footage') {
-        /* Footage: one generated clip per reveal group under drawn marks (scenes-schema §footage
-           treatment). The clips are paid calls made at produce §3, so the plan, the shots and each
-           shot's camera and prompt exist before approval — the spend does not. Footage clips do not spend a generatedVideoMax
-           slot — the cost panel lists every one and the §5 gate is where the spend is approved. */
-        if (!String(v.action || '').trim())
-          machine(where, 'footage slide has no visual.action — say what the people or things in the clips do, not what the marks draw');
-        if (!String(slide.plan || '').trim())
-          machine(where, 'footage slide has no plan — one line per group: what the clip shows and which mark lands on it');
-        const shots = Array.isArray(slide.shots) ? slide.shots : null;
-        const segs = Array.isArray(s.narration) ? s.narration.length : 0;
-        if (!shots || !shots.length) {
-          machine(where, 'footage slide has no slide.shots — one clip per reveal group (a sentence may carry two via an A|B sub-reveal)');
-        } else {
-          if (segs && shots.length < segs)
-            bad(where, `footage slide has ${shots.length} shots for ${segs} narration segments — segment ${shots.length + 1} would play on nothing`);
-          const groups = new Set();
-          shots.forEach((sh, j) => {
-            const at = `${where} shots[${j}]`;
-            if (!sh || typeof sh !== 'object') { bad(at, 'shot is not an object'); return; }
-            const group = Number(sh.group);
-            if (!Number.isInteger(group) || group < 1) bad(at, `group ${JSON.stringify(sh.group)} is not a positive integer`);
-            else if (groups.has(group)) bad(at, `group ${group} appears twice — one clip per group`);
-            else groups.add(group);
-            const clip = String(sh.clip || '');
-            if (!clip) machine(at, 'no clip — slides/footage/s<shot>-g<group>.mp4, generated at produce §3');
-            else if (!/^slides\/footage\/s\d+-g\d+[a-z0-9-]*\.(mp4|webm)$/.test(clip))
-              bad(at, `clip "${clip}" is outside the slides/footage/s<shot>-g<group>.mp4 convention`);
-            if (sh.matte && !/^slides\/footage\/.+\.webm$/.test(String(sh.matte)))
-              bad(at, `matte "${sh.matte}" must be a VP9-alpha webm under slides/footage/`);
-            const engine = sh.engine || v.engine || 'seedance';
-            if (engine !== 'seedance' && engine !== 'veo') bad(at, `engine "${engine}" is not seedance or veo`);
-            const dur = Number(sh.duration);
-            if (!Number.isFinite(dur) || dur <= 0) machine(at, 'no duration — the seconds requested from the engine (4–12 on seedance, 8 on veo)');
-            else if (engine === 'seedance' && (dur < 4 || dur > 12)) bad(at, `duration ${dur}s is outside seedance 1.5 pro\'s 4–12s`);
-            else if (engine === 'veo' && dur !== 8) bad(at, `duration ${dur}s — veo generates 8s only`);
-            const cam = sh.camera || {};
-            ['movement', 'speed', 'framing', 'end'].forEach((slot) => {
-              if (!cam[slot]) machine(at, `camera.${slot} is empty — a footage shot leaves the storyboard with all four slots filled`);
-            });
-            if (!String(sh.prompt || '').trim()) machine(at, 'no prompt — store the assembled clip prompt (assemble-bg-prompt.js --clip)');
-            else seedancePromptFindings(sh.prompt, engine).forEach((f) => machine(at, f));
-            if (!String(sh.audio || '').trim()) machine(at, 'no audio — say what the clip sounds like even though the builder drops it');
-            if (!String(sh.mark || '').trim()) machine(at, 'no mark — name the mark that lands on this shot, or "none"');
-          });
-          for (let g = 1; g <= segs; g++) if (!groups.has(g)) bad(where, `footage slide has no shot for group ${g}`);
-        }
       }
     }
 
     /* Timeline · statistic · principle are semantic routing decisions, not styling hints.
-       They cannot fall back to a still, footage, or a photo with animated annotations. The
-       authored HTML must expose one declared meaning-bearing primitive for every spoken group;
-       render-motion-slide.mjs checks those declarations against the rendered DOM. */
+       They are HTML slides on the studio stage and nothing else (user directive 2026-09-05,
+       above every other rule): not a still, not a clip with marks or labels over it, not a photo
+       with animated annotations. The authored HTML must expose one declared meaning-bearing
+       primitive for every spoken group; render-motion-slide.mjs checks those declarations
+       against the rendered DOM. */
     if (INFO_ROLE[shot.infoType]) {
       const expectedRole = INFO_ROLE[shot.infoType];
       const allowed = INFO_PRIMITIVES[shot.infoType];
       if (!slide) {
-        machine(where, `${shot.infoType} beat has no visual.slide — it must be a footage slide with labels or a seekable editorial diagram`);
+        machine(where, `${shot.infoType} beat has no visual.slide — it must be a seekable editorial HTML slide on the studio stage; nothing is drawn over video (directive 2026-09-05)`);
       } else if (slide.treatment === 'footage') {
-        /* The footage route (default since 2026-09-03): the value the sentence states goes on
-           screen as a label over the moving clip; the mark points at what it counts. */
-        if (!Array.isArray(slide.labels) || !slide.labels.filter((l) => String(l || '').trim()).length)
-          machine(where, `${shot.infoType} beat on footage has no slide.labels — the value the sentence states has to be on screen`);
+        /* already reported as FOOTAGE_RETIRED above */
       } else {
         if ((slide.kind || 'diagram') !== 'diagram')
           machine(where, `${shot.infoType} beat uses kind:"${slide.kind}" — it must use kind:"diagram"`);
         if (slide.motion !== true)
           machine(where, `${shot.infoType} beat has no slide.motion:true — a still frame is not allowed`);
         if (slide.treatment !== 'editorial')
-          machine(where, `${shot.infoType} beat uses treatment:"${slide.treatment}" — it must use treatment:"editorial" or "footage" with labels`);
+          machine(where, `${shot.infoType} beat uses treatment:"${slide.treatment}" — it must use treatment:"editorial" (an HTML slide; nothing is drawn over video)`);
         if (slide.role !== expectedRole)
           machine(where, `${shot.infoType} beat uses slide.role:"${slide.role}" — expected "${expectedRole}"`);
 
@@ -1138,23 +1103,11 @@ function selftest() {
                   camera: { movement: 'dolly in', speed: 'very slow', framing: 'high wide', end: 'road mid-frame' },
                   prompt: SEEDANCE_PROMPT, audio: 'wind' }] }, (over && over.slide) || {}) }, (over && over.visual) || {})
   });
-  ok('a footage slide with one clip per segment passes',
-     !has(bads(run([cover, footageScene(), goodShot, goodShot])), /footage slide|shots\[|slide\.treatment "footage"/));
-  ok('a footage slide with fewer shots than segments is a violation',
-     has(bads(run([cover, Object.assign({}, footageScene(), { narration: [{ tts: '가', sub: '가' }, { tts: '나', sub: '나' }] }), goodShot, goodShot])),
-         /1 shots for 2 narration segments/));
-  ok('a footage clip outside the naming convention is caught',
-     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'clips/a.mp4', duration: 5, prompt: SEEDANCE_PROMPT, audio: 'y', mark: 'z',
-       camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } }] } }), goodShot, goodShot])), /outside the slides\/footage/));
-  ok('a footage shot with empty camera slots is a violation',
-     bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5, prompt: SEEDANCE_PROMPT, audio: 'y', mark: 'z' }] } }),
-       goodShot, goodShot])).filter((f) => /camera\./.test(f.what)).length === 4);
-  ok('a footage shot outside the seedance duration band is a violation',
-     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 2, prompt: SEEDANCE_PROMPT, audio: 'y', mark: 'z',
-       camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } }] } }), goodShot, goodShot])), /outside seedance/));
-  ok('footage shots do not spend a generated-video slot',
-     !has(bads(run([cover, footageScene(), footageScene(), footageScene()])), /generated-video slots/));
-  ok('a footage slide counts as ai-video for the motion floor', motionKind(footageScene()) === 'ai-video');
+  ok('a footage slide is rejected — nothing is drawn over video (directive 2026-09-05)',
+     has(bads(run([cover, footageScene(), goodShot, goodShot])), /treatment:"footage" is retired/));
+  ok('a footage slide is not an ai-video kind any more', motionKind(footageScene()) === 'motion-slide');
+  const videoScene = Object.assign({}, goodShot, {
+    visual: { video: { engine: 'seedance', prompt: SEEDANCE_PROMPT }, action: 'riders enter the valley' } });
 
   // ── static ground · plate cap · budget key (owner directive 2026-09-03) ──
   const groundPolicy = normalizeMotionPolicy({ motion_min_true: 'off' }, 2, 'fixture');
@@ -1165,26 +1118,33 @@ function selftest() {
      normalizeMotionPolicy({ html_plate_max: 1, video_budget_usd: 6.5 }, 2, 'fixture').htmlPlateMax === 1 &&
      normalizeMotionPolicy({ video_budget_usd: 6.5 }, 2, 'fixture').videoBudgetUsd === 6.5);
   ok('a still that holds one picture past the limit is rejected',
-     has(bads(run([footageScene(), goodShot, footageScene()], null, { policy: groundPolicy })), /one picture stays on screen 6\.0s/));
-  ok('a footage slide never holds one picture',
-     !has(bads(run([footageScene(), footageScene(), footageScene()], null, { policy: groundPolicy })), /one picture stays/));
+     has(bads(run([videoScene, goodShot, videoScene], null, { policy: groundPolicy })), /one picture stays on screen 6\.0s/));
+  ok('a motion background never holds one picture',
+     !has(bads(run([videoScene, videoScene, videoScene], null, { policy: groundPolicy })), /one picture stays/));
   ok('a still per sentence resets the static-ground clock',
-     !has(bads(run([footageScene(), Object.assign({}, goodShot, { narration: [{ tts: '가', sub: '가', img: 'a.png' }, { tts: '나', sub: '나', img: 'b.png' }] }), footageScene()],
+     !has(bads(run([videoScene, Object.assign({}, goodShot, { narration: [{ tts: '가', sub: '가', img: 'a.png' }, { tts: '나', sub: '나', img: 'b.png' }] }), videoScene],
                    null, { policy: groundPolicy })), /one picture stays/));
   ok('a motion background resets the static-ground clock',
-     !has(bads(run([footageScene(), Object.assign({}, goodShot, { visual: { video: { engine: 'seedance', prompt: SEEDANCE_PROMPT }, action: 'waves' } }), footageScene()],
+     !has(bads(run([videoScene, Object.assign({}, goodShot, { visual: { video: { engine: 'seedance', prompt: SEEDANCE_PROMPT }, action: 'waves' } }), videoScene],
                    null, { policy: groundPolicy })), /one picture stays/));
   ok('an HTML plate longer than the limit is one picture',
-     has(bads(run([footageScene(), Object.assign({}, cover, { duration: 9 }), footageScene()], null, { policy: groundPolicy })), /one picture stays on screen 9\.0s/));
+     has(bads(run([videoScene, Object.assign({}, cover, { duration: 9 }), videoScene], null, { policy: groundPolicy })), /one picture stays on screen 9\.0s/));
+  const explain = (d, n) => Object.assign({}, semantic('statistic', 'statistic',
+      Array.from({ length: n }, (_, g) => ({ group: g + 1, primitive: 'count-up' }))),
+    { duration: d, narration: Array.from({ length: n }, () => ({ tts: '가', sub: '가' })) });
+  ok('an explanation slide with a movement per group runs the static-ground clock per group',
+     !has(bads(run([videoScene, explain(7, 2), videoScene], null, { policy: groundPolicy })), /one picture stays/));
+  ok('an explanation slide whose one group outruns the limit is still one picture',
+     has(bads(run([videoScene, explain(9, 2), videoScene], null, { policy: groundPolicy })), /one picture stays on screen 4\.5s/));
   const plateScene = (d) => Object.assign({}, cover, { type: 'points', beat: 'drip', transition: 'jcut', hookType: undefined, hookForm: undefined, duration: d });
   ok('HTML plates over the channel cap are rejected',
-     has(bads(run([footageScene(), plateScene(3), plateScene(3), plateScene(3)], null, { policy: groundPolicy })), /3 HTML plates — channel cap 2/));
-  const statFootage = (labels) => Object.assign({}, footageScene({ slide: { labels } }), {
+     has(bads(run([videoScene, plateScene(3), plateScene(3), plateScene(3)], null, { policy: groundPolicy })), /3 HTML plates on other beats — channel cap 2/));
+  ok('explanation slides sit outside the plate cap',
+     !has(bads(run([videoScene, explain(3, 1), explain(3, 1), explain(3, 1)], null, { policy: groundPolicy })), /HTML plates/));
+  const statFootage = Object.assign({}, footageScene({ slide: { labels: ['34개'] } }), {
     shot: Object.assign({}, goodShot.shot, { infoType: 'statistic' }) });
-  ok('a statistic beat may be drawn on footage with labels',
-     !has(bads(run([cover, statFootage(['34개'])])), /must use treatment|motionBeats|no slide\.labels/));
-  ok('a statistic beat on footage without labels is a violation',
-     has(bads(run([cover, statFootage([])])), /no slide\.labels/));
+  ok('a statistic beat on footage is rejected even with labels',
+     has(bads(run([cover, statFootage])), /treatment:"footage" is retired/));
   ok('an invented arts move is caught',
      has(bads(run([cover, Object.assign({}, goodShot, {
        visual: { slide: { file: 'slides/s2-k.html', kind: 'kinetic', motion: true, plan: 'x',
@@ -1271,10 +1231,6 @@ function selftest() {
   ok('the seedance prompt rules wait for the camera pass (--draft)',
      !has(bads(run([cover, motionScene('high wide, very slow dolly in. the riders cross.'), goodShot, goodShot], null, { draft: true })),
           /no consistency lock/));
-  ok('a footage shot carries the same rules',
-     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5,
-       engine: 'seedance', mark: 'z', audio: 'y', prompt: 'high wide, very slow dolly in, ending on road mid-frame. the riders cross.',
-       camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } }] } }), goodShot, goodShot])), /no consistency lock/));
 
   // ── scene transitions ──
   const dz = (over) => Object.assign({}, goodShot, over);
