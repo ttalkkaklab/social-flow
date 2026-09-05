@@ -136,7 +136,7 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
    **Then the picture itself across groups** (slide-design §6 P0-11): lay the `g<k>-mid`
    frames side by side and ask whether the picture — not the type, not the mark, not the
    number — changed from one group to the next. The same plate, screen or photograph under
-   two or more sentences past the channel's static-ground limit (default 4 s, from
+   two or more sentences past the channel's static-ground limit (default 8 s — one cut, from
    `window.MOTION_POLICY.maxStaticGroundSeconds`) is P0-11 whatever moved on top; an
    explanation slide runs that clock per group — each group has to change the picture (the
    primitive lands, the object moves, the value counts), and a group longer than the limit
@@ -158,6 +158,10 @@ Mark any input you couldn't open as "unverified" — never score what you haven'
    - `"diagram"` + `treatment:"footage"`: retired (2026-09-05). Report it as a P0 and stop —
      nothing is drawn over video, and the beat has to be re-authored as an editorial slide on
      the studio stage or a motion background with nothing on it.
+   - Every editorial diagram must satisfy `object-state-quality.md`: compare `subject.changes`
+     against the narration and `.work/slide-quality-review.md`. A physical subject labelled as
+     data to avoid rendering, a camera-only change, or a missing/unverified review is a P0.
+     A machine pixel-change pass does not establish material quality or meaningful motion.
    - `"diagram"` with `slide.object` (slide-design §9): open `g<k>-mid` and `g<k>-end` and look at
      the object itself — did its angle or its surface change between them, and is that change what
      the sentence says (stamps landing while the count runs, the disc rising to face the camera on

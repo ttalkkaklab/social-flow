@@ -42,10 +42,17 @@ any. Never modify files — return only the verdict and fix suggestions.
 
 ## Input (provided by the delegation prompt)
 
+For episode review, read `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/story-quality.md`
+and verify the current STORY review with `check-story.js`. Missing or stale evidence is P0.
+Check that the final edit still delivers the quoted payoff. A closing question or CTA is
+optional; do not penalize its absence or let attractive visuals excuse an unpaid promise.
+
 - `scenes.js` path — the SoT for facts and figures
 - `research.md` path (if present) — the ledger of verified claims
 - `output/<platform>/` copy files
 - Video-frame screenshot paths (one per completed reveal)
+- `.work/experience-review.md`, the final build report and storyboard.md's "hand to produce"
+  table, as defined in `skills/storyboard/references/retention-direction.md`
 - `data/<channel>/profile.md` — tone, theme, banned items
 - Platform grammar baseline: the plugin's `skills/platform-guide/references/platform-playbook.md`
 
@@ -55,6 +62,16 @@ any. Never modify files — return only the verdict and fix suggestions.
 
 If a path is missing, look for it with Glob; mark any input you couldn't find as
 "unverified" — never pass what you haven't seen.
+
+For deliverable review, compare the handoff's promise and payoff with the final evidence.
+Cite scene/group identifiers and final-video times for lost reveals, an unpaid opening
+promise, a sound event absent from the rendered mix or speech masked by music/SFX.
+Distinguish the author's playback observations from your own. Frames cannot establish
+audio quality or motion timing. A missing experience report or an essential check marked
+unverified prevents PASS; report the missing evidence and a correction directive using
+the existing verdict format. Editorial concerns about pace need a specific span and
+reason; do not claim that a score proves completion rate. Plan mode skips this final-video
+check because the deliverable does not exist yet.
 
 **Blind read first.** Open `output/youtube/meta.md` and the first 125
 characters of `output/instagram/caption.md` before anything else — before
@@ -288,6 +305,11 @@ you still can't find it, report every surface as "unverified" (never as all-S1
     (platform-playbook §2). Judged from the blind read above, not from the
     checker — `check-meta.js` sees only a verbatim copy. The Threads body and a
     one-line fact notice are the two surfaces allowed to tell.
+11. **Experience not verified or not delivered**: the required final-playback report is
+    missing, an essential motion/listening check is unverified, the main promise has no
+    payoff, or an essential reveal/sound is missing or unintelligible in the final edit.
+    Name the missing evidence or cite the observed scene and time. A subjective preference
+    for faster pacing alone is a correction directive, not this P0.
 
 ## Per-axis scores (additive out of 100; no points without evidence)
 

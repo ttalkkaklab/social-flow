@@ -88130,7 +88130,8 @@ var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
   "seedance.2-0-mini.720p",
   "seedance.2-0-fast.720p",
   "seedance.2-0.1080p",
-  "seedance.2-5.720p"
+  "seedance.2-5.720p",
+  "seedance.2-5.1080p"
 ]);
 var ELEVENLABS_KEY = {
   eleven_multilingual_v2: "tts.elevenlabs",
@@ -88239,7 +88240,7 @@ function isBillableTool(tool) {
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.54.0" },
+  { name: "social-flow", version: "0.55.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

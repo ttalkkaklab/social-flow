@@ -136,7 +136,7 @@ const SEEDANCE_FAMILY = {
  * episode loses its cost verdict. Membership is checked here instead, and an unpriced
  * combination comes back with a null key and a note saying which one, like an unmapped model.
  */
-const PRICED_VIDEO_KEYS = new Set([
+export const PRICED_VIDEO_KEYS = new Set([
     'veo.lite.720p', 'veo.fast.720p', 'veo.standard.720p',
     'veo.lite.1080p', 'veo.fast.1080p', 'veo.standard.1080p',
     'veo.fast.4k', 'veo.standard.4k',
@@ -145,7 +145,7 @@ const PRICED_VIDEO_KEYS = new Set([
     'seedance.1-5-pro-audio.1080p',
     'seedance.1-0-pro.1080p',
     'seedance.2-0-mini.720p', 'seedance.2-0-fast.720p',
-    'seedance.2-0.1080p', 'seedance.2-5.720p',
+    'seedance.2-0.1080p', 'seedance.2-5.720p', 'seedance.2-5.1080p',
 ]);
 const ELEVENLABS_KEY = {
     eleven_multilingual_v2: 'tts.elevenlabs',

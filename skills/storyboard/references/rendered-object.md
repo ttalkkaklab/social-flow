@@ -47,6 +47,10 @@ motion axis exactly as a spinning icon would.
 
 ## 2. Writing the scene (`slide.object`)
 
+First declare `quality:"object-state-v1"` and `subject.changes` as specified in
+[object-state-quality.md](object-state-quality.md). These are required at storyboard planning,
+not filled in after rendering. Each object key must realize the promised state change.
+
 `visual.slide` gains one field. Everything else on the slide scene is as in scenes-schema
 §slide scenes — `treatment:"editorial"`, `role`, `motif`, `labels`, `motionBeats`.
 

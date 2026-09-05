@@ -107,15 +107,11 @@
       data-primitive로 내보낸다. check-slide.js와 render-motion-slide.mjs가 두 선언을 맞춰 본다.
       principle 은 배우가 앉고(h.fig · h.disk · h.chamber) 관계가 그어진다(h.stem · h.bus · h.ring).
 
-  ■ 실사 컷 (treatment:"footage" — slide-design.md §6.2 · scenes-schema §footage 처리):
-      생성 클립이 문장마다 바탕이 되고(h.footage(rg, clip)), 그 위에 글자 없는 표식을 write-on 으로
-      그린다(h.mark.route · x · ring · hatch · box · dot · path). 클립·표식·매트는 흐름 밖 고정층이라
-      스테이지 gap 을 만들지 않고 DOM 순서로 겹친다 — 그룹 k+1 클립의 첫 프레임은 그룹 k 의 끝
-      프레임이고 1프레임 뒤에 컷이 떨어진다(상태 규칙 그대로). 표식 선은 pathLength 1 로 정규화한
-      stroke-dashoffset 1→0 이라 CSS 애니메이션이고 seek 로 재현된다. 글자는 h.mark.label 만, labels
-      에서. 매트(h.matte(rg, webm))는 인물만 남긴 VP9 알파 webm 을 표식 위에 얹어 선이 인물 뒤로
-      간다. 클립 길이(data-vdur)는 저작 때 나레이션 글자 수/4.5 초로 추정하고 렌더러가 --segs 로
-      세그먼트 길이에 맞춘다(클립보다 길면 끝 프레임에 얼고 렌더러가 경고한다).
+  ■ 실사 컷 (treatment:"footage") — 폐기 (사용자 지시 2026-09-05):
+      영상 위에는 아무것도 그리지 않는다. 생성 클립 위에 h.footage · h.matte · h.mark.* 로 표식을
+      얹는 이 레인은 check-slide.js 와 check-scenes.js 가 거부한다(treatmentRetired). 헬퍼와 CSS 는
+      옛 슬라이드를 읽으려고 남아 있을 뿐 새 슬라이드에서 부르지 않는다. 화살표·수치·원리가 필요한
+      컷은 아래 스튜디오 판 editorial 슬라이드로, 사건·장소는 표식 없는 모션 배경이나 b-roll 로 간다.
 
   ■ 스튜디오 판 · 구운 물체 (2026-09-04 — rendered-object.md · slide-design.md §1·§9):
       editorial 도해의 바탕은 스튜디오 판이다 — 벽과 바닥이 존 아래에서 만나는 사이클로라마 한 칸
