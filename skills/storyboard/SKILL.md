@@ -427,13 +427,17 @@ Core rules:
   blocks a weak ratio, an overlong still, or too many still shots in a row.
 - **Pick the screen body by the information job, not by the motion quota.** Film visible evidence;
   generate mood, place or people; draw structure, comparisons, steps and number flows. A picture cannot
-  replace a running result or hand action. Short informational episodes reserve **1–3 full-frame
-  editorial HTML cuts** for a document comparison, causal relation, mechanism,
+  replace a running result or hand action. Use **full-frame editorial HTML cuts** for a document
+  comparison, causal relation, mechanism,
   timeline, transition or verdict: set `treatment:"editorial"`, `role`, and one repeated `motif`.
+  **A shot that explains an arrow, a number, or a principle must use a full-frame HTML slide.** Build
+  the explanation inside that authored screen; never choose `treatment:"footage"` and never draw
+  arrows, circles, numbers, or explanatory marks over a video. A shot that does not explain one of
+  those things may use video, but the video stays clean except for the episode subtitle.
   Classify every narrated shot first: `shot.infoType:"timeline"` for ordered periods or dated
   events, `"statistic"` for measured counts·rates·shares·comparisons, `"principle"` for
-  causes·mechanisms·state changes, and `"other"` for the rest. The first three are drawn — **by default on
-  footage** (a footage slide whose `labels` carry the value, scenes-schema §slide scenes) or, for a one-sentence verdict, on an editorial plate with `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, and role `timeline` · `statistic` · `mechanism` respectively.
+  causes·mechanisms·state changes, and `"other"` for the rest. Draw the first three on a full-frame
+  editorial HTML slide with `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, and role `timeline` · `statistic` · `mechanism` respectively.
   On the plate route declare one `{group, primitive}` in `slide.motionBeats` for every narration segment. A still,
   kinetic type, or a photo with animated annotations cannot replace these cuts, and no picture holds the screen past `maxStaticGroundSeconds` (4 s). If a
   shot needs two types, split it. On a **principle** frame sit ink actors (`slide.arts` ·
