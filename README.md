@@ -28,13 +28,24 @@ cut that needs an arrow, a figure or a principle is an HTML slide on a lit studi
 with a baked 3D object when a thing is the subject, held to the quality of
 `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`; a scene where
 something **happens** — people move, a place, an action — is a generated clip with the
-subtitle as its only type. Generated video sits under the channel's `video_budget_usd`
-(default $10 an episode), no picture on an ordinary beat holds the screen longer than one
-sentence (`max_static_ground_seconds`, default 4 s), and an authored plate on such a beat is
-a one-sentence card (`html_plate_max`, default 2). Narration defaults to **your own voice on every scene**, so
+subtitle as its only type. **A short is cost-shaped** (user directive 2026-09-05): the hook
+is video — a motion background under the code-rendered cover title — at most one more cut is
+generated video, and every other cut is a still under its camera move or an HTML motion
+slide (`hook_video`, default on). Generated video sits under the channel's `video_budget_usd`
+(default $10 an episode), one still holds one cut at most (`max_static_ground_seconds`,
+default 8 s), and a one-picture plate on an ordinary beat is a one-sentence card
+(`html_plate_max`, default 2). Narration defaults to **your own voice on every scene**, so
 the shooting script (`script.md`) carries the lines for every shot — filmed shots get
 what to show, what to say, and the filename to save it as; the rest are voice-only
 recordings.
+
+Story approval uses an [evidence-backed contract](skills/storyboard/references/story-quality.md):
+choose supported content and an earned ending before polishing the hook. CTA is optional.
+Every spoken scene needs a purpose, and the narration review cites actual lines for meaning,
+progression, payoff and grounding. `check-story.js` and full `check-scenes.js` block missing
+or stale reviews before production; a numeric score cannot waive failure. Existing boards
+need a contract and review before rebuilding, without silently rewriting approved narration.
+These checks enforce the workflow, not a promised audience retention rate.
 
 The video pipeline (safe zones, reveal sync, subtitle contracts) and the SNS publishing
 client carry over from an earlier in-house plugin where they were verified in
@@ -233,6 +244,14 @@ the plugin with the flag above.
 
 ## Pipeline
 
+Story and production share a [direction guide](skills/storyboard/references/retention-direction.md).
+Each development pays part of the opening promise with evidence or a changed expectation.
+The board maps those beats to visible changes, sound events and the final payoff. Production
+checks that map against the finished video at delivery speed, including a listen to the mix.
+Autoproduce keeps its single-bed budget and can use music drops and available sound effects.
+Unverified essential playback checks hold the episode from the publish queue. These are
+editorial checks; completion-rate improvements require audience measurements.
+
 ```
 /social-flow:channel add my-channel        # 1. channel profile (once)
 /social-flow:branding my-channel           # 1.2 (optional) profile image — 4 candidates → HITL pick → 95-point convergence
@@ -273,9 +292,10 @@ cross-verified claims), three seven-item scenario candidates judged in one batch
 (the chain, then the words — three reads each, the sentences handed inline), the copy style
 checker and the contract checkers, build report (drift 0), one content-reviewer read at 95
 with P0=0, and a cost cap. The **economy tier is the
-default**: no Veo calls at all (still backgrounds + Ken Burns), roughly $0.26–0.29
-per episode (capped at $0.30); only when hook metrics fall below threshold does the
-4-second cover get promoted to `veo-3.1-lite`. Authoring is capped at **2 episodes
+default**: a silent Seedance motion background under the cover (the hook is video), still
+backgrounds with Ken Burns for the body, roughly $0.61 per episode ($0.90 on the veo-lite
+fallback, plan cap default $1.00); only when hook metrics fall below threshold does the
+one b-roll after the cover get promoted to `veo-3.1-lite`. Authoring is capped at **2 episodes
 per platform loop per day** (hard cap, counting successes and failures), and
 `check-duplicate.py` compares every candidate topic against the channel's whole back
 catalog to throw out rewordings of things already made. Ladder, promotion rules, and
@@ -436,7 +456,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional lane — default stays Z-Image. Hangul still goes to gpt_image. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **the text-and-quality path**: text rendering, arbitrary WIDTHxHEIGHT, up to 16 reference images, mask inpainting) |
 | Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
-| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x). Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x). Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Ordinary hooks use 1.5 Pro; eligible complex action and reference cuts use 2.0, fixed voice or over nine reference images use 2.5. The storyboard records the reason and forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table) |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |
 | Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |

@@ -1,5 +1,10 @@
 # The scenario stage — three candidates, scored, then one pick
 
+Read [story-quality.md](story-quality.md) before drafting. It governs the meaning, evidence
+and ending of every candidate. Keep the seven headings, but modern parallels are optional,
+마무리 delivers the supported resolution, and CTA may be `없음` with a reason. No score
+waives a missing message or unpaid promise. This supersedes conflicting item rules below.
+
 `scenario.md` is what the storyboard skill writes before §4 opens a shot: one page that
 lays out the episode as an investigation while a story candidate still costs a page
 instead of a board. Both formats run this stage. On long-form a candidate used to be a
@@ -41,8 +46,8 @@ hold.
    own words; it does not paste sentences across. This is the rule `ingest` already applies
    to a recording transcript ("raw material, not a script") and it applies here for the
    same reason.
-2. **Three lines are the exception.** The 훅's first spoken sentence, the 마무리 question and
-   the CTA's callback line go across verbatim as §4's first edit — they are the lines
+2. **Approved anchor lines are the exception.** The 훅's first sentence, the 마무리 resolution and
+   any chosen CTA line go across verbatim as §4's first edit — they are the lines
    scenario-craft §12 says to write first, and the user approved them with the pick. From
    the moment they land in `scenes.js`, `scenes.js` is where they live.
 3. **It freezes when §4 opens.** Stamp `frozen: <YYYY-MM-DD HH:MM>` in the frontmatter on
@@ -53,6 +58,11 @@ hold.
    stage was built to avoid.
 
 ## Viewer engines — what the 95 bar actually scores
+
+Read [retention-direction.md](retention-direction.md) §1 before drafting the three pages.
+Use its expectation, early payment and causal-link tests within the seven items below.
+After narration approval, §2 carries those decisions into the board and the production
+handoff. A numeric score is an editorial judgment, not a forecast of viewer retention.
 
 On the attended path the user is the judge of this stage; the reviewer reads it only on the
 unattended path, once, all three pages in one call (0.50.0). The 95 bar below is what that
@@ -148,7 +158,7 @@ A read that comes back `p0 > 0` is not a pass even at 95.
 ### Pick
 
 **Show the three pages in full first** — for each candidate, the seven items as written
-(the 훅's first sentence, the three 전개 paragraphs, the 마무리 question, the CTA line)
+(the opening, three developments, earned resolution and optional CTA decision)
 and its engine. A one-line option is not what gets approved; the seven items are. Then
 the choice.
 
@@ -188,18 +198,18 @@ minimum sits before the burst — usually the darkest beat inside 전개 #1, dee
 page whose signs run −2 · −1 · +1 · +1 · +2 · +2 with the peak on the question is the
 straight climb §12 names as the least-read shape; on the first test run (2026-09-02) three
 of five pages carried exactly that row, and the reviewer scored the curve axis 7–9 of 15.
-The 훅's promise has to reach the present for the same reason: a promise the historical
-fact already keeps is paid at 전개 #1, and 전개 #2·#3 then have nothing to close.
+The promise must leave necessary developments for the body. It may concern the historical
+event itself; inventing a modern connection to prolong it is not a solution.
 
 | # | Item | What goes in it |
 |---|---|---|
 | 1 | **주제** | What the episode makes the viewer think about — one sentence in the viewer's words, at the 초3~4 floor (korean-style §Eye level). Not a topic label ("로즈웰 사건") but the thought they leave with ("설명이 바뀌면 사람들은 무엇을 믿게 되나"). `COMPREHENSION.question` and `takeaway` are cut from this line. |
 | 2 | **훅** | A dramatised scene that pulls the viewer in — a person at that moment, a "만약 그날 …" the viewer can picture. Its first spoken sentence names what is at stake before anything is asked; it ends on the promise — what the viewer will know by the end. It may invent a scene. It may not invent a fact (below). |
 | 3 | **전개 #1** | What actually happened — the real event behind the hook, told as an account (who · when · what), every fact on a `research.md` row. Where the research holds an answer most viewers would guess first, this item opens on it and takes it apart (scenario-craft §11). |
-| 4 | **전개 #2** | What that event makes us think about now — the bridge from then to today, spoken as a thought, never left to the cut. This is the episode's turn: the past re-reads as a present question. On `answer-first` it plays before 전개 #1, so it names the event itself instead of pointing back at it. |
-| 5 | **전개 #3** | 2–3 present-day cases that carry the same thought — each named, each with one sentence on what it has to do with the topic, each pointing at a research row. |
-| 6 | **마무리** | The question to the viewer — what do you think? Worded so it produces comments. A memory-shaped wording ("여러분 집에서는 누가 …") still draws the most stories, so use it when the material allows; an opinion question is the item, not a defect. It never takes back what the page charged for — "사실 확실한 건 아닙니다" as the last thing said cancels the stake the 훅 named (scenario-craft §13; reviewer P0-14), and a limit worth stating is stated in 전개. |
-| 7 | **CTA** | What the viewer does next — the callback line that re-reads the 훅 with the turned meaning, plus one outward act: the comment invite on the 마무리 question, or the next episode's promise. Subscribe and like stay banned. |
+| 4 | **전개 #2** | The next necessary evidence, choice or consequence that changes understanding. A modern bridge is optional. On answer-first this supplies the early result and names its subject directly. |
+| 5 | **전개 #3** | Develop or test the answer with evidence, action or a limit. Use sourced modern cases only when they serve this content; no minimum case count. |
+| 6 | **마무리** | The earned resolution: answer the opening with evidence or a decisive action and make the meaning understandable. State limits honestly. Do not outsource the answer to a generic opinion question. |
+| 7 | **CTA** | Optional. Write `없음` and why the ending is sufficient, or one relevant ask after the resolution. Never use an ask to replace the answer. Subscribe and like stay banned. |
 
 ### 훅 may invent a scene, not a fact
 
@@ -212,11 +222,9 @@ rather than an unsourced claim, and 전개 #1's first sentence is where the fact
 
 ### The cases in 전개 #3 exist before the pick
 
-Three candidates need six to nine present-day cases between them, and they are written
-after first research. So §2.1's question map carries a row for the present-day cases each
-direction would use, and a case on a candidate page points at a search-log row with a
-source. The winner's cases are raised to Verified rows at §2.3; the two losing candidates'
-cases never become a claim or a caption.
+When a candidate uses modern cases, source them before the pick and connect each to the
+main content. A candidate may use none. Raise the winner's used claims to Verified rows
+at §2.3; unused cases never become a claim or caption.
 
 ### The seven items onto the board (§4 reads this)
 
@@ -226,13 +234,13 @@ cases never become a claim or a caption.
 | 전개 #1 | `drip`, 1–2 shots | `body` | `body` |
 | 전개 #2 | `drip`, 1 shot | `result` — the present answer plays before the body | `turn` |
 | 전개 #3 | `drip`, 1–2 shots — the last drip is where the answer is first complete | `body` | `result` |
-| 마무리 + CTA | `cta` — one shot, the last narrated one; the 마무리 question and the CTA callback are its two narration segments | `cta` | `cta` |
+| 마무리 + optional CTA | `cta` — the last narrated shot delivers the closing meaning, with an optional ask after the answer; no fixed group count | `cta` | `cta` |
 
 A short lands inside the 4–7 shot band (5–7 by this map). Long-form keeps the arc
 storyboard §2.3 picked (scenes-schema §playback order): unfinished-sentence material is
 `story`, where 전개 #2 is the turn; everything else is `answer-first`, where 전개 #2's present
-answer is the result shown before the body. `COMPREHENSION.question` is the **present-tense** question that 전개
-#2 and #3 close, not the past event 전개 #1 tells — on a short the last drip has to be the
+answer is the result shown before the body. `COMPREHENSION.question` is the specific question
+the episode answers, historical or present-day. On a short the last drip has to be the
 first place the answer is complete (scenes-schema §playback order), and a question the
 historical fact already answers puts that moment at 전개 #1. On long-form, how 전개 #1's
 investigation is laid out inside (curiosity loop · problem stack · …) is the one thing
@@ -279,10 +287,10 @@ taken apart, when the research holds one. Its darkest beat is usually the curve'
 3. <case, optional>
 
 ## 마무리 — feel <sign · feeling>
-<the question to the viewer, verbatim: "…">
+<the earned resolution, verbatim: "…">
 
 ## CTA — feel <sign · feeling>
-<the callback line verbatim: "…" · the outward act>
+<없음 + reason, or the optional relevant ask verbatim after the resolution>
 ```
 
 ## What it does not do

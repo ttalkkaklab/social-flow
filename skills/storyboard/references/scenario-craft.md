@@ -494,21 +494,11 @@ stayed at one level, an end that summarized.
   recipe is the same list from the practice side — conflict inside 1–3 s, then 억울·분노·
   긴장, then the hint of a turn, then cut at the most curious moment (field practice). A body
   resting on a low-arousal feeling is where the swipe lives, whatever its sign.
-- **The end hands the feeling over.** The act row (scenes-schema §playback order) already
-  forbids the vague subscribe ask; the catharsis reading says why — a request right after a
-  release is a bill after a gift. **On a short the CTA may ask one outward act** — a comment
-  question, a next-episode promise, or a memory question that produces comments. Subscribe and
-  like stay banned. **On long-form the last beat still asks for nothing:** two lines, a
-  callback that re-reads the cover's words with the turned meaning and puts the thing in the
-  viewer's own life (the §5 loop ending, made a you-line — "겨울을 나려고 만든 그 맛이, 지금
-  냉장고 속 그 맛이에요"), then a question. A memory-shaped one — "여러분 집 김치는 누가
-  담가요?" — gets a story in the comments where "지금도 김장을 하는 이유, 뭘까요?" gets a
-  debate or silence, so prefer it when the material allows. **Since 2026-09-02 the question
-  is the scenario's 마무리 item — what does the viewer think — on both formats** (user
-  directive; scenario-stage §the seven items), so an opinion question is no longer the
-  defect this bullet described, and the CTA item that follows it is the callback plus one
-  outward act (the comment invite, or the next episode) on long-form too. Subscribe and like
-  stay banned. Shorts loop, so the callback is also the line the cover is re-entered on.
+- **Deliver the ending before considering an ask.** Read [story-quality.md](story-quality.md).
+  On both formats, resolve the opening with specific evidence, action or a demonstrated
+  result. A callback can make the opening mean something different on replay. Default to
+  no CTA; if a relevant question or action helps, place it after the payoff. Do not require
+  two closing lines or a memory poll. Subscribe and like asks stay banned.
 - **Write the hook and the last line first.** 윤수영 (first-generation short-form writer):
   two or three lines of hook and ending, then everything in between — and what makes a scene
   land is 의외성, not description (field practice). The v4→v5 rewrite was exactly this: the
@@ -518,8 +508,8 @@ stayed at one level, an end that summarized.
   confirms it) — before a shot exists, because §4 is where a sentence can first be written
   down, and §4 asks for forty-odd values a shot at once (ep07's nine shots carry 449 between
   them), so a rule about writing order can't live there. The 훅's first spoken sentence, the
-  마무리 question and the CTA's callback are items on that page, and the sign of the feel
-  curve sits on every item's header. Those three lines go across verbatim; everything else
+  마무리 resolution and any chosen CTA are items on that page, and the sign of the feel
+  curve sits on every item's header. Those approved lines go across verbatim; everything else
   §4's story pass rewrites into the board in its own words, and §7 is where the sentences
   are read. What the user agrees to at §2.2 is the shape — this stake, this callback, this
   curve — while scenes are free. Unattended runs copy the same three lines into the
@@ -538,11 +528,10 @@ Checks the pass runs (§10's spirit):
 - The feel chart in storyboard.md carries a sign per shot; the minimum precedes `craft.burst`,
   the maximum sits on the turn or the result.
 - The cover's first spoken sentence names a loss or a stake before it names a question.
-- The 마무리 is a question to the viewer they can answer from what they heard, and the CTA
-  a callback plus one outward act — the comment invite, or the next episode — on both
-  formats. No line in the episode contains a subscribe or like verb.
-- Every feel on the chart is a high-arousal word; a shot whose feel is sad, calm or "nice"
-  with nothing at stake is the flat stretch §2 was looking for.
+- The 마무리 pays the promise with specific content. CTA is optional and follows the answer.
+  No line in the episode contains a subscribe or like ask.
+- Every feel is earned by a development. Quiet discovery, sadness and a pause can work;
+  intensity labels do not compensate for a scene without a purpose.
 
 ## 13. Cut points first, then half a step
 

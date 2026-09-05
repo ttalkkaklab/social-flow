@@ -58,6 +58,7 @@ const { spawnSync } = require('child_process');
 
 const SELF_DIR = __dirname;
 const REPORT_SH = path.join(SELF_DIR, 'cost-report.sh');
+const { scenePlan } = require('../../produce/references/seedance-route.js');
 
 function die(msg, code) {
   process.stderr.write('cost-preview: ' + msg + '\n');
@@ -165,7 +166,11 @@ function videoSlots(scenes) {
     const s = shot || {};
     const v = s.visual || {};
     const shotNo = i + 1;
-    if (s.type === 'broll') {
+    const plan = scenePlan(s);
+    if (plan && plan.engine === 'seedance') {
+      slots.push({ shot: shotNo, kind: plan.kind, engine: plan.engine, duration: Number(s.duration),
+        plan, label: plan.kind === 'motion' ? 'motion background' : plan.kind === 'quote' ? 'speech clip' : 'b-roll' });
+    } else if (s.type === 'broll') {
       const engine = v.engine === 'seedance' ? 'seedance' : 'veo';
       slots.push({ shot: shotNo, kind: 'broll', engine, duration: Number(s.duration) || 0,
                    label: 'b-roll after scene ' + (s.after === undefined ? '?' : s.after) });
@@ -249,8 +254,13 @@ function costFingerprint(scenes) {
     var slot = null;
     if (s.type === "broll") slot = ["broll", v.engine === "seedance" ? "seedance" : "veo", Number(s.duration) || 0];
     else if (v.video) slot = ["motion", (v.video.engine || v.engine) === "veo" ? "veo" : "seedance", Number(s.duration) || 0];
-    else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", "veo", 8];
-    if (slot) parts.push((i + 1) + ":" + slot.join("/"));
+    else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", (v.clip.engine || v.engine) === "seedance" ? "seedance" : "veo", Number(s.duration) || 8];
+    if (slot) {
+      var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
+      var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths"];
+      var settings = fields.map(function (key) { return config[key] === undefined ? null : config[key]; });
+      parts.push((i + 1) + ":" + slot.join("/") + ":" + encodeURIComponent(JSON.stringify(settings)));
+    }
     var sl = v.slide;
     if (sl && sl.treatment === "footage" && Array.isArray(sl.shots)) {
       for (var j = 0; j < sl.shots.length; j++) {
@@ -267,7 +277,9 @@ function costFingerprint(scenes) {
 /** Turns the slots into cost-tally.tsv rows. */
 function forecastRows(slots) {
   return slots.map((slot) => {
-    const route = ROUTES[slot.kind + '/' + slot.engine];
+    const plan = slot.plan;
+    const route = plan ? { key: plan.priceKey, fixedSeconds: plan.durationSeconds,
+      why: plan.tool + ' · ' + plan.model + ' · ' + plan.reason } : ROUTES[slot.kind + '/' + slot.engine];
     const qty = route.fixedQty !== undefined ? route.fixedQty
       : route.fixedSeconds !== undefined ? route.fixedSeconds : slot.duration;
     return {
@@ -517,7 +529,9 @@ function main() {
   const scenes = win.SCENES;
 
   // Stills first, then the video slots — the order the money goes out in produce.
-  const slots = stillSlots(scenes).concat(videoSlots(scenes));
+  let slots;
+  try { slots = stillSlots(scenes).concat(videoSlots(scenes)); }
+  catch (e) { die(e.message); }
   const rows = forecastRows(slots);
   const fingerprint = costFingerprint(scenes);
 
@@ -549,7 +563,7 @@ function main() {
 
   const spentFamilies = byFamily(spent.items);
   const channelProfile = findProfile(path.dirname(episodeDir));
-  const budget = budgetVerdict(spent.items, forecast.total, videoBudgetOf(channelProfile));
+  const budget = budgetVerdict(spent.items, videoSpent(forecast.items), videoBudgetOf(channelProfile));
   const result = {
     generated: new Date().toISOString().slice(0, 10),
     fingerprint,
@@ -565,6 +579,7 @@ function main() {
       slots: rows.length,
       rows: rows.map((r) => ({
         shot: r.slot.shot, kind: r.slot.kind, engine: r.slot.engine,
+        generation: r.slot.plan || null,
         key: r.key, qty: r.qty, label: r.slot.label, why: r.route.why
       })),
       unresolved: forecast.unresolved

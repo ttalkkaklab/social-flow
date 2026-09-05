@@ -35,6 +35,8 @@ data/<channel>/episodes/<topic>/
 
 ## Absolute rules
 
+Read [story-quality.md](../storyboard/references/story-quality.md) and run `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js storyboard/` before any generation or capture. Missing or stale reviews block production, including old boards; never rewrite approved narration silently. Then read [retention-direction.md](../storyboard/references/retention-direction.md) §2–§5 with the handoff. Resolve visible changes and sound events to scenes.js and supported controls. Preserve payoff, cost cap and voice; derive a missing handoff table without changing the narration. `beat:"cta"` permits a close with no ask.
+
 1. **No distorting facts** — narration and captions only recompose facts already in
    scenes.js. Don't collapse a range to its upper bound, and don't invent numbers.
 2. **No copy-paste crossposting** — "share the facts, never the sentences."
@@ -68,18 +70,18 @@ data/<channel>/episodes/<topic>/
    that much). **This rule is about b-roll inserts** — on a motion-background scene
    (scenes-schema §Motion background, `visual.video`) the builder uses only the video
    track, so the clip's sound gets dropped and the narration and subtitles stay as they are.
-10. **The cover's (first screen's) text is code-rendered only** — don't use **generated
-   video** for the cover. **Veo can't write Hangul** (user confirmed 2026-08-11). The cover
-   is a screen made of nothing but the hook title and the hero number, so broken glyphs
-   write off the whole episode. Put generated video in the **stretch after the cover** as
-   text-free b-roll.
-   **A real recorded clip is the exception** (2026-08-15) — the broken-Hangul reason for the
-   ban doesn't hold for a screencast. Laying the real result on screen (scrolling the
-   finished site, running the tool) as the cover **background** with the title and numbers
-   still code-rendered on top is allowed, and the movement in the first frame helps the
-   hook (aiming at the 84.8–93.8% skip rates measured in practice — Veo cost 0).
-   The clip has to be a user-supplied recording or an ingest artifact; don't use someone
-   else's copyrighted screen.
+10. **The cover's (first screen's) text is code-rendered only** — the engine never draws
+   the title. **Veo can't write Hangul** (user confirmed 2026-08-11), and the cover is a
+   screen of nothing but the hook title and the hero number, so broken glyphs write off the
+   whole episode. **On a short the picture under that text is video** (user directive
+   2026-09-05, `hook_video`): a motion background made from the cover still (§3, silent
+   seedance by default, the builder keeps only the video track so narration and the
+   code-rendered title stay), or **a real recorded clip** (2026-08-15 — scrolling the
+   finished site, running the tool, as the cover **background**; the movement in the first
+   frame is aimed at the 84.8–93.8% skip rates measured in practice). The clip has to be a
+   user-supplied recording or an ingest artifact; don't use someone else's copyrighted
+   screen. A text-free b-roll still goes in the **stretch after the cover**, never on it —
+   and on a short that is the one generated cut the hook leaves (rule 15).
 11. **The source image for generated video needs a person in it** — a still life of objects
    gives Veo nothing to move, so the frame wobbles faintly and ends, and those 8 seconds
    look like a freeze frame. With a person in it the model produces **natural movement** —
@@ -117,18 +119,19 @@ data/<channel>/episodes/<topic>/
    source makes a blurry video, and with no person in it the model finds nothing to move
    (rule 11).
    **Generated-video slots follow the approved channel motion policy.** Count b-roll and
-   motion-background scenes (`visual.video`) together. The format default is 2 and a profile
-   may override it with `generated_video_max`; HTML motion slides never spend one of these
-   paid slots. The channel's `video_budget_usd` (plugin default $10 per episode, billed and
-   projected generated video together) is the ceiling `cost-preview.js` enforces, and no
-   picture may hold the screen past `max_static_ground_seconds` (default 4 s) — a plate on an
-   `other` beat or a still under two sentences is a storyboard defect, not something produce
-   papers over with a Ken Burns move (an explanation slide runs that clock per group). Inside that
-   window the still keeps moving too: every still card carries a Ken Burns move (§6), and the
-   build refuses a frozen one. Produce never
-   lowers a profile motion floor to save a call; it stops when the approved storyboard cannot
-   meet both the floor and the cap. The contract's source of truth is scenes-schema §Channel
-   true-motion policy.
+   motion-background scenes (`visual.video`) together. The format default is 2, and **on a
+   short the first is the hook** (rule 10, `hook_video`) and the second is the one cut whose
+   `visual.why` says the movement is the content; a profile may override the cap with
+   `generated_video_max`. Every other cut is a still under its camera move — every still
+   card carries a Ken Burns move (§6), the build refuses a frozen one, and one still holds
+   one cut at most (`max_static_ground_seconds`, default 8 s; a longer cut swaps the still per
+   sentence) — or an HTML motion slide, which never spends a paid slot. A plate on an `other`
+   beat standing past that limit is a storyboard defect, not something produce papers over
+   (a slide with a movement per group runs that clock per group). The channel's
+   `video_budget_usd` (plugin default $10 per episode, billed and projected together) is the
+   ceiling `cost-preview.js` enforces. Produce never lowers a profile motion floor to save a
+   call; it stops when the approved storyboard cannot meet both the floor and the cap. The
+   contract's source of truth is scenes-schema §Channel true-motion policy.
 13. **Generation that costs money runs only after the plan is checked** — the cover
    background and the b-roll need a plan in the storyboard first (source prompt, motion,
    used length + why), and you check it yourself before calling `gpt_image_text2img` (high)
@@ -407,7 +410,7 @@ means generating something nobody approved.
   there you generate 8 and trim. Handing a model more seconds than the idea holds is how the
   middle of a clip goes dead — it fills the time it is given.
 
-**Which engine, how to word the prompt, and the recipe for each generated slot** —
+**Use the Seedance `generation` arguments from `cost-preview.js --json`; resolve errors and re-estimate retries before spending. Which engine, prompt, and per-slot recipe** —
 [video-generation.md](references/video-generation.md). It carries the face → sound → grid
 route between `veo_*` and `seedance_*`, each engine's prompt shape, and the per-slot recipes
 for b-roll, motion backgrounds and quote speaking clips. **Read it before the first
@@ -533,7 +536,7 @@ means skip this step.**
 arts are generated images, and no image is made before approval). What arrived from the
 storyboard is the plan in `visual.slide`: the kind, the `labels`, the `motionBeats`, the
 `arts` list, and the `object` when the slide carries a rendered thing. Follow
-[slide-authoring.md](../storyboard/references/slide-authoring.md) and build them in this
+[object-state-quality.md](../storyboard/references/object-state-quality.md) and [slide-authoring.md](../storyboard/references/slide-authoring.md); their plan, pixel and visual-review gates are required. Build in this
 order.
 
 1. **Generate `slide.arts` first** when the array is set — `slides/assets/s<shot>-<slug>.png`,
@@ -1130,6 +1133,8 @@ $REF/speedup.sh .work 1.6    # a channel-specific rate — profile.md §2 decide
 
 ### 8. Phone-mode QA (required before publishing)
 
+Run retention-direction.md §5 on the final video and save `.work/experience-review.md` for §10's reviewer. Frame checks verify layout; watching motion and listening verify timing, payoff and intelligibility. An unavailable check is unverified and holds publishing readiness.
+
 Copy `reel-qa.html` into `.work/` and shoot it **on a phone viewport with the platform UI
 overlay**, again with the headless Chrome the captures use. `?frame=1` draws the 390×844
 mockup, and a 470×920 window holds the whole phone including the right action rail
@@ -1309,10 +1314,7 @@ cost, and why it cost that.
 $REF/decisions.sh .work/decisions.tsv        # exit 1 means a bad line, not "no decisions"
 ```
 
-Put the lines whose choice differs from the storyboard's plan into the report — every
-`fallback`, and any `engine_selection` or `voice_selection` marked `revised`. Those are the
-places the finished video isn't what was approved, and the user should read that here rather
-than notice it in the video.
+Report every `fallback` and each `engine_selection` or `voice_selection` marked `revised`, so the user can see where production differs from the approved plan.
 
 On a pass, update storyboard.md to `status: produced`, present the artifact table (paths,
 length, platforms) together with the cost summary, and point the user at

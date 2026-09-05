@@ -1,22 +1,24 @@
 ---
 name: storyboard
 description: >
-  Plans one episode before anything costs money — research, 3 scenarios, then scenes. Use when
-  the user asks to "스토리보드 만들어", "스토리보드 작성", "이 주제로 영상 기획", "촬영 대본 만들어", "내가 녹화할 대본", "make a
-  storyboard", "plan a video for topic X", or starts a new topic in a channel. Researches the
-  topic, writes three scenario candidates in one fixed shape (주제 · dramatised 훅 · what happened
-  · what it means now · 2–3 present cases · 마무리 question · CTA), shows all three in full for the
-  pick, and writes the storyboard under data/[channel]/episodes/[topic]/storyboard/. Format is
-  picked first: 9:16 shorts by default, or 16:9 long-form with chapters. The narration is
-  written before any shot and read on its own twice — the chain, then the words — each looped to
-  95 in at most three reads; the board gets the contract checkers and the author's own read.
-  Nothing is generated here, so a storyboard costs nothing until the human says yes. Boundary —
-  this stops at approval; produce builds from it, autoproduce skips the stop.
+  Plans one episode and stops for approval before generation. Use when
+  the user asks to "스토리보드 만들어", "스토리보드 작성", "이 주제로 영상 기획", "촬영 대본 만들어", "내가 녹화할 대본", "make
+  a storyboard", "plan a video for topic X", or starts a new topic in a channel.
+  Researches the topic, writes three seven-item scenarios, shows
+  all three for the pick, researches the winner, and writes the storyboard
+  under data/[channel]/episodes/[topic]/storyboard/. Format with the user first: 9:16 shorts
+  by default, or 16:9 long-form with chapters. The narration is written before any shot and
+  read on its own twice — the chain, then the words — each looped to 95 in at most three
+  reads with the sentences handed to the reviewer inline; the board gets the contract
+  checkers and the author's own read. Plans each promise, visual change and sound event.
+  Nothing is generated here. Produce builds the approved board; autoproduce runs unattended.
 argument-hint: "<channel> <topic or topic hint>"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
 ---
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
+
+Read [story-quality.md](references/story-quality.md) before candidates or narration. Its evidence → meaning → ending → optional CTA contract overrides older mandatory-question and modern-case rules. Write `window.STORY` in §4a; draft checks require it. The existing narration review supplies its four evidence-backed findings; after vocabulary edits revalidate the read and run `check-story.js storyboard/` before §4b or approval. No score waives a failed criterion.
 
 Takes one topic through **research → three scenario candidates → one pick → more research →
 narration (the story pass) → narration read-through (looped to 95) → narration vocabulary
@@ -77,8 +79,8 @@ slug rule are all inherited from that file.
 
 **The channel profile outranks the generic format defaults.** Before choosing shots read
 `motion_min_true`, `motion_allowed_kinds`, `motion_max_consecutive_stills`, `motion_max_still_seconds`,
-`motion_require_action`, `generated_video_max`, and the three with plugin defaults — `max_static_ground_seconds` (4), `html_plate_max` (2),
-`video_budget_usd` (10); copy their normalized values into `window.MOTION_POLICY` (scenes-schema §Channel true-motion policy).
+`motion_require_action`, `generated_video_max`, and the four with plugin defaults — `max_static_ground_seconds` (8), `html_plate_max` (2),
+`video_budget_usd` (10), `hook_video` (on); copy their normalized values into `window.MOTION_POLICY` (scenes-schema §Channel true-motion policy).
 `check-scenes.js` compares the snapshot with the profile, so no episode can weaken it. A
 duration, shot-count or motion conflict stops here for the user to choose which contract changes.
 Produce checks it again: `minTrueMotion: 1`, zero still-run limits and `motion-slide` allowed
@@ -182,8 +184,8 @@ explanations compete — **3–5 rows**, not the episode's full 5–8.
    names the question, the hook form (`gap`·`number`·`identify`·`paradox`·`secret` — no
    `payoff` on a short), the **primary engine** (`curiosity`·`fear`·`intrigue`·`comedy` —
    three different primaries), the hero or unresolved thing, which claims hold it up, the
-   **2–3 present-day cases 전개 #3 would use** (a search-log row each — so the question map
-   has a row for them), and what the second pass still owes.
+   any modern cases the content actually needs (a search-log row each, or none),
+   and what the second pass still owes.
 
 Three verified claims is the floor below which there is no video (the same floor autoproduce
 drops a topic at), and **ten or more** searches is the floor below which there are no directions. Short of either, change the topic rather than inventing a third direction.
@@ -202,8 +204,8 @@ whatever stays unresolved, or drop that row (own-channel retention report, 2026-
 Turn each direction row into `candidates/d<n>.md` — **the seven items, in this order, on
 every candidate and both formats** (user directive, 2026-09-02): 주제 (what the viewer is
 made to think about) · 훅 (a dramatised scene) · 전개 #1 (what actually happened) · 전개 #2
-(what it makes us think about now) · 전개 #3 (2–3 present-day cases) · 마무리 (what do you
-think?) · CTA. Three different primaries (`curiosity` · `fear` · `intrigue` · `comedy`). Items,
+(necessary evidence or choice) · 전개 #3 (consequence, demonstration or limit) · 마무리
+(earned resolution) · CTA (optional, otherwise 없음 with reason). Three different primaries (`curiosity` · `fear` · `intrigue` · `comedy`). Items,
 caps, template, the 훅's fact rule and the item-to-beat map:
 [scenario-stage.md](references/scenario-stage.md). Skip-research channels skip this with
 the three-direction pick.
@@ -234,7 +236,7 @@ and §4.5 catch a story that does not carry. Test each page against scenario-sta
 engine test yourself before showing it: does the 훅 stage a moment, does 전개 #1 open on the
 false answer, does the feel curve dip. **Show the three pages in full before asking** — for
 each candidate print the seven items as written (the 훅's first sentence, the three 전개
-paragraphs, the 마무리 question, the CTA line) with its engine. A one-line option is not
+paragraphs, the earned resolution, the optional CTA decision) with its engine. A one-line option is not
 what the user approves; the seven items are. Then AskUserQuestion:
 
 ```
@@ -313,11 +315,11 @@ pick an arc** — hook → drip → cta (scenes-schema §playback order).
 ### 2.5 Confirm the structure — settled by the §2.2 approval, before any scene exists
 
 The seven items the user approved are the storyline on both formats: 훅 → 전개 #1 (what
-happened) → 전개 #2 (what it means now) → 전개 #3 (2–3 present cases) → 마무리 → CTA. Lay them
+happened) → 전개 #2 (evidence or choice) → 전개 #3 (consequence or limit) → 마무리 → optional CTA. Lay them
 onto beats with scenario-stage's item-to-beat map — a short writes `beat:"drip"` on the 전개
 shots and `beat:"cta"` on the last narrated shot; long-form keeps the §2.3 arc (`story`: 전개 #2
 is the `turn` · `answer-first`: its present answer is the `result`, first). The lines scenario-craft §12 says to write first —
-the 훅's first spoken sentence, the 마무리 question, the CTA callback — are items on the
+the opening, earned resolution and any chosen CTA are items on the
 approved page and go across verbatim as §4's first edit; the feel sign sits on each item's
 header. Nothing here is asked again.
 
@@ -410,6 +412,17 @@ Core rules:
     spoken shot. When going over 75s, write into the `storyboard.md` design rationale why
     dropping the demo or evidence in question would make the result impossible to
     understand (180s is the absolute cap).
+    **The body of a short is cost-shaped** (user directive 2026-09-05, scenes-schema
+    §Channel true-motion policy `hook_video`): **the hook is video** — the cover carries a
+    motion background under its code-rendered title (`visual.video`, the cover still as
+    the source) or a recording (`visual.source`); **at most one more cut is generated
+    video**, and only when the movement itself is the content, with the reason in
+    `visual.why`; **every other cut is a still under its camera move** (the still lane,
+    local engine, $0 — one still per cut, `narration[].img` when a cut runs past
+    `max_static_ground_seconds` 8 s) **or an HTML motion slide** (a movement per narration
+    group, the studio stage — explanation beats always, `other` beats when the sentence is
+    better drawn than photographed). `check-scenes.js` blocks a still hook and a second
+    generated cut with no `why`; the format cap of 2 holds the count.
   - **YouTube long-form 16:9**: **28–70 shots · 8–15 min** (20 min absolute cap) +
     **5–10 chapters** (3 or more in the filmed lane). The chapter contract is
     `references/scenes-schema.md` §chapter — write only the `chapter` string on the scene
@@ -436,6 +449,12 @@ Core rules:
   the studio stage, role `timeline` · `statistic` · `mechanism` respectively, and a rendered
   object (`slide.object`, `references/rendered-object.md`) when a thing is the subject. The
   quality bar is `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`.
+  **Before approval, read [object-state-quality.md](references/object-state-quality.md).**
+  Every editorial diagram must declare `quality:"object-state-v1"` and a `subject` with
+  observable before/after states for every narration group. Physical subjects require
+  `slide.object`; a camera move, flat cutout or settle does not satisfy the contract.
+  `check-scenes.js` blocks missing or invalid plans even in draft mode. Never waive this gate
+  to keep an unattended run moving. Do not modify an existing finished video to adopt the rule.
   Declare one `{group, primitive}` in `slide.motionBeats` for every narration segment; each
   group changes the picture, so these slides run the static-ground clock per group and sit
   outside `html_plate_max`. A still, a clip with marks or labels drawn over it, kinetic type,
@@ -459,12 +478,15 @@ Core rules:
   set by the storyboard — the user doesn't pick names. Whether the live voice carries the
   sound or narration covers it is decided here too (live voice means `narration: []`). The
   full text is scenes-schema §filmed scenes.
-- **On a motion-required short, pick the moving body before the background.** An event, a
-  place or an action beat on an `ai-video` channel is a **motion background or a b-roll clip
-  with nothing drawn on it** (`visual.video`, §5 slot rules) — the footage slide of 0.47–0.53
-  (clips under drawn marks) is retired, and no mark, label or callout goes over any clip.
-  A place, object or document that changes inside a photograph is `photo-action`: every group
-  changes a hand, debris, folder or trace, mirrored in `visual.action` and `slide.plan`. Whole-photo
+- **On a short, spend the one generated cut after the hook where the movement is the
+  sentence.** An event, a place or an action beat whose meaning is the motion itself is a
+  **motion background or a b-roll clip with nothing drawn on it** (`visual.video`, §5 slot
+  rules) with `visual.why` written; the beats that lose nothing as a photograph stay stills
+  under their camera move (directing-grammar §5 Still column — the move is chosen from the
+  feel, `pan` and `focus` for a cut that runs long). The footage slide of 0.47–0.53 (clips
+  under drawn marks) is retired, and no mark, label or callout goes over any clip. A place,
+  object or document that changes inside a photograph is `photo-action`: every group changes
+  a hand, debris, folder or trace, mirrored in `visual.action` and `slide.plan`. Whole-photo
   moves, drifting dust, flashing accents and animated subtitles still fail either contract.
 - **Long-form spreads one result across chapters over one episode; it isn't several
   short-form episodes stitched together.** A different topic per chapter makes a playlist,
@@ -510,8 +532,8 @@ Core rules:
   peak rather than up (§7). On every arc the feel chart carries a sign per shot and dips before
   it lifts — the minimum before `craft.burst`, the maximum on the turn or the result — the
   cover's first sentence names a loss or a stake before it asks anything, and on both formats
-  the cta is the 마무리 question plus the callback and one outward act (a comment invite or a
-  next-episode promise) with no subscribe verb (§12, catharsis). On
+  the closing beat delivers the earned meaning; a relevant ask is optional and follows the
+  answer, with no subscribe verb (story-quality.md). On
   informational episodes, walk §11's four checks last — the body's
   order against event time (the chronological-trap fingerprint), the promise sentence in the
   opening, the plausible wrong answer some scene takes apart, and the heaviest context stretch
@@ -563,7 +585,7 @@ Core rules:
   90 seconds run.
 - **On a short the shots after the cover are drip, then CTA.** n ≥ 1 drip shots. Each
   non-final drip pays one piece and opens the next gap; the last drip completes the answer;
-  the last narrated shot is `beat:"cta"` with one outward act. Do not write `beat:"hooking"`.
+  the last narrated shot is `beat:"cta"`, with an optional ask after the answer. Do not write `beat:"hooking"`.
   **On long-form the shot after the cover is hooking** — informational episodes included. If
   the cover stopped the thumb, hooking carries the stopped person to the result. The contract
   has four parts — **catch** what the cover threw, **hook** the viewer's problem with the
@@ -661,6 +683,12 @@ Core rules:
   second, and its face never transfers"). Unscoped references leak into each other, and the check
   strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character
   reference).
+- **Select Seedance per cut** using produce `references/video-model-selection.md` §Seedance
+  per-cut selection. Ordinary hook: 1.5 Pro. Essential complex action: 2.0 if the source
+  qualifies. Multiple character/product references: 2.0; fixed voice or over nine reference
+  images: 2.5. Record the purpose, reason, face eligibility and reference paths beside the
+  prompt (scenes-schema §Motion background). Rebuild the cost preview after any change;
+  its generation settings are the ones produce sends. Keep the hook-plus-one video cap.
 - **Every generated-video shot leaves here as one API call with its final prompt stored**
   (scenes-schema §clip prompt). The scene is the call: pick the planned route (`visual.engine`
   or the type default — b-roll → veo, motion background → seedance, speech clip →
@@ -742,15 +770,17 @@ reads scenes.js, research.md and the schema turns a two-minute verdict into a si
 
 ```bash
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
-node $PG/extract-text.js storyboard/scenes.js subtitle | nl -ba -w2 -s'. '   # numbered, one sentence a line
+node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js storyboard/ --text
 ```
 
 1. With `check-scenes.js --draft` at exit 0, **delegate to the storyboard-reviewer agent
    (Agent) in "narration mode"** with that numbered list, `window.COMPREHENSION` pasted as
-   written, and the `scenario.md` path (if present — a skip-research channel has none). No
+   written, STORY, relevant research excerpts with row IDs, and the scenario path if present. Read
+   the numbered speech first, then compare the supplied contract and evidence. No
    `scenes.js`, `research.md` or `profile.md` path. Tail:
    `STORYBOARD_REVIEW: mode=narration score=NN p0=N`. Findings cite sentence numbers; you
-   map them back to the shot and the segment.
+   map them with `check-story.js storyboard/ --map`. Record all four quoted findings in STORY.review
+   as specified in story-quality.md; after vocabulary edits recheck before setting a fresh hash.
 2. **Apply the directives in `scenes.js` as spoken sentences** — add the antecedent, say what
    the picture would have shown, speak the present link, name the case's connection, explain
    the term where it first appears. Never answer a finding with a caption or a picture. Keep
@@ -848,6 +878,11 @@ user is the one who will read these sentences aloud.
 
 ### 4.7 The board — your own read, then the checker
 
+Read [retention-direction.md](references/retention-direction.md) §2–§5. Add its scene/group
+table to the existing "hand to produce" note, linking the opening promise to evidence,
+visible changes, supported sound events and the payoff. Check every row against scenes.js.
+Plan the unattended path with one bed from the start when autoproduce is the caller.
+
 **4b starts here** — fill the machine layer (camera, space, clip prompts, sound, the joins,
 `window.MOTION_POLICY`), then run `check-scenes.js` without `--draft`. Nothing on the board is
 delegated any more; the reads of 0.49 that looked at it (per-scene role, camera, sound) are
@@ -859,8 +894,8 @@ once, in this order, before §5:
   shot is a drip (each pays one piece and opens the next gap, the last drip is the first place
   the answer is complete, the last narrated shot is the CTA); on long-form the result comes
   before the body on answer-first and after the turn on a story arc. A scene the video still
-  stands without is merged or dropped — when the count drops, stretch the remaining scenes to
-  keep the total length. Reorder beats rather than rewriting sentences (scenario-craft.md is
+  stands without is merged or dropped; recalculate the duration without padding the other
+  scenes. Respect format minimums with useful material before approval. Reorder beats rather than rewriting sentences (scenario-craft.md is
   the yardstick).
 - **Per shot, does the camera serve the feel** — the size and the angle against the
   directing-grammar §5 row for that feel, `shot.space` in visible-result language (no camera
@@ -968,10 +1003,13 @@ that chapter through angle and crop, and change the setting when the chapter cha
 Burns pan pulls two compositions out of one image). Even so, past 30 images, look again at
 whether this material belongs in the filmed lane.
 
-**Video is the default ground for every `other` beat — a still may hold the screen only under
-`maxStaticGroundSeconds` (4 s), and the episode's generated video sits under `video_budget_usd`
-($10)** (scenes-schema §Channel true-motion policy). Explanation beats (timeline · statistic ·
-principle) are HTML slides and never video (CLAUDE.md §Nothing is drawn over video).
+**On a short, generated video is the hook plus at most one cut** (user directive 2026-09-05,
+scenes-schema §Channel true-motion policy `hook_video`): the cover's motion background is
+slot one, the second slot is written only with `visual.why`, and every other `other` beat is a
+still under its camera move (one still per cut, `maxStaticGroundSeconds` 8 s) or an HTML
+motion slide. The episode's generated video sits under `video_budget_usd` ($10). Explanation
+beats (timeline · statistic · principle) are HTML slides and never video (CLAUDE.md §Nothing
+is drawn over video). Long-form keeps the format cap of 5 with no hook rule.
 Two generated forms count against the slot cap together:
 
 - **`broll`** — inserted between scenes. A stretch where only the picture moves and nothing is
@@ -1180,7 +1218,8 @@ show** — produce §3.6 authors the slides after approval, so what the user app
 plan and the contract `check-slide.js` already read out of scenes.js. Same for the stills:
 what goes on the screen is each shot's `bgPrompt` and its engine, not a picture.
 **Show the motion contract too** — measured true-motion shots against the required count, the
-longest still run in shots and seconds, the allowed motion kinds, and the generated-video cap.
+longest still run in shots and seconds, the allowed motion kinds, and the generated-video cap;
+on a short, the hook's moving form and, if a second generated cut exists, its `visual.why`.
 The numbers come from the profile-backed `window.MOTION_POLICY`; a motion finding from
 `check-scenes.js` blocks this approval screen rather than becoming an unresolved reviewer note.
 **Carry the review results here too** — the narration read-through's final score and how
