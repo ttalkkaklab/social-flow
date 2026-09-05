@@ -363,6 +363,13 @@ counts), so one full-width element — a bar track, a band, a bus line — sets 
 100 by construction. On the diagram archetypes `h_pct` is the axis that carries the
 verdict, and horizontal spread stays a judgement made by eye.
 
+**Material-texture exception (Jin directive, 2026-09-05).** Reference-quality material
+expression is allowed on every HTML screen. CSS gradients, baked texture, or both may imitate
+clay, stone, paper, metal, or another physical surface when the result gives the object visible
+grain, thickness, and a shadow that answers the studio light. This is quality work, not a
+generated-look marker. The exception does not permit gradients or glow on text, decorative
+colour washes, glass cards, or floating shadows.
+
 **Axes (additive)**
 
 - **Design craft (30)** — hierarchy: the hero is the first thing read, and read order
