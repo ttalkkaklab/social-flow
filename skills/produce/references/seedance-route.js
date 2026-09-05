@@ -12,16 +12,36 @@ const MODELS = {
 };
 const DEFAULT_MODEL = 'seedance-1-5-pro-251215';
 
+// A model may render a resolution the price table has no row for. Forecasting silently drops
+// such a shot, so the plan is rejected here instead. Mirrors autoproduce/references/prices.tsv;
+// seedance-routing.test.mjs checks the drift.
+const PRICED = new Set([
+  'seedance.1-0-pro-fast.1080p', 'seedance.1-0-pro-fast.720p',
+  'seedance.1-5-pro-silent.1080p', 'seedance.1-5-pro-silent.720p',
+  'seedance.1-5-pro-audio.1080p', 'seedance.1-0-pro.1080p',
+  'seedance.2-0-mini.720p', 'seedance.2-0-fast.720p',
+  'seedance.2-0.1080p', 'seedance.2-5.720p', 'seedance.2-5.1080p',
+]);
+
+// Seedance-only settings on a slot that defaults to Veo would skip every check below.
+const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePaths', 'referenceAudioPaths'];
+
 /** Resolve a planned shot before either forecasting or calling the generation tool. */
 function scenePlan(scene) {
   const v = scene.visual || {};
-  const kind = scene.type === 'broll' ? 'broll' : v.video ? 'motion'
-    : scene.type === 'quote' && v.clip && typeof v.clip === 'object' ? 'quote' : null;
-  if (!kind) return null;
+  const supplied = (x) => !!(x && typeof x === 'object' && (x.clip || x.file));
+  const kind = scene.type === 'broll' ? 'broll' : v.video && !supplied(v.video) ? 'motion'
+    : scene.type === 'quote' && v.clip && typeof v.clip === 'object' && !v.clip.file ? 'quote' : null;
+  if (!kind) return null;   // a supplied clip is a file that exists: nothing to route or bill
   const settings = Object.assign({}, v, kind === 'motion' ? v.video : kind === 'quote' ? v.clip : {});
   const engine = settings.engine || (kind === 'motion' ? 'seedance' : 'veo');
   if (!['seedance', 'veo'].includes(engine)) throw new Error('unknown video engine: ' + engine);
-  if (engine !== 'seedance') return { kind, engine };
+  if (engine !== 'seedance') {
+    const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined);
+    if (named.length)
+      throw new Error(named.join(', ') + ' only applies to Seedance — set engine:"seedance" or drop the setting');
+    return { kind, engine };
+  }
   const purpose = settings.modelPurpose || 'standard';
   if (!['standard', 'complex-motion', 'reference', 'fixed-voice'].includes(purpose))
     throw new Error('unknown modelPurpose: ' + purpose);
@@ -59,10 +79,17 @@ function scenePlan(scene) {
   const durationSeconds = Math.max(spec.duration[0], Math.ceil(used));
   if (durationSeconds > spec.duration[1]) throw new Error(model + ' takes at most ' + spec.duration[1] + ' seconds; shorten or split the scene');
   const family = spec.family === '1-5-pro' ? spec.family + (generateAudio ? '-audio' : '-silent') : spec.family;
+  const priceKey = 'seedance.' + family + '.' + resolution;
+  if (!PRICED.has(priceKey)) {
+    const priced = [...PRICED].filter((k) => k.startsWith('seedance.' + family + '.'))
+      .map((k) => k.split('.').pop());
+    throw new Error(model + ' has no price for ' + resolution +
+      (priced.length ? ' — this model is billed at ' + priced.join(', ') : ' — this model has no price row'));
+  }
   return { kind, engine, model, resolution, durationSeconds, generateAudio,
     tool: needsReference ? 'seedance_reference' : 'seedance_img2video',
     referenceImagePaths: references, referenceAudioPaths: voices,
-    priceKey: 'seedance.' + family + '.' + resolution,
+    priceKey,
     reason: settings.modelReason || 'ordinary motion — Seedance 1.5 Pro' };
 }
 

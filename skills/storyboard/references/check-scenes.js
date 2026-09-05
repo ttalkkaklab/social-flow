@@ -314,6 +314,16 @@ function beatsCoverGroups(scene) {
     Array.from({ length: segs }, (_, g) => g + 1).every((g) => sl.motionBeats.some((b) => b && Number(b.group) === g));
 }
 
+/** A shot the engine bills for: a b-roll, a motion background, or a speech clip the engine
+    makes. A `visual.video.clip` is a file the user supplies, so it costs nothing and is not
+    one of these. The generated-slot cap, the hook rule and the camera-slot rule read it. */
+function generatedVideo(scene) {
+  const v = (scene && scene.visual) || {};
+  if (scene && scene.type === 'broll') return true;
+  if (v.video) return !(typeof v.video === 'object' && v.video.clip);
+  return scene && scene.type === 'quote' && v.clip && typeof v.clip === 'object' && !v.clip.file;
+}
+
 function motionKind(scene) {
   const v = (scene && scene.visual) || {};
   if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording')
@@ -651,13 +661,11 @@ function check(win, fmt, opts) {
   }
 
   // The format owns the default cap; an explicit channel motion policy may raise or lower it.
-  const videoSlots = scenes.filter((s) => {
-    const v = s.visual || {};
-    return s.type === 'broll' || !!v.video;
-  });
+  // A supplied clip is a file that already exists, so it is not a slot the engine bills for.
+  const videoSlots = scenes.filter((s) => generatedVideo(s));
   if (videoSlots.length > motionPolicy.generatedVideoMax)
-    bad('episode', `${videoSlots.length} generated-video slots — b-roll and motion backgrounds ` +
-                   `count together and cap at ${motionPolicy.generatedVideoMax} ` +
+    bad('episode', `${videoSlots.length} generated-video slots — b-roll, motion backgrounds and ` +
+                   `speech clips count together and cap at ${motionPolicy.generatedVideoMax} ` +
                    '(channel motion policy; format default applies when the profile has no override)');
 
   /* ── Short-form body (owner directive 2026-09-05) ──
@@ -674,8 +682,14 @@ function check(win, fmt, opts) {
                         'recording (hook_video off in the profile switches this rule off)');
   }
   if (isShort && motionPolicy.hookVideo) {
-    videoSlots.forEach((s) => {
-      if (s === cover) return;
+    const body = videoSlots.filter((s) => s !== cover);
+    // One more cut than the hook, whatever the hook is — a recorded or supplied cover does not
+    // free its slot for a second generated body cut.
+    if (body.length > motionPolicy.generatedVideoMax - 1)
+      bad('episode', `${body.length} generated cuts after the hook — a short pays for the hook and ` +
+                     `at most ${motionPolicy.generatedVideoMax - 1} more (hook_video); every other cut is a ` +
+                     'still under its camera move or an HTML motion slide');
+    body.forEach((s) => {
       const v = s.visual || {};
       if (!String(v.why || '').trim())
         machine('shot ' + (scenes.indexOf(s) + 1), 'a generated cut after the hook with no visual.why — on a short the ' +
@@ -920,7 +934,9 @@ function check(win, fmt, opts) {
     const dur = Number(s.duration);
     if (s.type !== 'outro') {
       if (!Number.isFinite(dur) || dur <= 0) {
-        if (s.type !== 'broll') warn(where, 'no duration');
+        // A b-roll is a generated shot, so the engine is billed for a length it has to be given
+        // (§cut length); scenePlan rejects the shot without one.
+        warn(where, 'no duration');
       } else if (pacing.sceneMin && (dur < pacing.sceneMin || dur > pacing.sceneMax)) {
         warn(where, `duration ${dur}s — the ${fmt.label} band is ${pacing.sceneMin}~${pacing.sceneMax}s`);
       }
@@ -952,9 +968,7 @@ function check(win, fmt, opts) {
 
     // Every shot that becomes a generated video leaves the storyboard with its prompt stored
     // and its four camera slots filled — the storyboard is where that is still free to fix.
-    const isGenerated = s.type === 'broll' || !!v.video ||
-                        (s.type === 'quote' && v.clip && typeof v.clip === 'object');
-    if (isGenerated) {
+    if (generatedVideo(s)) {
       try { scenePlan(s); } catch (e) { machine(where, e.message); }
       const cam = v.camera || {};
       ['movement', 'speed', 'framing', 'end'].forEach((slot) => {
@@ -1273,6 +1287,22 @@ function selftest() {
                    null, { policy: hookPolicy })), /no visual\.why/));
   ok('the hook slot itself needs no visual.why',
      !has(bads(run([videoCover, goodShot, ctaShot], null, { policy: hookPolicy })), /no visual\.why/));
+  const quoteClip = Object.assign({}, goodShot, { type: 'quote', speaker: 'the pilot',
+    visual: Object.assign({}, goodShot.visual, { clip: { prompt: SEEDANCE_PROMPT, engine: 'veo' } }) });
+  ok('a speech clip is a generated cut, so the hook rule reads it too',
+     has(bads(run([videoCover, quoteClip, ctaShot], null, { policy: hookPolicy })), /no visual\.why/));
+  ok('speech clips count against the generated-slot cap',
+     has(bads(run([videoCover, quoteClip, quoteClip, ctaShot], null, { policy: hookPolicy })), /generated-video slots/));
+  ok('a recorded hook does not free a second generated body cut',
+     has(bads(run([Object.assign({}, cover, { visual: { source: 'recording', clip: 'footage/s1-desk.mp4' } }),
+                   Object.assign({}, videoScene, { visual: Object.assign({}, videoScene.visual, { why: 'the movement is the sentence' }) }),
+                   Object.assign({}, videoScene, { visual: Object.assign({}, videoScene.visual, { why: 'the movement is the sentence' }) }),
+                   ctaShot], null, { policy: hookPolicy })), /generated cuts after the hook/));
+  const suppliedCover = Object.assign({}, cover, { visual: Object.assign({}, cover.visual,
+    { video: { clip: 'storyboard/images/hook/supplied.mp4' } }) });
+  ok('a supplied clip is a hook without being a generated slot',
+     !has(bads(run([suppliedCover, goodShot, ctaShot], null, { policy: hookPolicy })),
+          /the hook is a still|visual\.camera|no stored clip prompt/));
   const statFootage = Object.assign({}, footageScene({ slide: { labels: ['34개'] } }), {
     shot: Object.assign({}, goodShot.shot, { infoType: 'statistic' }) });
   ok('a statistic beat on footage is rejected even with labels',

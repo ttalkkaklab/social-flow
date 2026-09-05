@@ -32,6 +32,8 @@ function storyHash(win) {
     type: s.type, beat: s.beat, arc: s.arc, after: s.after,
     title: s.title, stat: s.stat, bullets: s.bullets,
     narration: s.narration, info: s.shot?.info,
+    // Slide copy is burned on screen, so rewriting it changes the episode the reviewer read.
+    slideLabels: s.visual?.slide?.labels, slideSubject: s.visual?.slide?.subject,
     recording: s.visual?.source === 'recording' ? s.visual.clip : undefined
   }));
   return crypto.createHash('sha256').update(JSON.stringify(canonical({
@@ -74,9 +76,15 @@ function checkStory(win, { requireReview = true } = {}) {
       fail(`${label} requires 1-based shot, group and exact quote`); return null;
     }
     const n = speech.find(x => x.shot === r.shot && x.group === r.group)?.n;
-    if (!n ||
-        ![n.tts, n.sub].some(v => text(v) && v.includes(r.quote))) {
+    const said = [n?.tts, n?.sub].filter(v => text(v));
+    // A quote has to carry the sentence, not a character of it: half the line, at minimum.
+    // Otherwise "." matches every sentence and the reference proves nothing.
+    const enough = said.some(v => r.quote.trim().length >= Math.min(12, Math.ceil(v.trim().length / 2)));
+    if (!said.length || !said.some(v => v.includes(r.quote))) {
       fail(`${label} quote is not in the referenced narration`); return null;
+    }
+    if (!enough) {
+      fail(`${label} quote is too short to identify the line — quote at least half of it`); return null;
     }
     return [r.shot, r.group];
   }

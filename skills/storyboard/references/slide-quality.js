@@ -26,7 +26,8 @@ function checkQuality(slide, segments) {
   });
   if (subject.kind === 'object') {
     if (!slide.object) errors.push('object subject needs slide.object with a baked state-changing render');
-    const keys = String(slide.object?.keys || '').trim().split(/\s+/);
+    const keys = String(slide.object?.keys || '').trim().split(/\s+/).filter(Boolean);
+    if (slide.object && !keys.length) errors.push('slide.object needs keys — one state name per group plus the start state');
     for (let i = 1; i < keys.length; i++) {
       if (keys[i] === keys[i - 1]) errors.push(`object keys freeze in group ${i}`);
     }

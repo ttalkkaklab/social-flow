@@ -2274,34 +2274,49 @@ window.SB_DOC = {
   var policyVideoMax = MP.generatedVideoMax !== null && MP.generatedVideoMax !== undefined &&
                        Number.isFinite(Number(MP.generatedVideoMax))
     ? Number(MP.generatedVideoMax) : FMT.videoMax;
-  var genVid = SCENES.filter(function (s) {
-    return s.type === "broll" || (s.visual && s.visual.video); }).length;
+  // Mirrors check-scenes.js generatedVideo: a supplied clip is a file that already exists,
+  // so it is not a slot the engine bills for.
+  function generatedVideo(s) {
+    var v = (s && s.visual) || {};
+    if (s && s.type === "broll") return true;
+    if (v.video) return !(typeof v.video === "object" && v.video.clip);
+    return !!(s && s.type === "quote" && v.clip && typeof v.clip === "object" && !v.clip.file);
+  }
+  var genVid = SCENES.filter(generatedVideo).length;
   if (genVid > policyVideoMax)
-    flag("bad", T.where.genVideo, "b-roll and motion backgrounds together " + genVid + " shots — cap " +
-         policyVideoMax + " (channel motion policy; format default when no override is written)");
+    flag("bad", T.where.genVideo, "b-roll, motion backgrounds and speech clips together " + genVid +
+         " shots — cap " + policyVideoMax + " (channel motion policy; format default when no override is written)");
 
   // Short-form body (owner directive 2026-09-05) — the hook is video, one more generated cut
   // writes why, the rest is a still under its camera move or an HTML motion slide. Mirrors
   // check-scenes.js; hook_video: off in the profile (hookVideo:false here) switches it off.
   var hookVideoOn = MP.hookVideo !== false && MP.hookVideo !== "off";
   if (!WIDE && hookVideoOn) {
+    var bodyVideo = 0, bodyMax = policyVideoMax - 1;
     SCENES.forEach(function (s, i) {
       var v = (s && s.visual) || {};
       if (s.type === "cover") {
-        var moving = !!(v.video || v.clip || v.source === "recording" || v.picture === "recording");
+        var moving = !!(v.video || v.clip || v.source === "recording" ||
+                        v.source === "screencast" || v.picture === "recording");
         if (!moving)
           flag("bad", T.shotCap(1), "the hook is a still — on a short the cover is video: a motion background under the code-rendered title (visual.video), a supplied clip, or a recording");
-      } else if ((s.type === "broll" || v.video) && !String(v.why || "").trim()) {
-        flag("bad", T.shotCap(i + 1), "a generated cut after the hook with no visual.why — the body of a short is a still under its camera move or an HTML motion slide; write why this cut needs the movement itself");
+      } else if (generatedVideo(s)) {
+        bodyVideo++;
+        if (!String(v.why || "").trim())
+          flag("bad", T.shotCap(i + 1), "a generated cut after the hook with no visual.why — the body of a short is a still under its camera move or an HTML motion slide; write why this cut needs the movement itself");
       }
     });
+    if (bodyVideo > bodyMax)
+      flag("bad", "episode", bodyVideo + " generated cuts after the hook — a short pays for the hook and at most " + bodyMax + " more (hook_video); every other cut is a still under its camera move or an HTML motion slide");
   }
 
   function trueMotionKind(s) {
     var v = (s && s.visual) || {};
     if (v.source === "recording" || v.source === "screencast" || v.picture === "recording") return "recording";
-    if (v.slide && v.slide.motion === true) return "motion-slide";
+    // The ground decides the kind, as in check-scenes.js motionKind: a clip under a
+    // motion-slide overlay is video, not a plate.
     if (s && (s.type === "broll" || v.video || v.clip)) return "ai-video";
+    if (v.slide && v.slide.motion === true) return "motion-slide";
     return null;
   }
   function motionPlayback() {

@@ -82,3 +82,37 @@ test('forecast reflects model cost and snapshot changes; video budget excludes s
 test('cost fingerprint matches the storyboard template', () => {
   execFileSync(process.execPath, [preview, '--selftest'], { stdio: 'pipe' });
 });
+
+test('every routable price key is priced, and an unpriced resolution is refused', () => {
+  // scenePlan may only emit a key the ledger can price — an unpriced row would drop out of
+  // the forecast and read as headroom. Walk every model × resolution the capability table allows.
+  for (const [model, spec] of Object.entries(MODELS)) {
+    for (const resolution of spec.resolutions) {
+      for (const kind of ['motion', 'broll']) {
+        const visual = kind === 'motion'
+          ? { video: { prompt: 'A masked adult turns.', engine: 'seedance', model, resolution, ...(spec.images ? { realFaceInput: false } : {}), ...(model === 'seedance-1-5-pro-251215' ? {} : { modelReason: 'fixture' }) } }
+          : { engine: 'seedance', model, resolution, ...(spec.images ? { realFaceInput: false } : {}), ...(model === 'seedance-1-5-pro-251215' ? {} : { modelReason: 'fixture' }) };
+        const shot = { type: kind === 'broll' ? 'broll' : 'cover', after: 0, duration: 5, visual };
+        let plan = null;
+        try { plan = scenePlan(shot); } catch (e) {
+          assert.match(e.message, /has no price|cannot supply the audio|does not accept|requires realFaceInput|photoreal faces/,
+            `${model} ${resolution} ${kind}: ${e.message}`);
+          continue;
+        }
+        if (plan && plan.engine === 'seedance')
+          assert.ok(priceOf(plan.priceKey), `${plan.priceKey} is routable but has no price row`);
+      }
+    }
+  }
+});
+
+test('a supplied clip is not a generated slot', () => {
+  assert.equal(scenePlan({ type: 'cover', duration: 6, visual: { video: { clip: 'hook/supplied.mp4' } } }), null);
+  assert.equal(scenePlan({ type: 'quote', duration: 6, visual: { clip: { file: 'quotes/mayor.mp4' } } }), null);
+});
+
+test('Seedance settings on a Veo slot are refused instead of silently skipped', () => {
+  assert.throws(() => scenePlan({ type: 'quote', duration: 6, visual: { clip: {
+    modelPurpose: 'fixed-voice', referenceAudioPaths: ['voice.wav'] } } }),
+    /only applies to Seedance/);
+});
