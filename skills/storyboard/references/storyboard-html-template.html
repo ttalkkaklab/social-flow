@@ -2242,8 +2242,10 @@ window.SB_DOC = {
       }
     }
     if (!sl || sl.motion !== true || (sl.kind || "diagram") !== "diagram") return;
-    if (sl.treatment !== "editorial" && sl.treatment !== "photo-action" && sl.treatment !== "footage")
-      flag("bad", T.shotCap(i + 1), "moving diagram needs slide.treatment editorial, photo-action or footage");
+    if (sl.treatment === "footage")
+      flag("bad", T.shotCap(i + 1), "slide.treatment footage is retired (owner rule 2026-09-05) — nothing is drawn over video; make the cut a full-frame editorial slide or play the clip with subtitles only");
+    else if (sl.treatment !== "editorial" && sl.treatment !== "photo-action")
+      flag("bad", T.shotCap(i + 1), "moving diagram needs slide.treatment editorial or photo-action");
     if (sl.treatment === "editorial" && (!String(sl.role || "").trim() || !String(sl.motif || "").trim()))
       flag("bad", T.shotCap(i + 1), "editorial frame needs role and episode-wide motif");
     if (sl.treatment === "photo-action" && !String(v.action || "").trim())
