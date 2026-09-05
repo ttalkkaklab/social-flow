@@ -162,6 +162,9 @@ const MOTION_PROFILE_KEYS = [
 // Plugin-wide defaults (owner directive 2026-09-03 — "the viewer has to feel a video"). They
 // apply whether or not a profile declares a motion policy; a profile may raise, lower, or
 // switch each one off with `off`.
+// 2026-09-05 진 지시 — HTML 움직이는 화면(motion-slide)은 정지 바닥 4초 셈에서 뺀다. 화살표·수치·원리를
+// 설명하는 컷은 영상 대신 HTML 슬라이드로 만들라는 규칙이라, 그 화면을 「그림 한 장」으로 세면 규칙과
+// 부딪힌다. 영상 컷과 멈춘 그림에는 4초가 그대로 산다.
 const STATIC_GROUND_DEFAULT_SECONDS = 4;   // one picture may hold the screen this long
 const VIDEO_BUDGET_DEFAULT_USD = 10;       // generated video per episode — read by cost-preview.js
 
@@ -690,9 +693,11 @@ function check(win, fmt, opts) {
   /* ── Static ground (owner directive 2026-09-03) ──
      A picture that stays the same while the narration runs is a slideshow, whatever moves on
      top of it — captions, a counting number, a camera drift over one still. The clock resets
-     only when the picture itself changes: a generated clip (footage shot, motion background,
-     b-roll, quote clip), a recording, or a new still under the next sentence. An HTML plate is
-     one picture for its whole length, so a plate is a one-sentence card by construction. */
+     only when the picture itself changes: a generated clip (motion background, b-roll, quote
+     clip), a recording, or a new still under the next sentence. A still HTML plate is one
+     picture for its whole length, so such a plate is a one-sentence card by construction.
+     2026-09-05 진 지시로 HTML 움직이는 화면(motion-slide — visual.slide.motion:true)은 제외한다:
+     설명 컷은 HTML 로 만들라는 규칙의 화면이므로 그 안의 움직임이 곧 영상이다. */
   if (!draft && motionPolicy.maxStaticGroundSeconds !== null) {
     const rate = (pacing && Number(pacing.rate)) || 4.5;
     const secondsOf = (scene) => {
@@ -705,7 +710,7 @@ function check(win, fmt, opts) {
     playbackShots(scenes).forEach((x) => {
       const scene = x.scene;
       const kind = motionKind(scene);
-      if (kind === 'ai-video' || kind === 'recording') return;
+      if (kind === 'ai-video' || kind === 'recording' || kind === 'motion-slide') return;   // 2026-09-05 진 지시 — HTML 움직이는 화면 제외
       const segs = Array.isArray(scene.narration) ? scene.narration.length : 0;
       const stillPerLine = segs > 1 && scene.narration.every((seg) => seg && seg.img);
       const longest = stillPerLine ? secondsOf(scene) / segs : secondsOf(scene);
@@ -1122,8 +1127,12 @@ function selftest() {
   ok('a motion background resets the static-ground clock',
      !has(bads(run([footageScene(), Object.assign({}, goodShot, { visual: { video: { engine: 'seedance', prompt: SEEDANCE_PROMPT }, action: 'waves' } }), footageScene()],
                    null, { policy: groundPolicy })), /one picture stays/));
-  ok('an HTML plate longer than the limit is one picture',
-     has(bads(run([footageScene(), Object.assign({}, cover, { duration: 9 }), footageScene()], null, { policy: groundPolicy })), /one picture stays on screen 9\.0s/));
+  ok('an HTML motion slide is exempt from the static-ground clock (owner rule 2026-09-05)',
+     !has(bads(run([footageScene(), Object.assign({}, goodShot, { duration: 12, visual: { slide: { file: 'slides/s2-e.html', kind: 'diagram', motion: true,
+       treatment: 'editorial', role: 'evidence', motif: 'ink line', plan: 'x' } } }), footageScene()], null, { policy: groundPolicy })), /one picture stays/));
+  ok('a still HTML plate is still one picture',
+     has(bads(run([footageScene(), Object.assign({}, goodShot, { duration: 9, visual: { slide: { file: 'slides/s2-s.html', labels: ['x'] } } }), footageScene()],
+                  null, { policy: groundPolicy })), /one picture stays on screen 9\.0s/));
   const plateScene = (d) => Object.assign({}, cover, { type: 'points', beat: 'drip', transition: 'jcut', hookType: undefined, hookForm: undefined, duration: d });
   ok('HTML plates are not capped per episode (owner rule 2026-09-05)',
      !has(bads(run([footageScene(), plateScene(3), plateScene(3), plateScene(3)], null, { policy: groundPolicy })), /HTML plates/));
