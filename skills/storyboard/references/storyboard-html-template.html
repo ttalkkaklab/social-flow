@@ -2278,7 +2278,7 @@ window.SB_DOC = {
   // not a supplied file — a file the user already has is the filmed lane (visual.source).
   function generatedVideo(s) {
     var v = (s && s.visual) || {};
-    if (v.source === "recording" || v.source === "screencast" || v.picture === "recording") return false;
+    // The shape decides, not the lane marker — a shot with both is malformed, not filmed.
     return !!(s && (s.type === "broll" || v.video ||
                     (s.type === "quote" && v.clip && typeof v.clip === "object")));
   }

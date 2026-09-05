@@ -29,9 +29,8 @@ const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePa
 /** Resolve a planned shot before either forecasting or calling the generation tool. */
 function scenePlan(scene) {
   const v = scene.visual || {};
-  // A filmed shot is the user's own file — nothing to route or bill. `visual.video.clip` is
-  // produce's output record, so it does not make the shot supplied.
-  if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') return null;
+  // A filmed shot carries none of these shapes, so it falls out with kind null on its own.
+  // `visual.video.clip` is produce's output record and does not make the shot supplied.
   const kind = scene.type === 'broll' ? 'broll' : v.video ? 'motion'
     : scene.type === 'quote' && v.clip && typeof v.clip === 'object' ? 'quote' : null;
   if (!kind) return null;

@@ -320,7 +320,8 @@ function beatsCoverGroups(scene) {
     (`visual.source: "recording"`), which is not a generated shot at all. */
 function generatedVideo(scene) {
   const v = (scene && scene.visual) || {};
-  if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') return false;
+  // The shape decides, not the lane marker: a filmed shot carries none of these, so a shot
+  // that has both is a malformed board the cap and the camera-slot rules still have to reject.
   return !!(scene && (scene.type === 'broll' || v.video ||
                       (scene.type === 'quote' && v.clip && typeof v.clip === 'object')));
 }
@@ -1308,6 +1309,10 @@ function selftest() {
        Object.assign({}, videoScene, { visual: Object.assign({}, videoScene.visual,
          { video: Object.assign({}, videoScene.visual.video || {}, { clip: '.work/motion/motion-i1.mp4' }) }) }),
        videoScene, ctaShot], null, { policy: hookPolicy })), /generated cuts after the hook/));
+  ok('a recording marker does not hide a generated shape from the cap',
+     has(bads(run([Object.assign({}, videoCover, { visual: Object.assign({}, videoCover.visual,
+       { source: 'recording', clip: 'footage/s1.mp4' }) }),
+       videoScene, videoScene, ctaShot], null, { policy: hookPolicy })), /generated-video slots/));
   ok('long-form counts b-roll and motion backgrounds only, as the checklist says',
      !has(bads(runLong([cover, quoteClip, quoteClip, quoteClip, quoteClip, quoteClip, quoteClip, goodShot])),
           /generated-video slots/));
