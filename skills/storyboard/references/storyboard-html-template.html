@@ -2296,9 +2296,12 @@ window.SB_DOC = {
   var hookVideoOn = MP.hookVideo !== false && MP.hookVideo !== "off";
   if (!WIDE && hookVideoOn) {
     var bodyVideo = 0, bodyMax = policyVideoMax - 1;
+    // The hook is the first cover shot, as check-scenes.js reads it — a second cover-typed
+    // shot is body, so it does not quietly get a free generated cut here.
+    var hookIndex = SCENES.findIndex(function (s) { return s && s.type === "cover"; });
     SCENES.forEach(function (s, i) {
       var v = (s && s.visual) || {};
-      if (s.type === "cover") {
+      if (i === hookIndex) {
         var moving = !!(v.video || v.clip || v.source === "recording" ||
                         v.source === "screencast" || v.picture === "recording");
         if (!moving)
