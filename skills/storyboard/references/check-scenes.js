@@ -67,10 +67,10 @@ const HOOK_TYPES = ['fear', 'empathy', 'curiosity', 'spoiler'];
 const HOOK_FORMS = ['paradox', 'gap', 'payoff', 'identify', 'number', 'secret'];
 const TYPES = ['cover', 'hooking', 'points', 'quote', 'broll', 'outro'];
 const COMPREHENSION_MODES = ['informational', 'narrative'];
-const SLIDE_TREATMENTS = ['editorial', 'photo-action'];
-// footage (generated clips under drawn marks) retired 2026-09-05 — owner rule: nothing is drawn over
-// video, and a cut that explains an arrow, a number or a principle is a full-frame HTML slide.
-const RETIRED_TREATMENTS = ['footage'];
+const SLIDE_TREATMENTS = ['editorial', 'photo-action', 'footage'];
+// footage = generated clips with subtitles only. Marks over the clips (arrows, rings, brackets,
+// hatching, labels) retired 2026-09-05 — owner rule: nothing is drawn over video, and a cut that
+// explains an arrow, a number or a principle is a full-frame HTML slide (editorial).
 const EDITORIAL_ROLES = ['evidence', 'relationship', 'mechanism', 'timeline', 'statistic', 'transition', 'verdict'];
 const INFO_TYPES = ['other', 'timeline', 'statistic', 'principle'];
 const INFO_ROLE = { timeline: 'timeline', statistic: 'statistic', principle: 'mechanism' };
@@ -752,10 +752,7 @@ function check(win, fmt, opts) {
     const slide = v.slide;
     if (slide && slide.motion === true && (slide.kind || 'diagram') === 'diagram') {
       if (!String(slide.treatment || '').trim()) {
-        machine(where, 'motion diagram has no slide.treatment — choose editorial when HTML owns the frame, or photo-action when the photographed subject itself changes');
-      } else if (RETIRED_TREATMENTS.indexOf(slide.treatment) !== -1) {
-        bad(where, `slide.treatment "${slide.treatment}" is retired (owner rule 2026-09-05) — nothing is drawn over video; ` +
-                   'make the cut a full-frame HTML slide (treatment:"editorial") or play the clip with subtitles only');
+        machine(where, 'motion diagram has no slide.treatment — choose editorial when HTML owns the frame, photo-action when the photographed subject itself changes, or footage when generated clips carry the scene with nothing drawn over them');
       } else if (SLIDE_TREATMENTS.indexOf(slide.treatment) === -1) {
         bad(where, `slide.treatment "${slide.treatment}" is outside ${SLIDE_TREATMENTS.join(' · ')}`);
       } else if (slide.treatment === 'editorial') {
@@ -763,6 +760,61 @@ function check(win, fmt, opts) {
           machine(where, `editorial slide.role "${slide.role}" is outside ${EDITORIAL_ROLES.join(' · ')}`);
         if (!String(slide.motif || '').trim())
           machine(where, 'editorial slide has no motif — name the episode-wide visual device that carries between authored frames');
+      } else if (slide.treatment === 'footage') {
+        /* Footage: one generated clip per reveal group, subtitles only on top (scenes-schema §footage
+           treatment). The clips are paid calls made at produce §3, so the plan, the shots and each
+           shot's camera and prompt exist before approval — the spend does not. Footage clips do not spend a generatedVideoMax
+           slot — the cost panel lists every one and the §5 gate is where the spend is approved.
+           2026-09-05 진 지시 — 영상 위에는 아무것도 그리지 않는다: shots[].mark · slide.marks · slide.labels 가
+           하나라도 차 있으면 위반이다. 설명(화살표·수치·원리)이 필요한 컷은 editorial 로 만든다. */
+        const OVER_VIDEO = 'is retired (owner rule 2026-09-05) — nothing is drawn over video; delete it, or make the cut a full-frame editorial slide';
+        if (Array.isArray(slide.marks) && slide.marks.length)
+          bad(where, `slide.marks over footage ${OVER_VIDEO}`);
+        if (Array.isArray(slide.labels) && slide.labels.filter((l) => String(l || '').trim()).length)
+          bad(where, `slide.labels over footage ${OVER_VIDEO}`);
+        if (!String(v.action || '').trim())
+          machine(where, 'footage slide has no visual.action — say what the people or things in the clips do');
+        if (!String(slide.plan || '').trim())
+          machine(where, 'footage slide has no plan — one line per group: what the clip shows');
+        const shots = Array.isArray(slide.shots) ? slide.shots : null;
+        const segs = Array.isArray(s.narration) ? s.narration.length : 0;
+        if (!shots || !shots.length) {
+          machine(where, 'footage slide has no slide.shots — one clip per reveal group (a sentence may carry two via an A|B sub-reveal)');
+        } else {
+          if (segs && shots.length < segs)
+            bad(where, `footage slide has ${shots.length} shots for ${segs} narration segments — segment ${shots.length + 1} would play on nothing`);
+          const groups = new Set();
+          shots.forEach((sh, j) => {
+            const at = `${where} shots[${j}]`;
+            if (!sh || typeof sh !== 'object') { bad(at, 'shot is not an object'); return; }
+            const group = Number(sh.group);
+            if (!Number.isInteger(group) || group < 1) bad(at, `group ${JSON.stringify(sh.group)} is not a positive integer`);
+            else if (groups.has(group)) bad(at, `group ${group} appears twice — one clip per group`);
+            else groups.add(group);
+            const clip = String(sh.clip || '');
+            if (!clip) machine(at, 'no clip — slides/footage/s<shot>-g<group>.mp4, generated at produce §3');
+            else if (!/^slides\/footage\/s\d+-g\d+[a-z0-9-]*\.(mp4|webm)$/.test(clip))
+              bad(at, `clip "${clip}" is outside the slides/footage/s<shot>-g<group>.mp4 convention`);
+            if (sh.matte && !/^slides\/footage\/.+\.webm$/.test(String(sh.matte)))
+              bad(at, `matte "${sh.matte}" must be a VP9-alpha webm under slides/footage/`);
+            const engine = sh.engine || v.engine || 'seedance';
+            if (engine !== 'seedance' && engine !== 'veo') bad(at, `engine "${engine}" is not seedance or veo`);
+            const dur = Number(sh.duration);
+            if (!Number.isFinite(dur) || dur <= 0) machine(at, 'no duration — the seconds requested from the engine (4–12 on seedance, 8 on veo)');
+            else if (engine === 'seedance' && (dur < 4 || dur > 12)) bad(at, `duration ${dur}s is outside seedance 1.5 pro\'s 4–12s`);
+            else if (engine === 'veo' && dur !== 8) bad(at, `duration ${dur}s — veo generates 8s only`);
+            const cam = sh.camera || {};
+            ['movement', 'speed', 'framing', 'end'].forEach((slot) => {
+              if (!cam[slot]) machine(at, `camera.${slot} is empty — a footage shot leaves the storyboard with all four slots filled`);
+            });
+            if (!String(sh.prompt || '').trim()) machine(at, 'no prompt — store the assembled clip prompt (assemble-bg-prompt.js --clip)');
+            else seedancePromptFindings(sh.prompt, engine).forEach((f) => machine(at, f));
+            if (!String(sh.audio || '').trim()) machine(at, 'no audio — say what the clip sounds like even though the builder drops it');
+            const mark = String(sh.mark || '').trim();
+            if (mark && mark.toLowerCase() !== 'none') bad(at, `mark "${mark}" ${OVER_VIDEO}`);
+          });
+          for (let g = 1; g <= segs; g++) if (!groups.has(g)) bad(where, `footage slide has no shot for group ${g}`);
+        }
       } else if (slide.treatment === 'photo-action') {
         if (!String(v.action || '').trim())
           machine(where, 'photo-action slide has no visual.action — name the subject or evidence change, not a camera or overlay move');
@@ -1081,25 +1133,37 @@ function selftest() {
     visual: Object.assign({ action: 'riders enter the valley',
       slide: Object.assign({ file: 'slides/s2-valley.html', kind: 'diagram', motion: true, treatment: 'footage',
         plan: '① route into the valley', labels: [],
-        shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5, engine: 'seedance', mark: 'dashed route',
+        shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5, engine: 'seedance',
                   camera: { movement: 'dolly in', speed: 'very slow', framing: 'high wide', end: 'road mid-frame' },
                   prompt: SEEDANCE_PROMPT, audio: 'wind' }] }, (over && over.slide) || {}) }, (over && over.visual) || {})
   });
-  // footage retired 2026-09-05 (owner rule: nothing is drawn over video) — a board that still
-  // carries the treatment is rejected up front, and the old lane's sub-checks never run on it.
-  ok('a footage slide is retired — the board is rejected with the owner rule',
-     has(bads(run([cover, footageScene(), goodShot, goodShot])), /slide\.treatment "footage" is retired \(owner rule 2026-09-05\)/));
-  ok('a footage slide is still refused when its shots are complete',
-     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5, prompt: SEEDANCE_PROMPT, audio: 'y', mark: 'z',
-       camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } }] } }), goodShot, goodShot])), /is retired/));
-  ok('the retired lane runs no sub-checks of its own',
-     !has(bads(run([cover, Object.assign({}, footageScene({ slide: { shots: [{ group: 1, clip: 'clips/a.mp4', duration: 2 }] } }),
-       { narration: [{ tts: '가', sub: '가' }, { tts: '나', sub: '나' }] }), goodShot, goodShot])),
-          /shots for \d+ narration segments|outside the slides\/footage|outside seedance|camera\./));
-  ok('the treatment hint no longer offers footage',
-     !has(run([cover, Object.assign({}, goodShot, { visual: { slide: { file: 'slides/s2-x.html', kind: 'diagram', motion: true, plan: 'x' } } }), goodShot, goodShot])
-       .filter((f) => /no slide\.treatment/.test(f.what)), /footage/));
-  ok('editorial is still the accepted treatment',
+  // footage = clips with subtitles only (owner rule 2026-09-05) — the lane stays, anything drawn over it is a violation
+  ok('a footage slide with one clean clip per segment passes',
+     !has(bads(run([cover, footageScene(), goodShot, goodShot])), /footage slide|shots\[|slide\.treatment "footage"|retired/));
+  ok('a mark on a footage shot is a violation (owner rule 2026-09-05)',
+     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5, engine: 'seedance', mark: 'dashed route',
+       camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' }, prompt: SEEDANCE_PROMPT, audio: 'wind' }] } }), goodShot, goodShot])),
+         /mark "dashed route" is retired \(owner rule 2026-09-05\)/));
+  ok('mark "none" on a footage shot is fine',
+     !has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5, engine: 'seedance', mark: 'none',
+       camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' }, prompt: SEEDANCE_PROMPT, audio: 'wind' }] } }), goodShot, goodShot])), /retired/));
+  ok('slide.marks over footage is a violation',
+     has(bads(run([cover, footageScene({ slide: { marks: ['ring'] } }), goodShot, goodShot])), /slide\.marks over footage is retired/));
+  ok('labels over footage are a violation — numbers go on an editorial slide',
+     has(bads(run([cover, footageScene({ slide: { labels: ['180킬로미터'] } }), goodShot, goodShot])), /slide\.labels over footage is retired/));
+  ok('a footage slide with fewer shots than segments is a violation',
+     has(bads(run([cover, Object.assign({}, footageScene(), { narration: [{ tts: '가', sub: '가' }, { tts: '나', sub: '나' }] }), goodShot, goodShot])),
+         /1 shots for 2 narration segments/));
+  ok('a footage clip outside the naming convention is caught',
+     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'clips/a.mp4', duration: 5, prompt: SEEDANCE_PROMPT, audio: 'y',
+       camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } }] } }), goodShot, goodShot])), /outside the slides\/footage/));
+  ok('a footage shot with empty camera slots is a violation',
+     bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5, prompt: SEEDANCE_PROMPT, audio: 'y' }] } }),
+       goodShot, goodShot])).filter((f) => /camera\./.test(f.what)).length === 4);
+  ok('a footage shot outside the seedance duration band is a violation',
+     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 2, prompt: SEEDANCE_PROMPT, audio: 'y',
+       camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } }] } }), goodShot, goodShot])), /outside seedance/));
+  ok('editorial is still the accepted treatment for explaining cuts',
      !has(bads(run([cover, Object.assign({}, goodShot, { visual: { slide: { file: 'slides/s2-e.html', kind: 'diagram', motion: true, treatment: 'editorial',
        role: 'evidence', motif: 'ink line', plan: 'x' } } }), goodShot, goodShot], null, { policy: defaultPolicy })), /slide\.treatment/));
   ok('footage shots do not spend a generated-video slot',
@@ -1138,11 +1202,10 @@ function selftest() {
      !has(bads(run([footageScene(), plateScene(3), plateScene(3), plateScene(3)], null, { policy: groundPolicy })), /HTML plates/));
   const statFootage = (labels) => Object.assign({}, footageScene({ slide: { labels } }), {
     shot: Object.assign({}, goodShot.shot, { infoType: 'statistic' }) });
-  ok('a statistic beat on footage is refused even with labels — the value goes on an editorial diagram',
-     has(bads(run([cover, statFootage(['34개'])])), /is retired/) &&
-     has(run([cover, statFootage(['34개'])]).filter((f) => f.level !== 'ok'), /must use treatment:"editorial"/));
-  ok('a statistic beat on footage no longer asks for labels',
-     !has(bads(run([cover, statFootage([])])), /no slide\.labels/));
+  ok('a statistic beat on footage is refused — the value goes on an editorial diagram',
+     has(run([cover, statFootage([])]).filter((f) => f.level !== 'ok'), /must use treatment:"editorial"/));
+  ok('a statistic beat on footage with labels is refused twice — routing and labels over video',
+     has(bads(run([cover, statFootage(['34개'])])), /slide\.labels over footage is retired/));
   ok('an invented arts move is caught',
      has(bads(run([cover, Object.assign({}, goodShot, {
        visual: { slide: { file: 'slides/s2-k.html', kind: 'kinetic', motion: true, plan: 'x',
@@ -1229,8 +1292,8 @@ function selftest() {
   ok('the seedance prompt rules wait for the camera pass (--draft)',
      !has(bads(run([cover, motionScene('high wide, very slow dolly in. the riders cross.'), goodShot, goodShot], null, { draft: true })),
           /no consistency lock/));
-  ok('a retired footage shot is not read for its clip prompt',
-     !has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5,
+  ok('a footage shot carries the same prompt rules',
+     has(bads(run([cover, footageScene({ slide: { shots: [{ group: 1, clip: 'slides/footage/s2-g1.mp4', duration: 5,
        engine: 'seedance', mark: 'z', audio: 'y', prompt: 'high wide, very slow dolly in, ending on road mid-frame. the riders cross.',
        camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } }] } }), goodShot, goodShot])), /no consistency lock/));
 

@@ -13,8 +13,8 @@
  *      통과한 적 없는 글자가 화면에 나가는 길을 막는다 (주석 속 한글은 허용)
  *   3. 갈래(kind) — diagram(기본) · kinetic · character. 움직이는 diagram 은 treatment 로
  *      editorial(HTML 이 화면 전체를 설계) · photo-action(사진 속 대상이 실제로 바뀜) ·
- *      photo-action 으로 가른다. footage(생성 클립 위에 표식)는 2026-09-05 진 규칙으로 은퇴했다 — 영상 위에는
- *      아무것도 그리지 않고, 설명 컷은 HTML 이 화면 전체를 그린다. 그 값이 오면 여기서 막는다.
+ *      footage(생성 클립이 그룹마다 바탕이 되고 그 위에는 자막만 — shots 의 클립이 있어야 한다)를 가른다.
+ *      2026-09-05 진 규칙 — 영상 위에는 아무것도 그리지 않는다. footage 화면이 h.mark 를 부르면 여기서 막는다.
  *      갈래마다 시작하는 템플릿이 다르다. 모든 슬라이드는 motion:true 다 — 정지 슬라이드는
  *      없다. character 는 visual.slide.acts 가 그룹마다 동작 하나를 들고 있어야 한다.
  *      사건을 연기할 때는 cast와 대상이 있는 act 객체를 써서, 누가 무엇을 했는지도 고정한다.
@@ -57,9 +57,16 @@ const MSG = {
   smil: "SVG SMIL 애니메이션 금지 (<animate·<animateTransform·<animateMotion·<set) — 벽시계로 돌고 __seek 이 못 세운다. CSS @keyframes 나 __paint 로 옮긴다",
   kindVocab: k => `slide.kind "${k}" 는 ${KINDS.join(" · ")} 밖이다`,
   kindTemplate: (k, fn, tpl) => `kind:"${k}" 인데 ${fn}() 이 없다 — ${tpl} 에서 시작한다`,
-  treatmentMissing: "motion diagram 에 visual.slide.treatment 가 없다 — HTML 이 화면 전체를 설계하면 editorial, 사진 속 대상이 실제로 바뀌면 photo-action",
+  treatmentMissing: "motion diagram 에 visual.slide.treatment 가 없다 — HTML 이 화면 전체를 설계하면 editorial, 사진 속 대상이 실제로 바뀌면 photo-action, 생성 클립을 자막만 얹어 쓰면 footage",
   treatmentVocab: t => `slide.treatment "${t}" 는 ${TREATMENTS.join(" · ")} 밖이다`,
-  treatmentRetired: t => `slide.treatment "${t}" 는 은퇴했다(진 규칙 2026-09-05) — 영상 위에는 아무것도 그리지 않는다. 설명 컷은 HTML 이 화면 전체를 그리는 editorial 로 만들고, 그 밖의 영상 컷은 자막만 얹는다`,
+  footageMark: "footage 화면이 표식을 그린다(h.mark.*) — 2026-09-05 진 규칙: 영상 위에는 아무것도 그리지 않는다. 표식 코드를 지우거나, 설명 컷이면 editorial 로 만든다",
+  footageAction: "footage slide 에 visual.action 이 없다 — 클립 안에서 인물·사물이 무엇을 하는지 적는다(표식이 아니라 피사체의 움직임)",
+  footageShots: "footage slide 에 visual.slide.shots 가 없다 — 그룹마다 클립 하나(문장 하나 = 클립 하나·둘)를 적는다",
+  footageShotsShort: (n, m) => `footage shots ${n}개인데 나레이션 세그먼트는 ${m}개 — 세그먼트마다 클립이 있어야 화면이 채워진다`,
+  footageClip: f => `footage 클립이 없다 — ${f} (storyboard §5 에서 먼저 생성한다)`,
+  footageClipExt: f => `footage 클립 "${f}" 는 mp4·webm 이 아니다 — 렌더러의 Chrome 은 H.264 와 VP9 만 읽는다`,
+  footageUnused: f => `shots 의 클립 "${f}" 를 render 가 앉히지 않는다 — h.footage(rg, clip) 로 그 그룹의 바탕에 둔다`,
+  footageNoGround: "footage slide 인데 renderSlide 가 h.footage 를 부르지 않는다 — 클립이 바탕이어야 화면이 채워진다",
   editorialRole: r => `editorial slide.role "${r}" 는 ${EDITORIAL_ROLES.join(" · ")} 밖이다`,
   editorialMotif: "editorial slide.motif 가 없다 — 에피소드 전체를 잇는 시각 장치를 적는다",
   editorialRasterOnly: "editorial 화면이 래스터 한 장과 글자만 쓴다 — 사진은 재료일 뿐, HTML 배우·관계선·문서 조각 가운데 둘 이상이 화면의 논리를 만들어야 한다",
@@ -96,8 +103,7 @@ const MSG = {
 /* 저작 화면의 세 갈래와, 캐릭터 연기가 고를 수 있는 동작. 정본은 scenes-schema §저작 화면 레인과
    character-act-template.html 머리말이다 — 여기 이름을 늘리려면 템플릿의 키프레임도 같이 는다. */
 const KINDS = ["diagram", "kinetic", "character"];
-const TREATMENTS = ["editorial", "photo-action"];
-const RETIRED_TREATMENTS = ["footage"];   // 2026-09-05 진 규칙 — 영상 위 표식 금지
+const TREATMENTS = ["editorial", "photo-action", "footage"];
 const EDITORIAL_ROLES = ["evidence", "relationship", "mechanism", "timeline", "statistic", "transition", "verdict"];
 const SEMANTIC_HELPERS = {
   "date-enter": "date", "range-grow": "range", "event-link": "link",
@@ -192,14 +198,40 @@ function checkDir(dir, only, opts) {
     if (motion && kind === "diagram") {
       const treatment = slide && slide.treatment;
       if (!treatment) fail(base, MSG.treatmentMissing);
-      else if (RETIRED_TREATMENTS.indexOf(treatment) !== -1) fail(base, MSG.treatmentRetired(treatment));
       else if (TREATMENTS.indexOf(treatment) === -1) fail(base, MSG.treatmentVocab(treatment));
       else if (treatment === "editorial") {
         if (EDITORIAL_ROLES.indexOf(slide.role) === -1) fail(base, MSG.editorialRole(slide.role));
         if (!String(slide.motif || "").trim()) fail(base, MSG.editorialMotif);
+      } else if (treatment === "footage") {
+        if (!String(scene.visual.action || "").trim()) fail(base, MSG.footageAction);
       } else if (!String(scene.visual.action || "").trim()) {
         fail(base, MSG.photoAction);
       }
+    }
+
+    // footage — 클립이 그룹마다 있고, 파일이 있고, render 가 실제로 앉힌다(slide-design §6.2).
+    // 클립은 storyboard §5 에서 이미 생성돼 있어야 한다. 표식(h.mark)은 2026-09-05 진 규칙으로 막는다.
+    if (motion && kind === "diagram" && slide && slide.treatment === "footage") {
+      const start = code.search(/function\s+renderSlide\s*\(|\brenderSlide\s*=\s*(?:async\s*)?\(?/);
+      const stop = code.indexOf("SEEK-RUNTIME-BEGIN", start >= 0 ? start : 0);
+      const drawn = start >= 0 ? code.slice(start, stop >= 0 ? stop : code.length) : code;
+      const shots = Array.isArray(slide.shots) ? slide.shots : null;
+      if (!shots || !shots.length) fail(base, MSG.footageShots);
+      else {
+        const segs = (scene.narration || []).length;
+        if (segs && shots.length < segs) fail(base, MSG.footageShotsShort(shots.length, segs));
+        shots.forEach((sh) => {
+          [sh && sh.clip, sh && sh.matte].filter(Boolean).forEach((f) => {
+            const file = String(f);
+            if (!/\.(mp4|webm)$/i.test(file.split("?")[0])) fail(base, MSG.footageClipExt(file));
+            if (!fs.existsSync(path.join(dir, file))) fail(base, MSG.footageClip(file));
+            // 경로를 리터럴로 적었거나 shots 배열을 코드로 읽는다(sh[0].clip) — 둘 중 하나면 앉힌 것이다
+            if (!drawn.includes(file.replace(/^slides\//, "")) && !/\.shots\b/.test(drawn)) fail(base, MSG.footageUnused(file));
+          });
+        });
+      }
+      if (!/\bh\.footage\s*\(/.test(drawn)) fail(base, MSG.footageNoGround);
+      if (/\bh\.mark\b/.test(drawn)) fail(base, MSG.footageMark);   // 2026-09-05 진 규칙 — 영상 위 표식 금지
     }
 
     // editorial은 사진 위에 글자만 올리는 자리가 아니다. 사진을 쓰더라도 HTML이 논리를
@@ -600,13 +632,16 @@ function selftest() {
     ["s18-fig.html", `const SLIDE_SHOT = 18; window.__seek = 1; function renderSlide(S, h) { return h.disk(1); }`,
       [MSG.artUnused("slides/assets/s18-person.png")]],
     ["s19-story-act.html", `const SLIDE_SHOT = 19; window.__seek = 1; function renderCharacter(S, h) {}`, []],
-    // footage 은퇴(2026-09-05 진 규칙) — 클립을 다 갖췄어도, 샷이 없어도, 행동이 없어도 같은 한 줄로 막고 옛 검사는 안 돈다
+    // footage — 클립이 바탕이고(h.footage), shots 의 파일이 있고, 코드가 shots 를 읽으면 앉힌 것이다. 표식(h.mark)은 2026-09-05 진 규칙으로 막는다
+    ["s20-footage.html", `const SLIDE_SHOT = 20; window.__seek = 1; function renderSlide(S, h) { const sh = S.visual.slide.shots; return h.footage(1, sh[0].clip) + h.footage(2, sh[1].clip); }`, []],
     ["s20-footage.html", `const SLIDE_SHOT = 20; window.__seek = 1; function renderSlide(S, h) { const sh = S.visual.slide.shots; return h.footage(1, sh[0].clip) + h.mark.route(1, [[0,0],[1,1]]) + h.footage(2, sh[1].clip); }`,
-      [MSG.treatmentRetired("footage")]],
+      [MSG.footageMark]],
+    ["s20-footage.html", `const SLIDE_SHOT = 20; window.__seek = 1; function renderSlide(S, h) { return h.mark.x(1, 1, 1); }`,
+      [MSG.footageUnused("slides/footage/s20-g1.mp4"), MSG.footageUnused("slides/footage/s20-g2.mp4"), MSG.footageNoGround, MSG.footageMark]],
     ["s20-footage.html", `const SLIDE_SHOT = 20; window.__seek = 1; function renderSlide(S, h) { const sh = S.visual.slide.shots; return h.footage(1, sh[0].clip) + h.footage(2, sh[1].clip); }`,
-      [MSG.treatmentRetired("footage")], "missing-asset"],
-    ["s21-noshots.html", `const SLIDE_SHOT = 21; window.__seek = 1; function renderSlide(S, h) { return h.footage(1, "x.mp4"); }`, [MSG.treatmentRetired("footage")]],
-    ["s22-noaction.html", `const SLIDE_SHOT = 22; window.__seek = 1; function renderSlide(S, h) { const sh = S.visual.slide.shots; return h.footage(1, sh[0].clip); }`, [MSG.treatmentRetired("footage")]],
+      [MSG.footageClip("slides/footage/s20-g1.mp4"), MSG.footageClip("slides/footage/s20-g2.mp4")], "missing-asset"],
+    ["s21-noshots.html", `const SLIDE_SHOT = 21; window.__seek = 1; function renderSlide(S, h) { return h.footage(1, "x.mp4"); }`, [MSG.footageShots]],
+    ["s22-noaction.html", `const SLIDE_SHOT = 22; window.__seek = 1; function renderSlide(S, h) { const sh = S.visual.slide.shots; return h.footage(1, sh[0].clip); }`, [MSG.footageAction]],
     // 구운 물체 — 시트·사이드카·include·h.object·존(잉크 상자 49..629 — x 97 이면 726 ≤ 728, x 100 이면 3px 초과)
     ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; <script src="assets/s23-obj.js"></script> function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 97, y: 0, slot: true }); }`, []],
     ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; <script src="assets/s23-obj.js"></script> function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 100, y: 0, slot: true }); }`,
