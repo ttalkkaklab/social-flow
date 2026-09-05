@@ -159,10 +159,11 @@ function checkDir(dir, only, opts) {
     const kind = (slide && slide.kind) || "diagram";
 
     // 2) 한글 리터럴 — 주석을 걷어낸 소스의 문자열 리터럴만 본다
-    const code = src
+    const strip = (t) => t
       .replace(/<!--[\s\S]*?-->/g, "")
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/^\s*\/\/.*$/gm, "");
+    const code = strip(src);
     const lits = [];
     for (const m of code.matchAll(/"([^"\\\n]*[가-힣][^"\\\n]*)"|'([^'\\\n]*[가-힣][^'\\\n]*)'/g))
       lits.push(m[1] || m[2]);
@@ -397,8 +398,9 @@ function checkDir(dir, only, opts) {
       /* 시계·타이머 — 템플릿 런타임 블록(SEEK-RUNTIME-BEGIN ~ SEEK-RUNTIME-END, 「건드리지 않는다」 구간)은 뺀다.
          2026-09-05 디렉터 지시 — 사람이 열면 바로 도는 자동 재생을 템플릿 런타임에 넣는다(렌더러가 몰 때는 꺼진다).
          저작 영역과 머리에서는 여전히 금지 — 프레임은 __seek(t, g) 가 정한다. */
-      const rtBegin = code.indexOf("SEEK-RUNTIME-BEGIN"), rtEnd = code.indexOf("SEEK-RUNTIME-END", rtBegin);
-      const outsideRuntime = rtBegin >= 0 && rtEnd > rtBegin ? code.slice(0, rtBegin) + code.slice(rtEnd) : code;
+      // 표식은 주석 안에 있어서(/* SEEK-RUNTIME-BEGIN … */) 주석을 걷어낸 code 가 아니라 src 에서 찾는다
+      const rtBegin = src.indexOf("SEEK-RUNTIME-BEGIN"), rtEnd = src.indexOf("SEEK-RUNTIME-END", rtBegin);
+      const outsideRuntime = strip(rtBegin >= 0 && rtEnd > rtBegin ? src.slice(0, rtBegin) + src.slice(rtEnd) : src);
       if (/Math\.random|new Date|Date\.now|performance\.now|requestAnimationFrame|setTimeout|setInterval/.test(outsideRuntime))
         fail(base, MSG.motionClock);
       for (const tag of videoTags) {
