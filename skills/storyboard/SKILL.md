@@ -431,9 +431,10 @@ Core rules:
   comparison, causal relation, mechanism,
   timeline, transition or verdict: set `treatment:"editorial"`, `role`, and one repeated `motif`.
   **A shot that explains an arrow, a number, or a principle must use a full-frame HTML slide.** Build
-  the explanation inside that authored screen; never choose `treatment:"footage"` and never draw
-  arrows, circles, numbers, or explanatory marks over a video. A shot that does not explain one of
-  those things may use video, but the video stays clean except for the episode subtitle.
+  that explanation inside the authored screen and do not choose `treatment:"footage"` for that
+  shot. A shot that does not explain one of those things may use `treatment:"footage"`, but the
+  video stays clean except for the episode subtitle: no arrows, circles, numbers or explanatory
+  marks over it.
   Classify every narrated shot first: `shot.infoType:"timeline"` for ordered periods or dated
   events, `"statistic"` for measured counts·rates·shares·comparisons, `"principle"` for
   causes·mechanisms·state changes, and `"other"` for the rest. Draw the first three on a full-frame
@@ -461,7 +462,7 @@ Core rules:
   full text is scenes-schema §filmed scenes.
 - **On a motion-required short, pick the moving body before the background.** An event, a
   place or an action beat on an `ai-video` channel is a **footage slide** — `treatment:"footage"`,
-  one generated clip per sentence with wordless marks drawn over it (`references/footage-lane.md`).
+  one generated clip per sentence with no marks drawn over it (`references/footage-lane.md`).
   A place, object or document that changes inside a photograph is `photo-action`: every group
   changes a hand, debris, folder or trace, mirrored in `visual.action` and `slide.plan`. Whole-photo
   moves, drifting dust, flashing accents and animated subtitles still fail either contract.
