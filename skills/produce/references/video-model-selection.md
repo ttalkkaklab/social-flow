@@ -73,6 +73,56 @@ reasoning is §The one axis that splits them, below.
 2.0 mini · 1.0 pro fast are on no public arena at all (§Quality). If you want one because it's
 cheap or feature-rich, run the same prompt on both once that episode and decide.
 
+## Seedance per-cut selection
+
+Keep ordinary hooks and motion backgrounds on **1.5 Pro, 1080p, silent**. Select 2.0
+only when complex interaction or a sequence of actions is essential to the cut, or when
+reference images are required. Select 2.5 for a fixed reference voice or more than nine
+reference images. A higher version alone is not a reason to escalate. Explanation still
+belongs on HTML motion slides, and the short-form cap stays hook plus one additional cut.
+
+Store the selection fields beside the prompt: `visual.video` for motion backgrounds,
+`visual` for b-roll, `visual.clip` for speaking clips. The shared resolver is
+`seedance-route.js`; check-scenes and cost-preview both call it.
+
+| Field | Contract |
+|---|---|
+| `engine` | `seedance` for this route; b-roll and speaking clips otherwise default to Veo |
+| `modelPurpose` | `standard` (default), `complex-motion`, `reference`, or `fixed-voice` |
+| `modelReason` | Concrete action or reference requirement; required for every model other than 1.5 Pro |
+| `realFaceInput` | Set after inspecting all source/reference images. 2.x requires `false`; a generated photoreal face counts as a face too |
+| `referenceImagePaths` | Planned character/product panel paths, in prompt reference order; one source frame is not a reference set |
+| `referenceAudioPaths` | Planned fixed-voice samples; forces the 2.5 speaking/b-roll route |
+| `model` | Optional exact model ID; omit to use the purpose-based selection. An explicit override must pass the same capability checks |
+| `resolution` | Defaults to `1080p`; do not choose a 720p-only tier for a 1080p episode |
+
+For complex motion with a photoreal face, keep 1.5 or choose a compatible Veo route;
+do not remove the face or change the shot merely to qualify for 2.x. When 1.5 is chosen,
+write `modelPurpose:"standard"` (or an explicit 1.5 model) and explain the face constraint
+in `modelReason`. Multi-reference/voice requirements with a photoreal face must be
+replanned on a compatible route before generating.
+
+Produce reads each Seedance row's `generation` object from `cost-preview.js --json` and
+uses its `tool`, `model`, `resolution`, `durationSeconds`, `generateAudio`, and reference
+paths in the API call. Resolve relative reference paths from the storyboard directory.
+Add the stored prompt and source/output paths. Do not send planning fields such as
+`modelPurpose`, `modelReason`, `realFaceInput`, `priceKey`, or `kind` as tool arguments.
+`seedance_img2video` takes the existing source still; `seedance_reference` takes the
+resolved reference paths. Bind image/audio indices in the stored prompt before approval.
+
+The forecast bills the model's minimum duration and rounds fractional used seconds up;
+a 3-second 1.5 scene therefore pays for 4 seconds. It rejects overlong scenes. Changing
+model, purpose, resolution, audio, or references invalidates the cost snapshot. Unknown
+price combinations block a budget verdict instead of using the 1.5 price. Forecasts use
+list prices, including 2.5 at 1080p, so expiring discounts cannot understate the budget.
+
+Keep upgrades inside the episode budget and existing approval scope. Unattended runs
+use 1.5 for ordinary hooks; they may select 2.x for the requirements above only when the
+full revised estimate fits the authorized cap. Do not make a paid A/B comparison by default.
+If a compatible 1.5 clip repeatedly misses an essential action, a 2.0 retry is an escalation:
+record the failure and reason, retain the spent ledger, and recalculate the remaining budget
+before calling. Reference/voice requirements cannot be dropped just to fit the cap.
+
 ## One-line decisions
 
 | Situation | Use |
@@ -116,7 +166,7 @@ throw away. This is the slot where you win with no downside.
 |---|---|---|
 | b-roll slot | Yes (absolute rule 9) | Veo — or Seedance with `generateAudio: true` |
 | Motion background `visual.video` | Discarded | **Seedance silent** |
-| Cover | Code-rendered (absolute rule 10) | No generated video at all |
+| Cover | Generated audio discarded | Silent 1.5 Pro motion background; code-rendered title |
 
 ---
 
@@ -170,7 +220,7 @@ The Seedance figures are the official docs' 5s example prices divided down to pe
 Veo figures were confirmed directly on the
 [Gemini API pricing page](https://ai.google.dev/gemini-api/docs/pricing) (both 2026-08-15).
 Three time-limited discounts are not reflected — 2.5's 1080p at 72% of list (through ~09-17),
-2.0 mini at 40% and 2.0 fast at 75% (through ~09-07).
+2.0 mini at 40% and 2.0 fast at 75% (through 2026-10-07, rechecked 2026-09-05).
 
 ---
 

@@ -95,7 +95,7 @@
  *   first frame before the first seek.
  * Exit 0 ok · 1 render/contract failure · 2 usage.
  */
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import fs from "node:fs";
@@ -162,6 +162,16 @@ const { w: W, h: H } = preset.canvas;
 const shotNo = parseInt((path.basename(htmlAbs).match(/^s(\d+)-/) || [])[1] || "0", 10);
 const scene = (global.window.SCENES || [])[shotNo - 1];
 const segCount = scene && Array.isArray(scene.narration) ? scene.narration.length : null;
+if (scene?.visual?.slide?.quality != null || scene?.visual?.slide?.treatment === 'editorial') {
+  // Direct rendering must not bypass the planning and baked-pixel gate.
+  try {
+    execFileSync(process.execPath, [fileURLToPath(new URL('../../storyboard/references/check-slide.js', import.meta.url)),
+      path.dirname(scenesPath), path.basename(htmlAbs)], { stdio: 'pipe' });
+  } catch (error) {
+    console.error(String(error.stdout || '') + String(error.stderr || error.message));
+    process.exit(1);
+  }
+}
 const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArray(scene.visual.slide.motionBeats)
   ? scene.visual.slide.motionBeats.filter(b => b && Number.isInteger(Number(b.group)) && b.primitive)
   : [];
@@ -413,6 +423,8 @@ const openPage = async () => {
   // First seek only after fonts, image decodes and video first frames are all settled. Load alone
   // is not enough for an image — capture before decode finishes and the first frame comes out blank.
   await evalJS("window.__ready()", true);
+  if (treatment === 'editorial' && !await evalJS("document.documentElement.classList.contains('studio') && !!document.querySelector('.studio-plate')"))
+    return die('editorial slides require the studio ground and material system; h.stage("flat") cannot satisfy object-state quality');
   const size = await evalJS("window.__size()");
   if (size.w !== W || size.h !== H) return die(`page size ${size.w}x${size.h} ≠ format canvas ${W}x${H} (window.FORMAT=${FORMAT})`);
   const meta = await evalJS("window.__meta()");           // { hold, stray, infinite }

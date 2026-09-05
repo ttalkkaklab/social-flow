@@ -145,7 +145,7 @@ const PRICED_VIDEO_KEYS = new Set([
     'seedance.1-5-pro-audio.1080p',
     'seedance.1-0-pro.1080p',
     'seedance.2-0-mini.720p', 'seedance.2-0-fast.720p',
-    'seedance.2-0.1080p', 'seedance.2-5.720p',
+    'seedance.2-0.1080p', 'seedance.2-5.720p', 'seedance.2-5.1080p',
 ]);
 const ELEVENLABS_KEY = {
     eleven_multilingual_v2: 'tts.elevenlabs',

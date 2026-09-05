@@ -57,6 +57,7 @@ window.THEME = {
   brand:   "channel name"      // brand wording on the outro
 };
 window.COMPREHENSION = { /* the one-question contract — see below */ };
+window.STORY = { /* required story-v1 plan and current review: story-quality.md */ };
 // window.MUSIC = { … };   // named music cues (§music cues) — leave the line out for one bed all the way through
 window.SCENES = [ /* the shot array — one entry = one shot. Keep the identifier names */ ];
 ```
@@ -66,6 +67,12 @@ or the capture index (`frame.html?i=n`). Those are the machine identifiers produ
 Only the human-readable labels move to shot, scene, and sequence.
 
 ## Comprehension contract — `window.COMPREHENSION`
+
+Read [story-quality.md](story-quality.md) for the required `window.STORY` contract and quoted
+review evidence. Draft validation checks the plan; full validation also requires a current
+review. `beat:"cta"` retains its renderer identifier but means the closing beat: an ask or
+question is optional. A concrete payoff must precede any ask. These rules override older
+act-stage or comment-question requirements below.
 
 This block is written in the story pass before a shot gets a camera or a prompt. It makes the
 episode compressible to one question, one answer, and one thing the viewer should retain:
@@ -187,16 +194,16 @@ short are defects, not aliases. `check-scenes.js` hard-fails them.
 |---|---|---|---|
 | `hook` | cover | Opens a gap — a reason to stay in the first 3 seconds. **Does not dump `COMPREHENSION.answer`.** `hookType` is `fear` · `empathy` · `curiosity` (`spoiler` is forbidden). `hookForm` is `paradox` · `gap` · `identify` · `number` · `secret` (`payoff` is forbidden). No logo, no intro sting, no greeting | `type:"cover"` — it's the cover even unwritten |
 | `drip` | curiosity stage | **1–n shots, n ≥ 1.** Each shot except the last pays one piece of the answer and opens the next gap in the same breath (scenario-craft §5). The last drip is the first place the answer is complete. Typically 2–5, so the 4–12 shot band still holds | usually `type:"points"` |
-| `cta` | next / act | The last **narrated** shot. One outward act: a comment question, a next-episode promise, or a memory question that produces comments. Subscribe/like is still banned. A shared `type:"outro"` asset is not this beat | last narrated shot — write `beat:"cta"` |
+| `cta` | close | The last **narrated** shot delivers the closing meaning. A relevant ask after the answer is optional. Subscribe/like is banned. A shared outro asset is not this beat | last narrated shot — write `beat:"cta"` |
 
 The four drop-off jobs map onto those three beats:
 
 | Job | Short-form beat | What it has to do | What kills it |
 |---|---|---|---|
-| **stop** | `hook` | 0–3 s: big title, a strong first frame, movement already in it, a gap the viewer can feel | a first frame the thumb slides past; the cover speaking the answer; `spoiler` / `payoff` |
-| **hold** | `drip` (every shot except the last drip) | pay one piece, open the next — the viewer is never done wondering. Something changing on screen every 2–4 s | a drip that only explains; dumping the whole answer on drip 1 |
+| **stop** | `hook` | 0–3 s: big title, a strong first frame, movement already in it — the cover is video on a short (`hook_video`, §cover), a gap the viewer can feel | a first frame the thumb slides past; a still cover; the cover speaking the answer; `spoiler` / `payoff` |
+| **hold** | `drip` (every shot except the last drip) | pay one piece, open the next — the viewer is never done wondering. Every cut a still under its camera move or an HTML motion slide, one cut of generated video at most (`visual.why`) | a drip that only explains; dumping the whole answer on drip 1; a still that stands frozen |
 | **satisfy** | last `drip` | the first place `COMPREHENSION.answer` is complete | a hook the drips can't keep; ending on explanation with no complete answer |
-| **act** | `cta` | after the answer, one outward loop — a comment question, the next episode's concrete result, or a memory question | a vague subscribe ask; no spoken CTA; ending on the shared outro alone |
+| **close** | `cta` | after the answer, an earned closing line and optional relevant ask | an unpaid promise replaced with a poll or teaser; ending on the shared outro alone |
 
 Why this order: half or more of the viewers who leave a Short leave inside the first 3 seconds,
 completion is the first distribution signal under 60 s, and a curiosity loop — a question thrown,
@@ -499,33 +506,48 @@ window.MOTION_POLICY = {
   maxStillSeconds: 4,
   requireAction: true,
   generatedVideoMax: 7,
-  maxStaticGroundSeconds: 4,                 // one picture may hold the screen this long (plugin default 4)
-  htmlPlateMax: 2,                           // authored plates per episode (plugin default 2)
-  videoBudgetUsd: 10                         // generated video per episode, billed + projected (plugin default 10)
+  maxStaticGroundSeconds: 8,                 // one still under its camera move may hold one cut (plugin default 8)
+  htmlPlateMax: 2,                           // one-picture plates per episode (plugin default 2)
+  videoBudgetUsd: 10,                        // generated video per episode, billed + projected (plugin default 10)
+  hookVideo: true                            // on a short the cover is video; the one cut after it writes visual.why (plugin default true)
 };
 ```
 
 The profile keys are `motion_min_true`, `motion_allowed_kinds`,
 `motion_max_consecutive_stills`, `motion_max_still_seconds`, `motion_require_action`,
-`generated_video_max`, `max_static_ground_seconds`, `html_plate_max`, and `video_budget_usd`.
-`check-scenes.js` blocks a missing or changed copy: the profile wins.
+`generated_video_max`, `max_static_ground_seconds`, `html_plate_max`, `video_budget_usd`
+and `hook_video`. `check-scenes.js` blocks a missing or changed copy: the profile wins.
 
-**The last three have plugin-wide defaults** (owner directive 2026-09-03 — "the viewer has to
-feel a video: image changes, animation, camera moves") and apply even to a channel that
-declares no motion policy; a profile may raise, lower, or switch each off with `off`:
+**The last four have plugin-wide defaults** (owner directives 2026-09-03 — "the viewer has to
+feel a video: image changes, animation, camera moves" — and 2026-09-05 — "the hook is video,
+one more cut at most, the rest is a still under a camera move or an HTML slide animation")
+and apply even to a channel that declares no motion policy; a profile may raise, lower, or
+switch each off with `off`:
 
-- **`max_static_ground_seconds` (4)** — no picture stays the same on screen longer than this
-  while the narration runs. The clock resets only when the picture itself changes: a generated
-  clip (a motion background, a b-roll, a quote clip), a recording, or a new still under the
-  next sentence (`narration[].img`). Captions, a counting number, a Ken Burns move, ambient
-  drift and a callout do not reset it. An HTML plate on an `other` beat is one picture for its
-  whole length, so such a plate is a one-sentence card by construction. **An explanation slide
-  is the exception** (directive 2026-09-05): with one `motionBeats` entry per narration group
-  every group changes the picture — the primitive lands, the object moves, the value counts —
-  so the clock runs per group there, and a group longer than the limit needs its sustain layer.
-- **`html_plate_max` (2)** — authored plates on `other` beats per episode. Explanation beats
-  (timeline · statistic · principle) are HTML slides by directive and sit outside the cap; the
-  capped plates are the verdict or the single figure on an `other` beat.
+- **`hook_video` (true)** — the short-form body. The cover is a moving picture: a motion
+  background under the code-rendered title (`visual.video`, the cover still as the engine's
+  source — the same PNG is the thumbnail), a supplied clip (`visual.video.clip`) or a
+  recording. The format cap of 2 leaves **one** more generated cut, and that cut writes
+  `visual.why` — the movement itself is the content (a hand doing the thing, a crowd, a place
+  changing) — or the beat stays a still under its camera move or an HTML motion slide.
+  `off` returns the channel to the pre-directive shape (a still cover with the `punch`, video
+  wherever the cap allows). Long-form does not run this rule.
+- **`max_static_ground_seconds` (8)** — one still may hold one cut. The clock resets only
+  when the picture itself changes: a generated clip (a motion background, a b-roll, a quote
+  clip), a recording, or a new still under the next sentence (`narration[].img`). Captions, a
+  counting number, ambient drift and a callout do not reset it; the still's camera move is
+  what makes the cut read as footage (the builder refuses a frozen still), and it is the
+  reason the limit is a whole cut — 8 s is the top of the directing-grammar §5 length column.
+  A cut longer than that swaps the still per sentence or splits. An HTML plate is one
+  picture for its whole length, so a plate is a one-sentence card by construction. **A
+  motion slide with one `motionBeats` entry per narration group** changes the picture every
+  group — the primitive lands, the object moves, the value counts — so the clock runs per
+  group there, and a group longer than the limit needs its sustain layer.
+- **`html_plate_max` (2)** — one-picture plates on `other` beats per episode. A motion slide
+  with a movement per narration group is a body of its own on any beat (directive
+  2026-09-05), and explanation beats (timeline · statistic · principle) are HTML slides by
+  directive; both sit outside the cap. The capped plates are the verdict or the single figure
+  that stands still for its sentence.
 - **`video_budget_usd` (10)** — what one episode may spend on generated video, billed and
   projected together (`cost-preview.js` reads it and returns `!!` + exit 1 over the line;
   storyboard §5 fits the board before asking). Stills, TTS and music sit outside it.
@@ -568,8 +590,10 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
   statLabel: "미신고 과태료 상한",            // qualifier within 18 chars
   narration: [ {tts,sub}, {tts,sub} ],      // 2 segments — ① the hook ② the hero stat
   visual: {
-    picture: "still", overlay: "html",
-    bg: "images/scene-1.png", bgPrompt: "…", motion: "very slow dolly in"
+    picture: "ai-video", overlay: "html",   // on a short the hook is video (hook_video, §Channel true-motion policy)
+    bg: "images/scene-1.png", bgPrompt: "…",  // the cover still — the thumbnail and the engine's source
+    video: { prompt: "…", clip: ".work/motion/motion-i0.mp4" },   // §motion background — silent seedance by default, title still code-rendered on top
+    camera: { movement: "dolly in", speed: "very slow", framing: "chest-up", end: "subject centred" }
   }
 }
 ```
@@ -593,9 +617,12 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
 - **The first frame has no logo, no intro sting, no greeting.** The stop is decided in 0–3 s:
   a big title (≤16 chars, the gradient chip), a strong first frame (on a short: the gap, the
   person, the figure — not the finished answer; on long-form answer-first: the result), and
-  movement already in it — the builder's Ken Burns (`punch` lands the cover's zoom
-  inside the first half-second) and the cover's kicker → title → hero-stat staging
-  are the floor, an opening b-roll or a real recorded clip is the ceiling. Branding lives in
+  movement already in it — **on a short the cover is video** (owner directive 2026-09-05,
+  `hook_video`): a motion background under the code-rendered kicker → title → hero-stat
+  staging (`visual.video`, §motion background — the cover still is the source, so the
+  thumbnail and the first moving frame are the same picture), a supplied clip, or a real
+  recording. The builder's `punch` on a still cover is the shape a channel with `hook_video:
+  off` keeps, and the shape long-form still uses. Branding lives in
   the outro (produce absolute rule 6), and the channel intro never sits in front of a short.
 - reveal mapping: rg1=title ← segment ①, rg2=stat ← segment ②.
 
@@ -1371,6 +1398,29 @@ the tail at the scene boundary.
 
 ### Motion background (`visual.video`) — a scene background from image to video
 
+**Seedance model selection** — store `modelPurpose` (`standard`, `complex-motion`,
+`reference`, `fixed-voice`), `modelReason`, `realFaceInput`, optional exact `model`, and
+`resolution` beside the clip prompt. Default is 1.5 Pro at 1080p. Complex action selects
+2.0; reference panels select 2.0 (2.5 above nine images); fixed reference voice selects
+2.5 on b-roll/speaking slots only. Reference paths are `referenceImagePaths` and
+`referenceAudioPaths`, relative to this storyboard directory or absolute. A source still
+alone stays on image-to-video. The full contract is produce `video-model-selection.md`
+§Seedance per-cut selection. Check-scenes validates it and cost-preview returns the exact
+resolved generation settings. Example of an eligible action hook:
+
+```js
+video: {
+  engine: "seedance", modelPurpose: "complex-motion",
+  modelReason: "The masked adult catches a falling box and passes it to another adult in one continuous move",
+  realFaceInput: false, resolution: "1080p",
+  prompt: "…", clip: ".work/motion/motion-i0.mp4"
+}
+```
+
+Use the same fields in `visual` for b-roll and `visual.clip` for speaking clips.
+An actual photoreal face, including a generated face, is ineligible for 2.x. Keep such
+an action on 1.5 or a compatible Veo route instead.
+
 ```js
 {
   type: "points",
@@ -1441,14 +1491,16 @@ line). Anything vaguer and the model fills the surface with squiggles that pass 
 read as slop the moment anyone pauses. Screen text for the viewer is a code-rendered overlay
 either way (absolute rule 10); this is about words that live inside the picture.
 
-- **When to use it**: when the movement itself is the content. A place to show only the picture
-  with nothing said is `broll` (spliced between scenes); **when the background has to move while
-  you talk, that's a motion background**. A still is never the default for a spoken beat: it
-  is allowed only under the static-ground limit (§Channel true-motion policy — one picture, at
-  most `maxStaticGroundSeconds`, so a still under two sentences needs `narration[].img` per line
-  or becomes a motion background), and only after the channel's true-motion floor and still-run
-  limits are met. Video buys cost and seam risk; the per-episode `videoBudgetUsd` is the ceiling,
-  not a reason to hold one picture.
+- **When to use it**: on a short, **the cover — always** (owner directive 2026-09-05,
+  `hook_video`: the hook is video, and this is its form, since the title stays code-rendered
+  on top), and **at most one more cut, when the movement itself is the content**, with the
+  reason written in `visual.why`. A place to show only the picture with nothing said is
+  `broll` (spliced between scenes); **when the background has to move while you talk, that's
+  a motion background**. Every other spoken beat is a still under its camera move (the still
+  lane — one still per cut, at most `maxStaticGroundSeconds`, a longer cut swaps the still per
+  sentence with `narration[].img`) or an HTML motion slide, and the channel's true-motion
+  floor and still-run limits still have to be met. Video buys cost and seam risk; the format
+  cap of 2 and the per-episode `videoBudgetUsd` are the ceiling.
 - **Start from the shot's `feel`, not from "this scene is heavy, so push the camera in"** — read
   the directing-grammar §5 row for that feel and take its move; the picture (`bgPrompt`), the
   size and the angle carry the tone, the move supports it (a move on its own didn't change
@@ -1532,9 +1584,11 @@ either way (absolute rule 10); this is about words that live inside the picture.
 ```
 
 The generated-video cap **is set by §motion background's effective channel cap** — b-roll slots
-and motion-background scenes count together. One b-roll is usually the opening after the cover
-(`after: 0`); the other can sit after any body scene — where the story's axis turns, or where a
-run of still cuts is dragging.
+and motion-background scenes count together. On a short the cover's motion background already
+takes one of the two (`hook_video`), so a b-roll is the **one** optional cut after the hook and
+writes `visual.why` like any generated cut there — the opening after the cover (`after: 0`), or
+after the body scene where the story's axis turns. On long-form one b-roll is usually the
+opening and the other sits where a run of still cuts is dragging.
 
 - **Don't put it in the main manifest** — after the build, `../../produce/references/splice-clip.sh`
   splices it at the `after` scene's end time and pushes the following subtitles by the measured
@@ -1559,7 +1613,8 @@ run of still cuts is dragging.
   where the episode can afford that loss within the length contract (the total-length band per
   format).
 - **Don't use it on the cover.** Veo can't write Korean, so screens with the hook title and the
-  hero stat are code-rendered (absolute rule 10). `after: 0` — that's **after** the cover.
+  hero stat are code-rendered (absolute rule 10). `after: 0` — that's **after** the cover. The
+  cover's own moving form is the motion background under its title (§cover).
 - `src` is **the same file as `SCENES[after]`'s `visual.bg`** (absolute rule 12) — the transition
   is the photo the previous scene showed as a still starting to move, so one image does two jobs.
   It has to be a PNG of a photorealistic person scene (Korean women by default, per the profile §3
@@ -1853,6 +1908,11 @@ slide.**
       file: "slides/s12-plugin-layout.html",
       kind: "diagram", motion: true, treatment: "editorial",
       role: "mechanism", motif: "folder rail",
+      quality: "object-state-v1",
+      subject: { kind: "data", changes: [
+        // One entry per narration segment. These are abstract folder relationships.
+        { group: 1, before: "unconnected folders", after: "folders connected to the plugin", driver: "relation" }
+      ] },
       plan: "the plugin folder structure revealing itself top to bottom, one entry at a time",
       labels: ["skills/", "agents/", "server/"]
       // arts: [{ file: "slides/assets/s12-plugin-layout.png", prompt: "…", group: 1, move: "travel" }]
@@ -1872,6 +1932,8 @@ slide.**
 | `slide.role` | ✅ on `treatment:"editorial"` | `evidence` · `relationship` · `mechanism` · `timeline` · `statistic` · `transition` · `verdict` |
 | `slide.motif` | ✅ on `treatment:"editorial"` | The episode-wide visual device repeated across authored frames: signal line, evidence stamp, paper tear, date rail, or another concrete device |
 | `slide.motionBeats` | ✅ when `shot.infoType` is `timeline` · `statistic` · `principle` | One `{group, primitive}` per narration group. The declared primitive has to exist in the rendered DOM for the same group |
+| `slide.quality` | required on editorial diagrams | `"object-state-v1"`. The planning gate rejects missing or unknown contracts, including draft boards. See `object-state-quality.md` |
+| `slide.subject` | required on editorial diagrams | `{kind:"object"\|"data"\|"type", changes:[{group,before,after,driver}]}`. One observable change per narration segment. Physical subjects require `slide.object`; camera motion and settle do not qualify. `object-state-quality.md` defines the drivers and production review |
 | `slide.object` | optional on `treatment:"editorial"` | A **rendered object** (`rendered-object.md`, slide-design.md §9) — `{ file, shape, keys, frames, plan }`. `file` is the baked sheet `slides/assets/s<shot>-<slug>.png`; `shape` a name in `bake-object.py` (`disc`); `keys` and `frames` the bake arguments, so the sheet is reproducible from this file; `plan` what the object does on which sentence. The groups where the object arrives or recedes declare `object-move` in `motionBeats`. Baked at the slide authoring step, before `check-slide.js` |
 
 The frame design is part of what the user approves, so storyboard renders and reviews key

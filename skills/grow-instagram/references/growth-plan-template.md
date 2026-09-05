@@ -25,7 +25,7 @@ autoproduce:                # when the queue runs dry the loop authors directly 
   min_queue: 1              # author only when the ready level is below this
   daily_produce_cap: 1      # this plan's episodes per day (success+failure combined, cap 2 — per-platform hard cap)
   duplicate_threshold: 0.5  # duplicate-verdict threshold (check-duplicate.py) — raise only for series channels
-  max_cost_per_video: 0.30  # USD — the lite promotion passes; fast and standard are blocked
+  max_cost_per_video: 1.00  # USD — passes the economy baseline with the hook motion background (~$0.61 seedance · ~$0.90 veo lite); the lite b-roll promotion needs 1.60
   daily_cost_cap: 0.60      # USD
   weekly_cap: 2.00          # USD
   mark_queues: ["instagram"]  # queues to stamp on authoring success — only platforms with an approved growth plan

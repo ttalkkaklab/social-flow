@@ -156,6 +156,11 @@ Three things to look at in a filmed scene.
 
 # Scenario mode
 
+Read `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/story-quality.md`. It overrides
+mandatory modern parallels, emotional reversals and closing questions below. Require a
+specific supported meaning, necessary developments and an earned resolution. CTA may be
+absent. Cite the candidate's actual words for each finding; 95 never waives a failed criterion.
+
 The one mode that does not read `scenes.js` — there is no board yet. What you are handed is
 one candidate page (`storyboard/candidates/d<n>.md`, or the winner `storyboard/scenario.md`
 after the pick), written before a shot exists, **in the seven-item shape** — 주제 · 훅 ·
@@ -203,16 +208,14 @@ score the engines axis at 0 and raise P0-10.
 4. **Heavy context stands in front of the first tension.** Installs, definitions or backstory
    delivered as a block before anything is at stake, rather than as bridges at the moment the
    investigation needs them (§11).
-5. **The curve never dips, or never comes back.** No item carries a negative sign before the
-   burst, or the page ends below zero. A straight climb is the least-read shape and a page that
-   ends in the low leaves the viewer with the tension and none of the release (§12).
+5. **The claimed emotional change has no supporting event.** A label, soundtrack or promised
+   twist supplies the only tension or release. A quiet discovery or unresolved historical
+   outcome can work when it delivers the episode's supported content; no forced positive ending.
 6. **The 훅's first line asks before it names anything at stake.** Curiosity with no loss on
    the table (§12).
-7. **The ending is a summary or a subscribe ask.** The 마무리 has to be a question the viewer
-   can answer from the episode — what do they think — and the CTA a callback that re-reads the
-   훅 plus one outward act. A 마무리 that summarises, a CTA with no callback, or a subscribe or
-   like verb anywhere on the page is this P0. An opinion question is the item, not a defect
-   (user directive, 2026-09-02).
+7. **The ending never delivers the promised content.** A generic summary, moral, opinion
+   poll or teaser replaces the supported resolution. A specific synthesis or decisive action
+   is valid; no question or CTA is required. Subscribe and like asks remain defects.
 8. **The 훅 opens something no 전개 item pays.** A staged threat, secret or gap that 전개
    #1–#3 never return to (§3 · §5). The seven items are the ledger.
 9. **The page carries shot-level material** — shot numbers, camera slots, prompts, character
@@ -231,9 +234,9 @@ score the engines axis at 0 and raise P0-10.
     invent a scene, not a fact).
 13. **An item is missing, out of order, or not doing its job.** Fewer than the seven items or
     a different order; a 전개 #1 that is an allusion rather than an account (who · when ·
-    what); a 전개 #2 that only restates the past with no present in it; a 전개 #3 with fewer
-    than two cases, or a case with no line on what it has to do with the topic or no research
-    row; a 주제 that is a topic label rather than the thought the viewer leaves with.
+    what); developments that add no evidence, choice, consequence or changed understanding;
+    an unsupported case; a 주제 that is a topic label rather than specific content.
+    Modern parallels are optional. CTA may explicitly be absent with a reason.
 
 14. **The ending cancels what the page charged for.** The 마무리 or the CTA tells the viewer
     the episode was less than it seemed — "사실 확실한 건 아닙니다", "결국 별거 아니었죠", or a
@@ -259,9 +262,9 @@ for engines the beats actually run, with a file:line or a quoted beat as evidenc
 |---|---|---|
 | Viewer engines | 40 | primary enacted (25) — see the table in `scenario-stage.md`; secondary enacted without fighting the primary (10); the mix is one primary plus at most one spice, not four names (5) |
 | The opening | 20 | cold open on the strongest moment or evidence, a promise sentence the profile §1 target audience would want kept, a first line that names a loss before it asks, the primary engine landing in that opening, and the staging placed half a step off what the viewer would have guessed — familiar material with one property moved, never a premise that has to be explained before it lands (§13) |
-| The structure is honoured | 15 | the seven items in order, each doing its job — 전개 #1 an account with its rows, 전개 #2 the turn to the present spoken as a thought, 전개 #3's cases each with their link — and each item closing a question as it opens the next, its last sentence one you could cut on because it forces a "그런데" or a "그래서" into the item after it (§13); on long-form, 전개 #1 laid out in the shape the row rides |
-| The feel curve | 15 | a sign per item, the minimum before the burst and the maximum on the turn (전개 #2) or the cases (전개 #3), and both poles on high-arousal feelings (dread, anger, awe, relief — not sadness or "nice") |
-| Items and ending | 10 | what the 훅 opens is paid inside 전개 #1–#3; the 마무리 is a question the viewer can answer from the episode, worded to produce comments; the CTA is a callback that re-reads the 훅 with the turned meaning plus one outward act — and nothing subscribe-shaped |
+| The structure is honoured | 15 | seven headings with necessary developments: evidence, choices, consequences or changed understanding; no compulsory modern cases; optional CTA explicitly justified or absent |
+| The feel curve | 15 | emotional progression justified by events and audience expectations, with room for a quiet discovery or release; intensity labels alone earn no points |
+| Items and ending | 10 | the promise is paid with specific content and the ending makes its meaning understandable; an optional ask follows the answer and belongs to this episode; a no-CTA ending can earn all points |
 
 A page that honours structure, opening, curve and ending with **no working engine** tops out
 around 60. That is intentional — it cannot clear 95, and the directives should name which
@@ -313,6 +316,15 @@ ship get their machine verdict, after §4 has written them.
 
 # Narration mode
 
+Apply `story-quality.md` in this existing read, not a new review loop. After the blind
+read, compare with the supplied STORY and relevant research excerpts. Return four named
+findings: meaning, progression, payoff, grounding; each with exact numbered narration
+quotes and a specific reason. Grounding cites the supplied source rows and separates
+interpretation from fact. Missing evidence is unresolved, not assumed verified. Any failed
+criterion is P0 regardless of score. No CTA, no present-day parallels and a quiet ending
+are not defects. The delegator maps quotes to shot/group refs and records STORY.review
+against the reviewed text. Recheck substantive changes after vocabulary edits.
+
 The first of the two reads the delegator loops. What you judge is whether the episode comes
 through **from the spoken sentences alone** — the viewer with the phone in a pocket, or reading
 the subtitles with the sound off and the picture half-watched (user directive, 2026-09-02).
@@ -323,10 +335,12 @@ unattended.
 ## Inputs (supplied by the delegation prompt)
 
 - **the narration itself, inline** — the spoken sentences in playback order, numbered, one a
-  line (the delegator's `extract-text.js … subtitle | nl` output). This is the whole read;
+  line (the delegator's `check-story.js storyboard/ --text` output). This is the whole read;
   **open no file to get it.** A read that opens scenes.js, research.md or the schema turns a
   two-minute verdict into a sixty-turn one (measured) and stops being a listener's read.
 - `window.COMPREHENSION`, pasted as written — the question, the answer, the takeaway, the terms
+- STORY and relevant research excerpts with row IDs, for comparison only after the blind read.
+  The numbered speech comes from `check-story.js --text`, including live-voice transcripts.
 - `storyboard/scenario.md` path (if present) — the approved seven items (주제 · 훅 · 전개 #1–#3 ·
   마무리 · CTA); a skip-research channel has none, and then `COMPREHENSION.question` · `takeaway`
   stand in for the 주제 and the 마무리 line. Open it only at step 3.
@@ -336,6 +350,14 @@ unattended.
 
 ## Reading procedure — the order is the test
 
+Apply `skills/storyboard/references/retention-direction.md` §1 during this blind read.
+In the existing chain findings, cite the first sentence where forward movement stops,
+what the first development pays, and the sentences that plant and resolve the main
+promise. Test whether consecutive examples change the question or just repeat a point.
+Treat a plausible but dull span as a correction directive within the existing axes;
+do not invent a retention percentage or add a new score. Apply the existing P0 rules
+when a missing link or unpaid promise makes the narration fail its stated purpose.
+
 1. **Read the numbered sentences in the prompt top to bottom once, as a listener** — every
    narrated sentence in playback order, written notation, one per line, no title, no caption,
    no picture, no shot number. Only when the prompt carries no inline text, extract them
@@ -343,15 +365,15 @@ unattended.
 
    ```bash
    PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
-   node "$PG/extract-text.js" ./storyboard/scenes.js subtitle | nl -ba -w2 -s'. '
+   node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js" storyboard/ --text
    ```
 2. **Write down what you understood** in the verdict's first section, before any comparison:
    what the episode is about in one sentence, what happened, what it has to do with now,
    which cases were named, what you were asked at the end. Where you could not tell, say so
    there ("who 그 사람 is never comes up").
 3. **Only now open `scenario.md` (when there is one) and `window.COMPREHENSION`** and compare. Is your one
-   sentence the 주제? Did 전개 #1's event, 전개 #2's present link and 전개 #3's cases reach
-   you? Could you answer the 마무리 question from what you heard?
+   sentence the 주제? Did the necessary evidence, choice and consequence reach you?
+   Does the ending deliver the promised meaning? Evaluate a closing question only if used.
 4. Point each finding at a sentence number — the delegator maps it to the shot and the
    segment. Don't open `scenes.js` for that.
 
@@ -370,8 +392,9 @@ picture was going to show, and you will fill the gap for the author without noti
    scenario.md) — or you could not write one.
 4. **The event is told without who · when · what.** 전개 #1 reaches the listener as an
    allusion — "그 일이 있고 나서" — rather than as an account.
-5. **The present link is implied, not spoken.** 전개 #2's "what this makes us think about now"
-   never gets a sentence; the cut from past to present is expected to say it.
+5. **A necessary relationship is implied, not spoken.** The viewer must invent the link
+   between the evidence and conclusion. If modern parallels are used, their relevance must
+   be intelligible; no modern parallel is required.
 6. **A case with no link.** A 전개 #3 case is named and what it has to do with the topic is
    never said.
 7. **A term used before or without its plain wording.** A name or technical term a **만 9~10세
@@ -388,7 +411,8 @@ picture was going to show, and you will fill the gap for the author without noti
    defect** — 천구백구십 년대, 십오 퍼센트, 구만 명 land on their own, and pulling them in
    would fail nearly every episode (the library runs 29 year mentions and 15 percentages
    against 2 out-of-scale figures).
-9. **The 마무리 question cannot be answered from what was heard**, or no question is asked.
+9. **The ending does not deliver the promised content.** An optional question must be
+   answerable from what was heard; absence of a question is valid.
 10. **A drop in the chain.** Two consecutive sentences where the second does not follow from
    the first — a "but" or a "therefore" the listener cannot supply (scenario-craft §1), with
    nothing spoken to bridge it.
@@ -398,19 +422,28 @@ picture was going to show, and you will fill the gap for the author without noti
 | Axis | Points | What earns them |
 |---|---|---|
 | The topic lands | 25 | your one sentence matches the 주제, or `COMPREHENSION.question` when there is no scenario.md (15); the takeaway you would repeat matches `COMPREHENSION.takeaway` (10) |
-| The chain holds | 25 | every sentence follows from the one before with no picture needed; every referent has a spoken antecedent; no seam the listener has to bridge |
-| The content is complete | 20 | 전개 #1 as an account — who · when · what (8); 전개 #2 spoken as a thought (6); each 전개 #3 case named with its link (6) |
+| The chain holds | 25 | causal continuity and spoken antecedents without help from the picture (15); early partial payment, new evidence or consequences in each development, and a concrete reason to hear the next beat (10). Cite the first stalled span; clarity alone earns at most 15 here |
+| The content is complete | 20 | the situation or mechanism is understandable (8); necessary evidence and choices are spoken (6); consequences and limits support the conclusion (6); modern cases are optional |
 | Terms and names | 15 | every unfamiliar term explained where it first appears, at the 초3~4 floor (8); every out-of-scale figure — P0-8's four kinds, not years or percentages — spoken with something beside it (4); no proper name the listener carries for nothing (3) |
-| The ending | 15 | the 마무리 question answerable from what was heard (8); the CTA callback re-reads the 훅 with the turned meaning (7) |
+| The ending | 15 | the promised answer or decisive action is delivered (8); its connection to the opening and specific meaning is intelligible (7); an optional CTA cannot substitute for either |
 
 ## Output format (fixed, machine-parseable)
 
 ```
 ## What I understood (written before opening scenario.md or scenes.js)
 - About: <one sentence>
-- What happened: <…> · What it has to do with now: <…>
-- Cases named: <…> · Asked at the end: <…>
+- What happened or works: <…> · Why it matters here: <…>
+- Evidence or cases used: <…> · Ending and optional ask: <…>
 - Could not tell: <…>
+
+## Required story evidence (complete after the blind read)
+| Criterion | Verdict | Exact numbered narration quote(s) | Specific reason and source row where relevant |
+|---|---|---|---|
+| meaning | pass/fail | ... | ... |
+| progression | pass/fail | ... | ... |
+| payoff | pass/fail | ... | ... |
+| grounding | pass/fail | ... | ... |
+Unresolved: <list; empty only when all four pass>. Any fail is P0 regardless of total score.
 
 ## Chain findings
 | Shot·seg | Sentence | Finding |
@@ -781,14 +814,15 @@ the reviewer still checks whether the declared type tells the truth.
     no semantic primitive is the same defect
 16. **One picture under the narration** — the scene's picture does not change for longer than
     the channel's static-ground limit (`window.MOTION_POLICY.maxStaticGroundSeconds`, default
-    4 s): a points still under two or more sentences, an HTML plate or kinetic screen that runs
-    the whole scene, a photo that only pans or zooms. Captions changing, a number counting up,
-    a Ken Burns move and ambient drift do not reset the clock; only a generated clip, a
-    recording, or a new still under the next sentence does (owner directive 2026-09-03 —
-    "the viewer has to feel a video: image changes, animation, camera moves"). An explanation
-    slide (timeline · statistic · principle) is the exception since 2026-09-05: it declares a
-    movement per group, so its clock runs per group. `check-scenes.js`
-    blocks the estimate; here read the plan and say which sentences share one picture
+    8 s — one still may hold one cut under its camera move, directive 2026-09-05): a points
+    still that runs past a cut's length, an HTML plate or kinetic screen that runs a whole
+    long scene. Captions changing, a number counting up and ambient drift do not reset the
+    clock; only a generated clip, a recording, or a new still under the next sentence does
+    (owner directive 2026-09-03 — "the viewer has to feel a video: image changes, animation,
+    camera moves"). A motion slide with a movement per group runs its clock per group.
+    `check-scenes.js` blocks the estimate; here read the plan and say which sentences share
+    one picture. On a short, a still cover or a second generated cut with no `visual.why`
+    is the same defect (the hook is video, one more cut at most)
 15. **Hook dumps the answer on a short** — the cover's title, hero stat, or spoken text
     contains `COMPREHENSION.answer`, or the cover uses `hookType:"spoiler"` / `hookForm:"payoff"`.
     The last drip is the first place the answer is complete

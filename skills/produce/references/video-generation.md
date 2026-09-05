@@ -63,7 +63,10 @@ storyboard defect: send it back.
   for sound you'll discard, and Veo only makes 1080p at 8 seconds while Seedance makes
   exactly the seconds you ask for and charges for exactly that.
   `seedance_img2video` (`resolution: "1080p"` · `durationSeconds` = the length that scene
-  actually uses · model `seedance-1-5-pro-251215` · `generateAudio: false`).
+  actually uses, clamped to the model floor · default model `seedance-1-5-pro-251215` · `generateAudio: false`).
+  For complex-motion, reference, or fixed-voice cuts, apply video-model-selection §Seedance
+  per-cut selection and use the resolved forecast generation arguments; never reset an
+  escalated model to the ordinary-hook default.
   Don't pass an aspect-ratio argument — the default `adaptive` follows the 1088×1920 source
   as-is, and while spelling out `9:16` gives the same result, any other value crops the
   source from the center.

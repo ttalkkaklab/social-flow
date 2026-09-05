@@ -93,8 +93,10 @@ at all — `music_generate` takes an exact length up to 300s.
 
 ## 3. Cues — this part is craft
 
-A single bed under a whole episode is the thing this section exists to replace, and nothing in
-the literature says where a cue should change. What we have is the machinery and a default.
+A single bed can support the whole episode. Choose changes from the story's turns using
+[retention-direction.md](../../storyboard/references/retention-direction.md) §4, then listen
+to the final mix using §5. Cue placement is an editorial decision. Autoproduce keeps one
+bed and uses supported drops and available SFX; it does not generate multiple cues.
 
 `bgm.tsv` (`idx <TAB> audio-file`) changes the bed at a card and keeps it until the next row;
 changes crossfade over `BGM_CUE_XF` (2.0s). The storyboard authors it as `sound.cue` per shot

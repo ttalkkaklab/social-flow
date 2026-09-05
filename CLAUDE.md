@@ -64,6 +64,24 @@ This outranks every other rule in the plugin, the skills and the reference docs.
   clock runs per reveal group on them.
 - Video stays the ground for mood, place, people and action — with nothing drawn on it.
 
+## A short is cost-shaped — the hook is video, one more cut at most (user directive, 2026-09-05)
+
+Every short-form episode this plugin makes has the same body, and the checkers hold it
+(`check-scenes.js`, the storyboard.html strip; profile key `hook_video`, default on):
+
+- **The hook is video.** The cover carries a motion background under its code-rendered title
+  (`visual.video`, the cover still as the engine's source — silent Seedance by default), a
+  supplied clip, or a recording. A still cover is a defect on a short.
+- **At most one more cut is generated video**, and only when the movement itself is the
+  sentence — the shot writes `visual.why`. The format cap of 2 holds the count.
+- **Every other cut is a still under its camera move or an HTML motion slide.** The still
+  lane is local and $0 — one still per cut (`max_static_ground_seconds`, default 8 s), the
+  move chosen from the feel, `narration[].img` when a cut runs longer. An HTML motion slide
+  with a movement per narration group is a body of its own on any beat and sits outside
+  `html_plate_max`; explanation beats are HTML slides by the directive above.
+- autoproduce's economy baseline pays for the hook only (about $0.61 an episode); the one
+  cut after it is the escalation slot.
+
 ## Branch strategy
 
 ```

@@ -23,28 +23,28 @@ subtitle spec built for plates.
 
 ## Contents
 
-- [1. When a scene is a footage slide](#1-when-a-scene-is-a-footage-slide)
+- [1. When a scene is a footage slide — never, since 2026-09-05](#1-when-a-scene-is-a-footage-slide-never-since-2026-09-05)
 - [2. Writing the scene (§4)](#2-writing-the-scene-4)
 - [3. Fitting the clips to the budget (storyboard §5)](#3-fitting-the-clips-to-the-budget-storyboard-5)
 - [4. Generating the clips and authoring the marks (produce §3 · §3.6)](#4-generating-the-clips-and-authoring-the-marks-produce-3-36)
 - [5. Build (produce)](#5-build-produce)
 - [6. Traps](#6-traps)
 
-## 1. When a scene is a footage slide
+## 1. When a scene is a footage slide — never, since 2026-09-05
 
-- The channel motion policy allows `ai-video`, and the beat shows **something happening** —
-  people moving, a place, an action, a confrontation, a journey. On a history or story
-  channel that is most drip beats. **It is the default ground for every spoken beat** since
-  2026-09-03 (owner directive — "the viewer has to feel a video: image changes, animation,
-  camera moves"): the plugin's static-ground limit (scenes-schema §Channel true-motion policy,
-  `maxStaticGroundSeconds` 4) lets no picture hold the screen longer than one sentence, and
-  a footage slide clears it by construction because every group opens a new clip.
-- A statistic, a timeline or a mechanism goes on footage too, with the value as a `label` and
-  the mark on what it counts; the editorial plate is for the one-sentence verdict or a figure
-  that has to stand alone (`htmlPlateMax` 2 per episode). Not for a document or object
-  changing inside a photograph (`photo-action`), a talking head (a `quote` clip), or the cover
-  (§cover — its moving form is a motion background). One episode mixes them: footage for the
-  events and the numbers, at most two plates for the verdicts.
+- **Nothing here is a default any more.** The 2026-09-03 reading of this lane — "footage is
+  the default ground for every spoken beat, one clip per sentence" — was withdrawn on
+  2026-09-05 by two owner directives (CLAUDE.md §Nothing is drawn over video · §A short is
+  cost-shaped). A board plan that cites this section to lay every cut on footage is citing a
+  retired rule; `check-scenes.js` rejects `treatment:"footage"` on every shot.
+- **What a short is now** (scenes-schema §Channel true-motion policy, `hook_video`): the hook
+  is video — a motion background under the code-rendered cover title; **at most one more cut**
+  is generated video, with `visual.why` saying the movement is the content; every other cut
+  is a still under its camera move (one still per cut, `maxStaticGroundSeconds` 8) or an HTML
+  motion slide with a movement per narration group. A statistic, a timeline or a mechanism
+  is an editorial HTML slide on the studio stage (`rendered-object.md`), never a clip with
+  labels on it. A document or object changing inside a photograph is `photo-action`; a
+  talking head is a `quote` clip.
 - **A storyboard lane, not an autoproduce one.** The lane spends per sentence and puts a human
   at two places autoproduce has none — the cost gate (§3) and the marks read against the real
   clip (§4). autoproduce never plans a footage slide; a `scenes.js` handed to it that already

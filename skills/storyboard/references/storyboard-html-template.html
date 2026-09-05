@@ -1529,7 +1529,7 @@ window.SB_DOC = {
     var v = s.visual || {};
     /* A motion background may name its route on the video object itself — the same place the
        cost panel reads it from. check-scenes.js engineOf resolves it in this order too. */
-    var named = (v.video && v.video.engine) || v.engine;
+    var named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
     if (named === "veo" || named === "seedance") return named;
     if (s.type === "broll" || s.type === "quote") return "veo";
     return "seedance";
@@ -1741,8 +1741,13 @@ window.SB_DOC = {
       var slot = null;
       if (s.type === "broll") slot = ["broll", v.engine === "seedance" ? "seedance" : "veo", Number(s.duration) || 0];
       else if (v.video) slot = ["motion", (v.video.engine || v.engine) === "veo" ? "veo" : "seedance", Number(s.duration) || 0];
-      else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", "veo", 8];
-      if (slot) parts.push((i + 1) + ":" + slot.join("/"));
+      else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", (v.clip.engine || v.engine) === "seedance" ? "seedance" : "veo", Number(s.duration) || 8];
+      if (slot) {
+        var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
+        var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths"];
+        var settings = fields.map(function (key) { return config[key] === undefined ? null : config[key]; });
+        parts.push((i + 1) + ":" + slot.join("/") + ":" + encodeURIComponent(JSON.stringify(settings)));
+      }
       var sl = v.slide;
       if (sl && sl.treatment === "footage" && Array.isArray(sl.shots)) {
         for (var j = 0; j < sl.shots.length; j++) {
@@ -2203,15 +2208,8 @@ window.SB_DOC = {
     else if (isShortForm && COMP.terms.length > 3)
       flag("bad", T.where.comprehension, COMP.terms.length + " unfamiliar terms — short-form cap 3");
 
-    var editorialSlides = SCENES.filter(function (s) {
-      var sl = s && s.visual && s.visual.slide;
-      return sl && sl.motion === true && (sl.kind || "diagram") === "diagram" &&
-             sl.treatment === "editorial";
-    });
-    if (isShortForm && COMP.mode === "informational" && editorialSlides.length < 1)
-      flag("bad", T.where.comprehension, "short informational episode has no full-frame editorial HTML cut — use 1–3");
-    if (isShortForm && COMP.mode === "informational" && editorialSlides.length > 3)
-      flag("bad", T.where.comprehension, editorialSlides.length + " editorial HTML cuts — short-form cap 3");
+    // No editorial-cut band here — check-scenes.js dropped the 1–3 count on 2026-09-03, and since
+    // 2026-09-05 every timeline · statistic · principle beat is an editorial slide outside any cap.
   }
 
   SCENES.forEach(function (s, i) {
@@ -2220,9 +2218,9 @@ window.SB_DOC = {
     var infoTypes = ["other", "timeline", "statistic", "principle"];
     var infoRole = { timeline: "timeline", statistic: "statistic", principle: "mechanism" };
     var infoPrimitives = {
-      timeline: ["date-enter", "range-grow", "event-link"],
-      statistic: ["count-up", "bar-grow", "dot-fill", "axis-draw"],
-      principle: ["flow-trace", "node-enter", "state-transform"]
+      timeline: ["date-enter", "range-grow", "event-link", "object-move"],
+      statistic: ["count-up", "bar-grow", "dot-fill", "axis-draw", "object-move"],
+      principle: ["flow-trace", "node-enter", "state-transform", "shape-enter", "shape-draw", "shape-travel", "object-move"]
     };
     if (s.type !== "broll" && s.type !== "outro") {
       if (infoTypes.indexOf(infoType) < 0)
@@ -2242,12 +2240,30 @@ window.SB_DOC = {
       }
     }
     if (!sl || sl.motion !== true || (sl.kind || "diagram") !== "diagram") return;
-    if (sl.treatment === "footage")   // 2026-09-05 owner rule — nothing is drawn over video; mirrors check-scenes.js FOOTAGE_RETIRED
-      flag("bad", T.shotCap(i + 1), "treatment \"footage\" is retired (user directive 2026-09-05) — nothing is drawn over video; make the cut an editorial slide on the studio stage, or a motion background / b-roll with nothing drawn on it");
+    if (sl.treatment === "footage")
+      flag("bad", T.shotCap(i + 1), "treatment \"footage\" is retired (owner directive 2026-09-05) — nothing is drawn over video; an explanation cut is an editorial HTML slide on the studio stage, an event or a place is a motion background or b-roll with no marks");
     else if (sl.treatment !== "editorial" && sl.treatment !== "photo-action")
       flag("bad", T.shotCap(i + 1), "moving diagram needs slide.treatment editorial or photo-action");
     if (sl.treatment === "editorial" && (!String(sl.role || "").trim() || !String(sl.motif || "").trim()))
       flag("bad", T.shotCap(i + 1), "editorial frame needs role and episode-wide motif");
+    if (sl.treatment === "editorial") {
+      if (sl.quality !== "object-state-v1")
+        flag("bad", T.shotCap(i + 1), "editorial slide requires quality: object-state-v1");
+      var subject = sl.subject || {}, changes = subject.changes;
+      var drivers = {object:["geometry","surface","articulation","spatial"], data:["value","relation"], type:["type"]};
+      if (!drivers[subject.kind] || !Array.isArray(changes) || changes.length !== (s.narration || []).length)
+        flag("bad", T.shotCap(i + 1), "subject needs one before/after change per narration group");
+      else changes.forEach(function (change, j) {
+        if (!change || change.group !== j + 1 || typeof change.before !== "string" ||
+            typeof change.after !== "string" || !change.before.trim() || !change.after.trim() ||
+            change.before.trim() === change.after.trim() || drivers[subject.kind].indexOf(change.driver) < 0)
+          flag("bad", T.shotCap(i + 1), "invalid subject change in group " + (j + 1));
+      });
+      if (subject.kind === "object" && !sl.object)
+        flag("bad", T.shotCap(i + 1), "physical subject requires a baked object; a moving still is insufficient");
+      if (sl.object && subject.kind !== "object")
+        flag("bad", T.shotCap(i + 1), "slide.object requires subject.kind object");
+    }
     if (sl.treatment === "photo-action" && !String(v.action || "").trim())
       flag("bad", T.shotCap(i + 1), "photo-action frame needs a subject/evidence change in visual.action");
   });
@@ -2263,6 +2279,23 @@ window.SB_DOC = {
   if (genVid > policyVideoMax)
     flag("bad", T.where.genVideo, "b-roll and motion backgrounds together " + genVid + " shots — cap " +
          policyVideoMax + " (channel motion policy; format default when no override is written)");
+
+  // Short-form body (owner directive 2026-09-05) — the hook is video, one more generated cut
+  // writes why, the rest is a still under its camera move or an HTML motion slide. Mirrors
+  // check-scenes.js; hook_video: off in the profile (hookVideo:false here) switches it off.
+  var hookVideoOn = MP.hookVideo !== false && MP.hookVideo !== "off";
+  if (!WIDE && hookVideoOn) {
+    SCENES.forEach(function (s, i) {
+      var v = (s && s.visual) || {};
+      if (s.type === "cover") {
+        var moving = !!(v.video || v.clip || v.source === "recording" || v.picture === "recording");
+        if (!moving)
+          flag("bad", T.shotCap(1), "the hook is a still — on a short the cover is video: a motion background under the code-rendered title (visual.video), a supplied clip, or a recording");
+      } else if ((s.type === "broll" || v.video) && !String(v.why || "").trim()) {
+        flag("bad", T.shotCap(i + 1), "a generated cut after the hook with no visual.why — the body of a short is a still under its camera move or an HTML motion slide; write why this cut needs the movement itself");
+      }
+    });
+  }
 
   function trueMotionKind(s) {
     var v = (s && s.visual) || {};
@@ -3410,6 +3443,14 @@ window.SB_DOC = {
             meta += '<details class="prompt"><summary>' + esc(T.promptSlidePlan) + "</summary><p>" + esc(vis.slide.plan) +
                  (vis.slide.labels && vis.slide.labels.length ? " · labels: " + esc(vis.slide.labels.join(", ")) : "") +
                  "</p></details>";
+          if (vis.slide.subject && Array.isArray(vis.slide.subject.changes)) {
+            meta += '<div class="row"><b>Subject states</b><div class="v">' +
+              esc(vis.slide.subject.kind || "?") + " · " + esc(vis.slide.quality || "?") +
+              vis.slide.subject.changes.map(function (change) {
+                return '<p>g' + esc(change && change.group) + ": " + esc(change && change.before) +
+                  " → " + esc(change && change.after) + " (" + esc(change && change.driver) + ")</p>";
+              }).join("") + "</div></div>";
+          }
         }
       }
       if (firstOfScene && DOC.privacy && DOC.privacy[sceneKey])
