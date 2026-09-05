@@ -48,7 +48,7 @@ const MSG = {
   webfont: "웹폰트 로드 금지 — 로컬 폰트 스택만",
   motionSeek: "모션 슬라이드에 window.__seek 가 없다 — motion-slide-template.html 에서 시작한다",
   motionTransition: "모션 슬라이드에 transition 금지 — 속성이 바뀐 뒤에만 객체가 생겨 seek 로 세울 수 없다. @keyframes 로 쓴다",
-  motionClock: "모션 슬라이드에 시계·난수·타이머 금지 (Date·Math.random·performance.now·requestAnimationFrame·setTimeout) — 프레임은 __seek(t, g) 가 정한다. 키프레임으로 못 그리는 움직임은 __paint(rg, durMs, fn) 로 그린다",
+  motionClock: "모션 슬라이드에 시계·난수·타이머 금지 (Date·Math.random·performance.now·requestAnimationFrame·setTimeout) — 프레임은 __seek(t, g) 가 정한다. 키프레임으로 못 그리는 움직임은 __paint(rg, durMs, fn) 로 그린다. 예외는 템플릿 런타임 블록(SEEK-RUNTIME-BEGIN~END)의 자동 재생뿐이다",
   remoteMedia: u => `원격 URL 금지 — "${u}". 이미지·영상은 슬라이드 옆 로컬 파일만 쓴다. 네트워크가 프레임을 정하면 같은 (g, t) 가 같은 픽셀을 내지 못한다`,
   videoPlayback: "슬라이드의 <video> 에 autoplay·loop 금지 — 재생은 벽시계를 타고, 프레임은 __seek(t, g) 가 정한다",
   videoDur: "모션 슬라이드의 <video> 에 data-vdur 이 없다 — 그룹 안에서 재생할 길이(ms)가 0 이 되어 영상이 클립 내내 첫 프레임에 멈춘다",
@@ -394,7 +394,12 @@ function checkDir(dir, only, opts) {
     else {
       if (!/window\.__seek\s*=/.test(code)) fail(base, MSG.motionSeek);
       if (/transition\s*:/.test(code)) fail(base, MSG.motionTransition);
-      if (/Math\.random|new Date|Date\.now|performance\.now|requestAnimationFrame|setTimeout|setInterval/.test(code))
+      /* 시계·타이머 — 템플릿 런타임 블록(SEEK-RUNTIME-BEGIN ~ SEEK-RUNTIME-END, 「건드리지 않는다」 구간)은 뺀다.
+         2026-09-05 디렉터 지시 — 사람이 열면 바로 도는 자동 재생을 템플릿 런타임에 넣는다(렌더러가 몰 때는 꺼진다).
+         저작 영역과 머리에서는 여전히 금지 — 프레임은 __seek(t, g) 가 정한다. */
+      const rtBegin = code.indexOf("SEEK-RUNTIME-BEGIN"), rtEnd = code.indexOf("SEEK-RUNTIME-END", rtBegin);
+      const outsideRuntime = rtBegin >= 0 && rtEnd > rtBegin ? code.slice(0, rtBegin) + code.slice(rtEnd) : code;
+      if (/Math\.random|new Date|Date\.now|performance\.now|requestAnimationFrame|setTimeout|setInterval/.test(outsideRuntime))
         fail(base, MSG.motionClock);
       for (const tag of videoTags) {
         if (!/\bdata-rg\s*=/.test(tag)) { fail(base, MSG.videoGroup); break; }
@@ -520,6 +525,9 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; <style>@keyframes rise{}</style> window.__seek = () => 1;`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; <style>@keyframes rise{}</style>`, [MSG.motionSeek]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{transition: opacity 1s}</style>`, [MSG.motionTransition]],
+    // 시계·타이머 — 템플릿 런타임 블록 안의 자동 재생은 통과(2026-09-05), 저작 영역이면 막는다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; /* SEEK-RUNTIME-BEGIN */ function tick(){ requestAnimationFrame(tick); } /* SEEK-RUNTIME-END */`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { setTimeout(() => 1, 10); return h.count(1, 3); } /* SEEK-RUNTIME-BEGIN */ /* SEEK-RUNTIME-END */`, [MSG.motionClock]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{backdrop-filter:blur(8px);box-shadow:0 8px 20px #000}</style>`, [MSG.generatedStyle]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{border-radius:18px}</style>`, [MSG.roundedCard(18)]],
     // 플레이트·스크림 그라데이션은 템플릿 머리 CSS 자리(저작 영역 밖)라 통과한다
