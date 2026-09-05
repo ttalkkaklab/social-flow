@@ -447,8 +447,9 @@ includes source/date readability at phone scale.
 
 ### 6.2 Footage treatment — marks over generated footage
 
-> ⛔ **Retired (2026-09-05, Jin).** Do not use `treatment:"footage"`. The current rule is in
-> `skills/storyboard/SKILL.md` under “Pick the screen body by the information job.”
+> ⛔ **Marks retired (2026-09-05, Jin).** `treatment:"footage"` is allowed only with no
+> arrows, circles, brackets, hatching, numbers or explanatory marks over the video. The current
+> rule is in `skills/storyboard/SKILL.md` under “Pick the screen body by the information job.”
 
 The lane is `kind:"diagram", treatment:"footage"` (scenes-schema §footage treatment). The ground
 is one generated clip per reveal group; HTML draws wordless marks over it. The look was measured

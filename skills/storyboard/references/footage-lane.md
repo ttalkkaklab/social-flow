@@ -1,7 +1,8 @@
 # Footage lane — one generated clip per sentence, wordless marks drawn over it
 
-> ⛔ **Retired (2026-09-05, Jin).** Do not use `treatment:"footage"`. The current rule is in
-> `skills/storyboard/SKILL.md` under “Pick the screen body by the information job.”
+> ⛔ **Marks retired (2026-09-05, Jin).** `treatment:"footage"` is allowed only with no
+> arrows, circles, brackets, hatching, numbers or explanatory marks over the video. The current
+> rule is in `skills/storyboard/SKILL.md` under “Pick the screen body by the information job.”
 
 The procedure for `visual.slide.treatment:"footage"`. The contract is scenes-schema §footage
 treatment, the look and the rubric are slide-design.md §6.2, the machine checks are
