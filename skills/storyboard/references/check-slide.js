@@ -141,6 +141,7 @@ function checkDir(dir, only, opts) {
 
   for (const f of files) {
     const base = path.basename(f);
+    const badBefore = bad;   // 이 파일에서 난 ✗ 만 센다 — 앞 파일이 실패해도 이 파일의 ✓ 는 찍힌다
     const src = fs.readFileSync(path.join(slidesDir, base), "utf8");
 
     // 1) 파일명 ↔ SLIDE_SHOT ↔ scenes.js
@@ -433,7 +434,7 @@ function checkDir(dir, only, opts) {
       if (cardRadius !== undefined) fail(base, MSG.roundedCard(cardRadius));
     }
 
-    if (!bad) console.log(`✓ ${base}${motion ? " (motion · " + kind + ")" : ""}`);
+    if (bad === badBefore) console.log(`✓ ${base}${motion ? " (motion · " + kind + ")" : ""}`);
   }
 
   // scenes.js 쪽 역방향. 검토 중에는 목록만 보여주고 제작 입구에서는 --require-all로 막는다.
