@@ -45,6 +45,25 @@ The rule's source of truth is `skills/platform-guide/references/korean-style.md`
 Exceptions: `살아남는다` (a different verb), conditionals (`나뉜다면`), spoken past
 tense, and imperatives (`남겼어`·`남겨 둬`).
 
+## Nothing is drawn over video — explanation is an HTML slide (user directive, 2026-09-05)
+
+This outranks every other rule in the plugin, the skills and the reference docs.
+
+- **Nothing is drawn over video.** No arrow, route, X, ring, hatch, bracket, dot, label or
+  callout goes over a generated clip, a motion background, a b-roll, a quote clip or a
+  recording. The burned subtitle is the only type on a moving picture. The footage treatment
+  (`treatment:"footage"`, 0.47–0.53: one clip per sentence under drawn marks) is retired —
+  `check-scenes.js` and `check-slide.js` reject it.
+- **A cut that needs an arrow, a figure or a principle is an HTML slide, not video.**
+  `shot.infoType` timeline · statistic · principle, and any beat that would need something
+  pointed at on the picture, are `kind:"diagram", motion:true, treatment:"editorial"` on the
+  studio stage, with a rendered object when a thing is the subject. The quality bar is
+  `docs/research/2026-09-04-rendered-object-slide/reference-slide.html` — lit slabs, a
+  cyclorama, a baked object whose movement is the sentence, one accent, values that count
+  while the sentence runs. Those slides sit outside `html_plate_max`, and the static-ground
+  clock runs per reveal group on them.
+- Video stays the ground for mood, place, people and action — with nothing drawn on it.
+
 ## Branch strategy
 
 ```

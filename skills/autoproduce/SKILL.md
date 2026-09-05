@@ -347,13 +347,13 @@ The rules automated authoring breaks most often:
   `shot.infoType:"timeline"`, measured counts·rates·shares·comparisons are `"statistic"`,
   causes·mechanisms·state changes are `"principle"`, and the rest is `"other"`. The first three
   use the mandatory moving editorial diagram and mapped role, with one allowed
-  `slide.motionBeats` primitive per narration group. They never fall back to a still or footage.
-- `treatment:"footage"` (storyboard `references/footage-lane.md`) is not planned on this path —
-  it buys one clip per sentence and needs a human at the cost gate and at the marks. If the
-  `scenes.js` this run picks up already carries one, put one `seedance.1-5-pro-silent.1080p`
-  row per `slide.shots` entry (its `duration` in seconds) on `.work/cost-estimate.tsv` before
-  §5's cap verdict; exit 2 there stops the run instead of dropping to economy, because a
-  footage slide has no cheaper form.
+  `slide.motionBeats` primitive per narration group, on the studio stage, to the bar of
+  `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. They never fall back
+  to a still or to a clip with marks over it.
+- `treatment:"footage"` is retired (user directive 2026-09-05 — nothing is drawn over video;
+  CLAUDE.md §Nothing is drawn over video). `check-scenes.js` rejects it, so a `scenes.js`
+  that carries one stops at the contract check; rewrite the beat as an editorial slide (an
+  explanation) or a motion background with nothing drawn on it (an event, a place).
   A principle frame sits ink actors (`slide.arts` · `h.fig`) and draws hairline relations
   (`h.stem` · `h.bus` · `h.chamber` · `h.ring` · `h.press`). Named states may skip arts.
   Shape primitives require arts, generated at §6.6.
