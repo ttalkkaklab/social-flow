@@ -135,3 +135,27 @@ test('CLI gates block missing plans in draft and missing review in full producti
     writeFileSync(file, 'invalid syntax'); assert.equal(run('check-story.js').status, 3);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('a quote too short to identify the line is refused', () => {
+  const w = fixture();
+  w.STORY.opening = { shot: 1, group: 1, quote: '?' };
+  assert.match(checkStory(w).join(' '), /STORY\.opening quote is too short/);
+  // The measure is the line the quote was found in, not the shorter of tts/sub: a five-word
+  // subtitle must not vouch for a long spoken sentence.
+  const long = 'Why is the box moving across the table all by itself right now?';
+  w.SCENES[0].narration = [{ tts: long, sub: 'the box' }];
+  w.STORY.opening = { shot: 1, group: 1, quote: 'the box' };
+  assert.match(checkStory(w).join(' '), /STORY\.opening quote is too short/);
+  w.STORY.opening = { shot: 1, group: 1, quote: 'Why is the box moving across' };
+  assert.ok(!checkStory(w).some(e => /STORY\.opening quote/.test(e)));
+});
+
+test('rewriting slide copy invalidates the review hash', () => {
+  const w = fixture();
+  const before = storyHash(w);
+  w.SCENES[1].visual = { slide: { labels: ['34 closures'] } };
+  assert.notEqual(storyHash(w), before);
+  const withLabels = storyHash(w);
+  w.SCENES[1].visual.slide.subject = { kind: 'data', changes: [] };
+  assert.notEqual(storyHash(w), withLabels);
+});

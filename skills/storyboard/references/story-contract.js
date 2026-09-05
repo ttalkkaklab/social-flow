@@ -77,13 +77,14 @@ function checkStory(win, { requireReview = true } = {}) {
     }
     const n = speech.find(x => x.shot === r.shot && x.group === r.group)?.n;
     const said = [n?.tts, n?.sub].filter(v => text(v));
-    // A quote has to carry the sentence, not a character of it: half the line, at minimum.
-    // Otherwise "." matches every sentence and the reference proves nothing.
-    const enough = said.some(v => r.quote.trim().length >= Math.min(12, Math.ceil(v.trim().length / 2)));
-    if (!said.length || !said.some(v => v.includes(r.quote))) {
+    const found = said.filter(v => v.includes(r.quote));
+    if (!found.length) {
       fail(`${label} quote is not in the referenced narration`); return null;
     }
-    if (!enough) {
+    // A quote has to carry the line it points at, not a character of it — measured against
+    // the line it was found in, so a short subtitle cannot vouch for a long spoken sentence.
+    // Otherwise "." matches every sentence and the reference proves nothing.
+    if (found.some(v => r.quote.trim().length < Math.min(12, Math.ceil(v.trim().length / 2)))) {
       fail(`${label} quote is too short to identify the line — quote at least half of it`); return null;
     }
     return [r.shot, r.group];

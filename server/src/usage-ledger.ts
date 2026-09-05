@@ -154,7 +154,7 @@ const SEEDANCE_FAMILY: Record<string, string> = {
  * episode loses its cost verdict. Membership is checked here instead, and an unpriced
  * combination comes back with a null key and a note saying which one, like an unmapped model.
  */
-const PRICED_VIDEO_KEYS = new Set([
+export const PRICED_VIDEO_KEYS = new Set([
   'veo.lite.720p', 'veo.fast.720p', 'veo.standard.720p',
   'veo.lite.1080p', 'veo.fast.1080p', 'veo.standard.1080p',
   'veo.fast.4k', 'veo.standard.4k',

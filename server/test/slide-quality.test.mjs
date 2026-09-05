@@ -89,3 +89,11 @@ test('production checker rejects stale and frozen object sheets with a valid pla
     assert.match(run().stderr, /ranges differ/);
   } finally { rmSync(dir, {recursive:true, force:true}); }
 });
+
+test('an object with no keys is reported, not passed by an empty frozen-keys walk', () => {
+  const s = plan();
+  s.object = {};
+  assert.match(checkQuality(s, 1).join(), /slide\.object needs keys/);
+  delete s.object;
+  assert.match(checkQuality(s, 1).join(), /needs slide\.object/);
+});

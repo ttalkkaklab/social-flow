@@ -2274,18 +2274,21 @@ window.SB_DOC = {
   var policyVideoMax = MP.generatedVideoMax !== null && MP.generatedVideoMax !== undefined &&
                        Number.isFinite(Number(MP.generatedVideoMax))
     ? Number(MP.generatedVideoMax) : FMT.videoMax;
-  // Mirrors check-scenes.js generatedVideo: a supplied clip is a file that already exists,
-  // so it is not a slot the engine bills for.
+  // Mirrors check-scenes.js generatedVideo. `visual.video.clip` is produce's output record,
+  // not a supplied file — a file the user already has is the filmed lane (visual.source).
   function generatedVideo(s) {
     var v = (s && s.visual) || {};
-    if (s && s.type === "broll") return true;
-    if (v.video) return !(typeof v.video === "object" && v.video.clip);
-    return !!(s && s.type === "quote" && v.clip && typeof v.clip === "object" && !v.clip.file);
+    if (v.source === "recording" || v.source === "screencast" || v.picture === "recording") return false;
+    return !!(s && (s.type === "broll" || v.video ||
+                    (s.type === "quote" && v.clip && typeof v.clip === "object")));
   }
-  var genVid = SCENES.filter(generatedVideo).length;
+  // Long-form counts b-roll and motion backgrounds only; a short pays for speech clips too.
+  var genVid = SCENES.filter(function (s) {
+    return generatedVideo(s) && (!WIDE || s.type !== "quote"); }).length;
   if (genVid > policyVideoMax)
-    flag("bad", T.where.genVideo, "b-roll, motion backgrounds and speech clips together " + genVid +
-         " shots — cap " + policyVideoMax + " (channel motion policy; format default when no override is written)");
+    flag("bad", T.where.genVideo, "b-roll, motion backgrounds" + (WIDE ? "" : " and speech clips") +
+         " together " + genVid + " shots — cap " + policyVideoMax +
+         " (channel motion policy; format default when no override is written)");
 
   // Short-form body (owner directive 2026-09-05) — the hook is video, one more generated cut
   // writes why, the rest is a still under its camera move or an HTML motion slide. Mirrors
@@ -2299,7 +2302,7 @@ window.SB_DOC = {
         var moving = !!(v.video || v.clip || v.source === "recording" ||
                         v.source === "screencast" || v.picture === "recording");
         if (!moving)
-          flag("bad", T.shotCap(1), "the hook is a still — on a short the cover is video: a motion background under the code-rendered title (visual.video), a supplied clip, or a recording");
+          flag("bad", T.shotCap(1), "the hook is a still — on a short the cover is video: a motion background under the code-rendered title (visual.video), or a recording (visual.source)");
       } else if (generatedVideo(s)) {
         bodyVideo++;
         if (!String(v.why || "").trim())

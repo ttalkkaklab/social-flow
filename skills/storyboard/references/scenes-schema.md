@@ -526,8 +526,8 @@ switch each off with `off`:
 
 - **`hook_video` (true)** — the short-form body. The cover is a moving picture: a motion
   background under the code-rendered title (`visual.video`, the cover still as the engine's
-  source — the same PNG is the thumbnail), a supplied clip (`visual.video.clip`) or a
-  recording. The format cap of 2 leaves **one** more generated cut, and that cut writes
+  source — the same PNG is the thumbnail) or a clip the user already has
+  (`visual.source: "recording"`, §filmed scenes — that lane is not a generated shot). The format cap of 2 leaves **one** more generated cut, and that cut writes
   `visual.why` — the movement itself is the content (a hand doing the thing, a crowd, a place
   changing) — or the beat stays a still under its camera move or an HTML motion slide.
   `off` returns the channel to the pre-directive shape (a still cover with the `punch`, video
@@ -620,8 +620,8 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
   movement already in it — **on a short the cover is video** (owner directive 2026-09-05,
   `hook_video`): a motion background under the code-rendered kicker → title → hero-stat
   staging (`visual.video`, §motion background — the cover still is the source, so the
-  thumbnail and the first moving frame are the same picture), a supplied clip, or a real
-  recording. The builder's `punch` on a still cover is the shape a channel with `hook_video:
+  thumbnail and the first moving frame are the same picture) or a real recording
+  (`visual.source`, §filmed scenes). The builder's `punch` on a still cover is the shape a channel with `hook_video:
   off` keeps, and the shape long-form still uses. Branding lives in
   the outro (produce absolute rule 6), and the channel intro never sits in front of a short.
 - reveal mapping: rg1=title ← segment ①, rg2=stat ← segment ②.

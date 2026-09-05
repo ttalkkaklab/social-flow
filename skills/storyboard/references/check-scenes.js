@@ -315,13 +315,14 @@ function beatsCoverGroups(scene) {
 }
 
 /** A shot the engine bills for: a b-roll, a motion background, or a speech clip the engine
-    makes. A `visual.video.clip` is a file the user supplies, so it costs nothing and is not
-    one of these. The generated-slot cap, the hook rule and the camera-slot rule read it. */
+    makes. `visual.video.clip` is produce's own output record (§motion background), not a mark
+    that the file was supplied — a file the user already has is the filmed lane
+    (`visual.source: "recording"`), which is not a generated shot at all. */
 function generatedVideo(scene) {
   const v = (scene && scene.visual) || {};
-  if (scene && scene.type === 'broll') return true;
-  if (v.video) return !(typeof v.video === 'object' && v.video.clip);
-  return scene && scene.type === 'quote' && v.clip && typeof v.clip === 'object' && !v.clip.file;
+  if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') return false;
+  return !!(scene && (scene.type === 'broll' || v.video ||
+                      (scene.type === 'quote' && v.clip && typeof v.clip === 'object')));
 }
 
 function motionKind(scene) {
@@ -663,23 +664,26 @@ function check(win, fmt, opts) {
   // The format owns the default cap; an explicit channel motion policy may raise or lower it.
   // A supplied clip is a file that already exists, so it is not a slot the engine bills for.
   const videoSlots = scenes.filter((s) => generatedVideo(s));
-  if (videoSlots.length > motionPolicy.generatedVideoMax)
-    bad('episode', `${videoSlots.length} generated-video slots — b-roll, motion backgrounds and ` +
-                   `speech clips count together and cap at ${motionPolicy.generatedVideoMax} ` +
+  // Long-form counts b-roll and motion backgrounds only (§checklist); a short pays for every
+  // generated cut, speech clips included, which the hook rule below enforces.
+  const cappedSlots = isShort ? videoSlots : videoSlots.filter((s) => s.type !== 'quote');
+  if (cappedSlots.length > motionPolicy.generatedVideoMax)
+    bad('episode', `${cappedSlots.length} generated-video slots — b-roll, motion backgrounds` +
+                   `${isShort ? ' and speech clips' : ''} count together and cap at ` +
+                   `${motionPolicy.generatedVideoMax} ` +
                    '(channel motion policy; format default applies when the profile has no override)');
 
   /* ── Short-form body (owner directive 2026-09-05) ──
      The hook is video: on a short the cover carries a motion background (`visual.video`, the
-     cover still as the engine's source, the title still code-rendered on top), a supplied clip
-     or a recording. The format cap of 2 leaves one more generated cut, and that cut writes
+     cover still as the engine's source, the title still code-rendered on top) or a recording. The format cap of 2 leaves one more generated cut, and that cut writes
      `visual.why` — the movement itself has to be the content, or the beat is a still under its
      camera move or an HTML motion slide. The machine layer is written in §4b, so a draft defers. */
   if (isShort && cover && motionPolicy.hookVideo) {
     const coverKind = motionKind(cover);
     if (coverKind !== 'ai-video' && coverKind !== 'recording')
       machine('shot 1', 'the hook is a still — on a short the cover is video: a motion background under the ' +
-                        'code-rendered title (visual.video, the cover still as the source), a supplied clip, or a ' +
-                        'recording (hook_video off in the profile switches this rule off)');
+                        'code-rendered title (visual.video, the cover still as the source), or a recording ' +
+                        '(visual.source — hook_video off in the profile switches this rule off)');
   }
   if (isShort && motionPolicy.hookVideo) {
     const body = videoSlots.filter((s) => s !== cover);
@@ -1298,11 +1302,15 @@ function selftest() {
                    Object.assign({}, videoScene, { visual: Object.assign({}, videoScene.visual, { why: 'the movement is the sentence' }) }),
                    Object.assign({}, videoScene, { visual: Object.assign({}, videoScene.visual, { why: 'the movement is the sentence' }) }),
                    ctaShot], null, { policy: hookPolicy })), /generated cuts after the hook/));
-  const suppliedCover = Object.assign({}, cover, { visual: Object.assign({}, cover.visual,
-    { video: { clip: 'storyboard/images/hook/supplied.mp4' } }) });
-  ok('a supplied clip is a hook without being a generated slot',
-     !has(bads(run([suppliedCover, goodShot, ctaShot], null, { policy: hookPolicy })),
-          /the hook is a still|visual\.camera|no stored clip prompt/));
+  ok("produce's own clip record does not turn the checks off on a rebuild",
+     has(bads(run([Object.assign({}, videoCover, { visual: Object.assign({}, videoCover.visual,
+       { video: Object.assign({}, videoCover.visual.video, { clip: '.work/motion/motion-i0.mp4' }) }) }),
+       Object.assign({}, videoScene, { visual: Object.assign({}, videoScene.visual,
+         { video: Object.assign({}, videoScene.visual.video || {}, { clip: '.work/motion/motion-i1.mp4' }) }) }),
+       videoScene, ctaShot], null, { policy: hookPolicy })), /generated cuts after the hook/));
+  ok('long-form counts b-roll and motion backgrounds only, as the checklist says',
+     !has(bads(runLong([cover, quoteClip, quoteClip, quoteClip, quoteClip, quoteClip, quoteClip, goodShot])),
+          /generated-video slots/));
   const statFootage = Object.assign({}, footageScene({ slide: { labels: ['34개'] } }), {
     shot: Object.assign({}, goodShot.shot, { infoType: 'statistic' }) });
   ok('a statistic beat on footage is rejected even with labels',

@@ -415,7 +415,7 @@ Core rules:
     **The body of a short is cost-shaped** (user directive 2026-09-05, scenes-schema
     §Channel true-motion policy `hook_video`): **the hook is video** — the cover carries a
     motion background under its code-rendered title (`visual.video`, the cover still as
-    the source), a supplied clip or a recording; **at most one more cut is generated
+    the source) or a recording (`visual.source`); **at most one more cut is generated
     video**, and only when the movement itself is the content, with the reason in
     `visual.why`; **every other cut is a still under its camera move** (the still lane,
     local engine, $0 — one still per cut, `narration[].img` when a cut runs past

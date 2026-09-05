@@ -70,8 +70,8 @@ Every short-form episode this plugin makes has the same body, and the checkers h
 (`check-scenes.js`, the storyboard.html strip; profile key `hook_video`, default on):
 
 - **The hook is video.** The cover carries a motion background under its code-rendered title
-  (`visual.video`, the cover still as the engine's source — silent Seedance by default), a
-  supplied clip, or a recording. A still cover is a defect on a short.
+  (`visual.video`, the cover still as the engine's source — silent Seedance by default) or a
+  clip the user already has (`visual.source`, the filmed lane). A still cover is a defect on a short.
 - **At most one more cut is generated video**, and only when the movement itself is the
   sentence — the shot writes `visual.why`. The format cap of 2 holds the count.
 - **Every other cut is a still under its camera move or an HTML motion slide.** The still

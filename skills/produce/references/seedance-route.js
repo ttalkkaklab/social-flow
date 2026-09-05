@@ -29,10 +29,12 @@ const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePa
 /** Resolve a planned shot before either forecasting or calling the generation tool. */
 function scenePlan(scene) {
   const v = scene.visual || {};
-  const supplied = (x) => !!(x && typeof x === 'object' && (x.clip || x.file));
-  const kind = scene.type === 'broll' ? 'broll' : v.video && !supplied(v.video) ? 'motion'
-    : scene.type === 'quote' && v.clip && typeof v.clip === 'object' && !v.clip.file ? 'quote' : null;
-  if (!kind) return null;   // a supplied clip is a file that exists: nothing to route or bill
+  // A filmed shot is the user's own file — nothing to route or bill. `visual.video.clip` is
+  // produce's output record, so it does not make the shot supplied.
+  if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') return null;
+  const kind = scene.type === 'broll' ? 'broll' : v.video ? 'motion'
+    : scene.type === 'quote' && v.clip && typeof v.clip === 'object' ? 'quote' : null;
+  if (!kind) return null;
   const settings = Object.assign({}, v, kind === 'motion' ? v.video : kind === 'quote' ? v.clip : {});
   const engine = settings.engine || (kind === 'motion' ? 'seedance' : 'veo');
   if (!['seedance', 'veo'].includes(engine)) throw new Error('unknown video engine: ' + engine);
@@ -93,4 +95,4 @@ function scenePlan(scene) {
     reason: settings.modelReason || 'ordinary motion — Seedance 1.5 Pro' };
 }
 
-module.exports = { MODELS, DEFAULT_MODEL, scenePlan };
+module.exports = { MODELS, DEFAULT_MODEL, PRICED, scenePlan };

@@ -7,9 +7,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SEEDANCE_MODEL_SPECS } from '../dist/seedance-client.js';
-import { priceOf } from '../dist/usage-ledger.js';
+import { priceOf, PRICED_VIDEO_KEYS } from '../dist/usage-ledger.js';
 const require = createRequire(import.meta.url);
-const { MODELS, scenePlan } = require('../../skills/produce/references/seedance-route.js');
+const { MODELS, PRICED, scenePlan } = require('../../skills/produce/references/seedance-route.js');
 const preview = fileURLToPath(new URL('../../skills/autoproduce/references/cost-preview.js', import.meta.url));
 const scene = (video = {}, duration = 5) => ({ type: 'cover', duration, visual: { video: { prompt: 'A masked adult turns.', ...video } } });
 const action = { modelPurpose: 'complex-motion', modelReason: 'Catch then pass the box', realFaceInput: false };
@@ -106,9 +106,22 @@ test('every routable price key is priced, and an unpriced resolution is refused'
   }
 });
 
-test('a supplied clip is not a generated slot', () => {
-  assert.equal(scenePlan({ type: 'cover', duration: 6, visual: { video: { clip: 'hook/supplied.mp4' } } }), null);
-  assert.equal(scenePlan({ type: 'quote', duration: 6, visual: { clip: { file: 'quotes/mayor.mp4' } } }), null);
+test('a filmed shot is not a generated slot, but produce\'s output record does not make one', () => {
+  // visual.source is the user's own file — nothing to route or bill.
+  assert.equal(scenePlan({ type: 'cover', duration: 6, visual: { source: 'recording', clip: 'hook/desk.mp4' } }), null);
+  // visual.video.clip is where produce writes the file it just made, so a rebuilt board is
+  // still a generated slot — the checkers must not read the record as a supplied file.
+  const rebuilt = scenePlan({ type: 'cover', duration: 6, visual: { video: {
+    prompt: 'A masked adult turns.', clip: '.work/motion/motion-i0.mp4' } } });
+  assert.equal(rebuilt.kind, 'motion');
+  assert.equal(rebuilt.priceKey, 'seedance.1-5-pro-silent.1080p');
+});
+
+test('the planning price set does not drift from the ledger', () => {
+  // Both sides are hand-written lists of the same rows; compare them directly rather than
+  // trusting a rejection message, which cannot tell a real gap from a copy that lost a row.
+  const seedance = set => [...set].filter(k => k.startsWith('seedance.')).sort();
+  assert.deepEqual(seedance(PRICED), seedance(PRICED_VIDEO_KEYS));
 });
 
 test('Seedance settings on a Veo slot are refused instead of silently skipped', () => {
