@@ -23,16 +23,15 @@ keyframes before approval. A slide that states a value —
 the number counts up and the bar grows the moment its sentence starts, rendered locally
 frame by frame at no cost and admitted to the build after the contract checker and the
 author's own read of its key frames — the one free way to put movement on a body
-scene on either format. A scene where something **happens** — people move, a place, an
-action — is a **footage slide** (`treatment:"footage"`): one generated clip per sentence
-inside the same HTML lane, with wordless accent-colour marks (a route, an X, a ring,
-hatching, brackets) drawn on over the picture and, when a mark has to pass behind the
-people, a subject matte laid back on top. Cuts land on sentence starts; the clips are
-budgeted on the approval screen rather than counted against the generated-video cap — the
-channel's `video_budget_usd` (default $10 an episode) is the ceiling, and it is the default
-ground for every spoken beat: no picture may hold the screen longer than one sentence
-(`max_static_ground_seconds`, default 4 s), an authored plate is a one-sentence card
-(`html_plate_max`, default 2), and numbers go on the footage as labels. Narration defaults to **your own voice on every scene**, so
+scene on either format. **Nothing is drawn over video** (user directive 2026-09-05): a
+cut that needs an arrow, a figure or a principle is an HTML slide on a lit studio stage,
+with a baked 3D object when a thing is the subject, held to the quality of
+`docs/research/2026-09-04-rendered-object-slide/reference-slide.html`; a scene where
+something **happens** — people move, a place, an action — is a generated clip with the
+subtitle as its only type. Generated video sits under the channel's `video_budget_usd`
+(default $10 an episode), no picture on an ordinary beat holds the screen longer than one
+sentence (`max_static_ground_seconds`, default 4 s), and an authored plate on such a beat is
+a one-sentence card (`html_plate_max`, default 2). Narration defaults to **your own voice on every scene**, so
 the shooting script (`script.md`) carries the lines for every shot — filmed shots get
 what to show, what to say, and the filename to save it as; the rest are voice-only
 recordings.
@@ -382,9 +381,9 @@ social-flow/
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
 │   ├── storyboard/              # /social-flow:storyboard — research → 3 seven-item scenarios → pick → more research → narration → narration read-through looped to 95 → vocabulary looped to 95 (both inline, ≤3 reads) → [narration approval] → the board (author's read + check-scenes.js) → the image and clip plan → [approval]. No generation call — produce makes the stills, slides and clips
-│   │   └── references/          #   scenes-schema.md · directing-grammar.md · motion-slide-template.html (studio ground · slab material · rendered object) · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js · footage-lane.md (one clip per sentence, marks over it) · footage-frames.sh · rendered-object.md + bake-object.py (an SDF-raymarched object baked to a frame sheet, numpy + Pillow, ₩0 an episode)
+│   │   └── references/          #   scenes-schema.md · directing-grammar.md · motion-slide-template.html (studio ground · slab material · rendered object) · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js · footage-lane.md (retired 2026-09-05 — nothing is drawn over video) · footage-frames.sh · rendered-object.md + bake-object.py (an SDF-raymarched object baked to a frame sheet, numpy + Pillow, ₩0 an episode)
 │   ├── produce/                 # /social-flow:produce — stills (§1.5) → clips → slides (§3.6) → video build + per-platform text
-│   │   └── references/          #   build-reel.sh (SUB_MODE sentence · word · phrase) · speedup.sh (required final pace pass, 1.2 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency; footage slides play a clip per group) · make-matte.py (subject matte → VP9-alpha webm, needs rembg) · QA harness
+│   │   └── references/          #   build-reel.sh (SUB_MODE sentence · word · phrase) · speedup.sh (required final pace pass, 1.2 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · make-matte.py (subject matte → VP9-alpha webm, needs rembg) · QA harness
 │   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → 3 seven-item scenarios [scored to 95 on curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring [narration read alone, to 95] → video (human gates replaced by the machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
