@@ -80,7 +80,7 @@ const MSG = {
   artExt: f => `slide.arts "${f}" 는 png·jpg 가 아니다`,
   missingFile: f => `등록된 슬라이드가 없다 — ${f}`,
   generatedStyle: "생성형 디자인 표식 금지 — 그라데이션 글자·글로우·글래스·겹친 그림자 대신 잉크·종이색·액센트 하나와 플레이트·괘선을 쓴다",
-  gradientAuthored: "저작 영역(renderSlide 등)에 그라데이션 금지 — 플레이트·스크림 그라데이션은 템플릿 머리 CSS 가 이미 들고 있다(.plate · .scrim). 글자·막대·도형은 단색이다",
+  gradientAuthored: "저작 영역(renderSlide 등)에 그라데이션 금지 — 플레이트·스크림 그라데이션은 템플릿 머리 CSS 가 이미 들고 있다(.plate · .scrim). 재질(결·두께·빛)은 머리의 html.studio … 규칙 안에서만 그린다(2026-09-05 진 지시 — 참고본 수준의 재질은 허용). 글자·막대·도형은 단색이다",
   roundedCard: r => `둥근 카드 표식 금지 — border-radius:${r}px 대신 여백과 헤어라인으로 구조를 만든다`,
   photoAction: "photo-action slide 에 visual.action 이 없다 — 카메라나 선이 아니라 사진 속 대상·증거가 어떻게 바뀌는지 적는다",
   actsMissing: "kind:\"character\" 인데 visual.slide.acts 가 없다 — 그룹마다 동작 하나를 적는다",
@@ -417,8 +417,6 @@ function checkDir(dir, only, opts) {
            템플릿 자신의 그라데이션은 사진 컷 스크림 하나뿐이라 그 규칙만 빼고 검사한다.
            머리는 render 함수 앞 구간이다(저작 코드가 문자열로 뱉는 <style> 과 겹치지 않게). */
         const headCss = start > 0 ? code.slice(0, start).replace(/\.scrim\s*\{[^}]*\}/g, "") : "";
-        if (/\b(?:linear|conic|radial)-gradient\s*\(/i.test(authored) ||
-            /\b(?:linear|conic|radial)-gradient\s*\(/i.test(headCss)) fail(base, MSG.gradientAuthored);
         /* 재질 — 셀렉터가 전부 html.studio 로 시작하는 규칙 블록만 빼고 본다. 목록에 다른 셀렉터를
            하나라도 끼우면 그 블록은 검사 대상이다(리뷰 실측 우회). render 함수가 없으면 파일 전체다. */
         const GEN = /background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text|\bbox-shadow\s*:|\btext-shadow\s*:|\bbackdrop-filter\s*:|\bfilter\s*:\s*(?:drop-shadow|blur)\s*\(/i;
@@ -426,6 +424,11 @@ function checkDir(dir, only, opts) {
         const noMat = t => t.replace(/<style[^>]*>([\s\S]*?)<\/style>/g, (m, css) => "<style>" +
           css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/([^{}]+)\{[^{}]*\}/g, (r, sel) =>
             sel.replace(/^[\s\S]*;/, "").split(",").every(s => /^\s*html(?:\.[\w-]+)*\.studio(?![\w-])/.test(s)) ? "" : r) + "</style>");
+        /* 그라데이션 — 저작 영역은 예외 없이 막고, 머리 CSS 는 html.studio 재질 규칙만 뺀다.
+           2026-09-05 진 지시 「(점토 결을) 흉내내봐. 앞으로는 그렇게 작업해야해」 — 결·두께·빛은 스튜디오
+           재질층에 산다. 글자·막대·도형에 얹는 그라데이션은 여전히 생성형 표식이다. */
+        if (/\b(?:linear|conic|radial)-gradient\s*\(/i.test(authored) ||
+            /\b(?:linear|conic|radial)-gradient\s*\(/i.test(noMat(headCss))) fail(base, MSG.gradientAuthored);
         if (start >= 0 ? (GEN.test(authored) || GEN.test(noMat(headCss))) : GEN.test(noMat(code)))
           fail(base, MSG.generatedStyle);
       }
@@ -670,6 +673,10 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.wide.studio .band{box-shadow:0 2px 0 #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
     // 파일 첫 규칙이 스튜디오 규칙이어도 면제다 — 앞의 doctype·head 가 셀렉터에 붙지 않는다(리뷰 실측)
     ["s2-motion.html", `<!doctype html><html><head><meta charset="utf-8"><style>html.studio .band{box-shadow:0 2px 0 #000}</style> const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return h.count(1, 3); }`, []],
+    // 재질 그라데이션 — html.studio 규칙 안이면 통과(2026-09-05 진 지시), 머리의 다른 규칙이나 저작 영역이면 막는다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.studio .cell{background-image:radial-gradient(circle at 30% 20%, rgba(255,244,228,.18), transparent 60%)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.cell{background-image:radial-gradient(circle, #fff, #000)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [MSG.gradientAuthored]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.cell{background:linear-gradient(#fff,#000)}</style>' + h.count(1, 3); }`, [MSG.gradientAuthored]],
     // 규칙 앞의 CSS 주석은 셀렉터가 아니다
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>/* 재질 */ html.studio .band{box-shadow:0 2px 0 #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
   ];
