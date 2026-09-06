@@ -160,6 +160,26 @@ script.md, the hand-off to filming, and the long-form mixing rules — is in
 [shooting-mode.md](references/shooting-mode.md). **A fully generated short-form episode, the
 default, skips it.**
 
+### 1.7 Choose visual style and production mode before authoring
+
+Read [visual-style.md](references/visual-style.md). Before writing the storyboard, ask the user
+to choose cinematic-miniature (the Bae Jeong-ja diorama look), photoreal live action, or webtoon.
+Wait for the actual choice, persist it for this episode, and apply it to every generated
+start/end storyboard image and subsequent video prompt, in hybrid and full_video alike.
+Reuse an explicit existing choice; do not infer a style from production mode.
+
+Read [production-mode.md](references/production-mode.md). Before visual planning, present hybrid
+(1–2 videos plus HTML/still-camera scenes) and full_video (every new scene generated as video)
+with `production-cost.js` first-pass and retry-inclusive estimates, model, resolution, audio,
+clip counts, exchange-rate assumption, exclusions and the explicit episode budget cap.
+Persist the actual HITL answer in `window.PRODUCTION`; no paid generation happens here.
+At final board approval refresh the exact quote and bind its fingerprint to that approval.
+Only for the cinematic-miniature style, load the bundled [style guide and image pack](assets/styles/tactile-miniature-v1/STYLE.md); choose `visual.styleRole` by the narrated subject/action, not the shot number. The assembler emits real reference-image arguments and a portable style binding. Never use a reference's historical props as a substitute for the new topic. Read [full-video.md](../produce/references/full-video.md), write the spatial style
+and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, then use [spatial-prompts.js](references/spatial-prompts.js). This branch
+supersedes hybrid's shot cap, mandatory HTML explanation and person-required source clauses.
+Keep facts, narration reviews and the no-marks-over-video rule. Copy `production-mode.js`
+with the HTML template and render-routing.js; `cost-preview.js --sbdoc` supplies both prices.
+
 ### 2. Research and fact-checking (follows profile §5 policy)
 
 **Research comes first, in two passes, with a pick in between.** No scene is written until
@@ -1098,7 +1118,7 @@ files. Only a TTS episode carries filmed scenes alone — there the generated sc
 nothing for the user to do, and including them blurs what has to be done.
 
 **storyboard.html (the review render)** — copy `references/storyboard-html-template.html` into
-storyboard/, copy `references/render-routing.js` beside it, and fill in **only the `<title>` and the `✎ SB_DOC` block**. Its labels follow the
+storyboard/, copy `references/render-routing.js` and `references/production-mode.js` beside it, and fill in **only the `<title>` and the `✎ SB_DOC` block**. Its labels follow the
 reader's language (`?lang=en` · `?lang=ko`, or the picker at the end of the section menu); the
 episode's own copy stays in the language scenes.js is written in, so nothing here needs setting. Never write scene data
 (title, lines, bullets, shot, duration, THEME) into the HTML — the document loads the SoT

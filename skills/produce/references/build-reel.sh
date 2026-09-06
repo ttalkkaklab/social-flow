@@ -130,9 +130,12 @@ export LC_ALL=en_US.UTF-8
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # grab before cd (path to reveal-timing.py)
 WORKDIR="${1:?usage: build-reel.sh <workdir>}"
-# Check the actual source before encoding. A standalone TSV is not an approved episode.
-node "$HERE/verify-build-plan.js" "$WORKDIR" "${2:-$WORKDIR/../storyboard}"
+# Resolve the supplied board before changing directories; both gates inspect the same plan.
+STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${2:-$WORKDIR/../storyboard}")
+node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
 cd "$WORKDIR"
+node "$HERE/check-production.js" "$STORYBOARD" --workdir "$PWD" --ready --manifest --json > production-preflight.json
+FULL_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.generatedShots || []).join(" "))' "$PWD/production-preflight.json")
 
 # Format preset — the `: "${VAR:=value}"` block written by format-resolve.js.
 # It must be read **before** the inline defaults for precedence to hold: caller env → format.env → inline.
@@ -718,6 +721,8 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #         typed, because of the modulo -ss; and even j=0 loops and retypes from the start when the
   #         segment window is longer than the clip.)
   INS=(); FILT=""; NIN=0
+  FULL_CARD=0
+  case " $FULL_VIDEO_SHOTS " in *" $IDX "*) FULL_CARD=1;; esac
   j=0
   for VIS in "${FVIS[@]}"; do
     if [ "$j" -eq 0 ]; then
@@ -732,7 +737,13 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     BI=$NIN; HOLD=""
     case "$BASE" in
       *.mp4|*.mov|*.m4v|*.webm|*.MP4|*.MOV|*.M4V|*.WEBM)
-        if [ "$ONESHOT" = "1" ]; then
+        if [ "$FULL_CARD" = "1" ]; then
+          BDUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$BASE")
+          awk -v actual="$BDUR" -v needed="$D" 'BEGIN{exit !(actual+0.05>=needed)}' \
+            || { echo "Full-video card $IDX needs ${D}s but its clip has ${BDUR}s. Split/re-time narration or regenerate; looping and freeze padding are disabled." >&2; exit 1; }
+          SS=${FOFF[$j]}
+          INS+=(-ss "$SS" -t "$T" -i "$BASE")
+        elif [ "$ONESHOT" = "1" ]; then
           # If the clip is shorter than the segment window, clone the last frame to fill — a freeze, not a loop
           INS+=(-i "$BASE")
           HOLD="tpad=stop_mode=clone:stop=-1,trim=duration=$T,setpts=PTS-STARTPTS,"

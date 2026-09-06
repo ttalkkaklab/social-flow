@@ -1,16 +1,7 @@
 ---
 name: produce
 description: >
-  Builds the video and the per-platform text from an already-approved storyboard. Use when
-  the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after
-  a storyboard is approved. Turns the approved scenes.js under
-  data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at
-  1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic
-  subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under
-  the episode's output/, checked on a phone viewport before publishing. Where
-  recording/alignment.json exists it cuts the user's own screen recording instead of
-  generating scenes. Boundary — storyboard plans and stops for approval, produce starts
-  after it, autoproduce runs both unattended.
+  Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at 1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
 allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
@@ -30,7 +21,10 @@ data/<channel>/episodes/<topic>/
 ```
 For independent visual samples, use the installed planner and builder in [animation-review.md](references/animation-review.md). Fix plugin sources and rebuild; never substitute episode-specific scripts. This review mode has its own input contract and does not mark an episode publishable.
 ## Absolute rules
+Read [production-mode.md](../storyboard/references/production-mode.md) at entry: present hybrid and full-video choices **with first-pass and retry-inclusive costs and the budget cap**, then persist the user's selection. Reuse an existing approval on resume. Run `check-production.js storyboard/ --selection` before assets.
+For `PRODUCTION.mode:"full_video"`, use [full-video.md](references/full-video.md) instead of the hybrid visual steps below. Its source images, spatial prompts, separate narration, video QA and plain-video manifest override the hybrid slot cap, person requirement and HTML-only explanation rules; the no-marks-over-video rule still applies. Use [spatial-prompts.js](../storyboard/references/spatial-prompts.js) for this style. The default remains hybrid.
 Before assets, apply [render-routing.md](../storyboard/references/render-routing.md). `shot.render` selects a supported mode; run `check-scenes.js` to verify the handoff. Do not collapse still-camera, character, object and data-graph cuts into one HTML choice. Camera HTML uses `kind:"camera"` and the shared camera template; it is not true subject motion. Read [visual-direction.md](../storyboard/references/visual-direction.md) for episode repetition limits and the playback review. Data graphs, including donut/pie compositions and geographic maps, use [chart-design.md](../storyboard/references/chart-design.md), the shared SVG template and source-linked focus beats. Never substitute a numeric card for a chart.
+
 Read [story-quality.md](../storyboard/references/story-quality.md) and run `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js storyboard/` before any generation or capture. Missing or stale reviews block production, including old boards; never rewrite approved narration silently. Then read [retention-direction.md](../storyboard/references/retention-direction.md) §2–§5 with the handoff. Resolve visible changes and sound events to scenes.js and supported controls. Preserve payoff, cost cap and voice; derive a missing handoff table without changing the narration. `beat:"cta"` permits a close with no ask.
 1. **No distorting facts** — narration and captions only recompose facts already in
    scenes.js. Don't collapse a range to its upper bound, and don't invent numbers.
@@ -44,7 +38,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    caption out of the narration (scenes-schema §Screen text only when needed).
 4. **Korean with no AI tells** — apply platform-guide `references/korean-style.md` to every
    visible sentence. `check-style.py` makes the call, and an S1 blocks publishing.
-5. **Generated video is for mood shots and character speech only** — no reenactments, no
+5. **Generated video follows the selected mode** — full-video may explain physical mechanisms and spatial changes. No staged documentary reenactments, no
    real people, no national symbols, no staged news screens. Cards (static text) are
    code-rendered only.
 6. **Branding belongs in the outro** — no logo or badge in the body (a brand eating the
@@ -52,7 +46,8 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
 7. **The TTS voice is fixed** — don't change a single character of profile.md §2's
    voiceName and stylePrompt.
 8. **Generated video comes from an image** — don't use `veo_text2video`. The order is always
-   `gpt_image_text2img` → keep the PNG in `storyboard/images/` → `veo_img2video`.
+   approved image provider → keep the PNG in `storyboard/images/` → the selected image-to-video engine.
+   With `PRODUCTION.imageProvider:"host"`, use the product-provided image tool; ask before any separately billed fallback.
    The image is the reference point for reproducing a shot: if the video isn't right,
    rerun it off the same PNG with only the motion prompt changed. Video made straight from
    text gives a different scene every time even from the same prompt, so there's nothing
@@ -83,6 +78,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    keep the likeness fictional and frame the relevant action clearly. People are not a
    substitute for explaining why continuous video is needed. A photoreal generated person
    requires the publishing disclosure (`containsSyntheticMedia: true` on YouTube).
+
 12. **Don't throw the cover background PNG (the meta image) together** — the cover frame
    becomes `cover.jpg` (the YouTube thumbnail and the first screen of the IG and FB videos)
    as-is. No still lifes or abstract backgrounds unrelated to the topic — the default is one
@@ -146,9 +142,9 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    **6.2 spoken characters/s overall and per substantive cue**.
    The outro stays at 1.0x. What goes to `output/` is `reel-fast.mp4` ·
    `reel-sub-fast.mp4` · `subs-fast.srt`, never the pre-pass files.
-16. **Nothing is drawn over video, and explanation is an HTML slide** (user directive
+16. **Nothing is drawn over video; hybrid explanations use HTML** (user directive
    2026-09-05 — it outranks every other rule here and in every reference doc; CLAUDE.md
-   §Nothing is drawn over video). No arrow, route, X, ring, hatch, bracket, dot, label or
+   §Nothing is drawn over video; the selected full-video branch overrides only the HTML requirement). No arrow, route, X, ring, hatch, bracket, dot, label or
    callout goes over a generated clip, a motion background, a b-roll, a quote clip or a
    recording; the burned subtitle is the only type on a moving picture. A cut that needs an
    arrow, a figure or a principle is `kind:"diagram", motion:true, treatment:"editorial"` on

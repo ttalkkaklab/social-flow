@@ -75,6 +75,18 @@ a contract checker at exit 1.
 
 ## Absolute rules
 
+Before storyboard authoring, follow [visual-style.md](../storyboard/references/visual-style.md).
+Ask for miniature, photoreal or webtoon and use the actual choice for all new storyboard images.
+Unattended authoring needs an explicit standing style choice; otherwise wait for HITL.
+
+Read [production-mode.md](../storyboard/references/production-mode.md). Human invocations choose
+hybrid/full_video with estimated first-pass and retry-inclusive video cost before any assets.
+Unattended calls use a written standing mode, cap and attempt limit; legacy standing plans
+retain hybrid, never silently full_video. A mode/budget conflict holds before spending.
+An explicitly authorized full_video episode follows [full-video.md](../produce/references/full-video.md)
+for source images, prompts, separate narration, every generated clip and QA; this replaces the
+hybrid-only baseline/one-slot clauses below. All spend, narration and publish gates still apply.
+
 1. **Banned subject matter is inherited** — profile §3's banned subjects, plus
    the growth plan's banned list on unattended calls. Politics, religion,
    nationality-based disparagement, and unverified regulatory information go out

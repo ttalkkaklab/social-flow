@@ -129,6 +129,10 @@ const ROUTES = {
     key: 'image.local', fixedQty: 1,
     why: 'image_local_generate — local Z-Image, $0'
   },
+  'still/host': {
+    key: 'image.host', fixedQty: 1,
+    why: 'host-provided image generation — included allowance, no separately billed image API'
+  },
   'art/local': {
     key: 'image.local', fixedQty: 1,
     why: 'image_local_generate — a slide art plate, $0'
@@ -166,6 +170,7 @@ function videoSlots(scenes) {
     const s = shot || {};
     const v = s.visual || {};
     const shotNo = i + 1;
+    if (s.type === 'outro' || (!v.video && (['recording', 'screencast'].includes(v.source) || v.picture === 'recording'))) return;
     const plan = scenePlan(s);
     if (plan && plan.engine === 'seedance') {
       slots.push({ shot: shotNo, kind: plan.kind, engine: plan.engine, duration: Number(s.duration),
@@ -205,7 +210,7 @@ function videoSlots(scenes) {
  * fingerprint tracks the video slots the check strip warns about, and it is duplicated into
  * storyboard-html-template.html, where a still count would go stale for $0.
  */
-function stillSlots(scenes) {
+function stillSlots(scenes, imageProvider) {
   /* Which scenes' stills a video engine reads as its input. Those are photorealistic people on
      gpt high, never the local engine (still-generation.md §1 · storyboard §5): a b-roll takes
      its source from the scene at its `after` index, and a motion-background scene feeds its
@@ -227,7 +232,7 @@ function stillSlots(scenes) {
     const shotNo = i + 1;
     if (v.bgPrompt) {
       const isCover = s.type === 'cover';
-      const engine = isCover || videoSource.has(i) ? 'gpt' : 'local';
+      const engine = imageProvider === 'host' ? 'host' : isCover || videoSource.has(i) ? 'gpt' : 'local';
       slots.push({ shot: shotNo, kind: 'still', engine, duration: 0,
                    label: isCover ? 'cover background'
                         : videoSource.has(i) ? 'scene still · video source' : 'scene still' });
@@ -530,7 +535,7 @@ function main() {
 
   // Stills first, then the video slots — the order the money goes out in produce.
   let slots;
-  try { slots = stillSlots(scenes).concat(videoSlots(scenes)); }
+  try { slots = stillSlots(scenes, win.PRODUCTION?.imageProvider).concat(videoSlots(scenes)); }
   catch (e) { die(e.message); }
   const rows = forecastRows(slots);
   const fingerprint = costFingerprint(scenes);
@@ -563,10 +568,17 @@ function main() {
 
   const spentFamilies = byFamily(spent.items);
   const channelProfile = findProfile(path.dirname(episodeDir));
-  const budget = budgetVerdict(spent.items, videoSpent(forecast.items), videoBudgetOf(channelProfile));
+  let productionCost = null;
+  try { if (win.PRODUCTION) productionCost = require('./production-cost.js').quote(win); }
+  catch (e) { die(e.message); }
+  const retryForecast = productionCost?.options[win.PRODUCTION.mode]?.retryHighUsd;
+  const budget = budgetVerdict(spent.items, retryForecast === undefined ? videoSpent(forecast.items)
+    : Math.max(0, retryForecast - videoSpent(spent.items)),
+    win.PRODUCTION ? win.PRODUCTION.videoBudgetUsd : videoBudgetOf(channelProfile));
   const result = {
     generated: new Date().toISOString().slice(0, 10),
     fingerprint,
+    productionCost,
     spent: {
       total: spent.total,
       byFamily: spentFamilies,
@@ -603,7 +615,8 @@ function main() {
 
   if (wantJson) {
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');
-    process.exit(worstExit);
+    process.exitCode = worstExit;
+    return;
   }
 
   if (wantSbdoc) {
@@ -612,6 +625,7 @@ function main() {
       '  //   node ${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references/cost-preview.js . --sbdoc',
       '  // The check strip recomputes the fingerprint from SCENES and flags a stale snapshot.',
       '  cost: {',
+      ...(productionCost ? ['    productionCost: ' + JSON.stringify(productionCost) + ','] : []),
       '    spentUsd: ' + spent.total.toFixed(4) + ',            // already billed — the .work/cost-tally.tsv ledger',
       '    imagesUsd: ' + (spentFamilies.image || 0).toFixed(4) + ',           // of that, images — 0 unless the episode predates 2026-09-04',
       '    forecastUsd: ' + forecast.total.toFixed(4) + ',         // stills, slide arts and video slots, if approved',
@@ -624,7 +638,8 @@ function main() {
       '  },'
     ].join('\n');
     process.stdout.write(block + '\n');
-    process.exit(worstExit);
+    process.exitCode = worstExit;
+    return;
   }
 
   const out = [];
@@ -669,7 +684,9 @@ function main() {
     out.push('can be read as this episode\'s cost. Carry them onto the approval screen as they are.');
   }
   process.stdout.write(out.join('\n') + '\n');
-  process.exit(worstExit);
+  process.exitCode = worstExit;
+    return;
 }
 
-main();
+module.exports = { readScenes, videoSlots, forecastRows, runReport, videoSpent, videoBudgetOf, findProfile, budgetVerdict };
+if (require.main === module) main();
