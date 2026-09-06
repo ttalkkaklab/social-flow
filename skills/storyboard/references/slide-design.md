@@ -31,6 +31,10 @@ drawn (§1, §9). Every rule below serves one of those findings.
 - [8. Character act — when someone is reacting](#8-character-act-when-someone-is-reacting)
 - [9. Rendered object — a thing that is a render](#9-rendered-object-a-thing-that-is-a-render)
 
+**Data charts use [chart-design.md](chart-design.md).** Its quiet paper/ink data surface,
+direct labels, shared scales and SVG template take precedence over the slab, spine,
+hero-number and type-shadow treatments below. Those treatments belong to other slide subjects.
+
 ## 1. Ground — a plate, not a colour
 
 A broadcast graphic never sits on a flat fill. BBC News lays a gradient overlay under every

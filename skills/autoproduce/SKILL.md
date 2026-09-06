@@ -493,6 +493,9 @@ node $SB/check-scenes.js storyboard/          # exit 1 = authoring stops before 
 The profile's true-motion floor and still-run limits are hard gates here. Ken Burns, caption
 changes and still swaps do not count toward that floor. Select each cut with storyboard
 `references/render-routing.md` and write `shot.render`; the hook has no default video requirement.
+Read [visual-direction.md](../storyboard/references/visual-direction.md) and
+[chart-design.md](../storyboard/references/chart-design.md). Copied directions, text-led episode
+plans and unsupported modes fail before assets; an economy tier cannot waive these checks.
 Keep explicit channel constraints and justify every generated-video slot with `visual.why`.
 Do not lower the copied policy or the channel profile
 to make an unattended episode pass. What the scene, camera and sound reads of 0.49 looked at
@@ -723,7 +726,7 @@ pipeline's worst possible accident.
 
 ### 8. Render & build (gate 3)
 
-Build with `build-reel.sh`, following produce skill §2 (frame.html
+Build with `build-reel.sh .work storyboard/`; its source-plan check is mandatory. Follow produce skill §2 (frame.html
 regeneration) · §4 (reveal capture) · §6 (manifest) as-is. The overflow check
 runs here too — produce §4's `--dump-dom` one-liner needs no browser tooling, so
 unattended mode gets the same `ovf=0` verdict. On top of it, verify the captured

@@ -1,0 +1,52 @@
+<!doctype html>
+<html class="studio"><meta charset="utf-8">
+<style>
+*{box-sizing:border-box}html,body{margin:0;overflow:hidden}body{font-family:'Pretendard Variable','Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif}
+.studio-plate{position:absolute;inset:0;background:var(--paper)}
+#stage{position:absolute;left:var(--x);top:var(--top);width:var(--width);height:var(--height);color:var(--ink)}
+#eyebrow{font-size:30px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+#title{font-size:62px;line-height:1.18;letter-spacing:-.025em;font-weight:750;word-break:keep-all;text-wrap:balance;margin:28px 0 20px;max-height:150px}
+#insight{font-size:36px;line-height:1.4;word-break:keep-all;text-wrap:balance;min-height:104px;color:var(--muted)}
+#plot{margin-top:30px}#source{position:absolute;bottom:0;font-size:27px;line-height:1.4;color:var(--muted);max-width:100%;overflow-wrap:anywhere;border-top:2px solid var(--line);padding-top:20px}
+.wide #title{font-size:52px;max-height:125px}.wide #insight{font-size:32px}.wide #stage{display:grid;grid-template-columns:520px 1fr;gap:50px}.wide #intro{padding-top:18px}.wide #plot{margin-top:0}.wide #source{max-width:480px;font-size:25px}
+</style>
+<div class="studio-plate" data-ground></div>
+<main id="stage"><section id="intro"><div id="eyebrow"></div><div id="title"></div><div id="insight"></div></section><div id="plot"></div><div id="source"></div></main>
+<script src="../scenes.js"></script>
+<script src="assets/render-routing.js"></script>
+<script src="assets/chart-runtime.js"></script>
+<script>
+// Only change this index. Chart design and motion are shared; content stays in scenes.js.
+const SLIDE_SHOT = 1;
+const S=window.SCENES[SLIDE_SHOT-1],D=S.shot.render.data,wide=window.FORMAT==='youtube-long-16x9';
+const W=wide?1920:1080,H=wide?1080:1920,x=wide?96:176,zoneTop=wide?96:190,zoneBottom=wide?285:570;
+const cw=W-2*x,ch=H-zoneTop-zoneBottom,pw=wide?cw-570:cw,ph=wide?ch:650;
+const C=CHART_RUNTIME.colors(D.surface,window.THEME?.chartAccent);
+for(const [key,value] of Object.entries({...C,x:x+'px',top:zoneTop+'px',width:cw+'px',height:ch+'px',w:W+'px',h:H+'px','zone-x':x+'px','zone-top':zoneTop+'px','zone-bottom':zoneBottom+'px'}))document.documentElement.style.setProperty('--'+key,value);
+document.body.style.width=W+'px';document.body.style.height=H+'px';document.body.classList.toggle('wide',wide);
+const plot=document.getElementById('plot'),insight=document.getElementById('insight');
+document.getElementById('title').textContent=(D.title||S.title||'').replace(/\*\*/g,'');
+document.getElementById('eyebrow').textContent=D.unit;
+document.getElementById('source').textContent=D.source;
+let segments=(S.narration||[]).map(()=>S.duration*1000/Math.max(1,S.narration.length));
+function renderSlide(ms,group){
+  const motion={primitive:'chart-reveal'};plot.dataset.primitive=motion.primitive;plot.dataset.rg=group;
+  const i=Math.max(0,Math.min(segments.length-1,group-1)),p=Math.max(0,Math.min(1,ms/segments[i]));
+  // The graph and its focus continue across narration boundaries. No group restarts the bars.
+  plot.innerHTML=CHART_RUNTIME.render(D,{width:pw,height:ph,group:i+1,progress:p,accent:window.THEME?.chartAccent});
+  insight.textContent=D.beats[p<.25&&i>0?i-1:i].insight;
+}
+// SEEK-RUNTIME-BEGIN
+window.__seek=(ms,group=1)=>renderSlide(ms,group);
+window.__setSegs=map=>{segments=segments.map((d,i)=>map[i+1]>0?map[i+1]:d)};
+window.__groups=()=>[{rg:0,dur:0},...segments.map((dur,i)=>({rg:i+1,dur}))];
+window.__size=()=>({w:W,h:H});
+window.__meta=()=>({hold:0,stray:document.getAnimations().length,infinite:0,broken:[]});
+window.__ready=()=>window._chartReady||(window._chartReady=(async()=>{
+  const errors=RENDER_ROUTING.checkScene(S);if(errors.length)throw new Error(errors.join('\n'));
+  await document.fonts.ready;
+  for(const beat of D.beats){const marker=document.createElement('span');marker.hidden=true;marker.dataset.rg=beat.group;marker.dataset.primitive='chart-reveal';plot.parentElement.appendChild(marker)}
+  const q=new URLSearchParams(location.search);window.__seek(Number(q.get('t')||1e9),Number(q.get('g')||segments.length));
+})());
+window.__ready();
+</script></html>

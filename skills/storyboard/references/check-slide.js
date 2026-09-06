@@ -99,6 +99,7 @@ const KINDS = ["diagram", "kinetic", "character", "camera"];
 const TREATMENTS = ["editorial", "photo-action"];
 const EDITORIAL_ROLES = ["evidence", "relationship", "mechanism", "timeline", "statistic", "transition", "verdict"];
 const SEMANTIC_HELPERS = {
+  "chart-reveal": "chart",
   "date-enter": "date", "range-grow": "range", "event-link": "link",
   "count-up": "count", "bar-grow": "bar", "dot-fill": "dots", "axis-draw": "axis",
   "flow-trace": "flow", "node-enter": "node", "state-transform": "state",
@@ -205,8 +206,31 @@ function checkDir(dir, only, opts) {
       }
     }
 
+    if (scene.shot?.render?.mode === 'still_camera') {
+      require('./render-routing.js').checkScene(scene).forEach(message => fail(base, message));
+      const expected = fs.readFileSync(path.join(__dirname, 'camera-slide-template.html'), 'utf8')
+        .replace('const SLIDE_SHOT = 1;', `const SLIDE_SHOT = ${no};`);
+      if (src !== expected) fail(base, 'camera HTML must match camera-slide-template.html');
+      const asset = path.join(slidesDir, 'assets/still-camera.js');
+      if (!fs.existsSync(asset) || !fs.readFileSync(asset).equals(fs.readFileSync(path.join(__dirname, 'still-camera.js'))))
+        fail(base, 'missing or stale camera runtime: assets/still-camera.js');
+    }
+
+    // Charts use a versioned, shared renderer. A renamed number card cannot satisfy it.
+    if (scene.shot?.render?.mode === 'data_graph' || slide?.chartRenderer != null) {
+      require('./render-routing.js').checkScene(scene).forEach(message => fail(base, message));
+      const expected = fs.readFileSync(path.join(__dirname, 'chart-slide-template.html'), 'utf8')
+        .replace('const SLIDE_SHOT = 1;', `const SLIDE_SHOT = ${no};`);
+      if (src !== expected) fail(base, 'chart HTML must match chart-slide-template.html; author values and focus in scenes.js, improve the shared template for layout changes');
+      for (const name of ['chart-runtime.js', 'render-routing.js']) {
+        const asset = path.join(slidesDir, 'assets', name);
+        if (!fs.existsSync(asset) || !fs.readFileSync(asset).equals(fs.readFileSync(path.join(__dirname, name))))
+          fail(base, 'missing or stale chart runtime: assets/' + name);
+      }
+    }
+
     // editorial은 사진 위에 글자만 올리는 자리가 아니다. 사진을 쓰더라도 HTML이 논리를
-    // 구성해야 한다. 이 검사는 화면을 완전히 대신하지 않으며, 그 전에 명백한 한 장 배경
+    // 구성해야 한다. 이 검사는 화면을 완전히 대신하지 않으며 그 전에 명백한 한 장 배경
     // 의존을 막는다. kinetic은 의도적으로 글자가 그림일 수 있어 이 규칙에서 뺀다.
     if (motion && kind === "diagram" && slide && slide.treatment === "editorial") {
       const start = code.search(/function\s+renderSlide\s*\(/);
@@ -342,7 +366,7 @@ function checkDir(dir, only, opts) {
        ('<img src="' + S.photo + '"')은 캡처가 빈 문자열로, url("url(" + S.photo + ")") 꼴은
        공백을 낀 조각으로 떨어지는 것이 그 표시다. `+` 자체는 파일 이름에 흔한 글자라 조립의
        표시로 쓰지 않는다 — 값의 끝에 걸리거나 공백에 둘러싸인 `+` 만 조립으로 본다
-       (`"url(" + S.photo + ")"` 의 캡처는 trim 뒤 `+ S.photo +` 다). 값은 trim 한 뒤에 보는데,
+       (`"url(" + S.photo + ")"` 의 캡처는 trim 뒤 `+ S.photo +` 다). 값은 trim 한 뒤에 보는데
        CSS 가 허용하는 `url( a.gif )` 의 패딩 공백이 캡처에 딸려 오기 때문이다. 파일 이름 안의
        공백(`my chart.gif`)과 가운데 `+`(`chart+2024.png`)는 경로이지 조립이 아니다. */
     const dynamic = u => u === "" || /\$\{|`|^\+|\+$|\s\+\s/.test(u);

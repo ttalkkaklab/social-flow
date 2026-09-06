@@ -68,6 +68,8 @@ if [ -f reel-spliced.mp4 ]; then
 else
   VIN=reel.mp4;         SIN=reel-sub.mp4;         TIN=subs.srt
 fi
+# Generated/mixed episodes carry the mandatory builder proof. Shooting edits use edit.json.
+if [ -f build-plan-check.json ]; then node "$HERE/verify-assembled.js" . "$VIN" "$SIN" "$TIN"; fi
 [ -f "$VIN" ] || { echo "✗ $VIN missing — run build-reel.sh (and splice-clip.sh) first" >&2; exit 1; }
 
 if awk -v f="$SPEED" 'BEGIN{exit !(f == 1)}'; then

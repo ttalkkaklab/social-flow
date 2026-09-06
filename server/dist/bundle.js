@@ -85634,7 +85634,7 @@ function readInlineImage(filePath) {
 }
 function readInlineVideo(filePath) {
   const buffer = fs7.readFileSync(filePath);
-  return { videoBytes: buffer.toString("base64"), mimeType: mimeFromExtension(filePath, "video") };
+  return { videoBytes: buffer.toString("base64") };
 }
 async function generateFromText4(request) {
   const apiKey = requireGeminiKey();
@@ -89129,7 +89129,7 @@ function isBillableTool(tool) {
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.56.1" },
+  { name: "social-flow", version: "0.57.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
