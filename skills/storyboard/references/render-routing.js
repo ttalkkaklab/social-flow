@@ -44,6 +44,7 @@
   }
   if(r.mode==='data_graph'){
    const data=r.data;
+   if(!text(data?.title)&&!text(scene.title))bad('data graph needs data.title (or scene.title) naming the quantity being compared');
    if(!data||!text(data.source)||!text(data.unit)||!CHARTS[r.purpose]?.includes(data.chart))bad('data needs a source, unit and chart suited to its purpose');
    const values=data?.values;
    if(!Array.isArray(values)||values.length<2||values.some(p=>!p||!text(p.label)||(r.purpose==='timeline'?!text(p.date):!Number.isFinite(p.value))))bad('data needs at least two labelled source values (dated events for timeline)');

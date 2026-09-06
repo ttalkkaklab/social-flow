@@ -77,3 +77,5 @@ Run `check-slide.js --require-all`, then render with measured segment durations 
 `render-motion-slide.mjs`. Inspect beginning, middle, end and the join between groups.
 Check negative/zero values, long labels, crowded dates, source wrapping and phone readability.
 Inspect all chart types used in the episode. A correct scale does not guarantee a readable frame.
+
+Set `shot.render.data.title` to a short heading that names the comparison (for example, “페달 한 번에 바퀴는 몇 번?”). Do not rely on a non-cover scene having a title. The shared template accepts `scene.title` as a fallback.

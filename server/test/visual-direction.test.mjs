@@ -29,6 +29,8 @@ test('changing text to motionBeats cannot evade the text limit',()=>{
 });
 test('charts require source-linked, changing focus and valid temporal geometry',()=>{
  const s=graph();assert.deepEqual(checkScene(s),[]);
+ const untitled=graph();untitled.title='';assert.match(checkScene(untitled).join(),/data.title/);
+ untitled.shot.render.data.title='Measured comparison';assert.deepEqual(checkScene(untitled),[]);
  s.shot.render.data.beats=[];assert.match(checkScene(s,{draft:true}).join(),/one group, focus/);
  const t=graph();t.shot.render.purpose='trend';t.shot.render.data.chart='line';
  assert.match(checkScene(t,{draft:true}).join(),/ISO dates/);

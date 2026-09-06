@@ -25,7 +25,7 @@ const C=CHART_RUNTIME.colors(D.surface,window.THEME?.chartAccent);
 for(const [key,value] of Object.entries({...C,x:x+'px',top:zoneTop+'px',width:cw+'px',height:ch+'px',w:W+'px',h:H+'px','zone-x':x+'px','zone-top':zoneTop+'px','zone-bottom':zoneBottom+'px'}))document.documentElement.style.setProperty('--'+key,value);
 document.body.style.width=W+'px';document.body.style.height=H+'px';document.body.classList.toggle('wide',wide);
 const plot=document.getElementById('plot'),insight=document.getElementById('insight');
-document.getElementById('title').textContent=S.title||'';
+document.getElementById('title').textContent=(D.title||S.title||'').replace(/\*\*/g,'');
 document.getElementById('eyebrow').textContent=D.unit;
 document.getElementById('source').textContent=D.source;
 let segments=(S.narration||[]).map(()=>S.duration*1000/Math.max(1,S.narration.length));
