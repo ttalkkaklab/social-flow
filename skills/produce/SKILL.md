@@ -155,8 +155,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    is not met.
 15. **Every episode runs the final pace pass — the pass is not optional.** After the build (and
    after any clip splice) `references/speedup.sh` writes the one deliverable set and checks the
-   speech rate on its retimed subtitles. The default factor is **1.2x** — build-reel normalizes
-   each card's speech, but the recorded pace still reads slow in short form. A channel may set
+   speech rate on its retimed subtitles. The default factor is **1.0x**, which preserves the pace of the finished build. A channel may set
    another factor in profile.md §2, and either way the shipped result has to stay at or below
    **6.2 spoken characters/s overall and per substantive cue**.
    The outro stays at 1.0x. What goes to `output/` is `reel-fast.mp4` ·
@@ -214,7 +213,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
   ```bash
   PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
   node $PG/format-resolve.js storyboard/scenes.js --sh > .work/format.env
-  # profile.md §2's Playback speed — no line there, 1.2. Written once here because both
+  # profile.md §2's Playback speed — no line there, 1.0. Written once here because both
   # build-reel.sh and speedup.sh source this file, so the build's caps and the shipped
   # factor can't drift apart. `:=` takes the first assignment, so appending a second line
   # would silently keep the old value — the guard makes a rerun after a profile edit fail
@@ -940,7 +939,7 @@ different levels don't step up and down.
 **Chapters (long-form)** — attach scenes.js's `chapter` string to that shot's card idx.
 Don't write timestamps. The builder makes them from the measured times and checks YouTube's
 three requirements (first chapter at 0:00 · 3 or more · at least `10 × SPEED` seconds apart —
-12s at the 1.2 default, because the boundary has to still clear 10s after §7.5), and
+10s at the 1.0 default, because the boundary has to still clear 10s after §7.5), and
 **stops there** if any is broken.
 
 ```bash
@@ -1094,10 +1093,9 @@ $REF/speedup.sh .work        # → .work/reel-fast.mp4 · reel-sub-fast.mp4 · s
 $REF/speedup.sh .work 1.6    # a channel-specific rate — profile.md §2 decides, not the moment
 ```
 
-- **The default is 1.2x.** A profile may choose another factor for the whole feature — narration,
+- **The default is 1.0x.** A profile may choose another factor for the whole feature — narration,
   cards, filmed clips, b-roll, and BGM — but the final subtitle-rate gate still decides whether
-  it can ship. A channel that wants the recorded pace writes `1.0` in profile.md §2; the pass then
-  copies the build through under the `-fast` names.
+  it can ship. At `1.0`, the pass copies the build through under the `-fast` names.
 - **The outro stays at 1.0x.** It's a brand asset with its own cut and sonic logo, so the pass
   finds the boundary from the outro file's own duration and rejoins the tail untouched.
 - **Subtitles and chapters are retimed by the pass** (`subs-fast.srt`, `chapters-fast.txt`) —
@@ -1106,27 +1104,27 @@ $REF/speedup.sh .work 1.6    # a channel-specific rate — profile.md §2 decide
   recomputes from the original instead of stacking passes.
 - **The factor moves the writing-stage band too.** The 6.2 characters/s gate measures the *sped-up*
   subtitles, so a card written at `r` ships at `r × factor`. `build-reel.sh` divides its whole
-  `[3.2, 6.2]` band by the same `SPEED` and warns outside it — **[2.67, 5.17] at 1.2x**. Read that
+  `[3.2, 6.2]` band by the same `SPEED` and warns outside it — **[3.2, 6.2] at the 1.0x default**. Read that
   band as an early warning, not the gate itself: the builder counts the TTS script over the
   un-normalized card audio, while the gate counts the subtitle text over cue time after the pass,
   so the two numbers differ by design. Its chapter minimum becomes `10 × factor` so a boundary still
   clears 10s on the shipped file. Two consequences worth knowing before picking a factor:
   above about **1.38** the default 4.5 characters/s target can't reach the gate at all (4.5 × 1.38 =
   6.2), so a faster channel has to lower its target speaking rate with it. And the shooting lane has
-  no normalization of any kind — a take at the 5~6 characters/s standard lands at 6.0~7.2 and the
-  gate rejects it, so a screencast channel either writes shorter or sets `1.0`.
+  no normalization of any kind — at a channel-selected 1.2x, a take at the 5~6 characters/s
+  standard reaches 6.0~7.2 and can exceed the gate. The default 1.0x preserves that take's pace.
 - **`profile.md` §2 owns the rate.** Read the channel's speed line before running the pass; with
-  no line, 1.2. A profile TTS `speed` multiplies into this, so the final SRT is checked after
+  no line, 1.0. A profile TTS `speed` multiplies into this, so the final SRT is checked after
   both choices have taken effect.
 - The pass appends its own line to `build-report.txt`
-  (`── speedup x1.20 (reel.mp4): 62.0s → 52.2s (feature …)`; an explicit 1.0 prints
-  `── speedup x1.00: passed through …` instead) and exits 1 when the measured length doesn't match
+  (`── speedup x1.00: passed through …` at the default; a channel-selected 1.2x prints
+  `── speedup x1.20 (reel.mp4): 62.0s → 52.2s (feature …)`) and exits 1 when the measured length doesn't match
   feature/factor + tail or `check-final-speech-rate.py` finds more than 6.2 characters/s.
   **No marker line or final-rate PASS line means the episode is not ready to publish**
   (pipeline.md gate table).
 - **Length contracts are read after the pass.** The 35–75s recommendation and the per-channel
   length rules describe the shipped file.
-- With chapters, watch for the `⚠ … under 10s` line in `build-report.txt` — at 1.2x a boundary
+- With chapters, watch for the `⚠ … under 10s` line in `build-report.txt` — at a channel-selected 1.2x a boundary
   that was 10s apart comes out 8.3s and YouTube drops the whole chapter list. `build-reel.sh` now
   demands `10 × factor` up front, so this only fires on a build made before that. Merge those
   chapters and rebuild.
@@ -1150,8 +1148,8 @@ FORMAT_ENV= CAP_W=470 CAP_H=920 $REF/capture-frames.sh \
 ```
 
 One shot per scene at the reveal-complete moment, then read the PNGs. **QA runs on the final burn-in (`reel-sub-fast.mp4`)** — that's the file
-that ships, and the speed pass — 1.2x by default — may make a previously readable subtitle
-disappear. The
+that ships. The default 1.0x preserves subtitle timing; a faster channel setting may make
+a previously readable subtitle disappear. The
 clean one has no subtitles, so you can't see clipping or intrusion, and the burned-in one is
 what actually goes to IG. Check: action bar (x≈890) intrusion / subtitle centering / hero
 number clipping / can you tell the topic from the first frame alone / **whether the background
@@ -1334,7 +1332,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/bgm-bed.sh`** — renders the music bed the mix lays under the voice: every cue measured and gained to one distance under the narration, a short cue crossfaded onto itself instead of butt-joined, cue changes crossfaded. Called by both builders and by the b-roll premix
 - **`references/bgm-scoring.md`** — where the bed's numbers come from, which of them are published listening tests and which are our own practice, and the widely-quoted figures that failed verification
 - **`references/build-outro.sh`** — generates the channel's shared outro
-- **`references/speedup.sh`** — the required final pace pass (§7.5). Uses the channel's factor (1.2 default) while leaving the outro at 1.0x, retimes `subs.srt` and `chapters.txt`, verifies the measured length, and blocks a final speech rate over 6.2 characters/s. Reads the pre-pass set and writes `-fast` names, so it never stacks
+- **`references/speedup.sh`** — the required final pace pass (§7.5). Uses the channel's factor (1.0 default) while leaving the outro at 1.0x, retimes `subs.srt` and `chapters.txt`, verifies the measured length, and blocks a final speech rate over 6.2 characters/s. Reads the pre-pass set and writes `-fast` names, so it never stacks
 - **`references/check-final-speech-rate.py`** — measures Unicode letters and numbers on `subs-fast.srt`; catches a whole-video speed factor that made otherwise valid cards too dense to follow
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)

@@ -151,7 +151,7 @@ ATEMPO_MIN=${ATEMPO_MIN:-0.88}; ATEMPO_MAX=${ATEMPO_MAX:-1.18}
 # The playback factor speedup.sh will apply after this build (produce §7.5). produce §1 appends the
 # channel's factor to .work/format.env, which both scripts source, so the build and the pass agree.
 # Sourced above; the inline default matches speedup.sh's for a hand-run build with no format.env.
-SPEED=${SPEED:-1.2}
+SPEED=${SPEED:-1.0}
 # Validate before deriving. A command substitution that exits non-zero takes the whole assignment
 # down under `set -e`, so a guard placed after it never runs — the build would die with no reason.
 awk -v f="$SPEED" 'BEGIN{exit !(f >= 0.5 && f <= 3.0)}' \
