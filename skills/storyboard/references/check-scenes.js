@@ -794,9 +794,11 @@ function check(win, fmt, opts) {
   if (!draft && motionPolicy.htmlPlateMax !== null) {
     // A plate — one picture for its whole length — is capped. A motion slide with a movement
     // per narration group is a body of its own on any beat since 2026-09-05, and explanation
-    // beats are HTML slides by directive; both sit outside the cap.
+    // beats are HTML slides by directive; both sit outside the cap. Camera HTML is a
+    // photograph renderer, governed by still-run and static-ground limits instead.
     const plates = scenes.filter((scene) => scene && scene.type !== 'outro' && scene.visual &&
-      scene.visual.slide && !beatsCoverGroups(scene) && !INFO_ROLE[scene.shot && scene.shot.infoType]);
+      scene.visual.slide && scene.visual.slide.kind !== 'camera' &&
+      !beatsCoverGroups(scene) && !INFO_ROLE[scene.shot && scene.shot.infoType]);
     if (plates.length > motionPolicy.htmlPlateMax)
       bad('episode', `${plates.length} HTML plates on other beats — channel cap ${motionPolicy.htmlPlateMax}; ` +
                      'keep plates for one-sentence verdicts, or give the slide a movement per narration group ' +
@@ -1250,6 +1252,12 @@ function selftest() {
   const plateScene = (d) => Object.assign({}, cover, { type: 'points', beat: 'drip', transition: 'jcut', hookType: undefined, hookForm: undefined, duration: d });
   ok('HTML plates over the channel cap are rejected',
      has(bads(run([videoScene, plateScene(3), plateScene(3), plateScene(3)], null, { policy: groundPolicy })), /3 HTML plates on other beats — channel cap 2/));
+  const cameraPlate = (d) => Object.assign({}, plateScene(d), { visual: { bg: 'images/rider.png',
+    slide: { kind: 'camera', motion: true, file: 'slides/s1-rider.html', plan: 'Approach the rider.' } } });
+  ok('camera photographs do not consume the text plate allowance',
+     !has(bads(run([cameraPlate(3), cameraPlate(3), cameraPlate(3)], null, { policy: groundPolicy })), /HTML plates/));
+  ok('camera photographs still obey the static-ground clock',
+     has(bads(run([cameraPlate(9)], null, { policy: groundPolicy })), /one picture stays on screen 9\.0s/));
   ok('explanation slides sit outside the plate cap',
      !has(bads(run([videoScene, explain(3, 1), explain(3, 1), explain(3, 1)], null, { policy: groundPolicy })), /HTML plates/));
   const motionPlate = (d) => Object.assign({}, plateScene(d), { visual: { slide: Object.assign({}, cover.visual.slide,

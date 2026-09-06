@@ -66,3 +66,4 @@ visual defect prevents readiness for publishing. Do not rewrite approved facts o
 historical actions while repairing the visuals.
 
 All `still_camera` cuts use the unchanged shared camera HTML template and runtime, including push/pan. Non-slide video handoffs declare `visual.renderedFile` (or `visual.clip`) relative to the storyboard; assembly must use that exact file.
+Camera photographs do not consume `html_plate_max`. Their duration and consecutive-still limits still apply. Never replace a useful photograph with a text verdict just to satisfy a text-plate count.
