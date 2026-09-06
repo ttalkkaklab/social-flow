@@ -10,7 +10,7 @@
 #   splice-clip.sh's T values are on the original timeline, so a build that already sped up would
 #   put every insert in the wrong place.
 #
-#   Factor: the argument, else $SPEED, else format.env, else 1.2.
+#   Factor: the argument, else $SPEED, else format.env, else 1.0.
 #
 #   Input — the newest set in the workdir, the same rule output/ copies by:
 #     reel-spliced.mp4 / reel-sub-spliced.mp4 / subs-spliced.srt  when a splice ran
@@ -38,7 +38,7 @@ cd "$WORK"
 # builders hold: caller env → format.env → inline.
 [ -f format.env ] && . ./format.env
 
-SPEED=${2:-${SPEED:-1.2}}
+SPEED=${2:-${SPEED:-1.0}}
 FPS=${FPS:-30}
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}
 XFADE=${XFADE:-0.6}
@@ -71,7 +71,7 @@ fi
 [ -f "$VIN" ] || { echo "✗ $VIN missing — run build-reel.sh (and splice-clip.sh) first" >&2; exit 1; }
 
 if awk -v f="$SPEED" 'BEGIN{exit !(f == 1)}'; then
-  # An explicit 1.0 is a channel saying "ship at the recorded pace". Copy the set through under the
+  # At 1.0 (the default), ship at the recorded pace. Copy the set through under the
   # -fast names so the finalize step stays one fixed set of paths and the gate still sees its marker.
   cp -f "$VIN" reel-fast.mp4
   [ -f "$SIN" ] && cp -f "$SIN" reel-sub-fast.mp4
