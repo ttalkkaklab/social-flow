@@ -410,12 +410,26 @@ export async function extendVideo(request) {
             };
         }
         // A clip the server has already dropped can only fail — say so instead of spending the call.
-        if (!request.sourceVideoUri && handle && Date.now() - Date.parse(handle.savedAt) > HANDLE_LIFETIME_MS) {
-            return {
-                success: false,
-                error: `The Veo file handle for ${request.sourceVideoPath} was made at ${handle.savedAt} and the server keeps a generated video for 48 hours only. ` +
-                    'Generate the clip again — an expired handle cannot be extended.',
-            };
+        if (!request.sourceVideoUri && handle) {
+            const savedAtMs = Date.parse(handle.savedAt);
+            // An unreadable savedAt parses to NaN, and every comparison against NaN is false — trusting
+            // it would send an expired handle to the API instead of failing here, which is the one
+            // outcome this check exists to prevent.
+            if (!Number.isFinite(savedAtMs)) {
+                return {
+                    success: false,
+                    error: `The Veo file handle for ${request.sourceVideoPath} carries no readable savedAt (${JSON.stringify(handle.savedAt)}), ` +
+                        'so there is no way to tell whether the server still holds the clip. Generate it again, ' +
+                        'or pass sourceVideoUri if you know the handle is live.',
+                };
+            }
+            if (Date.now() - savedAtMs > HANDLE_LIFETIME_MS) {
+                return {
+                    success: false,
+                    error: `The Veo file handle for ${request.sourceVideoPath} was made at ${handle.savedAt} and the server keeps a generated video for 48 hours only. ` +
+                        'Generate the clip again — an expired handle cannot be extended.',
+                };
+            }
         }
         const { GoogleGenAI } = await import('@google/genai');
         const genai = new GoogleGenAI({ apiKey });
