@@ -89178,7 +89178,7 @@ function isBillableTool(tool) {
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.57.0" },
+  { name: "social-flow", version: "0.58.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

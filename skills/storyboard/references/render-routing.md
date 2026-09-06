@@ -32,7 +32,7 @@
 | 인물 소개·분위기·장소·단서 | `portrait`, `atmosphere`, `place`, `detail` | `still_camera` | 발명가 소개는 얼굴로 접근하고 작업실 소개는 공간을 드러낸다. |
 | 사람이 수행하는 과정 | `human_process` | `character_html` | 직원이 물건을 분류하거나 짐을 싣는 행동을 직접 보여준다. |
 | 사물의 작동·물리적 변화 | `mechanism`, `physical_state` | `object_html` | 기어 맞물림, 경첩 회전, 밸브 개폐를 보여준다. |
-| 수치 관계·시간 순서 | `comparison`, `trend`, `share`, `distribution`, `timeline` | `data_graph` | 판매량 비교, 시간별 변화, 구성비를 비교한다. 연표에는 날짜를 쓴다. |
+| 수치 관계·시간 순서 | `comparison`, `trend`, `share`, `distribution`, `geographic`, `timeline` | `data_graph` | 판매량 비교, 시간별 변화, 구성비를 비교한다. 연표에는 날짜를 쓴다. |
 | 짧은 근거 인용·결론 | `evidence_quote`, `verdict` | `editorial_html` | 인용은 원문과 출처를 적고 결론은 짧게 보여준다. |
 | 자연스러운 연속 동작 | `live_action` | `editorial_html` | `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"type"`로 짧은 인용·결론을 만든다. |
 | `generated_video` | 바람에 흔들리는 옷과 인물의 동작이 장면의 의미일 때 쓴다. |
@@ -115,3 +115,13 @@ shot: {
 기본값은 꺼짐이다. 채널에서 명시적으로 켰다면 그 제약을 지키면서 연속 동작이 필요한
 오프닝을 설계한다. 모든 영상 생성 컷은 정지 이미지나 제어 가능한 HTML 동작으로 부족한
 이유가 있어야 한다. 예산이나 실제 동작 비율을 맞추려고 무관한 캐릭터·그래프·영상을 넣지 않는다.
+
+
+### 도넛·파이·지도 선택
+
+전체 구성비는 `share`의 `donut`·`pie`·`stacked-bar` 중에서 고른다. 비슷한 값을
+정확히 비교해야 하면 막대를 쓴다. 도넛·파이는 합계와 조각의 비율을 유지한다.
+지역 분포가 설명의 핵심이면 `geographic`의 `map`을 쓴다. 비율·밀도는 지역별 색상으로
+표현하고 건수는 원의 넓이로 표현한다. 지도 경계와 좌표에는 출처가 있어야 한다.
+자료가 없는 지역은 빗금으로 표시해 0과 구분한다. 각 형식의 데이터 계약과 예시는
+[chart-design.md](chart-design.md)를 따른다.

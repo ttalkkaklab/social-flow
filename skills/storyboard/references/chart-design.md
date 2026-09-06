@@ -1,5 +1,13 @@
 # Charts for narrated video
 
+## Contents
+
+- [Choose the chart from the relationship](#choose-the-chart-from-the-relationship)
+- [Plan the comparison and the spoken focus](#plan-the-comparison-and-the-spoken-focus)
+- [Production and visual style](#production-and-visual-style)
+- [Donut and pie](#donut-and-pie)
+- [Maps](#maps)
+
 A chart lets the viewer compare evidence. Lead with a short factual headline, give the chart
 most of the space, and keep units and sources legible. A giant number over a token bar is not
 the default. Abstract quantities do not need 3D extrusion, glass, gradients, decorative
@@ -13,10 +21,13 @@ characters or a dashboard of rounded cards.
 | Category position | `dot` | labelled values | Sparse guide lines, precise dots and direct values. |
 | Change over time | `line` | labelled values with ISO dates | Time-proportional spacing, one line, focus on the discussed observations. |
 | Parts of a whole | `stacked-bar` | nonnegative values plus `total` | One 100% bar; values must sum to the whole. |
+| Few parts of a whole | `donut` or `pie` | nonnegative values plus `total` | Exact angles, a restrained category palette and adjacent labels. Donut centers show the focused share. |
+| Geographic pattern | `map` | sourced WGS84 GeoJSON and regional values or coordinates | Rate/density uses region color; counts use proportional symbol area. |
 | Distribution | `histogram` | contiguous equal-width `from`/`to` bins and frequencies | Adjacent columns; `binUnit` names the horizontal measurement. |
 | Dated events | `timeline` | labels with ISO dates | An elapsed-time rail. Split crowded event clusters into another cut. |
 
 Use at most six categories, four timeline events, or twelve line observations/histogram bins per cut.
+Maps allow up to 250 regional values or twelve symbols; focus on one location per narration beat.
 Keep labels short. Do not drop source values merely to fit the cap; split the evidence or
 aggregate only when the source and narration justify it. Do not switch chart types simply
 to pass a variety test. Never invent comparison values for an isolated number.
@@ -81,3 +92,69 @@ Inspect all chart types used in the episode. A correct scale does not guarantee 
 Set `shot.render.data.title` to a short heading that names the comparison (for example, “페달 한 번에 바퀴는 몇 번?”). Do not rely on a non-cover scene having a title. The shared template accepts `scene.title` as a fallback.
 
 `data.source` is the visible attribution caption. Keep it short and readable (for example, “예시 계산 · 앞 톱니 32개 기준”); put internal research paths in `data.sourceRef`, not in the video footer.
+
+## Donut and pie
+
+Use `purpose:'share'`, `chart:'donut'` or `'pie'`, `baseline:0`, and a positive `total`.
+The nonnegative source values must sum to that total. If the unit is `%`, the total is 100.
+Prefer a donut for one or a few highlighted shares and a pie for a small, easily distinguished
+composition. Prefer a bar when the viewer needs to compare similar values accurately.
+Keep at most six parts (four with labels longer than twelve characters). The checker also
+limits the total label rows at portrait width; shorten labels or split when that budget fails. Do not merge
+categories into “other” without a source-faithful calculation and a spoken reason.
+
+The shared renderer reveals each source angle, then moves the focus outline. It never
+explodes, tilts, extrudes, enlarges a tiny slice or changes the denominator between sentences.
+The donut center crossfades the exact focused share; the transition is not a measured trend.
+Source values retain their configured precision throughout the reveal; a nonzero value never
+rounds to zero. Derived percentages use independent adaptive precision. Extremely small shares
+use scientific notation and a share just below 100% uses an explicit lower bound. A zero share
+has no area. Fixed-width separator strokes cannot cover a small positive slice.
+
+## Maps
+
+Use `purpose:'geographic'`, `chart:'map'`, `infoType:'statistic'`. Choose a map when location
+or regional distribution explains the sentence. A ranked bar is clearer for a pure ranking.
+Use `data.locale:'en'` for English map keys; Korean is the default.
+
+```js
+map: {
+  mode: 'choropleth', // or 'symbol'
+  measure: 'rate',    // choropleth: rate or density; counts belong to symbols
+  projection: 'equal-area',
+  source: 'Boundary provider and edition',
+  license: 'License or public-domain attribution',
+  geojson: {type: 'FeatureCollection', features: [/* sourced boundaries */]}
+}
+// Choropleth values join an exact feature.id:
+values: [{label: 'Region A', regionId: 'A', value: 42}]
+// Symbol values carry sourced longitude/latitude, not hand-placed screen positions:
+values: [{label: 'Location A', longitude: 127.1, latitude: 37.5, value: 240}]
+```
+
+Embed sourced, licensed GeoJSON in `scenes.js` before rendering. Each Feature needs a unique
+string `id` and Polygon or MultiPolygon geometry with closed WGS84 longitude/latitude rings.
+Holes and islands are preserved. Remove a redundant CRS member only after confirming WGS84;
+reproject any other coordinate system with an appropriate GIS tool. Geometry crossing the
+antimeridian must be split at that meridian first. Never sketch country outlines from memory,
+stretch a map to the frame, move islands to improve spacing or silently omit territory.
+Keep at most 500 features and 100,000 coordinates; simplify with topology preservation.
+
+The offline renderer uses a cylindrical equal-area projection with a 30-degree standard
+parallel, fits the geographic extent uniformly and keeps it fixed across beats. Broad or
+polar extents can look compressed; inspect the actual output and choose a narrower sourced
+extent when the story permits. No map tiles, API keys, CDN or network access are needed during
+capture. The scene hash includes all geometry, values and attribution.
+
+Color uses one fixed zero-to-maximum sequential scale for nonnegative rates or densities.
+A missing region or explicit `value:null` is hatched, distinct from a measured zero. Raw counts
+use `mode:'symbol'`; circle **area**, not radius, is proportional to the source value. Zero is
+a plus marker and missing data is an X. Coordinates must lie within the supplied extent.
+Large symbols are painted first so smaller symbols stay visible; inspect overlaps and split
+crowded cuts without moving locations. The circle-size key uses the same area scale.
+
+Each beat focuses on one named location. The matching region outline or symbol border changes
+emphasis while the exact label and value appear below the map. The next beat preserves the
+map's geometry and scale. Boundary attribution appears beside the statistical source.
+The checker cannot establish whether a license, boundary, coordinate or claim is truthful:
+verify these against the original source during research and review actual playback.
