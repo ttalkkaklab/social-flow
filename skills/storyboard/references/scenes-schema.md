@@ -58,6 +58,7 @@ window.THEME = {
 };
 window.COMPREHENSION = { /* the one-question contract — see below */ };
 window.STORY = { /* required story-v1 plan and current review: story-quality.md */ };
+window.PRODUCTION = { /* required on new plans: mode, approved cost quote, cap, attempts; production-mode.md */ };
 // window.MUSIC = { … };   // named music cues (§music cues) — leave the line out for one bed all the way through
 window.SCENES = [ /* the shot array — one entry = one shot. Keep the identifier names */ ];
 ```
@@ -308,6 +309,24 @@ arc: "answer-first"               // long-form cover only — answer-first (defa
 beat: "drip"                      // short: hook | drip | cta. long-form: hook | hooking | result | body | turn (story only) | cta
 sequence: "풀기 1"                 // sequence head. Used with beat, the document groups them into one block
 ```
+
+## Production mode — `window.PRODUCTION`
+
+Use [production-mode.md](production-mode.md) for the HITL choice and machine fields. Show both
+modes with video-only first-pass/retry costs and the explicit cap before assets. `hybrid` uses
+1–2 videos plus purpose-routed HTML/still-camera scenes. `full_video` uses every new scene as
+`visual.video` and the selected episode style, including physical explanations; this replaces
+only the hybrid renderer and generated-count restrictions below. `MOTION_POLICY` remains the
+channel snapshot. Actual approval binds the quote fingerprint; changing inputs requires a new
+quote. `check-production.js` blocks missing/stale approval and over-budget calls.
+
+`shot.videoDesign` in full_video carries `look`, `worldId`, `before`, `action`, `after`,
+`camera`, `continuity` and `reject`. Keep real infoType/purpose, data evidence and narration.
+The source PNG, stored motion prompt and optional `visual.video.lastImagePath` drive the same
+spatial action. Runtime output path is `visual.video.clip`. Use explicit 1080p and audio false;
+only burned subtitles overlay the video. The selected style replaces the generic photo rule.
+A verified recording or shared outro retains its source. Full-video quality evidence is in
+`.work/video-review.json`, tied to the actual source and clip hashes, checked before the build.
 
 ## Fields common to every shot
 
@@ -2461,3 +2480,32 @@ strip says no violations.
       reference) — the subject of the shot first in the array
 - [ ] **Every generated-video shot says what it sounds like in `visual.audio`** (§clip audio) —
       left blank, the engine invents speech under the narration
+
+### Conditional start/end images
+
+Use `visual.frames: {mode:"first"|"first_last", reason, endState?, end?}` for new generated
+shots. `visual.bg` supplies the start frame. Two-frame shots require `endState` during planning
+and a distinct `end` image before video generation. The approval page displays both images;
+`seedance-route.js` forwards `end` as `lastImagePath`. Follow
+[render-routing.md](render-routing.md#start-and-end-frame-planning) for the selection and
+continuity rules. Legacy boards without `frames` retain their original single-frame display,
+unless an existing `lastImagePath` supplies a second frame.
+# Bundled full-video style references
+
+`PRODUCTION.style.referencePack` uses `tactile-miniature-v1` only for cinematic-miniature
+generated scenes. `visual.styleRole` selects `environment`, `character`, `interaction`,
+`transport`, or `reported_story`. These roles select appearance references, not story subjects.
+`spatial-prompts.js` returns `styleBinding`; save that object as `visual.stylePack`. It contains
+the pack ID/version, content digest and plugin-relative reference paths, all covered by the
+production plan signature. Do not store resolved machine-specific image paths in scenes.js.
+`look:"archive"` bypasses generated style references and preserves authentic source material.
+
+
+### Episode visual style selection
+
+Before authoring, follow [visual-style.md](visual-style.md). Both production modes store
+`PRODUCTION.style.preset`: `cinematic-miniature`, `photoreal`, or `webtoon`, with the actual
+`selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
+The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
+Use `videoDesign.look: "realistic"` for photoreal and `"webtoon"` for webtoon; neither attaches
+the miniature pack. Source, end-frame and motion prompts carry the selected treatment.

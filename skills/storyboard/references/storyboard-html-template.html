@@ -298,7 +298,7 @@
   .tl-seg.outro small { opacity: 1; }
   .tl-seg small { font-weight: 500; opacity: .8; font-size: 10px; }
   .tl-ruler { display: flex; margin-top: var(--s1); font-size: 10px; color: var(--faint); }
-  .tl-ruler span { border-left: 1px solid var(--line); padding-left: 3px; }
+  .tl-ruler span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-left: 1px solid var(--line); padding-left: 3px; }
   .tl-ruler span:last-child { text-align: right; border-left: none; border-right: 1px solid var(--line); padding: 0 3px 0 0; }
   .tl-cap { font-size: var(--t-cap); color: var(--faint); margin-bottom: var(--s2); }
 
@@ -369,6 +369,16 @@
   }
   .conti-row:first-child { border-top: none; padding-top: 0; }
   .conti-row:last-child { padding-bottom: 0; }
+  .conti-row.has-frame-pair { grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); }
+  .frame-inputs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; align-self: start; }
+  .frame-inputs.single { grid-template-columns: 1fr; width: var(--fw); }
+  .frame-inputs figure { margin: 0; min-width: 0; }
+  .frame-inputs img { width: 100%; aspect-ratio: 9 / 16; object-fit: contain; background: var(--sunk); border-radius: 8px; display: block; }
+  .frame-inputs.wide img { aspect-ratio: 16 / 9; }
+  .frame-inputs figcaption { font-size: var(--t-aux); font-weight: 600; margin-bottom: 8px; }
+  .frame-inputs .pending-frame { aspect-ratio: 9 / 16; display:grid; place-items:center; padding:12px; background:var(--sunk); border:1px dashed var(--line); color:var(--muted); }
+  .frame-inputs .frame-reason { grid-column:1/-1; font-size:var(--t-aux); color:var(--muted); }
+  @media (max-width: 700px) { .conti-row.has-frame-pair { grid-template-columns:1fr; } .frame-inputs { max-width:360px; } }
   .panel { margin: 0; width: var(--fw); }
 
   .cut { min-width: 0; max-width: 560px; }
@@ -779,6 +789,64 @@
     .meta-grid { grid-template-columns: 1fr; }
   }
 
+  /* Responsive review layout: keep frame comparisons and narration readable. */
+  @media screen {
+    .wrap { max-width: 1240px; padding: 32px clamp(16px, 3vw, 40px) 80px; }
+    .scene:has(.conti) { max-width: none; }
+    .scene { padding: clamp(16px, 2.5vw, 28px); margin: 20px 0; }
+    .scene-band { padding: clamp(12px, 2vw, 24px); }
+    .scene-title { font-size: 20px; line-height: 1.45; }
+    .scene-head { gap: 10px 12px; }
+    .scene-checks { gap: 6px; }
+    .conti { --fw: 216px; margin-top: 20px; }
+    .conti-row { align-items: start; gap: clamp(20px, 3vw, 36px); }
+    .conti-row.has-frame-pair { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+    .frame-inputs { width: 100%; max-width: 480px; gap: 16px; }
+    .frame-inputs.single { width: var(--fw); max-width: 100%; }
+    .frame-inputs figcaption { font-size: 14px; line-height: 1.5; margin-bottom: 10px; }
+    .frame-inputs a { display: block; border-radius: 10px; }
+    .frame-inputs img { border-radius: 10px; border: 1px solid var(--line); }
+    .frame-inputs .frame-reason { font-size: 14px; line-height: 1.75; padding: 12px 14px; background: var(--sunk); border-radius: 8px; overflow-wrap: anywhere; }
+    .cut { max-width: none; }
+    .cut-head { flex-wrap: wrap; line-height: 1.5; gap: 8px; }
+    .cut-sec { font-size: 12px; letter-spacing: .04em; margin-top: 20px; }
+    .cut-line { font-size: 16px; padding: 7px 0; gap: 10px; }
+    .cut-line .b { line-height: 1.8; word-break: keep-all; overflow-wrap: anywhere; }
+    .cut-line .len { font-size: 12px; }
+    .shot-info, .shot-feel, .cut-carry { font-size: 14px; line-height: 1.75; }
+    .toolbar { flex-wrap: wrap; gap: 12px 20px; }
+    .toolbar label { min-height: 44px; }
+    .docnav { flex-wrap: nowrap; overflow-x: auto; align-items: center; gap: 8px; padding: 10px 0; }
+    .docnav a, .docnav .langsel { flex: none; min-height: 44px; display: inline-flex; align-items: center; font-size: 13px; letter-spacing: 0; padding: 8px 12px; }
+    .sec { font-size: 15px; letter-spacing: .02em; scroll-margin-top: 80px; }
+    .timeline { overflow-x: auto; }
+    .audit li { line-height: 1.75; }
+    .audit-head { flex-wrap: wrap; gap: 8px; }
+    .meta-grid > *, .scene-head > *, .cost-split > * { min-width: 0; overflow-wrap: anywhere; }
+    a:focus-visible, summary:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
+  }
+  @media screen and (max-width: 900px) {
+    .conti-row.has-frame-pair { grid-template-columns: 1fr; }
+    .frame-inputs { max-width: 520px; }
+    .conti { --fw: 192px; }
+  }
+  @media screen and (max-width: 600px) {
+    .wrap { padding: 20px 12px 56px; }
+    .scene-band { padding: 10px; }
+    .scene { padding: 16px 12px; }
+    .scene-title { font-size: 18px; }
+    .conti-row { grid-template-columns: 1fr; gap: 20px; }
+    .frame-inputs { max-width: none; gap: 10px; }
+    .frame-inputs.single { width: min(68%, 260px); margin-inline: auto; }
+    .frame-inputs .frame-reason { padding: 10px 12px; }
+    .cut-line { flex-wrap: wrap; }
+    .cut-line .b { flex-basis: calc(100% - 30px); }
+    .cut-line .len { margin-left: 25px; }
+    .audit li { grid-template-columns: 1fr; gap: 2px; }
+    .audit-head .count { margin-left: 0; }
+    .sec .aside { float: none; display: block; margin-top: 6px; }
+  }
+
   @media print {
     /* Paper is always white — someone reading in dark mode still prints on the light palette.
        Switching only the background to white and leaving dark text colors prints white on
@@ -814,6 +882,7 @@
 
 <script src="./scenes.js"></script>
 <script src="./render-routing.js"></script>
+<script src="./production-mode.js"></script>
 <script>
 /* ✎ SB_DOC BEGIN — fill in this block only (editorial metadata that is not in scenes.js).
    Scene titles, dialogue, bullets, shot and duration are never written here — scenes.js is the SoT. */
@@ -1483,7 +1552,7 @@ window.SB_DOC = {
   /* Long-form produces hard-to-read numbers like 900s — anything past 2 minutes is written in minutes. */
   function durTxt(t) {
     t = Math.round(t || 0);
-    return t >= 120 ? T.min((t / 60).toFixed(1)) : T.sec(t);
+    return t >= 120 ? T.min((t / 60).toFixed(1)) : T.sec(Math.round(t * 10) / 10);
   }
   var root = document.documentElement.style;
   // A missing value would go straight in as --accent: undefined and void every color-mix
@@ -2219,7 +2288,7 @@ window.SB_DOC = {
 
   SCENES.forEach(function (s, i) {
     var v = (s && s.visual) || {}, sl = v.slide;
-    if (window.RENDER_ROUTING) window.RENDER_ROUTING.checkScene(s).forEach(function (message) { flag("bad", T.shotCap(i + 1), message); });
+    if (window.RENDER_ROUTING) window.RENDER_ROUTING.checkScene(s, { production: window.PRODUCTION }).forEach(function (message) { flag("bad", T.shotCap(i + 1), message); });
     else flag("bad", T.shotCap(i + 1), "Missing render-routing.js; copy it with the storyboard template");
     var infoType = s && s.shot && s.shot.infoType;
     var infoTypes = ["other", "timeline", "statistic", "principle"];
@@ -2232,7 +2301,7 @@ window.SB_DOC = {
     if (s.type !== "broll" && s.type !== "outro") {
       if (infoTypes.indexOf(infoType) < 0)
         flag("bad", T.shotCap(i + 1), "shot.infoType must be other, timeline, statistic, or principle");
-      if (infoRole[infoType]) {
+      if (infoRole[infoType] && !(window.PRODUCTION && window.PRODUCTION.mode === "full_video")) {
         if (!sl || (sl.kind || "diagram") !== "diagram" || sl.motion !== true || sl.treatment !== "editorial")
           flag("bad", T.shotCap(i + 1), infoType + " must be a full-frame moving editorial HTML diagram");
         else if (sl.role !== infoRole[infoType])
@@ -2281,6 +2350,13 @@ window.SB_DOC = {
   var policyVideoMax = MP.generatedVideoMax !== null && MP.generatedVideoMax !== undefined &&
                        Number.isFinite(Number(MP.generatedVideoMax))
     ? Number(MP.generatedVideoMax) : FMT.videoMax;
+  if (window.PRODUCTION) {
+    if (!window.PRODUCTION_MODE) flag("bad", "Production", "Missing production-mode.js");
+    else {
+      window.PRODUCTION_MODE.check(window).forEach(function (message) { flag("bad", "Production", message); });
+      policyVideoMax = window.PRODUCTION_MODE.policy({ generatedVideoMax: policyVideoMax }, window.PRODUCTION, SCENES).generatedVideoMax;
+    }
+  }
   // Mirrors check-scenes.js generatedVideo. `visual.video.clip` is produce's output record,
   // not a supplied file — a file the user already has is the filmed lane (visual.source).
   function generatedVideo(s) {
@@ -3083,7 +3159,7 @@ window.SB_DOC = {
           (cover.hookType ? T.outsideFour(cover.hookType) : T.strategyNotWritten))) : "") +
        badge((DOC.status || "draft") === "draft" ? "" : "ok", (DOC.status || "draft") === "draft" ? T.draft : DOC.status) +
        (DOC.created ? badge("", DOC.created) : "") +
-       badge(lenCls, T.mainLen(total)) +
+       badge(lenCls, T.mainLen(Math.round(total * 10) / 10)) +
        (outroSec ? badge("", T.withOutro(total + outroSec)) : "") +
        badge("", T.shotsN(main.length)) +
        (hasSceneField ? badge("", (function () {
@@ -3138,6 +3214,37 @@ window.SB_DOC = {
      bills. So the two numbers sit at the top of the document rather than in a report someone
      has to go and open. The source is SB_DOC.cost, written by cost-preview.js. */
   var COST = DOC.cost || null;
+  var PCOST = COST && COST.productionCost;
+  if (window.PRODUCTION) {
+    if (!PCOST || !window.PRODUCTION_MODE || PCOST.planSignature !== window.PRODUCTION_MODE.signature(window))
+      flag("bad", "Production cost", "Missing or stale mode comparison; refresh cost-preview.js --sbdoc before approval");
+    else {
+      var koMode = document.documentElement.lang.indexOf("ko") === 0;
+      h += '<section class="cost" id="production-cost"><div class="cost-head">' +
+        (koMode ? '제작 방식과 영상 생성비' : 'Production mode and video cost') + '</div>';
+      h += '<table><thead><tr><th>' + (koMode ? '방식' : 'Mode') + '</th><th>' +
+        (koMode ? '생성 영상' : 'Generated clips') + '</th><th>' + (koMode ? '최초 생성' : 'First pass') +
+        '</th><th>' + (koMode ? '재시도 포함 예상' : 'With retries') + '</th></tr></thead><tbody>';
+      ['hybrid', 'full_video'].forEach(function (key) {
+        var o = PCOST.options[key];
+        h += '<tr><td>' + esc(koMode ? o.label : key) + (key === window.PRODUCTION.mode ? ' ✓' : '') +
+          '</td><td>' + o.clips + ' / ' + o.generatedSeconds + 's</td><td>$' + o.firstPassUsd.toFixed(2) +
+          ' (≈₩' + o.firstPassKrw.toLocaleString() + ')</td><td>$' + o.retryLowUsd.toFixed(2) + '–$' + o.retryHighUsd.toFixed(2) +
+          ' (≈₩' + o.retryLowKrw.toLocaleString() + '–₩' + o.retryHighKrw.toLocaleString() + ')</td></tr>';
+      });
+      h += '</tbody></table><p>' + esc(koMode ? '영상 API 비용만 계산합니다. 이미지·음성·편집·세금은 제외하며 선택하지 않은 방식은 가정에 따른 추산입니다.' : PCOST.scope) +
+        '</p><p>' + esc(koMode ? '원화 환산 가정: 1달러=' + PCOST.krwPerUsd + '원. 승인 예산: $' + window.PRODUCTION.videoBudgetUsd +
+          '. 장면당 총 시도 한도: ' + window.PRODUCTION.maxAttempts + '회.' :
+          'Assumed KRW/USD: ' + PCOST.krwPerUsd + '. Approved video budget: $' + window.PRODUCTION.videoBudgetUsd +
+          '. Total attempts per clip: ' + window.PRODUCTION.maxAttempts) + '</p>';
+      var selectedRows = PCOST.options[window.PRODUCTION.mode].rows;
+      h += '<details><summary>' + (koMode ? '장면별 모델·해상도·생성비' : 'Model, resolution and cost per shot') + '</summary><ul>' + selectedRows.map(function (r) {
+        var g = r.generation || {}, model = g.model === 'seedance-1-5-pro-251215' ? 'Seedance 1.5 Pro' : g.model || r.key;
+        return '<li>' + (koMode ? '장면 ' : 'Shot ') + r.shot + ' · ' + esc(model) + ' · ' + esc(g.resolution || '') +
+          ' · ' + (g.generateAudio ? (koMode ? '음성 포함' : 'with audio') : (koMode ? '무음' : 'silent')) + ' · ' + r.seconds + 's · $' + r.usd.toFixed(3) + '</li>';
+      }).join('') + '</ul></details></section>';
+    }
+  }
   if (COST) {
     var liveFp = costFingerprint(SCENES);
     var stale = COST.fingerprint && COST.fingerprint !== liveFp;
@@ -3226,10 +3333,10 @@ window.SB_DOC = {
          esc(outroSec ? T.sec(outroSec) : T.lengthNotWritten) + "</small></div>";
   h += "</div>";
   h += '<div class="tl-ruler">' + marks.map(function (m) {
-    return '<span style="flex:' + m.d + '">' + esc(T.sec(m.at)) + "</span>"; }).join("") +
-    (outroSec ? '<span style="flex:' + outroSec + '">' + esc(T.sec(acc)) + "</span>" +
-      '<span style="flex:0 0 auto">' + esc(T.sec(acc + outroSec)) + "</span>"
-      : '<span style="flex:0 0 auto">' + esc(T.sec(acc)) + "</span>") + "</div>";
+    return '<span style="flex:' + m.d + '">' + esc(T.sec(Math.round((m.at) * 10) / 10)) + "</span>"; }).join("") +
+    (outroSec ? '<span style="flex:' + outroSec + '">' + esc(T.sec(Math.round((acc) * 10) / 10)) + "</span>" +
+      '<span style="flex:0 0 auto">' + esc(T.sec(Math.round((acc + outroSec) * 10) / 10)) + "</span>"
+      : '<span style="flex:0 0 auto">' + esc(T.sec(Math.round((acc) * 10) / 10)) + "</span>") + "</div>";
   if (outroUnknown) flag("warn", T.where.outro, "there is an outro scene but no SB_DOC.outro length — it does not count toward the total");
 
   /* ══ Promise ledger ══ — drawn only when SB_DOC.craft has content (the checks ran in the header) */
@@ -3413,6 +3520,26 @@ window.SB_DOC = {
           lines = '<div class="cut-carry">speech clip — the actor speaks, so there is no TTS narration</div>';
         if (lines) cell += '<div class="cut-sec">' + esc(T.audioSec) + "</div>" + lines;
 
+        var explicitFrames = vis.frames || vis.video && vis.video.lastImagePath || vis.imagePair;
+        if (explicitFrames && k === 0) {
+          var fp = window.RENDER_ROUTING.framePlan(s);
+          var koFrames = document.documentElement.lang.indexOf('ko') === 0;
+          var frameInput = function (src, label) {
+            return '<figure><figcaption>' + esc(label) + '</figcaption>' + (src
+              ? '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy"></a>'
+              : '<div class="pending-frame">' + (koFrames ? '이미지 생성 예정' : 'Image pending') + '</div>') + '</figure>';
+          };
+          var pair = fp.mode === 'first_last';
+          var inputs = frameInput(fp.start, koFrames ? '시작 프레임' : 'Start frame');
+          if (pair) inputs += frameInput(fp.end, koFrames ? '끝 프레임' : 'End frame');
+          var motionPlan = s.shot && s.shot.videoDesign && s.shot.videoDesign.motion;
+          if (motionPlan) {
+            inputs += '<div class="frame-reason"><strong>' + (koFrames ? '피사체 변화' : 'Subject change') + '</strong><br>' + esc(motionPlan.visibleChange || '') +
+              (motionPlan.beats || []).map(function(b) { return '<br>' + esc(b.at + 's · ' + b.state); }).join('') + '</div>';
+          }
+          inputs += '<div class="frame-reason">' + esc(fp.reason) + (fp.endState ? '<br>' + esc((koFrames ? '끝 상태: ' : 'End state: ') + fp.endState) : '') + '</div>';
+          return '<div class="conti-row' + (pair ? ' has-frame-pair' : '') + '"><div class="frame-inputs' + (pair ? '' : ' single') + (WIDE ? ' wide' : '') + '">' + inputs + '</div><div class="cut">' + cell + '</div></div>';
+        }
         return '<div class="conti-row"><figure class="panel">' +
           frame(s, st, k, f.tier || 0, f.statScale || 0) + "</figure>" +
           '<div class="cut">' + cell + "</div></div>";
