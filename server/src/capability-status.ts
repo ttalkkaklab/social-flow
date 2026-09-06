@@ -72,6 +72,8 @@ export function capabilityStatus(): {
       providers: [
         { provider: 'veo (Gemini)', configured: gemini, needs: 'GEMINI_API_KEY',
           note: 'veo_text2video · veo_img2video · veo_reference · veo_extension' },
+        { provider: 'gemini omni (Gemini)', configured: gemini, needs: 'GEMINI_API_KEY',
+          note: 'omni_text2video · omni_img2video · omni_extend · omni_edit — 360p drafts, 3-10s lengths, instruction editing' },
         { provider: 'seedance (BytePlus ModelArk)', configured: has(config.arkApiKey), needs: 'ARK_API_KEY',
           note: 'seedance_text2video · seedance_img2video · seedance_reference' },
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
@@ -118,7 +120,7 @@ export function capabilityStatus(): {
       capability: '3d_generation',
       providers: [
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
-          note: 'mlx_3d_generate — writes GLB; this pipeline has no mesh consumer' },
+          note: 'mlx_3d_generate — writes GLB; HTML mesh slides consume embedded models (mesh-objects.md)' },
       ],
     },
     {

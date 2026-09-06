@@ -491,10 +491,10 @@ node $SB/check-scenes.js storyboard/          # exit 1 = authoring stops before 
 ```
 
 The profile's true-motion floor and still-run limits are hard gates here. Ken Burns, caption
-changes and still swaps do not count toward that floor — but on a short the checker also
-holds the 2026-09-05 shape: the cover carries `visual.video` (the hook is video), a second
-generated cut needs `visual.why`, and every other cut is a still under its camera move or an
-HTML motion slide. Do not lower the copied policy or the channel profile
+changes and still swaps do not count toward that floor. Select each cut with storyboard
+`references/render-routing.md` and write `shot.render`; the hook has no default video requirement.
+Keep explicit channel constraints and justify every generated-video slot with `visual.why`.
+Do not lower the copied policy or the channel profile
 to make an unattended episode pass. What the scene, camera and sound reads of 0.49 looked at
 is now your own pass against storyboard §4's rules — `directing-grammar.md` §5·§6 for the
 feel and the dials, scenes-schema §camera · §cut length · §sound for the slots, the cue names
@@ -578,15 +578,15 @@ the price.
     no minor in frame, the engine the route names. The plan review of 0.49 is not
     called on this path.
 - **Per-cut Seedance escalation** — apply produce `references/video-model-selection.md`
-  §Seedance per-cut selection. The default hook stays on 1.5 Pro; essential complex action
+  §Seedance per-cut selection. A selected simple video hook uses 1.5 Pro; essential complex action
   may use 2.0, reference panels use 2.0 (2.5 above nine), and fixed voice uses 2.5 on a
   speaking/b-roll slot. Record purpose, reason, face eligibility and reference paths before
   generating. Read `cost-preview.js --json` and use the Seedance row's resolved `generation`
   arguments. Replace the baseline video projection in `.work/cost-estimate.tsv` with those
   model-specific rows and rerun the full episode cap check, including spent attempts.
   Never add a paid comparison by default or exceed the standing budget for an upgrade.
-- **Hook motion background (economy baseline — every short)** — the cover is video
-  (produce absolute rule 10, `hook_video`): `seedance_img2video` silent, 1080p, the
+- **Hook motion background (only when selected by the cut plan)** — `shot.render` must
+  justify continuous action or the channel must explicitly require `hook_video`: `seedance_img2video` silent, 1080p, the
   cover-background PNG as the source, the cover's `duration` as the requested length
   (4–8 s — Seedance bills the seconds asked for; use the resolved per-cut model above), the storyboard's stored
   `visual.video.prompt` sent verbatim. The builder keeps only the video track, so the

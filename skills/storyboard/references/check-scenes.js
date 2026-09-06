@@ -119,7 +119,7 @@ function isStillCard(scene) {
   const v = (scene && scene.visual) || {};
   if (scene && (scene.type === 'broll' || scene.type === 'outro')) return false;
   if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') return false;
-  if (v.slide || v.video || v.clip) return false;
+  if ((v.slide && v.slide.kind !== 'camera') || v.video || v.clip) return false;
   return true;
 }
 
@@ -173,7 +173,7 @@ const MOTION_PROFILE_KEYS = [
 const STATIC_GROUND_DEFAULT_SECONDS = 8;   // one still under its camera move may hold one cut — the top of the directing-grammar §5 length column
 const HTML_PLATE_DEFAULT_MAX = 2;          // static plates on `other` beats per episode — motion slides and explanation slides sit outside the cap
 const VIDEO_BUDGET_DEFAULT_USD = 10;       // generated video per episode — read by cost-preview.js
-const HOOK_VIDEO_DEFAULT = true;           // on a short the cover is a moving picture (a motion background, a supplied clip or a recording)
+const HOOK_VIDEO_DEFAULT = false;          // content chooses the opening treatment; an explicit channel override may require video
 
 function scalar(v) {
   if (v === undefined || v === null) return undefined;
@@ -333,7 +333,7 @@ function motionKind(scene) {
   // The ground decides the kind: a motion background or clip under a motion-slide overlay
   // (the cover's code-rendered title over `visual.video`) is video, not a plate.
   if (scene && (scene.type === 'broll' || v.video || v.clip)) return 'ai-video';
-  if (v.slide && v.slide.motion === true) return 'motion-slide';
+  if (v.slide && v.slide.kind !== 'camera' && v.slide.motion === true) return 'motion-slide';
   return null;
 }
 
@@ -810,6 +810,8 @@ function check(win, fmt, opts) {
     const where = 'shot ' + n;
     const v = s.visual || {};
     const shot = s.shot || {};
+    if ((opts && opts.requireRenderPlan) || shot.render)
+      require('./render-routing.js').checkScene(s, { draft }).forEach(message => bad(where, message));
 
     if (!s.type) { bad(where, 'no type'); return; }
     if (TYPES.indexOf(s.type) === -1) bad(where, `type "${s.type}" is outside ${TYPES.join(' · ')}`);
@@ -1026,7 +1028,7 @@ function check(win, fmt, opts) {
         const ob = v.slide.object;
         const at = `${where} slide.object`;
         if (!ob || typeof ob !== 'object' || Array.isArray(ob)) machine(at, 'is not an object — { file, shape, keys, frames, plan }');
-        else {
+        else if (ob.renderer !== 'mesh') {
           if (!ob.file) machine(at, 'has no file');
           else if (!OBJECT_FILE.test(ob.file)) machine(at, `file "${ob.file}" is not slides/assets/s<shot>-<slug>.png`);
           if (!ob.shape) machine(at, 'has no shape — bake-object.py --shape (disc)');
@@ -1210,7 +1212,7 @@ function selftest() {
   const groundPolicy = normalizeMotionPolicy({ motion_min_true: 'off' }, 2, 'fixture');
   ok('the new policy keys default plugin-wide',
      groundPolicy.maxStaticGroundSeconds === 8 && groundPolicy.htmlPlateMax === 2 && groundPolicy.videoBudgetUsd === 10 &&
-     groundPolicy.hookVideo === true);
+     groundPolicy.hookVideo === false);
   ok('a profile may set or switch the new keys off',
      normalizeMotionPolicy({ max_static_ground_seconds: 'off', html_plate_max: 1, video_budget_usd: 6.5 }, 2, 'fixture').maxStaticGroundSeconds === null &&
      normalizeMotionPolicy({ html_plate_max: 1, video_budget_usd: 6.5 }, 2, 'fixture').htmlPlateMax === 1 &&
@@ -1263,7 +1265,7 @@ function selftest() {
                   null, { policy: groundPolicy })), /motionBeats is empty/));
 
   // ── short-form body (owner directive 2026-09-05) — the hook is video, one more cut writes why ──
-  const hookPolicy = normalizeMotionPolicy({ motion_min_true: 'off', max_static_ground_seconds: 'off', html_plate_max: 'off' }, 2, 'fixture');
+  const hookPolicy = normalizeMotionPolicy({ hook_video: true, motion_min_true: 'off', max_static_ground_seconds: 'off', html_plate_max: 'off' }, 2, 'fixture');
   const videoCover = Object.assign({}, cover, { visual: { bg: 'images/scene-1.png', bgPrompt: 'x',
     video: { engine: 'seedance', prompt: SEEDANCE_PROMPT }, action: 'she turns to the window' } });
   ok('a still hook on a short is rejected',
@@ -1592,6 +1594,8 @@ function selftest() {
      bads(run(skeleton, null, { draft: true })).length === 0);
   ok('the same skeleton fails without --draft',
      has(bads(run(skeleton)), /no tts/));
+  ok('the CLI render gate rejects a skeleton that never chose a treatment',
+     has(bads(run(skeleton, null, { draft: true, requireRenderPlan: true })), /shot\.render/));
   ok('a deferred check is reported as later, not dropped',
      run(skeleton, null, { draft: true }).filter((f) => f.level === 'later').length === 7);
   ok('a skeleton shot with no transition is later in --draft, a violation without it',
@@ -1655,7 +1659,7 @@ function main() {
   const scenePolicy = normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY');
   const effectivePolicy = profileHasPolicy ? profilePolicy
     : normalizeMotionPolicy(null, formatVideoMax, 'format default');
-  const findings = check(win, fmt, { draft, policy: effectivePolicy });
+  const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true });
   // Draft validates the plan; full production also requires a current evidence-backed read.
   require('./story-contract.js').checkStory(win, { requireReview: !draft }).forEach(what =>
     findings.push({ level: 'bad', where: 'story quality', what }));
