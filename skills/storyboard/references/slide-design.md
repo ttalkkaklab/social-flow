@@ -573,6 +573,12 @@ is the one the sentence calls for, not merely that something moved.
 
 ## 9. Rendered object — a thing that is a render
 
+New physical subjects use [mesh-objects.md](mesh-objects.md): real 3D actors at every capture
+frame, with PBR material, soft key light and contact shadows. Choose 3D illustration or
+photoreal 3D. Use refined `h.mark.arrow` curves with a tangent-following head; keep arrow
+weight subordinate to the object silhouette. Inspect the actual clip before accepting it.
+Low-rate sheets and flat actor icons are not the default for new physical subjects.
+
 The mandatory planning and production gates are in [object-state-quality.md](object-state-quality.md).
 Every editorial diagram declares its subject changes before approval. A still cutout that
 only translates or settles fails the physical-object lane, even when its lighting looks good.
@@ -598,9 +604,9 @@ the object's movement into one PNG sheet. The slide plays it back by moving
 - **Two layers, split on purpose.** Type and plates stay CSS — crisp, re-authored per episode
   for free. Only the object is a render. A broadcast set builds its 3D element and its name
   plate separately for the same reason.
-- **Generic shapes only.** A disc, a tablet, a coin, a block. A specific artefact or a person
-  is a generated still or clip with nothing drawn on it, or a `photo-action` slide — never a
-  clip under marks (§6.2). One shape ships (`disc`); a second is one SDF function.
+- **The legacy baker handles generic shapes.** Only `disc` ships in this CPU baker.
+  Use the mesh lane for specific physical objects: a detailed GLB or an articulated assembly
+  with recognizable materials and silhouette. Mood footage still carries no marks (§6.2).
 - **Placement is measured, not eyeballed.** The sidecar's `ink` box includes the shadow's
   wall shadow, which reaches 226 px past the rim while the disc is reclined; `check-slide.js`
   holds it inside the zone.

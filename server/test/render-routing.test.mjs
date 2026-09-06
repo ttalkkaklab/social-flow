@@ -1,0 +1,79 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {mkdtempSync,writeFileSync,readFileSync,copyFileSync,mkdirSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {spawnSync} from 'node:child_process';
+const require=createRequire(import.meta.url),ref=path.resolve(import.meta.dirname,'../../skills/storyboard/references');
+const {recommend,checkScene}=require(path.join(ref,'render-routing.js'));
+const still=()=>({type:'points',duration:8,narration:[{tts:'A portrait.',sub:'A portrait.'}],shot:{infoType:'other',render:{mode:'still_camera',purpose:'portrait',reason:'Introduce the inventor.',camera:{effect:'push',target:'face',reason:'Make the identity clear.'}}},visual:{bg:'images/portrait.png',camera:{movement:'dolly in'}}});
+const physical=(character=false)=>({type:'points',duration:8,shot:{infoType:'principle',render:{mode:character?'character_html':'object_html',purpose:character?'human_process':'mechanism',reason:'Show the causal action.',action:character?'The worker lifts the load onto the cart.':'The valve opens and admits water.',...(character?{actors:['worker']}:{})}},visual:{slide:{kind:'diagram',motion:true,treatment:'editorial',subject:{kind:'object'},object:{renderer:'mesh'}}}});
+const graph=()=>({type:'points',duration:8,shot:{infoType:'statistic',render:{mode:'data_graph',purpose:'comparison',reason:'Compare measured counts.',data:{source:'research.md#counts',unit:'units',chart:'bar',baseline:0,values:[{label:'A',value:16},{label:'B',value:32}]}}},visual:{slide:{kind:'diagram',motion:true,treatment:'editorial',subject:{kind:'data'}}}});
+const video=()=>({type:'cover',shot:{infoType:'other',render:{mode:'generated_video',purpose:'live_action',reason:'The flowing fabric carries the mood.',motionEssential:true,action:'Wind lifts the fabric while the actor turns.',whyNotStill:'The changing silhouette requires continuous natural motion.'}},visual:{video:{engine:'seedance'},why:'Continuous cloth and body motion.'}});
+test('all five routes have valid independent production handoffs',()=>{
+ for(const scene of [still(),physical(true),physical(),graph(),video()])assert.deepEqual(checkScene(scene),[]);
+});
+test('subject nouns and incidental counts do not dictate the mode',()=>{
+ assert.equal(recommend('portrait'),'still_camera');
+ assert.equal(recommend('human_process'),'character_html');
+ assert.equal(recommend('mechanism'),'object_html');
+ assert.equal(recommend('comparison'),'data_graph');
+ const s=physical();s.shot.render.reason='Explain how gears with 16 and 32 teeth mesh.';
+ assert.deepEqual(checkScene(s),[]);
+});
+test('opening cut may be still, graph or character without a video quota',()=>{
+ for(const s of [still(),graph(),physical(true)]){s.type='cover';assert.deepEqual(checkScene(s),[])}
+});
+test('missing choice and semantic mismatches block drafts before assets',()=>{
+ const s=still();delete s.shot.render;assert.match(checkScene(s,{draft:true}).join(),/five modes/);
+ const wrong=physical();wrong.shot.render.mode='generated_video';assert.match(checkScene(wrong,{draft:true}).join(),/requires object_html/);
+ const r=still();r.shot.infoType='statistic';assert.match(checkScene(r,{draft:true}).join(),/quantitative purpose/);
+});
+test('do not replace a portrait with a character, or add decorative actors to machinery',()=>{
+ const s=still();s.shot.render.mode='character_html';assert.match(checkScene(s,{draft:true}).join(),/requires still_camera/);
+ const o=physical();o.shot.render.actors=['decorative host'];assert.match(checkScene(o).join(),/decorative actors/);
+ const c=physical(true);delete c.shot.render.actors;assert.match(checkScene(c).join(),/needs actors/);
+});
+test('HTML and video declarations cannot silently swap the chosen route',()=>{
+ const s=still();s.visual.video={engine:'seedance'};assert.match(checkScene(s).join(),/cannot hand off/);
+ const c=physical(true);c.visual.slide.object.renderer='sheet';assert.match(checkScene(c).join(),/real mesh/);
+ const v=video();delete v.visual.why;assert.match(checkScene(v).join(),/visual.why/);
+ delete v.shot.render.whyNotStill;assert.match(checkScene(v,{draft:true}).join(),/whyNotStill/);
+});
+test('data graphs require source values, appropriate charts and honest proportions',()=>{
+ for(const field of ['source','unit','values']){const s=graph();delete s.shot.render.data[field];assert.ok(checkScene(s).length)}
+ const s=graph();s.shot.render.data.baseline=10;assert.match(checkScene(s).join(),/baseline 0/);
+ s.shot.render.data.values[0].value=Infinity;assert.match(checkScene(s).join(),/source values/);
+ const t=graph();t.shot.render.purpose='trend';assert.match(checkScene(t).join(),/chart suited/);
+ const p=graph();Object.assign(p.shot.render,{purpose:'share'});Object.assign(p.shot.render.data,{chart:'stacked-bar',total:100});assert.match(checkScene(p).join(),/sum/);
+ p.shot.render.data.total=48;assert.deepEqual(checkScene(p),[]);
+});
+test('camera focus cannot become a generic zoom and needs measured regions by production',()=>{
+ const s=still();s.shot.render.camera.effect='rack-focus';assert.deepEqual(checkScene(s,{draft:true}),[]);
+ assert.match(checkScene(s).join(),/focus region|zoom anchor/);
+ Object.assign(s.shot.render.camera,{focusFrom:[.3,.6,.1,.1],focusTo:[.3,.4,.1,.1]});s.visual.slide={kind:'camera',motion:true,file:'slides/s1-camera.html'};
+ assert.deepEqual(checkScene(s),[]);
+});
+test('existing recordings and shared outro retain their source; false recording markers do not hide video',()=>{
+ assert.deepEqual(checkScene({type:'outro'}),[]);
+ assert.deepEqual(checkScene({type:'broll',visual:{source:'recording',clip:'footage/evidence.mp4'}}),[]);
+ assert.ok(checkScene({type:'broll',visual:{source:'recording',video:{engine:'seedance'}}}).length);
+});
+test('normal CLI enforces routing even for a board without a new policy marker',()=>{
+ const dir=mkdtempSync(path.join(tmpdir(),'routing-plan-'));
+ try{const s=still();delete s.shot.render;writeFileSync(path.join(dir,'scenes.js'),'window.SCENES='+JSON.stringify([s])+';');
+ const r=spawnSync(process.execPath,[path.join(ref,'check-scenes.js'),dir,'--draft','--json'],{encoding:'utf8'});
+ assert.notEqual(r.status,0);assert.match(r.stdout,/shot.render: choose one of the five modes/);
+ }finally{rmSync(dir,{recursive:true,force:true})}
+});
+test('shared camera template passes the production HTML contract',()=>{
+ const dir=mkdtempSync(path.join(tmpdir(),'routing-camera-'));
+ try{mkdirSync(path.join(dir,'slides/assets'),{recursive:true});const s=still();s.visual.slide={kind:'camera',motion:true,file:'slides/s1-camera.html'};
+ writeFileSync(path.join(dir,'scenes.js'),'window.SCENES='+JSON.stringify([s])+';');
+ copyFileSync(path.join(ref,'camera-slide-template.html'),path.join(dir,'slides/s1-camera.html'));
+ copyFileSync(path.join(ref,'still-camera.js'),path.join(dir,'slides/assets/still-camera.js'));
+ const r=spawnSync(process.execPath,[path.join(ref,'check-slide.js'),dir,'--require-all'],{encoding:'utf8'});
+ assert.equal(r.status,0,r.stdout+r.stderr);
+ }finally{rmSync(dir,{recursive:true,force:true})}
+});

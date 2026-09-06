@@ -140,6 +140,7 @@ export const PRICED_VIDEO_KEYS = new Set([
     'veo.lite.720p', 'veo.fast.720p', 'veo.standard.720p',
     'veo.lite.1080p', 'veo.fast.1080p', 'veo.standard.1080p',
     'veo.fast.4k', 'veo.standard.4k',
+    'omni.360p', 'omni.720p', 'omni.1080p', 'omni.4k',
     'seedance.1-0-pro-fast.1080p', 'seedance.1-0-pro-fast.720p',
     'seedance.1-5-pro-silent.1080p', 'seedance.1-5-pro-silent.720p',
     'seedance.1-5-pro-audio.1080p',
@@ -183,6 +184,22 @@ export function priceOf(tool, args) {
             ...(tool === 'veo_extension'
                 ? { note: 'extension adds 7s of new content per call — whether the vendor bills 7 or the 8s cut length is unconfirmed' }
                 : {}),
+        };
+    }
+    if (tool.startsWith('omni_')) {
+        // Priced per call, not per second. Every Omni call meters exactly 57,920 output video
+        // tokens whatever length or resolution was asked for, and the bill follows the meter:
+        // a 3s 360p call moved the project's spend counter by $1.01 (measured 2026-09-06).
+        // Asking for fewer seconds saves nothing, so the ledger records one unit per call.
+        const resolution = str(args.resolution, '720p');
+        const key = `omni.${resolution}`;
+        if (!PRICED_VIDEO_KEYS.has(key))
+            return { key: null, quantity: null, note: `no price row for ${key}` };
+        const asked = tool === 'omni_edit' ? null : num(args.durationSeconds, 8);
+        return {
+            key,
+            quantity: 1,
+            note: `flat per-call charge${asked === null ? '' : ` — ${asked}s requested, billed the same as 10s`}`,
         };
     }
     if (tool.startsWith('seedance_')) {
@@ -286,6 +303,7 @@ function charUnits(args) {
 /** True for the tools whose calls belong in an episode's cost ledger. */
 export function isBillableTool(tool) {
     return (tool.startsWith('veo_') ||
+        tool.startsWith('omni_') ||
         tool.startsWith('seedance_') ||
         tool.startsWith('gpt_image_') ||
         tool.startsWith('tts_') ||

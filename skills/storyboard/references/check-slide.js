@@ -95,7 +95,7 @@ const MSG = {
 
 /* 저작 화면의 세 갈래와, 캐릭터 연기가 고를 수 있는 동작. 정본은 scenes-schema §저작 화면 레인과
    character-act-template.html 머리말이다 — 여기 이름을 늘리려면 템플릿의 키프레임도 같이 는다. */
-const KINDS = ["diagram", "kinetic", "character"];
+const KINDS = ["diagram", "kinetic", "character", "camera"];
 const TREATMENTS = ["editorial", "photo-action"];
 const EDITORIAL_ROLES = ["evidence", "relationship", "mechanism", "timeline", "statistic", "transition", "verdict"];
 const SEMANTIC_HELPERS = {
@@ -109,10 +109,10 @@ const SEMANTIC_HELPERS = {
 const ART_MOVES = ["travel", "rise", "in", "drop", "press", "none"];
 const ACTS = ["enter", "point", "nod", "shrug", "think", "wave", "cheer",
   "conceal", "signal", "inspect", "gather", "surround", "bind", "escort", "release"];
-const KIND_FN = { diagram: "renderSlide", kinetic: "renderKinetic", character: "renderCharacter" };
+const KIND_FN = { diagram: "renderSlide", kinetic: "renderKinetic", character: "renderCharacter", camera: "renderCamera" };
 const KIND_TPL = { diagram: "motion-slide-template.html", kinetic: "kinetic-type-template.html",
-                   character: "character-act-template.html" };
-const EDITORIAL_ASSEMBLY = /\bh\.(?:fig|art|stem|bus|ring|disk|press|shift|flow|node|state|date|range|link|count|bar|dots|axis)\s*\(|data-primitive\s*=|class\s*=\s*["'][^"']*\b(?:art|cast|folio|packet|archive|rail|signal|relation|actor)\b/i;
+                   camera: "camera-slide-template.html", character: "character-act-template.html" };
+const EDITORIAL_ASSEMBLY = /\bh\.(?:object|fig|art|stem|bus|ring|disk|press|shift|flow|node|state|date|range|link|count|bar|dots|axis)\s*\(|data-primitive\s*=|class\s*=\s*["'][^"']*\b(?:art|cast|folio|packet|archive|rail|signal|relation|actor)\b/i;
 
 function checkDir(dir, only, opts) {
   const requireAll = !!(opts && opts.requireAll);
@@ -259,7 +259,10 @@ function checkDir(dir, only, opts) {
     // slide.object — 구운 물체(rendered-object.md). 시트·사이드카가 있고, 슬라이드가 사이드카를 읽고,
     // render 가 앉히고, 잉크 상자(사이드카 ink — 그림자 반그늘까지)가 존 안이다. slot 을 쓰면 세로는
     // 흐름이 정하므로 가로만 본다. x·y 가 리터럴이 아니면 존 검사는 건너뛴다.
-    if (slide && slide.object) {
+    if (slide && slide.object && slide.object.renderer === 'mesh') {
+      require('./mesh-preflight.js').checkMesh(dir, scene, code).forEach(message => fail(base, message));
+    }
+    if (slide && slide.object && slide.object.renderer !== 'mesh') {
       const ob = slide.object;
       const f = String(ob.file || "");
       if (!f) fail(base, MSG.objectFile);

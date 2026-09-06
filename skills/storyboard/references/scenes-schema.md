@@ -200,7 +200,7 @@ The four drop-off jobs map onto those three beats:
 
 | Job | Short-form beat | What it has to do | What kills it |
 |---|---|---|---|
-| **stop** | `hook` | 0–3 s: big title, a strong first frame, movement already in it — the cover is video on a short (`hook_video`, §cover), a gap the viewer can feel | a first frame the thumb slides past; a still cover; the cover speaking the answer; `spoiler` / `payoff` |
+| **stop** | `hook` | 0–3 s: big title, a strong first frame, movement already in it — the cover's treatment comes from `shot.render` like any other cut (§cover), a gap the viewer can feel | a first frame the thumb slides past; the cover speaking the answer; `spoiler` / `payoff` |
 | **hold** | `drip` (every shot except the last drip) | pay one piece, open the next — the viewer is never done wondering. Every cut a still under its camera move or an HTML motion slide, one cut of generated video at most (`visual.why`) | a drip that only explains; dumping the whole answer on drip 1; a still that stands frozen |
 | **satisfy** | last `drip` | the first place `COMPREHENSION.answer` is complete | a hook the drips can't keep; ending on explanation with no complete answer |
 | **close** | `cta` | after the answer, an earned closing line and optional relevant ask | an unpaid promise replaced with a poll or teaser; ending on the shared outro alone |
@@ -310,6 +310,13 @@ sequence: "풀기 1"                 // sequence head. Used with beat, the docum
 ```
 
 ## Fields common to every shot
+
+Every generated cut declares `shot.render` using [render-routing.md](render-routing.md).
+The five modes are `still_camera`, `character_html`, `object_html`, `data_graph`, and
+`generated_video`. The purpose and reason are required before assets; `infoType` remains
+the explanation category, while `render.mode` names the actual production route.
+Existing recordings and the shared outro preserve their source. Camera HTML uses `kind:"camera"`
+and `camera-slide-template.html`; its image and effect parameters come from scenes.js.
 
 | Field | Required | Description |
 |---|---|---|
@@ -509,7 +516,7 @@ window.MOTION_POLICY = {
   maxStaticGroundSeconds: 8,                 // one still under its camera move may hold one cut (plugin default 8)
   htmlPlateMax: 2,                           // one-picture plates per episode (plugin default 2)
   videoBudgetUsd: 10,                        // generated video per episode, billed + projected (plugin default 10)
-  hookVideo: true                            // on a short the cover is video; the one cut after it writes visual.why (plugin default true)
+  hookVideo: false                           // choose the opening by purpose; explicit channel override only
 };
 ```
 
@@ -524,14 +531,10 @@ one more cut at most, the rest is a still under a camera move or an HTML slide a
 and apply even to a channel that declares no motion policy; a profile may raise, lower, or
 switch each off with `off`:
 
-- **`hook_video` (true)** — the short-form body. The cover is a moving picture: a motion
-  background under the code-rendered title (`visual.video`, the cover still as the engine's
-  source — the same PNG is the thumbnail) or a clip the user already has
-  (`visual.source: "recording"`, §filmed scenes — that lane is not a generated shot). The format cap of 2 leaves **one** more generated cut, and that cut writes
-  `visual.why` — the movement itself is the content (a hand doing the thing, a crowd, a place
-  changing) — or the beat stays a still under its camera move or an HTML motion slide.
-  `off` returns the channel to the pre-directive shape (a still cover with the `punch`, video
-  wherever the cap allows). Long-form does not run this rule.
+- **`hook_video` (false)** — no mandatory generated-video opening. Every cut, including the
+  cover, uses `shot.render` from [render-routing.md](render-routing.md). An explicitly enabled
+  channel policy still requires a moving opening; design essential continuous action for it.
+  Video caps and budget are ceilings, not quotas. Every generated cut writes `visual.why`.
 - **`max_static_ground_seconds` (8)** — one still may hold one cut. The clock resets only
   when the picture itself changes: a generated clip (a motion background, a b-roll, a quote
   clip), a recording, or a new still under the next sentence (`narration[].img`). Captions, a
@@ -590,7 +593,7 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
   statLabel: "미신고 과태료 상한",            // qualifier within 18 chars
   narration: [ {tts,sub}, {tts,sub} ],      // 2 segments — ① the hook ② the hero stat
   visual: {
-    picture: "ai-video", overlay: "html",   // on a short the hook is video (hook_video, §Channel true-motion policy)
+    picture: "ai-video", overlay: "html",   // example only when shot.render selects generated_video
     bg: "images/scene-1.png", bgPrompt: "…",  // the cover still — the thumbnail and the engine's source
     video: { prompt: "…", clip: ".work/motion/motion-i0.mp4" },   // §motion background — silent seedance by default, title still code-rendered on top
     camera: { movement: "dolly in", speed: "very slow", framing: "chest-up", end: "subject centred" }
@@ -617,13 +620,10 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
 - **The first frame has no logo, no intro sting, no greeting.** The stop is decided in 0–3 s:
   a big title (≤16 chars, the gradient chip), a strong first frame (on a short: the gap, the
   person, the figure — not the finished answer; on long-form answer-first: the result), and
-  movement already in it — **on a short the cover is video** (owner directive 2026-09-05,
-  `hook_video`): a motion background under the code-rendered kicker → title → hero-stat
-  staging (`visual.video`, §motion background — the cover still is the source, so the
-  thumbnail and the first moving frame are the same picture) or a real recording
-  (`visual.source`, §filmed scenes). The builder's `punch` on a still cover is the shape a channel with `hook_video:
-  off` keeps, and the shape long-form still uses. Branding lives in
-  the outro (produce absolute rule 6), and the channel intro never sits in front of a short.
+  purposeful movement already in it. Choose that movement with `shot.render`: a still-camera
+  move, a character or object action, a data reveal, or essential continuous video. An explicit
+  channel `hook_video` setting remains a constraint. Branding lives in the outro and the
+  channel intro never sits in front of a short.
 - reveal mapping: rg1=title ← segment ①, rg2=stat ← segment ②.
 
 #### The first frame is a gap (short) or the result / the moment (long-form); segment ① is a promise to the viewer
@@ -1491,9 +1491,9 @@ line). Anything vaguer and the model fills the surface with squiggles that pass 
 read as slop the moment anyone pauses. Screen text for the viewer is a code-rendered overlay
 either way (absolute rule 10); this is about words that live inside the picture.
 
-- **When to use it**: on a short, **the cover — always** (owner directive 2026-09-05,
-  `hook_video`: the hook is video, and this is its form, since the title stays code-rendered
-  on top), and **at most one more cut, when the movement itself is the content**, with the
+- **When to use it**: on a short, **the cover when its `shot.render` picks video** (or when a
+  channel explicitly turns `hook_video` on) — this is the form it takes, since the title stays
+  code-rendered on top — and **any cut where the movement itself is the content**, with the
   reason written in `visual.why`. A place to show only the picture with nothing said is
   `broll` (spliced between scenes); **when the background has to move while you talk, that's
   a motion background**. Every other spoken beat is a still under its camera move (the still
@@ -1584,9 +1584,8 @@ either way (absolute rule 10); this is about words that live inside the picture.
 ```
 
 The generated-video cap **is set by §motion background's effective channel cap** — b-roll slots
-and motion-background scenes count together. On a short the cover's motion background already
-takes one of the two (`hook_video`), so a b-roll is the **one** optional cut after the hook and
-writes `visual.why` like any generated cut there — the opening after the cover (`after: 0`), or
+and motion-background scenes count together. On a short a video cover spends one of them, so
+what is left is the ceiling for b-roll, and each writes `visual.why` like any generated cut — the opening after the cover (`after: 0`), or
 after the body scene where the story's axis turns. On long-form one b-roll is usually the
 opening and the other sits where a run of still cuts is dragging.
 
@@ -1860,6 +1859,9 @@ still TTS, the card is still an ordinary card, and only the picture comes from a
 
 ### The authored-screen lane — three kinds under one key (`visual.slide.kind`)
 
+Physical subjects use the mesh object contract in [mesh-objects.md](mesh-objects.md).
+Choose `illustration3d` or `photoreal3d`; a flat disk cannot stand in for a subject.
+
 `visual.slide` is not only diagrams. It is **the screen we author ourselves**: one HTML file per
 shot, baked into clips by seek-rendering, checked by `check-slide.js`, and judged by
 `slide-reviewer`. What that file draws is `kind`, and there are three:
@@ -1926,7 +1928,7 @@ slide.**
 | `slide.file` | ✅ | `slides/s<shot number>-<slug>.html` — **shot number = the SCENES array position (from 1)**, the same number as script.md's shot and `voice/s<n>.wav` |
 | `slide.plan` | ✅ | One line on what to draw. For motion, number what changes on each narration group |
 | `slide.labels` | ✅ when the shapes carry text | Every piece of text to draw on the slide beyond `title` and `bullets`. The style gate's screen surface checks this array — plant Korean text in the slide file that isn't here and characters that never passed the check go on screen |
-| `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **flat ink actor** (person, agent, room) sitting with `h.fig`; rules (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generated at produce §3.6 |
+| `slide.arts` | required on a principle shape beat; optional elsewhere | Generated stills that move on the slide: `{ file, prompt, group, move }`. `file` is `slides/assets/s<shot>-<slug>.png`. `move` is `travel` · `rise` · `in` · `drop` · `press` · `none`. On a principle frame each plate is a **3D illustration actor** (person, agent, room) sitting with `h.fig`; rules (`h.stem` · `h.bus` · `h.chamber`) draw the relation. Named-state primitives may skip arts. An editorial frame that uses a raster still needs two or more authored actors, paper pieces, or relations — the raster is evidence, not the whole composition. The picture has no readable text; HTML type stays in `labels`. Generated at produce §3.6 |
 | `slide.motion` | ✅ `true` | required. A still slide is not allowed. Numbers count up, bars grow, type reveals on its sentence (§motion slides) |
 | `slide.treatment` | ✅ on a moving `diagram` | `"editorial"` when HTML owns the whole frame; `"photo-action"` when a photo fills the frame and the photographed subject or evidence itself changes. `"footage"` is retired (§footage treatment) — nothing is drawn over video |
 | `slide.role` | ✅ on `treatment:"editorial"` | `evidence` · `relationship` · `mechanism` · `timeline` · `statistic` · `transition` · `verdict` |
@@ -2000,7 +2002,7 @@ cast of actors with pipes drawing between them. `shape-enter` sits an actor or a
 relation (`h.stem` down, `h.bus` across, `h.ring` around). `shape-travel` is a press or a
 side move (`h.press` · `h.shift`). Labels name the actors; they are not the picture.
 Shape primitives require `slide.arts` (ink actor, paper fill, no background, no readable
-text, no photorealism). `flow-trace` · `node-enter` · `state-transform` stay for named
+text, consistent 3D material and studio light). `flow-trace` · `node-enter` · `state-transform` stay for named
 states and may skip arts. A principle shot that only reveals words is the same defect as a
 kinetic fallback.
 

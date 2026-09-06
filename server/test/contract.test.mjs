@@ -422,7 +422,8 @@ describe('mlx_* tools', () => {
   it('3d is GLB-only and says the pipeline has no consumer', () => {
     const mesh = byName.get('mlx_3d_generate');
     assert.match(mesh.description, /GLB/);
-    assert.match(mesh.description, /no GLB consumer/);
+    assert.match(mesh.description, /HTML mesh lane consumes embedded GLB/);
+    assert.match(mesh.description, /approved physical-object slide plan/);
     assert.ok((mesh.inputSchema.required ?? []).includes('imagePath'));
   });
 });

@@ -813,6 +813,7 @@
 <div class="wrap"><div id="app"><noscript>This document renders by loading scenes.js — please turn JavaScript on.</noscript></div></div>
 
 <script src="./scenes.js"></script>
+<script src="./render-routing.js"></script>
 <script>
 /* ✎ SB_DOC BEGIN — fill in this block only (editorial metadata that is not in scenes.js).
    Scene titles, dialogue, bullets, shot and duration are never written here — scenes.js is the SoT. */
@@ -1615,6 +1616,7 @@ window.SB_DOC = {
       feel: (s.shot && s.shot.feel) || "",
       info: (s.shot && s.shot.info) || "",
       infoType: (s.shot && s.shot.infoType) || "",
+      render: (s.shot && s.shot.render) || null,
       space: sp
     };
   }
@@ -2214,6 +2216,8 @@ window.SB_DOC = {
 
   SCENES.forEach(function (s, i) {
     var v = (s && s.visual) || {}, sl = v.slide;
+    if (window.RENDER_ROUTING) window.RENDER_ROUTING.checkScene(s).forEach(function (message) { flag("bad", T.shotCap(i + 1), message); });
+    else flag("bad", T.shotCap(i + 1), "Missing render-routing.js; copy it with the storyboard template");
     var infoType = s && s.shot && s.shot.infoType;
     var infoTypes = ["other", "timeline", "statistic", "principle"];
     var infoRole = { timeline: "timeline", statistic: "statistic", principle: "mechanism" };
@@ -2293,7 +2297,7 @@ window.SB_DOC = {
   // Short-form body (owner directive 2026-09-05) — the hook is video, one more generated cut
   // writes why, the rest is a still under its camera move or an HTML motion slide. Mirrors
   // check-scenes.js; hook_video: off in the profile (hookVideo:false here) switches it off.
-  var hookVideoOn = MP.hookVideo !== false && MP.hookVideo !== "off";
+  var hookVideoOn = MP.hookVideo === true || MP.hookVideo === "on";
   if (!WIDE && hookVideoOn) {
     var bodyVideo = 0, bodyMax = policyVideoMax - 1;
     // The hook is the first cover shot, as check-scenes.js reads it — a second cover-typed
@@ -2322,7 +2326,7 @@ window.SB_DOC = {
     // The ground decides the kind, as in check-scenes.js motionKind: a clip under a
     // motion-slide overlay is video, not a plate.
     if (s && (s.type === "broll" || v.video || v.clip)) return "ai-video";
-    if (v.slide && v.slide.motion === true) return "motion-slide";
+    if (v.slide && v.slide.kind !== "camera" && v.slide.motion === true) return "motion-slide";
     return null;
   }
   function motionPlayback() {
@@ -3296,6 +3300,7 @@ window.SB_DOC = {
            '<span class="shot-info shot-feel' + (g.feel ? "" : " miss") + '"><b>' + esc(T.feelLabel) + "</b>" +
            esc(g.feel || T.feelMissing) + "</span>") +
          (g.info ? '<span class="shot-info"><b>' + esc(T.infoLabel) + "</b>" + esc(g.info) + "</span>" : "") +
+         (g.render ? '<span class="shot-info"><b>' + esc(window.RENDER_ROUTING ? window.RENDER_ROUTING.LABELS[g.render.mode] || g.render.mode : g.render.mode) + "</b>" + esc(g.render.reason || "") + "</span>" : "") +
          (g.infoType ? '<span class="shot-info"><b>' + esc(T.infoTypeLabel) + "</b>" + esc(g.infoType) + "</span>" : "") +
          (spaceTextOf(g.space) ? '<span class="shot-info"><b>' + esc(T.spaceLabel) + "</b>" + esc(spaceTextOf(g.space)) + "</span>"
             : (genStill(s) && !FILL_FRAME[g.size] ? '<span class="shot-info shot-feel miss"><b>' + esc(T.spaceLabel) + "</b>" + esc(T.spaceMissing) + "</span>" : "")) +
