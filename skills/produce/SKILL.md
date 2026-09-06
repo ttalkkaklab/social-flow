@@ -1,16 +1,7 @@
 ---
 name: produce
 description: >
-  Builds the video and the per-platform text from an already-approved storyboard. Use when
-  the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after
-  a storyboard is approved. Turns the approved scenes.js under
-  data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at
-  1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic
-  subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under
-  the episode's output/, checked on a phone viewport before publishing. Where
-  recording/alignment.json exists it cuts the user's own screen recording instead of
-  generating scenes. Boundary — storyboard plans and stops for approval, produce starts
-  after it, autoproduce runs both unattended.
+  Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at 1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
 allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
