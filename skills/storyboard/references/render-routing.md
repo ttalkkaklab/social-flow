@@ -167,4 +167,3 @@ plan cannot proceed to video with a missing end image or identical start/end pat
 source/end hashes with the playback review. Changing frame plans invalidates the cost approval.
 End frames guide endpoints; they do not prove that intermediate movement is physically correct.
 Do not convert a continuity failure into a passing review because both stills look good.
-
