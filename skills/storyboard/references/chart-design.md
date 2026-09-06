@@ -79,3 +79,5 @@ Check negative/zero values, long labels, crowded dates, source wrapping and phon
 Inspect all chart types used in the episode. A correct scale does not guarantee a readable frame.
 
 Set `shot.render.data.title` to a short heading that names the comparison (for example, “페달 한 번에 바퀴는 몇 번?”). Do not rely on a non-cover scene having a title. The shared template accepts `scene.title` as a fallback.
+
+`data.source` is the visible attribution caption. Keep it short and readable (for example, “예시 계산 · 앞 톱니 32개 기준”); put internal research paths in `data.sourceRef`, not in the video footer.

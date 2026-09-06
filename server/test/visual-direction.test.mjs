@@ -43,6 +43,7 @@ test('SVG rendering keeps true proportions, source labels and repeatable frames'
  assert.notEqual(half,full);assert.equal(render(d),full);
  assert.match(full,/width="308"/);assert.match(full,/width="616"/);
  assert.match(full,/>16<\/text>/);assert.match(full,/>32<\/text>/);
+ d.decimals=0;d.values=[{label:'A',value:1},{label:'B',value:2}];assert.match(render(d),/>0\.5<\/text>/);
  d.values[0].label='<script>';d.beats[0].focus=['<script>'];assert.ok(!render(d).includes('<script>'));
 });
 test('focus changes do not restart bars at a narration boundary',()=>{

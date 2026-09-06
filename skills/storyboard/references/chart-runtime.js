@@ -13,6 +13,7 @@
     const p=ease(progress/0.78),first=group<=1,reveal=first?p:1;
     const beat=data.beats[Math.max(0,group-1)],prev=data.beats[Math.max(0,group-2)];
     const emphasis=i=>{const now=beat.focus.includes(v[i].label)?1:0,old=first?0:(prev.focus.includes(v[i].label)?1:0);return old+(now-old)*p};
+    const axisNum=x=>new Intl.NumberFormat('en-US',{maximumFractionDigits:12,...(Math.abs(x)>=1e6?{notation:'compact'}:x!==0&&Math.abs(x)<1e-6?{notation:'scientific'}:{})}).format(x);
     const num=x=>new Intl.NumberFormat('en-US',{maximumFractionDigits:data.decimals??1,...(Math.abs(x)>=1e6?{notation:'compact'}:{})}).format(x);
     const t=(x,y,s,size=32,fill=C.ink,anchor='start',weight=500,opacity=1)=>`<text x="${x}" y="${y}" font-size="${size}" fill="${fill}" text-anchor="${anchor}" font-weight="${weight}" opacity="${opacity}">${esc(s)}</text>`;
     const line=(x1,y1,x2,y2,stroke=C.line,w=2,extra='')=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${w}" ${extra}/>`;
@@ -29,7 +30,7 @@
       const sizes=v.map(d=>Array.from(d.label).length>12?118:82),available=height-154;
       const total=sizes.reduce((a,b)=>a+b,0),space=Math.max(0,(available-total)/n);
       const x=a=>left+(a-lo)/span*right;
-      for(let k=0;k<=4;k++){const value=lo+span*k/4,xx=x(value);out+=line(xx,56,xx,height-45)+t(xx,32,num(value),27,C.muted,k===0?'start':k===4?'end':'middle')}
+      for(let k=0;k<=4;k++){const value=lo+span*k/4,xx=x(value);out+=line(xx,56,xx,height-45)+t(xx,32,axisNum(value),27,C.muted,k===0?'start':k===4?'end':'middle')}
       if(lo<0)out+=line(x(0),56,x(0),height-45,C.muted,3);
       let cursor=top;
       v.forEach((d,i)=>{
@@ -47,7 +48,7 @@
     }else if(data.chart==='line'||data.chart==='histogram'){
       const left=92,right=width-24,top=58,bottom=height-105,pw=right-left,ph=bottom-top;
       const y=a=>bottom-(a-lo)/span*ph;
-      for(let k=0;k<=4;k++){const value=lo+span*k/4,yy=y(value);out+=line(left,yy,right,yy)+t(left-16,yy+9,num(value),28,C.muted,'end')}
+      for(let k=0;k<=4;k++){const value=lo+span*k/4,yy=y(value);out+=line(left,yy,right,yy)+t(left-16,yy+9,axisNum(value),28,C.muted,'end')}
       if(data.chart==='line'){
         const dates=v.map(d=>Date.parse(d.date)),ds=dates[n-1]-dates[0],x=i=>left+(dates[i]-dates[0])/ds*pw;
         const points=v.map((d,i)=>`${x(i)},${y(d.value)}`).join(' ');
