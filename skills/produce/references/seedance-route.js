@@ -35,6 +35,10 @@ function scenePlan(scene) {
     : scene.type === 'quote' && v.clip && typeof v.clip === 'object' ? 'quote' : null;
   if (!kind) return null;
   const settings = Object.assign({}, v, kind === 'motion' ? v.video : kind === 'quote' ? v.clip : {});
+  const frameErrors = require('../../storyboard/references/render-routing.js').checkFrames(scene);
+  if (frameErrors.length) throw new Error(frameErrors.join('; '));
+  const endFrame = require('../../storyboard/references/render-routing.js').framePlan(scene).end;
+  if (endFrame) settings.lastImagePath = endFrame;
   const engine = settings.engine || (kind === 'motion' ? 'seedance' : 'veo');
   if (!['seedance', 'veo'].includes(engine)) throw new Error('unknown video engine: ' + engine);
   if (engine !== 'seedance') {
@@ -66,6 +70,8 @@ function scenePlan(scene) {
   if (needsReference && !spec.images) throw new Error(model + ' does not accept reference images/audio');
   if (references.length > spec.images) throw new Error(model + ' accepts at most ' + spec.images + ' reference images');
   if (needsReference && !references.length && !voices.length) throw new Error('reference route needs referenceImagePaths or referenceAudioPaths');
+  if (settings.lastImagePath !== undefined && (typeof settings.lastImagePath !== 'string' || !settings.lastImagePath.trim() || needsReference || spec.family === '1-0-pro-fast'))
+    throw new Error('lastImagePath needs a supported image-to-video route and a nonempty local path');
   if (needsVoice && (!voices.length || spec.family !== '2-5')) throw new Error('fixed-voice route requires Seedance 2.5 and referenceAudioPaths');
   if (voices.length > 10) throw new Error('Seedance 2.5 accepts at most 10 reference audio clips');
   const generateAudio = kind !== 'motion';
@@ -90,6 +96,7 @@ function scenePlan(scene) {
   return { kind, engine, model, resolution, durationSeconds, generateAudio,
     tool: needsReference ? 'seedance_reference' : 'seedance_img2video',
     referenceImagePaths: references, referenceAudioPaths: voices,
+    ...(settings.lastImagePath ? { lastImagePath: settings.lastImagePath } : {}),
     priceKey,
     reason: settings.modelReason || 'ordinary motion — Seedance 1.5 Pro' };
 }

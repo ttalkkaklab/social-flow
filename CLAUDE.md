@@ -45,6 +45,24 @@ The rule's source of truth is `skills/platform-guide/references/korean-style.md`
 Exceptions: `살아남는다` (a different verb), conditionals (`나뉜다면`), spoken past
 tense, and imperatives (`남겼어`·`남겨 둬`).
 
+## Episode production choice (user directive, 2026-09-06)
+
+Before assets, HITL offers **hybrid** (1–2 generated clips plus HTML/still-camera scenes) or
+**full_video** (every new scene is generated video) with first-pass and retry-inclusive video
+costs, model, resolution, audio setting, explicit budget cap and exclusions. Persist the choice
+in `window.PRODUCTION` and bind approval to the final cost quote. Resume an unchanged approval.
+Before storyboard authoring, ask for cinematic-miniature, photoreal live action, or webtoon
+and apply that choice to every new source/end image and video prompt in either mode.
+Follow `skills/storyboard/references/visual-style.md`; production mode never chooses the art style.
+For cinematic-miniature only, full_video follows the spatial-explainer reference `LQZjvQ5W2ck`: consistent miniature/cutaway/
+realistic materials, stable geography, deliberate camera moves and visible physical changes.
+Its branch overrides the older HTML-only explanation, person-required video and generated-shot
+cap clauses below. It does not relax facts, voice, budget, publishing approval or the ban on
+marks over video. Read the production-mode and full-video contracts linked from the skills.
+Quality is reviewed against source images and actual clip playback, with asset-bound evidence;
+a metadata pass alone is not proof of visual quality. Never hide a failed clip with a still,
+HTML fallback, looping or freeze padding. The builder validates the approved video manifest.
+
 ## Nothing is drawn over video — explanation is an HTML slide (user directive, 2026-09-05)
 
 This outranks every other rule in the plugin, the skills and the reference docs.

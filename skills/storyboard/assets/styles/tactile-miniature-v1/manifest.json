@@ -1,0 +1,47 @@
+{
+  "id": "tactile-miniature-v1",
+  "version": 1,
+  "guide": "STYLE.md",
+  "provenance": "Generated with the built-in image tool for this project; user requested bundling as reusable style references. These are not YouTube screenshots or historical evidence.",
+  "rules": {
+    "material": "Tactile timber, plaster, stone, paper and fabric; physically believable thickness and contact shadows. Adapt material choices to the topic and period.",
+    "lighting": "Soft directional light and moderate depth of field; tense scenes may use cool shadows and warm practical lights while keeping the action readable.",
+    "people": "Natural anatomy and grounded feet; consistent identity, clothing and age across connected scenes. Faces are illustrative unless an authentic reference is explicitly supplied.",
+    "composition": "Cinematic miniature or cutaway space with clear foreground, action and background. The narrated actor, action, recipient or object must be visible when the scene depends on them.",
+    "camera": "One purposeful restrained move per shot. Preserve geometry and contact. Exact final states use an edited end frame from the start image.",
+    "priority": "Narrative meaning and evidence outrank visual resemblance. Borrow materials, light and craftsmanship, never unrelated people, period costumes, ships, offices or actions from a style reference.",
+    "exclude": "Decorative boxes in place of physical subjects; generic empty rooms as a substitute for an action; fake historical documents, legible invented writing, arrows, captions, watermarks or romanticized coercion."
+  },
+  "references": [
+    {
+      "role": "environment",
+      "file": "cutaway.png",
+      "sha256": "eaab087a51e48e73dd91e1061e83c669b4665d986feaf1e94dc5c9d9f99abfbf",
+      "use": "Readable spatial depth, thick walls, connected rooms and tactile timber/plaster."
+    },
+    {
+      "role": "character",
+      "file": "character.png",
+      "sha256": "4d88451f828e4f4eecfb7d40036ee6238e74961ad6e48a0ecf68fc8ab0bd8522",
+      "use": "Natural adult anatomy, restrained expression, cloth texture and practical side lighting. Fictional likeness."
+    },
+    {
+      "role": "interaction",
+      "file": "conversation.png",
+      "sha256": "ad49b80ccce92669cf620995715c97f6693b35f4df8738a0386eba6ae6e076dd",
+      "use": "A visible actor, action, other person and object; clear hands and clean unlettered paper."
+    },
+    {
+      "role": "transport",
+      "file": "low-light.png",
+      "sha256": "40d16c42e438d1c420ce183669dbe37e231edd80f6dac055d41e9a94e98ec815",
+      "use": "Cool exterior shadows with warm practical lights and readable human scale."
+    },
+    {
+      "role": "reported_story",
+      "file": "paper-account.png",
+      "sha256": "86c4d993f2c60f8c93e4a6d4fc23c038bdd5b5b415633f5661a1987fe7ba5dd8",
+      "use": "Optional clearly staged paper theatre for an attributed account, never proof that the account is true."
+    }
+  ]
+}

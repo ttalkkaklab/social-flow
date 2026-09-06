@@ -10,6 +10,12 @@
 
 ## 판단 순서
 
+먼저 `window.PRODUCTION`의 승인된 제작 방식을 읽는다. `hybrid`는 아래 판단 순서를
+따른다. `full_video`는 실제 `purpose`와 `infoType`을 유지하면서 새 장면마다
+`generated_video`를 쓴다. 공간 모형의 동작과 카메라 이동으로 설명하고 `videoDesign`에
+시작 상태·동작·끝 상태·연속성·검수 기준을 적는다. 두 방식의 예상 생성비와 재시도 비용을
+HITL에서 먼저 보여준다. 비용과 승인 계약은 `production-mode.md`를 따른다.
+
 내레이션을 읽고 시청자가 이 컷에서 알아야 할 한 가지를 먼저 적는다. 등장하는 명사나
 사용 가능한 API부터 고르지 않는다. 다음 질문에 답하고 `shot.render`를 작성한다.
 
@@ -125,3 +131,40 @@ shot: {
 표현하고 건수는 원의 넓이로 표현한다. 지도 경계와 좌표에는 출처가 있어야 한다.
 자료가 없는 지역은 빗금으로 표시해 0과 구분한다. 각 형식의 데이터 계약과 예시는
 [chart-design.md](chart-design.md)를 따른다.
+
+## Start and end frame planning
+
+For every newly authored image-to-video shot, set `visual.frames.mode` to `first` or
+`first_last` and write `reason`. Use `first_last` when the final position, a camera destination,
+opening/closing, assembly, removal or another visible state change must be controlled. Write
+`endState` before generating images. Use `first` for a mood shot or subtle ambient motion with
+no required destination. The decision is per shot, independent of hybrid/full-video choice.
+
+```js
+visual: {
+  bg: 'images/s1-start.png',
+  frames: {
+    mode: 'first_last',
+    reason: 'The camera must end close to the closed book.',
+    endState: 'The same closed book fills the lower center; furniture stays in place.',
+    end: 'images/s1-end.png'
+  },
+  video: { engine: 'seedance', model: 'seedance-1-5-pro-251215',
+    resolution: '1080p', generateAudio: false, prompt: 'Slow forward dolly toward the closed book.' }
+}
+```
+
+`visual.bg` is the start image. `visual.frames.end` is the end image; the Seedance router
+forwards it as `lastImagePath`. Do not maintain a second divergent end path. Legacy
+`visual.video.lastImagePath` still works; if both exist they must match. Before calling the
+media tool, resolve both paths relative to storyboard/ and send their absolute paths.
+
+The HTML shows a single input or two adjacent inputs, their reason, final state and pending
+image slots. Each thumbnail opens the full image. Keep image framing, identities, objects,
+lighting and spatial layout consistent; change only the planned action or camera endpoint.
+Generate the start first, inspect it, then use it as the end-image edit reference. A two-frame
+plan cannot proceed to video with a missing end image or identical start/end paths. Store the
+source/end hashes with the playback review. Changing frame plans invalidates the cost approval.
+End frames guide endpoints; they do not prove that intermediate movement is physically correct.
+Do not convert a continuity failure into a passing review because both stills look good.
+

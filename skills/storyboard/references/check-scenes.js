@@ -408,7 +408,9 @@ function check(win, fmt, opts) {
   const pacing = fmt.pacing || {};
   const formatVideoMax = fmt.video && Number.isFinite(Number(fmt.video.generatedSecondsMax))
     ? Math.floor(Number(fmt.video.generatedSecondsMax) / 8) : 2;
-  const motionPolicy = (opts && opts.policy) || normalizeMotionPolicy(null, formatVideoMax, 'default');
+  const productionMode = require('./production-mode.js');
+  productionMode.check(win, { draft }).forEach(message => bad('production mode', message));
+  const motionPolicy = productionMode.policy((opts && opts.policy) || normalizeMotionPolicy(null, formatVideoMax, 'default'), win.PRODUCTION, scenes);
   const main = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
   const cover = scenes.find((s) => s.type === 'cover');
   const isShort = fmt.format !== 'youtube-long-16x9';
@@ -813,7 +815,7 @@ function check(win, fmt, opts) {
     const v = s.visual || {};
     const shot = s.shot || {};
     if ((opts && opts.requireRenderPlan) || shot.render)
-      require('./render-routing.js').checkScene(s, { draft }).forEach(message => bad(where, message));
+      require('./render-routing.js').checkScene(s, { draft, production: win.PRODUCTION }).forEach(message => bad(where, message));
 
     if (!s.type) { bad(where, 'no type'); return; }
     if (TYPES.indexOf(s.type) === -1) bad(where, `type "${s.type}" is outside ${TYPES.join(' · ')}`);
@@ -864,7 +866,7 @@ function check(win, fmt, opts) {
        with animated annotations. The authored HTML must expose one declared meaning-bearing
        primitive for every spoken group; render-motion-slide.mjs checks those declarations
        against the rendered DOM. */
-    if (INFO_ROLE[shot.infoType]) {
+    if (INFO_ROLE[shot.infoType] && !productionMode.full(win.PRODUCTION)) {
       const expectedRole = INFO_ROLE[shot.infoType];
       const allowed = INFO_PRIMITIVES[shot.infoType];
       if (!slide) {
