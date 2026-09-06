@@ -84,8 +84,8 @@ const INFO_ROLE = { timeline: 'timeline', statistic: 'statistic', principle: 'me
 // object-move — a baked object arrives, turns or recedes (rendered-object.md · h.object); the sentence's
 // value can be the object itself on any of the three types, so it is allowed on all of them.
 const INFO_PRIMITIVES = {
-  timeline: ['date-enter', 'range-grow', 'event-link', 'object-move'],
-  statistic: ['count-up', 'bar-grow', 'dot-fill', 'axis-draw', 'object-move'],
+  timeline: ['date-enter', 'range-grow', 'event-link', 'object-move', 'chart-reveal'],
+  statistic: ['count-up', 'bar-grow', 'dot-fill', 'axis-draw', 'object-move', 'chart-reveal'],
   principle: ['flow-trace', 'node-enter', 'state-transform',
               'shape-enter', 'shape-draw', 'shape-travel', 'object-move'],
 };
@@ -794,9 +794,11 @@ function check(win, fmt, opts) {
   if (!draft && motionPolicy.htmlPlateMax !== null) {
     // A plate — one picture for its whole length — is capped. A motion slide with a movement
     // per narration group is a body of its own on any beat since 2026-09-05, and explanation
-    // beats are HTML slides by directive; both sit outside the cap.
+    // beats are HTML slides by directive; both sit outside the cap. Camera HTML is a
+    // photograph renderer, governed by still-run and static-ground limits instead.
     const plates = scenes.filter((scene) => scene && scene.type !== 'outro' && scene.visual &&
-      scene.visual.slide && !beatsCoverGroups(scene) && !INFO_ROLE[scene.shot && scene.shot.infoType]);
+      scene.visual.slide && scene.visual.slide.kind !== 'camera' &&
+      !beatsCoverGroups(scene) && !INFO_ROLE[scene.shot && scene.shot.infoType]);
     if (plates.length > motionPolicy.htmlPlateMax)
       bad('episode', `${plates.length} HTML plates on other beats — channel cap ${motionPolicy.htmlPlateMax}; ` +
                      'keep plates for one-sentence verdicts, or give the slide a movement per narration group ' +
@@ -1250,6 +1252,12 @@ function selftest() {
   const plateScene = (d) => Object.assign({}, cover, { type: 'points', beat: 'drip', transition: 'jcut', hookType: undefined, hookForm: undefined, duration: d });
   ok('HTML plates over the channel cap are rejected',
      has(bads(run([videoScene, plateScene(3), plateScene(3), plateScene(3)], null, { policy: groundPolicy })), /3 HTML plates on other beats — channel cap 2/));
+  const cameraPlate = (d) => Object.assign({}, plateScene(d), { visual: { bg: 'images/rider.png',
+    slide: { kind: 'camera', motion: true, file: 'slides/s1-rider.html', plan: 'Approach the rider.' } } });
+  ok('camera photographs do not consume the text plate allowance',
+     !has(bads(run([cameraPlate(3), cameraPlate(3), cameraPlate(3)], null, { policy: groundPolicy })), /HTML plates/));
+  ok('camera photographs still obey the static-ground clock',
+     has(bads(run([cameraPlate(9)], null, { policy: groundPolicy })), /one picture stays on screen 9\.0s/));
   ok('explanation slides sit outside the plate cap',
      !has(bads(run([videoScene, explain(3, 1), explain(3, 1), explain(3, 1)], null, { policy: groundPolicy })), /HTML plates/));
   const motionPlate = (d) => Object.assign({}, plateScene(d), { visual: { slide: Object.assign({}, cover.visual.slide,
@@ -1660,6 +1668,8 @@ function main() {
   const effectivePolicy = profileHasPolicy ? profilePolicy
     : normalizeMotionPolicy(null, formatVideoMax, 'format default');
   const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true });
+  require('./render-routing.js').checkEpisode(win).forEach(what =>
+    findings.push({ level: 'bad', where: 'visual direction', what }));
   // Draft validates the plan; full production also requires a current evidence-backed read.
   require('./story-contract.js').checkStory(win, { requireReview: !draft }).forEach(what =>
     findings.push({ level: 'bad', where: 'story quality', what }));

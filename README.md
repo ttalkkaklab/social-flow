@@ -19,18 +19,15 @@ build constant downstream. Long-form episodes **mix clips you film yourself with
 generated scenes** — where the evidence lives on screen you film it, where the point is
 a mood or a place the pipeline generates an image, and scenes that need words or
 diagrams on screen become **HTML motion slides**, authored and shown as rendered
-keyframes before approval. A slide that states a value —
-the number counts up and the bar grows the moment its sentence starts, rendered locally
-frame by frame at no cost and admitted to the build after the contract checker and the
-author's own read of its key frames — the one free way to put movement on a body
-scene on either format. **Nothing is drawn over video** (user directive 2026-09-05): a
+keyframes before approval. Quantitative relationships use charts with source values,
+a shared scale and narrated focus. Explanatory actions use 3D objects or characters.
+Production checks the plan and rendered frames before assembly. **Nothing is drawn over video** (user directive 2026-09-05): a
 cut that needs an arrow, a figure or a principle is an HTML slide on a lit studio stage,
 with a real 3D object when a thing is the subject. The offline mesh lane renders GLB models
 and articulated parts at every frame, with 3D illustration or photoreal materials and refined
 curved arrows ([object authoring](skills/storyboard/references/mesh-objects.md)), held to the quality of
-`docs/research/2026-09-04-rendered-object-slide/reference-slide.html`; a scene where
-something **happens** — people move, a place, an action — is a generated clip with the
-subtitle as its only type. **Every cut is chosen by purpose** (user directive 2026-09-06):
+`docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. Generated video is
+reserved for essential continuous action, with the subtitle as its only type. **Every cut is chosen by purpose** (user directive 2026-09-06):
 the storyboard reads the narration first and writes `shot.render` — a still under a camera
 move, a 3D character scene, a 3D object scene, a data graph, or generated video — with the
 reason for the choice ([render routing](skills/storyboard/references/render-routing.md)). The
@@ -42,6 +39,13 @@ default 8 s), and a one-picture plate on an ordinary beat is a one-sentence card
 the shooting script (`script.md`) carries the lines for every shot — filmed shots get
 what to show, what to say, and the filename to save it as; the rest are voice-only
 recordings.
+
+Visual direction has [episode checks](skills/storyboard/references/visual-direction.md): copied
+render reasons fail, text-led quote/verdict scenes are limited, and every opening belongs to
+the checked timeline. [Data charts](skills/storyboard/references/chart-design.md) use a shared,
+seekable SVG renderer for bars, dots, lines, stacked shares, histograms and timelines. Source
+values, honest scales and narrated focus beats drive the picture. The production builder
+reruns source-plan and slide checks before encoding and records the plugin version and hashes.
 
 Story approval uses an [evidence-backed contract](skills/storyboard/references/story-quality.md):
 choose supported content and an earned ending before polishing the hook. CTA is optional.

@@ -234,10 +234,15 @@ function readInlineImage(filePath) {
     const buffer = fs.readFileSync(filePath);
     return { imageBytes: buffer.toString('base64'), mimeType: mimeFromExtension(filePath, 'image') };
 }
-/** Read a local video file as a base64 inline video object. */
+/**
+ * Read a local video file as a base64 inline video object.
+ * No mimeType on purpose: the SDK's videoToMldev renames mimeType to `encoding`, and the Veo
+ * API rejects that field (400 INVALID_ARGUMENT, measured on an extension call 2026-09-06).
+ * The image path keeps its mimeType — imageToMldev does not rename it.
+ */
 function readInlineVideo(filePath) {
     const buffer = fs.readFileSync(filePath);
-    return { videoBytes: buffer.toString('base64'), mimeType: mimeFromExtension(filePath, 'video') };
+    return { videoBytes: buffer.toString('base64') };
 }
 // ── The 4 generation functions ───────────────────────────────────
 /** Generate video from a text prompt */

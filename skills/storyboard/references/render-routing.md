@@ -3,7 +3,7 @@
 ## Contents
 
 - [판단 순서](#판단-순서)
-- [다섯 가지 방식](#다섯-가지-방식)
+- [제작 방식](#제작-방식)
 - [선택 기록과 검사](#선택-기록과-검사)
 - [제작기 연결](#제작기-연결)
 - [그래프와 영상의 제한](#그래프와-영상의-제한)
@@ -25,7 +25,7 @@
 ‘두 제품의 판매량을 비교한다’는 수치 그래프다. 인물이 언급돼도 소개만 하면 정지 이미지다.
 직접 기록한 증거와 사용자 제공 영상은 기존 소스를 보존하며 생성 분류에서 제외한다.
 
-## 다섯 가지 방식
+## 제작 방식
 
 | 핵심 목적 | `purpose` | `mode` | 선택 예시 |
 |---|---|---|---|
@@ -33,7 +33,9 @@
 | 사람이 수행하는 과정 | `human_process` | `character_html` | 직원이 물건을 분류하거나 짐을 싣는 행동을 직접 보여준다. |
 | 사물의 작동·물리적 변화 | `mechanism`, `physical_state` | `object_html` | 기어 맞물림, 경첩 회전, 밸브 개폐를 보여준다. |
 | 수치 관계·시간 순서 | `comparison`, `trend`, `share`, `distribution`, `timeline` | `data_graph` | 판매량 비교, 시간별 변화, 구성비를 비교한다. 연표에는 날짜를 쓴다. |
-| 자연스러운 연속 동작 | `live_action` | `generated_video` | 바람에 흔들리는 옷과 인물의 동작이 장면의 의미일 때 쓴다. |
+| 짧은 근거 인용·결론 | `evidence_quote`, `verdict` | `editorial_html` | 인용은 원문과 출처를 적고 결론은 짧게 보여준다. |
+| 자연스러운 연속 동작 | `live_action` | `editorial_html` | `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"type"`로 짧은 인용·결론을 만든다. |
+| `generated_video` | 바람에 흔들리는 옷과 인물의 동작이 장면의 의미일 때 쓴다. |
 
 정지 이미지에도 `camera.effect`, `target`, `reason`을 적는다. 인물 소개에는 포커스 인,
 단서 강조에는 접근, 시선의 전환에는 초점 이동, 장소 설명에는 후퇴가 어울린다.
@@ -59,11 +61,18 @@ shot: {
 }
 ```
 
+[visual-direction.md](visual-direction.md)의 반복 제한과 장면별 검토 기준을 적용한다.
+같은 선택 이유를 세 컷 이상 복사하면 검사에서 막는다. 글자 중심 화면은 숏폼에서 최대 두 컷이고
+롱폼에서는 생성 컷 길이의 20%까지다. 한 컷은 8초 이하다. `motionBeats`로 이 제한을 피할 수 없다.
+`evidence_quote`는 `evidence:{source,quote}`를 적는다. 문서 자체를 보여주려면 사진 카메라 컷을 쓴다.
+
 모든 생성 대상 컷에 `mode`, `purpose`, `reason`이 필요하다. 기록 영상과 공통 아웃트로는
 예외다. 캐릭터에는 `actors`와 `action`, 사물에는 `action`을 적는다. 영상 생성에는
 `motionEssential:true`, `action`, `whyNotStill`이 추가로 필요하다. 수치에는
 `data:{chart,source,unit,values:[{label,value}],baseline}`을 적는다. 연표는 `value` 대신
 `date`를 쓰고 구성비에는 전체 값인 `total`을 적는다.
+차트의 문장별 강조 대상은 `data.beats`에 적는다. [chart-design.md](chart-design.md)의
+차트 선택과 공통 SVG 템플릿을 사용한다. 숫자만 크게 등장시키는 화면으로 대신하지 않는다.
 
 [render-routing.js](render-routing.js)가 목적과 방식의 대응, 필요한 근거와 자산 연결을
 검사한다. `check-scenes.js --draft`에서도 선택 누락과 의미 충돌을 막는다. 제작 단계에서는
@@ -79,6 +88,7 @@ shot: {
 | `character_html` | `visual.slide`의 `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"object"`, `object.renderer:"mesh"`를 사용한다. 배우와 접촉 동작을 모델 계획에 연결한다. |
 | `object_html` | 같은 메시 경로를 사용하되 설명에 필요 없는 캐릭터를 넣지 않는다. |
 | `data_graph` | `subject.kind:"data"`로 수치와 관계를 움직인다. 그래프를 장식용 3D 물체로 바꾸지 않는다. |
+| `editorial_html` | `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"type"`로 짧은 인용·결론을 만든다. |
 | `generated_video` | `visual.video` 또는 영상 컷으로 전달하고 `visual.why`에 선택 이유를 적는다. 기존 엔진·비용·참조 이미지 규칙을 적용한다. |
 
 카메라 HTML은 [camera-slide-template.html](camera-slide-template.html)을 복사하고
