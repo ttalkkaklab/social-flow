@@ -85634,7 +85634,7 @@ function readInlineImage(filePath) {
 }
 function readInlineVideo(filePath) {
   const buffer = fs7.readFileSync(filePath);
-  return { videoBytes: buffer.toString("base64"), mimeType: mimeFromExtension(filePath, "video") };
+  return { videoBytes: buffer.toString("base64") };
 }
 async function generateFromText4(request) {
   const apiKey = requireGeminiKey();
