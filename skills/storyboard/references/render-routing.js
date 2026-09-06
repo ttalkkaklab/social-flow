@@ -7,12 +7,35 @@
  const text=x=>typeof x==='string'&&!!x.trim();
  function exempt(scene){return scene.type==='outro'||(!scene.visual?.video&&(['recording','screencast'].includes(scene.visual?.source)||scene.visual?.picture==='recording'))}
  function recommend(purpose){return PURPOSES[purpose]||null}
- function checkScene(scene,{draft=false}={}){
+ function framePlan(scene){
+  const v=scene.visual||{}, f=v.frames||{}, end=f.end||v.video?.lastImagePath||v.lastImagePath||v.imagePair?.end||'';
+  return {mode:f.mode||(end?'first_last':'first'),start:v.bg||v.src||v.imagePair?.start||'',end,reason:f.reason||'',endState:f.endState||''};
+ }
+ function checkFrames(scene,{draft=false}={}){
+  const v=scene.visual||{},f=v.frames,p=framePlan(scene),errors=[];
+  const bad=s=>errors.push('visual.frames: '+s);
+  if(f){
+   if(!['first','first_last'].includes(f.mode))bad('mode must be first or first_last');
+   if(!text(f.reason))bad('record why this shot needs one or two frames');
+   if(f.mode==='first_last'&&!text(f.endState))bad('describe the visible final state');
+  }
+  const ends=[v.frames?.end,v.video?.lastImagePath,v.lastImagePath,v.imagePair?.end].filter(Boolean);
+  if(new Set(ends).size>1)bad('the displayed end frame and generation lastImagePath disagree');
+  if(p.mode==='first'&&p.end)bad('first-only mode cannot carry an end frame');
+  if(p.mode==='first_last'){
+   if(!draft&&(!text(p.start)||!text(p.end)))bad('both start and end images are required before generation');
+   if(p.start&&p.start===p.end)bad('start and end must be distinct images');
+  }
+  return errors;
+ }
+ function checkScene(scene,{draft=false,production=null}={}){
   if(exempt(scene))return [];
-  const r=scene.shot?.render,v=scene.visual||{},errors=[],bad=s=>errors.push('shot.render: '+s);
-  if(!r||typeof r!=='object')return ['shot.render: choose a supported mode and record purpose and reason before assets'];
-  const expected=recommend(r.purpose);
-  if(!expected)bad('unknown purpose; use '+Object.keys(PURPOSES).join(', '));
+  const r=scene.shot?.render,v=scene.visual||{},errors=checkFrames(scene,{draft}),bad=s=>errors.push('shot.render: '+s);
+  if(!r||typeof r!=='object')return errors.concat(['shot.render: choose a supported mode and record purpose and reason before assets']);
+  const fullVideo=production?.mode==='full_video';
+  const expected=fullVideo?'generated_video':recommend(r.purpose);
+  if(!recommend(r.purpose))bad('unknown purpose; use '+Object.keys(PURPOSES).join(', '));
+
   if(!LABELS[r.mode])bad('unknown mode; use '+Object.keys(LABELS).join(', '));
   else if(expected&&expected!==r.mode)bad(r.purpose+' requires '+expected+', not '+r.mode);
   if(!text(r.reason))bad('reason must explain why this treatment conveys the cut');
@@ -35,14 +58,16 @@
   if(r.mode==='character_html'&&(!Array.isArray(r.actors)||!r.actors.length||r.actors.some(a=>!text(a))))bad('character explanation needs actors who perform the action');
   if(r.mode==='object_html'&&Array.isArray(r.actors)&&r.actors.length)bad('object explanation must not add decorative actors');
   if(r.mode==='generated_video'){
-   if(r.motionEssential!==true||!text(r.whyNotStill)||!text(r.action))bad('generated video needs essential continuous motion, action and whyNotStill');
+   if(fullVideo){if(!text(r.action))bad('full video needs a visible action or a spatial camera reveal');}
+   else if(r.motionEssential!==true||!text(r.whyNotStill)||!text(r.action))bad('generated video needs essential continuous motion, action and whyNotStill');
   }
   if(r.mode==='editorial_html'){
    if(info!=='other')bad('an editorial quote/verdict uses infoType other');
    if(!Number.isFinite(scene.duration)||scene.duration<=0||scene.duration>8)bad('a text-led quote/verdict must last at most 8 seconds');
    if(r.purpose==='evidence_quote'&&(!text(r.evidence?.source)||!text(r.evidence?.quote)))bad('evidence_quote needs evidence.source and the exact evidence.quote');
   }
-  if(r.mode==='data_graph'){
+if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
+
    const data=r.data;
    if(!text(data?.title)&&!text(scene.title))bad('data graph needs data.title (or scene.title) naming the quantity being compared');
    if(!data||!text(data.source)||!text(data.unit)||!CHARTS[r.purpose]?.includes(data.chart))bad('data needs a source, unit and chart suited to its purpose');
@@ -176,6 +201,7 @@
   if((!long&&textCount>2)||(long&&total>0&&textSeconds/total>0.2))errors.push('text-led slides dominate: at most 2 per short, or 20% of generated duration in long-form; use source images, acted processes or actual charts where the content calls for them');
   return errors;
  }
- const api={PURPOSES,LABELS,CHARTS,recommend,exempt,checkScene,checkData,checkMap,checkEpisode};
+ const api={PURPOSES,LABELS,CHARTS,recommend,exempt,framePlan,checkFrames,checkScene,checkData,checkMap,checkEpisode};
+
  if(typeof module==='object'&&module.exports)module.exports=api;else root.RENDER_ROUTING=api;
 })(typeof window==='object'?window:globalThis);

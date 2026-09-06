@@ -36,9 +36,10 @@ function verifyManifest(work,board,scenes){
         verifyClip(file,path.resolve(board,s.visual.slide.file),group);remember(file);
       }
     } else {
-      const declared=s.visual?.renderedFile||s.visual?.clip;
-      if(typeof declared!=='string'||!declared.trim())throw new Error('non-slide scene needs visual.renderedFile or visual.clip before assembly');
-      const source=path.resolve(board,declared);
+      const generated=s.visual?.video?.clip;
+      const declared=generated||s.visual?.renderedFile||s.visual?.clip;
+      if(typeof declared!=='string'||!declared.trim())throw new Error('non-slide scene needs visual.video.clip, visual.renderedFile or visual.clip before assembly');
+      const source=generated ? require('./check-production.js').assetPath(board,declared) : path.resolve(board,declared);
       if(!fs.statSync(source).isFile())throw new Error('declared source is not a file');
       if(cols[2].includes('::')||cols[2].includes('|')||path.resolve(work,cols[2].replace(/^@/,''))!==source)throw new Error('segment media differs from the declared source');
       remember(source);

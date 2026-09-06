@@ -20,7 +20,10 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
 
-      # build (tsc) + the 573 contract tests
+      # Media contract tests encode a small deterministic clip and inspect it with ffprobe.
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      # Build and contract tests
       - run: npm ci
         working-directory: server
       - run: npm run check

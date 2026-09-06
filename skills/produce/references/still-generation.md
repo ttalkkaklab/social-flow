@@ -19,6 +19,11 @@ then only from the fields — never by editing the stored string by hand.
 
 ## 1. Which engine, and why
 
+`PRODUCTION.imageProvider:"host"` overrides the API table below: use the product-provided
+image tool with the approved stored prompt, log `image.host`, and ask before switching to a
+separately billed provider if that capability is unavailable. In full_video use the approved
+spatial look and world bible; physical subjects need no decorative person.
+
 Measured 2026-08-12 (`docs/research/2026-08-12-local-image-generation`).
 
 | Still | Engine | Price | Why |
@@ -87,6 +92,12 @@ and narration. The criterion is right, not pretty. No reviewer is delegated — 
 of 0.49 cost six million tokens a read (measured) and your own look costs nothing. Shooting
 mode skips this entirely.
 
+For cinematic-miniature, also read the bundled [style guide](../../storyboard/assets/styles/tactile-miniature-v1/STYLE.md).
+Use the assembler's actual reference-image arguments; a filename in prompt prose does not
+attach an image. Narration edits require a fresh content check even when no camera field
+changed. Reuse after a wording-only edit is allowed only after reading the image against the
+new words. A checksum or a refreshed approval hash is not evidence of that read.
+
 What disqualifies an image:
 
 - a picture unrelated to what the scene says
@@ -125,3 +136,11 @@ remake still gets billed, so it gets its own line.
 
 The storyboard's `SB_DOC.cost` is a **projection**, not a receipt — §10 compares the two, and
 that comparison is only possible if every call here left a line.
+
+
+## Selected episode style
+
+Follow [visual-style.md](../../storyboard/references/visual-style.md) before creating storyboard images.
+The explicit episode choice overrides generic photo defaults. Apply it to start and end frames
+in hybrid and full_video. Attach the miniature pack only for cinematic-miniature; photoreal
+and webtoon use their own treatment and approved character references.

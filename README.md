@@ -12,6 +12,31 @@ A **channel** is one content brand you operate: one `data/` directory per channe
 tone, voice, theme, and publish targets pinned in `profile.md`. Publish targets:
 **Threads · Instagram (Reels) · Facebook Pages · YouTube (Shorts and long-form)**.
 
+Before production, a HITL choice shows **hybrid** (1–2 generated clips plus HTML slides and
+still-camera scenes) beside **full video** (every new scene generated as a clip), with model,
+resolution, audio setting, first-pass and retry-inclusive video costs and an explicit budget cap.
+The read-only [cost comparison](skills/autoproduce/references/production-cost.js) uses the same
+API price table and routing as production, including minimum billed clip lengths. It labels KRW
+conversion as an assumption and excludes image, voice, editing and tax costs. The
+[choice contract](skills/storyboard/references/production-mode.md) persists approval and detects
+changed quotes. Existing recordings and shared outros retain their source.
+
+Full-video image planning ships the [tactile miniature style pack](skills/storyboard/assets/styles/tactile-miniature-v1/STYLE.md):
+five generated PNG references, a versioned manifest, and material, lighting, composition and
+content-review instructions. The prompt assembler returns actual reference-image arguments
+resolved from the installed plugin, so another machine does not need this episode's images.
+Use the references for appearance, not unrelated historical props or story content. Authentic
+archives keep their original look. Include `skills/storyboard/assets/` when distributing the
+whole plugin; the server-only npm package is not the plugin and does not contain these assets.
+
+The [full-video branch](skills/produce/references/full-video.md) targets a spatial explainer:
+architectural miniatures, detailed environments and cutaways, one visible action per cut,
+consistent geometry/materials, and separate channel narration. It supersedes the hybrid
+HTML-only explanation rules below for that episode. Source-image and motion prompts are
+assembled separately; actual playback and frame reviews are tied to source/clip hashes.
+The builder checks the selected files and refuses loops or freeze padding. These checks enforce
+review, not a guarantee that a generator matches the reference on its first attempt.
+
 Video comes in two formats. The default is 9:16 short-form (1080×1920/30fps), derived
 per platform; YouTube long-form uses 16:9 (1920×1080). You pick the format while
 authoring the storyboard, and a single `window.FORMAT` line in `scenes.js` fixes every
