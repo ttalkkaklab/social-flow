@@ -8,18 +8,42 @@
     ? {paper:'#152B2A',ink:'#F2F0E8',muted:'#A3B6AE',line:'#48615B',neutral:'#769086',accent:accent||'#C1E681'}
     : {paper:'#F4F1E9',ink:'#173B33',muted:'#52695F',line:'#CFD5CB',neutral:'#A4B6A9',accent:accent||'#176A53'};
   const color = s => /^#[0-9a-f]{6}$/i.test(s||'') ? s : null;
+  const mix=(a,b,p)=>'#'+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-p)+parseInt(b.slice(i,i+2),16)*p).toString(16).padStart(2,'0')).join('');
+  function sectorPath(cx,cy,r,inner,start,sweep){
+    if(sweep<=0)return '';
+    const point=(radius,a)=>[cx+radius*Math.cos(a),cy+radius*Math.sin(a)];
+    // Two arcs also represent an exact whole circle; tiny shares retain their source angle.
+    const a=point(r,start),b=point(r,start+sweep/2),c=point(r,start+sweep);
+    let path=`M${a} A${r},${r} 0 0 1 ${b} A${r},${r} 0 0 1 ${c}`;
+    if(inner){const d=point(inner,start+sweep),e=point(inner,start+sweep/2),f=point(inner,start);path+=` L${d} A${inner},${inner} 0 0 0 ${e} A${inner},${inner} 0 0 0 ${f}`}
+    else path+=` L${cx},${cy}`;
+    return path+' Z';
+  }
+  const project=([longitude,latitude])=>[longitude*Math.PI/180*Math.cos(Math.PI/6),-Math.sin(latitude*Math.PI/180)/Math.cos(Math.PI/6)];
+  function mapGeometry(geojson,width,height,padding=26){
+    const polygons=g=>g.type==='Polygon'?[g.coordinates]:g.coordinates;
+    const points=geojson.features.flatMap(f=>polygons(f.geometry).flatMap(poly=>poly.flatMap(ring=>ring.map(project))));
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    for(const [x,y] of points){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+    const scale=Math.min((width-2*padding)/(maxX-minX),(height-2*padding)/(maxY-minY));
+    const locate=p=>{const [x,y]=project(p);return [width/2+(x-(minX+maxX)/2)*scale,height/2+(y-(minY+maxY)/2)*scale]};
+    const paths=geojson.features.map(f=>({id:f.id,path:polygons(f.geometry).map(poly=>poly.map(ring=>ring.map((p,i)=>(i?'L':'M')+locate(p).join(',')).join(' ')+' Z').join(' ')).join(' ')}));
+    return {locate,paths};
+  }
   function render(data,{width=728,height=660,group=1,progress=1,accent}={}){
     const C=colors(data.surface,color(accent)),v=data.values,n=v.length;
     const p=ease(progress/0.78),first=group<=1,reveal=first?p:1;
     const beat=data.beats[Math.max(0,group-1)],prev=data.beats[Math.max(0,group-2)];
     const emphasis=i=>{const now=beat.focus.includes(v[i].label)?1:0,old=first?0:(prev.focus.includes(v[i].label)?1:0);return old+(now-old)*p};
     const axisNum=x=>new Intl.NumberFormat('en-US',{maximumFractionDigits:12,...(Math.abs(x)>=1e6?{notation:'compact'}:x!==0&&Math.abs(x)<1e-6?{notation:'scientific'}:{})}).format(x);
-    const num=x=>new Intl.NumberFormat('en-US',{maximumFractionDigits:data.decimals??1,...(Math.abs(x)>=1e6?{notation:'compact'}:{})}).format(x);
+    const percent=x=>{if(x>0&&x<.0001)return x.toExponential(1);if(x<100&&x>99.9999)return '>99.9999';const gap=Math.min(Math.abs(x),Math.abs(100-x));const digits=gap?Math.min(4,Math.max(1,1-Math.floor(Math.log10(gap)))):0;return new Intl.NumberFormat('en-US',{maximumFractionDigits:digits}).format(x)};
+    const num=x=>{const result=new Intl.NumberFormat('en-US',{maximumFractionDigits:data.decimals??1,...(Math.abs(x)>=1e6?{notation:'compact'}:{})}).format(x);return x!==0&&Number(result.replace(/,/g,''))===0?axisNum(x):result};
     const t=(x,y,s,size=32,fill=C.ink,anchor='start',weight=500,opacity=1)=>`<text x="${x}" y="${y}" font-size="${size}" fill="${fill}" text-anchor="${anchor}" font-weight="${weight}" opacity="${opacity}">${esc(s)}</text>`;
     const line=(x1,y1,x2,y2,stroke=C.line,w=2,extra='')=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${w}" ${extra}/>`;
-    const label=(x,y,s,anchor='start',size=32)=>{
-      const chars=Array.from(String(s)),limit=12;
-      return chars.length<=limit?t(x,y,s,size,C.ink,anchor):t(x,y,chars.slice(0,limit).join(''),size,C.ink,anchor)+t(x,y+size*1.15,chars.slice(limit).join(''),size,C.ink,anchor);
+    const label=(x,y,s,anchor='start',size=32,limit=12)=>{
+      const chars=Array.from(String(s));let result='';
+      for(let i=0;i<chars.length;i+=limit)result+=t(x,y+i/limit*size*1.15,chars.slice(i,i+limit).join(''),size,C.ink,anchor);
+      return result;
     };
     let out='';
     const hi=Math.max(0,...v.map(d=>d.value||0)),lo=Math.min(0,...v.map(d=>d.value||0));
@@ -67,6 +91,71 @@
       v.forEach((d,i)=>{const w=d.value/data.total*width*reveal,hot=emphasis(i);out+=`<rect x="${x}" y="${barY}" width="${w}" height="${barH}" fill="${C.neutral}"/><rect x="${x}" y="${barY}" width="${w}" height="${barH}" fill="${C.accent}" opacity="${hot}"/>`;x+=w});
       out+=t(0,43,'0%',28,C.muted)+t(width,43,'100%',28,C.muted,'end');
       v.forEach((d,i)=>{const yy=245+i*(height-265)/n,hot=emphasis(i);out+=`<circle cx="8" cy="${yy-10}" r="6" fill="${C.accent}" opacity="${.3+.7*hot}"/>`+label(30,yy,d.label)+t(width,yy,num(d.value)+'  /  '+num(d.value/data.total*100)+'%',34,C.ink,'end',700)});
+    }else if(data.chart==='donut'||data.chart==='pie'){
+      const radius=Math.min(width*.235,height*.32),cx=radius+8,cy=height/2-15,inner=data.chart==='donut'?radius*.66:0;
+      const keyX=width*.55,keyW=width-keyX,wrap=Math.max(1,Math.floor((keyW-23)/27));
+      const rows=v.map(d=>Math.max(88,Math.ceil(Array.from(d.label).length/wrap)*31.05+50));
+      let start=-Math.PI/2,cursor=(height-rows.reduce((a,b)=>a+b,0))/2+28;
+      v.forEach((d,i)=>{
+        const share=d.value/data.total,sweep=share*Math.PI*2,hot=emphasis(i),fill=mix(C.neutral,C.accent,.12+.88*i/Math.max(1,n-1));
+        out+=`<path data-mark="slice" data-share="${share}" d="${sectorPath(cx,cy,radius,inner,start,sweep*reveal)}" fill="${fill}"/>`;
+        // The focus ring does not change the angle or explode a slice.
+        out+=`<path d="${sectorPath(cx,cy,radius+6,radius+3,start,sweep*reveal)}" fill="${C.ink}" opacity="${hot}"/>`;
+        const yy=cursor;cursor+=rows[i];
+        out+=`<rect x="${keyX}" y="${yy-22}" width="8" height="48" rx="4" fill="${fill}"/>`;
+        out+=label(keyX+23,yy,d.label,'start',27,wrap);
+        const valueY=yy+(Math.ceil(Array.from(d.label).length/wrap)-1)*31.05+36;
+        out+=t(keyX+23,valueY,percent(share*100)+'%',32,C.ink,'start',700)+(data.unit==='%'?'':t(keyX+keyW,valueY,num(d.value),25,C.muted,'end'));
+        start+=sweep;
+      });
+      if(inner){
+        const hotValue=indices=>indices.reduce((sum,d)=>sum+(d?d.value:0),0)/data.total*100;
+        const current=hotValue(v.filter(d=>beat.focus.includes(d.label))),previous=first?current:hotValue(v.filter(d=>prev.focus.includes(d.label)));
+        // Crossfade exact observations, never invent intermediate data between spoken groups.
+        const centerSize=Math.min(52,inner*1.8/(Math.max(percent(previous).length,percent(current).length)+1)/.65);
+        out+=t(cx,cy+12,percent(previous)+'%',centerSize,C.ink,'middle',750,first?p:1-p);
+        if(!first)out+=t(cx,cy+12,percent(current)+'%',centerSize,C.ink,'middle',750,p);
+      }
+    }else if(data.chart==='map'){
+      const missing=data.locale==='en'?'No data':'자료 없음',areaKey=data.locale==='en'?'Area ∝ value':'원의 넓이 ∝ 값';
+      const m=data.map,mapH=height-215,geo=mapGeometry(m.geojson,width,mapH,32),max=Math.max(...v.map(d=>d.value||0))||1;
+      const byRegion=new Map(v.map((d,i)=>[d.regionId,{...d,index:i}]));
+      const shade=value=>mix(C.line,C.accent,value/max);
+      out+=`<defs><pattern id="map-missing" width="9" height="9" patternUnits="userSpaceOnUse"><rect width="9" height="9" fill="${C.paper}"/><path d="M0,9 L9,0" stroke="${C.line}" stroke-width="2"/></pattern></defs>`;
+      for(const region of geo.paths){
+        const d=byRegion.get(region.id),measured=Number.isFinite(d?.value),hot=d?emphasis(d.index):0;
+        const fill=m.mode==='choropleth'?(measured?shade(d.value):'url(#map-missing)'):C.line;
+        out+=`<path data-region="${esc(region.id)}" d="${region.path}" fill="${fill}" fill-rule="evenodd" stroke="${C.paper}" stroke-width="1.6" opacity="${first?.25+.75*p:1}"/>`;
+        if(m.mode==='choropleth'&&d)out+=`<path d="${region.path}" fill="none" fill-rule="evenodd" stroke="${C.ink}" stroke-width="2.8" opacity="${hot}"/>`;
+      }
+      if(m.mode==='symbol'){
+        // Large circles first, so smaller co-located observations remain visible. Area encodes value.
+        v.map((d,i)=>({...d,index:i})).sort((a,b)=>(b.value||0)-(a.value||0)).forEach(d=>{
+          const [x,y]=geo.locate([d.longitude,d.latitude]),hot=emphasis(d.index),radius=24*Math.sqrt((d.value||0)/max)*reveal;
+          if(d.value===null||d.value===0)out+=`<circle data-focus="${esc(d.label)}" cx="${x}" cy="${y}" r="10" fill="none" stroke="${C.accent}" stroke-width="3" opacity="${hot}"/>`;
+          if(d.value===null)out+=line(x-4,y-4,x+4,y+4,C.muted,2)+line(x-4,y+4,x+4,y-4,C.muted,2);
+          else if(d.value===0)out+=line(x-4,y,x+4,y,C.ink,2)+line(x,y-4,x,y+4,C.ink,2);
+          else out+=`<circle data-mark="symbol" data-value="${d.value}" cx="${x}" cy="${y}" r="${radius}" fill="${C.accent}" fill-opacity="${.5+.25*hot}" stroke="${C.ink}" stroke-width="${1+hot*2}"/>`;
+        });
+      }
+      const ly=mapH+24;
+      if(m.mode==='choropleth'){
+        for(let i=0;i<64;i++)out+=`<rect x="${i*3}" y="${ly}" width="3.1" height="10" fill="${shade(max*i/63)}"/>`;
+        out+=t(0,ly+40,'0',24,C.muted)+t(192,ly+40,axisNum(max),24,C.muted,'end');
+        out+=`<rect x="${width-180}" y="${ly-2}" width="22" height="16" fill="url(#map-missing)"/>`+t(width,ly+14,missing,24,C.muted,'end');
+      }else{
+        out+=`<circle cx="12" cy="${ly+4}" r="6" fill="${C.accent}"/><circle cx="180" cy="${ly+4}" r="12" fill="${C.accent}"/>`;
+        out+=t(30,ly+13,axisNum(max/16),23,C.muted)+t(202,ly+13,axisNum(max/4),23,C.muted);
+        out+=t(width,ly+14,areaKey,24,C.muted,'end');
+      }
+      // Focused regions use an ink outline; fixed-size reading rows keep labels off the geography.
+      const focused=v.filter(d=>beat.focus.includes(d.label)),previous=v.filter(d=>prev.focus.includes(d.label));
+      const readout=(items)=>items.map((d,i)=>{
+        const cell=width/items.length,x=i*cell;
+        return label(x,ly+91,d.label,'start',27)+t(x,ly+132+(Array.from(d.label).length>12?34:0),d.value===null?missing:num(d.value)+' '+data.unit,32,C.ink,'start',700);
+      }).join('');
+      out+=`<g opacity="${first?p:1-p}">${readout(first?focused:previous)}</g>`;
+      if(!first)out+=`<g opacity="${p}">${readout(focused)}</g>`;
     }else if(data.chart==='timeline'){
       const dates=v.map(d=>Date.parse(d.date)),range=dates[n-1]-dates[0],top=48,bottom=height-100;
       out+=line(22,top,22,bottom,C.line,3);
@@ -74,6 +163,6 @@
     }
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(beat.insight)}" style="font-family:inherit;font-variant-numeric:tabular-nums">${out}</svg>`;
   }
-  const api={render,colors,esc,ease};
+  const api={render,colors,esc,ease,sectorPath,mapGeometry,project};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.CHART_RUNTIME=api;
 })(typeof window==='object'?window:globalThis);
