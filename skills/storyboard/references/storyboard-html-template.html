@@ -1583,6 +1583,7 @@ window.SB_DOC = {
   /* Shot-type and picture-layer display names: STRINGS.*.type · STRINGS.*.pic */
   function inferredPicture(s) {
     if (s.visual && (s.visual.source === "recording" || s.visual.source === "screencast")) return "recording";
+    if (s.visual && s.visual.slide && s.visual.slide.kind === "camera") return "still";
     if (s.visual && s.visual.slide) return "slide";
     if (s.type === "outro") return "asset";
     if (s.type === "broll" || (s.visual && s.visual.video) || (s.type === "quote" && s.visual && s.visual.clip))
@@ -1995,14 +1996,14 @@ window.SB_DOC = {
     } else if (s.type !== "broll" && s.type !== "outro") {
       /* Slide-scene contract (scenes-schema §slide scenes) — the filename, the plan and the
          motion:true marker are what get approved; produce §3.6 builds the file after approval.
-         Coexisting with bg is a contradiction (there is only one screen). */
+         Camera slides consume bg as their photograph; other slides draw their own screen. */
       var sl = s.visual && s.visual.slide;
       if (sl) {
         chips.push(badge("", T.slide));
         /* 저작 화면의 갈래 (scenes-schema §the authored-screen lane). 파일이 아직 없는
            승인 시점에 볼 수 있는 것은 scenes.js 쪽 계약뿐이다 — check-slide.js 는 produce §3.6 에서
            파일을 보고 같은 것을 다시 본다. */
-        var KINDS = ["diagram", "kinetic", "character"];
+        var KINDS = ["diagram", "kinetic", "character", "camera"];
         var ACT_NAMES = ["enter", "point", "nod", "shrug", "think", "wave", "cheer"];
         var kind = sl.kind || "diagram";
         if (sl.motion !== true) {
@@ -2043,7 +2044,7 @@ window.SB_DOC = {
           chips.push(badge("warn", T.fileNaming));
           flag("warn", T.shotCap(no), 'slide.file "' + sl.file + '" — the convention is slides/s' + no + "-<slug>.html (shot number = array position)");
         }
-        if (s.visual.bg)
+        if (s.visual.bg && kind !== "camera")
           flag("warn", T.shotCap(no), "a slide scene also carrying bg — the screen is the slide alone");
       }
       var cap = s.type === "cover" ? FMT.capCover : FMT.capBody;
@@ -2214,6 +2215,8 @@ window.SB_DOC = {
     // 2026-09-05 every timeline · statistic · principle beat is an editorial slide outside any cap.
   }
 
+  if (window.RENDER_ROUTING) window.RENDER_ROUTING.checkEpisode(window).forEach(function (message) { flag("bad", "Visual direction", message); });
+
   SCENES.forEach(function (s, i) {
     var v = (s && s.visual) || {}, sl = v.slide;
     if (window.RENDER_ROUTING) window.RENDER_ROUTING.checkScene(s).forEach(function (message) { flag("bad", T.shotCap(i + 1), message); });
@@ -2222,8 +2225,8 @@ window.SB_DOC = {
     var infoTypes = ["other", "timeline", "statistic", "principle"];
     var infoRole = { timeline: "timeline", statistic: "statistic", principle: "mechanism" };
     var infoPrimitives = {
-      timeline: ["date-enter", "range-grow", "event-link", "object-move"],
-      statistic: ["count-up", "bar-grow", "dot-fill", "axis-draw", "object-move"],
+      timeline: ["date-enter", "range-grow", "event-link", "object-move", "chart-reveal"],
+      statistic: ["count-up", "bar-grow", "dot-fill", "axis-draw", "object-move", "chart-reveal"],
       principle: ["flow-trace", "node-enter", "state-transform", "shape-enter", "shape-draw", "shape-travel", "object-move"]
     };
     if (s.type !== "broll" && s.type !== "outro") {

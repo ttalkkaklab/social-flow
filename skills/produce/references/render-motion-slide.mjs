@@ -150,6 +150,9 @@ const htmlAbs = path.resolve(HTML);
 if (!fs.existsSync(htmlAbs)) usage("slide not found: " + htmlAbs);
 const OUT = path.resolve(opt.out);
 fs.mkdirSync(OUT, { recursive: true });
+const renderProof = require(path.join(HERE, 'slide-render-proof.js'));
+const proofInputs = renderProof.inputs(htmlAbs);
+if (!opt.frame) fs.rmSync(path.join(OUT, 'render-proof.json'), {force:true});
 
 // ── format → canvas (scenes.js next to slides/ decides, like the page itself) ─
 const scenesPath = path.join(path.dirname(htmlAbs), "..", "scenes.js");
@@ -716,6 +719,7 @@ const openPage = async () => {
               `${captureWobble.slice(0, 3).join(", ")}${captureWobble.length > 3 ? ", …" : ""}. The last capture was kept. ` +
               `Sub-pixel antialiasing wobble is invisible; a torn frame is not — open those files before trusting them`);
   fs.writeFileSync(path.join(OUT, "manifest.tsv"), manifest.join("\n") + "\n");
+  if (!opt.pngOnly) renderProof.writeProof(htmlAbs, OUT, proofInputs, rows, opt.fps);
   const sec = (Date.now() - t0) / 1000;
   const summary = { slide: path.basename(htmlAbs), format: FORMAT, canvas: `${W}x${H}`, groups: N, jobs,
     treatment: treatment || null,

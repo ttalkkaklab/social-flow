@@ -30,10 +30,8 @@ data/<channel>/episodes/<topic>/
 ```
 For independent visual samples, use the installed planner and builder in [animation-review.md](references/animation-review.md). Fix plugin sources and rebuild; never substitute episode-specific scripts. This review mode has its own input contract and does not mark an episode publishable.
 ## Absolute rules
-Before assets, apply [render-routing.md](../storyboard/references/render-routing.md). `shot.render` selects one of five modes; run `check-scenes.js` to verify the handoff. Do not collapse still-camera, character, object and data-graph cuts into one HTML choice. Camera HTML uses `kind:"camera"` and the shared camera template; it is not true subject motion.
-
+Before assets, apply [render-routing.md](../storyboard/references/render-routing.md). `shot.render` selects a supported mode; run `check-scenes.js` to verify the handoff. Do not collapse still-camera, character, object and data-graph cuts into one HTML choice. Camera HTML uses `kind:"camera"` and the shared camera template; it is not true subject motion. Read [visual-direction.md](../storyboard/references/visual-direction.md) for episode repetition limits and the playback review. Data graphs use [chart-design.md](../storyboard/references/chart-design.md), the shared SVG template and source-linked focus beats. Never substitute a numeric card for a chart.
 Read [story-quality.md](../storyboard/references/story-quality.md) and run `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js storyboard/` before any generation or capture. Missing or stale reviews block production, including old boards; never rewrite approved narration silently. Then read [retention-direction.md](../storyboard/references/retention-direction.md) §2–§5 with the handoff. Resolve visible changes and sound events to scenes.js and supported controls. Preserve payoff, cost cap and voice; derive a missing handoff table without changing the narration. `beat:"cta"` permits a close with no ask.
-
 1. **No distorting facts** — narration and captions only recompose facts already in
    scenes.js. Don't collapse a range to its upper bound, and don't invent numbers.
 2. **No copy-paste crossposting** — "share the facts, never the sentences."
@@ -78,25 +76,13 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    frame is aimed at the 84.8–93.8% skip rates measured in practice). The clip has to be a
    user-supplied recording or an ingest artifact; don't use someone else's copyrighted
    screen. A text-free b-roll still goes in the **stretch after the cover**, never on it —
-   and on a short that is the one generated cut the hook leaves (rule 15).
-11. **The source image for generated video needs a person in it** — a still life of objects
-   gives Veo nothing to move, so the frame wobbles faintly and ends, and those 8 seconds
-   look like a freeze frame. With a person in it the model produces **natural movement** —
-   hair shifting, a head turning, fabric creasing — and the quality jumps. Make it photoreal.
-   - **No real people** — feeding in a celebrity's or public figure's face, or a photo of a
-     real person, is banned (likeness rights, reputation). Use only a **generated person**
-     made with `gpt_image_text2img`.
-   - **Match the person to the viewer's demographic** — the default is a Korean woman
-     (user directive 2026-08-11). If channel profile §3 sets a different target, follow that.
-   - **Make the source image at `quality: "high"`.** A b-roll source is Veo's input, so a
-     blurry source makes a blurry video — save money here and the upgrade spend is wasted.
-   - Frame it at **an angle that puts the channel's subject at the center of the screen**.
-     On a hair channel the hair is the lead, so a back or 3/4 side angle works better — a
-     straight-on face pulls the eye to the face and raises the risk of the person reading as
-     someone real.
-   - A photoreal person on screen means the video **has to carry the AI-generation
-     disclosure** — `containsSyntheticMedia: true` when publishing to YouTube (the publish
-     skill's contract).
+   and every selected clip needs its own purpose and motion reason.
+11. **The source image must support the selected action.** Include a person only when the
+   shot needs that person; do not insert a demographic default into unrelated topics.
+   Use the channel's art direction and a high-quality source. For a generated person,
+   keep the likeness fictional and frame the relevant action clearly. People are not a
+   substitute for explaining why continuous video is needed. A photoreal generated person
+   requires the publishing disclosure (`containsSyntheticMedia: true` on YouTube).
 12. **Don't throw the cover background PNG (the meta image) together** — the cover frame
    becomes `cover.jpg` (the YouTube thumbnail and the first screen of the IG and FB videos)
    as-is. No still lifes or abstract backgrounds unrelated to the topic — the default is one
@@ -540,7 +526,10 @@ order.
    tactile 3D illustration or photoreal 3D object, soft studio light, consistent material
    and camera, transparent background, no readable text (`image_local_generate`; gpt or mlx where the plan says so). Log each call in
    `.work/cost-tally.tsv`. Sit a principle actor with `h.fig`.
-2. **Author the HTML** from the matching template. A principle frame is a `.cast` of actors
+2. **Author the HTML** from the matching template. Data graphs copy
+   [chart-slide-template.html](../storyboard/references/chart-slide-template.html) and its two
+   runtimes exactly, changing only `SLIDE_SHOT`; the values and focus beats come from scenes.js.
+   Follow [chart-design.md](../storyboard/references/chart-design.md). A principle frame is a `.cast` of actors
    or actual mesh parts plus restrained arrows; kinetic `renderKinetic` puts the first art on
    group 1 then the title with `in`; type-only skips arts. An explanation slide is built on
    the studio stage to the bar of
@@ -745,7 +734,17 @@ another engine.
 
 ### 6. Write the manifest + build
 
-Convert `.work/cards.tsv` and `segs.tsv` from scenes.js (tab-separated, outro excluded):
+Convert `.work/cards.tsv` and `segs.tsv` from scenes.js (tab-separated, outro excluded).
+The builder runs `verify-build-plan.js` against the source storyboard before any encoding:
+full scene/story checks, required slides and exact card order must pass. It writes
+`.work/build-plan-check.json` with the plugin version and input hashes. Slide clips need the
+renderer's `render-proof.json`; stale sources, replaced clips and changed segment narration fail.
+Measure the opening after TTS and update its plan before assembly; the encoded opening must
+match within 0.5s. The final pace pass also checks total length after planned b-roll inserts. There is no
+skip flag and no cached PASS file. Do not replace the builder with an episode-specific
+assembly script. Any opening belongs in SCENES; no separate PRELUDE is accepted.
+
+Manifest columns:
 
 ```
 cards.tsv : idx <TAB> absolute audio path <TAB> target chars/sec <TAB> zoom(in|out|auto|none|punch|hold) [<TAB> options]
@@ -879,7 +878,8 @@ on the previous rest state and freezes on its own, so the reveal xfade at the se
 boundary crosses two identical pictures (measured 44 dB PSNR across the seam) and the
 motion starts inside the pause before the sentence, where the caption contract already
 puts the reveal. A sub-reveal (`A|B`) takes two clips in one segment the same way
-(`@motion/slide-s5/r2.mp4|@motion/slide-s5/r3.mp4`).
+(`@motion/slide-s5/r2.mp4|@motion/slide-s5/r3.mp4`); declare that segment's
+`revealGroups:[2,3]` in narration so the input checker can bind both clips.
 
 ```
 # a motion-slide card (idx 4, three segments) — cards.tsv and segs.tsv
@@ -980,7 +980,7 @@ The third column of `sfx.tsv` is a file path or a catalog id. With just an id, r
 `python3 "$ASSET" data/<channel> sfx <id>`.
 
 ```bash
-$REF/build-reel.sh .work    # → .work/reel.mp4 (clean) · reel-sub.mp4 (burned-in) · subs.srt · cover.jpg · build-report.txt
+$REF/build-reel.sh .work storyboard/    # → .work/reel.mp4 (clean) · reel-sub.mp4 (burned-in) · subs.srt · cover.jpg · build-report.txt
 ```
 
 **You get two videos, not one.** This pipeline's principle is to keep subtitles out of the
@@ -1345,3 +1345,4 @@ length, platforms) together with the cost summary, and point the user at
 - **`../autoproduce/references/decision-log.md`** — the episode decision log (`.work/decisions.tsv`) storyboard starts and produce carries on: engine, voice, music and every fallback, with what each one replaced. `decisions.sh` reads it back for the §10 report
 - **`../autoproduce/references/cost-tally.md`** — the episode cost ledger convention (the file §3 and §5 write and §10 totals). The price source of truth `prices.tsv` and the calculator `cost-report.sh` sit in the same directory
 - **`../channel/references/resolve-asset.py`** — looks up the shared outro, BGM, sound effects, and character sheet (catalog + default path + the old `assets/outro.mp4`)
+All `still_camera` cuts use the unchanged shared camera HTML template and runtime, including push/pan. Non-slide video handoffs declare `visual.renderedFile` (or `visual.clip`) relative to the storyboard; assembly must use that exact file.
