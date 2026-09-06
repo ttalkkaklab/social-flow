@@ -5,12 +5,32 @@ import {mkdtempSync,writeFileSync,readFileSync,copyFileSync,mkdirSync,rmSync} fr
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
+import {runInNewContext} from 'node:vm';
 const require=createRequire(import.meta.url),root=path.resolve(import.meta.dirname,'../..');
 const ref=path.join(root,'skills/storyboard/references');
 const {checkEpisode,checkScene}=require(path.join(ref,'render-routing.js'));
 const {render}=require(path.join(ref,'chart-runtime.js'));
 const graph=()=>({type:'points',duration:8,title:'Measured comparison',narration:[{tts:'A has sixteen; B has thirty-two.'}],shot:{infoType:'statistic',render:{mode:'data_graph',purpose:'comparison',reason:'Show how much larger B is.',data:{source:'Fixture measurements',unit:'units',chart:'bar',baseline:0,values:[{label:'A',value:16},{label:'B',value:32}],beats:[{group:1,focus:['B'],insight:'B is twice A.'}]}}},visual:{slide:{file:'slides/s1-chart.html',kind:'diagram',motion:true,treatment:'editorial',role:'statistic',motif:'value on a shared scale',quality:'object-state-v1',chartRenderer:'svg-v1',motionBeats:[{group:1,primitive:'chart-reveal'}],subject:{kind:'data',changes:[{group:1,before:'No values visible',after:'Both values share a zero baseline',driver:'value'}]}}}});
 const quote=()=>({type:'points',duration:5,narration:[{tts:'The quoted evidence.'}],shot:{infoType:'other',render:{mode:'editorial_html',purpose:'evidence_quote',reason:'Read the exact admission.',evidence:{source:'The letter',quote:'The quoted evidence.'}}},visual:{slide:{kind:'diagram',motion:true,treatment:'editorial',subject:{kind:'type'}}}});
+test('approval renderer recognizes camera photographs without hiding unsupported slides',()=>{
+ const template=readFileSync(path.join(ref,'storyboard-html-template.html'),'utf8');
+ const script=template.slice(template.indexOf('/* ⚙ RENDERER')).split('</script>')[0];
+ function preview(kind){
+  const app={},audit={},style={setProperty(){}};
+  const document={getElementById:id=>({app,audit}[id]||null),documentElement:{style},body:{appendChild(){}},
+   createElement:()=>({style,firstChild:{querySelector:()=>null}})};
+  const window={THEME:{},FORMAT:'shorts-9x16',SB_DOC:{},SCENES:[{
+   type:'points',duration:5,title:'Rider',narration:[{tts:'Look at the rider.'}],
+   visual:{bg:'images/rider.png',picture:'still',overlay:'none',slide:{kind,motion:true,file:'slides/s1-rider.html',plan:'Approach the rider.'}}
+  }]};
+  runInNewContext(script,{window,document,URLSearchParams,location:{search:'?lang=en'},navigator:{languages:['en']},console},{timeout:5000});
+  return {html:app.innerHTML,audit:audit.innerHTML};
+ }
+ const camera=preview('camera');
+ assert.doesNotMatch(camera.audit,/slide.kind.*outside|structure says slide|also carrying bg/);
+ assert.match(preview('unknown').audit,/slide.kind.*outside/);
+ assert.match(preview('diagram').audit,/also carrying bg/);
+});
 test('text-led plans have an explicit route, a source and an episode limit',()=>{
  const s=quote();assert.deepEqual(checkScene(s),[]);
  delete s.shot.render.evidence;assert.match(checkScene(s).join(),/exact evidence.quote/);
