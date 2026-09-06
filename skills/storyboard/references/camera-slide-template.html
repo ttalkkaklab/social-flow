@@ -9,7 +9,7 @@ const S=window.SCENES[SLIDE_SHOT-1],R=S.shot.render,C=R.camera;
 const canvas=document.getElementById('photo');
 const wide=window.FORMAT==='youtube-long-16x9',W=wide?1920:1080,H=wide?1080:1920;
 canvas.width=W;canvas.height=H;document.body.style.width=W+'px';document.body.style.height=H+'px';
-let engine,segments=(S.narration||[]).map(()=>S.duration*1000/Math.max(1,S.narration.length));
+let engine,segments=(S.narration?.length?S.narration:[null]).map(()=>S.duration*1000/Math.max(1,S.narration?.length||0));
 const spec={template:C.effect,duration:S.duration,focusFrom:C.focusFrom,focusTo:C.focusTo,layers:C.layers};
 async function renderCamera(){engine=await STILL_CAMERA.mount(canvas,spec,'../'+S.visual.bg,(C.layers||[]).map(l=>'../'+l.image))}
 window.__ready=()=>window._ready||(window._ready=(async()=>{await document.fonts.ready;await renderCamera();await window.__seek(0,1)})());
