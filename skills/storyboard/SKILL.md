@@ -451,7 +451,7 @@ Core rules:
   Apply [render-routing.md](references/render-routing.md) and [visual-direction.md](references/visual-direction.md).
   Write `shot.render` before assets. A short has at most two text-led quote/verdict cuts;
   repeated render reasons and unplanned `PRELUDE` clips block the draft.
-  Data comparisons use [chart-design.md](references/chart-design.md) and its shared SVG renderer.
+  Data comparisons, donut/pie compositions and geographic maps use [chart-design.md](references/chart-design.md) and its shared SVG renderer.
   Distinguish character HTML, object HTML and data graphs even though all use HTML renderers.
   Choose the purpose before the assets: people/mood cuts use a still with a camera move.
   Explanations use recognizable 3D objects in a relevant environment, not labelled primitives
