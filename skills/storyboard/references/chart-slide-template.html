@@ -27,7 +27,7 @@ document.body.style.width=W+'px';document.body.style.height=H+'px';document.body
 const plot=document.getElementById('plot'),insight=document.getElementById('insight');
 document.getElementById('title').textContent=(D.title||S.title||'').replace(/\*\*/g,'');
 document.getElementById('eyebrow').textContent=D.unit;
-document.getElementById('source').textContent=D.source;
+document.getElementById('source').textContent=D.source+(D.chart==='map'?' · '+D.map.source:'');
 let segments=(S.narration||[]).map(()=>S.duration*1000/Math.max(1,S.narration.length));
 function renderSlide(ms,group){
   const motion={primitive:'chart-reveal'};plot.dataset.primitive=motion.primitive;plot.dataset.rg=group;
