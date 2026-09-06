@@ -18,6 +18,9 @@ against each other — a vector "3D" illustration (no material), a generated ima
 with lit slabs and type (right, but with nothing standing in the space). The rendered object is
 the fourth: the studio plate kept, plus an object that is a render.
 
+For new physical subjects use [mesh-objects.md](mesh-objects.md): real meshes and GLB animation
+are rendered at every output frame. This document describes the legacy CPU sheet lane.
+
 ## Contents
 
 - [1. When a scene gets a rendered object](#1-when-a-scene-gets-a-rendered-object)
@@ -115,10 +118,10 @@ lower rim shows its thickness, the tell that this is a thing and not a picture o
 **Frames.** Boundary frames are shared: with `1:11 2:27` group 1 plays frames 0–11 and group 2
 plays 11–38, so the cut between clips lands on the same picture (the state rule). Frame counts
 set the step rate: the runtime spreads a group's range over its segment, so 27 frames under a
-5-second sentence is 5.4 steps a second at 0.3° a step — turning reads as continuous, and a
-stamp landing is a step by nature. Fewer than about 10 frames under a long sentence reads as
-a slideshow; more than 40 in a group buys nothing you can see and costs bake time and sheet
-size.
+5-second sentence is only 5.4 updates a second. Do not use that rate for continuous object motion;
+use the mesh lane at the final capture frame rate. A stamp landing can be discrete. Fewer than about 10 frames under a long sentence reads as
+a slideshow. Sheet size grows with frame count; use mesh when the sheet budget cannot
+support the output frame rate.
 
 **The ink box.** The sidecar's `ink` is the bounding box, over every frame, of pixels with any
 alpha — the disc *and* its wall shadow, which reaches 226 px past the rim while the disc is
@@ -173,7 +176,7 @@ Composition notes, all measured on the fixture:
   it overflowed the zone by 58 px.
 - The aside card is a `.plate`; in studio mode every plate carries the slab material, so a
   value card overlapping the object's rim reads as a thing in front of a thing.
-- Marks over a studio slide use `pen:true` — a tapering fill stroke with an open chevron head,
+- The default studio arrow is `h.mark.arrow`; `pen:true` is an optional hand-drawn treatment,
   drawn on through a mask, with a cast shadow from the head CSS (`html.studio .marks .mk`).
   Coordinates are canvas pixels; the marks layer sits above the stage in studio mode.
 - The object's colour is a third colour beside ink, paper and the accent. It is the material

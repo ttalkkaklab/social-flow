@@ -205,22 +205,22 @@
      check-slide.js 는 저작 영역의 box-shadow·text-shadow·drop-shadow 를 막고 이 머리 규칙만 허용한다 —
      재질은 여기 클래스로만 온다. 판 재질은 부품 셀렉터 위에 걸리므로 h.tag·h.band·h.plate 는 그대로다. */
   html.studio{--lit:rgba(255,244,228,.15); --dip:rgba(4,9,17,.50); --edge:color-mix(in srgb,var(--ink) 62%,#000);
-              --tx:9px; --ty:12px; --sh:4,9,17}
-  html.wide.studio{--tx:7px; --ty:9px}
+              --tx:3px; --ty:4px; --sh:4,9,17}
+  html.wide.studio{--tx:2px; --ty:3px}
   html.studio .kicker:not(.plain), html.studio .band, html.studio .plate{
     box-shadow:inset 2px 2px 0 0 var(--lit), inset -1px -2px 0 0 var(--dip),
       var(--tx) var(--ty) 0 0 var(--edge),
-      calc(var(--tx) * 1.5) calc(var(--ty) * 1.6) 15px -4px rgba(var(--sh),.66),
-      calc(var(--tx) * 3.2) calc(var(--ty) * 3.4) 44px -14px rgba(var(--sh),.80)}
+      calc(var(--tx) * 1.5) calc(var(--ty) * 1.6) 12px -4px rgba(var(--sh),.24),
+      calc(var(--tx) * 3.2) calc(var(--ty) * 3.4) 32px -12px rgba(var(--sh),.28)}
   html.studio .kicker:not(.plain), html.studio .band.accent, html.studio .plate.accent{
     --lit:rgba(255,255,255,.32); --dip:color-mix(in srgb,color-mix(in srgb,var(--accent) 40%,#000) 40%,transparent);
     --edge:color-mix(in srgb,var(--accent) 55%,#000)}
   html.studio .band.paper, html.studio .plate.paper{
     --lit:rgba(255,255,255,.5); --dip:rgba(60,55,45,.35); --edge:color-mix(in srgb,var(--paper) 58%,#000)}
-  html.studio .stage{text-shadow:0 5px 10px rgba(var(--sh),.58), 0 18px 34px rgba(var(--sh),.62)}
+  html.studio .stage{text-shadow:0 2px 8px rgba(var(--sh),.22)}
   html.studio .foot, html.studio .hero-sub, html.studio .bar .lbl, html.studio .shape-cap, html.studio .fig-lab,
   html.studio .step .d, html.studio .date .what, html.studio .mark-label, html.studio .kicker.plain{text-shadow:none}
-  html.studio .marks .mk{filter:drop-shadow(0 5px 9px rgba(4,9,17,.72)) drop-shadow(0 1px 1px rgba(4,9,17,.6))}
+  html.studio .marks .mk{filter:drop-shadow(0 2px 4px rgba(4,9,17,.24))}
 
   .stage{
     position:absolute; left:var(--zone-x); right:var(--zone-x);
@@ -427,6 +427,9 @@
   .objwrap{position:absolute; pointer-events:none}
   .objwrap > .rv, .objwrap .rv > .rv, .obj{position:absolute; inset:0}
   .obj{background-repeat:no-repeat}
+  .mesh-viewport{position:relative;width:100%;flex-shrink:0;overflow:hidden}
+  .mesh-viewport canvas{display:block;width:100%;height:100%}
+  .mesh-viewport > span{position:absolute;inset:0;pointer-events:none}
   .rv.fx-objin{animation-name:objin; animation-duration:720ms; animation-timing-function:var(--ease)}
   .rv.fx-objout{animation-name:objout; animation-duration:var(--seg-d,var(--count)); animation-timing-function:var(--ease-cam)}
   @keyframes objin{0%{opacity:0;transform:translateY(42px) scale(.945)} 30%{opacity:1} 100%{opacity:1;transform:none}}
@@ -460,6 +463,7 @@
   .marks .draw{stroke-dasharray:1 1.2; stroke-dashoffset:1.1;
     animation:mark-draw var(--mark-draw) var(--ease-mask) both paused;
     animation-delay:calc(var(--k,0) * var(--mark-lead) + var(--lead-in,0ms))}
+  .marks .refined-arrow path{stroke-linecap:round;stroke-linejoin:round;fill:none}
   .marks mask .draw{stroke:#fff; stroke-width:calc(var(--mark-w) * 2); opacity:1}
   .marks .dash{stroke-dasharray:26 20}
   .marks.hatch .draw{animation-delay:calc(var(--k,0) * var(--mark-stagger) + var(--lead-in,0ms))}
@@ -804,9 +808,23 @@ const SLIDE_SHOT = 0;
     return penStroke(rg, "M" + pt([tip.x + b1[0] * A, tip.y + b1[1] * A]) + " L" + pt([tip.x, tip.y]) + " L" + pt([tip.x + b2[0] * A, tip.y + b2[1] * A]),
       { k: o.k || 0, w: (o.w || markW()) + .4, prof: "barb", lead: o.lead, delay: "var(--mark-draw) - 40ms" });
   };
+  const arrowPainters = [];
   const mark = {
+    // A continuous curve and a tangent-following head share one clock.
+    arrow(rg, pts, o = {}) {
+      if (pts.length < 2) throw new Error("arrow needs at least two points");
+      const d = o.curve === false ? polyPath(pts) : smoothPath(pts);
+      const id = "arrow-" + (++maskSeq), width = o.w || 6, head = o.head || 22;
+      const duration = o.duration || 950, delay = o.delayMs ?? ((o.lead || 0) * 170 + 120);
+      arrowPainters.push({ id, rg, duration, delay, arrow: o.arrow !== false });
+      return svgWrap(rg, '<g id="' + id + '" class="refined-arrow"><path class="arrow-trail" d="' + d +
+        '" pathLength="1" style="stroke-width:' + width + 'px;stroke-dasharray:1;stroke-dashoffset:1"/>' +
+        (o.arrow === false ? '' : '<path class="arrow-tip" d="M' + (-head*.82) + ' ' + (-head*.48) + ' L0 0 L' + (-head*.82) + ' ' + (head*.48) +
+        '" style="stroke-width:' + width + 'px;opacity:0"/>') + '</g>', o);
+    },
     /* 경로 — 이동·행군·항로. pts=[[x,y],…]. arrow(기본 true)·dash(점선)·curve(기본 true)·w·k·lead */
     route(rg, pts, o = {}) {
+      if (!o.pen && !o.dash) return mark.arrow(rg, pts, o);
       const d = o.curve === false ? polyPath(pts) : smoothPath(pts);
       if (o.pen) return mark.pen(rg, d, Object.assign({ arrow: o.arrow !== false, prof: o.arrow !== false ? "ramp" : "ink" }, o));
       let inner;
@@ -891,6 +909,12 @@ const SLIDE_SHOT = 0;
      그 판의 인라인 스타일("top:200px;width:224px")이다. */
   const objects = window.SLIDE_OBJECTS || {};
   const object = (rg, id, o = {}) => {
+    const spec = S.visual && S.visual.slide && S.visual.slide.object;
+    if (spec && spec.renderer === "mesh") {
+      const file = String(spec.file).replace(/^slides\//, "");
+      const markers = (S.narration || []).map((_, i) => '<span data-rg="' + (i + 1) + '" data-primitive="object-move"></span>').join("");
+      return '<div class="mesh-viewport" data-rg="0" data-mesh="' + esc(file) + '" style="height:' + (o.slot || 620) + 'px">' + markers + '</div>';
+    }
     const ob = objects[id];
     if (!ob) return "";
     const cw = ob.cell[0], ch = ob.cell[1], rows = Math.ceil(ob.n / ob.cols);
@@ -914,12 +938,14 @@ const SLIDE_SHOT = 0;
      글자 소스는 S(title·bullets)와 h.labels 만 쓴다. */
   function renderSlide(S, h) {
     let out = (h.labels.length ? h.tag(1, h.L(0)) : "") + h.title(1, S.title || "", { lead: 1 });
-    if (S.shot && S.shot.infoType === "principle") {
+    if (S.visual && S.visual.slide && S.visual.slide.object && S.visual.slide.object.renderer === "mesh") {
+      out += h.object(1, S.visual.slide.object.file.split("/").pop().replace(/\.json$/, ""), { slot: 620 });
+    } else if (S.shot && S.shot.infoType === "principle") {
       const n = h.arts.length;
       const cols = Math.max(1, Math.min(n || (S.bullets || []).length || 1, 3));
       out += '<div class="cast" style="--cols:' + cols + '">';
       if (n) out += h.arts.map((_, i) => h.fig(i + 1, i, { label: h.L(i + 1), lead: i === 0 ? 2 : 0 })).join("");
-      else out += (S.bullets || []).map((b, i) => h.disk(i + 1, { label: b.t || "" })).join("");
+      else throw new Error("Author the principle scene with a mesh object or planned 3D illustration assets; disks are not substitute actors");
       out += "</div>";
     } else {
       const items = S.bullets || [];
@@ -1049,7 +1075,11 @@ const SLIDE_SHOT = 0;
      --seg-d 에 들어가 CSS 의 animation-duration:var(--seg-d,…) 가 읽고, .sv 안의 카운트업은
      dur 자체가 늘어난다(시차만큼 뺀다). 값이 (g, t) 밖에서 오지만 렌더 시작 때 한 번 정해지는
      상수라 같은 (g, t) 는 여전히 같은 그림이다. */
+  const meshes = [];
+  let meshSegs = {};
   window.__setSegs = function (map) {
+    meshSegs = map;
+    for (const m of meshes) m.setSegs(map);
     for (const el of document.querySelectorAll("[data-rg]")) {
       const ms = map[+el.dataset.rg];
       if (ms > 0) el.style.setProperty("--seg-d", Math.round(ms) + "ms");
@@ -1123,6 +1153,17 @@ const SLIDE_SHOT = 0;
      같은 (g, t) 가 같은 픽셀이다. 이미지는 로드만으로는 부족하고 decode() 까지 끝나야 한다.
      못 읽는 소재는 여기서 기다리지 않고 통과시킨다 — 오타 난 src 하나가 렌더러를 30초 매달아
      놓는 대신, __meta().broken 이 그 파일을 이름과 함께 렌더러에 넘겨 exit 1 로 세운다. */
+  let meshLoading;
+  const readyMeshes = () => meshLoading || (meshLoading = Promise.all(
+    [...document.querySelectorAll("[data-mesh]")].map(async el => {
+      try {
+        if (!window.SLIDE_MESH) throw new Error("copy and include assets/mesh-runtime.js");
+        const link = document.createElement("a"); link.href = el.dataset.mesh;
+        const m = await window.SLIDE_MESH.mount(el, link.href);
+        m.setSegs(meshSegs); meshes.push(m); groundSynced = false;
+      } catch (e) { bgBroken.push(el.dataset.mesh + ": " + e.message); }
+    })
+  ));
   window.__ready = function () {
     const imgs = [...document.images].map(i => (i.decode ? i.decode().catch(() => {}) : Promise.resolve()));
     const vids = videos().map(v => {
@@ -1140,7 +1181,7 @@ const SLIDE_SHOT = 0;
       im.src = u;
       (im.decode ? im.decode() : Promise.resolve()).then(() => res(), () => { bgBroken.push(u); res(); });
     }));
-    return Promise.all([document.fonts.ready, ...imgs, ...vids, ...bgs]).then(() => true);
+    return Promise.all([document.fonts.ready, readyMeshes(), ...imgs, ...vids, ...bgs]).then(() => true);
   };
 
   window.__seek = function (tMs, g) {
@@ -1149,6 +1190,7 @@ const SLIDE_SHOT = 0;
        미뤄야 그것까지 pause 된다. 순서를 되돌리면 짧은 애니메이션에서 재렌더가 갈라진다
        (실측: 90ms 슬라이드인에서 81프레임 중 13프레임이 두 렌더 사이에 달랐다). */
     if (!groundSynced) syncGround();
+    for (const m of meshes) m.draw(g, tMs);
     for (const c of counters) {
       const p = c.rg < g ? 1 : c.rg === g ? easeCount(clamp01((tMs - c.lead) / c.dur)) : 0;
       c.el.innerHTML = cells(fmt(c.from + (c.to - c.from) * p, c.dec), c.tpl);
@@ -1188,6 +1230,7 @@ const SLIDE_SHOT = 0;
     for (const a of document.getAnimations()) { const o = owner(a); if (!o || o.dataset.ground !== undefined) continue;
       const r = +o.dataset.rg; dur[r] = Math.max(dur[r] || 0, endOf(a)); }
     for (const c of counters) dur[c.rg] = Math.max(dur[c.rg] || 0, c.dur + c.lead);
+    for (const m of meshes) for (const k in m.durations) dur[k] = Math.max(dur[k] || 0, m.durations[k]);
     for (const p of painters) dur[p.rg] = Math.max(dur[p.rg] || 0, p.dur);
     for (const s of sprites) for (const k in s.dur) dur[k] = Math.max(dur[k] || 0, s.dur[k]);
     for (const v of videos()) { if (v.dataset.rg === undefined) continue;
@@ -1226,7 +1269,7 @@ const SLIDE_SHOT = 0;
       .map(v => v.getAttribute("src") || "(video[data-rg] with no src)")
       .concat([...document.images].filter(i => !i.naturalWidth).map(i => i.getAttribute("src") || "(no src)"))
       .concat(bgBroken);
-    return { hold: HOLD, broken: broken,
+    return { hold: HOLD, broken: broken, meshes: meshes.map(m => m.diagnostics()),
              stray: all.filter(a => !owner(a)).length + strayVideo + strayHits,
              infinite: all.filter(a => owner(a) && !isFinite(endOf(a))).length
                      + painters.filter(p => !isFinite(p.dur)).length };
@@ -1246,6 +1289,22 @@ const SLIDE_SHOT = 0;
   };
   window.__boot();
   /* SEEK-RUNTIME-END */
+  for (const spec of arrowPainters) {
+    const group = document.getElementById(spec.id), trail = group.querySelector(".arrow-trail"), tip = group.querySelector(".arrow-tip");
+    const length = trail.getTotalLength();
+    window.__paint(spec.rg, spec.delay + spec.duration, t => {
+      const x = Math.max(0, Math.min(1, (t - spec.delay) / spec.duration));
+      const u = x*x*x*(x*(x*6-15)+10), distance = u*length;
+      trail.style.strokeDashoffset = String(1-u);
+      group.style.opacity = String(Math.min(1, x*12));
+      if (tip) {
+        const p = trail.getPointAtLength(distance), a = trail.getPointAtLength(Math.max(0,distance-.5)), b = trail.getPointAtLength(Math.min(length,distance+.5));
+        tip.setAttribute("transform", "translate("+p.x+" "+p.y+") rotate("+(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI)+")");
+        tip.style.opacity = String(Math.min(1,x*12));
+      }
+    });
+  }
+  window.__boot();
 })();
 </script>
 </body>

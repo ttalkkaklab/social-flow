@@ -821,8 +821,8 @@ the reviewer still checks whether the declared type tells the truth.
     (owner directive 2026-09-03 — "the viewer has to feel a video: image changes, animation,
     camera moves"). A motion slide with a movement per group runs its clock per group.
     `check-scenes.js` blocks the estimate; here read the plan and say which sentences share
-    one picture. On a short, a still cover or a second generated cut with no `visual.why`
-    is the same defect (the hook is video, one more cut at most)
+    one picture. A generated cut with no `visual.why`, or one whose reason does not say why a
+    still or an HTML action is insufficient, is the same defect
 15. **Hook dumps the answer on a short** — the cover's title, hero stat, or spoken text
     contains `COMPREHENSION.answer`, or the cover uses `hookType:"spoiler"` / `hookForm:"payoff"`.
     The last drip is the first place the answer is complete

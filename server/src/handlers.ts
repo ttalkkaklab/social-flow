@@ -13,6 +13,7 @@ import * as supertonic from './supertonic-client.js';
 import * as zimage from './zimage-client.js';
 import * as mlx from './mlx-serve-client.js';
 import * as tts from './tts-client.js';
+import * as omni from './omni-client.js';
 import * as video from './video-client.js';
 import { contentFeedback } from './content-feedback.js';
 import { youtubeTopicScout } from './youtube-topic-scout.js';
@@ -788,7 +789,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     return text(
       `Mesh generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
         `Generation time: ${result.elapsedSeconds}s\n\n` +
-        `GLB. This pipeline has no mesh consumer — produce/storyboard/autoproduce never read this file.`,
+        `GLB. Inspect the mesh and materials, then use it in an HTML mesh slide (mesh-objects.md); embed textures and buffers.`,
     );
   },
 
@@ -822,6 +823,41 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const refImagesInfo = result.referenceImages?.join('\n  - ') || '';
     return text(
       `Video generated with reference images successfully!\n\nOutput: ${result.videoPath}\nReference Images (${result.referenceImages?.length || 0}):\n  - ${refImagesInfo}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}`,
+    );
+  },
+
+  // ── video generation (Gemini Omni 1.1 Flash) — same save-and-return-path shape as Veo,
+  //    plus the interaction id, which is the handle omni_extend / omni_edit continue from ──
+  omni_text2video: async (args) => {
+    const result = await omni.generateFromText(parseArgs(omni.omniText2VideoSchema, args));
+    if (!result.success) return text(`Omni video generation failed: ${result.error}`, true);
+    return text(
+      `Video generated with Gemini Omni.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}\n\nPass the interaction id as previousInteractionId to omni_extend or omni_edit to keep working on this clip.`,
+    );
+  },
+  omni_img2video: async (args) => {
+    const result = await omni.generateFromImage(parseArgs(omni.omniImg2VideoSchema, args));
+    if (!result.success) return text(`Omni video generation from image failed: ${result.error}`, true);
+    const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
+    const modeInfo = result.lastImage ? ' (frame interpolation)' : '';
+    return text(
+      `Video generated from image with Gemini Omni${modeInfo}.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}\nFirst Frame Image: ${result.sourceImage}${lastImageInfo}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}`,
+    );
+  },
+  omni_extend: async (args) => {
+    const result = await omni.extendVideo(parseArgs(omni.omniExtendSchema, args));
+    if (!result.success) return text(`Omni video extension failed: ${result.error}`, true);
+    const source = result.sourceVideo ? `\nSource Video: ${result.sourceVideo}` : '';
+    return text(
+      `Video extended with Gemini Omni.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}${source}\nModel: ${result.model}\nResolution: ${result.resolution}\nAdded: +${result.duration} seconds\nPrompt: ${result.prompt}\n\nThe saved file is the whole cut (source + the added seconds), not just the new tail.`,
+    );
+  },
+  omni_edit: async (args) => {
+    const result = await omni.editVideo(parseArgs(omni.omniEditSchema, args));
+    if (!result.success) return text(`Omni video edit failed: ${result.error}`, true);
+    const source = result.sourceVideo ? `\nSource Video: ${result.sourceVideo}` : '';
+    return text(
+      `Video edited with Gemini Omni.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}${source}\nModel: ${result.model}\nResolution: ${result.resolution}\nInstruction: ${result.prompt}\n\nLength is unchanged from the input.`,
     );
   },
 

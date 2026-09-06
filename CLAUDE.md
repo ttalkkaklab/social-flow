@@ -62,25 +62,59 @@ This outranks every other rule in the plugin, the skills and the reference docs.
   cyclorama, a baked object whose movement is the sentence, one accent, values that count
   while the sentence runs. Those slides sit outside `html_plate_max`, and the static-ground
   clock runs per reveal group on them.
-- Video stays the ground for mood, place, people and action — with nothing drawn on it.
+- Video carries essential continuous action with no drawn explanation marks. Mood, place and
+  people use still-camera motion when that conveys the cut.
 
-## A short is cost-shaped — the hook is video, one more cut at most (user directive, 2026-09-05)
+## Physical subjects use 3D objects (user directive, 2026-09-06)
 
-Every short-form episode this plugin makes has the same body, and the checkers hold it
-(`check-scenes.js`, the storyboard.html strip; profile key `hook_video`, default on):
+- Choose the shot's purpose first. People, mood and place use a high-quality still with a
+  deliberate camera move. A person or physical noun alone does not require a 3D explanation.
+  Match camera direction to the actual cut: introduce a face with focus-in, inspect an object
+  then a face with rack focus, approach a detail, or pull back to reveal context. Foreground
+  reveals and parallax require prepared layers and a clean background. Do not cycle effects
+  by shot number. Record the subject, focus regions and reason in the shot plan.
+- Principles, quantities, mechanisms and explanatory situations use HTML motion scenes.
+  Depict physical things as recognizable, articulated 3D objects: a cart has wheels, an axle,
+  a bed and a load. Labelled boxes are not substitutes. Abstract quantities may use bars.
+- Give explanatory scenes a relevant environment, such as a workshop, office or supply depot.
+  Plan foreground, floor and background together; black or a solid colour is not the default.
+- When a narrated person helps explain the action, include a cute, authored 3D doll character
+  in the same material, lighting and perspective as the objects and environment. Animate its
+  relevant gesture and contact with objects. Characters are optional when objects explain it.
+  A realistic character painting with separately overlaid 3D props is not this treatment.
+  Prefer an acted task with anticipation, contact and release: move a piece, stamp a document,
+  or pull a cart. Head bobbing and waving alone do not explain object manipulation.
+- Use real mesh objects with 3D illustration or photoreal materials for new physical subjects.
+  Follow `skills/storyboard/references/mesh-objects.md`; the offline runtime consumes GLB and
+  articulated mesh assemblies. Flat disks, labelled boxes and moving cutouts cannot substitute
+  for a physical mechanism. Abstract quantities can still use bars, type and relationship lines.
+- Keep explanatory marks sparse. Character action scenes default to no drawn marks. Preserve
+  useful part labels on mechanism scenes, one at a time with a short timed appearance, a small
+  anchor and a legible line. A mark needs a reason beyond decoration; remove duplicate labels.
+- Use `h.mark.arrow` for smooth curves with a small head following the path. Pen strokes are
+  an explicit stylistic choice. Keep the object, arrow and type readable together.
+- Render subject motion at the final capture frame rate. Inspect full playback and random
+  seeks, including group boundaries. A schema pass alone does not establish visual quality.
 
-- **The hook is video.** The cover carries a motion background under its code-rendered title
-  (`visual.video`, the cover still as the engine's source — silent Seedance by default) or a
-  clip the user already has (`visual.source`, the filmed lane). A still cover is a defect on a short.
-- **At most one more cut is generated video**, and only when the movement itself is the
-  sentence — the shot writes `visual.why`. The format cap of 2 holds the count.
-- **Every other cut is a still under its camera move or an HTML motion slide.** The still
-  lane is local and $0 — one still per cut (`max_static_ground_seconds`, default 8 s), the
-  move chosen from the feel, `narration[].img` when a cut runs longer. An HTML motion slide
-  with a movement per narration group is a body of its own on any beat and sits outside
-  `html_plate_max`; explanation beats are HTML slides by the directive above.
-- autoproduce's economy baseline pays for the hook only (about $0.61 an episode); the one
-  cut after it is the escalation slot.
+## Choose each cut by purpose (user directive, 2026-09-06)
+
+This replaces the older mandatory-video hook and fixed editorial-cut quotas.
+Use `skills/storyboard/references/render-routing.md` before choosing any assets.
+Every generated cut declares `shot.render.mode`, `purpose` and `reason`:
+`still_camera`, `character_html`, `object_html`, `data_graph`, or `generated_video`.
+People mentioned in narration do not automatically need 3D characters; incidental numbers
+in a mechanism do not automatically need a graph. Choose the information the viewer needs.
+
+The hook follows the same process. `hook_video` defaults off; an explicitly enabled channel
+policy remains a constraint. Generated-video caps and budgets are ceilings, not quotas.
+No cut is paid video merely because it opens the episode. Every generated-video choice needs
+essential continuous motion and an explanation of why a still or controlled HTML action is
+insufficient. Existing recordings and the shared outro retain their source.
+
+`check-scenes.js --draft` blocks missing or contradictory choices before assets; full checks
+also match the choice to the production handoff. The approval page displays the mode and reason.
+Camera HTML is still-camera motion and never counts as true subject motion. Keep the existing
+static-ground limit, episode budget, generation cap and no-marks-over-video rule.
 
 ## Branch strategy
 

@@ -14,13 +14,9 @@ description: >
 argument-hint: "<channel> <topic> [platformCSV|auto]"
 allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
-
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
-
-Turn the approved storyboard (`storyboard/scenes.js`) into a 9:16 narrated video and
-per-platform text. **scenes.js is the only data source** — the video screens, the
-narration, the subtitles, and the captions all come from it.
-
+Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text.
+**scenes.js is the only data source** for screens, narration, subtitles and captions.
 ```
 data/<channel>/episodes/<topic>/
 ├── storyboard/          # input (has to be in the approved state)
@@ -32,8 +28,9 @@ data/<channel>/episodes/<topic>/
     ├── facebook/post.md
     └── youtube/meta.md  # title · description · tags · thumbnail
 ```
-
+For independent visual samples, use the installed planner and builder in [animation-review.md](references/animation-review.md). Fix plugin sources and rebuild; never substitute episode-specific scripts. This review mode has its own input contract and does not mark an episode publishable.
 ## Absolute rules
+Before assets, apply [render-routing.md](../storyboard/references/render-routing.md). `shot.render` selects one of five modes; run `check-scenes.js` to verify the handoff. Do not collapse still-camera, character, object and data-graph cuts into one HTML choice. Camera HTML uses `kind:"camera"` and the shared camera template; it is not true subject motion.
 
 Read [story-quality.md](../storyboard/references/story-quality.md) and run `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js storyboard/` before any generation or capture. Missing or stale reviews block production, including old boards; never rewrite approved narration silently. Then read [retention-direction.md](../storyboard/references/retention-direction.md) §2–§5 with the handoff. Resolve visible changes and sound events to scenes.js and supported controls. Preserve payoff, cost cap and voice; derive a missing handoff table without changing the narration. `beat:"cta"` permits a close with no ask.
 
@@ -73,8 +70,8 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
 10. **The cover's (first screen's) text is code-rendered only** — the engine never draws
    the title. **Veo can't write Hangul** (user confirmed 2026-08-11), and the cover is a
    screen of nothing but the hook title and the hero number, so broken glyphs write off the
-   whole episode. **On a short the picture under that text is video** (user directive
-   2026-09-05, `hook_video`): a motion background made from the cover still (§3, silent
+   whole episode. **The opening treatment follows `shot.render`**; video is optional unless the channel explicitly
+   enables `hook_video`. A selected motion background is made from the cover still (§3, silent
    seedance by default, the builder keeps only the video track so narration and the
    code-rendered title stay), or **a real recorded clip** (2026-08-15 — scrolling the
    finished site, running the tool, as the cover **background**; the movement in the first
@@ -120,8 +117,8 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    (rule 11).
    **Generated-video slots follow the approved channel motion policy.** Count b-roll and
    motion-background scenes (`visual.video`) together. The format default is 2, and **on a
-   short the first is the hook** (rule 10, `hook_video`) and the second is the one cut whose
-   `visual.why` says the movement is the content; a profile may override the cap with
+   short both are optional**. Each selected cut writes `visual.why` because continuous motion
+   carries its content; a profile may override the cap with
    `generated_video_max`. Every other cut is a still under its camera move — every still
    card carries a Ken Burns move (§6), the build refuses a frozen one, and one still holds
    one cut at most (`max_static_ground_seconds`, default 8 s; a longer cut swaps the still per
@@ -416,8 +413,9 @@ route between `veo_*` and `seedance_*`, each engine's prompt shape, and the per-
 for b-roll, motion backgrounds and quote speaking clips. **Read it before the first
 generated-video call**; an episode of still backgrounds skips it whole.
 `mlx_video_generate` is a separate local clip (24 fps, RAM-capped, ffmpeg mux) — it is
-not on that face-policy table and is not the default. `mlx_3d_generate` writes a GLB
-the builder never reads.
+not on that face-policy table and is not the default. `mlx_3d_generate` writes a GLB consumed by the HTML mesh lane
+([mesh-objects.md](../storyboard/references/mesh-objects.md)); inspect the model and its materials before use.
+Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): people/mood cuts use still-camera motion; explanations use recognizable 3D objects in contextual settings, with matching cute 3D characters performing the task when needed. Match still-camera direction to the cut’s purpose; character scenes default to no marks, mechanism scenes use brief, legible part callouts.
 
 - **Cover background = b-roll source (one image, `storyboard/images/scene-1.png`)**:
   `gpt_image_text2img`, `size: "1088x1920"`, **`quality: "high"`**. **Photoreal style with a
@@ -540,15 +538,17 @@ storyboard is the plan in `visual.slide`: the kind, the `labels`, the `motionBea
 order.
 
 1. **Generate `slide.arts` first** when the array is set — `slides/assets/s<shot>-<slug>.png`,
-   flat ink actor illustration, paper fill on ink, no background, no readable text, no
-   photorealism (`image_local_generate`; gpt or mlx where the plan says so). Log each call in
+   tactile 3D illustration or photoreal 3D object, soft studio light, consistent material
+   and camera, transparent background, no readable text (`image_local_generate`; gpt or mlx where the plan says so). Log each call in
    `.work/cost-tally.tsv`. Sit a principle actor with `h.fig`.
 2. **Author the HTML** from the matching template. A principle frame is a `.cast` of actors
-   plus rules (`h.stem` · `h.bus` · `h.chamber`); kinetic `renderKinetic` puts the first art on
+   or actual mesh parts plus restrained arrows; kinetic `renderKinetic` puts the first art on
    group 1 then the title with `in`; type-only skips arts. An explanation slide is built on
    the studio stage to the bar of
    `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`; a `slide.object` is
-   baked first (rendered-object.md §3). Nothing is laid over a clip (absolute rule 16).
+   rendered with the mesh lane by default ([mesh-objects.md](../storyboard/references/mesh-objects.md));
+   existing sheet objects are baked first. Use `h.mark.arrow` for refined curved arrows.
+   A flat image cannot substitute for an articulated object. Nothing is laid over a clip.
 3. **Run the contract, then render the sheet.**
 
    ```bash

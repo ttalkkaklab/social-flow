@@ -29,7 +29,7 @@ actor that changes. A camera push, glow, label reveal or `sv:"settle"` is not a 
 The states and any numbers must agree with the research and narration.
 
 - `object`: a physical thing is the explanation. Drivers are `geometry`, `surface`,
-  `articulation`, or `spatial`. Use `slide.object` and a baked render. Surface detail, moving
+  `articulation`, or `spatial`. Use `slide.object` and the mesh renderer or a baked render. Surface detail, moving
   parts, occlusion and lighting must respond to the object's change. Moving a flat cutout
   or zooming the same image does not qualify. A spatial change shows the actual relationship
   between rendered actors, not a turntable for decoration.
@@ -49,9 +49,10 @@ cyclorama, lit edges, slab thickness, contact and spread shadows. Type stays in 
 zone while the ground has restrained parallax. Keep one graphic accent, readable local
 type, mask-rise text and plate-first staging. Object material can have its own subdued colour.
 
-Read `rendered-object.md` for baking and placement. The bundled baker supports a disc;
-it does not render every subject. For another subject, implement and test a reproducible
-baker with the same PNG/sidecar contract before proceeding. Keep its recipe with the episode.
+Read [mesh-objects.md](mesh-objects.md) for new physical subjects: an offline GLB or assembled
+mesh is lit and posed at every output frame. Use `illustration3d` or `photoreal3d` deliberately.
+Read `rendered-object.md` for existing baked sheets; that CPU baker supports a disc only.
+Keep the model, materials and state recipe with the episode. Never use a flat disk as an actor.
 If no suitable renderer is available, report that limitation and stop; do not silently
 substitute a still, change the subject or make a paid API call.
 

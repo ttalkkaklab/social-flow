@@ -6917,12 +6917,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f3;
     };
-    function addFormats(ajv, list, fs7, exportName) {
+    function addFormats(ajv, list, fs8, exportName) {
       var _a4;
       var _b;
       (_a4 = (_b = ajv.opts.code).formats) !== null && _a4 !== void 0 ? _a4 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f3 of list)
-        ajv.addFormat(f3, fs7[f3]);
+        ajv.addFormat(f3, fs8[f3]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7173,7 +7173,7 @@ var require_p_retry = __commonJS({
       "Network request failed"
       // `cross-fetch`
     ];
-    var AbortError3 = class extends Error {
+    var AbortError2 = class extends Error {
       constructor(message) {
         super();
         if (message instanceof Error) {
@@ -7210,7 +7210,7 @@ var require_p_retry = __commonJS({
             reject(new TypeError(`Non-error was thrown: "${error2}". You should only throw errors.`));
             return;
           }
-          if (error2 instanceof AbortError3) {
+          if (error2 instanceof AbortError2) {
             operation.stop();
             reject(error2.originalError);
           } else if (error2 instanceof TypeError && !isNetworkError(error2.message)) {
@@ -7233,7 +7233,7 @@ var require_p_retry = __commonJS({
     });
     module.exports = pRetry2;
     module.exports.default = pRetry2;
-    module.exports.AbortError = AbortError3;
+    module.exports.AbortError = AbortError2;
   }
 });
 
@@ -15446,8 +15446,8 @@ var require_gaxios = __commonJS({
        * The Gaxios class is responsible for making HTTP requests.
        * @param defaults The default set of options to be used for this instance.
        */
-      constructor(defaults2) {
-        this.defaults = defaults2 || {};
+      constructor(defaults3) {
+        this.defaults = defaults3 || {};
         this.interceptors = {
           request: new interceptor_js_1.GaxiosInterceptorManager(),
           response: new interceptor_js_1.GaxiosInterceptorManager()
@@ -18925,7 +18925,7 @@ var require_util3 = __commonJS({
     exports.removeUndefinedValuesInObject = removeUndefinedValuesInObject;
     exports.isValidFile = isValidFile;
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
-    var fs7 = __require("fs");
+    var fs8 = __require("fs");
     var os = __require("os");
     var path9 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
@@ -19013,7 +19013,7 @@ var require_util3 = __commonJS({
     }
     async function isValidFile(filePath) {
       try {
-        const stats = await fs7.promises.lstat(filePath);
+        const stats = await fs8.promises.lstat(filePath);
         return stats.isFile();
       } catch (e2) {
         return false;
@@ -20968,10 +20968,10 @@ var require_getCredentials = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
     var path9 = __require("path");
-    var fs7 = __require("fs");
+    var fs8 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
-    var readFile2 = fs7.readFile ? (0, util_1.promisify)(fs7.readFile) : async () => {
+    var readFile2 = fs8.readFile ? (0, util_1.promisify)(fs8.readFile) : async () => {
       throw new errorWithCode_1.ErrorWithCode("use key rather than keyFile.", "MISSING_CREDENTIALS");
     };
     var ExtensionFiles;
@@ -22648,12 +22648,12 @@ var require_filesubjecttokensupplier = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FileSubjectTokenSupplier = void 0;
     var util_1 = __require("util");
-    var fs7 = __require("fs");
-    var readFile2 = (0, util_1.promisify)(fs7.readFile ?? (() => {
+    var fs8 = __require("fs");
+    var readFile2 = (0, util_1.promisify)(fs8.readFile ?? (() => {
     }));
-    var realpath = (0, util_1.promisify)(fs7.realpath ?? (() => {
+    var realpath = (0, util_1.promisify)(fs8.realpath ?? (() => {
     }));
-    var lstat = (0, util_1.promisify)(fs7.lstat ?? (() => {
+    var lstat = (0, util_1.promisify)(fs8.lstat ?? (() => {
     }));
     var FileSubjectTokenSupplier = class {
       filePath;
@@ -22771,7 +22771,7 @@ var require_certificatesubjecttokensupplier = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CertificateSubjectTokenSupplier = exports.InvalidConfigurationError = exports.CertificateSourceUnavailableError = exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = void 0;
     var util_1 = require_util3();
-    var fs7 = __require("fs");
+    var fs8 = __require("fs");
     var crypto_1 = __require("crypto");
     var https2 = __require("https");
     exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = "GOOGLE_API_CERTIFICATE_CONFIG";
@@ -22865,7 +22865,7 @@ var require_certificatesubjecttokensupplier = __commonJS({
         const configPath = this.certificateConfigPath;
         let fileContents;
         try {
-          fileContents = await fs7.promises.readFile(configPath, "utf8");
+          fileContents = await fs8.promises.readFile(configPath, "utf8");
         } catch (err4) {
           throw new CertificateSourceUnavailableError(`Failed to read certificate config file at: ${configPath}`);
         }
@@ -22890,14 +22890,14 @@ var require_certificatesubjecttokensupplier = __commonJS({
       async #getKeyAndCert(certPath, keyPath) {
         let cert, key;
         try {
-          cert = await fs7.promises.readFile(certPath);
+          cert = await fs8.promises.readFile(certPath);
           new crypto_1.X509Certificate(cert);
         } catch (err4) {
           const message = err4 instanceof Error ? err4.message : String(err4);
           throw new CertificateSourceUnavailableError(`Failed to read certificate file at ${certPath}: ${message}`);
         }
         try {
-          key = await fs7.promises.readFile(keyPath);
+          key = await fs8.promises.readFile(keyPath);
           (0, crypto_1.createPrivateKey)(key);
         } catch (err4) {
           const message = err4 instanceof Error ? err4.message : String(err4);
@@ -22916,7 +22916,7 @@ var require_certificatesubjecttokensupplier = __commonJS({
           return JSON.stringify([leafCert.raw.toString("base64")]);
         }
         try {
-          const chainPems = await fs7.promises.readFile(this.trustChainPath, "utf8");
+          const chainPems = await fs8.promises.readFile(this.trustChainPath, "utf8");
           const pemBlocks = chainPems.match(/-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----/g) ?? [];
           const chainCerts = pemBlocks.map((pem, index) => {
             try {
@@ -23618,7 +23618,7 @@ var require_pluggable_auth_handler = __commonJS({
     exports.PluggableAuthHandler = exports.ExecutableError = void 0;
     var executable_response_1 = require_executable_response();
     var childProcess = __require("child_process");
-    var fs7 = __require("fs");
+    var fs8 = __require("fs");
     var ExecutableError = class extends Error {
       /**
        * The exit code returned by the executable.
@@ -23703,14 +23703,14 @@ var require_pluggable_auth_handler = __commonJS({
         }
         let filePath;
         try {
-          filePath = await fs7.promises.realpath(this.outputFile);
+          filePath = await fs8.promises.realpath(this.outputFile);
         } catch {
           return void 0;
         }
-        if (!(await fs7.promises.lstat(filePath)).isFile()) {
+        if (!(await fs8.promises.lstat(filePath)).isFile()) {
           return void 0;
         }
-        const responseString = await fs7.promises.readFile(filePath, {
+        const responseString = await fs8.promises.readFile(filePath, {
           encoding: "utf8"
         });
         if (responseString === "") {
@@ -24121,7 +24121,7 @@ var require_gdchclient = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GdchClient = exports.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
     var crypto2 = __require("crypto");
-    var fs7 = __require("fs");
+    var fs8 = __require("fs");
     var https2 = __require("https");
     var oauth2client_1 = require_oauth2client();
     var DEFAULT_LIFETIME_IN_SECONDS = 3600;
@@ -24344,7 +24344,7 @@ var require_gdchclient = __commonJS({
         const currentPath = this.caCertPath;
         this.caAgentPromise = (async () => {
           try {
-            const ca = await fs7.promises.readFile(currentPath);
+            const ca = await fs8.promises.readFile(currentPath);
             return new https2.Agent({ ca });
           } catch (err4) {
             if (this.cachedCaCertPath === currentPath) {
@@ -24404,7 +24404,7 @@ var require_googleauth = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GoogleAuth = exports.GoogleAuthExceptionMessages = void 0;
     var child_process_1 = __require("child_process");
-    var fs7 = __require("fs");
+    var fs8 = __require("fs");
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os = __require("os");
@@ -24706,7 +24706,7 @@ var require_googleauth = __commonJS({
           return null;
         }
         const location = path9.join(configDir, "application_default_credentials.json");
-        if (!fs7.existsSync(location)) {
+        if (!fs8.existsSync(location)) {
           return null;
         }
         const client = await this._getApplicationCredentialsFromFilePath(location, options);
@@ -24723,8 +24723,8 @@ var require_googleauth = __commonJS({
           throw new Error("The file path is invalid.");
         }
         try {
-          filePath = fs7.realpathSync(filePath);
-          if (!fs7.lstatSync(filePath).isFile()) {
+          filePath = fs8.realpathSync(filePath);
+          if (!fs8.lstatSync(filePath).isFile()) {
             throw new Error();
           }
         } catch (err4) {
@@ -24733,7 +24733,7 @@ var require_googleauth = __commonJS({
           }
           throw err4;
         }
-        const readStream = fs7.createReadStream(filePath);
+        const readStream = fs8.createReadStream(filePath);
         return this.fromStream(readStream, options);
       }
       /**
@@ -25061,7 +25061,7 @@ var require_googleauth = __commonJS({
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
           const filePath = path9.resolve(this.keyFilename);
-          const stream = fs7.createReadStream(filePath);
+          const stream = fs8.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
           const client = await this.fromAPIKey(this.apiKey, this.clientOptions);
@@ -29302,6 +29302,7 @@ __export(node_exports, {
   ApiSpec: () => ApiSpec,
   AspectRatio: () => AspectRatio,
   AudioResponseFormat: () => AudioResponseFormat,
+  AudioTranscriptionConfigMode: () => AudioTranscriptionConfigMode,
   AuthType: () => AuthType,
   Batches: () => Batches,
   Behavior: () => Behavior,
@@ -29332,7 +29333,7 @@ __export(node_exports, {
   FeatureSelectionPreference: () => FeatureSelectionPreference,
   FileSource: () => FileSource,
   FileState: () => FileState,
-  Files: () => Files,
+  Files: () => Files$1,
   FinishReason: () => FinishReason,
   FunctionCallingConfigMode: () => FunctionCallingConfigMode,
   FunctionResponse: () => FunctionResponse,
@@ -29362,6 +29363,7 @@ __export(node_exports, {
   ImportFileResponse: () => ImportFileResponse,
   InlinedEmbedContentResponse: () => InlinedEmbedContentResponse,
   InlinedResponse: () => InlinedResponse,
+  InteractionStatus: () => InteractionStatus,
   JobState: () => JobState,
   Language: () => Language,
   ListBatchJobsResponse: () => ListBatchJobsResponse,
@@ -29381,6 +29383,7 @@ __export(node_exports, {
   MaskReferenceMode: () => MaskReferenceMode,
   MatchOperation: () => MatchOperation,
   MediaModality: () => MediaModality,
+  MediaProcessing: () => MediaProcessing,
   MediaResolution: () => MediaResolution,
   Modality: () => Modality,
   ModelStage: () => ModelStage,
@@ -30285,6 +30288,9 @@ function processJsonSchema(_jsonSchema) {
 function tSchema(schema) {
   return processJsonSchema(schema);
 }
+function tJsonSchema(schema) {
+  return schema;
+}
 function tSpeechConfig(speechConfig) {
   if (typeof speechConfig === "object") {
     return speechConfig;
@@ -30737,6 +30743,12 @@ function batchJobDestinationToVertex(fromObject) {
   if (fromBigqueryUri != null) {
     setValueByPath(toObject, ["bigqueryDestination", "outputUri"], fromBigqueryUri);
   }
+  const fromVertexDataset = getValueByPath(fromObject, [
+    "vertexDataset"
+  ]);
+  if (fromVertexDataset != null) {
+    setValueByPath(toObject, ["vertexMultimodalDatasetDestination"], vertexMultimodalDatasetDestinationToVertex(fromVertexDataset));
+  }
   if (getValueByPath(fromObject, ["fileName"]) !== void 0) {
     throw new Error("fileName parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
   }
@@ -30745,12 +30757,6 @@ function batchJobDestinationToVertex(fromObject) {
   }
   if (getValueByPath(fromObject, ["inlinedEmbedContentResponses"]) !== void 0) {
     throw new Error("inlinedEmbedContentResponses parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  const fromVertexDataset = getValueByPath(fromObject, [
-    "vertexDataset"
-  ]);
-  if (fromVertexDataset != null) {
-    setValueByPath(toObject, ["vertexMultimodalDatasetDestination"], vertexMultimodalDatasetDestinationToVertex(fromVertexDataset));
   }
   return toObject;
 }
@@ -30848,15 +30854,15 @@ function batchJobFromVertex(fromObject) {
   if (fromDest != null) {
     setValueByPath(toObject, ["dest"], batchJobDestinationFromVertex(tRecvBatchJobDestination(fromDest)));
   }
+  const fromOutputInfo = getValueByPath(fromObject, ["outputInfo"]);
+  if (fromOutputInfo != null) {
+    setValueByPath(toObject, ["outputInfo"], fromOutputInfo);
+  }
   const fromCompletionStats = getValueByPath(fromObject, [
     "completionStats"
   ]);
   if (fromCompletionStats != null) {
     setValueByPath(toObject, ["completionStats"], fromCompletionStats);
-  }
-  const fromOutputInfo = getValueByPath(fromObject, ["outputInfo"]);
-  if (fromOutputInfo != null) {
-    setValueByPath(toObject, ["outputInfo"], fromOutputInfo);
   }
   return toObject;
 }
@@ -30897,6 +30903,9 @@ function batchJobSourceToMldev(apiClient, fromObject) {
   if (getValueByPath(fromObject, ["bigqueryUri"]) !== void 0) {
     throw new Error("bigqueryUri parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
+  if (getValueByPath(fromObject, ["vertexDatasetName"]) !== void 0) {
+    throw new Error("vertexDatasetName parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
   const fromFileName = getValueByPath(fromObject, ["fileName"]);
   if (fromFileName != null) {
     setValueByPath(toObject, ["fileName"], fromFileName);
@@ -30912,9 +30921,6 @@ function batchJobSourceToMldev(apiClient, fromObject) {
       });
     }
     setValueByPath(toObject, ["requests", "requests"], transformedList);
-  }
-  if (getValueByPath(fromObject, ["vertexDatasetName"]) !== void 0) {
-    throw new Error("vertexDatasetName parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   return toObject;
 }
@@ -30932,17 +30938,17 @@ function batchJobSourceToVertex(fromObject) {
   if (fromBigqueryUri != null) {
     setValueByPath(toObject, ["bigquerySource", "inputUri"], fromBigqueryUri);
   }
-  if (getValueByPath(fromObject, ["fileName"]) !== void 0) {
-    throw new Error("fileName parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  if (getValueByPath(fromObject, ["inlinedRequests"]) !== void 0) {
-    throw new Error("inlinedRequests parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
   const fromVertexDatasetName = getValueByPath(fromObject, [
     "vertexDatasetName"
   ]);
   if (fromVertexDatasetName != null) {
     setValueByPath(toObject, ["vertexMultimodalDatasetSource", "datasetName"], fromVertexDatasetName);
+  }
+  if (getValueByPath(fromObject, ["fileName"]) !== void 0) {
+    throw new Error("fileName parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  if (getValueByPath(fromObject, ["inlinedRequests"]) !== void 0) {
+    throw new Error("inlinedRequests parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
   }
   return toObject;
 }
@@ -31297,13 +31303,13 @@ function fileDataToMldev$4(fromObject) {
 }
 function functionCallToMldev$4(fromObject) {
   const toObject = {};
-  const fromId = getValueByPath(fromObject, ["id"]);
-  if (fromId != null) {
-    setValueByPath(toObject, ["id"], fromId);
-  }
   const fromArgs = getValueByPath(fromObject, ["args"]);
   if (fromArgs != null) {
     setValueByPath(toObject, ["args"], fromArgs);
+  }
+  const fromId = getValueByPath(fromObject, ["id"]);
+  if (fromId != null) {
+    setValueByPath(toObject, ["id"], fromId);
   }
   const fromName = getValueByPath(fromObject, ["name"]);
   if (fromName != null) {
@@ -31336,6 +31342,10 @@ function functionCallingConfigToMldev$2(fromObject) {
 }
 function generateContentConfigToMldev$1(apiClient, fromObject, parentObject) {
   const toObject = {};
+  const fromServiceTier = getValueByPath(fromObject, ["serviceTier"]);
+  if (parentObject !== void 0 && fromServiceTier != null) {
+    setValueByPath(parentObject, ["serviceTier"], fromServiceTier);
+  }
   const fromSystemInstruction = getValueByPath(fromObject, [
     "systemInstruction"
   ]);
@@ -31414,7 +31424,7 @@ function generateContentConfigToMldev$1(apiClient, fromObject, parentObject) {
     "responseJsonSchema"
   ]);
   if (fromResponseJsonSchema != null) {
-    setValueByPath(toObject, ["responseJsonSchema"], fromResponseJsonSchema);
+    setValueByPath(toObject, ["responseJsonSchema"], tJsonSchema(fromResponseJsonSchema));
   }
   if (getValueByPath(fromObject, ["routingConfig"]) !== void 0) {
     throw new Error("routingConfig parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
@@ -31482,6 +31492,12 @@ function generateContentConfigToMldev$1(apiClient, fromObject, parentObject) {
   if (fromThinkingConfig != null) {
     setValueByPath(toObject, ["thinkingConfig"], fromThinkingConfig);
   }
+  const fromAudioTranscriptionConfig = getValueByPath(fromObject, [
+    "audioTranscriptionConfig"
+  ]);
+  if (fromAudioTranscriptionConfig != null) {
+    setValueByPath(toObject, ["audioTranscriptionConfig"], fromAudioTranscriptionConfig);
+  }
   const fromImageConfig = getValueByPath(fromObject, ["imageConfig"]);
   if (fromImageConfig != null) {
     setValueByPath(toObject, ["imageConfig"], imageConfigToMldev$1(fromImageConfig));
@@ -31494,10 +31510,6 @@ function generateContentConfigToMldev$1(apiClient, fromObject, parentObject) {
   }
   if (getValueByPath(fromObject, ["modelArmorConfig"]) !== void 0) {
     throw new Error("modelArmorConfig parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
-  const fromServiceTier = getValueByPath(fromObject, ["serviceTier"]);
-  if (parentObject !== void 0 && fromServiceTier != null) {
-    setValueByPath(parentObject, ["serviceTier"], fromServiceTier);
   }
   return toObject;
 }
@@ -31571,19 +31583,22 @@ function googleMapsToMldev$4(fromObject) {
   if (fromEnableWidget != null) {
     setValueByPath(toObject, ["enableWidget"], fromEnableWidget);
   }
+  if (getValueByPath(fromObject, ["groundingTypes"]) !== void 0) {
+    throw new Error("groundingTypes parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
   return toObject;
 }
 function googleSearchToMldev$4(fromObject) {
   const toObject = {};
-  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
-  if (fromSearchTypes != null) {
-    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
-  }
   if (getValueByPath(fromObject, ["blockingConfidence"]) !== void 0) {
     throw new Error("blockingConfidence parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
     throw new Error("excludeDomains parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
+  if (fromSearchTypes != null) {
+    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
   }
   const fromTimeRangeFilter = getValueByPath(fromObject, [
     "timeRangeFilter"
@@ -31606,9 +31621,6 @@ function imageConfigToMldev$1(fromObject) {
   if (getValueByPath(fromObject, ["personGeneration"]) !== void 0) {
     throw new Error("personGeneration parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
-  if (getValueByPath(fromObject, ["prominentPeople"]) !== void 0) {
-    throw new Error("prominentPeople parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
   if (getValueByPath(fromObject, ["outputMimeType"]) !== void 0) {
     throw new Error("outputMimeType parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
@@ -31617,6 +31629,9 @@ function imageConfigToMldev$1(fromObject) {
   }
   if (getValueByPath(fromObject, ["imageOutputOptions"]) !== void 0) {
     throw new Error("imageOutputOptions parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  if (getValueByPath(fromObject, ["prominentPeople"]) !== void 0) {
+    throw new Error("prominentPeople parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   return toObject;
 }
@@ -31771,6 +31786,20 @@ function partToMldev$4(fromObject) {
   if (fromMediaResolution != null) {
     setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
   }
+  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
+  if (fromToolCall != null) {
+    setValueByPath(toObject, ["toolCall"], fromToolCall);
+  }
+  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
+  if (fromToolResponse != null) {
+    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
+  }
+  const fromAudioTranscription = getValueByPath(fromObject, [
+    "audioTranscription"
+  ]);
+  if (fromAudioTranscription != null) {
+    setValueByPath(toObject, ["audioTranscription"], fromAudioTranscription);
+  }
   const fromCodeExecutionResult = getValueByPath(fromObject, [
     "codeExecutionResult"
   ]);
@@ -31821,17 +31850,15 @@ function partToMldev$4(fromObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
-  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
-  if (fromToolCall != null) {
-    setValueByPath(toObject, ["toolCall"], fromToolCall);
-  }
-  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
-  if (fromToolResponse != null) {
-    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
-  }
   const fromPartMetadata = getValueByPath(fromObject, ["partMetadata"]);
   if (fromPartMetadata != null) {
     setValueByPath(toObject, ["partMetadata"], fromPartMetadata);
+  }
+  const fromMediaProcessing = getValueByPath(fromObject, [
+    "mediaProcessing"
+  ]);
+  if (fromMediaProcessing != null) {
+    setValueByPath(toObject, ["mediaProcessing"], fromMediaProcessing);
   }
   return toObject;
 }
@@ -31852,17 +31879,17 @@ function safetySettingToMldev$3(fromObject) {
 }
 function toolConfigToMldev$2(fromObject) {
   const toObject = {};
-  const fromRetrievalConfig = getValueByPath(fromObject, [
-    "retrievalConfig"
-  ]);
-  if (fromRetrievalConfig != null) {
-    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
-  }
   const fromFunctionCallingConfig = getValueByPath(fromObject, [
     "functionCallingConfig"
   ]);
   if (fromFunctionCallingConfig != null) {
     setValueByPath(toObject, ["functionCallingConfig"], functionCallingConfigToMldev$2(fromFunctionCallingConfig));
+  }
+  const fromRetrievalConfig = getValueByPath(fromObject, [
+    "retrievalConfig"
+  ]);
+  if (fromRetrievalConfig != null) {
+    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
   }
   const fromIncludeServerSideToolInvocations = getValueByPath(fromObject, ["includeServerSideToolInvocations"]);
   if (fromIncludeServerSideToolInvocations != null) {
@@ -31875,21 +31902,19 @@ function toolToMldev$4(fromObject) {
   if (getValueByPath(fromObject, ["retrieval"]) !== void 0) {
     throw new Error("retrieval parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
-  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
-  if (fromComputerUse != null) {
-    setValueByPath(toObject, ["computerUse"], fromComputerUse);
-  }
-  const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
-  if (fromFileSearch != null) {
-    setValueByPath(toObject, ["fileSearch"], fromFileSearch);
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$4(fromGoogleSearch));
-  }
   const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
   if (fromGoogleMaps != null) {
     setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$4(fromGoogleMaps));
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -31897,8 +31922,15 @@ function toolToMldev$4(fromObject) {
   if (fromCodeExecution != null) {
     setValueByPath(toObject, ["codeExecution"], fromCodeExecution);
   }
+  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
+  if (fromComputerUse != null) {
+    setValueByPath(toObject, ["computerUse"], fromComputerUse);
+  }
   if (getValueByPath(fromObject, ["enterpriseWebSearch"]) !== void 0) {
     throw new Error("enterpriseWebSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  if (getValueByPath(fromObject, ["exaAiSearch"]) !== void 0) {
+    throw new Error("exaAiSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   const fromFunctionDeclarations = getValueByPath(fromObject, [
     "functionDeclarations"
@@ -31911,6 +31943,10 @@ function toolToMldev$4(fromObject) {
       });
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$4(fromGoogleSearch));
   }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
@@ -31925,18 +31961,9 @@ function toolToMldev$4(fromObject) {
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
   }
-  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
-  if (fromMcpServers != null) {
-    let transformedList = fromMcpServers;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return item;
-      });
-    }
-    setValueByPath(toObject, ["mcpServers"], transformedList);
-  }
-  if (getValueByPath(fromObject, ["exaAiSearch"]) !== void 0) {
-    throw new Error("exaAiSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
+  if (fromFileSearch != null) {
+    setValueByPath(toObject, ["fileSearch"], fromFileSearch);
   }
   return toObject;
 }
@@ -32010,23 +32037,14 @@ function blobToMldev$3(fromObject) {
   }
   return toObject;
 }
-function codeExecutionResultToVertex$3(fromObject) {
-  const toObject = {};
-  const fromOutcome = getValueByPath(fromObject, ["outcome"]);
-  if (fromOutcome != null) {
-    setValueByPath(toObject, ["outcome"], fromOutcome);
-  }
-  const fromOutput = getValueByPath(fromObject, ["output"]);
-  if (fromOutput != null) {
-    setValueByPath(toObject, ["output"], fromOutput);
-  }
-  if (getValueByPath(fromObject, ["id"]) !== void 0) {
-    throw new Error("id parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  return toObject;
-}
 function computerUseToVertex$2(fromObject) {
   const toObject = {};
+  const fromEnablePromptInjectionDetection = getValueByPath(fromObject, [
+    "enablePromptInjectionDetection"
+  ]);
+  if (fromEnablePromptInjectionDetection != null) {
+    setValueByPath(toObject, ["enablePromptInjectionDetection"], fromEnablePromptInjectionDetection);
+  }
   const fromEnvironment = getValueByPath(fromObject, ["environment"]);
   if (fromEnvironment != null) {
     setValueByPath(toObject, ["environment"], fromEnvironment);
@@ -32036,12 +32054,6 @@ function computerUseToVertex$2(fromObject) {
   ]);
   if (fromExcludedPredefinedFunctions != null) {
     setValueByPath(toObject, ["excludedPredefinedFunctions"], fromExcludedPredefinedFunctions);
-  }
-  const fromEnablePromptInjectionDetection = getValueByPath(fromObject, [
-    "enablePromptInjectionDetection"
-  ]);
-  if (fromEnablePromptInjectionDetection != null) {
-    setValueByPath(toObject, ["enablePromptInjectionDetection"], fromEnablePromptInjectionDetection);
   }
   if (getValueByPath(fromObject, ["disabledSafetyPolicies"]) !== void 0) {
     throw new Error("disabledSafetyPolicies parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
@@ -32243,21 +32255,6 @@ function deleteCachedContentResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function executableCodeToVertex$3(fromObject) {
-  const toObject = {};
-  const fromCode = getValueByPath(fromObject, ["code"]);
-  if (fromCode != null) {
-    setValueByPath(toObject, ["code"], fromCode);
-  }
-  const fromLanguage = getValueByPath(fromObject, ["language"]);
-  if (fromLanguage != null) {
-    setValueByPath(toObject, ["language"], fromLanguage);
-  }
-  if (getValueByPath(fromObject, ["id"]) !== void 0) {
-    throw new Error("id parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  return toObject;
-}
 function fileDataToMldev$3(fromObject) {
   const toObject = {};
   if (getValueByPath(fromObject, ["displayName"]) !== void 0) {
@@ -32275,13 +32272,13 @@ function fileDataToMldev$3(fromObject) {
 }
 function functionCallToMldev$3(fromObject) {
   const toObject = {};
-  const fromId = getValueByPath(fromObject, ["id"]);
-  if (fromId != null) {
-    setValueByPath(toObject, ["id"], fromId);
-  }
   const fromArgs = getValueByPath(fromObject, ["args"]);
   if (fromArgs != null) {
     setValueByPath(toObject, ["args"], fromArgs);
+  }
+  const fromId = getValueByPath(fromObject, ["id"]);
+  if (fromId != null) {
+    setValueByPath(toObject, ["id"], fromId);
   }
   const fromName = getValueByPath(fromObject, ["name"]);
   if (fromName != null) {
@@ -32338,19 +32335,22 @@ function googleMapsToMldev$3(fromObject) {
   if (fromEnableWidget != null) {
     setValueByPath(toObject, ["enableWidget"], fromEnableWidget);
   }
+  if (getValueByPath(fromObject, ["groundingTypes"]) !== void 0) {
+    throw new Error("groundingTypes parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
   return toObject;
 }
 function googleSearchToMldev$3(fromObject) {
   const toObject = {};
-  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
-  if (fromSearchTypes != null) {
-    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
-  }
   if (getValueByPath(fromObject, ["blockingConfidence"]) !== void 0) {
     throw new Error("blockingConfidence parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
     throw new Error("excludeDomains parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
+  if (fromSearchTypes != null) {
+    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
   }
   const fromTimeRangeFilter = getValueByPath(fromObject, [
     "timeRangeFilter"
@@ -32474,6 +32474,20 @@ function partToMldev$3(fromObject) {
   if (fromMediaResolution != null) {
     setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
   }
+  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
+  if (fromToolCall != null) {
+    setValueByPath(toObject, ["toolCall"], fromToolCall);
+  }
+  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
+  if (fromToolResponse != null) {
+    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
+  }
+  const fromAudioTranscription = getValueByPath(fromObject, [
+    "audioTranscription"
+  ]);
+  if (fromAudioTranscription != null) {
+    setValueByPath(toObject, ["audioTranscription"], fromAudioTranscription);
+  }
   const fromCodeExecutionResult = getValueByPath(fromObject, [
     "codeExecutionResult"
   ]);
@@ -32524,17 +32538,15 @@ function partToMldev$3(fromObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
-  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
-  if (fromToolCall != null) {
-    setValueByPath(toObject, ["toolCall"], fromToolCall);
-  }
-  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
-  if (fromToolResponse != null) {
-    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
-  }
   const fromPartMetadata = getValueByPath(fromObject, ["partMetadata"]);
   if (fromPartMetadata != null) {
     setValueByPath(toObject, ["partMetadata"], fromPartMetadata);
+  }
+  const fromMediaProcessing = getValueByPath(fromObject, [
+    "mediaProcessing"
+  ]);
+  if (fromMediaProcessing != null) {
+    setValueByPath(toObject, ["mediaProcessing"], fromMediaProcessing);
   }
   return toObject;
 }
@@ -32546,17 +32558,29 @@ function partToVertex$3(fromObject) {
   if (fromMediaResolution != null) {
     setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
   }
+  if (getValueByPath(fromObject, ["toolCall"]) !== void 0) {
+    throw new Error("toolCall parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  if (getValueByPath(fromObject, ["toolResponse"]) !== void 0) {
+    throw new Error("toolResponse parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  const fromAudioTranscription = getValueByPath(fromObject, [
+    "audioTranscription"
+  ]);
+  if (fromAudioTranscription != null) {
+    setValueByPath(toObject, ["audioTranscription"], fromAudioTranscription);
+  }
   const fromCodeExecutionResult = getValueByPath(fromObject, [
     "codeExecutionResult"
   ]);
   if (fromCodeExecutionResult != null) {
-    setValueByPath(toObject, ["codeExecutionResult"], codeExecutionResultToVertex$3(fromCodeExecutionResult));
+    setValueByPath(toObject, ["codeExecutionResult"], fromCodeExecutionResult);
   }
   const fromExecutableCode = getValueByPath(fromObject, [
     "executableCode"
   ]);
   if (fromExecutableCode != null) {
-    setValueByPath(toObject, ["executableCode"], executableCodeToVertex$3(fromExecutableCode));
+    setValueByPath(toObject, ["executableCode"], fromExecutableCode);
   }
   const fromFileData = getValueByPath(fromObject, ["fileData"]);
   if (fromFileData != null) {
@@ -32596,30 +32620,30 @@ function partToVertex$3(fromObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
-  if (getValueByPath(fromObject, ["toolCall"]) !== void 0) {
-    throw new Error("toolCall parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  if (getValueByPath(fromObject, ["toolResponse"]) !== void 0) {
-    throw new Error("toolResponse parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
   if (getValueByPath(fromObject, ["partMetadata"]) !== void 0) {
     throw new Error("partMetadata parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  const fromMediaProcessing = getValueByPath(fromObject, [
+    "mediaProcessing"
+  ]);
+  if (fromMediaProcessing != null) {
+    setValueByPath(toObject, ["mediaProcessing"], fromMediaProcessing);
   }
   return toObject;
 }
 function toolConfigToMldev$1(fromObject) {
   const toObject = {};
-  const fromRetrievalConfig = getValueByPath(fromObject, [
-    "retrievalConfig"
-  ]);
-  if (fromRetrievalConfig != null) {
-    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
-  }
   const fromFunctionCallingConfig = getValueByPath(fromObject, [
     "functionCallingConfig"
   ]);
   if (fromFunctionCallingConfig != null) {
     setValueByPath(toObject, ["functionCallingConfig"], functionCallingConfigToMldev$1(fromFunctionCallingConfig));
+  }
+  const fromRetrievalConfig = getValueByPath(fromObject, [
+    "retrievalConfig"
+  ]);
+  if (fromRetrievalConfig != null) {
+    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
   }
   const fromIncludeServerSideToolInvocations = getValueByPath(fromObject, ["includeServerSideToolInvocations"]);
   if (fromIncludeServerSideToolInvocations != null) {
@@ -32629,17 +32653,17 @@ function toolConfigToMldev$1(fromObject) {
 }
 function toolConfigToVertex$1(fromObject) {
   const toObject = {};
-  const fromRetrievalConfig = getValueByPath(fromObject, [
-    "retrievalConfig"
-  ]);
-  if (fromRetrievalConfig != null) {
-    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
-  }
   const fromFunctionCallingConfig = getValueByPath(fromObject, [
     "functionCallingConfig"
   ]);
   if (fromFunctionCallingConfig != null) {
     setValueByPath(toObject, ["functionCallingConfig"], fromFunctionCallingConfig);
+  }
+  const fromRetrievalConfig = getValueByPath(fromObject, [
+    "retrievalConfig"
+  ]);
+  if (fromRetrievalConfig != null) {
+    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
   }
   if (getValueByPath(fromObject, ["includeServerSideToolInvocations"]) !== void 0) {
     throw new Error("includeServerSideToolInvocations parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
@@ -32651,21 +32675,19 @@ function toolToMldev$3(fromObject) {
   if (getValueByPath(fromObject, ["retrieval"]) !== void 0) {
     throw new Error("retrieval parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
-  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
-  if (fromComputerUse != null) {
-    setValueByPath(toObject, ["computerUse"], fromComputerUse);
-  }
-  const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
-  if (fromFileSearch != null) {
-    setValueByPath(toObject, ["fileSearch"], fromFileSearch);
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$3(fromGoogleSearch));
-  }
   const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
   if (fromGoogleMaps != null) {
     setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$3(fromGoogleMaps));
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -32673,8 +32695,15 @@ function toolToMldev$3(fromObject) {
   if (fromCodeExecution != null) {
     setValueByPath(toObject, ["codeExecution"], fromCodeExecution);
   }
+  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
+  if (fromComputerUse != null) {
+    setValueByPath(toObject, ["computerUse"], fromComputerUse);
+  }
   if (getValueByPath(fromObject, ["enterpriseWebSearch"]) !== void 0) {
     throw new Error("enterpriseWebSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  if (getValueByPath(fromObject, ["exaAiSearch"]) !== void 0) {
+    throw new Error("exaAiSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   const fromFunctionDeclarations = getValueByPath(fromObject, [
     "functionDeclarations"
@@ -32687,6 +32716,10 @@ function toolToMldev$3(fromObject) {
       });
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$3(fromGoogleSearch));
   }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
@@ -32701,18 +32734,9 @@ function toolToMldev$3(fromObject) {
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
   }
-  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
-  if (fromMcpServers != null) {
-    let transformedList = fromMcpServers;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return item;
-      });
-    }
-    setValueByPath(toObject, ["mcpServers"], transformedList);
-  }
-  if (getValueByPath(fromObject, ["exaAiSearch"]) !== void 0) {
-    throw new Error("exaAiSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
+  if (fromFileSearch != null) {
+    setValueByPath(toObject, ["fileSearch"], fromFileSearch);
   }
   return toObject;
 }
@@ -32722,20 +32746,19 @@ function toolToVertex$2(fromObject) {
   if (fromRetrieval != null) {
     setValueByPath(toObject, ["retrieval"], fromRetrieval);
   }
-  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
-  if (fromComputerUse != null) {
-    setValueByPath(toObject, ["computerUse"], computerUseToVertex$2(fromComputerUse));
-  }
-  if (getValueByPath(fromObject, ["fileSearch"]) !== void 0) {
-    throw new Error("fileSearch parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
-  }
   const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
   if (fromGoogleMaps != null) {
     setValueByPath(toObject, ["googleMaps"], fromGoogleMaps);
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return mcpServerToVertex$2(item);
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -32743,11 +32766,19 @@ function toolToVertex$2(fromObject) {
   if (fromCodeExecution != null) {
     setValueByPath(toObject, ["codeExecution"], fromCodeExecution);
   }
+  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
+  if (fromComputerUse != null) {
+    setValueByPath(toObject, ["computerUse"], computerUseToVertex$2(fromComputerUse));
+  }
   const fromEnterpriseWebSearch = getValueByPath(fromObject, [
     "enterpriseWebSearch"
   ]);
   if (fromEnterpriseWebSearch != null) {
     setValueByPath(toObject, ["enterpriseWebSearch"], fromEnterpriseWebSearch);
+  }
+  const fromExaAiSearch = getValueByPath(fromObject, ["exaAiSearch"]);
+  if (fromExaAiSearch != null) {
+    setValueByPath(toObject, ["exaAiSearch"], fromExaAiSearch);
   }
   const fromFunctionDeclarations = getValueByPath(fromObject, [
     "functionDeclarations"
@@ -32760,6 +32791,10 @@ function toolToVertex$2(fromObject) {
       });
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
   }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
@@ -32777,19 +32812,8 @@ function toolToVertex$2(fromObject) {
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
   }
-  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
-  if (fromMcpServers != null) {
-    let transformedList = fromMcpServers;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return mcpServerToVertex$2(item);
-      });
-    }
-    setValueByPath(toObject, ["mcpServers"], transformedList);
-  }
-  const fromExaAiSearch = getValueByPath(fromObject, ["exaAiSearch"]);
-  if (fromExaAiSearch != null) {
-    setValueByPath(toObject, ["exaAiSearch"], fromExaAiSearch);
+  if (getValueByPath(fromObject, ["fileSearch"]) !== void 0) {
+    throw new Error("fileSearch parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
   }
   return toObject;
 }
@@ -33106,35 +33130,6 @@ function registerFilesResponseFromMldev(fromObject) {
   }
   return toObject;
 }
-function audioTranscriptionConfigToMldev$1(fromObject) {
-  const toObject = {};
-  if (getValueByPath(fromObject, ["languageCodes"]) !== void 0) {
-    throw new Error("languageCodes parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
-  const fromLanguageAuto = getValueByPath(fromObject, ["languageAuto"]);
-  if (fromLanguageAuto != null) {
-    setValueByPath(toObject, ["languageAuto"], fromLanguageAuto);
-  }
-  const fromLanguageHints = getValueByPath(fromObject, [
-    "languageHints"
-  ]);
-  if (fromLanguageHints != null) {
-    setValueByPath(toObject, ["languageHints"], fromLanguageHints);
-  }
-  const fromCustomVocabulary = getValueByPath(fromObject, [
-    "customVocabulary"
-  ]);
-  if (fromCustomVocabulary != null) {
-    setValueByPath(toObject, ["customVocabulary"], fromCustomVocabulary);
-  }
-  const fromAdaptationPhrases = getValueByPath(fromObject, [
-    "adaptationPhrases"
-  ]);
-  if (fromAdaptationPhrases != null) {
-    setValueByPath(toObject, ["adaptationPhrases"], fromAdaptationPhrases);
-  }
-  return toObject;
-}
 function authConfigToMldev$2(fromObject) {
   const toObject = {};
   const fromApiKey = getValueByPath(fromObject, ["apiKey"]);
@@ -33176,23 +33171,14 @@ function blobToMldev$2(fromObject) {
   }
   return toObject;
 }
-function codeExecutionResultToVertex$2(fromObject) {
-  const toObject = {};
-  const fromOutcome = getValueByPath(fromObject, ["outcome"]);
-  if (fromOutcome != null) {
-    setValueByPath(toObject, ["outcome"], fromOutcome);
-  }
-  const fromOutput = getValueByPath(fromObject, ["output"]);
-  if (fromOutput != null) {
-    setValueByPath(toObject, ["output"], fromOutput);
-  }
-  if (getValueByPath(fromObject, ["id"]) !== void 0) {
-    throw new Error("id parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  return toObject;
-}
 function computerUseToVertex$1(fromObject) {
   const toObject = {};
+  const fromEnablePromptInjectionDetection = getValueByPath(fromObject, [
+    "enablePromptInjectionDetection"
+  ]);
+  if (fromEnablePromptInjectionDetection != null) {
+    setValueByPath(toObject, ["enablePromptInjectionDetection"], fromEnablePromptInjectionDetection);
+  }
   const fromEnvironment = getValueByPath(fromObject, ["environment"]);
   if (fromEnvironment != null) {
     setValueByPath(toObject, ["environment"], fromEnvironment);
@@ -33202,12 +33188,6 @@ function computerUseToVertex$1(fromObject) {
   ]);
   if (fromExcludedPredefinedFunctions != null) {
     setValueByPath(toObject, ["excludedPredefinedFunctions"], fromExcludedPredefinedFunctions);
-  }
-  const fromEnablePromptInjectionDetection = getValueByPath(fromObject, [
-    "enablePromptInjectionDetection"
-  ]);
-  if (fromEnablePromptInjectionDetection != null) {
-    setValueByPath(toObject, ["enablePromptInjectionDetection"], fromEnablePromptInjectionDetection);
   }
   if (getValueByPath(fromObject, ["disabledSafetyPolicies"]) !== void 0) {
     throw new Error("disabledSafetyPolicies parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
@@ -33250,21 +33230,6 @@ function contentToVertex$2(fromObject) {
   }
   return toObject;
 }
-function executableCodeToVertex$2(fromObject) {
-  const toObject = {};
-  const fromCode = getValueByPath(fromObject, ["code"]);
-  if (fromCode != null) {
-    setValueByPath(toObject, ["code"], fromCode);
-  }
-  const fromLanguage = getValueByPath(fromObject, ["language"]);
-  if (fromLanguage != null) {
-    setValueByPath(toObject, ["language"], fromLanguage);
-  }
-  if (getValueByPath(fromObject, ["id"]) !== void 0) {
-    throw new Error("id parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  return toObject;
-}
 function fileDataToMldev$2(fromObject) {
   const toObject = {};
   if (getValueByPath(fromObject, ["displayName"]) !== void 0) {
@@ -33282,13 +33247,13 @@ function fileDataToMldev$2(fromObject) {
 }
 function functionCallToMldev$2(fromObject) {
   const toObject = {};
-  const fromId = getValueByPath(fromObject, ["id"]);
-  if (fromId != null) {
-    setValueByPath(toObject, ["id"], fromId);
-  }
   const fromArgs = getValueByPath(fromObject, ["args"]);
   if (fromArgs != null) {
     setValueByPath(toObject, ["args"], fromArgs);
+  }
+  const fromId = getValueByPath(fromObject, ["id"]);
+  if (fromId != null) {
+    setValueByPath(toObject, ["id"], fromId);
   }
   const fromName = getValueByPath(fromObject, ["name"]);
   if (fromName != null) {
@@ -33314,7 +33279,13 @@ function generationConfigToVertex$1(fromObject) {
     "responseJsonSchema"
   ]);
   if (fromResponseJsonSchema != null) {
-    setValueByPath(toObject, ["responseJsonSchema"], fromResponseJsonSchema);
+    setValueByPath(toObject, ["responseJsonSchema"], tJsonSchema(fromResponseJsonSchema));
+  }
+  const fromAudioTranscriptionConfig = getValueByPath(fromObject, [
+    "audioTranscriptionConfig"
+  ]);
+  if (fromAudioTranscriptionConfig != null) {
+    setValueByPath(toObject, ["audioTranscriptionConfig"], fromAudioTranscriptionConfig);
   }
   const fromAudioTimestamp = getValueByPath(fromObject, [
     "audioTimestamp"
@@ -33361,6 +33332,18 @@ function generationConfigToVertex$1(fromObject) {
   ]);
   if (fromPresencePenalty != null) {
     setValueByPath(toObject, ["presencePenalty"], fromPresencePenalty);
+  }
+  const fromResponseFormat = getValueByPath(fromObject, [
+    "responseFormat"
+  ]);
+  if (fromResponseFormat != null) {
+    let transformedList = fromResponseFormat;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["responseFormat"], transformedList);
   }
   const fromResponseLogprobs = getValueByPath(fromObject, [
     "responseLogprobs"
@@ -33427,18 +33410,6 @@ function generationConfigToVertex$1(fromObject) {
   if (getValueByPath(fromObject, ["enableEnhancedCivicAnswers"]) !== void 0) {
     throw new Error("enableEnhancedCivicAnswers parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
   }
-  const fromResponseFormat = getValueByPath(fromObject, [
-    "responseFormat"
-  ]);
-  if (fromResponseFormat != null) {
-    let transformedList = fromResponseFormat;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return item;
-      });
-    }
-    setValueByPath(toObject, ["responseFormat"], transformedList);
-  }
   if (getValueByPath(fromObject, ["translationConfig"]) !== void 0) {
     throw new Error("translationConfig parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
   }
@@ -33454,19 +33425,22 @@ function googleMapsToMldev$2(fromObject) {
   if (fromEnableWidget != null) {
     setValueByPath(toObject, ["enableWidget"], fromEnableWidget);
   }
+  if (getValueByPath(fromObject, ["groundingTypes"]) !== void 0) {
+    throw new Error("groundingTypes parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
   return toObject;
 }
 function googleSearchToMldev$2(fromObject) {
   const toObject = {};
-  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
-  if (fromSearchTypes != null) {
-    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
-  }
   if (getValueByPath(fromObject, ["blockingConfidence"]) !== void 0) {
     throw new Error("blockingConfidence parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
     throw new Error("excludeDomains parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
+  if (fromSearchTypes != null) {
+    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
   }
   const fromTimeRangeFilter = getValueByPath(fromObject, [
     "timeRangeFilter"
@@ -33560,13 +33534,13 @@ function liveConnectConfigToMldev$1(fromObject, parentObject) {
     "inputAudioTranscription"
   ]);
   if (parentObject !== void 0 && fromInputAudioTranscription != null) {
-    setValueByPath(parentObject, ["setup", "inputAudioTranscription"], audioTranscriptionConfigToMldev$1(fromInputAudioTranscription));
+    setValueByPath(parentObject, ["setup", "inputAudioTranscription"], fromInputAudioTranscription);
   }
   const fromOutputAudioTranscription = getValueByPath(fromObject, [
     "outputAudioTranscription"
   ]);
   if (parentObject !== void 0 && fromOutputAudioTranscription != null) {
-    setValueByPath(parentObject, ["setup", "outputAudioTranscription"], audioTranscriptionConfigToMldev$1(fromOutputAudioTranscription));
+    setValueByPath(parentObject, ["setup", "outputAudioTranscription"], fromOutputAudioTranscription);
   }
   const fromRealtimeInputConfig = getValueByPath(fromObject, [
     "realtimeInputConfig"
@@ -33741,8 +33715,11 @@ function liveConnectConfigToVertex(fromObject, parentObject) {
     }
     setValueByPath(parentObject, ["setup", "safetySettings"], transformedList);
   }
-  if (getValueByPath(fromObject, ["translationConfig"]) !== void 0) {
-    throw new Error("translationConfig parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  const fromTranslationConfig = getValueByPath(fromObject, [
+    "translationConfig"
+  ]);
+  if (parentObject !== void 0 && fromTranslationConfig != null) {
+    setValueByPath(parentObject, ["setup", "generationConfig", "translationConfig"], fromTranslationConfig);
   }
   return toObject;
 }
@@ -33968,6 +33945,20 @@ function partToMldev$2(fromObject) {
   if (fromMediaResolution != null) {
     setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
   }
+  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
+  if (fromToolCall != null) {
+    setValueByPath(toObject, ["toolCall"], fromToolCall);
+  }
+  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
+  if (fromToolResponse != null) {
+    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
+  }
+  const fromAudioTranscription = getValueByPath(fromObject, [
+    "audioTranscription"
+  ]);
+  if (fromAudioTranscription != null) {
+    setValueByPath(toObject, ["audioTranscription"], fromAudioTranscription);
+  }
   const fromCodeExecutionResult = getValueByPath(fromObject, [
     "codeExecutionResult"
   ]);
@@ -34018,17 +34009,15 @@ function partToMldev$2(fromObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
-  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
-  if (fromToolCall != null) {
-    setValueByPath(toObject, ["toolCall"], fromToolCall);
-  }
-  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
-  if (fromToolResponse != null) {
-    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
-  }
   const fromPartMetadata = getValueByPath(fromObject, ["partMetadata"]);
   if (fromPartMetadata != null) {
     setValueByPath(toObject, ["partMetadata"], fromPartMetadata);
+  }
+  const fromMediaProcessing = getValueByPath(fromObject, [
+    "mediaProcessing"
+  ]);
+  if (fromMediaProcessing != null) {
+    setValueByPath(toObject, ["mediaProcessing"], fromMediaProcessing);
   }
   return toObject;
 }
@@ -34040,17 +34029,29 @@ function partToVertex$2(fromObject) {
   if (fromMediaResolution != null) {
     setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
   }
+  if (getValueByPath(fromObject, ["toolCall"]) !== void 0) {
+    throw new Error("toolCall parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  if (getValueByPath(fromObject, ["toolResponse"]) !== void 0) {
+    throw new Error("toolResponse parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  const fromAudioTranscription = getValueByPath(fromObject, [
+    "audioTranscription"
+  ]);
+  if (fromAudioTranscription != null) {
+    setValueByPath(toObject, ["audioTranscription"], fromAudioTranscription);
+  }
   const fromCodeExecutionResult = getValueByPath(fromObject, [
     "codeExecutionResult"
   ]);
   if (fromCodeExecutionResult != null) {
-    setValueByPath(toObject, ["codeExecutionResult"], codeExecutionResultToVertex$2(fromCodeExecutionResult));
+    setValueByPath(toObject, ["codeExecutionResult"], fromCodeExecutionResult);
   }
   const fromExecutableCode = getValueByPath(fromObject, [
     "executableCode"
   ]);
   if (fromExecutableCode != null) {
-    setValueByPath(toObject, ["executableCode"], executableCodeToVertex$2(fromExecutableCode));
+    setValueByPath(toObject, ["executableCode"], fromExecutableCode);
   }
   const fromFileData = getValueByPath(fromObject, ["fileData"]);
   if (fromFileData != null) {
@@ -34090,14 +34091,14 @@ function partToVertex$2(fromObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
-  if (getValueByPath(fromObject, ["toolCall"]) !== void 0) {
-    throw new Error("toolCall parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  if (getValueByPath(fromObject, ["toolResponse"]) !== void 0) {
-    throw new Error("toolResponse parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
   if (getValueByPath(fromObject, ["partMetadata"]) !== void 0) {
     throw new Error("partMetadata parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  const fromMediaProcessing = getValueByPath(fromObject, [
+    "mediaProcessing"
+  ]);
+  if (fromMediaProcessing != null) {
+    setValueByPath(toObject, ["mediaProcessing"], fromMediaProcessing);
   }
   return toObject;
 }
@@ -34182,21 +34183,19 @@ function toolToMldev$2(fromObject) {
   if (getValueByPath(fromObject, ["retrieval"]) !== void 0) {
     throw new Error("retrieval parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
-  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
-  if (fromComputerUse != null) {
-    setValueByPath(toObject, ["computerUse"], fromComputerUse);
-  }
-  const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
-  if (fromFileSearch != null) {
-    setValueByPath(toObject, ["fileSearch"], fromFileSearch);
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$2(fromGoogleSearch));
-  }
   const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
   if (fromGoogleMaps != null) {
     setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$2(fromGoogleMaps));
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -34204,8 +34203,15 @@ function toolToMldev$2(fromObject) {
   if (fromCodeExecution != null) {
     setValueByPath(toObject, ["codeExecution"], fromCodeExecution);
   }
+  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
+  if (fromComputerUse != null) {
+    setValueByPath(toObject, ["computerUse"], fromComputerUse);
+  }
   if (getValueByPath(fromObject, ["enterpriseWebSearch"]) !== void 0) {
     throw new Error("enterpriseWebSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  if (getValueByPath(fromObject, ["exaAiSearch"]) !== void 0) {
+    throw new Error("exaAiSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   const fromFunctionDeclarations = getValueByPath(fromObject, [
     "functionDeclarations"
@@ -34218,6 +34224,10 @@ function toolToMldev$2(fromObject) {
       });
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$2(fromGoogleSearch));
   }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
@@ -34232,18 +34242,9 @@ function toolToMldev$2(fromObject) {
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
   }
-  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
-  if (fromMcpServers != null) {
-    let transformedList = fromMcpServers;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return item;
-      });
-    }
-    setValueByPath(toObject, ["mcpServers"], transformedList);
-  }
-  if (getValueByPath(fromObject, ["exaAiSearch"]) !== void 0) {
-    throw new Error("exaAiSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
+  if (fromFileSearch != null) {
+    setValueByPath(toObject, ["fileSearch"], fromFileSearch);
   }
   return toObject;
 }
@@ -34253,20 +34254,19 @@ function toolToVertex$1(fromObject) {
   if (fromRetrieval != null) {
     setValueByPath(toObject, ["retrieval"], fromRetrieval);
   }
-  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
-  if (fromComputerUse != null) {
-    setValueByPath(toObject, ["computerUse"], computerUseToVertex$1(fromComputerUse));
-  }
-  if (getValueByPath(fromObject, ["fileSearch"]) !== void 0) {
-    throw new Error("fileSearch parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
-  }
   const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
   if (fromGoogleMaps != null) {
     setValueByPath(toObject, ["googleMaps"], fromGoogleMaps);
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return mcpServerToVertex$1(item);
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -34274,11 +34274,19 @@ function toolToVertex$1(fromObject) {
   if (fromCodeExecution != null) {
     setValueByPath(toObject, ["codeExecution"], fromCodeExecution);
   }
+  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
+  if (fromComputerUse != null) {
+    setValueByPath(toObject, ["computerUse"], computerUseToVertex$1(fromComputerUse));
+  }
   const fromEnterpriseWebSearch = getValueByPath(fromObject, [
     "enterpriseWebSearch"
   ]);
   if (fromEnterpriseWebSearch != null) {
     setValueByPath(toObject, ["enterpriseWebSearch"], fromEnterpriseWebSearch);
+  }
+  const fromExaAiSearch = getValueByPath(fromObject, ["exaAiSearch"]);
+  if (fromExaAiSearch != null) {
+    setValueByPath(toObject, ["exaAiSearch"], fromExaAiSearch);
   }
   const fromFunctionDeclarations = getValueByPath(fromObject, [
     "functionDeclarations"
@@ -34291,6 +34299,10 @@ function toolToVertex$1(fromObject) {
       });
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
   }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
@@ -34308,83 +34320,18 @@ function toolToVertex$1(fromObject) {
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
   }
-  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
-  if (fromMcpServers != null) {
-    let transformedList = fromMcpServers;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return mcpServerToVertex$1(item);
-      });
-    }
-    setValueByPath(toObject, ["mcpServers"], transformedList);
-  }
-  const fromExaAiSearch = getValueByPath(fromObject, ["exaAiSearch"]);
-  if (fromExaAiSearch != null) {
-    setValueByPath(toObject, ["exaAiSearch"], fromExaAiSearch);
+  if (getValueByPath(fromObject, ["fileSearch"]) !== void 0) {
+    throw new Error("fileSearch parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
   }
   return toObject;
 }
 function usageMetadataFromVertex(fromObject) {
   const toObject = {};
-  const fromPromptTokenCount = getValueByPath(fromObject, [
-    "promptTokenCount"
-  ]);
-  if (fromPromptTokenCount != null) {
-    setValueByPath(toObject, ["promptTokenCount"], fromPromptTokenCount);
-  }
-  const fromCachedContentTokenCount = getValueByPath(fromObject, [
-    "cachedContentTokenCount"
-  ]);
-  if (fromCachedContentTokenCount != null) {
-    setValueByPath(toObject, ["cachedContentTokenCount"], fromCachedContentTokenCount);
-  }
   const fromResponseTokenCount = getValueByPath(fromObject, [
     "candidatesTokenCount"
   ]);
   if (fromResponseTokenCount != null) {
     setValueByPath(toObject, ["responseTokenCount"], fromResponseTokenCount);
-  }
-  const fromToolUsePromptTokenCount = getValueByPath(fromObject, [
-    "toolUsePromptTokenCount"
-  ]);
-  if (fromToolUsePromptTokenCount != null) {
-    setValueByPath(toObject, ["toolUsePromptTokenCount"], fromToolUsePromptTokenCount);
-  }
-  const fromThoughtsTokenCount = getValueByPath(fromObject, [
-    "thoughtsTokenCount"
-  ]);
-  if (fromThoughtsTokenCount != null) {
-    setValueByPath(toObject, ["thoughtsTokenCount"], fromThoughtsTokenCount);
-  }
-  const fromTotalTokenCount = getValueByPath(fromObject, [
-    "totalTokenCount"
-  ]);
-  if (fromTotalTokenCount != null) {
-    setValueByPath(toObject, ["totalTokenCount"], fromTotalTokenCount);
-  }
-  const fromPromptTokensDetails = getValueByPath(fromObject, [
-    "promptTokensDetails"
-  ]);
-  if (fromPromptTokensDetails != null) {
-    let transformedList = fromPromptTokensDetails;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return item;
-      });
-    }
-    setValueByPath(toObject, ["promptTokensDetails"], transformedList);
-  }
-  const fromCacheTokensDetails = getValueByPath(fromObject, [
-    "cacheTokensDetails"
-  ]);
-  if (fromCacheTokensDetails != null) {
-    let transformedList = fromCacheTokensDetails;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return item;
-      });
-    }
-    setValueByPath(toObject, ["cacheTokensDetails"], transformedList);
   }
   const fromResponseTokensDetails = getValueByPath(fromObject, [
     "candidatesTokensDetails"
@@ -34398,6 +34345,54 @@ function usageMetadataFromVertex(fromObject) {
     }
     setValueByPath(toObject, ["responseTokensDetails"], transformedList);
   }
+  const fromCacheTokensDetails = getValueByPath(fromObject, [
+    "cacheTokensDetails"
+  ]);
+  if (fromCacheTokensDetails != null) {
+    let transformedList = fromCacheTokensDetails;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["cacheTokensDetails"], transformedList);
+  }
+  const fromCachedContentTokenCount = getValueByPath(fromObject, [
+    "cachedContentTokenCount"
+  ]);
+  if (fromCachedContentTokenCount != null) {
+    setValueByPath(toObject, ["cachedContentTokenCount"], fromCachedContentTokenCount);
+  }
+  const fromPromptTokenCount = getValueByPath(fromObject, [
+    "promptTokenCount"
+  ]);
+  if (fromPromptTokenCount != null) {
+    setValueByPath(toObject, ["promptTokenCount"], fromPromptTokenCount);
+  }
+  const fromPromptTokensDetails = getValueByPath(fromObject, [
+    "promptTokensDetails"
+  ]);
+  if (fromPromptTokensDetails != null) {
+    let transformedList = fromPromptTokensDetails;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["promptTokensDetails"], transformedList);
+  }
+  const fromThoughtsTokenCount = getValueByPath(fromObject, [
+    "thoughtsTokenCount"
+  ]);
+  if (fromThoughtsTokenCount != null) {
+    setValueByPath(toObject, ["thoughtsTokenCount"], fromThoughtsTokenCount);
+  }
+  const fromToolUsePromptTokenCount = getValueByPath(fromObject, [
+    "toolUsePromptTokenCount"
+  ]);
+  if (fromToolUsePromptTokenCount != null) {
+    setValueByPath(toObject, ["toolUsePromptTokenCount"], fromToolUsePromptTokenCount);
+  }
   const fromToolUsePromptTokensDetails = getValueByPath(fromObject, [
     "toolUsePromptTokensDetails"
   ]);
@@ -34409,6 +34404,12 @@ function usageMetadataFromVertex(fromObject) {
       });
     }
     setValueByPath(toObject, ["toolUsePromptTokensDetails"], transformedList);
+  }
+  const fromTotalTokenCount = getValueByPath(fromObject, [
+    "totalTokenCount"
+  ]);
+  if (fromTotalTokenCount != null) {
+    setValueByPath(toObject, ["totalTokenCount"], fromTotalTokenCount);
   }
   const fromTrafficType = getValueByPath(fromObject, ["trafficType"]);
   if (fromTrafficType != null) {
@@ -34559,21 +34560,6 @@ function citationMetadataFromMldev(fromObject, _rootObject) {
   }
   return toObject;
 }
-function codeExecutionResultToVertex$1(fromObject, _rootObject) {
-  const toObject = {};
-  const fromOutcome = getValueByPath(fromObject, ["outcome"]);
-  if (fromOutcome != null) {
-    setValueByPath(toObject, ["outcome"], fromOutcome);
-  }
-  const fromOutput = getValueByPath(fromObject, ["output"]);
-  if (fromOutput != null) {
-    setValueByPath(toObject, ["output"], fromOutput);
-  }
-  if (getValueByPath(fromObject, ["id"]) !== void 0) {
-    throw new Error("id parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  return toObject;
-}
 function computeTokensParametersToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
@@ -34614,6 +34600,12 @@ function computeTokensResponseFromVertex(fromObject, _rootObject) {
 }
 function computerUseToVertex(fromObject, _rootObject) {
   const toObject = {};
+  const fromEnablePromptInjectionDetection = getValueByPath(fromObject, [
+    "enablePromptInjectionDetection"
+  ]);
+  if (fromEnablePromptInjectionDetection != null) {
+    setValueByPath(toObject, ["enablePromptInjectionDetection"], fromEnablePromptInjectionDetection);
+  }
   const fromEnvironment = getValueByPath(fromObject, ["environment"]);
   if (fromEnvironment != null) {
     setValueByPath(toObject, ["environment"], fromEnvironment);
@@ -34623,12 +34615,6 @@ function computerUseToVertex(fromObject, _rootObject) {
   ]);
   if (fromExcludedPredefinedFunctions != null) {
     setValueByPath(toObject, ["excludedPredefinedFunctions"], fromExcludedPredefinedFunctions);
-  }
-  const fromEnablePromptInjectionDetection = getValueByPath(fromObject, [
-    "enablePromptInjectionDetection"
-  ]);
-  if (fromEnablePromptInjectionDetection != null) {
-    setValueByPath(toObject, ["enablePromptInjectionDetection"], fromEnablePromptInjectionDetection);
   }
   if (getValueByPath(fromObject, ["disabledSafetyPolicies"]) !== void 0) {
     throw new Error("disabledSafetyPolicies parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
@@ -35318,21 +35304,6 @@ function endpointFromVertex(fromObject, _rootObject) {
   }
   return toObject;
 }
-function executableCodeToVertex$1(fromObject, _rootObject) {
-  const toObject = {};
-  const fromCode = getValueByPath(fromObject, ["code"]);
-  if (fromCode != null) {
-    setValueByPath(toObject, ["code"], fromCode);
-  }
-  const fromLanguage = getValueByPath(fromObject, ["language"]);
-  if (fromLanguage != null) {
-    setValueByPath(toObject, ["language"], fromLanguage);
-  }
-  if (getValueByPath(fromObject, ["id"]) !== void 0) {
-    throw new Error("id parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  return toObject;
-}
 function fileDataToMldev$1(fromObject, _rootObject) {
   const toObject = {};
   if (getValueByPath(fromObject, ["displayName"]) !== void 0) {
@@ -35350,13 +35321,13 @@ function fileDataToMldev$1(fromObject, _rootObject) {
 }
 function functionCallToMldev$1(fromObject, _rootObject) {
   const toObject = {};
-  const fromId = getValueByPath(fromObject, ["id"]);
-  if (fromId != null) {
-    setValueByPath(toObject, ["id"], fromId);
-  }
   const fromArgs = getValueByPath(fromObject, ["args"]);
   if (fromArgs != null) {
     setValueByPath(toObject, ["args"], fromArgs);
+  }
+  const fromId = getValueByPath(fromObject, ["id"]);
+  if (fromId != null) {
+    setValueByPath(toObject, ["id"], fromId);
   }
   const fromName = getValueByPath(fromObject, ["name"]);
   if (fromName != null) {
@@ -35389,6 +35360,10 @@ function functionCallingConfigToMldev(fromObject, _rootObject) {
 }
 function generateContentConfigToMldev(apiClient, fromObject, parentObject, rootObject) {
   const toObject = {};
+  const fromServiceTier = getValueByPath(fromObject, ["serviceTier"]);
+  if (parentObject !== void 0 && fromServiceTier != null) {
+    setValueByPath(parentObject, ["serviceTier"], fromServiceTier);
+  }
   const fromSystemInstruction = getValueByPath(fromObject, [
     "systemInstruction"
   ]);
@@ -35467,7 +35442,7 @@ function generateContentConfigToMldev(apiClient, fromObject, parentObject, rootO
     "responseJsonSchema"
   ]);
   if (fromResponseJsonSchema != null) {
-    setValueByPath(toObject, ["responseJsonSchema"], fromResponseJsonSchema);
+    setValueByPath(toObject, ["responseJsonSchema"], tJsonSchema(fromResponseJsonSchema));
   }
   if (getValueByPath(fromObject, ["routingConfig"]) !== void 0) {
     throw new Error("routingConfig parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
@@ -35535,6 +35510,12 @@ function generateContentConfigToMldev(apiClient, fromObject, parentObject, rootO
   if (fromThinkingConfig != null) {
     setValueByPath(toObject, ["thinkingConfig"], fromThinkingConfig);
   }
+  const fromAudioTranscriptionConfig = getValueByPath(fromObject, [
+    "audioTranscriptionConfig"
+  ]);
+  if (fromAudioTranscriptionConfig != null) {
+    setValueByPath(toObject, ["audioTranscriptionConfig"], fromAudioTranscriptionConfig);
+  }
   const fromImageConfig = getValueByPath(fromObject, ["imageConfig"]);
   if (fromImageConfig != null) {
     setValueByPath(toObject, ["imageConfig"], imageConfigToMldev(fromImageConfig));
@@ -35548,14 +35529,14 @@ function generateContentConfigToMldev(apiClient, fromObject, parentObject, rootO
   if (getValueByPath(fromObject, ["modelArmorConfig"]) !== void 0) {
     throw new Error("modelArmorConfig parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
-  const fromServiceTier = getValueByPath(fromObject, ["serviceTier"]);
-  if (parentObject !== void 0 && fromServiceTier != null) {
-    setValueByPath(parentObject, ["serviceTier"], fromServiceTier);
-  }
   return toObject;
 }
 function generateContentConfigToVertex(apiClient, fromObject, parentObject, rootObject) {
   const toObject = {};
+  const fromServiceTier = getValueByPath(fromObject, ["serviceTier"]);
+  if (parentObject !== void 0 && fromServiceTier != null) {
+    setValueByPath(parentObject, ["serviceTier"], fromServiceTier);
+  }
   const fromSystemInstruction = getValueByPath(fromObject, [
     "systemInstruction"
   ]);
@@ -35634,7 +35615,7 @@ function generateContentConfigToVertex(apiClient, fromObject, parentObject, root
     "responseJsonSchema"
   ]);
   if (fromResponseJsonSchema != null) {
-    setValueByPath(toObject, ["responseJsonSchema"], fromResponseJsonSchema);
+    setValueByPath(toObject, ["responseJsonSchema"], tJsonSchema(fromResponseJsonSchema));
   }
   const fromRoutingConfig = getValueByPath(fromObject, [
     "routingConfig"
@@ -35712,6 +35693,12 @@ function generateContentConfigToVertex(apiClient, fromObject, parentObject, root
   if (fromThinkingConfig != null) {
     setValueByPath(toObject, ["thinkingConfig"], fromThinkingConfig);
   }
+  const fromAudioTranscriptionConfig = getValueByPath(fromObject, [
+    "audioTranscriptionConfig"
+  ]);
+  if (fromAudioTranscriptionConfig != null) {
+    setValueByPath(toObject, ["audioTranscriptionConfig"], fromAudioTranscriptionConfig);
+  }
   const fromImageConfig = getValueByPath(fromObject, ["imageConfig"]);
   if (fromImageConfig != null) {
     setValueByPath(toObject, ["imageConfig"], imageConfigToVertex(fromImageConfig));
@@ -35724,10 +35711,6 @@ function generateContentConfigToVertex(apiClient, fromObject, parentObject, root
   ]);
   if (parentObject !== void 0 && fromModelArmorConfig != null) {
     setValueByPath(parentObject, ["modelArmorConfig"], fromModelArmorConfig);
-  }
-  const fromServiceTier = getValueByPath(fromObject, ["serviceTier"]);
-  if (parentObject !== void 0 && fromServiceTier != null) {
-    setValueByPath(parentObject, ["serviceTier"], fromServiceTier);
   }
   return toObject;
 }
@@ -35863,88 +35846,6 @@ function generateContentResponseFromVertex(fromObject, _rootObject) {
   }
   return toObject;
 }
-function generateImagesConfigToMldev(fromObject, parentObject, _rootObject) {
-  const toObject = {};
-  if (getValueByPath(fromObject, ["outputGcsUri"]) !== void 0) {
-    throw new Error("outputGcsUri parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
-  if (getValueByPath(fromObject, ["negativePrompt"]) !== void 0) {
-    throw new Error("negativePrompt parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
-  const fromNumberOfImages = getValueByPath(fromObject, [
-    "numberOfImages"
-  ]);
-  if (parentObject !== void 0 && fromNumberOfImages != null) {
-    setValueByPath(parentObject, ["parameters", "sampleCount"], fromNumberOfImages);
-  }
-  const fromAspectRatio = getValueByPath(fromObject, ["aspectRatio"]);
-  if (parentObject !== void 0 && fromAspectRatio != null) {
-    setValueByPath(parentObject, ["parameters", "aspectRatio"], fromAspectRatio);
-  }
-  const fromGuidanceScale = getValueByPath(fromObject, [
-    "guidanceScale"
-  ]);
-  if (parentObject !== void 0 && fromGuidanceScale != null) {
-    setValueByPath(parentObject, ["parameters", "guidanceScale"], fromGuidanceScale);
-  }
-  if (getValueByPath(fromObject, ["seed"]) !== void 0) {
-    throw new Error("seed parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
-  const fromSafetyFilterLevel = getValueByPath(fromObject, [
-    "safetyFilterLevel"
-  ]);
-  if (parentObject !== void 0 && fromSafetyFilterLevel != null) {
-    setValueByPath(parentObject, ["parameters", "safetySetting"], fromSafetyFilterLevel);
-  }
-  const fromPersonGeneration = getValueByPath(fromObject, [
-    "personGeneration"
-  ]);
-  if (parentObject !== void 0 && fromPersonGeneration != null) {
-    setValueByPath(parentObject, ["parameters", "personGeneration"], fromPersonGeneration);
-  }
-  const fromIncludeSafetyAttributes = getValueByPath(fromObject, [
-    "includeSafetyAttributes"
-  ]);
-  if (parentObject !== void 0 && fromIncludeSafetyAttributes != null) {
-    setValueByPath(parentObject, ["parameters", "includeSafetyAttributes"], fromIncludeSafetyAttributes);
-  }
-  const fromIncludeRaiReason = getValueByPath(fromObject, [
-    "includeRaiReason"
-  ]);
-  if (parentObject !== void 0 && fromIncludeRaiReason != null) {
-    setValueByPath(parentObject, ["parameters", "includeRaiReason"], fromIncludeRaiReason);
-  }
-  const fromLanguage = getValueByPath(fromObject, ["language"]);
-  if (parentObject !== void 0 && fromLanguage != null) {
-    setValueByPath(parentObject, ["parameters", "language"], fromLanguage);
-  }
-  const fromOutputMimeType = getValueByPath(fromObject, [
-    "outputMimeType"
-  ]);
-  if (parentObject !== void 0 && fromOutputMimeType != null) {
-    setValueByPath(parentObject, ["parameters", "outputOptions", "mimeType"], fromOutputMimeType);
-  }
-  const fromOutputCompressionQuality = getValueByPath(fromObject, [
-    "outputCompressionQuality"
-  ]);
-  if (parentObject !== void 0 && fromOutputCompressionQuality != null) {
-    setValueByPath(parentObject, ["parameters", "outputOptions", "compressionQuality"], fromOutputCompressionQuality);
-  }
-  if (getValueByPath(fromObject, ["addWatermark"]) !== void 0) {
-    throw new Error("addWatermark parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
-  if (getValueByPath(fromObject, ["labels"]) !== void 0) {
-    throw new Error("labels parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
-  const fromImageSize = getValueByPath(fromObject, ["imageSize"]);
-  if (parentObject !== void 0 && fromImageSize != null) {
-    setValueByPath(parentObject, ["parameters", "sampleImageSize"], fromImageSize);
-  }
-  if (getValueByPath(fromObject, ["enhancePrompt"]) !== void 0) {
-    throw new Error("enhancePrompt parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
-  return toObject;
-}
 function generateImagesConfigToVertex(fromObject, parentObject, _rootObject) {
   const toObject = {};
   const fromOutputGcsUri = getValueByPath(fromObject, ["outputGcsUri"]);
@@ -36037,22 +35938,6 @@ function generateImagesConfigToVertex(fromObject, parentObject, _rootObject) {
   }
   return toObject;
 }
-function generateImagesParametersToMldev(apiClient, fromObject, rootObject) {
-  const toObject = {};
-  const fromModel = getValueByPath(fromObject, ["model"]);
-  if (fromModel != null) {
-    setValueByPath(toObject, ["_url", "model"], tModel(apiClient, fromModel));
-  }
-  const fromPrompt = getValueByPath(fromObject, ["prompt"]);
-  if (fromPrompt != null) {
-    setValueByPath(toObject, ["instances[0]", "prompt"], fromPrompt);
-  }
-  const fromConfig = getValueByPath(fromObject, ["config"]);
-  if (fromConfig != null) {
-    generateImagesConfigToMldev(fromConfig, toObject);
-  }
-  return toObject;
-}
 function generateImagesParametersToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
@@ -36066,34 +35951,6 @@ function generateImagesParametersToVertex(apiClient, fromObject, rootObject) {
   const fromConfig = getValueByPath(fromObject, ["config"]);
   if (fromConfig != null) {
     generateImagesConfigToVertex(fromConfig, toObject);
-  }
-  return toObject;
-}
-function generateImagesResponseFromMldev(fromObject, rootObject) {
-  const toObject = {};
-  const fromSdkHttpResponse = getValueByPath(fromObject, [
-    "sdkHttpResponse"
-  ]);
-  if (fromSdkHttpResponse != null) {
-    setValueByPath(toObject, ["sdkHttpResponse"], fromSdkHttpResponse);
-  }
-  const fromGeneratedImages = getValueByPath(fromObject, [
-    "predictions"
-  ]);
-  if (fromGeneratedImages != null) {
-    let transformedList = fromGeneratedImages;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return generatedImageFromMldev(item);
-      });
-    }
-    setValueByPath(toObject, ["generatedImages"], transformedList);
-  }
-  const fromPositivePromptSafetyAttributes = getValueByPath(fromObject, [
-    "positivePromptSafetyAttributes"
-  ]);
-  if (fromPositivePromptSafetyAttributes != null) {
-    setValueByPath(toObject, ["positivePromptSafetyAttributes"], safetyAttributesFromMldev(fromPositivePromptSafetyAttributes));
   }
   return toObject;
 }
@@ -36510,24 +36367,6 @@ function generateVideosSourceToVertex(fromObject, parentObject, rootObject) {
   }
   return toObject;
 }
-function generatedImageFromMldev(fromObject, rootObject) {
-  const toObject = {};
-  const fromImage = getValueByPath(fromObject, ["_self"]);
-  if (fromImage != null) {
-    setValueByPath(toObject, ["image"], imageFromMldev(fromImage));
-  }
-  const fromRaiFilteredReason = getValueByPath(fromObject, [
-    "raiFilteredReason"
-  ]);
-  if (fromRaiFilteredReason != null) {
-    setValueByPath(toObject, ["raiFilteredReason"], fromRaiFilteredReason);
-  }
-  const fromSafetyAttributes = getValueByPath(fromObject, ["_self"]);
-  if (fromSafetyAttributes != null) {
-    setValueByPath(toObject, ["safetyAttributes"], safetyAttributesFromMldev(fromSafetyAttributes));
-  }
-  return toObject;
-}
 function generatedImageFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromImage = getValueByPath(fromObject, ["_self"]);
@@ -36596,7 +36435,13 @@ function generationConfigToVertex(fromObject, rootObject) {
     "responseJsonSchema"
   ]);
   if (fromResponseJsonSchema != null) {
-    setValueByPath(toObject, ["responseJsonSchema"], fromResponseJsonSchema);
+    setValueByPath(toObject, ["responseJsonSchema"], tJsonSchema(fromResponseJsonSchema));
+  }
+  const fromAudioTranscriptionConfig = getValueByPath(fromObject, [
+    "audioTranscriptionConfig"
+  ]);
+  if (fromAudioTranscriptionConfig != null) {
+    setValueByPath(toObject, ["audioTranscriptionConfig"], fromAudioTranscriptionConfig);
   }
   const fromAudioTimestamp = getValueByPath(fromObject, [
     "audioTimestamp"
@@ -36643,6 +36488,18 @@ function generationConfigToVertex(fromObject, rootObject) {
   ]);
   if (fromPresencePenalty != null) {
     setValueByPath(toObject, ["presencePenalty"], fromPresencePenalty);
+  }
+  const fromResponseFormat = getValueByPath(fromObject, [
+    "responseFormat"
+  ]);
+  if (fromResponseFormat != null) {
+    let transformedList = fromResponseFormat;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["responseFormat"], transformedList);
   }
   const fromResponseLogprobs = getValueByPath(fromObject, [
     "responseLogprobs"
@@ -36709,18 +36566,6 @@ function generationConfigToVertex(fromObject, rootObject) {
   if (getValueByPath(fromObject, ["enableEnhancedCivicAnswers"]) !== void 0) {
     throw new Error("enableEnhancedCivicAnswers parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
   }
-  const fromResponseFormat = getValueByPath(fromObject, [
-    "responseFormat"
-  ]);
-  if (fromResponseFormat != null) {
-    let transformedList = fromResponseFormat;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return item;
-      });
-    }
-    setValueByPath(toObject, ["responseFormat"], transformedList);
-  }
   if (getValueByPath(fromObject, ["translationConfig"]) !== void 0) {
     throw new Error("translationConfig parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
   }
@@ -36752,19 +36597,22 @@ function googleMapsToMldev$1(fromObject, rootObject) {
   if (fromEnableWidget != null) {
     setValueByPath(toObject, ["enableWidget"], fromEnableWidget);
   }
+  if (getValueByPath(fromObject, ["groundingTypes"]) !== void 0) {
+    throw new Error("groundingTypes parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
   return toObject;
 }
 function googleSearchToMldev$1(fromObject, _rootObject) {
   const toObject = {};
-  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
-  if (fromSearchTypes != null) {
-    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
-  }
   if (getValueByPath(fromObject, ["blockingConfidence"]) !== void 0) {
     throw new Error("blockingConfidence parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
     throw new Error("excludeDomains parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
+  if (fromSearchTypes != null) {
+    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
   }
   const fromTimeRangeFilter = getValueByPath(fromObject, [
     "timeRangeFilter"
@@ -36787,9 +36635,6 @@ function imageConfigToMldev(fromObject, _rootObject) {
   if (getValueByPath(fromObject, ["personGeneration"]) !== void 0) {
     throw new Error("personGeneration parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
-  if (getValueByPath(fromObject, ["prominentPeople"]) !== void 0) {
-    throw new Error("prominentPeople parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
   if (getValueByPath(fromObject, ["outputMimeType"]) !== void 0) {
     throw new Error("outputMimeType parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
@@ -36798,6 +36643,9 @@ function imageConfigToMldev(fromObject, _rootObject) {
   }
   if (getValueByPath(fromObject, ["imageOutputOptions"]) !== void 0) {
     throw new Error("imageOutputOptions parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  if (getValueByPath(fromObject, ["prominentPeople"]) !== void 0) {
+    throw new Error("prominentPeople parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   return toObject;
 }
@@ -36817,12 +36665,6 @@ function imageConfigToVertex(fromObject, _rootObject) {
   if (fromPersonGeneration != null) {
     setValueByPath(toObject, ["personGeneration"], fromPersonGeneration);
   }
-  const fromProminentPeople = getValueByPath(fromObject, [
-    "prominentPeople"
-  ]);
-  if (fromProminentPeople != null) {
-    setValueByPath(toObject, ["prominentPeople"], fromProminentPeople);
-  }
   const fromOutputMimeType = getValueByPath(fromObject, [
     "outputMimeType"
   ]);
@@ -36841,19 +36683,11 @@ function imageConfigToVertex(fromObject, _rootObject) {
   if (fromImageOutputOptions != null) {
     setValueByPath(toObject, ["imageOutputOptions"], fromImageOutputOptions);
   }
-  return toObject;
-}
-function imageFromMldev(fromObject, _rootObject) {
-  const toObject = {};
-  const fromImageBytes = getValueByPath(fromObject, [
-    "bytesBase64Encoded"
+  const fromProminentPeople = getValueByPath(fromObject, [
+    "prominentPeople"
   ]);
-  if (fromImageBytes != null) {
-    setValueByPath(toObject, ["imageBytes"], tBytes(fromImageBytes));
-  }
-  const fromMimeType = getValueByPath(fromObject, ["mimeType"]);
-  if (fromMimeType != null) {
-    setValueByPath(toObject, ["mimeType"], fromMimeType);
+  if (fromProminentPeople != null) {
+    setValueByPath(toObject, ["prominentPeople"], fromProminentPeople);
   }
   return toObject;
 }
@@ -37184,6 +37018,20 @@ function partToMldev$1(fromObject, rootObject) {
   if (fromMediaResolution != null) {
     setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
   }
+  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
+  if (fromToolCall != null) {
+    setValueByPath(toObject, ["toolCall"], fromToolCall);
+  }
+  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
+  if (fromToolResponse != null) {
+    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
+  }
+  const fromAudioTranscription = getValueByPath(fromObject, [
+    "audioTranscription"
+  ]);
+  if (fromAudioTranscription != null) {
+    setValueByPath(toObject, ["audioTranscription"], fromAudioTranscription);
+  }
   const fromCodeExecutionResult = getValueByPath(fromObject, [
     "codeExecutionResult"
   ]);
@@ -37234,21 +37082,19 @@ function partToMldev$1(fromObject, rootObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
-  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
-  if (fromToolCall != null) {
-    setValueByPath(toObject, ["toolCall"], fromToolCall);
-  }
-  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
-  if (fromToolResponse != null) {
-    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
-  }
   const fromPartMetadata = getValueByPath(fromObject, ["partMetadata"]);
   if (fromPartMetadata != null) {
     setValueByPath(toObject, ["partMetadata"], fromPartMetadata);
   }
+  const fromMediaProcessing = getValueByPath(fromObject, [
+    "mediaProcessing"
+  ]);
+  if (fromMediaProcessing != null) {
+    setValueByPath(toObject, ["mediaProcessing"], fromMediaProcessing);
+  }
   return toObject;
 }
-function partToVertex$1(fromObject, rootObject) {
+function partToVertex$1(fromObject, _rootObject) {
   const toObject = {};
   const fromMediaResolution = getValueByPath(fromObject, [
     "mediaResolution"
@@ -37256,17 +37102,29 @@ function partToVertex$1(fromObject, rootObject) {
   if (fromMediaResolution != null) {
     setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
   }
+  if (getValueByPath(fromObject, ["toolCall"]) !== void 0) {
+    throw new Error("toolCall parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  if (getValueByPath(fromObject, ["toolResponse"]) !== void 0) {
+    throw new Error("toolResponse parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  const fromAudioTranscription = getValueByPath(fromObject, [
+    "audioTranscription"
+  ]);
+  if (fromAudioTranscription != null) {
+    setValueByPath(toObject, ["audioTranscription"], fromAudioTranscription);
+  }
   const fromCodeExecutionResult = getValueByPath(fromObject, [
     "codeExecutionResult"
   ]);
   if (fromCodeExecutionResult != null) {
-    setValueByPath(toObject, ["codeExecutionResult"], codeExecutionResultToVertex$1(fromCodeExecutionResult));
+    setValueByPath(toObject, ["codeExecutionResult"], fromCodeExecutionResult);
   }
   const fromExecutableCode = getValueByPath(fromObject, [
     "executableCode"
   ]);
   if (fromExecutableCode != null) {
-    setValueByPath(toObject, ["executableCode"], executableCodeToVertex$1(fromExecutableCode));
+    setValueByPath(toObject, ["executableCode"], fromExecutableCode);
   }
   const fromFileData = getValueByPath(fromObject, ["fileData"]);
   if (fromFileData != null) {
@@ -37306,14 +37164,14 @@ function partToVertex$1(fromObject, rootObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
-  if (getValueByPath(fromObject, ["toolCall"]) !== void 0) {
-    throw new Error("toolCall parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  if (getValueByPath(fromObject, ["toolResponse"]) !== void 0) {
-    throw new Error("toolResponse parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
   if (getValueByPath(fromObject, ["partMetadata"]) !== void 0) {
     throw new Error("partMetadata parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  const fromMediaProcessing = getValueByPath(fromObject, [
+    "mediaProcessing"
+  ]);
+  if (fromMediaProcessing != null) {
+    setValueByPath(toObject, ["mediaProcessing"], fromMediaProcessing);
   }
   return toObject;
 }
@@ -37505,28 +37363,6 @@ function replicatedVoiceConfigToVertex(fromObject, _rootObject) {
   }
   return toObject;
 }
-function safetyAttributesFromMldev(fromObject, _rootObject) {
-  const toObject = {};
-  const fromCategories = getValueByPath(fromObject, [
-    "safetyAttributes",
-    "categories"
-  ]);
-  if (fromCategories != null) {
-    setValueByPath(toObject, ["categories"], fromCategories);
-  }
-  const fromScores = getValueByPath(fromObject, [
-    "safetyAttributes",
-    "scores"
-  ]);
-  if (fromScores != null) {
-    setValueByPath(toObject, ["scores"], fromScores);
-  }
-  const fromContentType = getValueByPath(fromObject, ["contentType"]);
-  if (fromContentType != null) {
-    setValueByPath(toObject, ["contentType"], fromContentType);
-  }
-  return toObject;
-}
 function safetyAttributesFromVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromCategories = getValueByPath(fromObject, [
@@ -37686,17 +37522,17 @@ function speechConfigToVertex(fromObject, rootObject) {
 }
 function toolConfigToMldev(fromObject, rootObject) {
   const toObject = {};
-  const fromRetrievalConfig = getValueByPath(fromObject, [
-    "retrievalConfig"
-  ]);
-  if (fromRetrievalConfig != null) {
-    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
-  }
   const fromFunctionCallingConfig = getValueByPath(fromObject, [
     "functionCallingConfig"
   ]);
   if (fromFunctionCallingConfig != null) {
     setValueByPath(toObject, ["functionCallingConfig"], functionCallingConfigToMldev(fromFunctionCallingConfig));
+  }
+  const fromRetrievalConfig = getValueByPath(fromObject, [
+    "retrievalConfig"
+  ]);
+  if (fromRetrievalConfig != null) {
+    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
   }
   const fromIncludeServerSideToolInvocations = getValueByPath(fromObject, ["includeServerSideToolInvocations"]);
   if (fromIncludeServerSideToolInvocations != null) {
@@ -37706,17 +37542,17 @@ function toolConfigToMldev(fromObject, rootObject) {
 }
 function toolConfigToVertex(fromObject, _rootObject) {
   const toObject = {};
-  const fromRetrievalConfig = getValueByPath(fromObject, [
-    "retrievalConfig"
-  ]);
-  if (fromRetrievalConfig != null) {
-    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
-  }
   const fromFunctionCallingConfig = getValueByPath(fromObject, [
     "functionCallingConfig"
   ]);
   if (fromFunctionCallingConfig != null) {
     setValueByPath(toObject, ["functionCallingConfig"], fromFunctionCallingConfig);
+  }
+  const fromRetrievalConfig = getValueByPath(fromObject, [
+    "retrievalConfig"
+  ]);
+  if (fromRetrievalConfig != null) {
+    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
   }
   if (getValueByPath(fromObject, ["includeServerSideToolInvocations"]) !== void 0) {
     throw new Error("includeServerSideToolInvocations parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
@@ -37728,21 +37564,19 @@ function toolToMldev$1(fromObject, rootObject) {
   if (getValueByPath(fromObject, ["retrieval"]) !== void 0) {
     throw new Error("retrieval parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
-  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
-  if (fromComputerUse != null) {
-    setValueByPath(toObject, ["computerUse"], fromComputerUse);
-  }
-  const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
-  if (fromFileSearch != null) {
-    setValueByPath(toObject, ["fileSearch"], fromFileSearch);
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$1(fromGoogleSearch));
-  }
   const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
   if (fromGoogleMaps != null) {
     setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$1(fromGoogleMaps));
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -37750,8 +37584,15 @@ function toolToMldev$1(fromObject, rootObject) {
   if (fromCodeExecution != null) {
     setValueByPath(toObject, ["codeExecution"], fromCodeExecution);
   }
+  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
+  if (fromComputerUse != null) {
+    setValueByPath(toObject, ["computerUse"], fromComputerUse);
+  }
   if (getValueByPath(fromObject, ["enterpriseWebSearch"]) !== void 0) {
     throw new Error("enterpriseWebSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  if (getValueByPath(fromObject, ["exaAiSearch"]) !== void 0) {
+    throw new Error("exaAiSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   const fromFunctionDeclarations = getValueByPath(fromObject, [
     "functionDeclarations"
@@ -37764,6 +37605,10 @@ function toolToMldev$1(fromObject, rootObject) {
       });
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$1(fromGoogleSearch));
   }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
@@ -37778,18 +37623,9 @@ function toolToMldev$1(fromObject, rootObject) {
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
   }
-  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
-  if (fromMcpServers != null) {
-    let transformedList = fromMcpServers;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return item;
-      });
-    }
-    setValueByPath(toObject, ["mcpServers"], transformedList);
-  }
-  if (getValueByPath(fromObject, ["exaAiSearch"]) !== void 0) {
-    throw new Error("exaAiSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
+  if (fromFileSearch != null) {
+    setValueByPath(toObject, ["fileSearch"], fromFileSearch);
   }
   return toObject;
 }
@@ -37799,20 +37635,19 @@ function toolToVertex(fromObject, rootObject) {
   if (fromRetrieval != null) {
     setValueByPath(toObject, ["retrieval"], fromRetrieval);
   }
-  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
-  if (fromComputerUse != null) {
-    setValueByPath(toObject, ["computerUse"], computerUseToVertex(fromComputerUse));
-  }
-  if (getValueByPath(fromObject, ["fileSearch"]) !== void 0) {
-    throw new Error("fileSearch parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
-  }
   const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
   if (fromGoogleMaps != null) {
     setValueByPath(toObject, ["googleMaps"], fromGoogleMaps);
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return mcpServerToVertex(item);
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -37820,11 +37655,19 @@ function toolToVertex(fromObject, rootObject) {
   if (fromCodeExecution != null) {
     setValueByPath(toObject, ["codeExecution"], fromCodeExecution);
   }
+  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
+  if (fromComputerUse != null) {
+    setValueByPath(toObject, ["computerUse"], computerUseToVertex(fromComputerUse));
+  }
   const fromEnterpriseWebSearch = getValueByPath(fromObject, [
     "enterpriseWebSearch"
   ]);
   if (fromEnterpriseWebSearch != null) {
     setValueByPath(toObject, ["enterpriseWebSearch"], fromEnterpriseWebSearch);
+  }
+  const fromExaAiSearch = getValueByPath(fromObject, ["exaAiSearch"]);
+  if (fromExaAiSearch != null) {
+    setValueByPath(toObject, ["exaAiSearch"], fromExaAiSearch);
   }
   const fromFunctionDeclarations = getValueByPath(fromObject, [
     "functionDeclarations"
@@ -37837,6 +37680,10 @@ function toolToVertex(fromObject, rootObject) {
       });
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
   }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
@@ -37854,19 +37701,8 @@ function toolToVertex(fromObject, rootObject) {
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
   }
-  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
-  if (fromMcpServers != null) {
-    let transformedList = fromMcpServers;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return mcpServerToVertex(item);
-      });
-    }
-    setValueByPath(toObject, ["mcpServers"], transformedList);
-  }
-  const fromExaAiSearch = getValueByPath(fromObject, ["exaAiSearch"]);
-  if (fromExaAiSearch != null) {
-    setValueByPath(toObject, ["exaAiSearch"], fromExaAiSearch);
+  if (getValueByPath(fromObject, ["fileSearch"]) !== void 0) {
+    throw new Error("fileSearch parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
   }
   return toObject;
 }
@@ -38429,6 +38265,54 @@ function uploadToFileSearchStoreResumableResponseFromMldev(fromObject) {
   }
   return toObject;
 }
+function raiseUndiciTimeouts(timeout) {
+  const dispatcherSymbol = /* @__PURE__ */ Symbol.for("undici.globalDispatcher.1");
+  const globalDispatcher = globalThis[dispatcherSymbol];
+  if (!globalDispatcher) {
+    return;
+  }
+  for (const sym of Object.getOwnPropertySymbols(globalDispatcher)) {
+    const desc = sym.description;
+    if ((desc === null || desc === void 0 ? void 0 : desc.includes("headers timeout")) || (desc === null || desc === void 0 ? void 0 : desc.includes("body timeout"))) {
+      const currentTimeout = globalDispatcher[sym];
+      if (typeof currentTimeout === "number") {
+        globalDispatcher[sym] = Math.max(currentTimeout, timeout);
+      }
+    }
+  }
+}
+function createAttemptSignal(timeout, callerSignal) {
+  const noop3 = () => {
+  };
+  if (!(timeout && timeout > 0) && !callerSignal) {
+    return { signal: void 0, dispose: noop3 };
+  }
+  const controller = new AbortController();
+  let timeoutHandle;
+  if (timeout && timeout > 0) {
+    timeoutHandle = setTimeout(() => controller.abort(), timeout);
+    if (timeoutHandle && typeof timeoutHandle.unref === "function") {
+      timeoutHandle.unref();
+    }
+  }
+  const onCallerAbort = () => controller.abort();
+  if (callerSignal) {
+    if (callerSignal.aborted) {
+      controller.abort();
+    } else {
+      callerSignal.addEventListener("abort", onCallerAbort);
+    }
+  }
+  return {
+    signal: controller.signal,
+    dispose: () => {
+      if (timeoutHandle !== void 0) {
+        clearTimeout(timeoutHandle);
+      }
+      callerSignal === null || callerSignal === void 0 ? void 0 : callerSignal.removeEventListener("abort", onCallerAbort);
+    }
+  };
+}
 async function throwErrorIfNotOK(response) {
   var _a4;
   if (response === void 0) {
@@ -38662,35 +38546,6 @@ function shouldAppendAfcHistory(config3) {
   var _a4;
   return !((_a4 = config3 === null || config3 === void 0 ? void 0 : config3.automaticFunctionCalling) === null || _a4 === void 0 ? void 0 : _a4.ignoreCallHistory);
 }
-function audioTranscriptionConfigToMldev(fromObject) {
-  const toObject = {};
-  if (getValueByPath(fromObject, ["languageCodes"]) !== void 0) {
-    throw new Error("languageCodes parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
-  const fromLanguageAuto = getValueByPath(fromObject, ["languageAuto"]);
-  if (fromLanguageAuto != null) {
-    setValueByPath(toObject, ["languageAuto"], fromLanguageAuto);
-  }
-  const fromLanguageHints = getValueByPath(fromObject, [
-    "languageHints"
-  ]);
-  if (fromLanguageHints != null) {
-    setValueByPath(toObject, ["languageHints"], fromLanguageHints);
-  }
-  const fromCustomVocabulary = getValueByPath(fromObject, [
-    "customVocabulary"
-  ]);
-  if (fromCustomVocabulary != null) {
-    setValueByPath(toObject, ["customVocabulary"], fromCustomVocabulary);
-  }
-  const fromAdaptationPhrases = getValueByPath(fromObject, [
-    "adaptationPhrases"
-  ]);
-  if (fromAdaptationPhrases != null) {
-    setValueByPath(toObject, ["adaptationPhrases"], fromAdaptationPhrases);
-  }
-  return toObject;
-}
 function authConfigToMldev(fromObject) {
   const toObject = {};
   const fromApiKey = getValueByPath(fromObject, ["apiKey"]);
@@ -38805,13 +38660,13 @@ function fileDataToMldev(fromObject) {
 }
 function functionCallToMldev(fromObject) {
   const toObject = {};
-  const fromId = getValueByPath(fromObject, ["id"]);
-  if (fromId != null) {
-    setValueByPath(toObject, ["id"], fromId);
-  }
   const fromArgs = getValueByPath(fromObject, ["args"]);
   if (fromArgs != null) {
     setValueByPath(toObject, ["args"], fromArgs);
+  }
+  const fromId = getValueByPath(fromObject, ["id"]);
+  if (fromId != null) {
+    setValueByPath(toObject, ["id"], fromId);
   }
   const fromName = getValueByPath(fromObject, ["name"]);
   if (fromName != null) {
@@ -38835,19 +38690,22 @@ function googleMapsToMldev(fromObject) {
   if (fromEnableWidget != null) {
     setValueByPath(toObject, ["enableWidget"], fromEnableWidget);
   }
+  if (getValueByPath(fromObject, ["groundingTypes"]) !== void 0) {
+    throw new Error("groundingTypes parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
   return toObject;
 }
 function googleSearchToMldev(fromObject) {
   const toObject = {};
-  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
-  if (fromSearchTypes != null) {
-    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
-  }
   if (getValueByPath(fromObject, ["blockingConfidence"]) !== void 0) {
     throw new Error("blockingConfidence parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
     throw new Error("excludeDomains parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
+  if (fromSearchTypes != null) {
+    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
   }
   const fromTimeRangeFilter = getValueByPath(fromObject, [
     "timeRangeFilter"
@@ -38941,13 +38799,13 @@ function liveConnectConfigToMldev(fromObject, parentObject) {
     "inputAudioTranscription"
   ]);
   if (parentObject !== void 0 && fromInputAudioTranscription != null) {
-    setValueByPath(parentObject, ["setup", "inputAudioTranscription"], audioTranscriptionConfigToMldev(fromInputAudioTranscription));
+    setValueByPath(parentObject, ["setup", "inputAudioTranscription"], fromInputAudioTranscription);
   }
   const fromOutputAudioTranscription = getValueByPath(fromObject, [
     "outputAudioTranscription"
   ]);
   if (parentObject !== void 0 && fromOutputAudioTranscription != null) {
-    setValueByPath(parentObject, ["setup", "outputAudioTranscription"], audioTranscriptionConfigToMldev(fromOutputAudioTranscription));
+    setValueByPath(parentObject, ["setup", "outputAudioTranscription"], fromOutputAudioTranscription);
   }
   const fromRealtimeInputConfig = getValueByPath(fromObject, [
     "realtimeInputConfig"
@@ -39012,6 +38870,20 @@ function partToMldev(fromObject) {
   if (fromMediaResolution != null) {
     setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
   }
+  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
+  if (fromToolCall != null) {
+    setValueByPath(toObject, ["toolCall"], fromToolCall);
+  }
+  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
+  if (fromToolResponse != null) {
+    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
+  }
+  const fromAudioTranscription = getValueByPath(fromObject, [
+    "audioTranscription"
+  ]);
+  if (fromAudioTranscription != null) {
+    setValueByPath(toObject, ["audioTranscription"], fromAudioTranscription);
+  }
   const fromCodeExecutionResult = getValueByPath(fromObject, [
     "codeExecutionResult"
   ]);
@@ -39062,17 +38934,15 @@ function partToMldev(fromObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
-  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
-  if (fromToolCall != null) {
-    setValueByPath(toObject, ["toolCall"], fromToolCall);
-  }
-  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
-  if (fromToolResponse != null) {
-    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
-  }
   const fromPartMetadata = getValueByPath(fromObject, ["partMetadata"]);
   if (fromPartMetadata != null) {
     setValueByPath(toObject, ["partMetadata"], fromPartMetadata);
+  }
+  const fromMediaProcessing = getValueByPath(fromObject, [
+    "mediaProcessing"
+  ]);
+  if (fromMediaProcessing != null) {
+    setValueByPath(toObject, ["mediaProcessing"], fromMediaProcessing);
   }
   return toObject;
 }
@@ -39107,21 +38977,19 @@ function toolToMldev(fromObject) {
   if (getValueByPath(fromObject, ["retrieval"]) !== void 0) {
     throw new Error("retrieval parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
-  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
-  if (fromComputerUse != null) {
-    setValueByPath(toObject, ["computerUse"], fromComputerUse);
-  }
-  const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
-  if (fromFileSearch != null) {
-    setValueByPath(toObject, ["fileSearch"], fromFileSearch);
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev(fromGoogleSearch));
-  }
   const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
   if (fromGoogleMaps != null) {
     setValueByPath(toObject, ["googleMaps"], googleMapsToMldev(fromGoogleMaps));
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -39129,8 +38997,15 @@ function toolToMldev(fromObject) {
   if (fromCodeExecution != null) {
     setValueByPath(toObject, ["codeExecution"], fromCodeExecution);
   }
+  const fromComputerUse = getValueByPath(fromObject, ["computerUse"]);
+  if (fromComputerUse != null) {
+    setValueByPath(toObject, ["computerUse"], fromComputerUse);
+  }
   if (getValueByPath(fromObject, ["enterpriseWebSearch"]) !== void 0) {
     throw new Error("enterpriseWebSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  if (getValueByPath(fromObject, ["exaAiSearch"]) !== void 0) {
+    throw new Error("exaAiSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   const fromFunctionDeclarations = getValueByPath(fromObject, [
     "functionDeclarations"
@@ -39143,6 +39018,10 @@ function toolToMldev(fromObject) {
       });
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev(fromGoogleSearch));
   }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
@@ -39157,18 +39036,9 @@ function toolToMldev(fromObject) {
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
   }
-  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
-  if (fromMcpServers != null) {
-    let transformedList = fromMcpServers;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return item;
-      });
-    }
-    setValueByPath(toObject, ["mcpServers"], transformedList);
-  }
-  if (getValueByPath(fromObject, ["exaAiSearch"]) !== void 0) {
-    throw new Error("exaAiSearch parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
+  if (fromFileSearch != null) {
+    setValueByPath(toObject, ["fileSearch"], fromFileSearch);
   }
   return toObject;
 }
@@ -40386,14 +40256,14 @@ function resolveGlobalSecurity(security, allowedFields) {
   let inputs = [
     [
       {
-        fieldName: "apiKey",
-        type: "http:custom",
-        value: (_a4 = security === null || security === void 0 ? void 0 : security.api_key) !== null && _a4 !== void 0 ? _a4 : env().GOOGLE_GENAI_API_KEY
-      },
-      {
         fieldName: "accessToken",
         type: "http:custom",
-        value: (_b = security === null || security === void 0 ? void 0 : security.access_token) !== null && _b !== void 0 ? _b : env().GOOGLE_GENAI_ACCESS_TOKEN
+        value: (_a4 = security === null || security === void 0 ? void 0 : security.access_token) !== null && _a4 !== void 0 ? _a4 : env().GOOGLE_GENAI_ACCESS_TOKEN
+      },
+      {
+        fieldName: "apiKey",
+        type: "http:custom",
+        value: (_b = security === null || security === void 0 ? void 0 : security.api_key) !== null && _b !== void 0 ? _b : env().GOOGLE_GENAI_API_KEY
       },
       {
         fieldName: "defaultHeaders",
@@ -40432,9 +40302,9 @@ function unwrapAsAPIPromise(p) {
   return new APIPromise(data, callSource);
 }
 function agentsCreate(client, body, api_version, options) {
-  return new APIPromise($do$l(client, body, api_version, options));
+  return new APIPromise($do$q(client, body, api_version, options));
 }
-async function $do$l(client, body, api_version, options) {
+async function $do$q(client, body, api_version, options) {
   var _a4, _b, _c;
   const input = {
     body,
@@ -40503,9 +40373,9 @@ async function $do$l(client, body, api_version, options) {
   return [result, { status: "complete", request: req, response }];
 }
 function agentsDelete(client, id, api_version, options) {
-  return new APIPromise($do$k(client, id, api_version, options));
+  return new APIPromise($do$p(client, id, api_version, options));
 }
-async function $do$k(client, id, api_version, options) {
+async function $do$p(client, id, api_version, options) {
   var _a4, _b, _c;
   const input = {
     id,
@@ -40577,9 +40447,9 @@ async function $do$k(client, id, api_version, options) {
   return [result, { status: "complete", request: req, response }];
 }
 function agentsGet(client, id, api_version, options) {
-  return new APIPromise($do$j(client, id, api_version, options));
+  return new APIPromise($do$o(client, id, api_version, options));
 }
-async function $do$j(client, id, api_version, options) {
+async function $do$o(client, id, api_version, options) {
   var _a4, _b, _c;
   const input = {
     id,
@@ -40651,9 +40521,9 @@ async function $do$j(client, id, api_version, options) {
   return [result, { status: "complete", request: req, response }];
 }
 function agentsList(client, api_version, page_size, page_token, parent, options) {
-  return new APIPromise($do$i(client, api_version, page_size, page_token, parent, options));
+  return new APIPromise($do$n(client, api_version, page_size, page_token, parent, options));
 }
-async function $do$i(client, api_version, page_size, page_token, parent, options) {
+async function $do$n(client, api_version, page_size, page_token, parent, options) {
   var _a4, _b, _c;
   const input = {
     api_version,
@@ -40723,6 +40593,389 @@ async function $do$i(client, api_version, page_size, page_token, parent, options
   }
   const response = doResult.value;
   const [result] = await match(fail("4XX"), fail("5XX"), json("default"))(response, req);
+  if (!result.ok) {
+    return [result, { status: "complete", request: req, response }];
+  }
+  return [result, { status: "complete", request: req, response }];
+}
+function environmentsCreateEnvironment(client, body, api_version, options) {
+  return new APIPromise($do$m(client, body, api_version, options));
+}
+async function $do$m(client, body, api_version, options) {
+  var _a4, _b, _c;
+  const input = {
+    body,
+    api_version
+  };
+  const payload = input;
+  const body$ = encodeJSON("body", payload.body, { explode: true });
+  const pathParams = {
+    api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
+  };
+  const path9 = pathToFunc("/{api_version}/environments")(pathParams);
+  const headers = new Headers(compactMap({
+    "Content-Type": "application/json",
+    Accept: "application/json"
+  }));
+  const securityInput = await extractSecurity(client._options.security);
+  const requestSecurity = resolveGlobalSecurity(securityInput);
+  const context = {
+    options: client._options,
+    base_url: (_c = (_b = options === null || options === void 0 ? void 0 : options.server_url) !== null && _b !== void 0 ? _b : client._baseURL) !== null && _c !== void 0 ? _c : "",
+    operation_id: "CreateEnvironment",
+    o_auth2_scopes: null,
+    resolved_security: requestSecurity,
+    security_source: client._options.security,
+    retry_config: (options === null || options === void 0 ? void 0 : options.retries) || client._options.retry_config || {
+      strategy: "attempt-count-backoff",
+      backoff: {
+        initialInterval: 500,
+        maxInterval: 8e3,
+        exponent: 2,
+        maxElapsedTime: 3e4
+      },
+      retryConnectionErrors: true,
+      maxRetries: 4
+    },
+    retry_codes: (options === null || options === void 0 ? void 0 : options.retry_codes) || ["408", "409", "429", "5XX"]
+  };
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
+    method: "POST",
+    baseURL: options === null || options === void 0 ? void 0 : options.server_url,
+    path: path9,
+    headers,
+    body: body$,
+    userAgent: client._options.user_agent,
+    timeout_ms: (options === null || options === void 0 ? void 0 : options.timeout_ms) || client._options.timeout_ms || -1
+  }, options);
+  if (!requestRes.ok) {
+    return [requestRes, { status: "invalid" }];
+  }
+  const req = requestRes.value;
+  const doResult = await client._do(req, {
+    context,
+    isErrorStatusCode: (statusCode) => matchStatusCode({ status: statusCode }, ["4XX", "5XX"]),
+    retryConfig: context.retry_config,
+    retryCodes: context.retry_codes
+  });
+  if (!doResult.ok) {
+    return [doResult, { status: "request-error", request: req }];
+  }
+  const response = doResult.value;
+  const [result] = await match(fail("4XX"), fail("5XX"), json("default"))(response, req);
+  if (!result.ok) {
+    return [result, { status: "complete", request: req, response }];
+  }
+  return [result, { status: "complete", request: req, response }];
+}
+function environmentsDeleteEnvironment(client, id, api_version, options) {
+  return new APIPromise($do$l(client, id, api_version, options));
+}
+async function $do$l(client, id, api_version, options) {
+  var _a4, _b, _c;
+  const input = {
+    id,
+    api_version
+  };
+  const payload = input;
+  const body = null;
+  const pathParams = {
+    api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" }),
+    id: encodeSimple("id", payload.id, {
+      explode: false,
+      charEncoding: "percent"
+    })
+  };
+  const path9 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const headers = new Headers(compactMap({
+    Accept: "application/json"
+  }));
+  const securityInput = await extractSecurity(client._options.security);
+  const requestSecurity = resolveGlobalSecurity(securityInput);
+  const context = {
+    options: client._options,
+    base_url: (_c = (_b = options === null || options === void 0 ? void 0 : options.server_url) !== null && _b !== void 0 ? _b : client._baseURL) !== null && _c !== void 0 ? _c : "",
+    operation_id: "DeleteEnvironment",
+    o_auth2_scopes: null,
+    resolved_security: requestSecurity,
+    security_source: client._options.security,
+    retry_config: (options === null || options === void 0 ? void 0 : options.retries) || client._options.retry_config || {
+      strategy: "attempt-count-backoff",
+      backoff: {
+        initialInterval: 500,
+        maxInterval: 8e3,
+        exponent: 2,
+        maxElapsedTime: 3e4
+      },
+      retryConnectionErrors: true,
+      maxRetries: 4
+    },
+    retry_codes: (options === null || options === void 0 ? void 0 : options.retry_codes) || ["408", "409", "429", "5XX"]
+  };
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
+    method: "DELETE",
+    baseURL: options === null || options === void 0 ? void 0 : options.server_url,
+    path: path9,
+    headers,
+    body,
+    userAgent: client._options.user_agent,
+    timeout_ms: (options === null || options === void 0 ? void 0 : options.timeout_ms) || client._options.timeout_ms || -1
+  }, options);
+  if (!requestRes.ok) {
+    return [requestRes, { status: "invalid" }];
+  }
+  const req = requestRes.value;
+  const doResult = await client._do(req, {
+    context,
+    isErrorStatusCode: (statusCode) => matchStatusCode({ status: statusCode }, ["4XX", "5XX"]),
+    retryConfig: context.retry_config,
+    retryCodes: context.retry_codes
+  });
+  if (!doResult.ok) {
+    return [doResult, { status: "request-error", request: req }];
+  }
+  const response = doResult.value;
+  const [result] = await match(fail("4XX"), fail("5XX"), json("default"))(response, req);
+  if (!result.ok) {
+    return [result, { status: "complete", request: req, response }];
+  }
+  return [result, { status: "complete", request: req, response }];
+}
+function environmentsGetEnvironment(client, id, api_version, options) {
+  return new APIPromise($do$k(client, id, api_version, options));
+}
+async function $do$k(client, id, api_version, options) {
+  var _a4, _b, _c;
+  const input = {
+    id,
+    api_version
+  };
+  const payload = input;
+  const body = null;
+  const pathParams = {
+    api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" }),
+    id: encodeSimple("id", payload.id, {
+      explode: false,
+      charEncoding: "percent"
+    })
+  };
+  const path9 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const headers = new Headers(compactMap({
+    Accept: "application/json"
+  }));
+  const securityInput = await extractSecurity(client._options.security);
+  const requestSecurity = resolveGlobalSecurity(securityInput);
+  const context = {
+    options: client._options,
+    base_url: (_c = (_b = options === null || options === void 0 ? void 0 : options.server_url) !== null && _b !== void 0 ? _b : client._baseURL) !== null && _c !== void 0 ? _c : "",
+    operation_id: "GetEnvironment",
+    o_auth2_scopes: null,
+    resolved_security: requestSecurity,
+    security_source: client._options.security,
+    retry_config: (options === null || options === void 0 ? void 0 : options.retries) || client._options.retry_config || {
+      strategy: "attempt-count-backoff",
+      backoff: {
+        initialInterval: 500,
+        maxInterval: 8e3,
+        exponent: 2,
+        maxElapsedTime: 3e4
+      },
+      retryConnectionErrors: true,
+      maxRetries: 4
+    },
+    retry_codes: (options === null || options === void 0 ? void 0 : options.retry_codes) || ["408", "409", "429", "5XX"]
+  };
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
+    method: "GET",
+    baseURL: options === null || options === void 0 ? void 0 : options.server_url,
+    path: path9,
+    headers,
+    body,
+    userAgent: client._options.user_agent,
+    timeout_ms: (options === null || options === void 0 ? void 0 : options.timeout_ms) || client._options.timeout_ms || -1
+  }, options);
+  if (!requestRes.ok) {
+    return [requestRes, { status: "invalid" }];
+  }
+  const req = requestRes.value;
+  const doResult = await client._do(req, {
+    context,
+    isErrorStatusCode: (statusCode) => matchStatusCode({ status: statusCode }, ["4XX", "5XX"]),
+    retryConfig: context.retry_config,
+    retryCodes: context.retry_codes
+  });
+  if (!doResult.ok) {
+    return [doResult, { status: "request-error", request: req }];
+  }
+  const response = doResult.value;
+  const [result] = await match(fail("4XX"), fail("5XX"), json("default"))(response, req);
+  if (!result.ok) {
+    return [result, { status: "complete", request: req, response }];
+  }
+  return [result, { status: "complete", request: req, response }];
+}
+function environmentsListEnvironments(client, api_version, page_size, page_token, options) {
+  return new APIPromise($do$j(client, api_version, page_size, page_token, options));
+}
+async function $do$j(client, api_version, page_size, page_token, options) {
+  var _a4, _b, _c;
+  const input = {
+    api_version,
+    page_size,
+    page_token
+  };
+  const payload = input;
+  const body = null;
+  const pathParams = {
+    api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
+  };
+  const path9 = pathToFunc("/{api_version}/environments")(pathParams);
+  const query = encodeFormQuery({
+    "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
+    "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
+  });
+  const headers = new Headers(compactMap({
+    Accept: "application/json"
+  }));
+  const securityInput = await extractSecurity(client._options.security);
+  const requestSecurity = resolveGlobalSecurity(securityInput);
+  const context = {
+    options: client._options,
+    base_url: (_c = (_b = options === null || options === void 0 ? void 0 : options.server_url) !== null && _b !== void 0 ? _b : client._baseURL) !== null && _c !== void 0 ? _c : "",
+    operation_id: "ListEnvironments",
+    o_auth2_scopes: null,
+    resolved_security: requestSecurity,
+    security_source: client._options.security,
+    retry_config: (options === null || options === void 0 ? void 0 : options.retries) || client._options.retry_config || {
+      strategy: "attempt-count-backoff",
+      backoff: {
+        initialInterval: 500,
+        maxInterval: 8e3,
+        exponent: 2,
+        maxElapsedTime: 3e4
+      },
+      retryConnectionErrors: true,
+      maxRetries: 4
+    },
+    retry_codes: (options === null || options === void 0 ? void 0 : options.retry_codes) || ["408", "409", "429", "5XX"]
+  };
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
+    method: "GET",
+    baseURL: options === null || options === void 0 ? void 0 : options.server_url,
+    path: path9,
+    headers,
+    query,
+    body,
+    userAgent: client._options.user_agent,
+    timeout_ms: (options === null || options === void 0 ? void 0 : options.timeout_ms) || client._options.timeout_ms || -1
+  }, options);
+  if (!requestRes.ok) {
+    return [requestRes, { status: "invalid" }];
+  }
+  const req = requestRes.value;
+  const doResult = await client._do(req, {
+    context,
+    isErrorStatusCode: (statusCode) => matchStatusCode({ status: statusCode }, ["4XX", "5XX"]),
+    retryConfig: context.retry_config,
+    retryCodes: context.retry_codes
+  });
+  if (!doResult.ok) {
+    return [doResult, { status: "request-error", request: req }];
+  }
+  const response = doResult.value;
+  const [result] = await match(fail("4XX"), fail("5XX"), json("default"))(response, req);
+  if (!result.ok) {
+    return [result, { status: "complete", request: req, response }];
+  }
+  return [result, { status: "complete", request: req, response }];
+}
+function environmentsFilesList(client, environment, path9, api_version, page_size, page_token, recursive, options) {
+  return new APIPromise($do$i(client, environment, path9, api_version, page_size, page_token, recursive, options));
+}
+async function $do$i(client, environment, path9, api_version, page_size, page_token, recursive, options) {
+  var _a4, _b, _c;
+  const input = {
+    environment,
+    path: path9,
+    api_version,
+    page_size,
+    page_token,
+    recursive
+  };
+  const payload = input;
+  const body = null;
+  const pathParams = {
+    api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" }),
+    environment: encodeSimple("environment", payload.environment, {
+      explode: false,
+      charEncoding: "percent"
+    }),
+    path: encodeSimple("path", payload.path, {
+      explode: false,
+      charEncoding: "percent"
+    })
+  };
+  const path$ = pathToFunc("/{api_version}/environments/{environment}/files/{path}")(pathParams);
+  const query = encodeFormQuery({
+    "page_size": payload.page_size,
+    "page_token": payload.page_token,
+    "recursive": payload.recursive
+  });
+  const headers = new Headers(compactMap({
+    Accept: "application/json"
+  }));
+  const securityInput = await extractSecurity(client._options.security);
+  const requestSecurity = resolveGlobalSecurity(securityInput);
+  const context = {
+    options: client._options,
+    base_url: (_c = (_b = options === null || options === void 0 ? void 0 : options.server_url) !== null && _b !== void 0 ? _b : client._baseURL) !== null && _c !== void 0 ? _c : "",
+    operation_id: "GetEnvironmentFiles",
+    o_auth2_scopes: null,
+    resolved_security: requestSecurity,
+    security_source: client._options.security,
+    retry_config: (options === null || options === void 0 ? void 0 : options.retries) || client._options.retry_config || {
+      strategy: "attempt-count-backoff",
+      backoff: {
+        initialInterval: 500,
+        maxInterval: 8e3,
+        exponent: 2,
+        maxElapsedTime: 3e4
+      },
+      retryConnectionErrors: true,
+      maxRetries: 4
+    },
+    retry_codes: (options === null || options === void 0 ? void 0 : options.retry_codes) || ["408", "409", "429", "5XX"]
+  };
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
+    method: "GET",
+    baseURL: options === null || options === void 0 ? void 0 : options.server_url,
+    path: path$,
+    headers,
+    query,
+    body,
+    userAgent: client._options.user_agent,
+    timeout_ms: (options === null || options === void 0 ? void 0 : options.timeout_ms) || client._options.timeout_ms || -1
+  }, options);
+  if (!requestRes.ok) {
+    return [requestRes, { status: "invalid" }];
+  }
+  const req = requestRes.value;
+  const doResult = await client._do(req, {
+    context,
+    isErrorStatusCode: (statusCode) => matchStatusCode({ status: statusCode }, ["4XX", "5XX"]),
+    retryConfig: context.retry_config,
+    retryCodes: context.retry_codes
+  });
+  if (!doResult.ok) {
+    return [doResult, { status: "request-error", request: req }];
+  }
+  const response = doResult.value;
+  const [result] = await match(json(200), fail("4XX"), fail("5XX"))(response, req);
   if (!result.ok) {
     return [result, { status: "complete", request: req, response }];
   }
@@ -40959,17 +41212,17 @@ async function $do$f(client, id, api_version, options) {
   }
   return [result, { status: "complete", request: req, response }];
 }
-function interactionsGet(client, id, stream, last_event_id, include_input, api_version, options) {
-  return new APIPromise($do$e(client, id, stream, last_event_id, include_input, api_version, options));
+function interactionsGet(client, id, api_version, include_input, last_event_id, stream, options) {
+  return new APIPromise($do$e(client, id, api_version, include_input, last_event_id, stream, options));
 }
-async function $do$e(client, id, stream, last_event_id, include_input, api_version, options) {
+async function $do$e(client, id, api_version, include_input, last_event_id, stream, options) {
   var _a4, _b, _c;
   const input = {
     id,
-    stream,
-    last_event_id,
+    api_version,
     include_input,
-    api_version
+    last_event_id,
+    stream
   };
   const payload = input;
   const body = null;
@@ -42431,21 +42684,6 @@ function cancelTuningJobResponseFromVertex(fromObject, _rootObject) {
   }
   return toObject;
 }
-function codeExecutionResultToVertex(fromObject, _rootObject) {
-  const toObject = {};
-  const fromOutcome = getValueByPath(fromObject, ["outcome"]);
-  if (fromOutcome != null) {
-    setValueByPath(toObject, ["outcome"], fromOutcome);
-  }
-  const fromOutput = getValueByPath(fromObject, ["output"]);
-  if (fromOutput != null) {
-    setValueByPath(toObject, ["output"], fromOutput);
-  }
-  if (getValueByPath(fromObject, ["id"]) !== void 0) {
-    throw new Error("id parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  return toObject;
-}
 function contentToVertex(fromObject, rootObject) {
   const toObject = {};
   const fromParts = getValueByPath(fromObject, ["parts"]);
@@ -42529,9 +42767,6 @@ function createTuningJobConfigToMldev(fromObject, parentObject, _rootObject) {
   if (getValueByPath(fromObject, ["outputUri"]) !== void 0) {
     throw new Error("outputUri parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
-  if (getValueByPath(fromObject, ["encryptionSpec"]) !== void 0) {
-    throw new Error("encryptionSpec parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
-  }
   if (getValueByPath(fromObject, ["rewardConfig"]) !== void 0) {
     throw new Error("rewardConfig parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
@@ -42555,6 +42790,9 @@ function createTuningJobConfigToMldev(fromObject, parentObject, _rootObject) {
   }
   if (getValueByPath(fromObject, ["validationDatasetUri"]) !== void 0) {
     throw new Error("validationDatasetUri parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
+  }
+  if (getValueByPath(fromObject, ["encryptionSpec"]) !== void 0) {
+    throw new Error("encryptionSpec parameter is only supported in Gemini Enterprise Agent Platform mode, not in Gemini Developer API mode.");
   }
   return toObject;
 }
@@ -42831,12 +43069,6 @@ function createTuningJobConfigToVertex(fromObject, parentObject, rootObject) {
   if (parentObject !== void 0 && fromOutputUri != null) {
     setValueByPath(parentObject, ["outputUri"], fromOutputUri);
   }
-  const fromEncryptionSpec = getValueByPath(fromObject, [
-    "encryptionSpec"
-  ]);
-  if (parentObject !== void 0 && fromEncryptionSpec != null) {
-    setValueByPath(parentObject, ["encryptionSpec"], fromEncryptionSpec);
-  }
   const fromRewardConfig = getValueByPath(fromObject, ["rewardConfig"]);
   if (parentObject !== void 0 && fromRewardConfig != null) {
     setValueByPath(parentObject, ["reinforcementTuningSpec", "singleRewardConfig"], fromRewardConfig);
@@ -42882,6 +43114,12 @@ function createTuningJobConfigToVertex(fromObject, parentObject, rootObject) {
   ]);
   if (parentObject !== void 0 && fromValidationDatasetUri != null) {
     setValueByPath(parentObject, ["reinforcementTuningSpec", "validationDatasetUri"], fromValidationDatasetUri);
+  }
+  const fromEncryptionSpec = getValueByPath(fromObject, [
+    "encryptionSpec"
+  ]);
+  if (parentObject !== void 0 && fromEncryptionSpec != null) {
+    setValueByPath(parentObject, ["encryptionSpec"], fromEncryptionSpec);
   }
   return toObject;
 }
@@ -42935,10 +43173,6 @@ function createTuningJobParametersPrivateToVertex(fromObject, rootObject) {
 }
 function distillationHyperParametersFromVertex(fromObject, rootObject) {
   const toObject = {};
-  const fromAdapterSize = getValueByPath(fromObject, ["adapterSize"]);
-  if (fromAdapterSize != null) {
-    setValueByPath(toObject, ["adapterSize"], fromAdapterSize);
-  }
   const fromEpochCount = getValueByPath(fromObject, ["epochCount"]);
   if (fromEpochCount != null) {
     setValueByPath(toObject, ["epochCount"], fromEpochCount);
@@ -42949,24 +43183,40 @@ function distillationHyperParametersFromVertex(fromObject, rootObject) {
   if (fromLearningRateMultiplier != null) {
     setValueByPath(toObject, ["learningRateMultiplier"], fromLearningRateMultiplier);
   }
+  const fromAdapterSize = getValueByPath(fromObject, ["adapterSize"]);
+  if (fromAdapterSize != null) {
+    setValueByPath(toObject, ["adapterSize"], fromAdapterSize);
+  }
+  const fromBatchSize = getValueByPath(fromObject, ["batchSize"]);
+  if (fromBatchSize != null) {
+    setValueByPath(toObject, ["batchSize"], fromBatchSize);
+  }
+  const fromLearningRate = getValueByPath(fromObject, ["learningRate"]);
+  if (fromLearningRate != null) {
+    setValueByPath(toObject, ["learningRate"], fromLearningRate);
+  }
   const fromGenerationConfig = getValueByPath(fromObject, [
     "generationConfig"
   ]);
   if (fromGenerationConfig != null) {
     setValueByPath(toObject, ["generationConfig"], generationConfigFromVertex(fromGenerationConfig));
   }
-  const fromLearningRate = getValueByPath(fromObject, ["learningRate"]);
-  if (fromLearningRate != null) {
-    setValueByPath(toObject, ["learningRate"], fromLearningRate);
-  }
-  const fromBatchSize = getValueByPath(fromObject, ["batchSize"]);
-  if (fromBatchSize != null) {
-    setValueByPath(toObject, ["batchSize"], fromBatchSize);
-  }
   return toObject;
 }
 function distillationSamplingSpecFromVertex(fromObject, rootObject) {
   const toObject = {};
+  const fromPromptDatasetUri = getValueByPath(fromObject, [
+    "promptDatasetUri"
+  ]);
+  if (fromPromptDatasetUri != null) {
+    setValueByPath(toObject, ["promptDatasetUri"], fromPromptDatasetUri);
+  }
+  const fromValidationDatasetUri = getValueByPath(fromObject, [
+    "validationDatasetUri"
+  ]);
+  if (fromValidationDatasetUri != null) {
+    setValueByPath(toObject, ["validationDatasetUri"], fromValidationDatasetUri);
+  }
   const fromBaseTeacherModel = getValueByPath(fromObject, [
     "baseTeacherModel"
   ]);
@@ -42979,18 +43229,6 @@ function distillationSamplingSpecFromVertex(fromObject, rootObject) {
   if (fromTunedTeacherModelSource != null) {
     setValueByPath(toObject, ["tunedTeacherModelSource"], fromTunedTeacherModelSource);
   }
-  const fromValidationDatasetUri = getValueByPath(fromObject, [
-    "validationDatasetUri"
-  ]);
-  if (fromValidationDatasetUri != null) {
-    setValueByPath(toObject, ["validationDatasetUri"], fromValidationDatasetUri);
-  }
-  const fromPromptDatasetUri = getValueByPath(fromObject, [
-    "promptDatasetUri"
-  ]);
-  if (fromPromptDatasetUri != null) {
-    setValueByPath(toObject, ["promptDatasetUri"], fromPromptDatasetUri);
-  }
   const fromHyperparameters = getValueByPath(fromObject, [
     "hyperparameters"
   ]);
@@ -43001,12 +43239,6 @@ function distillationSamplingSpecFromVertex(fromObject, rootObject) {
 }
 function distillationSpecFromVertex(fromObject, rootObject) {
   const toObject = {};
-  const fromPromptDatasetUri = getValueByPath(fromObject, [
-    "promptDatasetUri"
-  ]);
-  if (fromPromptDatasetUri != null) {
-    setValueByPath(toObject, ["promptDatasetUri"], fromPromptDatasetUri);
-  }
   const fromBaseTeacherModel = getValueByPath(fromObject, [
     "baseTeacherModel"
   ]);
@@ -43025,6 +43257,12 @@ function distillationSpecFromVertex(fromObject, rootObject) {
   if (fromPipelineRootDirectory != null) {
     setValueByPath(toObject, ["pipelineRootDirectory"], fromPipelineRootDirectory);
   }
+  const fromPromptDatasetUri = getValueByPath(fromObject, [
+    "promptDatasetUri"
+  ]);
+  if (fromPromptDatasetUri != null) {
+    setValueByPath(toObject, ["promptDatasetUri"], fromPromptDatasetUri);
+  }
   const fromStudentModel = getValueByPath(fromObject, ["studentModel"]);
   if (fromStudentModel != null) {
     setValueByPath(toObject, ["studentModel"], fromStudentModel);
@@ -43041,30 +43279,15 @@ function distillationSpecFromVertex(fromObject, rootObject) {
   if (fromTunedTeacherModelSource != null) {
     setValueByPath(toObject, ["tunedTeacherModelSource"], fromTunedTeacherModelSource);
   }
+  const fromTuningMode = getValueByPath(fromObject, ["tuningMode"]);
+  if (fromTuningMode != null) {
+    setValueByPath(toObject, ["tuningMode"], fromTuningMode);
+  }
   const fromValidationDatasetUri = getValueByPath(fromObject, [
     "validationDatasetUri"
   ]);
   if (fromValidationDatasetUri != null) {
     setValueByPath(toObject, ["validationDatasetUri"], fromValidationDatasetUri);
-  }
-  const fromTuningMode = getValueByPath(fromObject, ["tuningMode"]);
-  if (fromTuningMode != null) {
-    setValueByPath(toObject, ["tuningMode"], fromTuningMode);
-  }
-  return toObject;
-}
-function executableCodeToVertex(fromObject, _rootObject) {
-  const toObject = {};
-  const fromCode = getValueByPath(fromObject, ["code"]);
-  if (fromCode != null) {
-    setValueByPath(toObject, ["code"], fromCode);
-  }
-  const fromLanguage = getValueByPath(fromObject, ["language"]);
-  if (fromLanguage != null) {
-    setValueByPath(toObject, ["language"], fromLanguage);
-  }
-  if (getValueByPath(fromObject, ["id"]) !== void 0) {
-    throw new Error("id parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
   }
   return toObject;
 }
@@ -43080,7 +43303,13 @@ function generationConfigFromVertex(fromObject, _rootObject) {
     "responseJsonSchema"
   ]);
   if (fromResponseJsonSchema != null) {
-    setValueByPath(toObject, ["responseJsonSchema"], fromResponseJsonSchema);
+    setValueByPath(toObject, ["responseJsonSchema"], tJsonSchema(fromResponseJsonSchema));
+  }
+  const fromAudioTranscriptionConfig = getValueByPath(fromObject, [
+    "audioTranscriptionConfig"
+  ]);
+  if (fromAudioTranscriptionConfig != null) {
+    setValueByPath(toObject, ["audioTranscriptionConfig"], fromAudioTranscriptionConfig);
   }
   const fromAudioTimestamp = getValueByPath(fromObject, [
     "audioTimestamp"
@@ -43127,6 +43356,18 @@ function generationConfigFromVertex(fromObject, _rootObject) {
   ]);
   if (fromPresencePenalty != null) {
     setValueByPath(toObject, ["presencePenalty"], fromPresencePenalty);
+  }
+  const fromResponseFormat = getValueByPath(fromObject, [
+    "responseFormat"
+  ]);
+  if (fromResponseFormat != null) {
+    let transformedList = fromResponseFormat;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["responseFormat"], transformedList);
   }
   const fromResponseLogprobs = getValueByPath(fromObject, [
     "responseLogprobs"
@@ -43189,18 +43430,6 @@ function generationConfigFromVertex(fromObject, _rootObject) {
   const fromTopP = getValueByPath(fromObject, ["topP"]);
   if (fromTopP != null) {
     setValueByPath(toObject, ["topP"], fromTopP);
-  }
-  const fromResponseFormat = getValueByPath(fromObject, [
-    "responseFormat"
-  ]);
-  if (fromResponseFormat != null) {
-    let transformedList = fromResponseFormat;
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return item;
-      });
-    }
-    setValueByPath(toObject, ["responseFormat"], transformedList);
   }
   return toObject;
 }
@@ -43270,7 +43499,7 @@ function listTuningJobsResponseFromVertex(fromObject, rootObject) {
   }
   return toObject;
 }
-function partToVertex(fromObject, rootObject) {
+function partToVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromMediaResolution = getValueByPath(fromObject, [
     "mediaResolution"
@@ -43278,17 +43507,29 @@ function partToVertex(fromObject, rootObject) {
   if (fromMediaResolution != null) {
     setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
   }
+  if (getValueByPath(fromObject, ["toolCall"]) !== void 0) {
+    throw new Error("toolCall parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  if (getValueByPath(fromObject, ["toolResponse"]) !== void 0) {
+    throw new Error("toolResponse parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  const fromAudioTranscription = getValueByPath(fromObject, [
+    "audioTranscription"
+  ]);
+  if (fromAudioTranscription != null) {
+    setValueByPath(toObject, ["audioTranscription"], fromAudioTranscription);
+  }
   const fromCodeExecutionResult = getValueByPath(fromObject, [
     "codeExecutionResult"
   ]);
   if (fromCodeExecutionResult != null) {
-    setValueByPath(toObject, ["codeExecutionResult"], codeExecutionResultToVertex(fromCodeExecutionResult));
+    setValueByPath(toObject, ["codeExecutionResult"], fromCodeExecutionResult);
   }
   const fromExecutableCode = getValueByPath(fromObject, [
     "executableCode"
   ]);
   if (fromExecutableCode != null) {
-    setValueByPath(toObject, ["executableCode"], executableCodeToVertex(fromExecutableCode));
+    setValueByPath(toObject, ["executableCode"], fromExecutableCode);
   }
   const fromFileData = getValueByPath(fromObject, ["fileData"]);
   if (fromFileData != null) {
@@ -43328,19 +43569,23 @@ function partToVertex(fromObject, rootObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
-  if (getValueByPath(fromObject, ["toolCall"]) !== void 0) {
-    throw new Error("toolCall parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
-  if (getValueByPath(fromObject, ["toolResponse"]) !== void 0) {
-    throw new Error("toolResponse parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
-  }
   if (getValueByPath(fromObject, ["partMetadata"]) !== void 0) {
     throw new Error("partMetadata parameter is only supported in Gemini Developer API mode, not in Gemini Enterprise Agent Platform mode.");
+  }
+  const fromMediaProcessing = getValueByPath(fromObject, [
+    "mediaProcessing"
+  ]);
+  if (fromMediaProcessing != null) {
+    setValueByPath(toObject, ["mediaProcessing"], fromMediaProcessing);
   }
   return toObject;
 }
 function reinforcementTuningExampleToVertex(fromObject, rootObject) {
   const toObject = {};
+  const fromReferences = getValueByPath(fromObject, ["references"]);
+  if (fromReferences != null) {
+    setValueByPath(toObject, ["references"], fromReferences);
+  }
   const fromContents = getValueByPath(fromObject, ["contents"]);
   if (fromContents != null) {
     let transformedList = fromContents;
@@ -43350,10 +43595,6 @@ function reinforcementTuningExampleToVertex(fromObject, rootObject) {
       });
     }
     setValueByPath(toObject, ["contents"], transformedList);
-  }
-  const fromReferences = getValueByPath(fromObject, ["references"]);
-  if (fromReferences != null) {
-    setValueByPath(toObject, ["references"], fromReferences);
   }
   const fromSystemInstruction = getValueByPath(fromObject, [
     "systemInstruction"
@@ -43584,6 +43825,12 @@ function tuningJobFromVertex(fromObject, rootObject) {
   if (fromPreferenceOptimizationSpec != null) {
     setValueByPath(toObject, ["preferenceOptimizationSpec"], fromPreferenceOptimizationSpec);
   }
+  const fromDistillationSamplingSpec = getValueByPath(fromObject, [
+    "distillationSamplingSpec"
+  ]);
+  if (fromDistillationSamplingSpec != null) {
+    setValueByPath(toObject, ["distillationSamplingSpec"], distillationSamplingSpecFromVertex(fromDistillationSamplingSpec));
+  }
   const fromDistillationSpec = getValueByPath(fromObject, [
     "distillationSpec"
   ]);
@@ -43666,23 +43913,17 @@ function tuningJobFromVertex(fromObject, rootObject) {
   if (fromTunedModelDisplayName != null) {
     setValueByPath(toObject, ["tunedModelDisplayName"], fromTunedModelDisplayName);
   }
-  const fromTuningJobState = getValueByPath(fromObject, [
-    "tuningJobState"
-  ]);
-  if (fromTuningJobState != null) {
-    setValueByPath(toObject, ["tuningJobState"], fromTuningJobState);
-  }
-  const fromVeoTuningSpec = getValueByPath(fromObject, [
-    "veoTuningSpec"
-  ]);
-  if (fromVeoTuningSpec != null) {
-    setValueByPath(toObject, ["veoTuningSpec"], fromVeoTuningSpec);
-  }
   const fromTuningJobMetadata = getValueByPath(fromObject, [
     "tuningJobMetadata"
   ]);
   if (fromTuningJobMetadata != null) {
     setValueByPath(toObject, ["tuningJobMetadata"], fromTuningJobMetadata);
+  }
+  const fromTuningJobState = getValueByPath(fromObject, [
+    "tuningJobState"
+  ]);
+  if (fromTuningJobState != null) {
+    setValueByPath(toObject, ["tuningJobState"], fromTuningJobState);
   }
   const fromVeoLoraTuningSpec = getValueByPath(fromObject, [
     "veoLoraTuningSpec"
@@ -43690,11 +43931,11 @@ function tuningJobFromVertex(fromObject, rootObject) {
   if (fromVeoLoraTuningSpec != null) {
     setValueByPath(toObject, ["veoLoraTuningSpec"], fromVeoLoraTuningSpec);
   }
-  const fromDistillationSamplingSpec = getValueByPath(fromObject, [
-    "distillationSamplingSpec"
+  const fromVeoTuningSpec = getValueByPath(fromObject, [
+    "veoTuningSpec"
   ]);
-  if (fromDistillationSamplingSpec != null) {
-    setValueByPath(toObject, ["distillationSamplingSpec"], distillationSamplingSpecFromVertex(fromDistillationSamplingSpec));
+  if (fromVeoTuningSpec != null) {
+    setValueByPath(toObject, ["veoTuningSpec"], fromVeoTuningSpec);
   }
   return toObject;
 }
@@ -43841,7 +44082,7 @@ async function uploadBlobInternal(file, uploadUrl, apiClient, httpOptions) {
     let retryCount = 0;
     let currentDelayMs = INITIAL_RETRY_DELAY_MS;
     while (retryCount < MAX_RETRY_COUNT) {
-      const mergedHeaders = Object.assign(Object.assign({}, (httpOptions === null || httpOptions === void 0 ? void 0 : httpOptions.headers) || {}), { "X-Goog-Upload-Command": uploadCommand, "X-Goog-Upload-Offset": String(offset), "Content-Length": String(chunkSize) });
+      const mergedHeaders = Object.assign(Object.assign({}, (httpOptions === null || httpOptions === void 0 ? void 0 : httpOptions.headers) || {}), { "X-Goog-Upload-Command": uploadCommand, "X-Goog-Upload-Offset": String(offset) });
       response = await apiClient.request({
         path: "",
         body: chunk2,
@@ -43874,7 +44115,7 @@ function sleep(ms) {
 }
 function resolveCloudFlag(options) {
   var _a4;
-  if (options.enterprise !== void 0 || options.vertexai !== void 0) {
+  if (options && (options.enterprise !== void 0 || options.vertexai !== void 0)) {
     if (options.enterprise !== void 0 && options.vertexai !== void 0 && options.enterprise !== options.vertexai) {
       throw new Error("enterprise and vertexAI flags have conflicting values, please set enterprise value only.");
     }
@@ -43913,7 +44154,7 @@ function getApiKeyFromEnv() {
   }
   return envGoogleApiKey || envGeminiApiKey || void 0;
 }
-var import_p_retry, import_google_auth_library, _defaultBaseGeminiUrl, _defaultBaseVertexUrl, BaseModule, Outcome, Language, FunctionResponseScheduling, Type, AuthType, HttpElementLocation, ApiSpec, Environment, SafetyPolicy, PhishBlockThreshold, Behavior, DynamicRetrievalConfigMode, ThinkingLevel, PersonGeneration, ProminentPeople, HarmCategory, HarmBlockMethod, HarmBlockThreshold, FunctionCallingConfigMode, FinishReason, HarmProbability, HarmSeverity, UrlRetrievalStatus, BlockedReason, TrafficType, MediaModality, ModelStage, MediaResolution, Modality, Delivery, AspectRatio, ImageSize, TuningMode, AdapterSize, ResponseParseType, MatchOperation, ReinforcementTuningThinkingLevel, JobState, TuningJobState, AggregationMetric, PairwiseChoice, TuningSpeed, TuningTask, VideoOrientation, DocumentState, ServiceTier, PartMediaResolutionLevel, ToolType, ResourceScope, FeatureSelectionPreference, EmbeddingApiType, SafetyFilterLevel, ImagePromptLanguage, MaskReferenceMode, ControlReferenceType, SubjectReferenceType, EditMode, SegmentMode, VideoGenerationReferenceType, VideoGenerationMaskMode, VideoCompressionQuality, ImageResizeMode, TuningMethod, FileState, FileSource, TurnCompleteReason, VadSignalType, VoiceActivityType, StartSensitivity, EndSensitivity, ActivityHandling, TurnCoverage, Scale, MusicGenerationMode, LiveMusicPlaybackControl, ToolResponse, FunctionResponseBlob, FunctionResponseFileData, FunctionResponsePart, FunctionResponse, HttpResponse, GenerateContentResponsePromptFeedback, GenerateContentResponseUsageMetadata, GenerateContentResponse, EmbedContentResponse, GenerateImagesResponse, EditImageResponse, UpscaleImageResponse, RecontextImageResponse, SegmentImageResponse, ListModelsResponse, DeleteModelResponse, AudioResponseFormat, ImageResponseFormat, TextResponseFormat, VideoResponseFormat, ResponseFormat, CountTokensResponse, ComputeTokensResponse, GenerateVideosResponse, GenerateVideosOperation, ReinforcementTuningParseResponseConfig, ReinforcementTuningAutoraterScorerParsedResponseConversionScorer, EvaluateDatasetResponse, ListTuningJobsResponse, CancelTuningJobResponse, ValidateRewardResponse, DeleteCachedContentResponse, ListCachedContentsResponse, ListDocumentsResponse, ListFileSearchStoresResponse, UploadToFileSearchStoreResumableResponse, ImportFileResponse, ImportFileOperation, ListFilesResponse, CreateFileResponse, DeleteFileResponse, RegisterFilesResponse, InlinedResponse, SingleEmbedContentResponse, InlinedEmbedContentResponse, ListBatchJobsResponse, ReplayResponse, RawReferenceImage, MaskReferenceImage, ControlReferenceImage, StyleReferenceImage, SubjectReferenceImage, ContentReferenceImage, LiveServerMessage, LiveClientToolResponse, LiveSendToolResponseParameters, LiveMusicServerMessage, UploadToFileSearchStoreResponse, UploadToFileSearchStoreOperation, PagedItem, Pager, Batches, Caches, Chats, Chat, ApiError, Files, CONTENT_TYPE_HEADER, SERVER_TIMEOUT_HEADER, USER_AGENT_HEADER, GOOGLE_API_CLIENT_HEADER, SDK_VERSION, LIBRARY_LABEL, VERTEX_AI_API_DEFAULT_VERSION, GOOGLE_AI_API_DEFAULT_VERSION, MULTI_REGIONAL_LOCATIONS, DEFAULT_RETRY_ATTEMPTS, DEFAULT_RETRY_HTTP_STATUS_CODES, ApiClient, MCP_LABEL, hasMcpToolUsageFromMcpToTool, McpCallableTool, LiveMusic, LiveMusicSession, FUNCTION_RESPONSE_REQUIRES_ID, Live, defaultLiveSendClientContentParamerters, Session, DEFAULT_MAX_REMOTE_CALLS, Models, Operations, Tokens, Documents, FileSearchStores, envMemo, GoogleGenAISecurityProvider, GoogleGenAIAuthHook, HTTPClientError, UnexpectedClientError, InvalidRequestError, RequestAbortedError, RequestTimeoutError, ConnectionError, GoogleGenAiError, GeminiNextGenAPIClientError, APIError, APIUserAbortError, APIConnectionError, APIConnectionTimeoutError, BadRequestError, AuthenticationError, PermissionDeniedError, NotFoundError, ConflictError, UnprocessableEntityError, RateLimitError, InternalServerError, SDKHooks, hasOwn, ServerList, SDK_METADATA, encodeForm, encodeSimple, encodeFormQuery, DEFAULT_FETCHER, HTTPClient, mediaParamSeparator, codeRangeRE$1, defaultBackoff, PermanentError, TemporaryError, codeRangeRE, gt, webWorkerLike, isBrowserLike, ClientSDK, jsonLikeContentTypeRE, jsonlLikeContentTypeRE, GoogleGenAiDefaultError, Stream3, CR2, LF2, BOUNDARIES, MAX_BOUNDARY_LEN, DEFAULT_CONTENT_TYPES, headerValRE, SecurityErrorCode, SecurityError, _a, APIPromise, Agents, CancelInteractionByIdServerError, CancelInteractionByIdClientError, CreateInteractionServerError, CreateInteractionClientError, DeleteInteractionServerError, DeleteInteractionClientError, GetInteractionByIdServerError, GetInteractionByIdClientError, Interactions, Triggers, Webhooks, GoogleGenAI$1, LEGACY_LYRIA_MODELS, GeminiNextGenInteractions, GeminiNextGenAgents, GeminiNextGenWebhooks, GeminiNextGenTriggers, GOOGLE_API_KEY_HEADER, REQUIRED_VERTEX_AI_SCOPE, NodeAuth, NodeDownloader, NodeWebSocketFactory, NodeWebSocket, Tunings, MAX_CHUNK_SIZE, MAX_RETRY_COUNT, INITIAL_RETRY_DELAY_MS, DELAY_MULTIPLIER, X_GOOG_UPLOAD_STATUS_HEADER_FIELD, NodeUploader, NodeFiles, LANGUAGE_LABEL_PREFIX, GoogleGenAI2;
+var import_p_retry, import_google_auth_library, _defaultBaseGeminiUrl, _defaultBaseVertexUrl, BaseModule, Outcome, Language, FunctionResponseScheduling, Type, AuthType, HttpElementLocation, ApiSpec, Environment, SafetyPolicy, PhishBlockThreshold, Behavior, DynamicRetrievalConfigMode, ThinkingLevel, PersonGeneration, ProminentPeople, HarmCategory, HarmBlockMethod, HarmBlockThreshold, FunctionCallingConfigMode, FinishReason, HarmProbability, HarmSeverity, UrlRetrievalStatus, BlockedReason, TrafficType, MediaModality, ModelStage, MediaResolution, Modality, Delivery, AspectRatio, ImageSize, TuningMode, AdapterSize, ResponseParseType, MatchOperation, ReinforcementTuningThinkingLevel, JobState, TuningJobState, AggregationMetric, PairwiseChoice, VideoOrientation, TuningSpeed, TuningTask, DocumentState, ServiceTier, MediaProcessing, PartMediaResolutionLevel, ToolType, ResourceScope, FeatureSelectionPreference, EmbeddingApiType, SafetyFilterLevel, ImagePromptLanguage, MaskReferenceMode, ControlReferenceType, SubjectReferenceType, EditMode, SegmentMode, VideoGenerationReferenceType, VideoGenerationMaskMode, VideoCompressionQuality, ImageResizeMode, TuningMethod, FileState, FileSource, TurnCompleteReason, InteractionStatus, VadSignalType, VoiceActivityType, StartSensitivity, EndSensitivity, ActivityHandling, TurnCoverage, AudioTranscriptionConfigMode, Scale, MusicGenerationMode, LiveMusicPlaybackControl, ToolResponse, FunctionResponseFileData, FunctionResponseBlob, FunctionResponsePart, FunctionResponse, HttpResponse, GenerateContentResponsePromptFeedback, GenerateContentResponseUsageMetadata, GenerateContentResponse, EmbedContentResponse, GenerateImagesResponse, EditImageResponse, UpscaleImageResponse, RecontextImageResponse, SegmentImageResponse, ListModelsResponse, DeleteModelResponse, AudioResponseFormat, ImageResponseFormat, TextResponseFormat, VideoResponseFormat, ResponseFormat, CountTokensResponse, ComputeTokensResponse, GenerateVideosResponse, GenerateVideosOperation, ReinforcementTuningParseResponseConfig, ReinforcementTuningAutoraterScorerParsedResponseConversionScorer, EvaluateDatasetResponse, ListTuningJobsResponse, CancelTuningJobResponse, ValidateRewardResponse, DeleteCachedContentResponse, ListCachedContentsResponse, ListDocumentsResponse, ListFileSearchStoresResponse, UploadToFileSearchStoreResumableResponse, ImportFileResponse, ImportFileOperation, ListFilesResponse, CreateFileResponse, DeleteFileResponse, RegisterFilesResponse, InlinedResponse, SingleEmbedContentResponse, InlinedEmbedContentResponse, ListBatchJobsResponse, ReplayResponse, RawReferenceImage, MaskReferenceImage, ControlReferenceImage, StyleReferenceImage, SubjectReferenceImage, ContentReferenceImage, LiveServerMessage, LiveClientToolResponse, LiveSendToolResponseParameters, LiveMusicServerMessage, UploadToFileSearchStoreResponse, UploadToFileSearchStoreOperation, PagedItem, Pager, Batches, Caches, Chats, Chat, ApiError, Files$1, CONTENT_TYPE_HEADER, SERVER_TIMEOUT_HEADER, USER_AGENT_HEADER, GOOGLE_API_CLIENT_HEADER, SDK_VERSION, LIBRARY_LABEL, VERTEX_AI_API_DEFAULT_VERSION, GOOGLE_AI_API_DEFAULT_VERSION, MULTI_REGIONAL_LOCATIONS, DEFAULT_RETRY_ATTEMPTS, DEFAULT_RETRY_INITIAL_DELAY, DEFAULT_RETRY_MAX_DELAY, DEFAULT_RETRY_EXP_BASE, DEFAULT_RETRY_JITTER, DEFAULT_RETRY_HTTP_STATUS_CODES, ApiClient, MCP_LABEL, hasMcpToolUsageFromMcpToTool, McpCallableTool, LiveMusic, LiveMusicSession, FUNCTION_RESPONSE_REQUIRES_ID, Live, defaultLiveSendClientContentParamerters, Session, DEFAULT_MAX_REMOTE_CALLS, Models, Operations, Tokens, Documents, FileSearchStores, envMemo, GoogleGenAISecurityProvider, GoogleGenAIAuthHook, HTTPClientError, UnexpectedClientError, InvalidRequestError, RequestAbortedError, RequestTimeoutError, ConnectionError, GoogleGenAiError, GeminiNextGenAPIClientError, APIError, APIUserAbortError, APIConnectionError, APIConnectionTimeoutError, BadRequestError, AuthenticationError, PermissionDeniedError, NotFoundError, ConflictError, UnprocessableEntityError, RateLimitError, InternalServerError, SDKHooks, hasOwn, ServerList, SDK_METADATA, encodeForm, encodeSimple, encodeFormQuery, DEFAULT_FETCHER, HTTPClient, mediaParamSeparator, codeRangeRE$1, defaultBackoff, PermanentError, TemporaryError, codeRangeRE, gt, webWorkerLike, isBrowserLike, ClientSDK, jsonLikeContentTypeRE, jsonlLikeContentTypeRE, GoogleGenAiDefaultError, Stream3, CR2, LF2, BOUNDARIES, MAX_BOUNDARY_LEN, DEFAULT_CONTENT_TYPES, headerValRE, SecurityErrorCode, SecurityError, _a, APIPromise, Agents, Files2, Environments, CancelInteractionByIdServerError, CancelInteractionByIdClientError, CreateInteractionServerError, CreateInteractionClientError, DeleteInteractionServerError, DeleteInteractionClientError, GetInteractionByIdServerError, GetInteractionByIdClientError, Interactions, Triggers, Webhooks, GoogleGenAI$1, LEGACY_LYRIA_MODELS, GeminiNextGenInteractions, GeminiNextGenAgents, GeminiNextGenWebhooks, GeminiNextGenTriggers, GeminiNextGenEnvironmentFiles, GeminiNextGenEnvironments, GOOGLE_API_KEY_HEADER, REQUIRED_VERTEX_AI_SCOPE, NodeAuth, NodeDownloader, NodeWebSocketFactory, NodeWebSocket, Tunings, MAX_CHUNK_SIZE, MAX_RETRY_COUNT, INITIAL_RETRY_DELAY_MS, DELAY_MULTIPLIER, X_GOOG_UPLOAD_STATUS_HEADER_FIELD, NodeUploader, NodeFiles, LANGUAGE_LABEL_PREFIX, GoogleGenAI2;
 var init_node = __esm({
   "node_modules/@google/genai/dist/node/index.mjs"() {
     import_p_retry = __toESM(require_p_retry(), 1);
@@ -44029,11 +44270,11 @@ var init_node = __esm({
       HarmCategory2["HARM_CATEGORY_SEXUALLY_EXPLICIT"] = "HARM_CATEGORY_SEXUALLY_EXPLICIT";
       HarmCategory2["HARM_CATEGORY_DANGEROUS_CONTENT"] = "HARM_CATEGORY_DANGEROUS_CONTENT";
       HarmCategory2["HARM_CATEGORY_CIVIC_INTEGRITY"] = "HARM_CATEGORY_CIVIC_INTEGRITY";
+      HarmCategory2["HARM_CATEGORY_JAILBREAK"] = "HARM_CATEGORY_JAILBREAK";
       HarmCategory2["HARM_CATEGORY_IMAGE_HATE"] = "HARM_CATEGORY_IMAGE_HATE";
       HarmCategory2["HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT"] = "HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT";
       HarmCategory2["HARM_CATEGORY_IMAGE_HARASSMENT"] = "HARM_CATEGORY_IMAGE_HARASSMENT";
       HarmCategory2["HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT"] = "HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT";
-      HarmCategory2["HARM_CATEGORY_JAILBREAK"] = "HARM_CATEGORY_JAILBREAK";
     })(HarmCategory || (HarmCategory = {}));
     (function(HarmBlockMethod2) {
       HarmBlockMethod2["HARM_BLOCK_METHOD_UNSPECIFIED"] = "HARM_BLOCK_METHOD_UNSPECIFIED";
@@ -44069,6 +44310,7 @@ var init_node = __esm({
       FinishReason2["MALFORMED_FUNCTION_CALL"] = "MALFORMED_FUNCTION_CALL";
       FinishReason2["IMAGE_SAFETY"] = "IMAGE_SAFETY";
       FinishReason2["UNEXPECTED_TOOL_CALL"] = "UNEXPECTED_TOOL_CALL";
+      FinishReason2["TOO_MANY_TOOL_CALLS"] = "TOO_MANY_TOOL_CALLS";
       FinishReason2["IMAGE_PROHIBITED_CONTENT"] = "IMAGE_PROHIBITED_CONTENT";
       FinishReason2["NO_IMAGE"] = "NO_IMAGE";
       FinishReason2["IMAGE_RECITATION"] = "IMAGE_RECITATION";
@@ -44243,6 +44485,11 @@ var init_node = __esm({
       PairwiseChoice2["CANDIDATE"] = "CANDIDATE";
       PairwiseChoice2["TIE"] = "TIE";
     })(PairwiseChoice || (PairwiseChoice = {}));
+    (function(VideoOrientation2) {
+      VideoOrientation2["VIDEO_ORIENTATION_UNSPECIFIED"] = "VIDEO_ORIENTATION_UNSPECIFIED";
+      VideoOrientation2["LANDSCAPE"] = "LANDSCAPE";
+      VideoOrientation2["PORTRAIT"] = "PORTRAIT";
+    })(VideoOrientation || (VideoOrientation = {}));
     (function(TuningSpeed2) {
       TuningSpeed2["TUNING_SPEED_UNSPECIFIED"] = "TUNING_SPEED_UNSPECIFIED";
       TuningSpeed2["REGULAR"] = "REGULAR";
@@ -44254,11 +44501,6 @@ var init_node = __esm({
       TuningTask2["TUNING_TASK_T2V"] = "TUNING_TASK_T2V";
       TuningTask2["TUNING_TASK_R2V"] = "TUNING_TASK_R2V";
     })(TuningTask || (TuningTask = {}));
-    (function(VideoOrientation2) {
-      VideoOrientation2["VIDEO_ORIENTATION_UNSPECIFIED"] = "VIDEO_ORIENTATION_UNSPECIFIED";
-      VideoOrientation2["LANDSCAPE"] = "LANDSCAPE";
-      VideoOrientation2["PORTRAIT"] = "PORTRAIT";
-    })(VideoOrientation || (VideoOrientation = {}));
     (function(DocumentState2) {
       DocumentState2["STATE_UNSPECIFIED"] = "STATE_UNSPECIFIED";
       DocumentState2["STATE_PENDING"] = "STATE_PENDING";
@@ -44271,6 +44513,11 @@ var init_node = __esm({
       ServiceTier2["STANDARD"] = "standard";
       ServiceTier2["PRIORITY"] = "priority";
     })(ServiceTier || (ServiceTier = {}));
+    (function(MediaProcessing2) {
+      MediaProcessing2["MEDIA_PROCESSING_UNSPECIFIED"] = "MEDIA_PROCESSING_UNSPECIFIED";
+      MediaProcessing2["STATIC"] = "STATIC";
+      MediaProcessing2["AGENTIC"] = "AGENTIC";
+    })(MediaProcessing || (MediaProcessing = {}));
     (function(PartMediaResolutionLevel2) {
       PartMediaResolutionLevel2["MEDIA_RESOLUTION_UNSPECIFIED"] = "MEDIA_RESOLUTION_UNSPECIFIED";
       PartMediaResolutionLevel2["MEDIA_RESOLUTION_LOW"] = "MEDIA_RESOLUTION_LOW";
@@ -44285,6 +44532,7 @@ var init_node = __esm({
       ToolType2["URL_CONTEXT"] = "URL_CONTEXT";
       ToolType2["GOOGLE_MAPS"] = "GOOGLE_MAPS";
       ToolType2["FILE_SEARCH"] = "FILE_SEARCH";
+      ToolType2["MEDIA_PROCESSING"] = "MEDIA_PROCESSING";
     })(ToolType || (ToolType = {}));
     (function(ResourceScope2) {
       ResourceScope2["COLLECTION"] = "COLLECTION";
@@ -44417,6 +44665,12 @@ var init_node = __esm({
       TurnCompleteReason2["GENERATED_OTHER"] = "GENERATED_OTHER";
       TurnCompleteReason2["MAX_REGENERATION_REACHED"] = "MAX_REGENERATION_REACHED";
     })(TurnCompleteReason || (TurnCompleteReason = {}));
+    (function(InteractionStatus2) {
+      InteractionStatus2["INTERACTION_STATUS_UNSPECIFIED"] = "INTERACTION_STATUS_UNSPECIFIED";
+      InteractionStatus2["IN_PROGRESS"] = "IN_PROGRESS";
+      InteractionStatus2["REQUIRES_ACTION"] = "REQUIRES_ACTION";
+      InteractionStatus2["IDLE"] = "IDLE";
+    })(InteractionStatus || (InteractionStatus = {}));
     (function(VadSignalType2) {
       VadSignalType2["VAD_SIGNAL_TYPE_UNSPECIFIED"] = "VAD_SIGNAL_TYPE_UNSPECIFIED";
       VadSignalType2["VAD_SIGNAL_TYPE_SOS"] = "VAD_SIGNAL_TYPE_SOS";
@@ -44448,6 +44702,11 @@ var init_node = __esm({
       TurnCoverage2["TURN_INCLUDES_ALL_INPUT"] = "TURN_INCLUDES_ALL_INPUT";
       TurnCoverage2["TURN_INCLUDES_AUDIO_ACTIVITY_AND_ALL_VIDEO"] = "TURN_INCLUDES_AUDIO_ACTIVITY_AND_ALL_VIDEO";
     })(TurnCoverage || (TurnCoverage = {}));
+    (function(AudioTranscriptionConfigMode2) {
+      AudioTranscriptionConfigMode2["MODE_UNSPECIFIED"] = "MODE_UNSPECIFIED";
+      AudioTranscriptionConfigMode2["VERBATIM"] = "VERBATIM";
+      AudioTranscriptionConfigMode2["SMART"] = "SMART";
+    })(AudioTranscriptionConfigMode || (AudioTranscriptionConfigMode = {}));
     (function(Scale2) {
       Scale2["SCALE_UNSPECIFIED"] = "SCALE_UNSPECIFIED";
       Scale2["C_MAJOR_A_MINOR"] = "C_MAJOR_A_MINOR";
@@ -44478,9 +44737,9 @@ var init_node = __esm({
     })(LiveMusicPlaybackControl || (LiveMusicPlaybackControl = {}));
     ToolResponse = class {
     };
-    FunctionResponseBlob = class {
-    };
     FunctionResponseFileData = class {
+    };
+    FunctionResponseBlob = class {
     };
     FunctionResponsePart = class {
     };
@@ -46133,7 +46392,7 @@ var init_node = __esm({
         Object.setPrototypeOf(this, _ApiError.prototype);
       }
     };
-    Files = class extends BaseModule {
+    Files$1 = class Files extends BaseModule {
       constructor(apiClient) {
         super();
         this.apiClient = apiClient;
@@ -46418,12 +46677,16 @@ var init_node = __esm({
     SERVER_TIMEOUT_HEADER = "X-Server-Timeout";
     USER_AGENT_HEADER = "User-Agent";
     GOOGLE_API_CLIENT_HEADER = "x-goog-api-client";
-    SDK_VERSION = "2.13.0";
+    SDK_VERSION = "2.21.0";
     LIBRARY_LABEL = `google-genai-sdk/${SDK_VERSION}`;
     VERTEX_AI_API_DEFAULT_VERSION = "v1beta1";
     GOOGLE_AI_API_DEFAULT_VERSION = "v1beta";
     MULTI_REGIONAL_LOCATIONS = /* @__PURE__ */ new Set(["us", "eu"]);
     DEFAULT_RETRY_ATTEMPTS = 5;
+    DEFAULT_RETRY_INITIAL_DELAY = 1;
+    DEFAULT_RETRY_MAX_DELAY = 60;
+    DEFAULT_RETRY_EXP_BASE = 2;
+    DEFAULT_RETRY_JITTER = 1;
     DEFAULT_RETRY_HTTP_STATUS_CODES = [
       408,
       // Request timeout
@@ -46443,14 +46706,6 @@ var init_node = __esm({
         var _a4, _b, _c;
         this.clientOptions = Object.assign({}, opts);
         this.customBaseUrl = (_a4 = opts.httpOptions) === null || _a4 === void 0 ? void 0 : _a4.baseUrl;
-        if (this.clientOptions.vertexai) {
-          if (this.clientOptions.project && this.clientOptions.location) {
-            this.clientOptions.apiKey = void 0;
-          } else if (this.clientOptions.apiKey) {
-            this.clientOptions.project = void 0;
-            this.clientOptions.location = void 0;
-          }
-        }
         const initHttpOptions = {};
         if (this.clientOptions.vertexai) {
           if (!this.clientOptions.location && !this.clientOptions.apiKey && !this.customBaseUrl) {
@@ -46465,7 +46720,7 @@ var init_node = __esm({
             initHttpOptions.baseUrl = this.customBaseUrl;
             this.clientOptions.project = void 0;
             this.clientOptions.location = void 0;
-          } else if (this.clientOptions.apiKey || this.clientOptions.location === "global") {
+          } else if (this.clientOptions.apiKey && !this.clientOptions.project || this.clientOptions.location === "global") {
             initHttpOptions.baseUrl = "https://aiplatform.googleapis.com/";
           } else if (this.clientOptions.project && this.clientOptions.location && MULTI_REGIONAL_LOCATIONS.has(this.clientOptions.location)) {
             initHttpOptions.baseUrl = `https://aiplatform.${this.clientOptions.location}.rep.googleapis.com/`;
@@ -46571,10 +46826,10 @@ var init_node = __esm({
         if (httpOptions.baseUrl && httpOptions.baseUrlResourceScope === ResourceScope.COLLECTION) {
           return false;
         }
-        if (this.clientOptions.apiKey) {
+        if (!this.clientOptions.vertexai) {
           return false;
         }
-        if (!this.clientOptions.vertexai) {
+        if (!this.clientOptions.project || !this.clientOptions.location) {
           return false;
         }
         if (request.path.startsWith("projects/")) {
@@ -46605,8 +46860,8 @@ var init_node = __esm({
         } else {
           requestInit.body = request.body;
         }
-        requestInit = await this.includeExtraHttpOptionsToRequestInit(requestInit, patchedHttpOptions, url.toString(), request.abortSignal);
-        return this.unaryApiCall(url, requestInit, request.httpMethod);
+        requestInit = await this.includeExtraHttpOptionsToRequestInit(requestInit, patchedHttpOptions, url.toString());
+        return this.unaryApiCall(url, requestInit, request.httpMethod, patchedHttpOptions.retryOptions, patchedHttpOptions.timeout, request.abortSignal);
       }
       patchHttpOptions(baseHttpOptions, requestHttpOptions) {
         const patchedHttpOptions = JSON.parse(JSON.stringify(baseHttpOptions));
@@ -46631,39 +46886,12 @@ var init_node = __esm({
         }
         let requestInit = {};
         requestInit.body = request.body;
-        requestInit = await this.includeExtraHttpOptionsToRequestInit(requestInit, patchedHttpOptions, url.toString(), request.abortSignal);
-        return this.streamApiCall(url, requestInit, request.httpMethod);
+        requestInit = await this.includeExtraHttpOptionsToRequestInit(requestInit, patchedHttpOptions, url.toString());
+        return this.streamApiCall(url, requestInit, request.httpMethod, patchedHttpOptions.retryOptions, patchedHttpOptions.timeout, request.abortSignal);
       }
-      async includeExtraHttpOptionsToRequestInit(requestInit, httpOptions, url, abortSignal) {
-        if (httpOptions && httpOptions.timeout || abortSignal) {
-          const abortController = new AbortController();
-          const signal = abortController.signal;
-          if (httpOptions.timeout && (httpOptions === null || httpOptions === void 0 ? void 0 : httpOptions.timeout) > 0) {
-            const dispatcherSymbol = /* @__PURE__ */ Symbol.for("undici.globalDispatcher.1");
-            const globalDispatcher = globalThis[dispatcherSymbol];
-            if (globalDispatcher) {
-              const symbols = Object.getOwnPropertySymbols(globalDispatcher);
-              for (const sym of symbols) {
-                const desc = sym.description;
-                if ((desc === null || desc === void 0 ? void 0 : desc.includes("headers timeout")) || (desc === null || desc === void 0 ? void 0 : desc.includes("body timeout"))) {
-                  const currentTimeout = globalDispatcher[sym];
-                  if (typeof currentTimeout === "number") {
-                    globalDispatcher[sym] = Math.max(currentTimeout, httpOptions.timeout);
-                  }
-                }
-              }
-            }
-            const timeoutHandle = setTimeout(() => abortController.abort(), httpOptions.timeout);
-            if (timeoutHandle && typeof timeoutHandle.unref === "function") {
-              timeoutHandle.unref();
-            }
-          }
-          if (abortSignal) {
-            abortSignal.addEventListener("abort", () => {
-              abortController.abort();
-            });
-          }
-          requestInit.signal = signal;
+      async includeExtraHttpOptionsToRequestInit(requestInit, httpOptions, url) {
+        if ((httpOptions === null || httpOptions === void 0 ? void 0 : httpOptions.timeout) && httpOptions.timeout > 0) {
+          raiseUndiciTimeouts(httpOptions.timeout);
         }
         if (httpOptions && httpOptions.extraBody !== null) {
           includeExtraBodyToRequestInit(requestInit, httpOptions.extraBody);
@@ -46671,8 +46899,8 @@ var init_node = __esm({
         requestInit.headers = await this.getHeadersInternal(httpOptions, url);
         return requestInit;
       }
-      async unaryApiCall(url, requestInit, httpMethod) {
-        return this.apiCall(url.toString(), Object.assign(Object.assign({}, requestInit), { method: httpMethod })).then(async (response) => {
+      async unaryApiCall(url, requestInit, httpMethod, retryOptions, timeout, abortSignal) {
+        return this.apiCall(url.toString(), Object.assign(Object.assign({}, requestInit), { method: httpMethod }), retryOptions, timeout, abortSignal).then(async (response) => {
           await throwErrorIfNotOK(response);
           return new HttpResponse(response);
         }).catch((e2) => {
@@ -46683,8 +46911,8 @@ var init_node = __esm({
           }
         });
       }
-      async streamApiCall(url, requestInit, httpMethod) {
-        return this.apiCall(url.toString(), Object.assign(Object.assign({}, requestInit), { method: httpMethod })).then(async (response) => {
+      async streamApiCall(url, requestInit, httpMethod, retryOptions, timeout, abortSignal) {
+        return this.apiCall(url.toString(), Object.assign(Object.assign({}, requestInit), { method: httpMethod }), retryOptions, timeout, abortSignal).then(async (response) => {
           await throwErrorIfNotOK(response);
           return this.processStreamResponse(response);
         }).catch((e2) => {
@@ -46776,25 +47004,46 @@ var init_node = __esm({
           }
         });
       }
-      async apiCall(url, requestInit) {
-        var _a4;
-        if (!this.clientOptions.httpOptions || !this.clientOptions.httpOptions.retryOptions) {
-          return fetch(url, requestInit);
-        }
-        const retryOptions = this.clientOptions.httpOptions.retryOptions;
+      async apiCall(url, requestInit, retryOptions, timeout, abortSignal) {
+        var _a4, _b, _c, _d, _e, _f;
+        const retryableStatusCodes = (_a4 = retryOptions === null || retryOptions === void 0 ? void 0 : retryOptions.httpStatusCodes) !== null && _a4 !== void 0 ? _a4 : DEFAULT_RETRY_HTTP_STATUS_CODES;
         const runFetch = async () => {
-          const response = await fetch(url, requestInit);
-          if (response.ok) {
+          const attempt = createAttemptSignal(timeout, abortSignal);
+          let response;
+          try {
+            response = await fetch(url, Object.assign(Object.assign({}, requestInit), { signal: attempt.signal }));
+          } catch (e2) {
+            attempt.dispose();
+            throw e2;
+          }
+          if (!retryOptions || response.ok || !retryableStatusCodes.includes(response.status)) {
             return response;
           }
-          if (DEFAULT_RETRY_HTTP_STATUS_CODES.includes(response.status)) {
-            throw new Error(`Retryable HTTP Error: ${response.statusText}`);
+          try {
+            await throwErrorIfNotOK(response);
+          } finally {
+            attempt.dispose();
           }
-          throw new import_p_retry.AbortError(`Non-retryable exception ${response.statusText} sending request`);
+          return response;
         };
+        if (!retryOptions) {
+          return runFetch();
+        }
+        const attempts = Math.max(1, (_b = retryOptions.attempts) !== null && _b !== void 0 ? _b : DEFAULT_RETRY_ATTEMPTS);
+        const minTimeout = Math.round(((_c = retryOptions.initialDelay) !== null && _c !== void 0 ? _c : DEFAULT_RETRY_INITIAL_DELAY) * 1e3);
+        const maxTimeout = Math.max(minTimeout, Math.round(((_d = retryOptions.maxDelay) !== null && _d !== void 0 ? _d : DEFAULT_RETRY_MAX_DELAY) * 1e3));
         return (0, import_p_retry.default)(runFetch, {
-          // Retry attempts is one less than the number of total attempts.
-          retries: ((_a4 = retryOptions.attempts) !== null && _a4 !== void 0 ? _a4 : DEFAULT_RETRY_ATTEMPTS) - 1
+          retries: attempts - 1,
+          factor: (_e = retryOptions.expBase) !== null && _e !== void 0 ? _e : DEFAULT_RETRY_EXP_BASE,
+          minTimeout,
+          maxTimeout,
+          randomize: ((_f = retryOptions.jitter) !== null && _f !== void 0 ? _f : DEFAULT_RETRY_JITTER) > 0,
+          onFailedAttempt: (info) => {
+            var _a5;
+            if (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) {
+              throw (_a5 = info.error) !== null && _a5 !== void 0 ? _a5 : info;
+            }
+          }
         });
       }
       getDefaultHeaders() {
@@ -47302,8 +47551,8 @@ var init_node = __esm({
           onopen: onopenAwaitedCallback,
           onmessage: (event) => {
             void handleWebSocketMessage(apiClient, (msg) => {
-              if (msg.setupComplete && !session.setupComplete) {
-                session.setupComplete = msg.setupComplete;
+              if (msg["setupComplete"] && !session.setupComplete) {
+                session.setupComplete = msg["setupComplete"];
                 setupCompleteResolve({});
               }
               if (sessionResolved) {
@@ -47338,7 +47587,7 @@ var init_node = __esm({
           }
         }
         if ((_d = params.config) === null || _d === void 0 ? void 0 : _d.generationConfig) {
-          console.warn("Setting `LiveConnectConfig.generation_config` is deprecated, please set the fields on `LiveConnectConfig` directly. This will become an error in a future version (not before Q3 2025).");
+          console.warn("Setting `LiveConnectConfig.generation_config` is deprecated, please set the fields on `LiveConnectConfig` directly. It will be removed in the next major version (not before 7/31/2026).");
         }
         const inputTools = (_f = (_e = params.config) === null || _e === void 0 ? void 0 : _e.tools) !== null && _f !== void 0 ? _f : [];
         const convertedTools = [];
@@ -47569,7 +47818,7 @@ var init_node = __esm({
       }
     };
     DEFAULT_MAX_REMOTE_CALLS = 10;
-    Models = class extends BaseModule {
+    Models = class _Models extends BaseModule {
       constructor(apiClient) {
         super();
         this.apiClient = apiClient;
@@ -47663,6 +47912,10 @@ var init_node = __esm({
           return await this.processAfcStream(params);
         };
         this.generateImages = async (params) => {
+          if (!_Models.loggedGenerateImagesWarning) {
+            _Models.loggedGenerateImagesWarning = true;
+            console.warn("The generateImages method is deprecated and will be removed in the next major release (not before Jan. 1 2027). Please use the generateContent method with image models instead. See https://ai.google.dev/gemini-api/docs/deprecations#imagen-models and https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/capabilities/image-generation#generate-images");
+          }
           return await this.generateImagesInternal(params).then((apiResponse) => {
             var _a4;
             let positivePromptSafetyAttributes;
@@ -47713,6 +47966,10 @@ var init_node = __esm({
           return new Pager(PagedItem.PAGED_ITEM_MODELS, (x2) => this.listInternal(x2), await this.listInternal(actualParams), actualParams);
         };
         this.editImage = async (params) => {
+          if (!_Models.loggedEditImageWarning) {
+            _Models.loggedEditImageWarning = true;
+            console.warn("The editImage method is deprecated and will be removed in the next major release (not before Jan. 1 2027). Please use the generateContent method with image models instead. See https://ai.google.dev/gemini-api/docs/deprecations#imagen-models and https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/capabilities/gemini-edit-images#edit-an-image");
+          }
           const paramsInternal = {
             model: params.model,
             prompt: params.prompt,
@@ -47746,6 +48003,12 @@ var init_node = __esm({
           var _a4, _b, _c, _d, _e, _f;
           if ((params.prompt || params.image || params.video) && params.source) {
             throw new Error("Source and prompt/image/video are mutually exclusive. Please only use source.");
+          }
+          if (params.prompt || params.image || params.video) {
+            if (!_Models.loggedGenerateVideosWarning) {
+              _Models.loggedGenerateVideosWarning = true;
+              console.warn("The generateVideos method with prompt/image/video arguments is deprecated and will be removed in a future major release (not before 2026-07-31). Please use the source argument instead.");
+            }
           }
           if (!this.apiClient.isVertexAI()) {
             if (((_a4 = params.video) === null || _a4 === void 0 ? void 0 : _a4.uri) && ((_b = params.video) === null || _b === void 0 ? void 0 : _b.videoBytes)) {
@@ -48158,7 +48421,7 @@ var init_node = __esm({
        * Private method for generating images.
        */
       async generateImagesInternal(params) {
-        var _a4, _b, _c, _d;
+        var _a4, _b;
         let response;
         let path9 = "";
         let queryParams = {};
@@ -48191,33 +48454,7 @@ var init_node = __esm({
             return typedResp;
           });
         } else {
-          const body = generateImagesParametersToMldev(this.apiClient, params);
-          path9 = formatMap("{model}:predict", body["_url"]);
-          queryParams = body["_query"];
-          delete body["_url"];
-          delete body["_query"];
-          response = this.apiClient.request({
-            path: path9,
-            queryParams,
-            body: JSON.stringify(body),
-            httpMethod: "POST",
-            httpOptions: (_c = params.config) === null || _c === void 0 ? void 0 : _c.httpOptions,
-            abortSignal: (_d = params.config) === null || _d === void 0 ? void 0 : _d.abortSignal
-          }).then((httpResponse) => {
-            return httpResponse.json().then((jsonResponse) => {
-              const response2 = jsonResponse;
-              response2.sdkHttpResponse = {
-                headers: httpResponse.headers
-              };
-              return response2;
-            });
-          });
-          return response.then((apiResponse) => {
-            const resp = generateImagesResponseFromMldev(apiResponse);
-            const typedResp = new GenerateImagesResponse();
-            Object.assign(typedResp, resp);
-            return typedResp;
-          });
+          throw new Error("This method is only supported by the Gemini Enterprise Agent Platform (previously known as Vertex AI).");
         }
       }
       /**
@@ -48851,6 +49088,9 @@ var init_node = __esm({
         }
       }
     };
+    Models.loggedGenerateImagesWarning = false;
+    Models.loggedEditImageWarning = false;
+    Models.loggedGenerateVideosWarning = false;
     Operations = class extends BaseModule {
       constructor(apiClient) {
         super();
@@ -49767,7 +50007,7 @@ var init_node = __esm({
       "https://generativelanguage.googleapis.com"
     ];
     SDK_METADATA = {
-      userAgent: "speakeasy-sdk/typescript 2.4.1-preview.4 2.918.3 v1beta @google/genai"
+      userAgent: "speakeasy-sdk/typescript 2.4.1-preview.4 internal v1beta @google/genai"
     };
     encodeForm = formEncoder(",");
     encodeSimple = (key, value, options) => {
@@ -50325,6 +50565,12 @@ var init_node = __esm({
     _a = Symbol.toStringTag;
     Agents = class extends ClientSDK {
       /**
+       * Lists all Agents.
+       */
+      list(params, options) {
+        return unwrapAsAPIPromise(agentsList(this, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.parent, options));
+      }
+      /**
        * Creates a new Agent (Typed version for SDK).
        */
       create(params, options) {
@@ -50332,10 +50578,10 @@ var init_node = __esm({
         return unwrapAsAPIPromise(agentsCreate(this, body, api_version, options));
       }
       /**
-       * Lists all Agents.
+       * Deletes an Agent.
        */
-      list(params, options) {
-        return unwrapAsAPIPromise(agentsList(this, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.parent, options));
+      delete(id, params, options) {
+        return unwrapAsAPIPromise(agentsDelete(this, id, params === null || params === void 0 ? void 0 : params.api_version, options));
       }
       /**
        * Gets a specific Agent.
@@ -50343,11 +50589,43 @@ var init_node = __esm({
       get(id, params, options) {
         return unwrapAsAPIPromise(agentsGet(this, id, params === null || params === void 0 ? void 0 : params.api_version, options));
       }
+    };
+    Files2 = class extends ClientSDK {
       /**
-       * Deletes an Agent.
+       * Retrieves file metadata or directory contents from an environment's snapshot. To download file contents directly, pass ?alt=media or use the files.download helper.
        */
-      delete(id, params, options) {
-        return unwrapAsAPIPromise(agentsDelete(this, id, params === null || params === void 0 ? void 0 : params.api_version, options));
+      list(environment, path9, params, options) {
+        return unwrapAsAPIPromise(environmentsFilesList(this, environment, path9, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
+      }
+    };
+    Environments = class extends ClientSDK {
+      get files() {
+        var _a4;
+        return (_a4 = this._files) !== null && _a4 !== void 0 ? _a4 : this._files = new Files2(this._options);
+      }
+      /**
+       * Lists environments.
+       */
+      listEnvironments(params, options) {
+        return unwrapAsAPIPromise(environmentsListEnvironments(this, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, options));
+      }
+      /**
+       * Creates an environment.
+       */
+      createEnvironment(body, api_version, options) {
+        return unwrapAsAPIPromise(environmentsCreateEnvironment(this, body, api_version, options));
+      }
+      /**
+       * Deletes an environment.
+       */
+      deleteEnvironment(id, params, options) {
+        return unwrapAsAPIPromise(environmentsDeleteEnvironment(this, id, params === null || params === void 0 ? void 0 : params.api_version, options));
+      }
+      /**
+       * Gets an environment.
+       */
+      getEnvironment(id, params, options) {
+        return unwrapAsAPIPromise(environmentsGetEnvironment(this, id, params === null || params === void 0 ? void 0 : params.api_version, options));
       }
     };
     CancelInteractionByIdServerError = class extends GoogleGenAiError {
@@ -50435,9 +50713,6 @@ var init_node = __esm({
         const { api_version } = params, body = __rest(params, ["api_version"]);
         return unwrapAsAPIPromise(interactionsCreate(this, body, api_version, options));
       }
-      get(id, params, options) {
-        return unwrapAsAPIPromise(interactionsGet(this, id, params === null || params === void 0 ? void 0 : params.stream, params === null || params === void 0 ? void 0 : params.last_event_id, params === null || params === void 0 ? void 0 : params.include_input, params === null || params === void 0 ? void 0 : params.api_version, options));
-      }
       /**
        * Deleting an interaction
        *
@@ -50446,6 +50721,9 @@ var init_node = __esm({
        */
       delete(id, params, options) {
         return unwrapAsAPIPromise(interactionsDelete(this, id, params === null || params === void 0 ? void 0 : params.api_version, options));
+      }
+      get(id, params, options) {
+        return unwrapAsAPIPromise(interactionsGet(this, id, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.include_input, params === null || params === void 0 ? void 0 : params.last_event_id, params === null || params === void 0 ? void 0 : params.stream, options));
       }
       /**
        * Canceling an interaction
@@ -50459,6 +50737,12 @@ var init_node = __esm({
     };
     Triggers = class extends ClientSDK {
       /**
+       * Lists triggers for a project.
+       */
+      list(params, options) {
+        return unwrapAsAPIPromise(triggersList(this, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.filter, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, options));
+      }
+      /**
        * Creates a new trigger that will invoke the specified agent on the given cron schedule.
        */
       create(params, options) {
@@ -50466,10 +50750,10 @@ var init_node = __esm({
         return unwrapAsAPIPromise(triggersCreate(this, body, api_version, options));
       }
       /**
-       * Lists triggers for a project.
+       * Deletes a trigger.
        */
-      list(params, options) {
-        return unwrapAsAPIPromise(triggersList(this, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.filter, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, options));
+      delete(id, params, options) {
+        return unwrapAsAPIPromise(triggersDelete(this, id, params === null || params === void 0 ? void 0 : params.api_version, options));
       }
       /**
        * Gets details of a single trigger.
@@ -50485,10 +50769,10 @@ var init_node = __esm({
         return unwrapAsAPIPromise(triggersUpdate(this, id, body, api_version, options));
       }
       /**
-       * Deletes a trigger.
+       * Lists executions for a trigger.
        */
-      delete(id, params, options) {
-        return unwrapAsAPIPromise(triggersDelete(this, id, params === null || params === void 0 ? void 0 : params.api_version, options));
+      listExecutions(trigger_id, params, options) {
+        return unwrapAsAPIPromise(triggersListExecutions(this, trigger_id, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, options));
       }
       /**
        * Runs a trigger immediately.
@@ -50496,14 +50780,14 @@ var init_node = __esm({
       run(trigger_id, params, options) {
         return unwrapAsAPIPromise(triggersRun(this, trigger_id, params === null || params === void 0 ? void 0 : params.api_version, options));
       }
-      /**
-       * Lists executions for a trigger.
-       */
-      listExecutions(trigger_id, params, options) {
-        return unwrapAsAPIPromise(triggersListExecutions(this, trigger_id, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, options));
-      }
     };
     Webhooks = class extends ClientSDK {
+      /**
+       * Lists all Webhooks.
+       */
+      list(params, options) {
+        return unwrapAsAPIPromise(webhooksList(this, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, options));
+      }
       /**
        * Creates a new Webhook.
        */
@@ -50512,10 +50796,10 @@ var init_node = __esm({
         return unwrapAsAPIPromise(webhooksCreate(this, body, api_version, options));
       }
       /**
-       * Lists all Webhooks.
+       * Deletes a Webhook.
        */
-      list(params, options) {
-        return unwrapAsAPIPromise(webhooksList(this, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, options));
+      delete(id, params, options) {
+        return unwrapAsAPIPromise(webhooksDelete(this, id, params === null || params === void 0 ? void 0 : params.api_version, options));
       }
       /**
        * Gets a specific Webhook.
@@ -50532,10 +50816,10 @@ var init_node = __esm({
         return unwrapAsAPIPromise(webhooksUpdate(this, id, api_version, update_mask, body, options));
       }
       /**
-       * Deletes a Webhook.
+       * Sends a ping event to a Webhook.
        */
-      delete(id, params, options) {
-        return unwrapAsAPIPromise(webhooksDelete(this, id, params === null || params === void 0 ? void 0 : params.api_version, options));
+      ping(id, api_version, body, options) {
+        return unwrapAsAPIPromise(webhooksPing(this, id, api_version, body, options));
       }
       /**
        * Generates a new signing secret for a Webhook.
@@ -50543,29 +50827,27 @@ var init_node = __esm({
       rotateSigningSecret(id, api_version, body, options) {
         return unwrapAsAPIPromise(webhooksRotateSigningSecret(this, id, api_version, body, options));
       }
-      /**
-       * Sends a ping event to a Webhook.
-       */
-      ping(id, api_version, body, options) {
-        return unwrapAsAPIPromise(webhooksPing(this, id, api_version, body, options));
-      }
     };
     GoogleGenAI$1 = class GoogleGenAI extends ClientSDK {
-      get interactions() {
-        var _a4;
-        return (_a4 = this._interactions) !== null && _a4 !== void 0 ? _a4 : this._interactions = new Interactions(this._options);
-      }
-      get webhooks() {
-        var _a4;
-        return (_a4 = this._webhooks) !== null && _a4 !== void 0 ? _a4 : this._webhooks = new Webhooks(this._options);
-      }
       get agents() {
         var _a4;
         return (_a4 = this._agents) !== null && _a4 !== void 0 ? _a4 : this._agents = new Agents(this._options);
       }
+      get environments() {
+        var _a4;
+        return (_a4 = this._environments) !== null && _a4 !== void 0 ? _a4 : this._environments = new Environments(this._options);
+      }
+      get interactions() {
+        var _a4;
+        return (_a4 = this._interactions) !== null && _a4 !== void 0 ? _a4 : this._interactions = new Interactions(this._options);
+      }
       get triggers() {
         var _a4;
         return (_a4 = this._triggers) !== null && _a4 !== void 0 ? _a4 : this._triggers = new Triggers(this._options);
+      }
+      get webhooks() {
+        var _a4;
+        return (_a4 = this._webhooks) !== null && _a4 !== void 0 ? _a4 : this._webhooks = new Webhooks(this._options);
       }
     };
     LEGACY_LYRIA_MODELS = /* @__PURE__ */ new Set([
@@ -50591,7 +50873,7 @@ var init_node = __esm({
           const response2 = await wrapSDKCall(() => this.getClient(api_version).interactions.get(id, { stream, last_event_id, include_input, api_version }, toGoogleGenAIRequestOptions(options, true)));
           return wrapStreamErrors(response2);
         }
-        const response = await unwrapWithSdkHttpResponse(interactionsGet(this.getClient(api_version), id, stream, last_event_id, include_input, api_version, toGoogleGenAIRequestOptions(options)));
+        const response = await unwrapWithSdkHttpResponse(interactionsGet(this.getClient(api_version), id, api_version, include_input, last_event_id, stream, toGoogleGenAIRequestOptions(options)));
         return addOutputPropertiesIfInteraction(response);
       }
       async delete(id, params = {}, options) {
@@ -50704,6 +50986,45 @@ var init_node = __esm({
       async listExecutions(trigger_id, params = {}, options) {
         const { api_version, pageSize, pageToken } = params !== null && params !== void 0 ? params : {};
         return unwrapWithSdkHttpResponse(triggersListExecutions(this.getClient(api_version), trigger_id, api_version, pageSize, pageToken, toGoogleGenAIRequestOptions(options)));
+      }
+      getClient(apiVersion) {
+        var _a4;
+        if (apiVersion) {
+          return buildGoogleGenAIClient(this.parentClient, {
+            api_version: apiVersion
+          });
+        }
+        (_a4 = this.sdk) !== null && _a4 !== void 0 ? _a4 : this.sdk = buildGoogleGenAIClient(this.parentClient);
+        return this.sdk;
+      }
+    };
+    GeminiNextGenEnvironmentFiles = class {
+      constructor(resolveClient) {
+        this.resolveClient = resolveClient;
+      }
+      async list(params, options) {
+        const { environment, path: path9, page_size, page_token, recursive, api_version } = params;
+        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment, path9, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
+      }
+    };
+    GeminiNextGenEnvironments = class {
+      constructor(parentClient) {
+        this.parentClient = parentClient;
+        this.files = new GeminiNextGenEnvironmentFiles((apiVersion) => this.getClient(apiVersion));
+      }
+      async create(params, options) {
+        const { api_version } = params, body = __rest(params, ["api_version"]);
+        return unwrapWithSdkHttpResponse(environmentsCreateEnvironment(this.getClient(api_version), body, api_version, toGoogleGenAIRequestOptions(options)));
+      }
+      async list(params = {}, options) {
+        const { api_version, page_size, page_token } = params !== null && params !== void 0 ? params : {};
+        return unwrapWithSdkHttpResponse(environmentsListEnvironments(this.getClient(api_version), api_version, page_size, page_token, toGoogleGenAIRequestOptions(options)));
+      }
+      async get(id, params = {}, options) {
+        return unwrapWithSdkHttpResponse(environmentsGetEnvironment(this.getClient(params === null || params === void 0 ? void 0 : params.api_version), id, params === null || params === void 0 ? void 0 : params.api_version, toGoogleGenAIRequestOptions(options)));
+      }
+      async delete(id, params = {}, options) {
+        return unwrapWithSdkHttpResponse(environmentsDeleteEnvironment(this.getClient(params === null || params === void 0 ? void 0 : params.api_version), id, params === null || params === void 0 ? void 0 : params.api_version, toGoogleGenAIRequestOptions(options)));
       }
       getClient(apiVersion) {
         var _a4;
@@ -51309,7 +51630,7 @@ var init_node = __esm({
             let retryCount = 0;
             let currentDelayMs = INITIAL_RETRY_DELAY_MS;
             while (retryCount < MAX_RETRY_COUNT) {
-              const mergedHeaders = Object.assign(Object.assign({}, (httpOptions === null || httpOptions === void 0 ? void 0 : httpOptions.headers) || {}), { "X-Goog-Upload-Command": uploadCommand, "X-Goog-Upload-Offset": String(offset), "Content-Length": String(bytesRead), "X-Goog-Upload-File-Name": fileName });
+              const mergedHeaders = Object.assign(Object.assign({}, (httpOptions === null || httpOptions === void 0 ? void 0 : httpOptions.headers) || {}), { "X-Goog-Upload-Command": uploadCommand, "X-Goog-Upload-Offset": String(offset), "X-Goog-Upload-File-Name": fileName });
               response = await apiClient.request({
                 path: "",
                 body: chunk2,
@@ -51339,7 +51660,7 @@ var init_node = __esm({
         }
       }
     };
-    NodeFiles = class extends Files {
+    NodeFiles = class extends Files$1 {
       /**
        * Registers Google Cloud Storage files for use with the API.
        * This method is only available in Node.js environments.
@@ -51414,12 +51735,20 @@ var init_node = __esm({
         this._triggers = new GeminiNextGenTriggers(this.apiClient);
         return this._triggers;
       }
-      constructor(options) {
-        var _a4, _b, _c, _d;
-        if ((options.project || options.location) && options.apiKey) {
-          throw new Error("Project/location and API key are mutually exclusive in the client initializer.");
+      get environments() {
+        if (this._environments !== void 0) {
+          return this._environments;
         }
+        console.warn("GoogleGenAI.environments: Environments usage is experimental and may change in future versions.");
+        this._environments = new GeminiNextGenEnvironments(this.apiClient);
+        return this._environments;
+      }
+      constructor(options = {}) {
+        var _a4, _b, _c, _d;
         this.vertexai = resolveCloudFlag(options);
+        if ((options.project || options.location) && !this.vertexai) {
+          throw new Error("Project and location are not supported for Gemini API backend.");
+        }
         const envApiKey = getApiKeyFromEnv();
         const envProject = getEnv("GOOGLE_CLOUD_PROJECT");
         const envLocation = getEnv("GOOGLE_CLOUD_LOCATION");
@@ -51434,14 +51763,14 @@ var init_node = __esm({
             console.debug("The user provided Google Cloud credentials will take precedence over the API key from the environment variable.");
             this.apiKey = void 0;
           }
-          if ((envProject || envLocation) && options.apiKey) {
+          if (!options.project && !options.location && (envProject || envLocation) && options.apiKey) {
             console.debug("The user provided Vertex AI API key will take precedence over the project/location from the environment variables.");
             this.project = void 0;
             this.location = void 0;
-          } else if ((options.project || options.location) && envApiKey) {
+          } else if ((options.project || options.location) && !options.apiKey && envApiKey) {
             console.debug("The user provided project/location will take precedence over the API key from the environment variables.");
             this.apiKey = void 0;
-          } else if ((envProject || envLocation) && envApiKey) {
+          } else if (!options.project && !options.location && !options.apiKey && (envProject || envLocation) && envApiKey) {
             console.debug("The project/location from the environment variables will take precedence over the API key from the environment variables.");
             this.apiKey = void 0;
           }
@@ -54050,7 +54379,7 @@ var init_EventStream = __esm({
         const pushQueue = [];
         const readQueue = [];
         let ended = this.ended;
-        let failure;
+        let failure2;
         let failureDelivered = false;
         const doneResult = () => ({ value: void 0, done: true });
         const finishReaders = () => {
@@ -54059,10 +54388,10 @@ var init_EventStream = __esm({
           }
         };
         const rejectReader = () => {
-          if (!failure || failureDelivered || !readQueue.length)
+          if (!failure2 || failureDelivered || !readQueue.length)
             return;
           failureDelivered = true;
-          readQueue.shift().reject(failure);
+          readQueue.shift().reject(failure2);
         };
         const cleanup = () => {
           this.off(event, onEvent);
@@ -54083,7 +54412,7 @@ var init_EventStream = __esm({
           }
         };
         const onFailure = (error2) => {
-          failure = error2;
+          failure2 = error2;
           if (!pushQueue.length)
             rejectReader();
         };
@@ -54108,9 +54437,9 @@ var init_EventStream = __esm({
             const value = pushQueue.shift();
             if (value)
               return Promise.resolve({ value, done: false });
-            if (failure && !failureDelivered) {
+            if (failure2 && !failureDelivered) {
               failureDelivered = true;
-              return Promise.reject(failure);
+              return Promise.reject(failure2);
             }
             if (ended)
               return Promise.resolve(doneResult());
@@ -60017,7 +60346,7 @@ var init_content = __esm({
 });
 
 // node_modules/openai/resources/containers/files/files.mjs
-var Files2;
+var Files3;
 var init_files = __esm({
   "node_modules/openai/resources/containers/files/files.mjs"() {
     init_resource();
@@ -60027,7 +60356,7 @@ var init_files = __esm({
     init_headers2();
     init_uploads();
     init_path();
-    Files2 = class extends APIResource {
+    Files3 = class extends APIResource {
       constructor() {
         super(...arguments);
         this.content = new Content(this._client);
@@ -60073,7 +60402,7 @@ var init_files = __esm({
         });
       }
     };
-    Files2.Content = Content;
+    Files3.Content = Content;
   }
 });
 
@@ -60090,7 +60419,7 @@ var init_containers = __esm({
     Containers = class extends APIResource {
       constructor() {
         super(...arguments);
-        this.files = new Files2(this._client);
+        this.files = new Files3(this._client);
       }
       /**
        * Create Container
@@ -60128,7 +60457,7 @@ var init_containers = __esm({
         });
       }
     };
-    Containers.Files = Files2;
+    Containers.Files = Files3;
   }
 });
 
@@ -60445,7 +60774,7 @@ var init_evals = __esm({
 });
 
 // node_modules/openai/resources/files.mjs
-var Files3;
+var Files4;
 var init_files2 = __esm({
   "node_modules/openai/resources/files.mjs"() {
     init_resource();
@@ -60455,7 +60784,7 @@ var init_files2 = __esm({
     init_error2();
     init_uploads();
     init_path();
-    Files3 = class extends APIResource {
+    Files4 = class extends APIResource {
       /**
        * Upload a file that can be used across various endpoints. Individual files can be
        * up to 512 MB, and each project can store up to 2.5 TB of files in total. There
@@ -62509,7 +62838,7 @@ var init_file_batches = __esm({
 });
 
 // node_modules/openai/resources/vector-stores/files.mjs
-var Files4;
+var Files5;
 var init_files3 = __esm({
   "node_modules/openai/resources/vector-stores/files.mjs"() {
     init_resource();
@@ -62517,7 +62846,7 @@ var init_files3 = __esm({
     init_headers2();
     init_utils2();
     init_path();
-    Files4 = class extends APIResource {
+    Files5 = class extends APIResource {
       /**
        * Create a vector store file by attaching a
        * [File](https://platform.openai.com/docs/api-reference/files) to a
@@ -62674,7 +63003,7 @@ var init_vector_stores = __esm({
     VectorStores = class extends APIResource {
       constructor() {
         super(...arguments);
-        this.files = new Files4(this._client);
+        this.files = new Files5(this._client);
         this.fileBatches = new FileBatches(this._client);
       }
       /**
@@ -62744,7 +63073,7 @@ var init_vector_stores = __esm({
         });
       }
     };
-    VectorStores.Files = Files4;
+    VectorStores.Files = Files5;
     VectorStores.FileBatches = FileBatches;
   }
 });
@@ -63082,7 +63411,7 @@ var init_client = __esm({
         this.completions = new Completions2(this);
         this.chat = new Chat2(this);
         this.embeddings = new Embeddings(this);
-        this.files = new Files3(this);
+        this.files = new Files4(this);
         this.images = new Images(this);
         this.audio = new Audio(this);
         this.moderations = new Moderations(this);
@@ -63667,7 +63996,7 @@ var init_client = __esm({
     OpenAI.Completions = Completions2;
     OpenAI.Chat = Chat2;
     OpenAI.Embeddings = Embeddings;
-    OpenAI.Files = Files3;
+    OpenAI.Files = Files4;
     OpenAI.Images = Images;
     OpenAI.Audio = Audio;
     OpenAI.Moderations = Moderations;
@@ -75074,7 +75403,7 @@ var config2 = {
   naverClientSecret: process.env.NAVER_CLIENT_SECRET || "",
   /** data.go.kr auth key (required by datago_file_fetch/datago_api_call — search/detail/download need no auth) */
   dataGoKrApiKey: process.env.DATA_GO_KR_API_KEY || "",
-  /** Gemini API key (shared requirement of the veo_* video, tts_* speech, and music_* music tools) — https://aistudio.google.com/apikey */
+  /** Gemini API key (shared requirement of the veo_ and omni_ video, tts_* speech, and music_* music tools) — https://aistudio.google.com/apikey */
   geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "",
   /** OpenAI API key (required by the gpt_image_* image generation tools) — https://platform.openai.com/api-keys */
   openaiApiKey: process.env.OPENAI_API_KEY || "",
@@ -75205,7 +75534,7 @@ function requireDataGoKrKey() {
 function requireGeminiKey() {
   if (!config2.geminiApiKey) {
     throw new Error(
-      "GEMINI_API_KEY (or GOOGLE_API_KEY) is not set. veo_* (video), tts_* (speech), and music_* (Lyria) generation tools all require a Gemini API key (https://aistudio.google.com/apikey). Video, speech, and music generation are unavailable until the key is set \u2014 search, publish, and image tools work fine without it."
+      "GEMINI_API_KEY (or GOOGLE_API_KEY) is not set. veo_*/omni_* (video), tts_* (speech), and music_* (Lyria) generation tools all require a Gemini API key (https://aistudio.google.com/apikey). Video, speech, and music generation are unavailable until the key is set \u2014 search, publish, and image tools work fine without it."
     );
   }
   return config2.geminiApiKey;
@@ -78710,6 +79039,25 @@ var VEO_NEGATIVE_PROMPT_PROPERTY = {
   type: "string",
   description: `What to keep OUT of the frame, as comma-separated noun or adjective phrases: "wall, frame, on-screen text, subtitles". Do NOT write instructions such as "no walls" or "don't show walls" \u2014 Google's prompt guide names that form as not recommended, and writing an exclusion into the prompt body tends to summon the very noun you named. Put every exclusion here instead of in prompt.`
 };
+var OMNI_RESOLUTION_PROPERTY = {
+  type: "string",
+  description: 'Output resolution (default: "720p"). Resolution does not change the bill \u2014 every call costs the same flat amount \u2014 so 360p buys only speed; 1080p and 4k are upscales of the generated frames, not native renders.',
+  enum: ["360p", "720p", "1080p", "4k"],
+  default: "720p"
+};
+var OMNI_DURATION_PROPERTY = {
+  type: "number",
+  description: "Clip length in whole seconds, 3 to 10 (default: 8). Unlike Veo there is no 4/6/8 grid \u2014 any integer in range is accepted, and 11 is rejected by the API.",
+  minimum: 3,
+  maximum: 10,
+  default: 8
+};
+var OMNI_ASPECT_RATIO_PROPERTY = {
+  type: "string",
+  description: 'Aspect ratio of the generated video (default: "16:9")',
+  enum: ["16:9", "9:16"],
+  default: "16:9"
+};
 var SEEDANCE_MODEL_PROPERTY = {
   type: "string",
   description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" \u2014 the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no activation gate). Quality, from the Artificial Analysis blind image-to-video arena: dreamina-seedance-2-0-260128 ranks 1st overall (Elo 1,198), the three Veo 3.1 tiers sit at 1,066-1,086, and seedance-1-5-pro-251215 is the arena baseline at 1,000 \u2014 so 2.0 is clearly the best Seedance, and 1.5 pro trades roughly a 59:41 preference against Veo for about a third of the price. dreamina-seedance-2-5-260628, the 2.0 fast/mini variants, and seedance-1-0-pro-fast-251015 have NO public evaluation at all \u2014 prefer them only for cost or for a capability the tested models lack, not for a shot that matters. The 2.x models REJECT input images containing real human faces and need account balance > $30 to activate, which rules them out for photoreal-person sources.`,
@@ -79917,6 +80265,184 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
       required: ["prompt", "referenceImagePaths"]
     }
   },
+  // ── Video generation (Gemini Omni 1.1 Flash — the Interactions API lane) ──────────
+  {
+    name: "omni_text2video",
+    title: "Omni video generation (text \u2192 video)",
+    annotations: HINT.generate,
+    description: `Generate a video with native audio from a text prompt using Gemini Omni 1.1 Flash.
+
+Use when the shot needs a length off Veo's 4/6/8 grid (any whole 3-10 seconds), or when the cut will be edited or extended afterwards \u2014 omni_edit and omni_extend continue from the interactionId this returns.
+Do NOT use when a source visual exists \u2014 omni_img2video animates a still, omni_extend continues a clip, omni_edit rewrites one.
+COST, measured 2026-09-06: this model bills a FLAT ~$1.01 per call, not per second. A 3-second 360p draft costs the same as a full 10-second 4k render, and more than a whole 8-second veo-3.1-lite shot ($0.40). So never call it for a draft or a short cut \u2014 go to veo_text2video or seedance_text2video for those, and come here when you need the full 10 seconds, an off-grid length, or the edit lane. Ask for the seconds you actually want; a shorter clip refunds nothing.
+Audio is always generated and cannot be turned off: wrap dialogue in double quotes and name SFX and ambience in the prompt. There is no negative-prompt field on this model \u2014 write exclusions as positive description instead.
+
+Returns: a text block with the saved .mp4 path, the interaction id to continue from, resolution, aspect ratio, and duration.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "Descriptive text prompt for video generation (English recommended)"
+        },
+        aspectRatio: OMNI_ASPECT_RATIO_PROPERTY,
+        resolution: OMNI_RESOLUTION_PROPERTY,
+        durationSeconds: OMNI_DURATION_PROPERTY,
+        seed: {
+          type: "number",
+          description: "Optional decoding seed for reproducibility."
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the generated video (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the generated video (default: omni_<timestamp>.mp4)"
+        }
+      },
+      required: ["prompt"]
+    }
+  },
+  {
+    name: "omni_img2video",
+    title: "Omni video generation (image \u2192 video)",
+    annotations: HINT.generate,
+    description: `Animate a still image, or interpolate between two images, using Gemini Omni 1.1 Flash.
+
+Use when a generated background or photo has to move and the cut wants an off-grid length, or will be edited afterwards. Pass sourceImagePath as the first frame; add lastImagePath and the model renders the transition between the two. Billing is a flat ~$1.01 per call regardless of length or resolution, so a short cut is cheaper on veo_img2video or seedance_img2video.
+Do NOT use for pure text-to-video (omni_text2video) or for continuing an existing clip (omni_extend).
+veo_img2video remains the lane for a photoreal adult face, whose policy is measured there; Omni's person policy is unmeasured, so route people to Veo until it is. For silent b-roll at a length you pick, seedance_img2video is cheaper still.
+Composition control lives here \u2014 a subject appearing, vanishing, or ending in an exact pose \u2014 because both frames are yours.
+
+Returns: a text block with the saved .mp4 path, the interaction id to continue from, the source frames, resolution, aspect ratio, and duration.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "Text description of the motion to add"
+        },
+        sourceImagePath: {
+          type: "string",
+          description: "Absolute path to the first frame (starting) image file"
+        },
+        lastImagePath: {
+          type: "string",
+          description: "Optional: absolute path to the last frame image. When given, the video renders the transition from the first image to this one."
+        },
+        aspectRatio: OMNI_ASPECT_RATIO_PROPERTY,
+        resolution: OMNI_RESOLUTION_PROPERTY,
+        durationSeconds: OMNI_DURATION_PROPERTY,
+        seed: {
+          type: "number",
+          description: "Optional decoding seed for reproducibility."
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the generated video (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the generated video (default: omni_<timestamp>.mp4)"
+        }
+      },
+      required: ["prompt", "sourceImagePath"]
+    }
+  },
+  {
+    name: "omni_extend",
+    title: "Omni video extension (3-10s per call, 40s cumulative)",
+    annotations: HINT.generate,
+    description: `Continue a clip with Gemini Omni 1.1 Flash, adding 3-10 seconds of new content per call.
+
+Use when a shot has to run longer than one generation. Name the source exactly one of two ways: previousInteractionId, from an earlier omni_* call in this session, or sourceVideoPath, a local mp4 of at most 10 seconds. Google caps the cumulative length at 40 seconds.
+Do NOT expect only the new tail back \u2014 the saved file is the WHOLE cut, input included (measured: a 3s clip extended by 8s came back 11s), so do not concatenate it onto the source yourself.
+Against veo_extension: that one adds a fixed 7s, takes only Veo output, and needs a Veo model tier; this one takes any mp4 you have, adds a length you pick, and works on Omni output. Each call is a flat ~$1.01 whatever it adds, so add the full 10 seconds when you can. Aspect ratio is not settable here \u2014 the input video's ratio wins.
+
+Returns: a text block with the saved .mp4 path, the new interaction id, the source, and the seconds added.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: 'What happens next \u2014 describe the continuation ("the camera keeps pushing in as the door opens").'
+        },
+        previousInteractionId: {
+          type: "string",
+          description: "Interaction id returned by an earlier omni_* call. Give this OR sourceVideoPath, not both."
+        },
+        sourceVideoPath: {
+          type: "string",
+          description: "Absolute path to a local mp4 of at most 10 seconds. Give this OR previousInteractionId, not both."
+        },
+        resolution: OMNI_RESOLUTION_PROPERTY,
+        durationSeconds: {
+          type: "number",
+          description: "Seconds of NEW content to add, 3 to 10 (default: 8). The returned file is the whole cut, so it runs source + this.",
+          minimum: 3,
+          maximum: 10,
+          default: 8
+        },
+        seed: {
+          type: "number",
+          description: "Optional decoding seed for reproducibility."
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the extended video (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the extended video (default: omni_<timestamp>.mp4)"
+        }
+      },
+      required: ["prompt"]
+    }
+  },
+  {
+    name: "omni_edit",
+    title: "Omni video edit (instruction, same length)",
+    annotations: HINT.generate,
+    description: `Rewrite what is inside a clip by instruction, keeping its length, using Gemini Omni 1.1 Flash.
+
+Use when a generated cut is right in movement and framing but wrong in content \u2014 swap an object, change a colour, drop something from the frame \u2014 instead of re-rolling the whole shot and losing the camera move. State the change plainly ("change the persimmon to a green apple, keep the camera move identical"). Source is exactly one of previousInteractionId (an earlier omni_* call) or sourceVideoPath (a local mp4 of at most 10 seconds).
+Do NOT use to make a clip longer \u2014 that is omni_extend. Veo has no instruction-edit lane at all, so a Veo clip that needs one comes here by file path.
+The output runs the same length as the input (measured 3.008s in, 3.008s out); aspect ratio is inherited and not settable. Each edit is a fresh generation billed at the flat ~$1.01, not a cheap patch \u2014 two edits cost more than re-rolling the shot on Veo.
+
+Returns: a text block with the saved .mp4 path, the new interaction id, and the source.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "The change to make, stated plainly. Say what to keep as well as what to change."
+        },
+        previousInteractionId: {
+          type: "string",
+          description: "Interaction id returned by an earlier omni_* call. Give this OR sourceVideoPath, not both."
+        },
+        sourceVideoPath: {
+          type: "string",
+          description: "Absolute path to a local mp4 of at most 10 seconds. Give this OR previousInteractionId, not both."
+        },
+        resolution: OMNI_RESOLUTION_PROPERTY,
+        seed: {
+          type: "number",
+          description: "Optional decoding seed for reproducibility."
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory path to save the edited video (default: current working directory)"
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the edited video (default: omni_<timestamp>.mp4)"
+        }
+      },
+      required: ["prompt"]
+    }
+  },
   // ── Video generation (ByteDance Seedance — BytePlus ModelArk) ─────────────
   // The second engine sharing Veo's slot. The source of truth for which to use
   // when is skills/produce/references/video-model-selection.md.
@@ -80168,8 +80694,8 @@ Returns: a text block with the saved .mp4 path, model, size, frame count, fps, a
     annotations: HINT.generateLocal,
     description: `Generate a GLB mesh from an image on this machine via MLX Core / mlx-serve POST /v1/3d/generations. No vendor bill. This plugin never launches the app.
 
-Use only when the user explicitly wants a 3D mesh (GLB). The rest of this pipeline has no GLB consumer \u2014 produce, storyboard, and autoproduce never call this. Allowed extension is .glb only.
-Do NOT call this to make a video frame, a cover, or a motion slide. If :11234 is down the call fails closed with brew install --cask mlx-core.
+Use for a requested 3D mesh or an approved physical-object slide plan. The HTML mesh lane consumes embedded GLB models via slide.object renderer:"mesh" (mesh-objects.md). Inspect the model, materials and articulation before rendering; an image-to-mesh call does not guarantee a usable rig. Allowed extension is .glb only.
+Do NOT use this as an image generator or to render cover text. If :11234 is down the call fails closed with brew install --cask mlx-core.
 
 Returns: a text block with the saved .glb path and model.`,
     inputSchema: {
@@ -84687,8 +85213,277 @@ async function checkAccounts(channel) {
   return { ok: true, status: 200, body: JSON.stringify(body, null, 2) };
 }
 
-// src/video-client.ts
+// src/omni-client.ts
 import * as fs6 from "node:fs";
+var OMNI_MODEL = "gemini-omni-1.1-flash";
+var VALID_OMNI_ASPECT_RATIOS = ["16:9", "9:16"];
+var VALID_OMNI_RESOLUTIONS = ["360p", "720p", "1080p", "4k"];
+var POLL_INTERVAL_MS3 = 5e3;
+var MAX_POLLS3 = 120;
+var FILES_API_HOST = "https://generativelanguage.googleapis.com";
+var durationSchema2 = external_exports.number().int().min(3).max(10).optional().default(8);
+var resolutionSchema = external_exports.enum(VALID_OMNI_RESOLUTIONS).optional().default("720p");
+var aspectRatioSchema = external_exports.enum(VALID_OMNI_ASPECT_RATIOS).optional().default("16:9");
+var omniText2VideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  aspectRatio: aspectRatioSchema,
+  resolution: resolutionSchema,
+  durationSeconds: durationSchema2,
+  seed: external_exports.number().int().optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+});
+var omniImg2VideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
+  lastImagePath: external_exports.string().optional(),
+  aspectRatio: aspectRatioSchema,
+  resolution: resolutionSchema,
+  durationSeconds: durationSchema2,
+  seed: external_exports.number().int().optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+});
+var continuationFields = {
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  previousInteractionId: external_exports.string().optional(),
+  sourceVideoPath: external_exports.string().optional(),
+  resolution: resolutionSchema,
+  seed: external_exports.number().int().optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+};
+function requireOneSource(data, ctx) {
+  const given = [data.previousInteractionId, data.sourceVideoPath].filter(Boolean).length;
+  if (given !== 1) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["previousInteractionId"],
+      message: "Give exactly one source: previousInteractionId (an interaction from an earlier omni_* call) or sourceVideoPath (a local mp4 of at most 10 seconds)."
+    });
+  }
+}
+var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
+var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
+function sleep7(ms) {
+  return new Promise((resolve3) => setTimeout(resolve3, ms));
+}
+function readInlineFile(filePath, kind) {
+  const data = fs6.readFileSync(filePath).toString("base64");
+  return { type: kind, data, mime_type: mimeFromExtension(filePath, kind) };
+}
+async function downloadVideo(apiKey, videoUri) {
+  if (!videoUri.startsWith(`${FILES_API_HOST}/`)) {
+    throw new Error(`Refusing to download from an unexpected host: ${videoUri}`);
+  }
+  const response = await fetch(videoUri, { headers: { "x-goog-api-key": apiKey } });
+  if (!response.ok) throw new Error(`Failed to download video: ${response.status}`);
+  return Buffer.from(await response.arrayBuffer());
+}
+async function runInteraction(params, outputPath, filename, label) {
+  const apiKey = requireGeminiKey();
+  const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
+  const genai = new GoogleGenAI3({ apiKey });
+  const fullPath = resolveOutputFile(outputPath, filename, "video");
+  console.error(`[Omni] ${label} starting... (${params.response_format.resolution})`);
+  const created = await genai.interactions.create(params);
+  const interactionId = created.id;
+  if (!interactionId) return { error: "No interaction id returned from API" };
+  for (let poll = 1; poll <= MAX_POLLS3; poll++) {
+    await sleep7(POLL_INTERVAL_MS3);
+    const current = await genai.interactions.get(interactionId);
+    if (current.status === "in_progress" || current.status === "queued") {
+      console.error(`[Omni] ${label} in progress... (polling ${poll}/${MAX_POLLS3})`);
+      continue;
+    }
+    if (current.status !== "completed") {
+      const detail = current.errors?.map((e2) => JSON.stringify(e2)).join("; ");
+      return { error: `Interaction ${current.status}${detail ? `: ${detail}` : ""}` };
+    }
+    if (current.errors?.length) {
+      return { error: `Interaction reported errors: ${current.errors.map((e2) => JSON.stringify(e2)).join("; ")}` };
+    }
+    const videoUri = current.output_video?.uri;
+    if (!videoUri) return { error: "Interaction completed without a video output" };
+    fs6.writeFileSync(fullPath, await downloadVideo(apiKey, videoUri));
+    console.error(`[Omni] Video saved to: ${fullPath}`);
+    return { videoPath: fullPath, interactionId };
+  }
+  return { error: "Video generation timed out (10 minutes)" };
+}
+function failure(error2) {
+  const message = error2 instanceof Error ? error2.message : String(error2);
+  console.error(`[Omni] Error: ${message}`);
+  return { success: false, error: message };
+}
+var defaults2 = (request) => ({
+  dir: request.outputPath || process.cwd(),
+  name: request.filename || `omni_${Date.now()}.mp4`
+});
+async function generateFromText3(request) {
+  try {
+    const { dir, name } = defaults2(request);
+    const saved = await runInteraction(
+      {
+        model: OMNI_MODEL,
+        input: request.prompt,
+        response_format: {
+          type: "video",
+          aspect_ratio: request.aspectRatio,
+          resolution: request.resolution,
+          duration: `${request.durationSeconds}s`,
+          delivery: "uri"
+        },
+        background: true,
+        generation_config: {
+          ...request.seed === void 0 ? {} : { seed: request.seed },
+          video_config: { task: "text_to_video" }
+        }
+      },
+      dir,
+      name,
+      "Text-to-video"
+    );
+    if ("error" in saved) return { success: false, error: saved.error };
+    return {
+      success: true,
+      videoPath: saved.videoPath,
+      interactionId: saved.interactionId,
+      prompt: request.prompt,
+      model: OMNI_MODEL,
+      aspectRatio: request.aspectRatio,
+      resolution: request.resolution,
+      duration: request.durationSeconds
+    };
+  } catch (error2) {
+    return failure(error2);
+  }
+}
+async function generateFromImage3(request) {
+  try {
+    validateFilePath(request.sourceImagePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
+    if (request.lastImagePath) {
+      validateFilePath(request.lastImagePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
+    }
+    const input = [
+      { type: "text", text: request.prompt },
+      readInlineFile(request.sourceImagePath, "image")
+    ];
+    if (request.lastImagePath) input.push(readInlineFile(request.lastImagePath, "image"));
+    const { dir, name } = defaults2(request);
+    const saved = await runInteraction(
+      {
+        model: OMNI_MODEL,
+        input,
+        response_format: {
+          type: "video",
+          aspect_ratio: request.aspectRatio,
+          resolution: request.resolution,
+          duration: `${request.durationSeconds}s`,
+          delivery: "uri"
+        },
+        background: true,
+        generation_config: {
+          ...request.seed === void 0 ? {} : { seed: request.seed },
+          video_config: { task: "image_to_video" }
+        }
+      },
+      dir,
+      name,
+      request.lastImagePath ? "Frame interpolation" : "Image-to-video"
+    );
+    if ("error" in saved) return { success: false, error: saved.error };
+    return {
+      success: true,
+      videoPath: saved.videoPath,
+      interactionId: saved.interactionId,
+      prompt: request.prompt,
+      model: OMNI_MODEL,
+      aspectRatio: request.aspectRatio,
+      resolution: request.resolution,
+      duration: request.durationSeconds,
+      sourceImage: request.sourceImagePath,
+      lastImage: request.lastImagePath
+    };
+  } catch (error2) {
+    return failure(error2);
+  }
+}
+function continuationParams(request, task, durationSeconds) {
+  const response_format = {
+    type: "video",
+    resolution: request.resolution,
+    delivery: "uri",
+    ...durationSeconds === void 0 ? {} : { duration: `${durationSeconds}s` }
+  };
+  const seed = request.seed === void 0 ? {} : { seed: request.seed };
+  if (request.previousInteractionId) {
+    return {
+      model: OMNI_MODEL,
+      input: request.prompt,
+      response_format,
+      background: true,
+      previous_interaction_id: request.previousInteractionId,
+      ...request.seed === void 0 ? {} : { generation_config: seed }
+    };
+  }
+  validateFilePath(request.sourceVideoPath, { allowedExtensions: ALLOWED_EXTENSIONS.video });
+  return {
+    model: OMNI_MODEL,
+    input: [
+      { type: "text", text: request.prompt },
+      readInlineFile(request.sourceVideoPath, "video")
+    ],
+    response_format,
+    background: true,
+    generation_config: { ...seed, video_config: { task } }
+  };
+}
+async function extendVideo(request) {
+  try {
+    const { dir, name } = defaults2(request);
+    const saved = await runInteraction(
+      continuationParams(request, "extend", request.durationSeconds),
+      dir,
+      name,
+      "Extension"
+    );
+    if ("error" in saved) return { success: false, error: saved.error };
+    return {
+      success: true,
+      videoPath: saved.videoPath,
+      interactionId: saved.interactionId,
+      prompt: request.prompt,
+      model: OMNI_MODEL,
+      resolution: request.resolution,
+      duration: request.durationSeconds,
+      sourceVideo: request.sourceVideoPath
+    };
+  } catch (error2) {
+    return failure(error2);
+  }
+}
+async function editVideo(request) {
+  try {
+    const { dir, name } = defaults2(request);
+    const saved = await runInteraction(continuationParams(request, "edit"), dir, name, "Edit");
+    if ("error" in saved) return { success: false, error: saved.error };
+    return {
+      success: true,
+      videoPath: saved.videoPath,
+      interactionId: saved.interactionId,
+      prompt: request.prompt,
+      model: OMNI_MODEL,
+      resolution: request.resolution,
+      sourceVideo: request.sourceVideoPath
+    };
+  } catch (error2) {
+    return failure(error2);
+  }
+}
+
+// src/video-client.ts
+import * as fs7 from "node:fs";
 var VALID_VIDEO_MODELS = [
   "veo-3.1-generate-preview",
   // top quality (default) — 720p $0.40/s
@@ -84702,8 +85497,8 @@ var VALID_VIDEO_ASPECT_RATIOS = ["16:9", "9:16"];
 var VALID_VIDEO_RESOLUTIONS = ["720p", "1080p", "4k"];
 var DEFAULT_DURATION_SECONDS = 8;
 var EXTENSION_ADDED_SECONDS = 7;
-var POLL_INTERVAL_MS3 = 1e4;
-var MAX_POLLS3 = 60;
+var POLL_INTERVAL_MS4 = 1e4;
+var MAX_POLLS4 = 60;
 var API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 var DurationSchema = external_exports.union([external_exports.literal(4), external_exports.literal(6), external_exports.literal(8)]).optional().default(8);
 function validateResolutionConstraints(model, resolution, durationSeconds, ctx) {
@@ -84790,7 +85585,7 @@ async function getOperationStatus(apiKey, operationName) {
   }
   return response.json();
 }
-async function downloadVideo(apiKey, videoUri) {
+async function downloadVideo2(apiKey, videoUri) {
   const response = await fetch(videoUri, { headers: { "x-goog-api-key": apiKey } });
   if (!response.ok) {
     throw new Error(`Failed to download video: ${response.status}`);
@@ -84798,14 +85593,14 @@ async function downloadVideo(apiKey, videoUri) {
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
 }
-function sleep7(ms) {
+function sleep8(ms) {
   return new Promise((resolve3) => setTimeout(resolve3, ms));
 }
 async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, label) {
   let pollCount = 0;
-  while (pollCount < MAX_POLLS3) {
-    console.error(`[Veo] ${label} in progress... (polling ${++pollCount}/${MAX_POLLS3})`);
-    await sleep7(POLL_INTERVAL_MS3);
+  while (pollCount < MAX_POLLS4) {
+    console.error(`[Veo] ${label} in progress... (polling ${++pollCount}/${MAX_POLLS4})`);
+    await sleep8(POLL_INTERVAL_MS4);
     const status = await getOperationStatus(apiKey, operationName);
     if (status.error) {
       return { error: `Generation error: ${status.error.message || "Unknown error"}` };
@@ -84826,22 +85621,22 @@ async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, l
       return { error: "No video URI in response" };
     }
     const fullPath = resolveOutputFile(outputPath, filename, "video");
-    const videoBuffer = await downloadVideo(apiKey, videoUri);
-    fs6.writeFileSync(fullPath, videoBuffer);
+    const videoBuffer = await downloadVideo2(apiKey, videoUri);
+    fs7.writeFileSync(fullPath, videoBuffer);
     console.error(`[Veo] Video saved to: ${fullPath}`);
     return { videoPath: fullPath };
   }
   return { error: "Video generation timed out (10 minutes)" };
 }
 function readInlineImage(filePath) {
-  const buffer = fs6.readFileSync(filePath);
+  const buffer = fs7.readFileSync(filePath);
   return { imageBytes: buffer.toString("base64"), mimeType: mimeFromExtension(filePath, "image") };
 }
 function readInlineVideo(filePath) {
-  const buffer = fs6.readFileSync(filePath);
+  const buffer = fs7.readFileSync(filePath);
   return { videoBytes: buffer.toString("base64"), mimeType: mimeFromExtension(filePath, "video") };
 }
-async function generateFromText3(request) {
+async function generateFromText4(request) {
   const apiKey = requireGeminiKey();
   const model = request.model || DEFAULT_VIDEO_MODEL;
   const resolution = request.resolution || "720p";
@@ -84882,19 +85677,19 @@ async function generateFromText3(request) {
     return { success: false, error: errorMessage };
   }
 }
-async function generateFromImage3(request) {
+async function generateFromImage4(request) {
   const apiKey = requireGeminiKey();
   const model = request.model || DEFAULT_VIDEO_MODEL;
   const resolution = request.resolution || "720p";
   const durationSeconds = request.durationSeconds ?? DEFAULT_DURATION_SECONDS;
   try {
     validateFilePath(request.sourceImagePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
-    if (!fs6.existsSync(request.sourceImagePath)) {
+    if (!fs7.existsSync(request.sourceImagePath)) {
       return { success: false, error: `Source image not found: ${request.sourceImagePath}` };
     }
     if (request.lastImagePath) {
       validateFilePath(request.lastImagePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
-      if (!fs6.existsSync(request.lastImagePath)) {
+      if (!fs7.existsSync(request.lastImagePath)) {
         return { success: false, error: `Last frame image not found: ${request.lastImagePath}` };
       }
     }
@@ -84945,12 +85740,12 @@ async function generateFromImage3(request) {
     return { success: false, error: errorMessage };
   }
 }
-async function extendVideo(request) {
+async function extendVideo2(request) {
   const apiKey = requireGeminiKey();
   const model = request.model || DEFAULT_VIDEO_MODEL;
   try {
     validateFilePath(request.sourceVideoPath, { allowedExtensions: ALLOWED_EXTENSIONS.video });
-    if (!fs6.existsSync(request.sourceVideoPath)) {
+    if (!fs7.existsSync(request.sourceVideoPath)) {
       return { success: false, error: `Source video not found: ${request.sourceVideoPath}` };
     }
     const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
@@ -85001,7 +85796,7 @@ async function generateWithReferences2(request) {
   try {
     for (const imagePath of request.referenceImagePaths) {
       validateFilePath(imagePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
-      if (!fs6.existsSync(imagePath)) {
+      if (!fs7.existsSync(imagePath)) {
         return { success: false, error: `Reference image not found: ${imagePath}` };
       }
     }
@@ -85052,7 +85847,7 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync6 } from "node:fs";
+import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync7 } from "node:fs";
 import { dirname as dirname4, isAbsolute, join as join9, resolve as resolve2 } from "node:path";
 
 // src/content-feedback-html.ts
@@ -85664,7 +86459,7 @@ async function contentFeedback(input) {
   };
   if (htmlPath) {
     mkdirSync3(dirname4(htmlPath), { recursive: true });
-    writeFileSync6(htmlPath, renderFeedbackHtml(report), "utf8");
+    writeFileSync7(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -86731,6 +87526,12 @@ function capabilityStatus() {
           note: "veo_text2video \xB7 veo_img2video \xB7 veo_reference \xB7 veo_extension"
         },
         {
+          provider: "gemini omni (Gemini)",
+          configured: gemini,
+          needs: "GEMINI_API_KEY",
+          note: "omni_text2video \xB7 omni_img2video \xB7 omni_extend \xB7 omni_edit \u2014 360p drafts, 3-10s lengths, instruction editing"
+        },
+        {
           provider: "seedance (BytePlus ModelArk)",
           configured: has2(config2.arkApiKey),
           needs: "ARK_API_KEY",
@@ -86826,7 +87627,7 @@ function capabilityStatus() {
           provider: "mlx-serve (local, MLX Core)",
           configured: mlx,
           needs: "MLX Core.app or mlx-serve on PATH",
-          note: "mlx_3d_generate \u2014 writes GLB; this pipeline has no mesh consumer"
+          note: "mlx_3d_generate \u2014 writes GLB; HTML mesh slides consume embedded models (mesh-objects.md)"
         }
       ]
     },
@@ -87514,12 +88315,12 @@ File: ${result.path}
 Model: ${result.model}
 Generation time: ${result.elapsedSeconds}s
 
-GLB. This pipeline has no mesh consumer \u2014 produce/storyboard/autoproduce never read this file.`
+GLB. Inspect the mesh and materials, then use it in an HTML mesh slide (mesh-objects.md); embed textures and buffers.`
     );
   },
   // ── video generation (Veo 3.1) — saves the mp4 locally, returns path + meta text ──
   veo_text2video: async (args) => {
-    const result = await generateFromText3(parseArgs(text2VideoSchema, args));
+    const result = await generateFromText4(parseArgs(text2VideoSchema, args));
     if (!result.success) return text(`Video generation failed: ${result.error}`, true);
     return text(
       `Video generated successfully!
@@ -87533,7 +88334,7 @@ Prompt: ${result.prompt}`
     );
   },
   veo_img2video: async (args) => {
-    const result = await generateFromImage3(parseArgs(img2VideoSchema, args));
+    const result = await generateFromImage4(parseArgs(img2VideoSchema, args));
     if (!result.success) return text(`Video generation from image failed: ${result.error}`, true);
     const lastImageInfo = result.lastImage ? `
 Last Frame Image: ${result.lastImage}` : "";
@@ -87551,7 +88352,7 @@ Prompt: ${result.prompt}`
     );
   },
   veo_extension: async (args) => {
-    const result = await extendVideo(parseArgs(videoExtensionSchema, args));
+    const result = await extendVideo2(parseArgs(videoExtensionSchema, args));
     if (!result.success) return text(`Video extension failed: ${result.error}`, true);
     return text(
       `Video extended successfully!
@@ -87579,6 +88380,79 @@ Aspect Ratio: ${result.aspectRatio}
 Resolution: ${result.resolution}
 Duration: ${result.duration} seconds
 Prompt: ${result.prompt}`
+    );
+  },
+  // ── video generation (Gemini Omni 1.1 Flash) — same save-and-return-path shape as Veo,
+  //    plus the interaction id, which is the handle omni_extend / omni_edit continue from ──
+  omni_text2video: async (args) => {
+    const result = await generateFromText3(parseArgs(omniText2VideoSchema, args));
+    if (!result.success) return text(`Omni video generation failed: ${result.error}`, true);
+    return text(
+      `Video generated with Gemini Omni.
+
+File: ${result.videoPath}
+Interaction: ${result.interactionId}
+Model: ${result.model}
+Aspect Ratio: ${result.aspectRatio}
+Resolution: ${result.resolution}
+Duration: ${result.duration} seconds
+Prompt: ${result.prompt}
+
+Pass the interaction id as previousInteractionId to omni_extend or omni_edit to keep working on this clip.`
+    );
+  },
+  omni_img2video: async (args) => {
+    const result = await generateFromImage3(parseArgs(omniImg2VideoSchema, args));
+    if (!result.success) return text(`Omni video generation from image failed: ${result.error}`, true);
+    const lastImageInfo = result.lastImage ? `
+Last Frame Image: ${result.lastImage}` : "";
+    const modeInfo = result.lastImage ? " (frame interpolation)" : "";
+    return text(
+      `Video generated from image with Gemini Omni${modeInfo}.
+
+File: ${result.videoPath}
+Interaction: ${result.interactionId}
+First Frame Image: ${result.sourceImage}${lastImageInfo}
+Model: ${result.model}
+Aspect Ratio: ${result.aspectRatio}
+Resolution: ${result.resolution}
+Duration: ${result.duration} seconds
+Prompt: ${result.prompt}`
+    );
+  },
+  omni_extend: async (args) => {
+    const result = await extendVideo(parseArgs(omniExtendSchema, args));
+    if (!result.success) return text(`Omni video extension failed: ${result.error}`, true);
+    const source = result.sourceVideo ? `
+Source Video: ${result.sourceVideo}` : "";
+    return text(
+      `Video extended with Gemini Omni.
+
+File: ${result.videoPath}
+Interaction: ${result.interactionId}${source}
+Model: ${result.model}
+Resolution: ${result.resolution}
+Added: +${result.duration} seconds
+Prompt: ${result.prompt}
+
+The saved file is the whole cut (source + the added seconds), not just the new tail.`
+    );
+  },
+  omni_edit: async (args) => {
+    const result = await editVideo(parseArgs(omniEditSchema, args));
+    if (!result.success) return text(`Omni video edit failed: ${result.error}`, true);
+    const source = result.sourceVideo ? `
+Source Video: ${result.sourceVideo}` : "";
+    return text(
+      `Video edited with Gemini Omni.
+
+File: ${result.videoPath}
+Interaction: ${result.interactionId}${source}
+Model: ${result.model}
+Resolution: ${result.resolution}
+Instruction: ${result.prompt}
+
+Length is unchanged from the input.`
     );
   },
   // ── video generation (Seedance) — saves the mp4 locally, returns path + meta text ──
@@ -88121,6 +88995,10 @@ var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
   "veo.standard.1080p",
   "veo.fast.4k",
   "veo.standard.4k",
+  "omni.360p",
+  "omni.720p",
+  "omni.1080p",
+  "omni.4k",
   "seedance.1-0-pro-fast.1080p",
   "seedance.1-0-pro-fast.720p",
   "seedance.1-5-pro-silent.1080p",
@@ -88155,6 +89033,17 @@ function priceOf(tool, args) {
       key,
       quantity: seconds,
       ...tool === "veo_extension" ? { note: "extension adds 7s of new content per call \u2014 whether the vendor bills 7 or the 8s cut length is unconfirmed" } : {}
+    };
+  }
+  if (tool.startsWith("omni_")) {
+    const resolution = str6(args.resolution, "720p");
+    const key = `omni.${resolution}`;
+    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: null, note: `no price row for ${key}` };
+    const asked = tool === "omni_edit" ? null : num3(args.durationSeconds, 8);
+    return {
+      key,
+      quantity: 1,
+      note: `flat per-call charge${asked === null ? "" : ` \u2014 ${asked}s requested, billed the same as 10s`}`
     };
   }
   if (tool.startsWith("seedance_")) {
@@ -88235,12 +89124,12 @@ function charUnits(args) {
   return Math.round(rawChars(args) / 1e3 * 1e3) / 1e3;
 }
 function isBillableTool(tool) {
-  return tool.startsWith("veo_") || tool.startsWith("seedance_") || tool.startsWith("gpt_image_") || tool.startsWith("tts_") || tool.startsWith("music_") || tool.startsWith("suno_generate") || tool.startsWith("mlx_") || tool === "image_local_generate";
+  return tool.startsWith("veo_") || tool.startsWith("omni_") || tool.startsWith("seedance_") || tool.startsWith("gpt_image_") || tool.startsWith("tts_") || tool.startsWith("music_") || tool.startsWith("suno_generate") || tool.startsWith("mlx_") || tool === "image_local_generate";
 }
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.55.0" },
+  { name: "social-flow", version: "0.56.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -88331,7 +89220,7 @@ async function main() {
     console.error(`[social-flow] ${warning}`);
   }
   console.error(
-    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, suno key ${config2.sunoApiKey ? "set" : "MISSING (suno_* will fail \u2014 music_*(Lyria) does not need it)"}, elevenlabs key ${config2.elevenLabsApiKey ? "set" : "MISSING (tts_elevenlabs_* will fail \u2014 tts_generate/tts_local_generate do not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : "~/.local/bin/mlx-qwen3-asr (default \u2014 set QWEN3_ASR_BIN if elsewhere)"}, mlx-serve ${process.env.MLX_SERVE_URL ? process.env.MLX_SERVE_URL : "http://127.0.0.1:11234 (default \u2014 MLX Core.app / mlx-serve; this plugin never launches the app)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, ` + describeToolGate(toolNames, process.env, jsonPatterns)
+    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/omni_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, suno key ${config2.sunoApiKey ? "set" : "MISSING (suno_* will fail \u2014 music_*(Lyria) does not need it)"}, elevenlabs key ${config2.elevenLabsApiKey ? "set" : "MISSING (tts_elevenlabs_* will fail \u2014 tts_generate/tts_local_generate do not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : "~/.local/bin/mlx-qwen3-asr (default \u2014 set QWEN3_ASR_BIN if elsewhere)"}, mlx-serve ${process.env.MLX_SERVE_URL ? process.env.MLX_SERVE_URL : "http://127.0.0.1:11234 (default \u2014 MLX Core.app / mlx-serve; this plugin never launches the app)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, ` + describeToolGate(toolNames, process.env, jsonPatterns)
   );
 }
 main().catch((error2) => {
