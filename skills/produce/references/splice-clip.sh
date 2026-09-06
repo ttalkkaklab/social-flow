@@ -28,6 +28,7 @@
 set -euo pipefail
 export LC_ALL=en_US.UTF-8
 
+HERE="$(cd "$(dirname "$0")" && pwd)"
 WORK="${1:?usage: splice-clip.sh <workdir> <clip.mp4> <T-seconds> [<clip2.mp4> <T2-seconds>]}"
 shift
 [ $# -ge 2 ] || { echo "✗ no (clip T) pair to insert" >&2; exit 1; }
@@ -71,6 +72,13 @@ for ((i = 0; i < N; i++)); do
     fi
   done
 done
+
+if [ -f build-plan-check.json ]; then
+  PROOF_ARGS=()
+  for ((i = 0; i < N; i++)); do PROOF_ARGS+=("${CLIPS[i]}" "${TS[i]}"); done
+  node "$HERE/verify-assembled.js" . --splice-start "${PROOF_ARGS[@]}"
+  rm -f reel-spliced.mp4 reel-sub-spliced.mp4 subs-spliced.srt
+fi
 
 VDUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 reel.mp4)
 say "── main part ${VDUR}s · ${N} inserts"
@@ -307,5 +315,7 @@ if [ -f reel-sub-spliced.mp4 ]; then
     printf "── duration match check: clean %.3fs vs burn-in %.3fs (diff %.3fs)\n", a, b, d;
     if (d > 0.05) { print "⚠ the two copies differ in duration — check the spliced pieces"; } }'
 fi
+
+if [ -f build-plan-check.json ]; then node "$HERE/verify-assembled.js" . --splice-finish; fi
 
 say "✓ reel-spliced.mp4 · reel-sub-spliced.mp4 · subs-spliced.srt"

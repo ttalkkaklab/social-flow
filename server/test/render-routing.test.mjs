@@ -6,12 +6,12 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 const require=createRequire(import.meta.url),ref=path.resolve(import.meta.dirname,'../../skills/storyboard/references');
-const {recommend,checkScene}=require(path.join(ref,'render-routing.js'));
-const still=()=>({type:'points',duration:8,narration:[{tts:'A portrait.',sub:'A portrait.'}],shot:{infoType:'other',render:{mode:'still_camera',purpose:'portrait',reason:'Introduce the inventor.',camera:{effect:'push',target:'face',reason:'Make the identity clear.'}}},visual:{bg:'images/portrait.png',camera:{movement:'dolly in'}}});
+const {recommend,checkScene,checkEpisode}=require(path.join(ref,'render-routing.js'));
+const still=()=>({type:'points',duration:8,narration:[{tts:'A portrait.',sub:'A portrait.'}],shot:{infoType:'other',render:{mode:'still_camera',purpose:'portrait',reason:'Introduce the inventor.',camera:{effect:'push',target:'face',reason:'Make the identity clear.'}}},visual:{bg:'images/portrait.png',camera:{movement:'dolly in'},slide:{kind:'camera',motion:true,file:'slides/s1-camera.html'}}});
 const physical=(character=false)=>({type:'points',duration:8,shot:{infoType:'principle',render:{mode:character?'character_html':'object_html',purpose:character?'human_process':'mechanism',reason:'Show the causal action.',action:character?'The worker lifts the load onto the cart.':'The valve opens and admits water.',...(character?{actors:['worker']}:{})}},visual:{slide:{kind:'diagram',motion:true,treatment:'editorial',subject:{kind:'object'},object:{renderer:'mesh'}}}});
-const graph=()=>({type:'points',duration:8,shot:{infoType:'statistic',render:{mode:'data_graph',purpose:'comparison',reason:'Compare measured counts.',data:{source:'research.md#counts',unit:'units',chart:'bar',baseline:0,values:[{label:'A',value:16},{label:'B',value:32}]}}},visual:{slide:{kind:'diagram',motion:true,treatment:'editorial',subject:{kind:'data'}}}});
+const graph=()=>({type:'points',duration:8,narration:[{tts:'Compare the two values.'}],shot:{infoType:'statistic',render:{mode:'data_graph',purpose:'comparison',reason:'Compare measured counts.',data:{source:'research.md#counts',unit:'units',chart:'bar',baseline:0,beats:[{group:1,focus:['B'],insight:'B is twice A.'}],values:[{label:'A',value:16},{label:'B',value:32}]}}},visual:{slide:{kind:'diagram',motion:true,treatment:'editorial',subject:{kind:'data'},chartRenderer:'svg-v1'}}});
 const video=()=>({type:'cover',shot:{infoType:'other',render:{mode:'generated_video',purpose:'live_action',reason:'The flowing fabric carries the mood.',motionEssential:true,action:'Wind lifts the fabric while the actor turns.',whyNotStill:'The changing silhouette requires continuous natural motion.'}},visual:{video:{engine:'seedance'},why:'Continuous cloth and body motion.'}});
-test('all five routes have valid independent production handoffs',()=>{
+test('the five visual routes have valid independent production handoffs',()=>{
  for(const scene of [still(),physical(true),physical(),graph(),video()])assert.deepEqual(checkScene(scene),[]);
 });
 test('subject nouns and incidental counts do not dictate the mode',()=>{
@@ -26,7 +26,7 @@ test('opening cut may be still, graph or character without a video quota',()=>{
  for(const s of [still(),graph(),physical(true)]){s.type='cover';assert.deepEqual(checkScene(s),[])}
 });
 test('missing choice and semantic mismatches block drafts before assets',()=>{
- const s=still();delete s.shot.render;assert.match(checkScene(s,{draft:true}).join(),/five modes/);
+ const s=still();delete s.shot.render;assert.match(checkScene(s,{draft:true}).join(),/supported mode/);
  const wrong=physical();wrong.shot.render.mode='generated_video';assert.match(checkScene(wrong,{draft:true}).join(),/requires object_html/);
  const r=still();r.shot.infoType='statistic';assert.match(checkScene(r,{draft:true}).join(),/quantitative purpose/);
 });
@@ -64,7 +64,7 @@ test('normal CLI enforces routing even for a board without a new policy marker',
  const dir=mkdtempSync(path.join(tmpdir(),'routing-plan-'));
  try{const s=still();delete s.shot.render;writeFileSync(path.join(dir,'scenes.js'),'window.SCENES='+JSON.stringify([s])+';');
  const r=spawnSync(process.execPath,[path.join(ref,'check-scenes.js'),dir,'--draft','--json'],{encoding:'utf8'});
- assert.notEqual(r.status,0);assert.match(r.stdout,/shot.render: choose one of the five modes/);
+ assert.notEqual(r.status,0);assert.match(r.stdout,/shot.render: choose a supported mode/);
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
 test('shared camera template passes the production HTML contract',()=>{

@@ -253,3 +253,11 @@ which is the whole reason the vocabulary is closed.
 
 When that's done you're waiting — once the user's `footage/` and `voice/` files arrive, produce
 uses the per-group clips as the segment visuals (produce §3.6).
+
+## Data charts
+
+For `shot.render.mode:"data_graph"`, use [chart-design.md](chart-design.md). Copy
+[chart-slide-template.html](chart-slide-template.html), [chart-runtime.js](chart-runtime.js)
+and [render-routing.js](render-routing.js) as directed there. Chart plans use
+`chartRenderer:"svg-v1"` and `chart-reveal` beats. Do not start a data graph from the generic
+number poster. The shared renderer owns scales, marks, focus transitions and layout.

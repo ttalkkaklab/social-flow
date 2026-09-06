@@ -130,6 +130,8 @@ export LC_ALL=en_US.UTF-8
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # grab before cd (path to reveal-timing.py)
 WORKDIR="${1:?usage: build-reel.sh <workdir>}"
+# Check the actual source before encoding. A standalone TSV is not an approved episode.
+node "$HERE/verify-build-plan.js" "$WORKDIR" "${2:-$WORKDIR/../storyboard}"
 cd "$WORKDIR"
 
 # Format preset — the `: "${VAR:=value}"` block written by format-resolve.js.
@@ -1437,4 +1439,5 @@ fi
 # 143 instead of the old 163). A card holding a clip is unchanged at 1.035.
 ffmpeg -y -v error -ss "${COVER_TS:-3.2}" -i reel.mp4 -frames:v 1 -q:v 2 cover.jpg
 [ "$WARN" -eq 1 ] && say "── warnings present: check the ⚠ items above (regeneration advisories don't block the build)"
+node "$HERE/verify-assembled.js" .
 say "── done"

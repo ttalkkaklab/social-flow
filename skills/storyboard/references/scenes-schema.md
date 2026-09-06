@@ -312,8 +312,10 @@ sequence: "풀기 1"                 // sequence head. Used with beat, the docum
 ## Fields common to every shot
 
 Every generated cut declares `shot.render` using [render-routing.md](render-routing.md).
-The five modes are `still_camera`, `character_html`, `object_html`, `data_graph`, and
-`generated_video`. The purpose and reason are required before assets; `infoType` remains
+The supported modes are `still_camera`, `character_html`, `object_html`, `data_graph`,
+`generated_video`, and the limited `editorial_html` quote/verdict route.
+[visual-direction.md](visual-direction.md) defines repetition and text-duration limits;
+[chart-design.md](chart-design.md) defines data, focus beats and the shared chart renderer. The purpose and reason are required before assets; `infoType` remains
 the explanation category, while `render.mode` names the actual production route.
 Existing recordings and the shared outro preserve their source. Camera HTML uses `kind:"camera"`
 and `camera-slide-template.html`; its image and effect parameters come from scenes.js.

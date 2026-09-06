@@ -448,7 +448,10 @@ Core rules:
   §Nothing is drawn over video): `kind:"diagram"`, `motion:true`, `treatment:"editorial"` on
   the studio stage, role `timeline` · `statistic` · `mechanism` respectively, and a rendered
   object (`slide.object`, [mesh-objects.md](references/mesh-objects.md)) when a thing is the subject.
-  Apply [render-routing.md](references/render-routing.md) and write `shot.render` before assets.
+  Apply [render-routing.md](references/render-routing.md) and [visual-direction.md](references/visual-direction.md).
+  Write `shot.render` before assets. A short has at most two text-led quote/verdict cuts;
+  repeated render reasons and unplanned `PRELUDE` clips block the draft.
+  Data comparisons use [chart-design.md](references/chart-design.md) and its shared SVG renderer.
   Distinguish character HTML, object HTML and data graphs even though all use HTML renderers.
   Choose the purpose before the assets: people/mood cuts use a still with a camera move.
   Explanations use recognizable 3D objects in a relevant environment, not labelled primitives
@@ -474,20 +477,17 @@ Core rules:
   generated at produce §3.6; kinetic may carry an art or a disk, type-only is valid for a verdict or
   a cross. A slide also carries `file` (`slides/s<shot number>-<slug>.html`), `plan`, and every
   screen string in `labels`; produce §3.6 builds the moving files. See scenes-schema §slide scenes.
-  **When the slide states a value** — a count, a share, a comparison, steps that arrive one
-  per sentence — it is a **motion slide** (`slide.motion: true` is required, scenes-schema
-  §motion slides): the number counts up and the bar grows the moment its sentence starts, and
-  the `plan` says what moves on which sentence ("① 27 counts up · ② the bar grows"). This is
-  the one free way to put movement on a body scene — the generated-video cap doesn't apply
-  to it. Beats only: a scene that needs continuous motion (gears turning under the whole
-  narration) is footage, not a slide.
+  **Choose a chart only when a quantitative relationship is the point.** Use the source values,
+  the appropriate chart and one narrated focus per group from [chart-design.md](references/chart-design.md).
+  A lone date or number does not require a chart. Incidental quantities stay with the subject.
+  HTML can carry a character, a mechanism, a chart, or a short quotation; a numeric reveal
+  is not the default motion for the whole episode. Continuous mesh motion belongs in object HTML.
   Filmed scenes get `visual.clip` (filename), `shot` (what's visible), and `action` (what
   you do), and the filename follows the **`footage/s<scene number>-<slug>.mp4`** convention
   set by the storyboard — the user doesn't pick names. Whether the live voice carries the
   sound or narration covers it is decided here too (live voice means `narration: []`). The
   full text is scenes-schema §filmed scenes.
-- **On a short, spend the one generated cut after the hook where the movement is the
-  sentence.** An event, a place or an action beat whose meaning is the motion itself is a
+- **Choose generated video only where continuous motion carries the sentence.** An event, a place or an action beat whose meaning is the motion itself is a
   **motion background or a b-roll clip with nothing drawn on it** (`visual.video`, §5 slot
   rules) with `visual.why` written; the beats that lose nothing as a photograph stay stills
   under their camera move (directing-grammar §5 Still column — the move is chosen from the

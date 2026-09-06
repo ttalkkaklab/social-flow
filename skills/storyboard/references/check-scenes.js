@@ -84,8 +84,8 @@ const INFO_ROLE = { timeline: 'timeline', statistic: 'statistic', principle: 'me
 // object-move — a baked object arrives, turns or recedes (rendered-object.md · h.object); the sentence's
 // value can be the object itself on any of the three types, so it is allowed on all of them.
 const INFO_PRIMITIVES = {
-  timeline: ['date-enter', 'range-grow', 'event-link', 'object-move'],
-  statistic: ['count-up', 'bar-grow', 'dot-fill', 'axis-draw', 'object-move'],
+  timeline: ['date-enter', 'range-grow', 'event-link', 'object-move', 'chart-reveal'],
+  statistic: ['count-up', 'bar-grow', 'dot-fill', 'axis-draw', 'object-move', 'chart-reveal'],
   principle: ['flow-trace', 'node-enter', 'state-transform',
               'shape-enter', 'shape-draw', 'shape-travel', 'object-move'],
 };
@@ -1660,6 +1660,8 @@ function main() {
   const effectivePolicy = profileHasPolicy ? profilePolicy
     : normalizeMotionPolicy(null, formatVideoMax, 'format default');
   const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true });
+  require('./render-routing.js').checkEpisode(win).forEach(what =>
+    findings.push({ level: 'bad', where: 'visual direction', what }));
   // Draft validates the plan; full production also requires a current evidence-backed read.
   require('./story-contract.js').checkStory(win, { requireReview: !draft }).forEach(what =>
     findings.push({ level: 'bad', where: 'story quality', what }));

@@ -101,7 +101,7 @@ This outranks every other rule in the plugin, the skills and the reference docs.
 This replaces the older mandatory-video hook and fixed editorial-cut quotas.
 Use `skills/storyboard/references/render-routing.md` before choosing any assets.
 Every generated cut declares `shot.render.mode`, `purpose` and `reason`:
-`still_camera`, `character_html`, `object_html`, `data_graph`, or `generated_video`.
+`still_camera`, `character_html`, `object_html`, `data_graph`, `generated_video`, or `editorial_html`.
 People mentioned in narration do not automatically need 3D characters; incidental numbers
 in a mechanism do not automatically need a graph. Choose the information the viewer needs.
 
@@ -115,6 +115,16 @@ insufficient. Existing recordings and the shared outro retain their source.
 also match the choice to the production handoff. The approval page displays the mode and reason.
 Camera HTML is still-camera motion and never counts as true subject motion. Keep the existing
 static-ground limit, episode budget, generation cap and no-marks-over-video rule.
+
+## Visual direction and charts (user directive, 2026-09-06)
+
+Read `skills/storyboard/references/visual-direction.md` before planning cuts. Do not copy
+one generic render reason across the episode. Text-led quotations and verdicts use the
+limited `editorial_html` route; they cannot become the whole episode by declaring motion.
+Choose photographs, acted 3D processes, object mechanisms and charts from the story's needs.
+Data graphs follow `skills/storyboard/references/chart-design.md` and the shared SVG renderer.
+No unsupported route, substituted number card or separate PRELUDE may reach assembly.
+The builder reruns source-plan checks and records its version and input hashes before encoding.
 
 ## Branch strategy
 
