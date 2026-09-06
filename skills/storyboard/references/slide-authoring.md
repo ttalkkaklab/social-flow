@@ -75,7 +75,7 @@ rubric the reviewer applies.
      the settle scales by 4.5% and a small shape moves less than a pixel — `dim: true` on
      evidence the narration moves past. Without a `.sv`, a long sentence sits on a frozen frame and the
      renderer says which group and for how long.
-   - A **principle** frame is ink actors plus drawn relations, not a stack of labels.
+   - A **principle** frame is rendered 3D actors plus restrained relations, not a stack of labels.
      Sit the cast in `.cast`. `h.fig` arrives (`shape-enter`), `h.stem` / `h.bus` /
      `h.ring` draw (`shape-draw`), `h.chamber` boxes a terminal or room (`shape-enter`),
      `h.press` / `h.shift` travel (`shape-travel`). Labels name the actors; they are not
@@ -83,8 +83,8 @@ rubric the reviewer applies.
      arts. Shape primitives require `slide.arts`. A principle that only reveals words is
      the same defect as a kinetic fallback.
    - When `slide.arts` is set, generate each plate into `slides/assets/` **before** this
-     check — flat ink illustration of the actor, paper fill on ink, no background, no
-     readable text, no photorealism, local png/jpg. Sit a principle actor with
+     check — a lit 3D illustration or realistic render of the actor, with clear material and
+     silhouette, no background or readable text, local png/jpg. Sit a principle actor with
      `h.fig(rg, i)`; sit a kinetic still with `h.art(rg, i)`. The picture has no letters;
      HTML type stays in `labels`. `move` is `travel` · `rise` · `in` · `drop` · `press` ·
      `none`. An art that travels while its caption enters with `in` is one event.
@@ -103,9 +103,19 @@ rubric the reviewer applies.
    - A diagram with `treatment:"editorial"` sits on the **studio ground** by default
      (slide-design.md §1): a cyclorama plate, slab material on every tag, band and plate, a cast
      shadow under the type, the stage alone drifting 1% a group. Nothing to call — `h.stage("flat")`
-     is the way back to the plain plate. Marks drawn over a studio slide take `pen:true`. Call
+     is the way back to the plain plate. Marks use `h.mark.arrow` with a small tangent-following head. Call
      `h.stage(…)` before any `h.mark.*` — the mark layer reads the studio class when it is made.
-   - A diagram with **`slide.object`** places a **rendered object** (`rendered-object.md`,
+   - New physical subjects use the mesh lane in [mesh-objects.md](mesh-objects.md).
+   - First distinguish a people/mood still-camera cut from an explanatory HTML scene using
+     [illustrated-scenes.md](illustrated-scenes.md). Explanations use recognizable 3D objects
+     and a relevant setting. Add a cute 3D doll character when its action explains the narration;
+     match its material, perspective and light to the objects. A black ground or labelled box
+     cannot replace the setting or a physical object. Keep abstract bars for actual quantities.
+   - Specific-part annotations use the small ring and leader line in
+     [illustrated-scenes.md](illustrated-scenes.md#부위를-짚는-카탈로그-표식), with the anchor projected
+     from the moving part. Keep labels in clear space; use arrows only for direction or flow.
+     Include the bundled runtime, place `h.object`, and keep the model recipe beside the slide.
+   - A diagram with a **sheet `slide.object`** places a **rendered object** (`rendered-object.md`,
      slide-design.md §9): bake the sheet first —
      `python3 references/bake-object.py --shape disc --out slides/assets/s<n>-obj --keys … --frames …`
      with the keys and frames from scenes.js — then read the sidecar it wrote
@@ -121,7 +131,7 @@ rubric the reviewer applies.
    - `treatment:"footage"` is retired (2026-09-05 — nothing is drawn over video; CLAUDE.md
      §Nothing is drawn over video). Never lay `h.footage` or `h.matte`, and never draw a
      `h.mark.*` over a clip or a photo. The pen marks belong on the studio ground only
-     (slide-design.md §6.2, `pen:true`).
+     (slide-design.md §6.2).
 2. **Machine check** — `node references/check-slide.js <storyboard directory> --require-all`
    (`motion:true` written, `__seek` present, no `transition`, no clocks or timers, no web
    fonts, every Korean string in scenes.js, no shadow or gradient outside the template's studio

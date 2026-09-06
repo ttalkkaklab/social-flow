@@ -150,6 +150,9 @@ test('a model and resolution nobody priced comes back null, not as an invented k
     ...['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate-preview', 'veo-3.1-generate-preview']
       .flatMap((model) => ['720p', '1080p', '4k'].map((resolution) =>
         ['veo_text2video', { model, resolution }])),
+    ...['omni_text2video', 'omni_img2video', 'omni_extend', 'omni_edit']
+      .flatMap((tool) => ['360p', '720p', '1080p', '4k'].map((resolution) =>
+        [tool, { resolution, durationSeconds: 5 }])),
     ...['seedance-1-5-pro-251215', 'seedance-1-0-pro-250528', 'seedance-1-0-pro-fast-251015',
         'dreamina-seedance-2-5-260628', 'dreamina-seedance-2-0-260128',
         'dreamina-seedance-2-0-fast-260128', 'dreamina-seedance-2-0-mini-260615']
@@ -171,7 +174,7 @@ test('a model and resolution nobody priced comes back null, not as an invented k
   // the mapping does not know about would keep being recorded as an unpriced call forever.
   const reachable = new Set(combos.map(([tool, args]) => priceOf(tool, args).key).filter(Boolean));
   const unreachable = [...known]
-    .filter((k) => /^(veo|seedance)\./.test(k))
+    .filter((k) => /^(veo|seedance|omni)\./.test(k))
     .filter((k) => !reachable.has(k));
   assert.deepEqual(unreachable, [], 'priced rows no call can reach — add them to PRICED_VIDEO_KEYS');
   // The guard must not swallow the whole matrix — the routes the skills actually use still price.
@@ -189,6 +192,21 @@ test('an extension is billed for the 7 seconds it adds', () => {
   assert.equal(ext.key, 'veo.fast.720p');
   assert.equal(ext.quantity, 7);
   assert.match(ext.note, /unconfirmed/);
+});
+
+test('omni is billed per call, so a shorter clip saves nothing', () => {
+  // Measured 2026-09-06: a 3s 360p call moved the spend counter $1.01, the same amount the
+  // meter reports for every call. Recording seconds here would under-report a 3s cut 3x.
+  for (const seconds of [3, 5, 10]) {
+    const r = priceOf('omni_text2video', { resolution: '360p', durationSeconds: seconds });
+    assert.equal(r.key, 'omni.360p');
+    assert.equal(r.quantity, 1, `${seconds}s should still be one billed call`);
+    assert.match(r.note, /flat per-call/);
+  }
+  assert.equal(priceOf('omni_img2video', {}).key, 'omni.720p', 'the default resolution is 720p');
+  assert.equal(priceOf('omni_edit', { resolution: '720p' }).quantity, 1);
+  assert.equal(priceOf('omni_extend', { resolution: '720p', durationSeconds: 6 }).quantity, 1);
+  assert.equal(isBillableTool('omni_extend'), true);
 });
 
 test('mlx local calls log at $0 with the matching unit', () => {

@@ -38,28 +38,26 @@ That document's §9 notes that "without a per-episode budget there is no
 principled way to decide which scene gets generated video." This document
 fills that blank.
 
-The answer is **the first 3 seconds only**. A still-frame hook gets scrolled
-past — short-form operating common sense — so since 2026-09-05 (owner
-directive) **the hook is video on every short**: a silent Seedance motion
-background under the code-rendered cover title, made from the cover PNG. In
-the body the photos show as-is (absolute rule 14 — captions use only the top
-band), but the shot changes per scene and Ken Burns, caption swaps, subtitles
-and HTML motion slides carry the rhythm, so it reads as footage without more
-generated video. That's why even when escalation is needed, only **the one
-slot after the hook** goes up.
+Choose the treatment before estimating its cost. Use
+[render-routing.md](../../storyboard/references/render-routing.md) for each cut, including the
+opening. Still-camera, character HTML, object HTML and data-graph cuts do not consume generated
+video slots. Generate video only for essential continuous motion. The cap is a ceiling; unused
+slots stay unused. A channel may explicitly require a video opening, but this is no longer the
+plugin default. Recalculate from the selected assets with `cost-preview.js`.
 
 ## Economy baseline (the automated-authoring default)
 
 | Layer | What's used | Notes |
 |---|---|---|
 | Cover background | `gpt_image_text2img` quality **`high`**, 1088x1920, 1 image | Photorealistic human scene (default: a Korean woman) — the cover frame becomes the thumbnail as-is (absolute rule 12) and is the source of the hook motion background; on escalated episodes it doubles as the b-roll source |
-| Hook motion background | `seedance_img2video` silent 1080p, the cover PNG as the source, the cover's `duration` (4–8 s) — **about $0.35 at 6 s** | The hook is video (owner directive 2026-09-05, `hook_video`). The builder keeps only the video track, so narration and the code-rendered title stay. Without `ARK_API_KEY` the slot falls back to `veo_img2video` lite 1080p, 8 s billed — $0.64 |
+| Optional selected video hook | `seedance_img2video` silent 1080p, the cover PNG as the source, the cover's `duration` (4–8 s) — **about $0.35 at 6 s** | Only when `shot.render` selects video or the channel explicitly enables `hook_video`. The builder keeps only the video track, so narration and the code-rendered title stay. Without `ARK_API_KEY` the slot falls back to `veo_img2video` lite 1080p, 8 s billed — $0.64 |
 | Points backgrounds | `image_local_generate` (local Z-Image) 1088x1920, **2–4 images** — **$0** | The photo is the star (absolute rule 14) — captions use only the top band so the photo shows in full. Change the shot when the content axis changes. Only machines without mflux fall back to `gpt_image_text2img` quality `low` ($0.007/image) |
-| Motion (body) | ffmpeg Ken Burns still lane (eased zoom · focus · pan · punch · drift, 4%/s capped at 1.075) + HTML motion slides | The builder already does this — one still per cut, at most 8 s on one still. **No generated video in the body** at baseline |
+| Motion (body) | ffmpeg Ken Burns still lane (eased zoom · focus · pan · punch · drift, 4%/s capped at 1.075) + HTML motion slides | The builder already does this — one still per cut, at most 8 s on one still. Use the chosen per-cut route; there is no required number of generated clips |
 | Narration | whatever engine profile §2 says | `local` (Supertonic) costs 0; `gemini` bills per 1,000 characters |
 | BGM | one 30s `music_generate_clip` | The builder crossfades it onto itself to reach length. Variable-length generation has no confirmed price, so it isn't used — which also means the economy tier takes one bed, not cues |
 | Subtitles | the builder emits `subs.srt`·`subs.ass` together | free |
 
+The following historical example includes a selected video hook; it is not a required baseline.
 With points backgrounds moved to local Z-Image (2026-08-12), that share
 ($0.007 × 2–4 images) drops out — a local-TTS channel runs **about $0.61** per
 episode (1 high image + a 6 s Seedance hook + 1 BGM clip; **$0.90** on the

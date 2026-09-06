@@ -25,13 +25,17 @@ frame by frame at no cost and admitted to the build after the contract checker a
 author's own read of its key frames — the one free way to put movement on a body
 scene on either format. **Nothing is drawn over video** (user directive 2026-09-05): a
 cut that needs an arrow, a figure or a principle is an HTML slide on a lit studio stage,
-with a baked 3D object when a thing is the subject, held to the quality of
+with a real 3D object when a thing is the subject. The offline mesh lane renders GLB models
+and articulated parts at every frame, with 3D illustration or photoreal materials and refined
+curved arrows ([object authoring](skills/storyboard/references/mesh-objects.md)), held to the quality of
 `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`; a scene where
 something **happens** — people move, a place, an action — is a generated clip with the
-subtitle as its only type. **A short is cost-shaped** (user directive 2026-09-05): the hook
-is video — a motion background under the code-rendered cover title — at most one more cut is
-generated video, and every other cut is a still under its camera move or an HTML motion
-slide (`hook_video`, default on). Generated video sits under the channel's `video_budget_usd`
+subtitle as its only type. **Every cut is chosen by purpose** (user directive 2026-09-06):
+the storyboard reads the narration first and writes `shot.render` — a still under a camera
+move, a 3D character scene, a 3D object scene, a data graph, or generated video — with the
+reason for the choice ([render routing](skills/storyboard/references/render-routing.md)). The
+opening goes through the same choice, so no cut is paid video merely because it starts the
+episode (`hook_video`, default off). Generated video sits under the channel's `video_budget_usd`
 (default $10 an episode), one still holds one cut at most (`max_static_ground_seconds`,
 default 8 s), and a one-picture plate on an ordinary beat is a one-sentence card
 (`html_plate_max`, default 2). Narration defaults to **your own voice on every scene**, so
@@ -80,6 +84,12 @@ production, generalized here to per-channel operation.
 > - **Still Korean-only: the shooting script and the research parser.** `make-script.js`
 >   writes `script.md` — the page you read while filming — with Korean headings, and
 >   `check-research.js` finds a research.md's verification table by Korean heading words.
+
+Independent visual review collections use the installed storyboard planner and production builder:
+[animation review workflow](skills/produce/references/animation-review.md). The JSON-driven collection
+compares still-camera portraits, contextual 3D character scenes and object mechanisms, and records the
+installed entrypoint and asset hashes. These silent previews wait for user feedback and are not
+publishable episodes. Improve reusable plugin templates and rebuild; do not hand-edit their outputs.
 
 ## Requirements
 
@@ -134,7 +144,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the nine publish/insight tools
-  aren't even listed (`tools/list` shows 52 instead of 61), and the growth skills have
+  aren't even listed (`tools/list` shows 56 instead of 65), and the growth skills have
   nothing to drive.
 
 Credentials are per platform, so this is not all-or-nothing — a YouTube-only setup
@@ -292,8 +302,8 @@ cross-verified claims), three seven-item scenario candidates judged in one batch
 (the chain, then the words — three reads each, the sentences handed inline), the copy style
 checker and the contract checkers, build report (drift 0), one content-reviewer read at 95
 with P0=0, and a cost cap. The **economy tier is the
-default**: a silent Seedance motion background under the cover (the hook is video), still
-backgrounds with Ken Burns for the body, roughly $0.61 per episode ($0.90 on the veo-lite
+default**: a silent Seedance motion background under the cover when the routing picks video
+there, still backgrounds with Ken Burns for the body, roughly $0.61 per episode ($0.90 on the veo-lite
 fallback, plan cap default $1.00); only when hook metrics fall below threshold does the
 one b-roll after the cover get promoted to `veo-3.1-lite`. Authoring is capped at **2 episodes
 per platform loop per day** (hard cap, counting successes and failures), and
@@ -367,7 +377,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 61 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 65 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -429,14 +439,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (61 tools)
+## MCP tool surface (65 tools)
 
-**`tools/list` does not show all 61.** The nine publish/insights tools
+**`tools/list` does not show all 65.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 52. Hidden tools still have live handlers:
+server. With no tokens at all you'll count 56. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
@@ -456,6 +466,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional lane — default stays Z-Image. Hangul still goes to gpt_image. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **the text-and-quality path**: text rendering, arbitrary WIDTHxHEIGHT, up to 16 reference images, mask inpainting) |
 | Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
+| Video generation | `omni_text2video` / `omni_img2video` / `omni_extend` / `omni_edit` | Gemini Omni 1.1 Flash (GEMINI_API_KEY, Interactions API — 360p–4k, **any whole 3–10s**, and the only lane that **edits a clip by instruction** or extends a local mp4 to a 40s cumulative cap. **Billed flat ~$1.01 per call** — measured against the spend counter, not per second as the pricing page reads — so a 3s draft costs more than a full 8s veo-3.1-lite shot; worth it at the full 10s or for the edit lane, never for a short cut. No reference-image or negative-prompt field, and its person policy is unmeasured — photoreal faces stay on `veo_img2video`) |
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x). Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Ordinary hooks use 1.5 Pro; eligible complex action and reference cuts use 2.0, fixed voice or over nine reference images use 2.5. The storyboard records the reason and forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table) |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |
@@ -466,7 +477,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Music generation | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip (fixed 30s mp3 — the default BGM path) · Lyria RealTime (5–300s variable wav 48kHz, seed reproducibility). `GEMINI_API_KEY` |
 | Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
 | Music generation | `mlx_music_generate` | MLX Core / mlx-serve (WAV. Default instrumental. Optional bed; default BGM stays Lyria) |
-| 3D | `mlx_3d_generate` | MLX Core / mlx-serve (GLB from an image. This pipeline has no mesh consumer) |
+| 3D | `mlx_3d_generate` | MLX Core / mlx-serve (GLB from an image, consumed by the offline HTML mesh slide lane) |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
@@ -552,7 +563,7 @@ explicit error and everything else works.
 | `SERPAPI_API_KEY` | serp_* | — | SerpApi key |
 | `DATA_GO_KR_API_KEY` | datago_file_fetch · api_call | — | data.go.kr auth key (My Page on data.go.kr — beyond the key, each API needs a **per-API usage application**. Search/detail/download work without a key) |
 | `OPENAI_API_KEY` | gpt_image_* | — | OpenAI API key (platform.openai.com/api-keys — image generation) |
-| `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · tts_generate · tts_multi_speaker · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. `tts_local_generate` works without it) |
+| `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · omni_* · tts_generate · tts_multi_speaker · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. `tts_local_generate` works without it) |
 | `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — the second video engine. Dreamina Seedance 2.x models additionally require **an account balance over $30 or a resource pack** to activate; 1.5 pro and 1.0 have no such gate. `veo_*` works fine without this key) |
 | `SUNO_API_KEY` | suno_* | — | sunoapi.org API key (https://sunoapi.org/api-key — third-party REST, not Gemini and not an official Suno Inc. API). Unset, `music_*(Lyria)` still works |
 | `SUNO_BASE_URL` | | `https://api.sunoapi.org` | Same-spec self-host or regional mirror. Other vendors use different auth/paths — do not point this there |

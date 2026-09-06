@@ -1,0 +1,21 @@
+<!doctype html><html><meta charset="utf-8">
+<style>*{box-sizing:border-box}html,body{margin:0;overflow:hidden;background:#182323}canvas{display:block}#caption{position:absolute;left:15%;right:15%;bottom:12%;color:white;text-align:center;font:600 44px/1.5 'Apple SD Gothic Neo',sans-serif;-webkit-text-stroke:.8px #182323;paint-order:stroke fill;word-break:keep-all}</style>
+<canvas id="photo" data-rg="1"></canvas><div id="caption" data-rg="0"></div>
+<script src="../scenes.js"></script><script src="assets/still-camera.js"></script>
+<script>
+// Set only the shot index. The image, focus regions and captions come from scenes.js.
+const SLIDE_SHOT = 1;
+const S=window.SCENES[SLIDE_SHOT-1],R=S.shot.render,C=R.camera;
+const canvas=document.getElementById('photo'),caption=document.getElementById('caption');
+const wide=window.FORMAT==='youtube-long-16x9',W=wide?1920:1080,H=wide?1080:1920;
+canvas.width=W;canvas.height=H;document.body.style.width=W+'px';document.body.style.height=H+'px';
+let engine,segments=(S.narration||[]).map(()=>S.duration*1000/Math.max(1,S.narration.length));
+const spec={template:C.effect,duration:S.duration,focusFrom:C.focusFrom,focusTo:C.focusTo,layers:C.layers};
+async function renderCamera(){engine=await STILL_CAMERA.mount(canvas,spec,'../'+S.visual.bg,(C.layers||[]).map(l=>'../'+l.image))}
+window.__ready=()=>window._ready||(window._ready=(async()=>{await document.fonts.ready;await renderCamera();await window.__seek(0,1)})());
+window.__groups=()=>[{rg:0,dur:0},...segments.map((dur,i)=>({rg:i+1,dur}))];
+window.__setSegs=m=>{segments=segments.map((d,i)=>m[i+1]>0?m[i+1]:d)};
+window.__size=()=>({w:W,h:H});
+window.__seek=async(ms,group=1)=>{const i=Math.max(0,Math.min(segments.length-1,group-1)),offset=segments.slice(0,i).reduce((a,b)=>a+b,0),total=segments.reduce((a,b)=>a+b,0);engine.draw((offset+Math.max(0,Math.min(segments[i]||0,ms)))/total*spec.duration);caption.textContent=S.narration[i]?.sub||''};
+window.__meta=()=>({hold:0,stray:0,infinite:0,broken:[],...engine.diagnostics()});
+</script></html>

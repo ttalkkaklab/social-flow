@@ -165,6 +165,35 @@ const VEO_NEGATIVE_PROMPT_PROPERTY = {
 } as const;
 
 /**
+ * Shared Gemini Omni property definitions (gemini-omni-1.1-flash).
+ *
+ * Omni is one model with a task mode, so there is no tier to choose — the levers are
+ * resolution and length. 360p has no counterpart on Veo and exists for drafts.
+ */
+const OMNI_RESOLUTION_PROPERTY = {
+  type: 'string',
+  description:
+    'Output resolution (default: "720p"). Resolution does not change the bill — every call costs the same flat amount — so 360p buys only speed; 1080p and 4k are upscales of the generated frames, not native renders.',
+  enum: ['360p', '720p', '1080p', '4k'],
+  default: '720p',
+} as const;
+
+const OMNI_DURATION_PROPERTY = {
+  type: 'number',
+  description: 'Clip length in whole seconds, 3 to 10 (default: 8). Unlike Veo there is no 4/6/8 grid — any integer in range is accepted, and 11 is rejected by the API.',
+  minimum: 3,
+  maximum: 10,
+  default: 8,
+} as const;
+
+const OMNI_ASPECT_RATIO_PROPERTY = {
+  type: 'string',
+  description: 'Aspect ratio of the generated video (default: "16:9")',
+  enum: ['16:9', '9:16'],
+  default: '16:9',
+} as const;
+
+/**
  * Shared Seedance property definitions (BytePlus ModelArk) — lists and
  * defaults derive from the capability table in seedance-client.ts. Per-model
  * constraints (resolution, duration, audio, seed) can't be expressed in a
@@ -1517,6 +1546,185 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
     },
   },
 
+  // ── Video generation (Gemini Omni 1.1 Flash — the Interactions API lane) ──────────
+  {
+    name: 'omni_text2video',
+    title: 'Omni video generation (text → video)',
+    annotations: HINT.generate,
+    description: `Generate a video with native audio from a text prompt using Gemini Omni 1.1 Flash.
+
+Use when the shot needs a length off Veo's 4/6/8 grid (any whole 3-10 seconds), or when the cut will be edited or extended afterwards — omni_edit and omni_extend continue from the interactionId this returns.
+Do NOT use when a source visual exists — omni_img2video animates a still, omni_extend continues a clip, omni_edit rewrites one.
+COST, measured 2026-09-06: this model bills a FLAT ~$1.01 per call, not per second. A 3-second 360p draft costs the same as a full 10-second 4k render, and more than a whole 8-second veo-3.1-lite shot ($0.40). So never call it for a draft or a short cut — go to veo_text2video or seedance_text2video for those, and come here when you need the full 10 seconds, an off-grid length, or the edit lane. Ask for the seconds you actually want; a shorter clip refunds nothing.
+Audio is always generated and cannot be turned off: wrap dialogue in double quotes and name SFX and ambience in the prompt. There is no negative-prompt field on this model — write exclusions as positive description instead.
+
+Returns: a text block with the saved .mp4 path, the interaction id to continue from, resolution, aspect ratio, and duration.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Descriptive text prompt for video generation (English recommended)',
+        },
+        aspectRatio: OMNI_ASPECT_RATIO_PROPERTY,
+        resolution: OMNI_RESOLUTION_PROPERTY,
+        durationSeconds: OMNI_DURATION_PROPERTY,
+        seed: {
+          type: 'number',
+          description: 'Optional decoding seed for reproducibility.',
+        },
+        outputPath: {
+          type: 'string',
+          description: 'Directory path to save the generated video (default: current working directory)',
+        },
+        filename: {
+          type: 'string',
+          description: 'Filename for the generated video (default: omni_<timestamp>.mp4)',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'omni_img2video',
+    title: 'Omni video generation (image → video)',
+    annotations: HINT.generate,
+    description: `Animate a still image, or interpolate between two images, using Gemini Omni 1.1 Flash.
+
+Use when a generated background or photo has to move and the cut wants an off-grid length, or will be edited afterwards. Pass sourceImagePath as the first frame; add lastImagePath and the model renders the transition between the two. Billing is a flat ~$1.01 per call regardless of length or resolution, so a short cut is cheaper on veo_img2video or seedance_img2video.
+Do NOT use for pure text-to-video (omni_text2video) or for continuing an existing clip (omni_extend).
+veo_img2video remains the lane for a photoreal adult face, whose policy is measured there; Omni's person policy is unmeasured, so route people to Veo until it is. For silent b-roll at a length you pick, seedance_img2video is cheaper still.
+Composition control lives here — a subject appearing, vanishing, or ending in an exact pose — because both frames are yours.
+
+Returns: a text block with the saved .mp4 path, the interaction id to continue from, the source frames, resolution, aspect ratio, and duration.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Text description of the motion to add',
+        },
+        sourceImagePath: {
+          type: 'string',
+          description: 'Absolute path to the first frame (starting) image file',
+        },
+        lastImagePath: {
+          type: 'string',
+          description: 'Optional: absolute path to the last frame image. When given, the video renders the transition from the first image to this one.',
+        },
+        aspectRatio: OMNI_ASPECT_RATIO_PROPERTY,
+        resolution: OMNI_RESOLUTION_PROPERTY,
+        durationSeconds: OMNI_DURATION_PROPERTY,
+        seed: {
+          type: 'number',
+          description: 'Optional decoding seed for reproducibility.',
+        },
+        outputPath: {
+          type: 'string',
+          description: 'Directory path to save the generated video (default: current working directory)',
+        },
+        filename: {
+          type: 'string',
+          description: 'Filename for the generated video (default: omni_<timestamp>.mp4)',
+        },
+      },
+      required: ['prompt', 'sourceImagePath'],
+    },
+  },
+  {
+    name: 'omni_extend',
+    title: 'Omni video extension (3-10s per call, 40s cumulative)',
+    annotations: HINT.generate,
+    description: `Continue a clip with Gemini Omni 1.1 Flash, adding 3-10 seconds of new content per call.
+
+Use when a shot has to run longer than one generation. Name the source exactly one of two ways: previousInteractionId, from an earlier omni_* call in this session, or sourceVideoPath, a local mp4 of at most 10 seconds. Google caps the cumulative length at 40 seconds.
+Do NOT expect only the new tail back — the saved file is the WHOLE cut, input included (measured: a 3s clip extended by 8s came back 11s), so do not concatenate it onto the source yourself.
+Against veo_extension: that one adds a fixed 7s, takes only Veo output, and needs a Veo model tier; this one takes any mp4 you have, adds a length you pick, and works on Omni output. Each call is a flat ~$1.01 whatever it adds, so add the full 10 seconds when you can. Aspect ratio is not settable here — the input video's ratio wins.
+
+Returns: a text block with the saved .mp4 path, the new interaction id, the source, and the seconds added.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'What happens next — describe the continuation ("the camera keeps pushing in as the door opens").',
+        },
+        previousInteractionId: {
+          type: 'string',
+          description: 'Interaction id returned by an earlier omni_* call. Give this OR sourceVideoPath, not both.',
+        },
+        sourceVideoPath: {
+          type: 'string',
+          description: 'Absolute path to a local mp4 of at most 10 seconds. Give this OR previousInteractionId, not both.',
+        },
+        resolution: OMNI_RESOLUTION_PROPERTY,
+        durationSeconds: {
+          type: 'number',
+          description: 'Seconds of NEW content to add, 3 to 10 (default: 8). The returned file is the whole cut, so it runs source + this.',
+          minimum: 3,
+          maximum: 10,
+          default: 8,
+        },
+        seed: {
+          type: 'number',
+          description: 'Optional decoding seed for reproducibility.',
+        },
+        outputPath: {
+          type: 'string',
+          description: 'Directory path to save the extended video (default: current working directory)',
+        },
+        filename: {
+          type: 'string',
+          description: 'Filename for the extended video (default: omni_<timestamp>.mp4)',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'omni_edit',
+    title: 'Omni video edit (instruction, same length)',
+    annotations: HINT.generate,
+    description: `Rewrite what is inside a clip by instruction, keeping its length, using Gemini Omni 1.1 Flash.
+
+Use when a generated cut is right in movement and framing but wrong in content — swap an object, change a colour, drop something from the frame — instead of re-rolling the whole shot and losing the camera move. State the change plainly ("change the persimmon to a green apple, keep the camera move identical"). Source is exactly one of previousInteractionId (an earlier omni_* call) or sourceVideoPath (a local mp4 of at most 10 seconds).
+Do NOT use to make a clip longer — that is omni_extend. Veo has no instruction-edit lane at all, so a Veo clip that needs one comes here by file path.
+The output runs the same length as the input (measured 3.008s in, 3.008s out); aspect ratio is inherited and not settable. Each edit is a fresh generation billed at the flat ~$1.01, not a cheap patch — two edits cost more than re-rolling the shot on Veo.
+
+Returns: a text block with the saved .mp4 path, the new interaction id, and the source.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'The change to make, stated plainly. Say what to keep as well as what to change.',
+        },
+        previousInteractionId: {
+          type: 'string',
+          description: 'Interaction id returned by an earlier omni_* call. Give this OR sourceVideoPath, not both.',
+        },
+        sourceVideoPath: {
+          type: 'string',
+          description: 'Absolute path to a local mp4 of at most 10 seconds. Give this OR previousInteractionId, not both.',
+        },
+        resolution: OMNI_RESOLUTION_PROPERTY,
+        seed: {
+          type: 'number',
+          description: 'Optional decoding seed for reproducibility.',
+        },
+        outputPath: {
+          type: 'string',
+          description: 'Directory path to save the edited video (default: current working directory)',
+        },
+        filename: {
+          type: 'string',
+          description: 'Filename for the edited video (default: omni_<timestamp>.mp4)',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+
   // ── Video generation (ByteDance Seedance — BytePlus ModelArk) ─────────────
   // The second engine sharing Veo's slot. The source of truth for which to use
   // when is skills/produce/references/video-model-selection.md.
@@ -1768,8 +1976,8 @@ Returns: a text block with the saved .mp4 path, model, size, frame count, fps, a
     annotations: HINT.generateLocal,
     description: `Generate a GLB mesh from an image on this machine via MLX Core / mlx-serve POST /v1/3d/generations. No vendor bill. This plugin never launches the app.
 
-Use only when the user explicitly wants a 3D mesh (GLB). The rest of this pipeline has no GLB consumer — produce, storyboard, and autoproduce never call this. Allowed extension is .glb only.
-Do NOT call this to make a video frame, a cover, or a motion slide. If :11234 is down the call fails closed with brew install --cask mlx-core.
+Use for a requested 3D mesh or an approved physical-object slide plan. The HTML mesh lane consumes embedded GLB models via slide.object renderer:"mesh" (mesh-objects.md). Inspect the model, materials and articulation before rendering; an image-to-mesh call does not guarantee a usable rig. Allowed extension is .glb only.
+Do NOT use this as an image generator or to render cover text. If :11234 is down the call fails closed with brew install --cask mlx-core.
 
 Returns: a text block with the saved .glb path and model.`,
     inputSchema: {

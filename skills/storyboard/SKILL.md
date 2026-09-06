@@ -63,6 +63,13 @@ data/<channel>/episodes/<topic slug>/storyboard/
 └── script.md        # shooting mode only — the shooting script the user records against
 ```
 
+## Animation review collections
+
+When the user requests independent camera, character and object examples, use
+[animation-review.md](../produce/references/animation-review.md). Plan the requested collection
+with the installed planner and pass its JSON to produce. This explicit preview mode is not a
+publishable episode and does not fabricate a story approval. Match camera effects to each cut’s purpose, plan character contact and action, and justify brief mechanism labels. Follow the user's requested review point.
+
 ## Procedure
 
 ### 1. Load the profile
@@ -80,7 +87,7 @@ slug rule are all inherited from that file.
 **The channel profile outranks the generic format defaults.** Before choosing shots read
 `motion_min_true`, `motion_allowed_kinds`, `motion_max_consecutive_stills`, `motion_max_still_seconds`,
 `motion_require_action`, `generated_video_max`, and the four with plugin defaults — `max_static_ground_seconds` (8), `html_plate_max` (2),
-`video_budget_usd` (10), `hook_video` (on); copy their normalized values into `window.MOTION_POLICY` (scenes-schema §Channel true-motion policy).
+`video_budget_usd` (10), `hook_video` (off); copy their normalized values into `window.MOTION_POLICY` (scenes-schema §Channel true-motion policy).
 `check-scenes.js` compares the snapshot with the profile, so no episode can weaken it. A
 duration, shot-count or motion conflict stops here for the user to choose which contract changes.
 Produce checks it again: `minTrueMotion: 1`, zero still-run limits and `motion-slide` allowed
@@ -412,17 +419,11 @@ Core rules:
     spoken shot. When going over 75s, write into the `storyboard.md` design rationale why
     dropping the demo or evidence in question would make the result impossible to
     understand (180s is the absolute cap).
-    **The body of a short is cost-shaped** (user directive 2026-09-05, scenes-schema
-    §Channel true-motion policy `hook_video`): **the hook is video** — the cover carries a
-    motion background under its code-rendered title (`visual.video`, the cover still as
-    the source) or a recording (`visual.source`); **at most one more cut is generated
-    video**, and only when the movement itself is the content, with the reason in
-    `visual.why`; **every other cut is a still under its camera move** (the still lane,
-    local engine, $0 — one still per cut, `narration[].img` when a cut runs past
-    `max_static_ground_seconds` 8 s) **or an HTML motion slide** (a movement per narration
-    group, the studio stage — explanation beats always, `other` beats when the sentence is
-    better drawn than photographed). `check-scenes.js` blocks a still hook and a second
-    generated cut with no `why`; the format cap of 2 holds the count.
+    Choose each cut, including the hook, with [render-routing.md](references/render-routing.md).
+    Write `shot.render` before assets: still camera, character HTML, object HTML, data graph,
+    or generated video. The default video cap of 2 is a ceiling, not a target. `hook_video`
+    defaults off; an explicit channel override remains a constraint. Every paid video cut
+    explains why continuous motion is essential. Keep the static-ground and budget checks.
   - **YouTube long-form 16:9**: **28–70 shots · 8–15 min** (20 min absolute cap) +
     **5–10 chapters** (3 or more in the filmed lane). The chapter contract is
     `references/scenes-schema.md` §chapter — write only the `chapter` string on the scene
@@ -438,16 +439,23 @@ Core rules:
   blocks a weak ratio, an overlong still, or too many still shots in a row.
 - **Pick the screen body by the information job, not by the motion quota.** Film visible evidence;
   generate mood, place or people; draw structure, comparisons, steps and number flows. A picture cannot
-  replace a running result or hand action. Short informational episodes reserve **1–3 full-frame
-  editorial HTML cuts** for a document comparison, causal relation, mechanism,
-  timeline, transition or verdict: set `treatment:"editorial"`, `role`, and one repeated `motif`.
+  replace a running result or hand action. Select explanatory cuts only when the content needs a document comparison, causal relation,
+  mechanism, timeline, transition or verdict; do not reserve a fixed count. Set `treatment:"editorial"`, `role`, and one repeated `motif`.
   Classify every narrated shot first: `shot.infoType:"timeline"` for ordered periods or dated
   events, `"statistic"` for measured counts·rates·shares·comparisons, `"principle"` for
   causes·mechanisms·state changes, and `"other"` for the rest. **The first three are HTML
   slides, never video** (user directive 2026-09-05, above every other rule here — CLAUDE.md
   §Nothing is drawn over video): `kind:"diagram"`, `motion:true`, `treatment:"editorial"` on
   the studio stage, role `timeline` · `statistic` · `mechanism` respectively, and a rendered
-  object (`slide.object`, `references/rendered-object.md`) when a thing is the subject. The
+  object (`slide.object`, [mesh-objects.md](references/mesh-objects.md)) when a thing is the subject.
+  Apply [render-routing.md](references/render-routing.md) and write `shot.render` before assets.
+  Distinguish character HTML, object HTML and data graphs even though all use HTML renderers.
+  Choose the purpose before the assets: people/mood cuts use a still with a camera move.
+  Explanations use recognizable 3D objects in a relevant environment, not labelled primitives
+  on a black background. If a person acts in the explanation, include a cute authored 3D doll
+  with matching materials and purposeful gestures. Otherwise omit the character. Follow
+  [illustrated-scenes.md](references/illustrated-scenes.md); image warping is not 3D acting.
+  New physical subjects use `renderer:"mesh"`, with `illustration3d` or `photoreal3d` styling. The
   quality bar is `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`.
   **Before approval, read [object-state-quality.md](references/object-state-quality.md).**
   Every editorial diagram must declare `quality:"object-state-v1"` and a `subject` with
@@ -459,8 +467,8 @@ Core rules:
   group changes the picture, so these slides run the static-ground clock per group and sit
   outside `html_plate_max`. A still, a clip with marks or labels drawn over it, kinetic type,
   or a photo with animated annotations cannot replace these cuts. If a
-  shot needs two types, split it. On a **principle** frame sit ink actors (`slide.arts` ·
-  `h.fig`) and draw hairlines (`h.stem` · `h.bus` · `h.chamber` · `h.ring` · `h.press`). Named
+  shot needs two types, split it. On a **principle** frame use recognizable 3D objects or 3D illustration actors
+  (`slide.arts` · `h.fig`) and refined relation arrows (`h.mark.arrow`). Named
   states keep `flow-trace` · `node-enter` · `state-transform` and may skip arts. Shape
   primitives require `slide.arts` (`slides/assets/s<shot>-<slug>.png`, sit with `h.fig`);
   generated at produce §3.6; kinetic may carry an art or a disk, type-only is valid for a verdict or
@@ -688,7 +696,7 @@ Core rules:
   qualifies. Multiple character/product references: 2.0; fixed voice or over nine reference
   images: 2.5. Record the purpose, reason, face eligibility and reference paths beside the
   prompt (scenes-schema §Motion background). Rebuild the cost preview after any change;
-  its generation settings are the ones produce sends. Keep the hook-plus-one video cap.
+  its generation settings are the ones produce sends. Keep the episode video cap without filling unused slots.
 - **Every generated-video shot leaves here as one API call with its final prompt stored**
   (scenes-schema §clip prompt). The scene is the call: pick the planned route (`visual.engine`
   or the type default — b-roll → veo, motion background → seedance, speech clip →
@@ -1003,13 +1011,11 @@ that chapter through angle and crop, and change the setting when the chapter cha
 Burns pan pulls two compositions out of one image). Even so, past 30 images, look again at
 whether this material belongs in the filmed lane.
 
-**On a short, generated video is the hook plus at most one cut** (user directive 2026-09-05,
-scenes-schema §Channel true-motion policy `hook_video`): the cover's motion background is
-slot one, the second slot is written only with `visual.why`, and every other `other` beat is a
-still under its camera move (one still per cut, `maxStaticGroundSeconds` 8 s) or an HTML
-motion slide. The episode's generated video sits under `video_budget_usd` ($10). Explanation
-beats (timeline · statistic · principle) are HTML slides and never video (CLAUDE.md §Nothing
-is drawn over video). Long-form keeps the format cap of 5 with no hook rule.
+**Generated video is selected per cut, including the opening.** Use `shot.render` and
+[render-routing.md](references/render-routing.md); every selected video also writes `visual.why`.
+The short-form cap is 2 and the default video budget is $10. They are ceilings, not quotas.
+Explicit channel overrides still apply. Explanations use the appropriate HTML mode;
+long-form keeps its format cap without a mandatory video hook.
 Two generated forms count against the slot cap together:
 
 - **`broll`** — inserted between scenes. A stretch where only the picture moves and nothing is
@@ -1092,7 +1098,7 @@ files. Only a TTS episode carries filmed scenes alone — there the generated sc
 nothing for the user to do, and including them blurs what has to be done.
 
 **storyboard.html (the review render)** — copy `references/storyboard-html-template.html` into
-storyboard/ and fill in **only the `<title>` and the `✎ SB_DOC` block**. Its labels follow the
+storyboard/, copy `references/render-routing.js` beside it, and fill in **only the `<title>` and the `✎ SB_DOC` block**. Its labels follow the
 reader's language (`?lang=en` · `?lang=ko`, or the picker at the end of the section menu); the
 episode's own copy stays in the language scenes.js is written in, so nothing here needs setting. Never write scene data
 (title, lines, bullets, shot, duration, THEME) into the HTML — the document loads the SoT

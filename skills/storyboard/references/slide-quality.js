@@ -27,12 +27,18 @@ function checkQuality(slide, segments) {
   if (subject.kind === 'object') {
     if (!slide.object) errors.push('object subject needs slide.object with a baked state-changing render');
     const keys = String(slide.object?.keys || '').trim().split(/\s+/).filter(Boolean);
-    if (slide.object && !keys.length) errors.push('slide.object needs keys — one state name per group plus the start state');
+    if (slide.object && slide.object.renderer !== 'mesh' && !keys.length) errors.push('slide.object needs keys — one state name per group plus the start state');
     for (let i = 1; i < keys.length; i++) {
       if (keys[i] === keys[i - 1]) errors.push(`object keys freeze in group ${i}`);
     }
   }
   if (slide.object && subject.kind !== 'object') errors.push('slide.object requires subject.kind object');
+  if (slide.object?.renderer === 'mesh') {
+    const ob = slide.object;
+    if (!/^slides\/assets\/s\d+-[a-z0-9-]+\.json$/.test(ob.file || '')) errors.push('mesh object.file must be slides/assets/s<shot>-<slug>.json');
+    if (!require('./mesh-contract.js').STYLES.includes(ob.style)) errors.push('mesh object.style must be illustration3d or photoreal3d');
+    if (!String(ob.plan || '').trim()) errors.push('mesh object.plan must describe the subject motion');
+  } else if (slide.object?.renderer != null && slide.object.renderer !== 'sheet') errors.push('unknown object.renderer; choose mesh or sheet');
   return errors;
 }
 module.exports = { VERSION, checkQuality };

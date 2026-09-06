@@ -34,6 +34,23 @@ veo.standard.1080p	second	0.40	official	same price as 720p — 1080p is 8s-only
 veo.fast.4k	second	0.30	official	4K is 8s-only
 veo.standard.4k	second	0.60	official	4K is 8s-only. lite doesn't support 4K
 
+# ── Video (Gemini Omni 1.1 Flash) ────────────────────────────────────────
+# Billed PER CALL, not per second — measured 2026-09-06 against the live spend counter.
+# The pricing page reads as per-second ("5,792 tokens per second of 720p video ... approximately
+# $0.10 per second"), but every call reports exactly 57,920 output video tokens (5,792 x 10)
+# no matter the length or resolution asked for, and the bill follows the meter, not the request:
+# a 3s 360p call moved the project's monthly spend counter by KRW 1,410, which is
+# 57,920 x $17.50/1M = $1.0136 at the day's rate. Four earlier calls (3s t2v, 3s i2v, 3s
+# interpolation, a 6s extension result) reported the same 57,920.
+# So a short Omni cut costs MORE than a full Veo shot: $1.01 against $0.40 for veo lite 8s at
+# 720p. Omni pays off only at the full 10 seconds, or when the edit lane is the point.
+# Unmeasured: whether 720p/1080p/4k charge the same flat amount. They are recorded at the
+# measured value on the assumption the meter is resolution-blind, which is how it behaved at 360p.
+omni.360p	call	1.0136	measured	spend counter delta KRW 1,410 on a 3s 360p call, 2026-09-06
+omni.720p	call	1.0136	unverified	assumed identical to 360p — the meter did not move with resolution
+omni.1080p	call	1.0136	unverified	assumed identical — upscale may bill more, untested
+omni.4k	call	1.0136	unverified	assumed identical — upscale may bill more, untested
+
 # ── Video (Seedance / BytePlus ModelArk) ─────────────────────────────────
 # The vendor bills in tokens: tokens = (input video s + output video s) × width × height × 24 / 1024.
 # The per-second values below are the official docs' "5s·16:9" example price (list price) divided by 5 —

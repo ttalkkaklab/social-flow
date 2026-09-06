@@ -439,7 +439,11 @@ const SLIDE_SHOT = 0;
      --seg-d 에 들어가 CSS 의 animation-duration:var(--seg-d,…) 가 읽고, .sv 안의 카운트업은
      dur 자체가 늘어난다(시차만큼 뺀다). 값이 (g, t) 밖에서 오지만 렌더 시작 때 한 번 정해지는
      상수라 같은 (g, t) 는 여전히 같은 그림이다. */
+  const meshes = [];
+  let meshSegs = {};
   window.__setSegs = function (map) {
+    meshSegs = map;
+    for (const m of meshes) m.setSegs(map);
     for (const el of document.querySelectorAll("[data-rg]")) {
       const ms = map[+el.dataset.rg];
       if (ms > 0) el.style.setProperty("--seg-d", Math.round(ms) + "ms");
@@ -513,6 +517,17 @@ const SLIDE_SHOT = 0;
      같은 (g, t) 가 같은 픽셀이다. 이미지는 로드만으로는 부족하고 decode() 까지 끝나야 한다.
      못 읽는 소재는 여기서 기다리지 않고 통과시킨다 — 오타 난 src 하나가 렌더러를 30초 매달아
      놓는 대신, __meta().broken 이 그 파일을 이름과 함께 렌더러에 넘겨 exit 1 로 세운다. */
+  let meshLoading;
+  const readyMeshes = () => meshLoading || (meshLoading = Promise.all(
+    [...document.querySelectorAll("[data-mesh]")].map(async el => {
+      try {
+        if (!window.SLIDE_MESH) throw new Error("copy and include assets/mesh-runtime.js");
+        const link = document.createElement("a"); link.href = el.dataset.mesh;
+        const m = await window.SLIDE_MESH.mount(el, link.href);
+        m.setSegs(meshSegs); meshes.push(m); groundSynced = false;
+      } catch (e) { bgBroken.push(el.dataset.mesh + ": " + e.message); }
+    })
+  ));
   window.__ready = function () {
     const imgs = [...document.images].map(i => (i.decode ? i.decode().catch(() => {}) : Promise.resolve()));
     const vids = videos().map(v => {
@@ -530,7 +545,7 @@ const SLIDE_SHOT = 0;
       im.src = u;
       (im.decode ? im.decode() : Promise.resolve()).then(() => res(), () => { bgBroken.push(u); res(); });
     }));
-    return Promise.all([document.fonts.ready, ...imgs, ...vids, ...bgs]).then(() => true);
+    return Promise.all([document.fonts.ready, readyMeshes(), ...imgs, ...vids, ...bgs]).then(() => true);
   };
 
   window.__seek = function (tMs, g) {
@@ -539,6 +554,7 @@ const SLIDE_SHOT = 0;
        미뤄야 그것까지 pause 된다. 순서를 되돌리면 짧은 애니메이션에서 재렌더가 갈라진다
        (실측: 90ms 슬라이드인에서 81프레임 중 13프레임이 두 렌더 사이에 달랐다). */
     if (!groundSynced) syncGround();
+    for (const m of meshes) m.draw(g, tMs);
     for (const c of counters) {
       const p = c.rg < g ? 1 : c.rg === g ? easeCount(clamp01((tMs - c.lead) / c.dur)) : 0;
       c.el.innerHTML = cells(fmt(c.from + (c.to - c.from) * p, c.dec), c.tpl);
@@ -578,6 +594,7 @@ const SLIDE_SHOT = 0;
     for (const a of document.getAnimations()) { const o = owner(a); if (!o || o.dataset.ground !== undefined) continue;
       const r = +o.dataset.rg; dur[r] = Math.max(dur[r] || 0, endOf(a)); }
     for (const c of counters) dur[c.rg] = Math.max(dur[c.rg] || 0, c.dur + c.lead);
+    for (const m of meshes) for (const k in m.durations) dur[k] = Math.max(dur[k] || 0, m.durations[k]);
     for (const p of painters) dur[p.rg] = Math.max(dur[p.rg] || 0, p.dur);
     for (const s of sprites) for (const k in s.dur) dur[k] = Math.max(dur[k] || 0, s.dur[k]);
     for (const v of videos()) { if (v.dataset.rg === undefined) continue;
@@ -616,7 +633,7 @@ const SLIDE_SHOT = 0;
       .map(v => v.getAttribute("src") || "(video[data-rg] with no src)")
       .concat([...document.images].filter(i => !i.naturalWidth).map(i => i.getAttribute("src") || "(no src)"))
       .concat(bgBroken);
-    return { hold: HOLD, broken: broken,
+    return { hold: HOLD, broken: broken, meshes: meshes.map(m => m.diagnostics()),
              stray: all.filter(a => !owner(a)).length + strayVideo + strayHits,
              infinite: all.filter(a => owner(a) && !isFinite(endOf(a))).length
                      + painters.filter(p => !isFinite(p.dur)).length };

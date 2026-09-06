@@ -327,6 +327,15 @@ move while the other dials stayed at their defaults.
 
 ### The still lane — the camera the edit fakes `[blog]`
 
+For focus-in, rack focus, foreground reveals and parallax, use the prepared-asset runtime
+in [still-camera.js](still-camera.js) and the purpose/asset contract in
+[animation-review.md](../../produce/references/animation-review.md). A `focus=` value in
+the reel builder only chooses a zoom anchor; it does not shift optical focus. Do not silently
+turn a planned rack focus into a zoom. For an episode, mount the shared runtime in its HTML
+camera cut, drive `draw(seconds)` from `__seek`, and capture with the motion-slide renderer.
+Select the effect from the cut's meaning, then inspect the actual focus regions in the image.
+Character explanations use contact-driven 3D actions; sparse mechanism labels clarify parts.
+
 A still costs nothing to move: the builder crops a window out of the picture and drives the
 window, and to the audience that IS a camera. The lane has six moves — an eased slow zoom
 (in/out, the default: the observe row's 4%/s over the card, capped at a 1.075 total scale
@@ -346,8 +355,8 @@ Two disciplines carry over unchanged. The move supports the declared feel — it
 it (the evidence base for stills is practitioner practice, not measurement, so claim even
 less). And rationing: most cards keep the alternating default drift; a punch is the cover's
 move; drift is spent where presence or unease is the feel, not sprinkled for "energy".
-Since 2026-09-05 this lane is the body of a short (the hook is video, one more generated
-cut at most, every other cut a still under its move or an HTML motion slide), so a still now
+Since 2026-09-06 this lane carries every cut whose `shot.render` picks a still, which on a
+short is most of them, so a still now
 carries a whole cut: the centre push caps at 7.5% because the text is baked in, and over a
 5–8 s cut that is under 1.5%/s — a `pan` travel (12% at the default scale), a `focus` zoom
 that arrives at the subject, or `hold` + `drift` reads as an operated camera where the

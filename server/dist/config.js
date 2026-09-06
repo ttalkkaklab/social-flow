@@ -16,7 +16,7 @@ export const config = {
     naverClientSecret: process.env.NAVER_CLIENT_SECRET || '',
     /** data.go.kr auth key (required by datago_file_fetch/datago_api_call — search/detail/download need no auth) */
     dataGoKrApiKey: process.env.DATA_GO_KR_API_KEY || '',
-    /** Gemini API key (shared requirement of the veo_* video, tts_* speech, and music_* music tools) — https://aistudio.google.com/apikey */
+    /** Gemini API key (shared requirement of the veo_ and omni_ video, tts_* speech, and music_* music tools) — https://aistudio.google.com/apikey */
     geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
     /** OpenAI API key (required by the gpt_image_* image generation tools) — https://platform.openai.com/api-keys */
     openaiApiKey: process.env.OPENAI_API_KEY || '',
@@ -245,7 +245,7 @@ export function requireDataGoKrKey() {
 }
 export function requireGeminiKey() {
     if (!config.geminiApiKey) {
-        throw new Error('GEMINI_API_KEY (or GOOGLE_API_KEY) is not set. veo_* (video), tts_* (speech), and music_* (Lyria) ' +
+        throw new Error('GEMINI_API_KEY (or GOOGLE_API_KEY) is not set. veo_*/omni_* (video), tts_* (speech), and music_* (Lyria) ' +
             'generation tools all require a Gemini API key (https://aistudio.google.com/apikey). ' +
             'Video, speech, and music generation are unavailable until the key is set — search, publish, and image tools work fine without it.');
     }
