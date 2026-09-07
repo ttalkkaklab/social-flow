@@ -22,7 +22,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__datago_api_call",
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img",
   "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit",
-  "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue",
+  "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue",
   "mcp__social-flow__tts_list_voices", "mcp__social-flow__mlx_tts_generate",
   "mcp__social-flow__veo_img2video",
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
@@ -726,10 +726,13 @@ TTS and build.
 
 ### 7. Narration
 
-Exactly produce skill §5 — **1 call per scene**, engine and voice pinned to
-profile §2, the script is the full text of the narration segments' `tts`
-sentences joined with periods, `.work/pcm/c<n>.wav`. Length check right after
-generation (over 2× characters/4.5 → regenerate once).
+Exactly produce skill §5 and `../produce/references/tts-quality.md`: call
+`tts_generate_checked` once per scene with engine/voice pinned to profile §2 and all
+`tts` sentences joined with periods. Keep the WAV and its `.quality.json` sidecar in
+`.work/pcm/`. It reviews actual speech and retries up to three takes at fixed settings.
+Only a current PASS enters assembly. Failed, unavailable or exhausted review sets
+`queue_*: hold`; never reset attempts or substitute a raw unchecked take. Include paid
+Gemini audio review in the allowance even for local TTS; an older local-only budget is insufficient.
 
 If the local engine fails with "Python interpreter not found" /
 "No module named 'supertonic'", **abort right there — do not switch to

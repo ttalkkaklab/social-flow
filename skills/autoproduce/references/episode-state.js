@@ -207,6 +207,10 @@ function blockers(ep, stage) {
     out.push('the episode built without a cost report (produce §10)');
 
   // Not on a published episode — that video is already out, and a blocker there is noise.
+  if (stage !== 'published' && ep.has.video && ep.has.scenes && ep.dir) {
+    const error = require('../../produce/references/delivery-proof.js').check(ep.dir);
+    if (error) out.push(error);
+  }
   if (stage !== 'published' && ep.has.video && ep.has.spedUp === false)
     out.push('output/ holds the un-sped build — the required speed pass never ran ' +
              '(produce §7.5: speedup.sh, then copy the -fast set)');
@@ -429,6 +433,29 @@ function selftest() {
   ok('a report with no verdict line reads as false', withReport('── speedup x1.20\n') === false);
   fs.unlinkSync(tmp);
   ok('a missing report has no verdict', hasFinalRateMarker(tmp) === null);
+
+  // blockers(): a built video needs the assembly proof the speed pass wrote, bound to the
+  // delivered files and the storyboard; a published episode is left alone.
+  {
+    const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'episode-state-proof-'));
+    const out = path.join(dir, 'output', 'video');
+    fs.mkdirSync(out, { recursive: true }); fs.mkdirSync(path.join(dir, 'storyboard'));
+    const source = 'window.SCENES=[{type:"points",transition:"cut"}];';
+    fs.writeFileSync(path.join(dir, 'storyboard', 'scenes.js'), source);
+    fs.writeFileSync(path.join(out, 'video.mp4'), 'master'); fs.writeFileSync(path.join(out, 'subs.srt'), 'subtitles');
+    const built = Object.assign({}, base, { dir, has: Object.assign({}, base.has, { video: true, scenes: true }) });
+    const proofBlock = (stage) => blockers(built, stage).filter((x) => /assembly proof/.test(x));
+    ok('a built video without delivery-proof.json blocks', proofBlock('produced').length === 1);
+    ok('a published episode is not re-blocked on its proof', proofBlock('published').length === 0);
+    const sha = (v) => require('crypto').createHash('sha256').update(v).digest('hex');
+    fs.writeFileSync(path.join(out, 'delivery-proof.json'), JSON.stringify({ version: 1, kind: 'storyboard', speed: 1,
+      scenesSha256: sha(source), editCheckSha256: sha('edit'), assembledSha256: sha('assembly'),
+      outputs: { 'video.mp4': sha('master'), 'video-sub.mp4': null, 'subs.srt': sha('subtitles') } }));
+    ok('a proof bound to the delivered files clears the blocker', proofBlock('produced').length === 0);
+    fs.writeFileSync(path.join(dir, 'storyboard', 'scenes.js'), source + '\n');
+    ok('a storyboard edited after assembly blocks again', proofBlock('produced').some((x) => /storyboard changed/.test(x)));
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 
   if (failed) { process.stderr.write(failed + ' check(s) failed\n'); process.exit(1); }
   process.stdout.write('episode-state selftest OK\n');

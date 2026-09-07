@@ -7,10 +7,10 @@
     "material": "Tactile timber, plaster, stone, paper and fabric; physically believable thickness and contact shadows. Adapt material choices to the topic and period.",
     "lighting": "Soft directional light and moderate depth of field; tense scenes may use cool shadows and warm practical lights while keeping the action readable.",
     "people": "Natural anatomy and grounded feet; consistent identity, clothing and age across connected scenes. Faces are illustrative unless an authentic reference is explicitly supplied.",
-    "composition": "Cinematic miniature or cutaway space with clear foreground, action and background. The narrated actor, action, recipient or object must be visible when the scene depends on them.",
+    "composition": "Cinematic miniature or cutaway space with clear foreground, action and background. The narrated actor, action, recipient or object is visible whenever the scene depends on it.",
     "camera": "One purposeful restrained move per shot. Preserve geometry and contact. Exact final states use an edited end frame from the start image.",
-    "priority": "Narrative meaning and evidence outrank visual resemblance. Borrow materials, light and craftsmanship, never unrelated people, period costumes, ships, offices or actions from a style reference.",
-    "exclude": "Decorative boxes in place of physical subjects; generic empty rooms as a substitute for an action; fake historical documents, legible invented writing, arrows, captions, watermarks or romanticized coercion."
+    "priority": "Narrative meaning and evidence outrank visual resemblance. Borrow the reference's materials, light and craftsmanship only; every person, costume, vehicle, room and action comes from this episode's narration.",
+    "subjects": "Physical subjects are modelled things with real thickness, and actions happen in a furnished, recognizable place. Paper and signs stay blank or illegible, the frame is a clean scene for subtitles added later, and coercion or harm appears only as far as the narration states it, shown plainly."
   },
   "references": [
     {

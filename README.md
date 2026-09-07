@@ -29,13 +29,22 @@ Use the references for appearance, not unrelated historical props or story conte
 archives keep their original look. Include `skills/storyboard/assets/` when distributing the
 whole plugin; the server-only npm package is not the plugin and does not contain these assets.
 
-The [full-video branch](skills/produce/references/full-video.md) targets a spatial explainer:
-architectural miniatures, detailed environments and cutaways, one visible action per cut,
-consistent geometry/materials, and separate channel narration. It supersedes the hybrid
-HTML-only explanation rules below for that episode. Source-image and motion prompts are
-assembled separately; actual playback and frame reviews are tied to source/clip hashes.
-The builder checks the selected files and refuses loops or freeze padding. These checks enforce
-review, not a guarantee that a generator matches the reference on its first attempt.
+The [full-video branch](skills/produce/references/full-video.md) renders every new scene as a
+clip in the chosen style, with one visible action per cut, a shared world bible, one camera
+contract per shot (the four `visual.camera` slots) and separate channel narration; for
+cinematic-miniature it targets a spatial explainer of architectural miniatures, environments
+and cutaways. It supersedes the hybrid HTML-only explanation rules below for that episode. The
+prompt assembler builds the source and motion prompts from the shot plan and runs the same
+Seedance prompt gate the storyboard checker runs, so a stored prompt is a checked prompt.
+Actual playback and frame reviews are tied to source/clip hashes, and the builder checks the
+selected files and refuses loops or freeze padding. These checks enforce review, not a
+guarantee that a generator matches the reference on its first attempt.
+
+Assembly compiles each storyboard transition into the production timeline. Moving transitions
+use unseen outgoing video frames, with explicit source trims and narration margins. Missing
+handles or conflicting card options block the build. The checked master includes boundary
+frame verification and short playback excerpts for continuity review; see the
+[cinematic editing contract](skills/produce/references/cinematic-edit.md).
 
 Video comes in two formats. The default is 9:16 short-form (1080×1920/30fps), derived
 per platform; YouTube long-form uses 16:9 (1920×1080). You pick the format while
@@ -150,11 +159,12 @@ The keys come in two independent groups, and **you can stop after either one**.
 **Group 1 — production keys.** These make the video. `OPENAI_API_KEY` renders the
 cover and any frame with text on it (local image generation garbles Korean glyphs, so
 text frames go to GPT Image), and `GEMINI_API_KEY` covers generated video clips,
-acted narration, and BGM. Both are optional in the strict sense — scene backgrounds
-default to on-device `image_local_generate` and narration defaults to on-device
-`tts_local_generate`, so a no-key run still produces a video — but without
-`OPENAI_API_KEY` you lose text-bearing frames, and without `GEMINI_API_KEY` you lose
-generated motion and music. For research, `SERPAPI_API_KEY` and the Naver pair are
+acted narration, and BGM. Scene backgrounds default to on-device `image_local_generate`
+and narration synthesis defaults to on-device `tts_local_generate`. Generated narration
+requires `GEMINI_API_KEY` for the mandatory audio quality review, including local synthesis.
+A no-key run can synthesize local audio but cannot pass that narration into the builder.
+Review calls have a separate cost; include them and retakes in the episode allowance.
+For research, `SERPAPI_API_KEY` and the Naver pair are
 optional too; the storyboard skill falls back to WebSearch.
 
 **Group 2 — platform credentials (Threads · Instagram · YouTube · Facebook). Entirely
@@ -173,7 +183,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the nine publish/insight tools
-  aren't even listed (`tools/list` shows 56 instead of 65), and the growth skills have
+  aren't even listed (`tools/list` shows 57 instead of 66), and the growth skills have
   nothing to drive.
 
 Credentials are per platform, so this is not all-or-nothing — a YouTube-only setup
@@ -200,12 +210,13 @@ the whole projection rather than a bill that has already partly arrived.
 |---|---|---|---|
 | **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame have to go to the paid path. Default stays Z-Image |
 | **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `mlx_video_generate` (24fps, RAM-capped) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
-| **Speech (TTS)** | `tts_local_generate` — Supertonic 3, $0. Optional: `mlx_tts_generate` | `tts_generate` / `tts_multi_speaker` — Gemini, per 1,000 chars | …you don't need acted delivery. The local engine has no style or emotion control. mlx_tts is never a silent fallback for profile §2 |
+| **Speech (TTS)** | `tts_local_generate` — Supertonic 3, $0 synthesis. Optional: `mlx_tts_generate` | `tts_generate` / `tts_multi_speaker` — Gemini, per 1,000 chars. Every generated scene also pays the Gemini audio review inside `tts_generate_checked` (two calls per take) | …the scene is your own recording. Local synthesis is free, but the builder only accepts narration with a current review proof, and the review is a paid Gemini call even for local voices. The local engine has no style or emotion control. mlx_tts is never a silent fallback for profile §2 |
 | **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
 | **Music (BGM)** | `mlx_music_generate` when MLX Core is running | Lyria clip via Gemini (the default) | …you ship without BGM, or you have MLX Core up with a music model |
 
-So a zero-cost run is possible: local images, local narration, local
-transcription, no generated video, no BGM. What you give up is a proper cover
+A near-zero run is possible: local images, local narration synthesis, local
+transcription, no generated video, no BGM. What still costs money is the audio
+review of every generated narration scene, and what you give up is a proper cover
 frame (it needs rendered text) and background music.
 
 A realistic paid episode is small. The default economy tier spends about
@@ -406,7 +417,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 65 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 66 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -468,14 +479,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (65 tools)
+## MCP tool surface (66 tools)
 
-**`tools/list` does not show all 65.** The nine publish/insights tools
+**`tools/list` does not show all 66.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 56. Hidden tools still have live handlers:
+server. With no tokens at all you'll count 57. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
@@ -498,6 +509,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Video generation | `omni_text2video` / `omni_img2video` / `omni_extend` / `omni_edit` | Gemini Omni 1.1 Flash (GEMINI_API_KEY, Interactions API — 360p–4k, **any whole 3–10s**, and the only lane that **edits a clip by instruction** or extends a local mp4 to a 40s cumulative cap. **Billed flat ~$1.01 per call** — measured against the spend counter, not per second as the pricing page reads — so a 3s draft costs more than a full 8s veo-3.1-lite shot; worth it at the full 10s or for the edit lane, never for a short cut. No reference-image or negative-prompt field, and its person policy is unmeasured — photoreal faces stay on `veo_img2video`) |
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x). Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Ordinary hooks use 1.5 Pro; eligible complex action and reference cuts use 2.0, fixed voice or over nine reference images use 2.5. The storyboard records the reason and forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table) |
+| Checked narration | `tts_generate_checked` | Generates with the pinned engine and reviews the actual WAV: blind transcript, pronunciation, naturalness and clarity. Up to three takes; current hash-bound PASS required for assembly. Requires Gemini API review even for local TTS; see [speech quality gate](skills/produce/references/tts-quality.md). |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |
 | Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |
 | Voice generation | `mlx_tts_generate` | MLX Core / mlx-serve (raw WAV. Optional; never a silent fallback for the engine in profile §2) |

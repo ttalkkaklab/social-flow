@@ -11,6 +11,7 @@ const MODELS = {
   'seedance-1-0-pro-fast-251015': { family: '1-0-pro-fast', duration: [2, 12], resolutions: ['480p', '720p', '1080p'], images: 0, audio: false }
 };
 const DEFAULT_MODEL = 'seedance-1-5-pro-251215';
+const { checkFrames, framePlan } = require('../../storyboard/references/render-routing.js');
 
 // A model may render a resolution the price table has no row for. Forecasting silently drops
 // such a shot, so the plan is rejected here instead. Mirrors autoproduce/references/prices.tsv;
@@ -35,9 +36,9 @@ function scenePlan(scene) {
     : scene.type === 'quote' && v.clip && typeof v.clip === 'object' ? 'quote' : null;
   if (!kind) return null;
   const settings = Object.assign({}, v, kind === 'motion' ? v.video : kind === 'quote' ? v.clip : {});
-  const frameErrors = require('../../storyboard/references/render-routing.js').checkFrames(scene);
+  const frameErrors = checkFrames(scene);
   if (frameErrors.length) throw new Error(frameErrors.join('; '));
-  const endFrame = require('../../storyboard/references/render-routing.js').framePlan(scene).end;
+  const endFrame = framePlan(scene).end;
   if (endFrame) settings.lastImagePath = endFrame;
   const engine = settings.engine || (kind === 'motion' ? 'seedance' : 'veo');
   if (!['seedance', 'veo'].includes(engine)) throw new Error('unknown video engine: ' + engine);
