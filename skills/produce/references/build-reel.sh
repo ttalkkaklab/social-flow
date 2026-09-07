@@ -135,7 +135,8 @@ STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
 cd "$WORKDIR"
 node "$HERE/check-production.js" "$STORYBOARD" --workdir "$PWD" --ready --manifest --json > production-preflight.json
-FULL_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.generatedShots || []).join(" "))' "$PWD/production-preflight.json")
+FULL_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.plainVideoShots || p.generatedShots || []).join(" "))' "$PWD/production-preflight.json")
+REUSED_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.reusedShots || []).join(" "))' "$PWD/production-preflight.json")
 
 # Format preset — the `: "${VAR:=value}"` block written by format-resolve.js.
 # It must be read **before** the inline defaults for precedence to hold: caller env → format.env → inline.
@@ -741,6 +742,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
           BDUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$BASE")
           awk -v actual="$BDUR" -v needed="$D" 'BEGIN{exit !(actual+0.05>=needed)}' \
             || { echo "Full-video card $IDX needs ${D}s but its clip has ${BDUR}s. Split/re-time narration or regenerate; looping and freeze padding are disabled." >&2; exit 1; }
+          case " $REUSED_VIDEO_SHOTS " in *" $IDX "*)
+            awk -v actual="$BDUR" -v needed="$D" 'BEGIN{d=actual-needed; if(d<0)d=-d; exit !(d<=0.05)}' \
+              || { echo "Reused card $IDX duration differs from its imported file; match card audio/timing to the approved clip. Automatic trimming is disabled." >&2; exit 1; } ;;
+          esac
           SS=${FOFF[$j]}
           INS+=(-ss "$SS" -t "$T" -i "$BASE")
         elif [ "$ONESHOT" = "1" ]; then

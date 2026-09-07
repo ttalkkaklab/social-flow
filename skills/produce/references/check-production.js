@@ -18,8 +18,11 @@ function readReviews(work) {
   const file = path.join(work, 'video-review.json');
   return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { shots: [] };
 }
+function videoFile(scene) { return mode.reused(scene) ? scene.visual.reuse.clip : scene.visual.video.clip; }
 function accepted(win, index, storyboard, review) {
   const scene = win.SCENES[index];
+  if (mode.reused(scene)) return review && review.planDigest === shotDigest(win, index) &&
+    review.videoSha256 === scene.visual.reuse.sha256 && review.videoSha256 === hashFile(storyboard, videoFile(scene));
   return review && review.planDigest === shotDigest(win, index) &&
     review.sourceSha256 === hashFile(storyboard, scene.visual.bg) &&
     (!framePlan(scene).end || review.endSha256 === hashFile(storyboard, framePlan(scene).end)) &&
@@ -37,12 +40,36 @@ function motionReviewErrors(scene, review) {
   }
   return errors;
 }
+// The imported file is already cut; the source range is provenance, never an edit instruction.
+function validateReuseAsset(storyboard, scene, format) {
+  const errors = mode.reuseErrors(scene);
+  if (errors.length) throw new Error(errors.join('; '));
+  if (hashFile(storyboard, videoFile(scene)) !== scene.visual.reuse.sha256)
+    throw new Error('reused clip SHA-256 differs from the declared input');
+  const probe = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries',
+    'stream=width,height:format=duration', '-of', 'json', assetPath(storyboard, videoFile(scene))], { encoding: 'utf8' });
+  if (probe.status !== 0) throw new Error('ffprobe could not read the reused video');
+  const media = JSON.parse(probe.stdout), stream = media.streams?.[0], wide = format === 'youtube-long-16x9';
+  if (!stream || stream.width < (wide ? 1920 : 1080) || stream.height < (wide ? 1080 : 1920))
+    throw new Error('reused clip is below the approved 1080p canvas');
+  const seconds = Number(media.format?.duration), range = scene.visual.reuse.sourceRange;
+  if (!Number.isFinite(seconds) || Math.abs(seconds - (range.end - range.start)) > .05)
+    throw new Error('reused clip duration differs from sourceRange; import an already trimmed clip (0.05s tolerance)');
+}
 function check(storyboard, { requireSelection = false, ready = false, beforeCall = null, manifest = false, workdir = null } = {}) {
   storyboard = path.resolve(storyboard);
   const win = cost.readScenes(path.join(storyboard, 'scenes.js'));
   const errors = mode.check(win, { requireSelection, requireApproval: true });
   if (!win.PRODUCTION) return { errors, active: false };
   if (errors.length) return { errors, active: true };
+  if (beforeCall !== null && win.SCENES[beforeCall - 1] && mode.reused(win.SCENES[beforeCall - 1]))
+    return { active: true, errors: ['A reused clip cannot be selected for a new video API call'] };
+  // Imports already exist at selection time. Check bytes and dimensions even before other assets.
+  for (const [index, scene] of win.SCENES.entries()) {
+    if (!mode.reused(scene)) continue;
+    try { validateReuseAsset(storyboard, scene, win.FORMAT); }
+    catch (e) { errors.push('shot ' + (index + 1) + ': ' + e.message); }
+  }
   const work = workdir ? path.resolve(workdir) : path.join(path.dirname(storyboard), '.work'), p = win.PRODUCTION;
   const current = quote(win), option = current.options[p.mode];
   if (option.provisional) errors.push('The selected mode still has a provisional quote; finish its shot plan before approval');
@@ -75,16 +102,16 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
     if (cost.videoSpent(spent.items) + pending.reduce((sum, r) => sum + r.usd, 0) > p.videoBudgetUsd + 1e-9)
       errors.push('Spent video plus the next call and unfinished shots exceeds the approved budget');
   }
-  if (ready && mode.full(p)) {
+  if (ready) {
     win.SCENES.forEach((scene, index) => {
-      if (!mode.eligible(scene)) return;
+      if (!mode.reused(scene) && !(mode.full(p) && mode.eligible(scene))) return;
       const prefix = 'shot ' + (index + 1) + ': ', bad = msg => errors.push(prefix + msg);
       const matches = (reviews.shots || []).filter(r => r.shot === index + 1), review = matches[0];
       if (matches.length !== 1) { bad('one current video review is required'); return; }
       try {
         if (!accepted(win, index, storyboard, review)) bad('review is stale; inspect the current image, clip and shot plan');
         const probe = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries',
-          'stream=width,height:format=duration', '-of', 'json', assetPath(storyboard, scene.visual.video.clip)], { encoding: 'utf8' });
+          'stream=width,height:format=duration', '-of', 'json', assetPath(storyboard, videoFile(scene))], { encoding: 'utf8' });
         if (probe.status !== 0) throw new Error('ffprobe could not read the video');
         const media = JSON.parse(probe.stdout), stream = media.streams?.[0];
         const wide = win.FORMAT === 'youtube-long-16x9';
@@ -102,21 +129,23 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
       } catch (e) { bad(e.message); }
     });
   }
-  const generatedShots = mode.full(p) ? win.SCENES.flatMap((s, i) => mode.eligible(s) ? [i] : []) : [];
-  if (manifest && generatedShots.length) {
+  const generatedShots = option.rows.map(r => r.shot - 1);
+  const reusedShots = Array.from(win.SCENES).flatMap((s, i) => mode.reused(s) ? [i] : []);
+  const plainVideoShots = [...(mode.full(p) ? generatedShots : []), ...reusedShots];
+  if (manifest && plainVideoShots.length) {
     const cards = fs.readFileSync(path.join(work, 'cards.tsv'), 'utf8').split(/\r?\n/).filter(l => l && !l.startsWith('#')).map(l => l.split('\t'));
     const segments = fs.readFileSync(path.join(work, 'segs.tsv'), 'utf8').split(/\r?\n/).filter(l => l && !l.startsWith('#')).map(l => l.split('\t'));
-    for (const index of generatedShots) {
+    for (const index of plainVideoShots) {
       const card = cards.filter(r => Number(r[0]) === index), segs = segments.filter(r => Number(r[0]) === index);
-      if (card.length !== 1 || card[0][3] !== 'none' || !segs.length) errors.push('Full-video manifest needs one zoom=none card with segments for shot ' + (index + 1));
-      const expected = assetPath(storyboard, win.SCENES[index].visual.video.clip);
+      if (card.length !== 1 || card[0][3] !== 'none' || !segs.length) errors.push('Plain-video manifest needs one zoom=none card with segments for shot ' + (index + 1));
+      const expected = assetPath(storyboard, videoFile(win.SCENES[index]));
       if (segs.some(r => !r[2] || /::|\||^@/.test(r[2]) || path.resolve(work, r[2]) !== expected))
-        errors.push('Full-video segments must use only the approved clip, without overlays or freeze/palindrome wrappers: shot ' + (index + 1));
+        errors.push('Plain-video segments must use only the approved clip, without overlays or freeze/palindrome wrappers: shot ' + (index + 1));
     }
   }
-  return { active: true, mode: p.mode, generatedShots, errors, quote: current };
+  return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, quote: current };
 }
-module.exports = { check, shotDigest, hashFile, assetPath, motionReviewErrors };
+module.exports = { check, shotDigest, hashFile, assetPath, motionReviewErrors, videoFile, validateReuseAsset };
 if (require.main === module) {
   try {
     const args = process.argv.slice(2), target = args[0];

@@ -119,7 +119,7 @@ function isStillCard(scene) {
   const v = (scene && scene.visual) || {};
   if (scene && (scene.type === 'broll' || scene.type === 'outro')) return false;
   if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') return false;
-  if ((v.slide && v.slide.kind !== 'camera') || v.video || v.clip) return false;
+  if ((v.slide && v.slide.kind !== 'camera') || v.video || v.clip || v.reuse !== undefined) return false;
   return true;
 }
 
@@ -332,7 +332,7 @@ function motionKind(scene) {
     return 'recording';
   // The ground decides the kind: a motion background or clip under a motion-slide overlay
   // (the cover's code-rendered title over `visual.video`) is video, not a plate.
-  if (scene && (scene.type === 'broll' || v.video || v.clip)) return 'ai-video';
+  if (scene && (scene.type === 'broll' || v.video || v.clip || v.reuse !== undefined)) return 'ai-video';
   if (v.slide && v.slide.kind !== 'camera' && v.slide.motion === true) return 'motion-slide';
   return null;
 }

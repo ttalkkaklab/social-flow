@@ -254,3 +254,5 @@ in each new video's ledger memo. The quote binds this identifier. The retry gate
 revision's attempts per shot; all historical rows still count toward the episode dollar cap.
 Do not change the revision to bypass a failed shot's retry limit. A new revision requires a
 real revised plan and its approval. Keep historical rows and their original shot numbers intact.
+
+Existing generated inputs use [visual.reuse](../../storyboard/references/scenes-schema.md#existing-generated-clip-input-visualreuse). Skip generation steps for those shots and keep their imported-file playback review. Do not create a source image or call a video API for an imported input.

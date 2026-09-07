@@ -219,3 +219,87 @@ test('travelling end images follow the camera endpoint without forcing a fixed v
  const w=fixture(1);w.SCENES[0].visual.camera.end='A closer view beside the river.';
  const p=assemble(w,0);assert.match(p.endFramePrompt,/closer view beside the river/);assert.doesNotMatch(p.endFramePrompt,/Keep the same camera position/);
 });
+
+// Offline media validates the import contract, not the visual quality of generated footage.
+function reuseFixture(video) {
+ const w=fixture(4); w.PRODUCTION={mode:'hybrid',videoBudgetUsd:0,maxAttempts:2};
+ const lines=['Why is the box moving?','The table shakes.','A fan moves the table.','Check the table before the box.'];
+ const ref=shot=>({shot,group:1,quote:lines[shot-1]});
+ w.COMPREHENSION={mode:'narrative',question:'Why does the box move?',answer:'A fan moves the table.',takeaway:'Check the support.',branches:[],terms:[]};
+ w.SCENES.forEach((s,i)=>{
+  s.transition='cut';s.beat=['hook','drip','drip','cta'][i];s.narration=[{tts:lines[i],sub:lines[i]}];
+  s.shot={...s.shot,feel:'curious',size:'mcu',angle:'eye',info:lines[i],infoType:'other',render:{mode:'generated_video',purpose:'live_action',motionEssential:true,
+   reason:['Observe the box drift.','Follow the shaking support.','Reveal the fan contact.','Trace the cause back.'][i],action:'The box slides.',whyNotStill:'The changing position shows the motion.'}};
+  s.shot.videoDesign={motion:{kind:'subject_action',subject:'Box',visibleChange:'The box slides across the table.',beats:[{at:0,state:'Box at the left.'},{at:4,state:'Box at the right.'}]}};
+  s.visual={picture:'ai-video',overlay:'none',why:'Movement is the evidence.',action:'The box slides.',reuse:{clip:video,sha256:digest(readFileSync(video)),sourceEpisode:'archived-episode-7 (provenance only)',sourceRange:{start:10,end:15}}};
+ });
+ w.SCENES[0].hookType='curiosity';w.SCENES[0].hookForm='gap';
+ w.STORY={version:'story-v1',kind:'fiction',viewerNeed:'Solve the moving-box puzzle',thesis:'The support moves the box.',basis:'An explicitly fictional demonstration',opening:ref(1),payoff:ref(3),ending:ref(4),endingReason:'Return to the initial mistaken attribution',cta:'none',beats:[1,2,3,4].map(shot=>({shot,change:`New clue ${shot}`,necessity:`Required step ${shot}`}))};
+ w.STORY.review={hash:require('../../skills/storyboard/references/story-contract.js').storyHash(w),verdict:'pass',unresolved:[],...Object.fromEntries(['meaning','progression','payoff','grounding'].map(k=>[k,{reason:`${k} evidence in fictional premise`,refs:[ref(3)]}]))};
+ approve(w);return w;
+}
+test('explicit imports pass scene and production gates at zero generation cost, but never a new API call',()=>withBoard(({board,work,save})=>{
+ const video=path.join(work,'import.mp4');
+ const render=spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=gray:s=1080x1920:r=1:d=5','-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p',video],{encoding:'utf8'});
+ assert.equal(render.status,0,render.stderr);
+ const w=reuseFixture(video);save(w);
+ const run=spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--json'],{encoding:'utf8'});
+ assert.equal(run.status,0,run.stdout+run.stderr);
+ const p=check(board,{requireSelection:true});assert.deepEqual(p.errors,[]);
+ assert.equal(p.quote.options.hybrid.clips,0);assert.equal(p.quote.options.hybrid.reusedClips,4);
+ assert.equal(p.quote.options.hybrid.firstPassUsd,0);assert.equal(p.quote.options.hybrid.retryHighUsd,0);assert.equal(p.quote.options.hybrid.provisional,false);
+ assert.deepEqual(p.reusedShots,[0,1,2,3]);assert.deepEqual(p.generatedShots,[]);
+ assert.equal(scenePlan(w.SCENES[0]),null);
+ assert.match(check(board,{beforeCall:1}).errors.join(),/cannot be selected/);
+ assert.match(check(board,{ready:true}).errors.join(),/review is required/);
+ const reviews=w.SCENES.map((s,i)=>({shot:i+1,planDigest:shotDigest(w,i),videoSha256:s.visual.reuse.sha256,reviewer:'Synthetic contract fixture; not a quality approval',at:'2026-09-07T00:00:00Z',playback:true,seeks:[.1,2.5,4.8],defects:[],motionEvidence:{...s.shot.videoDesign.motion,cameraOnly:false,observedChange:'The box moves from left to right.'},...Object.fromEntries(['composition','materials','continuity','action','camera','referenceMatch'].map(k=>[k,'Synthetic contract evidence for '+k]))}));
+ const saveReviews=()=>writeFileSync(path.join(work,'video-review.json'),JSON.stringify({shots:reviews}));saveReviews();
+ writeFileSync(path.join(work,'cards.tsv'),w.SCENES.map((s,i)=>`${i}\tvoice.wav\t5\tnone\n`).join(''));
+ writeFileSync(path.join(work,'segs.tsv'),w.SCENES.map((s,i)=>`${i}\t0\t${video}\t${s.narration[0].tts}\t${s.narration[0].sub}\n`).join(''));
+ assert.deepEqual(check(board,{ready:true,manifest:true}).errors,[]);
+ const {verifyManifest}=require('../../skills/produce/references/verify-build-plan.js');
+ assert.equal(Object.keys(verifyManifest(work,board,w.SCENES,w.FORMAT)).length,1);
+ const manifest=readFileSync(path.join(work,'segs.tsv'),'utf8');
+ writeFileSync(path.join(work,'segs.tsv'),manifest.replace(video,video+'::overlay.png'));
+ assert.match(check(board,{manifest:true}).errors.join(),/without overlays/);
+ assert.throws(()=>verifyManifest(work,board,w.SCENES,w.FORMAT),/differs from the declared/);
+ writeFileSync(path.join(work,'segs.tsv'),manifest);
+ const low=path.join(work,'low.mp4');
+ assert.equal(spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=gray:s=320x240:r=1:d=5','-c:v','libx264','-preset','ultrafast',low],{encoding:'utf8'}).status,0);
+ const lowScene=structuredClone(w.SCENES[0]);lowScene.visual.reuse.clip=low;lowScene.visual.reuse.sha256=digest(readFileSync(low));
+ const {validateReuseAsset}=require('../../skills/produce/references/check-production.js');
+ assert.throws(()=>validateReuseAsset(board,lowScene,w.FORMAT),/1080p/);
+ lowScene.visual.reuse.clip=path.join(work,'missing.mp4');assert.throws(()=>validateReuseAsset(board,lowScene,w.FORMAT),/ENOENT/);
+ reviews[0].playback=false;saveReviews();assert.match(check(board,{ready:true}).errors.join(),/full playback/);reviews[0].playback=true;
+ reviews[0].videoSha256='0'.repeat(64);saveReviews();assert.match(check(board,{ready:true}).errors.join(),/review is stale/);
+ const mixed=structuredClone(w);
+ mixed.SCENES.slice(1).forEach((s,i)=>{
+  s.shot.render={mode:'still_camera',purpose:'portrait',reason:['Inspect the support.','Identify the fan.','Recall the object.'][i],camera:{effect:'push',target:'subject',reason:'Make the subject clear.'}};
+  s.visual={bg:'images/portrait.png',camera:{movement:'dolly in'},slide:{kind:'camera',motion:true,file:`slides/body-${i}.html`}};
+ });
+ mixed.STORY.review.hash=require('../../skills/storyboard/references/story-contract.js').storyHash(mixed);approve(mixed);save(mixed);
+ const single=spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--json'],{encoding:'utf8'});
+ assert.equal(single.status,0,single.stdout+single.stderr);
+ assert.deepEqual(check(board,{requireSelection:true}).errors,[]);
+ assert.equal(quote(mixed).options.hybrid.reusedClips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,0);
+ mixed.SCENES[1]=fixture(1).SCENES[0];mixed.SCENES[1].shot.render={mode:'generated_video',purpose:'live_action',motionEssential:true,reason:'Watch the buildings rise.',action:'Buildings rise.',whyNotStill:'The removal is continuous.'};
+ assert.equal(quote(mixed).options.hybrid.clips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,.29);assert.equal(quote(mixed).options.hybrid.retryHighUsd,.58);
+ assert.equal(quote(mixed).options.hybrid.rows[0].shot,2);
+ save(w);
+ const s=w.SCENES[0],original=structuredClone(s);
+ s.visual.video={clip:video};save(w);assert.match(check(board).errors.join(),/cannot also declare/);assert.throws(()=>scenePlan(s),/cannot also declare/);assert.throws(()=>quote(w),/cannot also declare/);
+ w.SCENES[0]=structuredClone(original);w.SCENES[0].visual.reuse.sha256='0'.repeat(64);approve(w);save(w);assert.match(check(board).errors.join(),/SHA-256 differs/);
+ w.SCENES[0]=structuredClone(original);w.SCENES[0].duration=4;w.SCENES[0].visual.reuse.sourceRange.end=14;approve(w);save(w);assert.match(check(board).errors.join(),/duration differs/);
+ w.SCENES[0]=structuredClone(original);w.SCENES[0].visual.reuse.sourceEpisode='relocated provenance';save(w);assert.match(check(board).errors.join(),/quote is stale/);
+ for(const invalid of [null,{clip:'https://example.com/a.mp4'}, {...original.visual.reuse,sourceRange:{start:NaN,end:5}}]){
+  w.SCENES[0]=structuredClone(original);w.SCENES[0].visual.reuse=invalid;assert.ok(mode.check(w).length);
+ }
+ for(const x of w.SCENES)delete x.visual.reuse;
+ assert.match(mode.check(w).join(),/hybrid needs/);
+}));
+test('generation output existence never discounts a new generation or its retries',()=>withBoard(({work})=>{
+ const w=fixture(1);w.PRODUCTION.mode='hybrid';const before=quote(w);
+ const video=path.join(work,'existing.mp4');writeFileSync(video,'already exists');w.SCENES[0].visual.video.clip=video;
+ assert.deepEqual(quote(w),before);
+ assert.equal(before.options.hybrid.firstPassUsd,.29);assert.equal(before.options.hybrid.retryHighUsd,.87);
+}));

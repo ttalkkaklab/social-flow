@@ -1655,7 +1655,7 @@ window.SB_DOC = {
     if (s.visual && s.visual.slide && s.visual.slide.kind === "camera") return "still";
     if (s.visual && s.visual.slide) return "slide";
     if (s.type === "outro") return "asset";
-    if (s.type === "broll" || (s.visual && s.visual.video) || (s.type === "quote" && s.visual && s.visual.clip))
+    if (s.type === "broll" || (s.visual && (s.visual.video || s.visual.reuse)) || (s.type === "quote" && s.visual && s.visual.clip))
       return "ai-video";
     return "still";
   }
@@ -1694,7 +1694,7 @@ window.SB_DOC = {
   var FILL_FRAME = { insert: 1, ecu: 1 };   // one object fills the frame — layout may stay empty
   function genStill(s) {
     if (s.type === "outro" || s.type === "broll") return false;
-    if (recOf(s)) return false;
+    if (recOf(s) || s.visual?.reuse !== undefined) return false;
     if (s.visual && s.visual.slide) return false;
     if (s.type === "quote" && !(s.visual && (s.visual.bg || s.visual.bgPrompt))) return false;
     // A pre-made clip with no still behind it (a filmed or imported video cover) is not drawn here.
@@ -1810,6 +1810,7 @@ window.SB_DOC = {
     var parts = [];
     for (var i = 0; i < scenes.length; i++) {
       var s = scenes[i] || {}, v = s.visual || {};
+      if (v.reuse !== undefined) parts.push((i + 1) + ":reuse:" + encodeURIComponent(JSON.stringify(v.reuse)));
       var slot = null;
       if (s.type === "broll") slot = ["broll", v.engine === "seedance" ? "seedance" : "veo", Number(s.duration) || 0];
       else if (v.video) slot = ["motion", (v.video.engine || v.engine) === "veo" ? "veo" : "seedance", Number(s.duration) || 0];
@@ -2385,7 +2386,7 @@ window.SB_DOC = {
     SCENES.forEach(function (s, i) {
       var v = (s && s.visual) || {};
       if (i === hookIndex) {
-        var moving = !!(v.video || v.clip || v.source === "recording" ||
+        var moving = !!(v.reuse || v.video || v.clip || v.source === "recording" ||
                         v.source === "screencast" || v.picture === "recording");
         if (!moving)
           flag("bad", T.shotCap(1), "the hook is a still — on a short the cover is video: a motion background under the code-rendered title (visual.video), or a recording (visual.source)");
@@ -2404,7 +2405,7 @@ window.SB_DOC = {
     if (v.source === "recording" || v.source === "screencast" || v.picture === "recording") return "recording";
     // The ground decides the kind, as in check-scenes.js motionKind: a clip under a
     // motion-slide overlay is video, not a plate.
-    if (s && (s.type === "broll" || v.video || v.clip)) return "ai-video";
+    if (s && (s.type === "broll" || v.video || v.clip || v.reuse)) return "ai-video";
     if (v.slide && v.slide.kind !== "camera" && v.slide.motion === true) return "motion-slide";
     return null;
   }

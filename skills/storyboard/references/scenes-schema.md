@@ -2509,3 +2509,61 @@ Before authoring, follow [visual-style.md](visual-style.md). Both production mod
 The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
 Use `videoDesign.look: "realistic"` for photoreal and `"webtoon"` for webtoon; neither attaches
 the miniature pack. Source, end-frame and motion prompts carry the selected treatment.
+
+## Existing generated clip input (`visual.reuse`)
+
+Use `visual.reuse` to import a previously generated clip as a cover or points cut.
+This is a local input contract, separate from the generation output `visual.video.clip`.
+Do not declare both, or label generated footage as `source:"recording"`.
+
+```js
+visual: {
+  picture: 'ai-video', overlay: 'none',
+  action: 'The person turns toward the door.',
+  why: 'The turn reveals the change in movement.',
+  reuse: {
+    clip: 'clips/previous-hook.mp4', // already trimmed; relative to storyboard/
+    sha256: '<64 lowercase hex characters for these exact bytes>',
+    sourceEpisode: 'channel/episodes/original-episode',
+    sourceRange: { start: 1.25, end: 5.25 } // original timeline, seconds
+  }
+}
+```
+
+`sourceEpisode` is a human provenance record. It is not authenticated and its original
+directory need not exist. `sourceRange` is also provenance: the checker cannot prove which
+original frames were selected. It checks that `end - start` equals `scene.duration`
+(within 0.001 seconds) and the supplied file duration (within 0.05 seconds, allowing one
+24fps frame of container rounding). A larger mismatch is an error. No automatic trimming,
+looping or freeze padding occurs. Supply MP4, MOV, M4V or WebM with at least the format's
+1080p canvas. Absolute local paths work; `.work/` resolves from the episode directory.
+
+Reuse keeps the current screen policy: `shot.render.mode:'generated_video'`,
+`purpose:'live_action'`, `motionEssential:true`, `action`, `whyNotStill`, `visual.why`,
+and `shot.videoDesign.motion` remain required. Subtitles are the only overlay. Do not
+combine this handoff with `visual.video`, `clip`, `renderedFile`, `source`, `slide`,
+`engine` or `prompt`, or use it on a quote, b-roll or outro entry.
+
+A hybrid episode may contain zero new generations and one or more imported clips;
+zero of both is rejected. Imported clips are reported separately as `reusedClips` and
+are excluded from both generation prices and hypothetical mode comparisons. The selected
+reuse-only hybrid estimate is final at $0. Existing `visual.video.clip` outputs still
+count toward generation and retries even when the output file already exists.
+`comparison.hybridShots` indexes eligible non-imported shots, starting at 1.
+
+`check-production --selection` verifies file hash, dimensions and duration before any
+assets. Approval fingerprints include the import metadata. `--before-call N` rejects an
+imported shot, and `seedance-route.scenePlan` returns no generation plan for it.
+`--ready` requires a current `video-review.json` entry for each imported cut, even in
+hybrid mode: `planDigest`, `videoSha256`, full playback, reviewer/time, start/middle/end
+seeks, motion evidence, six concrete visual observations and no unresolved defects.
+It does not require the old generation's source image. This validates recorded review
+evidence; it does not automatically judge visual quality or authenticate the reviewer.
+
+The assembly manifest uses the exact imported clip without wrappers, overlays or zoom.
+The builder rechecks its hash and uses the normal continuous video path. The computed
+card duration must match the imported file within 0.05 seconds; otherwise adjust the
+card audio/timing before assembly. A shorter card cannot silently trim the import. If the original
+sound is needed, provide it explicitly as the card audio; video inputs do not implicitly
+mix their audio. `STORY.transcripts` may reference `reuse.clip` for verified original speech,
+with times relative to the trimmed file. Review the final sound and subtitle timing as usual.

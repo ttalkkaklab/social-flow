@@ -34,6 +34,7 @@ function storyHash(win) {
     narration: s.narration, info: s.shot?.info,
     // Slide copy is burned on screen, so rewriting it changes the episode the reviewer read.
     slideLabels: s.visual?.slide?.labels, slideSubject: s.visual?.slide?.subject,
+    ...(s.visual?.reuse !== undefined ? { reuse: s.visual.reuse } : {}),
     recording: s.visual?.source === 'recording' ? s.visual.clip : undefined
   }));
   return crypto.createHash('sha256').update(JSON.stringify(canonical({
@@ -55,15 +56,15 @@ function checkStory(win, { requireReview = true } = {}) {
   (Array.isArray(story.transcripts) ? story.transcripts : []).forEach((t, i) => {
     const s = scenes[t?.shot - 1];
     if (!object(t) || !Number.isInteger(t.shot) || !s || s.type === 'outro' ||
-        s.visual?.source !== 'recording' || !text(t.source) || t.source !== s.visual.clip ||
+        (s.visual?.source !== 'recording' && !s.visual?.reuse) || !text(t.source) || t.source !== (s.visual?.reuse?.clip || s.visual.clip) ||
         (Array.isArray(s.narration) && s.narration.length) || live.has(t.shot) ||
         !Array.isArray(t.groups) || !t.groups.length) {
-      fail(`STORY.transcripts[${i}] requires a unique live-voice recording shot, matching clip and groups`); return;
+      fail(`STORY.transcripts[${i}] requires a unique live-voice recording or reused shot, matching clip and groups`); return;
     }
     let end = 0;
     t.groups.forEach(g => {
       if (!object(g) || !text(g.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) ||
-          g.start < end || g.end <= g.start) fail(`STORY.transcripts[${i}] requires ordered timed speech`);
+          g.start < end || g.end <= g.start || (s.visual?.reuse && g.end > s.duration)) fail(`STORY.transcripts[${i}] requires ordered timed speech`);
       if (object(g)) end = g.end;
     });
     live.set(t.shot, t.groups.map(g => ({ tts: g?.text, sub: g?.text })));

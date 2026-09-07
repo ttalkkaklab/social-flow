@@ -170,6 +170,7 @@ function videoSlots(scenes) {
     const s = shot || {};
     const v = s.visual || {};
     const shotNo = i + 1;
+    if (v.reuse !== undefined) { scenePlan(s); return; } // Validated import, no paid slot.
     if (s.type === 'outro' || (!v.video && (['recording', 'screencast'].includes(v.source) || v.picture === 'recording'))) return;
     const plan = scenePlan(s);
     if (plan && plan.engine === 'seedance') {
@@ -230,6 +231,7 @@ function stillSlots(scenes, imageProvider) {
     const s = shot || {};
     const v = s.visual || {};
     const shotNo = i + 1;
+    if (v.reuse !== undefined) { scenePlan(s); return; } // Validated import, no paid slot.
     if (v.bgPrompt) {
       const isCover = s.type === 'cover';
       const engine = imageProvider === 'host' ? 'host' : isCover || videoSource.has(i) ? 'gpt' : 'local';
@@ -256,6 +258,7 @@ function costFingerprint(scenes) {
   var parts = [];
   for (var i = 0; i < scenes.length; i++) {
     var s = scenes[i] || {}, v = s.visual || {};
+    if (v.reuse !== undefined) parts.push((i + 1) + ":reuse:" + encodeURIComponent(JSON.stringify(v.reuse)));
     var slot = null;
     if (s.type === "broll") slot = ["broll", v.engine === "seedance" ? "seedance" : "veo", Number(s.duration) || 0];
     else if (v.video) slot = ["motion", (v.video.engine || v.engine) === "veo" ? "veo" : "seedance", Number(s.duration) || 0];

@@ -62,8 +62,10 @@ If approval is missing, wait. A timeout, silence or a cheaper estimate is not a 
 Write `window.PRODUCTION` in scenes.js. It is independent of `window.MOTION_POLICY`, which
 remains an exact channel snapshot. `production-mode.js` applies only the selected shot cap and
 approved episode video budget on top; other channel constraints still apply. `hybrid` caps
-generated shots at two (or a lower explicit channel cap). Plan 1–2 when available; if the
-channel cannot permit one video, hold and revise that constraint with the user. `full_video` permits every generated scene to be a
+generated shots at two (or a lower explicit channel cap). Plan 1–2 new clips, or zero new
+clips with at least one explicit `visual.reuse` input. Zero of both is rejected. See the
+[reuse contract](scenes-schema.md#existing-generated-clip-input-visualreuse) for file checks,
+separate reuse counts and the final $0 estimate. Reuse does not relax the screen policy. `full_video` permits every generated scene to be a
 video, including explanations. Existing user recordings and the shared outro retain their source.
 
 ```js
