@@ -26,7 +26,7 @@
         !Number.isFinite(scene.duration) || scene.duration <= 0 || Math.abs(range.end - range.start - scene.duration) > .001)
       errors.push('visual.reuse.sourceRange must give original start/end seconds spanning exactly scene.duration');
     if (v.video !== undefined || v.clip !== undefined || v.source !== undefined || v.slide !== undefined || v.renderedFile !== undefined ||
-        v.engine !== undefined || v.prompt !== undefined || ['broll', 'quote', 'outro'].includes(scene.type))
+        v.engine !== undefined || v.prompt !== undefined || v.bgPrompt !== undefined || v.bg !== undefined || ['broll', 'quote', 'outro'].includes(scene.type))
       errors.push('A reused clip cannot also declare a generation, recording, slide or alternate file handoff');
     if (v.picture !== 'ai-video' || v.overlay !== 'none') errors.push('Reused generated clips keep picture:ai-video and overlay:none');
     if (scene.title || scene.stat || (scene.bullets || []).length || scene.footnote)

@@ -244,7 +244,8 @@ test('explicit imports pass scene and production gates at zero generation cost, 
  assert.equal(render.status,0,render.stderr);
  const w=reuseFixture(video);save(w);
  const run=spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--json'],{encoding:'utf8'});
- assert.equal(run.status,0,run.stdout+run.stderr);
+ assert.notEqual(run.status,0,run.stdout+run.stderr);
+ assert.match(run.stdout+run.stderr,/4 generated-video slots[\s\S]*cap at 2/);
  const p=check(board,{requireSelection:true});assert.deepEqual(p.errors,[]);
  assert.equal(p.quote.options.hybrid.clips,0);assert.equal(p.quote.options.hybrid.reusedClips,4);
  assert.equal(p.quote.options.hybrid.firstPassUsd,0);assert.equal(p.quote.options.hybrid.retryHighUsd,0);assert.equal(p.quote.options.hybrid.provisional,false);
@@ -287,6 +288,15 @@ test('explicit imports pass scene and production gates at zero generation cost, 
  assert.equal(quote(mixed).options.hybrid.rows[0].shot,2);
  save(w);
  const s=w.SCENES[0],original=structuredClone(s);
+ for (const field of ['bgPrompt','bg']) {
+  const invalid=structuredClone(w);invalid.PRODUCTION.imageProvider='gpt';
+  invalid.SCENES[0].visual[field]=field==='bgPrompt'?'Generate a background.':'images/background.png';
+  save(invalid);
+  assert.match(check(board).errors.join(),/cannot also declare/);
+  assert.throws(()=>scenePlan(invalid.SCENES[0]),/cannot also declare/);
+  assert.throws(()=>quote(invalid),/cannot also declare/);
+ }
+ save(w);
  s.visual.video={clip:video};save(w);assert.match(check(board).errors.join(),/cannot also declare/);assert.throws(()=>scenePlan(s),/cannot also declare/);assert.throws(()=>quote(w),/cannot also declare/);
  w.SCENES[0]=structuredClone(original);w.SCENES[0].visual.reuse.sha256='0'.repeat(64);approve(w);save(w);assert.match(check(board).errors.join(),/SHA-256 differs/);
  w.SCENES[0]=structuredClone(original);w.SCENES[0].duration=4;w.SCENES[0].visual.reuse.sourceRange.end=14;approve(w);save(w);assert.match(check(board).errors.join(),/duration differs/);

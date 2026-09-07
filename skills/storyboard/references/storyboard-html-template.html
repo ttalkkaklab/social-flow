@@ -2363,7 +2363,7 @@ window.SB_DOC = {
   function generatedVideo(s) {
     var v = (s && s.visual) || {};
     // The shape decides, not the lane marker — a shot with both is malformed, not filmed.
-    return !!(s && (s.type === "broll" || v.video ||
+    return !!(s && (s.type === "broll" || v.video || v.reuse !== undefined ||
                     (s.type === "quote" && v.clip && typeof v.clip === "object")));
   }
   // Long-form counts b-roll and motion backgrounds only; a short pays for speech clips too.
