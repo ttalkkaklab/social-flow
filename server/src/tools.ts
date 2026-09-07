@@ -21,6 +21,7 @@ import {
   VALID_SEEDANCE_RESOLUTIONS,
 } from './seedance-client.js';
 import { DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, TTS_VOICE_NAMES, VALID_TTS_MODELS } from './tts-client.js';
+import { GENERATORS, REVIEW_MODEL } from './tts-quality.js';
 import {
   DEFAULT_ELEVENLABS_MODEL,
   DEFAULT_ELEVENLABS_OUTPUT_FORMAT,
@@ -2010,6 +2011,32 @@ Returns: a text block with the saved .glb path and model.`,
   },
 
   // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
+  {
+    name: 'tts_generate_checked',
+    title: 'Generate and review narration',
+    annotations: HINT.generate,
+    description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1–3, including the first take).
+Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts. An entire scene is one call; never split it into sentence calls.
+Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer, malformed responses or exhausted attempts block production. Scores are operational thresholds, not a guarantee of human judgement.
+Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-review calls per acoustically valid take, plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        generator: { type: 'string', enum: [...GENERATORS], description: 'Existing synthesis tool matching profile §2.' },
+        generation: { type: 'object', additionalProperties: true, description: 'Arguments accepted by generator, including its text/script/inputs and pinned voice settings. Outer outputPath and filename control the output.' },
+        expectedText: { type: 'string', minLength: 1, maxLength: 4000, description: 'All spoken narration for this scene, matching narration[].tts. Write numbers as spoken words.' },
+        language: { type: 'string', minLength: 2, maxLength: 80, description: 'Spoken language, e.g. Korean.' },
+        delivery: { type: 'string', minLength: 1, maxLength: 2000, description: 'Intended natural delivery from profile §2, including tone and pacing.' },
+        outputPath: { type: 'string', description: 'Episode PCM directory, normally .work/pcm.' },
+        filename: { type: 'string', description: 'Scene WAV basename, e.g. c0.wav.' },
+        maxAttempts: { type: 'integer', minimum: 1, maximum: 3, default: 3, description: 'First generation plus retakes; set within the approved allowance.' },
+        rejectTake: { type: 'object', additionalProperties: false, required: ['audioSha256','reason'], description: 'When final listening finds a defect in a previously checked take, reject that exact WAV and use only remaining attempts. Never waives any check.', properties: {
+          audioSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the current checked WAV, as recorded in its quality proof.' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Actual time, word or sound defect observed during listening.' },
+        } },
+      },
+      required: ['generator','generation','expectedText','language','delivery','outputPath','filename'],
+    },
+  },
   {
     name: 'tts_generate',
     title: 'Speech synthesis (single speaker)',

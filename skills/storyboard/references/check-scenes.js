@@ -649,6 +649,13 @@ function check(win, fmt, opts) {
                   'where the jcut is the honest join');
   });
 
+  // Validate authored edit fields before assets; incomplete draft transitions are handled above.
+  if (scenes.some(s => s.edit !== undefined) && scenes.every((s,i) =>
+      i === firstMain || ['broll','outro'].includes(s.type) || s.transition !== undefined)) {
+    try { require('../../produce/references/edit-plan.js').preview(scenes); }
+    catch (e) { bad('edit plan', e.message); }
+  }
+
   /* Consecutive stills of the same size and angle in one scene read as a jump cut
      (30-degree / two-step-size rule). Filmed cards are the vlog exception. */
   for (let i = 1; i < scenes.length; i++) {
@@ -981,15 +988,17 @@ function check(win, fmt, opts) {
     // and its four camera slots filled — the storyboard is where that is still free to fix.
     if (generatedVideo(s) && v.reuse === undefined) {
       try { scenePlan(s); } catch (e) { machine(where, e.message); }
-      const cam = v.camera || {};
-      ['movement', 'speed', 'framing', 'end'].forEach((slot) => {
-        if (!cam[slot]) machine(where, `visual.camera.${slot} is empty — a generated shot leaves here with all four filled`);
+      // The slot rule lives in production-mode.js (shared with the approval page): a static
+      // camera has no speed to state, so that one slot may stay empty (§camera).
+      productionMode.missingCameraSlots(v.camera).forEach((slot) => {
+        machine(where, `visual.camera.${slot} is empty — a generated shot leaves here with all four filled (speed may stay empty on a static camera)`);
       });
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
       if (!prompt) machine(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');
       else seedancePromptFindings(prompt, engineOf(s)).forEach((f) => machine(where, f));
-      if (!v.audio && s.type !== 'quote')
+      // A clip planned silent (generateAudio:false — every full-video cut) has nothing to describe.
+      if (!v.audio && s.type !== 'quote' && !(v.video && v.video.generateAudio === false))
         warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
     }
 

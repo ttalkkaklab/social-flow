@@ -2,6 +2,7 @@ import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
 import { DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, TTS_VOICE_NAMES, VALID_TTS_MODELS } from './tts-client.js';
+import { GENERATORS, REVIEW_MODEL } from './tts-quality.js';
 import { DEFAULT_ELEVENLABS_MODEL, DEFAULT_ELEVENLABS_OUTPUT_FORMAT, ELEVENLABS_DIALOGUE_MAX_INPUTS, ELEVENLABS_DIALOGUE_MAX_VOICES, ELEVENLABS_DIALOGUE_MODEL, ELEVENLABS_MODELS, ELEVENLABS_MODEL_CHAR_CAPS, ELEVENLABS_OUTPUT_FORMATS, ELEVENLABS_TEXT_NORMALIZATION, ELEVENLABS_VOICE_CATEGORIES, MAX_ELEVENLABS_DIALOGUE_CHARS, MAX_ELEVENLABS_INPUT_CHARS, } from './elevenlabs-client.js';
 import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MIN_ZIMAGE_DIMENSION, ZIMAGE_DIMENSION_STEP, ZIMAGE_QUANTIZE_OPTIONS, } from './zimage-client.js';
 import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGES, QWEN3_ASR_MODELS, } from './qwen3-asr-client.js';
@@ -1815,6 +1816,32 @@ Returns: a text block with the saved .glb path and model.`,
         },
     },
     // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
+    {
+        name: 'tts_generate_checked',
+        title: 'Generate and review narration',
+        annotations: HINT.generate,
+        description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1–3, including the first take).
+Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts. An entire scene is one call; never split it into sentence calls.
+Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer, malformed responses or exhausted attempts block production. Scores are operational thresholds, not a guarantee of human judgement.
+Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-review calls per acoustically valid take, plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
+        inputSchema: {
+            type: 'object', additionalProperties: false,
+            properties: {
+                generator: { type: 'string', enum: [...GENERATORS], description: 'Existing synthesis tool matching profile §2.' },
+                generation: { type: 'object', additionalProperties: true, description: 'Arguments accepted by generator, including its text/script/inputs and pinned voice settings. Outer outputPath and filename control the output.' },
+                expectedText: { type: 'string', minLength: 1, maxLength: 4000, description: 'All spoken narration for this scene, matching narration[].tts. Write numbers as spoken words.' },
+                language: { type: 'string', minLength: 2, maxLength: 80, description: 'Spoken language, e.g. Korean.' },
+                delivery: { type: 'string', minLength: 1, maxLength: 2000, description: 'Intended natural delivery from profile §2, including tone and pacing.' },
+                outputPath: { type: 'string', description: 'Episode PCM directory, normally .work/pcm.' },
+                filename: { type: 'string', description: 'Scene WAV basename, e.g. c0.wav.' },
+                maxAttempts: { type: 'integer', minimum: 1, maximum: 3, default: 3, description: 'First generation plus retakes; set within the approved allowance.' },
+                rejectTake: { type: 'object', additionalProperties: false, required: ['audioSha256', 'reason'], description: 'When final listening finds a defect in a previously checked take, reject that exact WAV and use only remaining attempts. Never waives any check.', properties: {
+                        audioSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the current checked WAV, as recorded in its quality proof.' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Actual time, word or sound defect observed during listening.' },
+                    } },
+            },
+            required: ['generator', 'generation', 'expectedText', 'language', 'delivery', 'outputPath', 'filename'],
+        },
+    },
     {
         name: 'tts_generate',
         title: 'Speech synthesis (single speaker)',

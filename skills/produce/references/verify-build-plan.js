@@ -65,10 +65,11 @@ function verify(work, board) {
   const cards = fs.readFileSync(path.join(work, 'cards.tsv'), 'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#'));
   const ids = cards.map(l=>l.split('\t')[0]);
   if (JSON.stringify(ids)!==JSON.stringify(expected.map(String))) throw new Error('cards.tsv does not match SCENES order; no unplanned opening, missing card or duplicate card is allowed');
-  const mediaSha256=verifyManifest(work,board,win.window.SCENES,win.window.FORMAT);
+  require('./edit-plan.js').write(work,win.window.SCENES);
+  const mediaSha256={...verifyManifest(work,board,win.window.SCENES,win.window.FORMAT),...require('./check-tts-quality.js').check(work,board)};
   const hash = p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');
   const plugin = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../.claude-plugin/plugin.json'),'utf8'));
-  fs.writeFileSync(path.join(work, 'build-plan-check.json'), JSON.stringify({mediaSha256,version:plugin.version,storyboard:board,scenesSha256:hash(file),cardsSha256:hash(path.join(work,'cards.tsv')),segsSha256:hash(path.join(work,'segs.tsv')),checks:['check-scenes','check-slide','segment-inputs'],cards:expected},null,2)+'\n');
+  fs.writeFileSync(path.join(work, 'build-plan-check.json'), JSON.stringify({mediaSha256,version:plugin.version,storyboard:board,scenesSha256:hash(file),cardsSha256:hash(path.join(work,'cards.tsv')),segsSha256:hash(path.join(work,'segs.tsv')),resolvedCardsSha256:hash(path.join(work,'cards.resolved.tsv')),editPlanSha256:hash(path.join(work,'edit-plan.json')),checks:['check-scenes','check-slide','segment-inputs','edit-plan'],cards:expected},null,2)+'\n');
 }
 if (require.main === module) {
   try {

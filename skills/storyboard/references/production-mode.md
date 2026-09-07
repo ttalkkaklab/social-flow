@@ -17,8 +17,10 @@ An explicit choice already made for this episode is authorization; reuse it on r
 An old approved board with no choice gets this gate at produce entry, before generation.
 Do not reinterpret an approval of a topic as approval of full-video spend.
 
-- **혼합 제작** — 영상 1~2개와 HTML 설명 슬라이드·이미지 카메라 무빙을 섞습니다.
-- **전체 영상** — 모든 새 장면을 영상으로 만듭니다. 선택한 화풍을 모든 장면에 적용하며 생성비가 늘어납니다.
+- **hybrid** (혼합 제작) — one or two generated clips mixed with HTML explanation slides and
+  still-camera images.
+- **full_video** (전체 영상) — every new scene is a generated clip in the chosen style, which
+  raises generation cost.
 
 Run the read-only calculator for the intended length before shots exist:
 
@@ -78,13 +80,13 @@ window.PRODUCTION = {
   style: {
     preset: 'cinematic-miniature',
     selection: { kind: 'user', reference: 'ACTUAL_STYLE_CHOICE' },
-    referencePack: 'tactile-miniature-v1',
-    reference: 'https://www.youtube.com/shorts/LQZjvQ5W2ck',
+    referencePack: 'tactile-miniature-v1',    // cinematic-miniature only
+    reference: 'https://www.youtube.com/shorts/LQZjvQ5W2ck',   // where the look comes from: a URL or one line
     world: 'A rocky urban valley, with a stable mountain silhouette and stream route.',
     materials: 'Matte off-white concrete, detailed granite, restrained foliage.',
     palette: 'Warm grey, muted green, pale blue water.',
     lighting: 'Soft daylight with clear contact shadows and moderate depth of field.',
-    camera: 'Purposeful slow reveals, consistent lens language and legible phone framing.'
+    camera: 'Purposeful slow reveals, consistent lens language and legible phone framing.'   // carried in every motion prompt
   },
   approval: {
     kind: 'user',                     // standing only when its written authorization names this mode and cap
@@ -97,7 +99,8 @@ window.PRODUCTION = {
 
 Both modes keep the selected `style`; hybrid keeps purpose-based render routing.
 For full_video, follow `full-video.md` in the produce skill and use the stored style across
-every shot. Do not read the old HTML-only explanation and person-required video clauses as
+every shot. Each generated shot's camera is the four `visual.camera` slots; `videoDesign`
+holds the subject plan only, and `spatial-prompts.js` assembles the motion prompt from both. Do not read the old HTML-only explanation and person-required video clauses as
 overriding this explicit episode choice.
 
 The initial question can use a provisional duration estimate. Before the final storyboard
