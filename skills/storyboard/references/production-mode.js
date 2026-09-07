@@ -3,13 +3,17 @@
   'use strict';
   const text = value => typeof value === 'string' && !!value.trim();
   const MODES = { hybrid: '혼합 제작', full_video: '전체 영상' };
+  // The four slots every generated shot stores (scenes-schema §camera); spatial-prompts.js
+  // assembles the motion prompt's camera span from them, so nothing else describes the camera.
+  const CAMERA_SLOTS = ['movement', 'speed', 'framing', 'end'];
+  const normalize = value => String(value || '').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
   const STYLES = {
     'cinematic-miniature': { label: '시네마틱 미니어처 디오라마', looks: ['miniature', 'architectural'],
       prompt: 'Cinematic miniature diorama, tactile matte handcrafted surfaces, articulated miniature figures, coherent scale and soft contact shadows.' },
     'photoreal': { label: '완전 실사풍', looks: ['realistic'],
-      prompt: 'Photoreal live-action cinematography: life-size human proportions, natural skin and fabric texture, real locations, physically plausible light and photographic lenses. No miniature, doll, illustration or cartoon treatment.' },
+      prompt: 'Photoreal live-action cinematography: life-size human proportions, natural skin and fabric texture, real locations, physically plausible light and photographic lenses; every surface reads as a real material at real scale.' },
     'webtoon': { label: '웹툰풍', looks: ['webtoon'],
-      prompt: 'Korean webtoon illustration: consistent expressive character linework, clean contour lines, controlled cel shading, illustrated backgrounds and a coherent drawn palette. No photographic skin, miniature dolls, speech balloons or panel borders.' }
+      prompt: 'Korean webtoon illustration: consistent expressive character linework, clean contour lines, controlled cel shading, illustrated backgrounds and a coherent drawn palette; skin and cloth are drawn, and the frame is one unbroken picture.' }
   };
   function eligible(scene) {
     const v = scene.visual || {};
@@ -92,9 +96,12 @@
       if (!text(v.video?.prompt)) bad('store the motion prompt before generation');
       if (v.video?.resolution !== '1080p' || v.video?.generateAudio !== false)
         bad('reference quality uses explicit 1080p and generateAudio:false with separate narration');
-      if (v.video?.engine !== 'seedance') bad('spatial-explainer currently uses the priced Seedance image-to-video route');
-      for (const key of ['look', 'worldId', 'before', 'action', 'after', 'camera', 'continuity', 'reject'])
+      if (v.video?.engine !== 'seedance') bad('full_video uses the priced Seedance image-to-video route');
+      for (const key of ['look', 'worldId', 'before', 'action', 'after', 'continuity', 'reject'])
         if (!text(design[key])) bad('videoDesign.' + key + ' is required');
+      if (design.camera !== undefined) bad('videoDesign.camera is retired; the camera lives in the four visual.camera slots');
+      for (const slot of CAMERA_SLOTS)
+        if (!text(v.camera?.[slot])) bad('visual.camera.' + slot + ' is required; the motion prompt is assembled from the four slots');
       if (!['miniature', 'architectural', 'realistic', 'webtoon', 'archive'].includes(design.look))
         bad('videoDesign.look must be miniature, architectural, realistic, webtoon or archive');
       if (STYLES[style.preset] && design.look !== 'archive' && !STYLES[style.preset].looks.includes(design.look))
@@ -103,6 +110,16 @@
       if (!Array.isArray(s.narration) || !s.narration.length) bad('a generated cut needs its approved narration');
       if (s.title || s.stat || (s.bullets || []).length || s.footnote || !['none', undefined].includes(v.overlay))
         bad('only burned subtitles go over full-video footage; clear title, bullets, footnote and overlays');
+    });
+    // Three identical set-ups in a row read as one long take that keeps restarting. A change of
+    // size, angle or move needs a reason, and the reason is the next sentence (full-video.md §Shot plan).
+    const run = [];
+    (win.SCENES || []).forEach((s, i) => {
+      if (!eligible(s)) return;
+      const camera = s.visual?.camera || {}, key = normalize(camera.framing) + '|' + normalize(camera.movement);
+      if (run.length && run[run.length - 1].key !== key) run.length = 0;
+      run.push({ key, shot: i + 1 });
+      if (run.length === 3) errors.push('shots ' + run.map(r => r.shot).join(', ') + ': the same framing and camera move three times in a row; change size, angle or move for a reason');
     });
     return errors;
   }
@@ -113,7 +130,7 @@
     return { ...base, videoBudgetUsd: production.videoBudgetUsd,
       generatedVideoMax: full(production) ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { STYLES, MODES, eligible, full, signature, check, policy, motionErrors };
+  const api = { STYLES, MODES, CAMERA_SLOTS, eligible, full, signature, check, policy, motionErrors };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

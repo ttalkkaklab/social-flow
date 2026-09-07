@@ -9,7 +9,7 @@ const root=path.resolve(import.meta.dirname,'../..');
 const {resolveStylePack,ROLES}=require('../../skills/storyboard/references/style-pack.js');
 const {assemble}=require('../../skills/storyboard/references/spatial-prompts.js');
 const {signature}=require('../../skills/storyboard/references/production-mode.js');
-const plan=()=>({FORMAT:'shorts-9x16',PRODUCTION:{mode:'full_video',style:{world:'A contemporary machine workshop.',materials:'Brushed steel.',palette:'Ivory and blue.',lighting:'Soft light.'}},SCENES:[{duration:5,narration:[{tts:'A worker closes the valve.'}],shot:{videoDesign:{motion:{kind:'subject_action',subject:'Worker',visibleChange:'The worker turns and releases the valve.',beats:[{at:0,state:'Hand reaches for the valve.'},{at:4,state:'Hand releases the closed valve.'}]},look:'miniature',before:'One worker reaches for a valve on a pipe.',action:'Turn the valve.',after:'The same valve is closed.',camera:'Small push in.',continuity:'Same worker, pipe and valve.'}},visual:{styleRole:'interaction',camera:{framing:'Show hand and valve.'}}}]});
+const plan=()=>({FORMAT:'shorts-9x16',PRODUCTION:{mode:'full_video',style:{world:'A contemporary machine workshop.',materials:'Brushed steel.',palette:'Ivory and blue.',lighting:'Soft light.',camera:'Readable medium shots.'}},SCENES:[{duration:5,narration:[{tts:'A worker closes the valve.'}],shot:{videoDesign:{motion:{kind:'subject_action',subject:'Worker',visibleChange:'The worker turns and releases the valve.',beats:[{at:0,state:'Hand reaches for the valve.'},{at:4,state:'Hand releases the closed valve.'}]},look:'miniature',before:'One worker reaches for a valve on a pipe.',action:'Turn the valve.',after:'The same valve is closed.',continuity:'Same worker, pipe and valve.'}},visual:{styleRole:'interaction',camera:{framing:'Show hand and valve.',movement:'dolly in',speed:'slow',end:'the closed valve centred'}}}]});
 
 test('a copied plugin resolves verified image references without its original installation',()=>{
  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'style-pack-'));
@@ -58,4 +58,9 @@ test('style choice and its evidence are checked before assets and bound to the q
  w.PRODUCTION.style.selection={kind:'user',reference:'User selected photoreal for this episode.'};
  assert.deepEqual(check(w,{draft:true}),[]);
  const before=signature(w);w.PRODUCTION.style.preset='webtoon';assert.notEqual(signature(w),before);
+});
+test('style-pack rules and presets describe what to draw, never what to leave out',()=>{
+ const PROMPT=require('../../skills/storyboard/references/assemble-bg-prompt.js');
+ for(const rule of Object.values(resolveStylePack().rules))assert.deepEqual(PROMPT.negDirectiveHits(rule,'seedance'),[],rule);
+ const p=assemble(plan(),0);assert.doesNotMatch(p.sourcePrompt,/Style pack: /);assert.match(p.sourcePrompt,/Camera language: /);
 });

@@ -989,7 +989,8 @@ function check(win, fmt, opts) {
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
       if (!prompt) machine(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');
       else seedancePromptFindings(prompt, engineOf(s)).forEach((f) => machine(where, f));
-      if (!v.audio && s.type !== 'quote')
+      // A clip planned silent (generateAudio:false — every full-video cut) has nothing to describe.
+      if (!v.audio && s.type !== 'quote' && !(v.video && v.video.generateAudio === false))
         warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
     }
 

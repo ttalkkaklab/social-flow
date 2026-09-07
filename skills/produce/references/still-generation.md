@@ -21,8 +21,13 @@ then only from the fields — never by editing the stored string by hand.
 
 `PRODUCTION.imageProvider:"host"` overrides the API table below: use the product-provided
 image tool with the approved stored prompt, log `image.host`, and ask before switching to a
-separately billed provider if that capability is unavailable. In full_video use the approved
-spatial look and world bible; physical subjects need no decorative person.
+separately billed provider if that capability is unavailable.
+
+The episode style chosen in [visual-style.md](../../storyboard/references/visual-style.md)
+overrides the generic photo defaults below for every new still, start and end frame, in
+hybrid and full_video alike. The miniature pack is attached only for cinematic-miniature;
+photoreal and webtoon use their own treatment and approved character references. In
+full_video use the approved look and world bible; physical subjects need no decorative person.
 
 Measured 2026-08-12 (`docs/research/2026-08-12-local-image-generation`).
 
@@ -136,11 +141,3 @@ remake still gets billed, so it gets its own line.
 
 The storyboard's `SB_DOC.cost` is a **projection**, not a receipt — §10 compares the two, and
 that comparison is only possible if every call here left a line.
-
-
-## Selected episode style
-
-Follow [visual-style.md](../../storyboard/references/visual-style.md) before creating storyboard images.
-The explicit episode choice overrides generic photo defaults. Apply it to start and end frames
-in hybrid and full_video. Attach the miniature pack only for cinematic-miniature; photoreal
-and webtoon use their own treatment and approved character references.

@@ -163,7 +163,7 @@ default, skips it.**
 ### 1.7 Choose visual style and production mode before authoring
 
 Read [visual-style.md](references/visual-style.md). Before writing the storyboard, ask the user
-to choose cinematic-miniature (the Bae Jeong-ja diorama look), photoreal live action, or webtoon.
+to choose cinematic-miniature, photoreal live action, or webtoon.
 Wait for the actual choice, persist it for this episode, and apply it to every generated
 start/end storyboard image and subsequent video prompt, in hybrid and full_video alike.
 Reuse an explicit existing choice; do not infer a style from production mode.
@@ -175,7 +175,7 @@ clip counts, exchange-rate assumption, exclusions and the explicit episode budge
 Persist the actual HITL answer in `window.PRODUCTION`; no paid generation happens here.
 At final board approval refresh the exact quote and bind its fingerprint to that approval.
 Only for the cinematic-miniature style, load the bundled [style guide and image pack](assets/styles/tactile-miniature-v1/STYLE.md); choose `visual.styleRole` by the narrated subject/action, not the shot number. The assembler emits real reference-image arguments and a portable style binding. Never use a reference's historical props as a substitute for the new topic. Read [full-video.md](../produce/references/full-video.md), write the spatial style
-and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, then use [spatial-prompts.js](references/spatial-prompts.js). This branch
+and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, fill the four `visual.camera` slots, then use [spatial-prompts.js](references/spatial-prompts.js), which assembles both prompts and runs the Seedance prompt gate. This branch
 supersedes hybrid's shot cap, mandatory HTML explanation and person-required source clauses.
 Keep facts, narration reviews and the no-marks-over-video rule. Copy `production-mode.js`
 with the HTML template and render-routing.js; `cost-preview.js --sbdoc` supplies both prices.

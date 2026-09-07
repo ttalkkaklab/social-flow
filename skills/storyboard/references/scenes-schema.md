@@ -11,6 +11,10 @@ consumes after storyboard approval. `video-template.html` loads it with
 - [Format — `window.FORMAT`](#format-windowformat)
 - [Grammar units and production layers](#grammar-units-and-production-layers)
 - [Playback order — format picks the skeleton](#playback-order-format-picks-the-skeleton)
+- [Production mode — `window.PRODUCTION`](#production-mode-windowproduction)
+  - [Episode visual style selection](#episode-visual-style-selection)
+  - [Bundled full-video style references](#bundled-full-video-style-references)
+  - [Conditional start/end images](#conditional-startend-images)
 - [Fields common to every shot](#fields-common-to-every-shot)
   - [narration segments](#narration-segments)
   - [title is a spoken hook · narration explains in polite register (user directive, 2026-08-13)](#title-is-a-spoken-hook-narration-explains-in-polite-register-user-directive-2026-08-13)
@@ -320,13 +324,45 @@ only the hybrid renderer and generated-count restrictions below. `MOTION_POLICY`
 channel snapshot. Actual approval binds the quote fingerprint; changing inputs requires a new
 quote. `check-production.js` blocks missing/stale approval and over-budget calls.
 
-`shot.videoDesign` in full_video carries `look`, `worldId`, `before`, `action`, `after`,
-`camera`, `continuity` and `reject`. Keep real infoType/purpose, data evidence and narration.
-The source PNG, stored motion prompt and optional `visual.video.lastImagePath` drive the same
-spatial action. Runtime output path is `visual.video.clip`. Use explicit 1080p and audio false;
-only burned subtitles overlay the video. The selected style replaces the generic photo rule.
-A verified recording or shared outro retains its source. Full-video quality evidence is in
-`.work/video-review.json`, tied to the actual source and clip hashes, checked before the build.
+`shot.videoDesign` in full_video carries `look`, `worldId`, `motion`, `before`, `action`,
+`after`, `continuity` and `reject`; the camera is the four `visual.camera` slots (§camera),
+never a `videoDesign.camera` sentence, and `spatial-prompts.js` assembles the motion prompt
+from them through the same recipe and prompt gate as every other clip. Keep real
+infoType/purpose, data evidence and narration. The source PNG, stored motion prompt and
+optional `visual.frames.end` drive the same spatial action. Runtime output path is
+`visual.video.clip`. Use explicit 1080p and audio false; only burned subtitles overlay the
+video. The selected style replaces the generic photo rule. A verified recording or shared
+outro retains its source. Full-video quality evidence is in `.work/video-review.json`, tied to
+the actual source and clip hashes, checked before the build.
+
+### Episode visual style selection
+
+Before authoring, follow [visual-style.md](visual-style.md). Both production modes store
+`PRODUCTION.style.preset`: `cinematic-miniature`, `photoreal`, or `webtoon`, with the actual
+`selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
+The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
+Use `videoDesign.look: "realistic"` for photoreal and `"webtoon"` for webtoon; neither attaches
+the miniature pack. Source, end-frame and motion prompts carry the selected treatment.
+
+### Bundled full-video style references
+
+`PRODUCTION.style.referencePack` uses `tactile-miniature-v1` only for cinematic-miniature
+generated scenes. `visual.styleRole` selects `environment`, `character`, `interaction`,
+`transport`, or `reported_story`. These roles select appearance references, not story subjects.
+`spatial-prompts.js` returns `styleBinding`; save that object as `visual.stylePack`. It contains
+the pack ID/version, content digest and plugin-relative reference paths, all covered by the
+production plan signature. Do not store resolved machine-specific image paths in scenes.js.
+`look:"archive"` bypasses generated style references and preserves authentic source material.
+
+### Conditional start/end images
+
+Use `visual.frames: {mode:"first"|"first_last", reason, endState?, end?}` for new generated
+shots. `visual.bg` supplies the start frame. Two-frame shots require `endState` during planning
+and a distinct `end` image before video generation. The approval page displays both images;
+`seedance-route.js` forwards `end` as `lastImagePath`. Follow
+[render-routing.md](render-routing.md#start-and-end-frame-planning) for the selection and
+continuity rules. Legacy boards without `frames` retain their original single-frame display,
+unless an existing `lastImagePath` supplies a second frame.
 
 ## Fields common to every shot
 
@@ -2479,33 +2515,5 @@ strip says no violations.
 - [ ] **`visual.character` names whoever from the channel cast is on screen** (§character
       reference) — the subject of the shot first in the array
 - [ ] **Every generated-video shot says what it sounds like in `visual.audio`** (§clip audio) —
-      left blank, the engine invents speech under the narration
-
-### Conditional start/end images
-
-Use `visual.frames: {mode:"first"|"first_last", reason, endState?, end?}` for new generated
-shots. `visual.bg` supplies the start frame. Two-frame shots require `endState` during planning
-and a distinct `end` image before video generation. The approval page displays both images;
-`seedance-route.js` forwards `end` as `lastImagePath`. Follow
-[render-routing.md](render-routing.md#start-and-end-frame-planning) for the selection and
-continuity rules. Legacy boards without `frames` retain their original single-frame display,
-unless an existing `lastImagePath` supplies a second frame.
-# Bundled full-video style references
-
-`PRODUCTION.style.referencePack` uses `tactile-miniature-v1` only for cinematic-miniature
-generated scenes. `visual.styleRole` selects `environment`, `character`, `interaction`,
-`transport`, or `reported_story`. These roles select appearance references, not story subjects.
-`spatial-prompts.js` returns `styleBinding`; save that object as `visual.stylePack`. It contains
-the pack ID/version, content digest and plugin-relative reference paths, all covered by the
-production plan signature. Do not store resolved machine-specific image paths in scenes.js.
-`look:"archive"` bypasses generated style references and preserves authentic source material.
-
-
-### Episode visual style selection
-
-Before authoring, follow [visual-style.md](visual-style.md). Both production modes store
-`PRODUCTION.style.preset`: `cinematic-miniature`, `photoreal`, or `webtoon`, with the actual
-`selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
-The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
-Use `videoDesign.look: "realistic"` for photoreal and `"webtoon"` for webtoon; neither attaches
-the miniature pack. Source, end-frame and motion prompts carry the selected treatment.
+      left blank, the engine invents speech under the narration. A clip planned silent
+      (`generateAudio:false`, every full-video cut) has nothing to describe and skips this

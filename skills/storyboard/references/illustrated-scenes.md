@@ -1,113 +1,128 @@
-# 컷의 목적에 맞는 인물·사물·배경
+# People, objects and settings that fit the cut's purpose
 
 ## Contents
 
-- [표현 방식 선택](#표현-방식-선택)
-- [저작 순서](#저작-순서)
-- [선택 사항: 2.5D 일러스트의 범위](#선택-사항-25d-일러스트의-범위)
-- [부위를 짚는 카탈로그 표식](#부위를-짚는-카탈로그-표식)
-- [검증](#검증)
+- [Choosing the treatment](#choosing-the-treatment)
+- [Authoring order](#authoring-order)
+- [Optional: the scope of 2.5D illustration](#optional-the-scope-of-25d-illustration)
+- [Catalog callouts that point at a part](#catalog-callouts-that-point-at-a-part)
+- [Verification](#verification)
 
-## 표현 방식 선택
+## Choosing the treatment
 
-| 컷의 목적 | 표현 방식 | 움직임 |
+| The point of the cut | Treatment | Movement |
 |---|---|---|
-| 인물 소개, 분위기, 장소 | 완성도 높은 정지 이미지와 카메라 무빙 | 표정이나 관심 대상으로 천천히 이동한다. |
-| 원리, 수치, 작동, 상황 설명 | HTML 애니메이션과 실제 3D 사물 | 내레이션이 설명하는 부품·위치·상태를 바꾼다. |
-| 사람이 행동하는 설명 | HTML 장면에 같은 스타일의 귀여운 3D 인형 캐릭터를 포함한다. | 시선, 손짓, 사물과의 접촉을 설명 동작에 맞춘다. |
+| Introducing a person, a mood, a place | A finished still with a camera move | Travel slowly toward the expression or the object of interest. |
+| A principle, a quantity, an operation, a situation | HTML animation with real 3D objects | Change the part, position or state the narration describes. |
+| An explanation in which a person acts | An HTML scene with a cute 3D doll character in the same style | Match gaze, hand gestures and contact with objects to the explained action. |
 
-사람이나 사물의 이름이 등장한다는 이유만으로 설명 컷을 선택하지 않는다. 시청자가 이해할
-변화를 먼저 적는다. 인물이 필요 없는 원리 설명은 사물만으로 구성한다.
-수레는 바퀴·차축·적재함이 있는 수레로 만들고 장치는 부품의 결합과 작동을 보여준다.
-실제 사물을 이름표 붙인 네모 상자나 원으로 대신하지 않는다. 추상적인 수량을 비교하는
-막대와 관계선은 그대로 쓸 수 있다.
+The name of a person or an object appearing in the line is no reason to choose an
+explanation cut. Write the change the viewer must understand first. A principle that needs no
+person is built from objects alone. A cart is a cart with wheels, an axle and a bed; a device
+shows how its parts join and work. A real object is never replaced by a labelled box or circle.
+Bars and relation lines that compare abstract quantities remain fine.
 
-설명 장면에는 상황에 맞는 배경을 만든다. 집무실, 보급소, 작업대처럼 장소를 알아볼 단서를
-주고 전경·바닥·후경의 거리감을 잡는다. 검정이나 단색 바탕을 기본값으로 쓰지 않는다.
-캐릭터·사물·배경의 재질, 빛, 원근을 통일한다. 사실적인 인물 그림 위에 별도 3D 소품을
-얹는 방식은 귀여운 3D 인형이 행동하는 장면을 대신하지 않는다.
+Give explanation scenes a setting that fits the situation. Offer clues that identify the
+place, such as an office, a supply depot or a workbench, and set the distances of foreground,
+floor and background. Black or a flat colour is not the default. Unify the materials, light
+and perspective of character, objects and setting. Realistic figure paintings with separate 3D
+props laid on top are not a substitute for a cute 3D doll performing the action.
 
-## 저작 순서
+## Authoring order
 
-1. 인물의 시선과 손이 향할 대상을 정한다. 다음 문장에서는 무엇이 달라지는지 적는다.
-2. 전경·인물·후경을 배치한다. 창문, 탁자, 건축물, 먼 풍경으로 거리감을 만든다.
-3. 3D 캐릭터와 사물, 배경의 광원 방향, 노출, 색온도, 바닥 시점을 맞춘다.
-4. 제목과 자막이 들어갈 여백을 이미지 생성 단계에서 확보한다. 얼굴 위에 글자를 올리지 않는다.
-5. 조용한 호흡·고개·손목 움직임과 문장이 설명하는 동작을 구분한다. 큰 동작에는 리깅된 모델이나 별도로 제작한 동작 소재를 쓴다.
+1. Decide where the person's gaze and hands go. Write what changes in the next sentence.
+2. Place foreground, person and background. Build distance with windows, tables, architecture
+   or a far landscape.
+3. Match the light direction, exposure, colour temperature and floor viewpoint of the 3D
+   character, objects and background.
+4. Reserve the space for title and subtitles at image-generation time. Never put text over a
+   face.
+5. Separate quiet breathing, head and wrist motion from the action the sentence describes.
+   Large actions use a rigged model or separately produced motion material.
 
-카메라 연출은 컷의 의미에 맞춘다. 인물을 소개하면 얼굴로 포커스 인, 손의 행동에서 판단으로
-이어지면 손에서 얼굴로 초점 이동, 작은 단서를 강조하면 그 부위로 접근한다. 주변 상황이
-중요하면 인물에서 뒤로 빠진다. 전경 너머 등장은 가려진 대상을 드러낼 때 쓰고 서로 다른
-거리의 움직임은 공간 자체가 중요할 때 쓴다. 순번에 따라 효과를 돌려 쓰지 않는다.
-초점 위치와 이동 이유를 계획에 적고 실제 그림에서 얼굴·손의 좌표를 확인한다.
-전경 이동에는 투명 레이어와 가려진 부분까지 채운 배경을 준비한다.
+Camera direction follows the cut's meaning. Introducing a person: focus in on the face. From
+a hand's action to a judgement: rack focus from hand to face. Stressing a small clue:
+approach that part. When the surroundings matter, pull back from the person. Use a foreground
+reveal to uncover something hidden and depth parallax when the space itself matters. Never
+cycle effects by cut number. Write the focus position and the reason for the move into the
+plan, and confirm the face and hand coordinates on the actual picture. A foreground move
+needs a transparent layer and a background filled in behind it.
 
-캐릭터는 가능하면 문장의 행동을 직접 한다. 말을 옮기거나 도장을 찍거나 수레를 끄는
-순서를 만들고 준비 동작, 손의 접촉, 힘을 주는 순간, 놓는 동작을 잇는다. 걷는 동안 발과
-몸의 이동을 맞추고 손이 잡은 물체에서 떨어지지 않게 한다. 반복되는 고개·부채 동작만으로
-서로 다른 행동을 대신하지 않는다.
+Where possible the character performs the line's action itself. Build the sequence of moving
+a piece, stamping a document or pulling a cart: anticipation, hand contact, the moment of
+effort, release. While walking, match feet and body travel, and keep the hand on the object
+it holds. Repeated nods and fan waving cannot stand in for different actions.
 
-생성 이미지를 사용하면 현재 호스트와 사용자가 지정한 이미지 생성 도구를 따른다.
-Codex 내장 이미지 도구로 만든 파일은 프로젝트에 복사한다. 별도 API로 임의 전환하지 않는다.
+Generated images follow the image tool the host and the user chose. Files made with Codex's
+built-in image tool are copied into the project. Never switch to a separate API on your own.
 
-## 선택 사항: 2.5D 일러스트의 범위
+## Optional: the scope of 2.5D illustration
 
-인물·분위기 컷의 기본은 이미지 전체에 적용하는 카메라 무빙이다. 부분 변형은 별도로 선택할 때만 쓴다.
-`illustrated-scene-runtime.js`는 정지 일러스트의 작은 영역을 변형하고 카메라를 천천히 이동한다.
-실제 3D 메시나 골격 애니메이션은 아니다. 산출물과 검증 기록에 `illustration2.5d`로 적는다.
-큰 팔 동작, 걷기, 말하기, 물체를 집어 드는 동작을 이 방식으로 흉내 내지 않는다.
-기계나 소품의 작동이 설명의 핵심이면 [mesh-objects.md](mesh-objects.md)의 실제 메시를 쓴다.
+The default for a person or mood cut is a camera move over the whole image. Partial
+deformation is used only when chosen separately. `illustrated-scene-runtime.js` deforms small
+regions of a still illustration and moves the camera slowly. It is not a real 3D mesh or
+skeletal animation; record it as `illustration2.5d` in outputs and verification notes. Do not
+imitate a large arm movement, walking, speech or picking up an object this way. When the
+operation of a machine or a prop is the point, use the real meshes in
+[mesh-objects.md](mesh-objects.md).
 
-`ILLUSTRATED_SCENE.mount(canvas, decodedImage, config)`가 `draw(seconds, duration)`을 반환한다.
-`config.duration`은 유한한 초 단위 길이다. `joints`는 최대 8개이며 각 항목은 다음 값을 받는다.
+`ILLUSTRATED_SCENE.mount(canvas, decodedImage, config)` returns `draw(seconds, duration)`.
+`config.duration` is a finite length in seconds. `joints` holds at most 8 entries, each with:
 
-| 값 | 뜻 |
+| Value | Meaning |
 |---|---|
-| `region: [x,y,rx,ry]` | 원본 이미지에서 정규화한 중심과 영향 반경. y는 위에서 아래로 증가한다. |
-| `start`, `duration` | 동작의 시작과 길이. 초 단위다. |
-| `dx`, `dy` | 이미지 크기로 정규화한 변위. 절댓값 0.025 이하로 제한한다. |
-| `angle` | 회전 라디안. 절댓값 0.09 이하로 제한한다. |
-| `breath`, `frequency`, `phase` | 호흡 변위와 주기 계수. 변위 절댓값은 0.004 이하로 제한한다. |
+| `region: [x,y,rx,ry]` | Normalized centre and influence radius in the source image. y grows downward. |
+| `start`, `duration` | Start and length of the motion, in seconds. |
+| `dx`, `dy` | Displacement normalized to the image size; absolute value at most 0.025. |
+| `angle` | Rotation in radians; absolute value at most 0.09. |
+| `breath`, `frequency`, `phase` | Breathing displacement and period factors; displacement at most 0.004. |
 
-상한은 품질 보증이 아니다. 얼굴·손·배경의 변형을 재생 화면에서 확인하고 필요하면 더 줄인다.
-주변 창살이나 책상 모서리가 함께 휘면 영역을 다시 잡거나 해당 움직임을 없앤다.
+The limits are not a quality guarantee. Check the deformation of face, hands and background in
+actual playback and reduce it further when needed. If a window bar or a desk edge bends along,
+re-place the region or remove that motion.
 
-`__ready()`에서 이미지 디코드와 초기화를 기다린다. `__seek(tMs, group)`에서는 이전 그룹의
-실측 길이를 합친 절대 시각으로 `draw()`를 부른다. 그룹이 바뀔 때 호흡이나 카메라가 처음으로
-돌아가면 안 된다. 내레이션 길이를 바꾸면 전체 길이와 그룹 경계도 함께 갱신한다.
-`__meta()`에 진단 정보를 추가하고 누락된 이미지나 WebGL 초기화 실패를 통과시키지 않는다.
-무한 루프, 벽시계, 자동 재생은 저작 슬라이드에 넣지 않는다.
+`__ready()` waits for image decode and initialization. `__seek(tMs, group)` calls `draw()` with
+the absolute time that adds the measured lengths of earlier groups. Breathing and the camera
+must not restart when the group changes. When narration length changes, update the total
+length and the group boundaries with it. Add diagnostics to `__meta()` and never let a missing
+image or a WebGL initialization failure pass. No infinite loops, wall clocks or autoplay in an
+authored slide.
 
-명암을 낮춰 글자를 읽게 만드는 배경 처리는 템플릿의 `.scrim`을 쓴다.
-글자 그라데이션과 글로우 금지 규칙을 피하려고 다른 이름의 배경 효과를 만들지 않는다.
+Dimming a background to make text readable uses the template's `.scrim`. Do not invent a
+background effect under another name to get around the text-gradient and glow ban.
 
-## 부위를 짚는 카탈로그 표식
+## Catalog callouts that point at a part
 
-캐릭터의 행동으로 이해할 수 있으면 표식을 넣지 않는다. 사물의 원리 설명에는 필요한 부위만
-한 번에 하나씩 짧게 짚는다. 표식마다 표시 이유와 시작·종료 시각을 계획에 적는다.
-부위를 짚어야 할 때 [catalog-callouts.js](catalog-callouts.js)의 작은 링과 연결선을 쓴다.
-가는 선이 대상에서 출발해 여백의 라벨까지 이어지도록 한다. 원을 크게 둘러치거나 화살촉으로
-대상을 덮지 않는다. 이동 방향을 설명할 때만 `h.mark.arrow`를 쓴다.
+When the character's action makes the point clear, add no marks. Explaining an object's
+principle points at only the necessary parts, one at a time and briefly. Write the reason and
+the start and end time of every mark into the plan. When a part has to be pointed at, use the
+small ring and leader line in [catalog-callouts.js](catalog-callouts.js): a thin line starts at
+the part and runs to a label in clear space. Never circle the subject with a large ring or
+cover it with an arrowhead. `h.mark.arrow` is for direction of movement only.
 
-`CATALOG_CALLOUTS.mount(svg, specs)`에 `group`, `part`, `label: [x,y]`, `side`, `text`,
-`project()`를 넘긴다. 라벨 문자열은 `scenes.js`에서 가져온다. `project()`는 대상의 현재
-화면 좌표 `{x,y,visible}`를 반환한다. 메시 런타임의 `project(part, localPoint)` 또는
-뷰포트 요소의 `projectMeshPoint(part, localPoint)`로 부위 좌표를 얻는다.
-상위 요소가 카메라 이동으로 확대됐다면 `getBoundingClientRect()`의 위치와 크기를 반영한다.
+Pass `group`, `part`, `label: [x,y]`, `side`, `text` and `project()` to
+`CATALOG_CALLOUTS.mount(svg, specs)`. Label strings come from `scenes.js`. `project()` returns
+the part's current screen coordinates `{x,y,visible}`, from the mesh runtime's
+`project(part, localPoint)` or the viewport element's `projectMeshPoint(part, localPoint)`.
+When a parent element is enlarged by a camera move, account for the position and size from
+`getBoundingClientRect()`.
 
-`draw(group, tMs)`는 링, 선, 라벨을 차례로 보여 준다. 선에는 화살촉이나 반복 펄스를 넣지 않는다.
-표시점은 움직이는 부위를 따라가고 라벨은 여백에 고정한다. 선끼리 교차하거나 얼굴을 가리면
-라벨 위치를 다시 잡는다. 내레이션과 무관한 숫자, 치수, 부품 이름을 만들지 않는다.
-`style:"restrained"`는 작은 표시점, 밝은 선 받침, 짙은 연결선과 번호 없는 라벨을 쓴다.
-`delayMs`와 `endMs`로 짧게 나타났다 사라지게 한다. 모바일에서도 부위와 글자가 읽혀야 한다.
+`draw(group, tMs)` shows ring, line and label in order. No arrowheads or repeated pulses on
+the line. The anchor follows the moving part; the label stays fixed in clear space. When lines
+cross or a label hides a face, re-place the label. Never invent numbers, dimensions or part
+names the narration does not say. `style:"restrained"` uses a small anchor, a light line
+backing, a dark leader line and unnumbered labels. `delayMs` and `endMs` make it appear briefly
+and disappear. Parts and letters must stay readable on a phone.
 
-## 검증
+## Verification
 
-정지 화면과 실제 재생을 모두 본다. 같은 시각으로 여섯 번 이상 되돌아가 상태가 재현되는지 확인한다.
-인접한 내레이션 그룹의 경계에서 인물과 카메라가 이어지는지 확인한다.
-모바일에서는 얼굴·주요 글자·화살표가 서로 가리지 않아야 한다.
-밝고 단순한 3D 소품이 어두운 실사풍 일러스트 위에서 떠 보이면 재질과 조명을 맞추거나
-설명 영역을 다시 구성한다. 체크 통과나 메시 사용 여부만으로 세련미를 판정하지 않는다.
+Look at still frames and at actual playback. Seek back to the same time six or more times and
+confirm the state reproduces. Check that person and camera continue across the boundary of
+adjacent narration groups. On a phone, face, key text and arrows must not hide one another.
+When a bright, simple 3D prop floats over a dark photoreal illustration, match material and
+light or recompose the explanation area. A passed check or the use of a mesh does not decide
+polish on its own.
 
-다운로드용 HTML에는 이미지·런타임·모형·음성을 포함한다. 원본 그림의 경로가 개발자 폴더에만
-있거나 썸네일·연결 영상이 이전 버전이면 납품을 마치지 않는다.
+The downloadable HTML includes images, runtime, models and voice. Delivery is not finished
+while a source picture's path exists only in a developer folder or a thumbnail or linked video
+is an earlier version.

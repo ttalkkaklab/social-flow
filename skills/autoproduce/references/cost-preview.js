@@ -685,7 +685,6 @@ function main() {
   }
   process.stdout.write(out.join('\n') + '\n');
   process.exitCode = worstExit;
-    return;
 }
 
 module.exports = { readScenes, videoSlots, forecastRows, runReport, videoSpent, videoBudgetOf, findProfile, budgetVerdict };

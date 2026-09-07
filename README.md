@@ -29,13 +29,16 @@ Use the references for appearance, not unrelated historical props or story conte
 archives keep their original look. Include `skills/storyboard/assets/` when distributing the
 whole plugin; the server-only npm package is not the plugin and does not contain these assets.
 
-The [full-video branch](skills/produce/references/full-video.md) targets a spatial explainer:
-architectural miniatures, detailed environments and cutaways, one visible action per cut,
-consistent geometry/materials, and separate channel narration. It supersedes the hybrid
-HTML-only explanation rules below for that episode. Source-image and motion prompts are
-assembled separately; actual playback and frame reviews are tied to source/clip hashes.
-The builder checks the selected files and refuses loops or freeze padding. These checks enforce
-review, not a guarantee that a generator matches the reference on its first attempt.
+The [full-video branch](skills/produce/references/full-video.md) renders every new scene as a
+clip in the chosen style, with one visible action per cut, a shared world bible, one camera
+contract per shot (the four `visual.camera` slots) and separate channel narration; for
+cinematic-miniature it targets a spatial explainer of architectural miniatures, environments
+and cutaways. It supersedes the hybrid HTML-only explanation rules below for that episode. The
+prompt assembler builds the source and motion prompts from the shot plan and runs the same
+Seedance prompt gate the storyboard checker runs, so a stored prompt is a checked prompt.
+Actual playback and frame reviews are tied to source/clip hashes, and the builder checks the
+selected files and refuses loops or freeze padding. These checks enforce review, not a
+guarantee that a generator matches the reference on its first attempt.
 
 Video comes in two formats. The default is 9:16 short-form (1080×1920/30fps), derived
 per platform; YouTube long-form uses 16:9 (1920×1080). You pick the format while

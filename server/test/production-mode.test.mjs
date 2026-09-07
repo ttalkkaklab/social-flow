@@ -26,10 +26,11 @@ function fixture(n = 3) {
       reason: 'Reveal the stream.', action: 'The buildings rise.' }, videoDesign: {
       motion: {kind:'subject_action',subject:'Buildings',visibleChange:'Buildings rise away from the stream.',beats:[{at:0,state:'Buildings enclose the stream.'},{at:4,state:'Buildings clear the river bed.'}]},
       look: 'miniature', worldId: 'valley', before: 'Buildings enclose the stream.', action: 'Buildings rise vertically.',
-      after: 'The full stream is visible.', camera: 'The camera holds a three-quarter view.',
+      after: 'The full stream is visible.',
       continuity: 'The river and mountain retain their original shape.', reject: 'Reject unstable buildings and changing trees.' } },
     visual: { why: 'Physical removal exposes the stream.', action: 'The buildings rise.', bg: `images/scene-${i + 1}.png`,
-      camera: { framing: 'Elevated three-quarter view', movement: 'static', speed: 'steady', end: 'The open stream' },
+      camera: { framing: ['Elevated three-quarter view', 'Low wide view of the valley', 'Close view of the stream bed'][i % 3],
+        movement: 'static', speed: 'steady', end: 'The open stream' },
       video: { engine: 'seedance', model: 'seedance-1-5-pro-251215', resolution: '1080p', generateAudio: false } } }));
   for (let i = 0; i < n; i++) {
     const prompts = assemble(win, i); win.SCENES[i].visual.bgPrompt = prompts.sourcePrompt;
@@ -80,6 +81,8 @@ test('the normal scene CLI permits full-video explanations beyond the hybrid cap
   const run = spawnSync(process.execPath, [path.join(root, 'skills/storyboard/references/check-scenes.js'), board, '--draft', '--json'], { encoding: 'utf8' });
   assert.equal(run.error, undefined);
   assert.doesNotMatch(run.stdout, /requires object_html|beat has no visual.slide|generated-video slots/);
+  // The assembler's own prompts clear the seedance prompt gate, and a silent clip gets no soundtrack warning.
+  assert.doesNotMatch(run.stdout, /negative directive|digit seconds|no consistency lock|carries Korean|no visual\.audio/);
   win.PRODUCTION.mode = 'hybrid'; save(win);
   const hybrid = spawnSync(process.execPath, [path.join(root, 'skills/storyboard/references/check-scenes.js'), board, '--draft', '--json'], { encoding: 'utf8' });
   assert.match(hybrid.stdout, /requires object_html|generated-video slots/);
@@ -96,7 +99,7 @@ test('source and motion prompts share style without inventing a person; end-fram
   const win = fixture(), p = assemble(win, 0);
   assert.match(p.sourcePrompt, /Matte concrete/); assert.match(p.sourcePrompt, /miniature/);
   assert.match(p.motionPrompt, /Buildings rise vertically/);
-  assert.match(p.motionPrompt, /Preserve identity/);
+  assert.match(p.motionPrompt, /stays exactly consistent with the input frame/);
   assert.doesNotMatch(p.motionPrompt, /\d+ seconds|Korean woman/);
   win.SCENES[0].visual.video.lastImagePath = 'images/end.png';
   assert.equal(scenePlan(win.SCENES[0]).lastImagePath, 'images/end.png');
@@ -149,6 +152,10 @@ test('browser and CLI share signatures and the template loads a cost comparison'
   const html = readFileSync(path.join(root, 'skills/storyboard/references/storyboard-html-template.html'), 'utf8');
   assert.match(html, /src="\.\/production-mode.js"/);
   assert.match(html, /PCOST\.options\[key\]/);
+  // Every label goes through the STRINGS dictionary, the template's one i18n path.
+  assert.doesNotMatch(html, /koMode|koFrames/);
+  assert.match(html, /prodHead: "Production mode and video cost"/);
+  assert.match(html, /prodHead: "제작 방식과 영상 생성비"/);
   for (const block of html.replace(/<!--[\s\S]*?-->/g, '').matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) new vm.Script(block[1]);
 });
 test('approved revisions count their own retries while retaining historical spend',()=>withBoard(({board,work,save})=>{
@@ -218,4 +225,44 @@ test('explicit workdir checks its actual manifest and cost ledger',()=>withBoard
 test('travelling end images follow the camera endpoint without forcing a fixed viewpoint',()=>{
  const w=fixture(1);w.SCENES[0].visual.camera.end='A closer view beside the river.';
  const p=assemble(w,0);assert.match(p.endFramePrompt,/closer view beside the river/);assert.doesNotMatch(p.endFramePrompt,/Keep the same camera position/);
+});
+
+test('the assembled motion prompt clears the Seedance prompt gate that check-scenes.js runs', () => {
+  const PROMPT = require('../../skills/storyboard/references/assemble-bg-prompt.js');
+  const win = fixture(), p = assemble(win, 0).motionPrompt;
+  assert.match(p, /^Elevated three-quarter view, static camera, ending on The open stream\./);
+  assert.match(p, /At first, Buildings enclose the stream\. Finally, Buildings clear the river bed\./);
+  assert.match(p, /The episode camera language holds: Elevated spatial reveals/);
+  assert.match(p, /Audio: silent; narration is supplied separately\.$/);
+  const body = p.slice(0, p.search(/Audio\s*:/));
+  assert.deepEqual(PROMPT.negDirectiveHits(body, 'seedance'), []);
+  assert.deepEqual(PROMPT.timingHits(body, 'seedance'), []);
+  assert.deepEqual(PROMPT.hangulHits(p, 'seedance'), []);
+  assert.equal(PROMPT.lockMissing(p, 'seedance'), false);
+  for (const style of Object.values(mode.STYLES)) assert.deepEqual(PROMPT.negDirectiveHits(style.prompt, 'seedance'), []);
+  const d = win.SCENES[0].shot.videoDesign;
+  d.action = 'Do not move the trees while the buildings rise.';
+  assert.throws(() => assemble(win, 0), /prompt gate.*negative directive/);
+  d.action = 'Buildings rise over 4 seconds.';
+  assert.throws(() => assemble(win, 0), /prompt gate.*digit seconds/);
+  d.action = '건물이 올라간다.';
+  assert.throws(() => assemble(win, 0), /prompt gate.*Korean/);
+});
+test('one camera contract: the four visual.camera slots, never videoDesign.camera', () => {
+  const win = fixture(), s = win.SCENES[0];
+  delete s.visual.camera.end;
+  assert.throws(() => assemble(win, 0), /Missing visual\.camera\.end/);
+  assert.match(mode.check(win).join(), /visual\.camera\.end is required/);
+  s.visual.camera.end = 'The open stream'; s.shot.videoDesign.camera = 'A fixed view.';
+  assert.throws(() => assemble(win, 0), /videoDesign\.camera is retired/);
+  assert.match(mode.check(win).join(), /videoDesign\.camera is retired/);
+  delete s.shot.videoDesign.camera; delete s.visual;
+  assert.throws(() => assemble(win, 0), /Missing visual/);
+});
+test('three identical set-ups in a row fail full video; a changed framing passes', () => {
+  const win = fixture();
+  win.SCENES.forEach(s => { s.visual.camera.framing = 'Elevated three-quarter view'; });
+  assert.match(mode.check(win).join(), /shots 1, 2, 3: the same framing and camera move/);
+  win.SCENES[1].visual.camera.framing = 'Low wide view';
+  assert.doesNotMatch(mode.check(win).join(), /three times in a row/);
 });

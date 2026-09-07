@@ -1080,7 +1080,8 @@ window.SB_DOC = {
       where: { length: "total length", shotCount: "shot count", genVideo: "generated video", motion: "true motion", comprehension: "comprehension",
                chapter: "chapter", order: "playback order", opening: "opening strategy",
                hookForm: "hook form", promise: "promise ledger", cover: "cover",
-               transition: "transition", sound: "sound", cost: "cost", outro: "outro" },
+               transition: "transition", sound: "sound", cost: "cost", outro: "outro",
+               production: "production", productionCost: "production cost" },
       // the few check-strip sentences that were written in Korean
       recSentLong: function (n) { return "the longest sentence is " + n + " chars — the shooting script targets 40"; },
       sentBandFlag: function (tooLong, n, minv, band) {
@@ -1139,6 +1140,16 @@ window.SB_DOC = {
       draft: "draft",
       mainLen: function (v) { return "main body " + v + "s"; },
       withOutro: function (v) { return "with the outro ≈" + v + "s"; },
+
+      // ── production mode (window.PRODUCTION) and frame inputs ──
+      prodHead: "Production mode and video cost",
+      prodMode: "Mode", prodClips: "Generated clips", prodFirst: "First pass", prodRetry: "With retries",
+      prodModes: { hybrid: "Hybrid", full_video: "Full video" },
+      prodScope: "Video API cost only. Images, narration, editing and tax are excluded; the mode not selected is an estimate under stated assumptions.",
+      prodTerms: function (rate, cap, attempts) { return "Assumed KRW/USD: " + rate + ". Approved video budget: $" + cap + ". Total attempts per clip: " + attempts + "."; },
+      prodRows: "Model, resolution and cost per shot", prodShot: "Shot ", withAudio: "with audio", silent: "silent",
+      framePending: "Image pending", frameStart: "Start frame", frameEnd: "End frame",
+      frameChange: "Subject change", frameEndState: "End state: ",
 
       // ── header meta ──
       keyMessage: "Key message", coverHook: "Cover hook", series: "Series", source: "Original",
@@ -1318,7 +1329,7 @@ window.SB_DOC = {
       where: { length: "전체 길이", shotCount: "샷 수", genVideo: "생성 영상", motion: "실제 움직임", comprehension: "이해도", chapter: "챕터",
                order: "재생 순서", opening: "오프닝 전략", hookForm: "훅 형태",
                promise: "약속 장부", cover: "커버", transition: "전환", sound: "소리",
-               cost: "비용", outro: "아웃트로" },
+               cost: "비용", outro: "아웃트로", production: "제작 방식", productionCost: "제작 비용" },
       recSentLong: function (n) { return "제일 긴 문장이 " + n + "자 — 촬영 대본 권장은 40자"; },
       sentBandFlag: function (tooLong, n, minv, band) {
         return (tooLong ? "제일 긴 문장이 " + n + "자" : "한 문장이 " + minv + "자 미만") +
@@ -1376,6 +1387,16 @@ window.SB_DOC = {
       draft: "초안",
       mainLen: function (v) { return "본편 " + v + "초"; },
       withOutro: function (v) { return "아웃트로 포함 ≈" + v + "초"; },
+
+      // ── production mode (window.PRODUCTION) and frame inputs ──
+      prodHead: "제작 방식과 영상 생성비",
+      prodMode: "방식", prodClips: "생성 영상", prodFirst: "최초 생성", prodRetry: "재시도 포함 예상",
+      prodModes: { hybrid: "혼합 제작", full_video: "전체 영상" },
+      prodScope: "영상 API 비용만 계산합니다. 이미지·음성·편집·세금은 제외하며 선택하지 않은 방식은 가정에 따른 추산입니다.",
+      prodTerms: function (rate, cap, attempts) { return "원화 환산 가정: 1달러=" + rate + "원. 승인 예산: $" + cap + ". 장면당 총 시도 한도: " + attempts + "회."; },
+      prodRows: "장면별 모델·해상도·생성비", prodShot: "장면 ", withAudio: "음성 포함", silent: "무음",
+      framePending: "이미지 생성 예정", frameStart: "시작 프레임", frameEnd: "끝 프레임",
+      frameChange: "피사체 변화", frameEndState: "끝 상태: ",
 
       // ── header meta ──
       keyMessage: "핵심 메시지", coverHook: "커버 훅", series: "시리즈", source: "원본",
@@ -1534,7 +1555,7 @@ window.SB_DOC = {
      of it then shows an English word for the rest instead of an undefined, and a membership
      test ("is this shot.size in the vocabulary?") reads the same key set in every language. */
   ["size", "angle", "type", "pic", "beat", "arc", "hook", "hookForm", "cam", "panel",
-   "where", "overlay", "reveal", "nav", "fmt"].forEach(function (k) {
+   "where", "overlay", "reveal", "nav", "fmt", "prodModes"].forEach(function (k) {
     T[k] = Object.assign({}, STRINGS.en[k], (STRINGS[LANG] || {})[k]);
   });
   document.documentElement.lang = LANG;
@@ -2351,9 +2372,9 @@ window.SB_DOC = {
                        Number.isFinite(Number(MP.generatedVideoMax))
     ? Number(MP.generatedVideoMax) : FMT.videoMax;
   if (window.PRODUCTION) {
-    if (!window.PRODUCTION_MODE) flag("bad", "Production", "Missing production-mode.js");
+    if (!window.PRODUCTION_MODE) flag("bad", T.where.production, "Missing production-mode.js");
     else {
-      window.PRODUCTION_MODE.check(window).forEach(function (message) { flag("bad", "Production", message); });
+      window.PRODUCTION_MODE.check(window).forEach(function (message) { flag("bad", T.where.production, message); });
       policyVideoMax = window.PRODUCTION_MODE.policy({ generatedVideoMax: policyVideoMax }, window.PRODUCTION, SCENES).generatedVideoMax;
     }
   }
@@ -3217,31 +3238,25 @@ window.SB_DOC = {
   var PCOST = COST && COST.productionCost;
   if (window.PRODUCTION) {
     if (!PCOST || !window.PRODUCTION_MODE || PCOST.planSignature !== window.PRODUCTION_MODE.signature(window))
-      flag("bad", "Production cost", "Missing or stale mode comparison; refresh cost-preview.js --sbdoc before approval");
+      flag("bad", T.where.productionCost, "Missing or stale mode comparison; refresh cost-preview.js --sbdoc before approval");
     else {
-      var koMode = document.documentElement.lang.indexOf("ko") === 0;
-      h += '<section class="cost" id="production-cost"><div class="cost-head">' +
-        (koMode ? '제작 방식과 영상 생성비' : 'Production mode and video cost') + '</div>';
-      h += '<table><thead><tr><th>' + (koMode ? '방식' : 'Mode') + '</th><th>' +
-        (koMode ? '생성 영상' : 'Generated clips') + '</th><th>' + (koMode ? '최초 생성' : 'First pass') +
-        '</th><th>' + (koMode ? '재시도 포함 예상' : 'With retries') + '</th></tr></thead><tbody>';
+      h += '<section class="cost" id="production-cost"><div class="cost-head">' + esc(T.prodHead) + '</div>';
+      h += '<table><thead><tr><th>' + esc(T.prodMode) + '</th><th>' + esc(T.prodClips) + '</th><th>' + esc(T.prodFirst) +
+        '</th><th>' + esc(T.prodRetry) + '</th></tr></thead><tbody>';
       ['hybrid', 'full_video'].forEach(function (key) {
         var o = PCOST.options[key];
-        h += '<tr><td>' + esc(koMode ? o.label : key) + (key === window.PRODUCTION.mode ? ' ✓' : '') +
+        h += '<tr><td>' + esc(T.prodModes[key] || key) + (key === window.PRODUCTION.mode ? ' ✓' : '') +
           '</td><td>' + o.clips + ' / ' + o.generatedSeconds + 's</td><td>$' + o.firstPassUsd.toFixed(2) +
           ' (≈₩' + o.firstPassKrw.toLocaleString() + ')</td><td>$' + o.retryLowUsd.toFixed(2) + '–$' + o.retryHighUsd.toFixed(2) +
           ' (≈₩' + o.retryLowKrw.toLocaleString() + '–₩' + o.retryHighKrw.toLocaleString() + ')</td></tr>';
       });
-      h += '</tbody></table><p>' + esc(koMode ? '영상 API 비용만 계산합니다. 이미지·음성·편집·세금은 제외하며 선택하지 않은 방식은 가정에 따른 추산입니다.' : PCOST.scope) +
-        '</p><p>' + esc(koMode ? '원화 환산 가정: 1달러=' + PCOST.krwPerUsd + '원. 승인 예산: $' + window.PRODUCTION.videoBudgetUsd +
-          '. 장면당 총 시도 한도: ' + window.PRODUCTION.maxAttempts + '회.' :
-          'Assumed KRW/USD: ' + PCOST.krwPerUsd + '. Approved video budget: $' + window.PRODUCTION.videoBudgetUsd +
-          '. Total attempts per clip: ' + window.PRODUCTION.maxAttempts) + '</p>';
+      h += '</tbody></table><p>' + esc(T.prodScope) + '</p><p>' +
+        esc(T.prodTerms(PCOST.krwPerUsd, window.PRODUCTION.videoBudgetUsd, window.PRODUCTION.maxAttempts)) + '</p>';
       var selectedRows = PCOST.options[window.PRODUCTION.mode].rows;
-      h += '<details><summary>' + (koMode ? '장면별 모델·해상도·생성비' : 'Model, resolution and cost per shot') + '</summary><ul>' + selectedRows.map(function (r) {
+      h += '<details><summary>' + esc(T.prodRows) + '</summary><ul>' + selectedRows.map(function (r) {
         var g = r.generation || {}, model = g.model === 'seedance-1-5-pro-251215' ? 'Seedance 1.5 Pro' : g.model || r.key;
-        return '<li>' + (koMode ? '장면 ' : 'Shot ') + r.shot + ' · ' + esc(model) + ' · ' + esc(g.resolution || '') +
-          ' · ' + (g.generateAudio ? (koMode ? '음성 포함' : 'with audio') : (koMode ? '무음' : 'silent')) + ' · ' + r.seconds + 's · $' + r.usd.toFixed(3) + '</li>';
+        return '<li>' + esc(T.prodShot) + r.shot + ' · ' + esc(model) + ' · ' + esc(g.resolution || '') +
+          ' · ' + esc(g.generateAudio ? T.withAudio : T.silent) + ' · ' + r.seconds + 's · $' + r.usd.toFixed(3) + '</li>';
       }).join('') + '</ul></details></section>';
     }
   }
@@ -3523,21 +3538,20 @@ window.SB_DOC = {
         var explicitFrames = vis.frames || vis.video && vis.video.lastImagePath || vis.imagePair;
         if (explicitFrames && k === 0) {
           var fp = window.RENDER_ROUTING.framePlan(s);
-          var koFrames = document.documentElement.lang.indexOf('ko') === 0;
           var frameInput = function (src, label) {
             return '<figure><figcaption>' + esc(label) + '</figcaption>' + (src
               ? '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy"></a>'
-              : '<div class="pending-frame">' + (koFrames ? '이미지 생성 예정' : 'Image pending') + '</div>') + '</figure>';
+              : '<div class="pending-frame">' + esc(T.framePending) + '</div>') + '</figure>';
           };
           var pair = fp.mode === 'first_last';
-          var inputs = frameInput(fp.start, koFrames ? '시작 프레임' : 'Start frame');
-          if (pair) inputs += frameInput(fp.end, koFrames ? '끝 프레임' : 'End frame');
+          var inputs = frameInput(fp.start, T.frameStart);
+          if (pair) inputs += frameInput(fp.end, T.frameEnd);
           var motionPlan = s.shot && s.shot.videoDesign && s.shot.videoDesign.motion;
           if (motionPlan) {
-            inputs += '<div class="frame-reason"><strong>' + (koFrames ? '피사체 변화' : 'Subject change') + '</strong><br>' + esc(motionPlan.visibleChange || '') +
-              (motionPlan.beats || []).map(function(b) { return '<br>' + esc(b.at + 's · ' + b.state); }).join('') + '</div>';
+            inputs += '<div class="frame-reason"><strong>' + esc(T.frameChange) + '</strong><br>' + esc(motionPlan.visibleChange || '') +
+              (motionPlan.beats || []).map(function (b) { return '<br>' + esc(b.at + 's · ' + b.state); }).join('') + '</div>';
           }
-          inputs += '<div class="frame-reason">' + esc(fp.reason) + (fp.endState ? '<br>' + esc((koFrames ? '끝 상태: ' : 'End state: ') + fp.endState) : '') + '</div>';
+          inputs += '<div class="frame-reason">' + esc(fp.reason) + (fp.endState ? '<br>' + esc(T.frameEndState + fp.endState) : '') + '</div>';
           return '<div class="conti-row' + (pair ? ' has-frame-pair' : '') + '"><div class="frame-inputs' + (pair ? '' : ' single') + (WIDE ? ' wide' : '') + '">' + inputs + '</div><div class="cut">' + cell + '</div></div>';
         }
         return '<div class="conti-row"><figure class="panel">' +

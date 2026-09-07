@@ -76,13 +76,13 @@ window.PRODUCTION = {
   style: {
     preset: 'cinematic-miniature',
     selection: { kind: 'user', reference: 'ACTUAL_STYLE_CHOICE' },
-    referencePack: 'tactile-miniature-v1',
-    reference: 'https://www.youtube.com/shorts/LQZjvQ5W2ck',
+    referencePack: 'tactile-miniature-v1',    // cinematic-miniature only
+    reference: 'https://www.youtube.com/shorts/LQZjvQ5W2ck',   // where the look comes from: a URL or one line
     world: 'A rocky urban valley, with a stable mountain silhouette and stream route.',
     materials: 'Matte off-white concrete, detailed granite, restrained foliage.',
     palette: 'Warm grey, muted green, pale blue water.',
     lighting: 'Soft daylight with clear contact shadows and moderate depth of field.',
-    camera: 'Purposeful slow reveals, consistent lens language and legible phone framing.'
+    camera: 'Purposeful slow reveals, consistent lens language and legible phone framing.'   // carried in every motion prompt
   },
   approval: {
     kind: 'user',                     // standing only when its written authorization names this mode and cap
@@ -95,7 +95,8 @@ window.PRODUCTION = {
 
 Both modes keep the selected `style`; hybrid keeps purpose-based render routing.
 For full_video, follow `full-video.md` in the produce skill and use the stored style across
-every shot. Do not read the old HTML-only explanation and person-required video clauses as
+every shot. Each generated shot's camera is the four `visual.camera` slots; `videoDesign`
+holds the subject plan only, and `spatial-prompts.js` assembles the motion prompt from both. Do not read the old HTML-only explanation and person-required video clauses as
 overriding this explicit episode choice.
 
 The initial question can use a provisional duration estimate. Before the final storyboard

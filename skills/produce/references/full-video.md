@@ -1,21 +1,25 @@
-# Full-video spatial explainer
+# Full video — every new scene as a generated clip
 
 ## Contents
 
 - [Entry and scope](#entry-and-scope)
-- [Reference style](#reference-style)
+- [Episode style and looks](#episode-style-and-looks)
+- [Cinematic-miniature reference](#cinematic-miniature-reference)
 - [Shot plan and prompts](#shot-plan-and-prompts)
+  - [Subject motion contract](#subject-motion-contract)
+  - [Shot progression](#shot-progression)
 - [Generation and cost](#generation-and-cost)
 - [Visual review](#visual-review)
 - [Build handoff](#build-handoff)
+- [Revised storyboard attempts](#revised-storyboard-attempts)
 
 ## Entry and scope
 
-Use only for an explicitly approved `window.PRODUCTION.mode:'full_video'`. Read
-storyboard's production choice contract directly from its SKILL.md. This branch replaces
-hybrid's 1–2 generated-shot cap, HTML-only explanation routing, person-required source images,
-and generic photo style with the explicitly selected episode treatment. It does not change
-facts, voice, language, narration approval, budget or publishing approval.
+Use only for an explicitly approved `window.PRODUCTION.mode:'full_video'`
+([production-mode.md](../../storyboard/references/production-mode.md)). This branch replaces
+hybrid's 1–2 generated-shot cap, HTML-only explanation routing, person-required source images
+and generic photo style with the episode's selected style. It does not change facts, voice,
+language, narration approval, budget or publishing approval.
 
 Every new scene, including cover and closing message, uses `visual.video` with separate
 narration. Preserve user recordings and the shared outro. Do not splice silent b-roll into
@@ -23,66 +27,80 @@ the narration timeline. Do not substitute a camera move over a still or an HTML 
 a failed generated clip. Missing capability or exhausted budget means hold and revise with
 the user, not an invisible downgrade.
 
-## Reference style
+## Episode style and looks
 
-Follow [visual-style.md](../../storyboard/references/visual-style.md) and the episode HITL choice.
-Only cinematic-miniature scenes use the bundled `tactile-miniature-v1` pack.
-Photoreal and webtoon use their own prompt treatment and must not attach miniature references. Read
-[STYLE.md](../../storyboard/assets/styles/tactile-miniature-v1/STYLE.md) and select
-`visual.styleRole` for each scene: environment, character, interaction, transport, or
-reported_story. Store `PRODUCTION.style.referencePack: "tactile-miniature-v1"`.
-The pack ships actual PNG references and material, lighting, framing and content rules;
-it does not depend on this machine's episode data or access to the reference video.
-Authentic archival assets retain their source appearance and never inherit generated style.
+The style was chosen before authoring ([visual-style.md](../../storyboard/references/visual-style.md))
+and lives in `PRODUCTION.style`. Every source image, end frame and motion prompt carries it,
+and `production-mode.js` rejects a shot whose look is outside its preset.
 
-`spatial-prompts.js` resolves the installed pack and emits `sourceReferenceImages`,
-`sourceImageArgs`, `styleGuidePath` and `styleBinding` alongside prompts. Open the guide and
-selected images, then pass the actual `sourceImageArgs.referenced_image_paths` to the built-in
-image tool with the prompt. Store `styleBinding` as `visual.stylePack`; regenerate the quote
-after storing it. Absolute image paths are invocation-only and are resolved again on each
-machine. Add an approved character reference when continuity needs it. End-image edits use
-the scene's generated start image, not the generic pack as a replacement scene.
+| `style.preset` | `videoDesign.look` | Appearance references |
+|---|---|---|
+| `cinematic-miniature` | `miniature`, `architectural` | the bundled `tactile-miniature-v1` pack, one image per `visual.styleRole` |
+| `photoreal` | `realistic` | approved character images from this episode; no pack |
+| `webtoon` | `webtoon` | approved character images from this episode; no pack |
+| any preset | `archive` | the supplied source itself; no generated appearance reference |
 
-Plan the spoken actor/action/recipient before applying the look. A style match cannot excuse
-an unrelated image. After each narration edit, re-read the affected visual plan and image;
+`style.reference` records where the look comes from: a URL for the miniature reference, a
+one-line description otherwise. `world`, `materials`, `palette` and `lighting` are the world
+bible the source prompt restates on every shot. `camera` is the episode's camera language
+(lens, distance, pace); it rides inside every motion prompt's consistency lock, so all clips
+are drawn with one lens. Archival assets keep their source appearance.
+
+For cinematic-miniature, read [STYLE.md](../../storyboard/assets/styles/tactile-miniature-v1/STYLE.md),
+select `visual.styleRole` (environment, character, interaction, transport, reported_story)
+by the narrated subject, and store `PRODUCTION.style.referencePack: "tactile-miniature-v1"`.
+`spatial-prompts.js` resolves the installed pack and returns `sourceReferenceImages`,
+`sourceImageArgs`, `styleGuidePath` and `styleBinding` beside the prompts. Open the guide and
+the selected image, then pass `sourceImageArgs.referenced_image_paths` to the image tool with
+the prompt. Store `styleBinding` as `visual.stylePack` and regenerate the quote after storing
+it. Absolute image paths are invocation-only and are resolved again on each machine. Add an
+approved character reference when continuity needs it. End-image edits use the scene's
+generated start image, never the pack image as a replacement scene.
+
+Plan the spoken actor, action and recipient before applying the look. A style match cannot
+excuse an unrelated image. After each narration edit, re-read the affected plan and image;
 reuse only after observing that the meaning still matches. Record content findings separately
 from technical and style findings before any paid image-to-video call.
+
+## Cinematic-miniature reference
 
 The reference is https://www.youtube.com/shorts/LQZjvQ5W2ck. Observed frames show architectural
 miniatures, detailed rocky locations, cutaway models and archival pictures; architecture
 lifts out of a valley and the camera advances between buildings. The source does not disclose
-its exact generator. These are authored reconstruction instructions, not its recovered prompts.
+its generator. These are authored reconstruction instructions, not recovered prompts.
 
 - Keep a topic-specific **world bible**: geometry, named landmarks, materials, palette,
   lighting and camera language. Related shots share `worldId`; edit or reuse their source
-  images instead of independently inventing a new layout every time.
+  images instead of inventing a new layout every time.
 - `miniature`: off-white exhibition models, recognizable articulated objects, restrained
   trees, soft contact shadows. Buildings have windows, thickness and a plausible foundation.
 - `architectural`: readable cutaway layers and connected parts with physical thickness.
-  No label boxes standing in for physical things.
-- `realistic`: detailed natural surfaces and plausible scale. Reference actual geography;
-  a generated reconstruction is not documentary evidence of an event.
-- `archive`: supplied/source-verified art or photos. Preserve authentic marks and details;
+  Physical things are modelled; a label box never stands in for one.
+- `archive`: supplied or source-verified art or photos. Preserve authentic marks and details;
   do not invent a historical artwork. Generated motion cannot alter evidence-bearing content.
-- Choose a look to explain the sentence, not by cycling four presets. The focal object stays
-  legible on a phone. Moderate depth of field preserves the mechanism; avoid waxy surfaces,
-  floating objects, harsh plastic shine, unstable windows or generic empty studio backgrounds.
+- Choose a look to explain the sentence, not by cycling presets. The focal object stays
+  legible on a phone. Moderate depth of field preserves the mechanism; waxy surfaces, floating
+  objects, harsh plastic shine, unstable windows and empty studio backgrounds are defects.
 - One physical action or spatial reveal per short shot: lift a building, expose a rock layer,
-  let water pass, or approach a bridge. Write opening state → action → final state.
-  For actions, use anticipation/contact/release where applicable. Camera motion alone may
-  reveal a place but cannot replace a promised change in the subject.
-- Keep the no-marks-over-video rule: no added arrows, X marks, rings, labels, badges or titles.
-  Burned subtitles are the only overlay. Explain with object movement and framing. Numeric
-  comparisons still require source values and must preserve the actual count/proportion;
-  if a generator cannot do that accurately, stop and propose a revised cut or mode.
+  let water pass, or approach a bridge. Write opening state → action → final state, with
+  anticipation, contact and release where an actor is involved. Camera motion alone may
+  reveal a place; it cannot replace a promised change in the subject.
+- The no-marks-over-video rule holds: no added arrows, X marks, rings, labels, badges or
+  titles. Burned subtitles are the only overlay. Explain with object movement and framing.
+  Numeric comparisons still require source values and the actual count or proportion; if a
+  generator cannot draw that accurately, stop and propose a revised cut or mode.
+
+The `realistic` look (photoreal) and the `webtoon` look follow the same world-bible and
+one-action rules, with the treatment text `production-mode.js` holds for their preset.
 
 ## Shot plan and prompts
 
 Retain each scene's real `shot.infoType` and `shot.render.purpose`. In full-video mode its
 `render.mode` is `generated_video` even for a mechanism or a place; do not relabel every
 purpose as `live_action` to dodge semantic checks. Supply `render.reason`, `render.action`,
-`visual.why`, four `visual.camera` slots and `visual.action`. A statistic/timeline also keeps
-the source-backed `render.data` contract. Each generated scene carries:
+`visual.why`, `visual.action` and the four `visual.camera` slots (scenes-schema §camera). A
+statistic or timeline also keeps the source-backed `render.data` contract. Each generated
+scene carries:
 
 ```js
 shot: {
@@ -101,35 +119,48 @@ shot: {
     before: 'Apartment blocks surround the rocky stream in a mountain valley.',
     action: 'The complete building blocks rise vertically and leave the frame.',
     after: 'The continuous stream and rocky valley floor are fully visible.',
-    camera: 'A fixed elevated three-quarter view holds the valley in the centre.',
-    continuity: 'The mountain silhouette, stream route and existing trees remain fixed.',
+    continuity: 'The mountain silhouette, stream route and existing trees stay fixed.',
     reject: 'Reject bending buildings, changing window counts, drifting terrain or obscured water.'
   }
+},
+visual: {
+  camera: { framing: 'elevated three-quarter view of the whole valley', movement: 'static',
+            speed: 'very slow', end: 'the exposed stream centred' },
+  why: 'The removal is a continuous physical change no still can show.',
+  action: 'The blocks lift clear of the stream.'
 }
 ```
 
-Write generator-facing design/style fields in English. The `reject` field is for review;
-it is not sent as a negative-only instruction to Seedance. Produce reproducible prompts:
+One camera contract per shot: the four `visual.camera` slots, in vendor vocabulary.
+`videoDesign.camera` is retired and rejected. Write generator-facing design and style fields
+in English. The `reject` field is for review; it is never sent as a negative instruction.
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/spatial-prompts.js storyboard/ --shot 1
 ```
 
-Store `sourcePrompt` as `visual.bgPrompt` and `motionPrompt` as `visual.video.prompt` before
-the final estimate and approval. The helper is read-only. It incorporates the episode style,
-subject action, ending and positive geometry lock. The video prompt directs motion without
-redescribing the source or inventing a second camera move. Duration is an API parameter.
-If a fixed-camera change benefits from an end frame, edit the same source using
-`endFramePrompt`, keep that file, and set `visual.video.lastImagePath`; the router forwards it.
-Do not impose a fixed-camera end frame on a travelling-camera shot.
+The helper is read-only. `sourcePrompt` restates the narrated meaning, the opening state, the
+world bible and the framing slot; store it as `visual.bgPrompt`. `motionPrompt` goes through
+the same `clipAssemble` recipe as every other clip in this pipeline: the camera span from the
+four slots (`framing, speed movement, ending on end`; a static camera has no speed), the
+subject action with its beats in words, a consistency lock that carries the look and the
+episode camera language, and `Audio: silent`. Store it as `visual.video.prompt`. Before
+returning, the helper runs the Seedance prompt gate that `check-scenes.js` runs on every
+stored prompt (Korean outside dialogue quotes, a negative directive, a timecode or digit
+seconds, a missing lock) and fails with the reason instead of emitting a prompt the board
+would then reject. Duration is an API parameter. If a fixed-camera change benefits from an
+end frame, edit the same source using `endFramePrompt`, keep that file, and set
+`visual.frames.end`; the router forwards it as `lastImagePath`. Do not impose a fixed-camera
+end frame on a travelling-camera shot.
 
 ### Subject motion contract
 
 Every full-video `videoDesign.motion` declares `kind`, `subject` and `visibleChange`.
 Use `subject_action` for acted people, interactions and changing objects. Add at least two
 ordered `beats: [{at, state}]` within the clip duration: what the subject visibly does at
-those seconds, not camera positions. Choose a simple action with a visible result that fits
-the narration. Preserve identity and materials while allowing pose, expression and position
+those seconds, not camera positions. The seconds stay in the plan for the playback review;
+the prompt orders the same beats by description (at first, then, finally) because Seedance
+takes no clock. Choose a simple action with a visible result that fits the narration. Preserve identity and materials while allowing pose, expression and position
 to change. Miniature is a surface treatment; it does not mean frozen figurines.
 
 Use `spatial_reveal` for a location introduction with a specific newly exposed feature and
@@ -148,6 +179,23 @@ with “everyone stays fixed”, “breathing only” or “no new actions” to
 Reduce the number of actors, simplify contact, shorten/split the shot or revise its source
 within the approval contract. Preserve the promised action. A retry that loses that action
 is still a failed clip, even if its faces and buildings look better.
+
+### Shot progression
+
+A full-video episode is an edit, not a list of clips. Before generating, read the shot table
+as a sequence:
+
+- Change the set-up for a reason. Introduce a place wide, move closer as the narration narrows
+  to the part that matters, and return wide when the sentence needs the relationship again.
+  `production-mode.js` rejects three consecutive shots with the same `framing` and
+  `movement`: a third identical set-up reads as one long take that keeps restarting.
+- One move per shot, in vendor vocabulary (`dolly in`, `truck`, `arc shot`, `pedestal up`,
+  `static`), chosen from `shot.feel` as scenes-schema §camera describes. The move supports the
+  feel; size, angle, the picture and the sound carry it.
+- Continuity is a shared `worldId`, a stable `continuity` sentence and the same world bible in
+  every prompt. Landmarks, materials and light hold across the cuts; the subject changes.
+- Let the cut land on the subject: end a reveal on the thing the next sentence names, so the
+  first frame of the next shot answers the last frame of this one.
 
 ## Generation and cost
 
