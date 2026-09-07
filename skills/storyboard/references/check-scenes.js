@@ -119,6 +119,7 @@ function isStillCard(scene) {
   const v = (scene && scene.visual) || {};
   if (scene && (scene.type === 'broll' || scene.type === 'outro')) return false;
   if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') return false;
+  if (v.source === 'stock' && v.clip) return false;
   if ((v.slide && v.slide.kind !== 'camera') || v.video || v.clip || v.reuse !== undefined) return false;
   return true;
 }
@@ -160,7 +161,7 @@ function formatOf(scenesPath) {
   }
 }
 
-const MOTION_KINDS = ['ai-video', 'recording', 'motion-slide'];
+const MOTION_KINDS = ['ai-video', 'recording', 'stock-video', 'motion-slide'];
 const MOTION_PROFILE_KEYS = [
   'motion_min_true', 'motion_allowed_kinds', 'motion_max_consecutive_stills',
   'motion_max_still_seconds', 'motion_require_action', 'generated_video_max',
@@ -328,6 +329,9 @@ function generatedVideo(scene) {
 
 function motionKind(scene) {
   const v = (scene && scene.visual) || {};
+  // A free stock or archive clip (scenes-schema §stock material) is a supplied moving file:
+  // real motion the engine never billed for. A stock photo has no clip and stays a still.
+  if (v.source === 'stock' && typeof v.clip === 'string') return 'stock-video';
   if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording')
     return 'recording';
   // The ground decides the kind: a motion background or clip under a motion-slide overlay
@@ -690,10 +694,10 @@ function check(win, fmt, opts) {
      camera move or an HTML motion slide. The machine layer is written in §4b, so a draft defers. */
   if (isShort && cover && motionPolicy.hookVideo) {
     const coverKind = motionKind(cover);
-    if (coverKind !== 'ai-video' && coverKind !== 'recording')
+    if (coverKind !== 'ai-video' && coverKind !== 'recording' && coverKind !== 'stock-video')
       machine('shot 1', 'the hook is a still — on a short the cover is video: a motion background under the ' +
-                        'code-rendered title (visual.video, the cover still as the source), or a recording ' +
-                        '(visual.source — hook_video off in the profile switches this rule off)');
+                        'code-rendered title (visual.video, the cover still as the source), a recording or a ' +
+                        'free stock clip (visual.source — hook_video off in the profile switches this rule off)');
   }
   if (isShort && motionPolicy.hookVideo) {
     const body = videoSlots.filter((s) => s !== cover);
@@ -789,7 +793,7 @@ function check(win, fmt, opts) {
     playbackShots(scenes).forEach((x) => {
       const scene = x.scene;
       const kind = motionKind(scene);
-      if (kind === 'ai-video' || kind === 'recording') return;
+      if (kind === 'ai-video' || kind === 'recording' || kind === 'stock-video') return;
       const segs = Array.isArray(scene.narration) ? scene.narration.length : 0;
       const stillPerLine = segs > 1 && scene.narration.every((seg) => seg && seg.img);
       const beatPerGroup = segs > 1 && beatsCoverGroups(scene);
@@ -1337,6 +1341,43 @@ function selftest() {
   ok('long-form counts b-roll and motion backgrounds only, as the checklist says',
      !has(bads(runLong([cover, quoteClip, quoteClip, quoteClip, quoteClip, quoteClip, quoteClip, goodShot])),
           /generated-video slots/));
+
+  // ── free stock material (scenes-schema §stock material) — a supplied clip with its license record ──
+  const stockLicense = { provider: 'pexels', url: 'https://www.pexels.com/video/1', license: 'Pexels License',
+    licenseUrl: 'https://www.pexels.com/license/', author: 'A. Filmer', attributionRequired: false,
+    commercial: true, modify: true, retrievedAt: '2026-09-07' };
+  const stockScene = Object.assign({}, goodShot, {
+    shot: Object.assign({}, goodShot.shot, { render: { mode: 'stock_video', purpose: 'archive',
+      reason: 'the actual 1961 street is the sentence', action: 'trams cross the square' } }),
+    visual: { source: 'stock', clip: 'footage/s2-pexels-1.mp4', license: stockLicense } });
+  ok('a stock clip with its license passes',
+     !has(bads(run([videoCover, stockScene, ctaShot], null, { policy: hookPolicy })), /shot 2/));
+  ok('a stock clip is not a generated slot and needs no visual.why',
+     !has(bads(run([videoCover, stockScene, stockScene, ctaShot], null, { policy: hookPolicy })), /generated cuts after the hook|no visual\.why|generated-video slots/));
+  ok('a stock cover is a hook',
+     !has(bads(run([Object.assign({}, cover, { shot: Object.assign({}, cover.shot, { render: stockScene.shot.render }),
+       visual: stockScene.visual }), goodShot, ctaShot], null, { policy: hookPolicy })), /the hook is a still/));
+  ok('a stock clip does not run the static-ground clock',
+     !has(bads(run([videoScene, Object.assign({}, stockScene, { duration: 12 }), videoScene], null, { policy: groundPolicy })), /one picture stays/));
+  ok('a stock clip without its license record is rejected',
+     has(bads(run([videoCover, Object.assign({}, stockScene, { visual: { source: 'stock', clip: 'footage/s2-pexels-1.mp4' } }), ctaShot],
+                  null, { policy: hookPolicy })), /visual\.license/));
+  ok('a non-commercial or share-alike license is rejected',
+     has(bads(run([videoCover, Object.assign({}, stockScene, { visual: Object.assign({}, stockScene.visual,
+       { license: Object.assign({}, stockLicense, { commercial: false }) }) }), ctaShot], null, { policy: hookPolicy })), /commercial must be true/) &&
+     has(bads(run([videoCover, Object.assign({}, stockScene, { visual: Object.assign({}, stockScene.visual,
+       { license: Object.assign({}, stockLicense, { shareAlike: true }) }) }), ctaShot], null, { policy: hookPolicy })), /share-alike/));
+  ok('a credit-required license without attribution text is rejected',
+     has(bads(run([videoCover, Object.assign({}, stockScene, { visual: Object.assign({}, stockScene.visual,
+       { license: Object.assign({}, stockLicense, { attributionRequired: true }) }) }), ctaShot], null, { policy: hookPolicy })), /attribution text/));
+  ok('a stock clip waits for its file only outside --draft',
+     !has(bads(run([videoCover, Object.assign({}, stockScene, { visual: { source: 'stock', license: stockLicense } }), ctaShot],
+                   null, { policy: hookPolicy, draft: true })), /visual\.clip/) &&
+     has(bads(run([videoCover, Object.assign({}, stockScene, { visual: { source: 'stock', license: stockLicense } }), ctaShot],
+                  null, { policy: hookPolicy })), /visual\.clip under footage/));
+  ok('a portrait purpose cannot take the stock route',
+     has(bads(run([videoCover, Object.assign({}, stockScene, { shot: Object.assign({}, stockScene.shot,
+       { render: Object.assign({}, stockScene.shot.render, { purpose: 'portrait' }) }) }), ctaShot], null, { policy: hookPolicy })), /requires still_camera/));
   const statFootage = Object.assign({}, footageScene({ slide: { labels: ['34개'] } }), {
     shot: Object.assign({}, goodShot.shot, { infoType: 'statistic' }) });
   ok('a statistic beat on footage is rejected even with labels',

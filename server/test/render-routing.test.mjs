@@ -77,3 +77,37 @@ test('shared camera template passes the production HTML contract',()=>{
  assert.equal(r.status,0,r.stdout+r.stderr);
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
+
+// ── free stock material (scenes-schema §stock material) ──
+const routing=require(path.join(ref,'render-routing.js'));
+const stockLicense=()=>({provider:'nasa',url:'https://images.nasa.gov/details/A11',license:'NASA media usage guidelines',licenseUrl:'https://www.nasa.gov/nasa-brand-center/images-and-media/',attributionRequired:false,commercial:true,modify:true,retrievedAt:'2026-09-07'});
+const stockVideo=(purpose='archive')=>({type:'points',duration:6,narration:[{tts:'The launch.'}],shot:{infoType:'other',render:{mode:'stock_video',purpose,reason:'The actual 1969 launch is the sentence.',action:'The rocket clears the tower.'}},visual:{source:'stock',clip:'footage/s3-nasa-a11.mp4',license:stockLicense()}});
+test('a stock clip is a route of its own: archive only, live_action/atmosphere/place as an alternative',()=>{
+ assert.deepEqual(routing.modesFor('archive'),['stock_video']);
+ assert.deepEqual(routing.modesFor('live_action'),['generated_video','stock_video']);
+ assert.deepEqual(routing.modesFor('place'),['still_camera','stock_video']);
+ assert.deepEqual(routing.modesFor('portrait'),['still_camera']);
+ assert.deepEqual(checkScene(stockVideo()),[]);
+ assert.deepEqual(checkScene(stockVideo('live_action')),[]);
+ assert.match(checkScene(stockVideo('portrait')).join('\n'),/portrait requires still_camera/);
+ assert.match(checkScene({...stockVideo(),visual:{source:'stock',license:stockLicense()}}).join('\n'),/visual\.clip under footage/);
+ assert.deepEqual(checkScene({...stockVideo(),visual:{source:'stock',license:stockLicense()}},{draft:true}),[]);
+});
+test('full_video keeps a supplied stock clip and still refuses other substitutions',()=>{
+ assert.deepEqual(checkScene(stockVideo(),{production:{mode:'full_video'}}),[]);
+ assert.match(checkScene(still(),{production:{mode:'full_video'}}).join('\n'),/requires generated_video/);
+});
+test('the license record is checked on every stock source, photo or clip',()=>{
+ const lic=stockLicense();
+ assert.deepEqual(routing.checkLicense({license:lic}),[]);
+ for(const [key,value,re] of [['commercial',false,/commercial must be true/],['modify',false,/modify must be true/],['shareAlike',true,/share-alike/],['url','not a url',/url must be/],['retrievedAt','yesterday',/retrievedAt/],['attributionRequired','yes',/attributionRequired/]])
+  assert.match(routing.checkLicense({license:{...lic,[key]:value}}).join('\n'),re,key);
+ assert.match(routing.checkLicense({license:{...lic,attributionRequired:true}}).join('\n'),/attribution text/);
+ assert.deepEqual(routing.checkLicense({license:{...lic,attributionRequired:true,attribution:'NASA/KSC'}}),[]);
+ const photo=still();photo.visual.source='stock';photo.visual.license=lic;
+ assert.deepEqual(checkScene(photo),[]);
+ photo.visual.bgPrompt='a generated prompt';
+ assert.match(checkScene(photo).join('\n'),/drop bgPrompt/);
+ delete photo.visual.license;
+ assert.match(checkScene(photo).join('\n'),/visual\.license/);
+});

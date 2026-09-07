@@ -396,3 +396,15 @@ test('imported clips preserve the whole file through the cinematic edit compiler
  scenes[1].transition='dip';assert.equal(preview(scenes)[0].handle,0);
  delete scenes[0].visual;scenes[1].transition='dissolve';assert.equal(preview(scenes)[0].handle,.4);
 });
+
+test('a supplied stock clip is outside the generated set; a stock photograph may still source a generated cut', () => {
+  const license = { provider: 'pexels', url: 'https://www.pexels.com/video/1', license: 'Pexels License', licenseUrl: 'https://www.pexels.com/license/',
+    attributionRequired: false, commercial: true, modify: true, retrievedAt: '2026-09-07' };
+  const clip = { type: 'points', duration: 6, visual: { source: 'stock', clip: 'footage/s2-pexels-1.mp4', license } };
+  const photo = { type: 'points', duration: 6, visual: { source: 'stock', bg: 'images/stock/s3-met-1.jpg', license, video: { engine: 'seedance' } } };
+  assert.equal(mode.eligible(clip), false);
+  assert.equal(mode.eligible(photo), true);
+  const sig = mode.signature({ SCENES: [photo, clip], PRODUCTION: { mode: 'hybrid' } });
+  assert.match(sig, /"license"/, 'the approval fingerprint covers the license record');
+  assert.equal(mode.policy({ generatedVideoMax: 2 }, { mode: 'full_video', videoBudgetUsd: 1 }, [clip, photo]).generatedVideoMax, 1);
+});

@@ -869,6 +869,32 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    name: 'stock_search',
+    title: 'Free stock search (Pexels · Pixabay · NASA · Commons)',
+    annotations: HINT.read,
+    description:
+      'Free, commercially usable photos and clips for a cut that needs the real thing — an actual place, era, event or live action — at zero generation cost. Searches Pexels and Pixabay (PEXELS_API_KEY / PIXABAY_API_KEY; a missing key skips that provider with a note), the NASA Image and Video Library and Wikimedia Commons (no key). Every item returns a ready `visual.license` block (provider, page url, license name and url, commercial/modify flags, attribution text, retrievedAt) — store it verbatim on the `visual.source: "stock"` cut; check-scenes.js refuses a stock cut without it. Commons results are filtered to public domain, CC0 and plain CC BY (share-alike, non-commercial and no-derivatives files are dropped and counted) because an edited, monetized cut cannot carry those terms. This tool does not download: fetch `files[0].url` with curl into storyboard/footage/ (video, as footage/s<n>-<provider>-<id>.mp4) or storyboard/images/stock/ (photo); Commons video is WebM and needs an ffmpeg transcode. People, logos and brands in frame stay a separate rights question on every provider; NASA insignia and identifiable current astronauts are excluded from commercial use. English keywords work best on Pexels, Pixabay and NASA. Read-only; Pexels allows 200 requests/hour, Pixabay 100/minute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search terms — a concrete subject in English ("1960s street tram", "rice paddy aerial"); Pixabay reads the first 100 characters' },
+        media: { type: 'string', enum: ['video', 'photo'], description: 'video (default) for a stock_video cut · photo for a still_camera source image' },
+        providers: {
+          type: 'array',
+          items: { type: 'string', enum: ['pexels', 'pixabay', 'nasa', 'commons'] },
+          description: 'Which providers to ask (default all four). NASA for space, earth science and aviation history; Commons for archival and historical files',
+        },
+        orientation: { type: 'string', enum: ['portrait', 'landscape', 'square', 'any'], description: 'portrait for a 9:16 short, landscape for 16:9 long-form (default any). Applied after the call; NASA reports no dimensions' },
+        limit: { type: 'number', description: 'Items per provider (default 8, max 30; NASA pages 10 at a time)' },
+        minWidth: { type: 'number', description: 'Minimum pixel width — 1080 for a portrait short, 1920 for landscape' },
+        minDuration: { type: 'number', description: 'Video only — shortest clip in seconds to keep' },
+        maxDuration: { type: 'number', description: 'Video only — longest clip in seconds to keep (long archive reels are trimmed with visual.in)' },
+        locale: { type: 'string', description: 'Pexels locale (ko-KR, en-US) or a Pixabay two-letter lang; Commons and NASA ignore it' },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name: 'serp_trending_now',
     title: 'Google trending searches (SerpApi)',
     annotations: HINT.read,

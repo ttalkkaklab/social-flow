@@ -417,7 +417,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 66 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 67 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -479,14 +479,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (66 tools)
+## MCP tool surface (67 tools)
 
-**`tools/list` does not show all 66.** The nine publish/insights tools
+**`tools/list` does not show all 67.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 57. Hidden tools still have live handlers:
+server. With no tokens at all you'll count 58. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
@@ -500,6 +500,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Research | `sns_issue_scout` | SerpApi Google search with `site:threads.com` · `site:x.com` · `site:instagram.com`, collecting recent posts and counting topic phrases that recur across posts and platforms (+ Google trending searches). **A mention list with no engagement counts** — don't mix it into the same table as YouTube multipliers. Threads keyword search only returns your own posts before advanced access, and the Instagram Login API has no public search, so this is the only no-account path that sees all three at once |
 | Research | `naver_search` | Naver Open API (25,000 calls/day free — first choice for Korean). 8 types: news·blog·web·cafe·kin (Knowledge-iN)·image·encyc·local |
 | Research | `serp_web_search` / `serp_news_search` / `serp_naver_search` / `serp_image_search` / `serp_trending_now` | SerpApi (250 free/month — precision + international). naver takes where=web·news·image·video + a period filter, image takes license/size/aspect filters, trending_now returns per-country Google trending searches (4/24/48/168-hour windows, approximate volume and growth) |
+| Research | `stock_search` | Free stock photos and clips — Pexels · Pixabay (`PEXELS_API_KEY` / `PIXABAY_API_KEY`) · NASA Image and Video Library · Wikimedia Commons (no key). Every item returns the `visual.license` block a `visual.source: "stock"` cut stores; Commons is filtered to public domain, CC0 and CC BY. The survey behind it, with license quotes and the Korean public-domain sources: [free stock sources](docs/research/2026-09-07-free-stock-sources/index.html) (Korean) |
 | Open data | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (no auth — search·detail·raw file) |
 | Open data | `datago_file_fetch` / `datago_api_call` | odcloud · apis.data.go.kr (auth key + **per-API usage application** required) |
 | Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — the default path**. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
@@ -602,6 +603,8 @@ explicit error and everything else works.
 |---|---|---|---|
 | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | naver_search | — | Naver Open API (developers.naver.com) |
 | `SERPAPI_API_KEY` | serp_* | — | SerpApi key |
+| `PEXELS_API_KEY` | stock_search (Pexels) | — | Pexels API key (pexels.com/api — free, 200 requests/hour; NASA and Wikimedia Commons need no key) |
+| `PIXABAY_API_KEY` | stock_search (Pixabay) | — | Pixabay API key (pixabay.com/api/docs — free, 100 requests/minute) |
 | `DATA_GO_KR_API_KEY` | datago_file_fetch · api_call | — | data.go.kr auth key (My Page on data.go.kr — beyond the key, each API needs a **per-API usage application**. Search/detail/download work without a key) |
 | `OPENAI_API_KEY` | gpt_image_* | — | OpenAI API key (platform.openai.com/api-keys — image generation) |
 | `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · omni_* · tts_generate · tts_multi_speaker · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. `tts_local_generate` works without it) |

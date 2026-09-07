@@ -49,10 +49,13 @@
     errors.push(...motionErrors(scene));
     return errors;
   }
+  // A supplied file — the user's recording, or a free stock clip (visual.source "stock" with a
+  // clip path) — is never a generated shot; a stock photograph may still feed a generated cut.
   function eligible(scene) {
     const v = scene.visual || {};
     return scene.type !== 'outro' && !(!reused(scene) && !v.video &&
-      (['recording', 'screencast'].includes(v.source) || v.picture === 'recording'));
+      (['recording', 'screencast'].includes(v.source) || v.picture === 'recording' ||
+       (v.source === 'stock' && typeof v.clip === 'string')));
   }
   function full(production) { return production?.mode === 'full_video'; }
   // Outputs and approval metadata must not invalidate their own input signature.
@@ -68,7 +71,8 @@
           render: s.shot?.render, design: s.shot?.videoDesign,
           frames: v.frames, imagePair: v.imagePair, styleRole: v.styleRole, stylePack: v.stylePack,
           bg: v.bg, bgPrompt: v.bgPrompt, camera: v.camera, action: v.action, video, engine: v.engine,
-          prompt: v.prompt, clip: typeof v.clip === 'object' ? v.clip : undefined };
+          prompt: v.prompt, clip: typeof v.clip === 'object' ? v.clip : undefined,
+          source: v.source, license: v.license, file: typeof v.clip === 'string' ? v.clip : undefined };
       }) });
   }
   function motionErrors(scene) {
@@ -127,10 +131,11 @@
       if (!eligible(s) || reused(s)) return;
       const v = s.visual || {}, design = s.shot?.videoDesign || {};
       const bad = message => errors.push('shot ' + (i + 1) + ': ' + message);
-      if (s.shot?.render?.mode !== 'generated_video' || !v.video || v.slide || v.source || v.clip)
+      if (s.shot?.render?.mode !== 'generated_video' || !v.video || v.slide || (v.source && v.source !== 'stock') || v.clip)
         bad('full_video needs a narrated visual.video handoff; no slide/still substitution or b-roll splice');
       if (['broll', 'quote'].includes(s.type)) bad('full_video generated cuts use ordinary narrated cards');
-      if (!text(v.bg) || !text(v.bgPrompt)) bad('keep a source image path and its generation prompt');
+      // A stock photograph (visual.source "stock") is a supplied source image: a license record, no prompt.
+      if (!text(v.bg) || (!text(v.bgPrompt) && v.source !== 'stock')) bad('keep a source image path and its generation prompt');
       if (!text(v.video?.prompt)) bad('store the motion prompt before generation');
       if (v.video?.resolution !== '1080p' || v.video?.generateAudio !== false)
         bad('reference quality uses explicit 1080p and generateAudio:false with separate narration');

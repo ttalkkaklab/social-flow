@@ -13,7 +13,7 @@ description: >
   checkers and the author's own read. Plans each promise, visual change and sound event.
   Nothing is generated here. Produce builds the approved board; autoproduce runs unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
 ---
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
@@ -328,7 +328,9 @@ pick an arc** — hook → drip → cta (scenes-schema §playback order).
   `naver_search` (the larger quota).
 - For **reference images**, `serp_image_search` or `naver_search(type: "image")`. A searched
   image used as-is needs `license` — unspecified results have no rights check. **Screens you
-  make yourself get generated, not searched** (engine split in §5).
+  make yourself get generated, not searched** (engine split in §5). **Real footage or a real
+  photograph of the subject** comes from `stock_search` (Pexels · Pixabay · NASA · Commons, each item
+  with its `visual.license` block) or the Korean archives in [docs/research/2026-09-07-free-stock-sources](../../docs/research/2026-09-07-free-stock-sources/index.html).
 - **Government-origin evidence** (statistics, policy, regional status) comes from
   `datago_search` (data.go.kr). One official origin satisfies the cross-check. Collection,
   attribution, and the data-as-of-date trap: the **datago skill**.
@@ -955,7 +957,9 @@ costs nothing — which is the whole reason the plan and the spend were split (o
 2026-09-04).
 
 **Shooting mode plans no stills at all** (the screen comes from the user's recording), and
-**slide scenes have no image** — their screen is HTML, authored at produce §3.6.
+**slide scenes have no image** — their screen is HTML, authored at produce §3.6. **A stock cut is
+planned here and downloaded by produce**: `stock_search` gives the file URL and the license record;
+the board stores `visual.source: "stock"`, the `footage/` or `images/stock/` name and `visual.license` (scenes-schema §stock material).
 
 **Read the size off the preset, don't memorize it** — it goes in the plan so produce doesn't
 re-decide it.

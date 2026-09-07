@@ -119,7 +119,8 @@ This outranks every other rule in the plugin, the skills and the reference docs.
 This replaces the older mandatory-video hook and fixed editorial-cut quotas.
 Use `skills/storyboard/references/render-routing.md` before choosing any assets.
 Every generated cut declares `shot.render.mode`, `purpose` and `reason`:
-`still_camera`, `character_html`, `object_html`, `data_graph`, `generated_video`, or `editorial_html`.
+`still_camera`, `character_html`, `object_html`, `data_graph`, `generated_video`, `editorial_html`,
+or `stock_video` (a free stock or archive clip with its `visual.license` record, 2026-09-07).
 People mentioned in narration do not automatically need 3D characters; incidental numbers
 in a mechanism do not automatically need a graph. Choose the information the viewer needs.
 

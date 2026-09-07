@@ -38,6 +38,20 @@ for SRC in footage/*.mp4 footage/*.mov footage/*.m4v; do
 done
 ```
 
+- **Stock clips take the same lane, with two differences.** A `visual.source: "stock"` cut names
+  a file under `footage/` that does not exist yet: download `files[0].url` from the storyboard's
+  `stock_search` record (or the page in `visual.license.url`) into that exact name first, then
+  normalize it with the loop above — a Commons WebM goes through the same ffmpeg call. Its
+  sound is dropped, so skip the PCM pull and let TTS, subtitles and BGM run over it as over a
+  motion background; `visual.in` is the trim start inside the source. Keep the download
+  command and date in `.work/decisions.tsv` beside the license record: the terms that applied
+  on the day you fetched the file are the ones you can prove later.
+
+  ```bash
+  curl -L --fail -o footage/s4-commons-12345.webm "<files[0].url>"
+  ffmpeg -y -v error -ss "${IN:-0}" -i footage/s4-commons-12345.webm -an \
+    -r 30 -vsync cfr -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p .work/footage/s4-commons-12345.mov
+  ```
 - **Check first** — does every `visual.clip` on the filmed scenes in scenes.js exist. If even
   one is missing, **stop there** and tell the user which file is empty. Go on without it and
   you get a video with that scene missing, and you find out later.

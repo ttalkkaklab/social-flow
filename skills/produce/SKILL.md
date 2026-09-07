@@ -263,7 +263,10 @@ source, no real person, no text expected from an engine that can't write it, the
 written, no minor in frame. The storyboard checked this against a plan; you are checking it
 against the call that is about to go out.
 
-Then generate, **resending each stored `visual.bgPrompt` verbatim**, and **look at every
+**A stock photograph is not generated**: a `visual.source: "stock"` still names its file under
+`images/stock/` and carries `visual.license`; download it from the record's `url` (or the
+`stock_search` file URL) into that exact name, and log the date beside the license in
+`.work/decisions.tsv`. Then generate the rest, **resending each stored `visual.bgPrompt` verbatim**, and **look at every
 picture that comes back** before moving on — a wrong still is the cheapest thing in this
 pipeline to catch and the most expensive to carry, since §3 turns it into a clip.
 
@@ -508,8 +511,10 @@ printf 'produce\tfallback\tmotion background i3\tveo_img2video\tARK_API_KEY abse
 
 Normalize the user's `footage/` files once, then hand them to the builder as cards.
 The full lane — the VFR trap, the normalize command, the naming the builder expects —
-is in [optional-lanes.md](references/optional-lanes.md) §3.5. **No `footage/` directory
-means skip this step.**
+is in [optional-lanes.md](references/optional-lanes.md) §3.5. **Stock clips**
+(`visual.source: "stock"`, scenes-schema §stock material) take the same lane after a download
+into the name the board set; their sound is dropped. **No `footage/` directory and no stock
+cut means skip this step.**
 ### 3.6 Author the slides, then capture them (only on episodes that have them)
 
 **The slides are authored here, not in the storyboard** (owner directive 2026-09-04 — slide
@@ -1161,7 +1166,11 @@ subject and withhold the tally, the winner, the twist and the payoff number; a d
 that walks the episode in order, or whose main clauses are summary verbs (살펴봅니다 ·
 확인해요 · 정리했습니다), is report voice, not a hook. Before saving, read the title and the
 description alone with scenes.js closed and write one line — what do I now know about the
-ending? If that line names it, rewrite. Then the two machine checks, right after saving:
+ending? If that line names it, rewrite. **Credits for stock material**: every
+`visual.license` on the board with `attributionRequired: true` goes under a `출처` line at the
+end of the YouTube description and of the IG and FB captions (`attribution` verbatim, one per
+line); add the same line for a Pexels, Pixabay or government file when the author is known.
+Then the two machine checks, right after saving:
 
 ```bash
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references

@@ -28,6 +28,7 @@ import {
 } from '../dist/config.js';
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from '../dist/tools.js';
 import { ROUTES, threadsTextLength } from '../dist/handlers.js';
+import { STOCK_PROVIDERS, STOCK_MEDIA, STOCK_ORIENTATIONS, STOCK_MAX_LIMIT } from '../dist/stock-client.js';
 import { TTS_VOICE_NAMES, VALID_TTS_MODELS } from '../dist/tts-client.js';
 import {
   DEFAULT_SUPERTONIC_LANGUAGE,
@@ -833,6 +834,14 @@ describe('single-source constants', () => {
     assert.deepEqual(enumOf('serp_image_search', 'aspect'), [...IMAGE_ASPECTS]);
     assert.deepEqual(enumOf('serp_image_search', 'imageType'), [...IMAGE_TYPES]);
     assert.deepEqual(enumOf('serp_image_search', 'license'), [...IMAGE_LICENSES]);
+  });
+
+  it('stock_search enums match the stock-client source of truth', () => {
+    assert.deepEqual(enumOf('stock_search', 'media'), [...STOCK_MEDIA]);
+    assert.deepEqual(enumOf('stock_search', 'orientation'), [...STOCK_ORIENTATIONS]);
+    assert.deepEqual(byName.get('stock_search').inputSchema.properties.providers.items.enum, [...STOCK_PROVIDERS]);
+    const m = (byName.get('stock_search').inputSchema.properties.limit.description ?? '').match(/max\s*(\d+)/i);
+    assert.equal(m && Number(m[1]), STOCK_MAX_LIMIT);
   });
 
   it('search-tool limit caps agree between tool descriptions and the canonical constants', () => {

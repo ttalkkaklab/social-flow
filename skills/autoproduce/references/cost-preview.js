@@ -171,7 +171,9 @@ function videoSlots(scenes) {
     const v = s.visual || {};
     const shotNo = i + 1;
     if (v.reuse !== undefined) { scenePlan(s); return; } // Validated import, no paid slot.
-    if (s.type === 'outro' || (!v.video && (['recording', 'screencast'].includes(v.source) || v.picture === 'recording'))) return;
+    // A supplied file (a recording, or a free stock clip with its license record) bills nothing.
+    if (s.type === 'outro' || (!v.video && (['recording', 'screencast'].includes(v.source) || v.picture === 'recording' ||
+        (v.source === 'stock' && typeof v.clip === 'string')))) return;
     const plan = scenePlan(s);
     if (plan && plan.engine === 'seedance') {
       slots.push({ shot: shotNo, kind: plan.kind, engine: plan.engine, duration: Number(s.duration),

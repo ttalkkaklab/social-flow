@@ -1062,7 +1062,7 @@ window.SB_DOC = {
       angle: { eye: "eye level", high: "looking down", low: "looking up",
                overhead: "overhead", dutch: "tilted" },
       type: { cover: "cover", points: "body", quote: "quote", broll: "b-roll", outro: "outro" },
-      pic: { still: "still picture", "ai-video": "AI video", recording: "recording",
+      pic: { still: "still picture", "ai-video": "AI video", recording: "recording", stock: "stock clip",
              asset: "shared asset", slide: "HTML slide" },
       beat: { hook: "cover", hooking: "hooking", drip: "curiosity stage", result: "result", body: "body",
               turn: "turn", cta: "what next" },
@@ -1184,6 +1184,7 @@ window.SB_DOC = {
       feelLabel: "What the viewer should feel",
       feelMissing: "not written — write shot.feel before the size, angle and camera (directing-grammar §5)",
       infoLabel: "What this shot adds",
+      licenseLabel: "Source and license",
       infoTypeLabel: "Information route",
       spaceLabel: "The layout from the camera",
       spaceMissing: "not written — fill shot.space before generating the still (directing-grammar §3.5)",
@@ -1312,7 +1313,7 @@ window.SB_DOC = {
               cutaway: "딴 데 보기", reaction: "반응" },
       angle: { eye: "눈높이", high: "내려다봄", low: "올려다봄", overhead: "머리 위", dutch: "기울임" },
       type: { cover: "커버", points: "본문", quote: "인용", broll: "삽입 영상", outro: "아웃트로" },
-      pic: { still: "정지 그림", "ai-video": "AI 영상", recording: "녹화분",
+      pic: { still: "정지 그림", "ai-video": "AI 영상", recording: "녹화분", stock: "외부 영상",
              asset: "공용 소재", slide: "HTML 슬라이드" },
       beat: { hook: "커버", hooking: "후킹", drip: "호기심 풀기", result: "결과", body: "본문", turn: "전환", cta: "다음 안내" },
       joinIs: function (v) { return "이음 · " + v; },
@@ -1431,6 +1432,7 @@ window.SB_DOC = {
       feelLabel: "보는 사람이 느낄 것",
       feelMissing: "안 적힘 — 크기·각도·카메라보다 shot.feel 을 먼저 적어 주세요 (directing-grammar §5)",
       infoLabel: "이 샷이 더하는 것",
+      licenseLabel: "출처·라이선스",
       infoTypeLabel: "정보 표현 방식",
       spaceLabel: "카메라에서 본 배치",
       spaceMissing: "안 적힘 — 정지 그림을 만들기 전에 shot.space 를 채워 주세요 (directing-grammar §3.5)",
@@ -1672,6 +1674,7 @@ window.SB_DOC = {
   var CLOSE_SIZES = { cu: 1, choker: 1, ecu: 1 };
   /* Shot-type and picture-layer display names: STRINGS.*.type · STRINGS.*.pic */
   function inferredPicture(s) {
+    if (s.visual && s.visual.source === "stock" && s.visual.clip) return "stock";
     if (s.visual && (s.visual.source === "recording" || s.visual.source === "screencast")) return "recording";
     if (s.visual && s.visual.slide && s.visual.slide.kind === "camera") return "still";
     if (s.visual && s.visual.slide) return "slide";
@@ -1790,6 +1793,14 @@ window.SB_DOC = {
      let one shooting scene drag the generated scenes into the shooting contract too
      (40 characters, 5~6 characters per second). */
   function recOf(s) { return !!(s && s.visual && s.visual.source === "recording"); }
+  /* A supplied stock file shows where it came from and under what terms (scenes-schema §stock material) —
+     the approver reads the license next to the cut, not in a sidecar. */
+  function licenseText(l) {
+    var parts = [l.provider, l.license, l.author].filter(Boolean);
+    if (l.attributionRequired) parts.push("credit: " + (l.attribution || "(missing)"));
+    if (l.url) parts.push(l.url);
+    return parts.join(" · ");
+  }
   /* Only the portrait shooting lane is "top block + recording band" — a 16:9 recording gets
      seated as a strip to fit the portrait canvas (screencast-overlay). In landscape the clip
      fills the frame, so there is no strip and the text goes to the lower third. */
@@ -3418,7 +3429,7 @@ window.SB_DOC = {
     });
     h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
     h += '<div class="shot-meta"><span class="craft">' +
-         '<span class="vtag' + (pic === "ai-video" ? " gen" : "") + '">' + esc(T.pic[pic] || pic) + "</span>" +
+         '<span class="vtag' + (pic === "ai-video" || pic === "stock" ? " gen" : "") + '">' + esc(T.pic[pic] || pic) + "</span>" +
          '<span class="vtag' + (ov === "html" ? " html" : "") + '">' + esc(overlayLabel(s)) + "</span>" +
          charsOf(s).map(function (id) {
            return '<span class="char-tag">' + esc(castName(id)) + "</span>"; }).join("") + "</span>" +
@@ -3427,6 +3438,7 @@ window.SB_DOC = {
            esc(g.feel || T.feelMissing) + "</span>") +
          (g.info ? '<span class="shot-info"><b>' + esc(T.infoLabel) + "</b>" + esc(g.info) + "</span>" : "") +
          (g.render ? '<span class="shot-info"><b>' + esc(window.RENDER_ROUTING ? window.RENDER_ROUTING.LABELS[g.render.mode] || g.render.mode : g.render.mode) + "</b>" + esc(g.render.reason || "") + "</span>" : "") +
+         (s.visual && s.visual.license ? '<span class="shot-info"><b>' + esc(T.licenseLabel) + "</b>" + esc(licenseText(s.visual.license)) + "</span>" : "") +
          (g.infoType ? '<span class="shot-info"><b>' + esc(T.infoTypeLabel) + "</b>" + esc(g.infoType) + "</span>" : "") +
          (spaceTextOf(g.space) ? '<span class="shot-info"><b>' + esc(T.spaceLabel) + "</b>" + esc(spaceTextOf(g.space)) + "</span>"
             : (genStill(s) && !FILL_FRAME[g.size] ? '<span class="shot-info shot-feel miss"><b>' + esc(T.spaceLabel) + "</b>" + esc(T.spaceMissing) + "</span>" : "")) +

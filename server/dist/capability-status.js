@@ -110,6 +110,19 @@ export function capabilityStatus() {
             ],
         },
         {
+            capability: 'stock_footage',
+            providers: [
+                { provider: 'pexels', configured: has(config.pexelsApiKey), needs: 'PEXELS_API_KEY',
+                    note: 'stock_search — free photos and clips under the Pexels License, 200/hour' },
+                { provider: 'pixabay', configured: has(config.pixabayApiKey), needs: 'PIXABAY_API_KEY',
+                    note: 'stock_search — free photos and clips under the Pixabay Content License, 100/minute' },
+                { provider: 'nasa', configured: true, needs: 'no key',
+                    note: 'stock_search — images-api.nasa.gov, US government works (insignia and current astronauts excluded)' },
+                { provider: 'wikimedia commons', configured: true, needs: 'no key',
+                    note: 'stock_search — public domain, CC0 and CC BY files only; video arrives as WebM' },
+            ],
+        },
+        {
             capability: 'research',
             providers: [
                 { provider: 'naver', configured: has(config.naverClientId) && has(config.naverClientSecret),
