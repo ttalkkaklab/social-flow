@@ -109,7 +109,6 @@ STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
 cd "$WORKDIR"
 node "$HERE/check-production.js" "$STORYBOARD" --workdir "$PWD" --ready --manifest --json > production-preflight.json
-FULL_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.plainVideoShots || p.generatedShots || []).join(" "))' "$PWD/production-preflight.json")
 REUSED_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.reusedShots || []).join(" "))' "$PWD/production-preflight.json")
 
 # Format preset — the `: "${VAR:=value}"` block written by format-resolve.js.
