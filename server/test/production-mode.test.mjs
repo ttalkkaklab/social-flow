@@ -26,7 +26,6 @@ function fixture(n = 3) {
       reason: 'Reveal the stream.', action: 'The buildings rise.' }, videoDesign: {
       motion: {kind:'subject_action',subject:'Buildings',visibleChange:'Buildings rise away from the stream.',beats:[{at:0,state:'Buildings enclose the stream.'},{at:4,state:'Buildings clear the river bed.'}]},
       look: 'miniature', worldId: 'valley', before: 'Buildings enclose the stream.', action: 'Buildings rise vertically.',
-      after: 'The full stream is visible.',
       continuity: 'The river and mountain retain their original shape.', reject: 'Reject unstable buildings and changing trees.' } },
     visual: { why: 'Physical removal exposes the stream.', action: 'The buildings rise.', bg: `images/scene-${i + 1}.png`,
       camera: { framing: ['Elevated three-quarter view', 'Low wide view of the valley', 'Close view of the stream bed'][i % 3],
@@ -265,4 +264,32 @@ test('three identical set-ups in a row fail full video; a changed framing passes
   assert.match(mode.check(win).join(), /shots 1, 2, 3: the same framing and camera move/);
   win.SCENES[1].visual.camera.framing = 'Low wide view';
   assert.doesNotMatch(mode.check(win).join(), /three times in a row/);
+});
+
+test('a static camera leaves speed empty, and the final state is written once', () => {
+  const win = fixture(), s = win.SCENES[0], d = s.shot.videoDesign;
+  delete s.visual.camera.speed;
+  assert.deepEqual(mode.check(win), []);
+  assert.match(assemble(win, 0).motionPrompt, /^Elevated three-quarter view, static camera, /);
+  assert.match(assemble(win, 0).endFramePrompt, /final state: Buildings clear the river bed\./);
+  s.visual.camera.movement = 'dolly in';
+  assert.match(mode.check(win).join(), /visual\.camera\.speed is required/);
+  assert.throws(() => assemble(win, 0), /Missing visual\.camera\.speed/);
+  s.visual.camera.movement = 'static';
+  d.after = 'A crane now stands where the blocks were.';
+  assert.match(mode.check(win).join(), /after must be the last motion beat/);
+  assert.throws(() => assemble(win, 0), /after must be the last motion beat/);
+  d.after = 'Buildings clear the river bed';
+  assert.deepEqual(mode.check(win), []);
+  delete d.after; d.motion.kind = 'spatial_reveal'; d.motion.reason = 'The camera carries the reveal.';
+  assert.match(mode.check(win).join(), /videoDesign\.after is required/);
+  assert.throws(() => assemble(win, 0), /Missing videoDesign\.after/);
+});
+test('a shot look outside the selected preset fails the full check, not only the draft', () => {
+  const win = fixture();
+  win.PRODUCTION.style.preset = 'photoreal';
+  win.PRODUCTION.style.selection = { kind: 'user', reference: 'User chose photoreal for this episode.' };
+  assert.match(mode.check(win).join(), /conflicts with the selected episode style/);
+  win.SCENES.forEach(s => { s.shot.videoDesign.look = 'realistic'; });
+  assert.deepEqual(mode.check(win), []);
 });

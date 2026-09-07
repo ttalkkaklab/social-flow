@@ -118,22 +118,25 @@ shot: {
     },
     before: 'Apartment blocks surround the rocky stream in a mountain valley.',
     action: 'The complete building blocks rise vertically and leave the frame.',
-    after: 'The continuous stream and rocky valley floor are fully visible.',
     continuity: 'The mountain silhouette, stream route and existing trees stay fixed.',
     reject: 'Reject bending buildings, changing window counts, drifting terrain or obscured water.'
   }
 },
 visual: {
   camera: { framing: 'elevated three-quarter view of the whole valley', movement: 'static',
-            speed: 'very slow', end: 'the exposed stream centred' },
+            end: 'the exposed stream centred' },   // a static camera has no speed to state
   why: 'The removal is a continuous physical change no still can show.',
   action: 'The blocks lift clear of the stream.'
 }
 ```
 
-One camera contract per shot: the four `visual.camera` slots, in vendor vocabulary.
-`videoDesign.camera` is retired and rejected. Write generator-facing design and style fields
-in English. The `reject` field is for review; it is never sent as a negative instruction.
+One camera contract per shot: the four `visual.camera` slots, in vendor vocabulary; on a
+static camera `speed` stays empty and the span reads `static camera`. `videoDesign.camera` is
+retired and rejected. The final state is written once: on a `subject_action` shot it is the
+last motion beat, so `after` is optional there and must repeat that beat exactly when written;
+a `spatial_reveal` or `archive_hold` shot states it in `after`. Write generator-facing design
+and style fields in English. The `reject` field is for review; it is never sent as a negative
+instruction.
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/spatial-prompts.js storyboard/ --shot 1
@@ -158,9 +161,11 @@ end frame on a travelling-camera shot.
 Every full-video `videoDesign.motion` declares `kind`, `subject` and `visibleChange`.
 Use `subject_action` for acted people, interactions and changing objects. Add at least two
 ordered `beats: [{at, state}]` within the clip duration: what the subject visibly does at
-those seconds, not camera positions. The seconds stay in the plan for the playback review;
-the prompt orders the same beats by description (at first, then, finally) because Seedance
-takes no clock. Choose a simple action with a visible result that fits the narration. Preserve identity and materials while allowing pose, expression and position
+those seconds, not camera positions. The last beat is the shot's final state: the end-frame
+edit and the motion prompt both end on it, and `production-mode.js` rejects an `after` that
+says something else. The seconds stay in the plan for the playback review; the prompt orders
+the same beats by description (at first, then, finally) because Seedance takes no clock.
+Choose a simple action with a visible result that fits the narration. Preserve identity and materials while allowing pose, expression and position
 to change. Miniature is a surface treatment; it does not mean frozen figurines.
 
 Use `spatial_reveal` for a location introduction with a specific newly exposed feature and

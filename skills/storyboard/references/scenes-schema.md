@@ -325,7 +325,9 @@ channel snapshot. Actual approval binds the quote fingerprint; changing inputs r
 quote. `check-production.js` blocks missing/stale approval and over-budget calls.
 
 `shot.videoDesign` in full_video carries `look`, `worldId`, `motion`, `before`, `action`,
-`after`, `continuity` and `reject`; the camera is the four `visual.camera` slots (§camera),
+`continuity` and `reject`, plus `after` as the final state; on a `subject_action` shot the last
+motion beat is that state, so `after` is optional there and must repeat it exactly when
+written. The camera is the four `visual.camera` slots (§camera),
 never a `videoDesign.camera` sentence, and `spatial-prompts.js` assembles the motion prompt
 from them through the same recipe and prompt gate as every other clip. Keep real
 infoType/purpose, data evidence and narration. The source PNG, stored motion prompt and
@@ -1114,7 +1116,7 @@ bed runs across the whole feature; fading it at a scene change would punch a hol
 ```js
 camera: {
   movement: "dolly in",                                   // what the camera does — `static` is a choice, not an empty slot
-  speed: "very slow",                                     // how fast it does it
+  speed: "very slow",                                     // how fast it does it — stays empty on a static camera
   framing: "chest-up, eyes on the upper third",           // what is held while it moves
   end: "subject centred, hands entering the lower third"  // where it stops
 }
@@ -1127,7 +1129,8 @@ crop window (eased zoom towards the subject, pan with an optional zoom drift, a 
 cover, handheld drift), and the same vocabulary applies: `dolly in`/`zoom in` reads as a slow
 push towards the subject, `dolly out` as a pull-out, `handheld` as drift, `truck` as a pan
 (the feel each serves: directing-grammar §5 Still column; the option names: produce SKILL §6).
-`speed` reads on a still too — it sets how hard the window moves, on the beat ladder in
+A `static` camera has no speed to state: leave `speed` empty there, and the assembled span
+reads `static camera`. `speed` reads on a still too — it sets how hard the window moves, on the beat ladder in
 directing-grammar §4 (still lane): `very slow` for explain, `slow` for the payoff, `fast` /
 `very fast` for action and CTA cards, which also accelerate to the cut point. produce §6
 converts the word into the card's `span=`/`ease=` knobs. A still with no camera keeps the
@@ -2509,11 +2512,12 @@ strip says no violations.
       sibling `negative` field, no timecodes or digit seconds on a seedance route
 - [ ] **Every generated-video shot has all four `visual.camera` slots filled** (§camera) — b-roll,
       motion background, and quote speech clips. An empty `end` is the defect this checks for;
-      `movement: "static"` is a filled slot, not an empty one
+      `movement: "static"` is a filled slot, not an empty one, and `speed` is the one slot that
+      stays empty on a static camera
 - [ ] **A generated clip's `duration` matches what the cut is for** (§cut length) — an insert
       isn't 8 seconds because 8 was the default
 - [ ] **`visual.character` names whoever from the channel cast is on screen** (§character
       reference) — the subject of the shot first in the array
 - [ ] **Every generated-video shot says what it sounds like in `visual.audio`** (§clip audio) —
       left blank, the engine invents speech under the narration. A clip planned silent
-      (`generateAudio:false`, every full-video cut) has nothing to describe and skips this
+      (`generateAudio:false`, every full-video cut) has nothing to describe and skips this check

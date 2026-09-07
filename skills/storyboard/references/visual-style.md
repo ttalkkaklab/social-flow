@@ -52,7 +52,8 @@ keep their original appearance.
 
 Both hybrid and full video can write image prompts with `spatial-prompts.js`. An image-only
 cut still provides `shot.videoDesign`'s look, before, action, after and continuity, plus
-`visual.camera.framing`; that metadata does not turn the cut into video. Use the returned
+`visual.camera.framing`; that metadata does not turn the cut into video. On a video shot with
+`subject_action` motion the last beat is the final state and `after` may be left out. Use the returned
 `sourcePrompt` for the actual image generation and link the result into the storyboard HTML.
 For miniature, attach the pack's reference image with the returned `sourceImageArgs`.
 Photoreal and webtoon make the first image from the preset description and reference the

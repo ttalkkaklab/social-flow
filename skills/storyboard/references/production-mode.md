@@ -17,8 +17,10 @@ An explicit choice already made for this episode is authorization; reuse it on r
 An old approved board with no choice gets this gate at produce entry, before generation.
 Do not reinterpret an approval of a topic as approval of full-video spend.
 
-- **혼합 제작** — 영상 1~2개와 HTML 설명 슬라이드·이미지 카메라 무빙을 섞습니다.
-- **전체 영상** — 모든 새 장면을 영상으로 만듭니다. 선택한 화풍을 모든 장면에 적용하며 생성비가 늘어납니다.
+- **hybrid** (혼합 제작) — one or two generated clips mixed with HTML explanation slides and
+  still-camera images.
+- **full_video** (전체 영상) — every new scene is a generated clip in the chosen style, which
+  raises generation cost.
 
 Run the read-only calculator for the intended length before shots exist:
 

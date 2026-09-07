@@ -982,8 +982,11 @@ function check(win, fmt, opts) {
     if (generatedVideo(s)) {
       try { scenePlan(s); } catch (e) { machine(where, e.message); }
       const cam = v.camera || {};
+      // A static camera has no speed to state — the assembled span reads "static camera" (§camera).
+      const staticCam = /^(static|fixed|locked)/i.test(String(cam.movement || '').trim());
       ['movement', 'speed', 'framing', 'end'].forEach((slot) => {
-        if (!cam[slot]) machine(where, `visual.camera.${slot} is empty — a generated shot leaves here with all four filled`);
+        if (!cam[slot] && !(slot === 'speed' && staticCam))
+          machine(where, `visual.camera.${slot} is empty — a generated shot leaves here with all four filled (speed may stay empty on a static camera)`);
       });
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);

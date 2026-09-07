@@ -2,7 +2,7 @@
 'use strict';
 const fs = require('fs'), path = require('path');
 const { readScenes } = require('../../autoproduce/references/cost-preview.js');
-const { full, STYLES, motionErrors, CAMERA_SLOTS } = require('./production-mode.js');
+const { full, STYLES, motionErrors, missingCameraSlots, finalState } = require('./production-mode.js');
 const { resolveStylePack } = require('./style-pack.js');
 const PROMPT = require('./assemble-bg-prompt.js');
 const LOOKS = {
@@ -42,16 +42,17 @@ function assemble(win, index) {
   if (!d || !style || !LOOKS[d.look]) throw new Error('Choose style and videoDesign before assembling prompts');
   if (!v || typeof v !== 'object') throw new Error('Missing visual');
   if (d.camera !== undefined) throw new Error('videoDesign.camera is retired; the camera lives in the four visual.camera slots');
-  require_({ 'videoDesign.before': d.before, 'videoDesign.action': d.action, 'videoDesign.after': d.after, 'videoDesign.continuity': d.continuity,
-    'style.world': style.world, 'style.materials': style.materials, 'style.palette': style.palette, 'style.lighting': style.lighting,
-    'style.camera': style.camera, 'visual.camera.framing': v.camera?.framing });
   const isVideo = full(win.PRODUCTION) || !!v.video;
-  const camera = v.camera, missingSlots = CAMERA_SLOTS.filter(slot => !text(camera[slot]));
-  if (isVideo && missingSlots.length) throw new Error('Missing ' + missingSlots.map(s => 'visual.camera.' + s).join(', ') + ' (the motion prompt is assembled from the four slots)');
   if (isVideo) {
     const errors = motionErrors(scene);
     if (errors.length) throw new Error(errors.join('; '));
   }
+  const after = finalState(d);
+  require_({ 'videoDesign.before': d.before, 'videoDesign.action': d.action, 'videoDesign.after (or the last motion beat)': after,
+    'videoDesign.continuity': d.continuity, 'style.world': style.world, 'style.materials': style.materials, 'style.palette': style.palette,
+    'style.lighting': style.lighting, 'style.camera': style.camera, 'visual.camera.framing': v.camera?.framing });
+  const camera = v.camera, missingSlots = missingCameraSlots(camera);
+  if (isVideo && missingSlots.length) throw new Error('Missing ' + missingSlots.map(s => 'visual.camera.' + s).join(', ') + ' (the motion prompt is assembled from the four slots)');
   const canvas = win.FORMAT === 'youtube-long-16x9' ? 'Landscape 16:9' : 'Portrait 9:16';
   const preset = style.preset || 'spatial-explainer'; // Resume existing miniature boards.
   if (preset !== 'spatial-explainer' && !STYLES[preset]) throw new Error('Unknown visual style: ' + preset);
@@ -90,7 +91,7 @@ function assemble(win, index) {
     styleGuidePath: pack?.guidePath || null,
     sourceReferenceImages: pack?.referenceImagePaths || [],
     sourceImageArgs: pack ? { referenced_image_paths: pack.referenceImagePaths } : {},
-    endFramePrompt: 'Edit the supplied opening image into this final state: ' + d.after + '\n' + treatment + '\n' + lock +
+    endFramePrompt: 'Edit the supplied opening image into this final state: ' + after + '\n' + treatment + '\n' + lock +
       '\nPreserve lighting. Follow the planned camera endpoint: ' + (camera.end || camera.framing),
     motionPrompt };
 }

@@ -7,6 +7,14 @@
   // assembles the motion prompt's camera span from them, so nothing else describes the camera.
   const CAMERA_SLOTS = ['movement', 'speed', 'framing', 'end'];
   const normalize = value => String(value || '').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
+  // A static camera has no speed to state (the span reads "static camera"), so that one slot may stay empty.
+  const staticCamera = camera => /^(static|fixed|locked)/i.test(String(camera?.movement || '').trim());
+  const missingCameraSlots = camera => CAMERA_SLOTS.filter(slot => !text(camera?.[slot]) && !(slot === 'speed' && staticCamera(camera)));
+  // The final state is written once: the last motion beat on an acted shot, videoDesign.after otherwise.
+  function finalState(design) {
+    const beats = design?.motion?.kind === 'subject_action' ? design.motion.beats : null;
+    return Array.isArray(beats) && beats.length ? beats[beats.length - 1]?.state : design?.after;
+  }
   const STYLES = {
     'cinematic-miniature': { label: '시네마틱 미니어처 디오라마', looks: ['miniature', 'architectural'],
       prompt: 'Cinematic miniature diorama, tactile matte handcrafted surfaces, articulated miniature figures, coherent scale and soft contact shadows.' },
@@ -51,6 +59,8 @@
       if (!Array.isArray(beats) || beats.length < 2 || beats.some(b => !b || !Number.isFinite(b.at) || b.at < 0 || b.at > scene.duration || !text(b.state)) ||
           beats.some((b, i) => i && b.at <= beats[i - 1].at) || new Set(beats.map(b => b.state?.trim())).size < 2)
         errors.push('Subject action needs distinct, ordered motion.beats with seconds and visible states within the shot');
+      else if (text(d.after) && normalize(d.after) !== normalize(beats[beats.length - 1].state))
+        errors.push('videoDesign.after must be the last motion beat, written once; drop after or make the two identical');
       const directions = [d.action, d.continuity, scene.visual?.video?.prompt].join(' ');
       if (/keep (?:every|all) (?:person|people|characters?).{0,40}fixed|(?:people|women|characters?) (?:and door )?(?:stay|remain) fixed|only (?:very )?(?:small|subtle) (?:natural )?breathing|no new text, objects or actions/i.test(directions))
         errors.push('Subject action contradicts a global freeze or breathing-only instruction');
@@ -97,11 +107,12 @@
       if (v.video?.resolution !== '1080p' || v.video?.generateAudio !== false)
         bad('reference quality uses explicit 1080p and generateAudio:false with separate narration');
       if (v.video?.engine !== 'seedance') bad('full_video uses the priced Seedance image-to-video route');
-      for (const key of ['look', 'worldId', 'before', 'action', 'after', 'continuity', 'reject'])
+      for (const key of ['look', 'worldId', 'before', 'action', 'continuity', 'reject'])
         if (!text(design[key])) bad('videoDesign.' + key + ' is required');
+      if (design.motion?.kind !== 'subject_action' && !text(design.after)) bad('videoDesign.after is required unless the last motion beat states the final result');
       if (design.camera !== undefined) bad('videoDesign.camera is retired; the camera lives in the four visual.camera slots');
-      for (const slot of CAMERA_SLOTS)
-        if (!text(v.camera?.[slot])) bad('visual.camera.' + slot + ' is required; the motion prompt is assembled from the four slots');
+      for (const slot of missingCameraSlots(v.camera))
+        bad('visual.camera.' + slot + ' is required; the motion prompt is assembled from the four slots (speed may stay empty on a static camera)');
       if (!['miniature', 'architectural', 'realistic', 'webtoon', 'archive'].includes(design.look))
         bad('videoDesign.look must be miniature, architectural, realistic, webtoon or archive');
       if (STYLES[style.preset] && design.look !== 'archive' && !STYLES[style.preset].looks.includes(design.look))
@@ -130,7 +141,7 @@
     return { ...base, videoBudgetUsd: production.videoBudgetUsd,
       generatedVideoMax: full(production) ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { STYLES, MODES, CAMERA_SLOTS, eligible, full, signature, check, policy, motionErrors };
+  const api = { STYLES, MODES, CAMERA_SLOTS, eligible, full, signature, check, policy, motionErrors, missingCameraSlots, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);
