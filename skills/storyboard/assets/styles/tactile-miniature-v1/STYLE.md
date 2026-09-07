@@ -1,71 +1,81 @@
-# Tactile miniature · 기본 풀 영상 화풍
+# Tactile miniature · the default full-video look
 
-이 팩은 다른 기기에서도 같은 재질과 공간 표현으로 시작하도록 참조 이미지와 설명을
-함께 제공한다. 이미지들은 이 프로젝트에서 생성한 설명용 그림이다. 유튜브 원본의
-프레임이나 역사 자료가 아니며 특정 인물의 실제 모습도 아니다. 결과가 픽셀 단위로
-같아진다는 뜻은 아니다. 사용하는 모델과 장면에 따라 생성 결과가 달라진다.
+This pack ships reference images and rules together so another machine starts from the same
+materials and spatial treatment. The images are explanatory pictures generated for this
+project. They are not frames from the YouTube reference, not historical material, and not the
+likeness of any real person. They do not promise pixel-identical output; results vary with the
+model and the scene.
 
-## 무엇을 먼저 설계하나
+## What to design first
 
-대사의 뜻을 먼저 정한다. 컷마다 누가, 무엇을, 누구에게 하는지와 관객이 보아야 할
-핵심을 한 문장으로 쓴다. 인물 소개라면 인물이 보여야 하고 체포 가담이라면 피해 대상과
-가담의 관계가 보여야 한다. 받아 적는 이야기라면 말하는 사람과 기록하는 사람이 필요하다.
-책·길·방을 놓는 것만으로 대사의 뜻이 전달됐다고 판단하지 않는다.
+Settle the meaning of the line first. For each cut, write one sentence naming who does what to
+whom and what the viewer has to see. An introduction needs the person visible; complicity in an
+arrest needs the victim and the relation of complicity visible; a reported story needs the
+speaker and the person writing it down. Placing a book, a road or a room does not by itself
+carry the line.
 
-그다음 이 팩의 재질과 조명을 적용한다. 참조에 배가 있다고 다른 주제에도 배를 넣거나
-역사 의상이 있다고 현대 인물에게 같은 옷을 입히지 않는다. 확실하지 않은 일화는
-책 속 모형처럼 주장임을 드러내는 구성을 쓴다. 실제 사진이나 문서를 꾸며 내지 않는다.
+Then apply this pack's materials and light. A ship in a reference does not put a ship in
+another topic, and a period costume in a reference does not dress a modern person. An
+uncertain anecdote uses a staging that shows it as a claim, such as a model inside a book.
+Never fabricate a real photograph or document.
 
-## 참조 선택
+## Choosing a reference
 
-| 역할 · `visual.styleRole` | 이미지 | 가져올 특징 |
+| Role · `visual.styleRole` | Image | What to borrow |
 |---|---|---|
-| `environment` | `cutaway.png` | 두께가 있는 벽과 바닥, 연결된 공간, 목재·회벽 질감 |
-| `character` | `character.png` | 자연스러운 인체, 절제된 표정, 옷감, 얼굴을 읽을 수 있는 측광 |
-| `interaction` | `conversation.png` | 행동하는 사람과 대상, 분리된 손과 소품, 서로 맞는 시선 |
-| `transport` | `low-light.png` | 차가운 외부 그림자와 따뜻한 등불, 큰 공간 속 인물의 크기 |
-| `reported_story` | `paper-account.png` | 실제 사건과 구분되는 책 위 종이 무대. 불확실한 전언에만 사용 |
+| `environment` | `cutaway.png` | walls and floors with thickness, connected rooms, timber and plaster texture |
+| `character` | `character.png` | natural anatomy, restrained expression, cloth, side light that keeps the face readable |
+| `interaction` | `conversation.png` | a person acting on someone or something, separate hands and props, matching eyelines |
+| `transport` | `low-light.png` | cool exterior shadow with warm lamps, the scale of a person in a large space |
+| `reported_story` | `paper-account.png` | a paper stage on a book, distinct from the real event; only for uncertain hearsay |
 
-역할은 컷 번호를 순환하며 고르지 않는다. 대사의 핵심에 맞춰 고른다. 첫 장면의 화풍
-참조와 인물의 정체성 참조는 다르다. 처음 인물을 만들 때는 화풍만 가져오고 이후 연결된
-컷에는 승인한 인물 이미지를 추가 참조로 쓴다. 인물의 나이·의상·머리 모양을 유지한다.
+Roles are chosen by what the line is about, never by cycling through cut numbers. The style
+reference for a first scene and the identity reference for a person are different things: the
+first time a person is made, borrow the style only; connected cuts afterwards add the
+approved image of that person as a further reference. Keep the person's age, costume and hair.
 
-## 재질·조명·구도
+## Materials, light and composition
 
-- 나무결, 종이 섬유, 회벽과 돌의 표면, 옷감이 느껴져야 한다. 새 주제의 실제 재료가
-  금속이나 유리라면 그 재료로 바꾼다. 무조건 갈색 목재로 만들지 않는다.
-- 바닥 접촉 그림자, 벽의 두께, 지붕과 기둥의 연결을 보존한다. 떠 있는 물체나 서로
-  뚫고 지나가는 손·문·소품은 다시 만든다.
-- 기본은 부드러운 측광과 아이보리·갈색 계열이다. 위협적인 장면은 청회색 그림자와
-  따뜻한 실내등을 쓰되 인물과 행동이 어둠에 묻히지 않게 한다.
-- 전경·행동 공간·배경의 관계가 보이는 구도를 쓴다. 얕은 심도로 핵심 대상이 흐려지면
-  실패다. 세로 화면에서도 사람과 손, 관련 소품을 알아볼 수 있어야 한다.
-- 표정과 자세는 대사가 뒷받침하는 정도만 표현한다. 악행을 설명한다고 악마 같은 얼굴,
-  확인되지 않은 폭행, 피해자의 대사나 속마음을 덧붙이지 않는다.
+- Wood grain, paper fibre, plaster and stone surfaces and cloth should be felt. When a new
+  topic's real material is metal or glass, switch to that material rather than defaulting to
+  brown timber.
+- Preserve contact shadows on the floor, wall thickness, and the joints of roofs and columns.
+  Remake a floating object or a hand, door or prop that passes through another.
+- The default is soft side light in ivory and brown. A threatening scene may use blue-grey
+  shadow with warm interior lamps, as long as people and the action stay out of the dark.
+- Compose so the relation of foreground, action space and background reads. Shallow depth of
+  field that blurs the key subject is a failure. On a vertical screen the person, the hands
+  and the relevant prop must still be recognizable.
+- Expression and posture go only as far as the line supports. Explaining a wrongdoing does not
+  add a demonic face, an unverified assault, or lines and inner thoughts for the victim.
 
-## 영상으로 넘길 때
+## Handing off to video
 
-한 컷에는 한 가지 동작이나 카메라 이동을 계획한다. 시작 이미지에서 그 동작이 가능한
-공간과 손·소품의 위치를 준비한다. 닫힌 문, 도착 위치처럼 끝 상태가 중요하면 시작
-이미지를 편집해 끝 이미지를 만든다. 두 장을 독립적으로 생성하지 않는다.
+Plan one action or one camera move per cut. In the start image, prepare the space that action
+needs and the position of hands and props. When the end state matters, such as a closed door
+or an arrival point, edit the start image into the end image rather than generating the two
+independently.
 
-끝 이미지는 해당 컷의 시작 이미지를 직접 참조한다. 화풍 샘플만 참조해서 새 장면을
-만들지 않는다. 정지 이미지 두 장의 연속성이 맞아도 중간 영상이 맞다는 뜻은 아니다.
-이미지 수정 뒤에는 이전 영상의 검토 결과를 그대로 재사용하지 않는다.
+The end image references that cut's start image directly. Never build a new scene from the
+style sample alone. Two stills that agree do not prove that the video between them is right.
+After an image edit, do not reuse the previous clip's review result.
 
-## 생성 도구에 전달할 순서
+## Order of calls to the generation tool
 
-1. `spatial-prompts.js`를 설치된 플러그인 위치에서 실행한다. 출력의 `styleGuidePath`를
-   읽고 `sourceReferenceImages`의 실제 이미지를 연다.
-2. 출력의 `sourcePrompt`와 `sourceImageArgs.referenced_image_paths`를 built-in 이미지
-   도구에 함께 전달한다. 파일 경로를 프롬프트에 써 두는 것으로 이미지 전달을 대신하지 않는다.
-3. 장면의 `visual.stylePack`에 출력의 `styleBinding`을 저장한다. 이 값에는 설치 위치와
-   무관한 팩 ID·버전·해시·상대 경로가 들어간다. 다른 맥의 절대 경로를 복사하지 않는다.
-4. 생성된 그림을 대사와 대조한다. 필수 인물·행동·대상, 오해할 소품, 시대에 맞는 의상,
-   가짜 글자, 시작·끝 연결을 각각 확인한다. 아름다움과 내용 일치는 별개다.
-5. 모델이 이미지 참조를 받지 못하거나 팩 파일이 빠졌다면 같은 화풍이라고 조용히
-   가정하지 않는다. 기능 부족을 알린다. 별도 과금 API로 바꾸기 전에는 사용자에게 묻는다.
+1. Run `spatial-prompts.js` from the installed plugin location. Read the `styleGuidePath` it
+   prints and open the actual images in `sourceReferenceImages`.
+2. Pass the output's `sourcePrompt` together with `sourceImageArgs.referenced_image_paths` to
+   the built-in image tool. Writing a file path into the prompt does not attach the image.
+3. Store the output's `styleBinding` in the scene's `visual.stylePack`. It holds the pack id,
+   version, digest and plugin-relative paths, independent of the installation location. Never
+   copy another machine's absolute paths.
+4. Compare the generated picture with the line: the required person, action and recipient, a
+   prop that could mislead, period-appropriate costume, fake lettering, and the start-to-end
+   link, each checked separately. Beauty and content match are different things.
+5. When the model cannot take image references or a pack file is missing, do not assume the
+   same style quietly. Report the missing capability and ask before switching to a separately
+   billed API.
 
-대사가 바뀌면 관련 이미지와 계획을 다시 대조한다. 단순 어휘 변경은 같은 그림을 유지할
-수 있지만 행동·시대·대상·주장의 확실성이 달라지면 다시 설계한다. 파일 존재나 체크섬만으로
-내용 검토를 통과했다고 기록하지 않는다.
+When the line changes, compare the related image and plan again. A wording-only change can
+keep the picture; a change of action, period, recipient or the certainty of a claim means a
+redesign. A file's existence or a checksum is never recorded as a passed content review.

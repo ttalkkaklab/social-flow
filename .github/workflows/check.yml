@@ -44,6 +44,18 @@ jobs:
       # the slide contract: kind vocabulary, motion, acts, determinism — rules pinned by message
       - run: node skills/storyboard/references/check-slide.js --selftest
 
+      # the scene contract, the clip-prompt grammar the assemblers share, cost forecasting and copy meta
+      - run: node skills/storyboard/references/check-scenes.js --selftest
+      - run: node skills/storyboard/references/assemble-bg-prompt.js --selftest
+      - run: node skills/autoproduce/references/cost-preview.js --selftest
+      - run: node skills/platform-guide/references/check-meta.js --selftest
+      - run: python3 skills/autoproduce/references/check-duplicate.py --selftest
+      # the remaining python helpers: batch style overlap, asset resolver, final speech rate.
+      # make-matte.py --selftest stays local: it draws its fixture with Pillow, which is not a CI dependency.
+      - run: python3 skills/platform-guide/references/check-batch.py --selftest
+      - run: python3 skills/channel/references/resolve-asset.py --selftest
+      - run: python3 skills/produce/references/check-final-speech-rate.py --selftest
+
       # the research parser's table rules, and the channel browser's API shape and path guard
       - run: node skills/storyboard/references/check-research.js --selftest
       - run: node skills/channel/references/serve.js --selftest

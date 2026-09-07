@@ -44,8 +44,8 @@ done
 - **Orientation check**: a portrait clip in a landscape episode makes the builder stop at
   `STRICT_DIM=1` before the first ffmpeg. That's a reshoot, so tell the user right away.
 - **Length check**: on a scene that covers narration, the clip has to be longer than
-  `narration + PRE + POST`. Too short and the screen freezes at the end — cut that scene's
-  script down or get the clip reshot.
+  `edit.in + narration + edit.pre + edit.post + outgoing handle`. Short sources block assembly;
+  shorten/replan the cut or reshoot it. See [cinematic-edit.md](cinematic-edit.md).
 - The overlay is **one alpha capture per scene** (a lower third). Reveal enumeration isn't
   used on live-voice scenes — what changes on screen is the recording, not our lettering.
 
@@ -58,7 +58,6 @@ done
   (`start<TAB>end<TAB>sentence`) in seconds relative to the card's start. Pass this file as
   the 5th `cards.tsv` column `subs=` in §6 — live-voice scenes skip speech-boundary
   detection, so the subtitle times can only come from the transcript.
-
 
 ### 3.6 Slide scenes and live-voice audio (only on episodes that have them)
 
@@ -82,7 +81,7 @@ and render again over the same `--out`:
 
 ```bash
 # segment k's window = silence-midpoint k-1 → k on the card's trimmed narration
-# (the same silencedetect signal reveal-timing.py reads); last segment += POST (0.45s)
+# Include the per-card edit.post (default 0.12s) and outgoing live handle in the last group.
 ffmpeg -i .work/pcm/s<shot number>.wav -af silencedetect=n=-35dB:d=0.25 -f null - 2>&1 | grep silence_
 node $REF/render-motion-slide.mjs storyboard/slides/s<shot number>-<slug>.html \
   --out .work/motion/slide-s<shot number> --segs 1:3160,2:2840,3:4210
@@ -149,7 +148,6 @@ done
 - If noise at the head of a recording slips under the trim threshold (-50dB) and comes out
   as dead air, trim that one card by hand — also measured on the first episode.
 
-
 ### 3.7 Screencast splices (only on episodes that have them)
 
 A scene with `visual.source === "screencast"` (scenes-schema §screencast splice) is one window
@@ -187,7 +185,6 @@ $REF/cut-screencast.sh footage/s3-cli-run.mp4 .work/screencast/s3.mp4 \
   segment it would replay the cut from the top; without it the builder carries the playback
   across the reveal with `-ss`. `@` is right when the card is one segment — which is the shape
   this lane usually wants, one moment on screen.
-
 
 ## From §9 — the extra subtitle languages
 

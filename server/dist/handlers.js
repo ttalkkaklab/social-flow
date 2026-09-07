@@ -13,6 +13,7 @@ import * as supertonic from './supertonic-client.js';
 import * as zimage from './zimage-client.js';
 import * as mlx from './mlx-serve-client.js';
 import * as tts from './tts-client.js';
+import { checkedSpeechSchema, generateCheckedSpeech } from './tts-quality.js';
 import * as omni from './omni-client.js';
 import * as video from './video-client.js';
 import { contentFeedback } from './content-feedback.js';
@@ -792,6 +793,10 @@ export const ROUTES = {
     // Returns the script length, not the full text — echoing a 16k-char script back
     // just burns the caller's context, and it's a string they already sent, so it
     // carries no information.
+    tts_generate_checked: async (args) => {
+        const result = await generateCheckedSpeech(parseArgs(checkedSpeechSchema, args));
+        return text(JSON.stringify(result, null, 2), result.success !== true);
+    },
     tts_generate: async (args) => {
         const request = parseArgs(tts.ttsGenerateSchema, args);
         const result = await tts.generateSpeech(request);
