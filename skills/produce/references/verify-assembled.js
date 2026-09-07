@@ -13,16 +13,23 @@ function match(work,expected){for(const [file,want] of Object.entries(expected))
 function load(work){
   const proof=JSON.parse(fs.readFileSync(path.join(work,'build-plan-check.json'),'utf8'));
   const source=path.join(proof.storyboard,'scenes.js');
+  const speechMedia=require('./check-tts-quality.js').check(work,proof.storyboard);
   match(work,{[source]:proof.scenesSha256,'cards.tsv':proof.cardsSha256,'segs.tsv':proof.segsSha256});
+  if(!proof.resolvedCardsSha256||!proof.editPlanSha256)throw new Error('rebuild: missing compiled edit provenance');
+  match(work,{'cards.resolved.tsv':proof.resolvedCardsSha256,'edit-plan.json':proof.editPlanSha256});
   if(!proof.mediaSha256)throw new Error('rebuild: missing media provenance');
   match(work,proof.mediaSha256);
+  for(const [file,digest] of Object.entries(speechMedia))if(proof.mediaSha256[file]!==digest)throw new Error('rebuild: missing or stale audio review provenance: '+file);
   const sandbox={window:{}};vm.runInNewContext(fs.readFileSync(source,'utf8'),sandbox,{timeout:5000});
   return {proof,scenes:sandbox.window.SCENES};
 }
 function masters(work){
   const verified=JSON.parse(fs.readFileSync(path.join(work,'assembled-check.json'),'utf8'));
   if(!verified.outputs||BASE.some(f=>!Object.hasOwn(verified.outputs,f))||!verified.outputs['reel.mp4'])throw new Error('rebuild: both masters and subtitles need a current proof');
-  match(work,verified.outputs);return verified;
+  match(work,verified.outputs);
+  if(!verified.editCheckSha256)throw new Error('rebuild: missing rendered edit verification');
+  match(work,{'edit-check.json':verified.editCheckSha256});
+  return verified;
 }
 function check(work,delivery,burned,subtitles){
   const {proof,scenes}=load(work),master=path.join(work,'reel.mp4');
@@ -45,7 +52,8 @@ function check(work,delivery,burned,subtitles){
   if(!Number.isFinite(planned)||Math.abs(actual-planned)>.5)throw new Error(`opening is ${actual}s but the plan says ${planned}s; reconcile measured narration and trim before assembly`);
   for(const i of proof.cards)if(scenes[i].shot?.render?.mode==='editorial_html'&&duration(path.join(work,'work',`v${i}.mp4`))>8.07)throw new Error('text-led card '+i+' exceeds 8 seconds after encoding');
   if(fs.existsSync(path.join(work,'reel-sub.mp4'))&&Math.abs(duration(path.join(work,'reel-sub.mp4'))-duration(master))>.07)throw new Error('clean and burned masters differ in duration');
-  fs.writeFileSync(path.join(work,'assembled-check.json'),JSON.stringify({outputs:hashes(work,BASE),duration:duration(master),opening:actual,plannedOpening:planned},null,2)+'\n');
+  require('./check-edit-timeline.js').check(work);
+  fs.writeFileSync(path.join(work,'assembled-check.json'),JSON.stringify({editCheckSha256:hash(path.join(work,'edit-check.json')),outputs:hashes(work,BASE),duration:duration(master),opening:actual,plannedOpening:planned},null,2)+'\n');
 }
 function splice(work,args,finish=false){
   const {proof,scenes}=load(work);masters(work);

@@ -236,8 +236,10 @@ Run `check-production.js storyboard/ --ready` before capture/build. Generate no 
 captures for these cuts. Write cards with `zoom=none`; every narration segment names the same
 accepted video path, without `@`, `::overlay.png`, palindrome files or still-image substitutes.
 The builder reads continuous video offsets across segments, disables loops and freeze padding,
-and refuses an audio-driven card longer than its clip. Prefer `enter=cut` between distinct
-shots. Keep narration and burned subtitles; clear on-screen `title`, `bullets`, `stat` and
+and refuses a card whose source cannot cover its duration plus the outgoing live handle.
+Follow [cinematic-edit.md](cinematic-edit.md): choose each join by action and continuity,
+reserve its handle before quoting generation, and use the common builder for delivery.
+Do not blanket-assign `cut` or replace the builder with an episode-specific concatenation script. Keep narration and burned subtitles; clear on-screen `title`, `bullets`, `stat` and
 `footnote`, storing thumbnail/title copy in platform metadata instead.
 
 `build-reel.sh` reruns the approved-quote, review and manifest gates. The normal build report,

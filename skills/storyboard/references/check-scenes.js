@@ -649,6 +649,13 @@ function check(win, fmt, opts) {
                   'where the jcut is the honest join');
   });
 
+  // Validate authored edit fields before assets; incomplete draft transitions are handled above.
+  if (scenes.some(s => s.edit !== undefined) && scenes.every((s,i) =>
+      i === firstMain || ['broll','outro'].includes(s.type) || s.transition !== undefined)) {
+    try { require('../../produce/references/edit-plan.js').preview(scenes); }
+    catch (e) { bad('edit plan', e.message); }
+  }
+
   /* Consecutive stills of the same size and angle in one scene read as a jump cut
      (30-degree / two-step-size rule). Filmed cards are the vlog exception. */
   for (let i = 1; i < scenes.length; i++) {

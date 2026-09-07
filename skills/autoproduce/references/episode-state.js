@@ -207,6 +207,10 @@ function blockers(ep, stage) {
     out.push('the episode built without a cost report (produce §10)');
 
   // Not on a published episode — that video is already out, and a blocker there is noise.
+  if (stage !== 'published' && ep.has.video && ep.has.scenes && ep.dir) {
+    const error = require('../../produce/references/delivery-proof.js').check(ep.dir);
+    if (error) out.push(error);
+  }
   if (stage !== 'published' && ep.has.video && ep.has.spedUp === false)
     out.push('output/ holds the un-sped build — the required speed pass never ran ' +
              '(produce §7.5: speedup.sh, then copy the -fast set)');

@@ -53,37 +53,12 @@
 #                                         eased both ends) | linear | in (accelerating: starts unnoticed,
 #                                         fastest at the cut point — action/CTA cards, cut away at the peak).
 #                                         punch keeps its own ease-out ramp and ignores ease=.
-#                           enter=<mode>  the join in front of this card — **written on every spoken card
-#                                         after the first**, copied from the board's `transition` (produce
-#                                         §6 has the mapping). jcut | cut | black | white | dissolve | iris |
-#                                         blur | zoom | push:<l2r|r2l|u2d|d2u> | whip:<l2r|r2l|u2d|d2u>.
-#                                         enter=1 still means black. An empty enter= is the legacy
-#                                         4-column form: it falls back to a J-cut and the build warns,
-#                                         because that is the one join nobody chose.
-#                           exit=<mode>   the join behind it: cut (default) | black | white. exit=1 = black.
-#                                         **Dip** (black/white) is two halves: exit= on the card that ends the
-#                                         scene, enter= on the one that starts the next, SCENE_FADE (0.30s)
-#                                         each. It passes through a solid frame — a beat of nothing.
-#                                         **Carry** (jcut, dissolve, iris, blur, zoom, push, whip) is written
-#                                         on the incoming card alone. That card opens on the previous card's
-#                                         last frame and gets out of it — jcut holds it while the new line
-#                                         already plays (SCENE_JCUT, 0.32s) then snaps to the new picture;
-#                                         dissolve melts through it over SCENE_XF (0.45s); iris opens a circle
-#                                         out of it (SCENE_IRIS, 0.45s); blur smears it sideways and melts
-#                                         (SCENE_BLUR, 0.45s); push slides it off over SCENE_PUSH (0.32s);
-#                                         whip slides it off smeared along the travel axis (SCENE_WHIP,
-#                                         0.24s); zoom grows it past the camera (SCENE_ZOOM, 0.32s).
-#                                         **Every carry is a split edit**: the next line starts at this
-#                                         card's first frame, under the carried frame, so you hear the next
-#                                         sentence before the picture has finished changing and the picture
-#                                         never changes in silence (Murch; measured 0 stretches of >0.3s
-#                                         silence on the 85s reference short). A carry therefore drops the
-#                                         silent pre-roll (PRE seconds) from that card's length.
-#                                         **cut** is the smash: picture and sound change together, the old
-#                                         silent pre-roll. A dip keeps it too — its silence is the beat.
-#                                         Every mode is drawn **inside one card's own encode**, so §9 still
-#                                         stream-copies and drift stays 0. A dip keeps the card's frame
-#                                         count (measured A/B: identical subs.srt, 12.000000s both ways).
+#                           enter / exit: optional source mirrors; the edit compiler rejects
+#                                         contradictions and writes cards.resolved.tsv.
+#                           join / handle / in / pre / post: compiled from scenes.js edit.
+#                                         Use edit-plan.json to inspect the planned timeline.
+#   Moving transitions use the outgoing source's next unseen frames. No tail-frame PNGs.
+#   See cinematic-edit.md for source handles, sync restrictions and boundary playback review.
 #   <workdir>/segs.tsv  : idx <TAB> seg(0..) <TAB> visual-path <TAB> TTS-script-sentence <TAB> subtitle-display-sentence
 #                         visual = reveal-state PNG (reel-template ?reveal=k capture) or .mp4 (fullscreen b-roll)
 #                         Listing several with '|' splits the sentence's speech window evenly and they
@@ -92,9 +67,8 @@
 #                         over the video (persona speech video + badge/quote/signature overlays). Segs that
 #                         continue the same video start earlier by the xfade offset via -ss so playback
 #                         carries across the transition (no video jump at the cut).
-#                         Prefixing the path with "@" plays it **once** — starts at the first frame and
-#                         holds on the last (no -ss advance, no loop). For clips that are one motion from
-#                         start to end, like a typing card. "@video.mp4::overlay.png" works with an overlay
+#                         Prefixing a path with "@" starts each reveal group at its source in-point.
+#                         Every video must cover its visible window; no loops or freeze padding.
 #                         TTS-script = for char count/proportional fallback (Korean phonetic spelling) /
 #                         subtitle-display = for the screen (numbers/units as written)
 #   <workdir>/bgm.wav   : background music — the bed the episode opens on. Shorter than the
@@ -145,11 +119,8 @@ FULL_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.gen
 
 FPS=${FPS:-30}
 SPF=$((48000 / FPS))               # audio samples per frame
-PRE=${PRE:-0.40}                   # pre-roll (card entrance margin) — first card, smash cuts, dips
-POST=${POST:-0.45}                 # post-roll (last-reveal hang + breath). Was 0.70; the J-cut
-                                   # moved the next line onto the previous last frame, so the tail
-                                   # only has to hold the last reveal (REVEAL_D 0.35) plus a blink
-MIN_DUR=${MIN_DUR:-4.0}            # minimum card display time
+# Narration margins come from each compiled source edit (pre=0, post=0.12 by default).
+MIN_DUR=${MIN_DUR:-0.0}            # optional explicit minimum; short cuts stay short by default
 MAX_DUR=${MAX_DUR:-13.0}           # warn when exceeded (signal to shorten the script)
 RATE_TOL=${RATE_TOL:-0.05}
 ATEMPO_MIN=${ATEMPO_MIN:-0.88}; ATEMPO_MAX=${ATEMPO_MAX:-1.18}
@@ -178,13 +149,7 @@ XFADE=${XFADE:-0.6}                # feature↔outro transition length
 SCENE_FADE=${SCENE_FADE:-0.30}     # dip half-length — the black/white a card fades through (cards.tsv enter=/exit=).
                                    # 0.6s through the colour, the outro seam's length (XFADE). Was 0.12: four
                                    # frames down, one black, four up — a blink nobody read as a fade (ep209 measured)
-SCENE_XF=${SCENE_XF:-0.45}         # cross-dissolve length (enter=dissolve) — the incoming card melts out of the previous card's last frame
-SCENE_PUSH=${SCENE_PUSH:-0.32}     # push length (enter=push:<dir>) — the previous card's last frame slides off the incoming one
-SCENE_JCUT=${SCENE_JCUT:-0.32}     # J-cut hold — previous last frame stays on while the new line already plays, then the picture cuts. Under the 0.3s silence ceiling of the reference short once POST is the only remaining gap.
-SCENE_IRIS=${SCENE_IRIS:-0.45}     # iris length (enter=iris) — a circle opens out of the previous last frame. Same length as a dissolve: the eye has to follow the opening
-SCENE_BLUR=${SCENE_BLUR:-0.45}     # blur-dissolve length (enter=blur) — the previous last frame smears sideways and melts. Dissolve's length because it reads as one
-SCENE_WHIP=${SCENE_WHIP:-0.24}     # whip length (enter=whip:<dir>) — the shortest join here. A whip that lingers is a push with a blur on it
-SCENE_ZOOM=${SCENE_ZOOM:-0.32}     # zoom-through length (enter=zoom) — the previous last frame grows past the camera. Push's length; the move itself carries the speed
+# Moving join durations come from edit.transitionSeconds in the compiled plan.
 WHIP_BLUR=${WHIP_BLUR:-40}         # whip smear radius in px, along the travel axis only (avgblur)
 ZOOM_THRU=${ZOOM_THRU:-0.55}       # how far the carried frame grows on a zoom (1.0 → 1.55). Past ~0.8 the frame's own texture reads as a second picture
 REVEAL_D=${REVEAL_D:-0.35}         # max reveal fade length (shrinks to fit a shorter pause)
@@ -391,7 +356,7 @@ while IFS=$'\t' read -r _CI _ _ _CZ _CO; do
   esac
   say "✗ card $_CI: a still card with zoom=${_CZ:-auto} — a still never sits frozen under the voice. Use in|out|auto|punch, pan=<dir>, or hold+drift=1 (none and a bare hold are for footage that already moves)"
   exit 1
-done < cards.tsv
+done < cards.resolved.tsv
 
 # Per-segment sfx + BGM gating (optional) — sfx.tsv: idx <TAB> seg <TAB> audio-file <TAB> bgm(on|off)
 #   The audio file can be wav or mp4 (a video contributes its own sound). Left empty with just
@@ -412,19 +377,7 @@ SRTN=0                              # SRT cue number (from 1, file-wide running 
 
 # Read via fd 3 — keeps ffmpeg inside the loop from eating stdin (trap inherited from v2)
 # Column 5 (opts) is optional — read fills leftover variables with empty, so 4-column files run unchanged.
-# A carry (jcut / dissolve / push) opens on the previous card's last frame, so that card has
-# to leave one behind. J-cut is the default on every incoming card, so almost every predecessor
-# dumps a tail — one extra half-second extract per card, not a re-encode. Skip the dump only
-# when the next card opts out (enter=cut) or dips (it fades from a solid, not from the tail).
-CARRY_PREV=""; _PV=""
-while IFS=$'\t' read -r _CI _ _ _ _CO; do
-  [ -z "${_CI:-}" ] && continue
-  case "${_CO:-}" in
-    *enter=cut*|*enter=0*|*enter=black*|*enter=white*|*enter=1*) ;;
-    *) [ -n "$_PV" ] && CARRY_PREV="$CARRY_PREV $_PV " ;;
-  esac
-  _PV="$_CI"
-done < cards.tsv
+# The compiler reserves live outgoing handles from the following shot's transition.
 PREVIDX=""; PREVEXIT=""
 
 while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
@@ -436,7 +389,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #    out of step, and only eyes would catch it). Two-value options use ":" inside the value
   #    (pan=l2r:1.12, focus=0.6:0.4) — "," is the k=v separator and stays out of values.
   SYNC=0; SUBSF=""; PAN=""; PZ="$PAN_Z"; FX=0.5; FY=0.5; DRIFT=0; SPAN="$ZOOM_SPAN"; EASE="$KB_EASE"; SPANSET=0
-  ENTER=""; EXITM=""; PUSH_DIR=""
+  ENTER=""; EXITM=""; PUSH_DIR=""; JOIN=0; HANDLE=0; SOURCE_IN=0; EDIT_PRE=0; EDIT_POST=0.12
   case "${ZDIR:-auto}" in in|out|auto|none|punch|hold) : ;;
     *) say "✗ card $IDX: unknown zoom (column 4) — $ZDIR (in|out|auto|none|punch|hold)"; exit 1 ;; esac
   if [ -n "${OPTS:-}" ]; then
@@ -444,6 +397,11 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     for KV in "${OARR[@]}"; do
       [ -z "$KV" ] && continue
       case "$KV" in
+        join=*) JOIN="${KV#join=}" ;;
+        handle=*) HANDLE="${KV#handle=}" ;;
+        in=*) SOURCE_IN="${KV#in=}" ;;
+        pre=*) EDIT_PRE="${KV#pre=}" ;;
+        post=*) EDIT_POST="${KV#post=}" ;;
         sync=1) SYNC=1 ;;
         sync=0) SYNC=0 ;;
         subs=*) SUBSF="${KV#subs=}"; [ -f "$SUBSF" ] || { say "✗ card $IDX: subs file missing — $SUBSF"; exit 1; } ;;
@@ -467,7 +425,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         # every carry drops the silent pre-roll from this card's length (§4.5).
         # `enter=` is the join in front of this card, `exit=` the one behind it. A dip needs both
         # halves written (exit on the card before, enter on this one); jcut, dissolve and push
-        # need only `enter=` — they take the previous card's last frame as their material.
+        # need only `enter=` — the compiler reserves the outgoing live handle.
         enter=1|enter=black)     ENTER=black ;;
         enter=white)             ENTER=white ;;
         enter=dissolve)          ENTER=dissolve ;;
@@ -502,7 +460,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       && { say "⚠ card $IDX: base $BASEZ + span=$SPAN zooms past ZOOM_BASE/canvas (${ZOOM_BASE%x*}/$W) — raise ZOOM_BASE and feed a higher-res source"; WARN=1; }
   fi
   # A filmed card (sync) gets no margins — with pre-roll the picture runs from 0s while the sound alone lags 0.4s.
-  if [ "$SYNC" -eq 1 ]; then CPRE=0; CPOST=0; CMIN=0; else CPRE=$PRE; CPOST=$POST; CMIN=$MIN_DUR; fi
+  if [ "$SYNC" -eq 1 ]; then CPRE=0; CPOST=0; CMIN=0; else CPRE=$EDIT_PRE; CPOST=$EDIT_POST; CMIN=$MIN_DUR; fi
 
   # TOTF doesn't include this card yet, so it is exactly this card's start. Chapter marks and
   # step 9.5's music cues both key off this one number.
@@ -630,23 +588,8 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       && { say "⚠ card $IDX segment window under 0.9s — rebalance the sentences."; WARN=1; }
   fi
 
-  # ── 4.5) The join — every carry drops the silent pre-roll (sound leads picture)
-  #   Every spoken card after the first takes its enter= from the board's `transition`
-  #   (produce §6). An empty enter= is the legacy 4-column form: it falls back to a J-cut
-  #   and says so, because the fallback is the one join nobody chose.
-  #   A carry (jcut · dissolve · iris · blur · zoom · push · whip) opens on the previous last
-  #   frame, and the next line starts at this card's first frame **under** that frame — the
-  #   split edit on every carry, so the picture never changes in silence. CPRE is 0 there.
-  #   First card, filmed sync, speechless cards, dips and an explicit enter=cut (the smash)
-  #   keep the silent pre-roll: a dip's beat of nothing is the point.
-  #   Reveal timing (§6) takes the same CPRE the audio is padded with. It used to take the
-  #   J-cut hold (0.32s) instead, which put every reveal on a J-cut card 0.32s behind the
-  #   speech — measured on the 4-card fixture: the reveal at 1.60s for a sentence that starts
-  #   at 1.70s, where the dissolve card next to it landed 0.07s before its sentence.
-  if [ -z "$ENTER" ] && [ -n "$PREVIDX" ] && [ "$SYNC" -eq 0 ] && [ "$MUTE" -eq 0 ]; then
-    ENTER=jcut
-    say "⚠ card $IDX: no enter= — J-cut fallback. Every card after the first takes the board's transition (produce §6)."; WARN=1
-  fi
+  # ── 4.5) Apply the compiled split edit; missing joins cannot fall back silently.
+  [ -n "$ENTER" ] || { say "Missing compiled transition for card $IDX"; exit 1; }
   case "$ENTER" in jcut|dissolve|iris|blur|zoom|push|whip) CPRE=0 ;; esac
 
   # ── 5) Fix the card duration + assemble sample-accurate audio (same as v2 — the source of zero drift)
@@ -655,6 +598,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   FRAMES=$(awk -v d="$D1" -v f="$FPS" 'BEGIN{n=d*f; printf "%d", (n==int(n))?n:int(n)+1}')
   D=$(awk -v n="$FRAMES" -v f="$FPS" 'BEGIN{printf "%.6f", n/f}')
   SAMPLES=$((FRAMES * SPF))
+  HANDLE_FRAMES=$(awk -v d="$HANDLE" -v f="$FPS" 'BEGIN{printf "%d", int(d*f+0.999999)}')
+  RENDER_FRAMES=$((FRAMES + HANDLE_FRAMES))
+  RENDER_D=$(awk -v n="$RENDER_FRAMES" -v f="$FPS" 'BEGIN{printf "%.6f", n/f}')
+  awk -v j="$JOIN" -v d="$D" 'BEGIN{exit !(j<=d/3)}' || { say "card $IDX: transition exceeds one third of the card; shorten edit.transitionSeconds"; exit 1; }
   if awk -v d="$D" -v m="$MAX_DUR" 'BEGIN{exit !(d>m)}'; then
     say "⚠ card $IDX duration ${D}s > ${MAX_DUR}s — shorten the script."
     WARN=1
@@ -710,26 +657,17 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     fi
   fi
 
-  # ── 7) Video: state chain (xfade) → Ken Burns (zoompan) — b-roll (.mp4) joins in as a fullscreen window
-  #        "video::overlay.png" lays the video down and composites the alpha PNG on top. A video at j>0
-  #        starts -ss earlier by the xfade time (modulo the loop length) so playback looks continuous
-  #        across the transition.
-  #        A leading **`@` on the path means play once** — no shifting, no looping; it plays from the
-  #        clip's first frame and freezes on the last. For clips where **start to finish is one motion**,
-  #        like a typing card.
-  #        (Leave the default behavior and it breaks twice: j>0 starts mid-way, after the text is fully
-  #         typed, because of the modulo -ss; and even j=0 loops and retypes from the start when the
-  #         segment window is longer than the clip.)
+  # ── 7) Continuous video/reveal inputs followed by the planned camera and live join.
+  # @ starts a reveal clip at its own in-point; a shared video advances with the timeline.
+  # Every source must cover its visible interval, including the final outgoing handle.
   INS=(); FILT=""; NIN=0
-  FULL_CARD=0
-  case " $FULL_VIDEO_SHOTS " in *" $IDX "*) FULL_CARD=1;; esac
   j=0
   for VIS in "${FVIS[@]}"; do
     if [ "$j" -eq 0 ]; then
       if [ "$MV" -gt 1 ]; then T=$(awk -v o="${FOFF[1]}" 'BEGIN{printf "%.3f", o+1.0}')
-      else T=$(awk -v d="$D" 'BEGIN{printf "%.3f", d+0.5}'); fi
+      else T=$(awk -v d="$RENDER_D" 'BEGIN{printf "%.3f", d+0.5}'); fi
     else
-      T=$(awk -v d="$D" -v o="${FOFF[$j]}" 'BEGIN{printf "%.3f", d-o+1.0}')
+      T=$(awk -v d="$RENDER_D" -v o="${FOFF[$j]}" 'BEGIN{printf "%.3f", d-o+1.0}')
     fi
     BASE="$VIS"; OVL=""
     case "$VIS" in *::*) BASE="${VIS%%::*}"; OVL="${VIS#*::}";; esac
@@ -737,28 +675,22 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     BI=$NIN; HOLD=""
     case "$BASE" in
       *.mp4|*.mov|*.m4v|*.webm|*.MP4|*.MOV|*.M4V|*.WEBM)
-        if [ "$FULL_CARD" = "1" ]; then
-          BDUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$BASE")
-          awk -v actual="$BDUR" -v needed="$D" 'BEGIN{exit !(actual+0.05>=needed)}' \
-            || { echo "Full-video card $IDX needs ${D}s but its clip has ${BDUR}s. Split/re-time narration or regenerate; looping and freeze padding are disabled." >&2; exit 1; }
-          SS=${FOFF[$j]}
+          BDUR=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of csv=p=0 "$BASE")
+          [ "$BDUR" != "N/A" ] || { say "card $IDX: source needs a measurable video duration; remux it before assembly"; exit 1; }
+          if [ "$ONESHOT" = "1" ]; then OFFSET=0; else OFFSET=${FOFF[$j]}; fi
+          SS=$(awk -v s="$SOURCE_IN" -v o="$OFFSET" 'BEGIN{printf "%.6f", s+o}')
+          # Only the final reveal needs an outgoing handle. Earlier states end at their next reveal.
+          if [ "$j" -eq $((MV-1)) ]; then END_D=$RENDER_D;
+          else END_D=$(awk -v o="${FOFF[$((j+1))]}" -v f="${FDUR[$((j+1))]}" 'BEGIN{print o+f}'); fi
+          NEED=$(awk -v s="$SOURCE_IN" -v e="$END_D" -v o="$OFFSET" -v start="${FOFF[$j]}" 'BEGIN{printf "%.6f", s+e-start+o}')
+          awk -v actual="$BDUR" -v needed="$NEED" 'BEGIN{exit !(actual+0.00001>=needed)}' \
+            || { say "card $IDX: source needs ${NEED}s including live handle; has ${BDUR}s. Choose an earlier edit.in, shorten/replan the cut, or regenerate. No freeze or loop substitution."; exit 1; }
           INS+=(-ss "$SS" -t "$T" -i "$BASE")
-        elif [ "$ONESHOT" = "1" ]; then
-          # If the clip is shorter than the segment window, clone the last frame to fill — a freeze, not a loop
-          INS+=(-i "$BASE")
-          HOLD="tpad=stop_mode=clone:stop=-1,trim=duration=$T,setpts=PTS-STARTPTS,"
-        else
-          SS=0
-          if [ "$j" -gt 0 ]; then
-            BDUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$BASE")
-            SS=$(awk -v o="${FOFF[$j]}" -v d="$BDUR" 'BEGIN{if(d<=0){print 0; exit} printf "%.3f", o-int(o/d)*d}')
-          fi
-          INS+=(-ss "$SS" -stream_loop -1 -t "$T" -i "$BASE")
-        fi ;;
+        ;;
       *) INS+=(-loop 1 -framerate "$FPS" -t "$T" -i "$BASE") ;;
     esac
     NIN=$((NIN+1))
-    FILT+="[$BI:v]${HOLD}scale=$W:$H:force_original_aspect_ratio=increase:flags=lanczos,crop=$W:$H,fps=$FPS,settb=AVTB,setsar=1,format=yuv420p[b$j];"
+    FILT+="[$BI:v]${HOLD}scale=$W:$H:force_original_aspect_ratio=increase:flags=lanczos,crop=$W:$H,setpts=PTS-STARTPTS,fps=$FPS,settb=AVTB,setsar=1,format=yuv420p[b$j];"
     if [ -n "$OVL" ]; then
       OI=$NIN
       INS+=(-loop 1 -framerate "$FPS" -t "$T" -i "$OVL")
@@ -785,7 +717,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   like a machine, and the ease is what reads as an operated camera. KB_EASE=linear restores the ramp.
   #   The window position comes from the focus point (default 0.5:0.5 = centre — identical to the old
   #   centre expressions); drift adds a two-sine wobble on top and a DRIFT_Z base scale for margin.
-  ZLAST=$(( FRAMES > 1 ? FRAMES - 1 : 1 ))
+  ZLAST=$(( RENDER_FRAMES > 1 ? RENDER_FRAMES - 1 : 1 ))
   ZD="${ZDIR:-auto}"
   if [ "$ZD" = "auto" ]; then if [ $((N % 2)) -eq 1 ]; then ZD=in; else ZD=out; fi; fi
   # Default still move (no span= written): KB_RATE × card seconds, capped so the total scale
@@ -861,43 +793,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     ZD="$ZD$FTAG$DTAG$KTAG"
     FILT+="${CUR}scale=$ZB:flags=lanczos,zoompan=z='$ZEXPR':x='(iw-iw/zoom)*$FX$DXE':y='(ih-ih/zoom)*$FY$DYE':d=1:s=${W}x${H}:fps=$FPS,format=yuv420p[vkb];"
   fi
-  # ── 7.4) Scene-boundary transition (cards.tsv enter= / exit=) ──
-  #   The seam between two cards is a hard cut: §9 joins them with the concat demuxer and
-  #   -c copy, and the whole zero-drift contract rests on that being stream-exact. An xfade
-  #   between cards would break it twice over — the total would shrink by the transition length
-  #   per seam and trip the 2ms assertion, and xfade renumbers the tail's PTS from 0 anyway (the
-  #   measurement is written out at the outro seam below).
-  #
-  #   So **every transition is drawn inside the incoming card's own encode.** Nothing overlaps
-  #   in the concat, so §9 still stream-copies and drift stays 0. A dip keeps this card's
-  #   frame count; every carry drops the silent pre-roll (PRE) from this card's length
-  #   because the next line occupies it (§4.5).
-  #   Three ways to draw one:
-  #
-  #   ① dip (`enter=black|white` + `exit=black|white`) — the outgoing card fades its own tail
-  #     into the colour, the incoming card fades its own head out of it. Two halves, one per
-  #     card. It passes through a solid frame, which is what a dip is for: a beat of nothing.
-  #   ② carry (`enter=jcut|dissolve|iris|blur|zoom`, `enter=push:<dir>`, `enter=whip:<dir>`) —
-  #     the incoming card opens on **the previous card's last frame** (work/tail<prev>.png) and
-  #     gets out of it. jcut holds it while the new line already plays, then snaps; dissolve
-  #     melts through it; iris opens a circle out of it; blur smears it sideways and melts;
-  #     push slides it off; whip slides it off with the smear a fast pan leaves; zoom grows it
-  #     past the camera. Only the incoming card writes anything — no overlapping frame in the
-  #     concat.
-  #   ③ smash (`enter=cut`) — picture and sound change together. The old silent pre-roll.
-  #
-  #   **Why iris/blur may use xfade when the seam may not.** The ban above is on an xfade
-  #   *between cards*, where it eats one transition length out of the concat total and renumbers
-  #   the tail's PTS. Inside one card's encode neither applies: the inputs are the TD-long tail
-  #   loop and this card's own [vkb], so the output runs TD + cardlen − TD = cardlen (verified —
-  #   frame-identical to the overlay carries at 90/90 frames, 3.000s, on the 2-card fixture), and
-  #   the encode stamps fresh PTS regardless. It buys the whole xfade catalogue for one case line
-  #   per mode. Do not lift it to the seam in §9; that is still the thing that breaks drift.
-  #
-  #   Audio runs straight through. Every carry puts the next line under the previous last frame
-  #   so the picture never changes in silence; a dip keeps the card's own PRE/POST — its silence
-  #   is the beat. The BGM bed is rendered across the whole feature — fading it at a scene
-  #   change would punch a hole in the music.
+  # ── 7.4) Draw the moving handle inside the incoming card, preserving its audio clock.
+  # The predecessor rendered extra unseen frames; no last-frame snapshot or tail replay.
+  # Incoming video runs underneath the join, so essential opening action must follow it.
+  # Dips fade each side independently. Music and subtitles retain their absolute timing.
   VF_FADE=""; SRCL="[vkb]"
   if [ -n "$EXITM" ]; then
     # Half the seam belongs to each side, and it has to fit the shorter card: never more than
@@ -913,26 +812,20 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       ZD="$ZD enter:$ENTER@$SF_D" ;;
     dissolve|push|jcut|iris|blur|whip|zoom)
       [ -n "$PREVIDX" ] || { say "✗ card $IDX: enter=$ENTER has no card in front of it to carry — the first card can only dip"; exit 1; }
-      TAILPNG="work/tail$PREVIDX.png"
-      [ -f "$TAILPNG" ] || { say "✗ card $IDX: enter=$ENTER needs card $PREVIDX's last frame — $TAILPNG is missing"; exit 1; }
-      [ -n "$PREVEXIT" ] && { say "⚠ card $IDX: enter=$ENTER carries card $PREVIDX's last frame, but that card has exit=$PREVEXIT — it is carrying a frame of solid $PREVEXIT. Drop one of the two."; WARN=1; }
-      # A carry lives entirely in this card's head, so it can take a third of it and no more.
-      case "$ENTER" in
-        dissolve) TBASE=$SCENE_XF ;;  push) TBASE=$SCENE_PUSH ;;  iris) TBASE=$SCENE_IRIS ;;
-        blur)     TBASE=$SCENE_BLUR ;; whip) TBASE=$SCENE_WHIP ;;  zoom) TBASE=$SCENE_ZOOM ;;
-        *)        TBASE=$SCENE_JCUT ;;
-      esac
-      TD=$(awk -v d="$TBASE" -v dur="$D1" 'BEGIN{m=dur/3; if(d>m)d=m; if(d<0.04)d=0.04; printf "%.3f", d}')
-      INS+=(-loop 1 -framerate "$FPS" -t "$TD" -i "$TAILPNG")
+      TAILCLIP="work/handle$PREVIDX.mp4"
+      [ -f "$TAILCLIP" ] || { say "✗ card $IDX: enter=$ENTER needs card $PREVIDX's live handle — $TAILCLIP is missing"; exit 1; }
+      [ -z "$PREVEXIT" ] || { say "card $IDX: moving handle conflicts with the outgoing dip"; exit 1; }
+      TD=$(awk -v d="$JOIN" -v f="$FPS" 'BEGIN{printf "%.6f", int(d*f+0.999999)/f}')
+      INS+=(-t "$TD" -i "$TAILCLIP")
       TI=$NIN; NIN=$((NIN+1))
       FILT+="[$TI:v]scale=$W:$H:force_original_aspect_ratio=increase:flags=lanczos,crop=$W:$H,fps=$FPS,settb=AVTB,setsar=1"
       if [ "$ENTER" = "dissolve" ]; then
         FILT+=",format=yuva420p,fade=t=out:st=0:d=$TD:alpha=1[tcar];"
-        FILT+="[vkb][tcar]overlay=0:0:eof_action=pass,format=yuv420p[vtr];"
+        FILT+="[vkb][tcar]overlay=0:0:eof_action=pass:repeatlast=0,format=yuv420p[vtr];"
       elif [ "$ENTER" = "jcut" ]; then
-        # Hold the previous last frame for TD, then snap. The new line is already playing (CPRE=0, §4.5).
+        # Continue the outgoing footage for TD, then cut. The new line is already playing (CPRE=0, §4.5).
         FILT+=",format=yuv420p[tcar];"
-        FILT+="[vkb][tcar]overlay=0:0:enable='lt(t,$TD)':eof_action=pass,format=yuv420p[vtr];"
+        FILT+="[vkb][tcar]overlay=0:0:enable='lt(t,$TD)':eof_action=pass:repeatlast=0,format=yuv420p[vtr];"
       elif [ "$ENTER" = "iris" ] || [ "$ENTER" = "blur" ]; then
         # xfade composites the two pictures itself, so the carried frame needs no alpha ramp.
         # It also wants both inputs on one timebase — vkb comes out of zoompan without one, so
@@ -950,7 +843,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
           d2u) OXY="x=0:y='-H*t/$TD'"; WB="sizeX=1:sizeY=$WHIP_BLUR" ;;
         esac
         FILT+=",avgblur=$WB,format=yuv420p[tcar];"
-        FILT+="[vkb][tcar]overlay=$OXY:eof_action=pass,format=yuv420p[vtr];"
+        FILT+="[vkb][tcar]overlay=$OXY:eof_action=pass:repeatlast=0,format=yuv420p[vtr];"
       elif [ "$ENTER" = "zoom" ]; then
         # The carried frame grows past the camera and thins out as it goes. Doubling it first
         # keeps the growing window off the upscaler; the alpha ramp finishes at 65% of the join
@@ -959,7 +852,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         ZAF=$(awk -v t="$TD" 'BEGIN{printf "%.3f", t*0.65}')
         FILT+=",scale=$((W*2)):-1:flags=lanczos,zoompan=z='1+$ZOOM_THRU*on/($FPS*$TD)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':d=1:s=${W}x${H}:fps=$FPS,settb=AVTB,setsar=1"
         FILT+=",format=yuva420p,fade=t=out:st=0:d=$ZAF:alpha=1[tcar];"
-        FILT+="[vkb][tcar]overlay=0:0:eof_action=pass,format=yuv420p[vtr];"
+        FILT+="[vkb][tcar]overlay=0:0:eof_action=pass:repeatlast=0,format=yuv420p[vtr];"
       else
         # The carried frame slides off in the named direction, uncovering this card underneath.
         case "$PUSH_DIR" in
@@ -969,21 +862,31 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
           d2u) OXY="x=0:y='-H*t/$TD'" ;;
         esac
         FILT+=",format=yuv420p[tcar];"
-        FILT+="[vkb][tcar]overlay=$OXY:eof_action=pass,format=yuv420p[vtr];"
+        FILT+="[vkb][tcar]overlay=$OXY:eof_action=pass:repeatlast=0,format=yuv420p[vtr];"
       fi
       SRCL="[vtr]"
       ZD="$ZD enter:$ENTER${PUSH_DIR:+:$PUSH_DIR}@$TD" ;;
   esac
   FILT+="${SRCL}null${VF_FADE}[vout]"
 
-  ffmpeg -y -v error "${INS[@]}" -filter_complex "$FILT" -map "[vout]" \
-    -frames:v "$FRAMES" -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p "work/v$IDX.mp4"
-
-  # The last frame, for the next card to carry. -update overwrites the same file frame by frame,
-  # so what survives the last half-second of the clip is exactly the final frame — no reverse pass.
-  case "$CARRY_PREV" in *" $IDX "*)
-    ffmpeg -y -v error -sseof -0.5 -i "work/v$IDX.mp4" -update 1 "work/tail$IDX.png" ;;
-  esac
+  # Split a continuous render at the audio boundary. The handle starts at the NEXT
+  # frame, never a replay or a frozen copy of the outgoing card's tail.
+  if [ "$HANDLE_FRAMES" -gt 0 ]; then
+    FILT+=";[vout]split=2[body][future];[body]trim=end_frame=$FRAMES,setpts=PTS-STARTPTS[vbody];[future]trim=start_frame=$FRAMES:end_frame=$RENDER_FRAMES,setpts=PTS-STARTPTS[vhandle]"
+    ffmpeg -y -v error "${INS[@]}" -filter_complex "$FILT" \
+      -map '[vbody]' -frames:v "$FRAMES" -r "$FPS" -fps_mode cfr -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p "work/v$IDX.mp4" \
+      -map '[vhandle]' -frames:v "$HANDLE_FRAMES" -r "$FPS" -fps_mode cfr -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p "work/handle$IDX.mp4"
+  else
+    ffmpeg -y -v error "${INS[@]}" -filter_complex "$FILT" -map '[vout]' \
+      -frames:v "$FRAMES" -r "$FPS" -fps_mode cfr -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p "work/v$IDX.mp4"
+  fi
+  ACTUAL_FRAMES=$(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of csv=p=0 "work/v$IDX.mp4")
+  [ "$ACTUAL_FRAMES" = "$FRAMES" ] || { say "card $IDX: rendered $ACTUAL_FRAMES frames, expected $FRAMES"; exit 1; }
+  if [ "$HANDLE_FRAMES" -gt 0 ]; then
+    ACTUAL_HANDLE=$(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of csv=p=0 "work/handle$IDX.mp4")
+    [ "$ACTUAL_HANDLE" = "$HANDLE_FRAMES" ] || { say "card $IDX: incomplete live handle"; exit 1; }
+  fi
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$IDX" "$TOTF" "$FRAMES" "$ENTER${PUSH_DIR:+:$PUSH_DIR}" "$JOIN" "$HANDLE_FRAMES" "$SOURCE_IN" >> work/edit-timeline.tsv
   PREVIDX="$IDX"; PREVEXIT="$EXITM"
 
   # ── 7.5) Segment sound effects + BGM mute windows (only when sfx.tsv exists)
@@ -1102,7 +1005,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     say "  └ reveal ${MV} states"
     while IFS= read -r line; do say "$line"; done < "work/rt$IDX.txt"
   fi
-done 3< cards.tsv
+done 3< cards.resolved.tsv
 
 # ── 9.0) chapters.txt — only when chapters.tsv exists
 #   The input has 2 columns: `chapter-first-card-idx<TAB>chapter-title`. Times come from card absolute

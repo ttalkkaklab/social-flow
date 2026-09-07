@@ -389,66 +389,8 @@ test('build-reel Ken Burns — off for filmed clips, pan for landscape', () => {
   assert.match(reel, /KB_ZOOM_MIN=\$\{KB_ZOOM_MIN:-1\.06\}/, 'clamp inline default');
 });
 
-test('build-reel scene transition — a dissolve that costs no time', () => {
-  const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');
-  assert.match(reel, /SCENE_FADE=\$\{SCENE_FADE:-0\.30\}/, 'the documented dip half-length constant');
-  assert.match(reel, /SCENE_JCUT=\$\{SCENE_JCUT:-0\.32\}/, 'J-cut hold under the 0.3s silence ceiling');
-  assert.match(reel, /POST=\$\{POST:-0\.45\}/, 'post-roll is last-reveal hang, not a second of dead air');
-  assert.match(reel, /enter=1\|enter=black\)\s+ENTER=black/, 'enter= turns the head transition on');
-  assert.match(reel, /enter=0\|enter=cut\)\s+ENTER=cut/, 'enter=cut is the smash opt-out');
-  assert.match(reel, /exit=1\|exit=black\)\s+EXITM=black/, 'exit= turns the tail fade on');
-  assert.match(reel, /if \[ -z "\$ENTER" \] && \[ -n "\$PREVIDX" \]/, 'omitted enter= becomes a J-cut');
-  assert.match(reel, /ENTER=jcut/, 'the default join is jcut, not a silent hard cut');
-  assert.match(reel, /enable='lt\(t,\$TD\)'/, 'J-cut holds the previous last frame, then snaps');
-  assert.match(reel, /CARRY_PREV=""/, 'predecessors dump a tail for the incoming carry');
-
-  // The whole point: both fades live inside one card's own encode, so §9 still stream-copies
-  // and the 2ms drift assertion still holds. An xfade between cards would shrink the total by
-  // the fade length at every seam — the failure mode the outro seam already measured.
-  assert.match(reel, /FILT\+="\$\{SRCL\}null\$\{VF_FADE\}\[vout\]"/, 'the fade hangs off the shared hand-off');
-  assert.match(reel, /fade=t=in:st=0:d=\$SF_D/, 'head fade starts at 0');
-  assert.match(reel, /fade=t=out:st=/, 'tail fade');
-  // The carry is an overlay inside this card's encode. Naming the constants is not enough —
-  // the carry computes its own $TD, so pin the shape of the carry itself. (A blanket "no
-  // xfade" is wrong: the within-card reveal chain uses xfade legitimately.)
-  assert.match(reel, /\[vkb\]\[tcar\]overlay=/, 'the carry is an overlay, not a cross-card xfade');
-
-  // iris and blur reach for xfade too. This used to be pinned as "[tcar] never meets xfade",
-  // which was a proxy for the real contract and turned out to over-block: what breaks drift is
-  // an xfade **at the §9 seam**, where it eats one fade length out of the concat total. Inside
-  // one card's encode it cannot cost time — the carried frame is exactly $TD long and the xfade
-  // sits at offset 0, so the output runs TD + cardlen − TD = cardlen. Measured end to end on a
-  // 5-card fixture (iris · blur · whip · zoom): every card 120f / 4.000000s, drift 0.0000s. So
-  // pin the two properties that make it free instead of banning the filter.
-  assert.match(reel, /-loop 1 -framerate "\$FPS" -t "\$TD" -i "\$TAILPNG"/,
-               'the carried frame is exactly TD long — the half that makes an in-card xfade free');
-  // The trailing comma matters: without it `offset=0` also matches `offset=0.1`, and the
-  // negative form lets it through — the pair would read as a contract and enforce nothing.
-  assert.doesNotMatch(reel, /\[tcar\]\[vkbx\]xfade=[^"]*offset=(?!0,)/,
-                      'an in-card xfade starts at offset 0 — any other offset changes the length');
-  assert.match(reel, /\[tcar\]\[vkbx\]xfade=transition=\$XFT:duration=\$TD:offset=0,/,
-               'iris/blur composite inside the card, at offset 0 exactly, for exactly TD');
-
-  // The join vocabulary the storyboard writes (scenes-schema §scene transition) has to keep
-  // reaching the builder — a mode parsed but never drawn is the failure this repo already had
-  // once in the other direction.
-  for (const [mode, shape] of [
-    ['iris',  /case "\$ENTER" in iris\) XFT=circleopen/],
-    ['blur',  /XFT=hblur/],
-    ['whip',  /avgblur=\$WB/],
-    ['zoom',  /zoompan=z='1\+\$ZOOM_THRU\*on\/\(\$FPS\*\$TD\)'/],
-  ]) assert.match(reel, shape, `enter=${mode} is drawn, not just parsed`);
-  assert.match(reel, /enter=whip:\*\)\s+ENTER=whip; PUSH_DIR=/, 'whip takes a direction like push');
-  assert.match(reel, /dissolve\|push\|jcut\|iris\|blur\|whip\|zoom\)/, 'every carry mode enters the carry branch');
-
-  // The fade can never outgrow the card it sits in: a quarter of the card is the ceiling, so a
-  // one-second insert dips rather than blinking all the way through black.
-  assert.match(reel, /m=dur\/4; if\(d>m\)d=m/, 'the fade is clamped to a quarter of the card');
-
-  // §9 has to stay a stream copy — that is what keeps drift at 0 and subtitle cues in place.
-  assert.match(reel, /-f concat -safe 0 -i work\/list\.txt -c copy work\/video\.mp4/,
-               'cards are still joined by stream copy');
-});
+// Moving joins and their timing are exercised against real encoded frames in
+// cinematic-edit.test.mjs; do not pin the retired frozen-tail implementation.
 
 test('build-reel file subtitles — transcript times move onto absolute card times', () => {
   const reel = readFileSync(join(PRODUCE, 'build-reel.sh'), 'utf8');

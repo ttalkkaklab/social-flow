@@ -44,8 +44,8 @@ done
 - **Orientation check**: a portrait clip in a landscape episode makes the builder stop at
   `STRICT_DIM=1` before the first ffmpeg. That's a reshoot, so tell the user right away.
 - **Length check**: on a scene that covers narration, the clip has to be longer than
-  `narration + PRE + POST`. Too short and the screen freezes at the end — cut that scene's
-  script down or get the clip reshot.
+  `edit.in + narration + edit.pre + edit.post + outgoing handle`. Short sources block assembly;
+  shorten/replan the cut or reshoot it. See [cinematic-edit.md](cinematic-edit.md).
 - The overlay is **one alpha capture per scene** (a lower third). Reveal enumeration isn't
   used on live-voice scenes — what changes on screen is the recording, not our lettering.
 
@@ -82,7 +82,7 @@ and render again over the same `--out`:
 
 ```bash
 # segment k's window = silence-midpoint k-1 → k on the card's trimmed narration
-# (the same silencedetect signal reveal-timing.py reads); last segment += POST (0.45s)
+# Include the per-card edit.post (default 0.12s) and outgoing live handle in the last group.
 ffmpeg -i .work/pcm/s<shot number>.wav -af silencedetect=n=-35dB:d=0.25 -f null - 2>&1 | grep silence_
 node $REF/render-motion-slide.mjs storyboard/slides/s<shot number>-<slug>.html \
   --out .work/motion/slide-s<shot number> --segs 1:3160,2:2840,3:4210

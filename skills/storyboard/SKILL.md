@@ -428,6 +428,10 @@ Core rules:
   episode, and one reasoned `dutch`; keep hooks and speech at `eye`, and hold a wide ≥1.5× a close
   (directing-grammar §6). The same fields steer filmed-shot distance, eye height and 180° line (§7).
 - **Decide each join after the scenes are settled (4b).** Every shot after the first gets a
+  `edit.reason` and `edit.continuity` for each new boundary, following
+  [cinematic-edit.md](../produce/references/cinematic-edit.md). Match source composition and
+  action direction across neighbours, select the source in-point and reserve live outgoing
+  handles in the generated clip duration before the cost quote. Then write
   `transition`, chosen from what happened between the two shots in the ordered table of
   scenes-schema §scene transition — `jcut` only when nothing but the camera moved, `cut` only
   for a smash. `check-scenes` fails a boundary with none.
