@@ -98,13 +98,21 @@ check_first_cue() {
 # guessing: KEEP would be wrong on both sides of the length gate and the gate would still pass.
 # Under OUTRO=1 the tail can't be measured without the asset. Under OUTRO=0 a build that did splice
 # one leaves that outro inside the feature, and the pass would speed the sonic logo up with it —
-# the build report is the record of what the builder actually joined.
+# the build report is the record of what the builder actually joined, so it decides both
+# directions and the asset lying in the workdir decides neither. The other way round, OUTRO=1
+# over a build that joined nothing cuts the tail boundary out of the feature: the closing seconds
+# ship at 1.0x with their cues shifted instead of divided, and the length gate agrees because EXP
+# comes from the same wrong boundary.
 if [ "$OUTRO" = 1 ] && [ ! -f "$OUTRO_ASSET" ]; then
   say "✗ OUTRO=1 but $OUTRO_ASSET isn't in the workdir — the outro tail can't be measured. Put it back, or set OUTRO=0 in format.env when the channel ships without one"
   exit 1
 fi
 if [ "$OUTRO" != 1 ] && [ -f "$REPORT" ] && grep -q 'outro splice:' "$REPORT"; then
   say "✗ OUTRO=$OUTRO but the build spliced an outro ($REPORT) — speeding the whole file up would speed the outro with it. Rebuild under the same flag, or set OUTRO=1 in format.env"
+  exit 1
+fi
+if [ "$OUTRO" = 1 ] && [ -f "$REPORT" ] && ! grep -q 'outro splice:' "$REPORT"; then
+  say "✗ OUTRO=1 but the build joined no outro ($REPORT) — the tail would be cut out of the feature and shipped unsped. Rebuild under the same flag, or set OUTRO=0 in format.env"
   exit 1
 fi
 

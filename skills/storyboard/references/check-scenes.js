@@ -164,6 +164,7 @@ function formatOf(scenesPath) {
   }
 }
 
+const LONG_FORMAT = 'youtube-long-16x9';
 const MOTION_KINDS = ['ai-video', 'recording', 'motion-slide'];
 const MOTION_PROFILE_KEYS = [
   'motion_min_true', 'motion_allowed_kinds', 'motion_max_consecutive_stills',
@@ -237,10 +238,12 @@ function numberOrDefault(v, dflt, errors, field, integer) {
 
 /* `pacing` is the format preset's pacing block. The length band's default is format-derived —
    it is the only policy value this file must not carry a number for — so it arrives as an
-   argument instead of a module constant. */
-function normalizeMotionPolicy(raw, defaultVideoMax, source, pacing) {
+   argument instead of a module constant. `isShort` says which band that is; an omitted flag
+   reads as short-form, the way an omitted `window.FORMAT` does. */
+function normalizeMotionPolicy(raw, defaultVideoMax, source, pacing, isShort) {
   const errors = [];
   const band = pacing || {};
+  const shortForm = isShort !== false;
   const bandDefault = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
   const profileShape = raw && MOTION_PROFILE_KEYS.some((k) => raw[k] !== undefined);
   const sceneShape = !!raw && !profileShape;
@@ -285,11 +288,13 @@ function normalizeMotionPolicy(raw, defaultVideoMax, source, pacing) {
   const videoBudgetUsd = numberOrDefault(
     scalar(pick('video_budget_usd', 'videoBudgetUsd')), VIDEO_BUDGET_DEFAULT_USD,
     errors, 'video_budget_usd/videoBudgetUsd', false);
-  /* The channel may narrow the recommended length band; the format's hard cap is not a channel
-     field and stays with the preset. An absent key takes the preset's own band. Every other
-     policy key switches off with `off`, but there is no episode without a length, so `off` here
-     is a mistake worth naming instead of quietly handing the preset back — the doc side is
-     scenes-schema §Channel true-motion policy. */
+  /* The channel may narrow the recommended length band on short-form; the format's hard cap is
+     not a channel field and stays with the preset. An absent key takes the preset's own band.
+     Long-form never reads the pair, so a channel that narrows one end only does not get its
+     other end filled from the 8–15 min preset and cross-checked against a shorts number.
+     Every other policy key switches off with `off`, but there is no episode without a length,
+     so `off` here is a mistake worth naming instead of quietly handing the preset back — the
+     doc side is scenes-schema §Channel true-motion policy. */
   const bandNumber = (v, dflt, field) => {
     if (v === 'off' || v === 'none') {
       errors.push(`${field} does not take off — write a number, or drop the key to keep the preset's band`);
@@ -297,12 +302,12 @@ function normalizeMotionPolicy(raw, defaultVideoMax, source, pacing) {
     }
     return numberOrDefault(v, dflt, errors, field, false);
   };
-  const lengthMin = bandNumber(
+  const lengthMin = shortForm ? bandNumber(
     scalar(pick('length_min_seconds', 'lengthMin')), bandDefault(band.totalMin),
-    'length_min_seconds/lengthMin');
-  const lengthMax = bandNumber(
+    'length_min_seconds/lengthMin') : null;
+  const lengthMax = shortForm ? bandNumber(
     scalar(pick('length_max_seconds', 'lengthMax')), bandDefault(band.totalMax),
-    'length_max_seconds/lengthMax');
+    'length_max_seconds/lengthMax') : null;
   if (lengthMin !== null && lengthMax !== null && lengthMin > lengthMax)
     errors.push('length_min_seconds/lengthMin is above length_max_seconds/lengthMax');
   const hookRaw = scalar(pick('hook_video', 'hookVideo'));
@@ -442,10 +447,10 @@ function check(win, fmt, opts) {
     ? Math.floor(Number(fmt.video.generatedSecondsMax) / 8) : 2;
   const productionMode = require('./production-mode.js');
   productionMode.check(win, { draft }).forEach(message => bad('production mode', message));
-  const motionPolicy = productionMode.policy((opts && opts.policy) || normalizeMotionPolicy(null, formatVideoMax, 'default', pacing), win.PRODUCTION, scenes);
+  const isShort = fmt.format !== LONG_FORMAT;
+  const motionPolicy = productionMode.policy((opts && opts.policy) || normalizeMotionPolicy(null, formatVideoMax, 'default', pacing, isShort), win.PRODUCTION, scenes);
   const main = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
   const cover = scenes.find((s) => s.type === 'cover');
-  const isShort = fmt.format !== 'youtube-long-16x9';
 
   // ── Episode level ──
   if (!cover) bad('episode', 'no cover shot — every episode opens on one');
@@ -458,15 +463,17 @@ function check(win, fmt, opts) {
     warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.sceneCountMin}~${pacing.sceneCountMax}`);
 
   /* Total length against the channel's band, with the preset's underneath it (`length_min_seconds`
-     / `length_max_seconds`, scenes-schema §Channel true-motion policy). storyboard.html's length
-     strip runs this same ladder over the same scenes — everything but the outro asset, b-roll
-     included, because a b-roll plays — so the page and this file give one verdict. The hard cap
-     belongs to the platform, not to any channel. A board with no durations yet is left to the
-     per-scene `no duration` warning rather than told its total is 0. */
+     / `length_max_seconds`, scenes-schema §Channel true-motion policy). The two keys narrow the
+     short-form band only — long-form does not read them at all and keeps the preset's own band,
+     so a dual-format channel that tightens its shorts does not drag its long-form boards down.
+     storyboard.html's length strip runs this same ladder over the same scenes — everything but
+     the outro asset, b-roll included, because a b-roll plays — so the page and this file give one
+     verdict. The hard cap belongs to the platform, not to any channel. A board with no durations
+     yet is left to the per-scene `no duration` warning rather than told its total is 0. */
   const played = scenes.filter((s) => s.type !== 'outro')
     .reduce((a, s) => a + (Number(s.duration) > 0 ? Number(s.duration) : 0), 0);
-  const bandFloor = Number.isFinite(motionPolicy.lengthMin) ? motionPolicy.lengthMin : pacing.totalMin;
-  const bandCeil = Number.isFinite(motionPolicy.lengthMax) ? motionPolicy.lengthMax : pacing.totalMax;
+  const bandFloor = isShort && Number.isFinite(motionPolicy.lengthMin) ? motionPolicy.lengthMin : pacing.totalMin;
+  const bandCeil = isShort && Number.isFinite(motionPolicy.lengthMax) ? motionPolicy.lengthMax : pacing.totalMax;
   const lenTxt = (v) => `${Math.round(v * 10) / 10}s`;
   if (played > 0 && Number.isFinite(pacing.totalHard) && played > pacing.totalHard)
     bad('episode', `main body ${lenTxt(played)} — past the cap of ${lenTxt(pacing.totalHard)}`);
@@ -1329,6 +1336,13 @@ function selftest() {
      normalizeMotionPolicy({ length_min_seconds: 'none' }, 2, 'fixture', fmt.pacing)
        .errors.some((e) => /length_min_seconds\/lengthMin does not take off/.test(e)) &&
      normalizeMotionPolicy({ length_max_seconds: 'off' }, 2, 'fixture', fmt.pacing).lengthMax === 120);
+  /* A dual-format channel narrows its shorts and nothing else. Reading one key here and
+     filling the other from the 8~15 min preset used to cross-check 480 against 75 and fail
+     the long-form board on a profile error it had no business reading. */
+  ok('long-form reads neither band key, so one end alone stays out of its preset',
+     normalizeMotionPolicy({ length_min_seconds: 45 }, 2, 'fixture', fmtLong.pacing, false).lengthMin === null &&
+     normalizeMotionPolicy({ length_min_seconds: 45 }, 2, 'fixture', fmtLong.pacing, false).lengthMax === null &&
+     normalizeMotionPolicy({ length_max_seconds: 75 }, 2, 'fixture', fmtLong.pacing, false).errors.length === 0);
   ok('a length-only profile counts as declaring a policy',
      MOTION_PROFILE_KEYS.indexOf('length_min_seconds') !== -1 &&
      MOTION_PROFILE_KEYS.indexOf('length_max_seconds') !== -1);
@@ -1346,6 +1360,10 @@ function selftest() {
      has(atLevel(run(timed(10, 8), null, { policy: bandPolicy({ length_max_seconds: 50 }) }), 'warn'), /main body 80s — outside the channel band 35s~50s/));
   ok('past the 180s hard cap is a violation, and no channel key moves it',
      has(bads(run(timed(24, 8), null, { policy: bandPolicy({ length_max_seconds: 300 }) })), /main body 192s — past the cap of 180s/));
+  ok('the channel band is short-form only — long-form is measured against its own preset',
+     !has(runLong(timed(31, 20), null, { policy: bandPolicy({ length_max_seconds: 75 }) }), /main body/) &&
+     has(atLevel(runLong(timed(20, 20), null, { policy: bandPolicy({ length_max_seconds: 75 }) }), 'warn'),
+         /main body 400s — outside the default 480s~900s/));
   ok('a board with no durations yet is left to the per-scene warning',
      !has(run(timed(4, 0).map((s) => { const c = Object.assign({}, s); delete c.duration; return c; }),
               null, { policy: bandPolicy({ hook_video: 'off' }) }), /main body/));
@@ -1821,11 +1839,12 @@ function main() {
   const profilePath = findProfile(scenesPath);
   const profileRaw = profilePath ? frontmatter(profilePath) : {};
   const profileHasPolicy = MOTION_PROFILE_KEYS.some((k) => profileRaw[k] !== undefined);
+  const isShort = fmt.format !== LONG_FORMAT;
   const profilePolicy = normalizeMotionPolicy(profileHasPolicy ? profileRaw : null, formatVideoMax,
-                                               profilePath || 'format default', fmt.pacing);
-  const scenePolicy = normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', fmt.pacing);
+                                               profilePath || 'format default', fmt.pacing, isShort);
+  const scenePolicy = normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', fmt.pacing, isShort);
   const effectivePolicy = profileHasPolicy ? profilePolicy
-    : normalizeMotionPolicy(null, formatVideoMax, 'format default', fmt.pacing);
+    : normalizeMotionPolicy(null, formatVideoMax, 'format default', fmt.pacing, isShort);
   const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true });
   require('./render-routing.js').checkEpisode(win).forEach(what =>
     findings.push({ level: 'bad', where: 'visual direction', what }));

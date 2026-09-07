@@ -86,7 +86,7 @@ slug rule are all inherited from that file.
 
 **The channel profile outranks the generic format defaults.** Before choosing shots read
 `motion_min_true`, `motion_allowed_kinds`, `motion_max_consecutive_stills`, `motion_max_still_seconds`,
-`motion_require_action`, `generated_video_max`, `length_min_seconds` and `length_max_seconds` (unset, the preset's 35–120s band stands), and the four with plugin defaults — `max_static_ground_seconds` (8), `html_plate_max` (2),
+`motion_require_action`, `generated_video_max`, `length_min_seconds` and `length_max_seconds` (short-form only; unset, the preset's 35–120s band stands), and the four with plugin defaults — `max_static_ground_seconds` (8), `html_plate_max` (2),
 `video_budget_usd` (10), `hook_video` (off); copy their normalized values into `window.MOTION_POLICY` (scenes-schema §Channel true-motion policy). Read `shortform_outro` (`on` when absent) in the same pass — with it `off` the board has no outro entry and `SB_DOC.outro` is null.
 `check-scenes.js` compares the snapshot with the profile, so no episode can weaken it. A
 duration, shot-count or motion conflict stops here for the user to choose which contract changes.
@@ -402,8 +402,8 @@ photo is the default. The source of truth for field definitions is the schema's 
 units and production layers.
 
 **Write it in two passes.** **4a — story**: `window.COMPREHENSION` · `beat` · `shot.feel` ·
-`shot.info` · `shot.infoType` · `narration` · `arc` · `hookType`/`hookForm` · `title` and the approved scenario's
-three verbatim lines only, so shots stay cheap to cut; the cover's `shot.info` says the 훅 is staged
+`shot.info` · `shot.infoType` · `shot.share`/`shot.shareType` · `narration` · `arc` · `hookType`/`hookForm` · `title` and the
+approved scenario's three verbatim lines only, so shots stay cheap to cut; the cover's `shot.info` says the 훅 is staged
 ("연출 — 전개 #1 이 사실을 댄다"). 4a is done when §4.4 and §4.5 clear. **4b — machine**, after §4.5: everything else. scenario-craft §12 measures it.
 Core rules:
 - **Compress the episode before polishing its sentences.** `window.COMPREHENSION` names one question,
@@ -437,7 +437,7 @@ Core rules:
   for a smash. `check-scenes` fails a boundary with none.
 - **Composition — the format picked in §1.5 sets the band.** The source of truth for the
   constants is `formats.js`, and the `storyboard.html` check strip measures against those
-  values for you — with the channel's own band on top of the preset.
+  values for you — with the channel's own band on top of the short-form preset.
   - **Short-form 9:16**: hook + drip (1–n) + spoken CTA = **4–12 shots** inside the channel's band (`length_min_seconds`/`length_max_seconds`; unset, the preset's 35–120s stands, of which **35–75s** is the recommendation)
     (typically 2–5 drips). The shared outro asset sits after the CTA and is not a spoken shot — on a channel with `shortform_outro: off` nothing sits after the CTA at all, so the CTA's last frame is the episode's last frame and it is planned as the hand-back to the cover (scenario-craft §5).
     When going over the channel's maximum, write into the `storyboard.md` design rationale why

@@ -104,7 +104,7 @@ topic: <topic slug>
 mode: screencast          # screencast = whole-episode shoot | mixed = long-form mixed lane
 format: youtube-long-16x9 # or shorts-9x16
 scenes: <shots to film> / <shots in total>
-target: 8–15 min          # the channel's band for short-form (format default 35–75s)
+target: 8–15 min          # the channel's band for short-form (unset, the preset's 35–120s stands, of which 35–75s is the recommendation)
 generated: <YYYY-MM-DD>
 ---
 

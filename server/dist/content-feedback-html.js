@@ -138,7 +138,7 @@ function platformSection(section, title, accent) {
             { k: 'Views', v: fmt(section.cohort.views, 0), hint: 'not a quality signal' },
             { k: 'Opening pass', v: fmt(section.cohort.hook, 0, '%'), hint: 'engaged / views' },
             { k: 'Retention', v: fmt(section.cohort.retain, 0, '%'), hint: 'average view percentage' },
-            { k: 'Shares', v: fmt(section.cohort.shareRate, 2, '%'), hint: 'against views' },
+            { k: 'Shares', v: fmt(section.cohort.shareRate, 2, '%'), hint: 'against engaged views' },
             { k: 'Subs (channel)', v: fmt(section.cohort.channelSubRate, 2, '%'), hint: 'no per-episode number' },
         ], accent)
         : funnel([

@@ -2285,11 +2285,12 @@ window.SB_DOC = {
        (DOC.series ? " · " + esc(DOC.series) : "") + "</div>";
   h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic || "") + "</h1>";
 
-  /* The channel may narrow the band from either end (profile.md length_min_seconds /
-     length_max_seconds, copied into window.MOTION_POLICY). The format's hard cap is not a
-     channel field — 180s is the platform limit and FMT keeps it. */
+  /* The channel may narrow the short-form band from either end (profile.md length_min_seconds /
+     length_max_seconds, copied into window.MOTION_POLICY). Long-form keeps the preset's own band,
+     the way check-scenes.js gates the same pair, so the page and the CLI give one verdict. The
+     format's hard cap is not a channel field — 180s is the platform limit and FMT keeps it. */
   var lenOverride = function (v) {
-    return v !== null && v !== undefined && Number.isFinite(Number(v)) ? Number(v) : null; };
+    return !WIDE && v !== null && v !== undefined && Number.isFinite(Number(v)) ? Number(v) : null; };
   var lenMin = lenOverride(MP.lengthMin) !== null ? lenOverride(MP.lengthMin) : FMT.totalMin;
   var lenMax = lenOverride(MP.lengthMax) !== null ? lenOverride(MP.lengthMax) : FMT.totalMax;
   var lenChannel = lenMin !== FMT.totalMin || lenMax !== FMT.totalMax;
@@ -2348,7 +2349,8 @@ window.SB_DOC = {
     // The forwardable thing's shape. The label is optional anywhere; the close's shot.share
     // itself is required, and the playback-order block above is where that is checked.
     // The five words are copied from check-scenes.js's SHARE_TYPES — that array is the source
-    // of truth, and no lint pins this copy to it, so a sixth word has to be added in both.
+    // of truth, and format-lint.js's crossCheckShareContract compares this copy against it, so a
+    // sixth word goes into the checker first, then here, then the linter runs.
     var shareType = s && s.shot && s.shot.shareType;
     if (shareType && ["fact", "verdict", "line", "checklist", "none"].indexOf(shareType) < 0)
       flag("bad", T.shotCap(i + 1), "shot.shareType \"" + shareType + "\" is outside fact · verdict · line · checklist · none");
@@ -2651,7 +2653,8 @@ window.SB_DOC = {
         orderOk = false; orderBad = true;
       } else if (compactLetters(((lastMain.s.shot || {}).share) || "").length < 8) {
         // The 8-compacted-character floor is check-scenes.js's number (its share-trigger check);
-        // no lint pins this copy to it, so moving the floor means moving it in both files.
+        // format-lint.js's crossCheckShareContract reads both numbers and compares them, so the
+        // floor moves in the checker first and here second, with the linter run after.
         // An ask stays optional; a forwardable thing does not — an ask requests behaviour from
         // the viewer, while a forwardable thing is one sentence, figure or verdict they can pass
         // on as-is. Asking to be shared is an ask, not a trigger.

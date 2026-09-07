@@ -153,7 +153,6 @@ rule.
 
 ```yaml
 push_targets: []            # platforms allowed to push a candidate — [] means the loop only records it
-push_per_candidate: 1       # posts one candidate gets, across all targets
 ```
 
 **A platform listed here still publishes nothing by itself.** The push post
@@ -161,7 +160,9 @@ goes out from that platform's own growth loop under that platform's plan, so
 the target plan needs its own push clause first (Threads:
 `skills/grow-threads/references/growth-plan-template.md` §Cross-platform push).
 Only list a platform whose `growth-plan.md` is approved — a missing standing
-authorization is not ours to write on its owner's behalf.
+authorization is not ours to write on its owner's behalf. There is no count to
+set: a candidate gets one post per target, and the target loop records that
+push in its own state so it never posts about the same video again.
 
 The handoff is `data/<channel>/growth/breakout.json`, channel-shared and
 written only by the YouTube loop.

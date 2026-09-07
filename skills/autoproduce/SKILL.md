@@ -779,17 +779,20 @@ runs here too — produce §4's `--dump-dom` one-liner needs no browser tooling,
 unattended mode gets the same `ovf=0` verdict. On top of it, verify the captured
 state PNGs are non-zero-size and the per-scene state counts match the manifest.
 
-**Settle the outro before the build.** Read `shortform_outro` from profile.md — absent
-means `on`. On `on`, resolve and copy the asset under `format.env`'s `OUTRO_ASSET` name
-exactly as produce §6 does and write `OUTRO=1`; the build stops on a missing file instead
-of shipping an episode with no ending. On `off`, skip that resolve and copy and write
+**Settle the outro before the build.** `shortform_outro` in profile.md is **a short-form-only
+key** — absent means `on`, and a `youtube-long-16x9` episode writes `OUTRO=1` whatever the
+profile says, because long-form always splices `outro-16x9.mp4`. On a short with the key `on`
+or absent, resolve and copy the asset under `format.env`'s `OUTRO_ASSET` name exactly as
+produce §6 does and write `OUTRO=1`; the build stops on a missing file instead of shipping an
+episode with no ending. Only a short with `off` skips that resolve and copy and writes
 `OUTRO=0`, because `build-reel.sh` and `speedup.sh` decide by the variable, not by what
 happens to sit on disk — a leftover `outro.mp4` from an earlier run would otherwise get
 spliced on and left at 1.0x with its cues mistimed.
 
 ```bash
 grep -qF '${OUTRO:=' .work/format.env \
-  || echo ": \"\${OUTRO:=<1, or 0 when profile.md says shortform_outro: off>}\"" >> .work/format.env
+  && echo "format.env already carries OUTRO — edit that line instead of appending" \
+  || echo ": \"\${OUTRO:=<1, or 0 when this is a short and profile.md says shortform_outro: off>}\"" >> .work/format.env
 grep -F '${OUTRO:=' .work/format.env   # echoes the line the build and the speed pass read
 ```
 

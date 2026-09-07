@@ -206,11 +206,13 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
     && echo "format.env already carries SPEED — edit that line instead of appending" \
     || echo ": \"\${SPEED:=<the factor from profile.md §2>}\"" >> .work/format.env
   # profile.md's `shortform_outro` — absent or `on` writes 1, `off` writes 0, substituted the way
-  # the SPEED line wants a factor. **The flag decides the splice, not whether outro.mp4 is in the
-  # workdir** — that tells a channel shipping without one apart from a forgotten copy step.
+  # the SPEED line wants a factor; **the key is short-form only**, so a `youtube-long-16x9` episode
+  # writes 1 whatever the profile says (long-form always splices outro-16x9.mp4). **The flag decides
+  # the splice, not whether outro.mp4 is in the workdir** — that tells a channel shipping without
+  # one apart from a forgotten copy step.
   grep -qF '${OUTRO:=' .work/format.env \
     && echo "format.env already carries OUTRO — edit that line instead of appending" \
-    || echo ": \"\${OUTRO:=<1, or 0 when profile.md says shortform_outro: off>}\"" >> .work/format.env
+    || echo ": \"\${OUTRO:=<1, or 0 when this is a short and profile.md says shortform_outro: off>}\"" >> .work/format.env
   ```
 
   Top-level `window.FORMAT` in `scenes.js` is the format axis, and **without it the format
@@ -938,8 +940,10 @@ vm.runInNewContext(fs.readFileSync("storyboard/scenes.js","utf8"), sb);
 ' > .work/chapters.tsv
 ```
 
-**`OUTRO=0` skips this step** — the channel ships without one and `── no outro (OUTRO=0 …)` is the
-expected report line. Otherwise copy the outro chosen from the catalog **under exactly the name in
+**`OUTRO=0` skips this step** — a short-form-only channel that ships without one, where
+`── no outro (OUTRO=0 …)` is the expected report line and there may be no outro asset to resolve.
+Long-form never lands here: the flag is 1 whatever `shortform_outro` says (§1). Otherwise copy the
+outro chosen from the catalog **under exactly the name in
 `format.env`'s `OUTRO_ASSET`** — landscape is `outro-16x9.mp4`, so leaving it as `outro.mp4` means
 the builder can't find it, and under `OUTRO=1` that stops the build instead of passing as one line
 in the report. Use the platform's id (`youtube`·`instagram`) if you know it, `default` if you
@@ -948,9 +952,11 @@ don't; the resolved path goes to `$OUTRO_SRC` — `$OUTRO` is the flag.
 ```bash
 ASSET=${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py
 . .work/format.env                      # read OUTRO_ASSET and OUTRO
-OUTRO_SRC=$(python3 "$ASSET" data/<channel> outro "${PLATFORM:-default}") \
-  || OUTRO_SRC=$(python3 "$ASSET" data/<channel> outro default)
-[ "$OUTRO" = 1 ] && cp "$OUTRO_SRC" ".work/${OUTRO_ASSET}"
+if [ "$OUTRO" = 1 ]; then                # the flag first — with it 0 there may be no asset to find
+  OUTRO_SRC=$(python3 "$ASSET" data/<channel> outro "${PLATFORM:-default}") \
+    || OUTRO_SRC=$(python3 "$ASSET" data/<channel> outro default)
+  cp "$OUTRO_SRC" ".work/${OUTRO_ASSET}"
+fi
 # if there isn't one, generate it once with build-outro.sh → save as assets/outro/default.mp4
 #   python3 "$ASSET" --ensure data/<channel> outro default outro/default.mp4
 if [ -d data/<channel>/assets/fonts ]; then
@@ -1064,10 +1070,11 @@ re-encoded), and the builder verifies that the lengths match.
 Read `build-report.txt` and rule on it — **drift has to be 0.0000s**, and `missing reveal state` /
 `last reveal state unused` mean don't proceed. The full verdict table is in
 `references/pipeline.md` §Build report gate table. Total length: the channel's band
-(`length_min_seconds`/`length_max_seconds`, 35–75s by default), up to 120s, 180s cap —
-**measured after the §7.5 speed pass**, which is the file that ships. Confirm that `cover.jpg` is
-a frame where the hero number has already appeared, and if it isn't, set `COVER_TS` past the
-report's cover-transition-complete time and rebuild (or re-extract the still with ffmpeg).
+(`length_min_seconds`/`length_max_seconds`); unset, the preset's 35–120s stands, of which 35–75s is
+the recommendation, and 180s is the platform's own cap — **measured after the §7.5 speed pass**,
+which is the file that ships. Confirm that `cover.jpg` is a frame where the hero number has
+already appeared, and if it isn't, set `COVER_TS` past the report's cover-transition-complete
+time and rebuild (or re-extract the still with ffmpeg).
 
 ### 7.5 Speed pass (required — every episode)
 
@@ -1110,7 +1117,7 @@ $REF/speedup.sh .work 1.6    # a channel-specific rate — profile.md §2 decide
   `.work/qa/first-frame.png`, and exits 1 when the measured length doesn't match feature/factor +
   tail or `check-final-speech-rate.py` finds more than 6.2 characters/s. **No marker line or
   final-rate PASS line means the episode is not ready to publish** (pipeline.md gate table).
-- **Length contracts are read after the pass.** The channel's band (35–75s by default) describes the shipped file.
+- **Length contracts are read after the pass.** The channel's band — unset, the preset's 35–120s — describes the shipped file.
 - With chapters, watch for the `⚠ … under 10s` line in `build-report.txt` — at a channel-selected 1.2x a boundary
   that was 10s apart comes out 8.3s and YouTube drops the whole chapter list. `build-reel.sh` now
   demands `10 × factor` up front, so this only fires on a build made before that. Merge those

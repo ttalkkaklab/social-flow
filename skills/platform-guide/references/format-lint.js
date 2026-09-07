@@ -426,10 +426,18 @@ function crossCheckShareContract(issues) {
     issues.push({ name: 'SHARE_TYPES mirror in storyboard-html-template.html',
                   got: got.join(' · '), want: want.join(' · ') });
 
+  // Both floors are matched against the exact call expression, so a free-hand reformat of
+  // either line stops the match. That must go red: a pin nobody can see switch itself off
+  // reads as coverage it no longer gives.
   const floor = checker.match(/compactLength\(\(\(scenes\[[^\]]+\][^)]*\)\.shot \|\| \{\}\)\.share\) < (\d+)/);
   const pageFloor = page.match(/compactLetters\(\(\(lastMain\.s\.shot \|\| \{\}\)\.share\) \|\| ""\)\.length < (\d+)/);
-  if (!floor || !pageFloor) return;
-  if (floor[1] !== pageFloor[1])
+  if (!floor)
+    issues.push({ name: 'share-trigger floor in check-scenes.js', got: '(not found)',
+                  want: 'compactLength(((scenes[…] || {}).shot || {}).share) < <n>' });
+  if (!pageFloor)
+    issues.push({ name: 'share-trigger floor in storyboard-html-template.html', got: '(not found)',
+                  want: 'compactLetters(((lastMain.s.shot || {}).share) || "").length < <n>' });
+  if (floor && pageFloor && floor[1] !== pageFloor[1])
     issues.push({ name: 'share-trigger floor in storyboard-html-template.html',
                   got: pageFloor[1], want: floor[1] });
 }

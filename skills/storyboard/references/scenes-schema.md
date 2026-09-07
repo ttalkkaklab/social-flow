@@ -144,10 +144,11 @@ There are only two values.
 **The source of truth for the constants is
 `skills/platform-guide/references/formats.js`.** The table below is the summary you consult
 while authoring; the real values are what `format-resolve.js` hands the builder. When the two
-disagree, the preset is right — with one layer above it. `profile.md` may narrow the length
-band with `length_min_seconds` and `length_max_seconds`, and the channel wins there. Unset, the
-preset's own band stands (35–120 s on short-form), and the 180 s hard cap belongs to the
-platform rather than to any channel.
+disagree, the preset is right — with one layer above it. `profile.md` may narrow the short-form
+length band with `length_min_seconds` and `length_max_seconds`, and the channel wins there.
+Unset, the preset's own band stands (35–120 s on short-form); long-form keeps the preset's
+8–15 min band whatever the profile carries, and the 180 s hard cap belongs to the platform
+rather than to any channel.
 
 | Contract | Short-form 9:16 | Long-form 16:9 |
 |---|---|---|
@@ -617,11 +618,13 @@ The profile keys are `motion_min_true`, `motion_allowed_kinds`,
 `max_static_ground_seconds`, `html_plate_max`, `video_budget_usd`
 and `hook_video`. `check-scenes.js` blocks a missing or changed copy: the profile wins.
 
-**`length_min_seconds` / `length_max_seconds`** narrow the total-length band and land in the
-snapshot as `lengthMin` / `lengthMax`. Unset, the preset's band stands — 35–120 s on short-form,
-480–900 s on long-form — so a channel that says nothing behaves exactly as before. The channel
-wins over the preset for the band, and the 180 s hard cap stays the platform's limit rather than
-a channel field. `off` is the one word these two keys refuse — every other policy key switches
+**`length_min_seconds` / `length_max_seconds`** narrow the short-form total-length band and land
+in the snapshot as `lengthMin` / `lengthMax`. Unset, the preset's 35–120 s stands, so a channel
+that says nothing behaves exactly as before. Long-form is measured against its own preset band
+(480–900 s) on both surfaces whatever the profile carries, so a dual-format channel narrows its
+shorts without dragging its long-form boards down with them. The channel wins over the preset
+for the short-form band, and the 180 s hard cap stays the platform's limit rather than a channel
+field. `off` is the one word these two keys refuse — every other policy key switches
 off with it, but an episode always has a length, so `check-scenes.js` names it as a profile
 error instead of quietly handing the preset band back. `check-scenes.js` and the approval page
 then read the band the same way: every shot but the outro asset (b-roll included, because a

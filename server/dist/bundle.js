@@ -79923,7 +79923,7 @@ var CONTENT_FEEDBACK_OUTPUT = {
     htmlPath: { description: "Path of the HTML written. null when neither channel nor outputPath was given" },
     youtube: {
       type: "object",
-      description: "{ available, error?, account, cohort, items[], notes[] } \u2014 items carries, per recent video, hook (% getting past the opening), retain (average % watched), shareRate (shares against views, since YouTube reports no reach), angle (views low while hook/retention held up), and problem/hypothesis/next-episode notes"
+      description: "{ available, error?, account, cohort, items[], notes[] } \u2014 items carries, per recent video, hook (% getting past the opening), retain (average % watched), shareRate (shares against engagedViews, the views past the opening, since YouTube reports no reach), angle (views low while hook/retention held up), and problem/hypothesis/next-episode notes"
     },
     instagram: {
       type: "object",
@@ -82373,7 +82373,7 @@ Returns: integer credit balance.`,
     title: "YouTube performance insights",
     annotations: HINT.read,
     outputSchema: YOUTUBE_INSIGHTS_OUTPUT,
-    description: `YouTube performance insights \u2014 returns channel stats (subscribers, total views), window metrics (views, engagedViews, average view duration, average view percentage, subscriber gain/loss), and per-recent-upload metrics in one call (read-only, no side effects). The grow-youtube loop snapshots this every tick to judge tick-over-tick change and which video types are landing \u2014 storing and comparing is the caller's job in data/<channel>/growth/youtube/. **Two scopes required**: youtube.readonly for channel/video lookups, yt-analytics.readonly for window metrics. Tokens issued with publish-only youtube.upload have neither, so a reissue is needed; when missing, the error carries reissue guidance. Revenue metrics (includeRevenue) additionally need yt-analytics-monetary.readonly, and even if that fails the other metrics still arrive. **Analytics data runs 2-3 days behind**, so empty-looking values for yesterday/today are normal \u2014 set days to 7+ to see a trend. The per-video lifetime block is the one exception: it comes from the Data API video statistics and updates without that lag, so it is the only near-real-time number here, while period \u2014 shares and averageViewPercentage included \u2014 follows the lag. The swipe-away rate used for Shorts hook verdicts (Studio's "How many chose to view") has no corresponding Analytics API metric and cannot be fetched here \u2014 substitute averageViewPercentage and check the swipe metric manually in Studio.`,
+    description: `YouTube performance insights \u2014 returns channel stats (subscribers, total views), window metrics (views, engagedViews, average view duration, average view percentage, subscriber gain/loss), and per-recent-upload metrics in one call (read-only, no side effects). The grow-youtube loop snapshots this every tick to judge tick-over-tick change and which video types are landing \u2014 storing and comparing is the caller's job in data/<channel>/growth/youtube/. **Two scopes required**: youtube.readonly for channel/video lookups, yt-analytics.readonly for window metrics. Tokens issued with publish-only youtube.upload have neither, so a reissue is needed; when missing, the error carries reissue guidance. Revenue metrics (includeRevenue) additionally need yt-analytics-monetary.readonly, and even if that fails the other metrics still arrive. **Analytics data runs 2-3 days behind**, so empty-looking values for yesterday/today are normal \u2014 set days to 7+ to see a trend. Two blocks sit outside that lag: the per-video lifetime block (Data API video statistics) and the channel-level account block (Data API channels.list statistics) both move in near real time, while period \u2014 shares and averageViewPercentage included \u2014 follows the lag. The swipe-away rate used for Shorts hook verdicts (Studio's "How many chose to view") has no corresponding Analytics API metric and cannot be fetched here \u2014 substitute averageViewPercentage and check the swipe metric manually in Studio.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -82484,7 +82484,7 @@ Returns: integer credit balance.`,
     title: "Recent-content feedback report",
     annotations: HINT.generate,
     outputSchema: CONTENT_FEEDBACK_OUTPUT,
-    description: "Recent-content feedback \u2014 pulls the latest N posts (default 5) from YouTube and Instagram, scores them per platform, and writes a chart-heavy HTML report (tables, funnels, bars) locally (nothing goes public). YouTube looks at opening pass-through (engagedViews/views), average view percentage, and shares against views; Instagram reels at 3-second drop-off (reels_skip_rate), average watch, and shares vs reach. YouTube reports no reach, so the two share rates sit on different denominators and are read within a platform, not across. Levers (hook, retention, share, angle) are picked against this batch's median, not absolute thresholds. On YouTube, views low while pass-through and retention sit at or above the median means angle \u2014 open the next episode's title with the felt problem, not the method or tool. Platforms without tokens just skip their section. **Default HTML path** data/<channel>/growth/review-recent.html \u2014 changeable via outputPath. Analytics lags 2-3 days, so days defaults to 28. The review-recent skill calls this tool and then opens the report.",
+    description: "Recent-content feedback \u2014 pulls the latest N posts (default 5) from YouTube and Instagram, scores them per platform, and writes a chart-heavy HTML report (tables, funnels, bars) locally (nothing goes public). YouTube looks at opening pass-through (engagedViews/views), average view percentage, and shares against engagedViews (the views past the opening); Instagram reels at 3-second drop-off (reels_skip_rate), average watch, and shares vs reach. YouTube reports no reach, so the two share rates sit on different denominators and are read within a platform, not across. Levers (hook, retention, share, angle) are picked against this batch's median, not absolute thresholds. On YouTube, views low while pass-through and retention sit at or above the median means angle \u2014 open the next episode's title with the felt problem, not the method or tool. Platforms without tokens just skip their section. **Default HTML path** data/<channel>/growth/review-recent.html \u2014 changeable via outputPath. Analytics lags 2-3 days, so days defaults to 28. The review-recent skill calls this tool and then opens the report.",
     inputSchema: {
       type: "object",
       properties: {
@@ -86573,7 +86573,7 @@ function platformSection(section, title, accent) {
       { k: "Views", v: fmt(section.cohort.views, 0), hint: "not a quality signal" },
       { k: "Opening pass", v: fmt(section.cohort.hook, 0, "%"), hint: "engaged / views" },
       { k: "Retention", v: fmt(section.cohort.retain, 0, "%"), hint: "average view percentage" },
-      { k: "Shares", v: fmt(section.cohort.shareRate, 2, "%"), hint: "against views" },
+      { k: "Shares", v: fmt(section.cohort.shareRate, 2, "%"), hint: "against engaged views" },
       { k: "Subs (channel)", v: fmt(section.cohort.channelSubRate, 2, "%"), hint: "no per-episode number" }
     ],
     accent
@@ -86839,7 +86839,7 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
   const notes = [
     "Shorts swipe-away drop-off is not in the API. Opening pass is read as the engagedViews/views ratio.",
     "Per-episode subscriber conversion is not stable in the video report, so only the channel-window number is recorded.",
-    "YouTube reports no reach, so the share rate here is shares against views. It does not line up with the Instagram share rate, which is against reach.",
+    "YouTube reports no reach, so the share rate here is shares against engagedViews \u2014 the views that got past the opening. Instagram divides by reach, so read each rate inside its own platform.",
     "When only views are low and opening pass and retention are at or above the median, the lever is angle. Do not clone that format \u2014 open the next episode title with the problem."
   ];
   const rows = videos.map((video) => {
@@ -86850,14 +86850,19 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
     const hook = views && views > 0 && engaged != null ? engaged / views * 100 : null;
     const retain = num3(period?.averageViewPercentage);
     const shares = num3(period?.shares);
-    const shareRate = views && views > 0 && shares != null ? shares / views * 100 : null;
+    const shareRate = engaged && engaged > 0 && shares != null ? shares / engaged * 100 : null;
     return { video, period, views, hook, retain, shares, shareRate };
   });
+  const shareMid = median(rows.map((r2) => r2.shareRate).filter((n) => n != null));
+  if (shareMid === 0)
+    notes.push("Half or more of these episodes reported no shares, so the batch median is 0 and there is nothing to read a share rate against. The share lever is off for this batch.");
+  else if (shareMid == null)
+    notes.push("No share numbers came back for these episodes, so the share lever is off for this batch.");
   const cohort = {
     hook: median(rows.map((r2) => r2.hook).filter((n) => n != null)),
     retain: median(rows.map((r2) => r2.retain).filter((n) => n != null)),
     views: median(rows.map((r2) => r2.views).filter((n) => n != null)),
-    shareRate: median(rows.map((r2) => r2.shareRate).filter((n) => n != null)),
+    shareRate: shareMid === 0 ? null : shareMid,
     channelSubRate: (() => {
       const gained = num3(channelMetrics?.subscribersGained);
       const views = num3(channelMetrics?.views);
@@ -86894,7 +86899,7 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
       if (shareRate != null && cohort.shareRate != null && shareRate < cohort.shareRate * SHARE_GAP) {
         steps.push({
           lever: "share",
-          problem: `shares against views ${shareRate.toFixed(2)}% \u2014 below the ${cohort.shareRate.toFixed(2)}% median`,
+          problem: `shares against engaged views ${shareRate.toFixed(2)}% \u2014 below the ${cohort.shareRate.toFixed(2)}% median`,
           hypothesis: "there is no single line worth passing on (a twist, a number, a checklist)",
           next: "put a sentence someone would forward as-is on one screen"
         });

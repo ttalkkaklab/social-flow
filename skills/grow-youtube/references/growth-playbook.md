@@ -163,9 +163,11 @@ subscriber delta · per-video view distribution · shares. Likes are a lagging
 indicator and don't change decisions. **Shares are the exception among the
 response metrics** — a forward is the only response that carries the video to
 someone the recommendation never picked, and `youtube_insights` has returned
-the per-video number all along. Read it weekly against views on the same
-episodes, and only weekly: shares come from Analytics and lag 2–3 days like
-everything else that service serves, so no same-day rule can key on them.
+the per-video number all along. Read it weekly against `engagedViews` on the
+same episodes — the views that got past the opening, the closest stand-in for
+reach on a platform that reports none — and only weekly: shares come from
+Analytics and lag 2–3 days like everything else that service serves, so no
+same-day rule can key on them.
 Read the subject, length, and format of the
 top-reach videos into the next plan — without this learning, the loop just
 clones the same video. If only views are low while early pass-through and

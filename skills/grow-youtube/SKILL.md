@@ -212,10 +212,11 @@ The template and state schema are in `references/growth-plan-template.md`.
    to sit on the ledger before any verdict is allowed (default 5), the margin
    over that baseline that makes a candidate (default twice the median at the
    same age), which platforms may be pushed (offer only platforms whose
-   `growth-plan.md` is approved — no platform at all is a fine answer), and how
-   many pushes one candidate gets (default 1). Two things get said out loud
-   here: the watch needs the `/loop` interval shortened for as long as a window
-   is open, and a named push target still publishes nothing until that
+   `growth-plan.md` is approved — no platform at all is a fine answer). How many
+   pushes a candidate gets is not asked: it is one post per target, and that
+   target's loop never posts about the same video twice. Two things get said out
+   loud here: the watch needs the `/loop` interval shortened for as long as a
+   window is open, and a named push target still publishes nothing until that
    platform's own plan gains its push clause.
 4. Write `growth-plan.md` from the template, **show the full text and get
    explicit approval**, then save with `status: approved`. Always state:
@@ -277,13 +278,13 @@ hidden (`subscriberCountHidden`) it's a rounded value — don't use it for delta
 judgment; read only the view and watch metrics.
 
 **The lag covers half the response, not all of it.** Everything Analytics
-serves — the channel `metrics`, each video's `period` block,
+serves — the channel `metrics` block, each video's `period` block,
 `averageViewPercentage`, `engagedViews`, `shares` — runs 2–3 days behind and
-has day granularity at best. Each video's `lifetime` block (`views` · `likes` ·
-`comments`) comes from the Data API's public counter instead and carries no
-lag at all. Everything in this section reads the Analytics half; §2b is the
-only place the live half is read, and the two are never mixed in one
-judgment.
+has day granularity at best. Two blocks come from the Data API's public
+counters with no lag: each video's `lifetime` (`views` · `likes` ·
+`comments`) and the channel `account`, where `subscriberCount` lives. So the
+subscriber delta above is a live read and the view trend a lagged one; §2b
+samples live `lifetime` too. Never compare a live number with a lagged one.
 
 From the per-video metrics, read **the type of the top-reach videos** (subject,
 length, format) and `averageViewPercentage` into the next plan — without this

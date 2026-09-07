@@ -82,7 +82,7 @@ export function analyzeYoutubeVideos(videos, account, channelMetrics) {
     const notes = [
         'Shorts swipe-away drop-off is not in the API. Opening pass is read as the engagedViews/views ratio.',
         'Per-episode subscriber conversion is not stable in the video report, so only the channel-window number is recorded.',
-        'YouTube reports no reach, so the share rate here is shares against views. It does not line up with the Instagram share rate, which is against reach.',
+        'YouTube reports no reach, so the share rate here is shares against engagedViews — the views that got past the opening. Instagram divides by reach, so read each rate inside its own platform.',
         'When only views are low and opening pass and retention are at or above the median, the lever is angle. Do not clone that format — open the next episode title with the problem.',
     ];
     const rows = videos.map((video) => {
@@ -93,16 +93,28 @@ export function analyzeYoutubeVideos(videos, account, channelMetrics) {
         const hook = views && views > 0 && engaged != null ? (engaged / views) * 100 : null;
         const retain = num(period?.averageViewPercentage);
         const shares = num(period?.shares);
-        // Instagram divides shares by reach; YouTube Analytics has no reach metric, so views is the
-        // nearest denominator it does give. The two rates are read within a platform, never across.
-        const shareRate = views && views > 0 && shares != null ? (shares / views) * 100 : null;
+        // Instagram divides shares by reach; the nearest YouTube gives is engagedViews, the views that
+        // got past the opening. Raw views would fold the opening pass-through into the rate — shares
+        // over views is shares-per-watcher times the hook above — so a weak opening would drag the
+        // share lever down too and one problem would be billed twice.
+        const shareRate = engaged && engaged > 0 && shares != null ? (shares / engaged) * 100 : null;
         return { video, period, views, hook, retain, shares, shareRate };
     });
+    // shares is a whole-number Analytics metric and a batch is five episodes, so as soon as half of
+    // them report none the median is exactly 0 and every comparison against it fails without a word.
+    // Carry that as "no median" — the funnel then prints a dash instead of a measured-looking 0.00%
+    // — and say in the notes that the lever is off. The Instagram path below has the same shape and
+    // no such guard.
+    const shareMid = median(rows.map((r) => r.shareRate).filter((n) => n != null));
+    if (shareMid === 0)
+        notes.push('Half or more of these episodes reported no shares, so the batch median is 0 and there is nothing to read a share rate against. The share lever is off for this batch.');
+    else if (shareMid == null)
+        notes.push('No share numbers came back for these episodes, so the share lever is off for this batch.');
     const cohort = {
         hook: median(rows.map((r) => r.hook).filter((n) => n != null)),
         retain: median(rows.map((r) => r.retain).filter((n) => n != null)),
         views: median(rows.map((r) => r.views).filter((n) => n != null)),
-        shareRate: median(rows.map((r) => r.shareRate).filter((n) => n != null)),
+        shareRate: shareMid === 0 ? null : shareMid,
         channelSubRate: (() => {
             const gained = num(channelMetrics?.subscribersGained);
             const views = num(channelMetrics?.views);
@@ -141,7 +153,7 @@ export function analyzeYoutubeVideos(videos, account, channelMetrics) {
             if (shareRate != null && cohort.shareRate != null && shareRate < cohort.shareRate * SHARE_GAP) {
                 steps.push({
                     lever: 'share',
-                    problem: `shares against views ${shareRate.toFixed(2)}% — below the ${cohort.shareRate.toFixed(2)}% median`,
+                    problem: `shares against engaged views ${shareRate.toFixed(2)}% — below the ${cohort.shareRate.toFixed(2)}% median`,
                     hypothesis: 'there is no single line worth passing on (a twist, a number, a checklist)',
                     next: 'put a sentence someone would forward as-is on one screen',
                 });
