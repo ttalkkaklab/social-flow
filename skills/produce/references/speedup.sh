@@ -69,8 +69,11 @@ else
   VIN=reel.mp4;         SIN=reel-sub.mp4;         TIN=subs.srt
 fi
 # Generated/mixed episodes carry the mandatory builder proof. Shooting edits use edit.json.
-if [ -f build-plan-check.json ]; then node "$HERE/verify-assembled.js" . "$VIN" "$SIN" "$TIN"; fi
+if [ -f build-plan-check.json ] || [ ! -f edit.json ]; then node "$HERE/verify-assembled.js" . "$VIN" "$SIN" "$TIN"; fi
 [ -f "$VIN" ] || { echo "✗ $VIN missing — run build-reel.sh (and splice-clip.sh) first" >&2; exit 1; }
+
+# Remove derived files from an older pace pass, including an obsolete burned copy.
+rm -f reel-fast.mp4 reel-sub-fast.mp4 subs-fast.srt chapters-fast.txt delivery-proof.json
 
 if awk -v f="$SPEED" 'BEGIN{exit !(f == 1)}'; then
   # At 1.0 (the default), ship at the recorded pace. Copy the set through under the
@@ -81,6 +84,7 @@ if awk -v f="$SPEED" 'BEGIN{exit !(f == 1)}'; then
   [ -f chapters.txt ] && cp -f chapters.txt chapters-fast.txt
   check_final_rate
   say "── speedup x1.00: passed through at the recorded pace ($VIN → reel-fast.mp4)"
+  node "$HERE/delivery-proof.js" . "$SPEED"
   exit 0
 fi
 
@@ -206,3 +210,5 @@ fi
 check_final_rate
 TAIL=$(awk -v k="$KEEP" 'BEGIN{printf "%.2f", k}')
 say "── speedup x$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", f}') ($VIN): ${TOT}s → ${RV}s (feature ${B}s at speed, ${TAIL}s outro tail at 1.00x)"
+
+node "$HERE/delivery-proof.js" . "$SPEED"

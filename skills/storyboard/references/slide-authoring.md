@@ -112,7 +112,7 @@ rubric the reviewer applies.
      match its material, perspective and light to the objects. A black ground or labelled box
      cannot replace the setting or a physical object. Keep abstract bars for actual quantities.
    - Specific-part annotations use the small ring and leader line in
-     [illustrated-scenes.md](illustrated-scenes.md#부위를-짚는-카탈로그-표식), with the anchor projected
+     [illustrated-scenes.md](illustrated-scenes.md#catalog-callouts-that-point-at-a-part), with the anchor projected
      from the moving part. Keep labels in clear space; use arrows only for direction or flow.
      Include the bundled runtime, place `h.object`, and keep the model recipe beside the slide.
    - A diagram with a **sheet `slide.object`** places a **rendered object** (`rendered-object.md`,

@@ -137,7 +137,8 @@ test('delivery rejects a replaced burned master even when clean master is unchan
  const dir=mkdtempSync(path.join(tmpdir(),'burned-proof-'));
  try{
   const source='window.SCENES=[];';writeFileSync(path.join(dir,'scenes.js'),source);writeFileSync(path.join(dir,'cards.tsv'),'');writeFileSync(path.join(dir,'segs.tsv'),'');
-  writeFileSync(path.join(dir,'build-plan-check.json'),JSON.stringify({storyboard:dir,scenesSha256:hash(source),cardsSha256:hash(''),segsSha256:hash(''),mediaSha256:{}}));
+  writeFileSync(path.join(dir,'cards.resolved.tsv'),'');writeFileSync(path.join(dir,'edit-plan.json'),'{}');
+  writeFileSync(path.join(dir,'build-plan-check.json'),JSON.stringify({storyboard:dir,scenesSha256:hash(source),cardsSha256:hash(''),segsSha256:hash(''),resolvedCardsSha256:hash(''),editPlanSha256:hash('{}'),mediaSha256:{}}));
   writeFileSync(path.join(dir,'reel.mp4'),'clean');writeFileSync(path.join(dir,'reel-sub.mp4'),'replaced');writeFileSync(path.join(dir,'subs.srt'),'subtitles');
   writeFileSync(path.join(dir,'assembled-check.json'),JSON.stringify({duration:5,outputs:{'reel.mp4':hash('clean'),'reel-sub.mp4':hash('original'),'subs.srt':hash('subtitles')}}));
   assert.throws(()=>check(dir,'reel.mp4','reel-sub.mp4','subs.srt'),/checked output was replaced: reel-sub/);
@@ -153,7 +154,11 @@ test('clean-only builds record absence and reject a later stale burned copy',t=>
   const clip=path.join(dir,'reel.mp4'),r=spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=black:s=320x180:r=30:d=1','-c:v','libx264','-y',clip]);assert.equal(r.status,0,r.stderr?.toString());
   copyFileSync(clip,path.join(dir,'work/v0.mp4'));
   const source='window.SCENES=[{duration:1,type:"points"}];';writeFileSync(path.join(dir,'scenes.js'),source);writeFileSync(path.join(dir,'cards.tsv'),'');writeFileSync(path.join(dir,'segs.tsv'),'');writeFileSync(path.join(dir,'subs.srt'),'');
-  writeFileSync(path.join(dir,'build-plan-check.json'),JSON.stringify({storyboard:dir,scenesSha256:hash(source),cardsSha256:hash(''),segsSha256:hash(''),mediaSha256:{},cards:[0]}));
+  writeFileSync(path.join(dir,'cards.tsv'),'0\tvoice.wav\t0\tnone\n');
+  writeFileSync(path.join(dir,'voice.wav'),Buffer.from('silent audio fixture'));
+  require(path.join(root,'skills/produce/references/edit-plan.js')).write(dir,[{duration:1,type:'points'}]);
+  writeFileSync(path.join(dir,'work/edit-timeline.tsv'),'0\t0\t30\tcut\t0\t0\t0\n');
+  writeFileSync(path.join(dir,'build-plan-check.json'),JSON.stringify({storyboard:dir,scenesSha256:hash(source),cardsSha256:hash(readFileSync(path.join(dir,'cards.tsv'))),segsSha256:hash(''),resolvedCardsSha256:hash(readFileSync(path.join(dir,'cards.resolved.tsv'))),editPlanSha256:hash(readFileSync(path.join(dir,'edit-plan.json'))),mediaSha256:{[path.join(dir,'voice.wav')]:hash(readFileSync(path.join(dir,'voice.wav')))},cards:[0]}));
   assert.doesNotThrow(()=>check(dir));assert.doesNotThrow(()=>check(dir,'reel.mp4','reel-sub.mp4','subs.srt'));
   copyFileSync(clip,path.join(dir,'reel-sub.mp4'));
   assert.throws(()=>check(dir,'reel.mp4','reel-sub.mp4','subs.srt'),/checked output was replaced/);

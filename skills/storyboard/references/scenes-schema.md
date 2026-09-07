@@ -11,6 +11,10 @@ consumes after storyboard approval. `video-template.html` loads it with
 - [Format — `window.FORMAT`](#format-windowformat)
 - [Grammar units and production layers](#grammar-units-and-production-layers)
 - [Playback order — format picks the skeleton](#playback-order-format-picks-the-skeleton)
+- [Production mode — `window.PRODUCTION`](#production-mode-windowproduction)
+  - [Episode visual style selection](#episode-visual-style-selection)
+  - [Bundled full-video style references](#bundled-full-video-style-references)
+  - [Conditional start/end images](#conditional-startend-images)
 - [Fields common to every shot](#fields-common-to-every-shot)
   - [narration segments](#narration-segments)
   - [title is a spoken hook · narration explains in polite register (user directive, 2026-08-13)](#title-is-a-spoken-hook-narration-explains-in-polite-register-user-directive-2026-08-13)
@@ -320,13 +324,47 @@ only the hybrid renderer and generated-count restrictions below. `MOTION_POLICY`
 channel snapshot. Actual approval binds the quote fingerprint; changing inputs requires a new
 quote. `check-production.js` blocks missing/stale approval and over-budget calls.
 
-`shot.videoDesign` in full_video carries `look`, `worldId`, `before`, `action`, `after`,
-`camera`, `continuity` and `reject`. Keep real infoType/purpose, data evidence and narration.
-The source PNG, stored motion prompt and optional `visual.video.lastImagePath` drive the same
-spatial action. Runtime output path is `visual.video.clip`. Use explicit 1080p and audio false;
-only burned subtitles overlay the video. The selected style replaces the generic photo rule.
-A verified recording or shared outro retains its source. Full-video quality evidence is in
-`.work/video-review.json`, tied to the actual source and clip hashes, checked before the build.
+`shot.videoDesign` in full_video carries `look`, `worldId`, `motion`, `before`, `action`,
+`continuity` and `reject`, plus `after` as the final state; on a `subject_action` shot the last
+motion beat is that state, so `after` is optional there and must repeat it exactly when
+written. The camera is the four `visual.camera` slots (§camera),
+never a `videoDesign.camera` sentence, and `spatial-prompts.js` assembles the motion prompt
+from them through the same recipe and prompt gate as every other clip. Keep real
+infoType/purpose, data evidence and narration. The source PNG, stored motion prompt and
+optional `visual.frames.end` drive the same spatial action. Runtime output path is
+`visual.video.clip`. Use explicit 1080p and audio false; only burned subtitles overlay the
+video. The selected style replaces the generic photo rule. A verified recording or shared
+outro retains its source. Full-video quality evidence is in `.work/video-review.json`, tied to
+the actual source and clip hashes, checked before the build.
+
+### Episode visual style selection
+
+Before authoring, follow [visual-style.md](visual-style.md). Both production modes store
+`PRODUCTION.style.preset`: `cinematic-miniature`, `photoreal`, or `webtoon`, with the actual
+`selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
+The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
+Use `videoDesign.look: "realistic"` for photoreal and `"webtoon"` for webtoon; neither attaches
+the miniature pack. Source, end-frame and motion prompts carry the selected treatment.
+
+### Bundled full-video style references
+
+`PRODUCTION.style.referencePack` uses `tactile-miniature-v1` only for cinematic-miniature
+generated scenes. `visual.styleRole` selects `environment`, `character`, `interaction`,
+`transport`, or `reported_story`. These roles select appearance references, not story subjects.
+`spatial-prompts.js` returns `styleBinding`; save that object as `visual.stylePack`. It contains
+the pack ID/version, content digest and plugin-relative reference paths, all covered by the
+production plan signature. Do not store resolved machine-specific image paths in scenes.js.
+`look:"archive"` bypasses generated style references and preserves authentic source material.
+
+### Conditional start/end images
+
+Use `visual.frames: {mode:"first"|"first_last", reason, endState?, end?}` for new generated
+shots. `visual.bg` supplies the start frame. Two-frame shots require `endState` during planning
+and a distinct `end` image before video generation. The approval page displays both images;
+`seedance-route.js` forwards `end` as `lastImagePath`. Follow
+[render-routing.md](render-routing.md#start-and-end-frame-planning) for the selection and
+continuity rules. Legacy boards without `frames` retain their original single-frame display,
+unless an existing `lastImagePath` supplies a second frame.
 
 ## Fields common to every shot
 
@@ -1007,15 +1045,15 @@ directing-grammar §6 rule 16 points here. What the audience sees is what the bu
 
 | What happened between the two shots | Write | What the audience sees |
 |---|---|---|
-| a hit, a reveal that has to land on the new frame | `"cut"` | a smash — picture and sound change together, silent pre-roll |
+| a cut on action, an eyeline/composition match, or a reveal that lands on the new frame | `"cut"` | a smash — picture and sound change together, zero added pre-roll |
 | a hard swerve — the answer is somewhere else, and the turn is the point | `"whip:<l2r\|r2l\|u2d\|d2u>"` | the old shot smears along the travel and is gone (0.24 s) |
 | the camera goes *in* — into the box, the building, the diagram | `"zoom"` | the old shot grows past the camera and thins out (0.32 s) |
-| a find — the shot names the thing the episode has been circling | `"iris"` | a circle opens out of the old shot onto the new one (0.45 s) |
-| a memory, a hypothetical, someone losing the thread | `"blur"` | the old shot smears sideways and melts (0.45 s) |
+| a find — the shot names the thing the episode has been circling | `"iris"` | a circle opens out of the old shot onto the new one (0.40 s) |
+| a memory, a hypothetical, someone losing the thread | `"blur"` | the old shot smears sideways and melts (0.40 s) |
 | a chapter / act break, a jump the story treats as a distance | `"dip"` / `"dip:white"` | through black (or white) — a beat of nothing, 0.3 s down and 0.3 s up. White is a flash |
 | a list, a comparison, "meanwhile" — siblings, not a before and after | `"push:<l2r\|r2l\|u2d\|d2u>"` | the old shot slides off and uncovers the new one (0.32 s) |
-| time passed, or the place changed, and the two pictures belong to one world | `"dissolve"` | the new shot melts up **through** the old one for 0.45 s |
-| the same place and the same moment — two shots of one scene, size or angle changed | `"jcut"` | a cut with the sound leading: the next line starts on the old frame (0.32 s), then the picture cuts |
+| time passed, or the place changed, and the two pictures belong to one world | `"dissolve"` | the new shot melts up **through** the old one for 0.40 s |
+| the same place and the same moment — two shots of one scene, size or angle changed | `"jcut"` | a cut with the sound leading: the next line starts on the continuing outgoing footage (0.24 s), then the picture cuts |
 
 `jcut` is the last row on purpose. It is the right join only when nothing moved between the two
 shots except the camera; on every other boundary something did move — time, place, attention,
@@ -1029,14 +1067,14 @@ one a swerve instead of a list. Pick by what happened between the shots, never b
 different from the last join — the same join five times in a row is right when the same
 thing happened five times.
 
-**Every carry is a split edit.** `jcut`, `dissolve`, `iris`, `blur`, `zoom`, `push` and
-`whip` open on the previous shot's last frame, and the next line starts at the new card's
-first frame under it — you hear the next sentence before the picture has finished changing,
-so the picture never changes in silence (Murch). The builder drops those cards' silent
-pre-roll for that reason. `cut` and `dip` keep it: a smash needs the beat before the hit,
-and a dip's silence is the beat of nothing it exists for. The 85 s reference short in
-docs/research/2026-08-29-one-world-word-cue was six hard cuts and no dissolve; that was one
-channel's grammar, and this pipeline chooses per boundary instead (owner decision, 2026-09-03).
+**Every moving join uses live outgoing frames.** Follow
+[cinematic-edit.md](../../produce/references/cinematic-edit.md) for `edit.in`, `edit.pre`,
+`edit.post`, `edit.transitionSeconds`, `edit.reason` and `edit.continuity`. New boundaries
+record the intended action/visual connection and why this join fits. Reserve source duration
+for the outgoing handle before generation and quoting. The builder compiles joins from this
+source plan, uses unseen moving frames after the outgoing card boundary and preserves the
+audio/subtitle timeline. It does not freeze the last frame. Default pre-roll is zero and
+post-roll is 0.12s; dip pre-roll is 0.30s. Sync footage keeps its original timing.
 
 **Don't derive it from `scene` or `sceneSlug`.** The library uses them inconsistently —
 measured across every episode with the field, several give every single shot its own
@@ -1053,7 +1091,7 @@ sides except for the dip's two halves:
 | `transition` | `cards.tsv` |
 |---|---|
 | `"jcut"` | `enter=jcut` |
-| `"cut"` | `enter=cut` — smash, old silent pre-roll |
+| `"cut"` | `enter=cut` — zero added pre-roll |
 | `"dissolve"` | `enter=dissolve` |
 | `"push:<dir>"` | `enter=push:<dir>` |
 | `"iris"` | `enter=iris` |
@@ -1062,23 +1100,17 @@ sides except for the dip's two halves:
 | `"whip:<dir>"` | `enter=whip:<dir>` |
 | `"dip"` / `"dip:white"` | `exit=black` (or `white`) on the card before **and** `enter=black` (or `white`) on this one |
 
-An empty `enter=` is the legacy 4-column form: the builder falls back to a J-cut and warns,
-because that is the one join nobody chose.
-
-A dip keeps the card's frame count (measured A/B: identical `subs.srt`, same duration both
-ways; the iris and blur joins are drawn with an xfade **inside** the incoming card's encode
-and come out frame-identical to the overlay carries — 90/90 frames at 3.000 s on the 2-card
-fixture). Every carry drops that card's silent pre-roll (`PRE`, 0.40 s) because the next line
-occupies it — measured on the 10-card fixture: 12 frames off each carry card, drift 0, the
-subtitle cue moving with the audio. `POST` is 0.45 s — last-reveal hang plus a blink. The BGM
-bed runs across the whole feature; fading it at a scene change would punch a hole in the music.
+The builder compiles omitted `enter` and `exit` values from the storyboard and rejects
+contradictory explicit values. It never guesses a missing storyboard transition. Moving
+handles occupy the incoming card's head while narration and subtitles retain their clock.
+The continuous music bed runs across the feature; do not fade it at every scene change.
 
 ### Camera — the four slots (`visual.camera`)
 
 ```js
 camera: {
   movement: "dolly in",                                   // what the camera does — `static` is a choice, not an empty slot
-  speed: "very slow",                                     // how fast it does it
+  speed: "very slow",                                     // how fast it does it — stays empty on a static camera
   framing: "chest-up, eyes on the upper third",           // what is held while it moves
   end: "subject centred, hands entering the lower third"  // where it stops
 }
@@ -1091,7 +1123,8 @@ crop window (eased zoom towards the subject, pan with an optional zoom drift, a 
 cover, handheld drift), and the same vocabulary applies: `dolly in`/`zoom in` reads as a slow
 push towards the subject, `dolly out` as a pull-out, `handheld` as drift, `truck` as a pan
 (the feel each serves: directing-grammar §5 Still column; the option names: produce SKILL §6).
-`speed` reads on a still too — it sets how hard the window moves, on the beat ladder in
+A `static` camera has no speed to state: leave `speed` empty there, and the assembled span
+reads `static camera`. `speed` reads on a still too — it sets how hard the window moves, on the beat ladder in
 directing-grammar §4 (still lane): `very slow` for explain, `slow` for the payoff, `fast` /
 `very fast` for action and CTA cards, which also accelerate to the cut point. produce §6
 converts the word into the card's `span=`/`ease=` knobs. A still with no camera keeps the
@@ -1864,10 +1897,9 @@ still TTS, the card is still an ordinary card, and only the picture comes from a
 | `shot` (inside `visual`) | ✅ | one line on what is visible on screen — the **화면** item in script.md |
 | `action` | ✅ | what the user does while recording — the **행동** item in script.md |
 
-- **The clip plays once and freezes on its last frame** (`@` visual, §motion slides has the same
-  contract). So the `at` window should be about the card's length: longer and the tail never
-  plays, much shorter and the picture sits still while the voice runs on. `cut-screencast.sh`
-  warns in both directions when produce passes it the card duration.
+- **The clip plays once and must cover the edit.** Match the `at` window to the measured
+  narration, margins and any outgoing live handle. The builder rejects short sources instead
+  of freezing them. Sync footage keeps its original audio and uses cut/dip.
 - **A screencast scene has no `bg` or `bgPrompt`** — it drops out of §5 image generation and the
   produce §1.5 image check, exactly like a slide scene. What is on screen is the recording.
 - `zoom` is `none`. Ken Burns on a screen recording shakes text that is already small.
@@ -2112,15 +2144,11 @@ own — it is clip 1's first frame; the tag, the title and the first value open 
 a chain (slide-design.md §5). Groups are 1:1 with narration segments (segment 1 →
 group 1); sub-reveals (`A|B`) make more groups than segments, as on any card.
 
-What that buys: **no narration timing is needed at render time.** `render-motion-slide.mjs`
-(produce references) renders one clip per group, and produce lays clip k under segment k
-as a play-once visual (`@motion/slide-s<n>/r<k>.mp4` in segs.tsv, whose paths are relative
-to `.work/` — produce §3.6). The builder freezes
-each clip on its last frame for the rest of the segment, and the reveal xfade at the
-sentence boundary crosses two identical pictures (the previous rest state), so the seam
-is invisible — measured 44 dB PSNR across the seam on the 2026-08-29 fixture. The motion
-begins inside the pause before the sentence, which is where the caption contract already
-puts the reveal.
+Render one clip per group with `render-motion-slide.mjs`, then re-render with measured
+narration segment lengths before assembly. Use `@motion/slide-s<n>/r<k>.mp4` for independent
+reveal clips. Each clip must cover its segment and reveal overlap; the final group also needs
+any outgoing live handle. Match neighbouring rest states and sustain meaningful motion through
+the full window. The builder rejects short clips instead of freezing their final frame.
 
 | Field | Required | What |
 |---|---|---|
@@ -2473,39 +2501,12 @@ strip says no violations.
       sibling `negative` field, no timecodes or digit seconds on a seedance route
 - [ ] **Every generated-video shot has all four `visual.camera` slots filled** (§camera) — b-roll,
       motion background, and quote speech clips. An empty `end` is the defect this checks for;
-      `movement: "static"` is a filled slot, not an empty one
+      `movement: "static"` is a filled slot, not an empty one, and `speed` is the one slot that
+      stays empty on a static camera
 - [ ] **A generated clip's `duration` matches what the cut is for** (§cut length) — an insert
       isn't 8 seconds because 8 was the default
 - [ ] **`visual.character` names whoever from the channel cast is on screen** (§character
       reference) — the subject of the shot first in the array
 - [ ] **Every generated-video shot says what it sounds like in `visual.audio`** (§clip audio) —
-      left blank, the engine invents speech under the narration
-
-### Conditional start/end images
-
-Use `visual.frames: {mode:"first"|"first_last", reason, endState?, end?}` for new generated
-shots. `visual.bg` supplies the start frame. Two-frame shots require `endState` during planning
-and a distinct `end` image before video generation. The approval page displays both images;
-`seedance-route.js` forwards `end` as `lastImagePath`. Follow
-[render-routing.md](render-routing.md#start-and-end-frame-planning) for the selection and
-continuity rules. Legacy boards without `frames` retain their original single-frame display,
-unless an existing `lastImagePath` supplies a second frame.
-# Bundled full-video style references
-
-`PRODUCTION.style.referencePack` uses `tactile-miniature-v1` only for cinematic-miniature
-generated scenes. `visual.styleRole` selects `environment`, `character`, `interaction`,
-`transport`, or `reported_story`. These roles select appearance references, not story subjects.
-`spatial-prompts.js` returns `styleBinding`; save that object as `visual.stylePack`. It contains
-the pack ID/version, content digest and plugin-relative reference paths, all covered by the
-production plan signature. Do not store resolved machine-specific image paths in scenes.js.
-`look:"archive"` bypasses generated style references and preserves authentic source material.
-
-
-### Episode visual style selection
-
-Before authoring, follow [visual-style.md](visual-style.md). Both production modes store
-`PRODUCTION.style.preset`: `cinematic-miniature`, `photoreal`, or `webtoon`, with the actual
-`selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
-The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
-Use `videoDesign.look: "realistic"` for photoreal and `"webtoon"` for webtoon; neither attaches
-the miniature pack. Source, end-frame and motion prompts carry the selected treatment.
+      left blank, the engine invents speech under the narration. A clip planned silent
+      (`generateAudio:false`, every full-video cut) has nothing to describe and skips this check

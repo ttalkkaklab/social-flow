@@ -218,7 +218,10 @@ function lockMissing(text, engine) {
 
 function clipAssemble(opts) {
   const cam = opts.camera || {};
-  const missing = ["movement", "speed", "framing", "end"].filter(k => !(cam[k] && String(cam[k]).trim()));
+  // The produce §3 recipe: framing, then speed movement, then ending on end. A static
+  // camera has no speed to state — "static camera" is the whole move, so that slot may stay empty.
+  const isStatic = /^(static|fixed|locked)/i.test((cam.movement || "").trim());
+  const missing = ["movement", "speed", "framing", "end"].filter(k => !(cam[k] && String(cam[k]).trim()) && !(k === "speed" && isStatic));
   const scene = (opts.scene || "").trim();
   const motion = (opts.motion || "").trim();
   const locks = (opts.locks || "").trim();
@@ -229,9 +232,6 @@ function clipAssemble(opts) {
   const space = opts.withSpace ? spaceSentence(opts) : "";
   if (space) parts.push(space);
   if (scene) parts.push(dot(scene));
-  // The produce §3 recipe: framing, then speed movement, then ending on end. A static
-  // camera has no speed to state — "static camera" is the whole move.
-  const isStatic = /^(static|fixed|locked)/i.test((cam.movement || "").trim());
   const move = isStatic ? "static camera" : ((cam.speed || "").trim() + " " + (cam.movement || "").trim()).trim();
   const span = [(cam.framing || "").trim(), move, cam.end ? "ending on " + String(cam.end).trim() : ""]
     .filter(Boolean).join(", ");

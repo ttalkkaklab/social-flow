@@ -1,58 +1,66 @@
-# 컷마다 제작 방식 고르기
+# Choose each cut's production route
 
 ## Contents
 
-- [판단 순서](#판단-순서)
-- [제작 방식](#제작-방식)
-- [선택 기록과 검사](#선택-기록과-검사)
-- [제작기 연결](#제작기-연결)
-- [그래프와 영상의 제한](#그래프와-영상의-제한)
+- [Decision order](#decision-order)
+- [Routes](#routes)
+- [Recording the choice, and the checks](#recording-the-choice-and-the-checks)
+- [Connecting to the builder](#connecting-to-the-builder)
+- [Limits on graphs and video](#limits-on-graphs-and-video)
+  - [Donut, pie and map choices](#donut-pie-and-map-choices)
+- [Start and end frame planning](#start-and-end-frame-planning)
 
-## 판단 순서
+## Decision order
 
-먼저 `window.PRODUCTION`의 승인된 제작 방식을 읽는다. `hybrid`는 아래 판단 순서를
-따른다. `full_video`는 실제 `purpose`와 `infoType`을 유지하면서 새 장면마다
-`generated_video`를 쓴다. 공간 모형의 동작과 카메라 이동으로 설명하고 `videoDesign`에
-시작 상태·동작·끝 상태·연속성·검수 기준을 적는다. 두 방식의 예상 생성비와 재시도 비용을
-HITL에서 먼저 보여준다. 비용과 승인 계약은 `production-mode.md`를 따른다.
+Read the approved production mode in `window.PRODUCTION` first. `hybrid` follows the order
+below. `full_video` keeps each cut's real `purpose` and `infoType` and uses `generated_video`
+for every new scene: the model's action and the camera move explain the cut, and
+`videoDesign` records the opening state, the action, the final state, continuity and the
+review criteria. Both modes' estimated generation cost and retry cost are shown in HITL
+first; the cost and approval contract is [production-mode.md](production-mode.md).
 
-내레이션을 읽고 시청자가 이 컷에서 알아야 할 한 가지를 먼저 적는다. 등장하는 명사나
-사용 가능한 API부터 고르지 않는다. 다음 질문에 답하고 `shot.render`를 작성한다.
+Read the narration and write down the one thing the viewer must learn from this cut. Do not
+start from the nouns that appear or from the APIs available. Answer these questions, then
+write `shot.render`.
 
-1. 핵심이 크기·비율·추세·분포의 비교인가? 수치·그래프 HTML을 쓴다.
-2. 사람이 하는 순서나 사물과의 상호작용을 설명하는가? 3D 캐릭터 HTML을 쓴다.
-3. 부품의 결합·힘의 전달·물리적 상태 변화를 설명하는가? 3D 사물 HTML을 쓴다.
-4. 설명보다 자연스러운 연속 동작 자체를 보여줘야 하는가? 정지 이미지로 부족한 이유를
-   적고 영상 생성을 검토한다. 복잡한 표정·옷감·군중의 연속 동작 등이 해당한다.
-5. 인물의 정체·분위기·장소·단서가 핵심인가? 정지 이미지와 목적에 맞는 카메라 무빙을 쓴다.
+1. Is the point a comparison of size, ratio, trend or distribution? Use a data-graph HTML scene.
+2. Does it explain a sequence a person performs, or an interaction with an object? Use a 3D
+   character HTML scene.
+3. Does it explain how parts join, how force travels, or a physical state change? Use a 3D
+   object HTML scene.
+4. Does the continuous action itself have to be seen, more than explained? Write why a still
+   is not enough and consider generated video: complex expressions, cloth, a crowd in motion.
+5. Is the point who a person is, a mood, a place or a clue? Use a still with a camera move
+   that fits the purpose.
 
-두 가지가 동시에 핵심이면 컷을 나눈다. 한 가지가 보조 정보라면 핵심에 맞는 방식 하나를
-고른다. 예를 들어 ‘16개와 32개의 톱니가 맞물린다’는 작동 설명이므로 사물 HTML이고
-‘두 제품의 판매량을 비교한다’는 수치 그래프다. 인물이 언급돼도 소개만 하면 정지 이미지다.
-직접 기록한 증거와 사용자 제공 영상은 기존 소스를 보존하며 생성 분류에서 제외한다.
+When two things are the point at once, split the cut. When one is supporting information,
+choose the one route that fits the point. "Sixteen and thirty-two teeth mesh" explains an
+operation, so it is an object scene; "compare the two products' sales" is a data graph. A
+person who is only introduced is a still. Recorded evidence and user-supplied footage keep
+their source and stay outside this classification.
 
-## 제작 방식
+## Routes
 
-| 핵심 목적 | `purpose` | `mode` | 선택 예시 |
+| The point of the cut | `purpose` | `mode` | Example |
 |---|---|---|---|
-| 인물 소개·분위기·장소·단서 | `portrait`, `atmosphere`, `place`, `detail` | `still_camera` | 발명가 소개는 얼굴로 접근하고 작업실 소개는 공간을 드러낸다. |
-| 사람이 수행하는 과정 | `human_process` | `character_html` | 직원이 물건을 분류하거나 짐을 싣는 행동을 직접 보여준다. |
-| 사물의 작동·물리적 변화 | `mechanism`, `physical_state` | `object_html` | 기어 맞물림, 경첩 회전, 밸브 개폐를 보여준다. |
-| 수치 관계·시간 순서 | `comparison`, `trend`, `share`, `distribution`, `geographic`, `timeline` | `data_graph` | 판매량 비교, 시간별 변화, 구성비를 비교한다. 연표에는 날짜를 쓴다. |
-| 짧은 근거 인용·결론 | `evidence_quote`, `verdict` | `editorial_html` | 인용은 원문과 출처를 적고 결론은 짧게 보여준다. |
-| 자연스러운 연속 동작 | `live_action` | `editorial_html` | `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"type"`로 짧은 인용·결론을 만든다. |
-| `generated_video` | 바람에 흔들리는 옷과 인물의 동작이 장면의 의미일 때 쓴다. |
+| Who a person is, mood, place, clue | `portrait`, `atmosphere`, `place`, `detail` | `still_camera` | Approach an inventor's face; reveal a workshop by pulling back. |
+| A process a person performs | `human_process` | `character_html` | A worker sorts items or loads a cart, shown directly. |
+| How an object works or changes | `mechanism`, `physical_state` | `object_html` | Gears meshing, a hinge turning, a valve opening. |
+| Quantities and time order | `comparison`, `trend`, `share`, `distribution`, `geographic`, `timeline` | `data_graph` | Sales compared, change over time, composition. A timeline uses dates. |
+| A short quotation or verdict | `evidence_quote`, `verdict` | `editorial_html` | A quotation with its source; a verdict in a few words. |
+| Continuous action that carries the meaning | `live_action` | `generated_video` | Cloth in the wind, or a person's movement, when that movement is the point. |
 
-정지 이미지에도 `camera.effect`, `target`, `reason`을 적는다. 인물 소개에는 포커스 인,
-단서 강조에는 접근, 시선의 전환에는 초점 이동, 장소 설명에는 후퇴가 어울린다.
-매 컷에 같은 효과를 반복하지 않는다. 전경 등장·깊이별 이동은 필요한 레이어를 준비한다.
-자세한 자산 조건은 [illustrated-scenes.md](illustrated-scenes.md)를 따른다.
+Stills also record `camera.effect`, `target` and `reason`. Focus-in suits introducing a
+person, approach suits stressing a clue, rack focus a shift of attention, pull a place. Do
+not repeat one effect on every cut. Foreground reveals and depth parallax need prepared
+layers. Asset conditions are in [illustrated-scenes.md](illustrated-scenes.md).
 
-캐릭터는 손과 발을 움직여 실제 과정을 보여준다. 단순한 고개 끄덕임이나 부채 흔들기만으로
-설명 동작을 대신하지 않는다. 캐릭터 컷의 설명 표식은 기본적으로 끄고 사물 컷의 부품 표식도
-필요한 순간에 하나씩만 보여준다. 사용자가 좋다고 평가한 모형과 동작은 표식 수정 중에 바꾸지 않는다.
+Characters move hands and feet to show the actual process; a nod or a waving fan is not an
+explanation. Character cuts default to no marks, and an object cut shows one part label at a
+time, only when needed. A model or action the user rated well is not changed while marks are
+being fixed.
 
-## 선택 기록과 검사
+## Recording the choice, and the checks
 
 ```js
 shot: {
@@ -60,77 +68,79 @@ shot: {
   render: {
     mode: 'character_html',
     purpose: 'human_process',
-    reason: '사람이 짐을 싣고 출발하는 순서를 보여준다.',
-    actors: ['운반 담당자'],
-    action: '포대를 수레에 올린 뒤 손잡이를 잡고 출발한다.'
+    reason: 'Shows the order in which a person loads the cart and sets off.',
+    actors: ['the carrier'],
+    action: 'Lifts the sack onto the cart, takes the handle and starts moving.'
   }
 }
 ```
 
-[visual-direction.md](visual-direction.md)의 반복 제한과 장면별 검토 기준을 적용한다.
-같은 선택 이유를 세 컷 이상 복사하면 검사에서 막는다. 글자 중심 화면은 숏폼에서 최대 두 컷이고
-롱폼에서는 생성 컷 길이의 20%까지다. 한 컷은 8초 이하다. `motionBeats`로 이 제한을 피할 수 없다.
-`evidence_quote`는 `evidence:{source,quote}`를 적는다. 문서 자체를 보여주려면 사진 카메라 컷을 쓴다.
+Apply the repetition limits and per-scene review in [visual-direction.md](visual-direction.md).
+Copying one reason across three or more cuts fails the check. Text-led screens are at most two
+per short and at most 20% of generated cut length in long-form. One cut lasts at most 8
+seconds; `motionBeats` cannot get around that. `evidence_quote` records
+`evidence:{source,quote}`; to show the document itself, use a still-camera cut.
 
-모든 생성 대상 컷에 `mode`, `purpose`, `reason`이 필요하다. 기록 영상과 공통 아웃트로는
-예외다. 캐릭터에는 `actors`와 `action`, 사물에는 `action`을 적는다. 영상 생성에는
-`motionEssential:true`, `action`, `whyNotStill`이 추가로 필요하다. 수치에는
-`data:{chart,source,unit,values:[{label,value}],baseline}`을 적는다. 연표는 `value` 대신
-`date`를 쓰고 구성비에는 전체 값인 `total`을 적는다.
-차트의 문장별 강조 대상은 `data.beats`에 적는다. [chart-design.md](chart-design.md)의
-차트 선택과 공통 SVG 템플릿을 사용한다. 숫자만 크게 등장시키는 화면으로 대신하지 않는다.
+Every generated cut needs `mode`, `purpose` and `reason`; recordings and the shared outro are
+exempt. Characters need `actors` and `action`; objects need `action`. Generated video also
+needs `motionEssential:true`, `action` and `whyNotStill`. Quantities need
+`data:{chart,source,unit,values:[{label,value}],baseline}`; a timeline uses `date` instead of
+`value`, and a share adds the whole as `total`. The label each sentence emphasizes goes in
+`data.beats`. Chart choice and the shared SVG template follow [chart-design.md](chart-design.md);
+a screen that only enlarges a number is not a substitute.
 
-[render-routing.js](render-routing.js)가 목적과 방식의 대응, 필요한 근거와 자산 연결을
-검사한다. `check-scenes.js --draft`에서도 선택 누락과 의미 충돌을 막는다. 제작 단계에서는
-선택한 방식과 `visual`의 실제 전달 경로도 비교한다. 검토 화면에는 방식과 선택 이유가 표시된다.
-원문을 해석하는 일은 스토리보드 작성자가 맡는다. 검사기는 기록된 의도가 실제 문장과 같은지
-판단할 수 없으므로 승인 전에는 내레이션과 선택 이유를 한 번 더 대조한다.
+[render-routing.js](render-routing.js) checks that purpose matches mode, that the required
+evidence is present and that assets are linked. `check-scenes.js --draft` catches a missing
+choice or a semantic conflict; production also compares the chosen mode with the actual
+handoff in `visual`. The review page shows the mode and the reason. Interpreting the
+narration remains the author's job: the checker cannot tell whether a recorded intent matches
+the sentence, so compare the narration with the reasons once more before approval.
 
-## 제작기 연결
+## Connecting to the builder
 
-| 방식 | 기존 제작 경로와의 연결 |
+| `mode` | Connection to the existing production path |
 |---|---|
-| `still_camera` | `visual.bg`와 `visual.camera`를 이미지 카메라 경로에 전달한다. 초점·레이어 효과는 `visual.slide.kind:"camera"`로 작성한다. |
-| `character_html` | `visual.slide`의 `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"object"`, `object.renderer:"mesh"`를 사용한다. 배우와 접촉 동작을 모델 계획에 연결한다. |
-| `object_html` | 같은 메시 경로를 사용하되 설명에 필요 없는 캐릭터를 넣지 않는다. |
-| `data_graph` | `subject.kind:"data"`로 수치와 관계를 움직인다. 그래프를 장식용 3D 물체로 바꾸지 않는다. |
-| `editorial_html` | `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"type"`로 짧은 인용·결론을 만든다. |
-| `generated_video` | `visual.video` 또는 영상 컷으로 전달하고 `visual.why`에 선택 이유를 적는다. 기존 엔진·비용·참조 이미지 규칙을 적용한다. |
+| `still_camera` | `visual.bg` and `visual.camera` go to the image camera path. Focus and layer effects are authored as `visual.slide.kind:"camera"`. |
+| `character_html` | `visual.slide` with `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"object"`, `object.renderer:"mesh"`. Actors and contact actions link to the model plan. |
+| `object_html` | The same mesh path, without characters the explanation does not need. |
+| `data_graph` | `subject.kind:"data"` moves values and relations. A graph is never a decorative 3D object. |
+| `editorial_html` | `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"type"` for a short quotation or verdict. |
+| `generated_video` | `visual.video` or a video cut, with the reason in `visual.why`. The existing engine, cost and reference-image rules apply. |
 
-카메라 HTML은 [camera-slide-template.html](camera-slide-template.html)을 복사하고
-`SLIDE_SHOT`만 해당 컷 번호로 바꾼다. [still-camera.js](still-camera.js)를
-`slides/assets/`에 복사한다. 초점 영역과 레이어는 `shot.render.camera`의 `focusFrom`,
-`focusTo`, `layers`에서 읽는다. 초점 영역은 `[x,y,rx,ry]`의 정규화 좌표다.
-이미지는 선택한 호스트의 이미지 도구로 먼저 준비한다. HTML 파일이 있다는 이유로
-`visual.bg` 생성을 건너뛰지 않는다. HTML로 포장했어도 정지 이미지 카메라 컷이며
-실제 사물 동작 비율에는 포함하지 않는다.
+Camera HTML copies [camera-slide-template.html](camera-slide-template.html) and changes only
+`SLIDE_SHOT` to the cut number; copy [still-camera.js](still-camera.js) into `slides/assets/`.
+Focus regions and layers are read from `shot.render.camera`'s `focusFrom`, `focusTo` and
+`layers`; a focus region is normalized `[x,y,rx,ry]`. Prepare the image with the chosen host
+image tool first; an existing HTML file is no reason to skip generating `visual.bg`. Wrapped
+in HTML or not, this is a still-camera cut and does not count toward the true-motion ratio.
 
-생성 전에 `check-scenes.js`를 실행한다. 자산이 없거나 엔진이 준비되지 않았다고 다른
-방식으로 조용히 바꾸지 않는다. 선택 이유를 다시 검토하고 계획을 수정한 뒤 검사한다.
-이미 승인된 문장이나 게시물은 이 규칙을 적용하려고 임의로 다시 만들지 않는다.
+Run `check-scenes.js` before generating. When an asset is missing or an engine is not ready,
+do not switch routes quietly; revisit the reason, revise the plan, then check again. Already
+approved sentences or published posts are not remade to apply this rule.
 
-## 그래프와 영상의 제한
+## Limits on graphs and video
 
-차트는 데이터 형식과 보여줄 관계에 맞춰 고른다. 이는 영국 통계청의
-[차트 선택 지침](https://service-manual.ons.gov.uk/data-visualisation/chart-types/choosing-a-chart-type)을
-따른다. 범주 비교에는 막대·점, 시간별 추세에는 선, 구성비에는 누적 막대, 분포에는 히스토그램을
-기본으로 한다. 출처·단위·값을 기록하고 막대처럼 길이로 비교하는 차트는 0을 기준으로 그린다.
-없는 값을 만들거나 데이터를 애니메이션 편의에 맞게 바꾸지 않는다.
+Choose the chart by data type and by the relation to show, following the UK Office for
+National Statistics [chart choice guidance](https://service-manual.ons.gov.uk/data-visualisation/chart-types/choosing-a-chart-type):
+bars or dots for category comparison, a line for a trend over time, a stacked bar for
+composition, a histogram for a distribution. Record the source, the unit and the values; a
+chart that compares by length starts at zero. Never invent a missing value or bend the data
+to suit an animation.
 
-영상 생성 수는 상한으로만 사용한다. 첫 컷도 같은 선택 절차를 거치며 `hook_video`의
-기본값은 꺼짐이다. 채널에서 명시적으로 켰다면 그 제약을 지키면서 연속 동작이 필요한
-오프닝을 설계한다. 모든 영상 생성 컷은 정지 이미지나 제어 가능한 HTML 동작으로 부족한
-이유가 있어야 한다. 예산이나 실제 동작 비율을 맞추려고 무관한 캐릭터·그래프·영상을 넣지 않는다.
+The generated-video count is a ceiling. The first cut goes through the same choice;
+`hook_video` is off by default. When a channel switched it on explicitly, design an opening
+that needs continuous action while keeping that constraint. Every generated-video cut needs a
+reason a still or a controllable HTML action would not do. Do not add an unrelated
+character, graph or clip to meet a budget or a motion ratio.
 
+### Donut, pie and map choices
 
-### 도넛·파이·지도 선택
-
-전체 구성비는 `share`의 `donut`·`pie`·`stacked-bar` 중에서 고른다. 비슷한 값을
-정확히 비교해야 하면 막대를 쓴다. 도넛·파이는 합계와 조각의 비율을 유지한다.
-지역 분포가 설명의 핵심이면 `geographic`의 `map`을 쓴다. 비율·밀도는 지역별 색상으로
-표현하고 건수는 원의 넓이로 표현한다. 지도 경계와 좌표에는 출처가 있어야 한다.
-자료가 없는 지역은 빗금으로 표시해 0과 구분한다. 각 형식의 데이터 계약과 예시는
-[chart-design.md](chart-design.md)를 따른다.
+A whole's composition uses `share` with `donut`, `pie` or `stacked-bar`; when similar values
+must be compared exactly, use bars. Donut and pie keep the ratio of the total to each slice.
+When geographic distribution is the point, use `geographic` with `map`: rates and densities
+as per-region colour, counts as circle area. Boundaries and coordinates need a source. A
+region with no data is hatched, which is different from zero. Each format's data contract and
+examples are in [chart-design.md](chart-design.md).
 
 ## Start and end frame planning
 

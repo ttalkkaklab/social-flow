@@ -68,16 +68,12 @@ by frame rounding + sample-accurate padding. Reveals are pure video-side timing,
 boundary detection produces zero drift. Always composite through build-reel.sh (an -shortest mux
 was measured to accumulate 105ms).
 
-**Every card after the first carries its join.** `enter=` is copied from the board's
-`transition` (produce §6 has the mapping); an empty `enter=` is the legacy form, and the
-builder falls back to a J-cut and warns. Every carry (jcut, dissolve, iris, blur, zoom, push,
-whip) is a split edit: the next line starts at the card's first frame under the carried
-frame, so the card drops its silent `PRE` and the picture never changes in silence. `cut`
-(the smash) and a dip keep the pre-roll. `POST` is 0.45s (last-reveal hang); a dip half is
-0.30s. Every join is drawn inside the incoming card, so concat `-c copy` and drift 0 still
-hold — iris and blur reach for an xfade there, which is safe inside one encode and still
-banned at the seam (build-reel.sh §7.4 says why). Reveal timing takes the same `PRE` the
-audio was padded with.
+The source storyboard owns scene transitions and per-shot `edit` timing. The builder compiles
+`cards.resolved.tsv`, rejects contradictory options and reserves unseen outgoing frames for
+moving transitions. Default narration margins are pre=0 and post=0.12s; dip pre=0.30s.
+Sync footage keeps its original timing. See [cinematic-edit.md](cinematic-edit.md) for the
+handle contract, source trims and final boundary playback review. No missing transition
+falls back silently and no short video loops or freezes to fill its window.
 
 ## Reveal timing contract (reveal-timing.py)
 
@@ -97,7 +93,7 @@ audio was padded with.
 | `drift` ≠ 0.0000s | **Do not proceed** — pipeline bug |
 | `missing reveal state: r<k>` | **Do not proceed** — capture the missing state and split that segment into `A\|B` sub-reveals, then rebuild |
 | `last reveal state unused` | **Do not proceed** — the last bullet/source never appears in the video. If `no reveals.tsv` shows, this check is off (capture-reveals.sh wasn't used) |
-| `REGEN recommended` (speech rate outside [3.2/factor, 6.2/factor] — [3.2, 6.2] at the 1.0 default · clipped ending) | Regenerate only that card once with the same registry → rebuild. If it repeats, shorten the script |
+| `REGEN recommended` (speech rate outside [3.2/factor, 6.2/factor] — [3.2, 6.2] at the 1.0 default · clipped ending) | Recheck that card through the checked speech gate within its remaining attempt allowance, then rebuild. If exhausted, hold and correct the script through the existing approval rules |
 | `boundary proportional fallback` | OK to continue — if it recurs, fix the script's sentence boundaries (periods) |
 | `segment window under 0.9s` | Merge the short sentence with a neighbor |
 | `min gap between reveals <0.40s` | Trim bullets or lengthen the sentence |
@@ -113,13 +109,18 @@ audio was padded with.
 
 ## Three TTS failure modes and responses (Gemini TTS, field-tested)
 
-1. **Duration degeneration** — a short script comes out as 24s, 61s, 655s, all silence after the
-   speech. Skip the post-generation ffprobe length check (over 2× chars/4.5 → regenerate) and the
-   whole build breaks.
-2. **`No content parts in response`** — regenerate with the same parameters. **3–4 in a row**
-   means flash won't produce that script — switch to `model: "gemini-2.5-pro-preview-tts"` and it
-   passes in one try (voiceName is unchanged, so no tone shift).
-3. **`INTERNAL 500`** — regenerate with the same parameters.
+All generated narration first passes `tts_generate_checked` as defined in `tts-quality.md`.
+Missing/stale/failed speech proofs block assembly. The wrapper owns the three-take limit;
+legacy advisories below never authorize extra takes or changing the profile model.
+Unavailable review holds production. After any audio replacement, obtain a new proof.
+
+1. **Duration degeneration** — a short script can contain minutes of trailing silence.
+   The checked tool rejects abnormal duration and uses only the remaining take allowance.
+2. **`No content parts in response`** — the Gemini client retries its request at fixed settings.
+   If it still fails, the checked tool holds production. Do not change the profile's model
+   or rewrite the script merely to make the request succeed.
+3. **`INTERNAL 500`** — provider retries stay inside the client. Persistent failure is
+   unverified, not an instruction to spend three more takes.
 
 The three axes of voice consistency: ① fixed stylePrompt/voiceName ② loudnorm per-segment
 normalization ③ atempo speech-rate normalization. Output may be raw PCM (24kHz/s16/mono) — the
