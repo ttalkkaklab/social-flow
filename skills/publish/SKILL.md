@@ -442,7 +442,9 @@ write the reason into the publish log.
   timestamp, platform, post id, permalink, caption summary, and the approver's decision.
   **Write the §4 checklist beside it, item by item, as O/X** — an open item has to
   survive in the log for the next person to finish it.
-- Update `storyboard.md` to `status: published`.
+- Update `storyboard.md` to `status: published`. If the portal MCP is configured
+  (`mcp__ttalkkakstory__*`), call `episode_set_status` with `status: "published"` so the portal
+  shows the same state as the file.
 - If you used a temporary tunnel, verify the teardown per §1, then give the final
   report as a platform/permalink table.
 

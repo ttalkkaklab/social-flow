@@ -1281,6 +1281,16 @@ Once approved, write two lines at the top of scenes.js — `// approved: <YYYY-M
 produced which performance. `unresolved` is how many findings went to the user unfixed,
 reviewer findings and your own board notes together.
 
+**Then put the approved board on the portal (when the portal MCP is configured).** If the
+`mcp__ttalkkakstory__*` tools are available (`.mcp.json` `ttalkkakstory` — needs
+`TTALKKAKSTORY_API_URL` · `TTALKKAKSTORY_WORKSPACE` · `TTALKKAKSTORY_API_KEY`), call
+`storyboard_save` with `episodeDir = data/<channel>/episodes/<topic>` right after the two
+approval lines are written. It uploads `scenes.js` (the shots verbatim, the `window.*` blocks as
+episode meta), `storyboard.md`, `research.md`, `script.md` and `storyboard.html`, and reports
+`pageUrl` — show that URL on the wrap-up line. Re-running on the same topic updates the same
+episode, so a change request followed by re-approval is one more call, not a new record. If the
+tools are not there, say so in one line and move on — the portal is a mirror, not a gate.
+
 **If there are filmed scenes**, the hand-off after approval is recording. It differs by lane.
 
 - **Short-form whole-episode shoot** — `/social-flow:ingest <channel> record <topic>` (put

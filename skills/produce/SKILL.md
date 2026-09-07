@@ -1296,7 +1296,11 @@ Report every `fallback` and each `engine_selection` or `voice_selection` marked 
 
 On a pass, update storyboard.md to `status: produced`, present the artifact table (paths,
 length, platforms) together with the cost summary, and point the user at
-`/social-flow:publish`.
+`/social-flow:publish`. If the portal MCP is configured (`mcp__ttalkkakstory__*`), call
+`storyboard_save` once more on the episode directory (the board may have moved since approval —
+regenerated prompts, slide plans) and then `episode_set_status` with `status: "produced"`;
+`storyboard_list` with the storyboard id gives the episode id if you don't have it from the
+save result.
 
 ## Additional Resources
 
