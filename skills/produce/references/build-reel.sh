@@ -109,7 +109,8 @@ STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
 cd "$WORKDIR"
 node "$HERE/check-production.js" "$STORYBOARD" --workdir "$PWD" --ready --manifest --json > production-preflight.json
-FULL_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.generatedShots || []).join(" "))' "$PWD/production-preflight.json")
+FULL_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.plainVideoShots || p.generatedShots || []).join(" "))' "$PWD/production-preflight.json")
+REUSED_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.reusedShots || []).join(" "))' "$PWD/production-preflight.json")
 
 # Format preset — the `: "${VAR:=value}"` block written by format-resolve.js.
 # It must be read **before** the inline defaults for precedence to hold: caller env → format.env → inline.
@@ -685,6 +686,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
           NEED=$(awk -v s="$SOURCE_IN" -v e="$END_D" -v o="$OFFSET" -v start="${FOFF[$j]}" 'BEGIN{printf "%.6f", s+e-start+o}')
           awk -v actual="$BDUR" -v needed="$NEED" 'BEGIN{exit !(actual+0.00001>=needed)}' \
             || { say "card $IDX: source needs ${NEED}s including live handle; has ${BDUR}s. Choose an earlier edit.in, shorten/replan the cut, or regenerate. No freeze or loop substitution."; exit 1; }
+          case " $REUSED_VIDEO_SHOTS " in *" $IDX "*)
+            awk -v actual="$BDUR" -v needed="$D" -v start="$SOURCE_IN" -v render="$RENDER_D" 'BEGIN{d=actual-needed; if(d<0)d=-d; exit !(d<=0.05 && start==0 && render==needed)}' \
+              || { say "Reused card $IDX duration differs or requests trimming/live handles; use the complete imported clip with no source offset or outgoing handle."; exit 1; } ;;
+          esac
           INS+=(-ss "$SS" -t "$T" -i "$BASE")
         ;;
       *) INS+=(-loop 1 -framerate "$FPS" -t "$T" -i "$BASE") ;;

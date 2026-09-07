@@ -28,22 +28,26 @@ function quote(win, { krwPerUsd = 1400 } = {}) {
   if (!Number.isFinite(krwPerUsd) || krwPerUsd <= 0) throw new Error('krwPerUsd must be positive');
   const p = win.PRODUCTION || {}, attempts = p.maxAttempts ?? 3;
   if (!Number.isInteger(attempts) || attempts < 1 || attempts > 5) throw new Error('maxAttempts must be 1–5');
-  const inputs = (win.SCENES || []).filter(mode.eligible);
+  const reuseErrors = (win.SCENES || []).flatMap(mode.reuseErrors);
+  if (reuseErrors.length) throw new Error(reuseErrors.join('; '));
+  const reusedClips = (win.SCENES || []).filter(mode.reused).length;
+  const inputs = (win.SCENES || []).filter(s => mode.eligible(s) && !mode.reused(s));
   const model = p.comparison?.model || DEFAULT_MODEL;
   const resolution = p.comparison?.resolution || '1080p';
   const candidate = inputs.map(s => ({ type: 'points', duration: s.duration,
     visual: { video: { engine: 'seedance', model, modelReason: 'HITL comparison',
       realFaceInput: false, resolution, generateAudio: false } } }));
   const selectedHybrid = p.comparison?.hybridShots || inputs.slice(0, 2).map((_, i) => i + 1);
-  if (!Array.isArray(selectedHybrid) || selectedHybrid.length < 1 || selectedHybrid.length > 2 ||
+  if (!Array.isArray(selectedHybrid) || selectedHybrid.length < (inputs.length ? 1 : 0) || selectedHybrid.length > 2 ||
       new Set(selectedHybrid).size !== selectedHybrid.length || selectedHybrid.some(n => !Number.isInteger(n) || n < 1 || n > inputs.length))
     throw new Error('comparison.hybridShots must name 1–2 distinct eligible shots, numbered from 1');
   const options = {};
   for (const key of ['hybrid', 'full_video']) {
-    const provisional = key !== p.mode || !inputs.some(s => s.visual?.video || s.type === 'broll');
+    const provisional = key !== p.mode || (!reusedClips && !inputs.some(s => s.visual?.video || s.type === 'broll'));
     const scenes = provisional ? (key === 'hybrid' ? candidate.filter((_, i) => selectedHybrid.includes(i + 1)) : candidate) : win.SCENES;
     const estimate = pricedRows(scenes);
     options[key] = { label: mode.MODES[key], provisional, clips: estimate.rows.length,
+      ...(reusedClips ? { reusedClips } : {}),
       generatedSeconds: estimate.rows.reduce((sum, r) => sum + r.seconds, 0),
       firstPassUsd: estimate.totalUsd, retryLowUsd: +(estimate.totalUsd * Math.min(2, attempts)).toFixed(6),
       retryHighUsd: +(estimate.totalUsd * attempts).toFixed(6), maxAttempts: attempts,

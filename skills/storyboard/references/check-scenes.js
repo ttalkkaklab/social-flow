@@ -119,7 +119,7 @@ function isStillCard(scene) {
   const v = (scene && scene.visual) || {};
   if (scene && (scene.type === 'broll' || scene.type === 'outro')) return false;
   if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') return false;
-  if ((v.slide && v.slide.kind !== 'camera') || v.video || v.clip) return false;
+  if ((v.slide && v.slide.kind !== 'camera') || v.video || v.clip || v.reuse !== undefined) return false;
   return true;
 }
 
@@ -322,7 +322,7 @@ function generatedVideo(scene) {
   const v = (scene && scene.visual) || {};
   // The shape decides, not the lane marker: a filmed shot carries none of these, so a shot
   // that has both is a malformed board the cap and the camera-slot rules still have to reject.
-  return !!(scene && (scene.type === 'broll' || v.video ||
+  return !!(scene && (scene.type === 'broll' || v.video || v.reuse !== undefined ||
                       (scene.type === 'quote' && v.clip && typeof v.clip === 'object')));
 }
 
@@ -332,7 +332,7 @@ function motionKind(scene) {
     return 'recording';
   // The ground decides the kind: a motion background or clip under a motion-slide overlay
   // (the cover's code-rendered title over `visual.video`) is video, not a plate.
-  if (scene && (scene.type === 'broll' || v.video || v.clip)) return 'ai-video';
+  if (scene && (scene.type === 'broll' || v.video || v.clip || v.reuse !== undefined)) return 'ai-video';
   if (v.slide && v.slide.kind !== 'camera' && v.slide.motion === true) return 'motion-slide';
   return null;
 }
@@ -672,7 +672,7 @@ function check(win, fmt, opts) {
   }
 
   // The format owns the default cap; an explicit channel motion policy may raise or lower it.
-  // A supplied clip is a file that already exists, so it is not a slot the engine bills for.
+  // This is a screen-policy cap: imported generated clips count even when they cost $0.
   const videoSlots = scenes.filter((s) => generatedVideo(s));
   // Long-form counts b-roll and motion backgrounds only (§checklist); a short pays for every
   // generated cut, speech clips included, which the hook rule below enforces.
@@ -986,7 +986,7 @@ function check(win, fmt, opts) {
 
     // Every shot that becomes a generated video leaves the storyboard with its prompt stored
     // and its four camera slots filled — the storyboard is where that is still free to fix.
-    if (generatedVideo(s)) {
+    if (generatedVideo(s) && v.reuse === undefined) {
       try { scenePlan(s); } catch (e) { machine(where, e.message); }
       // The slot rule lives in production-mode.js (shared with the approval page): a static
       // camera has no speed to state, so that one slot may stay empty (§camera).

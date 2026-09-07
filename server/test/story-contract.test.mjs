@@ -159,3 +159,13 @@ test('rewriting slide copy invalidates the review hash', () => {
   w.SCENES[1].visual.slide.subject = { kind: 'data', changes: [] };
   assert.notEqual(storyHash(w), withLabels);
 });
+
+test('imported original speech uses trimmed-file times and binds the story review to imported bytes',()=>{
+ const w=fixture(),s=w.SCENES[0];s.duration=5;s.narration=[];
+ s.visual={reuse:{clip:'clips/old-hook.mp4',sha256:'a'.repeat(64),sourceEpisode:'archived',sourceRange:{start:10,end:15}}};
+ w.STORY.transcripts=[{shot:1,source:s.visual.reuse.clip,groups:[{start:0,end:4,text:ref(1).quote}]}];
+ w.STORY.review.hash=storyHash(w);assert.deepEqual(checkStory(w),[]);
+ s.visual.reuse.sha256='b'.repeat(64);assert.match(checkStory(w).join(),/stale|hash/);
+ w.STORY.review.hash=storyHash(w);w.STORY.transcripts[0].groups[0].end=6;
+ assert.match(checkStory(w).join(),/ordered timed speech/);
+});
