@@ -15,6 +15,9 @@ motion_max_consecutive_stills: off
 motion_max_still_seconds: off
 motion_require_action: false
 generated_video_max: 2
+shortform_outro: on       # on | off (absent = on)
+# length_min_seconds: 35  # optional — narrows the short-form band for this channel
+# length_max_seconds: 75  # leave both out and the preset band applies (35–120s on shorts)
 ---
 
 # <channel display name>
@@ -82,6 +85,12 @@ movement, Ken Burns, caption swaps, and still-image changes never count as true 
 `generated_video_max` overrides the format default only for this channel; the storyboard still
 shows the projected cost before approval. `motion_max_consecutive_stills` and
 `motion_max_still_seconds` stop long static runs even when the episode clears the ratio.
+`length_min_seconds` and `length_max_seconds` narrow the short-form length band for this
+channel — `check-scenes.js` and the approval strip then measure the episode against your
+band instead of the preset's, and warn outside it. Leave them out and the preset band
+applies (short-form 35–120s, of which 35–75s is the recommendation), so a profile written
+before the keys existed keeps today's band and needs no migration. Neither key moves the
+180s platform cap, which is the one length that fails rather than warns.
 
 The THEME contract of video-template.html — it goes into scenes.js as-is:
 
@@ -144,9 +153,16 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
   `<slug>-sonic-logo.wav` (the sonic logo — shared across all videos) — generate with /social-flow:intro.
   The default use is **splicing after the main video** (a brand close — a fixed asset made once).
   **Never placed in front of a short-form main video** (the first-3-seconds hook principle — the uses are in intro-playbook.md §1)
+- **Short-form outro**: `shortform_outro` in the front matter — `on` (the default when the
+  key is absent, and today's behaviour: the shared outro is spliced after the CTA) or `off`
+  (the short ends on the CTA's last frame). A profile written before the key existed keeps
+  the outro, so no channel under `data/` has to be edited. Short-form only — long-form always
+  splices `outro-16x9.mp4`.
 - **Wording**: <the brand closing script — e.g. "이런 정보, 매주 올라옵니다. 팔로우하고 이어서 보세요." ("More like this every week. Follow and keep watching.")>
-- **Asset path**: `data/<slug>/assets/outro/default.mp4` — if missing, generate it on
-  the first produce run with build-outro.sh and save it here (don't regenerate per topic).
+- **Asset path**: `data/<slug>/assets/outro/default.mp4` — with `shortform_outro: on`, if it's
+  missing, generate it on the first produce run with build-outro.sh and save it here (don't
+  regenerate per topic). With `off` a short-form-only channel needs no file at all, and a file
+  already on disk is kept, not deleted.
   When the wording differs per platform, keep `outro/youtube.mp4` and `outro/instagram.mp4`
   and put the ids in the catalog. resolve-asset also finds the old `assets/outro.mp4`.
 - **Catalog**: `data/<slug>/assets/catalog.md` — the kind+id table for shared assets.

@@ -74,7 +74,15 @@ measurements.
   body links only after channel A/B measurement**, recorded in the plan.
   Episode content (videos going out via produce → publish) is the exception
   where a body link is canonical (platform-playbook §3) — know the two paths
-  differ and don't mix them.
+  differ and don't mix them. **A breakout push is a third path** — the growth
+  loop posting about an episode that already went out on YouTube. It takes the
+  episode path's treatment, since its subject is an episode, but its target is
+  the **YouTube watch URL**: §3 prefers the IG reel permalink to keep the
+  reader inside Meta, and a push exists to send them out to that video. Put it
+  in the body or the self-reply as the plan's link policy says, and don't
+  assume the `linkUrl` preview card takes it — an IG permalink there is a
+  measured 400 and a YouTube URL there has never been tried. Only a plan
+  carrying §Cross-platform push may use this path at all.
 - Hashtags (topic tags) ≤1 — they carry no ranking weight.
 
 ## §New-post style

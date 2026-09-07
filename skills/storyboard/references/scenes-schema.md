@@ -20,7 +20,7 @@ consumes after storyboard approval. `video-template.html` loads it with
   - [title is a spoken hook · narration explains in polite register (user directive, 2026-08-13)](#title-is-a-spoken-hook-narration-explains-in-polite-register-user-directive-2026-08-13)
   - [visual plan](#visual-plan)
 - [Contracts by type](#contracts-by-type)
-  - [cover — on a short, a gap; on long-form, the result or the moment](#cover-on-a-short-a-gap-on-long-form-the-result-or-the-moment)
+  - [cover — on a short, a gap or the result; on long-form, the result or the moment](#cover-on-a-short-a-gap-or-the-result-on-long-form-the-result-or-the-moment)
   - [hooking — long-form only. The shot after the cover](#hooking-long-form-only-the-shot-after-the-cover)
   - [points — one message per screen](#points-one-message-per-screen)
   - [quote — speech / quotation](#quote-speech-quotation)
@@ -76,8 +76,12 @@ Only the human-readable labels move to shot, scene, and sequence.
 Read [story-quality.md](story-quality.md) for the required `window.STORY` contract and quoted
 review evidence. Draft validation checks the plan; full validation also requires a current
 review. `beat:"cta"` retains its renderer identifier but means the closing beat: an ask or
-question is optional. A concrete payoff must precede any ask. These rules override older
-act-stage or comment-question requirements below.
+question is optional. A concrete payoff must precede any ask. An ask stays optional; a
+forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable
+thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask,
+not a trigger. On a short the forwardable thing is written as `shot.share` on the `beat:"cta"`
+shot and `check-scenes.js` fails a board without it. These rules override older act-stage or
+comment-question requirements below.
 
 This block is written in the story pass before a shot gets a camera or a prompt. It makes the
 episode compressible to one question, one answer, and one thing the viewer should retain:
@@ -140,12 +144,16 @@ There are only two values.
 **The source of truth for the constants is
 `skills/platform-guide/references/formats.js`.** The table below is the summary you consult
 while authoring; the real values are what `format-resolve.js` hands the builder. When the two
-disagree, the preset is right.
+disagree, the preset is right — with one layer above it. `profile.md` may narrow the short-form
+length band with `length_min_seconds` and `length_max_seconds`, and the channel wins there.
+Unset, the preset's own band stands (35–120 s on short-form); long-form keeps the preset's
+8–15 min band whatever the profile carries, and the 180 s hard cap belongs to the platform
+rather than to any channel.
 
 | Contract | Short-form 9:16 | Long-form 16:9 |
 |---|---|---|
-| Main total length | 35–75s recommended · up to 120s when the story carries it (hard 180) | 8–15 min (hard 20 min) |
-| Shot count | 4–12 (4–7 for a single-question episode) | 28–70 |
+| Main total length | the channel band — unset, the preset's 35–120s, of which 35–75s is the recommendation and going over it needs a design reason (hard 180) | 8–15 min (hard 20 min) |
+| Shot count | 4–12 (4–7 for a single-question episode) — a warning either side of it, never a block; a board with a shot per sentence is expected to run past it | 28–70 |
 | Scene length | 4–13s | 6–20s · **no cap in the filmed lane** |
 | Narration characters | cover 40 · body 50 | cover 70 · body 90 |
 | Sentence length | 8–25 chars | 12–40 chars |
@@ -153,7 +161,7 @@ disagree, the preset is right.
 | Generated video, combined | 16s (8s × 2 slots) | 40s (8s × 5 slots) |
 | Chapters | none | 5–10 (authored) · 3 or more in the filmed lane (derived) |
 | Ken Burns pan | available — travel = W(z−1) ≈ 130px at 1.12, measured on portrait | used (scale 1.06–1.35) |
-| Outro asset | `outro.mp4` | `outro-16x9.mp4` |
+| Outro asset | `outro.mp4` when `shortform_outro: on` (the default) · none when `off` | `outro-16x9.mp4` |
 | Filmed scenes | the episode is either all filmed or all generated | **mixed within one episode** (§filmed scenes) |
 | Screencast splice | **per scene** — one recorded screen inside a generated episode (§screencast splice) | per scene, same contract |
 
@@ -180,7 +188,7 @@ One short is a book, a sequence is a paragraph, a scene is a sentence, a shot is
 | Coverage | Material from filming one scene at several sizes | Shots sharing a `scene` number. When `shot.info` overlaps, one of them is enough |
 
 A short is usually one sequence. Scenes divide only when place or time breaks. Shots go **one
-per new piece of information** — 4–6 shots in a dialogue scene is standard, but for a 35–75s
+per new piece of information** — 4–6 shots in a dialogue scene is standard, but for a short
 informational piece the floor is 2 shots at different sizes per scene (wide + close).
 
 `type` (cover/points/quote/broll/outro) is the kind of screen. The **playback role** is `beat`.
@@ -197,18 +205,18 @@ short are defects, not aliases. `check-scenes.js` hard-fails them.
 
 | `beat` | Name | What it does | Where |
 |---|---|---|---|
-| `hook` | cover | Opens a gap — a reason to stay in the first 3 seconds. **Does not dump `COMPREHENSION.answer`.** `hookType` is `fear` · `empathy` · `curiosity` (`spoiler` is forbidden). `hookForm` is `paradox` · `gap` · `identify` · `number` · `secret` (`payoff` is forbidden). No logo, no intro sting, no greeting | `type:"cover"` — it's the cover even unwritten |
-| `drip` | curiosity stage | **1–n shots, n ≥ 1.** Each shot except the last pays one piece of the answer and opens the next gap in the same breath (scenario-craft §5). The last drip is the first place the answer is complete. Typically 2–5, so the 4–12 shot band still holds | usually `type:"points"` |
-| `cta` | close | The last **narrated** shot delivers the closing meaning. A relevant ask after the answer is optional. Subscribe/like is banned. A shared outro asset is not this beat | last narrated shot — write `beat:"cta"` |
+| `hook` | cover | Gives a reason to stay in the first 3 seconds — a gap the viewer feels, or the result stated outright. All four `hookType` values and all six `hookForm` values are open on a short; a `spoiler` cover **may** speak `COMPREHENSION.answer`, a cover on the other three does not. Inside the first second the topic word or the figure is legible, the movement has started, and the first subtitle cue is up. No logo, no intro sting, no greeting | `type:"cover"` — it's the cover even unwritten |
+| `drip` | curiosity stage | **1–n shots, n ≥ 1.** Under a gap cover each shot except the last pays one piece of the answer and opens the next gap in the same breath (scenario-craft §5), and the last drip is the first place the answer is complete. Under a `spoiler` cover the answer is already out, so the drips carry the evidence, the how and the consequence that make it hold up, each one still opening the next question. Typically 2–5, so the 4–12 shot band still holds | usually `type:"points"` |
+| `cta` | close | The last **narrated** shot delivers the closing meaning and names one forwardable thing in `shot.share` — the sentence, figure or verdict a viewer would pass on as-is. A relevant ask after the answer is optional; the forwardable thing is not. Subscribe/like is banned, and asking to be shared is an ask rather than a trigger. Write the last sentence and the last frame together — where the story loops, the closing line hands back to the cover's first line. A shared outro asset is not this beat, and on a channel with `shortform_outro: off` this shot's last frame is the file's last frame | last narrated shot — write `beat:"cta"` |
 
 The four drop-off jobs map onto those three beats:
 
 | Job | Short-form beat | What it has to do | What kills it |
 |---|---|---|---|
-| **stop** | `hook` | 0–3 s: big title, a strong first frame, movement already in it — the cover's treatment comes from `shot.render` like any other cut (§cover), a gap the viewer can feel | a first frame the thumb slides past; the cover speaking the answer; `spoiler` / `payoff` |
-| **hold** | `drip` (every shot except the last drip) | pay one piece, open the next — the viewer is never done wondering. Every cut a still under its camera move or an HTML motion slide, one cut of generated video at most (`visual.why`) | a drip that only explains; dumping the whole answer on drip 1; a still that stands frozen |
-| **satisfy** | last `drip` | the first place `COMPREHENSION.answer` is complete | a hook the drips can't keep; ending on explanation with no complete answer |
-| **close** | `cta` | after the answer, an earned closing line and optional relevant ask | an unpaid promise replaced with a poll or teaser; ending on the shared outro alone |
+| **stop** | `hook` | 0–3 s: big title, a strong first frame, movement already in it — the cover's treatment comes from `shot.render` like any other cut (§cover), a gap the viewer can feel or a result worth staying for. Inside the first second the title and the figure are legible and the first subtitle cue is on screen | a first frame the thumb slides past; nothing legible in the first second; a first subtitle cue that arrives after 1.0 s |
+| **hold** | `drip` (every shot except the last drip) | pay one piece, open the next — the viewer is never done wondering. Every cut a still under its camera move or an HTML motion slide, one cut of generated video at most (`visual.why`) | a drip that only explains; under a gap cover, dumping the whole answer on drip 1; a still that stands frozen |
+| **satisfy** | last `drip` | `COMPREHENSION.answer` is complete by here — under a gap cover this is the first place it lands, under a `spoiler` cover it is where the stated result has been made to hold up | a hook the drips can't keep; ending on explanation with no complete answer |
+| **close** | `cta` | after the answer, an earned closing line, one forwardable thing named in `shot.share`, and an optional relevant ask — the last sentence and the last frame designed together | an unpaid promise replaced with a poll or teaser; a close nobody would screenshot or quote; ending on the shared outro alone (which an outro-off channel cannot do at all) |
 
 Why this order: half or more of the viewers who leave a Short leave inside the first 3 seconds,
 completion is the first distribution signal under 60 s, and a curiosity loop — a question thrown,
@@ -216,6 +224,11 @@ the answer delayed and paid in stages — is the strongest hold short-form has (
 2026-08-23 — field-practice grade; own-channel retention, n=4, 2026-08-26 — the body that paid
 in installments held flat, the body that explained something already accepted slid from the
 third second). Zeigarnik is the name for the mechanism, not a measurement of it.
+
+The channel brief that asked for a first-second layer (owner, 2026-09-07) reports viewers
+leaving inside the first second — field-practice grade, and unmeasured on our channel. Our own
+n=4 has winner and loser **both** clearing the first 3 seconds, so read the first second as a
+floor (nothing dead in frame 0), not as the retention lever. The lever is still the drips.
 
 ### Long-form (`youtube-long-16x9`) — one skeleton, two arcs (`arc`)
 
@@ -260,10 +273,10 @@ more often than a non-narrative one. Grade: practitioner blogs —
 
 | Job | answer-first | story | What it has to do | What kills it |
 |---|---|---|---|---|
-| **stop** | `hook` | `hook` | 0–3 s: big title, a strong first frame, movement already in it — no logo, no intro sting, no greeting. story: the moment of failure, close, no hint of how it ended | a first frame the thumb slides past; a story cover that names the ending |
+| **stop** | `hook` | `hook` | 0–3 s: big title, a strong first frame, movement already in it — no logo, no intro sting, no greeting. answer-first already puts the result in the first second; story: the moment of failure, close, no hint of how it ended, and the short-form first-second floor does not apply to it | a first frame the thumb slides past; a story cover that names the ending |
 | **hold** | `hooking` | `hooking` · `body` · `turn` | keep the promise visible and the answer withheld — through the first 60 s, story through the turn (setup lean, tension climbing setup → build → peak), something changing on screen every 2–4 s | unpacking the answer; drifting from what the cover threw; a setup that dawdles |
 | **satisfy** | `result` · `body` | `result` | pay the promise the cover made — answer-first: the result, then how; story: the payoff, the first time the answer is on screen | a hook the body can't keep |
-| **act** | `cta` | `cta` | after the answer, open one loop outward — a judgment call the comments will argue over, a rewatch pointer, a share-worthy single fact, plus the next concrete thing; story: the frame that loops back to the cover (scenario-craft §5 loop ending) plus a callback and the 마무리 question (scenario-craft §12) | a vague subscribe ask; the same judgment question verbatim every episode |
+| **act** | `cta` | `cta` | after the answer, open one loop outward — a judgment call the comments will argue over, a rewatch pointer, a share-worthy single fact (`shot.share` names it), plus the next concrete thing; story: the frame that loops back to the cover (scenario-craft §5 loop ending) plus a callback and the 마무리 question (scenario-craft §12) | a vague subscribe ask; the same judgment question verbatim every episode |
 
 And in between, **every visual change resets attention for a few more seconds** — high-performing
 Shorts change something on screen every 2–4 s (user-relayed, 2026-08-23 — field-practice grade,
@@ -288,8 +301,9 @@ outcome itself still kept for the result (§9); and the premise is shown working
 act · result) rather than explained (§10). On every arc the payoff shot copies its plant's
 frame (§3) and the signature line lands once (§7).
 
-On a short the cover opens a gap and the last drip is the first place the answer is complete.
-Don't put the finished answer on the cover, and don't unfold it again in the CTA. On long-form
+On a short the cover either opens a gap or states the result. When it opens a gap, the last
+drip is the first place the answer is complete; when it states the result, the drips make that
+result hold up. Either way, don't unfold the answer a second time in the CTA. On long-form
 answer-first the cover's first frame and the result scene point at the same artifact — the
 cover is the glance; the result unfolds it so the built parts show. On a story arc they are
 different on purpose — the cover is the moment, the result is what it became — and it is the
@@ -300,7 +314,9 @@ Left unwritten, the renderer reads it this way. `type:"cover"` → hook, `type:"
 `호기심`·`단계` → drip, `결과` → result, `기획`·`방법`·`내용` → body, `문제`·`후킹` → hooking,
 `전환`·`반전` → turn. `check-scenes.js` and `storyboard.html` hard-fail a short that is missing
 drip or a spoken CTA, that opens on hooking/result/body/turn, that dumps `COMPREHENSION.answer`
-on the cover, or that uses `hookType:"spoiler"` / `hookForm:"payoff"`. On long-form they keep
+on a cover riding **neither** `hookType:"spoiler"` **nor** `hookForm:"payoff"`, or whose
+`beat:"cta"` shot carries no `shot.share`. `spoiler` and `payoff` are legal on a short — either
+one puts the result at 0 s, so either one excuses the dump. On long-form they keep
 the arc checks: first shot isn't the cover, no hooking or the shot after the cover isn't
 hooking (warning); on answer-first, body before result is a violation; on a story arc, result
 before body or before the turn is a violation. The promise ledger (`SB_DOC.craft`, storyboard
@@ -389,7 +405,7 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 | `transition` | required after the first shot | the boundary **before this shot**, chosen from what happened between the two shots. `"jcut"` is the continuity cut (the sound leads); `"cut"` is a smash; `"dissolve"` · `"dip"` · `"dip:white"` · `"iris"` · `"blur"` · `"zoom"` · `"push:<dir>"` · `"whip:<dir>"` each say what moved. See §scene transition |
 | `beat` | optional on long-form, required on a short | short: `hook` \| `drip` \| `cta`. long-form: `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` (`turn` on the story arc only). See §playback order above |
 | `arc` | long-form cover only | `answer-first` (default) \| `story` — which playback order a long-form episode walks. Ignored on a short. See §playback order above |
-| `shot` | recommended | `{ feel, size, angle, info, infoType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
+| `shot` | recommended | `{ feel, size, angle, info, infoType, share, shareType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
 | `sound` | optional | `{ cue, drop, sfx }` — what the audience hears under this shot (§music cues). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
 
 ```js
@@ -400,6 +416,8 @@ shot: {
   angle: "eye",                            // eye (default) · high · low · overhead · dutch — against the SUBJECT's eyes
   info: "that the install is one command", // one line on what this shot newly TELLS the audience
   infoType: "other",                       // other · timeline · statistic · principle
+  share: "install is one command",         // the one sentence, figure or verdict a viewer forwards as-is
+  shareType: "fact",                       // fact · verdict · line · checklist · none
   space: {                                 // the floor plan of the frame (§frame space) — required on a generated still
     frame:  "camera",                      // the only allowed value — left means left of the picture
     layout: "person on the left third, kitchen door on the right",
@@ -423,6 +441,19 @@ shot: {
   carries a rendered object (`slide.object`); the bar is
   `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. If one shot needs two
   types, split the shot; one authored frame carries one visual argument.
+- **`share` is what the viewer would forward.** One sentence, figure or verdict they can pass
+  on as-is, written the way `info` is written — the words themselves, not a description of
+  them. It is **required on a short's `beat:"cta"` shot** and optional on every other shot and
+  on long-form, where the act beat already asks for a share-worthy fact (§playback order).
+  `check-scenes.js` fails a short whose closing shot has no `share` or whose `share` is shorter
+  than 8 compacted characters. An ask stays optional; a forwardable thing does not — an ask
+  requests behaviour from the viewer, while a forwardable thing is one sentence, figure or
+  verdict they can pass on as-is. Asking to be shared is an ask, not a trigger. "Share this
+  with someone" in a `share` slot is the engagement bait the subscribe/like ban exists for.
+- **`shareType` names its shape** — `fact` (a figure or a checkable claim), `verdict` (a
+  judgment worth arguing with), `line` (a quotable sentence), `checklist` (a short list someone
+  screenshots), `none` (this shot has nothing to forward). Optional, the way `infoType` is a
+  vocabulary beside `info`.
 - **Feel first, dials second.** Write `feel`, then pick `size`·`angle` (and `space` on a
   generated still, `camera` on a generated shot, `duration` on a clip) from the
   directing-grammar §5 table — the row is a default, and leaving it means writing why on the
@@ -572,6 +603,8 @@ window.MOTION_POLICY = {
   maxStillSeconds: 4,
   requireAction: true,
   generatedVideoMax: 7,
+  lengthMin: 35,                             // band floor in seconds (preset default 35 on short-form)
+  lengthMax: 75,                             // band ceiling, narrowed here from the preset's 120 — the 180s hard cap is not a channel field
   maxStaticGroundSeconds: 8,                 // one still under its camera move may hold one cut (plugin default 8)
   htmlPlateMax: 2,                           // one-picture plates per episode (plugin default 2)
   videoBudgetUsd: 10,                        // generated video per episode, billed + projected (plugin default 10)
@@ -581,8 +614,22 @@ window.MOTION_POLICY = {
 
 The profile keys are `motion_min_true`, `motion_allowed_kinds`,
 `motion_max_consecutive_stills`, `motion_max_still_seconds`, `motion_require_action`,
-`generated_video_max`, `max_static_ground_seconds`, `html_plate_max`, `video_budget_usd`
+`generated_video_max`, `length_min_seconds`, `length_max_seconds`,
+`max_static_ground_seconds`, `html_plate_max`, `video_budget_usd`
 and `hook_video`. `check-scenes.js` blocks a missing or changed copy: the profile wins.
+
+**`length_min_seconds` / `length_max_seconds`** narrow the short-form total-length band and land
+in the snapshot as `lengthMin` / `lengthMax`. Unset, the preset's 35–120 s stands, so a channel
+that says nothing behaves exactly as before. Long-form is measured against its own preset band
+(480–900 s) on both surfaces whatever the profile carries, so a dual-format channel narrows its
+shorts without dragging its long-form boards down with them. The channel wins over the preset
+for the short-form band, and the 180 s hard cap stays the platform's limit rather than a channel
+field. `off` is the one word these two keys refuse — every other policy key switches
+off with it, but an episode always has a length, so `check-scenes.js` names it as a profile
+error instead of quietly handing the preset band back. `check-scenes.js` and the approval page
+then read the band the same way: every shot but the outro asset (b-roll included, because a
+b-roll plays), a warning outside the band, and a violation past the hard cap. The shot band
+(4–12) does not move with them: a 40-second episode is still 4–12 shots.
 
 **The last four have plugin-wide defaults** (owner directives 2026-09-03 — "the viewer has to
 feel a video: image changes, animation, camera moves" — and 2026-09-05 — "the hook is video,
@@ -634,7 +681,7 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
 
 ## Contracts by type
 
-### cover — on a short, a gap; on long-form, the result or the moment
+### cover — on a short, a gap or the result; on long-form, the result or the moment
 
 ```js
 {
@@ -679,21 +726,31 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
   the stimulus is a reviewer correction directive.
 - **The first frame has no logo, no intro sting, no greeting.** The stop is decided in 0–3 s:
   a big title (≤16 chars, the gradient chip), a strong first frame (on a short: the gap, the
-  person, the figure — not the finished answer; on long-form answer-first: the result), and
-  purposeful movement already in it. Choose that movement with `shot.render`: a still-camera
-  move, a character or object action, a data reveal, or essential continuous video. An explicit
-  channel `hook_video` setting remains a constraint. Branding lives in the outro and the
-  channel intro never sits in front of a short.
-- reveal mapping: rg1=title ← segment ①, rg2=stat ← segment ②.
+  person, the figure — or, on a `spoiler` cover, the finished answer; on long-form answer-first:
+  the result), and purposeful movement already in it. Choose that movement with `shot.render`:
+  a still-camera move, a character or object action, a data reveal, or essential continuous
+  video. An explicit channel `hook_video` setting remains a constraint. Branding lives in the
+  outro and the channel intro never sits in front of a short.
+- **The first second is the floor under that.** On a short, at t=0 the topic word or the figure
+  is already legible, the movement has already started, and the first subtitle cue is on screen
+  inside 1.0 s. Long-form answer-first already carries the same clause below; a `story` cover is
+  carved out of it, since its opening moment is deliberately slow. After the encode the builder
+  measures the first cue's start time and warns past 1.0 s — a warning rather than a failure,
+  because by then the episode is already built.
+- reveal mapping: rg1=title ← segment ①, rg2=stat ← segment ②. The manifest opens on rg1, so
+  the title is already on screen in the first rendered frame; there is no background-only state
+  in front of it.
 
-#### The first frame is a gap (short) or the result / the moment (long-form); segment ① is a promise to the viewer
+#### The first frame is a gap or the result (short), the result or the moment (long-form); segment ① is a promise to the viewer
 
-**On a short the cover opens a gap and does not dump the answer.** The first frame and
-segment ① name a loss, a stake, or a question the viewer already feels. They do not speak
-`COMPREHENSION.answer`. `hookType:"spoiler"` and `hookForm:"payoff"` are forbidden — both dump
-the ending at 0 s, which is the long-form answer-first move. `check-scenes.js` hard-fails them,
-and it hard-fails a cover whose spoken text contains the compacted answer (8 letters or more).
-The last drip is the first place that answer is complete.
+**On a short the cover opens a gap or states the result.** A gap cover's first frame and
+segment ① name a loss, a stake, or a question the viewer already feels, and they do not speak
+`COMPREHENSION.answer` — `check-scenes.js` hard-fails a gap cover whose spoken text carries the
+compacted answer (8 letters or more), and the last drip is the first place that answer is
+complete. A result-first cover writes `hookType:"spoiler"` (usually with `hookForm:"payoff"`)
+and is expected to speak the answer, so the answer-dump check stands down for it; the drips
+then carry the evidence, the how and the consequence that make the stated result hold up. Both
+covers are legal on a short, and the choice belongs to the story rather than to the format.
 
 On long-form answer-first, build, tutorial, and before/after content shows **the finished
 result from the very first frame** of `visual.bg` or `visual.shot`. It doesn't open on process
@@ -728,7 +785,7 @@ The opening rides **one or more** of the four: cover title + segment ①, then t
 a short, or hooking on long-form. Write which one it rode on the cover shot as `hookType`.
 Overlapping two is fine — the first frame showing the ending while segment ① opens on fear,
 say — and in that case `hookType` records what the sound (segment ①) rides. **An opening with
-none of the four is a reviewer copy-mode P0.** A short never shows the ending.
+none of the four is a reviewer copy-mode P0.** All four are open on a short.
 
 | `hookType` | Strategy | What it hooks | Segment ① example |
 |---|---|---|---|
@@ -742,15 +799,21 @@ none of the four is a reviewer copy-mode P0.** A short never shows the ending.
   "임시거주 신고, 안 하면 과태료" (fear), "하루가 왜 늘 피곤하지" (empathy), "서버비가 0원이라고?"
   (curiosity), "순서 하나에 홈페이지가 달라졌어" (showing the ending). The platform title (the
   YouTube title, the IG first line) continues the strategy too (platform-playbook §1 ②, §6).
+  Continuity applies to the stimulus, not to the outcome — playbook §2 governs the title and
+  description whatever the cover's hookType is. A `spoiler` cover states the result on screen;
+  the YouTube title and description still withhold it.
 - **The shot after the cover continues the strategy the cover picked.** On a short that shot is
   the first drip; on long-form it is hooking. The catch contract (same subject, same promise)
   is the hard rule; matching strategies isn't required — a cover opening on fear and the next
   shot catching that loss with an empathy scene is natural. A title on fear with segment ①
   talking about something else counts as a catch violation.
-- **A short never uses `spoiler`.** Showing the ending at 0 s is the long-form answer-first
-  move; on a short it dumps the answer the drips are supposed to pay. `check-scenes.js`
-  hard-fails it. A long-form `story` arc rides `curiosity` (or `empathy`·`fear` on the moment of
-  failure) — `spoiler` is the ending in the first frame, which closes the loop at 0 s. Choosing
+- **`spoiler` is open on both formats.** Showing the ending at 0 s is the long-form
+  answer-first move, and on a short it is the result-first cover — the drips then make the
+  stated result hold up instead of paying it out piece by piece (§playback order). What the
+  cover states on screen does not travel to the metadata: playbook §2 still governs the
+  platform title and description. A long-form `story` arc rides `curiosity` (or `empathy`·`fear`
+  on the moment of failure) — `spoiler` is the ending in the first frame, which closes the loop
+  at 0 s. Choosing
   it on a story arc takes a written reason on the cover, and the reviewer reads it as a strategy
   that doesn't serve the arc (a correction directive — the strategy P0 stays "none of the four").
 - **Fear gets three guardrails.** ① The threat either has evidence in research.md or is hedged
@@ -796,22 +859,24 @@ reviewer correction directive (the strategy P0 stays the four).
 |---|---|---|---|---|
 | `paradox` | paradox · provocation | a claim that contradicts what the viewer believes — "most people have this backwards", "if you want Y, stop doing X" | `curiosity`, `fear` | a flat contrarian sentence, the topic word inside it |
 | `gap` | curiosity gap · open loop | throw a question or a claim and **withhold** the answer — "there's one food quietly slowing your progress" | `curiosity` | name the thing exists, not what it is |
-| `payoff` | result first | show or hint the punchline in the first 1–3 s, then promise how | `spoiler` | the first frame is the finished thing; segment ① says what it gets you |
+| `payoff` | result first | put the punchline in the first second, then promise how | `spoiler` | the first frame is the finished thing; segment ① says what it gets you |
 | `identify` | self-identification question | a question the viewer answers "that's me" — "editing on your phone and hitting the wall?" | `empathy` | the viewer is the subject, in the second person or the shared situation |
 | `number` | number · framework | a precise figure or a counted structure — "the exact 3 steps we made [figure] with" | `curiosity`, `spoiler` | the number is the hero stat, the structure is the body's spine |
-| `secret` | hidden · secret reveal | "hidden/secret" wording — a curiosity gap plus a trust loop (you'll be told) | `curiosity` | promise the reveal, keep it for the last drip (short) or the result (long-form) |
+| `secret` | hidden · secret reveal | "hidden/secret" wording — a curiosity gap plus a trust loop (you'll be told) | `curiosity` | promise the reveal, keep it for the shot that pays — the last drip (short) or the result (long-form) |
 
 - **The form has to be kept, not just thrown.** The platform now tracks "stopped, then left
-  inside 3 s" as a negative signal (user-relayed, 2026-08-23 — field-practice grade, unsourced)
-  — a `gap` that the result never closes, a `secret` the body
+  inside 3 s" as a negative signal (user-relayed, 2026-08-23 — field-practice grade, unsourced;
+  measured at 3 s, not at 1 s, so the first-second floor in §cover is a separate claim on its
+  own footing) — a `gap` that the result never closes, a `secret` the body
   never reveals, a `number` the body doesn't count out, a `paradox` the evidence doesn't back,
   is a hook that costs distribution instead of buying it. That is the §playback order
   **satisfy** job, and copy mode docks the drip (short) or hooking (long-form) axis when the
   promise isn't paid.
 - **Fear keeps its guardrails** whatever the form — a `paradox` or `number` on `fear` still
   needs the threat in research.md or hedged to a possibility.
-- **A short never uses `payoff`.** It dumps the result at 0 s, which is the long-form
-  answer-first cover. `check-scenes.js` hard-fails it. On long-form `answer-first` every form is
+- **`payoff` is open on both formats.** It puts the result at 0 s — on long-form that is the
+  answer-first cover, on a short it is the result-first cover riding `hookType:"spoiler"`, and
+  the drips then make that result hold up. On long-form `answer-first` every form is
   open. On `story`, `gap` · `secret` · `paradox` · `identify` keep the loop open; `payoff` and
   `number` close it at 0 s (the payoff is the answer, a counted framework tells the end). Use
   those two on a story arc only with the reason written on the cover — the reviewer treats them
@@ -947,7 +1012,7 @@ When you **do** use on-screen text:
 
 | Place | Why it's needed |
 |---|---|
-| Cover | The place to catch someone scrolling soundlessly in the first 3 seconds. The hook, the topic word, and the figure have to be there as text |
+| Cover | The place to catch someone scrolling soundlessly — it has to read inside the first second, before a word is heard. The hook, the topic word, and the figure have to be there as text |
 | Numbers, proper nouns, deadlines | Values that slip past the ear. Things to confirm with the eye, like `4,700만₫` or `7월 24일` |
 | Order and step numbers | Marking which step you're on in an episode that runs through several |
 | Information the sound doesn't carry | Sources, qualifiers, term definitions the narration doesn't say (`적대적 평가 = 스스로 채점`) |
@@ -1701,6 +1766,17 @@ opening and the other sits where a run of still cuts is dragging.
   `"구독해 주세요"`. For a serial, say the result they'll get in the next episode; for a one-off,
   say one line of channel value about continuing to solve the same problem. If the shared outro
   video has fixed wording, promise the next result in the main body's last narration instead.
+- **The outro never carries the share trigger.** `shot.share` lives on the spoken `beat:"cta"`
+  shot, because a channel can switch the outro off and the forwardable thing has to survive
+  that. The closing meaning works the same way — the outro carries the brand, the `beat:"cta"`
+  shot carries the close.
+- **On short-form the outro is a channel choice.** `shortform_outro` in `profile.md` front
+  matter is `on` (the default when the key is absent) or `off`. With it off, no `type:"outro"`
+  entry is written at all, `SB_DOC.outro` is null, and the `beat:"cta"` shot's last frame is
+  the file's last frame — plan that frame as the hand-back to the cover. A board with no outro
+  scene and a null `SB_DOC.outro` is complete, not unfinished. **Long-form is outside the
+  toggle**: `type:"outro"` is where its `cta` beat lands (§playback order) and it always
+  renders.
 
 ### chapter — long-form chapters (`youtube-long-16x9` only)
 
@@ -2348,7 +2424,7 @@ strip says no violations.
 - [ ] **The cover `hookType` is one of the four** (`fear`·`empathy`·`curiosity`·`spoiler`), and the
       title and segment ① actually ride that strategy — writing it down while the opening
       opens on a different stimulus is the same as not writing it (§the four opening strategies).
-      **A short does not use `spoiler`.** On long-form, hooking continues the same stimulus
+      All four are open on a short. On long-form, hooking continues the same stimulus
 - [ ] **Every scene title is a spoken hook** — something a person blurts out (casual-register
       exclamation, question, hearsay), not an explanatory statement, a `-하기` nominalization, or
       newspaper-style `-ㄴ다` (§title is a spoken hook)
@@ -2357,8 +2433,10 @@ strip says no violations.
       checked against the portrait contract, and it passes
 - [ ] Shot count and total length are inside the format band (§format table · the source of truth
       is `formats.js`)
-      - Short-form: hook + drip (1–n) + spoken CTA = **4–12 shots · 35–75s** as the default band,
-        up to 120s when the story carries it (180s hard cap — the YouTube Shorts limit)
+      - Short-form: hook + drip (1–n) + spoken CTA = **4–12 shots** inside the channel's band
+        (`length_min_seconds` / `length_max_seconds`, §Channel true-motion policy; unset, the
+        preset's 35–120s stands, of which **35–75s** is the recommendation), 180s hard cap —
+        the YouTube Shorts limit, not a channel field
       - Long-form: **28–70 shots · 8–15 min** (20 min hard cap) + chapters (§chapter).
         An episode with many filmed scenes normally has fewer shots than this band — one chunk of
         recording comes in as one scene. The badge only warns; it doesn't block
@@ -2422,20 +2500,28 @@ strip says no violations.
       catches the negative directives and a multi-reference clip with no scope anywhere
 - [ ] `visual.picture` and `visual.overlay` match the structure. AI video and HTML staging aren't
       merged into one badge
-- [ ] **On a short the cover opens a gap and does not dump `COMPREHENSION.answer`** — no
-      `hookType:"spoiler"`, no `hookForm:"payoff"`, no compacted answer in the cover's spoken
-      text. On long-form answer-first, builds, tutorials, and before/after comparisons show the
-      finished result in the first frame; on a story arc the first frame is the moment it went
-      wrong and the ending stays out of it
+- [ ] **On a short the cover opens a gap or states the result, and says which** — a gap cover
+      keeps `COMPREHENSION.answer` out of its spoken text; a result-first cover writes
+      `hookType:"spoiler"` and may speak the answer. Either way something legible is on screen
+      and already moving at t=0 and the first subtitle cue is up inside 1.0 s. On long-form
+      answer-first, builds, tutorials, and before/after comparisons show the finished result in
+      the first frame; on a story arc the first frame is the moment it went wrong and the ending
+      stays out of it
+- [ ] **The closing shot names one forwardable thing** — the `beat:"cta"` shot of a short has
+      `shot.share`: the sentence, figure or verdict a viewer would pass on as-is, 8 compacted
+      characters or more, with `shot.shareType` when its shape is worth recording. An ask is
+      still optional; this is not an ask
 - [ ] **Playback order matches the format** — **short: hook → drip (1–n) → cta**, n ≥ 1, last
-      narrated shot is `beat:"cta"` (an outro asset is not the spoken close), no
+      narrated shot is `beat:"cta"` (an outro asset is not the spoken close, and on a channel
+      with `shortform_outro: off` there is no outro entry at all), no
       hooking/result/body/turn; **long-form answer-first: cover → hooking → result → body**, the
       finished thing before the method; **long-form story: cover → hooking → body → turn →
       result**, the answer appearing for the first time in the result, a `turn` shot right before
       it
 - [ ] **On a short every middle shot is `beat:"drip"`** — each shot except the last drip pays
-      one piece and opens the next gap (scenario-craft §5); the last drip is the first place the
-      answer is complete. **On long-form the shot after the cover is hooking** (`beat:"hooking"`)
+      one piece and opens the next gap (scenario-craft §5); under a gap cover the last drip is
+      the first place the answer is complete, under a `spoiler` cover it is where the stated
+      result has been made to hold up. **On long-form the shot after the cover is hooking** (`beat:"hooking"`)
       — it catches what the cover threw, hooks with the viewer as the subject, and doesn't unpack
       the answer, with the result or the build starting within 60s of the cover (§hooking)
 - [ ] One episode solves one problem and produces one result
@@ -2452,11 +2538,12 @@ strip says no violations.
       a long-form, every question answered or written off, one `Chosen:` direction), and no
       claim sits on a written-off question
 - [ ] **The cover has `hookForm`** (`paradox`·`gap`·`payoff`·`identify`·`number`·`secret`) and the
-      title and segment ① take that shape, and the last drip (short) or the result (long-form)
-      pays it (a gap closed, a secret revealed, a number counted out — §the six hook forms).
-      **A short does not use `payoff`.** The first frame has no logo, no intro, no greeting; every
-      narration segment opens curiosity, moves the information forward, or puts evidence down;
-      one sentence = one subtitle = one reveal (§narration segments)
+      title and segment ① take that shape, and the shot that pays it does pay it — the last drip
+      (short) or the result (long-form) on a withholding form, the cover itself on `payoff` (a
+      gap closed, a secret revealed, a number counted out — §the six hook forms). All six are
+      open on a short. The first frame has no logo, no intro, no greeting and reads inside the
+      first second; every narration segment opens curiosity, moves the information forward, or
+      puts evidence down; one sentence = one subtitle = one reveal (§narration segments)
 - [ ] Plain-language principle — no unexplained jargon, no over-compression
 - [ ] No AI tells — exit 0 on all three surfaces (0 S1 findings left):
       ```bash

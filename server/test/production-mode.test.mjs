@@ -236,6 +236,8 @@ function reuseFixture(video) {
   s.transition='cut';s.beat=['hook','drip','drip','cta'][i];s.narration=[{tts:lines[i],sub:lines[i]}];
   s.shot={...s.shot,feel:'curious',size:'mcu',angle:'eye',info:lines[i],infoType:'other',render:{mode:'generated_video',purpose:'live_action',motionEssential:true,
    reason:['Observe the box drift.','Follow the shaking support.','Reveal the fan contact.','Trace the cause back.'][i],action:'The box slides.',whyNotStill:'The changing position shows the motion.'}};
+  // A short's close carries the forwardable thing; the ask stays optional, the trigger does not.
+  if(s.beat==='cta'){s.shot.share=lines[i];s.shot.shareType='checklist';}
   s.shot.videoDesign={motion:{kind:'subject_action',subject:'Box',visibleChange:'The box slides across the table.',beats:[{at:0,state:'Box at the left.'},{at:4,state:'Box at the right.'}]}};
   s.visual={picture:'ai-video',overlay:'none',why:'Movement is the evidence.',action:'The box slides.',reuse:{clip:video,sha256:digest(readFileSync(video)),sourceEpisode:'archived-episode-7 (provenance only)',sourceRange:{start:10,end:15}}};
  });
@@ -312,6 +314,39 @@ test('explicit imports pass scene and production gates at zero generation cost, 
  }
  for(const x of w.SCENES)delete x.visual.reuse;
  assert.match(mode.check(w).join(),/hybrid needs/);
+}));
+
+/* The second cover shape. A short may state the result on the cover: `hookType:"spoiler"` with
+   `hookForm:"payoff"`, the cover speaking COMPREHENSION.answer, and the payoff landing on the
+   opening group. Only the cover keeps its imported clip so the board stays under the video cap.
+   A legal spoiler cover relaxes nothing on the metadata side — the title and the description
+   stay under platform-playbook §2, which check-meta.js enforces on its own. */
+function spoilerFixture(video) {
+ const w=reuseFixture(video);
+ const lines=['A fan moves the table.','The table shakes under the box.','The fan sits at the table edge.','Check the table before the box.'];
+ const ref=shot=>({shot,group:1,quote:lines[shot-1]});
+ w.SCENES.forEach((s,i)=>{s.narration=[{tts:lines[i],sub:lines[i]}];s.shot.info=lines[i];});
+ w.SCENES[0].hookType='spoiler';w.SCENES[0].hookForm='payoff';
+ w.SCENES[3].shot.share=lines[3];w.SCENES[3].shot.shareType='checklist';
+ w.SCENES.slice(1).forEach((s,i)=>{
+  s.shot.render={mode:'still_camera',purpose:'portrait',reason:['Hold on the shaking table.','Find the fan.','Return to the table.'][i],camera:{effect:'push',target:'subject',reason:'Make the subject clear.'}};
+  s.visual={bg:'images/portrait.png',camera:{movement:'dolly in'},slide:{kind:'camera',motion:true,file:`slides/body-${i}.html`}};
+ });
+ Object.assign(w.STORY,{opening:ref(1),payoff:ref(1),ending:ref(4),endingReason:'End on the check the answer implies'});
+ w.STORY.review={hash:require('../../skills/storyboard/references/story-contract.js').storyHash(w),verdict:'pass',unresolved:[],...Object.fromEntries(['meaning','progression','payoff','grounding'].map(k=>[k,{reason:`${k} evidence in fictional premise`,refs:[ref(1)]}]))};
+ approve(w);return w;
+}
+test('a spoiler cover states the answer and the close still has to be forwardable',()=>withBoard(({board,work,save})=>{
+ const video=path.join(work,'import.mp4');
+ assert.equal(spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=gray:s=1080x1920:r=1:d=5','-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p',video],{encoding:'utf8'}).status,0);
+ const gate=()=>spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--json'],{encoding:'utf8'});
+ const w=spoilerFixture(video);save(w);
+ const pass=gate();assert.equal(pass.status,0,pass.stdout+pass.stderr);
+ assert.deepEqual(check(board,{requireSelection:true}).errors,[]);
+ delete w.SCENES[3].shot.share;save(w);
+ const missing=gate();
+ assert.notEqual(missing.status,0);
+ assert.match(missing.stdout+missing.stderr,/share trigger/);
 }));
 test('generation output existence never discounts a new generation or its retries',()=>withBoard(({work})=>{
  const w=fixture(1);w.PRODUCTION.mode='hybrid';const before=quote(w);

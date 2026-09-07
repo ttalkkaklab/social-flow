@@ -88,7 +88,7 @@ def parse_chosen(md: str) -> list[tuple[str, str]]:
 
 
 def parse_flags(md: str) -> dict[str, str]:
-    """Read the last column of the topic-phrase table (yes / skip) as phrase → mark."""
+    """Read the last column of the topic-phrase table (yes / skip / banned) as phrase → mark."""
     flags: dict[str, str] = {}
     for line in md.splitlines():
         if not line.startswith("|") or line.startswith("| ---") or line.startswith("| Phrase"):
@@ -322,6 +322,9 @@ def split_why(why: str) -> tuple[str, str]:
 
 
 def flag_status(flag: str) -> str:
+    # banned is read first so it wins over any other word in the same cell.
+    if "banned" in (flag or "").lower():
+        return "banned"
     if "skip" in (flag or "").lower():
         return "skip"
     if "yes" in (flag or "").lower():
@@ -350,8 +353,13 @@ def topic_brief(
     if not covers:
         lab = ko_label(title or phrase, 38)
         covers = f"The market videos cover '{lab}'."
-    status = "pick" if picked else flag_status(flag)
-    if status == "skip":
+    status = flag_status(flag)
+    if picked and status != "banned":
+        status = "pick"
+    if status == "banned":
+        make = ""
+        family = "off limits"
+    elif status == "skip":
         make = ""
         if family == "candidate":
             family = "off our topic"
@@ -435,7 +443,7 @@ def families_html(briefs: list[dict]) -> str:
     order = ["side-hustle test", "tool test", "model comparison"]
     buckets: dict[str, list[dict]] = {k: [] for k in order}
     for b in briefs:
-        if b["status"] == "skip":
+        if b["status"] in ("skip", "banned"):
             continue
         fam = b["family"] if b["family"] in buckets else "tool test"
         if not any(x["label"] == b["label"] for x in buckets[fam]):
@@ -530,10 +538,11 @@ def collect_briefs(
         out.append(brief)
 
     for phrase, why in chosen:
-        add(phrase, why, picked=True)
+        add(phrase, why, flags.get(phrase, ""), picked=True)
     ranked = sorted(
         keywords,
         key=lambda kw: (
+            3 if "banned" in flags.get(kw.get("phrase") or "", "").lower() else
             2 if "skip" in flags.get(kw.get("phrase") or "", "").lower() else
             1 if "yes" in flags.get(kw.get("phrase") or "", "").lower() else 0,
             -num(kw.get("bestMultiplier")),
@@ -573,8 +582,19 @@ def keyword_rows_html(briefs: list[dict]) -> str:
     rows = [b for b in briefs if b["status"] == "keep"]
     used = [b for b in briefs if b["status"] == "used"]
     skipped = [b for b in briefs if b["status"] == "skip"]
+    banned = [b for b in briefs if b["status"] == "banned"]
+    notes = []
+    if used:
+        notes.append("Already made " + " · ".join(b["label"] for b in used))
+    if skipped:
+        notes.append("Set aside " + " · ".join(b["label"] for b in skipped))
+    if banned:
+        notes.append(
+            "Off limits for this channel " + " · ".join(b["label"] for b in banned)
+        )
+    note_html = f'<p class="small">{esc(" · ".join(notes))}</p>' if notes else ""
     if not rows:
-        return '<p class="small">No candidate keywords.</p>'
+        return '<p class="small">No candidate keywords.</p>' + note_html
     bits = []
     for b in rows:
         tag = "making it" if b["status"] == "pick" else "candidate"
@@ -585,12 +605,6 @@ def keyword_rows_html(briefs: list[dict]) -> str:
             f'<div class="bl">Here is what we do</div><div class="wm">{esc(b["make"])}</div>'
             "</div>"
         )
-    notes = []
-    if used:
-        notes.append("Already made " + " · ".join(b["label"] for b in used))
-    if skipped:
-        notes.append("Set aside " + " · ".join(b["label"] for b in skipped))
-    note_html = f'<p class="small">{esc(" · ".join(notes))}</p>' if notes else ""
     return f'<div class="kwgrid">{"".join(bits)}</div>{note_html}'
 
 

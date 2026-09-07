@@ -16,6 +16,7 @@ approved_at: 2026-08-11
 tone: 반말                  # 반말 (casual) | 존댓말 (polite) — one per channel (inherited from profile.md)
 slots: ["09:00", "21:00"]   # 1–3 new-post rhythm slots (local time, target audience's active hours)
                             # a rhythm guide, not a cap — the loop judges publishing frequency
+push_allowed: false         # may this loop post about the channel's YouTube breakout? see §Cross-platform push
 ---
 
 # <channel name> Threads growth plan
@@ -40,7 +41,26 @@ slots: ["09:00", "21:00"]   # 1–3 new-post rhythm slots (local time, target au
 ## Link policy
 
 Default: links go in a self-reply. Update here once body-link A/B measurements accumulate.
+
+## Cross-platform push
+
+The channel's YouTube loop marks an episode a breakout candidate and writes it to
+`data/<channel>/growth/breakout.json`. With `push_allowed: false` the loop only reports that a
+candidate is waiting; `true` is what lets it post about one.
+
+- The push post is a post like any other and clears the same gate. The topic pool above
+  doesn't cover our own episodes, so this section is what covers them — nothing else does.
+- Link: follows §Link policy. The target is the **YouTube watch URL**, not the IG reel
+  permalink the episode fallback uses; sending the reader to the video is the point.
+- One post per candidate. A second post about the same video is a new decision, taken here
+  and not in the loop.
 ```
+
+**An existing plan needs `push_allowed` and this section added, then
+re-approved, before the first push.** A plan written before them forbids the
+push outright — the topic pool is the publishing scope and our own episodes
+were never in it, so a push under the old plan violates absolute rule 1. The
+loop reports the waiting candidate and stops there.
 
 ## state.json — state carried between ticks
 
@@ -54,6 +74,9 @@ Never store raw API responses.
   "lastTickAt": "2026-08-11T09:30:00+09:00",
   "filledSlots": { "2026-08-11": ["09:00"] },
   "engagedPostIds": ["17891234567890123"],
+  "pushes": [
+    { "videoId": "abc123", "postId": "17841400000000002", "at": "2026-08-11T10:12:00+09:00" }
+  ],
   "gateSkippedCommentIds": ["17899876543210987"],
   "keywordCursor": 1,
   "lastInsights": {
@@ -76,12 +99,16 @@ Never store raw API responses.
   human can decide whether to answer personally.
 - `keywordCursor` — keyword rotation position (from 0, cycling through the
   keyword count).
+- `pushes` — breakout pushes this loop published, one entry per video. It's the
+  dedup that keeps one candidate from being posted about twice, and the YouTube
+  loop reads it (read-only) to report pushes on its side. Keep the latest 50.
 
 **Legacy keys** — the old plan's `daily_caps` frontmatter and state.json's
 `searchRepliesToday` are retired (the daily-cap regime itself is gone). Ignore
 them if read from existing files, and drop them when saving state. Existing
 channel plans get migrated to this template and re-approved at the next init
-or plan edit.
+or plan edit. `pushes` goes the other way — it's new, so a state file without
+it is simply a loop that has never pushed; create it on the first one.
 
 ## growth-log.md — observation ledger (append only)
 

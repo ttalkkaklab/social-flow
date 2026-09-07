@@ -82,8 +82,9 @@
 #                         A sound heard only during that seg, plus BGM gating. The audio file can be
 #                         wav or mp4 (a video contributes its own sound); it can be empty with just
 #                         bgm set to off. Times are keyed to the visual's appearance, not sentence boundaries
-#   <workdir>/outro.mp4 : (optional) shared outro — joined with a black fade when present
-#                         (total length = feature + outro)
+#   <workdir>/outro.mp4 : (optional) shared outro — joined with a black fade when OUTRO=1 (the
+#                         default) and the file is here (total length = feature + outro). OUTRO=0
+#                         muxes the feature alone; OUTRO=1 with no file stops the build
 #   <workdir>/fonts/    : (optional) subtitle fonts ttf/otf — libass can't read woff2
 # Output: <workdir>/reel.mp4 (clean master without subtitles — for platforms that take a separate subtitle file)
 #         <workdir>/reel-sub.mp4 (burned-in copy — for platforms with no subtitle-file path, skipped when BURN=0)
@@ -181,6 +182,10 @@ SUB=${SUB:-1}                      # 1=generate subtitle data (subs.srt·subs.as
 BURN=${BURN:-1}                    # 1=also produce burned-in reel-sub.mp4, 0=clean master only
 SUB_FONT=${SUB_FONT:-Pretendard}   # fontconfig fallback when fonts/ has no ttf
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}   # outro to join — a different file per format
+OUTRO=${OUTRO:-1}                  # 1=join the outro (default), 0=the channel's shortform_outro is off
+# profile.md spells the choice `on`/`off`; the flag is the number. Anything else would fall to
+# the off path and drop the outro without saying so.
+case "$OUTRO" in 0|1) ;; *) echo "✗ OUTRO=$OUTRO — the flag is 1 or 0, not profile.md's shortform_outro on/off wording" >&2; exit 1;; esac
 STRICT_DIM=${STRICT_DIM:-0}        # 1=exit 1 on asset dimension mismatch, 0=one warning line
 URL_FMT=${URL_FMT:-}               # format parameter appended to capture URLs (empty for portrait)
 SUB_SIZE=${SUB_SIZE:-58}           # ASS Fontsize
@@ -306,7 +311,15 @@ assert_orient() {  # <path> <role> — orientation only
   fi
 }
 
-[ -f "$OUTRO_ASSET" ] && assert_exact "$OUTRO_ASSET" "outro"
+# Every outro branch below asks this one question — the channel's flag **and** the copied file.
+# OUTRO=1 with nothing to join is a broken workdir, not an outro-off episode, and it stops here:
+# left to fall through it prints the same "no outro" line as the deliberate case, which is the
+# silent drop the 2026-08-19 gates were written for.
+outro_on() { [ "$OUTRO" = 1 ] && [ -f "$OUTRO_ASSET" ]; }
+if [ "$OUTRO" = 1 ]; then
+  [ -f "$OUTRO_ASSET" ] || { say "✗ OUTRO=1 but $OUTRO_ASSET isn't in the workdir — copy it (produce §6), or set OUTRO=0 in format.env when the channel ships without one"; exit 1; }
+  assert_exact "$OUTRO_ASSET" "outro"
+fi
 # segs.tsv column-3 parsing — the **same rules** as the build loop (| split · strip @ prefix · cut after ::).
 # Written differently, the set the precheck sees diverges from the set the build reads.
 while IFS=$'\t' read -r _ _ VIS _; do
@@ -1217,7 +1230,7 @@ ENC=("${VENC[@]}" "${AENC[@]}" -movflags +faststart)
 # frozen black, and under -fps_mode passthrough those 19 frames vanish outright. Encoding
 # the two pieces separately and stream-copying them together leaves no filter at the seam.
 AUDSRC="work/mix.wav"; VDUR="$VT"; FO=""
-if [ -f "$OUTRO_ASSET" ]; then
+if outro_on; then
   OD=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$OUTRO_ASSET")
   FO=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
   VDUR=$(awk -v t="$VT" -v o="$OD" 'BEGIN{printf "%.6f", t+o}')
@@ -1231,14 +1244,14 @@ if [ -f "$OUTRO_ASSET" ]; then
 fi
 
 # The faded outro is identical for the clean and burned-in renders, so build it once.
-if [ -f "$OUTRO_ASSET" ]; then
+if outro_on; then
   ffmpeg -y -v error -i "$OUTRO_ASSET" \
     -vf "fade=t=in:st=0:d=$XFADE,setsar=1,format=yuv420p" -an "${VENC[@]}" work/outro-fade.mp4
 fi
 
 render() {                          # $1=output file  $2=subtitle filter (empty string = no burn-in)
   local OUT="$1" SF="${2:-}"
-  if [ -f "$OUTRO_ASSET" ]; then
+  if outro_on; then
     # Subtitles ride the feature only — the outro carries none, so SF goes on the feature.
     # Both pieces get the same VENC so the concat demuxer can stream-copy them.
     ffmpeg -y -v error -i work/video.mp4 \
@@ -1257,8 +1270,8 @@ render() {                          # $1=output file  $2=subtitle filter (empty 
 }
 
 render reel.mp4 ""
-if [ -f "$OUTRO_ASSET" ]; then say "── outro splice: black fade ${XFADE}s @ ${FO}s → total ${VDUR}s"
-else say "── no outro: muxing the main part alone"; fi
+if outro_on; then say "── outro splice: black fade ${XFADE}s @ ${FO}s → total ${VDUR}s"
+else say "── no outro (OUTRO=0, the channel ships without one): muxing the main part alone"; fi
 
 rm -f reel-sub.mp4
 if [ "$BURN" = "1" ] && [ -n "$SUBFILTER" ]; then
@@ -1287,6 +1300,8 @@ say "── reel.mp4: video ${RV}s / audio ${RA}s / loudness ${LUFS} / faststart
 #         got truncated.
 #      ③ Audio packets sharing one timestamp (normal spacing 1024/48000 = 0.0213s) make
 #         players run the rest of the sound ahead of the picture.
+DURWHY="the feature got cut"
+outro_on && DURWHY="the outro splice dropped or the feature got cut"
 ptspile() {   # $1=file → number of audio packets spaced abnormally close
   ffprobe -v error -select_streams a:0 -show_packets -of csv=p=0 \
     -show_entries packet=pts_time "$1" \
@@ -1299,7 +1314,7 @@ avgate() {    # $1=file $2=role
   awk -v a="$V" -v b="$A" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<=0.05)}' \
     || { say "✗ $ROLE: video ${V}s ≠ audio ${A}s — one of the two got cut"; exit 1; }
   awk -v a="$V" -v b="$VDUR" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<=0.1)}' \
-    || { say "✗ $ROLE: duration ${V}s ≠ expected ${VDUR}s — the outro splice dropped or the feature got cut"; exit 1; }
+    || { say "✗ $ROLE: duration ${V}s ≠ expected ${VDUR}s — ${DURWHY}"; exit 1; }
   P=$(ptspile "$F")
   [ "$P" -eq 0 ] \
     || { say "✗ $ROLE: ${P} audio packets share one timestamp — the sound will run ahead of the picture"; exit 1; }
@@ -1308,7 +1323,7 @@ avgate() {    # $1=file $2=role
   #       whole fade window, which keeps every count right while the logo hard-cuts in out
   #       of a frozen black (measured 2026-08-19). Sample brightness across the window and
   #       require it to move.
-  if [ -f "$OUTRO_ASSET" ]; then
+  if outro_on; then
     local SPREAD
     SPREAD=$(ffmpeg -v info -nostats -ss "$FO" -t "$(awk -v x="$XFADE" 'BEGIN{printf "%.3f", x*3}')" \
         -i "$F" -vf "signalstats,metadata=print:key=lavfi.signalstats.YAVG" -f null - 2>&1 \

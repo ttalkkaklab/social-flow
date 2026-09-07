@@ -4,7 +4,11 @@ Apply this contract to every model and authoring route, including skip-research 
 recordings, test episodes and revisions. Read it before candidates or narration. It overrides
 older requirements for a closing question, modern parallels, high-arousal emotions or a twist.
 Keep existing beat identifiers and production limits: `beat:"cta"` is the closing beat,
-not a requirement to ask the viewer for something.
+not a requirement to ask the viewer for something. An ask stays optional; a forwardable thing
+does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence,
+figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger. On a
+short that forwardable thing is `shot.share` on the closing shot, and `check-scenes.js` fails a
+board without it.
 
 ## Contents
 
@@ -25,15 +29,23 @@ not a requirement to ask the viewer for something.
    Design the ending before polishing the opening. A resolution, demonstrated limit or
    completed joke can be an ending; no universal moral or verbatim thesis announcement is needed.
 4. Create an opening whose question this ending can answer. Compare three content angles,
-   not three adjectives. Pay a useful piece early. Suspense-led shorts defer the whole answer;
-   answer-first long-form may show it early and sustain attention with evidence, method or limits.
+   not three adjectives. Pay a useful piece early. Suspense-led shorts defer the whole answer.
+   A short may also state its result in the first seconds (`hookType:"spoiler"`); attention then
+   rests on the evidence, the how and the consequence, the same way answer-first long-form
+   sustains it. Choose the lane from the material, and say in `STORY.endingReason` what the
+   ending does once the result is already known.
 5. Work backward to the indispensable developments. For each scene, name the new evidence,
    changed expectation, harder choice, consequence or earned release. Ask what becomes
    incomprehensible or unearned if it disappears. Cut repetition and decorative context.
    A reaction or pause can be necessary: explain what the viewer needs time to process.
 6. Default to no CTA. If an ask helps, put it after the promise is paid and connect it to
    the actual choice or useful next action. A generic poll or next-episode teaser cannot
-   substitute for this episode's answer. Never force every sentence into a cliffhanger.
+   substitute for this episode's answer. Never force every sentence into a cliffhanger. An ask
+   stays optional; a forwardable thing does not — an ask requests behaviour from the viewer,
+   while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking
+   to be shared is an ask, not a trigger. On a short, name that forwardable thing in the
+   closing shot's `shot.share`, whether or not the episode ends with an ask; on long-form the
+   act beat already asks for it and no checker demands the field.
 
 Keep the seven candidate headings. Under 주제 write the specific content and its evidence
 basis, separating interpretation. Use 전개 #1–#3 for necessary developments; modern parallels
@@ -85,6 +97,9 @@ window.STORY = {
 
 This field guide is not a passing fixture. Replace all placeholders and cover every narrated
 shot. The checker verifies structure and references, not the truth or quality of the reasoning.
+`payoff` may point at the opening group itself, but only on a board whose cover states the
+result — `hookType:"spoiler"` or `hookForm:"payoff"`. Any other cover pays after it promises,
+the payoff never plays before the opening, and `ending` still comes last.
 
 For mixed live-voice recordings, keep `narration: []` to avoid double audio. Supply review-only
 `STORY.transcripts: [{shot: 2, source: "footage/s2-demo.mp4", groups:
@@ -130,7 +145,9 @@ Record the review in `STORY.review` after the read:
 
 Run `node check-story.js storyboard/` after recording the read. Full `check-scenes.js`
 also requires this evidence before production. The hash covers narration, subtitles, screen
-copy, order, beats, comprehension and story decisions, not review or camera/audio settings.
+copy, the closing shot's `shot.share`, order, beats, comprehension and story decisions, not
+review or camera/audio settings — rewriting the forwardable thing after the read invalidates
+the review the same way rewriting a sentence does.
 Vocabulary edits invalidate it: recheck the affected meaning and the whole causal chain,
 record the fresh read, then update the hash. Never refresh only the hash to silence a failure.
 

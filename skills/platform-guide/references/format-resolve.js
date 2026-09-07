@@ -19,6 +19,15 @@
  * assignment (`VAR=value`) would invert today's builder contract
  * (`${VAR:-default}` always lets caller env win).
  *
+ * ## Presets only — profile.md is not read here
+ *
+ * This resolver sees scenes.js and the preset, nothing else. A channel narrows the
+ * authoring length band in profile.md (`length_min_seconds` / `length_max_seconds`) on top
+ * of what --json emits, and the two readers that layer it — check-scenes.js, which shells
+ * out to --json, and the approval page's check strip — start from the same preset pair.
+ * The band never reaches the shell. TOTAL_HARD does, and the hard cap takes no channel
+ * field: a sourced .env has no path back to profile.md.
+ *
  * ## The two things it rejects
  *
  * Silently falling back to portrait only surfaces after burning 12 minutes of
@@ -110,6 +119,9 @@ function toShell(key) {
 
   line(['W', f.canvas.w], ['H', f.canvas.h], ['FPS', f.canvas.fps]);
   put('ZOOM_BASE', f.image.zoomBase);
+  // TOTAL_HARD is the only pacing value the builders get. The length band stays an
+  // authoring contract — it is the pair a channel may narrow, and format.env cannot read
+  // profile.md (see the header).
   line(
     ['MAX_DUR', num(f.pacing.sceneMax, 1)],
     ['MAX_SCENE', f.pacing.recSceneMax === null ? NO_SCENE_CAP : f.pacing.recSceneMax],

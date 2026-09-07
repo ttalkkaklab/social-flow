@@ -59,6 +59,13 @@ Threads finds posts to join via keyword search, but the Instagram Login API
 this pipeline uses has no public post search. We don't imitate a feature that
 doesn't exist.
 
+**The channel's breakout push doesn't live here either.** A caption carries no
+clickable link, this pipeline has no Stories endpoint, and this skill has no
+publishing stage outside the queue — three reasons a push can't be wired in
+later either. The push goes out on Threads only (grow-youtube §2b). What
+Instagram contributes to a breakout is the same episode, published as a reel
+through this queue.
+
 `references/growth-playbook.md` is the source of truth for tactics (always
 load before writing). That document carries **only claims that passed
 verification**, and circulating folklore that was rejected sits in its own
@@ -138,13 +145,16 @@ data/<channel slug>/growth/
 │   ├── state.json       # state carried across ticks (the basis for double-publish prevention)
 │   └── growth-log.md    # one line per tick + metric deltas (observation ledger)
 ├── autoproduce.json     # channel-shared — authoring budget and history (shared with the YouTube loop)
-└── .autoproduce.lock/   # channel-shared lock — keeps the two loops from authoring at once
+├── .autoproduce.lock/   # channel-shared lock — keeps the two loops from authoring at once
+└── breakout.json        # channel-shared — YouTube writes the breakout candidate, Threads reads it
 ```
 
-**The last two are channel-shared** (not split per platform). One video goes
+**The last three are channel-shared** (not split per platform). One video goes
 out to both platforms, so budget and lock must be channel-level too — count
 per platform and the caps leak double; lock per platform and the lock stops
-nothing.
+nothing. `breakout.json` sits at the same level because the YouTube and Threads
+loops are talking about one video across it. **This loop neither reads nor
+writes it** — see the push note above.
 
 The template and state schema are in `references/growth-plan-template.md`.
 

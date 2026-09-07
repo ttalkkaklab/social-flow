@@ -17,13 +17,14 @@ created: <YYYY-MM-DD>
 # <topic display name> — Storyboard
 
 - **Channel**: <display name> (`data/<slug>/profile.md`)
-- **Expected total length**: <NN>s (main <N> shots + outro)
+- **Expected total length**: <NN>s (main <N> shots + outro, or main alone when the channel's `shortform_outro` is off)
 - **Core message**: <the one sentence this video delivers>
 - **Playback**: short: hook → drip (1–n) → cta (no `arc`). long-form: <answer-first / story> (`arc: <answer-first|story>`) — answer-first: cover → hooking → result → body; story: cover → hooking → body → turn → result
-- **Opening strategy**: <fear / empathy / curiosity / spoiler (long-form only)> (`hookType: <fear|empathy|curiosity|spoiler>`) — <one line on how the title and segment ① carry that stimulus; a short does not use spoiler>
-- **Hook form**: <paradox / gap / identify / number / secret> (`hookForm: <…>`) — <one line on how the title and segment ① take that shape, and where the last drip (short) or the result (long-form) pays it; a short does not use payoff>
-- **Promises**: <the cover's hook → the last drip (short) or the result shot (long-form); each sub-loop and plant → the shot that pays it> (`SB_DOC.craft.loops` in storyboard.html — the document draws the ledger and marks the unpaid ones)
+- **Opening strategy**: <fear / empathy / curiosity / spoiler> (`hookType: <fear|empathy|curiosity|spoiler>`) — <one line on how the title and segment ① carry that stimulus; all four are open on a short, and a spoiler cover may state the result on screen while the platform title still withholds it>
+- **Hook form**: <paradox / gap / payoff / identify / number / secret> (`hookForm: <…>`) — <one line on how the title and segment ① take that shape, and which shot pays it — the last drip (short) or the result (long-form) on a withholding form, the cover itself on payoff>
+- **Promises**: <the cover's hook → the last drip (short), the cover itself on a payoff cover, or the result shot (long-form); each sub-loop and plant → the shot that pays it> (`SB_DOC.craft.loops` in storyboard.html — the document draws the ledger and marks the unpaid ones)
 - **Cover hook**: "<cover title>" — hero stat <stat>
+- **Share trigger**: <the one sentence, figure or verdict the CTA shot hands the viewer to forward (`shot.share`) — an ask is optional, this is not>
 
 ## Sequence — <purpose>          # only when one episode has two purposes
 
@@ -40,6 +41,8 @@ created: <YYYY-MM-DD>
 | size · angle | <els … ecu / composition> · <eye / high / low / overhead / dutch> — <why, if it leaves the directing-grammar §5 row> |
 | info of this shot | <one line the viewer newly learns> |
 | information route | other / timeline / statistic / principle — the last three require a moving editorial HTML frame |
+| share of this shot | <the one sentence, figure or verdict a viewer would forward as-is — required on the CTA shot of a short, optional elsewhere> |
+| share shape | fact / verdict / line / checklist / none |
 | picture | still photo / AI video / recording / shared asset |
 | overlay | HTML reveal · captions · typing / none |
 | target length | ~<N>s |
@@ -95,7 +98,10 @@ What the document shows:
   under a scene band (`S#1. location / time`). The last main shot is not stamped PAYOFF.
 - **Scene-frame rows** — one reveal = one row. A 9:16 frame on the left; on the right, the
   text and dialogue at that moment. A reveal is not a shot. A channel-color badge means AI
-  video; an outline-only badge means HTML staging.
+  video; an outline-only badge means HTML staging. On a cover the first row is the title
+  reveal, and that is what the viewer sees at t=0 — the manifest opens on it, so there is no
+  background-only frame in front of it. Read that row as the first-second check: the topic
+  word or the figure legible, the movement already started.
 - **Contract check** — at the top of the document. Beyond character counts, speech rate, shot
   length, and frame overflow: whether the recorded `picture`/`overlay` match the structure,
   whether `shot.info` within the same scene overlaps, whether `shot.infoType` routes timelines,
@@ -104,8 +110,11 @@ What the document shows:
   is a violation), **long-form answer-first: cover → hooking → result → body** (body before
   result is a violation, a `turn` beat a warning), **story: cover → hooking → body → turn →
   result** (result before body or before the turn is a violation; no turn, no result, or the
-  shot before the payoff not being the turn is a warning). A first shot that isn't the cover,
-  a short cover that dumps the answer, or `spoiler`/`payoff` on a short, is a violation. On
+  shot before the payoff not being the turn is a warning). A first shot that isn't the cover is
+  a violation, and so is a short cover that dumps the answer **without declaring a result-first
+  opening** — `spoiler` and `payoff` are legal on a short, and a cover carrying either
+  `hookType:"spoiler"` or `hookForm:"payoff"` is expected to speak the answer. A short whose `beat:"cta"` shot carries no `shot.share` (or one
+  under 8 compacted characters) is a violation under the **share trigger** heading. On
   long-form a missing hooking shot, or the shot after the cover not being the hooking shot,
   is a warning (scenes-schema §hooking). A missing cover `hookType`, or
   a value outside the four, is an opening-strategy warning (§the four opening strategies —
@@ -121,8 +130,9 @@ The mode (shooting/generated) is auto-detected from `visual.source`, the illustr
 from `narration[].img`. Shooting mode has one overlay per shot, so a single reveal row. The
 timeline slots are shots, and b-roll plugs in at the playback position `after` sets.
 
-**Check items** — character counts, speech rate, scene length, total length, cover title 16
-chars, statLabel 18 chars, playback order (short: hook → drip → cta · long-form answer-first
+**Check items** — character counts, speech rate, scene length, total length (against the
+channel's band — `length_min_seconds` / `length_max_seconds`; unset, the preset's 35–120s
+stands), cover title 16 chars, statLabel 18 chars, playback order (short: hook → drip → cta · long-form answer-first
 cover → hooking → result → body · story cover → hooking → body → turn → result), plus:
 
 - **Frame overflow** — draws each reveal on a 1080px canvas and measures whether text
@@ -138,11 +148,17 @@ cover → hooking → result → body · story cover → hooking → body → tu
   empty, used length is ≤8s, and `src` matches the `after` scene's background.
 - **Empty narration** — a scene holding out with no sound (speech-clip quote scenes are
   normal and excluded).
-- **Missing outro length** — an outro scene exists but `SB_DOC.outro` is empty.
+- **Missing outro length** — an outro scene exists but `SB_DOC.outro` is empty. No outro
+  scene together with `SB_DOC.outro: null` is a complete board, not an omission — that is what a
+  channel with `shortform_outro: off` looks like.
+- **Share trigger** — the `beat:"cta"` shot of a short has no `shot.share`, or fewer than 8
+  compacted characters in it. `check-scenes.js` also rejects a `shot.shareType` outside
+  `fact`·`verdict`·`line`·`checklist`·`none`. A missing closing ask is not flagged; a missing
+  forwardable thing is.
 - **Unfilled placeholders** — blocks approval while `{{…}}` remains in SB_DOC.
 - **Hook form** — the cover has no `hookForm`, or a value outside the six.
-- **Arc / playback** — on a short, missing drip or spoken CTA, a long-form beat, or the
-  cover dumping the answer; on long-form, the cover's `arc` is outside the two (read as
+- **Arc / playback** — on a short, missing drip or spoken CTA, a long-form beat, or a
+  non-`spoiler` cover dumping the answer; on long-form, the cover's `arc` is outside the two (read as
   answer-first); on a story arc, no `turn` or no `result` shot, or the shot right before the
   payoff isn't the turn; on answer-first, a `turn` beat, or body with no result shot; either
   arc, a first shot that isn't the cover.
