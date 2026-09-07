@@ -46,8 +46,12 @@ like YouTube's 70% at 30 seconds.
 
 | Platform | What to look at | Lever to pull when it drops |
 | --- | --- | --- |
-| YouTube | early pass-through `engagedViews/views` · average view % · views | hook · retention · angle (if views alone are low while hook and retention hold, treat the title as the problem) |
+| YouTube | early pass-through `engagedViews/views` · average view % · views · shares against views | hook · retention · angle (if views alone are low while hook and retention hold, treat the title as the problem) · shares |
 | Instagram reels | 3-second drop-off · average watch seconds · shares against reach | hook · retention · shares |
+
+Shares read against views on YouTube because that platform gives no reach number;
+Instagram reads them against reach. Same lever either way: a forward puts the video
+in front of someone the recommendation never chose.
 
 YouTube click-through rate, subscribers per episode, and per-reel follows on Instagram
 are either not given by the platform or unstable. Leave those cells empty in the

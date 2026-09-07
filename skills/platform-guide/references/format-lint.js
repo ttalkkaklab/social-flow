@@ -133,6 +133,10 @@ const RULES = [
     re: /^OUTRO_ASSET=\$\{OUTRO_ASSET:-([^}]+)\}/m, want: S.outroAsset },
   { name: 'build-screencast OUTRO_ASSET', file: 'skills/produce/references/build-screencast.sh',
     re: /^OUTRO_ASSET=\$\{OUTRO_ASSET:-([^}]+)\}/m, want: S.outroAsset },
+  // speedup.sh names the same file to decide the tail it must leave unsped, so it is the
+  // third copy of this default and drifts the same way the other two would.
+  { name: 'speedup OUTRO_ASSET', file: 'skills/produce/references/speedup.sh',
+    re: /^OUTRO_ASSET=\$\{OUTRO_ASSET:-([^}]+)\}/m, want: S.outroAsset },
   { name: 'build-reel STRICT_DIM', file: 'skills/produce/references/build-reel.sh',
     re: /^STRICT_DIM=\$\{STRICT_DIM:-(\d)\}/m, want: String(S.guards.strictDim) },
   { name: 'build-screencast STRICT_DIM', file: 'skills/produce/references/build-screencast.sh',
@@ -370,6 +374,67 @@ function crossCheckAss(issues) {
 }
 
 /**
+ * The outro toggle's inline default, cross-checked across the three scripts that read it.
+ *
+ * `OUTRO` is a channel choice and reaches the shell only through .work/format.env, the way
+ * SPEED does, so each script carries just the fallback for a hand-run build. That fallback
+ * is 1: a script falling back to 0 drops the outro on every channel that never set the key,
+ * and one script disagreeing with another cuts the outro out of the speed pass while the
+ * builder still splices it. There is nothing to check until the toggle lands, so the check
+ * fires only once one of the three declares the variable.
+ */
+const OUTRO_FLAG_FILES = [
+  'skills/produce/references/build-reel.sh',
+  'skills/produce/references/build-screencast.sh',
+  'skills/produce/references/speedup.sh',
+];
+
+function crossCheckOutroFlag(issues) {
+  const found = OUTRO_FLAG_FILES.map((f) => (read(f) || '').match(/^OUTRO=\$\{OUTRO:-(\d)\}/m));
+  if (found.every((m) => !m)) return;
+  OUTRO_FLAG_FILES.forEach((f, i) => {
+    const m = found[i];
+    const name = `OUTRO inline default in ${path.basename(f)}`;
+    if (!m) issues.push({ name, got: '(not declared)', want: 'OUTRO=${OUTRO:-1}' });
+    else if (m[1] !== '1') issues.push({ name, got: m[1], want: '1' });
+  });
+}
+
+/**
+ * The share contract, held in two places that never read each other. check-scenes.js is the
+ * source of truth — its SHARE_TYPES array and the compacted-character floor its cta check
+ * uses — and storyboard-html-template.html copies both as bare literals, because a storyboard
+ * page opens with no path back to the plugin. A sixth share type added to the checker alone
+ * turns into "outside fact · verdict · line · checklist · none" on the approval page for a
+ * board the checker just passed, and a floor changed on one side moves the line between a
+ * warned board and a rejected one depending on which surface the author happens to read.
+ * Both copies are pulled out of their own source and compared with the checker's.
+ */
+function crossCheckShareContract(issues) {
+  const checker = read('skills/storyboard/references/check-scenes.js');
+  const page = read('skills/storyboard/references/storyboard-html-template.html');
+  if (checker === null || page === null) return;
+
+  const types = checker.match(/^const SHARE_TYPES = \[([^\]]*)\];/m);
+  if (!types) return;   // nothing to pin until the checker declares the vocabulary
+  const want = types[1].match(/'([^']+)'/g).map((s) => s.slice(1, -1));
+  const mirror = page.match(/\["fact"(?:,\s*"[^"]+")*\]/);
+  const got = mirror ? mirror[0].match(/"([^"]+)"/g).map((s) => s.slice(1, -1)) : null;
+  if (!got) issues.push({ name: 'SHARE_TYPES mirror in storyboard-html-template.html',
+                          got: '(not found)', want: want.join(' · ') });
+  else if (got.join(' · ') !== want.join(' · '))
+    issues.push({ name: 'SHARE_TYPES mirror in storyboard-html-template.html',
+                  got: got.join(' · '), want: want.join(' · ') });
+
+  const floor = checker.match(/compactLength\(\(\(scenes\[[^\]]+\][^)]*\)\.shot \|\| \{\}\)\.share\) < (\d+)/);
+  const pageFloor = page.match(/compactLetters\(\(\(lastMain\.s\.shot \|\| \{\}\)\.share\) \|\| ""\)\.length < (\d+)/);
+  if (!floor || !pageFloor) return;
+  if (floor[1] !== pageFloor[1])
+    issues.push({ name: 'share-trigger floor in storyboard-html-template.html',
+                  got: pageFloor[1], want: floor[1] });
+}
+
+/**
  * The seek runtime the three authored-screen templates share. It is copied into
  * each file rather than linked, for the same reason the zone tokens are — a
  * slide has no path back to the plugin. Copies drift silently: a fix applied to
@@ -427,6 +492,8 @@ function main() {
   }
 
   crossCheckAss(issues);
+  crossCheckOutroFlag(issues);
+  crossCheckShareContract(issues);
   crossCheckSeek(issues);
 
   if (listOnly) {

@@ -151,6 +151,7 @@ function platformSection(section: PlatformSection, title: string, accent: string
             { k: 'Views', v: fmt(section.cohort.views, 0), hint: 'not a quality signal' },
             { k: 'Opening pass', v: fmt(section.cohort.hook, 0, '%'), hint: 'engaged / views' },
             { k: 'Retention', v: fmt(section.cohort.retain, 0, '%'), hint: 'average view percentage' },
+            { k: 'Shares', v: fmt(section.cohort.shareRate, 2, '%'), hint: 'against views' },
             { k: 'Subs (channel)', v: fmt(section.cohort.channelSubRate, 2, '%'), hint: 'no per-episode number' },
           ],
           accent,
@@ -177,7 +178,8 @@ function platformSection(section: PlatformSection, title: string, accent: string
           item,
           metricCell('Views', fmt(item.metrics.views), vsClass(item.vsCohort.views)) +
             metricCell('Opening pass', fmt(item.metrics.hook, 0, '%'), vsClass(item.vsCohort.hook)) +
-            metricCell('Retention', fmt(item.metrics.retain, 0, '%'), vsClass(item.vsCohort.retain)),
+            metricCell('Retention', fmt(item.metrics.retain, 0, '%'), vsClass(item.vsCohort.retain)) +
+            metricCell('Share rate', fmt(item.metrics.shareRate, 2, '%'), vsClass(item.vsCohort.shareRate)),
         );
       }
       return itemCard(
@@ -282,7 +284,7 @@ nav.jump a {
 .plat-head h2 { font-size: 26px; letter-spacing: -.02em; }
 .acct { color: var(--mute); font-size: 13px; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .block-label { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); margin: 22px 0 10px; }
-.funnel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; list-style: none; }
+.funnel { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 18px; list-style: none; }
 .fn-step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 12px; position: relative; }
 .fn-step:not(:last-child)::after {
   content: ""; position: absolute; right: -14px; top: 50%; width: 10px; height: 10px;

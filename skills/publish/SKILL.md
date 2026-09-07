@@ -100,6 +100,26 @@ into promoting that prompt to "always allow".
    Procedure in §3-2. **Don't add `#Shorts`** — on landscape long-form it gets
    misfiled onto the shorts surface. Rule 9 (portrait first frame) doesn't apply to
    long-form.
+11. **Don't touch a video while it is spreading** — the metadata freezes the moment the
+    §4 checklist passes. From there: no re-upload, no delete, and no title, description or
+    thumbnail change without a reason you can write into the log. Re-editing a video while
+    it is gaining views resets the momentum it had built. That grade is creator-observed —
+    YouTube documents nothing here, so it stands as our operating rule rather than
+    [official]. The mechanics point the same way: `youtube_update` overwrites instead
+    of patching (§3-2 step 3) and one casual title edit re-sends the description and
+    thumbnail at whatever they currently are.
+
+    **What this doesn't restrict.** Everything rule 9 attaches while the video is still
+    private — thumbnail, subtitle tracks, playlist, portrait first frame — and the
+    private→public flip itself, which is the publish completing. The portrait-surface
+    check after going public reads the tile and changes nothing. Finishing an attachment
+    that never landed still belongs to the publish: the subtitle track a publish-only
+    scope rejected (§3 step 1), an FB `captionWarning` (§3 step 4), a first comment that
+    failed. And replying to comments is the post-publish work we want — §5 checks that
+    copy before it goes out.
+
+    A factual error in what went out is the one discretionary fix worth the reset. Take it
+    to the user first, then correct it and record what changed and why.
 
 ## Procedure
 
@@ -118,7 +138,7 @@ into promoting that prompt to "always allow".
   | Where it goes | four platforms | **YouTube alone** |
   | Files needed | `video.mp4` · `video-sub.mp4` · `subs.srt` | `video.mp4` · `subs.srt` · `chapters.txt` |
   | Hashtags | 3–5 including `#Shorts` | **no `#Shorts`** — it gets misfiled as a short |
-  | First publish | straight to public | **upload private, check, then public** (§3-2) |
+  | First publish | upload private, set the portrait frame, then public (rule 9) | **upload private, check, then public** (§3-2) |
   | Portrait surface | `oar*` required (rule 9) | n/a — for landscape the thumbnail is the surface |
 
   Long-form having no burned-in copy (`video-sub.mp4`) isn't a defect — `BURN=0` is
@@ -357,9 +377,11 @@ aren't touched at all (preset `platforms: ["youtube"]`).
    **On a video you're touching for the first time, call it with `dryRun: true` first**
    and check `wouldSend` — this tool overwrites rather than patching, so it re-sends
    the fields you didn't pass at their current values.
-4. If any one of them fails, tell the user **while it's still private**. Don't
-   re-upload — subtitles, description and thumbnail can all be fixed after publishing,
-   and re-uploading the video restarts the view count at zero.
+4. If any one of them fails, tell the user **while it's still private** — that stage
+   exists so the fix lands before anyone has seen it. Don't re-upload; re-uploading
+   restarts the view count at zero. A subtitle track can still be replaced later without
+   touching anything else (§2 table), but a description or thumbnail change once the
+   video is public falls under rule 11.
 
 Sometimes the chapters don't draw. Break the requirements (first line 0:00 · three or
 more · at least 10 seconds apart) and our list is ignored in favor of auto chapters —
@@ -417,6 +439,9 @@ the most frequent failure in this skill.
 - [ ] **Instagram — a permalink came back.** A 200 on the container is not a publish.
 - [ ] **Any temporary tunnel is torn down** — `pgrep -fl "cloudflared|http.server"`
       prints nothing.
+- [ ] **The metadata is final** (rule 11). Every box above is ticked, so nothing further
+      gets edited on this video. If a growth loop is watching it, note here when the
+      watch started.
 
 Anything that needs the user (a login, say) gets **asked for right then**. Don't defer
 it and report the rest as done.
@@ -442,6 +467,10 @@ write the reason into the publish log.
   timestamp, platform, post id, permalink, caption summary, and the approver's decision.
   **Write the §4 checklist beside it, item by item, as O/X** — an open item has to
   survive in the log for the next person to finish it.
+- **A change someone wants after publishing goes into the log, not into the video**
+  (rule 11) — write what they asked for and why under the episode's row, and the next
+  episode carries the fix. Comment replies are the exception; they're the post-publish
+  work, and the copy check above covers them.
 - Update `storyboard.md` to `status: published`.
 - If you used a temporary tunnel, verify the teardown per §1, then give the final
   report as a platform/permalink table.

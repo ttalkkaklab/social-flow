@@ -30,7 +30,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
 
 # From one topic to a finished video — unattended authoring
 
-Read [story-quality.md](../storyboard/references/story-quality.md) before candidate writing, including skip-research channels. It overrides mandatory closing questions and modern parallels. Write STORY with the story pass; use gate 6f's existing narration read for the four quoted findings. After vocabulary edits revalidate and run `check-story.js storyboard/` before any generation. Missing, failed or stale reviews stop production with queue hold, not merely publication. A closing beat may have `cta:"none"`.
+Read [story-quality.md](../storyboard/references/story-quality.md) before candidate writing, including skip-research channels. It overrides mandatory closing questions and modern parallels. Write STORY with the story pass; use gate 6f's existing narration read for the four quoted findings. After vocabulary edits revalidate and run `check-story.js storyboard/` before any generation. Missing, failed or stale reviews stop production with queue hold, not merely publication. A closing beat may have `cta:"none"`. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger.
 
 Runs `storyboard → produce` end to end without human approval. The input is a
 single topic string; the output is a publishable `output/` set.
@@ -87,8 +87,10 @@ An explicitly authorized full_video episode follows [full-video.md](../produce/r
 for source images, prompts, separate narration, every generated clip and QA; this replaces the
 hybrid-only baseline/one-slot clauses below. All spend, narration and publish gates still apply.
 
-1. **Banned subject matter is inherited** — profile §3's banned subjects, plus
-   the growth plan's banned list on unattended calls. Politics, religion,
+1. **Banned subject matter is inherited** — profile §2's banned expressions and
+   subjects and profile §3's banned subjects, plus the growth plan's banned list
+   on unattended calls. A phrase `market-keywords.md` flags as banned is not an
+   eligible `scout` topic either, top of the table or not. Politics, religion,
    nationality-based disparagement, and unverified regulatory information go out
    through no path.
 2. **Never invent facts** — numbers that failed verification stay out, and a
@@ -311,7 +313,8 @@ Both formats. After the three direction rows and `check-research.js --direction`
 write three candidate pages — **the seven items, in order, on every one**: 주제 · 훅 (a
 dramatised scene that invents no fact) · 전개 #1 (what actually happened) · 전개 #2 (what it
 makes the next development necessary) · 전개 #3 (evidence, consequence or limit) · 마무리
-(earned resolution) · CTA (optional, otherwise 없음 with reason), per storyboard §2.2 and
+(earned resolution, naming the one forwardable thing — the fact, verdict, line or checklist
+a viewer could pass on as-is) · CTA (optional, otherwise 없음 with reason), per storyboard §2.2 and
 `../storyboard/references/scenario-stage.md`. A page that only explains, a hook that is the
 start of the timeline, or a feel curve that never dips costs nothing to fix here and costs
 the whole board later. Three different primaries. Naming an engine is not enough — the
@@ -340,7 +343,7 @@ judges the three in one context and returns one tail per page:
 
 `../storyboard/references/scenes-schema.md` is the contract's source of truth;
 design rules follow storyboard skill §4 as-is, including its two passes — the story
-layer first (`beat`·`shot.feel`·`shot.info`·`shot.infoType`·`narration`·`arc`·`hookType`/`hookForm`·`title`, checked
+layer first (`beat`·`shot.feel`·`shot.info`·`shot.infoType`·`shot.share`/`shot.shareType`·`narration`·`arc`·`hookType`/`hookForm`·`title`, checked
 with `check-scenes.js --draft`), the machine layer after §3.6 clears.
 **Write `storyboard/scenario.md` at §2.2** (the scored winner — storyboard
 `../storyboard/references/scenario-stage.md`) and freeze it before the board. Both
@@ -387,35 +390,53 @@ The rules automated authoring breaks most often:
   original notation.
 - THEME copies profile §3's values verbatim.
 - Structure: hook + drip (1–n) + spoken CTA (4–12 shots, typically 2–5 drips);
-  main body 35–75 seconds, up to 120 when the story carries it. The shared outro is not the spoken close.
-- The opening leads with one of **fear, empathy, or curiosity** — exactly one
+  main body inside the channel's band — profile.md's `length_min_seconds` and
+  `length_max_seconds`; unset, the preset's 35–120 seconds stands, of which 35–75s is the
+  recommendation and going over it needs a design reason. No profile key raises the
+  180-second hard cap. Read the band off the profile every run; do not carry the preset
+  band into a channel that set its own. The shared outro is not the spoken close, and a
+  channel with `shortform_outro: off` in profile.md has no outro on a short at all (`on`
+  when the key is absent) — the spoken close is then the whole ending, and §8 writes
+  `OUTRO=0` so the builder and the speed pass agree.
+- The opening leads with one of **fear, empathy, curiosity or spoiler** — exactly one
   per episode, always. Pick it before authoring and record it on the cover shot
-  as `hookType` (`fear`·`empathy`·`curiosity`). **Do not use `spoiler` on a
-  short.** The cover title, segment ①, and the platform titles all carry that
-  stimulus. Fear needs the threat backed in research.md or cushioned with
-  possibility phrasing, and the drip shots must answer it — in the unattended
-  loop, unbacked fear is blocked by copy-gate P0-4 (scenes-schema §the four
-  opening strategies).
+  as `hookType` (`fear`·`empathy`·`curiosity`·`spoiler`). A short may open on the
+  result — `spoiler` is legal here, and the drips then owe the why and the proof.
+  The cover title, segment ①, and the platform titles all carry that
+  stimulus. Continuity applies to the stimulus, not to the outcome — playbook §2 governs
+  the title and description whatever the cover's hookType is. Fear needs the threat backed
+  in research.md or cushioned with possibility phrasing, and the drip shots must answer
+  it — in the unattended loop, unbacked fear is blocked by copy-gate P0-4 (scenes-schema
+  §the four opening strategies).
 - Next to `hookType` write **`hookForm`** — the shape of the first line, one of
-  `paradox`·`gap`·`identify`·`number`·`secret` (scenes-schema §the six hook
-  forms). **Do not use `payoff` on a short.** Keep it: a gap the last drip never
-  closes or a secret the drips never reveal is the early-exit trap the platform
-  now punishes (user-relayed, 2026-08-23 — field-practice grade). **The first
+  `paradox`·`gap`·`payoff`·`identify`·`number`·`secret` (scenes-schema §the six hook
+  forms), `payoff` included on a short. Whatever the form, close what it opens: a gap
+  the last drip never closes or a secret the drips never reveal is the early-exit trap
+  the platform now punishes (user-relayed, 2026-08-23 — field-practice grade), and a
+  `payoff` cover opens its loop on the why, so that is the loop the drips close. **The first
   frame has no logo, no intro, no greeting** (big title, strong frame, movement
-  in it), and **every narration sentence opens curiosity, moves the information
-  forward, or puts evidence down — or it's cut** (copy-gate P0-11). Subtitles are
-  written for muted viewing — one sentence, one subtitle, 4–7 words.
+  in it), and **the first second is the floor under the first three** — at t=0 the topic
+  word or the figure is legible and the picture is already moving, and the first subtitle
+  cue is up inside 1.0 s, which §8 measures on the shipped file. **Every narration
+  sentence opens curiosity, moves the information forward, or puts evidence down — or
+  it's cut** (copy-gate P0-11). Subtitles are written for muted viewing — one sentence,
+  one subtitle, 4–7 words.
 - **A short is always hook → drip (1–n) → cta.** Do not default to
   `answer-first`. Write `beat:"hook"` on the cover, `beat:"drip"` on every
   middle shot, `beat:"cta"` on the last narrated shot. n ≥ 1. Do not write
-  `hooking` · `result` · `body` · `turn`. The cover opens a gap and does not
-  speak `COMPREHENSION.answer`; each non-final drip pays one piece and opens
-  the next gap; the last drip is the first place the answer is complete; the
-  closing beat is spoken but may have no ask. An outro asset is not the spoken close.
+  `hooking` · `result` · `body` · `turn`. The cover opens the loop the rest of the
+  episode closes — a cover riding `hookType:"spoiler"` or `hookForm:"payoff"` may speak
+  `COMPREHENSION.answer` in the first line, any other cover reaches it no earlier than the
+  last drip; each non-final drip pays one piece and opens the next gap; the closing beat is
+  spoken, carries `shot.share` and may have no ask. An ask stays optional; a forwardable
+  thing does not — an ask requests behaviour from the viewer, while a forwardable thing is
+  one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not
+  a trigger. An outro asset is not the spoken close.
   Copy the approved anchor lines into the `scenes.js` header
-  comment: the opening, resolution and any chosen CTA. Lay
+  comment: the opening, resolution, the share trigger and any chosen CTA. Lay
   the seven items onto beats with scenario-stage's item-to-beat map (a short:
-  hook · drip × 전개 · cta; long-form by the cover's arc — `story` puts 전개 #2 at the
+  hook · drip × 전개 · cta, with 마무리's forwardable line landing on the cta shot as
+  `shot.share`; long-form by the cover's arc — `story` puts 전개 #2 at the
   turn, `answer-first` plays its present answer as the result first).
   **Long-form still follows the cover's `arc`** — `answer-first` (default):
   cover → hooking → result → body; `story`: cover → hooking → body → turn →
@@ -423,7 +444,12 @@ The rules automated authoring breaks most often:
   on long-form only (scenes-schema §playback order).
 - One entry is one shot. Write `scene`·`sceneSlug`·`shot.feel`·`shot.size`·
   `shot.angle`·`shot.info`·`shot.infoType`·`shot.space` and `visual.picture`·`visual.overlay` (source of
-  truth: scenes-schema §grammar units and production layers). **Feel first** —
+  truth: scenes-schema §grammar units and production layers). On a short's `cta` shot
+  also write **`shot.share`** — the one sentence, figure or verdict a viewer would forward
+  as-is, written like `shot.info` — and `shot.shareType`, one of
+  `fact`·`verdict`·`line`·`checklist`·`none`. `check-scenes.js` fails the episode when that
+  shot has no `shot.share` or under 8 compacted characters of one, so an unattended run stops
+  before generation rather than shipping a close nobody would pass on. **Feel first** —
   say what the audience should feel on the shot, then take the size and the angle
   (and the move and length on a generated shot) from the feel → technique table
   (`../storyboard/references/directing-grammar.md` §5). Write `shot.space` (`frame:
@@ -452,7 +478,9 @@ node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js storyboar
 numbered list first, then COMPREHENSION, STORY and relevant research excerpts with row IDs,
 plus the scenario path if present. No scenes.js, research.md or profile.md file read is needed.
 Map findings with `check-story.js storyboard/ --map` and record the four quoted judgments in
-STORY.review. Revalidate after vocabulary edits before setting a fresh hash.
+STORY.review. Revalidate after vocabulary edits before setting a fresh hash — `shot.share`
+sits inside that hash, so rewriting the share trigger stales the read exactly as rewriting
+a narration sentence does.
 Read the tail `STORYBOARD_REVIEW: mode=narration score=NN p0=N`.
 
 - **Apply the directives as spoken sentences** — an antecedent, the present link,
@@ -495,7 +523,11 @@ Apply `../storyboard/references/retention-direction.md` §2–§4 here. Write it
 table under storyboard.md's "hand to produce" note. Use the unattended one-bed sound
 design from the start, with supported drops and available SFX. Each middle beat must
 deliver evidence or change the viewer's expectation, and the main promise must have a
-specific payoff before the closing invite. Resolve missing essential assets before spending.
+specific payoff before the closing invite — spoken at the cover on a `spoiler` open,
+by the last drip otherwise. The cta shot's `shot.share` is that payoff made forwardable,
+not the invite: an ask requests behaviour from the viewer, a forwardable thing is one
+sentence, figure or verdict they can pass on as-is, and only the ask is optional.
+Resolve missing essential assets before spending.
 
 ```bash
 SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
@@ -747,6 +779,20 @@ runs here too — produce §4's `--dump-dom` one-liner needs no browser tooling,
 unattended mode gets the same `ovf=0` verdict. On top of it, verify the captured
 state PNGs are non-zero-size and the per-scene state counts match the manifest.
 
+**Settle the outro before the build.** Read `shortform_outro` from profile.md — absent
+means `on`. On `on`, resolve and copy the asset under `format.env`'s `OUTRO_ASSET` name
+exactly as produce §6 does and write `OUTRO=1`; the build stops on a missing file instead
+of shipping an episode with no ending. On `off`, skip that resolve and copy and write
+`OUTRO=0`, because `build-reel.sh` and `speedup.sh` decide by the variable, not by what
+happens to sit on disk — a leftover `outro.mp4` from an earlier run would otherwise get
+spliced on and left at 1.0x with its cues mistimed.
+
+```bash
+grep -qF '${OUTRO:=' .work/format.env \
+  || echo ": \"\${OUTRO:=<1, or 0 when profile.md says shortform_outro: off>}\"" >> .work/format.env
+grep -F '${OUTRO:=' .work/format.env   # echoes the line the build and the speed pass read
+```
+
 The `build-report.txt` verdict follows `../produce/references/pipeline.md`
 §report gate table.
 **drift ≠ 0, a missing reveal state, or an unused final reveal blocks
@@ -790,6 +836,12 @@ Unattended, the marker is the check: `build-report.txt` has to gain a
 spoken characters/s after every TTS and speed choice has taken effect. A non-zero exit aborts
 the episode — nothing enters the queue. §9 moves that pass's `-fast` set to output.
 
+The same pass adds a `── first cue …s` line and writes the t=0 frame to
+`.work/qa/first-frame.png`. Past 1.0 s the line arrives as `⚠ first cue …` — the opening
+second carried no words. That one is a warning, never an abort: the build is already paid
+for by the time it is measured. Copy the number into the wrap-up report and hand it to the
+content reviewer with the frame.
+
 ### 9. Finalize output + platform text
 
 ```bash
@@ -810,7 +862,10 @@ and the episode publishes un-sped with subtitles on the wrong timeline.
 Rewrite the platform text per platform following the platform-guide playbooks,
 and run the per-surface style check right after saving (produce §9's script
 as-is, `check-meta.js` on `output/youtube/meta.md` included — the title and
-description withhold the result, playbook §2). exit 2: fix and rerun; two
+description withhold the result, playbook §2). A `spoiler` cover buys nothing here:
+continuity applies to the stimulus, not to the outcome — playbook §2 governs the title
+and description whatever the cover's hookType is, and on a short the answer-leak check
+runs either way. exit 2: fix and rerun; two
 failures and that platform's queue marker doesn't get stamped. **Also run produce §9's batch check (check-batch)** — on
 the unattended path nobody is around to notice "this reads just like the last
 one", and since the growth loops call this skill repeatedly, this is where
@@ -827,6 +882,7 @@ cannot stand in for those checks. Preserve that hold through wrap-up even if cop
 
 Delegate to the content-reviewer agent — **frames pulled from the burned-in
 copy** (the clean master has no subtitles, so typos and clipping don't show),
+the `t=0` frame and §8's first-cue start among them,
 the platform copy, scenes.js, and §4·§9's exit codes.
 If the channel skips research, state that too (the facts axis converts to full
 marks).

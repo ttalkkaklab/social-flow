@@ -16,6 +16,7 @@ daily_caps:
   publishes: 2              # = slot count (cap 3)
 queue_rule: "status: produced|published + queue: ready"   # queue eligibility (default)
 ai_disclosure: always       # always | per-topic — with always the loop never turns disclosure off
+velocity_watch_minutes: 30  # sampling interval for a fresh video's view counter (0 = no watch) — see §Breakout
 autoproduce:                # when the queue runs dry the loop authors directly (off by default)
   enabled: false            # turning this true widens the loop's authority from publishing to authoring
   topic_source: pool        # pool (approved list) | keywords (Naver 지식iN) | scout (market-keywords.md)
@@ -120,7 +121,60 @@ exception and the user decides directly.
 A human links it in Studio after publishing (no API support). Default link
 target: <the long-form video or the series' flagship video>. With no target,
 leave it empty and the loop's reminders can be ignored.
+
+## Breakout — the velocity watch and the one-video push
+
+`velocity_watch_minutes` sets the sampling interval (default 30; 0 turns the
+watch off). Samples land only when a tick runs, so the `/loop` interval has to
+come down to match for as long as a window is open — on an hourly loop the
+readings are hourly whatever this number says.
+
+**What is sampled**: each watched video's `lifetime.views` · `likes` ·
+`comments`, the Data API's public counter, read out of the `youtube_insights`
+response the tick already fetched. No extra call and no lag.
+
+**What can't be**: everything Analytics serves — `shares`,
+`averageViewPercentage`, `engagedViews`, the whole `period` block — runs 2–3
+days behind at day granularity. **Sharing is not observable in the first
+hours.** Sharing gets judged in the weekly summary and never in a same-day
+rule.
+
+- **Window** — 6 hours from publish.
+- **Baseline** — 5 earlier watched episodes with a growth-log reading at about
+  the same age. Below that count the loop samples and declares nothing.
+- **Candidate** — views at that age at or above **2×** the baseline median,
+  and the lead holding across two consecutive samples. The 2× is a starting
+  placeholder, not a measured line: no public number exists for it and this
+  channel has none yet, so read the first weeks off the growth-log ledger and
+  write the real one here.
+- **Edit freeze** — while a window is open the video's title, description,
+  tags, thumbnail, captions and privacy stay as published. The Shorts vertical
+  frame is exempt; it's unfinished publish work rather than an edit.
+
+```yaml
+push_targets: []            # platforms allowed to push a candidate — [] means the loop only records it
+push_per_candidate: 1       # posts one candidate gets, across all targets
 ```
+
+**A platform listed here still publishes nothing by itself.** The push post
+goes out from that platform's own growth loop under that platform's plan, so
+the target plan needs its own push clause first (Threads:
+`skills/grow-threads/references/growth-plan-template.md` §Cross-platform push).
+Only list a platform whose `growth-plan.md` is approved — a missing standing
+authorization is not ours to write on its owner's behalf.
+
+The handoff is `data/<channel>/growth/breakout.json`, channel-shared and
+written only by the YouTube loop.
+
+**None of this is machine-checked.** No checker reads growth-plan.md,
+state.json or growth-log.md. The watch, the candidate rule, the push targets
+and the edit freeze hold only as far as the loop reads these lines.
+```
+
+**Keys absent from an older plan** — `velocity_watch_minutes` missing means 30,
+and no `## Breakout` section means no push targets. A plan written before this
+section keeps working unchanged: the loop must not error on it, and it never
+gains a push target by default.
 
 ## state.json — state carried across ticks
 
@@ -136,6 +190,15 @@ responses.
   "publishedTopics": ["20260811-visa-fee"],
   "pendingRelatedVideo": [
     { "videoId": "abc123", "topic": "20260811-visa-fee", "publishedAt": "2026-08-11T09:02:00+09:00" }
+  ],
+  "watching": [
+    {
+      "videoId": "abc123",
+      "topic": "20260811-visa-fee",
+      "publishedAt": "2026-08-11T09:02:00+09:00",
+      "samples": [{ "at": "2026-08-11T09:02:00+09:00", "views": 4, "likes": 0, "comments": 0 }],
+      "verdict": null
+    }
   ],
   "lastInsights": {
     "capturedAt": "2026-08-11T09:30:00+09:00",
@@ -158,9 +221,20 @@ responses.
 - `pendingRelatedVideo` — videos whose Related video isn't linked in Studio
   yet. Remove an entry when the user says it's handled. Entries older than
   30 days are dropped automatically.
+- `watching` — videos inside their velocity window (§Breakout). Each sample is
+  the four scalars only, never the API response (absolute rule 5). Drop the
+  entry when the window closes, after writing its closing reading and verdict
+  into growth-log — the log is what the next episode's baseline is medianed
+  from, not this file. A window is 6 hours at a 30-minute interval, so a full
+  entry holds about a dozen samples.
 - `lastInsights` — the baseline for the next tick's delta. Because Analytics
   lags 2–3 days, day-level comparison is meaningless, so 7-day-window values
-  are stored.
+  are stored. That reasoning covers the Analytics half only: the samples in
+  `watching` come from the Data API counter, which isn't lagged, and
+  minute-level comparison works there and nowhere else in this file.
+- Pushes are **not** stored here. The Threads loop publishes them and records
+  them in its own `growth/threads/state.json`; this loop reads that file for
+  reporting and never writes it.
 
 ## autoproduce.json — channel-shared authoring budget and history
 
@@ -175,13 +249,21 @@ entirely inside the lock.
 ```markdown
 # <channel name> YouTube growth log
 
-| time | replies | authored | published | subscribers | avg view % | notes |
-| --- | --- | --- | --- | --- | --- | --- |
-| 08-11 09:30 | 3 | - | 1(09:00) | 412(+7) | 71.3% | visa-fee episode top reach · Related unlinked |
-| 08-11 10:30 | 0 | 1($0.05 economy) | 0 | - | - | queue 0 → autoproduce |
-| 08-11 11:30 | 0 | - | 0 | - | - | observation only |
+| time | replies | authored | published | subscribers | avg view % | velocity | notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 08-11 09:30 | 3 | - | 1(09:00) | 412(+7) | 71.3% | abc123 t0 4 | visa-fee episode top reach · Related unlinked |
+| 08-11 10:00 | 0 | - | 0 | - | - | abc123 +38/30m | age 30m · baseline 3/5, calibrating |
+| 08-11 10:30 | 0 | 1($0.05 economy) | 0 | - | - | - | queue 0 → autoproduce |
+| 08-11 11:30 | 0 | - | 0 | - | - | - | observation only |
 ```
 
-Once a week (Monday's first tick) add a summary line: the weekly 4 metrics
+The `velocity` column is the ledger the candidate rule medians over, so it
+keeps a fixed shape — `<videoId> +N/<interval>` for a sample, `<videoId> t0 N`
+for the first one, `-` for a tick that took none. The age and the verdict go in
+notes.
+
+Once a week (Monday's first tick) add a summary line: the weekly 5 metrics
 (engagedViews · average view percentage · subscriber delta · per-video view
-distribution) + one line on the top-reach video types.
+distribution · shares) + one line on the top-reach video types, plus any pushes
+made and what moved after them. Shares sit in the weekly line and nowhere
+faster: the number is Analytics and lags 2–3 days.

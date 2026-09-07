@@ -135,6 +135,7 @@ export function analyzeYoutubeVideos(
   const notes = [
     'Shorts swipe-away drop-off is not in the API. Opening pass is read as the engagedViews/views ratio.',
     'Per-episode subscriber conversion is not stable in the video report, so only the channel-window number is recorded.',
+    'YouTube reports no reach, so the share rate here is shares against views. It does not line up with the Instagram share rate, which is against reach.',
     'When only views are low and opening pass and retention are at or above the median, the lever is angle. Do not clone that format — open the next episode title with the problem.',
   ];
   const rows = videos.map((video) => {
@@ -144,13 +145,18 @@ export function analyzeYoutubeVideos(
     const engaged = num(period?.engagedViews);
     const hook = views && views > 0 && engaged != null ? (engaged / views) * 100 : null;
     const retain = num(period?.averageViewPercentage);
-    return { video, period, views, hook, retain };
+    const shares = num(period?.shares);
+    // Instagram divides shares by reach; YouTube Analytics has no reach metric, so views is the
+    // nearest denominator it does give. The two rates are read within a platform, never across.
+    const shareRate = views && views > 0 && shares != null ? (shares / views) * 100 : null;
+    return { video, period, views, hook, retain, shares, shareRate };
   });
 
   const cohort = {
     hook: median(rows.map((r) => r.hook).filter((n): n is number => n != null)),
     retain: median(rows.map((r) => r.retain).filter((n): n is number => n != null)),
     views: median(rows.map((r) => r.views).filter((n): n is number => n != null)),
+    shareRate: median(rows.map((r) => r.shareRate).filter((n): n is number => n != null)),
     channelSubRate: (() => {
       const gained = num(channelMetrics?.subscribersGained);
       const views = num(channelMetrics?.views);
@@ -159,7 +165,7 @@ export function analyzeYoutubeVideos(
     })(),
   };
 
-  const items: ReviewedItem[] = rows.map(({ video, period, views, hook, retain }) => {
+  const items: ReviewedItem[] = rows.map(({ video, period, views, hook, retain, shares, shareRate }) => {
     const steps: FeedbackStep[] = [];
     if (!period) {
       steps.push({
@@ -185,6 +191,14 @@ export function analyzeYoutubeVideos(
           next: 'keep a single claim and tighten the gap between cuts',
         });
       }
+      if (shareRate != null && cohort.shareRate != null && shareRate < cohort.shareRate * SHARE_GAP) {
+        steps.push({
+          lever: 'share',
+          problem: `shares against views ${shareRate.toFixed(2)}% — below the ${cohort.shareRate.toFixed(2)}% median`,
+          hypothesis: 'there is no single line worth passing on (a twist, a number, a checklist)',
+          next: 'put a sentence someone would forward as-is on one screen',
+        });
+      }
       const hookOk = hook != null && cohort.hook != null && hook >= cohort.hook * GAP;
       const retainOk = retain != null && cohort.retain != null && retain >= cohort.retain * GAP;
       const viewsLow = views != null && cohort.views != null && views < cohort.views * GAP;
@@ -207,6 +221,8 @@ export function analyzeYoutubeVideos(
         views,
         hook,
         retain,
+        shares,
+        shareRate,
         likes: num((period as Record<string, unknown> | null)?.likes) ?? num((video.lifetime as Record<string, unknown> | undefined)?.likes),
         comments: num((period as Record<string, unknown> | null)?.comments) ?? num((video.lifetime as Record<string, unknown> | undefined)?.comments),
       },
@@ -214,6 +230,7 @@ export function analyzeYoutubeVideos(
         hook: vsMedian(hook, cohort.hook, true),
         retain: vsMedian(retain, cohort.retain, true),
         views: vsMedian(views, cohort.views, true),
+        shareRate: vsMedian(shareRate, cohort.shareRate, true),
       },
       steps,
     };

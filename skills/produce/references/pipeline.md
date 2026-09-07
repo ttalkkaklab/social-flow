@@ -51,7 +51,7 @@ Silence trim → loudnorm -16 → measured speech rate + atempo normalization (o
 duration rounded up to whole frames + sample-accurate audio padding (**zero drift**) → reveal transition
 timing (reveal-timing.py) → visual chain (video + alpha overlay composite → reveal xfade) → Ken Burns
 zoompan (4%/s on stills, capped at 1.075) → concat → BGM sidechain ducking → subtitle files (`subs.srt` for publishing ·
-`subs.ass` for burn-in) → outro xfade 0.6s splice → loudnorm -14 final encode (H.264 High 4.1, faststart)
+`subs.ass` for burn-in) → outro splice through black (only when the channel's outro is on) → loudnorm -14 final encode (H.264 High 4.1, faststart)
 → cover still extraction (`COVER_TS`, and the frame it pulls now comes out of a moving still —
 a 5s punch cover sits at scale 1.062 at 3.2s, so the thumbnail is that bit tighter).
 
@@ -101,10 +101,15 @@ falls back silently and no short video loops or freezes to fill its window.
 | `separation <N> LU is under the <floor> LU floor` | **Do not proceed** — the build exits 1; the bed is competing with the voice. Lower the bed (`BGM_SEP`), swap in a quieter cue, or fix a narration track that came in hot, then rebuild |
 | `separation <N> LU is no wider than the <N> LU resting distance` | The ducking never fired — the voice key went silent or the bed reached the mix around it. Rebuild after fixing; continue only if the voice is audibly clear over the music |
 | `── voice-to-bed separation <N> LU` (no mark) | OK — at or above the 4 LU floor and wider than the resting distance |
-| Total length | 35–75s recommended, up to 120s, 180s cap (main + outro − 0.6s) — **measured on the final pace pass's output** |
+| Total length | the channel's band (`length_min_seconds`/`length_max_seconds`, 35–75s by default), up to 120s, 180s cap. Expect main + outro here (build-screencast.sh overlaps its xfade, so main + outro − 0.6s on that lane) and main alone with `OUTRO=0` — **measured on the final pace pass's output** |
+| `── no outro (OUTRO=0, …)` | Expected on a channel whose `shortform_outro` is off. With the outro on, **do not proceed** — `OUTRO` in `.work/format.env` contradicts the channel, so fix the flag and rebuild |
+| `✗ OUTRO=1 but <asset> isn't in the workdir` | **Do not proceed** — the build stops there. Copy the outro under `format.env`'s `OUTRO_ASSET` name (produce §6), or set `OUTRO=0` when the channel ships without one |
+| `✗ OUTRO=0 but the build spliced an outro` | **Do not proceed** — the speed pass stops there. The flag was changed after the build, so the outro is sitting inside the feature and would be sped up with it. Rebuild under the flag you want |
+| `⚠ first cue at …s — past the 1.0s mark` | The opening second carries no words. Not a build failure: look at `.work/qa/first-frame.png`, and if the frame is bare too, bring the cover's first sentence forward and rebuild |
+| `── first cue …s` (no mark) | OK — the first subtitle is up inside the first second, and the t=0 still is in `.work/qa/` |
 | No `── speedup x…` line | **Do not proceed** — the required speed pass (produce §7.5) never ran, and `output/` would get the un-sped build. Run `speedup.sh .work` and copy the `-fast` set |
 | No `PASS final speech rate` line, or a `final speech rate` failure | **Do not proceed** — the shipped subtitle timeline was not checked or exceeds 6.2 characters/s. Lower the profile factor or shorten the dense line, rerun the pass, and use only the new `-fast` set |
-| `reel-fast.mp4 is …s but …s was expected` | **Do not proceed** — the speed pass exits 1; the filter didn't take. Check that `outro.mp4` in the workdir is the same file the build spliced |
+| `reel-fast.mp4 is …s but …s was expected` | **Do not proceed** — the speed pass exits 1; the filter didn't take. Check `OUTRO` in `.work/format.env` against what the build actually did (a flag the build and the pass disagree on makes the tail length wrong), then that `outro.mp4` in the workdir is the same file the build spliced |
 | `apart after the speed-up — YouTube drops chapters under 10s` | Long-form only. Merge the chapters that landed under 10s apart and rebuild — YouTube drops the entire list, not just that entry |
 
 ## Three TTS failure modes and responses (Gemini TTS, field-tested)

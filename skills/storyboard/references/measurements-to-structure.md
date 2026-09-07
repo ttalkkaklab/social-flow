@@ -15,9 +15,10 @@ and `SB_DOC.seriesNote`.
 1. **A stopping problem** — if `stayed to watch` is low, change the first frame and the first
    line. Don't substitute a harder CTA for it.
 2. **An interest problem** — if engaged views are low against raw views, cut explanation.
-   On a short, rework the drips so each pays one piece and opens the next; do not dump the
-   answer on the cover or on drip 1. On long-form answer-first, pull the moment of reaching
-   the result earlier.
+   On a short, rework the drips so each pays one piece and opens the next. Where the cover
+   states the result on purpose, that is the episode's shape and not the fault — read whether
+   the drips still open anything after it. Handing the rest over on drip 1 is a defect in
+   either shape. On long-form answer-first, pull the moment of reaching the result earlier.
 3. **A holding problem** — if `averageViewPercentage` trails the channel median, or the
    Studio curve slides through the drips (short) or the body (long-form) while the first
    seconds hold, those shots are closing loops without opening new ones. Rework them into
@@ -28,7 +29,10 @@ and `SB_DOC.seriesNote`.
    people who then did nothing — the second promotion layer is failing, not the body
    (growth-playbook §observed metrics). Redesign the act beat's outward loop
    (`references/scenes-schema.md` §playback order, act row) and rotate its form so it
-   isn't the same question every episode.
+   isn't the same question every episode. Read the closing shot's `shot.share` at the same
+   time: a comment comes from a question, a send comes from something the viewer can repeat
+   with none of the video attached, and a close carrying only the question wins only one
+   of the two.
 5. **Conversion clues** — use the topic, result, and form of the video that produced
    subscribers as the common axis of the next 3–5 episodes. Don't clone a format that had
    high views and no subscribers.
