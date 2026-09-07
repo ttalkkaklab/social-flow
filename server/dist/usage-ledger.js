@@ -302,6 +302,9 @@ function charUnits(args) {
 }
 /** True for the tools whose calls belong in an episode's cost ledger. */
 export function isBillableTool(tool) {
+    // This wrapper records each synthesis and review itself, including rejected takes.
+    if (tool === 'tts_generate_checked')
+        return false;
     return (tool.startsWith('veo_') ||
         tool.startsWith('omni_') ||
         tool.startsWith('seedance_') ||

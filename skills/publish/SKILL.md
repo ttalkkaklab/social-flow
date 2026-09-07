@@ -130,6 +130,10 @@ into promoting that prompt to "always allow".
   node $REF/episode-state.js .        # from the episode directory · exit 1 = blocked
   ```
 
+  The check also verifies `output/video/delivery-proof.json` against the delivered video,
+  subtitles and source storyboard. A separate export without current assembly provenance
+  must be rebuilt through the common builder and final pace pass.
+
   Exit 1 here means the directory promised something it never delivered — a video with no
   per-platform text, a `queue_*: ready` marker with no video behind it, **an `output/` still
   holding the pre-pass build** (the final pace pass in produce §7.5 is required; the check reads

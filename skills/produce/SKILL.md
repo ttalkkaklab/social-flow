@@ -3,7 +3,7 @@ name: produce
 description: >
   Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at 1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
 Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text.
@@ -22,7 +22,7 @@ data/<channel>/episodes/<topic>/
 For independent visual samples, use the installed planner and builder in [animation-review.md](references/animation-review.md). Fix plugin sources and rebuild; never substitute episode-specific scripts. This review mode has its own input contract and does not mark an episode publishable.
 ## Absolute rules
 Read [production-mode.md](../storyboard/references/production-mode.md) at entry: present hybrid and full-video choices **with first-pass and retry-inclusive costs and the budget cap**, then persist the user's selection. Reuse an existing approval on resume. Run `check-production.js storyboard/ --selection` before assets.
-For `PRODUCTION.mode:"full_video"`, use [full-video.md](references/full-video.md) instead of the hybrid visual steps below. Its source images, spatial prompts, separate narration, video QA and plain-video manifest override the hybrid slot cap, person requirement and HTML-only explanation rules; the no-marks-over-video rule still applies. Use [spatial-prompts.js](../storyboard/references/spatial-prompts.js) for this style. The default remains hybrid.
+For `PRODUCTION.mode:"full_video"`, use [full-video.md](references/full-video.md) instead of the hybrid visual steps below. Its source images, spatial prompts, separate narration, video QA and plain-video manifest override the hybrid slot cap, person requirement and HTML-only explanation rules; the no-marks-over-video rule still applies. [spatial-prompts.js](../storyboard/references/spatial-prompts.js) assembles every source and motion prompt from `videoDesign`, the four `visual.camera` slots and the episode style, and runs the Seedance prompt gate before returning. The default remains hybrid.
 Before assets, apply [render-routing.md](../storyboard/references/render-routing.md). `shot.render` selects a supported mode; run `check-scenes.js` to verify the handoff. Do not collapse still-camera, character, object and data-graph cuts into one HTML choice. Camera HTML uses `kind:"camera"` and the shared camera template; it is not true subject motion. Read [visual-direction.md](../storyboard/references/visual-direction.md) for episode repetition limits and the playback review. Data graphs, including donut/pie compositions and geographic maps, use [chart-design.md](../storyboard/references/chart-design.md), the shared SVG template and source-linked focus beats. Never substitute a numeric card for a chart.
 
 Read [story-quality.md](../storyboard/references/story-quality.md) and run `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js storyboard/` before any generation or capture. Missing or stale reviews block production, including old boards; never rewrite approved narration silently. Then read [retention-direction.md](../storyboard/references/retention-direction.md) §2–§5 with the handoff. Resolve visible changes and sound events to scenes.js and supported controls. Preserve payoff, cost cap and voice; derive a missing handoff table without changing the narration. `beat:"cta"` permits a close with no ask.
@@ -78,7 +78,6 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    keep the likeness fictional and frame the relevant action clearly. People are not a
    substitute for explaining why continuous video is needed. A photoreal generated person
    requires the publishing disclosure (`containsSyntheticMedia: true` on YouTube).
-
 12. **Don't throw the cover background PNG (the meta image) together** — the cover frame
    becomes `cover.jpg` (the YouTube thumbnail and the first screen of the IG and FB videos)
    as-is. No still lifes or abstract backgrounds unrelated to the topic — the default is one
@@ -144,7 +143,8 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    `reel-sub-fast.mp4` · `subs-fast.srt`, never the pre-pass files.
 16. **Nothing is drawn over video; hybrid explanations use HTML** (user directive
    2026-09-05 — it outranks every other rule here and in every reference doc; CLAUDE.md
-   §Nothing is drawn over video; the selected full-video branch overrides only the HTML requirement). No arrow, route, X, ring, hatch, bracket, dot, label or
+   §Nothing is drawn over video. An approved full-video episode lifts only the HTML
+   requirement, never the ban on marks). No arrow, route, X, ring, hatch, bracket, dot, label or
    callout goes over a generated clip, a motion background, a b-roll, a quote clip or a
    recording; the burned subtitle is the only type on a moving picture. A cut that needs an
    arrow, a figure or a principle is `kind:"diagram", motion:true, treatment:"editorial"` on
@@ -633,7 +633,7 @@ Run it on each scene's **last** reveal state — that one carries the most text.
 `ovf=0` means the zone still spills after the template's own tight1–3 shrink, so cut the copy
 or push a line into the next state.
 
-### 5. Generate the TTS (one call per scene)
+### 5. Generate and check the TTS (one scene per checked call)
 
 **An all-live-voice episode (`window.VOICE === "user"`) skips this whole section** — every
 card's audio comes from the clips (§3.5) and `voice/` (§3.6). The style gate already
@@ -670,7 +670,11 @@ On exit 2, **fix scenes.js** and start again from here — fixing only `.work/te
 leaves it out of step with the video (scenes.js is the single source). When fixing, leave
 numbers and proper nouns alone and work on the grain of the sentence.
 
-One voice call per scene — the profile registry as it stands, and the script is the full text
+Use `tts_generate_checked` for every generated scene; read `references/tts-quality.md` first.
+The engine-specific calls below describe the wrapper's `generator` and `generation` arguments.
+A raw TTS call has no quality proof and cannot enter assembly.
+
+One checked call per scene — the profile registry as it stands, and the script is the full text
 of that scene's narration segments' `tts` sentences joined with periods. `.work/pcm/c<n>.wav`.
 Don't split a scene into several calls by sentence (the voice varies between calls).
 
@@ -698,11 +702,11 @@ ElevenLabs at `wav_24000` share a spec and can sit on one timeline; local can't 
 without resampling one side before the build. `mlx_tts_generate` is an optional local
 voice when MLX Core is up — never a silent fallback for the engine pinned in profile §2.
 
-**Length check right after generation** — anything over twice chars/4.5 gets one regeneration
-at the same parameters. `tts_local_generate` and `tts_elevenlabs_generate` return the audio
-length in their responses so you can use that value directly, and `tts_generate` gets measured
-with ffprobe (handling Gemini TTS's anomalous output is in `references/pipeline.md` §Three TTS
-failure modes).
+**Mandatory speech quality gate.** The checked tool measures the WAV, transcribes without
+the script and separately reviews pronunciation, accuracy, naturalness and clarity. It retries
+failed takes at the same settings, at most three takes total. Only `status: pass` with a current
+`.wav.quality.json` may proceed. `fail` or `unverified` stops production. Include paid review
+even for local synthesis in the allowance; do not silently reset exhausted attempts.
 
 Once the whole scene is out, write a line to the ledger. **The quantity is chars÷1000, not
 the character count** — the unit price is per 1,000 characters, so writing 412 characters as
@@ -773,44 +777,31 @@ files keep working. Two-value options use `:` inside the value — `,` stays the
 | `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
 | `span=<0..1.5>` | this card's total zoom span, replacing the global `ZOOM_SPAN` (0.4 = the window grows 40% over the card). Applies to `in`/`out`/`punch` and the pan zoom drift; unused on `hold`/`none` | a still whose beat wants a visible move — computed from the storyboard's `speed` word (below). Past base+`span` > `ZOOM_BASE`/canvas (base: pan scale · drift 1.04 · else 1; headroom 0.5 at the defaults) the source upscales and the build warns: raise `ZOOM_BASE` and generate the scene image at that resolution |
 | `ease=smooth\|linear\|in` | this card's easing, replacing the global `KB_EASE`. `in` accelerates — an unnoticed start, fastest exactly at the cut | the ladder's accelerating rows (action/tension, CTA) — pairs with cutting away at the peak. `punch` keeps its own ease-out ramp and ignores `ease=` |
-| `enter=jcut` | **J-cut** — this card opens on the previous last frame for `SCENE_JCUT` (0.32s) while the next line already plays, then the picture cuts | `transition: "jcut"` — the continuity cut. Leave `enter=` empty and the builder falls back to this **and warns**: an empty join is the one nobody chose |
-| `enter=cut` | smash — picture and sound change together, old silent pre-roll | `transition: "cut"` |
-| `enter=dissolve` | this card opens on the previous card's last frame and melts up through it (`SCENE_XF`, 0.45s) — two pictures on screen at once | `transition: "dissolve"` — written on the card that carries the field, nothing on the card before |
-| `enter=push:<l2r\|r2l\|u2d\|d2u>` | the previous card's last frame slides off in that direction and uncovers this card (`SCENE_PUSH`, 0.32s) | `transition: "push:<dir>"` — same rule, the incoming card alone |
-| `enter=iris` | a circle opens out of the previous card's last frame onto this one (`SCENE_IRIS`, 0.45s) | `transition: "iris"` — the find |
-| `enter=blur` | the previous last frame smears sideways and melts (`SCENE_BLUR`, 0.45s) | `transition: "blur"` — memory, hypothetical, attention leaving |
-| `enter=zoom` | the previous last frame grows past the camera and thins out (`SCENE_ZOOM`, 0.32s) | `transition: "zoom"` — the camera goes *in* |
-| `enter=whip:<l2r\|r2l\|u2d\|d2u>` | the previous last frame slides off smeared along that axis (`SCENE_WHIP`, 0.24s — the shortest join here) | `transition: "whip:<dir>"` — a hard swerve. Pairs with a whoosh in `sfx.tsv` |
-| `exit=black` + `enter=black` (or `white`) | the card before fades its tail into the colour, this card fades its head out of it (`SCENE_FADE`, 0.30s each) | `transition: "dip"` / `"dip:white"` — two halves, one per card. `enter=1`/`exit=1` still mean black |
+| `enter=jcut` | next voice leads while the outgoing footage continues moving (default 0.24s) | source `transition: "jcut"` |
+| `enter=cut` | immediate picture cut, zero added pre-roll | source `transition: "cut"` |
+| `enter=dissolve` | moving outgoing footage dissolves over the incoming picture (0.40s) | source `transition: "dissolve"` |
+| `enter=push:<dir>` / `whip:<dir>` | moving footage travels off in l2r, r2l, u2d or d2u (0.32s / 0.24s) | same source transition |
+| `enter=iris` / `blur` / `zoom` | live outgoing footage opens, blurs or grows away (0.40s / 0.40s / 0.32s) | same source transition |
+| `enter=black` / `white` | paired outgoing/incoming fades for a chapter break | source `transition: "dip"` / `"dip:white"`; compiler supplies both halves |
 
-```
-# one line for a filmed scene (live voice) — its own sound starts with its picture, so the smash is the natural join
-3	pcm/s3-run-cli.wav	0	none	sync=1,subs=cards/s3subs.tsv,enter=cut
-# 슬라이드·생성 씬(사용자 녹음 나레이션 — window.VOICE) 한 줄 예: 일반 레인, sync 없음, 보드의 transition 을 enter= 로
-11	pcm/s12.wav	0	none	enter=dissolve
-```
+Read [cinematic-edit.md](references/cinematic-edit.md) before preparing video assets or
+assembling an episode. It defines source in-points, moving handles, narration margins and
+boundary review. `transition` and `edit` in scenes.js own the edit. The builder automatically
+compiles them into `cards.resolved.tsv`; a contradictory explicit card option blocks assembly.
+Do not hand-copy joins or use a separate concatenation exporter for delivery.
 
-**Every card after the first gets an `enter=`, and a transition is drawn inside one card,
-never across two.** Copy each shot's `transition` from scenes.js onto the table above — the
-name is the same on both sides, and a `dip` is the one that takes two halves (`exit=` on the
-card before, `enter=` on this one). A board that predates the field (no `transition` on a
-shot) gets its join chosen here, from the ordered table in scenes-schema §scene transition,
-and the choice goes into the build log. An empty `enter=` makes the builder fall back to a
-J-cut and warn. Every carry (jcut, dissolve, iris, blur, zoom, push, whip) drops the card's
-silent pre-roll — the next line starts under the carried frame; the smash (`enter=cut`),
-dips, the first card, filmed `sync` and speechless cards keep it.
+Use `edit.in` to select the source-video start, `edit.pre`/`post` for breathing room and
+`edit.transitionSeconds` for a moving join's duration. Defaults are zero pre-roll and 0.12s
+post-roll (dip pre-roll is 0.30s); sync footage keeps its original timing. The default minimum
+card duration is zero. A moving transition reserves actual unseen frames from the outgoing
+source; include this handle in generated duration and approved cost. Missing handles block
+assembly instead of looping, freezing or silently changing the transition.
 
-The builder does it this way because a boundary xfade would break the pipeline's spine: the
-total would shrink by the transition length at every seam and trip §9's 2ms drift assertion,
-and xfade renumbers the tail's PTS from 0 (the measurement is written out at the outro seam
-in build-reel.sh). A dip keeps the card's frame count, so the concat stays stream-copy exact
-and no subtitle cue moves — verified A/B on ep07 (10 cards, two dissolves, before carries
-dropped the pre-roll): 64.766667s and 1943 frames both ways, identical `subs.srt`, drift 0.
-The ban is on the seam, not on the filter: iris and blur composite inside one card with an
-xfade at offset 0 over a tail exactly the join long, so that card's length is untouched
-(build-reel.sh §7.4 carries the measurement). Every carry drops that card's silent `PRE`
-(0.40 s) because the next line occupies it — measured on the 10-card fixture: 12 frames off
-each carry card, the subtitle cue moving with the audio, drift 0. `POST` is 0.45 s.
+Every newly planned boundary records `edit.reason` and `edit.continuity`. Choose cuts from
+action, gaze, geography and voice rhythm; do not cycle effects or blanket-assign hard cuts.
+After assembly, inspect `edit-check.json`, play every `work/seams/` excerpt with sound and
+record observations in `edit-review.md` with the final master hash. The machine checks frame
+counts and applied joins; the review checks whether the edit actually feels continuous.
 
 **Word cues — `SUB_MODE=word`.** The burn-in shows **one 어절 at a time**, a hard swap every
 half second, sitting on the 65% line in a 60px glyph with no fade — the subtitle grammar of
@@ -870,8 +861,8 @@ each with the play-once prefix: segment k → `@motion/slide-s<shot number>/r<k>
 the state PNGs are written `cards/a<idx>r<k>.png`), `zoom` `none`, no overlay (the slide
 draws its own text). `@` is right here even though
 the scene has several segments, because every segment has **its own** clip — clip k opens
-on the previous rest state and freezes on its own, so the reveal xfade at the sentence
-boundary crosses two identical pictures (measured 44 dB PSNR across the seam) and the
+on the previous rest state and sustains its authored motion for the measured window, so the
+reveal xfade can cross matching compositions and the
 motion starts inside the pause before the sentence, where the caption contract already
 puts the reveal. A sub-reveal (`A|B`) takes two clips in one segment the same way
 (`@motion/slide-s5/r2.mp4|@motion/slide-s5/r3.mp4`); declare that segment's
@@ -902,20 +893,11 @@ them on screen one at a time). **A motion-background scene**'s segment visual is
 repeat the same video path (the builder joins the playback with `-ss`, pulled forward by the
 xfade offset).
 
-**The `@` prefix = play once** (`@typing.mp4`, or `@typing.mp4::badge.png`). The default video
-visual fills the segment window on a loop and starts pulled forward with `-ss` so it
-continues from the previous segment — behavior that assumes **a picture you can cut into
-anywhere**, like b-roll. A clip where **the whole thing is one action**, such as a typing
-card, breaks in two places under that: with 2+ segments it starts mid-way with the text
-already typed, and even with 1 segment a window longer than the clip loops and types it all
-again (measured). `@` plays from the first frame and stops on the last.
-**But `@` is for a single segment only** — put one clip **across two consecutive segments**
-and `@` restarts the clip at each segment boundary, resetting the typing (measured on the
-2026-08-14 claude-skills episode — the second command never made it on screen). On a spanning
-segment, drop the `@` and repeat the same path; the builder joins it with `-ss` continuation
-(the same behavior as a motion background). If the windows sum to less than the clip, it ends
-at that point without looping, so just confirm that the typing-complete time falls inside the
-sum of the windows.
+**The `@` prefix starts an independent reveal clip at its source in-point.** Use it for one
+clip per segment. When one continuous video spans several segments, omit `@` and repeat its
+path so the source offset advances with the timeline. Every source must cover its window
+and any outgoing handle; the builder rejects short sources instead of looping or freezing.
+Check that the intended action finishes at the chosen cut point.
 
 **`sfx.tsv` = sound that plays only in that segment's stretch**. The audio file can be a wav
 or an mp4 (for a video, its sound is used), and leaving it blank with only `bgm` set to `off`
@@ -1201,7 +1183,9 @@ the real URL. Save each under `output/<platform>/`, and finalize the video and c
 `cp .work/reel-fast.mp4 output/video/video.mp4` ·
 `cp .work/reel-sub-fast.mp4 output/video/video-sub.mp4` ·
 `cp .work/subs-fast.srt output/video/subs.srt` · `cp .work/cover.jpg output/video/cover.jpg` ·
-`cp .work/build-report.txt output/video/` (from here on, publish looks at `output/` only).
+`cp .work/build-report.txt output/video/` ·
+`cp .work/delivery-proof.json output/video/` (publish checks the final files against these
+hashes; an ad hoc export or stale copy cannot substitute for the checked assembly).
 **The `-fast` files are the deliverables** (§7.5) — copy `reel.mp4` or `subs.srt` here and the
 episode ships un-sped with subtitles on the wrong timeline. On a long-form episode the chapter
 file goes over under its published name too: `cp .work/chapters-fast.txt output/video/chapters.txt`
@@ -1242,7 +1226,7 @@ directly, separately from the reviewer delegation):
 - [ ] Actually **watch** the 0–3s opening — is there a real subject or movement in the first
       frame, or is a single title card holding three seconds still
 - [ ] Actually **listen** to the first segment's TTS — if it sounds like a robot reading,
-      regenerate that segment alone (the number one cause of drop-off on faceless content is
+      regenerate that scene through the checked gate and rebuild (the number one cause of drop-off on faceless content is
       the opening voice quality. A skip happens within 3 seconds, so the first sentence's voice
       is the hook)
 
