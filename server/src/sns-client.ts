@@ -1809,6 +1809,8 @@ export async function youtubeInsights(input: YoutubeInsightsInput): Promise<ApiR
           duration: duration || null,
           // Seconds pulled from the ISO8601 duration, used to tell whether it's a Short (portrait, 3 minutes or less)
           durationSeconds: ytDurationSeconds(duration),
+          // The two halves come from different services: lifetime is the public Data API counter and
+          // updates live, period is the Analytics window and runs 2-3 days behind (shares included)
           lifetime: {
             views: Number(videoStats.viewCount ?? 0),
             likes: Number(videoStats.likeCount ?? 0),

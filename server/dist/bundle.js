@@ -79915,7 +79915,7 @@ var YOUTUBE_INSIGHTS_OUTPUT = {
     revenueError: { type: "string", description: "Reason when only the revenue lookup failed (other metrics are fine)" },
     videos: {
       type: "array",
-      description: "Per recent upload: { videoId, permalink, title, publishedAt, duration, durationSeconds, lifetime: { views, likes, comments }, period: window metrics } \u2014 durationSeconds \u2264180 marks a Shorts candidate (the API cannot tell whether it is portrait); period is null when no data exists",
+      description: "Per recent upload: { videoId, permalink, title, publishedAt, duration, durationSeconds, lifetime: { views, likes, comments }, period: window metrics } \u2014 durationSeconds \u2264180 marks a Shorts candidate (the API cannot tell whether it is portrait); period is null when no data exists. lifetime is the public Data API counter and updates without the Analytics lag; period, and the shares inside it, is the lagged Analytics window \u2014 a fresh upload only moves in lifetime",
       items: { type: "object" }
     },
     videosError: {
@@ -79936,11 +79936,11 @@ var CONTENT_FEEDBACK_OUTPUT = {
     htmlPath: { description: "Path of the HTML written. null when neither channel nor outputPath was given" },
     youtube: {
       type: "object",
-      description: "{ available, error?, account, cohort, items[], notes[] } \u2014 items carries, per recent video, hook (% getting past the opening), retain (average % watched), angle (views low while hook/retention held up), and problem/hypothesis/next-episode notes"
+      description: "{ available, error?, account, cohort, items[], notes[] } \u2014 items carries, per recent video, hook (% getting past the opening), retain (average % watched), shareRate (shares against engagedViews, the views past the opening, since YouTube reports no reach), angle (views low while hook/retention held up), and problem/hypothesis/next-episode notes"
     },
     instagram: {
       type: "object",
-      description: "{ available, error?, account, cohort, items[], notes[] } \u2014 for reels: skip (3-second drop-off %), watch (seconds), shareRate; otherwise pending"
+      description: "{ available, error?, account, cohort, items[], notes[] } \u2014 for reels: skip (3-second drop-off %), watch (seconds), shareRate (shares against reach); otherwise pending"
     }
   },
   required: ["generatedAt", "limit", "days", "youtube", "instagram"]
@@ -82386,7 +82386,7 @@ Returns: integer credit balance.`,
     title: "YouTube performance insights",
     annotations: HINT.read,
     outputSchema: YOUTUBE_INSIGHTS_OUTPUT,
-    description: `YouTube performance insights \u2014 returns channel stats (subscribers, total views), window metrics (views, engagedViews, average view duration, average view percentage, subscriber gain/loss), and per-recent-upload metrics in one call (read-only, no side effects). The grow-youtube loop snapshots this every tick to judge tick-over-tick change and which video types are landing \u2014 storing and comparing is the caller's job in data/<channel>/growth/youtube/. **Two scopes required**: youtube.readonly for channel/video lookups, yt-analytics.readonly for window metrics. Tokens issued with publish-only youtube.upload have neither, so a reissue is needed; when missing, the error carries reissue guidance. Revenue metrics (includeRevenue) additionally need yt-analytics-monetary.readonly, and even if that fails the other metrics still arrive. **Analytics data runs 2-3 days behind**, so empty-looking values for yesterday/today are normal \u2014 set days to 7+ to see a trend. The swipe-away rate used for Shorts hook verdicts (Studio's "How many chose to view") has no corresponding Analytics API metric and cannot be fetched here \u2014 substitute averageViewPercentage and check the swipe metric manually in Studio.`,
+    description: `YouTube performance insights \u2014 returns channel stats (subscribers, total views), window metrics (views, engagedViews, average view duration, average view percentage, subscriber gain/loss), and per-recent-upload metrics in one call (read-only, no side effects). The grow-youtube loop snapshots this every tick to judge tick-over-tick change and which video types are landing \u2014 storing and comparing is the caller's job in data/<channel>/growth/youtube/. **Two scopes required**: youtube.readonly for channel/video lookups, yt-analytics.readonly for window metrics. Tokens issued with publish-only youtube.upload have neither, so a reissue is needed; when missing, the error carries reissue guidance. Revenue metrics (includeRevenue) additionally need yt-analytics-monetary.readonly, and even if that fails the other metrics still arrive. **Analytics data runs 2-3 days behind**, so empty-looking values for yesterday/today are normal \u2014 set days to 7+ to see a trend. Two blocks sit outside that lag: the per-video lifetime block (Data API video statistics) and the channel-level account block (Data API channels.list statistics) both move in near real time, while period \u2014 shares and averageViewPercentage included \u2014 follows the lag. The swipe-away rate used for Shorts hook verdicts (Studio's "How many chose to view") has no corresponding Analytics API metric and cannot be fetched here \u2014 substitute averageViewPercentage and check the swipe metric manually in Studio.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -82497,7 +82497,7 @@ Returns: integer credit balance.`,
     title: "Recent-content feedback report",
     annotations: HINT.generate,
     outputSchema: CONTENT_FEEDBACK_OUTPUT,
-    description: "Recent-content feedback \u2014 pulls the latest N posts (default 5) from YouTube and Instagram, scores them per platform, and writes a chart-heavy HTML report (tables, funnels, bars) locally (nothing goes public). YouTube looks at opening pass-through (engagedViews/views) and average view percentage; Instagram reels at 3-second drop-off (reels_skip_rate), average watch, and shares vs reach. Levers (hook, retention, share, angle) are picked against this batch's median, not absolute thresholds. On YouTube, views low while pass-through and retention sit at or above the median means angle \u2014 open the next episode's title with the felt problem, not the method or tool. Platforms without tokens just skip their section. **Default HTML path** data/<channel>/growth/review-recent.html \u2014 changeable via outputPath. Analytics lags 2-3 days, so days defaults to 28. The review-recent skill calls this tool and then opens the report.",
+    description: "Recent-content feedback \u2014 pulls the latest N posts (default 5) from YouTube and Instagram, scores them per platform, and writes a chart-heavy HTML report (tables, funnels, bars) locally (nothing goes public). YouTube looks at opening pass-through (engagedViews/views), average view percentage, and shares against engagedViews (the views past the opening); Instagram reels at 3-second drop-off (reels_skip_rate), average watch, and shares vs reach. YouTube reports no reach, so the two share rates sit on different denominators and are read within a platform, not across. Levers (hook, retention, share, angle) are picked against this batch's median, not absolute thresholds. On YouTube, views low while pass-through and retention sit at or above the median means angle \u2014 open the next episode's title with the felt problem, not the method or tool. Platforms without tokens just skip their section. **Default HTML path** data/<channel>/growth/review-recent.html \u2014 changeable via outputPath. Analytics lags 2-3 days, so days defaults to 28. The review-recent skill calls this tool and then opens the report.",
     inputSchema: {
       type: "object",
       properties: {
@@ -85112,6 +85112,8 @@ async function youtubeInsights(input) {
           duration: duration3 || null,
           // Seconds pulled from the ISO8601 duration, used to tell whether it's a Short (portrait, 3 minutes or less)
           durationSeconds: ytDurationSeconds(duration3),
+          // The two halves come from different services: lifetime is the public Data API counter and
+          // updates live, period is the Analytics window and runs 2-3 days behind (shares included)
           lifetime: {
             views: Number(videoStats.viewCount ?? 0),
             likes: Number(videoStats.likeCount ?? 0),
@@ -86584,6 +86586,7 @@ function platformSection(section, title, accent) {
       { k: "Views", v: fmt(section.cohort.views, 0), hint: "not a quality signal" },
       { k: "Opening pass", v: fmt(section.cohort.hook, 0, "%"), hint: "engaged / views" },
       { k: "Retention", v: fmt(section.cohort.retain, 0, "%"), hint: "average view percentage" },
+      { k: "Shares", v: fmt(section.cohort.shareRate, 2, "%"), hint: "against engaged views" },
       { k: "Subs (channel)", v: fmt(section.cohort.channelSubRate, 2, "%"), hint: "no per-episode number" }
     ],
     accent
@@ -86601,7 +86604,7 @@ function platformSection(section, title, accent) {
     if (section.platform === "YOUTUBE") {
       return itemCard(
         item,
-        metricCell("Views", fmt(item.metrics.views), vsClass(item.vsCohort.views)) + metricCell("Opening pass", fmt(item.metrics.hook, 0, "%"), vsClass(item.vsCohort.hook)) + metricCell("Retention", fmt(item.metrics.retain, 0, "%"), vsClass(item.vsCohort.retain))
+        metricCell("Views", fmt(item.metrics.views), vsClass(item.vsCohort.views)) + metricCell("Opening pass", fmt(item.metrics.hook, 0, "%"), vsClass(item.vsCohort.hook)) + metricCell("Retention", fmt(item.metrics.retain, 0, "%"), vsClass(item.vsCohort.retain)) + metricCell("Share rate", fmt(item.metrics.shareRate, 2, "%"), vsClass(item.vsCohort.shareRate))
       );
     }
     return itemCard(
@@ -86698,7 +86701,7 @@ nav.jump a {
 .plat-head h2 { font-size: 26px; letter-spacing: -.02em; }
 .acct { color: var(--mute); font-size: 13px; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .block-label { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); margin: 22px 0 10px; }
-.funnel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; list-style: none; }
+.funnel { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 18px; list-style: none; }
 .fn-step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 12px; position: relative; }
 .fn-step:not(:last-child)::after {
   content: ""; position: absolute; right: -14px; top: 50%; width: 10px; height: 10px;
@@ -86849,6 +86852,7 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
   const notes = [
     "Shorts swipe-away drop-off is not in the API. Opening pass is read as the engagedViews/views ratio.",
     "Per-episode subscriber conversion is not stable in the video report, so only the channel-window number is recorded.",
+    "YouTube reports no reach, so the share rate here is shares against engagedViews \u2014 the views that got past the opening. Instagram divides by reach, so read each rate inside its own platform.",
     "When only views are low and opening pass and retention are at or above the median, the lever is angle. Do not clone that format \u2014 open the next episode title with the problem."
   ];
   const rows = videos.map((video) => {
@@ -86858,12 +86862,20 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
     const engaged = num3(period?.engagedViews);
     const hook = views && views > 0 && engaged != null ? engaged / views * 100 : null;
     const retain = num3(period?.averageViewPercentage);
-    return { video, period, views, hook, retain };
+    const shares = num3(period?.shares);
+    const shareRate = engaged && engaged > 0 && shares != null ? shares / engaged * 100 : null;
+    return { video, period, views, hook, retain, shares, shareRate };
   });
+  const shareMid = median(rows.map((r2) => r2.shareRate).filter((n) => n != null));
+  if (shareMid === 0)
+    notes.push("Half or more of these episodes reported no shares, so the batch median is 0 and there is nothing to read a share rate against. The share lever is off for this batch.");
+  else if (shareMid == null)
+    notes.push("No share numbers came back for these episodes, so the share lever is off for this batch.");
   const cohort = {
     hook: median(rows.map((r2) => r2.hook).filter((n) => n != null)),
     retain: median(rows.map((r2) => r2.retain).filter((n) => n != null)),
     views: median(rows.map((r2) => r2.views).filter((n) => n != null)),
+    shareRate: shareMid === 0 ? null : shareMid,
     channelSubRate: (() => {
       const gained = num3(channelMetrics?.subscribersGained);
       const views = num3(channelMetrics?.views);
@@ -86871,7 +86883,7 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
       return gained / views * 100;
     })()
   };
-  const items = rows.map(({ video, period, views, hook, retain }) => {
+  const items = rows.map(({ video, period, views, hook, retain, shares, shareRate }) => {
     const steps = [];
     if (!period) {
       steps.push({
@@ -86897,6 +86909,14 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
           next: "keep a single claim and tighten the gap between cuts"
         });
       }
+      if (shareRate != null && cohort.shareRate != null && shareRate < cohort.shareRate * SHARE_GAP) {
+        steps.push({
+          lever: "share",
+          problem: `shares against engaged views ${shareRate.toFixed(2)}% \u2014 below the ${cohort.shareRate.toFixed(2)}% median`,
+          hypothesis: "there is no single line worth passing on (a twist, a number, a checklist)",
+          next: "put a sentence someone would forward as-is on one screen"
+        });
+      }
       const hookOk = hook != null && cohort.hook != null && hook >= cohort.hook * GAP;
       const retainOk = retain != null && cohort.retain != null && retain >= cohort.retain * GAP;
       const viewsLow = views != null && cohort.views != null && views < cohort.views * GAP;
@@ -86919,13 +86939,16 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
         views,
         hook,
         retain,
+        shares,
+        shareRate,
         likes: num3(period?.likes) ?? num3(video.lifetime?.likes),
         comments: num3(period?.comments) ?? num3(video.lifetime?.comments)
       },
       vsCohort: {
         hook: vsMedian(hook, cohort.hook, true),
         retain: vsMedian(retain, cohort.retain, true),
-        views: vsMedian(views, cohort.views, true)
+        views: vsMedian(views, cohort.views, true),
+        shareRate: vsMedian(shareRate, cohort.shareRate, true)
       },
       steps
     };
@@ -89553,7 +89576,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.62.0" },
+  { name: "social-flow", version: "0.63.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

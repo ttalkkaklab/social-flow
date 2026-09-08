@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>쇼츠 기준 화풍 프리셋 추가 조사 (2026-09-08)</title>
+<style>
+  :root{
+    --paper:#f5f6fa; --ink:#10131f; --muted:#5a6280; --rule:#d8dce8; --card:#ffffff;
+    --accent:#2f5fe0; --good:#1f8a5b; --bad:#b8433d; --code:#eef0f7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+      --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+    --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+  .wrap{max-width:1040px;margin:0 auto;padding:56px 24px 96px}
+  .eyebrow{font-family:Menlo,monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1,h2,h3{font-weight:800;letter-spacing:-.02em;text-wrap:balance;margin:0}
+  h1{font-size:clamp(32px,5vw,46px);line-height:1.15;margin-top:10px}
+  h2{font-size:24px;line-height:1.3;margin-top:64px;padding-top:20px;border-top:1px solid var(--rule)}
+  p{margin:14px 0;max-width:70ch}
+  ul{padding-left:20px;max-width:72ch} li{margin:8px 0}
+  code{font-family:Menlo,monospace;font-size:.88em;background:var(--code);padding:1px 6px;border-radius:5px}
+  .lede{font-size:18px;max-width:66ch} .lede b{font-weight:600;color:var(--accent)}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:18px 0}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-weight:600;color:var(--muted);font-size:12.5px;letter-spacing:.04em}
+  .tablewrap{overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+<p class="eyebrow">social-flow · research · 2026-09-08</p>
+<h1>쇼츠 기준 화풍 프리셋 추가 조사</h1>
+<p class="lede">기존 세 프리셋(시네마틱 미니어처·실사·웹툰)에 <b>클레이 스톱모션 · 종이 컷아웃 디오라마 · 수묵화 · 3D 카툰 캐릭터</b> 넷을 더했다. 0.61.0 의 <code>production-mode.js STYLES</code> 가 정본이고 이 문서는 그 근거다.</p>
+
+<h2>근거의 한계</h2>
+<p>쇼츠 기준으로 "이 화풍이 조회수 얼마"라는 실측은 어느 출처에도 없다. 숫자가 붙은 건 이탈리안 브레인롯(수십억 뷰)과 "AI 아바타 채널이 2026년 신규 수익화의 38%" 둘뿐이고 나머지는 편집부 관찰이다. 우리 자체 조사(<a href="../2026-08-15-first-scene-live-action-vs-animation/index.html">첫 장면 실사 대 애니메이션</a>)에서는 매체보다 사람·목소리·움직임이 리텐션을 갈랐다. 화풍 추가는 선택지를 넓히는 일이지 성과 보증이 아니다.</p>
+
+<h2>고른 넷</h2>
+<div class="tablewrap">
+<table>
+<tr><th>프리셋</th><th>쇼츠에서 먹히는 이유</th><th>우리 채널 적합</th><th>Seedance 1.5 위험</th></tr>
+<tr><td><code>claymation</code></td><td>AI 과포화의 반작용으로 2026년 틱톡·쇼츠 대표 화풍. 코지 계열이라 완주율이 높고 손맛이 있어 AI 슬롭으로 안 읽힌다</td><td>history-lab·pundago 원리 설명, 캐릭터 연속 등장</td><td>움직임은 low 로. 큰 동작은 정지컷+카메라 무빙으로 돌린다</td></tr>
+<tr><td><code>paper-cutout</code></td><td>겹친 종이층의 깊이가 세로 화면 패럴랙스와 맞다. 역사물 스타일 라이브러리 단골</td><td>역사 지도·전투 컷, still_camera 레인과 궁합</td><td>얼굴 표정이 약해 인물 소개 컷은 다른 프리셋 혼용</td></tr>
+<tr><td><code>ink-wash</code></td><td>중화권 쇼츠에서 검증된 룩(新中式 수묵·공필). 삼국지·조선사와 소재 일치</td><td>history-lab 전용 후보</td><td>고동작에서 먹선이 깨진다는 실측 보고 → 환경 모션(안개·물·바람)만 영상</td></tr>
+<tr><td><code>toon-3d</code></td><td>신규 AI 유저 상위 3 전환 포맷. 큰 눈·표정이 폰 화면에서 읽힌다</td><td>캐릭터가 설명하는 채널, 플러그인의 3D 인형 HTML 레인과 같은 세계관</td><td>스튜디오 이름은 프롬프트에 못 쓴다(아래)</td></tr>
+</table>
+</div>
+
+<h2>뺀 후보와 이유</h2>
+<ul>
+<li><b>틸트시프트 미니어처</b> — 시네마틱 미니어처 프리셋이 이미 그 자리다.</li>
+<li><b>믹스드 미디어</b>(실사 위 손그림 인물) — "영상 위에 아무것도 안 그린다"는 2026-09-05 지시와 충돌한다.</li>
+<li><b>지브리풍</b> — 요청 빈도는 2위지만 gpt-image 가 살아 있는 작가 스타일을 거절하고 Ghibli 는 실제 차단 사례가 있다. 이름을 빼고 쓰면 웹툰 프리셋의 변주라 별도 가치가 낮다.</li>
+<li><b>브레인롯·로파이 루프·Vox 스타일</b> — 화풍이 아니라 포맷이다.</li>
+</ul>
+
+<h2>구현 규칙</h2>
+<ul>
+<li>프리셋 문장에 스튜디오·생존 작가 이름을 넣지 않는다. 렌더링 규칙(재질·조명·비례)만 적는다.</li>
+<li>참조 팩은 시네마틱 미니어처만 가진다. 나머지 넷은 실사·웹툰처럼 프롬프트 전용이고 <code>referencePack</code> 을 주면 검사기가 거부한다.</li>
+<li>look 이름은 <code>clay · papercut · inkwash · toon3d</code>. <code>ALL_LOOKS</code> 가 STYLES 에서 자동으로 뽑히므로 프리셋을 더할 때 look 열거를 따로 고칠 일이 없다.</li>
+</ul>
+
+<h2>출처</h2>
+<ul>
+<li><a href="https://www.opus.pro/blog/viral-ai-video-styles-2026">17 Viral AI Video Styles of 2026 — OpusClip (2026-05-12)</a></li>
+<li><a href="https://www.opus.pro/blog/claymation-ai">Claymation AI: How Creators Are Faking Stop-Motion TikToks — OpusClip (2026-05-06)</a></li>
+<li><a href="https://videolens.cc/en/blog/viral-short-video-styles">21 Viral Short-Video Visual Styles — VideoLens (2026-06-14)</a></li>
+<li><a href="https://www.anijam.ai/blog/youtube-shorts-trends/">YouTube Shorts Trends 2026 — Anijam (2026-07-28, 매달 갱신)</a></li>
+<li><a href="https://garagefarm.net/ko-blog/animation-trends-to-watch">2026년에 주목해야 할 16가지 애니메이션 트렌드 — GarageFarm</a></li>
+<li><a href="https://www.atlascloud.ai/blog/tips/seedance-2.5-anime-prompts-style-control">Seedance 스타일 제어 가이드 — Atlas Cloud</a></li>
+<li><a href="https://higgsfield.ai/blog/guide-animation-seedance2.0">Seedance 프롬프트 라이브러리 — Higgsfield</a></li>
+<li><a href="https://futurism.com/openai-studio-ghibli-style-images">ChatGPT Starts Blocking Studio Ghibli-Style Images — Futurism</a></li>
+</ul>
+</div>
+</body>
+</html>

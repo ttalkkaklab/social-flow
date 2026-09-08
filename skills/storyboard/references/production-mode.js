@@ -21,8 +21,21 @@
     'photoreal': { label: '완전 실사풍', looks: ['realistic'],
       prompt: 'Photoreal live-action cinematography: life-size human proportions, natural skin and fabric texture, real locations, physically plausible light and photographic lenses; every surface reads as a real material at real scale.' },
     'webtoon': { label: '웹툰풍', looks: ['webtoon'],
-      prompt: 'Korean webtoon illustration: consistent expressive character linework, clean contour lines, controlled cel shading, illustrated backgrounds and a coherent drawn palette; skin and cloth are drawn, and the frame is one unbroken picture.' }
+      prompt: 'Korean webtoon illustration: consistent expressive character linework, clean contour lines, controlled cel shading, illustrated backgrounds and a coherent drawn palette; skin and cloth are drawn, and the frame is one unbroken picture.' },
+    // Added 2026-09-08 from the Shorts style survey (docs/research/2026-09-08-shorts-visual-styles).
+    // Named studios and living artists stay out of every prompt: the image lane refuses them.
+    'claymation': { label: '클레이 스톱모션', looks: ['clay'],
+      prompt: 'Stop-motion claymation: matte plasticine figures and sets with visible thumbprints and slight surface imperfections, chunky simplified forms, handcrafted miniature props, warm tactile studio light and soft contact shadows; the whole frame is one sculpted scene photographed on a set.' },
+    'paper-cutout': { label: '종이 컷아웃 디오라마', looks: ['papercut'],
+      prompt: 'Layered paper-cut diorama: every figure, prop and backdrop is a flat cut-paper shape with visible fibre edges, stacked in separated depth layers with soft cast shadows between the layers, a muted paper palette, simple readable silhouettes and a shallow theatre-stage depth.' },
+    'ink-wash': { label: '수묵화', looks: ['inkwash'],
+      prompt: 'East Asian ink-wash painting: confident brushed black ink lines with wet-on-wet grey gradients on pale rice-paper texture, generous empty space, one restrained mineral accent colour, figures and places drawn in calligraphic strokes; the frame stays one painted picture.' },
+    'toon-3d': { label: '3D 카툰 캐릭터', looks: ['toon3d'],
+      prompt: 'Stylised 3D cartoon animation: appealing characters with large expressive eyes and simplified rounded proportions, soft subsurface skin, clean material shaders on props and sets, warm rim light and cinematic depth of field, rendered like a feature-animation frame.' }
   };
+  // Only the miniature presets carry a bundled reference pack; every other preset is prompt-only.
+  const packPresets = ['cinematic-miniature', 'spatial-explainer'];
+  const ALL_LOOKS = ['archive', ...new Set(Object.values(STYLES).flatMap(s => s.looks))];
   // Explicit imported inputs, never inferred from an existing generation output.
   function reused(scene) { return scene.visual?.reuse !== undefined; }
   function reuseErrors(scene) {
@@ -110,8 +123,8 @@
     if (chosen && chosen !== 'spatial-explainer' && !STYLES[chosen]) errors.push('Unknown PRODUCTION.style.preset');
     if (STYLES[chosen] && (!['user', 'standing'].includes(p.style.selection?.kind) ||
         !text(p.style.selection?.reference))) errors.push('Record the actual style HITL choice in PRODUCTION.style.selection');
-    if (['photoreal', 'webtoon'].includes(chosen) && p.style.referencePack)
-      errors.push('Photoreal/webtoon must not inherit the miniature reference pack');
+    if (STYLES[chosen] && !packPresets.includes(chosen) && p.style.referencePack)
+      errors.push('Only cinematic-miniature carries the miniature reference pack; drop referencePack for ' + chosen);
     if (draft) return errors; // Shot assets/designs are authored after the narration-only draft.
     if (!full(p)) {
       const count = (win.SCENES || []).filter(s => eligible(s) &&
@@ -141,8 +154,8 @@
       if (design.camera !== undefined) bad('videoDesign.camera is retired; the camera lives in the four visual.camera slots');
       for (const slot of missingCameraSlots(v.camera))
         bad('visual.camera.' + slot + ' is required; the motion prompt is assembled from the four slots (speed may stay empty on a static camera)');
-      if (!['miniature', 'architectural', 'realistic', 'webtoon', 'archive'].includes(design.look))
-        bad('videoDesign.look must be miniature, architectural, realistic, webtoon or archive');
+      if (!ALL_LOOKS.includes(design.look))
+        bad('videoDesign.look must be one of ' + ALL_LOOKS.join(', '));
       if (STYLES[style.preset] && design.look !== 'archive' && !STYLES[style.preset].looks.includes(design.look))
         bad('videoDesign.look conflicts with the selected episode style');
       motionErrors(s).forEach(bad);
@@ -169,7 +182,7 @@
     return { ...base, videoBudgetUsd: production.videoBudgetUsd,
       generatedVideoMax: full(production) ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { STYLES, MODES, CAMERA_SLOTS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, finalState };
+  const api = { STYLES, MODES, CAMERA_SLOTS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

@@ -12,15 +12,16 @@ instead of a board. Both formats run this stage. On long-form a candidate used t
 · hero) is too thin to judge whether a viewer would stay — that is the "밋밋하다" failure
 the 95-point loop exists to catch.
 
-The loop happens **after first research and before the pick** (storyboard §2.2). Three
-different episodes this topic could be are written as three pages **in one fixed shape —
-the seven items below** (user directive, 2026-09-02) — each one is scored, the user sees all
-three in full and picks among the ones that cleared 95. Additional research and the board
-come after that, on the winner only.
+The loop happens **after first research and the three messages, before the pick** (storyboard
+§2.1 · §2.2). Three different episodes this topic could be — one topic cut from each message
+— are written as three pages **in one fixed shape — the seven items below** (user directive,
+2026-09-02) — each one is scored, the user sees all three in full and picks among the ones
+that cleared 95. Additional research and the board come after that, on the winner only.
 
 ## Contents
 
 - [Its status: an upstream input, not a second contract](#its-status-an-upstream-input-not-a-second-contract)
+- [Messages first — three things today's viewer takes away](#messages-first-three-things-todays-viewer-takes-away)
 - [Viewer engines — what the 95 bar actually scores](#viewer-engines-what-the-95-bar-actually-scores)
 - [The three-candidate loop](#the-three-candidate-loop-storyboard-22-autoproduce-gate-6a)
 - [What the page carries — the seven items](#what-the-page-carries-the-seven-items)
@@ -57,6 +58,54 @@ hold.
    than `scenes.js` — an upstream input that changed after its consumer is the drift this
    stage was built to avoid.
 
+## Messages first — three things today's viewer takes away
+
+The order is fixed (user directive, 2026-09-07): **research enough → decide three messages
+for the viewer living now → cut one topic from each message → write one scenario per topic.**
+A direction row written before its message is a topic looking for a reason, and the
+"밋밋하다" page usually started that way.
+
+### The message
+
+After the first research pass closes (storyboard §2.1: ten or more searches, three or more
+Verified rows) and before any direction row, write `research.md` §Messages — **three rows**.
+A message is one sentence in the viewer's words: what a viewer of this channel, living now,
+**understands, reconsiders or can do** after the episode (story-quality §Design step 2). It
+names the subject, what happened or works, and why that matters to them today — not a topic
+label, not an emotion label, not "협력이 중요하다". Three different messages, not three
+wordings; each rests on Verified rows already on the page, and the row says which.
+
+### The topic, cut from the message
+
+Each direction row (D1–D3) cites its message (`M1`–`M3`, one message per direction — two
+rows on one message leave a message with no episode, and the checker rejects that) and
+writes the **주제** — the concrete subject this episode is about, the event, the mechanism or
+the person that will deliver that message, in one sentence with the question it answers. The
+hook form, engine and hero are chosen for that topic. The candidate page carries the message
+verbatim under its title and its 주제 item names the subject; at §4 the message becomes
+`COMPREHENSION.takeaway` and `STORY.thesis`, and the 주제 becomes `COMPREHENSION.question`.
+
+### A topic is never a report of ignorance
+
+"X는 알 수 없다", "X는 아직까지 모른다", "X는 미스터리로 남았다" are not topics — an episode
+built on one has nothing to hand over at the 마무리, and the viewer who stayed for the answer
+is told there is none (reviewer P0-14 is the same take-back one item later). The mystery may
+open the 훅 — that is where `intrigue` lives — but the message and the 주제 name what the
+evidence **does** establish: what changed, what it did to people, what the viewer can do with
+it. 로즈웰 is not "무엇이 떨어졌는지는 아직 모른다"; it is "설명이 바뀌면 사람들은 무엇을 믿게
+되나", which the record answers.
+
+`check-research.js --direction` (and the close) rejects a message or direction sentence
+that ends on ignorance — the predicate forms `알 수 없다/없어요/없습니다`, `알 길이 없다`, `모른다/모릅니다/
+몰라요/모르겠다/몰랐다`, `아무도 알지 못한다`, `밝혀지지/풀리지/알려지지/규명되지 않았다`,
+`미스터리다/미스터리로 남았다`, `수수께끼로 남았다`, `미제로 남았다`, and the English
+`nobody knows`, `remains a mystery`, `we still don't know`, `we/they may never know`. Only those
+endings — "아무도 모르게 옮겼다", "아무도 모르는 곳", "미스터리다운 매력", "미제로 남기지
+않으려" all carry the same words with a different job, and the checker lets them through. A
+modifier ("정체를 알 수 없는 물체가 떨어진 뒤 군은 설명을 바꿨다") passes for the same reason,
+its predicate sitting elsewhere — you still read the sentence for what it hands over. The reviewer's scenario mode raises
+P0-15 on a candidate 주제 that is one of these, or that carries no message.
+
 ## Viewer engines — what the 95 bar actually scores
 
 Read [retention-direction.md](retention-direction.md) §1 before drafting the three pages.
@@ -79,7 +128,7 @@ engine are three copies of one episode, which §2.1 already bans.
 |---|---|---|---|---|
 | `curiosity` 호기심 | "that's interesting — how?" | a specific, closable gap about a surprising fact, paradox, or identity, paid in installments | a topic announcement, a definition, "today we look at" | scenario-craft §5 |
 | `fear` 공포 | "this could happen to me" | a threat and its clock on the table in the opening, plus a doable door later | a jump scare saved for the end, or a threat with no step the viewer can take | scenario-craft §4 |
-| `intrigue` 궁금증 | "I need to know what happens" | an unresolved outcome or secret whose paying item is named | a teaser with no named payer, or the answer dumped in the opening | scenario-craft §5 ledger · hookForm `gap`/`secret` |
+| `intrigue` 궁금증 | "I need to know what happens" | an unresolved outcome or secret whose paying item is named | a teaser with no named payer, or an opening that states the answer and then has nothing left to pay | scenario-craft §5 ledger · hookForm `gap`/`secret` |
 | `comedy` 코믹 | "wait — that broke the pattern" | a pattern the body sets, a punchline that breaks it last | "funny" as an adjective, a joke explained in the next sentence | scenario-craft §6 |
 
 `curiosity` and `intrigue` are not the same engine. Curiosity is an intellectual gap
@@ -106,9 +155,10 @@ formats. Channels that skip research skip this whole stage with the three-direct
 ### Write
 
 For each of the three direction rows, write
-`storyboard/candidates/d<n>.md` from the template below — the seven items, in order, on
-every candidate. Frontmatter carries `direction`, `engine_primary`, `engine_secondary` (or
-`none`), `score` and `p0` (empty until the first read), `round: 0`. Each item is a
+`storyboard/candidates/d<n>.md` from the template below — the message verbatim under the
+title, then the seven items, in order, on every candidate. Frontmatter carries `direction`,
+`message` (the `M#` it carries), `engine_primary`, `engine_secondary` (or `none`), `score`
+and `p0` (empty until the first read), `round: 0`. Each item is a
 paragraph (전개 #3 is a numbered list of its cases); on long-form the 전개 paragraphs run
 longer, they do not multiply.
 
@@ -203,13 +253,13 @@ event itself; inventing a modern connection to prolong it is not a solution.
 
 | # | Item | What goes in it |
 |---|---|---|
-| 1 | **주제** | What the episode makes the viewer think about — one sentence in the viewer's words, at the 초3~4 floor (korean-style §Eye level). Not a topic label ("로즈웰 사건") but the thought they leave with ("설명이 바뀌면 사람들은 무엇을 믿게 되나"). `COMPREHENSION.question` and `takeaway` are cut from this line. |
+| 1 | **주제** | The subject cut from the page's message — what this episode is about and the question it answers, one sentence in the viewer's words at the 초3~4 floor (korean-style §Eye level). Not a topic label ("로즈웰 사건"), and never a report of ignorance ("무엇이 떨어졌는지는 아직 모른다") — the sentence names what the evidence establishes ("군은 왜 발표를 바꿨을까 — 설명이 바뀌면 사람들이 무엇을 믿게 되는지"). `COMPREHENSION.question` is cut from this line; `takeaway` from the message (§Messages first). |
 | 2 | **훅** | A dramatised scene that pulls the viewer in — a person at that moment, a "만약 그날 …" the viewer can picture. Its first spoken sentence names what is at stake before anything is asked; it ends on the promise — what the viewer will know by the end. It may invent a scene. It may not invent a fact (below). |
 | 3 | **전개 #1** | What actually happened — the real event behind the hook, told as an account (who · when · what), every fact on a `research.md` row. Where the research holds an answer most viewers would guess first, this item opens on it and takes it apart (scenario-craft §11). |
 | 4 | **전개 #2** | The next necessary evidence, choice or consequence that changes understanding. A modern bridge is optional. On answer-first this supplies the early result and names its subject directly. |
 | 5 | **전개 #3** | Develop or test the answer with evidence, action or a limit. Use sourced modern cases only when they serve this content; no minimum case count. |
-| 6 | **마무리** | The earned resolution: answer the opening with evidence or a decisive action and make the meaning understandable. State limits honestly. Do not outsource the answer to a generic opinion question. |
-| 7 | **CTA** | Optional. Write `없음` and why the ending is sufficient, or one relevant ask after the resolution. Never use an ask to replace the answer. Subscribe and like stay banned. |
+| 6 | **마무리** | The earned resolution: answer the opening with evidence or a decisive action and make the meaning understandable. State limits honestly. Do not outsource the answer to a generic opinion question. Name the one forwardable thing here — the fact, verdict, line or checklist a viewer could pass on as-is; §4 writes it into the closing shot's `shot.share`, where a short requires it. |
+| 7 | **CTA** | Optional. Write `없음` and why the ending is sufficient, or one relevant ask after the resolution. Never use an ask to replace the answer. Subscribe and like stay banned. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger. |
 
 ### 훅 may invent a scene, not a fact
 
@@ -233,18 +283,24 @@ at §2.3; unused cases never become a claim or caption.
 | 훅 | `hook` — the cover, 1 shot | cover + `hooking` | cover + `hooking` |
 | 전개 #1 | `drip`, 1–2 shots | `body` | `body` |
 | 전개 #2 | `drip`, 1 shot | `result` — the present answer plays before the body | `turn` |
-| 전개 #3 | `drip`, 1–2 shots — the last drip is where the answer is first complete | `body` | `result` |
-| 마무리 + optional CTA | `cta` — the last narrated shot delivers the closing meaning, with an optional ask after the answer; no fixed group count | `cta` | `cta` |
+| 전개 #3 | `drip`, 1–2 shots — where the held answer is first complete, or where the answer the cover already stated meets its hardest test | `body` | `result` |
+| 마무리 + optional CTA | `cta` — the last narrated shot delivers the closing meaning and carries the forwardable thing in `shot.share`, with an optional ask after the answer; no fixed group count | `cta` | `cta` |
 
 A short lands inside the 4–7 shot band (5–7 by this map). Long-form keeps the arc
 storyboard §2.3 picked (scenes-schema §playback order): unfinished-sentence material is
 `story`, where 전개 #2 is the turn; everything else is `answer-first`, where 전개 #2's present
 answer is the result shown before the body. `COMPREHENSION.question` is the specific question
-the episode answers, historical or present-day. On a short the last drip has to be the
-first place the answer is complete (scenes-schema §playback order), and a question the
-historical fact already answers puts that moment at 전개 #1. On long-form, how 전개 #1's
-investigation is laid out inside (curiosity loop · problem stack · …) is the one thing
-storyboard §2.5 still asks.
+the episode answers, historical or present-day. A short candidate picks where its reveal
+sits, and its 훅 item says which of the two it took. Held is the default: the last drip is
+the first place the answer is complete (scenes-schema §playback order), and a question the
+historical fact already answers puts that moment at 전개 #1. Stated up front is the other
+legal shape — the 훅 says the result and the 전개 rows spend their time on why it is true,
+what it cost and where it breaks. Take it when the fact itself is the surprise and the
+reason is worth three items; the price is the finish, which no longer has a reveal to land
+on, so 전개 #3 has to carry the hardest test instead. A cover that states the answer and
+leaves the body nothing to develop is the intrigue row's failure case, not this shape. On
+long-form, how 전개 #1's investigation is laid out inside (curiosity loop · problem stack
+· …) is the one thing storyboard §2.5 still asks.
 
 ## Template
 
@@ -253,6 +309,7 @@ storyboard §2.5 still asks.
 channel: <slug>
 topic: <slug>
 direction: D1
+message: M1
 engine_primary: <curiosity | fear | intrigue | comedy>
 engine_secondary: <curiosity | fear | intrigue | comedy | none>
 structure: <short: hook-drip-cta | long-form: the arc + the shape 전개 #1 rides inside>
@@ -265,10 +322,12 @@ frozen:                     # stamped on entering §4, on scenario.md only
 
 # <topic> — 시나리오 D1
 
+**Message.** <the M1 sentence, verbatim from research.md §Messages>
 **Engine.** primary <…> · secondary <…>
 
 ## 주제
-<what the viewer is made to think about — one sentence in the viewer's words>
+<the subject cut from the message — what the episode is about and the question it answers,
+one sentence in the viewer's words; never "…는 알 수 없다">
 
 ## 훅 — feel <sign · feeling>
 <the dramatised scene. First spoken sentence verbatim: "…". Ends on the promise — and the
@@ -288,6 +347,7 @@ taken apart, when the research holds one. Its darkest beat is usually the curve'
 
 ## 마무리 — feel <sign · feeling>
 <the earned resolution, verbatim: "…">
+<forwardable — the one fact, verdict, line or checklist a viewer could pass on as-is, verbatim: "…">
 
 ## CTA — feel <sign · feeling>
 <없음 + reason, or the optional relevant ask verbatim after the resolution>

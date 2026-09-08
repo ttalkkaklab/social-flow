@@ -90,7 +90,10 @@ people at the same age).
    testament · landscape, "It's not X, it's Y" — and the human-style axis is scored on that
    reading. **exit 3** isn't a pass either: say "style unverified")
 2. **Engagement begging** — "좋아요 눌러" / "댓글 YES" / "팔로우하면"-type asks
-   (like/comment/follow bait — Meta explicitly suppresses its reach)
+   (like/comment/follow bait — Meta explicitly suppresses its reach). **A breakout push
+   gets no exemption** — "공유해 주세요" is the same ask on the same list. What a push
+   carries instead is the thing worth forwarding: one fact, verdict, line or checklist the
+   reader can pass on as-is. That is not an ask, so it never fires this P0
 3. **Promotion, links, steering to our posts** — in search_reply, any
    tool/service promotion, link, or "제 프로필에" ("on my profile")-type
    steering (it's spam the moment it appears)

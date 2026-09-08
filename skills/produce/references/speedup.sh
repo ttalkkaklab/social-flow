@@ -15,7 +15,7 @@
 #   Input — the newest set in the workdir, the same rule output/ copies by:
 #     reel-spliced.mp4 / reel-sub-spliced.mp4 / subs-spliced.srt  when a splice ran
 #     reel.mp4         / reel-sub.mp4         / subs.srt          otherwise
-#   Output: reel-fast.mp4 · reel-sub-fast.mp4 · subs-fast.srt · chapters-fast.txt
+#   Output: reel-fast.mp4 · reel-sub-fast.mp4 · subs-fast.srt · chapters-fast.txt · qa/first-frame.png
 #           (cover.jpg is a still — the same frame at any speed, so it carries over untouched)
 #   Reading the un-sped files and writing new names makes the pass idempotent — run it twice with
 #   a different factor and it recomputes from the original instead of stacking passes.
@@ -24,6 +24,14 @@
 #   sped-up logo sting reads as a glitch. Only the feature speeds up, and the tail is re-joined
 #   untouched. The boundary is the outro asset's own duration, minus the xfade overlap when the
 #   builder used one (build-screencast.sh xfades; build-reel.sh joins through black with no overlap).
+#   With OUTRO=0 the channel ships without one: KEEP is 0, the whole file is the feature, and the
+#   tail branch never runs. The flag comes from format.env, not from the asset lying in the workdir —
+#   a stale outro.mp4 under OUTRO=0 would otherwise leave that tail unsped with its cues mistimed,
+#   and the length gate would still pass because the same wrong boundary feeds both sides of it.
+#
+#   The pass also reports the shipped timeline's **first subtitle cue** and writes the t=0 frame to
+#   qa/first-frame.png beside the phone-QA stills (produce §8). A cue later than FIRST_CUE_MAX warns;
+#   it never exits, because by this point the episode is already built.
 #
 #   Subtitle and chapter times are divided by the factor over the feature and shifted by a constant
 #   over the outro tail, so a cue never drifts off the word it belongs to.
@@ -41,9 +49,14 @@ cd "$WORK"
 SPEED=${2:-${SPEED:-1.0}}
 FPS=${FPS:-30}
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}
+OUTRO=${OUTRO:-1}                   # 1=the build joined an outro (default), 0=the channel ships without one
+# profile.md spells the choice `on`/`off`; the flag is the number. Anything else would fall to
+# the off path and drop the outro without saying so.
+case "$OUTRO" in 0|1) ;; *) echo "✗ OUTRO=$OUTRO — the flag is 1 or 0, not profile.md's shortform_outro on/off wording" >&2; exit 1;; esac
 XFADE=${XFADE:-0.6}
 SPEED_TOL=${SPEED_TOL:-0.15}        # measured-vs-expected duration tolerance (s)
 FINAL_SPEECH_RATE_MAX=${FINAL_SPEECH_RATE_MAX:-6.2}
+FIRST_CUE_MAX=${FIRST_CUE_MAX:-1.0} # the opening cue has to be up inside this many seconds
 REPORT=build-report.txt
 
 awk -v f="$SPEED" 'BEGIN{exit !(f >= 0.5 && f <= 3.0)}' \
@@ -61,6 +74,47 @@ check_final_rate() {
   fi
   say "── $RATE_OUT"
 }
+# The opening cue of the file that ships, plus the frame a viewer meets at t=0. A late cue is a
+# warning: the build has already run, and stranding a finished episode over it helps nobody.
+check_first_cue() {
+  [ -f subs-fast.srt ] || return 0
+  local FC V STILL
+  FC=$(awk '/ --> /{split($1, t, /[:,]/); printf "%.3f", t[1]*3600 + t[2]*60 + t[3] + t[4]/1000; exit}' subs-fast.srt)
+  [ -n "$FC" ] || return 0
+  V=reel-fast.mp4; [ -f reel-sub-fast.mp4 ] && V=reel-sub-fast.mp4
+  mkdir -p qa
+  STILL="no still: ffmpeg couldn't read $V"
+  ffmpeg -y -v error -ss 0 -i "$V" -frames:v 1 qa/first-frame.png && STILL="qa/first-frame.png ($V @ 0s)"
+  if awk -v c="$FC" -v m="$FIRST_CUE_MAX" 'BEGIN{exit !(c > m)}'; then
+    say "⚠ first cue at ${FC}s — past the ${FIRST_CUE_MAX}s mark, so nothing is written on the opening second · $STILL"
+  else
+    say "── first cue ${FC}s (cap ${FIRST_CUE_MAX}s) · $STILL"
+  fi
+  return 0
+}
+
+# The flag rides in format.env beside SPEED (produce §1). A flag that disagrees with the build means
+# this pass and the builder hold different ideas of where the feature ends, so stop instead of
+# guessing: KEEP would be wrong on both sides of the length gate and the gate would still pass.
+# Under OUTRO=1 the tail can't be measured without the asset. Under OUTRO=0 a build that did splice
+# one leaves that outro inside the feature, and the pass would speed the sonic logo up with it —
+# the build report is the record of what the builder actually joined, so it decides both
+# directions and the asset lying in the workdir decides neither. The other way round, OUTRO=1
+# over a build that joined nothing cuts the tail boundary out of the feature: the closing seconds
+# ship at 1.0x with their cues shifted instead of divided, and the length gate agrees because EXP
+# comes from the same wrong boundary.
+if [ "$OUTRO" = 1 ] && [ ! -f "$OUTRO_ASSET" ]; then
+  say "✗ OUTRO=1 but $OUTRO_ASSET isn't in the workdir — the outro tail can't be measured. Put it back, or set OUTRO=0 in format.env when the channel ships without one"
+  exit 1
+fi
+if [ "$OUTRO" != 1 ] && [ -f "$REPORT" ] && grep -q 'outro splice:' "$REPORT"; then
+  say "✗ OUTRO=$OUTRO but the build spliced an outro ($REPORT) — speeding the whole file up would speed the outro with it. Rebuild under the same flag, or set OUTRO=1 in format.env"
+  exit 1
+fi
+if [ "$OUTRO" = 1 ] && [ -f "$REPORT" ] && ! grep -q 'outro splice:' "$REPORT"; then
+  say "✗ OUTRO=1 but the build joined no outro ($REPORT) — the tail would be cut out of the feature and shipped unsped. Rebuild under the same flag, or set OUTRO=0 in format.env"
+  exit 1
+fi
 
 # ── 1) Pick the input set — spliced when it exists, plain otherwise
 if [ -f reel-spliced.mp4 ]; then
@@ -83,6 +137,7 @@ if awk -v f="$SPEED" 'BEGIN{exit !(f == 1)}'; then
   [ -f "$TIN" ] && cp -f "$TIN" subs-fast.srt
   [ -f chapters.txt ] && cp -f chapters.txt chapters-fast.txt
   check_final_rate
+  check_first_cue
   say "── speedup x1.00: passed through at the recorded pace ($VIN → reel-fast.mp4)"
   node "$HERE/delivery-proof.js" . "$SPEED"
   exit 0
@@ -94,7 +149,7 @@ TOT=$(dur "$VIN")
 #   build-reel.sh joins through black (total = feature + outro), build-screencast.sh xfades
 #   (total = feature + outro − XFADE). The report line says which one ran.
 KEEP=0
-if [ -f "$OUTRO_ASSET" ]; then
+if [ "$OUTRO" = 1 ] && [ -f "$OUTRO_ASSET" ]; then
   OD=$(dur "$OUTRO_ASSET")
   if [ -f "$REPORT" ] && grep -q 'outro splice: xfade' "$REPORT"; then
     KEEP=$(awk -v o="$OD" -v x="$XFADE" 'BEGIN{printf "%.6f", o-x}')
@@ -103,8 +158,10 @@ if [ -f "$OUTRO_ASSET" ]; then
   fi
 fi
 B=$(awk -v t="$TOT" -v k="$KEEP" 'BEGIN{printf "%.6f", t-k}')
+if [ "$OUTRO" = 1 ]; then BWHY="the outro length doesn't fit the video"
+else BWHY="the video itself is under half a second"; fi
 awk -v b="$B" 'BEGIN{exit !(b > 0.5)}' \
-  || { echo "✗ the feature computes to ${B}s — the outro length doesn't fit the video" >&2; exit 1; }
+  || { echo "✗ the feature computes to ${B}s — ${BWHY}" >&2; exit 1; }
 EXP=$(awk -v b="$B" -v k="$KEEP" -v f="$SPEED" 'BEGIN{printf "%.3f", b/f + k}')
 
 mkdir -p work-fast
@@ -208,7 +265,10 @@ if [ -f chapters.txt ]; then
 fi
 
 check_final_rate
+check_first_cue
 TAIL=$(awk -v k="$KEEP" 'BEGIN{printf "%.2f", k}')
-say "── speedup x$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", f}') ($VIN): ${TOT}s → ${RV}s (feature ${B}s at speed, ${TAIL}s outro tail at 1.00x)"
+if [ "$OUTRO" = 1 ]; then PARTS="feature ${B}s at speed, ${TAIL}s outro tail at 1.00x"
+else PARTS="the whole ${B}s at speed, no outro tail (OUTRO=0)"; fi
+say "── speedup x$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", f}') ($VIN): ${TOT}s → ${RV}s (${PARTS})"
 
 node "$HERE/delivery-proof.js" . "$SPEED"
