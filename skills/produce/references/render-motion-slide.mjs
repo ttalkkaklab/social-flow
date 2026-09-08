@@ -453,6 +453,22 @@ const openPage = async () => {
     }
   }
   const warn = segWarn.slice();
+  // A baked object's frames were laid out for the narration lengths the bake was given, and the
+  // runtime stretches that fixed range over whatever segment it gets. So a sheet baked for 4.0s under
+  // a 5.5s sentence plays its frames at 22fps, silently — the recipe hash catches an edited camera but
+  // nothing caught a re-cut narration (blender-objects.md §4). Compare the two here, where both are known.
+  if (segMap) {
+    const baked = await evalJS(`(() => { const o = window.SLIDE_OBJECTS || {};
+      const k = Object.keys(o).find(k => o[k] && o[k].segs); return k ? o[k].segs : null; })()`);
+    if (baked) for (const [group, ms] of Object.entries(baked)) {
+      const asked = segMap[Number(group)];
+      if (!asked) continue;
+      const drift = Math.abs(asked - ms) / ms;
+      if (drift > 0.05) warn.push(`group ${group}: the object sheet was baked for ${ms}ms but this render passes ` +
+        `${asked}ms (${Math.round(drift * 100)}% off) — its frames stretch to fit, so subject motion runs at ` +
+        `${Math.round(30 * ms / asked)}fps instead of 30. Rebake with --segs before delivery`);
+    }
+  }
   // Sustain layer — hand the page its segment lengths before reading group durations, so
   // .sv elements stretch to them and __groups() reports the stretched clips. --segs keys
   // are GROUPS: on an A|B sub-reveal slide (more groups than segments) group k is no

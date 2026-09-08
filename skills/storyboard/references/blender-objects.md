@@ -7,7 +7,7 @@ sheet, a sidecar, `h.object`. What changes is who draws the frames. The browser 
 rasterises Three.js in headless Chrome, which runs WebGL on SwiftShader (a software
 renderer: three directional lights, a 1024 shadow map, no bounce light, 1–3 fps capture).
 `bake-blender.py` builds the same scene in Blender and path-traces every frame with Cycles —
-soft area shadows on a shadow-catcher floor, bounced light, node-based grain — then writes
+soft area shadows on a shadow-catcher floor, bounced light, procedural surface grain — then writes
 the sheet the slide already knows how to play. The slide, the checker and the renderer see a
 baked object; nothing about the seek contract changes.
 

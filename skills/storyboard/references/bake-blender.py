@@ -34,7 +34,7 @@ The first render after an install compiles GPU kernels once (about two minutes o
 Not carried over from the runtime: `contactShadows` and `lighting.shadowOpacity` (Cycles traces
 the real shadow) and GLB `clips` (refused — pose parts with `bindings` instead).
 """
-import argparse, glob, hashlib, json, math, os, shutil, subprocess, sys, tempfile, time
+import argparse, glob, hashlib, json, math, os, re, shutil, subprocess, sys, tempfile, time
 
 try:
     import bpy  # noqa: F401  — present only when Blender runs this file as --python
@@ -102,6 +102,23 @@ def to_blender_pos(v): return (v[0], -v[2], v[1])
 def to_blender_scale(v): return (v[0], v[2], v[1])
 def to_blender_quat(q): return (q[0], q[1], -q[3], q[2])
 
+LOCAL_GLB = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*\.glb$")   # mesh-contract.js LOCAL_GLB
+
+def check_sources(recipe, recipe_dir):
+    """The mesh lane's file rules, which this CLI would otherwise skip: a source is a bare .glb
+    filename beside the recipe, and its real path stays inside that directory. os.path.join keeps an
+    absolute second argument as-is, so without this an absolute source would open anywhere."""
+    for node in recipe.get("nodes", []):
+        source = node.get("source")
+        if not source: continue
+        if not LOCAL_GLB.match(source):
+            sys.exit(f"node {node.get('id')!r}: source must be a local .glb filename beside the recipe, got {source!r}")
+        real = os.path.realpath(os.path.join(recipe_dir, source))
+        if not real.startswith(os.path.realpath(recipe_dir) + os.sep):
+            sys.exit(f"node {node.get('id')!r}: {source} resolves outside the recipe directory")
+        if not os.path.isfile(real):
+            sys.exit(f"node {node.get('id')!r}: {source} is missing beside the recipe")
+
 def frame_plan(recipe, segs_ms, fps):
     """Frames per group, shared boundaries, and (group, progress) for every sheet frame."""
     ranges, start = {}, 0
@@ -164,6 +181,10 @@ def inner_main(job_path):
     from mathutils import Quaternion, Vector
     job = json.load(open(job_path, encoding="utf-8"))
     say = lambda *a: print("⟫", *a, flush=True)
+    # The scene build uses the Khronos PBR Neutral view transform (4.2), the Principled Coat inputs
+    # (4.0) and cycles.denoising_use_gpu (3.5). An older Blender throws a traceback deep inside instead.
+    if bpy.app.version < (4, 2):
+        sys.exit(f"bake-blender.py needs Blender 4.2 or newer, found {bpy.app.version_string}")
     if job["mode"] == "capacity":
         prefs = bpy.context.preferences.addons["cycles"].preferences
         prefs.refresh_devices()
@@ -303,6 +324,8 @@ def inner_main(job_path):
             bmesh.ops.create_uvsphere(bm, u_segments=48, v_segments=32, radius=size[0])
         elif kind == "cylinder":
             bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=64, radius1=size[1], radius2=size[0], depth=size[2])
+        elif kind != "torus":
+            sys.exit(f"unsupported geometry type {kind!r} — mesh-contract.js allows roundedBox, sphere, cylinder, torus")
         bm.to_mesh(mesh); bm.free()
         if kind == "torus":
             bpy.ops.mesh.primitive_torus_add(major_radius=size[0], minor_radius=size[1], major_segments=96, minor_segments=20)
@@ -635,6 +658,15 @@ def selftest():
     ok("advice falls back without blender", lane_advice(None, 128, 16)["lane"] == "mesh")
     ok("advice refuses the sheet on a small machine", lane_advice("METAL", 6, 8)["lane"] == "mesh")
     ok("advice sends a cpu-only machine overnight", lane_advice("CPU", 64, 32)["lane"] == "blender-unattended")
+    tmp_src = tempfile.mkdtemp(prefix="bake-blender-src-")
+    open(os.path.join(tmp_src, "ok.glb"), "wb").write(b"glTF")
+    def refuses(nodes):
+        try: check_sources({"nodes": nodes}, tmp_src); return False
+        except SystemExit: return True
+    ok("source rules match the mesh lane",
+       refuses([{"id": "a", "source": "../up.glb"}]) and refuses([{"id": "a", "source": "/abs/x.glb"}])
+       and refuses([{"id": "a", "source": "missing.glb"}]) and not refuses([{"id": "a", "source": "ok.glb"}]))
+    shutil.rmtree(tmp_src, ignore_errors=True)
     ok("zone width from scenes.js", zone_width("/nonexistent/slides/assets") == 728)
     ok("hex linear", near(hex_to_linear("#ffffff"), (1, 1, 1, 1)) and abs(hex_to_linear("#808080")[0] - 0.2158605) < 1e-5)
     veil = remap_alpha(np.array([0.0, 0.03, 0.06, 0.53, 1.0]), 0.06)
@@ -701,6 +733,7 @@ def outer_main():
     recipe_path = os.path.abspath(a.recipe)
     recipe = json.load(open(recipe_path, encoding="utf-8"))
     recipe_dir = os.path.dirname(recipe_path)
+    check_sources(recipe, recipe_dir)
     segs = parse_segs(a.segs, recipe)
     n, ranges, frames = frame_plan(recipe, segs, a.fps)
     frames_dir = tempfile.mkdtemp(prefix="bake-blender-frames-")
