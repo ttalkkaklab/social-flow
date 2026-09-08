@@ -82,7 +82,9 @@ reviews the corrected scene. Infrastructure recovery does not require a script c
 
 The review uses the bundled server's Gemini API client with `gemini-3.8-flash` on API `v1`.
 Set `SOCIAL_FLOW_TTS_REVIEW_MODEL` in the server environment to select another audio-input
-model; an unset or blank value uses the default. Restart the MCP server after changing it.
+model; an unset or blank value uses the default. `SOCIAL_FLOW_TTS_REVIEW_API_VERSION`
+selects its API version (default `v1`, also used when blank). These settings affect only
+the speech-review client. Restart the MCP server after changing either setting.
 There is no automatic model fallback or API retry that spends on a different reviewer.
 Changing the reviewer preserves synthesis attempts and resumes a pending candidate with
 the same request and WAV hash. A previous PASS is reviewed again without another synthesis;

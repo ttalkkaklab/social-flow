@@ -15,6 +15,7 @@ import * as mlx from './mlx-serve-client.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 const exec = promisify(execFile);
 export const QUALITY_POLICY = 'speech-quality-v1';
+export const REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || 'v1';
 export const REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || 'gemini-3.8-flash';
 export const GENERATORS = ['tts_generate', 'tts_multi_speaker', 'tts_local_generate', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue', 'mlx_tts_generate'];
 export const checkedSpeechSchema = z.object({
@@ -115,7 +116,7 @@ const REVIEW_JSON_SCHEMA = {
 };
 export async function listen(file, request) {
     const { GoogleGenAI } = await import('@google/genai');
-    const client = new GoogleGenAI({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: 'v1', timeout: 180000 } });
+    const client = new GoogleGenAI({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: REVIEW_API_VERSION, timeout: 180000 } });
     const audio = readFileSync(file);
     if (audio.length > 14 * 1024 * 1024 || audio.subarray(0, 4).toString() !== 'RIFF')
         throw new Error('Review requires a WAV smaller than 14 MiB');
@@ -256,7 +257,9 @@ export async function generateCheckedSpeech(input, dependencies) {
                     existsSync(output) && last.audioSha256 === sha256(readFileSync(output))) {
                     // Recheck the same candidate with the new reviewer; keep the previous evidence.
                     last.previousReviews = [...(Array.isArray(last.previousReviews) ? last.previousReviews : []),
-                        { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures }];
+                        { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer }];
+                    for (const key of ['transcript', 'review', 'failures', 'signal', 'cer'])
+                        delete last[key];
                     last.pending = true;
                 }
             }
@@ -297,14 +300,13 @@ export async function generateCheckedSpeech(input, dependencies) {
             let failures = signalFailures(signal, request.expectedText);
             let listened;
             if (!failures.length) {
-                take.model = REVIEW_MODEL;
                 listened = await deps.listen(output, request);
                 listened.review = reviewSchema.parse(listened.review);
                 failures = reviewFailures(request.expectedText, listened.transcript, listened.review, signal.duration);
             }
             if (audioSha256 !== sha256(readFileSync(output)))
                 throw new Error('Audio changed during review');
-            Object.assign(take, { pending: false, audioSha256, signal, ...listened, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
+            Object.assign(take, { pending: false, audioSha256, signal, ...(listened ? { model: REVIEW_MODEL, ...listened } : {}), cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
             if (!failures.length)
                 return save('pass', { audioSha256 });
             save('retry', { audioSha256 });
