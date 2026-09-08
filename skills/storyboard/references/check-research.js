@@ -733,8 +733,8 @@ function selftest() {
   ok('a missing Messages section is a violation on close', has(analyse(noMsg, null), /0 message\(s\)/));
   ok('a missing Messages section is a violation on --direction',
      has(analyse(noMsg, null, null, { directionPhase: true }), /0 message\(s\)/));
-  ok('with no messages the directions are not also reported as citing none',
-     !has(analyse(noMsg, null), /cites no message/));
+  ok('with no messages the directions raise nothing about citations at all',
+     !has(analyse(noMsg, null), /cites (no message|M\d)/));
   ok('two messages is a violation',
      has(analyse(good.replace('| M3 | z-msg | now | 3 | → D3 |\n', ''), null), /2 message\(s\)/));
   ok('a direction citing no message is a violation',
@@ -777,6 +777,16 @@ function selftest() {
      !has(ign('이 사건을 미제로 남기지 않으려 무엇을 했나'), /report of ignorance/));
   ok('a past-tense 몰랐다 is caught', has(ign('그날 무엇이 떨어졌는지 아무도 몰랐다'), /report of ignorance/));
   ok('"아무도 알지 못한다" is caught', has(ign('원인은 아무도 알지 못한다'), /report of ignorance/));
+  // The 주제 read has borrowed a neighbouring cell three times now. These two pin it: a blank
+  // 주제 must stay blank, whether the violating phrase sits in the hero cell or the status cell.
+  ok('a blank 주제 does not borrow a later cell on a half-filled draft row',
+     !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 | — | chosen |',
+                               '| D1 | M1 |  |  | 진실은 아무도 모른다 | 1 | — | chosen |'), null),
+          /report of ignorance/));
+  ok('a blank 주제 does not borrow the status cell either',
+     !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 | — | chosen |',
+                               '| D1 | M1 |  |  |  | 1 | — | 미제로 남았다 |'), null),
+          /report of ignorance/));
   ok('a row that puts the M# last still has its 주제 read',
      has(analyse(good.replace('| # | Message | 주제 · question | Hook form | Hero / stake | Already verified | Still to research | Status |\n|---|---|---|---|---|---|---|---|',
                               '| # | 주제 | Message |\n|---|---|---|')
