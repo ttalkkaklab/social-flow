@@ -24,7 +24,10 @@ board without it.
    A real person's unrecorded thoughts or dialogue are not fictional staging.
 2. Write what this audience will understand, reconsider or be able to do in one concrete
    sentence. A topic label, emotion label or "cooperation matters" is insufficient. Name
-   the subject, what happened or works, and why this relationship matters here.
+   the subject, what happened or works, and why this relationship matters here. Write three
+   of these for the viewer living now before any direction row (`research.md` §Messages,
+   scenario-stage §Messages first); each direction is one message's topic. A sentence that
+   says the thing cannot be known is not a message — the episode would have nothing to hand over.
 3. Choose the evidence, action, demonstration or punchline that delivers that content.
    Design the ending before polishing the opening. A resolution, demonstrated limit or
    completed joke can be an ending; no universal moral or verbatim thesis announcement is needed.

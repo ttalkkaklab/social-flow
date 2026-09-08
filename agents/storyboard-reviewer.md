@@ -179,6 +179,9 @@ scenario-craft §4 · §5 · §6 · §11 · §12.
 - path to the page under review — a `candidates/d<n>.md` or `scenario.md`; **on the unattended
   path all three candidate paths arrive in one call** — judge them in this one context, never by
   spawning a sub-agent per page, and end with one tail per page
+- the message the page carries (frontmatter `message: M#` and the **Message.** line under the
+  title — the one sentence today's viewer should take away, decided in `research.md` §Messages
+  before the direction was cut; scenario-stage §Messages first)
 - the claimed `engine_primary` (and `engine_secondary` if any) — curiosity · fear · intrigue · comedy
 - the structure that row rides (short: hook-drip-cta; long-form: the §2.3 arc, answer-first or
   story, plus the shape 전개 #1 rides inside — curiosity loop · problem stack · transformation arc · expert contrast ·
@@ -251,6 +254,13 @@ score the engines axis at 0 and raise P0-10.
     honestly names a limit *and* still gives the viewer the thing they came for is not this P0
     — the defect is the take-back, not the caveat.
 
+15. **The 주제 is a report of ignorance, or carries no message.** "X는 알 수 없다", "X는 아직
+    모른다", "X는 미스터리로 남았다" — the page promises to hand over nothing, and the viewer
+    who stayed for the answer is told there is none. A mystery may open the 훅; the 주제 names
+    what the evidence establishes (scenario-stage §A topic is never a report of ignorance, user
+    directive 2026-09-07). The same P0 when the 주제 does not deliver the message the page
+    carries, or the page carries none — a topic cut from nothing.
+
 **A thin item is not a P0 by itself.** A 전개 #3 with two cases where three would carry
 better, or a 전개 #2 of one sentence, costs points on the structure axis and earns a
 directive; it is P0-13 only when the item cannot do its job at all.
@@ -267,7 +277,7 @@ for engines the beats actually run, with a file:line or a quoted beat as evidenc
 |---|---|---|
 | Viewer engines | 40 | primary enacted (25) — see the table in `scenario-stage.md`; secondary enacted without fighting the primary (10); the mix is one primary plus at most one spice, not four names (5) |
 | The opening | 20 | cold open on the strongest moment or evidence, a promise sentence the profile §1 target audience would want kept, a first line that names a loss before it asks, the primary engine landing in that opening, and the staging placed half a step off what the viewer would have guessed — familiar material with one property moved, never a premise that has to be explained before it lands (§13) |
-| The structure is honoured | 15 | seven headings with necessary developments: evidence, choices, consequences or changed understanding; no compulsory modern cases; optional CTA explicitly justified or absent |
+| The structure is honoured | 15 | the 주제 delivers the page's message and names what the evidence establishes; seven headings with necessary developments: evidence, choices, consequences or changed understanding; no compulsory modern cases; optional CTA explicitly justified or absent |
 | The feel curve | 15 | emotional progression justified by events and audience expectations, with room for a quiet discovery or release; intensity labels alone earn no points |
 | Items and ending | 10 | the promise is paid with specific content and the ending makes its meaning understandable; an optional ask follows the answer and belongs to this episode; a no-CTA ending can earn all points, an ending that leaves nothing a viewer could repeat cannot |
 
