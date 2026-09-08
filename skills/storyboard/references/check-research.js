@@ -85,10 +85,11 @@ const FLOOR_DIRECTION_SEARCHES = 10;
 const IGNORANCE = new RegExp([
   '알\\s*수(?:가|는|도)?\\s*없(?:다|어요|습니다|죠|네요|음)(?![가-힣])',
   '알\\s*길(?:이|은)?\\s*없(?:다|어요|습니다|죠)(?![가-힣])',
-  '(?:모른다|모릅니다|몰라요|모르죠|모르겠(?:다|어요|습니다)|모르네요|모름)(?![가-힣])',
+  '(?:모른다|모릅니다|몰라요|모르죠|모르겠(?:다|어요|습니다)|모르네요|모름|몰랐(?:다|어요|습니다))(?![가-힣])',
   '(?:밝혀|풀리|알려)지지\\s*않(?:았다|았어요|았습니다|았죠|는다|아요|습니다|죠)(?![가-힣])',
-  '아무도\\s*(?:모른|모릅|몰라|모르|알지\\s*못)',
-  '(?:미스터리|수수께끼|미제)(?:다|이다|입니다|예요|죠|로\\s*남)',
+  '아무도\\s*(?:알지\\s*못(?:한다|합니다|해요|했다|했습니다))(?![가-힣])',
+  '(?:미스터리|수수께끼|미제)(?:다|이다|입니다|예요|죠)(?![가-힣])',
+  '(?:미스터리|수수께끼|미제)로\\s*남(?:았다|았어요|았습니다|았죠|는다|아요|습니다|은\\s*채)(?![가-힣])',
   '\\b(?:nobody|no\\s+one)\\s+knows\\b',
   '\\b(?:remains?|is|are|was|were)\\s+(?:still\\s+)?(?:an?\\s+)?(?:mystery|unknown|unsolved|unexplained)\\b',
   "\\b(?:we|they|scientists|historians)\\s+(?:still\\s+)?(?:don'?t|do\\s+not|may\\s+never)\\s+know\\b"
@@ -344,7 +345,7 @@ function analyse(src, fmt, scenes, opts) {
     bad(`${msgIds.length} message(s) — §2.1b writes three before any direction: what a viewer ` +
         'living now understands, reconsiders or can do after the episode, each a different message on Verified rows');
   msgIds.forEach((m) => {
-    const hit = m.cells.slice(1).join(' ').match(IGNORANCE);
+    const hit = m.cells.slice(1, -1).join(' ').match(IGNORANCE);
     if (hit)
       bad(`M${m.n} is a report of ignorance ("…${hit[0]}") — a message names what the evidence ` +
           'establishes, not what nobody knows (scenario-stage §Messages first)');
@@ -392,8 +393,8 @@ function analyse(src, fmt, scenes, opts) {
   });
   const shared = citedMsgs.filter((n, i) => citedMsgs.indexOf(n) !== i);
   if (shared.length)
-    warn(`directions share a message (M${[...new Set(shared)].join(', M')}) — one topic per message; ` +
-         'write the missing message instead of a second topic on this one');
+    bad(`directions share a message (M${[...new Set(shared)].join(', M')}) — one topic per message, ` +
+        'so a message is left with no episode; write that message a topic of its own');
 
   // ── Which claims are key ──
   // Two readings, and both count: ★ in the # column, and the rows the sentences cite. A claim
@@ -725,8 +726,6 @@ function selftest() {
      has(analyse(good.replace('| D2 | M2 | b |', '| D2 | — | b |'), null), /D2 cites no message/));
   ok('a direction citing a message that is not on the page is a violation',
      has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M7 | b |'), null), /D2 cites M7/));
-  ok('two directions on one message is a warning',
-     has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M1 | b |'), null), /share a message \(M1\)/));
   ok('the M in a status word or a hero stat is not a citation',
      !has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M2 | b — 5M 원 |'), null), /cites M/));
 
@@ -746,6 +745,21 @@ function selftest() {
      !has(ign('정체를 알 수 없는 물체가 떨어진 뒤 군은 왜 설명을 바꿨나'), /report of ignorance/));
   ok('a conditional 모른다면 passes', !has(ign('변속 원리를 모른다면 오르막에서 무엇을 잃나'), /report of ignorance/));
   ok('a quoted 없다는 clause passes', !has(ign('알 수 없다는 발표가 왜 불신을 키웠나'), /report of ignorance/));
+  ok('"아무도 모르게" is an adverb, not a verdict',
+     !has(ign('아무도 모르게 옮겨진 상자가 왜 문제였나'), /report of ignorance/));
+  ok('"아무도 모르는 곳" is a modifier',
+     !has(ign('아무도 모르는 곳에 숨긴 이유가 무엇이었나'), /report of ignorance/));
+  ok('"미스터리다운" is not a predicate',
+     !has(ign('그 기록에는 미스터리다운 매력이 있다'), /report of ignorance/));
+  ok('a promise not to leave it unsolved passes',
+     !has(ign('이 사건을 미제로 남기지 않으려 무엇을 했나'), /report of ignorance/));
+  ok('a past-tense 몰랐다 is caught', has(ign('그날 무엇이 떨어졌는지 아무도 몰랐다'), /report of ignorance/));
+  ok('"아무도 알지 못한다" is caught', has(ign('원인은 아무도 알지 못한다'), /report of ignorance/));
+  ok('the message status cell is not read for ignorance',
+     !has(analyse(good.replace('| M2 | y-msg | now | 2 | → D2 |',
+                               '| M2 | y-msg | now | 2 | 미제 |'), null), /M2 is a report of ignorance/));
+  ok('two directions on one message is a violation',
+     has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M1 | b |'), null), /share a message \(M1\)/));
   ok('the status cell is not read for ignorance',
      !has(analyse(good.replace('| D2 | M2 | b | number | y | 2 | — | not used |',
                                '| D2 | M2 | b | number | y | 2 | — | 미제 |'), null), /report of ignorance/));

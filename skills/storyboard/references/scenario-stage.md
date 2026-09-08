@@ -77,7 +77,8 @@ wordings; each rests on Verified rows already on the page, and the row says whic
 
 ### The topic, cut from the message
 
-Each direction row (D1–D3) cites its message (`M1`–`M3`, one message per direction) and
+Each direction row (D1–D3) cites its message (`M1`–`M3`, one message per direction — two
+rows on one message leave a message with no episode, and the checker rejects that) and
 writes the **주제** — the concrete subject this episode is about, the event, the mechanism or
 the person that will deliver that message, in one sentence with the question it answers. The
 hook form, engine and hero are chosen for that topic. The candidate page carries the message
@@ -96,11 +97,13 @@ it. 로즈웰 is not "무엇이 떨어졌는지는 아직 모른다"; it is "설
 
 `check-research.js --direction` (and the close) rejects a message or direction sentence
 that ends on ignorance — the predicate forms `알 수 없다/없어요/없습니다`, `모른다/모릅니다/
-몰라요/모르겠다`, `아무도 모른다`, `밝혀지지/풀리지/알려지지 않았다`, `미스터리다/미스터리로
-남았다`, `수수께끼로 남았다`, `미제로 남았다`, and the English `nobody knows`, `remains a
-mystery`, `we still don't know`, `may never know`. A modifier ("정체를 알 수 없는 물체가
-떨어진 뒤 군은 설명을 바꿨다") passes the machine check because its predicate sits elsewhere
-— you still read the sentence for what it hands over. The reviewer's scenario mode raises
+몰라요/모르겠다/몰랐다`, `아무도 알지 못한다`, `밝혀지지/풀리지/알려지지 않았다`,
+`미스터리다/미스터리로 남았다`, `수수께끼로 남았다`, `미제로 남았다`, and the English
+`nobody knows`, `remains a mystery`, `we still don't know`, `may never know`. Only those
+endings — "아무도 모르게 옮겼다", "아무도 모르는 곳", "미스터리다운 매력", "미제로 남기지
+않으려" all carry the same words with a different job, and the checker lets them through. A
+modifier ("정체를 알 수 없는 물체가 떨어진 뒤 군은 설명을 바꿨다") passes for the same reason,
+its predicate sitting elsewhere — you still read the sentence for what it hands over. The reviewer's scenario mode raises
 P0-15 on a candidate 주제 that is one of these, or that carries no message.
 
 ## Viewer engines — what the 95 bar actually scores
