@@ -51,8 +51,10 @@ Before assets, HITL offers **hybrid** (1–2 generated clips plus HTML/still-cam
 **full_video** (every new scene is generated video) with first-pass and retry-inclusive video
 costs, model, resolution, audio setting, explicit budget cap and exclusions. Persist the choice
 in `window.PRODUCTION` and bind approval to the final cost quote. Resume an unchanged approval.
-Before storyboard authoring, ask for cinematic-miniature, photoreal live action, or webtoon
-and apply that choice to every new source/end image and video prompt in either mode.
+Before storyboard authoring, ask for one of the visual-style presets — cinematic-miniature,
+photoreal live action, webtoon, claymation, paper-cutout, ink-wash or toon-3d (added 2026-09-08
+from the Shorts style survey) — and apply that choice to every new source/end image and video
+prompt in either mode.
 Follow `skills/storyboard/references/visual-style.md`; production mode never chooses the art style.
 For cinematic-miniature only, full_video follows the spatial-explainer reference `LQZjvQ5W2ck`: consistent miniature/cutaway/
 realistic materials, stable geography, deliberate camera moves and visible physical changes.

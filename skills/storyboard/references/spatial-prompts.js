@@ -2,7 +2,7 @@
 'use strict';
 const fs = require('fs'), path = require('path');
 const { readScenes } = require('../../autoproduce/references/cost-preview.js');
-const { full, STYLES, motionErrors, missingCameraSlots, finalState } = require('./production-mode.js');
+const { full, STYLES, packPresets, motionErrors, missingCameraSlots, finalState } = require('./production-mode.js');
 const { resolveStylePack } = require('./style-pack.js');
 const PROMPT = require('./assemble-bg-prompt.js');
 const LOOKS = {
@@ -10,6 +10,10 @@ const LOOKS = {
   architectural: 'A precise architectural cutaway model with believable thickness, connected parts, legible spatial relationships and softly lit material surfaces.',
   realistic: 'A physically believable location with natural textures, coherent perspective, detailed stone and foliage, and restrained depth of field.',
   webtoon: 'A coherent drawn webtoon scene with expressive linework, cel shading and illustrated depth.',
+  clay: 'A sculpted plasticine scene on a handcrafted set, thumbprinted matte surfaces and warm tactile light.',
+  papercut: 'A layered cut-paper diorama with fibre edges, separated depth layers and soft shadows between them.',
+  inkwash: 'A brushed ink-wash painting on rice paper with wet grey gradients, empty space and one accent colour.',
+  toon3d: 'A stylised 3D cartoon render with rounded appealing characters, clean shaders and cinematic light.',
   archive: 'A faithful presentation of the supplied archival reference, preserving its composition and marks as source evidence.'
 };
 const text = value => typeof value === 'string' && !!value.trim();
@@ -58,10 +62,10 @@ function assemble(win, index) {
   if (preset !== 'spatial-explainer' && !STYLES[preset]) throw new Error('Unknown visual style: ' + preset);
   if (STYLES[preset] && d.look !== 'archive' && !STYLES[preset].looks.includes(d.look))
     throw new Error('Shot look conflicts with selected visual style');
-  if (['photoreal', 'webtoon'].includes(preset) && style.referencePack)
+  if (STYLES[preset] && !packPresets.includes(preset) && style.referencePack)
     throw new Error('Remove the miniature reference pack for this style');
   const treatment = d.look === 'archive' ? LOOKS.archive : (STYLES[preset]?.prompt || LOOKS[d.look]);
-  const pack = d.look === 'archive' || ['photoreal', 'webtoon'].includes(preset) ? null : resolveStylePack({
+  const pack = d.look === 'archive' || !packPresets.includes(preset) ? null : resolveStylePack({
     id: style.referencePack, role: v.styleRole || 'environment' });
   const spoken = (scene.narration || []).map(n => n.tts || n.sub || '').join(' ');
   const source = [canvas + ', edge-to-edge composition.',

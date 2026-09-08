@@ -38,6 +38,10 @@ and `production-mode.js` rejects a shot whose look is outside its preset.
 | `cinematic-miniature` | `miniature`, `architectural` | the bundled `tactile-miniature-v1` pack, one image per `visual.styleRole` |
 | `photoreal` | `realistic` | approved character images from this episode; no pack |
 | `webtoon` | `webtoon` | approved character images from this episode; no pack |
+| `claymation` | `clay` | approved character images from this episode; no pack |
+| `paper-cutout` | `papercut` | approved character images from this episode; no pack |
+| `ink-wash` | `inkwash` | approved character images from this episode; no pack |
+| `toon-3d` | `toon3d` | approved character images from this episode; no pack |
 | any preset | `archive` | the supplied source itself; no generated appearance reference |
 
 `style.reference` records where the look comes from: a URL for the miniature reference, a
@@ -90,8 +94,11 @@ its generator. These are authored reconstruction instructions, not recovered pro
   Numeric comparisons still require source values and the actual count or proportion; if a
   generator cannot draw that accurately, stop and propose a revised cut or mode.
 
-The `realistic` look (photoreal) and the `webtoon` look follow the same world-bible and
-one-action rules, with the treatment text `production-mode.js` holds for their preset.
+The `realistic` look (photoreal), the `webtoon` look and the four prompt-only looks (`clay`,
+`papercut`, `inkwash`, `toon3d`) follow the same world-bible and one-action rules, with the
+treatment text `production-mode.js` holds for their preset. Ink-wash and claymation clips hold
+only slow motion (visual-style.md); plan the acted cut as a still with a camera move when the
+action is large.
 
 ## Shot plan and prompts
 
