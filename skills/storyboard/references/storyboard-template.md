@@ -193,13 +193,21 @@ must map 1:1 to an entry here.
 | ★1 | <figure·deadline·effective date> | <URL> | <URL> | naver_search | <YYYY-MM-DD> | source excerpt: "…" |
 | 2 | <context the lines lean on> | <URL> | <named source> | WebSearch | <YYYY-MM-DD> | |
 
-## Directions                                   # three different episodes this topic could be (SKILL §2.1). None marked chosen until §2.2 picks one.
+## Messages                                     # three things a viewer living now takes away (SKILL §2.1) — decided before any direction. None is a report of ignorance ("X는 알 수 없다").
 
-| # | Question this episode would answer | Hook form | Engine | Hero / stake | Already verified | Still to research | Score | Status |
-|---|---|---|---|---|---|---|---|---|
-| D1 | <one sentence> | gap | curiosity | <stat or unresolved thing> | 1 | <what the second pass still owes> | 96 | chosen |
-| D2 | <one sentence — a different episode, not a rephrase> | number | fear | <…> | 2 | <…> | 95 | not used |
-| D3 | <one sentence> | identify | comedy | <…> | 3 | <…> | 91 | not used |
+| # | Message — what the viewer understands, reconsiders or can do after this | Why it reaches them today | On claims | Status |
+|---|---|---|---|---|
+| M1 | <one sentence — the subject, what happened or works, why it matters to them> | <what in their life it touches> | 1, 3 | → D1 |
+| M2 | <a different message, not a rephrase> | <…> | 2 | → D2 |
+| M3 | <…> | <…> | 3 | → D3 |
+
+## Directions                                   # three different episodes this topic could be — one topic cut from each message (SKILL §2.1). None marked chosen until §2.2 picks one.
+
+| # | Message | 주제 · the question this episode answers | Hook form | Engine | Hero / stake | Already verified | Still to research | Score | Status |
+|---|---|---|---|---|---|---|---|---|---|
+| D1 | M1 | <one sentence — the subject that delivers M1; never "…는 아직 모른다"> | gap | curiosity | <a stat · a person · a mechanism> | 1 | <what the second pass still owes> | 96 | chosen |
+| D2 | M2 | <one sentence — a different episode, not a rephrase> | number | fear | <…> | 2 | <…> | 95 | not used |
+| D3 | M3 | <one sentence> | identify | comedy | <…> | 3 | <…> | 91 | not used |
 
 Chosen: D1 (<YYYY-MM-DD>) — <one line why, including the engine>
 
