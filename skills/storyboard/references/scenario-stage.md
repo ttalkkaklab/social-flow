@@ -99,7 +99,7 @@ it. 로즈웰 is not "무엇이 떨어졌는지는 아직 모른다"; it is "설
 that ends on ignorance — the predicate forms `알 수 없다/없어요/없습니다`, `모른다/모릅니다/
 몰라요/모르겠다/몰랐다`, `아무도 알지 못한다`, `밝혀지지/풀리지/알려지지/규명되지 않았다`,
 `미스터리다/미스터리로 남았다`, `수수께끼로 남았다`, `미제로 남았다`, and the English
-`nobody knows`, `remains a mystery`, `we still don't know`, `may never know`. Only those
+`nobody knows`, `remains a mystery`, `we still don't know`, `we/they may never know`. Only those
 endings — "아무도 모르게 옮겼다", "아무도 모르는 곳", "미스터리다운 매력", "미제로 남기지
 않으려" all carry the same words with a different job, and the checker lets them through. A
 modifier ("정체를 알 수 없는 물체가 떨어진 뒤 군은 설명을 바꿨다") passes for the same reason,
