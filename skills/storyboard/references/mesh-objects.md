@@ -39,6 +39,17 @@ frame using the template's `__seek(timeMs,group)` contract. There is no turntabl
 clock or low-rate sprite sampling. The existing baked PNG lane is still supported with
 `renderer:"sheet"` or no renderer field. Use mesh for new articulated or spatial subjects.
 
+Which of the two draws the frames is a machine question as much as a shot question:
+`python3 references/bake-blender.py --capacity` reads the GPU backend, cores and memory and answers
+with `mesh`, `blender` or `blender-unattended` plus the render-tab count that memory allows
+([blender-objects.md](blender-objects.md) §1 carries the trade table).
+
+The same recipe can be baked by Blender Cycles instead of drawn by the browser —
+`renderer:"blender"` with a `sheet`, `engine`, `samples` and `fps` ([blender-objects.md](blender-objects.md)):
+path-traced light, a real cast shadow on the studio floor, and a faster capture, at the price of
+minutes of local render per cut. It needs Blender on the machine (`capability_status` →
+`3d_generation`); when the review keeps asking for material, light and contact, that is the lane.
+
 ## Recipe and assets
 
 The JSON recipe has `version:1`, `style`, `camera:{position,target,fov}`, `nodes`, `states`
