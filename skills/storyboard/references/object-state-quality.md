@@ -51,6 +51,8 @@ type, mask-rise text and plate-first staging. Object material can have its own s
 
 Read [mesh-objects.md](mesh-objects.md) for new physical subjects: an offline GLB or assembled
 mesh is lit and posed at every output frame. Use `illustration3d` or `photoreal3d` deliberately.
+Read [blender-objects.md](blender-objects.md) when Blender is installed: the same recipe baked
+by Cycles, with a traced cast shadow and bounced light, into the sheet contract.
 Read `rendered-object.md` for existing baked sheets; that CPU baker supports a disc only.
 Keep the model, materials and state recipe with the episode. Never use a flat disk as an actor.
 If no suitable renderer is available, report that limitation and stop; do not silently
@@ -66,6 +68,12 @@ frames and the transition into the next group. Record in `.work/slide-quality-re
 
 | Scene/group | Promised subject change | Observed change | Material/light | Continuity/phone zone | Verdict |
 |---|---|---|---|---|---|
+
+Read a **whole frame** before any crop. A character or object that interpenetrates a static prop, or
+disappears behind one — a desk slab covering a torso, a post crossing a body — is a production defect,
+and it hides from a crop taken where the last defect was. Two consecutive review rounds on the same cut
+missed it that way (2026-09-08): the narrow box that proved a leg had been cleared could not show that
+the tabletop had taken its place.
 
 Compare the object itself, with labels and arrows mentally removed. Check thickness,
 surface detail, a consistent light direction, readable silhouettes and purposeful motion

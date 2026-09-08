@@ -24,7 +24,8 @@
 
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { config, mfluxZImageBin, mlxServeConfigured, qwen3AsrBin, snsTokenDir, supertonicPython } from './config.js';
+import os from 'node:os';
+import { blenderBin, config, mfluxZImageBin, mlxServeConfigured, qwen3AsrBin, snsTokenDir, supertonicPython } from './config.js';
 import { enabledPlatforms } from './sns-client.js';
 
 export interface ProviderStatus {
@@ -121,6 +122,10 @@ export function capabilityStatus(): {
       providers: [
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
           note: 'mlx_3d_generate — writes GLB; HTML mesh slides consume embedded models (mesh-objects.md)' },
+        { provider: 'blender (local, Cycles)', configured: Boolean(blenderBin()), needs: 'Blender 4.2+ (brew install --cask blender) or BLENDER=<executable>',
+          note: `bake-blender.py — bakes a mesh recipe into a frame sheet with path-traced light and shadows (blender-objects.md). `
+            + `This machine has ${os.cpus().length} cores and ${Math.round(os.totalmem() / 1e9)} GB; `
+            + `run --capacity for the GPU backend and which object lane suits it, then --probe on the recipe for minutes per cut` },
       ],
     },
     {

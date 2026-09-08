@@ -1114,7 +1114,7 @@ function check(win, fmt, opts) {
         const ob = v.slide.object;
         const at = `${where} slide.object`;
         if (!ob || typeof ob !== 'object' || Array.isArray(ob)) machine(at, 'is not an object — { file, shape, keys, frames, plan }');
-        else if (ob.renderer !== 'mesh') {
+        else if (ob.renderer !== 'mesh' && ob.renderer !== 'blender') {   // mesh · blender fields are slide-quality.js's
           if (!ob.file) machine(at, 'has no file');
           else if (!OBJECT_FILE.test(ob.file)) machine(at, `file "${ob.file}" is not slides/assets/s<shot>-<slug>.png`);
           if (!ob.shape) machine(at, 'has no shape — bake-object.py --shape (disc)');

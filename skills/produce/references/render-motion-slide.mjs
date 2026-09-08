@@ -453,6 +453,35 @@ const openPage = async () => {
     }
   }
   const warn = segWarn.slice();
+  // A baked object's frames were laid out for the narration lengths the bake was given, and the
+  // runtime stretches that fixed range over whatever segment it gets. So a sheet baked for 4.0s under
+  // a 5.5s sentence plays its frames at 22fps, silently — the recipe hash catches an edited camera but
+  // nothing caught a re-cut narration (blender-objects.md §4). Compare the two here, where both are known.
+  if (segMap) {
+    const baked = await evalJS(`(() => { const o = window.SLIDE_OBJECTS || {};
+      return Object.fromEntries(Object.entries(o).filter(([, v]) => v && v.segs)
+        .map(([k, v]) => [k, {segs: v.segs, fps: v.fps}])); })()`);
+    for (const [id, entry] of Object.entries(baked || {})) {
+      // A sheet baked at one rate and captured at another moves at the baked rate inside the clip,
+      // whatever the segment lengths are — that mismatch never shows up as drift.
+      if (Number(entry.fps) > 0 && Number(entry.fps) !== opt.fps)
+        warn.push(`${id}: the object sheet was baked at ${entry.fps}fps but this render captures at ` +
+          `${opt.fps}fps — subject motion arrives at the baked rate. Rebake with --fps ${opt.fps}`);
+      // "auto" segments are characters ÷ the format's rate, not measured audio, and the storyboard
+      // stage bakes from the recipe's planned durations — comparing the two there is noise.
+      if (opt.segs === "auto") continue;
+      for (const [group, ms] of Object.entries(entry.segs || {})) {
+        const asked = segMap[Number(group)];
+        if (!asked || !(ms > 0)) continue;
+        const drift = Math.abs(asked - ms) / ms;
+        // The bake laid down bakedFps frames a second for ms; stretched over asked they arrive slower.
+        const bakedFps = Number(entry.fps) > 0 ? Number(entry.fps) : opt.fps;
+        if (drift > 0.05) warn.push(`${id} group ${group}: the object sheet was baked for ${ms}ms but this render ` +
+          `passes ${asked}ms (${Math.round(drift * 100)}% off) — its frames stretch to fit, so subject motion runs ` +
+          `at ${(bakedFps * ms / asked).toFixed(1)}fps against this render's ${opt.fps}. Rebake with --segs before delivery`);
+      }
+    }
+  }
   // Sustain layer — hand the page its segment lengths before reading group durations, so
   // .sv elements stretch to them and __groups() reports the stretched clips. --segs keys
   // are GROUPS: on an A|B sub-reveal slide (more groups than segments) group k is no

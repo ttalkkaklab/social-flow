@@ -540,7 +540,8 @@ order.
    group 1 then the title with `in`; type-only skips arts. An explanation slide is built on
    the studio stage to the bar of
    `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`; a `slide.object` is
-   rendered with the mesh lane by default ([mesh-objects.md](../storyboard/references/mesh-objects.md));
+   rendered with the mesh lane by default ([mesh-objects.md](../storyboard/references/mesh-objects.md)),
+   or baked by Blender Cycles into a sheet when `renderer:"blender"` ([blender-objects.md](../storyboard/references/blender-objects.md) — rebake with the measured `--segs`);
    existing sheet objects are baked first. Use `h.mark.arrow` for refined curved arrows.
    A flat image cannot substitute for an articulated object. Nothing is laid over a clip.
 3. **Run the contract, then render the sheet.**

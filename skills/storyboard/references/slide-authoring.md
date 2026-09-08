@@ -105,7 +105,11 @@ rubric the reviewer applies.
      shadow under the type, the stage alone drifting 1% a group. Nothing to call — `h.stage("flat")`
      is the way back to the plain plate. Marks use `h.mark.arrow` with a small tangent-following head. Call
      `h.stage(…)` before any `h.mark.*` — the mark layer reads the studio class when it is made.
-   - New physical subjects use the mesh lane in [mesh-objects.md](mesh-objects.md).
+   - New physical subjects use the mesh lane in [mesh-objects.md](mesh-objects.md). The same recipe
+     can bake into a path-traced sheet with `renderer:"blender"` ([blender-objects.md](blender-objects.md));
+     `bake-blender.py --capacity` says which lane this machine should use and how many render tabs its
+     memory allows, then `--probe` gives the minutes for the actual recipe. Bake, then author with
+     `h.object` like any sheet.
    - First distinguish a people/mood still-camera cut from an explanatory HTML scene using
      [illustrated-scenes.md](illustrated-scenes.md). Explanations use recognizable 3D objects
      and a relevant setting. Add a cute 3D doll character when its action explains the narration;

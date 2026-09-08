@@ -87,6 +87,10 @@ node $REF/render-motion-slide.mjs storyboard/slides/s<shot number>-<slug>.html \
   --out .work/motion/slide-s<shot number> --segs 1:3160,2:2840,3:4210
 ```
 
+A slide whose `slide.object` is `renderer:"blender"` is rebaked with the same measured values
+first — `bake-blender.py --recipe … --out … --segs 1:3160,2:2840` (storyboard
+`references/blender-objects.md` §4) — so its frames match the capture rate, then rendered as above.
+
 `--segs` keys are **groups**, not segments. On an A|B sub-reveal slide (more groups than
 segments) `auto` steps aside with a warning — split the segment's measured window at the
 reveal point and pass per-group values. A slide from an older template (no `__setSegs`)
