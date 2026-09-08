@@ -193,7 +193,7 @@ must map 1:1 to an entry here.
 | ★1 | <figure·deadline·effective date> | <URL> | <URL> | naver_search | <YYYY-MM-DD> | source excerpt: "…" |
 | 2 | <context the lines lean on> | <URL> | <named source> | WebSearch | <YYYY-MM-DD> | |
 
-## Messages                                     # three things a viewer living now takes away (SKILL §2.1b) — decided before any direction. None is a report of ignorance ("X는 알 수 없다").
+## Messages                                     # three things a viewer living now takes away (SKILL §2.1) — decided before any direction. None is a report of ignorance ("X는 알 수 없다").
 
 | # | Message — what the viewer understands, reconsiders or can do after this | Why it reaches them today | On claims | Status |
 |---|---|---|---|---|
@@ -201,7 +201,7 @@ must map 1:1 to an entry here.
 | M2 | <a different message, not a rephrase> | <…> | 2 | → D2 |
 | M3 | <…> | <…> | 3 | → D3 |
 
-## Directions                                   # three different episodes this topic could be — one topic cut from each message (SKILL §2.1b). None marked chosen until §2.2 picks one.
+## Directions                                   # three different episodes this topic could be — one topic cut from each message (SKILL §2.1). None marked chosen until §2.2 picks one.
 
 | # | Message | 주제 · the question this episode answers | Hook form | Engine | Hero / stake | Already verified | Still to research | Score | Status |
 |---|---|---|---|---|---|---|---|---|---|

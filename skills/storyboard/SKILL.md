@@ -188,12 +188,12 @@ the second pass closes (user note 2026-08-23). Create the topic directory now so
 a path (`mkdir -p data/<channel>/episodes/<topic slug>/storyboard`); §3 still reads
 episode-state before scenes.
 
-**§2.1 first research** (enough to say what today's viewer should take away) → **§2.1b three
-messages, one topic each** → **§2.2 three scored scenarios, then one pick** → **§2.3 additional
-research** on the chosen direction (the exit). Tool choice, ingest, and the skip-research
-exception sit under all of them, at the end of this section.
+**§2.1 first research, then the three messages and one topic cut from each** → **§2.2 three
+scored scenarios, then one pick** → **§2.3 additional research** on the chosen direction (the
+exit). Tool choice, ingest, and the skip-research exception sit under all of them, at the end
+of this section.
 
-#### 2.1 First research — enough to propose three directions
+#### 2.1 First research — enough to write three messages and three directions
 
 Do not lock every figure. Do not write scenes. The question map here is **what we need to
 know to offer three honest directions** — what people ask, what's actually true, which
@@ -207,7 +207,7 @@ explanations compete, what it touches in the viewer's life now — **3–5 rows*
 3. **Put every claim in the evidence table** (`research.md` §Verified) — failed claims in
    §Failed. **Number the rows and keep the numbers.** Two independent sources for anything
    time-sensitive; one official origin counts as both. Don't shrink a range to its upper bound.
-4. **§2.1b — write `research.md` §Messages first: three messages for the viewer living now,** each
+4. **Write `research.md` §Messages first — three messages for the viewer living now,** each
    one sentence on what they understand, reconsider or can do after the episode, on Verified rows —
    three different messages, not three wordings (scenario-stage §Messages first).
 5. **Then §Directions — three rows, one topic cut from each message (`M#`), none chosen yet.** A

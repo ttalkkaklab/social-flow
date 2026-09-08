@@ -13,7 +13,7 @@ instead of a board. Both formats run this stage. On long-form a candidate used t
 the 95-point loop exists to catch.
 
 The loop happens **after first research and the three messages, before the pick** (storyboard
-§2.1b · §2.2). Three different episodes this topic could be — one topic cut from each message
+§2.1 · §2.2). Three different episodes this topic could be — one topic cut from each message
 — are written as three pages **in one fixed shape — the seven items below** (user directive,
 2026-09-02) — each one is scored, the user sees all three in full and picks among the ones
 that cleared 95. Additional research and the board come after that, on the winner only.

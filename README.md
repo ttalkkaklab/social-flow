@@ -345,7 +345,8 @@ them the pipeline ends at `produce` with the finished video and per-platform tex
 ```
 
 The machine gates stand where the approval gates were — fact verification (3+
-cross-verified claims), three seven-item scenario candidates judged in one batched read
+cross-verified claims and three messages, one topic cut from each), three seven-item
+scenario candidates judged in one batched read
 (curiosity · fear · intrigue · comedy), the narration read on its own and looped to 95 twice
 (the chain, then the words — three reads each, the sentences handed inline), the copy style
 checker and the contract checkers, build report (drift 0), one content-reviewer read at 95

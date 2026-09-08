@@ -2535,10 +2535,10 @@ strip says no violations.
 - [ ] No distortion of numeric ranges (a range stays a range)
 - [ ] Every factual claim matches a verification-passed entry in research.md, research.md was
       finished **before** the first scene was written (storyboard SKILL §2 — two passes with a
-      pick in between: first research → three directions → additional research · first pass
-      logs ten or more searches · sufficiency: floor 3 verified claims, 5+ on a short, 12+ on
-      a long-form, every question answered or written off, one `Chosen:` direction), and no
-      claim sits on a written-off question
+      pick in between: first research → three messages → one topic cut from each into three
+      directions → additional research · first pass logs ten or more searches · sufficiency:
+      floor 3 verified claims, 5+ on a short, 12+ on a long-form, every question answered or
+      written off, one `Chosen:` direction), and no claim sits on a written-off question
 - [ ] **The cover has `hookForm`** (`paradox`·`gap`·`payoff`·`identify`·`number`·`secret`) and the
       title and segment ① take that shape, and the shot that pays it does pay it — the last drip
       (short) or the result (long-form) on a withholding form, the cover itself on `payoff` (a

@@ -86,7 +86,7 @@ const IGNORANCE = new RegExp([
   '알\\s*수(?:가|는|도)?\\s*없(?:다|어요|습니다|죠|네요|음)(?![가-힣])',
   '알\\s*길(?:이|은)?\\s*없(?:다|어요|습니다|죠)(?![가-힣])',
   '(?:모른다|모릅니다|몰라요|모르죠|모르겠(?:다|어요|습니다)|모르네요|모름|몰랐(?:다|어요|습니다))(?![가-힣])',
-  '(?:밝혀|풀리|알려)지지\\s*않(?:았다|았어요|았습니다|았죠|는다|아요|습니다|죠)(?![가-힣])',
+  '(?:밝혀지|알려지|풀리|해결되|규명되)지\\s*않(?:았다|았어요|았습니다|았죠|는다|아요|습니다|죠)(?![가-힣])',
   '아무도\\s*(?:알지\\s*못(?:한다|합니다|해요|했다|했습니다))(?![가-힣])',
   '(?:미스터리|수수께끼|미제)(?:다|이다|입니다|예요|죠)(?![가-힣])',
   '(?:미스터리|수수께끼|미제)로\\s*남(?:았다|았어요|았습니다|았죠|는다|아요|습니다|은\\s*채)(?![가-힣])',
@@ -334,7 +334,7 @@ function analyse(src, fmt, scenes, opts) {
   }
 
   // ── Messages (three, decided before the directions) ──
-  // §2.1b: what a viewer living now understands, reconsiders or can do after the episode —
+  // §2.1: what a viewer living now understands, reconsiders or can do after the episode —
   // three different ones, each on Verified rows. A direction is the topic cut from one of
   // them, so a log with directions and no messages wrote its topics before their reason.
   // None may be a report of ignorance — "X는 알 수 없다" hands the viewer nothing at the
@@ -342,10 +342,12 @@ function analyse(src, fmt, scenes, opts) {
   const msgIds = mRows.filter((r) => /^\**\s*M?\s*\d+\s*\**$/i.test(r[0] || ''))
     .map((r) => ({ n: Number(String(r[0] || '').replace(/[^\d]/g, '')), cells: r }));
   if (msgIds.length < FLOOR_MESSAGES)
-    bad(`${msgIds.length} message(s) — §2.1b writes three before any direction: what a viewer ` +
+    bad(`${msgIds.length} message(s) — §2.1 writes three before any direction: what a viewer ` +
         'living now understands, reconsiders or can do after the episode, each a different message on Verified rows');
+  // Only the Message cell is the sentence under judgement. "Why today" next to it explains
+  // what the viewer does not yet know, and reading that column made honest rows fail.
   msgIds.forEach((m) => {
-    const hit = m.cells.slice(1, -1).join(' ').match(IGNORANCE);
+    const hit = String(m.cells[1] || '').match(IGNORANCE);
     if (hit)
       bad(`M${m.n} is a report of ignorance ("…${hit[0]}") — a message names what the evidence ` +
           'establishes, not what nobody knows (scenario-stage §Messages first)');
@@ -375,21 +377,28 @@ function analyse(src, fmt, scenes, opts) {
     warn(`directions ${[...chosen].join(', ')} are all marked chosen — pick one`);
   }
 
-  // Each direction is the topic cut from one message, and says which. The # and Status cells
-  // are left out of the read so a status word or the row id never trips the ignorance rule.
+  // Each direction is the topic cut from one message, and says which. The citation is a cell
+  // that holds nothing but an M# — a product name in the hero cell ("갤럭시 M2") is not one —
+  // and the 주제 read for ignorance is the cell right after it. Everything else on the row
+  // stays out of both reads: "Still to research" says what is not established yet, which is
+  // the column's job, and reading it made honest rows fail the gate.
   const msgNums = new Set(msgIds.map((m) => m.n));
   const citedMsgs = [];
+  const CITE_CELL = /^\**\s*M\s*(\d+)\s*\**$/i;
   dirIds.forEach((d) => {
-    const text = d.cells.slice(1, -1).join(' ');
-    const hit = text.match(IGNORANCE);
+    const mIdx = d.cells.findIndex((c, i) => i > 0 && CITE_CELL.test(String(c || '').trim()));
+    const topic = String((mIdx >= 0 ? d.cells[mIdx + 1] : d.cells[1]) || '');
+    const hit = topic.match(IGNORANCE);
     if (hit)
       bad(`D${d.n} is a report of ignorance ("…${hit[0]}") — the 주제 names what the evidence ` +
           'establishes, never "X는 알 수 없다" (scenario-stage §Messages first)');
     if (!msgIds.length) return;
-    const cite = text.match(/\bM\s*(\d+)\b/);
-    if (!cite) bad(`D${d.n} cites no message (M#) — every direction is the topic cut from one of the three messages`);
-    else if (!msgNums.has(Number(cite[1]))) bad(`D${d.n} cites M${cite[1]}, which is not in the Messages table`);
-    else citedMsgs.push(Number(cite[1]));
+    if (mIdx < 0) bad(`D${d.n} cites no message (M#) — every direction is the topic cut from one of the three messages`);
+    else {
+      const n = Number(String(d.cells[mIdx]).replace(/[^\d]/g, ''));
+      if (!msgNums.has(n)) bad(`D${d.n} cites M${n}, which is not in the Messages table`);
+      else citedMsgs.push(n);
+    }
   });
   const shared = citedMsgs.filter((n, i) => citedMsgs.indexOf(n) !== i);
   if (shared.length)
@@ -739,6 +748,11 @@ function selftest() {
   ok('알 수 없습니다 is caught', has(ign('그날 무엇이 있었는지는 알 수 없습니다'), /report of ignorance/));
   ok('미스터리로 남았다 is caught', has(ign('사건은 미스터리로 남았다'), /report of ignorance/));
   ok('밝혀지지 않았다 is caught', has(ign('원인은 밝혀지지 않았다'), /report of ignorance/));
+  ok('풀리지 않았다 is caught', has(ign('사건은 끝내 풀리지 않았다'), /report of ignorance/));
+  ok('해결되지 않았다 is caught', has(ign('문제는 해결되지 않았다'), /report of ignorance/));
+  ok('알려지지 않았다 is caught', has(ign('경위는 알려지지 않았다'), /report of ignorance/));
+  ok('a 지 form inside a longer word passes',
+     !has(ign('풀리지 않던 매듭을 누가 어떻게 풀었나'), /report of ignorance/));
   ok('an English "remains a mystery" is caught', has(ign('what fell remains a mystery'), /report of ignorance/));
   ok('"we still don\'t know" is caught', has(ign("we still don't know what fell"), /report of ignorance/));
   ok('"알 수 없는" as a modifier passes the machine check',
@@ -755,14 +769,33 @@ function selftest() {
      !has(ign('이 사건을 미제로 남기지 않으려 무엇을 했나'), /report of ignorance/));
   ok('a past-tense 몰랐다 is caught', has(ign('그날 무엇이 떨어졌는지 아무도 몰랐다'), /report of ignorance/));
   ok('"아무도 알지 못한다" is caught', has(ign('원인은 아무도 알지 못한다'), /report of ignorance/));
+  ok('the "Still to research" column may say what is not established yet',
+     !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 | — | chosen |',
+                               '| D1 | M1 | a | gap | x | 1 | 인명피해 규모는 아직 밝혀지지 않았다 | chosen |'),
+                  null), /report of ignorance/));
+  ok('the "Why today" column may say the viewer does not know it yet',
+     !has(analyse(good.replace('| M2 | y-msg | now | 2 | → D2 |',
+                               '| M2 | y-msg | 사람들이 여전히 진실을 모른다 | 2 | → D2 |'), null),
+          /report of ignorance/));
+  ok('an M# inside another cell does not stand in for a missing citation',
+     has(analyse(good.replace('| D2 | M2 | b | number | y | 2 | — | not used |',
+                              '| D2 | — | b | number | 갤럭시 M2 언팩 반응 | 2 | — | not used |'), null),
+         /D2 cites no message/));
+  ok('a two-column Messages table is still read for ignorance',
+     has(analyse(good.replace('| # | Message | Why today | On claims | Status |\n|---|---|---|---|---|',
+                              '| # | Message |\n|---|---|')
+                     .replace('| M1 | x-msg | now | 1 | → D1 |', '| M1 | 진실은 아무도 모른다 |')
+                     .replace('| M2 | y-msg | now | 2 | → D2 |', '| M2 | y-msg |')
+                     .replace('| M3 | z-msg | now | 3 | → D3 |', '| M3 | z-msg |'), null),
+         /M1 is a report of ignorance/));
   ok('the message status cell is not read for ignorance',
      !has(analyse(good.replace('| M2 | y-msg | now | 2 | → D2 |',
-                               '| M2 | y-msg | now | 2 | 미제 |'), null), /M2 is a report of ignorance/));
+                               '| M2 | y-msg | now | 2 | 미제로 남았다 |'), null), /M2 is a report of ignorance/));
   ok('two directions on one message is a violation',
      has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M1 | b |'), null), /share a message \(M1\)/));
   ok('the status cell is not read for ignorance',
      !has(analyse(good.replace('| D2 | M2 | b | number | y | 2 | — | not used |',
-                               '| D2 | M2 | b | number | y | 2 | — | 미제 |'), null), /report of ignorance/));
+                               '| D2 | M2 | b | number | y | 2 | — | 미제로 남았다 |'), null), /report of ignorance/));
 
   // Drift guard — the floors live in the skill, and this file has to agree with it.
   const skill = path.resolve(SELF_DIR, '..', 'SKILL.md');
@@ -773,7 +806,7 @@ function selftest() {
     ok('SKILL §2 still aims a short at five or more', /\*\*five or more\*\*/.test(s));
     ok('SKILL §2 still aims a long-form at twelve or more', /\*\*twelve or more\*\*/.test(s));
     ok('SKILL §2.1 still writes three directions', /three honest directions/i.test(s));
-    ok('SKILL §2.1b still writes three messages first', /§Messages first/.test(s));
+    ok('SKILL §2.1 still writes three messages first', /§Messages first/.test(s));
     ok('SKILL §2.1 still asks ten or more searches', /\*\*ten or more\*\*/.test(s));
     ok('SKILL still names check-research.js --direction', /check-research\.js storyboard\/ --direction/.test(s));
   } else {
