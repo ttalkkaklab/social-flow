@@ -78441,7 +78441,8 @@ function isBillableTool(tool) {
 // src/tts-quality.ts
 var exec = promisify2(execFile4);
 var QUALITY_POLICY = "speech-quality-v1";
-var REVIEW_MODEL = "gemini-2.5-pro";
+var REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || "v1";
+var REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || "gemini-3.8-flash";
 var GENERATORS = ["tts_generate", "tts_multi_speaker", "tts_local_generate", "tts_elevenlabs_generate", "tts_elevenlabs_dialogue", "mlx_tts_generate"];
 var checkedSpeechSchema = external_exports.object({
   generator: external_exports.enum(GENERATORS),
@@ -78537,7 +78538,7 @@ var REVIEW_JSON_SCHEMA = {
 };
 async function listen(file, request) {
   const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
-  const client = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { timeout: 18e4 } });
+  const client = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: REVIEW_API_VERSION, timeout: 18e4 } });
   const audio = readFileSync4(file);
   if (audio.length > 14 * 1024 * 1024 || audio.subarray(0, 4).toString() !== "RIFF") throw new Error("Review requires a WAV smaller than 14 MiB");
   const audioPart = { inlineData: { mimeType: "audio/wav", data: audio.toString("base64") } };
@@ -78682,9 +78683,9 @@ async function generateCheckedSpeech(input, dependencies) {
   try {
     if (existsSync5(proofFile)) {
       const old = JSON.parse(readFileSync4(proofFile, "utf8"));
-      if (Object.entries(base).every(([key, value]) => old[key] === value)) {
+      if (Object.entries(base).every(([key, value]) => key === "model" || old[key] === value)) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
-        attempts.push(...old.attempts);
+        attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
         const last = attempts.at(-1);
         if (request.rejectTake) {
           if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync5(output) || sha256(readFileSync4(output)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
@@ -78692,8 +78693,16 @@ async function generateCheckedSpeech(input, dependencies) {
           last.pending = false;
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
-        if (!request.rejectTake && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync5(output) && old.audioSha256 === sha256(readFileSync4(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
+        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync5(output) && old.audioSha256 === sha256(readFileSync4(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
           return { success: true, status: "pass", audioPath: output, proofPath: proofFile, attempts: attempts.length, reused: true };
+        }
+        if (!request.rejectTake && old.model !== REVIEW_MODEL && old.status === "pass" && last && existsSync5(output) && last.audioSha256 === sha256(readFileSync4(output))) {
+          last.previousReviews = [
+            ...Array.isArray(last.previousReviews) ? last.previousReviews : [],
+            { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer }
+          ];
+          for (const key of ["transcript", "review", "failures", "signal", "cer"]) delete last[key];
+          last.pending = true;
         }
       }
     }
@@ -78740,7 +78749,7 @@ async function generateCheckedSpeech(input, dependencies) {
         failures = reviewFailures(request.expectedText, listened.transcript, listened.review, signal.duration);
       }
       if (audioSha256 !== sha256(readFileSync4(output))) throw new Error("Audio changed during review");
-      Object.assign(take, { pending: false, audioSha256, signal, ...listened, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
+      Object.assign(take, { pending: false, audioSha256, signal, ...listened ? { model: REVIEW_MODEL, ...listened } : {}, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
       if (!failures.length) return save("pass", { audioSha256 });
       save("retry", { audioSha256 });
     }
