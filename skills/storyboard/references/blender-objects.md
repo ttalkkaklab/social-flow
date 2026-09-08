@@ -19,7 +19,7 @@ then captured at 6.3 fps against 1.1–2.6 fps for the same cut through the brow
 
 - [1. When to bake with Blender](#1-when-to-bake-with-blender)
 - [2. The scene declaration](#2-the-scene-declaration)
-- [3. Probe first — the machine's minutes per cut](#3-probe-first--the-machines-minutes-per-cut)
+- [3. Probe first, for this machine's minutes per cut](#3-probe-first-for-this-machines-minutes-per-cut)
 - [4. Bake, author, rebake](#4-bake-author-rebake)
 - [5. What the bake does with the recipe](#5-what-the-bake-does-with-the-recipe)
 - [6. Traps](#6-traps)
@@ -107,7 +107,7 @@ slide: {
 `check-slide.js` refuses a sheet whose sidecar came from a different recipe, engine, samples
 or fps — the sidecar carries the recipe's SHA-256, so editing the recipe means rebaking.
 
-## 3. Probe first — the machine's minutes per cut
+## 3. Probe first, for this machine's minutes per cut
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
