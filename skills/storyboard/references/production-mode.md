@@ -47,11 +47,13 @@ Identify provisional alternatives; they are comparison assumptions, not automati
 shot plans. Images, narration, music, editing, taxes and payment fees are outside this video quote.
 Explain those exclusions rather than presenting a video-only number as the complete bill.
 
-Use the returned numbers in this HITL wording, never literal example prices:
+Use the returned numbers in this HITL wording, never literal example prices. Each choice opens
+with one plain sentence on what it makes and what that costs in practice, before the numbers
+(user directive, 2026-09-08):
 
 > 어떤 방식으로 만들까요? 아래 금액은 영상 생성비이며 재시도를 포함한 예상치입니다.
-> - 혼합 제작: [영상 수·모델·해상도·음성 여부]. 최초 [금액], 평균 [횟수]회 시도 [범위]. 영상 예산 상한 [금액].
-> - 전체 영상: [영상 수·모델·해상도·음성 여부]. 최초 [금액], 평균 [횟수]회 시도 [범위]. 영상 예산 상한 [금액].
+> - 혼합 제작 — 생성 영상 1~2개에 HTML 설명 슬라이드와 카메라 무빙 정지컷을 섞습니다. 값이 싸고 결과가 안정적입니다. [영상 수·모델·해상도·음성 여부]. 최초 [금액], 평균 [횟수]회 시도 [범위]. 영상 예산 상한 [금액].
+> - 전체 영상 — 새 장면을 전부 생성 영상으로 만듭니다. 움직임이 풍부한 대신 비용과 재시도가 늘어납니다. [영상 수·모델·해상도·음성 여부]. 최초 [금액], 평균 [횟수]회 시도 [범위]. 영상 예산 상한 [금액].
 > 원화는 1달러=[환율]원으로 가정했습니다. 이미지·내레이션·편집·세금은 별도입니다.
 
 If the full-video estimate exceeds the channel cap, show the required episode-only cap in

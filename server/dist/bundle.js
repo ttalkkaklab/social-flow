@@ -89556,7 +89556,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.61.0" },
+  { name: "social-flow", version: "0.61.1" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
