@@ -382,7 +382,10 @@ def inner_main(job_path):
         targets[spec["id"]] = node
     for b in recipe.get("bindings") or []:
         pool = asset_objects[b["asset"]]
-        part = next((o for o in pool if o.name == b["node"]), None) or next((o for o in pool if o.name.startswith(b["node"] + ".")), None)
+        # Exact name, or the .001-style duplicate the importer adds — not any name that merely starts
+        # with it, which would silently pose lid.handle when the recipe asked for lid.
+        part = next((o for o in pool if o.name == b["node"]), None) or \
+               next((o for o in pool if re.fullmatch(re.escape(b["node"]) + r"\.\d{3}", o.name)), None)
         if part is None: sys.exit(f"GLB node missing: {b['asset']}/{b['node']}")
         part.rotation_mode = "QUATERNION"
         targets[b["id"]] = part
@@ -413,7 +416,7 @@ def inner_main(job_path):
                 hsv.inputs["Color"].default_value = tuple(base.default_value)
             links.new(hsv.outputs["Color"], base); hit += 1
         say("materials", f"{prefix}: {hit} material(s) adjusted {json.dumps(rule)}")
-        if not hit: sys.exit(f"blender.materials prefix '{prefix}' matched no material")
+        if not hit: sys.exit(f"blender.materials key '{prefix}' matched no material (exact name or a .001 duplicate)")
     recipe_ids = {n["id"] for n in recipe["nodes"]}
 
     def pose_at(group, progress):
@@ -732,6 +735,7 @@ def outer_main():
             advice["reason"] = (f"Blender {found.get('blender')} is installed but the bake needs 4.2 or newer "
                                 "(view transform, Principled coat inputs) — use the browser mesh lane, or upgrade Blender")
         out = {"blender": found.get("blender"), "executable": blender or None,
+               "tooOld": bool(found.get("tooOld")),
                "backend": found.get("backend") if blender else None, "devices": found.get("devices"),
                "ramGB": round(ram_gb, 1), "cores": cores, "sheetPixelCap": SHEET_PIXEL_CAP, **advice}
         print(f"{advice['lane']} lane — {advice['reason']}")

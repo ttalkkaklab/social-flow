@@ -462,6 +462,14 @@ const openPage = async () => {
       return Object.fromEntries(Object.entries(o).filter(([, v]) => v && v.segs)
         .map(([k, v]) => [k, {segs: v.segs, fps: v.fps}])); })()`);
     for (const [id, entry] of Object.entries(baked || {})) {
+      // A sheet baked at one rate and captured at another moves at the baked rate inside the clip,
+      // whatever the segment lengths are — that mismatch never shows up as drift.
+      if (Number(entry.fps) > 0 && Number(entry.fps) !== opt.fps)
+        warn.push(`${id}: the object sheet was baked at ${entry.fps}fps but this render captures at ` +
+          `${opt.fps}fps — subject motion arrives at the baked rate. Rebake with --fps ${opt.fps}`);
+      // "auto" segments are characters ÷ the format's rate, not measured audio, and the storyboard
+      // stage bakes from the recipe's planned durations — comparing the two there is noise.
+      if (opt.segs === "auto") continue;
       for (const [group, ms] of Object.entries(entry.segs || {})) {
         const asked = segMap[Number(group)];
         if (!asked || !(ms > 0)) continue;

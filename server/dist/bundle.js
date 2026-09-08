@@ -13722,7 +13722,7 @@ var require_node_domexception = __commonJS({
 });
 
 // node_modules/fetch-blob/from.js
-import { statSync, createReadStream, promises as fs2 } from "node:fs";
+import { statSync as statSync2, createReadStream, promises as fs2 } from "node:fs";
 import { basename } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
@@ -13731,10 +13731,10 @@ var init_from = __esm({
     init_file();
     init_fetch_blob();
     ({ stat } = fs2);
-    blobFromSync = (path10, type) => fromBlob(statSync(path10), path10, type);
+    blobFromSync = (path10, type) => fromBlob(statSync2(path10), path10, type);
     blobFrom = (path10, type) => stat(path10).then((stat4) => fromBlob(stat4, path10, type));
     fileFrom = (path10, type) => stat(path10).then((stat4) => fromFile(stat4, path10, type));
-    fileFromSync = (path10, type) => fromFile(statSync(path10), path10, type);
+    fileFromSync = (path10, type) => fromFile(statSync2(path10), path10, type);
     fromBlob = (stat4, path10, type = "") => new fetch_blob_default([new BlobDataItem({
       path: path10,
       size: stat4.size,
@@ -75392,7 +75392,7 @@ var StdioServerTransport = class {
 };
 
 // src/config.ts
-import { accessSync, constants, existsSync, readFileSync, readdirSync } from "node:fs";
+import { accessSync, constants, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join } from "node:path";
 var config2 = {
@@ -75459,7 +75459,7 @@ function blenderBin() {
   const runnable = (p) => {
     try {
       accessSync(p, constants.X_OK);
-      return true;
+      return statSync(p).isFile();
     } catch {
       return false;
     }

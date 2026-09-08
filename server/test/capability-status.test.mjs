@@ -36,6 +36,21 @@ test('a BLENDER path that exists but cannot be executed is not reported as the b
   }
 });
 
+test('a BLENDER pointing at the app bundle directory is not reported as the binary', async () => {
+  // The realistic wrong value: /Applications/Blender.app is a directory, and a directory carries the
+  // execute bit on unix, so an access(X_OK) test alone would accept it.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'blender-dir-'));
+  const saved = process.env.BLENDER;
+  process.env.BLENDER = dir;
+  try {
+    const { blenderBin } = await import('../dist/config.js');
+    assert.notEqual(blenderBin(), dir);
+  } finally {
+    if (saved === undefined) delete process.env.BLENDER; else process.env.BLENDER = saved;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('a missing BLENDER path falls through to the install search, never to the bogus value', async () => {
   const saved = process.env.BLENDER;
   process.env.BLENDER = '/nonexistent/blender-for-test';

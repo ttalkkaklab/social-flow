@@ -5,7 +5,7 @@
  * time**, not at startup — the publish tools must work without a search key, and
  * vice versa.
  */
-import { accessSync, constants, existsSync, readFileSync, readdirSync } from 'node:fs';
+import { accessSync, constants, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 export const config = {
@@ -120,10 +120,12 @@ function binOnPath(name) {
  * and the bake never disagree about which binary they mean.
  */
 export function blenderBin() {
+    // A directory carries the execute bit on unix, so accessSync alone would accept
+    // BLENDER=/Applications/Blender.app — the app bundle, not the binary inside it.
     const runnable = (p) => {
         try {
             accessSync(p, constants.X_OK);
-            return true;
+            return statSync(p).isFile();
         }
         catch {
             return false;

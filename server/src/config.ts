@@ -6,7 +6,7 @@
  * vice versa.
  */
 
-import { accessSync, constants, existsSync, readFileSync, readdirSync } from 'node:fs';
+import { accessSync, constants, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 
@@ -131,8 +131,10 @@ function binOnPath(name: string): boolean {
  * and the bake never disagree about which binary they mean.
  */
 export function blenderBin(): string {
+  // A directory carries the execute bit on unix, so accessSync alone would accept
+  // BLENDER=/Applications/Blender.app — the app bundle, not the binary inside it.
   const runnable = (p: string): boolean => {
-    try { accessSync(p, constants.X_OK); return true; } catch { return false; }
+    try { accessSync(p, constants.X_OK); return statSync(p).isFile(); } catch { return false; }
   };
   // Same order as bake-blender.py's find_blender, including the PATH lookup's position: reporting a
   // binary the bake would not pick — or one it cannot execute — makes capability_status lie.

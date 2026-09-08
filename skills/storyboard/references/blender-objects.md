@@ -35,8 +35,9 @@ python3 $REF/bake-blender.py --capacity      # no recipe needed
 # {"blender":"5.2.1 LTS","backend":"METAL","ramGB":137,"cores":16,"lane":"blender","jobs":4, …}
 ```
 
-`lane` is one of three. **`mesh`** — Blender is absent, or the machine has under 8 GB and cannot hold
-a decoded sheet beside Chrome; use `renderer:"mesh"`. **`blender-unattended`** — Cycles has no GPU
+`lane` is one of three. **`mesh`** — Blender is absent, the installed Blender is older than 4.2 (the
+report says `"tooOld": true`), or the machine has under 8 GB and cannot hold a decoded sheet beside
+Chrome; use `renderer:"mesh"`. **`blender-unattended`** — Cycles has no GPU
 backend, so a cut bakes at tens of seconds a frame; author on the mesh lane and leave the bake to an
 unattended run. **`blender`** — a GPU backend is there; `jobs` is how many render tabs its memory
 allows, and `--probe` on the actual recipe gives the minutes. What the choice trades:
@@ -200,8 +201,9 @@ A decoded 160 Mpx sheet is 640 MB in a Chrome tab; pass the `jobs` figure `--cap
   importer; `extras.socialFlowMicrorelief` becomes a bump from the base colour, as in the
   runtime. Animated `clips` are refused — pose the parts with `bindings`. A recipe may carry a
   Blender-only block, `"blender": {"materials": {"atlas-linen": {"saturation": 0.62, "value": 1.04}}}` —
-  a hue/saturation/value node placed before the BSDF of every material whose name starts
-  with the key (glTF names, `.001` duplicates included). It exists because path-traced light
+  a hue/saturation/value node placed before the BSDF of every material whose name is the key, or the
+  key with the `.001`-style suffix the glTF importer adds to duplicates. A key that matches nothing
+  stops the bake rather than rendering an unchanged material. It exists because path-traced light
   shows a texture's true chroma where the browser lane's over-lit room washed it out, and
   slide-design.md §2 wants the object's saturation below the accent's (the cart's straw sacks
   measured S 0.42–0.50 against the accent's 0.47 before the override, 0.30 after). The browser
